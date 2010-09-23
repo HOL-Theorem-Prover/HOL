@@ -81,16 +81,28 @@ sig
    Trace variables:
 
      "add disassembler comments"
-       - controls output for print_arm_assemble_from_file etc.
+          - controls output for print_arm_assemble_from_file etc.
+       0  : raw output (address and machine code)
+       1* : add assemble code comment
 
      "arm step"
-       - controls feedback for arm_step
+          - controls feedback for arm_step
+       0* : no output
+       1  : print progress
+       2  : print partial (failed) evaluations
+       3  : print progress and failed evaluations
 
      "arm steps"
-       - controls feedback for arm_steps
+          - controls feedback for arm_steps
+       0  : no output
+       1* : print progress
+       2  : print runtime
+       3  : print progress and runtime
 
      "label arm steps"
-       - controls theorem tagging for arm_steps
+          - controls theorem tagging for arm_steps
+       0  : don't add label
+       1* : add label
 
    ------------------------------------------------------------------------ *)
 

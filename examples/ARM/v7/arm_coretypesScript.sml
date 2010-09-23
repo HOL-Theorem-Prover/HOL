@@ -139,10 +139,10 @@ val sign_extend_def = Define`
   sign_extend n (w:'a word) = 
     n2w (SIGN_EXTEND n (dimindex(:'a)) (w2n w)) : 'a word`;
 
-val align_def = with_flag (computeLib.auto_import_definitions,false) Define
+val align_def = zDefine
   `align (w : 'a word, n : num) : 'a word = n2w (n * (w2n w DIV n))`;
 
-val aligned_def = with_flag (computeLib.auto_import_definitions,false) Define`
+val aligned_def = zDefine`
   aligned (w : 'a word, n : num) = (w = align(w,n))`;
 
 val count_leading_zeroes_def = Define`
@@ -186,7 +186,7 @@ val bytes_def = Define`
   (bytes (w, 2) = [(7 >< 0) w; (15 >< 8) w]) /\
   (bytes (w, 1) = [w2w (w:word32)] : word8 list)`;
 
-val LSL_C_def = with_flag (computeLib.auto_import_definitions,false) Define`
+val LSL_C_def = zDefine`
   LSL_C (x: 'a word, shift:num) =
     if shift = 0 then
       ARB
@@ -194,21 +194,21 @@ val LSL_C_def = with_flag (computeLib.auto_import_definitions,false) Define`
       let extended_x = w2n x * (2 ** shift) in
         (x << shift, BIT (dimindex(:'a)) extended_x)`;
 
-val LSR_C_def = with_flag (computeLib.auto_import_definitions,false) Define`
+val LSR_C_def = zDefine`
   LSR_C (x: 'a word, shift:num) =
     if shift = 0 then
       ARB
     else
       (x >>> shift, BIT (shift - 1) (w2n x))`;
 
-val ASR_C_def = with_flag (computeLib.auto_import_definitions,false) Define`
+val ASR_C_def = zDefine`
   ASR_C (x: 'a word, shift:num) =
     if shift = 0 then
       ARB
     else
       (x >> shift, x ' (MIN (dimindex(:'a) - 1) (shift - 1)))`;
 
-val ROR_C_def = with_flag (computeLib.auto_import_definitions,false) Define`
+val ROR_C_def = zDefine`
   ROR_C (x: 'a word, shift:num) =
     if shift = 0 then
       ARB
@@ -228,7 +228,7 @@ val ROR_def = Define `ROR (x: 'a word, shift:num) = x #>> shift`;
 val RRX_def = Define`
   RRX (x: 'a word, carry_in:bool) = SND (word_rrx (carry_in,x))`;
 
-val ITAdvance_def = with_flag (computeLib.auto_import_definitions,false) Define`
+val ITAdvance_def = zDefine`
   ITAdvance (IT:word8) =
     if (2 >< 0) IT = 0b000w:word3 then
       0b00000000w
@@ -399,6 +399,59 @@ val lowest_set_bit_compute = Q.store_thm("lowest_set_bit_compute",
 val NOT_IN_EMPTY_SPECIFICATION = save_thm("NOT_IN_EMPTY_SPECIFICATION",
   (GSYM o SIMP_RULE (srw_ss()) [] o Q.SPEC `{}`) pred_setTheory.SPECIFICATION);
 
+(* ------------------------------------------------------------------------ *)
+
+val encode_psr_bit = Q.store_thm("encode_psr_bit",
+  `(!cpsr. encode_psr cpsr ' 31 = cpsr.N) /\
+   (!cpsr. encode_psr cpsr ' 30 = cpsr.Z) /\
+   (!cpsr. encode_psr cpsr ' 29 = cpsr.C) /\
+   (!cpsr. encode_psr cpsr ' 28 = cpsr.V) /\
+   (!cpsr. encode_psr cpsr ' 27 = cpsr.Q) /\
+   (!cpsr. encode_psr cpsr ' 26 = cpsr.IT ' 1) /\
+   (!cpsr. encode_psr cpsr ' 25 = cpsr.IT ' 0) /\
+   (!cpsr. encode_psr cpsr ' 24 = cpsr.J) /\
+   (!cpsr. encode_psr cpsr ' 23 = cpsr.Reserved ' 3) /\
+   (!cpsr. encode_psr cpsr ' 22 = cpsr.Reserved ' 2) /\
+   (!cpsr. encode_psr cpsr ' 21 = cpsr.Reserved ' 1) /\
+   (!cpsr. encode_psr cpsr ' 20 = cpsr.Reserved ' 0) /\
+   (!cpsr. encode_psr cpsr ' 19 = cpsr.GE ' 3) /\
+   (!cpsr. encode_psr cpsr ' 18 = cpsr.GE ' 2) /\
+   (!cpsr. encode_psr cpsr ' 17 = cpsr.GE ' 1) /\
+   (!cpsr. encode_psr cpsr ' 16 = cpsr.GE ' 0) /\
+   (!cpsr. encode_psr cpsr ' 15 = cpsr.IT ' 7) /\
+   (!cpsr. encode_psr cpsr ' 14 = cpsr.IT ' 6) /\
+   (!cpsr. encode_psr cpsr ' 13 = cpsr.IT ' 5) /\
+   (!cpsr. encode_psr cpsr ' 12 = cpsr.IT ' 4) /\
+   (!cpsr. encode_psr cpsr ' 11 = cpsr.IT ' 3) /\
+   (!cpsr. encode_psr cpsr ' 10 = cpsr.IT ' 2) /\
+   (!cpsr. encode_psr cpsr ' 9 = cpsr.E) /\
+   (!cpsr. encode_psr cpsr ' 8 = cpsr.A) /\
+   (!cpsr. encode_psr cpsr ' 7 = cpsr.I) /\
+   (!cpsr. encode_psr cpsr ' 6 = cpsr.F) /\
+   (!cpsr. encode_psr cpsr ' 5 = cpsr.T) /\
+   (!cpsr. encode_psr cpsr ' 4 = cpsr.M ' 4) /\
+   (!cpsr. encode_psr cpsr ' 3 = cpsr.M ' 3) /\
+   (!cpsr. encode_psr cpsr ' 2 = cpsr.M ' 2) /\
+   (!cpsr. encode_psr cpsr ' 1 = cpsr.M ' 1) /\
+   (!cpsr. encode_psr cpsr ' 0 = cpsr.M ' 0)`,
+  SRW_TAC [fcpLib.FCP_ss] [encode_psr_def]);
+
+val extract_modify =
+   (GEN_ALL o SIMP_CONV (arith_ss++fcpLib.FCP_ss++boolSimps.CONJ_ss)
+    [word_extract_def, word_bits_def, w2w])
+    ``(h >< l) ($FCP P) = value``;
+
+val encode_psr_bits = Q.store_thm("encode_psr_bits",
+  `(!cpsr. (26 >< 25) (encode_psr cpsr) = (1 >< 0) cpsr.IT) /\
+   (!cpsr. (23 >< 20) (encode_psr cpsr) = cpsr.Reserved) /\
+   (!cpsr. (19 >< 16) (encode_psr cpsr) = cpsr.GE) /\
+   (!cpsr. (15 >< 10) (encode_psr cpsr) = (7 >< 2) cpsr.IT) /\
+   (!cpsr. ( 4 >< 0 ) (encode_psr cpsr) = cpsr.M)`,
+  REPEAT STRIP_TAC \\ REWRITE_TAC [encode_psr_def, extract_modify]
+    \\ SRW_TAC [ARITH_ss,fcpLib.FCP_ss] [word_extract_def, word_bits_def, w2w]);
+
+(* ------------------------------------------------------------------------ *)
+
 val _ = computeLib.add_persistent_funs
   [("pairTheory.UNCURRY",         pairTheory.UNCURRY),
    ("pairTheory.LEX_DEF",         pairTheory.LEX_DEF),
@@ -433,5 +486,7 @@ val _ = computeLib.add_persistent_funs
    ("Encoding_EQ_Encoding",       theorem "Encoding_EQ_Encoding"),
    ("Encoding2num_thm",           theorem "Encoding2num_thm"),
    ("num2Encoding_thm",           theorem "num2Encoding_thm")];
+
+(* ------------------------------------------------------------------------ *)
 
 val _ = export_theory ();

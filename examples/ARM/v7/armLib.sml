@@ -89,7 +89,7 @@ local
                          else
                            ()
                  val thm = if (!trace_progress div 2) mod 2 = 1 then
-                             Lib.time (arm_step opt) opc
+                             Lib.real_time (arm_step opt) opc
                            else
                              arm_step opt opc
              in
