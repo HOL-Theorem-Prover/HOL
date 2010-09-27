@@ -183,7 +183,8 @@ val fold_FEMPTY = store_thm("fold_FEMPTY",``(!f v. fold f v FEMPTY = v)``,
 val infdom_lemma = prove(``!a b. ¬(a = b) /\ a IN FDOM x ==> (b IN FDOM x = b IN FDOM (x \\ a))``,
     RW_TAC (std_ss ++ PRED_SET_ss) [FDOM_DOMSUB, IN_DELETE]);
 
-val EXISTS_MEM_M2L = prove(``!x a. (?y. MEM (a,y) (M2L x)) = a IN FDOM x``,
+val EXISTS_MEM_M2L = store_thm("EXISTS_MEM_M2L",
+   ``!x a. (?y. MEM (a,y) (M2L x)) = a IN FDOM x``,
    GEN_TAC THEN completeInduct_on `FCARD x` THEN REPEAT STRIP_TAC THEN
    PAT_ASSUM ``!y. P`` (ASSUME_TAC o CONV_RULE (REPEATC (DEPTH_CONV (RIGHT_IMP_FORALL_CONV ORELSEC AND_IMP_INTRO_CONV)))) THEN
    FULL_SIMP_TAC std_ss [M2L_def] THEN
@@ -507,7 +508,7 @@ val MAPSET_DISTINCT = store_thm("MAPSET_DISTINCT",
     ``MAPSET R x ==> ALL_DISTINCT x``,
     METIS_TAC [MAPSET_def,ALL_DISTINCT_MAPFST]);
 
-val TOTAL_LEX = prove(``!R R'. total R /\ total R' ==> total (R LEX R')``,
+val TOTAL_LEX = store_thm("TOTAL_LEX",``!R R'. total R /\ total R' ==> total (R LEX R')``,
     RW_TAC std_ss [pairTheory.LEX_DEF,relationTheory.total_def] THEN
     Cases_on `x` THEN Cases_on `y` THEN RW_TAC std_ss [] THEN
     METIS_TAC []);
@@ -853,7 +854,7 @@ val SORTS_MINSORT = store_thm("SORTS_MINSORT",
     RW_TAC std_ss [] THEN IND_STEP_TAC THEN
     METIS_TAC [DROP_LT, MIN_MEM]);
 
-val TOTAL_K = store_thm("TRANSITIVE_K",
+val TOTAL_K = store_thm("TOTAL_K",
     ``total (K (K T))``, RW_TAC std_ss [relationTheory.total_def]);
 
 val TRANSITIVE_K = store_thm("TRANSITIVE_K",
@@ -1244,18 +1245,6 @@ val sorted_car_sorted = store_thm("sorted_car_sorted",
     RW_TAC std_ss [HD, SEXP_LT_def,pairTheory.LEX_DEF, SEXP_LE_def, hol_defaxiomsTheory.ACL2_SIMPS] THEN
     METIS_TAC [sexp_nil]);
 
-val MAPSET_sortedcar = store_thm("MAPSET_sortedcar", 
-    ``!l. MAPSET (SEXP_LE LEX K (K T)) l ==> (sorted_car (list (pair I I) l) = t)``,
-    Induct THEN ONCE_REWRITE_TAC [sorted_car_def] THEN RW_TAC std_ss [] THEN
-    IMP_RES_TAC MAPSET_CONS THEN RES_TAC THEN 
-    RW_TAC std_ss [MAPSET_def,translateTheory.list_def,translateTheory.pair_def, hol_defaxiomsTheory.ACL2_SIMPS,
-    	   	  sexpTheory.itel_def, MAP, ALL_DISTINCT, slemma] THEN
-    Cases_on `l` THEN FULL_SIMP_TAC std_ss [hol_defaxiomsTheory.ACL2_SIMPS,  translateTheory.list_def,
-    	     	 translateTheory.pair_def,MAPSET_def, slemma, NOT_CONS_NIL, HD] THEN
-    REPEAT (POP_ASSUM MP_TAC) THEN ALL_CASES (curry op= ``:sexp # sexp`` o type_of) THEN 
-    RW_TAC std_ss [pairTheory.LEX_DEF_THM,SEXP_LE_def, MAP, ALL_DISTINCT, MEM, SEXP_LT_def,hol_defaxiomsTheory.ACL2_SIMPS] THEN
-    PROVE_TAC []);
-
 val MAPSET_sortedcar = store_thm("MAPSET_sortedcar",
    ``!l. MAPSET (SEXP_LE LEX K (K T)) (sexp_to_list (sexp_to_pair I I) l) ==> (sorted_car l = t)``,
    Induct THEN ONCE_REWRITE_TAC [sorted_car_def] THEN TRY (REWRITE_TAC [hol_defaxiomsTheory.ACL2_SIMPS] THEN NO_TAC) THEN
@@ -1283,7 +1272,51 @@ val sorted_car_rewrite = store_thm("sorted_car_rewrite",
     FULL_SIMP_TAC std_ss [MAPSET_def] THEN
     POP_ASSUM MP_TAC THEN RW_TAC std_ss [hol_defaxiomsTheory.ACL2_SIMPS]);
 
+(*****************************************************************************)
+(* fdom_rewrite: bool (x IN FDOM y)                                          *)
+(*****************************************************************************)
+
+val assoc_list = store_thm("assoc_list",
+    ``!y f g x. ONE_ONE f ==> (assoc (f x) (list (pair f g) y) = if (?z. MEM (x,z) y) then pair f g (HD (FILTER ($= x o FST) y)) else nil)``,
+    Induct THEN ONCE_REWRITE_TAC [hol_defaxiomsTheory.assoc_def] THEN 
+    RW_TAC std_ss [MEM,translateTheory.list_def, hol_defaxiomsTheory.ACL2_SIMPS, sexpTheory.itel_def,bool_rwr, translateTheory.pair_def, FILTER, HD] THEN
+    REPEAT (POP_ASSUM MP_TAC) THEN RW_TAC std_ss [] THEN
+    TRY (POP_ASSUM (ASSUME_TAC o REWRITE_RULE [pairTheory.PAIR_FST_SND_EQ] o Q.SPEC `SND h`)) THEN
+    METIS_TAC [ONE_ONE_THM]);
+
+val not_pair_nil = prove(``!y f g. not (equal nil (pair f g y)) = t``,
+    Cases THEN RW_TAC std_ss [translateTheory.pair_def,hol_defaxiomsTheory.ACL2_SIMPS]);
+
+val not_nil_nil = prove(``not (equal nil nil) = nil``,
+    RW_TAC std_ss [translateTheory.pair_def,hol_defaxiomsTheory.ACL2_SIMPS]);
+
+val fdom_rewrite = store_thm("fdom_rewrite", 
+    ``!y x. ONE_ONE f ==> (bool (x IN FDOM y) = not (equal nil (assoc (f x) (encode_fmap f g y))))``,
+    REWRITE_TAC [encode_fmap_def,combinTheory.o_THM, GSYM EXISTS_MEM_M2L, bool_rwr] THEN
+    RW_TAC std_ss [assoc_list, not_pair_nil, translateTheory.TRUTH_REWRITES,not_nil_nil] THEN
+    METIS_TAC [PERM_MINSORT, MEM_PERM]);
+
+(*****************************************************************************)
+(* apply_rewrite: encode (y ' x)                                             *)
+(*****************************************************************************)
+
+val FILTER_EQ_SEXP_SORT = store_thm("FILTER_EQ_SEXP_SORT",
+    ``!x l f. FILTER ($= x o FST) (MINSORT (inv_image SEXP_LE f LEX K (K T)) l) = FILTER ($= x o FST) l``,
+    REPEAT STRIP_TAC THEN MATCH_MP_TAC (GSYM (PULL_RULE (DISCH_ALL (CONJUNCT2 (MATCH_MP (fst (EQ_IMP_RULE (SPEC_ALL STABLE_def))) (UNDISCH (SPEC_ALL MINSORT_STABLE))))))) THEN
+    REPEAT (RW_TAC std_ss [TRANS_INV, TRANSITIVE_LEX, TRANSITIVE_K, SEXP_LE_TRANSITIVE, TOTAL_INV, TOTAL_K, TOTAL_LEX, SEXP_LE_TOTAL, relationTheory.inv_image_def, pairTheory.LEX_DEF] THEN
+            REPEAT STRIP_TAC THEN REPEAT (POP_ASSUM MP_TAC) THEN ALL_CASES (K true)));
+
+val uniql_FILTER = prove(``!l. uniql l /\ MEM (x,y) l ==> (HD (FILTER ($= x o FST) l) = (x,y))``,
+    Induct THEN REPEAT STRIP_TAC THEN IMP_RES_TAC uniql_cons THEN RW_TAC std_ss [uniql_def, FILTER, MEM, HD] THEN FULL_SIMP_TAC std_ss [MEM] THEN RES_TAC THEN
+    FULL_SIMP_TAC std_ss [uniql_def,MEM] THEN RES_TAC THEN Cases_on `h` THEN FULL_SIMP_TAC std_ss []);
+
+val apply_rewrite = store_thm("apply_rewrite", 
+    ``!y x. ONE_ONE f /\ x IN FDOM y ==> (g (y ' x) = cdr (assoc (f x) (encode_fmap f g y)))``,
+    REWRITE_TAC [encode_fmap_def,combinTheory.o_THM, GSYM EXISTS_MEM_M2L, bool_rwr] THEN
+    RW_TAC std_ss [assoc_list, not_pair_nil, translateTheory.TRUTH_REWRITES,not_nil_nil, GSYM translateTheory.PAIR_THMS, FILTER_EQ_SEXP_SORT] THEN
+    STRIP_ASSUME_TAC (Q.SPEC `y` UNIQL_M2L) THEN
+    IMP_RES_TAC uniql_FILTER THEN
+    RW_TAC std_ss [] THEN
+    METIS_TAC [MEM_M2L, PERM_MINSORT, MEM_PERM]);
+
 val _ = export_theory();
-
-
-
