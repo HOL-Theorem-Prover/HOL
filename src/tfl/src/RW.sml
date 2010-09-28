@@ -22,7 +22,9 @@ open HolKernel Parse boolLib pairLib;
 
 
 val RW_ERR = mk_HOL_ERR "RW";
-val monitoring = ref false;
+val monitoring = ref 0
+
+val _ = register_trace ("TFL rewrite monitoring", monitoring, 20);
 
 (* Fix the grammar used by this file *)
 val ambient_grammars = Parse.current_grammars();
@@ -82,7 +84,7 @@ fun GSPEC_ALL th =
     let val (ants,(lhs,rhs)) = (I##dest_eq)(strip_imp_only(concl th))
         val embedded_in = !embedded_ref
         val islooper = (aconv lhs rhs) orelse (exists (embedded_in lhs) ants)
-    in if (islooper  andalso !monitoring)
+    in if (islooper  andalso !monitoring > 0)
        then Lib.say ("excluding possibly looping rewrite:\n"
                      ^thm_to_string th^"\n\n")
        else ();
@@ -274,7 +276,7 @@ fun RW_STEP {context=(cntxt,_),prover,simpls as RW{rw_net,...}} tm =
          case match f
           of NONE => try rst
            | SOME th =>
-             if !monitoring
+             if !monitoring > 0
              then case drop_opt (map match rst)
                   of [] => (HOL_MESG (String.concat
                               ["RW_STEP:\n", Parse.thm_to_string th]); th)
@@ -461,7 +463,7 @@ fun simple cnv (cps as {context as (cntxt,b),prover,simpls}) (ant,rst) =
   of SOME (L,(lhs,rhs)) =>
      let val outcome =
          if aconv lhs rhs then NO_CHANGE (L,lhs)
-         else let val cps' = 
+         else let val cps' =
                    if null L then cps else
                        {context = (map ASSUME L @ cntxt,b),
                         prover  = prover,
@@ -547,8 +549,8 @@ fun do_cong cnv cps th =
  let val ants = strip_conj (fst(dest_imp (concl th)))
      fun loop [] = []    (* loop proves each antecedent in turn. *)
        | loop (ant::rst) =
-           let val (outcome,rst') = 
-                 if not(is_forall ant) 
+           let val (outcome,rst') =
+                 if not(is_forall ant)
                    then simple cnv cps (ant,rst)
                    else complex cnv cps (ant,rst)
            in outcome::loop rst'
@@ -769,11 +771,12 @@ fun always_fails x y z = solver_err();
  *---------------------------------------------------------------------------*)
 
 fun std_solver _ context tm =
- let val _ = if !monitoring
+ let val _ = if !monitoring > 0
              then Lib.say("Solver: trying to lookup in context\n"
                           ^term_to_string tm^"\n") else ()
-     fun loop [] = (if !monitoring then Lib.say "Solver: couldn't find it.\n"
-                                else ();
+     fun loop [] = (if !monitoring > 0 then
+                      Lib.say "Solver: couldn't find it.\n"
+                    else ();
                     solver_err())
        | loop (x::rst) =
            let val c = concl x
@@ -785,7 +788,7 @@ fun std_solver _ context tm =
            end
      val thm = loop (boolTheory.TRUTH::context)
  in
-    if !monitoring then Lib.say "Solver: found it.\n" else ();
+    if !monitoring > 0 then Lib.say "Solver: found it.\n" else ();
     thm
  end;
 
@@ -797,13 +800,13 @@ fun std_solver _ context tm =
 
 fun rw_solver simpls context tm =
  let open boolSyntax
-     val _ = if !monitoring
+     val _ = if !monitoring > 0
              then Lib.say("Solver: attempting to prove (by rewriting)\n  "
                           ^term_to_string tm^"\n") else ()
      val th = TOP_DEPTH RW_STEP {context = (context,ADD),
                                   simpls = simpls,
                                   prover = rw_solver} tm
-     val _ = if !monitoring
+     val _ = if !monitoring > 0
              then let val (lhs,rhs) = dest_eq(concl th)
                   in if rhs = T
                      then Lib.say("Solver: proved\n"^thm_to_string th^"\n\n")
@@ -931,12 +934,12 @@ val _ = Parse.temp_set_grammars ambient_grammars;
 
 end (* structure RW *)
 
-(* 
+(*
  Given (p,th) from Defn.sml::extract:
 
  val tma = boolSyntax.rhs(concl th)
  val nested_ref = ref false;
- val (Pure thl,Context cntxt,Congs congs,Solver solver) = 
+ val (Pure thl,Context cntxt,Congs congs,Solver solver) =
      (Pure [CUT_LEM],
       Context ([],DONT_ADD),
       Congs congs,
@@ -1003,8 +1006,8 @@ do_cong cnv cps cong_thm;
 val th = cong_thm;
 val ants = strip_conj (fst(dest_imp (concl th)))
 val (ant::rst) = ants;
-val (outcome1,rst') = 
-     if not(is_forall ant) 
+val (outcome1,rst') =
+     if not(is_forall ant)
         then simple cnv cps (ant,rst)
         else complex cnv cps (ant,rst);
 val (ant::rst) = rst';

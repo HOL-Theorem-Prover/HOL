@@ -24,7 +24,6 @@ sig
 
   (* Solvers and monitoring *)
   val solver_err : unit -> 'a
-  val monitoring : bool ref
   val rw_solver : simpls -> thm list -> term -> thm
   val std_solver : 'a -> thm list -> term -> thm
   val always_fails : 'a -> 'b -> 'c -> 'd
