@@ -1,0 +1,9 @@
+#!/bin/bash
+HOLDIR=`pwd`
+echo Cleaning examples/machine-code
+cd ${HOLDIR}/examples/machine-code
+./cleanall
+cd ${HOLDIR}/examples/miller
+echo Cleaning examples/miller
+./cleanall
+cd ${HOLDIR}
