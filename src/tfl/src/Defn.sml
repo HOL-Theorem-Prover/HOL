@@ -50,7 +50,8 @@ fun dest_hd_eqn eqs =
 fun dest_hd_eqnl (hd_eqn::_) =
   let val (lhs,rhs) = dest_eq (snd (strip_forall (concl hd_eqn)))
   in (strip_comb lhs, rhs)
-  end;
+  end
+  | dest_hd_eqnl _ = raise Match
 
 fun extract_info constset db =
     let open TypeBasePure
@@ -107,12 +108,15 @@ val imp_elim =
 
 fun inject ty [v] = [v]
   | inject ty (v::vs) =
-     let val (_,[lty,rty]) = dest_type ty
+     let val (lty,rty) = case dest_type ty of
+                           (_, [x,y]) => (x,y)
+                         | _ => raise Bind
          val res = mk_comb(mk_const("INL", lty-->ty),v)
          val inr = curry mk_comb (mk_const("INR", rty-->ty))
      in
        res::map inr (inject rty vs)
      end
+  | inject ty [] = raise Match
 
 fun project ty M =
  if is_vartype ty then [M]
