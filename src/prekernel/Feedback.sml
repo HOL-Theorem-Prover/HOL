@@ -166,11 +166,11 @@ fun trfp_get (TRFP{get,...}) = get()
 fun ref2trfp r = TRFP {get = (fn () => !r), set = (fn i => r := i)}
 
 type trace_record =
-  {name : string, value : tracefns, default : int, maximum : int}
+  {value : tracefns, default : int, maximum : int}
 
-val trace_list = ref ([]: trace_record list);
+val trace_map = ref (Binarymap.mkDict String.compare)
 
-fun find_record n = List.find (fn r => #name r = n) (!trace_list)
+fun find_record n = Binarymap.peek (!trace_map, n)
 
 val WARN = HOL_WARNING "Feedback";
 
@@ -178,11 +178,13 @@ fun register_trace (nm, r, max) =
   if !r < 0 orelse max < 0 then
     raise ERR "register_trace" "Can't have trace values less than zero."
   else
-    case find_record nm of
-      NONE   => trace_list := {name = nm, value = ref2trfp r,
-                               default =  !r, maximum = max}::(!trace_list)
-    | SOME _ => WARN "register_trace"
-        ("Already a trace "^quote nm^" registered. No action taken");
+    (case Binarymap.peek(!trace_map, nm) of
+       NONE => ()
+     | SOME _ => WARN "register_trace"
+                      ("Replacing a trace with name "^ quote nm);
+    trace_map := Binarymap.insert(!trace_map, nm,
+                                  {value = ref2trfp r, default = !r,
+                                   maximum = max}))
 
 fun register_ftrace (nm, (get,set), max) = let
   val default = get()
@@ -190,28 +192,35 @@ in
   if default < 0 orelse max < 0 then
     raise ERR "register_ftrace" "Can't have trace values less than zero."
   else
-    case find_record nm of
-      NONE => trace_list := {name = nm, value = TRFP{get = get, set = set},
-                             default = default, maximum = max}::(!trace_list)
-    | SOME _ => WARN "register_ftrace"
-                 ("Already a trace "^quote nm^" registered. No action taken")
+    (case Binarymap.peek(!trace_map, nm) of
+       NONE => ()
+     | SOME _ => WARN "register_ftrace"
+                      ("Replacing a trace with name "^ quote nm);
+     trace_map := Binarymap.insert(!trace_map, nm,
+                                {value = TRFP{get = get, set = set},
+                                 default = default, maximum = max}))
 end
 
-fun register_btrace (nm, bref) =
-  case find_record nm of
-    NONE => trace_list := {name = nm,
-                           value = TRFP{get= (fn () => if !bref then 1 else 0),
-                                        set= (fn i => bref := (i > 0))},
-                           default = if !bref then 1 else 0,
-                           maximum = 1}::(!trace_list)
+fun register_btrace (nm, bref) = let
+in
+  case Binarymap.peek(!trace_map, nm) of
+    NONE => ()
   | SOME _ => WARN "register_btrace"
-               ("Already a trace "^quote nm^" registered. No action taken");
+                   ("Replacing a trace with name "^ quote nm);
+  trace_map :=
+    Binarymap.insert(!trace_map, nm,
+                     {value = TRFP{get= (fn () => if !bref then 1 else 0),
+                                   set= (fn i => bref := (i > 0))},
+                      default = if !bref then 1 else 0,
+                      maximum = 1})
+end
 
-fun traces() =
-  Listsort.sort (fn (r1, r2) => String.compare (#name r1, #name r2))
-  (map (fn {name = n, value, default = d,maximum} =>
-        {name=n, trace_level = trfp_get value, default=d, max = maximum})
-   (!trace_list));
+fun traces() = let
+  fun foldthis (n,{value,default = d, maximum}, acc) =
+      {name=n, trace_level = trfp_get value, default=d, max = maximum} :: acc
+in
+  Binarymap.foldr foldthis [] (!trace_map)
+end
 
 fun set_trace nm newvalue =
  case find_record nm of
@@ -231,7 +240,8 @@ fun reset_trace nm =
                 ("No trace "^quote nm^" is registered");
 
 fun reset_traces () =
-  List.app (fn {value,default,...} => trfp_set value default) (!trace_list)
+  Binarymap.app (fn (_, {value,default,...}) => trfp_set value default)
+                (!trace_map)
 
 fun current_trace s =
   case find_record s of
