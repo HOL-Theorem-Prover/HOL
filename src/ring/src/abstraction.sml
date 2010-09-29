@@ -237,11 +237,12 @@ fun compute_cst_arg_map (fv,impargs) strm =
       val pr_var = S strm o fst o dest_var
       fun sep() = (S strm ","; NL strm; S strm "          ")
   in
-  S strm "  let open Parse abstraction"; NL strm;
-  S strm "      val [";
+  S strm "  let open Parse abstraction";                  NL strm;
+  S strm "      fun sing [x] = x | sing _ = raise Match"; NL strm;
+  S strm "      val ";
     pr_list_sep pr_var (fn() => S strm ",") (!fv_ass);
-    S strm "] = #Vals P";      NL strm;
-  S strm "      val ctab =";   NL strm;
+    S strm " = sing (#Vals P)"; NL strm;
+  S strm "      val ctab =";    NL strm;
   S strm "        [ ";
   pr_list_sep (fn (x,iargs) =>
       (S strm ("Term`"^x^" ");

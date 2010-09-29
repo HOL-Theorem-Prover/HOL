@@ -757,7 +757,9 @@ val generalize_recursion_theorem = let
     fun mk_inls ty =
       if is_vartype ty then [mk_var("x",ty)]
       else let
-        val (_,[ty1,ty2]) = dest_type ty
+        val (ty1,ty2) = case dest_type ty
+                        of (_,[ty1,ty2]) => (ty1,ty2)
+                         | _ => raise Match
         val inls1 = mk_inls ty1
         and inls2 = mk_inls ty2
         val inl =
@@ -778,7 +780,9 @@ val generalize_recursion_theorem = let
     fun mk_inls sof ty =
       if is_vartype ty then [sof]
       else let
-        val (_,[ty1,ty2]) = dest_type ty
+        val (ty1,ty2) = case dest_type ty
+                        of (_,[ty1,ty2]) => (ty1,ty2)
+                         | _ => raise Match
         val outl =
           mk_const("sum", "OUTL",[(Type.alpha |-> ty1), (Type.beta |-> ty2)])
         and outr =

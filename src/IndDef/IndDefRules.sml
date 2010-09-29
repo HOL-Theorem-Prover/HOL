@@ -306,6 +306,7 @@ local fun mkred Fn (c::cs) =
                      end
                 end
         end
+        | mkred _ _ = raise Match
 in
 fun RED_CASE Fn pat =
  let val bdy = snd(strip_forall pat)
@@ -336,6 +337,7 @@ fun APPLY_CASE [f] tm = f tm
      let val (conj1,conj2) = dest_conj tm
      in MK_COMB (AP_TERM boolSyntax.conjunction (f conj1),APPLY_CASE fs conj2)
      end
+  | APPLY_CASE _ _ = raise Match
 
 fun RED_WHERE Fn body =
  let val rfns = map (RED_CASE Fn) (strip_conj (fst(dest_imp body)))

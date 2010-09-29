@@ -430,7 +430,7 @@ fun BACKCHAIN_TAC th =
     in fn (asl,w) =>
         let val th1 = match_fn w
             val (ant,con) = dest_imp(concl th1)
-        in ([(asl,ant)],fn [t] => HO_MATCH_MP th1 t)
+        in ([(asl,ant)],fn [t] => HO_MATCH_MP th1 t | _ => raise Match)
         end
     end;;
 

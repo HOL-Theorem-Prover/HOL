@@ -134,7 +134,9 @@ fun mkbase (entries : Database.entry list) =
 	    let fun h 0 xs = (Empty, xs)
 		  | h n xs =
 		    let val m = n div 2
-			val (t1, (key, value) :: yr) = h m xs
+			val (t1, l) = h m xs
+                        val (key, value) = hd l
+                        val yr = tl l
 			val (t2, zs)                 = h (n-m-1) yr
 		    in (Node(key, value, t1, t2), zs) end
 	    in #1 (h (length xs) xs) end

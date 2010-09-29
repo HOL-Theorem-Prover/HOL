@@ -498,7 +498,7 @@ fun GTAC y (A,g) =
    let val (Bvar,Body) = dest_forall g
        and y' = Term.variant (free_varsl (g::A)) y
    in ([(A, subst[Bvar |-> y'] Body)],
-       fn [th] => GEN Bvar (INST [y' |-> Bvar] th))
+       fn [th] => GEN Bvar (INST [y' |-> Bvar] th) | _ => raise Match)
    end;
 
 (* ---------------------------------------------------------------------*)
@@ -640,7 +640,9 @@ fun INDUCT_THEN th =
      val tacsf = TACS hy
      val v = genvar (type_of Bvar)
      val eta_th = CONV_RULE (RAND_CONV ETA_CONV) (UNDISCH(SPEC v th))
-     val ([asm],con) = dest_thm eta_th
+     val (asm,con) = case dest_thm eta_th
+                     of ([asm],con) => (asm,con)
+                      | _ => raise Match
      val ind = GEN v (SUBST [boolvar |-> GALPHA asm]
                             (mk_imp(boolvar, con))
                             (DISCH asm eta_th))
@@ -957,7 +959,9 @@ local val B = Type.bool
 in
 fun prove_induction_thm th =
    let val (Bvar,Body) = dest_abs(rand(snd(strip_forall(concl th))))
-       val (_,[ty, rty]) = dest_type (type_of Bvar)
+       val (ty,rty) = case dest_type (type_of Bvar)
+                      of (_,[ty, rty]) => (ty,rty)
+                       | _ => raise Match
        val inst = INST_TYPE [rty |-> B] th
        val P = mk_primed_var("P", ty --> B)
        and v = genvar ty
@@ -1299,7 +1303,9 @@ fun case_cong_term case_def =
  *---------------------------------------------------------------------------*)
 
 fun EQ_EXISTS_LINTRO (thm,(vlist,theta)) =
-  let val [veq] = filter (can dest_eq) (hyp thm)
+  let val veq = case filter (can dest_eq) (hyp thm)
+                of [veq] => veq
+                 | _ => raise Match
       fun CHOOSER v (tm,thm) =
         let val w = (case (subst_assoc (fn w => v=w) theta)
                       of SOME w => w
@@ -1391,7 +1397,8 @@ fun list_variant l1 [] = []
        end;
 
 fun mk_subst2 [] [] = []
-  | mk_subst2 (a::L1) (b::L2) = (b |-> a)::mk_subst2 L1 L2;
+  | mk_subst2 (a::L1) (b::L2) = (b |-> a)::mk_subst2 L1 L2
+  | mk_subst2 _ _ = raise Match;
 
 
 (* ----------------------------------------------------------------------*)
