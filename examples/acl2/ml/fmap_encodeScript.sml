@@ -617,24 +617,20 @@ val COM_LT_TOTAL = prove(``!a b. a < b \/ b < a \/ (a = b : complex_rational)``,
 (* SEXP Ordering theorems                                                    *)
 (*****************************************************************************)
 
-val sexp_lt_def = TotalDefn.tDefine "sexp_lt" `sexp_lt a b =
-    itel [(andl [consp a ; consp b], ite (sexp_lt (car a) (car b)) t (ite (eq (car a) (car b)) (sexp_lt (cdr a) (cdr b)) nil)) ;
-          (consp a, t) ; (consp b, nil)]
-         (andl [alphorder a b ; not (equal a b)])`
-   (WF_REL_TAC `measure (sexp_size o FST)` THEN RW_TAC std_ss [hol_defaxiomsTheory.ACL2_SIMPS]);
+val SEXP_LE_def = Define `SEXP_LE a b = |= lexorder a b`;
 
-val SEXP_LT_def = Define `SEXP_LT a b = |= sexp_lt a b`;
+val _ = overload_on ("<=", ``SEXP_LE``);
 
-val _ = overload_on ("<", ``SEXP_LT``);
+val lexorder_def = hol_defaxiomsTheory.lexorder_def;
 
 val sym_rwr = prove(``
-    (!a b c. sexp_lt (sym a b) (chr c) = nil) /\ 
-    (!a b c d. sexp_lt (sym a b) (cons c d) = nil) /\  
-    (!a b c. sexp_lt (sym a b) (str c) = nil) /\
-    (!a b c. sexp_lt (chr a) (sym b c) = t) /\ 
-    (!a b c d. sexp_lt (cons a b) (sym c d) = t) /\  
-    (!a b c. sexp_lt (str a) (sym b c) = t)``,
-    ONCE_REWRITE_TAC [sexp_lt_def] THEN RW_TAC std_ss [hol_defaxiomsTheory.ACL2_SIMPS, sexpTheory.itel_def]);
+    (!a b c. lexorder (sym a b) (chr c) = nil) /\ 
+    (!a b c d. lexorder (sym a b) (cons c d) = t) /\  
+    (!a b c. lexorder (sym a b) (str c) = nil) /\
+    (!a b c. lexorder (chr a) (sym b c) = t) /\ 
+    (!a b c d. lexorder (cons a b) (sym c d) = nil) /\  
+    (!a b c. lexorder (str a) (sym b c) = t)``,
+    ONCE_REWRITE_TAC [lexorder_def] THEN RW_TAC std_ss [hol_defaxiomsTheory.ACL2_SIMPS, sexpTheory.itel_def]);
 
 val bool_rwr = prove(``!a. bool a = if a then t else nil``,Cases THEN RW_TAC std_ss [translateTheory.bool_def]);
 
@@ -653,15 +649,15 @@ val len_not_nil = prove(``!a. ~(len a = nil)``,
      Cases THEN ONCE_REWRITE_TAC [hol_defaxiomsTheory.len_def] THEN RW_TAC std_ss [hol_defaxiomsTheory.ACL2_SIMPS, sexpTheory.nat_def, sexpTheory.int_def, sexpTheory.cpx_def] THEN
      Cases_on `len s0` THEN RW_TAC std_ss [hol_defaxiomsTheory.ACL2_SIMPS, sexpTheory.nat_def, sexpTheory.int_def]);
 
-val sexp_lt_str_string = prove(``!a b. sexp_lt (str a) (str b) = if STRING_LESS a b then t else nil``,
-    ONCE_REWRITE_TAC [sexp_lt_def] THEN 
+val lexorder_str_string = prove(``!a b. lexorder (str a) (str b) = if STRING_LESS_EQ a b then t else nil``,
+    ONCE_REWRITE_TAC [lexorder_def] THEN 
     RW_TAC std_ss [sexpTheory.coerce_string_to_list_def, hol_defaxiomsTheory.ACL2_SIMPS, sexpTheory.itel_def] THEN
     REPEAT (CHANGED_TAC (REPEAT (POP_ASSUM MP_TAC) THEN RW_TAC std_ss [sexpTheory.COMMON_LISP_def,sexpTheory.csym_def, sexpTheory.STRING_LESS_IRREFLEXIVE])) THEN
     FULL_SIMP_TAC std_ss [sexp_str_lt_l1, GSYM sexpTheory.int_def, GSYM sexpTheory.nil_def] THEN
-    METIS_TAC [sexpTheory.STRING_LESS_TRICHOTOMY, sexpTheory.STRING_LESS_IRREFLEXIVE, sexpTheory.STRING_LESS_TRANS, len_not_nil]);
+    METIS_TAC [sexpTheory.STRING_LESS_TRICHOTOMY, sexpTheory.STRING_LESS_IRREFLEXIVE, sexpTheory.STRING_LESS_TRANS, sexpTheory.STRING_LESS_EQ_def, len_not_nil]);
 
-val sexp_lt_char = prove(``!a b. sexp_lt (chr a) (chr b) = if ORD a < ORD b then t else nil``,
-    ONCE_REWRITE_TAC [sexp_lt_def] THEN RW_TAC std_ss [hol_defaxiomsTheory.ACL2_SIMPS, sexpTheory.itel_def] THEN
+val lexorder_char = prove(``!a b. lexorder (chr a) (chr b) = if ORD a <= ORD b then t else nil``,
+    ONCE_REWRITE_TAC [lexorder_def] THEN RW_TAC std_ss [hol_defaxiomsTheory.ACL2_SIMPS, sexpTheory.itel_def] THEN
     REPEAT (CHANGED_TAC (REPEAT (POP_ASSUM MP_TAC) THEN 
             RW_TAC std_ss [GSYM translateTheory.INT_THMS, translateTheory.bool_def, integerTheory.INT_GT_CALCULATE, integerTheory.INT_LT_CALCULATE, hol_defaxiomsTheory.ACL2_SIMPS, bool_rwr])) THEN
     FULL_SIMP_TAC std_ss [GSYM stringTheory.ORD_11] THEN 
@@ -674,15 +670,15 @@ val string_less_l_nil = prove(``!a b. string_less_l (str a) (str b) (int 0) = ni
                   sexpTheory.STRING_LESS_IRREFLEXIVE, GSYM translateTheory.INT_LT, integerTheory.INT_LT_CALCULATE,
                   bool_rwr, sexpTheory.STRING_LESS_def, sexpTheory.LIST_LEX_ORDER_def, MAP, stringTheory.ORD_11, sexpTheory.cpx_def]);
 
-val sexp_lt_sym = prove(``sexp_lt (sym a b) (sym c d) =
+val lexorder_sym = prove(``lexorder (sym a b) (sym c d) =
     if ~(a = "") /\ (BASIC_INTERN b a = sym a b) 
        then if ~(c = "") /\ (BASIC_INTERN d c = sym c d)
-               then if STRING_LESS b d \/ (b = d) /\ STRING_LESS a c then t else nil
+               then if STRING_LESS b d \/ (b = d) /\ STRING_LESS_EQ a c then t else nil
  	       else t
        else if ~(c = "") /\ (BASIC_INTERN d c = sym c d)
        	       then nil
-	       else if STRING_LESS a c \/ (a = c) /\ STRING_LESS b d then t else nil``,
-    ONCE_REWRITE_TAC [sexp_lt_def] THEN 
+	       else if STRING_LESS a c \/ (a = c) /\ STRING_LESS_EQ b d then t else nil``,
+    ONCE_REWRITE_TAC [lexorder_def] THEN 
     REWRITE_TAC [sexpTheory.coerce_string_to_list_def, hol_defaxiomsTheory.ACL2_SIMPS, sexpTheory.itel_def, hol_defaxiomsTheory.ACL2_SIMPS,
                 sexpTheory.SEXP_SYM_LESS_EQ_def,sexpTheory.SEXP_SYM_LESS_def] THEN
     REPEAT (CHANGED_TAC (REPEAT (POP_ASSUM MP_TAC) THEN RW_TAC (std_ss ++ boolSimps.LET_ss) 
@@ -693,33 +689,23 @@ val sexp_lt_sym = prove(``sexp_lt (sym a b) (sym c d) =
 val vars1 = [``num (com a b)``, ``sym a b``, ``str a``, ``chr a``, ``cons a b``];
 val vars2 = [``num (com c d)``, ``sym c d``, ``str c``, ``chr c``, ``cons c d``];
 
-val sexp_lt_terms = flatten (map (fn y => (map (fn x => mk_comb(mk_comb(``sexp_lt``, x), y)) vars1)) vars2);
-val sexp_lt_thms = map (REWRITE_CONV [SEXP_LT_def] THENC 
-                        REWRITE_CONV [sexp_lt_str_string, sexp_lt_char, sexp_lt_sym] THENC ONCE_REWRITE_CONV [sexp_lt_def] THENC 
-                        REWRITE_CONV [hol_defaxiomsTheory.ACL2_SIMPS,sexpTheory.itel_def, sym_rwr,
-    		       		      sexpTheory.SEXP_SYM_LESS_EQ_def, sexpTheory.SEXP_SYM_LESS_def]) sexp_lt_terms;
+val lexorder_terms = flatten (map (fn y => (map (fn x => mk_comb(mk_comb(``lexorder``, x), y)) vars1)) vars2);
+val lexorder_thms = map (REWRITE_CONV [lexorder_str_string, lexorder_char, lexorder_sym] THENC ONCE_REWRITE_CONV [lexorder_def] THENC 
+                         REWRITE_CONV [hol_defaxiomsTheory.ACL2_SIMPS,sexpTheory.itel_def, sym_rwr,
+    		       	               sexpTheory.SEXP_SYM_LESS_EQ_def, sexpTheory.SEXP_SYM_LESS_def]) lexorder_terms;
 
-val SEXP_LT_RWRS = LIST_CONJ (hol_defaxiomsTheory.ACL2_SIMPS::bool_rwr::
-                              METIS_PROVE [] ``((if a then b else c) = d) = (a /\ (b = d) \/ ~a /\ (c = d))``::sexp_lt_thms);
+val SEXP_LE_RWRS = LIST_CONJ (hol_defaxiomsTheory.ACL2_SIMPS::bool_rwr::
+                              METIS_PROVE [] ``((if a then b else c) = d) = (a /\ (b = d) \/ ~a /\ (c = d))``::lexorder_thms);
 
 fun ALL_CASES f (a,g) =
-let val v = filter f (free_vars g)    
+let val v = filter (fn x => f x handle _ => false) (free_vars g)    
 in  (NTAC (length a) (POP_ASSUM MP_TAC) THEN 
      MAP_EVERY (fn b => SPEC_TAC (b,b)) v THEN
      REPEAT Cases THEN
      NTAC (length a) DISCH_TAC) (a,g)
 end;
 
-val SEXP_LT = REWRITE_RULE [hol_defaxiomsTheory.ACL2_SIMPS] SEXP_LT_def;
-
-val SEXP_LT_IRREFLEXIVE = store_thm("SEXP_LT_IRREFLEXIVE",
-    ``irreflexive SEXP_LT``,
-    REWRITE_TAC [relationTheory.irreflexive_def, SEXP_LT] THEN
-    completeInduct_on `sexp_size x` THEN 
-    REPEAT Cases THEN ALL_CASES (curry op= ``:complex_rational`` o type_of) THEN
-    RW_TAC std_ss [SEXP_LT_RWRS, sexpTheory.STRING_LESS_IRREFLEXIVE, ratTheory.RAT_LES_REF] THEN
-    IND_STEP_TAC THEN
-    RW_TAC arith_ss [sexpTheory.sexp_size_def]);
+val SEXP_LE = REWRITE_RULE [hol_defaxiomsTheory.ACL2_SIMPS] SEXP_LE_def;
 
 fun rattac (a,goal) =
 let val rats = filter (curry op= ``:rat`` o type_of) (free_vars goal)
@@ -729,44 +715,62 @@ in
 end;
 
 fun droptac (a,goal) = 
-    (if free_in ``sexp_lt s0 s0'`` goal
+    (if free_in ``lexorder s0 s0'`` goal
        then ALL_TAC
        else REPEAT (POP_ASSUM (K ALL_TAC))) (a,goal);
 
-val SEXP_LT_TRANSITIVE = time store_thm ("SEXP_LT_TRANSITIVE",
-    ``transitive SEXP_LT``,
-    REWRITE_TAC [relationTheory.transitive_def, SEXP_LT] THEN
-    completeInduct_on `sexp_size x + sexp_size y + sexp_size z` THEN 
-    REPEAT Cases THEN ALL_CASES (curry op= ``:complex_rational`` o type_of) THEN
-    REWRITE_TAC [SEXP_LT_RWRS, sexpTheory.sexp_size_def,
-                 ratTheory.RAT_LEQ_LES,ratTheory.rat_leq_def, complex_rationalTheory.complex_rational_11, DE_MORGAN_THM] THEN
-    STRIP_TAC THEN droptac THEN rattac THEN ASM_REWRITE_TAC [] THEN TRY STRIP_TAC THEN
-    PROVE_TAC [sexpTheory.STRING_LESS_TRANS, ratTheory.RAT_LES_TRANS, ratTheory.RAT_LES_REF, arithmeticTheory.LESS_TRANS,
-    	       DECIDE ``a + b + c < 1n + (a + a') + (1 + (b + b')) + (1 + (c + c'))``,
-               DECIDE ``a' + b' + c' < 1n + (a + a') + (1 + (b + b')) + (1 + (c + c'))``, sexpTheory.sexp_distinct]);
-
-val SEXP_LE_def = Define `SEXP_LE a b = (a = b) \/ SEXP_LT a b`;
-
-val SEXP_LE_TOTAL = store_thm("SEXP_LE_TOTAL", ``total SEXP_LE``,
-    REWRITE_TAC [relationTheory.total_def, SEXP_LT, SEXP_LE_def] THEN
+val SEXP_LE_ANTISYMMETRIC = time store_thm("SEXP_LE_ANTISYMMETRIC",
+    ``antisymmetric SEXP_LE``,
+    REWRITE_TAC [relationTheory.antisymmetric_def, SEXP_LE] THEN
     completeInduct_on `sexp_size x + sexp_size y` THEN 
     REPEAT Cases THEN ALL_CASES (curry op= ``:complex_rational`` o type_of) THEN
-    REWRITE_TAC [SEXP_LT_RWRS, sexpTheory.sexp_size_def] THEN
+    REWRITE_TAC [SEXP_LE_RWRS, sexpTheory.sexp_size_def, complex_rationalTheory.complex_rational_11, DE_MORGAN_THM] THEN
+    STRIP_TAC THEN droptac THEN TRY STRIP_TAC THEN
+    PROVE_TAC [
+        sexpTheory.STRING_LESS_EQ_SYM, sexpTheory.STRING_LESS_IRREFLEXIVE, sexpTheory.STRING_LESS_SYM,
+        stringTheory.ORD_11, arithmeticTheory.LESS_EQUAL_ANTISYM,
+        ratTheory.RAT_LEQ_ANTISYM, ratTheory.RAT_LEQ_LES, ratTheory.RAT_LES_ANTISYM,
+        DECIDE ``a + b < 1n + (a + a') + (1 + (b + b'))``,
+        DECIDE ``a' + b' < 1n + (a + a') + (1 + (b + b'))``]);
+
+val sexp_le_antirewrite = REWRITE_RULE [hol_defaxiomsTheory.ACL2_SIMPS,relationTheory.antisymmetric_def,SEXP_LE_def] SEXP_LE_ANTISYMMETRIC;
+
+val SEXP_LE_TRANSITIVE = time store_thm ("SEXP_LE_TRANSITIVE",
+    ``transitive SEXP_LE``,
+    REWRITE_TAC [relationTheory.transitive_def, SEXP_LE] THEN
+    completeInduct_on `sexp_size x + sexp_size y + sexp_size z` THEN 
+    REPEAT Cases THEN ALL_CASES (curry op= ``:complex_rational`` o type_of) THEN
+    REWRITE_TAC [SEXP_LE_RWRS, sexpTheory.sexp_size_def, complex_rationalTheory.complex_rational_11, DE_MORGAN_THM] THEN
+    STRIP_TAC THEN droptac THEN rattac THEN ASM_REWRITE_TAC [] THEN TRY STRIP_TAC THEN
+    PROVE_TAC [sexpTheory.STRING_LESS_EQ_def, sexpTheory.STRING_LESS_TRANS, sexpTheory.STRING_LESS_EQ_TRANS,
+              ratTheory.RAT_LES_TRANS, ratTheory.RAT_LES_REF, ratTheory.RAT_LEQ_TRANS, ratTheory.RAT_LEQ_LES,
+              arithmeticTheory.LESS_TRANS, arithmeticTheory.LESS_EQ_TRANS,
+              sexp_le_antirewrite,
+              DECIDE ``a + b + c < 1n + (a + a') + (1 + (b + b')) + (1 + (c + c'))``, 
+              DECIDE ``a' + b' + c' < 1n + (a + a') + (1 + (b + b')) + (1 + (c + c'))``, sexpTheory.sexp_distinct]);
+
+val SEXP_LE_TOTAL = store_thm("SEXP_LE_TOTAL", ``total SEXP_LE``,
+    REWRITE_TAC [relationTheory.total_def, SEXP_LE_def, hol_defaxiomsTheory.ACL2_SIMPS] THEN
+    completeInduct_on `sexp_size x + sexp_size y` THEN 
+    REPEAT Cases THEN ALL_CASES (curry op= ``:complex_rational`` o type_of) THEN
+    REWRITE_TAC [SEXP_LE_RWRS, sexpTheory.sexp_size_def, DE_MORGAN_THM] THEN
     METIS_TAC [ratTheory.RAT_LEQ_LES,ratTheory.rat_leq_def, sexpTheory.STRING_LESS_TRICHOTOMY, arithmeticTheory.LESS_CASES, 
-               arithmeticTheory.LESS_OR_EQ,stringTheory.ORD_11, ratTheory.RAT_LES_TOTAL,
+               arithmeticTheory.LESS_OR_EQ,stringTheory.ORD_11, ratTheory.RAT_LES_TOTAL, sexpTheory.STRING_LESS_EQ_def,
                DECIDE ``a + c < 1n + (a + b) + (1 + (c + d))``, DECIDE ``b + d < 1n + (a + b) + (1 + (c + d))``]);
 
-val SEXP_LE_TRANSITIVE = store_thm("SEXP_LE_TRANSITIVE",
-    ``transitive SEXP_LE``,
-    REWRITE_TAC [relationTheory.transitive_def, SEXP_LE_def] THEN
-    METIS_TAC [REWRITE_RULE [relationTheory.transitive_def] SEXP_LT_TRANSITIVE]);
+val SEXP_LT_def = Define `SEXP_LT a b = ~(a = b) /\ SEXP_LE a b`;
 
-val SEXP_LE_ANTISYMMETRIC = store_thm("SEXP_LE_ANTISYMMETRIC",
-    ``antisymmetric SEXP_LE``,
-    METIS_TAC [SEXP_LT_TRANSITIVE, SEXP_LT_IRREFLEXIVE, relationTheory.transitive_def, 
-    	      relationTheory.irreflexive_def, relationTheory.antisymmetric_def, SEXP_LE_def]);
+val _ = overload_on ("<", ``SEXP_LT``);
 
-val _ = overload_on ("<=", ``SEXP_LE``);
+val SEXP_LT_IRREFLEXIVE = store_thm("SEXP_LT_IRREFLEXIVE",
+    ``irreflexive SEXP_LT``,
+    METIS_TAC [SEXP_LT_def, relationTheory.irreflexive_def]);
+
+val SEXP_LT_TRANSITIVE = store_thm("SEXP_LT_TRANSITIVE",
+    ``transitive SEXP_LT``,
+    REWRITE_TAC [relationTheory.transitive_def, SEXP_LT_def] THEN
+    METIS_TAC (map (REWRITE_RULE [relationTheory.transitive_def,relationTheory.antisymmetric_def])
+                    [SEXP_LE_TRANSITIVE, SEXP_LE_ANTISYMMETRIC]));
 
 (*****************************************************************************)
 (* Stable sort proofs                                                        *)
@@ -1187,7 +1191,7 @@ val DETECT_GENERAL_FMAP = store_thm("DETECT_GENERAL_FMAP",
 
 val sorted_car_def = TotalDefn.tDefine "sorted_car" `
     sorted_car a = ite (andl [consp a ; consp (cdr a)])
-                       (andl [sexp_lt (caar a) (caadr a) ; sorted_car (cdr a)])
+                       (andl [not (equal (caar a) (caadr a)) ; lexorder (caar a) (caadr a) ; sorted_car (cdr a)])
                        t`
     (WF_REL_TAC `measure sexp_size` THEN Cases_on `a` THEN 
      RW_TAC std_ss [hol_defaxiomsTheory.ACL2_SIMPS]);
@@ -1196,24 +1200,23 @@ val sexp_nil = REWRITE_RULE [hol_defaxiomsTheory.ACL2_SIMPS] (
          prove(``!a f. (consp a = nil) ==> (sexp_to_list f a = []) /\ (car a = nil) /\ (cdr a = nil)``,
          Cases THEN RW_TAC std_ss [translateTheory.sexp_to_list_def, hol_defaxiomsTheory.ACL2_SIMPS]));
 
+val trans_rewrite = REWRITE_RULE [SEXP_LE_def, hol_defaxiomsTheory.ACL2_SIMPS, relationTheory.transitive_def] SEXP_LE_TRANSITIVE;
+val sym_rewrite = REWRITE_RULE [SEXP_LE_def, hol_defaxiomsTheory.ACL2_SIMPS, relationTheory.antisymmetric_def] SEXP_LE_ANTISYMMETRIC;
+
 val lemma = prove(
-     ``!x' x. SEXP_LT (car x) (car (car x')) /\ (sorted_car x' = t) ==> ~MEM (car x) (MAP FST (sexp_to_list (sexp_to_pair I I) x'))``,
+     ``!x' x. ~(lexorder (car x) (car (car x')) = nil) /\ ~(car x = car (car x')) /\ (sorted_car x' = t) ==> ~MEM (car x) (MAP FST (sexp_to_list (sexp_to_pair I I) x'))``,
      Induct THEN ONCE_REWRITE_TAC [sorted_car_def] THEN
      REWRITE_TAC [hol_defaxiomsTheory.ACL2_SIMPS, translateTheory.sexp_to_list_def, translateTheory.sexp_to_pair_def, MAP, ALL_DISTINCT, MEM] THEN
      RW_TAC std_ss [] THEN REPEAT (POP_ASSUM MP_TAC) THEN RW_TAC std_ss [] THEN
      Cases_on `x'` THEN
      FULL_SIMP_TAC std_ss [hol_defaxiomsTheory.ACL2_SIMPS, translateTheory.sexp_to_list_def, translateTheory.sexp_to_pair_def, MAP, ALL_DISTINCT, MEM] THEN
      RW_TAC std_ss [sexp_nil,MAP,MEM] THEN
-     METIS_TAC [SEXP_LT_IRREFLEXIVE, relationTheory.irreflexive_def,
-                REWRITE_RULE [hol_defaxiomsTheory.ACL2_SIMPS] SEXP_LT_def, sexpTheory.t_def, SEXP_LT_TRANSITIVE,
-                relationTheory.transitive_def]);
+     `~(car x = car (car x''))` by METIS_TAC [REWRITE_RULE [SEXP_LE_def, hol_defaxiomsTheory.ACL2_SIMPS, relationTheory.antisymmetric_def] SEXP_LE_ANTISYMMETRIC] THEN
+     FIRST_ASSUM (fn x => MATCH_MP_TAC x THEN ASM_REWRITE_TAC [] THEN MATCH_MP_TAC trans_rewrite THEN METIS_TAC []));
 
-val sorted_car_cons = prove(``!y x. sorted_car (cons x y) = ite (consp y) (andl [sexp_lt (car x) (caar y); sorted_car y]) t``,
+val sorted_car_cons = prove(``!y x. sorted_car (cons x y) = ite (consp y) (andl [not (equal (car x) (caar y)) ; lexorder (car x) (caar y); sorted_car y]) t``,
     CONV_TAC (ONCE_DEPTH_CONV (LAND_CONV (REWR_CONV sorted_car_def))) THEN
     RW_TAC std_ss [hol_defaxiomsTheory.ACL2_SIMPS]);
-
-val trans_rwr = REWRITE_RULE [hol_defaxiomsTheory.ACL2_SIMPS, relationTheory.transitive_def, SEXP_LT_def] SEXP_LT_TRANSITIVE;
-val irr_rwr = REWRITE_RULE [hol_defaxiomsTheory.ACL2_SIMPS, relationTheory.irreflexive_def, SEXP_LT_def] SEXP_LT_IRREFLEXIVE;
 
 val sorted_car_distinct = store_thm("sorted_car_distinct",
     ``!x. (sorted_car x = t) ==> ALL_DISTINCT (MAP FST (sexp_to_list (sexp_to_pair I I) x))``,
@@ -1227,8 +1230,8 @@ val sorted_car_distinct = store_thm("sorted_car_distinct",
      TRY (FIRST_ASSUM (STRIP_ASSUME_TAC o el 2 o CONJUNCTS o SPEC_ALL o MATCH_MP sexp_nil) THEN
           POP_ASSUM (CONV_TAC o DEPTH_CONV o REWR_CONV o GSYM)) THEN
      TRY (MATCH_MP_TAC lemma THEN ASM_REWRITE_TAC [SEXP_LT_def,hol_defaxiomsTheory.ACL2_SIMPS] THEN
-          MATCH_MP_TAC trans_rwr THEN Q.EXISTS_TAC `car s`) THEN
-     METIS_TAC [irr_rwr, sexp_nil]);
+          CONJ_TAC THEN1 (MATCH_MP_TAC trans_rewrite THEN Q.EXISTS_TAC `car s` THEN METIS_TAC []) THEN METIS_TAC [sym_rewrite]) THEN
+     METIS_TAC [sym_rewrite, sexp_nil]);
 
 val slemma = prove(``!x l. SORTED (SEXP_LE LEX K (K T)) (x::l) = SORTED (SEXP_LE LEX K (K T)) l /\ ((l = []) \/ ((SEXP_LE LEX K (K T)) x (HD l)))``,
     GEN_TAC THEN Cases THEN RW_TAC std_ss [sortingTheory.SORTED_DEF,HD] THEN METIS_TAC []);
@@ -1318,5 +1321,110 @@ val apply_rewrite = store_thm("apply_rewrite",
     IMP_RES_TAC uniql_FILTER THEN
     RW_TAC std_ss [] THEN
     METIS_TAC [MEM_M2L, PERM_MINSORT, MEM_PERM]);
+
+val ains_def = TotalDefn.tDefine "ains" `ains a l = itel [(not (consp l), cons a nil) ;
+                                            (equal (caar l) (car a), cons a (cdr l)) ; 
+    	       	 		            (lexorder (car a) (caar l), cons a l)] 
+                                           (cons (car l) (ains a (cdr l)))`
+    (WF_REL_TAC `measure (sexp_size o SND)` THEN 
+     GEN_TAC THEN Cases THEN RW_TAC std_ss [hol_defaxiomsTheory.ACL2_SIMPS, sexpTheory.sexp_size_def]);
+
+val insert_def = Define `(insert R (x,y) [] = [(x,y)]) /\
+                         (insert R (x,y) ((hx,hy)::tl) = 
+                             if hx = x then ((x,y)::tl) 
+                                       else if R x hx then ((x,y)::(hx,hy)::tl)
+                                                            else (hx,hy) :: insert R (x,y) tl)`;
+
+val ains_insert = store_thm("ains_insert", ``!l f g x y. ONE_ONE f ==> (ains (pair f g (x,y)) (list (pair f g) l) = list (pair f g) (insert (inv_image SEXP_LE f) (x,y) l))``,
+    Induct THEN ONCE_REWRITE_TAC [ains_def] THEN TRY (Cases_on `h`) THEN 
+    RW_TAC std_ss [translateTheory.list_def, hol_defaxiomsTheory.ACL2_SIMPS, sexpTheory.itel_def, translateTheory.pair_def, insert_def, SEXP_LE_def, REWRITE_RULE [FUN_EQ_THM] relationTheory.inv_image_def] THEN
+    REPEAT (POP_ASSUM MP_TAC) THEN RW_TAC std_ss [translateTheory.pair_def] THEN METIS_TAC [ONE_ONE_THM]);
+
+val slemma = prove(``!x l. SORTED R (x::l) = SORTED R l /\ ((l = []) \/ (R x (HD l)))``,
+    GEN_TAC THEN Cases THEN RW_TAC std_ss [sortingTheory.SORTED_DEF,HD] THEN METIS_TAC []);
+
+val SORTED_INSERT = store_thm("SORTED_INSERT", 
+    ``!R. total R ==> !l x y. SORTED (R LEX K (K T)) l ==> SORTED (R LEX K (K T)) (insert R (x,y) l)``,
+    NTAC 2 STRIP_TAC THEN Induct THEN REPEAT (Cases ORELSE GEN_TAC) THEN RW_TAC std_ss [slemma, SORTED_DEF, insert_def] THEN
+    TRY (Cases_on `l`) THEN TRY (Cases_on `h`) THEN FULL_SIMP_TAC std_ss [pairTheory.LEX_DEF, HD, insert_def] THEN
+    RW_TAC std_ss [HD] THEN
+    METIS_TAC [relationTheory.total_def]);
+
+val MEM_MAPFST_INSERT = store_thm("MEM_MAPFST_INSERT", 
+    ``!l q x y. MEM q (MAP FST (insert R (x,y) l)) = (q = x) \/ MEM q (MAP FST l)``,
+    Induct THEN REPEAT (Cases ORELSE GEN_TAC) THEN RW_TAC std_ss [MEM, MAP, insert_def] THEN
+    PROVE_TAC []);
+
+val MEM_INSERT = store_thm("MEM_INSERT", 
+    ``!l a x y. MEM a (insert R (x,y) l) ==> (FST a = x) /\ (SND a = y) \/ MEM a l``,
+    Induct THEN REPEAT (Cases ORELSE GEN_TAC) THEN RW_TAC std_ss [MEM, insert_def] THEN
+    RES_TAC THEN FULL_SIMP_TAC std_ss [] THEN PROVE_TAC []);
+
+val INSERT_EQ = store_thm("INSERT_EQ",
+    ``!l x y y'. antisymmetric R /\ transitive (R LEX R') /\ ALL_DISTINCT (MAP FST l) /\ SORTED (R LEX R') l /\ MEM (x,y) (insert R (x,y') l) ==> (y = y')``,
+    Induct THEN REPEAT (Cases ORELSE GEN_TAC) THEN RW_TAC std_ss [MEM, insert_def,ALL_DISTINCT,MAP,MEM_MAP] THEN
+    IMP_RES_TAC SORTED_EQ THEN FULL_SIMP_TAC std_ss [pairTheory.LEX_DEF] THEN METIS_TAC [relationTheory.antisymmetric_def,pairTheory.FST]);
+
+val INSERT_INSERTS = store_thm("INSERT_INSERTS",
+    ``!l x y R. MEM (x,y) (insert R (x,y) l)``,
+    Induct THEN REPEAT (Cases ORELSE GEN_TAC) THEN RW_TAC std_ss [insert_def, MEM]);
+
+val INSERT_MEM = store_thm("INSERT_MEM",
+    ``!l x y q r R. MEM (x,y) l ==> MEM (x,y) (insert R (q,r) l) \/ (x = q)``,
+    Induct THEN REPEAT (Cases ORELSE GEN_TAC) THEN RW_TAC std_ss [insert_def, MEM] THEN METIS_TAC []);
+
+    
+val ALL_DISTINCT_MAPFST_INSERT = store_thm("ALL_DISTINCT_MAPFST_INSERT",
+    ``!l R x y. total R /\ antisymmetric R /\ transitive R /\ SORTED R (MAP FST l) /\ ALL_DISTINCT (MAP FST l) ==> ALL_DISTINCT (MAP FST (insert R (x,y) l))``,
+    Induct THEN REPEAT (Cases ORELSE GEN_TAC) THEN RW_TAC std_ss [insert_def, MAP, ALL_DISTINCT, MEM, SORTED_EQ, MAP] THEN
+    IMP_RES_TAC SORTED_EQ THEN
+    METIS_TAC [relationTheory.transitive_def, relationTheory.antisymmetric_def, relationTheory.total_def, MEM_MAPFST_INSERT]);
+
+val INSERT_SET = store_thm("INSERT_SET",
+    ``!l R R' x y. transitive R /\ antisymmetric R /\ total R /\ transitive (R LEX R') /\ SORTED (R LEX R') l /\ ALL_DISTINCT (MAP FST l) ==> 
+              (set (insert R (x,y) l) = (x,y) INSERT (set l DIFF {z | FST z = x}))``,
+    Induct THEN REPEAT (Cases ORELSE GEN_TAC) THEN RW_TAC std_ss [insert_def, LIST_TO_SET_THM, EMPTY_DIFF, INSERT_DIFF, ALL_DISTINCT, MAP] THEN
+    IMP_RES_TAC SORTED_EQ THEN
+    RW_TAC (std_ss ++ pred_setLib.PRED_SET_ss) [INSERT_DEF, DIFF_DEF, SET_EQ_SUBSET,SUBSET_DEF, LIST_TO_SET_THM, insert_def, IN_LIST_TO_SET, MEM_MAP] THEN
+    IMP_RES_TAC MEM_INSERT THEN
+    FULL_SIMP_TAC (std_ss ++ pred_setLib.PRED_SET_ss) [MEM_MAP, INSERT_INSERTS] THEN
+    TRY (Cases_on `x'`) THEN FULL_SIMP_TAC std_ss [] THENL [
+      ALL_TAC, RES_TAC THEN FULL_SIMP_TAC std_ss [pairTheory.LEX_DEF],
+      ALL_TAC, ALL_TAC] THEN
+    METIS_TAC [relationTheory.transitive_def, relationTheory.antisymmetric_def, relationTheory.total_def, INSERT_EQ, INSERT_MEM]);
+
+val EMPTY_SET = METIS_PROVE [SET_EQ_SUBSET, SUBSET_DEF, NOT_IN_EMPTY] ``({} = a) = !x. ~(x IN a)``;
+
+val M2L_RWR = prove(``!x y. MEM x (M2L y) = FST x IN FDOM y /\ (SND x = y ' (FST x))``,
+    Cases THEN RW_TAC std_ss [MEM_M2L]);
+
+val SET_M2L_DOMSUB = store_thm("SET_M2L_DOMSUB", 
+    ``!m x. set (M2L (m \\ x)) = set (M2L m) DIFF {z | FST z = x}``,
+    RW_TAC std_ss [SET_EQ_SUBSET, SUBSET_DEF, IN_DIFF, IN_LIST_TO_SET, M2L_RWR, FDOM_DOMSUB, IN_DELETE, DOMSUB_FAPPLY_THM] THEN
+    FULL_SIMP_TAC (std_ss ++ PRED_SET_ss) []);
+
+
+val INSERT_FUPDATE = store_thm("INSERT_FUPDATE",
+    ``!x y R m. transitive R /\ antisymmetric R /\ total R ==> (MINSORT (R LEX K (K T)) (M2L (m |+ (x,y))) = insert R (x,y) (MINSORT (R LEX K (K T)) (M2L m)))``,
+    REPEAT STRIP_TAC THEN MATCH_MP_TAC MAP_FST_DISTINCT_EQ THEN REPEAT STRIP_TAC THENL [
+      MATCH_MP_TAC PERM_SORTED_EQ THEN Q.EXISTS_TAC `R` THEN REPEAT STRIP_TAC THEN ASM_REWRITE_TAC [] THENL [
+        MATCH_MP_TAC PERM_MAP,
+        METIS_TAC [SORTED_LEX, SORTS_MINSORT, SORTS_DEF, TRANSITIVE_LEX, TOTAL_LEX, TRANSITIVE_K, TOTAL_K, SORTED_INSERT],
+        METIS_TAC [SORTED_LEX, SORTS_MINSORT, SORTS_DEF, TRANSITIVE_LEX, TOTAL_LEX, TRANSITIVE_K, TOTAL_K, SORTED_INSERT]],
+      METIS_TAC [ALL_DISTINCT_MAPFST_M2L, PERM_DISTINCT, PERM_MINSORT, PERM_MAP], ALL_TAC] THEN
+    MATCH_MP_TAC SETEQ_PERM THEN REPEAT CONJ_TAC THEN
+    TRY (MATCH_MP_TAC SETEQ_TRANS THEN Q.EXISTS_TAC `M2L (m |+ (x,y))` THEN CONJ_TAC THEN1 METIS_TAC [PERM_SETEQ, PERM_MINSORT, PERM_SYM] THEN
+         REWRITE_TAC [SETEQ_THM, SET_M2L_FUPDATE, LIST_TO_SET_THM] THEN
+         Q.ABBREV_TAC `l = MINSORT (R LEX K (K T)) (M2L m)` THEN
+         REVERSE (`set (insert R (x,y) l) = (x,y) INSERT (set l DIFF {z | FST z = x})` by MATCH_MP_TAC INSERT_SET) THEN1
+	     (`set l = set (M2L m)` by METIS_TAC [PERM_SETEQ, SETEQ_THM, PERM_MINSORT] THEN ASM_REWRITE_TAC [SET_M2L_DOMSUB] THEN AP_TERM_TAC)) THEN
+    METIS_TAC [PERM_MAP, ALL_DISTINCT_MAPFST_M2L, ALL_DISTINCT_PERM, ALL_DISTINCT_MAPFST_M2L, ALL_DISTINCT_MAPFST, PERM_MINSORT, SORTED_LEX, 
+    	       TRANSITIVE_K, SORTS_MINSORT, SORTS_DEF, TOTAL_K, TOTAL_LEX, TRANSITIVE_LEX, ALL_DISTINCT_MAPFST_INSERT]);
+
+val fupdate_rewrite = store_thm("fupdate_rewrite",
+    ``!x f g m. ONE_ONE f ==> (encode_fmap f g (m |+ x) = ains (pair f g x) (encode_fmap f g m))``,
+    Cases THEN RW_TAC std_ss [encode_fmap_def, ains_insert] THEN AP_TERM_TAC THEN
+    MATCH_MP_TAC INSERT_FUPDATE THEN
+    METIS_TAC [TRANS_INV, ANTISYM_INV, TOTAL_INV, SEXP_LE_TOTAL, SEXP_LE_TRANSITIVE, SEXP_LE_ANTISYMMETRIC]);
 
 val _ = export_theory();
