@@ -698,7 +698,7 @@ val TOTALLY_AD_HOC_LEMMA = prove
    REPEAT GEN_TAC
     THEN REWRITE_TAC
           [NOT_SUC,SYM(SPECL [--`m:num`--,--`n:num`--] (CONJUNCT2 ADD)),
-           (fn [_, _,_,th] => th)(CONJUNCTS ADD_CLAUSES)]
+           (fn [_, _, _, th] => th | _ => raise Match) (CONJUNCTS ADD_CLAUSES)]
     THEN REWRITE_TAC[SPECL[--`SUC m`--,--`n:num`--]ADD_SYM]
     THEN STRIP_TAC
     THEN IMP_RES_TAC ADD_INV_0
@@ -721,7 +721,8 @@ val ADD_EQ_SUB = store_thm ("ADD_EQ_SUB",
     THEN IMP_RES_TAC(fst(EQ_IMP_RULE(SPEC_ALL NOT_LESS)))
     THEN RES_TAC
     THEN ASM_REWRITE_TAC
-          [SYM((fn [_,_,_,th] => th)(CONJUNCTS(SPEC_ALL ADD_CLAUSES))),
+          [SYM ((fn [_, _, _, th] => th | _ => raise Match)
+            (CONJUNCTS (SPEC_ALL ADD_CLAUSES))),
            TOTALLY_AD_HOC_LEMMA]);
 
 val LESS_MONO_ADD = store_thm ("LESS_MONO_ADD",
