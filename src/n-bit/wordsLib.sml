@@ -817,7 +817,8 @@ in
   local
     val distrib = GSYM WORD_RIGHT_AND_OVER_OR
     val WORD_REDUCE_CONV =
-           PURE_REWRITE_CONV [WORD_OR_CLAUSES2, WORD_LITERAL_OR_thms]
+           PURE_REWRITE_CONV [WORD_OR_CLAUSES2]
+             THENC PURE_REWRITE_CONV [WORD_LITERAL_OR_thms]
              THENC BITWISE_CONV
              THENC WORD_LITERAL_REDUCE_CONV
     fun merge t = let
