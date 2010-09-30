@@ -20,25 +20,25 @@ Never fails.
 - op_insert (fn x => fn y => x = y mod 2) 1 [3,2];
 > val it = [3, 2] : int list
 
-- op_insert aconv (Term `\x. x /\ y`) 
+- op_insert aconv (Term `\x. x /\ y`)
                   [T, Term `\z. z /\ y`, F];
 > val it = [`T`, `\z. z /\ y`, `F`] : term list
 
-- op_insert aconv (Term `\x. x /\ y`) 
+- op_insert aconv (Term `\x. x /\ y`)
                   [T, Term `\z. z /\ a`, F];
 > val it = [`\x. x /\ y`, `T`, `\z. z /\ a`, `F`] : term list
 }
 
 
 \COMMENTS
-There is no requirement that {eq} be recognizable as a kind of 
+There is no requirement that {eq} be recognizable as a kind of
 equality (it could be implemented by an order relation, for example).
 
-One should not write code that depends on the arrangement of elements in 
+One should not write code that depends on the arrangement of elements in
 the result.
 
-High performance finite set operations may be found in the ML Standard
-Basis Library.
+A high-performance implementation of finite sets may be found in
+structure {HOLset}.
 
 \SEEALSO
 Lib.insert, Lib.op_mem, Lib.op_union, Lib.op_mk_set, Lib.op_U, Lib.op_intersect, Lib.op_set_diff.

@@ -12,8 +12,8 @@ Tests whether a list contains a certain element.
 list, set.
 
 \DESCRIBE
-An invocation {op_mem eq x [x1,...,xn]} returns {true} if, for 
-some {xi} in the list, {eq xi x} evaluates to {true}. 
+An invocation {op_mem eq x [x1,...,xn]} returns {true} if, for
+some {xi} in the list, {eq xi x} evaluates to {true}.
 Otherwise it returns {false}.
 
 \FAILURE
@@ -27,8 +27,8 @@ Only fails if an application of {eq} fails.
 
 
 \COMMENTS
-High performance finite set operations may be found in the ML Standard
-Basis Library.
+A high-performance implementation of finite sets may be found in
+structure {HOLset}.
 
 \SEEALSO
 Lib.mem, Lib.op_insert, Lib.tryfind, Lib.exists, Lib.all, Lib.assoc,

@@ -9,7 +9,7 @@ Tells if two lists have no common elements.
 set, list, eqtype.
 
 \DESCRIBE
-An invocation {null_intersection l1 l2} is equivalent to 
+An invocation {null_intersection l1 l2} is equivalent to
 {null(intersect l1 l2)}, but is more efficient in the case where
 the intersection is not empty.
 
@@ -27,8 +27,8 @@ Never fails.
 
 
 \COMMENTS
-High performance finite set operations may be found in the ML Standard
-Basis Library.
+A high-performance implementation of finite sets may be found in
+structure {HOLset}.
 
 \SEEALSO
 Lib.intersect, Lib.union, Lib.U, Lib.mk_set, Lib.mem, Lib.insert, Lib.set_eq, Lib.set_diff.
