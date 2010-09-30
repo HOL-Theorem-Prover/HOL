@@ -50,6 +50,18 @@ svn revert -R .
 ----------------------------
 Merge Log:
 
+8632:  Ported revision 8609:8610 from HOL (main)
+to the HOL-Omega release version. (3rd Magnus revision for machine-code)
+
+8609:  Ported revision 8607:8608 from HOL (main)
+to the HOL-Omega release version. (3rd Magnus revision for machine-code)
+
+8607:  Ported revision 8604:8605 from HOL (main)
+to the HOL-Omega release version.
+
+8598:  Ported revision 8597:8598 from HOL (main)
+to the HOL-Omega release version.
+
 8195:  Changed revision number of last revision in merge file (this file).
 
 8594:  Ported revisions 8331:8589 from HOL to HOL-Omega.
