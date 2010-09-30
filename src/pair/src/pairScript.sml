@@ -788,7 +788,8 @@ val _ = BasicProvers.export_rewrites
 
 val comma_tm = Term.prim_mk_const{Name=",", Thy="pair"};
 fun is_pair tm = Term.same_const comma_tm (fst(strip_comb tm));
-fun dest_pair tm = let val (_,[a,b]) = strip_comb tm in (a,b) end;
+fun dest_pair tm =
+  case snd (strip_comb tm) of [a,b] => (a,b) | _ => raise Match;
 
 val _ = adjoin_to_theory
 {sig_ps = NONE,
