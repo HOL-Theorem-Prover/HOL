@@ -32,6 +32,10 @@ sig
   val tryfind       : ('a -> 'b) -> 'a list -> 'b
   val el            : int -> 'a list -> 'a
   val single        : 'a -> 'a list
+  val singleton_of_list : 'a list -> 'a
+  val pair_of_list  : 'a list -> 'a * 'a
+  val triple_of_list : 'a list -> 'a * 'a * 'a
+  val quadruple_of_list : 'a list -> 'a * 'a * 'a * 'a
   val index         : ('a -> bool) -> 'a list -> int
   val map2          : ('a -> 'b -> 'c) -> 'a list -> 'b list -> 'c list
   val all           : ('a -> bool) -> 'a list -> bool

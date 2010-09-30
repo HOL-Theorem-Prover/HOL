@@ -51,7 +51,7 @@ fun fst (x,_) = x
 fun snd (_,y) = y
 
 (*---------------------------------------------------------------------------*
- * Success and failure. Interrupt has a special status in MoscowML.          *
+ * Success and failure. Interrupt has a special status in Standard ML.       *
  *---------------------------------------------------------------------------*)
 fun can f x =
   (f x; true) handle Interrupt => raise Interrupt | _  => false;
@@ -75,7 +75,7 @@ in
 fun trye f x =
   f x handle e as HOL_ERR _ => raise e
            | Interrupt      => raise Interrupt
-           | otherwise      => raise default_exn
+           | _              => raise default_exn
 end;
 
 (*---------------------------------------------------------------------------*
@@ -93,7 +93,22 @@ fun with_exn f x e   = f x handle Interrupt => raise Interrupt | _ => raise e
  *        Common list operations                                             *
  *---------------------------------------------------------------------------*)
 
-fun single x = [x];
+fun single x = [x]
+
+(* turning lists into tuples *)
+
+fun singleton_of_list [x] = x
+  | singleton_of_list _ = raise ERR "singleton_of_list" "not a list of length 1"
+
+fun pair_of_list [x, y] = (x, y)
+  | pair_of_list _ = raise ERR "pair_of_list" "not a list of length 2"
+
+fun triple_of_list [x, y, z] = (x, y, z)
+  | triple_of_list _ = raise ERR "triple_of_list" "not a list of length 3"
+
+fun quadruple_of_list [x1, x2, x3, x4] = (x1, x2, x3, x4)
+  | quadruple_of_list _ = raise ERR "quadruple_of_list" "not a list of length 4"
+
 
 fun tryfind f =
  let fun F [] = raise ERR "tryfind" "all applications failed"
