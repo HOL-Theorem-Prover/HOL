@@ -138,30 +138,29 @@ local
      token into a function that maps the (possibly empty) list of
      argument terms to a term. *)
 
-  fun zero_args t [] =
+  fun zero_args t xs =
+    if List.null xs then
       t
-    | zero_args _ _ =
+    else
       raise ERR "zero_args" "no arguments expected"
 
-  fun one_arg f [t] =
-      f t
-    | one_arg _ _ =
-      raise ERR "one_arg" "one argument expected"
+  fun one_arg f xs =
+    f (Lib.singleton_of_list xs handle Feedback.HOL_ERR _ =>
+      raise ERR "one_arg" "one argument expected")
 
-  fun two_args f [t1, t2] =
-      f (t1, t2)
-    | two_args _ _ =
-      raise ERR "two_args" "two arguments expected"
+  fun two_args f xs =
+    f (Lib.pair_of_list xs handle Feedback.HOL_ERR _ =>
+      raise ERR "two_args" "two arguments expected")
 
-  fun three_args f [t1, t2, t3] =
-      f (t1, t2, t3)
-    | three_args _ _ =
-      raise ERR "three_args" "three arguments expected"
+  fun three_args f xs =
+    f (Lib.triple_of_list xs handle Feedback.HOL_ERR _ =>
+      raise ERR "three_args" "three arguments expected")
 
-  fun list_args f [] =
+  fun list_args f xs =
+    if List.null xs then
       raise ERR "list_args" "non-empty argument list expected"
-    | list_args f ts =
-    f ts
+    else
+      f ts
 
   (* FIXME: The built-in constants should instead be chosen
             dynamically, based on a parameter that specifies the
@@ -171,14 +170,17 @@ local
     (fn ((key, value), dict) => Redblackmap.insert (dict, key, value))
     (Redblackmap.mkDict String.compare)
     [
-      ("=", two_args boolSyntax.mk_eq),
-      ("iff", two_args boolSyntax.mk_eq),
+      (* SMT-LIB theory: Core *)
       ("true", zero_args boolSyntax.T),
       ("false", zero_args boolSyntax.F),
       ("not", one_arg boolSyntax.mk_neg),
+      ("implies", two_args boolSyntax.mk_imp),  (* FIXME: should be => *)
       ("and", list_args boolSyntax.list_mk_conj),
       ("or", list_args boolSyntax.list_mk_disj),
-      ("implies", two_args boolSyntax.mk_imp),
+      ("xor", two_args (fn (t1, t2) => Term.mk_comb (Term.mk_comb
+          (Term.prim_mk_const {Thy="HolSmt", Name="xor"}, t1), t2))),
+      ("=", two_args boolSyntax.mk_eq),
+      ("iff", two_args boolSyntax.mk_eq),
       ("ite", three_args boolSyntax.mk_cond),
       ("if_then_else", three_args boolSyntax.mk_cond),
       (* integer operations *)
@@ -342,18 +344,10 @@ local
           one_arg (fn t => wordsSyntax.mk_word_replicate (num, t))
         end
       else if String.isPrefix "array_ext" token then
-        (* Z3's array_ext[T] yields an index i such that select A i <>
-           select B i (provided A and B are different arrays of type T) *)
-        (* we can infer T from either argument array, so we just
-           ignore it here (without any checking) *)
-        two_args (fn (t1, t2) =>
-          let
-            val (index_type, _) = Type.dom_rng (Term.type_of t1)
-            val i = Term.mk_var ("i", index_type)
-          in
-            boolSyntax.mk_select (i, boolSyntax.mk_neg (boolSyntax.mk_eq
-              (Term.mk_comb (t1, i), Term.mk_comb (t2, i))))
-          end)
+        (* we can infer T in array_ext[T] from either argument array,
+           so we just ignore it here (without any checking) *)
+        two_args (fn (t1, t2) => boolSyntax.list_mk_icomb
+          (Term.prim_mk_const {Thy="HolSmt", Name="array_ext"}, [t1, t2]))
       else
         (* integer literals *)
         (zero_args (intSyntax.term_of_int (Arbint.fromString token))
@@ -372,16 +366,16 @@ local
                   else
                     SOME termfn
                 ) else result
-              fun UNDECLARED () =
-                ERR "termfn_of_token" ("undeclared symbol '" ^ token ^ "'")
             in
               if List.length fields = 1 then
-                raise UNDECLARED ()
+                raise ERR "termfn_of_token"
+                  ("undeclared symbol '" ^ token ^ "'")
               else
                 case Redblackmap.foldl foldthis NONE dict of
                   SOME termfn => termfn
                 | NONE =>
-                  raise UNDECLARED ()
+                  raise ERR "termfn_of_token"
+                    ("undeclared symbol '" ^ token ^ "'")
             end)
 
   fun parse_termlist get_token dict (acc : Term.term list) : Term.term list =
@@ -409,20 +403,21 @@ local
   (* parsing of proofterms                                                   *)
   (***************************************************************************)
 
-  fun zero_prems ([], concl) =
+  fun zero_prems (prems, concl) =
+    if List.null prems then
       concl
-    | zero_prems _ =
-      raise ERR "zero_prems" "no arguments expected"
+    else
+      raise ERR "zero_prems" "no premises expected"
 
-  fun one_prem ([prem], concl) =
-      (prem, concl)
-    | one_prem _ =
-      raise ERR "one_prem" "one argument expected"
+  fun one_prem (prems, concl) =
+    (Lib.singleton_of_list prems, concl)
+    handle Feedback.HOL_ERR _ =>
+      raise ERR "one_prem" "one premise expected"
 
-  fun two_prems ([prem1, prem2], concl) =
-      (prem1, prem2, concl)
-    | two_prems _ =
-      raise ERR "two_prems" "two arguments expected"
+  fun two_prems (prems, concl) =
+    Lib.uncurry Lib.triple (Lib.pair_of_list prems) concl
+    handle Feedback.HOL_ERR _ =>
+      raise ERR "two_prems" "two premises expected"
 
   fun list_prems (prems, concl) =
     (prems, concl)
