@@ -9,8 +9,8 @@ Takes the union of a list of sets.
 list, set, eqtype.
 
 \DESCRIBE
-An application {U [l1, ..., ln]} is equivalent to 
-{union l1 (... (union ln-1, ln)...)}. Thus, every element that 
+An application {U [l1, ..., ln]} is equivalent to
+{union l1 (... (union ln-1, ln)...)}. Thus, every element that
 occurs in one of the lists will appear in the result.
 
 \FAILURE
@@ -27,10 +27,10 @@ Never fails.
 The order in which the elements occur in the resulting list should
 not be depended upon.
 
-High performance set operations may be found in the ML Standard
-Basis Library.
+A high-performance implementation of finite sets may be found in
+structure {HOLset}.
 
-ML equality types are used in the implementation of {U} and its kin. 
+ML equality types are used in the implementation of {U} and its kin.
 This limits its applicability to types that allow equality. For other
 types, typically abstract ones, use the `op_' variants.
 

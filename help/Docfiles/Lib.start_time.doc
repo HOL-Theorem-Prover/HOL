@@ -27,7 +27,7 @@ Never fails.
 Multiple timers may be started without any interfering with the others.
 
 Further operations associated with the type {cpu_timer} may be found 
-in the ML Standard Basis Library structures {Timer} and {Time}.
+in the Standard ML Basis Library structures {Timer} and {Time}.
 
 \SEEALSO
 Lib.end_time, Lib.time.

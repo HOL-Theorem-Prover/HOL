@@ -22,7 +22,7 @@ Never fails.
 
 
 \COMMENTS
-Equivalent functionality can be found in the ML Standard Basis 
+Equivalent functionality can be found in the Standard ML Basis
 Library function {Int.toString}.
 
 \SEEALSO

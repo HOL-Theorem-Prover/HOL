@@ -9,9 +9,9 @@ Computes the union of two `sets'.
 list, set.
 
 \DESCRIBE
-If {l1} and {l2} are both `sets' (lists with no repeated members), 
+If {l1} and {l2} are both `sets' (lists with no repeated members),
 {union eq l1 l2} returns the set union of {l1} and {l2}, using {eq} as the
-implementation of element equality. If one or both of {l1} and {l2} have 
+implementation of element equality. If one or both of {l1} and {l2} have
 repeated elements, there may be repeated elements in the result.
 
 \FAILURE
@@ -25,16 +25,16 @@ If some application of {eq} fails.
 
 
 \COMMENTS
-Do not make the assumption that the order of items in the list 
-returned by {op_union} is fixed. Later implementations may use 
+Do not make the assumption that the order of items in the list
+returned by {op_union} is fixed. Later implementations may use
 different algorithms, and return a different concrete result
 while still meeting the specification.
 
-There is no requirement that {eq} be recognizable as a kind of 
+There is no requirement that {eq} be recognizable as a kind of
 equality (it could be implemented by an order relation, for example).
 
-High performance set operations may be found in the ML Standard
-Basis Library.
+A high-performance implementation of finite sets may be found in
+structure {HOLset}.
 
 \SEEALSO
 Lib.union, Lib.op_mem, Lib.op_insert, Lib.op_mk_set, Lib.op_U, Lib.op_intersect, Lib.op_set_diff.

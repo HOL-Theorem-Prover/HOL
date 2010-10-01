@@ -9,7 +9,7 @@ Transforms a list into one with distinct elements.
 list, set, eqtype.
 
 \DESCRIBE
-An invocation {mk_set list} returns a list consisting of the distinct 
+An invocation {mk_set list} returns a list consisting of the distinct
 members of {list}. In particular, the result list has
 no repeated elements.
 
@@ -25,11 +25,13 @@ Never fails.
 
 \COMMENTS
 In some programming situations, it is convenient to implement sets
-by lists, in which case {mk_set} may be helpful. However, such 
-an implementation is only suitable for small sets. Serious 
-implementations of sets may be found in the Standard ML Basis Library.
+by lists, in which case {mk_set} may be helpful. However, such
+an implementation is only suitable for small sets.
 
-ML equality types are used in the implementation of {mk_set} and its kin. 
+A high-performance implementation of finite sets may be found in
+structure {HOLset}.
+
+ML equality types are used in the implementation of {mk_set} and its kin.
 This limits its applicability to types that allow equality. For other
 types, typically abstract ones, use the `op_' variants.
 

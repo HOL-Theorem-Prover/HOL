@@ -15,7 +15,7 @@ An application {say s} prints the string {s} on the standard output.
 Never fails.
 
 \COMMENTS
-The ML Standard Basis Library structure {TextIO} offers
+The Standard ML Basis Library structure {TextIO} offers
 related functions.
 
 \ENDDOC
