@@ -5,6 +5,11 @@
 structure Z3_ProofReplay =
 struct
 
+(*TODO*)
+  val rewrite_update = ref (Redblackset.empty Term.compare)
+  val rewrite_WORD_DP = ref (Redblackset.empty Term.compare)
+  val rewrite_WORD_ARITH_CONV = ref (Redblackset.empty Term.compare)
+
 local
 
   open Z3_Proof
@@ -16,7 +21,6 @@ local
   val ALL_DISTINCT_CONS = HolSmtTheory.ALL_DISTINCT_CONS
   val NOT_MEM_NIL = HolSmtTheory.NOT_MEM_NIL
   val NOT_MEM_CONS = HolSmtTheory.NOT_MEM_CONS
-  val NOT_MEM_CONS_SWAP = HolSmtTheory.NOT_MEM_CONS_SWAP
   val AND_T = HolSmtTheory.AND_T
   val T_AND = HolSmtTheory.T_AND
   val F_OR = HolSmtTheory.F_OR
@@ -26,8 +30,10 @@ local
   val NNF_CONJ = HolSmtTheory.NNF_CONJ
   val NNF_DISJ = HolSmtTheory.NNF_DISJ
   val NNF_NOT_NOT = HolSmtTheory.NNF_NOT_NOT
-  val NEG_IFF_1 = HolSmtTheory.NEG_IFF_1
-  val NEG_IFF_2 = HolSmtTheory.NEG_IFF_2
+  val NEG_IFF_1_1 = HolSmtTheory.NEG_IFF_1_1
+  val NEG_IFF_1_2 = HolSmtTheory.NEG_IFF_1_2
+  val NEG_IFF_2_1 = HolSmtTheory.NEG_IFF_2_1
+  val NEG_IFF_2_2 = HolSmtTheory.NEG_IFF_2_2
   val DISJ_ELIM_1 = HolSmtTheory.DISJ_ELIM_1
   val DISJ_ELIM_2 = HolSmtTheory.DISJ_ELIM_2
   val IMP_DISJ_1 = HolSmtTheory.IMP_DISJ_1
@@ -35,8 +41,8 @@ local
   val IMP_FALSE = HolSmtTheory.IMP_FALSE
   val AND_IMP_INTRO_SYM = HolSmtTheory.AND_IMP_INTRO_SYM
 
-  (* a simpset that deals with function (i.e., array) updates when the
-     indices are integer or word literals *)
+  (* a simplification prover that deals with function (i.e., array)
+     updates when the indices are integer or word literals *)
   val SIMP_PROVE_UPDATE = simpLib.SIMP_PROVE (simpLib.&& (simpLib.++
     (intSimps.int_ss, simpLib.std_conv_ss {name = "word_EQ_CONV",
       pats = [``(x :'a word) = y``], conv = wordsLib.word_EQ_CONV}),
@@ -156,14 +162,14 @@ local
     Thm.MP (Thm.DISCH clause clause_imp_t) (List.hd thms)
   end
 
-  (* e.g.,   (A --> B) --> C --> D   ==>   [A, B, C, D] *)
-  fun strip_fun_tys ty =
+  (* e.g.,   "(A --> B) --> C --> D" acc   ==>   [A, B, C, D] @ acc *)
+  fun strip_fun_tys ty acc =
     let
       val (dom, rng) = Type.dom_rng ty
     in
-      strip_fun_tys dom @ strip_fun_tys rng
+      strip_fun_tys dom (strip_fun_tys rng acc)
     end
-    handle Feedback.HOL_ERR _ => [ty]
+    handle Feedback.HOL_ERR _ => ty :: acc
 
   (* approximate: only descends into combination terms and function types *)
   fun term_contains_real_ty tm =
@@ -173,7 +179,7 @@ local
     end
     handle Feedback.HOL_ERR _ =>
       List.exists (Lib.equal realSyntax.real_ty)
-        (strip_fun_tys (Term.type_of tm))
+        (strip_fun_tys (Term.type_of tm) [])
 
   (* returns "|- l = r", provided 'l' and 'r' are conjunctions that can be
      obtained from each other using associativity, commutativity and
@@ -221,20 +227,42 @@ local
 
   (* |- r1 /\ ... /\ rn = ~(s1 \/ ... \/ sn)
 
-     Note that p <=> q may be negated to q <=> ~p. *)
+     Note that q <=> p may be negated to p <=> ~q.  Also, p <=> ~q may
+     be negated to p <=> q. *)
   fun rewrite_nnf (l, r) =
   let
     val disj = boolSyntax.dest_neg r
-    val disj_th = Thm.ASSUME disj
     val conj_ths = Drule.CONJUNCTS (Thm.ASSUME l)
-    (* (p <=> q) ==> ~(q <=> ~p) *)
-    val neg_iffs = List.mapPartial (Lib.total (fn th =>
+    (* transform equivalences in 'l' into equivalences as they appear
+       in 'disj' *)
+    val conj_dict = List.foldl (fn (th, dict) => Redblackmap.insert
+      (dict, Thm.concl th, th)) (Redblackmap.mkDict Term.compare) conj_ths
+    (* we map over equivalences in 'disj', possibly obtaining the
+       negation of each one by forward reasoning from a suitable
+       theorem in 'conj_dict' *)
+    val iff_ths = List.mapPartial (Lib.total (fn t =>
       let
-        val (p, q) = boolSyntax.dest_eq (Thm.concl th)  (* may fail *)
+        val (p, q) = boolSyntax.dest_eq t  (* may fail *)
+        val neg_q = boolSyntax.mk_neg q  (* may fail (because of type) *)
       in
-        Thm.MP (Drule.SPECL [p, q] NEG_IFF_1) th  (* may fail *)
-      end)) conj_ths
-    val F_th = unit_resolution (disj_th :: conj_ths @ neg_iffs, boolSyntax.F)
+        let
+          val th = Redblackmap.find (conj_dict, boolSyntax.mk_eq (p, neg_q))
+        in
+          (* l |- ~(p <=> q) *)
+          Thm.MP (Drule.SPECL [p, q] NEG_IFF_2_1) th
+        end
+        handle Redblackmap.NotFound =>
+          let
+            val q = boolSyntax.dest_neg q  (* may fail *)
+            val th = Redblackmap.find (conj_dict, boolSyntax.mk_eq (q, p))
+          in
+            (* l |- ~(p <=> ~q) *)
+            Thm.MP (Drule.SPECL [p, q] NEG_IFF_1_1) th
+          end
+      end)) (boolSyntax.strip_disj disj)
+    (* [l, disj] |- F *)
+    val F_th = unit_resolution (Thm.ASSUME disj :: conj_ths @ iff_ths,
+      boolSyntax.F)
     fun disjuncts dict (thmfun, concl) =
     let
       val (l, r) = boolSyntax.dest_disj concl  (* may fail *)
@@ -242,7 +270,7 @@ local
       disjuncts (disjuncts dict (fn th => thmfun (Thm.DISJ1 th r), l))
         (fn th => thmfun (Thm.DISJ2 l th), r)
     end
-    handle Feedback.HOL_ERR _ =>
+    handle Feedback.HOL_ERR _ =>  (* 'concl' is not a disjunction *)
       let
         (* |- concl ==> disjunction *)
         val th = Thm.DISCH concl (thmfun (Thm.ASSUME concl))
@@ -250,117 +278,175 @@ local
         val th = Drule.UNDISCH (Drule.CONTRAPOS th)
         val th = Thm.MP (Thm.SPEC (boolSyntax.dest_neg concl) NOT_NOT_ELIM) th
           handle Feedback.HOL_ERR _ => th
-        val dict = Redblackmap.insert (dict, Thm.concl th, th)
+        val t = Thm.concl th
+        val dict = Redblackmap.insert (dict, t, th)
       in
-        (* ~(p <=> ~q) ==> (q <=> p) *)
+        (* if 't' is a negated equivalence, we check whether it can be
+           transformed into an equivalence that is present in 'l' *)
         let
-          val (p, neg_q) = boolSyntax.dest_eq (boolSyntax.dest_neg
-            (Thm.concl th))
-          val q = boolSyntax.dest_neg neg_q
-          val th = Thm.MP (Drule.SPECL [p, q] NEG_IFF_2) th
+          val (p, q) = boolSyntax.dest_eq (boolSyntax.dest_neg t) (* may fail *)
+          val neg_q = boolSyntax.mk_neg q  (* may fail (because of type) *)
         in
-          Redblackmap.insert (dict, Thm.concl th, th)
+          let
+            val _ = Redblackmap.find (conj_dict, boolSyntax.mk_eq (p, neg_q))
+            (* ~disjunction |- p <=> ~q *)
+            val th1 = Thm.MP (Drule.SPECL [p, q] NEG_IFF_2_2) th
+            val dict = Redblackmap.insert (dict, Thm.concl th1, th1)
+          in
+            let
+              val q = boolSyntax.dest_neg q  (* may fail *)
+              val _ = Redblackmap.find (conj_dict, boolSyntax.mk_eq (q, p))
+              (* ~disjunction |- q <=> p *)
+              val th1 = Thm.MP (Drule.SPECL [p, q] NEG_IFF_1_2) th
+            in
+              Redblackmap.insert (dict, Thm.concl th1, th1)
+            end
+            handle Redblackmap.NotFound => dict
+                 | Feedback.HOL_ERR _ => dict
+          end
+          handle Redblackmap.NotFound =>
+            (* p <=> ~q is not a conjunction in 'l', so we skip
+               deriving it; but we possibly still need to derive
+               q <=> p *)
+            let
+              val q = boolSyntax.dest_neg q  (* may fail *)
+              val _ = Redblackmap.find (conj_dict, boolSyntax.mk_eq (q, p))
+              (* ~disjunction |- q <=> p *)
+              val th1 = Thm.MP (Drule.SPECL [p, q] NEG_IFF_1_2) th
+            in
+              Redblackmap.insert (dict, Thm.concl th1, th1)
+            end
+            handle Redblackmap.NotFound => dict
+                 | Feedback.HOL_ERR _ => dict
         end
-        handle Feedback.HOL_ERR _ =>
+        handle Feedback.HOL_ERR _ =>  (* 't' is not an equivalence *)
           dict
       end  (* disjuncts *)
-    fun prove dict conj =
+    val dict = disjuncts (Redblackmap.mkDict Term.compare) (Lib.I, disj)
+    (* derive ``T`` (just in case ``T`` is a conjunct) *)
+    val dict = Redblackmap.insert (dict, boolSyntax.T, boolTheory.TRUTH)
+    (* proves a conjunction 'conj', provided each conjunct is proved
+      in 'dict' *)
+    fun prove_conj dict conj =
       Redblackmap.find (dict, conj)
       handle Redblackmap.NotFound =>
         let
           val (l, r) = boolSyntax.dest_conj conj
         in
-          Thm.CONJ (prove dict l) (prove dict r)
+          Thm.CONJ (prove_conj dict l) (prove_conj dict r)
         end
-    val dict = disjuncts (Redblackmap.mkDict Term.compare) (Lib.I, disj)
-    val r_imp_l = Thm.DISCH r (prove dict l)
+    val r_imp_l = Thm.DISCH r (prove_conj dict l)
     val l_imp_r = Thm.DISCH l (Thm.NOT_INTRO (Thm.DISCH disj F_th))
   in
     Drule.IMP_ANTISYM_RULE l_imp_r r_imp_l
   end
 
-  (* Returns "|- ALL_DISTINCT [x, y, z] = x <> y /\ x <> z /\ y <> z"; if
-     'swap' is true, then each inequation "x <> y" is swapped to "y <> x" if
-     y < x (according to Term.compare); if 'swap' is true, the resulting
-     conjunction may contain parentheses; may raise Conv.UNCHANGED *)
-  fun ALL_DISTINCT_CONV swap tm =
-  let 
-    fun not_mem_conv tm =
+  (* returns |- ~MEM x [a; b; c] = x <> a /\ x <> b /\ x <> c; fails
+     if not applied to a term of the form ``~MEM x [a; b; c]`` *)
+  fun NOT_MEM_CONV tm =
+  let
+    val (x, list) = listSyntax.dest_mem (boolSyntax.dest_neg tm)
+  in
     let
-      val (x, list) = listSyntax.dest_mem (boolSyntax.dest_neg tm)
+      val (h, t) = listSyntax.dest_cons list
+      (* |- ~MEM x (h::t) = (x <> h) /\ ~MEM x t *)
+      val th1 = Drule.ISPECL [x, h, t] NOT_MEM_CONS
+      val (neq, notmem) = boolSyntax.dest_conj (boolSyntax.rhs
+        (Thm.concl th1))
+      (* |- ~MEM x t = rhs *)
+      val th2 = NOT_MEM_CONV notmem
+      (* |- (x <> h) /\ ~MEM x t = (x <> h) /\ rhs *)
+      val th3 = Thm.AP_TERM (Term.mk_comb (boolSyntax.conjunction, neq)) th2
+      (* |- ~MEM x (h::t) = (x <> h) /\ rhs *)
+      val th4 = Thm.TRANS th1 th3
     in
+      if boolSyntax.rhs (Thm.concl th2) = boolSyntax.T then
+        Thm.TRANS th4 (Thm.SPEC neq AND_T)
+      else
+        th4
+    end
+    handle Feedback.HOL_ERR _ =>  (* 'list' is not a cons *)
       if listSyntax.is_nil list then
         (* |- ~MEM x [] = T *)
         Drule.ISPEC x NOT_MEM_NIL
       else
-        let
-          val (h, t) = listSyntax.dest_cons list
-          (* |- ~MEM x (h::t) = (x <> h) /\ ~MEM x t *)
-          val th1 = Drule.ISPECL [x, h, t] (if swap andalso
-                Term.compare (h, x) = LESS then
-              NOT_MEM_CONS_SWAP
-            else
-              NOT_MEM_CONS)
-          val (neq, notmem) = boolSyntax.dest_conj
-            (boolSyntax.rhs (Thm.concl th1))
-          (* |- ~MEM x t = rhs *)
-          val th2 = not_mem_conv notmem
-          (* |- ~MEM x (h::t) = (x <> h) /\ rhs *)
-          val th3 = Thm.TRANS th1 (Thm.AP_TERM (Term.mk_comb
-            (boolSyntax.conjunction, neq)) th2)
-        in
-          if boolSyntax.rhs (Thm.concl th2) = boolSyntax.T then
-            Thm.TRANS th3 (Thm.SPEC neq AND_T)
-          else
-            th3
-        end
-    end
-    fun all_distinct_conv tm =
-    let
-      val list = listSyntax.dest_all_distinct tm
-    in
-      if listSyntax.is_nil list then
-        (* |- ALL_DISTINCT [] = T *)
-        Thm.INST_TYPE [{redex = Type.alpha, residue = listSyntax.dest_nil list}]
-          ALL_DISTINCT_NIL
-      else
-        let
-          val (h, t) = listSyntax.dest_cons list
-          (* |- ALL_DISTINCT (h::t) = ~MEM h t /\ ALL_DISTINCT t *)
-          val th1 = Drule.ISPECL [h, t] ALL_DISTINCT_CONS
-          val (notmem, alldistinct) = boolSyntax.dest_conj
-            (boolSyntax.rhs (Thm.concl th1))
-          (* |- ~MEM h t = something *)
-          val th2 = not_mem_conv notmem
-          (* |- ALL_DISTINCT t = rhs *)
-          val th3 = all_distinct_conv alldistinct
-          val th4 = Drule.SPECL [notmem, boolSyntax.rhs (Thm.concl th2),
-            alldistinct, boolSyntax.rhs (Thm.concl th3)] CONJ_CONG
-          (* ~MEM h t /\ ALL_DISTINCT t = something /\ rhs *)
-          val th5 = Thm.MP (Thm.MP th4 th2) th3
-          val th6 = Thm.TRANS th1 th5
-        in
-          if boolSyntax.rhs (Thm.concl th3) = boolSyntax.T then
-            Thm.TRANS th6 (Thm.SPEC (boolSyntax.rhs (Thm.concl th2)) AND_T)
-          else
-            th6
-        end
-    end
-    val thm = all_distinct_conv tm
-  in
-    if swap then
-      thm
-    else
-      (* get rid of parentheses *)
-      let
-        val conj = boolSyntax.rhs (Thm.concl thm)
-        val conj' = boolSyntax.list_mk_conj (boolSyntax.strip_conj conj)
-      in
-        Thm.TRANS thm (Drule.CONJUNCTS_AC (conj, conj'))
-      end
+        raise ERR "NOT_MEM_CONV" ""
   end
-  handle Feedback.HOL_ERR _ =>
-    raise Conv.UNCHANGED
+
+  (* returns "|- ALL_DISTINCT [x; y; z] = (x <> y /\ x <> z) /\ y <>
+     z" (note the parentheses); fails if not applied to a term of the
+     form ``ALL_DISTINCT [x; y; z]`` *)
+  fun ALL_DISTINCT_CONV tm =
+  let
+    val list = listSyntax.dest_all_distinct tm
+  in
+    let
+      val (h, t) = listSyntax.dest_cons list
+      (* |- ALL_DISTINCT (h::t) = ~MEM h t /\ ALL_DISTINCT t *)
+      val th1 = Drule.ISPECL [h, t] ALL_DISTINCT_CONS
+      val (notmem, alldistinct) = boolSyntax.dest_conj
+        (boolSyntax.rhs (Thm.concl th1))
+      (* |- ~MEM h t = something *)
+      val th2 = NOT_MEM_CONV notmem
+      val something = boolSyntax.rhs (Thm.concl th2)
+      (* |- ALL_DISTINCT t = rhs *)
+      val th3 = ALL_DISTINCT_CONV alldistinct
+      val rhs = boolSyntax.rhs (Thm.concl th3)
+      val th4 = Drule.SPECL [notmem, something, alldistinct, rhs] CONJ_CONG
+      (* |- ~MEM h t /\ ALL_DISTINCT t = something /\ rhs *)
+      val th5 = Thm.MP (Thm.MP th4 th2) th3
+      (* |- ALL_DISTINCT (h::t) = something /\ rhs *)
+      val th6 = Thm.TRANS th1 th5
+    in
+      if rhs = boolSyntax.T then
+        Thm.TRANS th6 (Thm.SPEC something AND_T)
+      else
+        th6
+    end
+    handle Feedback.HOL_ERR _ =>  (* 'list' is not a cons *)
+      (* |- ALL_DISTINCT [] = T *)
+      Thm.INST_TYPE [{redex = Type.alpha, residue = listSyntax.dest_nil list}]
+        ALL_DISTINCT_NIL
+  end
+
+  (* returns |- (x = y) = (y = x), provided ``y = x`` is LESS than ``x
+     = y`` wrt. Term.compare; fails if applied to a term that is not
+     an equation; may raise Conv.UNCHANGED *)
+  fun REORIENT_SYM_CONV tm =
+  let
+    val tm' = boolSyntax.mk_eq (Lib.swap (boolSyntax.dest_eq tm))
+  in
+    if Term.compare (tm', tm) = LESS then
+      Conv.SYM_CONV tm
+    else
+      raise Conv.UNCHANGED
+  end
+
+  (* returns |- ALL_DISTINCT ... /\ T = ... *)
+  fun rewrite_all_distinct (l, r) =
+  let
+    fun ALL_DISTINCT_AND_T_CONV t =
+      ALL_DISTINCT_CONV t
+        handle Feedback.HOL_ERR _ =>
+          let
+            val all_distinct = Lib.fst (boolSyntax.dest_conj t)
+            val all_distinct_th = ALL_DISTINCT_CONV all_distinct
+          in
+            Thm.TRANS (Thm.SPEC all_distinct AND_T) all_distinct_th
+          end
+    val REORIENT_CONV = Conv.ONCE_DEPTH_CONV REORIENT_SYM_CONV
+    (* since ALL_DISTINCT may be present in both 'l' and 'r', we
+       normalize both 'l' and 'r' *)
+    val l_eq_l' = Conv.THENC (ALL_DISTINCT_AND_T_CONV, REORIENT_CONV) l
+    val r_eq_r' = Conv.THENC (fn t => ALL_DISTINCT_AND_T_CONV t
+      handle Feedback.HOL_ERR _ => raise Conv.UNCHANGED, REORIENT_CONV) r
+      handle Conv.UNCHANGED => Thm.REFL r
+    (* get rid of parentheses *)
+    val l'_eq_r' = Drule.CONJUNCTS_AC (boolSyntax.rhs (Thm.concl l_eq_l'),
+      boolSyntax.rhs (Thm.concl r_eq_r'))
+  in
+    Thm.TRANS (Thm.TRANS l_eq_l' l'_eq_r') (Thm.SYM r_eq_r')
+  end
 
   (* replaces distinct if-then-else terms by distinct variables;
      returns the generalized term and a map from ite-subterms to
@@ -444,6 +530,7 @@ local
 
      Also
      ~ALL_DISTINCT [x; y; z] \/ (x <> y /\ x <> z /\ y <> z)
+     ~(ALL_DISTINCT [x; y; z] /\ T) \/ (x <> y /\ x <> z /\ y <> z)
 
      There is a complication: 't' may contain arbitarily many
      irrelevant (nested) conjuncts/disjuncts, i.e.,
@@ -473,14 +560,23 @@ local
     end
     handle Feedback.HOL_ERR _ =>
     (* ~ALL_DISTINCT [x; y; z] \/ x <> y /\ x <> z /\ y <> z *)
+    (* ~(ALL_DISTINCT [x; y; z] /\ T) \/ x <> y /\ x <> z /\ y <> z *)
     let
-      val (not_all_distinct, _) = boolSyntax.dest_disj t
-      val all_distinct = boolSyntax.dest_neg not_all_distinct
-      val all_distinct_th = ALL_DISTINCT_CONV false all_distinct
-        handle Conv.UNCHANGED =>
-          raise ERR "z3_def_axiom" ""
+      val (l, r) = boolSyntax.dest_disj t
+      val all_distinct = boolSyntax.dest_neg l
+      val all_distinct_th = ALL_DISTINCT_CONV all_distinct
+        handle Feedback.HOL_ERR _ =>
+          let
+            val all_distinct = Lib.fst (boolSyntax.dest_conj all_distinct)
+            val all_distinct_th = ALL_DISTINCT_CONV all_distinct
+          in
+            Thm.TRANS (Thm.SPEC all_distinct AND_T) all_distinct_th
+          end
+      (* get rid of parentheses *)
+      val l_eq_r = Thm.TRANS all_distinct_th (Drule.CONJUNCTS_AC
+        (boolSyntax.rhs (Thm.concl all_distinct_th), r))
     in
-      (state, Drule.IMP_ELIM (Lib.fst (Thm.EQ_IMP_RULE all_distinct_th)))
+      (state, Drule.IMP_ELIM (Lib.fst (Thm.EQ_IMP_RULE l_eq_r)))
     end
 
   (* (!x y z. P) = P *)
@@ -659,76 +755,78 @@ local
   let
     val (l, r) = boolSyntax.dest_eq t
   in
-    if l = r then
+    if Profile.profile "rewrite(01)(l=r)" (fn () => l = r) () then
       (state, Thm.REFL l)
     else
       (* proforma theorems *)
-      (state, Profile.profile "rewrite(proforma)"
+      (state, Profile.profile "rewrite(02)(proforma)"
         (Z3_ProformaThms.prove Z3_ProformaThms.rewrite_thms) t)
     handle Feedback.HOL_ERR _ =>
 
+    (* cached theorems *)
+    (state, Profile.profile "rewrite(03)(cache)" (state_inst_cached_thm state) t)
+    handle Feedback.HOL_ERR _ =>
+
     (* re-ordering conjunctions and disjunctions *)
-    (if boolSyntax.is_conj l then
-      (state, Profile.profile "rewrite(conj)" rewrite_conj (l, r))
-    else if boolSyntax.is_disj l then
-      (state, Profile.profile "rewrite(disj)" rewrite_disj (l, r))
-    else
-      raise ERR "" "")
+    Profile.profile "rewrite(04)(conj/disj)" (fn () =>
+      if boolSyntax.is_conj l then
+        (state, Profile.profile "rewrite(04.1)(conj)" rewrite_conj (l, r))
+      else if boolSyntax.is_disj l then
+        (state, Profile.profile "rewrite(04.2)(disj)" rewrite_disj (l, r))
+      else
+        raise ERR "" "") ()
     handle Feedback.HOL_ERR _ =>
 
     (* |- r1 /\ ... /\ rn = ~(s1 \/ ... \/ sn) *)
-    (state, Profile.profile "rewrite(nnf)" rewrite_nnf (l, r))
+    (state, Profile.profile "rewrite(05)(nnf)" rewrite_nnf (l, r))
     handle Feedback.HOL_ERR _ =>
 
-    (* ALL_DISTINCT [x, y, z] = ... *)
-    (state, Profile.profile "rewrite(all_distinct)" (fn () =>
-      let
-        val l_eq_l' = ALL_DISTINCT_CONV true l
-          handle Conv.UNCHANGED => raise ERR "" ""
-        val r_eq_r' = ALL_DISTINCT_CONV true r
-          handle Conv.UNCHANGED => Thm.REFL r
-        val l' = boolSyntax.rhs (Thm.concl l_eq_l')
-        val r' = boolSyntax.rhs (Thm.concl r_eq_r')
-        val l'_eq_r' = Drule.CONJUNCTS_AC (l', r')
-      in
-        Thm.TRANS (Thm.TRANS l_eq_l' l'_eq_r') (Thm.SYM r_eq_r')
-      end) ())
-    handle Feedback.HOL_ERR _ =>
+    (* at this point, we should have dealt with all propositional
+       tautologies (i.e., 'tautLib.TAUT_PROVE t' should fail here) *)
 
-    (state, Profile.profile "rewrite(TAUT_PROVE)" tautLib.TAUT_PROVE t)
-    handle Feedback.HOL_ERR _ =>
-
-    (state, Profile.profile "rewrite(update)" SIMP_PROVE_UPDATE t)
-    handle Feedback.HOL_ERR _ =>
-
-    (state, Profile.profile "rewrite(cache)" (state_inst_cached_thm state) t)
+    (* |- ALL_DISTINCT ... /\ T = ... *)
+    (state, Profile.profile "rewrite(06)(ALL_DISTINCT)" rewrite_all_distinct
+      (l, r))
     handle Feedback.HOL_ERR _ =>
 
     let
-      val th = if term_contains_real_ty t then
-          Profile.profile "rewrite(REAL_ARITH)" realLib.REAL_ARITH t
-        else
-          Profile.profile "rewrite(ARITH_PROVE)" intLib.ARITH_PROVE t
+      val thm = (Profile.profile "rewrite(07)(update)" SIMP_PROVE_UPDATE t
+before rewrite_update := Redblackset.add (!rewrite_update, t))
         handle Feedback.HOL_ERR _ =>
 
-        (*TODO*) Profile.profile "rewrite(WORD_ARITH_CONV)" (fn () =>
+        (*TODO*) (Profile.profile "rewrite(08)(WORD_DP)" (fn () =>
+          wordsLib.WORD_DP (bossLib.SIMP_CONV (bossLib.++
+            (bossLib.srw_ss(), wordsLib.WORD_EXTRACT_ss)) [])
+            (Drule.EQT_ELIM o (bossLib.SIMP_CONV bossLib.arith_ss [])) t) ()
+before (
+  Profile.profile "rewrite(08)(WORD_DP)(thm)" Lib.I ();
+  rewrite_WORD_DP := Redblackset.add (!rewrite_WORD_DP, t)
+))
+        handle Feedback.HOL_ERR _ =>
+
+        (*TODO*) (Profile.profile "rewrite(09)(WORD_ARITH_CONV)" (fn () =>
           Drule.EQT_ELIM (wordsLib.WORD_ARITH_CONV t)
             handle Conv.UNCHANGED => raise ERR "" "") ()
+before (
+  Profile.profile "rewrite(09)(WORD_ARITH_CONV)(thm)" Lib.I ();
+  rewrite_WORD_ARITH_CONV := Redblackset.add (!rewrite_WORD_ARITH_CONV, t)
+))
         handle Feedback.HOL_ERR _ =>
 
-        (*TODO*) Profile.profile "rewrite(WORD_BIT_EQ)" (fn () =>
+        (*TODO*)
+        if term_contains_real_ty t then
+          Profile.profile "rewrite(10)(REAL_ARITH)" realLib.REAL_ARITH t
+        else
+          Profile.profile "rewrite(10)(ARITH_PROVE)" intLib.ARITH_PROVE t
+        handle Feedback.HOL_ERR _ =>
+
+        (*TODO*) Profile.profile "rewrite(11)(WORD_BIT_EQ)" (fn () =>
           Drule.EQT_ELIM (Conv.THENC (simpLib.SIMP_CONV (simpLib.++
             (simpLib.++ (bossLib.std_ss, wordsLib.WORD_ss),
             wordsLib.WORD_BIT_EQ_ss)) [], tautLib.TAUT_CONV) t)) ()
         handle Feedback.HOL_ERR _ =>
 
-        (*TODO*) Profile.profile "rewrite(WORD_DECIDE)" wordsLib.WORD_DECIDE t
-        handle Feedback.HOL_ERR _ =>
-
-        (*TODO*) Profile.profile "rewrite(WORD_DP)" (fn () =>
-          wordsLib.WORD_DP (bossLib.SIMP_CONV (bossLib.++
-            (bossLib.srw_ss(), wordsLib.WORD_EXTRACT_ss)) [])
-            (Drule.EQT_ELIM o (bossLib.SIMP_CONV bossLib.arith_ss [])) t) ()
+        (*TODO*) Profile.profile "rewrite(12)(WORD_DECIDE)" wordsLib.WORD_DECIDE t
 (*
         handle Feedback.HOL_ERR _ =>
 
@@ -736,7 +834,7 @@ local
           Tactical.prove (t, blastLib.BBLAST_TAC)
 *)
     in
-      (state_cache_thm state th, th)
+      (state_cache_thm state thm, thm)
     end
   end
 
@@ -749,11 +847,11 @@ local
   let
     val t' = boolSyntax.list_mk_imp (List.map Thm.concl thms, t)
     val (state, thm) = (* proforma theorems *)
-      (state, Profile.profile ("th_lemma[" ^ name ^ "](proforma)") (fn () =>
+      (state, Profile.profile ("th_lemma[" ^ name ^ "](1)(proforma)") (fn () =>
           Z3_ProformaThms.prove Z3_ProformaThms.th_lemma_thms t') ()
         handle Feedback.HOL_ERR _ =>
           (* cached theorems *)
-          Profile.profile ("th_lemma[" ^ name ^ "](cache)") (fn () =>
+          Profile.profile ("th_lemma[" ^ name ^ "](2)(cache)") (fn () =>
             state_inst_cached_thm state t') ())
       handle Feedback.HOL_ERR _ =>
         (* do actual work to derive the theorem *)
@@ -782,7 +880,7 @@ local
 
   val z3_th_lemma_array = th_lemma_wrapper "array" (fn (state, t) =>
     let
-      val thm = Profile.profile "th_lemma[array](simp)" SIMP_PROVE_UPDATE t
+      val thm = Profile.profile "th_lemma[array](3)(simp)" SIMP_PROVE_UPDATE t
     in
       (* cache 'thm' *)
       (state_cache_thm state thm, thm)
@@ -797,20 +895,52 @@ local
     (* TODO: I would like to find out whether PURE_REWRITE_TAC is
              faster than SIMP_TAC here.  However, using the former
              instead of the latter causes HOL4 to segfault on various
-             SMT-LIB benchmark proofs.  I do not know the reason for
-             this. *)
+             SMT-LIB benchmark proofs.  So far I do not know the
+             reason for this. *)
     val COND_REWRITE_TAC = (*Rewrite.PURE_REWRITE_TAC*) simpLib.SIMP_TAC
       simpLib.empty_ss [boolTheory.COND_RAND, boolTheory.COND_RATOR]
     val TAC = Tactical.THEN
-      (Profile.profile "th_lemma[bv](COND_REWRITE_TAC)" COND_REWRITE_TAC,
-      Profile.profile "th_lemma[bv](BBLAST_TAC)" blastLib.BBLAST_TAC)
+      (Profile.profile "th_lemma[bv](4.1)(COND_REWRITE_TAC)" COND_REWRITE_TAC,
+      Profile.profile "th_lemma[bv](4.2)(BBLAST_TAC)" blastLib.BBLAST_TAC)
   in
     th_lemma_wrapper "bv" (fn (state, t) =>
       let
+        val thm =
+
+(*
+        (*TODO*) Profile.profile "th_lemma[bv](3)(WORD_ARITH_CONV)" (fn () =>
+          Drule.EQT_ELIM (wordsLib.WORD_ARITH_CONV t)
+            handle Conv.UNCHANGED => raise ERR "" "") ()
+        handle Feedback.HOL_ERR _ =>
+*)
+
+        (*TODO*) (Profile.profile "th_lemma[bv](3)(WORD_BIT_EQ)" (fn () =>
+          Drule.EQT_ELIM (Conv.THENC (simpLib.SIMP_CONV (simpLib.++
+            (simpLib.++ (bossLib.std_ss, wordsLib.WORD_ss),
+            wordsLib.WORD_BIT_EQ_ss)) [], tautLib.TAUT_CONV) t)) ()
+before Profile.profile "th_lemma[bv](3)(WORD_BIT_EQ)(thm)" Lib.I ())
+        handle Feedback.HOL_ERR _ =>
+
+(*
+        (*TODO*) Profile.profile "th_lemma[bv](5)(WORD_DP)" (fn () =>
+          wordsLib.WORD_DP (bossLib.SIMP_CONV (bossLib.++
+            (bossLib.srw_ss(), wordsLib.WORD_EXTRACT_ss)) [])
+            (Drule.EQT_ELIM o (bossLib.SIMP_CONV bossLib.arith_ss [])) t) ()
+        handle Feedback.HOL_ERR _ =>
+*)
+
+(*
+        (*TODO*) Profile.profile "th_lemma[bv](6)(WORD_DECIDE)"
+          wordsLib.WORD_DECIDE t
+        handle Feedback.HOL_ERR _ =>
+*)
+
         (* TODO: TAC gets the job done, but it might be faster to try
                  other word (semi-)decision procedures first;
                  cf. z3_rewrite *)
-        val thm = Tactical.prove (t, TAC)
+          (Profile.profile "th_lemma[bv](4)(Tactical.prove)"
+            Tactical.prove (t, TAC)
+before Profile.profile "th_lemma[bv](4)(Tactical.prove)(thm)" Lib.I ())
       in
         (* cache 'thm' *)
         (state_cache_thm state thm, thm)
