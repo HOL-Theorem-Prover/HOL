@@ -500,14 +500,17 @@ end
 
 fun complex cnv (cps as {context as (cntxt,b),prover,simpls}) (ant,rst) =
 let fun tr (i,mf) = lztrace(i,"complex",mf)
-    fun trterm (i,m,t) =
-        tr(i, trace ("types", 1) (fn () => m ^ term_to_backend_string t))
+    fun trterm (i,m,t) = tr(i, (fn () => m ^ term_to_backend_string t))
     fun trvlist (i,m,tlist) =
+        tr(i, (fn () => String.concatWith "\n"
+                           (m :: map term_to_backend_string tlist)))
+    fun trthlist (i,m,thlist) =
         tr(i,
-           trace ("types", 1)
+           trace ("assumptions", 1)
              (fn () => String.concatWith "\n"
-                         (m :: map term_to_backend_string tlist)))
+                         (m :: map thm_to_backend_string thlist)))
     val _  = trterm(5, "Antecedent: ", ant)
+    val _ = trthlist(6, "Context: ", cntxt)
     val ant_frees = free_vars ant
     val _ = trvlist(10, "Antecedent frees: ", ant_frees)
     val context_frees = free_varsl (map concl (fst context))
@@ -553,9 +556,13 @@ in
          case assoc1 v pairs
           of SOME (_,tup) => pairTools.PGEN v tup thm
            | NONE => raise RW_ERR "complex" "generalize"
+     val result = itlist generalize vlist (itlist DISCH L th1)
+     val _ = lztrace(6, "complex",
+                     trace ("assumptions", 1)
+                     (fn () => "Changed outcome: " ^
+                               thm_to_backend_string result))
    in
-     (CHANGE (itlist generalize vlist (itlist DISCH L th1)),
-       map (subst [rhsv |-> g]) rst)
+     (CHANGE result, map (subst [rhsv |-> g]) rst)
    end
  | otherwise => let
    in
@@ -586,7 +593,6 @@ fun do_cong cnv cps th = let
                   (fn () => "th concl: "^term_to_backend_string c))
   val ants = strip_conj a
   val _ = lztrace(6, "do_cong",
-                  trace ("types", 1)
                     (fn () => String.concatWith "\n"
                                ("ants: " :: map term_to_backend_string ants)))
   fun loop [] = []    (* loop proves each antecedent in turn. *)
