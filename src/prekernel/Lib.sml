@@ -50,6 +50,9 @@ fun swap (x,y) = (y,x)
 fun fst (x,_) = x
 fun snd (_,y) = y
 
+fun triple x y z = (x, y, z)
+fun quadruple x1 x2 x3 x4 = (x1, x2, x3, x4)
+
 (*---------------------------------------------------------------------------*
  * Success and failure. Interrupt has a special status in Standard ML.       *
  *---------------------------------------------------------------------------*)

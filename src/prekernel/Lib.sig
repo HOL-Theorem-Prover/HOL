@@ -9,6 +9,8 @@ sig
   val pair          : 'a -> 'b -> 'a * 'b
   val rpair         : 'a -> 'b -> 'b * 'a
   val swap          : 'a * 'b -> 'b * 'a
+  val triple        : 'a -> 'b -> 'c -> 'a * 'b * 'c
+  val quadruple     : 'a -> 'b -> 'c -> 'd -> 'a * 'b * 'c * 'd
   val cons          : 'a -> 'a list -> 'a list
   val ##            : ('a -> 'b) * ('c -> 'd) -> 'a * 'c -> 'b * 'd
   val apfst         : ('a -> 'b) -> 'a * 'c -> 'b * 'c
