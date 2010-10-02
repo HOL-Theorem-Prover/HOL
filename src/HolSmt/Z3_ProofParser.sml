@@ -160,7 +160,7 @@ local
     if List.null xs then
       raise ERR "list_args" "non-empty argument list expected"
     else
-      f ts
+      f xs
 
   (* FIXME: The built-in constants should instead be chosen
             dynamically, based on a parameter that specifies the
