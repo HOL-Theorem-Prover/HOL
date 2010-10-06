@@ -11,7 +11,6 @@ val ptable = ref (Binarymap.mkDict String.compare : (string,call_info)dict)
 datatype 'a result = OK of 'a | Ex of exn
 
 fun return (OK x) = x | return (Ex e) = raise e
-fun is_Ex (Ex e) = true | is_Ex _ = false
 
 fun time f x = let
   val timer2 = Timer.startRealTimer()
@@ -40,24 +39,24 @@ fun add_profile nm timefx =
                                      sys = sys0 + sys1, real = real0 + real1, n = Int.+ (n0, 1)})
       end
 
-
-
 fun profile_exn_opt do_exn do_ok do_both nm f x =
-    let
-        val (result, timefx) = time f x
-        val _ = if do_both then add_profile nm timefx else ();
-        val _ = if is_Ex result andalso do_exn then 
-                  add_profile (nm ^ "_exn") timefx else ()
-        val _ = if not (is_Ex result) andalso do_ok then 
-                  add_profile (nm ^ "_OK") timefx else ()
-    in
-        return result
-    end;
+  let
+    val (result, timefx) = time f x
+    val _ = if do_both then add_profile nm timefx else ()
+    val _ = case result of OK _ =>
+        if do_ok then add_profile (nm ^ "_OK") timefx else ()
+      | Ex e =>
+        (case do_exn of NONE => ()
+        | SOME false => add_profile (nm ^ "_exn") timefx
+        | SOME true => add_profile (nm ^ "_" ^ exnName e) timefx)
+  in
+    return result
+  end
 
-fun profile nm          = profile_exn_opt false false true nm;
-fun profile_with_exn nm = profile_exn_opt true true true nm;
-fun profile_no_exn nm   = profile_exn_opt false true false nm;
-
+fun profile nm = profile_exn_opt NONE false true nm
+fun profile_with_exn nm = profile_exn_opt (SOME false) true true nm
+fun profile_with_exn_name nm = profile_exn_opt (SOME true) true true nm
+fun profile_no_exn nm = profile_exn_opt NONE true false nm
 
 fun reset1 nm =
     ptable := #1 (remove (!ptable, nm)) handle Binarymap.NotFound => ()

@@ -5,6 +5,7 @@ type call_info = {usr : Time.time, sys : Time.time, gc : Time.time, real : Time.
 
 val profile : string -> ('a -> 'b) -> 'a -> 'b
 val profile_with_exn : string -> ('a -> 'b) -> 'a -> 'b
+val profile_with_exn_name : string -> ('a -> 'b) -> 'a -> 'b
 val profile_no_exn : string -> ('a -> 'b) -> 'a -> 'b
 
 val reset1 : string -> unit
