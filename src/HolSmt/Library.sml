@@ -5,8 +5,12 @@
 structure Library =
 struct
 
-  (* opens 'path' as an output text file; writes all elements of 'strings' to
-     this file (in the order given); closes the file *)
+  (***************************************************************************)
+  (* I/O                                                                     *)
+  (***************************************************************************)
+
+  (* opens 'path' as an output text file; writes all elements of
+     'strings' to this file (in the given order); closes the file *)
   fun write_strings_to_file path strings =
   let
     val outstream = TextIO.openOut path
@@ -14,6 +18,74 @@ struct
     List.app (TextIO.output o Lib.pair outstream) strings;
     TextIO.closeOut outstream
   end
+
+  (* returns a function that returns the next character in 'instream'
+     and raises 'HOL_ERR' when at the end of 'instream' *)
+  fun get_buffered_char instream : unit -> char =
+  (* The fastest approach would be to slurp in the whole stream at
+     once. However, this is infeasible for long streams (especially
+     because 'String.explode' causes a significant memory
+     blowup). Reading chunks of 10000000 bytes (i.e., 10 MB) should be
+     a reasonable compromise between a small memory footprint (even
+     after 'String.explode') and a small number of reads. *)
+  let
+    val buffer = ref ([] : char list)
+  in
+    fn () =>
+      (case !buffer of
+        [] =>
+        (case String.explode (TextIO.inputN (instream, 10000000)) of
+          [] =>
+          raise Feedback.mk_HOL_ERR "Library" "get_buffered_char"
+            "end of stream"
+        | c::cs =>
+          (buffer := cs; c))
+      | c::cs =>
+        (buffer := cs; c))
+  end
+
+  (* Takes a function that returns characters
+     (cf. 'get_buffered_char'), returns a function that returns
+     tokens. SMT-LIB 2 tokens are separated by whitespace (which is
+     dropped) or parentheses (which are tokens themselves). Tokens are
+     simply strings; we use no markup. *)
+  fun get_token (get_char : unit -> char) : unit -> string =
+  let
+    val buffer = ref (NONE : string option)
+    fun (* whitespace *)
+        aux [] #" " = aux [] (get_char ())
+      | aux [] #"\n" = aux [] (get_char ())
+      | aux [] #"\r" = aux [] (get_char ())
+      | aux cs #" " = String.implode (List.rev cs)
+      | aux cs #"\n" = String.implode (List.rev cs)
+      | aux cs #"\r" = String.implode (List.rev cs)
+      (* parentheses *)
+      | aux [] #"(" = "("
+      | aux [] #")" = ")"
+      | aux cs #"(" = (buffer := SOME "("; String.implode (List.rev cs))
+      | aux cs #")" = (buffer := SOME ")"; String.implode (List.rev cs))
+      (* everything else *)
+      | aux cs c = aux (c :: cs) (get_char ())
+          handle Feedback.HOL_ERR _ =>
+            (* end of file *)
+            String.implode (List.rev (c :: cs))
+  in
+    fn () =>
+      case !buffer of
+        SOME token => (buffer := NONE; token)
+      | NONE => aux [] (get_char ())
+  end
+
+  fun expect_token (expected : string) (actual : string) : unit =
+    if expected = actual then
+      ()
+    else
+      raise Feedback.mk_HOL_ERR "Library" "expect_token"
+        ("'" ^ expected ^ "' expected, but '" ^ actual ^ "' found")
+
+  (***************************************************************************)
+  (* Derived rules                                                           *)
+  (***************************************************************************)
 
   (* A |- ... /\ t /\ ...
      --------------------
@@ -102,6 +174,10 @@ struct
     Thm.MP (Thm.NOT_ELIM th2) th1
   end
 
+  (***************************************************************************)
+  (* Tactics                                                                 *)
+  (***************************************************************************)
+
   (* A tactic that unfolds operations of set theory, replacing them by
      propositional logic (representing sets as predicates). *)
   val SET_SIMP_TAC =
@@ -110,7 +186,7 @@ struct
       pred_setTheory.EMPTY_DEF, pred_setTheory.UNIV_DEF,
       pred_setTheory.UNION_DEF, pred_setTheory.INTER_DEF]
   in
-    simpLib.SIMP_TAC (simpLib.mk_simpset [pred_setTheory.SET_SPEC_ss]) thms 
+    simpLib.SIMP_TAC (simpLib.mk_simpset [pred_setTheory.SET_SPEC_ss]) thms
   end
 
   (* A tactic that unfolds LET. *)

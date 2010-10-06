@@ -5,12 +5,10 @@
 structure Z3_ProofReplay =
 struct
 
-(*TODO*)
-  val rewrite_update = ref (Redblackset.empty Term.compare)
-  val rewrite_WORD_DP = ref (Redblackset.empty Term.compare)
-  val rewrite_WORD_ARITH_CONV = ref (Redblackset.empty Term.compare)
-
 local
+
+  fun profile name f x =
+    (*Profile.profile_with_exn name*) f x
 
   open Z3_Proof
 
@@ -56,10 +54,6 @@ local
     (* keeps track of assumptions; (only) these may remain in the
        final theorem *)
     asserted_hyps : Term.term HOLset.set,
-    (* keeps track of definitions "sk = ..." (where sk is a variable)
-       introduced for Skolemization; these are eliminated at the end
-       of proof reconstruction *)
-    skolem_defs : Term.term list,
     (* stores certain theorems (proved by 'rewrite' or 'th_lemma') for
        later retrieval, to avoid re-reproving them *)
     thm_cache : Thm.thm Net.net
@@ -68,21 +62,12 @@ local
   fun state_assert (s : state) (t : Term.term) : state =
     {
       asserted_hyps = HOLset.add (#asserted_hyps s, t),
-      skolem_defs = #skolem_defs s,
-      thm_cache = #thm_cache s
-    }
-
-  fun state_add_skolem_def (s : state) (t : Term.term) : state =
-    {
-      asserted_hyps = #asserted_hyps s,
-      skolem_defs = t :: #skolem_defs s,
       thm_cache = #thm_cache s
     }
 
   fun state_cache_thm (s : state) (thm : Thm.thm) : state =
     {
       asserted_hyps = #asserted_hyps s,
-      skolem_defs = #skolem_defs s,
       thm_cache = Net.insert (Thm.concl thm, thm) (#thm_cache s)
     }
 
@@ -453,7 +438,7 @@ local
      variables (treating anything but combinations as atomic, i.e.,
      this function does NOT descend into lambda-abstractions) *)
   fun generalize_ite t =
-  let 
+  let
     fun aux (dict, t) =
       if boolSyntax.is_cond t then (
         case Redblackmap.peek (dict, t) of
@@ -755,84 +740,58 @@ local
   let
     val (l, r) = boolSyntax.dest_eq t
   in
-    if Profile.profile "rewrite(01)(l=r)" (fn () => l = r) () then
+    if l = r then
       (state, Thm.REFL l)
     else
       (* proforma theorems *)
-      (state, Profile.profile "rewrite(02)(proforma)"
+      (state, profile "rewrite(01)(proforma)"
         (Z3_ProformaThms.prove Z3_ProformaThms.rewrite_thms) t)
     handle Feedback.HOL_ERR _ =>
 
     (* cached theorems *)
-    (state, Profile.profile "rewrite(03)(cache)" (state_inst_cached_thm state) t)
+    (state, profile "rewrite(02)(cache)" (state_inst_cached_thm state) t)
     handle Feedback.HOL_ERR _ =>
 
     (* re-ordering conjunctions and disjunctions *)
-    Profile.profile "rewrite(04)(conj/disj)" (fn () =>
+    profile "rewrite(04)(conj/disj)" (fn () =>
       if boolSyntax.is_conj l then
-        (state, Profile.profile "rewrite(04.1)(conj)" rewrite_conj (l, r))
+        (state, profile "rewrite(04.1)(conj)" rewrite_conj (l, r))
       else if boolSyntax.is_disj l then
-        (state, Profile.profile "rewrite(04.2)(disj)" rewrite_disj (l, r))
+        (state, profile "rewrite(04.2)(disj)" rewrite_disj (l, r))
       else
         raise ERR "" "") ()
     handle Feedback.HOL_ERR _ =>
 
     (* |- r1 /\ ... /\ rn = ~(s1 \/ ... \/ sn) *)
-    (state, Profile.profile "rewrite(05)(nnf)" rewrite_nnf (l, r))
+    (state, profile "rewrite(05)(nnf)" rewrite_nnf (l, r))
     handle Feedback.HOL_ERR _ =>
 
     (* at this point, we should have dealt with all propositional
        tautologies (i.e., 'tautLib.TAUT_PROVE t' should fail here) *)
 
     (* |- ALL_DISTINCT ... /\ T = ... *)
-    (state, Profile.profile "rewrite(06)(ALL_DISTINCT)" rewrite_all_distinct
-      (l, r))
+    (state, profile "rewrite(06)(all_distinct)" rewrite_all_distinct (l, r))
     handle Feedback.HOL_ERR _ =>
 
     let
-      val thm = (Profile.profile "rewrite(07)(update)" SIMP_PROVE_UPDATE t
-before rewrite_update := Redblackset.add (!rewrite_update, t))
+      val thm = profile "rewrite(07)(SIMP_PROVE_UPDATE)" SIMP_PROVE_UPDATE t
         handle Feedback.HOL_ERR _ =>
 
-        (*TODO*) (Profile.profile "rewrite(08)(WORD_DP)" (fn () =>
-          wordsLib.WORD_DP (bossLib.SIMP_CONV (bossLib.++
-            (bossLib.srw_ss(), wordsLib.WORD_EXTRACT_ss)) [])
-            (Drule.EQT_ELIM o (bossLib.SIMP_CONV bossLib.arith_ss [])) t) ()
-before (
-  Profile.profile "rewrite(08)(WORD_DP)(thm)" Lib.I ();
-  rewrite_WORD_DP := Redblackset.add (!rewrite_WORD_DP, t)
-))
+        profile "rewrite(08)(WORD_DP)" (wordsLib.WORD_DP
+          (bossLib.SIMP_CONV (bossLib.++ (bossLib.srw_ss(),
+            wordsLib.WORD_EXTRACT_ss)) [])
+          (Drule.EQT_ELIM o (bossLib.SIMP_CONV bossLib.arith_ss []))) t
         handle Feedback.HOL_ERR _ =>
 
-        (*TODO*) (Profile.profile "rewrite(09)(WORD_ARITH_CONV)" (fn () =>
+        profile "rewrite(09)(WORD_ARITH_CONV)" (fn () =>
           Drule.EQT_ELIM (wordsLib.WORD_ARITH_CONV t)
             handle Conv.UNCHANGED => raise ERR "" "") ()
-before (
-  Profile.profile "rewrite(09)(WORD_ARITH_CONV)(thm)" Lib.I ();
-  rewrite_WORD_ARITH_CONV := Redblackset.add (!rewrite_WORD_ARITH_CONV, t)
-))
         handle Feedback.HOL_ERR _ =>
 
-        (*TODO*)
         if term_contains_real_ty t then
-          Profile.profile "rewrite(10)(REAL_ARITH)" realLib.REAL_ARITH t
+          profile "rewrite(10.1)(REAL_ARITH)" realLib.REAL_ARITH t
         else
-          Profile.profile "rewrite(10)(ARITH_PROVE)" intLib.ARITH_PROVE t
-        handle Feedback.HOL_ERR _ =>
-
-        (*TODO*) Profile.profile "rewrite(11)(WORD_BIT_EQ)" (fn () =>
-          Drule.EQT_ELIM (Conv.THENC (simpLib.SIMP_CONV (simpLib.++
-            (simpLib.++ (bossLib.std_ss, wordsLib.WORD_ss),
-            wordsLib.WORD_BIT_EQ_ss)) [], tautLib.TAUT_CONV) t)) ()
-        handle Feedback.HOL_ERR _ =>
-
-        (*TODO*) Profile.profile "rewrite(12)(WORD_DECIDE)" wordsLib.WORD_DECIDE t
-(*
-        handle Feedback.HOL_ERR _ =>
-
-        (*TODO*) Profile.profile "rewrite(BBLAST_TAC)"
-          Tactical.prove (t, blastLib.BBLAST_TAC)
-*)
+          profile "rewrite(10.2)(ARITH_PROVE)" intLib.ARITH_PROVE t
     in
       (state_cache_thm state thm, thm)
     end
@@ -846,13 +805,14 @@ before (
     (state, thms, t) : state * Thm.thm =
   let
     val t' = boolSyntax.list_mk_imp (List.map Thm.concl thms, t)
-    val (state, thm) = (* proforma theorems *)
-      (state, Profile.profile ("th_lemma[" ^ name ^ "](1)(proforma)") (fn () =>
-          Z3_ProformaThms.prove Z3_ProformaThms.th_lemma_thms t') ()
-        handle Feedback.HOL_ERR _ =>
-          (* cached theorems *)
-          Profile.profile ("th_lemma[" ^ name ^ "](2)(cache)") (fn () =>
-            state_inst_cached_thm state t') ())
+    val (state, thm) = (state,
+      (* proforma theorems *)
+      profile ("th_lemma[" ^ name ^ "](1)(proforma)")
+        (Z3_ProformaThms.prove Z3_ProformaThms.th_lemma_thms) t'
+      handle Feedback.HOL_ERR _ =>
+        (* cached theorems *)
+        profile ("th_lemma[" ^ name ^ "](2)(cache)")
+          (state_inst_cached_thm state) t')
       handle Feedback.HOL_ERR _ =>
         (* do actual work to derive the theorem *)
         th_lemma_implementation (state, t')
@@ -867,80 +827,51 @@ before (
           (* this is just a heuristic - it is quite conceivable that a
              term that contains type real is provable by integer
              arithmetic *)
-          Profile.profile "th_lemma[arith](real)" realLib.REAL_ARITH t'
+          profile "th_lemma[arith](3.1)(real)" realLib.REAL_ARITH t'
         else
-          Profile.profile "th_lemma[arith](int)" intLib.ARITH_PROVE t'
-      (* cache 'thm' *)
-      val state = state_cache_thm state thm
+          profile "th_lemma[arith](3.2)(int)" intLib.ARITH_PROVE t'
       val subst = List.map (fn (term, var) => {redex = var, residue = term})
         (Redblackmap.listItems dict)
     in
-      (state, Thm.INST subst thm)
+      (* cache 'thm', instantiate to undo 'generalize_ite' *)
+      (state_cache_thm state thm, Thm.INST subst thm)
     end)
 
   val z3_th_lemma_array = th_lemma_wrapper "array" (fn (state, t) =>
     let
-      val thm = Profile.profile "th_lemma[array](3)(simp)" SIMP_PROVE_UPDATE t
+      val thm = profile "th_lemma[array](3)(SIMP_PROVE_UPDATE)"
+        SIMP_PROVE_UPDATE t
     in
       (* cache 'thm' *)
       (state_cache_thm state thm, thm)
     end)
 
-  (*TODO*)
   val z3_th_lemma_basic = th_lemma_wrapper "basic" (fn (state, t) =>
+    (*TODO: not implemented yet*)
     raise ERR "" "")
 
   val z3_th_lemma_bv =
   let
     (* TODO: I would like to find out whether PURE_REWRITE_TAC is
-             faster than SIMP_TAC here.  However, using the former
+             faster than SIMP_TAC here. However, using the former
              instead of the latter causes HOL4 to segfault on various
-             SMT-LIB benchmark proofs.  So far I do not know the
-             reason for this. *)
+             SMT-LIB benchmark proofs. So far I do not know the reason
+             for these segfaults. *)
     val COND_REWRITE_TAC = (*Rewrite.PURE_REWRITE_TAC*) simpLib.SIMP_TAC
       simpLib.empty_ss [boolTheory.COND_RAND, boolTheory.COND_RATOR]
-    val TAC = Tactical.THEN
-      (Profile.profile "th_lemma[bv](4.1)(COND_REWRITE_TAC)" COND_REWRITE_TAC,
-      Profile.profile "th_lemma[bv](4.2)(BBLAST_TAC)" blastLib.BBLAST_TAC)
   in
     th_lemma_wrapper "bv" (fn (state, t) =>
       let
-        val thm =
-
-(*
-        (*TODO*) Profile.profile "th_lemma[bv](3)(WORD_ARITH_CONV)" (fn () =>
-          Drule.EQT_ELIM (wordsLib.WORD_ARITH_CONV t)
-            handle Conv.UNCHANGED => raise ERR "" "") ()
-        handle Feedback.HOL_ERR _ =>
-*)
-
-        (*TODO*) (Profile.profile "th_lemma[bv](3)(WORD_BIT_EQ)" (fn () =>
+        val thm = profile "th_lemma[bv](3)(WORD_BIT_EQ)" (fn () =>
           Drule.EQT_ELIM (Conv.THENC (simpLib.SIMP_CONV (simpLib.++
             (simpLib.++ (bossLib.std_ss, wordsLib.WORD_ss),
             wordsLib.WORD_BIT_EQ_ss)) [], tautLib.TAUT_CONV) t)) ()
-before Profile.profile "th_lemma[bv](3)(WORD_BIT_EQ)(thm)" Lib.I ())
         handle Feedback.HOL_ERR _ =>
 
-(*
-        (*TODO*) Profile.profile "th_lemma[bv](5)(WORD_DP)" (fn () =>
-          wordsLib.WORD_DP (bossLib.SIMP_CONV (bossLib.++
-            (bossLib.srw_ss(), wordsLib.WORD_EXTRACT_ss)) [])
-            (Drule.EQT_ELIM o (bossLib.SIMP_CONV bossLib.arith_ss [])) t) ()
-        handle Feedback.HOL_ERR _ =>
-*)
-
-(*
-        (*TODO*) Profile.profile "th_lemma[bv](6)(WORD_DECIDE)"
-          wordsLib.WORD_DECIDE t
-        handle Feedback.HOL_ERR _ =>
-*)
-
-        (* TODO: TAC gets the job done, but it might be faster to try
-                 other word (semi-)decision procedures first;
-                 cf. z3_rewrite *)
-          (Profile.profile "th_lemma[bv](4)(Tactical.prove)"
-            Tactical.prove (t, TAC)
-before Profile.profile "th_lemma[bv](4)(Tactical.prove)(thm)" Lib.I ())
+          profile "th_lemma[bv](4)(COND_BBLAST)" Tactical.prove (t,
+            Tactical.THEN (profile "th_lemma[bv](4.1)(COND_REWRITE_TAC)"
+              COND_REWRITE_TAC, profile "th_lemma[bv](4.2)(BBLAST_TAC)"
+              blastLib.BBLAST_TAC))
       in
         (* cache 'thm' *)
         (state_cache_thm state thm, thm)
@@ -973,17 +904,13 @@ before Profile.profile "th_lemma[bv](4)(Tactical.prove)(thm)" Lib.I ())
      style. *)
 
   fun check_thm (name, thm, concl) =
-  (
-    if !SolverSpec.trace > 0 andalso Thm.concl thm <> concl then
-      WARNING "check_thm"
-        (name ^ ": conclusion is " ^ Hol_pp.term_to_string (Thm.concl thm) ^
-        ", expected: " ^ Hol_pp.term_to_string concl)
-    else ();
-    if !SolverSpec.trace > 2 then
+    if Thm.concl thm <> concl then
+      raise ERR "check_thm" (name ^ ": conclusion is " ^ Hol_pp.term_to_string
+        (Thm.concl thm) ^ ", expected: " ^ Hol_pp.term_to_string concl)
+    else if !SolverSpec.trace > 2 then
       Feedback.HOL_MESG
         ("HolSmtLib: " ^ name ^ " proved: " ^ Hol_pp.thm_to_string thm)
     else ()
-  )
 
   fun zero_prems (state : state, proof : proof)
       (name : string)
@@ -992,10 +919,10 @@ before Profile.profile "th_lemma[bv](4)(Tactical.prove)(thm)" Lib.I ())
       (continuation : (state * proof) * Thm.thm -> (state * proof) * Thm.thm)
       : (state * proof) * Thm.thm =
   let
-    val (state, thm) = Profile.profile name z3_rule_fn (state, concl)
+    val (state, thm) = profile name z3_rule_fn (state, concl)
       handle Feedback.HOL_ERR _ =>
         raise ERR name (Hol_pp.term_to_string concl)
-    val _ = Profile.profile "check_thm" check_thm (name, thm, concl)
+    val _ = profile "check_thm" check_thm (name, thm, concl)
   in
     continuation ((state, proof), thm)
   end
@@ -1009,11 +936,11 @@ before Profile.profile "th_lemma[bv](4)(Tactical.prove)(thm)" Lib.I ())
     thm_of_proofterm (state_proof, pt) (continuation o
       (fn ((state, proof), thm) =>
         let
-          val (state, thm) = Profile.profile name z3_rule_fn (state, thm, concl)
+          val (state, thm) = profile name z3_rule_fn (state, thm, concl)
             handle Feedback.HOL_ERR _ =>
               raise ERR name (Hol_pp.thm_to_string thm ^ ", " ^
                 Hol_pp.term_to_string concl)
-          val _ = Profile.profile "check_thm" check_thm (name, thm, concl)
+          val _ = profile "check_thm" check_thm (name, thm, concl)
         in
           ((state, proof), thm)
         end))
@@ -1028,13 +955,13 @@ before Profile.profile "th_lemma[bv](4)(Tactical.prove)(thm)" Lib.I ())
       (fn (state_proof, thm1) =>
         thm_of_proofterm (state_proof, pt2) (fn ((state, proof), thm2) =>
           let
-            val (state, thm) = Profile.profile name z3_rule_fn
+            val (state, thm) = profile name z3_rule_fn
               (state, thm1, thm2, concl)
                 handle Feedback.HOL_ERR _ =>
                   raise ERR name (Hol_pp.thm_to_string thm1 ^ ", " ^
                     Hol_pp.thm_to_string thm2 ^ ", " ^
                     Hol_pp.term_to_string concl)
-            val _ = Profile.profile "check_thm" check_thm (name, thm, concl)
+            val _ = profile "check_thm" check_thm (name, thm, concl)
           in
             ((state, proof), thm)
           end)))
@@ -1048,11 +975,11 @@ before Profile.profile "th_lemma[bv](4)(Tactical.prove)(thm)" Lib.I ())
       : (state * proof) * Thm.thm =
     let
       val acc = List.rev acc
-      val (state, thm) = Profile.profile name z3_rule_fn (state, acc, concl)
+      val (state, thm) = profile name z3_rule_fn (state, acc, concl)
         handle Feedback.HOL_ERR _ =>
           raise ERR name ("[" ^ String.concatWith ", " (List.map
             Hol_pp.thm_to_string acc) ^ "], " ^ Hol_pp.term_to_string concl)
-      val _ = Profile.profile "check_thm" check_thm (name, thm, concl)
+      val _ = profile "check_thm" check_thm (name, thm, concl)
     in
       continuation ((state, proof), thm)
     end
@@ -1135,6 +1062,8 @@ before Profile.profile "th_lemma[bv](4)(Tactical.prove)(thm)" Lib.I ())
 
 in
 
+  (* returns a theorem that concludes ``F``, with its hypotheses (a
+     subset of) those asserted in the proof *)
   fun check_proof proof : Thm.thm =
   let
     val _ = if !SolverSpec.trace > 1 then
@@ -1144,41 +1073,20 @@ in
     (* initial state *)
     val state = {
       asserted_hyps = Term.empty_tmset,
-      skolem_defs = [],
       thm_cache = Net.empty
     }
 
     (* ID 0 denotes the proof's root node *)
     val ((state, _), thm) = thm_of_proofterm ((state, proof), ID 0) Lib.I
 
-    val _ = if !SolverSpec.trace > 0 andalso Thm.concl thm <> boolSyntax.F then
-        WARNING "check_proof" "final conclusion is not 'F'"
-      else ()
-
-    (* eliminate Skolemization hypotheses "sk = def" (cf. function
-       'z3_sk' above), assuming that sk does not occur anywhere else
-       in 'thm' *)
-    val thm = (*Profile.profile "check_proof(skolem_defs)"*) (fn () =>
-      List.foldl (fn (sk_def, thm) =>
-        let
-          val (sk, def) = boolSyntax.dest_eq sk_def
-          val thm = Thm.INST [{redex = sk, residue = def}] thm
-          val def_thm = Thm.REFL def
-          val _ = if !SolverSpec.trace > 0 andalso
-                not (HOLset.member (Thm.hypset thm, Thm.concl def_thm)) then
-              WARNING "check_proof" "Skolem hypothesis not found"
-            else ()
-        in
-          Drule.PROVE_HYP def_thm thm
-        end) thm (#skolem_defs state)) ()
+    val _ = Thm.concl thm = boolSyntax.F orelse
+      raise ERR "check_proof" "final conclusion is not 'F'"
 
     (* check that the final theorem contains no hyps other than those
        that have been asserted *)
-    val _ = (*Profile.profile "check_proof(hypcheck)"*) (fn () =>
-      if !SolverSpec.trace > 0 andalso
-          not (HOLset.isSubset (Thm.hypset thm, #asserted_hyps state)) then
-        WARNING "check_proof" "final theorem contains additional hyp(s)"
-      else ()) ()
+    val _ = profile "check_proof(hypcheck)" HOLset.isSubset (Thm.hypset thm,
+        #asserted_hyps state) orelse
+      raise ERR "check_proof" "final theorem contains additional hyp(s)"
   in
     thm
   end
