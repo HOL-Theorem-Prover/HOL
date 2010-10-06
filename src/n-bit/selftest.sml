@@ -310,6 +310,9 @@ val _ = blast_true
            :bool[unit]) ==>
       ((1w :bool[unit]) = ~(0w :bool[unit]))``;
 
+val _ = blast_true
+  ``SND (word_rrx (T,v:word32)) = v >>> 1 !! 0x80000000w``;
+
 val _ = srw_true
   ``0x20000000w !! 0w !! w : word32 = w !! 0x20000000w``;
 
