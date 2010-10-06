@@ -14,10 +14,9 @@ struct
   (* I tried to implement this parser in ML-Lex/ML-Yacc, but gave up
      on that -- mainly for two reasons: 1. The whole toolchain/build
      process gets more complicated. 2. Performance and memory usage of
-     the generated parser were far from satisfactory; I am guessing
-     because the generated parser was not tail-recursive. (It might be
-     a worthwhile research project to implement an *efficient* parser
-     generator for SML ...) *)
+     the generated parser were far from satisfactory (probably because
+     my naive definition of the underlying grammar required the parser
+     to maintain a large stack internally). *)
 
 local
 
@@ -306,34 +305,6 @@ local
                 raise ERR "termfn_of_token"
                   ("undeclared symbol '" ^ token ^ "'"))
         end
-
-(* TODO
-            (* FIXME: This is a horrible hack to (heuristically) undo
-                      some horrible Z3 symbol mangling, which replaces
-                      . by _ in identifiers. *)
-            let
-              val fields = String.fields (Lib.equal #"_") token
-              fun foldthis (name, termfn, result) =
-                if fields = String.fields (fn c => Lib.mem c [#"_", #"."]) name
-                    then (
-                  if Option.isSome result then
-                    raise ERR "termfn_of_token"
-                      ("symbol '" ^ token ^ "' is ambiguous")
-                  else
-                    SOME termfn
-                ) else result
-            in
-              if List.length fields = 1 then
-                raise ERR "termfn_of_token"
-                  ("undeclared symbol '" ^ token ^ "'")
-              else
-                case Redblackmap.foldl foldthis NONE dict of
-                  SOME termfn => termfn
-                | NONE =>
-                  raise ERR "termfn_of_token"
-                    ("undeclared symbol '" ^ token ^ "'")
-            end)
-*)
 
   fun parse_termlist get_token dict (acc : Term.term list) : Term.term list =
   let
