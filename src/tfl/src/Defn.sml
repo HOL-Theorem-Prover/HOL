@@ -95,9 +95,10 @@ val imp_elim =
      val th2 = ASSUME tm1
      val th2a = ASSUME P
      val th3 = MP th2 th2a
-     val [th4,th5] = CONJUNCTS
-                      (EQ_MP (SPECL[PimpQ, PimpR] boolTheory.EQ_IMP_THM) th3)
-     val [th4a,th5a] = map (DISCH P o funpow 2 UNDISCH) [th4,th5]
+     val th3a = EQ_MP (SPECL[PimpQ, PimpR] boolTheory.EQ_IMP_THM) th3
+     val (th4,th5) = (CONJUNCT1 th3a,CONJUNCT2 th3a)
+     fun pmap f (x,y) = (f x, f y)
+     val (th4a,th5a) = pmap (DISCH P o funpow 2 UNDISCH) (th4,th5)
      val th4b = DISCH PimpQ th4a
      val th5b = DISCH PimpR th5a
      val th6 = DISCH tm1 (IMP_ANTISYM_RULE th4b th5b)
@@ -503,15 +504,12 @@ fun extract FV congs f (proto_def,WFR) =
      fun mk_restr p = mk_comb(restr_fR, p)
  in fn (p,th) =>
     let val nested_ref = ref false
-        open RW
-        val th' = CONV_RULE
-                   (Rewrite Fully
-                      (Pure [CUT_LEM],
-                       Context ([],DONT_ADD),
-                       Congs congs,
-                       Solver (solver (mk_restr p, f,
-                                       FV@free_vars(concl th), nested_ref))))
-                   th
+        val FV' = FV@free_vars(concl th)
+        val rwArgs = (RW.Pure [CUT_LEM],
+                      RW.Context ([],RW.DONT_ADD),
+                      RW.Congs congs,
+                      RW.Solver (solver (mk_restr p, f, FV', nested_ref)))
+        val th' = CONV_RULE (RW.Rewrite RW.Fully rwArgs) th
     in
       (th', Lib.op_set_diff aconv (hyp th') [proto_def,WFR], !nested_ref)
     end
@@ -561,15 +559,15 @@ fun elim_triv_literal_case th =
 (* but do not define the constant yet.                                       *)
 (*---------------------------------------------------------------------------*)
 
-fun wfrec_eqns thy eqns =
- let val {functional,pats} = mk_functional thy (protect eqns)
+fun wfrec_eqns facts tup_eqs =
+ let val {functional,pats} = mk_functional facts (protect tup_eqs)
      val SV = free_vars functional    (* schematic variables *)
      val (f, Body) = dest_abs functional
      val (x,_) = dest_abs Body
      val (Name, fty) = dest_var f
      val (f_dty, f_rty) = Type.dom_rng fty
      val WFREC_THM0 = ISPEC functional relationTheory.WFREC_COROLLARY
-     val R = variant (free_vars eqns) (fst(dest_forall(concl WFREC_THM0)))
+     val R = variant (free_vars tup_eqs) (fst(dest_forall(concl WFREC_THM0)))
      val WFREC_THM = ISPECL [R, f] WFREC_THM0
      val tmp = fst(wfrecUtils.strip_imp(concl WFREC_THM))
      val proto_def = Lib.trye hd tmp
@@ -579,7 +577,7 @@ fun wfrec_eqns thy eqns =
      val given_pats = givens pats
      val corollaries = map (C SPEC corollary') given_pats
      val eqns_consts = mk_set(find_terms is_const functional)
-     val (case_rewrites,congs) = extraction_thms eqns_consts thy
+     val (case_rewrites,congs) = extraction_thms eqns_consts facts
      val RWcnv = REWRITES_CONV (add_rewrites empty_rewrites
                                 (literal_case_THM::case_rewrites))
      val rule = unprotect_thm o
@@ -1573,10 +1571,8 @@ fun elim_wildcards eqs =
 
 fun parse_absyn absyn0 =
  let val (absyn,fn_names) = elim_wildcards absyn0
-     val restore_these = map (fn s => (s, Parse.hide s)) fn_names
-     fun restore() =
-       List.app (fn (s, data) => Parse.update_overload_maps s data)
-                restore_these
+     val to_restore = map (fn s => (s,Parse.hide s)) fn_names
+     fun restore() = List.app (uncurry Parse.update_overload_maps) to_restore
      val tm  = Parse.absyn_to_term (Parse.term_grammar()) absyn
                handle e => (restore(); raise e)
  in
