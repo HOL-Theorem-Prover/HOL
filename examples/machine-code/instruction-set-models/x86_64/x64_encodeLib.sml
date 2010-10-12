@@ -87,10 +87,10 @@ local
     zip ["R8W","R9W","R10W","R11W","R12W","R13W","R14W","R15W"] (add_reg_type 64 [8,9,10,11,12,13,14,15]) @
     zip ["R8D","R9D","R10D","R11D","R12D","R13D","R14D","R15D"] (add_reg_type 64 [8,9,10,11,12,13,14,15]) @
     zip ["R8","R9","R10","R11","R12","R13","R14","R15"] (add_reg_type 64 [8,9,10,11,12,13,14,15]) @
-    zip ["R0B","R1B","R2B","R3B","R4B","R5B","R6B","R7B"] (add_reg_type 64 [8,9,10,11,12,13,14,15]) @
-    zip ["R0W","R1W","R2W","R3W","R4W","R5W","R6W","R7W"] (add_reg_type 64 [8,9,10,11,12,13,14,15]) @
-    zip ["R0D","R1D","R2D","R3D","R4D","R5D","R6D","R7D"] (add_reg_type 64 [8,9,10,11,12,13,14,15]) @
-    zip ["R0","R1","R2","R3","R4","R5","R6","R7"] (add_reg_type 64 [8,9,10,11,12,13,14,15])
+    zip ["R0B","R1B","R2B","R3B","R4B","R5B","R6B","R7B"] (add_reg_type 64 [0,1,2,3,4,5,6,7]) @
+    zip ["R0W","R1W","R2W","R3W","R4W","R5W","R6W","R7W"] (add_reg_type 64 [0,1,2,3,4,5,6,7]) @
+    zip ["R0D","R1D","R2D","R3D","R4D","R5D","R6D","R7D"] (add_reg_type 64 [0,1,2,3,4,5,6,7]) @
+    zip ["R0","R1","R2","R3","R4","R5","R6","R7"] (add_reg_type 64 [0,1,2,3,4,5,6,7])
   fun x64_reg_info r = let
     fun find x [] = fail()
       | find x ((y,z)::ys) = if x = y then z else find x ys

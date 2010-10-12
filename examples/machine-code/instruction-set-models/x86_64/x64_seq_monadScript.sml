@@ -38,10 +38,10 @@ val ZREAD_INSTR_def = Define `
     || (NONE, SOME (w,perms)) -> if {Zread;Zexecute} SUBSET perms then SOME w else NONE
     || (SOME (w,perms), _) -> if {Zread;Zexecute} SUBSET perms then SOME w else NONE`;
 
-val Z64_ICACHE_EMPTY_def = Define `Z64_ICACHE_EMPTY = (\addr. NONE):x64_memory`;
+val X64_ICACHE_EMPTY_def = Define `X64_ICACHE_EMPTY = (\addr. NONE):x64_memory`;
 
 val ZCLEAR_ICACHE_def = Define `
-  ZCLEAR_ICACHE ((r,p,s,m,i):x64_state) = (r,p,s,m,Z64_ICACHE_EMPTY):x64_state`;
+  ZCLEAR_ICACHE ((r,p,s,m,i):x64_state) = (r,p,s,m,X64_ICACHE_EMPTY):x64_state`;
 
 val ZWRITE_REG_def   = Define `ZWRITE_REG   x y ((r,p,s,m,i):x64_state) = ((x =+ y) r,p,s,m,i):x64_state `;
 val ZWRITE_RIP_def   = Define `ZWRITE_RIP     y ((r,p,s,m,i):x64_state) = (r,y,s,m,i):x64_state `;
@@ -319,6 +319,26 @@ val ZWRITE_MEM2_WORD64_def = Define `
    (ZWRITE_MEM2 (a + 2w) (EL 2 (word2bytes 8 w))
    (ZWRITE_MEM2 (a + 1w) (EL 1 (word2bytes 8 w))
    (ZWRITE_MEM2 (a + 0w) (EL 0 (word2bytes 8 w)) s)))))))`;
+  
+val ZREAD_MEM2_WORD64_THM = store_thm("ZREAD_MEM2_WORD64_THM",
+  ``ZREAD_MEM2_WORD64 a (s:x64_state) = 
+      (w2w (ZREAD_MEM2_WORD32 (a + 4w) s) << 32) !! w2w (ZREAD_MEM2_WORD32 a s)``,
+  SIMP_TAC std_ss [ZREAD_MEM2_WORD32_def,ZREAD_MEM2_WORD64_def,bytes2word_def]  
+  THEN ASM_SIMP_TAC std_ss [GSYM WORD_ADD_ASSOC,word_add_n2w]
+  THEN SIMP_TAC (std_ss++wordsLib.WORD_SHIFT_ss) [GSYM LSL_BITWISE]    
+  THEN SIMP_TAC (std_ss++wordsLib.WORD_EXTRACT_ss++wordsLib.SIZES_ss) [WORD_OR_CLAUSES]
+  THEN SIMP_TAC (std_ss++wordsLib.WORD_SHIFT_ss) [GSYM LSL_BITWISE]   
+  THEN SIMP_TAC std_ss [AC WORD_OR_ASSOC WORD_OR_COMM]);
+
+val ZWRITE_MEM2_WORD64_THM = store_thm("ZWRITE_MEM2_WORD64_THM",
+  ``ZWRITE_MEM2_WORD64 a (w:word64) (s:x64_state) =
+      ZWRITE_MEM2_WORD32 (a + 4w) ((63 >< 32) w)
+     (ZWRITE_MEM2_WORD32 (a + 0w) ((31 ><  0) w) s)``,
+  SIMP_TAC std_ss [ZWRITE_MEM2_WORD32_def,ZWRITE_MEM2_WORD64_def]  
+  THEN NTAC 8 (ONCE_REWRITE_TAC [word2bytes_def] THEN SIMP_TAC std_ss [EL_thm])
+  THEN ASM_SIMP_TAC std_ss [GSYM WORD_ADD_ASSOC,word_add_n2w]
+  THEN SIMP_TAC (std_ss++wordsLib.WORD_SHIFT_ss) []    
+  THEN SIMP_TAC (std_ss++wordsLib.WORD_EXTRACT_ss++wordsLib.SIZES_ss) [WORD_OR_CLAUSES]);
 
 val CAN_ZWRITE_MEM_def = Define `
   CAN_ZWRITE_MEM a s = !w. ~(ZWRITE_MEM a w s = NONE)`;

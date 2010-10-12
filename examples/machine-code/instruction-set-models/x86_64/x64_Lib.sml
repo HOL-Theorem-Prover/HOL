@@ -54,7 +54,7 @@ fun raw_x64_decode s = let
 
 fun x64_decode s = let
   val (th,tm,l) = raw_x64_decode s
-  val th = MATCH_MP Z64_NEXT_THM th
+  val th = MATCH_MP X64_NEXT_THM th
   val th = SIMP_RULE std_ss [LENGTH] th
   val th = nTimes l (SIMP_RULE std_ss [EVERY_DEF] o ONCE_REWRITE_RULE [ZREAD_INSTR_BYTES_def]) th
   fun assums i n =
@@ -133,7 +133,7 @@ val ss = rewrites [x64_exec_def, ZREAD_REG_def, ZREAD_EFLAG_def,
   call_dest_from_ea_def, Zbinop_name_distinct, get_ea_address_def,
   erase_eflags_def, write_result_erase_eflags_def,restrict_size_def,
   word_signed_overflow_add_def, word_signed_overflow_sub_def, w2w_n2w,
-  bitTheory.BITS_THM, value_width_def]
+  bitTheory.BITS_THM, value_width_def, word_size_msb_def]
 
 fun x64_step s = let
   val th = x64_decode s
@@ -246,7 +246,7 @@ fun x64_test_aux inst input output = let
   val output2 = filter (fn (x,y) => not (mem x xs)) output
   val output1 = filter (fn (x,y) => mem x xs) output
   val _ = map (fn (x,y) => print ("  Value of "^x^" is left unspecified by model.\n")) output1
-  val tm = list_mk_conj (f "(THE (Z64_NEXT s))" output2)
+  val tm = list_mk_conj (f "(THE (X64_NEXT s))" output2)
   val tm2 = (hd o hyp o UNDISCH) th
   val goal = mk_imp(tm2,tm)
 (*
