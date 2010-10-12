@@ -203,8 +203,12 @@ val PRE_CONV = RATOR_CONV o RATOR_CONV o RAND_CONV
 val POST_CONV = RAND_CONV
 
 val FIX_WORD32_ARITH_CONV = DEPTH_CONV (fn tm => let
-  val (i,j) = match_term ((fst o dest_eq o concl o SPEC_ALL) word32_add_n2w) tm
-  val th1 = INST i (INST_TYPE j (SPEC_ALL word32_add_n2w))
+  val th1 = let
+    val (i,j) = match_term ((fst o dest_eq o concl o SPEC_ALL) word32_add_n2w) tm
+    in INST i (INST_TYPE j (SPEC_ALL word32_add_n2w)) end handle HOL_ERR e => let
+    val (i,j) = match_term ((fst o dest_eq o concl o SPEC_ALL) word64_add_n2w) tm
+    val _ = if numSyntax.is_numeral (subst i (mk_var("n",``:num``))) then () else fail()
+    in INST i (INST_TYPE j (SPEC_ALL word64_add_n2w)) end
   val th1 = CONV_RULE ((RAND_CONV o RATOR_CONV o RATOR_CONV o RAND_CONV) EVAL) th1
   val th1 = CONV_RULE ((RAND_CONV o RAND_CONV o RAND_CONV) EVAL) (REWRITE_RULE [] th1)
   in th1 end handle e => ALL_CONV tm);
