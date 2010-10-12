@@ -81,6 +81,7 @@ fun fullPath slist =
 
 val HOLDIR =
 val MOSMLDIR =
+val HAVE_BASIS2002 =
 val OS =
 val DEPDIR =
 val GNUMAKE =

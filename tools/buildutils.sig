@@ -9,9 +9,7 @@ sig
   val warn : string -> unit
 
   val read_buildsequence :
-      { ssfull : string -> Substring.substring,
-        inputLine : TextIO.instream -> string option,
-        kernelpath : string } ->
+      { kernelpath : string } ->
       string -> (string * int) list
 
   val cline_selftest : string list -> (int * string list)
@@ -24,9 +22,7 @@ sig
            Normal of {kernelspec : string, seqname : string, rest : string list}
          | Clean of string
 
-  val get_cline : {reader : TextIO.instream -> string option,
-                   default_seq : string} ->
-                  buildtype
+  val get_cline : {default_seq : string} -> buildtype
 
 
   val map_dir : (string * string -> unit) -> string -> unit

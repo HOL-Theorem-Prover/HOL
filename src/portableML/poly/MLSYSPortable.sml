@@ -43,7 +43,8 @@ fun time f x =
     val r = Timer.startRealTimer ()
     fun pt () =
       let
-        val {usr, sys, gc} = Timer.checkCPUTimer c
+        val {usr, sys} = Timer.checkCPUTimer c
+        val gc = Timer.checkGCTime c
         val real = Timer.checkRealTimer r
       in
         print

@@ -936,7 +936,8 @@ struct
     in
       loop()
     end
-    val sleep = if Systeml.isUnix then unixSleep else winSleep
+    val isUnix = #vol (Path.fromString (FileSys.getDir())) = ""
+    val sleep = if isUnix then unixSleep else winSleep
   end
 
   structure Path : OS_PATH = struct
@@ -950,8 +951,8 @@ struct
     val op sub = String.sub
 
     exception InvalidArc
-    fun mkAbsolute{relativeTo, path} = MP.mkAbsolute(relativeTo,path)
-    fun mkRelative{relativeTo, path} = MP.mkRelative(relativeTo,path)
+    fun mkAbsolute{relativeTo, path} = MP.mkAbsolute(path,relativeTo)
+    fun mkRelative{relativeTo, path} = MP.mkRelative(path,relativeTo)
     fun isRoot path =
         case fromString path of
           {isAbs = true, arcs = [""], ...} => true
@@ -992,6 +993,41 @@ struct
   end
 
 end
+
+signature TIMER =
+sig
+  type cpu_timer
+  type real_timer
+  val startCPUTimer : unit -> cpu_timer
+  val checkCPUTimes : cpu_timer
+                      -> {nongc : {usr : Time.time, sys : Time.time},
+                          gc : {usr : Time.time, sys : Time.time}}
+  val checkCPUTimer : cpu_timer -> {usr : Time.time, sys : Time.time}
+  val checkGCTime : cpu_timer -> Time.time
+  val totalCPUTimer : unit -> cpu_timer
+  val startRealTimer : unit -> real_timer
+  val checkRealTimer : real_timer -> Time.time
+  val totalRealTimer : unit -> real_timer
+end
+
+structure Timer : TIMER =
+struct
+
+  open Timer
+  fun checkCPUTimes timer = let
+    val times as {usr,sys,gc} = Timer.checkCPUTimer timer
+  in
+    {nongc = {usr = usr, sys = sys}, gc = {usr = gc, sys = Time.zeroTime}}
+  end
+  fun checkCPUTimer timer = let
+    val times as {usr,sys,gc} = Timer.checkCPUTimer timer
+  in
+    {usr = usr, sys = sys}
+  end
+  fun checkGCTime timer = #gc (Timer.checkCPUTimer timer)
+
+end
+
 
 structure Real =
 struct

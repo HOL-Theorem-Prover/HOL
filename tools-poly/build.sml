@@ -33,7 +33,7 @@ val dfltbuildseq = fullPath [HOLDIR, "tools", "build-sequence"]
    ---------------------------------------------------------------------- *)
 
 val {kernelspec,seqname = bseq_fname,rest = cmdline} =
-    case get_cline {reader = TextIO.inputLine, default_seq = dfltbuildseq} of
+    case get_cline {default_seq = dfltbuildseq} of
       Normal x => x
     | Clean s => {kernelspec = "", seqname = dfltbuildseq, rest = [s]}
 
@@ -67,10 +67,7 @@ val kpath = if use_expk then fullPath [HOLDIR, "src", "experimental-kernel"]
 
 val SRCDIRS =
     if cmdline = ["help"] then []
-    else read_buildsequence {ssfull = Substring.full,
-                             inputLine = TextIO.inputLine,
-                             kernelpath = kpath}
-                            bseq_fname
+    else read_buildsequence {kernelpath = kpath} bseq_fname
 
 val SIGOBJ = fullPath [HOLDIR, "sigobj"];
 val HOLMAKE = fullPath [HOLDIR, "bin/Holmake"]

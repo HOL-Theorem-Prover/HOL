@@ -131,7 +131,6 @@ end;
 
 
 structure PolyWord8 = Word8;
-structure PolyTimer = Timer;
 (* awfulness to make the environment look like Moscow ML's *)
 
 (* In Poly/ML "before" is 'a * 'b -> 'a and General.before is 'a * unit -> 'a.
@@ -144,17 +143,6 @@ structure Word8 = struct
     Word.fromLargeWord (PolyWord8.toLargeWord w);
 end;
 
-structure Timer = struct
-  open PolyTimer;
-  fun checkCPUTimer t =
-     let val {usr=usr, sys=sys} = PolyTimer.checkCPUTimer t;
-         val gc = PolyTimer.checkGCTime t;
-     in
-       {usr=usr, sys=sys, gc=gc}
-     end;
-end;
-
-structure PreProcess = OS.Process;
 structure Path = OS.Path;
 structure Process = OS.Process;
 structure FileSys = OS.FileSys;

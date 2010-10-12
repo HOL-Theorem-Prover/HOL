@@ -18,6 +18,7 @@ sig
   (* configuration time constants *)
   val HOLDIR : string
   val MOSMLDIR : string
+  val HAVE_BASIS2002 : bool
   val OS : string
   val DEPDIR : string
   val GNUMAKE : string

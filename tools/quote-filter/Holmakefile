@@ -13,4 +13,4 @@ filter.sml : filter
 	$(if $(MOSMLC),$(protect $(HOLDIR)/tools/mllex/mllex.exe),../mllex/mllex.exe) filter
 
 selftest: selftest.sml
-	MOSMLC -o selftest selftest.sml
+	$(HOLMOSMLC) -o selftest selftest.sml

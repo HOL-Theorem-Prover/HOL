@@ -18,25 +18,34 @@ fun time f x = let
 
   val result = OK (f x) handle e => Ex e
 
-  val timetaken = Timer.checkCPUTimer timer
+  val timetaken = Timer.checkCPUTimes timer
   val timetaken2 = Timer.checkRealTimer timer2
 in
   (result, (timetaken,timetaken2))
 end
 
+type timedata = {nongc : {usr:Time.time, sys: Time.time},
+                 gc : {usr:Time.time, sys: Time.time}}
+
 fun add_profile nm timefx =
     case peek (!ptable, nm) of
       NONE => let
-        val ({usr,sys,gc},real) = timefx
+        val ({nongc,gc}:timedata,real) = timefx
+        val data =
+            {usr = #usr nongc, sys = #sys nongc, gc = Time.+(#usr gc, #sys gc),
+             n = 1, real = real}
       in
-        ptable := insert (!ptable, nm, {usr = usr, gc = gc, sys = sys, n = 1,real = real})
+        ptable := insert (!ptable, nm, data)
       end
     | SOME {usr = usr0, sys = sys0, gc = gc0, n = n0, real = real0} => let
-        val ({usr = usr1, sys = sys1, gc = gc1}, real1) = timefx
+        val ({nongc, gc}:timedata, real1) = timefx
         open Time
+        val data =
+            {usr = usr0 + #usr nongc, sys = sys0 + #sys nongc,
+             gc = gc0 + #usr gc + #sys gc, n = Int.+(n0, 1),
+             real = real0 + real1}
       in
-        ptable := insert (!ptable, nm, {usr = usr0 + usr1, gc = gc0 + gc1,
-                                     sys = sys0 + sys1, real = real0 + real1, n = Int.+ (n0, 1)})
+        ptable := insert (!ptable, nm, data)
       end
 
 fun profile_exn_opt do_exn do_ok do_both nm f x =

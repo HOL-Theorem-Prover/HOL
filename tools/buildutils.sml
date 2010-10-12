@@ -63,13 +63,14 @@ in
 end
 
 
-fun read_buildsequence {ssfull,inputLine=readline,kernelpath} bseq_fname = let
+fun read_buildsequence {kernelpath} bseq_fname = let
+  val readline = TextIO.inputLine
   fun read_file acc fstr =
       case readline fstr of
         NONE => List.rev acc
       | SOME s => let
           (* drop trailing and leading whitespace *)
-          val ss = ssfull s
+          val ss = Substring.full s
           val ss = Substring.dropl Char.isSpace ss
           val ss = Substring.dropr Char.isSpace ss
 
@@ -228,7 +229,8 @@ datatype buildtype =
          Normal of {kernelspec : string, seqname : string, rest : string list}
        | Clean of string
 exception QuickExit of buildtype
-fun get_cline {reader,default_seq} = let
+fun get_cline {default_seq} = let
+  val reader = TextIO.inputLine
   (* handle -fullbuild vs -seq fname, and -expk vs -stdknl *)
   val oldopts = read_earlier_options reader
   val newopts = CommandLine.arguments()

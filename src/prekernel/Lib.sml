@@ -609,7 +609,8 @@ end;
 fun start_time () = Timer.startCPUTimer()
 
 fun end_time timer =
-  let val {gc,sys,usr} = Timer.checkCPUTimer timer
+  let val {sys,usr} = Timer.checkCPUTimer timer
+      val gc = Timer.checkGCTime timer
   in
      TextIO.output(TextIO.stdOut,
           "runtime: "^Time.toString usr ^ "s,\
