@@ -23,7 +23,7 @@ end
 fun analyse_term proc t = let
   val timer = Timer.startCPUTimer()
   val result = SOME (proc t) handle HOL_ERR _ => NONE
-  val {usr,sys,gc} = Timer.checkCPUTimer timer
+  val {usr,...} = Timer.checkCPUTimer timer
   val usrtime = Time.toString usr
   val verdict =
     case result of
