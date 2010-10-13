@@ -5,11 +5,11 @@ struct
 
   open Abbrev intSyntax realSyntax
 
-  val ERR = mk_HOL_ERR "intrealSyntax"
+  val ERR = Feedback.mk_HOL_ERR "intrealSyntax"
 
   (* Fundamental terms *)
 
-  fun mk_const (n, ty) = mk_thy_const {Thy = "intreal", Name = n, Ty = ty}
+  fun mk_const (n, ty) = Term.mk_thy_const {Thy = "intreal", Name = n, Ty = ty}
 
   val real_of_int_tm = mk_const ("real_of_int", int_ty --> real_ty)
   val INT_FLOOR_tm = mk_const ("INT_FLOOR", real_ty --> int_ty)
@@ -20,11 +20,11 @@ struct
 
   fun dest1 c fnm nm t =
   let
-    val (f, x) = dest_comb t
-    val _ = assert (same_const f) c
+    val (f, x) = Term.dest_comb t
+    val _ = Lib.assert (Term.same_const f) c
   in
     x
-  end handle HOL_ERR _ => raise ERR fnm ("Term is not an " ^ nm)
+  end handle Feedback.HOL_ERR _ => raise ERR fnm ("Term is not an " ^ nm)
 
   val dest_real_of_int = dest1 real_of_int_tm "dest_real_of_int" "injection"
   val is_real_of_int = Lib.can dest_real_of_int
