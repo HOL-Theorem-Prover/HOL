@@ -6,22 +6,24 @@ open codegen_inputLib helperLib;
 
 (* -- target-specific part begins -- *)
 
-open codegen_armLib codegen_x86Lib;
-open codegen_ppcLib;
+open codegen_x64Lib codegen_x86Lib codegen_armLib codegen_ppcLib; 
 
 fun assembler_tools target =
   if target = "arm" then (arm_encode_instruction, arm_encode_branch, arm_branch_to_string) else
   if target = "x86" then (x86_encode_instruction, x86_encode_branch, x86_branch_to_string) else
+  if target = "x64" then (x64_encode_instruction, x64_encode_branch, x64_branch_to_string) else
   if target = "ppc" then (ppc_encode_instruction, ppc_encode_branch, ppc_branch_to_string) else fail()
 
 fun conditional_tools target =
   if target = "arm" then (arm_cond_code, arm_conditionalise, arm_remove_annotations) else
   if target = "x86" then (x86_cond_code, x86_conditionalise, x86_remove_annotations) else
+  if target = "x64" then (x64_cond_code, x64_conditionalise, x64_remove_annotations) else
   if target = "ppc" then (ppc_cond_code, ppc_conditionalise, ppc_remove_annotations) else fail()
 
 fun generator_tools target =
   if target = "arm" then (arm_assign2assembly, arm_guard2assembly) else
   if target = "x86" then (x86_assign2assembly, x86_guard2assembly) else
+  if target = "x64" then (x64_assign2assembly, x64_guard2assembly) else
   if target = "ppc" then (ppc_assign2assembly, ppc_guard2assembly) else fail()
 
 (* -- target-specific part ends -- *)

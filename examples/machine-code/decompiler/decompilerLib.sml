@@ -189,6 +189,7 @@ fun replace_abbrev_vars tm = let
 
 fun name_for_abbrev tm =
   "v" ^ (int_to_string (Arbnum.toInt(numSyntax.dest_numeral(cdr (car tm))))) handle HOL_ERR e =>
+  if (fst (dest_const (car tm)) = "tT") handle HOL_ERR e => false then "k" else
   if is_const (cdr (car tm)) andalso is_const(car (car tm)) handle HOL_ERR e => false then
     (to_lower o fst o dest_const o cdr o car) tm
   else if can (match_term ``(f ((n2w n):'a word) (x:'c)):'d``) tm then
@@ -253,8 +254,11 @@ fun ABBREV_STACK prefix th = let
   val th1 = CONV_RULE (RAND_CONV (DEPTH_CONV (each cs)) THENC BETA_CONV) th1
   in th1 end handle HOL_ERR _ => th
 
-fun ABBREV_ALL dont_abbrev_list prefix =
-  ABBREV_PRECOND prefix o ABBREV_STACK prefix o ABBREV_POSTS dont_abbrev_list prefix;
+fun ABBREV_ALL dont_abbrev_list prefix th = let
+  val th = ABBREV_POSTS dont_abbrev_list prefix th
+  val th = ABBREV_STACK prefix th
+  val th = ABBREV_PRECOND prefix th
+  in th end;
 
 fun ABBREV_CALL prefix th = let
   val (_,_,_,q) = (dest_spec o concl) th
@@ -373,7 +377,8 @@ fun inst_pc_var tools thms = let
   fun triple_apply f (y,(th1,x1:int,x2:int option),NONE) = (y,(f y th1,x1,x2),NONE)
     | triple_apply f (y,(th1,x1,x2),SOME (th2,y1:int,y2:int option)) =
         (y,(f y th1,x1,x2),SOME (f y th2,y1,y2))
-  val i = [mk_var("eip",``:word32``) |-> mk_var("p",``:word32``)]
+  val i = [mk_var("eip",``:word32``) |-> mk_var("p",``:word32``),
+           mk_var("rip",``:word64``) |-> mk_var("p",``:word64``)]
   val (_,_,_,pc) = tools
   val ty = (hd o snd o dest_type o type_of) pc
   fun f y th = (!decompiler_set_pc) y th handle HOL_ERR _ => let
