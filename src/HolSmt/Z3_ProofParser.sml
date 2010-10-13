@@ -427,7 +427,7 @@ local
   (* returns an extended dictionary *)
   fun parse_term_definition get_token dict (name : string, head :string) =
   let
-    val _ = if !SolverSpec.trace > 0 andalso
+    val _ = if !Library.trace > 0 andalso
       Option.isSome (Redblackmap.peek (dict, name)) then
         WARNING "parse_term_definition"
           ("term name '" ^ name ^ "' defined more than once")
@@ -444,7 +444,7 @@ local
   (* returns an extended proof *)
   fun parse_proofterm_definition get_token (dict, proof) (id : int, parsefn) =
   let
-    val _ = if !SolverSpec.trace > 0 andalso
+    val _ = if !Library.trace > 0 andalso
       Option.isSome (Redblackmap.peek (proof, id)) then
         WARNING "parse_proofterm_definition"
           ("proofterm ID " ^ Int.toString id ^ " defined more than once")
@@ -525,7 +525,7 @@ in
     (* form the union of built-in names and user-declared names *)
     fun map_insert (name, term, dict) =
     (
-      if !SolverSpec.trace > 0 andalso
+      if !Library.trace > 0 andalso
           Option.isSome (Redblackmap.peek (dict, name)) then
         WARNING "parse_file"
           ("user declaration redefines built-in name '" ^ name ^ "'")
@@ -534,13 +534,13 @@ in
     )
     val dict = Redblackmap.foldl map_insert builtin_dict user_dict
     (* parse the file contents *)
-    val _ = if !SolverSpec.trace > 1 then
+    val _ = if !Library.trace > 1 then
         Feedback.HOL_MESG ("HolSmtLib: parsing Z3 proof file '" ^ path ^ "'")
       else ()
     val instream = TextIO.openIn path
     val get_token = Library.get_token (Library.get_buffered_char instream)
     val proof = parse_proof get_token (dict, Redblackmap.mkDict Int.compare) 0
-    val _ = if !SolverSpec.trace > 0 then
+    val _ = if !Library.trace > 0 then
         WARNING "parse_file" ("ignoring token '" ^ get_token () ^
           "' (and perhaps others) after proof")
           handle Feedback.HOL_ERR _ => ()  (* end of file, as expected *)

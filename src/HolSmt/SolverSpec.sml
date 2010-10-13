@@ -1,20 +1,8 @@
 (* Copyright (c) 2009-2010 Tjark Weber. All rights reserved. *)
 
-(* Definition of SMT solvers, tracing *)
+(* Definition of SMT solvers *)
 
 structure SolverSpec = struct
-
-  (* possible values:
-     0 - no output at all (except for fatal errors)
-     1 - warnings only
-     2 - also diagnostic messages of constant length
-     3 - also diagnostic messages that are potentially lengthy (e.g., terms,
-         models, proofs)
-     4 - moreover, temporary files (for communication with the SMT solver) are
-         not removed after solver invocation *)
-  val trace = ref 2
-
-  val _ = Feedback.register_trace ("HolSmtLib", trace, 4)
 
   datatype result = SAT of string option  (* model, should perhaps be a thm *)
                   | UNSAT of Thm.thm option  (* assumptions |- conclusion *)
@@ -38,20 +26,20 @@ structure SolverSpec = struct
     val outfile = FileSys.tmpName ()
     val cmd = cmd_stem ^ " " ^ infile ^ " > " ^ outfile
     (* the actual system call to the SMT solver *)
-    val _ = if !trace > 1 then
+    val _ = if !Library.trace > 1 then
         Feedback.HOL_MESG ("HolSmtLib: calling external command '" ^ cmd ^ "'")
       else ()
     val _ = Systeml.system_ps cmd
     (* call 'post' to determine the result *)
     val result = post x outfile
-    val _ = if !trace > 1 then
+    val _ = if !Library.trace > 1 then
         Feedback.HOL_MESG ("HolSmtLib: solver returned '" ^
           (case result of
              SAT NONE => "satisfiable' (no model given)"
            | SAT (SOME _) => "satisfiable' (model given)"
            | UNSAT NONE => "unsatisfiable' (no proof given)"
            | UNSAT (SOME thm) =>
-             if !trace > 2 then
+             if !Library.trace > 2 then
                "unsatisfiable' (theorem: " ^ Hol_pp.thm_to_string thm ^ ")"
              else
                "unsatisfiable' (proof checked)"
@@ -60,7 +48,7 @@ structure SolverSpec = struct
       else ()
     (* if the SMT solver returned a theorem 'thm', then this should be of the
        form "A' |- g" with A' \subseteq A, where (A, g) is the input goal *)
-    val _ = if !trace > 0 then
+    val _ = if !Library.trace > 0 then
         case result of
           UNSAT (SOME thm) =>
             let
@@ -80,7 +68,7 @@ structure SolverSpec = struct
           ()
       else ()
     (* delete all temporary files *)
-    val _ = if !trace < 4 then
+    val _ = if !Library.trace < 4 then
         List.app (fn path => OS.FileSys.remove path handle SysErr _ => ())
           [infile, outfile]
       else ()
