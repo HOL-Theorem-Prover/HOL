@@ -28,18 +28,18 @@ struct
 
   val dest_real_of_int = dest1 real_of_int_tm "dest_real_of_int" "injection"
   val is_real_of_int = Lib.can dest_real_of_int
-  fun mk_real_of_int t = Term.mk_comb (real_of_int, t)
+  fun mk_real_of_int t = Term.mk_comb (real_of_int_tm, t)
 
   val dest_INT_FLOOR = dest1 INT_FLOOR_tm "dest_INT_FLOOR" "integer floor"
   val is_INT_FLOOR = Lib.can dest_INT_FLOOR
-  fun mk_INT_FLOOR t = Term.mk_comb (INT_FLOOR, t)
+  fun mk_INT_FLOOR t = Term.mk_comb (INT_FLOOR_tm, t)
 
   val dest_INT_CEILING = dest1 INT_CEILING_tm "dest_INT_CEILING" "integer ceiling"
   val is_INT_CEILING = Lib.can dest_INT_CEILING
-  fun mk_INT_CEILING t = Term.mk_comb (INT_CEILING, t)
+  fun mk_INT_CEILING t = Term.mk_comb (INT_CEILING_tm, t)
 
   val dest_is_int = dest1 is_int_tm "dest_is_int" "is_int test"
   val is_is_int = Lib.can dest_is_int
-  fun mk_is_int t = Term.mk_comb (is_int, t)
+  fun mk_is_int t = Term.mk_comb (is_int_tm, t)
 
 end
