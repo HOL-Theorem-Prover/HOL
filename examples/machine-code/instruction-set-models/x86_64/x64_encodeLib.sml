@@ -61,7 +61,8 @@ fun fill n s = if size s < n then fill n ("0" ^ s) else s
 fun unsigned_hex n s = let
   val i = fill n (Arbnum.toHexString (Arbnum.fromString s))
   val i = (substring(i,14,2) ^ substring(i,12,2) ^ substring(i,10,2) ^ substring(i,8,2) ^ 
-           substring(i,6,2) ^ substring(i,4,2) ^ substring(i,2,2) ^ substring(i,0,2)) handle e => i
+           substring(i,6,2) ^ substring(i,4,2) ^ substring(i,2,2) ^ substring(i,0,2)) handle e => 
+          (substring(i,6,2) ^ substring(i,4,2) ^ substring(i,2,2) ^ substring(i,0,2)) handle e => i
   in if size i = n then i else fail() end
 
 fun signed_hex n i = let
@@ -83,13 +84,13 @@ local
     zip ["AX","CX","DX","BX","SP","BP","SI","DI"] (add_reg_type 16 [0,1,2,3,4,5,6,7]) @
     zip ["EAX","ECX","EDX","EBX","ESP","EBP","ESI","EDI"] (add_reg_type 32 [0,1,2,3,4,5,6,7]) @
     zip ["RAX","RCX","RDX","RBX","RSP","RBP","RSI","RDI"] (add_reg_type 64 [0,1,2,3,4,5,6,7]) @
-    zip ["R8B","R9B","R10B","R11B","R12B","R13B","R14B","R15B"] (add_reg_type 64 [8,9,10,11,12,13,14,15]) @
-    zip ["R8W","R9W","R10W","R11W","R12W","R13W","R14W","R15W"] (add_reg_type 64 [8,9,10,11,12,13,14,15]) @
-    zip ["R8D","R9D","R10D","R11D","R12D","R13D","R14D","R15D"] (add_reg_type 64 [8,9,10,11,12,13,14,15]) @
+    zip ["R8B","R9B","R10B","R11B","R12B","R13B","R14B","R15B"] (add_reg_type 8 [8,9,10,11,12,13,14,15]) @
+    zip ["R8W","R9W","R10W","R11W","R12W","R13W","R14W","R15W"] (add_reg_type 16 [8,9,10,11,12,13,14,15]) @
+    zip ["R8D","R9D","R10D","R11D","R12D","R13D","R14D","R15D"] (add_reg_type 32 [8,9,10,11,12,13,14,15]) @
     zip ["R8","R9","R10","R11","R12","R13","R14","R15"] (add_reg_type 64 [8,9,10,11,12,13,14,15]) @
-    zip ["R0B","R1B","R2B","R3B","R4B","R5B","R6B","R7B"] (add_reg_type 64 [0,1,2,3,4,5,6,7]) @
-    zip ["R0W","R1W","R2W","R3W","R4W","R5W","R6W","R7W"] (add_reg_type 64 [0,1,2,3,4,5,6,7]) @
-    zip ["R0D","R1D","R2D","R3D","R4D","R5D","R6D","R7D"] (add_reg_type 64 [0,1,2,3,4,5,6,7]) @
+    zip ["R0B","R1B","R2B","R3B","R4B","R5B","R6B","R7B"] (add_reg_type 8 [0,1,2,3,4,5,6,7]) @
+    zip ["R0W","R1W","R2W","R3W","R4W","R5W","R6W","R7W"] (add_reg_type 16 [0,1,2,3,4,5,6,7]) @
+    zip ["R0D","R1D","R2D","R3D","R4D","R5D","R6D","R7D"] (add_reg_type 32 [0,1,2,3,4,5,6,7]) @
     zip ["R0","R1","R2","R3","R4","R5","R6","R7"] (add_reg_type 64 [0,1,2,3,4,5,6,7])
   fun x64_reg_info r = let
     fun find x [] = fail()
@@ -197,7 +198,7 @@ fun x64_encode s = let
     if mem t ["r/m8","r/m16","r/m32","r/m64"] then "r/m32" else t;  
   val ys = map (fn (x,y) => (x,map simplify_token y)) ys
 (*
-  val (zs,ys) = el 1 ys
+  val (zs,ys) = el 4 ys 
 *)
   fun use_encoding (zs,ys) = let
     val rex = ref (if zsize = 64 then [#"W"] else [])
