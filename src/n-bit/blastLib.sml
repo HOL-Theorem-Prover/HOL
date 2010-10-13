@@ -740,6 +740,7 @@ in
       end
 end
 
+val BBLAST_PROVE = Drule.EQT_ELIM o BBLAST_CONV;
 val BBLAST_RULE = Conv.CONV_RULE BBLAST_CONV;
 val BBLAST_TAC  = Tactic.CONV_TAC BBLAST_CONV;
 

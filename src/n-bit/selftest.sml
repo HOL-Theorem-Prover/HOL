@@ -10,24 +10,21 @@ in
 end
 
 fun die() = OS.Process.exit OS.Process.failure
-fun test c tm = let
+fun test (c:conv) tm = let
   val rt = Timer.startRealTimer ()
-  val res = SOME (c tm) handle HOL_ERR _ => NONE
+  val res = Lib.total c tm
   val elapsed = Timer.checkRealTimer rt
-  val res' = SOME (Option.map Drule.EQT_ELIM res)
-             handle HOL_ERR _ => NONE
 in
   TextIO.print (trunc 65 tm ^ Time.toString elapsed ^
-                (case res' of
+                (case res of
                    NONE => "FAILED!"
-                 | SOME NONE => "FAILED!"
                  | _ => "") ^ "\n");
-  case res' of NONE => die() | SOME NONE => die() | _ => ()
+  case res of NONE => die() | _ => ()
 end
 
-val raw_blast_true = test blastLib.BIT_BLAST_CONV
-val blast_true = test blastLib.BBLAST_CONV
-val srw_true = test (simpLib.SIMP_CONV (srw_ss()) [])
+val raw_blast_true = test (Drule.EQT_ELIM o blastLib.BIT_BLAST_CONV)
+val blast_true = test blastLib.BBLAST_PROVE
+val srw_true = test (simpLib.SIMP_PROVE (srw_ss()) [])
 
 (* start tests *)
 
