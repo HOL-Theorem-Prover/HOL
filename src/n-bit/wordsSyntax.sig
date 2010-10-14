@@ -22,6 +22,7 @@ sig
   val word_L2_tm          : term
   val word_modify_tm      : term
   val word_reverse_tm     : term
+  val word_compare_tm     : term
   val nzcv_tm             : term
   val word_lt_tm          : term
   val word_le_tm          : term
@@ -86,6 +87,7 @@ sig
   val mk_word_L2          : hol_type -> term
   val mk_word_modify      : term * term -> term
   val mk_word_reverse     : term -> term
+  val mk_word_compare     : term * term -> term
   val mk_nzcv             : term * term -> term
   val mk_word_lt          : term * term -> term
   val mk_word_le          : term * term -> term
@@ -150,6 +152,7 @@ sig
   val dest_word_L2          : term -> hol_type
   val dest_word_modify      : term -> term * term
   val dest_word_reverse     : term -> term
+  val dest_word_compare     : term -> term * term
   val dest_nzcv             : term -> term * term
   val dest_word_lt          : term -> term * term
   val dest_word_le          : term -> term * term
@@ -214,6 +217,7 @@ sig
   val is_word_L2          : term -> bool
   val is_word_modify      : term -> bool
   val is_word_reverse     : term -> bool
+  val is_word_compare     : term -> bool
   val is_nzcv             : term -> bool
   val is_word_lt          : term -> bool
   val is_word_le          : term -> bool

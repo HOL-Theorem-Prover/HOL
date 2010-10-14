@@ -452,6 +452,10 @@ val _ = add_infix("@@",700,HOLgrammars.RIGHT);
 
 val _ = ai := false;
 
+(* equals 1w iff all bits are equal *)
+val word_compare_def = Define`
+  word_compare (a:'a word) b = if a = b then 1w else 0w :1 word`;
+
 val nzcv_def = with_flag (computeLib.auto_import_definitions, true) Define `
   nzcv (a:'a word) (b:'a word) =
     let q = w2n a + w2n (- b) in

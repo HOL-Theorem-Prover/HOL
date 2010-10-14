@@ -40,6 +40,7 @@ val word_H_tm           = mk_word_tm "word_H"
 val word_L2_tm          = mk_word_tm "word_L2"
 val word_modify_tm      = mk_word_tm "word_modify"
 val word_reverse_tm     = mk_word_tm "word_reverse"
+val word_compare_tm     = mk_word_tm "word_compare"
 val nzcv_tm             = mk_word_tm "nzcv"
 val word_lt_tm          = mk_word_tm "word_lt"
 val word_le_tm          = mk_word_tm "word_le"
@@ -135,6 +136,10 @@ fun mk_word_modify(f,w) =
 fun mk_word_reverse w =
   mk_comb(inst[alpha |-> dim_of w] word_reverse_tm,w)
   handle HOL_ERR _ => raise ERR "mk_word_reverse" "";
+
+fun mk_word_compare (w1, w2) =
+  list_mk_comb (inst [alpha |-> dim_of w1] word_compare_tm, [w1, w2])
+  handle HOL_ERR _ => raise ERR "mk_word_compare" "";
 
 fun mk_nzcv(w1,w2) =
   list_mk_comb(inst[alpha|->dim_of w1]nzcv_tm,[w1,w2])
@@ -414,6 +419,9 @@ val dest_word_modify =
 val dest_word_reverse =
   dest_monop word_reverse_tm (ERR "dest_word_reverse" "");
 
+val dest_word_compare =
+  dest_binop word_compare_tm (ERR "dest_word_compare" "");
+
 val dest_nzcv = dest_binop nzcv_tm (ERR "dest_nzcv" "");
 
 val dest_word_lt =
@@ -596,6 +604,7 @@ val is_word_H = Lib.can dest_word_H
 val is_word_L2 = Lib.can dest_word_L2;
 val is_word_modify = Lib.can dest_word_modify
 val is_word_reverse = Lib.can dest_word_reverse
+val is_word_compare = Lib.can dest_word_compare
 val is_nzcv = Lib.can dest_nzcv
 val is_word_lt = Lib.can dest_word_lt
 val is_word_le = Lib.can dest_word_le
