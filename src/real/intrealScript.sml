@@ -14,7 +14,7 @@ val _ = new_theory "intreal"
 (*---------------------------------------------------------------------------*)
 
 val real_of_int = new_definition ("real_of_int", ``real_of_int i =
-  if i < 0 then real_of_num (Num (~i)) else real_of_num (Num i)``)
+  if i < 0 then ~(real_of_num (Num (~i))) else real_of_num (Num i)``)
 
 (*---------------------------------------------------------------------------*)
 (* Floor and ceiling (ints)                                                  *)
