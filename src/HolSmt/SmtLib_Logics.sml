@@ -60,7 +60,8 @@ local
     ("bvxnor", K_zero_two wordsSyntax.mk_word_xnor),
     (* FIXME: add parsing of bvcomp *)
     ("bvsub", K_zero_two wordsSyntax.mk_word_sub),
-    (* FIXME: add parsing of bvsdiv, bvsrem, bvsmod *)
+    ("bvsdiv", K_zero_two wordsSyntax.mk_word_sdiv),
+    (* FIXME: add parsing of bvsrem and bvsmod *)
     (* arithmetic shift right -- the number of bits to shift is given
        by the second argument, which must also be a bit-vector *)
     ("bvashr", K_zero_two
