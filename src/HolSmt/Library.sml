@@ -68,18 +68,21 @@ struct
   fun get_token (get_char : unit -> char) : unit -> string =
   let
     val buffer = ref (NONE : string option)
-    (* FIXME: disallow \ in symbols, treat |x| as x (the latter might
-              require markup) *)
+    fun line_comment () =
+      if get_char () = #"\n" then
+        ()
+      else line_comment ()
     fun aux_symbol cs c =
       if c = #"|" then
-        String.implode (List.rev (c :: cs))
+        (* we return |x| as x *)
+        String.implode (List.rev cs)
       else
         aux_symbol (c :: cs) (get_char ())
     fun aux_string cs c =
       if c = #"\"" then
         String.implode (List.rev (c :: cs))
       else if c = #"\\" then
-        (* FIXME: handle quoted characters properly *)
+        (* FIXME: handle C-style quoted characters properly *)
         aux_string (get_char () :: c :: cs) (get_char ())
       else
         aux_string (c :: cs) (get_char ())
@@ -96,17 +99,20 @@ struct
       | aux cs #"(" = (buffer := SOME "("; String.implode (List.rev cs))
       | aux cs #")" = (buffer := SOME ")"; String.implode (List.rev cs))
       (* | *)
-      | aux [] #"|" = aux_symbol [#"|"] (get_char ())
+      | aux [] #"|" = aux_symbol [] (get_char ())
       | aux _ #"|" =
         raise Feedback.mk_HOL_ERR "Library" "get_token" "invalid '|'"
       (* " *)
       | aux [] #"\"" = aux_string [#"\""] (get_char ())
       | aux _ #"\"" =
         raise Feedback.mk_HOL_ERR "Library" "get_token" "invalid '\"'"
+      (* ; *)
+      | aux [] #";" = (line_comment (); aux [] (get_char ()))
+      | aux cs #";" = (line_comment (); String.implode (List.rev cs))
       (* everything else *)
       | aux cs c = aux (c :: cs) (get_char ())
           handle Feedback.HOL_ERR _ =>
-            (* end of file *)
+            (* end of stream *)
             String.implode (List.rev (c :: cs))
   in
     fn () =>
@@ -146,7 +152,8 @@ struct
 
   (* creates a dictionary that maps strings to lists of parsing functions *)
   fun dict_from_list xs
-      : (string, (string -> num list -> 'a list -> 'a) list) Redblackmap.dict =
+      : (string, (string -> Arbnum.num list -> 'a list -> 'a) list)
+        Redblackmap.dict =
     List.foldl extend_dict (Redblackmap.mkDict String.compare) xs
 
   (***************************************************************************)

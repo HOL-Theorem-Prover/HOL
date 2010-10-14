@@ -57,6 +57,14 @@ local
      following "_" in SMT-LIB syntax), but is instead used as a
      catch-all entry. The token itself is passed verbatim.
 
+     FIXME: The current setup doesn't do implicit conversions
+            properly. Certain SMT-LIB logics, e.g., AUFLIRA, insert
+            implicit conversions, e.g., from Int to Real, under
+            certain conditions. These could perhaps be inserted by
+            'parse_compound_term' (below), only there is no way at the
+            moment to tell 'parse_compound_term' what the conversions
+            are, and when they should be applied.
+
      Some of the basic infrastructure for parsing types/terms is
      identical, but some of the high-level parsing functions
      necessarily differ: parsing terms requires two dictionaries (one
