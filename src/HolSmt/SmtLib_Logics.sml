@@ -58,7 +58,7 @@ local
     ("bvnor", K_zero_two wordsSyntax.mk_word_nor),
     ("bvxor", K_zero_two wordsSyntax.mk_word_xor),
     ("bvxnor", K_zero_two wordsSyntax.mk_word_xnor),
-    (* FIXME: add parsing of bvcomp *)
+    ("bvcomp", K_zero_two wordsSyntax.mk_word_compare),
     ("bvsub", K_zero_two wordsSyntax.mk_word_sub),
     ("bvsdiv", K_zero_two wordsSyntax.mk_word_sdiv),
     ("bvsrem", K_zero_two wordsSyntax.mk_word_srem),
