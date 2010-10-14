@@ -35,6 +35,9 @@ val decompiler_set_pc = ref ((fn y => fn th => fail()) :int -> thm -> thm);
 fun add_decompiled (name,th,code_len,code_exit) =
   (decompiler_memory := (name,(th,code_len,code_exit)) :: !decompiler_memory);
 
+fun get_decompiled name =
+  snd (hd (filter (fn (x,y) => x = name) (!decompiler_memory))) handle _ => fail();
+
 fun add_code_abbrev thms = (code_abbreviations := thms @ !code_abbreviations);
 fun add_executable_data_name n = (executable_data_names := n :: !executable_data_names);
 fun remove_executable_data_name n = (executable_data_names := filter (fn m => not (n = m)) (!executable_data_names));
@@ -47,6 +50,7 @@ fun add_modifier name f = let
 fun remove_all_modifiers () = 
   user_defined_modifier := (fn (name:string) => fn (th:thm) => th);
 fun modifier name th = (!user_defined_modifier) name th;
+
 
 (* general set-up *)
 

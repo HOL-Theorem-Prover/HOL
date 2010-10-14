@@ -118,8 +118,10 @@ fun assemble target code = let
   fun space s = replace_char #" " "" s
   fun process ([],s) = fail()
     | process ([x],s) =
-       if (String.substring(x,0,6) = "insert" handle e => false) then
-         [(ASM_INSERT(space(String.substring(x,6,size(x)-6)),0,NONE),SOME s)]
+       if (String.substring(space(x),0,6) = "insert" handle e => false) then let
+         val name = space(String.substring(space(x),6,size((space(x)))-6))
+         val (_,code_length,_) = get_decompiled name
+         in [(ASM_INSERT(name,code_length,NONE),SOME s)] end
        else [(ASM_INSTRUCTION (x,"",NONE),SOME s)]
     | process ((y::x::xs),s) = (ASM_LABEL (space y),NONE) :: process ((x::xs),s)
   val ys = map process ys
