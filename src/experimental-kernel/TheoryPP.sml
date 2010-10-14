@@ -102,6 +102,9 @@ fun pp_type mvartype mtype pps ty =
          end
  end
 
+val include_docs = ref true
+val _ = Feedback.register_btrace ("TheoryPP.include_docs", include_docs)
+
 fun pp_sig pp_thm info_record ppstrm = let
   val {name,parents,axioms,definitions,theorems,sig_ps} = info_record
   val {add_string,add_break,begin_block,end_block,
@@ -164,14 +167,16 @@ fun pp_sig pp_thm info_record ppstrm = let
         end_block());
 
   fun pr_docs() =
-    (!pp_sig_hook();
-     begin_block CONSISTENT 3;
-     add_string "(*"; add_newline();
-     pr_parents parents';
-     pr_thms "Axiom" axioms';
-     pr_thms "Definition" definitions';
-     pr_thms "Theorem" theorems';
-     end_block(); add_newline(); add_string "*)"; add_newline())
+      if !include_docs then
+        (!pp_sig_hook();
+         begin_block CONSISTENT 3;
+         add_string "(*"; add_newline();
+         pr_parents parents';
+         pr_thms "Axiom" axioms';
+         pr_thms "Definition" definitions';
+         pr_thms "Theorem" theorems';
+         end_block(); add_newline(); add_string "*)"; add_newline())
+      else ()
   fun pthms (heading, ths) =
     vblock(heading,
            (fn (s,th) => (begin_block CONSISTENT 0;
