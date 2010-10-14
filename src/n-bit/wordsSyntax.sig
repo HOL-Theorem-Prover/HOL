@@ -37,6 +37,7 @@ sig
   val word_join_tm        : term
   val word_concat_tm      : term
   val word_div_tm         : term
+  val word_sdiv_tm        : term
   val word_mod_tm         : term
   val word_slice_tm       : term
   val word_bit_tm         : term
@@ -95,6 +96,7 @@ sig
   val mk_word_join        : term * term -> term
   val mk_word_concat      : term * term -> term
   val mk_word_div         : term * term -> term
+  val mk_word_sdiv        : term * term -> term
   val mk_word_mod         : term * term -> term
   val mk_word_log2        : term -> term
   val mk_word_msb         : term -> term
@@ -156,6 +158,7 @@ sig
   val dest_word_join        : term -> term * term
   val dest_word_concat      : term -> term * term
   val dest_word_div         : term -> term * term
+  val dest_word_sdiv        : term -> term * term
   val dest_word_mod         : term -> term * term
   val dest_word_log2        : term -> term
   val dest_word_msb         : term -> term
@@ -214,6 +217,7 @@ sig
   val is_word_sub         : term -> bool
   val is_word_mul         : term -> bool
   val is_word_rrx         : term -> bool
+  val is_word_sdiv        : term -> bool
   val is_word_concat      : term -> bool
   val is_word_div         : term -> bool
   val is_word_mod         : term -> bool
