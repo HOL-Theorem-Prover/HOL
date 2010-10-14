@@ -217,9 +217,9 @@ sig
   val is_word_sub         : term -> bool
   val is_word_mul         : term -> bool
   val is_word_rrx         : term -> bool
-  val is_word_sdiv        : term -> bool
   val is_word_concat      : term -> bool
   val is_word_div         : term -> bool
+  val is_word_sdiv        : term -> bool
   val is_word_mod         : term -> bool
   val is_word_log2        : term -> bool
   val is_word_msb         : term -> bool
