@@ -39,6 +39,8 @@ sig
   val word_div_tm         : term
   val word_sdiv_tm        : term
   val word_mod_tm         : term
+  val word_srem_tm        : term
+  val word_smod_tm        : term
   val word_slice_tm       : term
   val word_bit_tm         : term
   val word_bits_tm        : term
@@ -98,6 +100,8 @@ sig
   val mk_word_div         : term * term -> term
   val mk_word_sdiv        : term * term -> term
   val mk_word_mod         : term * term -> term
+  val mk_word_srem        : term * term -> term
+  val mk_word_smod        : term * term -> term
   val mk_word_log2        : term -> term
   val mk_word_msb         : term -> term
   val mk_word_lsb         : term -> term
@@ -160,6 +164,8 @@ sig
   val dest_word_div         : term -> term * term
   val dest_word_sdiv        : term -> term * term
   val dest_word_mod         : term -> term * term
+  val dest_word_srem        : term -> term * term
+  val dest_word_smod        : term -> term * term
   val dest_word_log2        : term -> term
   val dest_word_msb         : term -> term
   val dest_word_lsb         : term -> term
@@ -221,6 +227,8 @@ sig
   val is_word_div         : term -> bool
   val is_word_sdiv        : term -> bool
   val is_word_mod         : term -> bool
+  val is_word_srem        : term -> bool
+  val is_word_smod        : term -> bool
   val is_word_log2        : term -> bool
   val is_word_msb         : term -> bool
   val is_word_lsb         : term -> bool
