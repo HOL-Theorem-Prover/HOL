@@ -242,7 +242,7 @@ with
         val new_dprocs = map (Traverse.addctxt rewrs) dprocs' @ dprocs
     in
       SS {mk_rewrs    = mk_rewrs,
-          ssfrags     = Lib.op_insert same_frag f ssfrags,
+          ssfrags     = f :: ssfrags,
           initial_net = net,
           limit       = limit,
           dprocs      = new_dprocs,
