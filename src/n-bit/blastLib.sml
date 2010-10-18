@@ -463,7 +463,7 @@ local
   val reduce_xor = REWRITE_RULE [xor_thm] reduce_xor_def
 
   val word_L_thm = Q.prove(
-    `INT_MINw :'a word = FCP i. i = dimindex (:α) − 1`,
+    `INT_MINw :'a word = FCP i. i = dimindex (:'a) − 1`,
     SRW_TAC [fcpLib.FCP_ss] [word_L]);
 
   val minus1_thm = Q.prove(
