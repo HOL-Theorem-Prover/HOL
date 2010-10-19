@@ -271,10 +271,10 @@ with
  fun wk_mk_travrules (rels, congs) = let
    fun cong2proc th = let
      open Opening Travrules
-     fun mk_refl rel t = let
+     fun mk_refl (x as {Rinst=rel,arg= t}) = let
        val PREORDER(_,_,refl) = find_relation rel rels
      in
-       refl t
+       refl x
      end
    in
      CONGPROC mk_refl th

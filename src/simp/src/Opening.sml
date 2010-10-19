@@ -4,7 +4,7 @@ struct
 open HolKernel boolLib liteLib Trace;
 
 
-fun samerel t1 t2 = same_const t1 t2 orelse aconv t1 t2
+fun samerel t1 t2 = can (match_term t1) t2
 
 type congproc  = {relation:term,
 		  solver : term -> thm,
@@ -186,7 +186,7 @@ in fn {relation,solver,depther,freevars} =>
                 val rewr_thm =
                   (depther (reprocessed_assum_thms,oper) orig)
                   handle HOL_ERR _ =>
-                  let val thm = refl oper orig
+                  let val thm = refl {Rinst = oper, arg = orig}
                   in (trace(5,PRODUCE(orig,"UNCHANGED",thm));thm)
                   end
                 val abs_rewr_thm =

@@ -75,7 +75,7 @@ signature Opening = sig
                     freevars: term list,
 		    depther : (thm list * term) -> conv} -> conv
    val samerel            : term -> term -> bool
-   val CONGPROC           :  (term -> conv) ->  thm -> congproc
+   val CONGPROC           : ({Rinst:term,arg:term} -> thm) -> thm -> congproc
    val rel_of_congrule    : thm -> term
    val nconds_of_congrule : thm -> int
 

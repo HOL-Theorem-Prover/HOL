@@ -50,9 +50,9 @@ fun mk_preorder_refl preorders preorderTerm =
 fun mk_congprocs preorders congs =
   let
     val congs = flatten (map BODY_CONJUNCTS congs)
-    val gen_refl = mk_preorder_refl preorders;
+    fun gen_refl(x as {Rinst,arg}) = mk_preorder_refl preorders Rinst x
   in
-    map (fn cong => ((CONGPROC gen_refl) cong)) congs
+    map (CONGPROC gen_refl) congs
   end
 
 fun mk_refl_rewrite preorder =
@@ -61,7 +61,7 @@ fun mk_refl_rewrite preorder =
     val hol_type = hd (#2 (dest_type (type_of preorderTerm)))
     val var = mk_var ("x", hol_type)
     val refl = extract_preorder_refl preorder;
-    val reflThm = refl var
+    val reflThm = refl {Rinst=preorderTerm,arg=var}
   in
     EQT_INTRO reflThm
   end;
@@ -74,18 +74,18 @@ fun mk_eq_congproc preorder =
     val hol_type = hd (#2 (dest_type (type_of preorderTerm)))
     val var = mk_var ("x", hol_type)
     val refl = extract_preorder_refl preorder;
-    val reflThm = refl var
+    val reflThm = refl {Rinst=preorderTerm,arg=var}
     val thm = MATCH_MP AP_TERM_THM reflThm
     val thm = SPEC_ALL thm
   in
     (*The only congruence occuring in an antecedent is =. Thus t == ``$=`` holds for all
       calls and we can use REFL *)
-    (CONGPROC (fn t => REFL)) thm
+    (CONGPROC (fn {Rinst,arg} => REFL arg)) thm
   end;
 
 
 
-val equalityPreorder = PREORDER(boolSyntax.equality,TRANS,REFL);
+val equalityPreorder = Travrules.EQ_preorder
 
 
 fun is_match_binop binop term =
@@ -98,26 +98,23 @@ fun is_match_binop binop term =
 
 local
   fun cong_rewrite_internal preorder term boundvars thm =
-    (if (is_eq (concl thm)) then
-      (let
-        val refl = extract_preorder_refl preorder;
-        val congThm = refl term;
-        val congThm = CONV_RULE (RAND_CONV (REWR_CONV thm)) congThm
-      in
-        congThm
-      end)
-    else
-      (let
-        val thm_relation = rator(rator(concl thm));
-        val _ = if (samerel thm_relation (extract_preorder_const preorder)) then T
-                else failwith ("not applicable");
-        val thmLHS = rand (rator (concl thm));
-        val match = match_terml [] boundvars thmLHS term;
-        val thm = INST_TY_TERM match thm
-      in
-        thm
-      end)
-    )
+      if is_eq (concl thm) then let
+          val refl = extract_preorder_refl preorder
+          val congThm = refl {Rinst=extract_preorder_const preorder,arg=term}
+          val congThm = CONV_RULE (RAND_CONV (REWR_CONV thm)) congThm
+        in
+          congThm
+        end
+      else let
+          val thm_relation = rator(rator(concl thm))
+          val _ = samerel thm_relation (extract_preorder_const preorder) orelse
+                  failwith ("not applicable")
+          val thmLHS = rand (rator (concl thm))
+          val match = match_terml [] boundvars thmLHS term
+          val thm = INST_TY_TERM match thm
+        in
+          thm
+        end
 in
   fun cong_rewrite net preorder term =
     (let
@@ -173,23 +170,25 @@ fun reducer_addRwts (REDUCER {name,addcontext,apply,initial}) rwts =
   REDUCER {name=name,addcontext=addcontext, apply=apply, initial=addcontext (initial,rwts)}
 
 
-fun eq_reducer_wrapper (eq_reducer as REDUCER (data))=
-  let val name = #name data
-      val initial = (#initial data);
-      val addcontext = ((#addcontext data));
+fun eq_reducer_wrapper (eq_reducer as REDUCER data)= let
+  val name = #name data
+  val initial = #initial data
+  val addcontext = #addcontext data
 
-      fun apply {solver,context,stack,relation} tm =
-        let
-            val eqthm = (#apply data) {solver=solver,context=context,stack=stack,relation=relation} tm
-            val refl = extract_preorder_refl relation;
-            val congThm = refl tm;
-            val congThm = CONV_RULE (RAND_CONV (REWR_CONV eqthm)) congThm
-        in
-          congThm
-        end
-  in REDUCER {name=name,addcontext=addcontext, apply=apply,
-              initial=initial}
-  end;
+  fun apply {solver,context,stack,relation} tm = let
+    val eqthm = #apply data
+                       {solver=solver,context=context,stack=stack,
+                        relation=relation}
+                       tm
+    val refl = extract_preorder_refl relation
+    val congThm = refl {Rinst=extract_preorder_const relation, arg=tm}
+    val congThm = CONV_RULE (RAND_CONV (REWR_CONV eqthm)) congThm
+  in
+    congThm
+  end
+in
+  REDUCER {name=name,addcontext=addcontext, apply=apply, initial=initial}
+end;
 
 
 datatype congsetfrag = CSFRAG of
@@ -289,8 +288,7 @@ fun CONGRUENCE_SIMP_CONV relation (cs as (CS csdata)) ss =
     val qconv = CONGRUENCE_SIMP_QCONV relation cs ss
     val preorder = find_relation relation (#relations csdata);
     val refl = extract_preorder_refl preorder
-    fun conv thms tm =
-      ((qconv thms tm) handle _ => refl tm)
+    fun conv thms tm = qconv thms tm handle _ => refl {Rinst=relation,arg=tm}
   in
     conv
   end;
