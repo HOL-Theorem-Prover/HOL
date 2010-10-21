@@ -2,10 +2,8 @@ structure type_grammar :> type_grammar =
 struct
 
 datatype grammar_rule =
-  SUFFIX of string list
-| ARRAY_SFX
-| INFIX of {opname : string, parse_string : string} list *
-           HOLgrammars.associativity
+         INFIX of {opname : string, parse_string : string} list *
+                  HOLgrammars.associativity
 
 datatype type_structure =
          TYOP of {Thy : string, Tyop : string, Args : type_structure list}
@@ -20,6 +18,7 @@ fun typstruct_uptodate ts =
 
 
 datatype grammar = TYG of (int * grammar_rule) list *
+                          string list *
                           (string, type_structure) Binarymap.dict *
                           (int * string) TypeNet.typenet
 
@@ -65,25 +64,18 @@ fun suffix_arity abbrevs s =
     | SOME st => if typstruct_uptodate st then SOME (s, num_params st)
                  else NONE
 
-val std_suffix_precedence = 100
-
-
-
 fun merge r1 r2 =
   case (r1, r2) of
-    (ARRAY_SFX, ARRAY_SFX) => ARRAY_SFX
-  | (SUFFIX slist1, SUFFIX slist2) => SUFFIX(Lib.union slist1 slist2)
-  | (INFIX(rlist1, a1), INFIX(rlist2, a2)) => let
+    (INFIX(rlist1, a1), INFIX(rlist2, a2)) => let
     in
       if a1 = a2 then INFIX(Lib.union rlist1 rlist2, a1)
       else
         raise GrammarError
           "Attempt to merge two infix types with different associativities"
     end
-  | _ => raise GrammarError "Attempt to merge suffix and infix type"
 
-fun insert_sorted0 (k, v) [] = [(k, v)]
-  | insert_sorted0 kv1 (wholething as (kv2::rest)) = let
+fun insert_sorted (k, v) [] = [(k, v)]
+  | insert_sorted kv1 (wholething as (kv2::rest)) = let
       val (k1, v1) = kv1
       val (k2, v2) = kv2
     in
@@ -91,42 +83,24 @@ fun insert_sorted0 (k, v) [] = [(k, v)]
       else
         if k1 = k2 then  (k1, merge v1 v2) :: rest
         else
-          kv2 :: insert_sorted0 kv1 rest
+          kv2 :: insert_sorted kv1 rest
     end
 
-fun insert_sorted (k, v) (G0 : (int * grammar_rule) list) = let
-  val G1 = insert_sorted0 (k,v) G0
-  fun merge_adj_suffixes [] = []
-    | merge_adj_suffixes [x] = [x]
-    | merge_adj_suffixes (x1::x2::xs) = let
-      in
-        case (x1, x2) of
-          ((p1, SUFFIX slist1), (p2, SUFFIX slist2)) =>
-            merge_adj_suffixes ((p1, SUFFIX (Lib.union slist1 slist2))::xs)
-        | _ => x1 :: merge_adj_suffixes (x2 :: xs)
-      end
-in
-  merge_adj_suffixes G1
-end
-
-
-
-fun new_binary_tyop (TYG(G,abbrevs,pmap))
+fun new_binary_tyop (TYG(G,sfxs,abbrevs,pmap))
                     {precedence, infix_form, opname, associativity} =
     let
-      val rule1 =
+      val rule =
           if isSome infix_form then
             (precedence, INFIX([{parse_string = valOf infix_form,
                                  opname = opname}],
                                associativity))
           else (precedence, INFIX([{parse_string = opname, opname = opname}],
                                   associativity))
-      val rule2 = (std_suffix_precedence, SUFFIX[opname])
     in
-      TYG (insert_sorted rule1 (insert_sorted rule2 G), abbrevs, pmap)
+      TYG (insert_sorted rule G, Lib.insert opname sfxs, abbrevs, pmap)
     end
 
-fun remove_binary_tyop (TYG (G, abbrevs, pmap)) s = let
+fun remove_binary_tyop (TYG (G, sfxs, abbrevs, pmap)) s = let
   fun bad_irule {parse_string,...} = parse_string = s
   fun edit_rule (prec, r) =
       case r of
@@ -136,21 +110,21 @@ fun remove_binary_tyop (TYG (G, abbrevs, pmap)) s = let
           if null irules' then NONE
           else SOME (prec, INFIX (irules', assoc))
         end
-      | _ => SOME (prec, r)
 in
-  TYG(List.mapPartial edit_rule G, abbrevs, pmap)
+  TYG(List.mapPartial edit_rule G, sfxs, abbrevs, pmap)
 end
 
 
-fun new_tyop (TYG(G,abbrevs,pmap)) name =
-  TYG (insert_sorted (std_suffix_precedence, SUFFIX[name]) G, abbrevs, pmap)
+fun new_tyop (TYG(G,sfxs,abbrevs,pmap)) name =
+  TYG (G, name::sfxs, abbrevs, pmap)
 
-val empty_grammar = TYG ([(99, ARRAY_SFX)],
+val empty_grammar = TYG ([],
+                         [],
                          Binarymap.mkDict String.compare,
                          TypeNet.empty)
 
-fun rules (TYG (G, dict, pmap)) = G
-fun abbreviations (TYG (G, dict, pmap)) = dict
+fun rules (TYG (G, sfxs, dict, pmap)) = {infixes = G, suffixes = sfxs}
+fun abbreviations (TYG (G, sfxs, dict, pmap)) = dict
 
 fun check_structure st = let
   fun param_numbers (PARAM i, pset) = HOLset.add(pset, i)
@@ -169,25 +143,25 @@ in
 end
 
 val abb_tstamp = ref 0
-fun new_abbreviation (TYG(G, dict0,pmap)) (s, st) = let
+fun new_abbreviation (TYG(G, sfxs,dict0,pmap)) (s, st) = let
   val _ = check_structure st
   val _ = case st of PARAM _ =>
                      raise GrammarError
                                "Abbreviation can't be to a type variable"
                    | _ => ()
-  val G0 = TYG(G, Binarymap.insert(dict0,s,st),
+  val G0 = TYG(G, sfxs,Binarymap.insert(dict0,s,st),
                TypeNet.insert(pmap, structure_to_type st, (!abb_tstamp, s)))
   val _ = abb_tstamp := !abb_tstamp + 1
 in
   new_tyop G0 s
 end
 
-fun remove_abbreviation(arg as TYG(G, dict0, pmap0)) s = let
+fun remove_abbreviation(arg as TYG(G, sfxs,dict0, pmap0)) s = let
   val (dict,st) = Binarymap.remove(dict0,s)
   val pmap = #1 (TypeNet.delete(pmap0, structure_to_type st))
       handle Binarymap.NotFound => pmap0
 in
-  TYG(G, dict, pmap)
+  TYG(G, sfxs, dict, pmap)
 end handle Binarymap.NotFound => arg
 
 fun rev_append [] acc = acc
@@ -217,8 +191,8 @@ fun merge_pmaps (p1, p2) =
 
 fun merge_grammars (G1, G2) = let
   (* both grammars are sorted, with no adjacent suffixes *)
-  val TYG (grules1, abbrevs1, pmap1) = G1
-  val TYG (grules2, abbrevs2, pmap2) = G2
+  val TYG (grules1, sfxs1, abbrevs1, pmap1) = G1
+  val TYG (grules2, sfxs2, abbrevs2, pmap2) = G2
   fun merge_acc acc (gs as (g1, g2)) =
     case gs of
       ([], _) => rev_append acc g2
@@ -232,11 +206,12 @@ fun merge_grammars (G1, G2) = let
       end
 in
   TYG (merge_acc [] (grules1, grules2),
+       Lib.union sfxs1 sfxs2,
        merge_abbrevs G2 (abbrevs1, abbrevs2),
        merge_pmaps (pmap1, pmap2))
 end
 
-fun prettyprint_grammar pps (G as TYG (g,abbrevs,pmap)) = let
+fun prettyprint_grammar pps (G as TYG (g,sfxs,abbrevs,pmap)) = let
   open Portable Lib
   val {add_break,add_newline,add_string,begin_block,end_block,...} =
       with_ppstream pps
@@ -309,23 +284,24 @@ fun prettyprint_grammar pps (G as TYG (g,abbrevs,pmap)) = let
       ()
   end
 
+  fun print_suffixes slist = let
+    val oksl = List.mapPartial (suffix_arity abbrevs) slist
+  in
+    if null oksl then ()
+    else let
+      in
+        add_string "       TY  ::=  ";
+        begin_block INCONSISTENT 0;
+        pr_list print_suffix (fn () => add_string " |")
+                (fn () => add_break(1,0)) oksl;
+        end_block ();
+        add_newline()
+      end
+  end
+
   fun print_rule0 r =
     case r of
-      SUFFIX sl => let
-        val oksl = List.mapPartial (suffix_arity abbrevs) sl
-      in
-        if null oksl then ()
-        else let
-          in
-            add_string "TY  ::=  ";
-            begin_block INCONSISTENT 0;
-            pr_list print_suffix (fn () => add_string " |")
-                    (fn () => add_break(1,0)) oksl;
-            end_block ()
-          end
-      end
-    | ARRAY_SFX => add_string "TY  ::=  TY[TY] (array type)"
-    | INFIX(oplist, assoc) => let
+      INFIX(oplist, assoc) => let
         val assocstring =
             case assoc of
               LEFT => "L-"
@@ -353,6 +329,8 @@ in
       add_break (1,2);
       begin_block CONSISTENT 0;
         app print_rule g;
+        print_suffixes sfxs;
+        add_string "       TY  ::=  TY[TY] (array type)";
       end_block ();
     end_block ();
     print_abbrevs();
@@ -370,7 +348,7 @@ fun tysize ty =
         1 + List.foldl (fn (ty,acc) => tysize ty + acc) 0 Args
       end
 
-fun abb_dest_type0 (TYG(_, _, pmap)) ty = let
+fun abb_dest_type0 (TYG(_, _, _, pmap)) ty = let
   open HolKernel
   val net_matches = TypeNet.match(pmap, ty)
   fun mymatch pat ty = let
@@ -404,14 +382,14 @@ end
 fun abb_dest_type G ty = if !print_abbrevs then abb_dest_type0 G ty
                          else Type.dest_type ty
 
-fun disable_abbrev_printing s (arg as TYG(G,abbs,pmap)) =
+fun disable_abbrev_printing s (arg as TYG(G,sfxs,abbs,pmap)) =
     case Binarymap.peek(abbs, s) of
       NONE => arg
     | SOME st => let
         val ty = structure_to_type st
         val (pmap', (_,s')) = TypeNet.delete(pmap, ty)
       in
-        if s = s' then TYG(G, abbs, pmap')
+        if s = s' then TYG(G, sfxs,abbs, pmap')
         else arg
       end handle Binarymap.NotFound => arg
 (* ----------------------------------------------------------------------

@@ -3,15 +3,14 @@ struct
 
 open Feedback Type Portable HOLgrammars type_grammar
 
-datatype mygrav
-   = Sfx of int
-   | Lfx of int * string
-   | Rfx of int * string
-   | Top
+datatype mygrav = Sfx
+                | Lfx of int * string
+                | Rfx of int * string
+                | Top
 
 datatype single_rule
    = SR
-   | IR of associativity * string
+   | IR of int * associativity * string
 
 val ERR = mk_HOL_ERR "type_pp" "pp_type";
 
@@ -87,24 +86,22 @@ in
 end
 
 fun pp_type0 (G:grammar) backend = let
+  val {infixes,suffixes} = rules G
   fun lookup_tyop s = let
-    fun recurse [] = NONE
+    fun recurse [] = if Lib.mem s suffixes then SOME SR else NONE
       | recurse (x::xs) = let
         in
           case x of
-            (p, SUFFIX slist) =>
-              if Lib.mem s slist then SOME (p, SR) else recurse xs
-          | (p, INFIX (slist, a)) => let
+            (p, INFIX (slist, a)) => let
               val res = List.find (fn r => #opname r = s) slist
             in
               case res of
                 NONE => recurse xs
-              | SOME r => SOME(p, IR(a,#parse_string r))
+              | SOME r => SOME(IR(p, a,#parse_string r))
             end
-          | (p, ARRAY_SFX) => recurse xs
         end
   in
-    recurse (rules G) : (int * single_rule) option
+    recurse infixes : single_rule option
   end
   fun pr_ty pps ty grav depth = let
     open PPBackEnd
@@ -134,11 +131,11 @@ fun pp_type0 (G:grammar) backend = let
           val _ = !pp_array_types orelse
                   raise mk_HOL_ERR "" "" "" (* will be caught below *)
           val (bty, cty) = dest_arraytype ty
-          (* ignore parenthesis requirements on sub-arguments on assumption that
-             all suffixes, including array bracketting, are tightest binders in grammar
-             and all at the same tightest level. *)
+          (* ignore parenthesis requirements on sub-arguments knowing that
+             all suffixes, including array bracketting, are tightest binders
+             in grammar and all at the same tightest level. *)
         in
-          pr_ty pps bty grav (depth - 1);
+          pr_ty pps bty Sfx (depth - 1);
           add_string "[";
           pr_ty pps cty Top (depth - 1);
           add_string "]"
@@ -146,30 +143,30 @@ fun pp_type0 (G:grammar) backend = let
         let
           val (Tyop, Args) = type_grammar.abb_dest_type G ty
           fun tooltip () =
-                case Binarymap.peek (type_grammar.abbreviations G, Tyop) of
-                  NONE => let
-                    val {Thy,Tyop,...} = dest_thy_type ty
-                  in
+              case Binarymap.peek (type_grammar.abbreviations G, Tyop) of
+                NONE => let
+                  val {Thy,Tyop,...} = dest_thy_type ty
+                in
                     Thy ^ "$" ^ Tyop
-                  end
-                | SOME st => let
-                    val numps = num_params st
-                  in
-                    if 0 < numps then let
-                        val params =
-                            if numps <= 4 then List.take(greek4, numps)
-                            else let
-                                fun tab i = str (Char.chr (Char.ord #"e" + i))
-                              in
-                                greek4 @ List.tabulate(numps - 4, tab)
-                              end
-                      in
-                        UnicodeChars.lambda ^
-                        String.concatWith " " params ^ ". " ^
-                        structure_to_string st
-                      end
-                    else structure_to_string st
-                  end
+                end
+              | SOME st => let
+                  val numps = num_params st
+                in
+                  if 0 < numps then let
+                      val params =
+                          if numps <= 4 then List.take(greek4, numps)
+                          else let
+                              fun tab i = str (Char.chr (Char.ord #"e" + i))
+                            in
+                              greek4 @ List.tabulate(numps - 4, tab)
+                            end
+                    in
+                      UnicodeChars.lambda ^
+                      String.concatWith " " params ^ ". " ^
+                      structure_to_string st
+                    end
+                  else structure_to_string st
+                end
           fun print_args grav0 args = let
             val parens_needed = case Args of [_] => false | _ => true
             val grav = if parens_needed then Top else grav0
@@ -202,16 +199,11 @@ fun pp_type0 (G:grammar) backend = let
 
             end
           | [arg1, arg2] => (let
-              val (prec, rule) = valOf (lookup_tyop Tyop)
+              val rule = valOf (lookup_tyop Tyop)
             in
               case rule of
                 SR => let
-                  val addparens =
-                      case grav of
-                        Rfx(n, _) => (n > prec)
-                      | _ => false
                 in
-                  pbegin addparens;
                   begin_block INCONSISTENT 0;
                   (* knowing that there are two args, we know that they will
                      be printed with parentheses, so the gravity we pass in
@@ -219,13 +211,12 @@ fun pp_type0 (G:grammar) backend = let
                   print_args Top Args;
                   add_break(1,0);
                   add_ann_string (Tyop, TyOp tooltip);
-                  end_block();
-                  pend addparens
+                  end_block()
                 end
-              | IR(assoc, printthis) => let
+              | IR(prec, assoc, printthis) => let
                   val parens_needed =
                       case grav of
-                        Sfx n => (n > prec)
+                        Sfx => true
                       | Lfx (n, s) => if s = printthis then assoc <> LEFT
                                       else (n >= prec)
                       | Rfx (n, s) => if s = printthis then assoc <> RIGHT
@@ -244,20 +235,18 @@ fun pp_type0 (G:grammar) backend = let
                 end
             end handle Option => print_ghastly())
           | _ => let
-              val (prec, _) = valOf (lookup_tyop Tyop)
-              val addparens =
-                  case grav of
-                    Rfx (n, _) => (n > prec)
-                  | _ => false
             in
-              pbegin addparens;
-              begin_block INCONSISTENT 0;
-              print_args (Sfx prec) Args;
-              add_break(1,0);
-              add_ann_string (Tyop, TyOp tooltip);
-              end_block();
-              pend addparens
-            end handle Option => print_ghastly()
+              case lookup_tyop Tyop of
+                NONE => print_ghastly()
+              | SOME _ => let
+                in
+                  begin_block INCONSISTENT 0;
+                  print_args Sfx Args;
+                  add_break(1,0);
+                  add_ann_string (Tyop, TyOp tooltip);
+                  end_block()
+                end
+            end
         end
   end
 in

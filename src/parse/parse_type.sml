@@ -197,16 +197,7 @@ fun parse_type tyfns allow_unknown_suffixes G = let
     | _ => raise InternalFailure locn
   end
 
-  val (suffixes,rest) = let
-    fun foldthis ((_,r), acc as (sfxs,rest)) =
-        case r of
-          ARRAY_SFX => acc
-        | SUFFIX slist => (slist @ sfxs, rest)
-        | r => (sfxs, r::rest)
-    val (s0, r0) = List.foldl foldthis ([],[]) G
-  in
-    (s0, List.rev r0)
-  end
+  val {suffixes,infixes = rules} = G
 
   datatype ('op,'array) OPARRAY = NormalSfx of 'op
                                 | ArraySfx of 'array * locn.locn
@@ -261,13 +252,13 @@ fun parse_type tyfns allow_unknown_suffixes G = let
 
   fun parse_term current strm =
       case current of
-        [] => parse_atomsuffixes (parse_term rest) strm
+        [] => parse_atomsuffixes (parse_term rules) strm
       | (x::xs) => parse_rule x xs strm
-  and parse_rule rule rs strm = let
+  and parse_rule (rule as (_, r)) rs strm = let
     val next_level = parse_term rs
     val same_level = parse_rule rule rs
   in
-    case rule of
+    case r of
       INFIX (stlist, NONASSOC) => let
         val ty1 = next_level strm
       in
@@ -291,10 +282,9 @@ fun parse_type tyfns allow_unknown_suffixes G = let
           NONE => ty1
         | SOME opn => apply_tyop opn [ty1, same_level strm]
       end
-    | x => raise Fail "parse_type: should never happen"
   end
 in
-  fn qb => parse_term rest qb
+  fn qb => parse_term rules qb
      handle InternalFailure locn =>
             raise ERRloc locn
                   ("Type parsing failure with remaining input: "^

@@ -1,11 +1,9 @@
 signature type_grammar =
 sig
 
-  datatype grammar_rule
-    = SUFFIX of string list
-    | ARRAY_SFX
-    | INFIX of {opname : string, parse_string : string} list *
-                HOLgrammars.associativity
+  datatype grammar_rule =
+           INFIX of {opname : string, parse_string : string} list *
+                    HOLgrammars.associativity
 
   datatype type_structure
     = TYOP of {Thy : string, Tyop : string, Args : type_structure list}
@@ -17,7 +15,8 @@ sig
 
   val empty_grammar    : grammar
   val min_grammar      : grammar
-  val rules            : grammar -> (int * grammar_rule) list
+  val rules            : grammar -> {infixes: (int * grammar_rule) list,
+                                     suffixes : string list}
   val abbreviations    : grammar -> (string,type_structure) Binarymap.dict
 
   val abb_dest_type : grammar -> Type.hol_type -> string * Type.hol_type list
@@ -40,7 +39,6 @@ sig
 
   val merge_grammars   : grammar * grammar -> grammar
 
-  val std_suffix_precedence : int
   val prettyprint_grammar   : Portable.ppstream -> grammar -> unit
   val initialise_typrinter
     : (grammar -> Portable.ppstream -> Type.hol_type -> unit) -> unit
