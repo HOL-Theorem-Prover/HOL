@@ -128,19 +128,8 @@ fun parse_type tyfns allow_unknown_suffixes G = let
     | QTypeIdent(thy,ty) => qtyop{Thy=thy,Tyop=ty,Locn=locn,Args=args}
     | _ => raise Fail "parse_type.apply_tyop: can't happen"
 
-  fun n_appls (ops, t) =
-    case ops of
-      [] => t
-    | oph::opt => n_appls (opt, apply_tyop oph [t])
-  fun n_appls_l ([], t) = raise Fail "parse_type.n_appls_l: can't happen"
-    | n_appls_l (op1::ops, xs) = n_appls (ops, apply_tyop op1 xs)
-
-  fun n_array_sfxs locn (sfxs, ty) = let
-    fun build (sfx, base) =
-        qtyop{Thy = "fcp", Tyop = "cart",Locn=locn,Args = [base, sfx]}
-  in
-    List.foldl build ty sfxs
-  end
+  fun apply_asfx locn (base,index) =
+      qtyop{Thy = "fcp", Tyop = "cart",Locn=locn,Args = [base, index]}
 
   fun parse_op slist fb = let
     val (adv, (t,locn)) = typetok_of fb
@@ -208,13 +197,75 @@ fun parse_type tyfns allow_unknown_suffixes G = let
     | _ => raise InternalFailure locn
   end
 
+  val (suffixes,rest) = let
+    fun foldthis ((_,r), acc as (sfxs,rest)) =
+        case r of
+          ARRAY_SFX => acc
+        | SUFFIX slist => (slist @ sfxs, rest)
+        | r => (sfxs, r::rest)
+    val (s0, r0) = List.foldl foldthis ([],[]) G
+  in
+    (s0, List.rev r0)
+  end
+
+  datatype ('op,'array) OPARRAY = NormalSfx of 'op
+                                | ArraySfx of 'array * locn.locn
+  fun parse_oparray p strm = let
+    val (adv, (t,locn)) = typetok_of strm
+  in
+    case t of
+      LBracket => ArraySfx (parse_asfx p strm, locn)
+    | _ => NormalSfx (parse_op suffixes strm)
+  end
+  fun apply_oparrays ops base =
+      case ops of
+        [] => base
+      | NormalSfx sfx :: rest => apply_oparrays rest (apply_tyop sfx [base])
+      | ArraySfx (index,l) :: rest =>
+          apply_oparrays rest (apply_asfx l (base, index))
+
+  fun tuple_oparrays first rest tuple =
+      case first of
+        ArraySfx (i,l) => let
+        in
+          if length tuple <> 1 then
+            raise ERRloc l "array type can't take tuple as first argument"
+          else
+            apply_oparrays rest (apply_asfx l (hd tuple, i))
+        end
+      | NormalSfx s => apply_oparrays rest (apply_tyop s tuple)
+
+  fun parse_atomsuffixes p strm = let
+  in
+    case totalify (parse_tuple p) strm of
+      NONE => let
+        val ty1 = let
+          val op1 = parse_op suffixes strm
+        in
+          apply_tyop op1 []
+        end handle InternalFailure l => parse_atom strm
+        val ops = many (parse_oparray p) strm
+      in
+        apply_oparrays ops ty1
+      end
+    | SOME (tyl,locn) => let
+      in
+        case (many (parse_oparray p) strm) of
+          [] => if length tyl <> 1 then
+                  raise ERRloc locn "tuple with no suffix"
+                else
+                  hd tyl
+        | h::t => tuple_oparrays h t tyl
+      end
+  end
+
   fun parse_term current strm =
       case current of
-        [] => parse_atom strm
+        [] => parse_atomsuffixes (parse_term rest) strm
       | (x::xs) => parse_rule x xs strm
-  and parse_rule (r as (level, rule)) rs strm = let
+  and parse_rule rule rs strm = let
     val next_level = parse_term rs
-    val same_level = parse_rule r rs
+    val same_level = parse_rule rule rs
   in
     case rule of
       INFIX (stlist, NONASSOC) => let
@@ -240,39 +291,10 @@ fun parse_type tyfns allow_unknown_suffixes G = let
           NONE => ty1
         | SOME opn => apply_tyop opn [ty1, same_level strm]
       end
-    | ARRAY_SFX => let
-        val llocn = #2 (current strm)
-        val ty1 = next_level strm
-        val asfxs = many (parse_asfx (parse_term G)) strm
-      in
-        n_array_sfxs llocn (asfxs, ty1)
-      end
-    | SUFFIX slist => let
-      in
-        case totalify (parse_tuple (parse_term G)) strm of
-          NONE => let
-            val ty1 = let
-              val op1 = parse_op slist strm
-            in
-              apply_tyop op1 []
-            end handle InternalFailure l => next_level strm
-            val ops = many (parse_op slist) strm
-          in
-            n_appls(ops, ty1)
-          end
-        | SOME (tyl,locn) => let
-          in
-            case (many (parse_op slist) strm) of
-              [] => if length tyl <> 1 then
-                      raise ERRloc locn "tuple with no suffix"
-                    else
-                      hd tyl
-            | oplist => n_appls_l (oplist, tyl)
-          end
-      end
+    | x => raise Fail "parse_type: should never happen"
   end
 in
-  fn qb => parse_term G qb
+  fn qb => parse_term rest qb
      handle InternalFailure locn =>
             raise ERRloc locn
                   ("Type parsing failure with remaining input: "^

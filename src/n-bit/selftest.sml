@@ -10,6 +10,14 @@ in
 end
 
 fun die() = OS.Process.exit OS.Process.failure
+
+val _ = print (StringCvt.padRight #" " 65 "Parsing :bool[32] list")
+val ty1 = listSyntax.mk_list_type
+              (wordsSyntax.mk_word_type (fcpLib.index_type (Arbnum.fromInt 32)))
+val ty2 = Parse.Type`:bool[32] list` handle HOL_ERR _ => alpha
+val _ = if Type.compare(ty1,ty2) = EQUAL then print "OK\n"
+        else (print "FAILED!\n"; die())
+
 fun test (c:conv) tm = let
   val rt = Timer.startRealTimer ()
   val res = Lib.total c tm
@@ -27,7 +35,7 @@ val blast_true = test blastLib.BBLAST_PROVE
 val srw_true = test (simpLib.SIMP_PROVE (srw_ss()) [])
 
 (* start tests *)
-
+val _ = print "blastLib tests\n"
 val _ = raw_blast_true
   ``(a + b - b : word8) = a``;
 
