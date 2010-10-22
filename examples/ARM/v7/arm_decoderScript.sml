@@ -95,15 +95,18 @@ val arm_decode_def = zDefine`
       else
         case (b 27,b 26,b 25,b 24,b 23,b 22,b 21,b 20,b 7,b 6,b 5,b 4)
         of (F, F , F , T , F , F , F , F,b7,b6, F,b4) ->
-              if b 16 then
+             (if b 16 then
                 if ~b7 /\ ~b6 /\ ~b4 then
                   StatusAccess (Set_Endianness (b 9))
                 else
                   Undefined
-              else
-                StatusAccess
-                  (Change_Processor_State (i2 18) (b 8) (b 7)
-                     (b 6) (if b 17 then SOME (i5 0) else NONE))
+              else let m = b 17 and mode = i5 0 in
+                if ~m /\ (mode <> 0w) then
+                  Unpredictable
+                else
+                  StatusAccess
+                    (Change_Processor_State (i2 18) (b 8) (b 7)
+                       (b 6) (if m then SOME mode else NONE)))
         || (F, T , F , F ,b23, T , F , T,_7,_6,_5,_4) ->
               Miscellaneous
                 (Preload_Instruction b23 (r 16) (Mode2_immediate (i12 0)))
@@ -952,12 +955,15 @@ val thumb2_decode_aux6_def = with_flag (priming, SOME "_") Define`
       || (F , T, T, T, F, T, F,  F ,b13, F ,b11, F , F, F,b7,b6,b5,b4) ->
            Miscellaneous (Hint (hint_decode (ib8 0)))
       || (F , T, T, T, F, T, F,  F ,b13, F ,b11,b10,b9,b8,b7,b6,b5,b4) ->
-           if InITBlock then
+          (if InITBlock then
              Unpredictable
-           else
-             StatusAccess
-               (Change_Processor_State (ib2 9) b7 b6 b5
-                  (if b8 then SOME (ib5 0) else NONE))
+           else let mode = ib5 0 in
+             if ~b8 /\ (mode <> 0w) then
+               Unpredictable
+             else
+               StatusAccess
+                 (Change_Processor_State (ib2 9) b7 b6 b5
+                    (if b8 then SOME mode else NONE)))
       || (F , T, T, T, F, T, T,  F ,b13, F ,b11,b10,b9,b8, F, F, F, b4) ->
            if InITBlock then
              Unpredictable

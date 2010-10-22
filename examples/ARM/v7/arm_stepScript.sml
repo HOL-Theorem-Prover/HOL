@@ -1628,7 +1628,7 @@ val aligned_bx_and_aligned_thms = save_thm("aligned_bx_and_aligned_thms",
     (Drule.CONJUNCTS aligned_bx_and_aligned_add_with_carry @
      Drule.CONJUNCTS aligned_bx_and_aligned))));
 
-val aligned_bx_and_aligned_rrx = Q.store_thm("aligned_bx_and_aligned_rrx",
+val aligned_bx_and_aligned_rrx = Q.prove(
   `(!x a:word32.
      aligned_bx
        ((if aligned (a,4) /\ aligned_bx (a + 8w ?? SND (word_rrx (x,a + 8w)))
