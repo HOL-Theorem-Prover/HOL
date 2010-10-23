@@ -3856,6 +3856,97 @@ val DIVMOD_CALC = Q.store_thm
   (!m n. 0<n ==> (m MOD n = SND(DIVMOD(0, m, n))))`,
  SRW_TAC [][DIVMOD_CORRECT,ADD_CLAUSES]);
 
+(* ----------------------------------------------------------------------
+    Support for using congruential rewriting and MOD
+   ---------------------------------------------------------------------- *)
+
+(* a special marker constant *)
+val Sb_DEF = new_definition(
+  "Sb_DEF",
+  ``Sb n = n - 1``);
+
+val MODEQ_DEF = new_definition(
+  "MODEQ_DEF",
+  ``MODEQ n m1 m2 = (m1 MOD (n + 1) = m2 MOD (n + 1))``);
+
+val MODEQ_INTRO_CONG = store_thm(
+  "MODEQ_INTRO_CONG",
+  ``0 < n ==> MODEQ (Sb n) e0 e1 ==> (e0 MOD n = e1 MOD n)``,
+  SIMP_TAC (srw_ss()) [MODEQ_DEF, Sb_DEF, LESS_EQ, GSYM ONE, SUB_ADD]);
+
+val MODEQ_PLUS_CONG = store_thm(
+  "MODEQ_PLUS_CONG",
+  ``MODEQ n x0 x1 ==> MODEQ n y0 y1 ==> MODEQ n (x0 + y0) (x1 + y1)``,
+  SRW_TAC [][MODEQ_DEF, Once (GSYM MOD_PLUS), LESS_0, GSYM ADD1] THEN
+  SRW_TAC [][LESS_0, MOD_PLUS]);
+
+val MODEQ_MULT_CONG = store_thm(
+  "MODEQ_MULT_CONG",
+  ``MODEQ n x0 x1 ==> MODEQ n y0 y1 ==> MODEQ n (x0 * y0) (x1 * y1)``,
+  SRW_TAC [][MODEQ_DEF, Once (GSYM MOD_TIMES2), LESS_0, GSYM ADD1] THEN
+  SRW_TAC [][LESS_0, MOD_TIMES2]);
+
+val MODEQ_REFL = store_thm(
+  "MODEQ_REFL",
+  ``!x. MODEQ n x x``,
+  REWRITE_TAC [MODEQ_DEF]);
+
+val MODEQ_TRANS = store_thm(
+  "MODEQ_TRANS",
+  ``!x y z. MODEQ n x y /\ MODEQ n y z ==> MODEQ n x z``,
+  SIMP_TAC (srw_ss()) [MODEQ_DEF]);
+
+val MODEQ_NUMERAL = store_thm(
+  "MODEQ_NUMERAL",
+  ``(NUMERAL n <= NUMERAL m ==>
+     MODEQ (Sb (NUMERAL (BIT1 n))) (NUMERAL (BIT1 m))
+           (NUMERAL (BIT1 m) MOD NUMERAL (BIT1 n))) /\
+    (NUMERAL n <= NUMERAL m ==>
+     MODEQ (Sb (NUMERAL (BIT1 n))) (NUMERAL (BIT2 m))
+           (NUMERAL (BIT2 m) MOD NUMERAL (BIT1 n))) /\
+    (NUMERAL n <= NUMERAL m ==>
+     MODEQ (Sb (NUMERAL (BIT2 n))) (NUMERAL (BIT2 m))
+           (NUMERAL (BIT2 m) MOD NUMERAL (BIT2 n))) /\
+    (NUMERAL n < NUMERAL m ==>
+     MODEQ (Sb (NUMERAL (BIT2 n))) (NUMERAL (BIT1 m))
+           (NUMERAL (BIT1 m) MOD NUMERAL (BIT2 n)))``,
+  SIMP_TAC (srw_ss())
+           [MODEQ_DEF, Sb_DEF, BIT1, BIT2, ADD_CLAUSES, ALT_ZERO,
+            NUMERAL_DEF, SUB_0, SUB_MONO_EQ, MOD_MOD, LESS_0])
+
+val MODEQ_MOD = store_thm(
+  "MODEQ_MOD",
+  ``0 < n ==> MODEQ (Sb n) (x MOD n) x``,
+  SIMP_TAC (srw_ss()) [MODEQ_DEF, Sb_DEF, GSYM ADD1, ONE] THEN
+  Q.SPEC_THEN `n` STRUCT_CASES_TAC num_CASES THEN
+  SIMP_TAC (srw_ss()) [LESS_REFL, SUB_MONO_EQ, SUB_0, MOD_MOD, LESS_0]);
+
+val MODEQ_0 = store_thm(
+  "MODEQ_0",
+  ``0 < n ==> MODEQ (Sb n) n 0``,
+  SIMP_TAC (srw_ss()) [MODEQ_DEF, Sb_DEF, GSYM ADD1, ONE] THEN
+  Q.SPEC_THEN `n` STRUCT_CASES_TAC num_CASES THEN
+  SIMP_TAC (srw_ss()) [LESS_REFL, SUB_MONO_EQ, SUB_0, DIVMOD_ID, LESS_0,
+                       ZERO_MOD]);
+
+val modss = simpLib.add_relsimp {refl = MODEQ_REFL, trans = MODEQ_TRANS,
+                                 weakenings = [MODEQ_INTRO_CONG],
+                                 subsets = [],
+                                 rewrs = [MODEQ_NUMERAL, MODEQ_MOD, MODEQ_0]}
+                                (srw_ss()) ++
+            SSFRAG {dprocs = [], ac = [], rewrs = [],
+                    congs = [MODEQ_PLUS_CONG, MODEQ_MULT_CONG],
+                    filter = NONE, convs = [], name = NONE}
+
+val result1 =
+    SIMP_CONV modss [ASSUME ``0 < 6``, LESS_EQ_REFL, ASSUME ``2 < 3``,
+                     DIVMOD_ID, MULT_CLAUSES, ADD_CLAUSES,
+                     ASSUME ``7 MOD 6 = 1``] ``(6 * x + 7 + 6 * y) MOD 6``;
+
+val result2 =
+    SIMP_CONV modss
+              [ASSUME ``0 < n``, MULT_CLAUSES, ADD_CLAUSES]
+              ``(4 + 3 * n + 1) MOD n``
 
 val _ = adjoin_to_theory
 {sig_ps = NONE,
