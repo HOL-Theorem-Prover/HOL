@@ -38,7 +38,7 @@ datatype reducer =
               initial: context,
               addcontext : context * Thm.thm list -> context,
               apply: {solver:term list -> term -> thm, context: context,
-                      stack: term list, relation : preorder} -> conv
+                      stack: term list, relation : term} -> conv
               };
 fun dest_reducer (REDUCER x) = x
 
@@ -53,7 +53,8 @@ fun addctxt ths (REDUCER {name,initial,addcontext,apply}) =
  * ---------------------------------------------------------------------*)
 
 datatype trav_state =
-  TSTATE of {relation : preorder,
+  TSTATE of {relation_info : preorder,
+             relation : term,
              contexts1 : context list,
              contexts2 : context list,
              freevars : term list};
@@ -65,37 +66,44 @@ fun initial_context {rewriters:reducer list,
   TSTATE{contexts1=map (#initial o dest_reducer) rewriters,
          contexts2=map (#initial o dest_reducer) dprocs,
          freevars=[],
-         relation = find_relation relation (#relations tsdata)};
+         relation_info = find_relation relation (#relations tsdata),
+         relation = relation};
 
 (* ---------------------------------------------------------------------
  * add_context
  *
  * ---------------------------------------------------------------------*)
 
-fun add_context rewriters dprocs =
-  let val rewrite_collectors' = map (#addcontext o dest_reducer) rewriters
-      val dproc_collectors' = map (#addcontext o dest_reducer) dprocs
-  in fn (context as
-         TSTATE {contexts1,contexts2,freevars,relation}, thms) =>
-    if (null thms) then context else
-    let val more_freevars = free_varsl (flatten (map hyp thms))
+fun add_context rewriters dprocs = let
+  val rewrite_collectors' = map (#addcontext o dest_reducer) rewriters
+  val dproc_collectors' = map (#addcontext o dest_reducer) dprocs
+  fun doit (context, thms) = let
+    val TSTATE {contexts1,contexts2,freevars,relation_info, relation} = context
+  in
+    if null thms then context
+    else let
+        val more_freevars = free_varsl (flatten (map hyp thms))
         val _ = map (fn thm => trace(2,MORE_CONTEXT thm)) thms
         fun mk_privcontext maker privcontext = maker (privcontext,thms)
         val newcontexts1 =
-          if (null thms) then contexts1
+          if null thms then contexts1
           else map2 mk_privcontext rewrite_collectors' contexts1
         val newcontexts2 =
-          if (null thms) then contexts2
+          if null thms then contexts2
           else map2 mk_privcontext dproc_collectors' contexts2
         val newfreevars =
-          if (null more_freevars) then freevars
+          if null more_freevars then freevars
           else more_freevars@freevars
-    in TSTATE{contexts1=newcontexts1,
-              contexts2=newcontexts2,
-              freevars=newfreevars,
-              relation=relation}
-    end
-  end;
+      in
+        TSTATE{contexts1=newcontexts1,
+               contexts2=newcontexts2,
+               freevars=newfreevars,
+               relation=relation, relation_info = relation_info}
+      end
+  end
+in
+  doit
+end
 
 
 (* ---------------------------------------------------------------------
@@ -103,17 +111,19 @@ fun add_context rewriters dprocs =
  *
  * ---------------------------------------------------------------------*)
 
-fun change_relation
-  (TRAVRULES{relations,...})
-  (context as
-   TSTATE {contexts1,contexts2,freevars,
-               relation as PREORDER(oldrelname,_,_)},
-   rel) =
-  if samerel rel oldrelname then context
-  else TSTATE{contexts1=contexts1,
-              contexts2=contexts2,
-              freevars=freevars,
-              relation=find_relation rel relations};
+fun change_relation (TRAVRULES{relations,...}) (context, rel) = let
+  val TSTATE {contexts1,contexts2,freevars, relation_info, relation} = context
+  val PREORDER(oldrelname,_,_) = relation_info
+in
+  if samerel oldrelname rel then
+    TSTATE{contexts1=contexts1, contexts2=contexts2, freevars=freevars,
+           relation_info=relation_info, relation = rel}
+  else
+    TSTATE{contexts1=contexts1,
+           contexts2=contexts2,
+           freevars=freevars,
+           relation_info=find_relation rel relations, relation = rel}
+end
 
 (* ---------------------------------------------------------------------
  * Quick, General conversion routines.  These work for any preorder,
@@ -219,7 +229,7 @@ fun TRAVERSE_IN_CONTEXT limit rewriters dprocs travrules stack ctxt tm = let
 
   fun trav stack context  = let
     val TSTATE {contexts1,contexts2, freevars,
-                relation as (PREORDER (relname,_,_))} = context
+                relation_info = relation, relation = relname} = context
     fun ctxt_solver stack tm = let
       val old = !lim_r
     in
@@ -228,7 +238,7 @@ fun TRAVERSE_IN_CONTEXT limit rewriters dprocs travrules stack ctxt tm = let
     end
     fun apply_reducer (REDUCER rdata) context tm =
         (#apply rdata) {solver=ctxt_solver,context=context,
-                        stack=stack, relation=relation}
+                        stack=stack, relation=relname}
                        tm before
         dec lim_r
     fun high_priority tm =
