@@ -87,6 +87,8 @@ fun mk_literal_case (func,arg) =
 
 fun mk_arb ty = inst [alpha |-> ty] arb;
 
+fun mk_itself ty = inst [alpha |-> ty] the_value;
+
 fun mk_icomb (t1, t2) =
   let
     val (dom, _) = dom_rng (type_of t1)
@@ -144,6 +146,12 @@ val dest_literal_case = dest_binop literal_case literal_case_err
 
 fun dest_arb M =
   if same_const M arb then type_of M else raise ERR "dest_arb" ""
+
+fun dest_itself M =
+  if same_const M the_value then
+    hd (snd (dest_type (type_of M)))
+  else
+    raise ERR "dest_itself" ""
 
 end (* local *);
 
