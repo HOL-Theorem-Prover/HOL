@@ -9,17 +9,8 @@ local
 
   val ERR = Feedback.mk_HOL_ERR "SmtLib_Logics"
 
-  (* entries in 'dict2' take precedence over entries in 'dict1' *)
-  fun union_dict dict1 dict2 = Redblackmap.foldl (fn (key, vals, dict) =>
-    let
-      val old_vals = Redblackmap.find (dict1, key)
-        handle Redblackmap.NotFound => []
-    in
-      Redblackmap.insert (dict, key, vals @ old_vals)
-    end) dict1 dict2
-
   fun union_dicts (x::xs) =
-    List.foldl (Lib.uncurry union_dict o Lib.swap) x xs
+    List.foldl (Lib.uncurry Library.union_dict o Lib.swap) x xs
     | union_dicts [] =
     raise ERR "union_dicts" "empty list"
 
@@ -201,8 +192,8 @@ in
 
   structure QF_RDL =
   struct
-    val tydict = union_dict Core.tydict Reals.tydict
-    val tmdict = union_dict Core.tmdict Reals.tmdict
+    val tydict = union_dicts [Core.tydict, Reals.tydict]
+    val tmdict = union_dicts [Core.tmdict, Reals.tmdict]
   end
 
   structure QF_UF =

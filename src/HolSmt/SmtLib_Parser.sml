@@ -5,6 +5,8 @@
 structure SmtLib_Parser =
 struct
 
+  type 'a parse_fn = string -> Arbnum.num list -> 'a list -> 'a
+
 local
 
   val ERR = Feedback.mk_HOL_ERR "SmtLib_Parser"
@@ -70,8 +72,6 @@ local
      necessarily differ: parsing terms requires two dictionaries (one
      for declared types, one for declared terms), while parsing types
      only requires one dictionary (for declared types). *)
-
-  type 'a parse_fn = string -> Arbnum.num list -> 'a list -> 'a
 
   fun t_with_args dict (token : string) (nums : Arbnum.num list)
       (args : 'a list) : 'a =
@@ -463,10 +463,10 @@ local
     (* there must be exactly one "set-logic" command, and we expect
        this to be the benchmark's first command *)
     val logic = parse_set_logic get_token
-    val (tmdict, asserted) = parse_commands get_token
-      (SmtLib_Logics.parsedicts_of_logic logic) []
+    val (tydict, tmdict) = SmtLib_Logics.parsedicts_of_logic logic
+    val (tmdict, asserted) = parse_commands get_token (tydict, tmdict) []
   in
-    (logic, tmdict, asserted)
+    (logic, tydict, tmdict, asserted)
   end
 
 in
@@ -478,8 +478,9 @@ in
   val parse_term_list = parse_term_list
 
   (* 'parse_file' parses an SMT-LIB 2 benchmark, returning the
-     benchmark's logic, a dictionary with all terms declared in the
-     benchmark, and a list of "assert"ed formulae *)
+     benchmark's logic, two dictionaries containing all types and
+     terms, respectively, declared in the benchmark, and a list of
+     "assert"ed formulae *)
 
   (* FIXME: We only parse "set-logic", "declare-sort", "declare-fun"
             and "assert" commands. We ignore some and disallow most
@@ -490,6 +491,7 @@ in
             SMT-LIB library. *)
 
   fun parse_file (path : string) : string *
+    (string, Type.hol_type parse_fn list) Redblackmap.dict *
     (string, Term.term parse_fn list) Redblackmap.dict * Term.term list =
   let
     (* parse the file contents *)

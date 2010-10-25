@@ -150,6 +150,15 @@ struct
     Redblackmap.insert (dict, key, value :: values)
   end
 
+  (* entries in 'dict2' are prepended to entries in 'dict1' *)
+  fun union_dict dict1 dict2 = Redblackmap.foldl (fn (key, vals, dict) =>
+    let
+      val values = Redblackmap.find (dict1, key)
+        handle Redblackmap.NotFound => []
+    in
+      Redblackmap.insert (dict, key, vals @ values)
+    end) dict1 dict2
+
   (* creates a dictionary that maps strings to lists of parsing functions *)
   fun dict_from_list xs
       : (string, (string -> Arbnum.num list -> 'a list -> 'a) list)

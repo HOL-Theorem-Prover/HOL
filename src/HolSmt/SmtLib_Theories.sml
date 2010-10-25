@@ -38,7 +38,11 @@ in
       f xs
 
   fun zero_zero f x = zero_args (zero_args (f x))
+  fun zero_one f x = zero_args (one_arg (f x))
+  fun zero_two f x = zero_args (two_args (f x))
+
   fun one_zero f x = zero_args o (one_arg (f x))
+  fun one_one f x = one_arg o (one_arg (f x))
 
   fun K_zero_zero x = Lib.K (zero_args (zero_args x))
   fun K_zero_one f = Lib.K (zero_args (one_arg f))
@@ -53,13 +57,13 @@ in
 
   fun chainable f =
   let
-    fun aux t [] = raise Match
+    fun aux t [] = raise Match  (* should never happen *)
       | aux t [_] = t
       | aux t (x::y::zs) = aux (boolSyntax.mk_conj (t, f (x, y))) (y::zs)
   in
     Lib.K (zero_args (list_args
       (fn x::y::zs => aux (f (x, y)) (y::zs)
-        | _ => raise Match)))
+        | _ => raise ERR "chainable" "at least two arguments expected")))
   end
 
   fun leftassoc f = Lib.K (zero_args (list_args
