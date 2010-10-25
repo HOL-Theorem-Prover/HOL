@@ -4,6 +4,7 @@ sig
 
     val index_type    : Arbnum.num -> hol_type
     val index_to_num  : hol_type -> Arbnum.num
+
     val INDEX_CONV    : conv
     val DIMINDEX      : Arbnum.num -> thm
     val FINITE        : Arbnum.num -> thm

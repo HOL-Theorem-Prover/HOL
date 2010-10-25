@@ -12,18 +12,16 @@ end
 
 fun die() = OS.Process.exit OS.Process.failure
 
-fun mkwordty i = wordsSyntax.mk_word_type (fcpLib.index_type (Arbnum.fromInt i))
-
 val _ = print (prs 65 "Parsing :bool[32] list")
-val ty1 = listSyntax.mk_list_type (mkwordty 32)
+val ty1 = listSyntax.mk_list_type (wordsSyntax.mk_int_word_type 32)
 val ty2 = Parse.Type`:bool[32] list` handle HOL_ERR _ => alpha
 val _ = if Type.compare(ty1,ty2) = EQUAL then print "OK\n"
         else (print "FAILED!\n"; die())
 
 val _ = print (prs 65 "Parsing :('a + 'b)[32]")
-val ty1 = mk_thy_type{Thy = "fcp", Tyop = "cart",
-                      Args = [sumSyntax.mk_sum(alpha,beta),
-                              fcpLib.index_type (Arbnum.fromInt 32)]}
+val ty1 = fcpSyntax.mk_cart_type
+            (sumSyntax.mk_sum(alpha,beta),
+             fcpSyntax.mk_int_numeric_type 32);
 val ty2 = Parse.Type`:('a + 'b)[32]`
 val _ = if Type.compare(ty1,ty2) = EQUAL then print "OK\n"
         else (print "FAILED\n"; die())

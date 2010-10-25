@@ -9,6 +9,8 @@ sig
   val is_word_type      : hol_type -> bool
   val dim_of            : term -> hol_type
 
+  val mk_int_word_type  : int -> hol_type
+
   val mk_word           : num * num -> term
   val mk_wordi          : num * int -> term
   val mk_wordii         : int * int -> term
