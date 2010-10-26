@@ -430,7 +430,7 @@ with
      mk_comb(Term.inst theta f, x)
    end
 
-   fun apply {solver,context,stack,relation} t = let
+   fun apply {solver,context,stack,relation = (relation,_)} t = let
      val _ = can (match_term rel_t) relation orelse
              raise ERR ("mk_reducer.apply", "Wrong relation")
      val n = case context of redExn n => n

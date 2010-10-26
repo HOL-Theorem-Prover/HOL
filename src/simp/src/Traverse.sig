@@ -66,7 +66,7 @@ sig
          apply: {solver:term list -> term -> thm,
                  context: context,
                  stack:term list,
-                 relation : term} -> conv
+                 relation : (term * (term -> thm))} -> conv
        }
 
   val dest_reducer : reducer ->
@@ -76,7 +76,7 @@ sig
          apply: {solver:term list -> term -> thm,
                  context: context,
                  stack:term list,
-                 relation : term} -> conv}
+                 relation : (term * (term -> thm))} -> conv}
 
   val addctxt : thm list -> reducer -> reducer
 

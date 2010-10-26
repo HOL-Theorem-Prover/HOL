@@ -97,17 +97,16 @@ fun is_match_binop binop term =
 
 
 local
-  fun cong_rewrite_internal preorder term boundvars thm =
+  fun cong_rewrite_internal (rel, refl) term boundvars thm =
       if is_eq (concl thm) then let
-          val refl = extract_preorder_refl preorder
-          val congThm = refl {Rinst=extract_preorder_const preorder,arg=term}
+          val congThm = refl term
           val congThm = CONV_RULE (RAND_CONV (REWR_CONV thm)) congThm
         in
           congThm
         end
       else let
           val thm_relation = rator(rator(concl thm))
-          val _ = samerel thm_relation (extract_preorder_const preorder) orelse
+          val _ = samerel thm_relation rel orelse
                   failwith ("not applicable")
           val thmLHS = rand (rator (concl thm))
           val match = match_terml [] boundvars thmLHS term
@@ -175,13 +174,12 @@ fun eq_reducer_wrapper (eq_reducer as REDUCER data)= let
   val initial = #initial data
   val addcontext = #addcontext data
 
-  fun apply {solver,context,stack,relation} tm = let
+  fun apply {solver,context,stack,relation as (_, refl)} tm = let
     val eqthm = #apply data
                        {solver=solver,context=context,stack=stack,
                         relation=relation}
                        tm
-    val refl = extract_preorder_refl relation
-    val congThm = refl {Rinst=extract_preorder_const relation, arg=tm}
+    val congThm = refl tm
     val congThm = CONV_RULE (RAND_CONV (REWR_CONV eqthm)) congThm
   in
     congThm

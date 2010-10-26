@@ -38,7 +38,7 @@ datatype reducer =
               initial: context,
               addcontext : context * Thm.thm list -> context,
               apply: {solver:term list -> term -> thm, context: context,
-                      stack: term list, relation : term} -> conv
+                      stack: term list, relation : term * (term -> thm)} -> conv
               };
 fun dest_reducer (REDUCER x) = x
 
@@ -236,9 +236,14 @@ fun TRAVERSE_IN_CONTEXT limit rewriters dprocs travrules stack ctxt tm = let
       EQT_ELIM (trav stack (change_relation' (context,equality)) tm)
       handle e as HOL_ERR _ => (lim_r := old ; raise e)
     end
+    fun mkrefl t = let
+      val PREORDER(_, _, irefl) = relation
+    in
+      irefl {Rinst = relname, arg = t}
+    end
     fun apply_reducer (REDUCER rdata) context tm =
         (#apply rdata) {solver=ctxt_solver,context=context,
-                        stack=stack, relation=relname}
+                        stack=stack, relation=(relname, mkrefl)}
                        tm before
         dec lim_r
     fun high_priority tm =
