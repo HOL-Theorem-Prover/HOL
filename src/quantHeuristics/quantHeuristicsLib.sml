@@ -51,6 +51,17 @@ fun mapPartial f = mapPartialAcc f [];
 fun say_HOL_WARNING funname warning =
     Feedback.HOL_WARNING "quantHeuristicsBasicLib" funname warning
 
+fun genvar_RULE thm =
+let
+   val fvL = free_vars (concl thm)
+   val s = map (fn v => (v |-> genvar (type_of v))) fvL
+
+   val type_vL = type_vars_in_term (concl thm)
+   val ts = map (fn v => (v |-> gen_tyvar ())) type_vL
+in
+   INST_TYPE ts (INST s thm)
+end;
+
 
 
 (*******************************************************
@@ -989,6 +1000,11 @@ end handle HOL_ERR _ => raise QUANT_INSTANTIATE_HEURISTIC___no_guess_exp);
    val fv = [``x_n``];
    val sys = NONE;
    val thmL = [GSYM prim_recTheory.SUC_ID]
+
+   val t = ``l = []:'a list``;
+   val v = ``l:'a list``
+   val thmL = [rich_listTheory.NOT_CONS_NIL]
+
    val t = ``0 = x``
 *)
 fun QUANT_INSTANTIATE_HEURISTIC___EQUATION_distinct thmL sys v t =
@@ -1009,7 +1025,7 @@ let
    val ni = (ihs o dest_neg o concl) ni_thm;
 
 
-   val fvL_set = HOLset.difference (FVL [ni] empty_tmset, FVL [t] empty_tmset)
+   val fvL_set = HOLset.difference (FVL [ni] empty_tmset, FVL [i] empty_tmset)
    val fvL_org = HOLset.listItems fvL_set
    val v_name = (fst o dest_var) v
    val (fvL, ni) = prefix_free_vars (v_name, fvL_org, ni);
@@ -1205,15 +1221,7 @@ end;
 fun mk_guess_net guesses_thmL =
 let
     fun fresh_vars thm =
-    let
-        val fvL = free_vars (concl thm)
-        val s = map (fn v => (v |-> genvar (type_of v))) fvL
-
-        val type_vL = type_vars_in_term (concl thm)
-        val ts = map (fn v => (v |-> gen_tyvar ())) type_vL
-    in
-        SIMP_RULE std_ss [combinTheory.K_DEF] (INST_TYPE ts (INST s thm))
-    end;
+        SIMP_RULE std_ss [combinTheory.K_DEF] (genvar_RULE thm)
 
     val thmL0 = flatten (map (BODY_CONJUNCTS o fresh_vars) guesses_thmL)
     val thmL1 = mapPartial process_simple_guess_thm_warn thmL0
@@ -1314,6 +1322,9 @@ val heuristic = QUANT_INSTANTIATE_HEURISTIC___PURE_COMBINE empty_qp NONE
 val heuristic = QUANT_INSTANTIATE_HEURISTIC___PURE_COMBINE std_qp NONE
 val sys = heuristic;
 
+
+val heuristic = QUANT_INSTANTIATE_HEURISTIC___PURE_COMBINE list_qp NONE
+val sys = heuristic;
 
 val sys = dummy_sys
 
@@ -1964,7 +1975,10 @@ val sys = heuristic;
 val dir = CONSEQ_CONV_UNKNOWN_direction
 val min_var_occs = true;
 val rwL = []
-val t = mk_exists (v, t)
+val t = mk_exists (v, t
+val t = ``!x. x = []``
+
+heuristic ``l:'a list`` ``l:'a list = []``
 *)
 
 
