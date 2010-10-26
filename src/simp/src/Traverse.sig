@@ -102,7 +102,7 @@ sig
      equality (--`$=`--).  However traversal can also be used with
      other congruences and preorders.
 
-     The behavious of TRAVERSE depends almost totally on what
+     The behaviour of TRAVERSE depends almost totally on what
      is contained in the input travrules.
 
      The theorem list is a set of theorems to add initially as context
