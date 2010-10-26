@@ -428,7 +428,7 @@ fun pp_style_string ppstrm (st, s) =
     end_style ()
  end
 
-fun add_style_to_string st s = (make_to_string pp_style_string) (st, s);
+fun add_style_to_string st s = (make_to_backend_string pp_style_string) (st, s);
 fun print_with_style st =  make_print (add_style_to_string st);
 
 
