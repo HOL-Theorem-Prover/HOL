@@ -346,19 +346,32 @@ structure Yices = struct
             handle Feedback.HOL_ERR _ =>
               raise (Feedback.mk_HOL_ERR "Yices" "translate_term"
                 "word_extract: result bit-vector type of unknown size")
-          val old_dim = Arbnum.+ (Arbnum.- (n1, n2), Arbnum.one)
+          val extract_dim = Arbnum.+ (Arbnum.- (n1, n2), Arbnum.one)
+          val old_dim = fcpLib.index_to_num (wordsSyntax.dim_of w)
+            handle Feedback.HOL_ERR _ =>
+              raise (Feedback.mk_HOL_ERR "Yices" "translate_term"
+                "word_extract: argument bit-vector type of unknown size")
           val (acc, s1) = translate_term (acc, w)
-          val s1 = "(bv-extract " ^ Arbnum.toString n1 ^ " " ^
-            Arbnum.toString n2 ^ " " ^ s1 ^ ")"
+          val s1 = if Arbnum.< (n1, n2) then
+              (* Yices does not support bit-vector extraction with n1 < n2 *)
+              "(mk-bv 1 0)"
+            else
+              "(bv-extract " ^ Arbnum.toString n1 ^ " " ^ Arbnum.toString n2 ^
+                " " ^ (if Arbnum.< (n1, old_dim) then s1 else
+                  (* n1 >= old_dim: we need to prepend 0s to 'w' to make
+                     Yices happy *)
+                  "(bv-concat (mk-bv " ^ Arbnum.toString (Arbnum.+
+                    (Arbnum.- (n1, old_dim), Arbnum.one)) ^ " 0) " ^ s1 ^ ")")
+                ^ ")"
       in
-        if dim = old_dim then
+        if dim = extract_dim then
           (acc, s1)
-        else if Arbnum.< (dim, old_dim) then
+        else if Arbnum.< (dim, extract_dim) then
           (acc, "(bv-extract " ^ Arbnum.toString (Arbnum.- (dim, Arbnum.one)) ^
              " 0 " ^ s1 ^ ")")
-        else  (* dim > old_dim *)
+        else  (* dim > extract_dim *)
           (acc, "(bv-concat (mk-bv " ^ Arbnum.toString
-             (Arbnum.- (dim, old_dim)) ^ " 0) " ^ s1 ^ ")")
+            (Arbnum.- (dim, extract_dim)) ^ " 0) " ^ s1 ^ ")")
       end
     (* w2w *)
     else if wordsSyntax.is_w2w tm then
