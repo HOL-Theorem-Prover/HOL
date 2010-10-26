@@ -365,9 +365,11 @@ with
                  else
                    case List.find (fn (t,_) => aconv R t) subsets of
                      NONE => munge asms (ths :: rest, n)
-                   | SOME (_, sub_th) =>
-                     munge asms (ths :: rest,
-                                 insert (from,MATCH_MP sub_th th) n)
+                   | SOME (_, sub_th) => let
+                       val new_th = MATCH_MP sub_th th
+                     in
+                       munge asms ((TH new_th :: ths) :: rest, n)
+                     end
                end
              | NONE => munge asms (ths :: rest, n)
          end
