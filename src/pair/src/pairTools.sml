@@ -385,7 +385,7 @@ end;
 
 local
   val PFORALL_THM2 = prove (
-    ``!P:'a#'b->'c->bool. (!x. $! (P x)) = $! (UNCURRY P)``,
+    ``!P:'a->'b->bool. (!x. $! (P x)) = $! (UNCURRY P)``,
     GEN_TAC THEN
     Q.SUBGOAL_THEN `P = (\x y. P x y)` 
        (fn thm => ONCE_ASM_REWRITE_TAC [thm]) 
@@ -393,7 +393,7 @@ local
     BETA_TAC THEN REWRITE_TAC [PFORALL_THM]);
 
   val PEXISTS_THM2 = prove (
-    ``!P:'a#'b->'c->bool. (?x. $? (P x)) = $? (UNCURRY P)``,
+    ``!P:'a->'b->bool. (?x. $? (P x)) = $? (UNCURRY P)``,
     GEN_TAC THEN
     Q.SUBGOAL_THEN `P = (\x y. P x y)` 
        (fn thm => ONCE_ASM_REWRITE_TAC [thm]) 
@@ -415,5 +415,6 @@ in
       if is_existential (rator tm) then PEXISTS_INTRO_CONV tm else
          raise PERR "INTRO_TUPLED_QUANT_CONV" ""
 end;
+
 
 end
