@@ -190,6 +190,12 @@ in
     val tmdict = union_dicts [Core.tmdict, Ints.tmdict]
   end
 
+  structure QF_NRA =
+  struct
+    val tydict = LRA.tydict
+    val tmdict = LRA.tmdict
+  end
+
   structure QF_RDL =
   struct
     val tydict = union_dicts [Core.tydict, Reals.tydict]
@@ -244,6 +250,8 @@ in
       (QF_LRA.tydict, QF_LRA.tmdict)
     | "QF_NIA" =>
       (QF_NIA.tydict, QF_NIA.tmdict)
+    | "QF_NRA" =>
+      (QF_NRA.tydict, QF_NRA.tmdict)
     | "QF_RDL" =>
       (QF_RDL.tydict, QF_RDL.tmdict)
     | "QF_UF" =>
