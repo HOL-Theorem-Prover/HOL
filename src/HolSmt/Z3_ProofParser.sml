@@ -119,6 +119,7 @@ local
     ("iff", SmtLib_Theories.K_zero_two boolSyntax.mk_eq),
     ("implies", SmtLib_Theories.K_zero_two boolSyntax.mk_imp),
     ("~", SmtLib_Theories.K_zero_one intSyntax.mk_negated),
+    ("~", SmtLib_Theories.K_zero_one realSyntax.mk_negated),
     (* bit-vector constants: bvm[n] *)
     ("_", SmtLib_Theories.zero_zero (fn token =>
       if String.isPrefix "bv" token then
@@ -169,8 +170,15 @@ local
         end
       else
         raise ERR "<z3_builtin_dict._>" "not extract<m> n")),
-    (* bvudiv_i t1 t2 *)
     ("bvudiv_i", SmtLib_Theories.K_zero_two wordsSyntax.mk_word_div),
+    ("bvurem_i", SmtLib_Theories.K_zero_two wordsSyntax.mk_word_mod),
+    (* bvudiv0 t *)
+    ("bvudiv0", SmtLib_Theories.K_zero_one (fn t =>
+      let
+        val zero = wordsSyntax.mk_n2w (numSyntax.zero_tm, Term.type_of t)
+      in
+        wordsSyntax.mk_word_div (t, zero)
+      end)),
     (* array_extArray[m:n] t1 t2 *)
     ("_", SmtLib_Theories.zero_two (fn token =>
       if String.isPrefix "array_ext" token then
@@ -178,6 +186,28 @@ local
           (Term.prim_mk_const {Thy="HolSmt", Name="array_ext"}, t1), t2))
       else
         raise ERR "<z3_builtin_dict._>" "not array_ext...")),
+    (* repeatn t *)
+    ("_", SmtLib_Theories.zero_one (fn token =>
+      if String.isPrefix "repeat" token then
+        let
+          val n = Library.parse_arbnum (String.extract (token, 6, NONE))
+          val n = numSyntax.mk_numeral n
+        in
+          fn t => wordsSyntax.mk_word_replicate (n, t)
+        end
+      else
+        raise ERR "<z3_builtin_dict._>" "not repeat<n>")),
+    (* zero_extendn t *)
+    ("_", SmtLib_Theories.zero_one (fn token =>
+      if String.isPrefix "zero_extend" token then
+        let
+          val n = Library.parse_arbnum (String.extract (token, 11, NONE))
+        in
+          fn t => wordsSyntax.mk_w2w (t, fcpLib.index_type
+            (Arbnum.+ (fcpLib.index_to_num (wordsSyntax.dim_of t), n)))
+        end
+      else
+        raise ERR "<z3_builtin_dict._>" "not zero_extend<n>")),
     (* sign_extendn t *)
     ("_", SmtLib_Theories.zero_one (fn token =>
       if String.isPrefix "sign_extend" token then
@@ -189,17 +219,17 @@ local
         end
       else
         raise ERR "<z3_builtin_dict._>" "not sign_extend<n>")),
-    (* zero_extendn t *)
+    (* rotate_leftn t *)
     ("_", SmtLib_Theories.zero_one (fn token =>
-      if String.isPrefix "zero_extend" token then
+      if String.isPrefix "rotate_left" token then
         let
           val n = Library.parse_arbnum (String.extract (token, 11, NONE))
+          val n = numSyntax.mk_numeral n
         in
-          fn t => wordsSyntax.mk_w2w (t, fcpLib.index_type
-            (Arbnum.+ (fcpLib.index_to_num (wordsSyntax.dim_of t), n)))
+          fn t => wordsSyntax.mk_word_rol (t, n)
         end
       else
-        raise ERR "<z3_builtin_dict._>" "not zero_extend<n>"))
+        raise ERR "<z3_builtin_dict._>" "not rotate_left<n>"))
   ]
 
   (***************************************************************************)
