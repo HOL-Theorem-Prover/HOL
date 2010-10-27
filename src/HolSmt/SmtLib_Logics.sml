@@ -226,6 +226,12 @@ in
     val tmdict = QF_IDL.tmdict
   end
 
+  structure QF_UFLRA =
+  struct
+    val tydict = LRA.tydict
+    val tmdict = LRA.tmdict
+  end
+
   (* returns a type dictionary and a term dictionary that can be used
      to parse types/terms of the given SMT-LIB 2 logic *)
   fun parsedicts_of_logic (logic : string) =
@@ -268,6 +274,8 @@ in
       (QF_UFIDL.tydict, QF_UFIDL.tmdict)
     | "QF_UFLIA" =>
       (QF_UFLIA.tydict, QF_UFLIA.tmdict)
+    | "QF_UFLRA" =>
+      (QF_UFLRA.tydict, QF_UFLRA.tmdict)
     | _ =>
       raise ERR "parsedicts_of_logic" ("unknown logic '" ^ logic ^ "'")
 
