@@ -149,8 +149,8 @@ in
 
   structure QF_AUFLIA =
   struct
-    val tydict = union_dicts [Core.tydict, Ints.tydict, ArraysEx.tydict]
-    val tmdict = union_dicts [Core.tmdict, Ints.tmdict, ArraysEx.tmdict]
+    val tydict = AUFLIA.tydict
+    val tmdict = AUFLIA.tmdict
   end
 
   structure QF_AX =
@@ -174,8 +174,8 @@ in
 
   structure QF_LIA =
   struct
-    val tydict = union_dicts [Core.tydict, Ints.tydict]
-    val tmdict = union_dicts [Core.tmdict, Ints.tmdict]
+    val tydict = QF_IDL.tydict
+    val tmdict = QF_IDL.tmdict
   end
 
   structure QF_LRA =
@@ -186,8 +186,8 @@ in
 
   structure QF_NIA =
   struct
-    val tydict = union_dicts [Core.tydict, Ints.tydict]
-    val tmdict = union_dicts [Core.tmdict, Ints.tmdict]
+    val tydict = QF_IDL.tydict
+    val tmdict = QF_IDL.tmdict
   end
 
   structure QF_NRA =
@@ -198,8 +198,8 @@ in
 
   structure QF_RDL =
   struct
-    val tydict = union_dicts [Core.tydict, Reals.tydict]
-    val tmdict = union_dicts [Core.tmdict, Reals.tmdict]
+    val tydict = LRA.tydict
+    val tmdict = LRA.tmdict
   end
 
   structure QF_UF =
@@ -216,8 +216,14 @@ in
 
   structure QF_UFIDL =
   struct
-    val tydict = union_dicts [Core.tydict, Ints.tydict]
-    val tmdict = union_dicts [Core.tmdict, Ints.tmdict]
+    val tydict = QF_IDL.tydict
+    val tmdict = QF_IDL.tmdict
+  end
+
+  structure QF_UFLIA =
+  struct
+    val tydict = QF_IDL.tydict
+    val tmdict = QF_IDL.tmdict
   end
 
   (* returns a type dictionary and a term dictionary that can be used
@@ -260,6 +266,8 @@ in
       (QF_UFBV.tydict, QF_UFBV.tmdict)
     | "QF_UFIDL" =>
       (QF_UFIDL.tydict, QF_UFIDL.tmdict)
+    | "QF_UFLIA" =>
+      (QF_UFLIA.tydict, QF_UFLIA.tmdict)
     | _ =>
       raise ERR "parsedicts_of_logic" ("unknown logic '" ^ logic ^ "'")
 
