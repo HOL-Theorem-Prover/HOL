@@ -157,6 +157,20 @@ fu! HOLINT()
   call HOLCRestore()
 endf
 
+fu! HOLSelect(l,r)
+  let l:cursor = getpos(".")
+  if search(a:l,"Wbc") == 0
+    return
+  endif
+  normal v
+  if search(a:r,"W") == 0
+    normal <ESC>
+    call setpos('.', l:cursor)
+    return
+  endif
+  call search(a:r,"ce")
+endf
+
 vn <silent> hl :call YankThenHOLCall(function("HOLLoadSendQuiet"),[])<CR>
 vn <silent> hL :call YankThenHOLCall(function("HOLLoad"),[])<CR>
 vn <silent> hs :call YankThenHOLCall(function("HOLSend"),[])<CR>
@@ -179,6 +193,8 @@ nn <silent> hd :<C-U>call HOLRepeat("proofManagerLib.drop();")<CR>
 nn <silent> hp :call HOLCall(function("HOLF"),["proofManagerLib.p()"])<CR>
 nn <silent> hr :call HOLCall(function("HOLF"),["proofManagerLib.restart()"])<CR>
 nn <silent> hc :call HOLINT()<CR>
+nn <silent> ht :call HOLSelect("`","`")<CR>
+nn <silent> hT :call HOLSelect("``","``")<CR>
 no hh h
 
 let b:did_hol = 1
