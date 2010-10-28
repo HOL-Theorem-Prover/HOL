@@ -11,7 +11,7 @@
 structure simpLib :> simpLib =
 struct
 
-infix |> oo;
+infix oo;
 
 open HolKernel boolLib liteLib Trace Cond_rewr Travrules Traverse Ho_Net
 
