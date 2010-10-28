@@ -52,14 +52,15 @@ sig
                        conv: conv}
 
   type controlled_thm = BoundedRewrites.controlled_thm
-  datatype ssfrag = SSFRAG of
+  type ssfrag
+  val SSFRAG :
     {name : string option,
      convs: convdata list,
      rewrs: thm list,
         ac: (thm * thm) list,
     filter: (controlled_thm -> controlled_thm list) option,
     dprocs: Traverse.reducer list,
-     congs: thm list}
+     congs: thm list} -> ssfrag
 
   (*------------------------------------------------------------------------*)
   (* Easy building of common kinds of ssfrag objects                        *)
