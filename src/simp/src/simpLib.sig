@@ -61,6 +61,7 @@ sig
     filter: (controlled_thm -> controlled_thm list) option,
     dprocs: Traverse.reducer list,
      congs: thm list} -> ssfrag
+  val frag_rewrites : ssfrag -> thm list
 
   (*------------------------------------------------------------------------*)
   (* Easy building of common kinds of ssfrag objects                        *)
