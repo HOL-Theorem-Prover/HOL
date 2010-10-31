@@ -8,7 +8,7 @@ local
 
     datatype lazy_thm = LazyThm of (term HOLset.set) * (term list) * (unit -> thm) | Thm of thm
 
-    val lthms = ref (Splaymap.mkDict (Term.compare))
+    val lthms = ref (Splaymap.mkDict (Term.compare) : (term,lazy_thm)Splaymap.dict)
     val lzmode = ref true
     val _ = register_btrace("HolCheckLZ",lzmode);
     val dbglz = ref false
