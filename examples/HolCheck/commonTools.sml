@@ -31,8 +31,7 @@ fun fromMLnum n = numSyntax.mk_numeral(Arbnum.fromInt n);
 
 fun tsimps ty = let val {convs,rewrs} = TypeBase.simpls_of ty in rewrs end;
 
-fun get_ss_rewrs ss =
-    let val simpLib.SSFRAG{rewrs,...} = ss in rewrs end
+val get_ss_rewrs = simpLib.frag_rewrites
 
 (* make abbrev def: make definition where the lhs is just a constant name and rhs is closed term with no free_vars *)
 fun mk_adf nm rhs =

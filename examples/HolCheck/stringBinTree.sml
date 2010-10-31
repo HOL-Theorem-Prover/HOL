@@ -42,8 +42,7 @@ open computeLib;
 fun term_to_string2 t = with_flag (show_types,false) term_to_string t;
 
 val ONCE_BETA_LET_CONV = (ONCE_DEPTH_CONV BETA_CONV) THENC (ONCE_DEPTH_CONV let_CONV);
-val simpLib.SSFRAG bool_ss_thms = BOOL_ss;
-val no_beta_BOOL_ss = rewrites (#rewrs bool_ss_thms) (* this is BOOL_ss w/o beta-reduction *)
+val no_beta_BOOL_ss = rewrites (frag_rewrites BOOL_ss) (* this is BOOL_ss w/o beta-reduction *)
 
 (*apply first arg(conv) to test part of the cond term which is on the rhs of the snd arg (an eq term)*)
 val RHS_COND_TEST_CONV = RHS_CONV o RATOR_CONV o RATOR_CONV o RAND_CONV
