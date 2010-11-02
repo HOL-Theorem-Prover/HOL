@@ -175,7 +175,7 @@ struct
   fun conj_elim (thm, t) =
   let
     fun elim conj =
-      if t = conj then
+      if Term.aconv t conj then
         Lib.I
       else
         let
@@ -193,7 +193,7 @@ struct
      --------------------
      A |- ... \/ t \/ ... *)
   fun disj_intro (thm, disj) =
-    if Thm.concl thm = disj then
+    if Term.aconv (Thm.concl thm) disj then
       thm
     else
       let
