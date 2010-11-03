@@ -1592,7 +1592,7 @@ val update_lem = prove(``!n x y a b.
      	 POP_ASSUM SUBST_ALL_TAC THEN
      	 CONV_TAC SYM_CONV THEN MATCH_MP_TAC el_update2 THEN
      	 RW_TAC arith_ss []) 
-     [`(m:'a ** 'b) ' SUC n = EL n t''`,`(m:'a ** 'b) ' SUC n = EL n t'`]);
+     [`(m:'a ** 'b) ' (SUC n) = EL n t''`,`(m:'a ** 'b) ' (SUC n) = EL n t'`]);
 in
 val UPDATE_V2L = store_thm("UPDATE_V2L",
     ``!a b m. V2L ((a :+ b) m) = update a b (V2L m)``,
