@@ -87,6 +87,9 @@ struct
   fun addList (set, xs) = List.foldl (fn(x,set) => add(set, x)) set xs
   end
 
+  fun fromList compare xs =
+    addList (empty compare, xs)
+
   fun push LEAF stack = stack
     | push tree stack = tree :: stack
 
