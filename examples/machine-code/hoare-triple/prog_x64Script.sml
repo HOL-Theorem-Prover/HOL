@@ -6,8 +6,6 @@ open listTheory pairTheory combinTheory addressTheory fcpTheory;
 open set_sepTheory progTheory x64_Theory x64_seq_monadTheory x64_icacheTheory;
 open x64_astTheory x64_coretypesTheory x64_Lib x64_encodeLib;
 
-open arm_coretypesTheory arm_stepTheory; (* to get align and aligned *)
-
 val _ = new_theory "prog_x64";
 
 
@@ -663,11 +661,11 @@ val zBYTE_MEMORY_ANY_INTRO = store_thm("zBYTE_MEMORY_ANY_INTRO",
 (* ----------------------------------------------------------------------------- *)
 
 val zMEMORY_DOMAIN_def = Define `
-  zMEMORY_DOMAIN df = BIGUNION { {b;b+1w;b+2w;b+3w} | ALIGNED (w2w b) /\ b:word64 IN df }`;
+  zMEMORY_DOMAIN df = BIGUNION { {b;b+1w;b+2w;b+3w} | (b && 3w = 0w) /\ b:word64 IN df }`;
 
 val zMEMORY_FUNC_def = Define `
   zMEMORY_FUNC (f:word64->word32) a =
-    let w = f (align(a,4)) in
+    let w = f (a - (a && 3w)) in
       if a && 3w = 0w then (7 >< 0) (w) else
       if a && 3w = 1w then (7 >< 0) (w >> 8) else
       if a && 3w = 2w then (7 >< 0) (w >> 16) else
@@ -681,116 +679,40 @@ val zBYTE_MEMORY_ANY_SET_EQ = prove(
      {zMem d (SOME (f d,zDATA_PERM exec)) (c d) | d IN df}``,
   METIS_TAC [zBYTE_MEMORY_ANY_SET_def]);
 
-val IMP_aligned = prove(
-  ``!a. ALIGNED (w2w a) ==> aligned(a,4)``,
-  Cases \\ ASM_SIMP_TAC std_ss [aligned_def,align_def,w2w_def,w2n_n2w,ALIGNED_n2w]
-  \\ MP_TAC (Q.SPEC `n` (MATCH_MP DIVISION (DECIDE ``0<4:num``)))
-  \\ METIS_TAC [MULT_COMM,ADD_CLAUSES]);
-
-val aligned_n2w_MOD = prove(
-  ``!x k. 0 < k ==> (aligned(x,k) = (w2n x MOD k = 0))``,
-  Cases \\ ASM_SIMP_TAC std_ss [aligned_n2w,align_def,w2n_n2w]
-  \\ REPEAT STRIP_TAC \\ IMP_RES_TAC DIVISION
-  \\ REPEAT (Q.PAT_ASSUM `!k.bbb` (ASSUME_TAC o Q.SPEC `n`))
-  \\ Q.PAT_ASSUM `n < dimword (:'a)` MP_TAC
-  \\ POP_ASSUM (fn th => ONCE_REWRITE_TAC [th])
-  \\ ASM_SIMP_TAC std_ss [DIV_MULT,MOD_TIMES]
-  \\ STRIP_TAC
-  \\ `n DIV k * k < dimword (:'a)` by DECIDE_TAC
-  \\ FULL_SIMP_TAC std_ss [AC MULT_COMM MULT_ASSOC,n2w_11]);
-
 val aligned_4_ADD_AND_3 = prove(
-  ``!x. aligned(x,4) ==> (x + 0x0w && 0x3w = 0x0w) /\
-                         (x + 0x1w && 0x3w = 0x1w) /\
-                         (x + 0x2w && 0x3w = 0x2w) /\
-                         (x + 0x3w && 0x3w = 0x3w)``,
-  Cases \\ SIMP_TAC std_ss [n2w_and_3,word_add_n2w,n2w_11]
-  \\ ASM_SIMP_TAC std_ss [aligned_n2w_MOD,w2n_n2w]
-  \\ REPEAT STRIP_TAC \\ `0 < 4:num` by DECIDE_TAC
-  \\ `n = (n DIV 4) * 4` by METIS_TAC [DIVISION,ADD_CLAUSES]
-  \\ POP_ASSUM (fn th => ONCE_REWRITE_TAC [th])
-  \\ ASM_SIMP_TAC std_ss [MOD_TIMES]);
-
-val LESS_dimword64 = prove(
-  ``n < dimword (:64) /\ (n MOD 4 = 0) ==>
-    n + 1 < dimword (:64) /\ n + 2 < dimword (:64) /\ n + 3 < dimword (:64)``,
-  STRIP_TAC \\ REVERSE (`n + 3 < dimword (:64)` by ALL_TAC) THEN1 DECIDE_TAC
-  \\ SIMP_TAC std_ss [LESS_EQ,DECIDE ``SUC (m + 3) = m + 4``]
-  \\ Q.PAT_ASSUM `n < dimword (:64)` MP_TAC
-  \\ SIMP_TAC (std_ss++wordsLib.SIZES_ss) []
-  \\ `0 < 4:num` by DECIDE_TAC
-  \\ `n = (n DIV 4) * 4` by METIS_TAC [DIVISION,ADD_CLAUSES]
-  \\ POP_ASSUM (fn th => ONCE_REWRITE_TAC [th])
-  \\ SIMP_TAC std_ss [DECIDE ``n DIV 4 * 4 + 4 = SUC (n DIV 4) * 4``]
-  \\ SIMP_TAC bool_ss [GSYM (EVAL ``4611686018427387904 * 4:num``)]
-  \\ SIMP_TAC bool_ss [LT_MULT_RCANCEL,LE_MULT_RCANCEL,EVAL ``0<4:num``]
-  \\ SIMP_TAC std_ss [LESS_EQ]);
-
-val aligned_4_align = prove(
-  ``!x. aligned(x,4) ==> (align(x,4) = x) /\
-                         (align(x+1w,4) = x) /\
-                         (align(x+2w,4) = x) /\
-                         (align(x+3w,4) = x:word64)``,
-  Cases \\ SIMP_TAC std_ss [n2w_and_3,word_add_n2w,n2w_11]
-  \\ ASM_SIMP_TAC std_ss [aligned_n2w_MOD,w2n_n2w]
-  \\ REPEAT STRIP_TAC \\ `0 < 4:num` by DECIDE_TAC
-  \\ `n = (n DIV 4) * 4` by METIS_TAC [DIVISION,ADD_CLAUSES]
-  \\ Q.PAT_ASSUM `n < dimword (:'a)` MP_TAC
-  \\ POP_ASSUM (fn th => ONCE_REWRITE_TAC [th] THEN ASSUME_TAC (GSYM th))
-  \\ ASM_SIMP_TAC std_ss [MOD_TIMES,align_def,w2n_n2w,MULT_DIV]
-  \\ ASM_SIMP_TAC std_ss [AC MULT_COMM MULT_ASSOC]
-  \\ REPEAT STRIP_TAC
-  \\ IMP_RES_TAC LESS_dimword64
-  \\ FULL_SIMP_TAC std_ss [AC MULT_COMM MULT_ASSOC]
-  \\ Q.PAT_ASSUM `kk = n` (fn th => SIMP_TAC std_ss [Once (GSYM th)] THEN ASSUME_TAC th)
-  \\ FULL_SIMP_TAC std_ss [RW1[MULT_COMM]DIV_MULT]);
+  ``!x. (x && 0x3w = 0x0w) ==> 
+        (x + 0x0w && 0x3w = 0x0w) /\
+        (x + 0x1w && 0x3w = 0x1w) /\
+        (x + 0x2w && 0x3w = 0x2w) /\
+        (x + 0x3w && 0x3w = 0x3w:word64)``,
+  blastLib.BBLAST_TAC);
 
 val not_aligned = prove(
-  ``!x. aligned(x,4) ==> ~(aligned(x+1w:word64,4)) /\
-                         ~(aligned(x+2w,4)) /\
-                         ~(aligned(x+3w,4))``,
-  Cases \\ SIMP_TAC std_ss [n2w_and_3,word_add_n2w,n2w_11]
-  \\ ASM_SIMP_TAC std_ss [aligned_n2w_MOD,w2n_n2w] \\ STRIP_TAC
-  \\ IMP_RES_TAC LESS_dimword64
-  \\ FULL_SIMP_TAC std_ss [AC MULT_COMM MULT_ASSOC]
-  \\ `0 < 4:num` by DECIDE_TAC
-  \\ `n = (n DIV 4) * 4` by METIS_TAC [DIVISION,ADD_CLAUSES]
-  \\ POP_ASSUM (fn th => ONCE_REWRITE_TAC [th])
-  \\ ASM_SIMP_TAC std_ss [MOD_TIMES]);
+  ``!x. (x && 0x3w = 0x0w) ==> 
+        ~((x + 1w) && 0x3w = 0x0w) /\
+        ~((x + 2w) && 0x3w = 0x0w) /\
+        ~((x + 3w) && 0x3w = 0x0w:word64)``,
+  blastLib.BBLAST_TAC);
 
 val aligned_ADD_SELF = prove(
-  ``!a. aligned(a+4w,4) = aligned (a:word64,4)``,
-  Cases \\ ASM_SIMP_TAC std_ss [aligned_n2w_MOD,word_add_n2w,w2n_n2w]
-  \\ SIMP_TAC (std_ss++wordsLib.SIZES_ss) []
-  \\ SIMP_TAC bool_ss [GSYM (EVAL ``4 * 4611686018427387904:num``)]
-  \\ SIMP_TAC std_ss [MOD_MULT_MOD,EVAL ``0<4611686018427387904``,
-       EVAL ``0<4``] \\ SIMP_TAC std_ss [ADD_MODULUS]);
+  ``!x. ((x + 4w) && 0x3w = 0x0w) = (x && 0x3w = 0x0w:word64)``,
+  blastLib.BBLAST_TAC);
 
-val align_align = prove(
-  ``!x. align (align(x,4),4) = align(x,4)``,
-  METIS_TAC [align_id,EVAL ``(2**2):num``]);
-
-val aligned_align = prove(
-  ``!q. aligned(align(q,4),4)``,
-  SIMP_TAC std_ss [aligned_def,align_align]);
-
-val align_offset_exists = prove(
-  ``!x. ?k. (x = align(x,4) + n2w k) /\ k < 4``,
-  Cases \\ REPEAT STRIP_TAC \\ Q.EXISTS_TAC `n MOD 4`
-  \\ ASM_SIMP_TAC std_ss [align_n2w,word_add_n2w]
-  \\ METIS_TAC [RW1[MULT_COMM]DIVISION,EVAL ``0<4:num``]);
-
+val aligned_cases = prove(
+  ``!w. (w && 3w = 0w) \/ (w && 3w = 1w) \/ (w && 3w = 2w) \/ (w && 3w = 3w:word64)``,
+  blastLib.BBLAST_TAC);
+  
 val zMEMORY_INSERT = store_thm("zMEMORY_INSERT",
-  ``a IN df /\ ALIGNED (w2w a) ==>
+  ``a IN df /\ (a && 3w = 0w) ==>
     (zMEMORY df ((a =+ w) f) = zM a w * zMEMORY (df DELETE a) f)``,
   REPEAT STRIP_TAC
   \\ ASM_SIMP_TAC std_ss [zMEMORY_def,zBYTE_MEMORY_def,zM_def,GSYM STAR_ASSOC]
   \\ `zMEMORY_DOMAIN df = a INSERT (a+1w) INSERT (a+2w) INSERT
-      (a+3w) INSERT zMEMORY_DOMAIN (df DELETE a)` by
+      (a+3w) INSERT zMEMORY_DOMAIN (df DELETE a)` by 
    (FULL_SIMP_TAC std_ss [zMEMORY_DOMAIN_def]
-    \\ `{{b; b + 1w; b + 2w; b + 3w} | ALIGNED (w2w b) /\ b IN df} =
+    \\ `{{b; b + 1w; b + 2w; b + 3w} | (b && 3w = 0w) /\ b IN df} =
         {a; a + 1w; a + 2w; a + 3w} INSERT
-        {{b; b + 1w; b + 2w; b + 3w} | ALIGNED (w2w b) /\ b IN df DELETE a}` by
+        {{b; b + 1w; b + 2w; b + 3w} | (b && 3w = 0w) /\ b IN df DELETE a}` by
       (SIMP_TAC std_ss [EXTENSION,IN_INSERT,
          IN_BIGUNION,GSPECIFICATION,NOT_IN_EMPTY,IN_DELETE]
        \\ REPEAT STRIP_TAC \\ EQ_TAC \\ REPEAT STRIP_TAC
@@ -799,12 +721,10 @@ val zMEMORY_INSERT = store_thm("zMEMORY_INSERT",
     \\ ASM_SIMP_TAC std_ss [BIGUNION_INSERT,INSERT_UNION_EQ,UNION_EMPTY])
   \\ ASM_SIMP_TAC (std_ss++SIZES_ss) [zBYTE_MEMORY_ANY_INSERT_SET,DELETE_INSERT,
        WORD_EQ_ADD_CANCEL,n2w_11]
-  \\ IMP_RES_TAC IMP_aligned
   \\ SIMP_TAC std_ss [zMEMORY_FUNC_def,LET_DEF]
-  \\ IMP_RES_TAC aligned_4_ADD_AND_3
+  \\ ASM_SIMP_TAC std_ss [aligned_4_ADD_AND_3]  
   \\ ASM_SIMP_TAC (std_ss++wordsLib.SIZES_ss) [n2w_11]
-  \\ FULL_SIMP_TAC std_ss [WORD_ADD_0]
-  \\ ASM_SIMP_TAC std_ss [aligned_4_align]
+  \\ ASM_SIMP_TAC std_ss [WORD_ADD_SUB,WORD_SUB_RZERO]
   \\ ASM_SIMP_TAC std_ss [APPLY_UPDATE_THM,zDATA_PERM_def]
   \\ SIMP_TAC std_ss [STAR_ASSOC]
   \\ MATCH_MP_TAC (METIS_PROVE [] ``(q1 = q2) ==> ((p * q1) = (STAR p q2))``)
@@ -820,7 +740,7 @@ val zMEMORY_INSERT = store_thm("zMEMORY_INSERT",
     \\ FULL_SIMP_TAC std_ss [WORD_ADD_EQ_SUB,word_arith_lemma4]
     \\ FULL_SIMP_TAC std_ss [word_arith_lemma1,WORD_EQ_ADD_CANCEL]
     \\ FULL_SIMP_TAC std_ss [word_arith_lemma1,aligned_ADD_SELF,
-         word_arith_lemma3,WORD_ADD_0] \\ IMP_RES_TAC IMP_aligned)
+         word_arith_lemma3,WORD_ADD_0]) 
   \\ FULL_SIMP_TAC std_ss [DELETE_NON_ELEMENT]
   \\ FULL_SIMP_TAC std_ss [GSYM DELETE_NON_ELEMENT]
   \\ FULL_SIMP_TAC std_ss [zBYTE_MEMORY_ANY_def]
@@ -832,17 +752,14 @@ val zMEMORY_INSERT = store_thm("zMEMORY_INSERT",
   \\ REPEAT STRIP_TAC \\ EQ_TAC \\ REPEAT STRIP_TAC
   \\ ASM_SIMP_TAC std_ss [x64_el_11]
   \\ SIMP_TAC std_ss [zMEMORY_FUNC_def,LET_DEF]
-  \\ `?q. (d = align(q,4) + 0w) \/ (d = align(q,4) + 1w) \/
-          (d = align(q,4) + 2w) \/ (d = align(q,4) + 3w)` by METIS_TAC [align_offset_exists,
-            DECIDE ``k<4 = (k=0) \/ (k=1) \/ (k=2) \/ (k=3:num)``]
-  \\ `aligned(align(q,4),4)` by SIMP_TAC std_ss [aligned_align]
-  \\ FULL_SIMP_TAC std_ss []
-  \\ IMP_RES_TAC aligned_4_ADD_AND_3
-  \\ FULL_SIMP_TAC std_ss [APPLY_UPDATE_THM,WORD_ADD_0,align_align]
-  \\ SRW_TAC [] [] \\ FULL_SIMP_TAC std_ss [aligned_4_align]);
+  \\ STRIP_ASSUME_TAC (Q.SPEC `d` aligned_cases)
+  \\ FULL_SIMP_TAC (std_ss++SIZES_ss) [APPLY_UPDATE_THM,WORD_SUB_RZERO,n2w_11]
+  \\ SIMP_TAC std_ss [WORD_EQ_SUB_LADD]
+  \\ ONCE_REWRITE_TAC [EQ_SYM_EQ]
+  \\ SRW_TAC [] [] \\ FULL_SIMP_TAC std_ss []);
 
 val zM_LEMMA = prove(
-  ``!w a f. ALIGNED (w2w a) ==> (zM a w = zMEMORY {a} ((a =+ w) f))``,
+  ``!w a f. (a && 3w = 0w) ==> (zM a w = zMEMORY {a} ((a =+ w) f))``,
   REPEAT STRIP_TAC
   \\ IMP_RES_TAC (SIMP_RULE std_ss [IN_INSERT] (Q.INST [`df`|->`{a}`] zMEMORY_INSERT))
   \\ ASM_SIMP_TAC std_ss []
@@ -857,14 +774,14 @@ val zM_LEMMA = prove(
   \\ SIMP_TAC std_ss [IN_BIGUNION,GSPECIFICATION,SEP_EQ_def,EXTENSION,NOT_IN_EMPTY]);
 
 val zM_THM = store_thm("zM_THM",
-  ``!a w f. ALIGNED (w2w a) ==> (zMEMORY {a} ((a =+ w) f) = zM a w) /\
-                                (zMEMORY {a} (\x. w) = zM a w)``,
+  ``!a w f. (a && 3w = 0w) ==> (zMEMORY {a} ((a =+ w) f) = zM a w) /\
+                               (zMEMORY {a} (\x. w) = zM a w)``,
   SIMP_TAC std_ss [GSYM zM_LEMMA,GSYM (RW [APPLY_UPDATE_ID]
     (Q.SPECL [`(f:word64->word32) a`,`a`,`f`] zM_LEMMA))]);
 
 val zMEMORY_INTRO = store_thm("zMEMORY_INTRO",
   ``SPEC m (zM a v * P) c (zM a w * Q) ==>
-    ALIGNED (w2w a) /\ a IN df ==>
+    (a && 3w = 0w) /\ a IN df ==>
     SPEC m (zMEMORY df ((a =+ v) f) * P) c (zMEMORY df ((a =+ w) f) * Q)``,
   ONCE_REWRITE_TAC [STAR_COMM]
   \\ SIMP_TAC std_ss [zMEMORY_INSERT,STAR_ASSOC]

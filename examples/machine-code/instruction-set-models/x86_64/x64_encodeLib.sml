@@ -198,7 +198,7 @@ fun x64_encode s = let
     if mem t ["r/m8","r/m16","r/m32","r/m64"] then "r/m32" else t;  
   val ys = map (fn (x,y) => (x,map simplify_token y)) ys
 (*
-  val (zs,ys) = el 4 ys 
+  val (zs,ys) = el 2 ys 
 *)
   fun use_encoding (zs,ys) = let
     val rex = ref (if zsize = 64 then [#"W"] else [])
@@ -251,7 +251,7 @@ fun x64_encode s = let
     fun do_replace x =
       if mem x ["iq","id","iw","ib","cb","cw","cd"] then find x ts else
       if is_plus x then let
-        val reg_n = string_to_int_8 (find "Reg/Opcode" ts) #"R"
+        val reg_n = string_to_int_8 (find "Reg/Opcode" ts) #"B"
         val reg = Arbnum.fromInt (reg_n)
         val s = implode [hd (explode x), hd (tl (explode x))]
         in Arbnum.toHexString(Arbnum.+(Arbnum.fromHexString s, reg)) end else

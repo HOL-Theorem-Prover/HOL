@@ -434,9 +434,6 @@ val x64_tools_no_status = (x64_spec, x64_jump, TRUTH, x64_pc);
   val th = x64_spec (x64_encode "add [rax], eax");
   val th = x64_spec (x64_encode "add [rax], rax");
 
-  TODO:
-   - introduce a mode for pretending to be 32-bit x86 (?)
-
 *)
 
 end
