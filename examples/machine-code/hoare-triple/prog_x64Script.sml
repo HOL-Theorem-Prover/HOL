@@ -1095,5 +1095,20 @@ val w2w_OVER_ARITH_n2w = CONJ w2w_OVER_ARITH_n2w_LEMMA1 w2w_OVER_ARITH_n2w_LEMMA
 
 val _ = save_thm("w2w_OVER_ARITH_n2w",w2w_OVER_ARITH_n2w);
 
+val ALIGNED64 = store_thm("ALIGNED64",
+  ``!w n. ((0x0w = w && 0x3w) = (w && 0x3w = 0w)) /\ 
+          ((0x3w && w = 0w) = (w && 0x3w = 0w)) /\
+          ((4w + w && 0x3w = 0w) = (w && 0x3w = 0w:word64)) /\
+          ((w + 4w && 0x3w = 0w) = (w && 0x3w = 0w:word64)) /\
+          ((w - 4w && 0x3w = 0w) = (w && 0x3w = 0w:word64)) /\
+          ((w + n2w (8 * n) && 0x3w = 0w) = (w && 0x3w = 0w:word64)) /\
+          ((w + n2w (4 * n) && 0x3w = 0w) = (w && 0x3w = 0w:word64)) /\
+          ((w - n2w (8 * n) && 0x3w = 0w) = (w && 0x3w = 0w:word64)) /\
+          ((w - n2w (4 * n) && 0x3w = 0w) = (w && 0x3w = 0w:word64)) /\
+          ((n2w (8 * n) + w && 0x3w = 0w) = (w && 0x3w = 0w:word64)) /\
+          ((n2w (4 * n) + w && 0x3w = 0w) = (w && 0x3w = 0w:word64))``,
+  NTAC 2 STRIP_TAC \\ SIMP_TAC std_ss [GSYM word_mul_n2w] 
+  \\ Q.SPEC_TAC (`(n2w n):word64`,`v`) \\ blastLib.BBLAST_TAC);
+
 
 val _ = export_theory();
