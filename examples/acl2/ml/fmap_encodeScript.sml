@@ -1,3 +1,8 @@
+(*
+1. Prove encode_map_encode theorem
+2. Add into fmap_encoder
+*)
+
 (*****************************************************************************)
 (* Encoding and decoding of finite maps to lists and then s-expressions      *)
 (*                                                                           *)
@@ -6,13 +11,12 @@
 (*****************************************************************************)
 (* Load theories                                                             *)
 (*****************************************************************************)
+
 (*
 load "finite_mapTheory";
 load "sortingTheory";
 load "translateTheory";
-quietdec := true;
 open finite_mapTheory sortingTheory pred_setTheory listTheory pred_setLib;
-quietdec := false;
 *)
 
 (*****************************************************************************)
@@ -532,7 +536,7 @@ val filter_first = prove(``!l x y. (FILTER ($= x) (MAP FST l) = [x]) /\ (x = FST
     FIRST [PAT_ASSUM ``a = b`` MP_TAC, METIS_TAC []] THEN
     RW_TAC std_ss [RFILTER_EQ_NIL, MEM_MAP] THEN METIS_TAC []);
 
-val MAP_FST_DISTINCT_EQ = store_thm("MAP_FIRST_DISTINCT_EQ",
+val MAP_FST_DISTINCT_EQ = store_thm("MAP_FST_DISTINCT_EQ",
     ``!l1 l2. (MAP FST l1 = MAP FST l2) /\ ALL_DISTINCT (MAP FST l1) /\ PERM l1 l2 ==> (l1 = l2)``,
     REPEAT STRIP_TAC THEN MATCH_MP_TAC LIST_EQ THEN RW_TAC std_ss [PERM_LENGTH,pairTheory.PAIR_FST_SND_EQ] THEN
     `FST (EL x l1) = FST (EL x l2)` by METIS_TAC [EL_MAP, PERM_LENGTH] THEN
@@ -858,15 +862,24 @@ val M2L_L2M_MAP = store_thm("M2L_L2M_MAP",
     ``!l f g. ONE_ONE f ==> PERM (M2L (L2M (MAP (f ## g) l))) (MAP (f ## g) (M2L (L2M l)))``,
     METIS_TAC [ALL_DISTINCT_MAPFST_M2L,ALL_DISTINCT_MAP, map_lemma, ALL_DISTINCT_MAPFST, SETEQ_PERM, M2L_L2M_MAP_SETEQ, ALL_DISTINCT_M2L]);
 
-val QSORT3_M2L_L2M_MAP = store_thm("QSORT3_M2L_L2M_MAP", 
-    ``!l f g. ONE_ONE f ==> (QSORT3 ($<= LEX K (K T)) (M2L (L2M (MAP (f ## g) l))) = QSORT3 ($<= LEX (K (K T))) (MAP (f ## g) (M2L (L2M l))))``,
+val QSORT3_M2L_L2M_MAP_INV = store_thm("QSORT3_M2L_L2M_MAP_INV", 
+    ``!l f g h. ONE_ONE f /\ ONE_ONE h ==> (QSORT3 (inv_image $<= h LEX K (K T)) (M2L (L2M (MAP (f ## g) l))) = QSORT3 (inv_image $<= h LEX (K (K T))) (MAP (f ## g) (M2L (L2M l))))``,
     REPEAT STRIP_TAC THEN MATCH_MP_TAC MAP_FST_DISTINCT_EQ THEN
     REPEAT CONJ_TAC THEN
     TRY (MATCH_MP_TAC PERM_SORTED_EQ) THEN
-    TRY (Q.EXISTS_TAC `$<=`) THEN
-    METIS_TAC [M2L_L2M_MAP, PERM_QSORT3, PERM_TRANS,PERM_SYM, PERM_MAP, QSORT3_SORTS, SEXP_LE_TOTAL, 
+    TRY (Q.EXISTS_TAC `inv_image $<= h`) THEN
+    `total (inv_image $<= h)` by METIS_TAC [SEXP_LE_TOTAL, TOTAL_INV] THEN
+    TRY (METIS_TAC [M2L_L2M_MAP, PERM_QSORT3, PERM_TRANS,PERM_SYM, PERM_MAP, QSORT3_SORTS, SEXP_LE_TOTAL, 
                SEXP_LE_TRANSITIVE, TRANSITIVE_K, TOTAL_K, TRANSITIVE_LEX, TOTAL_LEX, SORTS_DEF, SORTED_LEX, 
-               SEXP_LE_ANTISYMMETRIC, ALL_DISTINCT_PERM, ALL_DISTINCT_MAPFST_M2L]);
+	       ANTISYM_INV, TRANS_INV, IRREFL_INV, TOTAL_INV,
+               SEXP_LE_ANTISYMMETRIC, ALL_DISTINCT_PERM, ALL_DISTINCT_MAPFST_M2L]));
+
+val INVIMAGE_I = store_thm("INVIMAGE_I", 
+    ``inv_image R I = R``,
+    RW_TAC std_ss [relationTheory.inv_image_def] THEN METIS_TAC []);
+
+val QSORT3_M2L_L2M_MAP = save_thm("QSORT3_M2L_L2M_MAP", 
+    REWRITE_RULE [INVIMAGE_I,ONE_ONE_I] (Q.ISPEC `I:sexp->sexp` (Q.GEN `h` (SPEC_ALL QSORT3_M2L_L2M_MAP_INV))));
 
 val MAP_EQ_LENGTH = store_thm("MAP_EQ_LENGTH",
     ``!l1 l2. (MAP f l1 = MAP g l2) ==> (LENGTH l1 = LENGTH l2)``,
@@ -902,26 +915,35 @@ val SORTED_MAP = store_thm("SORTED_MAP",
     Induct THEN RW_TAC std_ss [SORTED_EQ,SORTED_DEF,MAP,MEM_MAP] THEN
     REPEAT (POP_ASSUM MP_TAC) THEN RW_TAC std_ss [SORTED_EQ, TRANS_INV, relationTheory.inv_image_def]);
 
+val INV_INV_IMAGE = store_thm("INV_INV_IMAGE",
+    ``!h f. inv_image (inv_image R h) f = inv_image R (h o f)``,
+    RW_TAC std_ss [relationTheory.inv_image_def]);
+
 local
 val lemma 
     = GSYM (GEN_ALL (PULL_RULE (DISCH_ALL (CONJUNCT2 (UNDISCH (SPEC_ALL (PULL_RULE (REWRITE_RULE [STABLE_DEF] QSORT3_STABLE))))))));
 val sorttac 
     = RW_TAC std_ss [map_lemma, TRANSITIVE_K, SEXP_LE_ANTISYMMETRIC, SEXP_LE_TRANSITIVE, SEXP_LE_TOTAL, 
+      	     	     TOTAL_INV, TRANS_INV, ANTISYM_INV, IRREFL_INV, INV_INV_IMAGE,
                      REWRITE_RULE [SORTS_DEF] QSORT3_SORTS, TOTAL_K, TOTAL_LEX, TRANSITIVE_LEX, TOTAL_INV, TRANS_INV]
 in
-val QSORT3_PAIRMAP = store_thm("QSORT3_PAIRMAP",
-    ``!f. ONE_ONE f ==> !l g. QSORT3 ($<= LEX K (K T)) (MAP (f ## g) l) = MAP (f ## g) (QSORT3 (inv_image $<= f LEX K (K T)) l)``,
+val QSORT3_PAIRMAP_INV = store_thm("QSORT3_PAIRMAP_INV",
+    ``!f h. ONE_ONE f /\ ONE_ONE h ==> 
+          !l g. QSORT3 (inv_image $<= h LEX K (K T)) (MAP (f ## g) l) = 
+                MAP (f ## g) (QSORT3 (inv_image $<= (h o f) LEX K (K T)) l)``,
     REPEAT STRIP_TAC THEN MATCH_MP_TAC STABLE_FST_EQ THEN REPEAT STRIP_TAC THENL [
        MATCH_MP_TAC PERM_SORTED_EQ THEN
-       Q.EXISTS_TAC `$<=` THEN sorttac,
+       Q.EXISTS_TAC `inv_image $<= h` THEN sorttac,
        MATCH_MP_TAC EQ_TRANS THEN 
        Q.EXISTS_TAC `FILTER ($= x o FST) (MAP (f ## g) l)` THEN CONJ_TAC
     ] THEN1 METIS_TAC [PERM_QSORT3, PERM_MAP, PERM_SYM, PERM_TRANS, map_lemma] THEN
-    REPEAT (FIRST [MATCH_MP_TAC (PULL_RULE SORTED_LEX) ORELSE MATCH_MP_TAC SORTED_MAP THEN RW_TAC std_ss [SEXP_LE_TRANSITIVE],
+    REPEAT (FIRST [MATCH_MP_TAC (PULL_RULE SORTED_LEX) ORELSE MATCH_MP_TAC SORTED_MAP THEN RW_TAC std_ss [TRANS_INV,SEXP_LE_TRANSITIVE],
             MATCH_MP_TAC lemma ORELSE MATCH_MP_TAC (GSYM lemma) ORELSE (REWRITE_TAC [rich_listTheory.FILTER_MAP] THEN AP_TERM_TAC)]) THEN
     TRY (Q.EXISTS_TAC `K (K T)`) THEN sorttac THEN
     REPEAT (POP_ASSUM MP_TAC) THEN (fn (a,g) => MAP_EVERY (fn b => SPEC_TAC (b,b)) (free_vars g) (a,g)) THEN
     REPEAT (Cases ORELSE GEN_TAC) THEN RW_TAC std_ss [pairTheory.LEX_DEF,relationTheory.inv_image_def, ONE_ONE_DEF])
+val QSORT3_PAIRMAP = save_thm("QSORT3_PAIRMAP",
+    GEN_ALL (REWRITE_RULE [INVIMAGE_I,ONE_ONE_I] (Q.ISPEC `I:sexp->sexp` (Q.GEN `h` (SPEC_ALL QSORT3_PAIRMAP_INV)))))
 end;
 
 val list_pair_map = prove(``!f g f' g' l. list (pair f g) (MAP (f' ## g') l) = list (pair (f o f') (g o g')) l``,
@@ -1041,6 +1063,13 @@ val DETECT_GENERAL_FMAP = store_thm("DETECT_GENERAL_FMAP",
 (* `encode_fmap f0 f1 o map_fmap g0 g1 = encode_fmap (f0 o g0) (f1 o g1)`    *)
 (* Only needed for types based upon finite maps                              *)
 (*****************************************************************************)
+
+val o_rule = REWRITE_RULE [FUN_EQ_THM,combinTheory.o_THM]
+
+val ENCMAPENC_FMAP = store_thm("ENCMAPENC_FMAP",
+    ``ONE_ONE f0 /\ ONE_ONE g0 /\ ONE_ONE (f0 o g0) ==> (encode_fmap f0 f1 o map_fmap g0 g1 = encode_fmap (f0 o g0) (f1 o g1))``,
+    RW_TAC std_ss [encode_fmap_def, map_fmap_def, FUN_EQ_THM, QSORT3_M2L_L2M_MAP_INV,L2M_M2L,QSORT3_PAIRMAP_INV,
+                   o_rule translateTheory.ENCMAPENC_LIST, translateTheory.ENCMAPENC_PAIR]);
 
 (*****************************************************************************)
 (* Rewrite theorems:                                                         *)
