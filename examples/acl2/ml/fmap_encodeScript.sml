@@ -1,8 +1,3 @@
-(*
-1. Prove encode_map_encode theorem
-2. Add into fmap_encoder
-*)
-
 (*****************************************************************************)
 (* Encoding and decoding of finite maps to lists and then s-expressions      *)
 (*                                                                           *)
@@ -1051,12 +1046,34 @@ val DETECT_GENERAL_FMAP = store_thm("DETECT_GENERAL_FMAP",
     FIRST_ASSUM MATCH_MP_TAC THEN
     METIS_TAC [MAPSET_CONS]);
 
+val ONE_ONE_RING2 = store_thm("ONE_ONE_RING2",
+    ``ONE_ONE a /\ ONE_ONE b ==> ONE_ONE (a o b)``,
+    RW_TAC std_ss [ONE_ONE_DEF]);
+
+val PAIR_MAP_COMPOSE = store_thm("PAIR_MAP_COMPOSE",
+    ``!a b c d. (a o b ## c o d) = (a ## c) o (b ## d)``,
+    RW_TAC std_ss [FUN_EQ_THM,pairTheory.PAIR_MAP]);
 
 (*****************************************************************************)
 (* MAP_COMPOSE: Composition of maps                                          *)
 (* `fmap_map f0 f1 o fmap_map g0 g1 = fmap_map (f0 o g0) (f1 o g1)`          *)
 (* Only needed for types based upon finite maps                              *)
 (*****************************************************************************)
+
+val SETEQ_MAP = store_thm("SETEQ_MAP",
+    ``SETEQ a b ==> SETEQ (MAP f a) (MAP f b)``,
+    RW_TAC std_ss [SETEQ_def, MEM_MAP]);
+
+val SETEQ_COMM = save_thm("SETEQ_COMM", METIS_PROVE [SETEQ_THM] ``SETEQ a b = SETEQ b a``);
+
+val FMAP_MAP_COMPOSE = store_thm("FMAP_MAP_COMPOSE",
+    ``ONE_ONE f0 /\ ONE_ONE g0 ==> (map_fmap f0 f1 o map_fmap g0 g1 = map_fmap (f0 o g0) (f1 o g1))``,
+    RW_TAC std_ss [map_fmap_def, FUN_EQ_THM] THEN
+    MATCH_MP_TAC L2M_EQ THEN 
+    RW_TAC std_ss [GSYM SETEQ_THM, UNIQL_M2L, UNIQL_MAP, ONE_ONE_RING2, PAIR_MAP_COMPOSE, MAP_o] THEN
+    MATCH_MP_TAC SETEQ_MAP THEN
+    MATCH_MP_TAC (ONCE_REWRITE_RULE [SETEQ_COMM] M2L_L2M_SETEQ) THEN
+    PROVE_TAC [UNIQL_MAP, UNIQL_M2L]);
 
 (*****************************************************************************)
 (* ENCMAPENC: Composition of encoding                                        *)
@@ -1067,7 +1084,7 @@ val DETECT_GENERAL_FMAP = store_thm("DETECT_GENERAL_FMAP",
 val o_rule = REWRITE_RULE [FUN_EQ_THM,combinTheory.o_THM]
 
 val ENCMAPENC_FMAP = store_thm("ENCMAPENC_FMAP",
-    ``ONE_ONE f0 /\ ONE_ONE g0 /\ ONE_ONE (f0 o g0) ==> (encode_fmap f0 f1 o map_fmap g0 g1 = encode_fmap (f0 o g0) (f1 o g1))``,
+    ``ONE_ONE f0 /\ ONE_ONE g0 ==> (encode_fmap f0 f1 o map_fmap g0 g1 = encode_fmap (f0 o g0) (f1 o g1))``,
     RW_TAC std_ss [encode_fmap_def, map_fmap_def, FUN_EQ_THM, QSORT3_M2L_L2M_MAP_INV,L2M_M2L,QSORT3_PAIRMAP_INV,
                    o_rule translateTheory.ENCMAPENC_LIST, translateTheory.ENCMAPENC_PAIR]);
 
