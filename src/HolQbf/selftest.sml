@@ -60,7 +60,7 @@ fun prove t =
   if squolem_installed then
     let val _ = HolQbfLib.disprove t
     in
-      die ("Disprove failed on term '" ^ Hol_pp.term_to_string t ^
+      die ("Prove failed on term '" ^ Hol_pp.term_to_string t ^
         "': exception expected")
     end
     handle Feedback.HOL_ERR {origin_structure, origin_function, message} =>
@@ -70,7 +70,7 @@ fun prove t =
       then
         print "."
       else
-        die ("Disprove failed on term '" ^ Hol_pp.term_to_string t ^
+        die ("Prove failed on term '" ^ Hol_pp.term_to_string t ^
           "': exception HOL_ERR has unexpected argument values (in " ^
           origin_structure ^ "." ^ origin_function ^ ", message: " ^ message ^
           ")")
