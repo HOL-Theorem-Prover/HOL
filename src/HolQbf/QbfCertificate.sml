@@ -4,7 +4,7 @@
 
    As defined in "A File Format for QBF Certificates" by Daniel Kroening and
    Christoph M. Wintersteiger (2007-05-01, available at
-   http://www.verify.ethz.ch/qbv/download/qbcformat.pdf).
+   http://www.cprover.org/qbv/download/qbcformat.pdf).
 
    Also see "A First Step Towards a Unified Proof Checker for QBF" by Toni
    Jussila, Armin Biere, Carsten Sinz, Daniel Kröning and Christoph
@@ -85,20 +85,25 @@ struct
         List.rev clauses
       | resolution_clauses clauses ("0" :: _) =
         raise ERR "read_certificate_file"
-          "unexpected input after '0'-terminated list of resolution clauses"
+          "unexpected input after '0'-terminated list of clauses"
       | resolution_clauses clauses (cindex :: xs) =
         resolution_clauses (int_from_string cindex :: clauses) xs
       | resolution_clauses _ [] =
       raise ERR "read_certificate_file"
-        "resolution: '0' expected to terminate list of resolution clauses"
+        "resolution: '0' expected to terminate list of clauses"
     (* literal list -> string list -> resolution *)
-    fun resolution_args lits ("*" :: xs) =
-      (List.rev lits, resolution_clauses [] xs)
+    fun resolution_args [] ("*" :: xs) =
+        ([], resolution_clauses [] xs)
+      | resolution_args _ ("*" :: _) =
+        raise ERR "read_certificate_file"
+          "resolution: '*' found after list of literals (use '0' instead)"
+      | resolution_args lits ("0" :: xs) =
+        (List.rev lits, resolution_clauses [] xs)
       | resolution_args lits (lit :: xs) =
-      resolution_args (int_from_string lit :: lits) xs
+        resolution_args (int_from_string lit :: lits) xs
       | resolution_args _ [] =
-      raise ERR "read_certificate_file"
-        "resolution: '*' expected to terminate list of resolution literals"
+        raise ERR "read_certificate_file"
+          "resolution: missing '*' or '0' terminator"
     (* (cindex, resolution) dict -> string list -> (cindex, resolution) dict *)
     fun resolution res (cindex :: xs) =
       Redblackmap.insert (res, int_from_string cindex, resolution_args [] xs)
