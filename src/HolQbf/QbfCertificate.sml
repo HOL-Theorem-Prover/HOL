@@ -92,13 +92,13 @@ struct
       raise ERR "read_certificate_file"
         "resolution: '0' expected to terminate list of resolution clauses"
     (* literal list -> string list -> resolution *)
-    fun resolution_args lits ("0" :: xs) =
+    fun resolution_args lits ("*" :: xs) =
       (List.rev lits, resolution_clauses [] xs)
       | resolution_args lits (lit :: xs) =
       resolution_args (int_from_string lit :: lits) xs
       | resolution_args _ [] =
       raise ERR "read_certificate_file"
-        "resolution: '0' expected to terminate list of resolution literals"
+        "resolution: '*' expected to terminate list of resolution literals"
     (* (cindex, resolution) dict -> string list -> (cindex, resolution) dict *)
     fun resolution res (cindex :: xs) =
       Redblackmap.insert (res, int_from_string cindex, resolution_args [] xs)
@@ -144,7 +144,7 @@ struct
       | certificate (ext, res) (xs :: xss) =
       certificate (ext, resolution res xs) xss
       | certificate _ [] =
-        raise ERR "read_certificate_file" "empty certificate"
+        raise ERR "read_certificate_file" "missing conclusion"
   in
     (certificate
        (Redblackmap.mkDict Int.compare, Redblackmap.mkDict Int.compare)
