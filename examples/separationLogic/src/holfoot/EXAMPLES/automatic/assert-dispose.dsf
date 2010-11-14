@@ -1,0 +1,8 @@
+dummy(x;) [] {
+  x = new();
+  assert [x != 0];
+  dispose x;
+} [x != 0]
+
+
+
