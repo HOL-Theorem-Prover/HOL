@@ -1059,11 +1059,13 @@ in
 (* CODINGTHEOREM_FMAP: Replace the previous coding theorem generate with one *)
 (*   that resolves ONE_ONE terms in the antecedent.                          *)
 (*****************************************************************************)
+
 fun CODINGTHEOREM_FMAP s t =
 let val cc = get_coding_theorem_conclusion ``:sexp`` s t
     val t1 = generate_coding_theorem ``:sexp`` s (base_type t)
-    val t2 = PART_MATCH (lhs o snd o strip_imp) (SPEC_ALL t1) 
-    	     		 (lhs (snd (strip_imp (snd (strip_forall cc)))))
+    val t2 = REWRITE_RULE [ONE_ONE_I] 
+             (PART_MATCH (lhs o snd o strip_imp) (SPEC_ALL t1) 
+    	     		 (lhs (snd (strip_imp (snd (strip_forall cc))))))
 
     val thm1 = if null (type_vars (fdom t)) 
                   then ONEONE_DECENC_THM (fdom t) 
@@ -1120,6 +1122,20 @@ in
        then prev
        else mk_imp(mk11 (valOf enc), prev))
 end handle e => wrapException ("oneone_enc_conclusion(" ^ type_to_string t ^ ")") e
+
+(*****************************************************************************)
+(* oneone_mapenc_conclusion: Potentially adds a ONEONE encode and a          *)
+(* ONEONE map to the previous term.                                          *)
+(*****************************************************************************)
+fun oneone_mapenc_conclusion previous (target : hol_type) t =
+let val (vars,prev) = strip_forall (previous target t)
+    val coders = find_terms (fn x => (is_fmap o fst o dom_rng o type_of) x handle _ => false) prev
+    val pvars = filter is_var (mapfilter (rand o rator) coders)
+    val imps = map mk11 (filter (C mem pvars) vars)
+in
+    list_mk_forall(vars, 
+         if null imps then prev else mk_imp(list_mk_conj imps, prev))
+end
 end
 
 local
@@ -1134,6 +1150,8 @@ let val _ = perform "add_fmap_translations"
     val _ = add_coding_theorem sexp fmap "encode_detect_all" ENCDETALL_FMAP;
     val _ = add_coding_theorem sexp fmap "decode_encode_fix" DECENCFIX_FMAP;
     val _ = add_coding_theorem sexp fmap "encode_decode_map" ENCDECMAP_FMAP;
+
+    val _ = add_coding_theorem sexp fmap "encode_map_encode" ENCMAPENC_FMAP;
 
     val _ = add_coding_theorem sexp fmap "fix_id" FIXID_FMAP;
     val _ = add_source_theorem fmap "all_id" ALLID_FMAP;
@@ -1168,6 +1186,9 @@ let val _ = perform "add_fmap_translations"
 
     val _ = set_coding_theorem_conclusion sexp "decode_encode_fix" (oneone_decenc_conclusion mk_decode_encode_fix_conc sexp);
     val _ = add_rule_coding_theorem_generator "decode_encode_fix" is_fmap (CODINGTHEOREM_FMAP "decode_encode_fix") sexp;
+
+    val _ = set_coding_theorem_conclusion sexp "encode_map_encode" (oneone_mapenc_conclusion mk_encode_map_encode_conc sexp);
+    val _ = add_rule_coding_theorem_generator "encode_map_encode" is_fmap (CODINGTHEOREM_FMAP "encode_map_encode") sexp;
 
 in  ()
 end
