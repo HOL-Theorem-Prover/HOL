@@ -1331,4 +1331,10 @@ val fupdate_rewrite = store_thm("fupdate_rewrite",
     MATCH_MP_TAC INSERT_FUPDATE THEN
     METIS_TAC [TRANS_INV, ANTISYM_INV, TOTAL_INV, SEXP_LE_TOTAL, SEXP_LE_TRANSITIVE, SEXP_LE_ANTISYMMETRIC]);
 
+val fempty_rewrite = store_thm("fempty_rewrite",
+    ``!f g. encode_fmap f g FEMPTY = list (pair f g) []``,
+    RW_TAC std_ss [encode_fmap_def,M2L_def] THEN
+    ONCE_REWRITE_TAC [fold_def] THEN
+    RW_TAC std_ss [sortingTheory.QSORT3_DEF]);
+
 val _ = export_theory();

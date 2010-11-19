@@ -2606,7 +2606,7 @@ let val _ = type_trace 2 ("->generate_coding_theorem(" ^ name ^ "," ^
     val theorem = if exists_coding_theorem_precise target t name
     		then get_coding_theorem_precise target t name
 		else (get_coding_theorem_generator target name t) t
-	val mtheorem = if exists_coding_theorem_conclusion target name
+    val mtheorem = if exists_coding_theorem_conclusion target name
 		then MATCH_CONC theorem (get_coding_theorem_conclusion target name t)
 			handle e => raise (mkStandardExn "generate_coding_theorem"
 ("Generator for " ^ name ^
