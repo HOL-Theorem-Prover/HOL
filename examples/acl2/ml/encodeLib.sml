@@ -1735,7 +1735,12 @@ fun XTAC fix_defs (a,g) =
 	COND_CONG_TAC else NO_TAC) (a,g)
 in
 fun decode_encode_fix_tactic target _ (a,g) =
-let	val term = (rator o lhs o snd o strip_forall o snd o strip_imp o snd o strip_forall) g
+let	val _ = set_goal (a,g)
+(* open pairSyntax pairLib polytypicLib encodeLib pairTheory;
+   val target = ``:sexp``;
+   val num = ``:num``; 
+   val (a,g) = top_goal(); *)
+        val term = (rator o lhs o snd o strip_forall o snd o strip_imp o snd o strip_forall) g
 	val enc = rand (rator term);
 	val t = fst (dom_rng (type_of enc))
 	val encoder = get_coding_function_def target t "encode";
@@ -1763,9 +1768,10 @@ in
 		CONV_TAC (LAND_CONV (FIRST_CONV (mapfilter (REWR_CONV o PURE_REWRITE_RULE [FUN_EQ_THM,o_THM]) thms))) THEN
 		REWRITE_TAC [I_o_ID]] THEN
 	REPEAT (XTAC fix_defs THEN RES_TAC THEN
-		ASM_REWRITE_TAC (get_coding_function_def target (mk_prod(alpha,beta)) "encode"::thms) THEN
+		ASM_REWRITE_TAC (last (CONJUNCTS sexpTheory.sexp_11)::get_coding_function_def target (mk_prod(alpha,beta)) "encode"::thms) THEN
 		RULE_ASSUM_TAC GSYM THEN ASM_REWRITE_TAC (map GSYM thms)) THEN
 	REPEAT (CHANGED_TAC (ONCE_ASM_REWRITE_TAC (K_THM::all_defs) THEN
+	        REWRITE_TAC (translateTheory.DETDEAD_PAIR::I_THM::mapfilter (C get_source_theorem "map_id" o base_type) (all_types t)) THEN
 		CONV_TAC (DEPTH_CONV (REWR_CONV LET_DEF) THENC DEPTH_CONV GEN_BETA_CONV)))) (a,g)
 end
 end;
