@@ -10,7 +10,7 @@ structure HolQbfLib :> HolQbfLib = struct
   fun disprove t =
   let
     val path = FileSys.tmpName ()
-    val _ = QDimacs.write_qdimacs_file path t
+    val dict = QDimacs.write_qdimacs_file path t
     (* the actual system call to Squolem *)
     val cmd = "squolem2 -c " ^ path ^ " >& /dev/null"
     val _ = if !QbfTrace.trace > 1 then
@@ -25,7 +25,7 @@ structure HolQbfLib :> HolQbfLib = struct
           [path, cert_path]
       else ()
   in
-    QbfCertificate.check t cert
+    QbfCertificate.check t dict cert
   end
 
 end

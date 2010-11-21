@@ -56,25 +56,7 @@ fun disprove t =
         ", message: " ^ message ^ ")")
   else ()
 
-fun prove t =
-  if squolem_installed then
-    let val _ = HolQbfLib.disprove t
-    in
-      die ("Prove failed on term '" ^ Hol_pp.term_to_string t ^
-        "': exception expected")
-    end
-    handle Feedback.HOL_ERR {origin_structure, origin_function, message} =>
-      if origin_structure = "QbfCertificate" andalso
-         origin_function = "check" andalso
-         message = "certificate says \"VALID\": not implemented yet"
-      then
-        print "."
-      else
-        die ("Prove failed on term '" ^ Hol_pp.term_to_string t ^
-          "': exception HOL_ERR has unexpected argument values (in " ^
-          origin_structure ^ "." ^ origin_function ^ ", message: " ^ message ^
-          ")")
-  else ()
+val prove = disprove
 
 (*****************************************************************************)
 (* Test cases                                                                *)

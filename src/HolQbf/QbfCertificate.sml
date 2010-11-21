@@ -167,10 +167,63 @@ struct
 (*      not suitable for 't'.                                                *)
 (* ------------------------------------------------------------------------- *)
 
-  fun check t (VALID _) =
-    raise ERR "check" "certificate says \"VALID\": not implemented yet"
+  fun check t dict (VALID (exts,lits)) = let
+    open Lib Term boolSyntax
+
+    (* move these three to library? *)
+    val inverted_dict =
+      Redblackmap.foldr (fn(v,n,d)=>Redblackmap.insert(d,n,v))
+                        (Redblackmap.mkDict Int.compare)
+                        dict
+
+    fun literal_to_term n = let
+      val v = Redblackmap.find(inverted_dict,n)
+    in if n < 0 then mk_neg v else v end
+
+    fun extension_to_term (AND []) = T
+      | extension_to_term (AND ls) = list_mk_conj (map literal_to_term ls)
+      | extension_to_term (ITE(t,c,a)) =
+          mk_cond(literal_to_term t, literal_to_term c, literal_to_term a)
+
+    val (n, vars, matrix) = QbfLibrary.enumerate_quantified_vars t
+
+    fun foldthis ((_,_,true),acc) = acc
+      | foldthis ((key,v,false),acc as (t,d)) = let
+          val n = Redblackmap.find(dict,v)
+          val m = Redblackmap.find(lits,n)
+          val e = Redblackmap.find(exts,m)
+          val tm = extension_to_term e
+          val t = subst [v |-> tm] t
+          val d = Redblackmap.insert(d,key,tm)
+        in (t,d) end handle NotFound => acc
+
+    val wits = Redblackmap.mkDict Int.compare
+    val (matrix,wits) = List.foldr foldthis (matrix,wits) vars
+
+    val thm = HolSatLib.SAT_PROVE matrix
+    handle HolSatLib.SAT_cex th =>
+      raise ERR "check" ("SAT_PROVE failed with counterexample: "^
+                         (Parse.thm_to_backend_string th))
+    | satCheckError => (
+      if !QbfTrace.trace < 1 then () else
+        Feedback.HOL_WARNING "QbfCertificate" "check"
+         ("SAT_PROVE failed on "^
+          (Parse.term_to_backend_string matrix)^
+          ", using PROVE");
+      BasicProvers.PROVE [] matrix)
+
+    fun foldthis ((_,v,true),th) = Thm.GEN v th
+      | foldthis ((key,v,false),th) = let
+          val t = Thm.concl th
+          val tm = Redblackmap.find(wits,key) handle NotFound => T
+          val t = subst [tm |-> v] t
+          val t = mk_exists(v,t)
+        in Thm.EXISTS (t,tm) th end
+
+    (* TODO sanity checks on final thm (proves input term with no hyps) *)
+  in List.foldr foldthis thm vars end
 (* ------------------------------------------------------------------------- *)
-    | check t (INVALID (dict, cindex)) =
+    | check t _ (INVALID (dict, cindex)) =
     let
       (* pre-processing: break the problem apart into clauses in sequent form
          suitable for Q-resolution *)
