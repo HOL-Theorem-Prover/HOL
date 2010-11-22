@@ -30,6 +30,9 @@ val sexp = ``:sexp``;
 val fcp = ``:'a ** 'b``;
 val word = ``:'a word``;
 
+infix &&&;
+fun (a &&& b) = a andalso b;
+
 (*****************************************************************************)
 (* A rule to generate the theorem: |- X o I = X   for some X                 *)
 (*****************************************************************************)
@@ -246,6 +249,9 @@ let val _ = perform "add_string_translations"
     val _ = add_coding_theorem_precise sexp string "general_detect"
     	    (DECIDE ``!x. (sexp_to_bool o stringp) x ==>
 	    	    	  (sexp_to_bool o stringp) x``)
+
+    val _ = functionEncodeLib.add_terminal 
+            ("str ?", op&&& o (equal ``str`` ## stringSyntax.is_string_literal) o dest_comb);
 in
     ()
 end handle ExistsAlready => ()

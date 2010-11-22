@@ -1735,12 +1735,7 @@ fun XTAC fix_defs (a,g) =
 	COND_CONG_TAC else NO_TAC) (a,g)
 in
 fun decode_encode_fix_tactic target _ (a,g) =
-let	val _ = set_goal (a,g)
-(* open pairSyntax pairLib polytypicLib encodeLib pairTheory;
-   val target = ``:sexp``;
-   val num = ``:num``; 
-   val (a,g) = top_goal(); *)
-        val term = (rator o lhs o snd o strip_forall o snd o strip_imp o snd o strip_forall) g
+let	val term = (rator o lhs o snd o strip_forall o snd o strip_imp o snd o strip_forall) g
 	val enc = rand (rator term);
 	val t = fst (dom_rng (type_of enc))
 	val encoder = get_coding_function_def target t "encode";

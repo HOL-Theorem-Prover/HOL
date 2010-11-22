@@ -50,7 +50,7 @@ val ArrayOf_def =
  Define
   `ArrayOf(Array a) = a`;
 
-val _ = encodeLib.set_bottom_value ``:num |-> int`` ``FEMPTY : num |-> int``;
+val _ = encodeLib.set_bottom_value ``:'a |-> 'b`` ``FEMPTY : 'a |-> 'b``;
 
 val _ = acl2encodeLib.translate_simple_function [(``ArrayOf``, "acl2ArrayOf")] ArrayOf_def;
 
@@ -89,6 +89,13 @@ val _ =
 
 val _ = acl2encodeLib.initialise_type ``:bexp``;
 
+val _ =
+ Hol_datatype
+  `aexp = ArrConst  of (num |-> int)           (* array constant *)
+        | ArrVar    of string                  (* array variable *)
+        | ArrUpdate of aexp => nexp => nexp`;  (* array update   *)
+
+val _ = acl2encodeLib.initialise_type ``:aexp``;
 
 val neval_def =
  Define
@@ -156,19 +163,8 @@ val _ = acl2encodeLib.translate_conditional_function [(``safe_neval``,"acl2safe_
 val _ = acl2encodeLib.translate_conditional_function [(``nevaluates``,"acl2nevaluates")] [ONE_ONE_str, ONE_ONE_nat] nevaluates_def;
 
 (*****************************************************************************)
-(* The next stage is to translate neval as a 'limit' function using          *)
-(* nevaluates as the limit.                                                  *)
+(* beval just needs to have neval to be replaced.                            *)
 (*****************************************************************************)
-
-(*
-
-val _ =
- Hol_datatype
-  `aexp = ArrConst  of (num |-> int)           (* array constant *)
-        | ArrVar    of string                  (* array variable *)
-        | ArrUpdate of aexp => nexp => nexp`;  (* array update   *)
-
-val _ = acl2encodeLib.initialise_type ``:aexp``;
 
 val beval_def =
  Define
@@ -181,52 +177,148 @@ val beval_def =
    (beval (Or b1 b2) s = (beval b1 s \/ beval b2 s)) /\
    (beval (Not e) s = ~(beval e s))`;
 
+val safe_beval_def =
+ Define
+  `(safe_beval (Equal e1 e2) s = (safe_neval e1 s = safe_neval e2 s)) /\
+   (safe_beval (Less e1 e2) s = integer$int_lt (safe_neval e1 s) (safe_neval e2 s)) /\
+   (safe_beval (LessEq e1 e2) s = integer$int_le (safe_neval e1 s) (safe_neval e2 s)) /\
+   (safe_beval (Greater e1 e2) s = integer$int_gt (safe_neval e1 s) (safe_neval e2 s)) /\
+   (safe_beval (GreaterEq e1 e2) s = integer$int_ge (safe_neval e1 s) (safe_neval e2 s)) /\
+   (safe_beval (And b1 b2) s = (safe_beval b1 s /\ safe_beval b2 s)) /\
+   (safe_beval (Or b1 b2) s = (safe_beval b1 s \/ safe_beval b2 s)) /\
+   (safe_beval (Not e) s = ~(safe_beval e s))`;
+
+val bevaluates_def = 
+ Define
+  `(bevaluates (Equal e1 e2) s = nevaluates e1 s /\ nevaluates e2 s) /\ 
+   (bevaluates (Less e1 e2) s = nevaluates e1 s /\ nevaluates e2 s) /\ 
+   (bevaluates (LessEq e1 e2) s = nevaluates e1 s /\ nevaluates e2 s) /\ 
+   (bevaluates (Greater e1 e2) s = nevaluates e1 s /\ nevaluates e2 s) /\ 
+   (bevaluates (GreaterEq e1 e2) s = nevaluates e1 s /\ nevaluates e2 s) /\ 
+   (bevaluates (And b1 b2) s = bevaluates b1 s /\ bevaluates b2 s) /\
+   (bevaluates (Or b1 b2) s = bevaluates b1 s /\ bevaluates b2 s) /\
+   (bevaluates (Not e) s = bevaluates e s)`;
+
+val beval_safe_theorem1 = store_thm("beval_safe_theorem1",
+    ``!e s. bevaluates e s ==> (safe_beval e s = beval e s)``,
+    Induct THEN RW_TAC std_ss [bevaluates_def, safe_beval_def, beval_def, neval_safe_theorem1]);
+
+val ONE_ONE_str = prove(``ONE_ONE str``, RW_TAC std_ss [ONE_ONE_THM]);
+val ONE_ONE_nat = prove(``ONE_ONE nat``, RW_TAC std_ss [ONE_ONE_THM, sexpTheory.nat_def, translateTheory.INT_CONG, integerTheory.INT_INJ]);
+
+val _ = acl2encodeLib.translate_conditional_function [(``safe_beval``,"acl2safe_beval")] [ONE_ONE_str, ONE_ONE_nat] safe_beval_def;
+
+val _ = acl2encodeLib.translate_conditional_function [(``bevaluates``,"acl2bevaluates")] [ONE_ONE_str, ONE_ONE_nat] bevaluates_def;
+
+
+(*****************************************************************************)
+(* aeval requires v IN FDOM s.                                               *)
+(*****************************************************************************)
+
 val aeval_def =
  Define
-  `(aeval (ArrConst f) s = f)
-   /\
-   (aeval (ArrVar v) s = ArrayOf(s ' v))
-   /\
+  `(aeval (ArrConst f) s = f) /\
+   (aeval (ArrVar v) s = ArrayOf(s ' v)) /\
    (aeval (ArrUpdate a e1 e2) s = aeval a s |+ (Num(neval e1 s), neval e2 s))`;
+
+(*****************************************************************************)
+(* aevaluates defines when aeval will complete                               *)
+(*****************************************************************************)
+
+val aevaluates_def = 
+ Define
+  `(aevaluates (ArrConst f) s = T) /\
+   (aevaluates (ArrVar v) s = v IN FDOM s) /\
+   (aevaluates (ArrUpdate a e1 e2) s = aevaluates a s /\ nevaluates e1 s /\ integer$int_le 0i (safe_neval e1 s) /\ nevaluates e2 s)`;
+
+(*****************************************************************************)
+(* safe_aeval always completes.                                              *)
+(*****************************************************************************)
+
+val safe_aeval_def =
+ Define
+  `(safe_aeval (ArrConst f) s = f) /\
+   (safe_aeval (ArrVar v) s = if v IN FDOM s then ArrayOf(s ' v) else FEMPTY) /\
+   (safe_aeval (ArrUpdate a e1 e2) s = if integer$int_le 0i (safe_neval e1 s) then safe_aeval a s |+ (Num(safe_neval e1 s), safe_neval e2 s) else safe_aeval a s)`;
+
+(*****************************************************************************)
+(* Proves that aeval is correct.                                             *)
+(*****************************************************************************)
+
+val aeval_safe_theorem1 = store_thm("aeval_safe_theorem1",
+    ``!e s. aevaluates e s ==> (safe_aeval e s = aeval e s)``,
+    Induct THEN RW_TAC std_ss [aevaluates_def, safe_aeval_def, aeval_def, neval_safe_theorem1]);
+
+(*****************************************************************************)
+(* We now begin by translating safe_neval.                                   *)
+(*****************************************************************************)
+
+val ONE_ONE_str = prove(``ONE_ONE str``, RW_TAC std_ss [ONE_ONE_THM]);
+val ONE_ONE_nat = prove(``ONE_ONE nat``, RW_TAC std_ss [ONE_ONE_THM, sexpTheory.nat_def, translateTheory.INT_CONG, integerTheory.INT_INJ]);
+
+val _ = acl2encodeLib.translate_conditional_function [(``safe_aeval``,"acl2safe_aeval")] [ONE_ONE_str, ONE_ONE_nat] safe_aeval_def;
+val _ = acl2encodeLib.translate_conditional_function [(``aevaluates``,"acl2aevaluates")] [ONE_ONE_str, ONE_ONE_nat] aevaluates_def;
+
+(*****************************************************************************)
+(* naeval completes.                                                         *)
+(*****************************************************************************)
 
 val naeval_def =
  Define
-  `(naeval (INL e) s = Scalar(neval e s))
-   /\
+  `(naeval (INL e) s = Scalar(neval e s)) /\
    (naeval (INR a) s = Array(aeval a s))`;
 
+val safe_naeval_def =
+ Define
+  `(safe_naeval (INL e) s = Scalar(safe_neval e s)) /\
+   (safe_naeval (INR a) s = Array(safe_aeval a s))`;
+
+val naevaluates_def = 
+ Define
+  `(naevaluates (INL e) s = nevaluates e s) /\
+   (naevaluates (INR a) s = aevaluates a s)`;
+
+val naeval_safe_theorem1 = store_thm("naeval_safe_theorem1",
+    ``!e s. naevaluates e s ==> (safe_naeval e s = naeval e s)``,
+    Induct THEN RW_TAC std_ss [naevaluates_def, safe_naeval_def, naeval_def, neval_safe_theorem1, aeval_safe_theorem1]);
+
+val _ = acl2encodeLib.translate_simple_function [(``safe_naeval``,"acl2naeval")] safe_naeval_def;
+
+(*****************************************************************************)
+(* Translations of other definitions...                                      *)
+(*****************************************************************************)
+ 
 val Update_def =
  Define
   `Update v e s = s |+ (v, naeval e s)`;
 
+val safe_Update_def =
+ Define
+  `safe_Update v e s = s |+ (v, safe_naeval e s)`;
+
+val Updates_def = 
+ Define
+  `Updates v e s = naevaluates e s`;
+
+val Updates_safe_theorem1 = store_thm("Updates_safe_theorem1",
+    ``Updates v e s ==> (safe_Update v e s = Update v e s)``,
+    RW_TAC std_ss [Updates_def, safe_Update_def, Update_def, naeval_safe_theorem1]);
+
+val _ = acl2encodeLib.translate_conditional_function [(``safe_Update``,"acl2Update")] [ONE_ONE_str, ONE_ONE_nat] safe_Update_def;
+
 val UpdateCases =
  store_thm
   ("UpdateCases",
-   ``(Update v (INL e) s = s |+ (v, Scalar(neval e s)))
-     /\
+   ``(Update v (INL e) s = s |+ (v, Scalar(neval e s))) /\
      (Update v (INR a) s = s |+ (v, Array(aeval a s)))``,
    RW_TAC std_ss [Update_def,naeval_def]);
 
 (* Convert a value or array to a constant expression *)
 val Exp_def =
  Define
-  `(Exp(Scalar n) = INL(Const n))
-   /\
+  `(Exp(Scalar n) = INL(Const n)) /\
    (Exp(Array f)  = INR(ArrConst f))`;
 
-val Update_Exp =
- store_thm
-  ("Update_Exp",
-   ``!v val s. Update v (Exp val) s = s |+ (v, val)``,
-   Cases_on `val`
-    THEN RW_TAC std_ss [UpdateCases,Exp_def,aeval_def,neval_def]);
+val _ = acl2encodeLib.initialise_type ``:'a + 'b``;
 
-val _ = acl2encodeLib.translate_conditional_function [(``neval``, "acl2neval")] [] neval_def;
-
-
-val tf_def = Define `tf (x : int |-> int) = if 0i IN FDOM x then x ' 0i else 0i`;
-
-val oneone_int = ONEONE_ENC_THM ``:int``;
-
-val _ = acl2encodeLib.translate_conditional_function [(``tf``, "test_tf")] [oneone_int] tf_def handle e => acl2encodeLib.Raise e;
-*)
+val _ = acl2encodeLib.translate_conditional_function [(``Exp``,"acl2Exp")] [ONE_ONE_str, ONE_ONE_nat] Exp_def;
