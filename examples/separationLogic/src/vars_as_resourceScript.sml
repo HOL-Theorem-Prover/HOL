@@ -2090,6 +2090,13 @@ val var_res_exp_prop___CONST = store_thm ("var_res_exp_prop___CONST",
 SIMP_TAC std_ss [var_res_exp_prop_def, LET_THM, var_res_exp_const_EVAL, 
   FUN_EQ_THM])
 
+
+val var_res_exp_full_prop_def = Define `
+   var_res_exp_full_prop P (eL:('a,'b,'c) var_res_expression list) =
+   \state. let e_optL = MAP (\e. e (FST state)) eL in
+           (EVERY IS_SOME e_optL) /\ (P (MAP THE e_optL) (SND state))`
+
+
 val var_res_exp_is_defined_REWRITE = save_thm (
 "var_res_exp_is_defined_REWRITE",
 SIMP_RULE std_ss [var_res_stack_proposition_def]
@@ -4275,6 +4282,40 @@ SIMP_TAC std_ss [VAR_RES_IS_STACK_IMPRECISE___ALTERNATIVE_DEF,
 
 
 
+val VAR_RES_IS_STACK_IMPRECISE___USED_VARS___var_res_exp_full_prop =
+store_thm ("VAR_RES_IS_STACK_IMPRECISE___USED_VARS___var_res_exp_full_prop",
+``!eL P vs. 
+EVERY (VAR_RES_IS_STACK_IMPRECISE_EXPRESSION___USED_VARS_SUBSET vs) eL ==>
+VAR_RES_IS_STACK_IMPRECISE___USED_VARS vs (var_res_exp_full_prop P eL)``,
+
+SIMP_TAC std_ss [VAR_RES_IS_STACK_IMPRECISE___USED_VARS___ALTERNATIVE_DEF,
+   var_res_exp_full_prop_def, IN_ABS, PAIR_FORALL_THM] THEN
+REPEAT STRIP_TAC THEN
+Tactical.REVERSE (`(MAP (\e. e x1') eL) = (MAP (\e. e x1) eL)` by ALL_TAC) THEN (
+   FULL_SIMP_TAC list_ss [LET_THM]
+) THEN
+Q.PAT_ASSUM `P X x2` (K ALL_TAC) THEN
+Induct_on `eL` THEN (
+   ASM_SIMP_TAC list_ss [] 
+) THEN
+REPEAT STRIP_TAC THEN
+FULL_SIMP_TAC std_ss [] THEN
+MATCH_MP_TAC VAR_RES_IS_STACK_IMPRECISE_EXPRESSION___USED_VARS_SUBSET___EXP_EQ_IS_SOME THEN
+Q.EXISTS_TAC `vs` THEN
+ASM_SIMP_TAC std_ss [IN_INTER]);
+
+
+val VAR_RES_IS_STACK_IMPRECISE___var_res_exp_full_prop =
+store_thm ("VAR_RES_IS_STACK_IMPRECISE___var_res_exp_prop",
+``!eL P. EVERY (\e. IS_SOME (VAR_RES_IS_STACK_IMPRECISE_EXPRESSION___USED_VARS e)) eL ==>
+         VAR_RES_IS_STACK_IMPRECISE (var_res_exp_full_prop P eL)``,
+
+SIMP_TAC std_ss [VAR_RES_IS_STACK_IMPRECISE___ALTERNATIVE_DEF,
+                 GSYM VAR_RES_IS_STACK_IMPRECISE_EXPRESSION___USED_VARS_SUBSET___UNIV_REWRITE] THEN
+METIS_TAC[VAR_RES_IS_STACK_IMPRECISE___USED_VARS___var_res_exp_full_prop]);
+
+
+
 (******************************************************
  var_res_prop
  ******************************************************)
@@ -6329,6 +6370,28 @@ SIMP_TAC std_ss [var_res_prop_varlist_update_def, var_res_exp_prop_def, IN_DEF,
    var_res_exp_varlist_update_def, var_res_ext_state_varlist_update_def]);
 
 
+val var_res_prop_var_update___var_res_exp_full_prop =
+store_thm ("var_res_prop_var_update___var_res_exp_full_prop",
+``!vc eL P.
+var_res_prop_var_update vc (var_res_exp_full_prop P eL) =
+var_res_exp_full_prop P (MAP (var_res_exp_var_update vc) eL)``,
+
+SIMP_TAC std_ss [var_res_prop_var_update_def, var_res_exp_full_prop_def, IN_ABS,
+   LET_THM, FUN_EQ_THM, var_res_exp_var_update_def,
+   var_res_ext_state_var_update_def, IN_DEF, MAP_MAP_o,
+   combinTheory.o_DEF]);
+
+
+val var_res_prop_varlist_update___var_res_exp_full_prop =
+store_thm ("var_res_prop_varlist_update___var_res_exp_full_prop",
+``!vcL eL P.
+var_res_prop_varlist_update vcL (var_res_exp_full_prop P eL) =
+var_res_exp_full_prop P (MAP (var_res_exp_varlist_update vcL) eL)``,
+
+SIMP_TAC std_ss [var_res_prop_varlist_update_def, var_res_exp_full_prop_def, IN_DEF,
+   var_res_exp_varlist_update_def, var_res_ext_state_varlist_update_def,
+   MAP_MAP_o, combinTheory.o_DEF]);
+
 
 val var_res_prop_var_update___BOOL = store_thm ("var_res_prop_var_update___BOOL",
 ``(var_res_prop_var_update vc (asl_and p1 p2) =
@@ -7077,6 +7140,17 @@ val VAR_RES_COND_INFERENCE___prog_block3 = store_thm (
 ``!f P p1 pL pL2 Q.
  (VAR_RES_COND_HOARE_TRIPLE f P (asl_prog_block (p1::(asl_prog_block pL)::pL2)) Q) =
  (VAR_RES_COND_HOARE_TRIPLE f P (asl_prog_block (p1::(pL++pL2))) Q)``,
+
+SIMP_TAC std_ss [VAR_RES_COND_HOARE_TRIPLE_def,
+   VAR_RES_HOARE_TRIPLE_def, ASL_PROGRAM_HOARE_TRIPLE_def,
+   ASL_PROGRAM_SEM___prog_block, ASL_PROGRAM_SEM___prog_block_append]);
+
+
+val VAR_RES_COND_INFERENCE___prog_block4 = store_thm (
+"VAR_RES_COND_INFERENCE___prog_block4",
+``!f P pL pL2 Q.
+ (VAR_RES_COND_HOARE_TRIPLE f P (asl_prog_block ((asl_prog_block pL)::pL2)) Q) =
+ (VAR_RES_COND_HOARE_TRIPLE f P (asl_prog_block ((pL++pL2))) Q)``,
 
 SIMP_TAC std_ss [VAR_RES_COND_HOARE_TRIPLE_def,
    VAR_RES_HOARE_TRIPLE_def, ASL_PROGRAM_HOARE_TRIPLE_def,
@@ -12417,6 +12491,24 @@ ASM_SIMP_TAC std_ss [BAG_OF_EMPTY, EMPTY_SUBSET,
 (*******************************************************
  * assume, conditions, loops
  ******************************************************)
+
+
+val VAR_RES_COND_INFERENCE___prog_choice =
+store_thm ("VAR_RES_COND_INFERENCE___prog_choice",
+``!f P p1 p2 prog Q.
+VAR_RES_COND_HOARE_TRIPLE f P
+   (asl_prog_block (p1::prog)) Q /\
+VAR_RES_COND_HOARE_TRIPLE f P
+   (asl_prog_block (p2::prog)) Q ==>
+VAR_RES_COND_HOARE_TRIPLE f P (asl_prog_block ((asl_prog_choice p1 p2)::prog)) Q``,
+
+SIMP_TAC std_ss [VAR_RES_COND_INFERENCE___prog_block] THEN
+SIMP_TAC std_ss [VAR_RES_COND_HOARE_TRIPLE_def, VAR_RES_HOARE_TRIPLE_def] THEN
+REPEAT STRIP_TAC THEN
+FULL_SIMP_TAC std_ss [ASL_INFERENCE_prog_choice_STRONG] THEN
+MATCH_MP_TAC ASL_INFERENCE_prog_choice_seq THEN
+FULL_SIMP_TAC std_ss [ASL_PROGRAM_HOARE_TRIPLE_def,
+   ASL_PROGRAM_SEM___prog_block, ASL_PROGRAM_SEM___prog_seq]);
 
 
 val VAR_RES_COND_INFERENCE___prog_cond =

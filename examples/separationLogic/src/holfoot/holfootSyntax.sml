@@ -151,6 +151,15 @@ val holfoot_exp_mod_term = mk_comb (holfoot_exp_binop_term, numSyntax.mod_tm)
 val holfoot_exp_exp_term = mk_comb (holfoot_exp_binop_term, numSyntax.exp_tm)
 open numSyntax
 
+val holfoot_prog_diverge_term =
+   ``asl_prog_diverge : holfoot_program``
+
+val holfoot_prog_fail_term =
+   ``asl_prog_fail : holfoot_program``
+
+val holfoot_prog_choice_term =
+   ``asl_prog_choice : holfoot_program -> holfoot_program -> holfoot_program``
+
 val holfoot_prog_best_local_action_term =
    ``var_res_prog_best_local_action : holfoot_a_proposition -> holfoot_a_proposition ->
         holfoot_program``

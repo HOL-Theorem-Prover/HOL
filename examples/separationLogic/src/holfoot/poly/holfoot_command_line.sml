@@ -64,6 +64,7 @@ let
   val s =   "  b   undo\n";
   val s = s^"  R   restart proof\n";
   val s = s^"  p   print current goals\n";
+  val s = s^"  r   rotate subgoals\n\n";
   val s = s^"  c   split the current goal\n\n";
   val _ = print s;
   val _ = print_with_style [Bold] "other options\n";
@@ -137,6 +138,7 @@ let
         | #"p" => (print_goals())
         | #"b" => (apply_backup ();print_goal())
         | #"R" => (apply_restart ();print_goal())
+        | #"r" => (rotate 1;print_goal())
         | #"c" => (apply_strip ();print_goal())
         | #"q" => (Portable.exit ())
         | #"?" => (print_interactive_help ())

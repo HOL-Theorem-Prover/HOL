@@ -52,8 +52,12 @@ List.foldl (fn ((str, tok), t) => Binarymap.insert (t, str, tok))
   ("old" ,      OLD),
   ("assume" ,   ASSUME),
   ("assert" ,   ASSERT),
+  ("diverge" ,  DIVERGE),
+  ("fail" ,     FAIL),
+  ("assert" ,   ASSERT),
   ("false",     FF),
-  ("NULL",      (fn (x,y) => NAT (0,x,y)))
+  ("NULL",      (fn (x,y) => NAT (0,x,y))),
+  ("pointsTo",  POINTSTOS)
 ];
 
 

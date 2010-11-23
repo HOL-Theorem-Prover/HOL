@@ -242,6 +242,14 @@ fun holfoot_prog_printer GS sys (ppfns:term_pp_types.ppstream_funs) gravs d pps 
           sys (Top, Top, Top) (d - 1) prop_term;
           end_block ()
        end
+    ) else if (same_const op_term asl_prog_diverge_term)  then (
+          begin_block CONSISTENT 0;
+          add_string "diverge";
+          end_block ()
+    ) else if (same_const op_term asl_prog_fail_term)  then (
+          begin_block CONSISTENT 0;
+          add_string "fail";
+          end_block ()
     ) else if (same_const op_term asl_prog_cond_term)  then (
        let
           val prop_term = el 1 args;
@@ -252,7 +260,7 @@ fun holfoot_prog_printer GS sys (ppfns:term_pp_types.ppstream_funs) gravs d pps 
           add_string "if";
           add_string " ";
           sys (Top, Top, Top) (d - 1) prop_term;
-          add_string " then {";
+          add_string " {";
           add_break (1,(!holfoot_pretty_printer_block_indent));
           begin_block INCONSISTENT 0;
           sys (Top, Top, Top) (d - 1) prog1_term;
@@ -267,7 +275,28 @@ fun holfoot_prog_printer GS sys (ppfns:term_pp_types.ppstream_funs) gravs d pps 
           add_string "}";
           end_block ()
        end
-    ) else if (same_const op_term asl_prog_while_term)  then (
+    ) else if (same_const op_term asl_prog_choice_term)  then (
+       let
+          val prog1_term = el 1 args;
+          val prog2_term = el 2 args;
+       in
+          begin_block CONSISTENT 0;
+          add_string "if (*) {";
+          add_break (1,(!holfoot_pretty_printer_block_indent));
+          begin_block INCONSISTENT 0;
+          sys (Top, Top, Top) (d - 1) prog1_term;
+          end_block ();
+          add_break (1,0);
+          add_string "} else {";
+          add_break (1,(!holfoot_pretty_printer_block_indent));
+          begin_block INCONSISTENT 0;
+          sys (Top, Top, Top) (d - 1) prog2_term;
+          end_block ();
+          add_break (1,0);
+          add_string "}";
+          end_block ()
+       end
+     ) else if (same_const op_term asl_prog_while_term)  then (
        let
           val prop_term = el 1 args;
           val prog_term = el 2 args;

@@ -74,6 +74,7 @@ val tree_link_tags = ("l", "r")
   |  NULL
   |  NEW
   |  POINTSTO
+  |  POINTSTOS
   |  RBRACE
   |  RBRACKET
   |  RESOURCE
@@ -102,6 +103,8 @@ val tree_link_tags = ("l", "r")
   |  STRING of string
   |  ENTAILMENT
   |  OLD
+  |  DIVERGE
+  |  FAIL
 
 
 (* precedences (increasing) and associativities for expressions *)
@@ -254,6 +257,10 @@ statement:
 	  ( Pstm_new(IDENT, Aexp_num 1, []) )
   | IDENT EQUAL NEW LPAREN expression RPAREN SEMI
 	  ( Pstm_new(IDENT, expression, []) )
+  | FAIL SEMI
+          ( Pstm_fail )
+  | DIVERGE SEMI
+          ( Pstm_diverge )
   | DISPOSE expression SEMI
           ( Pstm_dispose(expression, Aexp_num 1) )
   | DISPOSE LPAREN expression RPAREN SEMI
@@ -262,6 +269,10 @@ statement:
           ( Pstm_dispose(expression1, expression2) )
   | LBRACE statement_star RBRACE
 	  ( Pstm_block(statement_star) )
+  | IF LPAREN STAR RPAREN statement %prec below_ELSE
+	  ( Pstm_ndet(statement, Pstm_block []) )
+  | IF LPAREN STAR RPAREN statement ELSE statement
+	  ( Pstm_ndet(statement1, statement2) )
   | IF LPAREN condition RPAREN statement %prec below_ELSE
 	  ( Pstm_if(condition, statement, Pstm_block []) )
   | IF LPAREN condition RPAREN statement ELSE statement
@@ -422,6 +433,10 @@ a_space_pred:
   | simple_expression POINTSTO expression COMMA expression 
           ( Aspred_pointsto(simple_expression,[(#1 tree_link_tags, expression1),
 				(#2 tree_link_tags, expression2)]) )
+  | POINTSTOS LPAREN expression COMMA a_component_expression_seq RPAREN
+          ( Aspred_pointsto(expression,a_component_expression_seq) )
+  | POINTSTOS LPAREN expression COMMA expression RPAREN 
+          ( Aspred_pointsto(expression1,[(list_link_tag, expression2)]) )
   | IDENT LPAREN genpredargs RPAREN
 	  ( Aspred_genpred (IDENT, genpredargs, IDENTleft) )
 

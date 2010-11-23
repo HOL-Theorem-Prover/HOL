@@ -4049,9 +4049,6 @@ REPEAT STRIP_TAC THEN
 CONV_TAC (LHS_CONV (RATOR_CONV (RAND_CONV (REWR_CONV (GSYM SUP_fasl_action_order___SING))))) THEN
 ASM_SIMP_TAC std_ss [asla_seq___SUP_fasl_action_order, IN_SING]);
 
-
-
-
 val asla_big_seq_def = Define
 `(asla_big_seq [] = asla_skip) /\
   (asla_big_seq (h::l) = asla_seq h (asla_big_seq l))`;
@@ -4177,6 +4174,19 @@ SIMP_TAC std_ss [asla_bin_choice_def, asla_choice_def,
    IN_INSERT, NOT_IN_EMPTY, BIGUNION_INSERT,
    BIGUNION_EMPTY, UNION_EMPTY] THEN
 METIS_TAC[NOT_IS_SOME_EQ_NONE]);
+
+
+val asla_seq___bin_choice = store_thm ("asla_seq___bin_choice",
+``!a1 a2 a3. asla_seq (asla_bin_choice a1 a2) a3 =
+  asla_bin_choice (asla_seq a1 a3) (asla_seq a2 a3)``,
+
+SIMP_TAC std_ss [asla_bin_choice_def,
+   asla_choice_def, asla_seq___SUP_fasl_action_order___left] THEN
+REPEAT STRIP_TAC THEN
+AP_TERM_TAC THEN
+SIMP_TAC std_ss [EXTENSION,
+  IN_INSERT, NOT_IN_EMPTY, IN_ABS,
+  RIGHT_AND_OVER_OR, EXISTS_OR_THM]);
 
 
 val asla_seq_diverge = store_thm ("asla_seq_diverge",
@@ -5462,6 +5472,11 @@ val asl_prog_repeat_num_def = Define `
 
 val asl_prog_ndet_def = Define `asl_prog_ndet (pset:('a, 'b, 'c, 'd) asl_program set) =
              BIGUNION pset`;
+
+val asl_prog_choice_ALTERNATIVE_DEF = store_thm ("asl_prog_choice_ALTERNATIVE_DEF",
+``!p1 p2. asl_prog_choice p1 p2 = asl_prog_ndet {p1;p2}``,
+SIMP_TAC std_ss [asl_prog_ndet_def, asl_prog_choice_def, BIGUNION_INSERT, BIGUNION_EMPTY, UNION_EMPTY]);
+
 
 val asl_prog_block_def = Define `(asl_prog_block [] = asl_prog_skip) /\
               (asl_prog_block [p1] = p1) /\
@@ -8787,6 +8802,20 @@ FULL_SIMP_TAC std_ss [asl_prog_cond_critical_section_def,
 
 
 
+val ASL_PROGRAM_SEM___prog_seq___prog_choice =
+store_thm ("ASL_PROGRAM_SEM___prog_seq___prog_choice",
+``
+(ASL_PROGRAM_SEM xenv penv
+      (asl_prog_seq (asl_prog_choice pT pF) prog))
+=
+(ASL_PROGRAM_SEM xenv penv
+      (asl_prog_choice (asl_prog_seq pT prog) (asl_prog_seq pF prog)))``,
+
+SIMP_TAC std_ss [ASL_PROGRAM_SEM___prog_seq,
+       ASL_PROGRAM_SEM___prog_choice,
+       asla_seq___bin_choice]);
+
+
 val ASL_PROGRAM_SEM___prog_seq___prog_cond =
 store_thm ("ASL_PROGRAM_SEM___prog_seq___prog_cond",
 ``
@@ -8799,59 +8828,10 @@ store_thm ("ASL_PROGRAM_SEM___prog_seq___prog_cond",
 
 
 SIMP_TAC std_ss [ASL_PROGRAM_SEM___prog_seq,
-       asl_prog_cond_def,
-       ASL_PROGRAM_SEM___prog_choice] THEN
-
+       asl_prog_cond_def, ASL_PROGRAM_SEM___prog_choice] THEN
 ASSUME_TAC asla_seq___ASSOC THEN
 FULL_SIMP_TAC std_ss [ASSOC_DEF] THEN
-
-Q.ABBREV_TAC `a1 = (asla_seq
-       (ASL_PROGRAM_SEM xenv penv
-          (asl_prog_prim_command (asl_pc_assume c)))
-       (ASL_PROGRAM_SEM xenv penv pT))` THEN
-Q.ABBREV_TAC `a2 = (asla_seq
-       (ASL_PROGRAM_SEM xenv penv
-          (asl_prog_prim_command (asl_pc_assume (asl_pred_neg c))))
-       (ASL_PROGRAM_SEM xenv penv pF))` THEN
-Q.ABBREV_TAC `a3 = (ASL_PROGRAM_SEM xenv penv prog)` THEN
-
-
-SIMP_TAC std_ss [asla_seq_def, asla_bin_choice_def,
-       asla_choice_def,
-       SUP_fasl_action_order_def,
-       SUP_fasl_order_def,
-       IN_IMAGE, IN_INSERT, NOT_IN_EMPTY,
-       EXISTS_OR_THM,
-       RIGHT_AND_OVER_OR,
-       LEFT_AND_OVER_OR,
-       COND_NONE_SOME_REWRITES] THEN
-ONCE_REWRITE_TAC[FUN_EQ_THM] THEN
-GEN_TAC THEN
-Cases_on `a1 x` THEN ASM_SIMP_TAC std_ss [] THEN
-Cases_on `a2 x` THEN ASM_SIMP_TAC std_ss [] THEN
-
-SIMP_TAC std_ss [COND_NONE_SOME_REWRITES_EQ] THEN
-REPEAT STRIP_TAC THENL [
-   ASM_SIMP_TAC std_ss [IN_BIGUNION, IN_IMAGE,
-          GSYM RIGHT_EXISTS_AND_THM,
-          IN_INSERT, NOT_IN_EMPTY,
-          RIGHT_AND_OVER_OR,
-          LEFT_AND_OVER_OR, EXISTS_OR_THM],
-
-
-   ONCE_REWRITE_TAC[EXTENSION] THEN
-   ASM_SIMP_TAC std_ss [IN_BIGUNION, IN_IMAGE,
-          GSYM LEFT_EXISTS_AND_THM,
-          IN_INSERT, NOT_IN_EMPTY,
-          RIGHT_AND_OVER_OR,
-          LEFT_AND_OVER_OR, EXISTS_OR_THM,
-          GSYM RIGHT_EXISTS_AND_THM] THEN
-   ONCE_REWRITE_TAC [
-      prove (``(if c then p else q) = (if ~c then q else p)``, METIS_TAC[])] THEN
-   ASM_SIMP_TAC std_ss [IN_BIGUNION, IN_IMAGE,
-         GSYM RIGHT_EXISTS_AND_THM]
-]);
-
+SIMP_TAC std_ss [asla_seq___bin_choice]);
 
 
 
@@ -9711,6 +9691,23 @@ val ASL_INFERENCE_prog_choice = store_thm ("ASL_INFERENCE_prog_choice",
 SIMP_TAC std_ss [ASL_INFERENCE_prog_choice_STRONG]);
 
 
+val ASL_INFERENCE_prog_choice_seq = store_thm  ("ASL_INFERENCE_prog_choice_seq",
+``!xenv penv P Q p1 p2 p_seq.
+(ASL_PROGRAM_HOARE_TRIPLE xenv penv P
+    (asl_prog_seq pTrue p_seq) Q) /\
+(ASL_PROGRAM_HOARE_TRIPLE xenv penv P
+    (asl_prog_seq pFalse p_seq) Q) ==>
+
+ASL_PROGRAM_HOARE_TRIPLE xenv penv P (asl_prog_seq (asl_prog_choice pTrue pFalse) p_seq) Q``,
+
+
+REPEAT STRIP_TAC THEN
+SIMP_TAC std_ss [ASL_PROGRAM_HOARE_TRIPLE_def,
+       ASL_PROGRAM_SEM___prog_seq___prog_choice] THEN
+SIMP_TAC std_ss [GSYM ASL_PROGRAM_HOARE_TRIPLE_def] THEN
+MATCH_MP_TAC ASL_INFERENCE_prog_choice THEN
+ASM_REWRITE_TAC[]);
+
 
 val ASL_INFERENCE_prog_kleene_star_STRONG = store_thm ("ASL_INFERENCE_prog_kleene_star_STRONG",
 ``!xenv penv P p.
@@ -10137,6 +10134,27 @@ REWRITE_TAC [asl_prog_cond_def] THEN
 REPEAT STRIP_TAC THEN
 MATCH_MP_TAC ASL_INFERENCE_prog_choice THEN
 FULL_SIMP_TAC std_ss [asl_prog_assume_def]);
+
+
+val ASL_INFERENCE_prog_cond_seq = store_thm  ("ASL_INFERENCE_prog_cond_seq",
+``!xenv penv c P Q pTrue pFalse p_seq.
+(ASL_PROGRAM_HOARE_TRIPLE xenv penv P
+    (asl_prog_seq (asl_prog_assume c) (asl_prog_seq pTrue p_seq)) Q) /\
+(ASL_PROGRAM_HOARE_TRIPLE xenv penv P
+    (asl_prog_seq (asl_prog_assume (asl_pred_neg c))
+         (asl_prog_seq pFalse p_seq)) Q) ==>
+
+ASL_PROGRAM_HOARE_TRIPLE xenv penv P (asl_prog_seq (asl_prog_cond c pTrue pFalse) p_seq) Q``,
+
+
+REPEAT STRIP_TAC THEN
+SIMP_TAC std_ss [ASL_PROGRAM_HOARE_TRIPLE_def,
+       ASL_PROGRAM_SEM___prog_seq___prog_cond] THEN
+SIMP_TAC std_ss [GSYM ASL_PROGRAM_HOARE_TRIPLE_def] THEN
+MATCH_MP_TAC ASL_INFERENCE_prog_cond THEN
+ASM_REWRITE_TAC[]);
+
+
 
 
 
@@ -11854,96 +11872,6 @@ SIMP_TAC std_ss [asl_prog_block_def]);
 
 
 
-
-val ASL_PROGRAM_SEM___prog_seq___prog_cond =
-store_thm ("ASL_PROGRAM_SEM___prog_seq___prog_cond",
-``
-(ASL_PROGRAM_SEM xenv penv
-      (asl_prog_seq (asl_prog_cond c pT pF) prog))
-=
-(ASL_PROGRAM_SEM xenv penv
-      (asl_prog_cond c (asl_prog_seq pT prog) (asl_prog_seq pF prog)))``,
-
-
-
-SIMP_TAC std_ss [ASL_PROGRAM_SEM___prog_seq,
-       asl_prog_cond_def,
-       ASL_PROGRAM_SEM___prog_choice] THEN
-
-ASSUME_TAC asla_seq___ASSOC THEN
-FULL_SIMP_TAC std_ss [ASSOC_DEF] THEN
-
-Q.ABBREV_TAC `a1 = (asla_seq
-       (ASL_PROGRAM_SEM xenv penv
-          (asl_prog_prim_command (asl_pc_assume c)))
-       (ASL_PROGRAM_SEM xenv penv pT))` THEN
-Q.ABBREV_TAC `a2 = (asla_seq
-       (ASL_PROGRAM_SEM xenv penv
-          (asl_prog_prim_command (asl_pc_assume (asl_pred_neg c))))
-       (ASL_PROGRAM_SEM xenv penv pF))` THEN
-Q.ABBREV_TAC `a3 = (ASL_PROGRAM_SEM xenv penv prog)` THEN
-
-
-SIMP_TAC std_ss [asla_seq_def, asla_bin_choice_def,
-       asla_choice_def,
-       SUP_fasl_action_order_def,
-       SUP_fasl_order_def,
-       IN_IMAGE, IN_INSERT, NOT_IN_EMPTY,
-       EXISTS_OR_THM,
-       RIGHT_AND_OVER_OR,
-       LEFT_AND_OVER_OR,
-       COND_NONE_SOME_REWRITES] THEN
-ONCE_REWRITE_TAC[FUN_EQ_THM] THEN
-GEN_TAC THEN
-Cases_on `a1 x` THEN ASM_SIMP_TAC std_ss [] THEN
-Cases_on `a2 x` THEN ASM_SIMP_TAC std_ss [] THEN
-
-SIMP_TAC std_ss [COND_NONE_SOME_REWRITES_EQ] THEN
-REPEAT STRIP_TAC THENL [
-   ASM_SIMP_TAC std_ss [IN_BIGUNION, IN_IMAGE,
-          GSYM RIGHT_EXISTS_AND_THM,
-          IN_INSERT, NOT_IN_EMPTY,
-          RIGHT_AND_OVER_OR,
-          LEFT_AND_OVER_OR, EXISTS_OR_THM],
-
-
-   ONCE_REWRITE_TAC[EXTENSION] THEN
-   ASM_SIMP_TAC std_ss [IN_BIGUNION, IN_IMAGE,
-          GSYM LEFT_EXISTS_AND_THM,
-          IN_INSERT, NOT_IN_EMPTY,
-          RIGHT_AND_OVER_OR,
-          LEFT_AND_OVER_OR, EXISTS_OR_THM,
-          GSYM RIGHT_EXISTS_AND_THM] THEN
-   ONCE_REWRITE_TAC [
-      prove (``(if c then p else q) = (if ~c then q else p)``, METIS_TAC[])] THEN
-   ASM_SIMP_TAC std_ss [IN_BIGUNION, IN_IMAGE,
-         GSYM RIGHT_EXISTS_AND_THM]
-]);
-
-
-
-val ASL_INFERENCE_prog_cond_seq = store_thm  ("ASL_INFERENCE_prog_cond_seq",
-``!xenv penv c P Q pTrue pFalse p_seq.
-(ASL_PROGRAM_HOARE_TRIPLE xenv penv P
-    (asl_prog_seq (asl_prog_assume c) (asl_prog_seq pTrue p_seq)) Q) /\
-(ASL_PROGRAM_HOARE_TRIPLE xenv penv P
-    (asl_prog_seq (asl_prog_assume (asl_pred_neg c))
-         (asl_prog_seq pFalse p_seq)) Q) ==>
-
-ASL_PROGRAM_HOARE_TRIPLE xenv penv P (asl_prog_seq (asl_prog_cond c pTrue pFalse) p_seq) Q``,
-
-
-
-REPEAT STRIP_TAC THEN
-SIMP_TAC std_ss [ASL_PROGRAM_HOARE_TRIPLE_def,
-       ASL_PROGRAM_SEM___prog_seq___prog_cond] THEN
-SIMP_TAC std_ss [GSYM ASL_PROGRAM_HOARE_TRIPLE_def] THEN
-MATCH_MP_TAC ASL_INFERENCE_prog_cond THEN
-ASM_REWRITE_TAC[]);
-
-
-
-
 val ASL_PROGRAM_IS_ABSTRACTION___block_flatten =
 store_thm ("ASL_PROGRAM_IS_ABSTRACTION___block_flatten",
 
@@ -12638,6 +12566,19 @@ AP_TERM_TAC THEN
 METIS_TAC[]);
 
 
+val asl_prog_IS_RESOURCE_AND_PROCCALL_FREE___prog_choice =
+store_thm ("asl_prog_IS_RESOURCE_AND_PROCCALL_FREE___prog_choice",
+``!p1 p2.
+  asl_prog_IS_RESOURCE_AND_PROCCALL_FREE p1 /\
+  asl_prog_IS_RESOURCE_AND_PROCCALL_FREE p2 ==>
+  asl_prog_IS_RESOURCE_AND_PROCCALL_FREE (asl_prog_choice p1 p2)``,
+
+SIMP_TAC std_ss [asl_prog_choice_ALTERNATIVE_DEF] THEN
+REPEAT STRIP_TAC THEN
+MATCH_MP_TAC asl_prog_IS_RESOURCE_AND_PROCCALL_FREE___prog_ndet THEN
+ASM_SIMP_TAC std_ss [IN_INSERT, NOT_IN_EMPTY,
+   DISJ_IMP_THM, FORALL_AND_THM]);
+
 
 val asl_prog_IS_RESOURCE_AND_PROCCALL_FREE___prog_choose_constants =
 store_thm ("asl_prog_IS_RESOURCE_AND_PROCCALL_FREE___prog_choose_constants",
@@ -12666,6 +12607,7 @@ val asl_prog_IS_RESOURCE_AND_PROCCALL_FREE___ASL_REWRITES =
     asl_prog_IS_RESOURCE_AND_PROCCALL_FREE___prog_aquire_lock,
     asl_prog_IS_RESOURCE_AND_PROCCALL_FREE___prog_forall,
     asl_prog_IS_RESOURCE_AND_PROCCALL_FREE___prog_ndet,
+    asl_prog_IS_RESOURCE_AND_PROCCALL_FREE___prog_choice,
     asl_prog_IS_RESOURCE_AND_PROCCALL_FREE___prog_choose_constants,
     asl_prog_IS_RESOURCE_AND_PROCCALL_FREE___prog_repeat_num,
     asl_prog_IS_RESOURCE_AND_PROCCALL_FREE___prog_kleene_star,
