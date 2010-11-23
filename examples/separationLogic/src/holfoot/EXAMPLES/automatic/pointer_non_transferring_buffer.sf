@@ -1,6 +1,6 @@
 init() { c = NULL; }
 
-resource buf (c) [if c==NULL then emp else emp]
+resource buf (c) [emp]
 
 put(x) [x|->] {
   with buf when (c==NULL) { c = x; }

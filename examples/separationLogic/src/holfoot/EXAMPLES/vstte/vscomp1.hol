@@ -87,7 +87,6 @@ Induct_on `l` THENL [
 
    ASM_SIMP_TAC list_ss [LIST_SUM_def, LIST_MAX_def,
       MULT_CLAUSES, MAX_DEF] THEN
-   ASM_SIMP_TAC (arith_ss++boolSimps.COND_elim_ss) [] THEN
    REPEAT STRIP_TAC THEN
    Cases_on `h < LIST_MAX l` THEN (
       ASM_SIMP_TAC arith_ss []
