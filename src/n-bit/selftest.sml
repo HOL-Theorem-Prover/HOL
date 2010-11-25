@@ -1,6 +1,7 @@
 open HolKernel Parse boolLib bossLib blastLib;
 
 val _ = set_trace "Unicode" 0
+val _ = set_trace "print blast counterexample" 0
 
 val prs = StringCvt.padRight #" "
 fun trunc w t = let
@@ -43,12 +44,96 @@ in
   case res of NONE => die() | _ => ()
 end
 
+fun test_fail orig (c:conv) tm = let
+  val res = (c tm; SOME "should fail!")
+              handle HolSatLib.SAT_cex _ => SOME "unexpected counterexample!"
+                   | HOL_ERR {origin_function,...} =>
+                       if origin_function = orig then
+                         NONE
+                       else
+                         SOME ("unexpected exception from " ^ origin_function)
+in
+  TextIO.print ("Expecting failure: " ^ trunc 46 tm ^
+                (case res of
+                   NONE => "OK"
+                 | SOME s => s) ^ "\n");
+  case res of SOME _ => die() | _ => ()
+end
+
+fun test_counter (c:conv) tm = let
+  val res = (c tm; SOME "should fail!")
+              handle HolSatLib.SAT_cex thm =>
+                       if Lib.can Drule.EQF_ELIM thm then
+                         NONE
+                       else
+                         SOME "invalid counterexample"
+                   | HOL_ERR {origin_function,...} =>
+                         SOME ("unexpected exception from " ^ origin_function)
+in
+  TextIO.print ("Counterexample: " ^ trunc 49 tm ^
+                (case res of
+                   NONE => "OK"
+                 | SOME s => s) ^ "\n");
+  case res of SOME _ => die() | _ => ()
+end
+
 val raw_blast_true = test (Drule.EQT_ELIM o blastLib.BIT_BLAST_CONV)
 val blast_true = test blastLib.BBLAST_PROVE
+val blast_fail = test_fail "BBLAST_PROVE" blastLib.BBLAST_PROVE
+val blast_counter = test_counter blastLib.BBLAST_PROVE
 val srw_true = test (simpLib.SIMP_PROVE (srw_ss()) [])
 
 (* start tests *)
 val _ = print "blastLib tests\n"
+
+(* Fail (false) *)
+val _ = blast_fail ``!x. x <+ 0w : word8``;
+val _ = blast_fail ``?x. x <+ 0w : word8``;
+val _ = blast_fail ``?x y. !z. (x + y = 0w : word8) /\ P z``;
+val _ = blast_fail ``?x: word8. 3w > 4w : word4``;
+val _ = blast_fail ``x + x = x :'a word``;
+
+(* Fail, can't solve *)
+val _ = blast_fail ``?x. !y. x <=+ y : word8``;
+val _ = blast_fail ``!y. ?x. x <=+ y : word8``;
+val _ = blast_fail ``?x. x <=+ y : word8``;
+val _ = blast_fail ``(!x:word8 y:word8. word_msb x = word_msb y) ==>
+                     (x <+ y = x < y : word8)``
+(* Counterexamples *)
+val _ = blast_counter ``!x. x >=+ 2w : word8``;
+val _ = blast_counter ``!y. x <=+ y : word8``;
+val _ = blast_counter ``(x = 1w) \/ (x = 2w : word2)``;
+val _ = blast_counter ``x = y : word2``
+val _ = blast_counter ``x + x = x : word8``;
+val _ = blast_counter ``x <+ y = x < y : word8``
+
+val _ = blast_true ``!x. x >=+ 2w \/ x <+ 2w : word8``;
+val _ = blast_true ``?x. x <+ 2w : word8``;
+val _ = blast_true ``?x. !y:word8. (y <> y + 1w) /\ x <+ 2w : word8``;
+val _ = blast_true ``?x y. x + y = 12w : word8``;
+val _ = blast_true ``?x. x + x = x : word8``;
+val _ = blast_true ``?x y. !z. (x + y = 0w : word8) /\ (z \/ ~z)``;
+val _ = blast_true ``?x. x <=+ 0w : word8``;
+val _ = blast_true ``!w:word8. ~word_lsb (w << 2)``;
+val _ = blast_true ``?w:word8. word_lsb w``;
+val _ = blast_true ``?x y z. (x + y <+ z + 1w : word8)``;
+val _ = blast_true ``?z y x. (x + y <+ z + 1w : word8)``;
+val _ = blast_true ``?z x y. (x + y <+ z + 1w : word8)``;
+val _ = blast_true ``?x. x``;
+val _ = blast_true ``?x y. x \/ y``;
+val _ = blast_true ``?y x. x \/ y``;
+val _ = blast_true ``!x y. (word_msb x = word_msb y) ==>
+                             (x <+ y = x < y : word8)``
+val _ = blast_true ``?x y. (word_msb x = word_msb y) ==>
+                             (x <+ y = x < y : word8)``
+val _ = blast_true ``!x. x <+ 1w ==> (x + x = x : word8)``;
+val _ = blast_true ``?x. x <+ 1w ==> (x + x = x : word8)``;
+val _ = blast_true ``?x: word8. 3w < 4w : word4``;
+val _ = blast_true ``?x y. x + y = y + x : word8``;
+val _ = blast_true ``?x:word8 y:word8. T``;
+val _ = blast_true ``?x:word8. !y:word8. T``;
+val _ = blast_true ``!x:word8. ?y:word8. T``;
+
 val _ = raw_blast_true
   ``(a + b - b : word8) = a``;
 

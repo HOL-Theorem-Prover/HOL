@@ -208,6 +208,16 @@ fun POP_ASSUM thfun (a::asl, w) = thfun (ASSUME a) (asl,w)
 fun POP_ASSUM_LIST asltac (asl,w) = asltac (map ASSUME asl) ([],w);
 
 (*---------------------------------------------------------------------------
+ * Pop the first assumption satisying the given predictae and give it to
+ * a function (tactic).
+ *---------------------------------------------------------------------------*)
+
+fun PRED_ASSUM pred thfun (asl, w) =
+  case Lib.total (Lib.pluck pred) asl
+    of SOME (ob, asl') => thfun (ASSUME ob) (asl', w)
+       | NONE => raise ERR "PRED_ASSUM" "No suitable assumption found."
+
+(*---------------------------------------------------------------------------
  * Pop the first assumption matching (higher-order match) the given term
  * and give it to a function (tactic).
  *---------------------------------------------------------------------------*)
