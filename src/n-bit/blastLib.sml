@@ -646,12 +646,12 @@ in
           val vars = Term.genvars Type.bool (List.length insts)
           val theta = Lib.map2 (Lib.curry (op |->)) insts vars
           val tm' = Term.subst theta tm
-          val thm = Lib.PASS (HolSatLib.SAT_PROVE tm')
-                    handle HolSatLib.SAT_cex thm => Lib.FAIL thm
+          val thm = (HolSatLib.SAT_PROVE tm'; NONE)
+                    handle HolSatLib.SAT_cex thm => SOME thm
         in
           case thm
-          of Lib.PASS t => []
-           | Lib.FAIL t =>
+          of NONE => []
+           | SOME t =>
                let
                  val theta' = Lib.map2 (Lib.curry (op |->)) vars insts
                  val c = fst (boolSyntax.dest_imp (concl t))
