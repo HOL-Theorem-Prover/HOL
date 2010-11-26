@@ -5,6 +5,50 @@ open HolKernel Parse boolLib pairSyntax pairTheory PairRules;
 
 val PERR = mk_HOL_ERR "pairTools";
 
+(* recursively expand variables with pair type *)
+local
+  val name_of = fst o dest_var
+  fun rename_tac v1 v2 =
+    FULL_STRUCT_CASES_TAC
+      (EXISTS (mk_exists(v2,(mk_eq(v1,v2))),v1) (REFL v1))
+  fun split_tac p a d =
+    FULL_STRUCT_CASES_TAC
+      (CONV_RULE (RENAME_VARS_CONV [name_of a, name_of d])
+         (ISPEC p pair_CASES))
+in
+  fun PairCases_on q g = let
+    val fvs = free_varsl(snd g::fst g)
+    val mk_var = variant fvs o mk_var
+    val v = parse_in_context fvs q
+  in
+    if is_var v then let
+      val (sv,ty) = dest_var v
+      val n = let val n = ref 0 in fn()=> !n before n := !n+1 end
+      fun split_tacs v tya tyd = let
+        fun try_split s ty = let
+          val v = mk_var((name_of v)^s,ty)
+        in (v,
+            case total dest_prod ty of
+              NONE =>
+                (fn()=> rename_tac v (mk_var(sv^(Int.toString(n())),ty)))
+            | SOME (tya, tyd) =>
+                (fn()=> split_tacs v tya tyd))
+        end
+        val (va,ka) = try_split "a" tya
+        val (vd,kd) = try_split "d" tyd
+      in
+        split_tac v va vd
+        THEN ka() THEN kd()
+      end
+    in
+      case total dest_prod (type_of v) of
+        NONE => raise PERR "PairCases_on" "Not of pair type"
+      | SOME (tya, tyd) => split_tacs v tya tyd
+    end g
+    else raise PERR "PairCases_on" "Not a variable"
+  end
+end
+
 (*---------------------------------------------------------------------------
  *
  *     (x = (v1,...,vn))       |- M[(v1,...,vn)]
