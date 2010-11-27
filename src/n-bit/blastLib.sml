@@ -695,7 +695,7 @@ in
          (case Lib.total boolSyntax.dest_eq tm
           of SOME (w,v) =>
                 Lib.can dim_of_word w orelse
-                is_word_index w orelse is_word_index v
+                is_word_index w andalso is_word_index v
            | NONE =>
                (case Lib.total wordsSyntax.dest_word_lo tm
                 of SOME (w,_) => Lib.can dim_of_word w
@@ -775,7 +775,7 @@ in
       else if wordsSyntax.is_word_lo tm then
         Conv.RIGHT_CONV_RULE (Conv.REWR_CONV (conv c)) thm
       else let val (l,r) = boolSyntax.dest_eq c in
-        if wordsSyntax.is_index l orelse wordsSyntax.is_index r then
+        if wordsSyntax.is_index l andalso wordsSyntax.is_index r then
           let
             val thm2 = TRY_INDEX_CONV conv l
             val thm3 = TRY_INDEX_CONV conv r
@@ -894,60 +894,6 @@ val FULL_BBLAST_TAC =
   REPEAT
     (Tactical.PRED_ASSUM (Lib.can (HolKernel.find_term is_blastable)) MP_TAC)
   THEN BBLAST_TAC;
-
-(*
-(* Succeed *)
-val thm = BBLAST_PROVE ``!x. x >=+ 2w \/ x <+ 2w : word8``;
-val thm = BBLAST_PROVE ``?x. x <+ 2w : word8``;
-val thm = BBLAST_PROVE ``?x. !y:word8. (y <> y + 1w) /\ x <+ 2w : word8``;
-val thm = BBLAST_PROVE ``?x y. x + y = 12w : word8``;
-val thm = BBLAST_PROVE ``?x. x + x = x : word8``;
-val thm = BBLAST_PROVE ``?x y. !z. (x + y = 0w : word8) /\ (z \/ ~z)``;
-val thm = BBLAST_PROVE ``?x. x <=+ 0w : word8``;
-val thm = BBLAST_PROVE ``!w:word8. ~word_lsb (w << 2)``;
-val thm = BBLAST_PROVE ``?w:word8. word_lsb w``;
-val thm = BBLAST_PROVE ``?x y z. (x + y <+ z + 1w : word8)``;
-val thm = BBLAST_PROVE ``?z y x. (x + y <+ z + 1w : word8)``;
-val thm = BBLAST_PROVE ``?z x y. (x + y <+ z + 1w : word8)``;
-val thm = BBLAST_PROVE ``?x. x``;
-val thm = BBLAST_PROVE ``?x y. x \/ y``;
-val thm = BBLAST_PROVE ``?y x. x \/ y``;
-val thm = BBLAST_PROVE ``!x y. (word_msb x = word_msb y) ==>
-                               (x <+ y = x < y : word8)``
-val thm = BBLAST_PROVE ``?x y. (word_msb x = word_msb y) ==>
-                               (x <+ y = x < y : word8)``
-val thm = BBLAST_PROVE ``!x. x <+ 1w ==> (x + x = x : word8)``;
-val thm = BBLAST_PROVE ``?x. x <+ 1w ==> (x + x = x : word8)``;
-val thm = BBLAST_PROVE ``?x: word8. 3w < 4w : word4``;
-val thm = BBLAST_PROVE ``?x y. x + y = y + x : word8``;
-val thm = BBLAST_PROVE ``?x y:word8. T``;
-val thm = BBLAST_PROVE ``?x:word8. !y:word8. T``;
-val thm = BBLAST_PROVE ``!x:word8. ?y:word8. T``;
-
-(* Fail false *)
-val thm = BBLAST_PROVE ``!x. x <+ 0w : word8``;
-val thm = BBLAST_PROVE ``?x. x <+ 0w : word8``;
-val thm = BBLAST_PROVE ``?x y. !z. (x + y = 0w : word8) /\ P z``;
-val thm = BBLAST_PROVE ``?x: word8. 3w > 4w : word4``;
-
-(* Fail, not blastable *)
-val thm = BBLAST_PROVE ``x + x = x``;
-
-(* Fail, can't solve *)
-val thm = BBLAST_PROVE ``?x. !y. x <=+ y : word8``;
-val thm = BBLAST_PROVE ``!y. ?x. x <=+ y : word8``;
-val thm = BBLAST_PROVE ``?x. x <=+ y : word8``;
-val thm = BBLAST_PROVE ``(!x:word8 y:word8. word_msb x = word_msb y) ==>
-                         (x <+ y = x < y : word8)``
-
-(* Counter example *)
-val thm = BBLAST_PROVE ``!x. x >=+ 2w : word8``;
-val thm = BBLAST_PROVE ``!y. x <=+ y : word8``;
-val thm = BBLAST_PROVE ``(x = 1w) \/ (x = 2w : word2)``;
-val thm = BBLAST_PROVE ``x = y : word2``
-val thm = BBLAST_PROVE ``x + x = x : word8``;
-val thm = BBLAST_PROVE ``x <+ y = x < y : word8``
-*)
 
 (* ------------------------------------------------------------------------ *)
 

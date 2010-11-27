@@ -133,6 +133,7 @@ val _ = blast_true ``?x y. x + y = y + x : word8``;
 val _ = blast_true ``?x:word8 y:word8. T``;
 val _ = blast_true ``?x:word8. !y:word8. T``;
 val _ = blast_true ``!x:word8. ?y:word8. T``;
+val _ = blast_true  ``((w2w a - w2w b) : 33 word ' 32) = (a <+ b : word32)``;
 
 val _ = raw_blast_true
   ``(a + b - b : word8) = a``;
