@@ -693,9 +693,7 @@ in
   fun is_blastable tm =
          is_word_index tm orelse
          (case Lib.total boolSyntax.dest_eq tm
-          of SOME (w,v) =>
-                Lib.can dim_of_word w orelse
-                is_word_index w andalso is_word_index v
+          of SOME (w,v) => Lib.can dim_of_word w
            | NONE =>
                (case Lib.total wordsSyntax.dest_word_lo tm
                 of SOME (w,_) => Lib.can dim_of_word w
@@ -775,29 +773,19 @@ in
       else if wordsSyntax.is_word_lo tm then
         Conv.RIGHT_CONV_RULE (Conv.REWR_CONV (conv c)) thm
       else let val (l,r) = boolSyntax.dest_eq c in
-        if wordsSyntax.is_index l andalso wordsSyntax.is_index r then
-          let
-            val thm2 = TRY_INDEX_CONV conv l
-            val thm3 = TRY_INDEX_CONV conv r
-          in
-            Conv.RIGHT_CONV_RULE
-              (PURE_REWRITE_CONV [thm2, thm3]
-               THENC Conv.TRY_CONV BIT_TAUT_CONV) thm
-          end
-        else
-          case bit_theorems conv (dim_of_word l, l, r)
-          of Lib.PASS thms =>
-                 Conv.RIGHT_CONV_RULE
-                   (Conv.REWR_CONV (fcp_eq_thm (Term.type_of l))
-                    THENC REWRITE_CONV thms) thm
-           | Lib.FAIL (i, fail_thm) =>
-               let
-                 val ty = wordsSyntax.dim_of l
-                 val sz_thm = mk_size_thm (i, ty)
-                 val thm2 = Drule.MATCH_MP FCP_NEQ (Thm.CONJ sz_thm fail_thm)
-               in
-                 Conv.RIGHT_CONV_RULE (Conv.REWR_CONV thm2) thm
-               end
+        case bit_theorems conv (dim_of_word l, l, r)
+        of Lib.PASS thms =>
+               Conv.RIGHT_CONV_RULE
+                 (Conv.REWR_CONV (fcp_eq_thm (Term.type_of l))
+                  THENC REWRITE_CONV thms) thm
+         | Lib.FAIL (i, fail_thm) =>
+             let
+               val ty = wordsSyntax.dim_of l
+               val sz_thm = mk_size_thm (i, ty)
+               val thm2 = Drule.MATCH_MP FCP_NEQ (Thm.CONJ sz_thm fail_thm)
+             in
+               Conv.RIGHT_CONV_RULE (Conv.REWR_CONV thm2) thm
+             end
       end
     end
   end
