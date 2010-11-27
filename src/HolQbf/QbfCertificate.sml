@@ -170,14 +170,28 @@ struct
   fun check t dict (VALID (exts,lits)) = let
     open Lib Term boolSyntax
 
-    (* move these three to library? *)
-    val inverted_dict =
-      Redblackmap.foldr (fn(v,n,d)=>Redblackmap.insert(d,n,v))
-                        (Redblackmap.mkDict Int.compare)
-                        dict
+    val (var_to_num, num_to_var) =
+      case dict of
+        NONE => let
+          val s = !QDimacs.var_prefix
+          val z = String.size(s)
+        in
+          (fn v => valOf(Int.fromString(String.extract(fst(dest_var v),z,NONE))),
+           fn n => mk_var(s^(Int.toString n),Type.bool))
+        end
+      | SOME dict => let
+          open Redblackmap
+          val invd = foldr (fn(v,n,d)=>insert(d,n,v))
+                           (mkDict Int.compare)
+                           dict
+        in
+          (fn v => find(dict,v), curry find invd)
+        end
+
+    (* move these to library? *)
 
     fun literal_to_term n = let
-      val v = Redblackmap.find(inverted_dict,n)
+      val v = num_to_var n
     in if n < 0 then mk_neg v else v end
 
     fun extension_to_term (AND []) = T
@@ -189,7 +203,7 @@ struct
 
     fun foldthis ((_,_,true),acc) = acc
       | foldthis ((key,v,false),acc as (t,d)) = let
-          val n = Redblackmap.find(dict,v)
+          val n = var_to_num v
           val m = Redblackmap.find(lits,n)
           val e = Redblackmap.find(exts,m)
           val tm = extension_to_term e

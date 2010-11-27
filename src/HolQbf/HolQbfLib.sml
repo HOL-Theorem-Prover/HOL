@@ -25,7 +25,7 @@ structure HolQbfLib :> HolQbfLib = struct
           [path, cert_path]
       else ()
   in
-    QbfCertificate.check t dict cert
+    QbfCertificate.check t (SOME dict) cert
   end
 
 end
