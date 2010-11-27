@@ -712,11 +712,6 @@ local
   fun INDEX_CONV conv = TOP_DEPTH_CONV (FCP_INDEX_CONV conv)
                         THENC Conv.TRY_CONV BIT_TAUT_CONV
 
-  fun TRY_INDEX_CONV conv tm =
-        INDEX_CONV conv tm
-        handle HOL_ERR _ => dummy_thm
-             | Conv.UNCHANGED => dummy_thm
-
   fun bit_theorems conv (n, l, r) =
       let
         val _ = if !blast_trace > 1 then
@@ -765,11 +760,7 @@ in
       thm
     else let val conv = mk_sums NUM_CONV c in
       if wordsSyntax.is_index tm then
-        let
-          val thm2 = INDEX_CONV conv c
-        in
-          Conv.RIGHT_CONV_RULE (Conv.REWR_CONV thm2) thm
-        end
+        Conv.RIGHT_CONV_RULE (Conv.REWR_CONV (INDEX_CONV conv c)) thm
       else if wordsSyntax.is_word_lo tm then
         Conv.RIGHT_CONV_RULE (Conv.REWR_CONV (conv c)) thm
       else let val (l,r) = boolSyntax.dest_eq c in
@@ -798,11 +789,15 @@ in
         val thm = Conv.QCONV WORD_SIMP_CONV tm'
         val tms = HolKernel.find_terms is_blastable (rhsc thm)
         val thms = Lib.mapfilter BIT_BLAST_CONV tms
+        val res = FORALL_EQ_RULE vars
+                    (Conv.RIGHT_CONV_RULE
+                       (Rewrite.ONCE_REWRITE_CONV thms THENC
+                        Conv.TRY_CONV BIT_TAUT_CONV) thm)
       in
-        FORALL_EQ_RULE vars
-          (Conv.RIGHT_CONV_RULE
-             (Rewrite.ONCE_REWRITE_CONV thms THENC
-              Conv.TRY_CONV BIT_TAUT_CONV) thm)
+        if term_eq (rhsc res) tm then
+          raise Conv.UNCHANGED
+        else
+          res
       end
 end
 
@@ -833,7 +828,7 @@ in
   fun BBLAST_PROVE tm =
   let
     val (vars,tm') = boolSyntax.strip_exists tm
-    val thm = BBLAST_CONV tm'
+    val thm = Conv.QCONV BBLAST_CONV tm'
   in
     if List.null vars then
       Drule.EQT_ELIM thm
