@@ -22,7 +22,18 @@ sig
   *)
   val PERM_ELIM_DUPLICATES_CONV : term -> thm
 
+  (* Given a term of the form "PERM l1 l2" this
+     conversion tries to combine TAKE and DROP parts of
+     l1 and l2. It uses that resorting is allowed inside permutations.
 
+     Example:
+
+     PERM_TAKE_DROP_CONV ``PERM (DROP n l1++l2++TAKE n l1) (l1++TAKE n l2++DROP n l2)``
+
+     |- PERM (DROP n l1 ++ l2 ++ TAKE n l1) (l1 ++ TAKE n l2 ++ DROP n l2) <=>
+        PERM (l1 ++ l2) (l2 ++ l1)
+  *)
+  val PERM_TAKE_DROP_CONV : term -> thm
 
   (* Given a term ``PERM l1 l2`` this conversions sorts the lists l1 and l2.
 
