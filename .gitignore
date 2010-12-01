@@ -75,6 +75,7 @@ help/theorygraph/theories.imap
 help/theorygraph/theories.jpg
 help/theorygraph/theories.pdf
 
+src/bool/SharingTables.*
 src/emit/ML/*
 src/emit/Caml/*
 src/quotient/src/*.html
