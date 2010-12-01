@@ -32,6 +32,7 @@
 build-log
 svn-update
 developers/generateBuildSummary
+developers/comparelogs
 bin/Holmake
 bin/build
 bin/hol
