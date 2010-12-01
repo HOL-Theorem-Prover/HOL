@@ -1,4 +1,4 @@
-
+val theory_width = 30
 
 
 structure Process = OS.Process
@@ -32,7 +32,7 @@ val _ = if length args <> 2 andalso diffsort then
 val base = hd args
 
 fun print_dashes () =
-    (print (StringCvt.padLeft #"-" (15 * length args + 25) "");
+    (print (StringCvt.padLeft #"-" (15 * length args + theory_width) "");
      print "\n")
 
 fun read_file (fname,m) = let
@@ -99,7 +99,7 @@ end
 fun fmt_real r = centered25 (Real.fmt (StringCvt.FIX (SOME 3)) r)
 
 val _ = if not bequiet then
-          (print (StringCvt.padLeft #" " 25 "");
+          (print (StringCvt.padLeft #" " theory_width "");
            app (print o fmt_fname) args;
            print "\n";
            print_dashes())
@@ -112,7 +112,7 @@ fun print_line m thyname = let
         NONE => print (centered25 "--")
       | SOME r => print (fmt_real r)
 in
-  print (StringCvt.padRight #" " 25 thyname);
+  print (StringCvt.padRight #" " theory_width thyname);
   app print_entry args;
   print "\n"
 end
@@ -143,7 +143,7 @@ end
 
 val _ = if not bequiet then
           (print_dashes();
-           print (StringCvt.padRight #" " 25 "Total");
+           print (StringCvt.padRight #" " theory_width "Total");
            app print_entry args;
            print "\n")
         else ()
