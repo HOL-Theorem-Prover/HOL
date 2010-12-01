@@ -805,7 +805,8 @@ fun unadjzip [] A = A
     theorems or whatnot, then the initial theory will be exported.
  ----------------------------------------------------------------------------*)
 
-val new_theory_time = ref (Timer.checkCPUTimer Globals.hol_clock)
+fun total_cpu {usr,sys} = Time.+(usr,sys)
+val new_theory_time = ref (total_cpu (Timer.checkCPUTimer Globals.hol_clock))
 
 val report_times = ref true
 
@@ -880,8 +881,8 @@ fun export_theory () =
     of [] =>
        (let val ostrm1 = Portable.open_out(concat["./",name,".sig"])
             val ostrm2 = Portable.open_out(concat["./",name,".sml"])
-            val time_now = #usr (Timer.checkCPUTimer Globals.hol_clock)
-            val time_since = Time.-(time_now, #usr (!new_theory_time))
+            val time_now = total_cpu (Timer.checkCPUTimer Globals.hol_clock)
+            val time_since = Time.-(time_now, !new_theory_time)
             val tstr = Time.toString time_since
         in
           mesg ("Exporting theory "^Lib.quote thyname^" ... ");
@@ -946,7 +947,8 @@ fun new_theory str =
       val thyname = thyid_name thid
       fun mk_thy () = (HOL_MESG ("Created theory "^Lib.quote str);
                         makeCT(fresh_segment str); initialize thyname)
-      val _ = new_theory_time := Timer.checkCPUTimer Globals.hol_clock
+      val _ =
+          new_theory_time := total_cpu (Timer.checkCPUTimer Globals.hol_clock)
   in
    if str=thyname
       then (HOL_MESG("Restarting theory "^Lib.quote str);
