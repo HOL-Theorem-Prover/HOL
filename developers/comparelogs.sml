@@ -13,11 +13,24 @@ fun mkquiet {bequiet, diffsort, files} =
 fun mkdiff {bequiet, diffsort, files} =
     {bequiet = bequiet, diffsort = true, files = files}
 
+val usage_msg =
+    "Usage:\n  " ^ CommandLine.name() ^ " file1 file2 ... filen\n\n" ^
+    "Options:\n\
+    \  -d    Sort results in order of the differences (only with two files)\n\
+    \  -q    Print raw data only, no sums, or fancy lines; (output to other tools)\n\
+    \  -h    Show this help message\n\
+    \  -?    Show this help message\n"
+
+fun show_usage() = (print usage_msg; Process.exit Process.success)
+
+
 fun getargs args =
     case args of
       [] => {bequiet = false, diffsort = false, files = []}
     | "-q" :: rest => mkquiet (getargs rest)
     | "-d" :: rest => mkdiff (getargs rest)
+    | "-h" :: _ => show_usage()
+    | "-?" :: _ => show_usage()
     | _ => {bequiet = false, diffsort = false, files = args}
 
 val {bequiet,diffsort,files = args} = getargs args0
