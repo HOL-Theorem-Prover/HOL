@@ -72,31 +72,25 @@ SIMP_RULE list_ss [LIST_TO_FMAP_THM, holfoot_separation_combinator_def] holfoot_
 (***************************************)
 
 val holfoot_ap_amortized_queue_term = Term `holfoot_ap_amortized_queue`;
-
 fun mk_holfoot_ap_amoritized_queue_absyn (strong, tag, exp, dtag, data) =
       Absyn.list_mk_app (Absyn.mk_AQ holfoot_ap_amortized_queue_term, [
-         Absyn.mk_AQ (if strong then T else F),
-         tag, exp, 
-         dtag, 
-         data]);
+         Absyn.mk_AQ (if strong then T else F), tag, exp, dtag, data]);
 
 (* amortized_queue (q,data) *)
 val _ = add_genpred ("amortized_queue", [Aspred_arg_ty_exp, Aspred_arg_ty_comma, Aspred_arg_ty_hol], 
-                 fn [exp1,data] => mk_holfoot_ap_amoritized_queue_absyn (
-                     true,
-                     Absyn.mk_AQ (string2holfoot_tag (!list_link_tag)), 
-                     exp1, 
-                     Absyn.mk_AQ (string2holfoot_tag (!data_list_tag)),
-                     data));
+          fn [exp1,data] => mk_holfoot_ap_amoritized_queue_absyn (true, 
+             Absyn.mk_AQ (string2holfoot_tag (!list_link_tag)), exp1, 
+             Absyn.mk_AQ (string2holfoot_tag (!data_list_tag)), data));
 
+(* weak_amortized_queue (q,data) *)
 val _ = add_genpred ("weak_amortized_queue", [Aspred_arg_ty_exp, Aspred_arg_ty_comma, Aspred_arg_ty_hol], 
-                 fn [exp1,data] => mk_holfoot_ap_amoritized_queue_absyn (
-                     false,
-                     Absyn.mk_AQ (string2holfoot_tag (!list_link_tag)), 
-                     exp1, 
-                     Absyn.mk_AQ (string2holfoot_tag (!data_list_tag)),
-                     data));
+          fn [exp1,data] => mk_holfoot_ap_amoritized_queue_absyn (false,
+             Absyn.mk_AQ (string2holfoot_tag (!list_link_tag)), exp1, 
+             Absyn.mk_AQ (string2holfoot_tag (!data_list_tag)), data));
 
+(***************************************)
+(* add it to the pretty printer        *)
+(***************************************)
 
 fun amortized_queue_printer Gs sys (ppfns:term_pp_types.ppstream_funs) gravs d pps t = let
     open Portable term_pp_types

@@ -62,37 +62,30 @@ val file = concat [examplesDir, "/interactive/insertionsort.dsf"];
 (* holfoot_set_goal_procedures file ["delete"] *)
 
 val delete_TAC =
-   HF_CONTINUE_TAC THEN   
-   REPEAT STRIP_TAC THEN
-   Cases_on `i'_const = 0` THEN1 (
-     xHF_CONTINUE_TAC [use_asms]
-   ) THEN   
+   HF_CONTINUE_TAC THEN REPEAT STRIP_TAC THEN
+   Cases_on `i'_const = 0` THEN1 xHF_CONTINUE_TAC [use_asms] THEN   
    xHF_CONTINUE_TAC [use_asms, add_rewrites [REMOVE_def], generate_vcs] THEN
-   HF_VC_TAC THEN
-   FULL_SIMP_TAC list_ss []
-
-
+   HF_VC_TAC THEN FULL_SIMP_TAC list_ss []
 
 (* holfoot_set_goal_procedures file ["min"] *)
 val min_TAC =
-   xHF_CONTINUE_TAC [generate_vcs] THEN   
-   REPEAT STRIP_TAC THEN (
-      HF_ELIM_COMMENTS_TAC THEN
-      ASM_SIMP_TAC arith_ss []
-   );
+   HF_CONTINUE_TAC THEN HF_VC_TAC THEN
+   REPEAT STRIP_TAC THEN ASM_SIMP_TAC arith_ss []
 
 (* holfoot_set_goal_procedures file ["sortlist"] *)
 val sortlist_TAC =
+   xHF_CONTINUE_TAC [add_rewrites [SORTED_DEF, SORTED_DEF],
+                     add_ssfrags [permLib.PERM_ss]] THEN
    xHF_SOLVE_TAC [generate_vcs,
        add_rewrites [SORTED_EQ, transitive_LE, EVERY_MEM, SORTED_DEF],
        add_ssfrags [permLib.PERM_ss]] THEN     
    SIMP_TAC (std_ss++boolSimps.CONJ_ss) [GSYM FORALL_AND_THM] THEN
    REPEAT GEN_TAC THEN HF_ELIM_COMMENTS_TAC THEN
-   Cases_on `mc2 = data_h` THEN ASM_SIMP_TAC (std_ss++permLib.PERM_ss) [REMOVE_def] THEN
+   Cases_on `m'_const = data_h` THEN ASM_SIMP_TAC (std_ss++permLib.PERM_ss) [REMOVE_def] THEN
    REPEAT STRIP_TAC THENL [
       METIS_TAC [PERM_MEM_EQ],
 
-     `MEM y (data_h::REMOVE mc2 data_t)` by METIS_TAC [PERM_MEM_EQ] THEN
+     `MEM y (data_h::REMOVE m'_const data_t)` by METIS_TAC [PERM_MEM_EQ] THEN
       FULL_SIMP_TAC list_ss [] THEN
       METIS_TAC[MEM_REMOVE_IMP],
 
@@ -100,7 +93,6 @@ val sortlist_TAC =
       ASM_SIMP_TAC (std_ss++permLib.PERM_SIMPLE_ss) [] THEN
       METIS_TAC[PERM_REMOVE]
    ];
-
 
 val _ = holfoot_tac_verify_spec file NONE
                 [("sortlist", sortlist_TAC),

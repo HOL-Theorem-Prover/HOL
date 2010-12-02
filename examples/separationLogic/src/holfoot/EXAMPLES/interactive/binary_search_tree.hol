@@ -18,8 +18,7 @@ HOL_Interactive.toggle_quietdec();
 (* Some useful REWRITES                                                       *)
 (******************************************************************************)
 
-    
-val BIN_SEARCH_TREE_SET_defn = Hol_defn "BIN_SEARCH_TREE_SET" 
+val BIN_SEARCH_TREE_SET_def = Define 
   `(BIN_SEARCH_TREE_SET leaf keys = (keys = EMPTY)) /\
    (BIN_SEARCH_TREE_SET (node [k] [t1; t2]) keys = 
        ?k1 k2. (keys = k INSERT (k1 UNION k2)) /\
@@ -28,15 +27,7 @@ val BIN_SEARCH_TREE_SET_defn = Hol_defn "BIN_SEARCH_TREE_SET"
                (BIN_SEARCH_TREE_SET t1 k1) /\
                (BIN_SEARCH_TREE_SET t2 k2)) /\
    (BIN_SEARCH_TREE_SET _ _ = F)`;
-
-val (BIN_SEARCH_TREE_SET_def, _) =
-Defn.tprove (BIN_SEARCH_TREE_SET_defn,
- Q.EXISTS_TAC `(measure (\ (t,_). MAX_DEPTH t))` THEN
- REWRITE_TAC [prim_recTheory.WF_measure] THEN
- SIMP_TAC arith_ss [prim_recTheory.measure_thm,
-                    MEM,
-                    MAX_DEPTH___DIRECT_SUBTREES___NODE]);
-
+    
 val BIN_SEARCH_TREE_SET_THM = prove (
  ``(BIN_SEARCH_TREE_SET leaf keys = (keys = EMPTY)) /\
    (BIN_SEARCH_TREE_SET (node v tL) keys = 
