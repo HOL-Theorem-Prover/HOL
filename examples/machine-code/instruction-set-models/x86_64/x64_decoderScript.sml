@@ -166,7 +166,7 @@ val decode_Zrm32_def = Define `  (* sw2sw = sign-extension *)
       if ~(g "Mod" = [T;T]) /\ (g "R/M" = [F;F;T]) then decode_SIB g else
       if  (g "Mod" = [F;F]) then Zm NONE (SOME (b2reg g "REX.B" "R/M")) 0w else
       if  (g "Mod" = [T;F]) then Zm NONE (SOME (b2reg g "REX.B" "R/M")) (sw2sw:word8->word64 (b2w g "disp8")) else
-      if  (g "Mod" = [F;T]) then Zm NONE (SOME (b2reg g "REX.B" "R/M")) (sw2sw:word8->word64 (b2w g "disp32")) else
+      if  (g "Mod" = [F;T]) then Zm NONE (SOME (b2reg g "REX.B" "R/M")) (sw2sw:word32->word64 (b2w g "disp32")) else
       if  (g "Mod" = [T;T]) then Zr (b2reg g "REX.B" "R/M") else Zr (b2reg g "REX.B" "reg") `;
 
 val decode_Zconst_def = Define `
