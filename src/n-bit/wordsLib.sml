@@ -687,7 +687,7 @@ val WORD_ADD_ss =
      name = "WORD_ADD_CANON_CONV",
      pats = [``words$word_add (w:'a word) y``]};
 
-val WORD_SUB_ss =
+val WORD_SUBTRACT_ss =
  simpLib.merge_ss
    [simpLib.rewrites [word_sub_def],
     simpLib.std_conv_ss
@@ -731,11 +731,7 @@ val WORD_ARITH_EQ_ss =
 
 val WORD_ARITH_ss =
   simpLib.named_merge_ss "word arith"
-    [WORD_MULT_ss, WORD_ADD_ss, WORD_SUB_ss, WORD_w2n_ss, WORD_CONST_ss];
-
-val WORD_MULT_CONV = SIMP_CONV (pure_ss++WORD_MULT_ss) [];
-val WORD_ADD_CONV  = SIMP_CONV (pure_ss++WORD_ADD_ss) [];
-val WORD_SUB_CONV  = SIMP_CONV (pure_ss++WORD_SUB_ss) [];
+    [WORD_MULT_ss, WORD_ADD_ss, WORD_SUBTRACT_ss, WORD_w2n_ss, WORD_CONST_ss];
 
 local
  val conv = SIMP_CONV (std_ss++WORD_ARITH_EQ_ss++WORD_ARITH_ss) []
@@ -1041,6 +1037,74 @@ val WORD_MUL_LSL_ss =
 
 (* ------------------------------------------------------------------------- *)
 
+local
+  val SYM_WORD_DIV_LSR = GSYM WORD_DIV_LSR
+  val two_tm = numSyntax.term_of_int 2
+in
+  fun WORD_DIV_LSR_CONV tm =
+    let
+      val (l,r) = wordsSyntax.dest_word_div tm
+      val (v,ty) = wordsSyntax.dest_n2w r
+      val p = fst (wordsSyntax.dest_mod_word_literal r)
+      val n = numSyntax.mk_numeral (Arbnum.log2 p)
+      val lt_thm = numSyntax.mk_less (n, wordsSyntax.mk_dimindex ty)
+                    |> (Conv.RAND_CONV SIZES_CONV THENC numLib.REDUCE_CONV)
+                    |> Drule.EQT_ELIM
+      val exp_thm = boolSyntax.mk_eq
+                       (wordsSyntax.mk_n2w (v,ty),
+                        wordsSyntax.mk_n2w (numSyntax.mk_exp (two_tm, n),ty))
+                    |> WORD_EVAL_CONV
+                    |> Drule.EQT_ELIM
+      val thm1 = Rewrite.PURE_ONCE_REWRITE_CONV [exp_thm] tm
+      val thm2 = Thm.MP (Drule.ISPECL [l,n] SYM_WORD_DIV_LSR) lt_thm
+    in
+      Thm.TRANS thm1 thm2
+    end handle HOL_ERR _ => raise ERR "WORD_DIV_LSR_CONV" ""
+             | Domain => raise ERR "WORD_DIV_LSR_CONV" "Divide by zero"
+end
+
+(* ------------------------------------------------------------------------- *)
+
+fun WORD_LIT_CONV tm =
+let
+  val ty = wordsSyntax.dim_of tm
+  val (n,sz) = wordsSyntax.dest_mod_word_literal tm
+  val res = if n <> Arbnum.zero andalso sz <> Arbnum.one andalso
+               Arbnum.log2 n = Arbnum.less1 sz
+            then
+              wordsSyntax.mk_word_2comp
+                (wordsSyntax.mk_n2w (numLib.mk_numeral
+                   (Arbnum.-(Arbnum.pow (Arbnum.two, sz), n)), ty))
+            else
+              wordsSyntax.mk_n2w (numLib.mk_numeral n, ty)
+  val _ = not (term_eq res tm) orelse raise Conv.UNCHANGED
+in
+  boolSyntax.mk_eq (tm, res)
+    |> WORD_EVAL_CONV
+    |> Drule.EQT_ELIM
+end
+
+val NEG1_WORD1 = Drule.EQT_ELIM (WORD_EVAL_CONV ``-1w = 1w : word1``);
+
+fun WORD_SUB_CONV tm =
+  Conv.CHANGED_CONV
+   (SIMP_CONV (bool_ss++WORD_MULT_ss++WORD_SUBTRACT_ss) []
+    THENC DEPTH_CONV WORD_LIT_CONV
+    THENC PURE_REWRITE_CONV [WORD_SUB_INTRO, WORD_NEG_SUB, WORD_SUB_RNEG,
+            WORD_NEG_NEG, WORD_MULT_CLAUSES, NEG1_WORD1]) tm
+  handle HOL_ERR (err as {origin_function, ...}) =>
+    if origin_function = "CHANGED_CONV" then
+      raise Conv.UNCHANGED
+    else
+      raise HOL_ERR err;
+
+val WORD_SUB_ss =
+  simpLib.name_ss "WORD_SUB"
+    (simpLib.std_conv_ss
+       {name = "WORD_SUB_CONV", pats = [], conv = WORD_SUB_CONV});
+
+(* ------------------------------------------------------------------------- *)
+
 val LET_RULE = SIMP_RULE (bool_ss++boolSimps.LET_ss) [];
 val OR_AND_COMM_RULE = ONCE_REWRITE_RULE [WORD_ADD_COMM, WORD_OR_COMM];
 
@@ -1066,6 +1130,96 @@ val WORD_EXTRACT_ss =
 
 (* ------------------------------------------------------------------------- *)
 
+fun full_dest_strip t =
+let val (l,r) = strip_comb t
+    val {Thy = thy, Name = name, ...} = Term.dest_thy_const l
+in
+  (thy, name, r)
+end;
+
+fun dest_strip t =
+let val (l,r) = strip_comb t in
+  (fst (dest_const l), r)
+end;
+
+(* ------------------------------------------------------------------------- *)
+
+local
+  val reduce = rhs o concl o numLib.REDUCE_CONV;
+
+  fun log2_of tm =
+    case Lib.total numSyntax.dest_numeral (reduce tm)
+    of SOME i => (Arbnum.log2 i handle Domain => raise ERR "log2_of" "zero")
+     | NONE => raise ERR "num_to_2exp" "Not a number"
+
+  val SYM_BITS_THM   = GSYM bitTheory.BITS_THM
+  val SYM_BITS_ZERO3 = GSYM bitTheory.BITS_ZERO3
+  val SYM_BITS_THM2  = GSYM bitTheory.BITS_THM2
+  val MOD_DIMINDEX2  = REWRITE_RULE [dimword_def] MOD_DIMINDEX
+
+  fun BITS_INTRO_CONV tm =
+   (case Lib.total full_dest_strip tm
+    of SOME ("arithmetic", "MOD", [m,n]) =>
+       (case Lib.total full_dest_strip m
+        of SOME ("arithmetic", "DIV", [p,q]) =>
+              let
+                val _ = not (numSyntax.is_numeral p) orelse
+                        raise ERR "BITS_INTRO_CONV" ""
+                val l = log2_of q
+                val h = numSyntax.mk_numeral
+                          (Arbnum.less1 (Arbnum.+(log2_of n, l)))
+              in
+                Thm.TRANS (numLib.REDUCE_CONV tm)
+                  (SYM_BITS_THM
+                    |> Drule.SPECL [h, numSyntax.mk_numeral l, p]
+                    |> Conv.CONV_RULE (Conv.LHS_CONV numLib.REDUCE_CONV))
+              end
+         | _ =>
+              let
+                val _ = not (numSyntax.is_numeral m) orelse
+                        raise ERR "BITS_INTRO_CONV" ""
+                val h = numSyntax.mk_numeral (Arbnum.less1 (log2_of n))
+              in
+                Thm.TRANS (numLib.REDUCE_CONV tm)
+                  (SYM_BITS_ZERO3
+                    |> Drule.SPECL [h, m]
+                    |> Conv.CONV_RULE (Conv.LHS_CONV numLib.REDUCE_CONV))
+              end)
+   | SOME ("arithmetic", "DIV", [m,n]) =>
+       (case Lib.total full_dest_strip m
+        of SOME ("arithmetic", "MOD", [p,q]) =>
+              let
+                val _ = not (numSyntax.is_numeral p) orelse
+                        raise ERR "BITS_INTRO_CONV" ""
+                val l = numSyntax.mk_numeral (log2_of n)
+                val h = numSyntax.mk_numeral (Arbnum.less1 (log2_of q))
+              in
+                Thm.TRANS (numLib.REDUCE_CONV tm)
+                  (SYM_BITS_THM2
+                    |> Drule.SPECL [h, l, p]
+                    |> Conv.CONV_RULE (Conv.LHS_CONV numLib.REDUCE_CONV))
+              end
+         | _ => raise ERR "BITS_INTRO_CONV" "Could not convert to BITS")
+   | _ => raise ERR "BITS_INTRO_CONV" "Could not convert to BITS")
+  handle HOL_ERR _ =>
+    raise ERR "BITS_INTRO_CONV" "Could not convert to BITS"
+in
+  val BITS_INTRO_CONV =
+        PURE_REWRITE_CONV
+          [MOD_DIMINDEX, MOD_DIMINDEX2,
+           SYM_BITS_THM, SYM_BITS_ZERO3, SYM_BITS_THM2]
+        THENC TOP_DEPTH_CONV BITS_INTRO_CONV
+end
+
+val BITS_INTRO_ss =
+  simpLib.name_ss "BITS_INTRO"
+    (simpLib.std_conv_ss
+      {name = "BITS_INTRO_CONV",
+       pats = [``a MOD b``, ``(a MOD b) DIV c``],
+       conv = BITS_INTRO_CONV});
+
+(* ------------------------------------------------------------------------- *)
+
 local
   val ssfrags = [WORD_LOGIC_ss, WORD_ARITH_ss, WORD_SHIFT_ss, WORD_GROUND_ss,
                  BIT_ss, SIZES_ss]
@@ -1080,17 +1234,121 @@ val WORD_CONV = SIMP_CONV (std_ss++WORD_ss++WORD_EXTRACT_ss)
 
 (* ------------------------------------------------------------------------- *)
 
+local
+  val n2w_LOWER_ss =
+    rewrites
+     ([n2w_BITS, n2w_sub, n2w_sub_eq_0] @
+     List.map GSYM
+      [wordsTheory.word_add_n2w,
+       wordsTheory.word_mul_n2w,
+       wordsTheory.w2w_def,
+       wordsTheory.w2w_id])
+
+  fun num_lt tm =
+    case Lib.total full_dest_strip tm
+    of SOME ("arithmetic", "MOD", [m,n]) =>
+        (case Lib.total numSyntax.dest_numeral n
+         of SOME i =>
+              if Arbnum.<(Arbnum.zero, i) then
+                [Thm.MP
+                   (Drule.SPECL [m,n] arithmeticTheory.MOD_LESS)
+                   (numLib.DECIDE (numSyntax.mk_less (numSyntax.zero_tm, n)))]
+              else
+                []
+          | NONE => [])
+     | SOME ("bit", "BITS", [h,l,n]) =>
+         if numSyntax.is_numeral h then
+           if numSyntax.is_numeral l then
+             [Conv.CONV_RULE (Conv.RAND_CONV numLib.REDUCE_CONV)
+               (Drule.SPECL [h,l,n] bitTheory.BITSLT_THM)]
+           else
+             [Conv.CONV_RULE (Conv.RAND_CONV numLib.REDUCE_CONV)
+               (Drule.SPECL [h,l,n] BITSLT_THM2)]
+         else
+           []
+     | SOME ("words", "w2n", [w]) =>
+         if Lib.can fcpSyntax.dest_numeric_type (wordsSyntax.dim_of w) then
+           [Conv.CONV_RULE (Conv.RAND_CONV SIZES_CONV)
+             (Drule.ISPEC w wordsTheory.w2n_lt)]
+         else
+           []
+     | SOME ("arithmetic", "+", [a,b]) => num_lt a @ num_lt b
+     | SOME ("arithmetic", "-", [a,b]) => num_lt a @ num_lt b
+     | SOME ("arithmetic", "*", [a,b]) => num_lt a @ num_lt b
+     | SOME ("arithmetic", "DIV", [a,b]) => num_lt a
+     | _ => []
+
+  fun LT_THMS_TAC tm =
+    case Lib.total num_lt tm
+    of SOME thms => MAP_EVERY ASSUME_TAC thms
+     | NONE => ALL_TAC
+
+  val word_eq_imp_num_eq = Q.prove(
+    `!m n. (n2w m = n2w n : 'a word) /\
+           m < dimword(:'a) /\
+           n < dimword(:'a) ==> (m = n)`,
+    SRW_TAC [] [] THEN FULL_SIMP_TAC arith_ss [])
+
+  val word_lt_imp_num_lt = Q.prove(
+    `!m n. (n2w m) <+ (n2w n : 'a word) /\
+           m < dimword(:'a) /\
+           n < dimword(:'a) ==> (m < n)`,
+    SRW_TAC [] [word_lo_n2w] THEN FULL_SIMP_TAC arith_ss [])
+
+  val word_ls_imp_num_ls = Q.prove(
+    `!m n. (n2w m) <=+ (n2w n : 'a word) /\
+           m < dimword(:'a) /\
+           n < dimword(:'a) ==> (m <= n)`,
+    SRW_TAC [] [word_ls_n2w] THEN FULL_SIMP_TAC arith_ss [])
+
+  fun get_intro_thm tm =
+        case Lib.total full_dest_strip tm
+        of SOME ("min", "=", [l,r])       => SOME (word_eq_imp_num_eq,l,r)
+         | SOME ("prim_rec", "<", [l,r])  => SOME (word_lt_imp_num_lt,l,r)
+         | SOME ("arithmetic", "<=", [l,r]) => SOME (word_ls_imp_num_ls,l,r)
+         | _ => NONE
+
+  val n2w_INTRO : int -> tactic =
+    fn sz => fn (asl,g) =>
+      case get_intro_thm g
+      of SOME (intro_thm,l,r) =>
+           let
+             val typ = fcpSyntax.mk_int_numeric_type sz
+             val sz_thm = SIZES_CONV (wordsSyntax.mk_dimword typ)
+             val sz = rhs (concl sz_thm)
+             val l_lt = numSyntax.mk_less (l,sz)
+             val r_lt = numSyntax.mk_less (r,sz)
+           in
+             (Tactic.MATCH_MP_TAC
+                (Thm.INST_TYPE [Type.alpha |-> typ]
+                   (Drule.SPECL [l,r] intro_thm))
+              THEN LT_THMS_TAC l
+              THEN LT_THMS_TAC r
+              THEN Tactical.SUBGOAL_THEN l_lt
+                     (fn thm => REWRITE_TAC [thm, sz_thm])
+              THENL [
+                bossLib.ASM_SIMP_TAC arith_ss [],
+                Tactical.SUBGOAL_THEN r_lt (fn thm => REWRITE_TAC [thm])
+                THENL [
+                  bossLib.ASM_SIMP_TAC arith_ss [],
+                  bossLib.ASM_SIMP_TAC (arith_ss++SIZES_ss++n2w_LOWER_ss) []
+                ]
+              ]) (asl,g)
+           end
+       | NONE => FAIL_TAC "Unsuitable goal" (asl,g)
+in
+  fun n2w_INTRO_TAC sz =
+     SIMP_TAC (arith_ss++BITS_INTRO_ss) [] THEN n2w_INTRO sz
+end
+
+(* ------------------------------------------------------------------------- *)
+
 val LESS_THM = SUC_RULE prim_recTheory.LESS_THM;
 
 val LESS_COR =
   [``(prim_rec$< m (arithmetic$NUMERAL (arithmetic$BIT1 n))) ==> (P:bool)``,
    ``(prim_rec$< m (arithmetic$NUMERAL (arithmetic$BIT2 n))) ==> (P:bool)``]
      |> map (GEN_ALL o REWRITE_CONV [LESS_THM, DISJ_IMP_THM]) |> LIST_CONJ;
-
-fun dest_strip t =
-let val (l,r) = strip_comb t in
-  (fst (dest_const l), r)
-end;
 
 local
   val word_n2w_le = Q.prove(
@@ -1666,16 +1924,18 @@ in
           raise ERR "WORD_BIT_EQ_CONV" "Not a word equality"
   val WORD_BIT_EQ_ss = simpLib.named_merge_ss "word bit eq"
                          [WORD_BIT_EQ_ss, numSimps.ARITH_ss]
-  fun WORD_DP_PROVE dp t = let
-          val thm1 = QCONV
-                      (WORD_CONV
-                        THENC
-                       SIMP_CONV (bool_ss++WORD_CONST_ss++WORD_UINT_MAX_ss) rw3
-                        THENC
-                       SIMP_CONV (std_ss++boolSimps.LET_ss++WORD_UINT_MAX_ss++
-                                  WORD_w2n_ss++WORD_SUB_ss++WORD_ADD_ss) rw4
-                        THENC
-                       DEPTH_CONV EXISTS_WORD_CONV) t
+  fun WORD_DP_PROVE dp t =
+        let
+          val thm1 =
+                  QCONV
+                    (WORD_CONV
+                      THENC
+                     SIMP_CONV (bool_ss++WORD_CONST_ss++WORD_UINT_MAX_ss) rw3
+                      THENC
+                     SIMP_CONV (std_ss++boolSimps.LET_ss++WORD_UINT_MAX_ss++
+                                WORD_w2n_ss++WORD_SUBTRACT_ss++WORD_ADD_ss) rw4
+                      THENC
+                     DEPTH_CONV EXISTS_WORD_CONV) t
           val t1 = rhs (concl thm1)
           val bnds = mk_bounds_thms t1
           val t2 = mk_imp (concl bnds, t1)

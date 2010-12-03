@@ -232,6 +232,12 @@ val BITSLT_THM = store_thm("BITSLT_THM",
   `!h l n. BITS h l n < 2 ** (SUC h-l)`,
   RW_TAC bool_ss [BITS_THM,ZERO_LT_TWOEXP,DIVISION]);
 
+val BITSLT_THM2 = Q.store_thm("BITSLT_THM2",
+  `!h l n. BITS h l n < 2 ** SUC h`,
+  REPEAT STRIP_TAC
+  \\ `BITS h l n < 2 ** (SUC h - l)` by REWRITE_TAC [BITSLT_THM]
+  \\ METIS_TAC [EXP_SUB_LESS_EQ, LESS_LESS_EQ_TRANS]);
+
 val DIV_MULT_LEM = prove(
   `!m n. 0 < n ==> m DIV n * n <= m`,
   RW_TAC std_ss [LESS_EQ_EXISTS] \\ EXISTS_TAC `m MOD n`
