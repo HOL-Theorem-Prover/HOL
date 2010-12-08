@@ -499,7 +499,7 @@ Conditional & {\small\verb+if +}$t\ ${\small\verb+then +}$t_1${\small\verb+ else
 %
 {\small\verb+let+}-expression & {\small\verb+let +}$x${\small\verb+=+}$t_1${\small\verb+ in +}$t_2$ &
 \holtxt{LET(\bs}$x${\small\verb+.+}$t_2${\small\verb+)+}$t_1$ &
-\holtxt{mk\_let(\bs}$x${\small\verb+.+}$t_1${\small\verb+,+}$t_2${\small\verb+)+} \\ \hline
+\holtxt{mk\_let(mk\_abs($x$,$t_2$),$t_1$)} \\ \hline
 \end{tabular}
 \end{center}
 
