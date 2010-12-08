@@ -1980,16 +1980,7 @@ If the ``stem'' of the first constant defined in a set of clauses is such that r
 The \ml{xHol\_reln} function is analogous to the \ml{xDefine} function for defining recursive functions (see Section~\ref{TFL}).
 
 \paragraph{Strong Induction Principles}
-So called ``strong'' versions of induction principles (in which instances
-of the relation being defined appear as extra hypotheses), can be
-automatically proved with a call to the function
-\[
-\ml{IndDefLib.derive\_strong\_induction : thm * thm -> thm}
-\]
-The first argument is the rules theorem, and the second is the
-induction theorem.
-The strong induction principle for a relation is used when the
-\ml{Induct\_on} tactic is used.
+So called ``strong'' versions of induction principles (in which instances of the relation being defined appear as extra hypotheses), are automatically proved when a definition is made with \ml{Hol\_reln}. The strong induction principle for a relation is used when the \ml{Induct\_on} tactic is used.
 
 \paragraph{Adding Monotone Operators}
 \index{inductive relations!monotone operators for}
@@ -2151,5 +2142,6 @@ and the effect will be the same.
 
 %%% Local Variables:
 %%% mode: latex
+%%% mode: visual-line
 %%% TeX-master: "description"
 %%% End:
