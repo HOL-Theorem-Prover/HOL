@@ -850,15 +850,7 @@ val FOLDR_SNOC = store_thm("FOLDR_SNOC",
     THEN LIST_INDUCT_TAC THEN REWRITE_TAC[SNOC,FOLDR]
     THEN REPEAT GEN_TAC THEN ASM_REWRITE_TAC[]);
 
-val FOLDL_SNOC = store_thm("FOLDL_SNOC",
-    (--`!(f:'b->'a->'b) e x l. FOLDL f e (SNOC x l) = f (FOLDL f e l) x`--),
-    let val lem = prove(
-        (--`!l (f:'b->'a->'b) e x. FOLDL f e (SNOC x l) = f (FOLDL f e l) x`--),
-        LIST_INDUCT_TAC THEN REWRITE_TAC[SNOC,FOLDL]
-        THEN REPEAT GEN_TAC THEN ASM_REWRITE_TAC[])
-   in
-    MATCH_ACCEPT_TAC lem
-   end);
+val FOLDL_SNOC = save_thm("FOLDL_SNOC", listTheory.FOLDL_SNOC);
 
 val SNOC_INDUCT_TAC = INDUCT_THEN SNOC_INDUCT ASSUME_TAC;
 
@@ -1102,10 +1094,7 @@ val IS_EL = store_thm("IS_EL",
 
 val IS_EL_SNOC = save_thm("IS_EL_SNOC", listTheory.MEM_SNOC);
 
-val SUM_SNOC = store_thm("SUM_SNOC",
-    (--`!x l. SUM (SNOC x l) = (SUM l) + x`--),
-    GEN_TAC THEN LIST_INDUCT_TAC THEN REWRITE_TAC[SUM,SNOC,ADD,ADD_0]
-    THEN GEN_TAC THEN ASM_REWRITE_TAC[ADD_ASSOC]);
+val SUM_SNOC = save_thm("SUM_SNOC", listTheory.SUM_SNOC);
 
 val SUM_FOLDR = store_thm("SUM_FOLDR",
     (--`!l:num list. SUM l = FOLDR $+ 0 l`--),

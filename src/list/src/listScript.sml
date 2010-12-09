@@ -2187,6 +2187,39 @@ val GENLIST_NUMERALS = store_thm(
 val _ = export_rewrites ["GENLIST_NUMERALS"]
 
 
+(* ---------------------------------------------------------------------- *)
+
+val FOLDL_SNOC = store_thm("FOLDL_SNOC",
+    (--`!(f:'b->'a->'b) e x l. FOLDL f e (SNOC x l) = f (FOLDL f e l) x`--),
+    let val lem = prove(
+        (--`!l (f:'b->'a->'b) e x. FOLDL f e (SNOC x l) = f (FOLDL f e l) x`--),
+        LIST_INDUCT_TAC THEN REWRITE_TAC[SNOC,FOLDL]
+        THEN REPEAT GEN_TAC THEN ASM_REWRITE_TAC[])
+   in
+    MATCH_ACCEPT_TAC lem
+   end);
+
+local open arithmeticTheory in
+val SUM_SNOC = store_thm("SUM_SNOC",
+    (--`!x l. SUM (SNOC x l) = (SUM l) + x`--),
+    GEN_TAC THEN LIST_INDUCT_TAC THEN REWRITE_TAC[SUM,SNOC,ADD,ADD_0]
+    THEN GEN_TAC THEN ASM_REWRITE_TAC[ADD_ASSOC]);
+end
+
+val SUM_MAP_FOLDL = Q.store_thm(
+"SUM_MAP_FOLDL",
+`!ls. SUM (MAP f ls) = FOLDL (λa e. a + f e) 0 ls`,
+HO_MATCH_MP_TAC SNOC_INDUCT THEN
+SRW_TAC [][FOLDL_SNOC,MAP_SNOC,SUM_SNOC,MAP,SUM,FOLDL]);
+
+val SUM_IMAGE_eq_SUM_MAP_SET_TO_LIST = Q.store_thm(
+"SUM_IMAGE_eq_SUM_MAP_SET_TO_LIST",
+`FINITE s ==> (SIGMA f s = SUM (MAP f (SET_TO_LIST s)))`,
+SRW_TAC [][SUM_IMAGE_DEF] THEN
+SRW_TAC [][ITSET_eq_FOLDL_SET_TO_LIST,SUM_MAP_FOLDL] THEN
+AP_THM_TAC THEN AP_THM_TAC THEN AP_TERM_TAC THEN
+SRW_TAC [][FUN_EQ_THM,arithmeticTheory.ADD_COMM]);
+
 (* ----------------------------------------------------------------------
     All lists have infinite universes
    ---------------------------------------------------------------------- *)
