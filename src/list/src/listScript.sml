@@ -1823,6 +1823,11 @@ val ALL_DISTINCT_SET_TO_LIST = store_thm("ALL_DISTINCT_SET_TO_LIST",
 			 pred_setTheory.CHOICE_NOT_IN_REST]);
 val _ = export_rewrites ["ALL_DISTINCT_SET_TO_LIST"];
 
+val ITSET_eq_FOLDL_SET_TO_LIST = Q.store_thm(
+"ITSET_eq_FOLDL_SET_TO_LIST",
+`!s. FINITE s ==> !f a. ITSET f s a = FOLDL (combin$C f) a (SET_TO_LIST s)`,
+HO_MATCH_MP_TAC pred_setTheory.FINITE_COMPLETE_INDUCTION THEN
+SRW_TAC [][pred_setTheory.ITSET_THM,SET_TO_LIST_THM,FOLDL]);
 
 (* ----------------------------------------------------------------------
     listRel
