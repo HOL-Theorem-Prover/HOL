@@ -3682,6 +3682,21 @@ val SUM_SAME_IMAGE = Q.store_thm
     FULL_SIMP_TAC (srw_ss() ++ DNF_ss) []
   ]);
 
+val SUM_IMAGE_CONG = Q.store_thm(
+"SUM_IMAGE_CONG",
+`(s1 = s2) /\ (!x. x IN s2 ==> (f1 x = f2 x))
+ ==> (SIGMA f1 s1 = SIGMA f2 s2)`,
+SRW_TAC [][] THEN
+REVERSE (Cases_on `FINITE s1`) THEN1 (
+  SRW_TAC [][SUM_IMAGE_DEF,Once ITSET_def] THEN
+  SRW_TAC [][Once ITSET_def] ) THEN
+Q.PAT_ASSUM `!x.P` MP_TAC THEN
+POP_ASSUM MP_TAC THEN
+Q.ID_SPEC_TAC `s1` THEN
+HO_MATCH_MP_TAC FINITE_INDUCT THEN
+SRW_TAC [][SUM_IMAGE_THM,SUM_IMAGE_DELETE])
+val _ = DefnBase.export_cong "SUM_IMAGE_CONG"
+
 
 (*---------------------------------------------------------------------------*)
 (* SUM_SET sums the elements of a set of natural numbers                     *)
