@@ -1934,6 +1934,18 @@ SIMP_TAC std_ss [asl_inl_def, asl_inr_def, NOT_IN_EMPTY, EXTENSION,
    IN_ABS]);
 
 
+val PRODUCT_SEPARATION_COMBINATOR___asl_star = store_thm (
+"PRODUCT_SEPARATION_COMBINATOR___asl_star",
+``!f1 f2 P1 P2.
+asl_star (PRODUCT_SEPARATION_COMBINATOR f1 f2) P1 P2 =
+\(x,y). ?x1 x2 y1 y2. (f1 (SOME x1) (SOME x2) = SOME x) /\
+                      (f2 (SOME y1) (SOME y2) = SOME y) /\
+                      (P1 (x1,y1) /\ P2 (x2,y2))``,
+
+SIMP_TAC std_ss [EXTENSION, asl_star_def, IN_DEF, PAIR_FORALL_THM] THEN
+SIMP_TAC std_ss [PRODUCT_SEPARATION_COMBINATOR_REWRITE, PAIR_EXISTS_THM] THEN
+METIS_TAC[]);
+
 
 val PRODUCT_SEPARATION_COMBINATOR___asl_in_star = store_thm (
 "PRODUCT_SEPARATION_COMBINATOR___asl_in_star",

@@ -321,21 +321,11 @@ val _ = type_abbrev("var_res_state",
    Type `:('pvars |-> ('data # var_res_permission))`);
 
 
-
 val VAR_RES_STACK_IS_SEPARATE_def = Define `
    VAR_RES_STACK_IS_SEPARATE s1 s2 =
    !x.    ((x IN (FDOM s1)) /\ (x IN (FDOM s2))) ==>
       ((FST (s1 ' x) = FST (s2 ' x)) /\
                  (IS_SOME (var_res_permission_combine (SOME (SND (s1 ' x))) (SOME (SND (s2 ' x))))))`;
-
-
-
-
-
-
-
-
-
 
 
 val VAR_RES_STACK_IS_SEPARATE___SYM = store_thm ("VAR_RES_STACK_IS_SEPARATE___SYM",
@@ -2118,6 +2108,14 @@ val var_res_prop_expression_def = Define `
       (let el' = MAP (\e. e s) el in
       ((EVERY IS_SOME el') /\ (p (MAP THE el')))))`;
 
+val var_res_prop_expression___ALTERNATIVE_DEF = store_thm ("var_res_prop_expression___ALTERNATIVE_DEF",
+``var_res_prop_expression f emp p eL =
+  var_res_exp_full_prop (\vl s. (p vl) /\ (s IN asl_emp f \/ ~emp)) eL``,
+SIMP_TAC std_ss [var_res_prop_expression_def, FUN_EQ_THM,
+   var_res_exp_full_prop_def, var_res_stack_proposition_def, LET_THM] THEN
+SIMP_TAC (std_ss++EQUIV_EXTRACT_ss) []);
+
+
 val var_res_prop_binexpression_def = Define `
   var_res_prop_binexpression f emp p e1 e2 =
   var_res_stack_proposition f emp (\s:('a,'b) var_res_state.
@@ -2859,8 +2857,6 @@ store_thm ("VAR_RES_IS_STACK_IMPRECISE___USED_VARS___asl_emp",
          ~(VAR_RES_IS_STACK_IMPRECISE___USED_VARS vs (asl_emp (VAR_RES_COMBINATOR f)))``,
 PROVE_TAC [VAR_RES_IS_STACK_IMPRECISE___IMP, VAR_RES_IS_STACK_IMPRECISE___asl_emp]);
 
-
-
 val VAR_RES_IS_STACK_IMPRECISE___asl_or = store_thm (
 "VAR_RES_IS_STACK_IMPRECISE___asl_or",
 ``!P1 P2.
@@ -2903,7 +2899,6 @@ VAR_RES_IS_STACK_IMPRECISE___USED_VARS exS (asl_and P1 P2)``,
 
 SIMP_TAC std_ss [VAR_RES_IS_STACK_IMPRECISE___USED_VARS_def, asl_bool_EVAL] THEN
 PROVE_TAC[VAR_RES_IS_STACK_IMPRECISE___asl_and]);
-
 
 
 val VAR_RES_IS_STACK_IMPRECISE___const = store_thm (
@@ -3000,7 +2995,24 @@ METIS_TAC [VAR_RES_IS_STACK_IMPRECISE___ALTERNATIVE_DEF,
 
 
 
+val VAR_RES_IS_STACK_IMPRECISE___USED_VARS___asl_forall = store_thm (
+"VAR_RES_IS_STACK_IMPRECISE___USED_VARS___asl_forall",
+``!exS P.
+(!x. VAR_RES_IS_STACK_IMPRECISE___USED_VARS exS (P x)) ==>
+VAR_RES_IS_STACK_IMPRECISE___USED_VARS exS (asl_forall x. P x)``,
 
+REPEAT STRIP_TAC THEN
+FULL_SIMP_TAC std_ss [VAR_RES_IS_STACK_IMPRECISE___USED_VARS___ALTERNATIVE_DEF,
+       asl_forall_def, IN_DEF] THEN
+METIS_TAC[]);
+
+
+val VAR_RES_IS_STACK_IMPRECISE___asl_forall = store_thm (
+"VAR_RES_IS_STACK_IMPRECISE___asl_forall",
+``!P. (!x. VAR_RES_IS_STACK_IMPRECISE (P x)) ==>
+       VAR_RES_IS_STACK_IMPRECISE (asl_forall x. P x)``,
+METIS_TAC [VAR_RES_IS_STACK_IMPRECISE___ALTERNATIVE_DEF,
+           VAR_RES_IS_STACK_IMPRECISE___USED_VARS___asl_forall]);
 
 
 val VAR_RES_IS_STACK_IMPRECISE___USED_VARS___asl_star = store_thm (
@@ -13675,7 +13687,8 @@ val VAR_RES_IS_STACK_IMPRECISE___USED_VARS___VAR_RES_REWRITES =
      VAR_RES_IS_STACK_IMPRECISE___USED_VARS___asl_and,
      VAR_RES_IS_STACK_IMPRECISE___USED_VARS___asl_false,
      VAR_RES_IS_STACK_IMPRECISE___USED_VARS___asl_trivial_cond,
-     VAR_RES_IS_STACK_IMPRECISE___USED_VARS___asl_exists_direct,
+     VAR_RES_IS_STACK_IMPRECISE___USED_VARS___asl_exists_direct, 
+     VAR_RES_IS_STACK_IMPRECISE___USED_VARS___asl_forall,
      VAR_RES_IS_STACK_IMPRECISE___USED_VARS___cond,
      VAR_RES_IS_STACK_IMPRECISE___USED_VARS___asl_star,
      VAR_RES_IS_STACK_IMPRECISE___USED_VARS___var_res_map___SIMPLE,
