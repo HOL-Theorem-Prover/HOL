@@ -3252,12 +3252,7 @@ val BUTFIRSTN_CONS_EL = store_thm ("BUTFIRSTN_CONS_EL",
   Cases_on `n` THEN ASM_SIMP_TAC list_ss []);
 
 
-val ALL_DISTINCT_SNOC = store_thm (
-   "ALL_DISTINCT_SNOC",
-   ``!x l. ALL_DISTINCT (SNOC x l) =
-             ~(MEM x l) /\ (ALL_DISTINCT l)``,
-SIMP_TAC list_ss [SNOC_APPEND, listTheory.ALL_DISTINCT_APPEND] THEN PROVE_TAC[]);
-
+val ALL_DISTINCT_SNOC = save_thm("ALL_DISTINCT_SNOC", listTheory.ALL_DISTINCT_SNOC)
 
 val MEM_LAST_FRONT = store_thm (
    "MEM_LAST_FRONT",

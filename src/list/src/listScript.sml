@@ -2186,6 +2186,40 @@ val GENLIST_NUMERALS = store_thm(
   REWRITE_TAC [GENLIST_GENLIST_AUX, GENLIST_AUX]);
 val _ = export_rewrites ["GENLIST_NUMERALS"]
 
+val MEM_GENLIST = Q.store_thm(
+"MEM_GENLIST",
+`MEM x (GENLIST f n) <=> ?m. m < n /\ (x = f m)`,
+SRW_TAC [][MEM_EL,EL_GENLIST,EQ_IMP_THM] THEN
+PROVE_TAC [EL_GENLIST] )
+
+val ALL_DISTINCT_SNOC = store_thm (
+   "ALL_DISTINCT_SNOC",
+   ``!x l. ALL_DISTINCT (SNOC x l) =
+             ~(MEM x l) /\ (ALL_DISTINCT l)``,
+SRW_TAC [][SNOC_APPEND, ALL_DISTINCT_APPEND] THEN PROVE_TAC[]);
+
+local open prim_recTheory in
+val ALL_DISTINCT_GENLIST = Q.store_thm(
+"ALL_DISTINCT_GENLIST",
+`ALL_DISTINCT (GENLIST f n) <=>
+ (!m1 m2. m1 < n /\ m2 < n /\ (f m1 = f m2) ==> (m1 = m2))`,
+Induct_on `n` THEN
+SRW_TAC [][GENLIST,ALL_DISTINCT_SNOC,MEM_EL] THEN
+SRW_TAC [][EQ_IMP_THM] THEN1 (
+  IMP_RES_TAC LESS_SUC_IMP THEN
+  Cases_on `m1 = n` THEN Cases_on `m2 = n` THEN SRW_TAC [][] THEN
+  FULL_SIMP_TAC (srw_ss()) [] THEN1 (
+    NTAC 2 (FIRST_X_ASSUM (Q.SPEC_THEN `m2` MP_TAC)) THEN
+    SRW_TAC [][] ) THEN
+  NTAC 2 (FIRST_X_ASSUM (Q.SPEC_THEN `m1` MP_TAC)) THEN
+  SRW_TAC [][] ) THEN1 (
+  Q.MATCH_RENAME_TAC `~(m < n) \/ f n <> EL m (GENLIST f n)` [] THEN
+  Cases_on `m < n` THEN SRW_TAC [][] THEN
+  FIRST_X_ASSUM (Q.SPECL_THEN [`m`,`n`] MP_TAC) THEN
+  SRW_TAC [][LESS_SUC] THEN
+  METIS_TAC [LESS_REFL] ) THEN
+METIS_TAC [LESS_SUC] )
+end
 
 (* ---------------------------------------------------------------------- *)
 
