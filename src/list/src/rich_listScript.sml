@@ -529,77 +529,14 @@ val SNOC_APPEND = save_thm("SNOC_APPEND", listTheory.SNOC_APPEND);
 val REVERSE_DEF = listTheory.REVERSE_DEF
 val REVERSE_REVERSE = listTheory.REVERSE_REVERSE
 
-val REVERSE = store_thm (
-  "REVERSE",
-  ``(REVERSE [] = []) /\
-    (!x:'a l. REVERSE (x::l) = SNOC x (REVERSE l))``,
-  REWRITE_TAC [REVERSE_DEF, SNOC_APPEND]);
-
-val REVERSE_SNOC = store_thm(
-  "REVERSE_SNOC",
-  ``!(x:'a) l. REVERSE (SNOC x l) = CONS x (REVERSE l)``,
-  GEN_TAC THEN LIST_INDUCT_TAC THEN ASM_REWRITE_TAC[SNOC,REVERSE]);
+val REVERSE = save_thm ( "REVERSE", listTheory.REVERSE_SNOC_DEF );
+val REVERSE_SNOC = save_thm ("REVERSE_SNOC", listTheory.REVERSE_SNOC);
 
 val REVERSE_APPEND = save_thm("REVERSE_APPEND", listTheory.REVERSE_APPEND);
 
 val REVERSE_REVERSE = save_thm("REVERSE_REVERSE", REVERSE_REVERSE);
 
-val forall_REVERSE = TAC_PROOF(([],
-    (--`!P. (!l:('a)list. P(REVERSE l)) = (!l. P l)`--)),
-    GEN_TAC THEN EQ_TAC THEN DISCH_TAC THEN GEN_TAC
-    THEN POP_ASSUM (ACCEPT_TAC o (REWRITE_RULE[REVERSE_REVERSE]
-     o (SPEC (--`REVERSE l:('a)list`--)))));
-
-val f_REVERSE_lemma = TAC_PROOF (([],
-    (--`!f1 f2.
-    ((\x. (f1:('a)list->'b) (REVERSE x)) = (\x. f2 (REVERSE x))) = (f1 = f2)`--)),
-    REPEAT GEN_TAC THEN EQ_TAC THEN DISCH_TAC THENL[
-      POP_ASSUM (fn x => ACCEPT_TAC (EXT (REWRITE_RULE[REVERSE_REVERSE]
-      (GEN (--`x:('a)list`--) (BETA_RULE (AP_THM x (--`REVERSE (x:('a)list)`--))))))),
-      ASM_REWRITE_TAC[]]);
-
-
-val SNOC_Axiom_old = prove(
-  --`!(e:'b) (f:'b -> ('a -> (('a)list -> 'b))).
-        ?! fn1.
-          (fn1[] = e) /\
-          (!x l. fn1(SNOC x l) = f(fn1 l)x l)`--,
-
- let val  lemma =  CONV_RULE (EXISTS_UNIQUE_CONV)
-       (REWRITE_RULE[REVERSE_REVERSE] (BETA_RULE (SPECL
-         [(--`e:'b`--),(--`(\ft x l. f ft x (REVERSE l)):'b -> ('a -> (('a)list -> 'b))`--)]
-        (PURE_ONCE_REWRITE_RULE
-         [SYM (CONJUNCT1 REVERSE),
-          PURE_ONCE_REWRITE_RULE[SYM (SPEC_ALL REVERSE_SNOC)]
-           (BETA_RULE (SPEC (--`\l:('a)list.fn1(CONS x l) =
-                       (f:'b -> ('a -> (('a)list -> 'b)))(fn1 l)x l`--)
-             (CONV_RULE (ONCE_DEPTH_CONV SYM_CONV) forall_REVERSE)))]
-            list_Axiom_old))))
- in
-    REPEAT GEN_TAC THEN CONV_TAC EXISTS_UNIQUE_CONV
-    THEN STRIP_ASSUME_TAC lemma THEN CONJ_TAC THENL
-    [
-      EXISTS_TAC (--`(fn1:('a)list->'b) o REVERSE`--)
-      THEN REWRITE_TAC[o_DEF] THEN BETA_TAC THEN ASM_REWRITE_TAC[],
-
-      REPEAT GEN_TAC THEN POP_ASSUM (ACCEPT_TAC o SPEC_ALL o
-        REWRITE_RULE[REVERSE_REVERSE,f_REVERSE_lemma] o
-        BETA_RULE o REWRITE_RULE[o_DEF] o
-        SPECL [(--`(fn1' o REVERSE):('a)list->'b`--),(--`(fn1'' o REVERSE):('a)list->'b`--)])
-     ]
-  end);
-
-val SNOC_Axiom = store_thm(
-  "SNOC_Axiom",
-  --`!e f. ?fn:'a list -> 'b.
-       (fn [] = e) /\
-       (!x l. fn (SNOC x l) = f x l (fn l))`--,
-  REPEAT GEN_TAC THEN
-  STRIP_ASSUME_TAC (CONV_RULE EXISTS_UNIQUE_CONV
-                    (BETA_RULE
-                     (Q.SPECL [`e`, `\x y z. f y z x`] SNOC_Axiom_old))) THEN
-  Q.EXISTS_TAC `fn1` THEN ASM_REWRITE_TAC []);
-
+val SNOC_Axiom = save_thm("SNOC_Axiom", listTheory.SNOC_Axiom);
 
 val NOT_NULL_SNOC = store_thm(
   "NOT_NULL_SNOC",
@@ -870,8 +807,8 @@ val LENGTH_NOT_NULL = store_thm("LENGTH_NOT_NULL",
       REWRITE_TAC [LENGTH,NULL,NOT_LESS_0],
       REWRITE_TAC [LENGTH,NULL,LESS_0]]);
 
-val SNOC_INDUCT = save_thm("SNOC_INDUCT", prove_induction_thm SNOC_Axiom_old);
-val SNOC_CASES =  save_thm("SNOC_CASES", hd (prove_cases_thm SNOC_INDUCT));
+val SNOC_INDUCT = save_thm("SNOC_INDUCT", listTheory.SNOC_INDUCT);
+val SNOC_CASES =  save_thm("SNOC_CASES", listTheory.SNOC_CASES);
 
 val NOT_NULL_SNOC = prove(
     (--`!(x:'a) l. ~NULL(SNOC x l)`--),
