@@ -726,6 +726,11 @@ val PERM_MAP = store_thm ("PERM_MAP",
    REWRITE_TAC[MAP_APPEND] THEN
    PROVE_TAC[]);
 
+val PERM_SUM = Q.store_thm(
+"PERM_SUM",
+`!l1 l2. PERM l1 l2 ==> (SUM l1 = SUM l2)`,
+HO_MATCH_MP_TAC PERM_IND THEN
+SRW_TAC [][] THEN DECIDE_TAC);
 
 val PERM_FILTER = store_thm ("PERM_FILTER",
 ``!P l1 l2. PERM l1 l2 ==> (PERM (FILTER P l1) (FILTER P l2))``,
