@@ -28,6 +28,17 @@ fun in_conv tm =
     | otherwise => raise ERR "in_conv" "not an IN term";
 
 (*---------------------------------------------------------------------------*)
+
+local open Tactic Conv Tactical in
+fun MAX_SET_elim_tac (g as (_, w)) = let
+  val t = find_term is_max_set w
+in
+  CONV_TAC (UNBETA_CONV t) THEN
+  MATCH_MP_TAC pred_setTheory.MAX_SET_ELIM THEN BETA_TAC
+end g
+end
+
+(*---------------------------------------------------------------------------*)
 (* Set up computeLib for sets                                                *)
 (*---------------------------------------------------------------------------*)
 

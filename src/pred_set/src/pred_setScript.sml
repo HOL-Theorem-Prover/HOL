@@ -3791,6 +3791,12 @@ val MAX_SET_THM = store_thm(
     ASM_SIMP_TAC arith_ss [MAX_DEF]
   ]);
 
+val MAX_SET_ELIM = store_thm(
+  "MAX_SET_ELIM",
+  ``!P Q. FINITE P /\ ~(P = {}) /\ (!x. (!y. y IN P ==> y <= x) /\ x IN P ==> Q x) ==>
+          Q (MAX_SET P)``,
+  PROVE_TAC [MAX_SET_DEF]);
+
 val MIN_SET_DEF = new_definition("MIN_SET_DEF", ``MIN_SET = $LEAST``);
 
 val MIN_SET_ELIM = store_thm(
