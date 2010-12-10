@@ -11,6 +11,8 @@ sig
   val INSERT_CONV    : conv -> conv
   val IMAGE_CONV     : conv -> conv -> conv
 
+  val MAX_SET_elim_tac : tactic
+
   val PRED_SET_ss    : simpLib.ssfrag
 
 end;
