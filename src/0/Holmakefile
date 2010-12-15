@@ -40,7 +40,7 @@ TheoryPP-sig.uo TheoryPP-sig.ui: TheoryPP-sig.sml $(PORTABLE_UID)
 Theory-sig.uo: Theory-sig.sml $(PORTABLE_UID) $(FTHEORY_UID)
 	HOLMOSMLC -c -toplevel $(FTHEORY_UI) Theory-sig.sml
 
-Definition-sig.uo: Definition-sig.sml 
+Definition-sig.uo: Definition-sig.sml
 	$(MOSMLC) -c -toplevel Definition-sig.sml
 
 CoreKernel-sig.uo: CoreKernel-sig.sml Net-sig.uo \
@@ -50,7 +50,7 @@ CoreKernel-sig.uo: CoreKernel-sig.sml Net-sig.uo \
                                Theory-sig.ui TheoryPP-sig.ui Net-sig.ui \
                                Definition-sig.ui CoreKernel-sig.sml
 
-Net-sig.uo: Net-sig.sml 
+Net-sig.uo: Net-sig.sml
 	$(MOSMLC) -c -toplevel Net-sig.sml
 
 Overlay.uo: Overlay.sml CoreKernel-sig.uo Type.uo Term.uo $(FTAG_UID) Thm.uo \
@@ -59,5 +59,3 @@ Overlay.uo: Overlay.sml CoreKernel-sig.uo Type.uo Term.uo $(FTAG_UID) Thm.uo \
 	                       Thm.ui TheoryPP.ui Definition.ui $(FTAG_UI) \
                                Theory.ui Net.ui  Overlay.sml
 
-HolKernel.uo: Overlay.uo HolKernel.sml
-	HOLMOSMLC -c -structure Overlay.ui HolKernel.sml
