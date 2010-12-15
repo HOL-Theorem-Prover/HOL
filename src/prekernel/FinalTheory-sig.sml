@@ -9,6 +9,8 @@ sig
                     struct_ps : (ppstream -> unit) option}
   type num = Arbnum.num
 
+  val kernelid : string
+
 (* Create a new theory *)
 
   val new_theory         : string -> unit

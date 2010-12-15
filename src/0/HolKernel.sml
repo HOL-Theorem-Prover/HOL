@@ -16,8 +16,6 @@ val ERR = mk_HOL_ERR "HolKernel";
           General term operations
  ---------------------------------------------------------------------------*)
 
-val kernelid = "stdknl"
-
 fun dest_monop c e M =
  let val (c1,N) = with_exn dest_comb M e
  in if same_const c c1 then N else raise e end
@@ -42,9 +40,9 @@ fun dest_triop p e M =
 (* Take a binder apart. Fails on paired binders.                             *)
 (*---------------------------------------------------------------------------*)
 
-local 
-  fun dest M = 
-    let val (c,Rand) = dest_comb M 
+local
+  fun dest M =
+    let val (c,Rand) = dest_comb M
     in (c,dest_abs Rand) end
 in
 fun dest_binder c e M =

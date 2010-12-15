@@ -132,7 +132,7 @@ TextIO.output(TextIO.stdOut,
    "\n---------------------------------------------------------------------\n"
   ^"       HOL-4 ["
   ^Globals.release^" "^Lib.int_to_string(Globals.version)
-  ^" ("^kernelid^", "^build_stamp^")"
+  ^" ("^Theory.kernelid^", "^build_stamp^")"
   ^"]\n\n       For introductory HOL help, type: help \"hol\";"
   ^"\n---------------------------------------------------------------------\n\
    \\n")
