@@ -27,6 +27,21 @@ val WARN = HOL_WARNING "Type";
  ---------------------------------------------------------------------------*)
 
 val typesig = KernelSig.new_table()
+fun prim_delete_type (k as {Thy, Tyop}) =
+    ignore (KernelSig.retire_name(typesig, {Thy = Thy, Name = Tyop}))
+
+fun prim_new_type {Thy,Tyop} n = let
+  val _ = n >= 0 orelse failwith "invalid arity"
+in
+  ignore (KernelSig.insert(typesig,{Thy=Thy,Name=Tyop},n))
+end
+fun del_segment s = KernelSig.del_segment(typesig, s)
+
+fun uptodate_type (Tyv s) = true
+  | uptodate_type (Tyapp((info,_), args)) =
+    KernelSig.uptodate_id info andalso List.all uptodate_type args
+
+
 
 
 (*---------------------------------------------------------------------------*

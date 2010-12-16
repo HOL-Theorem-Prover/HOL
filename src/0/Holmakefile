@@ -1,61 +1,48 @@
 OPTIONS = NO_OVERLAY
-FTAG_UI = $(protect $(SIGOBJ)/FinalTag-sig.ui)
-FTYPE_UI = $(protect $(SIGOBJ)/FinalType-sig.ui)
-FTERM_UI = $(protect $(SIGOBJ)/FinalTerm-sig.ui)
-FTHEORY_UI = $(protect $(SIGOBJ)/FinalTheory-sig.ui)
 
+FTAG_UI = $(protect $(SIGOBJ)/FinalTag-sig.ui)
 FTAG_UID = $(dprot $(SIGOBJ)/FinalTag-sig.ui)
+
+FTYPE_UI = $(protect $(SIGOBJ)/FinalType-sig.ui)
+FTYPE_UID = $(dprot $(SIGOBJ)/FinalType-sig.ui)
+
+FTERM_UI = $(protect $(SIGOBJ)/FinalTerm-sig.ui)
 FTERM_UID = $(dprot $(SIGOBJ)/FinalTerm-sig.ui)
-FTHEORY_UID = $(dprot $(SIGOBJ)/FinalTheory-sig.ui)
+
+FTHM_UI = $(protect $(SIGOBJ)/FinalThm-sig.ui)
+FTHM_UID = $(dprot $(SIGOBJ)/FinalThm-sig.ui)
+
 TAG_UID = $(dprot $(SIGOBJ)/Tag.ui)
 LIB_UID = $(dprot $(SIGOBJ)/Lib.ui)
 PORTABLE_UID = $(dprot $(SIGOBJ)/Portable.ui)
 COUNT_UID = $(dprot $(SIGOBJ)/Count.ui)
 HOLSET_UID = $(dprot $(SIGOBJ)/HOLset.ui)
 
-Raw-sig.uo: Raw-sig.sml KernelTypes.uo $(LIB_UID) $(FTHEORY_UID) TheoryPP-sig.ui
-	HOLMOSMLC -c -toplevel $(FTHEORY_UI) TheoryPP-sig.ui Raw-sig.sml
+Raw-sig.uo: Raw-sig.sml KernelTypes.uo $(LIB_UID) $(FTHEORY_UID)
+	$(HOLMOSMLC) -c -toplevel $(FTHEORY_UI) Raw-sig.sml
 
-Thm.uo: Thm.sml Term.uo $(TAG_UID) Raw-sig.uo $(COUNT_UID) $(HOLSET_UID)
-	$(HOLMOSMLC) -c -toplevel Raw-sig.ui Term.ui Type.ui Thm.sml
+Term.ui: Term.sig $(FTERM_UID) KernelTypes.ui
+	$(HOLMOSMLC) -c $(FTERM_UI) $<
 
-TheoryPP.uo: TheoryPP.sml Thm.uo
-	HOLMOSMLC -c -toplevel Raw-sig.ui Type.ui Term.ui Thm.ui TheoryPP.sml
-
-Theory.uo: Theory.sml TheoryPP.uo $(dprot $(SIGOBJ)/Systeml.ui) $(dprot $(SIGOBJ)/UniversalType.uo)
-	HOLMOSMLC -c -toplevel Raw-sig.ui Type.ui Term.ui Thm.ui TheoryPP.ui Theory.sml
-
-Definition.uo: Definition.sml Theory.uo
-	HOLMOSMLC -c -toplevel Raw-sig.ui Type.ui Term.ui Thm.ui Theory.ui Definition.sml
+Type.ui: Type.sig $(FTYPE_UID) KernelTypes.ui
+	$(HOLMOSMLC) -c $(FTYPE_UI) $<
 
 Net.uo: Net.sml Term.uo Raw-sig.uo
 	HOLMOSMLC -c -toplevel Raw-sig.ui Type.ui Term.ui Net.sml
 
-Thm-sig.uo: Thm-sig.sml $(LIB_UID) $(HOLSET_UID)
-	HOLMOSMLC -c -toplevel Thm-sig.sml
+Thm.ui: Thm.sig KernelTypes.ui $(FTHM_UID)
+	$(HOLMOSMLC) -c $(FTHM_UI) $<
 
-TheoryPP-sig.uo TheoryPP-sig.ui: TheoryPP-sig.sml $(PORTABLE_UID)
-	HOLMOSMLC -c -toplevel TheoryPP-sig.sml
-
-Theory-sig.uo: Theory-sig.sml $(PORTABLE_UID) $(FTHEORY_UID)
-	HOLMOSMLC -c -toplevel $(FTHEORY_UI) Theory-sig.sml
-
-Definition-sig.uo: Definition-sig.sml
-	$(MOSMLC) -c -toplevel Definition-sig.sml
-
-CoreKernel-sig.uo: CoreKernel-sig.sml Net-sig.uo \
-                   Thm-sig.uo $(FTAG_UID) $(FTERM_UID) Theory-sig.uo \
-                   TheoryPP-sig.uo Definition-sig.uo $(TAG_UID)
-	HOLMOSMLC -c -toplevel $(FTAG_UI) $(FTYPE_UI) $(FTERM_UI) Thm-sig.ui \
-                               Theory-sig.ui TheoryPP-sig.ui Net-sig.ui \
-                               Definition-sig.ui CoreKernel-sig.sml
+CoreKernel-sig.uo: CoreKernel-sig.sml Net-sig.uo Thm.uo \
+                   $(FTAG_UID) $(FTERM_UID) $(FTHM_UID) $(TAG_UID)
+	HOLMOSMLC -c -toplevel $(FTAG_UI) $(FTYPE_UI) $(FTERM_UI) $(FTHM_UI) \
+                               Net-sig.ui CoreKernel-sig.sml
 
 Net-sig.uo: Net-sig.sml
 	$(MOSMLC) -c -toplevel Net-sig.sml
 
 Overlay.uo: Overlay.sml CoreKernel-sig.uo Type.uo Term.uo $(FTAG_UID) Thm.uo \
-            TheoryPP.uo Theory.uo Definition.uo Net.uo
+            Net.uo
 	HOLMOSMLC -c -toplevel CoreKernel-sig.ui Type.ui Term.ui \
-	                       Thm.ui TheoryPP.ui Definition.ui $(FTAG_UI) \
-                               Theory.ui Net.ui  Overlay.sml
+	                       Thm.ui $(FTAG_UI) Net.ui  Overlay.sml
 

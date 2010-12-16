@@ -20,9 +20,9 @@ val ERR = mk_HOL_ERR "Tag";
 (* the current theory.                                                       *)
 (*---------------------------------------------------------------------------*)
 
-datatype tag = TAG of string list * string ref list
+datatype tag = TAG of string list * string Nonce.t list
 
-fun dest_tag (TAG(O,A)) = (O, map ! A)
+fun dest_tag (TAG(O,A)) = (O, map Nonce.dest A)
 fun oracles_of (TAG(O,_)) = O;
 fun axioms_of  (TAG(_,A)) = A;
 
@@ -111,7 +111,7 @@ fun pp_tag ppstrm (TAG (olist,axlist)) =
       add_string "[axioms: ";
         begin_block INCONSISTENT 1;
         if !Globals.show_axioms
-        then pr_list (add_string o !)
+        then pr_list (add_string o Nonce.dest)
              (fn () => add_string ",") (fn () => add_break(1,0)) axlist
         else add_string(repl #"#" axlist); end_block();
       add_string "]";

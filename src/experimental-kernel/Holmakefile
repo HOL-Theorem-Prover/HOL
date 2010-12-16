@@ -9,22 +9,21 @@ FTYPE = $(protect $(SIGOBJ)/FinalType-sig.ui)
 FTERMD = $(dprot $(SIGOBJ)/FinalTerm-sig.ui)
 FTERM = $(protect $(SIGOBJ)/FinalTerm-sig.ui)
 
-FTHEORYD = $(dprot $(SIGOBJ)/FinalTheory-sig.ui)
-FTHEORY = $(protect $(SIGOBJ)/FinalTheory-sig.ui)
+FTHMD = $(dprot $(SIGOBJ)/FinalThm-sig.ui)
+FTHM = $(protect $(SIGOBJ)/FinalThm-sig.ui)
 
 LIBD = $(dprot $(SIGOBJ)/Lib.ui)
 
 HOLSETD = $(dprot $(SIGOBJ)/HOLset.ui)
 
-Overlay.uo: Overlay.sml Definition.ui Net.ui $(FTAGD) $(FTYPED) $(FTERMD)
-	$(HOLMOSMLC) -c -toplevel $(FTAG) $(FTYPE) $(FTERM) Definition.ui \
-                                  Net.ui Overlay.sml
+Overlay.uo: Overlay.sml Net.ui Thm.ui $(FTAGD) $(FTYPED) $(FTERMD) $(FTHMD)
+	$(HOLMOSMLC) -c -toplevel $(FTAG) $(FTYPE) $(FTERM) $(FTHM) Net.ui Overlay.sml
 
 Type.ui : Type.sig $(FTYPED) $(dprot $(SIGOBJ)/KernelSig.ui) $(LIBD)
-	$(HOLMOSMLC) -c $(FTYPE) Type.sig
+	$(HOLMOSMLC) -c $(FTYPE) $<
 
 Term.ui: Term.sig $(FTERMD) Type.ui
-	$(HOLMOSMLC) -c $(FTERM) Term.sig
+	$(HOLMOSMLC) -c $(FTERM) $<
 
-Theory.ui: Theory.sig $(FTHEORYD) Term.ui Type.ui Thm.ui
-	$(HOLMOSMLC) -c $(FTHEORY) Theory.sig
+Thm.ui: Thm.sig $(FTHMD) Term.ui
+	$(HOLMOSMLC) -c $(FTHM) $<

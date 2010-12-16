@@ -29,6 +29,17 @@ infix |-> ##;
 
 
 val termsig = KernelSig.new_table()
+fun prim_delete_const kn = ignore (KernelSig.retire_name(termsig, kn))
+fun prim_new_const (k as {Thy,Name}) ty = let
+  val hty = if Type.polymorphic ty then POLY ty else GRND ty
+  val id = KernelSig.insert(termsig, k, hty)
+in
+  Const(id, hty)
+end
+fun del_segment s = KernelSig.del_segment(termsig, s)
+
+
+
 
 (*---------------------------------------------------------------------------*
  * Builtin constants. These are in every HOL signature, and it is            *
@@ -747,7 +758,9 @@ fun dest_abs(Abs(Bvar as Fv(Name,Ty), Body)) =
   | dest_abs _ = raise ERR "dest_abs" "not a lambda abstraction"
 end;
 
+local
 open KernelSig
+in
 fun break_abs(Abs(_,Body)) = Body
   | break_abs(t as Clos _) = break_abs (push_clos t)
   | break_abs _ = raise ERR "break_abs" "not an abstraction";
@@ -763,6 +776,7 @@ fun break_const (Const p) = (I##to_hol_type) p
 
 fun dest_const (Const(id,ty)) = (name_of id, to_hol_type ty)
   | dest_const _ = raise ERR "dest_const" "not a const"
+end
 
 (*---------------------------------------------------------------------------
                Derived destructors
@@ -798,6 +812,7 @@ local
    in look end
   fun bound_by_scope scoped M = if scoped then not (free M 0) else false
   val tymatch = Type.raw_match_type
+  open KernelSig
 in
 fun RM [] theta = theta
   | RM (((v as Fv(n,Ty)),tm,scoped)::rst) ((S1 as (tmS,Id)),tyS)
@@ -942,7 +957,7 @@ fun pp_raw_term index pps tm =
  let open Portable
      val {add_string,add_break,begin_block,end_block,...} = with_ppstream pps
      fun pp (Abs(Bvar,Body)) =
-          ( add_string "(\\";
+          ( add_string "(|";
             pp Bvar; add_string dot; add_break(1,0);
             pp Body; add_string ")" )
       | pp (Comb(Rator,Rand)) =
@@ -952,10 +967,121 @@ fun pp_raw_term index pps tm =
       | pp a      = add_string (percent^Lib.int_to_string (index a))
  in
    begin_block INCONSISTENT 0;
-   add_string "`";
    pp (norm_clos tm);
-   add_string "`";
    end_block()
  end;
+
+fun write_raw index =
+    String.translate (fn #"\n" => " " | c => str c) o
+    HOLPP.pp_to_string 75 (pp_raw_term index)
+
+(*---------------------------------------------------------------------------*
+ * Fetching theorems from disk. The following parses the "raw" term          *
+ * representation found in exported theory files.                            *
+ *---------------------------------------------------------------------------*)
+
+local
+datatype lexeme
+   = dot
+   | lamb
+   | lparen
+   | rparen
+   | ident of int
+   | bvar  of int;
+
+local val numeric = Char.contains "0123456789"
+in
+fun take_numb ss0 =
+  let val (ns, ss1) = Substring.splitl numeric ss0
+  in case Int.fromString (Substring.string ns)
+      of SOME i => (i,ss1)
+       | NONE   => raise ERR "take_numb" ""
+  end
+end;
+
+(* don't allow numbers to be split across fragments *)
+
+fun lexer ss1 =
+  case Substring.getc (Lib.deinitcommentss ss1) of
+                      (* was: (Substring.dropl Char.isSpace ss1) *)
+    NONE => NONE
+  | SOME (c,ss2) =>
+    case c of
+      #"."  => SOME(dot,   ss2)
+    | #"|" => SOME(lamb,  ss2)
+    | #"("  => SOME(lparen,ss2)
+    | #")"  => SOME(rparen,ss2)
+    | #"%"  => let val (n,ss3) = take_numb ss2 in SOME(ident n, ss3) end
+    | #"$"  => let val (n,ss3) = take_numb ss2 in SOME(bvar n,  ss3) end
+    |   _   => raise ERR "raw lexer" "bad character";
+
+fun eat_rparen ss =
+  case lexer ss
+   of SOME (rparen, ss') => ss'
+    |   _ => raise ERR "eat_rparen" "expected right parenthesis";
+
+fun eat_dot ss =
+  case lexer ss
+   of SOME (dot, ss') => ss'
+    |   _ => raise ERR "eat_dot" "expected a \".\"";
+
+in
+fun read_raw tmv = let
+  fun index i = Vector.sub(tmv, i)
+  fun parse (stk,ss) =
+      case lexer ss of
+        SOME (bvar n,  rst) => (Bv n::stk,rst)
+      | SOME (ident n, rst) => (index n::stk,rst)
+      | SOME (lparen,  rst) =>
+        (case lexer rst
+          of SOME (lamb, rst') => parse (glamb (stk,rst'))
+           |    _              => parse (parsel (parse (stk,rst))))
+      |  _ => (stk,ss)
+  and
+     parsel (stk,ss) =
+        case parse (stk,ss)
+         of (h1::h2::t, ss') => (Comb(h2,h1)::t, eat_rparen ss')
+          |   _              => raise ERR "raw.parsel" "impossible"
+  and
+     glamb(stk,ss) =
+     case lexer ss
+       of SOME (ident n, rst) =>
+            (case parse (stk, eat_dot rst)
+              of (h::t,rst1) => (Abs(index n,h)::t, eat_rparen rst1)
+               |   _         => raise ERR "glamb" "impossible")
+        | _ => raise ERR "glamb" "expected an identifier"
+in
+fn s =>
+   (case parse ([], Substring.full s)
+     of ([v], _)  => v
+      | otherwise => raise ERR "raw term parser" "parse failed")
+ | otherwise => raise ERR "raw term parser" "expected a quotation"
+end;
+end (* local *)
+
+(* ----------------------------------------------------------------------
+    Is a term up-to-date wrt the theory?
+   ---------------------------------------------------------------------- *)
+
+fun uptodate_term t = let
+  open Type
+  fun recurse tmlist =
+      case tmlist of
+        [] => true
+      | t::rest => let
+        in
+          case t of
+            Fv(_, ty) => Type.uptodate_type ty andalso recurse rest
+          | Const(info, ty) => KernelSig.uptodate_id info andalso
+                               uptodate_type (to_hol_type ty) andalso
+                               recurse rest
+          | Comb(f,x) => recurse (f::x::rest)
+          | Abs(v,bod) => recurse (v::bod::rest)
+          | Bv _ => recurse rest
+          | Clos _ => recurse (push_clos t :: rest)
+        end
+in
+  recurse [t]
+end
 
 end (* Term *)

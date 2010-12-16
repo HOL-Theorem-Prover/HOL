@@ -149,7 +149,7 @@ end; (* structure Graph *)
  * stored in a theory.                                                       *
  *---------------------------------------------------------------------------*)
 
-datatype thmkind = Thm of thm | Axiom of string ref * thm | Defn of thm
+datatype thmkind = Thm of thm | Axiom of string Nonce.t * thm | Defn of thm
 
 fun is_axiom (Axiom _) = true  | is_axiom _   = false;
 fun is_theorem (Thm _) = true  | is_theorem _ = false;
@@ -337,7 +337,7 @@ local fun inCT f arg = makeCT(f arg (theCT()))
 in
   val add_typeCT        = inCT add_type
   val add_termCT        = inCT add_term
-  fun add_axiomCT(r,ax) = inCT add_fact (!r, Axiom(r,ax))
+  fun add_axiomCT(r,ax) = inCT add_fact (Nonce.dest r, Axiom(r,ax))
   fun add_defnCT(s,def) = inCT add_fact (s,  Defn def)
   fun add_thmCT(s,th)   = inCT add_fact (s,  Thm th)
 
@@ -466,7 +466,7 @@ fun save_thm (name,th) =
        ; th)
 
 fun new_axiom (name,tm) =
-   let val rname = ref name
+   let val rname = Nonce.mk name
        val axiom = Thm.mk_axiom_thm (rname,tm)
        val  _ = check_name ("new_axiom",name)
    in if uptodate_term tm then add_axiomCT(rname,axiom)

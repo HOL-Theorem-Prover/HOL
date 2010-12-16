@@ -1,4 +1,4 @@
-signature Thm =
+signature FinalThm =
 sig
   type thm
   type tag
@@ -104,11 +104,15 @@ sig
 
   val mk_thm        : term list * term -> thm
   val mk_oracle_thm : string -> term list * term -> thm
+  val mk_axiom_thm  : (string Nonce.t * term) -> thm
   val add_tag       : tag * thm -> thm
+
+  (* definitional rules of inference *)
+  val prim_type_definition : {Thy : string, Tyop : string} * thm -> thm
+  val prim_constant_definition : string -> term -> thm
+  val prim_specification : string -> string list -> thm -> thm
 
   (* Fetching theorems from disk *)
 
-  val disk_thm      : term vector
-                       -> string list * 'a Portable.frag list list
-                                      * 'a Portable.frag list -> thm
+  val disk_thm      : string list * term list -> thm
 end;

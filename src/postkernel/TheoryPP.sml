@@ -357,7 +357,7 @@ fun pp_struct info_record = let
 
   fun pp_tm tm =
       (add_string "read\"">>
-       add_string (RawParse.pp_raw_term
+       add_string (Term.write_raw
                      (fn t => Map.find(#termmap tmtable, t))
                      tm)>>
        add_string "\"")
@@ -384,7 +384,7 @@ fun pp_struct info_record = let
            (stringbrk "local" >>
             block CONSISTENT 0
               (stringbrk"val DT = Thm.disk_thm" >>
-               stringbrk"fun read s = RawParse.readTerm tmvector s") >>
+               stringbrk"val read = Term.read_raw tmvector") >>
             add_newline >>
             add_string"in" >> add_newline >>
             block CONSISTENT 0
