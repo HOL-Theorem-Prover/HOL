@@ -14,5 +14,5 @@ FinalType-sig.uo: FinalType-sig.sml Lib.ui
 FinalTheory-sig.uo: FinalTheory-sig.sml Lib.uo $(PORTABLED)
 	$(HOLMOSMLC) -c -toplevel $<
 
-FinalThm-sig.uo: FinalThm-sig.sml Lib.uo $(PORTABLED)
+FinalThm-sig.uo: FinalThm-sig.sml Nonce.ui Lib.uo $(PORTABLED)
 	$(HOLMOSMLC) -c -toplevel $<

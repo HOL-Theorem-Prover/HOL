@@ -1,5 +1,7 @@
 OPTIONS = NO_OVERLAY
 
+TAGD = $(dprot $(SIGOBJ)/Tag.ui)
+
 FTAGD = $(dprot $(SIGOBJ)/FinalTag-sig.ui)
 FTAG = $(protect $(SIGOBJ)/FinalTag-sig.ui)
 
@@ -25,5 +27,5 @@ Type.ui : Type.sig $(FTYPED) $(dprot $(SIGOBJ)/KernelSig.ui) $(LIBD)
 Term.ui: Term.sig $(FTERMD) Type.ui
 	$(HOLMOSMLC) -c $(FTERM) $<
 
-Thm.ui: Thm.sig $(FTHMD) Term.ui
+Thm.ui: Thm.sig $(FTHMD) $(TAGD) Term.ui
 	$(HOLMOSMLC) -c $(FTHM) $<
