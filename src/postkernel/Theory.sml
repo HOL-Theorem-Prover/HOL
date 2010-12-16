@@ -60,7 +60,6 @@ infix ##;
 
 val ERR  = mk_HOL_ERR "Theory";
 val WARN = HOL_WARNING "Theory";
-val kernelid = "expknl"
 
 type thy_addon = {sig_ps    : (ppstream -> unit) option,
                   struct_ps : (ppstream -> unit) option}
