@@ -1052,10 +1052,9 @@ fun read_raw tmv = let
         | _ => raise ERR "glamb" "expected an identifier"
 in
 fn s =>
-   (case parse ([], Substring.full s)
+   case parse ([], Substring.full s)
      of ([v], _)  => v
-      | otherwise => raise ERR "raw term parser" "parse failed")
- | otherwise => raise ERR "raw term parser" "expected a quotation"
+      | otherwise => raise ERR "raw term parser" "parse failed"
 end;
 end (* local *)
 
