@@ -4,16 +4,13 @@ struct
 (* Header for interactive use
 
   app load ["numLib", "bossLib",
-            "gcdTheory", "primeTheory",
+            "gcdTheory",
             "powerTheory", "summationTheory", "dividesTheory"];
  *)
 
 open HolKernel Parse boolLib bossLib
      numLib arithmeticTheory prim_recTheory
-     gcdTheory primeTheory powerTheory summationTheory dividesTheory;
-
-infix THEN THENC THENL;
-infix 8 by;
+     gcdTheory summationTheory dividesTheory;
 
 val ARW = RW_TAC arith_ss;
 
@@ -23,7 +20,7 @@ val _ = new_theory "congruent";
 val CONGRUENT = Define `congruent a b n = ?c d. a+c*n = b+d*n`;
 
 
-val CONGRUENT_REF = store_thm("CONGRUENT_REF",
+val CONGRUENT_REFL = store_thm("CONGRUENT_REFL",
 			Term `!a n. congruent a a n`,
                         PROVE_TAC[CONGRUENT]);
 
@@ -88,9 +85,9 @@ val CONGRUENT_MULT = store_thm("CONGRUENT_MULT",
 val CONGRUENT_POWER = store_thm("CONGRUENT_POWER",
 			Term `!a b c n. congruent a b n
                                            ==>
-                                        congruent (power a c) (power b c) n`,
+                                        congruent (a ** c) (b ** c) n`,
                         Induct_on `c` THEN
-                        PROVE_TAC[power_def,CONGRUENT_MULT,CONGRUENT_REF]);
+                        PROVE_TAC[EXP,CONGRUENT_MULT,CONGRUENT_REFL]);
 
 
 val CONGRUENT_LE_EX = store_thm("CONGRUENT_LE_EX",
@@ -131,7 +128,7 @@ val CONGRUENT_DIVIDES = store_thm("CONGRUENT_DIVIDES",
                          ARW[] THEN IMP_RES_TAC CONGRUENT_LE_EX
                          THEN ARW[DIVIDES_MULT,ADD_SUB]
                          THEN PROVE_TAC[DIVIDES_MULT,ADD_SUB,
-                                        DIVIDES_REF,MULT_SYM]);
+                                        DIVIDES_REFL,MULT_SYM]);
 
 val _ = export_theory();
 

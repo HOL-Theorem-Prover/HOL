@@ -1,8 +1,7 @@
 structure binomialScript =
 struct
 
-open HolKernel Parse boolLib bossLib
-     arithmeticTheory factorialTheory powerTheory summationTheory ;
+open HolKernel Parse boolLib bossLib arithmeticTheory summationTheory
 
 val ARW = RW_TAC arith_ss;
 
@@ -35,6 +34,9 @@ val BINOMIAL_DEF4 = store_thm("BINOMIAL_DEF4",
                                        =
                                     binomial a (SUC b) + binomial a b`,
                         REWRITE_TAC[BINOMIAL]);
+
+val _ = temp_overload_on ("fact", ``FACT``)
+val fact_def = REWRITE_RULE [Once MULT_COMM] FACT
 
 val BINOMIAL_FACT = store_thm("BINOMIAL_FACT",
 Term `!a b. binomial (a+b) b * (fact a * fact b)
@@ -71,7 +73,8 @@ Induct_on `b`
   ]
 );
 
-val power_def' = CONV_RULE numLib.SUC_TO_NUMERAL_DEFN_CONV power_def
+val _ = temp_overload_on ("power", ``$EXP``)
+val EXP' = CONV_RULE numLib.SUC_TO_NUMERAL_DEFN_CONV EXP
 val EXP_PASCAL = store_thm("EXP_PASCAL",
 Term `!a b n.
         power (a+b) n
@@ -80,12 +83,12 @@ Term `!a b n.
           (\k. binomial n k * (power a (n-k) * power b k))`,
 Induct_on `n`
  THENL [
-  ARW[power_def,summation_def,BINOMIAL_DEF1],
+  ARW[EXP,summation_def,BINOMIAL_DEF1],
   Cases_on `n`
    THENL [
-     ARW [power_def,summation_def,BINOMIAL_DEF1,BINOMIAL_DEF3,MULT_CLAUSES,
-          power_def'],
-     ONCE_REWRITE_TAC[power_def]
+     ARW [EXP,summation_def,BINOMIAL_DEF1,BINOMIAL_DEF3,MULT_CLAUSES,
+          EXP'],
+     ONCE_REWRITE_TAC[EXP]
        THEN ASM_REWRITE_TAC[RIGHT_ADD_DISTRIB,SUMMATION_TIMES]
        THEN REPEAT STRIP_TAC
        THEN `summation (SUC n') 0
@@ -94,7 +97,7 @@ Induct_on `n`
              a * power a (SUC n') +
              summation n' 1
                (\n. a * (binomial(SUC n') n * (power a (SUC n' - n) * power b n)))`
-         by ARW[SUMMATION_1,BINOMIAL_DEF1,power_def',MULT_CLAUSES]
+         by ARW[SUMMATION_1,BINOMIAL_DEF1,EXP',MULT_CLAUSES]
        THEN `summation (SUC n') 0
               (\n. b * (binomial(SUC n') n * (power a (SUC n' - n) * power b n)))
                =
@@ -102,7 +105,7 @@ Induct_on `n`
                (\n. b * (binomial(SUC n') n * (power a (SUC n' - n) * power b n)))
                + b * power b (SUC n')`
          by ARW [SUMMATION_2,BINOMIAL_DEF1,
-                 BINOMIAL_DEF3,power_def',MULT_CLAUSES]
+                 BINOMIAL_DEF3,EXP',MULT_CLAUSES]
        THEN BETA_TAC THEN ASM_REWRITE_TAC[]
        THEN REWRITE_TAC[Q.SPECL[`n'`,`0`] SUMMATION_SHIFT] THEN BETA_TAC
        THEN `(a * power a (SUC n')
@@ -124,14 +127,14 @@ Induct_on `n`
           THEN POP_ASSUM MP_TAC THEN REPEAT (POP_ASSUM (K ALL_TAC))
           THEN DISCH_TAC
           THEN `SUC n' - k = SUC (n' - k)` by ARW[]
-          THEN ASM_REWRITE_TAC[power_def]
+          THEN ASM_REWRITE_TAC[EXP]
           THEN MATCH_MP_TAC (DECIDE ``(x=q) /\ (y=p) ==> (x + y = p + q)``)
           THEN PROVE_TAC [MULT_SYM,MULT_ASSOC],
          ASM_REWRITE_TAC [GSYM ADD_ASSOC, ONE]
           THEN ARW[Q.SPEC`SUC n'` SUMMATION_1, Q.SPEC`n'` SUMMATION_2,
                    DECIDE ``x + 2 = SUC (SUC x)``]
-          THEN ARW[power_def,BINOMIAL_DEF1,MULT_CLAUSES,ADD_CLAUSES]
-          THEN ARW[power_def,BINOMIAL_DEF3,MULT_CLAUSES]
+          THEN ARW[EXP,BINOMIAL_DEF1,MULT_CLAUSES,ADD_CLAUSES]
+          THEN ARW[EXP,BINOMIAL_DEF3,MULT_CLAUSES]
           THEN REWRITE_TAC [TWO]
           THEN ONCE_REWRITE_TAC[SUMMATION_SHIFT_P] THEN BETA_TAC
           THEN MATCH_MP_TAC SUMMATION_EXT
