@@ -2933,6 +2933,36 @@ val EXP_BASE_LEQ_MONO_SUC_IMP = save_thm(
   (REWRITE_RULE [LESS_0] o Q.INST [`b` |-> `SUC b`] o SPEC_ALL)
   EXP_BASE_LEQ_MONO_IMP);
 
+val EXP_BASE_LE_IFF = store_thm(
+  "EXP_BASE_LE_IFF",
+  ``b ** m <= b ** n <=>
+      (b = 0) /\ (n = 0) \/ (b = 0) /\ 0 < m \/ (b = 1) \/ 1 < b /\ m <= n``,
+  Q.SPEC_THEN `b` STRUCT_CASES_TAC num_CASES THEN
+  ASM_REWRITE_TAC [NOT_SUC, NOT_LESS_0] THENL [
+    Q.SPEC_THEN `m` STRUCT_CASES_TAC num_CASES THEN
+    ASM_REWRITE_TAC [LESS_REFL, EXP, ONE, SUC_NOT] THENL [
+      Q.SPEC_THEN `n` STRUCT_CASES_TAC num_CASES THEN
+      ASM_REWRITE_TAC [NOT_SUC, EXP, ONE, LESS_EQ_REFL, MULT_CLAUSES,
+                       NOT_SUC_LESS_EQ_0],
+      ASM_REWRITE_TAC [LESS_0, MULT_CLAUSES, ZERO_LESS_EQ]
+    ],
+    EQ_TAC THENL [
+      ASM_CASES_TAC ``1 < SUC n'`` THEN SRW_TAC [][EXP_BASE_LE_MONO] THEN
+      FULL_SIMP_TAC (srw_ss()) [ONE, LESS_MONO_EQ, INV_SUC_EQ,
+                                GSYM NOT_ZERO_LT_ZERO],
+      STRIP_TAC THEN ASM_REWRITE_TAC [EXP_1, LESS_EQ_REFL] THEN
+      MATCH_MP_TAC EXP_BASE_LEQ_MONO_IMP THEN ASM_REWRITE_TAC [LESS_0]
+    ]
+  ]);
+
+val X_LE_X_EXP = store_thm(
+  "X_LE_X_EXP",
+  ``0 < n ==> x <= x ** n``,
+  Q.SPEC_THEN `n` STRUCT_CASES_TAC num_CASES THEN
+  REWRITE_TAC [EXP, LESS_REFL, LESS_0] THEN
+  Q.SPEC_THEN `x` STRUCT_CASES_TAC num_CASES THEN
+  REWRITE_TAC [ZERO_LESS_EQ, LE_MULT_CANCEL_LBARE, NOT_SUC, ZERO_LT_EXP,
+               LESS_0]);
 
 (* theorems about exponentiation where the exponent is held constant *)
 val LT_MULT_IMP = prove(
