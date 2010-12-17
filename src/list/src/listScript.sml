@@ -2254,6 +2254,31 @@ SRW_TAC [][ITSET_eq_FOLDL_SET_TO_LIST,SUM_MAP_FOLDL] THEN
 AP_THM_TAC THEN AP_THM_TAC THEN AP_TERM_TAC THEN
 SRW_TAC [][FUN_EQ_THM,arithmeticTheory.ADD_COMM]);
 
+val SNOC_INDUCT_TAC = INDUCT_THEN SNOC_INDUCT ASSUME_TAC;
+
+local open arithmeticTheory prim_recTheory in
+val EL_REVERSE = store_thm("EL_REVERSE",
+    (--`!n (l:'a list). n < (LENGTH l) ==>
+     (EL n (REVERSE l) = EL (PRE(LENGTH l - n)) l)`--),
+    INDUCT_TAC THEN SNOC_INDUCT_TAC
+    THEN ASM_REWRITE_TAC[LENGTH,LENGTH_SNOC,
+        EL,HD,TL,NOT_LESS_0,LESS_MONO_EQ,SUB_0] THENL[
+        REWRITE_TAC[REVERSE_SNOC,PRE,EL_LENGTH_SNOC,HD],
+        REWRITE_TAC[REVERSE_SNOC,SUB_MONO_EQ,TL]
+        THEN REPEAT STRIP_TAC THEN RES_THEN SUBST1_TAC
+        THEN MATCH_MP_TAC (GSYM EL_SNOC)
+        THEN REWRITE_TAC(PRE_SUB1 :: (map GSYM [SUB_PLUS,ADD1]))
+        THEN numLib.DECIDE_TAC]);
+end
+
+val REVERSE_GENLIST = Q.store_thm("REVERSE_GENLIST",
+`REVERSE (GENLIST f n) = GENLIST (λm. f (PRE n - m)) n`,
+  MATCH_MP_TAC LIST_EQ THEN
+  SRW_TAC [][EL_REVERSE] THEN
+  `PRE (n - x) < n` by numLib.DECIDE_TAC THEN
+  SRW_TAC [][EL_GENLIST] THEN
+  AP_TERM_TAC THEN numLib.DECIDE_TAC)
+
 (* ----------------------------------------------------------------------
     All lists have infinite universes
    ---------------------------------------------------------------------- *)
