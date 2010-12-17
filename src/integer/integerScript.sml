@@ -3394,6 +3394,12 @@ val _ = BasicProvers.export_rewrites
          "INT_SUB_RNEG", "INT_SUB_RZERO", "INT_SUB_SUB",
          "INT_SUB_SUB2", "NUM_OF_INT"]
 
+val _ = adjoin_to_theory {sig_ps = NONE,
+  struct_ps = SOME (fn ppstrm =>
+   app (fn s => (PP.add_string ppstrm s; PP.add_newline ppstrm))
+   ["val _ = TypeBase.write [TypeBasePure.mk_nondatatype_info",
+    "  (``:int``, {nchotomy = SOME INT_NUM_CASES,",
+    "              encode = NONE, size = NONE})];"])}
 
 val _ = export_theory();
 
