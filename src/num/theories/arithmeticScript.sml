@@ -2964,6 +2964,63 @@ val X_LE_X_EXP = store_thm(
   REWRITE_TAC [ZERO_LESS_EQ, LE_MULT_CANCEL_LBARE, NOT_SUC, ZERO_LT_EXP,
                LESS_0]);
 
+val X_LT_EXP_X = Q.store_thm(
+"X_LT_EXP_X",
+`1 < b ==> x < b ** x`,
+Q.ID_SPEC_TAC `x` THEN INDUCT_TAC THEN1
+  SIMP_TAC bool_ss [LESS_0,EXP,ONE] THEN
+STRIP_TAC THEN
+FULL_SIMP_TAC bool_ss [] THEN
+Cases_on `x = 0` THEN1
+  ASM_SIMP_TAC bool_ss [EXP,MULT_RIGHT_1,SYM ONE] THEN
+MATCH_MP_TAC LESS_EQ_LESS_TRANS THEN
+EXISTS_TAC ``x + x`` THEN
+CONJ_TAC THEN1 (
+  SIMP_TAC bool_ss [ADD1,ADD_MONO_LESS_EQ] THEN
+  SIMP_TAC bool_ss [ONE] THEN
+  MATCH_MP_TAC LESS_OR THEN
+  PROVE_TAC [NOT_ZERO_LT_ZERO] ) THEN
+SIMP_TAC bool_ss [EXP] THEN
+MATCH_MP_TAC LESS_EQ_LESS_TRANS THEN
+EXISTS_TAC ``b * x`` THEN
+CONJ_TAC THEN1 (
+  SIMP_TAC bool_ss [GSYM TIMES2] THEN
+  MATCH_MP_TAC LESS_MONO_MULT THEN
+  SIMP_TAC bool_ss [TWO] THEN
+  MATCH_MP_TAC LESS_OR THEN
+  FIRST_ASSUM ACCEPT_TAC ) THEN
+SIMP_TAC bool_ss [LT_MULT_LCANCEL] THEN
+CONJ_TAC THEN1 (
+  MATCH_MP_TAC LESS_TRANS THEN
+  EXISTS_TAC ``1`` THEN
+  ASM_SIMP_TAC bool_ss [ONE,prim_recTheory.LESS_0_0] ) THEN
+FIRST_ASSUM ACCEPT_TAC)
+
+local fun Cases_on q = Q.SPEC_THEN q STRUCT_CASES_TAC num_CASES in
+
+val ZERO_EXP = Q.store_thm(
+"ZERO_EXP",
+`0 ** x = if x = 0 then 1 else 0`,
+Cases_on `x` THEN
+SIMP_TAC bool_ss [EXP,numTheory.NOT_SUC,MULT])
+
+val X_LT_EXP_X_IFF = Q.store_thm(
+"X_LT_EXP_X_IFF",
+`x < b ** x <=> 1 < b \/ (x = 0)`,
+EQ_TAC THEN1 (
+  Cases_on `b` THEN1 (
+    Cases_on `x` THEN
+    SIMP_TAC bool_ss [ZERO_EXP,SUC_NOT,NOT_LESS_0] ) THEN
+  Q.MATCH_RENAME_TAC `x < SUC b ** x ==> 1 < SUC b \/ (x = 0)` [] THEN
+  Cases_on `b` THEN1 (
+    SIMP_TAC bool_ss [EXP_1,SYM ONE] THEN
+    SIMP_TAC bool_ss [ONE,LESS_THM,NOT_LESS_0] ) THEN
+  SIMP_TAC bool_ss [LESS_MONO_EQ,ONE,LESS_0] ) THEN
+STRIP_TAC THEN1 (
+  POP_ASSUM MP_TAC THEN ACCEPT_TAC X_LT_EXP_X) THEN
+ASM_SIMP_TAC bool_ss [EXP,ONE,LESS_0])
+end
+
 (* theorems about exponentiation where the exponent is held constant *)
 val LT_MULT_IMP = prove(
   ``a < b /\ x < y ==> a * x < b * y``,
