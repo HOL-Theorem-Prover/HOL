@@ -418,20 +418,24 @@ val int_sort = sort (curry (op <= :int*int->bool))
 (* Topologically sort a list wrt partial order R.                            *)
 (*---------------------------------------------------------------------------*)
 
-fun topsort R =
- let fun pred_of y x = R x y
-   fun deps [] front acc = acc
-     | deps (h::t) front acc =
-        let val hpreds = filter (pred_of h) (front @ t)
-        in deps t (h::front) ((h,hpreds)::acc)
-        end
-   fun loop [] = []
-     | loop l =
-        case partition (fn (_,dl) => null dl) (deps l [] [])
-         of ([],rst) => raise ERR "topsort" "cyclic dependency"
-          | (nodeps,rst) => map fst nodeps@loop (map fst rst)
- in loop
- end;
+fun topsort R = let
+  fun pred_of y x = R x y
+  fun a1 l1 l2 = l1 @ l2
+  fun a2 l1 l2 = foldl (op::) l2 l1
+  fun deps [] _ acc = acc
+    | deps (h::t) front (nodeps,rst) = let
+        val pred_of_h = pred_of h
+        val hdep = exists pred_of_h t orelse
+                   exists pred_of_h front
+        val acc = if hdep then (nodeps,h::rst)
+                          else (h::nodeps,rst)
+      in deps t (h::front) acc end
+  fun loop _ [] = []
+    | loop (a1,a2) l =
+        case (deps l [] ([],[])) of
+          ([],_) => raise ERR "topsort" "cyclic dependency"
+        | (nodeps,rst) => a1 nodeps (loop (a2,a1) rst)
+in loop (a2,a1) end
 
 (*---------------------------------------------------------------------------*
  * Substitutions.                                                            *
