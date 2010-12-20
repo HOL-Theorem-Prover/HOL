@@ -6,6 +6,9 @@ sig
     val x64_spec             : string -> (thm * int * int option) *
                                          (thm * int * int option) option
 
+    val x64_spec_byte_memory : string -> (thm * int * int option) *
+                                         (thm * int * int option) option
+
     val x64_tools            : decompiler_tools
     val x64_tools_no_status  : decompiler_tools
 

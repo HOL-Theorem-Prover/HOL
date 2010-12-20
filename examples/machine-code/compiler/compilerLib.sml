@@ -3,12 +3,14 @@ struct
 
 open HolKernel boolLib bossLib Parse;
 open decompilerLib;
-open codegenLib codegen_x86Lib;
+open codegenLib;
+open codegen_x86Lib;
 open reg_allocLib;
 
-open prog_armLib prog_ppcLib prog_x86Lib;
+open prog_armLib prog_ppcLib prog_x86Lib prog_x64Lib;
 open wordsTheory wordsLib addressTheory;
-open helperLib tailrecLib;
+open helperLib;
+open tailrecLib;
 
 
 fun AUTO_ALPHA_CONV () = let
@@ -70,6 +72,7 @@ fun basic_compile target tm = let
   val (tools,target,model_name,s) =
     if mem target ["arm","ARM"] then (arm_tools,"arm","ARM_MODEL",[]) else
     if mem target ["x86","i32","386"] then (x86_tools,"x86","X86_MODEL",to_x86_regs ()) else
+    if mem target ["x64","X64"] then (x64_tools,"x64","X64_MODEL",[]) else
     if mem target ["ppc","Power","PowerPC"] then (ppc_tools,"ppc","PPC_MODEL",[]) else fail()
   val x = fst (dest_eq tm)
   val name = fst (dest_const (repeat car x)) handle e => fst (dest_var (repeat car x))

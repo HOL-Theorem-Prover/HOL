@@ -54,9 +54,15 @@ fun basic_assembler target code3 = let
   val (enc,branch,_) = assembler_tools target
   (* translate into machine code *)
   fun extend (s,i) = if size s < 2 * i then extend ("0" ^ s, i) else s
+  fun split_at p [] ys = (implode (rev ys),"")
+    | split_at p (x::xs) ys = if p x then (implode (rev ys),implode (x::xs))
+                              else split_at p xs (x::ys)
+  fun better_encode x = let
+    val (x1,x2) = split_at (fn c => c = #"/") (explode x) []
+    in extend (enc x1) ^ x2 end
   fun translate (ASM_INSTRUCTION (x,z,y),q) =
         if x = "" then (ASM_INSTRUCTION (x,z,y),q)
-        else (ASM_INSTRUCTION (extend (enc x),z,y),q)
+        else (ASM_INSTRUCTION (better_encode x,z,y),q)
     | translate x = x
   val code4 = map translate code3
   (* replace gotos, first with nothing, then regenerate iteratively until no change *)
@@ -270,10 +276,12 @@ fun get_tools th = let
   val s = get_model_name th
   in if s = "PPC_MODEL" then prog_ppcLib.ppc_tools else
      if s = "X86_MODEL" then prog_x86Lib.x86_tools else
+     if s = "X64_MODEL" then prog_x64Lib.x64_tools else 
      if s = "ARM_MODEL" then prog_armLib.arm_tools else fail() end
 
 fun add_assignment (tm1,tm2,th,len) = let
   val (_,_,_,pc) = get_tools th
+  val pc_ty = (hd o snd o dest_type o type_of) pc
   val th = RW [GSYM progTheory.SPEC_MOVE_COND] (DISCH_ALL th)
   val thx = CONV_RULE (PRE_CONV (SIMP_CONV (std_ss++sep_cond_ss) [])) th
   val thx = UNDISCH_ALL (RW [progTheory.SPEC_MOVE_COND] thx)
@@ -284,16 +292,17 @@ fun add_assignment (tm1,tm2,th,len) = let
   val dest_tuple = list_dest pairSyntax.dest_pair
   val ys = zip (dest_tuple tm1) (dest_tuple tm2) handle e => [(tm1,tm2)]
   val ys = filter (fn (x,y) => not (x = y)) ys
-  val post = cdr (find_term (can (match_term (mk_comb(pc,genvar(``:word32``))))) q)
-  val tm2 = subst [mk_var("p",``:word32``) |-> post] p
+  val post = cdr (find_term (can (match_term (mk_comb(pc,genvar(pc_ty))))) q)
+  val tm2 = subst [mk_var("p",pc_ty) |-> post] p
+  val tm2 = if can dest_sep_disj q then mk_sep_disj(tm2,snd(dest_sep_disj q)) else tm2
   val vs = pairSyntax.list_mk_pair (map fst ys)
   val ws = pairSyntax.list_mk_pair (map snd ys)
   val tm3 = pairSyntax.mk_anylet([(vs,ws)],tm2)
   val lemma = prove(mk_eq(q,tm3),
     SIMP_TAC std_ss [LET_DEF]
     THEN SPEC_TAC (ws,genvar(type_of ws))
-    THEN SIMP_TAC std_ss [pairTheory.FORALL_PROD,LET_DEF]
-    THEN (fn t => hd [])) handle Empty => TRUTH
+    THEN SIMP_TAC (std_ss++star_ss) [pairTheory.FORALL_PROD,LET_DEF]
+    THEN (fn t => hd [])) handle Empty => (print ("\n\nUnable to store assignment:\n\n" ^ term_to_string(mk_eq(q,tm3)) ^ "\n\n"); TRUTH)
   val th = CONV_RULE (RAND_CONV (ONCE_REWRITE_CONV [lemma])) th
   val _ = add_decompiled (name,th,len,SOME len)
   in () end;
@@ -315,8 +324,9 @@ fun extract_ops th = let
   val th = UNDISCH_ALL (SIMP_RULE (std_ss++sep_cond_ss) [progTheory.SPEC_MOVE_COND] th)
   val (m,p,c,q) = dest_spec (concl th)
   val (i,q) = pairSyntax.dest_anylet q handle HOL_ERR _ => ([],q)
+  fun fst_sep_disj tm = fst (dest_sep_disj tm) handle HOL_ERR _ => tm
   val ps = list_dest dest_star p
-  val qs = list_dest dest_star q
+  val qs = list_dest dest_star (fst_sep_disj q)
   (* length of instruction *)
   val l = (numSyntax.int_of_term o cdr o cdr o cdr o hd) (filter (fn tm => car tm = pc) qs)
   (* calculate update *)
@@ -343,6 +353,7 @@ fun extract_ops th = let
   fun foo tm = optionSyntax.dest_some tm handle e => tm
   val qs = filter (fn tm => mem (car tm) xs) qs
   val qs = map (fn tm => add_conditional(foo (cdr tm),car tm,th,l)) qs
+           handle HOL_ERR _ => []
   in () end;
 
 fun add_compiled thms = let val _ = map extract_ops thms in () end;

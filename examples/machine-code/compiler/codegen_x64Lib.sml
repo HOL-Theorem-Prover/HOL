@@ -144,9 +144,9 @@ fun x64_remove_annotations c =
   else c handle _ => c
 
 fun x64_cond_code tm =
-  (* zero     *) if tm = ``xS1 X_ZF`` then ("e","ne") else
-  (* sign     *) if tm = ``xS1 X_SF`` then ("s","ns") else
-  (* below    *) if tm = ``xS1 X_CF`` then ("b","nb") else fail()
+  (* zero     *) if tm = ``zS1 Z_ZF`` then ("e","ne") else
+  (* sign     *) if tm = ``zS1 Z_SF`` then ("s","ns") else
+  (* below    *) if tm = ``zS1 Z_CF`` then ("b","nb") else fail()
 
 
 fun x64_encode_instruction s =

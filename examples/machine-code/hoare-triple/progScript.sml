@@ -123,6 +123,11 @@ val SPEC_SUBSET_CODE = store_thm("SPEC_SUBSET_CODE",
   \\ `c' = c UNION c'` by FULL_SIMP_TAC bool_ss [EXTENSION,IN_UNION]
   \\ METIS_TAC [SPEC_ADD_CODE]);
 
+val SPEC_REFL = store_thm("SPEC_REFL",
+  ``!x:('a,'b,'c)processor p c. SPEC x p c p``,
+  INIT_TAC \\ SIMP_TAC std_ss [RUN_def,SPEC_def] \\ REPEAT STRIP_TAC
+  \\ Q.EXISTS_TAC `0` \\ FULL_SIMP_TAC bool_ss [rel_sequence_def]);
+
 val rel_sequence_shift = prove(
   ``!n seq s. rel_sequence n seq s ==> !i. rel_sequence n (\j. seq (i + j)) (seq i)``,
   REWRITE_TAC [rel_sequence_def] \\ REPEAT STRIP_TAC \\ SIMP_TAC std_ss []
@@ -177,6 +182,19 @@ val SPEC_FRAME_COMPOSE = store_thm("SPEC_FRAME_COMPOSE",
   THEN1 (MATCH_MP_TAC SPEC_FRAME \\ ASM_SIMP_TAC std_ss [])
   \\ IMP_RES_TAC SPEC_FRAME \\ METIS_TAC [STAR_ASSOC,STAR_COMM]);
 
+val SPEC_FRAME_COMPOSE_DISJ = store_thm("SPEC_FRAME_COMPOSE_DISJ",
+  ``!x p p' c1 m c2 q q' b1 b2 d.
+       (b1 ==> SPEC x (m * q') c2 q) ==>
+       (b2 ==> SPEC x p c1 (m * p' \/ d)) ==>
+       (b1 /\ b2) ==> SPEC x (p * q') (c1 UNION c2) (q * p' \/ d * q')``,
+  REPEAT STRIP_TAC \\ MATCH_MP_TAC SPEC_COMPOSE \\ FULL_SIMP_TAC std_ss []
+  \\ Q.EXISTS_TAC `m * p' * q' \/ d * q'` \\ REPEAT STRIP_TAC
+  \\ IMP_RES_TAC SPEC_FRAME \\ FULL_SIMP_TAC std_ss [SEP_CLAUSES]
+  \\ MATCH_MP_TAC (RW [SEP_CLAUSES,UNION_IDEMPOT] 
+       (Q.SPECL [`x`,`p1`,`p2`,`c`,`SEP_F`,`c`] SPEC_MERGE))
+  \\ POP_ASSUM (MP_TAC o Q.SPEC `p'`)
+  \\ FULL_SIMP_TAC std_ss [SPEC_REFL, AC STAR_ASSOC STAR_COMM]);    
+
 val SEP_REFINE_HIDE = prove(
   ``SEP_REFINE (~p * q) less to_set state =
     ?x. SEP_REFINE (p x * q) less to_set state``,
@@ -225,10 +243,22 @@ val SPEC_MOVE_COND_POST = store_thm("SPEC_MOVE_COND_POST",
   ``SPEC m (p * cond b) c q = SPEC m (p * cond b) c (q * cond b)``,
   SIMP_TAC std_ss [SPEC_MOVE_COND,SEP_CLAUSES]);
 
-val SPEC_REFL = store_thm("SPEC_REFL",
-  ``!x:('a,'b,'c)processor p c. SPEC x p c p``,
-  INIT_TAC \\ SIMP_TAC std_ss [RUN_def,SPEC_def] \\ REPEAT STRIP_TAC
-  \\ Q.EXISTS_TAC `0` \\ FULL_SIMP_TAC bool_ss [rel_sequence_def]);
+val SPEC_ADD_DISJ = store_thm("SPEC_ADD_DISJ",
+  ``!x p c q. SPEC x p c q ==> !r. SPEC x p c (q \/ r)``,
+  REPEAT STRIP_TAC \\ IMP_RES_TAC SPEC_WEAKEN
+  \\ POP_ASSUM (MATCH_MP_TAC o Q.SPEC `q \/ r`)
+  \\ FULL_SIMP_TAC std_ss [SEP_IMP_def,SEP_DISJ_def]);
+
+val SPEC_PRE_DISJ = store_thm("SPEC_PRE_DISJ",
+  ``!x p1 p2 c q. SPEC x (p1 \/ p2) c q = SPEC x p1 c q /\ SPEC x p2 c q``,
+  INIT_TAC \\ SIMP_TAC std_ss [SPEC_def,SEP_CLAUSES,RUN_def,
+                SEP_REFINE_DISJ] \\ METIS_TAC []);
+
+val SPEC_PRE_DISJ_INTRO = store_thm("SPEC_PRE_DISJ_INTRO",
+  ``!x p c q r. SPEC x p c (q \/ r) ==> SPEC x (p \/ r) c (q \/ r)``,
+  SIMP_TAC std_ss [SPEC_PRE_DISJ] \\ REPEAT STRIP_TAC  
+  \\ MATCH_MP_TAC (MATCH_MP SPEC_WEAKEN (SPEC_ALL SPEC_REFL))
+  \\ FULL_SIMP_TAC std_ss [SEP_IMP_def,SEP_DISJ_def]);
 
 val SPEC_TAILREC = store_thm("SPEC_TAILREC",
   ``!f1 (f2:'a->'b) g p res res' c m.
