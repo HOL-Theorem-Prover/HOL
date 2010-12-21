@@ -167,75 +167,220 @@ struct
 (*      not suitable for 't'.                                                *)
 (* ------------------------------------------------------------------------- *)
 
-  fun check t dict (VALID (exts,lits)) = let
-    open Lib Term boolSyntax
+  local open Tactic Tactical in
+    val REMOVE_ORIG = Q.prove(
+      `(!x:bool. (x = M) ==> P x) ==> (?x. P x)`,
+      DISCH_TAC THEN Q.EXISTS_TAC `M` THEN
+      POP_ASSUM MATCH_MP_TAC THEN REFL_TAC)
 
-    val (var_to_num, num_to_var) =
+    val REMOVE_EXT = Q.prove(
+      `(!x:bool. (x = M) ==> P) ==> P`,
+      DISCH_TAC THEN POP_ASSUM MATCH_MP_TAC
+      THEN Q.EXISTS_TAC `M` THEN REFL_TAC)
+  end
+
+  local open Term Redblackset in
+    (* h is the hypothesis defining an existential variable.
+         for original variables, this is (v = e) for some extension variable e.
+         for extension variables, this is (e = tm) for some extension term tm.
+       lhs is the index of the variable on the left of an hypothesis
+       rhs is the set of indexes of variables occurring on the right.
+         for a universally quantified variable, lhs is just its index.
+       pos is the number of quantifiers before a variable is bound in the original term.
+         for extension variables, pos is NONE.  *)
+    datatype vtype = Forall of {v:term, lhs:vindex, pos:int}
+                   | Exists of {h:term, lhs:vindex, rhs:vindex set, pos:int option}
+
+    (* R x y means x should be bound in scope of y (i.e. x has more quantifiers before it)
+       This is either because this was the case in the original term,
+       or because we need to remove the hypothesis (x = tx) (and quantify over x)
+       before we can quantify over y, because y occurs in tx *)
+    fun R (Forall {pos=n1,...}) (Forall {pos=n2,...}) = n1 > n2
+      | R (Forall {pos=n1,...}) (Exists {pos=SOME n2,...}) = n1 > n2
+      | R (Exists {pos=SOME n1,...}) (Forall {pos=n2,...}) = n1 > n2
+      | R (Exists {pos=SOME n1,...}) (Exists {pos=SOME n2,...}) = n1 > n2
+      | R (Exists {rhs,...}) (Forall {lhs,...}) = member(rhs,lhs)
+      | R (Exists {rhs,...}) (Exists {lhs,...}) = member(rhs,lhs)
+      | R _ _ = false
+  end
+
+  fun check t dict (VALID (exts,lits)) = let
+    open Lib Thm Drule Term Type boolSyntax
+    open Redblackset Redblackmap
+
+    val (var_to_index, index_to_var) = let
+      open String Int Option
+      val s = !QDimacs.var_prefix
+      fun num_to_var n = mk_var(s^(toString n),bool)
+    in
       case dict of
         NONE => let
-          val s = !QDimacs.var_prefix
-          val z = String.size(s)
+          val z = size(s)
         in
-          (fn v => valOf(Int.fromString(String.extract(fst(dest_var v),z,NONE))),
-           fn n => mk_var(s^(Int.toString n),Type.bool))
+          (fn v => valOf(fromString(extract(fst(dest_var v),z,NONE))),
+           num_to_var)
         end
       | SOME dict => let
-          open Redblackmap
-          val invd = foldr (fn(v,n,d)=>insert(d,n,v))
-                           (mkDict Int.compare)
-                           dict
+          (* in this case we use the inverse of dict to
+             map indexes to variables, but since dict only
+             binds original variables, we update the inverse map
+             on indexes of extension variables as necessary,
+             (using num_to_var for extensions) *)
+          fun invert_dict d =
+            foldl (fn(v,n,d)=>insert(d,n,v)) (mkDict compare) d
+          val tcid = ref (invert_dict dict)
+          fun update (n,v) = (tcid := insert(!tcid,n,v); v)
         in
-          (fn v => find(dict,v), curry find invd)
+          (curry find dict,
+           fn n => find (!tcid,n)
+             handle NotFound => update (n,num_to_var n))
         end
+    end
 
-    (* move these to library? *)
+    (* Traverse the prefix of the term and
+       calculate vtypes for all the bound variables.
+       Return a list of vtypes, the matrix, and a new lits map.
+       The new lits map binds any existential variables that were
+         not bound to explicit witness literals to 0,
+         indicating that they should be set to true.
+       The hypotheses for the existential variables are of the form
+         (v = e), where e is the corresponding extension variable,
+         or (v = T) when there is none.
+       The rhs (dependency) sets for the existential variables
+         are either {e} or {}.  *)
+    val (vars,mat,lits) = let
+      val cmp = Int.compare
+      fun enum vars t lits' n = let
+        val ((v,t), is_forall) = (dest_forall t, true)
+          handle Feedback.HOL_ERR _ => (dest_exists t, false)
+        val lhs = var_to_index v
+        val (var,lits') =
+          if is_forall then (Forall {v=v,lhs=lhs,pos=n}, lits') else let
+            val (tm,rhs,lits') = let
+              val ext_lit = find(lits,lhs)
+              val ext_index = Int.abs ext_lit
+              val tm = index_to_var ext_index
+              val tm = if ext_lit < 0 then mk_neg tm else tm
+              val rhs = singleton cmp ext_index
+            in (tm,rhs,lits') end
+            handle NotFound => (T,empty cmp,insert(lits',lhs,0))
+          in (Exists {h=mk_eq(v,tm),lhs=lhs,rhs=rhs,pos=SOME n}, lits') end
+      in enum (var::vars) t lits' (n+1) end
+      handle Feedback.HOL_ERR _ => (vars,t,lits')
+    in enum [] t lits 0 end
 
-    fun literal_to_term n = let
-      val v = num_to_var n
-    in if n < 0 then mk_neg v else v end
+    (* add all the hypotheses for the original existential variables
+       onto the front of the matrix, so we end up with
+       (v1 = e1) ==> (v2 = e2) ==> ... ==> mat *)
+    fun foldthis (Forall _,t) = t
+      | foldthis (Exists {h,...},t) = mk_imp(h,t)
+    val mat = List.foldl foldthis mat vars
 
-    fun extension_to_term (AND []) = T
-      | extension_to_term (AND ls) = list_mk_conj (map literal_to_term ls)
-      | extension_to_term (ITE(t,c,a)) =
-          mk_cond(literal_to_term t, literal_to_term c, literal_to_term a)
+    (* extension_to_term calculates a term corresponding
+         to the definition of an extension variable,
+         plus the set of indexes that term depends on.
+       If an extension is defined using an original existential variable v,
+       replace references to v by references to v's witness (extension) variable.
+       If v has no witness, replace references to v by references to T,
+       but simplify as necessary.
+       For example, if v has no witness:
+         if v occurs in an AND, don't bother listing it.
+         if ~v occurs in an AND, replace the AND by F,
+         if v is the test in an ITE, replace the ITE by its consequent
+         etc. *)
+    local
+      val empty = empty Int.compare
+      (* lit processes a literal l, accumulating dependencies in s.
+         TFk is the continuation for when l has no witness.
+           TFk is passed whether l was not negated
+           (i.e. will be constant T, rather than constant F)
+         vk is the continuation for when l has a witness.
+           vk is passed the literal of the witness,
+             and s with the index of the witness added *)
+      fun lit (l,s) TFk vk = let
+        val index = Int.abs l
+      in let
+        val el = find(lits,index)
+      in if el = 0 then TFk (l > 0) else let
+        val ext_index = Int.abs el
+        val s = add(s,ext_index)
+        val v = index_to_var ext_index
+        val neg = if l < 0 then el > 0 else el < 0
+        val v = if neg then mk_neg v else v
+      in vk (v,s) end end
+      handle NotFound => let
+        val s = add(s,index)
+        val v = index_to_var index
+        val v = if l < 0 then mk_neg v else v
+      in vk (v,s) end end
+      fun non_replacing_lit (l,s) k = let
+        val index = Int.abs l
+        val s = add(s,index)
+        val v = index_to_var index
+        val v = if l < 0 then mk_neg v else v
+      in k (v,s) end
+      exception False
+      fun afold (l,(t,s)) = lit (l,s)
+        (fn true=>(t,s)|false=>raise False)
+        (fn(v,s)=>
+         (case t of NONE   => SOME v
+                  | SOME t => SOME (mk_conj(v,t)), s))
+      fun negate t =
+        dest_neg t handle Feedback.HOL_ERR _ => mk_neg t
+    in
+      fun extension_to_term (AND ls) =
+      (let
+            val (t,s) = List.foldl afold (NONE,empty) ls
+          in case t of NONE   => (T,s)
+                     | SOME t => (t,s)
+          end handle False => (F,empty))
+        | extension_to_term (ITE(t,c,a)) =
+          lit (t,empty)
+              (fn t=> lit (if t then c else a,empty)
+                      (fn true=>(T,empty)|false=>(F,empty))
+                      (fn(v,s)=>(v,s)))
+              (fn(t,s)=> lit (c,s)
+                         (fn c=> lit (a,s)
+                                 (fn a=>(if c then if a then T else t
+                                              else if a then negate t else F,
+                                         s))
+                                 (fn(a,s)=>(if c then mk_disj(t,a)
+                                                 else mk_conj(negate t,a),s)))
+                         (fn(c,s)=> lit (a,s)
+                                    (fn a=>((if a then mk_imp else mk_conj)(t,c),s))
+                                    (fn(a,s)=>(mk_cond(t,c,a),s))))
+    end
 
-    val (n, vars, matrix) = QbfLibrary.enumerate_quantified_vars t
+    (* calculate vtypes for the extension variables,
+       add the hypotheses to the matrix,
+       and add the vtypes to the list of vtypes *)
+    fun foldthis (lhs,ext,(t,vars)) = let
+      val v = index_to_var lhs
+      val (tm,rhs) = extension_to_term ext
+      val h = mk_eq(v,tm)
+      val var = Exists {h=h,lhs=lhs,rhs=rhs,pos=NONE}
+    in (mk_imp(h,t),var::vars) end
+    val (mat,vars) = foldl foldthis (mat,vars) exts
 
-    fun foldthis ((_,_,true),acc) = acc
-      | foldthis ((key,v,false),acc as (t,d)) = let
-          val n = var_to_num v
-          val m = Redblackmap.find(lits,n)
-          val e = Redblackmap.find(exts,m)
-          val tm = extension_to_term e
-          val t = subst [v |-> tm] t
-          val d = Redblackmap.insert(d,key,tm)
-        in (t,d) end handle NotFound => acc
+    val thm = HolSatLib.SAT_PROVE mat
 
-    val wits = Redblackmap.mkDict Int.compare
-    val (matrix,wits) = List.foldr foldthis (matrix,wits) vars
+    val vars = Lib.topsort R vars
 
-    val thm = HolSatLib.SAT_PROVE matrix
-    handle HolSatLib.SAT_cex th =>
-      raise ERR "check" ("SAT_PROVE failed with counterexample: "^
-                         (Parse.thm_to_backend_string th))
-    | satCheckError => (
-      if !QbfTrace.trace < 1 then () else
-        Feedback.HOL_WARNING "QbfCertificate" "check"
-         ("SAT_PROVE failed on "^
-          (Parse.term_to_backend_string matrix)^
-          ", using PROVE");
-      BasicProvers.PROVE [] matrix)
-
-    fun foldthis ((_,v,true),th) = Thm.GEN v th
-      | foldthis ((key,v,false),th) = let
-          val t = Thm.concl th
-          val tm = Redblackmap.find(wits,key) handle NotFound => T
-          val t = subst [tm |-> v] t
-          val t = mk_exists(v,t)
-        in Thm.EXISTS (t,tm) th end
-
-    (* TODO sanity checks on final thm (proves input term with no hyps) *)
-  in List.foldr foldthis thm vars end
+    (* Discharge the hypotheses of the proved theorem
+       in the right order to recover the original term
+       as its conclusion.
+       This order is calculated in the topsort above.
+       Specifically, generalize universal variables,
+       and use the REMOVE_ theorems for existential/extension variables *)
+    fun foldthis ((Forall {v,...}),th) = GEN v th
+      | foldthis ((Exists {h,pos,...}),th) =
+        HO_MATCH_MP (if Option.isSome pos then REMOVE_ORIG else REMOVE_EXT)
+          (GEN (fst(dest_eq h)) (DISCH h th))
+    val thm = DISCH_ALL (List.foldl foldthis (UNDISCH_ALL thm) vars)
+    val _ = t = concl thm orelse raise ERR "check" "proved wrong theorem"
+  in
+    thm
+  end
 (* ------------------------------------------------------------------------- *)
     | check t _ (INVALID (dict, cindex)) =
     let
@@ -317,5 +462,4 @@ struct
     in
       thm
     end
-
 end
