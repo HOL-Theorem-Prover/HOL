@@ -2789,6 +2789,11 @@ CONJ_TAC THEN1 (
   FIRST_ASSUM ACCEPT_TAC) THEN
 SIMP_TAC bool_ss [ADD_SUC])
 
+val MOD_LIFT_PLUS_IFF = Q.store_thm(
+"MOD_LIFT_PLUS_IFF",
+`0 < n ==> (((x + k) MOD n = x MOD n + k) = (k < n - x MOD n))`,
+PROVE_TAC [SUB_LEFT_LESS,ADD_SYM,MOD_LESS,MOD_LIFT_PLUS])
+
 (* ----------------------------------------------------------------------
     Some additional theorems (nothing to do with DIV and MOD)
    ---------------------------------------------------------------------- *)
