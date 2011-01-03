@@ -2238,6 +2238,10 @@ val SUM_SNOC = store_thm("SUM_SNOC",
     (--`!x l. SUM (SNOC x l) = (SUM l) + x`--),
     GEN_TAC THEN LIST_INDUCT_TAC THEN REWRITE_TAC[SUM,SNOC,ADD,ADD_0]
     THEN GEN_TAC THEN ASM_REWRITE_TAC[ADD_ASSOC]);
+
+val SUM_APPEND = store_thm("SUM_APPEND",
+    (--`!l1 l2. SUM (APPEND l1 l2) = SUM l1 + SUM l2`--),
+    LIST_INDUCT_TAC THEN ASM_REWRITE_TAC[SUM,APPEND,ADD,ADD_0,ADD_ASSOC]);
 end
 
 val SUM_MAP_FOLDL = Q.store_thm(

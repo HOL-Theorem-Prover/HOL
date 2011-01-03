@@ -2632,9 +2632,7 @@ val ZIP_UNZIP = save_thm("ZIP_UNZIP", listTheory.ZIP_UNZIP);
 
 val UNZIP_ZIP = save_thm("UNZIP_ZIP", listTheory.UNZIP_ZIP);
 
-val SUM_APPEND = store_thm("SUM_APPEND",
-    (--`!l1 l2. SUM (APPEND l1 l2) = SUM l1 + SUM l2`--),
-    LIST_INDUCT_TAC THEN ASM_REWRITE_TAC[SUM,APPEND,ADD,ADD_0,ADD_ASSOC]);
+val SUM_APPEND = save_thm("SUM_APPEND", listTheory.SUM_APPEND);
 
 val SUM_REVERSE = store_thm("SUM_REVERSE",
     (--`!l. SUM (REVERSE l) = SUM l`--),
