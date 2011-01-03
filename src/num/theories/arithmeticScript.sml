@@ -2399,10 +2399,12 @@ REPEAT GEN_TAC
   THEN STRUCT_CASES_TAC (SPEC (Term`n:num`) num_CASES)
   THEN ASM_REWRITE_TAC[MULT_CLAUSES,ADD_CLAUSES,prim_recTheory.LESS_0]);
 
-val SUC_PRE = prove(Term`!d. 0<d ==> (SUC(PRE d) = d)`,
-REPEAT GEN_TAC
-  THEN STRUCT_CASES_TAC (SPEC (Term`d:num`) num_CASES)
-  THEN ASM_REWRITE_TAC[prim_recTheory.PRE,prim_recTheory.LESS_REFL]);
+local open prim_recTheory in
+val SUC_PRE = store_thm("SUC_PRE",
+Term `0 < m <=> (SUC (PRE m) = m)`,
+   STRUCT_CASES_TAC (SPEC (Term `m:num`) num_CASES) THEN
+   REWRITE_TAC [PRE,NOT_LESS_0,LESS_0,NOT_SUC])
+end
 
 val LESS_MONO_LEM =
 GEN_ALL
