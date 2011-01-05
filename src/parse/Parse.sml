@@ -1362,8 +1362,7 @@ in
   update_grms "add_user_printer"
               ("temp_add_user_printer",
                String.concat ["(", quote name, ", ",
-                              "#2 (parse_from_grammars min_grammars)",
-                              "[QUOTE \"", minprint pattern, "\"], ",
+                               minprint pattern, ", ",
                               name, ")"]);
   temp_add_user_printer(name, pattern, pfn)
 end;
