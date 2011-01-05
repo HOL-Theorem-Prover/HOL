@@ -126,7 +126,7 @@ val MULT = new_recursive_definition
     rec_axiom = num_Axiom,
     def = --`(0 * n = 0) /\
              (SUC m * n = (m * n) + n)`--};
-
+val _ = TeX_notation {hol = "*", TeX = ("\\HOLTokenProd{}", 1)}
 
 val EXP = new_recursive_definition
    {name = "EXP",
