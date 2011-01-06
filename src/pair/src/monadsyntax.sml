@@ -145,23 +145,24 @@ end handle HOL_ERR _ => NONE
          | term_pp_types.UserPP_Failed =>  NONE
 
 
-fun print_monads (tyg, tmg) sysprinter (ppfns:term_pp_types.ppstream_funs) (p,l,r) dpth pps t = let
-  open term_pp_types term_grammar
-  val (strn,brk) = (#add_string ppfns, #add_break ppfns);
+fun print_monads (tyg, tmg) backend sysprinter ppfns (p,l,r) dpth t = let
+  open term_pp_types term_grammar smpp term_pp_utils
+  infix >>
+  val ppfns = ppfns :ppstream_funs
+  val {add_string=strn,add_break=brk,ublock,...} = ppfns
   val (prname, arg1, arg2) = valOf (dest_bind tmg t)
                              handle Option => raise UserPP_Failed
   fun pr_action (v, action) =
       case v of
         NONE => sysprinter (Top,Top,Top) (dpth - 1) action
       | SOME v => let
+          val bvars = free_vars v
         in
-          PP.begin_block pps PP.INCONSISTENT 0;
-          sysprinter (Top,Top,Prec(100, "monad_assign")) (dpth - 1) v;
-          strn " ";
-          strn "<-";
-          brk(1,2);
-          sysprinter (Top,Prec(100, "monad_assign"),Top) (dpth - 1) action;
-          PP.end_block pps
+          addbvs bvars >>
+          ublock PP.INCONSISTENT 0
+            (sysprinter (Top,Top,Prec(100, "monad_assign")) (dpth - 1) v >>
+             strn " " >> strn "<-" >> brk(1,2) >>
+             sysprinter (Top,Prec(100, "monad_assign"),Top) (dpth - 1) action)
         end
   fun brk_bind binder arg1 arg2 =
       if binder = monad_bind then let
@@ -182,13 +183,12 @@ fun print_monads (tyg, tmg) sysprinter (ppfns:term_pp_types.ppstream_funs) (p,l,
   val (arg1',arg2') = brk_bind prname arg1 arg2
   val actions = strip [arg1'] arg2'
 in
-  PP.begin_block pps PP.CONSISTENT 0;
-    strn "do"; brk(1,2);
-    Portable.pr_list pr_action (fn () => strn ";") (fn () => brk(1,2))
-                     actions;
-    brk(1,0);
-    strn "od";
-  PP.end_block pps
+  ublock PP.CONSISTENT 0
+    (strn "do" >> brk(1,2) >>
+     getbvs >- (fn oldbvs =>
+     pr_list pr_action (strn ";" >> brk(1,2)) actions >>
+     brk(1,0) >>
+     strn "od" >> setbvs oldbvs))
 end
 
 val _ = temp_add_user_printer ("monadsyntax.print_monads", ``x:'a``,

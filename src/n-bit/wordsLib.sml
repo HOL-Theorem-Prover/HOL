@@ -2055,14 +2055,15 @@ val Induct_word =
 val word_pp_mode = ref 0;
 val word_cast_on = ref false;
 
-fun print_word f Gs sys (ppfns:term_pp_types.ppstream_funs) gravs d pps t = let
-   open Portable term_pp_types
-   val (str,brk) = (#add_string ppfns, #add_break ppfns);
+fun print_word f Gs backend sys ppfns gravs d t = let
+   open Portable term_pp_types smpp
+   infix >>
+   val {add_string=str,add_break=brk,...} = ppfns : term_pp_types.ppstream_funs
    val (n,x) = dest_n2w t
    val m = fcpLib.index_to_num x handle HOL_ERR _ => Arbnum.zero
    val v = numSyntax.dest_numeral n
 in
-  (if !Globals.show_types orelse !word_cast_on then str "(" else ());
+  (if !Globals.show_types orelse !word_cast_on then str "(" else nothing) >>
   str
    ((case f (Arbnum.toInt m, v) of
        StringCvt.DEC => Arbnum.toString v
@@ -2075,10 +2076,10 @@ in
                           (Feedback.HOL_MESG "Octal output is only supported \
                              \when base_tokens.allow_octal_input is true.";
                            Arbnum.toString v)
-     | StringCvt.HEX => "0x"^(Arbnum.toHexString v)) ^ "w");
+     | StringCvt.HEX => "0x"^(Arbnum.toHexString v)) ^ "w") >>
   (if !Globals.show_types orelse !word_cast_on then
-    (brk (1,2); pp_type pps (type_of t); str ")")
-   else ())
+     brk (1,2) >> liftpp (fn pps => pp_type pps (type_of t)) >> str ")"
+   else nothing)
 end handle HOL_ERR _ => raise term_pp_types.UserPP_Failed;
 
 fun output_words_as f = Parse.temp_add_user_printer
@@ -2117,69 +2118,66 @@ fun remove_word_printer () =
 (* A pretty-printer that shows the types for ><, w2w and @@                  *)
 (* ------------------------------------------------------------------------- *)
 
-fun word_cast Gs sys (ppfns:term_pp_types.ppstream_funs) (pg,lg,rg) d pps t =
+fun word_cast Gs backend sys ppfns (pg,lg,rg) d t =
 let
-   open Portable term_pp_types
-   val (str,brk) = (#add_string ppfns, #add_break ppfns);
+   open Portable term_pp_types smpp
+   infix >>
+   val {add_string=str,add_break=brk,ublock,...} = ppfns :ppstream_funs
    fun stype tm = String.extract(type_to_string (type_of tm),1,NONE)
    fun delim i act = case pg of
-                        Prec(j,_) => if i <= j then act() else ()
-                      | _ => ()
+                        Prec(j,_) => if i <= j then act else nothing
+                      | _ => nothing
    val (f,x) = strip_comb t
 in
   case (fst (dest_const f), x)
     of ("n2w",[a]) =>
           let val prec = Prec (2000,"n2w") in
-            begin_block pps INCONSISTENT 0;
-            delim 200 (fn () => str "(");
-            trace ("types", 1) (sys (pg,lg,rg) d) f; brk (1,2);
-            sys (prec,prec,prec) (d - 1) a;
-            delim 200 (fn () => str ")");
-            end_block pps
+            ublock INCONSISTENT 0
+              (delim 200 (str "(") >>
+               trace ("types", 1) (sys (pg,lg,rg) d) f >> brk (1,2) >>
+               sys (prec,prec,prec) (d - 1) a >>
+               delim 200 (str ")"))
           end
      | ("w2w",[a]) =>
           let val prec = Prec (2000,"w2w") in
-            begin_block pps INCONSISTENT 0;
-            delim 200 (fn () => str "(");
-            trace ("types", 1) (sys (pg,lg,rg) d) f; brk (1,2);
-            sys (prec,prec,prec) (d - 1) a;
-            delim 200 (fn () => str ")");
-            end_block pps
+            ublock INCONSISTENT 0
+              (delim 200 (str "(") >>
+               trace ("types", 1) (sys (pg,lg,rg) d) f >> brk (1,2) >>
+               sys (prec,prec,prec) (d - 1) a >>
+               delim 200 (str ")"))
           end
      | ("sw2sw",[a]) =>
           let val prec = Prec (2000,"sw2sw") in
-            begin_block pps INCONSISTENT 0;
-            delim 200 (fn () => str "(");
-            trace ("types", 1) (sys (pg,lg,rg) d) f; brk (1,2);
-            sys (prec,prec,prec) (d - 1) a;
-            delim 200 (fn () => str ")");
-            end_block pps
+            ublock INCONSISTENT 0
+              (delim 200 (str "(") >>
+               trace ("types", 1) (sys (pg,lg,rg) d) f >> brk (1,2) >>
+               sys (prec,prec,prec) (d - 1) a >>
+               delim 200 (str ")"))
           end
      | ("word_concat",[a,b]) =>
           let val prec = Prec (2000,"word_concat") in
-            begin_block pps INCONSISTENT 0;
-            delim 200 (fn () => str "(");
-            trace ("types", 1) (sys (pg,lg,rg) d) f; brk (1,2);
-            sys (prec,prec,prec) (d - 1) a; brk (1,0);
-            sys (prec,prec,prec) (d - 1) b;
-            delim 200 (fn () => str ")");
-            end_block pps
+            ublock INCONSISTENT 0
+              (delim 200 (str "(") >>
+               trace ("types", 1) (sys (pg,lg,rg) d) f >> brk (1,2) >>
+               sys (prec,prec,prec) (d - 1) a >> brk (1,0) >>
+               sys (prec,prec,prec) (d - 1) b >>
+               delim 200 (str ")"))
           end
      | ("word_extract",[h,l,a]) =>
           let val prec = Prec (2000,"word_extract") in
-            begin_block pps INCONSISTENT 0;
-            delim 200 (fn () => str "(");
-            str "(";
-            str "(";
-            sys (prec,prec,prec) (d - 1) h; brk(1,2);
-            str "><"; brk (1,2);
-            sys (prec,prec,prec) (d - 1) l;
-            str ")"; brk (1,2);
-            pp_type pps (type_of (list_mk_comb (f,[h,l])));
-            str ")"; brk (1,2);
-            sys (prec,prec,prec) (d - 1) a;
-            delim 200 (fn () => str ")");
-            end_block pps
+            ublock INCONSISTENT 0
+              (delim 200 (str "(") >>
+               str "(" >>
+               str "(" >>
+               sys (prec,prec,prec) (d - 1) h >> brk(1,2) >>
+               str "><" >> brk (1,2) >>
+               sys (prec,prec,prec) (d - 1) l >>
+               str ")" >> brk (1,2) >>
+               liftpp
+                 (fn pps => pp_type pps (type_of (list_mk_comb (f,[h,l])))) >>
+               str ")" >> brk (1,2) >>
+               sys (prec,prec,prec) (d - 1) a >>
+               delim 200 (str ")"))
           end
      | _ => raise term_pp_types.UserPP_Failed
 end handle HOL_ERR _ => raise term_pp_types.UserPP_Failed;
