@@ -182,7 +182,8 @@ end
 
 
 fun avoid_symbolmerge G (add_string, add_break, add_ann_string) = let
-  open term_grammar smpp
+  open term_grammar
+  val op>> = smpp.>>
   infix >>
   val keywords = #endbinding (specials G) :: grammar_tokens G @
                  known_constants G
