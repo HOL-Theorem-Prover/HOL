@@ -778,28 +778,26 @@ fun eval (n, m, r, s) =
 
 (* ------------------------------------------------------------------------- *)
 
-fun myprint Gs sys (ppfns:term_pp_types.ppstream_funs) (pg,lg,rg) d pps t = let
-      open Portable term_pp_types
-      val (strn,brk) = (#add_string ppfns, #add_break ppfns);
-      val (l,typ) = listSyntax.dest_list t
-      val _ = typ = ``:word32`` andalso not (null l) orelse raise UserPP_Failed
-      fun delim act = case pg of
-                        Prec(_, "CONS") => ()
-                      | _ => act()
-    in
-      delim (fn () => (begin_block pps CONSISTENT 0;
-                       strn "[";
-                       brk (1,1);
-                       begin_block pps CONSISTENT 0));
-      app (fn x => (sys (Prec(0, "CONS"), Top, Top) (d - 1) x;
-                    strn ";"; add_newline pps))
-          (List.take (l,length l - 1));
-      sys (Prec(0, "CONS"), Top, Top) (d - 1) (last l);
-      delim (fn () => (end_block pps;
-                       brk (1,0);
-                       strn "]";
-                       end_block pps))
-    end handle HOL_ERR _ => raise term_pp_types.UserPP_Failed;
+fun myprint Gs backend sys ppfns (pg,lg,rg) d t = let
+  open Portable term_pp_types smpp
+  infix >>
+  val {add_string=strn,add_break=brk,ublock,add_newline,...} =
+      ppfns :ppstream_funs
+  val (l,typ) = listSyntax.dest_list t
+  val _ = typ = ``:word32`` andalso not (null l) orelse raise UserPP_Failed
+  fun delim act =
+      case pg of
+        Prec(_, "CONS") => act
+      | _ => ublock CONSISTENT 0
+                    (strn "[" >> brk (1,1) >>
+                     ublock CONSISTENT 0 (act >> brk(1,0) >> strn "]"))
+in
+  delim (
+    smpp.pr_list
+      (sys (Prec(0, "CONS"), Top, Top) (d - 1))
+      (strn ";" >> add_newline)
+      l)
+end handle HOL_ERR _ => raise term_pp_types.UserPP_Failed;
 
 val _ = temp_add_user_printer
    ("arm_evalLib.myprint", ``x:word32 list``, myprint);
