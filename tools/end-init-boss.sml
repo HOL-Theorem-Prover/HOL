@@ -11,7 +11,7 @@ let
       if terminfo <> "emacs" andalso terminfo <> "dumb"
       then
         (String.map (K #" ") s ^
-         String.implode (List.tabulate(length l,  K #"-")) ^ " ]\r", "*")
+         CharVector.tabulate(length l,  K #"-") ^ " ]\r", "*")
       else ("", ".")
   fun dotload f = (print dotchar; load f)
   val curdir = FileSys.getDir()
