@@ -54,7 +54,7 @@ end
 
 fun fupdate f (a,pps) = SOME (a, (f a, pps))
 
-fun liftpp ppf (a,pps) = (ppf pps; SOME ((), (a,pps)))
+fun liftpp ppf (a,pps) = (SOME (ppf pps, (a,pps)))
 
 infix >>
 fun pr_list fpp brk list =

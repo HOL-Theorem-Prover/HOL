@@ -15,7 +15,7 @@ sig
   val ||| : ('a,'b) t * (unit -> ('a,'b) t) -> ('a,'b) t
   val return : 'b -> ('a,'b) t
   val fupdate : ('a -> 'a) -> ('a,'a) t
-  val liftpp : (HOLPP.ppstream -> unit) -> ('a,unit) t
+  val liftpp : (HOLPP.ppstream -> 'b) -> ('a,'b) t
 
   val block : HOLPP.break_style -> int -> ('a,'b) t -> ('a,'b) t
   val pr_list : ('b -> ('a,unit)t) -> ('a,unit) t -> 'b list -> ('a,unit)t
