@@ -1581,7 +1581,7 @@ fun pp_term (G : grammar) TyG backend = let
                 val {Args,...} = dest_thy_type Ty
               in
                 add_string "(" >>
-                block CONSISTENT 0 (add_string type_intro >> doTy Ty) >>
+                block CONSISTENT 0 (add_string type_intro >> doTy (hd Args)) >>
                 add_string ")"
               end
             else
