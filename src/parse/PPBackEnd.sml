@@ -181,7 +181,7 @@ fun add_ssz pps (s,sz) =
 (* raw terminal                     *)
 (* -------------------------------- *)
 
-val raw_terminal = {
+val raw_terminal : t = {
    name = "raw_terminal",
    add_break      = PP.add_break,
    add_string     = PP.add_string,
