@@ -73,38 +73,45 @@ fun with_ppstream (t:t) pps =
 (* -------------------------------- *)
 
 val UserStyle_dict = ref
-   ((Redblackmap.mkDict String.compare):
-        (string, (pp_style list * ((string * pp_style list) list))) Redblackmap.dict);
+   (Redblackmap.mkDict String.compare:
+     (string, pp_style list * (string * pp_style list) list) Redblackmap.dict)
 
 fun register_UserStyle backendOpt sty stL =
 let
-   val (default_stL, bstL) = Redblackmap.find (!UserStyle_dict, sty) handle NotFound => (stL,[]);
+   val (default_stL, bstL) =
+       Redblackmap.find (!UserStyle_dict, sty) handle NotFound => (stL,[])
 
-   val default_stL = if isSome(backendOpt) then default_stL else stL;
+   val default_stL = if isSome(backendOpt) then default_stL else stL
    val bstL = if isSome(backendOpt) then
       (valOf backendOpt, stL)::
-      (Lib.filter (fn (s,_) => not (s = valOf backendOpt)) bstL) else bstL;
+      (Lib.filter (fn (s,_) => not (s = valOf backendOpt)) bstL) else bstL
 
-   val _ = UserStyle_dict := Redblackmap.insert (!UserStyle_dict, sty, (default_stL, bstL))
+   val _ =
+       UserStyle_dict :=
+       Redblackmap.insert (!UserStyle_dict, sty, (default_stL, bstL))
 in
    ()
 end;
 
 fun lookup_UserStyle backend sty =
 let
-   val (default_stL, bstL) = Redblackmap.find (!UserStyle_dict, sty) handle NotFound =>
-       ((register_UserStyle NONE sty []);([],[]));
-   val styL = Lib.assoc backend bstL handle Feedback.HOL_ERR _ => default_stL;
+   val (default_stL, bstL) = Redblackmap.find (!UserStyle_dict, sty)
+       handle NotFound =>
+       (register_UserStyle NONE sty []; ([],[]))
+   val styL = Lib.assoc backend bstL handle Feedback.HOL_ERR _ => default_stL
 in
    styL
-end;
+end
 
 fun known_UserStyles () =
    map Lib.fst (Redblackmap.listItems (!UserStyle_dict))
 
 
-(*fullstyle: foreground option * background option * bold? * underlined? * user styles*)
-type pp_full_style = (pp_color option) * (pp_color option) * bool * bool * string list
+(* fullstyle:
+     foreground option * background option * bold? * underlined? * user styles
+*)
+type pp_full_style =
+     pp_color option * pp_color option * bool * bool * string list
 
 val base_style = (NONE, NONE, false, false,[]):pp_full_style
 
@@ -144,7 +151,7 @@ fun expand_UserStyle b [] = []
   | expand_UserStyle b ((UserStyle st)::styL) =
     expand_UserStyle b ((lookup_UserStyle b st)@styL)
   | expand_UserStyle b (st::styL) =
-    (st::(expand_UserStyle b styL));
+    (st::(expand_UserStyle b styL))
 
 fun user_push_styleL b style_stack styL =
     push_styleL style_stack (expand_UserStyle b styL);
@@ -162,16 +169,17 @@ fun user_push_styleL b style_stack styL =
 (* -------------------------------- *)
 
 val add_type_information = ref true
-val _ = Feedback.register_btrace ("PPBackEnd show types", add_type_information);
+val _ = Feedback.register_btrace ("PPBackEnd show types", add_type_information)
 
 val backend_use_annotations = ref true
-val _ = Feedback.register_btrace ("PPBackEnd use annotations", backend_use_annotations);
+val _ = Feedback.register_btrace ("PPBackEnd use annotations",
+                                  backend_use_annotations)
 
 val backend_use_styles = ref true
-val _ = Feedback.register_btrace ("PPBackEnd use styles", backend_use_styles);
+val _ = Feedback.register_btrace ("PPBackEnd use styles", backend_use_styles)
 
 val backend_use_css = ref true
-val _ = Feedback.register_btrace ("PPBackEnd use css", backend_use_styles);
+val _ = Feedback.register_btrace ("PPBackEnd use css", backend_use_styles)
 
 fun add_ssz pps (s,sz) =
   case sz of NONE => PP.add_string pps s
@@ -329,7 +337,8 @@ val emacs_terminal = let
   fun tyop info s = "(*(*(*TY\000"^(lazy_string info)^"\000"^s^"*)*)*)"
   fun tysyn info s = "(*(*(*TY\000"^(lazy_string info)^"\000"^s^"*)*)*)"
   fun add_xstring pps {s, sz, ann} =
-      if not (!backend_use_annotations) orelse not (isSome ann) then add_ssz pps (s,sz) else
+      if not (!backend_use_annotations) orelse not (isSome ann) then
+        add_ssz pps (s,sz) else
       let val sz = case sz of NONE => UTF8.size s | SOME sz => sz in
       case valOf ann of
         FV (_,tystr) => PP.add_stringsz pps (fv s tystr, sz)
@@ -398,8 +407,11 @@ fun color_to_html Black       = "black"
 
 fun full_style_to_html (fg,bg,b,u,[]) =
    "style=\"" ^
-   (* foreground *) (if isSome fg then ("color:"^(color_to_html (valOf fg))^"; ") else "") ^
-   (* background *) (if isSome bg then ("background-color:"^(color_to_html (valOf bg))^"; ") else "") ^
+   (* foreground *)
+   (if isSome fg then ("color:"^(color_to_html (valOf fg))^"; ") else "") ^
+   (* background *)
+   (if isSome bg then ("background-color:"^(color_to_html (valOf bg))^"; ")
+    else "") ^
    (* bold *)       (if b then "font-weight:bold; " else "") ^
    (* underline *)  (if u then "text-decoration:underline; " else "") ^
    "\""
@@ -416,7 +428,8 @@ case c of
 | #"\"" => "&quot;"
 | c => Char.toString c
 
-fun html_escape s = valOf (String.fromString (String.translate char_html_escape s))
+fun html_escape s =
+    valOf (String.fromString (String.translate char_html_escape s))
 
 val html_terminal =
 let
@@ -430,16 +443,19 @@ let
       PP.add_stringsz pps ("<span "^(full_style_to_html fsty)^">", 0)
 
 
-  fun reset_style pps = PP.add_stringsz pps ("</span>", 0);
+  fun reset_style pps = PP.add_stringsz pps ("</span>", 0)
 
-  fun begin_style pps styL = if not (!backend_use_styles) then () else
-        ((if (!backend_use_css) then push_styleL
-            else user_push_styleL name) style_stack styL;
-         set_style pps (top_style style_stack));
+  fun begin_style pps styL =
+      if not (!backend_use_styles) then ()
+      else ((if (!backend_use_css) then push_styleL
+             else user_push_styleL name) style_stack styL;
+            set_style pps (top_style style_stack))
 
-  fun end_style pps = if not (!backend_use_styles) then () else
+  fun end_style pps =
+      if not (!backend_use_styles) then ()
+      else
         (pop_style style_stack;
-         PP.add_stringsz pps ("</span>", 0));
+         PP.add_stringsz pps ("</span>", 0))
 
   fun add_color_string pps c ssz =
      (set_style pps (SOME c, NONE, false, false, []);
@@ -449,12 +465,13 @@ let
 
   fun add_ann_string_general pps ty ls_opt ssz =
   let
-     val _ = PP.add_stringsz pps ("<span class=\""^ty^"\"", 0);
+     val _ = PP.add_stringsz pps ("<span class=\""^ty^"\"", 0)
      val _ = if ((!add_type_information) andalso (isSome ls_opt)) then
-             (PP.add_stringsz pps (" title=\""^((valOf ls_opt) ())^"\"", 0)) else ();
-     val _ = PP.add_stringsz pps (">", 0);
-     val _ = add_ssz pps ssz;
-     val _ = PP.add_stringsz pps ("</span>", 0);
+               PP.add_stringsz pps (" title=\""^((valOf ls_opt) ())^"\"", 0)
+             else ()
+     val _ = PP.add_stringsz pps (">", 0)
+     val _ = add_ssz pps ssz
+     val _ = PP.add_stringsz pps ("</span>", 0)
   in
      ()
   end;
@@ -486,9 +503,10 @@ let
       | _ => add_ssz pps ssz
 
   fun add_xstring pps {s,sz,ann} =
-    if not (!backend_use_annotations) orelse not (isSome ann) then add_ssz pps (s,sz) else
-     (if (!backend_use_css) then add_ann_string___css else add_ann_string___simple)
-       pps ((s,sz), valOf ann)
+    if not (!backend_use_annotations) orelse not (isSome ann) then
+      add_ssz pps (s,sz)
+    else (if (!backend_use_css) then add_ann_string___css
+          else add_ann_string___simple) pps ((s,sz), valOf ann)
 in
   {name           = name,
    add_break      = #add_break   raw_terminal,
