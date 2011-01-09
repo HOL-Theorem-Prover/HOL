@@ -272,7 +272,8 @@ val _ = app tpp ["let x = T in x /\\ y",
                  "f ($/\\ p)",
                  "(((p /\\ q) /\\ r) /\\ s) /\\ t",
                  "(case x of T -> (\\x. x) || F -> $~) y",
-                 "!x. P (x /\\ y)"]
+                 "!x. P (x /\\ y)",
+                 "(:'a)"]
 
 val _ = new_type ("foo", 2)
 val _ = new_constant ("con", ``:'a -> ('a,'b)foo``)
