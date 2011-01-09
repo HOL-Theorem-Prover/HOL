@@ -38,8 +38,10 @@ sig
                       | Const of {Thy:string,Name:string,Ty:hol_type} * string
                       | Note of string;
 
+  type xstring = {s:string,sz:int option,ann:annotation option}
+
   type t = {add_string     : ppstream -> string -> unit,
-            add_ann_string : ppstream -> string * annotation -> unit,
+            add_xstring    : ppstream -> xstring -> unit,
             begin_block    : ppstream -> PP.break_style -> int -> unit,
             end_block      : ppstream -> unit,
             add_break      : ppstream -> int * int -> unit,
@@ -51,8 +53,8 @@ sig
   val with_ppstream : t -> ppstream ->
                       {add_break      : int * int -> unit,
                        add_newline    : unit -> unit,
-                       add_ann_string : string * annotation -> unit,
                        add_string     : string -> unit,
+                       add_xstring    : xstring -> unit,
                        begin_block    : break_style -> int -> unit,
                        end_block      : unit -> unit,
                        begin_style    : pp_style list -> unit,

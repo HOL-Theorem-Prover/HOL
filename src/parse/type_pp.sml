@@ -105,8 +105,9 @@ fun pp_type0 (G:grammar) backend = let
   end
   fun pr_ty pps ty grav depth = let
     open PPBackEnd
-    val {add_string, add_break, begin_block, end_block, add_ann_string,...} =
+    val {add_string, add_break, begin_block, end_block, add_xstring,...} =
       with_ppstream backend pps
+    fun add_ann_string (s,ann) = add_xstring {s=s,ann=SOME ann,sz=NONE}
     fun pbegin b = if b then add_string "(" else ()
     fun pend b = if b then add_string ")" else ()
     fun uniconvert s =

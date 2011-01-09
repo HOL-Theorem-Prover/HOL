@@ -181,7 +181,7 @@ in
 end
 
 
-fun avoid_symbolmerge G (add_string, add_break, add_ann_string) = let
+fun avoid_symbolmerge G (add_string, add_xstring, add_break) = let
   open term_grammar
   val op>> = smpp.>>
   infix >>
@@ -194,30 +194,29 @@ fun avoid_symbolmerge G (add_string, add_break, add_ann_string) = let
   in
     y <> s2
   end handle base_tokens.LEX_ERR _ => true
-  fun new_addstring f s ls = let
-    val sz = size s
+  fun new_addxstring f (xstr as {s,sz,ann}) ls = let
     val allspaces = str_all (equal #" ") s
   in
-    if sz = 0 then nothing
-    else (if ls = " " orelse allspaces then f s
-          else if not (!avoid_symbol_merges) then f s
-          else if String.sub(ls, size ls - 1) = #"\"" then f s
+    case sz of SOME 0 => nothing
+    |_=> (if ls = " " orelse allspaces then f xstr
+          else if not (!avoid_symbol_merges) then f xstr
+          else if String.sub(ls, size ls - 1) = #"\"" then f xstr
           (* special case the quotation because term_tokens relies on
              the base token technology (see base_lexer) to separate the
              end of a string from the next character *)
           else if creates_comment (ls, s) orelse bad_merge (ls, s) then
-            add_string " " >> f s
+            add_string " " >> f xstr
           else
-            f s) >>
+            f xstr) >>
          setlaststring (if allspaces then " " else s)
   end
+  fun new_addstring f s = new_addxstring (fn{s,...}=>f s) {s=s,sz=NONE,ann=NONE}
   fun new_add_break (p as (n,m)) =
       (if n > 0 then setlaststring " " else nothing) >> add_break p
 in
   ((fn s => getlaststring >- new_addstring add_string s),
-   new_add_break,
-   (fn (s,ann) =>
-       getlaststring >- new_addstring (fn s => add_ann_string(s,ann)) s))
+   (fn xstr => getlaststring >- new_addxstring add_xstring xstr),
+   new_add_break)
 end
 
 
@@ -643,7 +642,8 @@ fun pp_term (G : grammar) TyG backend = let
   let
     val full_pr_term = pr_term
     val pr_term = pr_term binderp showtypes showtypes_v ppfns NoCP
-    val {add_string,add_break,add_ann_string,...} = ppfns
+    val {add_string,add_break,add_xstring,...} = ppfns
+    fun add_ann_string (s,ann) = add_xstring {s=s,ann=SOME ann,sz=NONE}
     fun block_by_style (addparens, rr, pgrav, fname, fprec) = let
       val needed =
         case #1 (#block_style (rr:rule_record)) of
@@ -1850,14 +1850,15 @@ in
   fn pps => fn t =>
     let
       val baseppfns = smpp.from_backend backend
-      val {add_string,add_break,ublock,add_ann_string,add_newline,ustyle,...} =
+      val {add_string,add_break,ublock,add_xstring,add_newline,ustyle,...} =
           baseppfns
-      val (add_string, add_break, add_ann_string) =
-          avoid_merge (add_string, add_break, add_ann_string)
-      val ppfns = {add_string = add_string, add_break = add_break,
+      val (add_string, add_xstring, add_break) =
+          avoid_merge (add_string, add_xstring, add_break)
+      val ppfns = {add_string = add_string,
+                   add_xstring = add_xstring,
+                   add_break = add_break,
                    add_newline = add_newline,
                    ublock = block,
-                   add_ann_string = add_ann_string,
                    ustyle = ustyle}
     in
        begin_block pps CONSISTENT 0;

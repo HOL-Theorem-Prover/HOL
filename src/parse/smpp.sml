@@ -74,12 +74,12 @@ fun mappr_list fpp brk list =
       end
 
 fun from_backend (b:PPBackEnd.t) = let
-  val {add_string,add_ann_string,add_newline,add_break,
+  val {add_string,add_xstring,add_newline,add_break,
        begin_block,end_block,begin_style,end_style,...} = b
 in
   {add_string  = lift1 add_string,
+   add_xstring = lift1 add_xstring,
    add_newline = lift add_newline,
-   add_ann_string = lift1 add_ann_string,
    add_break = lift1 add_break,
    flush = flush,
    ublock = block0 begin_block end_block,

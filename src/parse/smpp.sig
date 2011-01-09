@@ -24,7 +24,7 @@ sig
   val from_backend :
       PPBackEnd.t ->
       {add_string : string -> ('a,unit) t,
-       add_ann_string : string * PPBackEnd.annotation -> ('a,unit) t,
+       add_xstring : PPBackEnd.xstring -> ('a,unit) t,
        flush : ('a,unit) t,
        add_newline : ('a,unit) t,
        add_break : int * int -> ('a,unit) t,

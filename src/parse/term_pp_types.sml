@@ -13,8 +13,8 @@ structure term_pp_types = struct
   type ppstream_funs =
       {add_break      : int * int -> uprinter,
        add_newline    : uprinter,
-       add_ann_string : string * PPBackEnd.annotation -> uprinter,
        add_string     : string -> uprinter,
+       add_xstring    : PPBackEnd.xstring -> uprinter,
        ustyle    : PPBackEnd.pp_style list -> uprinter -> uprinter,
        ublock    : PP.break_style -> int -> uprinter -> uprinter}
 
