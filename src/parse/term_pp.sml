@@ -1555,8 +1555,9 @@ fun pp_term (G : grammar) TyG backend = let
                  (if print_type then add_type else nothing) >>
                  pend print_type)))
         end
-      | CONST{Name, Thy, Ty} => let
-          fun add_prim_name() = add_string (Thy ^ "$" ^ Name)
+      | CONST(c as {Name, Thy, Ty}) => let
+          val add_ann_string = fn s => add_ann_string (s, PPBackEnd.Const (c,s))
+          fun add_prim_name() = add_ann_string (Thy ^ "$" ^ Name)
           fun with_type action = let
           in
             pbegin true >>
@@ -1574,12 +1575,12 @@ fun pp_term (G : grammar) TyG backend = let
                 pr_numeral NONE tm
               else if Literal.is_emptystring tm then
                 add_string "\"\""
-              else add_string s
+              else add_ann_string s
             end
           in
             if Name = "the_value" andalso Thy = "bool" then let
                 val {Args,...} = dest_thy_type Ty
-              in
+              in (* TODO: annotate all of this as the constant somehow *)
                 add_string "(" >>
                 block CONSISTENT 0 (add_string type_intro >> doTy (hd Args)) >>
                 add_string ")"
