@@ -116,6 +116,7 @@ src/real
 !!examples/separationLogic/src/
 src/HolQbf
 src/HolSmt
+src/opentheory
 !examples/misc
 # these examples require Muddy, which is MoscowML specific
 [mosml]!examples/muddy/muddyC
