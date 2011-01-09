@@ -2,7 +2,7 @@ structure PPBackEnd :> PPBackEnd =
 struct
 
 type hol_type = Type.hol_type
-open Portable     
+open Portable
 
 
 
@@ -92,7 +92,7 @@ end;
 
 fun lookup_UserStyle backend sty =
 let
-   val (default_stL, bstL) = Redblackmap.find (!UserStyle_dict, sty) handle NotFound => 
+   val (default_stL, bstL) = Redblackmap.find (!UserStyle_dict, sty) handle NotFound =>
        ((register_UserStyle NONE sty []);([],[]));
    val styL = Lib.assoc backend bstL handle Feedback.HOL_ERR _ => default_stL;
 in
@@ -114,14 +114,14 @@ fun update_style (_, bg,b,u,uL)  (FG c) = (SOME c, bg, b, u, uL)
   | update_style (fg,bg,b,_,uL)  Underline = (fg, bg, b, true, uL)
   | update_style (fg,bg,b,u,uL)  (UserStyle st) = (fg, bg, b, true, st::uL)
 
-val list_update_style = foldl (fn (s, fs) => update_style fs s) 
+val list_update_style = foldl (fn (s, fs) => update_style fs s)
 
 
 (* -------------------------------- *)
 (* A stack for styles               *)
 (* -------------------------------- *)
 
-fun top_style style_stack = let val st = !style_stack in 
+fun top_style style_stack = let val st = !style_stack in
    if null st then base_style else hd st end;
 
 fun pop_style style_stack = let val st = !style_stack in
@@ -134,7 +134,7 @@ fun push_styleL style_stack styL =
 let
    val top_fsty = top_style style_stack;
    val new_fsty = list_update_style top_fsty styL;
-   val _ = push_style style_stack new_fsty 
+   val _ = push_style style_stack new_fsty
 in
    new_fsty
 end;
@@ -231,15 +231,15 @@ end;
 
 
 fun full_style_to_vt100 (fg,bg,b,u,_) =
-   (* reset *)      "\027[0"^ 
-   (* foreground *) (if isSome fg then (fg_to_vt100 (valOf fg)) else "") ^ 
+   (* reset *)      "\027[0"^
+   (* foreground *) (if isSome fg then (fg_to_vt100 (valOf fg)) else "") ^
    (* background *) (if isSome bg then (bg_to_vt100 (valOf bg)) else "") ^
    (* bold *)       (if b then ";1" else "") ^
-   (* underline *)  (if u then ";4" else "") ^ 
+   (* underline *)  (if u then ";4" else "") ^
    (* done *)       "m";
 
 
-val vt100_terminal = 
+val vt100_terminal =
 let
   val name = "vt100_terminal";
   val style_stack = ref ([]:pp_full_style list);
@@ -314,8 +314,8 @@ fun bool_to_string true = "X"
   | bool_to_string false = "-";
 
 fun full_style_to_emacs_string (fg,bg,b,u,_) =
-   (color_option_to_string fg) ^ 
-   (color_option_to_string bg) ^ 
+   (color_option_to_string fg) ^
+   (color_option_to_string bg) ^
    (bool_to_string b) ^
    (bool_to_string u);
 
@@ -351,10 +351,10 @@ val emacs_terminal = let
         PP.add_stringsz pps (print_str, 0)
      end;
 
-  fun end_style pps = 
+  fun end_style pps =
      if not (!backend_use_styles) then () else
      let
-        val _ = pop_style style_stack 
+        val _ = pop_style style_stack
         val print_str = "*)*)*)";
      in
         PP.add_stringsz pps (print_str, 0)
@@ -398,7 +398,7 @@ fun color_to_html Black       = "black"
 
 fun full_style_to_html (fg,bg,b,u,[]) =
    "style=\"" ^
-   (* foreground *) (if isSome fg then ("color:"^(color_to_html (valOf fg))^"; ") else "") ^ 
+   (* foreground *) (if isSome fg then ("color:"^(color_to_html (valOf fg))^"; ") else "") ^
    (* background *) (if isSome bg then ("background-color:"^(color_to_html (valOf bg))^"; ") else "") ^
    (* bold *)       (if b then "font-weight:bold; " else "") ^
    (* underline *)  (if u then "text-decoration:underline; " else "") ^
@@ -408,7 +408,7 @@ fun full_style_to_html (fg,bg,b,u,[]) =
 
 
 
-fun char_html_escape c = 
+fun char_html_escape c =
 case c of
   #"<"  => "&lt;"
 | #">"  => "&gt;"
@@ -418,7 +418,7 @@ case c of
 
 fun html_escape s = valOf (String.fromString (String.translate char_html_escape s))
 
-val html_terminal = 
+val html_terminal =
 let
   val name = "html_terminal";
   fun add_ssz pps (s,sz) = let
@@ -433,7 +433,7 @@ let
   fun reset_style pps = PP.add_stringsz pps ("</span>", 0);
 
   fun begin_style pps styL = if not (!backend_use_styles) then () else
-        ((if (!backend_use_css) then push_styleL 
+        ((if (!backend_use_css) then push_styleL
             else user_push_styleL name) style_stack styL;
          set_style pps (top_style style_stack));
 
