@@ -21,7 +21,6 @@ app load ["hol88Lib",
 *)
 
 open HolKernel Parse boolLib;
-infix THEN THENC THENL ORELSE ORELSEC ##;
 
 open hol88Lib
      reduceLib
