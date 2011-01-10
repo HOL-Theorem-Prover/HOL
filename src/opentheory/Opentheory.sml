@@ -7,15 +7,6 @@ local open Drule Conv in
     IMP_ANTISYM_RULE
       (DISCH (concl th2) th1)
       (DISCH (concl th1) th2)
-  fun absThm (v,tu) = let
-    val (t,u) = dest_eq(concl tu)
-    val vt = mk_abs(v,t)
-    val vu = mk_abs(v,u)
-    val vtvu = mk_eq(vt,vu)
-    val x = FUN_EQ_CONV vtvu
-    val x = CONV_RULE (RAND_CONV (QUANT_CONV (LAND_CONV BETA_CONV))) x
-    val x = CONV_RULE (RAND_CONV (QUANT_CONV (RAND_CONV BETA_CONV))) x
-  in EQ_MP (SYM x) (GEN v tu) end
 end
 
 val ERR = mk_HOL_ERR "Opentheory"
@@ -74,7 +65,7 @@ fun raw_read_article {tyop_from_ot,const_from_ot} input {define_tyop,define_cons
   fun ot_to_tyop  c s = Map.find(tyop_from_ot ,s)
   handle Map.NotFound => raise ERR (c^": no map from "^s^" to a type operator")
   fun f "absTerm"(st as {stack=OTerm b::OVar v::os,...}) = st_(OTerm(mk_abs(v,b))::os,st)
-    | f "absThm" (st as {stack=OThm th::OVar v::os,...}) = (st_(OThm(absThm(v,th))::os,st)
+    | f "absThm" (st as {stack=OThm th::OVar v::os,...}) = (st_(OThm(ABS v th)::os,st)
       handle HOL_ERR e => raise ERR ("absThm: failed with "^format_ERR e))
     | f "appTerm"(st as {stack=OTerm x::OTerm f::os,...})= st_(OTerm(mk_comb(f,x))::os,st)
     | f "appThm" (st as {stack=OThm xy::OThm fg::os,...})= let
