@@ -144,7 +144,7 @@ fun raw_read_article {tyop_from_ot,const_from_ot} input {define_tyop,define_cons
     | f "varTerm" (st as {stack=OVar t::os,...})           = st_(OTerm t::os,st)
     | f "varType" (st as {stack=OName n::os,...})          = st_(OType(mk_vartype n)::os,st)
     | f s st = let val c = String.sub(s,0) open Char Option Int
-      in if c = #"\"" then push(OName(valOf(String.fromString (trimlr s))),st) else
+      in if c = #"\"" then push(OName(trimlr s),st) else
          if isDigit c then push(ONum(valOf(fromString s)),st) else
          if c = #"#" then st else
          raise ERR ("Unknown command: "^s)

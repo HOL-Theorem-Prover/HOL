@@ -26,7 +26,7 @@ val reader = {
   define_const=let val d =
   Redblackmap.fromList String.compare [
       ("Data.Bool.!", fn _ => {const={Thy="bool",Name="!"},def=A FORALL_DEF}),
-      ("Data.Bool./\\", let
+      ("Data.Bool./\\\\", let
         val th = prove(``$/\ = \p q. (\f. f p q) = \f:bool->bool->bool. f T T``,
                        SRW_TAC [][AND_DEF,FUN_EQ_THM] THEN EQ_TAC THEN SRW_TAC [][])
         in fn _ => {const={Thy="bool",Name="/\\"},def=th} end),
@@ -39,7 +39,7 @@ val reader = {
                         FIRST_X_ASSUM MATCH_MP_TAC THEN METIS_TAC [SELECT_AX])
         in fn _ => {const={Thy="bool",Name="?"},def=A th} end),
       ("Data.Bool.?!", fn _ => {const={Thy="bool",Name="?!"},def=A EXISTS_UNIQUE_DEF}),
-      ("Data.Bool.\\/", fn _ => {const={Thy="bool",Name="\\/"},def=OR_DEF}),
+      ("Data.Bool.\\\\/", fn _ => {const={Thy="bool",Name="\\/"},def=OR_DEF}),
       ("Data.Bool.~", fn _ => {const={Thy="bool",Name="~"},def=NOT_DEF}),
       ("Data.Bool.cond", fn _ => {const={Thy="bool",Name="COND"},def=A COND_DEF}),
       ("Data.Bool.let", fn _ => {const={Thy="bool",Name="LET"},def=A LET_DEF}),
@@ -89,7 +89,7 @@ val tyop_from_ot = Redblackmap.fromList String.compare [
 val const_from_ot = Redblackmap.fromList String.compare [
   ("=",{Thy="min",Name="="}),
   ("Data.Bool.!",{Thy="bool",Name="!"}),
-  ("Data.Bool./\\",{Thy="bool",Name="/\\"}),
+  ("Data.Bool./\\\\",{Thy="bool",Name="/\\"}),
   ("Data.Bool.==>",{Thy="min",Name="==>"}),
   ("Data.Bool.?",{Thy="bool",Name="?"}),
   ("Data.Bool.select",{Thy="min",Name="@"}),
