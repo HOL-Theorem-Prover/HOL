@@ -14,34 +14,30 @@ val const_from_ot: unit -> thy_const from_ot
 
 (* record of data an article reader must provide: *)
 type reader = {
-  tyops  : (string, {axiom:thm, args:hol_type list, rep:string, abs:string} ->
-                    {rep_abs:thm, abs_rep:thm, rep:term, abs:term, tyop:thy_tyop})
-           dict,
-  consts : (string, term -> {const:thy_const, def:thm}) dict,
-  axioms : thm Net.net -> (term list * term) -> thm}
+  define_tyop  : string ->
+                 {ax:thm, args:hol_type list, rep:string, abs:string} ->
+                 {rep_abs:thm, abs_rep:thm, rep:term, abs:term, tyop:thy_tyop},
+  define_const : string -> term -> {const:thy_const, def:thm},
+  axiom        : thm Net.net -> (term list * term) -> thm}
 
 (*
-tyops are type operators the article will define, indexed by their OpenTheory
-names. Each name is mapped to a function that does something equivalent to
-defining the new type. Each function is provided the type axiom, a list of
+[tyops name info] will be called when the article wants to define a new type
+with OpenTheory name [name]. [info] consists of the type axiom, a list of
 arguments (type variables) for the type operator in the desired order, and the
-OpenTheory names of the rep and abs constants. It must return the new type
-operator, the rep and abs constants, and the type bijection theorems.
-If axiom = |- P t then these are:
+OpenTheory names of the rep and abs constants. The call must return the new
+type operator, the rep and abs constants, and the type bijection theorems.
+If the type axiom is |- P t then the bijection theorems are:
   abs_rep = |- (!a. abs (rep a) = a)
   rep_abs = |- (!r. P r = (rep(abs r) = r))
 
-consts are constants the article will define, indexed by their OpenTheory
-names. Each name is mapped to a function that does something equivalent to
-defining the new constant. Each function is provided the right hand side rhs of
-the definition and must return the name of the constant and an equational
-theorem |- const = rhs.
+[consts name rhs] will be called when the article wants to define a new
+constant with OpenTheory name [name]. The call must return the (HOL) name of
+the constant and an equational theorem |- const = rhs.
 
-axioms are theorems that the article depends on about possibly both input
-and output tyops and constants. They are represented by a function that takes
-the collection of theorems the article has already proved, represented by a
-conclusion-indexed net, and a pair (h,c) representing the desired axiom, and
-must return a theorem h |- c.
+[axioms thms (h,c)] will be called when the article wants to retrieve an
+assumption or an axiom. [thms] is the collection of theorems the article has
+already proved, represented by a conclusion-indexed net. The call must return a
+theorem h |- c.
 *)
 
 val raw_read_article : {tyop_from_ot:thy_tyop from_ot,

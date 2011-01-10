@@ -51,12 +51,12 @@ datatype object
 | OTerm of term
 | OThm of thm
 
-type reader =
-   {tyops  : (string, {axiom:thm, args:hol_type list, rep:string, abs:string} ->
-                      {rep_abs:thm, abs_rep:thm, rep:term, abs:term, tyop:thy_tyop})
-             dict,
-    consts : (string, term -> {const:thy_const, def:thm}) dict,
-    axioms : thm Net.net -> (term list * term) -> thm}
+type reader = {
+  define_tyop  : string ->
+                 {ax:thm, args:hol_type list, rep:string, abs:string} ->
+                 {rep_abs:thm, abs_rep:thm, rep:term, abs:term, tyop:thy_tyop},
+  define_const : string -> term -> {const:thy_const, def:thm},
+  axiom        : thm Net.net -> (term list * term) -> thm}
 
 fun st_(st,{stack,dict,thms}) = {stack=st,dict=dict,thms=thms}
 fun push (ob,st) = st_(ob::(#stack st),st)
@@ -65,7 +65,7 @@ local open Substring in
   val trimr  = fn s => string(trimr 1 (full s))
 end
 
-fun raw_read_article {tyop_from_ot,const_from_ot} input {tyops,consts,axioms} = let
+fun raw_read_article {tyop_from_ot,const_from_ot} input {define_tyop,define_const,axiom} = let
   val ERR = ERR "read_article"
   fun unOTermls c = List.map (fn OTerm t => t | _ => raise ERR (c^" failed to pop a list of terms"))
   fun unOTypels c = List.map (fn OType t => t | _ => raise ERR (c^" failed to pop a list of types"))
@@ -84,7 +84,7 @@ fun raw_read_article {tyop_from_ot,const_from_ot} input {tyops,consts,axioms} = 
         val gxgy  = AP_TERM g xy
       in st_(OThm(TRANS fxgx gxgy)::os,st) end
     | f "assume"       (st as {stack=OTerm t::os,...})          = st_(OThm(ASSUME t)::os,st)
-    | f "axiom"        (st as {stack=OTerm t::OList ts::os,thms,...}) = st_(OThm(axioms thms (unOTermls "axiom" ts,t))::os,st)
+    | f "axiom"        (st as {stack=OTerm t::OList ts::os,thms,...}) = st_(OThm(axiom thms (unOTermls "axiom" ts,t))::os,st)
     | f "betaConv"     (st as {stack=OTerm t::os,...})          = st_(OThm(BETA_CONV t)::os,st)
     | f "cons"         (st as {stack=OList t::h::os,...})       = st_(OList(h::t)::os,st)
     | f "const"        (st as {stack=OName n::os,...})          = st_(OConst (ot_to_const "const" n)::os,st)
@@ -93,12 +93,12 @@ fun raw_read_article {tyop_from_ot,const_from_ot} input {tyops,consts,axioms} = 
     | f "deductAntisym"(st as {stack=OThm t1::OThm t2::os,...}) = st_(OThm(DEDUCT_ANTISYM t1 t2)::os,st)
     | f "def"         {stack=ONum k::x::os,dict,thms}           = {stack=x::os,dict=Map.insert(dict,k,x),thms=thms}
     | f "defineConst" (st as {stack=OTerm t::OName n::os,...})  = let
-        val {const,def} = Map.find(consts,n) t
+        val {const,def} = define_const n t
         handle Map.NotFound => raise ERR ("defineConst: no map from "^n^" to a definition function")
       in st_(OThm def::OConst const::os,st) end
-    | f "defineTypeOp"  (st as {stack=OThm th::OList ls::OName rep::OName abs::OName n::os,...}) = let
+    | f "defineTypeOp"  (st as {stack=OThm ax::OList ls::OName rep::OName abs::OName n::os,...}) = let
         val ls = List.map (fn OName s => mk_vartype s | _ => raise ERR "defineTypeOp failed to pop a list of names") ls
-        val {abs,rep,abs_rep,rep_abs,tyop} = Map.find(tyops,n) {axiom=th,args=ls,rep=rep,abs=abs}
+        val {abs,rep,abs_rep,rep_abs,tyop} = define_tyop n {ax=ax,args=ls,rep=rep,abs=abs}
         val {Thy,Name,...} = dest_thy_const rep val rep = {Thy=Thy,Name=Name}
         val {Thy,Name,...} = dest_thy_const abs val abs = {Thy=Thy,Name=Name}
       in st_(OThm rep_abs::OThm abs_rep::OConst rep::OConst abs::OTypeOp tyop::os,st) end
