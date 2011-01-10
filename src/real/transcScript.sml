@@ -3583,6 +3583,292 @@ val _ = basic_diffs := !basic_diffs@[SPEC_ALL DIFF_LN_COMPOSITE];
 val lem = prove(Term`!n:num. 0 < n ==> ~(n=0)`,
 INDUCT_TAC THEN ASM_REWRITE_TAC [NOT_SUC,NOT_LESS_0]);
 
+(* ----------------------------------------------------------------------
+    Exponentiation with real exponents
+
+    Contributed by
+
+       Umair Siddique
+
+       Email: umair.siddique@rcms.nust.edu.pk
+       DATE: 29-12-2010
+
+       System Analysis & Verification (sAvE)  LAB
+
+       National University of Sciences and Technology (NUST)
+       Ialamabad,Pakistan
+    ---------------------------------------------------------------------- *)
+
+fun K_TAC _ = ALL_TAC;
+
+open bossLib realSimps
+
+(* Definition *)
+val _ = set_fixity "rpow" (Infixr 700);
+
+val rpow = Define `a rpow b = exp (b * ln a)`;
+
+(* Properties *)
+
+val  GEN_RPOW = store_thm
+        ("GEN_RPOW",
+        ``! a n. 0 < a ==> (a pow n = a rpow  &n)``,
+ Induct_on `n` THENL [
+ RW_TAC real_ss [pow,POW_1, rpow, GSYM EXP_0],
+
+GEN_TAC THEN
+        RW_TAC std_ss[rpow,pow,REAL,REAL_RDISTRIB,EXP_ADD,REAL_MUL_LID] THEN
+
+        KNOW_TAC ``exp(ln a)= a`` THEN1
+          PROVE_TAC[EXP_LN] THEN
+        DISCH_TAC THEN ASM_REWRITE_TAC [] THEN POP_ASSUM K_TAC THEN
+        KNOW_TAC ``a* exp (&n * ln a) = exp (&n * ln a)*a`` THEN1
+          RW_TAC std_ss[REAL_MUL_COMM] THEN
+        DISCH_TAC THEN ASM_REWRITE_TAC [] THEN POP_ASSUM K_TAC]);
+
+val  RPOW_SUC_N = store_thm
+        ("RPOW_SUC_N",
+        ``!(a:real) (n:num). 0 < a ==>(a rpow (&n+1)= a pow SUC n)``,
+ RW_TAC std_ss [] THEN
+ KNOW_TAC``&n + (1:real)= & SUC n`` THEN1
+     RW_TAC std_ss [REAL]THEN
+       DISCH_TAC THEN ONCE_ASM_REWRITE_TAC[] THEN
+       RW_TAC std_ss [GEN_RPOW]) ;
+
+val RPOW_0= store_thm
+        ("RPOW_0",
+        ``! a. (0 < a)==> (a rpow  &0 = &1)``,
+  RW_TAC std_ss [rpow]THEN
+  RW_TAC std_ss [REAL_MUL_LZERO]THEN
+  RW_TAC std_ss [EXP_0]);
+
+val  RPOW_1= store_thm
+        ("RPOW_1",
+        ``! a. (0 < a)==> ( a rpow  &1 = a)``,
+   RW_TAC std_ss [GSYM GEN_RPOW,POW_1]);
+
+val  ONE_RPOW= store_thm
+        ("ONE_RPOW",
+        ``! a. (0 < a)==> (1 rpow a  = 1)``,
+RW_TAC real_ss [rpow,LN_1,EXP_0]);
+
+val  RPOW_POS_LT= store_thm
+        ("RPOW_POS_LT",
+        ``! a b. (0 < a)==> (0 < a rpow b)``,
+              RW_TAC std_ss [rpow, EXP_POS_LT]);
+
+val  RPOW_NZ= store_thm
+        ("RPOW_NZ",
+        ``! a b. (0 <> a)==> ( a rpow b <>0)``,
+RW_TAC std_ss [rpow,EXP_NZ]);
+
+
+val  LN_RPOW= store_thm
+        ("LN_RPOW",
+        ``! a b. (0 < a)==> (ln (a rpow b)= (b*ln a))``,
+ RW_TAC std_ss [rpow,LN_EXP]);
+
+val  RPOW_ADD= store_thm
+        ("RPOW_ADD",
+        ``! a b c. a rpow (b + c)= (a rpow  b)*(a rpow  c)``,
+ RW_TAC std_ss [rpow, EXP_ADD, REAL_RDISTRIB] );
+
+val  RPOW_ADD_MUL= store_thm
+        ("RPOW_ADD_MUL",
+        ``! a b c. a rpow (b + c)* a rpow (-b)= (a rpow c)``,
+ RW_TAC std_ss [rpow, REAL_RDISTRIB, GSYM EXP_ADD]THEN
+ KNOW_TAC`` ((b * ln a + c * ln a + -b * ln a)=(b * ln a  -b * ln a + c*ln a)) ``THEN1
+    REAL_ARITH_TAC THEN
+         DISCH_TAC THEN ASM_REWRITE_TAC[] THEN POP_ASSUM K_TAC THEN
+     KNOW_TAC``((b * ln a - b * ln a + c * ln a) = (c*ln a )) ``THEN1
+         REAL_ARITH_TAC THEN
+         RW_TAC real_ss []);
+
+val  RPOW_SUB= store_thm
+        ("RPOW_SUB",
+        ``! a b c. a rpow (b - c)= (a rpow b)/(a rpow c)``,
+RW_TAC std_ss [rpow, REAL_SUB_RDISTRIB, EXP_SUB]);
+
+val  RPOW_DIV= store_thm
+        ("RPOW_DIV",
+        ``! a b c.  (0 < a)/\ (0<b)==> ((a/b) rpow  c= (a rpow c)/(b rpow c))``,
+   RW_TAC std_ss [rpow ,LN_DIV, REAL_SUB_LDISTRIB, EXP_SUB]);
+
+val  RPOW_INV= store_thm
+        ("RPOW_INV",
+        ``! a b .  (0 < a)==>((inv a) rpow b= inv (a rpow b))``,
+
+RW_TAC real_ss [rpow, REAL_INV_1OVER, LN_DIV, REAL_SUB_LDISTRIB, EXP_SUB, LN_1, EXP_0]);
+
+
+val  RPOW_MUL= store_thm
+        ("RPOW_MUL",
+        ``! a b c. (0<a) /\ (0<b)==> (((a*b) rpow c)=(a rpow c)*(b rpow c))``,
+RW_TAC std_ss [rpow, LN_MUL, REAL_LDISTRIB, EXP_ADD]);
+
+val  RPOW_RPOW= store_thm
+        ("RPOW_RPOW",
+        ``! a b c. (0<a)==> ((a rpow b) rpow c = a rpow (b*c))``,
+  RW_TAC real_ss [rpow, LN_EXP, REAL_MUL_ASSOC] THEN
+  PROVE_TAC[ REAL_MUL_COMM] );
+
+
+val  RPOW_LT= store_thm
+        ("RPOW_LT",
+        ``! (a:real) (b:real) (c:real).(1 < a)==>((a rpow b < a rpow c)= b < c )``,
+ RW_TAC std_ss [rpow]  THEN
+ KNOW_TAC`` exp (b * ln a) < exp (c * ln a)= (b*ln a < c*ln a)``  THEN1
+      RW_TAC real_ss [EXP_MONO_LT]  THEN
+      DISCH_TAC THEN ASM_REWRITE_TAC[] THEN POP_ASSUM K_TAC  THEN
+      KNOW_TAC``((b:real)*ln a < (c:real)*ln a)= (b < c)``  THENL   [
+      MATCH_MP_TAC REAL_LT_RMUL  THEN
+      KNOW_TAC``0 < ln a = exp (0) < exp (ln a)``  THEN1
+         PROVE_TAC[EXP_MONO_LT]  THEN
+         DISCH_TAC  THEN
+         FULL_SIMP_TAC real_ss[]  THEN
+         RW_TAC real_ss [EXP_0]  THEN
+         KNOW_TAC``1 < (a:real) ==> 0 <(a:real)``  THENL [
+             RW_TAC real_ss []  THEN
+             MATCH_MP_TAC REAL_LT_TRANS  THEN
+             EXISTS_TAC``(1:real)`` THEN
+             RW_TAC real_ss [],
+             RW_TAC real_ss []  THEN
+             KNOW_TAC``exp (ln a)=(a:real)``  THEN1
+                  RW_TAC real_ss [EXP_LN] THEN
+                  DISCH_TAC THEN ASM_REWRITE_TAC[]],
+            RW_TAC real_ss []]);
+
+val  RPOW_LE = store_thm
+        ("RPOW_LE",
+        ``!a b c. (1 < a)==>((a rpow b <= a rpow c)= b <= c )``,
+ RW_TAC std_ss [rpow] THEN
+ KNOW_TAC`` exp ((b:real) * ln a) <= exp ((c:real) * ln a)= ((b:real)*ln a <= (c:real)*ln a)`` THEN1
+      RW_TAC real_ss [EXP_MONO_LE] THEN
+ DISCH_TAC THEN ASM_REWRITE_TAC[] THEN POP_ASSUM K_TAC THEN
+ KNOW_TAC``(b*ln a <= c*ln a)= ((b:real) <= (c:real))`` THENL[
+          MATCH_MP_TAC REAL_LE_RMUL THEN
+     KNOW_TAC``0 < ln a = exp (0) < exp (ln a)`` THEN1
+         PROVE_TAC[EXP_MONO_LT] THEN
+          DISCH_TAC THEN
+          FULL_SIMP_TAC real_ss[] THEN
+          RW_TAC real_ss [EXP_0] THEN
+     KNOW_TAC``1 < (a:real) ==> 0 <(a:real)`` THENL[
+          RW_TAC real_ss [] THEN
+          MATCH_MP_TAC REAL_LT_TRANS THEN
+          EXISTS_TAC``(1:real)`` THEN
+          RW_TAC real_ss [] ,
+          RW_TAC real_ss [] THEN
+          KNOW_TAC``exp (ln a)=(a:real)`` THEN1
+             RW_TAC real_ss [EXP_LN] THEN
+             DISCH_TAC THEN ASM_REWRITE_TAC[]],
+ RW_TAC real_ss []]);
+
+
+val  BASE_RPOW_LE= store_thm
+        ("BASE_RPOW_LE",
+        ``! a b c. (0 < a)/\ (0 < c)/\ (0 < b)==>((a rpow b <= c rpow b)= a <= c )``,
+RW_TAC std_ss [rpow, EXP_MONO_LE] THEN
+KNOW_TAC`` (((b:real) * ln a) <= ((b:real) * ln c))= ((ln a <= ln c))`` THENL[
+  MATCH_MP_TAC REAL_LE_LMUL   THEN
+  RW_TAC real_ss [],
+
+  DISCH_TAC THEN ASM_REWRITE_TAC[] THEN POP_ASSUM K_TAC  THEN
+  RW_TAC real_ss [LN_MONO_LE]]);
+
+val  BASE_RPOW_LT= store_thm
+        ("BASE_RPOW_LT",
+        ``! a b c. (0 < a)/\ (0 < c)/\ (0 < b)==>((a rpow b < c rpow b)= a < c )``,
+
+ RW_TAC std_ss [rpow, EXP_MONO_LT]  THEN
+ KNOW_TAC ``((b * ln a) < (b * ln c))= ((ln a < ln c))``  THENL[
+       MATCH_MP_TAC REAL_LT_LMUL  THEN
+       RW_TAC real_ss []  ,
+
+       DISCH_TAC THEN ASM_REWRITE_TAC[] THEN POP_ASSUM K_TAC  THEN
+       RW_TAC real_ss [LN_MONO_LT] ]);
+
+val  RPOW_UNIQ_BASE= store_thm (
+  "RPOW_UNIQ_BASE",
+  ``!a b c. 0 < a /\ 0 < c /\ 0 <> b /\ (a rpow b = c rpow b)==> (a = c)``,
+
+
+ RW_TAC std_ss [rpow, GSYM LN_INJ]THEN
+ POP_ASSUM MP_TAC  THEN
+ KNOW_TAC`` (exp (b * ln a) = exp (b * ln c)) = (ln (exp (b * ln a)) = ln (exp (b * ln c)))``THEN1
+     PROVE_TAC[LN_EXP]THEN
+     DISCH_TAC THEN ASM_REWRITE_TAC[] THEN POP_ASSUM K_TAC THEN
+     FULL_SIMP_TAC real_ss[LN_EXP] THEN
+     FULL_SIMP_TAC real_ss[REAL_EQ_MUL_LCANCEL]);
+
+
+val  RPOW_UNIQ_EXP = store_thm
+        ("RPOW_UNIQ_EXP",
+        ``!a b c. 1 < a /\ 0 < c /\ 0 < b /\ (a rpow b = a rpow c) ==>
+                  (b = c)``,
+ RW_TAC std_ss [rpow, GSYM LN_INJ] THEN
+ POP_ASSUM MP_TAC THEN
+ KNOW_TAC`` (exp (b * ln a) = exp (c * ln a)) = (ln (exp (b * ln a)) = ln (exp (c * ln a)))`` THEN1
+      PROVE_TAC[LN_EXP] THEN
+          DISCH_TAC THEN ASM_REWRITE_TAC[] THEN POP_ASSUM K_TAC THEN
+          FULL_SIMP_TAC real_ss[LN_EXP] THEN
+          FULL_SIMP_TAC real_ss[REAL_EQ_RMUL] THEN
+          KNOW_TAC``(1 < (a:real))==> 0 < ln a`` THENL[
+      RW_TAC real_ss [] THEN
+      KNOW_TAC``0 < ln a = exp (0) < exp (ln a)`` THEN1
+          PROVE_TAC[EXP_MONO_LT] THEN
+          DISCH_TAC THEN
+          FULL_SIMP_TAC real_ss[] THEN
+          RW_TAC real_ss [EXP_0] THEN
+              KNOW_TAC``1 < (a:real) ==> 0 <(a:real)`` THENL[
+                   RW_TAC real_ss [] THEN
+                   MATCH_MP_TAC REAL_LT_TRANS THEN
+                   EXISTS_TAC``(1:real)`` THEN
+                   RW_TAC real_ss [] ,
+                   RW_TAC real_ss [] THEN
+                   KNOW_TAC``exp (ln a)=(a:real)`` THEN1
+                      RW_TAC real_ss [EXP_LN] THEN
+       DISCH_TAC THEN ASM_REWRITE_TAC[] THEN  RW_TAC real_ss []],
+ FULL_SIMP_TAC real_ss[REAL_POS_NZ] ]);
+
+val  RPOW_DIV_BASE= store_thm
+        ("RPOW_DIV_BASE",
+        `` ! x t. (0 < x)==> ((x rpow t)/x = x rpow (t-1))``,
+RW_TAC std_ss [rpow, REAL_SUB_RDISTRIB, EXP_SUB, REAL_MUL_LID] THEN
+KNOW_TAC``exp(ln x)= (x:real)`` THEN1
+    PROVE_TAC[EXP_LN] THEN
+DISCH_TAC THEN ASM_REWRITE_TAC [] );
+
+(*----------------------------------------------------------------*)
+(* Differentiability of real powers                               *)
+(*----------------------------------------------------------------*)
+
+val  DIFF_COMPOSITE_EXP = store_thm
+        ("DIFF_COMPOSITE_EXP",
+        ``!g m x. ((g diffl m) x ==> ((\x. exp (g x)) diffl (exp (g x) * m)) x)``,
+       RW_TAC std_ss [DIFF_COMPOSITE]);
+
+val  DIFF_RPOW = store_thm
+        ("DIFF_RPOW",
+        ``!x y. 0 < x ==> (((\x. (x rpow y)) diffl (y* (x rpow (y-1))))x )``,
+RW_TAC real_ss [rpow,GSYM RPOW_DIV_BASE] THEN
+RW_TAC real_ss [REAL_MUL_ASSOC,real_div,REAL_MUL_COMM]THEN
+RW_TAC real_ss [GSYM real_div] THEN
+KNOW_TAC ``!x'. exp ((y * ln x')) = exp ((\x'. y *ln x') x')`` THEN1
+     RW_TAC real_ss [] THEN
+DISCH_TAC THEN ASM_REWRITE_TAC [] THEN POP_ASSUM K_TAC THEN
+KNOW_TAC `` ((y / x) * exp ((\x'. y * ln x') x))= ( exp ((\x'. y * ln x') x)*(y/x) ) `` THEN1
+     RW_TAC std_ss [REAL_MUL_COMM] THEN
+DISCH_TAC THEN ASM_REWRITE_TAC [] THEN POP_ASSUM K_TAC THEN
+MATCH_MP_TAC DIFF_COMPOSITE_EXP THEN
+KNOW_TAC ``((\x. y * ln x) diffl (y/x)) x = ((\x. y * (\x.ln x) x) diffl (y/x)) x`` THEN1
+     RW_TAC real_ss [] THEN
+DISCH_TAC THEN ASM_REWRITE_TAC [] THEN POP_ASSUM K_TAC THEN
+RW_TAC real_ss [real_div] THEN
+MATCH_MP_TAC DIFF_CMUL THEN
+MATCH_MP_TAC DIFF_LN THEN
+RW_TAC real_ss []);
+
+
 (*
 val MCLAURIN_LN_POS = store_thm("MCLAURIN_LN_POS",
  Term`!x n.
