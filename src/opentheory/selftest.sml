@@ -13,13 +13,6 @@ axioms:
 *)
 val tmp = OS.FileSys.tmpName()
 val bool_thms = if OS.Process.isSuccess(Systeml.system_ps (cmd pkg tmp)) then let
-val input = TextIO.openIn tmp
-val tyop_from_ot = Redblackmap.fromList String.compare [
-  ("bool",{Thy="min",Tyop="bool"}),
-  ("->",{Thy="min",Tyop="fun"})]
-val const_from_ot = Redblackmap.fromList String.compare [
-  ("=",{Thy="min",Name="="}),
-  ("Data.Bool.select",{Thy="min",Name="@"})]
 val A = INST_TYPE[alpha|->mk_vartype"A",beta|->mk_vartype"B"]
 val reader = {
   define_tyop=fn _ => raise Fail "wasn't expecting to define any tyops",
@@ -51,7 +44,7 @@ val reader = {
     val n = ins (A ETA_AX) (ins (A SELECT_AX) empty)
     fun f _ (_,c) = hd (index c n)
   in f end }
-val thms = raw_read_article {tyop_from_ot=tyop_from_ot, const_from_ot=const_from_ot} input reader
+val thms = read_article tmp reader
 (* TODO: check that thms is the same set that opentheory
          says the package should have produced *)
 in thms end else []
@@ -80,26 +73,6 @@ defined constants: replicate
 axioms:
 *)
 val thms = if OS.Process.isSuccess(Systeml.system_ps (cmd pkg tmp)) then let
-val input = TextIO.openIn tmp
-val tyop_from_ot = Redblackmap.fromList String.compare [
-  ("bool",{Thy="min",Tyop="bool"}),
-  ("->",{Thy="min",Tyop="fun"}),
-  ("Data.List.list",{Thy="list",Tyop="list"}),
-  ("Number.Natural.natural",{Thy="num",Tyop="num"})]
-val const_from_ot = Redblackmap.fromList String.compare [
-  ("=",{Thy="min",Name="="}),
-  ("Data.Bool.!",{Thy="bool",Name="!"}),
-  ("Data.Bool./\\\\",{Thy="bool",Name="/\\"}),
-  ("Data.Bool.==>",{Thy="min",Name="==>"}),
-  ("Data.Bool.?",{Thy="bool",Name="?"}),
-  ("Data.Bool.select",{Thy="min",Name="@"}),
-  ("Data.Bool.T",{Thy="bool",Name="T"}),
-  ("Data.List.::",{Thy="list",Name="CONS"}),
-  ("Data.List.[]",{Thy="list",Name="NIL"}),
-  ("Data.List.length",{Thy="list",Name="LENGTH"}),
-  ("Number.Natural.suc",{Thy="num",Name="SUC"}),
-  ("Number.Numeral.zero",{Thy="num",Name="0"})
-  ]
 val A = INST_TYPE[alpha|->mk_vartype"A",beta|->mk_vartype"B"]
 val reader = {
   define_tyop=fn _ => raise Fail "wasn't expecting to define any tyops",
@@ -117,7 +90,7 @@ val reader = {
     val n = ins (A th) n
     fun f _ (_,c) = hd (index c n)
   in f end }
-val thms = raw_read_article {tyop_from_ot=tyop_from_ot, const_from_ot=const_from_ot} input reader
+val thms = read_article tmp reader
 (* TODO: check that thms is the same set that opentheory
          says the package should have produced *)
 in thms end else []

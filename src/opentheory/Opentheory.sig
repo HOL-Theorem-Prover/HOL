@@ -1,16 +1,7 @@
 signature Opentheory = sig
 type term = Term.term type hol_type = Type.hol_type type thm = Thm.thm
-type ('a,'b) dict = ('a,'b) Redblackmap.dict
-
-(* maps between OpenTheory names and HOL4 names: *)
-type thy_tyop  = {Thy:string,Tyop:string}
-type thy_const = {Thy:string,Name:string}
-type 'a to_ot  = ('a,string) dict
-type 'a from_ot= (string,'a) dict
-val tyop_to_ot   : unit -> thy_tyop to_ot
-val tyop_from_ot : unit -> thy_tyop from_ot
-val const_to_ot  : unit -> thy_const to_ot
-val const_from_ot: unit -> thy_const from_ot
+type thy_tyop  = OpenTheoryMap.thy_tyop
+type thy_const = OpenTheoryMap.thy_const
 
 (* record of data an article reader must provide: *)
 type reader = {
@@ -40,6 +31,8 @@ already proved, represented by a conclusion-indexed net. The call must return a
 theorem h |- c.
 *)
 
+type 'a to_ot  = 'a OpenTheoryMap.to_ot
+type 'a from_ot= 'a OpenTheoryMap.from_ot
 val raw_read_article : {tyop_from_ot:thy_tyop from_ot,
                         const_from_ot:thy_const from_ot}
            -> TextIO.instream -> reader -> thm list

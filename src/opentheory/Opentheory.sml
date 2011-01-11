@@ -1,6 +1,6 @@
 structure Opentheory :> Opentheory = struct
 
-open boolSyntax HolKernel Parse
+open boolSyntax HolKernel Parse OpenTheoryMap
 
 local open Drule Conv in
   fun DEDUCT_ANTISYM th1 th2 =
@@ -10,26 +10,6 @@ local open Drule Conv in
 end
 
 val ERR = mk_HOL_ERR "Opentheory"
-
-structure Map = Redblackmap
-type ('a,'b) dict = ('a,'b) Map.dict
-
-type thy_tyop  = {Thy:string,Tyop:string}
-type thy_const = {Thy:string,Name:string}
-type 'a to_ot  = ('a,string) dict
-type 'a from_ot= (string,'a) dict
-fun lex_cmp c (f1,f2) (x1,x2) =
-  case c(f1 x1,f1 x2) of EQUAL => c(f2 x1,f2 x2) | z => z
-val thy_tyop_cmp  = lex_cmp String.compare (#Tyop,#Thy)
-val thy_const_cmp = lex_cmp String.compare (#Name,#Thy)
-val the_tyop_to_ot   = ref (Map.mkDict thy_tyop_cmp)
-val the_tyop_from_ot = ref (Map.mkDict String.compare)
-val the_const_to_ot  = ref (Map.mkDict thy_const_cmp)
-val the_const_from_ot= ref (Map.mkDict String.compare)
-fun tyop_to_ot()   = !the_tyop_to_ot
-fun tyop_from_ot() = !the_tyop_from_ot
-fun const_to_ot()  = !the_const_to_ot
-fun const_from_ot()= !the_const_from_ot
 
 datatype object
 = ONum of int
@@ -147,7 +127,7 @@ in Net.listItems (#thms (loop {stack=[],dict=Map.mkDict(Int.compare),thms=Net.em
 
 fun read_article s r =
   raw_read_article
-    {tyop_from_ot=tyop_from_ot(),
-     const_from_ot=const_from_ot()}
+    {tyop_from_ot=tyop_from_ot_map(),
+     const_from_ot=const_from_ot_map()}
     (TextIO.openIn s) r
 end
