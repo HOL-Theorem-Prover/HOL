@@ -46,7 +46,9 @@ val reader =
      return 1) >- (fn sign =>
     takeP Char.isDigit >- (fn digits =>
     if digits = "" then fail
-    else literal "." >> return (sign * valOf (Int.fromString digits))))) ++
+    else literal "." >> let
+      val n = (sign * valOf (Int.fromString digits))
+    in return n end handle Option => fail))) ++
   fail
 
 val decode = lift reader
