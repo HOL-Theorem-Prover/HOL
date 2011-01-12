@@ -199,6 +199,13 @@ val strip_exists     = HolKernel.strip_binder (SOME existential)
 val strip_conj       = strip_binop (total dest_conj)
 val strip_disj       = strip_binop (total dest_disj)
 
+fun dest_strip_comb t =
+let val (l,r) = strip_comb t
+    val {Thy = thy, Name = name, ...} = Term.dest_thy_const l
+in
+  (thy ^ "$" ^ name, r)
+end;
+
 val strip_imp =
   let val desti = total dest_imp
       fun strip A M =
