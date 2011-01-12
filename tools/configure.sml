@@ -239,7 +239,7 @@ let
     val basisuifile = fullPath [holmakedir, "basis2002.ui"]
   in
     not have_basis2002 andalso
-    Time.>(modTime sigfile, modTime basisuifile)
+    Time.>(modTime basisuifile, modTime sigfile)
   end
   val rebuild_sigfile =
       not (canread uifile) orelse
