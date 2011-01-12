@@ -9,7 +9,7 @@ struct
 infix |>
 fun (x |> f) = f x
 
-fun die s = (TextIO.output(TextIO.stdErr, s);
+fun die s = (TextIO.output(TextIO.stdErr, s^"\n");
              TextIO.flushOut TextIO.stdErr;
              OS.Process.exit OS.Process.failure)
 
