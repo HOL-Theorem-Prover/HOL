@@ -9,6 +9,7 @@ fun const_def (c,th) = let
   handle Map.NotFound => raise Fail ("No map for "^(#Thy c)^"$"^(#Name c))
 in (n, fn _ => {const=c,def=th}) end
 val rv = Systeml.system_ps cmd
+val _ = if OS.Process.isSuccess rv then let
 val reader = {
   define_tyop=fn _ => let
     val ABS = "one_abs"
@@ -34,4 +35,5 @@ val reader = {
   in f end }
 val thms = read_article tmp reader
 val _ = save_thm("exports",LIST_CONJ(Net.listItems thms))
+in () end else ()
 val _ = export_theory ()
