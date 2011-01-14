@@ -123,7 +123,7 @@ fun raw_read_article {tyop_from_ot,const_from_ot} input {define_tyop,define_cons
   fun loop x = case TextIO.inputLine input of
     NONE => x before TextIO.closeIn(input)
   | SOME line => loop (f (trimr line) x)
-in Net.listItems (#thms (loop {stack=[],dict=Map.mkDict(Int.compare),thms=Net.empty})) end
+in #thms (loop {stack=[],dict=Map.mkDict(Int.compare),thms=Net.empty}) end
 
 fun read_article s r =
   raw_read_article

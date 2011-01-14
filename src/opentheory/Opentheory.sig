@@ -35,6 +35,6 @@ type 'a to_ot  = 'a OpenTheoryMap.to_ot
 type 'a from_ot= 'a OpenTheoryMap.from_ot
 val raw_read_article : {tyop_from_ot:thy_tyop from_ot,
                         const_from_ot:thy_const from_ot}
-           -> TextIO.instream -> reader -> thm list
-val read_article     : string -> reader -> thm list
+           -> TextIO.instream -> reader -> thm Net.net
+val read_article     : string -> reader -> thm Net.net
 end
