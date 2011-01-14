@@ -31,13 +31,18 @@ fun die s =
 fun read_after_write t =
 let
   val path = FileSys.tmpName ()
+  val dict = QDimacs.write_qdimacs_file path t
+  val dict = Redblackmap.foldl (fn (v, i, dict) =>
+    Redblackmap.insert (dict, Int.toString i, Lib.fst (Term.dest_var v)))
+    (Redblackmap.mkDict String.compare) dict  (* invert 'dict' *)
+  fun varfn s = Redblackmap.find (dict, s)
+    handle Redblackmap.NotFound =>
+      raise Feedback.mk_HOL_ERR "selftest" "read_after_write" "unknown index"
 in
-  QDimacs.write_qdimacs_file path t;
-  case Term.match_term t (QDimacs.read_qdimacs_file path) of
-    (_, []) =>
+  if Term.aconv t (QDimacs.read_qdimacs_file varfn path) then
     print "."
-  | _ =>
-    die "Term read requires type substitution to match original term."
+  else
+    die "Term read not alpha-equivalent to original term."
 end
 handle Feedback.HOL_ERR {origin_structure, origin_function, message} =>
   die ("Read after write failed on term '" ^ Hol_pp.term_to_string t ^

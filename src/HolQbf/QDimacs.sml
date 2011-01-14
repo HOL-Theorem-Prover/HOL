@@ -141,17 +141,15 @@ struct
   end
 
 (* ------------------------------------------------------------------------- *)
-(* var_prefix: string that is prefixed to each QDIMACS variable index when   *)
-(*      'read_qdimacs_file' (see below) turns the variable index into (the   *)
-(*      name of) a HOL variable                                              *)
-(* ------------------------------------------------------------------------- *)
-
-  val var_prefix = ref "v"
-
-(* ------------------------------------------------------------------------- *)
 (* read_qdimacs_file: returns a QBF (as a HOL term) that corresponds to the  *)
 (*      QBF problem given in a file in QDIMACS format.  See the description  *)
 (*      of 'write_qdimacs_file' for further explanations.                    *)
+(*                                                                           *)
+(*      'varfn' must map QDIMACS variable indices (i.e., positive integers,  *)
+(*      but given as strings) to HOL variable names. 'varfn' is expected to  *)
+(*      be injective, a function (i.e., the result only depends on its       *)
+(*      input), and reasonably fast.  (For instance, 'varfn' could prepend   *)
+(*      "v" or similar to its argument.)                                     *)
 (*                                                                           *)
 (*      'read_qdimacs_file' is slightly lenient toward certain file format   *)
 (*      errors. It may fail when applied to a file that is not in QDIMACS    *)
@@ -161,7 +159,7 @@ struct
   (* This would arguably be much nicer to implement with parser combinators.
      Or perhaps one should use mllex/mlyacc. *)
 
-  fun read_qdimacs_file path =
+  fun read_qdimacs_file (varfn : string -> string) path =
   let
     (* string list -> string list *)
     fun filter_preamble [] =
@@ -181,7 +179,7 @@ struct
           "preamble contains a line that does not begin with \"c \" or \"p \""
     (* string -> term *)
     fun mk_var s =
-      Term.mk_var (!var_prefix ^ s, Type.bool)
+      Term.mk_var (varfn s, Type.bool)
     (* splits a list of strings into elements before the first "0", and those
        after it *)
     (* string list -> string list * string list *)

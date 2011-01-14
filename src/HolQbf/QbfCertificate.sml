@@ -210,7 +210,7 @@ struct
 
     val (var_to_index, index_to_var) = let
       open String Int Option
-      val s = !QDimacs.var_prefix
+      val s = "v"  (*TODO*)
       fun num_to_var n = mk_var(s^(toString n),bool)
     in
       case dict of
