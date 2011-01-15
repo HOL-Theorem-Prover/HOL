@@ -38,6 +38,6 @@ val reader = {
     fun f _ (_,c) = hd (index c n)
   in f end }
 val thms = read_article tmp reader
-val _ = save_thm("exports",LIST_CONJ(Net.listItems thms))
-in () end else ()
+in save_thm("exports",LIST_CONJ(Net.listItems thms)) end
+else save_thm("exports",boolTheory.TRUTH)
 val _ = export_theory ()
