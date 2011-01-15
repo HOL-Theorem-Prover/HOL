@@ -33,7 +33,7 @@ struct
 (*      quantified at the outermost level: e.g., "!x. x \/ y" is not a       *)
 (*      theorem in HOL.                                                      *)
 (*                                                                           *)
-(*      Returns a dictionary mapping subterms of 't' to QDIMACS variable     *)
+(*      Returns a dictionary mapping variables in 't' to QDIMACS variable    *)
 (*      indices (i.e., positive integers).                                   *)
 (* ------------------------------------------------------------------------- *)
 
@@ -141,15 +141,33 @@ struct
   end
 
 (* ------------------------------------------------------------------------- *)
+(* dict_to_varfn: converts a dictionary returned by 'write_qdimacs_file'     *)
+(*      into a function that can be passed to 'read_qdimacs_file' as its     *)
+(*      'varfn' argument.                                                    *)
+(* ------------------------------------------------------------------------- *)
+
+  fun dict_to_varfn dict : int -> Term.term =
+  let
+    val inverted_dict = Redblackmap.foldl (fn (t, i, dict) =>
+      Redblackmap.insert (dict, i, t)) (Redblackmap.mkDict Int.compare) dict
+  in
+    fn i => Redblackmap.find (inverted_dict, i)
+      handle Redblackmap.NotFound =>
+        raise Feedback.mk_HOL_ERR "QDimacs" "dict_to_varfn"
+          ("unknown index " ^ Int.toString i)
+  end
+
+(* ------------------------------------------------------------------------- *)
 (* read_qdimacs_file: returns a QBF (as a HOL term) that corresponds to the  *)
 (*      QBF problem given in a file in QDIMACS format.  See the description  *)
 (*      of 'write_qdimacs_file' for further explanations.                    *)
 (*                                                                           *)
-(*      'varfn' must map QDIMACS variable indices (i.e., positive integers,  *)
-(*      but given as strings) to HOL variable names. 'varfn' is expected to  *)
-(*      be injective, a function (i.e., the result only depends on its       *)
-(*      input), and reasonably fast.  (For instance, 'varfn' could prepend   *)
-(*      "v" or similar to its argument.)                                     *)
+(*      'varfn' must map QDIMACS variable indices (i.e., positive integers)  *)
+(*      to HOL variables of type bool.  'varfn' is expected to be injective, *)
+(*      a function (i.e., the result only depends on its argument), and      *)
+(*      reasonably fast.  (For instance, 'varfn' could prepend "v" or        *)
+(*      similar to a string representation of its argument to obtain the     *)
+(*      variable name.)  Also see 'dict_to_varfn'.                           *)
 (*                                                                           *)
 (*      'read_qdimacs_file' is slightly lenient toward certain file format   *)
 (*      errors. It may fail when applied to a file that is not in QDIMACS    *)
@@ -159,7 +177,7 @@ struct
   (* This would arguably be much nicer to implement with parser combinators.
      Or perhaps one should use mllex/mlyacc. *)
 
-  fun read_qdimacs_file (varfn : string -> string) path =
+  fun read_qdimacs_file (varfn : int -> Term.term) path =
   let
     (* string list -> string list *)
     fun filter_preamble [] =
@@ -179,7 +197,14 @@ struct
           "preamble contains a line that does not begin with \"c \" or \"p \""
     (* string -> term *)
     fun mk_var s =
-      Term.mk_var (varfn s, Type.bool)
+      let
+        val i = Option.valOf (Int.fromString s)
+          handle Option.Option =>
+            raise ERR "read_qdimacs_file"
+              ("integer expected, but '" ^ s ^ "' found")
+      in
+        varfn i
+      end
     (* splits a list of strings into elements before the first "0", and those
        after it *)
     (* string list -> string list * string list *)
