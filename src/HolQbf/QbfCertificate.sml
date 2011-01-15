@@ -200,29 +200,19 @@ struct
       open String Int Option
       val s = "v"  (*TODO*)
       fun num_to_var n = mk_var(s^(toString n),bool)
+      (* in this case we use the inverse of dict to
+         map indexes to variables, but since dict only
+         binds original variables, we update the inverse map
+         on indexes of extension variables as necessary,
+         (using num_to_var for extensions) *)
+      fun invert_dict d =
+        foldl (fn(v,n,d)=>insert(d,n,v)) (mkDict compare) d
+      val tcid = ref (invert_dict dict)
+      fun update (n,v) = (tcid := insert(!tcid,n,v); v)
     in
-      case dict of
-        NONE => let
-          val z = size(s)
-        in
-          (fn v => valOf(fromString(extract(fst(dest_var v),z,NONE))),
-           num_to_var)
-        end
-      | SOME dict => let
-          (* in this case we use the inverse of dict to
-             map indexes to variables, but since dict only
-             binds original variables, we update the inverse map
-             on indexes of extension variables as necessary,
-             (using num_to_var for extensions) *)
-          fun invert_dict d =
-            foldl (fn(v,n,d)=>insert(d,n,v)) (mkDict compare) d
-          val tcid = ref (invert_dict dict)
-          fun update (n,v) = (tcid := insert(!tcid,n,v); v)
-        in
-          (curry find dict,
-           fn n => find (!tcid,n)
-             handle NotFound => update (n,num_to_var n))
-        end
+      (curry find dict,
+       fn n => find (!tcid,n)
+         handle NotFound => update (n,num_to_var n))
     end
 
     (* Traverse the prefix of the term and
@@ -262,7 +252,7 @@ struct
        (v1 = e1) ==> (v2 = e2) ==> ... ==> mat *)
     fun foldthis (Forall _,t) = t
       | foldthis (Exists {h,...},t) = mk_imp(h,t)
-    val mat = List.foldl foldthis mat vars
+    val mat = Profile.profile "mk_imp" (List.foldl foldthis mat) vars
 
     (* extension_to_term calculates a term corresponding
          to the definition of an extension variable,
@@ -348,11 +338,11 @@ struct
       val h = mk_eq(v,tm)
       val var = Exists {h=h,lhs=lhs,rhs=rhs,pos=NONE}
     in (mk_imp(h,t),var::vars) end
-    val (mat,vars) = foldl foldthis (mat,vars) exts
+    val (mat,vars) = Profile.profile "mat_vars" (foldl foldthis (mat,vars)) exts
 
-    val thm = HolSatLib.SAT_PROVE mat
+    val thm = Profile.profile "SAT_PROVE" HolSatLib.SAT_PROVE mat
 
-    val vars = Lib.topsort R vars
+    val vars = Profile.profile "topsort" (Lib.topsort R) vars
 
     (* Discharge the hypotheses of the proved theorem
        in the right order to recover the original term
@@ -361,14 +351,14 @@ struct
        Specifically, generalize universal variables,
        use EXISTS on existential variables, and
        use INST, REFL, and PROVE_HYP to remove the hypotheses *)
-    fun foldthis ((Forall {v,...}),th) = GEN v th
-      | foldthis ((Exists {h,pos,...}),th) = let
+    fun foldthis ((Forall {v,...}),th) = Profile.profile "Forall" (GEN v) th
+      | foldthis ((Exists {h,pos,...}),th) = Profile.profile "Exists" (fn () => let
         val (v,w) = dest_eq h
         val th = if Option.isSome pos then EXISTS (mk_exists(v,concl th),v) th else th
         val th = INST [v |-> w] th
         val th = PROVE_HYP (REFL w) th
-      in th end
-    val thm = DISCH_ALL (List.foldl foldthis (UNDISCH_ALL thm) vars)
+      in th end) ()
+    val thm = Profile.profile "DISCH_ALL" DISCH_ALL (List.foldl foldthis (Profile.profile "UNDISCH_ALL" UNDISCH_ALL thm) vars)
     val _ = t = concl thm orelse raise ERR "check" "proved wrong theorem"
   in
     thm

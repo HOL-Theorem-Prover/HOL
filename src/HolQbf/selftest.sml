@@ -32,12 +32,7 @@ fun read_after_write t =
 let
   val path = FileSys.tmpName ()
   val dict = QDimacs.write_qdimacs_file path t
-  val dict = Redblackmap.foldl (fn (v, i, dict) =>
-    Redblackmap.insert (dict, Int.toString i, Lib.fst (Term.dest_var v)))
-    (Redblackmap.mkDict String.compare) dict  (* invert 'dict' *)
-  fun varfn s = Redblackmap.find (dict, s)
-    handle Redblackmap.NotFound =>
-      raise Feedback.mk_HOL_ERR "selftest" "read_after_write" "unknown index"
+  val varfn = QDimacs.dict_to_varfn dict
 in
   if Term.aconv t (QDimacs.read_qdimacs_file varfn path) then
     print "."
@@ -49,19 +44,23 @@ handle Feedback.HOL_ERR {origin_structure, origin_function, message} =>
     "': exception HOL_ERR (in " ^ origin_structure ^ "." ^ origin_function ^
     ", message: " ^ message ^ ")")
 
+fun prove t =
+  if squolem_installed then
+    (HolQbfLib.prove t; print ".")
+    handle Feedback.HOL_ERR {origin_structure, origin_function, message} =>
+      die ("Prove failed on term '" ^ Hol_pp.term_to_string t ^
+        "': exception HOL_ERR (in " ^ origin_structure ^ "." ^ origin_function ^
+        ", message: " ^ message ^ ")")
+  else ()
+
 fun disprove t =
   if squolem_installed then
-    let val _ = HolQbfLib.disprove t
-    in
-      print "."
-    end
+    (HolQbfLib.disprove t; print ".")
     handle Feedback.HOL_ERR {origin_structure, origin_function, message} =>
       die ("Disprove failed on term '" ^ Hol_pp.term_to_string t ^
         "': exception HOL_ERR (in " ^ origin_structure ^ "." ^ origin_function ^
         ", message: " ^ message ^ ")")
   else ()
-
-val prove = disprove
 
 (*****************************************************************************)
 (* Test cases                                                                *)
