@@ -105,21 +105,6 @@ in
   if aconv (concl Falsity) F then die "FAILED!" else die "Huh???"
 end handle ExitOK => print "OK\n"
 
-(* Test for INST_TYPE bug discovered here
-http://www.gilith.com/pipermail/opentheory-users/2011-January/000083.html *)
-val _ = let
-  val _ = tprint "Testing for INST_TYPE variable renaming bug"
-  val va = mk_var("v", alpha)
-  val vb = mk_var("v", bool)
-  val tm = mk_comb(mk_comb(mk_abs(va,mk_abs(vb,T)),va),vb)
-  val th = EQ_MP (SYM (DEPTH_CONV BETA_CONV tm)) TRUTH
-  val (_,[v1,v2]) = strip_comb (concl th)
-  val _ = if v1 = v2 then die "Huh???" else ()
-  val th = INST_TYPE [alpha|->bool] th
-  val (_,[v1,v2]) = strip_comb (concl th)
-  val _ = if v1 = v2 then die "FAILED!" else ()
-in () end
-
 val _ = Process.atExit (fn () => let
                              fun rm s = FileSys.remove s
                                         handle _ => ()
