@@ -167,18 +167,6 @@ struct
 (*      not suitable for 't'.                                                *)
 (* ------------------------------------------------------------------------- *)
 
-  local open Tactic Tactical in
-    val REMOVE_ORIG = Q.prove(
-      `(!x:bool. (x = M) ==> P x) ==> (?x. P x)`,
-      DISCH_TAC THEN Q.EXISTS_TAC `M` THEN
-      POP_ASSUM MATCH_MP_TAC THEN REFL_TAC)
-
-    val REMOVE_EXT = Q.prove(
-      `(!x:bool. (x = M) ==> P) ==> P`,
-      DISCH_TAC THEN POP_ASSUM MATCH_MP_TAC
-      THEN Q.EXISTS_TAC `M` THEN REFL_TAC)
-  end
-
   local open Term Redblackset in
     (* h is the hypothesis defining an existential variable.
          for original variables, this is (v = e) for some extension variable e.
@@ -371,11 +359,15 @@ struct
        as its conclusion.
        This order is calculated in the topsort above.
        Specifically, generalize universal variables,
-       and use the REMOVE_ theorems for existential/extension variables *)
+       use EXISTS on existential variables, and
+       use INST, REFL, and PROVE_HYP to remove the hypotheses *)
     fun foldthis ((Forall {v,...}),th) = GEN v th
-      | foldthis ((Exists {h,pos,...}),th) =
-        HO_MATCH_MP (if Option.isSome pos then REMOVE_ORIG else REMOVE_EXT)
-          (GEN (fst(dest_eq h)) (DISCH h th))
+      | foldthis ((Exists {h,pos,...}),th) = let
+        val (v,w) = dest_eq h
+        val th = if Option.isSome pos then EXISTS (mk_exists(v,concl th),v) th else th
+        val th = INST [v |-> w] th
+        val th = PROVE_HYP (REFL w) th
+      in th end
     val thm = DISCH_ALL (List.foldl foldthis (UNDISCH_ALL thm) vars)
     val _ = t = concl thm orelse raise ERR "check" "proved wrong theorem"
   in
