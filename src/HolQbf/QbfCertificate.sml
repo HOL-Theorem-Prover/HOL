@@ -291,12 +291,6 @@ struct
         val v = index_to_var index
         val v = if l < 0 then mk_neg v else v
       in vk (v,s) end end
-      fun non_replacing_lit (l,s) k = let
-        val index = Int.abs l
-        val s = add(s,index)
-        val v = index_to_var index
-        val v = if l < 0 then mk_neg v else v
-      in k (v,s) end
       exception False
       fun afold (l,(t,s)) = lit (l,s)
         (fn true=>(t,s)|false=>raise False)
