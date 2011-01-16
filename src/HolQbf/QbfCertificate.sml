@@ -359,10 +359,20 @@ struct
         val th = PROVE_HYP (REFL w) th
       in th end) ()
     val thm = Profile.profile "DISCH_ALL" DISCH_ALL (List.foldl foldthis (Profile.profile "UNDISCH_ALL" UNDISCH_ALL thm) vars)
-    val _ = t = concl thm orelse raise ERR "check" "proved wrong theorem"
-  in
-    thm
-  end
+
+      (* sanity checks *)
+      val _ = if !QbfTrace.trace < 1 orelse HOLset.isEmpty (Thm.hypset thm) then
+          ()
+        else
+          Feedback.HOL_WARNING "QbfCertificate" "check" "final theorem has hyps"
+      val _ = if !QbfTrace.trace < 1 orelse Term.aconv (Thm.concl thm) t then
+          ()
+        else
+          Feedback.HOL_WARNING "QbfCertificate" "check"
+            "final theorem proves a different term"
+    in
+      thm
+    end
 (* ------------------------------------------------------------------------- *)
     | check t _ (INVALID (dict, cindex)) =
     let
@@ -437,7 +447,8 @@ struct
           ()
         else
           Feedback.HOL_WARNING "QbfCertificate" "check" "final theorem has hyps"
-      val _ = if !QbfTrace.trace < 1 orelse Thm.concl thm = boolSyntax.F then
+      val _ = if !QbfTrace.trace < 1 orelse
+        Term.aconv (Thm.concl thm) boolSyntax.F then
           ()
         else
           Feedback.HOL_WARNING "QbfCertificate" "check" "final theorem not F"
