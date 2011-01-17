@@ -156,4 +156,7 @@ src/temporal/src
 !!examples/Crypto/TEA
 !!examples/Crypto/TWOFISH
 
+# ACL2 example
+!!examples/acl2/ml
+
 [poly]!!!examples/machine-code/lisp
