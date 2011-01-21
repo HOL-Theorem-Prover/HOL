@@ -65,7 +65,7 @@ fun is_fcp_thm s =
 
 val machine_sizes = (map snd o filter (is_fcp_thm o fst) o theorems) "words";
 
-val sizes_comp = new_compset machine_sizes;
+val sizes_comp = computeLib.new_compset machine_sizes;
 
 val TIMES_2EXP1 =
  (GSYM o REWRITE_RULE [arithmeticTheory.MULT_LEFT_1] o
@@ -73,9 +73,10 @@ val TIMES_2EXP1 =
 
 local
   val compset = reduceLib.num_compset()
-  val _ = add_thms [NUMERAL_SFUNPOW_FDUB, NUMERAL_SFUNPOW_iDUB, iDUB_NUMERAL,
-                    FDUB_iDUB, FDUB_FDUB, NUMERAL_TIMES_2EXP] compset
-  val conv = CBV_CONV compset
+  val _ = computeLib.add_thms
+             [NUMERAL_SFUNPOW_FDUB, NUMERAL_SFUNPOW_iDUB, iDUB_NUMERAL,
+              FDUB_iDUB, FDUB_FDUB, NUMERAL_TIMES_2EXP] compset
+  val conv = computeLib.CBV_CONV compset
   val rule = REWRITE_RULE [TIMES_2EXP1, arithmeticTheory.TIMES2,
                            GSYM numeralTheory.iDUB]
 in
@@ -87,12 +88,12 @@ in
       if (rtr = "dimword") orelse (rtr = "dimindex") orelse
          (rtr = "INT_MIN") orelse (rtr = "FINITE")
       then
-        CHANGED_CONV (CBV_CONV sizes_comp) t
+        CHANGED_CONV (computeLib.CBV_CONV sizes_comp) t
           handle HOL_ERR _ =>
             let val x = (PURE_REWRITE_CONV [rule INT_MIN_def,
                                             rule dimword_IS_TWICE_INT_MIN]
                            THENC fcpLib.INDEX_CONV THENC conv) t
-                val _ = add_thms [x] sizes_comp
+                val _ = computeLib.add_thms [x] sizes_comp
             in
               x
             end
@@ -132,9 +133,10 @@ val word_EQ_CONV =
 let
  fun is_word_literal t = wordsSyntax.is_word_literal t orelse is_uintmax t
  val comp = reduceLib.num_compset()
- val _ = add_thms
+ val _ = computeLib.add_thms
           (word_eq_n2w :: map (SUC_RULE) [MOD_2EXP_EQ, MOD_2EXP_MAX]) comp
- val _ = add_conv(``fcp$dimindex:'a itself -> num``, 1, SIZES_CONV) comp
+ val _ = computeLib.add_conv
+          (``fcp$dimindex:'a itself -> num``, 1, SIZES_CONV) comp
 in
  fn tm =>
    case total dest_eq tm
@@ -145,7 +147,7 @@ in
            then Thm.SPEC w1 (INST_TYPE[alpha|->type_of w1] REFL_CLAUSE)
            else
                 if null (type_vars_in_term w1)
-                then CHANGED_CONV (CBV_CONV comp) tm
+                then CHANGED_CONV (computeLib.CBV_CONV comp) tm
                 else raise ERR "word_EQ_CONV" "contains type variables"
       else raise ERR "word_eq_CONV" "non-literal in equality"
 end;
@@ -252,7 +254,8 @@ in
 end;
 
 fun words_compset () =
-let val compset = reduceLib.num_compset()
+let open computeLib
+    val compset = reduceLib.num_compset()
     val _ = listSimps.list_rws compset
     val _ = add_thms thms compset
     val _ = add_conv(``fcp$dimindex:'a itself -> num``, 1, SIZES_CONV) compset
@@ -264,14 +267,14 @@ in
   compset
 end;
 
-val _ = add_thms thms the_compset;
-val _ = add_conv(``fcp$dimindex:'a itself -> num``, 1, SIZES_CONV) the_compset;
-val _ = add_conv(``words$dimword:'a itself -> num``, 1, SIZES_CONV) the_compset;
-val _ = add_conv(``words$INT_MIN:'a itself -> num``, 1, SIZES_CONV) the_compset;
-val _ = add_conv(``min$= : 'a word -> 'a word -> bool``, 2, word_EQ_CONV)
-          the_compset;
+val _ = computeLib.add_funs thms;
+val _ = computeLib.add_convs
+  [(``fcp$dimindex:'a itself -> num``, 1, SIZES_CONV),
+   (``words$dimword:'a itself -> num``, 1, SIZES_CONV),
+   (``words$INT_MIN:'a itself -> num``, 1, SIZES_CONV),
+   (``min$= : 'a word -> 'a word -> bool``, 2, word_EQ_CONV)];
 
-val WORD_EVAL_CONV = CBV_CONV (words_compset());
+val WORD_EVAL_CONV = computeLib.CBV_CONV (words_compset());
 val WORD_EVAL_RULE = CONV_RULE WORD_EVAL_CONV;
 val WORD_EVAL_TAC  = CONV_TAC WORD_EVAL_CONV;
 
@@ -994,37 +997,62 @@ local
           l
         else
           num2list' (Arbnum.plus1 i) (if odd n then i::l else l) (Arbnum.div2 n)
-in
+
   val num2list = num2list' Arbnum.zero []
-end;
 
-fun shift_n t n =
-   if n = Arbnum.zero then
-     t
-   else
-     wordsSyntax.mk_word_lsl (t, numSyntax.mk_numeral n);
+  fun shift_n t n =
+     if n = Arbnum.zero then
+       t
+     else
+       wordsSyntax.mk_word_lsl (t, numSyntax.mk_numeral n);
 
-fun sum_n l = foldl (fn (a,b) => wordsSyntax.mk_word_add (b,a)) (hd l) (tl l);
+  fun sum_n l = foldl (fn (a,b) => wordsSyntax.mk_word_add (b,a)) (hd l) (tl l);
 
-fun WORD_MUL_LSL_CONV tm = let
-  val (l,r) = wordsSyntax.dest_word_mul tm
-  val (v,sz) = wordsSyntax.dest_mod_word_literal l
-  val v2 = wordsSyntax.dest_word_literal l
-  val thm = if v <> v2 then
-              EQT_ELIM (word_EQ_CONV (mk_eq (l,wordsSyntax.mk_word (v,sz))))
-            else
-              combinTheory.I_THM
+  val MUL_PLUS1 = List.nth(CONJUNCTS (SPEC_ALL WORD_MULT_CLAUSES), 4)
+                  |> SYM |> GEN_ALL
+  val MUL_DISTRIB = GSYM WORD_RIGHT_ADD_DISTRIB
+
+  fun LSL_CONV tm =
+       (if wordsSyntax.is_word_add tm then
+          Conv.BINOP_CONV LSL_CONV
+        else
+          Conv.TRY_CONV
+            (REWR_CONV WORD_LSL_NUMERAL THENC
+             Conv.LAND_CONV WORD_EVAL_CONV)) tm
+
+  fun MUL_DISTRIB_CONV tm =
+       (if wordsSyntax.is_word_add tm then
+          Conv.LAND_CONV MUL_DISTRIB_CONV THENC
+          (REWR_CONV MUL_PLUS1 ORELSEC REWR_CONV MUL_DISTRIB)
+        else
+          ALL_CONV) tm
+
 in
-  if v = Arbnum.zero then
-    (TRY_CONV (RATOR_CONV (RAND_CONV (REWR_CONV thm))) THENC
-     REWR_CONV (hd word_mult_clauses)) tm
-  else let
-    val _ = not (wordsSyntax.is_word_literal r) orelse
-              raise ERR "WORD_MUL_LSL_CONV" "Not a term of the form: n2w n * x"
-    val t' = sum_n (List.map (shift_n r) (num2list v))
+  fun WORD_MUL_LSL_CONV tm = let
+    val (l,r) = wordsSyntax.dest_word_mul tm
+    val (v,sz) = wordsSyntax.dest_mod_word_literal l
+    val v2 = wordsSyntax.dest_word_literal l
+    val conv = if v <> v2 then
+                Conv.REWR_CONV (EQT_ELIM
+                  (word_EQ_CONV (mk_eq (l,wordsSyntax.mk_word (v,sz)))))
+              else
+                Conv.ALL_CONV
+    val thm = Conv.QCONV (Conv.LAND_CONV conv) tm
+    val tm = rhs (concl thm)
   in
-    EQT_ELIM
-      (SIMP_CONV (std_ss++WORD_ARITH_ss) [WORD_MUL_LSL,thm] (mk_eq (tm,t')))
+    Thm.TRANS thm
+     (if v = Arbnum.zero then
+        REWR_CONV (hd word_mult_clauses) tm
+      else if v = Arbnum.one then
+        REWR_CONV (List.nth (word_mult_clauses, 2)) tm
+      else let
+        val x = Term.mk_var ("x", Term.type_of tm)
+        val t' = sum_n (List.map (shift_n x) (num2list v))
+        val rwt = (LSL_CONV THENC MUL_DISTRIB_CONV
+                   THENC Conv.LAND_CONV WORD_EVAL_CONV) t'
+      in
+        REWR_CONV (SYM rwt) tm
+      end)
   end
 end;
 
@@ -2013,9 +2041,9 @@ val Cases_on_word = Cases_on;
 val LESS_CONV =
 let val compset = reduceLib.num_compset()
     val thm = SUC_RULE prim_recTheory.LESS_THM
-    val _ = add_thms [thm] compset
+    val _ = computeLib.add_thms [thm] compset
 in
- CBV_CONV compset
+ computeLib.CBV_CONV compset
 end;
 
 local
