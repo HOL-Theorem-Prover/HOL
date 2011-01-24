@@ -875,9 +875,11 @@ let val x = wordsSyntax.dest_word_1comp t in
   if is_known_word_size t then
     if is_word_zero x then
       PURE_REWRITE_CONV [REWRITE_RULE [SYM_WORD_NEG_1] WORD_NOT_0] t
-    else
+    else if wordsSyntax.is_word_literal x then
       (PURE_REWRITE_CONV [word_1comp_n2w]
         THENC DEPTH_CONV SIZES_CONV THENC numLib.REDUCE_CONV) t
+    else
+      raise ERR "WORD_COMP_CONV" "Must be word literal"
   else
     (PURE_REWRITE_CONV [WORD_NOT_NUMERAL]
       THENC numLib.REDUCE_CONV) t
