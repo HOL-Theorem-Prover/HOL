@@ -77,6 +77,16 @@ in
   case res of SOME _ => die() | _ => ()
 end
 
+fun time_to_minutes e =
+let
+  val s = Time.toSeconds e
+  val minutes = Int.quot (s, 60);
+  val seconds = Int.rem (s, 60);
+in
+  Int.toString minutes ^ "m " ^
+  StringCvt.padLeft #"0" 2 (Int.toString seconds) ^ "s"
+end;
+
 val raw_blast_true = test (Drule.EQT_ELIM o blastLib.BIT_BLAST_CONV)
 val blast_true = test blastLib.BBLAST_PROVE
 val blast_fail = test_fail "BBLAST_PROVE" blastLib.BBLAST_PROVE
@@ -85,6 +95,7 @@ val srw_true = test (simpLib.SIMP_PROVE (srw_ss()) [])
 
 (* start tests *)
 val _ = print "blastLib tests\n"
+val tt = Timer.startRealTimer ()
 
 (* Fail (false) *)
 val _ = blast_fail ``!x. x <+ 0w : word8``;
@@ -99,6 +110,7 @@ val _ = blast_fail ``!y. ?x. x <=+ y : word8``;
 val _ = blast_fail ``?x. x <=+ y : word8``;
 val _ = blast_fail ``(!x:word8 y:word8. word_msb x = word_msb y) ==>
                      (x <+ y = x < y : word8)``
+
 (* Counterexamples *)
 val _ = blast_counter ``!x. x >=+ 2w : word8``;
 val _ = blast_counter ``!y. x <=+ y : word8``;
@@ -422,5 +434,9 @@ val _ = srw_true
 
 val _ = blast_true
   ``(a:word2) <+ b /\ b <+ c /\ c <+ d ==> (3w * d = 1w)``
+
+val elapsed = Timer.checkRealTimer tt;
+
+val _ = print ("\nTotal time: " ^ time_to_minutes elapsed ^ "\n");
 
 val _ = OS.Process.exit OS.Process.success;
