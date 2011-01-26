@@ -11,8 +11,10 @@ in
   else prs w s
 end
 
+fun die() = ()
 fun die() = OS.Process.exit OS.Process.failure
 
+val _ = print "\n";
 val _ = print (prs 65 "Parsing :bool[32] list")
 val ty1 = listSyntax.mk_list_type (wordsSyntax.mk_int_word_type 32)
 val ty2 = Parse.Type`:bool[32] list` handle HOL_ERR _ => alpha
@@ -98,7 +100,6 @@ val _ = print "blastLib tests\n"
 val tt = Timer.startRealTimer ()
 
 (* Fail (false) *)
-val _ = blast_fail ``!x. x <+ 0w : word8``;
 val _ = blast_fail ``?x. x <+ 0w : word8``;
 val _ = blast_fail ``?x y. !z. (x + y = 0w : word8) /\ P z``;
 val _ = blast_fail ``?x: word8. 3w > 4w : word4``;
@@ -112,12 +113,14 @@ val _ = blast_fail ``(!x:word8 y:word8. word_msb x = word_msb y) ==>
                      (x <+ y = x < y : word8)``
 
 (* Counterexamples *)
+val _ = blast_counter ``!x. x <+ 0w : word8``;
 val _ = blast_counter ``!x. x >=+ 2w : word8``;
 val _ = blast_counter ``!y. x <=+ y : word8``;
 val _ = blast_counter ``(x = 1w) \/ (x = 2w : word2)``;
 val _ = blast_counter ``x = y : word2``
 val _ = blast_counter ``x + x = x : word8``;
 val _ = blast_counter ``x <+ y = x < y : word8``
+val _ = blast_counter ``(8w * a + b && 7w) >> 3 = a && (-1w >> 3) : word8``;
 
 val _ = blast_true ``!x. x >=+ 2w \/ x <+ 2w : word8``;
 val _ = blast_true ``?x. x <+ 2w : word8``;

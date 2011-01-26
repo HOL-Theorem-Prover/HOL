@@ -814,14 +814,25 @@ local
     | build_exists ({redex,residue}::l1) (t::l2) cthm =
         build_exists l1 l2 (Thm.EXISTS (t, residue) cthm);
 
-  fun order_counter [] [] a = List.rev a
-    | order_counter [] _ _ = raise ERR "BBLAST_PROVE" "Couldn't prove goal."
-    | order_counter (v::vars) counter a =
+  fun order_ctr [] [] a = List.rev a
+    | order_ctr [] _ _ = raise ERR "BBLAST_PROVE" "Couldn't prove goal."
+    | order_ctr (v::vars) counter a =
         let
           val (c,rest) = Lib.pluck (fn {redex,residue} => (redex = v)) counter
         in
-          order_counter vars rest (c :: a)
+          order_ctr vars rest (c :: a)
         end handle HOL_ERR _ => raise ERR "BBLAST_PROVE" "Couldn't prove goal."
+  fun order_counter v c = order_ctr v c []
+
+  val word_zero_tm = wordsSyntax.mk_n2w (numSyntax.zero_tm, Type.alpha)
+  fun mk_zero_subst v =
+        (v |-> Term.inst [Type.alpha |-> wordsSyntax.dim_of v] word_zero_tm)
+  fun add_subst (s1 : (term, term) Lib.subst, s2 : (term, term) Lib.subst) =
+        let val reds = List.map (#redex) s2
+            fun okay v = Lib.all (not o term_eq v) reds
+        in
+          s2 @ (List.filter (okay o #redex) s1)
+        end
 in
   fun BBLAST_PROVE tm =
   let
@@ -833,10 +844,12 @@ in
       handle HOL_ERR _ =>
          let
            val body = snd (boolSyntax.strip_forall tm)
-           val counter = counterexample (rhsc thm)
+           val fvars = Term.free_vars body
+           val w_subst = Lib.mapfilter mk_zero_subst fvars
+           val counter = add_subst (w_subst, counterexample (rhsc thm))
          in
            if not (List.null counter) andalso
-              Lib.can (order_counter (Term.free_vars body) counter) []
+              Lib.can (order_counter fvars) counter
            then
              let val _ = if !blast_counter then
                            print_counterexample counter
@@ -856,7 +869,7 @@ in
             REPEATC Conv.EXISTS_SIMP_CONV) tm)
       else let
         val counter = counterexample (boolSyntax.mk_neg ctm)
-        val counter = order_counter vars counter []
+        val counter = order_counter vars counter
         val ctms = counter_terms counter [boolSyntax.list_mk_exists(vars,ctm)]
         val cthm = Drule.EQT_ELIM
                      (wordsLib.WORD_EVAL_CONV (Term.subst counter ctm))
