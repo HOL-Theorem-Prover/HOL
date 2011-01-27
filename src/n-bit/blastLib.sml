@@ -663,17 +663,29 @@ in
     end
 end
 
-fun print_counterexample l =
-   if List.null l then
-     print "No counterexample found!\n"
-   else let
-     fun f {redex,residue} = Hol_pp.term_to_string redex ^ " -> " ^
-                             Hol_pp.term_to_string residue ^ "\n\n"
-   in
-     print "Found counterexample:\n\n";
-     List.app (fn c => print (f c ^ "and\n\n")) (Lib.butlast l);
-     print (f (List.last l))
+val arb_num_tm = boolSyntax.mk_arb numSyntax.num
+
+local
+  fun print_subst {redex,residue} =
+    let val s = case Lib.total wordsSyntax.dest_n2w residue
+                of SOME (tm, _) =>
+                     if Term.term_eq tm arb_num_tm then
+                       "ARB (0w)"
+                     else
+                       Hol_pp.term_to_string residue
+                 | NONE => Hol_pp.term_to_string residue
+    in
+     Hol_pp.term_to_string redex ^ " -> " ^ s ^ "\n\n"
     end
+in
+  fun print_counterexample l =
+     if List.null l then
+       print "No counterexample found!\n"
+     else
+      (print "Found counterexample:\n\n";
+       List.app (fn c => print (print_subst c ^ "and\n\n")) (Lib.butlast l);
+       print (print_subst (List.last l)))
+end
 
 (* ------------------------------------------------------------------------
    BIT_BLAST_CONV : convert a bit vector assertion ``a = b``, ``a ' n`` or
@@ -824,9 +836,9 @@ local
         end handle HOL_ERR _ => raise ERR "BBLAST_PROVE" "Couldn't prove goal."
   fun order_counter v c = order_ctr v c []
 
-  val word_zero_tm = wordsSyntax.mk_n2w (numSyntax.zero_tm, Type.alpha)
+  val arb_tm = wordsSyntax.mk_n2w (arb_num_tm, Type.alpha)
   fun mk_zero_subst v =
-        (v |-> Term.inst [Type.alpha |-> wordsSyntax.dim_of v] word_zero_tm)
+        (v |-> Term.inst [Type.alpha |-> wordsSyntax.dim_of v] arb_tm)
   fun add_subst (s1 : (term, term) Lib.subst, s2 : (term, term) Lib.subst) =
         let val reds = List.map (#redex) s2
             fun okay v = Lib.all (not o term_eq v) reds
@@ -855,7 +867,8 @@ in
                            print_counterexample counter
                          else
                            ()
-                 val ctm = Term.subst counter body
+                 val ctm = Term.subst [arb_num_tm |-> numSyntax.zero_tm]
+                             (Term.subst counter body)
              in
                raise HolSatLib.SAT_cex (wordsLib.WORD_EVAL_CONV ctm)
              end
