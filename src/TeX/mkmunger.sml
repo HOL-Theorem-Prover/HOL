@@ -5,7 +5,7 @@ fun munger () = let
   val () = Feedback.emit_MESG := false
   val () = Feedback.WARNING_outstream := TextIO.stdErr
   val () = set_trace "Unicode" 1
-  val () = set_trace "pp_dollar_escapes" 0
+  val () = set_trace "pp_dollar_escapes" 1
   val () = set_trace "ambiguous grammar warning" 2
   open TextIO
   val lexer = mungeLex.makeLexer (fn n => TextIO.input stdIn)
@@ -22,7 +22,7 @@ fun munger () = let
   fun setoverrides s = mungeTools.user_overrides := mungeTools.read_overrides s
   val run_lexer = ref true
   val _ = case CommandLine.arguments() of
-            [] => () 
+            [] => ()
           | ["-index", basename] => (
                 holindex.holindex basename;
                 run_lexer := false)

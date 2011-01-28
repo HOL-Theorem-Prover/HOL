@@ -11,6 +11,7 @@ datatype opt = Turnstile | Case | TT | Def | SpacedDef | TypeOf | TermThm
              | AllTT | ShowTypes
              | Conj of int
              | Rule | StackedRule
+             | NoDollarParens
 
 val numErrors = ref 0
 type posn = int * int
@@ -42,6 +43,7 @@ fun stringOpt pos s =
   | "showtypes" => SOME ShowTypes
   | "rule" => SOME Rule
   | "stackedrule" => SOME StackedRule
+  | "nodollarparens" => SOME NoDollarParens
   | _ => let
     in
       if String.isPrefix ">>" s then let
@@ -278,14 +280,16 @@ in
       addz "}"
     end
 
-    fun stdtermprint t = let
-      val baseprint = raw_pp_term_as_tex overrides pps
-      val printer = if OptSet.has ShowTypes opts then
-                      trace ("types", 1) baseprint
-                    else trace ("types", 0) baseprint
-    in
-      printer t
-    end
+    fun optprintermod f pps =
+        f pps |> (if OptSet.has ShowTypes opts then
+                    trace ("types", 1)
+                  else trace ("types", 0))
+              |> (if OptSet.has NoDollarParens opts then
+                    trace ("EmitTeX: dollar parens", 0)
+                  else
+                    trace ("EmitTeX: dollar parens", 1))
+
+    fun stdtermprint pps t = optprintermod (raw_pp_term_as_tex overrides) pps t
 
     val () = if not alltt andalso not rulep then add_string pps "\\HOLinline{"
              else ()
@@ -316,33 +320,24 @@ in
                               (fn pps => (add_newline pps; add_newline pps))
                             else add_newline
               val lines = thm |> CONJUNCTS |> map (concl o SPEC_ALL)
-              val printfn = let
-                val base = raw_pp_term_as_tex overrides
-              in
-                if OptSet.has ShowTypes opts then
-                  (fn pps => trace ("types", 1) (base pps))
-                else (fn pps => trace ("types", 0) (base pps))
-              end
             in
               begin_block pps CONSISTENT 0;
               block_list pps
                          (fn pps => begin_block pps INCONSISTENT 0)
-                         printfn
+                         stdtermprint
                          newline
                          end_block
                          lines;
               end_block pps
             end
-          else if rulep then rule_print stdtermprint (concl thm)
+          else if rulep then rule_print (stdtermprint pps) (concl thm)
           else let
-              val base = raw_pp_theorem_as_tex overrides pps
+              val base = raw_pp_theorem_as_tex overrides
+              val printer = optprintermod base pps
               val printer =
                   if OptSet.has NoTurnstile opts then
-                    trace ("EmitTeX: print thm turnstiles", 0) base
-                  else base
-              val printer =
-                  if OptSet.has ShowTypes opts then trace ("types", 1) printer
-                  else trace ("types", 0) printer
+                    trace ("EmitTeX: print thm turnstiles", 0) printer
+                  else printer
             in
               printer thm
             end
@@ -369,7 +364,8 @@ in
                       end
                    else ()
         in
-          if rulep then rule_print stdtermprint term else stdtermprint term
+          if rulep then rule_print (stdtermprint pps) term
+          else stdtermprint pps term
         end
       | Type => let
           val typ = if OptSet.has TypeOf opts
