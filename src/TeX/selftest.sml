@@ -39,4 +39,4 @@ val _ = if s = "(\\HOLTokenConj{})" then print "OK\n" else die()
 
 val _ = tprint "Testing dollarised syntax (if)"
 val s = pp_to_string 70 pp_term_as_tex (mk_var("if", bool))
-val _ = if s = "(\\HOLFreeVar{if})" then print "OK\n" else die()
+val _ = if s = "(\\HOLFreeVar{\\HOLKeyword{if}})" then print "OK\n" else die()
