@@ -24,7 +24,8 @@ $(EXE): $($(ML_SYSNAME)_MKMUNGE_DEP)
 	$($(ML_SYSNAME)_MKMUNGE_COMM)
 	$(CP) $@ $(protect $(HOLDIR)/bin)
 
-mkmunge.o: poly-mkmkmunge.ML mkmkcline.sml $(dprot $(HOLDIR)/bin/hol.builder)
+mkmunge.o: poly-mkmkmunge.ML mkmkcline.sml $(dprot $(HOLDIR)/bin/hol.builder) \
+           EmitTeX.uo
 	$(HOLDIR)/bin/hol < $<
 
 munger.lex.sml: munger.lex
