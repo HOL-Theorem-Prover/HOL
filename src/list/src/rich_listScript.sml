@@ -933,6 +933,37 @@ val FILTER_MAP = store_thm("FILTER_MAP",
     THEN GEN_TAC THEN PURE_ONCE_REWRITE_TAC[o_THM]
     THEN COND_CASES_TAC THEN ASM_REWRITE_TAC[FILTER,MAP]);
 
+val LENGTH_FILTER_LEQ = Q.store_thm("LENGTH_FILTER_LEQ",
+  `!P l. LENGTH (FILTER P l) <= LENGTH l`,
+  Induct_on `l`
+  THEN SRW_TAC [] [numLib.DECIDE ``!a b. a <= b ==> a <= SUC b``]);
+
+val EL_FILTER = Q.prove(
+  `!i l P. i < LENGTH (FILTER P l) ==> P (EL i (FILTER P l))`,
+  Induct_on `l`
+  THEN SRW_TAC [] []
+  THEN Cases_on `i`
+  THEN SRW_TAC [numSimps.ARITH_ss] []);
+
+val FILTER_EQ_lem = Q.prove(
+  `!l l2 P h. ~P h ==> (FILTER P l <> h :: l2)`,
+  SRW_TAC [] [listTheory.LIST_EQ_REWRITE]
+  THEN Cases_on `LENGTH (FILTER P l) = 0`
+  THEN SRW_TAC [] []
+  THEN DISJ2_TAC
+  THEN Q.EXISTS_TAC `0`
+  THEN SRW_TAC [numSimps.ARITH_ss] []
+  THEN `0 < LENGTH (FILTER P l)` by numLib.DECIDE_TAC
+  THEN IMP_RES_TAC EL_FILTER
+  THEN FULL_SIMP_TAC (srw_ss()) []
+  THEN metisLib.METIS_TAC []);
+
+val FILTER_EQ = Q.store_thm("FILTER_EQ",
+  `!P1 P2 l.
+     (FILTER P1 l = FILTER P2 l) =
+     (!x. MEM x l ==> (P1 x = P2 x))`,
+  Induct_on `l` THEN SRW_TAC [] [] THEN metisLib.METIS_TAC [FILTER_EQ_lem]);
+
 (*- 18 Nov. 93 -*)
 val LENGTH_SEG = store_thm("LENGTH_SEG",
     (--`!n k (l:'a list). ((n + k) <= (LENGTH l)) ==> (LENGTH (SEG n k l) = n)`--),
