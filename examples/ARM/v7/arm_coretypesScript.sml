@@ -239,7 +239,7 @@ val ITAdvance_n2w = save_thm("ITAdvance_n2w",
    ITAdvance_def
      |> SIMP_RULE (srw_ss()++wordsLib.WORD_EXTRACT_ss) []
      |> Q.SPEC `n2w n`
-     |> CONV_RULE (RHS_CONV EVAL)
+     |> RIGHT_CONV_RULE EVAL
      |> GEN_ALL);
 
 val decode_psr_def = Define`

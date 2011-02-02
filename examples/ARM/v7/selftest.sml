@@ -6,6 +6,7 @@ val _ = wordsLib.guess_lengths();
 val _ = set_trace "Unicode" 0;
 val _ = set_trace "arm steps" 3;
 val _ = set_trace "arm step" 2;
+val _ = set_trace "arm step check" 1;
 val _ = set_trace "notify type variable guesses" 0;
 val _ = set_trace "notify word length guesses" 0;
 
@@ -18,9 +19,7 @@ fun test str f x = let
   val elapsed = Timer.checkRealTimer rt
 in
   TextIO.print ("\n" ^ str ^ " ... " ^ Time.toString elapsed ^ "s" ^
-                (case res of
-                   NONE => "FAILED!"
-                 | _ => "\n") ^ "\n");
+                (case res of NONE => "FAILED!\n" | _ => "\n\n"));
   case res of NONE => die() | _ => ()
 end
 

@@ -94,29 +94,38 @@ val fetch_instruction_def = Define`
 
 val arm_next_def = Define`
   arm_next ii irpt : unit M =
-    if irpt = HW_Reset then
-      clear_wait_for_interrupt ii >>= (\u:unit. take_reset ii)
+    if irpt = NoInterrupt then
+      waiting_for_interrupt ii >>=
+      (\wfi.
+         condT (~wfi)
+           (fetch_instruction ii
+               (\a. read_memA ii (a, 4) >>= (\d. return (word32 d)))
+               (\a. read_memA ii (a, 2) >>= (\d. return (word16 d))) >>=
+            (\(opc,instr). arm_instr ii instr)))
     else
-      read_cpsr ii >>=
-      (\cpsr.
-          if (irpt = HW_Fiq) /\ ~cpsr.F then
-            clear_wait_for_interrupt ii >>= (\u:unit. take_fiq_exception ii)
-          else if (irpt = HW_Irq) /\ ~cpsr.I then
-            clear_wait_for_interrupt ii >>= (\u:unit. take_irq_exception ii)
-          else
-            waiting_for_interrupt ii >>=
-            (\wfi.
-               if wfi then
-                 constT ()
-               else
-                 fetch_instruction ii
-                   (\a. read_memA ii (a, 4) >>= (\d. return (word32 d)))
-                   (\a. read_memA ii (a, 2) >>= (\d. return (word16 d))) >>=
-                 (\(opc,instr). arm_instr ii instr)))`;
+      (if irpt = HW_Reset then
+          take_reset ii
+        else if irpt = HW_Fiq then
+          take_fiq_exception ii
+        else (* irpt = HW_Irq *)
+          take_irq_exception ii) >>=
+      (\u:unit. clear_wait_for_interrupt ii)`;
 
 val arm_run_def = Define`
   arm_run t ii inp =
-    (forT 0 t (\t. arm_next ii (inp t))) >>=
+    (forT 0 t
+      (\t.
+         let irpt = inp t in
+           if (irpt = NoInterrupt) \/ (irpt = HW_Reset) then
+             arm_next ii irpt
+           else
+             read_cpsr ii >>=
+             (\cpsr.
+                arm_next ii NoInterrupt >>=
+                (\u:unit.
+                  condT ((irpt = HW_Fiq) /\ ~cpsr.F \/
+                         (irpt = HW_Irq) /\ ~cpsr.I)
+                        (arm_next ii irpt))))) >>=
     (\unit_list:unit list. constT ())`;
 
 (* ------------------------------------------------------------------------ *)

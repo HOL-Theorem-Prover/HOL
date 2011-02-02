@@ -7,7 +7,7 @@ struct
 *)
 
 open HolKernel boolLib bossLib;
-open wordsTheory combinTheory;
+open wordsTheory combinTheory updateLib;
 open arm_coretypesTheory arm_seq_monadTheory arm_opsemTheory armTheory;
 open arm_stepTheory;
 
@@ -30,8 +30,10 @@ val op \\ = op Tactical.THEN;
 val ERR = Feedback.mk_HOL_ERR "arm_stepLib";
 
 val arm_step_trace = ref 0;
+val arm_step_check = ref false;
 
 val _ = Feedback.register_trace ("arm step", arm_step_trace, 3);
+val _ = Feedback.register_btrace ("arm step check", arm_step_check);
 
 (* ------------------------------------------------------------------------- *)
 (* Facilitate evaluation                                                     *)
@@ -367,6 +369,10 @@ local
   val ALIGN_ss = simpLib.std_conv_ss
         {conv = ALIGN_CONV, name = "ALIGN_CONV",
          pats = [``arm_coretypes$aligned (n2w a:'a word,n)``]}
+  fun cond_mk_test c f l =
+        [case c
+         of SOME b => mk_test (f,l,b)
+          | NONE => boolSyntax.T]
 in
   fun mk_precondition
         the_state arch itstate ext thumbee thumb endian flags regs memory =
@@ -385,12 +391,10 @@ in
             mk_test (read_sctlr_tm,[``arm_step$sctlrV``,the_state],F),
             mk_test (read_sctlr_tm,[``arm_step$sctlrA``,the_state],T),
             mk_test (read_sctlr_tm,[``arm_step$sctlrU``,the_state],F)] @
-           [case itstate
-            of SOME IT => mk_test (read_it_tm,[the_state],IT)
-             | NONE => boolSyntax.T] @
+            cond_mk_test itstate read_it_tm [the_state] @
+            cond_mk_test endian  read_status_tm [``arm_step$psrE``,the_state] @
            [mk_test (read_status_tm,[``arm_step$psrJ``,the_state],thumbee),
             mk_test (read_status_tm,[``arm_step$psrT``,the_state],thumb),
-            mk_test (read_status_tm,[``arm_step$psrE``,the_state],endian),
             flags, regs, memory]))
 end;
 
@@ -717,19 +721,8 @@ local
       eval (mk_comb (flags_fupd, cpsr))
     end
 
-  fun mk_irpt_cpsr the_state inp T ThumbEE M =
-        if inp = armSyntax.HW_Irq_tm then
-          (``^the_state.psrs (0,CPSR) with
-             <| I := F; J := ^ThumbEE; T := ^T; M := ^M |>``,
-            mk_test (read_status_tm,[``arm_step$psrI``,the_state],boolSyntax.F))
-        else if inp = armSyntax.HW_Fiq_tm then
-          (``^the_state.psrs (0,CPSR) with
-            <| F := F; J := ^ThumbEE; T := ^T; M := ^M |>``,
-            mk_test (read_status_tm,[``arm_step$psrF``,the_state],boolSyntax.F))
-        else
-          (``^the_state.psrs (0,CPSR) with
-             <| J := ^ThumbEE; T := ^T; M := ^M |>``,
-           boolSyntax.T)
+  fun mk_irpt_cpsr the_state T ThumbEE M =
+        ``^the_state.psrs (0,CPSR) with <| J := ^ThumbEE; T := ^T; M := ^M |>``
 
   fun decode_opcode IT arch thumb thumbee opc =
         if thumb then
@@ -791,13 +784,13 @@ in
   in
     if mk_inp instr <> armSyntax.NoInterrupt_tm then
       let
-        val (CPSR,flags_pre) = mk_irpt_cpsr the_state inp Thumb ThumbEE M
+        val CPSR = mk_irpt_cpsr the_state Thumb ThumbEE M
         val (ext,state') = init the_state CPSR A thumbee
         val reg_pre = snd (mk_reg_pre (the_state,M,state'))
       in
         (0,0,state',
-         mk_precondition the_state A itstate ext ThumbEE Thumb E
-           flags_pre reg_pre boolSyntax.T)
+         mk_precondition the_state A NONE ext ThumbEE Thumb NONE
+           boolSyntax.T reg_pre boolSyntax.T)
       end
     else
       let
@@ -829,8 +822,8 @@ in
         val (nreg,reg_pre) = mk_reg_pre (the_state,M,state')
       in
         (nreg,nmem,state',
-         mk_precondition the_state A itstate ext ThumbEE Thumb E
-           flags_pre reg_pre memory_pre)
+         mk_precondition the_state A itstate ext ThumbEE Thumb
+           (SOME E) flags_pre reg_pre memory_pre)
       end
   end
 end;
@@ -863,7 +856,8 @@ in
            [align_relative_add_with_carry, lem3, APPLY_UPDATE_THM,
             WORD_NOT, WORD_LEFT_ADD_DISTRIB, UPDATE_APPLY_IMP_ID]
       \\ MATCH_MP_TAC UPDATE_APPLY_IMP_ID
-      \\ SRW_TAC [] [ARMpsr_component_equality, lem1, lem2])
+      \\ SRW_TAC [] [ARMpsr_component_equality, lem1, lem2]
+  )
 end;
 
 fun prove_comp_thm the_state P H G X = Q.prove(
@@ -947,7 +941,7 @@ local
      ARM_READ_STATUS_UPDATES, ARM_WRITE_SPSR_FROM_MODE,
      ARM_READ_UNCHANGED, ARM_WRITE_STATUS_Q,
      ARM_READ_CPSR_COMPONENT_UNCHANGED,
-     COND_RATOR, EXCEPTION_MODE,
+     COND_RATOR,
      Q.ISPEC `ARM_WRITE_CPSR` COND_RAND,
      Q.ISPEC `ARM_WRITE_IT n` COND_RAND,
      arm_bit_distinct, lem11, lem12]
@@ -991,6 +985,21 @@ in
                         [simpLib.rewrites updates_rws,
                          OFFSET_ss, WORD_EQ_ss, BFC_ss]
 end;
+
+val SORT_PSR_UPDATES_CONV =
+  updateLib.OVERRIDE_UPDATES_CONV ``:(num # PSRName) -> ARMpsr``
+    [GSYM arm_coretypesTheory.PSRName2num_11,
+     arm_coretypesTheory.PSRName2num_thm];
+
+val SORT_REG_UPDATES_CONV =
+  updateLib.OVERRIDE_UPDATES_CONV ``:(num # RName) -> word32``
+    [GSYM arm_coretypesTheory.RName2num_11,
+     arm_coretypesTheory.RName2num_thm];
+
+val SORT_REG_UPDATES_RULE =
+  Conv.CONV_RULE (Conv.RAND_CONV (Conv.RHS_CONV
+    (Conv.ONCE_DEPTH_CONV SORT_PSR_UPDATES_CONV THENC
+     Conv.ONCE_DEPTH_CONV SORT_REG_UPDATES_CONV)));
 
 local
   val endian_options = List.map (List.map lowercase)
@@ -1107,15 +1116,37 @@ in
     end
 end;
 
-fun get_valuestate2 s tm = let
-  val f = snd o get_valuestate s
+local
+    val fupd_set =
+        (DB.definitions "arm_coretypes" @
+         DB.definitions "arm_seq_monad")
+        |> List.map fst
+        |> List.filter (String.isSuffix "_fupd")
+        |> Redblackset.fromList String.compare
+  fun is_fupd tm =
+         case Lib.total Term.dest_const tm
+         of SOME (s,_) => Redblackset.member (fupd_set,s)
+          | NONE => false
 in
-  case Lib.total boolSyntax.dest_cond tm
-  of SOME (c,tm1,tm2) => [f tm1, f tm2]
-   | NONE => [f tm]
+  fun check_step thm =
+      if !arm_step_check andalso
+         Lib.can (HolKernel.find_term is_fupd) (concl thm)
+      then
+        (Parse.print_thm thm;
+         print "\n";
+         raise ERR "check_step" "Found record update!")
+      else
+        thm
 end
 
 local
+  fun get_valuestate2 s tm = let
+    val f = snd o get_valuestate s
+  in
+    case Lib.total boolSyntax.dest_cond tm
+    of SOME (c,tm1,tm2) => [f tm1, f tm2]
+     | NONE => [f tm]
+  end
   val the_state = mk_var ("state",``:arm_seq_monad$arm_state``)
   fun mk_arm_next inp t = ``arm$arm_next <| proc := 0 |> ^inp ^t``
   fun some_update fupd v s =
@@ -1181,7 +1212,8 @@ in
                            [character_thm,comp_thm1,comp_thm2,eval_thm]))
                     | _ => raise ERR "arm_step"
                              "Unexpected number of composition theorems"
-    val thm = next_thm |> Drule.UNDISCH
+    val thm = next_thm |> SORT_REG_UPDATES_RULE
+                       |> Drule.UNDISCH
                        |> SIMP_RULE (bool_ss++ARM_ALIGN_ss) [Thm.ASSUME pre]
                        |> Thm.DISCH pre
                        |> with_flag (Cond_rewr.stack_limit,50)
@@ -1193,12 +1225,19 @@ in
              (SIMP_RULE (bool_ss++ARM_UPDATES_ss) [Thm.ASSUME pre'])
         |> Thm.DISCH pre'
         |> Thm.GEN the_state
+        |> check_step
   end
 end;
 
 end
 
 (*
+open arm_encoderLib;
+fun test opt s = arm_step opt (arm_encode_from_string s);
+test "" "svc #4";
+test "" "adds r1, r2";
+test "" "ldrex r1,[r2]";
+
 val test = arm_step "fiq";
 val _ = test "0xE591F000"; (* ldr pc,[r1] *)
 val _ = test "0xF8110A00"; (* rfeda r1 *)

@@ -160,7 +160,7 @@ val ARM_WRITE_SPSR_def = Define`
 local
   val l = fst (listSyntax.dest_list
       ``[0b10001w;0b10010w;0b10011w;0b10110w;0b10111w;0b11011w]:word5 list``)
-  fun rule thm m = GEN_ALL (CONV_RULE (RHS_CONV EVAL)
+  fun rule thm m = GEN_ALL (RIGHT_CONV_RULE EVAL
                      (Drule.SPEC_ALL (Thm.SPEC m thm)))
 in
   val ARM_READ_SPSR_MODE = save_thm("ARM_READ_SPSR_MODE",
@@ -1315,7 +1315,8 @@ val aligned_bx_add_with_carry_literal_pc =
          ONCE_REWRITE_RULE [WORD_ADD_COMM] aligned_bx_add_sub_pc,
          ``x + -1w * (a + 0x8w) = ~(a + 8w) + (x + 0x1w)``
             |> wordsLib.WORD_ARITH_CONV |> EQT_ELIM]
-    \\ SRW_TAC [] [WORD_NOT, WORD_LEFT_ADD_DISTRIB]);
+    \\ SRW_TAC [] [WORD_NOT, WORD_LEFT_ADD_DISTRIB]
+    );
 
 val aligned_bx_1comp_pc = Q.store_thm("aligned_bx_1comp_pc",
   `!a:word32. aligned_bx (~(align (a,4) + 8w))`,
@@ -2649,52 +2650,6 @@ val error_option_case_COND_RAND = Q.store_thm("error_option_case_COND_RAND",
        f a2 a3`,
   SRW_TAC [] []);
 
-(*
-val chka_thm = Q.store_thm("chka_thm",
-   `(if c then
-       ValueState ()
-         (state with
-          <|registers updated_by
-              ((0,pc) =+ x) o
-              ((0,lr) =+ y) o
-              ((0,pc) =+ z);
-            psrs updated_by p;
-            event_register updated_by e;
-            interrupt_wait updated_by i;
-            memory updated_by m;
-            accesses updated_by a;
-            information := info;
-            coprocessors updated_by cp |>)
-     else
-       ValueState ()
-         (state with
-          <|registers updated_by ((0,pc) =+ z);
-            psrs updated_by p;
-            event_register updated_by e;
-            interrupt_wait updated_by i;
-            memory updated_by m;
-            accesses updated_by a;
-            information := info;
-            coprocessors updated_by cp |>)) =
-   ValueState ()
-     (state with
-      <|registers updated_by
-          ((0,pc) =+ if c then x else z) o
-          ((0,lr) =+ if c then y
-                     else if lr = pc then z
-                     else state.registers (0,lr)) o
-          ((0,pc) =+ z);
-        psrs updated_by p;
-        event_register updated_by e;
-        interrupt_wait updated_by i;
-        memory updated_by m;
-        accesses updated_by a;
-        information := info;
-        coprocessors updated_by cp |>)`,
-  SRW_TAC [] [arm_state_component_equality]
-  \\ SRW_TAC [] [FUN_EQ_THM, combinTheory.UPDATE_def]);
-*)
-
 (* ------------------------------------------------------------------------- *)
 
 val ARM_READ_REG_FROM_MODE = Q.store_thm("ARM_READ_REG_FROM_MODE",
@@ -3104,8 +3059,7 @@ fun arm_reg_rule thm =
   Drule.LIST_CONJ
     (List.tabulate(16, fn i =>
       let val r = wordsSyntax.mk_wordii(i,4) in
-        (GEN_ALL o CONV_RULE (RHS_CONV EVAL) o
-         Drule.SPEC_ALL o Thm.SPEC r) thm
+        (GEN_ALL o RIGHT_CONV_RULE EVAL o Drule.SPEC_ALL o Thm.SPEC r) thm
       end));
 
 local
@@ -3124,8 +3078,7 @@ in
           val m = wordsSyntax.mk_wordi(Arbnum.fromBinString s,5)
           val x = pairSyntax.mk_pair(n,m)
       in
-        (GEN_ALL o CONV_RULE (RHS_CONV EVAL) o
-         Drule.SPEC_ALL o Thm.SPEC x) thm
+        (GEN_ALL o RIGHT_CONV_RULE EVAL o Drule.SPEC_ALL o Thm.SPEC x) thm
       end) regs)
 end;
 
@@ -3151,9 +3104,11 @@ val PSR_OF_UPDATES = Q.store_thm("PSR_OF_UPDATES",
    (!a s. ARM_READ_CPSR (ARM_WRITE_MEM_READ a s) = ARM_READ_CPSR s) /\
    (!d s. ARM_READ_CPSR (ARM_WRITE_CPSR d s) = d) /\
    (!d s. ARM_READ_CPSR (ARM_WRITE_SPSR d s) = ARM_READ_CPSR s) /\
+   (!m d s. ARM_READ_CPSR (ARM_WRITE_SPSR_MODE m d s) = ARM_READ_CPSR s) /\
    (!f d s. ARM_READ_CPSR (ARM_WRITE_STATUS_SPSR f d s) = ARM_READ_CPSR s) /\
    (!d s. ARM_READ_CPSR (ARM_WRITE_GE_SPSR d s) = ARM_READ_CPSR s) /\
-   (!x y s. ARM_READ_CPSR (CLEAR_EXCLUSIVE_BY_ADDRESS (x,y) s) = ARM_READ_CPSR s) /\
+   (!x y s. ARM_READ_CPSR (CLEAR_EXCLUSIVE_BY_ADDRESS (x,y) s) =
+            ARM_READ_CPSR s) /\
    (!d s. ARM_READ_CPSR (ARM_WRITE_IT_SPSR d s) = ARM_READ_CPSR s) /\
    (!d s. ARM_READ_CPSR (ARM_WRITE_MODE_SPSR d s) = ARM_READ_CPSR s) /\
    (!n m d s. ARM_READ_SPSR (ARM_WRITE_REG_MODE (n,m) d s) = ARM_READ_SPSR s) /\
@@ -3167,9 +3122,10 @@ val PSR_OF_UPDATES = Q.store_thm("PSR_OF_UPDATES",
     \\ SRW_TAC [] [ARM_WRITE_REG_MODE_def, ARM_WRITE_REG_def, ARM_WRITE_MEM_def,
                    ARM_WRITE_MEM_READ_def, ARM_WRITE_MEM_WRITE_def,
                    ARM_WRITE_SPSR_def, ARM_WRITE_CPSR_def, ARM_READ_CPSR_def,
-                   ARM_WRITE_STATUS_SPSR_def, ARM_WRITE_GE_SPSR_def,
-                   ARM_WRITE_IT_SPSR_def, ARM_WRITE_MODE_SPSR_def,
-                   ARM_READ_SPSR_def, CLEAR_EXCLUSIVE_BY_ADDRESS_def]
+                   ARM_WRITE_SPSR_MODE_def, ARM_WRITE_STATUS_SPSR_def,
+                   ARM_WRITE_GE_SPSR_def, ARM_WRITE_IT_SPSR_def,
+                   ARM_WRITE_MODE_SPSR_def, ARM_READ_SPSR_def,
+                   CLEAR_EXCLUSIVE_BY_ADDRESS_def]
     \\ SRW_TAC [] [ARM_WRITE_SPSR_MODE_def, SPSR_MODE_NOT_CPSR, UPDATE_def]
     \\ FULL_SIMP_TAC (srw_ss()) [ARM_MODE_def, SPSR_MODE_NOT_CPSR,
          ARM_READ_SPSR_MODE_def, ARM_READ_CPSR_def]);
@@ -3188,7 +3144,8 @@ val CPSR_COMPONENTS_OF_UPDATES = Q.store_thm("CPSR_COMPONENTS_OF_UPDATES",
    (!f b s. ARM_READ_STATUS f (ARM_WRITE_STATUS f b s) = b) /\
    (!f f2 b s. f2 <> f ==>
         (ARM_READ_STATUS f (ARM_WRITE_STATUS f2 b s) = ARM_READ_STATUS f s)) /\
-   (!f x y s. ARM_READ_STATUS f (CLEAR_EXCLUSIVE_BY_ADDRESS (x,y) s) = ARM_READ_STATUS f s) /\
+   (!f x y s. ARM_READ_STATUS f (CLEAR_EXCLUSIVE_BY_ADDRESS (x,y) s) =
+              ARM_READ_STATUS f s) /\
    (!f d s. ARM_READ_STATUS f (ARM_WRITE_SPSR d s) = ARM_READ_STATUS f s) /\
    (!f it s. ARM_READ_STATUS f (ARM_WRITE_IT_SPSR it s) =
              ARM_READ_STATUS f s) /\
@@ -3589,25 +3546,6 @@ val ARM_READ_STATUS_UPDATES = Q.store_thm("ARM_READ_STATUS_UPDATES",
   REPEAT STRIP_TAC
     \\ MATCH_MP_TAC (Thm.CONJUNCT1 ARM_READ_UNCHANGED)
     \\ METIS_TAC []);
-
-val EXCEPTION_MODE = Q.store_thm("EXCEPTION_MODE",
-  `!state m pc lr a b.
-      ARM_WRITE_CPSR
-        (ARM_READ_CPSR state with M := m)
-        (ARM_WRITE_SPSR (ARM_READ_CPSR state)
-           (ARM_WRITE_MODE m
-              (ARM_WRITE_REG pc a
-                 (ARM_WRITE_REG_MODE (lr,m) b state)))) =
-      ARM_WRITE_SPSR (ARM_READ_CPSR state)
-        (ARM_WRITE_MODE m
-           (ARM_WRITE_REG pc a
-              (ARM_WRITE_REG_MODE (lr,m) b state)))`,
-  SRW_TAC [] [ARM_WRITE_CPSR_def, ARM_READ_CPSR_def, ARM_WRITE_MODE_def,
-              ARM_WRITE_SPSR_def, ARM_WRITE_REG_MODE_def, ARM_WRITE_REG_def,
-              ARM_MODE_def, SPSR_MODE_NOT_CPSR, APPLY_UPDATE_THM]
-    \\ SRW_TAC [] [SPSR_MODE_NOT_CPSR, ARM_WRITE_SPSR_MODE_def,
-         arm_state_component_equality, FUN_EQ_THM, APPLY_UPDATE_THM]
-    \\ SRW_TAC [] [SPSR_MODE_NOT_CPSR]);
 
 (* ------------------------------------------------------------------------- *)
 
