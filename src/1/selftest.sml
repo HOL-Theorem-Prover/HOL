@@ -257,14 +257,16 @@ val _ = print "OK\n"
 
 (* pretty-printing tests - turn Unicode off *)
 val _ = set_trace "Unicode" 0
-fun tpp s = let
+val _ = Parse.current_backend := PPBackEnd.raw_terminal
+fun tppw width s = let
   val t = Parse.Term [QUOTE s]
-  val _ = tprint ("Testing printing of `"^s^"`")
-  val res = term_to_string t
+  val _ = tprint ("Testing printing of `"^String.toString s^"`")
+  val res = Portable.pp_to_string width Parse.pp_term t
 in
   if res = s then print "OK\n"
   else (print "FAILED!\n"; Process.exit Process.failure)
 end
+val tpp = tppw 80
 
 
 val _ = app tpp ["let x = T in x /\\ y",
@@ -274,6 +276,16 @@ val _ = app tpp ["let x = T in x /\\ y",
                  "(case x of T -> (\\x. x) || F -> $~) y",
                  "!x. P (x /\\ y)",
                  "(:'a)"]
+
+val _ = tpp "x = y"
+val _ = tppw 10 "xxxxxx =\nyyyyyy"
+
+val _ = add_rule {term_name = "=",
+                  fixity = Infix(NONASSOC, 100),
+                  block_style = (AroundSamePrec, (PP.CONSISTENT,0)),
+                  paren_style = OnlyIfNecessary,
+                  pp_elements = [HardSpace 1, TOK "=", BreakSpace(1,2)]}
+val _ = tppw 10 "xxxxxx =\n  yyyyyy"
 
 val _ = print "** Tests with pp_dollar_escapes = 0.\n"
 val _ = set_trace "pp_dollar_escapes" 0
