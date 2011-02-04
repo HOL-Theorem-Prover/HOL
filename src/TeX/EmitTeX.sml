@@ -252,6 +252,7 @@ local
     of "\\" => token_string "Backslash"
      | "{"  => token_string "Leftbrace"
      | "}"  => token_string "Rightbrace"
+     | "\"" => token_string "DoubleQuote"
      | "$"  => "\\$"
      | "α" => greek "alpha"
      | "β" => greek "beta"
