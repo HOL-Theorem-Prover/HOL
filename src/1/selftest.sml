@@ -277,6 +277,8 @@ val _ = app tpp ["let x = T in x /\\ y",
                  "(case x of T -> (\\x. x) || F -> $~) y",
                  "!x. P (x /\\ y)",
                  "P (!x. Q x)",
+                 "\\x. ?y. P x y",
+                 "P (\\x. ?y. Q x y)",
                  "(:'a)"]
 
 val _ = tpp "x = y"
