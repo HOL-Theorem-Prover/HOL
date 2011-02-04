@@ -242,7 +242,7 @@ fun token_string s = String.concat ["\\", !texPrefix, "Token", s, "{}"];
 
 local
   fun greek s = "\\ensuremath{\\" ^ s ^ "}"
-  fun subn i  = "\\ensuremath{_{" ^ Int.toString i ^ "}}"
+  fun subn i  = "\\ensuremath{\\sb{" ^ Int.toString i ^ "}}"
 
   val dollar_parens = ref true
   val _ = register_btrace ("EmitTeX: dollar parens", dollar_parens)
