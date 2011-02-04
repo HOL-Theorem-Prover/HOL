@@ -260,7 +260,8 @@ val _ = set_trace "Unicode" 0
 val _ = Parse.current_backend := PPBackEnd.raw_terminal
 fun tppw width s = let
   val t = Parse.Term [QUOTE s]
-  val _ = tprint ("Testing printing of `"^String.toString s^"`")
+  val pretty = String.translate (fn #"\n" => "\\n" | c => str c)
+  val _ = tprint ("Testing printing of `"^pretty s^"`")
   val res = Portable.pp_to_string width Parse.pp_term t
 in
   if res = s then print "OK\n"
@@ -275,6 +276,7 @@ val _ = app tpp ["let x = T in x /\\ y",
                  "(((p /\\ q) /\\ r) /\\ s) /\\ t",
                  "(case x of T -> (\\x. x) || F -> $~) y",
                  "!x. P (x /\\ y)",
+                 "P (!x. Q x)",
                  "(:'a)"]
 
 val _ = tpp "x = y"
