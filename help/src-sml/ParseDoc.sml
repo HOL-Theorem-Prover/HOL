@@ -5,6 +5,8 @@ open Substring;
 exception ParseError of string
 
 fun I x = x;
+fun mem x [] = false
+  | mem x (y::ys) = x = y orelse mem x ys
 
 fun curry f x y = f (x,y)
 fun equal x y = (x=y)
@@ -72,6 +74,8 @@ in
   else
     raise ParseError ("Unknown keyword: "^s)
 end
+
+val empty_ok = ["DOC", "KEYWORDS", "LIBRARY"]
 
 
 fun divide ss =
@@ -304,8 +308,13 @@ fun parse_file docfile = let
           else
             SEEALSO args
         end
-      | otherwise =>
-        FIELD (tag, trimws (List.map db_out (paragraphs (markup ss))))
+      | otherwise => let
+          val args = trimws (List.map db_out (paragraphs (markup ss)))
+        in
+          if null args andalso not (mem tag empty_ok) then
+            raise ParseError ("Empty "^tag^" field")
+          else FIELD (tag, args)
+        end
   val firstpass = List.map section (to_sections (fetch_contents docfile))
   val finalisation = final_char_check o
                      check_type_field2 o
