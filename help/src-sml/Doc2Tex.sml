@@ -7,7 +7,7 @@ open ParseDoc
 fun occurs s ss = not (Substring.isEmpty (#2 (Substring.position s ss)));
 fun equal x y = (x = y)
 
-fun warn s = TextIO.output(TextIO.stdErr, s)
+fun warn s = TextIO.output(TextIO.stdErr, s ^ "\n")
 fun out(str,s) = TextIO.output(str, s)
 
 fun every P ss =
@@ -122,9 +122,11 @@ in
   out (ostr, "\\DOC{"^docpart^"}{"^prettypart^"}\n\n")
 end
 
+val verbose = ref false
 
 fun do_the_work dir dset outstr = let
   fun appthis dnm = let
+    val _ = if !verbose then warn ("Processing "^dnm) else ()
     val cname = core_dname dnm
     val file = parse_file (OS.Path.concat(dir,dnm ^ ".doc"))
   in
@@ -137,19 +139,25 @@ in
 end
 
 
-fun main () =
-    case CommandLine.arguments() of
-      [docdir, texfile] => let
-        val texfstr = TextIO.openAppend texfile
-        val docfiles = find_docfiles docdir
-      in
-        do_the_work docdir docfiles texfstr;
-        TextIO.closeOut texfstr;
-        OS.Process.exit OS.Process.success
-      end
-    | _ =>
-      (warn ("Usage: "^CommandLine.name()^ " <doc directory> <TeX file>\n");
-       OS.Process.exit OS.Process.failure);
+fun main () = let
+  fun handle_args (docdir, texfile) = let
+    val texfstr = TextIO.openAppend texfile
+    val docfiles = find_docfiles docdir
+  in
+    do_the_work docdir docfiles texfstr;
+    TextIO.closeOut texfstr;
+    OS.Process.exit OS.Process.success
+  end
+in
+  case CommandLine.arguments() of
+    [docdir, texfile] => handle_args (docdir, texfile)
+  | ["-v", docdir, texfile] => (verbose := true; handle_args(docdir,texfile))
+  | _ =>
+    (warn ("Usage: "^CommandLine.name()^
+           " [-v] <doc directory> <TeX file>\n");
+     warn ("  -v      be verbose about what's happening.");
+     OS.Process.exit OS.Process.failure)
+end
 
 
 end (* struct *)
