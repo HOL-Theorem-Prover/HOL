@@ -14,8 +14,6 @@ exception, then {QCONV c t} instead returns the theorem {|- t = t}.
 \FAILURE
 {QCONV c t} fails if the application of {c} to {t} fails.
 
-\COMMENTS
-
 \SEEALSO
 Conv.CHANGED_CONV, Conv.QCHANGED_CONV.
 
