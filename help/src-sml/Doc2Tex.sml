@@ -8,6 +8,8 @@ fun occurs s ss = not (Substring.isEmpty (#2 (Substring.position s ss)));
 fun equal x y = (x = y)
 
 fun warn s = TextIO.output(TextIO.stdErr, s ^ "\n")
+fun die s = (TextIO.output(TextIO.stdErr, s ^ "\n");
+             OS.Process.exit OS.Process.failure)
 fun out(str,s) = TextIO.output(str, s)
 
 fun every P ss =
@@ -129,6 +131,7 @@ fun do_the_work dir dset outstr = let
     val _ = if !verbose then warn ("Processing "^dnm) else ()
     val cname = core_dname dnm
     val file = parse_file (OS.Path.concat(dir,dnm ^ ".doc"))
+               handle ParseError msg => die ("Parse error in "^dnm^": "^msg)
   in
     print_docpart(file, outstr);
     app (fn s => print_section (s,outstr)) file;
