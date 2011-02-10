@@ -59,7 +59,7 @@ datatype section
    | SEEALSO of substring list;
 
 
-val valid_keywords =   (* not currently used *)
+val valid_keywords =
     Binaryset.addList(Binaryset.empty String.compare,
                       ["DOC", "ELTYPE", "BLTYPE", "TYPE", "SYNOPSIS",
                        "COMMENTS", "USES", "SEEALSO", "KEYWORDS", "DESCRIBE",
