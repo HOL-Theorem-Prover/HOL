@@ -437,6 +437,47 @@ fun topsort R = let
         | (nodeps,rst) => a1 nodeps (loop (a2,a1) rst)
 in loop (a2,a1) end
 
+(* for the following two implementations,
+   each node appears before all its dependencies
+   in the returned list *)
+
+(* O(n*log(n)) time version
+   deps = map from nodes to adjacency lists *)
+fun dict_topsort deps = let
+  open Redblackmap
+  val deps = transform (fn ls => ref (SOME ls)) deps
+  fun visit (n,ls) =
+  let val r = find (deps,n) in
+    case !r of
+      NONE => ls
+    | SOME dl => let
+        val _ = r := NONE
+        val ls = List.foldl visit ls dl
+      in n::ls end
+  end
+  fun v (n,_,ls) = visit (n,ls)
+in
+  foldl v [] deps
+end
+
+(* linear time version
+   only works when nodes are integers 0 up to some n
+   deps = vector of adjacency lists *)
+fun vector_topsort deps = let
+  open Array
+  val n = Vector.length deps
+  val a = tabulate (n, SOME o (curry Vector.sub deps))
+  fun visit (n,ls) =
+    case sub (a,n) of
+      NONE => ls
+    | SOME dl => let
+        val _ = update (a,n,NONE)
+        val ls = List.foldl visit ls dl
+      in n::ls end
+  fun v (0,ls) = ls
+    | v (n,ls) = v(n-1,visit(n-1,ls))
+in v(n,[]) end
+
 (*---------------------------------------------------------------------------*
  * Substitutions.                                                            *
  *---------------------------------------------------------------------------*)
