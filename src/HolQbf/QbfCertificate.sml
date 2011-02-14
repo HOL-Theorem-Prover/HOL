@@ -167,10 +167,6 @@ struct
 (*      not suitable for 't'.                                                *)
 (* ------------------------------------------------------------------------- *)
 
-  local open Redblackmap in
-    fun update (d,k,f) = insert(d,k,f(peek(d,k)))
-  end
-
   local open Term in
     datatype vtype = Forall of term (* var *)
                    | Exists of (term * term) (* var, extvar *)
