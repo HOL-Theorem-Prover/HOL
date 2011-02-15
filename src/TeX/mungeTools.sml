@@ -302,7 +302,7 @@ in
     val () =
       case command of
         Theorem => let
-          val thm = do_thminsts pos opts (getThm spec)
+          val thm = getThm spec
           val thm =
               if OptSet.has NoSpec opts then thm
               else
@@ -316,6 +316,7 @@ in
                                " does not have a conjunct #" ^
                                Int.toString i);
                           SPEC_ALL thm)
+          val thm = do_thminsts pos opts thm
           val _ = add_string pps (optset_indent opts)
         in
           if OptSet.has Def opts orelse OptSet.has SpacedDef opts then let
