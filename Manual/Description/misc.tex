@@ -893,6 +893,18 @@ The expectation is that $f$ will be the combinator \holtxt{K} from \theoryimp{co
 %
 In this way, large complicated terms that are not themselves theorems (or even of boolean type), can be stored in \HOL{} theories, and then printed in \LaTeX{} documents.
 
+\item[\texttt{merge}, \texttt{nomerge}] (For use with \holtm{} and \holthm.)
+By default, the HOL pretty-printer is paranoid about token-merging, and will insert spaces between the tokens it emits to try to ensure that what is output can be read in again without error.
+%
+This behaviour can be frustrating when getting one's \LaTeX{} to look ``just so'', so it can be turned off with the \texttt{nomerge} option.
+
+Additionally, this behaviour can be turned off globally with the \texttt{--nomergeanalysis} option to the munger.
+%
+If this has been made the default, it may be useful to occasionally turn the merge analysis back on for a particular term or theorem; this is done with the \texttt{merge} option.
+%
+(In interactive HOL, the token-merging analysis is controlled by a trace variable called \texttt{"pp\_avoids\_symbol\_merges"}.)
+
+
 \item[\texttt{nodollarparens}] (For use with \holtm{} and \holthm.) Causes the default escaping of syntactic sugar to be suppressed.
 \index{ escape, in HOL logic parser@\ml{\$} (escape, in \HOL{} logic parser)}%
 \index{tokens!suppressing parsing behaviour of}
@@ -1104,12 +1116,7 @@ This default width can be overridden on a case-by-case basis with the
 \texttt{width=} option to any of the commands within a \LaTeX{}
 document.
 
-\paragraph{Preventing Merge Analysis}
-By default, the HOL pretty-printer is paranoid about token-merging, and will insert spaces between the tokens it emits to try to ensure that what is output can be read in again without error.
-%
-This behaviour can be frustrating when getting one's \LaTeX{} to look ``just so'', so it can be turned off with the \texttt{--nomergeanalysis} option to the munger.
-%
-(In interactive HOL, the token-merging analysis is controlled by a trace variable called \texttt{"pp\_avoids\_symbol\_merges"}.)
+\paragraph{Preventing Merge Analysis}  As mentioned above in the description of the \texttt{merge} and \texttt{nomerge} options to the \holtm{} and \holthm{} commands, the munger can be configured to not do token-merging avoidance by passing the \texttt{--nomergeanalysis} option to the munger.
 
 \smallskip \noindent The \texttt{-w}, \texttt{--nomergeanalysis} and
 overrides file options can be given in any order.
