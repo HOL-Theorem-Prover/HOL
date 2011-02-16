@@ -47,3 +47,11 @@ val _ = set_trace "EmitTeX: dollar parens" 0
 val s = pp_to_string 70 pp_term_as_tex conjunction
 val _ = if s = "\\HOLTokenConj{}" then print "OK\n" else die()
 val _ = set_trace "EmitTeX: dollar parens" 1
+
+val _ = tprint "Testing UNIV printing (:'a)"
+val s = pp_to_string 70 pp_term_as_tex (pred_setSyntax.mk_univ alpha)
+val _ = if s = "\\ensuremath{\\cal{U}}(:'a)" then print "OK\n" else die()
+
+val _ = tprint "Testing UNIV printing (:num)"
+val s = pp_to_string 70 pp_term_as_tex (pred_setSyntax.mk_univ numSyntax.num)
+val _ = if s = "\\ensuremath{\\cal{U}}(:num)" then print "OK\n" else die()
