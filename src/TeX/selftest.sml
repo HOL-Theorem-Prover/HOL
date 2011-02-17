@@ -1,4 +1,5 @@
-open EmitTeX Term Type Parse boolSyntax combinSyntax PP
+open HolKernel boolLib bossLib Parse
+open EmitTeX combinSyntax PP
 
 fun tprint s = print (StringCvt.padRight #" " 65 s)
 fun die() = (print "FAILED!\n"; OS.Process.exit OS.Process.failure)
