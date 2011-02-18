@@ -53,6 +53,12 @@ val _ = tprint "Testing UNIV printing (:'a)"
 val s = pp_to_string 70 pp_term_as_tex (pred_setSyntax.mk_univ alpha)
 val _ = if s = "\\ensuremath{\\cal{U}}(:'a)" then print "OK\n" else die()
 
+val _ = tprint "Testing UNIV printing \"raw\" (:'a)"
+val s = pp_to_string 70
+                     (raw_pp_term_as_tex (K NONE))
+                     (pred_setSyntax.mk_univ alpha)
+val _ = if s = "\\ensuremath{\\cal{U}}(:\\ensuremath{\\alpha})" then print "OK\n" else die()
+
 val _ = tprint "Testing UNIV printing (:num)"
 val s = pp_to_string 70 pp_term_as_tex (pred_setSyntax.mk_univ numSyntax.num)
 val _ = if s = "\\ensuremath{\\cal{U}}(:num)" then print "OK\n" else die()
