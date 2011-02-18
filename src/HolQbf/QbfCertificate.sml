@@ -201,10 +201,14 @@ struct
        Create vars map from a variable index to a vtype.
        Existential variables without witnesses are given an rhs of T.
        Create deps map from a variable index to a list of indexes
-       indicating the variables in the list will appear on the rhs
-       of the hypothesis defining this variable.
-       After this pass, deps will just map existential variables
-       to singleton lists containing their extension variable witnesses. *)
+       indicating that this variable will appear on the rhs
+       of the hypothesis defining each variable in the list.
+       Deps also has the variable x_{n+1}, bound immediately
+       after (inside) a variable x_n, in the list for x_n.
+       After this pass, deps will map extension variables that are witnesses
+       to singleton lists containing their corresponding existential variables.
+       It will also map existential and universal variables to singleton
+       lists containing the next bound variable (empty list for innermost) *)
     val (vars,mat,lits,deps,lvi) = let
       val cmp = Int.compare
       fun enum vars t lits' deps lvi = let
