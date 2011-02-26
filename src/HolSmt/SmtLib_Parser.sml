@@ -1,4 +1,4 @@
-(* Copyright (c) 2010 Tjark Weber. All rights reserved. *)
+(* Copyright (c) 2010-2011 Tjark Weber. All rights reserved. *)
 
 (* Parsing of SMT-LIB 2 benchmarks *)
 
@@ -77,7 +77,7 @@ local
       (args : 'a list) : 'a =
     Lib.tryfind (fn f => f token nums args) (Redblackmap.find (dict, token)
       handle Redblackmap.NotFound => [])
-    handle Feedback.HOL_ERR e =>
+    handle Feedback.HOL_ERR _ =>
     (* catch-all *)
     Lib.tryfind (fn f => f token nums args) (Redblackmap.find (dict, "_")
       handle Redblackmap.NotFound => [])

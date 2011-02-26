@@ -1,4 +1,4 @@
-(* Copyright (c) 2009-2010 Tjark Weber. All rights reserved. *)
+(* Copyright (c) 2009-2011 Tjark Weber. All rights reserved. *)
 
 (* Functions to invoke the Yices SMT solver *)
 
@@ -167,7 +167,7 @@ structure Yices = struct
                       val ty_dict' = Redblackmap.insert (ty_dict, ty, name)
                       val defs' = "(define-type " ^ name ^ ")" :: defs
                   in
-                    if Feedback.get_tracefn "HolSmtLib" () > 2 then
+                    if !Library.trace > 2 then
                       Feedback.HOL_MESG
                         ("HolSmtLib (Yices): inventing name '" ^ name ^
                         "' for HOL type '" ^ Hol_pp.type_to_string ty ^ "'")
@@ -674,7 +674,7 @@ structure Yices = struct
                       ((ty_dict, ty_fresh, defs), Term.type_of tm)
                     val defs = "(define " ^ name ^ "::" ^ ty_name ^ ")" :: defs
                 in
-                  if Feedback.get_tracefn "HolSmtLib" () > 2 then
+                  if !Library.trace > 2 then
                     Feedback.HOL_MESG
                       ("HolSmtLib (Yices): inventing name '" ^ name ^
                       "' for HOL term '" ^ Hol_pp.term_to_string tm ^ "'")
@@ -748,12 +748,6 @@ structure Yices = struct
   val Yices_Oracle = SolverSpec.make_solver
     (Lib.pair () o goal_to_Yices)
     "yices -tc"
-    (Lib.K result_fn)
-
-  (* Yices 1.0.28, SMT-LIB file format *)
-  val Yices_SMT_Oracle = SolverSpec.make_solver
-    (Lib.pair () o Lib.snd o SmtLib.goal_to_SmtLib)
-    "yices -tc -smt"
     (Lib.K result_fn)
 
 end

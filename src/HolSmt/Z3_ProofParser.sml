@@ -1,4 +1,4 @@
-(* Copyright (c) 2009-2010 Tjark Weber. All rights reserved. *)
+(* Copyright (c) 2009-2011 Tjark Weber. All rights reserved. *)
 
 (* Proof reconstruction for Z3: parsing of Z3's proofs *)
 
@@ -91,26 +91,26 @@ local
       Lib.apfst (Lib.C (Lib.curry listSyntax.mk_list) pt_ty) o Lib.front_last)
 
   val z3_builtin_dict = Library.dict_from_list [
-    ("and_elim",        one_prem "and_elim"),
+    ("and-elim",        one_prem "and-elim"),
     ("asserted",        zero_prems "asserted"),
     ("commutativity",   zero_prems "commutativity"),
-    ("def_axiom",       zero_prems "def_axiom"),
-    ("elim_unused",     zero_prems "elim_unused"),
+    ("def-axiom",       zero_prems "def-axiom"),
+    ("elim-unused",     zero_prems "elim-unused"),
     ("hypothesis",      zero_prems "hypothesis"),
     ("lemma",           one_prem "lemma"),
     ("monotonicity",    list_prems "monotonicity"),
     ("mp",              two_prems "mp"),
-    ("not_or_elim",     one_prem "not_or_elim"),
-    ("quant_intro",     one_prem "quant_intro"),
+    ("not-or-elim",     one_prem "not-or-elim"),
+    ("quant-intro",     one_prem "quant-intro"),
     ("rewrite",         zero_prems "rewrite"),
     ("symm",            one_prem "symm"),
-    ("th_lemmaarith",   list_prems "th_lemmaarith"),
-    ("th_lemmaarray",   list_prems "th_lemmaarray"),
-    ("th_lemmabasic",   list_prems "th_lemmabasic"),
-    ("th_lemmabv",      list_prems "th_lemmabv"),
+    ("th-lemmaarith",   list_prems "th-lemmaarith"),
+    ("th-lemmaarray",   list_prems "th-lemmaarray"),
+    ("th-lemmabasic",   list_prems "th-lemmabasic"),
+    ("th-lemmabv",      list_prems "th-lemmabv"),
     ("trans",           two_prems "trans"),
-    ("true_axiom",      zero_prems "true_axiom"),
-    ("unit_resolution", list_prems "unit_resolution"),
+    ("true-axiom",      zero_prems "true-axiom"),
+    ("unit-resolution", list_prems "unit-resolution"),
 
     (* FIXME: I am hoping that the Z3 proof format will eventually be
        changed to adhere to the SMT-LIB format more strictly, i.e.,
@@ -267,26 +267,26 @@ local
     (fn ((key, value), dict) => Redblackmap.insert (dict, key, value))
     (!pt_dict)
     [
-      ("and_elim",        one_prem_pt AND_ELIM),
+      ("and-elim",        one_prem_pt AND_ELIM),
       ("asserted",        zero_prems_pt ASSERTED),
       ("commutativity",   zero_prems_pt COMMUTATIVITY),
-      ("def_axiom",       zero_prems_pt DEF_AXIOM),
-      ("elim_unused",     zero_prems_pt ELIM_UNUSED),
+      ("def-axiom",       zero_prems_pt DEF_AXIOM),
+      ("elim-unused",     zero_prems_pt ELIM_UNUSED),
       ("hypothesis",      zero_prems_pt HYPOTHESIS),
       ("lemma",           one_prem_pt LEMMA),
       ("monotonicity",    list_prems_pt MONOTONICITY),
       ("mp",              two_prems_pt MP),
-      ("not_or_elim",     one_prem_pt NOT_OR_ELIM),
-      ("quant_intro",     one_prem_pt QUANT_INTRO),
+      ("not-or-elim",     one_prem_pt NOT_OR_ELIM),
+      ("quant-intro",     one_prem_pt QUANT_INTRO),
       ("rewrite",         zero_prems_pt REWRITE),
       ("symm",            one_prem_pt SYMM),
-      ("th_lemmaarith",   list_prems_pt TH_LEMMA_ARITH),
-      ("th_lemmaarray",   list_prems_pt TH_LEMMA_ARRAY),
-      ("th_lemmabasic",   list_prems_pt TH_LEMMA_BASIC),
-      ("th_lemmabv",      list_prems_pt TH_LEMMA_BV),
+      ("th-lemmaarith",   list_prems_pt TH_LEMMA_ARITH),
+      ("th-lemmaarray",   list_prems_pt TH_LEMMA_ARRAY),
+      ("th-lemmabasic",   list_prems_pt TH_LEMMA_BASIC),
+      ("th-lemmabv",      list_prems_pt TH_LEMMA_BV),
       ("trans",           two_prems_pt TRANS),
-      ("true_axiom",      zero_prems_pt TRUE_AXIOM),
-      ("unit_resolution", list_prems_pt UNIT_RESOLUTION)
+      ("true-axiom",      zero_prems_pt TRUE_AXIOM),
+      ("unit-resolution", list_prems_pt UNIT_RESOLUTION)
     ]
 
   (***************************************************************************)
@@ -367,6 +367,31 @@ local
 
 in
 
+  (* Similar to 'parse_file' below, but for instreams.  Does not close
+     the instream. *)
+
+  fun parse_stream (tydict : (string, Type.hol_type SmtLib_Parser.parse_fn list)
+    Redblackmap.dict, tmdict : (string, Term.term SmtLib_Parser.parse_fn list)
+    Redblackmap.dict) (instream : TextIO.instream) : proof =
+  let
+    (* union of user-declared names and Z3's inference rule names *)
+    val tmdict = Library.union_dict tmdict z3_builtin_dict
+    (* parse the stream *)
+    val _ = if !Library.trace > 1 then
+        Feedback.HOL_MESG "HolSmtLib: parsing Z3 proof"
+      else ()
+    val get_token = Library.get_token (Library.get_buffered_char instream)
+    val proof = parse_proof get_token
+      (tydict, tmdict, Redblackmap.mkDict Int.compare) 0
+    val _ = if !Library.trace > 0 then
+        WARNING "parse_stream" ("ignoring token '" ^ get_token () ^
+          "' (and perhaps others) after proof")
+          handle Feedback.HOL_ERR _ => ()  (* end of stream, as expected *)
+      else ()
+  in
+    proof
+  end
+
   (* Function 'parse_file' parses Z3's response to the SMT2
      (get-proof) command (for an unsatisfiable problem, with proofs
      enabled in Z3, i.e., using option "PROOF_MODE=2").  It has been
@@ -377,28 +402,12 @@ in
      (cf. 'SmtLib_Parser.parse_file'); and the name of the proof
      file. *)
 
-  fun parse_file (tydict : (string, Type.hol_type SmtLib_Parser.parse_fn list)
-    Redblackmap.dict, tmdict : (string, Term.term SmtLib_Parser.parse_fn list)
-    Redblackmap.dict) (path : string) : proof =
+  fun parse_file (tydict, tmdict) (path : string) : proof =
   let
-    (* union of user-declared names and Z3's inference rule names *)
-    val tmdict = Library.union_dict tmdict z3_builtin_dict
-    (* parse the file contents *)
-    val _ = if !Library.trace > 1 then
-        Feedback.HOL_MESG ("HolSmtLib: parsing Z3 proof file '" ^ path ^ "'")
-      else ()
     val instream = TextIO.openIn path
-    val get_token = Library.get_token (Library.get_buffered_char instream)
-    val proof = parse_proof get_token
-      (tydict, tmdict, Redblackmap.mkDict Int.compare) 0
-    val _ = if !Library.trace > 0 then
-        WARNING "parse_file" ("ignoring token '" ^ get_token () ^
-          "' (and perhaps others) after proof")
-          handle Feedback.HOL_ERR _ => ()  (* end of file, as expected *)
-      else ()
-    val _ = TextIO.closeIn instream
   in
-    proof
+    parse_stream (tydict, tmdict) instream
+      before TextIO.closeIn instream
   end
 
 end  (* local *)
