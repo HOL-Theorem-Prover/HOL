@@ -8,6 +8,6 @@ signature HolSmtLib = sig
 
   val YICES_TAC : tactic
   val Z3_ORACLE_TAC : tactic
-  (*val Z3_TAC : tactic*)
+  val Z3_TAC : tactic
 
 end
