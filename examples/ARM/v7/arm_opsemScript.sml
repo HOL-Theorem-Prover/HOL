@@ -1632,7 +1632,7 @@ val signed_multiply_dual_instr_def = iDefine`
 val signed_multiply_long_dual_instr_def = iDefine`
   signed_multiply_long_dual_instr ii enc
     (Signed_Multiply_Long_Dual dhi dlo m sub m_swap n) =
-    instruction ii "signed_multiply_dual"
+    instruction ii "signed_multiply_long_dual"
       (ARCH2 enc {a | version_number a >= 6})
       (\v. (if enc = Encoding_Thumb2 then
               BadReg dlo \/ BadReg dhi \/ BadReg n /\ BadReg m
