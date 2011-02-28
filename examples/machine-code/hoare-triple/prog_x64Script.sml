@@ -190,10 +190,14 @@ val zCODE_def = Define `zCODE = CODE_POOL X64_INSTR`;
 
 val zM_def = Define `
   zM a (w:word32) =
-    ~zM1 a        (SOME ((7 >< 0) w,{Zread;Zwrite})) *
-    ~zM1 (a + 1w) (SOME ((7 >< 0) (w >> 8),{Zread;Zwrite})) *
+    ~zM1 a        (SOME ((7 >< 0) (w      ),{Zread;Zwrite})) *
+    ~zM1 (a + 1w) (SOME ((7 >< 0) (w >>  8),{Zread;Zwrite})) *
     ~zM1 (a + 2w) (SOME ((7 >< 0) (w >> 16),{Zread;Zwrite})) *
-    ~zM1 (a + 3w) (SOME ((7 >< 0) (w >> 24),{Zread;Zwrite}))`;
+    ~zM1 (a + 3w) (SOME ((7 >< 0) (w >> 24),{Zread;Zwrite})) `;
+
+val zM64_def = Define `
+  zM64 a (w:word64) =
+    zM a ((31 >< 0) w) * zM (a + 4w) ((63 >< 32) w)`;
 
 val zR_def = Define `
   (zR 0w = zR1 RAX) /\
@@ -1011,6 +1015,11 @@ val X64_SPEC_EXLPODE_CODE = save_thm("X64_SPEC_EXLPODE_CODE",
 (* ----------------------------------------------------------------------------- *)
 (* Simplifications of w2w (w2w x + w2w y) and similar                            *)
 (* ----------------------------------------------------------------------------- *)
+
+val LOAD64 = store_thm("LOAD64",
+  ``(w2w (((63 >< 32) w):word32) << 32 !! w2w (((31 >< 0) w):word32) = w:word64) /\
+    (w2w (((31 >< 0) w):word32) !! w2w (((63 >< 32) w):word32) << 32 = w:word64)``,
+  blastLib.BBLAST_TAC);
 
 val WORD_BITS_BITS_ZERO = store_thm("WORD_BITS_BITS_ZERO",
   ``!w k. (k -- 0) ((k -- 0) w) = (k -- 0) w``,

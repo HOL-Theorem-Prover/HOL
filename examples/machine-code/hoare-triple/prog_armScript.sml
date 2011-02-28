@@ -2,14 +2,12 @@
 open HolKernel boolLib bossLib Parse;
 open pred_setTheory res_quanTheory wordsTheory wordsLib bitTheory arithmeticTheory;
 open listTheory pairTheory combinTheory addressTheory bit_listTheory;
+open finite_mapTheory;
 
 open set_sepTheory progTheory;
-
 open armTheory arm_coretypesTheory arm_stepTheory armLib;
 
-
 val _ = new_theory "prog_arm";
-
 
 infix \\
 val op \\ = op THEN;
@@ -41,7 +39,7 @@ val _ = Parse.type_abbrev("arm_set",``:arm_el set``);
 
 val ARM_OK_def = Define `
   ARM_OK state =
-    (ARM_ARCH state = ARMv4) /\ (ARM_EXTENSIONS state = {}) /\
+    (ARM_ARCH state = ARMv6) /\ (ARM_EXTENSIONS state = {}) /\
     (ARM_UNALIGNED_SUPPORT state) /\ (ARM_READ_EVENT_REGISTER state) /\
     ~(ARM_READ_INTERRUPT_WAIT state) /\ ~(ARM_READ_SCTLR sctlrV state) /\
     (ARM_READ_SCTLR sctlrA state) /\ ~(ARM_READ_SCTLR sctlrU state) /\
@@ -183,6 +181,8 @@ val aM1_def = Define `aM1 a x = SEP_EQ {aMem a x}`;
 val aS1_def = Define `aS1 a x = SEP_EQ {aStatus a x}`;
 val aU1_def = Define `aU1 x = SEP_EQ {aUndef x}`;
 val aCPSR_def = Define `aCPSR x = SEP_EQ {aCPSR_Reg x}`;
+
+val aLR_def = Define `aLR lr = cond (ALIGNED lr) * aR 14w lr`;
 
 val aM_def = Define `
   aM a (w:word32) =
@@ -473,6 +473,48 @@ val aBYTE_MEMORY_INTRO = store_thm("aBYTE_MEMORY_INTRO",
 
 
 (* ----------------------------------------------------------------------------- *)
+(* Memory assertion based on finite maps                                         *)
+(* ----------------------------------------------------------------------------- *)
+
+val aMEM_def = Define `aMEM m = aBYTE_MEMORY (FDOM m) (\x. m ' x)`;
+
+(*
+val _ = wordsLib.guess_lengths();
+val READ32_def = Define `
+  READ32 a (m:word32 |-> word8) = 
+    (m ' (a + 3w) @@ m ' (a + 2w) @@ m ' (a + 1w) @@ m ' (a)):word32`;
+
+val WRITE32_def = Define `
+  WRITE32 (a:word32) (w:word32) m = 
+    m |+ (a + 0w, (( 7 ><  0) w):word8)
+      |+ (a + 1w, ((15 ><  8) w):word8)
+      |+ (a + 2w, ((23 >< 16) w):word8)
+      |+ (a + 3w, ((31 >< 24) w):word8)`;
+
+val WRITE32_THM = store_thm("WRITE32_THM",
+  ``!a w. 
+     (((a + 3w =+ (31 >< 24) w)
+       ((a + 2w =+ (23 >< 16) w)
+        ((a + 1w =+ (15 >< 8) w)
+         ((a =+ (7 >< 0) w) (\x. m ' x))))) = 
+      (\x. WRITE32 a w m ' x)) /\
+     (((a =+ (7 >< 0) w)
+       ((a + 0x1w =+ (15 >< 8) w)
+        ((a + 0x2w =+ (23 >< 16) w)
+         ((a + 0x3w =+ (31 >< 24) w) (\x. m ' x))))) = 
+       (\x. WRITE32 a w m ' x))``,
+  SIMP_TAC std_ss [WRITE32_def,FAPPLY_FUPDATE_THM,APPLY_UPDATE_THM,FUN_EQ_THM]
+  \\ SRW_TAC [] [] \\ FULL_SIMP_TAC (std_ss++SIZES_ss) [WORD_EQ_ADD_LCANCEL,
+       RW [WORD_ADD_0] (Q.SPECL [`w`,`0w`] WORD_EQ_ADD_LCANCEL),
+       RW [WORD_ADD_0] (Q.SPECL [`w`,`v`,`0w`] WORD_EQ_ADD_LCANCEL),n2w_11]);
+*)
+
+val aMEM_WRITE_BYTE = store_thm("aMEM_WRITE_BYTE",
+  ``!a:word32 w:word8. ((a =+ w) (\x. m ' x) = (\x. (m |+ (a,w)) ' x))``,
+  SIMP_TAC std_ss [FAPPLY_FUPDATE_THM,APPLY_UPDATE_THM,FUN_EQ_THM] \\ SRW_TAC [] []);
+
+
+(* ----------------------------------------------------------------------------- *)
 (* Word-sized data memory                                                        *)
 (* ----------------------------------------------------------------------------- *)
 
@@ -638,25 +680,72 @@ val FCP_UPDATE_WORD_AND = store_thm("FCP_UPDATE_WORD_AND",
 
 (* Stack --- sp points at top of stack, stack grows towards smaller addresses *)
 
+val SEP_HIDE_ARRAY_def = Define `
+  SEP_HIDE_ARRAY p i a n = SEP_EXISTS xs. SEP_ARRAY p i a xs * cond (LENGTH xs = n)`;
+
 val aSTACK_def = Define `
-  aSTACK fp xs = aR 11w fp * aR 13w (fp - n2w (4 * LENGTH xs)) *
-                 SEP_ARRAY aM (-4w) fp xs * cond (ALIGNED fp)`;
+  aSTACK bp n xs = 
+    SEP_ARRAY aM 4w bp xs * cond (ALIGNED bp) * 
+    SEP_HIDE_ARRAY aM (-4w) (bp - 4w) n`;
 
-val STAR6 = prove(
-  ``p1 * p2 * p3 * p4 * p5 * p6 = (STAR p1 p2 * p5) * (p3 * p4 * p6)``,
-  SIMP_TAC std_ss [AC STAR_ASSOC STAR_COMM]);
+val SEP_HIDE_ARRAY_SUC = prove(
+  ``SEP_HIDE_ARRAY aM w a (SUC n) = ~aM a * SEP_HIDE_ARRAY aM w (a + w) n``,
+  SIMP_TAC std_ss [SEP_HIDE_ARRAY_def,SEP_CLAUSES,FUN_EQ_THM,SEP_EXISTS_THM]
+  \\ REPEAT STRIP_TAC \\ EQ_TAC \\ REPEAT STRIP_TAC THEN1
+   (Cases_on `xs` \\ FULL_SIMP_TAC std_ss [LENGTH,ADD1,cond_STAR,SEP_ARRAY_def]
+    \\ Q.EXISTS_TAC `t` \\ FULL_SIMP_TAC std_ss [word_sub_def,SEP_CLAUSES]
+    \\ FULL_SIMP_TAC std_ss [SEP_HIDE_def,SEP_CLAUSES,SEP_EXISTS_THM]
+    \\ Q.EXISTS_TAC `h` \\ FULL_SIMP_TAC std_ss [])
+  \\ FULL_SIMP_TAC std_ss [SEP_HIDE_def,SEP_CLAUSES,SEP_EXISTS_THM,cond_STAR]
+  \\ Q.EXISTS_TAC `x'::xs`
+  \\ FULL_SIMP_TAC std_ss [LENGTH,SEP_ARRAY_def,cond_STAR,STAR_ASSOC]);
 
-val aSTACK_INTRO = store_thm("aSTACK_INTRO",
-  ``(ALIGNED a ==>
-     SPEC ARM_MODEL (q1 * aR 11w a * aM (a - n2w n) x) c
-                    (q2 * aR 11w a * aM (a - n2w n) y)) ==>
-    !xs ys.
-      (4 * LENGTH xs = n) ==>
-      SPEC ARM_MODEL (q1 * aSTACK a (xs ++ [x] ++ ys))
-                   c (q2 * aSTACK a (xs ++ [y] ++ ys))``,
-  SIMP_TAC std_ss [aSTACK_def,SEP_ARRAY_APPEND,GSYM WORD_NEG_RMUL,STAR_ASSOC,
-    RW1 [MULT_COMM] word_mul_n2w,GSYM word_sub_def,SEP_ARRAY_def,SEP_CLAUSES,
-    LENGTH,LENGTH_APPEND,SPEC_MOVE_COND] \\ ONCE_REWRITE_TAC [STAR6]
-  \\ METIS_TAC [SPEC_FRAME]);
+val SEP_EXISTS_aSTACK = store_thm("SEP_EXISTS_aSTACK",
+  ``((SEP_EXISTS x. p x * q) = (SEP_EXISTS x. p x) * q) /\
+    ((SEP_EXISTS x. q * p x) = q * (SEP_EXISTS x. p x)) /\
+    ((SEP_EXISTS x. aSTACK a n (x::xs)) = aSTACK (a + 4w) (n + 1) xs)``,
+  SIMP_TAC std_ss [SEP_CLAUSES,aSTACK_def,GSYM ADD1,ALIGNED,
+      SEP_HIDE_ARRAY_SUC,SEP_ARRAY_def,WORD_ADD_SUB]
+  THEN SIMP_TAC std_ss [SEP_CLAUSES,SEP_HIDE_def,STAR_ASSOC,GSYM word_sub_def]
+  THEN SIMP_TAC std_ss [AC STAR_ASSOC STAR_COMM]); 
+
+
+(* ----------------------------------------------------------------------------- *)
+(* Reading/writing chunks of memory                                              *)
+(* ----------------------------------------------------------------------------- *)
+
+val _ = wordsLib.guess_lengths();
+val READ32_def = Define `
+  READ32 a (m:word32 -> word8) = 
+    (m (a + 3w) @@ m (a + 2w) @@ m (a + 1w) @@ m (a)):word32`;
+
+val WRITE32_def = Define `
+  WRITE32 (a:word32) (w:word32) m = 
+    ((a + 0w =+ (w2w w):word8)
+    ((a + 1w =+ (w2w (w >>> 8)):word8)
+    ((a + 2w =+ (w2w (w >>> 16)):word8)
+    ((a + 3w =+ (w2w (w >>> 24)):word8) m))))`;
+
+val WRITE32_blast_lemma = blastLib.BBLAST_PROVE
+  ``((( 7 ><  0) (w:word32)) = (w2w w):word8) /\
+    (((15 ><  8) (w:word32)) = (w2w (w >>> 8)):word8) /\
+    (((23 >< 16) (w:word32)) = (w2w (w >>> 16)):word8) /\
+    (((31 >< 24) (w:word32)) = (w2w (w >>> 24)):word8)``
+  
+val WRITE32_THM = store_thm("WRITE32_THM",
+  ``!a w. 
+     (((a      =+ (( 7 ><  0) w):word8)
+      ((a + 1w =+ ((15 ><  8) w):word8)
+      ((a + 2w =+ ((23 >< 16) w):word8)
+      ((a + 3w =+ ((31 >< 24) w):word8) m)))) = WRITE32 a w m) /\
+     (((a + 3w =+ ((31 >< 24) w):word8)
+      ((a + 2w =+ ((23 >< 16) w):word8)
+      ((a + 1w =+ ((15 ><  8) w):word8)
+      ((a      =+ (( 7 ><  0) w):word8) m)))) = WRITE32 a w m)``,
+  SIMP_TAC std_ss [GSYM WRITE32_blast_lemma,WRITE32_def,APPLY_UPDATE_THM,FUN_EQ_THM]
+  \\ SRW_TAC [] [] \\ FULL_SIMP_TAC (std_ss++SIZES_ss) [WORD_EQ_ADD_LCANCEL,
+       RW [WORD_ADD_0] (Q.SPECL [`w`,`0w`] WORD_EQ_ADD_LCANCEL),
+       RW [WORD_ADD_0] (Q.SPECL [`w`,`v`,`0w`] WORD_EQ_ADD_LCANCEL),n2w_11]);
+
 
 val _ = export_theory();

@@ -247,32 +247,21 @@ fun introduce_zMEMORY th = if
     val th = SIMP_RULE (bool_ss++sep_cond_ss) [] th
     in th end end
 
-(*
-fun introduce_zSTACK th =
-  if not (!x64_use_stack) then th else let
-  val (_,p,c,q) = dest_spec(concl th)
-  val ebp = mk_var("ebp",``:word32``)
-  fun access_ebp tm = (tm = ebp) orelse
-    (can (match_term ``(v:word32) - n2w n``) tm andalso (ebp = (cdr o car) tm))
-  val tm1 = find_term (fn tm =>
-              can (match_term ``zM x y``) tm andalso (access_ebp o cdr o car) tm) p
-  val tm2 = find_term (can (match_term (mk_comb(car tm1,genvar(``:word32``))))) q
-  val c1 = MOVE_OUT_CONV ``zR1 EBP`` THENC MOVE_OUT_CONV (car tm1)
-  val c2 = MOVE_OUT_CONV ``zR1 EBP`` THENC MOVE_OUT_CONV (car tm2)
-  val th = CONV_RULE (POST_CONV c2 THENC PRE_CONV c1) th
-  val th = DISCH ``ALIGNED ebp`` th
-  val th = MATCH_MP zSTACK_INTRO_EBZ th
-  fun mk_stack_var i = mk_var("s" ^ int_to_string i,``:word32``)
-  val index = (Arbnum.toInt o numSyntax.dest_numeral o cdr o cdr o cdr o car) tm1
-  val index = index div 4
-  fun mk_slist i = if i = 0 then ``[]:word32 list`` else
-                     listSyntax.mk_cons(mk_stack_var (index - i), mk_slist (i-1))
-  val th = SPECL [mk_slist index,mk_var("ss",``:word32 list``)] th
-  val th = CONV_RULE (RATOR_CONV (SIMP_CONV std_ss [listTheory.LENGTH]) THENC
-                      REWRITE_CONV [listTheory.APPEND]) th
-  val th = INST [cdr tm1 |-> mk_stack_var index] th
-  in th end handle e => th;
-*)
+fun introduce_zSTACK th = 
+  if not (can (find_term (fn x => x = ``RSP``)) (concl th)) then th else let
+  val pattern = ``zM (a + 4w) x1 * zM a x2``
+  val tag = (RW [GSYM STAR_ASSOC] th) |> concl |> car 
+            |> find_term (can (match_term pattern))
+  val x1 = (cdr o cdr o car) tag
+  val x2 = (cdr o cdr) tag
+  val a = (cdr o car o cdr) tag 
+  val _ = mem (mk_var("r4",``:word64``)) (free_vars a) orelse fail() 
+  val res = SPECL [a,mk_var("xx",``:word64``)] (RW1[STAR_COMM]zM64_def)
+  val y1 = (cdr o cdr o car) ((snd o dest_eq o concl) res)
+  val y2 = (cdr o cdr) ((snd o dest_eq o concl) res)
+  val th = RW [GSYM res,GSYM STAR_ASSOC] (INST [x1|->y1,x2|->y2] th)
+  val th = RW [STAR_ASSOC,LOAD64] th
+  in th end handle HOL_ERR _ => th;
 
 fun calculate_length_and_jump th = let
   val (_,_,c,q) = dest_spec (concl th)
@@ -287,10 +276,10 @@ fun calculate_length_and_jump th = let
     (th,l,NONE) end
 
 fun post_process_thm mpred th = let
+  val th = if mpred = zMEM_AUTO then introduce_zSTACK th else th 
   val th = RW [GSYM zR_def] th
   val th = SIMP_RULE (std_ss++sw2sw_ss++w2w_ss) [wordsTheory.word_mul_n2w,SEP_CLAUSES] th
   val th = CONV_RULE FIX_WORD32_ARITH_CONV th
- (* val th = introduce_zSTACK th *)
   val th = if mpred = zMEM_AUTO then introduce_zMEMORY th else th
   val th = introduce_zBYTE_MEMORY_ANY th
   val th = SIMP_RULE (std_ss++sw2sw_ss++w2w_ss) [GSYM wordsTheory.WORD_ADD_ASSOC,
@@ -427,6 +416,7 @@ val x64_tools_no_status = (x64_spec, x64_jump, TRUTH, x64_pc);
 
 (*
 
+  val mpred = zMEM_AUTO
   val th = x64_spec (x64_encode "add r0,5");
   val th = x64_spec (x64_encode "inc r11");
   val th = x64_spec (x64_encode "je 40");
@@ -441,6 +431,8 @@ val x64_tools_no_status = (x64_spec, x64_jump, TRUTH, x64_pc);
   val th = x64_spec (x64_encode "add [rax], ax");
   val th = x64_spec (x64_encode "add [rax], eax");
   val th = x64_spec (x64_encode "add [rax], rax");
+  val th = x64_spec (x64_encode "call r2");
+  val th = x64_spec (x64_encode "ret");
 
 *)
 

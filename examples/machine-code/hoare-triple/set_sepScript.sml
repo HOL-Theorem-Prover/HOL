@@ -222,6 +222,33 @@ val fun2set_DELETE = store_thm("fun2set_DELETE",
   SIMP_TAC std_ss [fun2set_def,GSPECIFICATION,IN_DELETE,EXTENSION,
                    FORALL_PROD] THEN METIS_TAC []);
 
+val SPLIT_fun2set_IMP = prove(
+  ``SPLIT (fun2set (f,df)) (u,v) ==> 
+    (u = fun2set(f,df DIFF { x | (x,f x) IN v }))``,
+  SIMP_TAC std_ss [SPLIT_def] \\ REPEAT STRIP_TAC
+  \\ FULL_SIMP_TAC std_ss [SPLIT_def,EXTENSION,IN_UNION,NOT_IN_EMPTY,
+      DISJOINT_DEF,IN_INTER,fun2set_def,GSPECIFICATION,IN_DIFF] 
+  \\ METIS_TAC []);
+       
+val SPLIT_SYM_IMP = prove(
+  ``SPLIT x (u,v) ==> SPLIT x (v,u) ``,
+  SIMP_TAC std_ss [SPLIT_def,DISJOINT_DEF] \\ METIS_TAC [UNION_COMM,INTER_COMM]);
+
+val fun2set_STAR_IMP = store_thm("fun2set_STAR_IMP",
+  ``(p * q) (fun2set (f,df)) ==> 
+    ?x y. p (fun2set (f,df DIFF y)) /\ q (fun2set (f,df DIFF x))``,
+  SIMP_TAC std_ss [STAR_def] \\ REPEAT STRIP_TAC \\ IMP_RES_TAC SPLIT_SYM_IMP
+  \\ IMP_RES_TAC SPLIT_fun2set_IMP \\ METIS_TAC []);  
+
+val one_fun2set_IMP = store_thm("one_fun2set_IMP",
+  ``(one (a,x)) (fun2set (f,df)) ==> (f a = x) /\ a IN df``,
+  REPEAT STRIP_TAC
+  \\ IMP_RES_TAC (REWRITE_RULE [SEP_CLAUSES] (Q.SPECL [`a`,`x`,`emp`] one_fun2set))); 
+
+val DIFF_UNION = store_thm("DIFF_UNION", 
+  ``!x y z. x DIFF y DIFF z = x DIFF (y UNION z)``,
+  SIMP_TAC std_ss [EXTENSION,IN_DIFF,IN_UNION] \\ METIS_TAC []);
+
 val SEP_ARRAY_APPEND = store_thm("SEP_ARRAY_APPEND",
   ``!xs ys p i a. 
       SEP_ARRAY p i a (xs ++ ys) =
