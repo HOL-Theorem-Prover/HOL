@@ -2216,6 +2216,14 @@ val MOD_TIMES = store_thm("MOD_TIMES",
    FIRST_ASSUM MATCH_ACCEPT_TAC
    end);
 
+val MOD_TIMES_SUB = store_thm("MOD_TIMES_SUB",
+ --`!n q r. 0 < n /\ 0 < q /\ r <= n ==> ((q * n - r) MOD n = (n - r) MOD n)`--,
+ NTAC 2 STRIP_TAC THEN
+ STRUCT_CASES_TAC (Q.SPEC `q` num_CASES) THEN1
+   REWRITE_TAC [NOT_LESS_0] THEN
+ REPEAT STRIP_TAC THEN
+ FULL_SIMP_TAC bool_ss [MULT,LESS_EQ_ADD_SUB,MOD_TIMES]);
+
 val MOD_PLUS = store_thm("MOD_PLUS",
  --`!n. 0<n ==> !j k. (((j MOD n) + (k MOD n)) MOD n) = ((j+k) MOD n)`--,
    let fun SUBS th = SUBST_OCCS_TAC [([2],th)]
