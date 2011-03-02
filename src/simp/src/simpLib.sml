@@ -146,6 +146,8 @@ fun std_conv_ss {name,conv,pats} =
       merge_ss (map (fn p => cnv (SOME([],p))) pats)
   end
 
+fun ssfrag_name (SSFRAG_CON s) = Option.valOf (#name s);
+
 fun partition_ssfrags names ssdata =
      List.partition
        (fn SSFRAG_CON s =>
@@ -260,6 +262,11 @@ with
  val mk_simpset = foldl add_to_ss empty_ss;
 
  fun op ++ (ss,ssdata) = add_to_ss (ssdata,ss)
+
+ fun ssfrag_names_of ss =
+       ss |> ssfrags_of
+          |> Lib.mapfilter ssfrag_name
+          |> Lib.mk_set
 
  fun remove_ssfrags ss names =
        ss |> ssfrags_of
