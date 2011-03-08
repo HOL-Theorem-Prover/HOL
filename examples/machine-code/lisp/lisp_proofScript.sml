@@ -257,8 +257,8 @@ val sexpression2sexp_11 = prove(
           (delete_Nil u = delete_Nil v)``,
   Induct
   THEN Cases_on `v`
-  THEN (Cases_on `a` ORELSE ALL_TAC)
-  THEN (Cases_on `a'` ORELSE ALL_TAC)
+  THEN REPEAT (Cases_on `a`)
+  THEN REPEAT (Cases_on `a'`)
   THEN REWRITE_TAC [sexpression2sexp_def,atom2sexp_def,
                     delete_Nil_def,delete_Nil_aux_def]
   THEN SRW_TAC [] []);
