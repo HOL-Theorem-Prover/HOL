@@ -757,10 +757,8 @@ val SCHROEDER_BERNSTEIN_AUTO = store_thm
    ++ Q.PAT_ASSUM `t SUBSET s` MP_TAC
    ++ RW_TAC std_ss [SUBSET_DEF, IN_DIFF]
    ++ RW_TAC std_ss [BIJ_DEF]
-   >> (BasicProvers.NORM_TAC std_ss [INJ_DEF] <<
-       [PROVE_TAC [SCHROEDER_CLOSED, SUBSET_DEF, IN_IMAGE],
-        PROVE_TAC [SCHROEDER_CLOSED, SUBSET_DEF, IN_IMAGE],
-        PROVE_TAC []])
+   >> (BasicProvers.NORM_TAC std_ss [INJ_DEF]
+       ++ PROVE_TAC [SCHROEDER_CLOSED, SUBSET_DEF, IN_IMAGE])
    ++ RW_TAC std_ss [SURJ_DEF]
    ++ REVERSE (Cases_on `x IN schroeder_close f (s DIFF t)`) >> PROVE_TAC []
    ++ POP_ASSUM MP_TAC
