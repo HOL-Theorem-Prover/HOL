@@ -18,12 +18,12 @@ val _ = cpi (``STRING``, "STRING")
 val PAD_LEFT = Q.prove(
   `PAD_LEFT c n s =
      STRCAT (IMPLODE (GENLIST (K c) (n - STRLEN s))) s`,
-  REWRITE_TAC [PAD_LEFT_def, IMPLODE_EXPLODE_I]);
+  REWRITE_TAC [listTheory.PAD_LEFT, IMPLODE_EXPLODE_I]);
 
 val PAD_RIGHT = Q.prove(
   `PAD_RIGHT c n s =
      STRCAT s (IMPLODE (GENLIST (K c) (n - STRLEN s)))`,
-  REWRITE_TAC [PAD_RIGHT_def, IMPLODE_EXPLODE_I]);
+  REWRITE_TAC [listTheory.PAD_RIGHT, IMPLODE_EXPLODE_I]);
 
 val defs =
   map DEFN [char_size_def, STRCAT_EXPLODE,

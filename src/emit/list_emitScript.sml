@@ -46,13 +46,19 @@ val FRONT_NIL = Q.prove
 (`FRONT [] = FAIL FRONT ^(mk_var("empty list",bool))  []`,
  REWRITE_TAC [combinTheory.FAIL_THM]);
 
+val GENLIST_compute = Q.prove(
+  `!n l.
+     GENLIST f n = if n = 0 then [] else SNOC (f (PRE n)) (GENLIST f (PRE n))`,
+  STRIP_TAC THEN Q.SPEC_THEN `n` STRUCT_CASES_TAC arithmeticTheory.num_CASES
+    THEN REWRITE_TAC [numTheory.NOT_SUC, prim_recTheory.PRE, GENLIST]);
+
 val defs =
   map DEFN [NULL_DEF, CONJ HD_NIL HD, CONJ TL_NIL TL, APPEND, FLAT, MAP,
-            MEM, FILTER, FOLDR, FOLDL, EVERY_DEF,
+            MEM, FILTER, FOLDR, FOLDL, SNOC, GENLIST_compute, EVERY_DEF,
             EXISTS_DEF, MAP2_THM, ZIP_THM, UNZIP_THM, REVERSE_DEF,
             CONJ LAST_NIL LAST_CONS, CONJ FRONT_NIL FRONT_CONS,
             ALL_DISTINCT, EL_compute, LENGTH_THM, LEN_DEF, REV_DEF,
-            list_size_def]
+            list_size_def, PAD_LEFT, PAD_RIGHT]
 
 val _ = eSML "list"
   (MLSIG "type num = numML.num" ::
