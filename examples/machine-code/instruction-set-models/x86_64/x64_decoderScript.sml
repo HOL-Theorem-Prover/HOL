@@ -412,8 +412,7 @@ val x64_syntax_list = `` [
 
   ]``;
 
-
-val x64_decode_aux_def = Define `
+val x64_decode_aux_def = zDefine `
   x64_decode_aux g = 
     (match_list_raw g x64_match_step tokenise (x64_syntax o tokenise) o
     MAP (\s. let x = STR_SPLIT [#"|"] s in (EL 0 x, EL 1 x))) ^x64_syntax_list`;
@@ -524,8 +523,22 @@ val x64_decode_def = Define `
           if (g "REX.W" = [T]) /\ (g "16BIT" = [T]) then NONE else
           if Zprefixes_ok pres i then SOME (Zfull_inst pres i, w) else NONE`;
 
+val padbyte_def = Define `
+  (padbyte [] = [F;F;F;F;F;F;F;F]) /\
+  (padbyte [x0] = [x0;F;F;F;F;F;F;F]) /\
+  (padbyte [x0;x1] = [x0;x1;F;F;F;F;F;F]) /\
+  (padbyte [x0;x1;x2] = [x0;x1;x2;F;F;F;F;F]) /\
+  (padbyte [x0;x1;x2;x3] = [x0;x1;x2;x3;F;F;F;F]) /\
+  (padbyte [x0;x1;x2;x3;x4] = [x0;x1;x2;x3;x4;F;F;F]) /\
+  (padbyte [x0;x1;x2;x3;x4;x5] = [x0;x1;x2;x3;x4;x5;F;F]) /\
+  (padbyte [x0;x1;x2;x3;x4;x5;x6] = [x0;x1;x2;x3;x4;x5;x6;F]) /\
+  (padbyte [x0;x1;x2;x3;x4;x5;x6;x7] = [x0;x1;x2;x3;x4;x5;x6;x7])`;
+
+val word2byte_def = Define `
+  word2byte (w:word8) = padbyte (MAP ($= 1) (word_to_bin_list w))`;
+
 val x64_decode_bytes_def = Define `
-  x64_decode_bytes b = x64_decode (FOLDR APPEND [] (MAP w2bits b))`;
+  x64_decode_bytes b = x64_decode (FLAT (MAP word2byte b))`;
 
 
 (* -- partially pre-evaluate x64_decode_aux -- *)
@@ -533,6 +546,46 @@ val x64_decode_bytes_def = Define `
 val Zreg_distinct = save_thm("Zreg_distinct",
   SIMP_RULE std_ss [GSYM CONJ_ASSOC,ALL_DISTINCT,MEM,REVERSE_DEF,APPEND] 
     (CONJ ALL_DISTINCT_Zreg (ONCE_REWRITE_RULE [GSYM ALL_DISTINCT_REVERSE] ALL_DISTINCT_Zreg)));
+
+val DTF_DTF = prove(
+  ``(DTF p1 p2 ++ DTF q1 q2 = DTF (p1 ++ q1) (p2 ++ q2))``,
+  SIMP_TAC std_ss [FUN_EQ_THM,option_orelse_def,LET_DEF] THEN REPEAT STRIP_TAC  
+  THEN Cases_on `x` THEN Cases_on `r` THEN SIMP_TAC std_ss [DTF_def] THEN Cases_on `h`
+  THEN SIMP_TAC std_ss [DTF_def,option_orelse_def,LET_DEF]);
+
+val DTF_INTRO = prove(
+  ``(DF >> f = DTF (\x.NONE) f) /\ (DT >> f = DTF f (\x.NONE))``,
+  SIMP_TAC std_ss [FUN_EQ_THM,option_then_def,LET_DEF] THEN REPEAT STRIP_TAC  
+  THEN Cases_on `x` THEN Cases_on `r` THEN SIMP_TAC std_ss [DTF_def,DF_def,DT_def]
+  THEN Cases_on `h` THEN SIMP_TAC std_ss [DTF_def,option_orelse_def,LET_DEF,DF_def,DT_def]);
+
+val ORELSE_NONE = prove(
+  ``((\x.NONE) ++ f = f) /\ (f ++ (\x.NONE) = f) /\ 
+    ((\x.NONE) >> f = (\x.NONE)) /\ (f >> (\x.NONE) = (\x.NONE))``,
+  SIMP_TAC std_ss [FUN_EQ_THM,option_orelse_def,option_then_def,LET_DEF] THEN METIS_TAC []);
+
+val PUSH_assert_lemma = prove(
+  ``(assert k >> (DTF p q >> t) = DTF (assert k >> p >> t) (assert k >> q >> t))``,
+  SIMP_TAC std_ss [FUN_EQ_THM] THEN Cases THEN Cases_on `r` THEN REPEAT (Cases_on `h`)
+  THEN SIMP_TAC std_ss [assert_def,option_then_def,LET_DEF,DTF_def]
+  THEN SRW_TAC [] [] THEN FULL_SIMP_TAC std_ss []);
+
+val DTF_THEN = prove(
+  ``DTF p q >> t = DTF (p >> t) (q >> t)``,
+  SIMP_TAC std_ss [FUN_EQ_THM] THEN Cases THEN Cases_on `r` THEN REPEAT (Cases_on `h`)
+  THEN SIMP_TAC std_ss [assert_def,option_then_def,LET_DEF,DTF_def]);
+
+val PUSH_assert = prove(
+  ``(assert k >> (DF >> f) = DF >> (assert k >> f)) /\
+    (assert k >> (DT >> f) = DT >> (assert k >> f)) /\
+    (assert k >> (p ++ q) = (assert k >> p ++ assert k >> q)) /\
+    (assert k >> DTF p q = DTF (assert k >> p) (assert k >> q))``,
+  SIMP_TAC std_ss [FUN_EQ_THM,option_then_def,option_orelse_def,LET_DEF,GSYM DTF_THM] 
+  THEN REPEAT STRIP_TAC THEN Cases_on `x` THEN Cases_on `r` THEN REPEAT (Cases_on `h`)
+  THEN SIMP_TAC std_ss [assert_def,DF_def,DT_def] THEN METIS_TAC []);
+
+val car = fst o dest_comb;
+val cdr = snd o dest_comb;
 
 val x64_decode_aux_thm = let
   fun eval_term_ss tm_name tm = conv_ss
@@ -550,40 +603,60 @@ val x64_decode_aux_thm = let
     REPEAT STRIP_TAC THEN EVAL_TAC);
   val SOME_LEMMA = prove(``!(f :'a -> 'b option) (g :'c) (h :'d). (SOME >> f = f)``,
     SIMP_TAC std_ss [FUN_EQ_THM,option_then_def,LET_DEF]);
-  fun simp_term tm = let
-    val th1 = REWRITE_CONV [MAP,x64_decode_aux_def,combinTheory.o_DEF] tm
-    val th2 = CONV_RULE (ONCE_DEPTH_CONV (BETA_CONV) THENC (RAND_CONV (RAND_CONV EVAL))) th1
-    val th3 = REWRITE_RULE [match_list_raw_def,MAP] th2
-    val th4 = SIMP_RULE (std_ss++token_ss) [match_def] th3
-    val th5 = SIMP_RULE (bool_ss++if_ss) [MAP,x64_match_step_def] th4
-    val th6 = SIMP_RULE (bool_ss++if_ss++select_op_ss) [x64_syntax_def,EL_LEMMA,HD] th5
-    val th6a = SIMP_RULE (std_ss) [LET_DEF,process_hex_add_def] th6
-    val th7 = SIMP_RULE (bool_ss++if_ss++hex_ss++hex_add_ss++n2bits_3_ss) [decode_Zdest_src_def,decode_Zconst_def] th6a
-    val th8 = REWRITE_RULE [GSYM option_then_assoc,option_do_def,option_try_def,GSYM option_orelse_assoc] th7
-    val th9 = SIMP_RULE std_ss [option_orelse_SOME,GSYM option_orelse_assoc,Z_SOME_def] th8
-    val thA = REWRITE_RULE [GSYM option_then_assoc,EL_LEMMA,drop_eq_thm,SOME_LEMMA,option_do_def] th9
-    val thB = thA |> REWRITE_RULE [assert_option_then_thm,option_then_assoc]
-                  |> REWRITE_RULE [assert_option_then_thm,GSYM option_then_assoc,SOME_LEMMA]
-    val thC = REWRITE_RULE [option_try_def,GSYM option_orelse_assoc] thB
-    val thD = REWRITE_RULE [option_then_OVER_orelse] thC
-    val thE = REWRITE_RULE [option_orelse_assoc] thD
-    val thX = REWRITE_RULE [DT_over_DF,option_then_assoc,option_orelse_assoc,option_then_OVER_orelse] thE
-    val thZ = REWRITE_RULE [DTF_THM] thX
-    in thZ end
-  in simp_term ``x64_decode_aux g`` end;
+  val DT_THEN = prove(
+    ``((DT >> f) (g,T::w) = f (g,w)) /\ ((DF >> f) (g,F::w) = f (g,w))``,
+    SIMP_TAC std_ss [option_then_def,DT_def,DF_def,LET_DEF]);
+  val tm = ``x64_decode_aux g``
+  val th1 = REWRITE_CONV [MAP,x64_decode_aux_def,combinTheory.o_DEF] tm
+  val th2 = CONV_RULE (ONCE_DEPTH_CONV (BETA_CONV) THENC (RAND_CONV (RAND_CONV EVAL))) th1
+  val th3 = REWRITE_RULE [match_list_raw_def,MAP] th2
+  val th4 = SIMP_RULE (std_ss++token_ss) [match_def] th3
+  val th5 = SIMP_RULE (bool_ss++if_ss) [MAP,x64_match_step_def] th4
+  val th6 = SIMP_RULE (bool_ss++if_ss++select_op_ss) [x64_syntax_def,EL_LEMMA,HD] th5
+  val th6a = SIMP_RULE (std_ss) [LET_DEF,process_hex_add_def] th6
+  val th7 = SIMP_RULE (bool_ss++if_ss++hex_ss++hex_add_ss++n2bits_3_ss) [decode_Zdest_src_def,decode_Zconst_def] th6a
+  val th8 = REWRITE_RULE [GSYM option_then_assoc,option_do_def,option_try_def,GSYM option_orelse_assoc] th7
+  val th9 = SIMP_RULE std_ss [option_orelse_SOME,GSYM option_orelse_assoc,Z_SOME_def] th8
+  val thA = REWRITE_RULE [GSYM option_then_assoc,EL_LEMMA,drop_eq_thm,SOME_LEMMA,option_do_def] th9
+  val thB = thA |> REWRITE_RULE [assert_option_then_thm,option_then_assoc]
+                |> REWRITE_RULE [assert_option_then_thm,GSYM option_then_assoc,SOME_LEMMA]
+  val thC = REWRITE_RULE [option_try_def,GSYM option_orelse_assoc] thB
+  val thD = REWRITE_RULE [option_then_OVER_orelse] thC
+  val thE = REWRITE_RULE [option_orelse_assoc] thD
+  val thX = REWRITE_RULE [DT_over_DF,option_then_assoc,option_orelse_assoc,option_then_OVER_orelse] thE
+  val thZ = thX |> REWRITE_RULE [DTF_INTRO,DTF_DTF,DTF_THEN,ORELSE_NONE,PUSH_assert]
+  (* find pre-evaulatable prefixes *)
+  val DTF_tm = ``DTF p (q:'a # bool list -> 'b option)``
+  fun dest_DTF tm = if can (match_term DTF_tm) tm then (cdr (car tm), cdr tm) else fail()
+  val w_var = mk_var("w",``:bool list``)
+  fun rec_dest_DTF tm = let
+    val (x1,x2) = dest_DTF tm
+    val xs1 = rec_dest_DTF x1
+    val xs2 = rec_dest_DTF x2
+    in (map (curry listSyntax.mk_cons T) xs1) @ (map (curry listSyntax.mk_cons F) xs2) end
+    handle HOL_ERR _ => [w_var]
+  val prefixes = thZ |> concl |> dest_eq |> snd |> cdr |> rec_dest_DTF
+  (* evaluate the prefixes *)
+  val LEMMA = prove(
+    ``!g w. ((\w. SOME (g,w)) >> f) w = f (g,w)``,
+    SIMP_TAC std_ss [LET_DEF,option_then_def]);
+  val c = ONCE_REWRITE_CONV [thZ] THENC REWRITE_CONV [LEMMA,DTF_def]
+  val decode_aux_tm = ``x64_decode_aux g``
+  fun eval_for prefix = c (mk_comb(decode_aux_tm,prefix))
+  val pre_evaluated_thm = LIST_CONJ (map eval_for prefixes) 
+  in pre_evaluated_thm end;
   
-
 fun permanently_add_to_compset name thm = let
   val _ = save_thm(name,thm)
-  val _ = computeLib.add_funs [thm]
-  val _ = adjoin_to_theory {sig_ps = NONE, struct_ps = SOME (fn ppstrm =>
-    let val S = (fn s => (PP.add_string ppstrm s; PP.add_newline ppstrm)) in
-            S ("val _ = computeLib.add_funs ["^name^"];")
-    end)}
+  val _ = computeLib.add_persistent_funs [(name,thm)]
   in print ("Permanently added to compset: "^name^"\n") end;
 
 val _ = permanently_add_to_compset "Zreg_distinct" Zreg_distinct;
 val _ = permanently_add_to_compset "x64_decode_aux_thm" x64_decode_aux_thm;
+
+(*
+   EVAL ``x64_decode_bytes [0x48w; 0x01w; 0xD1w]``
+*)
 
   
 val _ = export_theory ();
