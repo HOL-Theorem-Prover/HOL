@@ -25,7 +25,9 @@ sig
               distinct  : thm option,
               fields    : (string * hol_type) list,
               accessors : thm list,
-              updates   : thm list} -> tyinfo
+              updates   : thm list,
+              destructors : thm list,
+              recognizers : thm list} -> tyinfo
 
    val gen_datatype_info : {ax:thm,ind:thm,case_defs:thm list} -> tyinfo list
 
@@ -43,6 +45,8 @@ sig
    val axiom_of        : tyinfo -> thm
    val induction_of    : tyinfo -> thm
    val constructors_of : tyinfo -> term list
+   val destructors_of  : tyinfo -> thm list
+   val recognizers_of  : tyinfo -> thm list
    val case_const_of   : tyinfo -> term
    val case_cong_of    : tyinfo -> thm
    val case_def_of     : tyinfo -> thm
@@ -71,6 +75,8 @@ sig
    val put_fields      : (string * hol_type) list -> tyinfo -> tyinfo
    val put_accessors   : thm list -> tyinfo -> tyinfo
    val put_updates     : thm list -> tyinfo -> tyinfo
+   val put_destructors : thm list -> tyinfo -> tyinfo
+   val put_recognizers : thm list -> tyinfo -> tyinfo
 
    (* Functional databases of datatype facts and associated operations *)
 
@@ -110,4 +116,8 @@ sig
    val mk_record       : typeBase -> hol_type * (string * term) list -> term
    val dest_record     : typeBase -> term -> hol_type * (string * term) list
    val is_record       : typeBase -> term -> bool
+
+   val dest_record_type : typeBase -> hol_type -> (string * hol_type) list
+   val is_record_type   : typeBase -> hol_type -> bool
+
 end

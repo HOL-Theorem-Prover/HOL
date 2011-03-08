@@ -14,11 +14,11 @@ val negate_tm = Const "int_neg"
 val plus_tm =  Const "int_add"
 val minus_tm = Const "int_sub"
 val mult_tm =  Const "int_mul"
+val exp_tm =   Const "int_exp"
 val div_tm =   Const "int_div"
 val mod_tm =   Const "int_mod"
 val quot_tm =  Const "int_quot"
 val rem_tm =   Const "int_rem"
-val exp_tm =   Const "int_exp"
 val less_tm =  Const "int_lt"
 val leq_tm =   Const "int_le"
 val great_tm = Const "int_gt"
@@ -87,6 +87,10 @@ fun strip_mult tm = let
 in
   recurse [] tm
 end
+
+val dest_exp = dest_binop exp_tm ("dest_exp", "Term not an exp")
+val is_exp = can dest_exp
+fun mk_exp (arg1, arg2) = list_mk_comb(exp_tm, [arg1, arg2])
 
 val dest_div = dest_binop div_tm ("dest_div", "Term not a division")
 val is_div = can dest_div

@@ -7,6 +7,7 @@ struct
 
 open HolKernel boolSyntax Drule Conv Prim_rec;
 type ppstream = Portable.ppstream
+type simpfrag = simpfrag.simpfrag
 
 val ERR = mk_HOL_ERR "TypeBasePure";
 
@@ -14,8 +15,6 @@ fun type_names ty =
   let val {Thy,Tyop,Args} = Type.dest_thy_type ty
   in (Thy,Tyop)
   end;
-
-type simpfrag = simpfrag.simpfrag
 
 datatype shared_thm
     = ORIG of thm
@@ -37,6 +36,8 @@ type dtyinfo =
             nchotomy     : thm,
             case_const   : term,
             constructors : term list,
+            destructors  : thm list,
+            recognizers  : thm list,
             size         : (term * shared_thm) option,
             encode       : (term * shared_thm) option,
             lift         : term option,
@@ -72,6 +73,12 @@ val ty_name_of = type_names o ty_of
 
 fun constructors_of (DFACTS {constructors,...}) = constructors
   | constructors_of (NFACTS _) = [];
+
+fun destructors_of (DFACTS {destructors,...}) = destructors
+  | destructors_of (NFACTS _) = [];
+
+fun recognizers_of (DFACTS {recognizers,...}) = recognizers
+  | recognizers_of (NFACTS _) = [];
 
 fun case_const_of (DFACTS {case_const,...}) = case_const
   | case_const_of (NFACTS (ty,_)) =
@@ -154,51 +161,58 @@ fun lift_of(DFACTS {lift,...}) = lift
 fun put_nchotomy th (DFACTS
       {ty,axiom, case_const,case_cong,case_def, constructors,
        induction, nchotomy, distinct, one_one, fields,
-        accessors, updates, simpls, size, encode, lift})
+        accessors, updates, simpls, size, encode, lift,
+        destructors,recognizers})
     = DFACTS{ty=ty,axiom=axiom, case_const=case_const,
             case_cong=case_cong,case_def=case_def, constructors=constructors,
             induction=induction, nchotomy=th, distinct=distinct,
             one_one=one_one, fields=fields,
             accessors=accessors, updates=updates, simpls=simpls,
-            size=size, encode=encode,lift=lift}
+            size=size, encode=encode,lift=lift,
+            recognizers=recognizers,destructors=destructors}
   | put_nchotomy th (NFACTS(ty,{nchotomy,size,encode})) =
       NFACTS(ty,{nchotomy=SOME th,size=size,encode=encode});
 
 fun put_simpls thl (DFACTS
  {ty,axiom, case_const, case_cong, case_def, constructors,
   induction, nchotomy, distinct, one_one, fields,
-  accessors, updates, simpls, size, encode,lift})
+  accessors, updates, simpls, size, encode,lift,destructors,recognizers})
   =
   DFACTS {ty=ty,axiom=axiom, case_const=case_const,
             case_cong=case_cong,case_def=case_def,constructors=constructors,
             induction=induction, nchotomy=nchotomy, distinct=distinct,
             one_one=one_one, fields=fields, accessors=accessors, updates=updates,
-            simpls=thl, size=size, encode=encode,lift=lift}
+            simpls=thl, size=size, encode=encode,lift=lift,
+            recognizers=recognizers,destructors=destructors}
  | put_simpls _ _ = raise ERR "put_simpls" "not a datatype";
 
 fun put_induction th (DFACTS
  {ty,axiom, case_const,case_cong,case_def,constructors,
   induction, nchotomy, distinct, one_one, fields,
-  accessors, updates, simpls, size, encode,lift})
+  accessors, updates, simpls, size, encode,lift,
+  destructors,recognizers})
   =
   DFACTS {ty=ty,axiom=axiom, case_const=case_const,
           case_cong=case_cong,case_def=case_def, constructors=constructors,
           induction=th, nchotomy=nchotomy, distinct=distinct,
           one_one=one_one, fields=fields, accessors=accessors, updates=updates,
-          simpls=simpls, size=size, encode=encode,lift=lift}
+          simpls=simpls, size=size, encode=encode,lift=lift,
+          recognizers=recognizers,destructors=destructors}
  | put_induction _ _ = raise ERR "put_induction" "not a datatype";
 
 fun put_size (size_tm,size_rw) (DFACTS
        {ty,axiom, case_const,case_cong,case_def,constructors,
         induction, nchotomy, distinct, one_one, fields,
-        accessors, updates, simpls, size, encode,lift})
+        accessors, updates, simpls, size, encode,lift,
+        destructors,recognizers})
     =
     DFACTS {ty=ty,axiom=axiom, case_const=case_const,
             case_cong=case_cong,case_def=case_def,constructors=constructors,
             induction=induction, nchotomy=nchotomy, distinct=distinct,
             one_one=one_one, fields=fields,
             accessors=accessors, updates=updates, simpls=simpls,
-            size=SOME(size_tm,size_rw), encode=encode,lift=lift}
+            size=SOME(size_tm,size_rw), encode=encode,lift=lift,
+            recognizers=recognizers,destructors=destructors}
   | put_size (size_tm,size_rw) (NFACTS(ty,{nchotomy,size,encode})) =
       NFACTS(ty,{nchotomy=nchotomy,size=SOME(size_tm,thm_of size_rw),
                  encode=encode});
@@ -206,68 +220,108 @@ fun put_size (size_tm,size_rw) (DFACTS
 fun put_encode (encode_tm,encode_rw) (DFACTS
        {ty,axiom, case_const,case_cong,case_def,constructors,
         induction, nchotomy, distinct, one_one, fields,
-        accessors, updates, simpls, size, encode,lift})
+        accessors, updates, simpls, size, encode,lift,
+        destructors,recognizers})
      =
      DFACTS{ty=ty,axiom=axiom, case_const=case_const,
             case_cong=case_cong,case_def=case_def,constructors=constructors,
             induction=induction, nchotomy=nchotomy, distinct=distinct,
             one_one=one_one, fields=fields,
             accessors=accessors, updates=updates, simpls=simpls,
-            size=size, encode=SOME(encode_tm,encode_rw), lift=lift}
+            size=size, encode=SOME(encode_tm,encode_rw), lift=lift,
+            recognizers=recognizers,destructors=destructors}
   | put_encode (encode_tm,encode_rw) (NFACTS(ty,{nchotomy,size,encode})) =
      NFACTS(ty,{nchotomy=nchotomy,size=size,encode=SOME(encode_tm,thm_of encode_rw)});
 
 fun put_lift lift_tm (DFACTS
  {ty,axiom, case_const,case_cong,case_def,constructors,
   induction, nchotomy, distinct, one_one, fields,
-  accessors, updates, simpls, size, encode, lift})
+  accessors, updates, simpls, size, encode, lift,
+  destructors,recognizers})
   =
   DFACTS {ty=ty,axiom=axiom, case_const=case_const,
             case_cong=case_cong,case_def=case_def,constructors=constructors,
             induction=induction, nchotomy=nchotomy, distinct=distinct,
             one_one=one_one, fields=fields,
             accessors=accessors, updates=updates, simpls=simpls,
-            size=size, encode=encode, lift=SOME lift_tm}
+            size=size, encode=encode, lift=SOME lift_tm,
+            recognizers=recognizers,destructors=destructors}
  | put_lift _ _ = raise ERR "put_lift" "not a datatype";
 
 fun put_fields flds (DFACTS
  {ty,axiom, case_const,case_cong,case_def,constructors,
   induction, nchotomy, distinct, one_one, fields,
-  accessors, updates, simpls, size, encode, lift})
+  accessors, updates, simpls, size, encode, lift,
+  destructors,recognizers})
   =
   DFACTS {ty=ty,axiom=axiom, case_const=case_const,
             case_cong=case_cong,case_def=case_def,constructors=constructors,
             induction=induction, nchotomy=nchotomy, distinct=distinct,
             one_one=one_one, fields=flds,
             accessors=accessors, updates=updates, simpls=simpls,
-            size=size, encode=encode, lift=lift}
+            size=size, encode=encode, lift=lift,
+            recognizers=recognizers,destructors=destructors}
  | put_fields _ _ = raise ERR "put_fields" "not a datatype";
 
 fun put_accessors thl (DFACTS
  {ty,axiom, case_const,case_cong,case_def,constructors,
   induction, nchotomy, distinct, one_one, fields,
-  accessors, updates, simpls, size, encode, lift})
+  accessors, updates, simpls, size, encode, lift,
+  destructors,recognizers})
   =
   DFACTS {ty=ty,axiom=axiom, case_const=case_const,
             case_cong=case_cong,case_def=case_def,constructors=constructors,
             induction=induction, nchotomy=nchotomy, distinct=distinct,
             one_one=one_one, fields=fields,
             accessors=thl, updates=updates, simpls=simpls,
-            size=size, encode=encode, lift=lift}
+            size=size, encode=encode, lift=lift,
+            recognizers=recognizers,destructors=destructors}
  | put_accessors _ _ = raise ERR "put_accessors" "not a datatype";
 
 fun put_updates thl (DFACTS
  {ty,axiom, case_const,case_cong,case_def,constructors,
   induction, nchotomy, distinct, one_one, fields,
-  accessors, updates, simpls, size, encode, lift})
+  accessors, updates, simpls, size, encode, lift,
+  destructors,recognizers})
   =
   DFACTS {ty=ty,axiom=axiom, case_const=case_const,
             case_cong=case_cong,case_def=case_def,constructors=constructors,
             induction=induction, nchotomy=nchotomy, distinct=distinct,
             one_one=one_one, fields=fields,
             accessors=accessors, updates=thl, simpls=simpls,
-            size=size, encode=encode, lift=lift}
+            size=size, encode=encode, lift=lift,
+            recognizers=recognizers,destructors=destructors}
  | put_updates _ _ = raise ERR "put_updates" "not a datatype";
+
+fun put_recognizers thl (DFACTS
+ {ty,axiom, case_const,case_cong,case_def,constructors,
+  induction, nchotomy, distinct, one_one, fields,
+  accessors, updates, simpls, size, encode, lift,
+  destructors,recognizers})
+  =
+  DFACTS {ty=ty,axiom=axiom, case_const=case_const,
+          case_cong=case_cong,case_def=case_def,constructors=constructors,
+          induction=induction, nchotomy=nchotomy, distinct=distinct,
+          one_one=one_one, fields=fields,
+          accessors=accessors, updates=updates, simpls=simpls,
+          size=size, encode=encode, lift=lift,
+          recognizers=thl,destructors=destructors}
+ | put_recognizers _ _ = raise ERR "put_recognizers" "not a datatype";
+
+fun put_destructors thl (DFACTS
+ {ty,axiom, case_const,case_cong,case_def,constructors,
+  induction, nchotomy, distinct, one_one, fields,
+  accessors, updates, simpls, size, encode, lift,
+  destructors,recognizers})
+  =
+  DFACTS {ty=ty,axiom=axiom, case_const=case_const,
+            case_cong=case_cong,case_def=case_def,constructors=constructors,
+            induction=induction, nchotomy=nchotomy, distinct=distinct,
+            one_one=one_one, fields=fields,
+            accessors=accessors, updates=updates, simpls=simpls,
+            size=size, encode=encode, lift=lift,
+            recognizers=recognizers,destructors=thl}
+ | put_destructors _ _ = raise ERR "put_destructors" "not a datatype";
 
 (*---------------------------------------------------------------------------*
  * Returns the datatype name and the constructors. The code is a copy of     *
@@ -297,7 +351,8 @@ val defn_const =
 
 fun mk_datatype_info {ax,case_def,case_cong,induction,
                       nchotomy,size,encode,lift,one_one,
-                      fields, accessors, updates, distinct} =
+                      fields, accessors, updates, distinct,
+                      destructors,recognizers} =
   let val (ty,ty_names,constructors) = basic_info case_def
       val inj = case one_one of NONE => [] | SOME x => [x]
       val D  = case distinct of NONE => [] | SOME x => CONJUNCTS x
@@ -305,6 +360,8 @@ fun mk_datatype_info {ax,case_def,case_cong,induction,
    DFACTS
      {ty           = ty,
       constructors = constructors,
+      destructors  = destructors,
+      recognizers  = recognizers,
       case_const   = defn_const case_def,
       case_def     = case_def,
       case_cong    = case_cong,
@@ -328,7 +385,8 @@ local fun mk_ti (n,ax,ind)
             mk_datatype_info{ax=COPY(n,ax), induction=COPY(n,ind),
                       case_def=cdef,case_cong=ccong, nchotomy=nch,
                       one_one=oo, distinct=d,size=NONE, encode=NONE,
-                      lift=NONE, fields=[], accessors=[],updates=[]}
+                      lift=NONE, fields=[], accessors=[],updates=[],
+                      recognizers=[],destructors=[]}
             :: mk_ti (n,ax,ind) cds cgs oos ds nchs
         | mk_ti _ [] [] [] [] [] = []
         | mk_ti _ [] _ _ _ _ = raise ERR "gen_tyinfo" "Too few case defns"
@@ -350,7 +408,8 @@ fun gen_datatype_info {ax, ind, case_defs} =
             nchotomy = hd nchotomyl,
             size=NONE, encode=NONE, lift=NONE,
             fields=[], accessors=[],updates=[],
-            one_one=hd one_ones, distinct=hd distincts}
+            one_one=hd one_ones, distinct=hd distincts,
+            recognizers=[],destructors=[]}
  in
    if length nchotomyl = 1 then [tyinfo_1]
    else let val tyname = ty_name_of tyinfo_1
@@ -374,7 +433,7 @@ fun pp_tyinfo ppstrm (d as DFACTS recd) =
      val pp_thm = Parse.pp_thm ppstrm
      val {ty,constructors, case_const, case_def, case_cong, induction,
           nchotomy,one_one,distinct,simpls,size,encode,lift,axiom,
-          fields, accessors, updates} = recd
+          fields, accessors, updates,recognizers,destructors} = recd
      val ty_namestring = name_pair (ty_name_of d)
  in
    begin_block CONSISTENT 0;
@@ -954,11 +1013,12 @@ fun strip_case tybase M =
 (* Syntax operations for record types.                                       *)
 (*---------------------------------------------------------------------------*)
 
-fun is_record_type tybase ty =
-  (case prim_get tybase (type_names ty)
-   of NONE => false
-    | SOME tyinfo => not (null (fields_of tyinfo)))
-  handle HOL_ERR _ => false;
+fun dest_record_type tybase ty =
+  case Lib.total (fields_of o valOf o prim_get tybase o type_names) ty
+    of SOME (fields as (_::_)) => fields
+     | otherwise => raise ERR "dest_record_type" "not a record type";
+    
+fun is_record_type tybase ty = Lib.can (dest_record_type tybase) ty;
 
 fun has_record_type tybase M = is_record_type tybase (type_of M);
 

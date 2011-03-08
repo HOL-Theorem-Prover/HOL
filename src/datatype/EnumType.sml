@@ -370,6 +370,8 @@ fun enum_type_to_tyinfo (ty, constrs) = let
           fields = [],
           accessors = [],
           updates = [],
+          recognizers = [],
+          destructors = [],
           distinct = distinct }
 in
   case distinct of

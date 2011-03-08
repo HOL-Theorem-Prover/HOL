@@ -460,6 +460,8 @@ val _ = adjoin_to_theory
     S "      fields=[],";                                    NL();
     S "      accessors=[],";                                 NL();
     S "      updates=[],";                                   NL();
+    S "      destructors=[THE_DEF],";                        NL();
+    S "      recognizers=[IS_NONE_DEF,IS_SOME_DEF],";        NL();
     S "      lift=SOME(mk_var(\"optionSyntax.lift_option\",Parse.Type`:'type -> ('a -> 'term) -> 'a option -> 'term`)),";
     NL();
     S "      one_one=SOME SOME_11,";                         NL();
@@ -489,6 +491,8 @@ val _ = TypeBase.write
       size=NONE,
       encode=NONE,
       fields=[], accessors=[], updates=[],
+      destructors=[THE_DEF],
+      recognizers=[IS_NONE_DEF,IS_SOME_DEF],
       lift=SOME(mk_var("optionSyntax.lift_option",
                 Parse.Type`:'type -> ('a -> 'term) -> 'a option -> 'term`)),
       one_one=SOME SOME_11,
