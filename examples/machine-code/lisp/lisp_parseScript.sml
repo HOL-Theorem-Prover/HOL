@@ -2770,7 +2770,7 @@ val SEP_EXPS_ok_data = prove(
   \\ `x IN (g DELETE q DELETE (q + 0x4w))` by ASM_SIMP_TAC std_ss [IN_DELETE]
   \\ IMP_RES_TAC SUBSET_TRANS
   \\ FULL_SIMP_TAC std_ss []
-  \\ Q.ABBREV_TAC `ys = (h' q,a1)::(h' (q + 0x4w),a2)::t`
+  \\ Q.ABBREV_TAC `ys = (h q,a1)::(h (q + 0x4w),a2)::t`
   \\ Q.ABBREV_TAC `i = SUC (LENGTH t) +
         2 * (SUC (LSIZE a1 + LSIZE a2) + SUM_LSIZE (MAP SND t))`
   \\ `LENGTH ys + 2 * SUM_LSIZE (MAP SND ys) < i` by
