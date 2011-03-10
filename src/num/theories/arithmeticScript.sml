@@ -2732,6 +2732,19 @@ val NUMERAL_MULT_EQ_DIV = store_thm(
   CONJ_TAC THEN MATCH_MP_TAC MULT_EQ_DIV THEN
   REWRITE_TAC [NUMERAL_DEF, BIT1, BIT2, ADD_CLAUSES, LESS_0]);
 
+val MOD_EQ_0_DIVISOR = Q.store_thm(
+"MOD_EQ_0_DIVISOR",
+`0 < n ==> ((k MOD n = 0) = (∃d. k = d * n))`,
+DISCH_TAC THEN
+EQ_TAC THEN1 (
+  DISCH_TAC THEN
+  EXISTS_TAC ``k DIV n`` THEN
+  MATCH_MP_TAC EQ_SYM THEN
+  SRW_TAC [][Once MULT_SYM] THEN
+  MATCH_MP_TAC (MP_CANON (DISCH_ALL (#2(EQ_IMP_RULE (UNDISCH MULT_EQ_DIV))))) THEN
+  SRW_TAC [][] ) THEN
+SRW_TAC [][] THEN SRW_TAC [][MOD_EQ_0])
+
 val MOD_SUC = Q.store_thm(
 "MOD_SUC",
 `0 < y /\ (SUC x <> (SUC (x DIV y)) * y) ==> ((SUC x) MOD y = SUC (x MOD y))`,
