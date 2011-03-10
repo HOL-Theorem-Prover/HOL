@@ -103,7 +103,12 @@ in
   fun x64_is_reg r = can x64_reg_info r;
 end;
 
-fun x64_address_encode s = let
+fun x64_address_encode s = 
+  if mem s ["[R13]","[0+R13]","[R13+0]"] then 
+    (* work around suggested by Intel manual for avoiding 
+       the encoding of RIP-relative addressing in 64-bit x86 *)
+    [("R/M", "13"), ("Mod", "1"), ("disp", "00")] 
+  else let
   val (index,base,disp) = parse_address s
   val rr = int_to_string o x64_reg2int
   fun the (SOME x) = x | the NONE = fail()
@@ -198,7 +203,7 @@ fun x64_encode s = let
     if mem t ["r/m8","r/m16","r/m32","r/m64"] then "r/m32" else t;  
   val ys = map (fn (x,y) => (x,map simplify_token y)) ys
 (*
-  val (zs,ys) = el 2 ys 
+  val (zs,ys) = hd ys 
 *)
   fun use_encoding (zs,ys) = let
     val rex = ref (if zsize = 64 then [#"W"] else [])
