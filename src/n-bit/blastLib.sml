@@ -500,7 +500,7 @@ local
       reduce_nand_def, word_compare_def, word_replicate_def, word_join,
       word_concat_def, word_reverse_def, word_modify_def, word_lsl_def,
       word_lsr_def, word_asr_def, word_ror_def, word_rol_def, word_rrx_def,
-      word_msb_def, word_lsb_def, word_extract_def, word_bits_def,
+      word_msb_def, word_lsb_def, word_extract_def, word_bits_def, word_abs,
       word_slice_def, word_bit_def, word_signed_bits_def, bit_field_insert_def,
       index_cond, SYM WORD_NEG_1, word_L_thm, minus1_thm, w2w_thm, sw2sw_thm,
       BITWISE_ADD, BITWISE_SUB, BITWISE_LO, fcpTheory.FCP_UPDATE_def,

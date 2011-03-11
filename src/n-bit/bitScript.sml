@@ -192,6 +192,12 @@ val NOT_ZERO_ADD1 = save_thm("NOT_ZERO_ADD1",
 
 val ZERO_LT_TWOEXP = save_thm("ZERO_LT_TWOEXP",
   GEN_ALL (REDUCE_RULE (SPECL [`n`,`1`] ZERO_LESS_EXP)));
+val _ = export_rewrites ["ZERO_LT_TWOEXP"]
+
+val ONE_LE_TWOEXP = Q.store_thm("ONE_LE_TWOEXP",
+  `!n. 1n <= 2 ** n`,
+  SRW_TAC [][DECIDE ``1n <= x = 0 < x``]);
+val _ = export_rewrites ["ONE_LE_TWOEXP"]
 
 val TWOEXP_NOT_ZERO = save_thm("TWOEXP_NOT_ZERO",
   REWRITE_RULE [GSYM NOT_ZERO_LT_ZERO] ZERO_LT_TWOEXP);
@@ -416,38 +422,6 @@ val NOT_MOD2_LEM2 = store_thm("NOT_MOD2_LEM2",
 
 val ODD_MOD2_LEM = store_thm("ODD_MOD2_LEM",
  `!n. ODD n = ((n MOD 2) = 1)`, RW_TAC arith_ss [ODD_EVEN,MOD_2]);
-
-val BIT_OF_BITS_THM = Q.store_thm (
-"BIT_OF_BITS_THM",
-`!n h l a. l + n <= h ==> (BIT n (BITS h l a) = BIT (l + n) a)`,
-RW_TAC arith_ss [BIT_def, BITS_COMP_THM]);
-
-val BIT_SHIFT_THM = Q.store_thm (
-"BIT_SHIFT_THM",
-`!n a s. BIT (n + s) (a * 2 ** s) = BIT n a`,
-RW_TAC std_ss [BIT_def, BITS_def,MOD_2EXP_def, DIV_2EXP_def] \\
-RW_TAC arith_ss [SUC_SUB, EXP_ADD] \\
-metisLib.METIS_TAC [GSYM DIV_DIV_DIV_MULT, ZERO_LT_TWOEXP,
-                    MULT_DIV, MULT_SYM]);
-
-val BIT_SHIFT_THM2 = Q.store_thm (
-"BIT_SHIFT_THM2",
-`!n a s. s <= n ==> (BIT n (a * 2 ** s) = BIT (n - s) a)`,
-RW_TAC arith_ss [GSYM (Q.SPECL [`n-s`, `a`, `s`] BIT_SHIFT_THM)]);
-
-val BIT_SHIFT_THM3 = Q.store_thm (
-"BIT_SHIFT_THM3",
-`!n a s. (n < s) ==> ~BIT n (a * 2 ** s)`,
-RW_TAC std_ss [BIT_def, BITS_def,MOD_2EXP_def, DIV_2EXP_def] \\
-RW_TAC arith_ss [SUC_SUB, NOT_MOD2_LEM2, GSYM EVEN_MOD2] \\
-RW_TAC arith_ss [DIV_P, ZERO_LT_TWOEXP] \\
-Q.EXISTS_TAC `a * 2 ** (s - n)` \\ Q.EXISTS_TAC `0` \\
-RW_TAC std_ss [ZERO_LT_TWOEXP,GSYM MULT_ASSOC, GSYM EXP_ADD, EVEN_MULT] \\
-ASM_SIMP_TAC arith_ss [EVEN_EXP])
-
-val BIT_OF_BITS_THM2 = store_thm("BIT_OF_BITS_THM2",
-  `!h l x n.  h < l + x ==> ~BIT x (BITS h l n)`,
-  RW_TAC arith_ss [MIN_DEF,BIT_def,BITS_COMP_THM2,BITS_ZERO]);
 
 (* ------------------------------------------------------------------------- *)
 
@@ -895,6 +869,10 @@ val BITWISE_BITS = store_thm("BITWISE_BITS",
 
 (* ------------------------------------------------------------------------- *)
 
+val NOT_BIT_GT_TWOEXP = store_thm("NOT_BIT_GT_TWOEXP",
+  `!i n.  n < 2 ** i ==> ~BIT i n`,
+  SRW_TAC [ARITH_ss] [BIT_def,BITS_THM,LESS_DIV_EQ_ZERO]);
+
 val BITS_SUC2 = prove(
   `!n a. BITS (SUC n) 0 a = SLICE (SUC n) (SUC n) a + BITS n 0 a`,
   RW_TAC arith_ss [GSYM SLICE_ZERO_THM,SLICE_COMP_THM]);
@@ -922,6 +900,148 @@ val BITWISE_ONE_COMP_LEM = store_thm("BITWISE_ONE_COMP_LEM",
     ]
 );
 
+val ONE_COMP = Q.prove(
+  `!i n a b. i < SUC n ==> (~BIT i a = BIT i (BITWISE (SUC n) (\x y. ~x) a b))`,
+  SRW_TAC [] [BITWISE_THM]);
+
+val BIT_COMPLEMENT_LEM = Q.prove(
+  `!n i a. i < n /\ a MOD 2 ** n <> 0 ==>
+           (BIT i (2 ** n - a MOD 2 ** n) = ~BIT i (a MOD 2 ** n - 1))`,
+  Cases \\ SRW_TAC [] []
+  \\ `~BIT i (a MOD 2 ** SUC n' − 1) =
+       BIT i (BITWISE (SUC n') (\x y. ~x) (a MOD 2 ** SUC n' − 1) 0)`
+  by METIS_TAC [ONE_COMP]
+  \\ POP_ASSUM SUBST1_TAC
+  \\ `a MOD 2 ** SUC n' - 1 < 2 ** SUC n'`
+  by SRW_TAC [ARITH_ss] [MOD_2EXP_LT, DECIDE ``a < b ==> a < b + 1n``]
+  \\ ASM_SIMP_TAC std_ss [BITWISE_ONE_COMP_LEM, BITS_ZEROL,
+       DECIDE ``b <> 0 ==> (a - 1 - (b - 1n) = a - b)``]);
+
+val BIT_COMPLEMENT = Q.store_thm("BIT_COMPLEMENT",
+   `!n i a.
+      (BIT i (2 ** n - a MOD 2 ** n) =
+       ((a MOD 2 ** n = 0) /\ (i = n) \/
+        (a MOD 2 ** n <> 0) /\ (i < n) /\ ~BIT i (a MOD 2 ** n - 1)))`,
+   REPEAT STRIP_TAC
+   \\ Cases_on `a MOD 2 ** n = 0`
+   \\ ASM_SIMP_TAC std_ss []
+   THENL [
+     Cases_on `i = n` \\ SRW_TAC [] [BIT_B_NEQ, BIT_B],
+     Cases_on `i < n`
+     \\ FULL_SIMP_TAC std_ss []
+     THENL [
+       ASM_SIMP_TAC std_ss [BIT_COMPLEMENT_LEM],
+       `2n ** n <= 2 ** i` by METIS_TAC [NOT_LESS, TWOEXP_MONO2]
+       \\ `2n ** n - a MOD 2 ** n < 2 ** n`
+       by SRW_TAC [ARITH_ss] [ZERO_LT_TWOEXP]
+       \\ `2n ** n - a MOD 2 ** n < 2 ** i`
+       by METIS_TAC [arithmeticTheory.LESS_LESS_EQ_TRANS]
+       \\ ASM_SIMP_TAC std_ss [NOT_BIT_GT_TWOEXP]
+     ]
+   ]);
+
+(* ------------------------------------------------------------------------- *)
+
+val BIT_OF_BITS_THM = Q.store_thm (
+"BIT_OF_BITS_THM",
+`!n h l a. l + n <= h ==> (BIT n (BITS h l a) = BIT (l + n) a)`,
+RW_TAC arith_ss [BIT_def, BITS_COMP_THM]);
+
+val BIT_SHIFT_THM = Q.store_thm (
+"BIT_SHIFT_THM",
+`!n a s. BIT (n + s) (a * 2 ** s) = BIT n a`,
+RW_TAC std_ss [BIT_def, BITS_def,MOD_2EXP_def, DIV_2EXP_def] \\
+RW_TAC arith_ss [SUC_SUB, EXP_ADD] \\
+metisLib.METIS_TAC [GSYM DIV_DIV_DIV_MULT, ZERO_LT_TWOEXP,
+                    MULT_DIV, MULT_SYM]);
+
+val BIT_SHIFT_THM2 = Q.store_thm (
+"BIT_SHIFT_THM2",
+`!n a s. s <= n ==> (BIT n (a * 2 ** s) = BIT (n - s) a)`,
+RW_TAC arith_ss [GSYM (Q.SPECL [`n-s`, `a`, `s`] BIT_SHIFT_THM)]);
+
+val BIT_SHIFT_THM3 = Q.store_thm (
+"BIT_SHIFT_THM3",
+`!n a s. (n < s) ==> ~BIT n (a * 2 ** s)`,
+RW_TAC std_ss [BIT_def, BITS_def,MOD_2EXP_def, DIV_2EXP_def] \\
+RW_TAC arith_ss [SUC_SUB, NOT_MOD2_LEM2, GSYM EVEN_MOD2] \\
+RW_TAC arith_ss [DIV_P, ZERO_LT_TWOEXP] \\
+Q.EXISTS_TAC `a * 2 ** (s - n)` \\ Q.EXISTS_TAC `0` \\
+RW_TAC std_ss [ZERO_LT_TWOEXP,GSYM MULT_ASSOC, GSYM EXP_ADD, EVEN_MULT] \\
+ASM_SIMP_TAC arith_ss [EVEN_EXP])
+
+val BIT_OF_BITS_THM2 = store_thm("BIT_OF_BITS_THM2",
+  `!h l x n.  h < l + x ==> ~BIT x (BITS h l n)`,
+  RW_TAC arith_ss [MIN_DEF,BIT_def,BITS_COMP_THM2,BITS_ZERO]);
+
+val BIT_DIV2 = store_thm("BIT_DIV2",
+  `!n i. BIT n (i DIV 2) = BIT (SUC n) i`,
+  RW_TAC arith_ss [BIT_def,BITS_THM,EXP,ZERO_LT_TWOEXP,DIV_DIV_DIV_MULT]);
+
+val BIT_SHIFT_THM4 = Q.store_thm("BIT_SHIFT_THM4",
+  `!n i a. BIT i (a DIV 2 ** n) = BIT (i + n) a`,
+  Induct \\ SRW_TAC [] [arithmeticTheory.ADD_CLAUSES, GSYM BIT_DIV2]
+  \\ POP_ASSUM (fn th =>
+       SIMP_TAC std_ss [arithmeticTheory.DIV_DIV_DIV_MULT, GSYM th,
+         ZERO_LT_TWOEXP, EXP]));
+
+val MOD0_MONO = Q.prove(
+  `!n m a. n < m /\ (a MOD 2 ** m = 0) ==> (a MOD 2 ** n = 0)`,
+  Cases \\ Cases \\ SRW_TAC [] []
+  \\ FULL_SIMP_TAC std_ss [GSYM BITS_ZERO3]
+  \\ `n' <= n` by DECIDE_TAC
+  \\ Q.SPECL_THEN [`n`,`0`,`n'`,`0`,`a`]
+       (IMP_RES_TAC o SIMP_RULE std_ss []) BITS_COMP_THM
+  \\ METIS_TAC [BITS_ZERO2]);
+
+val DIV_LT = Q.store_thm("DIV_LT",
+  `!n m a. n < m /\ a < 2 ** m ==> a DIV 2 ** n < 2 ** m`,
+  Cases \\ SRW_TAC [] []
+  \\ Cases_on `a` \\ SRW_TAC [] [ZERO_LT_TWOEXP, arithmeticTheory.ZERO_DIV]
+  \\ `1n < 2 ** SUC n'`
+  by SRW_TAC [] [EXP, ZERO_LT_TWOEXP, DECIDE ``0 < n ==> 1n < 2 * n``]
+  \\ METIS_TAC [prim_recTheory.LESS_0, LESS_TRANS,
+       arithmeticTheory.DIV_LESS, ZERO_LT_TWOEXP]);
+
+val MOD_ZERO_GT = Q.store_thm("MOD_ZERO_GT",
+  `!n a. a <> 0 /\ (a MOD 2 ** n = 0) ==> 2 ** n <= a`,
+  SRW_TAC [] []
+  \\ SPOSE_NOT_THEN
+       (ASSUME_TAC o REWRITE_RULE [arithmeticTheory.NOT_LESS_EQUAL])
+  \\ FULL_SIMP_TAC arith_ss []);
+
+val DIV_GT0 = Q.store_thm("DIV_GT0",
+  `!a b. b <= a /\ 0 < b ==> (0 < a DIV b)`,
+  SRW_TAC [] [arithmeticTheory.X_LT_DIV]);
+
+val DIV_SUB1 = Q.store_thm("DIV_SUB1",
+  `!a b. 2 ** b <= a /\ (a MOD 2 ** b = 0) ==>
+         (a DIV 2 ** b - 1 = (a - 1) DIV 2 ** b)`,
+  SRW_TAC [] [ZERO_LT_TWOEXP,
+              arithmeticTheory.DIV_SUB
+              |> Q.INST [`q` |-> `1`] |> SIMP_RULE std_ss [] |> GSYM]
+  \\ Cases_on `2 ** b = a`
+  \\ SRW_TAC [ARITH_ss] [ZERO_LT_TWOEXP,
+       arithmeticTheory.ZERO_DIV, arithmeticTheory.LESS_DIV_EQ_ZERO]
+  \\ `2 ** b < a` by DECIDE_TAC
+  \\ IMP_RES_TAC LESS_ADD
+  \\ POP_ASSUM (SUBST_ALL_TAC o SYM)
+  \\ ASM_SIMP_TAC arith_ss []
+  \\ FULL_SIMP_TAC arith_ss [arithmeticTheory.ADD_MODULUS_LEFT, ZERO_LT_TWOEXP,
+       arithmeticTheory.ADD_DIV_RWT, arithmeticTheory.LESS_DIV_EQ_ZERO,
+       DECIDE ``0 < x ==> (p + x - 1 = p + (x - 1n))``]);
+
+val DIV_SUB0 = Q.prove(
+  `!a b. a MOD 2 ** b <> 0 ==> (a DIV 2 ** b = (a - 1) DIV 2 ** b)`,
+  REPEAT STRIP_TAC
+  \\ Q.SPECL_THEN [`b`,`a`] ASSUME_TAC TWOEXP_DIVISION
+  \\ POP_ASSUM SUBST1_TAC
+  \\ ASM_SIMP_TAC std_ss [arithmeticTheory.ADD_DIV_ADD_DIV, ZERO_LT_TWOEXP,
+       DECIDE ``n <> 0n ==> (x + n - 1 = x + (n - 1))``]
+  \\ `a MOD 2 ** b − 1 < 2 ** b`
+  by METIS_TAC [DECIDE ``n <> 0n ==> (n - 1 < n)``, MOD_2EXP_LT, LESS_TRANS]
+  \\ ASM_SIMP_TAC arith_ss [arithmeticTheory.LESS_DIV_EQ_ZERO, ZERO_LT_TWOEXP]);
+
 val BIT_EXP_SUB1 = store_thm("BIT_EXP_SUB1",
   `!b n. BIT b (2 ** n - 1) = b < n`,
   REPEAT STRIP_TAC
@@ -934,6 +1054,37 @@ val BIT_EXP_SUB1 = store_thm("BIT_EXP_SUB1",
     \\ `BITWISE (SUC n') (\x y. ~x) 0 ARB < 2 ** b`
     by METIS_TAC [BITWISE_LT_2EXP, LESS_LESS_EQ_TRANS, TWOEXP_MONO2]
     \\ SRW_TAC [] [BITS_LT_LOW]);
+
+val BIT_SHIFT_THM5 = Q.store_thm("BIT_SHIFT_THM5",
+  `!n m i a. i + n < m /\ a < 2 ** m ==>
+       (BIT i (2 ** m -
+               (a DIV 2 ** n + if a MOD 2 ** n = 0 then 0 else 1) MOD 2 ** m) =
+        BIT (i + n) (2 ** m - a MOD 2 ** m))`,
+  REPEAT STRIP_TAC
+  \\ SIMP_TAC arith_ss [BIT_COMPLEMENT]
+  \\ Cases_on `a MOD 2 ** m = 0`
+  \\ ASM_SIMP_TAC arith_ss [GSYM BIT_SHIFT_THM4]
+  THENL [
+    Q.PAT_ASSUM `a < 2 ** m` (fn th => FULL_SIMP_TAC arith_ss
+      [th, ZERO_LT_TWOEXP, arithmeticTheory.ZERO_DIV]),
+    `n < m` by DECIDE_TAC
+    \\ SRW_TAC [ARITH_ss] [DIV_LT]
+    THENL [
+      `a <> 0` by (STRIP_TAC \\ FULL_SIMP_TAC arith_ss [])
+      \\ `2 ** n <= a` by IMP_RES_TAC MOD_ZERO_GT
+      \\ `0 < a DIV 2 ** n` by METIS_TAC [DIV_GT0, ZERO_LT_TWOEXP]
+      \\ ASM_SIMP_TAC arith_ss [DIV_SUB1],
+      Cases_on `a DIV 2 ** n = 2 ** m - 1`
+      \\ SRW_TAC [ARITH_ss]
+           [ZERO_LT_TWOEXP, DECIDE ``0n < n ==> (n - 1 + 1 = n)``]
+      THENL [
+        ASM_SIMP_TAC arith_ss [GSYM DIV_SUB0, BIT_EXP_SUB1],
+        `a DIV 2 ** n < 2 ** m` by METIS_TAC [DIV_LT]
+        \\ `a DIV 2 ** n + 1 < 2 ** m` by DECIDE_TAC
+        \\ ASM_SIMP_TAC arith_ss [DIV_SUB0]
+      ]
+    ]
+  ]);
 
 (* ------------------------------------------------------------------------- *)
 
@@ -949,10 +1100,6 @@ val BIT_SET_NOT_ZERO_COR = prove(
 
 val BIT_SET_NOT_ZERO_COR2 =
   REWRITE_RULE [DIV_1,EXP] (SPEC `0` BIT_SET_NOT_ZERO_COR);
-
-val BIT_DIV2 = store_thm("BIT_DIV2",
-  `!n i. BIT n (i DIV 2) = BIT (SUC n) i`,
-  RW_TAC arith_ss [BIT_def,BITS_THM,EXP,ZERO_LT_TWOEXP,DIV_DIV_DIV_MULT]);
 
 val SBIT_MULT = store_thm("SBIT_MULT",
   `!b m n. (SBIT b n) * 2 ** m = SBIT b (n + m)`,
@@ -1081,10 +1228,6 @@ val BIT_REVERSE_THM = store_thm("BIT_REVERSE_THM",
         \\ ASM_SIMP_TAC std_ss [ADD1,SUB_SUB,ADD_SUB,SUB_ADD]]);
 
 (* ------------------------------------------------------------------------- *)
-
-val NOT_BIT_GT_TWOEXP = store_thm("NOT_BIT_GT_TWOEXP",
-  `!i n.  n < 2 ** i ==> ~BIT i n`,
-  SRW_TAC [ARITH_ss] [BIT_def,BITS_THM,LESS_DIV_EQ_ZERO]);
 
 val NOT_BIT_GT_LOG2 = store_thm("NOT_BIT_GT_LOG2",
   `!i n. LOG2 n < i ==> ~BIT i n`,
