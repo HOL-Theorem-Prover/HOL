@@ -224,6 +224,10 @@ val bit_field_insert_def = Define`
   bit_field_insert h l a =
     word_modify (\i. COND (l <= i /\ i <= h) (a ' (i - l)))`;
 
+val word_sign_extend_def = Define`
+  word_sign_extend n (w:'a word) =
+    n2w (SIGN_EXTEND n (dimindex(:'a)) (w2n w)) : 'a word`;
+
 val word_len_def = Define `word_len (w:'a word) = dimindex (:'a)`;
 
 val _ = overload_on ("''",Term`$word_slice`);
@@ -1208,6 +1212,18 @@ val word_signed_bits_n2w = Q.store_thm("word_signed_bits_n2w",
            `(dimindex (:'a) - l = 0)` by DECIDE_TAC
              \\ SRW_TAC [ARITH_ss, boolSimps.LET_ss]
                   [SIGN_EXTEND_def, BIT_ZERO, BITS_ZERO]]]);
+
+val MIN_lem = Q.prove(
+  `!h t. MIN (MIN h t) (t + l) = MIN h t`,
+  SRW_TAC [ARITH_ss] [MIN_DEF]);
+
+val word_sign_extend_bits = Q.store_thm("word_sign_extend_bits",
+  `!h l w:'a word.
+     (h --- l) w =
+     word_sign_extend (MIN (SUC h) (dimindex(:'a)) - l) ((h -- l) w)`,
+  NTAC 2 STRIP_TAC \\ Cases
+  \\ SRW_TAC [] [word_sign_extend_def, word_signed_bits_n2w, word_bits_n2w,
+       MOD_DIMINDEX, bitTheory.BITS_COMP_THM2, MIN_lem]);
 
 val word_index_n2w = store_thm("word_index_n2w",
   `!n i. (n2w n : 'a word) ' i =
