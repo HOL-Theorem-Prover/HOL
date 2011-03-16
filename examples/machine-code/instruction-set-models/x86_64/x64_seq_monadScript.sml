@@ -187,23 +187,23 @@ val read_m8_seq_def = Define `(read_m8_seq ii a):word8 x64_M =
 
 val read_m16_seq_def = Define `(read_m16_seq ii a):word16 x64_M =
   seqT_seq (parT_seq (read_mem_seq ii (a+0w)) (read_mem_seq ii (a+1w)))
-       (\(x0,x1). constT_seq (bytes2word [x0;x1]))`; 
+       (\(x0,x1). constT_seq (bytes2word [x0;x1]))`;
 
 val read_m32_seq_def = Define `(read_m32_seq ii a):word32 x64_M =
-  seqT_seq (parT_seq (read_mem_seq ii (a+0w)) 
+  seqT_seq (parT_seq (read_mem_seq ii (a+0w))
            (parT_seq (read_mem_seq ii (a+1w))
-           (parT_seq (read_mem_seq ii (a+2w)) 
+           (parT_seq (read_mem_seq ii (a+2w))
                      (read_mem_seq ii (a+3w)))))
        (\(x0,x1,x2,x3). constT_seq (bytes2word [x0;x1;x2;x3]))`;
 
 val read_m64_seq_def = Define `(read_m64_seq ii a):word64 x64_M =
-  seqT_seq (parT_seq (read_mem_seq ii (a+0w)) 
+  seqT_seq (parT_seq (read_mem_seq ii (a+0w))
            (parT_seq (read_mem_seq ii (a+1w))
            (parT_seq (read_mem_seq ii (a+2w))
            (parT_seq (read_mem_seq ii (a+3w))
            (parT_seq (read_mem_seq ii (a+4w))
            (parT_seq (read_mem_seq ii (a+5w))
-           (parT_seq (read_mem_seq ii (a+6w)) 
+           (parT_seq (read_mem_seq ii (a+6w))
                      (read_mem_seq ii (a+7w)))))))))
        (\(x0,x1,x2,x3,x4,x5,x6,x7). constT_seq (bytes2word [x0;x1;x2;x3;x4;x5;x6;x7]))`;
 
@@ -213,25 +213,25 @@ val write_m8_seq_def = Define `(write_m8_seq ii a w):unit x64_M =
 
 val write_m16_seq_def = Define `(write_m16_seq ii a w):unit x64_M =
     (let bs = word2bytes 2 (w:word16) in
-       parT_unit_seq (write_mem_seq ii (a+0w) (EL 0 bs)) 
+       parT_unit_seq (write_mem_seq ii (a+0w) (EL 0 bs))
                      (write_mem_seq ii (a+1w) (EL 1 bs)))`;
 
 val write_m32_seq_def = Define `(write_m32_seq ii a w):unit x64_M =
     (let bs = word2bytes 4 (w:word32) in
-       parT_unit_seq (write_mem_seq ii (a+0w) (EL 0 bs)) 
+       parT_unit_seq (write_mem_seq ii (a+0w) (EL 0 bs))
       (parT_unit_seq (write_mem_seq ii (a+1w) (EL 1 bs))
-      (parT_unit_seq (write_mem_seq ii (a+2w) (EL 2 bs)) 
+      (parT_unit_seq (write_mem_seq ii (a+2w) (EL 2 bs))
                      (write_mem_seq ii (a+3w) (EL 3 bs)))))`;
 
 val write_m64_seq_def = Define `(write_m64_seq ii a w):unit x64_M =
     (let bs = word2bytes 8 (w:word64) in
-       parT_unit_seq (write_mem_seq ii (a+0w) (EL 0 bs)) 
+       parT_unit_seq (write_mem_seq ii (a+0w) (EL 0 bs))
       (parT_unit_seq (write_mem_seq ii (a+1w) (EL 1 bs))
-      (parT_unit_seq (write_mem_seq ii (a+2w) (EL 2 bs)) 
+      (parT_unit_seq (write_mem_seq ii (a+2w) (EL 2 bs))
       (parT_unit_seq (write_mem_seq ii (a+3w) (EL 3 bs))
-      (parT_unit_seq (write_mem_seq ii (a+4w) (EL 4 bs)) 
+      (parT_unit_seq (write_mem_seq ii (a+4w) (EL 4 bs))
       (parT_unit_seq (write_mem_seq ii (a+5w) (EL 5 bs))
-      (parT_unit_seq (write_mem_seq ii (a+6w) (EL 6 bs)) 
+      (parT_unit_seq (write_mem_seq ii (a+6w) (EL 6 bs))
                      (write_mem_seq ii (a+7w) (EL 7 bs)))))))))`;
 
 (* clear the icache *)
@@ -319,25 +319,25 @@ val ZWRITE_MEM2_WORD64_def = Define `
    (ZWRITE_MEM2 (a + 2w) (EL 2 (word2bytes 8 w))
    (ZWRITE_MEM2 (a + 1w) (EL 1 (word2bytes 8 w))
    (ZWRITE_MEM2 (a + 0w) (EL 0 (word2bytes 8 w)) s)))))))`;
-  
+
 val ZREAD_MEM2_WORD64_THM = store_thm("ZREAD_MEM2_WORD64_THM",
-  ``ZREAD_MEM2_WORD64 a (s:x64_state) = 
+  ``ZREAD_MEM2_WORD64 a (s:x64_state) =
       (w2w (ZREAD_MEM2_WORD32 (a + 4w) s) << 32) !! w2w (ZREAD_MEM2_WORD32 a s)``,
-  SIMP_TAC std_ss [ZREAD_MEM2_WORD32_def,ZREAD_MEM2_WORD64_def,bytes2word_def]  
+  SIMP_TAC std_ss [ZREAD_MEM2_WORD32_def,ZREAD_MEM2_WORD64_def,bytes2word_def]
   THEN ASM_SIMP_TAC std_ss [GSYM WORD_ADD_ASSOC,word_add_n2w]
-  THEN SIMP_TAC (std_ss++wordsLib.WORD_SHIFT_ss) [GSYM LSL_BITWISE]    
+  THEN SIMP_TAC (std_ss++wordsLib.WORD_SHIFT_ss) [GSYM LSL_BITWISE]
   THEN SIMP_TAC (std_ss++wordsLib.WORD_EXTRACT_ss++wordsLib.SIZES_ss) [WORD_OR_CLAUSES]
-  THEN SIMP_TAC (std_ss++wordsLib.WORD_SHIFT_ss) [GSYM LSL_BITWISE]   
+  THEN SIMP_TAC (std_ss++wordsLib.WORD_SHIFT_ss) [GSYM LSL_BITWISE]
   THEN SIMP_TAC std_ss [AC WORD_OR_ASSOC WORD_OR_COMM]);
 
 val ZWRITE_MEM2_WORD64_THM = store_thm("ZWRITE_MEM2_WORD64_THM",
   ``ZWRITE_MEM2_WORD64 a (w:word64) (s:x64_state) =
       ZWRITE_MEM2_WORD32 (a + 4w) ((63 >< 32) w)
      (ZWRITE_MEM2_WORD32 (a + 0w) ((31 ><  0) w) s)``,
-  SIMP_TAC std_ss [ZWRITE_MEM2_WORD32_def,ZWRITE_MEM2_WORD64_def]  
+  SIMP_TAC std_ss [ZWRITE_MEM2_WORD32_def,ZWRITE_MEM2_WORD64_def]
   THEN NTAC 8 (ONCE_REWRITE_TAC [word2bytes_def] THEN SIMP_TAC std_ss [EL_thm])
   THEN ASM_SIMP_TAC std_ss [GSYM WORD_ADD_ASSOC,word_add_n2w]
-  THEN SIMP_TAC (std_ss++wordsLib.WORD_SHIFT_ss) []    
+  THEN SIMP_TAC (std_ss++wordsLib.WORD_SHIFT_ss) []
   THEN SIMP_TAC (std_ss++wordsLib.WORD_EXTRACT_ss++wordsLib.SIZES_ss) [WORD_OR_CLAUSES]);
 
 val CAN_ZWRITE_MEM_def = Define `
@@ -444,15 +444,15 @@ val x64_else_none_eflag_lemma = store_thm("x64_else_none_eflag_lemma",
   SIMP_TAC std_ss [option_apply_def]);
 
 val x64_state_EZPAND = store_thm("x64_state_EZPAND",
-  ``?r i f m. s:x64_state = (r,i,f,m)``,
-  Cases_on `s` THEN Cases_on `r` THEN Cases_on `r'` THEN SIMP_TAC std_ss []);
+  ``?r p f m i. s:x64_state = (r,p,f,m,i)``,
+  Q.SPEC_TAC (`s`,`s`) THEN SIMP_TAC std_ss [pairTheory.FORALL_PROD]);
 
 val ZREAD_RIP_ADD_0 = store_thm("ZREAD_RIP_ADD_0",
   ``ZREAD_MEM (ZREAD_RIP s) s = ZREAD_MEM (ZREAD_RIP s + 0w) s``,
   REWRITE_TAC [WORD_ADD_0]);
 
 val x64_address_lemma = save_thm("x64_address_lemma",
-  SIMP_RULE std_ss [listTheory.ALL_DISTINCT,MEM,GSYM CONJ_ASSOC] 
+  SIMP_RULE std_ss [listTheory.ALL_DISTINCT,MEM,GSYM CONJ_ASSOC]
     (EVAL ``ALL_DISTINCT [0w;1w;2w;3w;4w;5w;6w;7w:word64]``));
 
 val _ = export_theory ();

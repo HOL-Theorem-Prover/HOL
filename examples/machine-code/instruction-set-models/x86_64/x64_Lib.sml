@@ -22,7 +22,7 @@ val bytes_LEMMA = SIMP_RULE std_ss [LENGTH] (Q.SPEC `[v1;v2;v3;v4;v5;v6;v7;v8]` 
 
 val n2w_SIGN_EXTEND = prove(
   ``!n. n < 256 ==> (n2w (SIGN_EXTEND 8 32 n):word32 = sw2sw ((n2w n):word8))``,
-  SIMP_TAC (std_ss++SIZES_ss) [sw2sw_def,w2n_n2w]);  
+  SIMP_TAC (std_ss++SIZES_ss) [sw2sw_def,w2n_n2w]);
 
 fun raw_x64_decode s = let
   fun mk_bool_list n =
@@ -42,7 +42,7 @@ fun raw_x64_decode s = let
     val th = REWRITE_RULE [bits2num_w2bits,n2w_w2n] th
     in (th,l+4) end handle e => (th,l)
   val (th,l) = let
-    val x = find_term (can (match_term ``bits2num xs``)) (concl th) 
+    val x = find_term (can (match_term ``bits2num xs``)) (concl th)
     val th = REWRITE_RULE [bytes_LEMMA, MATCH_MP n2w_SIGN_EXTEND bytes_LEMMA] th
     val thi = Q.INST [`w`|->`imm8`] w2bits_word8
     val i = fst (match_term (snd (dest_comb x)) ((snd o dest_eq o concl o SPEC_ALL) thi))
@@ -223,15 +223,19 @@ fun x64_step s = let
 
 val _ = output_words_as_hex();
 
-fun x64_test_aux inst input output = let
-  val rw = x64_step inst
+fun x64_test_aux i input output = let
+  val rw = x64_step i
+  val old_regs = ["RAX", "RBX", "RCX", "RDX", "RSI", "RDI", "RSP", "RBP"]
+  val new_regs = ["R8", "R9", "R10", "R11", "R12", "R13", "R14", "R15"]
   fun format state (i,j) =
     if i = "RIP"
     then ("ZREAD_RIP "^state^" = 0x"^j^"w")
-    else if length (explode i) = 3
+    else if mem i new_regs
+    then ("ZREAD_REG z"^i^" "^state^" = 0x"^j^"w")
+    else if mem i old_regs
     then ("ZREAD_REG "^i^" "^state^" = 0x"^j^"w")
-    else if length (explode i) = 2
-    then ("ZREAD_EFLAG Z_"^i^" "^state^" = SOME "^j)
+    else if size i = 2
+    then ("ZREAD_EFLAG Z_"^i^" "^state^" = SOME "^(if j = "1" then "T" else "F"))
     else ("ZREAD_MEM 0x"^i^"w "^state^" = SOME (0x"^j^"w)")
   fun p y = Parse.Term [QUOTE y]
   fun f s = map (p o format s)
@@ -250,7 +254,7 @@ fun x64_test_aux inst input output = let
   val xs = distinct xs
   val output2 = filter (fn (x,y) => not (mem x xs)) output
   val output1 = filter (fn (x,y) => mem x xs) output
-  val _ = map (fn (x,y) => print ("  Value of "^x^" is left unspecified by model.\n")) output1
+  val _ = map (fn (x,y) => print (" ["^x^"]")) output1
   val tm = list_mk_conj (f "(THE (X64_NEXT s))" output2)
   val tm2 = (hd o hyp o UNDISCH) th
   val goal = mk_imp(tm2,tm)
@@ -268,19 +272,55 @@ fun x64_test_aux inst input output = let
   val result = REWRITE_RULE [GSYM AND_IMP_INTRO] result
   in result end;
 
-fun x64_test inst input output = let
-  fun p s = if length (explode s) < 4 then s else "["^s^"]"
-  val _ = print ("\nTesting:\n  instruction = "^inst^"\n")
-  val _ = print ("Input:\n")
-  val _ = map (fn (x,y) => print ("  "^(p x)^" = "^y^"\n")) input
-  val _ = print ("Output:\n")
-  val _ = map (fn (x,y) => print ("  "^(p x)^" = "^y^"\n")) output
-  val _ = print ("Result:\n")
-  val th = SOME (x64_test_aux inst input output) handle e => NONE
+fun x64_test s diff = let
+  fun get_input (x,y,z) = (x,y)
+  fun get_output (x,y,z) = (x,z)
+  val input = map get_input diff
+  val output = map get_output diff
+  val i = last(String.tokens (fn c => mem c [#" ",#"\t"]) s)
+  val _ = print ("Testing: "^s)
+  val th = SOME (x64_test_aux i input output) handle e => NONE
   in case th of
-      NONE => (print "  Test failed.\n"; TRUTH)
-    | SOME th => (print "  Test successful.\n\n"; print_thm th; print "\n\n"; th)
+      NONE => (print "   --- FAILED!\n"; ())
+    | SOME th => (print ", ok.\n"; ())
   end;
 
+
+(*
+
+val _ = x64_test "lea RAX,[R15+4*R13-400] | 4B8D84AF70FEFFFF"
+ [("RAX","dd7685b0d983e708","0f28c87c9005ada0"),
+  ("RBX","6d0dc0863d9fb8a5","6d0dc0863d9fb8a5"),
+  ("RCX","57d4da275d8c867f","57d4da275d8c867f"),
+  ("RDX","04f0600453b21541","04f0600453b21541"),
+  ("RSI","9eab61a9939b06b5","9eab61a9939b06b5"),
+  ("RDI","0f74a94248faaa4a","0f74a94248faaa4a"),
+  ("RSP","00007fff5fbff230","00007fff5fbff230"),
+  ("RBP","00007fff5fbff2a0","00007fff5fbff2a0"),
+  ("R8" ,"2e52646f7adbc694","2e52646f7adbc694"),
+  ("R9" ,"6851092e695571ff","6851092e695571ff"),
+  ("R10","f2593e1dac5dbbce","f2593e1dac5dbbce"),
+  ("R11","940d948eff7cc2b1","940d948eff7cc2b1"),
+  ("R12","147ae1b1548e57c4","147ae1b1548e57c4"),
+  ("R13","03ca121f4c116f1c","03ca121f4c116f1c"),
+  ("R14","d9d91c6175b5684d","d9d91c6175b5684d"),
+  ("R15","00007fff5fbff2c0","00007fff5fbff2c0"),
+  ("RIP","0000000100001b87","0000000100001b8f"),
+  ("CF","0","0"),
+  ("PF","0","0"),
+  ("AF","0","0"),
+  ("ZF","1","1"),
+  ("SF","1","1"),
+  ("OF","1","1"),
+  ("00007fff5fbff3f8","73","73"),
+  ("00007fff5fbff3f9","00","00"),
+  ("00007fff5fbff3fa","e4","e4"),
+  ("00007fff5fbff3fb","6c","6c"),
+  ("00007fff5fbff3fc","d7","d7"),
+  ("00007fff5fbff3fd","f3","f3"),
+  ("00007fff5fbff3fe","fc","fc"),
+  ("00007fff5fbff3ff","64","64")]
+
+*)
 
 end
