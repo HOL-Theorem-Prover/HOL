@@ -801,6 +801,18 @@ FULL_SIMP_TAC bool_ss
 [MULT_SUC,SUM_IMAGE_count_SUM_GENLIST,GENLIST_APPEND,
  SUM_APPEND,GENLIST,SUM_SNOC] THEN
 METIS_TAC [LESS_SUC,LESS_SUC_REFL])
+
+val sum_of_sums = Q.store_thm(
+"sum_of_sums",
+`SIGMA (\m. SIGMA (f m) (count a)) (count b) = SIGMA (\m. f (m DIV a) (m MOD a)) (count (a * b))`,
+Cases_on `a=0` THEN SRW_TAC [][SUM_IMAGE_THM,SUM_IMAGE_ZERO] THEN
+Cases_on `b=0` THEN SRW_TAC [][SUM_IMAGE_THM,SUM_IMAGE_ZERO] THEN
+MATCH_MP_TAC EQ_SYM THEN
+MATCH_MP_TAC SUM_IMAGE_count_MULT THEN
+SRW_TAC [][] THEN
+MATCH_MP_TAC SUM_IMAGE_CONG THEN
+SRW_TAC [][] THEN
+METIS_TAC [ADD_SYM,MULT_SYM,DIV_MULT,MOD_MULT])
 end
 
 (*Perm theorems for the simplication*)
