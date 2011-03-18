@@ -146,12 +146,23 @@ in
   infloop_protect "Congruence for conditional expressions" check doit t
 end
 
+val (test10_flag,_) = let
+  open boolSimps
+  val t = ``I (f:'b -> 'c) o I (g:'a -> 'b)``
+  val result = ``(f:'b -> 'c) o I (g:'a -> 'b)``
+  val doit = QCONV (SIMP_CONV (bool_ss ++ combinSimps.COMBIN_ss)
+                              [SimpL ``$o``])
+  fun check th = aconv (rhs (concl th)) result
+in
+  infloop_protect "SimpL on operator returning non-boolean" check doit t
+end
+
 (* ---------------------------------------------------------------------- *)
 
 val _ = Process.exit
           (if List.all I [test1_flag, test2_flag, test3_flag, test4_flag,
                           test5_flag, test6_flag, test7_flag, test8_flag,
-                          test9_flag]
+                          test9_flag, test10_flag]
            then
              Process.success
            else
