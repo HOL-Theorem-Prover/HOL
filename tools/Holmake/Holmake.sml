@@ -159,18 +159,10 @@ fun string_part (UO c)  = string_part0 c
   | string_part (SIG c) = string_part0 c
   | string_part (Unhandled s) = s
 
-fun isProperSuffix s1 s2 = let
-  val sz1 = size s1
-  val sz2 = size s2
-  open Substring
-in
-  if sz1 >= sz2 then NONE
-  else let
-    val (prefix, suffix) = splitAt(full s2, sz2 - sz1)
-  in
-    if string suffix = s1 then SOME (string prefix) else NONE
-  end
-end
+fun isProperSuffix s1 s2 =
+    if size s1 < size s2 andalso String.isSuffix s1 s2 then
+      SOME (String.substring(s2,0,size s2 - size s1))
+    else NONE
 
 fun toCodeType s = let
   val possprefix = isProperSuffix "Theory" s
