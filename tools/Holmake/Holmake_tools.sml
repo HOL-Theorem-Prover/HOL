@@ -7,6 +7,15 @@ open Systeml
 structure Path = OS.Path
 structure FileSys = OS.FileSys
 
+fun normPath s = OS.Path.toString(OS.Path.fromString s)
+fun itlist f L base =
+   let fun it [] = base | it (a::rst) = f a (it rst) in it L end;
+fun itstrings f [] = raise Fail "itstrings: empty list"
+  | itstrings f [x] = x
+  | itstrings f (h::t) = f h (itstrings f t);
+fun fullPath slist = normPath
+   (itstrings (fn chunk => fn path => OS.Path.concat (chunk,path)) slist);
+
 type output_functions = {warn : string -> unit, info : string -> unit,
                          tgtfatal : string -> unit,
                          diag : string -> unit}
@@ -164,8 +173,6 @@ fun fromFile f =
 
 fun file_compare (f1, f2) = String.compare (fromFile f1, fromFile f2)
 
-(*** Construct primary dependencies *)
-(* Next, construct the primary dependency chain, for a given target *)
 fun primary_dependent f =
     case f of
       UO c => SOME (SML c)
@@ -174,5 +181,44 @@ fun primary_dependent f =
     | SIG (Theory s) => SOME (SML (Script s))
     | _ => NONE
 
+fun read_files ds P action =
+    case OS.FileSys.readDir ds of
+      NONE => OS.FileSys.closeDir ds
+    | SOME nextfile =>
+      (if P nextfile then action nextfile else ();
+       read_files ds P action)
+
+
+fun clean_dir {extra_cleans} = let
+  val cdstream = OS.FileSys.openDir "."
+  fun to_delete f =
+      case (toFile f) of
+        UO _ => true
+      | UI _ => true
+      | SIG (Theory _) => true
+      | SML (Theory _) => true
+      | _ => false
+  fun quiet_remove s = OS.FileSys.remove s handle e => ()
+in
+  read_files cdstream to_delete quiet_remove;
+  app quiet_remove extra_cleans
+end
+
+exception DirNotFound
+fun clean_depdir {depdirname} = let
+  val depds = OS.FileSys.openDir DEPDIR handle
+      OS.SysErr _ => raise DirNotFound
+in
+  read_files depds
+             (fn _ => true)
+             (fn s => OS.FileSys.remove (fullPath [DEPDIR, s]));
+  OS.FileSys.rmDir DEPDIR;
+  true
+end handle OS.SysErr (mesg, _) => let
+           in
+             print ("make cleanDeps failed with message: "^mesg^"\n");
+             false
+           end
+         | DirNotFound => true
 
 end (* struct *)

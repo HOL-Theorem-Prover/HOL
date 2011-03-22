@@ -37,16 +37,6 @@ val DEFAULT_OVERLAY = "Overlay.ui";
 
 val SYSTEML = Systeml.systeml
 
-fun normPath s = Path.toString(Path.fromString s)
-fun itlist f L base =
-   let fun it [] = base | it (a::rst) = f a (it rst) in it L end;
-fun itstrings f [] = raise Fail "itstrings: empty list"
-  | itstrings f [x] = x
-  | itstrings f (h::t) = f h (itstrings f t);
-fun fullPath slist = normPath
-   (itstrings (fn chunk => fn path => Path.concat (chunk,path)) slist);
-
-
 val spacify = String.concatWith " "
 
 fun nspaces f n = if n <= 0 then () else (f " "; nspaces f (n - 1))
@@ -1117,47 +1107,11 @@ end handle CircularDependency => cache_insert (target, false)
          | x => raise Fail ("Got an "^exnName x^" exception, with message <"^
                             exnMessage x^"> in make_up_to_date")
 
-exception DirNotFound
-
 (** Dealing with the command-line *)
 fun do_target x = let
-  fun read_files ds P action =
-     case FileSys.readDir ds
-      of NONE => FileSys.closeDir ds
-       | SOME nextfile =>
-           (if P nextfile then action nextfile else ();
-            read_files ds P action)
-
-  fun clean_action () = let
-    val cdstream = FileSys.openDir "."
-    fun to_delete f =
-      case (toFile f) of
-        UO _ => true
-      | UI _ => true
-      | SIG (Theory _) => true
-      | SML (Theory _) => true
-      | _ => false
-    fun quiet_remove s = FileSys.remove s handle e => ()
-  in
-    read_files cdstream to_delete quiet_remove;
-    app quiet_remove extra_cleans;
-    true
-  end
-  fun clean_deps() = let
-    val depds = FileSys.openDir DEPDIR handle
-      OS.SysErr _ => raise DirNotFound
-  in
-    read_files depds
-               (fn _ => true)
-               (fn s => FileSys.remove (fullPath [DEPDIR, s]));
-    FileSys.rmDir DEPDIR;
-    true
-  end handle OS.SysErr (mesg, _) => let
-             in
-                print ("make cleanDeps failed with message: "^mesg^"\n");
-                false
-             end
-           | DirNotFound => true
+  fun clean_action () =
+      (Holmake_tools.clean_dir {extra_cleans = extra_cleans}; true)
+  fun clean_deps() = Holmake_tools.clean_depdir {depdirname = DEPDIR}
   val _ = done_some_work := false
 in
   if not (member x dontmakes) then
