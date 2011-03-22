@@ -39,6 +39,15 @@ sig
   val int_ptree_of_list : (int * term) list -> term_ptree
   val ptree_of_ints     : int list -> term_ptree
 
+  val string_peek          : term_ptree -> string -> term option
+  val string_add           : term_ptree -> (string * term) -> term_ptree
+  val string_add_list      : term_ptree -> (string * term) list -> term_ptree
+  val string_remove        : term_ptree -> string -> term_ptree
+  val string_in_ptree      : string * term_ptree -> bool
+  val string_insert_ptree  : string * term_ptree -> term_ptree
+  val string_ptree_of_list : (string * term) list -> term_ptree
+  val ptree_of_strings     : string list -> term_ptree
+
   val custom_pp_term_ptree
                     : (ppstream -> bool -> unit) ->
                       (ppstream -> num * term -> unit) -> int ->
