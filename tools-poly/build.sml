@@ -460,22 +460,6 @@ end
        Get rid of compiled code and dependency information.
  ---------------------------------------------------------------------------*)
 
-local val lenScript = String.size "Script"
-      val lenTheory_ext = String.size "Theory.sig"
-in
-fun suffixCheck s =
- let val len = String.size s
- in (("Script" = String.extract(s,len-lenScript,NONE)) orelse raise Subscript)
-    handle Subscript
-    =>  let val suffix = String.extract(s,len - lenTheory_ext, NONE)
-        in (len > 10
-            andalso ((suffix = "Theory.sig") orelse (suffix = "Theory.sml")))
-           orelse raise Subscript
-         end
-        handle Subscript => false
-  end
-end;
-
 fun cleandir dir = ignore (buildutils.clean HOLDIR dir)
 fun cleanAlldir dir = ignore (buildutils.cleanAll HOLDIR dir)
 
