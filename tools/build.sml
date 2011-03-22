@@ -403,26 +403,19 @@ fun suffixCheck s =
   end
 end;
 
-infix called_in
-fun (cmd called_in dir) = let
-  val dir0 = FileSys.getDir()
-  val _ = FileSys.chDir dir
-in
-  SYSTEML cmd before FileSys.chDir dir0
-end
-
-fun cleandir dir = ignore ([HOLMAKE, "clean"] called_in dir)
-fun cleanAlldir dir = ignore ([HOLMAKE, "cleanAll"] called_in dir)
+fun cleandir dir = ignore (buildutils.clean HOLDIR dir)
+fun cleanAlldir dir = ignore (buildutils.cleanAll HOLDIR dir)
 
 fun clean_dirs f =
     clean_sigobj() before
     (* clean both kernel directories, regardless of which was actually built,
        the help src directory too, and all the src directories, including
        those with ! annotations  *)
-    List.app f (fullPath [HOLDIR, "help", "src-sml"] ::
-                fullPath [HOLDIR, "src", "0"] ::
-                fullPath [HOLDIR, "src", "experimental-kernel"] ::
-                map #1 SRCDIRS);
+    buildutils.clean_dirs {HOLDIR=HOLDIR, action = f}
+                          (fullPath [HOLDIR, "help", "src-sml"] ::
+                           fullPath [HOLDIR, "src", "0"] ::
+                           fullPath [HOLDIR, "src", "experimental-kernel"] ::
+                           map #1 SRCDIRS)
 
 fun check_against s = let
   open Time
@@ -460,10 +453,10 @@ val _ =
     | ["-dir",path,
        "-symlink"]  => buildDir (symlink_check()) (path, 0)
     | ["-nosymlink"]=> build_hol cp
-    | ["-clean"]    => clean_dirs cleandir
-    | ["-cleanAll"] => clean_dirs cleanAlldir
-    | ["clean"]     => clean_dirs cleandir
-    | ["cleanAll"]  => clean_dirs cleanAlldir
+    | ["-clean"]    => clean_dirs buildutils.clean
+    | ["-cleanAll"] => clean_dirs buildutils.cleanAll
+    | ["clean"]     => clean_dirs buildutils.clean
+    | ["cleanAll"]  => clean_dirs buildutils.cleanAll
     | ["symlink"]   => build_hol (symlink_check())
     | ["nosymlink"] => build_hol cp
     | ["small"]     => build_hol mv

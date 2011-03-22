@@ -343,6 +343,70 @@ end
 
 fun mv b = if b then mv0 else cp b
 
+fun moveTo dir action = let
+  val here = OS.FileSys.getDir()
+  val b = (OS.FileSys.chDir dir; true) handle _ => false
+  fun normalise s = OS.Path.mkAbsolute {path = s, relativeTo = dir}
+in
+  if b then (map normalise (action ()) before OS.FileSys.chDir here)
+            handle e => (OS.FileSys.chDir here; raise e)
+  else []
+end
 
+fun hmakefile_data HOLDIR =
+    if OS.FileSys.access ("Holmakefile", [OS.FileSys.A_READ]) then let
+        open Holmake_types
+        fun base_env s =
+            case s of
+              "HOLDIR" => [LIT HOLDIR]
+            | "SIGOBJ" => [VREF "HOLDIR", LIT "/sigobj"]
+            | _ => (case OS.Process.getEnv s of
+                      NONE => [LIT ""]
+                    | SOME v => [LIT v])
+        val toks = ReadHMF.read "Holmakefile"
+        val env = extend_env toks base_env
+        fun envlist id =
+            map dequote (tokenize (perform_substitution env [VREF id]))
+      in
+        {includes = envlist "PRE_INCLUDES" @ envlist "INCLUDES",
+         extra_cleans = envlist "EXTRA_CLEANS"}
+      end
+    else {includes = [], extra_cleans = []}
+
+fun clean0 HOLDIR = let
+  val {includes,extra_cleans} = hmakefile_data HOLDIR
+in
+  Holmake_tools.clean_dir {extra_cleans = extra_cleans} ;
+  includes
+end
+
+fun cleanAll0 HOLDIR = let
+  val {includes,extra_cleans} = hmakefile_data HOLDIR
+in
+  Holmake_tools.clean_dir {extra_cleans = extra_cleans};
+  Holmake_tools.clean_depdir {depdirname = ".HOLMK"};
+  includes
+end
+
+fun clean HOLDIR dirname = moveTo dirname (fn () => clean0 HOLDIR)
+fun cleanAll HOLDIR dirname = moveTo dirname (fn () => cleanAll0 HOLDIR)
+
+fun clean_dirs {HOLDIR,action} dirs = let
+  val seen = Binaryset.empty String.compare
+  fun recurse sofar todo =
+      case todo of
+        [] => ()
+      | d::ds => let
+        in
+          if Binaryset.member(sofar, d) then recurse sofar ds
+          else let
+              val newincludes = action HOLDIR d
+            in
+              recurse (Binaryset.add(sofar,d)) (newincludes @ ds)
+            end
+        end
+in
+  recurse seen dirs
+end
 
 end (* struct *)
