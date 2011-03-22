@@ -106,124 +106,6 @@ fun variant str =  (* get an unused file name in the current directory *)
  else str;
 
 
-(*
-   Rather than continually have to deal with strings corresponding to
-   file-names and mess with nasty suffixes and the like, we define a
-   structured datatype into which file-names can be translated once
-   and for all.
-*)
-
-(** Definition of structured file type *)
-
-datatype CodeType
-    = Theory of string
-    | Script of string
-    | Other of string
-
-datatype File
-    = SML of CodeType
-    | SIG of CodeType
-    | UO of CodeType
-    | UI of CodeType
-    | Unhandled of string
-
-fun compareCodeType (Theory s1, Theory s2) = String.compare (s1, s2)
-  | compareCodeType (Theory _, _) = LESS
-
-  | compareCodeType (Script _, Theory _) = GREATER
-  | compareCodeType (Script s1, Script s2) = String.compare (s1, s2)
-  | compareCodeType (Script _, _) = LESS
-
-  | compareCodeType (Other s1, Other s2) = String.compare (s1, s2)
-  | compareCodeType (Other s1, _) = GREATER
-
-
-
-fun compareFile (SML ct1, SML ct2) = compareCodeType (ct1, ct2)
-  | compareFile (SML _, _) = LESS
-
-  | compareFile (SIG _, SML _) = GREATER
-  | compareFile (SIG ct1, SIG ct2) = compareCodeType (ct1, ct2)
-  | compareFile (SIG _, _) = LESS
-
-  | compareFile (UO _, SML _) = GREATER
-  | compareFile (UO _, SIG _) = GREATER
-  | compareFile (UO ct1, UO ct2) = compareCodeType (ct1, ct2)
-  | compareFile (UO _, _) = LESS
-
-  | compareFile (UI _, Unhandled _) = LESS
-  | compareFile (UI ct1, UI ct2) = compareCodeType (ct1, ct2)
-  | compareFile (UI _, _) = GREATER
-
-  | compareFile (Unhandled s1, Unhandled s2) = String.compare (s1, s2)
-  | compareFile (Unhandled _, _) = GREATER
-
-fun string_part0 (Theory s) = s
-  | string_part0 (Script s) = s
-  | string_part0 (Other s) = s
-fun string_part (UO c)  = string_part0 c
-  | string_part (UI c)  = string_part0 c
-  | string_part (SML c) = string_part0 c
-  | string_part (SIG c) = string_part0 c
-  | string_part (Unhandled s) = s
-
-fun isProperSuffix s1 s2 = let
-  val sz1 = size s1
-  val sz2 = size s2
-  open Substring
-in
-  if sz1 >= sz2 then NONE
-  else let
-    val (prefix, suffix) = splitAt(full s2, sz2 - sz1)
-  in
-    if string suffix = s1 then SOME (string prefix) else NONE
-  end
-end
-
-fun split_file s = let
-  open Substring
-  val (base, ext) = splitr (fn c => c <> #".") (full s)
-in
-  if (size base <> 0) then
-    (string (slice(base, 0, SOME (size base - 1))), string ext)
-  else
-    (s, "")
-end
-
-fun toCodeType s = let
-  val possprefix = isProperSuffix "Theory" s
-in
-  if (isSome possprefix) then Theory (valOf possprefix)
-  else let
-    val possprefix = isProperSuffix "Script" s
-  in
-    if isSome possprefix then Script (valOf possprefix)
-    else Other s
-  end
-end
-
-fun toFile s0 =
-  case split_file s0 of
-    (s, "sml") => SML (toCodeType s)
-  | (s, "sig") => SIG (toCodeType s)
-  | (s, "uo")  => UO (toCodeType s)
-  | (s, "ui")  => UI (toCodeType s)
-  |    _       => Unhandled s0
-
-fun codeToString c =
-  case c of
-    Theory s => s ^ "Theory"
-  | Script s => s ^ "Script"
-  | Other s  => s
-
-fun fromFile f =
-  case f of
-    UO c  => codeToString c ^ ".uo"
-  | UI c  => codeToString c ^ ".ui"
-  | SIG c => codeToString c ^ ".sig"
-  | SML c => codeToString c ^ ".sml"
-  | Unhandled s => s
-
 fun fromFileNoSuf f =
   case f of
     UO c  => codeToString c
@@ -232,8 +114,6 @@ fun fromFileNoSuf f =
   | SML c => codeToString c
   | Unhandled s => s
 
-
-fun file_compare (f1, f2) = String.compare (fromFile f1, fromFile f2)
 
 (*** Construct primary dependencies *)
 (* Next, construct the primary dependency chain, for a given target *)
@@ -1218,7 +1098,7 @@ fun no_full_extra_rule tgt =
 
 val done_some_work = ref false
 val up_to_date_cache:(File, bool)Binarymap.dict ref =
-  ref (Binarymap.mkDict compareFile);
+  ref (Binarymap.mkDict file_compare);
 fun cache_insert(f, b) =
   ((up_to_date_cache := Binarymap.insert (!up_to_date_cache, f, b));
    b)
