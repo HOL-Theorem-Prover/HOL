@@ -3550,7 +3550,7 @@ Q.SPEC_THEN `n` STRIP_ASSUME_TAC num_CASES THEN1
 METIS_TAC [LESS_ANTISYM,LESS_0])
 
 (* Absolute difference *)
-val ABS_DIFF_def = new_definition ("ABS_DIFF",
+val ABS_DIFF_def = new_definition ("ABS_DIFF_def",
 ``ABS_DIFF n m = if n < m then m - n else n - m``)
 
 val ABS_DIFF_SYM = Q.store_thm(
