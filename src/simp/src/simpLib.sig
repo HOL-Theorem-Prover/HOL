@@ -51,6 +51,12 @@ sig
                        pats: term list,
                        conv: conv}
 
+  type relsimpdata = {refl: thm,
+                      trans:thm,
+                      weakenings:thm list,
+                      subsets : thm list,
+                      rewrs : thm list}
+
   type controlled_thm = BoundedRewrites.controlled_thm
 
   type ssfrag
@@ -77,6 +83,7 @@ sig
   val dproc_ss       : Traverse.reducer -> ssfrag
   val ac_ss          : (thm * thm) list -> ssfrag
   val conv_ss        : convdata -> ssfrag
+  val relsimp_ss     : relsimpdata -> ssfrag
   val std_conv_ss    : stdconvdata -> ssfrag
   val merge_ss       : ssfrag list -> ssfrag
   val name_ss        : string -> ssfrag -> ssfrag
@@ -114,9 +121,7 @@ sig
   val add_weakener : (Travrules.preorder list * thm list * Traverse.reducer) ->
                      simpset -> simpset
 
-  val add_relsimp  : {trans: thm, refl: thm, weakenings: thm list,
-                      subsets: thm list, rewrs : thm list} ->
-                      simpset -> simpset
+  val add_relsimp  : relsimpdata -> simpset -> simpset
 
   val traversedata_for_ss: simpset -> Traverse.traverse_data
 
