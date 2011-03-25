@@ -11,6 +11,7 @@ sig
      val ARITH_RWTS_ss      : simpLib.ssfrag
      val ARITH_AC_ss        : simpLib.ssfrag
      val ARITH_NORM_ss      : simpLib.ssfrag
+     val MOD_ss             : simpLib.ssfrag
 
      val CTXT_ARITH         : ctxt -> conv
      val CACHED_ARITH       : ctxt -> conv
@@ -51,6 +52,9 @@ end
    [SUC_FILTER_ss] is a "simpset fragment" that causes the simpset it
    is merged into to subsequently modify input rewrite theorems so
    that patterns over SUC match more readily.
+
+   [MOD_ss] is a "simpset fragment" that helps in the simplification
+   of terms involving MOD.
 
    [is_arith t] is true if t is a term which ARITH_CONV might be able to
    prove true.

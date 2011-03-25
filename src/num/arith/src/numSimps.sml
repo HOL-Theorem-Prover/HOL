@@ -620,6 +620,20 @@ in
        filter = SOME numfilter, ac = [], dprocs = []}
 end;
 
+val MOD_ss = let
+  open arithmeticTheory simpLib
+  val rsd = {refl = MODEQ_REFL, trans = MODEQ_TRANS,
+             weakenings = [MODEQ_INTRO_CONG],
+             subsets = [],
+             rewrs = [MODEQ_NUMERAL, MODEQ_MOD, MODEQ_0]}
+  val RSD_ss = relsimp_ss rsd
+  val congs = SSFRAG {dprocs = [], ac = [], rewrs = [],
+                      congs = [MODEQ_PLUS_CONG, MODEQ_MULT_CONG],
+                      filter = NONE, convs = [], name = NONE}
+in
+  merge_ss [RSD_ss, congs] |> name_ss "MOD_ss"
+end
+
 (* ----------------------------------------------------------------------
     ARITH_NORM_ss
 

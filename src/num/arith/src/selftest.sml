@@ -73,6 +73,25 @@ in
   else die "FAILED!\n"
 end
 
+val ss = boolSimps.bool_ss ++ numSimps.REDUCE_ss ++ numSimps.MOD_ss ++
+         numSimps.ARITH_RWTS_ss
+val _ = pr "Testing MOD_ss with constant denominator ..."
+val _ = let
+  val t = ``(6 * x + 7 + 10 * y) MOD 6``
+  val result = SIMP_CONV ss [] t
+in
+  if aconv (rhs (concl result)) ``(1 + 4 * y) MOD 6`` then print "OK\n"
+  else die "FAILED!\n"
+end handle _ => die "FAILED!\n"
+
+val _ = pr "Testing MOD_ss with variable denominator ..."
+val _ = let
+  val t = ``(4 + 3 * n + 1) MOD n``
+  val result = SIMP_CONV ss [ASSUME ``0 < n``] t
+in
+  if aconv (rhs (concl result)) ``5 MOD n`` then print "OK\n"
+  else die "FAILED!\n"
+end handle _ => die "FAILED!\n"
 
 
 val _ = Process.exit Process.success
