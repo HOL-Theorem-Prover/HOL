@@ -70,22 +70,28 @@ val user_rewrites = ref (SSFRAG {dprocs = [], ac = [], rewrs = [],
 fun add_rwts ths =
     user_rewrites := simpLib.merge_ss [!user_rewrites, simpLib.rewrites ths]
 
-fun betafy ss = let
-  open chap2Theory head_reductionTheory
-in
-  simpLib.add_relsimp {refl = GEN_ALL lameq_refl, trans = lameq_trans,
-                       weakenings = [lameq_weaken_cong, lameq_has_bnf_cong,
-                                     lameq_bnf_of_cong],
-                       subsets = [ccbeta_lameq, betastar_lameq, whstar_lameq,
-                                  normorder_lameq, nstar_lameq],
-                       rewrs = [lameq_S, lameq_K, lameq_I, lameq_C,
-                                lameq_B, lameq_beta]} ss ++
-  rewrites [termTheory.lemma14b, normal_orderTheory.nstar_betastar_bnf,
-            betastar_lameq_bnf, lameq_refl] ++
-  !user_rewrites ++
+open chap2Theory head_reductionTheory
+val BETA_rsd = {refl = GEN_ALL lameq_refl, trans = lameq_trans,
+                weakenings = [lameq_weaken_cong, lameq_has_bnf_cong,
+                              lameq_bnf_of_cong],
+                subsets = [ccbeta_lameq, betastar_lameq, whstar_lameq,
+                           normorder_lameq, nstar_lameq],
+                rewrs = [lameq_S, lameq_K, lameq_I, lameq_C,
+                         lameq_B, lameq_beta]}
+
+val BETA_CONG_ss =
   SSFRAG {dprocs = [], ac = [], rewrs = [], congs = congs, filter = NONE,
           name = NONE, convs = []}
-end
+val BETA_RWTS_ss = rewrites [termTheory.lemma14b,
+                             normal_orderTheory.nstar_betastar_bnf,
+                             betastar_lameq_bnf, lameq_refl]
+
+val BETA_ss =
+  simpLib.merge_ss [relsimp_ss BETA_rsd, BETA_CONG_ss, BETA_RWTS_ss]
+
+fun betafy ss =
+  simpLib.add_relsimp BETA_rsd ss ++ BETA_RWTS_ss ++
+  !user_rewrites ++ BETA_CONG_ss
 fun bsrw_ss() = betafy(srw_ss())
 
 val {export = export_betarwt,...} = ThmSetData.new_exporter "betasimp" add_rwts
