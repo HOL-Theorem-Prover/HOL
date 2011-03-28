@@ -13,11 +13,11 @@ Parse
 
 \DESCRIBE
 A call to {type_abbrev(s,ty)} sets up a type abbreviation that will
-cause the parser to treat the string {s} to be treated as a synonym
-for the type {ty}.  Moreover, if {ty} includes any type variables,
-then the abbreviation is treated as a type operator taking as many
-parameters as appear in {ty}.  The order of the parameters will be the
-alphabetic ordering of the type variables' names.
+cause the parser to treat the string {s} as a synonym for the type
+{ty}. Moreover, if {ty} includes any type variables, then the
+abbreviation is treated as a type operator taking as many parameters
+as appear in {ty}.  The order of the parameters will be the alphabetic
+ordering of the type variables' names.
 
 Abbreviations work at the level of the names of type operators.  It is
 thus possible to link a binary infix to an operator that is in turn an
@@ -35,7 +35,6 @@ This is a simple abbreviation.
    - ``:num set``;
    > val it = ``:num set`` : hol_type
 }
-
 Here, the abbreviation is set up and provided with its own infix
 symbol.
 {
