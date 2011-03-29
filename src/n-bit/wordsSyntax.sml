@@ -70,6 +70,11 @@ val word_lsr_tm         = mk_word_tm "word_lsr"
 val word_asr_tm         = mk_word_tm "word_asr"
 val word_ror_tm         = mk_word_tm "word_ror"
 val word_rol_tm         = mk_word_tm "word_rol"
+val word_lsl_bv_tm      = mk_word_tm "word_lsl_bv"
+val word_lsr_bv_tm      = mk_word_tm "word_lsr_bv"
+val word_asr_bv_tm      = mk_word_tm "word_asr_bv"
+val word_ror_bv_tm      = mk_word_tm "word_ror_bv"
+val word_rol_bv_tm      = mk_word_tm "word_rol_bv"
 val word_hi_tm          = mk_word_tm "word_hi"
 val word_lo_tm          = mk_word_tm "word_lo"
 val word_hs_tm          = mk_word_tm "word_hs"
@@ -258,6 +263,26 @@ fun mk_word_ror(w,n) =
 fun mk_word_rol(w,n) =
   list_mk_comb(inst[alpha|->dim_of w]word_rol_tm,[w,n])
   handle HOL_ERR _ => raise ERR "mk_word_rol" "";
+
+fun mk_word_lsl_bv(w,n) =
+  list_mk_comb(inst[alpha|->dim_of w]word_lsl_bv_tm,[w,n])
+  handle HOL_ERR _ => raise ERR "mk_word_lsl_bv" "";
+
+fun mk_word_lsr_bv(w,n) =
+  list_mk_comb(inst[alpha|->dim_of w]word_lsr_bv_tm,[w,n])
+  handle HOL_ERR _ => raise ERR "mk_word_lsr_bv" "";
+
+fun mk_word_asr_bv(w,n) =
+  list_mk_comb(inst[alpha|->dim_of w]word_asr_bv_tm,[w,n])
+  handle HOL_ERR _ => raise ERR "mk_word_asr_bv" "";
+
+fun mk_word_ror_bv(w,n) =
+  list_mk_comb(inst[alpha|->dim_of w]word_ror_bv_tm,[w,n])
+  handle HOL_ERR _ => raise ERR "mk_word_ror_bv" "";
+
+fun mk_word_rol_bv(w,n) =
+  list_mk_comb(inst[alpha|->dim_of w]word_rol_bv_tm,[w,n])
+  handle HOL_ERR _ => raise ERR "mk_word_rol_bv" "";
 
 fun mk_word_hi(w1,w2) =
   list_mk_comb(inst[alpha |-> dim_of w1]word_hi_tm,[w1,w2])
@@ -503,6 +528,21 @@ val dest_word_ror =
 val dest_word_rol =
   dest_binop word_rol_tm (ERR "dest_word_rol" "");
 
+val dest_word_lsl_bv =
+  dest_binop word_lsl_bv_tm (ERR "dest_word_lsl_bv" "");
+
+val dest_word_lsr_bv =
+  dest_binop word_lsr_bv_tm (ERR "dest_word_lsr_bv" "");
+
+val dest_word_asr_bv =
+  dest_binop word_asr_bv_tm (ERR "dest_word_asr_bv" "");
+
+val dest_word_ror_bv =
+  dest_binop word_ror_bv_tm (ERR "dest_word_ror_bv" "");
+
+val dest_word_rol_bv =
+  dest_binop word_rol_bv_tm (ERR "dest_word_rol_bv" "");
+
 val dest_word_hi =
   dest_binop word_hi_tm (ERR "dest_word_hi" "");
 
@@ -627,14 +667,19 @@ val is_word_lsr = Lib.can dest_word_lsr
 val is_word_asr = Lib.can dest_word_asr
 val is_word_ror = Lib.can dest_word_ror
 val is_word_rol = Lib.can dest_word_rol
-val is_word_hi =Lib.can dest_word_hi
-val is_word_lo =Lib.can dest_word_lo
-val is_word_hs =Lib.can dest_word_hs
-val is_word_ls =Lib.can dest_word_ls
-val is_word_and =Lib.can dest_word_and
+val is_word_lsl_bv = Lib.can dest_word_lsl_bv
+val is_word_lsr_bv = Lib.can dest_word_lsr_bv
+val is_word_asr_bv = Lib.can dest_word_asr_bv
+val is_word_ror_bv = Lib.can dest_word_ror_bv
+val is_word_rol_bv = Lib.can dest_word_rol_bv
+val is_word_hi = Lib.can dest_word_hi
+val is_word_lo = Lib.can dest_word_lo
+val is_word_hs = Lib.can dest_word_hs
+val is_word_ls = Lib.can dest_word_ls
+val is_word_and = Lib.can dest_word_and
 val is_word_or = Lib.can dest_word_or
 val is_word_xor = Lib.can dest_word_xor
-val is_word_nand =Lib.can dest_word_nand
+val is_word_nand = Lib.can dest_word_nand
 val is_word_nor = Lib.can dest_word_nor
 val is_word_xnor = Lib.can dest_word_xnor
 val is_word_1comp = Lib.can dest_word_1comp

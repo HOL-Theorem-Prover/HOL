@@ -53,6 +53,11 @@ sig
   val word_asr_tm         : term
   val word_ror_tm         : term
   val word_rol_tm         : term
+  val word_lsl_bv_tm      : term
+  val word_lsr_bv_tm      : term
+  val word_asr_bv_tm      : term
+  val word_ror_bv_tm      : term
+  val word_rol_bv_tm      : term
   val word_hi_tm          : term
   val word_lo_tm          : term
   val word_hs_tm          : term
@@ -118,6 +123,11 @@ sig
   val mk_word_asr         : term * term -> term
   val mk_word_ror         : term * term -> term
   val mk_word_rol         : term * term -> term
+  val mk_word_lsl_bv      : term * term -> term
+  val mk_word_lsr_bv      : term * term -> term
+  val mk_word_asr_bv      : term * term -> term
+  val mk_word_ror_bv      : term * term -> term
+  val mk_word_rol_bv      : term * term -> term
   val mk_word_hi          : term * term -> term
   val mk_word_lo          : term * term -> term
   val mk_word_hs          : term * term -> term
@@ -183,6 +193,11 @@ sig
   val dest_word_asr         : term -> term * term
   val dest_word_ror         : term -> term * term
   val dest_word_rol         : term -> term * term
+  val dest_word_lsl_bv      : term -> term * term
+  val dest_word_lsr_bv      : term -> term * term
+  val dest_word_asr_bv      : term -> term * term
+  val dest_word_ror_bv      : term -> term * term
+  val dest_word_rol_bv      : term -> term * term
   val dest_word_hi          : term -> term * term
   val dest_word_lo          : term -> term * term
   val dest_word_hs          : term -> term * term
@@ -247,6 +262,11 @@ sig
   val is_word_asr         : term -> bool
   val is_word_ror         : term -> bool
   val is_word_rol         : term -> bool
+  val is_word_lsl_bv      : term -> bool
+  val is_word_lsr_bv      : term -> bool
+  val is_word_asr_bv      : term -> bool
+  val is_word_ror_bv      : term -> bool
+  val is_word_rol_bv      : term -> bool
   val is_word_hi          : term -> bool
   val is_word_lo          : term -> bool
   val is_word_hs          : term -> bool

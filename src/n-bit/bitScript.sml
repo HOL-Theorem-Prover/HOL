@@ -1160,6 +1160,9 @@ val MOD_PLUS_RIGHT = store_thm("MOD_PLUS_RIGHT",
    ASM_REWRITE_TAC [SYM(SPEC_ALL ADD_ASSOC)]
    end);
 
+val MOD_PLUS_LEFT = save_thm("MOD_PLUS_LEFT",
+  ONCE_REWRITE_RULE [ADD_COMM] MOD_PLUS_RIGHT);
+
 val MOD_LESS = prove(
   `!n a. 0 < n ==> a MOD n < n`, PROVE_TAC [DIVISION]);
 

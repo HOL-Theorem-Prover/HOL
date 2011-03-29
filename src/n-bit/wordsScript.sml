@@ -441,17 +441,42 @@ val word_rrx_def = zDefine`
     (word_lsb w,
      (FCP i. if i = ^HB then c else (word_lsr w 1) ' i):'a word)`;
 
+val word_lsl_bv_def = Define`
+  word_lsl_bv (w:'a word) (n:'a word) = word_lsl w (w2n n)`;
+
+val word_lsr_bv_def = Define`
+  word_lsr_bv (w:'a word) (n:'a word) = word_lsr w (w2n n)`;
+
+val word_asr_bv_def = Define`
+  word_asr_bv (w:'a word) (n:'a word) = word_asr w (w2n n)`;
+
+val word_ror_bv_def = Define`
+  word_ror_bv (w:'a word) (n:'a word) = word_ror w (w2n n)`;
+
+val word_rol_bv_def = Define`
+  word_rol_bv (w:'a word) (n:'a word) = word_rol w (w2n n)`;
+
 val _ = add_infix("<<", 680,HOLgrammars.LEFT)
 val _ = add_infix(">>", 680,HOLgrammars.LEFT)
 val _ = add_infix(">>>",680,HOLgrammars.LEFT)
 val _ = add_infix("#>>",680,HOLgrammars.LEFT)
 val _ = add_infix("#<<",680,HOLgrammars.LEFT)
+val _ = add_infix("<<~", 680,HOLgrammars.LEFT)
+val _ = add_infix(">>~", 680,HOLgrammars.LEFT)
+val _ = add_infix(">>>~",680,HOLgrammars.LEFT)
+val _ = add_infix("#>>~",680,HOLgrammars.LEFT)
+val _ = add_infix("#<<~",680,HOLgrammars.LEFT)
 
 val _ = overload_on ("<<", ``words$word_lsl``)
 val _ = overload_on (">>", ``words$word_asr``)
 val _ = overload_on (">>>",``words$word_lsr``)
 val _ = overload_on ("#>>",``words$word_ror``)
 val _ = overload_on ("#<<",``words$word_rol``)
+val _ = overload_on ("<<~", ``words$word_lsl_bv``)
+val _ = overload_on (">>~", ``words$word_asr_bv``)
+val _ = overload_on (">>>~",``words$word_lsr_bv``)
+val _ = overload_on ("#>>~",``words$word_ror_bv``)
+val _ = overload_on ("#<<~",``words$word_rol_bv``)
 
 val _ = Unicode.unicode_version{u=Unicode.UChar.lsl, tmnm="<<"}
 val _ = Unicode.unicode_version{u=Unicode.UChar.asr, tmnm=">>"}
@@ -520,6 +545,7 @@ val dimword_IS_TWICE_INT_MIN = store_thm(
 
 val DIMINDEX_GT_0 = save_thm("DIMINDEX_GT_0",
   PROVE [DECIDE ``!s. 1 <= s ==> 0 < s``,DIMINDEX_GE_1] ``0 < dimindex(:'a)``);
+val _ = export_rewrites ["DIMINDEX_GT_0"];
 
 val ONE_LT_dimword = store_thm(
   "ONE_LT_dimword",
@@ -574,6 +600,10 @@ val ZERO_LT_INT_MIN = Q.store_thm("ZERO_LT_INT_MIN",
 val INT_MIN_LT_DIMWORD = Q.store_thm("INT_MIN_LT_DIMWORD",
   `INT_MIN (:'a) < dimword (:'a)`,
   SRW_TAC [] [INT_MIN_def, DIMINDEX_GT_0, dimword_def]);
+
+val dimindex_lt_dimword = Q.store_thm("dimindex_lt_dimword",
+  `dimindex(:'a) < dimword(:'a)`,
+  SRW_TAC [] [dimword_def, arithmeticTheory.X_LT_EXP_X]);
 
 (* ------------------------------------------------------------------------- *)
 (*  Domain transforming maps : theorems                                      *)
@@ -665,6 +695,11 @@ val _ = TypeBase.write [TypeBasePure.mk_nondatatype_info
      {nchotomy = SOME ranged_word_nchotomy, encode=NONE,
       size = SOME (``\(v1:bool->num) (v2:'a->num) (v3:'a word). w2n v3``,
                    CONJUNCT1 (SPEC_ALL AND_CLAUSES))})];
+
+val mod_dimindex = Q.store_thm("mod_dimindex",
+  `!n. n MOD dimindex (:'a) < dimword (:'a)`,
+  METIS_TAC [arithmeticTheory.LESS_TRANS, arithmeticTheory.MOD_LESS,
+             dimindex_lt_dimword, DIMINDEX_GT_0]);
 
 val WORD_INDUCT = store_thm("WORD_INDUCT",
  `!P. P 0w /\ (!n. SUC n < dimword(:'a) ==> P (n2w n) ==> P (n2w (SUC n))) ==>
@@ -875,14 +910,21 @@ val word_T = store_thm("word_T",
   SIMP_TAC fcp_ss [word_T_def,n2w_def,ONE_COMP_0_THM,DIMINDEX_GT_0,
                    UINT_MAX_def, dimword_def]);
 
+val FCP_T_F = Q.store_thm("FCP_T_F",
+  `($FCP (K T) = word_T) /\ ($FCP (K F) = 0w)`,
+  SRW_TAC [fcpLib.FCP_ss] [word_T, word_0]);
+val _ = export_rewrites ["FCP_T_F"];
+
 val word_L = store_thm("word_L",
-  `!n. n < dimindex(:'a) ==> ((INT_MINw:'a word) ' n = (n = dimindex(:'a) - 1))`,
+  `!n. n < dimindex(:'a) ==>
+       ((INT_MINw:'a word) ' n = (n = dimindex(:'a) - 1))`,
   SRW_TAC [fcpLib.FCP_ss] [word_L_def, n2w_def, INT_MIN_def]
     \\ Cases_on `n = dimindex (:'a) - 1`
     \\ SRW_TAC [] [BIT_B_NEQ, BIT_B]);
 
 val word_H = store_thm("word_H",
-  `!n. n < dimindex(:'a) ==> ((INT_MAXw:'a word) ' n = (n < dimindex(:'a) - 1))`,
+  `!n. n < dimindex(:'a) ==>
+       ((INT_MAXw:'a word) ' n = (n < dimindex(:'a) - 1))`,
   SRW_TAC [fcpLib.FCP_ss] [word_H_def, n2w_def, INT_MAX_def, INT_MIN_def]
     \\ Cases_on `n < dimindex (:'a) - 1`
     \\ SRW_TAC [] [BIT_B_NEQ, BIT_B, BIT_EXP_SUB1]);
@@ -2778,6 +2820,19 @@ val WORD_DIV_LSR = Q.store_thm("WORD_DIV_LSR",
   \\ `w2n m DIV 2 ** n < w2n m` by METIS_TAC [DIV_LESS]
   \\ METIS_TAC [LESS_TRANS, w2n_lt]);
 
+val WORD_MOD_1 = Q.store_thm("WORD_MOD_1",
+  `!m. word_mod m 1w = 0w`,
+  SRW_TAC [] [word_mod_def]);
+
+val WORD_MOD_POW2 = Q.store_thm("WORD_MOD_POW2",
+  `!m:'a word v.
+     v < dimindex(:'a) - 1 ==> (word_mod m (n2w (2 ** SUC v)) = (v -- 0) m)`,
+   Cases
+   \\ SRW_TAC [ARITH_ss]
+       [BITS_ZERO3, word_mod_def, word_bits_n2w, arithmeticTheory.MIN_DEF]
+   \\ `2 ** SUC v < dimword(:'a)` by SRW_TAC [ARITH_ss] [dimword_def]
+   \\ SRW_TAC [ARITH_ss] []);
+
 val SHIFT_1_SUB_1 = Q.store_thm("SHIFT_1_SUB_1",
   `!i n. i < dimindex (:'a) ==>
        (((1w : 'a word) << n - 1w) ' i = i < n)`,
@@ -3937,11 +3992,7 @@ val sw2sw_0 = save_thm("sw2sw_0",
 
 val sw2sw_word_T = store_thm("sw2sw_word_T",
   `sw2sw (- 1w) = - 1w`,
-  NTAC 3 (SRW_TAC [fcpLib.FCP_ss] [sw2sw, word_T, word_msb_def, WORD_NEG_1])
-    << [`i < dimindex (:'b)` by DECIDE_TAC,
-      `dimindex (:'b) - 1 < dimindex (:'b)`
-         by SIMP_TAC arith_ss [DIMINDEX_GT_0]]
-    \\ SRW_TAC [] [word_T]);
+  SRW_TAC [fcpLib.FCP_ss, ARITH_ss] [sw2sw, word_T, word_msb_def, WORD_NEG_1]);
 
 val word_div_1 = save_thm("word_div_1",
   GEN_ALL (SIMP_CONV std_ss [word_1_n2w, word_div_def, n2w_w2n] ``v // 1w``));
