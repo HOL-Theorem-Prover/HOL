@@ -2,6 +2,7 @@ open HolKernel Parse boolLib bossLib blastLib;
 
 val _ = set_trace "Unicode" 0
 val _ = set_trace "print blast counterexamples" 0
+val _ = set_trace "bit blast" 0
 
 val prs = StringCvt.padRight #" "
 fun trunc w t = let

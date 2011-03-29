@@ -18,9 +18,12 @@ val ERR = Feedback.mk_HOL_ERR "blastLib";
 
 val blast_trace = ref 0;
 val blast_counter = ref true;
+val blast_multiply_limit = ref 8;
 
 val _ = Feedback.register_trace ("bit blast", blast_trace, 3);
 val _ = Feedback.register_btrace ("print blast counterexamples", blast_counter);
+val _ = Feedback.register_trace
+          ("blast multiply limit", blast_multiply_limit, 32);
 
 val rhsc = boolSyntax.rhs o Thm.concl;
 
@@ -28,7 +31,7 @@ val dim_of_word = fcpLib.index_to_num o wordsSyntax.dim_of;
 
 (* ------------------------------------------------------------------------
    mk_index_thms : Generate rewrites of the form  ``($FCP f) ' i = f i``.
-   INDEX_CONV    : Evaluation for terms of the form  ``($FCP f)``.
+   INDEX_CONV    : Evaluation for terms of the form  ``($FCP f) ' i``.
    ------------------------------------------------------------------------ *)
 
 fun mk_leq_thm (i,j) =
@@ -48,6 +51,7 @@ local
                      |> Drule.SPEC_ALL
                      |> Thm.INST_TYPE [Type.alpha |-> Type.bool]
                      |> Q.GEN `i`
+
   fun mk_index_thms ty =
     let
       val n = fcpSyntax.dest_int_numeric_type ty
@@ -156,7 +160,7 @@ val BSUM_mp_not_carry =
 val rhs_rewrite =
   Conv.RIGHT_CONV_RULE
     (Rewrite.REWRITE_CONV
-       [satTheory.AND_INV, EQF_INTRO boolTheory.NOT_AND,
+       [satTheory.AND_INV, Drule.EQF_INTRO boolTheory.NOT_AND,
         DECIDE ``!b:bool. (b = ~b) = F``,
         DECIDE ``!b:bool. (~b = b) = F``])
 
@@ -166,8 +170,10 @@ val rhs_rewrite =
                   expression.
    -------------------------------------------------------------------- *)
 
-fun mk_summation conv (max, x, y, c) =
+fun mk_summation rwts (max, x, y, c) =
 let
+  val conv = INDEX_CONV THENC PURE_REWRITE_CONV rwts
+
   val INST_SUM = Thm.INST [``x:num -> bool`` |-> x,
                            ``y:num -> bool`` |-> y,
                            ``c:bool`` |-> c]
@@ -220,7 +226,7 @@ let
              (Thm.MP thm1 (Drule.LIST_CONJ [x_thm, y_thm, c_thm])) :: s,
            rhs_rewrite
              (Thm.MP thm2 (Drule.LIST_CONJ [i_thm, x_thm, y_thm, c_thm])))
-         end)
+        end)
     end
 in
   mk_sums Arbnum.zero
@@ -232,8 +238,10 @@ end;
               where "exp" is a propositional expression.
    -------------------------------------------------------------------- *)
 
-fun mk_carry conv (max, x, y, c) =
+fun mk_carry rwts (max, x, y, c) =
 let
+  val conv = INDEX_CONV THENC PURE_REWRITE_CONV rwts
+
   val INST_CARRY = Thm.INST [``x:num -> bool`` |-> x,
                            ``y:num -> bool`` |-> y,
                            ``c:bool`` |-> c]
@@ -303,6 +311,7 @@ local
                      | ("blast$BCARRY", [n, x, y, c]) =>
                           (true, (numLib.dest_numeral n, x, y, c))
                      | _ => raise ERR "dest_sum" ""
+
   val is_sum = Lib.can dest_sum
 
   fun pick_max [] m = m
@@ -334,19 +343,15 @@ in
       val (_, rwts, c_outs) =
             List.foldl
               (fn ((b,nxyc), (i, rwts, c_outs)) =>
-                 let
-                   val cnv = conv THENC PURE_REWRITE_CONV rwts
-                   val _ = if !blast_trace > 0 then
-                             TextIO.print
-                               ("Expanding term... " ^ Int.toString i ^ "\n")
-                           else
-                             ()
-                 in
-                   if b then
-                     (i + 1, rwts, mk_carry cnv nxyc :: c_outs)
-                   else
-                     (i + 1, mk_summation cnv nxyc @ rwts, c_outs)
-                 end) (1, [],[]) tms
+                 (if !blast_trace > 0 then
+                    TextIO.print ("Expanding term... " ^ Int.toString i ^ "\n")
+                  else
+                    ();
+                  if b then
+                    (i + 1, rwts, mk_carry rwts nxyc :: c_outs)
+                  else
+                    (i + 1, mk_summation rwts nxyc @ rwts, c_outs)))
+              (1, [],[]) tms
     in
       rwts @ c_outs
     end
@@ -362,11 +367,10 @@ end
 local
   val BIT_SET_CONV = Conv.REWR_CONV wordsTheory.BIT_SET THENC EVAL_CONV
 
-  val i = Term.mk_var ("i", numLib.num)
-
   fun is_bit_lit tm = case Lib.total bitSyntax.dest_bit tm
                       of SOME (_, n) => numSyntax.is_numeral n
                        | NONE => false
+
   fun mk_bit_sets tm =
     let
       val tms = Lib.mk_set (HolKernel.find_terms is_bit_lit tm)
@@ -423,8 +427,7 @@ local
 
   val SYM_WORD_NOT_LOWER = GSYM WORD_NOT_LOWER;
 
-  val bit_rwts =
-    [word_lsb_def, word_msb_def, word_bit_def]
+  val bit_rwts = [word_lsb_def, word_msb_def, word_bit_def]
 
   val order_rwts =
     [WORD_HIGHER,
@@ -467,7 +470,7 @@ in
     in
       case Lib.total wordsSyntax.dest_word_2comp l
       of SOME v =>
-           if Lib.total wordsSyntax.dest_word_literal v = SOME (Arbnum.one) then
+           if Lib.total wordsSyntax.dest_word_literal v = SOME Arbnum.one then
              Conv.REWR_CONV SYM_WORD_NEG_MUL tm
            else
              raise ERR "SMART_MUL_LSL_CONV" "not -1w * x"
@@ -528,7 +531,7 @@ local
         let
           val d = fcpSyntax.dest_int_numeric_type ty
           val wty = wordsSyntax.mk_word_type ty
-          val v = Term.mk_var("m", wty)
+          val v = Term.mk_var ("m", wty)
           val eq_thm = fcp_eq_thm wty
         in
           List.tabulate (d, fn i =>
@@ -627,11 +630,6 @@ end
    BLAST_MUL_CONV : expands bit vector multiplication
    ------------------------------------------------------------------------ *)
 
-val blast_multiply_limit = ref 8;
-
-val _ = Feedback.register_trace
-          ("blast multiply limit", blast_multiply_limit, 32);
-
 local
   fun mk_bitwise_mul i =
         blastTheory.BITWISE_MUL
@@ -644,7 +642,7 @@ local
 in
   fun BLAST_MUL_CONV tm =
         let
-          val (l,_) = wordsSyntax.dest_word_mul tm
+          val l = fst (wordsSyntax.dest_word_mul tm)
           val sz = fcpSyntax.dest_int_numeric_type (wordsSyntax.dim_of l)
           val _ = sz <= !blast_multiply_limit orelse
                   raise ERR "BLAST_MUL_CONV" "bigger than multiply limit"
@@ -975,6 +973,8 @@ local
 
   fun bit_theorems top conv (n, l, r) =
       let
+        fun BIT_TAUT_CONV tm = (INDEX_CONV THENC TAUT_INDEX_CONV top conv) tm
+                               handle Conv.UNCHANGED => dummy_thm
         val _ = if !blast_trace > 1 then
                   TextIO.print ("Checking " ^ Arbnum.toString n ^ " bit word\n")
                 else
@@ -991,9 +991,7 @@ local
                 val ii = numLib.mk_numeral i
                 val li = wordsSyntax.mk_index (l, ii)
                 val ri = wordsSyntax.mk_index (r, ii)
-                val eq_tm = boolSyntax.mk_eq (li, ri)
-                val idx_thm = TAUT_INDEX_CONV top conv eq_tm
-                              handle Conv.UNCHANGED => dummy_thm
+                val idx_thm = BIT_TAUT_CONV (boolSyntax.mk_eq (li, ri))
               in
                 if rhsc idx_thm = boolSyntax.F then
                   Lib.FAIL (ii, idx_thm)
@@ -1018,17 +1016,17 @@ in
     if Term.term_eq c boolSyntax.T orelse Term.term_eq c boolSyntax.F then
       thm
     else let
-      val conv = INDEX_CONV THENC PURE_REWRITE_CONV (mk_sums INDEX_CONV c)
+      val SUM_CONV = PURE_REWRITE_CONV (mk_sums INDEX_CONV c)
     in
       if wordsSyntax.is_index tm then
-        Conv.RIGHT_CONV_RULE (Conv.REWR_CONV (TAUT_INDEX_CONV top conv c)) thm
+        Conv.RIGHT_CONV_RULE (TAUT_INDEX_CONV top SUM_CONV) thm
         handle Conv.UNCHANGED => thm
       else if wordsSyntax.is_word_lo tm then
-        Conv.RIGHT_CONV_RULE (Conv.REWR_CONV (conv c)) thm
+        Conv.RIGHT_CONV_RULE SUM_CONV thm
       else let
         val (l,r) = boolSyntax.dest_eq c
       in
-        case bit_theorems top conv (dim_of_word l, l, r)
+        case bit_theorems top SUM_CONV (dim_of_word l, l, r)
         of Lib.PASS thms =>
                Conv.RIGHT_CONV_RULE
                  (Conv.REWR_CONV (fcp_eq_thm (Term.type_of l))
