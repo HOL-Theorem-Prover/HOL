@@ -5,6 +5,7 @@ struct
   type hol_type     = Type.hol_type
   type tyvar        = Type.tyvar
   type kind         = Kind.kind
+  type rank         = Kind.rank
   type conv         = term -> thm
   type rule         = thm -> thm
   type goal         = term list * term

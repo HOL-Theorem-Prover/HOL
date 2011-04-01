@@ -62,7 +62,7 @@ val defs =
        CONJ MIN_SET_EMPTY MIN_SET_THM, count_EQN,POW_EQNS];
 
 val _ = eSML "set"
-   (ABSDATATYPE ([("'a",typ,0)], `set = EMPTY | INSERT of 'a => set`)
+   (ABSDATATYPE ([("'a",typ rho)], `set = EMPTY | INSERT of 'a => set`)
     :: OPEN ["num"]
     :: MLSIG "type num = numML.num"
     :: MLSIG "val EMPTY    : 'a set"

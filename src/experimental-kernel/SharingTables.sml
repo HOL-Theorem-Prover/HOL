@@ -1,7 +1,9 @@
 structure SharingTables :> SharingTables =
 struct
 
-open Term Type Kind
+open Term Type Kind Rank
+
+type rank = Rank.rank
 
 structure Map = Binarymap
 structure PP = HOLPP
@@ -66,8 +68,8 @@ end
     Kinds
    ---------------------------------------------------------------------- *)
 
-datatype shared_kind = KDTY
-                     | KDV of string
+datatype shared_kind = KDTY of rank
+                     | KDV of string * rank
                      | KDARR of int * int
 
 type kindtable = {kdsize : int,
@@ -79,13 +81,13 @@ fun make_shared_kind kd table =
       SOME i => (i, table)
     | NONE => let
       in
-        if kd = typ then let
+        if is_type_kind kd then let
             val {kdsize, kdmap, kdlist} = table
           in
             (kdsize,
              {kdsize = kdsize + 1,
               kdmap = Map.insert(kdmap, kd, kdsize),
-              kdlist = KDTY :: kdlist})
+              kdlist = KDTY (dest_type_kind kd) :: kdlist})
           end
         else if is_var_kind kd then let
             val {kdsize, kdmap, kdlist} = table
@@ -120,8 +122,8 @@ val empty_kdtable : kindtable =
 fun build_kind_vector shkdlist = let
   fun build1 (shkd, (n, kdmap)) =
       case shkd of
-        KDTY  => (n + 1, Map.insert(kdmap, n, Kind.typ))
-      | KDV s => (n + 1, Map.insert(kdmap, n, Kind.mk_var_kind s))
+        KDTY rk => (n + 1, Map.insert(kdmap, n, Kind.typ rk))
+      | KDV (s,rk) => (n + 1, Map.insert(kdmap, n, Kind.mk_var_kind (s,rk)))
       | KDARR (i1,i2) => let
           val kd1 = Map.find(kdmap, i1)
           val kd2 = Map.find(kdmap, i2)
@@ -134,13 +136,15 @@ in
   Vector.fromList (map #2 (Map.listItems kdmap))
 end
 
+val rankstr = Rank.rank_to_string
+
 fun output_kindtable pps {kdtable_nm} (kdtable : kindtable) = let
   val out = PP.add_string pps
   fun nl() = PP.add_newline pps
   fun output_shkind shkd =
       case shkd of
-        KDTY  => out ("KDTY")
-      | KDV s => out ("KDV "^Lib.mlquote s)
+        KDTY rk => out ("KDTY "^rankstr rk)
+      | KDV (s,rk) => out ("KDV ("^Lib.mlquote s^","^rankstr rk^")")
       | KDARR (i1,i2) => out ("KDARR (" ^ Int.toString i1 ^ "," ^ Int.toString i2 ^ ")")
   fun output_shkinds [] = ()
     | output_shkinds [x] = output_shkind x
@@ -161,8 +165,8 @@ end
     Types
    ---------------------------------------------------------------------- *)
 
-datatype shared_type = TYV of string * int * int
-                     | TYC of int * int * int
+datatype shared_type = TYV of string * int
+                     | TYC of int * int
                      | TYAp of int * int
                      | TYAbs of int * int
                      | TYUni of int * int
@@ -177,17 +181,17 @@ fun make_shared_type ty (tables as (idtable, kdtable, table)) =
     | NONE => let
       in
         if is_vartype ty then let
-            val (name, kind, rank) = dest_var_type ty
+            val (name, kind) = dest_var_type ty
             val (kdi, kdtable') = make_shared_kind kind kdtable
             val {tysize, tymap, tylist} = table
           in
             (tysize, (idtable, kdtable',
              {tysize = tysize + 1,
               tymap = Map.insert(tymap, ty, tysize),
-              tylist = TYV (name, kdi, rank) :: tylist}))
+              tylist = TYV (name, kdi) :: tylist}))
           end
         else if is_con_type ty then let
-            val {Thy, Tyop, Kind, Rank} = dest_thy_con_type ty
+            val {Thy, Tyop, Kind} = dest_thy_con_type ty
             val (id, idtable') =
                 make_shared_id {Thy = Thy, Other = Tyop} idtable
             val (kdi, kdtable') = make_shared_kind Kind kdtable
@@ -196,7 +200,7 @@ fun make_shared_type ty (tables as (idtable, kdtable, table)) =
             (tysize, (idtable', kdtable',
              {tysize = tysize + 1,
               tymap = Map.insert(tymap, ty, tysize),
-              tylist = TYC (id, kdi, Rank) :: tylist}))
+              tylist = TYC (id, kdi) :: tylist}))
           end
         else if is_app_type ty then let
             val (Opr,Arg) = dest_app_type ty
@@ -237,24 +241,25 @@ fun make_shared_type ty (tables as (idtable, kdtable, table)) =
       end
 
 val empty_tytable : typetable =
-    {tysize = 0, tymap = Map.mkDict Type.compare, tylist = [] }
+    {tysize = 0, tymap = Map.mkDict Type.prim_compare, tylist = [] }
+(* not Type.compare, else ranks not stored correctly *)
 
 fun build_type_vector idv kdv shtylist = let
   fun build1 (shty, (n, tymap)) =
       case shty of
-        TYV (s,kdi,rk) => let
+        TYV (s,kdi) => let
           val kd = Vector.sub(kdv, kdi)
         in
-          (n + 1, Map.insert(tymap, n, Type.mk_var_type(s,kd,rk)))
+          (n + 1, Map.insert(tymap, n, Type.mk_var_type(s,kd)))
         end
-      | TYC (id,kdi,rk) => let
+      | TYC (id,kdi) => let
           val kd = Vector.sub(kdv, kdi)
           val {Thy,Other} = Vector.sub(idv, id)
         in
           (n + 1,
            Map.insert(tymap, n,
                              Type.mk_thy_con_type {Thy = Thy, Tyop = Other,
-                                                   Kind = kd, Rank = rk}))
+                                                   Kind = kd}))
         end
       | TYAp (opri,argi) => let
           val opr = Map.find(tymap, opri)
@@ -289,10 +294,10 @@ fun output_typetable pps {idtable_nm,kdtable_nm,tytable_nm} (tytable : typetable
   fun ipair_string (x,y) = "("^Int.toString x^", "^Int.toString y^")"
   fun output_shtype shty =
       case shty of
-        TYV (s,kdi,rk)  => out ("TYV(" ^ Lib.mlquote s ^ "," ^
-                                Int.toString kdi ^ "," ^ Int.toString rk ^ ")")
-      | TYC (id,kdi,rk) => out ("TYC(" ^ Int.toString id ^ "," ^
-                                Int.toString kdi ^ "," ^ Int.toString rk ^ ")")
+        TYV (s,kdi)  => out ("TYV(" ^ Lib.mlquote s ^ "," ^
+                                Int.toString kdi ^ ")")
+      | TYC (id,kdi) => out ("TYC(" ^ Int.toString id ^ "," ^
+                                Int.toString kdi ^ ")")
       | TYAp (opri,argi)  => out ("TYAp"  ^ ipair_string(opri,argi))
       | TYAbs (bvi,bodyi) => out ("TYAbs" ^ ipair_string(bvi,bodyi))
       | TYUni (bvi,bodyi) => out ("TYUni" ^ ipair_string(bvi,bodyi))

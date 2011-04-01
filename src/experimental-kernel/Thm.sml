@@ -88,7 +88,7 @@ fun dest_imp M =
  let val (Rator,conseq) = with_exn dest_comb M DEST_IMP_ERR
  in if is_comb Rator
     then let val (Rator,ant) = dest_comb Rator
-         in if Rator=Term.imp then (ant,conseq) else raise DEST_IMP_ERR
+         in if eq Rator Term.imp then (ant,conseq) else raise DEST_IMP_ERR
          end
     else case with_exn dest_thy_const Rator DEST_IMP_ERR
           of {Name="~", Thy="bool",...} => (conseq,Susp.force F)
@@ -172,7 +172,7 @@ fun hyp_tyvars th =
 fun hyp_frees th =
   HOLset.foldl (fn (h,tms) => Term.FVL[h] tms) empty_tmset (hypset th);
 
-fun is_bool tm = (type_of tm = bool);
+fun is_bool tm = (Type.eq_ty (type_of tm) bool);
 
 
 (*---------------------------------------------------------------------------
@@ -284,7 +284,7 @@ fun ABS v (THM(ocl,asl,c)) =
 fun TY_ABS a (THM(ocl,asl,c)) =
  let val (lhs,rhs,ty) = Term.dest_eq_ty c handle HOL_ERR _
                       => ERR "TY_ABS" "not an equality"
-     val (nm,kd,rk) = Type.dest_var_type a handle HOL_ERR _
+     val (nm,kd) = Type.dest_var_type a handle HOL_ERR _
                       => ERR "TY_ABS" "first argument is not a type variable"
  in if type_var_occursl a asl
      then ERR "TY_ABS" "The type variable is free in the assumptions"
@@ -343,12 +343,26 @@ fun GEN_TY_ABS opt vlist (th as THM(ocl,asl,c)) =
  *
  *---------------------------------------------------------------------------*)
 
-fun INST_RANK n (th as THM(ocl,asl,c)) =
-    if n = 0 then th
-    else if n < 0 then raise ERR "INST_RANK" "rank instantiation cannot lower the rank"
-    else let val instfn = Term.inst_rank n
-         in make_thm Count.InstRank(ocl, hypset_map instfn asl, instfn c)
-         end
+fun INST_RANK 0 th = th
+  | INST_RANK rkS (th as THM(ocl,asl,c)) =
+    let val instfn = Term.inst_rank rkS
+    in make_thm Count.InstRank(ocl, hypset_map instfn asl, instfn c)
+    end
+    handle HOL_ERR {message,...} => ERR "INST_RANK" message
+
+(*---------------------------------------------------------------------------
+ *         A |- M
+ *  --------------------  PURE_INST_KIND theta
+ *  theta(A) |- theta(M)
+ *
+ *---------------------------------------------------------------------------*)
+
+fun PURE_INST_KIND [] th = th
+  | PURE_INST_KIND theta (THM(ocl,asl,c)) =
+    let val instfn = Term.pure_inst_kind theta
+    in make_thm Count.PureInstKind(ocl, hypset_map instfn asl, instfn c)
+    end
+    handle HOL_ERR {message,...} => ERR "PURE_INST_KIND" message
 
 (*---------------------------------------------------------------------------
  *         A |- M
@@ -359,34 +373,43 @@ fun INST_RANK n (th as THM(ocl,asl,c)) =
 
 fun INST_KIND [] th = th
   | INST_KIND theta (THM(ocl,asl,c)) =
-    let val instfn = Term.inst_kind theta
+    let val (rkS,kdS) = Kind.align_kinds theta
+        val instfn = Term.inst_rank_kind rkS kdS
     in make_thm Count.InstKind(ocl, hypset_map instfn asl, instfn c)
     end
+    handle HOL_ERR {message,...} => ERR "INST_KIND" message
 
 (*---------------------------------------------------------------------------
  *         A |- M
- *  --------------------  INST_TYPE theta
+ *  --------------------  PURE_INST_TYPE theta
  *  theta(A) |- theta(M)
  *
  *---------------------------------------------------------------------------*)
 
+fun PURE_INST_TYPE [] th = th
+  | PURE_INST_TYPE theta (THM(ocl,asl,c)) =
+    let val instfn = pure_inst theta
+    in
+      make_thm Count.PureInstType(ocl, hypset_map instfn asl, instfn c)
+    end
+    handle HOL_ERR {message,...} => ERR "PURE_INST_TYPE" message
+
+(*---------------------------------------------------------------------------
+ *                 A |- M
+ *  ------------------------------------  INST_TYPE theta
+ *  tyS(kdS(rkS(A))) |- tyS(kdS(rkS(M)))
+ *
+ *  where theta aligns to the rank,kind,type substitutions rkS,kdS,tyS
+ *---------------------------------------------------------------------------*)
+
 fun INST_TYPE [] th = th
   | INST_TYPE theta (THM(ocl,asl,c)) =
-    let val r = Type.subst_rank theta
-    in if r = 0 then let
-         val instfn = inst theta
-       in
-         make_thm Count.InstType(ocl, hypset_map instfn asl, instfn c)
-       end
-       else let
-         val theta' = Type.inst_rank_subst r theta
-         val asl'   = hypset_map (Term.inst_rank r) asl
-         val c'     = Term.inst_rank r c
-         val instfn = inst theta'
-       in
-         make_thm Count.InstType(ocl, hypset_map instfn asl', instfn c')
-       end
+    let val (rkS,kdS,tyS) = Type.align_types theta
+        val instfn = inst_rk_kd_ty rkS kdS tyS
+    in
+      make_thm Count.InstType(ocl, hypset_map instfn asl, instfn c)
     end
+    handle HOL_ERR {message,...} => ERR "INST_TYPE" message
 
 (*---------------------------------------------------------------------------
  *          A |- M
@@ -1305,6 +1328,24 @@ fun INST [] th = th
       else
         raise ERR "INST" "can only instantiate variables"
 
+
+(*---------------------------------------------------------------------------*
+ * Instantiate free term, type, kind, and rank variables in a theorem        *
+ *---------------------------------------------------------------------------*)
+
+fun INST_ALL (tmS, tyS, kdS, rkS) th =
+      if List.all (is_var o #redex) tmS then
+        let
+          val substf = inst_all rkS kdS tyS tmS
+        in
+          make_thm Count.InstAll
+            (tag th, hypset_map substf (hypset th), substf (concl th))
+          handle HOL_ERR _ => ERR "INST_ALL" ""
+        end
+      else
+        raise ERR "INST_ALL" "can only instantiate variables"
+
+
 (*---------------------------------------------------------------------------*
  * Now some derived rules optimized for computations, avoiding most          *
  * of useless type-checking, using pointer equality and delayed              *
@@ -1506,18 +1547,20 @@ fun add_tag (tag1, THM(tag2, h,c)) = THM(Tag.merge tag1 tag2, h, c)
  *---------------------------------------------------------------------------*)
 
 fun mk_axiom_thm (r,c) =
-   (Assert (type_of c = bool) "mk_axiom_thm"  "Not a proposition!";
+   (Assert (Type.eq_ty (type_of c) bool) "mk_axiom_thm"  "Not a proposition!";
     make_thm Count.Axiom (Tag.ax_tag r, empty_hyp, c))
 
 fun mk_defn_thm (witness_tag, c) =
-   (Assert (type_of c = bool) "mk_defn_thm"  "Not a proposition!";
+   (Assert (Type.eq_ty (type_of c) bool) "mk_defn_thm"  "Not a proposition!";
     make_thm Count.Definition (witness_tag,empty_hyp,c))
 
+
+fun debug_kind kd = print (Kind.kind_to_string kd)
 
 local open Type in
 fun debug_type ty =
     if is_vartype ty then let
-        val (s,kd,rk) = dest_var_type ty
+        val (s,kd) = dest_var_type ty
       in print s
       end 
     else if (can dom_rng ty) then let
@@ -1525,7 +1568,7 @@ fun debug_type ty =
       in print "("; debug_type dty; print " -> "; debug_type rty; print ")"
       end
     else if is_con_type ty then let
-        val {Tyop,Thy,Kind,Rank} = dest_thy_con_type ty
+        val {Tyop,Thy,Kind} = dest_thy_con_type ty
       in print Tyop
       end
     else if is_app_type ty then let
@@ -1649,14 +1692,12 @@ fun prim_type_definition (name as {Thy, Tyop}, thm) = let
   val (dom,rng) = with_exn Type.dom_rng Pty TYDEF_FORM_ERR
   val tyvars    = Listsort.sort Type.compare (type_vars_in_term P)
   val checked   = check_null_hyp thm TYDEF_ERR
-  val checked   =
-      assert_exn null (free_vars P)
+  val checked   = assert_exn null (free_vars P)
                  (TYDEF_ERR "subset predicate must be a closed term")
-  val checked   = assert_exn (op=) (rng,bool)
+  val checked   = assert_exn (Type.eq_ty bool) rng
                              (TYDEF_ERR "subset predicate has the wrong type")
-  val newkd     = List.foldr (op ==>) typ (map Type.kind_of tyvars)
-  val newrk     = List.foldr Int.max   0  (map Type.rank_of tyvars)
-  val   _       = Type.prim_new_type name newkd newrk
+  val newkd     = List.foldr (op ==>) (Type.kind_of dom) (map Type.kind_of tyvars)
+  val   _       = Type.prim_new_type name newkd
   val newty     = Type.mk_thy_type{Tyop=Tyop,Thy=Thy,Args=tyvars}
   val repty     = newty --> dom
   val rep       = mk_primed_var("rep", repty)

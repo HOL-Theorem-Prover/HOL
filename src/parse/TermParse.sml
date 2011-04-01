@@ -198,15 +198,15 @@ end
 fun to_ptyInEnv ty = let
   open Pretype Parse_support
   val (PT(ty0,l)) = ty
-  fun binder_type binder (Pretype.PT(Pretype.Vartype(s,kd,rk),l)) = make_binding_type_occ l s binder
+  fun binder_type binder (Pretype.PT(Pretype.Vartype(s,kd),l)) = make_binding_type_occ l s binder
     | binder_type binder (Pretype.PT(Pretype.TyKindConstr{Ty,Kind},l)) =
             make_kind_binding_occ l (binder_type binder Ty) Kind
     | binder_type binder (Pretype.PT(Pretype.TyRankConstr{Ty,Rank},l)) =
             make_rank_binding_occ l (binder_type binder Ty) Rank
     | binder_type _ _ = raise ERROR "to_ptyInEnv" "non-variable type binder"
 in case ty0 of
-     Vartype(s,kd,rk)  => make_type_atom l (s,kd,rk)
-   | Contype{Thy,Tyop,Kind,Rank} => make_type_constant l {Thy=Thy,Tyop=Tyop}
+     Vartype(s,kd)  => make_type_atom l (s,kd)
+   | Contype{Thy,Tyop,Kind} => make_type_constant l {Thy=Thy,Tyop=Tyop}
    | TyApp(ty1,ty2   ) => list_make_app_type l (map to_ptyInEnv [ty1,ty2])
    | TyUniv(bvar,body) => bind_type l [binder_type "!"  bvar] (to_ptyInEnv body)
    | TyAbst(bvar,body) => bind_type l [binder_type "\\" bvar] (to_ptyInEnv body)
@@ -233,7 +233,7 @@ in
                                                NONE
       | binder(VAQ (l,x))       = make_aq_binding_occ l x
       | binder(VTYPED(l,v,pty)) = make_vstruct oinfo l [binder v] (SOME (to_ptyInEnv pty))
-    fun tybinder(Pretype.PT(Pretype.Vartype(s,kd,rk),l)) = (make_tybinding_occ l s kd rk)
+    fun tybinder(Pretype.PT(Pretype.Vartype(s,kd),l)) = (make_tybinding_occ l s kd)
       | tybinder(Pretype.PT(Pretype.TyKindConstr{Ty,Kind},l)) = make_kind_tybinding_occ l (tybinder Ty) Kind
       | tybinder(Pretype.PT(Pretype.TyRankConstr{Ty,Rank},l)) = make_rank_tybinding_occ l (tybinder Ty) Rank
       | tybinder(Pretype.PT(_,l)) = raise ERROR "tybinder" "not a variable type"
@@ -333,11 +333,57 @@ end
 local
   open Preterm Pretype
   fun name_eq s M = ((s = fst(dest_var M)) handle HOL_ERR _ => false)
+  fun tyname_eq s Ty = ((s = fst(Type.dest_var_type Ty)) handle HOL_ERR _ => false)
   exception UNCHANGED
   fun strip_csts (Constrained{Ptm,...}) = strip_csts Ptm
     | strip_csts t = t
-  fun give_types_to_fvs ctxt boundvars tm = let
-    val gtf = give_types_to_fvs ctxt
+  fun strip_tycsts (PT(TyKindConstr{Ty,...},_)) = strip_tycsts Ty
+    | strip_tycsts (PT(TyRankConstr{Ty,...},_)) = strip_tycsts Ty
+    | strip_tycsts t = t
+  fun give_types_to_ftyvs tyctxt boundtyvars ty = let
+    val gtfty = give_types_to_ftyvs tyctxt
+    val PT(ty0,locn) = ty
+  in
+    case ty0 of
+      Vartype(s,kd) => let
+      in
+        if not(Lib.op_mem Pretype.eq ty boundtyvars) then
+          case List.find (tyname_eq s) tyctxt of
+            NONE => raise UNCHANGED
+          | SOME ctxt_ty => PT(Vartype(s, Prekind.fromKind (kind_of ctxt_ty)), locn)
+        else raise UNCHANGED
+      end
+    | TyApp(opr,arg) => let
+      in
+        let
+          val opr' = gtfty boundtyvars opr
+        in
+          let
+            val arg' =  gtfty boundtyvars arg
+          in
+            PT(TyApp(opr',arg'), locn)
+          end handle UNCHANGED => PT(TyApp(opr',arg), locn)
+        end handle UNCHANGED =>
+                   let val arg' = gtfty boundtyvars arg
+                   in
+                     PT(TyApp(opr,arg'), locn)
+                   end
+      end
+    | TyAbst(Bvar, Body) => PT(TyAbst(Bvar,
+                                      gtfty (strip_tycsts Bvar::boundtyvars) Body),
+                               locn)
+    | TyUniv(Bvar, Body) => PT(TyUniv(Bvar,
+                                      gtfty (strip_tycsts Bvar::boundtyvars) Body),
+                               locn)
+    | TyKindConstr{Ty,Kind} => PT(TyKindConstr{Ty = gtfty boundtyvars Ty, Kind = Kind},
+                                  locn)
+    | TyRankConstr{Ty,Rank} => PT(TyRankConstr{Ty = gtfty boundtyvars Ty, Rank = Rank},
+                                  locn)
+    | _ => raise UNCHANGED
+  end
+  fun give_types_to_fvs tyctxt ctxt boundtyvars boundvars tm = let
+    val gtf = give_types_to_fvs tyctxt ctxt
+    val gtfty = give_types_to_ftyvs tyctxt
   in
     case tm of
       Var{Name, Ty, Locn} => let
@@ -347,34 +393,69 @@ local
             NONE => raise UNCHANGED
           | SOME ctxt_tm => Var{Locn = Locn, Name = Name,
                                 Ty =  Pretype.fromType (type_of ctxt_tm)}
-        else raise UNCHANGED
+        else (*raise UNCHANGED*)
+             Var{Locn = Locn, Name = Name,
+                 Ty =  gtfty boundtyvars Ty}
       end
     | Comb{Rator, Rand, Locn} => let
       in
         let
-          val rator = gtf boundvars Rator
+          val rator = gtf boundtyvars boundvars Rator
         in
           let
-            val rand =  gtf boundvars Rand
+            val rand =  gtf boundtyvars boundvars Rand
           in
             Comb{Rator = rator, Rand = rand, Locn = Locn}
           end handle UNCHANGED => Comb{Rator = rator, Rand = Rand, Locn = Locn}
         end handle UNCHANGED =>
-                   let val rand = gtf boundvars Rand
+                   let val rand = gtf boundtyvars boundvars Rand
                    in
                      Comb{Rator = Rator, Rand = rand, Locn = Locn}
                    end
       end
+    | TyComb{Rator, Rand, Locn} => let
+      in
+        let
+          val rator = gtf boundtyvars boundvars Rator
+        in
+          let
+            val rand =  gtfty boundtyvars Rand
+          in
+            TyComb{Rator = rator, Rand = rand, Locn = Locn}
+          end handle UNCHANGED => TyComb{Rator = rator, Rand = Rand, Locn = Locn}
+        end handle UNCHANGED =>
+                   let val rand = gtfty boundtyvars Rand
+                   in
+                     TyComb{Rator = Rator, Rand = rand, Locn = Locn}
+                   end
+      end
     | Abs{Bvar, Body, Locn} => Abs{Bvar = Bvar,
-                                   Body = gtf (strip_csts Bvar::boundvars) Body,
+                                   Body = gtf boundtyvars (strip_csts Bvar::boundvars) Body,
                                    Locn = Locn}
-    | Constrained{Ptm,Locn,Ty} => Constrained{Ptm = gtf boundvars Ptm,
-                                              Locn = Locn, Ty = Ty}
+    | TyAbs{Bvar, Body, Locn} =>TyAbs{Bvar = Bvar,
+                                   Body = gtf (strip_tycsts Bvar::boundtyvars) boundvars Body,
+                                   Locn = Locn}
+    | Constrained{Ptm,Locn,Ty} => let
+      in
+        let
+          val Ptm' = gtf boundtyvars boundvars Ptm
+        in
+          let
+            val Ty' =  gtfty boundtyvars Ty
+          in
+            Constrained{Ptm = Ptm', Locn = Locn, Ty = Ty'}
+          end handle UNCHANGED => Constrained{Ptm = Ptm', Locn = Locn, Ty = Ty}
+        end handle UNCHANGED =>
+                   let val Ty' = gtfty boundtyvars Ty
+                   in
+                     Constrained{Ptm = Ptm, Locn = Locn, Ty = Ty'}
+                   end
+      end
     | _ => raise UNCHANGED
   end
 in
   fun parse_preterm_in_context0 pprinters FVs ptm0 = let
-    val ptm = give_types_to_fvs FVs [] ptm0
+    val ptm = give_types_to_fvs [] FVs [] [] ptm0
               handle UNCHANGED => ptm0
   in
     preterm_to_term pprinters ptm

@@ -7,7 +7,8 @@ struct
       | KindSymbol of string (* symbolic identifier, not :: or <= or incl  (),:  *)
       | KindVar of string
       | KindArity
-      | KindNumeral of int
+      | KindNumeral of string
+      | KindRankCst
       | Comma
       | LParen
       | RParen
@@ -23,7 +24,9 @@ fun toksize tt =
     | KindSymbol s => size s
     | KindVar s => size s
     | KindArity => 1
-    | KindNumeral n => Real.ceil (Math.log10 (Real.fromInt (n+1)))
+    | KindNumeral s => size s
+(* if n = 0 then 1 else Real.ceil (Math.log10 (Real.fromInt (n+1))) *)
+    | KindRankCst => 1
     | Comma => 1
     | LParen => 1
     | RParen => 1
@@ -89,9 +92,7 @@ fun MkNumKind (pfx, sfx) =
     case sfx of
       NONE =>
         let val s = munge pfx
-            val n = Arbnum.fromString s
-        in KindNumeral (Arbnum.toInt n)
-           handle Overflow => raise ERR "MkKindNumeral" ("Excessively large arity: " ^ s)
+        in KindNumeral s
         end
     | SOME _ => Error (BT_Numeral (Arbnum.fromString (munge pfx), sfx))
 
@@ -134,6 +135,8 @@ in
     consume_kind numeralkindp MkNumKind ([s0], NONE) srest
   else if s0 = "(" then nadvance 1 LParen
   else if s0 = ")" then nadvance 1 RParen
+  else if s0 = ":" andalso not(size s > 1 andalso String.sub(s,1) = #"]")
+                   then nadvance 1 KindRankCst
   else if s0 = "," then nadvance 1 Comma
   else if s0 = "[" then nadvance 1 LBracket
   else if s0 = "]" then nadvance 1 RBracket
@@ -143,7 +146,7 @@ end
 
 fun handle_num numinfo =
     case numinfo of
-      (num, NONE) => (KindNumeral (Arbnum.toInt num)
+      (num, NONE) => (KindNumeral (Int.toString(Arbnum.toInt num))
                       handle Overflow => Error (BT_Numeral numinfo))
     | (num, SOME _) => Error (BT_Numeral numinfo)
 
@@ -160,7 +163,8 @@ end
 fun token_string (KindIdent s) = s
   | token_string (KindVar s) = s
   | token_string (KindSymbol s) = s
-  | token_string (KindNumeral i) = Int.toString i
+  | token_string (KindNumeral s) = s
+  | token_string  KindRankCst  = ":"
   | token_string _ = raise Fail "token_string of something with no string"
 fun dest_aq (AQ x) = x
   | dest_aq _ = raise Fail "dest_aq of non antiquote kind token"

@@ -128,7 +128,7 @@ val _ = temp_set_grammars(tyg',tmg)
 val _ = new_type("bag",1)
 
 val _ = eSML "bag"
-  (ABSDATATYPE ([("'a",typ,0)], `bag = EMPTY_BAG | BAG_INSERT of 'a => bag`)
+  (ABSDATATYPE ([("'a",typ rho)], `bag = EMPTY_BAG | BAG_INSERT of 'a => bag`)
    :: OPEN ["num", "set"]
    :: MLSIG "type num = numML.num"
    :: MLSIG "type 'a set = 'a setML.set"
@@ -158,7 +158,7 @@ val _ = eSML "bag"
 
 val _ = eCAML "bag"
   (MLSIGSTRUCT ["type num = NumML.num", "type 'a set = 'a SetML.set"] @
-   ABSDATATYPE ([("'a",typ,0)], `bag = EMPTY_BAG | BAG_INSERT of 'a => bag`) ::
+   ABSDATATYPE ([("'a",typ rho)], `bag = EMPTY_BAG | BAG_INSERT of 'a => bag`) ::
    OPEN ["num", "set"] ::
    map MLSIG
       ["val _BAG_VAL      : 'a bag -> 'a -> num",

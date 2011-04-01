@@ -239,10 +239,11 @@ fun SUBST_MATCH eqth th =
              find_match(rator t)   handle HOL_ERR _ =>
              find_match(rand t)    handle HOL_ERR _ =>
              find_match(body t)
-      val (tm_inst,ty_inst,kd_inst,rk) = find_match (concl th)
+      val match as (tm_inst,ty_inst,kd_inst,rk) = find_match (concl th)
   in
-     SUBS [INST tm_inst (INST_TYPE ty_inst
-              (INST_KIND kd_inst (INST_RANK rk eqth)))] th
+     SUBS [INST_ALL match eqth] th
+  (* SUBS [INST tm_inst (PURE_INST_TYPE ty_inst
+              (INST_KIND kd_inst (INST_RANK rk eqth)))] th *)
   end
   handle HOL_ERR _ => raise ERR "SUBST_MATCH" "";
 

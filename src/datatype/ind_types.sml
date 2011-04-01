@@ -104,20 +104,36 @@ fun striplist dest =
   end;
 
 (*---------------------------------------------------------------------------
-   This is (*not*) the same as Type.type_subst, which (*only substitutes*) does substitute
+   This is not the same as Type.type_subst, which only substitutes
    for variables!
  ---------------------------------------------------------------------------*)
 
-fun tysubst theta ty = Type.type_subst theta ty;
-(*
+fun subst_type_var_in bv {redex,residue} =
+    type_var_in bv redex orelse type_var_in bv residue
+fun remove_type_var_subst bv theta =
+    filter (not o subst_type_var_in bv) theta
+
+fun tysubst theta ty =
   case subst_assoc (eq_ty ty) theta
    of SOME x => x
     | NONE =>
-       if is_vartype ty then ty
-       else let val {Tyop,Thy,Args} = dest_thy_type ty
-            in mk_thy_type{Tyop=Tyop,Thy=Thy, Args=map (tysubst theta) Args}
+       if is_var_type ty then ty
+       else if is_con_type ty then ty
+       else if is_app_type ty then
+            let val (ty1,ty2) = dest_app_type ty
+            in mk_app_type(tysubst theta ty1, tysubst theta ty2)
+            end
+       else if is_abs_type ty then
+            let val (bv,body) = dest_abs_type ty
+                val theta' = remove_type_var_subst bv theta
+            in if null theta' then ty
+               else mk_abs_type(bv, tysubst theta' body)
+            end
+       else let val (bv,body) = dest_univ_type ty
+                val theta' = remove_type_var_subst bv theta
+            in if null theta' then ty
+               else mk_univ_type(bv, tysubst theta' body)
             end;
-*)
 
 fun name_vartype_opr ty = #1 (dest_var_type ty)
 
@@ -174,10 +190,11 @@ fun SCRUB_EQUATION eq th =
 
 val justify_inductive_type_model = let
   val aty = Type.alpha
+(*  val rho_ty = Type.mk_thy_con_type{Thy="bool",Tyop="rho",Kind=Kind.typ Kind.rho} *)
   val T_tm = boolSyntax.T
   and n_tm = mk_var("n",numSyntax.num)
-(*  and beps_tm = Term`@x:bool. T` *)
-  and beps_tm = mk_arb bool
+  and beps_tm = Term`@x:bool. T`
+(*  and beps_tm = (*mk_arb bool*) mk_thy_const{Thy="bool",Name="rho_value",Ty=rho_ty} *)
   fun munion [] s2 = s2
     | munion (h1::s1') s2 =
        let val (_,s2') = Lib.pluck (fn h2 => h2 = h1) s2
@@ -192,7 +209,7 @@ in
     val arb_tms = map mk_arb alltys
     val pty =
       end_itlist (fn ty1 => fn ty2 => mk_type("prod",[ty1,ty2])) alltys
-      handle HOL_ERR _ => Type.bool
+      handle HOL_ERR _ => Type.bool (* mk_thy_con_type{Thy="bool",Tyop="rho",Kind=typ rho} *)
     val recty = mk_type("recspace",[pty])
     val constr = mk_const("ind_type","CONSTR",[aty |-> pty])
     val fcons = mk_const("ind_type", "FCONS",[aty |-> recty])
@@ -494,7 +511,7 @@ end;
 fun create_recursive_functions tybijpairs consindex conthms rth = let
   val domtys = map (hd o snd o strip_app_type o type_of o snd o snd) consindex
   val recty = (hd o snd o strip_app_type o type_of o fst o snd o hd) consindex
-  val ranty = mk_var_type("'Z", typ, rank_of recty)
+  val ranty = mk_var_type("'Z", typ (rank_of_type recty))
   val fnn = mk_var("fn", recty --> ranty)
   and fns = make_args "fn" [] (map (C (curry op -->) ranty) domtys)
   val args = make_args "a" [] domtys
@@ -580,7 +597,7 @@ in
   fun create_recursion_iso_constructor consindex = let
     val recty = hd(snd(strip_app_type(type_of(fst(hd consindex)))))
     val domty = hd(snd(strip_app_type recty))
-    val zty = mk_var_type("'Z", typ, rank_of domty)
+    val zty = mk_var_type("'Z", typ (rank_of_type domty))
     val s = mk_var("s",numty --> zty)
     val i = mk_var("i",domty)
     and r = mk_var("r", numty --> recty)
@@ -818,12 +835,12 @@ in
     val (avs,ebod) = strip_forall(concl th)
     val (evs,bod) = strip_exists ebod
     val n = length evs
-    val maxrank = foldl Int.max 0 (map (rank_of o type_of) avs)
+    val ev_rks = map (rank_of_type o type_of) evs
   in
     if n = 1 then th
     else let
       val tys =
-        map (fn i => mk_var_type ("'Z"^Int.toString i, typ, maxrank)) (upto (n - 1))
+        map2 (fn i => fn rk => mk_var_type ("'Z"^Int.toString i, typ rk)) (upto (n - 1)) ev_rks
       val sty = mk_sum tys
       val inls = mk_inls sty
       and outls = mk_outls sty
@@ -941,14 +958,14 @@ fun occurs_in ty bigty =
     end
   else if is_univ_type bigty then let
       val (bvar,body) = dest_univ_type bigty
-      val (_,kd,rk) = dest_var_type bvar
-      val gvar = Type.gen_var_type(kd,rk)
+      val (_,kd) = dest_var_type bvar
+      val gvar = Type.gen_var_type kd
     in occurs_in ty (type_subst [bvar |-> gvar] body)
     end
   else if is_abs_type bigty then let
       val (bvar,body) = dest_abs_type bigty
-      val (_,kd,rk) = dest_var_type bvar
-      val gvar = Type.gen_var_type(kd,rk)
+      val (_,kd) = dest_var_type bvar
+      val gvar = Type.gen_var_type kd
     in occurs_in ty (type_subst [bvar |-> gvar] body)
     end
   else false
@@ -1004,7 +1021,7 @@ fun lift_type_bijections iths cty =
      if not (List.exists (C occurs_in cty) itys)
      then Thm.INST_TYPE [Type.alpha |-> cty] ISO_REFL
      else let val (tyc,isotys) = strip_app_type cty
-              val (tycon,_,_) = dest_con_type tyc
+              val (tycon,_) = dest_con_type tyc
           in if tycon = "fun"
              then MATCH_MP ISO_FUN
                     (end_itlist CONJ (map (lift_type_bijections iths) isotys))
@@ -1292,7 +1309,7 @@ local
       end
     handle HOL_ERR _ =>
     if is_con_type ty then let
-        val {Thy,Tyop=outerop,Kind,Rank} = dest_thy_con_type ty
+        val {Thy,Tyop=outerop,...} = dest_thy_con_type ty
       in
         if Thy = "list" andalso outerop = "list" then #"l"
         else String.sub(outerop,0)
@@ -1381,7 +1398,7 @@ fun canonicalise_tyvars def thm = let
     | (tyv::tyvs) => let
         val newtyname = Lexis.gen_variant Lexis.tyvar_vary avoids "'a"
       in
-        (tyv |-> mk_var_type(newtyname, kind_of tyv, rank_of tyv)) ::
+        (tyv |-> mk_var_type(newtyname, kind_of tyv)) ::
         gen_canonicals tyvs (newtyname :: avoids)
       end
   val names_to_avoid = map name_vartype_opr def_tyvars
@@ -1445,7 +1462,7 @@ local
            if Lib.mem (name_of tyv1) avoids_names
            then let val newtyv = Lexis.gen_variant Lexis.tyvar_vary
                                        (check_these_names@avoids_names) "'a"
-                    val newty = mk_var_type(newtyv, kind_of tyv1, rank_of tyv1)
+                    val newty = mk_var_type(newtyv, kind_of tyv1)
                 in (tyv1 |-> newty) :: recurse tyvs (newty::avoids)
                 end
            else recurse tyvs avoids
@@ -1475,7 +1492,7 @@ local
     val mtys = itlist (insert o type_of) cjs' []
     val pcons = map (fn ty => filter (fn t => type_of t = ty) cjs') mtys
     val cls' = zip mtys (map (map (recover_clause id)) pcons)
-    val tyal = map (fn ty => ty |-> mk_var_type("'"^fst(dest_type ty)^id, kind_of ty, rank_of ty)) mtys
+    val tyal = map (fn ty => ty |-> mk_var_type("'"^fst(dest_type ty)^id, kind_of ty)) mtys
     val cls'' = map (modify_type tyal ## map (modify_item tyal)) cls'
   in
     (k,tyal,cls'',Thm.INST_TYPE tyins ith, Thm.INST_TYPE tyins rth)
@@ -1573,7 +1590,7 @@ local
     end
 
     val tys = Theory.types (current_theory())
-    fun ty_appthis (tyn,kind,rank) =
+    fun ty_appthis (tyn,kind) =
         if String.isSubstring safepfx tyn then Theory.delete_type tyn
         else ()
   in

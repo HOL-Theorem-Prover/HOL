@@ -356,6 +356,18 @@ fun vc vL t =
        in
           (vL'', thm_opt)
        end
+     | TYCOMB (t1, ty2) =>
+       let
+          val (vL', thm1_opt) = vc vL t1;
+          val thm_opt = if not (isSome thm1_opt) then NONE else
+              let
+                 val thm1 = if (isSome thm1_opt) then valOf thm1_opt else REFL t1;
+              in
+                 SOME (TY_COMB thm1 ty2)
+              end;
+       in
+          (vL', thm_opt)
+       end
      | LAMB (v, _) =>
        let
           val v' = variant vL v;
@@ -377,6 +389,18 @@ fun vc vL t =
               end;
        in
          (v'::vL', thm_opt)
+       end
+     | TYLAMB (tyv, b) =>
+       let
+          val (vL' , thm_b_opt) = vc vL b;
+          val thm_opt = if not (isSome thm_b_opt) then NONE else
+              let
+                 val thm_b = if (isSome thm_b_opt) then valOf thm_b_opt else REFL b;
+              in
+                 SOME (TY_ABS tyv thm_b)
+              end;
+       in
+         (vL', thm_opt)
        end;
 in
    fun VARIANT_CONV fvL t =

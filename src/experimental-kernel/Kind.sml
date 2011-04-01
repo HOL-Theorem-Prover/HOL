@@ -15,10 +15,10 @@ In *scratch*, type
 and type Ctrl-j.
 
 loadPath := Globals.HOLDIR ^ "/sigobj" :: !loadPath;
-app load ["Feedback","Lib","KernelTypes"];
+app load ["Feedback","Lib","KernelTypes","Lexis"];
 *)
 
-open Feedback Lib;
+open Feedback Lib Rank;
 
 infix |-> ##;
 
@@ -27,8 +27,8 @@ fun ERR f msg = HOL_ERR {origin_structure = "Kind",
                          origin_function = f,
                          message = msg}
 
-datatype kind = Type
-              | KdVar of string
+datatype kind = Type of rank
+              | KdVar of string * rank
               | Oper of kind * kind
 
 
@@ -36,26 +36,45 @@ datatype kind = Type
        The kind of HOL types
  ---------------------------------------------------------------------------*)
 
-val typ = Type
+val rcheck = Rank.check "Kind"
+
+fun typ r = Type (rcheck "typ" r)
+
+fun mk_type_kind r = Type (rcheck "mk_type_kind" r)
+
+fun dest_type_kind (Type rank) = rank
+  | dest_type_kind _ = raise ERR "dest_type_kind" "not a type kind";
 
 (*---------------------------------------------------------------------------
        Operator (arrow) kinds
  ---------------------------------------------------------------------------*)
 
 infixr 3 ==>;   val op ==> = Oper;
+infix 3 :=: :>=:;
 
 fun kind_dom_rng (Oper(X,Y)) = (X,Y)
   | kind_dom_rng _ = raise ERR "kind_dom_rng" "not an operator kind";
 
-fun mk_arity 0 = Type
-  | mk_arity n = Type ==> mk_arity (n-1);
+fun ((Type r1) :=: (Type r2)) = true
+  | ((KdVar (s1,r1)) :=: (KdVar (s2,r2))) = (s1 = s2) andalso (r1 = r2)
+  | ((Oper (k1s,k1t)) :=: (Oper (k2s,k2t))) = (k1s :=: k2s) andalso (k1t :=: k2t)
+  | (_ :=: _) = false;
 
-fun is_arity (Type) = true
-  | is_arity (Oper(Type,Y)) = is_arity Y
+(* Kind containment: kinds match, but ranks are same or lower than container *)
+fun ((Type r1) :>=: (Type r2)) = ge_rk(r1,r2)
+  | ((KdVar (s1,r1)) :>=: (KdVar (s2,r2))) = (s1 = s2) andalso (r1 = r2)
+  | ((Oper (k1s,k1t)) :>=: (Oper (k2s,k2t))) = (k1s :>=: k2s) andalso (k1t :>=: k2t)
+  | (_ :>=: _) = false;
+
+fun mk_arity 0 = Type rho
+  | mk_arity n = Type rho ==> mk_arity (n-1);
+
+fun is_arity (Type 0) = true
+  | is_arity (Oper(Type 0,Y)) = is_arity Y
   | is_arity _ = false;
 
-fun arity_of (Type) = 0
-  | arity_of (Oper(Type,Y)) = arity_of Y + 1
+fun arity_of (Type 0) = 0
+  | arity_of (Oper(Type 0,Y)) = arity_of Y + 1
   | arity_of _ = raise ERR "arity_of" "not an arity kind";
 
 fun list_mk_arrow_kind (X::XS,Y) = X ==> list_mk_arrow_kind(XS,Y)
@@ -73,16 +92,19 @@ fun strip_arrow_kind (Oper(X,Y)) = let val (args,res) = strip_arrow_kind Y
        Kind variables
  ---------------------------------------------------------------------------*)
 
-val kappa = KdVar "'k"
+val kappa = KdVar ("'k", rho)
 
 val varkindcomplain = ref true
 val _ = register_btrace ("Varkind Format Complaint", varkindcomplain)
 
-fun mk_var_kind "'k" = kappa
-  | mk_var_kind s = if Lexis.allowed_user_type_var s then KdVar s
-                    else (if !varkindcomplain then
-                            WARN "mk_var_kind" "non-standard syntax"
-                          else (); KdVar s)
+local val chk = rcheck "mk_var_kind"
+in
+fun mk_var_kind ("'k", 0) = kappa
+  | mk_var_kind (s,r) = if Lexis.allowed_user_type_var s then KdVar (s,chk r)
+                        else (if !varkindcomplain then
+                                WARN "mk_var_kind" "non-standard syntax"
+                              else (); KdVar (s,chk r))
+end
 
 fun dest_var_kind (KdVar s) = s
   | dest_var_kind _ = raise ERR "dest_var_kind" "not a kind variable"
@@ -93,14 +115,14 @@ fun dest_var_kind (KdVar s) = s
      it unlikely that the names will clash with user-created
      kind variables.
  ---------------------------------------------------------------------------*)
-      
+
 local val gen_kdvar_prefix = "%%gen_kdvar%%"
       fun num2name i = gen_kdvar_prefix^Lib.int_to_string i
       val nameStrm   = Lib.mk_istream (fn x => x+1) 0 num2name
 in
-fun gen_var_kind () = KdVar(state(next nameStrm))
+fun gen_var_kind r = KdVar(state(next nameStrm), rcheck "gen_var_kind" r)
 
-fun is_gen_kdvar (KdVar name) = String.isPrefix gen_kdvar_prefix name
+fun is_gen_kdvar (KdVar (name,_)) = String.isPrefix gen_kdvar_prefix name
   | is_gen_kdvar _ = false;
 end;
 
@@ -109,10 +131,37 @@ end;
                 Discriminators
  ---------------------------------------------------------------------------*)
 
-(* for is_type_kind, use k = typ *)
-fun is_base_kind    (Type) = true | is_base_kind  _ = false;
-fun is_var_kind (KdVar  _) = true | is_var_kind   _ = false;
+fun is_type_kind (Type  _) = true | is_type_kind _ = false;
+fun is_var_kind  (KdVar _) = true | is_var_kind   _ = false;
 fun is_arrow_kind (Oper _) = true | is_arrow_kind _ = false;
+
+
+(* ----------------------------------------------------------------------
+    A total ordering on kinds.
+    Type < KdVar < Oper
+   ---------------------------------------------------------------------- *)
+
+fun kind_compare (Type r1,  Type r2)  = rank_compare(r1,r2)
+  | kind_compare (Type _,   _)        = LESS
+  | kind_compare (KdVar _,  Type _)   = GREATER
+  | kind_compare (KdVar p1, KdVar p2) = Lib.pair_compare(String.compare,rank_compare)(p1,p2)
+  | kind_compare (KdVar _,  _)        = LESS
+  | kind_compare (Oper p1,  Oper p2)  = Lib.pair_compare(kind_compare,kind_compare)(p1,p2)
+  | kind_compare (Oper _,   _)        = GREATER;
+
+
+(* ----------------------------------------------------------------------
+    A total ordering on kinds that does not distinguish ranks of Type's.
+    Type < KdVar < Oper
+   ---------------------------------------------------------------------- *)
+
+fun tycon_kind_compare (Type r1,  Type r2)  = EQUAL
+  | tycon_kind_compare (Type _,   _)        = LESS
+  | tycon_kind_compare (KdVar _,  Type _)   = GREATER
+  | tycon_kind_compare (KdVar p1, KdVar p2) = Lib.pair_compare(String.compare,rank_compare)(p1,p2)
+  | tycon_kind_compare (KdVar _,  _)        = LESS
+  | tycon_kind_compare (Oper p1,  Oper p2)  = Lib.pair_compare(tycon_kind_compare,tycon_kind_compare)(p1,p2)
+  | tycon_kind_compare (Oper _,   _)        = GREATER;
 
 
 (*----------------------------------------------------------------------*
@@ -136,7 +185,7 @@ end;
  ---------------------------------------------------------------------------*)
   
 fun exists_kdvar P =
- let fun occ (Type) = false
+ let fun occ (Type _) = false
        | occ (w as KdVar _) = P w
        | occ (Oper(kd1,kd2)) = occ kd1 orelse occ kd2
  in occ end;
@@ -151,11 +200,130 @@ fun kind_var_in v =
 
 
 (*---------------------------------------------------------------------------*
+ * Computing the rank of a kind.                                             *
+ *---------------------------------------------------------------------------*)
+
+fun rank_of (Type rk)       = rk
+  | rank_of (KdVar(_,rk))   = rk
+  | rank_of (Oper(dom,rng)) = max (rank_of dom, rank_of rng);
+
+(*---------------------------------------------------------------------------*
+ * Is a kind polymorphic, or contain a non-zero rank?                        *
+ *---------------------------------------------------------------------------*)
+
+fun polymorphic (Type rk)       = (rk > 0)
+  | polymorphic (KdVar _)       = true
+  | polymorphic (Oper(dom,rng)) = polymorphic dom orelse polymorphic rng
+
+
+(*---------------------------------------------------------------------------*
+ * Increasing the rank of a kind. (Promotion)                                *
+ *---------------------------------------------------------------------------*)
+
+local val chk = rcheck "inst_rank"
+in
+fun inst_rank 0 = I
+  | inst_rank rkS =
+  let val promote = promote rkS
+      fun inc_rk (Type rk)        = Type (promote rk)
+        | inc_rk (KdVar(s,rk))    = KdVar(s,promote rk)
+        | inc_rk (Oper (dom,rng)) = Oper (inc_rk dom, inc_rk rng)
+  in inc_rk
+  end
+end;
+
+fun raw_subst_rank rkS =
+  let fun chk rk = (rcheck "raw_subst_rank" rk; rk)
+      fun subst_rank0 [] = chk rkS
+        | subst_rank0 ({redex,residue} :: s) =
+            raw_match_rank false (rank_of redex) (rank_of residue) (subst_rank0 s)
+  in subst_rank0
+  end
+
+val subst_rank = raw_subst_rank 0
+
+fun inst_rank_subst rkS =
+  let val inst = inst_rank rkS
+      fun inst_rank_subst0 [] = []
+        | inst_rank_subst0 ({redex,residue} :: s) =
+            ({redex=inst redex, residue=residue} :: inst_rank_subst0 s)
+  in inst_rank_subst0
+  end
+
+fun align_kinds theta = let
+        val rkS = subst_rank theta
+        val inst = inst_rank rkS
+        fun inst_redex [] = []
+          | inst_redex ({redex,residue} :: s) = let
+                val redex' = inst redex
+              in
+                if redex' = residue then inst_redex s
+                else (redex' |-> residue) :: inst_redex s
+              end
+      in
+        (rkS, if rkS=0 then theta else inst_redex theta)
+      end
+
+(*---------------------------------------------------------------------------*
  * Substitute in a kind, trying to preserve existing structure.              *
  *---------------------------------------------------------------------------*)
 
+fun kd_sub_rk 0 _ = SAME
+  | kd_sub_rk rkS (Type rk) = DIFF (Type(promote rkS rk))
+  | kd_sub_rk rkS (Oper(kd1,kd2))
+      = (case delta_map (kd_sub_rk rkS) [kd1,kd2]
+          of SAME => SAME
+           | DIFF [kd1',kd2'] => DIFF (Oper(kd1', kd2'))
+           | DIFF _ => raise ERR "kd_sub_rk" "can't happen")
+  | kd_sub_rk rkS (KdVar(s,rk)) = DIFF (KdVar(s,promote rkS rk))
+
+fun kd_sub0 [] _ = SAME
+  | kd_sub0 theta (Type _) = SAME
+  | kd_sub0 theta (Oper(kd1,kd2))
+      = (case delta_map (kd_sub0 theta) [kd1,kd2]
+          of SAME => SAME
+           | DIFF [kd1',kd2'] => DIFF (Oper(kd1', kd2'))
+           | DIFF _ => raise ERR "kd_sub0" "can't happen")
+  | kd_sub0 theta v =
+      case Lib.subst_assoc (equal v) theta
+       of NONE    => SAME
+        | SOME kd => DIFF kd
+
+(*
+fun norm_sub (rkS,kdS) =
+ let val Theta = inst_rank rkS
+     fun del A [] = A
+       | del kdS ({redex,residue}::rst) =
+         del (let val redex' = Theta(redex)
+              in if residue = redex' then kdS
+                                     else (redex' |-> residue)::kdS
+              end) rst
+ in  del [] kdS
+ end
+*)
+
+fun kd_sub rkS [] = kd_sub_rk rkS
+  | kd_sub 0   theta = kd_sub0 theta
+  | kd_sub rkS theta =
+      let val inst_rk = promote rkS
+          fun sub (Type rk) = DIFF (Type (inst_rk rk))
+            | sub (Oper(kd1,kd2))
+               = (case delta_map sub [kd1,kd2]
+                   of SAME => SAME
+                    | DIFF [kd1',kd2'] => DIFF (Oper(kd1', kd2'))
+                    | DIFF _ => raise ERR "kd_sub" "can't happen")
+            | sub (v as KdVar(s,rk)) =
+               let val v' = KdVar(s,inst_rk rk)
+               in case Lib.subst_assoc (equal v') theta
+                   of NONE    => DIFF v'
+                    | SOME kd => DIFF kd
+               end
+      in sub
+      end
+
+(*
 fun kd_sub [] _ = SAME
-  | kd_sub theta (Type) = SAME
+  | kd_sub theta (Type _) = SAME
   | kd_sub theta (Oper(kd1,kd2))
       = (case delta_map (kd_sub theta) [kd1,kd2]
           of SAME => SAME
@@ -164,7 +332,8 @@ fun kd_sub [] _ = SAME
   | kd_sub theta v =
       case Lib.subst_assoc (equal v) theta
        of NONE    => SAME
-        | SOME kd => if kd=v then SAME else DIFF kd
+        | SOME kd => DIFF kd
+*)
 
 fun kd_sub1 theta kd =
   case Lib.subst_assoc (equal kd) theta
@@ -179,18 +348,125 @@ fun kd_sub1 theta kd =
 
 fun kind_subst theta =
     if null theta then I
-    else if List.all (is_var_kind o #redex) theta
-         then delta_apply (kd_sub theta)
+    else
+    let val (rk,theta') = align_kinds theta
+    in if rk = 0 then
+         if List.all (is_var_kind o #redex) theta
+         then delta_apply (kd_sub0 theta)
          else delta_apply (kd_sub1 theta)
+       else
+         if List.all (is_var_kind o #redex) theta'
+         then delta_apply (kd_sub0 theta') o inst_rank rk
+         else delta_apply (kd_sub1 theta') o inst_rank rk
+    end
 
-         
+val emptysubst:(kind,kind)Binarymap.dict = Binarymap.mkDict kind_compare
+local
+  open Binarymap
+  fun add [] A = A
+    | add ({redex,residue}::t) A =
+        if not (ge_rk (rank_of redex, rank_of residue))
+        then raise ERR "inst_kind" "rank of residue is not contained in rank of redex"
+        else add t (insert(A,redex,residue))
+in
+fun pure_inst_kind []    = Lib.I
+  | pure_inst_kind theta =
+  let val fmap = add theta emptysubst
+      fun inst (k as Type _)    = k
+        | inst (Oper(kd1, kd2)) = Oper(inst kd1, inst kd2)
+        | inst (v as KdVar _)   = case peek(fmap,v) of NONE => v | SOME y => y
+  in inst
+  end
+
+(* fun inst_rank_kind rank theta = kind_subst theta o inst_rank rank *)
+
+fun inst_rank_kind rk   []    = inst_rank rk
+  | inst_rank_kind 0    theta = pure_inst_kind theta
+  | inst_rank_kind rank theta =
+  let val rk_inst = Rank.promote rank
+      val fmap = add theta emptysubst
+      fun inst (Type rk)        = Type (rk_inst rk)
+        | inst (Oper(kd1, kd2)) = Oper(inst kd1, inst kd2)
+        | inst (KdVar(s,rk))    = let val v = KdVar(s,rk_inst rk) in
+                                    case peek(fmap,v)
+                                    (*case subst_assoc (equal v) theta*)
+                                     of SOME y => y
+                                      | NONE => v
+                                  end
+  in inst
+  end
+end; (* local *)
+
+(* inst_kind aligns the ranks of its substitution *)
+fun inst_kind theta =
+  let val (rktheta,kdtheta) = align_kinds theta
+  in inst_rank_kind rktheta kdtheta
+  end
+
+(*---------------------------------------------------------------------------
+     These routines support the "vsubst" routine in Type.sml,
+     by raising the Unchanged exception if they are not changed.
+ ---------------------------------------------------------------------------*)
+
+(* used internally to avoid term rebuilding during substitution and
+   type instantiation; exported to Type.vsubst, Term.inst and subst *)
+exception Unchanged
+
+(* apply a function f under "constructor" con, handling Unchanged *)
+fun qcomb con f (x,y) = let
+  val fx = f x
+in
+  let val fy = f y
+  in
+    con(fx, fy)
+  end handle Unchanged => con(fx, y)
+end handle Unchanged => let val fy = f y
+                        in
+                          con(x, fy)
+                        end
+
+fun vsubst_rk 0 = (fn kd => raise Unchanged)
+  | vsubst_rk rkS =
+    let val inst = Rank.promote rkS
+        fun vsub (Type rk)       = Type(inst rk)
+          | vsub (Oper(kd1,kd2)) = Oper(vsub kd1, vsub kd2)
+          | vsub (KdVar(s,rk))   = KdVar(s, inst rk)
+    in vsub
+    end
+
+fun vsubst_kd []  = (fn kd => raise Unchanged)
+  | vsubst_kd kdS =
+    let fun vsub (Type rk) = raise Unchanged
+          | vsub (Oper p) = qcomb Oper vsub p
+          | vsub (v as KdVar _) =
+              case Lib.subst_assoc (equal v) kdS of
+                 NONE => raise Unchanged
+               | SOME k => k
+    in vsub
+    end
+
+fun vsubst_rk_kd rkS []  = vsubst_rk rkS
+  | vsubst_rk_kd 0 kdS = vsubst_kd kdS
+  | vsubst_rk_kd rkS kdS =
+    let val inst = Rank.promote rkS
+        fun vsub (Type rk) = Type(inst rk)
+          | vsub (Oper p) = qcomb Oper vsub p
+          | vsub (KdVar(s,rk)) =
+              let val v' = KdVar(s, inst rk)
+              in case Lib.subst_assoc (equal v') kdS of
+                    NONE => v'
+                  | SOME k => k
+              end
+    in vsub
+    end
+
 (*---------------------------------------------------------------------------
          This matching algorithm keeps track of identity bindings
          v |-> v in a separate area. This eliminates the need for
          post-match normalization of substitutions coming from the
          matching algorithm.
  ---------------------------------------------------------------------------*)
-  
+
 local
   fun MERR s = raise ERR "raw_match_kind" s
   fun lookup x ids =
@@ -198,41 +474,56 @@ local
          | look ({redex,residue}::t) = if x=redex then SOME residue else look t
    in look end
 in   
-fun kdmatch [] [] Sids = Sids
-  | kdmatch (Type::ps) (Type::obs) Sids =
-     kdmatch ps obs Sids
-  | kdmatch ((v as KdVar name)::ps) (kd::obs) (Sids as (S,ids)) =
-     kdmatch ps obs
+fun kdmatch _ [] [] rSids = rSids
+  | kdmatch incty (Type r1::ps) (Type r2::obs) ((rkS,rkfixed),Sids) =
+     kdmatch incty ps obs ((if incty then rkS else raw_match_rank rkfixed r1 r2 rkS,rkfixed),Sids)
+  | kdmatch incty ((v as KdVar(name,rk))::ps) (kd::obs) (rSids as ((rkS,rkfixed),Sids as (S,ids))) =
+     kdmatch incty ps obs
        (case lookup v ids S
-         of NONE => if v=kd then (S,v::ids) else ((v |-> kd)::S,ids)
-          | SOME kd1 => if kd1=kd then Sids else
+         of NONE => if v=kd then ((raw_match_rank rkfixed rk rk rkS,rkfixed),(S,v::ids))
+                    else ((raw_match_rank rkfixed rk (rank_of kd) rkS,rkfixed), 
+                          ((v |-> kd)::S,ids))
+          | SOME kd1 => if kd1=kd then rSids else
                         MERR ("double bind on kind variable "^name))
-  | kdmatch (Oper(p1,p2)::ps) (Oper(obs1,obs2)::obs) Sids =
-      kdmatch (p1::p2::ps) (obs1::obs2::obs) Sids
-  | kdmatch any other thing = MERR "different kind constructors"
+  | kdmatch incty (Oper(p1,p2)::ps) (Oper(obs1,obs2)::obs) rSids =
+      kdmatch incty (p1::p2::ps) (obs1::obs2::obs) rSids
+  | kdmatch _ any other thing = MERR "different kind constructors"
 end
 
-fun raw_match_kind pat ob Sids = kdmatch [pat] [ob] Sids 
+fun norm_subst (rk as (rkS,rkfixed),(kdS,kdI)) =
+ let val Theta = inst_rank rkS
+     val mapTheta = case rkS of
+                      0 => I
+                    | _ => map Theta
+     fun del A [] = A
+       | del (kdS,kdI) ({redex,residue}::rst) =
+         del (let val redex' = Theta(redex)
+              in if residue = redex' then (kdS,redex'::kdI)
+                                     else ((redex' |-> residue)::kdS,kdI)
+              end) rst
+ in (rk, del ([],mapTheta kdI) kdS)
+ end
 
-fun match_kind_restr fixed pat ob  = fst (raw_match_kind pat ob ([],fixed))
-fun match_kind_in_context pat ob S = fst (raw_match_kind pat ob (S,[]))
+fun prim_match_kind inconty pat ob rSids = kdmatch inconty [pat] [ob] rSids 
 
-fun match_kind pat ob = match_kind_in_context pat ob []
+val raw_match_kind = prim_match_kind false
 
+fun match_kind_restr rkfixed fixed pat ob =
+    let val ((rkS,rkfixed),(kdS,ids)) = norm_subst (raw_match_kind pat ob ((0,rkfixed),([],fixed)))
+    in (rkS,kdS)
+    end
+fun match_kind_in_context pat ob (rk,S) =
+    let val ((rkS,rkfixed),(kdS,ids)) = norm_subst (raw_match_kind pat ob ((rk,false),(S,[])))
+    in (rkS,kdS)
+    end
 
-(* ----------------------------------------------------------------------
-    A total ordering on kinds.
-    Type < KdVar < Oper
-   ---------------------------------------------------------------------- *)
+fun match_kind pat ob = match_kind_in_context pat ob (0,[])
 
-fun kind_compare (Type,     Type)     = EQUAL
-  | kind_compare (Type,     _)        = LESS
-  | kind_compare (KdVar _,  Type)     = GREATER
-  | kind_compare (KdVar s1, KdVar s2) = String.compare(s1,s2)
-  | kind_compare (KdVar _,  _)        = LESS
-  | kind_compare (Oper p1,  Oper p2)  =
-        Lib.pair_compare(kind_compare,kind_compare)(p1,p2)
-  | kind_compare (Oper _,   _)        = GREATER;
+fun match_kinds theta =
+ let fun match ({redex,residue},matches) = raw_match_kind redex residue matches
+     val ((rkS,rkfixed),(kdS,ids)) = norm_subst (List.foldr match ((0,false),([],[])) theta)
+ in (rkS,kdS)
+ end
 
 
 fun size acc kdlist =
@@ -259,26 +550,30 @@ fun kind_size kd = size 0 [[kd]]
  * "->" associates to the right, else, parentheses are printed as needed.    *
  *---------------------------------------------------------------------------*)
 
-fun pp_kind pps kn =
+fun pp_kind pps kd =
  let open Portable
      val {add_string,add_break,begin_block,end_block,...} = with_ppstream pps
-     fun pp1 paren (Type) = add_string "ty"
-       | pp1 paren (KdVar s) = add_string s
+     fun pp1 paren (Type rk) = if rk=rho then add_string "ty"
+                                       else add_string ("ty:"^rank_to_string rk)
+       | pp1 paren (KdVar(s,rk)) = if rk=rho then add_string s
+                                       else add_string (s^":"^rank_to_string rk)
        | pp1 paren (Oper(Rator,Rand)) =
           ( if paren then (add_string "("; begin_block INCONSISTENT 0) else ();
             pp true Rator; add_string " =>"; add_break(1,0); pp false Rand;
             if paren then (end_block(); add_string ")") else () )
-     and pp paren Type = add_string "ty"
-       | pp paren (KdVar s) = add_string s
-       | pp paren kn = add_string ("ar " ^ Lib.int_to_string (arity_of kn))
-                       handle HOL_ERR _ => pp1 paren kn
+     and pp paren (Type rk) = if rk=rho then add_string "ty"
+                                       else add_string ("ty:"^rank_to_string rk)
+       | pp paren (KdVar(s,rk)) = if rk=rho then add_string s
+                                       else add_string (s^":"^rank_to_string rk)
+       | pp paren kd = add_string ("ar " ^ Lib.int_to_string (arity_of kd))
+                       handle HOL_ERR _ => pp1 paren kd
  in
    begin_block INCONSISTENT 0;
-   pp false kn;
+   pp false kd;
    end_block()
  end;
 
-fun pp_qkind pps kn =
+fun pp_qkind pps kd =
  let open Portable Globals
      val {add_string,add_break,begin_block,end_block,...} = with_ppstream pps
      val pp_kind = pp_kind pps
@@ -286,7 +581,7 @@ fun pp_qkind pps kn =
    begin_block INCONSISTENT 0;
    add_string (!kind_pp_prefix);
    add_string "::";
-   pp_kind kn;
+   pp_kind kd;
    add_string (!kind_pp_suffix);
    end_block()
  end;
@@ -301,31 +596,6 @@ val kind_to_string = sprint pp_kind;
 
 (*
 val _ = installPP pp_qkind;
-*)
-
-(*
-val k0 = typ;
-val k1 = typ ==> typ;
-val k2 = mk_arity 2;
-val k3 = (typ ==> typ) ==> (typ ==> typ);
-val k4 = k2 ==> k1 ==> k2;
-val k5 = k4 ==> k4 ==> k4;
-val k6 = k5 ==> k5;
-kind_dom_rng k0; (* should fail *)
-kind_dom_rng k1;
-kind_dom_rng k2;
-kind_dom_rng k3;
-kind_dom_rng k4;
-is_arity k0;
-is_arity k1;
-is_arity k2;
-is_arity k3;
-is_arity k4;
-arity_of k0;
-arity_of k1;
-arity_of k2;
-arity_of k3; (* should fail *)
-arity_of k4; (* should fail *)
 *)
 
 

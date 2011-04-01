@@ -27,6 +27,12 @@ datatype label = TV
      the junk with the usual sort of call to match_type.  With "peek", the
      old data won't be called because the lookup at the leaf's Binarymap
      will just find whatever's supposed to be associated with the new type.
+
+     However, the kind recorded is not the actual kind of the constant,
+     but the primitive kind, as originally part of the type definition.
+     Using the acutal constant's kind would not permit retriving the
+     type data from the database for a constant which was an instance
+     of the primitive kind.
   *)
 
 fun reccmp ({Thy=th1,Tyop=op1}, {Thy=th2,Tyop=op2}) =
@@ -78,8 +84,10 @@ fun ndest_type (ty,env) =
                    else (TBV i, [])
       end
     else if is_con_type ty then
-      let val {Thy,Tyop,Kind,Rank} = dest_thy_con_type ty
-      in (TCON({Thy=Thy,Tyop=Tyop},Kind), [])
+      let val {Thy,Tyop,Kind} = dest_thy_con_type ty
+          val tyc = {Thy=Thy,Tyop=Tyop}
+          val pKind = prim_kind_of tyc
+      in (TCON(tyc,pKind), [])
       end
     else if is_app_type ty then
       let val (opr,arg) = dest_app_type ty

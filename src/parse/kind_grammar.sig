@@ -5,7 +5,7 @@ sig
 
 Kind is the root nonterminal.
 
-Kind   ::= 'ty' | KindIdent | Kind '=>' Kind | 'ar' Numeral | '(' Kind ')'
+Kind   ::= 'ty' [ ':' Numeral ] | KindIdent [ ':' Numeral ] | Kind '=>' Kind | 'ar' Numeral | '(' Kind ')'
 
 *)
 
@@ -14,10 +14,12 @@ Kind   ::= 'ty' | KindIdent | Kind '=>' Kind | 'ar' Numeral | '(' Kind ')'
     | INFIX of {opname : string, parse_string : string} list *
                 HOLgrammars.associativity
     | PREFIX of string list
+    | RANKCAST
 
   datatype kind_structure
     = KINDOP of {Thy : string, Kindop : string, Args : kind_structure list}
-    | KDVAR  of string
+    | KDTYPE of Kind.rank
+    | KDVAR  of string * Kind.rank
 
   type grammar
 

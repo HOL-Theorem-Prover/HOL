@@ -79,20 +79,19 @@ fun strip_app_structure0 argl (TYAPP(opr,arg)) =
 fun strip_app_structure st = strip_app_structure0 [] st
 
 fun structure_to_string st = let
-  open Kind
+  open Rank Kind
   fun recurse paren st =
       case st of
-        TYCON {Thy,Tyop,Kind,Rank} => Thy ^ "$" ^ Tyop
-      | TYVAR (str,kd,rk) =>
-          let val paren = not (kd = typ andalso rk = 0)
+        TYCON {Thy,Tyop,Kind} => Thy ^ "$" ^ Tyop
+      | TYVAR (str,kd) =>
+          let val paren = not (kd = typ rho) andalso not (is_var_kind kd)
           in
             (if paren then "(" else "") ^
             str ^
-            (if kd = typ then "" else " : "^kind_to_string kd) ^
-            (if rk = 0   then "" else " :<= "^Int.toString rk) ^
+            (if kd = typ rho then "" else " : "^kind_to_string kd) ^
             (if paren then ")" else "")
           end
-      | TYAPP (TYAPP (TYCON {Thy="min",Tyop="fun",Kind,Rank}, x), y) =>
+      | TYAPP (TYAPP (TYCON {Thy="min",Tyop="fun",Kind}, x), y) =>
                        (if paren then "(" else "") ^
                        recurse true x ^ " -> " ^
                        recurse false y ^
@@ -132,10 +131,9 @@ fun structure_to_string st = let
                  ") " ^ opstr
         end
 *)
-      | PARAM (i,kd,rk) => (if i < 4 then List.nth(greek4, i)
-                            else "'" ^ str (Char.chr (Char.ord #"a" + i))) ^
-                           (if kd = typ then "" else " : "^kind_to_string kd) ^
-                           (if rk = 0   then "" else " :<= "^Int.toString rk)
+      | PARAM (i,kd) => (if i < 4 then List.nth(greek4, i)
+                         else "'" ^ str (Char.chr (Char.ord #"a" + i))) ^
+                        (if kd = typ rho then "" else " : "^kind_to_string kd)
 in
   recurse false st
 end
@@ -221,9 +219,8 @@ fun pp_type0 (G:grammar) backend = let
     fun check_dest_type ty =
       let open Kind
           val (opr,args) = strip_app_type ty
-          val {Thy,Tyop,Kind,Rank} = dest_thy_con_type opr
+          val {Thy,Tyop,Kind} = dest_thy_con_type opr
       in if is_arity Kind (*andalso length args = arity_of Kind*)
-                          andalso Rank = 0
          then (Tyop,args)
          else raise ERR "check_dest_type: not a traditional type"
       end
@@ -243,18 +240,19 @@ fun pp_type0 (G:grammar) backend = let
     fun add_ann_string'(p as (s,ann)) =
               (*if !pp_annotations then*) add_ann_string p (*else add_string s*)
 
-    fun print_skr grav annot (s,k,r) =
-        if (k <> Kind.typ orelse r <> 0) andalso show_kinds() = 1
+    fun print_sk grav annot (s,k) =
+      let open Rank Kind
+      in
+        if (k <> typ rho) andalso show_kinds() = 1
            orelse show_kinds() = 2
         then let
             val parens_needed =
                  case grav of Top => false | _ => true
-            val pkd = k <> Kind.typ orelse show_kinds() = 2
           in
             pbegin parens_needed;
             add_ann_string' (s, annot);
-            if k <> Kind.typ orelse show_kinds() = 2 then let
-                val p = r <> 0 andalso not (Kind.is_arity k)
+            if k <> typ rho orelse show_kinds() = 2 then let
+                val p = rank_of k <> rho andalso not (Kind.is_arity k)
               in
                 add_string ": ";
                 pbegin p;
@@ -262,35 +260,33 @@ fun pp_type0 (G:grammar) backend = let
                 pend p
               end
             else ();
-            if r <> 0 orelse show_kinds() = 2 then
-              (add_string " :<= "; add_string (Int.toString r))
-            else ();
             pend parens_needed
           end
         else add_ann_string' (s, annot)
+      end
 
     fun print_var new grav tyv =
-        let val (s,k,r) = dest_var_type tyv
+        let val (s,k) = dest_var_type tyv
             val s = uniconvert s
-            val bound = Lib.mem tyv (!btyvars_seen)
+            val bound = binderp orelse Lib.mem tyv (!btyvars_seen)
             val kd_annot = (* if k = Kind.typ then "" else *)
                            ": " ^ kind_to_string k
             val annot = (if bound then TyBV else TyFV)
-                        (k, r, fn () => s ^ kd_annot)
-        in if new then print_skr grav annot (s,k,r)
+                        (k, fn () => s ^ kd_annot)
+        in if new then print_sk grav annot (s,k)
                   else add_ann_string' (s, annot)
         end
     fun print_vars [] = ()
       | print_vars (v::vs) = (print_var true Top v; add_string ","; print_vars vs)
 
     fun print_const grav tyc =
-        let val {Thy, Tyop, Kind, Rank} = dest_thy_con_type tyc
+        let val {Thy, Tyop, Kind} = dest_thy_con_type tyc
             val fullname = Thy ^ "$" ^ Tyop
-            val kd_annot = if Kind = Kind.typ then ""
+            val kd_annot = if Kind = Kind.typ Rank.rho then ""
                            else ": " ^ kind_to_string Kind
             val annot_str = fullname ^ kd_annot
             val annot = TyOp (fn () => annot_str)
-        in print_skr grav annot (fullname,Kind,Rank)
+        in print_sk grav annot (fullname,Kind)
         end
 
   in
@@ -299,9 +295,10 @@ fun pp_type0 (G:grammar) backend = let
       if is_var_type ty then
         let
           val new_freetyvar =
+             not binderp andalso
              not (Lib.mem ty (!ftyvars_seen)) andalso
              not (Lib.mem ty (!btyvars_seen))
-          val new = new_freetyvar orelse binderp
+          val new = binderp orelse new_freetyvar
         in
           if new_freetyvar then ftyvars_seen := ty :: (!ftyvars_seen) else ();
           print_var new grav ty
@@ -414,6 +411,11 @@ fun pp_type0 (G:grammar) backend = let
                   pr_ty binderp pps arg1 (Lfx (prec, printthis)) (depth - 1);
                   add_break(1,0);
                   add_ann_string (printthis, TySyn tooltip);
+                  if current_trace "kinds" < 2 then () else
+                    let val rk = rank_of_type (#1 (strip_app_type ty))
+                    in if rk = Rank.rho then () else
+                        add_string (":" ^ Rank.rank_to_string rk)
+                    end;
                   add_break(1,0);
                   pr_ty binderp pps arg2 (Rfx (prec, printthis)) (depth -1);
                   end_block();
@@ -445,7 +447,7 @@ fun pp_type0 (G:grammar) backend = let
         in
           case fromType ty of
             TyV_Const _ => let
-              val {Thy,Tyop,Kind,Rank} = dest_thy_con_type ty
+              val {Thy,Tyop,Kind} = dest_thy_con_type ty
             in
               case lookup_tyop Tyop of
                 NONE =>  print_const grav ty
@@ -463,7 +465,6 @@ fun pp_type0 (G:grammar) backend = let
           | TyV_Abs _ => let
               val (vars, body) = strip_abs_type ty
               val prev_btyvars_seen = !btyvars_seen
-              val _ = btyvars_seen := vars @ prev_btyvars_seen
               val parens = case grav of
                              Top => false
                            | _ => true
@@ -480,6 +481,7 @@ fun pp_type0 (G:grammar) backend = let
                       vars;
               end_block ();
               add_string ".";
+              btyvars_seen := vars @ prev_btyvars_seen;
               add_break (1,0);
               pr_ty false pps body Top (depth - 1);
               end_block ();
@@ -489,7 +491,6 @@ fun pp_type0 (G:grammar) backend = let
           | TyV_All _ => let
               val (vars, body) = strip_univ_type ty
               val prev_btyvars_seen = !btyvars_seen
-              val _ = btyvars_seen := vars @ prev_btyvars_seen
               val parens = case grav of
                              Top => false
                            | _ => true
@@ -506,6 +507,7 @@ fun pp_type0 (G:grammar) backend = let
                       vars;
               end_block ();
               add_string ".";
+              btyvars_seen := vars @ prev_btyvars_seen;
               add_break (1,0);
               pr_ty false pps body Top (depth - 1);
               end_block ();
@@ -519,16 +521,16 @@ in
   pr_ty
 end
 
-fun pp_type_cont G backend = let
-  val baseprinter = pp_type0 G backend
+fun pp_type_cont G backend binderp = let
+  val baseprinter = pp_type0 G backend binderp
 in
-  (fn pps => fn ty => baseprinter false pps ty Top (!Globals.max_print_depth))
+  (fn pps => fn ty => baseprinter pps ty Top (!Globals.max_print_depth))
 end
 
-fun pp_type_with_depth_cont G backend = let
-  val baseprinter = pp_type0 G backend
+fun pp_type_with_depth_cont G backend binderp = let
+  val baseprinter = pp_type0 G backend binderp
 in
-  (fn pps => fn depth => fn ty => baseprinter false pps ty Top depth)
+  (fn pps => fn depth => fn ty => baseprinter pps ty Top depth)
 end
 
 fun pp_type G backend = let

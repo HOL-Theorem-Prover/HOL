@@ -1,15 +1,15 @@
 signature type_pp =
 sig
 
- val pp_type : type_grammar.grammar -> PPBackEnd.t ->
+ val pp_type : type_grammar.grammar -> PPBackEnd.t -> bool ->
                Portable.ppstream -> Type.hol_type -> unit
- val pp_type_with_depth : type_grammar.grammar -> PPBackEnd.t ->
+ val pp_type_with_depth : type_grammar.grammar -> PPBackEnd.t -> bool ->
                           Portable.ppstream -> int -> Type.hol_type -> unit
  val pp_type_cont :
-               type_grammar.grammar -> PPBackEnd.t ->
+               type_grammar.grammar -> PPBackEnd.t -> bool ->
                Portable.ppstream -> Type.hol_type -> unit
  val pp_type_with_depth_cont :
-               type_grammar.grammar -> PPBackEnd.t ->
+               type_grammar.grammar -> PPBackEnd.t -> bool ->
                Portable.ppstream -> int -> Type.hol_type -> unit
 
  val pp_num_types   : bool ref

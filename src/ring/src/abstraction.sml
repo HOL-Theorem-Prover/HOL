@@ -97,7 +97,7 @@ fun four_cmp cmp1 cmp2 cmp3 cmp4 (a1,b1,c1,d1) (a2,b2,c2,d2) =
 
 (* val majo_eq = pair_cmp (list_cmp (subst_cmp eq)) equal *)
 
-val majo_eq = four_cmp (list_cmp (subst_cmp eq)) equal equal equal
+val majo_eq = four_cmp (list_cmp (subst_cmp eq)) (list_cmp (subst_cmp eq_ty)) equal equal
 
 fun majo NONE o2 = o2
   | majo o1 NONE = o1

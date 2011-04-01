@@ -1,0 +1,37 @@
+#!/bin/bash
+HOLDIR=`(cd ../.. ; pwd)`
+echo HOLDIR=${HOLDIR}
+cd ${HOLDIR}/examples/ARM/v4
+echo ${HOLDIR}/examples/ARM/v4
+${HOLDIR}/bin/Holmake cleanAll
+cd ${HOLDIR}/examples/ARM/v7
+echo ${HOLDIR}/examples/ARM/v7
+${HOLDIR}/bin/Holmake cleanAll
+cd ${HOLDIR}/examples/machine-code/instruction-set-models/common
+echo ${HOLDIR}/examples/machine-code/instruction-set-models/common
+${HOLDIR}/bin/Holmake cleanAll
+cd ${HOLDIR}/examples/machine-code/instruction-set-models/arm
+echo ${HOLDIR}/examples/machine-code/instruction-set-models/arm
+${HOLDIR}/bin/Holmake cleanAll
+cd ${HOLDIR}/examples/machine-code/instruction-set-models/x86
+echo ${HOLDIR}/examples/machine-code/instruction-set-models/x86
+${HOLDIR}/bin/Holmake cleanAll
+cd ${HOLDIR}/examples/machine-code/instruction-set-models/ppc
+echo ${HOLDIR}/examples/machine-code/instruction-set-models/ppc
+${HOLDIR}/bin/Holmake cleanAll
+cd ${HOLDIR}/examples/machine-code/decompiler
+echo ${HOLDIR}/examples/machine-code/decompiler
+${HOLDIR}/bin/Holmake cleanAll
+cd ${HOLDIR}/examples/machine-code/compiler
+echo ${HOLDIR}/examples/machine-code/compiler
+${HOLDIR}/bin/Holmake cleanAll
+cd ${HOLDIR}/examples/machine-code/hoare-triple
+echo ${HOLDIR}/examples/machine-code/hoare-triple
+${HOLDIR}/bin/Holmake cleanAll
+cd ${HOLDIR}/examples/machine-code/garbage-collectors
+echo ${HOLDIR}/examples/machine-code/garbage-collectors
+${HOLDIR}/bin/Holmake cleanAll
+cd ${HOLDIR}/examples/machine-code/just-in-time
+echo ${HOLDIR}/examples/machine-code/just-in-time
+${HOLDIR}/bin/Holmake cleanAll
+cd ${HOLDIR}/examples/machine-code

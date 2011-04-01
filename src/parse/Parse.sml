@@ -136,6 +136,39 @@ fun fixity s =
        Mysterious stuff
  ---------------------------------------------------------------------------*)
 
+(*
+
+(* ============ *)
+(* rank parsing *)
+(* ============ *)
+
+val rk_antiq = parse_rank.rk_antiq;
+val dest_rk_antiq = parse_rank.dest_rk_antiq;
+val is_rk_antiq = parse_rank.is_rk_antiq;
+
+val rk_kd_antiq = parse_rank.rk_kd_antiq;
+val dest_rk_kd_antiq = parse_rank.dest_rk_kd_antiq;
+val is_rk_kd_antiq = parse_rank.is_rk_kd_antiq;
+
+val rk_ty_antiq = parse_rank.rk_ty_antiq;
+val dest_rk_ty_antiq = parse_rank.dest_rk_ty_antiq;
+val is_rk_ty_antiq = parse_rank.is_rk_ty_antiq;
+
+local
+  open parse_rank Prerank
+in
+val rank_parser0 =
+  ref (parse_rank termantiq_constructors)
+val rank_parser1 =
+  ref (parse_rank typeantiq_constructors)
+val rank_parser2 =
+  ref (parse_rank kindantiq_constructors)
+val rank_parser3 =
+  ref (parse_rank rankantiq_constructors)
+end
+
+*)
+
 (* ============ *)
 (* kind parsing *)
 (* ============ *)
@@ -163,6 +196,36 @@ fun make_to_backend_string ppf x = Portable.pp_to_string (!Globals.linewidth) pp
 fun lazy_make_to_string ppf = Lib.with_flag (current_backend, PPBackEnd.raw_terminal) (fn x => make_to_backend_string (ppf()) x)
 fun make_to_string ppf = lazy_make_to_string (fn()=>ppf)
 fun make_print to_string t = Portable.output(Portable.std_out, to_string t)
+
+(*
+
+(*---------------------------------------------------------------------------
+        pretty printing ranks
+ ---------------------------------------------------------------------------*)
+
+val rank_to_string = Rank.rank_to_string
+
+fun pp_rank pps rk =
+ let open Portable
+     val {add_string,add_break,begin_block,end_block,...} = with_ppstream pps
+ in
+   add_string (rank_to_string rk)
+ end;
+
+(*val rank_to_string = make_to_string pp_rank;*)
+val print_rank = make_print rank_to_string;
+val rank_to_backend_string = make_to_backend_string pp_rank;
+val print_backend_rank = make_print rank_to_backend_string;
+
+fun rank_pp_with_delimiters ppfn pp rank =
+  let open Portable Globals
+  in add_string pp (!rank_pp_prefix);
+     add_string pp ":::";
+     ppfn pp rank;
+     add_string pp (!rank_pp_suffix)
+  end
+
+*)
 
 (*---------------------------------------------------------------------------
         pretty printing kinds
@@ -200,10 +263,56 @@ fun kind_pp_with_delimiters ppfn pp kind =
      add_string pp (!kind_pp_suffix)
   end
 
+(*
+
+(*---------------------------------------------------------------------------
+              Parsing ranks
+ ---------------------------------------------------------------------------*)
+
+fun parse_Prerank pfns prk = Prerank.toRank prk
+
+local open parse_rank
+in
+fun parse_Rank parser q = let
+  open base_tokens qbuf
+  val qb = new_buffer q
+in
+  case qbuf.current qb of
+    (BT_Ident s,locn) =>
+    if String.size s < 3 orelse
+       String.sub(s, 0) <> #":" orelse String.sub(s, 1) <> #":"
+                                orelse String.sub(s, 2) <> #":" then
+      raise ERRORloc "parse_Rank" locn "ranks must begin with a triple colon"
+    else let
+        val _ = if size s = 3 then advance qb
+                else let val locn' = locn.move_start 3 locn in
+                     replace_current (BT_Ident (String.extract(s, 3, NONE)),locn') qb end
+        val pk = parser qb
+        val pfns = SOME rank_to_string
+      in
+        case current qb of
+            (BT_EOI,_) => parse_Prerank pfns pk
+          | (_,locn) => raise ERRORloc "parse_Rank" locn
+                                       ("Couldn't make any sense of remaining input.")
+      end
+  | (_,locn) => raise ERRORloc "parse_Rank" locn "ranks must begin with a triple colon"
+end
+end (* local *)
+
+fun Rank q =
+   parse_Rank (!rank_parser3) q
+
+fun ==== q x = Rank q;
+
+*)
+
 
 (*---------------------------------------------------------------------------
               Parsing kinds
  ---------------------------------------------------------------------------*)
+
+fun parse_Prekind pfns pkd =
+     Prekind.rankcheck pfns pkd
 
 local open parse_kind
 in
@@ -221,9 +330,10 @@ in
                 else let val locn' = locn.move_start 2 locn in
                      replace_current (BT_Ident (String.extract(s, 2, NONE)),locn') qb end
         val pk = parser qb
+        val pfns = SOME kind_to_string
       in
         case current qb of
-            (BT_EOI,_) => Prekind.toKind pk
+            (BT_EOI,_) => parse_Prekind pfns pk
           | (_,locn) => raise ERRORloc "parse_Kind" locn
                                        ("Couldn't make any sense of remaining input.")
       end
@@ -299,7 +409,7 @@ end
 fun pp_type pps ty = let in
    update_type_fns();
    Portable.add_string pps ":";
-   !type_printer (!current_backend) pps ty
+   !type_printer (!current_backend) false pps ty
  end
 
 
@@ -320,7 +430,7 @@ fun pp_with_bquotes ppfn pp x =
   let open Portable in add_string pp "`"; ppfn pp x; add_string pp "`" end
 
 fun print_from_grammars (tyG, tmG) =
-  (type_pp.pp_type tyG (!current_backend),
+  (type_pp.pp_type tyG (!current_backend) false,
    term_pp.pp_term tmG tyG (!current_backend))
 
 local open TextIO in
@@ -381,15 +491,15 @@ end
 fun to_ptyInEnv ty = let
   open Pretype Parse_support
   val (PT(ty0,l)) = ty
-  fun binder_type binder (Pretype.PT(Pretype.Vartype(s,kd,rk),l)) = make_binding_type_occ l s binder
+  fun binder_type binder (Pretype.PT(Pretype.Vartype(s,kd),l)) = make_binding_type_occ l s binder
     | binder_type binder (Pretype.PT(Pretype.TyKindConstr{Ty,Kind},l)) =
             make_kind_binding_occ l (binder_type binder Ty) Kind
     | binder_type binder (Pretype.PT(Pretype.TyRankConstr{Ty,Rank},l)) =
             make_rank_binding_occ l (binder_type binder Ty) Rank
     | binder_type _ _ = raise ERROR "to_ptyInEnv" "non-variable type binder"
 in case ty0 of
-     Vartype(s,kd,rk)  => make_type_atom l (s,kd,rk)
-   | Contype{Thy,Tyop,Kind,Rank} => make_type_constant l {Thy=Thy,Tyop=Tyop}
+     Vartype(s,kd) => make_type_atom l (s,kd)
+   | Contype{Thy,Tyop,Kind} => make_type_constant l {Thy=Thy,Tyop=Tyop}
    | TyApp(ty1,ty2   ) => list_make_app_type l (map to_ptyInEnv [ty1,ty2])
    | TyUniv(bvar,body) => bind_type l [binder_type "!"  bvar] (to_ptyInEnv body)
    | TyAbst(bvar,body) => bind_type l [binder_type "\\" bvar] (to_ptyInEnv body)
@@ -522,7 +632,7 @@ fun pp_abbrev s = let
   val g = type_grammar.disable_abbrev_printing s g
   val (ppfn,_) = print_from_grammars (g,!the_term_grammar)
 in
-  Lib.C ppfn ty
+  Lib.C ppfn ty (* fn x => ppfn x false ty *)
 end handle Binarymap.NotFound =>
   raise ERROR "pp_abbrev" (s ^ " is not a type abbreviation")
 
@@ -991,16 +1101,16 @@ fun temp_type_abbrev (s, ty) = let
                  (0, Binarymap.mkDict Type.compare) params
   fun mk_structure pset bvars ty =
       if is_vartype ty then let
-          val tyvar as (str, kd, rk) = dest_var_type ty
-        in if mem ty bvars then type_grammar.TYVAR(str,kd,rk)
+          val tyvar as (str, kd) = dest_var_type ty
+        in if mem ty bvars then type_grammar.TYVAR(str,kd)
            else if not (null bvars) then raise ERROR "temp_type_abbrev"
                      ("abbreviation type parameter not allowed within universal type or type abstraction;\n"
                       ^"Use no parameters but define as a type abstraction instead to indicate parameters.")
-           else type_grammar.PARAM (Binarymap.find(pset, ty), kd, rk)
+           else type_grammar.PARAM (Binarymap.find(pset, ty), kd)
         end
       else if is_con_type ty then let
-          val {Thy, Tyop, Kind, Rank} = dest_thy_con_type ty
-        in type_grammar.TYCON {Thy = Thy, Tyop = Tyop, Kind = Kind, Rank = Rank}
+          val {Thy, Tyop, Kind} = dest_thy_con_type ty
+        in type_grammar.TYCON {Thy = Thy, Tyop = Tyop, Kind = Kind}
         end
       else if is_app_type ty then let
           val (ty1, ty2) = Type.dest_app_type ty
@@ -1031,7 +1141,7 @@ in
                                                    (TheoryPP.pp_type "K" "U" "R" "T" "O" "P" "B" "N")
                                                    ty,
                                    ")"],
-                    if kind_of ty <> typ then NONE else
+                    if not (Kind.is_type_kind (kind_of ty)) then NONE else
                     SOME (mk_thy_const{Name = "ARB", Thy = "bool", Ty = ty})
                    )
 end;
@@ -1901,7 +2011,7 @@ val TOK = term_grammar.RE o term_grammar.TOK
    ---------------------------------------------------------------------- *)
 
     val _ = initialise_typrinter
-            (fn G => type_pp.pp_type G PPBackEnd.raw_terminal)
+            (fn G => type_pp.pp_type G PPBackEnd.raw_terminal false)
     val _ = Definition.new_specification_hook := List.app add_const;
 
 (* when new_theory is called, and if the new theory has the same name
@@ -1919,6 +2029,7 @@ val TOK = term_grammar.RE o term_grammar.TOK
         if Thy = thy then SOME (nm, {Name = Name, Thy = Thy})
         else NONE
       end
+      handle HOL_ERR _ => NONE
     in
       List.mapPartial bad_guy actual_ops
     end

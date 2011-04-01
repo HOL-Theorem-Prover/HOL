@@ -43,8 +43,11 @@ val current_theory = Theory.current_theory;
 fun dest_atom tm = (dest_var tm handle HOL_ERR _ => dest_const tm)
 
 fun mk_exists (absrec as (Bvar,_)) =
-  mk_comb(mk_thy_const{Name="?",Thy="bool", Ty= (type_of Bvar-->bool)-->bool},
-          mk_abs absrec)
+  let val Bvar_ty = type_of Bvar
+  in
+    mk_comb(mk_thy_const{Name="?",Thy="bool", Ty= (Bvar_ty-->bool)-->bool},
+            mk_abs absrec)
+  end
 
 fun dest_exists M =
  let val (Rator,Rand) = with_exn dest_comb M (TYDEF_ERR"dest_exists")
@@ -124,11 +127,10 @@ fun new_type_definition (name,thm) =
      val checked   = check_null_hyp thm TYDEF_ERR
      val checked   = assert_exn null (free_vars P)
                        (TYDEF_ERR "subset predicate must be a closed term")
-     val checked   = assert_exn (op=) (rng,bool)
+     val checked   = assert_exn (eq_ty bool) rng
                       (TYDEF_ERR "subset predicate has the wrong type")
-     val newkd     = List.foldr (op ==>) typ (map kind_of tyvars)
-     val newrk     = List.foldr Int.max   0  (map rank_of tyvars)
-     val   _       = Theory.new_type_opr(name, newkd, newrk)
+     val newkd     = List.foldr (op ==>) (kind_of dom) (map kind_of tyvars)
+     val   _       = Theory.new_type_opr(name, newkd)
      val newty     = mk_thy_type{Tyop=name,Thy=current_theory(),Args=tyvars}
      val repty     = newty --> dom
      val rep       = mk_primed_var("rep", repty)

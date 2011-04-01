@@ -1,16 +1,18 @@
 signature Pretype =
 sig
-  type prekind = Prekind.prekind
   type prerank = Prerank.prerank
+  type prekind = Prekind.prekind
+  type uvarkind = Prekind.uvarkind
+  type rank = Kind.rank
   type kind = Kind.kind
   type hol_type = Type.hol_type
-  type pretyvar = string * prekind * prerank
+  type pretyvar = string * prekind
   type tyvar = Type.tyvar
   type term = Term.term
 
  datatype pretype0
     = Vartype of pretyvar
-    | Contype of {Thy : string, Tyop : string, Kind : prekind, Rank : prerank}
+    | Contype of {Thy : string, Tyop : string, Kind : prekind}
     | TyApp  of pretype * pretype
     | TyUniv of pretype * pretype
     | TyAbst of pretype * pretype
@@ -19,7 +21,7 @@ sig
     | UVar of uvartype ref
  and uvartype
     = SOMEU of pretype
-    | NONEU of prekind * prerank
+    | NONEU of prekind
  and pretype = PT of pretype0 locn.located
 
 val tylocn : pretype -> locn.locn
@@ -29,7 +31,7 @@ val eq : pretype -> pretype -> bool
 val --> : pretype * pretype -> pretype
 val dom_rng : pretype -> pretype * pretype
 val is_fun_type : pretype -> bool
-val dest_con_type : pretype -> {Tyop : string, Thy : string, Kind : prekind, Rank : prerank}
+val dest_con_type : pretype -> {Tyop : string, Thy : string, Kind : prekind}
 val dest_var_type : pretype -> pretyvar
 val the_var_type : pretype -> pretype
 val mk_app_type : pretype * pretype -> pretype
@@ -53,7 +55,7 @@ val do_beta_conv_types : unit -> bool
 val is_universal : pretype -> bool
 
 val pkind_of : pretype -> prekind
-val prank_of : pretype -> prerank
+val prank_of_type : pretype -> prerank
 val is_atom  : pretype -> bool
 
 val type_vars  : pretype -> pretype list
@@ -62,14 +64,14 @@ val variant_type : pretype list -> pretype -> pretype
 
 val kindvars : pretype -> string list
 val tyvars : pretype -> string list
-val new_uvar : (prekind * prerank) -> pretype
+val new_uvar : prekind -> pretype
 val all_new_uvar : unit -> pretype
 val uvars_of : pretype -> uvartype ref list
 val ref_occurs_in : uvartype ref * pretype -> bool
 val ref_equiv : uvartype ref * pretype -> bool
 val has_free_uvar : pretype -> bool
 
-val prekind_rank_compare : (prekind * prerank) * (prekind * prerank) -> order
+(*val prekind_rank_compare : (prekind * prerank) * (prekind * prerank) -> order*)
 val pretyvar_compare : pretyvar * pretyvar -> order
 
 
@@ -82,27 +84,43 @@ val pretyvar_compare : pretyvar * pretyvar -> order
    gen_unify to call, if it should choose.
 *)
 val gen_unify :
-  (prekind -> prekind -> ('a -> 'a * unit option)) ->
-  (prerank -> prerank -> ('a -> 'a * unit option)) ->
-  (prerank -> prerank -> ('a -> 'a * unit option)) ->
-  ((pretype -> pretype -> ('a -> 'a * unit option)) ->
-   (uvartype ref -> (pretype -> ('a -> 'a * unit option)))) ->
+  (int -> prekind -> prekind -> ('a -> 'a * unit option)) ->  (* kind_unify    *)
+  (int -> prekind -> prekind -> ('a -> 'a * unit option)) ->  (* kind_unify_le *)
+  (int -> prekind -> prekind -> ('a -> 'a * unit option)) ->  (* conty_kind_unify *)
+  (int -> prerank -> prerank -> ('a -> 'a * unit option)) ->  (* rank_unify    *)
+  (int ->
+   (pretyvar list -> pretyvar list -> pretype -> pretype -> ('a -> 'a * unit option)) ->
+   pretyvar list -> pretyvar list ->
+   uvartype ref -> pretype -> ('a -> 'a * unit option)) ->    (* bind          *)
+  string ->
   ('a -> pretype -> pretype list) ->
-  pretyvar list -> pretyvar list ->
+  int -> pretyvar list -> pretyvar list ->
   pretype -> pretype -> ('a -> 'a * unit option)
 
 val unify : pretype -> pretype -> unit
+val unify_le : pretype -> pretype -> unit
 val can_unify : pretype -> pretype -> bool
+val can_unify_le : pretype -> pretype -> bool
 
 val safe_unify :
   pretype -> pretype ->
-  (  (prekind option ref * prekind) list
-   * ((order * prerank) option ref * (order * prerank)) list
+  (  ((order * prerank) option ref * (order * prerank)) list
+   * (uvarkind ref * uvarkind) list
    * (uvartype ref * uvartype) list ->
-   (  (prekind option ref * prekind) list
-    * ((order * prerank) option ref * (order * prerank)) list
+   (  ((order * prerank) option ref * (order * prerank)) list
+    * (uvarkind ref * uvarkind) list
     * (uvartype ref * uvartype) list)
    * unit option)
+val safe_unify_le :
+  pretype -> pretype ->
+  (  ((order * prerank) option ref * (order * prerank)) list
+   * (uvarkind ref * uvarkind) list
+   * (uvartype ref * uvartype) list ->
+   (  ((order * prerank) option ref * (order * prerank)) list
+    * (uvarkind ref * uvarkind) list
+    * (uvartype ref * uvartype) list)
+   * unit option)
+
 val type_subst  : {redex : pretype, residue : pretype} list -> pretype -> pretype
 val distinguish_btyvars : pretype list -> pretype -> pretype
 
@@ -111,10 +129,21 @@ val rename_tv : string list -> string list -> pretype ->
            (prerank list * (string * prekind) list * (string * pretype) list) ->
            (prerank list * (string * prekind) list * (string * pretype) list) * pretype option
 val reconcile_univ_types : pretype -> pretype -> pretype
+(*
+val test_reconcile_univ_types : pretype -> pretype ->
+           (  ((order * prerank) option ref * (order * prerank) option) list
+            * (uvarkind ref * uvarkind) list
+            * (uvartype ref * uvartype) list )
+           * pretype
+val unwind_bindings : 
+           (  ((order * prerank) option ref * (order * prerank) option) list
+            * (uvarkind ref * uvarkind) list
+            * (uvartype ref * uvartype) list ) -> unit
+*)
 val fromType : hol_type -> pretype
 val remove_made_links : pretype -> pretype
 val replace_null_links : pretype -> string list * string list
-                         -> (string list * string list) * unit option
+                                -> (string list * string list) * unit option
 val clean : pretype -> hol_type
 val toType : pretype -> hol_type
 val chase : pretype -> pretype
@@ -137,8 +166,8 @@ datatype kcheck_error =
          TyAppFail of hol_type * hol_type
        | TyUnivFail of hol_type
        | TyKindConstrFail of hol_type * kind
-       | TyRankConstrFail of hol_type * int
-       | TyRankLEConstrFail of hol_type * int
+       | TyRankConstrFail of hol_type * rank
+       | TyRankLEConstrFail of hol_type * rank
 
 val last_kcerror : (kcheck_error * locn.locn) option ref
 

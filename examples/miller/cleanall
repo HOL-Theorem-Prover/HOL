@@ -1,0 +1,25 @@
+#!/bin/bash
+HOLDIR=`(cd ../.. ; pwd)`
+echo HOLDIR=${HOLDIR}
+cd ${HOLDIR}/examples/miller/ho_prover
+echo ${HOLDIR}/examples/miller/ho_prover
+${HOLDIR}/bin/Holmake cleanAll
+cd ${HOLDIR}/examples/miller/subtypes
+echo ${HOLDIR}/examples/miller/subtypes
+${HOLDIR}/bin/Holmake cleanAll
+cd ${HOLDIR}/examples/miller/RSA
+echo ${HOLDIR}/examples/miller/RSA
+${HOLDIR}/bin/Holmake cleanAll
+cd ${HOLDIR}/examples/miller/formalize
+echo ${HOLDIR}/examples/miller/formalize
+${HOLDIR}/bin/Holmake cleanAll
+cd ${HOLDIR}/examples/miller/groups
+echo ${HOLDIR}/examples/miller/groups
+${HOLDIR}/bin/Holmake cleanAll
+cd ${HOLDIR}/examples/miller/prob
+echo ${HOLDIR}/examples/miller/prob
+${HOLDIR}/bin/Holmake cleanAll
+cd ${HOLDIR}/examples/miller/miller
+echo ${HOLDIR}/examples/miller/miller
+${HOLDIR}/bin/Holmake cleanAll
+cd ${HOLDIR}/examples/miller

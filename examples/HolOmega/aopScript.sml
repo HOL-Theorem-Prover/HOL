@@ -11,6 +11,10 @@ struct
 open HolKernel Parse boolLib
      bossLib
 
+(*
+app load ["functorTheory"];
+*)
+
 open combinTheory functorTheory;
 
 val combin_ss = bool_ss ++ combinSimps.COMBIN_ss

@@ -31,18 +31,18 @@ val _ = eSML "fcp"
   ([OPEN ["num"],
     MLSIG "type num = numML.num",
     DATATYPE(`itself = ITSELF of num`),
-    ABSDATATYPE ([("'a",typ,0),("'b",typ,0)], `cart = FCPi of (num -> 'a) # 'b itself`),
-    EQDATATYPE ([("'a",typ,0)],`bit0 = BIT0A of 'a | BIT0B of 'a`),
-    EQDATATYPE ([("'a",typ,0)],`bit1 = BIT1A of 'a | BIT1B of 'a | BIT1C`)] @
+    ABSDATATYPE ([("'a",typ rho),("'b",typ rho)], `cart = FCPi of (num -> 'a) # 'b itself`),
+    EQDATATYPE ([("'a",typ rho)],`bit0 = BIT0A of 'a | BIT0B of 'a`),
+    EQDATATYPE ([("'a",typ rho)],`bit1 = BIT1A of 'a | BIT1B of 'a | BIT1C`)] @
    map DEFN defs)
 
 val _ = eCAML "fcp"
  (MLSIGSTRUCT ["type num = NumML.num"]
    @ OPEN ["num"]
   :: DATATYPE(`itself = ITSELF of num`)
-  :: ABSDATATYPE ([("'a",typ,0),("'b",typ,0)], `cart = FCPi of (num -> 'a) # 'b itself`)
-  :: EQDATATYPE ([("'a",typ,0)],`bit0 = BIT0A of 'a | BIT0B of 'a`)
-  :: EQDATATYPE ([("'a",typ,0)],`bit1 = BIT1A of 'a | BIT1B of 'a | BIT1C`)
+  :: ABSDATATYPE ([("'a",typ rho),("'b",typ rho)], `cart = FCPi of (num -> 'a) # 'b itself`)
+  :: EQDATATYPE ([("'a",typ rho)],`bit0 = BIT0A of 'a | BIT0B of 'a`)
+  :: EQDATATYPE ([("'a",typ rho)],`bit1 = BIT1A of 'a | BIT1B of 'a | BIT1C`)
   :: map (DEFN o REWRITE_RULE [GSYM FCPi_def, FUN_EQ_THM]) defs)
 
 val _ = export_theory ();

@@ -1,7 +1,7 @@
 structure HolKernel =
 struct
 
-  open Feedback Globals Lib Kind Type Term Thm Theory Definition
+  open Feedback Globals Lib Rank Kind Type Term Thm Theory Definition
 
 
 (*---------------------------------------------------------------------------
@@ -12,25 +12,11 @@ infixr ==>;  infixr -->;  infix |->;
 
 val ERR = mk_HOL_ERR "HolKernel";
 
-val kernelid = "expknl"
-
-(*---------------------------------------------------------------------------
-       Type antiquotations (required in term parser)
- ---------------------------------------------------------------------------*)
-
-fun ty_antiq ty = mk_var("ty_antiq",ty)
-
-fun dest_ty_antiq tm =
-  case with_exn dest_var tm (ERR "dest_ty_antiq" "not a type antiquotation")
-   of ("ty_antiq",Ty) => Ty
-    |  _ => raise ERR "dest_ty_antiq" "not a type antiquotation";
-
-val is_ty_antiq = Lib.can dest_ty_antiq
-
-
 (*---------------------------------------------------------------------------
           General term operations
  ---------------------------------------------------------------------------*)
+
+val kernelid = "expknl"
 
 fun dest_monop c e M =
  let val (c1,N) = with_exn dest_comb M e
@@ -188,8 +174,8 @@ fun dest_term M =
 
 
 datatype omega_type
-   = TYVAR of string * kind * int (* rank *)
-   | TYCONST of {Thy:string, Tyop:string, Kind:kind, Rank:int}
+   = TYVAR of string * kind
+   | TYCONST of {Thy:string, Tyop:string, Kind:kind}
    | TYAPP  of hol_type * hol_type
    | TYUNIV of hol_type * hol_type
    | TYABS  of hol_type * hol_type;

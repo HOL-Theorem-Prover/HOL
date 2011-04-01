@@ -26,12 +26,12 @@ TApp   ::= Leaf | Tuple Leaf
                 HOLgrammars.associativity
 
   datatype type_structure =
-      TYCON  of {Thy : string, Tyop : string, Kind : Kind.kind, Rank : int}
+      TYCON  of {Thy : string, Tyop : string, Kind : Kind.kind}
     | TYAPP  of type_structure * type_structure
     | TYUNIV of type_structure * type_structure
     | TYABST of type_structure * type_structure
-    | TYVAR  of string * Kind.kind * int (* rank *)
-    | PARAM  of int    * Kind.kind * int (* rank *)
+    | TYVAR  of string * Kind.kind
+    | PARAM  of int    * Kind.kind
 
   val conform_structure_to_type : (int * grammar_rule) list -> string ->
                                   type_structure -> Type.hol_type -> type_structure

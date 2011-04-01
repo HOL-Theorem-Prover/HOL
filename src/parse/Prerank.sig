@@ -1,10 +1,11 @@
 signature Prerank =
 sig
+  type rank = Kind.rank
 
 datatype prerank
     = Zerorank
     | Sucrank of prerank
-    | Maxrank of prerank * prerank
+    | Maxrank of prerank list
     | UVarrank of (order * prerank) option ref
 
 type oprerank = order * prerank
@@ -22,6 +23,7 @@ val prerank_to_string : prerank -> string
 
 val new_uvar : unit -> prerank
 val uvars_of : prerank -> oprerank option ref list
+val reset_rank_uvars : prerank -> unit
 val ref_occurs_in : oprerank option ref * prerank -> bool
 val ref_equiv : oprerank option ref * prerank -> bool
 val has_free_uvar : prerank -> bool
@@ -37,54 +39,67 @@ val has_free_uvar : prerank -> bool
    gen_unify to call, if it should choose.
 *)
 val gen_unify :
-  ((prerank -> prerank -> ('a -> 'a * unit option)) ->
-   (prerank -> prerank -> ('a -> 'a * unit option)) ->
-   (oprerank option ref -> (prerank -> ('a -> 'a * unit option)))) ->
-  ((prerank -> prerank -> ('a -> 'a * unit option)) ->
-   (oprerank option ref -> (prerank -> ('a -> 'a * unit option)))) ->
-  ((prerank -> prerank -> ('a -> 'a * unit option)) ->
-   (oprerank option ref -> (prerank -> ('a -> 'a * unit option)))) ->
-  prerank -> prerank -> ('a -> 'a * unit option)
+  ((int -> prerank -> prerank -> ('a -> 'a * unit option)) ->
+   (int -> prerank -> prerank -> ('a -> 'a * unit option)) ->
+   (int -> oprerank option ref -> (prerank -> ('a -> 'a * unit option)))) ->
+  ((int -> prerank -> prerank -> ('a -> 'a * unit option)) ->
+   (int -> oprerank option ref -> (prerank -> ('a -> 'a * unit option)))) ->
+  ((int -> prerank -> prerank -> ('a -> 'a * unit option)) ->
+   (int -> prerank -> prerank -> ('a -> 'a * unit option)) ->
+   (int -> oprerank option ref -> (prerank -> ('a -> 'a * unit option)))) ->
+  int -> prerank -> prerank -> ('a -> 'a * unit option)
 val gen_unify_le :
-  ((prerank -> prerank -> ('a -> 'a * unit option)) ->
-   (oprerank option ref -> (prerank -> ('a -> 'a * unit option)))) ->
-  ((prerank -> prerank -> ('a -> 'a * unit option)) ->
-   (oprerank option ref -> (prerank -> ('a -> 'a * unit option)))) ->
-  prerank -> prerank -> ('a -> 'a * unit option)
+  ((int -> prerank -> prerank -> ('a -> 'a * unit option)) ->
+   (int -> prerank -> prerank -> ('a -> 'a * unit option)) ->
+   (int -> oprerank option ref -> (prerank -> ('a -> 'a * unit option)))) ->
+  ((int -> prerank -> prerank -> ('a -> 'a * unit option)) ->
+   (int -> oprerank option ref -> (prerank -> ('a -> 'a * unit option)))) ->
+  ((int -> prerank -> prerank -> ('a -> 'a * unit option)) ->
+   (int -> prerank -> prerank -> ('a -> 'a * unit option)) ->
+   (int -> oprerank option ref -> (prerank -> ('a -> 'a * unit option)))) ->
+  int -> prerank -> prerank -> ('a -> 'a * unit option)
 val unify : prerank -> prerank -> unit
 val unify_le : prerank -> prerank -> unit
 val can_unify : prerank -> prerank -> bool
 val can_unify_le : prerank -> prerank -> bool
 
 val unsafe_unify :
-  prerank -> prerank ->
+  int -> prerank -> prerank ->
   ((oprerank option ref * oprerank option) list ->
    (oprerank option ref * oprerank option) list * unit option)
 
 val unsafe_unify_le :
-  prerank -> prerank ->
+  int -> prerank -> prerank ->
   ((oprerank option ref * oprerank option) list ->
    (oprerank option ref * oprerank option) list * unit option)
 
 val safe_unify :
-  prerank -> prerank ->
+  int -> prerank -> prerank ->
   ((oprerank option ref * oprerank) list ->
    (oprerank option ref * oprerank) list * unit option)
 
 val safe_unify_le :
-  prerank -> prerank ->
+  int -> prerank -> prerank ->
   ((oprerank option ref * oprerank) list ->
    (oprerank option ref * oprerank) list * unit option)
 
 (*val apply_subst : (oprerank option ref * prerank) list -> prerank -> prerank*)
 
 
-val rename_rv : bool -> prerank -> prerank list -> (prerank list * prerank option)
+val rename_rv : prerank -> prerank list -> (prerank list * prerank option)
 val rename_rankvars : prerank -> prerank
 
-val fromRank : int -> prerank
+val fromRank : rank -> prerank
 val remove_made_links : prerank -> prerank
-val replace_null_links : prerank -> string list -> string list * unit option
-val clean : prerank -> int
-val toRank : prerank -> int
+val replace_null_links     : prerank -> unit -> unit * unit option
+val var_replace_null_links : prerank -> unit -> unit * unit option
+val clean : prerank -> rank
+val toRank : prerank -> rank
+val pp_prerank : ppstream -> prerank -> unit
+
+val termantiq_constructors : (prerank,Term.term) parse_rank.rankconstructors
+val typeantiq_constructors : (prerank,Type.hol_type) parse_rank.rankconstructors
+val kindantiq_constructors : (prerank,Kind.kind) parse_rank.rankconstructors
+val rankantiq_constructors : (prerank,Kind.rank) parse_rank.rankconstructors
+
 end

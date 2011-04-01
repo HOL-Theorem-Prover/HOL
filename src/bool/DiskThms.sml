@@ -64,10 +64,11 @@ struct
     val _ = PP.end_block pps                   (* end kind title block *)
     val _ = PP.add_break pps (1,0)
     val _ = PP.begin_block pps PP.INCONSISTENT 0
+    val rankstr = Int.toString
     fun pr_skd skd =
         case skd of
-          KDTY  => PP.add_string pps "KDTY"
-        | KDV s => PP.add_string pps ("KDV" ^ qstr s)
+          KDTY rk => PP.add_string pps ("KDTY(" ^ rankstr rk ^ ")")
+        | KDV (s,rk) => PP.add_string pps ("KDV(" ^ qstr s ^ "," ^ rankstr rk ^ ")")
         | KDARR (k1i,k2i) => let
           in
             PP.add_string pps "KDARR(";
@@ -96,12 +97,10 @@ struct
     val _ = PP.begin_block pps PP.INCONSISTENT 0
     fun pr_sty sty =
         case sty of
-          TYV (s,kdi,rk)  => PP.add_string pps ("TYV(" ^ qstr s ^ "," ^
-                                                Int.toString kdi ^ "," ^
-                                                Int.toString rk ^ ")")
-        | TYC (id,kdi,rk) => PP.add_string pps ("TYC(" ^ Int.toString id ^ "," ^
-                                                Int.toString kdi ^ "," ^
-                                                Int.toString rk ^ ")")
+          TYV (s,kdi)  => PP.add_string pps ("TYV(" ^ qstr s ^ "," ^
+                                                Int.toString kdi ^ ")")
+        | TYC (id,kdi) => PP.add_string pps ("TYC(" ^ Int.toString id ^ "," ^
+                                                Int.toString kdi ^ ")")
         | TYAp (opri,argi)  => out ("TYAp"  ^ ipair_string(opri,argi))
         | TYAbs (bvi,bodyi) => out ("TYAbs" ^ ipair_string(bvi,bodyi))
         | TYUni (bvi,bodyi) => out ("TYUni" ^ ipair_string(bvi,bodyi))

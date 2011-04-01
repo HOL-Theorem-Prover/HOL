@@ -187,7 +187,7 @@ local fun find_match u =
        end
 in
 fun SUBST_MATCH eqth th =
- SUBS [Drule.INST_ALL (find_match(lhs(concl eqth)) (concl th)) eqth] th
+ SUBS [INST_ALL (find_match(lhs(concl eqth)) (concl th)) eqth] th
 end;
 
 

@@ -58,7 +58,7 @@ val defs =
        (REWRITE_RULE [th] FEVERY_FUPDATE)]
 
 val _ = eSML "fmap"
-  (ABSDATATYPE ([("'a",typ,0),("'b",typ,0)], `fmap = FEMPTY | FUPDATE of fmap => 'a#'b`)
+  (ABSDATATYPE ([("'a",typ rho),("'b",typ rho)], `fmap = FEMPTY | FUPDATE of fmap => 'a#'b`)
    :: OPEN ["num", "list", "set", "option"]
    :: MLSIG "type num = numML.num"
    :: MLSIG "type 'a set = 'a setML.set"
@@ -69,7 +69,7 @@ val _ = eSML "fmap"
 
 val _ = eCAML "fmap"
   (MLSIGSTRUCT ["type num = NumML.num", "type 'a set = 'a SetML.set"]
-   @ ABSDATATYPE ([("'a",typ,0),("'b",typ,0)], `fmap = FEMPTY | FUPDATE of fmap => 'a # 'b`)
+   @ ABSDATATYPE ([("'a",typ rho),("'b",typ rho)], `fmap = FEMPTY | FUPDATE of fmap => 'a # 'b`)
    :: OPEN ["num", "list", "set", "option"]
    :: MLSIG "val _FDOM     : ('a,'b) fmap -> 'a set"
    :: MLSIG "val _FRANGE   : ('a,'b) fmap -> 'b set"

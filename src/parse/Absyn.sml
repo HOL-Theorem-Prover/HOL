@@ -145,11 +145,10 @@ fun dest_lam (LAM (_,v,M)) = (v,M)
 fun dest_tylam (TYLAM (_,a,M)) = (a,M)
   | dest_tylam (AQ (locn,x)) =
       let val (Bvar,Body) = Term.dest_tyabs x
-          val (s,kd,rk) = Type.dest_var_type Bvar
+          val (s,kd) = Type.dest_var_type Bvar
           val Bvar' = Pretype.fromType Bvar
           val kd' = Prekind.fromKind kd
-          val rk' = Prerank.fromRank rk
-      in ((*Bvar'*)Pretype.PT(Pretype.Vartype(s, kd', rk'),locn), AQ (locn,Body))
+      in ((*Bvar'*)Pretype.PT(Pretype.Vartype(s, kd'),locn), AQ (locn,Body))
       end
   | dest_tylam t = raise ERRloc "dest_tylam" (locn_of_absyn t) "Expected a type abstraction"
 

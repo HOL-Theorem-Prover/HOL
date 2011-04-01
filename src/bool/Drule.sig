@@ -2,6 +2,8 @@ signature Drule =
 sig
   include Abbrev
 
+  val INST_RK_KD       : rank * (kind,kind)subst -> thm -> thm
+  val INST_RK_KD_TY    : rank * (kind,kind)subst * (hol_type,hol_type)subst -> thm -> thm
   val ETA_CONV         : term -> thm
   val TY_ETA_CONV      : term -> thm
   val RIGHT_ETA        : thm -> thm
@@ -106,8 +108,7 @@ sig
   val TY_EXISTS_IMP    : hol_type -> thm -> thm
   val INST_TY_TERM     : (term,term)subst * (hol_type,hol_type)subst
                           -> thm -> thm
-  val INST_ALL         : (term,term)subst * (hol_type,hol_type)subst
-                           * (kind,kind)subst * int
+  val PURE_INST_TY_TERM : (term,term)subst * (hol_type,hol_type)subst
                           -> thm -> thm
   val GSPEC            : thm -> thm
   val TY_GSPEC         : thm -> thm

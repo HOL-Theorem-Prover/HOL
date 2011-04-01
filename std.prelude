@@ -67,9 +67,11 @@ in
     MPP.end_block pps
   end
   val _ = installPP (mosmlpp Pretype.pp_pretype)
-  val _ = installPP (mosmlpp (Parse.kind_pp_with_delimiters Hol_pp.pp_kind))
+  val _ = installPP (mosmlpp Prekind.pp_prekind)
+  val _ = installPP (mosmlpp Prerank.pp_prerank)
   val _ = installPP (mosmlpp (Parse.term_pp_with_delimiters Hol_pp.pp_term))
   val _ = installPP (mosmlpp (Parse.type_pp_with_delimiters Hol_pp.pp_type))
+  val _ = installPP (mosmlpp (Parse.kind_pp_with_delimiters Hol_pp.pp_kind))
   val _ = installPP (mosmlpp Hol_pp.pp_thm)
   val _ = installPP (mosmlpp Hol_pp.pp_theory)
   val _ = installPP (mosmlpp kind_grammar.prettyprint_grammar)

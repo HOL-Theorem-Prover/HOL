@@ -54,7 +54,7 @@ end
 fun clean_action isolatedp a = let
   open Absyn
   val unit_pty = Pretype.PT(Pretype.Contype{Thy = "one", Tyop = "one",
-                                            Kind = Prekind.typ, Rank = Prerank.Zerorank},
+                                            Kind = Prekind.typ Prerank.Zerorank},
                             locn.Loc_None)
   fun mk_bare a = (VTYPED (locn.Loc_None,
                            VIDENT (locn.Loc_None, genvar),

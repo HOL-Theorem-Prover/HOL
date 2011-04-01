@@ -70,9 +70,9 @@ in
    add_newline();
    add_ann_string ("Free variable", FV (bool, fn () => ": bool"));
    add_newline();
-   add_ann_string ("Free type variable", TyFV (Kind.typ, 0, fn () => ": ty :<= 0"));
+   add_ann_string ("Free type variable", TyFV (Kind.typ Rank.rho, fn () => ": ty :<= 0"));
    add_newline();
-   add_ann_string ("Bound type variable", TyBV (Kind.typ, 0, fn () => ": ty :<= 0"));
+   add_ann_string ("Bound type variable", TyBV (Kind.typ Rank.rho, fn () => ": ty :<= 0"));
    add_newline();
    add_ann_string ("TySyn", TySyn (fn () => "TySyn"));
    add_newline();

@@ -1,7 +1,7 @@
 structure HolKernel =
 struct
 
-  open Feedback Globals Lib Kind Type Term Thm Theory Definition
+  open Feedback Globals Lib Rank Kind Type Term Thm Theory Definition
 
 
 (*---------------------------------------------------------------------------
@@ -187,8 +187,8 @@ fun dest_term M =
 
 
 datatype omega_type
-   = TYVAR of string * kind * int (* rank *)
-   | TYCONST of {Thy:string, Tyop:string, Kind:kind, Rank:int}
+   = TYVAR of string * kind
+   | TYCONST of {Thy:string, Tyop:string, Kind:kind}
    | TYAPP  of hol_type * hol_type
    | TYUNIV of hol_type * hol_type
    | TYABS  of hol_type * hol_type;
@@ -197,7 +197,7 @@ fun destruct_type Ty =
   TYAPP   (dest_app_type     Ty) handle HOL_ERR _ =>
   TYUNIV  (dest_univ_type    Ty) handle HOL_ERR _ =>
   TYABS   (dest_abs_type     Ty) handle HOL_ERR _ =>
-  TYVAR   (dest_var_type  Ty) handle HOL_ERR _ =>
+  TYVAR   (dest_var_type     Ty) handle HOL_ERR _ =>
   TYCONST (dest_thy_con_type Ty);
 
 fun is_omega th = Lib.exists Term.is_omega (hyp th) orelse Term.is_omega (concl th)

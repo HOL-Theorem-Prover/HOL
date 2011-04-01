@@ -30,7 +30,7 @@ sig
  val pp_struct
    : {theory      : string*num*num,
       parents     : (string*num*num) list,
-      types       : (string*kind*int) list,
+      types       : (string*kind) list,
       constants   : (string*hol_type) list,
       axioms      : (string * thm) list,
       definitions : (string * thm) list,

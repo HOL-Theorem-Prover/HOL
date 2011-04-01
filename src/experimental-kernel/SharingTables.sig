@@ -4,11 +4,11 @@ sig
 
   structure Map : Binarymap
   type id = {Thy : string, Other : string}
-  datatype shared_kind = KDTY
-                       | KDV of string
+  datatype shared_kind = KDTY of Rank.rank
+                       | KDV of string * Rank.rank
                        | KDARR of int * int
-  datatype shared_type = TYV of string * int * int
-                       | TYC of int * int * int
+  datatype shared_type = TYV of string * int
+                       | TYC of int * int
                        | TYAp of int * int
                        | TYAbs of int * int
                        | TYUni of int * int

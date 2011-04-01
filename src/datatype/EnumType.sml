@@ -17,17 +17,21 @@ val NUM = num;
 val ambient_grammars = Parse.current_grammars();
 val _ = Parse.temp_set_grammars arithmeticTheory.arithmetic_grammars;
 
+local
+(*val numI = mk_app_type(mk_abs_type(alpha,alpha),num)*)
+val n = mk_var("n",num)
+in
 fun enum_pred k =
- let val n = mk_var("n",num)
-     val topnum = term_of_int k
+ let val topnum = term_of_int k
  in mk_abs(n,mk_less(n,topnum))
- end;
+ end
 
 fun type_exists k =
- let val n = mk_var("n",num)
+ let
  in prove (mk_exists(n, mk_comb(enum_pred k, n)),
            EXISTS_TAC zero_tm THEN REDUCE_TAC)
  end
+end;
 
 fun num_values REP_ABS defs =
  let val len = length defs

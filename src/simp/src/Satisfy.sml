@@ -79,7 +79,7 @@ fun satisfy1 (consts,facts) gl =
       val _ = if null vars then failwith "satisfy1" else ()
       val _ = trace(3,REDUCE("trying SATISFY on",g))
       val S = map (fn inR v => inR v |-> inR (genvar (type_of v))
-                    | inL a => inL a |-> inL (gen_var_type (kind_of a, rank_of a))
+                    | inL a => inL a |-> inL (gen_var_type (kind_of a))
                   ) vars  (* rename to avoid clashes *)
 (*
       val tmvars = mapfilter outR vars
@@ -121,8 +121,7 @@ fun SATISFY_TAC (asms,gl) =
 
 fun GSPEC thm = SPEC(genvar(type_of(bvar(rand(concl thm))))) thm;
 fun TY_GSPEC thm = let val a = btyvar(rand(concl thm))
-                       val (_,kd,rk) = dest_var_type a
-                   in TY_SPEC(gen_var_type(kd,rk)) thm
+                   in TY_SPEC(gen_var_type (kind_of a)) thm
                    end;
 fun FACT_CANON thm =
   if (is_conj (concl thm)) then flatten (map FACT_CANON (CONJUNCTS thm))

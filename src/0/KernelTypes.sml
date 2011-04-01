@@ -10,26 +10,47 @@ struct
 type id = KernelSig.kernelid
 
 (*---------------------------------------------------------------------------*
- * HOL types are somewhat akin to terms in first order logic.                *
+ *                  HOL ranks                                                *
  *---------------------------------------------------------------------------*)
 
 (*---------------------------------------------------------------------------*
- * The kind in type constants and variables regulates the formation of types.*
- * The int in type constants and variables is the rank.                      *
- * The rank is actually a natural number >= 0.                               *
+ * Ranks are actually the (single) rank variable plus a natural number >= 0. *
+ *---------------------------------------------------------------------------*)
+
+type rank = int (* >= 0 *)
+
+(*---------------------------------------------------------------------------*
+ *                  HOL kinds                                                *
+ *---------------------------------------------------------------------------*)
+
+(*---------------------------------------------------------------------------*
+ * Kinds contain their rank within each base kind and kind variable.         *
+ *---------------------------------------------------------------------------*)
+
+datatype kind = Type of rank
+              | KdVar of string * rank
+              | Oper of kind * kind
+
+(*---------------------------------------------------------------------------*
+ *                  HOL types                                                *
+ *---------------------------------------------------------------------------*)
+
+(*---------------------------------------------------------------------------*
+ * Type constants are a two-tuple, containing the following components:      *
+ *    1) kernel identifier                                                   *
+ *    2) kind                                                                *
+ * Type variables are a two-tuple, containing the following components:      *
+ *    1) string (identifier)                                                 *
+ *    2) kind                                                                *
  * Universal types (TyAll) quantify over types of a given rank or lower.     *
  * Bound type variables are represented internally using deBruijn indices    *
  * and explicit substitution. Externally, as always, the interface is to a   *
  * name-carrying syntax.                                                     *
  *---------------------------------------------------------------------------*)
 
-datatype kind = Type
-              | KdVar of string
-              | Oper of kind * kind
-
 type id = KernelSig.kernelid
-type tyconst  =  id * kind * int (* rank *)
-type tyvar = string * kind * int (* rank *)
+type tyconst  =  id * kind
+type tyvar = string * kind
 
 datatype hol_type = TyFv of tyvar
                   | TyBv of int

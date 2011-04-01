@@ -50,7 +50,7 @@ val monad_def = new_definition("monad_def", Term
 (*---------------------------------------------------------------------------
             Monad predicate, on unit, map and join term operators
  ---------------------------------------------------------------------------*)
-
+val _ = set_trace "debug_type_inference" 0;
 val umj_monad_def = new_definition(
    "umj_monad_def",
    ``umj_monad (unit: 'M unit,
@@ -259,7 +259,7 @@ val umj_monad_EQ_monad = store_thm
 
            STRIP_TAC
 	   THEN (FIRST_X_ASSUM (MP_TAC o MATCH_MP monad_IMP_umj_monad))
-	   THEN (POP_ASSUM_LIST (fn ths => REWRITE_TAC (map SYM ths))) 
+	   THEN (POP_ASSUM_LIST (fn ths => REWRITE_TAC (map SYM ths)))
          ]
   );
 

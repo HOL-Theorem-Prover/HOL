@@ -81,6 +81,14 @@ val define_type = ind_types.define_type;
 (*---------------------------------------------------------------------------*)
 
 (*---------------------------------------------------------------------------*)
+(* Print a rank                                                              *)
+(*---------------------------------------------------------------------------*)
+
+val rankstr = Int.toString
+
+fun rankstring rk = rankstr rk
+
+(*---------------------------------------------------------------------------*)
 (* Print a kind                                                              *)
 (*---------------------------------------------------------------------------*)
 
@@ -90,11 +98,20 @@ fun pp_kind mvarkind pps kd =
      val {add_string,add_break,begin_block,end_block,
           add_newline,flush_ppstream,...} = with_ppstream pps
  in
-  if kd = Kind.typ then add_string "typ"
+  if Kind.is_type_kind kd then
+         add_string ("(typ " ^ rankstring (dest_type_kind kd) ^ ")")
   else if Kind.is_var_kind kd then
-         case Kind.dest_var_kind kd
-           of "'k" => add_string "kappa"
-            |   s  => add_string ("("^mvarkind^quote s^")")
+         let val (n,rk) = Kind.dest_var_kind kd
+         in case n
+              of "'k" => add_string "kappa"
+               |   s  => (add_string ("(");
+                          begin_block INCONSISTENT 0;
+                            add_string (mvarkind^quote s);
+                            add_break (1,0);
+                            add_string (rankstring rk);
+                          end_block ();
+                          add_string ")")
+         end
   else let val (d,r) = Kind.kind_dom_rng kd
        in (add_string "(";
            begin_block INCONSISTENT 0;
@@ -126,8 +143,8 @@ fun extern_type mvarkind mvartype mvartypeopr mtype mcontype mapptype mabstype m
                           else (add_string "("; extern_type ty; add_string ")")
  in
   if is_vartype ty
-  then let val (s,kd,rk) = dest_var_type ty
-       in if kd = Kind.typ andalso rk = 0 then
+  then let val (s,kd) = dest_var_type ty
+       in if kd = Kind.typ Rank.rho then
             case s
              of "'a" => add_string "alpha"
               | "'b" => add_string "beta"
@@ -140,8 +157,6 @@ fun extern_type mvarkind mvartype mvartypeopr mtype mcontype mapptype mabstype m
                  add_string (quote s);
                  add_break (1,0);
                  pp_kind kd;
-                 add_break (1,0);
-                 add_string (Int.toString rk);
                end_block ())
        end
   else
@@ -176,7 +191,7 @@ fun extern_type mvarkind mvartype mvartypeopr mtype mcontype mapptype mabstype m
          end)
   handle HOL_ERR _ =>
   if is_con_type ty then
-       let val {Tyop,Thy,Kind,Rank} = dest_thy_con_type ty
+       let val {Tyop,Thy,Kind} = dest_thy_con_type ty
        in
            add_string mcontype;
            begin_block INCONSISTENT 0;
@@ -185,8 +200,6 @@ fun extern_type mvarkind mvartype mvartypeopr mtype mcontype mapptype mabstype m
            add_string (quote Thy);
            add_break (1,0);
            pp_kind Kind;
-           add_break (1,0);
-           add_string (Int.toString Rank);
            end_block ()
        end
   else if is_app_type ty then
@@ -249,8 +262,8 @@ fun pp_fields ppstrm fields =
   add_string "    fun T s t A   = mk_thy_type{Thy=t,Tyop=s,Args=A}";             add_newline();
   add_string "    val K         = mk_var_kind";             add_newline();
   add_string "    val U         = mk_vartype";              add_newline();
-  add_string "    fun R s k r   = mk_var_type(s,k,r)";      add_newline();
-  add_string "    fun O s t k r = mk_thy_con_type{Tyop=s,Thy=t,Kind=k,Rank=r}";  add_newline();
+  add_string "    fun R s k     = mk_var_type(s,k)";      add_newline();
+  add_string "    fun O s t k   = mk_thy_con_type{Tyop=s,Thy=t,Kind=k}";   add_newline();
   add_string "    fun P a b     = mk_app_type(a,b)";        add_newline();
   add_string "    fun B a b     = mk_abs_type(a,b)";        add_newline();
   add_string "    fun N a b     = mk_univ_type(a,b)";       add_newline();
@@ -280,7 +293,7 @@ fun prim_mk_type (Thy, Tyop) = let
   val con = Type.prim_mk_thy_con_type {Thy = Thy, Tyop = Tyop}
   val kind = Type.kind_of con
   val (arg_kinds,res_kind) = Kind.strip_arrow_kind kind
-  val Args = map (fn kd => Type.mk_var_type("'a", kd, 0)) arg_kinds
+  val Args = map (fn kd => Type.mk_var_type("'a", kd)) arg_kinds
 in
   Type.mk_thy_type {Thy = Thy, Tyop = Tyop, Args = Args}
 end
@@ -322,7 +335,7 @@ in
 end
 
 
-local fun tyname_as_tyvar (n,kd,rk) = mk_var_type ("'" ^ n, kd, rk)
+local fun tyname_as_tyvar (n,kd) = mk_var_type ("'" ^ n, kd)
       fun stage1 (s,Constructors l) = (s,l)
         | stage1 (s,Record fields)  = (s,[(s,map snd fields)])
       fun check_fields (s,Record fields) =
@@ -345,8 +358,8 @@ fun to_tyspecs ASTs =
      val asts = map stage1 ASTs
      val new_type_names = map #1 asts
      fun mk_hol_type (dAQ ty) = ty
-       | mk_hol_type (dVartype (s,kd,rk)) =
-            mk_var_type (s,Prekind.toKind kd,Prerank.toRank rk)
+       | mk_hol_type (dVartype (s,kd)) =
+            mk_var_type (s,Prekind.toKind kd)
        | mk_hol_type (dTyUniv(bvar,body)) =
             mk_univ_type(mk_hol_type bvar, mk_hol_type body)
        | mk_hol_type (dTyAbst(bvar,body)) =
@@ -360,16 +373,15 @@ fun to_tyspecs ASTs =
             else mk_app_type(mk_hol_type opr, mk_hol_type arg)
        | mk_hol_type (dTyApp(opr,arg)) =
             mk_app_type(mk_hol_type opr, mk_hol_type arg)
-       | mk_hol_type (dContype{Thy,Tyop = s,Kind,Rank}) =
+       | mk_hol_type (dContype{Thy,Tyop = s,Kind}) =
             let val Kind' = Prekind.toKind Kind
-                val Rank' = Prerank.toRank Rank
             in
               if Lib.mem s new_type_names
-              then tyname_as_tyvar (s,Kind',Rank')
+              then tyname_as_tyvar (s,Kind')
               else
               (case Thy of
-                  SOME Thy' => mk_thy_con_type{Thy=Thy', Tyop=s, Kind=Kind', Rank=Rank'}
-                | NONE      => mk_con_type{Tyop=s, Kind=Kind', Rank=Rank'})
+                  SOME Thy' => mk_thy_con_type{Thy=Thy', Tyop=s, Kind=Kind'}
+                | NONE      => mk_con_type{Tyop=s, Kind=Kind'})
             end
 (*
        | mk_hol_type (dTyop{Tyop = s, Args, Thy}) =
@@ -394,7 +406,7 @@ fun to_tyspecs ASTs =
             end
      end
 
-     fun default_tyname_as_tyvar n = tyname_as_tyvar(n,Kind.typ,0)
+     fun default_tyname_as_tyvar n = tyname_as_tyvar(n,Kind.typ Rank.rho)
      fun constructor (cname, ptys) = (cname, map mk_hol_type ptys)
   in
      map (default_tyname_as_tyvar##map constructor) asts
@@ -496,7 +508,7 @@ fun pretype_ops acc ptysl =
         | (pty :: more_ptys) => let
           in
             case pty of
-              dContype {Thy,Tyop,Kind,Rank} =>
+              dContype {Thy,Tyop,Kind} =>
                  pretype_ops (HOLset.add(acc, Tyop)) (more_ptys :: rest)
             | dTyApp (opr,arg) =>
                  pretype_ops acc ([opr,arg] :: more_ptys :: rest)
@@ -1066,11 +1078,11 @@ local
     case pty of
       dTyUniv(bvar,body) => dTyUniv(bvar, reform_tyops prevtypes body)
     | dTyAbst(bvar,body) => dTyAbst(bvar, reform_tyops prevtypes body)
-    | dTyApp(opr as dContype{Thy, Tyop, Kind, Rank}, arg) =>
+    | dTyApp(opr as dContype{Thy, Tyop, Kind}, arg) =>
          dTyApp(opr, reform_tyops prevtypes arg)
     | dTyApp(opr,arg)    => dTyApp (reform_tyops prevtypes opr,
                                     reform_tyops prevtypes arg)
-    | dContype{Thy, Tyop, Kind, Rank} => let
+    | dContype{Thy, Tyop, Kind} => let
       in
         case (Lib.assoc1 Tyop prevtypes) of
           (SOME (_, strset)) => let
@@ -1079,10 +1091,10 @@ local
                   NONE => hd (Type.decls Tyop)
                 | SOME s => {Thy = s, Tyop = Tyop}
             val kind = valOf (Type.op_kind thytyop)
-            val Kind' = HOLset.foldr (fn ((s,kd,rk),kd') => kd ==> kd') Kind strset
+            val Kind' = HOLset.foldr (fn ((s,kd),kd') => kd ==> kd') Kind strset
             val _ = Kind.match_kind kind (toKind Kind')
                     handle HOL_ERR _ => raise ERR "reform_tyops" (Tyop ^ " has unexpected kind " ^ kind_to_string (toKind Kind'))
-            val pty' = dContype{Thy=Thy, Tyop=Tyop, Kind=Kind', Rank=Rank}
+            val pty' = dContype{Thy=Thy, Tyop=Tyop, Kind=Kind'}
           in
              list_dTyApp (pty', map dVartype (HOLset.listItems strset))
           end
@@ -1183,10 +1195,9 @@ fun find_vartypes (pty, acc) =
  in
   case pty of
     dVartype s => HOLset.add(acc, s)
-  | dAQ ty => List.foldl (fn (ty, acc) => let val (s,kd,rk) = dest_var_type ty
+  | dAQ ty => List.foldl (fn (ty, acc) => let val (s,kd) = dest_var_type ty
                                               val kd' = Prekind.fromKind kd
-                                              val rk' = Prerank.fromRank rk
-                                          in HOLset.add(acc, (s,kd',rk')) end)
+                                          in HOLset.add(acc, (s,kd')) end)
                          acc (Type.type_vars ty)
   | dContype _ => acc
   | dTyApp(opr,arg) => List.foldl find_vartypes acc [opr,arg]

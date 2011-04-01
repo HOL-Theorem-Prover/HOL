@@ -261,11 +261,11 @@ fun empty_segment ({thid,facts, ...}:segment) =
  *              ADDING TO THE SEGMENT                                        *
  *---------------------------------------------------------------------------*)
 
-fun add_type_opr {name,theory,kind,rank} thy =
-    (Type.prim_new_type {Thy = theory, Tyop = name} kind rank; thy)
+fun add_type_opr {name,theory,kind} thy =
+    (Type.prim_new_type {Thy = theory, Tyop = name} kind; thy)
 
 fun add_type {name,theory,arity} thy = 
-    add_type_opr {name=name,theory=theory,kind=Kind.mk_arity arity,rank=0} thy
+    add_type_opr {name=name,theory=theory,kind=Kind.mk_arity arity} thy
 
 fun add_term {name,theory,htype} thy =
     (Term.prim_new_const {Thy = theory, Name = name} htype; thy)
@@ -359,20 +359,20 @@ end;
  *            INSTALLING CONSTANTS IN THE CURRENT SEGMENT                    *
  *---------------------------------------------------------------------------*)
 
-fun new_type_opr (Name,Kind,Rank) =
+fun new_type_opr (Name,Kind) =
  (if Lexis.allowed_type_constant Name orelse
      not (!Globals.checking_type_names)
   then ()
   else WARN "new_type" (Lib.quote Name^" is not a standard type name")
-  ; add_type_oprCT {name=Name, kind=Kind, rank=Rank, theory = CTname()};());
+  ; add_type_oprCT {name=Name, kind=Kind, theory = CTname()};());
 
-fun new_type (Name,Arity) = new_type_opr (Name, Kind.mk_arity Arity, 0)
+fun new_type (Name,Arity) = new_type_opr (Name, Kind.mk_arity Arity)
 
 fun new_constant (Name,Ty) =
   (if not (Lexis.allowed_term_constant Name) andalso
       !Globals.checking_const_names
    then WARN "new_constant" (Lib.quote Name^" is not a standard constant name")
-   else if Type.kind_of Ty <> Kind.typ
+   else if not (is_type_kind (Type.kind_of Ty))
    then raise ERR "new_constant" "type does not have base kind"
    else ()
    ; add_termCT {name=Name, theory=CTname(), htype=Ty}; ())
@@ -382,7 +382,7 @@ fun new_constant (Name,Ty) =
      previously built theory from disk.
  ---------------------------------------------------------------------------*)
 
-fun install_type(s,kd,rk,thy) = add_type_oprCT {name=s, kind=kd, rank=rk, theory=thy};
+fun install_type(s,kd,thy) = add_type_oprCT {name=s, kind=kd, theory=thy};
 fun install_const(s,ty,thy) = add_termCT {name=s, htype=ty, theory=thy}
 
 
@@ -523,7 +523,7 @@ fun link_parents thy plist =
  end;
 
 fun incorporate_types thy tys =
-  let fun itype (s,kd,rk) = (install_type(s,kd,rk,thy);())
+  let fun itype (s,kd) = (install_type(s,kd,thy);())
   in List.app itype tys
   end;
 

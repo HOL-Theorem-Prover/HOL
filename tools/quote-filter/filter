@@ -69,7 +69,7 @@ type lexresult = (string * int)
 fun eof arg = ("", 0)
 %%
 %structure filter
-%s string comment qcomment tmcomment tycomment kdcomment tmquote tyquote kdquote quote ANTIQ;
+%s string comment qcomment tmcomment tycomment kdcomment rkcomment tmquote tyquote kdquote rkquote quote ANTIQ;
 %arg (UserDeclarations.QFS {output_stream, comdepth, pardepth, antiquote, row, rowstart});
 %full
 
@@ -92,6 +92,18 @@ lowergreek = "\206" [\177-\191] | "\207" [\128-\137] ;
 <INITIAL>")" => (ECHO yyarg yytext; dec pardepth;
                  if !antiquote andalso !pardepth < 1 then (yytext,yypos)
                  else continue());
+<INITIAL>"``" {ws}* ":::" ({letter} | {ws} | {newline} | [('] | {digit} | {lowergreek}) => (
+                 print yyarg ("(Parse.Rank [QUOTE \""^locpragma yyarg (yytext,yypos) 2);
+                 safeprint yyarg (drop_upto #":" yytext);
+                 YYBEGIN rkquote;
+                 continue());
+<INITIAL>"``" {ws}* ":::^" =>
+              (print yyarg ("(Parse.Rank [QUOTE \""^locpragma yyarg (yytext,yypos) 2^
+                      ":::\", ANTIQUOTE (");
+               YYBEGIN ANTIQ;
+               continue();
+               YYBEGIN rkquote;
+               continue());
 <INITIAL>"``" {ws}* "::" ({letter} | {ws} | {newline} | [('] | {digit} | {lowergreek}) => (
                  print yyarg ("(Parse.Kind [QUOTE \""^locpragma yyarg (yytext,yypos) 2);
                  safeprint yyarg (drop_upto #":" yytext);
@@ -143,7 +155,7 @@ lowergreek = "\206" [\177-\191] | "\207" [\128-\137] ;
 <string>[^\\"\n\015\128-\255]+ => (ECHO yyarg yytext; continue());
 <string>. => (ECHO yyarg yytext; continue());
 
-<comment,tmcomment,tycomment,kdcomment,qcomment>"(*" =>
+<comment,tmcomment,tycomment,kdcomment,rkcomment,qcomment>"(*" =>
                 (ECHO yyarg yytext; inc comdepth; continue());
 <comment>"*)" => (ECHO yyarg yytext; dec comdepth;
                   if !comdepth < 1 then YYBEGIN INITIAL else ();
@@ -157,44 +169,50 @@ lowergreek = "\206" [\177-\191] | "\207" [\128-\137] ;
 <kdcomment>"*)" => (ECHO yyarg yytext; dec comdepth;
                   if !comdepth < 1 then YYBEGIN kdquote else ();
                   continue());
+<rkcomment>"*)" => (ECHO yyarg yytext; dec comdepth;
+                  if !comdepth < 1 then YYBEGIN rkquote else ();
+                  continue());
 <qcomment>"*)" => (ECHO yyarg yytext; dec comdepth;
                   if !comdepth < 1 then YYBEGIN quote else ();
                   continue());
 <comment>{newline} => (newline yyarg (yypos,yytext); continue());
-<tmcomment,tycomment,kdcomment,qcomment>{newline} => (qnewline yyarg (yypos,yytext); continue());
-<tmcomment,tycomment,kdcomment,qcomment>"\\" => (ECHO yyarg "\\\\"; continue());
-<tmcomment,tycomment,kdcomment,qcomment>"\"" => (ECHO yyarg "\\\""; continue());
-<tmcomment,tycomment,kdcomment,qcomment>"\t" => (ECHO yyarg "\\t"; continue());
-<tmcomment,tycomment,kdcomment,qcomment>"^`" => (ECHO yyarg "`"; continue());
-<tmcomment,tycomment,kdcomment>"``" => (print yyarg "\"])"; comdepth := 0;
+<tmcomment,tycomment,kdcomment,rkcomment,qcomment>{newline} => (qnewline yyarg (yypos,yytext); continue());
+<tmcomment,tycomment,kdcomment,rkcomment,qcomment>"\\" => (ECHO yyarg "\\\\"; continue());
+<tmcomment,tycomment,kdcomment,rkcomment,qcomment>"\"" => (ECHO yyarg "\\\""; continue());
+<tmcomment,tycomment,kdcomment,rkcomment,qcomment>"\t" => (ECHO yyarg "\\t"; continue());
+<tmcomment,tycomment,kdcomment,rkcomment,qcomment>"^`" => (ECHO yyarg "`"; continue());
+<tmcomment,tycomment,kdcomment,rkcomment>"``" => (print yyarg "\"])"; comdepth := 0;
                               YYBEGIN INITIAL; continue());
 <qcomment>"`" => (print yyarg "\"]"; comdepth := 0;
                   YYBEGIN INITIAL; continue());
-<tmcomment,tycomment,kdcomment,qcomment>[\128-\255] => (ECHO yyarg (bslash_escape yytext);
+<tmcomment,tycomment,kdcomment,rkcomment,qcomment>[\128-\255] => (ECHO yyarg (bslash_escape yytext);
                                               continue());
-<comment,tmcomment,tycomment,kdcomment,qcomment>[^\n\015\\"\t^`*()\128-\255]+ => (ECHO yyarg yytext; continue());
+<comment,tmcomment,tycomment,kdcomment,rkcomment,qcomment>[^\n\015\\"\t^`*()\128-\255]+ => (ECHO yyarg yytext; continue());
 
-<comment,tmcomment,tycomment,kdcomment,qcomment>. => (ECHO yyarg yytext; continue());
+<comment,tmcomment,tycomment,kdcomment,rkcomment,qcomment>. => (ECHO yyarg yytext; continue());
 
-<quote,tmquote,tyquote,kdquote>"^"+{ws} => (ECHO yyarg yytext; continue());
-<quote,tmquote,tyquote,kdquote>"^"+{newline} =>
+<quote,tmquote,tyquote,kdquote,rkquote>"^"+{ws} => (ECHO yyarg yytext; continue());
+<quote,tmquote,tyquote,kdquote,rkquote>"^"+{newline} =>
    (ECHO yyarg (String.substring(yytext,0,size yytext - 1));
     qnewline yyarg (yypos,yytext);
     continue());
-<quote,tmquote,tyquote,kdquote>"^^" => (ECHO yyarg "^"; continue());
-<quote,tmquote,tyquote,kdquote>"^`" => (ECHO yyarg "`"; continue());
-<quote,tmquote,tyquote,kdquote>"^"{symbol} => (ECHO yyarg yytext; continue());
-<quote,tmquote,tyquote,kdquote>{newline} => (qnewline yyarg (yypos,yytext); continue());
+<quote,tmquote,tyquote,kdquote,rkquote>"^^" => (ECHO yyarg "^"; continue());
+<quote,tmquote,tyquote,kdquote,rkquote>"^`" => (ECHO yyarg "`"; continue());
+<quote,tmquote,tyquote,kdquote,rkquote>"^"{symbol} => (ECHO yyarg yytext; continue());
+<quote,tmquote,tyquote,kdquote,rkquote>{newline} => (qnewline yyarg (yypos,yytext); continue());
 
 <quote>"`" => (print yyarg "\"]"; YYBEGIN INITIAL; continue());
-<tmquote,tyquote,kdquote>"``" => (print yyarg "\"])"; YYBEGIN INITIAL; continue());
+<tmquote,tyquote,kdquote,rkquote>"``" => (print yyarg "\"])"; YYBEGIN INITIAL; continue());
 
 <quote>"(*" => (ECHO yyarg yytext; inc comdepth; YYBEGIN qcomment; continue());
 <tmquote>"(*" => (ECHO yyarg yytext; inc comdepth; YYBEGIN tmcomment;
                   continue());
 <tyquote>"(*" => (ECHO yyarg yytext; inc comdepth; YYBEGIN tycomment;
                   continue());
-<kdquote>"(*" => (ECHO yyarg yytext; YYBEGIN kdcomment; continue());
+<kdquote>"(*" => (ECHO yyarg yytext; inc comdepth; YYBEGIN kdcomment;
+                  continue());
+<rkquote>"(*" => (ECHO yyarg yytext; inc comdepth; YYBEGIN rkcomment;
+                  continue());
 
 <quote>"^" => (print yyarg "\", ANTIQUOTE ("; YYBEGIN ANTIQ; continue();
                YYBEGIN quote; continue());
@@ -204,13 +222,15 @@ lowergreek = "\206" [\177-\191] | "\207" [\128-\137] ;
                  YYBEGIN tyquote; continue());
 <kdquote>"^" => (print yyarg "\", ANTIQUOTE ("; YYBEGIN ANTIQ; continue();
                  YYBEGIN kdquote; continue());
+<rkquote>"^" => (print yyarg "\", ANTIQUOTE ("; YYBEGIN ANTIQ; continue();
+                 YYBEGIN rkquote; continue());
 
 
-<quote,tmquote,tyquote,kdquote>[\128-\255] => (ECHO yyarg (bslash_escape yytext);
+<quote,tmquote,tyquote,kdquote,rkquote>[\128-\255] => (ECHO yyarg (bslash_escape yytext);
                                                continue());
-<quote,tmquote,tyquote,kdquote>[^`\n\015^ \t(*\128-\255]+ =>
+<quote,tmquote,tyquote,kdquote,rkquote>[^`\n\015^ \t(*\128-\255]+ =>
   (ECHO yyarg (String.toString yytext); continue());
-<quote,tmquote,tyquote,kdquote>. => (ECHO yyarg (String.toString yytext); continue());
+<quote,tmquote,tyquote,kdquote,rkquote>. => (ECHO yyarg (String.toString yytext); continue());
 
 <ANTIQ>{MLid} => (ECHO yyarg yytext;
                   print yyarg ("),QUOTE \""^locpragma yyarg (yytext,yypos) 0);

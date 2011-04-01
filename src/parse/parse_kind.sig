@@ -2,18 +2,16 @@ signature parse_kind =
 sig
 
   type ('a,'b) kindconstructors =
-     {varkind : string locn.located -> 'a,
+     {varkind : (string * Prerank.prerank) locn.located -> 'a,
+      typekind : Prerank.prerank locn.located -> 'a,
       kindop : (string locn.located * 'a list) -> 'a,
       qkindop : {Thy:string, Kindop:string, Locn:locn.locn, Args: 'a list} -> 'a,
       arity : (string locn.located * int) -> 'a,
-      antiq : 'b -> 'a}
+      antiq : 'b -> 'a,
+      rankcast : {Kd:'a, Rank:Prerank.prerank, Locn:locn.locn} -> 'a}
 
   val parse_kind :
-    {varkind : string locn.located -> 'a,
-     kindop : (string locn.located * 'a list) -> 'a,
-     qkindop : {Thy:string, Kindop:string, Locn:locn.locn, Args: 'a list} -> 'a,
-     arity : (string locn.located * int) -> 'a,
-     antiq : 'b -> 'a} ->
+    ('a,'b) kindconstructors ->
     bool ->
     kind_grammar.grammar ->
     'b qbuf.qbuf -> 'a

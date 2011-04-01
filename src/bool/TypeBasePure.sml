@@ -12,7 +12,7 @@ val ERR = mk_HOL_ERR "TypeBasePure";
 
 fun type_names ty =
   let val (Opr,Args) = Type.strip_app_type ty
-      val {Thy,Tyop,Kind,Rank} = Type.dest_thy_con_type Opr
+      val {Thy,Tyop,Kind} = Type.dest_thy_con_type Opr
   in (Thy,Tyop)
   end;
 
@@ -483,7 +483,7 @@ type typeBase = tyinfo TypeNet.typenet
 
 val empty : typeBase = TypeNet.empty
 
-fun apply1st f (x,y,z) = (f x,y,z)
+fun apply1st f (x,y) = (f x,y)
 fun next_ty ty = mk_var_type(apply1st Lexis.tyvar_vary (dest_var_type ty))
 
 (*---------------------------------------------------------------------------*)
@@ -518,11 +518,11 @@ fun normalise_ty ty = let
               recurse (recurse (dict, bvar::env, usethis) [body]) rest
         end
   val (inst0, _, _) = recurse (Binarymap.mkDict Type.compare, [], Type.alpha) [ty]
-  fun set_kd_rk src trg =
-    let val (s,kd,rk) = dest_var_type trg
-    in mk_var_type(s, kind_of src, rank_of src)
+  fun set_kd src trg =
+    let val (s,kd) = dest_var_type trg
+    in mk_var_type(s, kind_of src)
     end
-  val inst = Binarymap.foldl (fn (tyk,tyv,acc) => (tyk |-> set_kd_rk tyk tyv)::acc)
+  val inst = Binarymap.foldl (fn (tyk,tyv,acc) => (tyk |-> set_kd tyk tyv)::acc)
                              []
                              inst0
 in
@@ -534,8 +534,8 @@ fun prim_get (db:typeBase) (thy,tyop) =
       NONE => NONE
     | SOME kd => let
         val (kd_args,kd_res) = Kind.strip_arrow_kind kd
-        fun set_kind ty kind = let val (s,kd,rk) = dest_var_type ty
-                               in mk_var_type(s,kind,rk)
+        fun set_kind ty kind = let val (s,kd) = dest_var_type ty
+                               in mk_var_type(s,kind)
                                end
         fun genargs nextty (kd::kds) = set_kind nextty kd :: genargs (next_ty nextty) kds
           | genargs nextty    []     = []
@@ -588,7 +588,7 @@ fun tysize ty =
       end *)
 
 fun mymatch pat ty = let
-  val ((i, sames), (k, kdsames), r) = Type.raw_kind_match_type pat ty (([], []), ([], []), 0)
+  val ((i, sames), (k, kdsames), (r, rkfixed)) = Type.raw_kind_match_type pat ty (([], []), ([], []), (0, false))
 in
   (i @ (map (fn ty => ty |-> ty) sames),
    k @ (map (fn kd => kd |-> kd) kdsames),
@@ -619,17 +619,17 @@ local
   fun num() = mk_thy_type{Tyop="num",Thy="num",Args=[]}
   fun next_nm avoids s = Lexis.gen_variant Lexis.tyvar_vary avoids s
   fun gen_tyvs avoids nextty (kd::kds) =
-        let val (name,_,rk) = dest_var_type nextty
+        let val (name,_) = dest_var_type nextty
             val new_name = next_nm avoids name
-            val newtyv = mk_var_type(new_name, kd, rk)
+            val newtyv = mk_var_type(new_name, kd)
         in newtyv :: gen_tyvs (new_name::avoids) newtyv kds
         end
     | gen_tyvs avoids nextty [] = []
 in
   fun size_ty avoids ty =
-    let val (s,kd,rk) = dest_var_type ty
-                        handle HOL_ERR e => ("", kind_of ty, rank_of ty)
-    in if kd = typ then ty --> num()
+    let val (s,kd) = dest_var_type ty
+                        handle HOL_ERR e => ("", kind_of ty)
+    in if is_type_kind kd then ty --> num()
        else if is_arrow_kind kd then
          let val (args,res) = strip_arrow_kind kd
              val arg_tyvs = gen_tyvs (s::avoids) alpha args
@@ -640,9 +640,9 @@ in
          in list_mk_univ_type (arg_tyvs, foldr (op -->) res_sz_ty arg_sz_tys)
          end
        else (* kd is a kind variable *)
-         let val k = dest_var_kind kd
+         let val (k,rk) = dest_var_kind kd
              val k' = next_nm (s::avoids) k
-             val ty' = mk_var_type (k', kd ==> typ, rk)
+             val ty' = mk_var_type (k', kd ==> typ rk)
          in
            mk_app_type (ty', ty) --> num()
          end
@@ -839,7 +839,7 @@ fun enc_type ty =
   if ty = Type.bool then bool_var
   else
   let val (opr,args) = strip_app_type ty
-      val (tyop,kd,rk) = dest_con_type ty
+      val (tyop,kd) = dest_con_type ty
       val enc_args = to_list(map enc_type args)
       val enc_tyop = tyop_var tyop
       val pair = Pair enc_tyop enc_args

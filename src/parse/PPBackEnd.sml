@@ -14,8 +14,8 @@ open Portable
 
 datatype annotation = BV of hol_type * (unit -> string)
                     | FV of hol_type * (unit -> string)
-                    | TyBV of kind * int (*rank*) * (unit -> string)
-                    | TyFV of kind * int (*rank*) * (unit -> string)
+                    | TyBV of kind * (unit -> string)
+                    | TyFV of kind * (unit -> string)
                     | TyOp of (unit -> string)
                     | TySyn of (unit -> string)
                     | Const of {Thy:string,Name:string,Ty:hol_type} * string
@@ -332,8 +332,8 @@ val emacs_terminal = let
       case ann of
         FV (_,tystr) => PP.add_stringsz pps (fv s tystr, sz s)
       | BV (_,tystr) => PP.add_stringsz pps (bv s tystr, sz s)
-      | TyFV (_,_,kdstr) => PP.add_stringsz pps (tyfv s kdstr, sz s)
-      | TyBV (_,_,kdstr) => PP.add_stringsz pps (tybv s kdstr, sz s)
+      | TyFV (_,kdstr) => PP.add_stringsz pps (tyfv s kdstr, sz s)
+      | TyBV (_,kdstr) => PP.add_stringsz pps (tybv s kdstr, sz s)
       | TyOp thy => PP.add_stringsz pps (tyop thy s, sz s)
       | TySyn r => PP.add_stringsz pps (tysyn r s, sz s)
       | _ => PP.add_string pps s
@@ -470,8 +470,8 @@ let
       case ann of
         FV (_,tystr) => add_ann_string_general pps "freevar" (SOME tystr) s
       | BV (_,tystr) => add_ann_string_general pps "boundvar" (SOME tystr) s
-      | TyFV (_,_,kdstr) => add_ann_string_general pps "freetypevar" (SOME kdstr) s
-      | TyBV (_,_,kdstr) => add_ann_string_general pps "boundtypevar" (SOME kdstr) s
+      | TyFV (_,kdstr) => add_ann_string_general pps "freetypevar" (SOME kdstr) s
+      | TyBV (_,kdstr) => add_ann_string_general pps "boundtypevar" (SOME kdstr) s
       | TyOp thy => add_ann_string_general pps "type" (SOME thy) s
       | TySyn r => add_ann_string_general pps "type" (SOME r) s
       | _ => add_string pps s

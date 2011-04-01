@@ -411,10 +411,11 @@ local
     val sth = TY_TM_SPEC_ALL impth
     val hyptyvars = HOLset.listItems (hyp_tyvars sth)
     val hypkdvars = HOLset.listItems (hyp_kdvars sth)
+    val hyprkvars = Term.has_var_rankl (hyp sth)
     val lconstants = HOLset.intersection
                          (FVL [concl sth] empty_tmset, hyp_frees sth)
     val matchfn =
-        kind_match_terml hypkdvars hyptyvars lconstants (fst(dest_imp(concl sth)))
+        kind_match_terml hyprkvars hypkdvars hyptyvars lconstants (fst(dest_imp(concl sth)))
   in fn th => MP (INST_ALL (matchfn (concl th)) sth) th
   end;
 

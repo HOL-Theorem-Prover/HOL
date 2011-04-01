@@ -58,11 +58,12 @@ end
 val the_true = T
 val the_false = F
 
+(*
 fun type_match vty cty sofar =
   if is_vartype vty
   then if ((vty = cty) orelse
            (case subst_assoc (equal vty) sofar
-             of SOME ty => (ty = cty)
+             of SOME ty => eq_ty ty cty
               | NONE => false))
        then sofar
        else {redex=vty, residue=cty}::sofar
@@ -73,6 +74,9 @@ fun type_match vty cty sofar =
          then itlist2 type_match vargs cargs sofar
          else failwith "type_match"
        end;
+*)
+fun type_match vty cty [] = Type.kind_match_type vty cty
+  | type_match vty cty _  = failwith "type_match: non-null accumulator";
 
 
 fun is_beq tm = (type_of (lhs tm) = bool) handle HOL_ERR _ => false;
@@ -798,7 +802,7 @@ fun ASM_FOL_TAC (asl,w) =
 
 val PREMESON_CANON_TAC =
   let fun GTY_SPEC th = let val tyv = fst(dest_tyforall(concl th))
-                        in TY_SPEC (gen_var_type(kind_of tyv, rank_of tyv)) th
+                        in TY_SPEC (gen_var_type(kind_of tyv)) th
                         end
       fun GSPEC th = SPEC (genvar(type_of(fst(dest_forall(concl th))))) th
       open jrhTactics
@@ -835,8 +839,8 @@ val create_equality_axioms =
     val eq_elim_RULE = MATCH_MP(TAUT `(a = b) ==> b \/ ~a`)
     val veq_tm = rator(rator(concl(hd eq_thms)))
     fun create_equivalence_axioms (eq,_) =
-      let val tyins = type_match (type_of veq_tm) (type_of eq) []
-      in map (INST_TYPE tyins) eq_thms
+      let val (tyins,kdins,rkin) = type_match (type_of veq_tm) (type_of eq) []
+      in map (INST_TYPE tyins o INST_KIND kdins o INST_RANK rkin) eq_thms
       end
     fun tm_consts tm acc =
       let val (fnc,args) = strip_comb tm
@@ -928,6 +932,8 @@ val (POLY_ASSUME_TAC:thm list -> jrhTactics.Tactic) =
         then type_match ty1 ty2 []
         else failwith "match_consts"
       end
+    fun INST_TY_KD_RK (tyS,kdS,rkS) th =
+        INST_TYPE tyS (INST_KIND kdS (INST_RANK rkS th))
     fun polymorph mconsts th =
       let val tvs = subtract (type_vars_in_term (concl th))
                              (Lib.U (map type_vars_in_term (hyp th)))
@@ -937,7 +943,7 @@ val (POLY_ASSUME_TAC:thm list -> jrhTactics.Tactic) =
             val pconsts = grab_constants (concl th) []
             val tyins = mapfilter match_consts
               (allpairs (fn x => fn y => (x,y)) pconsts mconsts)
-            val ths' = Lib.op_mk_set thm_eq (mapfilter (C INST_TYPE th) tyins)
+            val ths' = Lib.op_mk_set thm_eq (mapfilter (C INST_TY_KD_RK th) tyins)
           in
             if null ths' then
               (if not (!Globals.interactive) then ()

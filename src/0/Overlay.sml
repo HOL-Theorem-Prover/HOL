@@ -5,6 +5,7 @@
 
 structure CoreKernel :> CoreKernel =
 struct
+  structure Rank       = Rank
   structure Kind       = Kind
   structure Type       = Type
   structure Term       = Term

@@ -119,6 +119,31 @@ fun vmatch_type tyvarP ty ty' =
     tyS
   end;
 
+fun opkdstr ty =
+   trace ("kinds",2)
+     (fn () => type_to_string ty ^ " - opr: " ^ (kind_to_string o kind_of o fst o strip_app_type) ty ^ "\n")
+     ()
+
+fun types_to_string types = "[" ^ types_to_string0 types ^ "]"
+and types_to_string0 [] = ""
+  | types_to_string0 [x] = type_to_string x
+  | types_to_string0 (x::xs) = type_to_string x ^ ",\n " ^ types_to_string0 xs;
+
+fun tyinst_to_string tyinst = "[" ^ tyinst_to_string0 tyinst ^ "]"
+and tyinst_to_string0 [] = ""
+  | tyinst_to_string0 [x] = tyinst_to_string1 x
+  | tyinst_to_string0 (x::xs) = tyinst_to_string1 x ^ ",\n " ^ tyinst_to_string0 xs
+and tyinst_to_string1 {redex,residue} = type_to_string redex ^ " |-> " ^ type_to_string residue;
+
+fun tminst_to_string tminst = "[" ^ tminst_to_string0 tminst ^ "]"
+and tminst_to_string0 [] = ""
+  | tminst_to_string0 [x] = tminst_to_string1 x
+  | tminst_to_string0 (x::xs) = tminst_to_string1 x ^ ",\n " ^ tminst_to_string0 xs
+and tminst_to_string1 {redex,residue} = term_to_string redex ^ " |-> " ^ term_to_string residue;
+
+fun inst_to_string (tminst,tyinst) = "Terms:\n" ^ tminst_to_string tminst ^ "\n" ^
+                                     "Types:\n" ^ tyinst_to_string tyinst
+
 fun vunifyl_type tyvarP =
   let
     fun unify sub [] = sub
@@ -139,7 +164,7 @@ fun vunifyl_type tyvarP =
         in
           if f = f' andalso length args = length args' then
             unify sub (zip args args' @ work)
-          else raise ERR "unify_type" "different type constructors"
+          else raise (ERR "unify_type" ("different type constructors:\n" ^ opkdstr ty ^ "vs.\n" ^ opkdstr ty'))
         end
   in
     unify
@@ -192,18 +217,21 @@ fun vunifyl (tmvarP, tyvarP) =
       if eq tm tm' then unify sub work
       else if tmvarP tm then
         if tmvarP tm' andalso varname tm = varname tm' then
-          unify (unify_type sub [type_of tm, type_of tm']) work
+          unify (unify_type sub [type_of tm, type_of tm']
+                ) work
         else if occurs tm tm' then raise ERR "unify_term" "occurs"
         else unify (unify_var_type sub tm tm') work
       else if tmvarP tm' then unify' sub work tm' tm
       else
         case (dest_term tm, dest_term tm') of (VAR (n, ty), VAR (n', ty'))
           => if n <> n' then raise ERR "unify_term" "different variables"
-             else unify (unify_type sub [ty, ty']) work
+             else unify (unify_type sub [ty, ty']
+                        ) work
         | (CONST {Thy, Name, Ty}, CONST {Thy = Thy', Name = Name', Ty = Ty'})
           => if Thy <> Thy' orelse Name <> Name' then
                raise ERR "unify_term" "different constants"
-             else unify (unify_type sub [Ty, Ty']) work
+             else unify (unify_type sub [Ty, Ty']
+                        ) work
         | (COMB (a, b), COMB (a', b')) => unify' sub ((b, b') :: work) a a'
         | (TYCOMB (a, b), TYCOMB (a', b')) => unify' (unify_type sub [b, b']) work a a'
         | (LAMB _, LAMB _) => raise ERR "unify_term" "can't deal with lambda"

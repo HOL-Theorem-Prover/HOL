@@ -46,7 +46,10 @@ val bounded_tm   = prim_mk_const {Name="BOUNDED",      Thy="bool"};
  ---------------------------------------------------------------------------*)
 
 fun mk_eq (lhs,rhs) =
- list_mk_comb(inst[alpha |-> type_of lhs] equality, [lhs,rhs])
+ let val (tyS,kdS,rkS) = kind_match_type alpha (type_of lhs)
+ in (*list_mk_comb(inst[alpha |-> type_of lhs] equality, [lhs,rhs])*)
+   list_mk_comb(inst tyS (inst_rank_kind rkS kdS equality), [lhs,rhs])
+ end
  handle HOL_ERR _ => raise ERR "mk_eq" "lhs and rhs have different types";
 
 fun mk_imp(ant,conseq) =
@@ -96,7 +99,7 @@ fun mk_icomb (t1, t2) =
     val (dom, _) = dom_rng (type_of t1)
     val (i,k,r) = kind_match_type dom (type_of t2)
   in
-    mk_comb (inst i (inst_rank_kind r k t1), t2)
+    mk_comb (inst_rk_kd_ty r k i t1, t2)
   end
 
 

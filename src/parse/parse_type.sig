@@ -2,13 +2,13 @@ signature parse_type =
 sig
 
   type ('a,'b) tyconstructors =
-     {vartype : (string * Prekind.prekind * Prerank.prerank) locn.located -> 'a,
+     {vartype : (string * Prekind.prekind) locn.located -> 'a,
       tyop : (string locn.located * 'a list) -> 'a,
       qtyop : {Thy:string, Tyop:string, Locn:locn.locn, Args: 'a list} -> 'a,
       antiq : 'b -> 'a,
       kindcast : {Ty:'a, Kind:Prekind.prekind, Locn:locn.locn} -> 'a,
       rankcast : {Ty:'a, Rank:Prerank.prerank, Locn:locn.locn} -> 'a,
-      tycon : {Thy:string, Tyop:string, Kind:Prekind.prekind, Rank:Prerank.prerank, Locn:locn.locn} -> 'a,
+      tycon : {Thy:string, Tyop:string, Kind:Prekind.prekind, Locn:locn.locn} -> 'a,
       tyapp  : 'a * 'a -> 'a,
       tyuniv : 'a * 'a -> 'a,
       tyabs  : 'a * 'a -> 'a

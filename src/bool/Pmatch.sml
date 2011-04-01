@@ -437,8 +437,7 @@ fun no_repeat_vars pat =
  ---------------------------------------------------------------------------*)
 
 fun subst_inst (term_sub,type_sub,kind_sub,rank_sub) tm =
-    Term.subst term_sub (Term.inst type_sub
-      (Term.inst_kind kind_sub (Term.inst_rank rank_sub tm)));
+    Term.subst term_sub (Term.inst_rk_kd_ty rank_sub kind_sub type_sub tm);
 
 fun pat_match1 (pat,exp) given_pat =
  let val sub = Term.kind_match_term pat given_pat
@@ -473,7 +472,7 @@ fun pat_match3 pat_exps given_pats =
             let val (ra,rb,rc,rd) = unzip4 rest
             in (a::ra, b::rb, c::rc, d::rd)
             end
-      val max_list = foldl Int.max 0
+      val max_list = foldl Rank.max 0
   in
      (fn (tmSs,tySs,kdSs,rkSs) =>
         ((distinguish o reduce_mats o purge_wildcards o flatten) tmSs,

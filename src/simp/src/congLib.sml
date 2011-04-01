@@ -112,7 +112,8 @@ local
         val _ = if (samerel thm_relation (extract_preorder_const preorder)) then T
                 else failwith ("not applicable");
         val thmLHS = rand (rator (concl thm));
-        val match = kind_match_terml [] [] boundvars thmLHS term;
+        val rkvars = Term.has_var_rankl (HOLset.listItems boundvars)
+        val match = kind_match_terml rkvars [] [] boundvars thmLHS term;
         val thm = INST_ALL match thm
       in
         thm

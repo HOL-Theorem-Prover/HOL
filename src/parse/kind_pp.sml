@@ -1,7 +1,7 @@
 structure kind_pp :> kind_pp =
 struct
 
-open Feedback Kind Portable HOLgrammars kind_grammar
+open Feedback Rank Kind Portable HOLgrammars kind_grammar
 
 datatype mygrav
    = Pfx of int
@@ -37,6 +37,7 @@ fun pp_kind0 (G:grammar) backend = let
               | SOME r => SOME(p, IR(a,#parse_string r))
             end
           | (p, NONFIX) => recurse xs
+          | (p, RANKCAST) => recurse xs
         end
   in
     recurse (rules G) : (int * single_rule) option
@@ -62,13 +63,21 @@ fun pp_kind0 (G:grammar) backend = let
 
   in
     if depth = 0 then add_string "..."
-    else if kd = Kind.typ then add_string "ty"
-    else if Kind.is_var_kind kd then add_string (Kind.dest_var_kind kd)
+    else if is_type_kind kd then
+        let val rk = dest_type_kind kd
+        in add_string ("ty" ^
+                       (if rk = rho then "" else ":" ^ rank_to_string rk))
+        end
+    else if is_var_kind kd then
+        let val (s,rk) = dest_var_kind kd
+        in add_string (s ^
+                       (if rk = rho then "" else ":" ^ rank_to_string rk))
+        end
     else
         let val _ = Lib.assert (Lib.equal true) (!pp_arity_kinds)
-          val s = Int.toString (dest_arity_kind kd)
+          val a = dest_arity_kind kd
         in
-          add_string ("ar "  ^ s)
+          add_string ("ar "  ^ Int.toString a)
         end handle HOL_ERR _ =>
         let val (dom,rng) = kind_dom_rng kd
             val Tyop = "=>"

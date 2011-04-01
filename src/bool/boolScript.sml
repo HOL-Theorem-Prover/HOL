@@ -21,12 +21,7 @@ or
 and type Ctrl-j.
 
 Then while viewing this file,
-type Meta-H H to start a new Moscow ML session, and execute the following:
-
-For Moscow ML:
-
-quotation := true;
-loadPath := "/Users/palantir" ^ "/hol/hol-omega/sigobj" :: !loadPath;
+type Meta-H H to start a new Moscow ML session, and execute the following for Moscow ML:
 
 quotation := true;
 loadPath := "/Users/pvhomei" ^ "/hol/hol-omega/sigobj" :: !loadPath;
@@ -34,7 +29,7 @@ loadPath := "/Users/pvhomei" ^ "/hol/hol-omega/src/bool" :: !loadPath;
 
 load "PP";
 structure MosmlPP = PP;
-app load ["Kind","Type","Term","Thm","Theory","Globals","HolKernel","Parse","Unicode","Hol_pp"];
+app load ["Kind","Type","Term","Thm","Theory","Globals","HolKernel","Parse","UnicodeChars","Hol_pp"];
 (*app load ["boolTheory","boolSyntax","Drule","Abbrev"];*)
 (*app load ["Globals","Drule","boolTheory","Tactical","Tactic","Rewrite"];*)
 
@@ -58,6 +53,10 @@ struct
                             !Meta.quietdec)
   fun amquiet () = !Meta.quietdec
 end;
+
+
+
+
 
 *)
 
@@ -108,10 +107,12 @@ in
     HOLPP.flush_ppstream newpps;
     MPP.end_block pps
   end
-  val _ = installPP (mosmlpp Kind.pp_qkind)
   val _ = installPP (mosmlpp Pretype.pp_pretype)
+  val _ = installPP (mosmlpp Prekind.pp_prekind)
+  val _ = installPP (mosmlpp Prerank.pp_prerank)
   val _ = installPP (mosmlpp (Parse.term_pp_with_delimiters Hol_pp.pp_term))
   val _ = installPP (mosmlpp (Parse.type_pp_with_delimiters Hol_pp.pp_type))
+  val _ = installPP (mosmlpp (Parse.kind_pp_with_delimiters Hol_pp.pp_kind))
   val _ = installPP (mosmlpp Hol_pp.pp_thm)
   val _ = installPP (mosmlpp Hol_pp.pp_theory)
   val _ = installPP (mosmlpp kind_grammar.prettyprint_grammar)
@@ -404,9 +405,25 @@ val BOOL_CASES_AX =
  new_axiom
    ("BOOL_CASES_AX", Term `!t. (t=T) \/ (t=F)`);
 
+(*
+val _ = set_trace "types" 1;
+val _ = set_trace "kinds" 2;
+val _ = set_trace "debug_preterm" 1; (* for debugging only; remove later. *)
+val _ = set_trace "debug_pretype" 1; (* for debugging only; remove later. *)
+val _ = set_trace "debug_prekind" 1; (* for debugging only; remove later. *)
+val _ = set_trace "debug_prerank" 1; (* for debugging only; remove later. *)
+
+val _ = set_trace "debug_preterm" 0; (* for debugging only; remove later. *)
+val _ = set_trace "debug_pretype" 0; (* for debugging only; remove later. *)
+val _ = set_trace "debug_prekind" 0; (* for debugging only; remove later. *)
+val _ = set_trace "debug_prerank" 0; (* for debugging only; remove later. *)
+val _ = set_trace "types" 0;
+val _ = set_trace "kinds" 1;
+*)
+
 val TY_ETA_AX = (* New for HOL-Omega *)
  new_axiom
-   ("TY_ETA_AX",     Term `!t:(!'a:'k.'a ('b:<=1)). (\:'a. t [:'a:]) = t`);
+   ("TY_ETA_AX",     Term `!t:(!'a:'k.'a ('b:'k=>ty:1)). (\:'a. t [:'a:]) = t`);
 
 val ETA_AX =
  new_axiom
@@ -459,6 +476,26 @@ val RES_EXISTS_DEF =
 
 val _ = (add_const "RES_EXISTS"; associate_restriction ("?",  "RES_EXISTS"));
 
+(*
+val _ = set_trace "types" 1;
+val _ = set_trace "kinds" 2;
+val _ = set_trace "debug_preterm" 1; (* for debugging only; remove later. *)
+val _ = set_trace "debug_pretype" 1; (* for debugging only; remove later. *)
+val _ = set_trace "debug_prekind" 1; (* for debugging only; remove later. *)
+val _ = set_trace "debug_prerank" 1; (* for debugging only; remove later. *)
+
+Term `!x:'a. P x`;
+Term `(?(x : 'a) :: p. m x)`;
+Term `!(x : 'a) y :: p. m x /\ m y ==> (x = y)`;
+
+val _ = set_trace "debug_preterm" 0; (* for debugging only; remove later. *)
+val _ = set_trace "debug_pretype" 0; (* for debugging only; remove later. *)
+val _ = set_trace "debug_prekind" 0; (* for debugging only; remove later. *)
+val _ = set_trace "debug_prerank" 0; (* for debugging only; remove later. *)
+val _ = set_trace "types" 0;
+val _ = set_trace "kinds" 1;
+*)
+
 val RES_EXISTS_UNIQUE_DEF =
  Definition.new_definition
    ("RES_EXISTS_UNIQUE_DEF",
@@ -493,7 +530,7 @@ val BOUNDED_DEF =
 val DATATYPE_TAG_DEF =
   Definition.new_definition
     ("DATATYPE_TAG_DEF",
-     Term`DATATYPE = \x. T`);
+     Term`DATATYPE = \x:'a. T`);
 
 val _ = List.app add_const ["BOUNDED", "DATATYPE"];
 
@@ -577,6 +614,9 @@ val list_mk_tyforall = itlist (curry mk_tyforall)
 val list_mk_tyexists = itlist (curry mk_tyexists)
 
 (* also implemented in Drule *)
+
+fun INST_RK_KD_TY(Srk,Skd,Sty) = INST_ALL([],Sty,Skd,Srk)
+
 fun ETA_CONV t =
   let val (var, cmb) = dest_abs t
       val tysubst = [alpha |-> type_of var, beta |-> type_of cmb]
@@ -588,16 +628,22 @@ fun ETA_CONV t =
 fun TY_ETA_CONV t =
   let val (tyvar, tycmb) = dest_tyabs t
       val ty      = type_of tycmb
-      val rk      = Int.max(rank_of ty - 1, 0)
+      val rk      = rank_of_type ty
+      val uvar    = fst (dest_univ_type (type_of (fst (dest_tycomb tycmb))))
+      val b_rk    = 1 (*'b*)
+      val rksubst = Rank.raw_match_rank false b_rk rk (rank_of_type uvar)
       val kd      = kind_of tyvar
-      val kdsubst = if kd = kappa then [] else [kappa |-> kd]
-      val tysubst = [mk_var_type("'b", kd ==> typ, rk+1) |-> mk_abs_type(tyvar, ty)]
-(*
+      val kappa'  = Kind.inst_rank rksubst kappa
+      val kdsubst = if kd = kappa' then [] else [kappa' |-> kd]
+      val bty     = mk_var_type("'b", kd ==> typ (Rank.promote rksubst b_rk))
+      val tysubst = [bty |-> mk_abs_type(tyvar, ty)]
+(* The code above essentially does the following, quickly:
       val pat = lhs (snd (dest_forall (concl TY_ETA_AX)))
-      val (tmsubst, tysubst, kdsubst, rk) = kind_match_term pat t
+      val (tmsubst, tysubst, kdsubst, rksubst) = kind_match_term pat t
 *)
       val th = SPEC (tyrator tycmb)
-                 (INST_TYPE tysubst (INST_KIND kdsubst (INST_RANK rk TY_ETA_AX)))
+                 (INST_RK_KD_TY (rksubst,kdsubst,tysubst) TY_ETA_AX)
+              (* (PURE_INST_TYPE tysubst (PURE_INST_KIND kdsubst (INST_RANK rksubst TY_ETA_AX))) *)
   in
     TRANS (ALPHA t (lhs (concl th))) th
   end;
@@ -942,6 +988,18 @@ val _ = save_thm("FORALL_THM",FORALL_THM);
 val _ = save_thm("EXISTS_THM",EXISTS_THM);
 
 
+(*
+val _ = set_trace "types" 1;
+val _ = set_trace "kinds" 2;
+val _ = set_trace "debug_type_inference" 2; (* for debugging only; remove later. *)
+
+val tm1 = Term `!t. t`;
+
+val _ = set_trace "debug_type_inference" 0; (* for debugging only; remove later. *)
+val _ = set_trace "types" 0;
+val _ = set_trace "kinds" 1;
+*)
+
 val TY_FORALL_THM =
   SYM (AP_TERM (Term `$!: :(!'a:'k.bool)->bool`)
                (TY_ETA_CONV (Term `\:'a:'k. f [:'a:]:bool`)));
@@ -950,8 +1008,8 @@ val TY_EXISTS_THM =
   SYM (AP_TERM (Term `$?: :(!'a:'k.bool)->bool`)
                (TY_ETA_CONV (Term `\:'a:'k. f [:'a:]:bool`)));
 
-val _ = save_thm("TY_FORALL_THM",FORALL_THM);
-val _ = save_thm("TY_EXISTS_THM",EXISTS_THM);
+val _ = save_thm("TY_FORALL_THM",TY_FORALL_THM);
+val _ = save_thm("TY_EXISTS_THM",TY_EXISTS_THM);
 
 (*---------------------------------------------------------------------------*
  *  |- !t1:'a. !t2:'b. (\x. t1) t2 = t1                                      *
@@ -1597,8 +1655,8 @@ val _ = save_thm("EQ_EXT",EQ_EXT);
  *---------------------------------------------------------------------------*)
 
 val EQ_TY_EXT =
-   let val f = (--`f: !'a:'k. ('a:'k) ('b:<=1)`--)
-       and g = (--`g: !'a:'k. ('a:'k) ('b:<=1)`--)
+   let val f = (--`f: !'a:'k. 'a ('b:<=1)`--)
+       and g = (--`g: !'a:'k. 'a ('b:<=1)`--)
    in
    GEN f (GEN g (DISCH (--`!:'a:'k. ^f [:'a:] = ^g [:'a:]`--)
                        (TY_EXT(ASSUME (--`!:'a:'k. ^f [:'a:] = ^g [:'a:]`--)))))
@@ -1631,8 +1689,8 @@ val _ = save_thm("FUN_EQ_THM",FUN_EQ_THM);
  ---------------------------------------------------------------------------*)
 
 val TY_FUN_EQ_THM =
-  let val a = mk_var_type("'a", kappa, 0)
-      val b = mk_var_type("'b", kappa ==> typ, 1)
+  let val a = mk_var_type("'a", kappa)
+      val b = mk_var_type("'b", kappa ==> typ 1)
       val ty = Type.mk_univ_type(a, Type.mk_app_type(b,a))
       val f = mk_var("f", ty)
       val g = mk_var("g", ty)
@@ -1859,7 +1917,7 @@ val _ = save_thm("COND_CLAUSES", COND_CLAUSES);
 val COND_ID =
    let val b = --`b:bool`--
        and t = --`t:'a`--
-       val def = INST_TYPE [==`:'b`==  |->  ==`:'a`==] COND_DEF
+       val def = PURE_INST_TYPE [==`:'b`==  |->  ==`:'a`==] COND_DEF
        val th1 = itlist (fn x => RIGHT_BETA o (C AP_THM x))
                         [t,t,b] def
        val p = genvar (==`:bool`==)
@@ -1933,6 +1991,20 @@ val _ = save_thm("SELECT_REFL_2", SELECT_REFL_2);
 (* SELECT_UNIQUE = |- !P x. (!y. P y = (y = x)) ==> ($@ P = x)               *)
 (*---------------------------------------------------------------------------*)
 
+(*
+val _ = set_trace "types" 1;
+val _ = set_trace "kinds" 2;
+val _ = set_trace "debug_preterm" 1; (* for debugging only; remove later. *)
+val _ = set_trace "debug_pretype" 1; (* for debugging only; remove later. *)
+val _ = set_trace "debug_prekind" 1; (* for debugging only; remove later. *)
+val _ = set_trace "debug_prerank" 1; (* for debugging only; remove later. *)
+
+val _ = set_trace "debug_preterm" 0; (* for debugging only; remove later. *)
+val _ = set_trace "debug_pretype" 0; (* for debugging only; remove later. *)
+val _ = set_trace "debug_prekind" 0; (* for debugging only; remove later. *)
+val _ = set_trace "debug_prerank" 0; (* for debugging only; remove later. *)
+*)
+
 val SELECT_UNIQUE =
   let fun mksym tm = DISCH tm (SYM(ASSUME tm))
       val th0 = IMP_ANTISYM_RULE (mksym (--`y:'a = x`--))
@@ -1980,8 +2052,8 @@ end
 (* -------------------------------------------------------------------------*)
 
 val NOT_FORALL_THM =
-    let val f = ``P:'a->bool``
-	val x = ``x:'a``
+    let val f = --`P:'a->bool`--
+	val x = --`x:'a`--
 	val t = mk_comb(f,x)
 	val all = mk_forall(x,t)
 	and exists = mk_exists(x,mk_neg t)
@@ -3448,10 +3520,10 @@ let val f = --`f: 'a -> 'b`--
     val theta2 = [Type`:'a` |-> Type`:'b`]
     val (COND_T,COND_F) = (GENL[t1,t2]##GENL[t1,t2])
                           (CONJ_PAIR(SPEC_ALL COND_CLAUSES))
-    val thTl = AP_THM (SPECL [f,g] (INST_TYPE theta1 COND_T)) x
-    and thFl = AP_THM (SPECL [f,g] (INST_TYPE theta1 COND_F)) x
-    val thTr = SPECL [fx,gx] (INST_TYPE theta2 COND_T)
-    and thFr = SPECL [fx,gx] (INST_TYPE theta2 COND_F)
+    val thTl = AP_THM (SPECL [f,g] (PURE_INST_TYPE theta1 COND_T)) x
+    and thFl = AP_THM (SPECL [f,g] (PURE_INST_TYPE theta1 COND_F)) x
+    val thTr = SPECL [fx,gx] (PURE_INST_TYPE theta2 COND_T)
+    and thFr = SPECL [fx,gx] (PURE_INST_TYPE theta2 COND_F)
     val thT1 = TRANS thTl (SYM thTr)
     and thF1 = TRANS thFl (SYM thFr)
     val tm = (--`(if b then (f:'a->'b ) else g) x = (if b then f x else g x)`--)
@@ -3486,8 +3558,8 @@ let val f = --`f: 'a -> 'b`--
                           (CONJ_PAIR (SPEC_ALL COND_CLAUSES))
     val thTl = AP_TERM f (SPECL [x,y] COND_T)
     and thFl = AP_TERM f (SPECL [x,y] COND_F)
-    val thTr = SPECL [fx,fy] (INST_TYPE theta COND_T)
-    and thFr = SPECL [fx,fy] (INST_TYPE theta COND_F)
+    val thTr = SPECL [fx,fy] (PURE_INST_TYPE theta COND_T)
+    and thFr = SPECL [fx,fy] (PURE_INST_TYPE theta COND_F)
     val thT1 = TRANS thTl (SYM thTr)
     and thF1 = TRANS thFl (SYM thFr)
     val tm = (--`(f:'a->'b ) (if b then x else y) = (if b then f x else f y)`--)
@@ -3509,25 +3581,114 @@ val _ = save_thm("COND_RAND", COND_RAND);
 (*				       	                 PVH 2008.07.29 *)
 (* ---------------------------------------------------------------------*)
 
+(*
+val _ = set_trace "types" 1;
+val _ = set_trace "kinds" 2;
+val _ = set_trace "debug_preterm" 1; (* for debugging only; remove later. *)
+val _ = set_trace "debug_pretype" 1; (* for debugging only; remove later. *)
+val _ = set_trace "debug_prekind" 1; (* for debugging only; remove later. *)
+val _ = set_trace "debug_prerank" 1; (* for debugging only; remove later. *)
+
+val _ = set_trace "debug_preterm" 0; (* for debugging only; remove later. *)
+val _ = set_trace "debug_pretype" 0; (* for debugging only; remove later. *)
+val _ = set_trace "debug_prekind" 0; (* for debugging only; remove later. *)
+val _ = set_trace "debug_prerank" 0; (* for debugging only; remove later. *)
+val _ = set_trace "types" 0;
+val _ = set_trace "kinds" 1;
+
+Problems is that in 'val tm = ...' that 'b is given rank 1 by default.  Why?  Doesn't happen for 'val f ='.
+The "if" must impose a rank relationship that causes 'b to get rank 1.
+
+    val tm = (--`(if b then (f: !'a:'k.'a 'b) else g) [:'a:] = (if b then f [:'a:] else g [:'a:])`--)
+See
+- > val tm =
+    `if (b :bool) then (f :∀γ: 'k. γ (β: 'k => ty:=0)) else (g :∀γ: 'k. γ β)
+       [:α: 'k:] =
+     if b then f [:α:] else g [:α:]` : term (* EVIL *)
+vs
+- > val tm =
+    `if (b :bool) then (f :∀γ: 'k. γ (β: 'k => ty)) else (g :∀γ: 'k. γ β)
+       [:α: 'k:] =
+     if b then f [:α:] else g [:α:]` : term (* GOOD *)
+
+Term`(if b then (f: !'a:'k.'a 'b:<=0) else g) [:'a:] = z`;
+
+Term`(if b then (f: !'a:'k.'a 'b:<=0) else g) [:'a:] = z`;
+
+Checking application:
+=:>= 0 applied to
+((((COND:= max(= >= r+1, = ?9836936) (b: 9834876: bool))
+   ((f:
+     9834808:
+       (!V('a): 'k:9831938: =9834712: >=r : 'k:9831938: =9834712: >=r.
+           (V('a): 'k:9831938: =9834712: >=r
+            V('b): 'k:9831938: =9834712: >=r => ty:9836884: =?9836936))) :
+      (!V('a): 'k:9831938: =9834712: >=r : 'k:9831938: =9834712: >=r.
+          (V('a): 'k:9831938: =9834712: >=r
+           V('b): 'k:9831938: =9834712: >=r => ty:9836884: =?9836936))))
+  (g:
+   9834634: 9835190:
+     (!V('a): 'k:9831938: =9834712: >=r : 'k:9831938: =9834712: >=r.
+         (V('a): 'k:9831938: =9834712: >=r
+          V('b): 'k:9831938: =9834712: >=r => ty:9836884: =?9836936))))
+ [:V('a): 'k:9831938: =9834712: >=r:])
+Types: rator: 9834446: ty:9834502: >=0 ->:>= 0 9834446: ty:9834502: >=0 ->:>= 0 bool
+   to: rand : (V('a): 'k:9831938: =9834712: >=r
+ V('b): 'k:9831938: =9834712: >=r => ty:9836884: =?9836936)
+
+Type unification: 
+(V('a): 'k:9831938: =9834712: >=r
+ V('b): 'k:9831938: =9834712: >=r => ty:9836884: =?9836936)
+to be  =    to: 
+9834446: ty:9834502: >=0
+
+Unifying kinds: 
+9836906: ty:9836884: =?9836936
+to be  =    to: 
+ty:9834502: >=0
+
+  Unifying kinds: ty:9836884: =?9836936
+  to be  =    to: ty:9834502: >=0
+
+    Unifying ranks: 9836884: =?9836936
+    to be =     vs: 9834502: >=0
+
+- - - Term`(if b then (f: !'a:'k.'a 'b) else g) [:'a:] = (if b then f [:'a:] else g [:'a:])`;
+
+Checking term const = of type
+  68504: ty:?68080 ->:?68080 68504: ty:?68080 ->:?68080 bool
+Checking kind of type has kind ty.
+
+Why is the rank of = going to default to =0, just because of the bool there?
+Better that it not.
+*)
+
+
 val COND_TY_COMB =
-let val f = --`f: !'a:'k. 'a 'b`--
+let
+(*  val f = --`f: !'a:'k. 'a 'b`-- (* rank 1 *)
     val g = --`g: !'a:'k. 'a 'b`--
-    val a = mk_var_type("'a", kappa, 0)
+*)
+    val f = --`f: !'a. 'a ('b:'k => ty)`-- (* rank 1 *)
+    val g = --`g: !'a. 'a ('b:'k => ty)`--
+    val a = mk_var_type("'a", kappa)
     val b = --`b:bool`--
-    val fa = --`^f [:'a:'k:]`-- and ga = --`^g [:'a:'k:]`--
+    val fa = --`^f [:'a:'k:]`-- and ga = --`^g [:'a:'k:]`-- (* rank 0 *)
     val t1 = --`t1:'a`--
     val t2 = --`t2:'a`--
-    val theta1 = [Type`:'a` |-> Type`: !'a:'k. 'a 'b`]
-    val theta2 = [Type`:'a` |-> Type`:'a 'b:'k=>ty`]
+(*  val theta1 = [Type`:'a:<=1` |-> Type`: !'a:'k. 'a 'b`] *)
+    val theta1 = [Type`:'a:<=1` |-> Type`: !'a. 'a ('b:'k => ty)`]
+    val theta2 = [Type`:'a`     |-> Type`:'a 'b:'k=>ty`]
     val (COND_T,COND_F) = (GENL[t1,t2]##GENL[t1,t2])
                           (CONJ_PAIR(SPEC_ALL COND_CLAUSES))
-    val thTl = TY_COMB (SPECL [f,g] (INST_TYPE theta1 COND_T)) a
-    and thFl = TY_COMB (SPECL [f,g] (INST_TYPE theta1 COND_F)) a
-    val thTr = SPECL [fa,ga] (INST_TYPE theta2 COND_T)
-    and thFr = SPECL [fa,ga] (INST_TYPE theta2 COND_F)
+    val rkS = 1
+    val thTl = TY_COMB (SPECL [f,g] (PURE_INST_TYPE theta1 (INST_RANK rkS COND_T))) a
+    and thFl = TY_COMB (SPECL [f,g] (PURE_INST_TYPE theta1 (INST_RANK rkS COND_F))) a
+    val thTr = SPECL [fa,ga] (PURE_INST_TYPE theta2 COND_T)
+    and thFr = SPECL [fa,ga] (PURE_INST_TYPE theta2 COND_F)
     val thT1 = TRANS thTl (SYM thTr)
     and thF1 = TRANS thFl (SYM thFr)
-    val tm = (--`(if b then (f: !'a:'k.'a 'b ) else g) [:'a:] = (if b then f [:'a:] else g [:'a:])`--)
+    val tm = (--`(if b then (f: !'a:'k.'a ('b:<=0)) else g) [:'a:] = (if b then f [:'a:] else g [:'a:])`--)
     val thT2 = SUBST_CONV [b |-> ASSUME (--`b = T`--)] tm tm
     and thF2 = SUBST_CONV [b |-> ASSUME (--`b = F`--)] tm tm
     val thT3 = EQ_MP (SYM thT2) thT1
@@ -3569,8 +3730,8 @@ val _ = save_thm("COND_ABS", COND_ABS);
 
 val COND_TY_ABS =
 let val b = --`b:bool`--
-    val f = --`f: !'a:'k.'a 'b`--
-    val g = --`g: !'a:'k.'a 'b`--
+    val f = --`f: !'a:'k.'a 'b:<=0`--
+    val g = --`g: !'a:'k.'a 'b:<=0`--
     val a = ==`:'a:'k`==
  in
    GENL [b,f,g]
@@ -3602,8 +3763,8 @@ let val b    = --`b:bool`--
     and [NOT1,NOT2] = tl (CONJUNCTS NOT_CLAUSES)
     and [OR1,OR2,OR3,OR4,_] = map GEN_ALL (CONJUNCTS (SPEC_ALL OR_CLAUSES))
     and [AND1,AND2,AND3,AND4,_] = map GEN_ALL (CONJUNCTS(SPEC_ALL AND_CLAUSES))
-    val thTl = SPECL [t1,t2] (INST_TYPE theta COND_T)
-    and thFl = SPECL [t1,t2] (INST_TYPE theta COND_F)
+    val thTl = SPECL [t1,t2] (PURE_INST_TYPE theta COND_T)
+    and thFl = SPECL [t1,t2] (PURE_INST_TYPE theta COND_F)
     val thTr =
       let val th1 = TRANS (AP_THM (AP_TERM disj NOT1) t1) (SPEC t1 OR3)
           and th2 = SPEC t2 OR1
@@ -3652,7 +3813,7 @@ let val b    = --`b:bool`--
     val imp_th2  = TRANS imp_th2a imp_th2b
 
 
-    val new_rhs = ``(b ==> t1) /\ (~b ==> t2)``;
+    val new_rhs = --`(b ==> t1) /\ (~b ==> t2)`--;
     val subst = [mk_imp(b,t1) |-> imp_th1,
                  mk_imp(nb,t2) |-> imp_th2]
 
@@ -3689,8 +3850,8 @@ let val b    = --`b:bool`--
     and [NOT1,NOT2] = tl (CONJUNCTS NOT_CLAUSES)
     and [OR1,OR2,OR3,OR4,_] = map GEN_ALL (CONJUNCTS (SPEC_ALL OR_CLAUSES))
     and [AND1,AND2,AND3,AND4,_] = map GEN_ALL (CONJUNCTS(SPEC_ALL AND_CLAUSES))
-    val thTl = SPECL [t1,t2] (INST_TYPE theta COND_T)
-    and thFl = SPECL [t1,t2] (INST_TYPE theta COND_F)
+    val thTl = SPECL [t1,t2] (PURE_INST_TYPE theta COND_T)
+    and thFl = SPECL [t1,t2] (PURE_INST_TYPE theta COND_F)
     val thTr =
       let val th2 = TRANS (AP_THM (AP_TERM conj NOT1) t2) (SPEC t2 AND3)
           and th1 = SPEC t1 AND1
@@ -3807,7 +3968,7 @@ val LET_RAND = save_thm("LET_RAND",
      val tm3 = Term`\x:'a. N x:'b`
      val P   = Term`P:'b -> bool`
      val LET_THM1 = RIGHT_BETA (SPEC tm2 (SPEC tm1
-                    (Thm.INST_TYPE [beta |-> bool] LET_THM)))
+                    (Thm.PURE_INST_TYPE [beta |-> bool] LET_THM)))
      val LET_THM2 = AP_TERM P (RIGHT_BETA (SPEC tm2 (SPEC tm3 LET_THM)))
  in TRANS LET_THM2 (SYM LET_THM1)
  end);
@@ -3823,9 +3984,9 @@ val LET_RATOR = save_thm("LET_RATOR",
      val tm1 = Term`\x:'a. N x:'b->'c`
      val tm2 = Term`\x:'a. N x ^b:'c`
      val LET_THM1 = AP_THM (RIGHT_BETA (SPEC M (SPEC tm1
-                   (Thm.INST_TYPE [beta |-> (beta --> gamma)] LET_THM)))) b
+                   (Thm.PURE_INST_TYPE [beta |-> (beta --> gamma)] LET_THM)))) b
      val LET_THM2 = RIGHT_BETA (SPEC M (SPEC tm2
-                      (Thm.INST_TYPE [beta |-> gamma] LET_THM)))
+                      (Thm.PURE_INST_TYPE [beta |-> gamma] LET_THM)))
  in TRANS LET_THM1 (SYM LET_THM2)
  end);
 
@@ -3905,8 +4066,8 @@ val _ = save_thm("SWAP_EXISTS_THM", SWAP_EXISTS_THM);
 
 val SWAP_TY_EXISTS_THM =
   let val P = mk_var("P", Type `: !'a:'k 'b:'l. bool`)
-      val a = mk_var_type("'a", Kind `::'k`, 0)
-      val b = mk_var_type("'b", Kind `::'l`, 0)
+      val a = mk_var_type("'a", Kind `::'k`)
+      val b = mk_var_type("'b", Kind `::'l`)
       val Pab = list_mk_tycomb (P,[a,b])
       val tm1 = mk_tyexists(a, Pab)
       val tm2 = mk_tyexists(b, tm1)
@@ -4537,7 +4698,7 @@ val MONO_COND = save_thm("MONO_COND",
      val th1 = ASSUME tm1
      val th2 = ASSUME tm2
      val th3 = ASSUME tm3
-     val th4 = SPEC tm6 (SPEC tm5 (INST_TYPE [alpha |-> bool] COND_CLAUSES))
+     val th4 = SPEC tm6 (SPEC tm5 (PURE_INST_TYPE [alpha |-> bool] COND_CLAUSES))
      val th5 = CONJUNCT1 th4
      val th6 = CONJUNCT2 th4
      val th7 = SPEC tm4 BOOL_CASES_AX
@@ -4730,7 +4891,7 @@ val SKOLEM_THM = save_thm("SKOLEM_THM",
      val th1 = ASSUME tm1
      val th2 = ASSUME tm2
      val th3 = SPEC x th1
-     val th4 = INST_TYPE [alpha |-> beta] SELECT_AX
+     val th4 = PURE_INST_TYPE [alpha |-> beta] SELECT_AX
      val th5 = SPEC y (SPEC (Term`\y. ^P x y`) th4)
      val th6 = BETA_CONV (fst(dest_imp(concl th5)))
      val th7 = BETA_CONV (snd(dest_imp(concl th5)))
@@ -4810,6 +4971,22 @@ val boolAxiom = save_thm("boolAxiom",
 (* bool_INDUCT |- !P. P T /\ P F ==> !b. P b                                 *)
 (* ------------------------------------------------------------------------- *)
 
+(*
+val _ = set_trace "types" 1;
+val _ = set_trace "kinds" 2;
+val _ = set_trace "debug_preterm" 1; (* for debugging only; remove later. *)
+val _ = set_trace "debug_pretype" 1; (* for debugging only; remove later. *)
+val _ = set_trace "debug_prekind" 1; (* for debugging only; remove later. *)
+val _ = set_trace "debug_prerank" 1; (* for debugging only; remove later. *)
+
+val _ = set_trace "debug_preterm" 0; (* for debugging only; remove later. *)
+val _ = set_trace "debug_pretype" 0; (* for debugging only; remove later. *)
+val _ = set_trace "debug_prekind" 0; (* for debugging only; remove later. *)
+val _ = set_trace "debug_prerank" 0; (* for debugging only; remove later. *)
+val _ = set_trace "types" 0;
+val _ = set_trace "kinds" 1;
+*)
+
 val bool_INDUCT = save_thm("bool_INDUCT",
  let val P = Term`P:bool -> bool`
      val b = Term `b:bool`
@@ -4859,6 +5036,16 @@ val bool_case_CONG = save_thm("bool_case_CONG",
  in
    GENL (rev fvs) th
  end);
+
+(*
+val _ = set_trace "debug_pretype" 1; (* for debugging only; remove later. *)
+val _ = set_trace "debug_prekind" 1; (* for debugging only; remove later. *)
+val _ = set_trace "debug_prerank" 1; (* for debugging only; remove later. *)
+
+val _ = set_trace "debug_pretype" 0; (* for debugging only; remove later. *)
+val _ = set_trace "debug_prekind" 0; (* for debugging only; remove later. *)
+val _ = set_trace "debug_prerank" 0; (* for debugging only; remove later. *)
+*)
 
 val FORALL_BOOL = save_thm
 ("FORALL_BOOL",
@@ -4999,6 +5186,27 @@ end
      The definition of restricted abstraction.
  ---------------------------------------------------------------------------*)
 
+(*
+val _ = set_trace "debug_preterm" 1; (* for debugging only; remove later. *)
+val _ = set_trace "debug_pretype" 1; (* for debugging only; remove later. *)
+val _ = set_trace "debug_prekind" 1; (* for debugging only; remove later. *)
+val _ = set_trace "debug_prerank" 1; (* for debugging only; remove later. *)
+val _ = set_trace "types" 1;
+val _ = set_trace "kinds" 2;
+
+Term `(?(x : 'a) :: p. m x)`;
+Term `!(x : 'a) y :: p. m x /\ m y ==> (x = y)`;
+Term `\b (x:'a). COND b x`;
+Term `(COND b x) : 'a -> 'a`;
+Term `COND b (x : 'a)`;
+
+val _ = set_trace "debug_pretype" 0; (* for debugging only; remove later. *)
+val _ = set_trace "debug_prekind" 0; (* for debugging only; remove later. *)
+val _ = set_trace "debug_prerank" 0; (* for debugging only; remove later. *)
+val _ = set_trace "types" 0;
+val _ = set_trace "kinds" 1;
+*)
+
 val RES_ABSTRACT_EXISTS =
   let
     fun B_CONV n = funpow n RATOR_CONV BETA_CONV
@@ -5014,7 +5222,7 @@ val RES_ABSTRACT_EXISTS =
     val A3 = TRANS A2 (BETA_CONV (RHS A2))
     val A4 = EQT_INTRO (ASSUME (Term `^x IN ^p`))
     val A5 = RATOR_CONV (RATOR_CONV (RAND_CONV (K A4))) (RHS A3)
-    val A6 = INST_TYPE [alpha |-> beta] COND_CLAUSE1
+    val A6 = PURE_INST_TYPE [alpha |-> beta] COND_CLAUSE1
     val A7 = SPECL [Term `^m ^x`, Term `ARB ^x : 'b`] A6
     val A8 = DISCH (Term `^x IN ^p`) (TRANS (TRANS A3 A5) A7)
     val A9 = GENL [Term `^p`, Term `^m`, Term `^x`] A8
@@ -5029,7 +5237,7 @@ val RES_ABSTRACT_EXISTS =
     val B8 = INST [m |-> m2] A3
     val B9 = SYM (SPEC (Term `^x IN ^p`) EQ_CLAUSE4)
     val B10 = EQ_MP B9 (ASSUME (Term `~(^x IN ^p)`))
-    val B11 = INST_TYPE [alpha |-> beta] COND_CLAUSE2
+    val B11 = PURE_INST_TYPE [alpha |-> beta] COND_CLAUSE2
     val B12 = RATOR_CONV (RATOR_CONV (RAND_CONV (K B10))) (RHS B7)
     val B13 = TRANS B12 (SPECL [Term `^m1 ^x`, Term `ARB ^x : 'b`] B11)
     val B14 = RATOR_CONV (RATOR_CONV (RAND_CONV (K B10))) (RHS B8)
@@ -5244,8 +5452,8 @@ val BOOL_FUN_INDUCT = save_thm("BOOL_FUN_INDUCT",BOOL_FUN_INDUCT);
  ---------------------------------------------------------------------------*)
 
 val literal_case_THM =
- let val f = ``f:'a->'b``
-     val x = ``x:'a``
+ let val f = --`f:'a->'b`--
+     val x = --`x:'a`--
  in
   GEN f (GEN x
     (RIGHT_BETA(AP_THM (RIGHT_BETA(AP_THM literal_case_DEF f)) x)))
@@ -5265,7 +5473,7 @@ val literal_case_RAND = save_thm("literal_case_RAND",
      val tm3 = Term`\x:'a. N x:'b`
      val P   = Term`P:'b -> bool`
      val literal_case_THM1 = RIGHT_BETA (SPEC tm2 (SPEC tm1
-                    (Thm.INST_TYPE [beta |-> bool] literal_case_THM)))
+                    (Thm.PURE_INST_TYPE [beta |-> bool] literal_case_THM)))
      val literal_case_THM2 = AP_TERM P (RIGHT_BETA (SPEC tm2 (SPEC tm3 literal_case_THM)))
  in TRANS literal_case_THM2 (SYM literal_case_THM1)
  end);
@@ -5282,9 +5490,9 @@ val literal_case_RATOR = save_thm("literal_case_RATOR",
      val tm1 = Term`\x:'a. N x:'b->'c`
      val tm2 = Term`\x:'a. N x ^b:'c`
      val literal_case_THM1 = AP_THM (RIGHT_BETA (SPEC M (SPEC tm1
-                   (Thm.INST_TYPE [beta |-> (beta --> gamma)] literal_case_THM)))) b
+                   (Thm.PURE_INST_TYPE [beta |-> (beta --> gamma)] literal_case_THM)))) b
      val literal_case_THM2 = RIGHT_BETA (SPEC M (SPEC tm2
-                      (Thm.INST_TYPE [beta |-> gamma] literal_case_THM)))
+                      (Thm.PURE_INST_TYPE [beta |-> gamma] literal_case_THM)))
  in TRANS literal_case_THM1 (SYM literal_case_THM2)
  end);
 
@@ -5333,14 +5541,14 @@ val literal_case_id = save_thm
     val t = mk_var("t",beta)
     val u = mk_var("u",beta)
     val eq = mk_eq(x,a)
-    val bcase = inst [alpha |-> beta]
+    val bcase = pure_inst [alpha |-> beta]
                      (prim_mk_const{Name = "bool_case",Thy="bool"})
     val g = mk_abs(x,list_mk_comb(bcase,[t, u, eq]))
     val lit_thm = RIGHT_BETA(SPEC a (SPEC g literal_case_THM))
     val bool_case_th = SPECL [mk_eq(a,a),t,u]
-                         (INST_TYPE [alpha |-> beta] bool_case_EQ_COND)
+                         (PURE_INST_TYPE [alpha |-> beta] bool_case_EQ_COND)
     val Teq = SYM (EQT_INTRO(REFL a))
-    val ifT = CONJUNCT1(SPECL[t,u] (INST_TYPE[alpha |-> beta] COND_CLAUSES))
+    val ifT = CONJUNCT1(SPECL[t,u] (PURE_INST_TYPE[alpha |-> beta] COND_CLAUSES))
     val ifeq = SUBS [Teq] ifT
  in
     TRANS lit_thm (TRANS bool_case_th ifeq)
@@ -5426,11 +5634,12 @@ val DATATYPE_TAG_THM = save_thm("DATATYPE_TAG_THM",
 
 
 val DATATYPE_BOOL = save_thm("DATATYPE_BOOL",
- let val thm1 = INST_TYPE [alpha |-> bool] DATATYPE_TAG_THM
+ let val thm1 = PURE_INST_TYPE [alpha |-> bool] DATATYPE_TAG_THM
      val bvar = mk_var("bool",bool--> bool-->bool)
  in
     SPEC (list_mk_comb(bvar,[T,F])) thm1
  end);
+
 
 (* ----------------------------------------------------------------------
     Set up the "itself" type constructor and its one value
@@ -5455,38 +5664,38 @@ val _ = add_const "the_value"
 val ITSELF_UNIQUE = let
   val typedef_asm = ASSUME (#2 (dest_exists (concl ITSELF_TYPE_DEF)))
   val typedef_eq0 =
-      AP_THM (INST_TYPE [beta |-> ``:'a itself``] TYPE_DEFINITION)
-             ``$= (ARB:'a)``
+      AP_THM (PURE_INST_TYPE [beta |-> ==`:'a itself`==] TYPE_DEFINITION)
+             (--`$= (ARB:'a)`--)
   val typedef_eq0 = RIGHT_BETA typedef_eq0
-  val typedef_eq = AP_THM typedef_eq0 ``rep:'a itself -> 'a``
+  val typedef_eq = AP_THM typedef_eq0 (--`rep:'a itself -> 'a`--)
   val typedef_eq = RIGHT_BETA typedef_eq
   val (typedef_11, typedef_onto) = CONJ_PAIR (EQ_MP typedef_eq typedef_asm)
-  val onto' = INST [``x:'a`` |-> ``(rep:'a itself -> 'a) i``]
+  val onto' = INST [--`x:'a`-- |-> --`(rep:'a itself -> 'a) i`--]
                    (#2 (EQ_IMP_RULE (SPEC_ALL typedef_onto)))
   val allreps_arb = let
-    val ex' = EXISTS (``?x':'a itself. rep i = rep x':'a``, ``i:'a itself``)
-                     (REFL ``(rep:'a itself -> 'a) i``)
+    val ex' = EXISTS (--`?x':'a itself. rep i = rep x':'a`--, --`i:'a itself`--)
+                     (REFL (--`(rep:'a itself -> 'a) i`--))
   in
     SYM (MP onto' ex')
   end
   val allreps_repthevalue =
       TRANS allreps_arb
-            (SYM (INST [``i:'a itself`` |-> ``bool$the_value``] allreps_arb))
+            (SYM (INST [--`i:'a itself`-- |-> --`bool$the_value : 'a itself`--] allreps_arb))
   val all_eq_thevalue =
-      GEN_ALL (MP (SPECL [``i:'a itself``, ``bool$the_value``] typedef_11)
+      GEN_ALL (MP (SPECL [--`i:'a itself`--, --`bool$the_value : 'a itself`--] typedef_11)
                   allreps_repthevalue)
 in
   save_thm("ITSELF_UNIQUE",
-           CHOOSE (``rep:'a itself -> 'a``, ITSELF_TYPE_DEF) all_eq_thevalue)
+           CHOOSE (--`rep:'a itself -> 'a`--, ITSELF_TYPE_DEF) all_eq_thevalue)
 end
 
 (* prove a datatype axiom for the type, allowing definitions of the form
     f (:'a) = ...
 *)
 val itself_Axiom = let
-  val witness = ``(\x:'b itself. e : 'a)``
-  val fn_behaves = BETA_CONV  (mk_comb(witness, ``(:'b)``))
-  val fn_exists = EXISTS (``?f:'b itself -> 'a. f (:'b) = e``, witness)
+  val witness = --`(\x:'b itself. e : 'a)`--
+  val fn_behaves = BETA_CONV  (mk_comb(witness, --`(:'b)`--))
+  val fn_exists = EXISTS (--`?f:'b itself -> 'a. f (:'b) = e`--, witness)
                   fn_behaves
 in
   save_thm("itself_Axiom", GEN_ALL fn_exists)
@@ -5494,9 +5703,9 @@ end
 
 (* prove induction *)
 val itself_induction = let
-  val pval = ASSUME ``P (:'a) : bool``
+  val pval = ASSUME (--`P (:'a) : bool`--)
   val pi =
-      EQ_MP (SYM (AP_TERM ``P:'a itself -> bool`` (SPEC_ALL ITSELF_UNIQUE)))
+      EQ_MP (SYM (AP_TERM (--`P:'a itself -> bool`--) (SPEC_ALL ITSELF_UNIQUE)))
             pval
 in
   save_thm("itself_induction", GEN_ALL (DISCH_ALL (GEN_ALL pi)))
@@ -5504,13 +5713,13 @@ end
 
 (* define case operator *)
 val itself_case_thm = let
-  val witness = ``\(b:'b) (i:'a itself). b``
-  val witness_applied1 = BETA_CONV (mk_comb(witness, ``b:'b``))
-  val witness_applied2 = RIGHT_BETA (AP_THM witness_applied1 ``(:'a)``)
+  val witness = --`\(b:'b) (i:'a itself). b`--
+  val witness_applied1 = BETA_CONV (mk_comb(witness, --`b:'b`--))
+  val witness_applied2 = RIGHT_BETA (AP_THM witness_applied1 (--`(:'a)`--))
 in
   new_specification("itself_case_thm",
                     ["itself_case"],
-                    EXISTS (``?f:'b -> 'a itself -> 'b. !b. f b (:'a) = b``,
+                    EXISTS (--`?f:'b -> 'a itself -> 'b. !b. f b (:'a) = b`--,
                             witness)
                            (GEN_ALL witness_applied2))
 end
@@ -5522,19 +5731,19 @@ end
 
 val PEIRCE = save_thm
 ("PEIRCE",
- let val th1 = ASSUME ``(P ==> Q) ==> P``
-     val th2 = ASSUME ``P:bool``
-     val th3 = ASSUME ``~P``
+ let val th1 = ASSUME (--`(P ==> Q) ==> P`--)
+     val th2 = ASSUME (--`P:bool`--)
+     val th3 = ASSUME (--`~P`--)
      val th4 = MP th3 th2
-     val th5 = MP (SPEC ``Q:bool`` FALSITY) th4
-     val th6 = DISCH ``P:bool`` th5
+     val th5 = MP (SPEC (--`Q:bool`--) FALSITY) th4
+     val th6 = DISCH (--`P:bool`--) th5
      val th7 = MP th1 th6
      val th8 = MP th3 th7
-     val th9 = DISCH ``~P`` th8
-     val th10 = MP (SPEC ``~P`` IMP_F) th9
-     val th11 = SUBS [SPEC ``P:bool`` (CONJUNCT1 NOT_CLAUSES)] th10
+     val th9 = DISCH (--`~P`--) th8
+     val th10 = MP (SPEC (--`~P`--) IMP_F) th9
+     val th11 = SUBS [SPEC (--`P:bool`--) (CONJUNCT1 NOT_CLAUSES)] th10
  in
-   DISCH ``(P ==> Q) ==> P`` th11
+   DISCH (--`(P ==> Q) ==> P`--) th11
  end);
 
 (* ----------------------------------------------------------------------
@@ -5545,45 +5754,61 @@ val PEIRCE = save_thm
    ---------------------------------------------------------------------- *)
 
 val JRH_INDUCT_UTIL = let
-  val asm_t = ``!x:'a. (x = t) ==> P x``
+  val asm_t = (--`!x:'a. (x = t) ==> P x`--)
   val asm = ASSUME asm_t
-  val t = ``t:'a``
-  val P = ``P : 'a -> bool``
+  val t = (--`t:'a`--)
+  val P = (--`P : 'a -> bool`--)
   val Pt = MP (SPEC t asm) (REFL t)
-  val ExPx = EXISTS (``?x:'a. P x``, t) Pt
-  val P_eta = SPEC P (INST_TYPE [beta |-> bool] ETA_AX)
-  val ExP_eta = AP_TERM ``(?) : ('a -> bool) -> bool`` P_eta
+  val ExPx = EXISTS ((--`?x:'a. P x`--), t) Pt
+  val P_eta = SPEC P (PURE_INST_TYPE [beta |-> bool] ETA_AX)
+  val ExP_eta = AP_TERM (--`(?) : ('a -> bool) -> bool`--) P_eta
 in
   save_thm("JRH_INDUCT_UTIL", GENL [P, t] (DISCH asm_t (EQ_MP ExP_eta ExPx)))
 end
 
 (* Parsing additions *)
 (* iff *)
-val _ = overload_on ("<=>", ``(=) : bool -> bool -> bool``)
+val _ = overload_on ("<=>", (--`(=) : bool -> bool -> bool`--))
 val _ = set_fixity "<=>" (Infix(NONASSOC, 100))
 val _ = unicode_version {u = UChar.iff, tmnm = "<=>"}
 val _ = TeX_notation {hol = "<=>", TeX = ("\\HOLTokenEquiv{}",2)}
 val _ = TeX_notation {hol = UChar.iff, TeX = ("\\HOLTokenEquiv{}",2)}
 
 (* not equal *)
-val _ = overload_on ("<>", ``\x:'a y:'a. ~(x = y)``)
+val _ = overload_on ("<>", (--`\x:'a y:'a. ~(x = y)`--))
 val _ = set_fixity "<>" (Infix(NONASSOC, 450))
 val _ = TeX_notation {hol="<>", TeX = ("\\HOLTokenNotEqual{}",1)}
 
 val _ = uset_fixity UChar.neq (Infix(NONASSOC, 450))
-val _ = uoverload_on (UChar.neq, ``\x:'a y:'a. ~(x = y)``)
+val _ = uoverload_on (UChar.neq, (--`\x:'a y:'a. ~(x = y)`--))
 val _ = TeX_notation {hol=UChar.neq, TeX = ("\\HOLTokenNotEqual{}",1)}
 
 (* not an element of *)
-val _ = overload_on ("NOTIN", ``\x:'a y:('a -> bool). ~(x IN y)``)
+val _ = overload_on ("NOTIN", (--`\x:'a y:('a -> bool). ~(x IN y)`--))
 val _ = set_fixity "NOTIN" (Infix(NONASSOC, 425))
 val _ = unicode_version {u = UChar.not_elementof, tmnm = "NOTIN"}
 val _ = TeX_notation {hol="NOTIN", TeX = ("\\HOLTokenNotIn{}",1)}
 val _ = TeX_notation {hol=UChar.not_elementof,
                       TeX = ("\\HOLTokenNotIn{}",1)}
 
+(*
+val _ = set_trace "types" 1;
+val _ = set_trace "kinds" 2;
+val _ = set_trace "debug_preterm" 1; (* for debugging only; remove later. *)
+val _ = set_trace "debug_pretype" 1; (* for debugging only; remove later. *)
+val _ = set_trace "debug_prekind" 1; (* for debugging only; remove later. *)
+val _ = set_trace "debug_prerank" 1; (* for debugging only; remove later. *)
+
+val _ = set_trace "debug_preterm" 0; (* for debugging only; remove later. *)
+val _ = set_trace "debug_pretype" 0; (* for debugging only; remove later. *)
+val _ = set_trace "debug_prekind" 0; (* for debugging only; remove later. *)
+val _ = set_trace "debug_prerank" 0; (* for debugging only; remove later. *)
+val _ = set_trace "types" 0;
+val _ = set_trace "kinds" 1;
+*)
+
 (* not iff *)
-val _ = overload_on ("<=/=>", ``$<> : bool -> bool -> bool``)
+val _ = overload_on ("<=/=>", (--`$<> : bool -> bool -> bool`--))
 val _ = set_fixity "<=/=>" (Infix(NONASSOC, 100))
 val _ = unicode_version {u = UChar.not_iff, tmnm = "<=/=>"}
 val _ = TeX_notation {hol="<=/=>", TeX = ("\\HOLTokenNotEquiv{}",2)}

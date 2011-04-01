@@ -31,7 +31,7 @@ sig
  val pp_struct
    : {theory      : string*Arbnum.num*Arbnum.num,
       parents     : (string*Arbnum.num*Arbnum.num) list,
-      types       : (string*kind*int) list,
+      types       : (string*kind) list,
       constants   : (string*hol_type) list,
       axioms      : (string * thm) list,
       definitions : (string * thm) list,

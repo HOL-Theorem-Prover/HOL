@@ -8,32 +8,47 @@ sig
  ---------------------------------------------------------------------------*)
 
 (*---------------------------------------------------------------------------*
+ *                  HOL ranks                                                *
+ *---------------------------------------------------------------------------*)
+
+(*---------------------------------------------------------------------------*
+ * Ranks are actually the (single) rank variable plus a natural number >= 0. *
+ *---------------------------------------------------------------------------*)
+
+type rank = int (* >= 0 *)
+
+(*---------------------------------------------------------------------------*
+ *                  HOL kinds                                                *
+ *---------------------------------------------------------------------------*)
+
+(*---------------------------------------------------------------------------*
+ * Kinds contain their rank within each base kind and kind variable.         *
+ *---------------------------------------------------------------------------*)
+
+datatype kind = Type of rank
+              | KdVar of string * rank
+              | Oper of kind * kind
+
+(*---------------------------------------------------------------------------*
  *                  HOL types                                                *
  *---------------------------------------------------------------------------*)
 
 (*---------------------------------------------------------------------------*
- * Type constants are a three-tuple, containing the following components:    *
+ * Type constants are a two-tuple, containing the following components:      *
  *    1) kernel identifier                                                   *
  *    2) kind                                                                *
- *    3) rank                                                                *
- * Type variables are a three-tuple, containing the following components:    *
+ * Type variables are a two-tuple, containing the following components:      *
  *    1) string (identifier)                                                 *
  *    2) kind                                                                *
- *    3) rank                                                                *
- * Ranks are actually natural numbers >= 0.                                  *
  * Universal types (TyAll) quantify over types of a given rank or lower.     *
  * Bound type variables are represented internally using deBruijn indices    *
  * and explicit substitution. Externally, as always, the interface is to a   *
  * name-carrying syntax.                                                     *
  *---------------------------------------------------------------------------*)
 
-datatype kind = Type
-              | KdVar of string
-              | Oper of kind * kind
-
 type id = KernelSig.kernelid
-type tyconst  =      id * kind * int (* rank *)
-type tyvar    =  string * kind * int (* rank *)
+type tyconst  =      id * kind
+type tyvar    =  string * kind
 
 datatype hol_type = TyFv of tyvar
                   | TyBv of int

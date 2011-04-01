@@ -6,7 +6,8 @@ signature kind_tokens = sig
       | KindSymbol of string (* symbolic identifier, not :: or <= or incl  (),:  *)
       | KindVar of string
       | KindArity
-      | KindNumeral of int
+      | KindNumeral of string
+      | KindRankCst
       | Comma
       | LParen
       | RParen

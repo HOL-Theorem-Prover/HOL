@@ -73,8 +73,8 @@ fun mymatch_and_instantiate axth pattern instance = let
   val pat_type = List.foldr tmlist_type Type.bool patvars
   val inst_type = List.foldr tmlist_type Type.bool instvars
   val (tyinst,kdinst,rkinst) = Type.kind_match_type pat_type inst_type
-  val new_patbody0 = Term.inst tyinst (Term.inst_rank_kind rkinst kdinst patbody)
-  val new_patvars = map (Term.inst tyinst o Term.inst_rank_kind rkinst kdinst) patvars
+  val new_patbody0 = Term.inst_rk_kd_ty rkinst kdinst tyinst patbody
+  val new_patvars = map (Term.inst_rk_kd_ty rkinst kdinst tyinst) patvars
   val initial_env = ListPair.map op|-> (new_patvars, instvars)
   val new_patbody = Term.subst initial_env new_patbody0
   fun match_eqn cnum pat inst = let
@@ -113,8 +113,11 @@ fun mymatch_and_instantiate axth pattern instance = let
                  origin_structure = "recursion",
                  message = "Number of conjuncts not even the same"}
   val tmsubst = match_eqns [] 1 (strip_conj new_patbody) (strip_conj instbody)
-  val axth1 = Thm.INST_TYPE tyinst (Thm.INST_KIND kdinst (Thm.INST_RANK rkinst axth))
+(*
+  val axth1 = Thm.PURE_INST_TYPE tyinst (Thm.INST_KIND kdinst (Thm.INST_RANK rkinst axth))
   val axth2 = Thm.INST tmsubst axth1
+*)
+  val axth2 = INST_ALL (tmsubst,tyinst,kdinst,rkinst) axth
 in
   CONV_RULE (STRIP_QUANT_CONV
              (CONJS_CONV (STRIP_QUANT_CONV (RHS_CONV HEAD_BETA_CONV))))
@@ -421,7 +424,7 @@ fun num_variant vlist v =
 fun generate_case_constant_eqns ty clist =
  let val (dty,rty) = Type.dom_rng ty
      val (Opr,Args) = strip_app_type dty
-     val (Tyop,Kind,Rank) = dest_con_type Opr
+     val (Tyop,Kind) = dest_con_type Opr
      fun mk_cfun ctm (nv,away) =
        let val (c,args) = strip_comb ctm
            val fty = itlist (curry (op -->)) (map type_of args) rty
@@ -648,7 +651,7 @@ fun INDUCT_THEN th =
  in fn ttac => fn (A,t) =>
      let val lam = snd(dest_comb t)
          val (_,tyS,kdS,rkS) = Term.kind_match_term v lam
-         val spec = SPEC lam (INST_TYPE tyS (INST_KIND kdS (INST_RANK rkS ind)))
+         val spec = SPEC lam (INST_RK_KD_TY (rkS,kdS,tyS) ind)
          val (ant,conseq) = dest_imp(concl spec)
          val beta = SUBST [boolvar |-> bconv ant]
                           (mk_imp(boolvar, conseq)) spec

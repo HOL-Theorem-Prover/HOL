@@ -804,7 +804,7 @@ fun adjust_tygram tygram =
  end;
 
 fun prim_pp_type_as_ML tygram tmgram ppstrm ty =
-    type_pp.pp_type (adjust_tygram tygram) PPBackEnd.raw_terminal ppstrm ty
+    type_pp.pp_type (adjust_tygram tygram) PPBackEnd.raw_terminal false ppstrm ty
 
 fun pp_type_as_ML ppstrm ty =
    prim_pp_type_as_ML (Parse.type_grammar()) (Parse.term_grammar())
@@ -1023,7 +1023,7 @@ fun list_mk_TyApp (head,[]) = head
   | list_mk_TyApp (head,(ty::tys)) = list_mk_TyApp (dTyApp(head,ty),tys)
 fun replace1 f (v as dVartype _) = v
   | replace1 f (aq as dAQ _)     = aq
-  | replace1 f (c as dContype{Tyop,Thy,Kind,Rank}) = f Tyop
+  | replace1 f (c as dContype{Tyop,Thy,Kind}) = f Tyop
   | replace1 f (ap as dTyApp(opr,arg)) = dTyApp(replace1 f opr, replace1 f arg)
   | replace1 f (dTyUniv(bvar,body)) = dTyUniv(replace1 f bvar, replace1 f body)
   | replace1 f (dTyAbst(bvar,body)) = dTyAbst(replace1 f bvar, replace1 f body)
@@ -1031,7 +1031,7 @@ fun replace1 f (v as dVartype _) = v
   | replace1 f (dTyRankConstr{Ty,Rank}) = dTyRankConstr{Ty=replace1 f Ty,Rank=Rank}
 fun replace f (v as dVartype _) = v
   | replace f (aq as dAQ _)     = aq
-  | replace f (c as dContype{Tyop,Thy,Kind,Rank}) = (f Tyop handle _ => c)
+  | replace f (c as dContype{Tyop,Thy,Kind}) = (f Tyop handle _ => c)
   | replace f (a as dTyApp(opr,arg)) = let val (head,args) = strip_TyApp a in
                replace1 f head handle _ => list_mk_TyApp(head, map (replace f) args) end
   | replace f (dTyUniv(bvar,body)) = dTyUniv(replace f bvar, replace f body)
@@ -1046,17 +1046,17 @@ fun replaceForm f (Constructors alist) =
   | replaceForm f other = other
 
 fun pretype_of ty =
-     let val (name,kind,rank) = dest_var_type ty
-     in dVartype(name, Prekind.fromKind kind, Prerank.fromRank rank)
+     let val (name,kind) = dest_var_type ty
+     in dVartype(name, Prekind.fromKind kind)
      end
 (* handle _ =>
      let val (s,args) = dest_type ty
      in dTyop{Tyop=s,Thy=NONE,Args=map pretype_of args}
      end *)
    handle _ =>
-     let val {Thy,Tyop,Kind,Rank} = dest_thy_con_type ty
+     let val {Thy,Tyop,Kind} = dest_thy_con_type ty
      in dContype{Thy=SOME Thy, Tyop=Tyop,
-                 Kind=Prekind.fromKind Kind, Rank=Prerank.fromRank Rank}
+                 Kind=Prekind.fromKind Kind}
      end
    handle _ =>
      let val (opr,arg) = dest_app_type ty
@@ -1103,7 +1103,7 @@ fun repair_type_decls (iDATATYPE decls) =
      handle e => raise (wrap_exn "EmitML.repair_type_decls" "iDATATYPE" e))
   | repair_type_decls (iEQDATATYPE (tyvars,decls)) =
     (let open ParseDatatype
-         fun tyv2dVar (s,kd,rk) = (s,Prekind.fromKind kd,Prerank.fromRank rk)
+         fun tyv2dVar (s,kd) = (s,Prekind.fromKind kd)
          val tyvarsl = map (dVartype o tyv2dVar) tyvars
          val tynames = map fst decls
          val newtypes = map (fn s => dTyop{Tyop=s,Thy=NONE,Args=tyvarsl}) tynames
@@ -1132,7 +1132,7 @@ fun pp_datatype_as_ML ppstrm (tyvars,decls) =
          ; pr_list pp_comp_ty (fn () => add_string" *")
                               (fn () => add_break(1,0)) tyl
          ; end_block())
-     fun pp_tyvar (s,kd,rk) = (add_string s; add_break(1,0))
+     fun pp_tyvar (s,kd) = (add_string s; add_break(1,0))
      fun pp_tyvars [] = ()
        | pp_tyvars [v] = pp_tyvar v
        | pp_tyvars vlist =
@@ -1222,7 +1222,7 @@ fun pp_sig strm (s,elems) =
     fun pp_eqdatatype b (tyvars,astl) =
      let val tynames = map fst astl
          val tys = map (fn s => (tyvars,s)) tynames
-         fun pp_tyvar (s,kd,rk) = add_string s
+         fun pp_tyvar (s,kd) = add_string s
          fun pp_tydec (tyvars,s) =
            (begin_block CONSISTENT 0;
              add_string (if b andalso not (!emitOcaml)

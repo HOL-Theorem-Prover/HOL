@@ -6,10 +6,12 @@ datatype grammar_rule
     | INFIX of {opname : string, parse_string : string} list *
                 HOLgrammars.associativity
     | PREFIX of string list
+    | RANKCAST
 
 datatype kind_structure
     = KINDOP of {Thy : string, Kindop : string, Args : kind_structure list}
-    | KDVAR  of string
+    | KDTYPE of Kind.rank
+    | KDVAR  of string * Kind.rank
 
 datatype grammar = KINDG of (int * grammar_rule) list (* *
                           (string, kind_structure) Binarymap.dict *
@@ -42,14 +44,15 @@ fun structure_to_kind st =
       KINDOP {Thy,Kindop,Args} =>
         let val args = map structure_to_kind Args
         in
-           if Kindop = "ty"
+           (* if Kindop = "ty"
            then if length args = 0
                 then Kind.typ
                 else raise KDG_ERR "structure_to_kind"
                            ("Wrong number of arguments ("
                             ^ Int.toString(length args)
                             ^ ") to kind operator\"" ^ Kindop ^ "\"")
-           else if Kindop = "=>"
+           else *)
+           if Kindop = "=>"
            then if length args = 2
                 then hd args ==> hd(tl args)
                 else raise KDG_ERR "structure_to_kind"
@@ -61,7 +64,8 @@ fun structure_to_kind st =
             (* Kind.mk_thy_kind {Thy = Thy, Kindop = Kindop,
                                  Args = map structure_to_kind Args} *)
         end
-    | KDVAR str => Kind.mk_var_kind str
+    | KDTYPE rk => Kind.mk_type_kind rk
+    | KDVAR (str,rk) => Kind.mk_var_kind (str,rk)
 
 val std_prefix_precedence = 100
 val arity_precedence = 120
@@ -79,6 +83,7 @@ fun merge r1 r2 =
         raise GrammarError
           "Attempt to merge two infix kinds with different associativities"
     end
+  | (RANKCAST, RANKCAST) => RANKCAST
   | _ => raise GrammarError "Attempt to merge prefix and infix kind"
 
 fun insert_sorted0 (k, v) [] = [(k, v)]
@@ -148,7 +153,7 @@ fun new_kindop (KINDG(G (*,abbrevs,pmap*) )) name =
 fun new_arityop (KINDG(G (*,abbrevs,pmap*) )) name =
   KINDG (insert_sorted (arity_precedence, PREFIX[name]) G (*, abbrevs, pmap*) )
 
-val empty_grammar = KINDG ([(700, NONFIX)] (*,
+val empty_grammar = KINDG ([(500, RANKCAST),(700, NONFIX)] (*,
                           Binarymap.mkDict String.compare, 
                           TypeNet.empty *) )
 
@@ -311,6 +316,7 @@ fun prettyprint_grammar pps (G as KINDG (g (*,abbrevs,pmap*) )) = let
         end_block ()
       end
     | NONFIX => add_string "KIND  ::=  ty (type kind)"
+    | RANKCAST => add_string "KIND  ::=  KIND : RANK (rank cast of kind)"
     | INFIX(oplist, assoc) => let
         val assocstring =
             case assoc of

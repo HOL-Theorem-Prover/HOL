@@ -4,7 +4,7 @@ struct
 open Type
 
   datatype TypeView = TyV_Var of tyvar
-                    | TyV_Const of {Thy:string,Tyop:string,Kind:kind,Rank:int}
+                    | TyV_Const of {Thy:string,Tyop:string,Kind:kind}
                     | TyV_App of hol_type * hol_type
                     | TyV_Abs of tyvar * hol_type
                     | TyV_All of tyvar * hol_type
@@ -29,7 +29,7 @@ open Type
   fun toType tyv =
       case tyv of
         TyV_Var tyv => mk_var_type tyv
-      | TyV_Const r => mk_thy_con_type { Thy = #Thy r, Tyop = #Tyop r, Kind = #Kind r, Rank = #Rank r }
+      | TyV_Const r => mk_thy_con_type { Thy = #Thy r, Tyop = #Tyop r, Kind = #Kind r }
       | TyV_App (ty1, ty2) => mk_app_type (ty1, ty2)
       | TyV_Abs (tyv, ty) => mk_abs_type (mk_var_type tyv, ty)
       | TyV_All (tyv, ty) => mk_univ_type (mk_var_type tyv, ty)

@@ -16,12 +16,16 @@ infix 8 via by;
 infix >> >- >|
 
 structure Tag = Tag :> FinalTag where type tag = Tag.tag
+structure Rank = Rank :> FinalRank
 structure Kind = Kind :> FinalKind where type kind = Kind.kind
+                                     and type rank = Rank.rank
 structure Type = Type :> FinalType where type hol_type = Type.hol_type
                                      and type kind = Kind.kind
+                                     and type rank = Rank.rank
 structure Term = Term :> FinalTerm where type term = Term.term
                                      and type hol_type = Type.hol_type
                                      and type kind = Kind.kind
+                                     and type rank = Rank.rank
 
 structure Process = OS.Process
 structure FileSys = OS.FileSys

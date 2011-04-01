@@ -3,6 +3,7 @@ sig
 
   include FinalTerm where type hol_type = Type.hol_type
                       and type kind     = Kind.kind
+                      and type rank     = Rank.rank
 
   val uptodate_term     : term -> bool
 

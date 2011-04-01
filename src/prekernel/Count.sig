@@ -10,9 +10,10 @@
 signature Count =
 sig
 
-  datatype rule = Assume | Refl | Beta | Subst | Abs | Disch | Mp | InstRank | InstKind | InstType
+  datatype rule = Assume | Refl | Beta | Subst | Abs | Disch | Mp
+                | InstRank | PureInstKind | InstKind | PureInstType | InstType
                 | MkComb | ApTerm | ApThm | Alpha
-                | Sym | Trans | EqMp | EqImpRule | Inst
+                | Sym | Trans | EqMp | EqImpRule | Inst | InstAll
                 | Spec | Gen
                 | TySpec | TyGen (* these are for HOL-Omega *)
                 | Exists | Choose
@@ -32,12 +33,13 @@ sig
     BETA_CONV : int, SUBST : int,
     ABS : int, DISCH : int,
     MP : int, INST_RANK : int,
-    INST_KIND : int, INST_TYPE : int,
+    PURE_INST_KIND : int, INST_KIND : int,
+    PURE_INST_TYPE : int, INST_TYPE : int,
     MK_COMB : int, AP_TERM : int,
     AP_THM : int, ALPHA : int,
     SYM : int, TRANS : int,
     EQ_MP : int, EQ_IMP_RULE : int,
-    INST : int,
+    INST : int, INST_ALL : int,
     SPEC : int, GEN : int,
     EXISTS : int, CHOOSE : int,
     TY_SPEC : int, TY_GEN : int,  (* these are for HOL-Omega *)

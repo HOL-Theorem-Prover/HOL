@@ -1146,7 +1146,7 @@ fun parse_term (G : grammar) typeparser type_var_parser = let
           open Pretype
         in
           (PT(TyApp(PT(Contype{Thy="bool", Tyop = "itself",
-                               Kind = Prekind.mk_arity 1, Rank = Prerank.Zerorank}, locn.Loc_None),
+                               Kind = Prekind.mk_arity 1}, locn.Loc_None),
                     ty),
               rlocn),
            rlocn)

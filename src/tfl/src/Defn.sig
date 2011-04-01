@@ -37,7 +37,7 @@ sig
   val aux_defn   : defn -> defn option
   val union_defn : defn -> defn option
 
-  val inst_defn  : defn -> (term,term)subst * (hol_type,hol_type)subst * (kind,kind)subst * int -> defn
+  val inst_defn  : defn -> (term,term)subst * (hol_type,hol_type)subst * (kind,kind)subst * rank -> defn
   val set_reln   : defn -> term -> defn
 
   val elim_tcs   : defn -> thm list -> defn

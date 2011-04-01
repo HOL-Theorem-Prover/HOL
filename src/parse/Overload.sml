@@ -3,6 +3,7 @@ struct
 
 open HolKernel Lexis
 infix ##
+infixr 3 ==>
 
 (* invariant on the type overloaded_op_info;
      base_type is the anti-unification of all the types in the actual_ops
@@ -79,28 +80,73 @@ fun tmlist_tyvs tlist =
 local
   open stmonad Lib Type
   infix >- >>
-  fun lookup n (env,avds) =
+  fun kd_lookup n (kdinfo as (kdenv,_),tyinfo) =
+    case assoc1 n kdenv of
+      NONE => ((kdinfo,tyinfo), NONE)
+    | SOME (_,v) => ((kdinfo,tyinfo), SOME v)
+  fun lookup n (kdinfo,(env,avds)) =
     case assoc1 n env of
-      NONE => ((env,avds), NONE)
-    | SOME (_,v) => ((env,avds), SOME v)
-  fun extend x (env,avds) = ((x::env,avds), ())
+      NONE => ((kdinfo,(env,avds)), NONE)
+    | SOME (_,v) => ((kdinfo,(env,avds)), SOME v)
+  fun kd_extend x ((kdenv,kdavds),tyinfo) = (((x::kdenv,kdavds),tyinfo), ())
+  fun extend x (kdinfo,(env,avds)) = ((kdinfo,(x::env,avds)), ())
   (* invariant on type generation part of state:
        not (next_var MEM sofar)
   *)
-  fun newtyvar (kd,rk) (env, (next_var, sofar)) = let
+  fun newkdvar rk ((env, (next_var, sofar)), tyinfo) = let
     val new_sofar = next_var::sofar
     val new_next = gen_variant tyvar_vary sofar (tyvar_vary next_var)
     (* new_next can't be in new_sofar because gen_variant ensures that
        it won't be in sofar, and tyvar_vary ensures it won't be equal to
        next_var *)
   in
-    ((env, (new_next, new_sofar)), mk_var_type(next_var,kd,rk))
+    (((env, (new_next, new_sofar)), tyinfo), mk_var_kind(next_var,rk))
+  end
+  fun newtyvar kd (kdinfo, (env, (next_var, sofar))) = let
+    val new_sofar = next_var::sofar
+    val new_next = gen_variant tyvar_vary sofar (tyvar_vary next_var)
+    (* new_next can't be in new_sofar because gen_variant ensures that
+       it won't be in sofar, and tyvar_vary ensures it won't be equal to
+       next_var *)
+  in
+    ((kdinfo, (env, (new_next, new_sofar))), mk_var_type(next_var,kd))
   end
 
 (* ---------------------------------------------------------------------- *)
 (* The au routine is the core of the anti-unification algorithm.          *)
 (* The result is the type which is the anti-unification of the arguments. *)
 (* ---------------------------------------------------------------------- *)
+
+  fun au_rk (rk1, rk2) =
+    return (if ge_rk(rk1,rk2) then rk2 else rk1)
+
+  fun au_kd (kd1, kd2) =
+    if kd1 = kd2 then return kd1
+    else
+      kd_lookup (kd1, kd2) >-
+      (fn result =>
+       case result of
+         NONE =>
+           if (is_arrow_kind kd1) andalso (is_arrow_kind kd2) then let
+               val (kd1f,kd1a) = dest_arrow_kind kd1
+               val (kd2f,kd2a) = dest_arrow_kind kd2
+             in
+                 mmap au_kd (ListPair.zip ([kd1f,kd1a], [kd2f,kd2a])) >-
+                   (fn [kdf,kda] =>
+                     return (kdf ==> kda)
+                     | _ => raise Fail "Overload.au_kd: impossible argument")
+             end
+           else if (is_type_kind kd1) andalso (is_type_kind kd2) then let
+               val rk1 = dest_type_kind kd1
+               val rk2 = dest_type_kind kd2
+             in
+               au_rk (rk1,rk2) >- (fn rk => return (typ rk))
+             end
+           else
+             au_rk (rank_of kd1, rank_of kd2) >- (fn rk =>
+             newkdvar rk >- (fn new_kd => kd_extend ((kd1, kd2), new_kd) >>
+                                          return new_kd))
+        | SOME v => return v)
 
   fun au0 cntx (ty1, ty2) =
     if null cntx andalso eq_ty ty1 ty2 then return ty1
@@ -115,29 +161,35 @@ local
                    if ty2' = ty2
                    then return ty1
                    else
-                     newtyvar (kind_of ty1,rank_of ty1) >- (fn new_ty => extend ((ty1, ty2), new_ty) >>
-                                                            return new_ty)
+                     au_kd (kind_of ty1, kind_of ty2) >- (fn kd =>
+                     newtyvar kd >- (fn new_ty => extend ((ty1, ty2), new_ty) >>
+                                                  return new_ty))
                | NONE =>
                    let
-                     val (s1, kd1, rk1) = dest_var_type ty1
-                     val (s2, kd2, rk2) = dest_var_type ty2
+                     val (s1, kd1) = dest_var_type ty1
+                     val (s2, kd2) = dest_var_type ty2
                    in
-                     if s1 = s2 andalso kd1 = kd2 andalso rk1 = rk2 then
-                       return ty1
+                     if s1 = s2 then
+                       if kd1 = kd2 then
+                         return ty1
+                       else
+                         au_kd (kd1,kd2) >- (fn kd => return (mk_var_type(s1,kd)))
                      else
-                       newtyvar (kd1,rk1) >- (fn new_ty => extend ((ty1, ty2), new_ty) >>
-                                              return new_ty)
+                       au_kd (kd1,kd2) >- (fn kd =>
+                       newtyvar kd >- (fn new_ty => extend ((ty1, ty2), new_ty) >>
+                                                    return new_ty))
                    end
            else
            if (is_con_type ty1) andalso (is_con_type ty2) then let
-               val {Thy = thy1, Tyop = tyop1, Kind = kd1, Rank = rk1} = dest_thy_con_type ty1
-               val {Thy = thy2, Tyop = tyop2, Kind = kd2, Rank = rk2} = dest_thy_con_type ty2
+               val {Thy = thy1, Tyop = tyop1, Kind = kd1} = dest_thy_con_type ty1
+               val {Thy = thy2, Tyop = tyop2, Kind = kd2} = dest_thy_con_type ty2
              in
-               if tyop1 = tyop2 andalso thy1 = thy2 andalso kd1 = kd2 andalso rk1 = rk2 then
-                 return (mk_thy_con_type{Thy = thy1, Tyop = tyop1, Kind = kd1, Rank = rk1})
+               au_kd (kd1,kd2) >- (fn kd =>
+               if tyop1 = tyop2 andalso thy1 = thy2 then
+                 return (mk_thy_con_type{Thy = thy1, Tyop = tyop1, Kind = kd})
                else
-                 newtyvar (kd1,rk1) >- (fn new_ty => extend ((ty1, ty2), new_ty) >>
-                                        return new_ty)
+                 newtyvar kd >- (fn new_ty => extend ((ty1, ty2), new_ty) >>
+                                              return new_ty))
              end
            else
            if (is_app_type ty1) andalso (is_app_type ty2) then
@@ -154,8 +206,9 @@ local
                    return (mk_thy_type{Thy = thy1, Tyop = tyop1,
                                        Args = tylist}))
                else
-                 newtyvar (kind_of ty1,rank_of ty1) >- (fn new_ty => extend ((ty1, ty2), new_ty) >>
-                                                        return new_ty)
+                 au_kd (kind_of ty1, kind_of ty2) >- (fn kd =>
+                 newtyvar kd >- (fn new_ty => extend ((ty1, ty2), new_ty) >>
+                                              return new_ty))
              end
              else
 (**)
@@ -171,10 +224,12 @@ local
                              handle e => ((*print ("au failed at mk_app_type on " ^ type_to_string tya
                                                  ^ " " ^ type_to_string tyf ^ "\n");*)
                                           Raise e)
-                            ))
+                            )
+                     | _ => raise Fail "Overload.au0: impossible argument")
                else
-                 newtyvar (kind_of ty1,rank_of ty1) >- (fn new_ty => extend ((ty1, ty2), new_ty) >>
-                                                        return new_ty)
+                 au_kd (kind_of ty1, kind_of ty2) >- (fn kd =>
+                 newtyvar kd >- (fn new_ty => extend ((ty1, ty2), new_ty) >>
+                                              return new_ty))
              end
            else
            if (is_abs_type ty1) andalso (is_abs_type ty2) then let
@@ -206,24 +261,27 @@ local
                    return (mk_thy_type{Thy = thy1, Tyop = tyop1,
                                        Args = tylist}))
                else
-                 newtyvar >- (fn new_ty => extend ((ty1, ty2), new_ty) >>
-                              return new_ty)
+                 au_kd (kind_of ty1, kind_of ty2) >- (fn kd =>
+                 newtyvar kd >- (fn new_ty => extend ((ty1, ty2), new_ty) >>
+                                 return new_ty))
              end
 *)
            else
-             newtyvar (kind_of ty1, rank_of ty1) >-
-                         (fn new_ty =>
-                          extend ((ty1, ty2), new_ty) >>
-                          return new_ty)
+             au_kd (kind_of ty1, kind_of ty2) >- (fn kd =>
+             newtyvar kd >- (fn new_ty =>
+                             extend ((ty1, ty2), new_ty) >>
+                             return new_ty))
         | SOME v => return v)
 
   val au = au0 []
 
   fun initial_state (ty1, ty2) = let
-    val avoids = map (#1 o dest_var_type) (type_varsl [ty1, ty2])
+    val avoids = List.map (#1 o dest_var_type) (Type.type_varsl [ty1, ty2])
+    val kdavoids = List.map (#1 o dest_var_kind) (Type.kind_varsl [ty1, ty2])
     val first_var = gen_variant tyvar_vary avoids "'a"
+    val first_kdvar = gen_variant tyvar_vary kdavoids "'a"
   in
-    ([], (first_var, avoids))
+    (([], (first_kdvar, kdavoids)),([], (first_var, avoids)))
   end
   fun generate_iterates n f x =
     if n <= 0 then []
@@ -232,8 +290,8 @@ local
   fun canonicalise ty = let
     val tyvars = type_vars ty
     val replacements =
-      map2 (fn tyv => fn s => let val (_,kd,rk) = dest_var_type tyv
-                              in mk_var_type(s,kd,rk) end)
+      map2 (fn tyv => fn s => let val (_,kd) = dest_var_type tyv
+                              in mk_var_type(s,kd) end)
            tyvars (generate_iterates (length tyvars) tyvar_vary "'a")
     val subst =
       ListPair.map (fn (ty1, ty2) => Lib.|->(ty1, ty2)) (tyvars, replacements)
@@ -482,21 +540,30 @@ fun isize0 acc f [] = acc
   | isize0 acc f ({redex,residue} :: rest) = isize0 (acc + f residue + 1) f rest
 fun isize f x = isize0 0 f x
 
-fun strip_comb ((_, prmap): overload_info) t = let
-  val (t',tyargs) = strip_tycomb t
-  val matches = PrintMap.match(prmap, t')
+(*
+fun rsize0 acc f [] = acc
+  | rsize0 acc f (r :: rs) = rsize0 (acc + f r) f rs
+fun rsize f x = rsize0 0 f x
+*)
+fun rsize f x = f x
+
   val cmp0 = pair_compare (measure_cmp (isize term_size),
                            pair_compare (measure_cmp (isize type_size),
                            pair_compare (measure_cmp (isize kind_size),
-                           pair_compare (Int.compare,
+                           pair_compare (measure_cmp (rsize rank_size),
                                          flip_order o Int.compare))))
   val cmp = inv_img_cmp (fn (a,b,k,r,c,d) => (a,(b,(k,(r,c))))) cmp0
 
+fun strip_comb ((_, prmap): overload_info) t = let
+  val (t',tyargs) = strip_tycomb t
+  val matches = PrintMap.match(prmap, t')
+
   fun test ((fvs, pat), (orig, nm, tstamp)) = let
+    val rkvs = not (null fvs)
     val kdvs = tmlist_kdvs fvs
     val tyvs = tmlist_tyvs fvs
     val tmset = HOLset.addList(empty_tmset, fvs)
-    val ((tmi0,tmeq),(tyi0,tyeq),(kdi0,kdeq),rki) = raw_kind_match kdvs tyvs tmset pat t' ([],[],[],0)
+    val ((tmi0,tmeq),(tyi0,tyeq),(kdi0,kdeq),(rki,rkfx)) = raw_kind_match rkvs kdvs tyvs tmset pat t' ([],[],[],0)
     val tmi = HOLset.foldl (fn (t,acc) => if HOLset.member(tmset,t) then acc
                                           else (t |-> t) :: acc)
                            tmi0

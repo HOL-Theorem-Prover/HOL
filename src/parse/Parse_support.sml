@@ -1,8 +1,8 @@
 structure Parse_support :> Parse_support =
 struct
 
-type prekind = Prekind.prekind
 type prerank = Prerank.prerank
+type prekind = Prekind.prekind
 type pretype = Pretype.pretype
 type uvartype = Pretype.uvartype
 type preterm = Preterm.preterm
@@ -23,8 +23,8 @@ val SOMEU = Pretype.SOMEU;
 
 type env = {scope    : (string * pretype) list,
             free     : (string * pretype) list,
-            scope_ty : (string * (prekind * prerank)) list,
-            free_ty  : (string * (prekind * prerank)) list,
+            scope_ty : (string * prekind) list,
+            free_ty  : (string * prekind) list,
             uscore_cnt : int};
 
 fun lookup_fvar(s,({free,...}:env)) = assoc s free;
@@ -38,10 +38,10 @@ fun new_uscore {scope,free,scope_ty,free_ty,uscore_cnt} =
 
 fun lookup_ftyvar(s,({free_ty,...}:env)) = assoc s free_ty;
 fun lookup_btyvar(s,({scope_ty,...}:env)) = assoc s scope_ty;
-fun add_free_ty ((s,kd,rk),{scope,free,scope_ty,free_ty,uscore_cnt}) =
-    {scope=scope, free=free, scope_ty=scope_ty, free_ty=(s,(kd,rk))::free_ty, uscore_cnt = uscore_cnt}
-fun add_scope_ty((s,kd,rk),{scope,free,scope_ty,free_ty,uscore_cnt}) =
-    {scope=scope, free=free, scope_ty=(s,(kd,rk))::scope_ty, free_ty=free_ty, uscore_cnt = uscore_cnt};
+fun add_free_ty ((s,kd),{scope,free,scope_ty,free_ty,uscore_cnt}) =
+    {scope=scope, free=free, scope_ty=scope_ty, free_ty=(s,kd)::free_ty, uscore_cnt = uscore_cnt}
+fun add_scope_ty((s,kd),{scope,free,scope_ty,free_ty,uscore_cnt}) =
+    {scope=scope, free=free, scope_ty=(s,kd)::scope_ty, free_ty=free_ty, uscore_cnt = uscore_cnt};
 
 val empty_env = {scope=[], free=[], scope_ty=[], free_ty=[], uscore_cnt = 0};
 fun get_env (e:env) = e;
@@ -94,42 +94,39 @@ local
   open Pretype Term Preterm
   fun from_ty l lty (E as (lscope, scope, free, scope_ty, free_ty)) =
     case lty of
-      TYVAR (v as (Name,Kind,Rank)) =>
+      TYVAR (v as (Name,Kind)) =>
        let val pkd = Prekind.fromKind Kind
-           val prk = Prerank.fromRank Rank
-           val v' = (Name, pkd, prk)
+           val v' = (Name, pkd)
        in case assoc1 Name scope_ty
-           of SOME(_,(nkv,nrk)) => (Prekind.unify pkd nkv; (PT(Vartype v',l), E))
+           of SOME(_,nkv) => (Prekind.unify pkd nkv; (PT(Vartype v',l), E))
             | NONE => let in
                case assoc1 Name free_ty
                 of NONE => (PT(Vartype v',l),
-                            (lscope, scope, free, scope_ty, (Name,(pkd,prk))::free_ty))
-                 | SOME(_,(nkv,nrk)) => (Prekind.unify pkd nkv; (PT(Vartype v',l), E))
+                            (lscope, scope, free, scope_ty, (Name,pkd)::free_ty))
+                 | SOME(_,nkv) => (Prekind.unify pkd nkv; (PT(Vartype v',l), E))
                end
        end
-    | TYCONST{Thy,Tyop,Kind,Rank} =>
-        (PT(Contype{Thy=Thy,Tyop=Tyop,Kind=Prekind.fromKind Kind,Rank=Prerank.fromRank Rank}, l), E)
+    | TYCONST{Thy,Tyop,Kind} =>
+        (PT(Contype{Thy=Thy,Tyop=Tyop,Kind=Prekind.fromKind Kind}, l), E)
     | TYAPP(opr,arg) =>
        let val (pty1,E1) = from_ty l (destruct_type opr) E
            val (pty2,E2) = from_ty l (destruct_type arg) E1
        in (PT(TyApp(pty1,pty2),l), E2)
        end
     | TYUNIV(bvar,body) =>
-       let val (s,kd,rk) = Type.dest_var_type bvar
+       let val (s,kd) = Type.dest_var_type bvar
            val pkd = Prekind.fromKind kd
-           val prk = Prerank.fromRank rk
-           val v' = (s,pkd,prk)
+           val v' = (s,pkd)
            val (body',(_,_,_,_,free_ty')) =
-                  from_ty l (destruct_type body) (lscope, scope, free, (s,(pkd,prk))::scope_ty, free_ty)
+                  from_ty l (destruct_type body) (lscope, scope, free, (s,pkd)::scope_ty, free_ty)
        in (PT(TyUniv(PT(Vartype v',l),body'),l), (lscope, scope, free, scope_ty, free_ty'))
        end
     | TYABS(bvar,body) =>
-       let val (s,kd,rk) = Type.dest_var_type bvar
+       let val (s,kd) = Type.dest_var_type bvar
            val pkd = Prekind.fromKind kd
-           val prk = Prerank.fromRank rk
-           val v' = (s,pkd,prk)
+           val v' = (s,pkd)
            val (body',(_,_,_,_,free_ty')) =
-                  from_ty l (destruct_type body) (lscope, scope, free, (s,(pkd,prk))::scope_ty, free_ty)
+                  from_ty l (destruct_type body) (lscope, scope, free, (s,pkd)::scope_ty, free_ty)
        in (PT(TyAbst(PT(Vartype v',l),body'),l), (lscope, scope, free, scope_ty, free_ty'))
        end
 
@@ -182,12 +179,11 @@ local
         (Abs{Bvar=Var v', Body=Body', Locn=l}, (lscope, scope, free', scope_ty', free_ty'))
       end
     | TYLAMB(Bvar,Body) => let
-        val (s,kd,rk) = Type.dest_var_type Bvar
+        val (s,kd) = Type.dest_var_type Bvar
         val pkd = Prekind.fromKind kd
-        val prk = Prerank.fromRank rk
-        val v' = (s,pkd,prk)
+        val v' = (s,pkd)
         val (Body',(_,_,free',scope_ty',free_ty')) = from l (dest_term Body)
-                                       (lscope, scope, free, (s,(pkd,prk))::scope_ty, free_ty)
+                                       (lscope, scope, free, (s,pkd)::scope_ty, free_ty)
       in
         (TyAbs{Bvar=PT(Vartype v',l), Body=Body', Locn=l}, (lscope, scope, free', scope_ty', free_ty'))
       end
@@ -239,9 +235,9 @@ fun make_binding_occ l s E =
                  Locn=locn.near (Preterm.locn b)}), E')
  end;
 
-fun make_tybinding_occ l s kd rk E =
+fun make_tybinding_occ l s kd E =
  let open Pretype Preterm
-     val ntyvar = (s, kd, rk)
+     val ntyvar = (s, kd)
      val ntv = PT(Vartype ntyvar, l)
      val E' = add_scope_ty(ntyvar,E)
  in ((fn b => TyAbs{Bvar=ntv, Body=b, Locn=locn.near (Preterm.locn b)}), E')
@@ -264,10 +260,9 @@ fun make_binding_type_occ l s binder E =
        Lexis.allowed_user_type_var s orelse
        raise ERRORloc "make_binding_type_occ" l
          (s ^ " is not lexically permissible as a binding type variable")
-     val nkv = Prekind.new_uvar()
-     val nrv = Prerank.new_uvar()
-     val pty = PT(Vartype(s, nkv, nrv), l)
-     val E' = add_scope_ty((s,nkv,nrv),E)
+     val nkv = Prekind.all_new_uvar() (* new_var_uvar() *)
+     val pty = PT(Vartype(s, nkv), l)
+     val E' = add_scope_ty((s,nkv),E)
  in
   case binder
    of "\\" => ((fn b => PT(TyAbst(pty,b), locn.near (tylocn b))), E')
@@ -351,22 +346,20 @@ in
        handle HOL_ERR _ => fresh(s,E)
 end
 
-fun make_free_tyvar l ((s,kd,rk),E) = let
+fun make_free_tyvar l ((s,kd),E) = let
   open Pretype
-  fun fresh (s,kd,rk,E) = let
-    (*val kdv = Prekind.new_uvar()
-      val rkv = Prerank.new_uvar()*)
-    val v = (s, kd, rk)
+  fun fresh (s,kd,E) = let
+    val v = (s, kd)
   in
     (PT(Vartype v, l), add_free_ty(v, E))
   end
 in
-  (*if all_uscores s then fresh ("_"^Int.toString (#uscore_cnt E), kd, rk, new_uscore E)
+  (*if all_uscores s then fresh ("_"^Int.toString (#uscore_cnt E), kd, new_uscore E)
   else*)
-       let val (kd, rk) = lookup_ftyvar(s,E)
-       in (PT(Vartype(s, kd, rk), l), E)
+       let val kd = lookup_ftyvar(s,E)
+       in (PT(Vartype(s, kd), l), E)
        end
-       handle HOL_ERR _ => fresh(s,kd,rk,E)
+       handle HOL_ERR _ => fresh(s,kd,E)
 end
 
 (*---------------------------------------------------------------------------
@@ -377,13 +370,12 @@ fun make_bvar l (s,E) = (Preterm.Var{Name=s, Ty=lookup_bvar(s,E), Locn=l}, E);
 
 fun make_btyvar l (s,E) =
     let open Pretype
-        val (kind,rank) = lookup_btyvar(s,E)
+        val kind = lookup_btyvar(s,E)
 (*
         val _ = print (">> looking up bound type variable \""^s^"\": found "^
-                       "kind="^Kind.kind_to_string (Prekind.toKind kind)^
-                       ", rank="^Int.toString (Prerank.toRank rank)^"\n")
+                       "kind="^Kind.kind_to_string (Prekind.toKind kind)^"\n")
 *)
-    in (PT(Vartype(s,kind,rank), l), E)
+    in (PT(Vartype(s,kind), l), E)
     end;
 
 (* ----------------------------------------------------------------------
@@ -416,7 +408,7 @@ fun gen_overloaded_const oinfo l s =
                                  fvs
         in
           Preterm.Pattern{Ptm = Preterm.term_to_preterm 
-                                  (map dest_var_kind kdfvs)
+                                  (map (#1 o dest_var_kind) kdfvs)
                                   (map (#1 o dest_var_type) tyfvs) t,
                           Locn = l}
         end
@@ -533,16 +525,15 @@ fun make_atom oinfo l s E =
 fun make_type_constant l {Thy=Thy0,Tyop=Tyop0} E =
  let open Pretype
      val c = Type.prim_mk_thy_con_type {Thy=Thy0,Tyop=Tyop0}
-     val {Thy,Tyop,Kind,Rank} = Type.dest_thy_con_type c
+     val {Thy,Tyop,Kind} = Type.dest_thy_con_type c
      val Kind' = Prekind.rename_kindvars [] (Prekind.fromKind Kind)
-     val Rank' = Prerank.fromRank Rank
- in (PT(Contype {Thy=Thy0,Tyop=Tyop0,Kind=Kind',Rank=Rank'}, l), E)
+ in (PT(Contype {Thy=Thy0,Tyop=Tyop0,Kind=Kind'}, l), E)
  end
 
-fun make_type_atom l (s,kd,rk) E =
+fun make_type_atom l (s,kd) E =
  make_btyvar l (s,E)
    handle HOL_ERR _ =>
-   make_free_tyvar l ((s,kd,rk), E)
+   make_free_tyvar l ((s,kd), E)
 
 fun make_uvar_type l r NONE E =
     (Pretype.PT(Pretype.UVar r, l), E)

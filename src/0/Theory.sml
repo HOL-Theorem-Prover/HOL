@@ -267,15 +267,15 @@ fun empty_segment ({thid,facts, ...}:segment) =
  *              ADDING TO THE SEGMENT                                        *
  *---------------------------------------------------------------------------*)
 
-fun add_type_opr {name,theory,kind,rank} thy = let
+fun add_type_opr {name,theory,kind} thy = let
   open Type KernelSig
 in
-  insert(typesig, {Name=name,Thy=theory}, (kind,rank));
+  insert(typesig, {Name=name,Thy=theory}, kind);
   thy
 end
 
 fun add_type {name,theory,arity} thy = 
-    add_type_opr {name=name,theory=theory,kind=Kind.mk_arity arity,rank=0} thy
+    add_type_opr {name=name,theory=theory,kind=Kind.mk_arity arity} thy
 
 fun add_term {name,theory,htype} thy = let
   open Term KernelSig
@@ -404,20 +404,20 @@ end;
  *            INSTALLING CONSTANTS IN THE CURRENT SEGMENT                    *
  *---------------------------------------------------------------------------*)
 
-fun new_type_opr (Name,Kind,Rank) =
+fun new_type_opr (Name,Kind) =
  (if not (Lexis.allowed_type_constant Name) andalso
      !Globals.checking_type_names
    then WARN "new_type" (Lib.quote Name^" is not a standard type name")
    else ()
-  ; add_type_oprCT {name=Name, kind=Kind, rank=Rank, theory = CTname()};());
+  ; add_type_oprCT {name=Name, kind=Kind, theory = CTname()};());
 
-fun new_type (Name,Arity) = new_type_opr (Name, Kind.mk_arity Arity, 0)
+fun new_type (Name,Arity) = new_type_opr (Name, Kind.mk_arity Arity)
 
 fun new_constant (Name,Ty) =
   (if not (Lexis.allowed_term_constant Name) andalso
      !Globals.checking_const_names
    then WARN "new_constant" (Lib.quote Name^" is not a standard constant name")
-   else if Type.kind_of Ty <> Kind.typ
+   else if not (Kind.is_type_kind (Type.kind_of Ty))
    then raise ERR "new_constant" "type does not have base kind"
    else ()
    ; add_termCT {name=Name, theory=CTname(), htype=Ty}; ())
@@ -427,7 +427,7 @@ fun new_constant (Name,Ty) =
      previously built theory from disk.
  ---------------------------------------------------------------------------*)
 
-fun install_type(s,k,r,thy) = add_type_oprCT {name=s, kind=k, rank=r, theory=thy};
+fun install_type(s,k,thy) = add_type_oprCT {name=s, kind=k, theory=thy};
 fun install_const(s,ty,thy) = add_termCT {name=s, htype=ty, theory=thy}
 
 
@@ -465,7 +465,7 @@ fun up2date_id id = KernelSig.uptodate_id id
 
 fun uptodate_type ty = let open Type in
     if is_vartype ty then true
-    else let val ((id,_,_),args) = Type.break_type ty
+    else let val ((id,_),args) = Type.break_type ty
          in up2date_id id
             andalso Lib.all uptodate_type args
          end
@@ -648,7 +648,7 @@ fun link_parents thy plist =
  end;
 
 fun incorporate_types thy tys =
-  let fun itype (s,k,r) = (install_type(s,k,r,thy);())
+  let fun itype (s,k) = (install_type(s,k,thy);())
   in List.app itype tys
   end;
 
@@ -898,8 +898,9 @@ fun export_theory () =
              Binarymap.insert(acc,k,write t)
            end
          | _ => acc
+     val res = Binarymap.foldl foldthis (Binarymap.mkDict String.compare) dmap
    in
-     Binarymap.foldl foldthis (Binarymap.mkDict String.compare) dmap
+     res (* Binarymap.foldl foldthis (Binarymap.mkDict String.compare) dmap *)
    end
 
      val structthry =

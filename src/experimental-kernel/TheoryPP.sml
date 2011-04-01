@@ -11,6 +11,7 @@ type thm      = Thm.thm;
 type term     = Term.term
 type hol_type = Type.hol_type
 type kind     = Kind.kind
+type rank     = Rank.rank
 
 open Feedback Lib Portable;
 
@@ -73,17 +74,20 @@ fun with_parens pfn pp x =
 (* Print a kind                                                              *)
 (*---------------------------------------------------------------------------*)
 
+val rank_to_string = Rank.rank_to_string
+
 fun pp_kind mvarkind pps kd =
  let open Portable
      val pp_kind = pp_kind mvarkind pps
      val {add_string,add_break,begin_block,end_block,
           add_newline,flush_ppstream,...} = with_ppstream pps
  in
-  if kd = Kind.typ then add_string "typ"
+  if Kind.is_type_kind kd then
+         add_string ("(typ " ^ rank_to_string (Kind.dest_type_kind kd) ^ ")")
   else if Kind.is_var_kind kd then
          case Kind.dest_var_kind kd
-           of "'k" => add_string "kappa"
-            |   s  => add_string ("("^mvarkind^quote s^")")
+           of ("'k", 0) => add_string "kappa"
+            | (  s ,rk) => add_string ("("^mvarkind^"("^quote s^","^rank_to_string rk^"))")
   else let val (d,r) = Kind.kind_dom_rng kd
        in (add_string "(";
            begin_block INCONSISTENT 0;
@@ -112,8 +116,8 @@ fun pp_type mvarkind mvartype mvartypeopr mtype mcontype mapptype mabstype muniv
                           else (add_string "("; pp_type ty; add_string ")")
  in
   if is_vartype ty
-  then let val (s,kd,rk) = dest_var_type ty
-       in if kd = Kind.typ andalso rk = 0 then
+  then let val (s,kd) = dest_var_type ty
+       in if kd = Kind.typ Rank.rho then
             case s
              of "'a" => add_string "alpha"
               | "'b" => add_string "beta"
@@ -126,8 +130,6 @@ fun pp_type mvarkind mvartype mvartypeopr mtype mcontype mapptype mabstype muniv
                  add_string (quote s);
                  add_break (1,0);
                  pp_kind kd;
-                 add_break (1,0);
-                 add_string (Int.toString rk);
                end_block ())
        end
   else
@@ -163,7 +165,7 @@ fun pp_type mvarkind mvartype mvartypeopr mtype mcontype mapptype mabstype muniv
   handle HOL_ERR _ =>
 (* shouldn't need code for is_con_type, subsumed by above: *)
   if is_con_type ty then
-       let val {Tyop,Thy,Kind,Rank} = dest_thy_con_type ty
+       let val {Tyop,Thy,Kind} = dest_thy_con_type ty
        in
            add_string mcontype;
            begin_block INCONSISTENT 0;
@@ -172,8 +174,6 @@ fun pp_type mvarkind mvartype mvartypeopr mtype mcontype mapptype mabstype muniv
            add_string (quote Thy);
            add_break (1,0);
            pp_kind Kind;
-           add_break (1,0);
-           add_string (Int.toString Rank);
            end_block ()
        end
   else if is_app_type ty then
@@ -408,9 +408,13 @@ fun pp_struct info_record = let
   fun pp_kind1 kd = let
       open Kind
     in
-      if kd = typ then add_string "typ"
+      if is_type_kind kd then add_string ("typ "^Rank.rank_to_string(Kind.rank_of kd))
       else if is_arity kd then add_string ("mk_arity "^Int.toString(arity_of kd))
-      else if is_var_kind kd then add_string ("mk_var_kind \""^dest_var_kind kd^"\"")
+      else if is_var_kind kd then let
+          val (s,rk) = dest_var_kind kd
+        in
+          add_string ("mk_var_kind (\""^s^"\","^rank_to_string rk^")")
+        end
       else (* must be arrow kind *) let
           val (kd1,kd2) = dest_arrow_kind kd
         in
@@ -423,11 +427,11 @@ fun pp_struct info_record = let
              add_string ")")
         end
     end
-  fun pp_ty_dec (s,kd,rk) =
+  fun pp_ty_dec (s,kd) =
        block CONSISTENT 0
         (add_string ("(" ^ stringify s ^ ", ") >>
          pp_kind1 kd >>
-         add_string (", " ^ Int.toString rk ^ ")"))
+         add_string ")")
   fun pp_const_dec (s, ty) =
       add_string ("("^stringify s^", "^
                   Int.toString (Map.find(#tymap tytable, ty)) ^ ")")
@@ -569,19 +573,19 @@ in
              add_string "open Kind Type Term Thm" >> add_newline >>
              add_string "infixr -->" >> add_newline >>
              add_newline >>
-             add_string"fun C s t ty  = mk_thy_const{Name=s,Thy=t,Ty=ty}" >>
+             add_string"fun C s t ty = mk_thy_const{Name=s,Thy=t,Ty=ty}" >>
              add_newline >>
-             add_string"fun T s t A   = mk_thy_type{Tyop=s, Thy=t,Args=A}" >>
+             add_string"fun T s t A  = mk_thy_type{Tyop=s, Thy=t,Args=A}" >>
              add_newline >>
-             add_string"fun V s q     = mk_var(s,q)" >> add_newline >>
-             add_string"val K         = mk_var_kind" >> add_newline >>
-             add_string"val U         = mk_vartype"  >> add_newline >>
-             add_string"fun R s k r   = mk_var_type(s,k,r)" >> add_newline >>
-             add_string"fun O s t k r = mk_thy_con_type{Tyop=s,Thy=t,Kind=k,Rank=r}" >>
+             add_string"fun V s q    = mk_var(s,q)" >> add_newline >>
+             add_string"val K        = mk_var_kind" >> add_newline >>
+             add_string"val U        = mk_vartype"  >> add_newline >>
+             add_string"fun R s k    = mk_var_type(s,k)" >> add_newline >>
+             add_string"fun O s t k  = mk_thy_con_type{Tyop=s,Thy=t,Kind=k}" >>
              add_newline >>
-             add_string"fun P a b     = mk_app_type(a,b)"   >> add_newline >>
-             add_string"fun B a b     = mk_abs_type(a,b)"   >> add_newline >>
-             add_string"fun N a b     = mk_univ_type(a,b)"  >> add_newline >>
+             add_string"fun P a b    = mk_app_type(a,b)"   >> add_newline >>
+             add_string"fun B a b    = mk_abs_type(a,b)"   >> add_newline >>
+             add_string"fun N a b    = mk_univ_type(a,b)"  >> add_newline >>
              pblock ("Parents", add_string o pparent,
                      thid_sort parents1) >>
              add_newline >>

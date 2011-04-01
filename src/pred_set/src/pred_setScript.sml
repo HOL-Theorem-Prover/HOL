@@ -16,7 +16,7 @@ struct
 
 (* interactive use
 app load ["pairLib", "numLib", "PGspec", "PSet_ind", "Q",
-          "Defn", "TotalDefn", "metisLib"];
+          "Defn", "TotalDefn", "metisLib", "numpairTheory"];
 *)
 open HolKernel Parse boolLib Prim_rec pairLib numLib
      pairTheory numTheory prim_recTheory arithmeticTheory whileTheory

@@ -4,6 +4,43 @@ struct
 open Portable HolKernel term_grammar
      HOLtokens HOLgrammars GrammarSpecials;
 
+(*debugging: *)
+val debug = ref 0
+val _ = Feedback.register_trace("time_pp_term", debug, 2)
+
+fun spaces 0 = "" | spaces n = (" "^spaces(n - 1));
+fun padto n s = if String.size s < n then s ^ spaces (n - String.size s) else s;
+val pad_width = 40;
+val decimal_digits = 5;
+local open Timer
+fun start_timer() = (*startRealTimer()*) startCPUTimer();
+val check_timer = (*checkRealTimer*) #usr o checkCPUTimer;
+fun print_str backend pps s =
+  let val ppfns = (*Portable*) PPBackEnd.with_ppstream backend pps
+      val {add_string,add_break,begin_block,end_block,add_newline,...} =
+          ppfns
+  in
+    add_string s
+  end;
+fun print_timer backend pps s t =
+  let val ppfns = (*Portable*) PPBackEnd.with_ppstream backend pps
+      val {add_string,add_break,begin_block,end_block,add_newline,...} =
+          ppfns
+  in
+    add_string ("(*" ^ s ^ ": " ^ (Time.fmt decimal_digits (check_timer t)) ^ "*)");
+    add_break(0,0)
+  end;
+in
+fun time backend pps s f x = if !debug=0 then f x else
+  let val t = start_timer()
+      val _ = print_str backend pps "("
+      val y = f x
+  in print_str backend pps ")";
+     print_timer backend pps s t;
+     y
+  end
+end (* local *);
+
 val PP_ERR = mk_HOL_ERR "term_pp";
 
 (*---------------------------------------------------------------------------
@@ -359,11 +396,12 @@ end handle HOL_ERR _ => fst (dest_const tm)
 
 
 fun pp_term (G : grammar) TyG backend = let
+  val ty_to_str = PP.pp_to_string 10000 (type_pp.pp_type TyG PPBackEnd.raw_terminal false)
   fun tystr ty =
       let val cur_ftyvars_seen = !type_pp.ftyvars_seen
           val cur_kinds = current_trace "kinds"
           val _ = set_trace "kinds" 0
-          val str = PP.pp_to_string 10000 (type_pp.pp_type TyG PPBackEnd.raw_terminal) ty
+          val str = ty_to_str ty
       in
         type_pp.ftyvars_seen := cur_ftyvars_seen;
         set_trace "kinds" cur_kinds;
@@ -671,12 +709,14 @@ fun pp_term (G : grammar) TyG backend = let
 
   fun pr_term binderp showtypes showtypes_v vars_seen pps ppfns combpos tm
               pgrav lgrav rgrav depth = let
+
     fun pr_term1 binderp showtypes showtypes_v vars_seen pps ppfns combpos tm
               pgrav lgrav rgrav depth
-      = pr_term binderp showtypes showtypes_v vars_seen pps ppfns combpos tm
-              pgrav lgrav rgrav depth
+      = time backend pps "pr_term" (pr_term binderp showtypes showtypes_v vars_seen pps ppfns combpos tm
+              pgrav lgrav rgrav) depth
               handle e => Raise (wrap_exn "term_pp.pr_term" "<entrance>" e) (* debugging *)
     val pr_term = pr_term1
+
     val _ =
         if printers_exist then let
             fun sysprint (pg,lg,rg) depth tm =
@@ -700,9 +740,13 @@ fun pp_term (G : grammar) TyG backend = let
         else ()
 
     val {fvars_seen, bvars_seen} = vars_seen
+    val vstruct_pr_term =
+        pr_term true showtypes showtypes_v vars_seen pps ppfns NoCP
+    val comb_pr_term =
+        pr_term binderp showtypes showtypes_v vars_seen pps ppfns
     val full_pr_term = pr_term
-    val pr_term =
-        pr_term binderp showtypes showtypes_v vars_seen pps ppfns NoCP
+    val pr_term = comb_pr_term NoCP
+     (* pr_term binderp showtypes showtypes_v vars_seen pps ppfns NoCP *)
     val {add_string,add_break,begin_block,end_block,add_ann_string,...} = ppfns
     fun block_by_style (addparens, rr, pgrav, fname, fprec) = let
       val needed =
@@ -720,22 +764,23 @@ fun pp_term (G : grammar) TyG backend = let
     fun spacep b = if b then add_break(1, 0) else ()
     fun sizedbreak n = add_break(n, 0)
 
-    val pr_type = type_pp.pp_type_with_depth_cont TyG backend pps (decdepth depth)
+    val base_pr_type = type_pp.pp_type_with_depth_cont TyG backend
+    val pr_type = fn boundp => base_pr_type boundp pps (decdepth depth)
 
-    fun pr_typel s [] = raise PP_ERR "pp_term" "no bound variables in type abstraction"
-      | pr_typel s [ty] = pr_type ty
-      | pr_typel s (ty::tys) =
-              (pr_type ty;
+    fun pr_typel bndr s [] = raise PP_ERR "pp_term" "no bound variables in type abstraction"
+      | pr_typel bndr s [ty] = pr_type bndr ty
+      | pr_typel bndr s (ty::tys) =
+              (pr_type bndr ty;
                add_string s;
                add_break (1,0);
-               pr_typel s tys)
+               pr_typel bndr s tys)
 
     fun pr_type_list tys = let
     in
       add_break (1,0);
       add_string type_lbracket;
       begin_block INCONSISTENT 0;
-      pr_typel "," tys;
+      pr_typel false "," tys;
       end_block();
       add_string type_rbracket
     end
@@ -787,17 +832,20 @@ fun pp_term (G : grammar) TyG backend = let
 
 
 
+
     fun pr_vstruct bv = let
+(*
       val pr_t =
         if showtypes then
           full_pr_term true true showtypes_v vars_seen pps ppfns NoCP
         else full_pr_term true false showtypes_v vars_seen pps ppfns NoCP
+*)
     in
       case bv of
         Simple tm => let
         in
           if (is_pair tm orelse is_var tm) then
-            pr_t tm Top Top Top (decdepth depth)
+            vstruct_pr_term tm Top Top Top (decdepth depth)
           else
             raise PP_ERR "pr_vstruct"
               "Can only handle pairs and vars as vstructs"
@@ -934,15 +982,15 @@ fun pp_term (G : grammar) TyG backend = let
       val addparens = lgrav <> RealTop orelse rgrav <> RealTop
       val (bvars, body) = strip_tyvstructs NONE tm (* strip_tyabs tm *)
       val prev_btyvars_seen = !type_pp.btyvars_seen
-      val _ = type_pp.btyvars_seen := bvars @ prev_btyvars_seen
     in
       pbegin addparens;
       begin_block INCONSISTENT 2;
       add_string (hd type_lambda);
       begin_block INCONSISTENT 0;
-      pr_typel "" bvars;
+      pr_typel true "" bvars;
       end_block();
       add_string endbinding; add_break (1,0);
+      type_pp.btyvars_seen := bvars @ prev_btyvars_seen;
       pr_term body Top Top Top (decdepth depth);
       end_block();
       pend addparens;
@@ -1006,7 +1054,8 @@ fun pp_term (G : grammar) TyG backend = let
       add_string (numeral_str ^ sfx) ;
       if showtypes then
         (add_string (" "^type_intro); add_break (0,0);
-         type_pp.pp_type_with_depth_cont TyG backend pps (decdepth depth)
+         (* type_pp.pp_type_with_depth_cont TyG backend pps (decdepth depth) *)
+         pr_type false
                                          (#2 (dom_rng injty)))
       else ();
       pend showtypes
@@ -1316,14 +1365,15 @@ fun pp_term (G : grammar) TyG backend = let
     in
       pbegin (addparens orelse comb_show_type);
       begin_block INCONSISTENT 2;
-      full_pr_term binderp showtypes showtypes_v vars_seen pps ppfns RatorCP t1
+      comb_pr_term RatorCP t1
                    prec lprec prec (decdepth depth);
       add_break (1, 0);
-      full_pr_term binderp showtypes showtypes_v vars_seen pps ppfns RandCP t2
+      comb_pr_term RandCP t2
                    prec prec rprec (decdepth depth);
       if comb_show_type then
         (add_string (" "^type_intro); add_break (0,0);
-         type_pp.pp_type_with_depth_cont TyG backend pps (decdepth depth)
+         (* type_pp.pp_type_with_depth_cont TyG backend pps (decdepth depth) *)
+         pr_type false
                                          (type_of tm))
       else ();
       end_block();
@@ -1382,8 +1432,9 @@ fun pp_term (G : grammar) TyG backend = let
             ((fn () => (add_string "("; begin_block CONSISTENT 0)),
              (fn () => (add_break (1,2);
                         add_string type_intro;
-                        type_pp.pp_type_with_depth TyG backend pps
-                                                   (decdepth depth)
+                        (* type_pp.pp_type_with_depth TyG backend pps
+                                                   (decdepth depth) *)
+                        pr_type false
                                                    (type_of tm);
                         end_block();
                         add_string ")")))
@@ -1505,7 +1556,6 @@ fun pp_term (G : grammar) TyG backend = let
                     | TypeBinderString r => #tok r
           val (bvs, body) = strip_tyvstructs (SOME fname) tm (* strip_tyabs tm *)
           val prev_btyvars_seen = !type_pp.btyvars_seen
-          val _ = type_pp.btyvars_seen := bvs @ prev_btyvars_seen
           val addparens =
             case rgrav of
               Prec(n, _) => n > fprec
@@ -1515,9 +1565,10 @@ fun pp_term (G : grammar) TyG backend = let
           add_string tok;
           spacep (not (symbolic tok));
           begin_block INCONSISTENT 0;
-          pr_typel "" bvs;
+          pr_typel true "" bvs;
           end_block();
           add_string endbinding; spacep true;
+          type_pp.btyvars_seen := bvs @ prev_btyvars_seen;
           begin_block CONSISTENT 0;
           pr_term body Top Top Top (decdepth depth);
           type_pp.btyvars_seen := prev_btyvars_seen;
@@ -1671,7 +1722,8 @@ fun pp_term (G : grammar) TyG backend = let
       add_break(0,0);
       add_string ("`"^type_intro);
       add_break (0,0);
-      type_pp.pp_type_with_depth_cont TyG backend pps (decdepth depth) ty;
+      (* type_pp.pp_type_with_depth_cont TyG backend pps (decdepth depth) ty; *)
+      pr_type false ty;
       add_string "`))";
       end_block()
     end
@@ -1720,7 +1772,8 @@ fun pp_term (G : grammar) TyG backend = let
           fun add_type () = let
           in
             add_string (" "^type_intro); add_break (0,0);
-            type_pp.pp_type_with_depth_cont TyG backend pps (decdepth depth) Ty
+            (* type_pp.pp_type_with_depth_cont TyG backend pps (decdepth depth) Ty *)
+            pr_type false Ty
           end
           val new_freevar =
             showtypes andalso not isfake andalso
@@ -1751,11 +1804,10 @@ fun pp_term (G : grammar) TyG backend = let
           fun with_type action = let
           in
             pbegin true;
-            (*begin_block CONSISTENT 0;*)
             action();
             add_string (" "^type_intro);
-            type_pp.pp_type_with_depth_cont TyG backend pps (decdepth depth) Ty;
-            (*end_block ();*)
+            (* type_pp.pp_type_with_depth_cont TyG backend pps (decdepth depth) Ty; *)
+            pr_type false Ty;
             pend true
           end
           val r = {Name = Name, Thy = Thy}
@@ -1778,7 +1830,8 @@ fun pp_term (G : grammar) TyG backend = let
                 add_string "(";
                 begin_block CONSISTENT 0;
                 add_string type_intro;
-                type_pp.pp_type_with_depth_cont TyG backend pps depth (hd Args);
+                (* type_pp.pp_type_with_depth_cont TyG backend pps depth (hd Args); *)
+                base_pr_type false pps depth (hd Args);
                 end_block ();
                 add_string ")"
               end
@@ -1824,11 +1877,12 @@ fun pp_term (G : grammar) TyG backend = let
                  else normal_const()
         end
       | COMB(Rator, Rand) => let
-          val (f, args) = strip_comb Rator
-          val (oif, oiargs) =
+          val (f, args) = time backend pps "strip_comb" strip_comb Rator
+          val (oif, oiargs) = time backend pps "oi_strip_comb" (fn () =>
               case Overload.oi_strip_comb overload_info tm of
                 NONE => (f, args @ [Rand])
               | SOME p => p
+) ()
 
           (* check for various literal and special forms *)
 
@@ -1857,12 +1911,12 @@ fun pp_term (G : grammar) TyG backend = let
 
           (* binders *)
           val _ =
-              if my_is_abs tm then (pr_abs tm; raise SimpleExit)
+              if time backend pps "my_is_abs" my_is_abs tm then (time backend pps "pr_abs" pr_abs tm; raise SimpleExit)
               else ()
 
           (* set comprehensions *)
           val _ =
-              if grammar_name G oif = SOME "GSPEC" andalso my_is_abs Rand
+              if time backend pps "pr_abs" (grammar_name G) oif = SOME "GSPEC" andalso my_is_abs Rand
               then let
                   val (vs, body) = my_dest_abs Rand
                   val vfrees = FVL [vs] empty_tmset
@@ -1908,8 +1962,8 @@ fun pp_term (G : grammar) TyG backend = let
               else ()
 
           (* record forms *)
-          val _ = check_for_field_selection Rator Rand
-          val _ = check_for_record_update Rator Rand
+          val _ = time backend pps "chk fld sel" (check_for_field_selection Rator) Rand
+          val _ = time backend pps "chk rcd upd" (check_for_record_update Rator) Rand
 
           (* case expressions *)
           val () =
@@ -2032,28 +2086,28 @@ fun pp_term (G : grammar) TyG backend = let
               end
           end (* pr_atomf *)
           fun maybe_pr_atomf () =
-              if grammar_name G f = SOME "case" then
-                pr_atomf (strip_comb tm)
+              if time backend pps "gram_nm" (grammar_name G) f = SOME "case" then
+                time backend pps "pr_atomf1" pr_atomf (strip_comb tm)
               else
-                case Overload.oi_strip_comb overload_info tm of
+                case time backend pps "overld" (Overload.oi_strip_comb overload_info) tm of
                   SOME (p as (f,args)) => let
                   in
                     case args of
                       [] => pr_term f pgrav lgrav rgrav depth
-                    | _ => pr_atomf p
+                    | _ => time backend pps "pr_atomf2" pr_atomf p
                   end
-                | NONE => if is_var f then pr_atomf (f, args @ [Rand])
-                          else pr_comb tm Rator Rand
+                | NONE => if is_var f then time backend pps "pr_atomf3" pr_atomf (f, args @ [Rand])
+                          else time backend pps "pr_comb" (pr_comb tm Rator) Rand
         in
           if showtypes_v then
             if const_is_ambiguous f then
               pr_comb tm Rator Rand
             else
               maybe_pr_atomf()
-          else maybe_pr_atomf()
+          else time backend pps "maybe_pr_atom" maybe_pr_atomf()
         end
       | TYCOMB(Rator, Rand) => Feedback.trace("pp_avoids_symbol_merges",0) pr_tycomb tm
-      | LAMB  (Bvar,  Body) => pr_abs tm
+      | LAMB  (Bvar,  Body) => time backend pps "pr_abs" pr_abs tm
       | TYLAMB(Bvar,  Body) => pr_tyabs tm
   end handle SimpleExit => ()
   (* the end of pr_term *)
@@ -2078,11 +2132,13 @@ in
        begin_block CONSISTENT 0;
        type_pp.ftyvars_seen := [];
        type_pp.btyvars_seen := [];
+       time backend pps "pp_term" (
        pr_term false
                (!Globals.show_types orelse !Globals.show_types_verbosely)
                (!Globals.show_types_verbosely)
                (start_names())
                pps ppfns NoCP t RealTop RealTop RealTop
+       )
                (!Globals.max_print_depth);
        end_block ()
     end

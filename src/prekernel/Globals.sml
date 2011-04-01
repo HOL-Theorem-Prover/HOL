@@ -66,6 +66,7 @@ val output_HOL_ERR = ref outHOL_ERR_default
  * Prettyprinting flags                                                      *
  *---------------------------------------------------------------------------*)
 
+val rank_pp_prefix = ref "`"  and rank_pp_suffix = ref "`"
 val kind_pp_prefix = ref "`"  and kind_pp_suffix = ref "`"
 val type_pp_prefix = ref "`"  and type_pp_suffix = ref "`"
 val term_pp_prefix = ref "`"  and term_pp_suffix = ref "`"

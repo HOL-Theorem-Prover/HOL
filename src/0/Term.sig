@@ -3,12 +3,14 @@ sig
   type hol_type = KernelTypes.hol_type
   type term = KernelTypes.term
   type kind = KernelTypes.kind
+  type rank = KernelTypes.rank
   type ('a,'b)subst = ('a,'b)Lib.subst
   type 'a set       = 'a HOLset.set
 
   val termsig       : KernelTypes.holty KernelSig.symboltable
 
   val type_of       : term -> hol_type
+  val rank_of_term  : term -> rank
   val free_vars     : term -> term list
   val free_vars_lr  : term -> term list
   val FVL           : term list -> term set -> term set
@@ -67,6 +69,7 @@ sig
   val is_bvar       : term -> bool
   val is_genvar     : term -> bool
   val is_const      : term -> bool
+  val is_poly_const : term -> bool
   val is_comb       : term -> bool
   val is_tycomb     : term -> bool
   val is_abs        : term -> bool
@@ -95,55 +98,62 @@ sig
   val eta_conv_ty_in_term : term -> term
   val beta_eta_conv_ty_in_term : term -> term
   val subst         : (term,term) Lib.subst -> term -> term
-  val inst          : (hol_type,hol_type) subst -> term -> term (* general: aligns kinds & ranks *)
   val pure_inst     : (hol_type,hol_type) subst -> term -> term (* expects kinds & ranks match *)
-  val inst_kind     : (kind,kind)subst -> term -> term
-  val inst_rank     : int -> term -> term
-  val inst_rank_kind : int -> (kind,kind)subst -> term -> term
-  val inst_rk_kd_ty : int -> (kind,kind)subst -> (hol_type,hol_type)subst -> term -> term
+  val inst          : (hol_type,hol_type) subst -> term -> term (* general: aligns kinds & ranks *)
+  val pure_inst_kind: (kind,kind) subst -> term -> term (* expects ranks match *)
+  val inst_kind     : (kind,kind) subst -> term -> term (* general: aligns ranks *)
+  val inst_rank     : rank -> term -> term
+  val inst_rank_kind: rank -> (kind,kind)subst -> term -> term
+  val inst_rk_kd_ty : rank -> (kind,kind)subst -> (hol_type,hol_type)subst -> term -> term
+  val inst_all      : rank -> (kind,kind)subst -> (hol_type,hol_type)subst -> (term,term)subst
+                        -> term -> term
+(*
   val subst_type    : (hol_type,hol_type) subst -> term -> term   (* arbitrary types to types; aligns *)
   val pure_subst_type : (hol_type,hol_type) subst -> term -> term (* expects kinds & ranks match *)
+*)
+
+  val has_var_rankl : term list -> bool
 
   val get_type_kind_rank_insts : kind list -> hol_type list ->
                       {redex : term, residue : term} list ->
                       ({redex : hol_type, residue : hol_type} list * hol_type list) *
-                      ({redex : kind, residue : kind} list * kind list) * int ->
+                      ({redex : kind, residue : kind} list * kind list) * (rank * bool) ->
                       ({redex : hol_type, residue : hol_type} list * hol_type list) *
-                      ({redex : kind, residue : kind} list * kind list) * int
-  val raw_kind_match : kind list -> hol_type list -> term set
+                      ({redex : kind, residue : kind} list * kind list) * (rank * bool)
+  val raw_kind_match : bool -> kind list -> hol_type list -> term set
                       -> term -> term
-                      -> (term,term)subst * (hol_type,hol_type)subst * (kind,kind)subst * int
+                      -> (term,term)subst * (hol_type,hol_type)subst * (kind,kind)subst * rank
                       -> ((term,term)subst * term set) *
                          ((hol_type,hol_type)subst * hol_type list) *
-                         ((kind,kind)subst * kind list) * int
+                         ((kind,kind)subst * kind list) * (rank * bool)
   val raw_match     : hol_type list -> term set
                       -> term -> term
                       -> (term,term)subst * (hol_type,hol_type)subst
                       -> ((term,term)subst * term set) *
                          ((hol_type,hol_type)subst * hol_type list)
-  val kind_match_terml : kind list -> hol_type list -> term set -> term -> term
-                        -> (term,term)subst * (hol_type,hol_type)subst * (kind,kind)subst * int
+  val kind_match_terml : bool -> kind list -> hol_type list -> term set -> term -> term
+                        -> (term,term)subst * (hol_type,hol_type)subst * (kind,kind)subst * rank
   val match_terml   : hol_type list -> term set -> term -> term
                         -> (term,term)subst * (hol_type,hol_type)subst
   val kind_match_term : term -> term
-                        -> (term,term)subst * (hol_type,hol_type)subst * (kind,kind)subst * int
+                        -> (term,term)subst * (hol_type,hol_type)subst * (kind,kind)subst * rank
   val match_term    : term -> term -> (term,term)subst * (hol_type,hol_type)subst
   val kind_norm_subst : ((term,term)subst * term set) *
                       ((hol_type,hol_type)subst * hol_type list) *
-                      ((kind,kind)subst * kind list) * int
-                      -> ((term,term)subst * (hol_type,hol_type)subst * (kind,kind)subst * int)
+                      ((kind,kind)subst * kind list) * (rank * bool)
+                      -> ((term,term)subst * (hol_type,hol_type)subst * (kind,kind)subst * rank)
   val norm_subst    : ((term,term)subst * term set) *
                       ((hol_type,hol_type)subst * hol_type list)
                       -> ((term,term)subst * (hol_type,hol_type)subst)
   val ho_kind_match_term0 : kind list -> hol_type list -> term HOLset.set -> term -> term
                        -> (term,int)subst * (term,term)subst
                           * ((hol_type,hol_type)subst * hol_type list)
-                          * ((kind,kind)subst * kind list) * int
+                          * ((kind,kind)subst * kind list) * (rank * bool)
   val ho_match_term0 : hol_type list -> term HOLset.set -> term -> term
                        -> (term,int)subst * (term,term)subst
                           * ((hol_type,hol_type)subst * hol_type list)
   val ho_kind_match_term  : kind list ->  hol_type list -> term HOLset.set -> term -> term
-                       -> (term,term)subst * (hol_type,hol_type)subst * (kind,kind)subst * int
+                       -> (term,term)subst * (hol_type,hol_type)subst * (kind,kind)subst * rank
   val ho_match_term  : hol_type list -> term HOLset.set -> term -> term
                        -> (term,term)subst * (hol_type,hol_type)subst
   val thy_consts    : string -> term list

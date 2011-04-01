@@ -17,6 +17,7 @@ fun tmlist_kdvs tlist =
 fun tmlist_tyvs tlist =
   List.foldl (fn (t,acc) => Lib.union (Term.type_vars_in_term t) acc) [] tlist
 
+fun is_debug() = current_trace "debug_type_inference" >= 1;
 
 val debug_overloading = ref false
 val _ = register_btrace ("overload", debug_overloading)
@@ -40,7 +41,6 @@ datatype tcheck_error =
 
 val last_tcerror : (tcheck_error * locn.locn) option ref = ref NONE
 
-
 datatype preterm = Var   of {Name:string,  Ty:pretype, Locn:locn.locn}
                  | Const of {Name:string,  Thy:string, Ty:pretype, Locn:locn.locn}
                  | Overloaded of overinfo
@@ -55,6 +55,10 @@ datatype preterm = Var   of {Name:string,  Ty:pretype, Locn:locn.locn}
               (* Because of the Locn fields, preterms should *not* be compared
                  with the built-in equality, but should use eq defined below.
                  To check this has been done everywhere, uncomment this constructor. *)
+
+fun dest_var (Var record) = record
+  | dest_var (Constrained {Ptm, ...}) = dest_var Ptm
+  | dest_var _ = raise ERR "dest_var" "not a variable"
 
 val op --> = Pretype.-->
 
@@ -107,7 +111,7 @@ fun term_to_preterm kdavds avds t = let
       | LAMB(v,bod) => recurse avds v >- (fn v' =>
                        recurse avds bod >- (fn bod' =>
                        return (Abs{Body = bod', Bvar = v', Locn = bogus})))
-      | TYLAMB(a,bod) => let val (s,_,_) = dest_var_type a
+      | TYLAMB(a,bod) => let val (s,_) = dest_var_type a
                              val avds' = s::avds
                          in gen avds' a >- (fn a' =>
                             recurse avds' bod >- (fn bod' =>
@@ -158,6 +162,9 @@ fun eq (Var{Name=Name,Ty=Ty,...})                  (Var{Name=Name',Ty=Ty',...}) 
   | eq (Antiq{Tm=Tm,...})                          (Antiq{Tm=Tm',...})                            = Term.aconv Tm Tm'
   | eq (Pattern{Ptm,...})                          (Pattern{Ptm=Ptm',...})                        = eq Ptm Ptm'
   | eq  _                                           _                                             = false
+
+fun rator (Comb{Rator, ...}) = Rator
+  | rator _ = raise ERR "rator" "not a Comb"
 
 fun strip_pcomb pt = let
   fun recurse acc t =
@@ -243,7 +250,7 @@ end;
 
 val has_free_uvar = Pretype.has_free_uvar
 
-fun kindVars ptm =  (* the prekind variables in a preterm *)
+fun kindVars ptm =  (* the prekind variable names in a preterm *)
   case ptm of
     Var{Ty,...}             => Pretype.kindvars Ty
   | Const{Ty,...}           => Pretype.kindvars Ty
@@ -251,7 +258,7 @@ fun kindVars ptm =  (* the prekind variables in a preterm *)
   | TyComb{Rator,Rand,...}  => Lib.union (kindVars Rator) (Pretype.kindvars Rand)
   | Abs{Bvar,Body,...}      => Lib.union (kindVars Bvar) (kindVars Body)
   | TyAbs{Bvar,Body,...}    => Lib.union (Pretype.kindvars Bvar) (kindVars Body)
-  | Antiq{Tm,...}           => map Kind.dest_var_kind (Term.kind_vars_in_term Tm)
+  | Antiq{Tm,...}           => map (#1 o Kind.dest_var_kind) (Term.kind_vars_in_term Tm)
   | Constrained{Ptm,Ty,...} => Lib.union (kindVars Ptm) (Pretype.kindvars Ty)
   | Pattern{Ptm,...}        => kindVars Ptm
   | Overloaded _            => raise Fail "Preterm.kindVars: applied to Overloaded";
@@ -543,6 +550,182 @@ fun remove_case_magic tm =
 end; (* local *)
 
 
+(*---------------------------------------------------------------------------*
+ *    Converting preterms to strings, for printing.                          *
+ *---------------------------------------------------------------------------*)
+local open Prerank Prekind Pretype Portable
+in
+fun default_kind (PK(Typekind Zerorank,_)) = true
+  | default_kind _ = false
+fun pp_if_prekind add_string pp_prekind kd =
+      if default_kind kd then ()
+      else (add_string ": ";
+            pp_prekind kd)
+fun kind_to_string (PK(Typekind Zerorank,_)) = ""
+  | kind_to_string kd = ": " ^ prekind_to_string kd
+fun default_rank Zerorank = true
+  | default_rank _ = false
+fun add_rank_string Zerorank = ""
+  | add_rank_string rk = ":" ^ prerank_to_string rk
+fun pp_if_prerank add_string pp_prerank rk =
+      if current_trace "kinds" < 2 orelse default_rank rk then ()
+      else (add_string " : ";
+            pp_prerank rk)
+fun print_prerank rk = print (prerank_to_string rk ^ "; ")
+fun print_prekind kd = print (prekind_to_string kd ^ "; ")
+end
+
+datatype pp_pty_state = none | left | right | uvar
+
+fun pp_preterm pps tm =
+ let open Portable
+     val {add_string,add_break,begin_block,end_block,...} = with_ppstream pps
+     val checkref = Portable.ref_to_int
+     val pp_prekind = Prekind.pp_prekind pps
+     val pp_prerank = Prerank.pp_prerank pps
+     val pp_if_prekind = pp_if_prekind add_string pp_prekind
+     val pp_if_prerank = pp_if_prerank add_string pp_prerank
+     val pp_pretype = Pretype.pp_pretype pps
+     fun pppreterm tm =
+       case tm of
+           Var{Name,Ty,...} => (add_string "(";
+                                begin_block INCONSISTENT 0;
+                                add_string (Name^":");
+                                add_break(1,0);
+                                pp_pretype Ty;
+                                end_block();
+                                add_string ")")
+         | Const {Thy, Name, Ty, ...} => (if current_trace "kinds" < 2 then () else add_string "[";
+                                          if Thy = "bool" orelse Thy = "min" then
+                                              add_string Name
+                                            else add_string (Thy ^ "$" ^ Name);
+                                            pp_if_prerank (Prekind.prank_of (Pretype.pkind_of Ty));
+                                            if current_trace "kinds" < 2 then () else add_string "]" )
+         | Comb{Rator, Rand, ...} => (add_string "(";
+                               begin_block INCONSISTENT 0;
+                               pppreterm Rator;
+                               add_break(1,0);
+                               pppreterm Rand;
+                               end_block();
+                               add_string ")")
+         | TyComb{Rator, Rand, ...} => (add_string "(";
+                               begin_block INCONSISTENT 0;
+                               pppreterm Rator;
+                               add_break(1,0);
+                               add_string "[:";
+                               pp_pretype Rand;
+                               add_string ":]";
+                               end_block();
+                               add_string ")")
+         | Abs{Bvar,Body,...} => (add_string "\\";
+                               pppreterm Bvar;
+                               add_string ".";
+                               add_break(1,0);
+                               begin_block INCONSISTENT 0;
+                               pppreterm Body;
+                               end_block())
+         | TyAbs{Bvar,Body,...} => (add_string "\\:";
+                               pp_pretype Bvar;
+                               add_string ".";
+                               add_break(1,0);
+                               begin_block INCONSISTENT 0;
+                               pppreterm Body;
+                               end_block())
+         | Constrained{Ptm,Ty,...} => (add_string "(";
+                               begin_block INCONSISTENT 0;
+                               pppreterm Ptm;
+                               add_string " :";
+                               add_break(1,2);
+                               pp_pretype Ty;
+                               end_block();
+                               add_string ")")
+         | Overloaded {Name,Ty,...} => (add_string "<";
+                               begin_block INCONSISTENT 0;
+                               add_string ("overloaded " ^ Name ^ ":");
+                               add_break(1,2);
+                               pp_pretype Ty;
+                               end_block();
+                               add_string ">")
+         | Antiq {Tm,...} => add_string "<antiq>"
+         | Pattern{Ptm,...} => pppreterm Ptm
+ in
+   begin_block INCONSISTENT 0;
+   pppreterm tm;
+   end_block()
+ end;
+
+val preterm_to_string = Portable.pp_to_string 80 pp_preterm
+fun print_preterm tm = Portable.output(Portable.std_out, preterm_to_string tm);
+
+fun pp_preterms pps tms =
+ let open Portable
+     val {add_string,add_break,begin_block,end_block,...} = with_ppstream pps
+     val pp_preterm = pp_preterm pps
+     fun pppreterms0 [] = ()
+       | pppreterms0 (tm::tms) = (add_string ",";
+                                  add_break(0,0);
+                                  pp_preterm tm;
+                                  pppreterms0 tms)
+     fun pppreterms [] = ()
+       | pppreterms (tm::tms) =  (begin_block INCONSISTENT 0;
+                                  pp_preterm tm;
+                                  pppreterms0 tms;
+                                  end_block())
+ in
+   add_string "[";
+   pppreterms tms;
+   add_string "]"
+ end;
+
+val preterms_to_string = Portable.pp_to_string 80 pp_preterms
+fun print_preterms tms = Portable.output(Portable.std_out, preterms_to_string tms);
+
+val debug_term = Thm.debug_term
+fun debug_terms tms =
+ let fun debug_terms0 [] = ()
+       | debug_terms0 (tm::tms) = (print ", ";
+                                   debug_term tm;
+                                   debug_terms0 tms)
+     fun debug_terms [] = ()
+       | debug_terms (tm::tms)  = (debug_term tm;
+                                   debug_terms0 tms)
+ in
+   print "[";
+   debug_terms tms;
+   print "]"
+ end;
+
+val debug_type = Thm.debug_type
+fun debug_types tys =
+ let fun debug_types0 [] = ()
+       | debug_types0 (ty::tys) = (print ", ";
+                                   debug_type ty;
+                                   debug_types0 tys)
+     fun debug_types [] = ()
+       | debug_types (ty::tys)  = (debug_type ty;
+                                   debug_types0 tys)
+ in
+   print "[";
+   debug_types tys;
+   print "]"
+ end;
+
+fun debug_kind kd = Thm.debug_kind kd
+fun debug_kinds kds =
+ let fun debug_kinds0 [] = ()
+       | debug_kinds0 (kd::kds) = (print ", ";
+                                   debug_kind kd;
+                                   debug_kinds0 kds)
+     fun debug_kinds1 [] = ()
+       | debug_kinds1 (kd::kds) = (debug_kind kd;
+                                   debug_kinds0 kds)
+ in
+   print "[";
+   debug_kinds1 kds;
+   print "]"
+ end;
+
+
 (*---------------------------------------------------------------------------
     Translate a preterm to a term. Will "guess type variables"
     (assign names to type variables created during type inference),
@@ -567,13 +750,24 @@ fun to_term tm =
         fun cleanup tm = let
           open optmonad
           infix >> >-
-          val clean = Pretype.clean o Pretype.remove_made_links
+          val clean = (*Type.vacuum o*) Pretype.clean o Pretype.remove_made_links
+(*
+          fun clean ty = (print "\ncleaning type:\n  ";
+                          set_trace "kinds" 2;
+                          Pretype.print_pretype ty; print "\n";
+                          let val ty' = Pretype.clean (Pretype.remove_made_links ty)
+                          in print "to:\n  ";
+                             Pretype.print_pretype ty; print "\n";
+                             ty'
+                          end)
+*)
           fun prepare Ty =
               let val Ty' = if Pretype.do_beta_conv_types()
                             then Pretype.deep_beta_eta_ty Ty
                             else Ty
               in Pretype.replace_null_links Ty' >- (fn _ => return Ty')
               end
+          val _ = if not (is_debug()) then () else (print "\nto_term:\n"; set_trace "kinds" 2; print_preterm tm; print "\n")
         in
           case tm of
             Var{Name,Ty,...} => prepare Ty >- (fn Ty' =>
@@ -584,7 +778,13 @@ fun to_term tm =
                before the call to clean occurs. *)
           | Const{Name,Thy,Ty,...} =>
                 prepare Ty >- (fn Ty' =>
-                return (Term.mk_thy_const{Name=Name, Thy=Thy, Ty=clean Ty'}))
+                return (Term.mk_thy_const{Name=Name, Thy=Thy, Ty=clean Ty'})
+                             handle e as HOL_ERR _ =>
+                                (print ("ERROR in cleanup(Const) of "^Thy^"$"^Name^":\n");
+                                 set_trace "kinds" 2;
+                                 Pretype.print_pretype Ty'; print "\n";
+                                 print "Const type: "; debug_type (clean Ty'); print "\n";
+                                 Raise e))
           | Comb{Rator, Rand,...} => let
               val (f, args) = strip_pcomb tm
               open Term
@@ -598,6 +798,15 @@ fun to_term tm =
                   in
                     list_mk_comb(Term.subst inst res0,
                                  List.drop(args, length inst))
+                             handle e as HOL_ERR _ =>
+                                (print "ERROR in cleanup(Pattern):\n";
+                                 set_trace "kinds" 2;
+                                 print_preterm tm; print "\n";
+                                 print "Oper term: "; debug_term f_t; print "\n";
+                                 print "Arg terms: "; debug_terms args; print "\n";
+                                 print "Oper type: "; debug_type (type_of f_t); print "\n";
+                                 print "Arg types: "; debug_types (map type_of args); print "\n";
+                                 Raise e)
                   end
                 in
                   cleanup Ptm >- (fn f =>
@@ -606,7 +815,40 @@ fun to_term tm =
                 end
               | _ => cleanup f >- (fn f' =>
                      mmap cleanup args >- (fn args' =>
-                     return (list_mk_comb(f', args'))))
+                     return ((list_mk_comb(f', args'))
+                             handle e as HOL_ERR _ =>
+                                (let fun strip_fun_type ty = let val (d,r) = Type.dom_rng ty
+                                                                 val (ds,base) = strip_fun_type r
+                                                             in (d::ds,base)
+                                                             end handle HOL_ERR _ => ([],ty)
+                                     val (f_arg_tys,_) = strip_fun_type (type_of f')
+(**)
+                                     val arg1 = el 1 args'
+                                     val (o_tm,[mapf_tm,unit_tycmb]) = strip_comb arg1
+                                     val unit_tycmb_ty = type_of unit_tycmb
+                                     val _ = (print "unit_tycmb_ty: "; debug_type unit_tycmb_ty; print "\n")
+                                     val bad_a = fst(Type.dom_rng unit_tycmb_ty)
+                                     val (unit_tm,alpha_arg) = dest_tycomb unit_tycmb
+                                     val _ = (print "alpha_arg: "; debug_type alpha_arg; print "\n")
+                                     val unit_ty = type_of unit_tm
+                                     val _ = (print "unit_ty: "; debug_type unit_ty; print "\n")
+(**)
+                                 in
+                                 print "ERROR in cleanup:\n";
+                                 set_trace "kinds" 2;
+                                 debug_term f'; print " "; debug_terms args'; print "\n";
+                                 print "Oper type: "; debug_type (type_of f'); print "\n";
+                                 print "Oper dtypes: "; debug_types f_arg_tys; print "\n";
+                                 print "Arg types: "; debug_types (map type_of args'); print "\n";
+                                 print "Oper kind: "; print_prekind (Pretype.pkind_of(ptype_of f)); print "\n";
+                                 print "Oper dkinds: "; debug_kinds (map Type.kind_of f_arg_tys); print "\n";
+                                 print "Arg  dkinds: "; debug_kinds (map (Type.kind_of o type_of) args'); print "\n";
+                                 print "Arg kinds: "; (map (print_prekind o Pretype.pkind_of o ptype_of) args); print "\n";
+                                 print "Oper rank: "; print_prerank (Pretype.prank_of_type(ptype_of f)); print "\n";
+                                 print "Arg ranks: "; (map (print_prerank o Pretype.prank_of_type o ptype_of) args); print "\n";
+                                 Raise e
+                                 end))
+                     ))
             end
           | TyComb{Rator, Rand,...} => cleanup Rator >- (fn Rator'
                                   => prepare Rand >- (fn Rand'
@@ -622,10 +864,11 @@ fun to_term tm =
           | Overloaded _ => raise ERRloc "to_term" (locn tm)
                                          "applied to Overloaded"
           | Pattern{Ptm,...} => cleanup Ptm
-        end
+        end handle e as HOL_ERR _ => (print "ERROR in cleanup:\n"; print_preterm tm; print "\n"; Raise e)
         val K = kindVars tm
         val V = tyVars tm
         val ((newK,newV), result) = cleanup tm (K,V)
+                   handle e as HOL_ERR _ => (print "ERROR in to_term:\n"; print_preterm tm; print "\n"; Raise e)
         val guessed_kindvars = List.take(newK, length newK - length K)
         val guessed_vars = List.take(newV, length newV - length V)
         val _ =
@@ -697,20 +940,24 @@ fun remove_overloading_phase1 ptm =
       Constrained{Ptm = remove_overloading_phase1 Ptm, Ty = Ty, Locn = Locn}
 (*| Pattern{Ptm, Locn} => Pattern{Ptm = remove_overloading_phase1 Ptm, Locn = Locn}*) (* should this be here? *)
   | Overloaded{Name,Ty,Info,Locn} => let
-      val _ = over_print ("\nResolving overloaded "^Name^" of type\n"^Pretype.pretype_to_string Ty^"\n")
+      val _ = over_print ("\nResolving (phase1) overloaded "^Name^" of type\n"^Pretype.pretype_to_string Ty^"\n")
       fun testfn t = let
         open Term Pretype
         val possty = type_of t
         val fvs = free_vars t
-        val kdavds = map Kind.dest_var_kind (tmlist_kdvs fvs)
+        val kdavds = map (#1 o Kind.dest_var_kind) (tmlist_kdvs fvs)
         val avds = map (#1 o Type.dest_var_type) (tmlist_tyvs fvs)
         val pty0 = Pretype.fromType possty
-        val _ = over_print ("Testing possible type\n"^pretype_to_string pty0^"\n")
+        val _ = over_print ("Testing (phase1) possible type\n"^pretype_to_string pty0^"\n")
         val pty = Pretype.rename_typevars kdavds avds pty0
         val Ty1 = Pretype.reconcile_univ_types Ty pty
+        val _ = if not (is_debug()) then () else
+                print ("\nChecking (phase1) overloaded term " ^ Name ^ ":\n"
+                        ^ "Pattern type: " ^ Pretype.pretype_to_string Ty1 ^ "\n"
+                        ^ "Possibl type: " ^ Pretype.pretype_to_string pty ^ "\n")
         val res = Pretype.can_unify Ty1 pty
         val _ = over_print ("Attempted unification with type for "^Name^" ")
-        val _ = over_print ((if res then "succeeded" else "failed")^".\n")
+        val _ = over_print ((if res then "succeeded" else "failed")^".\n\n")
       in
         (*Pretype.can_unify Ty pty*) res
       end
@@ -731,18 +978,30 @@ fun remove_overloading_phase1 ptm =
         in
           if is_const t then let
               val {Ty = ty,Name,Thy} = dest_thy_const t
-              val pty = Pretype.rename_typevars [] [] (Pretype.fromType ty)
+              val pty0 = Pretype.fromType ty
+              val _ = over_print ("Testing (phase1) possible const type\n"^Pretype.pretype_to_string pty0^"\n")
+              val pty = Pretype.rename_typevars [] [] pty0
               val Ty1 = Pretype.reconcile_univ_types Ty pty
-              val _ = Pretype.unify pty Ty1
+              val _ = if not (is_debug()) then () else
+                print ("\nChecking (phase1) overloaded constant " ^ Name ^ ":\n"
+                        ^ "Pattern type: " ^ Pretype.pretype_to_string Ty1 ^ "\n"
+                        ^ "Possibl type: " ^ Pretype.pretype_to_string pty ^ "\n")
+              val _ = Pretype.unify Ty1 pty (* or Pretype.unify_le? *)
             in
               Const{Name=Name, Thy=Thy, Ty=pty, Locn=Locn}
             end
           else let
               val fvs = free_vars t
-              val kdavds = map Kind.dest_var_kind (tmlist_kdvs fvs)
+              val kdavds = map (#1 o Kind.dest_var_kind) (tmlist_kdvs fvs)
               val avds = map (#1 o Type.dest_var_type) (tmlist_tyvs fvs)
               val ptm = term_to_preterm kdavds avds t
-              val _ = Pretype.unify Ty (ptype_of ptm)
+              val pty = ptype_of ptm
+        val _ = if not (is_debug()) then () else
+                print ("\nChecking (phase1) overloaded non-constant:\n"
+                        ^ "Preterm of t: " ^ preterm_to_string ptm ^ "\n"
+                        ^ "Pattern type: " ^ Pretype.pretype_to_string Ty ^ "\n"
+                        ^ "Possibl type: " ^ Pretype.pretype_to_string pty ^ "\n")
+              val _ = Pretype.unify Ty pty (* or Pretype.unify_le? *)
             in
               Pattern{Ptm = ptm, Locn = Locn}
             end
@@ -771,6 +1030,12 @@ fun remove_overloading ptm = let
        Rator before Rand, Bvar before Body
      In accumulator style, that looks as below *)
   fun overloaded_subterms acc ptm =
+    let
+    in
+(*
+    if (is_debug()) then print ("\n?? overloading traversal on\n" ^ preterm_to_string ptm ^ "\n")
+          else ();
+*)
     case ptm of
       Overloaded x => x::acc
     | Comb{Rator, Rand, ...} =>
@@ -783,8 +1048,9 @@ fun remove_overloading ptm = let
         overloaded_subterms acc Body
     | Constrained{Ptm,...} => overloaded_subterms acc Ptm
     | _ => acc
+    end
   val overloads = overloaded_subterms [] ptm
-  val _ = if length overloads >= 30
+  val _ = if List.length overloads >= 30
           then HOL_WARNING "Preterm" "remove_overloading"
                            "many overloaded symbols in term: \
                            \overloading resolution might take a long time."
@@ -799,19 +1065,29 @@ fun remove_overloading ptm = let
             if is_const t then let
                 val {Ty = ty, Name = n, Thy = thy} = Term.dest_thy_const t
                 val pty0 = Pretype.fromType ty
+                val _ = over_print ("Trying possible const type\n"^Pretype.pretype_to_string pty0^"\n")
                 val pty  = Pretype.rename_typevars [] [] pty0
-                val Ty1 = Pretype.reconcile_univ_types Ty pty
+                val Ty1 = Pretype.reconcile_univ_types Ty pty (* may be unnecessary since came from term *)
+        val _ = if not (is_debug()) then () else
+                print ("\nTrying overloaded constant " ^ Name ^ ":\n\n"
+                        ^ "Pattern type: " ^ Pretype.pretype_to_string Ty1 ^ "\n\n"
+                        ^ "Possibl type: " ^ Pretype.pretype_to_string pty ^ "\n\n")
               in
                 unify pty Ty1 >>
                 return (Const{Name=n, Ty=Ty, Thy=thy, Locn=Locn})
               end
             else let
                 val fvs = free_vars t
-                val kdavds = map Kind.dest_var_kind (tmlist_kdvs fvs)
-                val avds = map (#1 o Type.dest_var_type) (tmlist_tyvs fvs)
+                val kdavds = List.map (#1 o Kind.dest_var_kind) (tmlist_kdvs fvs)
+                val avds = List.map (#1 o Type.dest_var_type) (tmlist_tyvs fvs)
                 val ptm = term_to_preterm kdavds avds t
                 val pty = ptype_of ptm
-                val Ty1 = Pretype.reconcile_univ_types Ty pty
+                val Ty1 = Pretype.reconcile_univ_types Ty pty (* may be unnecessary since came from term *)
+        val _ = if not (is_debug()) then () else
+                print ("\nTrying overloaded non-constant:\n"
+                        ^ "Preterm of t: " ^ preterm_to_string ptm ^ "\n"
+                        ^ "Pattern type: " ^ Pretype.pretype_to_string Ty1 ^ "\n"
+                        ^ "Possibl type: " ^ Pretype.pretype_to_string pty ^ "\n")
               in
                 unify pty Ty1 >>
                 return (Pattern{Ptm = ptm, Locn = Locn})
@@ -829,10 +1105,15 @@ fun do_overloading_removal ptm0 = let
   open seq
   val ptm = remove_overloading_phase1 ptm0
   val result = remove_overloading ptm ([],[],[])
-  fun apply_tsubst tsubst = app (fn (r, value) => r := (*Pretype.SOMEU*) value) tsubst
-  fun apply_krsubst subst = app (fn (r, value) => r := SOME value) subst
-  fun apply_subst(ksubst, rsubst, tsubst) =
-      (apply_tsubst tsubst; apply_krsubst ksubst; apply_krsubst rsubst)
+  fun clean_rsubst rs ((r, ord_value)::rest) =
+    if mem r rs then clean_rsubst rs rest
+                else (r, ord_value)::clean_rsubst (r::rs) rest
+    | clean_rsubst _ [] = []
+  fun apply_tsubst subst = app (fn (r, value) => r := (*Pretype.SOMEU*) value) subst
+  fun apply_ksubst subst = app (fn (r, value) => r := (*Prekind.SOMEK*) value) subst
+  fun apply_rsubst subst = app (fn (r, ord_value) => r := SOME ord_value) subst
+  fun apply_subst(rsubst, ksubst, tsubst) =
+      (apply_rsubst (clean_rsubst [] rsubst); apply_ksubst ksubst; apply_tsubst tsubst)
   fun do_csubst clist ptm =
     case clist of
       [] => (ptm, [])
@@ -840,6 +1121,10 @@ fun do_overloading_removal ptm0 = let
       in
         (* must take care to keep order of traversal same as traversal in
            overloaded_subterms above *)
+(*
+        if (is_debug()) then print ("\n?? overloading removal on\n" ^ preterm_to_string ptm ^ "\n")
+          else ();
+*)
         case ptm of
           Comb{Rator, Rand, Locn} => let
             (* Rator before Rand *)
@@ -872,7 +1157,14 @@ fun do_overloading_removal ptm0 = let
           in
             (Constrained{Ptm = Ptm', Ty = Ty, Locn = Locn}, clist')
           end
-        | Overloaded {Ty,...} => (Pretype.unify (ptype_of c) Ty; (c,cs))
+        | Overloaded {Ty,...} => let
+        val _ = if not (is_debug()) then () else
+                print ("\nDoing overloading removal:\n\n"
+                        ^ "Pattern type: " ^ Pretype.pretype_to_string Ty ^ "\n\n"
+                        ^ "Possibl type: " ^ Pretype.pretype_to_string (ptype_of c) ^ "\n\n")
+                                 in Pretype.unify (ptype_of c) Ty;
+                                    (c,cs)
+                                 end
         | _ => (ptm, clist)
       end
 in
@@ -880,7 +1172,7 @@ in
     NONE => raise ERRloc "do_overloading_removal" (locn ptm0)
                          "Couldn't find a sensible resolution for \
                          \overloaded constants"
-  | SOME ((env as (kenv,renv,tenv),clist),xs) =>
+  | SOME ((env as (renv,kenv,tenv),clist),xs) =>
       if not (!Globals.guessing_overloads)
          orelse !Globals.notify_on_tyvar_guess
       then
@@ -938,6 +1230,46 @@ fun overloading_resolution ptm =
  * actually very simple, given side-effecting unification.
  *---------------------------------------------------------------------------*)
 
+local
+  open Prekind Prerank Pretype
+  val zero = Zerorank
+  val inc  = Sucrank
+  val max  = mk_Maxrank
+
+(*
+fun check_zero_ty0 (Vartype(s,kd)) = kd
+  | check_zero_ty0 (Contype{Kind, ...}) = Kind
+  | check_zero_ty0 (TyApp(opr,arg)) = chase (check_zero_ty opr)
+  | check_zero_ty0 (ty as TyUniv _) = typ (prank_of0 ty) (* NOT check_zero_ty body *)
+  | check_zero_ty0 (TyAbst(Bvar,Body)) = check_zero_ty Bvar ==> check_zero_ty Body
+  | check_zero_ty0 (TyKindConstr{Ty,Kind}) = Kind
+  | check_zero_ty0 (TyRankConstr{Ty,Rank}) = check_zero_ty Ty
+  | check_zero_ty0 (UVar (ref (NONEU kd))) = kd
+  | check_zero_ty0 (UVar (ref (SOMEU ty))) = check_zero_ty ty
+and check_zero_ty (pty as PT(ty,locn)) = check_zero_ty0 ty
+*)
+in
+fun check_zero_ty pty = Prerank.eq zero (prank_of_type pty)
+fun check_zero tm = let 
+fun check_zero0 (Var{Ty, ...}) = false
+  | check_zero0 (Const{Ty, Name, ...}) = Name="!" andalso check_zero_ty Ty
+  | check_zero0 (Comb{Rator, Rand, ...}) = (check_zero1 Rator orelse check_zero1 Rand)
+  | check_zero0 (TyComb{Rator, Rand, ...}) = (check_zero1 Rator orelse check_zero_ty Rand)
+  | check_zero0 (Abs{Bvar,Body,...}) = (check_zero1 Bvar orelse check_zero1 Body)
+  | check_zero0 (TyAbs{Bvar,Body,...}) = (check_zero_ty Bvar orelse check_zero1 Body)
+  | check_zero0 (Constrained{Ty,Ptm,...}) = (check_zero_ty Ty orelse check_zero1 Ptm)
+  | check_zero0 (Antiq{Tm,...}) = false
+  | check_zero0 (Overloaded {Ty,...}) = check_zero_ty Ty
+  | check_zero0 (Pattern{Ptm,...}) = check_zero1 Ptm
+and check_zero1 tm =
+      check_zero0 tm (*andalso (print "\nFound Zero rank in:\n";
+                              print_preterm tm;
+                              print "\n";
+                              true)*)
+in check_zero1 tm
+end
+end;
+
 fun is_atom (Var _) = true
   | is_atom (Const _) = true
   | is_atom (Constrained{Ptm,...}) = is_atom Ptm
@@ -960,6 +1292,51 @@ fun list_mk_tycomb(tm,[]) = tm
 val univcomplain = ref true
 val _ = register_btrace ("Var of Universal Type Complaint", univcomplain)
 
+fun high_o (Const{Thy="combin", Name="o", Ty=Ty, ...}) =
+       current_trace "debug_type_inference" > 0 andalso
+          Prerank.leq (Prerank.Sucrank Prerank.Zerorank) (Pretype.prank_of_type Ty)
+  | high_o _ = false
+
+fun high_unit (Var{Name="unit", Ty=Ty, ...}) =
+       current_trace "debug_type_inference" > 0 andalso
+          Prerank.leq (Prerank.Sucrank Prerank.Zerorank) (Pretype.prank_of_type Ty)
+  | high_unit _ = false
+
+fun check_for_high_o (Const{Thy="combin", Name="o", Ty=Ty, ...}) =
+       if current_trace "debug_type_inference" > 0 andalso
+          Prerank.leq (Prerank.Sucrank Prerank.Zerorank) (Pretype.prank_of_type Ty)
+         then Raise (ERR "check_for_high_o"
+                ("found combin$o of rank " ^ Prerank.prerank_to_string(Pretype.prank_of_type Ty) ^
+                 " of type\n" ^ Pretype.pretype_to_string Ty ^ "\n"))
+         else ()
+  | check_for_high_o (Overloaded{Ty,...}) = ()
+(*
+       if current_trace "debug_type_inference" > 0 andalso
+          Prerank.leq (Prerank.Sucrank Prerank.Zerorank) (Pretype.prank_of_type Ty)
+         then Raise (ERR "check_for_high_o"
+                ("found overloaded combin$o of rank " ^ Prerank.prerank_to_string(Pretype.prank_of_type Ty) ^
+                 " of type\n" ^ Pretype.pretype_to_string Ty ^ "\n"))
+         else ()
+*)
+  | check_for_high_o (Comb{Rator,Rand,...}) = (check_for_high_o Rator; check_for_high_o Rand)
+  | check_for_high_o (TyComb{Rator,...}) = check_for_high_o Rator
+  | check_for_high_o (Abs{Bvar,Body,...}) = (check_for_high_o Bvar; check_for_high_o Body)
+  | check_for_high_o (TyAbs{Body,...}) = check_for_high_o Body
+  | check_for_high_o (Constrained{Ptm,...}) = check_for_high_o Ptm
+  | check_for_high_o (Pattern{Ptm,...}) = check_for_high_o Ptm
+  | check_for_high_o _ = ()
+
+fun check_for f (c as Const _) = f c
+  | check_for f (v as Var _) = f v
+  | check_for f (t as Overloaded{Ty,...}) = f t
+  | check_for f (Comb{Rator,Rand,...}) = (check_for f Rator orelse check_for f Rand)
+  | check_for f (TyComb{Rator,...}) = check_for f Rator
+  | check_for f (Abs{Bvar,Body,...}) = (check_for f Bvar orelse check_for f Body)
+  | check_for f (TyAbs{Body,...}) = check_for f Body
+  | check_for f (Constrained{Ptm,...}) = check_for f Ptm
+  | check_for f (Pattern{Ptm,...}) = check_for f Ptm
+  | check_for f _ = false
+
 local
   val op --> = Pretype.-->
   val op ==> = Prekind.==>
@@ -974,8 +1351,7 @@ fun TC printers = let
           let val kdprint = z
               fun typrint ty =
                   if Type.is_con_type ty
-                  then (y ty ^ " " ^ z (Type.kind_of ty)
-                             ^ " :<= " ^ Int.toString (Type.rank_of ty))
+                  then (y ty ^ " " ^ z (Type.kind_of ty))
                   else y ty
               fun tmprint tm = x tm
                 (*if Term.is_const tm
@@ -985,7 +1361,7 @@ fun TC printers = let
             (tmprint, typrint, kdprint)
           end
         | NONE => (default_tmprinter, default_typrinter, default_kdprinter)
-  fun prk rk = Int.toString rk
+  val prk = Rank.rank_to_string
   (* ptype_of should only be applied to preterms which have been checked. *)
   fun ptype_of (Var{Ty, ...}) = Ty
     | ptype_of (Const{Ty, ...}) = Ty
@@ -1045,7 +1421,7 @@ fun TC printers = let
        let open Pretype
            val ty = deep_beta_eta_ty (ptype_of tm)
            val (bvars,body) = strip_univ_type ty
-           val args = map (fn bvar => new_uvar(pkind_of bvar,Prerank.new_uvar())) bvars
+           val args = map (fn bvar => new_uvar(pkind_of bvar)) bvars
        in list_mk_tycomb(tm, args)
        end
   fun check(Comb{Rator, Rand, Locn}) =
@@ -1061,9 +1437,9 @@ fun TC printers = let
           else
              (if not (!univcomplain) then () else
               (* Test if Rator is a var with universal type but no constraint *)
-              let val Var {Name, Ty, Locn} = Rand'
+              let val {Name, Ty, Locn} = dest_var Rand'
                   open Pretype
-                  val PT(UVar (r as ref (NONEU (kd,rk))),tylocn) = the_var_type Rand_ty
+                  val PT(UVar (r as ref (NONEU _)),tylocn) = the_var_type Rand_ty
                   val dom_ty = #1 (dom_rng Rator_ty)
                   fun is_uvar_type(PT(UVar r,loc)) = true
                     | is_uvar_type _ = false
@@ -1076,7 +1452,59 @@ fun TC printers = let
                            " should have its universal type indicated by a type constraint.")
               end handle _ => ();
               (* end of test to warn if var with universal type but no constraint *)
-              Pretype.unify Rator_ty (Rand_ty --> Pretype.all_new_uvar());
+              if not (is_debug()) then () else
+                print ("\n(Checking application:\n" ^ preterm_to_string Rator ^ "\napplied to\n"
+                        ^ preterm_to_string Rand ^ "\n"
+                        ^ "Types: rator:\n" ^ Pretype.pretype_to_string Rator_ty ^ "\n"
+                        ^ "   to: rand :\n" ^ Pretype.pretype_to_string Rand_ty ^ "\n");
+              (**)if Pretype.is_fun_type Rator_ty (* optimize; cut out unnecessary unifications *)
+              then Pretype.unify_le Rand_ty (* :<=: *) (fst (Pretype.dom_rng Rator_ty))
+              else(**) Pretype.unify_le (Rand_ty --> Pretype.all_new_uvar())
+                                                  (* Pretype.new_uvar(Prekind.new_uvar(
+                                                       Pretype.prank_of_type Rator_ty)) *)
+                              (* :<=: *) Rator_ty;
+              if not (is_debug()) then () else
+                print ("\n)Checked application:\n" ^ preterm_to_string Rator ^ "\napplied to\n"
+                        ^ preterm_to_string Rand ^ "\n"
+                        ^ "Types: rator:\n" ^ Pretype.pretype_to_string Rator_ty ^ "\n"
+                        ^ "   to: rand :\n" ^ Pretype.pretype_to_string Rand_ty ^ "\n");
+              if check_for high_o Rator' andalso
+                 check_for high_unit Rand'
+              then (let val c_o = rator Rator'
+                        val c_o_ty = ptype_of c_o
+                        val c_o_kd = Pretype.pkind_of c_o_ty
+                        val c_o_rk = Prekind.prank_of c_o_kd
+                        val unit_ty = ptype_of Rand'
+                        val unit_kd = Pretype.pkind_of unit_ty
+                        val unit_rk = Prekind.prank_of unit_kd
+                    in
+                      Globals.show_types := true;
+                      set_trace "kinds" 2;
+                      print "\nVIOLATION\n\n";
+                      print_preterm (Comb{Rator=Rator', Rand=Rand', Locn=Locn});
+                      print "\n";
+                      print "\ncombin$o :\n\n";
+                      print_preterm c_o;
+                      print "\n";
+                      print "\ntype of combin$o :\n\n";
+                      Pretype.print_pretype c_o_ty;
+                      print "\n";
+                      print "\nkind of type of combin$o :\n\n";
+                      Prekind.print_prekind c_o_kd;
+                      print "\n";
+                      print "\nunit :\n\n";
+                      print_preterm Rand';
+                      print "\n";
+                      print "\ntype of unit :\n\n";
+                      Pretype.print_pretype unit_ty;
+                      print "\n";
+                      print "\nkind of type of unit :\n\n";
+                      Prekind.print_prekind unit_kd;
+                      print "\n";
+                      Raise (ERR "check_for_high_o_high_unit"
+                                 ("found high combin$o and a high unit as well"))
+                    end)
+              else ();
               Comb{Rator=Rator', Rand=Rand', Locn=Locn})
              handle (e as Feedback.HOL_ERR{origin_structure="Pretype",
                                            origin_function="unify",message})
@@ -1115,6 +1543,10 @@ fun TC printers = let
        end)
     | check(TyComb{Rator, Rand, Locn}) =
          (let val Rator' = check Rator
+              val _ = if not (is_debug()) then () else
+                print ("\nChecking application of term to type:\n" ^ preterm_to_string Rator ^ " applied to\n"
+                        ^ Pretype.pretype_to_string Rand ^ "\n"
+                        ^ "Checking kind of type:\n")
               val _  = checkkind Rand
               val Rator_ty = ptype_of Rator'
           in
@@ -1130,10 +1562,9 @@ fun TC printers = let
 *)
                                      val Rator_str = " (" ^ preterm_to_string Rator' ^ ")" handle HOL_ERR _ => ""
                                      val s = "'a"
-                                     val kd = Prekind.new_uvar()
-                                     val rk = Prerank.new_uvar()
-                                     val bvar = Pretype.PT(Pretype.Vartype(s,kd,rk),locn.Loc_None) (* choose either this or next line *)
-                                     (*val bvar = new_uvar(kd,rk)*)
+                                     val kd = Prekind.all_new_uvar() (* new_var_uvar() *)
+                                     val bvar = Pretype.PT(Pretype.Vartype(s,kd),locn.Loc_None) (* choose either this or next line *)
+                                     (*val bvar = new_uvar kd*)
                                      val body = Pretype.mk_app_type(Pretype.all_new_uvar(), bvar)
                                      val univ_ty = Pretype.mk_univ_type(bvar, body)
                                  in (* if not (!univcomplain) then () else
@@ -1146,8 +1577,19 @@ fun TC printers = let
                                     (bvar,body)
                                  end
           in
-             Prekind.unify (Pretype.pkind_of Rand) (Pretype.pkind_of bvar);
-             Prerank.unify_le (Pretype.prank_of Rand) (* <= *) (Pretype.prank_of bvar);
+             if not (is_debug()) then () else
+                print ("\nChecking application of term to type:\n" ^ preterm_to_string Rator ^ " applied to\n"
+                        ^ Pretype.pretype_to_string Rand ^ " to be :<=:\n"
+                        ^ "Kind of rand : " ^ Pretype.pretype_to_string Rand ^ "  where\n"
+                        ^ "Type of term : " ^ Pretype.pretype_to_string Rator_ty ^ "\n"
+                        ^ "Kind of above: " ^ Prekind.prekind_to_string (Pretype.pkind_of Rator_ty) ^ "\n");
+             Prekind.unify_le (Pretype.pkind_of Rand) (* :<=: *) (Pretype.pkind_of bvar);
+             if not (is_debug()) then () else
+                print ("\nChecked application of term to type:\n" ^ preterm_to_string Rator ^ " applied to\n"
+                        ^ Pretype.pretype_to_string Rand ^ " to be :<=:\n"
+                        ^ "Kind of rand : " ^ Pretype.pretype_to_string Rand ^ "  where\n"
+                        ^ "Type of term : " ^ Pretype.pretype_to_string Rator_ty ^ "\n"
+                        ^ "Kind of above: " ^ Prekind.prekind_to_string (Pretype.pkind_of Rator_ty) ^ "\n");
              TyComb{Rator=Rator', Rand=Rand, Locn=Locn}
           end
        handle (e as Feedback.HOL_ERR{origin_structure="Pretype",
@@ -1242,7 +1684,7 @@ fun TC printers = let
 
                        if Type.is_univ_type Rator_ty then
                            "whose argument must have rank <= " ^
-                           prk(Type.rank_of (#1 (Type.dest_univ_type Rator_ty))) ^ "\n\n"
+                           prk(Type.rank_of_type (#1 (Type.dest_univ_type Rator_ty))) ^ "\n\n"
                        else "which is not a universal type\n\n",
                        if (is_atom Rator') then ""
                        else ("which has type\n\n" ^
@@ -1253,7 +1695,7 @@ fun TC printers = let
 
                        if (Pretype.is_atom Rand) then ""
                        else ("which has rank\n\n" ^
-                             prk(Type.rank_of Rand_ty) ^ "\n\n"),
+                             prk(Type.rank_of_type Rand_ty) ^ "\n\n"),
 
                        "rank unification failure message: ", message, "\n"]
           in
@@ -1264,12 +1706,27 @@ fun TC printers = let
             raise ERRloc"typecheck" (rand_locn (* arbitrary *)) "failed"
           end
           end)
-    | check (  Abs{Bvar, Body, Locn}) = let val Bvar' = check Bvar
+    | check (  Abs{Bvar, Body, Locn}) = let 
+                                            val _ = if not (is_debug()) then () else
+                print ("\nChecking abstraction of term by term variable: (1/2) bound variable:\n"
+                        ^ preterm_to_string Bvar ^ "\n")
+                                            val Bvar' = check Bvar
+                                            val _ = if not (is_debug()) then () else
+                print ("\nChecking abstraction of term by term variable: (2/2) body:\n"
+                        ^ preterm_to_string Body ^ "\n")
                                             val Body' = check Body
                                          in Abs{Bvar=Bvar', Body=Body', Locn=Locn}
                                         end
-    | check (TyAbs{Bvar, Body, Locn}) = let val _ = checkkind Bvar
+    | check (TyAbs{Bvar, Body, Locn}) = let
+                                            val _ = if not (is_debug()) then () else
+                print ("\nChecking abstraction of term by type variable: (1/2):\n"
+                        ^ "Checking kind of type variable:\n"
+                        ^ Pretype.pretype_to_string Bvar ^ "\n")
+                                            val _ = checkkind Bvar
                                             val Bvar' = Pretype.the_var_type Bvar
+                                            val _ = if not (is_debug()) then () else
+                print ("\nChecking abstraction of term by type variable: (2/2) body:\n"
+                        ^ preterm_to_string Body ^ "\n")
                                             val Body' = check Body
                                          in if mem Bvar' (Pretype.type_varsl (map ptype_of (free_vars Body)))
                                             then raise ERRloc "typecheck.TyAbs" Locn
@@ -1277,7 +1734,22 @@ fun TC printers = let
                                             else TyAbs{Bvar=Bvar, Body=Body', Locn=Locn}
                                         end
     | check (v as Var {Name, Ty, Locn}) =
-       ((checkkind Ty; Prekind.unify (Pretype.pkind_of Ty) Prekind.typ;
+       ((if not (is_debug()) then () else
+                print ("\nChecking type of term var " ^ Name ^ ":\n"
+                        ^ "  " ^ Pretype.pretype_to_string Ty ^ "\n");
+         checkkind Ty;
+         if not (is_debug()) then () else
+                print ("\nChecked type of term var " ^ Name ^ ":\n"
+                        ^ "  " ^ Pretype.pretype_to_string Ty ^ "\n");
+(*
+         if not (is_debug()) then () else
+                print ("\nChecking kind of type of " ^ Name ^ " has kind ty.\n");
+*)
+         Prekind.unify (Pretype.pkind_of Ty) (Prekind.typ (Prerank.new_uvar()));
+(*
+         if not (is_debug()) then () else
+                print ("\nChecked kind of type of " ^ Name ^ " has kind ty.\n");
+*)
          v)
        handle (e as Feedback.HOL_ERR{origin_structure="Prekind",
                                      origin_function="unify",message})
@@ -1300,7 +1772,7 @@ fun TC printers = let
 
                        "which has kind\n\n", pkd(Type.kind_of real_type), "\n\n",
 
-                       "but the type of a term must have kind ", pkd Kind.typ, "\n\n",
+                       "but the type of a term must have kind ", pkd (Kind.typ Rank.rho), "\n\n",
 
                        "kind unification failure message: ", message, "\n"]
           in
@@ -1310,7 +1782,23 @@ fun TC printers = let
             raise ERRloc"kindcheck" (pty_locn Ty (* arbitrary *)) "failed"
           end)
     | check (c as Const {Name, Thy, Ty, Locn}) =
-       ((checkkind Ty; Prekind.unify (Pretype.pkind_of Ty) Prekind.typ; c)
+       ((if not (is_debug()) then () else
+                print ("\nChecking type of term const " ^ Name ^ ":\n"
+                        ^ "  " ^ Pretype.pretype_to_string Ty ^ "\n");
+         checkkind Ty;
+         if not (is_debug()) then () else
+                print ("\nChecked type of term const " ^ Name ^ ":\n"
+                        ^ "  " ^ Pretype.pretype_to_string Ty ^ "\n");
+(*
+         if not (is_debug()) then () else
+                print ("\nChecking kind of type of " ^ Name ^ " has kind ty.\n");
+*)
+         Prekind.unify (Pretype.pkind_of Ty) (Prekind.typ (Prerank.new_uvar()));
+(*
+         if not (is_debug()) then () else
+                print ("\nChecked kind of type of " ^ Name ^ " has kind ty.\n");
+*)
+         c)
        handle (e as Feedback.HOL_ERR{origin_structure="Prekind",
                                      origin_function="unify",message})
        => let val show_kinds = Feedback.get_tracefn "kinds"
@@ -1333,7 +1821,7 @@ fun TC printers = let
 
                        "which has kind\n\n", pkd(Type.kind_of real_type), "\n\n",
 
-                       "but the type of a term must have kind ", pkd Kind.typ, "\n\n",
+                       "but the type of a term must have kind ", pkd (Kind.typ Rank.rho), "\n\n",
 
                        "kind unification failure message: ", message, "\n"]
           in
@@ -1343,8 +1831,12 @@ fun TC printers = let
             raise ERRloc"kindcheck" (pty_locn Ty (* arbitrary *)) "failed"
           end)
     | check (Constrained{Ptm,Ty,Locn}) =
-        (checkkind Ty;
-         Prekind.unify (Pretype.pkind_of Ty) Prekind.typ
+        (if is_debug() then print ("\nChecking type constraint of term:\n" ^
+                                   Pretype.pretype_to_string Ty ^ "\n") else ();
+         checkkind Ty;
+         if is_debug() then print ("\nChecking type constraint of term has kind ty:\n" ^
+                                   Pretype.pretype_to_string Ty ^ "\n") else ();
+         Prekind.unify (Pretype.pkind_of Ty) (Prekind.typ (Prerank.new_uvar()))
          handle (e as Feedback.HOL_ERR{origin_structure="Prekind",
                                        origin_function="unify",message})
        => let val show_kinds = Feedback.get_tracefn "kinds"
@@ -1368,7 +1860,7 @@ fun TC printers = let
 
                        "which has kind\n\n", pkd(Type.kind_of real_type), "\n\n",
 
-                       "but the type of a term must have kind ", pkd Kind.typ, "\n\n",
+                       "but the type of a term must have kind ", pkd (Kind.typ Rank.rho), "\n\n",
 
                        "kind unification failure message: ", message, "\n"]
           in
@@ -1377,12 +1869,16 @@ fun TC printers = let
             last_tcerror := SOME (ConstrainKindFail(real_term, real_type), ty_locn);
             raise ERRloc"kindcheck" (pty_locn Ty (* arbitrary *)) "failed"
           end;
+          if is_debug() then print ("\nChecking term that has type constraint:\n" ^
+                                   preterm_to_string Ptm ^ "\n") else ();
          let val Ptm' = check Ptm
              val Ptm_ty = Pretype.deep_beta_eta_ty (ptype_of Ptm')
          in if Pretype.is_univ_type Ptm_ty andalso Pretype.is_not_univ_type Ty then
                check (Constrained{Ptm=mk_not_tyabs Ptm', Ty=Ty, Locn=Locn})
             else
-               (Pretype.unify Ptm_ty Ty;
+               (if is_debug() then print ("\nChecking term has same type as type constraint:\n")
+                              else ();
+                Pretype.unify Ptm_ty Ty;
                 Constrained{Ptm=Ptm', Ty=Ty, Locn=Locn})
        handle (e as Feedback.HOL_ERR{origin_structure="Pretype",
                                      origin_function="unify",message})
@@ -1411,12 +1907,38 @@ fun TC printers = let
             raise ERRloc"typecheck" Locn message
           end
          end)
+    | check (tm as Overloaded{Name,Ty,Info,Locn}) =
+        (if is_debug() then print ("\nChecking overloaded term " ^ Name ^ "'s type:\n"
+                                      ^ Pretype.pretype_to_string Ty ^ "\n") else ();
+         checkkind Ty;
+         if is_debug() then print ("\nChecked  overloaded term " ^ Name ^ "'s type:\n"
+                                      ^ Pretype.pretype_to_string Ty ^ "\n") else ();
+         tm
+        )
+    | check (tm as Pattern{Ptm,Locn}) =
+        (if is_debug() then print ("\nChecking pattern term:\n") else ();
+         let val Ptm' = check Ptm
+         in
+           if is_debug() then print ("\nChecked  pattern term:\n") else ();
+           Pattern{Ptm = Ptm', Locn = Locn}
+         end
+        )
+(*
+    | check tm = (if not (is_debug()) then ()
+                          else print "<<< otherwise term pattern\n";
+                        let val tm' = tm
+                        in if not (is_debug()) then ()
+                             else print (">>> " ^ preterm_to_string tm' ^ "\n");
+                           tm'
+                         end)
+*)
     | check tm = tm
 in
   check
 end
 end (* local *)
 
+(**)
 fun evade_free_tvs tm =
 (*   inst (map (fn tv => (Pretype.all_new_uvar() |-> tv)) (type_vars_in_term tm)) tm *)
   let val dbvs = Pretype.distinguish_btyvars
@@ -1453,10 +1975,11 @@ fun evade_free_tvs tm =
                    Overloaded{Name=Name,Ty=dbvs cx Ty,Info=Info,Locn=Locn}
   in evad (type_vars_in_term tm) tm
   end
-        
+(**)
+
 
 fun typecheck_phase1 pfns ptm =
-    TC pfns (evade_free_tvs ptm)
+    TC pfns (*ptm*) (**) (evade_free_tvs ptm) (**)
     handle phase1_exn(l,s,ty) => let
            in
              case pfns of
@@ -1472,9 +1995,11 @@ fun typecheck_phase1 pfns ptm =
 val post_process_term = ref (I : term -> term);
 
 fun typecheck pfns ptm0 = let
-  val ptm0' = TC pfns (evade_free_tvs ptm0)
-  val ptm1 = overloading_resolution0 ptm0'
-  val ptm = TC pfns ptm1
+  val ptm1 = TC pfns (*ptm0*) (**) (evade_free_tvs ptm0) (**)
+  val _ = if not (is_debug()) then () else
+           (print "\n=== End of Parsing Pass 1; Beginning of Pass 2 ===\n")
+  val ptm2 = overloading_resolution0 ptm1
+  val ptm = TC pfns ptm2
 in
   !post_process_term (remove_case_magic (to_term ptm))
 end handle phase1_exn(l,s,ty) =>

@@ -361,8 +361,10 @@ fun ID_SPEC_TAC x :tactic = fn (asl,w) =>
     ([(asl, mk_forall(x, w))], sing (SPEC x))
     handle HOL_ERR _ => raise ERR "ID_SPEC_TAC" "";
 
+(* Impossible tactic if ty is not a type var,
+   subst_type (in place of inst) is invalid. *)
 fun TY_SPEC_TAC (ty,a) :tactic = fn (asl,w) =>
-    ([(asl, mk_tyforall(a, subst_type[ty |-> a] w))],
+    ([(asl, mk_tyforall(a, inst[ty |-> a] w))],
      fn [th] => TY_SPEC ty th)
     handle HOL_ERR _ => raise ERR "TY_SPEC_TAC" "";
 
@@ -833,6 +835,7 @@ fun MATCH_MP_TAC thm :tactic = let
                         (FVL [concl thm] empty_tmset, hyp_frees thm)
   val hyptyvars    = HOLset.listItems (hyp_tyvars thm)
   val hypkdvars    = HOLset.listItems (hyp_kdvars thm)
+  val hyprkvars    = Term.has_var_rankl (hyp thm)
   val (gvs,imp)    = strip_all_forall (concl thm)
   val (ant,conseq) = with_exn dest_imp imp
                               (ERR "MATCH_MP_TAC" "Not an implication")
@@ -844,7 +847,7 @@ fun MATCH_MP_TAC thm :tactic = let
 in
 fn (A,g) =>
    let val (vs,gl) = strip_all_forall g
-       val ins     = kind_match_terml hypkdvars hyptyvars lconsts con gl
+       val ins     = kind_match_terml hyprkvars hypkdvars hyptyvars lconsts con gl
            handle HOL_ERR _ => raise ERR "MATCH_MP_TAC" "No match"
        val ith     = INST_ALL ins th2
        val gth     = TY_TM_GENL vs (UNDISCH ith)

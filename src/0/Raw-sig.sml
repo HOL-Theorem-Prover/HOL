@@ -9,6 +9,7 @@ sig
   type term     = KernelTypes.term
   type hol_type = KernelTypes.hol_type
   type kind     = KernelTypes.kind
+  type rank     = KernelTypes.rank
   type 'a set   = 'a HOLset.set
 
   val tag           : thm -> tag
@@ -29,8 +30,10 @@ sig
   val DISCH         : term -> thm -> thm
   val MP            : thm -> thm -> thm
   val SUBST         : (term,thm)Lib.subst -> term -> thm -> thm
-  val INST_RANK     : int -> thm -> thm
+  val INST_RANK     : rank -> thm -> thm
+  val PURE_INST_KIND: (kind,kind)Lib.subst -> thm -> thm
   val INST_KIND     : (kind,kind)Lib.subst -> thm -> thm
+  val PURE_INST_TYPE: (hol_type,hol_type)Lib.subst -> thm -> thm
   val INST_TYPE     : (hol_type,hol_type)Lib.subst -> thm -> thm
   val ALPHA         : term -> term -> thm
   val MK_COMB       : thm * thm -> thm
@@ -42,6 +45,9 @@ sig
   val EQ_MP         : thm -> thm -> thm
   val EQ_IMP_RULE   : thm -> thm * thm
   val INST          : (term,term)Lib.subst -> thm -> thm
+  val INST_ALL      : (term,term)Lib.subst * (hol_type,hol_type)Lib.subst
+                       * (kind,kind)Lib.subst * rank
+                      -> thm -> thm
   val SPEC          : term -> thm -> thm
   val GEN           : term -> thm -> thm
   val GENL          : term list -> thm -> thm
@@ -76,6 +82,7 @@ sig
   val disk_thm      : hol_type vector -> term vector
                        -> string list * 'a Portable.frag list list
                                       * 'a Portable.frag list -> thm
+  val debug_kind    : kind -> unit
   val debug_type    : hol_type -> unit
   val debug_term    : term -> unit
 end;

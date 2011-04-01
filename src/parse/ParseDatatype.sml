@@ -22,6 +22,7 @@ struct
 type prekind = Prekind.prekind
 type prerank = Prerank.prerank
 type kind = Kind.kind
+type rank = Kind.rank
 type hol_type = Type.hol_type
 
 open Portable Feedback optmonad;
@@ -37,14 +38,14 @@ datatype kcheck_error =
          TyAppFail of hol_type * hol_type
        | TyUnivFail of hol_type
        | TyKindConstrFail of hol_type * kind
-       | TyRankConstrFail of hol_type * int
-       | TyRankLEConstrFail of hol_type * int
+       | TyRankConstrFail of hol_type * rank
+       | TyRankLEConstrFail of hol_type * rank
 
 val last_kcerror : kcheck_error option ref = ref NONE
 
 datatype pretype
-   = dVartype of string * prekind * prerank
-   | dContype of {Thy : string option, Tyop : string, Kind : prekind, Rank : prerank}
+   = dVartype of string * prekind
+   | dContype of {Thy : string option, Tyop : string, Kind : prekind}
    | dTyApp  of pretype * pretype
    | dTyUniv of pretype * pretype
    | dTyAbst of pretype * pretype
@@ -65,9 +66,9 @@ type AST = string * datatypeForm
 (*
 fun pretypeToType pty =
   case pty of
-    dVartype (s,kd,rk) => Type.mk_var_type (s, Prekind.toKind kd, Prerank.toRank rk)
-  | dContype {Thy=SOME Thy,Tyop,Kind,Rank} => Type.mk_thy_con_type {Thy=Thy, Tyop=Tyop, Kind=Kind, Rank=Rank}
-  | dContype {Thy=NONE,    Tyop,Kind,Rank} => Type.mk_con_type Tyop
+    dVartype (s,kd) => Type.mk_var_type (s, Prekind.toKind kd)
+  | dContype {Thy=SOME Thy,Tyop,Kind} => Type.mk_thy_con_type {Thy=Thy, Tyop=Tyop, Kind=Kind}
+  | dContype {Thy=NONE,    Tyop,Kind} => Type.mk_con_type Tyop
   | dTyApp  (opr,arg)   => Type.mk_app_type(pretypeToType opr, pretypeToType arg)
   | dTyUniv (bvar,body) => Type.mk_univ_type(pretypeToType bvar, pretypeToType body)
   | dTyAbst (bvar,body) => Type.mk_abs_type (pretypeToType bvar, pretypeToType body)
@@ -98,29 +99,29 @@ fun strip_dTyApp ty =
 (* returns a list of strings, names of all kind variables mentioned *)
 fun kindvars ty =
   case ty of
-    dVartype (_, kd, _) => Prekind.kindvars kd
+    dVartype (_, kd) => Prekind.kindvars kd
   | dContype{Kind=Kind, ...} => Prekind.kindvars Kind
   | dTyApp (ty1, ty2) => Lib.union (kindvars ty1) (kindvars ty2)
   | dTyUniv (tyv, ty) => Lib.union (kindvars tyv) (kindvars ty)
   | dTyAbst (tyv, ty) => Lib.union (kindvars tyv) (kindvars ty)
   | dTyKindConstr {Ty,Kind} => Lib.union (kindvars Ty) (Prekind.kindvars Kind)
   | dTyRankConstr {Ty,... } => kindvars Ty
-  | dAQ (Ty) => map Kind.dest_var_kind (Type.kind_vars Ty)
+  | dAQ (Ty) => map (#1 o Kind.dest_var_kind) (Type.kind_vars Ty)
 
 (* returns a list of strings, names of all type variables mentioned *)
 local
-fun app_tri f g (x,y,z) = (x, f y, g z)
+fun app_duo f (x,y) = (x, f y)
 in
 fun tyvars ty =
   case ty of
-    dVartype (v as (s, kd, rk)) => [v]
+    dVartype (v as (s, kd)) => [v]
   | dContype s => []
   | dTyApp (ty1, ty2) => Lib.union (tyvars ty1) (tyvars ty2)
   | dTyUniv (tyv, ty) => Lib.subtract (tyvars ty) (tyvars tyv)
   | dTyAbst (tyv, ty) => Lib.subtract (tyvars ty) (tyvars tyv)
   | dTyKindConstr {Ty,...} => tyvars Ty
   | dTyRankConstr {Ty,...} => tyvars Ty
-  | dAQ (Ty) => map ((app_tri Prekind.fromKind Prerank.fromRank) o Type.dest_var_type)
+  | dAQ (Ty) => map ((app_duo Prekind.fromKind) o Type.dest_var_type)
                     (Type.type_vars Ty)
 end
 
@@ -145,14 +146,16 @@ fun ast_deftypes (str,form) = [str]
 fun asts_deftypes asts = list_union ast_deftypes asts
 
 
+(*
 fun kind_rank_to_string (kd,rk) =
     if current_trace "kinds" = 0 then "" else
       let open Prekind Prerank
-      in   (if prekind_compare(kd,typ) = EQUAL
+      in   (if prekind_compare(kd,typ Zerorank) = EQUAL
             then "" else ":" ^ prekind_to_string kd)
          ^ (if prerank_compare(rk,Zerorank) = EQUAL
             then "" else ":<=" ^ prerank_to_string rk)
       end
+*)
 
 datatype pp_pty_state = none | left | right
 
@@ -161,8 +164,8 @@ fun pp_pretype pps ty =
      val {add_string,add_break,begin_block,end_block,...} = with_ppstream pps
      fun pppretype state ty =
        case ty of
-           dVartype(s,kd,rk) => add_string ("V(" ^ s ^ kind_rank_to_string(kd,rk) ^ ")")
-         | dContype {Thy, Tyop, Kind, Rank} =>
+           dVartype(s,kd) => add_string ("V(" ^ s ^ Prekind.prekind_to_string kd ^ ")")
+         | dContype {Thy, Tyop, Kind} =>
               (case Thy of
                   SOME Thy' => if Thy' = "bool" orelse Thy' = "min" then
                                                  add_string Tyop
@@ -242,7 +245,7 @@ fun pp_pretype pps ty =
                                pppretype none Ty;
                                add_string " :<=";
                                add_break(1,2);
-                               add_string (Int.toString(Prerank.toRank Rank));
+                               add_string (Rank.rank_to_string(Prerank.toRank Rank));
                                end_block())
          | dAQ (ty) => Parse.pp_type pps ty
  in
@@ -256,16 +259,15 @@ fun print_pretype ty = Portable.output(Portable.std_out, pretype_to_string ty);
 local open Type
 in
 fun fromType t =
-  if is_vartype t then let
-      val (str, kd, rk) = dest_var_type t
+  if is_var_type t then let
+      val (str, kd) = dest_var_type t
     in
-      dVartype (str, Prekind.fromKind kd, Prerank.fromRank rk)
+      dVartype (str, Prekind.fromKind kd)
     end
   else if is_con_type t then let
-      val {Thy, Tyop, Kind, Rank} = dest_thy_con_type t
+      val {Thy, Tyop, Kind} = dest_thy_con_type t
     in
       dContype {Kind=Prekind.fromKind Kind,
-                Rank=Prerank.fromRank Rank,
                 Thy=SOME Thy, Tyop=Tyop}
     end
   else if is_app_type t then let
@@ -291,11 +293,9 @@ end
 
 fun remove_made_links ty =
   case ty of
-    dVartype(s,kd,rk) => dVartype(s, Prekind.remove_made_links kd,
-                                     Prerank.remove_made_links rk)
-  | dContype {Thy, Tyop, Kind, Rank} =>
-      dContype {Kind=Prekind.remove_made_links Kind, Thy=Thy, Tyop=Tyop,
-                  Rank=Prerank.remove_made_links Rank}
+    dVartype(s,kd) => dVartype(s, Prekind.remove_made_links kd)
+  | dContype {Thy, Tyop, Kind} =>
+      dContype {Kind=Prekind.remove_made_links Kind, Thy=Thy, Tyop=Tyop}
   | dTyApp(ty1, ty2) => dTyApp (remove_made_links ty1, remove_made_links ty2)
   | dTyUniv(tyv, ty) => dTyUniv(remove_made_links tyv, remove_made_links ty)
   | dTyAbst(tyv, ty) => dTyAbst(remove_made_links tyv, remove_made_links ty)
@@ -307,9 +307,9 @@ fun remove_made_links ty =
 
 val tyvariant = Lexis.gen_variant Lexis.tyvar_vary
 
-fun kind_replace_null_links kd (kenv,tenv) =
-    let val (kenv', result) = Prekind.replace_null_links kd kenv
-    in ((kenv',tenv), result)
+fun kind_replace_null_links kd (renv,kenv,tenv) =
+    let val ((renv',kenv'), result) = Prekind.replace_null_links kd (renv,kenv)
+    in ((renv',kenv',tenv), result)
     end
 
 (* eta-expansion (see "env" after end below) *is* necessary *)
@@ -321,8 +321,8 @@ in
   | dTyAbst (tyv, ty) => replace_null_links tyv >> replace_null_links ty >> ok
   | dTyKindConstr {Ty,Kind} => replace_null_links Ty >> kind_replace_null_links Kind >> ok
   | dTyRankConstr {Ty,Rank} => replace_null_links Ty >> ok
-  | dVartype (s,kd,rk) => kind_replace_null_links kd
-  | dContype {Thy,Tyop,Kind,Rank} => kind_replace_null_links Kind
+  | dVartype (s,kd) => kind_replace_null_links kd
+  | dContype {Thy,Tyop,Kind} => kind_replace_null_links Kind
   | dAQ (Ty) => ok
 end env
 
@@ -332,22 +332,22 @@ val list_mk_arrow_kind = Prekind.list_mk_arrow_kind
 
 fun clean deftys params pty =
 let val pkinds = map #2 params
-    val par_types = map (fn (s,kd,rk) => Type.mk_var_type(s, Prekind.toKind kd, Prerank.toRank rk)) params
+    val par_types = map (fn (s,kd) => Type.mk_var_type(s, Prekind.toKind kd)) params
     fun clean pty =
 (case pty of
-    dVartype (s,kd,rk) => Type.mk_var_type (s, Prekind.toKind kd, Prerank.toRank rk)
-  | dContype {Thy,Tyop,Kind,Rank} =>
+    dVartype (s,kd) => Type.mk_var_type (s, Prekind.toKind kd)
+  | dContype {Thy,Tyop,Kind} =>
       let val is_defty = Lib.mem Tyop deftys
           val Kind' = if is_defty then list_mk_arrow_kind(pkinds, Kind)
                                   else Kind
           val cty = (case Thy of
                         SOME Thy' => Type.mk_thy_con_type {Thy=Thy', Tyop=Tyop,
-                                           Kind=Prekind.toKind Kind', Rank=Prerank.toRank Rank}
+                                           Kind=Prekind.toKind Kind'}
                       | NONE      => Type.mk_con_type {Tyop=Tyop,
-                                           Kind=Prekind.toKind Kind', Rank=Prerank.toRank Rank})
+                                           Kind=Prekind.toKind Kind'})
                      handle HOL_ERR _ => (* This can happen during error messages from kind inference *)
                       Feedback.trace ("Vartype Format Complaint",0)
-                         Type.mk_var_type(Tyop, Prekind.toKind Kind', Prerank.toRank Rank)
+                         Type.mk_var_type(Tyop, Prekind.toKind Kind')
       in if is_defty then Type.list_mk_app_type(cty, par_types)
                      else cty
       end
@@ -369,7 +369,7 @@ fun def_toType deftys ftyvs ty =
   let (* val ty = if Feedback.current_trace "beta_conv_types" > 0
                       then deep_beta_eta_ty ty
                       else ty *)
-      val _ = replace_null_links ty (kindvars ty, (map #1 o tyvars) ty)
+      val _ = replace_null_links ty ((), kindvars ty, (map #1 o tyvars) ty)
   in
     clean deftys ftyvs (remove_made_links ty)
   end
@@ -414,7 +414,7 @@ fun cleanASTs asts = map cleanAST asts
 *)
 
 fun toASTs asts =
-  let val _ = asts_replace_null_links asts (asts_kindvars asts, (map #1 o asts_tyvars) asts)
+  let val _ = asts_replace_null_links asts ((), asts_kindvars asts, (map #1 o asts_tyvars) asts)
   in
     (*cleanASTs*) (asts_remove_made_links asts)
   end
@@ -425,35 +425,25 @@ fun toASTs asts =
  * Calculate the prekind or prerank of a pretype.                            *
  *---------------------------------------------------------------------------*)
 
-fun pkind_of (*deftys par_kds*) ty = let
-  fun pkd (dVartype(s,kd,rk)) = kd
-    | pkd (dContype{Tyop, Kind, ...}) = (*if Lib.mem Tyop deftys
-                                        then list_mk_arrow_kind(par_kds, Kind)
-                                        else*) Kind
-    | pkd (dTyApp(opr,arg)) = Prekind.chase (pkd opr)
-    | pkd (dTyUniv _) = Prekind.typ
-    | pkd (dTyAbst(Bvar,Body)) = pkd Bvar ==> pkd Body
-    | pkd (dTyKindConstr{Ty,Kind}) = Kind
-    | pkd (dTyRankConstr{Ty,Rank}) = pkd Ty
-    | pkd (dAQ(Ty)) = Prekind.fromKind (Type.kind_of Ty)
-in pkd ty
-end
-
-
 local
 val zero = Prerank.Zerorank
 val inc  = Prerank.Sucrank
 val max  = Prerank.mk_Maxrank
 in
-fun prank_of (dVartype(s,kd,rk)) = rk
-  | prank_of (dContype{Rank, ...}) = Rank
-  | prank_of (dTyApp(opr,arg))     = max(    prank_of opr  , prank_of arg )
-  | prank_of (dTyUniv(Bvar,Body))  = max(inc(prank_of Bvar), prank_of Body)
-  | prank_of (dTyAbst(Bvar,Body))  = max(    prank_of Bvar , prank_of Body)
-  | prank_of (dTyKindConstr{Ty,Kind}) = prank_of Ty
-  | prank_of (dTyRankConstr{Ty,Rank}) = Rank
-  | prank_of (dAQ(Ty)) = Prerank.fromRank (Type.rank_of Ty)
-end;
+  fun prank_of (dTyUniv(Bvar,Body))  = max(inc(prank_of Bvar), prank_of Body)
+    | prank_of (dTyRankConstr{Ty,Rank}) = Rank
+    | prank_of (dAQ(Ty)) = Prerank.fromRank (Type.rank_of_type Ty)
+    | prank_of ty = Prekind.prank_of (pkind_of ty)
+
+  and pkind_of (dVartype(s,kd)) = kd
+    | pkind_of (dContype{Tyop, Kind, ...}) = Kind
+    | pkind_of (dTyApp(opr,arg)) = Prekind.chase (pkind_of opr)
+    | pkind_of (ty as dTyUniv _) = Prekind.typ (prank_of ty)
+    | pkind_of (dTyAbst(Bvar,Body)) = pkind_of Bvar ==> pkind_of Body
+    | pkind_of (dTyKindConstr{Ty,Kind}) = Kind
+    | pkind_of (dTyRankConstr{Ty,Rank}) = pkind_of Ty
+    | pkind_of (dAQ(Ty)) = Prekind.fromKind (Type.kind_of Ty)
+end
 
 
 val bads = CharSet.addString(CharSet.empty, "()\"")
@@ -548,17 +538,17 @@ in
                                    base_tokens.toString x^"\"")
 end
 
-fun tycon {Thy, Tyop, Kind, Rank} = dContype{Tyop=Tyop, Thy=Thy, Kind=Kind, Rank=Rank}
+fun tycon {Thy, Tyop, Kind} = dContype{Tyop=Tyop, Thy=Thy, Kind=Kind}
 
 fun dTyop {Tyop, Thy, Args} =
   let fun mkprety acc [] = acc
         | mkprety acc (arg::args) = mkprety (dTyApp(acc,arg)) args
       open Prekind
-      val kind = list_mk_arrow_kind(map pkind_of Args, typ)
-  in mkprety (dContype{Tyop=Tyop, Thy=Thy, Kind=kind, Rank=Prerank.Zerorank}) Args
+      val kind = list_mk_arrow_kind(map pkind_of Args, typ Prerank.Zerorank)
+  in mkprety (dContype{Tyop=Tyop, Thy=Thy, Kind=kind}) Args
   end
 
-fun dest_dTyop (dContype {Thy,Tyop,Kind,Rank}) = {Tyop=Tyop, Thy=Thy, Args=[]}
+fun dest_dTyop (dContype {Thy,Tyop,Kind}) = {Tyop=Tyop, Thy=Thy, Args=[]}
   | dest_dTyop (dTyApp(opr,arg)) = let val {Thy,Tyop,Args} = dest_dTyop opr
                                    in {Thy=Thy,Tyop=Tyop,Args=Args @ [arg]}
                                    end
@@ -585,12 +575,14 @@ fun kindcast {Ty,Kind,Locn} =
 fun rankcast {Ty,Rank,Locn} =
   dTyRankConstr {Ty=Ty,Rank=Rank}
 
-fun mk_basevarkd(s,locn) = Prekind.PK(Prekind.Varkind s, locn)
+fun mk_basevarkd((s,rk),locn) = Prekind.PK(Prekind.Varkind(s,rk), locn)
+
+fun mk_basetypekd(rk,locn) = Prekind.PK(Prekind.Typekind rk, locn)
 
 fun kindop_to_qkindop ((kindop,locn), args) = let
   open Prekind
 in
-  if kindop = "ty" then PK(Typekind,locn)
+  if kindop = "ty" then PK(Typekind (Prerank.new_uvar()),locn)
   else if kindop = "=>" then PK(Arrowkind(hd args, hd(tl args)), locn)
   else raise ERR "kind parser" (kindop ^ " not a known kind operator")
 end
@@ -600,14 +592,19 @@ fun do_qkindop {Thy:string, Kindop, Locn:locn.locn, Args} =
 
 fun arity ((s, locn), n) = Prekind.mk_arity n
 
-val kind_p1_rec = {varkind = mk_basevarkd, qkindop = do_qkindop,
-                kindop = kindop_to_qkindop, arity = arity,
-                antiq = fn x => Prekind.fromKind (remove_kd_aq x)}
+fun kd_rankcast {Kd,Rank,Locn} = 
+  Prekind.PK(Prekind.KdRankConstr {Kd=Kd,Rank=Rank}, Locn)
+
+val kind_p1_rec = {varkind = mk_basevarkd, typekind = mk_basetypekd,
+                   qkindop = do_qkindop,
+                   kindop = kindop_to_qkindop, arity = arity,
+                   antiq = fn x => Prekind.fromKind (remove_kd_aq x),
+                   rankcast = kd_rankcast}
 
 val kindparser = parse_kind.parse_kind kind_p1_rec true (Parse.kind_grammar())
 
-fun mk_conty{Thy,Tyop,Kind,Rank,Locn} =
-       dContype{Thy=SOME Thy,Tyop=Tyop,Kind=Kind,Rank=Rank}
+fun mk_conty{Thy,Tyop,Kind,Locn} =
+       dContype{Thy=SOME Thy,Tyop=Tyop,Kind=Kind}
 
 fun parse_type strm =
   parse_type.parse_type {vartype = dVartype o #1, tyop = tyop, qtyop = qtyop,
@@ -622,15 +619,15 @@ fun parse_type strm =
        Parsing environments
  ---------------------------------------------------------------------------*)
 
-type env = {scope_ty : (string * (prekind * prerank)) list,
-            free_ty  : (string * (prekind * prerank)) list};
+type env = {scope_ty : (string * prekind) list,
+            free_ty  : (string * prekind) list};
 
 fun lookup_ftyvar(s,({free_ty,...}:env)) = Lib.assoc s free_ty;
 fun lookup_btyvar(s,({scope_ty,...}:env)) = Lib.assoc s scope_ty;
-fun add_free_ty ((s,kd,rk),{scope_ty,free_ty}) =
-    {scope_ty=scope_ty, free_ty=(s,(kd,rk))::free_ty}
-fun add_scope_ty((s,kd,rk),{scope_ty,free_ty}) =
-    {scope_ty=(s,(kd,rk))::scope_ty, free_ty=free_ty};
+fun add_free_ty ((s,kd),{scope_ty,free_ty}) =
+    {scope_ty=scope_ty, free_ty=(s,kd)::free_ty}
+fun add_scope_ty((s,kd),{scope_ty,free_ty}) =
+    {scope_ty=(s,kd)::scope_ty, free_ty=free_ty};
 
 val empty_env = {scope_ty=[], free_ty=[]};
 fun get_env (e:env) = e;
@@ -664,17 +661,17 @@ fun make_rank_binding_occ bty rk E = cdomfrk (bty E) rk;
  * Free occurrences of variables.
  *---------------------------------------------------------------------------*)
 
-fun make_free_tyvar ((s,kd,rk),E) = let
-  fun fresh (s,kd,rk,E) = let
-    val v = (s, kd, rk)
+fun make_free_tyvar ((s,kd),E) = let
+  fun fresh (s,kd,E) = let
+    val v = (s, kd)
   in
     (dVartype v, add_free_ty(v, E))
   end
 in
-       let val (kd, rk) = lookup_ftyvar(s,E)
-       in (dVartype(s, kd, rk), E)
+       let val kd = lookup_ftyvar(s,E)
+       in (dVartype(s, kd), E)
        end
-       handle HOL_ERR _ => fresh(s,kd,rk,E)
+       handle HOL_ERR _ => fresh(s,kd,E)
 end
 
 (*---------------------------------------------------------------------------
@@ -682,29 +679,27 @@ end
  *---------------------------------------------------------------------------*)
 
 fun make_btyvar (s,E) =
-    let val (kind,rank) = lookup_btyvar(s,E)
-    in (dVartype(s,kind,rank), E)
+    let val kind = lookup_btyvar(s,E)
+    in (dVartype(s,kind), E)
     end;
 
-fun make_type_atom (s,kd,rk) E =
+fun make_type_atom (s,kd) E =
  make_btyvar (s,E)
    handle HOL_ERR _ =>
-   make_free_tyvar ((s,kd,rk), E)
+   make_free_tyvar ((s,kd), E)
 
 
 fun make_type_constant {Thy=Thy0,Tyop=Tyop0} E =
  let val c = case Thy0 of
                    SOME Thy' => Type.prim_mk_thy_con_type {Thy=Thy',Tyop=Tyop0}
                  | NONE      => Type.prim_mk_con_type Tyop0
-     val {Thy,Tyop,Kind,Rank} = Type.dest_thy_con_type c
+     val {Thy,Tyop,Kind} = Type.dest_thy_con_type c
      val Kind' = Prekind.rename_kindvars [] (Prekind.fromKind Kind)
-     val Rank' = Prerank.fromRank Rank
- in (dContype {Thy=SOME Thy,Tyop=Tyop,Kind=Kind',Rank=Rank'}, E)
+ in (dContype {Thy=SOME Thy,Tyop=Tyop,Kind=Kind'}, E)
  end
  handle Feedback.HOL_ERR _ =>
- let val Kind' = Prekind.new_uvar()
-     val Rank' = Prerank.new_uvar()
- in (dContype {Thy=Thy0,Tyop=Tyop0,Kind=Kind',Rank=Rank'}, E)
+ let val Kind' = Prekind.all_new_uvar()
+ in (dContype {Thy=Thy0,Tyop=Tyop0,Kind=Kind'}, E)
  end
 
 
@@ -770,10 +765,9 @@ fun make_binding_type_occ s binder E =
        Lexis.allowed_user_type_var s orelse
        raise ERR "make_binding_type_occ"
          (s ^ " is not lexically permissible as a binding type variable")
-     val nkv = Prekind.new_uvar()
-     val nrv = Prerank.new_uvar()
-     val pty = dVartype(s, nkv, nrv)
-     val E' = add_scope_ty((s,nkv,nrv),E)
+     val nkv = Prekind.all_new_uvar() (* new_var_uvar() *)
+     val pty = dVartype(s, nkv)
+     val E' = add_scope_ty((s,nkv),E)
  in
   case binder
    of "\\" => ((fn b => dTyAbst(pty,b)), E')
@@ -783,15 +777,15 @@ fun make_binding_type_occ s binder E =
 
 
 fun to_ptyInEnv ty = let
-  fun binder_type binder (dVartype(s,kd,rk)) = make_binding_type_occ s binder
+  fun binder_type binder (dVartype(s,kd)) = make_binding_type_occ s binder
     | binder_type binder (dTyKindConstr{Ty,Kind}) =
             make_kind_binding_occ (binder_type binder Ty) Kind
     | binder_type binder (dTyRankConstr{Ty,Rank}) =
             make_rank_binding_occ (binder_type binder Ty) Rank
     | binder_type _ _ = raise ERR "to_ptyInEnv" "non-variable type binder"
 in case ty of
-     dVartype(s,kd,rk)  => make_type_atom (s,kd,rk)
-   | dContype{Thy,Tyop,Kind,Rank} => make_type_constant {Thy=Thy,Tyop=Tyop}
+     dVartype(s,kd)  => make_type_atom (s,kd)
+   | dContype{Thy,Tyop,Kind} => make_type_constant {Thy=Thy,Tyop=Tyop}
    | dTyApp(ty1,ty2   ) => list_make_app_type (map to_ptyInEnv [ty1,ty2])
    | dTyUniv(bvar,body) => bind_type [binder_type "!"  bvar] (to_ptyInEnv body)
    | dTyAbst(bvar,body) => bind_type [binder_type "\\" bvar] (to_ptyInEnv body)
@@ -854,25 +848,28 @@ local
   fun default_typrinter x = "<hol_type>"
 in
 fun KC printers deftys params = let
-  val prk = Int.toString
+  val prk = Rank.rank_to_string
   val (pty, pkd) =
       case printers
        of SOME (y,z) =>
           let val kdprint = z
               fun typrint ty =
                   if Type.is_con_type ty
-                  then (y ty ^ " : " ^ z (Type.kind_of ty)
-                             ^ " :<= " ^ prk (Type.rank_of ty))
+                  then (y ty ^ " : " ^ z (Type.kind_of ty))
                   else y ty
           in
             (typrint, kdprint)
           end
         | NONE => (default_typrinter, default_kdprinter)
+  val checkrank = Prekind.checkrank (case printers of SOME (x,y) => SOME y | NONE => NONE)
   fun check(dTyApp(opr,arg)) =
       (check opr;
        check arg;
-       Prekind.unify (pkind_of opr)
-                     (pkind_of arg ==> Prekind.new_uvar())
+       (**)if Prekind.is_arrow_kind (pkind_of opr) (* optimize; cut out unnecessary unifications *)
+        then Prekind.unify_le (pkind_of arg) (* :<=: *) (Lib.fst (Prekind.dom_rng (pkind_of opr)))
+        else (**) Prekind.unify_le
+                     (pkind_of arg ==> Prekind.all_new_uvar())
+          (* :<=: *) (pkind_of opr)
        handle (e as Feedback.HOL_ERR{origin_structure="Prekind",
                                      origin_function="unify",message})
        => let val show_kinds = Feedback.get_tracefn "kinds"
@@ -908,16 +905,20 @@ fun KC printers deftys params = let
             last_kcerror := SOME (TyAppFail(opr',arg'));
             raise ERR "kindcheck" "failed"
           end)
+    | check (dVartype(Name, Kind)) = checkrank Kind
+    | check (dContype{Thy, Tyop, Kind}) = checkrank Kind
     | check (dTyUniv(Bvar, Body)) =
-       (check Bvar; check Body; Prekind.unify (pkind_of Body) Prekind.typ
-       handle (e as Feedback.HOL_ERR{origin_structure="Prekind",
-                                     origin_function="unify",message})
+       (check Bvar; check Body;
+       let val type_kd = Prekind.typ (Prerank.new_uvar())
+       in Prekind.unify (pkind_of Body) type_kd
+          handle (e as Feedback.HOL_ERR{origin_structure="Prekind",
+                                        origin_function="unify",message})
        => let val show_kinds = Feedback.get_tracefn "kinds"
               val tmp = show_kinds()
               val _   = Feedback.set_trace "kinds" 2
               val real_type = def_toType deftys params Body
                 handle e => (Feedback.set_trace "kinds" tmp; raise e)
-              val real_kind = Prekind.toKind Prekind.typ
+              val real_kind = Prekind.toKind type_kd
                 handle e => (Feedback.set_trace "kinds" tmp; raise e)
               val message =
                   String.concat
@@ -938,10 +939,12 @@ fun KC printers deftys params = let
             kcheck_say message;
             last_kcerror := SOME (TyUnivFail(real_type));
             raise ERR "kindcheck" "failed"
-          end)
+          end
+       end)
     | check (dTyAbst(Bvar, Body)) = (check Bvar; check Body)
     | check (dTyKindConstr{Ty,Kind}) =
-       (check Ty; Prekind.unify (pkind_of Ty) Kind
+       (check Ty; checkrank Kind;
+        Prekind.unify (pkind_of Ty) Kind
        handle (e as Feedback.HOL_ERR{origin_structure="Prekind",
                                      origin_function="unify",message})
        => let val show_kinds = Feedback.get_tracefn "kinds"
@@ -991,7 +994,7 @@ fun KC printers deftys params = let
                        "\n\n",
                        if (is_atom Ty) then ""
                        else ("which has rank " ^
-                             prk(Type.rank_of real_type) ^ "\n\n"),
+                             prk(Type.rank_of_type real_type) ^ "\n\n"),
 
                        "can not be constrained to be of rank ",
                        prk real_rank, "\n\n",
@@ -1020,7 +1023,7 @@ fun KC printers deftys params = let
                        "\n\n",
                        if (is_atom Ty) then ""
                        else ("which has rank " ^
-                             prk(Type.rank_of real_type) ^ "\n\n"),
+                             prk(Type.rank_of_type real_type) ^ "\n\n"),
 
                        "can not be constrained to be <= rank ",
                        prk real_rank, "\n\n",

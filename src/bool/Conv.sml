@@ -53,6 +53,12 @@ fun REWR_CONV0 (part_matcher,fn_name) th =
     in if prim_eq l tm then eqn else TRANS (ALPHA tm l) eqn
     end
     handle HOL_ERR _ => raise ERR fn_name "lhs of thm doesn't match term"
+(*
+    handle HOL_ERR _ => raise ERR fn_name ("lhs of thm doesn't match term"
+                            ^ (if current_trace "kinds" < 2 then "" else
+                                 (set_trace "types" 1;
+                                  "\n" ^ thm_to_string th ^ "\nvs.\n" ^ term_to_string tm)))
+*)
   end;
 
 val REWR_CONV    = REWR_CONV0 (PART_MATCH,    "REWR_CONV")
@@ -198,7 +204,7 @@ fun TY_ABS_CONV conv tm =
         TY_ABS Bvar newbody
         handle HOL_ERR _ =>
                let
-                 val v = gen_var_type (kind_of Bvar, rank_of Bvar)
+                 val v = gen_var_type (kind_of Bvar)
                  val th1 = TY_ALPHA_CONV v tm
                  val r = rhs (concl th1)
                  val {Body = Body',...} = dest_tyabs r
@@ -449,8 +455,7 @@ fun STRIP_TY_BINDER_CONV opt conv tm = let
 in
   GEN_TY_ABS opt vlist (conv M)
   handle HOL_ERR _ => let
-           fun kind_rank ty = let val (_,kd,rk) = dest_var_type ty in (kd,rk) end
-           val gvs = map (gen_var_type o kind_rank) vlist
+           val gvs = map (gen_var_type o snd o dest_var_type) vlist
            fun rename vs t =
                case vs of
                  [] => ALL_CONV t
@@ -600,7 +605,7 @@ in
       (* find all instances of arg_t in t, and convert t
          to (\:v. t[v/arg_t]) [:arg_t:]
          v can be a genvar because we expect to get rid of it later. *)
-      val gv = gen_var_type (kind_of arg_t, rank_of arg_t)
+      val gv = gen_var_type (kind_of arg_t)
       val newbody = Term.inst [arg_t |-> gv] t
         (* probably wrong; inst cannot handle type expressions as redexes *)
         (* need to build a new Term.subst_type function for this *)
@@ -2470,7 +2475,7 @@ fun X_FUN_EQ_CONV x tm =
 (* yields |- (f = g) = !:a. f [:a:] = g [:a:]                            *)
 (*                                                                       *)
 (* fails if a free in f or g,                                            *)
-(* or a not a type variable of the right kind and rank.                  *)
+(* or a not a type variable of the right kind.                           *)
 (* --------------------------------------------------------------------- *)
 
 fun X_TY_FUN_EQ_CONV a tm =
@@ -2483,12 +2488,12 @@ fun X_TY_FUN_EQ_CONV a tm =
  let val (ty,_) = with_exn dest_univ_type(type_of(lhs tm))
                    (ERR "X_TY_FUN_EQ_CONV" "lhs and rhs do not have universal type")
  in
-   if kind_of ty = kind_of a andalso rank_of ty = rank_of a
+   if kind_of ty = kind_of a
    then let val imp1 = DISCH_ALL (TY_GEN a (TY_COMB (ASSUME tm) a))
             val asm  = ASSUME (concl (TY_GEN a (TY_COMB (ASSUME tm) a)))
         in IMP_ANTISYM_RULE imp1 (DISCH_ALL (TY_EXT asm))
         end
-   else raise ERR "X_TY_FUN_EQ_CONV" (dest_vartype a^" has the wrong kind or rank")
+   else raise ERR "X_TY_FUN_EQ_CONV" (dest_vartype a^" has the wrong kind")
  end
  handle e => raise (wrap_exn "Conv" "X_TY_FUN_EQ_CONV" e);
 

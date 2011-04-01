@@ -3,6 +3,7 @@ signature Parse = sig
   type term = Term.term
   type hol_type = Type.hol_type
   type kind = Kind.kind
+  type rank = Kind.rank
   type thm = Thm.thm
   type associativity = HOLgrammars.associativity
   type pp_element = term_grammar.pp_element
@@ -18,6 +19,13 @@ signature Parse = sig
      | Binder
      | TypeBinder
   val fixityToString : fixity -> string
+
+(*
+  (* Parsing Ranks *)
+
+  val Rank         : rank frag list -> rank
+  val ====         : rank frag list -> 'a -> rank
+*)
 
   (* Parsing Kinds *)
 
@@ -254,6 +262,7 @@ signature Parse = sig
   val pp_terms : ppstream -> term list -> unit
   val pp_type : ppstream -> hol_type -> unit
   val pp_kind : ppstream -> kind -> unit
+(*  val pp_rank : ppstream -> rank -> unit *)
   val pp_thm : ppstream -> thm -> unit
   val pp_with_bquotes :
     (ppstream -> 'a -> unit) -> (ppstream -> 'a -> unit)
@@ -268,6 +277,11 @@ signature Parse = sig
   val kind_pp_with_delimiters :
     (ppstream -> kind -> unit) ->
     ppstream -> kind -> unit
+(*
+  val rank_pp_with_delimiters :
+    (ppstream -> rank -> unit) ->
+    ppstream -> rank -> unit
+*)
   val get_term_printer : unit -> (ppstream -> term -> unit)
   val set_term_printer : (ppstream -> term -> unit) ->
                                ppstream -> term -> unit
@@ -282,6 +296,10 @@ signature Parse = sig
   val type_to_backend_string : hol_type -> string
   val kind_to_string         : kind -> string
   val kind_to_backend_string : kind -> string
+(*
+  val rank_to_string         : rank -> string
+  val rank_to_backend_string : rank -> string
+*)
   val thm_to_string          : thm -> string
   val thm_to_backend_string  : thm -> string
 
@@ -291,6 +309,10 @@ signature Parse = sig
   val print_backend_type     : hol_type -> unit
   val print_kind             : kind -> unit
   val print_backend_kind     : kind -> unit
+(*
+  val print_rank             : rank -> unit
+  val print_backend_rank     : rank -> unit
+*)
   val print_term             : term -> unit
   val print_terms            : term list -> unit
   val print_backend_term     : term -> unit

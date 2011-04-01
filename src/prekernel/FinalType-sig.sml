@@ -2,15 +2,16 @@ signature FinalType =
 sig
 
  eqtype hol_type
+ type rank
  type kind
- type tyvar = string * kind * int (* rank *)
+ type tyvar = string * kind
 
  val mk_vartype    : string -> hol_type
  val mk_var_type   : tyvar -> hol_type
  val mk_primed_vartype : string -> hol_type
  val mk_primed_var_type : tyvar -> hol_type
  val gen_tyvar     : unit -> hol_type
- val gen_var_type  : kind * int -> hol_type
+ val gen_var_type  : kind -> hol_type
  val variant_type  : hol_type list -> hol_type -> hol_type
  val variant_tyvar : hol_type list -> tyvar -> tyvar
  val prim_variant_type : hol_type list -> hol_type -> hol_type
@@ -28,11 +29,10 @@ sig
 
  val prim_mk_con_type : string -> hol_type
  val prim_mk_thy_con_type : {Thy:string, Tyop:string} -> hol_type
- val mk_con_type   : {Tyop:string, Kind:kind, Rank:int} -> hol_type
- val mk_thy_con_type : {Thy:string, Tyop:string, Kind:kind, Rank:int} -> hol_type
- val dest_con_type : hol_type -> string * kind * int
- val dest_thy_con_type : hol_type -> {Thy:string, Tyop:string, Kind:kind,
-                                       Rank:int}
+ val mk_con_type   : {Tyop:string, Kind:kind} -> hol_type
+ val mk_thy_con_type : {Thy:string, Tyop:string, Kind:kind} -> hol_type
+ val dest_con_type : hol_type -> string * kind
+ val dest_thy_con_type : hol_type -> {Thy:string, Tyop:string, Kind:kind}
  val is_con_type   : hol_type -> bool
 
  val mk_app_type   : hol_type * hol_type -> hol_type
@@ -56,28 +56,34 @@ sig
  val is_abs_type   : hol_type -> bool
 
  val kind_of       : hol_type -> kind
- val rank_of       : hol_type -> int
+ val prim_kind_of  : {Thy:string,Tyop:string} -> kind
+ val rank_of_type  : hol_type -> rank
  val kind_vars     : hol_type -> kind list
  val kind_varsl    : hol_type list -> kind list
- val inst_rank     : int -> hol_type -> hol_type
+ val inst_rank     : rank -> hol_type -> hol_type
  val inst_kind     : (kind,kind)Lib.subst -> hol_type -> hol_type
- val inst_rank_kind : int -> (kind,kind)Lib.subst -> hol_type -> hol_type
+ val inst_rank_kind: rank -> (kind,kind)Lib.subst -> hol_type -> hol_type
+ val inst_rk_kd_ty : rank -> (kind,kind)Lib.subst -> (hol_type,hol_type)Lib.subst
+                        -> hol_type -> hol_type
  val aconv_ty      : hol_type -> hol_type -> bool
  val beta_conv_ty  : hol_type -> hol_type
  val head_beta_ty  : hol_type -> hol_type
+ val head_beta_eta_ty : hol_type -> hol_type
  val deep_beta_ty  : hol_type -> hol_type
  val eta_conv_ty   : hol_type -> hol_type
  val deep_eta_ty   : hol_type -> hol_type
  val deep_beta_eta_ty : hol_type -> hol_type
+(* val vacuum        : hol_type -> hol_type *)
  val abconv_ty     : hol_type -> hol_type -> bool
  val abeconv_ty    : hol_type -> hol_type -> bool
  val eq_ty         : hol_type -> hol_type -> bool
- val subtype       : hol_type -> hol_type -> bool
+ val ge_ty         : hol_type -> hol_type -> bool
+(* val subtype       : hol_type -> hol_type -> bool *)
 
  val decls         : string -> {Thy:string, Tyop:string} list
  val op_arity      : {Thy:string, Tyop:string} -> int option
  val op_kind       : {Thy:string, Tyop:string} -> kind option
- val op_rank       : {Thy:string, Tyop:string} -> int option
+ val op_rank       : {Thy:string, Tyop:string} -> rank option
 
  val type_vars     : hol_type -> hol_type list
  val type_varsl    : hol_type list -> hol_type list
@@ -87,9 +93,9 @@ sig
  val universal     : hol_type -> bool
  val abstraction   : hol_type -> bool
  val is_omega      : hol_type -> bool
- val kind_rank_compare : (kind * int) * (kind * int) -> order
  val tyvar_compare : tyvar * tyvar -> order
  val compare       : hol_type * hol_type -> order
+ val prim_compare  : hol_type * hol_type -> order
  val tyvar_eq      : tyvar -> tyvar -> bool
  val type_eq       : hol_type -> hol_type -> bool
  val empty_tyset   : hol_type  HOLset.set
@@ -105,15 +111,14 @@ sig
  val etyvar        : hol_type
  val ftyvar        : hol_type
 
- val type_subst    : (hol_type,hol_type) Lib.subst -> hol_type -> hol_type
- val pure_type_subst : (hol_type,hol_type) Lib.subst -> hol_type -> hol_type (* expects kinds, ranks match *)
- val match_rank    : int -> int -> int
- val raw_match_rank: int -> int -> int -> int
- val match_type    : hol_type -> hol_type -> (hol_type,hol_type) Lib.subst
+ val pure_type_subst  : (hol_type,hol_type)Lib.subst -> hol_type -> hol_type (* expects kinds, ranks match *)
+ val type_subst       : (hol_type,hol_type)Lib.subst -> hol_type -> hol_type (* aligns kinds, ranks to match *)
+ val full_type_subst  : (hol_type,hol_type)Lib.subst -> hol_type -> hol_type (* redexes can be expressions *)
+ val match_type       : hol_type -> hol_type -> (hol_type,hol_type) Lib.subst
  val kind_match_type  : hol_type -> hol_type ->
-                        (hol_type,hol_type)Lib.subst * (kind,kind)Lib.subst * int
+                        (hol_type,hol_type)Lib.subst * (kind,kind)Lib.subst * rank
  val kind_match_types : (hol_type,hol_type)Lib.subst ->
-                        (hol_type,hol_type)Lib.subst * (kind,kind)Lib.subst * int
+                        (hol_type,hol_type)Lib.subst * (kind,kind)Lib.subst * rank
 
  val match_type_restr : hol_type list -> hol_type -> hol_type 
                         -> (hol_type,hol_type) Lib.subst
@@ -127,11 +132,11 @@ sig
                       -> (hol_type,hol_type) Lib.subst * hol_type list
  val raw_kind_match_type : hol_type -> hol_type
                       -> ( (hol_type,hol_type) Lib.subst * hol_type list ) *
-                         ( (kind,kind) Lib.subst * kind list ) * int
+                         ( (kind,kind) Lib.subst * kind list ) * (rank * bool)
                       -> ( (hol_type,hol_type) Lib.subst * hol_type list ) *
-                         ( (kind,kind) Lib.subst * kind list ) * int
+                         ( (kind,kind) Lib.subst * kind list ) * (rank * bool)
  val align_types : (hol_type,hol_type) Lib.subst ->
-                   int * (kind,kind) Lib.subst * (hol_type,hol_type) Lib.subst
+                   rank * (kind,kind) Lib.subst * (hol_type,hol_type) Lib.subst
 
 (* val type_to_string : hol_type -> string *) (* for low-level error messages only; superceeded *)
 

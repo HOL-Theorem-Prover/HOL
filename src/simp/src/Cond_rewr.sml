@@ -158,10 +158,10 @@ fun ac_term_ord(tm1,tm2) =
     * COND_REWR_CONV
     * ---------------------------------------------------------------------*)
 
-   fun kd_rk_eq (v1,v2) =
-      let val (_,kd1,rk1) = dest_var_type v1
-          val (_,kd2,rk2) = dest_var_type v2
-      in kind_rank_compare ((kd1,rk1), (kd2,rk2)) = EQUAL
+   fun kd_eq (v1,v2) =
+      let val (_,kd1) = dest_var_type v1
+          val (_,kd2) = dest_var_type v2
+      in kind_compare (kd1, kd2) = EQUAL
       end
 
    fun vperm(tm1,tm2) =

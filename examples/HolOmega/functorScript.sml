@@ -11,6 +11,10 @@ struct
 open HolKernel Parse boolLib
      bossLib
 
+(*
+app load ["quotient_pairTheory","quotient_listTheory","rich_listTheory"];
+*)
+
 open combinTheory combinSimps
 
 val _ = set_trace "Unicode" 1;

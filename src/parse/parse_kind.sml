@@ -8,11 +8,13 @@ open qbuf
 exception InternalFailure of locn.locn
 
 type ('a,'b) kindconstructors =
-     {varkind : string locn.located -> 'a,
+     {varkind : (string * Prerank.prerank) locn.located -> 'a,
+      typekind : Prerank.prerank locn.located -> 'a,
       kindop : (string locn.located * 'a list) -> 'a,
       qkindop : {Thy:string, Kindop:string, Locn:locn.locn, Args: 'a list} -> 'a,
       arity : (string locn.located * int) -> 'a,
-      antiq : 'b -> 'a}
+      antiq : 'b -> 'a,
+      rankcast : {Kd:'a, Rank:Prerank.prerank, Locn:locn.locn} -> 'a}
 
 val ERR = Feedback.mk_HOL_ERR "Parse" "parse_kind"
 
@@ -22,11 +24,11 @@ val ERRloc = Feedback.mk_HOL_ERRloc "Parse" "parse_kind"
 local
   val ERR2 = Feedback.mk_HOL_ERR "Parse" "dest_kd_antiq" "not a kind antiquotation"
 in
-fun kd_antiq kd = Type.mk_var_type("'kd_antiq",kd,0)
+fun kd_antiq kd = Type.mk_var_type("'kd_antiq",kd)
 
 fun dest_kd_antiq ty =
   case Lib.with_exn Type.dest_var_type ty ERR2
-   of ("'kd_antiq",Kd,0) => Kd
+   of ("'kd_antiq",Kd) => Kd
     |  _ => raise ERR2
 
 val is_kd_antiq = Lib.can dest_kd_antiq
@@ -34,12 +36,12 @@ end
 
 (* antiquoting types into terms *)
 local
-  open Term Type Kind
+  open Term Type Kind Rank
   infixr ==>
   val ERR2 = Feedback.mk_HOL_ERR "Parse" "dest_ty_antiq" "not a type antiquotation"
 in
 fun ty_antiq ty = let val kd = kind_of ty
-                      val a = mk_var_type("'ty_antiq", kd ==> typ, 0)
+                      val a = mk_var_type("'ty_antiq", kd ==> typ rho)
                       val ty' = mk_app_type(a, ty)
                   in mk_var("ty_antiq",ty')
                   end
@@ -49,7 +51,7 @@ fun dest_ty_antiq tm =
    of ("ty_antiq",ty) =>
         let val (a,ty') = Lib.with_exn dest_app_type ty ERR2
         in case Lib.with_exn dest_var_type a ERR2
-            of ("'ty_antiq",_,0) => ty'
+            of ("'ty_antiq",_) => ty'
              | _ => raise ERR2
         end
     |  _ => raise ERR2
@@ -66,13 +68,15 @@ fun totalify f x = SOME (f x) handle InternalFailure _ => NONE
 
 fun parse_kind kdfns allow_unknown_prefixes G = let
   val G = rules G (*and abbrevs = abbreviations G*)
-  val {varkind = pVarkind, kindop = pKind, antiq = pAQ, qkindop, arity} = kdfns
+  val {varkind = pVarkind, typekind = pTypekind, kindop = pKind,
+       antiq = pAQ, qkindop, arity, rankcast} = kdfns
   fun structure_to_value (s,locn) args st =
       case st of
         KINDOP {Args, Thy, Kindop} =>
         qkindop {Args = map (structure_to_value (s,locn) args) Args,
                  Thy = Thy, Kindop = Kindop, Locn = locn}
-      | KDVAR str => pVarkind (str,locn)
+      | KDVAR (str,rk) => pVarkind ((str, Prerank.fromRank rk),locn)
+      | KDTYPE rk => pTypekind(Prerank.fromRank rk,locn)
 
   (* extra fails on next two definitions will effectively make the stream
      push back the unwanted token *)
@@ -83,6 +87,7 @@ fun parse_kind kdfns allow_unknown_prefixes G = let
   fun is_LBracket t = case t of LBracket => true | _ => false
   fun is_RBracket t = case t of RBracket => true | _ => false
   fun is_Comma t = case t of Comma => true | _ => false
+  fun is_KindRankCst t = case t of KindRankCst => true | _ => false
   fun itemP P fb = let
     val (adv, (t,locn)) = kindtok_of fb (* TODO:KSW: use locn *)
   in
@@ -168,16 +173,42 @@ fun parse_kind kdfns allow_unknown_prefixes G = let
     val (adv, (t,locn)) = kindtok_of fb
   in
     case t of 
-      KindNumeral n => (adv(); n)
+      KindNumeral s => (let val n = Arbnum.fromString s
+                            val i = Arbnum.toInt n
+                        in adv(); i
+                        end
+                        handle Overflow => raise ERRloc locn
+                               ("Excessively large rank: " ^ s)
+                             | _ => raise ERRloc locn
+                               ("Incomprehensible rank: " ^ s) )
     | _ => raise ERRloc locn
-                 "arity kind operator with no numeric suffix"
+                 "kind operator with no numeric suffix"
+  end
+
+  fun parse_rankcast fb = let
+    val (llocn, _) = itemP is_KindRankCst fb
+    val  rk = parse_num fb
+    val prk = Prerank.fromRank rk
+  in
+    (prk, llocn (*locn.between llocn rlocn*) )
+  end
+
+  fun apply_rankcast (kd, rk, locn) =
+    rankcast{Kd=kd, Rank=rk, Locn=locn}
+
+  fun uniconvert c = let
+    val ((s,i), s') = valOf (UTF8.getChar c)
+  in
+    if s' = "" andalso 0x3B1 <= i andalso i <= 0x3C9 then
+      "'" ^ str (Char.chr (i - 0x3B1 + Char.ord #"a"))
+    else c
   end
 
   fun parse_atom fb = let 
     val (adv, (t,locn)) = kindtok_of fb
   in
-    case t of 
-      KindVar s => (adv(); pVarkind (s, locn))
+    case t of
+      KindVar s => (adv(); pVarkind ((uniconvert s,Prerank.new_uvar()(*new_var_uvar()*)), locn))
     | AQ x => (adv(); pAQ x)
     | KindIdent s => (adv(); apply_kindop(t,locn) [])
     | _ => raise InternalFailure locn
@@ -230,6 +261,26 @@ fun parse_kind kdfns allow_unknown_prefixes G = let
         case t of
           KindArity => (adv(); arity (("ar",locn), parse_num strm))
         | _ => next_level strm
+      end
+    | RANKCAST => let
+        val kd1 = next_level strm
+        fun recurse acc =
+            let val (adv, (t,locn)) = kindtok_of strm
+            in case t of
+                 KindRankCst =>
+                   (case totalify parse_rankcast strm of
+                       SOME (rk,locn) => recurse (apply_rankcast (acc, rk, locn))
+                     | NONE => acc)
+               | _ => acc
+            end
+      in recurse kd1
+(*
+        case t of
+          KindRankCst => (adv();
+                          print "SAW KindRankCst\n";
+                          rankcast{Kd=kd1, Rank=Prerank.fromRank(parse_num strm), Locn=locn})
+        | _ => kd1
+*)
       end
   end
 in

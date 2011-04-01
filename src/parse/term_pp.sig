@@ -7,8 +7,8 @@ sig
     Portable.ppstream -> term -> unit
 
 
-  (* this initialises a reference storing a function for pulling apart
-     case splits.  It's expected that the initialisation will be called
+  (* this initializes a reference storing a function for pulling apart
+     case splits.  It's expected that the initialization will be called
      from inside the TypeBase *)
   val init_casesplit_munger : (term -> term * (term * term) list) -> unit
 

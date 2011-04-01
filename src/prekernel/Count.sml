@@ -12,9 +12,10 @@ fun counting_thms b = (counting := b);
 val inc = Portable.inc
 
 
-datatype rule = Assume | Refl | Beta | Subst | Abs | Disch | Mp | InstRank | InstKind | InstType
+datatype rule = Assume | Refl | Beta | Subst | Abs | Disch | Mp
+              | InstRank | PureInstKind | InstKind | PureInstType | InstType
               | MkComb | ApTerm | ApThm | Alpha
-              | Sym | Trans | EqMp | EqImpRule | Inst
+              | Sym | Trans | EqMp | EqImpRule | Inst | InstAll
               | Spec | Gen | Exists | Choose
               | TySpec | TyGen | TyExists | TyChoose (* these are for HOL-Omega *)
               | Conj | Conjunct1 | Conjunct2
@@ -27,12 +28,14 @@ val count = {ASSUME     = ref 0, REFL = ref 0,
              BETA_CONV  = ref 0, SUBST = ref 0,
              ABS        = ref 0, DISCH = ref 0,
              MP         = ref 0, INST_RANK = ref 0,
-             INST_KIND  = ref 0, INST_TYPE  = ref 0,
+             PURE_INST_KIND  = ref 0, INST_KIND  = ref 0,
+             PURE_INST_TYPE  = ref 0, INST_TYPE  = ref 0,
              MK_COMB    = ref 0, AP_TERM = ref 0,
              AP_THM     = ref 0, ALPHA = ref 0,
              SYM        = ref 0,
              TRANS      = ref 0, EQ_MP = ref 0,
              EQ_IMP_RULE = ref 0, INST = ref 0,
+             INST_ALL = ref 0,
              SPEC       = ref 0, GEN = ref 0,
              EXISTS     = ref 0, CHOOSE = ref 0,
              TY_SPEC    = ref 0, TY_GEN = ref 0,
@@ -61,7 +64,9 @@ fun inc_count R =
        | Disch      => inc (#DISCH count)
        | Mp         => inc (#MP count)
        | InstRank   => inc (#INST_RANK count)
+       | PureInstKind => inc (#PURE_INST_KIND count)
        | InstKind   => inc (#INST_KIND count)
+       | PureInstType => inc (#PURE_INST_TYPE count)
        | InstType   => inc (#INST_TYPE count)
        | MkComb     => inc (#MK_COMB count)
        | ApTerm     => inc (#AP_TERM count)
@@ -72,6 +77,7 @@ fun inc_count R =
        | EqMp       => inc (#EQ_MP count)
        | EqImpRule  => inc (#EQ_IMP_RULE count)
        | Inst       => inc (#INST count)
+       | InstAll    => inc (#INST_ALL count)
        | Spec       => inc (#SPEC count)
        | Gen        => inc (#GEN count)
        | Exists     => inc (#EXISTS count)
@@ -112,7 +118,9 @@ fun reset_thm_count() =
      zero (#DISCH count);
      zero (#MP count);
      zero (#INST_RANK count);
+     zero (#PURE_INST_KIND count);
      zero (#INST_KIND count);
+     zero (#PURE_INST_TYPE count);
      zero (#INST_TYPE count);
      zero (#MK_COMB count);
      zero (#AP_TERM count);
@@ -123,6 +131,7 @@ fun reset_thm_count() =
      zero (#EQ_MP count);
      zero (#EQ_IMP_RULE count);
      zero (#INST count);
+     zero (#INST_ALL count);
      zero (#SPEC count);
      zero (#GEN count);
      zero (#EXISTS count);
@@ -155,11 +164,13 @@ end;
 fun prims() =
    !(#ASSUME count) + !(#REFL count) + !(#BETA_CONV count) +
    !(#SUBST count) + !(#ABS count) + !(#DISCH count) +
-   !(#MP count) + !(#INST_RANK count) + !(#INST_KIND count) + !(#INST_TYPE count) + !(#MK_COMB count) +
+   !(#MP count) + !(#INST_RANK count) +
+   !(#PURE_INST_KIND count) + !(#INST_KIND count) + !(#PURE_INST_TYPE count) + !(#INST_TYPE count) +
+   !(#MK_COMB count) +
    !(#AP_TERM count) + !(#AP_THM count) + !(#ALPHA count) +
    !(#SYM count) + !(#TRANS count) +
    !(#EQ_MP count) + !(#EQ_IMP_RULE count) +
-   !(#INST count) +
+   !(#INST count) + !(#INST_ALL count) +
    !(#SPEC count) + !(#GEN count) +
    !(#EXISTS count) + !(#CHOOSE count) +
    !(#TY_SPEC count) + !(#TY_GEN count) + (* these are for HOL-Omega *)
@@ -184,12 +195,13 @@ fun thm_count() =
   BETA_CONV  = !(#BETA_CONV count), SUBST       = !(#SUBST count),
   ABS        = !(#ABS count),       DISCH       = !(#DISCH count),
   MP         = !(#MP count),        INST_RANK   = !(#INST_RANK count),
-  INST_KIND  = !(#INST_KIND count), INST_TYPE   = !(#INST_TYPE count),
+  PURE_INST_KIND = !(#PURE_INST_KIND count), INST_KIND = !(#INST_KIND count),
+  PURE_INST_TYPE = !(#PURE_INST_TYPE count), INST_TYPE = !(#INST_TYPE count),
   MK_COMB = !(#MK_COMB count),      AP_TERM     = !(#AP_TERM count),
   AP_THM = !(#AP_THM count),        ALPHA       = !(#ALPHA count),
   SYM = !(#SYM count),              TRANS       = !(#TRANS count),
   EQ_MP = !(#EQ_MP count),          EQ_IMP_RULE = !(#EQ_IMP_RULE count),
-  INST = !(#INST count),
+  INST = !(#INST count),            INST_ALL    = !(#INST_ALL count),
   SPEC = !(#SPEC count),            GEN = !(#GEN count),
   EXISTS = !(#EXISTS count),        CHOOSE = !(#CHOOSE count),
   TY_SPEC = !(#TY_SPEC count),      TY_GEN = !(#TY_GEN count),

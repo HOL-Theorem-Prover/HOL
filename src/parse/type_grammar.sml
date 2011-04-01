@@ -11,18 +11,18 @@ datatype grammar_rule =
            HOLgrammars.associativity
 
 datatype type_structure =
-         TYCON  of {Thy : string, Tyop : string, Kind : Kind.kind, Rank : int}
+         TYCON  of {Thy : string, Tyop : string, Kind : Kind.kind}
        | TYAPP  of type_structure * type_structure
        | TYUNIV of type_structure * type_structure
        | TYABST of type_structure * type_structure
-       | TYVAR  of string * Kind.kind * int (* rank *)
-       | PARAM  of int    * Kind.kind * int (* rank *)
+       | TYVAR  of string * Kind.kind
+       | PARAM  of int    * Kind.kind
 
 fun typstruct_uptodate ts =
     case ts of
       PARAM _ => true
-    | TYVAR (str,kd,rk) => true
-    | TYCON {Thy, Tyop, Kind, Rank} => isSome (Type.op_kind {Thy = Thy, Tyop = Tyop})
+    | TYVAR (str,kd) => true
+    | TYCON {Thy, Tyop, Kind} => isSome (Type.op_kind {Thy = Thy, Tyop = Tyop})
     | TYAPP (opr,arg) => typstruct_uptodate opr andalso typstruct_uptodate arg
     | TYUNIV (bvar,body) => typstruct_uptodate body
     | TYABST (bvar,body) => typstruct_uptodate body
@@ -33,7 +33,7 @@ fun typstruct_uptodate ts =
 
 exception GrammarError = HOLgrammars.GrammarError
 
-fun dest_var_st (TYVAR triple) = triple
+fun dest_var_st (TYVAR tvr) = tvr
   | dest_var_st _ = raise GrammarError "dest_var_st: not a type variable"
 
 fun is_abs_st (TYABST _) = true
@@ -48,18 +48,18 @@ fun strip_abs_st (TYABST (bvar,body)) =
   end
   | strip_abs_st ty = ([],ty)
 
-fun inst_rank_kind rkS kdS (TYVAR (str,kd,rk)) =
-       TYVAR (str,Kind.kind_subst kdS kd,rk+rkS)
-  | inst_rank_kind rkS kdS (TYCON {Thy, Tyop, Kind, Rank}) =
-       TYCON {Thy=Thy, Tyop=Tyop, Kind=Kind.kind_subst kdS Kind, Rank=Rank}
+fun inst_rank_kind rkS kdS (TYVAR (str,kd)) =
+       TYVAR (str,Kind.inst_rank_kind rkS kdS kd)
+  | inst_rank_kind rkS kdS (TYCON {Thy, Tyop, Kind}) =
+       TYCON {Thy=Thy, Tyop=Tyop, Kind=Kind.inst_rank_kind rkS kdS Kind}
   | inst_rank_kind rkS kdS (TYAPP (opr,arg)) =
        TYAPP (inst_rank_kind rkS kdS opr, inst_rank_kind rkS kdS arg)
   | inst_rank_kind rkS kdS (TYABST (bvar,body)) =
        TYABST (inst_rank_kind rkS kdS bvar, inst_rank_kind rkS kdS body)
   | inst_rank_kind rkS kdS (TYUNIV (bvar,body)) =
        TYUNIV (inst_rank_kind rkS kdS bvar, inst_rank_kind rkS kdS body)
-  | inst_rank_kind rkS kdS (PARAM (n,kd,rk)) =
-       PARAM (n, Kind.kind_subst kdS kd, rk+rkS)
+  | inst_rank_kind rkS kdS (PARAM (n,kd)) =
+       PARAM (n, Kind.inst_rank_kind rkS kdS kd)
 
 
 
@@ -89,7 +89,7 @@ fun initialise_typrinter f =
 
 fun pp_type g pps ty = (!type_printer) g pps ty
 
-fun dest_var_st (TYVAR triple) = triple
+fun dest_var_st (TYVAR tvr) = tvr
   | dest_var_st _ = raise GrammarError "dest_var_st: not a type variable"
 
 fun is_abs_st (TYABST _) = true
@@ -106,21 +106,21 @@ fun strip_abs_st (TYABST (bvar,body)) =
 
 fun structure_to_type st =
     case st of
-      TYCON {Thy,Tyop,Kind,Rank} => Type.mk_thy_con_type {Thy=Thy, Tyop=Tyop, Kind=Kind, Rank=Rank}
+      TYCON {Thy,Tyop,Kind} => Type.mk_thy_con_type {Thy=Thy, Tyop=Tyop, Kind=Kind}
     | TYAPP (opr,arg) => Type.mk_app_type(structure_to_type opr, structure_to_type arg)
     | TYUNIV (bvar,body) => Type.mk_univ_type(structure_to_type bvar, structure_to_type body)
     | TYABST (bvar,body) => Type.mk_abs_type(structure_to_type bvar, structure_to_type body)
-    | TYVAR (str,kd,rk) => Type.mk_var_type(str,kd,rk)
+    | TYVAR (str,kd) => Type.mk_var_type(str,kd)
 (*
       TYOP {Thy,Tyop,Args} =>
       Type.mk_thy_type {Thy = Thy, Tyop = Tyop,
                         Args = map structure_to_type Args}
 *)
-    | PARAM (n,kd,rk) => Type.mk_var_type ("'"^str (chr (n + ord #"a")), kd, rk)
+    | PARAM (n,kd) => Type.mk_var_type ("'"^str (chr (n + ord #"a")), kd)
 
-fun params0 acc (PARAM (i,kd,rk)) = HOLset.add(acc, i)
-  | params0 acc (TYCON {Thy,Tyop,Kind,Rank}) = acc
-  | params0 acc (TYVAR (str,kd,rk)) = acc
+fun params0 acc (PARAM (i,kd)) = HOLset.add(acc, i)
+  | params0 acc (TYCON {Thy,Tyop,Kind}) = acc
+  | params0 acc (TYVAR (str,kd)) = acc
   | params0 acc (TYAPP (opr,arg)) = params0 (params0 acc opr) arg
   | params0 acc (TYUNIV (bvar,body)) = params0 (params0 acc bvar) body
   | params0 acc (TYABST (bvar,body)) = params0 (params0 acc bvar) body
@@ -275,7 +275,7 @@ fun is_var_rule (_,CAST) = true
 fun var_grammar (TYG(G,abbrevs,specials,pmap)) = TYG(List.filter is_var_rule G,abbrevs,specials,pmap)
 
 fun check_structure st = let
-  fun param_numbers (PARAM (i,kd,rk), pset) = HOLset.add(pset, i)
+  fun param_numbers (PARAM (i,kd), pset) = HOLset.add(pset, i)
     | param_numbers (TYCON _, pset) = pset
     | param_numbers (TYVAR _, pset) = pset
     | param_numbers (TYAPP(opr,arg), pset) = param_numbers (arg, param_numbers (opr,pset))
@@ -404,10 +404,14 @@ fun prettyprint_grammar pps (G as TYG (g,abbrevs,specials,pmap)) = let
                 pr_list (fn () => add_string "TY") (fn () => add_string ", ")
                         (fn () => ()) (List.tabulate(n,K ()));
                 add_string ")")
-    open Kind
+    open Rank Kind
+    fun rank_str rk = if rk = rho then "" else ":" ^ rank_to_string rk
     fun print_ty_kind kind =
-      if kind = typ then add_string "TY"
-      else if is_var_kind kind then add_string (dest_var_kind kind)
+      if is_type_kind kind then add_string ("TY" ^ rank_str (dest_type_kind kind))
+      else if is_var_kind kind then
+           let val (s,rk) = dest_var_kind kind
+           in add_string (s ^ rank_str rk)
+           end
       else let val (kds,kd) = strip_arrow_kind kind
            in add_string "(";
               pr_list (fn kd => print_ty_kind kd) (fn () => add_string " => ")
@@ -428,21 +432,21 @@ fun prettyprint_grammar pps (G as TYG (g,abbrevs,specials,pmap)) = let
 fun triple_compare(cmp1,cmp2,cmp3)((a1,a2,a3),(b1,b2,b3)) =
     Lib.pair_compare(cmp1,Lib.pair_compare(cmp2,cmp3))((a1,(a2,a3)),(b1,(b2,b3)))
 
-fun get_params0 acc (PARAM (i,kd,rk)) = HOLset.add(acc, (i,kd,rk))
-  | get_params0 acc (TYCON {Thy,Tyop,Kind,Rank}) = acc
-  | get_params0 acc (TYVAR (str,kd,rk)) = acc
+fun get_params0 acc (PARAM (i,kd)) = HOLset.add(acc, (i,kd))
+  | get_params0 acc (TYCON {Thy,Tyop,Kind}) = acc
+  | get_params0 acc (TYVAR (str,kd)) = acc
   | get_params0 acc (TYAPP (opr,arg)) = get_params0 (get_params0 acc opr) arg
   | get_params0 acc (TYUNIV (bvar,body)) = get_params0 (get_params0 acc bvar) body
   | get_params0 acc (TYABST (bvar,body)) = get_params0 (get_params0 acc bvar) body
-val get_params = get_params0 (HOLset.empty (triple_compare (Int.compare,Kind.kind_compare,Int.compare)))
+val get_params = get_params0 (HOLset.empty (Lib.pair_compare (Int.compare,Kind.kind_compare)))
 
   fun print_abbrev (s, st) = let
     val ps = HOLset.listItems (get_params st)
     fun print_lhs () =
       case (*num_params st*) length ps of
         0 => add_string s
-      | 1 => (let val (p as (_,kd,rk)) = hd ps
-                  val simple = kd = Kind.typ andalso rk = 0
+      | 1 => (let val (p as (_,kd)) = hd ps
+                  val simple = kd = Kind.typ Rank.rho
               in if simple then () else add_string "(";
                  pp_type G pps (structure_to_type (PARAM p));
                  if simple then () else add_string ")";
@@ -584,8 +588,8 @@ fun abb_dest_type0 (TYG(_, _, _, pmap)) ty = let
   open HolKernel
   val net_matches = TypeNet.match(pmap, ty)
   fun mymatch pat ty = let
-    val ((i, sames), (k, kdsames), r) =
-       Type.raw_kind_match_type pat ty (([], []), ([], []), 0)
+    val ((i, sames), (k, kdsames), (r, rkfixed)) =
+       Type.raw_kind_match_type pat ty (([], []), ([], []), (0, false))
   in
     (i @ (map (fn ty => ty |-> ty) sames),
      k @ (map (fn kd => kd |-> kd) kdsames),
@@ -613,7 +617,7 @@ in
       val (tyinst,kdinst,rkinst) = inst
       val tyvs' = map (Type.inst_rank_kind rkinst kdinst) tyvs
       val inst' = if null tyvs then Listsort.sort instcmp tyinst
-                  else map (fn tyv => tyv |-> pure_type_subst tyinst tyv) tyvs'
+                  else map (fn tyv => tyv |-> type_subst tyinst tyv) tyvs'
       val args = map #residue inst'
     in
       (nm, args)

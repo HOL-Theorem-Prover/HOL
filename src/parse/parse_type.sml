@@ -10,13 +10,13 @@ type term = Term.term
 exception InternalFailure of locn.locn
 
 type ('a,'b) tyconstructors =
-     {vartype : (string * Prekind.prekind * Prerank.prerank) locn.located -> 'a,
+     {vartype : (string * Prekind.prekind) locn.located -> 'a,
       tyop : (string locn.located * 'a list) -> 'a,
       qtyop : {Thy:string, Tyop:string, Locn:locn.locn, Args: 'a list} -> 'a,
       antiq : 'b -> 'a,
       kindcast : {Ty:'a, Kind:Prekind.prekind, Locn:locn.locn} -> 'a,
       rankcast : {Ty:'a, Rank:Prerank.prerank, Locn:locn.locn} -> 'a,
-      tycon : {Thy:string, Tyop:string, Kind:Prekind.prekind, Rank:Prerank.prerank, Locn:locn.locn} -> 'a,
+      tycon : {Thy:string, Tyop:string, Kind:Prekind.prekind, Locn:locn.locn} -> 'a,
       tyapp  : 'a * 'a -> 'a,
       tyuniv : 'a * 'a -> 'a,
       tyabs  : 'a * 'a -> 'a
@@ -39,13 +39,13 @@ fun one _ [ty] = ty
 fun totalify f x = SOME (f x) handle InternalFailure _ => NONE
 
 fun parse_type (tyfns :
-    {vartype : (string * Prekind.prekind * Prerank.prerank) locn.located -> 'a,
+    {vartype : (string * Prekind.prekind) locn.located -> 'a,
      tyop : (string locn.located * 'a list) -> 'a,
      qtyop : {Thy:string, Tyop:string, Locn:locn.locn, Args: 'a list} -> 'a,
      antiq : 'b -> 'a,
      kindcast : {Ty: 'a, Kind:Prekind.prekind, Locn:locn.locn} -> 'a,
      rankcast : {Ty: 'a, Rank:Prerank.prerank, Locn:locn.locn} -> 'a,
-     tycon  : {Thy:string, Tyop:string, Kind:Prekind.prekind, Rank:Prerank.prerank, Locn:locn.locn} -> 'a,
+     tycon  : {Thy:string, Tyop:string, Kind:Prekind.prekind, Locn:locn.locn} -> 'a,
      tyapp  : ('a * 'a) -> 'a,
      tyuniv : ('a * 'a) -> 'a,
      tyabs  : ('a * 'a) -> 'a})
@@ -59,7 +59,7 @@ fun parse_type (tyfns :
        tyapp = pAppType, tyuniv = pUnivType, tyabs = pAbstType} = tyfns
   fun structure_num_args st =
     let val max = Int.max
-        fun nargs (PARAM (n,kd,rk)) = n + 1
+        fun nargs (PARAM (n,kd)) = n + 1
           | nargs (TYAPP  (opr, arg )) = max (nargs opr,  nargs arg)
           | nargs (TYUNIV (bvar,body)) = max (nargs bvar, nargs body)
           | nargs (TYABST (bvar,body)) = max (nargs bvar, nargs body)
@@ -70,18 +70,17 @@ fun parse_type (tyfns :
     let val stv = structure_to_value0 (s,locn) args
     in
       case st of
-        TYCON  {Thy, Tyop, Kind, Rank} => pConType {Thy=Thy, Tyop=Tyop, Kind=Prekind.fromKind Kind,
-                                                    Rank=Prerank.fromRank Rank, Locn=locn}
+        TYCON  {Thy, Tyop, Kind} => pConType {Thy=Thy, Tyop=Tyop, Kind=Prekind.fromKind Kind, Locn=locn}
       | TYAPP  (opr,arg)   => pAppType (stv opr,  stv arg)
       | TYUNIV (bvar,body) => pUnivType(stv bvar, stv body)
       | TYABST (bvar,body) => pAbstType(stv bvar, stv body)
-      | TYVAR  (str,kd,rk) => pVartype ((str, Prekind.fromKind kd, Prerank.fromRank rk), locn)
+      | TYVAR  (str,kd)    => pVartype ((str, Prekind.fromKind kd), locn)
 (*
         TYOP {Args, Thy, Tyop} =>
         qtyop {Args = map (structure_to_value0 (s,locn) args) Args,
                Thy = Thy, Tyop = Tyop, Locn = locn}
 *)
-      | PARAM (n,kd,rk) => List.nth(args, n)
+      | PARAM (n,kd) => List.nth(args, n)
     end
 
   fun structure_to_value (s,locn) args st =
@@ -307,7 +306,7 @@ end
   end
 
   fun parse_kindcast fb = let
-    val (llocn, _) = itemP is_KindCst fb 
+    val (llocn, _) = itemP is_KindCst fb
     val kd = kindparser fb
     val (adv,(t,rlocn)) = typetok_of fb
   in
@@ -402,7 +401,7 @@ end
                          ^ Int.toString (length tys) ^ " types\n") else ();
                    tys
                 end
-    | TypeVar s => (adv(); [pVartype ((uniconvert s,Prekind.new_uvar(),Prerank.new_uvar()), locn)])
+    | TypeVar s => (adv(); [pVartype ((uniconvert s,Prekind.all_new_uvar()(*new_var_uvar()*)), locn)])
     | AQ x => (adv(); [pAQ x])
     | QTypeIdent (s0,s) => [try_const_tyop(t,locn)]
     | TypeIdent s => [try_const_tyop(t,locn)]
