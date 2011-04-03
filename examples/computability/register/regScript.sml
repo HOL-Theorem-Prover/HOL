@@ -2,11 +2,10 @@
 (* Register machines                                                         *)
 (*---------------------------------------------------------------------------*)
 
-quietdec := true;
-loadPath := "../" :: !loadPath;
-app load ["finite_mapTheory", "goedelCodeTheory"];
+open HolKernel bossLib boolLib Parse
 open finite_mapTheory arithmeticTheory pred_setTheory;
-quietdec := false;
+
+val _ = new_theory "reg"
 
 (*---------------------------------------------------------------------------*)
 (* Register machines have two instructions:                                  *)
@@ -16,7 +15,7 @@ quietdec := false;
 (*                  decrement r and goto j                                   *)
 (*---------------------------------------------------------------------------*)
 
-Hol_datatype 
+val _ = Hol_datatype
   `instr = INC of num => num
          | TST of num => num => num`;
 
@@ -26,17 +25,18 @@ Hol_datatype
 (* in register 0.                                                            *)
 (*---------------------------------------------------------------------------*)
 
-val stateOf_def = 
- Define
-  `stateOf (Regs,i) = Regs`;
+val _ = Hol_datatype `config = <| pc : num; regs : num |-> num |>`
+val _ = hide "config"
 
-val pcOf_def = 
- Define
-  `pcOf (Regs,i) = i`;
+val saferead_def = Define`
+  saferead f i = case FLOOKUP f i of
+                    NONE -> 0
+                 || SOME v -> v
+`;
+val _ = set_fixity "''" (Infixl 2000)
+val _ = overload_on ("''", ``saferead``)
 
-val reg0_def = 
- Define
-  `reg0 config = stateOf config ' 0`;
+val reg0_def = Define `reg0 config = config.regs '' 0`;
 
 (*---------------------------------------------------------------------------*)
 (* A step of computation is represented as a relation between configurations.*)
@@ -46,29 +46,26 @@ val reg0_def =
 (* is made to the configuration.                                             *)
 (*---------------------------------------------------------------------------*)
 
-val Step_def = 
- Define
-  `Step prog (Regs,pc) = 
-     case FLOOKUP prog pc
-      of NONE -> (Regs,pc)
-      || SOME(INC r j) ->  (Regs |+ (r, (Regs ' r) + 1), j)
-      || SOME(TST r a b) -> 
-           if (Regs ' r) = 0 
-            then (Regs,a)
-             else (Regs |+ (r, (Regs ' r) - 1), b)`;
-    
-(*---------------------------------------------------------------------------*)
-(* Explicitly index a list. Translate a list into a finite map.              *)
-(*---------------------------------------------------------------------------*)
+val Step_def = Define `
+  Step prog cfg =
+     case FLOOKUP prog cfg.pc of
+         NONE -> cfg
+      || SOME(INC r j) ->  cfg with <|
+                              regs updated_by (\R. R |+ (r, R '' r + 1));
+                              pc := j
+                           |>
+      || SOME(TST r a b) ->
+           if cfg.regs '' r = 0 then cfg with pc := a
+           else cfg with <| regs updated_by (\R. R |+ (r, R '' r - 1));
+                            pc := b |>`;
 
-val ENUMERATE_def = 
- Define
-   `(ENUMERATE [] n = []) /\
-    (ENUMERATE (h::t) n = (n,h)::ENUMERATE t (n+1))`;
+(* ----------------------------------------------------------------------
+    Translate a list into a finite map.
+   ---------------------------------------------------------------------- *)
 
-val fmapOf_def = 
+val fmapOf_def =
  Define
-   `fmapOf list = FEMPTY |++ ENUMERATE list 0`;
+   `fmapOf list = FEMPTY |++ GENLIST (λn. (n, EL n list)) (LENGTH list)`
 
 (*---------------------------------------------------------------------------*)
 (* A sequence f is an execution of prog on inputs args starting at pc, just  *)
@@ -81,23 +78,25 @@ val fmapOf_def =
 (* of prog.                                                                  *)
 (*---------------------------------------------------------------------------*)
 
-val isExecution_def = 
+val isExecution_def =
  Define
-  `isExecution prog pc args f = 
-     (f 0 = (fmapOf args,pc)) /\
+  `isExecution prog pc args f =
+     (f 0 = <| regs := fmapOf args; pc := pc|>) /\
      (!n. f (n+1) = Step prog (f n))`;
 
-val Executions_Exist = Q.prove
-(`!prog pc args. ?f. isExecution prog pc args f`,
- RW_TAC arith_ss [isExecution_def] THEN 
- Q.EXISTS_TAC `\n. FUNPOW (Step prog) n (fmapOf args,pc)` THEN 
+val Executions_Exist = store_thm(
+  "Executions_Exist",
+  ``!prog pc args. ?f. isExecution prog pc args f``,
+ RW_TAC arith_ss [isExecution_def] THEN
+ Q.EXISTS_TAC `\n. FUNPOW (Step prog) n <| regs := fmapOf args; pc := pc|>` THEN
  RW_TAC arith_ss [FUNPOW] THEN RW_TAC arith_ss [GSYM ADD1] THEN
  RW_TAC arith_ss [FUNPOW_SUC]);
 
-val Executions_Unique = Q.prove
-(`!prog pc args f1 f2. 
-     isExecution prog pc args f1 /\ 
-     isExecution prog pc args f2 ==> (f1=f2)`,
+val Executions_Unique = store_thm(
+  "Executions_Unique",
+  ``!prog pc args f1 f2.
+     isExecution prog pc args f1 /\
+     isExecution prog pc args f2 ==> (f1=f2)``,
  RW_TAC arith_ss [isExecution_def, FUN_EQ_THM] THEN
  Induct_on `x` THEN RW_TAC arith_ss [] THEN METIS_TAC [ADD1]);
 
@@ -109,8 +108,8 @@ val Executions_Unique = Q.prove
 (*                                                                           *)
 (*---------------------------------------------------------------------------*)
 
-val execOf_def = 
- new_specification 
+val execOf_def =
+ new_specification
   ("execOf_def",
    ["execOf"],
     SIMP_RULE std_ss [SKOLEM_THM] Executions_Exist);
@@ -122,15 +121,16 @@ val execOf_def =
 (*       !n. execOf prog pc args (SUC n) = Step prog (execOf prog pc args n) *)
 (*---------------------------------------------------------------------------*)
 
-val execOf_thm = 
-  SIMP_RULE arith_ss [isExecution_def, GSYM ADD1] execOf_def;
+val execOf_thm = save_thm(
+  "execOf_thm",
+  SIMP_RULE arith_ss [isExecution_def, GSYM ADD1] execOf_def);
 
-val execOf_recn = Q.prove
-(`execOf prog pc args n = 
-   if n=0 then (fmapOf args,pc)
-   else Step prog (execOf prog pc args (n-1))`,
-  Cases_on `n` THEN RW_TAC arith_ss [execOf_thm]);;
-
+val execOf_recn = store_thm(
+  "execOf_recn",
+  ``execOf prog pc args n =
+      if n=0 then <| regs := fmapOf args; pc := pc|>
+      else Step prog (execOf prog pc args (n-1))``,
+  Cases_on `n` THEN RW_TAC arith_ss [execOf_thm]);
 
 val _ = computeLib.add_funs [execOf_recn,FLOOKUP_DEF];
 
@@ -138,47 +138,49 @@ val _ = computeLib.add_funs [execOf_recn,FLOOKUP_DEF];
 (* The index of the first terminated configuration in a sequence.            *)
 (*---------------------------------------------------------------------------*)
 
-val haltedConfig_def =
- Define
-  `haltedConfig (prog:num |-> instr) (cnfg:(num |-> num) # num) = 
-    (pcOf cnfg NOTIN FDOM prog)`;
+val haltedConfig_def = Define `
+   haltedConfig prog cnfg = cnfg.pc ∉ FDOM prog
+`
 
 val haltsAt_def =
- Define 
-  `haltsAt (prog:num |-> instr) (seq:num -> (num |-> num) # num) = 
+ Define
+  `haltsAt (prog:num |-> instr) (seq:num -> config) =
     if (?n. haltedConfig prog (seq n))
      then SOME (LEAST n. haltedConfig prog (seq n))
       else NONE`;
 
-val haltsSuffix = Q.prove
-(`!prog pc args seq m. 
-   isExecution prog pc args seq /\
-   haltedConfig prog (seq m) ==>
-   !q. m <= q ==> haltedConfig prog (seq q)`,
- RW_TAC arith_ss [haltedConfig_def,isExecution_def,GSYM ADD1] THEN
- `?k. q = m + k` by METIS_TAC [LESS_EQUAL_ADD] THEN 
- RW_TAC arith_ss [] THEN POP_ASSUM (K ALL_TAC) THEN 
- Induct_on `k` THEN RW_TAC arith_ss [ADD_CLAUSES] THEN 
- Cases_on `seq (k + m)` THEN RW_TAC arith_ss [Step_def,FLOOKUP_DEF] THEN 
- METIS_TAC[pcOf_def]);
+val haltsSuffix = store_thm(
+  "haltsSuffix",
+  ``!prog pc args seq m.
+       isExecution prog pc args seq /\
+       haltedConfig prog (seq m) ==>
+       !q. m <= q ==> haltedConfig prog (seq q)``,
+  SRW_TAC [][haltedConfig_def,isExecution_def,GSYM ADD1] THEN
+  `?k. q = m + k` by METIS_TAC [LESS_EQUAL_ADD] THEN
+  SRW_TAC [][] THEN POP_ASSUM (K ALL_TAC) THEN
+  Induct_on `k` THEN SRW_TAC [][ADD_CLAUSES] THEN
+  Q.SPEC_THEN `seq (m + k)` FULL_STRUCT_CASES_TAC
+              (theorem "config_literal_nchotomy") THEN
+  SRW_TAC [][Step_def,FLOOKUP_DEF] THEN FULL_SIMP_TAC (srw_ss()) []);
 
-val haltsSuffixThm = Q.prove
-(`!prog pc args m q. 
-   haltedConfig prog (execOf prog pc args m) /\  m <= q ==> 
-   haltedConfig prog (execOf prog pc args q)`,
- METIS_TAC [execOf_def,haltsSuffix]);
+val haltsSuffixThm = store_thm(
+  "haltsSuffixThm",
+  ``!prog pc args m q.
+      haltedConfig prog (execOf prog pc args m) /\  m <= q ==>
+      haltedConfig prog (execOf prog pc args q)``,
+  METIS_TAC [execOf_def,haltsSuffix]);
 
 val Halts_def =
- Define 
+ Define
   `Halts prog pc args = ?n. haltsAt prog (execOf prog pc args) = SOME n`;
 
 (*---------------------------------------------------------------------------*)
 (* The function computed by program prog is given by funOf prog.             *)
 (*---------------------------------------------------------------------------*)
 
-val funOf_def = 
+val funOf_def =
  Define
-  `funOf prog args = 
+  `funOf prog args =
      let seq = execOf prog 1 args
      in case haltsAt prog seq
          of SOME m -> SOME (reg0 (seq m))
@@ -188,16 +190,16 @@ val funOf_def =
 (* Accept/reject inputs.                                                     *)
 (*---------------------------------------------------------------------------*)
 
-val Accepts_def = 
+val Accepts_def =
  Define
-  `Accepts prog pc args = 
-     ?m. (haltsAt prog (execOf prog pc args) = SOME m) /\ 
+  `Accepts prog pc args =
+     ?m. (haltsAt prog (execOf prog pc args) = SOME m) /\
          (reg0(execOf prog pc args m) = 1)`;
 
-val Rejects_def = 
+val Rejects_def =
  Define
-  `Rejects prog pc args = 
-     ?m. (haltsAt prog (execOf prog pc args) = SOME m) /\ 
+  `Rejects prog pc args =
+     ?m. (haltsAt prog (execOf prog pc args) = SOME m) /\
          (reg0(execOf prog pc args m) = 0)`;
 
 (*---------------------------------------------------------------------------*)
@@ -209,12 +211,12 @@ val nComputable_def =
   `nComputable n (f:num list -> num option) =
       ?prog. !args. (LENGTH args = n) ==> (f args = funOf prog args)`;
 
-val Computable_def = 
+val Computable_def =
  Define
   `Computable = BIGUNION {nComputable n | n IN UNIV}`;
 
 val IN_Computable = Q.prove
-(`f IN Computable = 
+(`f IN Computable =
    ?n prog. !args. (LENGTH args = n) ==> (f args = funOf prog args)`,
  SRW_TAC [] [IN_BIGUNION, Computable_def,EQ_IMP_THM,nComputable_def] THEN
  METIS_TAC [nComputable_def, SPECIFICATION]);
@@ -226,9 +228,9 @@ val IN_Computable = Q.prove
 (* pc 1.                                                                     *)
 (*---------------------------------------------------------------------------*)
 
-val Run_def = 
+val Run_def =
  Define
-  `Run prog args n = FUNPOW (Step prog) n (fmapOf args,1)`;
+  `Run prog args n = FUNPOW (Step prog) n <| regs := fmapOf args; pc := 1|>`;
 
 (*---------------------------------------------------------------------------*)
 (* Example Register program executions.                                      *)
@@ -236,10 +238,10 @@ val Run_def =
 
 (*
 (* Halt immediately *)
-val prog1 = ``FEMPTY |++ [(1,TST 0 0 0)]``;  
+val prog1 = ``FEMPTY |++ [(1,TST 0 0 0)]``;
 
 (* Add R0 and R1, leaving result in R0 and trashing R1 *)
-val prog2 = ``FEMPTY |++ [(1,TST 1 0 2); (2, INC 0 1)]``; 
+val prog2 = ``FEMPTY |++ [(1,TST 1 0 2); (2, INC 0 1)]``;
 
 EVAL ``reg0(Run ^prog1 [0;1;2] 1)``;
 EVAL ``reg0(Run ^prog2 [3;4] 8)``;
