@@ -182,6 +182,13 @@ val maps_to_composable = Q.store_thm(
 ⇒ composable c gf`,
 srw_tac [][composable_def,maps_to_def])
 
+val maps_to_comp = Q.store_thm(
+"maps_to_comp",
+`∀c f g x y z. is_category c ∧ maps_to c f x y ∧ maps_to c g y z ⇒
+          maps_to c (c.comp (g,f)) x z`,
+srw_tac [][is_category_def,category_axioms_def] >>
+metis_tac [])
+
 val comp_mor_dom_cod = Q.store_thm(
 "comp_mor_dom_cod",
 `∀ c gf. is_category c ∧ composable c gf ⇒
@@ -192,13 +199,23 @@ rpt strip_tac >>
 imp_res_tac composable_maps_to >>
 fsrw_tac [][maps_to_def,composable_def])
 
+val mor_obj = Q.store_thm(
+"mor_obj",
+`∀c f. is_category c ∧ f ∈ c.mor ⇒ c.dom f ∈ c.obj ∧ c.cod f ∈ c.obj`,
+srw_tac [][is_category_def,category_axioms_def])
+
 val maps_to_obj = Q.store_thm(
 "maps_to_obj",
 `∀c f x y.
 is_category c ∧ maps_to c f x y
 ⇒ x ∈ c.obj ∧ y ∈ c.obj`,
-srw_tac [][maps_to_def] >>
-fsrw_tac [][is_category_def,category_axioms_def])
+srw_tac [][maps_to_def] >> srw_tac [][mor_obj])
+
+val composable_obj = Q.store_thm(
+"composable_obj",
+`∀c f g. is_category c ∧ composable c (g,f) ⇒
+  c.dom f ∈ c.obj ∧ c.dom g ∈ c.obj ∧ c.cod f ∈ c.obj ∧ c.cod g ∈ c.obj`,
+srw_tac [][composable_def,mor_obj])
 
 val id_inj = Q.store_thm(
 "id_inj",
@@ -206,6 +223,11 @@ val id_inj = Q.store_thm(
 ⇒ (x = y)`,
 srw_tac [][is_category_def,category_axioms_def] >>
 res_tac >> metis_tac [maps_to_def])
+
+val id_maps_to = Q.store_thm(
+"id_maps_to",
+`∀c x. is_category c ∧ x ∈ c.obj ⇒ maps_to c (c.id x) x x`,
+srw_tac [][is_category_def,category_axioms_def])
 
 val composable_comp = Q.store_thm(
 "composable_comp",
@@ -501,14 +523,42 @@ val is_category_op_cat = Q.store_thm(
 "is_category_op_cat",
 `∀c. is_category c ⇒ is_category (op_cat c)`,
 srw_tac [][is_category_def,op_cat_axioms,op_cat_extensional])
+val _ = export_rewrites["is_category_op_cat"]
 
-val op_maps_to = Q.store_thm(
-"op_maps_to",
+val op_cat_obj = Q.store_thm(
+"op_cat_obj",
+`∀c. (op_cat c).obj = c.obj`,
+srw_tac [][op_cat_def])
+
+val op_cat_mor = Q.store_thm(
+"op_cat_mor",
+`∀c. (op_cat c).mor = c.mor`,
+srw_tac [][op_cat_def])
+
+val op_cat_dom = Q.store_thm(
+"op_cat_dom",
+`∀c. (op_cat c).dom = c.cod`,
+srw_tac [][op_cat_def])
+
+val op_cat_cod = Q.store_thm(
+"op_cat_cod",
+`∀c. (op_cat c).cod = c.dom`,
+srw_tac [][op_cat_def])
+
+val op_cat_comp = Q.store_thm(
+"op_cat_comp",
+`∀c f g. (op_cat c).comp (g,f) = c.comp (f,g)`,
+srw_tac [][op_cat_def])
+
+val _ = export_rewrites["op_cat_obj","op_cat_mor","op_cat_dom","op_cat_cod","op_cat_comp"]
+
+val op_cat_maps_to = Q.store_thm(
+"op_cat_maps_to",
 `∀c f x y. maps_to c f x y ⇒ maps_to (op_cat c) f y x`,
 srw_tac [][maps_to_def,op_cat_def])
 
-val op_composable = Q.store_thm(
-"op_composable",
+val op_cat_composable = Q.store_thm(
+"op_cat_composable",
 `∀c gf. composable c (SND gf, FST gf) ⇒ composable (op_cat c) gf`,
 srw_tac [][composable_def,op_cat_def])
 

@@ -21,7 +21,7 @@ quietdec := false;
 (******************************************************************************
 * Boilerplate needed for compilation
 ******************************************************************************)
-open HolKernel Parse boolLib bossLib;
+open HolKernel Parse boolLib bossLib lcsymtacs;
 open zfset_axiomsTheory pred_setLib pred_setTheory pairLib 
      pairTheory combinTheory;
 
@@ -653,7 +653,13 @@ val ExtFn =
     THEN `!x. x In X ==> !y. (g ' x = y) <=> Pair x y In g` by METIS_TAC[ApFn]
     THEN FULL_SIMP_TAC std_ss [Extension_ax,Pow_def,InProdEq,Fn_def,Pfn_def,Spec_def]
     THEN METIS_TAC[Extension_ax]);
-    
+
+val FnEqThm = Q.store_thm(
+"FnEqThm",
+`!f g X Y. f In (X -> Y) /\ g In (X -> Y) /\ (!x. x In X ==> (f ' x = g ' x))
+  ==> (f = g)`,
+metis_tac [ExtFn])
+
 (*---------------------------------------------------------------------------*)
 (* RepSet(f:'a->zfset) =  the image of f as a set in zfset                   *)
 (*---------------------------------------------------------------------------*)
@@ -1090,6 +1096,32 @@ val IdFnAp =
   ("IdFnAp",
    ``!X x. x In X ==> (IdFn X ' x = x)``,
    METIS_TAC[IdFnApLemma,IdFnPfnType,ApPfn]);
+
+val ComposeFnId1 = Q.store_thm(
+"ComposeFnId1",
+`!f X Y Z. (Y = X) /\ f In (Y -> Z) ==> (ComposeFn (X,Y,Z) f (IdFn Y) = f)`,
+srw_tac [][] >>
+match_mp_tac FnEqThm >>
+map_every qexists_tac [`X`,`Z`] >>
+qspec_then `X` assume_tac IdFnType >>
+conj_tac >- srw_tac [][ComposeFnType] >>
+qspecl_then [`X`,`X`,`Z`,`f`,`IdFn X`] mp_tac ApComposeFn >>
+srw_tac [][] >>
+metis_tac [IdFnAp,InFn])
+
+val ComposeFnId2 = Q.store_thm(
+"ComposeFnId2",
+`!f X Y Z. (Y = Z) /\ f In (X -> Y) ==> (ComposeFn (X,Y,Z) (IdFn Y) f = f)`,
+srw_tac [][] >>
+match_mp_tac FnEqThm >>
+map_every qexists_tac [`X`,`Y`] >>
+qspec_then `Y` assume_tac IdFnType >>
+conj_tac >- srw_tac [][ComposeFnType] >>
+qspecl_then [`X`,`Y`,`Y`,`IdFn Y`,`f`] mp_tac ApComposeFn >>
+srw_tac [][] >>
+match_mp_tac IdFnAp >>
+match_mp_tac InFn >>
+qexists_tac `X` >> srw_tac [][])
 
 val GraphFn_def =
  Define
