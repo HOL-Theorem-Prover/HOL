@@ -1906,6 +1906,57 @@ val word_replicate_concat_word_list = Q.store_thm
      \\ SRW_TAC [ARITH_ss] [ADD_MODULUS_RIGHT]
      \\ Cases_on `n` \\ SRW_TAC [ARITH_ss] [ZERO_LESS_MULT]);
 
+(* ......................................................................... *)
+
+(* |- !w. w <> 0w ==> LOG2 (w2n w) < dimindex (:'a) *)
+val LOG2_w2n_lt = save_thm("LOG2_w2n_lt",
+   bitTheory.LT_TWOEXP
+   |> Q.SPECL [`w2n (w : 'a word)`, `dimindex(:'a)`]
+   |> SIMP_RULE std_ss [GSYM dimword_def, w2n_lt, w2n_eq_0]
+   |> Q.DISCH `w <> 0w`
+   |> SIMP_RULE std_ss []
+   |> Q.GEN `w`);
+
+val LOG2_w2n = Q.store_thm("LOG2_w2n",
+  `!w:'a word.
+     w <> 0w ==>
+     (LOG2 (w2n w) = dimindex(:'a) - 1 - LEAST i. w ' (dimindex(:'a) - 1 - i))`,
+  Cases \\ STRIP_TAC
+  \\ MATCH_MP_TAC bitTheory.LOG2_UNIQUE
+  \\ FULL_SIMP_TAC (srw_ss()) []
+  \\ numLib.LEAST_ELIM_TAC
+  \\ SRW_TAC [fcpLib.FCP_ss, ARITH_ss] [word_index, BIT_IMP_GE_TWOEXP]
+  THENL [
+    SPOSE_NOT_THEN STRIP_ASSUME_TAC
+    \\ `!i. i <= dimindex (:'a) - 1 ==> ~BIT i n`
+    by (SRW_TAC [] []
+        \\ Q.PAT_ASSUM `!n. P` (Q.SPEC_THEN `dimindex(:'a) - i - 1` MP_TAC)
+        \\ ASM_SIMP_TAC arith_ss [])
+    \\ FULL_SIMP_TAC (srw_ss()) [MOD_DIMINDEX, BITS_ZERO5],
+    SPOSE_NOT_THEN (STRIP_ASSUME_TAC o SIMP_RULE std_ss [NOT_LESS])
+    \\ Cases_on `n = 0`
+    \\ FULL_SIMP_TAC std_ss [dimword_def]
+    \\ `?i. SUC (dimindex (:'a) - (n' + 1)) <= i /\ i < dimindex(:'a)  /\
+            BIT i n`
+    by METIS_TAC [EXISTS_BIT_IN_RANGE]
+    \\ Q.PAT_ASSUM `!m. P` (Q.SPEC_THEN `dimindex(:'a) - i - 1` MP_TAC)
+    \\ SRW_TAC [ARITH_ss] []
+  ]);
+
+val LEAST_BIT_LT = Q.store_thm("LEAST_BIT_LT",
+  `!w:'a word. w <> 0w ==> (LEAST i. w ' i) < dimindex(:'a)`,
+  Cases \\ SRW_TAC [] []
+  \\ numLib.LEAST_ELIM_TAC
+  \\ FULL_SIMP_TAC std_ss [dimword_def]
+  \\ `?i. i < dimindex(:'a) /\ BIT i n` by METIS_TAC [EXISTS_BIT_LT]
+  \\ SRW_TAC [] []
+  THEN1 METIS_TAC [word_index]
+  \\ SPOSE_NOT_THEN (ASSUME_TAC o SIMP_RULE std_ss [NOT_LESS])
+  \\ `i < n'` by DECIDE_TAC
+  \\ Q.PAT_ASSUM `!m. P` (Q.SPEC_THEN `i` IMP_RES_TAC)
+  \\ POP_ASSUM MP_TAC
+  \\ ASM_SIMP_TAC std_ss [word_index]);
+
 (* ------------------------------------------------------------------------- *)
 (*  Word redection: theorems                                                 *)
 (* ------------------------------------------------------------------------- *)

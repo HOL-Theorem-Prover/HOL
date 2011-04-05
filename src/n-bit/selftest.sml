@@ -461,6 +461,9 @@ val _ = blast_true
 val _ = blast_true
   ``(1w <<~ a) * b = b <<~ a : 6 word``;
 
+val _ = blast_true
+  ``a <+ 10w /\ b <+ 10w ==> (a * b <=+ 81w : word8)``;
+
 val elapsed = Timer.checkRealTimer tt;
 
 val _ = print ("\nTotal time: " ^ time_to_minutes elapsed ^ "\n");

@@ -1,8 +1,9 @@
 (* ========================================================================= *)
 (* FILE          : blastScript.sml                                           *)
-(* DESCRIPTION   : A bitwise treatment of n-bit addition.                    *)
+(* DESCRIPTION   : A bitwise treatment of addition, multiplication           *)
+(*                 and shifting.                                             *)
 (* AUTHOR        : Anthony Fox, University of Cambridge                      *)
-(* DATE          : 2010                                                      *)
+(* DATE          : 2010,2011                                                 *)
 (* ========================================================================= *)
 
 open HolKernel Parse boolLib bossLib;
