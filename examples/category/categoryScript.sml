@@ -191,8 +191,8 @@ metis_tac [])
 
 val comp_mor_dom_cod = Q.store_thm(
 "comp_mor_dom_cod",
-`∀ c gf. is_category c ∧ composable c gf ⇒
- (FST gf) ∈ c.mor ∧ (SND gf) ∈ c.mor ∧
+`∀c gf. is_category c ∧ composable c gf ⇒
+ (FST gf) ∈ c.mor ∧ (SND gf) ∈ c.mor ∧ c.comp gf ∈ c.mor ∧
  (c.dom (c.comp gf) = c.dom (SND gf)) ∧
  (c.cod (c.comp gf) = c.cod (FST gf))`,
 rpt strip_tac >>
@@ -550,7 +550,13 @@ val op_cat_comp = Q.store_thm(
 `∀c f g. (op_cat c).comp (g,f) = c.comp (f,g)`,
 srw_tac [][op_cat_def])
 
-val _ = export_rewrites["op_cat_obj","op_cat_mor","op_cat_dom","op_cat_cod","op_cat_comp"]
+val op_cat_id = Q.store_thm(
+"op_cat_id",
+`∀c x. x ∈ c.obj ⇒ ((op_cat c).id = c.id)`,
+srw_tac [][op_cat_def])
+
+val _ = export_rewrites
+["op_cat_obj","op_cat_mor","op_cat_dom","op_cat_cod","op_cat_comp","op_cat_id"]
 
 val op_cat_maps_to = Q.store_thm(
 "op_cat_maps_to",
@@ -566,6 +572,8 @@ val _ = Hol_datatype `functor =
   <| dom : ('a1,'b1) category;
      cod : ('a2,'b2) category;
      morf : 'b1 -> 'b2 |>`
+
+val functor_component_equality = DB.theorem "functor_component_equality"
 
 val objf_def = Define`
   objf f x = @y. y ∈ f.cod.obj ∧ (f.morf (f.dom.id x) = f.cod.id y)`
@@ -585,6 +593,16 @@ val mk_functor_def = Define`
 
 val is_functor_def = Define`
   is_functor f = extensional_functor f ∧ functor_axioms f`
+
+val functor_eq_thm = Q.store_thm(
+"functor_eq_thm",
+`∀f g. is_functor f ∧ is_functor g ∧
+       (f.dom = g.dom) ∧ (f.cod = g.cod) ∧
+       (∀h. h ∈ f.dom.mor ⇒ (f.morf h = g.morf h)) ⇒
+         (f = g)`,
+srw_tac [][functor_component_equality] >>
+fsrw_tac [][is_functor_def,extensional_functor_def] >>
+metis_tac [extensional_def])
 
 val is_functor_is_category = Q.store_thm(
 "is_functor_is_category",
@@ -974,8 +992,20 @@ val is_nat_trans_def = Define`
 val mk_nt_def = Define`
   mk_nt n = <| dom := n.dom; cod := n.cod; at := restrict n.at (ntdom n).obj |>`
 
+val mk_nt_dom = Q.store_thm(
+"mk_nt_dom",
+`∀n. (mk_nt n).dom = n.dom`,
+srw_tac [][mk_nt_def])
+
+val mk_nt_cod = Q.store_thm(
+"mk_nt_cod",
+`∀n. (mk_nt n).cod = n.cod`,
+srw_tac [][mk_nt_def])
+
+val _ = export_rewrites ["mk_nt_dom","mk_nt_cod"]
+
 val is_nat_trans_mk_nt = Q.store_thm(
-"is_nat_trans_def",
+"is_nat_trans_mk_nt",
 `∀n. nat_trans_axioms n ⇒ is_nat_trans (mk_nt n)`,
 srw_tac [][mk_nt_def,is_nat_trans_def,extensional_nat_trans_def] >>
 fsrw_tac [][nat_trans_axioms_def] >>
@@ -1026,6 +1056,23 @@ metis_tac [])
 
 val id_nt_def = Define`
   id_nt f = mk_nt <| dom := f; cod := f; at := λx. f.cod.id (objf f x) |>`
+
+val id_nt_dom = Q.store_thm(
+"id_nt_dom",
+`∀f. (id_nt f).dom = f`,
+srw_tac [][id_nt_def])
+
+val id_nt_cod = Q.store_thm(
+"id_nt_cod",
+`∀f. (id_nt f).cod = f`,
+srw_tac [][id_nt_def])
+
+val _ = export_rewrites ["id_nt_dom","id_nt_cod"]
+
+val id_nt_at = Q.store_thm(
+"id_nt_at",
+`∀f x. x ∈ f.dom.obj ⇒ ((id_nt f).at x = f.cod.id (objf f x))`,
+srw_tac [][id_nt_def,mk_nt_def,restrict_def])
 
 val is_nat_trans_id_nt = Q.store_thm(
 "is_nat_trans_id_nt",
@@ -1099,8 +1146,8 @@ val is_nat_trans_is_category = Q.store_thm(
 `∀n. is_nat_trans n ⇒ is_category (ntdom n) ∧ is_category (ntcod n)`,
 metis_tac [is_nat_trans_is_functor,is_functor_is_category])
 
-val is_nat_trans_comp = Q.store_thm(
-"is_nat_trans_comp",
+val is_nat_trans_nt_comp = Q.store_thm(
+"is_nat_trans_nt_comp",
 `∀nm. composable_nts nm ⇒ is_nat_trans (nt_comp nm)`,
 srw_tac [][nt_comp_def] >>
 match_mp_tac is_nat_trans_mk_nt >>
@@ -1275,10 +1322,15 @@ srw_tac [][category_axioms_def]
   fsrw_tac [][] ) >>
 fsrw_tac [][maps_to_def] >>
 srw_tac [][] >- (
-  match_mp_tac is_nat_trans_comp >>
+  match_mp_tac is_nat_trans_nt_comp >>
   srw_tac [][composable_nts_def] >>
   fsrw_tac [][] ) >>
 srw_tac [][nt_comp_def,mk_nt_def])
+
+val functor_cat_obj = Q.store_thm(
+"functor_cat_obj",
+`∀cs. (functor_cat cs).obj = {f | functor_maps_to f (FST cs) (SND cs)}`,
+Cases >> srw_tac [][functor_cat_def])
 
 val functor_cat_dom = Q.store_thm(
 "functor_cat_dom",
@@ -1313,8 +1365,8 @@ fsrw_tac [][is_nat_trans_def,nat_trans_axioms_def])
 
 val functor_cat_comp = Q.store_thm(
 "functor_cat_comp",
-`∀cs gf x. composable (functor_cat cs) gf ∧ x ∈ (ntdom (SND gf)).obj
- ⇒ (((functor_cat cs).comp gf).at x = (nt_comp gf).at x)`,
+`∀cs gf. composable (functor_cat cs) gf
+ ⇒ (((functor_cat cs).comp gf) = (nt_comp gf))`,
 Cases >> srw_tac [][functor_cat_def,mk_cat_def] >>
 srw_tac [][restrict_def,IN_DEF] >>
 qsuff_tac `F` >> srw_tac [][] >>
