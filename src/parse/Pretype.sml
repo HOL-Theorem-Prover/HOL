@@ -20,6 +20,8 @@ fun tyvars t =
   | UVar (ref NONE) => []
   | UVar (ref (SOME t')) => tyvars t'
 
+fun mk_fun_ty (dom,rng) = Tyop{Thy="min", Tyop="fun", Args = [dom,rng]}
+
 fun new_uvar () = UVar(ref NONE)
 
 infix ref_occurs_in
@@ -284,5 +286,12 @@ val typantiq_constructors =
     {vartype = fn x => Vartype (fst x), qtyop = do_qtyop,
      tyop = tyop_to_qtyop,
      antiq = fromType}
+
+fun has_unbound_uvar pty =
+    case pty of
+      Vartype _ => false
+    | UVar (ref (SOME pty0)) => has_unbound_uvar pty0
+    | UVar (ref NONE) => true
+    | Tyop{Args,...} => List.exists has_unbound_uvar Args
 
 end;

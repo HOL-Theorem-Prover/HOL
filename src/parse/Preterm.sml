@@ -41,7 +41,7 @@ datatype preterm = Var   of {Name:string,  Ty:pretype, Locn:locn.locn}
                  with the built-in equality, but should use eq defined below.
                  To check this has been done everywhere, uncomment this constructor. *)
 
-fun ty1 --> ty2 = Pretype.Tyop{Thy = "min", Tyop = "fun", Args = [ty1, ty2]}
+val op--> = Pretype.mk_fun_ty
 fun ptype_of (Var{Ty, ...}) = Ty
   | ptype_of (Const{Ty, ...}) = Ty
   | ptype_of (Comb{Rator, ...}) = Pretype.chase (ptype_of Rator)
