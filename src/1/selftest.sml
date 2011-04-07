@@ -302,6 +302,7 @@ val _ = set_trace "types" 1
 val _ = print "** Tests with 'types' trace on.\n"
 val _ = tpp "(con (x :'a) :('a, 'b) foo)"
 val _ = tpp "\\(x :'a) (y :'a). x = y"
+val _ = tpp "(ARB (x :'a) :'b)"
 
 (* pretty-printing - tests of colouring *)
 val _ = Parse.current_backend := PPBackEnd.vt100_terminal

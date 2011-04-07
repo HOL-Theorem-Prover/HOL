@@ -1131,21 +1131,16 @@ fun pp_term (G : grammar) TyG backend = let
             #base_type
               (valOf (Overload.info_for_name overload_info print_name))
       end
-
-      val empty_tyset = HOLset.empty Type.compare
-      fun arg_tyvars acc args ty =
-          case args of
-            [] => (acc, ty)
-          | _ :: rest => let
-              val (dom,rng) = dom_rng ty
-            in
-              arg_tyvars (HOLset.addList(acc, type_vars dom)) rest rng
-            end
-      val (consumed_types, rest_type) =
-          arg_tyvars empty_tyset args base_ty
-      val rng_types = HOLset.addList(empty_tyset, type_vars rest_type)
+      val base_pty = Pretype.rename_typevars [] (Pretype.fromType base_ty)
+      fun foldthis (tm,acc) = let
+        open Pretype
+        val fn_pty = mk_fun_ty(fromType (type_of tm), new_uvar())
+      in
+        unify acc fn_pty; chase acc
+      end
+      val _ = List.foldl foldthis base_pty args
     in
-      not (HOLset.isEmpty (HOLset.difference(rng_types, consumed_types)))
+      Pretype.has_unbound_uvar base_pty
     end handle HOL_ERR _ => false
              | Option => false
 
