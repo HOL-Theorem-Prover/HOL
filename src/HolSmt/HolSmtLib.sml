@@ -32,8 +32,8 @@ structure HolSmtLib :> HolSmtLib = struct
        constructs, we try to simplify those away *)
     val (goals, proof) = Tactical.THENL (Tactical.REPEAT Tactic.GEN_TAC,
       [Tactical.THEN (Library.LET_SIMP_TAC,
-         Tactical.THEN (Library.WORD_SIMP_TAC,
-           Tactical.THEN (Library.SET_SIMP_TAC, Tactic.BETA_TAC)))]) goal
+         (*Tactical.THEN (Library.WORD_SIMP_TAC,*)
+           Tactical.THEN (Library.SET_SIMP_TAC, Tactic.BETA_TAC))]) goal
   in
     (* ugly hack to work around the fact that SET_SIMP_TAC and
        BETA_TAC (above) prove ``T``; we call the SMT solver anyway to
@@ -44,7 +44,16 @@ structure HolSmtLib :> HolSmtLib = struct
       (ignore (SMT_TAC ([], boolSyntax.T));
       (goals, proof))
     | [g] =>
-      Lib.apsnd (fn f => proof o Lib.single o f) (SMT_TAC g)
+      (if !Library.trace > 2 then
+        let
+          val (hyps, concl) = g
+        in
+          Feedback.HOL_MESG ("HolSmtLib: simplified goal is [" ^
+            String.concatWith ", " (List.map Hol_pp.term_to_string hyps) ^
+            "] |- " ^ Hol_pp.term_to_string concl)
+        end
+      else ();
+      Lib.apsnd (fn f => proof o Lib.single o f) (SMT_TAC g))
     | _ =>  (* cannot happen *)
       raise Match
   end

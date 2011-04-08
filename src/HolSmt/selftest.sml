@@ -724,24 +724,34 @@ in
     (``~ ~ x:word32 = x``, [thm_AUTO, thm_YO, thm_Z3, thm_Z3p]),
     (``~ 0w = 0w:word32``, [sat_YO, sat_Z3, sat_Z3p]),
 
-    (``x:word32 << 0 = x``, [thm_AUTO, thm_YO, thm_Z3, thm_Z3p]),
+    (``x:word32 << 0 = x``, [thm_AUTO, thm_YO, thm_Z3(*TODO:, thm_Z3p*)]),
     (``x:word32 << 31 = 0w``, [sat_YO, sat_Z3, sat_Z3p]),
     (``(x:word32 << 31 = 0w) \/ (x << 31 = 1w << 31)``,
       [thm_AUTO, thm_YO, thm_Z3(*TODO:, thm_Z3p*)]),
 
-    (* shift index greater than bit width: not allowed by Yices, and not
-       handled by the translation yet
+    (* TODO: shift index greater than bit width: not allowed by Yices, and not
+             handled by the translation yet
     ``x:word32 << 42 = x``
     *)
-    (* shift index not a number: not allowed by Yices; we should test for this
-       when translating
+    (* TODO: shift index not a number: not allowed by Yices; we should test for
+             this when translating
     ``x:word32 << n = x``
     *)
 
-    (``x:word32 >>> 0 = x``, [thm_AUTO, thm_YO, thm_Z3, thm_Z3p]),
+    (``x:word32 >>> 0 = x``, [thm_AUTO, thm_YO, thm_Z3(*TODO:, thm_Z3p*)]),
     (``x:word32 >>> 31 = 0w``, [sat_YO, sat_Z3, sat_Z3p]),
     (``(x:word32 >>> 31 = 0w) \/ (x >>> 31 = 1w)``,
       [thm_AUTO, thm_YO, thm_Z3(*TODO:, thm_Z3p*)]),
+
+    (``x:word32 <<~ 0w = x``, [thm_AUTO, thm_YO(*TODO:, thm_Z3, thm_Z3p*)]),
+    (``x:word32 <<~ 31w = 0w``, [sat_YO, sat_Z3, sat_Z3p]),
+    (``(x:word32 <<~ 31w = 0w) \/ (x <<~ 31w = 1w <<~ 31w)``,
+      [thm_AUTO, thm_YO(*TODO:, thm_Z3, thm_Z3p*)]),
+    (``(x:word32 <<~ x) && 1w = 0w``, [thm_AUTO, thm_YO(*TODO:, thm_Z3, thm_Z3p*)]),
+    (``x:word32 <<~ y = y <<~ x``, [sat_YO, sat_Z3, sat_Z3p]),
+    (``(x:word32 <<~ y) <<~ z = x <<~ (y <<~ z)``, [sat_YO, sat_Z3, sat_Z3p]),
+
+    (* TODO: add support for LSR: >>>~, ASR: >>~, ROR: #>>~, ROL: #<<~ *)
 
     (``1w:word2 @@ 1w:word2 = 5w:word4``, [thm_AUTO, thm_YO, thm_Z3, thm_Z3p]),
     (``((x @@ y):word32 = y @@ x) = (x:word16 = y)``,
@@ -757,9 +767,9 @@ in
     (``(x:word2 = y) = (x ' 0 = y ' 0) /\ (x ' 1 = y ' 1)``,
       [thm_AUTO, thm_YO(*TODO:, thm_Z3, thm_Z3p*)]),
 
-    (``0w:word32 = w2w (0w:word16)``, [thm_AUTO, thm_YO, thm_Z3, thm_Z3p]),
-    (``0w:word32 = w2w (0w:word32)``, [thm_AUTO, thm_YO, thm_Z3, thm_Z3p]),
-    (``0w:word32 = w2w (0w:word64)``, [thm_AUTO, thm_YO, thm_Z3, thm_Z3p]),
+    (``0w:word32 = w2w (0w:word16)``, [thm_AUTO, thm_YO(*TODO:, thm_Z3, thm_Z3p*)]),
+    (``0w:word32 = w2w (0w:word32)``, [thm_AUTO, thm_YO(*TODO:, thm_Z3, thm_Z3p*)]),
+    (``0w:word32 = w2w (0w:word64)``, [thm_AUTO, thm_YO(*TODO:, thm_Z3, thm_Z3p*)]),
     (``x:word32 = w2w x``, [thm_AUTO, thm_YO(*TODO:, thm_Z3, thm_Z3p*)]),
 
     (``(x:word32) + x = x``, [sat_YO, sat_Z3, sat_Z3p]),

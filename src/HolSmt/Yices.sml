@@ -4,9 +4,9 @@
 
 structure Yices = struct
 
-  (* FIXME: Yices 1.0.28 only supports linear arithmetic, bit-vector shifts by
+  (* FIXME: Yices 1.0.29 only supports linear arithmetic, bit-vector shifts by
             a numeric constant, etc.  We do not check these side conditions on
-            arguments at the moment, therefore possibly producing illegal Yices
+            arguments at the moment, therefore possibly producing invalid Yices
             input. *)
 
   (* translation of HOL terms into Yices' input syntax -- currently, all types
@@ -126,6 +126,14 @@ structure Yices = struct
     (wordsSyntax.word_1comp_tm, "bv-not", ""),
     (wordsSyntax.word_lsl_tm, "bv-shift-left0", ""),
     (wordsSyntax.word_lsr_tm, "bv-shift-right0", ""),
+    (* bv-shl is an undocumented Yices feature (as of version 1.0.29) *)
+    (wordsSyntax.word_lsl_bv_tm, "bv-shl", ""),
+    (* FIXME: The following functions have no built-in counterparts in Yices,
+              as far as I know.  We could try to provide our own definitions.
+    (wordsSyntax.word_lsr_bv_tm, ...),
+    (word_asr_bv_tm, ...),
+    (word_ror_bv_tm, ...),
+    (word_rol_bv_tm, ...), *)
     (* word_concat in HOL has a more general type than bv-concat in Yices *)
     (wordsSyntax.word_concat_tm, "bv-concat", ""),
     (wordsSyntax.word_add_tm, "bv-add", ""),
@@ -744,7 +752,7 @@ structure Yices = struct
         SolverSpec.UNKNOWN NONE
     end
 
-  (* Yices 1.0.28, native file format *)
+  (* Yices 1.0.29, native file format *)
   val Yices_Oracle = SolverSpec.make_solver
     (Lib.pair () o goal_to_Yices)
     "yices -tc"
