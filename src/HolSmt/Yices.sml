@@ -130,10 +130,13 @@ structure Yices = struct
     (wordsSyntax.word_lsl_bv_tm, "bv-shl", ""),
     (* FIXME: The following functions have no built-in counterparts in Yices,
               as far as I know.  We could try to provide our own definitions.
+    (wordsSyntax.word_asr_tm, ...),
+    (wordsSyntax.word_ror_tm, ...),
+    (wordsSyntax.word_rol_tm, ...),
     (wordsSyntax.word_lsr_bv_tm, ...),
-    (word_asr_bv_tm, ...),
-    (word_ror_bv_tm, ...),
-    (word_rol_bv_tm, ...), *)
+    (wordsSyntax.word_asr_bv_tm, ...),
+    (wordsSyntax.word_ror_bv_tm, ...),
+    (wordsSyntax.word_rol_bv_tm, ...), *)
     (* word_concat in HOL has a more general type than bv-concat in Yices *)
     (wordsSyntax.word_concat_tm, "bv-concat", ""),
     (wordsSyntax.word_add_tm, "bv-add", ""),
@@ -723,19 +726,22 @@ structure Yices = struct
           end
       end
 
-  fun goal_to_Yices (As, g) =
+  fun goal_to_Yices goal =
   let
-    val g = boolSyntax.mk_neg g
-    (* eta-long form (because Yices cannot handle partial applications) *)
-    val As_g = List.map full_eta_long_conv (As @ [g])
+    (* simplification *)
+    val SIMP_TAC = Tactical.THENL (Tactical.REPEAT Tactic.GEN_TAC,
+      [Tactical.THEN (Library.LET_SIMP_TAC,
+        Tactical.THEN (Library.SET_SIMP_TAC, Tactic.BETA_TAC))])
+    val ((asl, g), _) = SolverSpec.simplify SIMP_TAC goal
+    val (asl, g) = (List.map full_eta_long_conv asl, full_eta_long_conv g)
     val empty = Redblackmap.mkDict Term.compare
     val empty_ty = Redblackmap.mkDict Type.compare
-    val ((_, _, _, _, defs), yices_As_g) = Lib.foldl_map translate_term
-      ((empty, 0, empty_ty, 0, []), As_g)
+    val ((_, _, _, _, defs), yices_asl_g) = Lib.foldl_map translate_term
+      ((empty, 0, empty_ty, 0, []), asl @ [boolSyntax.mk_neg g])
     val defs = List.map (fn s => s ^ "\n") (List.rev defs)
-    val yices_As_g = List.map (fn s => "(assert " ^ s ^ ")\n") yices_As_g
+    val yices_asl_g = List.map (fn s => "(assert " ^ s ^ ")\n") yices_asl_g
   in
-    defs @ yices_As_g @ ["(check)\n"]
+    defs @ yices_asl_g @ ["(check)\n"]
   end
 
   (* returns SAT if Yices reported "sat", UNSAT if Yices reported "unsat" *)

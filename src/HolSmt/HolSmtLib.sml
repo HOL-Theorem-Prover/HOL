@@ -10,52 +10,24 @@ structure HolSmtLib :> HolSmtLib = struct
   fun GENERIC_SMT_TAC solver goal =
   let
     val ERR = Feedback.mk_HOL_ERR "HolSmtLib" "GENERIC_SMT_TAC"
-    fun SMT_TAC goal =
-      case solver goal of
-        SolverSpec.SAT NONE =>
-        raise ERR "solver reports negated term to be 'satisfiable'"
-      | SolverSpec.SAT (SOME _) =>
-        raise ERR
-          "solver reports negated term to be 'satisfiable' (model returned)"
-      | SolverSpec.UNSAT NONE =>
-        ([], fn _ => Thm.mk_oracle_thm "HolSmtLib" goal)
-      | SolverSpec.UNSAT (SOME thm) =>
-        (* 'thm' should be of the form "A' |- concl", where A' \subseteq A, and
-           (A, concl) is the input goal (cf. SolverSpec.sml) *)
-        ([], fn _ => thm)
-      | SolverSpec.UNKNOWN NONE =>
-        raise ERR
-          "solver reports 'unknown' (solver not installed/problem too hard?)"
-      | SolverSpec.UNKNOWN (SOME message) =>
-        raise ERR ("solver reports 'unknown' (" ^ message ^ ")")
-    (* to work around the fact that SMT solvers cannot handle various
-       constructs, we try to simplify those away *)
-    val (goals, proof) = Tactical.THENL (Tactical.REPEAT Tactic.GEN_TAC,
-      [Tactical.THEN (Library.LET_SIMP_TAC,
-         (*Tactical.THEN (Library.WORD_SIMP_TAC,*)
-           Tactical.THEN (Library.SET_SIMP_TAC, Tactic.BETA_TAC))]) goal
   in
-    (* ugly hack to work around the fact that SET_SIMP_TAC and
-       BETA_TAC (above) prove ``T``; we call the SMT solver anyway to
-       make sure this only works if the solver is installed (which is
-       relied upon in selftest.sml) *)
-    case goals of
-      [] =>
-      (ignore (SMT_TAC ([], boolSyntax.T));
-      (goals, proof))
-    | [g] =>
-      (if !Library.trace > 2 then
-        let
-          val (hyps, concl) = g
-        in
-          Feedback.HOL_MESG ("HolSmtLib: simplified goal is [" ^
-            String.concatWith ", " (List.map Hol_pp.term_to_string hyps) ^
-            "] |- " ^ Hol_pp.term_to_string concl)
-        end
-      else ();
-      Lib.apsnd (fn f => proof o Lib.single o f) (SMT_TAC g))
-    | _ =>  (* cannot happen *)
-      raise Match
+    case solver goal of
+      SolverSpec.SAT NONE =>
+      raise ERR "solver reports negated term to be 'satisfiable'"
+    | SolverSpec.SAT (SOME _) =>
+      raise ERR
+        "solver reports negated term to be 'satisfiable' (model returned)"
+    | SolverSpec.UNSAT NONE =>
+      ([], fn _ => Thm.mk_oracle_thm "HolSmtLib" goal)
+    | SolverSpec.UNSAT (SOME thm) =>
+      (* 'thm' should be of the form "A' |- concl", where A' \subseteq A, and
+         (A, concl) is the input goal (cf. SolverSpec.sml) *)
+      ([], fn _ => thm)
+    | SolverSpec.UNKNOWN NONE =>
+      raise ERR
+        "solver reports 'unknown' (solver not installed/problem too hard?)"
+    | SolverSpec.UNKNOWN (SOME message) =>
+      raise ERR ("solver reports 'unknown' (" ^ message ^ ")")
   end
 
   val YICES_TAC = GENERIC_SMT_TAC Yices.Yices_Oracle

@@ -54,10 +54,7 @@ local
     ("bvsdiv", K_zero_two wordsSyntax.mk_word_sdiv),
     ("bvsrem", K_zero_two wordsSyntax.mk_word_srem),
     ("bvsmod", K_zero_two wordsSyntax.mk_word_smod),
-    (* arithmetic shift right -- the number of bits to shift is given
-       by the second argument, which must also be a bit-vector *)
-    ("bvashr", K_zero_two
-      (wordsSyntax.mk_word_asr o Lib.apsnd wordsSyntax.mk_w2n)),
+    ("bvashr", K_zero_two wordsSyntax.mk_word_asr_bv),
     ("repeat", K_one_one
       (Lib.curry wordsSyntax.mk_word_replicate o numSyntax.mk_numeral)),
     ("zero_extend", K_one_one (fn n => fn t => wordsSyntax.mk_w2w (t,

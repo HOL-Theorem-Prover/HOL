@@ -16,6 +16,10 @@ local
      present, we make no attempt to identify a less expressive SMT-LIB
      logic based on the constants that actually appear in the goal. *)
 
+  (* For successful proof reconstruction, it is important that the
+     translation implemented in SmtLib_{Theories,Logics}.sml is an
+     inverse of the translation implemented in this file. *)
+
   val ERR = Feedback.mk_HOL_ERR "SmtLib"
   val WARNING = Feedback.HOL_WARNING "SmtLib"
 
@@ -104,9 +108,6 @@ local
     (intrealSyntax.real_of_int_tm, apfst_K "to_real"),
     (intrealSyntax.INT_FLOOR_tm, apfst_K "to_int"),
     (intrealSyntax.is_int_tm, apfst_K "is_int"),
-    (* HOL constants without direct SMT-LIB counterparts *)
-    (boolSyntax.bool_case, Lib.## (Lib.K "ite",
-      SmtLib_Theories.three_args (fn (t1, t2, t3) => [t3, t1, t2]))),
     (* bit-vector constants *)
     (Term.mk_var ("x", wordsSyntax.mk_word_type Type.alpha), Lib.apfst (fn tm =>
       if wordsSyntax.is_word_literal tm then
@@ -199,75 +200,12 @@ local
     (wordsSyntax.word_sdiv_tm, apfst_K "bvsdiv"),
     (wordsSyntax.word_srem_tm, apfst_K "bvsrem"),
     (wordsSyntax.word_smod_tm, apfst_K "bvsmod"),
-    (* shift left -- the number of bits to shift is given by the
-       second argument, which must also be a bit-vector *)
-    (wordsSyntax.word_lsl_tm, Lib.## (Lib.K "bvshl",
-      SmtLib_Theories.two_args (fn (w, n) =>
-        let
-          val dim_ty = wordsSyntax.dim_of w
-          (* make sure that 'n' is a numeral that can be represented by
-             a word of width 'dim_ty' *)
-          val num = numSyntax.dest_numeral n
-          val dim = fcpSyntax.dest_numeric_type dim_ty
-          val _ = if Arbnum.< (num, Arbnum.pow (Arbnum.two, dim)) then
-              ()
-            else (
-              if !Library.trace > 0 then
-                WARNING "translate_term" "word_lsl: argument too large"
-              else
-                ();
-              raise ERR "<builtin_symbols.word_lsl_tm>" "argument too large"
-            )
-          val wn = wordsSyntax.mk_n2w (n, dim_ty)
-        in
-          [w, wn]
-        end))),
-    (* shift right -- the number of bits to shift is given by the
-       second argument, which must also be a bit-vector *)
-    (wordsSyntax.word_lsr_tm, Lib.## (Lib.K "bvlshr",
-      SmtLib_Theories.two_args (fn (w, n) =>
-        let
-          val dim_ty = wordsSyntax.dim_of w
-          (* make sure that 'n' is a numeral that can be represented by
-             a word of width 'dim_ty' *)
-          val num = numSyntax.dest_numeral n
-          val dim = fcpSyntax.dest_numeric_type dim_ty
-          val _ = if Arbnum.< (num, Arbnum.pow (Arbnum.two, dim)) then
-              ()
-            else (
-              if !Library.trace > 0 then
-                WARNING "translate_term" "word_lsr: argument too large"
-              else
-                ();
-              raise ERR "<builtin_symbols.word_lsr_tm>" "argument too large"
-            )
-          val wn = wordsSyntax.mk_n2w (n, dim_ty)
-        in
-          [w, wn]
-        end))),
-    (* arithmetic shift right -- the number of bits to shift is given
-       by the second argument, which must also be a bit-vector *)
-    (wordsSyntax.word_asr_tm, Lib.## (Lib.K "bvashr",
-      SmtLib_Theories.two_args (fn (w, n) =>
-        let
-          val dim_ty = wordsSyntax.dim_of w
-          (* make sure that 'n' is a numeral that can be represented by
-             a word of width 'dim_ty' *)
-          val num = numSyntax.dest_numeral n
-          val dim = fcpSyntax.dest_numeric_type dim_ty
-          val _ = if Arbnum.< (num, Arbnum.pow (Arbnum.two, dim)) then
-              ()
-            else (
-              if !Library.trace > 0 then
-                WARNING "translate_term" "word_asr: argument too large"
-              else
-                ();
-              raise ERR "<builtin_symbols.word_asr_tm>" "argument too large"
-            )
-          val wn = wordsSyntax.mk_n2w (n, dim_ty)
-        in
-          [w, wn]
-        end))),
+    (* shift operations with two bit-vector arguments; the corresponding HOL
+       shift operations that take a numeral as their second argument are not
+       supported *)
+    (wordsSyntax.word_lsl_bv_tm, apfst_K "bvshl"),
+    (wordsSyntax.word_lsr_bv_tm, apfst_K "bvlshr"),
+    (wordsSyntax.word_asr_bv_tm, apfst_K "bvashr"),
     (wordsSyntax.word_replicate_tm, fn (t, ts) =>
       SmtLib_Theories.two_args (fn (n, w) =>
         let
@@ -306,6 +244,9 @@ local
 
     ("rotate_right", K_one_one
       (Lib.C (Lib.curry wordsSyntax.word_ror) o numSyntax.numeral)),
+
+    ROR: #>>~
+    ROL: #<<~
 *)
     (wordsSyntax.word_lo_tm, apfst_K "bvult"),
     (wordsSyntax.word_ls_tm, apfst_K "bvule"),
