@@ -434,6 +434,25 @@ in
   val goal_to_SmtLib_with_get_proof =
     Lib.apsnd (fn xs => xs @ ["(get-proof)\n", "(exit)\n"]) o goal_to_SmtLib_aux
 
+  (* eliminates some HOL terms that are not supported by the SMT-LIB
+     translation *)
+  val SIMP_TAC =
+    let
+      val INT_ABS = intLib.ARITH_PROVE
+        ``!x. ABS (x:int) = if x < 0i then 0i - x else x``
+      open Tactical simpLib
+    in
+      REPEAT Tactic.GEN_TAC THEN
+      Library.LET_SIMP_TAC THEN
+      SIMP_TAC pureSimps.pure_ss
+        [boolTheory.bool_case_DEF, integerTheory.INT_MIN,
+          integerTheory.INT_MAX, INT_ABS] THEN
+      SIMP_TAC (pureSimps.pure_ss ++ numSimps.REDUCE_ss ++ wordsLib.SIZES_ss)
+        [wordsTheory.word_shift_bv] THEN
+      Library.SET_SIMP_TAC THEN
+      Tactic.BETA_TAC
+    end
+
 end  (* local *)
 
 end

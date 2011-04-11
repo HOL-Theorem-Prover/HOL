@@ -690,6 +690,8 @@ in
 
     (* words (i.e., bit vectors) *)
 
+    (* FIXME: Z3 2.19 prints "extract" wrongly in its proofs *)
+
     (``x:word2 = x``, [thm_AUTO, thm_YO, thm_Z3, thm_Z3p]),
     (``x:word3 = x``, [thm_AUTO, thm_YO, thm_Z3, thm_Z3p]),
     (``x:word4 = x``, [thm_AUTO, thm_YO, thm_Z3, thm_Z3p]),
@@ -730,13 +732,10 @@ in
     (``~ ~ x:word32 = x``, [thm_AUTO, thm_YO, thm_Z3, thm_Z3p]),
     (``~ 0w = 0w:word32``, [sat_YO, sat_Z3, sat_Z3p]),
 
-    (* FIXME: word shift by integer constants should be simplified to word
-              shifts by words *)
-
-    (``x:word32 << 0 = x``, [thm_AUTO, thm_YO(*, thm_Z3, thm_Z3p*)]),
+    (``x:word32 << 0 = x``, [thm_AUTO, thm_YO, thm_Z3, thm_Z3p]),
     (``x:word32 << 31 = 0w``, [sat_YO, sat_Z3, sat_Z3p]),
     (``(x:word32 << 31 = 0w) \/ (x << 31 = 1w << 31)``,
-      [thm_AUTO, thm_YO(*, thm_Z3, thm_Z3p*)]),
+      [thm_AUTO, thm_YO, thm_Z3(*, thm_Z3p*)]),
 
     (* TODO: shift index greater than bit width: not allowed by Yices, and not
              handled by the translation yet
@@ -747,12 +746,10 @@ in
     ``x:word32 << n = x``
     *)
 
-    (``x:word32 >>> 0 = x``, [thm_AUTO, thm_YO(*, thm_Z3, thm_Z3p*)]),
+    (``x:word32 >>> 0 = x``, [thm_AUTO, thm_YO, thm_Z3, thm_Z3p]),
     (``x:word32 >>> 31 = 0w``, [sat_YO, sat_Z3, sat_Z3p]),
     (``(x:word32 >>> 31 = 0w) \/ (x >>> 31 = 1w)``,
-      [thm_AUTO, thm_YO(*, thm_Z3, thm_Z3p*)]),
-
-    (* FIXME: Z3 2.19 prints "extract" wrongly in its proofs *)
+      [thm_AUTO, thm_YO, thm_Z3(*, thm_Z3p*)]),
 
     (``x:word32 <<~ 0w = x``, [thm_AUTO, thm_YO, thm_Z3, thm_Z3p]),
     (``x:word32 <<~ 31w = 0w``, [sat_YO, sat_Z3, sat_Z3p]),

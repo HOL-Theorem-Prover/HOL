@@ -728,7 +728,8 @@ structure Yices = struct
 
   fun goal_to_Yices goal =
   let
-    (* simplification *)
+    (* simplification: eliminates some HOL terms that are not supported by the
+       Yices translation *)
     val SIMP_TAC = Tactical.THENL (Tactical.REPEAT Tactic.GEN_TAC,
       [Tactical.THEN (Library.LET_SIMP_TAC,
         Tactical.THEN (Library.SET_SIMP_TAC, Tactic.BETA_TAC))])
