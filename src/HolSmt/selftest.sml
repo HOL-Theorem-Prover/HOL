@@ -102,8 +102,7 @@ local
   val thm_AUTO = let
     fun auto_tac (_, t) =
     let
-      val simpset = bossLib.++ (bossLib.++ (bossLib.srw_ss (),
-        wordsLib.WORD_ss), wordsLib.WORD_EXTRACT_ss)
+      val simpset = bossLib.++ (bossLib.srw_ss (), wordsLib.WORD_ss)
       val t_eq_t' = simpLib.SIMP_CONV simpset [integerTheory.INT_ABS,
         integerTheory.INT_MAX, integerTheory.INT_MIN, boolTheory.bool_case_DEF]
         t
@@ -472,8 +471,8 @@ in
     (``(x:real) * 42 = 42 * x``, [thm_AUTO, thm_YO]),
 
     (``(x:real) / 1 = x``, [thm_AUTO, thm_YO]),
-    (``x > 0 ==> (x:real) / 42 < x``, [(* thm_AUTO,*) thm_YO]),
-    (``x < 0 ==> (x:real) / 42 > x``, [(* thm_AUTO,*) thm_YO]),
+    (``x > 0 ==> (x:real) / 42 < x``, [(*thm_AUTO,*) thm_YO]),
+    (``x < 0 ==> (x:real) / 42 > x``, [(*thm_AUTO,*) thm_YO]),
 
     (``abs (x:real) >= 0``, [thm_AUTO, thm_YO]),
     (``(abs (x:real) = 0) = (x = 0)``, [thm_AUTO, thm_YO]),
@@ -482,18 +481,18 @@ in
     (``abs (abs (x:real)) = abs x``, [thm_AUTO, thm_YO]),
     (``abs (x:real) = x``, [sat_YO, sat_Z3, sat_Z3p]),
 
-    (``min (x:real) y <= x``, [(* thm_AUTO,*) thm_YO]),
-    (``min (x:real) y <= y``, [(* thm_AUTO,*) thm_YO]),
-    (``(z:real) < x /\ z < y ==> z < min x y``, [(* thm_AUTO,*) thm_YO]),
+    (``min (x:real) y <= x``, [(*thm_AUTO,*) thm_YO]),
+    (``min (x:real) y <= y``, [(*thm_AUTO,*) thm_YO]),
+    (``(z:real) < x /\ z < y ==> z < min x y``, [(*thm_AUTO,*) thm_YO]),
     (``min (x:real) y < x``, [sat_YO, sat_Z3, sat_Z3p]),
     (``min (x:real) 0 = 0``, [sat_YO, sat_Z3, sat_Z3p]),
-    (``(x:real) >= 0 ==> (min x 0 = 0)``, [(* thm_AUTO,*) thm_YO]),
+    (``(x:real) >= 0 ==> (min x 0 = 0)``, [(*thm_AUTO,*) thm_YO]),
 
-    (``max (x:real) y >= x``, [(* thm_AUTO,*) thm_YO]),
-    (``max (x:real) y >= y``, [(* thm_AUTO,*) thm_YO]),
-    (``(z:real) > x /\ z > y ==> z > max x y``, [(* thm_AUTO,*) thm_YO]),
+    (``max (x:real) y >= x``, [(*thm_AUTO,*) thm_YO]),
+    (``max (x:real) y >= y``, [(*thm_AUTO,*) thm_YO]),
+    (``(z:real) > x /\ z > y ==> z > max x y``, [(*thm_AUTO,*) thm_YO]),
     (``max (x:real) y > x``, [sat_YO, sat_Z3, sat_Z3p]),
-    (``(x:real) >= 0 ==> (max x 0 = x)``, [(* thm_AUTO,*) thm_YO]),
+    (``(x:real) >= 0 ==> (max x 0 = x)``, [(*thm_AUTO,*) thm_YO]),
 
     (* arithmetic inequalities: <, <=, >, >= *)
 
@@ -612,7 +611,7 @@ in
     (``(x = y) ==> (f x y = f y x)``,
       [thm_AUTO, thm_YO, thm_Z3, thm_Z3p]),
     (``(f (f x) = x) /\ (f (f (f (f (f x)))) = x) ==> (f x = x)``,
-      [(* thm_AUTO,*) thm_YO, thm_Z3, thm_Z3p]),
+      [(*thm_AUTO,*) thm_YO, thm_Z3, thm_Z3p]),
     (``(f x = f y) ==> (x = y)``, [sat_YO, sat_Z3, sat_Z3p]),
 
     (* predicates *)
@@ -663,9 +662,9 @@ in
     (``(x, y) = (x, z)``, [sat_YO, sat_Z3, sat_Z3p]),
     (``(x, y) = (z, y)``, [sat_YO, sat_Z3, sat_Z3p]),
     (``(x, y) = (y, x)``, [sat_YO, sat_Z3, sat_Z3p]),
-    (``((x, y) = (y, x)) = (x = y)``, [(* thm_AUTO,*) thm_YO]),
+    (``((x, y) = (y, x)) = (x = y)``, [(*thm_AUTO,*) thm_YO]),
     (``((x, y, z) = (y, z, x)) = (x = y) /\ (y = z)``,
-      [(* thm_AUTO,*) thm_YO]),
+      [(*thm_AUTO,*) thm_YO]),
     (``((x, y) = (u, v)) = (x = u) /\ (y = v)``, [thm_AUTO, thm_YO]),
 
     (``y = FST (x, y)``, [sat_YO, sat_Z3, sat_Z3p]),
@@ -684,13 +683,11 @@ in
       [thm_AUTO, thm_YO]),
 
     (``(FST (x, y) = SND (x, y)) = (x = y)``, [thm_AUTO, thm_YO]),
-    (``(FST p = SND p) = (p = (SND p, FST p))``, [(* thm_AUTO,*) thm_YO]),
+    (``(FST p = SND p) = (p = (SND p, FST p))``, [(*thm_AUTO,*) thm_YO]),
     (``((\p. FST p) (x, y)= (\p. SND p) (x, y)) = (x = y)``,
       [thm_AUTO, thm_YO]),
 
     (* words (i.e., bit vectors) *)
-
-    (* FIXME: Z3 2.19 prints "extract" wrongly in its proofs *)
 
     (``x:word2 = x``, [thm_AUTO, thm_YO, thm_Z3, thm_Z3p]),
     (``x:word3 = x``, [thm_AUTO, thm_YO, thm_Z3, thm_Z3p]),
@@ -732,6 +729,8 @@ in
     (``~ ~ x:word32 = x``, [thm_AUTO, thm_YO, thm_Z3, thm_Z3p]),
     (``~ 0w = 0w:word32``, [sat_YO, sat_Z3, sat_Z3p]),
 
+    (* FIXME: Z3 2.19 prints "extract" wrongly in its proofs *)
+
     (``x:word32 << 0 = x``, [thm_AUTO, thm_YO, thm_Z3, thm_Z3p]),
     (``x:word32 << 31 = 0w``, [sat_YO, sat_Z3, sat_Z3p]),
     (``(x:word32 << 31 = 0w) \/ (x << 31 = 1w << 31)``,
@@ -746,11 +745,6 @@ in
     ``x:word32 << n = x``
     *)
 
-    (``x:word32 >>> 0 = x``, [thm_AUTO, thm_YO, thm_Z3, thm_Z3p]),
-    (``x:word32 >>> 31 = 0w``, [sat_YO, sat_Z3, sat_Z3p]),
-    (``(x:word32 >>> 31 = 0w) \/ (x >>> 31 = 1w)``,
-      [thm_AUTO, thm_YO, thm_Z3(*, thm_Z3p*)]),
-
     (``x:word32 <<~ 0w = x``, [thm_AUTO, thm_YO, thm_Z3, thm_Z3p]),
     (``x:word32 <<~ 31w = 0w``, [sat_YO, sat_Z3, sat_Z3p]),
     (``(x:word32 <<~ 31w = 0w) \/ (x <<~ 31w = 1w <<~ 31w)``,
@@ -760,7 +754,12 @@ in
     (``x:word32 <<~ y = y <<~ x``, [sat_YO, sat_Z3, sat_Z3p]),
     (``(x:word32 <<~ y) <<~ z = x <<~ (y <<~ z)``, [sat_YO, sat_Z3, sat_Z3p]),
 
-    (* FIXME: Yices doesn't support right-shifting by a bit-vector amount *)
+    (``x:word32 >>> 0 = x``, [thm_AUTO, thm_YO, thm_Z3, thm_Z3p]),
+    (``x:word32 >>> 31 = 0w``, [sat_YO, sat_Z3, sat_Z3p]),
+    (``(x:word32 >>> 31 = 0w) \/ (x >>> 31 = 1w)``,
+      [thm_AUTO, thm_YO, thm_Z3(*, thm_Z3p*)]),
+
+    (* FIXME: Yices does not support right-shift by a bit-vector amount *)
 
     (``x:word32 >>>~ 0w = x``, [thm_AUTO, (*thm_YO,*) thm_Z3, thm_Z3p]),
     (``x:word32 >>>~ 31w = 0w``, [sat_YO, sat_Z3, sat_Z3p]),
@@ -771,18 +770,43 @@ in
     (``(x:word32 >>>~ y) >>>~ z = x >>>~ (y >>>~ z)``,
       [sat_YO, sat_Z3, sat_Z3p]),
 
-    (* FIXME: not sure why AUTO doesn't succeed on the goals below *)
+    (* FIXME: Yices does not support arithmetical shift-right *)
+
+    (``x:word32 >> 0 = x``, [thm_AUTO, (*thm_YO,*) thm_Z3, thm_Z3p]),
+    (``x:word32 >> 31 = 0w``, [sat_YO, sat_Z3, sat_Z3p]),
+    (``(x:word32 >> 31 = 0w) \/ (x >> 31 = 0xFFFFFFFFw)``,
+      [thm_AUTO, (*thm_YO,*) thm_Z3(*, thm_Z3p*)]),
 
     (``x:word32 >>~ 0w = x``, [thm_AUTO, (*thm_YO,*) thm_Z3, thm_Z3p]),
     (``x:word32 >>~ 31w = 0w``, [sat_YO, sat_Z3, sat_Z3p]),
     (``(x:word32 >>~ 31w = 0w) \/ (x >>~ 31w = 0xFFFFFFFFw)``,
-      [(*thm_AUTO, thm_YO,*) thm_Z3(*, thm_Z3p*)]),
+      [thm_AUTO, (*thm_YO,*) thm_Z3(*, thm_Z3p*)]),
     (``(x:word32 >>~ x = 0w)  \/ (x >>~ x = 0xFFFFFFFFw)``,
-      [(*thm_AUTO, thm_YO,*) thm_Z3(*, thm_Z3p*)]),
+      [thm_AUTO, (*thm_YO,*) thm_Z3(*, thm_Z3p*)]),
     (``x:word32 >>~ y = y >>~ x``, [sat_YO, sat_Z3, sat_Z3p]),
     (``(x:word32 >>~ y) >>~ z = x >>~ (y >>~ z)``, [sat_YO, sat_Z3, sat_Z3p]),
 
-    (* FIXME: add support for ROR: #>>~, ROL: #<<~ *)
+    (* FIXME: Yices does not support bit-vector rotation *)
+
+    (``x:word32 #<< 0 = x``, [thm_AUTO, (*thm_YO,*) thm_Z3(*, thm_Z3p*)]),
+    (``x:word32 #<< 32 = x``, [thm_AUTO, (*thm_YO,*) thm_Z3(*, thm_Z3p*)]),
+    (``x:word32 #<< 64 = x``, [thm_AUTO, (*thm_YO,*) thm_Z3(*, thm_Z3p*)]),
+    (``x:word32 #<< 1 <> x``, [sat_YO, sat_Z3, sat_Z3p]),
+
+    (``x:word32 #<<~ 0w = x``, [thm_AUTO, (*thm_YO,*) thm_Z3(*, thm_Z3p*)]),
+    (``x:word32 #<<~ 32w = x``, [thm_AUTO, (*thm_YO,*) thm_Z3(*, thm_Z3p*)]),
+    (``x:word32 #<<~ 64w = x``, [thm_AUTO, (*thm_YO,*) thm_Z3(*, thm_Z3p*)]),
+    (``x:word32 #<<~ 1w = x``, [sat_YO, sat_Z3, sat_Z3p]),
+
+    (``x:word32 #>> 0 = x``, [thm_AUTO, (*thm_YO,*) thm_Z3(*, thm_Z3p*)]),
+    (``x:word32 #>> 32 = x``, [thm_AUTO, (*thm_YO,*) thm_Z3(*, thm_Z3p*)]),
+    (``x:word32 #>> 64 = x``, [thm_AUTO, (*thm_YO,*) thm_Z3(*, thm_Z3p*)]),
+    (``x:word32 #>> 1 <> x``, [sat_YO, sat_Z3, sat_Z3p]),
+
+    (``x:word32 #>>~ 0w = x``, [thm_AUTO, (*thm_YO,*) thm_Z3(*, thm_Z3p*)]),
+    (``x:word32 #>>~ 32w = x``, [thm_AUTO, (*thm_YO,*) thm_Z3(*, thm_Z3p*)]),
+    (``x:word32 #>>~ 64w = x``, [thm_AUTO, (*thm_YO,*) thm_Z3(*, thm_Z3p*)]),
+    (``x:word32 #>>~ 1w = x``, [sat_YO, sat_Z3, sat_Z3p]),
 
     (``1w:word2 @@ 1w:word2 = 5w:word4``, [thm_AUTO, thm_YO, thm_Z3, thm_Z3p]),
     (``((x @@ y):word32 = y @@ x) = (x:word16 = y)``,
@@ -918,12 +942,12 @@ in
      (b <=+ a /\ a <> b <=> b <+ a) /\ (a <> b /\ b <=+ a <=> b <+ a) /\
      (b <= a /\ a <> b <=> b < a) /\ (a <> b /\ b <= a <=> b < a) /\
      (((v:word32) - w = 0w) <=> (v = w)) /\ (w - 0w = w)``,
-      [(* thm_AUTO,*) thm_YO(*, thm_Z3, thm_Z3p*)]),
+      [(*thm_AUTO,*) thm_YO(*, thm_Z3, thm_Z3p*)]),
 
     (* from Yogesh Mahajan *)
     (``!(w: 18 word). (sw2sw w): 32 word = w2w ((16 >< 0) w: 17 word) +
      0xfffe0000w + ((0 >< 0) (~(17 >< 17) w: bool[unit]) << 17): 32 word``,
-      [(* thm_AUTO,*) thm_YO(*, thm_Z3, thm_Z3p*)]),
+      [thm_AUTO, thm_YO(*, thm_Z3, thm_Z3p*)]),
 
     (* data types: constructors *)
 

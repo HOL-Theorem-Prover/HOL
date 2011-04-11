@@ -202,7 +202,7 @@ local
     (wordsSyntax.word_smod_tm, apfst_K "bvsmod"),
     (* shift operations with two bit-vector arguments; the corresponding HOL
        shift operations that take a numeral as their second argument are not
-       supported *)
+       supported in SMT-LIB *)
     (wordsSyntax.word_lsl_bv_tm, apfst_K "bvshl"),
     (wordsSyntax.word_lsr_bv_tm, apfst_K "bvlshr"),
     (wordsSyntax.word_asr_bv_tm, apfst_K "bvashr"),
@@ -238,16 +238,17 @@ local
     ("sign_extend", K_one_one (fn n => fn t => wordsSyntax.sw2sw (t,
       fcpLib.index_type
         (Arbnum.+ (fcpLib.index_to_num (wordsSyntax.dim_of t), n))))),
-
-    ("rotate_left", K_one_one
-      (Lib.C (Lib.curry wordsSyntax.word_rol) o numSyntax.numeral)),
-
-    ("rotate_right", K_one_one
-      (Lib.C (Lib.curry wordsSyntax.word_ror) o numSyntax.numeral)),
-
-    ROR: #>>~
-    ROL: #<<~
 *)
+    (* rotation by a numeral; the corresponding HOL rotation operations that
+       take two bit-vector arguments are not supported in SMT-LIB *)
+    (wordsSyntax.word_rol_tm, fn (_, ts) =>
+      SmtLib_Theories.two_args (fn (w, n) =>
+        ("(_ rotate_left " ^ Arbnum.toString (numSyntax.dest_numeral n) ^ ")",
+          [w])) ts),
+    (wordsSyntax.word_ror_tm, fn (_, ts) =>
+      SmtLib_Theories.two_args (fn (w, n) =>
+        ("(_ rotate_right " ^ Arbnum.toString (numSyntax.dest_numeral n) ^ ")",
+          [w])) ts),
     (wordsSyntax.word_lo_tm, apfst_K "bvult"),
     (wordsSyntax.word_ls_tm, apfst_K "bvule"),
     (wordsSyntax.word_hi_tm, apfst_K "bvugt"),
@@ -438,17 +439,23 @@ in
      translation *)
   val SIMP_TAC =
     let
+      open Tactical simpLib
       val INT_ABS = intLib.ARITH_PROVE
         ``!x. ABS (x:int) = if x < 0i then 0i - x else x``
-      open Tactical simpLib
+      val WORD_SHIFT_BV = SIMP_PROVE bossLib.bool_ss
+          [wordsTheory.word_shift_bv]
+        ``(!w:'a word n. n < dimword (:'a) ==> (w << n = w <<~ n2w n)) /\
+          (!w:'a word n. n < dimword (:'a) ==> (w >> n = w >>~ n2w n)) /\
+          (!w:'a word n. n < dimword (:'a) ==> (w >>> n = w >>>~ n2w n))``
     in
       REPEAT Tactic.GEN_TAC THEN
       Library.LET_SIMP_TAC THEN
       SIMP_TAC pureSimps.pure_ss
         [boolTheory.bool_case_DEF, integerTheory.INT_MIN,
-          integerTheory.INT_MAX, INT_ABS] THEN
+          integerTheory.INT_MAX, INT_ABS, wordsTheory.word_rol_bv_def,
+          wordsTheory.word_ror_bv_def, wordsTheory.w2n_n2w] THEN
       SIMP_TAC (pureSimps.pure_ss ++ numSimps.REDUCE_ss ++ wordsLib.SIZES_ss)
-        [wordsTheory.word_shift_bv] THEN
+        [WORD_SHIFT_BV] THEN
       Library.SET_SIMP_TAC THEN
       Tactic.BETA_TAC
     end
