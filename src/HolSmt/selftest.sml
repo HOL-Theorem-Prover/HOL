@@ -643,19 +643,16 @@ in
 
     (* TODO: the SMT-LIB translation currently does not properly abstract away
              function types, thereby leading to illegal higher-order goals *)
-    (``(\x. x) = (\y. y)``,
-      [thm_AUTO, thm_YO (*, thm_Z3*)]),
+
+    (``(\x. x) = (\y. y)``, [thm_AUTO, thm_YO(*, thm_Z3, thm_Z3p*)]),
     (``(\x. \x. x) x x = (\y. \y. y) y x``,
-      [thm_AUTO, thm_YO (*, thm_Z3, thm_Z3p*)]),
+      [thm_AUTO, thm_YO, thm_Z3, thm_Z3p]),
     (``(\x. x (\x. x)) = (\y. y (\x. x))``,
-      [thm_AUTO, thm_YO (*, thm_Z3*)]),
-    (* Yices 1.0.18 fails to decide this one
-    ``(\x. x (\x. x)) = (\y. y x)``
-    *)
-    (``f x = (\x. f x) x``,
-      [thm_AUTO, thm_YO (*, thm_Z3, thm_Z3p*)]),
-    (``f x = (\y. f y) x``,
-      [thm_AUTO, thm_YO (*, thm_Z3, thm_Z3p*)]),
+      [thm_AUTO, thm_YO(*, thm_Z3, thm_Z3p*)]),
+    (* Yices 1.0.29 fails to decide this one *)
+    (``(\x. x (\x. x)) = (\y. y x)``, [(*sat_YO,*) sat_Z3, sat_Z3p]),
+    (``f x = (\x. f x) x``, [thm_AUTO, thm_YO, thm_Z3, thm_Z3p]),
+    (``f x = (\y. f y) x``, [thm_AUTO, thm_YO, thm_Z3, thm_Z3p]),
 
     (* tuples, FST, SND *)
 
@@ -759,18 +756,19 @@ in
     (``(x:word32 >>> 31 = 0w) \/ (x >>> 31 = 1w)``,
       [thm_AUTO, thm_YO, thm_Z3(*, thm_Z3p*)]),
 
-    (* FIXME: Yices does not support right-shift by a bit-vector amount *)
+    (* Yices does not support right-shift by a (non-constant) bit-vector
+       amount *)
 
-    (``x:word32 >>>~ 0w = x``, [thm_AUTO, (*thm_YO,*) thm_Z3, thm_Z3p]),
+    (``x:word32 >>>~ 0w = x``, [thm_AUTO, thm_YO, thm_Z3, thm_Z3p]),
     (``x:word32 >>>~ 31w = 0w``, [sat_YO, sat_Z3, sat_Z3p]),
     (``(x:word32 >>>~ 31w = 0w) \/ (x >>>~ 31w = 1w)``,
-      [thm_AUTO, (*thm_YO,*) thm_Z3(*, thm_Z3p*)]),
+      [thm_AUTO, thm_YO, thm_Z3(*, thm_Z3p*)]),
     (``(x:word32 >>>~ x) = 0w``, [thm_AUTO, (*thm_YO,*) thm_Z3(*, thm_Z3p*)]),
-    (``x:word32 >>>~ y = y >>>~ x``, [sat_YO, sat_Z3, sat_Z3p]),
+    (``x:word32 >>>~ y = y >>>~ x``, [(*sat_YO,*) sat_Z3, sat_Z3p]),
     (``(x:word32 >>>~ y) >>>~ z = x >>>~ (y >>>~ z)``,
-      [sat_YO, sat_Z3, sat_Z3p]),
+      [(*sat_YO,*) sat_Z3, sat_Z3p]),
 
-    (* FIXME: Yices does not support arithmetical shift-right *)
+    (* Yices does not support arithmetical shift-right *)
 
     (``x:word32 >> 0 = x``, [thm_AUTO, (*thm_YO,*) thm_Z3, thm_Z3p]),
     (``x:word32 >> 31 = 0w``, [sat_YO, sat_Z3, sat_Z3p]),
@@ -786,7 +784,7 @@ in
     (``x:word32 >>~ y = y >>~ x``, [sat_YO, sat_Z3, sat_Z3p]),
     (``(x:word32 >>~ y) >>~ z = x >>~ (y >>~ z)``, [sat_YO, sat_Z3, sat_Z3p]),
 
-    (* FIXME: Yices does not support bit-vector rotation *)
+    (* Yices does not support bit-vector rotation *)
 
     (``x:word32 #<< 0 = x``, [thm_AUTO, (*thm_YO,*) thm_Z3(*, thm_Z3p*)]),
     (``x:word32 #<< 32 = x``, [thm_AUTO, (*thm_YO,*) thm_Z3(*, thm_Z3p*)]),

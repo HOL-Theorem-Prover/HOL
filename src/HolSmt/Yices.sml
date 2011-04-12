@@ -133,7 +133,6 @@ structure Yices = struct
     (wordsSyntax.word_asr_tm, ...),
     (wordsSyntax.word_ror_tm, ...),
     (wordsSyntax.word_rol_tm, ...),
-    (wordsSyntax.word_lsr_bv_tm, ...),
     (wordsSyntax.word_asr_bv_tm, ...),
     (wordsSyntax.word_ror_bv_tm, ...),
     (wordsSyntax.word_rol_bv_tm, ...), *)
@@ -732,7 +731,10 @@ structure Yices = struct
        Yices translation *)
     val SIMP_TAC = Tactical.THENL (Tactical.REPEAT Tactic.GEN_TAC,
       [Tactical.THEN (Library.LET_SIMP_TAC,
-        Tactical.THEN (Library.SET_SIMP_TAC, Tactic.BETA_TAC))])
+        Tactical.THEN (simpLib.SIMP_TAC (simpLib.++ (simpLib.++
+          (pureSimps.pure_ss, numSimps.REDUCE_ss), wordsLib.SIZES_ss))
+          [wordsTheory.word_lsr_bv_def, wordsTheory.w2n_n2w],
+        Tactical.THEN (Library.SET_SIMP_TAC, Tactic.BETA_TAC)))])
     val ((asl, g), _) = SolverSpec.simplify SIMP_TAC goal
     val (asl, g) = (List.map full_eta_long_conv asl, full_eta_long_conv g)
     val empty = Redblackmap.mkDict Term.compare
