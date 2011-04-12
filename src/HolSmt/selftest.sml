@@ -96,7 +96,8 @@ local
 
 (*****************************************************************************)
 (* a built-in automated semi-decision procedure that *very* loosely          *)
-(* resembles SMT solvers (in terms of reasoning power)                       *)
+(* resembles SMT solvers (in terms of coverage; not so much in terms of      *)
+(* performance)                                                              *)
 (*****************************************************************************)
 
   val thm_AUTO = let
@@ -641,8 +642,8 @@ in
 
     (* lambda abstractions *)
 
-    (* TODO: the SMT-LIB translation currently does not properly abstract away
-             function types, thereby leading to illegal higher-order goals *)
+    (* FIXME: the SMT-LIB translation currently does not properly abstract away
+              function types, thereby leading to illegal higher-order goals *)
 
     (``(\x. x) = (\y. y)``, [thm_AUTO, thm_YO(*, thm_Z3, thm_Z3p*)]),
     (``(\x. \x. x) x x = (\y. \y. y) y x``,
@@ -733,14 +734,13 @@ in
     (``(x:word32 << 31 = 0w) \/ (x << 31 = 1w << 31)``,
       [thm_AUTO, thm_YO, thm_Z3(*, thm_Z3p*)]),
 
-    (* TODO: shift index greater than bit width: not allowed by Yices, and not
-             handled by the translation yet
-    ``x:word32 << 42 = x``
-    *)
-    (* TODO: shift index not a number: not allowed by Yices; we should test for
-             this when translating
-    ``x:word32 << n = x``
-    *)
+    (* Yices does not support shifting by more than the word length *)
+
+    (``x:word32 << 99 = 0w``, [thm_AUTO, (*thm_YO,*) thm_Z3, thm_Z3p]),
+
+    (* Yices does not support shifting by a non-constant *)
+
+    (``x:word32 << n = x``, [(*sat_YO,*) sat_Z3, sat_Z3p]),
 
     (``x:word32 <<~ 0w = x``, [thm_AUTO, thm_YO, thm_Z3, thm_Z3p]),
     (``x:word32 <<~ 31w = 0w``, [sat_YO, sat_Z3, sat_Z3p]),
