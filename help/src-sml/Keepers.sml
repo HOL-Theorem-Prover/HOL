@@ -16,7 +16,7 @@ val keepers =
       "Lib.sig", "Globals.sig",
 
      (* parse *)
-     "Parse.sig", "Hol_pp.sig", "Absyn.sig", "Preterm.sig",
+     "Parse.sig", "Hol_pp.sig", "Absyn.sig", "Preterm.sig", "PPBackEnd.sig",
 
      (* boolLib *)
      "Abbrev.sig", "DB.sig", "boolSyntax.sig", "boolTheory.sig",
