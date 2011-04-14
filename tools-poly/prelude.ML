@@ -33,7 +33,16 @@ val _ = let
       handle Option => 0
 in
   if compiler_number >= 530 then
-    install_pp (pp2polypp (with_pp HOLset.pp_holset))
+    let
+      fun pp_redblackmap pps (_:('a,'b) Redblackmap.dict) =
+            HOLPP.add_string pps "<Redblackmap>"
+      fun pp_redblackset pps (_:'a Redblackset.set) =
+            HOLPP.add_string pps "<Redblackset>"
+    in
+      install_pp (pp2polypp (with_pp HOLset.pp_holset));
+      install_pp (pp2polypp (with_pp pp_redblackmap));
+      install_pp (pp2polypp (with_pp pp_redblackset))
+    end
   else ();
   install_pp (pp2polypp
                   (with_pp (Parse.term_pp_with_delimiters Hol_pp.pp_term)));
