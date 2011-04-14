@@ -29,7 +29,7 @@ sig
   val dest_W           : term -> term * term
   val dest_o           : term -> term * term
   val dest_update      : term -> term * term
-  val dest_update_comb : term -> term * term
+  val dest_update_comb : term -> (term * term) * term
   val strip_update     : term -> (term * term) list * term
   val dest_fail        : term -> term * string * term list
 
