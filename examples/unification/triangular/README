@@ -1,0 +1,8 @@
+Unification with "triangular substitutions" (i.e. in accumulator-passing
+style), inspired by the Scheme implementation used in miniKanren.
+
+For more details, see the paper:
+(Nominal) Unification by Recursive Descent with Triangular Substitutions
+Ramana Kumar and Michael Norrish
+ITP 2010, pp 51-66
+http://dx.doi.org/10.1007/978-3-642-14052-5_6
