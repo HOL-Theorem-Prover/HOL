@@ -116,6 +116,15 @@ fun new_type_definition (name,thm) = let
  handle e => raise (wrap_exn "Definition" "new_type_definition" e);
 
 
+fun new_type_specification (name, tnames, thm) = let
+  val Thy = Theory.current_theory()
+  val tydef = Thm.prim_type_specification Thy tnames thm
+ in
+   Theory.store_definition (name^"_TY_SPEC", tydef)
+ end
+ handle e => raise (wrap_exn "Definition" "new_type_specification" e);
+
+
 fun new_definition(name,M) =
  let val (dest,post) = !new_definition_hook
      val (V,eq)      = dest M

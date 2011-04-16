@@ -1832,7 +1832,8 @@ a formula of the form $c_{\sigma}=t_{\sigma}$, such that:
 \begin{myenumerate}
 \item $c$ is not the name of any constant in $\Sigma_{\Omega}$;
 \item $t_{\sigma}$ is a closed term in ${\sf Terms}_{\Sigma_{\Omega}}$;
-\item all the type variables occurring in $t_{\sigma}$ occur in $\sigma$.
+\item all the type variables occurring free in $t_{\sigma}$ occur free in $\sigma$;
+\item all the kind variables occurring in $t_{\sigma}$ occur in $\sigma$.
 \end{myenumerate}
 
 In \HOL, definitions can be slightly more general than this, in that
@@ -1872,7 +1873,9 @@ Failure occurs if:
 \item $t$ contains free variables that are not in any of
 the variable structures $v_1$, $\dots$, $v_n$ (this is equivalent
 to requiring $\lambda v_1\ \cdots\ v_n.\  t$ to be a closed term);
-\item there is a type variable in  $v_1$, $\dots$, $v_n$ or $t$
+\item there is a free type variable in  $v_1$, $\dots$, $v_n$ or $t$
+that does not occur free in the type of $c$;
+\item there is a kind variable in  $v_1$, $\dots$, $v_n$ or $t$
 that does not occur in the type of $c$.
 \end{myenumerate}
 
@@ -1898,6 +1901,9 @@ such that:
 \cdots {x_n}_{\sigma_n}}t_{\ty{bool}}\ \in\ {\sf Terms}_{\cal T}$.
 \item $tyvars(\lquant{{x_1}_{\sigma_1}
 \cdots {x_n}_{\sigma_n}}t_{\ty{bool}})\ \subseteq\ tyvars(\sigma_i)$ for
+$1\leq i\leq n$.
+\item $kindvars(\lquant{{x_1}_{\sigma_1}
+\cdots {x_n}_{\sigma_n}}t_{\ty{bool}})\ \subseteq\ kindvars(\sigma_i)$ for
 $1\leq i\leq n$.
 \item $\equant{{x_1}_{\sigma_1}\ \cdots\ {x_n}_{\sigma_n}}t
 \ \in\ {\sf Theorems}_{\cal T}$.
@@ -1936,7 +1942,10 @@ with name $name$, as a definition in the current theory segment. A call to
 \item the theorem argument has a non-empty assumption list;
 \item there are free variables in the theorem argument;
 \item $c_1$, $\dots$, $c_n$ are not distinct variables;
-\item the type of some $c_i$ does not contain all the type
+\item the type of some $c_i$ does not contain freely all the type
+variables which occur free in the term
+\holtxt{\bs$x_1\ \cdots\ x_n$. $t$[$x_1$, $\ldots$, $x_n$]};
+\item the type of some $c_i$ does not contain all the kind
 variables which occur in the term
 \holtxt{\bs$x_1\ \cdots\ x_n$. $t$[$x_1$, $\ldots$, $x_n$]}.
 \end{myenumerate}
@@ -1976,8 +1985,9 @@ for a theory ${\cal T}$ is a $3$-tuple
 $tyvars(\sigma)\in\{\alpha_1, \ldots , \alpha_n\}$.
 \item \ty{op} is not the name of a type constant in ${\sf Struc}_{\cal T}$.
 \item $p\in{\sf Terms}_{\cal T}$ is a closed term of
-type $\sigma\fun\ty{bool}$  and
-$tyvars(p)\subseteq\{\alpha_1, \ldots , \alpha_n\}$.
+type $\sigma\fun\ty{bool}$.
+\item $tyvars(p)\subseteq\{\alpha_1, \ldots , \alpha_n\}$.
+\item $kindvars(p)\subseteq\ kindvars\{\alpha_1, \ldots , \alpha_n\}$.
 \item $\equant{x_{\sigma}}p\ x \ \subseteq\ {\sf Theorems}_{\cal T}$.
 \end{myenumerate}
 
@@ -2023,7 +2033,9 @@ is defined in the theory \ml{bool} by:
 \noindent Executing \ml{new\_type\_definition("\ty{op}",\ }$t$\ml{,\
 |- ?}$x$\ml{.}\ $t\ x$\ml{)} fails if:
 \begin{myenumerate}
-\item $t$ does not have a type of the form $\sigma$\ml{->bool}.
+\item $t$ does not have a type of the form $\sigma$\ml{->bool};
+\item $t$ is not a closed term;
+\item The kind variables of $t$ are not contained within the kind variables of the type variables of $t$.
 \end{myenumerate}
 \index{extension, of HOL logic@extension, of \HOL{} logic!by type definition|)}
 \index{theories, in HOL logic@theories, in \HOL{} logic!extension of|)}
@@ -2161,6 +2173,90 @@ have the form of a theorem returned by \ml{define\_new\_type\_bijections}.
 None of these functions saves anything in the current theory.
 
 \index{type definitions, in HOL logic@type definitions, in \HOL{} logic!properties of bijections for|)}
+
+\subsubsection{Type specifications}
+\label{type-specs}
+
+\index{extension, of HOL logic@extension, of \HOL{} logic!by type specification|(}
+%
+\index{type specifications, in HOL logic@type specifications, in \HOL{} logic|(}
+%
+In \LOGIC{} a type specification
+%
+\index{type specification extension, of HOL logic@type specification extension, of \HOL{} logic!ML function for@\ML\ function for}
+%
+for a theory ${\cal T}$ 
+is defined to be a pair:
+
+\[
+\langle(\tau_1,\ldots,\tau_n),\ \lquant{{:}{\alpha_1}_{k_1}
+\cdots {\alpha_n}_{k_n}}q_{bool}\rangle
+\]
+such that:
+
+\begin{myenumerate}
+\item $\tau_1$, $\dots$, $\tau_n$ are distinct names.
+\item None of the $\tau_i$ are the name of a type constant in ${\sf Struc}_{\cal T}$.
+\item $\lquant{{:}{\alpha_1}_{k_1}
+\cdots {\alpha_n}_{k_n}}q_{bool}\ \in\ {\sf Terms}_{\cal T}$.
+\item $\lquant{{:}{\alpha_1}_{k_1}
+\cdots {\alpha_n}_{k_n}}q_{bool}$ has no free variables or free type variables.
+\item $kindvars(\lquant{{:}{\alpha_1}_{k_1}
+\cdots {\alpha_n}_{k_n}}q_{bool})\ \subseteq\ kindvars(k_i)$ for
+$1\leq i\leq n$.
+\item $\equant{{:}{\alpha_1}_{k_1}\ \cdots\ {\alpha_n}_{k_n}}q_{bool}
+\ \in\ {\sf Theorems}_{\cal T}$.
+\end{myenumerate}
+Such a specification
+simultaneously introduces ${\tau_1},\ldots,{\tau_n}$ 
+as new type operators of kinds
+${k_1},\ldots,{k_n}$, respectively, and
+
+\[\turn q_{bool}\ml{[}{\tau_1},\ldots,{\tau_n}/{\alpha_1},\ldots,{\alpha_n}\ml{]} \]
+
+\noindent as a new axiom in the current theory.
+
+The following \ML\ function is used to make type specifications in
+the \HOL{} system.
+
+\begin{holboxed}
+\index{new_type_specification@\ml{new\_type\_specification}|pin}
+\begin{verbatim}
+   new_type_specification : string * string list * thm -> thm
+\end{verbatim}
+\end{holboxed}
+%
+Evaluating:
+{
+\newcommand{\tauone}{\ensuremath{\tau_1}}
+\newcommand{\taun}{\ensuremath{\tau_n}}
+\newcommand{\alphaone}{\ensuremath{\alpha_1}}
+\newcommand{\alphan}{\ensuremath{\alpha_n}}
+\begin{alltt}
+   new_type_specification("\(\mathit{name}\)", ["\tauone", ..., "\taun"],
+                          |- ?:\alphaone ... \alphan. \(q\)[\alphaone, ..., \alphan])
+\end{alltt}
+}
+simultaneously introduces new types named $\tau_1$, $\dots$,
+$\tau_n$ satisfying the property:
+
+\[ \ml{|- }q\ml{[}\tau_1\ml{,}\ \ldots\ \ml{,}\tau_n\ml{]} \]
+
+\noindent This theorem is stored,
+with name $name$, as a definition in the current theory segment. A call to
+\ml{new\_type\_specification} fails if:
+
+\begin{myenumerate}
+\item the theorem argument has a non-empty assumption list;
+\item there are free variables or free type variables in the theorem argument;
+\item $\tau_1$, $\dots$, $\tau_n$ are not distinct names;
+\item the kind of some $\tau_i$ does not contain all the kind
+variables which occur in the term
+\holtxt{?:$\alpha_1\ \cdots\ \alpha_n$. $q$[$\alpha_1$, $\ldots$, $\alpha_n$]}.
+\end{myenumerate}
+%
+\index{specification of types, in HOL logic@specification of types, in \HOL{} logic|)}
+
 
 
 %\subsection{Type abbreviations}\label{typeabbrev}\index{types, in HOL logic@types, in \HOL{} logic!abbreviation of}\index{type abbreviations!in HOL logic@in \HOL{} logic}\index{abbreviation of types, in HOL logic@abbreviation of types, in \HOL{} logic|(}

@@ -19,14 +19,15 @@ satisfying the property:
 }
 This theorem is stored, with name {name}, as a definition in
 the current theory segment. It is also returned by the call to
-{new_specification} 
+{new_specification}.
 
 \FAILURE
 {new_specification} fails if the theorem argument has assumptions or
 free variables. It also fails if the supplied constant names 
 {c1}, ..., {cn} are not distinct. It also fails if the length of
 the existential prefix of the theorem is not at least {n}. Finally, 
-failure occurs if some {ci} does not contain all the type variables that
+failure occurs if some {ci} does not contain all the free type variables
+and kind variables that
 occur in the term {?x1...xn. t}.
 
 \USES

@@ -173,7 +173,7 @@ fun hyp_frees th =
   HOLset.foldl (fn (h,tms) => Term.FVL[h] tms) empty_tmset (hypset th);
 
 fun is_bool tm = (Type.eq_ty (type_of tm) bool);
-
+ 
 
 (*---------------------------------------------------------------------------
  *                THE PRIMITIVE RULES OF INFERENCE
@@ -1632,6 +1632,7 @@ end
 fun ERR f msg = HOL_ERR {origin_structure = "Thm",
                          origin_function = f, message = msg}
 val TYDEF_ERR = ERR "prim_type_definition"
+val TYSPEC_ERR= ERR "prim_type_specification"
 val DEF_ERR   = ERR "new_definition"
 val SPEC_ERR  = ERR "new_specification"
 
@@ -1664,6 +1665,13 @@ fun nstrip_exists 0 t = ([],t)
      in (Bvar::l, t'')
      end;
 
+fun nstrip_tyexists 0 t = ([],t)
+  | nstrip_tyexists n t =
+     let val (Bvar, Body) = dest_tyexists t
+         val (l,t'') = nstrip_tyexists (n-1) Body
+     in (Bvar::l, t'')
+     end;
+
 (* standard checks *)
 fun check_null_hyp th f =
   if null(hyp th) then ()
@@ -1676,13 +1684,28 @@ fun check_free_vars tm f =
             ("Free variables in rhs of definition: "
              :: commafy (map (Lib.quote o fst o dest_var) V)));
 
+fun check_free_tyvars tm f =
+  case type_vars_in_term tm
+   of [] => ()
+    | V  => raise f (String.concat
+            ("Free type variables in specification: "
+             :: commafy (map (Lib.quote o fst o Type.dest_var_type) V)));
+
 fun check_tyvars body_tyvars ty f =
  case Lib.set_diff body_tyvars (Type.type_vars ty)
   of [] => ()
    | extras =>
       raise f (String.concat
          ("Unbound type variable(s) in definition: "
-           :: commafy (map (Lib.quote o Type.dest_vartype) extras)));
+           :: commafy (map (Lib.quote o fst o Type.dest_var_type) extras)));
+
+fun check_kdvars body_kdvars bound_kdvars f =
+ case Lib.set_diff body_kdvars bound_kdvars
+  of [] => ()
+   | extras =>
+      raise f (String.concat
+         ("Unbound kind variable(s) in definition: "
+           :: commafy (map (Lib.quote o fst o Kind.dest_var_kind) extras)));
 
 
 fun prim_type_definition (name as {Thy, Tyop}, thm) = let
@@ -1694,6 +1717,8 @@ fun prim_type_definition (name as {Thy, Tyop}, thm) = let
   val checked   = check_null_hyp thm TYDEF_ERR
   val checked   = assert_exn null (free_vars P)
                  (TYDEF_ERR "subset predicate must be a closed term")
+  val checked   = check_kdvars (kind_vars_in_term P) (Type.kind_varsl tyvars) TYDEF_ERR
+                    handle e => raise (wrap_exn "new_type_definition" "check_kdvars" e)
   val checked   = assert_exn (Type.eq_ty bool) rng
                              (TYDEF_ERR "subset predicate has the wrong type")
   val newkd     = List.foldr (op ==>) (Type.kind_of dom) (map Type.kind_of tyvars)
@@ -1705,6 +1730,27 @@ fun prim_type_definition (name as {Thy, Tyop}, thm) = let
                                Ty = Pty --> (repty-->bool)}
 in
   mk_defn_thm(tag thm, mk_exists(rep, list_mk_comb(TYDEF,[P,rep])))
+end
+
+fun prim_type_specification thyname tnames th = let
+  val con       = concl th
+  val checked   = check_null_hyp th TYSPEC_ERR
+  val checked   = check_free_vars con TYSPEC_ERR
+  val checked   = check_free_tyvars con TYSPEC_ERR
+  val checked   =
+      assert_exn (op=) (length(mk_set tnames),length tnames)
+                 (TYSPEC_ERR "duplicate type names in specification")
+  val (V,body)  =
+      with_exn (nstrip_tyexists (length tnames)) con
+               (TYSPEC_ERR "too few existentially quantified type variables")
+  fun vOK V a   = check_kdvars V (Type.kind_vars a) TYSPEC_ERR
+  val checked   = List.app (vOK (kind_vars_in_term body)) V
+  fun newty n k = (Type.prim_new_type {Thy=thyname,Tyop=n} k;
+                   Type.mk_thy_con_type {Thy=thyname,Tyop=n,Kind=k})
+  val kds       = map (snd o Type.dest_var_type) V
+  val newtys    = map2 newty tnames kds
+in
+  mk_defn_thm (tag th, inst (map (op |->) (zip V newtys)) body)
 end
 
 fun prim_constant_definition Thy M = let
@@ -1725,6 +1771,7 @@ fun prim_constant_definition Thy M = let
       else raise DEF_FORM_ERR
   val checked = check_free_vars rhs DEF_ERR
   val checked = check_tyvars (type_vars_in_term rhs) Ty DEF_ERR
+  val checked = check_kdvars (kind_vars_in_term rhs) (Type.kind_vars Ty) DEF_ERR
   val new_lhs = Term.prim_new_const {Name = Name, Thy = Thy} Ty
 in
   mk_defn_thm(empty_tag, mk_eq(new_lhs, rhs))
@@ -1745,6 +1792,8 @@ fun prim_specification thyname cnames th = let
                (SPEC_ERR "too few existentially quantified variables")
   fun vOK V v   = check_tyvars V (type_of v) SPEC_ERR
   val checked   = List.app (vOK (type_vars_in_term body)) V
+  fun vOKkd V v = check_kdvars V (Type.kind_vars (type_of v)) SPEC_ERR
+  val checked   = List.app (vOKkd (kind_vars_in_term body)) V
   fun addc v s  = v |-> bind thyname s (snd(dest_var v))
 in
   mk_defn_thm (tag th, subst (map2 addc V cnames) body)

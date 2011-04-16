@@ -33,8 +33,9 @@ may have any of its variables universally quantified.
 in {x_1}, ..., {x_m} (this is equivalent to requiring 
 {\v_1 ... v_n. t} to be a closed term). Failure also occurs if
 any variable occurs more than once in {v_1, ..., v_n}.  Finally, 
-failure occurs if there is a type variable in {v_1}, ..., {v_n} or
-{t} that does not occur in the type of {c}.
+failure occurs if there is a free type variable or kind variable
+in {v_1}, ..., {v_n} or
+{t} that does not occur free in the type of {c}.
 
 \EXAMPLE
 A NAND relation can be defined as follows.

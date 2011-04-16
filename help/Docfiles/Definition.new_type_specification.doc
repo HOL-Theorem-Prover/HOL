@@ -1,0 +1,109 @@
+\DOC new_type_specification
+
+\TYPE {new_type_specification : string * string list * thm -> thm}
+
+\SYNOPSIS
+Introduce a new type constant or type constants satisfying a given property.
+
+\DESCRIBE
+The ML function {new_type_specification} implements the primitive HOL rule of
+type specification for the HOL-Omega logic.
+Evaluating:
+{
+   new_type_specification (name, ["t1",...,"tn"], |- ?:'a1...'an. q)
+}
+simultaneously introduces new type constants named {t1},...,{tn}
+satisfying the property:
+{
+   |- q[t1,...,tn / 'a1,...,'an]
+}
+This theorem is stored, with name {name_TY_SPEC}, as a definition in
+the current theory segment. It is also returned by the call to
+{new_type_specification}.
+
+\FAILURE
+{new_type_specification} fails if the theorem argument has assumptions,
+free variables, or free type variables. It also fails if the supplied
+type constant names {t1}, ..., {tn} are not distinct. In addition, it fails
+if the length of the existential prefix of the theorem is not at least {n}.
+Finally, failure occurs if the kind of some {ti} does not contain all
+the free kind variables that occur in the term {?:'a1...'an. q}.
+
+\EXAMPLE
+In this example, a type containing three elements is defined. The three
+elements are ordered in a non-transitive way.
+{
+  open sumTheory;
+
+- val clock3_def = Define
+      `(clock3 (INL ()) = INR (INL ())) /\
+       (clock3 (INR (INL ())) = INR (INR ())) /\
+       (clock3 (INR (INR ())) = INL ())`;
+
+Equations stored under "clock3_def".
+Induction stored under "clock3_ind".
+
+> val clock3_def =
+    |- (clock3 (INL ()) = INR (INL ())) ∧
+       (clock3 (INR (INL ())) = INR (INR ())) ∧
+       (clock3 (INR (INR ())) = INL ()) : thm
+
+- val three_type_exists = store_thm(
+     "three_type_exists",
+     ``?:'a. ?x y z (gr:'a -> 'a -> bool).
+          (~(x = y) /\ ~(x = z) /\ ~(y = z)) /\
+          (!u. (u = x) \/ (u = y) \/ (u = z)) /\
+          (gr x y /\ gr y z /\ gr z x)``,
+     TY_EXISTS_TAC ``:one + one + one``
+     THEN EXISTS_TAC ``INL () : one + one + one``
+     THEN EXISTS_TAC ``INR (INL ()) : one + one + one``
+     THEN EXISTS_TAC ``INR (INR ()) : one + one + one``
+     THEN EXISTS_TAC ``\x y. y = clock3 x``
+     THEN SIMP_TAC (bool_ss ++ sumSimps.SUM_ss) [clock3_def]
+     THEN Cases
+     THEN SIMP_TAC (bool_ss ++ sumSimps.SUM_ss) [oneTheory.one]
+     THEN Cases_on `y`
+     THEN SIMP_TAC (bool_ss ++ sumSimps.SUM_ss) [oneTheory.one]
+    );
+
+> val three_type_exists =
+    |- ∃:α.
+         ∃x y z gr.
+           (x ≠ y ∧ x ≠ z ∧ y ≠ z) ∧ (∀u. (u = x) ∨ (u = y) ∨ (u = z)) ∧
+           gr x y ∧ gr y z ∧ gr z x
+     : thm
+
+- val three_type_def =
+      new_type_specification("three_type",["three"],three_type_exists);
+
+> val three_type_def =
+    |- ∃x y z gr.
+         (x ≠ y ∧ x ≠ z ∧ y ≠ z) ∧ (∀u. (u = x) ∨ (u = y) ∨ (u = z)) ∧
+         gr x y ∧ gr y z ∧ gr z x
+     : thm
+
+- val rock_paper_scissors_spec =
+    Rsyntax.new_specification
+       { name    = "rock_paper_scissors_spec",
+         consts  = [ {const_name="rock",      fixity=Closefix},
+                     {const_name="scissors",  fixity=Closefix},
+                     {const_name="paper",     fixity=Closefix},
+                     {const_name="beats",     fixity=Infix (NONASSOC,450)} ],
+         sat_thm = three_type_def };
+
+> val rock_paper_scissors_spec =
+    |- ($rock ≠ $scissors ∧ $rock ≠ $paper ∧ $scissors ≠ $paper) ∧
+       (∀u. (u = $rock) ∨ (u = $scissors) ∨ (u = $paper)) ∧
+       $rock beats $scissors ∧ $scissors beats $paper ∧ $paper beats $rock
+     : thm
+}
+
+\COMMENTS
+The introduced type constants have a postfix parsing status. To alter this, 
+use {add_infix_type} or {add_binder_type}.
+
+\SEEALSO
+Definition.new_type_definition, Definition.new_specification,
+Parse.add_infix_type, Parse.add_binder_type.
+
+\ENDDOC

@@ -38,7 +38,10 @@ of values of type {ty} that satisfy {P}.
 \FAILURE
 Executing {new_type_definition(tyop,th)} fails if {th} is not an
 assumption-free theorem of the form {|- ?x. t x}. Failure also occurs
-if the type of {t} is not of the form {ty->bool}.
+if the type of {t} is not of the form {ty->bool}.  In addition, failure
+occurs if {t} is not a closed term.  Finally, failure occurs
+if the kind variables of {t}
+are not contained within the kind variables of the free type variables of {t}.
 
 \EXAMPLE
 In this example, a type containing three elements is defined. The predicate
@@ -114,6 +117,6 @@ Finally, we can introduce the constants and their property.
 Drule.define_new_type_bijections,
 Prim_rec.prove_abs_fn_one_one, Prim_rec.prove_abs_fn_onto,
 Drule.prove_rep_fn_one_one, Drule.prove_rep_fn_onto,
-Definition.new_specification.
+Definition.new_type_specification, Definition.new_specification.
 
 \ENDDOC
