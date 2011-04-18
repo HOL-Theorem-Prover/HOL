@@ -24,7 +24,7 @@ structure Z3 = struct
   val Z3_SMT_Oracle = SolverSpec.make_solver
     (fn goal =>
       let
-        val (goal, _) = SolverSpec.simplify SmtLib.SIMP_TAC goal
+        val (goal, _) = SolverSpec.simplify (SmtLib.SIMP_TAC false) goal
         val (_, strings) = SmtLib.goal_to_SmtLib goal
       in
         ((), strings)
@@ -36,7 +36,7 @@ structure Z3 = struct
   val Z3_SMT_Prover = SolverSpec.make_solver
     (fn goal =>
       let
-        val (goal, validation) = SolverSpec.simplify SmtLib.SIMP_TAC goal
+        val (goal, validation) = SolverSpec.simplify (SmtLib.SIMP_TAC true) goal
         val (ty_tm_dict, strings) = SmtLib.goal_to_SmtLib_with_get_proof goal
       in
         (((goal, validation), ty_tm_dict), strings)

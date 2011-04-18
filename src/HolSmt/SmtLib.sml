@@ -352,7 +352,6 @@ local
     (* binders *)
     let
       (* perhaps we should use a table of binders instead *)
-      (* TODO: let binders *)
       val (binder, (vars, body)) = if boolSyntax.is_forall tm then
           ("forall", boolSyntax.strip_forall tm)
         else if boolSyntax.is_exists tm then
@@ -376,6 +375,22 @@ local
     in
       (acc, (vardecls @ bodydecls, "(" ^ binder ^ " (" ^
         String.concatWith " " smtvars ^ ") " ^ body ^ ")"))
+    end
+    handle Feedback.HOL_ERR _ =>
+
+    (* let binder - somewhat similar to quantifiers, but we only
+       translate one let at a time (so we don't have to worry about
+       semantic differences caused by parallel vs. sequential let) *)
+    let
+      val (M, N) = boolSyntax.dest_let tm
+      val (var, body) = Term.dest_abs M
+      val (acc, (Ndecls, N)) = translate_term (acc, (bounds, N))
+      val name = bv_prefix ^ Int.toString (Redblackmap.numItems bounds)
+      val bounds = Redblackmap.insert (bounds, var, name)
+      val (acc, (bodydecls, body)) = translate_term (acc, (bounds, body))
+    in
+      (acc, (Ndecls @ bodydecls,
+        "(let ((" ^ name ^ " " ^ N ^ ")) " ^ body ^ ")"))
     end
     handle Feedback.HOL_ERR _ =>
 
@@ -499,7 +514,7 @@ in
 
   (* eliminates some HOL terms that are not supported by the SMT-LIB
      translation *)
-  val SIMP_TAC =
+  fun SIMP_TAC simp_let =
     let
       open Tactical simpLib
       val INT_ABS = intLib.ARITH_PROVE
@@ -511,7 +526,7 @@ in
           (!w:'a word n. n < dimword (:'a) ==> (w >>> n = w >>>~ n2w n))``
     in
       REPEAT Tactic.GEN_TAC THEN
-      Library.LET_SIMP_TAC THEN
+      (if simp_let then Library.LET_SIMP_TAC else ALL_TAC) THEN
       SIMP_TAC pureSimps.pure_ss
         [boolTheory.bool_case_DEF, integerTheory.INT_MIN,
           integerTheory.INT_MAX, INT_ABS, wordsTheory.word_rol_bv_def,
