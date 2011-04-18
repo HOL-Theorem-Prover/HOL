@@ -37,6 +37,24 @@ local
 
   val apfst_K = Lib.apfst o Lib.K
 
+  (* returns true iff 'ty' is a word type that is not fixed-width *)
+  fun is_non_numeric_word_type ty =
+    not (fcpSyntax.is_numeric_type (wordsSyntax.dest_word_type ty))
+      handle Feedback.HOL_ERR _ => false
+
+  (* make sure that all word types in 't' are of fixed width; return 's' *)
+  fun apfst_fixed_width s =
+    Lib.apfst (fn t =>
+      let
+        val (domtys, rngty) = boolSyntax.strip_fun (Term.type_of t)
+      in
+        if List.exists is_non_numeric_word_type (rngty :: domtys) then
+          raise ERR ("<builtin_symbols." ^ s ^ ">")
+            "not a fixed-width word type"
+        else
+          s
+      end)
+
   (* (HOL term, a function that maps a pair (rator, rands) to an
      SMT-LIB symbol and a list of remaining (still-to-be-encoded)
      argument terms) *)
@@ -185,32 +203,27 @@ local
           ("(_ extract " ^ Arbnum.toString i ^ " " ^ Arbnum.toString j ^ ")",
             [w])
         end) ts),
-
-    (* FIXME: We should check that the following word operations are
-              applied to fixed-width words, and translate them as
-              uninterpreted functions otherwise. *)
-
-    (wordsSyntax.word_1comp_tm, apfst_K "bvnot"),
-    (wordsSyntax.word_and_tm, apfst_K "bvand"),
-    (wordsSyntax.word_or_tm, apfst_K "bvor"),
-    (wordsSyntax.word_nand_tm, apfst_K "bvnand"),
-    (wordsSyntax.word_nor_tm, apfst_K "bvnor"),
-    (wordsSyntax.word_xor_tm, apfst_K "bvxor"),
-    (wordsSyntax.word_xnor_tm, apfst_K "bvxnor"),
-    (wordsSyntax.word_2comp_tm, apfst_K "bvneg"),
-    (wordsSyntax.word_compare_tm, apfst_K "bvcomp"),
-    (wordsSyntax.word_add_tm, apfst_K "bvadd"),
-    (wordsSyntax.word_sub_tm, apfst_K "bvsub"),
-    (wordsSyntax.word_mul_tm, apfst_K "bvmul"),
-    (wordsSyntax.word_sdiv_tm, apfst_K "bvsdiv"),
-    (wordsSyntax.word_srem_tm, apfst_K "bvsrem"),
-    (wordsSyntax.word_smod_tm, apfst_K "bvsmod"),
+    (wordsSyntax.word_1comp_tm, apfst_fixed_width "bvnot"),
+    (wordsSyntax.word_and_tm, apfst_fixed_width "bvand"),
+    (wordsSyntax.word_or_tm, apfst_fixed_width "bvor"),
+    (wordsSyntax.word_nand_tm, apfst_fixed_width "bvnand"),
+    (wordsSyntax.word_nor_tm, apfst_fixed_width "bvnor"),
+    (wordsSyntax.word_xor_tm, apfst_fixed_width "bvxor"),
+    (wordsSyntax.word_xnor_tm, apfst_fixed_width "bvxnor"),
+    (wordsSyntax.word_2comp_tm, apfst_fixed_width "bvneg"),
+    (wordsSyntax.word_compare_tm, apfst_fixed_width "bvcomp"),
+    (wordsSyntax.word_add_tm, apfst_fixed_width "bvadd"),
+    (wordsSyntax.word_sub_tm, apfst_fixed_width "bvsub"),
+    (wordsSyntax.word_mul_tm, apfst_fixed_width "bvmul"),
+    (wordsSyntax.word_sdiv_tm, apfst_fixed_width "bvsdiv"),
+    (wordsSyntax.word_srem_tm, apfst_fixed_width "bvsrem"),
+    (wordsSyntax.word_smod_tm, apfst_fixed_width "bvsmod"),
     (* shift operations with two bit-vector arguments; the corresponding HOL
        shift operations that take a numeral as their second argument are not
        supported in SMT-LIB *)
-    (wordsSyntax.word_lsl_bv_tm, apfst_K "bvshl"),
-    (wordsSyntax.word_lsr_bv_tm, apfst_K "bvlshr"),
-    (wordsSyntax.word_asr_bv_tm, apfst_K "bvashr"),
+    (wordsSyntax.word_lsl_bv_tm, apfst_fixed_width "bvshl"),
+    (wordsSyntax.word_lsr_bv_tm, apfst_fixed_width "bvlshr"),
+    (wordsSyntax.word_asr_bv_tm, apfst_fixed_width "bvashr"),
     (wordsSyntax.word_replicate_tm, fn (t, ts) =>
       SmtLib_Theories.two_args (fn (n, w) =>
         let
@@ -246,22 +259,28 @@ local
 *)
     (* rotation by a numeral; the corresponding HOL rotation operations that
        take two bit-vector arguments are not supported in SMT-LIB *)
-    (wordsSyntax.word_rol_tm, fn (_, ts) =>
-      SmtLib_Theories.two_args (fn (w, n) =>
-        ("(_ rotate_left " ^ Arbnum.toString (numSyntax.dest_numeral n) ^ ")",
-          [w])) ts),
-    (wordsSyntax.word_ror_tm, fn (_, ts) =>
-      SmtLib_Theories.two_args (fn (w, n) =>
-        ("(_ rotate_right " ^ Arbnum.toString (numSyntax.dest_numeral n) ^ ")",
-          [w])) ts),
-    (wordsSyntax.word_lo_tm, apfst_K "bvult"),
-    (wordsSyntax.word_ls_tm, apfst_K "bvule"),
-    (wordsSyntax.word_hi_tm, apfst_K "bvugt"),
-    (wordsSyntax.word_hs_tm, apfst_K "bvuge"),
-    (wordsSyntax.word_lt_tm, apfst_K "bvslt"),
-    (wordsSyntax.word_le_tm, apfst_K "bvsle"),
-    (wordsSyntax.word_gt_tm, apfst_K "bvsgt"),
-    (wordsSyntax.word_ge_tm, apfst_K "bvsge")
+    (wordsSyntax.word_rol_tm, fn (t, ts) =>
+      (
+        apfst_fixed_width "rotate_left" (t, ());
+        SmtLib_Theories.two_args (fn (w, n) =>
+          ("(_ rotate_left " ^ Arbnum.toString (numSyntax.dest_numeral n)
+            ^ ")", [w])) ts
+      )),
+    (wordsSyntax.word_ror_tm, fn (t, ts) =>
+      (
+        apfst_fixed_width "rotate_right" (t, ());
+        SmtLib_Theories.two_args (fn (w, n) =>
+          ("(_ rotate_right " ^ Arbnum.toString (numSyntax.dest_numeral n)
+            ^ ")", [w])) ts
+      )),
+    (wordsSyntax.word_lo_tm, apfst_fixed_width "bvult"),
+    (wordsSyntax.word_ls_tm, apfst_fixed_width "bvule"),
+    (wordsSyntax.word_hi_tm, apfst_fixed_width "bvugt"),
+    (wordsSyntax.word_hs_tm, apfst_fixed_width "bvuge"),
+    (wordsSyntax.word_lt_tm, apfst_fixed_width "bvslt"),
+    (wordsSyntax.word_le_tm, apfst_fixed_width "bvsle"),
+    (wordsSyntax.word_gt_tm, apfst_fixed_width "bvsgt"),
+    (wordsSyntax.word_ge_tm, apfst_fixed_width "bvsge")
   ]
 
   (* SMT-LIB type and function names are uniformly generated as "tN"

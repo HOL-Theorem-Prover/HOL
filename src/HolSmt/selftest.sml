@@ -959,6 +959,12 @@ in
      0xfffe0000w + ((0 >< 0) (~(17 >< 17) w: bool[unit]) << 17): 32 word``,
       [thm_AUTO, thm_YO(*, thm_Z3, thm_Z3p*)]),
 
+    (* The Yices translation currently rejects polymorphic-width bit
+       vectors; the SMT-LIB translation treats their type - and
+       operations on them - as uninterpreted. *)
+
+    (``x <=+ x``, [thm_AUTO, (*sat_YO,*) sat_Z3, sat_Z3p]),
+
     (* data types: constructors *)
 
     (``foo <> bar``, [thm_AUTO, thm_YO]),
