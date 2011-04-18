@@ -640,20 +640,32 @@ in
     (* Z3 2.13 reports `unknown' for the next goal *)
     (``?x. P x ==> !x. P x``, [thm_AUTO, thm_YO]),
 
+    (* let binders *)
+
+    (``let x = y in let x = x /\ z in x = y /\ z``,
+      [thm_AUTO, thm_YO, thm_Z3, thm_Z3p]),
+
     (* lambda abstractions *)
 
-    (* FIXME: the SMT-LIB translation currently does not properly abstract away
-              function types, thereby leading to illegal higher-order goals *)
-
-    (``(\x. x) = (\y. y)``, [thm_AUTO, thm_YO(*, thm_Z3, thm_Z3p*)]),
+    (``(\x. x) = (\y. y)``, [thm_AUTO, thm_YO, thm_Z3, thm_Z3p]),
     (``(\x. \x. x) x x = (\y. \y. y) y x``,
       [thm_AUTO, thm_YO, thm_Z3, thm_Z3p]),
     (``(\x. x (\x. x)) = (\y. y (\x. x))``,
-      [thm_AUTO, thm_YO(*, thm_Z3, thm_Z3p*)]),
+      [thm_AUTO, thm_YO, thm_Z3, thm_Z3p]),
     (* Yices 1.0.29 fails to decide this one *)
     (``(\x. x (\x. x)) = (\y. y x)``, [(*sat_YO,*) sat_Z3, sat_Z3p]),
     (``f x = (\x. f x) x``, [thm_AUTO, thm_YO, thm_Z3, thm_Z3p]),
     (``f x = (\y. f y) x``, [thm_AUTO, thm_YO, thm_Z3, thm_Z3p]),
+
+    (* higher-order logic *)
+
+    (* FIXME: Z3 2.19 unexpectedly replaces certain implications by
+              conjunctions in its proof *)
+
+    (``(P (f x) ==> Q f) ==> P (f x) ==> Q f``,
+      [thm_AUTO, thm_YO, thm_Z3(*, thm_Z3p*)]),
+    (``(Q f ==> P (f x)) ==> Q f ==> P (f x)``,
+      [thm_AUTO, thm_YO, thm_Z3(*, thm_Z3p*)]),
 
     (* tuples, FST, SND *)
 

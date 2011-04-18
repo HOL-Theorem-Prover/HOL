@@ -56,9 +56,14 @@ structure Z3 = struct
                 (* types don't take arguments *)
                 Redblackmap.insert (dict, s, [SmtLib_Theories.K_zero_zero ty]))
                 (Redblackmap.mkDict String.compare) ty_dict
-              val tm_dict = Redblackmap.foldl (fn (tm, s, dict) =>
+              val tm_dict = Redblackmap.foldl (fn ((tm, n), s, dict) =>
                 Redblackmap.insert (dict, s, [Lib.K (SmtLib_Theories.zero_args
-                  (Lib.curry Term.list_mk_comb tm))]))
+                  (fn args =>
+                    if List.length args = n then
+                      Term.list_mk_comb (tm, args)
+                    else
+                      raise Feedback.mk_HOL_ERR "Z3" ("<" ^ s ^ ">")
+                        "wrong number of arguments"))]))
                 (Redblackmap.mkDict String.compare) tm_dict
               (* add relevant SMT-LIB types/terms to dictionaries *)
               val ty_dict = Library.union_dict (Library.union_dict

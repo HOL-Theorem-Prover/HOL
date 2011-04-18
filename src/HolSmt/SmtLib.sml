@@ -185,6 +185,11 @@ local
           ("(_ extract " ^ Arbnum.toString i ^ " " ^ Arbnum.toString j ^ ")",
             [w])
         end) ts),
+
+    (* FIXME: We should check that the following word operations are
+              applied to fixed-width words, and translate them as
+              uninterpreted functions otherwise. *)
+
     (wordsSyntax.word_1comp_tm, apfst_K "bvnot"),
     (wordsSyntax.word_and_tm, apfst_K "bvand"),
     (wordsSyntax.word_or_tm, apfst_K "bvor"),
@@ -293,6 +298,19 @@ local
       (Redblackmap.insert (tydict, ty, name), ([decl], name))
     end
 
+  (* SMT-LIB is first-order.  Thus, functions can only be applied to
+     arguments of base type, but not to arguments of function type;
+     all completely applied terms must be of base type.
+
+     Thus, higher-order arguments must be abstracted so that they are
+     of (uninterpreted) base type.  We achieve this by abstracting the
+     offending function type to a fresh base type, and by abstracting
+     the argument's rator to an uninterpreted term that returns the
+     correct (abstracted) type.  Note that the same function/operator
+     may appear both with and without arguments in a HOL formula.
+     'tmdict' maps terms along with the number of their actual
+     arguments to an SMT-LIB representation. *)
+
   (* returns an updated accumulator, a (possibly empty) list of
      SMT-LIB (type and term) declarations, and the SMT-LIB
      representation of the given term *)
@@ -310,6 +328,7 @@ local
       in
         (acc, (List.concat declss, sexpr name names))
       end
+    val tm_has_base_type = not (Lib.can Type.dom_rng (Term.type_of tm))
   in
     (* binders *)
     let
@@ -345,30 +364,48 @@ local
     (acc, ([], Redblackmap.find (bounds, tm)))
     handle Redblackmap.NotFound =>
 
-    (* translate the entire term (e.g., for numerals), using the
-       dictionary of built-in symbols *)
-    builtin_symbol (tm, [])
+    (* translate the entire term (e.g., for numerals), using the dictionary of
+       built-in symbols; however, only do this if 'tm' has base type *)
+    (if tm_has_base_type then
+      builtin_symbol (tm, [])
+    else
+      raise ERR "translate_term" "not first-order")  (* handled below *)
     handle Feedback.HOL_ERR _ =>
 
     (* split the term into rator and rands *)
     let
       val (rator, rands) = boolSyntax.strip_comb tm
     in
-      (* translate the rator as a built-in symbol (applied to its rands) *)
-      builtin_symbol (rator, rands)
+      (* translate the rator as a built-in symbol (applied to its rands); only
+         do this if 'tm' has base type *)
+      (if tm_has_base_type then
+        builtin_symbol (rator, rands)
+      else
+        raise ERR "translate_term" "not first-order")  (* handled below *)
       handle Feedback.HOL_ERR _ =>
 
       let
+        val rands_count = List.length rands
         val (acc, (decls, name)) =
           (* translate the rator as a previously defined symbol *)
-          (acc, ([], Redblackmap.find (tmdict, rator)))
+          (acc, ([], Redblackmap.find (tmdict, (rator, rands_count))))
           handle Redblackmap.NotFound =>
 
           (* translate the rator as a new (i.e., uninterpreted) symbol *)
           let
             (* translate 'rator' types required for the rator's
                SMT-LIB declaration *)
-            val (domtys, rngty) = boolSyntax.strip_fun (Term.type_of rator)
+            fun doms_rng acc 0 ty =
+              (List.rev acc, ty)
+              | doms_rng acc n ty =
+              let
+                val (dom, rng) = Type.dom_rng ty
+              in
+                doms_rng (dom :: acc) (n - 1) rng
+              end
+            (* strip only 'rands_count' many 'domtys', leaving the remaining
+               argument types in 'rngty' *)
+            val (domtys, rngty) = doms_rng [] rands_count (Term.type_of rator)
             val (tydict, domdecltys) = Lib.foldl_map translate_type
               (tydict, domtys)
             val (domdeclss, domtys) = Lib.split domdecltys
@@ -378,10 +415,11 @@ local
             val name = tm_prefix ^ Int.toString (Redblackmap.numItems tmdict)
             val _ = if !Library.trace > 2 then
                 Feedback.HOL_MESG ("HolSmtLib (SmtLib): inventing name '" ^
-                  name ^ "' for HOL term '" ^ Hol_pp.term_to_string rator ^ "'")
+                  name ^ "' for HOL term '" ^ Hol_pp.term_to_string rator ^
+                  "' (applied to " ^ Int.toString rands_count ^ " argument(s))")
               else
                 ()
-            val tmdict = Redblackmap.insert (tmdict, rator, name)
+            val tmdict = Redblackmap.insert (tmdict, (rator, rands_count), name)
             val decl = "(declare-fun " ^ name ^ " (" ^
               String.concatWith " " domtys ^ ") " ^ rngty ^ ")\n"
           in
@@ -400,13 +438,18 @@ local
   (* Returns a string list representing the input goal in SMT-LIB file
      format, together with two dictionaries that map types and terms
      to identifiers used in the SMT-LIB representation.  The goal's
-     conclusion is negated before translation into SMT-LIB format. *)
+     conclusion is negated before translation into SMT-LIB format.
+     The integer in the term dictionary gives the number of actual
+     arguments to the term.  (Because SMT-LIB is first-order,
+     partially applied functions are mapped to different SMT-LIB
+     identifiers, depending on the number of actual arguments.) *)
   fun goal_to_SmtLib_aux (ts, t)
     : ((Type.hol_type, string) Redblackmap.dict *
-      (Term.term, string) Redblackmap.dict) * string list =
+      (Term.term * int, string) Redblackmap.dict) * string list =
   let
     val tydict = Redblackmap.mkDict Type.compare
-    val tmdict = Redblackmap.mkDict Term.compare
+    val tmdict = Redblackmap.mkDict
+      (Lib.pair_compare (Term.compare, Int.compare))
     val bounds = Redblackmap.mkDict Term.compare
     val (acc, smtlibs) = Lib.foldl_map
       (fn (acc, tm) => translate_term (acc, (bounds, tm)))
