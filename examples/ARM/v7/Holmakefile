@@ -1,0 +1,2 @@
+selftest.exe: selftest.uo armLib.uo
+	$(HOLMOSMLC) -o $@ $<

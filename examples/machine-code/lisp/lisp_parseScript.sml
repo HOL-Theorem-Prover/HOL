@@ -2349,6 +2349,8 @@ val symbol_table_dom_th =
       ``symbol_table_dom builtin_symbols (r3,dm,dg)``
 
 val symbol_table_tm = let
+  fun all_distinct [] = []
+    | all_distinct (x::xs) = x :: all_distinct (filter (fn y => not (x = y)) xs)
   val tms = find_terms (can (match_term ``(g:word32->word8) (r3 + n2w m) = n2w n``)) (concl symbol_table_th)
   val mooch = Arbnum.toInt o numSyntax.dest_numeral o cdr o cdr
   val ys = sort (fn x => fn y => x <= y) (all_distinct (map mooch tms))

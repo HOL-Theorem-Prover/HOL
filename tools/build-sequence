@@ -122,8 +122,8 @@ src/HolSmt
 [mosml]!examples/HolBdd
 [mosml]!!examples/HolCheck
 src/datatype/inftree
-!examples/HolOmega
-!examples/HolOmega/interim
+examples/HolOmega
+examples/HolOmega/interim
 !examples/lambda/basics
 !examples/lambda/barendregt
 !examples/computability

@@ -68,6 +68,125 @@ in
   HOLset.foldl (fn (t, th) => PROVE_HYP (transform t) th) th (hypset th)
 end
 
+datatype NDTY = NDV of string
+              | NEWTY of int
+              | NTYOP of {Thy : string, Tyop : string, Args : NDTY list}
+              | NATOM
+fun ndty2ty ndty =
+    case ndty of
+      NDV v => mk_vartype v
+    | NTYOP{Thy,Tyop,Args} => mk_thy_type {Thy=Thy,Tyop=Tyop,
+                                           Args = map ndty2ty Args}
+    | NEWTY _ => raise Fail "ndty2ty: NEWTY"
+    | NATOM => stringLib.string_ty
+
+fun ty2ndty ty =
+    case Lib.total dest_thy_type ty of
+      SOME {Thy,Tyop,Args} => NTYOP {Thy = Thy, Tyop = Tyop,
+                                     Args = map ty2ndty Args}
+    | NONE => NDV (dest_vartype ty)
+
+
+datatype bstatus = Bound | Unbound
+datatype constructor_spec =
+         CSP of {name : string, args : (NDTY * bstatus) list}
+
+type type_spec = (string * constructor_spec list) list
+
+val term_spec = [("term",
+                  [CSP {name = "LAM",
+                        args = [(NATOM, Unbound), (NEWTY 0, Bound)]},
+                   CSP {name = "APP",
+                        args = [(NEWTY 0, Unbound), (NEWTY 0, Unbound)]},
+                   CSP {name = "VAR", args = [(NATOM, Bound)]}])]
+
+val lterm_spec = [("lterm",
+                   [CSP {name = "LAMi",
+                         args = [(ty2ndty ``:num``, Unbound),
+                                 (NATOM, Unbound),
+                                 (NEWTY 0, Bound),
+                                 (NEWTY 0, Unbound)]},
+                    CSP {name = "LAM",
+                         args = [(NATOM, Unbound), (NEWTY 0, Bound)]},
+                    CSP {name = "APP",
+                         args = [(NEWTY 0, Unbound), (NEWTY 0, Unbound)]},
+                    CSP {name = "VAR", args = [(NATOM, Bound)]}])]
+
+fun ndty_exists P nty =
+    P nty orelse
+    (case nty of
+       NTYOP{Args,...} => List.exists (ndty_exists P) Args
+     | _ => false)
+
+fun isNEWTY (NEWTY _) = true
+  | isNEWTY _ = false
+
+fun is_recursive (CSP{args,...}) =
+    List.exists (ndty_exists isNEWTY o #1) args
+
+fun consp_nonatom_extras (consp as CSP{name,args}, acc) =
+    if is_recursive consp then let
+        fun foldthis ((ndty,_), acc) =
+            case ndty of
+              NATOM => acc
+            | _ => ndty2ty ndty :: acc handle Fail _ => acc
+      in
+        (name, foldl foldthis [] args) :: acc
+      end
+    else acc
+
+fun extra_nonatom_types tysp = let
+  fun foldthis ((_, consps), acc) = List.foldl consp_nonatom_extras acc consps
+in
+  foldl foldthis [] tysp
+end
+
+(* extra_nonatom_types term_spec = [("APP", []), ("LAM", [])] *)
+
+fun ndty_filter P (ndty,acc) = let
+  val subtree =
+      case ndty of
+        NTYOP {Args,...} => List.foldl (ndty_filter P) acc Args
+      | _ => acc
+in
+  if P ndty then ndty :: subtree else subtree
+end
+
+fun isATOM (ndty, bstatus) =
+    bstatus = Bound andalso ndty_exists (equal NATOM) ndty
+
+fun consp_atom_extras (consp as CSP {name, args}, acc) =
+    if List.exists isATOM args then let
+        fun foldthis ((ndty, _), acc) =
+            case ndty of
+              NATOM => acc
+            | _ => ndty2ty ndty :: acc
+              handle Fail _ => raise Fail "Can't accompany bound atoms with\
+                                           \ recursive types"
+      in
+        (name, List.foldl foldthis [] args) :: acc
+      end
+    else acc
+
+fun extra_atom_types tysp = let
+  fun foldthis ((_, consps), acc) = List.foldl consp_atom_extras acc consps
+in
+  foldl foldthis [] tysp
+end
+
+fun mk_atom_ty tysp = let
+  val atomtys = extra_atom_types tysp
+  fun one_bunch (_, []) = ``:unit``
+    | one_bunch (_, tys) = pairSyntax.list_mk_prod tys
+in
+  List.foldr (fn (bnch,ty) => sumSyntax.mk_sum (one_bunch bnch, ty))
+             (one_bunch (hd atomtys))
+             (tl atomtys)
+end
+
+
+
+
 val vp = ``(λn u:unit. n = 0)``
 val lp = ``(λn (d:unit + unit) tns uns.
                (n = 0) ∧ ISL d ∧ (tns = [0]) ∧ (uns = []) ∨

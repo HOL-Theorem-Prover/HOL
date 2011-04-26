@@ -22,7 +22,13 @@ open HolKernel Parse boolLib pairLib;
 
 
 val RW_ERR = mk_HOL_ERR "RW";
-val monitoring = ref false;
+val monitoring = ref 0
+
+val _ = register_trace ("TFL rewrite monitoring", monitoring, 20);
+fun lztrace(i,fname,msgf) = if i <= !monitoring then
+                         Lib.say ("RW."^fname^": "^ msgf() ^ "\n")
+                      else ()
+
 
 (* Fix the grammar used by this file *)
 val ambient_grammars = Parse.current_grammars();
@@ -82,7 +88,7 @@ fun GSPEC_ALL th =
     let val (ants,(lhs,rhs)) = (I##dest_eq)(strip_imp_only(concl th))
         val embedded_in = !embedded_ref
         val islooper = (aconv lhs rhs) orelse (exists (embedded_in lhs) ants)
-    in if (islooper  andalso !monitoring)
+    in if (islooper  andalso !monitoring > 0)
        then Lib.say ("excluding possibly looping rewrite:\n"
                      ^thm_to_string th^"\n\n")
        else ();
@@ -249,43 +255,46 @@ fun stringulate _ [] = []
   | stringulate f [x] = [f x]
   | stringulate f (h::t) = f h::",\n"::stringulate f t;
 
-fun drop_opt [] = []
-  | drop_opt (SOME x::rst) = x::drop_opt rst
-  | drop_opt (NONE::rst) = drop_opt rst;
+val drop_opt = List.mapPartial Lib.I
 
 local fun sys_var tm = (is_var tm andalso
                         not(Lexis.ok_identifier(fst(dest_var tm))))
       val failed = RW_ERR "RW_STEP" "all applications failed"
 in
-fun RW_STEP {context=(cntxt,_),prover,simpls as RW{rw_net,...}} tm =
- let fun match f =
-      (case f tm
-        of UNCOND th => SOME th
-         | COND th =>
-            let val condition = fst(dest_imp(concl th))
-                val cond_thm = prover simpls cntxt condition
-                val ant_vars_fixed = not(can(find_term sys_var) condition)
-            in
-               SOME ((if ant_vars_fixed then MP else MATCH_MP) th cond_thm)
-            end)
-           handle HOL_ERR _ => NONE
-    fun try [] = raise failed
-      | try (f::rst) =
-         case match f
-          of NONE => try rst
-           | SOME th =>
-             if !monitoring
-             then case drop_opt (map match rst)
-                  of [] => (HOL_MESG (String.concat
-                              ["RW_STEP:\n", Parse.thm_to_string th]); th)
-                  | L => (HOL_MESG (String.concat
-                      ["RW_STEP: multiple rewrites possible (first taken):\n",
-                            String.concat
-                              (stringulate Parse.thm_to_string(th::L))]); th)
-             else th
- in
+fun RW_STEP {context=(cntxt,_),prover,simpls as RW{rw_net,...}} tm = let
+  fun match f =
+      (case f tm of
+         UNCOND th => SOME th
+       | COND th => let
+           val condition = fst(dest_imp(concl th))
+           val cond_thm = prover simpls cntxt condition
+          val ant_vars_fixed = not(can(find_term sys_var) condition)
+         in
+           SOME ((if ant_vars_fixed then MP else MATCH_MP) th cond_thm)
+         end)
+      handle HOL_ERR _ => NONE
+  fun try [] = raise failed
+    | try (f::rst) =
+      case match f of
+        NONE => try rst
+      | SOME th =>
+        if !monitoring > 0 then
+          (set_trace "assumptions" 1;
+           case drop_opt (map match rst) of
+             [] => (Lib.say (String.concat
+                                 ["RW_STEP:\n", Parse.thm_to_string th]);
+                    th before set_trace "assumptions" 0)
+           | L => (Lib.say (String.concat
+                                ["RW_STEP: multiple rewrites possible \
+                                 \(first taken):\n",
+                                 String.concat
+                                    (stringulate Parse.thm_to_string (th::L))]);
+                   th before set_trace "assumptions" 0))
+        else th
+in
    try (Net.match tm rw_net)
-end end
+end
+end
 
 (*---------------------------------------------------------------------------
  * It should be a mistake to have more than one applicable congruence rule for
@@ -456,12 +465,15 @@ fun add_cntxt ADD = add_rws | add_cntxt DONT_ADD = Lib.K;
 (* Handler for simple cong. rule antecedents: ones without quantification.   *)
 (*---------------------------------------------------------------------------*)
 
-fun simple cnv (cps as {context as (cntxt,b),prover,simpls}) (ant,rst) =
- case total ((I##dest_eq) o strip_imp_only) ant
-  of SOME (L,(lhs,rhs)) =>
-     let val outcome =
+fun simple cnv (cps as {context as (cntxt,b),prover,simpls}) (ant,rst) = let
+  val _ = lztrace(5, "simple",
+                  (fn () => "ant: " ^ term_to_backend_string ant))
+in
+ case total ((I##dest_eq) o strip_imp_only) ant of
+   SOME (L,(lhs,rhs)) => let
+     val outcome =
          if aconv lhs rhs then NO_CHANGE (L,lhs)
-         else let val cps' = 
+         else let val cps' =
                    if null L then cps else
                        {context = (map ASSUME L @ cntxt,b),
                         prover  = prover,
@@ -469,19 +481,37 @@ fun simple cnv (cps as {context as (cntxt,b),prover,simpls}) (ant,rst) =
               in CHANGE(cnv cps' lhs) handle HOL_ERR _ => NO_CHANGE (L,lhs)
                                            | UNCHANGED => NO_CHANGE (L,lhs)
               end
-     in case outcome
-         of CHANGE th => let val Mnew = boolSyntax.rhs(concl th)
-                         in (CHANGE (itlist DISCH L th),
-                             map (subst [rhs |-> Mnew]) rst)
-                         end
-          |  _ => (outcome, map (subst [rhs |-> lhs]) rst)
-     end
-  | NONE => (CHANGE(ASSUME ant), rst)    (* Not an equality, so just assume *)
+   in
+     case outcome of
+       CHANGE th => let
+         val Mnew = boolSyntax.rhs(concl th)
+       in
+         lztrace(5, "simple",
+                 (fn () => "outcome: " ^ term_to_backend_string Mnew));
+         (CHANGE (itlist DISCH L th), map (subst [rhs |-> Mnew]) rst)
+       end
+     |  _ => (lztrace(5, "simple", (fn () => "unchanged outcome "^
+                                             term_to_backend_string lhs));
+              (outcome, map (subst [rhs |-> lhs]) rst))
+   end
+ | NONE => (CHANGE(ASSUME ant), rst)    (* Not an equality, so just assume *)
+end
 
 
 fun complex cnv (cps as {context as (cntxt,b),prover,simpls}) (ant,rst) =
-let val ant_frees = free_vars ant
+let fun tr (i,mf) = lztrace(i,"complex",mf)
+    fun trterm (i,m,t) =
+        tr(i, trace ("types", 1) (fn () => m ^ term_to_backend_string t))
+    fun trvlist (i,m,tlist) =
+        tr(i,
+           trace ("types", 1)
+             (fn () => String.concatWith "\n"
+                         (m :: map term_to_backend_string tlist)))
+    val _  = trterm(5, "Antecedent: ", ant)
+    val ant_frees = free_vars ant
+    val _ = trvlist(10, "Antecedent frees: ", ant_frees)
     val context_frees = free_varsl (map concl (fst context))
+    val _ = trvlist(10, "Context frees: ", context_frees)
     val (vlist,ceqn) = strip_forall ant
     val (lhs,rhs) = dest_eq(snd(strip_imp_only ceqn))
     val (f,args) = (I##rev) (dest_combn lhs (length vlist))
@@ -508,23 +538,30 @@ let val ant_frees = free_vars ant
                             else CHANGE lhs_beta_maybe
      end
 in
- case outcome
-  of CHANGE th =>
-      let val Mnew = boolSyntax.rhs(concl th)
-          val g = list_mk_pabs(vstrl1,Mnew)
-          val gvstrl1 = list_mk_comb(g,vstrl1)
-          val equ = SYM(DEPTH_CONV GEN_BETA_CONV gvstrl1
-                       handle HOL_ERR _ => REFL gvstrl1)
-          val th1 = TRANS th equ (* f vstrl1 = g vstrl1 *)
-          val pairs = zip args vstrl1
-          fun generalize v thm =
-                case op_assoc1 eq v pairs
-                 of SOME (_,tup) => pairTools.PGEN v tup thm
-                  | NONE => raise RW_ERR "complex" "generalize"
-      in (CHANGE (itlist generalize vlist (itlist DISCH L th1)),
-          map (subst [rhsv |-> g]) rst)
-      end
-   | otherwise => (outcome, map (subst [rhsv |-> f]) rst)
+ case outcome of
+   CHANGE th => let
+     val Mnew = boolSyntax.rhs(concl th)
+     val _ = trterm(5, "rhs of CHANGE th (Mnew): ", Mnew)
+     val _ = trvlist(10, "assumptions of CHANGE th: ", hyp th)
+     val g = list_mk_pabs(vstrl1,Mnew)
+     val gvstrl1 = list_mk_comb(g,vstrl1)
+     val eq = SYM(DEPTH_CONV GEN_BETA_CONV gvstrl1
+                  handle HOL_ERR _ => REFL gvstrl1)
+     val th1 = TRANS th eq (* f vstrl1 = g vstrl1 *)
+     val pairs = zip args vstrl1
+     fun generalize v thm =
+         case op_assoc1 Term.eq v pairs
+          of SOME (_,tup) => pairTools.PGEN v tup thm
+           | NONE => raise RW_ERR "complex" "generalize"
+   in
+     (CHANGE (itlist generalize vlist (itlist DISCH L th1)),
+       map (subst [rhsv |-> g]) rst)
+   end
+ | otherwise => let
+   in
+     tr(5, K "outcome was no change");
+     (outcome, map (subst [rhsv |-> f]) rst)
+   end
 end;
 
 
@@ -543,23 +580,30 @@ end;
  * isolate the free variables.
  *---------------------------------------------------------------------------*)
 
-fun do_cong cnv cps th =
- let val ants = strip_conj (fst(dest_imp (concl th)))
-     fun loop [] = []    (* loop proves each antecedent in turn. *)
-       | loop (ant::rst) =
-           let val (outcome,rst') = 
-                 if not(is_forall ant) 
-                   then simple cnv cps (ant,rst)
-                   else complex cnv cps (ant,rst)
-           in outcome::loop rst'
-           end
-     val ants' = loop ants
-     fun mk_ant (NO_CHANGE (L,tm)) = itlist DISCH L (REFL tm)
-       | mk_ant (CHANGE th) = th
- in
-    if Lib.all unchanged ants' then raise UNCHANGED
-    else MATCH_MP th (LIST_CONJ (map mk_ant ants'))
- end;
+fun do_cong cnv cps th = let
+  val (a, c) = dest_imp (concl th)
+  val _ = lztrace(6, "do_cong",
+                  (fn () => "th concl: "^term_to_backend_string c))
+  val ants = strip_conj a
+  val _ = lztrace(6, "do_cong",
+                  trace ("types", 1)
+                    (fn () => String.concatWith "\n"
+                               ("ants: " :: map term_to_backend_string ants)))
+  fun loop [] = []    (* loop proves each antecedent in turn. *)
+    | loop (ant::rst) = let
+        val (outcome,rst') =
+            if not(is_forall ant) then simple cnv cps (ant,rst)
+            else complex cnv cps (ant,rst)
+      in
+        outcome::loop rst'
+      end
+  val ants' = loop ants
+  fun mk_ant (NO_CHANGE (L,tm)) = itlist DISCH L (REFL tm)
+    | mk_ant (CHANGE th) = th
+in
+  if Lib.all unchanged ants' then raise UNCHANGED
+  else MATCH_MP th (LIST_CONJ (map mk_ant ants'))
+end;
 
 
 fun SUB_QCONV cnv (cps as {context,prover,simpls}) tm =
@@ -576,9 +620,19 @@ fun SUB_QCONV cnv (cps as {context,prover,simpls}) tm =
       let val Bth = cnv cps Body
       in ABS Bvar Bth
          handle HOL_ERR _ =>
-          let val v = genvar (type_of Bvar)
+          let val _ = lztrace(6, "SUB_QCONV",
+                              trace ("assumptions", 1)
+                              (fn () => "ABS failure: " ^
+                                        term_to_backend_string Bvar ^ "  " ^
+                                        thm_to_backend_string Bth))
+              val v = genvar (type_of Bvar)
               val th1 = ALPHA_CONV v tm
-              val eq_thm' = ABS v (cnv cps (body(boolSyntax.rhs(Thm.concl th1))))
+              val call2 = cnv cps (body(rhs(concl th1)))
+              val _ = lztrace(6, "SUB_QCONV",
+                              trace ("assumptions", 1)
+                              (fn () => "ABS 2nd call: "^
+                                        thm_to_backend_string call2))
+              val eq_thm' = ABS v call2
               val at = snd(dest_eq(concl eq_thm'))
               val v' = variant (free_vars at) Bvar
               val th2 = ALPHA_CONV v' at
@@ -769,11 +823,12 @@ fun always_fails x y z = solver_err();
  *---------------------------------------------------------------------------*)
 
 fun std_solver _ context tm =
- let val _ = if !monitoring
+ let val _ = if !monitoring > 0
              then Lib.say("Solver: trying to lookup in context\n"
                           ^term_to_string tm^"\n") else ()
-     fun loop [] = (if !monitoring then Lib.say "Solver: couldn't find it.\n"
-                                else ();
+     fun loop [] = (if !monitoring > 0 then
+                      Lib.say "Solver: couldn't find it.\n"
+                    else ();
                     solver_err())
        | loop (x::rst) =
            let val c = concl x
@@ -785,7 +840,7 @@ fun std_solver _ context tm =
            end
      val thm = loop (boolTheory.TRUTH::context)
  in
-    if !monitoring then Lib.say "Solver: found it.\n" else ();
+    if !monitoring > 0 then Lib.say "Solver: found it.\n" else ();
     thm
  end;
 
@@ -797,13 +852,13 @@ fun std_solver _ context tm =
 
 fun rw_solver simpls context tm =
  let open boolSyntax
-     val _ = if !monitoring
+     val _ = if !monitoring > 0
              then Lib.say("Solver: attempting to prove (by rewriting)\n  "
                           ^term_to_string tm^"\n") else ()
      val th = TOP_DEPTH RW_STEP {context = (context,ADD),
                                   simpls = simpls,
                                   prover = rw_solver} tm
-     val _ = if !monitoring
+     val _ = if !monitoring > 0
              then let val (lhs,rhs) = dest_eq(concl th)
                   in if eq rhs T
                      then Lib.say("Solver: proved\n"^thm_to_string th^"\n\n")
@@ -931,12 +986,12 @@ val _ = Parse.temp_set_grammars ambient_grammars;
 
 end (* structure RW *)
 
-(* 
+(*
  Given (p,th) from Defn.sml::extract:
 
  val tma = boolSyntax.rhs(concl th)
  val nested_ref = ref false;
- val (Pure thl,Context cntxt,Congs congs,Solver solver) = 
+ val (Pure thl,Context cntxt,Congs congs,Solver solver) =
      (Pure [CUT_LEM],
       Context ([],DONT_ADD),
       Congs congs,
@@ -1003,8 +1058,8 @@ do_cong cnv cps cong_thm;
 val th = cong_thm;
 val ants = strip_conj (fst(dest_imp (concl th)))
 val (ant::rst) = ants;
-val (outcome1,rst') = 
-     if not(is_forall ant) 
+val (outcome1,rst') =
+     if not(is_forall ant)
         then simple cnv cps (ant,rst)
         else complex cnv cps (ant,rst);
 val (ant::rst) = rst';

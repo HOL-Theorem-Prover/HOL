@@ -951,20 +951,45 @@ local
      Q.ISPEC `ARM_WRITE_CPSR` COND_RAND,
      Q.ISPEC `ARM_WRITE_IT n` COND_RAND,
      arm_bit_distinct, lem11, lem12]
+
+  fun OFFSET_CONV tm =
+    let
+      val (l,r) = wordsSyntax.dest_word_add tm
+      val (ll,lr) = wordsSyntax.dest_word_add l
+    in
+      if wordsSyntax.is_word_literal lr andalso
+         wordsSyntax.is_word_literal r
+      then
+        (REWR_CONV (GSYM wordsTheory.WORD_ADD_ASSOC) THENC
+         RAND_CONV wordsLib.WORD_EVAL_CONV) tm
+      else
+        raise ERR "OFFSET_CONV" ""
+    end
 in
+  val OFFSET_ss = simpLib.merge_ss [simpLib.rewrites [wordsTheory.WORD_ADD_0],
+                   simpLib.std_conv_ss
+                     {conv = OFFSET_CONV, name = "OFFSET_CONV",
+                      pats = [``a + n2w b + n2w c : word32``]}]
+
   val WORD_EQ_ss = simpLib.std_conv_ss
              {conv = wordsLib.word_EQ_CONV, name = "word_EQ_CONV",
               pats = [``n2w w = n2w y :'a word``]}
+
   val BFC_ss = simpLib.std_conv_ss
              {conv = wordsLib.WORD_EVAL_CONV, name = "WORD_EVAL_CONV",
               pats = [``words$word_modify f 0xFFFFFFFFw : word32``]}
+
   val ARM_ALIGN_ss = simpLib.merge_ss
                         [simpLib.rewrites align_rws, wordsLib.SIZES_ss,
                          numSimps.REDUCE_ss, SatisfySimps.SATISFY_ss]
-  val ARM_RECORD_ss = simpLib.merge_ss [simpLib.rewrites record_rws, WORD_EQ_ss,
-                                        boolSimps.CONJ_ss, numSimps.REDUCE_ss]
+
+  val ARM_RECORD_ss = simpLib.merge_ss
+                        [simpLib.rewrites record_rws, WORD_EQ_ss,
+                         boolSimps.CONJ_ss, numSimps.REDUCE_ss]
+
   val ARM_UPDATES_ss = simpLib.merge_ss
-                         [simpLib.rewrites updates_rws, WORD_EQ_ss, BFC_ss]
+                        [simpLib.rewrites updates_rws,
+                         OFFSET_ss, WORD_EQ_ss, BFC_ss]
 end;
 
 local
