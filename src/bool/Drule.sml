@@ -2557,7 +2557,9 @@ fun define_new_type_bijections{name,ABS,REP,tyax} =
   then raise ERR "define_new_type_bijections"
                  "input theorem must have no assumptions"
   else
-  let val (_,[P,rep]) = strip_comb(snd(dest_exists(concl tyax)))
+  let val (P,rep) = case strip_comb(snd(dest_exists(concl tyax)))
+                    of (_,[P,rep]) => (P,rep)
+                     | _ => raise Match
       val (a,r) = Type.dom_rng (type_of rep)
   in Rsyntax.new_specification
       {name=name,
@@ -2589,7 +2591,9 @@ fun prove_rep_fn_one_one th =
        val (_,Body) = dest_forall(concl thm)
        val (A, Rand) = dest_comb(lhs Body)
        val (R, _)= dest_comb Rand
-       val (_,[aty,rty]) = Type.dest_type (type_of R)
+       val (aty,rty) = case Type.dest_type (type_of R)
+                       of (_,[aty,rty]) => (aty,rty)
+                        | _ => raise Match
        val a = mk_primed_var("a", aty)
        val a' = variant [a] a
        val a_eq_a' = mk_eq(a,a')
@@ -2627,7 +2631,9 @@ fun prove_rep_fn_one_one th =
 (* ---------------------------------------------------------------------*)
 
 fun prove_rep_fn_onto th =
-   let val [th1,th2] = CONJUNCTS th
+   let val (th1,th2) = case CONJUNCTS th
+                       of [th1,th2] => (th1,th2)
+                        | _ => raise Match
        val (Bvar,Body) = dest_forall(concl th2)
        val (_,eq) = dest_eq Body
        val (RE, ar) = dest_comb(lhs eq)
@@ -2669,7 +2675,9 @@ fun prove_rep_fn_onto th =
 (* ---------------------------------------------------------------------*)
 
 fun prove_abs_fn_onto th =
-   let val [th1,th2] = CONJUNCTS th
+   let val (th1,th2) = case CONJUNCTS th
+                       of [th1,th2] => (th1,th2)
+                        | _ => raise Match
        val (bv_th1,Body) = dest_forall(concl th1)
        val (A,Rand) = dest_comb(lhs Body)
        val R = rator Rand
@@ -2709,7 +2717,9 @@ fun prove_abs_fn_onto th =
 (* ---------------------------------------------------------------------*)
 
 fun prove_abs_fn_one_one th =
-   let val [th1,th2] = CONJUNCTS th
+   let val (th1,th2) = case CONJUNCTS th
+                       of [th1,th2] => (th1,th2)
+                        | _ => raise Match
        val (r, Body) = dest_forall(concl th2)
        val P = rator(lhs Body)
        val (A, Rand) = dest_comb(lhs(snd(dest_forall(concl th1))))

@@ -19,11 +19,6 @@ open buildutils
 prim_val catch_interrupt : bool -> unit = 1 "sys_catch_break";
 val _ = catch_interrupt true;
 
-fun readline strm =
-    case TextIO.inputLine strm of
-      "" => NONE
-    | s => SOME s
-
 (* values from the Systeml structure, which is created at HOL configuration
    time *)
 val OS = Systeml.OS;
@@ -40,7 +35,7 @@ val DYNLIB = Systeml.DYNLIB
 val dfltbuildseq = fullPath [HOLDIR, "tools", "build-sequence"]
 
 val {kernelspec,seqname = bseq_fname,rest = cmdline} =
-    case get_cline {reader = readline, default_seq = dfltbuildseq} of
+    case get_cline {default_seq = dfltbuildseq} of
       Normal x => x
     | Clean s => {kernelspec = "", seqname = dfltbuildseq, rest = [s]}
 
@@ -59,26 +54,21 @@ val kpath = if use_expk then fullPath [HOLDIR, "src", "experimental-kernel"]
 
 val SRCDIRS =
     if cmdline = ["help"] then []
-    else read_buildsequence {ssfull = Substring.all,
-                             inputLine = readline,
-                             kernelpath = kpath}
-                            bseq_fname
+    else read_buildsequence {kernelpath = kpath} bseq_fname
 
 val SIGOBJ = fullPath [HOLDIR, "sigobj"];
 val HOLMAKE = fullPath [HOLDIR, "bin/Holmake"]
 
 open Systeml;
-val SYSTEML = Systeml.systeml
+fun SYSTEML clist = Process.isSuccess (Systeml.systeml clist)
 
 fun Holmake dir =
-  if SYSTEML [HOLMAKE, "--qof"] = Process.success then
+  if SYSTEML [HOLMAKE, "--qof"] then
     if do_selftests > 0 andalso
        FileSys.access("selftest.exe", [FileSys.A_EXEC])
     then
       (print "Performing self-test...\n";
-       if SYSTEML [dir ^ "/selftest.exe", Int.toString do_selftests] =
-          Process.success
-       then
+       if SYSTEML [dir ^ "/selftest.exe", Int.toString do_selftests] then
          print "Self-test was successful\n"
        else
          die ("Selftest failed in directory "^dir))
@@ -88,7 +78,7 @@ fun Holmake dir =
 
 
 fun Gnumake dir =
-  if SYSTEML [GNUMAKE] = Process.success then true
+  if SYSTEML [GNUMAKE] then true
   else (warn ("Build failed in directory "^dir ^" ("^GNUMAKE^" failed).");
         false)
 
@@ -99,7 +89,7 @@ fun Gnumake dir =
 (* create a symbolic link - Unix only *)
 fun link b s1 s2 =
   let open Process
-  in if SYSTEML ["ln", "-s", s1, s2] = success then ()
+  in if SYSTEML ["ln", "-s", s1, s2] then ()
      else die ("Unable to link file "^quote s1^" to file "^quote s2^".")
   end
 
@@ -320,7 +310,7 @@ fun build_adoc_files () = let
   fun make_adocs dir = let
     val fulldir = fullPath [HOLDIR, dir]
   in
-    if SYSTEML [doc2txt, fulldir, fulldir] = Process.success then true
+    if SYSTEML [doc2txt, fulldir, fulldir] then true
     else
       (print ("Generation of ASCII doc files failed in directory "^dir^"\n");
        false)
@@ -350,10 +340,10 @@ fun build_help () =
  in
    print "Generating HTML versions of Docfiles...\n"
  ;
-   if SYSTEML cmd1  = Process.success then print "...HTML Docfiles done\n"
+   if SYSTEML cmd1 then print "...HTML Docfiles done\n"
    else die "Couldn't make html versions of Docfiles"
  ;
-   if (print "Building Help DB\n"; SYSTEML cmd2) = Process.success then ()
+   if (print "Building Help DB\n"; SYSTEML cmd2) then ()
    else die "Couldn't make help database"
  end;
 

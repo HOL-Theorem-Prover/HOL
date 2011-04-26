@@ -510,7 +510,7 @@ local
       BITWISE_ADD, BITWISE_SUB, BITWISE_LO, fcpTheory.FCP_UPDATE_def,
       listTheory.HD, listTheory.TL, listTheory.SNOC, listTheory.FOLDL,
       listTheory.GENLIST_GENLIST_AUX, SUC_RULE listTheory.GENLIST_AUX,
-      combinTheory.o_THM] cmp
+      combinTheory.o_THM, pairTheory.SND, pairTheory.FST] cmp
 
   val _ = computeLib.add_conv
             (``fcp$dimindex:'a itself -> num``, 1, wordsLib.SIZES_CONV) cmp

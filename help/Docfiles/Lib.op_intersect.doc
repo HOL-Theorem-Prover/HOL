@@ -9,7 +9,7 @@ Computes the intersection of two `sets'.
 list, set.
 
 \DESCRIBE
-{op_intersect eq l1 l2} returns a list consisting of those 
+{op_intersect eq l1 l2} returns a list consisting of those
 elements of {l1} that are {eq} to some element in {l2}.
 
 \FAILURE
@@ -26,10 +26,10 @@ Fails if an application of {eq} fails.
 \COMMENTS
 The order of items in the list returned by {op_intersect} is not dependable.
 
-High performance finite set operations may be found in the ML Standard
-Basis Library.
+A high-performance implementation of finite sets may be found in
+structure {HOLset}.
 
-There is no requirement that {eq} be recognizable as a kind of 
+There is no requirement that {eq} be recognizable as a kind of
 equality (it could be implemented by an order relation, for example).
 
 \SEEALSO

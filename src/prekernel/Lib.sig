@@ -9,6 +9,8 @@ sig
   val pair          : 'a -> 'b -> 'a * 'b
   val rpair         : 'a -> 'b -> 'b * 'a
   val swap          : 'a * 'b -> 'b * 'a
+  val triple        : 'a -> 'b -> 'c -> 'a * 'b * 'c
+  val quadruple     : 'a -> 'b -> 'c -> 'd -> 'a * 'b * 'c * 'd
   val cons          : 'a -> 'a list -> 'a list
   val ##            : ('a -> 'b) * ('c -> 'd) -> 'a * 'c -> 'b * 'd
   val apfst         : ('a -> 'b) -> 'a * 'c -> 'b * 'c
@@ -32,6 +34,10 @@ sig
   val tryfind       : ('a -> 'b) -> 'a list -> 'b
   val el            : int -> 'a list -> 'a
   val single        : 'a -> 'a list
+  val singleton_of_list : 'a list -> 'a
+  val pair_of_list  : 'a list -> 'a * 'a
+  val triple_of_list : 'a list -> 'a * 'a * 'a
+  val quadruple_of_list : 'a list -> 'a * 'a * 'a * 'a
   val index         : ('a -> bool) -> 'a list -> int
   val map2          : ('a -> 'b -> 'c) -> 'a list -> 'b list -> 'c list
   val all           : ('a -> bool) -> 'a list -> bool

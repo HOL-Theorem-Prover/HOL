@@ -3,14 +3,14 @@
 \TYPE {op_set_diff : ('a -> 'a -> bool) -> 'a list -> 'a list -> 'a list}
 
 \SYNOPSIS
-Computes the set-theoretic difference of two `sets', modulo a 
+Computes the set-theoretic difference of two `sets', modulo a
 supplied relation.
 
 \KEYWORDS
 list, set.
 
 \DESCRIBE
-{op_set_diff eq l1 l2} returns a list consisting of those elements 
+{op_set_diff eq l1 l2} returns a list consisting of those elements
 of {l1} that are not {eq} to some element of {l2}.
 
 \FAILURE
@@ -30,8 +30,8 @@ Fails if an application of {eq} fails.
 The order in which the elements occur in the resulting list should
 not be depended upon.
 
-High performance set operations may be found in the ML Standard
-Basis Library.
+A high-performance implementation of finite sets may be found in
+structure {HOLset}.
 
 \SEEALSO
 Lib.set_diff, Lib.op_mem, Lib.op_insert, Lib.op_union, Lib.op_U, Lib.op_mk_set, Lib.op_intersect.

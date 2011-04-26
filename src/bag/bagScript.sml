@@ -641,8 +641,10 @@ val SUB_BAG_BAG_DIFF = store_thm(
 
 local
   fun bdf (b1, b2) (b3, b4) =
-    let val [b1v, b2v, b3v, b4v] =
-          map (C (curry mk_var) (==`:'a->num`==)) [b1, b2, b3, b4]
+    let val (b1v, b2v, b3v, b4v) =
+          case map (C (curry mk_var) (==`:'a->num`==)) [b1, b2, b3, b4] of
+            [b1v, b2v, b3v, b4v] => (b1v, b2v, b3v, b4v)
+          | _ => raise Match
     in
         ``BAG_DIFF (BAG_UNION ^b1v ^b2v) (BAG_UNION ^b3v ^b4v) =
             BAG_DIFF b2 b3``
@@ -662,8 +664,10 @@ end;
 
 local
   fun bdf (b1, b2) (b3, b4) =
-    let val [b1v, b2v, b3v, b4v] =
-          map (C (curry mk_var) (==`:'a->num`==)) [b1, b2, b3, b4]
+    let val (b1v, b2v, b3v, b4v) =
+          case map (C (curry mk_var) (==`:'a->num`==)) [b1, b2, b3, b4] of
+            [b1v, b2v, b3v, b4v] => (b1v, b2v, b3v, b4v)
+          | _ => raise Match
     in
         ``SUB_BAG (BAG_UNION ^b1v ^b2v) (BAG_UNION ^b3v ^b4v) =
             SUB_BAG (b2:'a->num) b3``

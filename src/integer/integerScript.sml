@@ -94,13 +94,14 @@ val LT_ADD2 =
 (*--------------------------------------------------------------------------*)
 
 fun CANCEL_CONV (assoc,sym,lcancelthms) tm =
-  let val lcthms =
+  let fun pair_from_list [x, y] = (x, y)
+        | pair_from_list _ = raise Match
+      val lcthms =
       map ((fn th => (assert (is_eq o concl)) th
 	    handle _ => EQF_INTRO th
 		handle _ => EQT_INTRO th) o SPEC_ALL) lcancelthms
-      val [eqop, binop] =
-	  map (rator o rator o lhs o snd o strip_forall o concl)
-	  [hd lcthms, sym]
+      val (eqop, binop) = pair_from_list (map
+        (rator o rator o lhs o snd o strip_forall o concl) [hd lcthms, sym])
       fun strip_binop tm =
 	  if (eq (rator(rator tm)) binop handle _ => false) then
 	      (strip_binop (rand(rator tm))) @ (strip_binop(rand tm))
@@ -110,20 +111,21 @@ fun CANCEL_CONV (assoc,sym,lcancelthms) tm =
 
       fun rmel i list = op_set_diff aconv list [i]
 
-      val (_,[l1,r1]) = (assert (eq eqop) ## I) (strip_comb tm)
-      val [l, r] = map strip_binop [l1, r1]
+      val (_, (l1, r1)) = (assert (eq eqop) ## pair_from_list)
+        (strip_comb tm)
+      val (l, r) = pair_from_list (map strip_binop [l1, r1])
       val i = op_intersect aconv l r
   in
       if null i then raise Fail ""
       else
 	  let val itm = list_mk_binop i
-	      val [l', r'] =
-		  map (end_itlist (C (curry op o)) (map rmel i)) [l, r]
-	      val [l2, r2] =
-		  map (fn ts => mk_binop itm (list_mk_binop ts)
-		       handle _ => itm) [l',r']
-	      val [le, re] =
-		  map (EQT_ELIM o AC_CONV(assoc,sym) o mk_eq)[(l1,l2),(r1,r2)]
+	      val (l', r') = pair_from_list
+		  (map (end_itlist (C (curry op o)) (map rmel i)) [l, r])
+	      val (l2, r2) = pair_from_list
+		  (map (fn ts => mk_binop itm (list_mk_binop ts)
+		       handle _ => itm) [l',r'])
+	      val (le, re) = pair_from_list
+		  (map (EQT_ELIM o AC_CONV(assoc,sym) o mk_eq)[(l1,l2),(r1,r2)])
 	      val eqv = MK_COMB(AP_TERM eqop le,re)
 	  in
 	      CONV_RULE(RAND_CONV(end_itlist (curry(op ORELSEC))

@@ -210,8 +210,11 @@ struct
     BIT2     = bit2_tm
   };
 
-  val dest_numeral = Literal.dest_numeral
-  val is_numeral   = Literal.is_numeral
+  fun dest_numeral t =
+    Literal.dest_numeral t handle HOL_ERR _ =>
+      raise ERR "dest_numeral" "term is not a numeral"
+
+  val is_numeral = can dest_numeral
 
   val int_of_term = Arbnum.toInt o dest_numeral
   fun term_of_int i = mk_numeral(Arbnum.fromInt i)

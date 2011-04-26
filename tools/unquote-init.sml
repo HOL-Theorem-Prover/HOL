@@ -29,7 +29,7 @@ fun use s =
     let
       val filename = FileSys.tmpName()^".hol"
     in
-      if unquote_to s filename = OS.Process.success then
+      if Process.isSuccess (unquote_to s filename) then
         (Meta.use filename; FileSys.remove filename)
         handle e => (FileSys.remove filename handle _ => (); raise e)
       else (TextIO.output(TextIO.stdOut,

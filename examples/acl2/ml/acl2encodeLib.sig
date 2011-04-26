@@ -276,5 +276,15 @@ sig
     val ENCODE_WF_REL_TAC : term frag list -> tactic
     val FULL_CHOOSE_DETECT_TAC : tactic
 
+(*****************************************************************************)
+(* For a ground term:                                                        *)
+(*     ONEONE_DECENC_THM t = |- ONEONE (decode_t o encode_t)                 *)
+(*     ONEONE_ENC_THM t    = |- ONEONE (encode_t : t -> sexp)                *)
+(*                                                                           *)
+(*****************************************************************************)
+
+    val ONEONE_DECENC_THM : hol_type -> thm
+    val ONEONE_ENC_THM    : hol_type -> thm
+ 
     val Raise : exn -> 'a
 end

@@ -66,6 +66,9 @@ struct
               | tree  => tree
           , if !addone then n+1 else n) end
 
+  fun insertList (m, xs) =
+    List.foldl (fn ((i, v), m) => insert (m, i, v)) m xs
+
   fun push LEAF stack = stack
     | push tree stack = tree :: stack
 

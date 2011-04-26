@@ -58,7 +58,8 @@ fun bgt s =  if !prf then let val (t,mtr,(utot,stot,gtot),ptot) = find(!tim,s)
 (* update aggregates for timer s *)
 fun ent s =
     if !prf then let val (t,mtr,(utot,stot,gtot),ptot) = find(!tim,s) handle ex => Feedback.failwith("profTools.ent: Not Found")
-		     val {usr=ut,sys=st,gc=gt} = checkCPUTimer t
+		     val {usr=ut,sys=st} = checkCPUTimer t
+                     val gt = checkGCTime t
 		     val {prims=p,...} = read mtr
 		 in (tim := insert(!tim,s,(t,mtr,(utot+(Time.toReal ut),stot+(Time.toReal st),gtot+(Time.toReal gt)),addI ptot p))) end
     else ()

@@ -403,6 +403,25 @@ val word32_add_n2w = store_thm("word32_add_n2w",
     \\ ONCE_REWRITE_TAC [GSYM n2w_mod]
     \\ ASM_SIMP_TAC (std_ss++wordsLib.SIZES_ss) []]);
 
+val two64 = (snd o dest_eq o concl o EVAL) ``(2**64):num``
+val two63 = (snd o dest_eq o concl o EVAL) ``(2**63):num``
+val word64_add_n2w = store_thm("word64_add_n2w",
+  ``!x n. x + (n2w n):word64 =
+          if n < 2**63 then x + n2w n else x - n2w (2**64 - n MOD 2**64)``,
+  Cases_word \\ STRIP_TAC
+  \\ SIMP_TAC (std_ss++wordsLib.SIZES_ss) [word_sub_def,word_2comp_n2w]
+  \\ Cases_on `n' < ^two63` \\ ASM_REWRITE_TAC []
+  \\ `n' MOD ^two64 < ^two64` by METIS_TAC [arithmeticTheory.DIVISION,EVAL ``0 < ^two64``]
+  \\ Cases_on `n' MOD ^two64 = 0` THENL [
+    ASM_SIMP_TAC (std_ss++wordsLib.SIZES_ss) []
+    \\ ONCE_REWRITE_TAC [GSYM n2w_mod]
+    \\ ASM_SIMP_TAC (std_ss++wordsLib.SIZES_ss) [],
+    `(^two64 - n' MOD ^two64) < ^two64` by DECIDE_TAC
+    \\ ASM_SIMP_TAC std_ss []
+    \\ `^two64 - (^two64 - n' MOD ^two64) = n' MOD ^two64` by DECIDE_TAC
+    \\ ONCE_REWRITE_TAC [GSYM n2w_mod]
+    \\ ASM_SIMP_TAC (std_ss++wordsLib.SIZES_ss) []]);
+
 val MOD_EQ_0_IMP = prove(
   ``!n m. 0 < m ==> ((n MOD m = 0) = ?k. n = k * m)``,
   METIS_TAC [DIVISION,ADD_0,MOD_EQ_0]);

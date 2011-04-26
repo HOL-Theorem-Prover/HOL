@@ -11,7 +11,8 @@ fun test_term c (n,t,b) = let
   val result = SOME (SOME (c t))
     handle Interrupt => SOME NONE
          | _ => NONE
-  val {usr,sys,gc} = Timer.checkCPUTimer timer
+  val {usr,sys} = Timer.checkCPUTimer timer
+  val gc = Timer.checkGCTime timer
   val (verdictmsg, verdict) =
     case result of
       SOME (SOME th) => let

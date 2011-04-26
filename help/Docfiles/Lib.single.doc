@@ -1,0 +1,17 @@
+\DOC single
+
+\TYPE {single : 'a -> 'a list}
+
+\SYNOPSIS
+Turns a value into a single-element list.
+
+\DESCRIBE
+{single x} returns {[x]}.
+
+\FAILURE
+Never fails.
+
+\SEEALSO
+Lib.singleton_of_list.
+
+\ENDDOC

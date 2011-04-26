@@ -39,7 +39,10 @@ local fun pmc s = prim_mk_const {Name = s, Thy = "ringNorm"}
       val spmult = canon_pmc "SPmult"
 in
 fun polynom_sign ty ring =
-  let val [P,M,N] = map ring_field [`RP ^ring`,`RM ^ring`,`RN ^ring`] in
+  let val (P,M,N) = case map ring_field [`RP ^ring`,`RM ^ring`,`RN ^ring`]
+                    of [P,M,N] => (P,M,N)
+                     | _ => raise Match
+  in
   { Vars=inst_ty ty pvar,
     Csts=inst_ty ty pcst,
     Op1=[(N,inst_ty ty popp)],
@@ -47,7 +50,10 @@ fun polynom_sign ty ring =
   end
 
 fun spolynom_sign ty sring =
-  let val [P,M] = map sring_field [`SRP ^sring`,`SRM ^sring`] in
+  let val (P,M) = case map sring_field [`SRP ^sring`,`SRM ^sring`]
+                  of [P,M,N] => (P,M)
+                   | _ => raise Match
+  in
   { Vars=inst_ty ty spvar,
     Csts=inst_ty ty spcst,
     Op1=[],
@@ -216,7 +222,9 @@ fun declare_ring {RingThm,IsConst,Rewrites} =
       val mk_eq = binop_eq Ty
 
       fun norm_conv t =
-        let val {Metamap,Poly=[p]} = reify_fun [t]
+        let val (Metamap,p) = case reify_fun [t]
+                              of {Metamap,Poly=[p]} => (Metamap, p)
+                               | _ => raise Match
             val thm = SPECL[Metamap,p] SoundThm
   	in simp_rule thm
   	end
@@ -224,7 +232,9 @@ fun declare_ring {RingThm,IsConst,Rewrites} =
 
       fun eq_conv t =
   	let val (lhs,rhs) = dest_eq t
-            val {Metamap,Poly=[p1,p2]} = reify_fun [lhs,rhs]
+            val (Metamap,p1,p2) = case reify_fun [lhs,rhs]
+                                  of {Metamap,Poly=[p1,p2]} => (Metamap,p1,p2)
+                                   | _ => raise Match
 	    val mthm = SPEC Metamap SoundThm
             val th1 = simp_rule (SPEC p1 mthm)
             val th2 = simp_rule (SPEC p2 mthm)

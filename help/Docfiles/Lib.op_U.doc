@@ -9,8 +9,8 @@ Takes the union of a list of sets, modulo the supplied relation.
 list, set.
 
 \DESCRIBE
-An application {op_U eq [l1, ..., ln]} is equivalent to 
-{op_union eq l1 (... (op_union eq ln-1, ln)...)}. Thus, 
+An application {op_U eq [l1, ..., ln]} is equivalent to
+{op_union eq l1 (... (op_union eq ln-1, ln)...)}. Thus,
 every element that occurs in one of the lists will appear in the
 result. However, if there are two elements {x} and {y} from different lists
 such that {eq x y}, then only one of {x} and {y} will appear in the result.
@@ -22,7 +22,7 @@ If an application of {eq} fails when applied to two elements from the lists.
 
 \EXAMPLE
 {
-- op_U (fn x => fn y => x mod 2 = y mod 2) 
+- op_U (fn x => fn y => x mod 2 = y mod 2)
        [[1,2,3], [4,5,6], [2,4,6,8,10]];
 > val it = [5, 2, 4, 6, 8, 10] : int list
 }
@@ -32,10 +32,10 @@ If an application of {eq} fails when applied to two elements from the lists.
 The order in which the elements occur in the resulting list should
 not be depended upon.
 
-High performance set operations may be found in the ML Standard
-Basis Library.
+A high-performance implementation of finite sets may be found in
+structure {HOLset}.
 
-There is no requirement that {eq} be recognizable as a kind of 
+There is no requirement that {eq} be recognizable as a kind of
 equality (it could be implemented by an order relation, for example).
 
 \SEEALSO

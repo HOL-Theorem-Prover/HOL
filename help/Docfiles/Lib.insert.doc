@@ -27,15 +27,17 @@ Never fails.
 
 \COMMENTS
 In some programming situations, it is convenient to implement sets
-by lists, in which case {insert} may be helpful. However, such 
-an implementation is only suitable for small sets. Serious 
-implementations of sets may be found in the Standard ML Basis Library.
+by lists, in which case {insert} may be helpful. However, such
+an implementation is only suitable for small sets.
 
-ML equality types are used in the implementation of {insert} and its kin. 
+A high-performance implementation of finite sets may be found in
+structure {HOLset}.
+
+ML equality types are used in the implementation of {insert} and its kin.
 This limits its applicability to types that allow equality. For other
 types, typically abstract ones, use the `op_' variants.
 
-One should not write code that depends on where the `list-as-set' 
+One should not write code that depends on where the `list-as-set'
 algorithms place elements in the list which is being considered as a
 set.
 

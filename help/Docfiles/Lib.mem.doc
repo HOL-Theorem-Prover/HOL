@@ -11,7 +11,7 @@ list, set, eqtype.
 \LIBRARY Lib
 
 \DESCRIBE
-An invocation {mem x [x1,...,xn]} returns {true} if some {xi} 
+An invocation {mem x [x1,...,xn]} returns {true} if some {xi}
 in the list is equal to {x}. Otherwise it returns {false}.
 
 \FAILURE
@@ -22,8 +22,8 @@ Note that the type of the members of the list must be an SML equality
 type. If set operations on a non-equality type are desired, use the `op_'
 variants, which take an equality predicate as an extra argument.
 
-High performance finite set operations may be found in the ML Standard
-Basis Library.
+A high-performance implementation of finite sets may be found in
+structure {HOLset}.
 
 \SEEALSO
 Lib.op_mem, Lib.insert, Lib.tryfind, Lib.exists, Lib.all, Lib.assoc,

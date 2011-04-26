@@ -3,6 +3,26 @@ app load ["Mosml", "Process", "Path", "FileSys", "Timer", "Real", "Int",
           "Bool", "OS", "CommandLine"] ;
 open Mosml;
 
+fun die s = (TextIO.output(TextIO.stdErr, s ^ "\n");
+             OS.Process.exit OS.Process.failure)
+
+(* Thanks to Ken Friis Larsen for this very cute trick *)
+val version_string =
+    List.nth([], 1) handle Option => "2.01" | Subscript => "2.10";
+
+val _ = if version_string = "2.01" then let
+            val _ = print "\n\nUsing Basis 2002 update for Moscow ML 2.01\n"
+            val _ = app load ["CharVector", "Math"]
+            infix ++ val op++ = OS.Path.concat
+          in
+            use ("tools" ++ "Holmake" ++ "basis2002.sml")
+          end
+        else ();
+
+structure FileSys = OS.FileSys
+structure Process = OS.Process
+structure Path = OS.Path
+
 (* utility functions *)
 fun readdir s = let
   val ds = FileSys.openDir s
@@ -109,13 +129,15 @@ end;
 fun dirify {arcs,isAbs,vol} =
     OS.Path.toString {arcs = #1 (frontlast arcs), isAbs = isAbs, vol = vol}
 
+
 val mosmldir = let
   val nm = CommandLine.name()
   val p as {arcs, isAbs, vol} = OS.Path.fromString nm
   val cand =
       if isAbs then SOME (dirify p)
       else if length arcs > 1 then
-        SOME (OS.Path.mkAbsolute (dirify p, OS.FileSys.getDir()))
+        SOME (Path.mkAbsolute {path = dirify p,
+                               relativeTo = OS.FileSys.getDir()})
       else (* examine PATH variable *)
         case OS.Process.getEnv "PATH" of
           NONE => NONE

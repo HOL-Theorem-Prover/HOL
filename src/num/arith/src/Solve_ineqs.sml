@@ -356,9 +356,10 @@ fun VAR_ELIM coeffsl =
       val pairs = pair_ineqs (ricoeffs,licoeffs)
       val (success,new_ineqs) = weighted_sums var pairs
   in  if success
-      then let val [((lindex,rindex),(coeffs,thf))] = new_ineqs
-           in  ([lindex,rindex],thf)
-           end
+      then
+        case new_ineqs
+        of [((lindex,rindex),(coeffs,thf))] => ([lindex,rindex],thf)
+         | _ => raise Match
       else let val n = fromInt (length new_ineqs)
                and new_coeffs =
                   (map (fst o snd) new_ineqs) @ (map snd nicoeffs)

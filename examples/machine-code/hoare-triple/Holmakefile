@@ -1,1 +1,1 @@
-INCLUDES = $(HOLDIR)/tools/mlyacc/mlyacclib $(HOLDIR)/examples/machine-code/instruction-set-models/common $(HOLDIR)/examples/machine-code/instruction-set-models/x86 $(HOLDIR)/examples/machine-code/instruction-set-models/ppc $(HOLDIR)/examples/ARM/v7
+INCLUDES = $(HOLDIR)/tools/mlyacc/mlyacclib $(HOLDIR)/examples/machine-code/instruction-set-models/common $(HOLDIR)/examples/machine-code/instruction-set-models/x86 $(HOLDIR)/examples/machine-code/instruction-set-models/x86_64 $(HOLDIR)/examples/machine-code/instruction-set-models/ppc $(HOLDIR)/examples/ARM/v7

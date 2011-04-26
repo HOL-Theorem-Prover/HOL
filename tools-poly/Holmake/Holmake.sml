@@ -735,6 +735,7 @@ case file of
        OS.Process.success
      end
      handle IO.Io _ => OS.Process.failure)
+| _ => raise Match
 end
 
 fun poly_link result files =

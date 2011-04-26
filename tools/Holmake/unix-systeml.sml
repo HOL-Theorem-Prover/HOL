@@ -61,13 +61,13 @@ in
         valOf (get_first checkdir pathdirs)
       end
     else
-      Path.mkAbsolute (myname,FileSys.getDir())
+      Path.mkAbsolute {path = myname,relativeTo = FileSys.getDir()}
   end
 
   fun xable_string s = s
 
   fun mk_xable file =
-      if PreProcess.isSuccess (systeml ["chmod", "a+x", file]) then file
+      if Process.isSuccess (systeml ["chmod", "a+x", file]) then file
       else if FileSys.access (file,[FileSys.A_EXEC]) then
           (* if we can execute it, then continue with a warning *)
           (* NB: MoSML docs say FileSys.access uses real uid/gid, not effective uid/gid,
@@ -88,6 +88,7 @@ fun fullPath slist =
 (* these values are filled in by configure.sml *)
 val HOLDIR =
 val MOSMLDIR =
+val HAVE_BASIS2002 =
 val OS =
 
 val DEPDIR =

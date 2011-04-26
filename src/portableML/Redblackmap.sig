@@ -5,20 +5,21 @@ sig
 
   exception NotFound
 
-  val mkDict    : ('key * 'key -> order) -> ('key, 'a) dict
-  val insert    : ('key, 'a) dict * 'key * 'a -> ('key, 'a) dict
-  val find      : ('key, 'a) dict * 'key -> 'a
-  val peek      : ('key, 'a) dict * 'key -> 'a option
-  val remove    : ('key, 'a) dict * 'key -> ('key, 'a) dict * 'a
-  val numItems  : ('key, 'a) dict -> int
-  val listItems : ('key, 'a) dict -> ('key * 'a) list
-  val isEmpty   : ('key, 'a) dict -> bool
-  val app       : ('key * 'a -> unit) -> ('key,'a) dict -> unit
-  val revapp    : ('key * 'a -> unit) -> ('key,'a) dict -> unit
-  val foldr     : ('key * 'a * 'b -> 'b)-> 'b -> ('key,'a) dict -> 'b
-  val foldl     : ('key * 'a * 'b -> 'b) -> 'b -> ('key,'a) dict -> 'b
-  val map       : ('key * 'a -> 'b) -> ('key,'a) dict -> ('key, 'b) dict
-  val transform : ('a -> 'b) -> ('key,'a) dict -> ('key, 'b) dict
+  val mkDict     : ('key * 'key -> order) -> ('key, 'a) dict
+  val insert     : ('key, 'a) dict * 'key * 'a -> ('key, 'a) dict
+  val insertList : ('key, 'a) dict * ('key * 'a) list -> ('key, 'a) dict
+  val find       : ('key, 'a) dict * 'key -> 'a
+  val peek       : ('key, 'a) dict * 'key -> 'a option
+  val remove     : ('key, 'a) dict * 'key -> ('key, 'a) dict * 'a
+  val numItems   : ('key, 'a) dict -> int
+  val listItems  : ('key, 'a) dict -> ('key * 'a) list
+  val isEmpty    : ('key, 'a) dict -> bool
+  val app        : ('key * 'a -> unit) -> ('key,'a) dict -> unit
+  val revapp     : ('key * 'a -> unit) -> ('key,'a) dict -> unit
+  val foldr      : ('key * 'a * 'b -> 'b)-> 'b -> ('key,'a) dict -> 'b
+  val foldl      : ('key * 'a * 'b -> 'b) -> 'b -> ('key,'a) dict -> 'b
+  val map        : ('key * 'a -> 'b) -> ('key,'a) dict -> ('key, 'b) dict
+  val transform  : ('a -> 'b) -> ('key,'a) dict -> ('key, 'b) dict
 end
 
 (*
@@ -31,6 +32,11 @@ end
    ordr.
 
    [insert(m, i, v)] extends (or modifies) map m to map i to v.
+
+   [insertList(m, xs)] extends (or modifies) map m with the (index,
+   value) pairs in xs.  (It is equivalent to foldl (fn ((i, v), m) =>
+   insert (m, i, v)) m xs.)  Note that later list entries will
+   overwrite earlier entries for the same index.
 
    [find (m, k)] returns v if m maps k to v; otherwise raises NotFound.
 

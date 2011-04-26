@@ -7,17 +7,16 @@ struct
 
   (* Function 'parse_file' parses Z3's response to the SMT2
      (get-proof) command (for an unsatisfiable problem, with proofs
-     enabled in Z3, i.e., "PROOF_MODE=2" in Z3's .ini file). Other
+     enabled in Z3, i.e., using option "PROOF_MODE=2"). Other
      functions in this file are just auxiliary. This parser has been
-     tested with Z3 2.11 (which was released on August 17, 2010). *)
+     tested with Z3 2.12, which was released in September 2010. *)
 
   (* I tried to implement this parser in ML-Lex/ML-Yacc, but gave up
      on that -- mainly for two reasons: 1. The whole toolchain/build
      process gets more complicated. 2. Performance and memory usage of
-     the generated parser were far from satisfactory, I am guessing
-     because the generated parser wasn't tail-recursive. (It might be
-     a worthwhile research project to implement an *efficient* parser
-     generator for SML ...) *)
+     the generated parser were far from satisfactory (probably because
+     my naive definition of the underlying grammar required the parser
+     to maintain a large stack internally). *)
 
 local
 
@@ -27,85 +26,8 @@ local
   val WARNING = Feedback.HOL_WARNING "Z3_ProofParser"
 
   (***************************************************************************)
-  (* tokenization                                                            *)
-  (***************************************************************************)
-
-  (* The fastest approach would be to slurp in the whole proof file at
-     once. However, this is infeasible for large proofs (especially
-     because 'String.explode' causes a significant memory blowup, so
-     it cannot be applied to large proofs in their entirety). *)
-
-  fun get_buffered_char instream : unit -> char =
-  let
-    val buffer = ref ([] : char list)
-  in
-    fn () =>
-      (case !buffer of
-        [] =>
-        (* reading chunks of 10485760 bytes (i.e., 10 MB) should be a
-           reasonable compromise between a small memory footprint
-           (even after 'String.explode') and a small number of reads *)
-        (case String.explode (TextIO.inputN (instream, 10485760)) of
-          [] =>
-          raise ERR "get_buffered_char" "end of file"
-        | c::cs =>
-          (if !SolverSpec.trace > 2 then
-            Feedback.HOL_MESG ("HolSmtLib: read "
-              ^ Int.toString (List.length cs + 1)
-              ^ " character(s) from Z3 proof file")
-          else ();
-          buffer := cs; c))
-      | c::cs =>
-        (buffer := cs; c))
-  end
-
-  (* tokens are simply strings; we use no markup *)
-
-  fun get_token (get_char : unit -> char) : unit -> string =
-  let
-    val buffer = ref (NONE : string option)
-    fun (* whitespace *)
-        aux [] #" " = aux [] (get_char ())
-      | aux [] #"\n" = aux [] (get_char ())
-      | aux [] #"\r" = aux [] (get_char ())
-      | aux cs #" " = String.implode (List.rev cs)
-      | aux cs #"\n" = String.implode (List.rev cs)
-      | aux cs #"\r" = String.implode (List.rev cs)
-      (* parentheses *)
-      | aux [] #"(" = "("
-      | aux [] #")" = ")"
-      | aux cs #"(" = (buffer := SOME "("; String.implode (List.rev cs))
-      | aux cs #")" = (buffer := SOME ")"; String.implode (List.rev cs))
-      (* everything else *)
-      | aux cs c = aux (c :: cs) (get_char ())
-          handle Feedback.HOL_ERR _ =>
-            (* end of file *)
-            String.implode (List.rev (c :: cs))
-  in
-    fn () =>
-      let
-        val token = case !buffer of
-            SOME token => (buffer := NONE; token)
-          | NONE => aux [] (get_char ())
-      in
-        if !SolverSpec.trace > 2 then
-          Feedback.HOL_MESG
-            ("HolSmtLib: next Z3 proof token is '" ^ token ^ "'")
-        else ();
-        token
-      end
-  end
-
-  (***************************************************************************)
   (* auxiliary functions                                                     *)
   (***************************************************************************)
-
-  fun expect_token (expected : string) (actual : string) : unit =
-    if expected = actual then
-      ()
-    else
-      raise ERR "expect_token"
-        ("'" ^ expected ^ "' expected, but '" ^ actual ^ "' found")
 
   fun proofterm_id (name : string) : int =
     if String.isPrefix "?x" name then
@@ -138,30 +60,29 @@ local
      token into a function that maps the (possibly empty) list of
      argument terms to a term. *)
 
-  fun zero_args t [] =
+  fun zero_args t xs =
+    if List.null xs then
       t
-    | zero_args _ _ =
+    else
       raise ERR "zero_args" "no arguments expected"
 
-  fun one_arg f [t] =
-      f t
-    | one_arg _ _ =
-      raise ERR "one_arg" "one argument expected"
+  fun one_arg f xs =
+    f (Lib.singleton_of_list xs handle Feedback.HOL_ERR _ =>
+      raise ERR "one_arg" "one argument expected")
 
-  fun two_args f [t1, t2] =
-      f (t1, t2)
-    | two_args _ _ =
-      raise ERR "two_args" "two arguments expected"
+  fun two_args f xs =
+    f (Lib.pair_of_list xs handle Feedback.HOL_ERR _ =>
+      raise ERR "two_args" "two arguments expected")
 
-  fun three_args f [t1, t2, t3] =
-      f (t1, t2, t3)
-    | three_args _ _ =
-      raise ERR "three_args" "three arguments expected"
+  fun three_args f xs =
+    f (Lib.triple_of_list xs handle Feedback.HOL_ERR _ =>
+      raise ERR "three_args" "three arguments expected")
 
-  fun list_args f [] =
+  fun list_args f xs =
+    if List.null xs then
       raise ERR "list_args" "non-empty argument list expected"
-    | list_args f ts =
-    f ts
+    else
+      f xs
 
   (* FIXME: The built-in constants should instead be chosen
             dynamically, based on a parameter that specifies the
@@ -171,14 +92,17 @@ local
     (fn ((key, value), dict) => Redblackmap.insert (dict, key, value))
     (Redblackmap.mkDict String.compare)
     [
-      ("=", two_args boolSyntax.mk_eq),
-      ("iff", two_args boolSyntax.mk_eq),
+      (* SMT-LIB theory: Core *)
       ("true", zero_args boolSyntax.T),
       ("false", zero_args boolSyntax.F),
       ("not", one_arg boolSyntax.mk_neg),
+      ("implies", two_args boolSyntax.mk_imp),  (* FIXME: should be => *)
       ("and", list_args boolSyntax.list_mk_conj),
       ("or", list_args boolSyntax.list_mk_disj),
-      ("implies", two_args boolSyntax.mk_imp),
+      ("xor", two_args (fn (t1, t2) => Term.mk_comb (Term.mk_comb
+          (Term.prim_mk_const {Thy="HolSmt", Name="xor"}, t1), t2))),
+      ("=", two_args boolSyntax.mk_eq),
+      ("iff", two_args boolSyntax.mk_eq),
       ("ite", three_args boolSyntax.mk_cond),
       ("if_then_else", three_args boolSyntax.mk_cond),
       (* integer operations *)
@@ -268,24 +192,42 @@ local
         in
           zero_args (wordsSyntax.mk_word (parse_arbnum m, parse_arbnum n))
         end
-      else if String.isPrefix "extract" token then
+      else if String.isPrefix "extract" token then (
         (* extracting bits m to n from a bit-vector *)
-        let
-          val fields = String.fields (fn c => Lib.mem c [#"[", #":", #"]"])
-            (String.extract (token, 7, NONE))
-          val (m, n) = case fields of ["", m, n, ""] => (m, n)
-            | _ =>
-              raise ERR "termfn_of_token"
-                ("failed to parse '" ^ token ^ "' as extract[m:n]")
-          val m = parse_arbnum m
-          val n = parse_arbnum n
-          val index_type = fcpLib.index_type (Arbnum.plus1 (Arbnum.- (m, n)))
-          val m = numSyntax.mk_numeral m
-          val n = numSyntax.mk_numeral n
-        in
-          one_arg (fn t => wordsSyntax.mk_word_extract (m, n, t, index_type))
-        end
-      else if String.isPrefix "zero_extend" token then
+        (* FIXME: Z3 2.12 uses both "extract[m:n]" and "extract[m n]"
+                  in its proofs. Ugh! Note that the latter consists of
+                  two separate tokens. *)
+        case String.fields (fn c => Lib.mem c [#"[", #":", #"]"])
+          (String.extract (token, 7, NONE)) of
+          ["", m, n, ""] =>
+          let
+            val m = parse_arbnum m
+            val n = parse_arbnum n
+            val index_type = fcpLib.index_type (Arbnum.plus1 (Arbnum.- (m, n)))
+            val m = numSyntax.mk_numeral m
+            val n = numSyntax.mk_numeral n
+          in
+            one_arg (fn t => wordsSyntax.mk_word_extract (m, n, t, index_type))
+          end
+        | ["", m] =>
+          let
+            val m = parse_arbnum m
+            val m_num = numSyntax.mk_numeral m
+          in
+            two_args (fn (n_num, t) =>
+              let
+                (* 'n_num' should be a HOL numeral *)
+                val n = numSyntax.dest_numeral n_num
+                val index_type =
+                  fcpLib.index_type (Arbnum.plus1 (Arbnum.- (m, n)))
+              in
+                wordsSyntax.mk_word_extract (m_num, n_num, t, index_type)
+              end)
+          end
+        | _ =>
+          raise ERR "termfn_of_token"
+            ("failed to parse '" ^ token ^ "' as extract[m:n] or extract[m n]")
+      ) else if String.isPrefix "zero_extend" token then
         (* prepending n 0-bits to a bit vector *)
         let
           val fields = String.fields (fn c => Lib.mem c [#"[", #"]"])
@@ -342,47 +284,27 @@ local
           one_arg (fn t => wordsSyntax.mk_word_replicate (num, t))
         end
       else if String.isPrefix "array_ext" token then
-        (* Z3's array_ext[T] yields an index i such that select A i <>
-           select B i (provided A and B are different arrays of type T) *)
-        (* we can infer T from either argument array, so we just
-           ignore it here (without any checking) *)
-        two_args (fn (t1, t2) =>
-          let
-            val (index_type, _) = Type.dom_rng (Term.type_of t1)
-            val i = Term.mk_var ("i", index_type)
-          in
-            boolSyntax.mk_select (i, boolSyntax.mk_neg (boolSyntax.mk_eq
-              (Term.mk_comb (t1, i), Term.mk_comb (t2, i))))
-          end)
+        (* we can infer T in array_ext[T] from either argument array,
+           so we just ignore it here (without any checking) *)
+        two_args (fn (t1, t2) => boolSyntax.list_mk_icomb
+          (Term.prim_mk_const {Thy="HolSmt", Name="array_ext"}, [t1, t2]))
       else
-        (* integer literals *)
-        (zero_args (intSyntax.term_of_int (Arbint.fromString token))
-          handle Option.Option =>
-            (* FIXME: This is a horrible hack to (heuristically) undo
-                      some horrible Z3 symbol mangling, which replaces
-                      . by _ in identifiers. *)
-            let
-              val fields = String.fields (Lib.equal #"_") token
-              fun foldthis (name, termfn, result) =
-                if fields = String.fields (fn c => Lib.mem c [#"_", #"."]) name
-                    then (
-                  if Option.isSome result then
-                    raise ERR "termfn_of_token"
-                      ("symbol '" ^ token ^ "' is ambiguous")
-                  else
-                    SOME termfn
-                ) else result
-              fun UNDECLARED () =
-                ERR "termfn_of_token" ("undeclared symbol '" ^ token ^ "'")
-            in
-              if List.length fields = 1 then
-                raise UNDECLARED ()
-              else
-                case Redblackmap.foldl foldthis NONE dict of
-                  SOME termfn => termfn
-                | NONE =>
-                  raise UNDECLARED ()
-            end)
+        let
+          val last = String.size token - 1
+        in
+          (* FIXME: This code deals with "n]" tokens, which result
+                    from occurrences of "extract[m n]" in Z3's
+                    proofs. Ugh! We parse them as HOL numerals. *)
+          if last >= 0 andalso String.sub (token, last) = #"]" then
+            zero_args (numSyntax.mk_numeral (parse_arbnum (String.substring
+              (token, 0, last))))
+          else
+            (* integer literals *)
+            zero_args (intSyntax.term_of_int (Arbint.fromString token)
+              handle Option.Option =>
+                raise ERR "termfn_of_token"
+                  ("undeclared symbol '" ^ token ^ "'"))
+        end
 
   fun parse_termlist get_token dict (acc : Term.term list) : Term.term list =
   let
@@ -409,20 +331,21 @@ local
   (* parsing of proofterms                                                   *)
   (***************************************************************************)
 
-  fun zero_prems ([], concl) =
+  fun zero_prems (prems, concl) =
+    if List.null prems then
       concl
-    | zero_prems _ =
-      raise ERR "zero_prems" "no arguments expected"
+    else
+      raise ERR "zero_prems" "no premises expected"
 
-  fun one_prem ([prem], concl) =
-      (prem, concl)
-    | one_prem _ =
-      raise ERR "one_prem" "one argument expected"
+  fun one_prem (prems, concl) =
+    (Lib.singleton_of_list prems, concl)
+    handle Feedback.HOL_ERR _ =>
+      raise ERR "one_prem" "one premise expected"
 
-  fun two_prems ([prem1, prem2], concl) =
-      (prem1, prem2, concl)
-    | two_prems _ =
-      raise ERR "two_prems" "two arguments expected"
+  fun two_prems (prems, concl) =
+    Lib.uncurry Lib.triple (Lib.pair_of_list prems) concl
+    handle Feedback.HOL_ERR _ =>
+      raise ERR "two_prems" "two premises expected"
 
   fun list_prems (prems, concl) =
     (prems, concl)
@@ -460,7 +383,7 @@ local
             longer be necessary.  It would suffice to enclose each
             inference rule's list of premises in parentheses; then the
             parser would find a ")" token once it has parsed the last
-            premise. *)
+            premise, and can continue by parsing a term. *)
 
   (* parses an s-expression that is either a proofterm or a term *)
   fun parse_proofterm_or_term get_token dict =
@@ -495,7 +418,7 @@ local
      as 'parsefn' *)
   and parse_compound_proofterm get_token dict parsefn : proofterm =
     parsefn (parse_prooftermlist_term get_token dict [])
-      before expect_token ")" (get_token ())
+      before Library.expect_token ")" (get_token ())
 
   (***************************************************************************)
   (* parsing of let definitions                                              *)
@@ -535,9 +458,9 @@ local
      definition; returns a (possibly extended) dictionary and proof *)
   fun parse_definition get_token (dict, proof) =
   let
-    val _ = expect_token "(" (get_token ())
+    val _ = Library.expect_token "(" (get_token ())
     val name = get_token ()
-    val _ = expect_token "(" (get_token ())
+    val _ = Library.expect_token "(" (get_token ())
     val head = get_token ()
   in
     (case Redblackmap.peek (rule_parsers, head) of
@@ -546,16 +469,37 @@ local
           (proofterm_id name, parsefn))
     | NONE =>
       (parse_term_definition get_token dict (name, head), proof))
-    before expect_token ")" (get_token ())
+    before Library.expect_token ")" (get_token ())
   end
+
+  (* drops all tokens until it finds a ")" *)
+  fun parse_error get_token =
+    if get_token () = ")" then
+      ()
+    else
+      parse_error get_token
 
   (* entry point into the parser (i.e., the grammar's start symbol) *)
   fun parse_proof get_token (dict, proof) (rpars : int) =
   let
-    val _ = expect_token "(" (get_token ())
+    val _ = Library.expect_token "(" (get_token ())
     val head = get_token ()
   in
-    if head = "let" then
+    if head = "error" then (
+      (* FIXME: some Z3 proofs are preceded by an error message. We
+                simply drop this, but it should not be produced by Z3
+                in the first place. *)
+      parse_error get_token;
+      parse_proof get_token (dict, proof) rpars
+    ) else if head = "let" orelse head = "flet" then
+      (* FIXME: "flet" is only used to define terms (of type Bool),
+                never for proofterm definitions. However, this
+                distinction is not particularly helpful: types can
+                easily be inferred, and there is nothing special about
+                type Bool anyway. We simply ignore this distinction. I
+                am hoping that the Z3 proof format will be changed to
+                use "let" (or similar) for all terms, and "ilet" (or
+                similar) for all proofterms. *)
       parse_proof get_token (parse_definition get_token (dict, proof))
         (rpars + 1)
     else
@@ -564,7 +508,8 @@ local
           (* Z3 assigns no ID to the final proof step; we use ID 0 *)
           parse_proofterm_definition get_token (dict, proof) (0, parsefn)
             before
-              Lib.funpow rpars (fn () => expect_token ")" (get_token ())) ()
+              Lib.funpow rpars
+                (fn () => Library.expect_token ")" (get_token ())) ()
       | NONE =>
           raise ERR "parse_proof" ("unknown inference rule '" ^ head ^ "'")
   end
@@ -593,7 +538,7 @@ in
         Feedback.HOL_MESG ("HolSmtLib: parsing Z3 proof file '" ^ path ^ "'")
       else ()
     val instream = TextIO.openIn path
-    val get_token = get_token (get_buffered_char instream)
+    val get_token = Library.get_token (Library.get_buffered_char instream)
     val proof = parse_proof get_token (dict, Redblackmap.mkDict Int.compare) 0
     val _ = if !SolverSpec.trace > 0 then
         WARNING "parse_file" ("ignoring token '" ^ get_token () ^

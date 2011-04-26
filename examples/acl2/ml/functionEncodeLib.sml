@@ -2716,11 +2716,13 @@ let val _ = prove_propagation_theorem_data
 		    decoded_args args
 	    handle e => wrapException this_function e
     val rule = PURE_REWRITE_RULE [o_THM,FUN_EQ_THM,K_THM,I_THM];
+
+    (* Used to use FULL.... changed 09/10/2010 *)
     val encdetall_thms = map (
-    	   rule o FULL_ENCODE_DETECT_ALL_THM target o type_of) decoded_args
+    	   rule o generate_coding_theorem target "encode_detect_all" o type_of) decoded_args
 	   handle e => wrapException this_function e
     val encdecmap_thms = map (
-    	   rule o FULL_ENCODE_DECODE_MAP_THM target o type_of) decoded_args
+    	   rule o generate_coding_theorem target "encode_decode_map" o type_of) decoded_args
 	   handle e => wrapException this_function e
     val allid_thms = map (
     	   rule o FULL_ALL_ID_THM o type_of) decoded_args

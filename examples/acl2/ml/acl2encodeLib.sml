@@ -1021,6 +1021,171 @@ in
 end handle ExistsAlready => ();
 
 (*****************************************************************************)
+(* Initialisation of finite map rewrites                                     *)
+(*****************************************************************************)
+
+fun is_fmap t = ((curry op= "fmap" o fst o dest_type) t) handle _ => false
+val fdom = hd o snd o dest_type;
+val frng = hd o tl o snd o dest_type;
+val fmap = mk_type("fmap", [alpha,beta])
+
+(*****************************************************************************)
+(* ONEONE_DECENC_THM                                                         *)
+(*****************************************************************************)
+
+fun ONEONE_DECENC_THM t = 
+let val _ = if type_vars t = [] then () else 
+    	       raise (polyExn (Standard, [], "Not a ground type: " ^ type_to_string t))
+    val thm1 = generate_coding_theorem sexp "encode_decode_map" t
+    val thm2 = generate_source_theorem "map_id" t
+    val thm3 = Q.AP_TERM `ONE_ONE` (TRANS thm1 thm2);
+in  EQ_MP (SYM thm3) (INST_TYPE [alpha |-> t] fmap_encodeTheory.ONE_ONE_I)
+end handle e => wrapException "ONEONE_DECENC_THM" e
+
+fun ONEONE_ENC_THM t =
+    MATCH_MP fmap_encodeTheory.ONE_ONE_RING (ONEONE_DECENC_THM t)
+
+local
+(* Make a 11 term *)
+fun mk11 term = 
+let val (t1,t2) = dom_rng (type_of term)
+in  mk_comb(mk_const("ONE_ONE", (t1 --> t2) --> bool), term)
+end;
+
+val find_terms = HolKernel.find_terms;
+in
+
+(*****************************************************************************)
+(* CODINGTHEOREM_FMAP: Replace the previous coding theorem generate with one *)
+(*   that resolves ONE_ONE terms in the antecedent.                          *)
+(*****************************************************************************)
+fun CODINGTHEOREM_FMAP s t =
+let val cc = get_coding_theorem_conclusion ``:sexp`` s t
+    val t1 = generate_coding_theorem ``:sexp`` s (base_type t)
+    val t2 = PART_MATCH (lhs o snd o strip_imp) (SPEC_ALL t1) 
+    	     		 (lhs (snd (strip_imp (snd (strip_forall cc)))))
+
+    val thm1 = if null (type_vars (fdom t)) 
+                  then ONEONE_DECENC_THM (fdom t) 
+                  else ASSUME (fst (dest_imp (concl t2)))
+
+    val matched = MATCH_MP t2 thm1 handle _ => MATCH_MP t2 (MATCH_MP fmap_encodeTheory.ONE_ONE_RING thm1)
+
+    val fthm = generate_coding_theorem ``:sexp`` s (fdom t);
+    val tthm = generate_coding_theorem ``:sexp`` s (frng t);
+
+    val rterm = repeat rator (rhs (snd (strip_imp (snd (strip_forall cc)))));
+
+in  GENL (fst (strip_forall cc)) (DISCH_ALL (TRANS matched (MK_COMB (AP_TERM rterm (SPEC_ALL fthm), tthm))))
+end handle e => wrapException ("CODINGTHEOREM_FMAP(" ^ type_to_string t ^ ")") e
+
+(*****************************************************************************)
+(* oneone_decenc_conclusion: Potentially adds a ONEONE (decode o encode) to  *)
+(* the previous term.                                                        *)
+(*****************************************************************************)
+fun oneone_decenc_conclusion previous target t =
+let val (vars,prev) = strip_forall (previous target t)
+    val sub = type_subst (map (fn x => x |-> gen_tyvar()) (type_vars t))
+    val enc = if is_fmap t then SOME (encodeLib.get_encode_function target (fdom t)) else NONE
+    val terms = if is_fmap t then [combinSyntax.mk_o(valOf enc, encodeLib.get_decode_function target (fdom t)),
+                                   combinSyntax.mk_o(encodeLib.get_decode_function target (sub (fdom t)), valOf enc)] else []
+
+    val sdec = if is_fmap t then map combinSyntax.dest_o (find_terms (fn a => exists (can (C match_term a)) terms) prev) else []
+    val pdec = if is_fmap t then map snd (filter (curry op= (valOf enc) o fst) sdec) @ map fst (filter (curry op= (valOf enc) o snd) sdec) else []
+
+    val _ = if is_fmap t andalso null (find_terms (can (match_term (valOf enc))) prev)
+    	       then raise (polyExn (Standard, [], "No encoder in conclusion of theorem"))
+	       else ()
+    val pdecs = if is_fmap t andalso null pdec 
+    	      	   then (find_terms (can (match_term (encodeLib.get_decode_function target (fdom t)))) prev @ 
+                         [encodeLib.get_decode_function target (fdom t)])
+		   else pdec
+    val vars' = union vars (if is_fmap t then free_vars (hd pdecs) else [])
+in  
+    list_mk_forall(vars', if not (is_fmap t) orelse null (type_vars (fdom t))
+       then prev
+       else mk_imp(mk11 (combinSyntax.mk_o(hd pdecs, valOf enc)), prev))
+end handle e => wrapException ("oneone_decenc_conclusion(" ^ type_to_string t ^ ")") e
+
+(*****************************************************************************)
+(* oneone_enc_conclusion: Potentially adds a ONEONE encode to the previous   *)
+(* term.                                                                     *)
+(*****************************************************************************)
+fun oneone_enc_conclusion previous target t =
+let val (vars,prev) = strip_forall (previous target t)
+    val sub = type_subst (map (fn x => x |-> gen_tyvar()) (type_vars t))
+    val enc = if is_fmap t then SOME (encodeLib.get_encode_function target (fdom t)) else NONE
+in  
+    list_mk_forall(vars, if not (is_fmap t) orelse null (type_vars (fdom t))
+       then prev
+       else mk_imp(mk11 (valOf enc), prev))
+end handle e => wrapException ("oneone_enc_conclusion(" ^ type_to_string t ^ ")") e
+end
+
+local
+open fmap_encodeTheory encodeLib
+in
+fun add_fmap_translations () =
+let val _ = perform "add_fmap_translations"
+    val _ = add_translation sexp fmap
+    
+    val _ = add_rule_coding_theorem_generator "encode_decode_map" is_fmap
+
+    val _ = add_coding_theorem sexp fmap "encode_detect_all" ENCDETALL_FMAP;
+    val _ = add_coding_theorem sexp fmap "decode_encode_fix" DECENCFIX_FMAP;
+    val _ = add_coding_theorem sexp fmap "encode_decode_map" ENCDECMAP_FMAP;
+
+    val _ = add_coding_theorem sexp fmap "fix_id" FIXID_FMAP;
+    val _ = add_source_theorem fmap "all_id" ALLID_FMAP;
+    val _ = add_source_theorem fmap "map_id" MAPID_FMAP;
+
+    val _ = add_coding_theorem sexp fmap "detect_dead" DETECTDEAD_FMAP;
+    val _ = add_coding_theorem sexp fmap "general_detect" DETECT_GENERAL_FMAP
+
+    val _ = add_source_function fmap "map"
+        {const = ``map_fmap``, definition = map_fmap_def, induction = NONE};
+
+    val _ = add_source_function fmap "all"
+        {const = ``all_fmap``, definition = all_fmap_def, induction = NONE};
+
+    val _ = add_coding_function sexp fmap "encode"
+        {const = ``encode_fmap``, definition = encode_fmap_def, induction = NONE};
+
+    val _ = add_coding_function sexp fmap "decode"
+        {const = ``decode_fmap``, definition = decode_fmap_def, induction = NONE};
+
+    val _ = add_coding_function sexp fmap "detect"
+        {const = ``detect_fmap``, definition = detect_fmap_def, induction = NONE};
+
+    val _ = add_coding_function sexp fmap "fix"
+        {const = ``fix_fmap``, definition = fix_fmap_def, induction = NONE};
+
+    val _ = set_coding_theorem_conclusion sexp "encode_decode_map" (oneone_decenc_conclusion mk_encode_decode_map_conc sexp);
+    val _ = add_rule_coding_theorem_generator "encode_decode_map" is_fmap (CODINGTHEOREM_FMAP "encode_decode_map") sexp;
+
+    val _ = set_coding_theorem_conclusion sexp "encode_detect_all" (oneone_enc_conclusion mk_encode_detect_all_conc sexp);
+    val _ = add_rule_coding_theorem_generator "encode_detect_all" is_fmap (CODINGTHEOREM_FMAP "encode_detect_all") sexp;
+
+    val _ = set_coding_theorem_conclusion sexp "decode_encode_fix" (oneone_decenc_conclusion mk_decode_encode_fix_conc sexp);
+    val _ = add_rule_coding_theorem_generator "decode_encode_fix" is_fmap (CODINGTHEOREM_FMAP "decode_encode_fix") sexp;
+
+in  ()
+end
+end;
+
+local
+open fmap_encodeTheory
+in
+fun add_fmap_rewrites () = 
+let val _ = add_standard_rewrite 0 "fmap_p" sorted_car_rewrite;
+    val _ = add_standard_rewrite 0 "FDOM" fdom_rewrite;
+    val _ = add_standard_rewrite 0 "FAPPLY" apply_rewrite;
+    val _ = add_standard_rewrite 0 "FUPDATE" fupdate_rewrite;
+in ()
+end
+end
+
+(*****************************************************************************)
 (* Initialisation: run the above functions, checking for errors.             *)
 (*****************************************************************************)
 
@@ -1046,6 +1211,7 @@ val _ = add_translations add_bool_translations bool;
 val _ = add_translations add_list_translations list;
 val _ = add_translations add_fcp_translations fcp;
 val _ = add_translations add_word_translations word;
+val _ = add_translations add_fmap_translations fmap;
 
 fun add_rewrites f t =
     (trace 1 "Adding rewrites for the type: " ;
@@ -1067,7 +1233,7 @@ val _ = add_rewrites add_int_rewrites int;
 val _ = add_rewrites add_rat_rewrites rat;
 val _ = add_rewrites add_fcp_rewrites fcp;
 val _ = add_rewrites add_word_rewrites word;
-
+val _ = add_rewrites add_fmap_rewrites fmap;
 
 
 (*****************************************************************************)

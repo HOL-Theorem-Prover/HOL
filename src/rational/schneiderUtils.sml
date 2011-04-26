@@ -198,7 +198,7 @@ fun RIGHT_LEMMA_DISJ_CASES_TAC th =
 
 fun MP2_TAC th ((asm,g):goal) =
     let val (s,t) = dest_imp(concl th)
-     in ([(asm,s)],fn [t]=> MP th t)
+     in ([(asm,s)],fn [t]=> MP th t | _ => raise Match)
     end
 
 

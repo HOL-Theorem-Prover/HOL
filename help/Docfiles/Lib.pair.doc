@@ -6,11 +6,11 @@
 Makes two values into a pair.
 
 \DESCRIBE
-{pair x y} returns {(x,y)}.
+{pair x y} returns {(x, y)}.
 
 \FAILURE
 Never fails.
 
 \SEEALSO
-Lib.rpair, Lib.swap, Lib.fst, Lib.snd, Lib.curry, Lib.uncurry.
+Lib.rpair, Lib.swap, Lib.fst, Lib.snd, Lib.pair_of_list, Lib.triple, Lib.quadruple, Lib.curry, Lib.uncurry.
 \ENDDOC

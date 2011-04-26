@@ -124,7 +124,8 @@ fun GTAC y (A,g) =
        and y' = variant (free_varsl (g::A)) y
    in
    ([(A,subst[Bvar |-> y'] Body)],
-    fn [th] => GEN Bvar (INST [y' |-> Bvar] th))
+    fn [th] => GEN Bvar (INST [y' |-> Bvar] th)
+     | _ => raise Match)
    end;
 
 (* ---------------------------------------------------------------------*)
@@ -309,7 +310,9 @@ fun MUTUAL_INDUCT_THEN1 th =
        val _ = print_theorem eta_th
        val _ = print_string "\n"
 *)
-       val ([asm],con) = dest_thm eta_th
+       val (asm,con) = case dest_thm eta_th
+                       of ([asm],con) => (asm,con)
+                        | _ => raise ERR "MUTUAL_INDUCT_THEN1" ""
        val dis = DISCH asm eta_th
        val ind = GENL vs (SUBST [bool |-> GALPHA asm] (mk_imp(bool, con)) dis)
 (*

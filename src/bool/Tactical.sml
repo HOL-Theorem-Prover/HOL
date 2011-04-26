@@ -326,7 +326,8 @@ end;
 
 fun SUBGOAL_THEN wa ttac (asl,w) =
     let val (gl,p) = ttac (ASSUME wa) (asl,w)
-    in ((asl,wa)::gl,(fn (tha::thl) => PROVE_HYP tha (p thl)))
+    in ((asl,wa)::gl,
+        (fn (tha::thl) => PROVE_HYP tha (p thl) | _ => raise Match))
     end;
 
 (*---------------------------------------------------------------------------

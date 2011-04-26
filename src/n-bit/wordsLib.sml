@@ -320,9 +320,14 @@ local
       "num_to_bin_string","num_to_oct_string","num_to_dec_string",
       "num_to_hex_string"]
 
+  val l3 = ["fcp_index", ":+"];
+
   val s = name_thy_set
-           (("min","=")::("arithmetic","DIV_2EXP")::("fcp","fcp_index")::
-             map (pair "words") l1 @ map (pair "bit") l2)
+           (("min","=")::
+            ("arithmetic","DIV_2EXP")::
+            map (pair "words") l1 @
+            map (pair "bit") l2 @
+            map (pair "fcp") l3)
 
   fun is_hex_digit_literal t =
         numSyntax.is_numeral t andalso
@@ -812,7 +817,8 @@ in
   local
     val distrib = GSYM WORD_RIGHT_AND_OVER_OR
     val WORD_REDUCE_CONV =
-           PURE_REWRITE_CONV [WORD_OR_CLAUSES2, WORD_LITERAL_OR_thms]
+           PURE_REWRITE_CONV [WORD_OR_CLAUSES2]
+             THENC PURE_REWRITE_CONV [WORD_LITERAL_OR_thms]
              THENC BITWISE_CONV
              THENC WORD_LITERAL_REDUCE_CONV
     fun merge t = let

@@ -171,7 +171,7 @@ fun read assumes srcext objext filename = let
       if access (unquote, [A_EXEC]) then let
           val newname = tmpName()
         in
-          if Systeml.systeml [unquote, file0, newname] = Process.success then
+          if Process.isSuccess (Systeml.systeml [unquote, file0, newname]) then
             newname
           else file0
         end

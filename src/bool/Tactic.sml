@@ -136,7 +136,7 @@ val FREEZE_THEN :thm_tactical = fn (ttac:thm_tactic) => fn bth => fn g =>
 val CONJ_TAC:tactic = fn (asl,w) =>
    let val (conj1,conj2) = dest_conj w
    in ([(asl,conj1), (asl,conj2)],
-       fn [th1,th2] => CONJ th1 th2)
+       fn [th1,th2] => CONJ th1 th2 | _ => raise Match)
    end
    handle HOL_ERR _ => raise ERR "CONJ_TAC" "";
 
@@ -219,7 +219,7 @@ val EQ_TAC:tactic = fn (asl,t) =>
    let val (lhs,rhs) = dest_eq t
    in ([(asl, mk_imp(lhs, rhs)),
        (asl, mk_imp(rhs, lhs))],
-       fn [th1,th2] => IMP_ANTISYM_RULE th1 th2)
+       fn [th1,th2] => IMP_ANTISYM_RULE th1 th2 | _ => raise Match)
    end
    handle HOL_ERR _ => raise ERR "EQ_TAC" "";
 

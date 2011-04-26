@@ -35,6 +35,11 @@ val match_list_def = Define `
     match_init >>
     option_try (MAP (\(x,y). match step (pre x) >> (res y)) list)`;
 
+val match_list_raw_def = Define `
+  match_list_raw g step pre res list =
+    (\w:bool list. SOME (g,w)) >> 
+    option_try (MAP (\(x,y). match step (pre x) >> (res y)) list)`;
+
 
 (* -- operations over bit lists -- *)
 
@@ -79,6 +84,24 @@ val drop_eq_thm = store_thm("drop_eq_thm",
   THEN SIMP_TAC std_ss [drop_eq_def,DT_def,DF_def,LET_DEF,LENGTH,option_then_def,DROP_0,TAKE_0]
   THEN Cases_on `h` THEN SIMP_TAC std_ss [drop_eq_def,DT_def,DF_def,
     LET_DEF,LENGTH,option_then_def,rich_listTheory.BUTFIRSTN,rich_listTheory.FIRSTN,CONS_11]);
+
+val assert_option_then_lemma = prove(
+  ``!p b. (assert (\g. T) >> p = p) /\
+          (assert b >> DF = DF >> assert b) /\
+          (assert b >> DT = DT >> assert b)``,
+  REPEAT STRIP_TAC 
+  THEN SRW_TAC [] [option_then_def,assert_def,FUN_EQ_THM,LET_DEF,pairTheory.FORALL_PROD]
+  THEN Cases_on `p_2` THEN SRW_TAC [] [DF_def,DT_def]
+  THEN Cases_on `h` THEN FULL_SIMP_TAC std_ss [DF_def,DT_def,assert_def]);
+  
+val assert_option_then_thm = store_thm("assert_option_then_thm",
+  ``!p q b. (assert (\g. T) >> p = p) /\
+            (q >> assert (\g. T) >> p = q >> p) /\
+            (assert b >> DF = DF >> assert b) /\
+            (assert b >> DT = DT >> assert b) /\
+            (p >> assert b >> DF = p >> DF >> assert b) /\
+            (p >> assert b >> DT = p >> DT >> assert b)``,
+  METIS_TAC [assert_option_then_lemma,option_then_assoc]);
 
 
 (* -- for fast evaluation -- *)

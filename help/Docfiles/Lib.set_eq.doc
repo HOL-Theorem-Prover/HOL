@@ -27,12 +27,12 @@ Never fails.
 
 
 \COMMENTS
-High performance finite set operations may be found in the ML Standard
-Basis Library.
+A high-performance implementation of finite sets may be found in
+structure {HOLset}.
 
 ML equality types are used in the implementation of {set_eq}
 and its kin. This limits its applicability to types that
-allow equality. For other types, typically abstract ones, 
+allow equality. For other types, typically abstract ones,
 use the `op_' variants.
 
 \SEEALSO

@@ -595,7 +595,7 @@ val hmake_qof = member "QUIT_ON_FAILURE" hmake_options
 val hmake_noprereqs = member "NO_PREREQS" hmake_options
 val extra_cleans = envlist "EXTRA_CLEANS"
 
-val nob2002 = nob2002 orelse hmake_no_basis2002
+val nob2002 = nob2002 orelse hmake_no_basis2002 orelse Systeml.HAVE_BASIS2002
 
 val quit_on_failure = quit_on_failure orelse hmake_qof
 val no_prereqs = no_prereqs orelse hmake_noprereqs
@@ -639,7 +639,9 @@ in
       | "MOSMLCOMP" => [VREF "protect $(MOSMLDIR)/mosmlc"]
       | "MOSMLLEX" => [VREF "protect $(MOSMLDIR)/mosmllex"]
       | "MOSMLYAC" => [VREF "protect $(MOSMLDIR)/mosmlyac"]
-      | _ => hmakefile_env0 s)
+      | _ => if s = "HAVE_BASIS2002" andalso Systeml.HAVE_BASIS2002 then
+               [LIT "1"]
+             else hmakefile_env0 s)
 end
 
 val (first_target, extra_rules) =
@@ -685,7 +687,7 @@ fun run_extra_command tgt c = let
       else ()
   val result = Systeml.system_ps c
 in
-  if result <> Process.success andalso ignore_error then
+  if not (Process.isSuccess result) andalso ignore_error then
     (warn ("["^tgt^"] Error (ignored)");
      Process.success)
   else result
@@ -696,7 +698,7 @@ fun run_extra_commands tgt commands =
   case commands of
     [] => Process.success
   | (c::cs) =>
-      if run_extra_command tgt c = Process.success then
+      if Process.isSuccess (run_extra_command tgt c) then
         run_extra_commands tgt cs
       else
         (tgtfatal ("*** ["^tgt^"] Error");
@@ -932,9 +934,10 @@ fun build_command c arg = let
   val include_flags = hmake_preincludes @ std_include_flags @
                       additional_includes
  (*  val include_flags = ["-I",SIGOBJ] @ additional_includes *)
-  val overlay_stringl = case actual_overlay of
-                          NONE => if not nob2002 then ["basis2002.ui"] else []
-                        | SOME s => ["basis2002.ui", s]
+  val overlay_stringl =
+      case actual_overlay of
+        NONE => if not nob2002 then ["basis2002.ui"] else []
+      | SOME s => if Systeml.HAVE_BASIS2002 then [s] else ["basis2002.ui", s]
   exception CompileFailed
   exception FileNotFound
 in
@@ -959,7 +962,7 @@ in
                      FileSys.rename{old=clone, new=file})
                   else ()
             in
-              (if unquote_to clone file = Process.success
+              (if Process.isSuccess (unquote_to clone file)
                   handle e => (revert();
                                print ("Unquoting "^file^
                                       " raised exception\n");
@@ -980,7 +983,7 @@ in
           else compile debug ("-q"::(include_flags@ ("-c"::(overlay_stringl @
                                                             [file]))))
      in
-        res = success
+        Process.isSuccess res
      end
   | BuildScript s => let
       val _ = not (Binaryset.member(!failed_script_cache, s)) orelse
@@ -1007,7 +1010,8 @@ in
           if interactive_flag then "holmake_interactive.uo" :: objectfiles0
           else objectfiles0
     in
-      if compile debug (include_flags @ ["-o", script] @ objectfiles) = success
+      if
+        isSuccess (compile debug (include_flags @ ["-o", script] @ objectfiles))
       then let
         val script' = Systeml.mk_xable script
         val thysmlfile = s^"Theory.sml"
@@ -1016,12 +1020,12 @@ in
         val _ = app safedelete [thysmlfile, thysigfile]
         val res2    = Systeml.systeml [fullPath [FileSys.getDir(), script']]
         val _       = app safedelete [script', scriptuo, scriptui]
-        val ()      = if res2 <> success then
+        val ()      = if not (isSuccess res2) then
                         failed_script_cache :=
                         Binaryset.add(!failed_script_cache, s)
                       else ()
       in
-        (res2 = success) andalso
+        isSuccess res2 andalso
         (exists_readable thysmlfile orelse
          (print ("Script file "^script'^" didn't produce "^thysmlfile^"; \n\
                  \  maybe need export_theory() at end of "^scriptsml^"\n");
@@ -1039,7 +1043,7 @@ end
 fun do_a_build_command target pdep secondaries =
   case (extra_commands (fromFile target)) of
     SOME (cs as _ :: _) =>
-      run_extra_commands (fromFile target) cs = Process.success
+      Process.isSuccess (run_extra_commands (fromFile target) cs)
   | _ (* i.e., NONE or SOME [] *) => let
     in
       case target of
@@ -1168,8 +1172,8 @@ in
                 else
                   cache_insert(target,
                                (done_some_work := true;
-                                run_extra_commands tgt_str commands =
-                                Process.success))
+                                Process.isSuccess
+                                    (run_extra_commands tgt_str commands)))
               else (* target is up-to-date wrt its dependencies already *)
                 (if null ctxt then
                    if null commands then

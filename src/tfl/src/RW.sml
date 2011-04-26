@@ -20,11 +20,12 @@ struct
 
 open HolKernel Parse boolLib pairLib;
 
-
 val RW_ERR = mk_HOL_ERR "RW";
+
 val monitoring = ref 0
 
 val _ = register_trace ("TFL rewrite monitoring", monitoring, 20);
+
 fun lztrace(i,fname,msgf) = if i <= !monitoring then
                          Lib.say ("RW."^fname^": "^ msgf() ^ "\n")
                       else ()
@@ -48,6 +49,23 @@ fun GSPEC_ALL th =
     handle HOL_ERR _ => th;
 
 
+fun gvterm tm =
+  case dest_term tm
+   of COMB(t1,t2) => mk_comb(gvterm t1,gvterm t2)
+    | LAMB(v,M) =>
+       let val gv = genvar (type_of v)
+           val M' = gvterm(subst [v |-> gv] M)
+       in mk_abs(gv,M')
+       end
+    | otherwise => tm;
+
+fun GENVAR_THM th =
+ let val M = concl th
+     val M' = gvterm M
+ in 
+  EQ_MP (ALPHA M M') th
+ end;
+
  (*--------------------------------------------------------------------------
   * Support for constructing rewrite rule sets. The following routines
   * are attempts at providing "not too restrictive" checks for whether
@@ -67,17 +85,19 @@ fun GSPEC_ALL th =
   *   end;
   *--------------------------------------------------------------------------*)
 
- fun alike head tm1 tm2 = eq (#1 (strip_comb tm2)) head
-                          andalso
-                          can (match_term tm1) tm2;
+ fun alike head tm1 tm2 = 
+  eq (#1 (strip_comb tm2)) head
+  andalso
+  can (match_term tm1) tm2;
+
  fun embedded1 tm =
-    let val head = #1(strip_comb tm)
-    in if is_var head then alike head tm
-                      else fn _ => false
-    end;
+  let val head = #1(strip_comb tm)
+  in if is_var head then alike head tm else K false
+  end;
 
  (* For changing the notion of a looping rewrite. *)
- val embedded_ref = ref embedded1
+
+ val embedded_ref = ref embedded1;
 
 
  (*---------------------------------------------------------------------------
@@ -500,14 +520,17 @@ end
 
 fun complex cnv (cps as {context as (cntxt,b),prover,simpls}) (ant,rst) =
 let fun tr (i,mf) = lztrace(i,"complex",mf)
-    fun trterm (i,m,t) =
-        tr(i, trace ("types", 1) (fn () => m ^ term_to_backend_string t))
+    fun trterm (i,m,t) = tr(i, (fn () => m ^ term_to_backend_string t))
     fun trvlist (i,m,tlist) =
+        tr(i, (fn () => String.concatWith "\n"
+                           (m :: map term_to_backend_string tlist)))
+    fun trthlist (i,m,thlist) =
         tr(i,
-           trace ("types", 1)
+           trace ("assumptions", 1)
              (fn () => String.concatWith "\n"
-                         (m :: map term_to_backend_string tlist)))
+                         (m :: map thm_to_backend_string thlist)))
     val _  = trterm(5, "Antecedent: ", ant)
+    val _ = trthlist(6, "Context: ", cntxt)
     val ant_frees = free_vars ant
     val _ = trvlist(10, "Antecedent frees: ", ant_frees)
     val context_frees = free_varsl (map concl (fst context))
@@ -553,9 +576,13 @@ in
          case op_assoc1 Term.eq v pairs
           of SOME (_,tup) => pairTools.PGEN v tup thm
            | NONE => raise RW_ERR "complex" "generalize"
+     val result = itlist generalize vlist (itlist DISCH L th1)
+     val _ = lztrace(6, "complex",
+                     trace ("assumptions", 1)
+                     (fn () => "Changed outcome: " ^
+                               thm_to_backend_string result))
    in
-     (CHANGE (itlist generalize vlist (itlist DISCH L th1)),
-       map (subst [rhsv |-> g]) rst)
+     (CHANGE result, map (subst [rhsv |-> g]) rst)
    end
  | otherwise => let
    in
@@ -580,29 +607,32 @@ end;
  * isolate the free variables.
  *---------------------------------------------------------------------------*)
 
-fun do_cong cnv cps th = let
+fun do_cong cnv cps th0 = let
+  val th = th0
+(*  val th = GENVAR_THM th0 *)
   val (a, c) = dest_imp (concl th)
   val _ = lztrace(6, "do_cong",
                   (fn () => "th concl: "^term_to_backend_string c))
   val ants = strip_conj a
   val _ = lztrace(6, "do_cong",
-                  trace ("types", 1)
                     (fn () => String.concatWith "\n"
                                ("ants: " :: map term_to_backend_string ants)))
   fun loop [] = []    (* loop proves each antecedent in turn. *)
-    | loop (ant::rst) = let
-        val (outcome,rst') =
-            if not(is_forall ant) then simple cnv cps (ant,rst)
-            else complex cnv cps (ant,rst)
+    | loop (ant::rst) = 
+      let val (outcome,rst') =
+           if is_forall ant
+             then complex cnv cps (ant,rst)
+             else simple cnv cps (ant,rst)
       in
         outcome::loop rst'
       end
-  val ants' = loop ants
+  val outcomes = loop ants
   fun mk_ant (NO_CHANGE (L,tm)) = itlist DISCH L (REFL tm)
     | mk_ant (CHANGE th) = th
 in
-  if Lib.all unchanged ants' then raise UNCHANGED
-  else MATCH_MP th (LIST_CONJ (map mk_ant ants'))
+  if Lib.all unchanged outcomes 
+    then raise UNCHANGED
+    else MATCH_MP th (LIST_CONJ (map mk_ant outcomes))
 end;
 
 
@@ -748,6 +778,7 @@ datatype solver  = Solver of simpls -> thm list -> term -> thm;
  * The basic choices are in the traversal strategy and whether or not to use
  * a default set of simplifications.
  *---------------------------------------------------------------------------*)
+
 fun Rewrite Once (Simpls(ss,thl),Context cntxt,Congs congs,Solver solver) =
                  RW_STEPS ONCE_DEPTH (ss,cntxt,congs,solver) thl
 
@@ -987,25 +1018,67 @@ val _ = Parse.temp_set_grammars ambient_grammars;
 end (* structure RW *)
 
 (*
- Given (p,th) from Defn.sml::extract:
+(*
+val bar_defn = Hol_defn "bar"
+`bar s = STATE_OPTION_BIND 
+            STATE_OPTION_GET
+            (\s1. STATE_OPTION_BIND 
+                    STATE_OPTION_GET
+                    (\s2. STATE_OPTION_IGNORE_BIND 
+                            (if s1=s2 then STATE_OPTION_UNIT () else (\b. bar b))
+                            (STATE_OPTION_UNIT ())))
+            s`;
+*)
+val stem = "bar";
+val q = 
+`bar s = STATE_OPTION_BIND 
+            STATE_OPTION_GET
+            (\s1. STATE_OPTION_BIND 
+                    STATE_OPTION_GET
+                    (\s2. STATE_OPTION_IGNORE_BIND 
+                            (if s1=s2 then STATE_OPTION_UNIT () else (\b. bar b))
+                            (STATE_OPTION_UNIT ())))
+            s`;
+val [eqns] = parse_quote q;
+val facts = TypeBase.theTypeBase();
+val tup_eqs = eqns;
+val thy = facts;
+val [(p,th)] = (zip given_pats corollaries'')
+extract [R1] congs f (proto_def,WFR) (pat,corr)
+val FV = [R1]
+val tma = boolSyntax.rhs(concl th);
+
+val R = rand WFR
+val CUT_LEM = ISPECL [f,R] relationTheory.RESTRICT_LEMMA
+val restr_fR = rator(rator(lhs(snd(dest_imp (concl (SPEC_ALL CUT_LEM))))))
+fun mk_restr p = mk_comb(restr_fR, p)
+
+Given (p,th) from Defn.sml::extract:
 
  val tma = boolSyntax.rhs(concl th)
+ val tmb = rator tma;
+ val tmc = body (rand tmb);
+ val tmd = body (rand tmc);
+ val tme = ``^tmd q``;
+
  val nested_ref = ref false;
- val (Pure thl,Context cntxt,Congs congs,Solver solver) =
+ val (Pure thl,Context cntxt,Congs congs,Solver solver) = (* rwArgs *)
      (Pure [CUT_LEM],
       Context ([],DONT_ADD),
       Congs congs,
       Solver (solver (mk_restr p, f, FV@free_vars(concl th), nested_ref)));
 
+(*
  val thl = [CUT_LEM]
  val cntxt = ([],DONT_ADD)
  val solver = solver (mk_restr p, f, FV@free_vars(concl th), nested_ref);
+*)
 
 RW_STEPS TOP_DEPTH (empty_simpls,cntxt,congs,solver) thl tma;  (* d.n.work *)
-val tmb = body(rand tma);
 RW_STEPS TOP_DEPTH (empty_simpls,cntxt,congs,solver) thl tmb;  (* d.n.work *)
-val tmc = rand tmb;
-RW_STEPS TOP_DEPTH (empty_simpls,cntxt,congs,solver) thl tmc;  (* works *)
+RW_STEPS TOP_DEPTH (empty_simpls,cntxt,congs,solver) thl tmc;  (* d.n.work *)
+RW_STEPS TOP_DEPTH (empty_simpls,cntxt,congs,solver) thl tmd;  (* d.n.work *)
+RW_STEPS TOP_DEPTH (empty_simpls,cntxt,congs,solver) thl tme;  (* works *)
 
 val simpls' = add_congs(add_rws empty_simpls thl) congs;
 

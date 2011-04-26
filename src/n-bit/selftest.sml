@@ -27,6 +27,7 @@ end
 
 val raw_blast_true = test blastLib.BIT_BLAST_CONV
 val blast_true = test blastLib.BBLAST_CONV
+val srw_true = test (simpLib.SIMP_CONV (srw_ss()) [])
 
 (* start tests *)
 
@@ -308,5 +309,11 @@ val _ = blast_true
           $= (((0 :num) >< (0 :num)) (0w :bool[unit]) :bool[unit])) (1w
            :bool[unit]) ==>
       ((1w :bool[unit]) = ~(0w :bool[unit]))``;
+
+val _ = blast_true
+  ``SND (word_rrx (T,v:word32)) = v >>> 1 !! 0x80000000w``;
+
+val _ = srw_true
+  ``0x20000000w !! 0w !! w : word32 = w !! 0x20000000w``;
 
 val _ = OS.Process.exit OS.Process.success;
