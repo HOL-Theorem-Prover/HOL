@@ -1515,6 +1515,92 @@ val LZIP_LUNZIP = Q.store_thm
  Cases_on `h` THEN SRW_TAC [][] THEN SRW_TAC [][]);
 val _ = export_rewrites ["LZIP_LUNZIP"]
 
+val LUNFOLD_THM = Q.store_thm
+("LUNFOLD_THM",
+  `!f x v1 v2. 
+     ((f x = NONE) ==> (LUNFOLD f x = [||])) /\
+     ((f x = SOME (v1,v2)) ==> (LUNFOLD f x = v2:::LUNFOLD f v1))`,
+ SRW_TAC [] [] THEN1
+ SRW_TAC [] [Once LUNFOLD] THEN
+ SRW_TAC [] [Once LUNFOLD]);
+
+val LLIST_EQ = Q.store_thm 
+("LLIST_EQ",
+ `!f g. 
+   (!x. ((f x = [||]) /\ (g x = [||])) \/
+        (?h y. (f x = h:::f y) /\ (g x = h:::g y)))
+   ==> 
+   (!x. f x = g x)`,
+ SRW_TAC [] [] THEN
+ SRW_TAC [] [Once LLIST_BISIMULATION0] THEN
+ Q.EXISTS_TAC `\ll1 ll2. ?x. (ll1 = f x) /\ (ll2 = g x)` THEN
+ SRW_TAC [] [] THEN
+ METIS_TAC []);
+
+val LUNFOLD_EQ = Q.store_thm 
+("LUNFOLD_EQ",
+ `!R f s ll.
+    R s ll /\
+    (!s ll. 
+       R s ll 
+       ==> 
+       ((f s = NONE) /\ (ll = [||])) \/ 
+       ?s' x ll'. 
+         (f s = SOME (s',x)) /\ (LHD ll = SOME x) /\ (LTL ll = SOME ll') /\ 
+         R s' ll')
+    ==>
+    (LUNFOLD f s = ll)`,
+ SRW_TAC [] [] THEN
+ SRW_TAC [] [Once LLIST_BISIMULATION] THEN
+ Q.EXISTS_TAC `\ll1 ll2. ?s. (ll1 = LUNFOLD f s) /\ R s ll2` THEN
+ SRW_TAC [] [] THEN1
+ METIS_TAC [] THEN
+ RES_TAC THEN
+ SRW_TAC [] [LUNFOLD_THM] THEN
+ IMP_RES_TAC LUNFOLD_THM THEN
+ SRW_TAC [] [] THEN
+ METIS_TAC []);
+
+val LMAP_LUNFOLD = Q.store_thm 
+("LMAP_LUNFOLD",
+ `!f g s. 
+   LMAP f (LUNFOLD g s) = LUNFOLD (\s. OPTION_MAP (\(x, y). (x, f y)) (g s)) s`,
+ SRW_TAC [] [] THEN
+ MATCH_MP_TAC (GSYM LUNFOLD_EQ) THEN
+ SRW_TAC [] [] THEN
+ Q.EXISTS_TAC `\s ll. ll = LMAP f (LUNFOLD g s)` THEN
+ SRW_TAC [] [] THEN
+ Cases_on `g s` THEN
+ SRW_TAC [] [LUNFOLD_THM] THEN
+ Cases_on `x` THEN
+ IMP_RES_TAC LUNFOLD_THM THEN
+ SRW_TAC [] []);
+
+val LNTH_LDROP = Q.store_thm 
+("LNTH_LDROP",
+ `!n l x. (LNTH n l = SOME x) ==> (LHD (THE (LDROP n l)) = SOME x)`,
+ Induct THEN
+ SRW_TAC [] [LNTH, LDROP] THEN
+ Cases_on `LTL l` THEN
+ SRW_TAC [] [] THEN 
+ FULL_SIMP_TAC (srw_ss()) []);
+
+val LAPPEND_fromList = Q.store_thm 
+("LAPPEND_fromList",
+ `!l1 l2. LAPPEND (fromList l1) (fromList l2) = fromList (l1 ++ l2)`,
+ Induct THEN
+ SRW_TAC [] []);
+
+val LTAKE_LENGTH = Q.store_thm ("LTAKE_LENGTH",
+`!n ll l. (LTAKE n ll = SOME l) ==> (n = LENGTH l)`,
+Induct THEN
+SRW_TAC [] [] THEN
+SRW_TAC [] [] THEN
+`(ll = [||]) \/ ?h t. ll = h:::t` by METIS_TAC [llist_CASES] THEN
+SRW_TAC [] [] THEN
+FULL_SIMP_TAC (srw_ss()) [] THEN
+METIS_TAC []);
+
 val _ = export_theory();
 
 end;
