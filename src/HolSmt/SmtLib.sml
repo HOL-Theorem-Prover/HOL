@@ -347,6 +347,16 @@ local
       in
         (acc, (List.concat declss, sexpr name names))
       end
+    (* creates a mapping from bound variables to their SMT-LIB names; if a
+       variable is already mapped, we return its existing SMT-LIB name *)
+    fun create_bound_name (bounds, v) =
+      (bounds, Redblackmap.find (bounds, v))
+      handle Redblackmap.NotFound =>
+        let
+          val name = bv_prefix ^ Int.toString (Redblackmap.numItems bounds)
+        in
+          (Redblackmap.insert (bounds, v, name), name)
+        end
     val tm_has_base_type = not (Lib.can Type.dom_rng (Term.type_of tm))
   in
     (* binders *)
@@ -358,12 +368,7 @@ local
           ("exists", boolSyntax.strip_exists tm)
         else
           raise ERR "translate_term" "not a binder"  (* handled below *)
-      val (bounds, smtvars) = Lib.foldl_map (fn (dict, v) =>
-        let
-          val name = bv_prefix ^ Int.toString (Redblackmap.numItems dict)
-        in
-          (Redblackmap.insert (dict, v, name), name)
-        end) (bounds, vars)
+      val (bounds, smtvars) = Lib.foldl_map create_bound_name (bounds, vars)
       val (tydict, vardecltys) = Lib.foldl_map translate_type
         (tydict, List.map Term.type_of vars)
       val (vardeclss, vartys) = Lib.split vardecltys
@@ -385,8 +390,7 @@ local
       val (M, N) = boolSyntax.dest_let tm
       val (var, body) = Term.dest_abs M
       val (acc, (Ndecls, N)) = translate_term (acc, (bounds, N))
-      val name = bv_prefix ^ Int.toString (Redblackmap.numItems bounds)
-      val bounds = Redblackmap.insert (bounds, var, name)
+      val (bounds, name) = create_bound_name (bounds, var)
       val (acc, (bodydecls, body)) = translate_term (acc, (bounds, body))
     in
       (acc, (Ndecls @ bodydecls,

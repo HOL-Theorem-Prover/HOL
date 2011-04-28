@@ -644,6 +644,8 @@ in
 
     (``let x = y in let x = x /\ z in x = y /\ z``,
       [thm_AUTO, thm_YO, thm_Z3, thm_Z3p]),
+    (``let x = u in let x = x in let y = v in x /\ y = u /\ v``,
+      [thm_AUTO, thm_YO, thm_Z3, thm_Z3p]),
 
     (* lambda abstractions *)
 
