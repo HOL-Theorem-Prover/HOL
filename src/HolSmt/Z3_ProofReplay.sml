@@ -8,7 +8,7 @@ struct
 local
 
   fun profile name f x =
-    (*Profile.profile_with_exn name*) f x
+    Profile.profile_with_exn_name name f x
 
   open Z3_Proof
 
@@ -907,7 +907,7 @@ local
     if Thm.concl thm <> concl then
       raise ERR "check_thm" (name ^ ": conclusion is " ^ Hol_pp.term_to_string
         (Thm.concl thm) ^ ", expected: " ^ Hol_pp.term_to_string concl)
-    else if !SolverSpec.trace > 2 then
+    else if !Library.trace > 2 then
       Feedback.HOL_MESG
         ("HolSmtLib: " ^ name ^ " proved: " ^ Hol_pp.thm_to_string thm)
     else ()
@@ -1048,7 +1048,7 @@ local
                  the theorem just derived *)
               (fn ((state, proof), thm) =>
                 (
-                  if !SolverSpec.trace > 2 then
+                  if !Library.trace > 2 then
                     Feedback.HOL_MESG
                       ("HolSmtLib: updating proof at ID " ^ Int.toString id)
                   else ();
@@ -1066,7 +1066,7 @@ in
      subset of) those asserted in the proof *)
   fun check_proof proof : Thm.thm =
   let
-    val _ = if !SolverSpec.trace > 1 then
+    val _ = if !Library.trace > 1 then
         Feedback.HOL_MESG "HolSmtLib: checking Z3 proof"
       else ()
 

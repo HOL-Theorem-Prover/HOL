@@ -624,6 +624,10 @@ end
 (* ------------------------------------------------------------------------- *)
 
 local
+  fun filter_mk_set [] = []
+    | filter_mk_set ((x as (a,_))::rst) =
+        x::filter_mk_set (List.filter (fn (b,_) => b <> a) rst)
+
   val uint_of_word = wordsSyntax.uint_of_word
   fun try_dest_label thm = markerLib.DEST_LABEL thm handle HOL_ERR _ => thm;
   fun reg tm = mk_var ("r" ^ Int.toString (uint_of_word tm), ``:word32``);
@@ -703,13 +707,15 @@ local
        | ("ARM_WRITE_MODE_SPSR", [d,s]) => updates s ((spsrmode,d)::l)
        | (_,tml) => updates (List.last tml) l) handle HOL_ERR _ => List.rev l
 
+  fun updates_set tm = filter_mk_set (updates tm [])
+
   fun get_updates tm =
   let
     val tm' = component_substs tm
   in
     case Lib.total boolSyntax.dest_cond tm'
-    of SOME (c,a,b) => Conditional_step (c, updates a [], updates b [])
-     | NONE => Simple_step (updates tm' [])
+    of SOME (c,a,b) => Conditional_step (c, updates_set a, updates_set b)
+     | NONE => Simple_step (updates_set tm')
   end
 in
   fun arm_step_updates opt opc = let

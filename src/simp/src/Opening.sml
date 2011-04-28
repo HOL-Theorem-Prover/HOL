@@ -4,7 +4,7 @@ struct
 open HolKernel boolLib liteLib Trace;
 
 
-fun samerel t1 t2 = same_const t1 t2 orelse aconv t1 t2
+fun samerel t1 t2 = can (match_term t1) t2
 
 type congproc  = {relation:term,
 		  solver : term -> thm,
@@ -130,7 +130,7 @@ let
 
    val (conditions,conc) = strip_n_imp nconds (concl congrule')
    val matcher =
-      HO_PART_MATCH (rand o rator o snd o strip_n_imp nconds) congrule'
+      HO_PART_MATCH (rator o snd o strip_n_imp nconds) congrule'
 
  (* work out whether context assumptions need to be reprocessed *)
  (* e.g "~g" in the "else" branch of COND_CONG needs to be.     *)
@@ -143,20 +143,25 @@ let
            conditions
 
 in fn {relation,solver,depther,freevars} =>
-  if not (samerel relation rel) then failwith "not applicable" else fn tm =>
-  let val match_thm = matcher tm
-      val _ = trace(3,OPENING(tm,congrule'))
-      val (_,conc) = strip_n_imp nconds (concl match_thm)
-      val genvars = free_vars (rand conc)
+  if not (samerel rel relation) andalso not (same_const rel relation) then
+    failwith "not applicable"
+  else fn tm =>
+  let
+    val theta = match_type (#1 (dom_rng (type_of relation))) (type_of tm)
+    val relation' = Term.inst theta relation
+    val match_thm = matcher (mk_comb(relation',tm))
+    val _ = trace(3,OPENING(tm,match_thm))
+    val (_,conc) = strip_n_imp nconds (concl match_thm)
+    val genvars = filter is_genvar (free_vars (rand conc))
 
-      (* this function does all the work of solving the side conditions
+    (* this function does all the work of solving the side conditions
        one by one.  The integer is the number of side conditions
        remaining to be discharged.  Most of the side conditions
        will be sub-congruences of the form (--`A = ?A`--)  *)
 
-      fun process_subgoals (0,match_thm,_) = match_thm
-        | process_subgoals (_,_,[]) = raise Fail "process_subgoals BIND"
-        | process_subgoals (n,match_thm,flags::more_flags) =
+    fun process_subgoals (0,match_thm,_) = match_thm
+      | process_subgoals (_,_,[]) = raise Fail "process_subgoals BIND"
+      | process_subgoals (n,match_thm,flags::more_flags) =
         let val condition = #1 (dest_imp (concl match_thm))
 
            (* work out whether the condition is a congruence condition
@@ -186,7 +191,7 @@ in fn {relation,solver,depther,freevars} =>
                 val rewr_thm =
                   (depther (reprocessed_assum_thms,oper) orig)
                   handle HOL_ERR _ =>
-                  let val thm = refl oper orig
+                  let val thm = refl {Rinst = oper, arg = orig}
                   in (trace(5,PRODUCE(orig,"UNCHANGED",thm));thm)
                   end
                 val abs_rewr_thm =
@@ -201,14 +206,18 @@ in fn {relation,solver,depther,freevars} =>
                 val new_match_thm = MP spec_match_thm gen_abs_rewr_thm
             in process_subgoals (n-1,new_match_thm,more_flags)
             end
-          else
-            let val side_condition_thm = solver condition
-                val new_match_thm = MP match_thm side_condition_thm
+          else let
+              fun output() =
+                  "Instantiated congruence condition is a side condition: "^
+                  term_to_string condition
+              val _ = trace (6, LZ_TEXT output)
+              val side_condition_thm = solver condition
+              val new_match_thm = MP match_thm side_condition_thm
             in process_subgoals (n-1,new_match_thm,more_flags)
             end
         end
 
-      val final_thm = process_subgoals (nconds,match_thm,reprocess_flags)
+    val final_thm = process_subgoals (nconds,match_thm,reprocess_flags)
 
   in
     if eq (rand (rator (concl final_thm))) (rand (concl final_thm))

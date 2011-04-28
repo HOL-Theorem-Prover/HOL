@@ -1,12 +1,28 @@
 (* Copyright (c) 2009-2010 Tjark Weber. All rights reserved. *)
 
-(* Common auxiliary functions *)
+(* Common auxiliary functions, tracing *)
 
 structure Library =
 struct
 
   (***************************************************************************)
-  (* I/O                                                                     *)
+  (* tracing                                                                 *)
+  (***************************************************************************)
+
+  (* possible values:
+     0 - no output at all (except for fatal errors)
+     1 - warnings only
+     2 - also diagnostic messages of constant length
+     3 - also diagnostic messages that are potentially lengthy (e.g., terms,
+         models, proofs)
+     4 - moreover, temporary files (for communication with the SMT solver) are
+         not removed after solver invocation *)
+  val trace = ref 2
+
+  val _ = Feedback.register_trace ("HolSmtLib", trace, 4)
+
+  (***************************************************************************)
+  (* I/O, parsing                                                            *)
   (***************************************************************************)
 
   (* opens 'path' as an output text file; writes all elements of
@@ -52,6 +68,24 @@ struct
   fun get_token (get_char : unit -> char) : unit -> string =
   let
     val buffer = ref (NONE : string option)
+    fun line_comment () =
+      if get_char () = #"\n" then
+        ()
+      else line_comment ()
+    fun aux_symbol cs c =
+      if c = #"|" then
+        (* we return |x| as x *)
+        String.implode (List.rev cs)
+      else
+        aux_symbol (c :: cs) (get_char ())
+    fun aux_string cs c =
+      if c = #"\"" then
+        String.implode (List.rev (c :: cs))
+      else if c = #"\\" then
+        (* FIXME: handle C-style quoted characters properly *)
+        aux_string (get_char () :: c :: cs) (get_char ())
+      else
+        aux_string (c :: cs) (get_char ())
     fun (* whitespace *)
         aux [] #" " = aux [] (get_char ())
       | aux [] #"\n" = aux [] (get_char ())
@@ -64,17 +98,41 @@ struct
       | aux [] #")" = ")"
       | aux cs #"(" = (buffer := SOME "("; String.implode (List.rev cs))
       | aux cs #")" = (buffer := SOME ")"; String.implode (List.rev cs))
+      (* | *)
+      | aux [] #"|" = aux_symbol [] (get_char ())
+      | aux _ #"|" =
+        raise Feedback.mk_HOL_ERR "Library" "get_token" "invalid '|'"
+      (* " *)
+      | aux [] #"\"" = aux_string [#"\""] (get_char ())
+      | aux _ #"\"" =
+        raise Feedback.mk_HOL_ERR "Library" "get_token" "invalid '\"'"
+      (* ; *)
+      | aux [] #";" = (line_comment (); aux [] (get_char ()))
+      | aux cs #";" = (line_comment (); String.implode (List.rev cs))
       (* everything else *)
       | aux cs c = aux (c :: cs) (get_char ())
           handle Feedback.HOL_ERR _ =>
-            (* end of file *)
+            (* end of stream *)
             String.implode (List.rev (c :: cs))
   in
     fn () =>
-      case !buffer of
-        SOME token => (buffer := NONE; token)
-      | NONE => aux [] (get_char ())
+      let
+        val token = case !buffer of
+            SOME token => (buffer := NONE; token)
+          | NONE => aux [] (get_char ())
+      in
+        if !trace > 2 then
+          Feedback.HOL_MESG ("HolSmtLib: next token is '" ^ token ^ "'")
+        else ();
+        token
+      end
   end
+
+  fun parse_arbnum (s : string) =
+    Arbnum.fromString s
+      handle Option.Option =>
+        raise Feedback.mk_HOL_ERR "Library" "parse_arbnum"
+          ("numeral expected, but '" ^ s ^ "' found")
 
   fun expect_token (expected : string) (actual : string) : unit =
     if expected = actual then
@@ -82,6 +140,30 @@ struct
     else
       raise Feedback.mk_HOL_ERR "Library" "expect_token"
         ("'" ^ expected ^ "' expected, but '" ^ actual ^ "' found")
+
+  (* extends a dictionary that maps keys to lists of values *)
+  fun extend_dict ((key, value), dict) =
+  let
+    val values = Redblackmap.find (dict, key)
+      handle Redblackmap.NotFound => []
+  in
+    Redblackmap.insert (dict, key, value :: values)
+  end
+
+  (* entries in 'dict2' are prepended to entries in 'dict1' *)
+  fun union_dict dict1 dict2 = Redblackmap.foldl (fn (key, vals, dict) =>
+    let
+      val values = Redblackmap.find (dict1, key)
+        handle Redblackmap.NotFound => []
+    in
+      Redblackmap.insert (dict, key, vals @ values)
+    end) dict1 dict2
+
+  (* creates a dictionary that maps strings to lists of parsing functions *)
+  fun dict_from_list xs
+      : (string, (string -> Arbnum.num list -> 'a list -> 'a) list)
+        Redblackmap.dict =
+    List.foldl extend_dict (Redblackmap.mkDict String.compare) xs
 
   (***************************************************************************)
   (* Derived rules                                                           *)

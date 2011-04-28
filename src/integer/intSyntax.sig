@@ -24,6 +24,7 @@ sig
   val divides_tm     : term
   val min_tm         : term
   val max_tm         : term
+  val LEAST_INT_tm   : term
   val Num_tm         : term (* the coercion from :int -> :num *)
   val int_injection  : term (* the injection from :num -> :int *)
 
@@ -100,5 +101,9 @@ sig
   val is_max         : term -> bool
   val dest_max       : term -> (term * term)
   val mk_max         : (term * term) -> term
+
+  val is_LEAST_INT   : term -> bool
+  val dest_LEAST_INT : term -> term
+  val mk_LEAST_INT   : term -> term
 
 end

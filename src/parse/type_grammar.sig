@@ -17,13 +17,12 @@ TApp   ::= Leaf | Tuple Leaf
 *)
 
   datatype grammar_rule
-    = CONSTANT of string list
-    | BINDER of string list list
-    | APPLICATION
-    | CAST
-    | ARRAY_SFX
-    | INFIX of {opname : string, parse_string : string} list *
-                HOLgrammars.associativity
+         = CONSTANT of string list
+         | BINDER of string list list
+         | APPLICATION
+         | CAST
+         | INFIX of {opname : string, parse_string : string} list *
+                    HOLgrammars.associativity
 
   datatype type_structure =
       TYCON  of {Thy : string, Tyop : string, Kind : Kind.kind}
@@ -74,7 +73,6 @@ TApp   ::= Leaf | Tuple Leaf
 
   val merge_grammars   : grammar * grammar -> grammar
 
-  val std_suffix_precedence : int
   val prettyprint_grammar   : Portable.ppstream -> grammar -> unit
   val initialise_typrinter
     : (grammar -> Portable.ppstream -> Type.hol_type -> unit) -> unit

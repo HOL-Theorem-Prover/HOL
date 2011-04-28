@@ -29,10 +29,10 @@ fun ERR x = STRUCT_ERR "Travrules" x;
 
   datatype preorder = PREORDER of term
                                   * (thm -> thm -> thm)
-                                  * (term -> thm);
+                                  * ({Rinst:term,arg:term} -> thm);
 
    fun find_relation rel  = let
-     fun f ((h as PREORDER (cid,_,_))::t) = if Opening.samerel rel cid then h
+     fun f ((h as PREORDER (cid,_,_))::t) = if Opening.samerel cid rel then h
                                             else f t
        | f [] = ERR("find_relation","relation not found")
    in
@@ -41,10 +41,13 @@ fun ERR x = STRUCT_ERR "Travrules" x;
 
    fun ARB_TRANS thm c1 c2 = MATCH_MP thm (CONJ c1 c2);
 
-   fun mk_preorder (TRANS_THM,REFL_THM) =
-       PREORDER (rator(rator(snd(dest_forall(concl REFL_THM)))),
-		 ARB_TRANS TRANS_THM,
-		 fn x => ISPEC x REFL_THM);
+   fun mk_preorder (TRANS_THM,REFL_THM) = let
+     fun refl {Rinst,arg} = PART_MATCH rator REFL_THM (mk_comb(Rinst,arg))
+   in
+     PREORDER (rator(rator(snd(boolSyntax.strip_forall(concl REFL_THM)))),
+               ARB_TRANS TRANS_THM,
+               refl)
+   end
 
    (* ---------------------------------------------------------------------
     * travrules objects and basic operations on them
@@ -91,9 +94,13 @@ fun ERR x = STRUCT_ERR "Travrules" x;
  * equality_travrules
  * ---------------------------------------------------------------------*)
 
-val equality = [PREORDER(boolSyntax.equality,TRANS,REFL)];
+val EQ_preorder = let
+  fun eqrefl {Rinst,arg} = REFL arg
+in
+  PREORDER(boolSyntax.equality,TRANS,eqrefl)
+end
 val EQ_tr = gen_mk_travrules
-  {relations=equality,
+  {relations=[EQ_preorder],
    congprocs=[Opening.EQ_CONGPROC],
    weakenprocs=[]}
 
@@ -102,7 +109,7 @@ fun cong2proc rels th = let
   val r = rel_of_congrule th
   val PREORDER(_,_,refl) = find_relation r rels
 in
-  CONGPROC (fn _ => fn t => refl t) th
+  CONGPROC refl th
 end
 
 fun mk_travrules relns congs =

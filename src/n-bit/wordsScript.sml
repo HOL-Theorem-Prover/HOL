@@ -309,6 +309,34 @@ val word_mod_def = Define`
   word_mod (v:'a word) (w:'a word) =
     n2w (w2n v MOD w2n w):'a word`;
 
+(* 2's complement signed remainder (sign follows dividend) *)
+val word_srem_def = Define`
+  word_srem a b =
+    if word_msb a then
+      if word_msb b then
+        word_2comp (word_mod (word_2comp a) (word_2comp b))
+      else
+        word_2comp (word_mod (word_2comp a) b)
+    else
+      if word_msb b then
+        word_mod a (word_2comp b)
+      else
+        word_mod a b`;
+
+(* 2's complement signed remainder (sign follows divisor) *)
+val word_smod_def = Define`
+  word_smod a b =
+    if word_msb a then
+      if word_msb b then
+        word_2comp (word_mod (word_2comp a) (word_2comp b))
+      else
+        word_mod (word_2comp a) b
+    else
+      if word_msb b then
+        word_2comp (word_mod a (word_2comp b))
+      else
+        word_mod a b`;
+
 val word_L2_def = Define `word_L2 = word_mul word_L word_L`;
 
 val _ = overload_on ("+", Term`$word_add`);
@@ -423,6 +451,10 @@ val _ = add_infix("@@",700,HOLgrammars.RIGHT);
 (* ------------------------------------------------------------------------- *)
 
 val _ = ai := false;
+
+(* equals 1w iff all bits are equal *)
+val word_compare_def = Define`
+  word_compare (a:'a word) b = if a = b then 1w else 0w :1 word`;
 
 val nzcv_def = with_flag (computeLib.auto_import_definitions, true) Define `
   nzcv (a:'a word) (b:'a word) =

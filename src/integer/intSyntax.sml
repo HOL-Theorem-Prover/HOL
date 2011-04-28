@@ -27,6 +27,7 @@ val min_tm =   Const "int_min"
 val max_tm =   Const "int_max";
 val absval_tm =  Const "ABS"
 val divides_tm = Const "int_divides"
+val LEAST_INT_tm = Const "LEAST_INT"
 val int_injection = Const "int_of_num"
 val Num_tm = Const "Num"
 
@@ -146,6 +147,18 @@ fun mk_min (tm1, tm2) = list_mk_comb(min_tm, [tm1, tm2])
 val dest_max = dest_binop max_tm ("dest_max", "Term not a max")
 val is_max = can dest_max
 fun mk_max (tm1, tm2) = list_mk_comb(max_tm, [tm1, tm2])
+
+fun dest_LEAST_INT t =
+  let
+    val (f, x) = dest_comb t
+    val _ = assert (same_const LEAST_INT_tm) f
+  in
+    x
+  end handle HOL_ERR _ =>
+    raise ERR "dest_LEAST_INT" "term not a LEAST_INT"
+
+val is_LEAST_INT = can dest_LEAST_INT
+fun mk_LEAST_INT t = mk_comb (LEAST_INT_tm, t)
 
 fun dest_injected tm = let
   val (f,x) = dest_comb tm

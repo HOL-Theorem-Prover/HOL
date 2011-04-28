@@ -23,7 +23,7 @@ sig
 
   datatype preorder = PREORDER of term
                                    * (thm -> thm -> thm)
-                                   * (term -> thm)
+                                   * ({Rinst:term,arg:term} -> thm)
   val samerel : term -> term -> bool
 
   val mk_preorder : (thm * thm) -> preorder;
@@ -90,6 +90,7 @@ sig
   val cong2proc : preorder list -> thm -> Opening.congproc
 
   (* the equality case - all theorems are interpeted as equality congruences *)
+  val EQ_preorder : preorder
   val EQ_tr : travrules
 
 end (* sig *)

@@ -2,13 +2,12 @@ structure type_grammar :> type_grammar =
 struct
 
 datatype grammar_rule =
-  CONSTANT of string list
-| BINDER of string list list
-| APPLICATION
-| CAST
-| ARRAY_SFX
-| INFIX of {opname : string, parse_string : string} list *
-           HOLgrammars.associativity
+           CONSTANT of string list
+         | BINDER of string list list
+         | APPLICATION
+         | CAST
+         | INFIX of {opname : string, parse_string : string} list *
+                    HOLgrammars.associativity
 
 datatype type_structure =
          TYCON  of {Thy : string, Tyop : string, Kind : Kind.kind}
@@ -146,11 +145,9 @@ val std_suffix_precedence = 100
 val std_binder_precedence =  20
 
 
-
 fun merge r1 r2 =
   case (r1, r2) of
-    (ARRAY_SFX, ARRAY_SFX) => ARRAY_SFX
-  | (CAST, CAST) => CAST
+    (CAST, CAST) => CAST
   | (APPLICATION, APPLICATION) => APPLICATION
   | (CONSTANT slist1, CONSTANT slist2) => CONSTANT(Lib.union slist1 slist2)
   | (BINDER slist1, BINDER slist2) => BINDER(Lib.union slist1 slist2)
@@ -247,7 +244,6 @@ fun conform_structure_to_type G s st ty =
     inst_rank_kind rk kdS st
   end
 
-
 fun new_tyop (TYG(G,abbrevs,specials,pmap)) name =
   TYG (insert_sorted (std_suffix_precedence, CONSTANT[name]) G, abbrevs, specials, pmap)
 
@@ -255,7 +251,7 @@ fun new_tybinder (TYG(G,abbrevs,specials,pmap)) names =
   TYG (insert_sorted (std_binder_precedence, BINDER[names]) G, abbrevs, specials, pmap)
 
 val empty_grammar = TYG ([(std_binder_precedence, BINDER[]),
-                          (80, APPLICATION),(90, CAST),(99, ARRAY_SFX)], 
+                          (80, APPLICATION),(90, CAST)],
                          Binarymap.mkDict String.compare,
                          {lambda = ["\\"], forall = ["!"]},
                          TypeNet.empty)
@@ -504,21 +500,24 @@ val get_params = get_params0 (HOLset.empty (Lib.pair_compare (Int.compare,Kind.k
       ()
   end
 
+  fun print_suffixes slist = let
+    val oksl = List.mapPartial (suffix_kind abbrevs) slist
+  in
+    if null oksl then ()
+    else let
+      in
+        add_string "       TY  ::=  ";
+        begin_block INCONSISTENT 0;
+        pr_list print_suffix (fn () => add_string " |")
+                (fn () => add_break(1,0)) oksl;
+        end_block ();
+        add_newline()
+      end
+  end
+
   fun print_rule0 r =
     case r of
-      CONSTANT sl => let
-        val oksl = List.mapPartial (suffix_kind abbrevs) sl
-      in
-        if null oksl then ()
-        else let
-          in
-            add_string "TY  ::=  ";
-            begin_block INCONSISTENT 0;
-            pr_list print_suffix (fn () => add_string " |")
-                    (fn () => add_break(1,0)) oksl;
-            end_block ()
-          end
-      end
+      CONSTANT sl => print_suffixes sl
     | BINDER sl => let
       in
         add_string "TY  ::=  ";
@@ -529,7 +528,6 @@ val get_params = get_params0 (HOLset.empty (Lib.pair_compare (Int.compare,Kind.k
       end
     | CAST => add_string "TY  ::=  TY : KIND | TY :<= RANK (kind or rank cast of type)"
     | APPLICATION => add_string "TY  ::=  TY TY (type application)"
-    | ARRAY_SFX => add_string "TY  ::=  TY[TY] (array type)"
     | INFIX(oplist, assoc) => let
         val assocstring =
             case assoc of
@@ -558,6 +556,7 @@ in
       add_break (1,2);
       begin_block CONSISTENT 0;
         app print_rule g;
+        add_string "       TY  ::=  TY[TY] (array type)";
       end_block ();
     end_block ();
     print_abbrevs();

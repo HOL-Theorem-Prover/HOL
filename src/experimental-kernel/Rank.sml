@@ -88,7 +88,6 @@ local
 in
 fun raw_match_rank false pat tar rk = match pat tar (chk rk)
   | raw_match_rank true  pat tar rk = matchfixed pat tar (chk rk)
-  | raw_match_rank _ any other thing = RERR "invalid rank substitution"
 end
 
 fun match_rank pat_rk tar_rk =

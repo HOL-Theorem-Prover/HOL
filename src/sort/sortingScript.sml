@@ -977,7 +977,7 @@ val length_lem =
 
 val PART3_FILTER = 
   store_thm("PART3_FILTER",
-    ``!tl hd. PART3 R hd tl = (FILTER (\x. R x hd /\ ~R hd x) tl, 
+    ``!tl hd. PART3 R hd tl = (FILTER (\x. R x hd /\ ~R hd x) tl,
                             FILTER (\x. R x hd /\ R hd x) tl,
                             FILTER (\x. ~R x hd) tl)``,
     Induct THEN RW_TAC std_ss [PART3_DEF, PAIR_MAP, FILTER] THEN
@@ -1028,7 +1028,7 @@ val PERM3_FILTER =
   store_thm(
     "PERM3_FILTER",
     ``!l h. PERM l
-      (FILTER (\x. R x h /\ ¬R h x) l ++ FILTER (\x. R x h /\ R h x) l ++
+      (FILTER (\x. R x h /\ ~R h x) l ++ FILTER (\x. R x h /\ R h x) l ++
        FILTER (\x. ~R x h) l)``,
     REPEAT STRIP_TAC THEN
     MATCH_MP_TAC (SPEC ``\x. (R:'a -> 'a -> bool) x h`` tospec) THEN
@@ -1045,14 +1045,14 @@ val PERM_QSORT3 =
     ``!l R. PERM l (QSORT3 R l)``,
     completeInduct_on `LENGTH l` THEN Cases THEN
     RW_TAC std_ss [PERM_CONS_EQ_APPEND, QSORT3_DEF, PERM_NIL, PART3_FILTER] THEN
-    Q.EXISTS_TAC `QSORT3 R (FILTER (λx. R x h ∧ ¬R h x) t)` THEN
-    Q.EXISTS_TAC `FILTER (λx. R x h ∧ R h x) t ++ QSORT3 R (FILTER (λx. ¬R x h) t) ` THEN
+    Q.EXISTS_TAC `QSORT3 R (FILTER (\x. R x h /\ ~R h x) t)` THEN
+    Q.EXISTS_TAC `FILTER (\x. R x h /\ R h x) t ++ QSORT3 R (FILTER (\x. ~R x h) t) ` THEN
     RW_TAC std_ss [APPEND_ASSOC, GSYM APPEND] THEN
     MATCH_MP_TAC PERM3 THEN
     MAP_EVERY Q.EXISTS_TAC [
-      `FILTER (λx. R x h ∧ ¬R h x) t`, 
-      `FILTER (λx. R x h ∧ R h x) t`,
-      `FILTER (λx. ¬R x h) t`] THEN
+      `FILTER (\x. R x h /\ ~R h x) t`, 
+      `FILTER (\x. R x h /\ R h x) t`,
+      `FILTER (\x. ~R x h) t`] THEN
     RW_TAC std_ss [PERM_REFL] THEN TRY IND_STEP_TAC THEN RW_TAC arith_ss [length_lem] THEN
     METIS_TAC [PERM3_FILTER]);
 

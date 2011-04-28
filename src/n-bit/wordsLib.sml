@@ -114,10 +114,11 @@ val SIZES_ss =
 
 fun NUM_RULE l n x =
   let val y = SPEC_ALL x
+      val N = Parse.Term n
   in CONJ
      ((GEN_ALL o simpLib.SIMP_RULE (bossLib.arith_ss++boolSimps.LET_ss) l o
        INST [n |-> `0n`]) y)
-     ((GEN_ALL o INST [n |-> `^Na`]) y)
+     ((GEN_ALL o Thm.INST [N |-> ``NUMERAL ^N``]) y)
   end;
 
 val MOD_WL =

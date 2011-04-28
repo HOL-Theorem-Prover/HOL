@@ -263,7 +263,7 @@ end handle HOL_ERR _ => failwith "loops"
 
 val CONJ_DISCH =
   let val IMP_CONJ_RULE =
-      let val [t1,t2,t3] = fst(strip_forall(concl AND_IMP_INTRO))
+      let val (t1,t2,t3) = triple_of_list(fst(strip_forall(concl AND_IMP_INTRO)))
           val IMP_CONJ_THM = fst(EQ_IMP_RULE (SPEC_ALL AND_IMP_INTRO))
       in fn th =>
         let val (p,qr) = dest_imp(concl th)

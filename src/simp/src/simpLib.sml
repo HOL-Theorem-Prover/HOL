@@ -243,7 +243,7 @@ with
         val new_dprocs = map (Traverse.addctxt rewrs) dprocs' @ dprocs
     in
       SS {mk_rewrs    = mk_rewrs,
-          ssfrags     = Lib.op_insert same_frag f ssfrags,
+          ssfrags     = f :: ssfrags,
           initial_net = net,
           limit       = limit,
           dprocs      = new_dprocs,
@@ -272,10 +272,10 @@ with
  fun wk_mk_travrules (rels, congs) = let
    fun cong2proc th = let
      open Opening Travrules
-     fun mk_refl rel t = let
+     fun mk_refl (x as {Rinst=rel,arg= t}) = let
        val PREORDER(_,_,refl) = find_relation rel rels
      in
-       refl t
+       refl x
      end
    in
      CONGPROC mk_refl th
@@ -333,6 +333,7 @@ with
 
  fun munge base subsets asms (thlistlist, n) = let
    val munge = munge base subsets
+   val isbase = can (match_term base)
  in
    case thlistlist of
      [] => n
@@ -362,15 +363,18 @@ with
                    else
                      Net.insert (t, (bound, List.foldl foldthis th asms)) n
                  end
+
                in
-                 if aconv R base then
-                   munge asms (ths :: rest, insert (from,th) n)
+                 if isbase R then
+                   munge asms (ths :: rest, insert (mk_comb(R,from),th) n)
                  else
                    case List.find (fn (t,_) => aconv R t) subsets of
                      NONE => munge asms (ths :: rest, n)
-                   | SOME (_, sub_th) =>
-                     munge asms (ths :: rest,
-                                 insert (from,MATCH_MP sub_th th) n)
+                   | SOME (_, sub_th) => let
+                       val new_th = MATCH_MP sub_th th
+                     in
+                       munge asms ((TH new_th :: ths) :: rest, n)
+                     end
                end
              | NONE => munge asms (ths :: rest, n)
          end
@@ -401,13 +405,15 @@ with
    end
    val initial_ctxt = addcontext (redExn Net.empty, initial_rewrites)
    fun applythm solver t (bound, th) = let
+     val _ =
+         trace(7, LZ_TEXT (fn () => "Attempting rewrite: "^thm_to_string th))
      fun dec() = case bound of
                    BOUNDED (r as ref n) =>
                      if n > 0 then r := n - 1
                      else raise ERR ("mk_reducer.applythm",
                                      "Bound exceeded on rwt.")
                  | UNBOUNDED => ()
-     val matched = PART_MATCH (lhand o #2 o strip_imp) th t
+     val matched = PART_MATCH (rator o #2 o strip_imp) th t
      open Trace
      fun do_sideconds th =
          if is_imp (concl th) then let
@@ -423,14 +429,26 @@ with
      do_sideconds matched
    end
 
-   fun apply {solver,context,stack,relation} t = let
-     val _ = aconv (po_rel relation) rel_t orelse
+   fun mk_icomb(f, x) = let
+     val (f_domty, _) = dom_rng (type_of f)
+     val xty = type_of x
+     val theta = match_type f_domty xty
+   in
+     mk_comb(Term.inst theta f, x)
+   end
+
+   fun apply {solver,context,stack,relation = (relation,_)} t = let
+     val _ = can (match_term rel_t) relation orelse
              raise ERR ("mk_reducer.apply", "Wrong relation")
      val n = case context of redExn n => n
                            | _ => raise ERR ("apply", "Wrong sort of ctxt")
-     val matches = Net.match t n
+     val lookup_t = mk_icomb(relation,t)
+     val _ = trace(7, LZ_TEXT(fn () => "Looking up "^term_to_string lookup_t))
+     val matches = Net.match lookup_t n
+     val _ = trace(7, LZ_TEXT(fn () => "Found "^Int.toString (length matches)^
+                                       " matches"))
    in
-     tryfind (applythm (solver stack) t) matches
+     tryfind (applythm (solver stack) lookup_t) matches
    end
  in
    Traverse.REDUCER {name = SOME ("reducer for "^term_to_string rel_t),

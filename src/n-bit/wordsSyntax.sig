@@ -9,6 +9,8 @@ sig
   val is_word_type      : hol_type -> bool
   val dim_of            : term -> hol_type
 
+  val mk_int_word_type  : int -> hol_type
+
   val mk_word           : num * num -> term
   val mk_wordi          : num * int -> term
   val mk_wordii         : int * int -> term
@@ -22,6 +24,7 @@ sig
   val word_L2_tm          : term
   val word_modify_tm      : term
   val word_reverse_tm     : term
+  val word_compare_tm     : term
   val nzcv_tm             : term
   val word_lt_tm          : term
   val word_le_tm          : term
@@ -37,7 +40,10 @@ sig
   val word_join_tm        : term
   val word_concat_tm      : term
   val word_div_tm         : term
+  val word_sdiv_tm        : term
   val word_mod_tm         : term
+  val word_srem_tm        : term
+  val word_smod_tm        : term
   val word_slice_tm       : term
   val word_bit_tm         : term
   val word_bits_tm        : term
@@ -83,6 +89,7 @@ sig
   val mk_word_L2          : hol_type -> term
   val mk_word_modify      : term * term -> term
   val mk_word_reverse     : term -> term
+  val mk_word_compare     : term * term -> term
   val mk_nzcv             : term * term -> term
   val mk_word_lt          : term * term -> term
   val mk_word_le          : term * term -> term
@@ -95,7 +102,10 @@ sig
   val mk_word_join        : term * term -> term
   val mk_word_concat      : term * term -> term
   val mk_word_div         : term * term -> term
+  val mk_word_sdiv        : term * term -> term
   val mk_word_mod         : term * term -> term
+  val mk_word_srem        : term * term -> term
+  val mk_word_smod        : term * term -> term
   val mk_word_log2        : term -> term
   val mk_word_msb         : term -> term
   val mk_word_lsb         : term -> term
@@ -144,6 +154,7 @@ sig
   val dest_word_L2          : term -> hol_type
   val dest_word_modify      : term -> term * term
   val dest_word_reverse     : term -> term
+  val dest_word_compare     : term -> term * term
   val dest_nzcv             : term -> term * term
   val dest_word_lt          : term -> term * term
   val dest_word_le          : term -> term * term
@@ -156,7 +167,10 @@ sig
   val dest_word_join        : term -> term * term
   val dest_word_concat      : term -> term * term
   val dest_word_div         : term -> term * term
+  val dest_word_sdiv        : term -> term * term
   val dest_word_mod         : term -> term * term
+  val dest_word_srem        : term -> term * term
+  val dest_word_smod        : term -> term * term
   val dest_word_log2        : term -> term
   val dest_word_msb         : term -> term
   val dest_word_lsb         : term -> term
@@ -205,6 +219,7 @@ sig
   val is_word_L2          : term -> bool
   val is_word_modify      : term -> bool
   val is_word_reverse     : term -> bool
+  val is_word_compare     : term -> bool
   val is_nzcv             : term -> bool
   val is_word_lt          : term -> bool
   val is_word_le          : term -> bool
@@ -216,7 +231,10 @@ sig
   val is_word_rrx         : term -> bool
   val is_word_concat      : term -> bool
   val is_word_div         : term -> bool
+  val is_word_sdiv        : term -> bool
   val is_word_mod         : term -> bool
+  val is_word_srem        : term -> bool
+  val is_word_smod        : term -> bool
   val is_word_log2        : term -> bool
   val is_word_msb         : term -> bool
   val is_word_lsb         : term -> bool

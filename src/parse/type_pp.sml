@@ -3,15 +3,14 @@ struct
 
 open Feedback Type Portable HOLgrammars type_grammar
 
-datatype mygrav
-   = Sfx of int
-   | Lfx of int * string
-   | Rfx of int * string
-   | Top
+datatype mygrav = Sfx
+                | Lfx of int * string
+                | Rfx of int * string
+                | Top
 
 datatype single_rule
    = SR
-   | IR of associativity * string
+   | IR of int * associativity * string
 
 val PP_ERR = mk_HOL_ERR "type_pp";
 
@@ -161,7 +160,7 @@ fun pp_type0 (G:grammar) backend = let
         in
           case x of
             (p, CONSTANT slist) =>
-              if Lib.mem s slist then SOME (p, SR) else recurse xs
+              if Lib.mem s slist then SOME SR else recurse xs
           | (p, BINDER slist) => recurse xs
           | (p, APPLICATION) => recurse xs
           | (p, INFIX (slist, a)) => let
@@ -169,13 +168,12 @@ fun pp_type0 (G:grammar) backend = let
             in
               case res of
                 NONE => recurse xs
-              | SOME r => SOME(p, IR(a,#parse_string r))
+              | SOME r => SOME(IR(p, a,#parse_string r))
             end
           | (p, CAST) => recurse xs
-          | (p, ARRAY_SFX) => recurse xs
         end
   in
-    recurse (rules G) : (int * single_rule) option
+    recurse (rules G) : single_rule option
   end
 
   fun lookup_tybinder s = let
@@ -184,7 +182,7 @@ fun pp_type0 (G:grammar) backend = let
         in
           case x of
             (p, BINDER slist) =>
-              if Lib.exists (Lib.mem s) slist then SOME (p, SR) else recurse xs
+              if Lib.exists (Lib.mem s) slist then SOME SR else recurse xs
           | (p, CONSTANT slist) => recurse xs
           | (p, APPLICATION) => recurse xs
           | (p, INFIX (slist, a)) => let
@@ -192,13 +190,12 @@ fun pp_type0 (G:grammar) backend = let
             in
               case res of
                 NONE => recurse xs
-              | SOME r => SOME(p, IR(a,#parse_string r))
+              | SOME r => SOME(IR(p, a,#parse_string r))
             end
           | (p, CAST) => recurse xs
-          | (p, ARRAY_SFX) => recurse xs
         end
   in
-    recurse (rules G) : (int * single_rule) option
+    recurse (rules G) : single_rule option
   end
 
   fun pr_ty binderp pps ty grav depth = let
@@ -312,11 +309,11 @@ fun pp_type0 (G:grammar) backend = let
           val _ = !pp_array_types orelse
                   raise mk_HOL_ERR "" "" "" (* will be caught below *)
           val (bty, cty) = dest_arraytype ty
-          (* ignore parenthesis requirements on sub-arguments on assumption that
-             all suffixes, including array bracketting, are tightest binders in grammar
-             and all at the same tightest level. *)
+          (* ignore parenthesis requirements on sub-arguments knowing that
+             all suffixes, including array bracketting, are tightest binders
+             in grammar and all at the same tightest level. *)
         in
-          pr_ty binderp pps bty grav (depth - 1);
+          pr_ty binderp pps bty Sfx (depth - 1);
           add_string "[";
           pr_ty binderp pps cty Top (depth - 1);
           add_string "]"
@@ -325,36 +322,36 @@ fun pp_type0 (G:grammar) backend = let
         let
           val (Tyop, Args) = type_grammar.abb_dest_type G ty
           fun tooltip () =
-                case Binarymap.peek (type_grammar.abbreviations G, Tyop) of
-                  NONE => let
-                    val {Thy,Tyop,...} = dest_thy_type ty
-                  in
+              case Binarymap.peek (type_grammar.abbreviations G, Tyop) of
+                NONE => let
+                  val {Thy,Tyop,...} = dest_thy_type ty
+                in
                     Thy ^ "$" ^ Tyop
                   end
-                | SOME (st as TYABST _) => let
-                    val st' = type_grammar.conform_structure_to_type (type_grammar.rules G) Tyop st ty
-                  in
-                    structure_to_string st'
-                  end
-                | SOME st => (* pre-HOL-Omega type structures *) let
-                    val st = valOf (Binarymap.peek (type_grammar.abbreviations G, Tyop))
-                    val numps = num_params st
-                  in
-                    if 0 < numps then let
-                        val params =
-                            if numps <= 4 then List.take(greek4, numps)
-                            else let
-                                fun tab i = str (Char.chr (Char.ord #"e" + i))
-                              in
-                                greek4 @ List.tabulate(numps - 4, tab)
-                              end
-                      in
-                        UnicodeChars.lambda ^
-                        String.concatWith " " params ^ ". " ^
-                        structure_to_string st
-                      end
-                    else structure_to_string st
-                  end
+              | SOME (st as TYABST _) => let
+                  val st' = type_grammar.conform_structure_to_type (type_grammar.rules G) Tyop st ty
+                in
+                  structure_to_string st'
+                end
+              | SOME st => (* pre-HOL-Omega type structures *) let
+                  (* val st = valOf (Binarymap.peek (type_grammar.abbreviations G, Tyop)) *) (* repeat? *)
+                  val numps = num_params st
+                in
+                  if 0 < numps then let
+                      val params =
+                          if numps <= 4 then List.take(greek4, numps)
+                          else let
+                              fun tab i = str (Char.chr (Char.ord #"e" + i))
+                            in
+                              greek4 @ List.tabulate(numps - 4, tab)
+                            end
+                    in
+                      UnicodeChars.lambda ^
+                      String.concatWith " " params ^ ". " ^
+                      structure_to_string st
+                    end
+                  else structure_to_string st
+                end
           fun print_ghastly () = let
             val {Thy,Tyop,...} = dest_thy_type ty
           in
@@ -376,16 +373,11 @@ fun pp_type0 (G:grammar) backend = let
 
             end
           | [arg1, arg2] => (let
-              val (prec, rule) = valOf (lookup_tyop Tyop)
+              val rule = valOf (lookup_tyop Tyop)
             in
               case rule of
                 SR => let
-                  val addparens =
-                      case grav of
-                        Rfx(n, _) => (n > prec)
-                      | _ => false
                 in
-                  pbegin addparens;
                   begin_block INCONSISTENT 0;
                   (* knowing that there are two args, we know that they will
                      be printed with parentheses, so the gravity we pass in
@@ -393,13 +385,12 @@ fun pp_type0 (G:grammar) backend = let
                   print_args Top Args;
                   add_break(1,0);
                   add_ann_string (Tyop, TyOp tooltip);
-                  end_block();
-                  pend addparens
+                  end_block()
                 end
-              | IR(assoc, printthis) => let
+              | IR(prec, assoc, printthis) => let
                   val parens_needed =
                       case grav of
-                        Sfx n => (n > prec)
+                        Sfx => true
                       | Lfx (n, s) => if s = printthis then assoc <> LEFT
                                       else (n >= prec)
                       | Rfx (n, s) => if s = printthis then assoc <> RIGHT
@@ -423,20 +414,18 @@ fun pp_type0 (G:grammar) backend = let
                 end
             end handle Option => print_ghastly())
           | _ => let
-              val (prec, _) = valOf (lookup_tyop Tyop)
-              val addparens =
-                  case grav of
-                    Rfx (n, _) => (n > prec)
-                  | _ => false
             in
-              pbegin addparens;
-              begin_block INCONSISTENT 0;
-              print_args (Sfx prec) Args;
-              add_break(1,0);
-              add_ann_string (Tyop, TyOp tooltip);
-              end_block();
-              pend addparens
-            end handle Option => print_ghastly()
+              case lookup_tyop Tyop of
+                NONE => print_ghastly()
+              | SOME _ => let
+                in
+                  begin_block INCONSISTENT 0;
+                  print_args Sfx Args;
+                  add_break(1,0);
+                  add_ann_string (Tyop, TyOp tooltip);
+                  end_block()
+                end
+            end
         end
      (* else let *)
         handle HOL_ERR _ => let
@@ -457,9 +446,9 @@ fun pp_type0 (G:grammar) backend = let
               val (base, args) = strip_app_type ty
             in
               begin_block INCONSISTENT 0;
-              print_args (Sfx 200) args;
+              print_args Sfx args;
               add_break(1,0);
-              pr_ty binderp pps base (Sfx 200) (depth - 1);
+              pr_ty binderp pps base Sfx (depth - 1);
               end_block ()
             end
           | TyV_Abs _ => let

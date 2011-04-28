@@ -1,6 +1,6 @@
 (* Copyright (c) 2009-2010 Tjark Weber. All rights reserved. *)
 
-(* Various theorems for HolSmtLib. *)
+(* Various theorems for HolSmtLib *)
 
 structure HolSmtScript =
 struct

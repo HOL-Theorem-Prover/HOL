@@ -1,7 +1,8 @@
 structure wordsSyntax :> wordsSyntax =
 struct
 
-open Abbrev HolKernel wordsTheory;
+open HolKernel Parse boolLib bossLib;
+open wordsTheory fcpSyntax;
 
 val ERR = mk_HOL_ERR "wordsSyntax";
 
@@ -10,20 +11,20 @@ val ERR = mk_HOL_ERR "wordsSyntax";
 (* Word types                                                                *)
 (*---------------------------------------------------------------------------*)
 
-fun mk_word_type wty =
-  Type.mk_thy_type{Tyop="cart",Thy="fcp",Args=[bool,wty]};
+fun mk_word_type wty = fcpSyntax.mk_cart_type (Type.bool, wty);
+
+val mk_int_word_type = mk_word_type o fcpSyntax.mk_int_numeric_type;
 
 fun dest_word_type ty =
-  case total dest_thy_type ty
-   of NONE => raise ERR "dest_word_type" ""
-    | SOME {Tyop="cart",Thy="fcp",Args=[b,wty]} =>
-        if bool = b then wty
-         else raise ERR "dest_word_type" "not an instance of bool ** 'a"
-    | SOME other => raise ERR "dest_word_type" "not an instance of bool ** 'a";
+let
+  val (a, b) = fcpSyntax.dest_cart_type ty
+  val _ = a = Type.bool orelse
+                raise ERR "dest_word_type" "not an instance of :bool['a]"
+in b end
 
 val is_word_type = Lib.can dest_word_type;
 
-fun dim_of tm = dest_word_type(type_of tm);
+val dim_of = dest_word_type o type_of;
 
 (*---------------------------------------------------------------------------*)
 (* Constants for word operations                                             *)
@@ -31,8 +32,8 @@ fun dim_of tm = dest_word_type(type_of tm);
 
 fun mk_word_tm s = prim_mk_const{Name = s, Thy = "words"}
 
-val fcp_index_tm        = prim_mk_const{Name = "fcp_index", Thy = "fcp"}
-val dimindex_tm         = prim_mk_const{Name = "dimindex", Thy = "fcp"}
+val fcp_index_tm        = fcpSyntax.fcp_index_tm
+val dimindex_tm         = fcpSyntax.dimindex_tm
 val dimword_tm          = mk_word_tm "dimword"
 val word_T_tm           = mk_word_tm "word_T"
 val word_L_tm           = mk_word_tm "word_L"
@@ -40,6 +41,7 @@ val word_H_tm           = mk_word_tm "word_H"
 val word_L2_tm          = mk_word_tm "word_L2"
 val word_modify_tm      = mk_word_tm "word_modify"
 val word_reverse_tm     = mk_word_tm "word_reverse"
+val word_compare_tm     = mk_word_tm "word_compare"
 val nzcv_tm             = mk_word_tm "nzcv"
 val word_lt_tm          = mk_word_tm "word_lt"
 val word_le_tm          = mk_word_tm "word_le"
@@ -55,7 +57,10 @@ val word_lsb_tm         = mk_word_tm "word_lsb"
 val word_join_tm        = mk_word_tm "word_join"
 val word_concat_tm      = mk_word_tm "word_concat"
 val word_div_tm         = mk_word_tm "word_div"
+val word_sdiv_tm        = mk_word_tm "word_sdiv"
 val word_mod_tm         = mk_word_tm "word_mod"
+val word_srem_tm        = mk_word_tm "word_srem"
+val word_smod_tm        = mk_word_tm "word_smod"
 val word_slice_tm       = mk_word_tm "word_slice"
 val word_bit_tm         = mk_word_tm "word_bit"
 val word_bits_tm        = mk_word_tm "word_bits"
@@ -98,15 +103,12 @@ val sw2sw_tm            = mk_word_tm "sw2sw"
 
 fun mk_index(w,n) =
   list_mk_comb(inst[alpha |-> bool, beta |-> dim_of w] fcp_index_tm,[w,n])
-  handle HOL_ERR _ => raise ERR "mk_index" "";
+    handle HOL_ERR _ => raise ERR "mk_index" "";
 
-fun mk_dimindex ty =
-  mk_comb(inst[alpha |-> ty] dimindex_tm,
-          inst[alpha |-> ty] boolSyntax.the_value)
-  handle HOL_ERR _ => raise ERR "mk_dimindex" "";
+val mk_dimindex = fcpSyntax.mk_dimindex;
 
 fun mk_dimword ty =
-  mk_comb(inst[alpha |-> ty] dimword_tm,inst[alpha |-> ty] boolSyntax.the_value)
+  mk_comb(inst[alpha |-> ty] dimword_tm, boolSyntax.mk_itself ty)
   handle HOL_ERR _ => raise ERR "mk_dimword" "";
 
 fun mk_word_T ty =
@@ -132,6 +134,10 @@ fun mk_word_modify(f,w) =
 fun mk_word_reverse w =
   mk_comb(inst[alpha |-> dim_of w] word_reverse_tm,w)
   handle HOL_ERR _ => raise ERR "mk_word_reverse" "";
+
+fun mk_word_compare (w1, w2) =
+  list_mk_comb (inst [alpha |-> dim_of w1] word_compare_tm, [w1, w2])
+  handle HOL_ERR _ => raise ERR "mk_word_compare" "";
 
 fun mk_nzcv(w1,w2) =
   list_mk_comb(inst[alpha|->dim_of w1]nzcv_tm,[w1,w2])
@@ -189,9 +195,21 @@ fun mk_word_div (w1, w2) =
   list_mk_comb (inst [alpha |-> dim_of w1] word_div_tm, [w1, w2])
   handle HOL_ERR _ => raise ERR "mk_word_div" "";
 
+fun mk_word_sdiv (w1, w2) =
+  list_mk_comb (inst [alpha |-> dim_of w1] word_sdiv_tm, [w1, w2])
+  handle HOL_ERR _ => raise ERR "mk_word_sdiv" "";
+
 fun mk_word_mod (w1, w2) =
   list_mk_comb (inst [alpha |-> dim_of w1] word_mod_tm, [w1, w2])
   handle HOL_ERR _ => raise ERR "mk_word_mod" "";
+
+fun mk_word_srem (w1, w2) =
+  list_mk_comb (inst [alpha |-> dim_of w1] word_srem_tm, [w1, w2])
+  handle HOL_ERR _ => raise ERR "mk_word_srem" "";
+
+fun mk_word_smod (w1, w2) =
+  list_mk_comb (inst [alpha |-> dim_of w1] word_smod_tm, [w1, w2])
+  handle HOL_ERR _ => raise ERR "mk_word_smod" "";
 
 fun mk_word_log2 w =
   mk_comb(inst[alpha|->dim_of w]word_log2_tm,w)
@@ -363,15 +381,12 @@ fun mk_bit_field_insert (h,l,w1,w2) =
 (* Destructors                                                               *)
 (*---------------------------------------------------------------------------*)
 
-val dest_index = dest_binop fcp_index_tm (ERR "dest_index" "");
+val dest_index    = fcpSyntax.dest_fcp_index;
+val dest_dimindex = fcpSyntax.dest_dimindex;
 
-val dest_dimindex =
-  hd o snd o dest_type o type_of o
-  dest_monop dimindex_tm (ERR "dest_dimindex" "");
-
-val dest_dimword =
-  hd o snd o dest_type o type_of o
-  dest_monop dimword_tm (ERR "dest_dimword" "");
+fun dest_dimword tm =
+  HolKernel.dest_monop dimword_tm (ERR "dest_dimword" "") tm
+    |> boolSyntax.dest_itself;
 
 fun dest_word_T tm =
   if same_const word_T_tm tm
@@ -398,6 +413,9 @@ val dest_word_modify =
 
 val dest_word_reverse =
   dest_monop word_reverse_tm (ERR "dest_word_reverse" "");
+
+val dest_word_compare =
+  dest_binop word_compare_tm (ERR "dest_word_compare" "");
 
 val dest_nzcv = dest_binop nzcv_tm (ERR "dest_nzcv" "");
 
@@ -434,8 +452,17 @@ val dest_word_concat =
 val dest_word_div =
   dest_binop word_div_tm (ERR "dest_word_div" "");
 
+val dest_word_sdiv =
+  dest_binop word_sdiv_tm (ERR "dest_word_sdiv" "");
+
 val dest_word_mod =
   dest_binop word_mod_tm (ERR "dest_word_mod" "");
+
+val dest_word_srem =
+  dest_binop word_srem_tm (ERR "dest_word_srem" "");
+
+val dest_word_smod =
+  dest_binop word_smod_tm (ERR "dest_word_smod" "");
 
 val dest_word_log2 =
   dest_monop word_log2_tm (ERR "dest_word_log2" "");
@@ -572,6 +599,7 @@ val is_word_H = Lib.can dest_word_H
 val is_word_L2 = Lib.can dest_word_L2;
 val is_word_modify = Lib.can dest_word_modify
 val is_word_reverse = Lib.can dest_word_reverse
+val is_word_compare = Lib.can dest_word_compare
 val is_nzcv = Lib.can dest_nzcv
 val is_word_lt = Lib.can dest_word_lt
 val is_word_le = Lib.can dest_word_le
@@ -583,7 +611,10 @@ val is_word_mul = Lib.can dest_word_mul
 val is_word_rrx = Lib.can dest_word_rrx
 val is_word_concat = Lib.can dest_word_concat
 val is_word_div = Lib.can dest_word_div
+val is_word_sdiv = Lib.can dest_word_sdiv
 val is_word_mod = Lib.can dest_word_mod
+val is_word_srem = Lib.can dest_word_srem
+val is_word_smod = Lib.can dest_word_smod
 val is_word_log2 = Lib.can dest_word_log2
 val is_word_msb = Lib.can dest_word_msb
 val is_word_lsb = Lib.can dest_word_lsb
@@ -643,4 +674,3 @@ in
 end handle HOL_ERR _ => raise ERR "dest_mod_word_literal" ""
 
 end
-

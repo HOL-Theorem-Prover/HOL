@@ -36,7 +36,7 @@ val STATE_OPTION_IGNORE_BIND_def = new_definition(
 val STATE_OPTION_LIFT_def = new_definition(
   "STATE_OPTION_LIFT_def",
   ``(STATE_OPTION_LIFT : 'b option -> ('a,'b) monad) m s =
-    OPTION_BIND m (λa. SOME (a,s))``);
+    OPTION_BIND m (\a. SOME (a,s))``);
 
 (* Commands to make the above look nice with monadsyntax in place.
 val _ = overload_on("monad_bind", ``STATE_OPTION_BIND o STATE_OPTION_LIFT``);

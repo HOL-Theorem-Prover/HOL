@@ -2,35 +2,53 @@ open HolKernel Parse boolLib bossLib blastLib;
 
 val _ = set_trace "Unicode" 0
 
+val prs = StringCvt.padRight #" "
 fun trunc w t = let
   val s = Lib.with_flag (Globals.linewidth, 10000) term_to_string t
 in
   if size s >= w then String.extract (s, 0, SOME (w - 5)) ^ " ... "
-  else StringCvt.padRight #" " w s
+  else prs w s
 end
 
 fun die() = OS.Process.exit OS.Process.failure
-fun test c tm = let
+
+val _ = print (prs 65 "Parsing :bool[32] list")
+val ty1 = listSyntax.mk_list_type (wordsSyntax.mk_int_word_type 32)
+val ty2 = Parse.Type`:bool[32] list` handle HOL_ERR _ => alpha
+val _ = if Type.compare(ty1,ty2) = EQUAL then print "OK\n"
+        else (print "FAILED!\n"; die())
+
+val _ = print (prs 65 "Parsing :('a + 'b)[32]")
+val ty1 = fcpSyntax.mk_cart_type
+            (sumSyntax.mk_sum(alpha,beta),
+             fcpSyntax.mk_int_numeric_type 32);
+val ty2 = Parse.Type`:('a + 'b)[32]`
+val _ = if Type.compare(ty1,ty2) = EQUAL then print "OK\n"
+        else (print "FAILED\n"; die())
+
+val _ = print (prs 65 "Printing :('a + 'b)[32]")
+val _ = if type_to_string ty2 = ":('a + 'b)[32]" then print "OK\n"
+        else (print "FAILED\n"; die())
+
+
+fun test (c:conv) tm = let
   val rt = Timer.startRealTimer ()
-  val res = SOME (c tm) handle HOL_ERR _ => NONE
+  val res = Lib.total c tm
   val elapsed = Timer.checkRealTimer rt
-  val res' = SOME (Option.map Drule.EQT_ELIM res)
-             handle HOL_ERR _ => NONE
 in
   TextIO.print (trunc 65 tm ^ Time.toString elapsed ^
-                (case res' of
+                (case res of
                    NONE => "FAILED!"
-                 | SOME NONE => "FAILED!"
                  | _ => "") ^ "\n");
-  case res' of NONE => die() | SOME NONE => die() | _ => ()
+  case res of NONE => die() | _ => ()
 end
 
-val raw_blast_true = test blastLib.BIT_BLAST_CONV
-val blast_true = test blastLib.BBLAST_CONV
-val srw_true = test (simpLib.SIMP_CONV (srw_ss()) [])
+val raw_blast_true = test (Drule.EQT_ELIM o blastLib.BIT_BLAST_CONV)
+val blast_true = test blastLib.BBLAST_PROVE
+val srw_true = test (simpLib.SIMP_PROVE (srw_ss()) [])
 
 (* start tests *)
-
+val _ = print "blastLib tests\n"
 val _ = raw_blast_true
   ``(a + b - b : word8) = a``;
 

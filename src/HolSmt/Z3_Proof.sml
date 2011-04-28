@@ -26,10 +26,10 @@ struct
 
      To add another inference rule, one must 1. add a corresponding
      'proofterm' datatype constructor below; 2. modify
-     Z3_ProofParser.sml (in particular, the 'rule_parsers' table) so
-     that the parser recognizes the new rule's concrete syntax;
-     3. modify Z3_ProofReplay.sml so that 'check_proof' knows how to
-     validate inferences performed by the new rule. *)
+     Z3_ProofParser.sml so that the parser recognizes the new rule's
+     concrete syntax; 3. modify Z3_ProofReplay.sml so that
+     'check_proof' knows how to validate inferences performed by the
+     new rule. *)
 
   datatype proofterm = AND_ELIM of proofterm * Term.term
                      | ASSERTED of Term.term

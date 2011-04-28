@@ -26,6 +26,7 @@ sig
     val decompiler_finalise : (thm * thm -> thm * thm) ref
 
     val add_decompiled      : string * thm * int * int option -> unit
+    val get_decompiled      : string -> thm * int * int option
 
     val add_code_abbrev     : thm list -> unit
     val set_abbreviate_code : bool -> unit

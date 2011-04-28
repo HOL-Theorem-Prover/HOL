@@ -271,12 +271,13 @@ end
   fun n_appls_l ([], t) = raise Fail "parse_type.n_appls_l: can't happen"
     | n_appls_l (op1::ops, xs) = n_appls (ops, apply_tyop op1 xs)
 
-  fun n_array_sfxs locn (sfxs, ty) = let
-    fun build (sfx, base) =
-        qtyop{Thy = "fcp", Tyop = "cart",Locn=locn,Args = [base, sfx]}
-  in
-    List.foldl build ty sfxs
-  end
+  fun apply_asfx locn (base,index) =
+      qtyop{Thy = "fcp", Tyop = "cart",Locn=locn,Args = [base, index]}
+
+  fun mk_asfx locn index =
+      let val cart = qtyop{Thy = "fcp", Tyop = "cart",Locn=locn,Args = []}
+      in get_abbrev [cart,index] (TypeIdent "C",locn)
+      end
 
   fun parse_abbrev args fb = let
     val (adv, (t,locn)) = typetok_of fb
@@ -405,6 +406,14 @@ end
     | AQ x => (adv(); [pAQ x])
     | QTypeIdent (s0,s) => [try_const_tyop(t,locn)]
     | TypeIdent s => [try_const_tyop(t,locn)]
+    | LBracket => [mk_asfx locn (parse_asfx prse fb)]
+(*
+    | LBracket => let val index = parse_asfx prse fb
+                      val (a_nm,_) = Type.dest_var_type (Type.gen_var_type (Kind.typ Rank.rho))
+                      val a = pVartype ((a_nm, Prekind.typ Prerank.Zerorank), locn)
+                  in [pAbstType(a, apply_asfx locn (a,index))]
+                  end
+*)
     | _ => raise InternalFailure locn
   end
 
@@ -459,15 +468,71 @@ end
     ((t,locn),alphas)
   end
 
+(*
+  val {suffixes,infixes = rules} = G
+
+  datatype ('op,'array) OPARRAY = NormalSfx of 'op
+                                | ArraySfx of 'array * locn.locn
+  fun parse_oparray p strm = let
+    val (adv, (t,locn)) = typetok_of strm
+  in
+    case t of
+      LBracket => ArraySfx (parse_asfx p strm, locn)
+    | _ => NormalSfx (parse_op suffixes strm)
+  end
+  fun apply_oparrays ops base =
+      case ops of
+        [] => base
+      | NormalSfx sfx :: rest => apply_oparrays rest (apply_tyop sfx [base])
+      | ArraySfx (index,l) :: rest =>
+          apply_oparrays rest (apply_asfx l (base, index))
+
+  fun tuple_oparrays first rest tuple =
+      case first of
+        ArraySfx (i,l) => let
+        in
+          if length tuple <> 1 then
+            raise ERRloc l "array type can't take tuple as first argument"
+          else
+            apply_oparrays rest (apply_asfx l (hd tuple, i))
+        end
+      | NormalSfx s => apply_oparrays rest (apply_tyop s tuple)
+
+  fun parse_atomsuffixes p strm = let
+  in
+    case totalify (parse_tuple p) strm of
+      NONE => let
+        val ty1 = let
+          val op1 = parse_op suffixes strm
+        in
+          apply_tyop op1 []
+        end handle InternalFailure l => parse_atom strm
+        val ops = many (parse_oparray p) strm
+      in
+        apply_oparrays ops ty1
+      end
+    | SOME (tyl,locn) => let
+      in
+        case (many (parse_oparray p) strm) of
+          [] => if length tyl <> 1 then
+                  raise ERRloc locn "tuple with no suffix"
+                else
+                  hd tyl
+        | h::t => tuple_oparrays h t tyl
+      end
+  end
+*)
+
+
   fun parse_term current strm =
       case current of
         [] => parse_atom (parse_term G) strm
       | (r::rs) => parse_rule r rs strm
-  and parse_rule (r as (level, rule)) rs strm = let
+  and parse_rule (rule as (_, r)) rs strm = let
     val next_level = parse_term rs
-    val same_level = parse_rule r rs
+    val same_level = parse_rule rule rs
   in
-    case rule of
+    case r of
       INFIX (stlist, NONASSOC) => let
         val (adv, (t,llocn)) = typetok_of strm
         val ty1 = next_level strm
@@ -512,15 +577,6 @@ end
                       end
           | NONE => next_level strm
       end
-    | ARRAY_SFX => let
-        val llocn = #2 (current strm)
-        val ty1 = next_level strm
-      in
-        if length ty1 <> 1 then ty1
-        else let val asfxs = many (parse_asfx (parse_term G)) strm
-             in [n_array_sfxs llocn (asfxs, one llocn ty1)]
-             end
-      end
     | CAST => let
         val _ = if is_debug() then print ">> CAST\n" else ()
         val ty1 = next_level strm
@@ -562,14 +618,17 @@ end
                  val ts = type_tokens.token_string t
                  val _ = if is_debug() then print ("  APPLICATION looking for operator;\n") else ()
              in
-               if not (is_left_token t) then
-                 (if is_debug() then print "  APPLICATION returns, no operator found.\n" else ();
-                  acc)
-               else
-                 let val ty2 = next_level strm
-                 in if is_debug() then print "  APPLICATION found operator!\n" else ();
-                    recurse [apply_tyop (one locn1 ty2, locn1) acc]
-                 end
+               case t of
+                 LBracket => recurse [ apply_asfx locn1 (one locn1 acc, parse_asfx (parse_term G) strm) ]
+               | _ =>
+                 if not (is_left_token t) then
+                   (if is_debug() then print "  APPLICATION returns, no operator found.\n" else ();
+                    acc)
+                 else
+                   let val ty2 = next_level strm
+                   in if is_debug() then print "  APPLICATION found operator!\n" else ();
+                      recurse [apply_tyop (one locn1 ty2, locn1) acc]
+                   end
 (*
                case totalify next_level strm of
                  NONE => (if not (is_debug()) then () else

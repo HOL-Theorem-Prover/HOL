@@ -14,8 +14,6 @@ struct
 
 open HolKernel Parse boolLib folTools folMapping;
 
-infix THEN ORELSE THENC;
-
 (* ------------------------------------------------------------------------- *)
 (* Chatting and error handling.                                              *)
 (* ------------------------------------------------------------------------- *)

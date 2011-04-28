@@ -3353,6 +3353,16 @@ val INT_DIVIDES_REDUCE = store_thm(
   SIMP_TAC bool_ss [NUMERAL_DEF, BIT1, BIT2, ADD_CLAUSES, SUC_NOT] THEN
   PROVE_TAC [INT_MOD0]);
 
+(*---------------------------------------------------------------------------*)
+(* LEAST integer satisfying a predicate (may be undefined).                  *)
+(*---------------------------------------------------------------------------*)
+
+val LEAST_INT_DEF = new_definition ("LEAST_INT_DEF",
+  ``LEAST_INT P = @i. P i /\ !j. j < i ==> ~P j``)
+
+val _ = set_fixity "LEAST_INT" Binder
+
+(*---------------------------------------------------------------------------*)
 
 val _ = BasicProvers.export_rewrites
         ["INT_ADD_LID_UNIQ", "INT_ADD_LINV",

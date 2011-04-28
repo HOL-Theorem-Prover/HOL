@@ -96,6 +96,8 @@ src/finite_map
 !!examples/decidable_separationLogic/src/
 src/bag
 src/n-bit
+examples/HolOmega
+examples/HolOmega/interim
 !examples/ARM/arm6-verification
 !!examples/ARM/arm6-verification/correctness
 src/ring/src
@@ -122,8 +124,6 @@ src/HolSmt
 [mosml]!examples/HolBdd
 [mosml]!!examples/HolCheck
 src/datatype/inftree
-examples/HolOmega
-examples/HolOmega/interim
 !examples/lambda/basics
 !examples/lambda/barendregt
 !examples/computability

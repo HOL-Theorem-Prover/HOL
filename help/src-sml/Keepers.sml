@@ -84,6 +84,7 @@ val keepers =
      "wordsTheory.sig",
      "wordsSyntax.sig",
      "fcpLib.sig",
+     "fcpSyntax.sig",
      "wordsLib.sig",
      "blastLib.sig",
 

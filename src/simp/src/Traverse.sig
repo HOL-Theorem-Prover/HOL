@@ -66,7 +66,7 @@ sig
          apply: {solver:term list -> term -> thm,
                  context: context,
                  stack:term list,
-                 relation : Travrules.preorder} -> conv
+                 relation : (term * (term -> thm))} -> conv
        }
 
   val dest_reducer : reducer ->
@@ -76,7 +76,7 @@ sig
          apply: {solver:term list -> term -> thm,
                  context: context,
                  stack:term list,
-         relation : Travrules.preorder} -> conv}
+                 relation : (term * (term -> thm))} -> conv}
 
   val addctxt : thm list -> reducer -> reducer
 
@@ -102,7 +102,7 @@ sig
      equality (--`$=`--).  However traversal can also be used with
      other congruences and preorders.
 
-     The behavious of TRAVERSE depends almost totally on what
+     The behaviour of TRAVERSE depends almost totally on what
      is contained in the input travrules.
 
      The theorem list is a set of theorems to add initially as context

@@ -51,6 +51,7 @@ sig
   val mk_bool_case           : term * term * term -> term
   val mk_literal_case        : term * term -> term
   val mk_arb                 : hol_type -> term
+  val mk_itself              : hol_type -> term
   val mk_res_forall          : term * term * term -> term
   val mk_res_exists          : term * term * term -> term
   val mk_res_exists_unique   : term * term * term -> term
@@ -83,6 +84,7 @@ sig
   val dest_bool_case         : term -> term * term * term
   val dest_literal_case      : term -> term * term
   val dest_arb               : term -> hol_type
+  val dest_itself            : term -> hol_type
   val dest_res_forall        : term -> term * term * term
   val dest_res_exists        : term -> term * term * term
   val dest_res_exists_unique : term -> term * term * term

@@ -9,60 +9,13 @@
 structure fcpLib :> fcpLib =
 struct
 
-(* interactive use:
-  app load ["fcpTheory"];
-*)
-
-open HolKernel Parse boolLib bossLib;
-open Q computeLib fcpTheory;
+open HolKernel Parse boolLib bossLib
+open computeLib fcpTheory fcpSyntax;
 
 (* ------------------------------------------------------------------------- *)
 
-fun index_type n =
-  let open Arbnum in
-    if mod2 n = zero then
-      if n = zero then
-        raise ERR "mk_index" "index size must be non-zero"
-      else
-        mk_type("bit0", [index_type (div2 n)])
-    else
-      if n = one then
-        mk_type("one", [])
-      else
-        mk_type("bit1", [index_type (div2 (less1 n))])
-  end;
-
-local
-  fun index2num typ =
-  case dest_type typ of
-    ("one", []) => SOME Arbnum.one
-  | ("bool",[]) => SOME Arbnum.two
-  | ("num", []) => NONE
-  | ("int", []) => NONE
-  | ("string", []) => NONE
-  | ("list", [t]) => NONE
-  | ("bit0", [t]) => (case index2num t of
-                        SOME x => SOME (Arbnum.times2 x)
-                      | _ => NONE)
-  | ("bit1", [t]) => (case index2num t of
-                        SOME x => SOME (Arbnum.plus1 (Arbnum.times2 x))
-                      | _ => NONE)
-  | ("sum",  [t,p]) => (case (index2num t, index2num p) of
-                          (SOME x, SOME y) => SOME (Arbnum.+(x, y))
-                        | _ => NONE)
-  | ("prod", [t,p]) => (case (index2num t, index2num p) of
-                          (SOME x, SOME y) => SOME (Arbnum.*(x, y))
-                        | _ => NONE)
-  | ("fun",  [t,p]) => (case (index2num p, index2num t) of
-                          (SOME x, SOME y) => SOME (Arbnum.pow(x, y))
-                        | _ => NONE)
-  | ("cart", [t,p]) => (case (index2num t, index2num p) of
-                          (SOME x, SOME y) => SOME (Arbnum.pow(x, y))
-                        | _ => NONE)
-  | _ => failwith ("Can't compute size of type " ^ type_to_string typ);
-in
-  fun index_to_num typ = case index2num typ of SOME x => x | NONE => Arbnum.one
-end;
+val index_type   = fcpSyntax.mk_numeric_type;
+val index_to_num = fcpSyntax.dest_numeric_type;
 
 fun index_compset () =
   let val compset = reduceLib.num_compset()
@@ -74,19 +27,28 @@ in
   compset
 end;
 
-val INDEX_CONV = CHANGED_CONV (CBV_CONV (index_compset()));
+val INDEX_CONV = Conv.CHANGED_CONV (computeLib.CBV_CONV (index_compset()));
 
-fun conv n = INDEX_CONV o inst [alpha |-> index_type n];
+local
+  fun conv n = INDEX_CONV o Term.inst [Type.alpha |-> index_type n];
+in
+  fun DIMINDEX n = conv n (fcpSyntax.mk_dimindex Type.alpha);
 
-fun DIMINDEX n = conv n ``dimindex(:'a)``;
+  fun FINITE n =
+    pred_setSyntax.mk_univ Type.alpha
+      |> pred_setSyntax.mk_finite
+      |> conv n
+      |> Drule.EQT_ELIM
+end
 
-fun FINITE n = (EQT_ELIM o conv n) ``FINITE(UNIV:'a->bool)``;
+fun SIZE n =
+  PURE_REWRITE_RULE [DIMINDEX n]
+    (Thm.MP
+       (Thm.INST_TYPE [Type.alpha |-> index_type n] fcpTheory.card_dimindex)
+       (FINITE n));
 
-fun SIZE n = PURE_REWRITE_RULE [DIMINDEX n]
-               (MP (Thm.INST_TYPE [alpha |-> index_type n] card_dimindex)
-                   (FINITE n));
-
-val FCP_ss = rewrites [FCP_BETA,FCP_ETA,CART_EQ];
+val FCP_ss =
+  simpLib.rewrites [fcpTheory.FCP_BETA, fcpTheory.FCP_ETA, fcpTheory.CART_EQ];
 
 val notify_on_length_guess = ref true;
 

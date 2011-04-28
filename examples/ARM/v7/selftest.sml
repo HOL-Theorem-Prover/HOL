@@ -24,6 +24,16 @@ in
   case res of NONE => die() | _ => ()
 end
 
+fun time_to_minutes e =
+let
+  val s = Time.toSeconds e
+  val minutes = Int.quot (s, 60);
+  val seconds = Int.rem (s, 60);
+in
+  Int.toString minutes ^ "m " ^
+  StringCvt.padLeft #"0" 2 (Int.toString seconds) ^ "s"
+end;
+
 local
   val updates_compare = Lib.pair_compare (Term.compare, Term.compare)
   val updates_empty = Redblackset.empty updates_compare
@@ -103,6 +113,8 @@ val mem = mk_var ("mem", ``:word32 -> word8``);
 
 val _ = print "Starting tests ... \n\n";
 
+val tt = Timer.startRealTimer ()
+
 (* start tests *)
 
 val _ = test "print_arm_assemble_from_quote" (print_arm_assemble_from_quote "0")
@@ -154,10 +166,27 @@ val _ = test "print_arm_assemble_from_quote" (print_arm_assemble_from_quote "0")
         ble     .label
         `;
 
+(*
 val go = step "v4";
-
+*)
 val _ = test "validate_arm_step" (fn l => List.map (validate_arm_step "v4") l)
-  [("TST r5, #3",
+  [("ldm r1!,{r1,r2}",
+    [(r1, ``ARB:word32``),
+     (r15, ``^r15 + 4w``),
+     (r2, ``^mem (r1 + 7w) @@ mem (r1 + 6w) @@
+             mem (r1 + 5w) @@ mem (r1 + 4w)``)]),
+   ("stm r1!,{r0,r1}",
+    [(``^mem (r1 + 7w)``, ``ARB:word8``),
+     (``^mem (r1 + 6w)``, ``ARB:word8``),
+     (``^mem (r1 + 5w)``, ``ARB:word8``),
+     (``^mem (r1 + 4w)``, ``ARB:word8``),
+     (``^mem (r1 + 3w)``, ``(31 >< 24) ^r0``),
+     (``^mem (r1 + 2w)``, ``(23 >< 16) ^r0``),
+     (``^mem (r1 + 1w)``, ``(15 >< 8) ^r0``),
+     (``^mem r1``, ``(7 >< 0) ^r0``),
+     (r1, ``^r1 + 8w``),
+     (r15, ``^r15 + 4w``)]),
+   ("TST r5, #3",
     [(psrN, ``word_msb (^r5 && 3w)``),
      (psrZ, ``(^r5) && 3w = 0w``),
      (r15, ``^r15 + 4w``)]),
@@ -365,8 +394,9 @@ val _ = test "validate_arm_step" (fn l => List.map (validate_arm_step "v4") l)
      (r15, ``^r15 + 4w``)])
   ];
 
+(*
 val go = step "v4,sys";
-
+*)
 val _ = test "validate_arm_step"
         (fn l => List.map (validate_arm_step "v4,sys") l)
   [("MSR CPSR, r1",
@@ -658,5 +688,9 @@ val _ = test "arm_steps_from_quote ThumbEE" (arm_steps_from_quote "v7-R,thumb")`
         udiv    r1,r2,r3
         enterx
         `;
+
+val elapsed = Timer.checkRealTimer tt;
+
+val _ = print ("\nTotal time: " ^ time_to_minutes elapsed ^ "\n");
 
 val _ = OS.Process.exit OS.Process.success;

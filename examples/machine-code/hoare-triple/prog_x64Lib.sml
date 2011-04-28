@@ -5,7 +5,7 @@ open HolKernel boolLib bossLib;
 open wordsLib stringLib addressTheory pred_setTheory combinTheory;
 open set_sepTheory x64_Theory x64_Lib helperLib;
 open x64_seq_monadTheory x64_coretypesTheory x64_astTheory x64_icacheTheory;
-open prog_x64Theory wordsTheory;
+open prog_x64Theory wordsTheory x64_encodeLib;
 
 infix \\
 val op \\ = op THEN;
@@ -313,7 +313,7 @@ fun post_process_thm th = let
   val th = SIMP_RULE std_ss [wordsTheory.WORD_EQ_SUB_ZERO,w2w_eq_n2w,w2w_CLAUSES] th
   val th = th |> SIMP_RULE (std_ss++wordsLib.SIZES_ss) [WORD_w2w_OVER_BITWISE,
                    WORD_w2w_n2w_OVER_BITWISE,w2w_OVER_ARITH,w2w_OVER_ARITH_n2w]
-              |> SIMP_RULE (std_ss++wordsLib.SIZES_ss) [w2w_w2w,w2w_id,
+              |> SIMP_RULE (std_ss++wordsLib.SIZES_ss) [w2w_w2w,w2w_id,w2n_n2w,
                    WORD_ALL_BITS,WORD_BITS_BITS_ZERO,WORD_BITS_NOT_BITS_ZERO]
   in calculate_length_and_jump th end;
 
@@ -418,8 +418,6 @@ val x64_tools = (x64_spec, x64_jump, x64_status, x64_pc)
 val x64_tools_no_status = (x64_spec, x64_jump, TRUTH, x64_pc);
 
 (*
-
-  open x64_encodeLib;
 
   val th = x64_spec (x64_encode "add r0,5");
   val th = x64_spec (x64_encode "inc r11");

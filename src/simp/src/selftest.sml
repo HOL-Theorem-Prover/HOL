@@ -135,11 +135,23 @@ in
       t
 end
 
+(* test that congruence rule for conditional expressions is working OK *)
+val (test9_flag,_) = let
+  open boolSimps
+  val t = ``if a then f a:'a else g a``
+  val result = ``if a then f T:'a else g F``
+  fun doit t = QCONV (SIMP_CONV bool_ss []) t
+  fun check th = aconv (rhs (concl th)) result
+in
+  infloop_protect "Congruence for conditional expressions" check doit t
+end
+
 (* ---------------------------------------------------------------------- *)
 
 val _ = Process.exit
           (if List.all I [test1_flag, test2_flag, test3_flag, test4_flag,
-                          test5_flag, test6_flag, test7_flag, test8_flag]
+                          test5_flag, test6_flag, test7_flag, test8_flag,
+                          test9_flag]
            then
              Process.success
            else

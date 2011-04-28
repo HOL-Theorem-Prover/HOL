@@ -34,6 +34,11 @@ val _ = temp_overload_on ("return", ``constT``);
 val _ = overload_on("UInt", ``\w. int_of_num (w2n w)``);
 val _ = overload_on("SInt", ``w2i``);
 
+val _ = overload_on("UNKNOWN", ``ARB:bool``);
+val _ = overload_on("UNKNOWN", ``ARB:word32``);
+val _ = overload_on("BITS16_UNKNOWN", ``[ARB;ARB] : word8 list``);
+val _ = overload_on("BITS32_UNKNOWN", ``[ARB;ARB;ARB;ARB] : word8 list``);
+
 val _ = app temp_overload_on
   [("unit2", ``\(u1:unit,u2:unit). constT ()``),
    ("unit3", ``\(u1:unit,u2:unit,u3:unit). constT ()``),
@@ -1340,7 +1345,7 @@ val multiply_instr_def = iDefine`
              write_reg ii d result |||
              condT setflags (read_flags ii >>=
              (\(N,Z,C,V).
-                let C_flag = if version = 4 then ARB else C in
+                let C_flag = if version = 4 then UNKNOWN else C in
                   write_flags ii (word_msb result,result = 0w,C_flag,V)))) >>=
             unit3)))`;
 
@@ -1380,7 +1385,8 @@ val multiply_long_instr_def = iDefine`
               write_reg ii dlo (( 31 >< 0  ) result) |||
               condT setflags (read_flags ii >>=
               (\(N,Z,C,V).
-                let (C_flag,V_flag) = if version = 4 then (ARB,ARB) else (C,V)
+                let (C_flag,V_flag) = if version = 4 then (UNKNOWN,UNKNOWN)
+                                                     else (C,V)
                 in
                   write_flags ii
                     (word_msb result,result = 0w,C_flag,V_flag)))) >>=
@@ -2295,14 +2301,14 @@ val store_instr_def = iDefine`
                   (\has_unaligned_support.
                      let data = if has_unaligned_support \/ aligned(address,4)
                                   then bytes(data,4)
-                                  else ARB
+                                  else BITS32_UNKNOWN
                      in
                        (if unpriv then
                           write_memU_unpriv ii (address,4) data
                         else
                           write_memU ii (address,4) data))) |||
-               (condT wback (write_reg ii n offset_addr)) |||
-               (increment_pc ii enc)) >>=
+               increment_pc ii enc |||
+               condT wback (write_reg ii n offset_addr)) >>=
                unit3)))`;
 
 (* ........................................................................
@@ -2367,8 +2373,8 @@ val load_halfword_instr_def = iDefine`
          (\base.
             address_mode3 ii indx add base mode3 >>=
             (\(offset_addr,address).
-             (condT wback (write_reg ii n offset_addr) |||
-               increment_pc ii enc |||
+             (increment_pc ii enc |||
+              condT wback (write_reg ii n offset_addr) |||
               (if half then
                 (if unpriv then
                    read_memU_unpriv ii (address,2)
@@ -2383,7 +2389,7 @@ val load_halfword_instr_def = iDefine`
                        else
                          write_reg ii t (zero_extend32 data)
                      else
-                       write_reg ii t ARB)))
+                       write_reg ii t UNKNOWN)))
                else
                  (if unpriv then
                    read_memU_unpriv ii (address,1)
@@ -2436,14 +2442,14 @@ val store_halfword_instr_def = iDefine`
                (\has_unaligned_support.
                    let data = if has_unaligned_support \/ aligned(address,2)
                                 then bytes(rt,2)
-                                else ARB
+                                else BITS16_UNKNOWN
                    in
                      (if unpriv then
                         write_memU_unpriv ii (address,2) data
                       else
                         write_memU ii (address,2) data))) |||
-               condT wback (write_reg ii n offset_addr) |||
-               increment_pc ii enc) >>=
+               increment_pc ii enc |||
+               condT wback (write_reg ii n offset_addr)) >>=
                unit3)))`;
 
 (* ........................................................................
@@ -2514,7 +2520,7 @@ val load_multiple_instr_def = iDefine`
                    else
                      write_reg ii n (base - length)
                  else
-                   write_reg ii n ARB)) >>=
+                   write_reg ii n UNKNOWN)) >>=
                 unit2)))`;
 
 (* ........................................................................
@@ -2562,7 +2568,7 @@ val store_multiple_instr_def = iDefine`
               forT 0 14
                 (\i. condT (registers ' i)
                        (if (i = w2n n) /\ wback /\ (i <> lowest) then
-                          write_memA ii (address i,4) ARB
+                          write_memA ii (address i,4) BITS32_UNKNOWN
                         else
                           read_reg_mode ii (n2w i,mode) >>=
                           (\d. write_memA ii (address i,4) (bytes(d,4))))) >>=
@@ -2611,8 +2617,8 @@ val load_dual_instr_def = iDefine`
          (\base.
            address_mode3 ii indx add base mode3 >>=
            (\(offset_addr,address).
-            (condT wback (write_reg ii n offset_addr) |||
-             increment_pc ii enc |||
+            (increment_pc ii enc |||
+             condT wback (write_reg ii n offset_addr) |||
              read_memA ii (address,4) >>=
              (\data. write_reg ii t (word32 data)) |||
              read_memA ii (address + 4w,4) >>=
@@ -2649,8 +2655,8 @@ val store_dual_instr_def = iDefine`
          (\(base,rt,rt2).
            address_mode3 ii indx add base mode3 >>=
            (\(offset_addr,address).
-            (condT wback (write_reg ii n offset_addr) |||
-             increment_pc ii enc |||
+            (increment_pc ii enc |||
+             condT wback (write_reg ii n offset_addr) |||
              write_memA ii (address,4) (bytes(rt,4)) |||
              write_memA ii (address + 4w,4) (bytes(rt2,4))) >>=
              unit4)))`;
@@ -2973,7 +2979,8 @@ val status_to_register_instr_def = iDefine`
     instruction ii "status_to_register"
       (if enc = Encoding_Thumb2 then ARCH thumb2_support else ALL)
       (\v. if enc = Encoding_Thumb2 then BadReg d else (d = 15w))
-      (((if readspsr then
+      ((increment_pc ii enc |||
+        (if readspsr then
           current_mode_is_user_or_system ii >>=
           (\is_user_or_system_mode.
              if is_user_or_system_mode then
@@ -2982,8 +2989,7 @@ val status_to_register_instr_def = iDefine`
                read_spsr ii >>= (\spsr. write_reg ii d (encode_psr spsr)))
          else
            read_cpsr ii >>= (\cpsr. write_reg ii d
-             (encode_psr cpsr && 0b11111000_11111111_00000011_11011111w))) |||
-        increment_pc ii enc) >>=
+             (encode_psr cpsr && 0b11111000_11111111_00000011_11011111w)))) >>=
         unit2)`;
 
 (* ........................................................................
@@ -3038,7 +3044,9 @@ val change_processor_state_instr_def = iDefine`
     (Change_Processor_State imod affectA affectI affectF mode) =
     instruction ii "change_processor_state"
       (ARCH2 enc {a | version_number a >= 6})
-      (\v. ((imod = 0b00w) /\ IS_NONE mode) \/ (imod = 0b01w))
+      (\v. ((imod = 0b00w) /\ IS_NONE mode) \/
+           (imod ' 1 <=> ~affectA /\ ~affectI /\ ~affectF) \/
+           (imod = 0b01w))
       (current_mode_is_priviledged ii >>=
        (\current_mode_is_priviledged.
           if current_mode_is_priviledged then
@@ -3700,7 +3708,7 @@ val arm_instr_def = with_flag (priming, SOME "_") Define`
          || Undefined ->
               take_undef_instr_exception ii
          || _ ->
-              errorT "arm_instr: unpredictable or not implemented"
+              errorT "decode: unpredictable"
        else
          increment_pc ii enc)) >>=
     (\u:unit.
