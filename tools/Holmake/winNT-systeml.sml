@@ -75,7 +75,7 @@ fun fullPath slist =
         valOf (get_first checkdir pathdirs)
       end
     else
-      Path.mkAbsolute (myname,FileSys.getDir())
+      Path.mkAbsolute {path = myname, relativeTo = FileSys.getDir()}
   end
 
 

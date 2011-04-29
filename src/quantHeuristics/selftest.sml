@@ -19,7 +19,7 @@ let
              let
                 val thm_t = concl (valOf thm_opt);
              in
-                is_eq thm_t andalso (lhs thm_t = t) andalso (rhs thm_t = valOf r_opt)
+                is_eq thm_t andalso (Term.term_eq (lhs thm_t) t) andalso (aconv (rhs thm_t) (valOf r_opt))
              end
     val quiet = quiet andalso ok
     val _ = if ok then
@@ -48,15 +48,8 @@ in
     ()
 end;
 
-
-val hard_fail = false;
-val quiet = false;
-
-
-(*
 val hard_fail = true;
 val quiet = false;
-*)
 
 (******************************************************************************)
 (* General tests                                                              *)
@@ -232,7 +225,6 @@ val qh_testCases_list =
    (``?x. PP ==> ~(x = []) /\ P x``, 
     SOME ``?x_t:'a list x_h. PP ==> P (x_h::x_t)``)];
 val _ = map (qh_test_list hard_fail quiet) qh_testCases_list;
-
 
 
 (******************************************************************************)

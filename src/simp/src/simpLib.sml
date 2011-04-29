@@ -11,7 +11,7 @@
 structure simpLib :> simpLib =
 struct
 
-infix |> oo;
+infix oo;
 
 open HolKernel boolLib liteLib Trace Cond_rewr Travrules Traverse Ho_Net
 
@@ -68,7 +68,7 @@ end
 (* Composable simpset fragments                                              *)
 (*---------------------------------------------------------------------------*)
 
-datatype ssfrag = SSFRAG of
+datatype ssfrag = SSFRAG_CON of
    {name   : string option,
     convs  : convdata list,
     rewrs  : thm list,
@@ -77,32 +77,37 @@ datatype ssfrag = SSFRAG of
     dprocs : Traverse.reducer list,
     congs  : thm list};
 
+fun SSFRAG {name,convs,rewrs,ac,filter,dprocs,congs} =
+  SSFRAG_CON {name = name, convs = convs, rewrs = rewrs, ac = ac,
+              filter = filter, dprocs = dprocs, congs = congs}
+
 (*---------------------------------------------------------------------------*)
-(* Operation on ssdata values                                                *)
+(* Operation on ssfrag values                                                *)
 (*---------------------------------------------------------------------------*)
 
-fun name_ss s (SSFRAG {convs,rewrs,filter,ac,dprocs,congs,...}) =
-  SSFRAG {name=SOME s,
-          convs=convs,rewrs=rewrs,filter=filter,
-          ac=ac,dprocs=dprocs,congs=congs};
+fun name_ss s (SSFRAG_CON {convs,rewrs,filter,ac,dprocs,congs,...}) =
+  SSFRAG_CON {name=SOME s, convs=convs,rewrs=rewrs,filter=filter,
+              ac=ac,dprocs=dprocs,congs=congs};
 
 fun rewrites rewrs =
-   SSFRAG {name=NONE,
+   SSFRAG_CON {name=NONE,
            convs=[],rewrs=rewrs,filter=NONE,ac=[],dprocs=[],congs=[]};
 
 fun dproc_ss dproc =
-   SSFRAG {name=NONE,
+   SSFRAG_CON {name=NONE,
            convs=[],rewrs=[],filter=NONE,ac=[],dprocs=[dproc],congs=[]};
 
 fun ac_ss aclist =
-   SSFRAG {name=NONE,
+   SSFRAG_CON {name=NONE,
            convs=[],rewrs=[],filter=NONE,ac=aclist,dprocs=[],congs=[]};
 
 fun conv_ss conv =
-   SSFRAG {name=NONE,
+   SSFRAG_CON {name=NONE,
            convs=[conv],rewrs=[],filter=NONE,ac=[],dprocs=[],congs=[]};
 
-fun D (SSFRAG s) = s;
+fun D (SSFRAG_CON s) = s;
+fun frag_rewrites ssf = #rewrs (D ssf)
+
 
 fun merge_names list =
   itlist (fn (SOME x) =>
@@ -118,14 +123,15 @@ fun merge_names list =
 (*---------------------------------------------------------------------------*)
 
 fun merge_ss (s:ssfrag list) =
-    SSFRAG {name=merge_names (map (#name o D) s),
-            convs=flatten (map (#convs o D) s),
-             rewrs=flatten (map (#rewrs o D) s),
-            filter=SOME (end_foldr (op oo) (mapfilter (the o #filter o D) s))
-                    handle HOL_ERR _ => NONE,
+    SSFRAG_CON {name=merge_names (map (#name o D) s),
+                convs=flatten (map (#convs o D) s),
+                rewrs=flatten (map (#rewrs o D) s),
+                filter=SOME (end_foldr (op oo)
+                                       (mapfilter (the o #filter o D) s))
+                       handle HOL_ERR _ => NONE,
                 ac=flatten (map (#ac o D) s),
-	    dprocs=flatten (map (#dprocs o D) s),
-	     congs=flatten (map (#congs o D) s)};
+	        dprocs=flatten (map (#dprocs o D) s),
+	        congs=flatten (map (#congs o D) s)};
 
 fun named_rewrites name = (name_ss name) o rewrites;
 fun named_merge_ss name = (name_ss name) o merge_ss;
@@ -142,7 +148,7 @@ fun std_conv_ss {name,conv,pats} =
 
 fun partition_ssfrags names ssdata =
      List.partition
-       (fn SSFRAG s =>
+       (fn SSFRAG_CON s =>
           case #name s
           of SOME name => Lib.mem name names
            | NONE => false) ssdata
@@ -222,11 +228,12 @@ with
 
  fun ac_rewrites aclist = Lib.itlist mk_ac aclist [];
 
- fun same_frag (SSFRAG{name=SOME n1, ...}) (SSFRAG{name=SOME n2, ...}) = n1=n2
+ fun same_frag (SSFRAG_CON{name=SOME n1, ...})
+               (SSFRAG_CON{name=SOME n2, ...}) = n1=n2
    | same_frag other wise = false;
 
  fun add_to_ss
-    (f as SSFRAG {convs,rewrs,filter,ac,dprocs,congs,...},
+    (f as SSFRAG_CON {convs,rewrs,filter,ac,dprocs,congs,...},
      SS {mk_rewrs=mk_rewrs',ssfrags,travrules,initial_net,dprocs=dprocs',
          limit})
   = let val mk_rewrs = case filter of
@@ -292,8 +299,8 @@ with
    SS {mk_rewrs = mk_rewrs, ssfrags = ssfrags,
        travrules = merge_travrules [travrules, wk_mk_travrules(rels,congs)],
        initial_net = initial_net, dprocs = dprocs, limit = limit} ++
-   SSFRAG{convs = [], rewrs = [], filter = NONE, ac = [], dprocs = [dp],
-          congs = [], name = NONE}
+   SSFRAG_CON{convs = [], rewrs = [], filter = NONE, ac = [], dprocs = [dp],
+              congs = [], name = NONE}
  end
 
 (* ----------------------------------------------------------------------
@@ -528,9 +535,9 @@ local open markerSyntax markerLib
         val (ACs,rst') = Lib.partition is_AC rst
     in
      if null Congs andalso null ACs then (ss,thl)
-     else ((ss ++ SSFRAG{name=SOME"Cong and/or AC",
-                         ac=map unAC ACs, congs=map unCong Congs,
-                         convs=[],rewrs=[],filter=NONE,dprocs=[]}), rst')
+     else ((ss ++ SSFRAG_CON{name=SOME"Cong and/or AC",
+                             ac=map unAC ACs, congs=map unCong Congs,
+                             convs=[],rewrs=[],filter=NONE,dprocs=[]}), rst')
     end
 in
 fun SIMP_CONV ss l tm =
@@ -607,14 +614,14 @@ fun track f x =
     creating per-type ssdata values
    ---------------------------------------------------------------------- *)
 
-fun type_ssfrag ty =
- let val {Thy,Tyop,...} = dest_thy_type ty
-     val tyname = Thy^"$"^Tyop
-     val {rewrs, convs} = TypeBase.simpls_of ty
+fun type_ssfrag ty = let
+  val {Thy,Tyop,...} = dest_thy_type ty
+  val tyname = Thy^"$"^Tyop
+  val {rewrs, convs} = TypeBase.simpls_of ty
 in
-  SSFRAG {name=SOME ("Datatype "^tyname),
-          convs = convs, rewrs = rewrs, filter = NONE,
-          dprocs = [], ac = [], congs = []}
+  SSFRAG_CON {name=SOME ("Datatype "^tyname),
+              convs = convs, rewrs = rewrs, filter = NONE,
+              dprocs = [], ac = [], congs = []}
 end
 
 
@@ -625,7 +632,6 @@ end
 val CONSISTENT   = Portable.CONSISTENT
 val INCONSISTENT = Portable.INCONSISTENT;
 
-fun D (SSFRAG s) = s;
 fun dest_reducer (Traverse.REDUCER x) = x;
 
 fun merge_names list =
@@ -640,7 +646,7 @@ fun merge_names list =
 fun dest_convdata {name,key as SOME(_,tm),trace,conv} = (name,SOME tm)
   | dest_convdata {name,...} = (name,NONE);
 
-fun pp_ssfrag ppstrm (SSFRAG {name,convs,rewrs,ac,dprocs,congs,...}) =
+fun pp_ssfrag ppstrm (SSFRAG_CON {name,convs,rewrs,ac,dprocs,congs,...}) =
  let open Portable
      val name = (case name of SOME s => s | NONE => "<anonymous>")
      val convs = map dest_convdata convs

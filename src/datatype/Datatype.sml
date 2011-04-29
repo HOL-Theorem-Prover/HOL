@@ -47,15 +47,11 @@ type typeBase     = TypeBasePure.typeBase
 type 'a quotation = 'a Portable.frag list
 type AST          = ParseDatatype.AST;
 
+type record_rw_names = string list
+
 type field_name   = string
 type field_names  = string list
 type constructor  = string * hol_type list
-type tyspec       = hol_type * constructor list
-type record_rw_names = string list
-
-(* Fix the grammar used by this file *)
-val ambient_grammars = Parse.current_grammars();
-val _ = Parse.temp_set_grammars arithmeticTheory.arithmetic_grammars;
 
 (*---------------------------------------------------------------------------
    A tyspec is a type specification.  The first component is a type
@@ -66,7 +62,16 @@ val _ = Parse.temp_set_grammars arithmeticTheory.arithmetic_grammars;
    types are marked by occurrences of the corresponding type variables.
  ---------------------------------------------------------------------------*)
 
+type tyspec = hol_type * constructor list
+
+
+(* Fix the grammar used by this file *)
+val ambient_grammars = Parse.current_grammars();
+val _ = Parse.temp_set_grammars arithmeticTheory.arithmetic_grammars;
+
 val ERR = mk_HOL_ERR "Datatype";
+
+val empty_pretyvarset = HOLset.empty Pretype.pretyvar_compare
 
 (*---------------------------------------------------------------------------
            Basic datatype definition support
@@ -357,23 +362,23 @@ fun to_tyspecs ASTs =
      val _ = check_constrs_unique_in_theory ASTs
      val asts = map stage1 ASTs
      val new_type_names = map #1 asts
-     fun mk_hol_type (dAQ ty) = ty
-       | mk_hol_type (dVartype (s,kd)) =
+     fun mk_hol_ty (dAQ ty) = ty
+       | mk_hol_ty (dVartype (s,kd)) =
             mk_var_type (s,Prekind.toKind kd)
-       | mk_hol_type (dTyUniv(bvar,body)) =
-            mk_univ_type(mk_hol_type bvar, mk_hol_type body)
-       | mk_hol_type (dTyAbst(bvar,body)) =
-            mk_abs_type(mk_hol_type bvar, mk_hol_type body)
-       | mk_hol_type (dTyKindConstr{Ty,...}) = mk_hol_type Ty
-       | mk_hol_type (dTyRankConstr{Ty,...}) = mk_hol_type Ty
-       | mk_hol_type (dTyApp(opr as dContype{Tyop = s, ...},arg)) =
+       | mk_hol_ty (dTyUniv(bvar,body)) =
+            mk_univ_type(mk_hol_ty bvar, mk_hol_ty body)
+       | mk_hol_ty (dTyAbst(bvar,body)) =
+            mk_abs_type(mk_hol_ty bvar, mk_hol_ty body)
+       | mk_hol_ty (dTyKindConstr{Ty,...}) = mk_hol_ty Ty
+       | mk_hol_ty (dTyRankConstr{Ty,...}) = mk_hol_ty Ty
+       | mk_hol_ty (dTyApp(opr as dContype{Tyop = s, ...},arg)) =
             if Lib.mem s new_type_names
             then raise ERR "to_tyspecs"
                      ("Omit arguments to new type:"^Lib.quote s)
-            else mk_app_type(mk_hol_type opr, mk_hol_type arg)
-       | mk_hol_type (dTyApp(opr,arg)) =
-            mk_app_type(mk_hol_type opr, mk_hol_type arg)
-       | mk_hol_type (dContype{Thy,Tyop = s,Kind}) =
+            else mk_app_type(mk_hol_ty opr, mk_hol_ty arg)
+       | mk_hol_ty (dTyApp(opr,arg)) =
+            mk_app_type(mk_hol_ty opr, mk_hol_ty arg)
+       | mk_hol_ty (dContype{Thy,Tyop = s,Kind}) =
             let val Kind' = Prekind.toKind Kind
             in
               if Lib.mem s new_type_names
@@ -384,20 +389,19 @@ fun to_tyspecs ASTs =
                 | NONE      => mk_con_type{Tyop=s, Kind=Kind'})
             end
 (*
-       | mk_hol_type (dTyop{Tyop = s, Args, Thy}) =
+       | mk_hol_ty (dTyop{Tyop=s, Args, Thy}) =
             if Lib.mem s new_type_names
             then if null Args then tyname_as_tyvar s
                  else raise ERR "to_tyspecs"
                      ("Omit arguments to new type:"^Lib.quote s)
             else
               case Thy of
-                NONE => mk_type(s, map mk_hol_type Args)
+                NONE => mk_type(s, map mk_hol_ty Args)
               | SOME t => mk_thy_type {Tyop = s, Thy = t,
-                                       Args = map mk_hol_type Args}
+                                       Args = map mk_hol_ty Args}
 *)
-     val mk_hol_type0 = mk_hol_type
      fun mk_hol_type pty = let
-       val ty = mk_hol_type0 pty
+       val ty = mk_hol_ty pty
      in
        if Theory.uptodate_type ty then ty
        else let val Opr = fst (strip_app_type ty)
@@ -415,8 +419,8 @@ end;
 
 fun tyspecs_of q = to_tyspecs (ParseDatatype.parse q);
 
-val new_asts_datatype  = define_type o to_tyspecs;
-fun new_datatype q     = new_asts_datatype (ParseDatatype.parse q);
+val new_asts_datatype = define_type o to_tyspecs;
+fun new_datatype q    = new_asts_datatype (ParseDatatype.parse q);
 
 
 (*---------------------------------------------------------------------------*)
@@ -1153,6 +1157,7 @@ in
 (* ast elements not referring to any others will be present only as          *)
 (*     singleton lists                                                       *)
 (*---------------------------------------------------------------------------*)
+
 fun prim_define_type_from_astl prevtypes f db astl0 = let
   val astl = insert_tyarguments prevtypes astl0
 in
@@ -1220,8 +1225,6 @@ fun dtForm_vartypes (dtf, acc) =
                           acc fldlist
 
 
-val empty_pretyvarset = HOLset.empty Pretype.pretyvar_compare
-
 (*---------------------------------------------------------------------------*)
 (* prevtypes below is an association list mapping the names of types         *)
 (* previously defined in this "session" to the list of type variables that   *)
@@ -1249,14 +1252,7 @@ in
 end
 
 
-fun primHol_datatype_from_astl db astl = define_type_from_astl [] db astl;
-
-fun primHol_datatype db q =
- let val astl = ParseDatatype.parse q handle (e as HOL_ERR _) => Raise e
- in #2(primHol_datatype_from_astl db astl)
- end
-
-
+fun primHol_datatype db astl = define_type_from_astl [] db astl;
 
 (*---------------------------------------------------------------------------
 
@@ -1487,21 +1483,22 @@ fun datatype_thm (n,M) = save_thm
   ("datatype_"^n,
    EQT_ELIM (ISPEC M DATATYPE_TAG_THM));
 
-fun Hol_datatype q =
+fun astHol_datatype astl =
  let
-  val tyspecl = ParseDatatype.parse q
-  val tyinfos_etc = primHol_datatype (TypeBase.theTypeBase()) q
+  val (_,tyinfos_etc) = primHol_datatype (TypeBase.theTypeBase()) astl
   val _ = Theory.scrub()
-  val _     = datatype_thm (mk_datatype_presentation (current_theory()) tyspecl)
+  val _ = datatype_thm (mk_datatype_presentation (current_theory()) astl)
   val tynames = map (TypeBasePure.ty_name_of o #1) tyinfos_etc
   val tynames = filter (not o is_substring bigrec_subdivider_string o snd) tynames
   val tynames = map (Lib.quote o snd) tynames
-  val message = "Defined "^(if length tynames > 1 then "types" else "type")^
+  val message = "Defined type"^(if length tynames > 1 then "s" else "")^
                 ": "^String.concat (Lib.commafy tynames)
  in
   persistent_tyinfo tyinfos_etc;
   HOL_MESG message
  end handle ? as HOL_ERR _ => Raise (wrap_exn "Datatype" "Hol_datatype" ?);
+
+val Hol_datatype = astHol_datatype o ParseDatatype.parse;
 
 val _ = Parse.temp_set_grammars ambient_grammars
 

@@ -69,6 +69,10 @@ hv          Save the proof state (by calling save_proof).
 
 hc          Interrupt execution (of whichever of the things sent is running).
 
+ht          Select a quotation, including the ` delimiters.
+            Find ` left of (or under) cursor and select to next `.
+hT          Select a term: same as above, but with `` delimiters.
+
 hh          A normal h (usually means move cursor left).
             This one works in both normal and visual modes.
 

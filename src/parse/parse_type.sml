@@ -276,6 +276,7 @@ end
 
   fun mk_asfx locn index =
       let val cart = qtyop{Thy = "fcp", Tyop = "cart",Locn=locn,Args = []}
+                     handle _ => raise InternalFailure locn
       in get_abbrev [cart,index] (TypeIdent "C",locn)
       end
 

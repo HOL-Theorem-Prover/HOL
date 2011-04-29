@@ -786,6 +786,8 @@ in
 
     (``(31 >< 0) x:word32 = x``, [thm_AUTO, thm_YO]),
     (``(1 >< 0) (0w:word32) = 0w:word2``, [thm_AUTO, thm_YO]),
+    (``(32 >< 0) (x:word32) :bool[33] = w2w x``, [thm_AUTO, thm_YO]),
+    (``(0 >< 1) (x:word32) = 0w:word32``, [thm_AUTO, thm_YO]),
 
     (``(x:word2 = y) = (x ' 0 = y ' 0) /\ (x ' 1 = y ' 1)``,
       [(*TODO: thm_AUTO,*) thm_YO]),
