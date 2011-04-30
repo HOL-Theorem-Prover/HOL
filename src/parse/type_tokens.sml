@@ -132,7 +132,6 @@ in
   else if s0 = ")" then nadvance 1 RParen
   else if s0 = ":" then
     if size s = 1 then nadvance 1 KindCst
-    else if String.sub(s,1) = #"[" then nadvance 1 KindCst
     else if Lib.mem (String.sub(s,1)) [#":", #"]"] then error
     else if size s >= 3 andalso
             String.sub(s,1) = #"<" andalso
