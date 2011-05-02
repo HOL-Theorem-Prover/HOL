@@ -1455,6 +1455,12 @@ val COMPLEX_EXP_N = store_thm("COMPLEX_EXP_N",
   REWRITE_TAC[complex_exp, RE, IM, EXP_N, GSYM DE_MOIVRE_LEMMA,
               COMPLEX_POW_SCALAR_LMUL]);
 
+val COMPLEX_EXP_N2 = store_thm("COMPLEX_EXP_N2",
+  ``!z:complex n:num. exp (&n :complex * z) = exp z pow n``,
+  REWRITE_TAC[complex_mul, complex_of_num, RE_COMPLEX_OF_REAL,
+              IM_COMPLEX_OF_REAL, REAL_MUL_LZERO, REAL_ADD_RID,REAL_SUB_RZERO,
+              GSYM complex_scalar_lmul, COMPLEX_EXP_N]);
+
 val COMPLEX_EXP_0 = store_thm("COMPLEX_EXP_0",
   ``exp 0c = 1``,
   REWRITE_TAC[complex_of_num, complex_of_real, complex_exp, RE, IM, EXP_0,
