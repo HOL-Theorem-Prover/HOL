@@ -923,8 +923,8 @@ val BIT_COMPLEMENT_LEM = Q.prove(
   `!n i a. i < n /\ a MOD 2 ** n <> 0 ==>
            (BIT i (2 ** n - a MOD 2 ** n) = ~BIT i (a MOD 2 ** n - 1))`,
   Cases \\ SRW_TAC [] []
-  \\ `~BIT i (a MOD 2 ** SUC n' − 1) =
-       BIT i (BITWISE (SUC n') (\x y. ~x) (a MOD 2 ** SUC n' − 1) 0)`
+  \\ `~BIT i (a MOD 2 ** SUC n' - 1) =
+       BIT i (BITWISE (SUC n') (\x y. ~x) (a MOD 2 ** SUC n' - 1) 0)`
   by METIS_TAC [ONE_COMP]
   \\ POP_ASSUM SUBST1_TAC
   \\ `a MOD 2 ** SUC n' - 1 < 2 ** SUC n'`
@@ -1053,7 +1053,7 @@ val DIV_SUB0 = Q.prove(
   \\ POP_ASSUM SUBST1_TAC
   \\ ASM_SIMP_TAC std_ss [arithmeticTheory.ADD_DIV_ADD_DIV, ZERO_LT_TWOEXP,
        DECIDE ``n <> 0n ==> (x + n - 1 = x + (n - 1))``]
-  \\ `a MOD 2 ** b − 1 < 2 ** b`
+  \\ `a MOD 2 ** b - 1 < 2 ** b`
   by METIS_TAC [DECIDE ``n <> 0n ==> (n - 1 < n)``, MOD_2EXP_LT, LESS_TRANS]
   \\ ASM_SIMP_TAC arith_ss [arithmeticTheory.LESS_DIV_EQ_ZERO, ZERO_LT_TWOEXP]);
 

@@ -2734,7 +2734,7 @@ val NUMERAL_MULT_EQ_DIV = store_thm(
 
 val MOD_EQ_0_DIVISOR = Q.store_thm(
 "MOD_EQ_0_DIVISOR",
-`0 < n ==> ((k MOD n = 0) = (∃d. k = d * n))`,
+`0 < n ==> ((k MOD n = 0) = (?d. k = d * n))`,
 DISCH_TAC THEN
 EQ_TAC THEN1 (
   DISCH_TAC THEN

@@ -2271,7 +2271,7 @@ end
 
 val SUM_MAP_FOLDL = Q.store_thm(
 "SUM_MAP_FOLDL",
-`!ls. SUM (MAP f ls) = FOLDL (λa e. a + f e) 0 ls`,
+`!ls. SUM (MAP f ls) = FOLDL (\a e. a + f e) 0 ls`,
 HO_MATCH_MP_TAC SNOC_INDUCT THEN
 SRW_TAC [][FOLDL_SNOC,MAP_SNOC,SUM_SNOC,MAP,SUM,FOLDL]);
 
@@ -2301,7 +2301,7 @@ val EL_REVERSE = store_thm("EL_REVERSE",
 end
 
 val REVERSE_GENLIST = Q.store_thm("REVERSE_GENLIST",
-`REVERSE (GENLIST f n) = GENLIST (λm. f (PRE n - m)) n`,
+`REVERSE (GENLIST f n) = GENLIST (\m. f (PRE n - m)) n`,
   MATCH_MP_TAC LIST_EQ THEN
   SRW_TAC [][EL_REVERSE] THEN
   `PRE (n - x) < n` by numLib.DECIDE_TAC THEN
