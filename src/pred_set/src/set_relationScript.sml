@@ -1206,24 +1206,31 @@ val lemma9 = Q.prove (
    upper_bounds (BIGUNION (fchains r)) r SUBSET maximal_elements s r`,
 SRW_TAC [] [] THEN
 `BIGUNION (fchains r) IN fchains r` by METIS_TAC [lemma7] THEN
-Cases_on `upper_bounds (BIGUNION (fchains r)) r DIFF (BIGUNION (fchains r)) <> 
-          {}` THENL
-[`(CHOICE (upper_bounds (BIGUNION (fchains r)) r DIFF 
-  (BIGUNION (fchains r))) INSERT (BIGUNION (fchains r)) IN fchains r)`
+Cases_on `upper_bounds (BIGUNION (fchains r)) r DIFF (BIGUNION (fchains r)) <>
+          {}`
+THENL [
+  `(CHOICE (upper_bounds (BIGUNION (fchains r)) r DIFF
+     (BIGUNION (fchains r))) INSERT (BIGUNION (fchains r))
+   IN fchains r)`
          by METIS_TAC [lemma8] THEN
-     METIS_TAC [MEMBER_NOT_EMPTY, CHOICE_DEF, IN_BIGUNION, IN_DIFF, IN_INSERT],
- SRW_TAC [] [SUBSET_DEF, maximal_elements_def] THEN
-     `?k. k IN fchains r /\ x IN k` 
-             by METIS_TAC [IN_DIFF, MEMBER_NOT_EMPTY, IN_BIGUNION] THENL
-     [FULL_SIMP_TAC (srw_ss()) [fchains_def, chain_def, range_def,
-                                SUBSET_DEF] THEN
-          METIS_TAC [],
-      `x' IN upper_bounds (BIGUNION (fchains r)) r` 
-              by METIS_TAC [upper_bounds_lem] THEN
-          `x IN (BIGUNION (fchains r)) /\ x' IN (BIGUNION (fchains r))`
+  METIS_TAC [MEMBER_NOT_EMPTY, CHOICE_DEF, IN_BIGUNION, IN_DIFF, IN_INSERT],
+  SIMP_TAC (srw_ss()) [SUBSET_DEF, maximal_elements_def] THEN
+  Q.X_GEN_TAC `u` THEN STRIP_TAC THEN CONJ_TAC THENL [
+    ALL_TAC,
+    Q.X_GEN_TAC `e` THEN STRIP_TAC
+  ] THEN
+  `?k. k IN fchains r /\ u IN k`
+             by METIS_TAC [IN_DIFF, MEMBER_NOT_EMPTY, IN_BIGUNION]
+  THENL [
+    FULL_SIMP_TAC (srw_ss()) [fchains_def, chain_def, range_def, SUBSET_DEF] THEN
+    METIS_TAC [],
+    `e IN upper_bounds (BIGUNION (fchains r)) r` by METIS_TAC [upper_bounds_lem] THEN
+    `u IN (BIGUNION (fchains r)) /\ e IN (BIGUNION (fchains r))`
                   by METIS_TAC [IN_BIGUNION, IN_DIFF, MEMBER_NOT_EMPTY] THEN
-          FULL_SIMP_TAC (srw_ss()) [upper_bounds_def, antisym_def] THEN
-          METIS_TAC []]]);
+    FULL_SIMP_TAC (srw_ss()) [upper_bounds_def, antisym_def] THEN
+    METIS_TAC []
+   ]
+]);
 
 in
 
