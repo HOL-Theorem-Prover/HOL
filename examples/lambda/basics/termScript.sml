@@ -34,23 +34,16 @@ val support_freshf = prove(
      by SRW_TAC [][perm_fnapp] THEN
   SRW_TAC [][]);
 
-val lamf_support_t = ``support (fnpm perm_of (fnpm apm apm)) ^lamf A``
-val app_support_t = ``support (fnpm apm (fnpm apm apm)) ap A``
-val var_support_t = ``support (fnpm perm_of apm) vr A``
-
-val lamf_support_fresh = UNDISCH (UNDISCH (prove(
-  ``^lamf_support_t ==> is_perm apm ==>
-    !x y v a.
-      ~(x IN A) /\ ~(y IN A) ==>
-        (apm [(x,y)] (lm v a) = lm (swapstr x y v) (apm [(x,y)] a))``,
-  REPEAT STRIP_TAC THEN
-  `apm [(x,y)] (lm v a) =
-       fnpm apm apm [(x,y)] (lm v) (apm [(x,y)] a)`
-     by SRW_TAC [][fnpm_def, is_perm_sing_inv] THEN
-  SRW_TAC [][] THEN AP_THM_TAC THEN
-  `swapstr x y v = perm_of [(x,y)] v` by SRW_TAC [][] THEN
-  POP_ASSUM SUBST1_TAC THEN MATCH_MP_TAC support_freshf THEN
-  SRW_TAC [][])))
+val lamf_support_t =
+  ``!u v w t.
+      u ∉ A ∧ v ∉ A ==>
+      (apm [(u,v)] (^lamf w t) = ^lamf (swapstr u v w) (apm [(u,v)] t))``
+val app_support_t =
+  ``∀u:string v t1 t2.
+       u ∉ A ∧ v ∉ A ==>
+       (apm [(u,v)] (ap t1 t2) = ap (apm [(u,v)] t1) (apm [(u,v)] t2))``
+val var_support_t =
+  ``∀u v s. u ∉ A ∧ v ∉ A ==> (apm [(u,v)] (vr s) = vr (swapstr u v s))``
 
 val h_supp_t = ``supp (fnpm perm_of apm) ^h``
 
@@ -71,8 +64,7 @@ val h_supported_by = prove(
   ``!v s sS pi.
        ^ctxt0 ==>
        support (fnpm perm_of apm) ^h (v INSERT (A UNION patoms pi UNION sS))``,
-  REPEAT STRIP_TAC THEN
-  MAP_EVERY ASSUME_TAC [lamf_support_fresh, ssupport_fresh] THEN
+  REPEAT STRIP_TAC THEN ASSUME_TAC ssupport_fresh THEN
   SRW_TAC [][support_def, FUN_EQ_THM, fnpm_def, listpm_APPENDlist]);
 
 val cond16 = ``?a. ~(a IN A) /\ !x. ~(a IN supp apm (^lamf a x))``
@@ -87,15 +79,22 @@ val cond16_implies_freshness_ok = prove(
            ~(b IN supp apm (lm b (apm [(a,b)] x)))`
       by (REPEAT GEN_TAC THEN STRIP_TAC THEN
           `lm b = fnpm apm apm [(a,b)] (lm a)`
-              by SRW_TAC [][fnpm_def, FUN_EQ_THM, is_perm_sing_inv,
-                            lamf_support_fresh] THEN
-          SRW_TAC [][fnpm_def, is_perm_sing_inv, perm_supp, perm_IN]) THEN
+              by SRW_TAC [][fnpm_def, FUN_EQ_THM, is_perm_sing_inv] THEN
+          POP_ASSUM (fn th =>
+          `lm b (apm [(a,b)] x) =
+             fnpm apm apm [(a,b)] (lm a) (apm [(a,b)] x)`
+             by SRW_TAC [][th]) THEN
+          `_ = apm [(a,b)] (lm a x)`
+             by POP_ASSUM (fn th => SRW_TAC [][fnpm_def, is_perm_sing_inv]) THEN
+          `supp apm (lm b (apm [(a,b)] x)) = ssetpm [(a,b)] (supp apm (lm a x))`
+             by METIS_TAC [perm_supp] THEN
+          SRW_TAC [][perm_IN]) THEN
   Q_TAC (NEW_TAC "z") `{v;a} UNION A UNION sS UNION patoms pi` THEN
   `support (fnpm perm_of apm) h (v INSERT A UNION patoms pi UNION sS)`
      by (UNABBREV_ALL_TAC THEN MATCH_MP_TAC h_supported_by THEN
          SRW_TAC [][]) THEN
   Q.EXISTS_TAC `z` THEN SRW_TAC [][] THENL [
-    `~(z IN v INSERT A UNION patoms pi UNION sS)` by SRW_TAC [][] THEN
+    `z ∉ v INSERT A UNION patoms pi UNION sS` by SRW_TAC [][] THEN
     `FINITE (v INSERT A UNION patoms pi UNION sS)` by SRW_TAC [][] THEN
     METIS_TAC [supp_smallest, SUBSET_DEF, fnpm_is_perm, perm_of_is_perm],
     Q.UNABBREV_TAC `h` THEN
@@ -137,7 +136,7 @@ val rawfinite_support = prove(
   Induct THENL [
     Q.X_GEN_TAC `s` THEN SRW_TAC [][fnpm_def] THEN
     `(!s. apm [(x,y)] (vr s) = vr (perm_of [(x,y)] s))`
-        by (MATCH_MP_TAC support_freshf THEN SRW_TAC [][]) THEN
+        by SRW_TAC [][is_perm_eql] THEN
     SRW_TAC [][swapstr_perm_of, is_perm_sing_inv],
 
     `!a b pi. apm pi (ap a b) =
@@ -148,12 +147,12 @@ val rawfinite_support = prove(
         by (MATCH_MP_TAC support_freshf THEN SRW_TAC [][]) THEN
     SRW_TAC [][],
 
-    MAP_EVERY Q.X_GEN_TAC [`s`, `pi`, `x`, `y`] THEN SRW_TAC [][fnpm_def] THEN
+    MAP_EVERY Q.X_GEN_TAC [`s`, `pi`, `x`, `y`] THEN SRW_TAC [][] THEN
     Q.MATCH_ABBREV_TAC `apm [(x,y)] (fresh apm g) = fresh apm h` THEN
     `h = fnpm perm_of apm [(x,y)] g`
        by (MAP_EVERY Q.UNABBREV_TAC [`g`, `h`] THEN
            SIMP_TAC (srw_ss()) [FUN_EQ_THM] THEN Q.X_GEN_TAC `b` THEN
-           SRW_TAC [][fnpm_def, lamf_support_fresh] THEN
+           SRW_TAC [][fnpm_def] THEN
            `cpmpm [(x,y)] pi ++ [(swapstr x y b, swapstr x y s)] =
                 cpmpm [(x,y)] (pi ++ [(b,s)])`
               by SRW_TAC [][listpm_APPENDlist] THEN
@@ -177,7 +176,8 @@ val rawfinite_support = prove(
     `support (fnpm perm_of (fnpm apm apm)) lm bigA /\
      support (fnpm cpmpm apm) (fn t) bigA /\
      support cpmpm pi bigA`
-       by FULL_SIMP_TAC (srw_ss()) [support_def, Abbr`bigA`] THEN
+       by (FULL_SIMP_TAC (srw_ss()) [support_def, Abbr`bigA`] THEN
+           SRW_TAC [][fnpm_def, FUN_EQ_THM, is_perm_sing_inv]) THEN
     SRW_TAC [][fcond_def] THENL [
       Q.MATCH_ABBREV_TAC `FINITE (supp pm h)` THEN
       Q_TAC SUFF_TAC `?X. FINITE X /\ support pm h X`
@@ -236,7 +236,6 @@ val perms_move = prove(
   Q.ABBREV_TAC
     `bigS = s INSERT A UNION allatoms t UNION patoms p1 UNION patoms p2` THEN
   ASSUME_TAC allatoms_fresh THEN
-  ASSUME_TAC lamf_support_fresh THEN
   Q.PAT_ASSUM `!p1 p2. fn (ptpm p2 t) p1 = fn t (p1 ++ p2)` (K ALL_TAC) THEN
   `support (fnpm perm_of apm) f bigS /\ support (fnpm perm_of apm) g bigS`
      by (SRW_TAC [][support_def, FUN_EQ_THM, fnpm_def, Abbr`f`, Abbr`g`,
@@ -338,7 +337,7 @@ val fn_respectful = prove(
             allatoms t2` THEN
   `support (fnpm perm_of apm) f bigS /\ support (fnpm perm_of apm) g bigS`
      by (SRW_TAC [][support_def, fnpm_def, FUN_EQ_THM, Abbr`f`, Abbr`bigS`,
-                    lamf_support_fresh, fn_support_fresh, Abbr`g`] THEN
+                    fn_support_fresh, Abbr`g`] THEN
          ONCE_REWRITE_TAC [GSYM ptpm_sing_to_back] THEN
          SRW_TAC [][] THEN SRW_TAC [][swapstr_def, allatoms_fresh]) THEN
   `FINITE bigS` by SRW_TAC [][Abbr`bigS`] THEN
@@ -386,7 +385,7 @@ val better_lam_clause0 = prove(
          METIS_TAC []) THEN
   Q.ABBREV_TAC `bigS = v INSERT A UNION allatoms t` THEN
   `support (fnpm perm_of apm) f bigS`
-     by (SRW_TAC [][lamf_support_fresh, fn_support_fresh, support_def,
+     by (SRW_TAC [][fn_support_fresh, support_def,
                     fnpm_def, FUN_EQ_THM, Abbr`f`, listpm_def, pairpm_def,
                     allatoms_fresh, Abbr`bigS`] THEN
          SRW_TAC [][swapstr_def]) THEN
@@ -598,11 +597,9 @@ val APP_acyclic = store_thm(
     Establish substitution function
    ---------------------------------------------------------------------- *)
 
-val subst_lemma = prove(
-  ``~(y = v) /\ ~(x = v) /\ ~(x IN FV N) /\ ~(y IN FV N) ==>
-    (tpm [(x,y)] (if swapstr x y s = v then N else VAR (swapstr x y s)) =
-     (if s = v then N else VAR s))``,
-  SRW_TAC [][swapstr_eq_left] THEN SRW_TAC [][tpm_fresh]);
+val tpm_COND = prove(
+  ``tpm pi (if P then x else y) = if P then tpm pi x else tpm pi y``,
+  SRW_TAC [][]);
 
 val tpm_apart = store_thm(
   "tpm_apart",
@@ -626,16 +623,18 @@ val silly_lemma = prove(``?x. ~(x = y) /\ ~(x IN FV M)``,
                         METIS_TAC [])
 
 val subst_exists =
-    (SIMP_RULE (srw_ss()) [SKOLEM_THM, FORALL_AND_THM] o
-     Q.GEN `N` o Q.GEN `x` o
-     SIMP_RULE (srw_ss()) [support_def, FUN_EQ_THM, fnpm_def, subst_lemma,
-                           silly_lemma] o
-     Q.INST [`A` |-> `x INSERT FV N`, `apm` |-> `tpm`,
-             `vr` |-> `\s. if s = x then N else VAR s`,
-             `ap` |-> `(@@)`,
-             `lm` |-> `LAM`] o
-     SPEC_ALL o
-     INST_TYPE [alpha |-> ``:term``]) tm_recursion
+    tm_recursion
+        |> INST_TYPE [alpha |-> ``:term``]
+        |> SPEC_ALL
+        |> Q.INST [`A` |-> `x INSERT FV N`, `apm` |-> `tpm`,
+                   `vr` |-> `\s. if s = x then N else VAR s`,
+                   `ap` |-> `(@@)`,
+                   `lm` |-> `LAM`]
+        |> SIMP_RULE (srw_ss()) [support_def, FUN_EQ_THM, fnpm_def,
+                                 silly_lemma, tpm_COND, tpm_fresh]
+        |> SIMP_RULE (srw_ss()) [swapstr_eq_left]
+        |> Q.GEN `x` |> Q.GEN `N`
+        |> SIMP_RULE (srw_ss()) [SKOLEM_THM, FORALL_AND_THM]
 
 val SUB_DEF = new_specification("SUB_DEF", ["SUB"], subst_exists)
 
@@ -819,23 +818,6 @@ val lem1 = prove(
   Q_TAC (NEW_TAC "z") `supp (fmpm lswapstr tpm) fm` THEN
   METIS_TAC []);
 
-val var_case = prove(
-  ``∀x y. ~(x ∈ supp (fmpm lswapstr tpm) fm) ∧
-          ~(y ∈ supp (fmpm lswapstr tpm) fm)
-        ==>
-          ∀s. tpm [(x,y)]
-                 (if swapstr x y s ∈ FDOM fm then fm ' (swapstr x y s)
-                  else VAR (swapstr x y s)) =
-              (if s ∈ FDOM fm then fm ' s else VAR s)``,
-  SRW_TAC [][] THEN SRW_TAC [][FAPPLY_eqv_lswapstr, supp_fresh] THENL [
-    `~(s ∈ FDOM (fmpm lswapstr tpm [(x,y)] fm))`
-        by SRW_TAC [][supp_fresh] THEN
-    FULL_SIMP_TAC (srw_ss()) [fmpm_FDOM],
-    `s ∈ FDOM (fmpm lswapstr tpm [(x,y)] fm)`
-        by SRW_TAC [][supp_fresh] THEN
-    FULL_SIMP_TAC (srw_ss()) [fmpm_FDOM]
-  ]);
-
 val supp_FRANGE = prove(
   ``~(x ∈ supp (setpm tpm) (FRANGE fm)) =
    ∀y. y ∈ FDOM fm ==> ~(x ∈ FV (fm ' y))``,
@@ -849,17 +831,21 @@ in
   CHOOSE (v, thm) (EXISTS(fm,v) c1)
 end
 
+val lem2 = prove(
+  ``u ∉ FDOM f ∧ v ∉ FDOM f ==> (swapstr u v s IN FDOM f <=> s IN FDOM f)``,
+  Cases_on `u = s` THEN SRW_TAC [][] THEN Cases_on `v = s` THEN SRW_TAC [][]);
+
 val ssub_exists =
-    (ex_conj1 o SIMP_RULE (srw_ss()) [supp_FRANGE] o
-     SIMP_RULE (srw_ss()) [SKOLEM_THM, FORALL_AND_THM, strterm_fmap_supp] o
-     Q.GEN `fm` o
-     (fn th => MP th var_case) o
-     CONV_RULE (LAND_CONV (SIMP_CONV (srw_ss()) [FUN_EQ_THM, fnpm_def])) o
-     SIMP_RULE (srw_ss()) [support_def, lem1] o
-     SIMP_RULE (srw_ss()) [] o
-     Q.SPECL [`\s. if s ∈ FDOM fm then fm ' s else VAR s`,
-              `LAM`, `tpm`, `$@@`, `supp (fmpm lswapstr tpm) fm`] o
-     INST_TYPE [alpha |-> ``:term``]) tm_recursion
+    tm_recursion
+        |> INST_TYPE [alpha |-> ``:term``]
+        |> Q.SPECL [`\s. if s ∈ FDOM fm then fm ' s else VAR s`,
+                    `LAM`, `tpm`, `$@@`, `supp (fmpm lswapstr tpm) fm`]
+        |> SIMP_RULE (srw_ss()) [lem1]
+        |> SIMP_RULE (srw_ss()) [tpm_COND, strterm_fmap_supp, lem2,
+                                 FAPPLY_eqv_lswapstr, supp_fresh]
+        |> Q.GEN `fm`
+        |> SIMP_RULE (srw_ss()) [SKOLEM_THM, FORALL_AND_THM, supp_FRANGE]
+        |> ex_conj1
 
 val ssub_def = new_specification ("ssub_def", ["ssub"], ssub_exists)
 val _ = export_rewrites ["ssub_def"]
