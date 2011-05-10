@@ -67,7 +67,7 @@ val h_supported_by = prove(
   REPEAT STRIP_TAC THEN ASSUME_TAC ssupport_fresh THEN
   SRW_TAC [][support_def, FUN_EQ_THM, fnpm_def, listpm_APPENDlist]);
 
-val cond16 = ``?a. ~(a IN A) /\ !x. ~(a IN supp apm (^lamf a x))``
+val cond16 = ``∀a x. a ∉ A ==> a ∉ supp apm (^lamf a x)``
 
 val cond16_implies_freshness_ok = prove(
   ``!v s A sS.
@@ -75,9 +75,11 @@ val cond16_implies_freshness_ok = prove(
        ?a. ~(a IN ^h_supp_t) /\ ~(a IN supp apm (^h a))``,
   REPEAT STRIP_TAC THEN
   Q.ABBREV_TAC `h = ^h` THEN
+  Q_TAC (NEW_TAC "a") `A` THEN
   `!b x. ~(b IN A) /\ ~(a = b) ==>
            ~(b IN supp apm (lm b (apm [(a,b)] x)))`
       by (REPEAT GEN_TAC THEN STRIP_TAC THEN
+          `b ∉ supp apm (lm b x)` by SRW_TAC [][] THEN
           `lm b = fnpm apm apm [(a,b)] (lm a)`
               by SRW_TAC [][fnpm_def, FUN_EQ_THM, is_perm_sing_inv] THEN
           POP_ASSUM (fn th =>
@@ -243,7 +245,7 @@ val perms_move = prove(
          SRW_TAC [][swapstr_perm_of, swapstr_def]) THEN
   `FINITE bigS` by SRW_TAC [][Abbr`bigS`] THEN
   Q_TAC (NEW_TAC "b") `bigS` THEN
-  `~(b IN supp (fnpm perm_of apm) f) /\ ~(b IN supp (fnpm perm_of apm) g)`
+  `b ∉ supp (fnpm perm_of apm) f ∧ b ∉ supp (fnpm perm_of apm) g`
       by METIS_TAC [supp_smallest, SUBSET_DEF, fnpm_is_perm,
                     perm_of_is_perm] THEN
   `FINITE (supp (fnpm perm_of apm) f) /\ FINITE (supp (fnpm perm_of apm) g)`
@@ -257,19 +259,15 @@ val perms_move = prove(
             MATCH_MP_TAC cond16_implies_freshness_ok THEN
             MAP_EVERY Q.EXISTS_TAC
                       [`A`, `A UNION allatoms t UNION patoms p2`] THEN
-            SRW_TAC [][] THENL [
-              SRW_TAC [][support_def, fnpm_def, FUN_EQ_THM, listpm_APPENDlist,
-                         is_perm_sing_inv],
-              METIS_TAC []
-            ],
+            SRW_TAC [][] THEN
+            SRW_TAC [][support_def, fnpm_def, FUN_EQ_THM, listpm_APPENDlist,
+                       is_perm_sing_inv],
             Q.UNABBREV_TAC `g` THEN
             MATCH_MP_TAC cond16_implies_freshness_ok THEN
             MAP_EVERY Q.EXISTS_TAC [`A`, `A UNION allatoms t`] THEN
-            SRW_TAC [][] THENL [
-              SRW_TAC [][support_def, FUN_EQ_THM, fnpm_def,
-                         is_perm_sing_inv],
-              METIS_TAC []
-            ]
+            SRW_TAC [][] THEN
+            SRW_TAC [][support_def, FUN_EQ_THM, fnpm_def,
+                       is_perm_sing_inv]
           ]) THEN
   `(fresh apm f = f b) /\ (fresh apm g = g b)` by METIS_TAC [fresh_thm] THEN
   SRW_TAC [][Abbr`f`, Abbr`g`] THEN
@@ -402,15 +400,12 @@ val better_lam_clause0 = prove(
   MATCH_MP_TAC ((REWRITE_RULE [listTheory.APPEND] o
                  Q.INST [`pi` |-> `[]`]) cond16_implies_freshness_ok) THEN
   MAP_EVERY Q.EXISTS_TAC [`A`, `A UNION allatoms t`] THEN
-  SRW_TAC [][] THENL [
-    SRW_TAC [][support_def, FUN_EQ_THM, fnpm_def, fn_support_fresh,
-               allatoms_fresh, is_perm_sing_inv],
-    METIS_TAC []
-  ]);
+  SRW_TAC [][] THEN
+  SRW_TAC [][support_def, FUN_EQ_THM, fnpm_def, fn_support_fresh,
+             allatoms_fresh, is_perm_sing_inv]);
 
 val silly_new_lemma = prove(
-  ``~(x = NEW (x INSERT allatoms t)) /\
-    ~(NEW (x INSERT allatoms t) IN allatoms t)``,
+  ``x ≠ NEW (x INSERT allatoms t) /\ NEW (x INSERT allatoms t) ∉ allatoms t``,
   Q.SPEC_THEN `x INSERT allatoms t` MP_TAC NEW_def THEN
   SRW_TAC [][]);
 
