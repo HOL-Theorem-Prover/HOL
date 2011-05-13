@@ -10,6 +10,9 @@ loadPath :=
 
 map load ["finite_mapTheory", "holfootTheory",
      "Parsetree", "AssembleHolfootParser"];
+
+use (Globals.HOLDIR ^ "/examples/separationLogic/src/holfoot/header.sml")
+
 show_assums := true;
 *)
 
@@ -839,6 +842,10 @@ fun holfoot_p_statement2absyn funL resL gv vs (Pstm_assign (v, expr)) =
   in
      (comb_a, [], [])
   end  
+| holfoot_p_statement2absyn funL resL gv vs Pstm_diverge =
+     (Absyn.mk_AQ holfoot_prog_diverge_term, [], [])
+| holfoot_p_statement2absyn funL resL gv vs Pstm_fail =
+     (Absyn.mk_AQ holfoot_prog_fail_term, [], [])
 | holfoot_p_statement2absyn funL resL gv vs (Pstm_block stmL) =
   let
      val l0 = map (holfoot_p_statement2absyn funL resL gv vs) stmL;      
@@ -856,6 +863,16 @@ fun holfoot_p_statement2absyn funL resL gv vs (Pstm_assign (v, expr)) =
 
       val comb_a = Absyn.list_mk_app (Absyn.mk_AQ holfoot_prog_cond_term, 
              [c_a, stm1, stm2]);
+   in
+      (comb_a, wL1@wL2, fL1@fL2)
+   end
+| holfoot_p_statement2absyn funL resL gv vs (Pstm_ndet (stm1, stm2)) =
+   let
+      val (stm1, wL1, fL1) = holfoot_p_statement2absyn funL resL gv vs stm1;
+      val (stm2, wL2, fL2) = holfoot_p_statement2absyn funL resL gv vs stm2;
+
+      val comb_a = Absyn.list_mk_app (Absyn.mk_AQ holfoot_prog_choice_term, 
+             [stm1, stm2]);
    in
       (comb_a, wL1@wL2, fL1@fL2)
    end
@@ -1141,8 +1158,12 @@ fun Pfundecl2hol_final (funname, assume_opt, ref_args, val_args, localV,
    val abstr_prog = 
        list_mk_icomb (holfoot_prog_quant_best_local_action_term, [mk_list_pabs cond_free_var_list wrapped_preCond, mk_list_pabs cond_free_var_list postCond3])
    val abstr_prog_val_args_term = pairLib.mk_pabs (pairLib.mk_pair(arg_ref_term, arg_val_term), abstr_prog);
+
+   (*access to global variables*)
+   val global_vars = Redblackset.listItems (Redblackset.difference (Redblackset.union (ws, rs), 
+      string_list2set (ref_args @ val_args @ localV)))
 in
-   (assume_opt, funname, fun_term, abstr_prog_val_args_term)
+   (assume_opt, funname, fun_term, abstr_prog_val_args_term, global_vars)
 end;
 
 
@@ -1316,16 +1337,33 @@ fun Pprogram2hol procL_opt (Pprogram (ident_decl, global_decl, program_item_decl
          if (not (isSome procL_opt)) then T else
          if (mem proc (valOf procL_opt)) then T else F;
 
-      fun mk_pair_terms (assume_opt, s, fun_body, spec) =
+      fun mk_pair_terms (assume_opt, s, fun_body, spec, _) =
          pairLib.list_mk_pair [assume_proc_spec assume_opt s, stringLib.fromMLstring s, fun_body, spec];
       val fun_decl_parse_pairL = map mk_pair_terms fun_decl_parseL;
 
       val input = listSyntax.mk_list (fun_decl_parse_pairL, type_of (hd fun_decl_parse_pairL));
 
+
+      (* check for problems with variables protected by locks being used *)
+      fun check_vars (_, fname, _, _, gvs) (Presource (rname, rvs, _)) =
+         let
+            val il = Lib.intersect gvs rvs;  
+         in
+            if null il orelse (fname = "init") then NONE else SOME (fname, rname, il)
+         end;
+      val error_list = map valOf (filter isSome (flatten (map (fn fd => map (check_vars fd) resource_list) fun_decl_parseL)));
+      val _ = if null error_list then () else
+              let
+                  fun error_report (fname, rname, vl) =
+                    String.concat ["The function '", fname, "' accesses the variables [",
+                    String.concat (Lib.commafy vl), "] which are protected by resource '", rname, "'!\n"];
+              in
+                 (AssembleHolfootParser.print_parse_error (String.concat (
+                     map error_report error_list));Feedback.fail ())
+              end;
    in
       (list_mk_icomb (HOLFOOT_SPECIFICATION_term, [resource_term, input]))
    end;
-
 
 
 fun mk_entailment (comment, p1, p2) =
@@ -1373,6 +1411,8 @@ fun Ptop2hol res_opt (Pentailments x) =
 
 val parse_holfoot_file = (Ptop2hol NONE) o parse;
 fun parse_holfoot_file_restrict procL = (Ptop2hol (SOME procL)) o parse;
+
+
 
 fun print_file_contents file =
    let

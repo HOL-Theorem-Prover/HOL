@@ -27,7 +27,6 @@ val HOLFOOT_VAR_RES_FRAME_SPLIT_term : term;
 val HOLFOOT_VAR_RES_FRAME_SPLIT___EMP_PRED_term : term;
 val holfoot_ap_array_term : term
 val holfoot_ap_bigstar_list_term : term
-val holfoot_ap_expression_term : term
 val holfoot_ap_binexpression_term : term
 val holfoot_ap_bintree_term : term
 val holfoot_ap_data_array_term : term
@@ -36,15 +35,16 @@ val holfoot_ap_data_list_seg_term : term
 val holfoot_ap_data_list_term : term
 val holfoot_ap_data_queue_term : term
 val holfoot_ap_data_tree_term : term
+val holfoot_ap_emp_term : term
 val holfoot_ap_eq_cond_term : term
 val holfoot_ap_equal_term : term
+val holfoot_ap_expression_term : term
 val holfoot_ap_false_term : term
 val holfoot_ap_ge_term : term
 val holfoot_ap_gt_term : term
 val holfoot_ap_le_term : term
 val holfoot_ap_lt_term : term
 val holfoot_ap_points_to_term : term
-val holfoot_ap_emp_term : term
 val holfoot_ap_star_term : term
 val holfoot_ap_tree_term : term
 val holfoot_ap_unequal_term : term
@@ -83,8 +83,11 @@ val holfoot_pred_true_term : term
 val holfoot_prog_assign_term : term
 val holfoot_prog_best_local_action_term : term
 val holfoot_prog_block_term : term
+val holfoot_prog_choice_term : term
 val holfoot_prog_cond_term : term
 val holfoot_prog_dispose_term  : term
+val holfoot_prog_diverge_term : term
+val holfoot_prog_fail_term : term
 val holfoot_prog_field_assign_term : term
 val holfoot_prog_field_lookup_term : term
 val holfoot_prog_new_term  : term
@@ -99,6 +102,7 @@ val holfoot_separation_combinator_term : term
 val holfoot_stack_true_term : term
 val holfoot_tag_term  : term
 val holfoot_var_term  : term
+
 
 val dest_holfoot_ap_array : term -> term * term
 val dest_holfoot_ap_bintree : term -> term * term

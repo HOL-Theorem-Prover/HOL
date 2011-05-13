@@ -618,7 +618,7 @@ let	val (xvar,body) = dest_forall term handle e => wrapException "CASE_SPLIT_CON
 		handle e => raise (mkStandardExn "CASE_SPLIT_CONV"
 				("An nchotomy does not exist for the type of the " ^
 				 " universally quantified variable: " ^ type_to_string t))
-	val nchot = SPEC xvar nchot_thm
+	val nchot = ISPEC xvar nchot_thm
 		handle e => raise (mkDebugExn "CASE_SPLIT_CONV"
 			("TypeBase returned an nchotomy for type " ^ type_to_string t ^
 			 " which was not universally quantified with a variable of the same type!"))
@@ -2606,7 +2606,7 @@ let val _ = type_trace 2 ("->generate_coding_theorem(" ^ name ^ "," ^
     val theorem = if exists_coding_theorem_precise target t name
     		then get_coding_theorem_precise target t name
 		else (get_coding_theorem_generator target name t) t
-	val mtheorem = if exists_coding_theorem_conclusion target name
+    val mtheorem = if exists_coding_theorem_conclusion target name
 		then MATCH_CONC theorem (get_coding_theorem_conclusion target name t)
 			handle e => raise (mkStandardExn "generate_coding_theorem"
 ("Generator for " ^ name ^

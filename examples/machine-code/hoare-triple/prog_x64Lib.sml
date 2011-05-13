@@ -217,11 +217,10 @@ fun introduce_zMEMORY th = if
     val fff = (fst o dest_eq o concl o UNDISCH_ALL o SPEC_ALL o GSYM) zMEMORY_INSERT
     fun compact th = let
       val x = find_term (can (match_term fff)) ((car o car o concl o UNDISCH_ALL) th)
-      val rw = (INST (fst (match_term fff x)) o SPEC_ALL o GSYM) zMEMORY_INSERT
+      val rw = (INST (fst (match_term fff x)) o SPEC_ALL o DISCH_ALL o GSYM o UNDISCH) zMEMORY_INSERT
       val th = DISCH ((fst o dest_imp o concl) rw) th
       val th = SIMP_RULE bool_ss [GSYM zMEMORY_INSERT] th
       in th end
-
     val th = repeat compact th
     val th = RW [STAR_ASSOC,AND_IMP_INTRO,GSYM CONJ_ASSOC] th
     val th = RW [APPLY_UPDATE_ID] th
@@ -230,7 +229,7 @@ fun introduce_zMEMORY th = if
       | ss (v::vs) = pred_setSyntax.mk_insert(v,ss vs)
     val u1 = pred_setSyntax.mk_subset(ss (rev ys),mk_var("df",``:word64 set``))
     val u3 = (fst o dest_imp o concl) th
-    val u2 = list_mk_conj (u1::filter (can (match_term ``ALIGNED x``)) (list_dest dest_conj u3))
+    val u2 = list_mk_conj (u1::filter is_eq (list_dest dest_conj u3))
     val goal = mk_imp(u2,u3)
     val imp = prove(goal,
       ONCE_REWRITE_TAC [ALIGNED_MOD_4]
@@ -433,9 +432,6 @@ val x64_tools_no_status = (x64_spec, x64_jump, TRUTH, x64_pc);
   val th = x64_spec (x64_encode "add [rax], ax");
   val th = x64_spec (x64_encode "add [rax], eax");
   val th = x64_spec (x64_encode "add [rax], rax");
-
-  TODO:
-   - introduce a mode for pretending to be 32-bit x86 (?)
 
 *)
 

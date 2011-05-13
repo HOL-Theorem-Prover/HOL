@@ -112,13 +112,13 @@ the combination of the ``conceptual'' theories \theory{LOG} and
 %
 for higher order logic. These axioms, together with the rules of
 inference described in Section~\ref{rules}, constitute the core of the
-\HOL{} logic.  Because of the way the \HOL{} system evolved from \LCF,
+\HOL{} logic.  Because of the way the \HOL{} system evolved from \LCF%
 %
-\index{LCF@\LCF}
+\index{LCF@\LCF}%
 %
 \footnote{To simplify the porting of the LCF theorem-proving tools to
   the HOL system, the HOL logic was made as like PP$\lambda$ (the
-  logic built-in to LCF) as possible.} the particular axiomatization
+  logic built-in to LCF) as possible.}, the particular axiomatization
 of higher order logic it uses differs from the classical
 axiomatization due to Church\index{Church, A.}  \cite{Church}.  The
 biggest difference is that in Church's formulation type variables
@@ -499,7 +499,7 @@ Conditional & {\small\verb+if +}$t\ ${\small\verb+then +}$t_1${\small\verb+ else
 %
 {\small\verb+let+}-expression & {\small\verb+let +}$x${\small\verb+=+}$t_1${\small\verb+ in +}$t_2$ &
 \holtxt{LET(\bs}$x${\small\verb+.+}$t_2${\small\verb+)+}$t_1$ &
-\holtxt{mk\_let(\bs}$x${\small\verb+.+}$t_1${\small\verb+,+}$t_2${\small\verb+)+} \\ \hline
+\holtxt{mk\_let(mk\_abs($x$,$t_2$),$t_1$)} \\ \hline
 \end{tabular}
 \end{center}
 

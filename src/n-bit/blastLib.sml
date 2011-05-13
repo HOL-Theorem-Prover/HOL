@@ -17,8 +17,10 @@ open Parse
 val ERR = Feedback.mk_HOL_ERR "blastLib";
 
 val blast_trace = ref 0;
+val blast_counter = ref true;
 
 val _ = Feedback.register_trace ("bit blast", blast_trace, 3);
+val _ = Feedback.register_btrace ("print blast counterexamples", blast_counter);
 
 val rhsc = boolSyntax.rhs o Thm.concl;
 
@@ -58,8 +60,7 @@ in
                               |> Thm.INST [``i:num`` |-> i,
                                            ``g:num->bool`` |-> f]
              in
-               Conv.CONV_RULE (Conv.RHS_CONV conv)
-                 (Thm.MP indx_thm (mk_size_thm (i,ty)))
+               Conv.RIGHT_CONV_RULE conv (Thm.MP indx_thm (mk_size_thm (i,ty)))
              end
           | _ => raise Conv.UNCHANGED)
      | _ => raise ERR "FCP_INDEX_CONV" "not an application of fcp_index"
@@ -102,11 +103,11 @@ val BSUM_mp_not_carry =
   |> PURE_REWRITE_RULE [DECIDE ``((x = ~y) = ~F) = (x:bool = ~y)``];
 
 val rhs_rewrite =
-  Conv.CONV_RULE (Conv.RHS_CONV
+  Conv.RIGHT_CONV_RULE
     (Rewrite.REWRITE_CONV
        [satTheory.AND_INV, EQF_INTRO boolTheory.NOT_AND,
         DECIDE ``!b:bool. (b = ~b) = F``,
-        DECIDE ``!b:bool. (~b = b) = F``]))
+        DECIDE ``!b:bool. (~b = b) = F``])
 
 (* --------------------------------------------------------------------
    mk_summation : returns theorems of the form  ``BSUM i x y c = exp``
@@ -569,8 +570,7 @@ in
     if c = boolSyntax.T orelse c = boolSyntax.F then
       thm
     else
-      Conv.CONV_RULE
-        (Conv.RHS_CONV (Conv.REWR_CONV (Drule.EQT_INTRO (conv c)))) thm
+      Conv.RIGHT_CONV_RULE (Conv.REWR_CONV (Drule.EQT_INTRO (conv c))) thm
       handle HOL_ERR _ =>
         Drule.EQF_INTRO (conv (boolSyntax.mk_neg tm))
         handle HOL_ERR _ =>
@@ -601,12 +601,104 @@ in
   Thm.INST theta' thm
 end
 
+local
+  fun eq_fst_partition [] = []
+    | eq_fst_partition ((x,y)::l) =
+        let val (eqx,neqx) = List.partition (term_eq x o fst) l in
+          ((x,y::List.map snd eqx)) :: eq_fst_partition neqx
+        end
+
+  fun word_counter (x,l) =
+  let
+    val i = Term.mk_var ("i", numLib.num)
+    val ty' = wordsSyntax.dest_word_type (type_of x)
+  in
+    l |> List.filter fst
+      |> List.map (fn (_,n) => boolSyntax.mk_eq (i, n))
+      |> (fn l => if List.null l then
+                    boolSyntax.F
+                  else
+                    boolSyntax.list_mk_disj l)
+      |> (fn f => fcpSyntax.mk_fcp (Term.mk_abs (i, f), ty'))
+      |> wordsLib.WORD_EVAL_CONV
+      |> concl
+      |> rhs
+      |> (fn t => {redex = x, residue = t})
+  end
+
+  fun bool_counter tm =
+        case Lib.total boolSyntax.dest_neg tm
+        of SOME t => {redex = t, residue = boolSyntax.F}
+         | NONE => {redex = tm, residue = boolSyntax.T}
+
+  fun dest_bit tm =
+    case Lib.total boolSyntax.dest_neg tm
+    of SOME t => let val (x,y) = fcpSyntax.dest_fcp_index t in (x,(false,y)) end
+     | NONE => let val (x,y) = fcpSyntax.dest_fcp_index tm in (x,(true,y)) end
+in
+  fun counterexample tm =
+    let val tm = snd (boolSyntax.strip_forall tm) in
+      if tm = boolSyntax.F orelse tm = boolSyntax.T then
+        []
+      else
+        let
+          val insts = HOLset.listItems (non_prop_terms tm)
+          val vars = Term.genvars Type.bool (List.length insts)
+          val theta = Lib.map2 (Lib.curry (op |->)) insts vars
+          val tm' = Term.subst theta tm
+          val thm = (HolSatLib.SAT_PROVE tm'; NONE)
+                    handle HolSatLib.SAT_cex thm => SOME thm
+        in
+          case thm
+          of NONE => []
+           | SOME t =>
+               let
+                 val theta' = Lib.map2 (Lib.curry (op |->)) vars insts
+                 val c = fst (boolSyntax.dest_imp (concl t))
+                 val c = boolSyntax.strip_conj (Term.subst theta' c)
+                 val (bits,rest) = List.partition (Lib.can dest_bit) c
+                 val bits = eq_fst_partition (List.map dest_bit bits)
+               in
+                 List.map word_counter bits @ List.map bool_counter rest
+               end
+        end
+    end
+end
+
+fun print_counterexample l =
+   if List.null l then
+     print "No counterexample found!\n"
+   else let
+     fun f {redex,residue} = Hol_pp.term_to_string redex ^ " -> " ^
+                             Hol_pp.term_to_string residue ^ "\n\n"
+   in
+     print "Found counterexample:\n\n";
+     List.app (fn c => print (f c ^ "and\n\n")) (Lib.butlast l);
+     print (f (List.last l))
+    end
+
 (* ------------------------------------------------------------------------
    BIT_BLAST_CONV : convert a bit vector assertion ``a = b``, ``a ' n`` or
                     ``a <+ b`` into bitwise propositions. Uses SAT to try
                     to reduce sub-expressions to T or F.
    BBLAST_CONV : wrapper around BIT_BLAST_CONV.
    ------------------------------------------------------------------------ *)
+
+local
+  fun is_word_index tm =
+         case Lib.total wordsSyntax.dest_index tm
+         of SOME (w,i) => numLib.is_numeral i andalso Lib.can dim_of_word w
+          | NONE => false
+in
+  fun is_blastable tm =
+         is_word_index tm orelse
+         (case Lib.total boolSyntax.dest_eq tm
+          of SOME (w,v) => Lib.can dim_of_word w
+           | NONE =>
+               (case Lib.total wordsSyntax.dest_word_lo tm
+                of SOME (w,_) => Lib.can dim_of_word w
+                 | NONE => false))
+end
 
 local
   val FCP_NEQ = trace ("metis",0) Q.prove(
@@ -619,27 +711,6 @@ local
 
   fun INDEX_CONV conv = TOP_DEPTH_CONV (FCP_INDEX_CONV conv)
                         THENC Conv.TRY_CONV BIT_TAUT_CONV
-
-  fun TRY_INDEX_CONV conv tm =
-        INDEX_CONV conv tm
-        handle HOL_ERR _ => dummy_thm
-             | Conv.UNCHANGED => dummy_thm
-
-  fun is_word_index tm =
-         case Lib.total wordsSyntax.dest_index tm
-         of SOME (w,i) => numLib.is_numeral i andalso Lib.can dim_of_word w
-          | NONE => false
-
-  fun is_blastable tm =
-         is_word_index tm orelse
-         (case Lib.total boolSyntax.dest_eq tm
-          of SOME (w,v) =>
-                Lib.can dim_of_word w orelse
-                is_word_index w orelse is_word_index v
-           | NONE =>
-               (case Lib.total wordsSyntax.dest_word_lo tm
-                of SOME (w,_) => Lib.can dim_of_word w
-                 | NONE => false))
 
   fun bit_theorems conv (n, l, r) =
       let
@@ -676,7 +747,7 @@ local
   val NUM_CONV = computeLib.CBV_CONV cmp
   fun FORALL_EQ_RULE vars t =
         List.foldr (fn (v,t) => Drule.FORALL_EQ v t) t vars
-        |> Conv.CONV_RULE (Conv.RHS_CONV (Rewrite.REWRITE_CONV []))
+        |> Conv.RIGHT_CONV_RULE (Rewrite.REWRITE_CONV [])
 in
   fun BIT_BLAST_CONV tm =
   let
@@ -689,37 +760,23 @@ in
       thm
     else let val conv = mk_sums NUM_CONV c in
       if wordsSyntax.is_index tm then
-        let
-          val thm2 = INDEX_CONV conv c
-        in
-          Conv.CONV_RULE (Conv.RHS_CONV (Conv.REWR_CONV thm2)) thm
-        end
+        Conv.RIGHT_CONV_RULE (Conv.REWR_CONV (INDEX_CONV conv c)) thm
       else if wordsSyntax.is_word_lo tm then
-        Conv.CONV_RULE (Conv.RHS_CONV (Conv.REWR_CONV (conv c))) thm
+        Conv.RIGHT_CONV_RULE (Conv.REWR_CONV (conv c)) thm
       else let val (l,r) = boolSyntax.dest_eq c in
-        if wordsSyntax.is_index l orelse wordsSyntax.is_index r then
-          let
-            val thm2 = TRY_INDEX_CONV conv l
-            val thm3 = TRY_INDEX_CONV conv r
-          in
-            Conv.CONV_RULE (Conv.RHS_CONV
-              (PURE_REWRITE_CONV [thm2, thm3]
-               THENC Conv.TRY_CONV BIT_TAUT_CONV)) thm
-          end
-        else
-          case bit_theorems conv (dim_of_word l, l, r)
-          of Lib.PASS thms =>
-                 Conv.CONV_RULE (Conv.RHS_CONV
-                   (Conv.REWR_CONV (fcp_eq_thm (Term.type_of l))
-                    THENC REWRITE_CONV thms)) thm
-           | Lib.FAIL (i, fail_thm) =>
-               let
-                 val ty = wordsSyntax.dim_of l
-                 val sz_thm = mk_size_thm (i, ty)
-                 val thm2 = Drule.MATCH_MP FCP_NEQ (Thm.CONJ sz_thm fail_thm)
-               in
-                 Conv.CONV_RULE (Conv.RHS_CONV (Conv.REWR_CONV thm2)) thm
-               end
+        case bit_theorems conv (dim_of_word l, l, r)
+        of Lib.PASS thms =>
+               Conv.RIGHT_CONV_RULE
+                 (Conv.REWR_CONV (fcp_eq_thm (Term.type_of l))
+                  THENC REWRITE_CONV thms) thm
+         | Lib.FAIL (i, fail_thm) =>
+             let
+               val ty = wordsSyntax.dim_of l
+               val sz_thm = mk_size_thm (i, ty)
+               val thm2 = Drule.MATCH_MP FCP_NEQ (Thm.CONJ sz_thm fail_thm)
+             in
+               Conv.RIGHT_CONV_RULE (Conv.REWR_CONV thm2) thm
+             end
       end
     end
   end
@@ -732,17 +789,94 @@ in
         val thm = Conv.QCONV WORD_SIMP_CONV tm'
         val tms = HolKernel.find_terms is_blastable (rhsc thm)
         val thms = Lib.mapfilter BIT_BLAST_CONV tms
+        val res = FORALL_EQ_RULE vars
+                    (Conv.RIGHT_CONV_RULE
+                       (Rewrite.ONCE_REWRITE_CONV thms THENC
+                        Conv.TRY_CONV BIT_TAUT_CONV) thm)
       in
-        FORALL_EQ_RULE vars
-          (Conv.CONV_RULE (Conv.RHS_CONV
-             (Rewrite.ONCE_REWRITE_CONV thms THENC
-              Conv.TRY_CONV BIT_TAUT_CONV)) thm)
+        if term_eq (rhsc res) tm then
+          raise Conv.UNCHANGED
+        else
+          res
       end
 end
 
-val BBLAST_PROVE = Drule.EQT_ELIM o BBLAST_CONV;
+local
+  fun is_quant tm = boolSyntax.is_forall tm orelse boolSyntax.is_exists tm;
+
+  fun counter_terms _ [] = raise ERR "counter_terms" "empty"
+    | counter_terms [] tms = tl tms
+    | counter_terms ({redex,residue}::l) (t::tms) =
+        counter_terms l
+          (Term.subst [redex |-> residue]
+             (snd (boolSyntax.dest_exists t)) :: t :: tms)
+
+  fun build_exists [] _ cthm = cthm
+    | build_exists _ [] cthm = cthm
+    | build_exists ({redex,residue}::l1) (t::l2) cthm =
+        build_exists l1 l2 (Thm.EXISTS (t, residue) cthm);
+
+  fun order_counter [] [] a = List.rev a
+    | order_counter [] _ _ = raise ERR "BBLAST_PROVE" "Couldn't prove goal."
+    | order_counter (v::vars) counter a =
+        let
+          val (c,rest) = Lib.pluck (fn {redex,residue} => (redex = v)) counter
+        in
+          order_counter vars rest (c :: a)
+        end handle HOL_ERR _ => raise ERR "BBLAST_PROVE" "Couldn't prove goal."
+in
+  fun BBLAST_PROVE tm =
+  let
+    val (vars,tm') = boolSyntax.strip_exists tm
+    val thm = Conv.QCONV BBLAST_CONV tm'
+  in
+    if List.null vars then
+      Drule.EQT_ELIM thm
+      handle HOL_ERR _ =>
+         let
+           val body = snd (boolSyntax.strip_forall tm)
+           val counter = counterexample (rhsc thm)
+         in
+           if not (List.null counter) andalso
+              Lib.can (order_counter (Term.free_vars body) counter) []
+           then
+             let val _ = if !blast_counter then
+                           print_counterexample counter
+                         else
+                           ()
+                 val ctm = Term.subst counter body
+             in
+               raise HolSatLib.SAT_cex (wordsLib.WORD_EVAL_CONV ctm)
+             end
+           else
+             raise ERR "BBLAST_PROVE" "Couldn't prove goal."
+         end
+    else let val ctm = rhsc thm in
+      if ctm = boolSyntax.T then
+        Drule.EQT_ELIM
+          ((PURE_ONCE_REWRITE_CONV [thm] THENC
+            REPEATC Conv.EXISTS_SIMP_CONV) tm)
+      else let
+        val counter = counterexample (boolSyntax.mk_neg ctm)
+        val counter = order_counter vars counter []
+        val ctms = counter_terms counter [boolSyntax.list_mk_exists(vars,ctm)]
+        val cthm = Drule.EQT_ELIM
+                     (wordsLib.WORD_EVAL_CONV (Term.subst counter ctm))
+        val cthm' = build_exists (List.rev counter) ctms cthm
+      in
+        PURE_ONCE_REWRITE_RULE [GSYM thm] cthm'
+      end
+    end
+  end
+end
+
 val BBLAST_RULE = Conv.CONV_RULE BBLAST_CONV;
 val BBLAST_TAC  = Tactic.CONV_TAC BBLAST_CONV;
+
+val FULL_BBLAST_TAC =
+  REPEAT
+    (Tactical.PRED_ASSUM (Lib.can (HolKernel.find_term is_blastable)) MP_TAC)
+  THEN BBLAST_TAC;
 
 (* ------------------------------------------------------------------------ *)
 

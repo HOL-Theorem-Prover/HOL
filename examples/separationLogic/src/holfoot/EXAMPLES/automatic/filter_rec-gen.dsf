@@ -1,0 +1,21 @@
+global P;
+
+list_filter(l;) [data_list(l,data)] {
+  local e, m;
+
+  if (l == NULL) {}
+  else {
+    e = l->dta;
+    m = l->tl;
+    list_filter(m;);
+    if (``~(P e)``) { 
+      dispose l;
+      l = m;
+    } else { 
+      l->tl = m;
+    }
+  }
+} [data_list(l, ``FILTER P data``)]
+
+
+

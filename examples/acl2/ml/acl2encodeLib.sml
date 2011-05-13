@@ -10,7 +10,7 @@ open Rewrite polytypicLib encodeLib functionEncodeLib
 open translateTheory extendTranslateTheory wordsLib intLib
 
 (*
-app load ["intLib","wordsLib","extendTranslateTheory","functionEncodeLib"];
+app load ["intLib","wordsLib","extendTranslateTheory","functionEncodeLib", "fmap_encodeTheory"];
 *)
 
 (*****************************************************************************)
@@ -29,6 +29,9 @@ val list = ``:'a list``;
 val sexp = ``:sexp``;
 val fcp = ``:'a ** 'b``;
 val word = ``:'a word``;
+
+infix &&&;
+fun (a &&& b) = a andalso b;
 
 (*****************************************************************************)
 (* A rule to generate the theorem: |- X o I = X   for some X                 *)
@@ -200,6 +203,101 @@ let val _ = perform "add_bool_translations"
     val _ = add_coding_theorem sexp bool "general_detect"
     	    (DECIDE ``!x. (sexp_to_bool o booleanp) x ==>
 	    	    	  (sexp_to_bool o booleanp) x``)
+in
+    ()
+end handle ExistsAlready => ()
+
+(*****************************************************************************)
+(* Add the type-translation theorems for strings                             *)
+(*****************************************************************************)
+
+fun add_string_translations () =
+let val _ = perform "add_string_translations"
+    val _ = add_translation_precise sexp string
+    val _ = add_coding_function_precise sexp string "encode"
+	{const = ``str``,definition = combinTheory.I_THM, induction = NONE};
+    val _ = add_coding_function_precise sexp string "decode"
+	{const = ``sexp_to_string``,definition = translateTheory.sexp_to_string_def,
+	 induction = NONE};
+    val _ = add_coding_function_precise sexp string "detect"
+	{const = ``sexp_to_bool o stringp``,
+         definition = sexpTheory.stringp_def,
+	 induction = NONE};
+
+    val _ = add_source_function_precise string "map"
+	{const = ``I``,definition = I_THM,induction = NONE};
+    val _ = add_source_function_precise string "all"
+	{const = ``K T``,definition = K_THM,induction = NONE};
+    val _ = add_coding_function_precise sexp string "fix"
+	{const = ``fix_string``,definition = translateTheory.fix_string_def,
+	 induction = NONE};
+
+    val _ = add_coding_theorem_precise sexp string "encode_decode_map"
+    	    translateTheory.ENCDECMAP_STRING;
+    val _ = add_coding_theorem_precise sexp string "encode_detect_all"
+    	    translateTheory.ENCDETALL_STRING;
+    val _ = add_coding_theorem_precise sexp string "decode_encode_fix"
+    	    translateTheory.DECENCFIX_STRING;
+    val _ = add_coding_theorem_precise sexp string "encode_map_encode"
+    	    (simple_encode_map_encode ``str``)
+    val _ = add_coding_theorem_precise sexp string "fix_id"
+    	    translateTheory.FIXID_STRING;
+    val _ = add_source_theorem_precise string "map_compose" (simple_map_compose string);
+
+    val _ = add_coding_theorem_precise sexp string "detect_dead"
+    	    translateTheory.DETDEAD_STRING;
+    val _ = add_coding_theorem_precise sexp string "general_detect"
+    	    (DECIDE ``!x. (sexp_to_bool o stringp) x ==>
+	    	    	  (sexp_to_bool o stringp) x``)
+
+    val _ = functionEncodeLib.add_terminal 
+            ("str ?", op&&& o (equal ``str`` ## stringSyntax.is_string_literal) o dest_comb);
+in
+    ()
+end handle ExistsAlready => ()
+
+(*****************************************************************************)
+(* Add the type-translation theorems for chars                             *)
+(*****************************************************************************)
+
+fun add_char_translations () =
+let val _ = perform "add_char_translations"
+    val _ = add_translation_precise sexp char
+    val _ = add_coding_function_precise sexp char "encode"
+	{const = ``chr``,definition = combinTheory.I_THM, induction = NONE};
+    val _ = add_coding_function_precise sexp char "decode"
+	{const = ``sexp_to_char``,definition = translateTheory.sexp_to_char_def,
+	 induction = NONE};
+    val _ = add_coding_function_precise sexp char "detect"
+	{const = ``sexp_to_bool o characterp``,
+         definition = sexpTheory.characterp_def,
+	 induction = NONE};
+
+    val _ = add_source_function_precise char "map"
+	{const = ``I``,definition = I_THM,induction = NONE};
+    val _ = add_source_function_precise char "all"
+	{const = ``K T``,definition = K_THM,induction = NONE};
+    val _ = add_coding_function_precise sexp char "fix"
+	{const = ``fix_char``,definition = translateTheory.fix_char_def,
+	 induction = NONE};
+
+    val _ = add_coding_theorem_precise sexp char "encode_decode_map"
+    	    translateTheory.ENCDECMAP_CHAR;
+    val _ = add_coding_theorem_precise sexp char "encode_detect_all"
+    	    translateTheory.ENCDETALL_CHAR;
+    val _ = add_coding_theorem_precise sexp char "decode_encode_fix"
+    	    translateTheory.DECENCFIX_CHAR;
+    val _ = add_coding_theorem_precise sexp char "encode_map_encode"
+    	    (simple_encode_map_encode ``chr``)
+    val _ = add_coding_theorem_precise sexp char "fix_id"
+    	    translateTheory.FIXID_CHAR;
+    val _ = add_source_theorem_precise char "map_compose" (simple_map_compose char);
+
+    val _ = add_coding_theorem_precise sexp char "detect_dead"
+    	    translateTheory.DETDEAD_CHAR;
+    val _ = add_coding_theorem_precise sexp char "general_detect"
+    	    (DECIDE ``!x. (sexp_to_bool o characterp) x ==>
+	    	    	  (sexp_to_bool o characterp) x``)
 in
     ()
 end handle ExistsAlready => ()
@@ -1059,20 +1157,31 @@ in
 (* CODINGTHEOREM_FMAP: Replace the previous coding theorem generate with one *)
 (*   that resolves ONE_ONE terms in the antecedent.                          *)
 (*****************************************************************************)
+
 fun CODINGTHEOREM_FMAP s t =
-let val cc = get_coding_theorem_conclusion ``:sexp`` s t
-    val t1 = generate_coding_theorem ``:sexp`` s (base_type t)
-    val t2 = PART_MATCH (lhs o snd o strip_imp) (SPEC_ALL t1) 
-    	     		 (lhs (snd (strip_imp (snd (strip_forall cc)))))
+let val cc = if exists_coding_theorem_conclusion sexp s
+                then get_coding_theorem_conclusion sexp s t
+    	        else get_source_theorem_conclusion s t
+    val t1 = if exists_coding_theorem_conclusion sexp s
+                then generate_coding_theorem sexp s (base_type t)
+		else generate_source_theorem s (base_type t);
+    val t2 = REWRITE_RULE [fmap_encodeTheory.ONE_ONE_I] 
+             (PART_MATCH (lhs o snd o strip_imp) (SPEC_ALL t1) 
+    	     		 (lhs (snd (strip_imp (snd (strip_forall cc))))))
 
     val thm1 = if null (type_vars (fdom t)) 
                   then ONEONE_DECENC_THM (fdom t) 
                   else ASSUME (fst (dest_imp (concl t2)))
 
-    val matched = MATCH_MP t2 thm1 handle _ => MATCH_MP t2 (MATCH_MP fmap_encodeTheory.ONE_ONE_RING thm1)
+    val matched = MATCH_MP t2 thm1 handle _ => 
+    		  MATCH_MP t2 (MATCH_MP fmap_encodeTheory.ONE_ONE_RING thm1) handle _ =>
+		  t2
 
-    val fthm = generate_coding_theorem ``:sexp`` s (fdom t);
-    val tthm = generate_coding_theorem ``:sexp`` s (frng t);
+
+    val fthm = generate_coding_theorem sexp s (fdom t) handle _ =>
+    	       generate_source_theorem s (fdom t)
+    val tthm = generate_coding_theorem sexp s (frng t) handle _ =>
+    	       generate_source_theorem s (frng t)
 
     val rterm = repeat rator (rhs (snd (strip_imp (snd (strip_forall cc)))));
 
@@ -1120,6 +1229,20 @@ in
        then prev
        else mk_imp(mk11 (valOf enc), prev))
 end handle e => wrapException ("oneone_enc_conclusion(" ^ type_to_string t ^ ")") e
+
+(*****************************************************************************)
+(* oneone_mapenc_conclusion: Potentially adds a ONEONE encode and a          *)
+(* ONEONE map to the previous term.                                          *)
+(*****************************************************************************)
+fun oneone_mapenc_conclusion previous x =
+let val (vars,prev) = strip_forall (previous x)
+    val coders = find_terms (fn x => (is_fmap o fst o dom_rng o type_of) x handle _ => false) prev
+    val pvars = filter is_var (mapfilter (rand o rator) coders)
+    val imps = map mk11 (filter (C mem pvars) vars)
+in
+    list_mk_forall(vars, 
+         if null imps then prev else mk_imp(list_mk_conj imps, prev))
+end
 end
 
 local
@@ -1135,9 +1258,13 @@ let val _ = perform "add_fmap_translations"
     val _ = add_coding_theorem sexp fmap "decode_encode_fix" DECENCFIX_FMAP;
     val _ = add_coding_theorem sexp fmap "encode_decode_map" ENCDECMAP_FMAP;
 
+    val _ = add_coding_theorem sexp fmap "encode_map_encode" ENCMAPENC_FMAP;
+
     val _ = add_coding_theorem sexp fmap "fix_id" FIXID_FMAP;
     val _ = add_source_theorem fmap "all_id" ALLID_FMAP;
     val _ = add_source_theorem fmap "map_id" MAPID_FMAP;
+
+    val _ = add_source_theorem fmap "map_compose" FMAP_MAP_COMPOSE;
 
     val _ = add_coding_theorem sexp fmap "detect_dead" DETECTDEAD_FMAP;
     val _ = add_coding_theorem sexp fmap "general_detect" DETECT_GENERAL_FMAP
@@ -1169,6 +1296,12 @@ let val _ = perform "add_fmap_translations"
     val _ = set_coding_theorem_conclusion sexp "decode_encode_fix" (oneone_decenc_conclusion mk_decode_encode_fix_conc sexp);
     val _ = add_rule_coding_theorem_generator "decode_encode_fix" is_fmap (CODINGTHEOREM_FMAP "decode_encode_fix") sexp;
 
+    val _ = set_coding_theorem_conclusion sexp "encode_map_encode" (curry (oneone_mapenc_conclusion (uncurry mk_encode_map_encode_conc)) sexp);
+    val _ = add_rule_coding_theorem_generator "encode_map_encode" is_fmap (CODINGTHEOREM_FMAP "encode_map_encode") sexp;
+
+    val _ = set_source_theorem_conclusion "map_compose" (oneone_mapenc_conclusion mk_map_compose_conc);
+    val _ = add_rule_source_theorem_generator "map_compose" is_fmap (CODINGTHEOREM_FMAP "map_compose");
+
 in  ()
 end
 end;
@@ -1181,6 +1314,7 @@ let val _ = add_standard_rewrite 0 "fmap_p" sorted_car_rewrite;
     val _ = add_standard_rewrite 0 "FDOM" fdom_rewrite;
     val _ = add_standard_rewrite 0 "FAPPLY" apply_rewrite;
     val _ = add_standard_rewrite 0 "FUPDATE" fupdate_rewrite;
+    val _ = add_standard_rewrite 0 "FEMPTY" fempty_rewrite;
 in ()
 end
 end
@@ -1208,6 +1342,8 @@ val _ = add_translations add_num_translations num;
 val _ = add_translations add_int_translations int;
 val _ = add_translations add_rat_translations rat;
 val _ = add_translations add_bool_translations bool;
+val _ = add_translations add_string_translations string;
+val _ = add_translations add_char_translations char;
 val _ = add_translations add_list_translations list;
 val _ = add_translations add_fcp_translations fcp;
 val _ = add_translations add_word_translations word;

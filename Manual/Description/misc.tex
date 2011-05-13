@@ -812,6 +812,12 @@ The output is suited for inclusion in the normal flow of \LaTeX{} (it is an \tex
 Parses the string argument as a term, and prints it.
 %
 Again, the output is wrapped in an \texttt{\bs{}mbox}.
+
+\paragraph{Important:} If the string argument includes a right-brace character
+(\ie, the character \rb, which has ASCII code 125), then it must be
+escaped by preceding it with a backslash~(\bs).  Otherwise, the
+munger's lexer will incorrectly determine that the argument ends at
+that right-brace character rather than at a subsequent one.
 \item[\holthm\{\textit{\mdseries{thmspecifier}}\}]
 %
 \index{HOLthm (munging command)@\holthm{} (munging command)}
@@ -906,6 +912,9 @@ The argument is a string that parses to a \emph{term}, not a type.
 The behaviour is to print the type of this term.
 %
 Thus \texttt{\holty{}[of]\{p /\bs{} q\}} will print \texttt{bool}.
+
+If the string includes right-braces, they must be escaped with
+back-slashes, just as with the arguments to \holtm.
 
 \item[\texttt{rule}] (Only for use with \holtm{} and \holthm.)
 Prints a term (or a theorem's conclusion) using the \texttt{\bs{}infer} command (available as part of the \texttt{proof.sty} package).

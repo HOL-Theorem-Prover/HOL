@@ -1,4 +1,4 @@
-
+val theory_width = 30
 
 
 structure Process = OS.Process
@@ -13,11 +13,24 @@ fun mkquiet {bequiet, diffsort, files} =
 fun mkdiff {bequiet, diffsort, files} =
     {bequiet = bequiet, diffsort = true, files = files}
 
+val usage_msg =
+    "Usage:\n  " ^ CommandLine.name() ^ " file1 file2 ... filen\n\n" ^
+    "Options:\n\
+    \  -d    Sort results in order of the differences (only with two files)\n\
+    \  -q    Print raw data only, no sums, or fancy lines; (output to other tools)\n\
+    \  -h    Show this help message\n\
+    \  -?    Show this help message\n"
+
+fun show_usage() = (print usage_msg; Process.exit Process.success)
+
+
 fun getargs args =
     case args of
       [] => {bequiet = false, diffsort = false, files = []}
     | "-q" :: rest => mkquiet (getargs rest)
     | "-d" :: rest => mkdiff (getargs rest)
+    | "-h" :: _ => show_usage()
+    | "-?" :: _ => show_usage()
     | _ => {bequiet = false, diffsort = false, files = args}
 
 val {bequiet,diffsort,files = args} = getargs args0
@@ -32,7 +45,7 @@ val _ = if length args <> 2 andalso diffsort then
 val base = hd args
 
 fun print_dashes () =
-    (print (StringCvt.padLeft #"-" (15 * length args + 25) "");
+    (print (StringCvt.padLeft #"-" (15 * length args + theory_width) "");
      print "\n")
 
 fun read_file (fname,m) = let
@@ -99,7 +112,7 @@ end
 fun fmt_real r = centered25 (Real.fmt (StringCvt.FIX (SOME 3)) r)
 
 val _ = if not bequiet then
-          (print (StringCvt.padLeft #" " 25 "");
+          (print (StringCvt.padLeft #" " theory_width "");
            app (print o fmt_fname) args;
            print "\n";
            print_dashes())
@@ -112,7 +125,7 @@ fun print_line m thyname = let
         NONE => print (centered25 "--")
       | SOME r => print (fmt_real r)
 in
-  print (StringCvt.padRight #" " 25 thyname);
+  print (StringCvt.padRight #" " theory_width thyname);
   app print_entry args;
   print "\n"
 end
@@ -143,7 +156,7 @@ end
 
 val _ = if not bequiet then
           (print_dashes();
-           print (StringCvt.padRight #" " 25 "Total");
+           print (StringCvt.padRight #" " theory_width "Total");
            app print_entry args;
            print "\n")
         else ()

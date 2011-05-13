@@ -337,7 +337,7 @@ end;
 (*
 PERM_SPLIT ls l
 
-val ls = ``l1:'a list``
+val ls = ``(l1 ++l2):'a list``
 val l = ``l2 ++ x::l1``
 *)
 
@@ -357,6 +357,56 @@ let
    val thm0 = ISPECL [l,lc,ls,l''] PERM_FUN_SPLIT;
    val thm1 = MP thm0 thm_l
    val thm2 = MP thm1 thm_ls
+in
+   thm2
+end;
+
+
+(*
+   val t = ``(l2++x::l3)``
+   val t = ``((TAKE n l)++l2++x::l3++(DROP n l))``
+   val t = ``((TAKE n l)++(DROP m l2)++l2++x::l3++(TAKE m l2)++(DROP n l))``
+*)
+fun PERM_TAKE_DROP t =
+   let
+      val (_, ls) = strip_perm_list t;
+      val drop_ls = mapfilter listSyntax.dest_drop ls
+      val take_ls = mapfilter listSyntax.dest_take ls
+      val common = first (fn e => mem e drop_ls) take_ls;
+
+      val common_t = listSyntax.mk_append (listSyntax.mk_take common, listSyntax.mk_drop common);
+      val thm0 = PERM_SPLIT common_t t;
+      val thm1 = CONV_RULE ((RAND_CONV o RATOR_CONV o RAND_CONV) (REWR_CONV listTheory.TAKE_DROP)) thm0
+
+      val thm2_opt = (total PERM_TAKE_DROP) (rand (concl thm1))
+      val thm3 = if not (isSome thm2_opt) then thm1 else
+                   MATCH_MP PERM_TRANS (CONJ thm1 (valOf thm2_opt))
+   in
+      thm3
+   end;
+
+
+(*
+   val l1 = ``(TAKE n l)++l2++x::l3++(DROP n l)``
+   val l2 = ``(DROP m l)++x::l3++(TAKE m l)++(DROP n l)``
+   val t = ``PERM ^l1 ^l2``
+*)
+fun PERM_TAKE_DROP_CONV t =
+let
+   val (l1,l2) = dest_PERM t handle HOL_ERR _ => raise UNCHANGED;
+
+   val thm_l1_opt = (total PERM_TAKE_DROP) l1;
+   val thm_l2_opt = (total PERM_TAKE_DROP) l2;
+   val _ = if isSome thm_l1_opt orelse isSome thm_l2_opt then () else raise UNCHANGED;
+
+   val thm_l1 = if isSome thm_l1_opt then valOf thm_l1_opt else ISPEC l1 PERM_REFL;
+   val thm_l2 = if isSome thm_l2_opt then valOf thm_l2_opt else ISPEC l2 PERM_REFL;
+
+   val l1' = (rand o concl) thm_l1
+   val l2' = (rand o concl) thm_l2
+   val thm0 = ISPECL [l1,l1',l2,l2'] PERM_CONG_2;
+   val thm1 = MP thm0 thm_l1
+   val thm2 = MP thm1 thm_l2
 in
    thm2
 end;
@@ -403,6 +453,7 @@ end;
 
 
 val PERM_NORMALISE_CONV = PERM_ELIM_DUPLICATES_CONV THENC
+                          PERM_TAKE_DROP_CONV THENC
                           PERM_NO_ELIM_NORMALISE_CONV THENC
 			  PERM_TURN_CONV;
 

@@ -63,10 +63,17 @@ val dim_of = snd o dest_cart_type o Term.type_of;
 
 (* ------------------------------------------------------------------------- *)
 
+val fcp_tm       = Term.prim_mk_const{Name = "FCP", Thy = "fcp"}
 val fcp_index_tm = Term.prim_mk_const{Name = "fcp_index", Thy = "fcp"}
 val dimindex_tm  = Term.prim_mk_const{Name = "dimindex", Thy = "fcp"}
 
 (* ------------------------------------------------------------------------- *)
+
+fun mk_fcp (x,ty) =
+let val a = snd (Type.dom_rng (Term.type_of x)) in
+  Term.mk_comb
+    (Term.inst[Type.alpha |-> a, Type.beta |-> ty] fcp_tm, x)
+end handle HOL_ERR _ => raise ERR "mk_fcp" "";
 
 fun mk_fcp_index (x,y) =
 let val (a, b) = dest_cart_type (Term.type_of x) in
@@ -81,6 +88,10 @@ fun mk_dimindex ty =
 
 (* ------------------------------------------------------------------------- *)
 
+fun dest_fcp tm =
+  (HolKernel.dest_monop fcp_tm (ERR "dest_fcp" "") tm,
+   snd (dest_cart_type (type_of tm)));
+
 val dest_fcp_index =
   HolKernel.dest_binop fcp_index_tm (ERR "dest_fcp_index" "");
 
@@ -90,6 +101,7 @@ fun dest_dimindex tm =
 
 (* ------------------------------------------------------------------------- *)
 
+val is_fcp       = Lib.can dest_fcp;
 val is_fcp_index = Lib.can dest_fcp_index;
 val is_dimindex  = Lib.can dest_dimindex;
 

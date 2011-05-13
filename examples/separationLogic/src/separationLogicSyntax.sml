@@ -98,6 +98,8 @@ val asl_prog_parallel_term = asl_mk_const "asl_prog_parallel";
 val dest_asl_prog_parallel = strip_comb_2 asl_prog_parallel_term;
 val is_asl_prog_parallel = (can dest_asl_prog_parallel);
 
+val asl_prog_diverge_term = asl_mk_const "asl_prog_diverge";
+val asl_prog_fail_term = asl_mk_const "asl_prog_fail";
 
 val asl_prog_seq_term = asl_mk_const "asl_prog_seq";
 val dest_asl_prog_seq = strip_comb_2 asl_prog_seq_term;
@@ -114,6 +116,11 @@ val dest_asl_prog_cond = strip_comb_3 asl_prog_cond_term;
 val is_asl_prog_cond = (can dest_asl_prog_cond);
 fun mk_asl_prog_cond (c,p1,p2) = 
    list_mk_icomb(asl_prog_cond_term, [c,p1,p2]);
+
+val asl_prog_choice_term = asl_mk_const "asl_prog_choice";
+val dest_asl_prog_choice = strip_comb_2 asl_prog_choice_term;
+val is_asl_prog_choice = (can dest_asl_prog_choice);
+
 
 
 val asl_prog_while_term = asl_mk_const "asl_prog_while";

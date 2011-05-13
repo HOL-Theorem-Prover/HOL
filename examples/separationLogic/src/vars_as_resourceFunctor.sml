@@ -1116,22 +1116,34 @@ val tt = find_term is_VAR_RES_COND_HOARE_TRIPLE (snd (top_goal ()))
 fun VAR_RES_COND_INFERENCE___cond___CONSEQ_CONV tt =
 let
    val (p1,c_opt,_,_,_,thm0_fun) = dest_VAR_RES_COND_HOARE_TRIPLE___FIRST_COMMAND_location tt;
-   val (cond_t, _, _) = dest_asl_prog_cond p1
+   val cond_t_opt = 
+      let 
+         val (cond_t, _, _) = dest_asl_prog_cond p1
+      in SOME cond_t end handle HOL_ERR _ =>
+      let
+         val _ = dest_asl_prog_choice p1;
+      in NONE end;
 
    (*apply inference*)
    val c = if isSome c_opt then valOf c_opt else empty_label_list
    val thm0 = if not (isSome c_opt) then REFL tt else
               VAR_RES_COND_HOARE_TRIPLE___FIRST_COMMAND___CONV
                    (K (ISPECL [c, p1] asl_comment_location_def)) tt
+   val inf_thm = if isSome cond_t_opt then
+      VAR_RES_COND_INFERENCE___prog_cond else
+      VAR_RES_COND_INFERENCE___prog_choice
    val thm1a =
-      (HO_PART_MATCH (snd o dest_imp_only) VAR_RES_COND_INFERENCE___prog_cond)
+      HO_PART_MATCH (snd o dest_imp_only) inf_thm
       (rhs (concl thm0));
    val thm1 = CONV_RULE (RAND_CONV (K (GSYM thm0))) thm1a
 
    (*comments*)
-   val neg_cond_t = mk_icomb (asl_pred_neg_term, cond_t);
-   val cond_s = term_to_string cond_t
-   val neg_cond_s = term_to_string neg_cond_t
+   val (cond_s, neg_cond_s) = if isSome cond_t_opt then
+       let
+          val cond_t = valOf cond_t_opt
+          val neg_cond_t = mk_icomb (asl_pred_neg_term, cond_t);
+       in (term_to_string cond_t, term_to_string neg_cond_t) end
+       else ("1", "2");
 
    val ct = asl_comment_modify_APPEND_INC ("case "^cond_s) c
    val cf = asl_comment_modify_APPEND_INC ("case "^neg_cond_s) c
@@ -1139,13 +1151,15 @@ let
    val ttt = (fst o dest_conj o fst o dest_imp o concl) thm1
 
    fun list_first_conv conv ttt =
-      if listSyntax.is_nil ttt then conv ttt else
+      if (listSyntax.is_nil ttt) then conv ttt else
       (RATOR_CONV (RAND_CONV conv)) ttt
    fun comment_conv c =
       (TRY_CONV (REWR_CONV VAR_RES_COND_INFERENCE___prog_block3)) THENC
-      ((RATOR_CONV o RAND_CONV o RAND_CONV o RAND_CONV)
+      (TRY_CONV (REWR_CONV VAR_RES_COND_INFERENCE___prog_block4)) THENC
+      ((RATOR_CONV o RAND_CONV o RAND_CONV o (if isSome cond_t_opt then RAND_CONV else I))
        (list_append_norm_CONV THENC
         list_first_conv (asl_comment_location_INTRO_CONV c)))
+
 
    val thm2 = CONV_RULE (
       (RATOR_CONV o RAND_CONV)
@@ -1153,6 +1167,32 @@ let
        (RATOR_CONV (RAND_CONV (comment_conv ct))))) thm1
 in
    thm2
+end;
+
+(******************************************************************************)
+(* HANDLE diverge                                                             *)
+(******************************************************************************)
+
+(*
+val tt = find_term is_VAR_RES_COND_HOARE_TRIPLE (snd (top_goal ()))
+*)
+fun VAR_RES_COND_INFERENCE___diverge___CONV tt =
+let
+   val (p1,c_opt,_,_,_,thm0_fun) = dest_VAR_RES_COND_HOARE_TRIPLE___FIRST_COMMAND_location tt;
+   val _ = if same_const p1 asl_prog_diverge_term then () else Feedback.fail();
+
+   (*apply inference*)
+   val c = if isSome c_opt then valOf c_opt else empty_label_list
+   val thm0 = if not (isSome c_opt) then REFL tt else
+              VAR_RES_COND_HOARE_TRIPLE___FIRST_COMMAND___CONV
+                   (K (ISPECL [c, p1] asl_comment_location_def)) tt;
+      
+   val thm1a =
+      HO_PART_MATCH I VAR_RES_COND_INFERENCE___prog_block_diverge
+      (rhs (concl thm0));
+   val thm1 = TRANS thm0 (EQT_INTRO thm1a);
+in
+   thm1
 end;
 
 
@@ -3381,6 +3421,9 @@ val VAR_RES_INFERENCES_LIST___simulate_command = ("simulate command",
    ("block_spec",
        no_context_strengthen_conseq_conv
        VAR_RES_COND_INFERENCE___block_spec___CONSEQ_CONV),
+   ("diverge",
+       no_context_strengthen_conseq_conv
+       VAR_RES_COND_INFERENCE___diverge___CONV),
    ("assert",
        no_context_strengthen_conseq_conv
        VAR_RES_COND_INFERENCE___assert___CONSEQ_CONV)]@

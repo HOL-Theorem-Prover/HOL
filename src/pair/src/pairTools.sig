@@ -2,6 +2,7 @@ signature pairTools =
 sig
  include Abbrev
 
+ val PairCases_on     : term quotation -> tactic
  val PGEN             : term -> term -> thm -> thm
  val PGEN_TAC         : term -> tactic
  val PFUN_EQ_RULE     : thm -> thm

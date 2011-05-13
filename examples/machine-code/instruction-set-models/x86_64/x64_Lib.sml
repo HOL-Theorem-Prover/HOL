@@ -11,9 +11,9 @@ open x64_coretypesTheory x64_icacheTheory;
 
 (* decoder *)
 
-fun nTimes n f x = if n = 0 then x else nTimes (n-1) f (f x)
-
 val Zreg_distinct = x64_decoderTheory.Zreg_distinct;
+
+fun nTimes n f x = if n = 0 then x else nTimes (n-1) f (f x)
 
 fun eval_term_ss tm_name tm = conv_ss
   { name = tm_name, trace = 3, key = SOME ([],tm), conv = K (K EVAL) };
@@ -135,6 +135,10 @@ val ss = rewrites [x64_exec_def, ZREAD_REG_def, ZREAD_EFLAG_def,
   word_signed_overflow_add_def, word_signed_overflow_sub_def, w2w_n2w,
   bitTheory.BITS_THM, value_width_def, word_size_msb_def]
 
+val SCALE_SIMP = LIST_CONJ [EVAL ``w2n (0w:word2)``,EVAL ``w2n (1w:word2)``,
+    EVAL ``w2n (2w:word2)``,EVAL ``w2n (3w:word2)``,
+    prove(``!w. 1w * w = w``,SIMP_TAC std_ss [wordsTheory.WORD_MULT_CLAUSES])]
+
 fun x64_step s = let
   val th = x64_decode s
   val tm = (fst o dest_eq o fst o dest_imp o concl) th
@@ -159,6 +163,7 @@ fun x64_step s = let
   val th1 = SIMP_RULE bool_ss [GSYM AND_IMP_INTRO,pred_setTheory.IN_INSERT,pred_setTheory.NOT_IN_EMPTY] th1
   val th1 = SIMP_RULE bool_ss [AND_IMP_INTRO,GSYM CONJ_ASSOC] th1
   val th1 = SIMP_RULE bool_ss [SIMP_RULE (srw_ss()) [] (INST_TYPE[``:'a``|->``:32``]w2n_lt)] th1
+  val th1 = SIMP_RULE std_ss [SCALE_SIMP] th1
   in th1 end;
 
 (*

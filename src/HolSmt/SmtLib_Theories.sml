@@ -180,8 +180,15 @@ in
       ("false", K_zero_zero boolSyntax.F),
       ("not", K_zero_one boolSyntax.mk_neg),
       ("=>", rightassoc boolSyntax.mk_imp),
-      ("and", leftassoc boolSyntax.mk_conj),
-      ("or", leftassoc boolSyntax.mk_disj),
+      (* FIXME: SMT-LIB declares "and" and "or" as left-assoc. This
+         interacts badly with HOL4, where they are right-assoc.  In
+         particular, it breaks our proof reconstruction implementation
+         (Z3_ProofReplay.sml) in a few places that are not prepared to
+         handle the additional parentheses. For now, we parse "and"
+         and "or" as rightassoc. Since conjunction and disjunction are
+         associative, this does not change the meaning of formulas. *)
+      ("and", rightassoc boolSyntax.mk_conj),
+      ("or", rightassoc boolSyntax.mk_disj),
       ("xor", leftassoc (fn (t1, t2) => Term.mk_comb (Term.mk_comb
           (Term.prim_mk_const {Thy="HolSmt", Name="xor"}, t1), t2))),
       ("=", chainable boolSyntax.mk_eq),

@@ -13,7 +13,7 @@ sortlist(i;) [data_list(i,data)] {
      (PERM data _idata)``]
 
 
-min(m;i) [data_list(i,data) * (m == #mc)] {
+min(m;i) [data_list(i,data)] {
   local ih, it;
   if (i == NULL) {} else {
     ih = i->dta;
@@ -23,9 +23,9 @@ min(m;i) [data_list(i,data) * (m == #mc)] {
     }
     min (m;it);
   }
-} [data_list(i,data) * (m == _mc2) *
-   ``(MEM _mc2 (mc::data)) /\
-     (EVERY (\n. _mc2 <= n) (mc::data))``]
+} [data_list(i,data) * 
+   ``(MEM m (old(m)::data)) /\
+     (EVERY (\n. m <= n) (old(m)::data))``]
 
 
 delete(i,j;m) [data_list(i,data) * ``MEM m data``] {

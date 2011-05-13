@@ -175,7 +175,7 @@ struct
   fun conj_elim (thm, t) =
   let
     fun elim conj =
-      if t = conj then
+      if Term.aconv t conj then
         Lib.I
       else
         let
@@ -193,7 +193,7 @@ struct
      --------------------
      A |- ... \/ t \/ ... *)
   fun disj_intro (thm, disj) =
-    if Thm.concl thm = disj then
+    if Term.aconv (Thm.concl thm) disj then
       thm
     else
       let
@@ -204,22 +204,27 @@ struct
             Thm.DISJ2 l (disj_intro (thm, r))
       end
 
+  (* auxiliary function: fails unless 's' is a subterm of 't' with
+     respect to 'destfn' *)
+  fun check_subterm destfn s t =
+    if Term.aconv s t then
+      ()
+    else
+      let
+        val (l, r) = destfn t
+      in
+        check_subterm destfn s l
+          handle Feedback.HOL_ERR _ =>
+            check_subterm destfn s r
+      end
+
   (* |- ... \/ t \/ ... \/ ~t \/ ... *)
   fun gen_excluded_middle disj =
   let
     val (pos, neg) = Lib.tryfind (fn neg =>
       let
         val pos = boolSyntax.dest_neg neg
-        fun check_is_disjunct lit disj =
-          disj = lit orelse
-            let
-              val (l, r) = boolSyntax.dest_disj disj
-            in
-              check_is_disjunct lit l
-                handle Feedback.HOL_ERR _ =>
-                  check_is_disjunct lit r
-            end
-        val _ = check_is_disjunct pos disj
+        val _ = check_subterm boolSyntax.dest_disj pos disj
       in
         (pos, neg)
       end) (boolSyntax.strip_disj disj)
@@ -237,16 +242,7 @@ struct
     val (pos, neg) = Lib.tryfind (fn neg =>
       let
         val pos = boolSyntax.dest_neg neg
-        fun check_is_conjunct lit conj =
-          conj = lit orelse
-            let
-              val (l, r) = boolSyntax.dest_conj conj
-            in
-              check_is_conjunct lit l
-                handle Feedback.HOL_ERR _ =>
-                  check_is_conjunct lit r
-            end
-        val _ = check_is_conjunct pos (Thm.concl thm)
+        val _ = check_subterm boolSyntax.dest_conj pos (Thm.concl thm)
       in
         (pos, neg)
       end) (boolSyntax.strip_conj (Thm.concl thm))

@@ -1823,6 +1823,11 @@ val ALL_DISTINCT_SET_TO_LIST = store_thm("ALL_DISTINCT_SET_TO_LIST",
 			 pred_setTheory.CHOICE_NOT_IN_REST]);
 val _ = export_rewrites ["ALL_DISTINCT_SET_TO_LIST"];
 
+val ITSET_eq_FOLDL_SET_TO_LIST = Q.store_thm(
+"ITSET_eq_FOLDL_SET_TO_LIST",
+`!s. FINITE s ==> !f a. ITSET f s a = FOLDL (combin$C f) a (SET_TO_LIST s)`,
+HO_MATCH_MP_TAC pred_setTheory.FINITE_COMPLETE_INDUCTION THEN
+SRW_TAC [][pred_setTheory.ITSET_THM,SET_TO_LIST_THM,FOLDL]);
 
 (* ----------------------------------------------------------------------
     listRel
@@ -1996,6 +2001,76 @@ val MEM_SNOC = store_thm("MEM_SNOC",
     THEN CONV_TAC ((RAND_CONV o RATOR_CONV o ONCE_DEPTH_CONV)
      (REWR_CONV DISJ_SYM)) THEN REFL_TAC);
 
+val REVERSE_SNOC_DEF = store_thm (
+  "REVERSE_SNOC_DEF",
+    ``(REVERSE [] = []) /\
+        (!x:'a l. REVERSE (x::l) = SNOC x (REVERSE l))``,
+          REWRITE_TAC [REVERSE_DEF, SNOC_APPEND]);
+
+val REVERSE_SNOC = store_thm(
+  "REVERSE_SNOC",
+    ``!(x:'a) l. REVERSE (SNOC x l) = CONS x (REVERSE l)``,
+      GEN_TAC THEN LIST_INDUCT_TAC THEN ASM_REWRITE_TAC[SNOC,REVERSE_SNOC_DEF]);
+
+val forall_REVERSE = TAC_PROOF(([],
+    (--`!P. (!l:('a)list. P(REVERSE l)) = (!l. P l)`--)),
+    GEN_TAC THEN EQ_TAC THEN DISCH_TAC THEN GEN_TAC
+    THEN POP_ASSUM (ACCEPT_TAC o (REWRITE_RULE[REVERSE_REVERSE]
+     o (SPEC (--`REVERSE l:('a)list`--)))));
+
+val f_REVERSE_lemma = TAC_PROOF (([],
+    (--`!f1 f2.
+    ((\x. (f1:('a)list->'b) (REVERSE x)) = (\x. f2 (REVERSE x))) = (f1 = f2)`--)),
+    REPEAT GEN_TAC THEN EQ_TAC THEN DISCH_TAC THENL[
+      POP_ASSUM (fn x => ACCEPT_TAC (EXT (REWRITE_RULE[REVERSE_REVERSE]
+      (GEN (--`x:('a)list`--) (BETA_RULE (AP_THM x (--`REVERSE (x:('a)list)`--))))))),
+      ASM_REWRITE_TAC[]]);
+
+
+val SNOC_Axiom_old = prove(
+  --`!(e:'b) (f:'b -> ('a -> (('a)list -> 'b))).
+        ?! fn1.
+          (fn1[] = e) /\
+          (!x l. fn1(SNOC x l) = f(fn1 l)x l)`--,
+
+ let val  lemma =  CONV_RULE (EXISTS_UNIQUE_CONV)
+       (REWRITE_RULE[REVERSE_REVERSE] (BETA_RULE (SPECL
+         [(--`e:'b`--),(--`(\ft x l. f ft x (REVERSE l)):'b -> ('a -> (('a)list -> 'b))`--)]
+        (PURE_ONCE_REWRITE_RULE
+         [SYM (CONJUNCT1 REVERSE_DEF),
+          PURE_ONCE_REWRITE_RULE[SYM (SPEC_ALL REVERSE_SNOC)]
+           (BETA_RULE (SPEC (--`\l:('a)list.fn1(CONS x l) =
+                       (f:'b -> ('a -> (('a)list -> 'b)))(fn1 l)x l`--)
+             (CONV_RULE (ONCE_DEPTH_CONV SYM_CONV) forall_REVERSE)))]
+            list_Axiom_old))))
+ in
+    REPEAT GEN_TAC THEN CONV_TAC EXISTS_UNIQUE_CONV
+    THEN STRIP_ASSUME_TAC lemma THEN CONJ_TAC THENL
+    [
+      EXISTS_TAC (--`(fn1:('a)list->'b) o REVERSE`--)
+      THEN REWRITE_TAC[combinTheory.o_DEF] THEN BETA_TAC THEN ASM_REWRITE_TAC[],
+
+      REPEAT GEN_TAC THEN POP_ASSUM (ACCEPT_TAC o SPEC_ALL o
+        REWRITE_RULE[REVERSE_REVERSE,f_REVERSE_lemma] o
+        BETA_RULE o REWRITE_RULE[combinTheory.o_DEF] o
+        SPECL [(--`(fn1' o REVERSE):('a)list->'b`--),(--`(fn1'' o REVERSE):('a)list->'b`--)])
+     ]
+  end);
+
+val SNOC_Axiom = store_thm(
+  "SNOC_Axiom",
+  --`!e f. ?fn:'a list -> 'b.
+       (fn [] = e) /\
+       (!x l. fn (SNOC x l) = f x l (fn l))`--,
+  REPEAT GEN_TAC THEN
+  STRIP_ASSUME_TAC (CONV_RULE EXISTS_UNIQUE_CONV
+                    (BETA_RULE
+                     (Q.SPECL [`e`, `\x y z. f y z x`] SNOC_Axiom_old))) THEN
+  Q.EXISTS_TAC `fn1` THEN ASM_REWRITE_TAC []);
+
+val SNOC_INDUCT = save_thm("SNOC_INDUCT", prove_induction_thm SNOC_Axiom_old);
+val SNOC_CASES =  save_thm("SNOC_CASES", hd (prove_cases_thm SNOC_INDUCT));
+
 (*--------------------------------------------------------------*)
 (* List generator                                               *)
 (*  GENLIST f n = [f 0;...; f(n-1)]                             *)
@@ -2111,6 +2186,73 @@ val GENLIST_NUMERALS = store_thm(
   REWRITE_TAC [GENLIST_GENLIST_AUX, GENLIST_AUX]);
 val _ = export_rewrites ["GENLIST_NUMERALS"]
 
+val MEM_GENLIST = Q.store_thm(
+"MEM_GENLIST",
+`MEM x (GENLIST f n) <=> ?m. m < n /\ (x = f m)`,
+SRW_TAC [][MEM_EL,EL_GENLIST,EQ_IMP_THM] THEN
+PROVE_TAC [EL_GENLIST] )
+
+val ALL_DISTINCT_SNOC = store_thm (
+   "ALL_DISTINCT_SNOC",
+   ``!x l. ALL_DISTINCT (SNOC x l) =
+             ~(MEM x l) /\ (ALL_DISTINCT l)``,
+SRW_TAC [][SNOC_APPEND, ALL_DISTINCT_APPEND] THEN PROVE_TAC[]);
+
+local open prim_recTheory in
+val ALL_DISTINCT_GENLIST = Q.store_thm(
+"ALL_DISTINCT_GENLIST",
+`ALL_DISTINCT (GENLIST f n) <=>
+ (!m1 m2. m1 < n /\ m2 < n /\ (f m1 = f m2) ==> (m1 = m2))`,
+Induct_on `n` THEN
+SRW_TAC [][GENLIST,ALL_DISTINCT_SNOC,MEM_EL] THEN
+SRW_TAC [][EQ_IMP_THM] THEN1 (
+  IMP_RES_TAC LESS_SUC_IMP THEN
+  Cases_on `m1 = n` THEN Cases_on `m2 = n` THEN SRW_TAC [][] THEN
+  FULL_SIMP_TAC (srw_ss()) [] THEN1 (
+    NTAC 2 (FIRST_X_ASSUM (Q.SPEC_THEN `m2` MP_TAC)) THEN
+    SRW_TAC [][] ) THEN
+  NTAC 2 (FIRST_X_ASSUM (Q.SPEC_THEN `m1` MP_TAC)) THEN
+  SRW_TAC [][] ) THEN1 (
+  Q.MATCH_RENAME_TAC `~(m < n) \/ f n <> EL m (GENLIST f n)` [] THEN
+  Cases_on `m < n` THEN SRW_TAC [][] THEN
+  FIRST_X_ASSUM (Q.SPECL_THEN [`m`,`n`] MP_TAC) THEN
+  SRW_TAC [][LESS_SUC] THEN
+  METIS_TAC [LESS_REFL] ) THEN
+METIS_TAC [LESS_SUC] )
+end
+
+(* ---------------------------------------------------------------------- *)
+
+val FOLDL_SNOC = store_thm("FOLDL_SNOC",
+    (--`!(f:'b->'a->'b) e x l. FOLDL f e (SNOC x l) = f (FOLDL f e l) x`--),
+    let val lem = prove(
+        (--`!l (f:'b->'a->'b) e x. FOLDL f e (SNOC x l) = f (FOLDL f e l) x`--),
+        LIST_INDUCT_TAC THEN REWRITE_TAC[SNOC,FOLDL]
+        THEN REPEAT GEN_TAC THEN ASM_REWRITE_TAC[])
+   in
+    MATCH_ACCEPT_TAC lem
+   end);
+
+local open arithmeticTheory in
+val SUM_SNOC = store_thm("SUM_SNOC",
+    (--`!x l. SUM (SNOC x l) = (SUM l) + x`--),
+    GEN_TAC THEN LIST_INDUCT_TAC THEN REWRITE_TAC[SUM,SNOC,ADD,ADD_0]
+    THEN GEN_TAC THEN ASM_REWRITE_TAC[ADD_ASSOC]);
+end
+
+val SUM_MAP_FOLDL = Q.store_thm(
+"SUM_MAP_FOLDL",
+`!ls. SUM (MAP f ls) = FOLDL (λa e. a + f e) 0 ls`,
+HO_MATCH_MP_TAC SNOC_INDUCT THEN
+SRW_TAC [][FOLDL_SNOC,MAP_SNOC,SUM_SNOC,MAP,SUM,FOLDL]);
+
+val SUM_IMAGE_eq_SUM_MAP_SET_TO_LIST = Q.store_thm(
+"SUM_IMAGE_eq_SUM_MAP_SET_TO_LIST",
+`FINITE s ==> (SIGMA f s = SUM (MAP f (SET_TO_LIST s)))`,
+SRW_TAC [][SUM_IMAGE_DEF] THEN
+SRW_TAC [][ITSET_eq_FOLDL_SET_TO_LIST,SUM_MAP_FOLDL] THEN
+AP_THM_TAC THEN AP_THM_TAC THEN AP_TERM_TAC THEN
+SRW_TAC [][FUN_EQ_THM,arithmeticTheory.ADD_COMM]);
 
 (* ----------------------------------------------------------------------
     All lists have infinite universes

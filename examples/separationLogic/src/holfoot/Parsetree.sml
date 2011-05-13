@@ -72,6 +72,9 @@ datatype p_statement =
   | Pstm_fcall of string * actual_params
   | Pstm_parallel_fcall of string * actual_params * string * actual_params
   | Pstm_assert of a_proposition
+  | Pstm_diverge 
+  | Pstm_fail 
+  | Pstm_ndet of p_statement * p_statement
 
 
 datatype p_item =

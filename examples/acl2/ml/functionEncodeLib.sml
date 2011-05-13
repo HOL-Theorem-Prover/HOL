@@ -472,8 +472,12 @@ end;
 (*****************************************************************************)
 
 fun head_term thm =
-	hd (strip_conj (fst (dest_imp_only (concl thm))))
-	handle e => wrapException "head_term" e;
+let val x = fst (dest_imp_only (concl thm))
+            handle e => wrapException "head_term" e;
+in  (let val r = fst (dest_conj x) 
+     in if is_conj r then hd (strip_conj r) else r
+     end) handle _ => x
+end  
 
 fun resolve_head_term protect rthm thm assumptions =
 let	val thm' = if is_conj (fst (dest_imp_only (concl thm))) then
@@ -506,15 +510,15 @@ in
 end
 
 local
-fun TUNDISCH thm =
-	if fst (dest_imp_only (concl thm)) = T then
-		CONV_RULE (FIRST_CONV (map REWR_CONV (CONJUNCTS (SPEC_ALL IMP_CLAUSES)))) thm else UNDISCH thm
+fun TUNDISCH thm = MP thm TRUTH handle _ =>  UNDISCH thm
 in
 fun tail_thm thm =
-	(if is_conj (fst (dest_imp_only (concl thm)))
+let val imp = fst (dest_imp_only (concl thm))
+in  (if is_conj imp
 	then TUNDISCH (CONV_RULE (REWR_CONV (GSYM AND_IMP_INTRO)) thm)
-	else 	if head_term thm = T then thm
+	else 	if imp = T then thm
 		else DISCH T (TUNDISCH thm)) handle e => wrapException "tail_thm" e
+end
 end;
 
 (*****************************************************************************)
@@ -694,14 +698,17 @@ in
 			"Variable in assumptions bound")
 			else result
 end
+fun mapchanged f [] = []
+  | mapchanged f (x::xs) = 
+  (f x :: mapchanged f xs) handle UNCHANGED => mapchanged f xs
 fun IAL oset L (assums,extras) =
 let	val to_avoid = free_varsl oset
+        val _ = trace 4 "I" ;
 	val _ = if !debug then IAL_data := SOME (oset,(L,(assums,extras)))
 	      	   	 else ();
-	val l = mapfilter (partial_resolve false
-	      		  (map (rematch_disjunction to_avoid) L))
-	      		  (filter (is_imp_only o concl) extras)
-	val e = thm_diff l extras
+        val rematched = map (rematch_disjunction to_avoid) L
+	val l = mapchanged (partial_resolve false rematched) (filter (is_imp_only o concl) extras) ;
+	val e = thm_diff l extras ;
 	val full_e = map (fn x => partial_resolve false (resolve_functions []) x
 	    	     	       	  handle UNCHANGED => x) e
 			handle e => wrapException "include_assumption_list" e
@@ -732,7 +739,7 @@ let	val to_avoid = free_varsl oset
 		     ("Adding the following assumption\n" ^
 		      "(derived from an auxillary theorem):\n" ^
 		      thm_to_string
-		       (first (not o null o C set_diff oset o hyp) new_assums) ^
+		       (first (not o null o C set_diff oset o hyp) (new_assums @ newe)) ^
 		      "\nwill add the unwanted hypothesis to the set:\n" ^
 		      term_to_string
 		       (tryfind (hd o C set_diff oset o hyp)

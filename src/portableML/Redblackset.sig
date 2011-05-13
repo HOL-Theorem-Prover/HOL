@@ -7,6 +7,7 @@ exception NotFound
 
 val empty        : ('item * 'item -> order) -> 'item set
 val singleton    : ('item * 'item -> order) -> 'item -> 'item set
+val fromList     : ('item * 'item -> order) -> 'item list -> 'item set
 val add          : 'item set * 'item -> 'item set
 val addList      : 'item set * 'item list -> 'item set
 val retrieve     : 'item set * 'item -> 'item
@@ -41,6 +42,10 @@ end
 
    [singleton ordr i] creates the singleton set containing i, with the
    given ordering relation.
+
+   [fromList ordr xs] creates the set containing all items from the
+   list xs, with the given ordering relation.  It is equivalent to
+   addList (empty ordr, xs).
 
    [add(s, i)] adds item i to set s.
 

@@ -6,9 +6,11 @@ sig
 
     val SIZES_ss          : simpLib.ssfrag
     val BIT_ss            : simpLib.ssfrag
+    val BITS_INTRO_ss     : simpLib.ssfrag
 
     val WORD_ARITH_ss     : simpLib.ssfrag
     val WORD_LOGIC_ss     : simpLib.ssfrag
+    val WORD_SUB_ss       : simpLib.ssfrag
     val WORD_SHIFT_ss     : simpLib.ssfrag
     val WORD_ARITH_EQ_ss  : simpLib.ssfrag
     val WORD_BIT_EQ_ss    : simpLib.ssfrag
@@ -20,11 +22,16 @@ sig
     val SIZES_CONV        : conv
     val word_EQ_CONV      : conv
 
+    val BITS_INTRO_CONV   : conv
     val WORD_ARITH_CONV   : conv
     val WORD_LOGIC_CONV   : conv
+    val WORD_SUB_CONV     : conv
     val WORD_MUL_LSL_CONV : conv
+    val WORD_DIV_LSR_CONV : conv
     val WORD_CONV         : conv
     val WORD_BIT_EQ_CONV  : conv
+
+    val n2w_INTRO_TAC     : int -> tactic
 
     val WORD_DP           : conv -> conv -> conv
     val WORD_DECIDE       : conv

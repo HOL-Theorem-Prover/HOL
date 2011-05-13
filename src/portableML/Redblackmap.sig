@@ -6,6 +6,7 @@ sig
   exception NotFound
 
   val mkDict     : ('key * 'key -> order) -> ('key, 'a) dict
+  val fromList   : ('key * 'key -> order) -> ('key * 'a) list -> ('key, 'a) dict
   val insert     : ('key, 'a) dict * 'key * 'a -> ('key, 'a) dict
   val insertList : ('key, 'a) dict * ('key * 'a) list -> ('key, 'a) dict
   val find       : ('key, 'a) dict * 'key -> 'a
@@ -30,6 +31,10 @@ end
 
    [mkDict ordr] returns a new, empty map whose keys have ordering
    ordr.
+
+   [fromList ordr xs] returns a map that contains the (index, value)
+   pairs in xs, whose keys have ordering ordr.  It is equivalent to
+   insertList (mkDict ordr, xs).
 
    [insert(m, i, v)] extends (or modifies) map m to map i to v.
 

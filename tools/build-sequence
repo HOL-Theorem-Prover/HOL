@@ -37,6 +37,7 @@ tools/mlyacc/mlyacclib
 src/portableML
 src/prekernel
 **KERNEL**
+src/postkernel
 # these three directories are required to even run hol.bare.unquote
 src/parse
 src/bool

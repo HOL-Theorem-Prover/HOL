@@ -423,6 +423,7 @@ fun arm_prove_specs m_pred s = let
                  val t2 = find_term (can (match_term ``(n :+ F) ((n2w k):word32)``)) (concl th)
                  in RW [EVAL t2] th end
                in repeat f ((gg o gg o gg o gg o gg)th) end
+    val th = SIMP_RULE std_ss [word_arith_lemma1] th
     val th = arm_prove_one_spec s th
     in post_process_thm th end
   val result = map derive_spec thms

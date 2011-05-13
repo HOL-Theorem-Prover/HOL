@@ -182,6 +182,12 @@ val dest_ASL_SPECIFICATION : term -> term * term * term;
 val is_ASL_SPECIFICATION : term -> bool;
 
 
+val asl_prog_choice_term : term;
+val dest_asl_prog_choice : term -> term * term;
+val is_asl_prog_choice : term -> bool;
+
+val asl_prog_diverge_term : term;
+val asl_prog_fail_term : term;
 
 
 end

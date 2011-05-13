@@ -778,8 +778,8 @@ local
         handle Feedback.HOL_ERR _ =>
 
         profile "rewrite(08)(WORD_DP)" (wordsLib.WORD_DP
-          (bossLib.SIMP_CONV (bossLib.++ (bossLib.srw_ss(),
-            wordsLib.WORD_EXTRACT_ss)) [])
+          (bossLib.SIMP_CONV (bossLib.++ (bossLib.++ (bossLib.arith_ss,
+            wordsLib.WORD_ss), wordsLib.WORD_EXTRACT_ss)) [])
           (Drule.EQT_ELIM o (bossLib.SIMP_CONV bossLib.arith_ss []))) t
         handle Feedback.HOL_ERR _ =>
 
@@ -788,10 +788,13 @@ local
             handle Conv.UNCHANGED => raise ERR "" "") ()
         handle Feedback.HOL_ERR _ =>
 
+        profile "rewrite(10)(BBLAST)" blastLib.BBLAST_PROVE t
+        handle Feedback.HOL_ERR _ =>
+
         if term_contains_real_ty t then
-          profile "rewrite(10.1)(REAL_ARITH)" realLib.REAL_ARITH t
+          profile "rewrite(11.1)(REAL_ARITH)" realLib.REAL_ARITH t
         else
-          profile "rewrite(10.2)(ARITH_PROVE)" intLib.ARITH_PROVE t
+          profile "rewrite(11.2)(ARITH_PROVE)" intLib.ARITH_PROVE t
     in
       (state_cache_thm state thm, thm)
     end

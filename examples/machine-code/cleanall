@@ -16,6 +16,9 @@ ${HOLDIR}/bin/Holmake cleanAll
 cd ${HOLDIR}/examples/machine-code/instruction-set-models/x86
 echo ${HOLDIR}/examples/machine-code/instruction-set-models/x86
 ${HOLDIR}/bin/Holmake cleanAll
+cd ${HOLDIR}/examples/machine-code/instruction-set-models/x86_64
+echo ${HOLDIR}/examples/machine-code/instruction-set-models/x86_64
+${HOLDIR}/bin/Holmake cleanAll
 cd ${HOLDIR}/examples/machine-code/instruction-set-models/ppc
 echo ${HOLDIR}/examples/machine-code/instruction-set-models/ppc
 ${HOLDIR}/bin/Holmake cleanAll

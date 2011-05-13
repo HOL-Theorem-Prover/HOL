@@ -564,7 +564,7 @@ in
         mk_eq(mk_comb(get_encode_function target t,
 	              list_mk_comb(cnst,map fst tvs)),
               if vars = []
-	      	 then mk_comb(get_encode_function ``:num`` target,``0n``)
+	      	 then mk_comb(get_encode_function target ``:num``,``0n``)
   		 else (mk_comb(get_encode_function target
 		                  (pairLib.list_mk_prod types),
 			       pairLib.list_mk_pair vars)))))
@@ -1741,7 +1741,8 @@ let	val term = (rator o lhs o snd o strip_forall o snd o strip_imp o snd o strip
 	val encoder = get_coding_function_def target t "encode";
 	val mt = first (not o C (exists_coding_theorem target) "decode_encode_fix") (all_types t)
 	val rts = mk_prod(alpha,beta)::num::relevant_types mt
-	val thms = map (generate_coding_theorem target "decode_encode_fix" o base_type) rts
+	val thms = map (generate_coding_theorem target "decode_encode_fix" o base_type) rts @
+	    	   mapfilter (generate_coding_theorem target "decode_encode_fix") rts
 	val fix_defs = map (C (get_coding_function_def target) "fix") (mk_prod(alpha,beta)::num::all_types mt)
 	val dead_thm = #bottom_thm (get_translation_scheme target)
 	val all_defs = foldl (fn (a,b) => get_coding_function_def target a "encode"::get_source_function_def a "map"::
@@ -1753,18 +1754,19 @@ let	val term = (rator o lhs o snd o strip_forall o snd o strip_imp o snd o strip
 in
 	(REPEAT STRIP_TAC THEN
 	FIRST [
-		CONV_TAC (LAND_CONV (RATOR_CONV (FIRST_CONV (map REWR_CONV thms)))),
+		CONV_TAC (LAND_CONV (RATOR_CONV (FIRST_CONV (mapfilter REWR_CONV thms)))),
 		LABEL_TAC thms enc encoder target t,
 		START_LABEL_TAC enc encoder target t THEN
 		TRY (FULL_SIMP_TAC std_ss [get_coding_function_def target (mk_prod(alpha,beta)) "detect"] THEN NO_TAC) THEN
 		TRY (FIRST_ASSUM (CONV_TAC o LAND_CONV o RAND_CONV o RATOR_CONV o RAND_CONV o REWR_CONV o GSYM) THEN
 		CONV_TAC (LAND_CONV (REWR_CONV thm THENC RAND_CONV (REWR_CONV PAIR)))) THEN
-		CONV_TAC (LAND_CONV (FIRST_CONV (map (REWR_CONV o PURE_REWRITE_RULE [FUN_EQ_THM,o_THM]) thms))) THEN
+		CONV_TAC (LAND_CONV (FIRST_CONV (mapfilter (REWR_CONV o PURE_REWRITE_RULE [FUN_EQ_THM,o_THM]) thms))) THEN
 		REWRITE_TAC [I_o_ID]] THEN
 	REPEAT (XTAC fix_defs THEN RES_TAC THEN
-		ASM_REWRITE_TAC (get_coding_function_def target (mk_prod(alpha,beta)) "encode"::thms) THEN
+		ASM_REWRITE_TAC (last (CONJUNCTS sexpTheory.sexp_11)::get_coding_function_def target (mk_prod(alpha,beta)) "encode"::thms) THEN
 		RULE_ASSUM_TAC GSYM THEN ASM_REWRITE_TAC (map GSYM thms)) THEN
 	REPEAT (CHANGED_TAC (ONCE_ASM_REWRITE_TAC (K_THM::all_defs) THEN
+	        REWRITE_TAC (translateTheory.DETDEAD_PAIR::I_THM::mapfilter (C get_source_theorem "map_id" o base_type) (all_types t)) THEN
 		CONV_TAC (DEPTH_CONV (REWR_CONV LET_DEF) THENC DEPTH_CONV GEN_BETA_CONV)))) (a,g)
 end
 end;

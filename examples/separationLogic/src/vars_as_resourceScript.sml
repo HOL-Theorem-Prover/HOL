@@ -321,21 +321,11 @@ val _ = type_abbrev("var_res_state",
    Type `:('pvars |-> ('data # var_res_permission))`);
 
 
-
 val VAR_RES_STACK_IS_SEPARATE_def = Define `
    VAR_RES_STACK_IS_SEPARATE s1 s2 =
    !x.    ((x IN (FDOM s1)) /\ (x IN (FDOM s2))) ==>
       ((FST (s1 ' x) = FST (s2 ' x)) /\
                  (IS_SOME (var_res_permission_combine (SOME (SND (s1 ' x))) (SOME (SND (s2 ' x))))))`;
-
-
-
-
-
-
-
-
-
 
 
 val VAR_RES_STACK_IS_SEPARATE___SYM = store_thm ("VAR_RES_STACK_IS_SEPARATE___SYM",
@@ -1188,52 +1178,24 @@ SIMP_TAC (std_ss++LIFT_COND_ss++EQUIV_EXTRACT_ss) [IN_UNION, IN_INTER,
 
 
 val VAR_RES_STACK___IS_SUBSTATE_UPTO_PERMISSIONS_def = Define `
-    VAR_RES_STACK___IS_SUBSTATE_UPTO_PERMISSIONS exS st1 st2 =
+    VAR_RES_STACK___IS_SUBSTATE_UPTO_PERMISSIONS st1 st2 =
 
     ((FDOM st1) SUBSET (FDOM st2)) /\ 
-    (!v. v IN FDOM st1 ==> (FST (st1 ' v) = FST (st2 ' v))) /\
-    (!v. (v IN (FDOM st1) /\ v IN exS) ==>
-         (IS_VAR_RES_SUBPERMISSION (SND (st1 ' v)) (SND (st2 ' v))))`;
+    (!v. v IN FDOM st1 ==> (FST (st1 ' v) = FST (st2 ' v)))`;
 
 
 val VAR_RES_STACK___IS_EQUAL_UPTO_PERMISSIONS_def = Define `
-    VAR_RES_STACK___IS_EQUAL_UPTO_PERMISSIONS exS (st1:('a, 'b) var_res_state) st2 =
+    VAR_RES_STACK___IS_EQUAL_UPTO_PERMISSIONS (st1:('a, 'b) var_res_state) st2 =
     (FDOM st1 = FDOM st2) /\ 
-    (!v. v IN FDOM st1 ==> (FST (st1 ' v) = FST (st2 ' v))) /\
-    (!v. (v IN (FDOM st1) /\ v IN exS) ==> ((st1 ' v) = (st2 ' v)))`;
-
-val VAR_RES_STACK___IS_SUBSTATE_UPTO_PERMISSIONS___UNIV =
-store_thm ("VAR_RES_STACK___IS_SUBSTATE_UPTO_PERMISSIONS___UNIV",
-``
-VAR_RES_STACK___IS_SUBSTATE_UPTO_PERMISSIONS UNIV st1 st2 =
-VAR_RES_STACK_IS_SUBSTATE st1 st2``,
-
-SIMP_TAC std_ss [VAR_RES_STACK_IS_SUBSTATE_REWRITE,
-       VAR_RES_STACK___IS_SUBSTATE_UPTO_PERMISSIONS_def,
-       IN_UNIV] THEN
-EQ_TAC THEN SIMP_TAC std_ss []);
-
-
-
-val VAR_RES_STACK___IS_EQUAL_UPTO_PERMISSIONS___UNIV =
-store_thm ("VAR_RES_STACK___IS_EQUAL_UPTO_PERMISSIONS___UNIV",
-``
-VAR_RES_STACK___IS_EQUAL_UPTO_PERMISSIONS UNIV st1 st2 =
-(st1 = st2)``,
-
-SIMP_TAC std_ss [VAR_RES_STACK___IS_EQUAL_UPTO_PERMISSIONS_def,
-       IN_UNIV] THEN
-EQ_TAC THEN
-SIMP_TAC std_ss [GSYM fmap_EQ_THM]);
-
+    (!v. v IN FDOM st1 ==> (FST (st1 ' v) = FST (st2 ' v)))`;
 
 
 val VAR_RES_STACK___IS_EQUAL_UPTO_PERMISSIONS___ALTERNATIVE_DEF =
 store_thm ("VAR_RES_STACK___IS_EQUAL_UPTO_PERMISSIONS___ALTERNATIVE_DEF",
-``!exS st1 st2.
-VAR_RES_STACK___IS_EQUAL_UPTO_PERMISSIONS exS st1 st2 =
-(VAR_RES_STACK___IS_SUBSTATE_UPTO_PERMISSIONS exS st1 st2 /\
-VAR_RES_STACK___IS_SUBSTATE_UPTO_PERMISSIONS exS st2 st1)``,
+``!st1 st2.
+VAR_RES_STACK___IS_EQUAL_UPTO_PERMISSIONS st1 st2 =
+(VAR_RES_STACK___IS_SUBSTATE_UPTO_PERMISSIONS st1 st2 /\
+VAR_RES_STACK___IS_SUBSTATE_UPTO_PERMISSIONS st2 st1)``,
 
 
 SIMP_TAC std_ss [VAR_RES_STACK___IS_SUBSTATE_UPTO_PERMISSIONS_def,
@@ -1250,8 +1212,6 @@ REPEAT STRIP_TAC THEN EQ_TAC THEN STRIP_TAC THENL [
    FULL_SIMP_TAC std_ss [] THEN
    METIS_TAC[IS_VAR_RES_SUBPERMISSION_THM]
 ]);
-
-
 
 
 val VAR_RES_STACK___UPDATE_PERMISSION_def = Define `
@@ -1294,19 +1254,16 @@ Cases_on `v IN FDOM st` THENL [
 val VAR_RES_STACK___IS_EQUAL_UPTO_PERMISSIONS_THM = store_thm (
 "VAR_RES_STACK___IS_EQUAL_UPTO_PERMISSIONS_THM",
 ``
-COMM (VAR_RES_STACK___IS_EQUAL_UPTO_PERMISSIONS exS) /\
-(VAR_RES_STACK___IS_EQUAL_UPTO_PERMISSIONS exS st st) /\
+COMM VAR_RES_STACK___IS_EQUAL_UPTO_PERMISSIONS /\
+(VAR_RES_STACK___IS_EQUAL_UPTO_PERMISSIONS st st) /\
 
-(~(v IN exS) ==>
-(VAR_RES_STACK___IS_EQUAL_UPTO_PERMISSIONS exS st
-(VAR_RES_STACK___UPDATE_PERMISSION v p st))) /\
+(VAR_RES_STACK___IS_EQUAL_UPTO_PERMISSIONS st
+(VAR_RES_STACK___UPDATE_PERMISSION v p st)) /\
 
-((!v. v IN exS ==> IS_NONE (f v)) ==>
-(VAR_RES_STACK___IS_EQUAL_UPTO_PERMISSIONS exS st
-(VAR_RES_STACK___UPDATE_PERMISSION_ALL f st))) /\
+(VAR_RES_STACK___IS_EQUAL_UPTO_PERMISSIONS st
+(VAR_RES_STACK___UPDATE_PERMISSION_ALL f st)) /\
 
-(?p. VAR_RES_STACK___UPDATE_PERMISSION v p st = st)
-``,
+(?p. VAR_RES_STACK___UPDATE_PERMISSION v p st = st)``,
 
 
 SIMP_TAC std_ss [VAR_RES_STACK___UPDATE_PERMISSION_def,
@@ -1331,14 +1288,14 @@ Cases_on `v IN FDOM st` THENL [
 val VAR_RES_STACK___IS_SUBSTATE_UPTO_PERMISSIONS___COMBINE_EXISTS1 =
 store_thm ("VAR_RES_STACK___IS_SUBSTATE_UPTO_PERMISSIONS___COMBINE_EXISTS1",
 ``
-!st1 st2 st st' exS.
+!st1 st2 st st'.
 ((VAR_RES_STACK_COMBINE (SOME st1) (SOME st2) = SOME st) /\
-(VAR_RES_STACK___IS_SUBSTATE_UPTO_PERMISSIONS exS st st')) ==>
+(VAR_RES_STACK___IS_SUBSTATE_UPTO_PERMISSIONS st st')) ==>
 
 (?st1' st2'.
 (VAR_RES_STACK_COMBINE (SOME st1') (SOME st2') = SOME st') /\
-(VAR_RES_STACK___IS_EQUAL_UPTO_PERMISSIONS exS st1 st1') /\
-(VAR_RES_STACK___IS_SUBSTATE_UPTO_PERMISSIONS exS st2 st2'))``,
+(VAR_RES_STACK___IS_EQUAL_UPTO_PERMISSIONS st1 st1') /\
+(VAR_RES_STACK___IS_SUBSTATE_UPTO_PERMISSIONS st2 st2'))``,
 
 
 SIMP_TAC std_ss [SOME___VAR_RES_STACK_COMBINE,
@@ -1346,70 +1303,15 @@ SIMP_TAC std_ss [SOME___VAR_RES_STACK_COMBINE,
        VAR_RES_STACK___IS_EQUAL_UPTO_PERMISSIONS_def,
        FMERGE_DEF, SUBSET_DEF, VAR_RES_STACK_IS_SEPARATE_def] THEN
 REPEAT STRIP_TAC THEN
-
-
-`?pf. !v. ((v IN FDOM st1) /\ (v IN exS)) ==>
-          (((var_res_permission_combine (SOME (SND (st1 ' v))) (SOME (pf v)) = SOME (SND (st' ' v))) \/
-           (~(v IN FDOM st2) /\ (st1 ' v = st' ' v))) /\
-           (v IN FDOM st2 ==> IS_VAR_RES_SUBPERMISSION (SND (st2 ' v)) (pf v)))` by ALL_TAC THEN1 (
-
-   Q.EXISTS_TAC `\v. if ~(v IN FDOM st1) \/ ~(v IN exS) then ARB else
-                        @p. ((var_res_permission_combine (SOME (SND (st1 ' v))) (SOME p) =
-                             SOME (SND (st' ' v))) \/ (~(v IN FDOM st2) /\ (st1 ' v = st' ' v))) /\
-                     (v IN FDOM st2 ==> IS_VAR_RES_SUBPERMISSION (SND (st2 ' v)) p)` THEN
-   GEN_TAC THEN BETA_TAC THEN
-   REPEAT (Q.PAT_ASSUM `!x. X x` (ASSUME_TAC o Q.SPEC `v`)) THEN
-   STRIP_TAC THEN
-   ASM_REWRITE_TAC[] THEN
-   SELECT_ELIM_TAC THEN
-   SIMP_TAC std_ss [] THEN
-   Cases_on `v IN FDOM st2` THENL [
-      FULL_SIMP_TAC std_ss [IN_UNION, IS_SOME_EXISTS, VAR_RES_STACK_COMBINE___MERGE_FUNC_def] THEN
-      FULL_SIMP_TAC std_ss [IS_VAR_RES_SUBPERMISSION_def] THENL [
-         METIS_TAC[],
-
-         Q.EXISTS_TAC `THE (var_res_permission_combine (SOME (SND (st2 ' v))) (SOME p))` THEN
-         Q.PAT_ASSUM `X = SOME y` (ASSUME_TAC o GSYM) THEN
-         FULL_SIMP_TAC std_ss [] THEN
-         `var_res_permission_combine
-            (var_res_permission_combine (SOME (SND (st1 ' v)))
-               (SOME (SND (st2 ' v)))) (SOME p) =
-          var_res_permission_combine
-            (SOME (SND (st1 ' v))) (var_res_permission_combine
-               (SOME (SND (st2 ' v))) (SOME p))` by ALL_TAC THEN1 (
-             METIS_TAC[var_res_permission_THM2, ASSOC_DEF, COMM_DEF]
-          ) THEN
-          Cases_on `var_res_permission_combine (SOME (SND (st2 ' v))) (SOME p)` THEN (
-             FULL_SIMP_TAC std_ss [var_res_permission_THM2]
-          ) THEN
-          PROVE_TAC[]
-      ],
-
-
-      FULL_SIMP_TAC std_ss [IN_UNION, IS_VAR_RES_SUBPERMISSION_def] THENL [
-         ONCE_REWRITE_TAC[GSYM pairTheory.PAIR] THEN
-         ASM_SIMP_TAC std_ss [],
-
-         METIS_TAC[]
-      ]
-  ]
-) THEN
-
-
-Q.ABBREV_TAC `resS = \v. ~(v IN exS) \/ ~(v IN FDOM st1) \/ (v IN FDOM st2) \/ ~(st' ' v = st1 ' v)` THEN
-Q.EXISTS_TAC `VAR_RES_STACK___UPDATE_PERMISSION_ALL (\v. if (v IN exS) then NONE else
-                      SOME (var_res_permission_split1  (SND (st' ' v)))
-                                                          ) st1` THEN
-Q.EXISTS_TAC `VAR_RES_STACK___UPDATE_PERMISSION_ALL (\v. if (v IN exS) /\ (v IN FDOM st1) then
-                          SOME (pf  v) else
-                      SOME (if (v IN FDOM st1) then
-                                 var_res_permission_split2  (SND (st' ' v))
-                                                               else SND (st' ' v)
-                                                          )) (DRESTRICT st' resS)` THEN
+Q.EXISTS_TAC `VAR_RES_STACK___UPDATE_PERMISSION_ALL (\v. SOME (var_res_permission_split1  (SND (st' ' v)))) st1` THEN
+Q.EXISTS_TAC `VAR_RES_STACK___UPDATE_PERMISSION_ALL (\v. 
+   SOME (if (v IN FDOM st1) then  var_res_permission_split2  (SND (st' ' v))
+                            else SND (st' ' v))) st'` THEN
 FULL_SIMP_TAC std_ss [VAR_RES_STACK___UPDATE_PERMISSION_ALL_def,
             FDOM_FINITE, FUN_FMAP_DEF, COND_REWRITES,
-            IN_UNION, GSYM fmap_EQ_THM, FMERGE_DEF] THEN
-`(FDOM st1 UNION FDOM (DRESTRICT st' resS)) = (FDOM st')` by ALL_TAC THEN1 (
+            IN_UNION, GSYM fmap_EQ_THM, FMERGE_DEF,
+            var_res_permission_THM2] THEN
+`(FDOM st1 UNION FDOM st') = (FDOM st')` by ALL_TAC THEN1 (
    UNABBREV_ALL_TAC THEN
    SIMP_TAC std_ss [EXTENSION, IN_UNION, IN_INTER, IN_ABS, DRESTRICT_DEF] THEN
    METIS_TAC[]
@@ -1424,33 +1326,25 @@ Tactical.REVERSE (Cases_on `v IN FDOM st'`) THEN1 (
    `~(v IN FDOM st1)` by METIS_TAC[] THEN
    ASM_SIMP_TAC std_ss []
 ) THEN
-Tactical.REVERSE (Cases_on `v IN resS`) THEN1 (
-   UNABBREV_ALL_TAC THEN
-   FULL_SIMP_TAC std_ss [IN_ABS, DRESTRICT_DEF, IN_INTER]
-) THEN
-ASM_SIMP_TAC std_ss [DRESTRICT_DEF, FUN_FMAP_DEF, FDOM_FINITE, FINITE_INTER,
-           IN_INTER] THEN
 Cases_on `v IN FDOM st2` THEN Cases_on `v IN FDOM st1` THEN Cases_on `v IN exS` THEN (
    FULL_SIMP_TAC std_ss [VAR_RES_STACK_COMBINE___MERGE_FUNC_def,
           IS_VAR_RES_SUBPERMISSION_THM,
           var_res_permission_THM2]
-) THEN
-UNABBREV_ALL_TAC THEN
-FULL_SIMP_TAC std_ss [IN_ABS]);
+));
 
 
 
 val VAR_RES_STACK___IS_SUBSTATE_UPTO_PERMISSIONS___COMBINE_EXISTS2 =
 store_thm ("VAR_RES_STACK___IS_SUBSTATE_UPTO_PERMISSIONS___COMBINE_EXISTS2",
 ``
-!st1:('a,'b) var_res_state st2 st st' exS.
+!st1:('a,'b) var_res_state st2 st st'.
 ((VAR_RES_STACK_COMBINE (SOME st1) (SOME st2) = SOME st) /\
-(VAR_RES_STACK___IS_SUBSTATE_UPTO_PERMISSIONS exS st st')) ==>
+(VAR_RES_STACK___IS_SUBSTATE_UPTO_PERMISSIONS st st')) ==>
 
 (?st1' st2'.
 (VAR_RES_STACK_COMBINE (SOME st1') (SOME st2') = SOME st') /\
-(VAR_RES_STACK___IS_SUBSTATE_UPTO_PERMISSIONS exS st1 st1') /\
-(VAR_RES_STACK___IS_EQUAL_UPTO_PERMISSIONS exS st2 st2'))``,
+(VAR_RES_STACK___IS_SUBSTATE_UPTO_PERMISSIONS st1 st1') /\
+(VAR_RES_STACK___IS_EQUAL_UPTO_PERMISSIONS st2 st2'))``,
 
 
 `!(st1:('a,'b) var_res_state) st2. VAR_RES_STACK_COMBINE (SOME st1) (SOME st2) =
@@ -1464,35 +1358,34 @@ METIS_TAC[VAR_RES_STACK___IS_SUBSTATE_UPTO_PERMISSIONS___COMBINE_EXISTS1]);
 val VAR_RES_STACK___IS_EQUAL_UPTO_PERMISSIONS___COMBINE_EXISTS =
 store_thm ("VAR_RES_STACK___IS_EQUAL_UPTO_PERMISSIONS___COMBINE_EXISTS",
 ``
-!st1 st2 st st' exS.
+!st1 st2 st st'.
 ((VAR_RES_STACK_COMBINE (SOME st1) (SOME st2) = SOME st) /\
-(VAR_RES_STACK___IS_EQUAL_UPTO_PERMISSIONS exS st st')) ==>
+ (VAR_RES_STACK___IS_EQUAL_UPTO_PERMISSIONS st st')) ==>
 
 (?st1' st2'.
 (VAR_RES_STACK_COMBINE (SOME st1') (SOME st2') = SOME st') /\
-(VAR_RES_STACK___IS_EQUAL_UPTO_PERMISSIONS exS st1 st1') /\
-(VAR_RES_STACK___IS_EQUAL_UPTO_PERMISSIONS exS st2 st2'))``,
+(VAR_RES_STACK___IS_EQUAL_UPTO_PERMISSIONS st1 st1') /\
+(VAR_RES_STACK___IS_EQUAL_UPTO_PERMISSIONS st2 st2'))``,
 
 
 SIMP_TAC std_ss [SOME___VAR_RES_STACK_COMBINE,
        VAR_RES_STACK___IS_EQUAL_UPTO_PERMISSIONS_def,
        FMERGE_DEF, SUBSET_DEF, VAR_RES_STACK_IS_SEPARATE_def] THEN
 REPEAT STRIP_TAC THEN
-Q.EXISTS_TAC `VAR_RES_STACK___UPDATE_PERMISSION_ALL (\v. if (v IN exS) then NONE else
+Q.EXISTS_TAC `VAR_RES_STACK___UPDATE_PERMISSION_ALL (\v. 
                       SOME (if (v IN FDOM st2) then
                                  var_res_permission_split1  (SND (st' ' v))
-                                                               else SND (st' ' v)
-                                                          )) st1` THEN
-Q.EXISTS_TAC `VAR_RES_STACK___UPDATE_PERMISSION_ALL (\v. if (v IN exS) then NONE else
+                            else SND (st' ' v))) st1` THEN
+Q.EXISTS_TAC `VAR_RES_STACK___UPDATE_PERMISSION_ALL (\v. 
                       SOME (if (v IN FDOM st1) then
                                  var_res_permission_split2  (SND (st' ' v))
-                                                               else SND (st' ' v)
-                                                          )) st2` THEN
+                            else SND (st' ' v))) st2` THEN
 
 `!x. (x IN FDOM st' /\ ~(x IN FDOM st1)) ==> x IN FDOM st2` by METIS_TAC[EXTENSION, IN_UNION] THEN
 FULL_SIMP_TAC std_ss [VAR_RES_STACK___UPDATE_PERMISSION_ALL_def,
             FDOM_FINITE, FUN_FMAP_DEF, COND_REWRITES,
-            IN_UNION, GSYM fmap_EQ_THM, FMERGE_DEF, GSYM FORALL_AND_THM] THEN
+            IN_UNION, GSYM fmap_EQ_THM, FMERGE_DEF, GSYM FORALL_AND_THM,
+            var_res_permission_THM2, VAR_RES_STACK_COMBINE___MERGE_FUNC_def] THEN
 GEN_TAC THEN
 REPEAT (Q.PAT_ASSUM `!x. X x` (ASSUME_TAC o Q.SPEC `x`)) THEN
 Cases_on `x IN FDOM st2` THEN Cases_on `x IN FDOM st1` THEN Cases_on `x IN exS` THEN (
@@ -1504,12 +1397,10 @@ Cases_on `x IN FDOM st2` THEN Cases_on `x IN FDOM st1` THEN Cases_on `x IN exS` 
 
 
 
-
-
 val VAR_RES_STACK___IS_SUBSTATE_UPTO_PERMISSIONS___FEMPTY = store_thm (
 "VAR_RES_STACK___IS_SUBSTATE_UPTO_PERMISSIONS___FEMPTY",
-``(VAR_RES_STACK___IS_SUBSTATE_UPTO_PERMISSIONS exS FEMPTY X) /\
-  (VAR_RES_STACK___IS_SUBSTATE_UPTO_PERMISSIONS exS X FEMPTY = (X = FEMPTY))``,
+``(VAR_RES_STACK___IS_SUBSTATE_UPTO_PERMISSIONS FEMPTY X) /\
+  (VAR_RES_STACK___IS_SUBSTATE_UPTO_PERMISSIONS X FEMPTY = (X = FEMPTY))``,
 
 SIMP_TAC std_ss [VAR_RES_STACK___IS_SUBSTATE_UPTO_PERMISSIONS_def,
        FDOM_FEMPTY, NOT_IN_EMPTY, EMPTY_SUBSET, SUBSET_DEF,
@@ -1521,75 +1412,23 @@ METIS_TAC[]);
 
 val VAR_RES_STACK___IS_EQUAL_UPTO_PERMISSIONS___FEMPTY = store_thm (
 "VAR_RES_STACK___IS_EQUAL_UPTO_PERMISSIONS___FEMPTY",
-``(VAR_RES_STACK___IS_EQUAL_UPTO_PERMISSIONS exS FEMPTY X = (X = FEMPTY)) /\
-  (VAR_RES_STACK___IS_EQUAL_UPTO_PERMISSIONS exS X FEMPTY = (X = FEMPTY))``,
+``(VAR_RES_STACK___IS_EQUAL_UPTO_PERMISSIONS FEMPTY X = (X = FEMPTY)) /\
+  (VAR_RES_STACK___IS_EQUAL_UPTO_PERMISSIONS X FEMPTY = (X = FEMPTY))``,
 
 SIMP_TAC std_ss [VAR_RES_STACK___IS_EQUAL_UPTO_PERMISSIONS___ALTERNATIVE_DEF,
                  VAR_RES_STACK___IS_SUBSTATE_UPTO_PERMISSIONS___FEMPTY]);
 
 
-
-
-val VAR_RES_STACK___IS_SUBSTATE_UPTO_PERMISSIONS___SUBSET = store_thm (
-"VAR_RES_STACK___IS_SUBSTATE_UPTO_PERMISSIONS___SUBSET",
-``(VAR_RES_STACK___IS_SUBSTATE_UPTO_PERMISSIONS exS1 st1 st2 /\
-(exS2 SUBSET exS1)) ==>
-(VAR_RES_STACK___IS_SUBSTATE_UPTO_PERMISSIONS exS2 st1 st2)``,
-
-
-SIMP_TAC std_ss [VAR_RES_STACK___IS_SUBSTATE_UPTO_PERMISSIONS_def, SUBSET_DEF]);
-
-
-
-val VAR_RES_STACK___IS_EQUAL_UPTO_PERMISSIONS___SUBSET = store_thm (
-"VAR_RES_STACK___IS_EQUAL_UPTO_PERMISSIONS___SUBSET",
-``(VAR_RES_STACK___IS_EQUAL_UPTO_PERMISSIONS exS1 st1 st2 /\
-(exS2 SUBSET exS1)) ==>
-(VAR_RES_STACK___IS_EQUAL_UPTO_PERMISSIONS exS2 st1 st2)``,
-
-
-SIMP_TAC std_ss [VAR_RES_STACK___IS_EQUAL_UPTO_PERMISSIONS_def, SUBSET_DEF]);
-
-
-
-
-
-val VAR_RES_STACK___IS_SUBSTATE_UPTO_PERMISSIONS___UNION = store_thm (
-"VAR_RES_STACK___IS_SUBSTATE_UPTO_PERMISSIONS___UNION",
-``VAR_RES_STACK___IS_SUBSTATE_UPTO_PERMISSIONS (exS1 UNION exS2) st1 st2 =
-(VAR_RES_STACK___IS_SUBSTATE_UPTO_PERMISSIONS exS1 st1 st2 /\
- VAR_RES_STACK___IS_SUBSTATE_UPTO_PERMISSIONS exS2 st1 st2)``,
-
-
-SIMP_TAC std_ss [VAR_RES_STACK___IS_SUBSTATE_UPTO_PERMISSIONS_def, IN_UNION] THEN
-METIS_TAC[]);
-
-
-
-
-val VAR_RES_STACK___IS_EQUAL_UPTO_PERMISSIONS___UNION = store_thm (
-"VAR_RES_STACK___IS_EQUAL_UPTO_PERMISSIONS___UNION",
-``VAR_RES_STACK___IS_EQUAL_UPTO_PERMISSIONS (exS1 UNION exS2) st1 st2 =
-(VAR_RES_STACK___IS_EQUAL_UPTO_PERMISSIONS exS1 st1 st2 /\
- VAR_RES_STACK___IS_EQUAL_UPTO_PERMISSIONS exS2 st1 st2)``,
-
-
-SIMP_TAC std_ss [VAR_RES_STACK___IS_EQUAL_UPTO_PERMISSIONS_def, IN_UNION] THEN
-METIS_TAC[]);
-
-
-
 val VAR_RES_STACK___IS_EQUAL_UPTO_PERMISSIONS___VAR_RES_STACK_SPLIT =
 store_thm ("VAR_RES_STACK___IS_EQUAL_UPTO_PERMISSIONS___VAR_RES_STACK_SPLIT",
 ``
-(VAR_RES_STACK___IS_EQUAL_UPTO_PERMISSIONS EMPTY (VAR_RES_STACK_SPLIT1 EMPTY UNIV p) p) /\
-(VAR_RES_STACK___IS_EQUAL_UPTO_PERMISSIONS EMPTY (VAR_RES_STACK_SPLIT2 EMPTY UNIV p) p)``,
+(VAR_RES_STACK___IS_EQUAL_UPTO_PERMISSIONS (VAR_RES_STACK_SPLIT1 EMPTY UNIV p) p) /\
+(VAR_RES_STACK___IS_EQUAL_UPTO_PERMISSIONS (VAR_RES_STACK_SPLIT2 EMPTY UNIV p) p)``,
 
 
 SIMP_TAC std_ss [VAR_RES_STACK___IS_EQUAL_UPTO_PERMISSIONS_def,
    VAR_RES_STACK_SPLIT12___REWRITES, DIFF_EMPTY, IN_UNIV,
    UNION_EMPTY, INTER_UNIV, NOT_IN_EMPTY]);
-
 
 
 
@@ -1772,7 +1611,6 @@ val asl_emp___VAR_RES_COMBINATOR = store_thm (
 SIMP_TAC std_ss [VAR_RES_COMBINATOR_def,
    PRODUCT_SEPARATION_COMBINATOR___asl_emp,
    asl_emp___VAR_RES_STACK_COMBINE, IN_SING]);
-
 
 
 val VAR_RES_COMBINATOR_REWRITE = save_thm ("VAR_RES_COMBINATOR_REWRITE",
@@ -2090,6 +1928,13 @@ val var_res_exp_prop___CONST = store_thm ("var_res_exp_prop___CONST",
 SIMP_TAC std_ss [var_res_exp_prop_def, LET_THM, var_res_exp_const_EVAL, 
   FUN_EQ_THM])
 
+
+val var_res_exp_full_prop_def = Define `
+   var_res_exp_full_prop P (eL:('a,'b,'c) var_res_expression list) =
+   \state. let e_optL = MAP (\e. e (FST state)) eL in
+           (EVERY IS_SOME e_optL) /\ (P (MAP THE e_optL) (SND state))`
+
+
 val var_res_exp_is_defined_REWRITE = save_thm (
 "var_res_exp_is_defined_REWRITE",
 SIMP_RULE std_ss [var_res_stack_proposition_def]
@@ -2110,6 +1955,14 @@ val var_res_prop_expression_def = Define `
   var_res_stack_proposition f emp (\s:('a,'b) var_res_state.
       (let el' = MAP (\e. e s) el in
       ((EVERY IS_SOME el') /\ (p (MAP THE el')))))`;
+
+val var_res_prop_expression___ALTERNATIVE_DEF = store_thm ("var_res_prop_expression___ALTERNATIVE_DEF",
+``var_res_prop_expression f emp p eL =
+  var_res_exp_full_prop (\vl s. (p vl) /\ (s IN asl_emp f \/ ~emp)) eL``,
+SIMP_TAC std_ss [var_res_prop_expression_def, FUN_EQ_THM,
+   var_res_exp_full_prop_def, var_res_stack_proposition_def, LET_THM] THEN
+SIMP_TAC (std_ss++EQUIV_EXTRACT_ss) []);
+
 
 val var_res_prop_binexpression_def = Define `
   var_res_prop_binexpression f emp p e1 e2 =
@@ -2615,7 +2468,7 @@ SIMP_TAC (list_ss++EQUIV_EXTRACT_ss) [FUN_EQ_THM, var_res_prop_binexpression_con
 
 val VAR_RES_IS_STACK_IMPRECISE_def = Define `
     VAR_RES_IS_STACK_IMPRECISE P =
-    (!st1 st2 h. (VAR_RES_STACK___IS_EQUAL_UPTO_PERMISSIONS EMPTY st1 st2) ==>
+    (!st1 st2 h. (VAR_RES_STACK___IS_EQUAL_UPTO_PERMISSIONS st1 st2) ==>
           ((st1,h) IN P = (st2,h) IN P)) /\
     (!st1 st2 h. (VAR_RES_STACK_IS_SUBSTATE st1 st2 /\ (st1,h) IN P) ==>
                  (st2,h) IN P) `;
@@ -2688,7 +2541,7 @@ REPEAT GEN_TAC THEN EQ_TAC THEN STRIP_TAC THEN REPEAT CONJ_TAC THENL [
 
 
    Tactical.REVERSE (`!st1 st2 h.
-      (VAR_RES_STACK___IS_EQUAL_UPTO_PERMISSIONS {} st1 st2 /\
+      (VAR_RES_STACK___IS_EQUAL_UPTO_PERMISSIONS st1 st2 /\
       (st1,h) IN P) ==> (st2,h) IN P` by ALL_TAC) THEN1 (
       PROVE_TAC[REWRITE_RULE [COMM_DEF]
                   (CONJUNCT1 VAR_RES_STACK___IS_EQUAL_UPTO_PERMISSIONS_THM)]
@@ -2852,8 +2705,6 @@ store_thm ("VAR_RES_IS_STACK_IMPRECISE___USED_VARS___asl_emp",
          ~(VAR_RES_IS_STACK_IMPRECISE___USED_VARS vs (asl_emp (VAR_RES_COMBINATOR f)))``,
 PROVE_TAC [VAR_RES_IS_STACK_IMPRECISE___IMP, VAR_RES_IS_STACK_IMPRECISE___asl_emp]);
 
-
-
 val VAR_RES_IS_STACK_IMPRECISE___asl_or = store_thm (
 "VAR_RES_IS_STACK_IMPRECISE___asl_or",
 ``!P1 P2.
@@ -2896,7 +2747,6 @@ VAR_RES_IS_STACK_IMPRECISE___USED_VARS exS (asl_and P1 P2)``,
 
 SIMP_TAC std_ss [VAR_RES_IS_STACK_IMPRECISE___USED_VARS_def, asl_bool_EVAL] THEN
 PROVE_TAC[VAR_RES_IS_STACK_IMPRECISE___asl_and]);
-
 
 
 val VAR_RES_IS_STACK_IMPRECISE___const = store_thm (
@@ -2993,7 +2843,24 @@ METIS_TAC [VAR_RES_IS_STACK_IMPRECISE___ALTERNATIVE_DEF,
 
 
 
+val VAR_RES_IS_STACK_IMPRECISE___USED_VARS___asl_forall = store_thm (
+"VAR_RES_IS_STACK_IMPRECISE___USED_VARS___asl_forall",
+``!exS P.
+(!x. VAR_RES_IS_STACK_IMPRECISE___USED_VARS exS (P x)) ==>
+VAR_RES_IS_STACK_IMPRECISE___USED_VARS exS (asl_forall x. P x)``,
 
+REPEAT STRIP_TAC THEN
+FULL_SIMP_TAC std_ss [VAR_RES_IS_STACK_IMPRECISE___USED_VARS___ALTERNATIVE_DEF,
+       asl_forall_def, IN_DEF] THEN
+METIS_TAC[]);
+
+
+val VAR_RES_IS_STACK_IMPRECISE___asl_forall = store_thm (
+"VAR_RES_IS_STACK_IMPRECISE___asl_forall",
+``!P. (!x. VAR_RES_IS_STACK_IMPRECISE (P x)) ==>
+       VAR_RES_IS_STACK_IMPRECISE (asl_forall x. P x)``,
+METIS_TAC [VAR_RES_IS_STACK_IMPRECISE___ALTERNATIVE_DEF,
+           VAR_RES_IS_STACK_IMPRECISE___USED_VARS___asl_forall]);
 
 
 val VAR_RES_IS_STACK_IMPRECISE___USED_VARS___asl_star = store_thm (
@@ -3215,7 +3082,7 @@ ASM_SIMP_TAC std_ss [EVERY_MEM]);
 val VAR_RES_IS_STACK_IMPRECISE_EXPRESSION___USED_VARS_REL_def = Define `
     VAR_RES_IS_STACK_IMPRECISE_EXPRESSION___USED_VARS_REL
        (e:('a,'b,'c) var_res_expression) vs =
-    (!st1 st2. VAR_RES_STACK___IS_EQUAL_UPTO_PERMISSIONS {} st1 st2 ==>
+    (!st1 st2. VAR_RES_STACK___IS_EQUAL_UPTO_PERMISSIONS st1 st2 ==>
                (e st1 = e st2)) /\
     ((!st. e (DRESTRICT st vs) = e st) /\ FINITE vs /\
     (!st. IS_SOME (e st) = (vs SUBSET FDOM st)))`;
@@ -4272,6 +4139,40 @@ store_thm ("VAR_RES_IS_STACK_IMPRECISE___var_res_exp_prop",
 SIMP_TAC std_ss [VAR_RES_IS_STACK_IMPRECISE___ALTERNATIVE_DEF,
                  GSYM VAR_RES_IS_STACK_IMPRECISE_EXPRESSION___USED_VARS_SUBSET___UNIV_REWRITE,
                  VAR_RES_IS_STACK_IMPRECISE___USED_VARS___var_res_exp_prop]);
+
+
+
+val VAR_RES_IS_STACK_IMPRECISE___USED_VARS___var_res_exp_full_prop =
+store_thm ("VAR_RES_IS_STACK_IMPRECISE___USED_VARS___var_res_exp_full_prop",
+``!eL P vs. 
+EVERY (VAR_RES_IS_STACK_IMPRECISE_EXPRESSION___USED_VARS_SUBSET vs) eL ==>
+VAR_RES_IS_STACK_IMPRECISE___USED_VARS vs (var_res_exp_full_prop P eL)``,
+
+SIMP_TAC std_ss [VAR_RES_IS_STACK_IMPRECISE___USED_VARS___ALTERNATIVE_DEF,
+   var_res_exp_full_prop_def, IN_ABS, PAIR_FORALL_THM] THEN
+REPEAT STRIP_TAC THEN
+Tactical.REVERSE (`(MAP (\e. e x1') eL) = (MAP (\e. e x1) eL)` by ALL_TAC) THEN (
+   FULL_SIMP_TAC list_ss [LET_THM]
+) THEN
+Q.PAT_ASSUM `P X x2` (K ALL_TAC) THEN
+Induct_on `eL` THEN (
+   ASM_SIMP_TAC list_ss [] 
+) THEN
+REPEAT STRIP_TAC THEN
+FULL_SIMP_TAC std_ss [] THEN
+MATCH_MP_TAC VAR_RES_IS_STACK_IMPRECISE_EXPRESSION___USED_VARS_SUBSET___EXP_EQ_IS_SOME THEN
+Q.EXISTS_TAC `vs` THEN
+ASM_SIMP_TAC std_ss [IN_INTER]);
+
+
+val VAR_RES_IS_STACK_IMPRECISE___var_res_exp_full_prop =
+store_thm ("VAR_RES_IS_STACK_IMPRECISE___var_res_exp_prop",
+``!eL P. EVERY (\e. IS_SOME (VAR_RES_IS_STACK_IMPRECISE_EXPRESSION___USED_VARS e)) eL ==>
+         VAR_RES_IS_STACK_IMPRECISE (var_res_exp_full_prop P eL)``,
+
+SIMP_TAC std_ss [VAR_RES_IS_STACK_IMPRECISE___ALTERNATIVE_DEF,
+                 GSYM VAR_RES_IS_STACK_IMPRECISE_EXPRESSION___USED_VARS_SUBSET___UNIV_REWRITE] THEN
+METIS_TAC[VAR_RES_IS_STACK_IMPRECISE___USED_VARS___var_res_exp_full_prop]);
 
 
 
@@ -6329,6 +6230,28 @@ SIMP_TAC std_ss [var_res_prop_varlist_update_def, var_res_exp_prop_def, IN_DEF,
    var_res_exp_varlist_update_def, var_res_ext_state_varlist_update_def]);
 
 
+val var_res_prop_var_update___var_res_exp_full_prop =
+store_thm ("var_res_prop_var_update___var_res_exp_full_prop",
+``!vc eL P.
+var_res_prop_var_update vc (var_res_exp_full_prop P eL) =
+var_res_exp_full_prop P (MAP (var_res_exp_var_update vc) eL)``,
+
+SIMP_TAC std_ss [var_res_prop_var_update_def, var_res_exp_full_prop_def, IN_ABS,
+   LET_THM, FUN_EQ_THM, var_res_exp_var_update_def,
+   var_res_ext_state_var_update_def, IN_DEF, MAP_MAP_o,
+   combinTheory.o_DEF]);
+
+
+val var_res_prop_varlist_update___var_res_exp_full_prop =
+store_thm ("var_res_prop_varlist_update___var_res_exp_full_prop",
+``!vcL eL P.
+var_res_prop_varlist_update vcL (var_res_exp_full_prop P eL) =
+var_res_exp_full_prop P (MAP (var_res_exp_varlist_update vcL) eL)``,
+
+SIMP_TAC std_ss [var_res_prop_varlist_update_def, var_res_exp_full_prop_def, IN_DEF,
+   var_res_exp_varlist_update_def, var_res_ext_state_varlist_update_def,
+   MAP_MAP_o, combinTheory.o_DEF]);
+
 
 val var_res_prop_var_update___BOOL = store_thm ("var_res_prop_var_update___BOOL",
 ``(var_res_prop_var_update vc (asl_and p1 p2) =
@@ -6646,7 +6569,7 @@ Q.MATCH_ABBREV_TAC `(st1, h) IN P = (st2, h) IN P` THEN
      VAR_RES_IS_STACK_IMPRECISE___USED_VARS_def]
 ) THEN
 Tactical.REVERSE (
-   `VAR_RES_STACK___IS_EQUAL_UPTO_PERMISSIONS EMPTY st1 st2` by ALL_TAC) THEN1 (
+   `VAR_RES_STACK___IS_EQUAL_UPTO_PERMISSIONS st1 st2` by ALL_TAC) THEN1 (
    FULL_SIMP_TAC std_ss [VAR_RES_IS_STACK_IMPRECISE_def]
 ) THEN
 
@@ -7077,6 +7000,17 @@ val VAR_RES_COND_INFERENCE___prog_block3 = store_thm (
 ``!f P p1 pL pL2 Q.
  (VAR_RES_COND_HOARE_TRIPLE f P (asl_prog_block (p1::(asl_prog_block pL)::pL2)) Q) =
  (VAR_RES_COND_HOARE_TRIPLE f P (asl_prog_block (p1::(pL++pL2))) Q)``,
+
+SIMP_TAC std_ss [VAR_RES_COND_HOARE_TRIPLE_def,
+   VAR_RES_HOARE_TRIPLE_def, ASL_PROGRAM_HOARE_TRIPLE_def,
+   ASL_PROGRAM_SEM___prog_block, ASL_PROGRAM_SEM___prog_block_append]);
+
+
+val VAR_RES_COND_INFERENCE___prog_block4 = store_thm (
+"VAR_RES_COND_INFERENCE___prog_block4",
+``!f P pL pL2 Q.
+ (VAR_RES_COND_HOARE_TRIPLE f P (asl_prog_block ((asl_prog_block pL)::pL2)) Q) =
+ (VAR_RES_COND_HOARE_TRIPLE f P (asl_prog_block ((pL++pL2))) Q)``,
 
 SIMP_TAC std_ss [VAR_RES_COND_HOARE_TRIPLE_def,
    VAR_RES_HOARE_TRIPLE_def, ASL_PROGRAM_HOARE_TRIPLE_def,
@@ -12419,6 +12353,24 @@ ASM_SIMP_TAC std_ss [BAG_OF_EMPTY, EMPTY_SUBSET,
  ******************************************************)
 
 
+val VAR_RES_COND_INFERENCE___prog_choice =
+store_thm ("VAR_RES_COND_INFERENCE___prog_choice",
+``!f P p1 p2 prog Q.
+VAR_RES_COND_HOARE_TRIPLE f P
+   (asl_prog_block (p1::prog)) Q /\
+VAR_RES_COND_HOARE_TRIPLE f P
+   (asl_prog_block (p2::prog)) Q ==>
+VAR_RES_COND_HOARE_TRIPLE f P (asl_prog_block ((asl_prog_choice p1 p2)::prog)) Q``,
+
+SIMP_TAC std_ss [VAR_RES_COND_INFERENCE___prog_block] THEN
+SIMP_TAC std_ss [VAR_RES_COND_HOARE_TRIPLE_def, VAR_RES_HOARE_TRIPLE_def] THEN
+REPEAT STRIP_TAC THEN
+FULL_SIMP_TAC std_ss [ASL_INFERENCE_prog_choice_STRONG] THEN
+MATCH_MP_TAC ASL_INFERENCE_prog_choice_seq THEN
+FULL_SIMP_TAC std_ss [ASL_PROGRAM_HOARE_TRIPLE_def,
+   ASL_PROGRAM_SEM___prog_block, ASL_PROGRAM_SEM___prog_seq]);
+
+
 val VAR_RES_COND_INFERENCE___prog_cond =
 store_thm ("VAR_RES_COND_INFERENCE___prog_cond",
 ``!f P c pTrue pFalse prog Q.
@@ -13583,7 +13535,8 @@ val VAR_RES_IS_STACK_IMPRECISE___USED_VARS___VAR_RES_REWRITES =
      VAR_RES_IS_STACK_IMPRECISE___USED_VARS___asl_and,
      VAR_RES_IS_STACK_IMPRECISE___USED_VARS___asl_false,
      VAR_RES_IS_STACK_IMPRECISE___USED_VARS___asl_trivial_cond,
-     VAR_RES_IS_STACK_IMPRECISE___USED_VARS___asl_exists_direct,
+     VAR_RES_IS_STACK_IMPRECISE___USED_VARS___asl_exists_direct, 
+     VAR_RES_IS_STACK_IMPRECISE___USED_VARS___asl_forall,
      VAR_RES_IS_STACK_IMPRECISE___USED_VARS___cond,
      VAR_RES_IS_STACK_IMPRECISE___USED_VARS___asl_star,
      VAR_RES_IS_STACK_IMPRECISE___USED_VARS___var_res_map___SIMPLE,

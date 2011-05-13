@@ -1,5 +1,3 @@
-tl;
-
 init() { f = NULL; }
 
 resource mm (f) [list(f)]

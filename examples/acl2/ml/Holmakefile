@@ -1,13 +1,33 @@
-defaxiomsTheory.uo defaxiomsTheory.ui: complex_rationalTheory.uo sexp.uo sexpTheory.uo make_defaxioms.ml
-	$(HOLDIR)/bin/hol < make_defaxioms.ml
+default : defaxiomsTheory.uo
+
+## poly.ml supplies empty definitions for quietdec, printDepth/Length and compile_theory
+defaxiomsTheory.sig defaxiomsTheory.sml: complex_rationalTheory.uo sexp.uo sexpTheory.uo make_defaxioms.ml
+	[ -f "$(MOSMLC)" ] \
+		&& cat make_defaxioms.ml | $(HOLDIR)/bin/hol \
+		|| cat poly.ml make_defaxioms.ml | $(HOLDIR)/bin/hol
 	rm -rf scratchTheory.sig
 	rm -rf scratchTheory.sml
-#	$(HOLDIR)/bin/hol.noquote $(HOLDIR)/../preface.ml < make_defaxioms.ml
 
-#sexpTheory.uo sexpTheory.ui: sexp.uo make_sexp.ml
-#	$(HOLDIR)/bin/hol.unquote $(HOLDIR)/../preface.ml < make_sexp.ml
+## Since we didn't compile the theory (under polyml) we create the dependency graph first
+.HOLMK/defaxiomsTheory.sig.d .HOLMK/defaxiomsTheory.sml.d : defaxiomsTheory.sig defaxiomsTheory.sml
+	touch defaxiomsScript.sml && touch defaxiomsTheory.sig defaxiomsTheory.sml && \
+	Holmake -r --no_holmakefile && rm defaxiomsScript.sml
 
+## We then produce the ui and uo files as 'poly_compile' would
+defaxiomsTheory.ui : .HOLMK/defaxiomsTheory.sig.d
+	echo "Compiling $(@)"
+	@[ -f "$(MOSMLC)" ] || \
+	echo "/opt/hol/sigobj/Overlay" > $(@) && \
+	for i in `cat .HOLMK/defaxiomsTheory.sig.d | cut -f 2 -d':'`; do \
+		echo $$i | cut -f 1 -d'.' >> $(@) ; \
+	done && \
+	echo `pwd`/`echo $(@) | cut -f 1 -d'.'`.sig >> $(@)
 
-
-
-
+defaxiomsTheory.uo : .HOLMK/defaxiomsTheory.sml.d
+	echo "Compiling $(@)"
+	@[ -f "$(MOSMLC)" ] || \
+	echo "/opt/hol/sigobj/Overlay" > $(@) && \
+	for i in `cat .HOLMK/defaxiomsTheory.sml.d | cut -f 2 -d':'`; do \
+		(find `pwd` -name $$i 2>/dev/null | grep \. || echo $$i) | cut -f 1 -d'.' >> $(@) ; \
+	done && \
+	echo `pwd`/`echo $(@) | cut -f 1 -d'.'`.sml >> $(@)

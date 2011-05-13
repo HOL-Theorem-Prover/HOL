@@ -13,19 +13,22 @@ to~2011.  It is loosely inspired by \ml{HolSatLib}
 (Section~\ref{sec:HolSatLib}), and has been described in parts in the
 following publication:
 \begin{itemize}
-\item Tjark Weber: {\it Validating QBF Invalidity in HOL4}.  Published
-  at the International Conference on Interactive Theorem Proving (ITP)
-  2010.
+\item Tjark Weber: {\it Validating QBF Invalidity in HOL4}.  In Matt
+  Kaufmann and Lawrence C.\ Paulson, editors, Interactive Theorem
+  Proving, First International Conference, ITP 2010, Edinburgh, UK,
+  July 11--14, 2010.  Proceedings, volume 6172 of Lecture Notes in
+  Computer Science, pages 466--480.  Springer, 2010.
 \end{itemize}
 \ml{HolQbfLib} uses an external QBF solver, Squolem, to disprove
 invalid Quantified Boolean Formulae.
 
 \subsection{Installing Squolem}
 
-\ml{HolQbfLib} has been tested with Squolem 1.03 (release date
-2007-01-28).  Squolem can be obtained for Windows and Linux from
+\ml{HolQbfLib} has been tested with (the x86 Linux version of) Squolem
+2.02 (release date 2010-11-10).  Later versions might work as well.
+Squolem can be obtained from
 \url{http://www.cprover.org/qbv/download.html}.  After installation,
-you must make the executable available as {\tt squolem}, \eg, by
+you must make the executable available as {\tt squolem2}, \eg, by
 placing it into a folder that is in your {\tt \$PATH}.  This name is
 currently hard-coded: there is no configuration option to tell \HOL{}
 about the location and name of the Squolem executable.
@@ -74,12 +77,12 @@ The behavior is undefined if any of these restrictions are violated.
 
 - disprove ``?x. x /\ ~x``;
 <<HOL message: HolQbfLib: calling external command
-  'squolem --save-certificate /tmp/file0Pw2Tg >& /dev/null'>>
+  'squolem2 -c /tmp/file0Pw2Tg >& /dev/null'>>
 > val it =  [?x. x /\ ~x] |- F : thm
 
 - disprove ``!x. ?y. x /\ y``;
 <<HOL message: HolQbfLib: calling external command
-  'squolem --save-certificate /tmp/fileZAGj4m >& /dev/null'>>
+  'squolem2 -c /tmp/fileZAGj4m >& /dev/null'>>
 > val it =
      [!x. ?y. x /\ y] |- F : thm
 \end{verbatim}

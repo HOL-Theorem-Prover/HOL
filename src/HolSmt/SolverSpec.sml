@@ -52,10 +52,10 @@ structure SolverSpec = struct
         case result of
           UNSAT (SOME thm) =>
             let
-              val (A, g) = goal
-              val A_set = HOLset.addList (Term.empty_tmset, A)
+              val (As, g) = goal
+              val As = HOLset.fromList Term.compare As
             in
-              if not (HOLset.isSubset (Thm.hypset thm, A_set)) then
+              if not (HOLset.isSubset (Thm.hypset thm, As)) then
                 Feedback.HOL_WARNING "SolverSpec" "make_solver"
                   "theorem contains additional hyp(s)"
               else ();

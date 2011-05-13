@@ -1,0 +1,127 @@
+hd,tl;
+
+list_traverse(x) [list(x)] {
+  local t;
+  t = x;
+  /* lseg(x,t) should be framed */
+  while(t != NULL) [lseg(x,t) * list(t)] {
+    t = t->tl;
+  }
+} [list(x)]
+
+lseg_traverse(x,y) [lseg(x,y)] {
+  local t;
+  t = x;
+  if(t != y) {
+    t = t->tl;
+    lseg_traverse(t,y);
+  } else {}
+} [lseg(x,y)]
+
+list_copy(p) [list(p)] {
+  local t;
+  t = p;
+  q = NULL;
+  while(t != NULL) [list(q) * lseg(p,t) * list(t)] {
+    sq = q;
+    q = new();
+    q->tl = sq;
+    t = t->tl;
+  }
+} [list(p) * list(q)]
+
+list_reverse(o,i) [list(i)] {
+  local t;
+  o = NULL;
+  while (i != NULL) [list(i) * list(o)] {
+    t = i->tl;
+    i->tl = o;
+    o = i;
+    i = t;
+  }
+} [list(o)]
+
+list_deallocate(x) [lseg(x,0)] {
+  local t;
+  while(x != NULL) [lseg(x,0)] {
+    t = x;
+    x = x->tl;
+    dispose t;
+  }
+} [emp]
+
+list_append(x,y) [list(x) * list(y)] {
+  local t;
+  if (x == NULL) {
+    x = y;
+  } else {
+    t = x;
+    n = t->tl;
+    /* list(y) is framed */
+    while (n != NULL) [lseg(x,t) * t |-> n * list(n)] {
+      t = n;
+      n = t->tl;
+    }
+    t->tl = y;
+  } /* lseg(x,t) * t |-> y * list(y) */
+} [list(x)]
+
+list_insert(l;x) [x|-> * list(l)] {
+  local s, t, u;
+  if(l==NULL) {
+    x->tl = NULL;
+    l = x;
+  } else {
+    s = x->hd;
+    t = l->hd;
+    if(s>t) {
+      u = l->tl;
+      list_insert(u;x);
+      l->tl = u;
+    } else {
+      x->tl = l;
+      l = x;
+    }
+  }
+} [list(l)]
+
+/* If you comment out the dispose instruction then an error will be
+ * flagged, because it is a memory leak */
+list_remove(l;x) [list(l)] {
+  local t;
+  if(l!=NULL) {
+    if(l==x) {
+      l = l->tl;
+      dispose(x);
+    } else {
+      t = l->tl;
+      list_remove(t;x);
+      l->tl = t;
+    }
+  }
+} [list(l)]
+
+list_filter(x,a) [list(x)] { /* remove all links with hd a from x */
+  local y, z, e;
+  y = x;
+  z = NULL;
+  while(y != NULL)
+  [if y==x then list(x) else lseg(x,z) * z |-> tl:y * list(y)] {
+    e = y->hd;
+    if(e == a) { /* need to remove y */
+      if(y == x) { /* first link */
+        x = y->tl;
+        dispose y;
+        y = x;
+      } else { /* not first link */
+        e = y->tl;
+        z->tl = e;
+        dispose y;
+        y = z->tl;
+      }
+    } else { /* don't need to remove y */
+      z = y;
+      y = y->tl;
+    }
+  }
+} [list(x)]

@@ -105,7 +105,7 @@ operators) can be inspected using the function \ml{type\_grammar}.
 \begin{array}{lcl}
 \tau &::=& \tau \odot \tau \bar \nt{vtype} \bar \nt{tyop} \bar
            \tok{(} \;\nt{tylist}\;\tok{)} \;\nt{tyop}\bar \tau \;\nt{tyop}
-           \bar \tok{(}\;\tau\;\tok{)}\\
+           \bar \tok{(}\;\tau\;\tok{)} \bar \tau\tok{[}\tau\tok{]}\\
 \odot &::=& \tok{->} \bar \tok{\#} \bar \tok{+} \bar \cdots\\
 \nt{vtype} &::=& \tok{'a} \bar \tok{'b} \bar \tok{'c} \bar \cdots\\
 \nt{tylist} &::=& \tau \bar \tau \;\tok{,}\;\nt{tylist}\\
@@ -114,7 +114,8 @@ operators) can be inspected using the function \ml{type\_grammar}.
 \end{array}
 \]
 \caption{An abstract grammar for \HOL{} types ($\tau$).  Infixes ($\odot$)
-  always bind more weakly than type operators ($\nt{tyop}$), so that
+  always bind more weakly than type operators~($\nt{tyop}$) (and
+  type-subscripting~($\tau\tok{[}\tau\tok{]}$)), so that
   $\tau_1 \,\odot\, \tau_2 \,\nt{tyop}$ is always parsed as $\tau_1\, \odot\,
   (\tau_2 \,\nt{tyop})$.  Different infixes can have different
   priorities, and infixes at different priority levels can associate

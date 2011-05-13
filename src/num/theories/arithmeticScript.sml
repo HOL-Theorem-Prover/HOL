@@ -2432,7 +2432,7 @@ REWRITE_TAC [ONE] THEN REPEAT STRIP_TAC
     THEN ASM_REWRITE_TAC[]]);
 
 val MOD_LESS = Q.store_thm("MOD_LESS",
- `!m n. 0 < n ==> k MOD n < n`,
+ `!m n. 0 < n ==> m MOD n < n`,
  METIS_TAC [DIVISION]);
 
 val ADD_MODULUS = Q.store_thm("ADD_MODULUS",

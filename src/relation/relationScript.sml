@@ -75,9 +75,8 @@ val _ = add_rule { fixity = Suffix 2100,
                    block_style = (AroundEachPhrase, (Portable.CONSISTENT,0)),
                    paren_style = OnlyIfNecessary,
                    pp_elements = [TOK "^+"],
-                   term_name = "^+" }
-val _ = overload_on ("^+", ``TC : ('a -> 'a -> bool) -> 'a -> 'a -> bool``)
-val _ = Unicode.unicode_version {u = Unicode.UChar.sup_plus, tmnm = "^+"}
+                   term_name = "TC" }
+val _ = Unicode.unicode_version {u = Unicode.UChar.sup_plus, tmnm = "TC"}
 val _ = TeX_notation {hol = Unicode.UChar.sup_plus,
                       TeX = ("\\HOLTokenSupPlus{}", 1)}
 val _ = TeX_notation {hol = "^+", TeX = ("\\HOLTokenSupPlus{}", 1)}
@@ -92,8 +91,7 @@ val _ = add_rule { fixity = Suffix 2100,
                    block_style = (AroundEachPhrase, (Portable.CONSISTENT,0)),
                    paren_style = OnlyIfNecessary,
                    pp_elements = [TOK "^*"],
-                   term_name = "^*" }
-val _ = overload_on ("^*", ``RTC : ('a -> 'a -> bool) -> 'a -> 'a -> bool``)
+                   term_name = "RTC" }
 val _ = TeX_notation {hol = "^*", TeX = ("\\HOLTokenSupStar{}", 1)}
 
 val RC_DEF = new_definition(
