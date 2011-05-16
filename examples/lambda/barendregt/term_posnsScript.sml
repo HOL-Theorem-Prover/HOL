@@ -172,32 +172,23 @@ val var_posns_SUBSET_valid_posns = store_thm(
    ---------------------------------------------------------------------- *)
 
 val vp'_var = ``\ (s : string). if v = s then {[]: redpos list} else {}``
-val vp'_app = ``\rt ru.
-                    IMAGE (CONS Lt) rt UNION IMAGE (CONS Rt) ru``
-val vp'_lam = ``\ (w:string) rt. IMAGE (CONS In) rt``
-
-open metisLib
+val vp'_lam = ``\rt (w:string) t:term . IMAGE (CONS In) rt``
 
 val silly_lemma = prove(
   ``(?a:string. ~(a = v))``,
   Q_TAC (NEW_TAC "z") `{v}` THEN
   Q.EXISTS_TAC `z` THEN SRW_TAC [][]);
 val v_posns_exists =
-    (SIMP_RULE (srw_ss()) [SKOLEM_THM, FORALL_AND_THM] o
-     GEN_ALL o
-     SIMP_RULE (srw_ss()) [nomsetTheory.fnpm_def, silly_lemma,
-                           GSYM basic_swapTheory.swapstr_eq_left] o
-     CONV_RULE (LAND_CONV (ONCE_REWRITE_CONV [FUN_EQ_THM])) o
-     CONV_RULE (LAND_CONV (ONCE_REWRITE_CONV [FUN_EQ_THM])) o
-     SIMP_RULE (srw_ss()) [nomsetTheory.support_def] o
-     Q.INST [`apm` |-> `K I`,
+    termTheory.tm_recursion
+        |> INST_TYPE [alpha |-> ``:posn set``]
+        |> SPEC_ALL
+        |> Q.INST [`apm` |-> `K I`,
              `A` |-> `{v}`,
              `vr` |-> `^vp'_var`,
-             `ap` |-> `^vp'_app`,
-             `lm` |-> `^vp'_lam`] o
-     SPEC_ALL o
-     INST_TYPE [alpha |-> ``:posn set``])
-    termTheory.tm_recursion
+             `ap` |-> `\rt ru t u. IMAGE (CONS Lt) rt UNION IMAGE (CONS Rt) ru`,
+             `lm` |-> `^vp'_lam`]
+        |> SIMP_RULE (srw_ss()) [GSYM basic_swapTheory.swapstr_eq_left]
+        |> Q.GEN `v` |> SIMP_RULE (srw_ss()) [SKOLEM_THM, FORALL_AND_THM]
 
 val v_posns_def = new_specification("v_posns_def", ["v_posns"],
                                     v_posns_exists);
@@ -381,8 +372,10 @@ val redex_posns_are_valid = store_thm(
    ---------------------------------------------------------------------- *)
 
 val bv_posns_at_exists0 =
-    (SIMP_RULE (srw_ss()) [] o
-     Q.INST [`apm` |-> `K I`,
+    tm_recursion_nosideset
+        |> SPEC_ALL
+        |> INST_TYPE [alpha |-> ``:redpos list -> redpos list set``]
+        |> Q.INST [`apm` |-> `K I`,
              `vr` |-> `\s l. {}`,
              `ap` |-> `\rt ru t u l.
                            case l of
@@ -393,10 +386,8 @@ val bv_posns_at_exists0 =
                            case l of
                               [] -> bv_posns (LAM v t)
                            || In::rest -> IMAGE (CONS In) (rt rest)
-                           || _ -> {}`] o
-     INST_TYPE [alpha |-> ``:redpos list -> redpos list set``] o
-     SPEC_ALL)
-    tm_recursion_nosideset
+                           || _ -> {}`]
+        |> SIMP_RULE (srw_ss()) []
 
 val bv_posns_at_exists = prove(
   ``?bv_posns_at.
@@ -412,7 +403,7 @@ val bv_posns_at_exists = prove(
                    || In::rest -> IMAGE (CONS In) (bv_posns_at rest t)
                    || _ -> {})) /\
        !t l p. bv_posns_at l (tpm p t) = bv_posns_at l t``,
-  STRIP_ASSUME_TAC bv_posns_at_exists0 THEN
+  Q.X_CHOOSE_THEN `f` STRIP_ASSUME_TAC bv_posns_at_exists0 THEN
   Q.EXISTS_TAC `\l t. f t l` THEN SRW_TAC [][]);
 
 val bv_posns_at_def = new_specification("bv_posns_at_def", ["bv_posns_at"],
