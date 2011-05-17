@@ -982,8 +982,9 @@ struct
                                                (term_grammar())));
        temp_set_type_grammar (fupdate_specials_ty (fupd_lambda_ty (cons UChar.lambda))
                              (fupdate_specials_ty (fupd_forall_ty (cons UChar.forall))
+                             (fupdate_specials_ty (fupd_exists_ty (cons UChar.exists))
                              (fupdate_rules_ty (fupd_binders_ty (fn sl => cons (uchar (hd sl)) sl))
-                                               (type_grammar())))))
+                                               (type_grammar()))))))
   fun traceset n = if n = 0 then
                      if !master_unicode_switch then
                        (master_unicode_switch := false;
@@ -1202,7 +1203,6 @@ fun fixityToString Prefix  = "Prefix"
   | fixityToString (RF rf) = term_grammar.rule_fixityToString rf
 
 fun relToString TM = "TM"
-  | relToString TY = "TY"
   | relToString (TOK s) = "TOK "^quote s
 end
 
@@ -2005,10 +2005,9 @@ end handle IO.Io {function,name,...} =>
      PhraseBlockStyle, and ParenStyle.
  ---------------------------------------------------------------------------*)
 
-fun TM x = x; fun TY x = x; fun TOK x = x;   (* remove constructor status *)
+fun TM x = x; fun TOK x = x;   (* remove constructor status *)
 
 val TM = term_grammar.RE term_grammar.TM
-val TY = term_grammar.RE term_grammar.TY
 val TOK = term_grammar.RE o term_grammar.TOK
 
 (* ----------------------------------------------------------------------

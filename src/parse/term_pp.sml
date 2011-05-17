@@ -710,14 +710,12 @@ fun pp_term (G : grammar) TyG backend = let
   fun pr_term binderp showtypes showtypes_v vars_seen pps ppfns combpos tm
               pgrav lgrav rgrav depth = let
 
-(*
     fun pr_term1 binderp showtypes showtypes_v vars_seen pps ppfns combpos tm
               pgrav lgrav rgrav depth
       = time backend pps "pr_term" (pr_term binderp showtypes showtypes_v vars_seen pps ppfns combpos tm
               pgrav lgrav rgrav) depth
               handle e => Raise (wrap_exn "term_pp.pr_term" "<entrance>" e) (* debugging *)
     val pr_term = pr_term1
-*)
 
     val _ =
         if printers_exist then let
@@ -792,7 +790,7 @@ fun pp_term (G : grammar) TyG backend = let
        printed after the first TOK element (if !show_types is true);
        args is a list of terms to be inserted
        in place of RE TM elements.  Returns the unused args *)
-    fun print_ellist (lprec, cprec, rprec) (els, args) = let
+    fun print_ellist (lprec, cprec, rprec) (els, tyargs, args) = let
       val recurse = print_ellist (lprec, cprec, rprec)
       val print_tycomb = false (* (!show_types) andalso not (null tyargs) *)
     in
@@ -803,46 +801,30 @@ fun pp_term (G : grammar) TyG backend = let
           case e of
             PPBlock(more_els, (sty, ind)) => let
               val _ = begin_block sty ind
-              val rest = recurse (more_els, args)
+              val rest = recurse (more_els, tyargs, args)
               val _ = end_block()
             in
-              recurse (es, rest)
+              recurse (es, tyargs, rest)
             end
           | HardSpace n => (add_string (string_of_nspaces n);
-                            recurse (es, args))
-          | BreakSpace (n, m) => (add_break(n,m); recurse (es, args))
-          | RE (TOK s) => (*if print_tycomb then
+                            recurse (es, tyargs, args))
+          | BreakSpace (n, m) => (add_break(n,m); recurse (es, tyargs, args))
+          | RE (TOK s) => if print_tycomb then
                             (pbegin print_tycomb;
                              begin_block INCONSISTENT 0;
                              add_string s;
                              pr_type_list tyargs;
                              end_block();
                              pend print_tycomb;
-                             recurse (es, args))
-                          else*)
-                          (add_string s; recurse (es, args))
-          | RE TM => ((pr_term (outR (hd args)) Top Top Top (decdepth depth);
-                       (* handle HOL_ERR {origin_function="outR",...} =>
-                                 raise (PP_ERR "pr_term" "type arg where term arg expected"); *)
-                      recurse (es, tl args))
-                          handle HOL_ERR {origin_function="outR",...} =>
-                          recurse (e::es, tl args))
-          | RE TY => (pr_type false (outL (hd args))
-                          handle HOL_ERR {origin_function="outL",...} =>
-                                 raise (PP_ERR "pr_term" "term arg where type arg expected");
-                      recurse (es, tl args))
-          | FirstTM => ((pr_term (outR (hd args)) cprec lprec cprec (decdepth depth);
-                       (* handle HOL_ERR {origin_function="outR",...} =>
-                                 raise (PP_ERR "pr_term" "type arg where term arg expected"); *)
-                        recurse (es, tl args))
-                          handle HOL_ERR {origin_function="outR",...} =>
-                          recurse (e::es, tl args))
-          | LastTM => ((pr_term (outR (hd args)) cprec cprec rprec (decdepth depth);
-                       (* handle HOL_ERR {origin_function="outR",...} =>
-                                 raise (PP_ERR "pr_term" "type arg where term arg expected"); *)
-                       recurse (es, tl args))
-                          handle HOL_ERR {origin_function="outR",...} =>
-                          recurse (e::es, tl args))
+                             recurse (es, [], args))
+                          else
+                          (add_string s; recurse (es, tyargs, args))
+          | RE TM => (pr_term (hd args) Top Top Top (decdepth depth);
+                      recurse (es, tyargs, tl args))
+          | FirstTM => (pr_term (hd args) cprec lprec cprec (decdepth depth);
+                        recurse (es, tyargs, tl args))
+          | LastTM => (pr_term (hd args) cprec cprec rprec (decdepth depth);
+                       recurse (es, tyargs, tl args))
           | EndInitialBlock _ => raise Fail "term_pp - encountered EIB"
           | BeginFinalBlock _ => raise Fail "term_pp - encountered BFB"
         end
@@ -1275,14 +1257,14 @@ fun pp_term (G : grammar) TyG backend = let
                       [] => () (* should never happen *)
                     | [u] => print_update (decdepth depth) u
                     | u::us => (print_update (decdepth depth) u;
-                                print_ellist(Top,Top,Top) (sep, []);
+                                print_ellist(Top,Top,Top) (sep, [], []);
                                 recurse (decdepth depth) us)
             in
-              print_ellist (Top,Top,Top) (ldelim, []);
+              print_ellist (Top,Top,Top) (ldelim, [], []);
               begin_block INCONSISTENT 0;
               recurse depth updates;
               end_block ();
-              print_ellist (Top,Top,Top) (rdelim, []);
+              print_ellist (Top,Top,Top) (rdelim, [], []);
               ()
             end
           in
@@ -1426,8 +1408,8 @@ fun pp_term (G : grammar) TyG backend = let
       val _ = if binderp then bvars_seen := tm :: !bvars_seen else ()
     in
       case nilrule of
-        SOME r => (ignore (print_ellist (Top,Top,Top) (#leftdelim r, []));
-                   ignore (print_ellist (Top,Top,Top) (#rightdelim r, [])))
+        SOME r => (ignore (print_ellist (Top,Top,Top) (#leftdelim r, [], []));
+                   ignore (print_ellist (Top,Top,Top) (#rightdelim r, [], [])))
       | NONE => let
           (* if only rule is a list form rule and we've got to here, it
              will be a rule allowing this to the cons part of a list form.
@@ -1441,10 +1423,10 @@ fun pp_term (G : grammar) TyG backend = let
         end
     end
 
-    fun pr_comb_with_rule frule fterm all_args = let
-      val args = mapfilter outR all_args
+    fun pr_comb_with_rule frule fterm args Rand = let
       val {fname,fprec,f} = fterm
-      val comb_show_type = comb_show_type(f,args)
+      val (fhead,tyargs) = strip_tycomb f
+      val comb_show_type = comb_show_type(f,args @ [Rand])
       val (ptype_begin, ptype_end) =
           if comb_show_type then
             ((fn () => (add_string "("; begin_block CONSISTENT 0)),
@@ -1490,6 +1472,7 @@ fun pp_term (G : grammar) TyG backend = let
           val prec = Prec(fprec, fname)
           val lprec = if addparens then Top else lgrav
           val rprec = if addparens then Top else rgrav
+          val arg_terms = args @ [Rand]
           val pp_elements = block_up_els [] ((FirstTM::elements) @ [LastTM])
           val (begblock, endblock) =
             block_by_style(addparens, rr, pgrav, fname, fprec)
@@ -1503,12 +1486,11 @@ fun pp_term (G : grammar) TyG backend = let
                    (fn () => bvars_seen := old_seen))
                 end
               else ((fn () => ()), (fn () => ()))
-          val all_tm_args = mapfilter (inR o outR) all_args
         in
           ptype_begin(); pbegin (addparens orelse comb_show_type);
           begblock();
           casearrow_begin();
-          print_ellist (lprec, prec, rprec) (pp_elements, all_tm_args);
+          print_ellist (lprec, prec, rprec) (pp_elements, tyargs, arg_terms);
           casearrow_end();
           endblock (); pend (addparens orelse comb_show_type);
           ptype_end()
@@ -1528,12 +1510,13 @@ fun pp_term (G : grammar) TyG backend = let
           val addparens = parens_needed_outright orelse parens_needed_by_style
           val lprec = if addparens then Top else lgrav
           val prec = Prec(fprec, fname)
+          val real_args = args @ [Rand]
           val pp_elements = block_up_els [] (FirstTM :: elements)
           val (begblock, endblock) =
             block_by_style(addparens, rr, pgrav, fname, fprec)
         in
           ptype_begin(); pbegin (addparens orelse comb_show_type); begblock();
-          print_ellist (lprec, prec, Top) (pp_elements, all_args);
+          print_ellist (lprec, prec, Top) (pp_elements, tyargs, real_args);
           endblock(); pend (addparens orelse comb_show_type); ptype_end()
         end
       | SUFFIX TYPE_annotation =>
@@ -1553,18 +1536,19 @@ fun pp_term (G : grammar) TyG backend = let
               combpos = RandCP
           val rprec = if addparens then Top else rgrav
           val pp_elements = block_up_els [] (elements @ [LastTM])
+          val real_args = args @ [Rand]
           val prec = Prec(fprec, fname)
           val (begblock, endblock) =
             block_by_style(addparens, rr, pgrav, fname, fprec)
         in
           ptype_begin(); pbegin (addparens orelse comb_show_type);
           begblock();
-          print_ellist (Top, prec, rprec) (pp_elements, all_args);
+          print_ellist (Top, prec, rprec) (pp_elements, tyargs, real_args);
           endblock(); pend (addparens orelse comb_show_type);
           ptype_end()
         end
       | PREFIX (BINDER lst) =>
-        if is_tyabs tm orelse (is_comb tm andalso is_tyabs (rand tm)) then let
+        if is_tyabs tm orelse is_tyabs Rand then let
           val tok = case hd lst of
                       LAMBDA => hd lambda (* should never happen *)
                     | TYPE_LAMBDA => hd type_lambda (* should never happen *)
@@ -1628,7 +1612,7 @@ fun pp_term (G : grammar) TyG backend = let
           val elements = #elements rr
         in
           ptype_begin(); uncurry begin_block (#2 (#block_style rr)) ;
-          print_ellist (Top, Top, Top) (elements, all_args);
+          print_ellist (Top, Top, Top) (elements, tyargs, args @ [Rand]);
           end_block();
           ptype_end()
         end
@@ -1653,21 +1637,21 @@ fun pp_term (G : grammar) TyG backend = let
               else let
               in
                 pr_term head Top Top Top (decdepth depth);
-                print_ellist (Top,Top,Top) (sep, []);
+                print_ellist (Top,Top,Top) (sep, [], []);
                 recurse (decdepth depth) tail
               end
             end
           in
-            print_ellist (Top,Top,Top) (ldelim, []) ;
+            print_ellist (Top,Top,Top) (ldelim, [], []) ;
             begin_block consistency breakspacing;
             recurse depth tm;
             end_block();
-            ignore (print_ellist (Top,Top,Top) (rdelim, []))
+            ignore (print_ellist (Top,Top,Top) (rdelim, [], []))
           end
         in
           ptype_begin(); pr_list tm; ptype_end()
         end
-    end handle e as HOL_ERR _ => (print "pr_comb_with_rule\n"; Raise e)
+    end
 
     fun pr_let0 tm = let
       fun find_base acc tm =
@@ -1893,9 +1877,7 @@ fun pp_term (G : grammar) TyG backend = let
                  else normal_const()
         end
       | COMB(Rator, Rand) => let
-          val (f, all_args0) = time backend pps "strip_all_comb" strip_all_comb Rator
-          val args = mapfilter outR all_args0
-          val all_args = all_args0 @ [inR Rand]
+          val (f, args) = time backend pps "strip_comb" strip_comb Rator
           val (oif, oiargs) = time backend pps "oi_strip_comb" (fn () =>
               case Overload.oi_strip_comb overload_info tm of
                 NONE => (f, args @ [Rand])
@@ -2003,41 +1985,14 @@ fun pp_term (G : grammar) TyG backend = let
                    else ()
 
           fun is_atom tm = is_const tm orelse is_var tm orelse (is_tycomb tm andalso is_atom (fst(dest_tycomb tm)))
-          infix +-+
-          fun ptype ty = (debug_type ty; print " ")
-          fun pterm tm = (debug_term tm; print ":"; ptype (type_of tm))
           fun pr_atomf (f,args) = let
-            val all_args = args
-            val args = mapfilter outR all_args (* select just the term args *)
             (* the tm, Rator and Rand bindings that we began with are
                overridden by the f and args values that may be the product of
                oi_strip_comb *)
-            val fname = atom_name f handle e as HOL_ERR _ => (print "atom_name\n"; Raise e)
-            val _ = if not (null all_args) then () else
-                       (print ("\nNull args! ("^fname^":");
-                        debug_type (type_of f);
-                        print (")\nargs: ");
-                        app (ptype +-+ pterm) all_args;
-                        print ("\n");
-                        Raise (PP_ERR "pr_atomf" "null all_args at call!"))
-            val tm = list_mk_all_comb (f, all_args)
-                      handle e as HOL_ERR _ =>
-                       (print ("list_mk_all_comb("^fname^":");
-                        debug_type (type_of f);
-                        print (")\n");
-                        app (ptype +-+ pterm) all_args;
-                        print ("\n");
-                        Raise e)
-            val Rator = rator tm handle HOL_ERR _ => tyrator tm handle e as HOL_ERR _ =>
-                      (print "no rator in pr_atomf";
-                       print ("("^fname^":");
-                        debug_type (type_of f);
-                        print (")\nargs: ");
-                        app (ptype +-+ pterm) all_args;
-                        print ("\n");
-                        Raise e)
-            val (args,Rand) = front_last args handle e as HOL_ERR _ => (print "front_last\n"; Raise e)
-in let
+            val fname = atom_name f
+            val tm = list_mk_comb (f, args)
+            val Rator = rator tm
+            val (args,Rand) = front_last args
             val candidate_rules = lookup_term fname
             fun is_list (r as {nilstr, cons, ...}:listspec) tm =
                 has_name_by_parser G nilstr tm orelse
@@ -2073,7 +2028,7 @@ in let
             case candidate_rules of
               NONE =>
               if is_let tm then pr_let lgrav rgrav tm
-              else (let
+              else let
                 in
                   case restr_binder of
                     NONE => pr_comb tm Rator Rand
@@ -2085,10 +2040,10 @@ in let
                       pr_comb_with_rule(#3(valOf restr_binder_rule))
                                        {fprec = #1 (valOf restr_binder_rule),
                                         fname = fname,
-                                        f = f} all_args
+                                        f = f} args Rand
                     else
                       pr_comb tm Rator Rand
-                end handle e as HOL_ERR _ => (print "candidate_rules NONE not_let\n"; Raise e))
+                end
             | SOME crules0 => let
                 fun suitable_rule rule =
                     case rule of
@@ -2104,53 +2059,44 @@ in let
                     | SUFFIX (STD_suffix list) =>
                       numTMs (rule_elements (#elements (hd list))) =
                       length args
-                    | SUFFIX TYPE_annotation => raise Fail "Can't happen 90210"
-                    | SUFFIX TYPE_application => raise Fail "Can't happen 90210"
+                    | SUFFIX Type_annotation => raise Fail "Can't happen 90210"
+                    | SUFFIX Type_application => raise Fail "Can't happen 90210"
                     | CLOSEFIX list =>
                       numTMs (rule_elements (#elements (hd list))) - 1 =
                       length args
                     | INFIX (FNAPP _) => raise Fail "Can't happen 90211"
                     | INFIX VSCONS => raise Fail "Can't happen 90213"
                     | LISTRULE list => is_list (hd list) tm
-                val crules = List.filter (suitable_rule o #3) crules0 handle e as HOL_ERR _ => (print "suitable_rule\n"; Raise e)
+                val crules = List.filter (suitable_rule o #3) crules0
                 fun is_lrule (LISTRULE _) = true | is_lrule _ = false
-                val first_nonlist = List.find (not o is_lrule o #3) crules handle e as HOL_ERR _ => (print "not is_lrule\n"; Raise e)
-                val lrules = List.filter (is_lrule o #3) crules handle e as HOL_ERR _ => (print "is_lrule\n"; Raise e)
+                val first_nonlist = List.find (not o is_lrule o #3) crules
+                val lrules = List.filter (is_lrule o #3) crules
               in
                 if not (null lrules) then
                   pr_comb_with_rule (#3 (hd lrules))
                                     {fprec = #1 (hd lrules),
                                      fname=fname, f=f}
-                                    all_args
+                                    args Rand
                 else
                   case first_nonlist of
                     SOME (p,_,r) =>
                     pr_comb_with_rule r {fprec=p, fname=fname, f=f}
-                                      all_args
-                  | NONE => pr_comb tm Rator Rand handle e as HOL_ERR _ => (print "pr_comb\n"; Raise e)
+                                      args Rand
+                  | NONE => pr_comb tm Rator Rand
               end
-          end handle e as HOL_ERR _ => (print ("pr_atomf(" ^ fname ^ ")\n"); Raise e)
-          end (* pr_atomf *) handle e as HOL_ERR _ =>
-                             (print "main pr_atomf\n";
-                              pterm f;
-                              print (")\nargs: ");
-                              app (ptype +-+ pterm) all_args;
-                              print ("\n");
-                              Raise e)
+          end (* pr_atomf *)
           fun maybe_pr_atomf () =
               if time backend pps "gram_nm" (grammar_name G) f = SOME "case" then
-                time backend pps "pr_atomf1" pr_atomf (strip_all_comb tm) handle e => (print "CASE\n"; Raise e)
+                time backend pps "pr_atomf1" pr_atomf (strip_comb tm)
               else
-                case time backend pps "overld" (Overload.oi_strip_all_comb overload_info) tm of
+                case time backend pps "overld" (Overload.oi_strip_comb overload_info) tm of
                   SOME (p as (f,args)) => let
                   in
                     case args of
                       [] => pr_term f pgrav lgrav rgrav depth
-                    | _ => time backend pps "pr_atomf2" pr_atomf (*p*)(f,(*map inR*) args) handle e => (print "OVERLOADED\n"; Raise e)
+                    | _ => time backend pps "pr_atomf2" pr_atomf p
                   end
-                | NONE => if is_var f then (if null all_args then Raise (PP_ERR "pr_atomf" "null all_args") else ();
-                                            time backend pps "pr_atomf3" pr_atomf (f, (*args @ [Rand]*) all_args)
-                                                                        handle e => (print "VAR f\n"; Raise e))
+                | NONE => if is_var f then time backend pps "pr_atomf3" pr_atomf (f, args @ [Rand])
                           else time backend pps "pr_comb" (pr_comb tm Rator) Rand
         in
           if showtypes_v then

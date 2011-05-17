@@ -66,6 +66,5 @@ sig
   val gen_remove_mapping : string -> term -> overload_info -> overload_info
 
   val oi_strip_comb : overload_info -> term -> (term * term list) option
-  val oi_strip_all_comb : overload_info -> term -> (term * (hol_type,term)Lib.sum list) option
 
 end

@@ -400,6 +400,7 @@ val _ = add_rule{term_name   = "COND",
                  paren_style = OnlyIfNecessary,
                  block_style = (AroundEachPhrase, (CONSISTENT, 0))};
 
+(*
 val _ = add_rule{term_name   = "PACK",
                  fixity      = TruePrefix 70,
                  pp_elements = [PPBlock([TOK "pack", BreakSpace(1,2), TY,
@@ -409,6 +410,7 @@ val _ = add_rule{term_name   = "PACK",
                                 TOK "body", BreakSpace(1,2)],
                  paren_style = OnlyIfNecessary,
                  block_style = (AroundEachPhrase, (CONSISTENT, 0))};
+*)
 
 
 (*---------------------------------------------------------------------------*
