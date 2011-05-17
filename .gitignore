@@ -27,6 +27,7 @@
 *.tid
 *.tix
 *.hix
+*.fdb_latexmk
 
 *~
 build-log
