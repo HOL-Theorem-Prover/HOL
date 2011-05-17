@@ -193,7 +193,11 @@ val is_the_value    = same_const the_value
  *---------------------------------------------------------------------------*)
 
 val list_mk_comb     = HolKernel.list_mk_comb
+val list_mk_tycomb   = HolKernel.list_mk_tycomb
+val list_mk_all_comb = HolKernel.list_mk_all_comb
 val list_mk_abs      = HolKernel.list_mk_abs
+val list_mk_tyabs    = HolKernel.list_mk_tyabs
+val list_mk_all_abs  = HolKernel.list_mk_all_abs
 
 val list_mk_forall   = list_mk_binder (SOME universal)
 val list_mk_exists   = list_mk_binder (SOME existential)
@@ -207,50 +211,16 @@ fun list_mk_icomb(f,args) = List.foldl (fn (a,t) => mk_icomb (t,a)) f args
 
 val strip_comb       = HolKernel.strip_comb
 val strip_tycomb     = HolKernel.strip_tycomb
+val strip_all_comb   = HolKernel.strip_all_comb
 val strip_abs        = HolKernel.strip_abs
 val strip_tyabs      = HolKernel.strip_tyabs
+val strip_all_abs    = HolKernel.strip_all_abs
 val strip_forall     = HolKernel.strip_binder (SOME universal)
 val strip_exists     = HolKernel.strip_binder (SOME existential)
 val strip_tyforall   = HolKernel.strip_tybinder (SOME ty_universal)
 val strip_tyexists   = HolKernel.strip_tybinder (SOME ty_existential)
 val strip_conj       = strip_binop (total dest_conj)
 val strip_disj       = strip_binop (total dest_disj)
-
-fun list_mk_all_abs (vars,tm) =
-  foldr (fn (inL tyv, tm) => mk_tyabs(tyv,tm)
-          | (inR   v, tm) => mk_abs(v,tm))
-        tm vars
-
-fun strip_all_abs tm =
-  if is_abs tm then
-    let val (v,body1) = dest_abs tm
-        val (vs,body) = strip_all_abs body1
-    in (inR v::vs,body)
-    end
-  else if is_tyabs tm then
-    let val (a,body1) = dest_tyabs tm
-        val (vs,body) = strip_all_abs body1
-    in (inL a::vs,body)
-    end
-  else ([],tm)
-
-fun list_mk_all_comb (f,args) =
-  foldl (fn (inL ty, f) => mk_tycomb(f,ty)
-          | (inR tm, f) => mk_comb(f,tm))
-        f args
-
-fun strip_all_comb tm =
-  if is_comb tm then
-    let val (f,arg) = dest_comb tm
-        val (h,args) = strip_all_comb f
-    in (h, inR arg::args)
-    end
-  else if is_tycomb tm then
-    let val (f,arg) = dest_tycomb tm
-        val (h,args) = strip_all_comb f
-    in (h, inL arg::args)
-    end
-  else (tm,[])
 
 fun avoid_dest_abs (tyvs,tmvs) tm =
   let val (bv,body) = dest_abs tm

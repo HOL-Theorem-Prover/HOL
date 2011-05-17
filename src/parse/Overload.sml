@@ -620,6 +620,35 @@ in
   else recurse [] t
 end
 
+fun dest_all_comb tm =
+  case Lib.total dest_comb tm of
+     SOME (Rator,Rand) => (Rator, inR Rand)
+   | NONE => case Lib.total dest_tycomb tm of
+                SOME (Rator,Rand) => (Rator, inL Rand)
+              | NONE => raise OVERLOAD_ERR "neither a comb or a type comb"
+fun all_rator tm = rator tm handle HOL_ERR _ => tyrator tm
+fun oi_strip_all_comb oinfo t = let
+  fun recurse acc t =
+      case strip_comb oinfo t of
+        NONE => let
+        in
+          case Lib.total dest_all_comb t of
+            NONE => NONE
+          | SOME (f,x) => recurse (x::acc) f
+        end
+      | SOME (f,args) =>
+          let val (f',tyargs) = strip_tycomb f
+          in SOME(f', map inL tyargs @ map inR args @ acc)
+          end
+  val realf = repeat all_rator t
+in
+  if is_var realf andalso
+     String.isPrefix GrammarSpecials.fakeconst_special (#1 (dest_var realf))
+  then
+    NONE
+  else recurse [] t
+end
+
 
 fun overloading_of_term (oinfo as (_, prmap) : overload_info) t =
     case strip_comb oinfo t of

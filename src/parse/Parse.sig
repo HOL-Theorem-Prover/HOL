@@ -353,6 +353,7 @@ signature Parse = sig
   (* more constructors/values that come across from term_grammar *)
 
   val TM               : pp_element
+  val TY               : pp_element
   val TOK              : string -> pp_element
   val BreakSpace       : int * int -> pp_element
   val HardSpace        : int -> pp_element

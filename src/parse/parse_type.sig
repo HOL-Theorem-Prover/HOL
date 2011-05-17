@@ -11,6 +11,7 @@ sig
       tycon : {Thy:string, Tyop:string, Kind:Prekind.prekind, Locn:locn.locn} -> 'a,
       tyapp  : 'a * 'a -> 'a,
       tyuniv : 'a * 'a -> 'a,
+      tyexist: 'a * 'a -> 'a,
       tyabs  : 'a * 'a -> 'a
      }
   type term = Term.term

@@ -10,11 +10,14 @@ type term = Term.term
 type nthy_rec = {Name : string, Thy : string}
 
   type block_info = PP.break_style * int
-  datatype rule_element = TOK of string | TM
+  datatype rule_element = TOK of string | TM | TY
   fun RE_compare (TOK s1, TOK s2) = String.compare(s1,s2)
-    | RE_compare (TOK _, TM) = LESS
+    | RE_compare (TOK _, _) = LESS
     | RE_compare (TM, TOK _) = GREATER
     | RE_compare (TM, TM) = EQUAL
+    | RE_compare (TM, TY) = LESS
+    | RE_compare (TY, TY) = EQUAL
+    | RE_compare (TY, _) = GREATER
   datatype pp_element =
     PPBlock of pp_element list * block_info |
     EndInitialBlock of block_info | BeginFinalBlock of block_info |
@@ -38,6 +41,7 @@ type nthy_rec = {Name : string, Thy : string}
 
   fun rels_ok [TOK _] = true
     | rels_ok (TOK _ :: TM :: xs) = rels_ok xs
+    | rels_ok (TOK _ :: TY :: xs) = rels_ok xs
     | rels_ok (TOK _ :: xs) = rels_ok xs
     | rels_ok _ = false
 
@@ -66,6 +70,7 @@ type nthy_rec = {Name : string, Thy : string}
 
 fun reltoString (TOK s) = s
   | reltoString TM = "TM"
+  | reltoString TY = "TY"
 
 type rule_record = {term_name : string,
                     elements : pp_element list,
@@ -544,6 +549,7 @@ local
   fun specials_from_elm [] = ok
     | specials_from_elm ((TOK x)::xs) = add x >> specials_from_elm xs
     | specials_from_elm (TM::xs) = specials_from_elm xs
+    | specials_from_elm (TY::xs) = specials_from_elm xs
   val mmap = (fn f => fn args => mmap f args >> ok)
   fun rule_specials G r = let
     val rule_specials = rule_specials G
@@ -1011,6 +1017,7 @@ fun add_listform G lrule = let
         EndInitialBlock _ => false
       | BeginFinalBlock _ => false
       | RE TM => false
+      | RE TY => false
       | LastTM => false
       | FirstTM => false
       | _ => true
@@ -1203,6 +1210,7 @@ end
  * ---------------------------------------------------------------------- *)
 
 datatype ruletype_info = add_prefix | add_suffix | add_both | add_nothing
+                       | add_typrefix | add_tysuffix | add_tyboth | add_ty_tm | add_tm_ty
 
 fun prettyprint_grammar tmprint pstrm (G :grammar) = let
   open Portable
@@ -1216,6 +1224,11 @@ fun prettyprint_grammar tmprint pstrm (G :grammar) = let
         add_prefix => ("", " TM")
       | add_suffix => ("TM ", "")
       | add_both => ("TM ", " TM")
+      | add_typrefix => ("", " TY")
+      | add_tysuffix => ("TY ", "")
+      | add_tyboth => ("TY ", " TY")
+      | add_ty_tm => ("TY ", " TM")
+      | add_tm_ty => ("TM ", " TY")
       | add_nothing => ("", "")
     fun special_case s =
       if s = bracket_special then "just parentheses, no term produced"
@@ -1233,7 +1246,7 @@ fun prettyprint_grammar tmprint pstrm (G :grammar) = let
   in
     begin_block INCONSISTENT 2;
     add_string pfx;
-    pr_list (fn (TOK s) => add_string ("\""^s^"\"") | TM => add_string "TM")
+    pr_list (fn (TOK s) => add_string ("\""^s^"\"") | TM => add_string "TM" | TY => add_string "TY")
             (fn () => add_string " ") (fn () => ()) rels;
     add_string sfx;
     add_string tmid_suffix;
@@ -1516,9 +1529,11 @@ fun rule_element_encode rel =
     case rel of
       TOK s => "K" ^ StringData.encode s
     | TM => "M"
+    | TY => "Y"
 val rule_element_reader =
     (literal "K" >> map TOK StringData.reader) ||
-    (literal "M" >> return TM)
+    (literal "M" >> return TM) ||
+    (literal "Y" >> return TY)
 
 
 fun paren_style_encode Always = "A"

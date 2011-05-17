@@ -127,7 +127,7 @@ lowergreek = "\206" [\177-\191] | "\207" [\128-\137] ;
                  safeprint yyarg (":"^bslash_escape(String.extract(drop_upto #":" yytext,1,NONE)));
                  YYBEGIN tyquote;
                  continue());
-<INITIAL>"``" {ws}* ":" ({letter} | {ws} | {newline} | [('!] | {lbracket} | {digit} | {lowergreek}) => (
+<INITIAL>"``" {ws}* ":" ({letter} | {ws} | {newline} | [('!?] | {lbracket} | {digit} | {lowergreek}) => (
                  print yyarg ("(Parse.Type [QUOTE \""^locpragma yyarg (yytext,yypos) 2);
                  safeprint yyarg (drop_upto #":" yytext);
                  YYBEGIN tyquote;

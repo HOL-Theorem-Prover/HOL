@@ -287,6 +287,11 @@ fun mk_prec_matrix G = let
             insert ((STD_HOL_TOK s1, true), STD_HOL_TOK s2) PM_EQUAL;
             recurse xs
           end
+        | recurse (TOK s1::TY::(xs as TOK s2::_)) = let
+          in
+            insert ((STD_HOL_TOK s1, true), STD_HOL_TOK s2) PM_EQUAL;
+            recurse xs
+          end
         | recurse l = raise Fail
                                 (String.concat
                                      ("Bogus rule featuring elements "::
@@ -501,8 +506,8 @@ fun mk_prec_matrix G = let
     | SUFFIX TYPE_application => let
         val lower_rights = List.concat (map right_grabbing_elements remainder)
       in
-        app (fn lower_right => insert ((#1 lower_right,true), TypeBracket)
-                                      GREATER')
+        app (fn (lower_right,src) =>
+                insert ((lower_right,true), TypeBracket) (PM_GREATER src))
             lower_rights
       end
     | SUFFIX (STD_suffix rules) => let
@@ -915,6 +920,7 @@ fun parse_term (G : grammar) typeparser type_var_parser = let
      non-terminal *)
   fun perform_reduction rhs = let
     fun ok_item ((Terminal (STD_HOL_TOK _),_), _) = true
+      | ok_item ((Terminal TypeTok,_), _) = true
       | ok_item ((NonTerminal _,_), _) = true
       | ok_item _ = false
 
@@ -937,9 +943,14 @@ fun parse_term (G : grammar) typeparser type_var_parser = let
           case (List.nth(interior, 1)) of TOK x => x | _ => raise Hah
         fun list_ok [] = raise Fail "list_ok: shouldn't happen"
           | list_ok [TM] = true
+          | list_ok [TY] = true
           | list_ok (TOK _::_) = false
           | list_ok (TM :: TOK s :: rest) = s = poss_sep andalso list_ok rest
+          | list_ok (TY :: TOK s :: rest) = s = poss_sep andalso list_ok rest
           | list_ok (TM :: TM :: _) = false
+          | list_ok (TM :: TY :: _) = false
+          | list_ok (TY :: TM :: _) = false
+          | list_ok (TY :: TY :: _) = false
       in
         if list_ok interior then
           term_grammar.compatible_listrule G {separator = poss_sep,
@@ -964,9 +975,10 @@ fun parse_term (G : grammar) typeparser type_var_parser = let
 
          Below, the variable top_was_tm is true if a TM was popped in this
          way. *)
-      (* NB: terminology: each stack item is either a TM (=term, i.e.,
-         nonterminal) or a TOK (=token, i.e., terminal). *)
+      (* NB: terminology: each stack item is either a TM (=term, i.e., nonterminal),
+         a TY (=type, i.e., terminal), or a TOK (=token, i.e., terminal). *)
       fun stack_item_to_rule_element (Terminal (STD_HOL_TOK s),_) = TOK s
+        | stack_item_to_rule_element (Terminal TypeTok,_) = TY
         | stack_item_to_rule_element (NonTerminal _,_) = TM
         | stack_item_to_rule_element (_,locn) = FAILloc locn "perform_reduction: gak!"
       val ((_,rlocn),_) = List.hd rhs
@@ -1109,6 +1121,20 @@ fun parse_term (G : grammar) typeparser type_var_parser = let
            push (thing_to_push, Token tt)
         end handle Temp s => (WARNloc "parse_term" locn s;
                               error (WARNloc_string locn s)))
+      end
+    | (((NonTerminal t,llocn), _)::((Terminal (STD_HOL_TOK "body"),_), _)::
+       ((Terminal TypeTok,qtlocn), PreType qty)::((Terminal (STD_HOL_TOK "by"),_), _)::
+       ((Terminal TypeTok,rtlocn), PreType rty)::((Terminal (STD_HOL_TOK "pack"),plocn), _)::rest) => let
+        fun list_mk_tycomb(tm,tys) =
+           List.foldl (fn(ty,tm) => TYCOMB((tm,plocn),(ty,llocn))) tm tys
+      in
+        repeatn 6 pop >>
+        push ((NonTerminal (COMB((list_mk_tycomb((QIDENT("bool","PACK")),
+                                                 [rty,qty]),
+                                  locn.between qtlocn rtlocn),
+                                 (t,llocn))),
+               locn.between plocn llocn),
+              XXX)
       end
     | (((Terminal (STD_HOL_TOK type_rbracket),rlocn), _)::
        ((Terminal TypeListTok,tlocn), PreTypeList tys)::((Terminal TypeBracket,_), _)::
@@ -1516,6 +1542,60 @@ fun parse_term (G : grammar) typeparser type_var_parser = let
       in
         current_la >- action_on_la
       end
+    | STD_HOL_TOK "pack" => let
+      (* behaviour has to be slightly more tricksy in this case:
+           - we need to make sure that the next things that appear in
+             the stream of tokens are two complete types separated by "by".
+           - The way we do this is by calling the type parser on the
+             remaining input stream and putting the results into the
+             lookahead list behind the "pack".
+           - We only do this once, so the following action checks to
+             see that the lookahead list is only one long, otherwise
+             it can do the normal action
+       *)
+        fun action_on_la la =
+          case la of
+            [x as (_,locn)] =>
+              lifted_typeparser >-  (fn ty =>
+                          set_la [x, (PreType ty,locn.Loc_Near locn)])
+              (* TODO: if lifted_typeparser returned a location, use that *)
+          | _ => usual_action
+        fun action_on_by la =
+          case la of
+            (x::_) =>
+              topterm    >- (fn top =>
+              invstructp >- (fn invs =>
+              doit (SOME x, top, invs)))
+          | _ => usual_action
+      in
+        current_la >- action_on_la
+(*      >> (* plus more actions to get the next "by" and type *)
+        current_la >- action_on_by >>
+        current_la >- action_on_la
+*)
+      end
+    | STD_HOL_TOK "by" => let
+      (* behaviour has to be slightly more tricksy in this case:
+           - we need to make sure that the next things that appear in
+             the stream of tokens is a complete type.
+           - The way we do this is by calling the type parser on the
+             remaining input stream and putting the results into the
+             lookahead list behind the "by".
+           - We only do this once, so the following action checks to
+             see that the lookahead list is only one long, otherwise
+             it can do the normal action
+       *)
+        fun action_on_la la =
+          case la of
+            [x as (_,locn)] =>
+              lifted_typeparser >-  (fn ty =>
+                          set_la [x, (PreType ty,locn.Loc_Near locn)])
+              (* TODO: if lifted_typeparser returned a location, use that *)
+          | _ => usual_action
+      in
+        current_la >- action_on_la
+      end
+    | TypeTok => shift
 (*
     | STD_HOL_TOK "\\:" => let
       (* behaviour has to be slightly more tricksy in this case:
@@ -1716,8 +1796,8 @@ infix Gmerge
 
 Useful functions to test with:
 
-fun do_parse0 G ty = let
-  val pt = parse_term G ty
+fun do_parse0 G ty tyv = let
+  val pt = parse_term G ty tyv
 in
   fn q => let
     val ((cs, p), _) = pt (q, PStack {lookahead = [], stack = [],

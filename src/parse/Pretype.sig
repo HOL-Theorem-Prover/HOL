@@ -43,6 +43,10 @@ val dest_univ_type : pretype -> pretype * pretype
 val strip_univ_type : pretype -> pretype list * pretype
 val is_univ_type : pretype -> bool
 val is_not_univ_type : pretype -> bool
+val mk_exist_type : pretype * pretype -> pretype
+val dest_exist_type : pretype -> pretype * pretype
+val strip_exist_type : pretype -> pretype list * pretype
+val is_exist_type : pretype -> bool
 val mk_abs_type : pretype * pretype -> pretype
 val dest_abs_type : pretype -> pretype * pretype
 

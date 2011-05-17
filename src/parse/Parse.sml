@@ -936,10 +936,12 @@ struct
       {type_intro = type_intro, type_lbracket = type_lbracket, type_rbracket= type_rbracket,
        lambda = lambda, type_lambda = f type_lambda, endbinding = endbinding,
        restr_binders = restr_binders, res_quanop = res_quanop}
-  fun fupd_lambda_ty f {lambda,forall} = 
-      {lambda = f lambda, forall = forall}
-  fun fupd_forall_ty f {lambda,forall} = 
-      {lambda = lambda, forall = f forall}
+  fun fupd_lambda_ty f {lambda,forall,exists} = 
+      {lambda = f lambda, forall = forall, exists = exists}
+  fun fupd_forall_ty f {lambda,forall,exists} = 
+      {lambda = lambda, forall = f forall, exists = exists}
+  fun fupd_exists_ty f {lambda,forall,exists} = 
+      {lambda = lambda, forall = forall, exists = f exists}
   fun fupd_binder_ty f (n, type_grammar.BINDER sl) = (n, type_grammar.BINDER (map f sl))
     | fupd_binder_ty f rule = rule
   fun fupd_binders_ty f rules = map (fupd_binder_ty f) rules
@@ -961,8 +963,9 @@ struct
                                                (term_grammar())));
        temp_set_type_grammar (fupdate_specials_ty (fupd_lambda_ty (fn _ => ["\\"]))
                              (fupdate_specials_ty (fupd_forall_ty (fn _ => ["!"]))
+                             (fupdate_specials_ty (fupd_exists_ty (fn _ => ["?"]))
                              (fupdate_rules_ty (fupd_binders_ty (fn sl => [Lib.last sl]))
-                                               (type_grammar())))))
+                                               (type_grammar()))))))
 
   (* This "uchar" is a terrible hack. *)
   fun uchar "\\" = UChar.lambda
@@ -1199,6 +1202,7 @@ fun fixityToString Prefix  = "Prefix"
   | fixityToString (RF rf) = term_grammar.rule_fixityToString rf
 
 fun relToString TM = "TM"
+  | relToString TY = "TY"
   | relToString (TOK s) = "TOK "^quote s
 end
 
@@ -2001,9 +2005,10 @@ end handle IO.Io {function,name,...} =>
      PhraseBlockStyle, and ParenStyle.
  ---------------------------------------------------------------------------*)
 
-fun TM x = x; fun TOK x = x;   (* remove constructor status *)
+fun TM x = x; fun TY x = x; fun TOK x = x;   (* remove constructor status *)
 
 val TM = term_grammar.RE term_grammar.TM
+val TY = term_grammar.RE term_grammar.TY
 val TOK = term_grammar.RE o term_grammar.TOK
 
 (* ----------------------------------------------------------------------

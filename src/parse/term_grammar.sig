@@ -10,6 +10,7 @@ sig
   datatype rule_element
      = TOK of string
      | TM
+     | TY
   val RE_compare : rule_element * rule_element -> order
 
   datatype pp_element

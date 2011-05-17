@@ -19,6 +19,7 @@ type ('a,'b) tyconstructors =
       tycon : {Thy:string, Tyop:string, Kind:Prekind.prekind, Locn:locn.locn} -> 'a,
       tyapp  : 'a * 'a -> 'a,
       tyuniv : 'a * 'a -> 'a,
+      tyexist: 'a * 'a -> 'a,
       tyabs  : 'a * 'a -> 'a
      }
 
@@ -48,15 +49,16 @@ fun parse_type (tyfns :
      tycon  : {Thy:string, Tyop:string, Kind:Prekind.prekind, Locn:locn.locn} -> 'a,
      tyapp  : ('a * 'a) -> 'a,
      tyuniv : ('a * 'a) -> 'a,
+     tyexist: ('a * 'a) -> 'a,
      tyabs  : ('a * 'a) -> 'a})
                (kindparser : 'b qbuf.qbuf -> Prekind.prekind)
                allow_unknown_suffixes G = let
   val G = rules G and abbrevs = abbreviations G and specials = specials G
-  val {lambda = lambda, forall = forall} = specials
+  val {lambda = lambda, forall = forall, exists = exists} = specials
   val {vartype = pVartype, tyop = pType, antiq = pAQ, qtyop,
        kindcast, rankcast,
        tycon = pConType,
-       tyapp = pAppType, tyuniv = pUnivType, tyabs = pAbstType} = tyfns
+       tyapp = pAppType, tyuniv = pUnivType, tyexist = pExistType, tyabs = pAbstType} = tyfns
   fun structure_num_args st =
     let val max = Int.max
         fun nargs (PARAM (n,kd)) = n + 1
@@ -94,7 +96,7 @@ fun parse_type (tyfns :
   val left_tokens =
     let
       open Redblackset
-      val ts0 = addList(empty String.compare, lambda @ forall)
+      val ts0 = addList(empty String.compare, lambda @ forall @ exists)
       fun gather_from_rule ((level, rule), ts) =
         case rule of
           CONSTANT slist => addList(ts, slist)
@@ -261,6 +263,9 @@ end
   fun apply_univ(alphas, body) =
     list_apply_binder(pUnivType, alphas, body)
 
+  fun apply_exist(alphas, body) =
+    list_apply_binder(pExistType, alphas, body)
+
   fun apply_abst(alphas, body) =
     list_apply_binder(pAbstType, alphas, body)
 
@@ -328,12 +333,15 @@ end
     case t of
       TypeIdent s  => if Lib.mem s lambda then apply_abst(alphas, body)
                       else if Lib.mem s forall then apply_univ(alphas, body)
+                      else if Lib.mem s exists then apply_exist(alphas, body)
                       else raise InternalFailure locn
     | QTypeIdent (_,s) => if Lib.mem s lambda then apply_abst(alphas, body)
                       else if Lib.mem s forall then apply_univ(alphas, body)
+                      else if Lib.mem s exists then apply_exist(alphas, body)
                       else raise InternalFailure locn
     | TypeSymbol s => if Lib.mem s lambda then apply_abst(alphas, body)
                       else if Lib.mem s forall then apply_univ(alphas, body)
+                      else if Lib.mem s exists then apply_exist(alphas, body)
                       else raise InternalFailure locn
     | _ => raise InternalFailure locn
   end

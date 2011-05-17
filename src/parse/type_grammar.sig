@@ -38,7 +38,8 @@ TApp   ::= Leaf | Tuple Leaf
   type grammar
 
   type special_info   = {lambda : string list,
-                         forall : string list}
+                         forall : string list,
+                         exists : string list}
 
   val structure_to_type : type_structure -> Type.hol_type
 

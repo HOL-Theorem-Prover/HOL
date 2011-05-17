@@ -516,6 +516,38 @@ fun variant_type fvs v = if is_var_type v then gen_variant "variant_type" fvs v
                             if op_mem eq v fvs then new_uvar(pkind_of v)
                             else v
 
+fun mk_exist_type (x as PT(Vartype(nm,kd),locn),body) =
+  let open Prekind
+      val x0 = PT(Vartype(nm, typ (prank_of kd)),locn)
+      val y  = variant_type (x0 :: type_vars body) x0
+    in mk_univ_type(y, mk_univ_type(x, body --> y) --> y)
+    end
+   | mk_exist_type (PT(ty,locn),body) =
+       case ty of
+          TyKindConstr{Ty, Kind} => mk_exist_type (Ty,body)
+        | TyRankConstr{Ty, Rank} => mk_exist_type (Ty,body)
+        | _ => raise ERR "mk_exist_type" "first arg is not a type variable"
+
+fun dest_exist_type ty =
+  let val (y, ty1) = dest_univ_type0 ty
+      val (ty2,ty3) = dom_rng ty1
+      val _ = assert (equal ty3) y
+      val (x, ty4) = dest_univ_type0 ty2
+      val (body, ty5) = dom_rng ty4
+      val _ = assert (equal ty5) y
+  in (x,body)
+  end handle HOL_ERR _ => raise ERR "dest_exist_type" "not an existential type"
+
+fun strip_exist_type ty =
+    let val (x, ty1) = dest_exist_type ty
+        val (xs, body) = strip_exist_type ty1
+    in (x::xs, body)
+    end
+    handle HOL_ERR _ => ([], ty)
+
+val is_exist_type = can dest_exist_type
+
+
 
 (*---------------------------------------------------------------------------*
  *    Section on substitution.                                               *
@@ -2445,7 +2477,15 @@ fun tyop_to_qtyop ((tyop,locn), args) =
   case Type.decls tyop of
     [] => raise mk_HOL_ERRloc "Parse" "type parser" locn
                               (tyop^" not a known type operator")
-  | {Thy,Tyop} :: _ => do_qtyop {Thy = Thy, Tyop = Tyop, Locn = locn, Args = args}
+  | {Thy,Tyop} :: _ =>
+      let val prim_kd = prim_kind_of{Thy=Thy, Tyop=Tyop}
+          val pre_kd = case Prekind.rename_kv [] (Prekind.fromKind prim_kd) ([],[])
+                         of (_, SOME pre_kd) => pre_kd
+                          | _ => raise ERR "tyop_to_qtyop" "impossible"
+          val c = mk_conty{Thy=Thy,Tyop=Tyop,Kind=pre_kd,Locn=locn}
+      in list_mk_app_type(c, args)
+      end
+      (* do_qtyop {Thy = Thy, Tyop = Tyop, Locn = locn, Args = args} *)
 
 fun do_kindcast {Ty,Kind,Locn} =
   PT(TyKindConstr {Ty=Ty,Kind=Kind}, Locn)
@@ -2461,7 +2501,7 @@ val termantiq_constructors =
      antiq = fn x => fromType (remove_ty_aq x),
      kindcast = do_kindcast, rankcast = do_rankcast,
      tycon = mk_conty, tyapp = mk_app_type,
-     tyuniv = mk_univ_type, tyabs = mk_abs_type}
+     tyuniv = mk_univ_type, tyexist = mk_exist_type, tyabs = mk_abs_type}
 
 val typantiq_constructors =
     {vartype = mk_basevarty, qtyop = do_qtyop,
@@ -2469,6 +2509,6 @@ val typantiq_constructors =
      antiq = fromType,
      kindcast = do_kindcast, rankcast = do_rankcast,
      tycon = mk_conty, tyapp = mk_app_type,
-     tyuniv = mk_univ_type, tyabs = mk_abs_type}
+     tyuniv = mk_univ_type, tyexist = mk_exist_type, tyabs = mk_abs_type}
 
 end;

@@ -27,6 +27,7 @@ type hol_type = Type.hol_type
 
 open Portable Feedback optmonad;
 infix >> >-;
+infixr ==>;
 
 val ERR = mk_HOL_ERR "ParseDatatype";
 val ERRloc = mk_HOL_ERRloc "ParseDatatype";
@@ -108,7 +109,7 @@ fun kindvars ty =
   | dTyRankConstr {Ty,... } => kindvars Ty
   | dAQ (Ty) => map (#1 o Kind.dest_var_kind) (Type.kind_vars Ty)
 
-(* returns a list of strings, names of all type variables mentioned *)
+(* returns a list of (string,kind) pairs, of all type variables mentioned *)
 local
 fun app_duo f (x,y) = (x, f y)
 in
@@ -305,7 +306,41 @@ fun remove_made_links ty =
       dTyRankConstr {Ty=remove_made_links Ty, Rank=Prerank.remove_made_links Rank}
   | _ => ty (* including dAQ *)
 
+fun dest_var_type (dVartype p) = p
+  | dest_var_type (dTyKindConstr {Ty,Kind}) =
+      let val (nm,kd) = dest_var_type Ty
+      in (nm,Kind)
+      end
+  | dest_var_type (dTyRankConstr {Ty,Rank}) = dest_var_type Ty
+  | dest_var_type (dAQ ty) =
+      let val (nm,kd) = Type.dest_var_type ty
+          handle HOL_ERR _ => raise ERR "dest_var_type" "not a type variable"
+      in (nm, Prekind.fromKind kd)
+      end
+  | dest_var_type _ = raise ERR "dest_var_type" "not a type variable"
+
+val is_var_type = Lib.can dest_var_type
+
 val tyvariant = Lexis.gen_variant Lexis.tyvar_vary
+
+fun gen_variant caller =
+  let fun var_name (dVartype(Name,_)) = Name
+        | var_name _ = raise ERR caller "not a variable"
+      fun vary vlist (dVartype(Name,Kind)) =
+          let val L = vlist
+              val next = tyvariant L
+              fun loop name =
+                 let val s = if Lib.mem name L then next name else name
+                 in s
+                 end
+          in dVartype(loop Name, Kind)
+          end
+        | vary _ _ = raise ERR caller "2nd argument should be a type variable"
+  in vary
+  end;
+
+(* for this variant_type, the fvs should be a list of strings *)
+fun variant_type fvs v = gen_variant "variant_type" fvs v
 
 fun kind_replace_null_links kd (renv,kenv,tenv) =
     let val ((renv',kenv'), result) = Prekind.replace_null_links kd (renv,kenv)
@@ -446,6 +481,27 @@ in
 end
 
 
+fun (ty1 --> ty2) =
+  let val max = Prerank.mk_Maxrank
+      val rank = max(prank_of ty1, prank_of ty2)
+      val kind = Prekind.typ rank
+  in
+    dTyApp(dTyApp(dContype {Thy = SOME "min", Tyop = "fun",
+                            Kind = kind ==> kind ==> kind},
+                    ty1),
+           ty2)
+  end
+
+fun dTyExist (x,body) =
+  let open Prekind
+      val (nm,kd) = dest_var_type x
+                    handle HOL_ERR _ => raise ERR "dTyExist" "first arg is not a type variable"
+      val x0 = dVartype(nm, typ (prank_of kd))
+      val y  = variant_type (nm :: map Lib.fst (tyvars body)) x0
+  in dTyUniv(y, dTyUniv(x, body --> y) --> y)
+  end
+
+
 val bads = CharSet.addString(CharSet.empty, "()\"")
 
 fun consume P (qb,s,locn) = let
@@ -544,8 +600,21 @@ fun dTyop {Tyop, Thy, Args} =
   let fun mkprety acc [] = acc
         | mkprety acc (arg::args) = mkprety (dTyApp(acc,arg)) args
       open Prekind
-      val kind = list_mk_arrow_kind(map pkind_of Args, typ Prerank.Zerorank)
-  in mkprety (dContype{Tyop=Tyop, Thy=Thy, Kind=kind}) Args
+      val Thy_s =
+        case Thy of
+           SOME s => SOME s
+         | NONE => case Type.decls Tyop
+                    of [] => NONE
+                     | {Thy,Tyop} :: _ => SOME Thy
+      val pre_kd = case Thy_s
+                    of SOME s => let val prim_kd = Type.prim_kind_of{Thy=s, Tyop=Tyop}
+                                 in case rename_kv [] (fromKind prim_kd) ([],[])
+                                     of (_, SOME pre_kd) => pre_kd
+                                      | _ => raise ERR "dTyop" "impossible"
+                                 end
+                     | NONE => list_mk_arrow_kind(map pkind_of Args, typ Prerank.Zerorank)
+      val c = dContype{Thy=Thy, Tyop=Tyop, Kind=pre_kd}
+  in mkprety c Args
   end
 
 fun dest_dTyop (dContype {Thy,Tyop,Kind}) = {Tyop=Tyop, Thy=Thy, Args=[]}
@@ -610,7 +679,7 @@ fun parse_type strm =
   parse_type.parse_type {vartype = dVartype o #1, tyop = tyop, qtyop = qtyop,
                          antiq = dAQ, kindcast = kindcast, rankcast = rankcast,
                          tycon = mk_conty, tyapp = dTyApp,
-                         tyuniv = dTyUniv, tyabs = dTyAbst}
+                         tyuniv = dTyUniv, tyexist = dTyExist, tyabs = dTyAbst}
                         kindparser true
   (Parse.type_grammar()) strm
 

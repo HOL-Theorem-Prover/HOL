@@ -165,6 +165,77 @@ val strip_fun =
   in strip []
   end;
 
+fun list_mk_all_abs (vars,tm) =
+  foldr (fn (inL tyv, tm) => mk_tyabs(tyv,tm)
+          | (inR   v, tm) => mk_abs(v,tm))
+        tm vars
+
+fun strip_all_abs tm =
+  if is_abs tm then
+    let val (v,body1) = dest_abs tm
+        val (vs,body) = strip_all_abs body1
+    in (inR v::vs,body)
+    end
+  else if is_tyabs tm then
+    let val (a,body1) = dest_tyabs tm
+        val (vs,body) = strip_all_abs body1
+    in (inL a::vs,body)
+    end
+  else ([],tm)
+
+fun list_mk_all_comb (f,args) =
+  foldl (fn (inL ty, f) => mk_tycomb(f,ty)
+          | (inR tm, f) => mk_comb(f,tm))
+        f args
+
+fun strip_all_comb tm =
+  let
+    fun strip acc tm =
+        let val (f,x) = dest_comb tm
+        in strip (inR x::acc) f
+        end
+      handle HOL_ERR _ =>
+        let val (f,a) = dest_tycomb tm
+        in strip (inL a::acc) f
+        end
+      handle HOL_ERR _ => (tm,acc)
+  in strip [] tm
+  end
+
+fun mk_exist_type (x,body) =
+  let val (nm,kd) = dest_var_type x
+                    handle HOL_ERR _ => raise ERR "mk_exist_type" "first arg is not a type variable"
+      val _ = if is_type_kind (kind_of body) then ()
+              else raise ERR "mk_exist_type" "kind of second arg is not type kind"
+      val x0 = mk_var_type(nm, typ (rank_of kd))
+      val y  = variant_type (x :: x0 :: type_vars body) x0
+  in mk_univ_type(y, mk_univ_type(x, body --> y) --> y)
+  end
+
+fun list_mk_exist_type (xs,body) =
+  let fun make (x::xs) tm = mk_exist_type (x, make xs tm)
+        | make [] tm = tm
+  in make xs body
+  end
+
+fun dest_exist_type ty =
+  let val (y, ty1) = dest_univ_type ty
+      val (ty2,ty3) = dom_rng ty1
+      val _ = assert (equal ty3) y
+      val (x, ty4) = dest_univ_type ty2
+      val (body, ty5) = dom_rng ty4
+      val _ = assert (equal ty5) y
+  in (x,body)
+  end handle HOL_ERR _ => raise ERR "dest_exist_type" "not an existential type"
+
+fun strip_exist_type ty =
+    let val (x, ty1) = dest_exist_type ty
+        val (xs, body) = strip_exist_type ty1
+    in (x::xs, body)
+    end
+    handle HOL_ERR _ => ([], ty)
+
+val is_exist_type = can dest_exist_type
 
 datatype lambda
    = VAR    of string * hol_type

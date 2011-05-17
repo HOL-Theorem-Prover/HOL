@@ -63,7 +63,8 @@ fun inst_rank_kind rkS kdS (TYVAR (str,kd)) =
 
 
 type special_info = {lambda : string list,
-                     forall : string list}
+                     forall : string list,
+                     exists : string list}
 
 datatype grammar = TYG of (int * grammar_rule) list *
                           (string, type_structure) Binarymap.dict *
@@ -253,7 +254,7 @@ fun new_tybinder (TYG(G,abbrevs,specials,pmap)) names =
 val empty_grammar = TYG ([(std_binder_precedence, BINDER[]),
                           (80, APPLICATION),(90, CAST)],
                          Binarymap.mkDict String.compare,
-                         {lambda = ["\\"], forall = ["!"]},
+                         {lambda = ["\\"], forall = ["!"], exists = ["?"]},
                          TypeNet.empty)
 
 fun rules (TYG (G, dict, specials, pmap)) = G
@@ -351,12 +352,12 @@ in
 end
 
 fun merge_specials (S1, S2) = let
-  val {lambda = lam1, forall = fal1} = S1
-  val {lambda = lam2, forall = fal2} = S2
+  val {lambda = lam1, forall = fal1, exists = exs1} = S1
+  val {lambda = lam2, forall = fal2, exists = exs2} = S2
 in
-  if lam1 = lam2 andalso fal1 = fal2
+  if lam1 = lam2 andalso fal1 = fal2 andalso exs1 = exs2
   then
-    {lambda = lam1, forall = fal1}
+    {lambda = lam1, forall = fal1, exists = exs1}
   else
     raise GrammarError "Specials in two grammars don't agree"
 end
@@ -387,7 +388,7 @@ in
 end
 
 fun prettyprint_grammar pps (G as TYG (g,abbrevs,specials,pmap)) = let
-  val {lambda,forall} = specials
+  val {lambda,forall,exists} = specials
   open Portable Lib
   val {add_break,add_newline,add_string,begin_block,end_block,...} =
       with_ppstream pps
@@ -654,6 +655,7 @@ val min_grammar =
                                         infix_form = SOME "->",
                                         precedence = 50}
                   |> C new_tybinder ["\\"]
+                  |> C new_tybinder ["?"]
                   |> C new_tybinder ["!"]
 
 

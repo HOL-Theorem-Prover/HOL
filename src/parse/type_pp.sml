@@ -153,7 +153,7 @@ val ftyvars_seen = ref ([] : hol_type list)
 val btyvars_seen = ref ([] : hol_type list)
 
 fun pp_type0 (G:grammar) backend = let
-  val {lambda = lambda, forall = forall} = specials G
+  val {lambda = lambda, forall = forall, exists = exists} = specials G
   fun lookup_tyop s = let
     fun recurse [] = NONE
       | recurse (x::xs) = let
@@ -478,7 +478,9 @@ fun pp_type0 (G:grammar) backend = let
               btyvars_seen := prev_btyvars_seen
             end
           | TyV_All _ => let
-              val (vars, body) = strip_univ_type ty
+              val existential = HolKernel.is_exist_type ty
+              val (vars, body) = (if existential then HolKernel.strip_exist_type
+                                                 else strip_univ_type ) ty
               val prev_btyvars_seen = !btyvars_seen
               val parens = case grav of
                              Top => false
@@ -488,7 +490,7 @@ fun pp_type0 (G:grammar) backend = let
             in
               pbegin parens;
               begin_block CONSISTENT 2;
-              add_string (hd forall);
+              add_string (hd (if existential then exists else forall));
               begin_block INCONSISTENT 2;
               pr_list (fn arg => pr_ty true pps arg grav (depth - 1))
                       (fn () => ())
