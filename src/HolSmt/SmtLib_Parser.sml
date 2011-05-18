@@ -349,6 +349,23 @@ local
   (* parsing of benchmarks                                                   *)
   (***************************************************************************)
 
+  (* we simply ignore all following tokens up to the next ")" *)
+  fun parse_set_info get_token =
+    if get_token () = ")" then
+      ()
+    else
+      parse_set_info get_token
+
+  (* returns the SMT-LIB logic name and its type/term dictionaries *)
+  fun parse_set_logic get_token =
+  let
+    val logic = get_token ()
+    val (tydict, tmdict) = SmtLib_Logics.parsedicts_of_logic logic
+    val _ = Library.expect_token ")" (get_token ())
+  in
+    (logic, tydict, tmdict)
+  end
+
   (* returns an extended 'tydict' *)
   (* FIXME: We only allow sort declarations of arity 0 at present. *)
   fun parse_declare_sort get_token tydict =
@@ -385,17 +402,14 @@ local
     Library.extend_dict ((name, parsefn), tmdict)
   end
 
-  (* we simply ignore all following tokens up to the next ")" *)
-  fun parse_set_info get_token =
-    if get_token () = ")" then
-      ()
-    else
-      parse_set_info get_token
-
-  (* returns a 'tmdict' extended with declared function symbols, and a
-     list of asserted formulas *)
-  fun parse_commands get_token (tydict, tmdict) asserted =
+  (* returns the logic's name, its 'tydict', its 'tmdict' extended with
+     declared function symbols, and a list of asserted formulas *)
+  fun parse_commands get_token state =
   let
+    fun dest_state cmd =
+      case state of
+        SOME x => x
+      | NONE   => raise ERR "parse_commands" (cmd ^ " issued before set-logic")
     val _ = Library.expect_token "(" (get_token ())
     val command = get_token ()
   in
@@ -403,71 +417,66 @@ local
       let
         val _ = parse_set_info get_token
       in
-        parse_commands get_token (tydict, tmdict) asserted
+        parse_commands get_token state
+      end
+    | "set-logic" =>
+      let
+        val _ = not (Option.isSome state) orelse
+          raise ERR "parse_commands" "set-logic issued more than once"
+        val (logic, tydict, tmdict) = parse_set_logic get_token
+      in
+        parse_commands get_token (SOME (logic, tydict, tmdict, []))
       end
     | "declare-sort" =>
       let
+        val (logic, tydict, tmdict, asserted) = dest_state "declare-sort"
         val tydict = parse_declare_sort get_token tydict
       in
-        parse_commands get_token (tydict, tmdict) asserted
+        parse_commands get_token (SOME (logic, tydict, tmdict, asserted))
       end
     | "declare-fun" =>
       let
+        val (logic, tydict, tmdict, asserted) = dest_state "declare-fun"
         val tmdict = parse_declare_fun get_token (tydict, tmdict)
       in
-        parse_commands get_token (tydict, tmdict) asserted
+        parse_commands get_token (SOME (logic, tydict, tmdict, asserted))
       end
     | "assert" =>
       let
+        val (logic, tydict, tmdict, asserted) = dest_state "assert"
         val asserted = parse_term get_token (tydict, tmdict) :: asserted
         val _ = Library.expect_token ")" (get_token ())
       in
-        parse_commands get_token (tydict, tmdict) asserted
+        parse_commands get_token (SOME (logic, tydict, tmdict, asserted))
       end
     | "check-sat" =>
       let
+        val _ = dest_state "check-sat"
         val _ = Library.expect_token ")" (get_token ())
       in
-        parse_commands get_token (tydict, tmdict) asserted
+        parse_commands get_token state
       end
     | "get-proof" =>
       let
+        val _ = dest_state "get-proof"
         val _ = Library.expect_token ")" (get_token ())
       in
-        parse_commands get_token (tydict, tmdict) asserted
+        parse_commands get_token state
       end
     | "exit" =>
       let
+        val (logic, tydict, tmdict, asserted) = dest_state "exit"
         val _ = Library.expect_token ")" (get_token ())
       in
-        (tmdict, List.rev asserted)
+        (logic, tydict, tmdict, List.rev asserted)
       end
     | _ =>
       raise ERR "parse_commands" ("unknown command '" ^ command ^ "'")
   end
 
-  (* returns the SMT-LIB logic name *)
-  fun parse_set_logic get_token : string =
-  let
-    val _ = Library.expect_token "(" (get_token ())
-    val _ = Library.expect_token "set-logic" (get_token ())
-    val logic = get_token ()
-    val _ = Library.expect_token ")" (get_token ())
-  in
-    logic
-  end
-
   (* entry point into the parser (i.e., the grammar's start symbol) *)
   fun parse_benchmark get_token =
-  let
-    (* there must be exactly one "set-logic" command, and we expect
-       this to be the benchmark's first command *)
-    val logic = parse_set_logic get_token
-    val (tydict, tmdict) = SmtLib_Logics.parsedicts_of_logic logic
-    val (tmdict, asserted) = parse_commands get_token (tydict, tmdict) []
-  in
-    (logic, tydict, tmdict, asserted)
-  end
+    parse_commands get_token NONE
 
 in
 
@@ -487,8 +496,8 @@ in
             other SMT-LIB 2 commands. We do NOT perform assertion
             stack management (cf. "push"/"pop" in the SMT-LIB 2
             standard). This implementation, although oversimplified,
-            happens to work for all benchmarks currently found in the
-            SMT-LIB library. *)
+            happens to work for most benchmarks currently (as of
+            2011-05-17) found in the SMT-LIB library. *)
 
   fun parse_file (path : string) : string *
     (string, Type.hol_type parse_fn list) Redblackmap.dict *
