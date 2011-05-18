@@ -80,10 +80,12 @@ struct
         aux_symbol (c :: cs) (get_char ())
     fun aux_string cs c =
       if c = #"\"" then
-        String.implode (List.rev (c :: cs))
+        (* we return "x" as x *)
+        String.implode (List.rev cs)
       else if c = #"\\" then
-        (* FIXME: handle C-style quoted characters properly *)
-        aux_string (get_char () :: c :: cs) (get_char ())
+        (* The only escape sequences in SMT-LIB are \" and \\. We simply drop
+           the backslash. *)
+        aux_string (get_char () :: cs) (get_char ())
       else
         aux_string (c :: cs) (get_char ())
     fun (* whitespace *)
@@ -105,7 +107,7 @@ struct
       | aux _ #"|" =
         raise Feedback.mk_HOL_ERR "Library" "get_token" "invalid '|'"
       (* " *)
-      | aux [] #"\"" = aux_string [#"\""] (get_char ())
+      | aux [] #"\"" = aux_string [] (get_char ())
       | aux _ #"\"" =
         raise Feedback.mk_HOL_ERR "Library" "get_token" "invalid '\"'"
       (* ; *)
