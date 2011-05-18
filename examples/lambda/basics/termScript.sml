@@ -176,63 +176,51 @@ val tmrecrel_total = prove(
 val eqv_helpers =
 ``(∀x y s. x ∉ A ∧ y ∉ A ==> (apm [(x,y)] (vf s : 'a) = vf (swapstr x y s))) ∧
   (∀x y t1 t2 r1 r2.
-     x ∉ A ∧ y ∉ A ==>
+     x ∉ A ∧ y ∉ A ∧
+     (∀x. x ∉ A ∧ x ∉ FV t1 ==> x ∉ supp apm r1) ∧
+     (∀x. x ∉ A ∧ x ∉ FV t2 ==> x ∉ supp apm r2) ==>
       (apm [(x,y)] (af r1 r2 t1 t2) =
        af (apm [(x,y)] r1) (apm [(x,y)] r2) (tpm [(x,y)] t1) (tpm [(x,y)] t2)))
      ∧
   (∀x y v t r.
-     x ∉ A ∧ y ∉ A ==>
+     x ∉ A ∧ y ∉ A ∧
+     (∀x. x ∉ A ∧ x ∉ FV t ==> x ∉ supp apm r) ==>
      (apm [(x,y)] (lf v r t) =
       lf (swapstr x y v) (apm [(x,y)] r) (tpm [(x,y)] t)))``
 
 val FCB = ``∀a r:α t:term. a ∉ A ==> a ∉ supp apm (lf a r t:α)``
-
-val tmrecrel_eqv = prove(
-  ``FINITE A ∧ is_perm apm ∧ ^eqv_helpers ==>
-    ∀t r. tmrecrel A vf af lf t r ==>
-          ∀x y. x ∉ A ∧ y ∉ A ==>
-                tmrecrel A vf af lf (tpm [(x,y)] t) (apm [(x,y)] r)``,
-  strip_tac >> Induct_on `tmrecrel A vf af lf` >> srw_tac [][] >| [
-    srw_tac [][tmrecrel_rules],
-    metis_tac [tmrecrel_rules],
-    `swapstr x y v ∉ A` by srw_tac [][swapstr_def] >>
-    metis_tac [tmrecrel_rules]
-  ]);
-
-(* try instead: x y ∉ A , ∉ FV T ==> (apm [(x,y)] r = r) *)
-val _ = temp_overload_on ("→", ``fnpm``) (* \to *)
-val _ = temp_set_fixity "→" (Infixr 490)
 
 val notinsupp_I = prove(
   ``∀A apm e x.
        is_perm apm ∧ FINITE A ∧ support apm x A ∧ e ∉ A ==> e ∉ supp apm x``,
   metis_tac [supp_smallest, SUBSET_DEF]);
 
-val freshness = prove(
+val tmrecrel_eqvfresh = prove(
   ``FINITE A ∧ is_perm apm ∧ ^eqv_helpers ∧ ^FCB ==>
     ∀t r. tmrecrel A vf af lf t r ==>
-          ∀x. x ∉ A ∧ x ∉ FV t ==> x ∉ supp apm r``,
-  strip_tac >> Induct_on `tmrecrel` >> srw_tac [][tpm_fresh] >| [
+          (∀x y. x ∉ A ∧ y ∉ A ==>
+                 tmrecrel A vf af lf (tpm [(x,y)] t) (apm [(x,y)] r)) ∧
+          (∀x. x ∉ A ∧ x ∉ FV t ==> x ∉ supp apm r)``,
+  strip_tac >> Induct_on `tmrecrel A vf af lf` >> srw_tac [][] >| [
+    srw_tac [][tmrecrel_rules],
     match_mp_tac notinsupp_I >> qexists_tac `s INSERT A` >>
     srw_tac [][support_def],
-
-    match_mp_tac notinsupp_I >> qexists_tac `A ∪ FV t ∪ FV t'` >>
+    metis_tac [tmrecrel_rules],
+    match_mp_tac notinsupp_I >> qexists_tac `FV t ∪ FV t' ∪ A` >>
     srw_tac [][support_def, supp_fresh, tpm_fresh],
-
+    `swapstr x y v ∉ A` by srw_tac [][swapstr_def] >>
+    metis_tac [tmrecrel_rules],
     Cases_on `x = v` >> srw_tac [][] >>
     match_mp_tac notinsupp_I >> qexists_tac `A ∪ FV t ∪ {v}` >>
     srw_tac [][support_def, supp_fresh, tpm_fresh]
   ]);
-
 
 fun udplus th =
     th |> REWRITE_RULE [GSYM CONJ_ASSOC]
        |> repeat (UNDISCH o CONV_RULE (REWR_CONV (GSYM AND_IMP_INTRO)))
        |> UNDISCH
 
-val eqv_I = udplus tmrecrel_eqv
-
-val fresh_I = udplus freshness
+val eqvfresh_I = udplus tmrecrel_eqvfresh
 
 val uniqueness = prove(
   ``FINITE A ∧ is_perm apm ∧ ^eqv_helpers ∧ ^FCB ==>
@@ -248,22 +236,27 @@ val uniqueness = prove(
   map_every qx_gen_tac [`u`, `r2`, `t2`] >> srw_tac [][] >>
   Cases_on `v = u` >- (fsrw_tac [][] >> metis_tac []) >>
   `t2 = tpm [(u,v)] t` by fsrw_tac [][LAM_eq_thm, tpm_flip_args] >>
-  `tmrecrel A vf af lf t (apm [(u,v)] r2)` by metis_tac [tpm_sing_inv, eqv_I] >>
+  `tmrecrel A vf af lf t (apm [(u,v)] r2)`
+     by metis_tac [tpm_sing_inv, eqvfresh_I] >>
   `r = apm [(u,v)] r2` by metis_tac [] >>
   fsrw_tac [][tpm_eqr] >> srw_tac [][] >>
   `v ∉ FV t2`
     by (first_x_assum (MP_TAC o AP_TERM ``λt. (v:string) ∈ FV t``) >>
         srw_tac [][]) >>
-  `v ∉ supp apm r2` by metis_tac [fresh_I] >>
+  `v ∉ supp apm r2` by metis_tac [eqvfresh_I] >>
   `v ∉ supp apm (lf u r2 t2)`
      by (match_mp_tac notinsupp_I >>
          qexists_tac `A ∪ {u} ∪ supp apm r2 ∪ FV t2` >>
+         `∀a. a ∉ A ∧ a ∉ FV t2 ==> a ∉ supp apm r2`
+            by metis_tac [eqvfresh_I] >>
          srw_tac [][tpm_fresh, supp_fresh, support_def] >>
          match_mp_tac (GEN_ALL supp_absence_FINITE) >> metis_tac[]) >>
   `u ∉ supp apm (lf u r2 t2)` by metis_tac [] >>
   Q.MATCH_ABBREV_TAC `X = Y` >> qsuff_tac `apm [(u,v)] X = apm [(u,v)] Y`
     >- srw_tac [][is_perm_injective] >>
   markerLib.UNABBREV_ALL_TAC >>
+  `∀x. x ∉ A ∧ x ∉ FV (tpm [(u,v)] t2) ==> x ∉ supp apm (apm [(u,v)] r2)`
+     by metis_tac [eqvfresh_I] >>
   srw_tac [][SimpLHS, is_perm_sing_inv] >> metis_tac [supp_fresh]);
 
 val tm_recursion0 = prove(
@@ -293,7 +286,7 @@ val tm_recursion0 = prove(
 
     `∃r. tmrecrel A vf af lf t r` by metis_tac [udplus tmrecrel_total] >>
     `tmrecrel A vf af lf (tpm [(x,y)] t) (apm [(x,y)] r)`
-      by metis_tac [eqv_I] >>
+      by metis_tac [eqvfresh_I] >>
     `(∀r'. tmrecrel A vf af lf t r' = (r' = r)) ∧
      ∀r'. tmrecrel A vf af lf (tpm [(x,y)] t) r' = (r' = apm [(x,y)] r)`
       by metis_tac [udplus uniqueness] >>
