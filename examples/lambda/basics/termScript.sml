@@ -188,7 +188,9 @@ val eqv_helpers =
      (apm [(x,y)] (lf v r t) =
       lf (swapstr x y v) (apm [(x,y)] r) (tpm [(x,y)] t)))``
 
-val FCB = ``∀a r:α t:term. a ∉ A ==> a ∉ supp apm (lf a r t:α)``
+val FCB =
+  ``∀a r:α t:term. a ∉ A ∧ (∀x. x ∉ A ∧ x ∉ FV t ==> x ∉ supp apm r) ==>
+                   a ∉ supp apm (lf a r t:α)``
 
 val notinsupp_I = prove(
   ``∀A apm e x.
@@ -240,6 +242,7 @@ val uniqueness = prove(
      by metis_tac [tpm_sing_inv, eqvfresh_I] >>
   `r = apm [(u,v)] r2` by metis_tac [] >>
   fsrw_tac [][tpm_eqr] >> srw_tac [][] >>
+  `∀a. a ∉ A ∧ a ∉ FV t2 ==> a ∉ supp apm r2` by metis_tac [eqvfresh_I] >>
   `v ∉ FV t2`
     by (first_x_assum (MP_TAC o AP_TERM ``λt. (v:string) ∈ FV t``) >>
         srw_tac [][]) >>
@@ -247,8 +250,6 @@ val uniqueness = prove(
   `v ∉ supp apm (lf u r2 t2)`
      by (match_mp_tac notinsupp_I >>
          qexists_tac `A ∪ {u} ∪ supp apm r2 ∪ FV t2` >>
-         `∀a. a ∉ A ∧ a ∉ FV t2 ==> a ∉ supp apm r2`
-            by metis_tac [eqvfresh_I] >>
          srw_tac [][tpm_fresh, supp_fresh, support_def] >>
          match_mp_tac (GEN_ALL supp_absence_FINITE) >> metis_tac[]) >>
   `u ∉ supp apm (lf u r2 t2)` by metis_tac [] >>
