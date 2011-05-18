@@ -183,7 +183,7 @@ val eqv_helpers =
        af (apm [(x,y)] r1) (apm [(x,y)] r2) (tpm [(x,y)] t1) (tpm [(x,y)] t2)))
      ∧
   (∀x y v t r.
-     x ∉ A ∧ y ∉ A ∧
+     x ∉ A ∧ y ∉ A ∧ v ∉ A ∧
      (∀x. x ∉ A ∧ x ∉ FV t ==> x ∉ supp apm r) ==>
      (apm [(x,y)] (lf v r t) =
       lf (swapstr x y v) (apm [(x,y)] r) (tpm [(x,y)] t)))``
