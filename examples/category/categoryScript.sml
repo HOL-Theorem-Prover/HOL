@@ -1,4 +1,4 @@
-open HolKernel Parse boolLib bossLib lcsymtacs pairTheory pred_setTheory SatisfySimps;
+open HolKernel Parse boolLib bossLib lcsymtacs pairTheory pred_setTheory SatisfySimps boolSimps;
 
 val _ = new_theory "category";
 
@@ -158,8 +158,8 @@ val category_axioms_def = Define`
     (∀a. a ∈ c.obj ⇒ (id a -:c) :- a → a -: c) ∧
     (∀f. f ∈ c.mor ⇒ (f o (id f.dom -:c) -: c = f)) ∧
     (∀f. f ∈ c.mor ⇒ ((id f.cod -:c) o f -: c = f)) ∧
-    (∀f g h. f ≈> g -: c ∧ g ≈> h -: c ⇒ (* should make comp_assoc a better rewrite *)
-               (h o (g o f -: c) -: c = (h o g -: c) o f -: c)) ∧
+    (∀f g h. f ≈> g -: c ∧ g ≈> h -: c ⇒
+               (((h o g -: c) o f -: c) = h o g o f -: c -: c)) ∧
     (∀f g x y z. f :- x → y -: c ∧ g :- y → z -: c ⇒
                    g o f -: c :- x → z -: c)`;
 
@@ -297,13 +297,13 @@ val _ = export_rewrites["is_category_mk_cat"];
 val comp_assoc = Q.store_thm(
 "comp_assoc",
 `∀c f g h. is_category c ∧ f ≈> g -: c ∧ g ≈> h -: c
-  ⇒ (h o (g o f -: c) -: c = (h o g -: c) o f -: c)`,
+  ⇒ ((h o g -: c) o f -: c = h o (g o f -: c) -: c)`,
 srw_tac [][is_category_def,category_axioms_def]);
 
 val composable_maps_to = Q.store_thm(
 "composable_maps_to",
-`∀c f g. is_category c ∧ f ≈> g -: c
-  ⇒ g o f -:c :- f.dom → g.cod -:c`,
+`∀c f g a b. is_category c ∧ f ≈> g -: c ∧ (a = f.dom) ∧ (b = g.cod)
+  ⇒ g o f -:c :- a → b -:c`,
 srw_tac [][composable_in_def] >>
 fsrw_tac [][is_category_def,category_axioms_def] >>
 first_assum match_mp_tac >> srw_tac [][maps_to_in_def]);
@@ -545,6 +545,11 @@ imp_res_tac iso_pair_mor >>
 imp_res_tac iso_pair_sym >>
 fsrw_tac [][iso_pair_def,composable_in_def]);
 
+val inv_maps_to = Q.store_thm(
+"inv_maps_to",
+`∀c f a b. is_category c ∧ iso c f ∧ (a = f.cod) ∧ (b = f.dom) ⇒ f⁻¹ -:c :- a → b -:c`,
+srw_tac [][maps_to_in_def,inv_mor_dom_cod]);
+
 val inv_composable = Q.store_thm(
 "inv_composable",
 `∀c f. is_category c ∧ iso c f ⇒
@@ -594,21 +599,21 @@ srw_tac [][] >>
 imp_res_tac is_category_def >>
 `(g o f -:c) o ((f⁻¹ -:c) o (g⁻¹ -:c) -:c) -:c = ((g o f -:c) o (f⁻¹ -:c) -:c) o (g⁻¹ -:c) -:c` by (
   fsrw_tac [][category_axioms_def] >>
-  first_assum match_mp_tac >> srw_tac [][] >>
+  first_assum (match_mp_tac o GSYM) >> srw_tac [][] >>
   match_mp_tac (DISCH_ALL (CONJUNCT1 (UNDISCH_ALL (SPEC_ALL composable_comp)))) >>
   fsrw_tac [][inv_composable] ) >>
 `(g o f -:c) o (f⁻¹ -:c) -:c = g o (f o (f⁻¹ -:c) -:c) -:c` by (
   fsrw_tac [][category_axioms_def] >>
-  first_assum (match_mp_tac o GSYM) >> srw_tac [][] >>
+  first_assum match_mp_tac >> srw_tac [][] >>
   fsrw_tac [][inv_composable] ) >>
 `((f⁻¹ -:c) o (g⁻¹ -:c) -:c) o (g o f -:c) -:c = (f⁻¹ -:c) o ((g⁻¹ -:c) o (g o f -:c) -:c) -:c` by (
   fsrw_tac [][category_axioms_def] >>
-  first_assum (match_mp_tac o GSYM) >> srw_tac [][] >>
+  first_assum match_mp_tac >> srw_tac [][] >>
   match_mp_tac (DISCH_ALL (CONJUNCT2 (UNDISCH_ALL (SPEC_ALL composable_comp)))) >>
   fsrw_tac [][inv_composable] ) >>
 `(g⁻¹ -:c) o (g o f -:c) -:c = ((g⁻¹ -:c) o g -:c) o f -:c` by (
   fsrw_tac [][category_axioms_def] >>
-  first_assum match_mp_tac >> srw_tac [][] >>
+  first_assum (match_mp_tac o GSYM) >> srw_tac [][] >>
   fsrw_tac [][inv_composable] ) >>
 `f.cod = g.dom` by fsrw_tac [][composable_in_def] >>
 imp_res_tac comp_inv_id >>
@@ -629,7 +634,7 @@ val _ = add_rule {
 };
 
 val iso_pair_between_objs_def = Define`
-  iso_pair_between_objs c a f g b = f :- a → b -:c ∧ f <≃> g -:c`;
+  iso_pair_between_objs c a f g b = (f :- a → b) ∧ f <≃> g -:c`;
 
 val _ = overload_on("iso_pair_between_objs_syntax",
   ``λf a b g c. iso_pair_between_objs c a f g b``);
@@ -641,7 +646,10 @@ qsuff_tac `∀f a b g c. is_category c ⇒ (f <a≃b> g -:c ⇒ g <b≃a> f -:c)
 >- metis_tac [] >>
 srw_tac [][iso_pair_between_objs_def] >>
 imp_res_tac iso_pair_sym >>
-fsrw_tac [][iso_pair_def,maps_to_in_def,composable_in_def]);
+fsrw_tac [][iso_pair_def] >>
+imp_res_tac maps_to_in_def >>
+imp_res_tac composable_in_def >>
+fsrw_tac [][]);
 
 val _ = add_rule {
   term_name = "iso_objs_syntax",
@@ -658,9 +666,9 @@ val _ = overload_on("iso_objs_syntax",``λa b c. iso_objs c a b``);
 
 val iso_objs_thm = Q.store_thm(
 "iso_objs_thm",
-`∀c a b. a ≅ b -:c = ∃f. f :- a → b -:c ∧ iso c f`,
+`∀c a b. is_category c ⇒ (a ≅ b -:c = ∃f. f :- a → b -:c ∧ iso c f)`,
 srw_tac [][iso_objs_def,iso_pair_between_objs_def,iso_def] >>
-metis_tac []);
+metis_tac [maps_to_in_def,maps_to_def,iso_pair_mor]);
 
 val _ = add_rule {
   term_name = "uiso_objs_syntax",
@@ -680,7 +688,7 @@ val uiso_objs_thm = Q.store_thm(
 `∀c a b. is_category c ⇒ (a ≡ b -:c = ∃!f. f :- a → b -:c ∧ iso c f)`,
 srw_tac [][uiso_objs_def,EXISTS_UNIQUE_THM,EXISTS_PROD,FORALL_PROD,
            iso_pair_between_objs_def,iso_def] >>
-metis_tac [inv_unique]);
+metis_tac [inv_unique,maps_to_in_def,maps_to_def,iso_pair_mor]);
 
 val iso_objs_sym = Q.store_thm(
 "iso_objs_sym",
@@ -702,7 +710,8 @@ metis_tac [iso_pair_between_objs_sym]);
 val iso_objs_objs = Q.store_thm(
 "iso_objs_objs",
 `∀c a b. is_category c ∧ a ≅ b -:c ⇒ a ∈ c.obj ∧ b ∈ c.obj`,
-srw_tac [][iso_objs_thm] >>
+srw_tac [][] >>
+imp_res_tac iso_objs_thm >>
 imp_res_tac maps_to_obj);
 
 val unit_cat_def = Define`
@@ -770,6 +779,44 @@ conj_tac >- (srw_tac [][compose_in_def,restrict_def,composable_in_def] >> fsrw_t
 srw_tac [][compose_in_def,restrict_def,maps_to_in_def,composable_in_def] >>
 fsrw_tac [][morphism_component_equality]);
 val _ = export_rewrites["is_category_discrete_cat"];
+
+val discrete_cat_obj_mor = Q.store_thm(
+"discrete_cat_obj_mor",
+`∀s. (∀x. x ∈ (discrete_cat s).obj = x ∈ s) ∧
+     (∀f. f ∈ (discrete_cat s).mor = (∃x. (f = discrete_mor x) ∧ x ∈ s))`,
+srw_tac [][discrete_cat_def]);
+val _ = export_rewrites["discrete_cat_obj_mor"];
+
+val discrete_cat_id = Q.store_thm(
+"discrete_cat_id",
+`∀s x. x ∈ s ⇒ (id x -:(discrete_cat s) = discrete_mor x)`,
+srw_tac [][id_in_def,restrict_def,morphism_component_equality] >>
+srw_tac [][discrete_cat_def,mk_cat_def,restrict_def]);
+val _ = export_rewrites["discrete_cat_id"];
+
+val discrete_cat_maps_to = Q.store_thm(
+"discrete_cat_maps_to",
+`∀f x y s. f :- x → y -:(discrete_cat s) =
+      x ∈ s ∧ (y = x) ∧ (f = id x -:(discrete_cat s))`,
+srw_tac [][maps_to_in_def,EQ_IMP_THM] >> srw_tac [][] >>
+metis_tac []);
+val _ = export_rewrites["discrete_cat_maps_to"];
+
+val discrete_cat_composable = Q.store_thm(
+"discrete_cat_composable",
+`∀s f g. f ≈> g -:discrete_cat s = ∃x. x ∈ s ∧ (g = f) ∧ (f = discrete_mor x)`,
+srw_tac [][composable_in_def,morphism_component_equality] >>
+metis_tac []);
+val _ = export_rewrites["discrete_cat_composable"];
+
+val discrete_cat_compose_in = Q.store_thm(
+"discrete_cat_compose_in",
+`∀s f. f ∈ (discrete_cat s).mor ⇒ ((f o f -:discrete_cat s) = f)`,
+fsrw_tac [boolSimps.DNF_ss][compose_in_def,restrict_def] >>
+srw_tac [][morphism_component_equality] >>
+srw_tac [][discrete_cat_def,mk_cat_def,restrict_def,composable_in_def] >>
+metis_tac []);
+val _ = export_rewrites["discrete_cat_compose_in"];
 
 val unit_cat_discrete = Q.store_thm(
 "unit_cat_discrete",
@@ -991,7 +1038,7 @@ metis_tac [op_cat_idem,is_category_op_cat] >>
 srw_tac [][iso_objs_def] >>
 imp_res_tac iso_pair_between_objs_sym >>
 fsrw_tac [][iso_pair_between_objs_def] >>
-metis_tac [op_cat_maps_to_in,op_cat_iso_pair]);
+metis_tac [op_cat_maps_to_in,op_mor_dom,op_mor_cod,op_cat_iso_pair]);
 
 val op_cat_uiso_objs = Q.store_thm(
 "op_cat_uiso_objs",
@@ -1001,5 +1048,153 @@ metis_tac [op_cat_idem,is_category_op_cat] >>
 srw_tac [][uiso_objs_def,op_cat_iso_pair_between_objs] >>
 fsrw_tac [][EXISTS_UNIQUE_THM,EXISTS_PROD,FORALL_PROD] >>
 metis_tac [iso_pair_between_objs_sym,op_mor_idem]);
+
+val product_mor_def = Define`
+  product_mor (f,g) =
+  <| dom := (f.dom,g.dom); cod := (f.cod,g.cod); map := (f.map,g.map) |>`;
+
+val product_mor_components = Q.store_thm(
+"product_mor_components",
+`∀fg. ((product_mor fg).dom = ((FST fg).dom, (SND fg).dom)) ∧
+      ((product_mor fg).cod = ((FST fg).cod, (SND fg).cod)) ∧
+      ((product_mor fg).map = ((FST fg).map, (SND fg).map))`,
+Cases >> srw_tac [][product_mor_def]);
+val _ = export_rewrites["product_mor_components"];
+
+val unproduct_mor_def = Define`
+  unproduct_mor fg =
+    (<|dom:= FST fg.dom; cod:= FST fg.cod; map := FST fg.map|>,
+     <|dom:= SND fg.dom; cod:= SND fg.cod; map := SND fg.map|>)`;
+
+val product_mor_unproduct_mor = Q.store_thm(
+"product_mor_unproduct_mor",
+`(∀x. product_mor (unproduct_mor x) = x) ∧
+ (∀x. unproduct_mor (product_mor x) = x)`,
+fsrw_tac [][FORALL_PROD,product_mor_def,unproduct_mor_def,
+            morphism_component_equality]);
+val _ = export_rewrites["product_mor_unproduct_mor"];
+
+val product_mor_eq = Q.store_thm(
+"product_mor_eq",
+`∀f g f' g'. (product_mor (f,g) = product_mor (f',g')) =
+             (f = f') ∧ (g = g')`,
+srw_tac [][EQ_IMP_THM] >>
+fsrw_tac [][product_mor_def,morphism_component_equality]);
+val _ = export_rewrites["product_mor_eq"];
+
+val pre_product_cat_def = Define`
+  pre_product_cat c1 c2 = <|
+    obj := c1.obj × c2.obj;
+    mor := IMAGE product_mor (c1.mor × c2.mor);
+    id_map := λab. (c1.id_map (FST ab), c2.id_map (SND ab));
+    comp := λef gh.
+      (c1.comp (FST (unproduct_mor ef)) (FST (unproduct_mor gh)),
+       c2.comp (SND (unproduct_mor ef)) (SND (unproduct_mor gh)))|>`;
+
+val pre_product_cat_obj_mor = Q.store_thm(
+"pre_product_cat_obj_mor",
+`∀c1 c2. ((pre_product_cat c1 c2).obj = c1.obj × c2.obj) ∧
+         ((pre_product_cat c1 c2).mor =
+          IMAGE product_mor (c1.mor × c2.mor))`,
+srw_tac [][pre_product_cat_def]);
+val _ = export_rewrites["pre_product_cat_obj_mor"];
+
+val pre_product_cat_maps_to_in = Q.store_thm(
+"pre_product_cat_maps_to_in",
+`∀c1 c2 f x y.
+  f :- x → y -:(pre_product_cat c1 c2) =
+    (FST (unproduct_mor f)) :- (FST x) → (FST y) -: c1 ∧
+    (SND (unproduct_mor f)) :- (SND x) → (SND y) -: c2`,
+srw_tac [DNF_ss][maps_to_in_def,unproduct_mor_def,
+                 morphism_component_equality,EXISTS_PROD] >>
+Cases_on `f.dom` >> Cases_on `f.cod` >> Cases_on `f.map` >>
+Cases_on `x` >> Cases_on `y` >>
+srw_tac [DNF_ss][EQ_IMP_THM] >|[
+  qmatch_abbrev_tac `x ∈ c1.mor` >>
+  qsuff_tac `x=p_1` >- srw_tac [][] >>
+  srw_tac [][Abbr`x`,morphism_component_equality],
+  qmatch_abbrev_tac `x ∈ c2.mor` >>
+  qsuff_tac `x=p_2` >- srw_tac [][] >>
+  srw_tac [][Abbr`x`,morphism_component_equality],
+  qmatch_assum_abbrev_tac `p1 ∈ c1.mor` >>
+  qmatch_assum_abbrev_tac `p2 ∈ c2.mor` >>
+  map_every qexists_tac [`p1`,`p2`] >>
+  srw_tac [][Abbr`p1`,Abbr`p2`]]);
+
+val pre_product_cat_id = Q.store_thm(
+"pre_product_cat",
+`∀c1 c2 x y. x ∈ c1.obj ∧ y ∈ c2.obj ⇒
+  (id (x,y) -:(pre_product_cat c1 c2) =
+   product_mor (id x -:c1, id y -:c2))`,
+srw_tac [][id_in_def,restrict_def,product_mor_def,pre_product_cat_def]);
+
+val pre_product_cat_composable_in = Q.store_thm(
+"pre_product_cat_composable_in",
+`∀c1 c2 f g. f ≈> g -:(pre_product_cat c1 c2) =
+  (FST (unproduct_mor f) ≈> FST (unproduct_mor g) -:c1) ∧
+  (SND (unproduct_mor f) ≈> SND (unproduct_mor g) -:c2)`,
+srw_tac [DNF_ss][composable_in_def,EXISTS_PROD,EQ_IMP_THM] >>
+fsrw_tac [][] >>
+map_every qexists_tac [`FST (unproduct_mor f)`,`SND (unproduct_mor f)`,
+                       `FST (unproduct_mor g)`,`SND (unproduct_mor g)`] >>
+fsrw_tac [][] >>
+Cases_on `f.cod` >> Cases_on `g.dom` >> fsrw_tac [][unproduct_mor_def]);
+val _ = export_rewrites["pre_product_cat_composable_in"];
+
+val pre_product_cat_compose_in = Q.store_thm(
+"pre_product_cat_compose_in",
+`∀c1 c2 f g. (f ≈> g -:(pre_product_cat c1 c2)) ⇒
+  (g o f -:(pre_product_cat c1 c2) =
+    product_mor (FST (unproduct_mor g) o FST (unproduct_mor f) -:c1,
+                 SND (unproduct_mor g) o SND (unproduct_mor f) -:c2))`,
+srw_tac [][compose_in_def,restrict_def,product_mor_def,compose_def,
+           unproduct_mor_def,pre_product_cat_def] >>
+rpt (pop_assum mp_tac) >> srw_tac [][composable_in_def] >>
+Cases_on `f.cod` >> Cases_on `g.dom` >> fsrw_tac [][]);
+val _ = export_rewrites["pre_product_cat_compose_in"];
+
+val product_cat_def = Define`
+  product_cat c1 c2 = mk_cat (pre_product_cat c1 c2)`;
+
+val is_category_product_cat = Q.store_thm(
+"is_category_product_cat",
+`∀c1 c2. is_category c1 ∧ is_category c2
+  ⇒ is_category (product_cat c1 c2)`,
+srw_tac [][product_cat_def] >>
+fsrw_tac [DNF_ss][category_axioms_def,FORALL_PROD] >>
+conj_tac >- srw_tac [][pre_product_cat_id,pre_product_cat_maps_to_in] >>
+conj_tac >- (
+  srw_tac [][pre_product_cat_id] >>
+  qmatch_abbrev_tac `f o g -:(pre_product_cat c1 c2) = h` >>
+  `g ≈> f -:(pre_product_cat c1 c2)` by (
+    unabbrev_all_tac >>
+    srw_tac [][composable_in_def] ) >>
+  unabbrev_all_tac >> srw_tac [][] ) >>
+conj_tac >- (
+  srw_tac [][pre_product_cat_id] >>
+  qmatch_abbrev_tac `f o g -:(pre_product_cat c1 c2) = h` >>
+  `g ≈> f -:(pre_product_cat c1 c2)` by (
+    unabbrev_all_tac >>
+    srw_tac [][composable_in_def] ) >>
+  unabbrev_all_tac >> srw_tac [][] ) >>
+conj_tac >- (
+  srw_tac [][] >>
+  qmatch_abbrev_tac `ff o gg -:ppc = ee o hh -:ppc` >>
+  `gg ≈> ff -:ppc` by (
+    unabbrev_all_tac >> srw_tac [][composable_comp] ) >>
+  `hh ≈> ee -:ppc` by (
+    unabbrev_all_tac >> srw_tac [][composable_comp] ) >>
+  unabbrev_all_tac >> srw_tac [][] >>
+  match_mp_tac comp_assoc >> fsrw_tac [][] ) >>
+srw_tac [][] >>
+`f ≈> g -:pre_product_cat c1 c2` by (
+  fsrw_tac [][pre_product_cat_maps_to_in] >>
+  srw_tac [][] >>
+  match_mp_tac maps_to_composable >>
+  metis_tac [] ) >>
+fsrw_tac [][pre_product_cat_maps_to_in] >>
+srw_tac [][] >>
+match_mp_tac composable_maps_to >>
+fsrw_tac [][maps_to_in_def,composable_in_def]);
 
 val _ = export_theory ();

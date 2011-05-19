@@ -1,6 +1,6 @@
 open HolKernel Parse boolLib bossLib boolSimps pred_setTheory pairTheory categoryTheory functorTheory nat_transTheory lcsymtacs SatisfySimps;
 
-val _ = new_theory "set_cat";
+val _ = new_theory "ens_cat";
 
 val HasFunType_def = Define`
   HasFunType f X Y = extensional f X ∧ ∀x. x ∈ X ⇒ f x ∈ Y`;
@@ -93,17 +93,17 @@ val _ = export_rewrites["ComposeFunType"];
 
 val _ = overload_on("IsTypedFunIn",``λU f. f.dom ∈ U ∧ f.cod ∈ U ∧ IsTypedFun f``);
 
-val set_cat_def = Define`
-  set_cat U = mk_cat <|
+val ens_cat_def = Define`
+  ens_cat U = mk_cat <|
     obj := U ;
     mor := {f | IsTypedFunIn U f} ;
     id_map := IdFun ;
     comp := λf g. (g o f).map |>`;
 
-val is_category_set_cat = Q.store_thm(
-"is_category_set_cat",
-`∀U. is_category (set_cat U)`,
-srw_tac [][set_cat_def] >>
+val is_category_ens_cat = Q.store_thm(
+"is_category_ens_cat",
+`∀U. is_category (ens_cat U)`,
+srw_tac [][ens_cat_def] >>
 srw_tac [][category_axioms_def] >- (
   srw_tac [][maps_to_in_def,id_in_def,IsTypedFun_def,restrict_def] )
 >- (
@@ -124,52 +124,52 @@ srw_tac [][category_axioms_def] >- (
 fsrw_tac [][maps_to_in_def] >>
 fsrw_tac [][compose_in_def,restrict_def,composable_in_def] >>
 fsrw_tac [][IsTypedFun_def]);
-val _ = export_rewrites["is_category_set_cat"];
+val _ = export_rewrites["is_category_ens_cat"];
 
-val set_cat_obj = Q.store_thm(
-"set_cat_obj",
-`∀U. (set_cat U).obj = U`,
-srw_tac [][set_cat_def]);
+val ens_cat_obj = Q.store_thm(
+"ens_cat_obj",
+`∀U. (ens_cat U).obj = U`,
+srw_tac [][ens_cat_def]);
 
-val set_cat_mor = Q.store_thm(
-"set_cat_mor",
-`∀U f. f ∈ (set_cat U).mor ⇔ IsTypedFunIn U f`,
-srw_tac [][set_cat_def]);
+val ens_cat_mor = Q.store_thm(
+"ens_cat_mor",
+`∀U f. f ∈ (ens_cat U).mor ⇔ IsTypedFunIn U f`,
+srw_tac [][ens_cat_def]);
 
-val set_cat_id = Q.store_thm(
-"set_cat_id",
-`∀U x. x ∈ U ⇒ ((id x -:(set_cat U)) = TypedGraphFun (x,x) (IdFun x))`,
-srw_tac [][id_in_def,set_cat_def,mk_cat_def,restrict_def,TypedGraphFun_def,IdFun_def]);
+val ens_cat_id = Q.store_thm(
+"ens_cat_id",
+`∀U x. x ∈ U ⇒ ((id x -:(ens_cat U)) = TypedGraphFun (x,x) (IdFun x))`,
+srw_tac [][id_in_def,ens_cat_def,mk_cat_def,restrict_def,TypedGraphFun_def,IdFun_def]);
 
-val set_cat_composable_in = Q.store_thm(
-"set_cat_composable_in",
-`∀U f g. f ≈> g -:(set_cat U) ⇔ IsTypedFunIn U f ∧ IsTypedFunIn U g ∧ f ≈> g`,
-srw_tac [][composable_in_def,set_cat_mor]);
+val ens_cat_composable_in = Q.store_thm(
+"ens_cat_composable_in",
+`∀U f g. f ≈> g -:(ens_cat U) ⇔ IsTypedFunIn U f ∧ IsTypedFunIn U g ∧ f ≈> g`,
+srw_tac [][composable_in_def,ens_cat_mor]);
 
-val set_cat_comp = Q.store_thm(
-"set_cat_comp",
-`∀U f g. f ≈> g -:(set_cat U) ⇒ ((set_cat U).comp f g = ComposeFun(f.dom,g.dom) g.map f.map)`,
-srw_tac [][set_cat_def,mk_cat_def,restrict_def,composable_in_def]);
+val ens_cat_comp = Q.store_thm(
+"ens_cat_comp",
+`∀U f g. f ≈> g -:(ens_cat U) ⇒ ((ens_cat U).comp f g = ComposeFun(f.dom,g.dom) g.map f.map)`,
+srw_tac [][ens_cat_def,mk_cat_def,restrict_def,composable_in_def]);
 
-val set_cat_compose_in = Q.store_thm(
-"set_cat_compose_in",
-`∀U f g. f ≈> g -:(set_cat U) ⇒ (g o f -:(set_cat U) = g o f)`,
-srw_tac [][compose_in_def,morphism_component_equality,set_cat_comp,set_cat_composable_in,restrict_def]>>
+val ens_cat_compose_in = Q.store_thm(
+"ens_cat_compose_in",
+`∀U f g. f ≈> g -:(ens_cat U) ⇒ (g o f -:(ens_cat U) = g o f)`,
+srw_tac [][compose_in_def,morphism_component_equality,ens_cat_comp,ens_cat_composable_in,restrict_def]>>
 metis_tac []);
 
-val set_cat_maps_to_in = Q.store_thm(
-"set_cat_maps_to_in",
-`∀U f x y. f :- x → y -:(set_cat U) ⇔ IsTypedFunIn U f ∧ f :- x → y`,
-srw_tac [][maps_to_in_def,EQ_IMP_THM,set_cat_mor]);
+val ens_cat_maps_to_in = Q.store_thm(
+"ens_cat_maps_to_in",
+`∀U f x y. f :- x → y -:(ens_cat U) ⇔ IsTypedFunIn U f ∧ f :- x → y`,
+srw_tac [][maps_to_in_def,EQ_IMP_THM,ens_cat_mor]);
 
 val _ = export_rewrites[
-"set_cat_obj","set_cat_mor","set_cat_id",
-"set_cat_composable_in","set_cat_comp",
-"set_cat_compose_in","set_cat_maps_to_in"];
+"ens_cat_obj","ens_cat_mor","ens_cat_id",
+"ens_cat_composable_in","ens_cat_comp",
+"ens_cat_compose_in","ens_cat_maps_to_in"];
 
 val pre_hom_functor_def = Define`
   (pre_hom_functor c x : ('a,'b,('a,'b) mor set, ('a,'b) mor -> ('a,'b) mor) functor) = <|
-    dom := c ; cod := set_cat UNIV;
+    dom := c ; cod := ens_cat UNIV;
     map := λf. TypedGraphFun ((c|x→f.dom|),(c|x→f.cod|)) (λg. f o g -:c)
   |>`;
 
@@ -180,7 +180,7 @@ srw_tac [][pre_hom_functor_def]);
 
 val pre_hom_functor_cod = Q.store_thm(
 "pre_hom_functor_cod",
-`∀c x. (pre_hom_functor c x).cod = set_cat UNIV`,
+`∀c x. (pre_hom_functor c x).cod = ens_cat UNIV`,
 srw_tac [][pre_hom_functor_def]);
 
 val _ = export_rewrites["pre_hom_functor_cod","pre_hom_functor_dom"];
@@ -211,7 +211,7 @@ srw_tac [][] >- (
   srw_tac [][morphism_component_equality,TypedGraphFun_def] >>
   srw_tac [][restrict_def,FUN_EQ_THM] >> srw_tac [][] >>
   fsrw_tac [][hom_def,maps_to_in_def] ) >>
-fsrw_tac [][TypedGraphFun_def,set_cat_def]);
+fsrw_tac [][TypedGraphFun_def,ens_cat_def]);
 val _ = export_rewrites ["pre_hom_functor_objf"];
 
 val _ = add_rule{
@@ -260,8 +260,8 @@ srw_tac [][functor_axioms_def]
   srw_tac [][FUN_EQ_THM,restrict_def] >>
   srw_tac [][] >>
   fsrw_tac [][hom_def,maps_to_in_def] ) >>
-qmatch_abbrev_tac `hh = gg o ff -:(set_cat U)` >>
-`ff ≈> gg -:(set_cat U)` by (
+qmatch_abbrev_tac `hh = gg o ff -:(ens_cat U)` >>
+`ff ≈> gg -:(ens_cat U)` by (
   srw_tac [][Abbr`ff`,Abbr`gg`,Abbr`U`,TypedGraphFun_def] >>
   imp_res_tac composable_in_def >> fsrw_tac [][] >>
   fsrw_tac [][hom_def] >>
@@ -276,7 +276,7 @@ TRY ( srw_tac [][hom_def,compose_in_def,restrict_def] >> NO_TAC) >>
 srw_tac [][ComposeFun_def] >>
 srw_tac [][restrict_def,FUN_EQ_THM] >>
 srw_tac [][] >- (
-  match_mp_tac (GSYM comp_assoc) >>
+  match_mp_tac comp_assoc >>
   fsrw_tac [][hom_def,composable_in_def,maps_to_in_def] ) >>
 qsuff_tac `F` >- srw_tac [][] >>
 qpat_assum `X ∉ Y` mp_tac >> srw_tac [][] >>
@@ -291,7 +291,7 @@ srw_tac [][hom_functor_def]);
 
 val hom_functor_cod = Q.store_thm(
 "hom_functor_cod",
-`∀c x. (hom_functor c x).cod = (set_cat UNIV)`,
+`∀c x. (hom_functor c x).cod = (ens_cat UNIV)`,
 srw_tac [][hom_functor_def]);
 
 val _ = export_rewrites["hom_functor_cod","hom_functor_dom"];
@@ -355,15 +355,15 @@ val _ = export_rewrites["is_functor_contra_functor"];
 *)
 
 val pre_op_mor_functor_def = Define`
-  pre_op_mor_functor U = <| dom := set_cat U; cod := set_cat U;
+  pre_op_mor_functor U = <| dom := ens_cat U; cod := ens_cat U;
     map := λf. TypedGraphFun
                 (IMAGE op_mor f.dom, IMAGE op_mor f.cod)
                 (op_mor o f.map o op_mor) |>`;
 
 val pre_op_mor_functor_components = Q.store_thm(
 "pre_op_mor_functor_components",
-`∀U. ((pre_op_mor_functor U).dom = set_cat U) ∧
-     ((pre_op_mor_functor U).cod = set_cat U) ∧
+`∀U. ((pre_op_mor_functor U).dom = ens_cat U) ∧
+     ((pre_op_mor_functor U).cod = ens_cat U) ∧
      ((pre_op_mor_functor U).map = λf. TypedGraphFun
                 (IMAGE op_mor f.dom, IMAGE op_mor f.cod)
                 (op_mor o f.map o op_mor))`,
@@ -406,8 +406,8 @@ srw_tac [][] >- fsrw_tac [][IsTypedFun_def,HasFunType_def]
   srw_tac [][morphism_component_equality] >>
   srw_tac [][restrict_def,FUN_EQ_THM] >>
   srw_tac [][] >> fsrw_tac [][] ) >>
-qmatch_abbrev_tac `hh = gg o ff -: set_cat U` >>
-`ff ≈> gg -:set_cat U` by (
+qmatch_abbrev_tac `hh = gg o ff -: ens_cat U` >>
+`ff ≈> gg -:ens_cat U` by (
   srw_tac [][Abbr`ff`,Abbr`gg`] >>
   fsrw_tac [][IsTypedFun_def,HasFunType_def] ) >>
 srw_tac [][] >>
@@ -421,8 +421,8 @@ val _ = export_rewrites["is_functor_op_mor_functor"];
 
 val op_mor_functor_dom_cod = Q.store_thm(
 "op_mor_functor_dom_cod",
-`∀U. ((op_mor_functor U).dom = set_cat U) ∧
-     ((op_mor_functor U).cod = set_cat U)`,
+`∀U. ((op_mor_functor U).dom = ens_cat U) ∧
+     ((op_mor_functor U).cod = ens_cat U)`,
 srw_tac [][op_mor_functor_def]);
 val _ = export_rewrites["op_mor_functor_dom_cod"];
 
@@ -510,7 +510,7 @@ srw_tac [][YfunctorNT_def,mk_nt_def]);
 
 val ntcod_YfunctorNT = Q.store_thm(
 "ntcod_YfunctorNT",
-`∀c f. ntcod (YfunctorNT c f) = (set_cat UNIV)`,
+`∀c f. ntcod (YfunctorNT c f) = (ens_cat UNIV)`,
 srw_tac [][YfunctorNT_def,mk_nt_def]);
 
 val YfunctorNT_at = Q.store_thm(
@@ -547,8 +547,8 @@ imp_res_tac maps_to_in_def >>
 fsrw_tac [][] >> srw_tac [][] >>
 imp_res_tac mor_obj >> srw_tac [][] >>
 qmatch_abbrev_tac
-  `(TypedGraphFun (t2,t3) f2) o (TypedGraphFun (t1,t2) f1) -:set_cat U =
-   (TypedGraphFun (t4,t3) f1) o (TypedGraphFun (t1,t4) f2) -:set_cat U` >>
+  `(TypedGraphFun (t2,t3) f2) o (TypedGraphFun (t1,t2) f1) -:ens_cat U =
+   (TypedGraphFun (t4,t3) f1) o (TypedGraphFun (t1,t4) f2) -:ens_cat U` >>
 `(∀x. x ∈ t1 ⇒ f1 x ∈ t2) ∧
  (∀x. x ∈ t4 ⇒ f1 x ∈ t3) ∧
  (∀x. x ∈ t2 ⇒ f2 x ∈ t3) ∧
@@ -558,14 +558,14 @@ qmatch_abbrev_tac
   srw_tac [][] >>
   match_mp_tac maps_to_comp >>
   metis_tac []) >>
-qmatch_abbrev_tac `x o w -:set_cat U = v o u -:set_cat U` >>
+qmatch_abbrev_tac `x o w -:ens_cat U = v o u -:ens_cat U` >>
 `IsTypedFun u ∧ IsTypedFun v ∧ IsTypedFun w ∧ IsTypedFun x` by
   metis_tac [IsTypedFunTypedGraphFun] >>
-`u ∈ (set_cat U).mor ∧ v ∈ (set_cat U).mor ∧ w ∈ (set_cat U).mor ∧ x ∈ (set_cat U).mor` by
-  metis_tac [set_cat_mor,IN_UNIV] >>
-`u ≈> v -:(set_cat U)` by (
+`u ∈ (ens_cat U).mor ∧ v ∈ (ens_cat U).mor ∧ w ∈ (ens_cat U).mor ∧ x ∈ (ens_cat U).mor` by
+  metis_tac [ens_cat_mor,IN_UNIV] >>
+`u ≈> v -:(ens_cat U)` by (
   srw_tac [][composable_def,Abbr`v`,Abbr`u`,Abbr`U`]) >>
-`w ≈> x -:set_cat U` by (
+`w ≈> x -:ens_cat U` by (
   srw_tac [][composable_def,Abbr`x`,Abbr`w`,Abbr`U`]) >>
 srw_tac [][] >>
 map_every qunabbrev_tac [`u`,`v`,`w`,`x`] >>
@@ -574,7 +574,7 @@ srw_tac [][ComposeFun_def] >>
 srw_tac [][restrict_def] >>
 srw_tac [][FUN_EQ_THM] >>
 srw_tac [][Abbr`f1`,Abbr`f2`] >>
-match_mp_tac comp_assoc >>
+match_mp_tac (GSYM comp_assoc) >>
 qunabbrev_tac `t1` >>
 fsrw_tac [][hom_def] >>
 imp_res_tac maps_to_composable >>
@@ -584,14 +584,14 @@ val _ = export_rewrites["is_nat_trans_YfunctorNT"];
 val YfunctorNT_maps_to = Q.store_thm(
 "YfunctorNT_maps_to",
 `∀c f. is_category c ∧ f ∈ c.mor ⇒
-    (YfunctorNT c f) :- (c|_→f.dom|) → (c|_→f.cod|) -:[(c°)→set_cat UNIV]`,
+    (YfunctorNT c f) :- (c|_→f.dom|) → (c|_→f.cod|) -:[(c°)→ens_cat UNIV]`,
 srw_tac [][maps_to_in_def]);
 val _ = export_rewrites["YfunctorNT_maps_to"];
 
 val YfunctorNT_composable = Q.store_thm(
 "YfunctorNT_composable",
 `∀c f g. is_category c ∧ f ≈> g -:c ⇒
-  (YfunctorNT c f) ≈> (YfunctorNT c g) -:[(c°)→set_cat UNIV]`,
+  (YfunctorNT c f) ≈> (YfunctorNT c g) -:[(c°)→ens_cat UNIV]`,
 srw_tac [][composable_nts_def] >> fsrw_tac [][composable_in_def]);
 val _ = export_rewrites["YfunctorNT_composable"];
 
@@ -607,21 +607,22 @@ val _ = export_rewrites["YfunctorNT_id"];
 
 val is_category_presheaf_cat = Q.store_thm(
 "is_category_presheaf_cat",
-`∀c. is_category c ⇒ is_category [(c°)→set_cat UNIV]`,
-metis_tac [is_category_functor_cat,is_category_set_cat,is_category_op_cat])
+`∀c. is_category c ⇒ is_category [(c°)→ens_cat UNIV]`,
+metis_tac [is_category_functor_cat,is_category_ens_cat,is_category_op_cat])
 val _ = export_rewrites["is_category_presheaf_cat"];
 
 val pre_Yfunctor_def = Define`
   pre_Yfunctor c = <|
-    dom := c; cod := [(c°)→set_cat UNIV];
+    dom := c; cod := [(c°)→ens_cat UNIV];
     map := λf. YfunctorNT c f |>`;
 
 val pre_Yfunctor_components = Q.store_thm(
 "pre_Yfunctor_components",
 `∀c. ((pre_Yfunctor c).dom = c) ∧
-     ((pre_Yfunctor c).cod = [(c°)→set_cat UNIV]) ∧
-     ((pre_Yfunctor c).map = λf. YfunctorNT c f)`,
-srw_tac [][pre_Yfunctor_def]);
+     ((pre_Yfunctor c).cod = [(c°)→ens_cat UNIV]) ∧
+     ((pre_Yfunctor c).map = λf. YfunctorNT c f) ∧
+     (∀f. (pre_Yfunctor c)##f = YfunctorNT c f)`,
+srw_tac [][pre_Yfunctor_def,morf_def]);
 val _ = export_rewrites["pre_Yfunctor_components"];
 
 val pre_Yfunctor_objf = Q.store_thm(
@@ -633,7 +634,7 @@ SELECT_ELIM_TAC >> srw_tac [][] >- (
   qexists_tac `c|_→x|` >> srw_tac [][] ) >>
 pop_assum mp_tac >>
 srw_tac [][id_in_def] >>
-Q.ISPEC_THEN `[(c°)→set_cat UNIV]` match_mp_tac id_inj >>
+Q.ISPEC_THEN `[(c°)→ens_cat UNIV]` match_mp_tac id_inj >>
 srw_tac [][]);
 val _ = export_rewrites["pre_Yfunctor_objf"];
 
@@ -649,7 +650,8 @@ srw_tac [][functor_axioms_def,morf_def]
 >- (imp_res_tac maps_to_obj >> fsrw_tac [][morf_def,maps_to_in_def])
 >- fsrw_tac [][maps_to_in_def]
 >- (qexists_tac `c|_→x|` >> srw_tac [][]) >>
-imp_res_tac composable_maps_to >>
+qspecl_then [`c`,`f`,`g`,`f.dom`,`g.cod`] mp_tac composable_maps_to >>
+srw_tac [][] >>
 imp_res_tac maps_to_in_def >>
 imp_res_tac YfunctorNT_composable >>
 match_mp_tac nt_eq_thm >> fsrw_tac [][] >>
@@ -659,18 +661,18 @@ conj_tac >- ( fsrw_tac [][nt_comp_def,compose_def,mk_nt_def,restrict_def,Yfuncto
   imp_res_tac composable_in_def >> srw_tac [][]) >>
 srw_tac [][] >>
 qmatch_abbrev_tac
-  `h = TypedGraphFun (i,j) k o TypedGraphFun (l,m) n -:set_cat UNIV` >>
+  `h = TypedGraphFun (i,j) k o TypedGraphFun (l,m) n -:ens_cat UNIV` >>
 `(∀x. x ∈ i ⇒  k x ∈ j) ∧ (∀x. x ∈ l ⇒ n x ∈ m)` by (
   unabbrev_all_tac >>
   srw_tac [][hom_def] >>
   match_mp_tac maps_to_comp >>
   metis_tac [maps_to_in_def,maps_to_def] ) >>
 imp_res_tac IsTypedFunTypedGraphFun >>
-imp_res_tac set_cat_mor >>
+imp_res_tac ens_cat_mor >>
 ntac 2 (pop_assum (qspec_then `UNIV` mp_tac)) >>
 `m = i` by (
   fsrw_tac [][composable_in_def,Abbr`m`,Abbr`i`] ) >>
-`(TypedGraphFun (l,m) n) ≈> (TypedGraphFun (i,j) k) -:set_cat UNIV` by (
+`(TypedGraphFun (l,m) n) ≈> (TypedGraphFun (i,j) k) -:ens_cat UNIV` by (
   srw_tac [][]) >>
 srw_tac [][Abbr`h`] >>
 srw_tac [][TypedGraphFun_def,ComposeTypedFun_def] >>
@@ -681,7 +683,7 @@ unabbrev_all_tac >>
 srw_tac [][] >>
 `g.dom = f.cod` by (
   fsrw_tac [][composable_in_def] ) >>
-match_mp_tac (GSYM comp_assoc) >>
+match_mp_tac comp_assoc >>
 fsrw_tac [][hom_def] >>
 match_mp_tac maps_to_composable >>
 map_every qexists_tac [`x`,`f.dom`,`f.cod`] >>
@@ -694,7 +696,7 @@ srw_tac [][Yfunctor_def]);
 
 val Yfunctor_cod = Q.store_thm(
 "Yfunctor_cod",
-`∀c. (Yfunctor c).cod = [(c°)→set_cat UNIV]`,
+`∀c. (Yfunctor c).cod = [(c°)→ens_cat UNIV]`,
 srw_tac [][Yfunctor_def]);
 
 val Yfunctor_objf = Q.store_thm(
@@ -717,7 +719,7 @@ val YMap_def = Define`
 val YMapImage = Q.store_thm(
 "YMapImage",
 `∀c x n f. is_category c ∧ is_functor f ∧ is_nat_trans n ∧
-           (f :- c° → set_cat UNIV) ∧ x ∈ c.obj ∧
+           (f :- c° → ens_cat UNIV) ∧ x ∈ c.obj ∧
            (n :- ((Yfunctor c)@@x) → f) ⇒
              (YMap c x n) ∈ (f@@x)`,
 srw_tac [][YMap_def] >>
@@ -748,7 +750,7 @@ val _ = export_rewrites["YMapInv_at"];
 
 val is_nat_trans_YMapInv = Q.store_thm(
 "is_nat_trans_YMapInv",
-`∀c x f y. is_category c ∧ is_functor f ∧ (f :- c° → set_cat UNIV) ∧
+`∀c x f y. is_category c ∧ is_functor f ∧ (f :- c° → ens_cat UNIV) ∧
            x ∈ c.obj ∧ y ∈ (f@@x)
  ⇒ is_nat_trans (YMapInv c x f y)`,
 srw_tac [][YMapInv_def] >>
@@ -756,7 +758,7 @@ srw_tac [][nat_trans_axioms_def]
 >- (
   qmatch_assum_rename_tac `g ∈ c|u→x|` [] >>
   `g° :- x → u -:(c°)` by fsrw_tac [][hom_def] >>
-  `f##g° :- (f@@x) → (f@@u) -:set_cat UNIV` by (
+  `f##g° :- (f@@x) → (f@@u) -:ens_cat UNIV` by (
     match_mp_tac morf_maps_to >>
     map_every qexists_tac [`f.dom`,`x`,`u`] >>
     srw_tac [][] ) >>
@@ -766,12 +768,12 @@ qmatch_assum_rename_tac `g° :- u → v -:c` [] >>
 imp_res_tac maps_to_in_def >>
 fsrw_tac [][] >>
 qmatch_abbrev_tac
-`(TypedGraphFun (i,j) k) o (TypedGraphFun (l,i) n) -:set_cat UNIV =
- q o (TypedGraphFun (l,s) h) -:set_cat UNIV` >>
+`(TypedGraphFun (i,j) k) o (TypedGraphFun (l,i) n) -:ens_cat UNIV =
+ q o (TypedGraphFun (l,s) h) -:ens_cat UNIV` >>
 `(∀x. x ∈ i ⇒  k x ∈ j) ∧ (∀x. x ∈ l ⇒ h x ∈ s)` by (
  unabbrev_all_tac >> srw_tac [][] >>
  qmatch_assum_abbrev_tac `z ∈ (c|q→x|)` >>
- `f##(z)° :- f@@x → f@@q -:set_cat UNIV` by (
+ `f##(z)° :- f@@x → f@@q -:ens_cat UNIV` by (
    match_mp_tac morf_maps_to >>
    fsrw_tac [][hom_def] ) >>
  fsrw_tac [][maps_to_in_def,IsTypedFun_def,HasFunType_def] >>
@@ -781,7 +783,7 @@ qmatch_abbrev_tac
   match_mp_tac maps_to_comp >>
   qexists_tac `g.dom` >>
   srw_tac [SATISFY_ss][]) >>
-`q :- s → j -:set_cat UNIV` by (
+`q :- s → j -:ens_cat UNIV` by (
   map_every qunabbrev_tac [`q`,`s`,`j`] >>
   match_mp_tac morf_maps_to >>
   map_every qexists_tac [`f.dom`,`g.dom`,`g.cod`] >>
@@ -790,7 +792,7 @@ qmatch_abbrev_tac
 imp_res_tac maps_to_in_def >>
 srw_tac [][Abbr`k`] >>
 imp_res_tac IsTypedFunTypedGraphFun >>
-`TypedGraphFun (l,s) h ≈> q -: set_cat UNIV` by (
+`TypedGraphFun (l,s) h ≈> q -: ens_cat UNIV` by (
   fsrw_tac [][Abbr`q`,Abbr`s`,maps_to_in_def] ) >>
 srw_tac [][] >>
 unabbrev_all_tac >>
@@ -814,7 +816,7 @@ val _ = export_rewrites["is_nat_trans_YMapInv"];
 
 val YMapInvImage = Q.store_thm(
 "YMapInvImage",
-`∀c x f y. is_category c ∧ is_functor f ∧ (f :- c° → set_cat UNIV) ∧
+`∀c x f y. is_category c ∧ is_functor f ∧ (f :- c° → ens_cat UNIV) ∧
            x ∈ c.obj ∧ y ∈ (f@@x) ⇒
            is_nat_trans (YMapInv c x f y) ∧
            ((YMapInv c x f y) :- (Yfunctor c)@@x → f)`,
@@ -822,7 +824,7 @@ srw_tac [][YMapInv_def]);
 
 val YMap1 = Q.store_thm(
 "YMap1",
-`∀c f x n. is_category c ∧ is_functor f ∧ (f :- c° → set_cat UNIV) ∧
+`∀c f x n. is_category c ∧ is_functor f ∧ (f :- c° → ens_cat UNIV) ∧
            x ∈ c.obj ∧ is_nat_trans n ∧ (n :- ((Yfunctor c)@@x) → f) ⇒
              (YMapInv c x f (YMap c x n) = n)`,
 rpt strip_tac >>
@@ -853,7 +855,7 @@ qmatch_assum_rename_tac `f ∈ c|z→x|` [] >>
 Q.ISPECL_THEN [`n`,`c|_→x|`,`n.cod` ,`n.cod.cod` ,`f°`,`x`,`z`]
   mp_tac naturality >>
 fsrw_tac [][hom_def] >>
-qmatch_abbrev_tac `(f1 o f2 -:set_cat UNIV = f3 o f4 -:set_cat UNIV) ⇒ X` >>
+qmatch_abbrev_tac `(f1 o f2 -:ens_cat UNIV = f3 o f4 -:ens_cat UNIV) ⇒ X` >>
 `IsTypedFun f2` by (
   srw_tac [][Abbr`f2`] >>
   imp_res_tac maps_to_in_def >>
@@ -861,11 +863,11 @@ qmatch_abbrev_tac `(f1 o f2 -:set_cat UNIV = f3 o f4 -:set_cat UNIV) ⇒ X` >>
   match_mp_tac maps_to_comp >>
   qexists_tac `x` >>
   fsrw_tac [][maps_to_in_def]) >>
-`f1 :- f1.dom → f1.cod -:set_cat UNIV` by (
+`f1 :- f1.dom → f1.cod -:ens_cat UNIV` by (
   qunabbrev_tac `f1` >>
   match_mp_tac nt_at_maps_to >>
   srw_tac [][hom_def] ) >>
-`f4 :- f4.dom → f4.cod -:set_cat UNIV` by (
+`f4 :- f4.dom → f4.cod -:ens_cat UNIV` by (
   qunabbrev_tac `f4` >>
   match_mp_tac nt_at_maps_to >>
   srw_tac [][hom_def] ) >>
@@ -874,7 +876,7 @@ qmatch_abbrev_tac `(f1 o f2 -:set_cat UNIV = f3 o f4 -:set_cat UNIV) ⇒ X` >>
   fsrw_tac [][] >>
   map_every qexists_tac [`x`,`z`] >>
   srw_tac [][] ) >>
-`f3 :- f3.dom → f3.cod -:set_cat UNIV` by (
+`f3 :- f3.dom → f3.cod -:ens_cat UNIV` by (
   qunabbrev_tac `f3` >>
   match_mp_tac morf_maps_to >>
   srw_tac [][] >>
@@ -882,12 +884,12 @@ qmatch_abbrev_tac `(f1 o f2 -:set_cat UNIV = f3 o f4 -:set_cat UNIV) ⇒ X` >>
   srw_tac [][] >>
   fsrw_tac [][maps_to_in_def] ) >>
 imp_res_tac maps_to_in_def >>
-`f2 ≈> f1 -:set_cat UNIV` by (
+`f2 ≈> f1 -:ens_cat UNIV` by (
   fsrw_tac [][Abbr`f2`,hom_def] >>
   srw_tac [][] >>
   match_mp_tac maps_to_comp >>
   srw_tac [SATISFY_ss][] ) >>
-`f4 ≈> f3 -:set_cat UNIV` by (
+`f4 ≈> f3 -:ens_cat UNIV` by (
   fsrw_tac [][Abbr`f3`] ) >>
 `n.cod@@z = f3.cod` by (
   fsrw_tac [][maps_to_in_def,Abbr`f3`] ) >>
@@ -905,13 +907,13 @@ fsrw_tac [][id_maps_to]);
 
 val YMap2 = Q.store_thm(
 "YMap2",
-`∀c x f y. is_category c ∧ is_functor f ∧ (f :- c° → set_cat UNIV) ∧
+`∀c x f y. is_category c ∧ is_functor f ∧ (f :- c° → ens_cat UNIV) ∧
            x ∈ c.obj ∧ y ∈ (f@@x) ⇒
              (YMap c x (YMapInv c x f y) = y)`,
 srw_tac [][YMap_def] >>
 srw_tac [][restrict_def,hom_def] >>
 pop_assum mp_tac >> srw_tac [][id_maps_to] >>
-`f##(id x -:(c°)) = id (f@@x) -: set_cat UNIV` by srw_tac [][morf_id] >>
+`f##(id x -:(c°)) = id (f@@x) -: ens_cat UNIV` by srw_tac [][morf_id] >>
 fsrw_tac [][] >>
 srw_tac [][restrict_def]);
 
