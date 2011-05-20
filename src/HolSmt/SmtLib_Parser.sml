@@ -402,6 +402,43 @@ local
     Library.extend_dict ((name, parsefn), tmdict)
   end
 
+  (* returns an extended 'tmdict', and the definition (as a formula) *)
+  fun parse_define_fun get_token (tydict, tmdict) =
+  let
+    val name = get_token ()
+    val vars = parse_sorted_vars get_token tydict
+    val domain_types = List.map Lib.snd vars
+    val range_type = parse_type get_token tydict
+    val vars = List.map (fn vT => (Lib.fst vT, Term.mk_var vT)) vars
+    (* variables don't take arguments *)
+    fun var_parsefn var token nums args =
+      if List.null nums andalso List.null args then
+        var
+      else
+        raise ERR ("<" ^ Hol_pp.term_to_string var ^ ">")
+          "wrong number of arguments"
+    val definiens_tmdict = List.foldl Library.extend_dict tmdict
+      (List.map (Lib.apsnd var_parsefn) vars)
+    val definiens = parse_term get_token (tydict, definiens_tmdict)
+    val _ = Library.expect_token ")" (get_token ())
+    (* 'name' from now on should be parsed as 'tm' *)
+    val tm = Term.mk_var (name,
+      boolSyntax.list_mk_fun (domain_types, range_type))
+    val args_count = List.length domain_types
+    fun parsefn token nums args =
+      if List.null nums andalso List.length args = args_count then
+        Term.list_mk_comb (tm, args)
+      else
+        raise ERR ("<" ^ name ^ ">") "wrong number of arguments"
+    val tmdict = Library.extend_dict ((name, parsefn), tmdict)
+    (* the semantics of define-fun: ``!x1...xn. f x1 ... xn = definiens`` *)
+    val vars = List.map Lib.snd vars
+    val definition = boolSyntax.list_mk_forall (vars,
+      boolSyntax.mk_eq (Term.list_mk_comb (tm, vars), definiens))
+  in
+    (tmdict, definition)
+  end
+
   (* returns the logic's name, its 'tydict', its 'tmdict' extended with
      declared function symbols, and a list of asserted formulas *)
   fun parse_commands get_token state =
@@ -438,6 +475,14 @@ local
       let
         val (logic, tydict, tmdict, asserted) = dest_state "declare-fun"
         val tmdict = parse_declare_fun get_token (tydict, tmdict)
+      in
+        parse_commands get_token (SOME (logic, tydict, tmdict, asserted))
+      end
+    | "define-fun" =>
+      let
+        val (logic, tydict, tmdict, asserted) = dest_state "define-fun"
+        val (tmdict, def) = parse_define_fun get_token (tydict, tmdict)
+        val asserted = def :: asserted
       in
         parse_commands get_token (SOME (logic, tydict, tmdict, asserted))
       end
@@ -491,13 +536,14 @@ in
      terms, respectively, declared in the benchmark, and a list of
      "assert"ed formulae *)
 
-  (* FIXME: We only parse "set-logic", "declare-sort", "declare-fun"
-            and "assert" commands. We ignore some and disallow most
-            other SMT-LIB 2 commands. We do NOT perform assertion
-            stack management (cf. "push"/"pop" in the SMT-LIB 2
-            standard). This implementation, although oversimplified,
-            happens to work for most benchmarks currently (as of
-            2011-05-17) found in the SMT-LIB library. *)
+  (* FIXME: We only parse "set-logic", "declare-sort", "declare-fun",
+            "define-fun" and "assert" commands.  We ignore some and
+            disallow most other SMT-LIB 2 commands.  We do NOT perform
+            assertion stack management (cf. "push"/"pop" in the
+            SMT-LIB 2 standard).  Our implementation, although
+            oversimplified, happens to work for most benchmarks
+            currently (as of 2011-05-20) found in the SMT-LIB
+            library. *)
 
   fun parse_file (path : string) : string *
     (string, Type.hol_type parse_fn list) Redblackmap.dict *
