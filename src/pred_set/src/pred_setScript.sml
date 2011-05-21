@@ -3718,6 +3718,33 @@ MATCH_MP_TAC LESS_EQ_TRANS THEN
 Q.EXISTS_TAC `ABS_DIFF (f e) (g e) + ABS_DIFF (SIGMA f s) (SIGMA g s)` THEN
 SRW_TAC [][ABS_DIFF_SUMS])
 
+val SUM_IMAGE_MONO_LESS_EQ = Q.store_thm(
+"SUM_IMAGE_MONO_LESS_EQ",
+`!s. FINITE s ==> (!x. x IN s ==> f x <= g x)
+  ==> SUM_IMAGE f s <= SUM_IMAGE g s`,
+HO_MATCH_MP_TAC FINITE_INDUCT THEN
+SRW_TAC [][SUM_IMAGE_THM] THEN
+FULL_SIMP_TAC (srw_ss()) [DELETE_NON_ELEMENT] THEN
+MATCH_MP_TAC LESS_EQ_LESS_EQ_MONO THEN
+SRW_TAC [][]);
+
+val SUM_IMAGE_MONO_LESS = Q.store_thm(
+"SUM_IMAGE_MONO_LESS",
+`!s. FINITE s ==> (?x. x IN s /\ f x < g x) /\ (!x. x IN s ==> f x <= g x)
+  ==> SUM_IMAGE f s < SUM_IMAGE g s`,
+HO_MATCH_MP_TAC FINITE_INDUCT THEN
+SRW_TAC [][SUM_IMAGE_THM] THEN
+FULL_SIMP_TAC (srw_ss()) [DELETE_NON_ELEMENT] THEN1 (
+  MATCH_MP_TAC LESS_LESS_EQ_TRANS THEN
+  Q.EXISTS_TAC `g e + SIGMA f s` THEN
+  SRW_TAC [][] THEN
+  MATCH_MP_TAC (MP_CANON SUM_IMAGE_MONO_LESS_EQ) THEN
+  SRW_TAC [][] ) THEN
+`SIGMA f s < SIGMA g s` by METIS_TAC [] THEN
+MATCH_MP_TAC LESS_LESS_EQ_TRANS THEN
+Q.EXISTS_TAC `f e + SIGMA g s` THEN
+SRW_TAC [][]);
+
 (*---------------------------------------------------------------------------*)
 (* SUM_SET sums the elements of a set of natural numbers                     *)
 (*---------------------------------------------------------------------------*)
