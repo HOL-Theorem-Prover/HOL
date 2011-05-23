@@ -1535,6 +1535,24 @@ RW_TAC bool_ss [BIJ_DEF] THEN
 IMP_RES_TAC LINV_DEF THEN FULL_SIMP_TAC bool_ss [INJ_DEF, SURJ_DEF] THEN
 METIS_TAC []);
 
+val BIJ_IFF_INV = Q.store_thm(
+"BIJ_IFF_INV",
+`!f s t. BIJ f s t =
+  (!x. x IN s ==> f x IN t) /\
+  ?g. (!x. x IN t ==> g x IN s) /\
+      (!x. x IN s ==> (g (f x) = x)) /\
+      (!x. x IN t ==> (f (g x) = x))`,
+REPEAT GEN_TAC THEN
+EQ_TAC THEN STRIP_TAC THEN1 (
+  CONJ_TAC THEN1 METIS_TAC [BIJ_DEF,INJ_DEF] THEN
+  Q.EXISTS_TAC `LINV f s` THEN
+  IMP_RES_TAC BIJ_LINV_BIJ THEN
+  CONJ_TAC THEN1 METIS_TAC [BIJ_DEF,INJ_DEF] THEN
+  CONJ_TAC THEN1 METIS_TAC [BIJ_DEF,LINV_DEF] THEN
+  METIS_TAC [BIJ_LINV_INV] ) THEN
+SRW_TAC [][BIJ_DEF,INJ_DEF,SURJ_DEF] THEN
+METIS_TAC []);
+
 val lemma3 = TAC_PROOF(([],
 (--`!f:'a->'b. !s. ?g. !t. SURJ f s t ==> !x:'b. x IN t ==> (f(g x) = x)`--)),
      REPEAT GEN_TAC THEN PURE_REWRITE_TAC [SURJ_DEF] THEN
