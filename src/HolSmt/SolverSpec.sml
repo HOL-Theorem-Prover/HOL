@@ -1,4 +1,4 @@
-(* Copyright (c) 2009-2010 Tjark Weber. All rights reserved. *)
+(* Copyright (c) 2009-2011 Tjark Weber. All rights reserved. *)
 
 (* Definition of SMT solvers *)
 
@@ -33,7 +33,7 @@ structure SolverSpec = struct
     (* call 'post' to determine the result *)
     val result = post x outfile
     val _ = if !Library.trace > 1 then
-        Feedback.HOL_MESG ("HolSmtLib: solver returned '" ^
+        Feedback.HOL_MESG ("HolSmtLib: solver reports negated term to be '" ^
           (case result of
              SAT NONE => "satisfiable' (no model given)"
            | SAT (SOME _) => "satisfiable' (model given)"
