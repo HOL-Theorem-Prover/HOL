@@ -764,7 +764,7 @@ structure Yices = struct
   (* Yices 1.0.29, native file format *)
   val Yices_Oracle = SolverSpec.make_solver
     (Lib.pair () o goal_to_Yices)
-    "yices -tc"
+    "yices -tc "
     (Lib.K result_fn)
 
 end

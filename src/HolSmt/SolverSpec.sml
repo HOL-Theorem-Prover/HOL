@@ -24,7 +24,7 @@ structure SolverSpec = struct
     val infile = FileSys.tmpName ()
     val _ = Library.write_strings_to_file infile inputs
     val outfile = FileSys.tmpName ()
-    val cmd = cmd_stem ^ " " ^ infile ^ " > " ^ outfile
+    val cmd = cmd_stem ^ infile ^ " > " ^ outfile
     (* the actual system call to the SMT solver *)
     val _ = if !Library.trace > 1 then
         Feedback.HOL_MESG ("HolSmtLib: calling external command '" ^ cmd ^ "'")

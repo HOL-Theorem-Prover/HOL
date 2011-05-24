@@ -29,7 +29,7 @@ structure Z3 = struct
       in
         ((), strings)
       end)
-    "z3 -smt2"
+    "z3 -smt2 -file:"
     (Lib.K is_sat_file)
 
   (* Z3 (Linux/Unix), SMT-LIB file format, with proofs *)
@@ -41,7 +41,7 @@ structure Z3 = struct
       in
         (((goal, validation), ty_tm_dict), strings)
       end)
-    "z3 PROOF_MODE=2 -smt2"
+    "z3 PROOF_MODE=2 -smt2 -file:"
     (fn ((goal, validation), (ty_dict, tm_dict)) =>
       fn outfile =>
         let
