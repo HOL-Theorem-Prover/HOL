@@ -431,6 +431,11 @@ fun new_type_definition (name, inhab_thm) =
      before
   Parse.add_type name;
 
+fun new_type_specification (name, tnames, inhab_thm) =
+  Definition.new_type_specification (name,tnames, inhab_thm)
+     before
+  List.app Parse.add_type tnames;
+
 fun new_constant (p as (Name,_)) =
   Theory.new_constant p
      before

@@ -180,6 +180,7 @@ sig
   val new_binder            : string * hol_type -> unit
   val delete_const          : string -> unit
   val new_type_definition   : string * thm -> thm
+  val new_type_specification: string * string list * thm -> thm
   val new_infixl_definition : string * term * int -> thm
   val new_infixr_definition : string * term * int -> thm
   val new_binder_definition : string * term -> thm
