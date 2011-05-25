@@ -128,6 +128,7 @@ fun transform vs th = let
       REWRITE_CONV ([REAL_INJ, REAL_NEGNEG, REAL_NEG_EQ0,
                      num_eq_0, REAL_LT, REAL_LE,
                      REAL_MUL_RZERO, REAL_MUL_LZERO,
+                     REAL_ADD_LID, REAL_ADD_RID,
                      arithmeticTheory.ZERO_LESS_EQ] @
                     (map (fn n => List.nth(CONJUNCTS le_int, n)) [1,3]))
   fun simp t = let
@@ -159,8 +160,8 @@ val v = mk_var("v", real_ty)
 
 val add_rats =
     transform [(x, posneg), (y, nb12), (u, posneg), (v, nb12)] add_rat
-val add_ratls = transform [(x, posneg), (y,nb12), (z, posneg)] add_ratl
-val add_ratrs = transform [(x, posneg), (y, posneg), (z, nb12)] add_ratr
+val add_ratls = transform [(x, posneg), (y,nb12), (z, posneg0)] add_ratl
+val add_ratrs = transform [(x, posneg0), (y, posneg), (z, nb12)] add_ratr
 
 val mult_rats =
     transform [(x,posneg), (y, nb12), (u, posneg), (v, nb12)] mult_rat
