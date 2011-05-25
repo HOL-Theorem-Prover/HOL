@@ -480,34 +480,6 @@ val string_lt_trans = store_thm("string_lt_trans",
   THEN REPEAT STRIP_TAC THEN IMP_RES_TAC arithmeticTheory.LESS_TRANS 
   THEN METIS_TAC []);
 
-
-(*---------------------------------------------------------------------------
-       Translations between natural numbers and strings
- ---------------------------------------------------------------------------*)
-
-val num2str_def = Define `
-  num2str n = STRCAT (if n < 10 then "" else num2str (n DIV 10)) 
-                     [CHR (n MOD 10 + 48)]`;
-
-val str2num_def = Define `
-  (str2num "" = 0) /\
-  (str2num (STRING c s) = (ORD c - 48) * 10 ** (LENGTH s) + str2num s)`;
-
-val str2num_APPEND = prove(
-  ``!s t. str2num (STRCAT s t) = str2num s * 10 ** LENGTH t + str2num t``,
-  Induct THEN ASM_SIMP_TAC std_ss [APPEND,str2num_def,EXP_ADD,LENGTH_APPEND,
-      RIGHT_ADD_DISTRIB,MULT_ASSOC,ADD_ASSOC]);
- 
-val str2num_num2str = store_thm("str2num_num2str",
-  ``!n. (str2num (num2str n) = n) /\ EVERY isDigit (num2str n)``,
-  HO_MATCH_MP_TAC (fetch "-" "num2str_ind") THEN STRIP_TAC THEN STRIP_TAC
-  THEN `n MOD 10 < 10` by SIMP_TAC std_ss [MOD_LESS]
-  THEN `n MOD 10 + 48 < 256 /\ n MOD 10 + 48 <= 57` by DECIDE_TAC
-  THEN ONCE_REWRITE_TAC [num2str_def] THEN Cases_on `n < 10` 
-  THEN FULL_SIMP_TAC std_ss [EVERY_APPEND,EVERY_DEF,GSYM DIVISION,
-         isDigit_def,ORD_CHR_RWT,str2num_APPEND,LENGTH,str2num_def]);
-
-
 (*---------------------------------------------------------------------------
     Exportation
  ---------------------------------------------------------------------------*)
