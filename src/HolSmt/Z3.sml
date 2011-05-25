@@ -9,7 +9,9 @@ structure Z3 = struct
     case TextIO.inputLine instream of
       NONE => SolverSpec.UNKNOWN NONE
     | SOME "sat\n" => SolverSpec.SAT NONE
+    | SOME "sat\r\n" => SolverSpec.SAT NONE
     | SOME "unsat\n" => SolverSpec.UNSAT NONE
+    | SOME "unsat\r\n" => SolverSpec.UNSAT NONE
     | _ => is_sat_stream instream
 
   fun is_sat_file path =
