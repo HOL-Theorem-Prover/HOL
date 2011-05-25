@@ -1810,7 +1810,14 @@ fun pp_term (G : grammar) TyG backend = let
           (fn _ => if my_is_abs tm then pr_abs tm else fail) |||
 
           (* record forms *)
-          (fn _ => check_for_field_selection Rator Rand) |||
+          (fn _ =>
+              case oiargs of
+                [] => fail
+              | _ => let
+                  val (args, Rand) = front_last oiargs
+                in
+                  check_for_field_selection (list_mk_comb(oif,args)) Rand
+                end) |||
           (fn _ => check_for_record_update Rator Rand) |||
 
           check_for_setcomprehensions |||
