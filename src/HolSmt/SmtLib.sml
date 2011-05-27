@@ -218,6 +218,8 @@ local
     (wordsSyntax.word_sdiv_tm, apfst_fixed_width "bvsdiv"),
     (wordsSyntax.word_srem_tm, apfst_fixed_width "bvsrem"),
     (wordsSyntax.word_smod_tm, apfst_fixed_width "bvsmod"),
+    (wordsSyntax.word_div_tm, apfst_fixed_width "bvudiv"),
+    (wordsSyntax.word_mod_tm, apfst_fixed_width "bvurem"),
     (* shift operations with two bit-vector arguments; the corresponding HOL
        shift operations that take a numeral as their second argument are not
        supported in SMT-LIB *)

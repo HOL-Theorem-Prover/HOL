@@ -741,7 +741,15 @@ in
     (``~ ~ x:word32 = x``, [thm_AUTO, thm_YO, thm_Z3, thm_Z3p]),
     (``~ 0w = 0w:word32``, [sat_YO, sat_Z3, sat_Z3p]),
 
+    (* Yices does not support bit-vector division *)
     (* FIXME: Z3 2.19 prints "extract" wrongly in its proofs *)
+
+    (``x:word32 / 4w = x / 2w / 2w``, [(*thm_AUTO, thm_YO,*) thm_Z3(*, thm_Z3p*)]),
+    (``x:word32 / 6w = x / 2w / 3w``, [(*thm_AUTO, thm_YO,*) thm_Z3(*, thm_Z3p*)]),
+    (``(x:word32 = 0w) \/ (x / x = 1w)``, [(*thm_AUTO, thm_YO,*) thm_Z3(*, thm_Z3p*)]),
+    (``x:word32 // 4w = x // 2w // 2w``, [thm_AUTO, (*thm_YO,*) thm_Z3(*, thm_Z3p*)]),
+    (``x:word32 // 6w = x // 2w // 3w``, [(*thm_AUTO, thm_YO,*) thm_Z3(*, thm_Z3p*)]),
+    (``(x:word32 = 0w) \/ (x // x = 1w)``, [(*thm_AUTO, thm_YO,*) thm_Z3(*, thm_Z3p*)]),
 
     (``x:word32 << 0 = x``, [thm_AUTO, thm_YO, thm_Z3, thm_Z3p]),
     (``x:word32 << 31 = 0w``, [sat_YO, sat_Z3, sat_Z3p]),
