@@ -212,8 +212,8 @@ in
 
     (* real *)
 
-    (* FIXME: Z3 2.16 prints reals as integers in its proofs; I see no
-              way to reliably distinguish between them. *)
+    (* Z3 2.19 prints reals as integers in its proofs; I see no way to
+       reliably distinguish between them. *)
 
     (``0r = 0r``, [thm_AUTO, thm_YO, thm_Z3(*, thm_Z3p*)]),
     (``1r = 1r``, [thm_AUTO, thm_YO, thm_Z3(*, thm_Z3p*)]),
@@ -303,45 +303,27 @@ in
 
     (* int *)
 
-    (``(x:int) + 0 = x``,
-      [thm_AUTO, thm_YO, thm_Z3, thm_Z3p]),
-    (``0 + (x:int) = x``,
-      [thm_AUTO, thm_YO, thm_Z3, thm_Z3p]),
-    (``(x:int) + y = y + x``,
-      [thm_AUTO, thm_YO, thm_Z3, thm_Z3p]),
-    (``(x:int) + (y + z) = (x + y) + z``,
-      [thm_AUTO, thm_YO, thm_Z3, thm_Z3p]),
-    (``((x:int) + y = 0) = (x = 0) /\ (y = 0)``,
-      [sat_YO, sat_Z3, sat_Z3p]),
-    (``((x:int) + y = 0) = (x = ~y)``,
-      [thm_AUTO, thm_YO, thm_Z3, thm_Z3p]),
+    (``(x:int) + 0 = x``, [thm_AUTO, thm_YO, thm_Z3, thm_Z3p]),
+    (``0 + (x:int) = x``, [thm_AUTO, thm_YO, thm_Z3, thm_Z3p]),
+    (``(x:int) + y = y + x``, [thm_AUTO, thm_YO, thm_Z3, thm_Z3p]),
+    (``(x:int) + (y + z) = (x + y) + z``, [thm_AUTO, thm_YO, thm_Z3, thm_Z3p]),
+    (``((x:int) + y = 0) = (x = 0) /\ (y = 0)``, [sat_YO, sat_Z3, sat_Z3p]),
+    (``((x:int) + y = 0) = (x = ~y)``, [thm_AUTO, thm_YO, thm_Z3, thm_Z3p]),
 
-    (``(x:int) - 0 = x``,
-      [thm_AUTO, thm_YO, thm_Z3, thm_Z3p]),
+    (``(x:int) - 0 = x``, [thm_AUTO, thm_YO, thm_Z3, thm_Z3p]),
     (``(x:int) - y = y - x``, [sat_YO, sat_Z3, sat_Z3p]),
-    (``(x:int) - y - z = x - (y + z)``,
-      [thm_AUTO, thm_YO, thm_Z3, thm_Z3p]),
-    (``(x:int) <= y ==> (x - y = 0)``,
-      [sat_YO, sat_Z3, sat_Z3p]),
-    (``((x:int) - y = 0) \/ (y - x = 0)``,
-      [sat_YO, sat_Z3, sat_Z3p]),
-    (``(x:int) - y = x + ~y``,
-      [thm_AUTO, thm_YO, thm_Z3, thm_Z3p]),
+    (``(x:int) - y - z = x - (y + z)``, [thm_AUTO, thm_YO, thm_Z3, thm_Z3p]),
+    (``(x:int) <= y ==> (x - y = 0)``, [sat_YO, sat_Z3, sat_Z3p]),
+    (``((x:int) - y = 0) \/ (y - x = 0)``, [sat_YO, sat_Z3, sat_Z3p]),
+    (``(x:int) - y = x + ~y``, [thm_AUTO, thm_YO, thm_Z3, thm_Z3p]),
 
-    (``(x:int) * 0 = 0``,
-      [thm_AUTO, thm_YO, thm_Z3, thm_Z3p]),
-    (``0 * (x:int) = 0``,
-      [thm_AUTO, thm_YO, thm_Z3, thm_Z3p]),
-    (``(x:int) * 1 = x``,
-      [thm_AUTO, thm_YO, thm_Z3, thm_Z3p]),
-    (``1 * (x:int) = x``,
-      [thm_AUTO, thm_YO, thm_Z3, thm_Z3p]),
-    (``(x:int) * ~1 = ~x``,
-      [thm_AUTO, thm_YO, thm_Z3, thm_Z3p]),
-    (``~1 * (x:int) = ~x``,
-      [thm_AUTO, thm_YO, thm_Z3, thm_Z3p]),
-    (``(x:int) * 42 = 42 * x``,
-      [thm_AUTO, thm_YO, thm_Z3, thm_Z3p]),
+    (``(x:int) * 0 = 0``, [thm_AUTO, thm_YO, thm_Z3, thm_Z3p]),
+    (``0 * (x:int) = 0``, [thm_AUTO, thm_YO, thm_Z3, thm_Z3p]),
+    (``(x:int) * 1 = x``, [thm_AUTO, thm_YO, thm_Z3, thm_Z3p]),
+    (``1 * (x:int) = x``, [thm_AUTO, thm_YO, thm_Z3, thm_Z3p]),
+    (``(x:int) * ~1 = ~x``, [thm_AUTO, thm_YO, thm_Z3, thm_Z3p]),
+    (``~1 * (x:int) = ~x``, [thm_AUTO, thm_YO, thm_Z3, thm_Z3p]),
+    (``(x:int) * 42 = 42 * x``, [thm_AUTO, thm_YO, thm_Z3, thm_Z3p]),
 
     (``(~42:int) / ~42 = 1``, [thm_AUTO, thm_YO]),
     (``(~1:int) / ~42 = 0``, [thm_AUTO, thm_YO]),
@@ -366,17 +348,15 @@ in
     (``(x:int) / 1 = x``, [thm_AUTO, thm_YO]),
     (``(x:int) / ~1 = ~x``, [thm_AUTO, thm_YO]),
     (``(x:int) / 42 <= x``, [sat_YO, sat_Z3, sat_Z3p]),
-    (``(x:int) / 42 <= ABS x``, [thm_AUTO, thm_YO (*, thm_Z3, thm_Z3p*)]),
-    (``((x:int) / 42 = x) = (x = 0)``,
-      [sat_YO, sat_Z3, sat_Z3p]),
+    (``(x:int) / 42 <= ABS x``, [thm_AUTO, thm_YO(*, thm_Z3, thm_Z3p*)]),
+    (``((x:int) / 42 = x) = (x = 0)``, [sat_YO, sat_Z3, sat_Z3p]),
     (``((x:int) / 42 = x) = (x = 0) \/ (x = ~1)``, [thm_AUTO, thm_YO]),
     (``(x:int) / 0 = x``, [sat_YO, sat_Z3, sat_Z3p]),
     (``(x:int) / 0 = 0``, [sat_YO, sat_Z3, sat_Z3p]),
     (``(0:int) / 0 = 0``, [sat_YO, sat_Z3, sat_Z3p]),
     (``(0:int) / 0 = 1``, [sat_YO, sat_Z3, sat_Z3p]),
     (``(0:int) / 0 = 1 / 0``, [sat_YO, sat_Z3, sat_Z3p]),
-    (``(x:int) / 0 = x / 0``,
-      [thm_AUTO, thm_YO, thm_Z3, thm_Z3p]),
+    (``(x:int) / 0 = x / 0``, [thm_AUTO, thm_YO, thm_Z3, thm_Z3p]),
 
     (* cf. integerTheory.int_div *)
     (``(x:int) < 0 ==> (x / 1 = ~(~x / 1) + if ~x % 1 = 0 then 0 else ~1)``,
@@ -427,7 +407,7 @@ in
     (``(x:int) % 1 = x - x / 1 * 1``, [thm_AUTO, thm_YO]),
     (``(x:int) % 42 = x - x / 42 * 42``, [thm_AUTO, thm_YO]),
 
-    (``ABS (x:int) >= 0``, [thm_AUTO, thm_YO (*, thm_Z3, thm_Z3p*)]),
+    (``ABS (x:int) >= 0``, [thm_AUTO, thm_YO(*, thm_Z3, thm_Z3p*)]),
     (``(ABS (x:int) = 0) = (x = 0)``, [thm_AUTO, thm_YO(*, thm_Z3, thm_Z3p*)]),
     (``(x:int) >= 0 ==> (ABS x = x)``, [thm_AUTO, thm_YO(*, thm_Z3, thm_Z3p*)]),
     (``(x:int) <= 0 ==> (ABS x = ~x)``, [thm_AUTO, thm_YO(*, thm_Z3, thm_Z3p*)]),
@@ -459,10 +439,8 @@ in
     (``(x:real) - 0 = x``, [thm_AUTO, thm_YO]),
     (``(x:real) - y = y - x``, [sat_YO, sat_Z3, sat_Z3p]),
     (``(x:real) - y - z = x - (y + z)``, [thm_AUTO, thm_YO]),
-    (``(x:real) <= y ==> (x - y = 0)``,
-      [sat_YO, sat_Z3, sat_Z3p]),
-    (``((x:real) - y = 0) \/ (y - x = 0)``,
-      [sat_YO, sat_Z3, sat_Z3p]),
+    (``(x:real) <= y ==> (x - y = 0)``, [sat_YO, sat_Z3, sat_Z3p]),
+    (``((x:real) - y = 0) \/ (y - x = 0)``, [sat_YO, sat_Z3, sat_Z3p]),
     (``(x:real) - y = x + ~y``, [thm_AUTO, thm_YO]),
 
     (``(x:real) * 0 = 0``, [thm_AUTO, thm_YO]),
@@ -555,22 +533,15 @@ in
     (``(x:int) >= y ==> 42 * x >= 42 * y``,
       [thm_AUTO, thm_YO, thm_Z3, thm_Z3p]),
 
-    (``((x:int) < y) = (y > x)``,
-      [thm_AUTO, thm_YO, thm_Z3, thm_Z3p]),
-    (``((x:int) <= y) = (y >= x)``,
-      [thm_AUTO, thm_YO, thm_Z3, thm_Z3p]),
-    (``(x:int) < y /\ y <= z ==> x < z``,
-      [thm_AUTO, thm_YO, thm_Z3(*, thm_Z3p*)]),
-    (``(x:int) <= y /\ y <= z ==> x <= z``,
-      [thm_AUTO, thm_YO, thm_Z3(*, thm_Z3p*)]),
-    (``(x:int) > y /\ y >= z ==> x > z``,
-      [thm_AUTO, thm_YO, thm_Z3(*, thm_Z3p*)]),
-    (``(x:int) >= y /\ y >= z ==> x >= z``,
-      [thm_AUTO, thm_YO, thm_Z3(*, thm_Z3p*)]),
+    (``((x:int) < y) = (y > x)``, [thm_AUTO, thm_YO, thm_Z3, thm_Z3p]),
+    (``((x:int) <= y) = (y >= x)``, [thm_AUTO, thm_YO, thm_Z3, thm_Z3p]),
+    (``(x:int) < y /\ y <= z ==> x < z``, [thm_AUTO, thm_YO, thm_Z3(*, thm_Z3p*)]),
+    (``(x:int) <= y /\ y <= z ==> x <= z``, [thm_AUTO, thm_YO, thm_Z3(*, thm_Z3p*)]),
+    (``(x:int) > y /\ y >= z ==> x > z``, [thm_AUTO, thm_YO, thm_Z3(*, thm_Z3p*)]),
+    (``(x:int) >= y /\ y >= z ==> x >= z``, [thm_AUTO, thm_YO, thm_Z3(*, thm_Z3p*)]),
 
     (``(x:int) >= 0``, [sat_YO, sat_Z3, sat_Z3p]),
-    (``0 < (x:int) /\ x <= 1 ==> (x = 1)``,
-      [thm_AUTO, thm_YO, thm_Z3(*, thm_Z3p*)]),
+    (``0 < (x:int) /\ x <= 1 ==> (x = 1)``, [thm_AUTO, thm_YO, thm_Z3(*, thm_Z3p*)]),
 
     (* real *)
 
@@ -607,10 +578,8 @@ in
 
     (* uninterpreted functions *)
 
-    (``(x = y) ==> (f x = f y)``,
-      [thm_AUTO, thm_YO, thm_Z3, thm_Z3p]),
-    (``(x = y) ==> (f x y = f y x)``,
-      [thm_AUTO, thm_YO, thm_Z3, thm_Z3p]),
+    (``(x = y) ==> (f x = f y)``, [thm_AUTO, thm_YO, thm_Z3, thm_Z3p]),
+    (``(x = y) ==> (f x y = f y x)``, [thm_AUTO, thm_YO, thm_Z3, thm_Z3p]),
     (``(f (f x) = x) /\ (f (f (f (f (f x)))) = x) ==> (f x = x)``,
       [(*thm_AUTO,*) thm_YO, thm_Z3, thm_Z3p]),
     (``(f x = f y) ==> (x = y)``, [sat_YO, sat_Z3, sat_Z3p]),
@@ -661,8 +630,8 @@ in
 
     (* higher-order logic *)
 
-    (* FIXME: Z3 2.19 unexpectedly replaces certain implications by
-              conjunctions in its proof *)
+    (* Z3 2.19 unexpectedly replaces certain implications by conjunctions in
+       its proof *)
 
     (``(P (f x) ==> Q f) ==> P (f x) ==> Q f``,
       [thm_AUTO, thm_YO, thm_Z3(*, thm_Z3p*)]),
@@ -742,14 +711,45 @@ in
     (``~ 0w = 0w:word32``, [sat_YO, sat_Z3, sat_Z3p]),
 
     (* Yices does not support bit-vector division *)
-    (* FIXME: Z3 2.19 prints "extract" wrongly in its proofs *)
+    (* Z3 2.19 prints "extract" wrongly in its proofs *)
 
     (``x:word32 / 4w = x / 2w / 2w``, [(*thm_AUTO, thm_YO,*) thm_Z3(*, thm_Z3p*)]),
     (``x:word32 / 6w = x / 2w / 3w``, [(*thm_AUTO, thm_YO,*) thm_Z3(*, thm_Z3p*)]),
-    (``(x:word32 = 0w) \/ (x / x = 1w)``, [(*thm_AUTO, thm_YO,*) thm_Z3(*, thm_Z3p*)]),
+    (``x:word32 / x = 1w``, [sat_YO, sat_Z3, sat_Z3p]),
+    (``x:word32 <> 0w ==> (x / x = 1w)``, [(*thm_AUTO, thm_YO,*) thm_Z3(*, thm_Z3p*)]),
+    (``y:word8 <> 0w ==> (x / y = -x / -y)``, [sat_YO, sat_Z3, sat_Z3p]),
+    (``y:word8 <> 0w ==> (x / y = -(-x / y))``, [sat_YO, sat_Z3, sat_Z3p]),
+    (``y:word8 <> 0w ==> (x / y = -(x / -y))``, [sat_YO, sat_Z3, sat_Z3p]),
+    (``x:word8 <> 0x80w /\ y <> 0w ==> (x / y = -x / -y)``,
+      [(*thm_AUTO, thm_YO,*) thm_Z3(*, thm_Z3p*)]),
+    (``x:word8 <> 0x80w /\ y <> 0w ==> (x / y = -(-x / y))``,
+      [(*thm_AUTO, thm_YO,*) thm_Z3(*, thm_Z3p*)]),
+    (``x:word8 <> 0x80w /\ y <> 0w ==> (x / y = -(x / -y))``,
+      [(*thm_AUTO, thm_YO,*) thm_Z3(*, thm_Z3p*)]),
+
     (``x:word32 // 4w = x // 2w // 2w``, [thm_AUTO, (*thm_YO,*) thm_Z3(*, thm_Z3p*)]),
     (``x:word32 // 6w = x // 2w // 3w``, [(*thm_AUTO, thm_YO,*) thm_Z3(*, thm_Z3p*)]),
-    (``(x:word32 = 0w) \/ (x // x = 1w)``, [(*thm_AUTO, thm_YO,*) thm_Z3(*, thm_Z3p*)]),
+    (``x:word32 // x = 1w``, [sat_YO, sat_Z3, sat_Z3p]),
+    (``x:word32 <> 0w ==> (x // x = 1w)``, [(*thm_AUTO, thm_YO,*) thm_Z3(*, thm_Z3p*)]),
+
+    (``y:word8 <> 0w ==> (x = x // y * y + word_mod x y)``,
+      [(*thm_AUTO, thm_YO,*) thm_Z3(*, thm_Z3p*)]),
+    (``y:word8 <> 0w ==> word_mod x y <+ y``,
+      [(*thm_AUTO, thm_YO,*) thm_Z3(*, thm_Z3p*)]),
+
+    (``y:word8 <> 0w ==> (x = x / y * y + word_srem x y)``,
+      [(*thm_AUTO, thm_YO,*) thm_Z3(*, thm_Z3p*)]),
+
+    (* Z3 2.19 does not handle "bvsrem ... bv0" correctly *)
+
+    (``x:word8 < 0w /\ y < 0w  ==> (word_srem x y = -word_mod (-x) (-y))``,
+      [(*thm_AUTO, thm_YO, thm_Z3, thm_Z3p*)]),
+    (``x:word8 < 0w /\ y >= 0w ==> (word_srem x y = -word_mod (-x) y)``,
+      [(*thm_AUTO, thm_YO, thm_Z3, thm_Z3p*)]),
+    (``x:word8 >= 0w /\ y < 0w ==> (word_srem x y = word_mod x (-y))``,
+      [(*thm_AUTO, thm_YO, thm_Z3, thm_Z3p*)]),
+    (``x:word8 >= 0w /\ y >= 0w ==> (word_srem x y = word_mod x y)``,
+      [(*thm_AUTO, thm_YO, thm_Z3, thm_Z3p*)]),
 
     (``x:word32 << 0 = x``, [thm_AUTO, thm_YO, thm_Z3, thm_Z3p]),
     (``x:word32 << 31 = 0w``, [sat_YO, sat_Z3, sat_Z3p]),
