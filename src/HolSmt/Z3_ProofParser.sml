@@ -175,9 +175,16 @@ local
     (* bvudiv0 t *)
     ("bvudiv0", SmtLib_Theories.K_zero_one (fn t =>
       let
-        val zero = wordsSyntax.mk_n2w (numSyntax.zero_tm, Term.type_of t)
+        val zero = wordsSyntax.mk_n2w (numSyntax.zero_tm, wordsSyntax.dim_of t)
       in
         wordsSyntax.mk_word_div (t, zero)
+      end)),
+    (* bvurem0 t *)
+    ("bvurem0", SmtLib_Theories.K_zero_one (fn t =>
+      let
+        val zero = wordsSyntax.mk_n2w (numSyntax.zero_tm, wordsSyntax.dim_of t)
+      in
+        wordsSyntax.mk_word_mod (t, zero)
       end)),
     (* array_extArray[m:n] t1 t2 *)
     ("_", SmtLib_Theories.zero_two (fn token =>
