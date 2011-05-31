@@ -96,7 +96,16 @@ end
 val _ = app tpp ["P \"a\" /\\ Q",
                  "P (STRCAT a \"b\") /\\ Q",
                  "#\"a\"",
-                 "\"(*\""]
+                 "\"(*\"",
+                 "\"*)\""]
+
+val _ = set_trace "paranoid string literal printing" 1
+
+val t = ``"*)"``
+val _ = tprint "Paranoid printing of ``\"*)\"``"
+val s = term_to_string t
+val _ = if s = "\"\\042)\"" then print "OK\n"
+        else (print "FAILED!\n"; Process.exit Process.failure)
 
 
 val _ = OS.Process.exit OS.Process.success

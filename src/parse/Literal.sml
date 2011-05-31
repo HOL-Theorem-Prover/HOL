@@ -161,6 +161,38 @@ fun dest_string_lit tm =
 
 val is_string_lit = can dest_string_lit
 
+val paranoid_stringlitpp = ref false
+val _ = Feedback.register_btrace
+            ("paranoid string literal printing", paranoid_stringlitpp)
+fun string_literalpp s =
+    if not (!paranoid_stringlitpp) then Lib.mlquote s
+    else let
+        val limit = size s
+        fun sub i = String.sub(s,i)
+        fun extract(i,c) = String.extract(s,i,c)
+        val concat = String.concat
+        val toString = String.toString
+        fun recurse A lastc start i =
+            if i >= limit then concat (List.rev("\"" :: extract(start,NONE)::A))
+            else
+              case (lastc, sub i) of
+                (#"(", #"*") => let
+                  val p = toString (extract(start,SOME (i - start - 1))) ^ "(\\042"
+                in
+                  recurse (p::A) #" " (i + 1) (i + 1)
+                end
+              | (#"*", #")") => let
+                  val p = toString (extract(start,SOME(i - start - 1))) ^ "\\042)"
+                in
+                  recurse (p::A) #" " (i + 1) (i + 1)
+                end
+              | (_, c) => recurse A c start (i + 1)
+      in
+        recurse ["\""] #" " 0 0
+      end
+
+
+
 (*---------------------------------------------------------------------------*)
 (* Redefine dest_string_lit to handle cases where c in CHR (c) is either a   *)
 (* "bare" numeral or of the form (NUMERAL ...). Used in ML generation.       *)

@@ -94,6 +94,7 @@ src/TeX
 !examples/RSA
 src/sort
 src/string
+!src/string/theorytesting
 !examples/STE
 src/res_quan/src
 src/quotient/src

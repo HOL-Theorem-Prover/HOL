@@ -1785,7 +1785,7 @@ fun pp_term (G : grammar) TyG backend = let
           (* strings *)
           (case total Literal.dest_string_lit tm of
              NONE => fail
-           | SOME s => add_string (Lib.mlquote s)) |||
+           | SOME s => add_string (Literal.string_literalpp s)) |||
 
           (* characters *)
           (fn _ => case total Literal.dest_char_lit tm of
