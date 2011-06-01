@@ -53,7 +53,7 @@ local
     ("bvsub", K_zero_two wordsSyntax.mk_word_sub),
     ("bvsdiv", K_zero_two wordsSyntax.mk_word_sdiv),
     ("bvsrem", K_zero_two wordsSyntax.mk_word_srem),
-    (* semantic mismatch: ("bvsmod", K_zero_two wordsSyntax.mk_word_smod),*)
+    ("bvsmod", K_zero_two wordsSyntax.mk_word_smod),
     ("bvashr", K_zero_two wordsSyntax.mk_word_asr_bv),
     ("repeat", K_one_one
       (Lib.curry wordsSyntax.mk_word_replicate o numSyntax.mk_numeral)),

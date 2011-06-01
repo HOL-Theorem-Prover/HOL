@@ -743,12 +743,21 @@ in
     (* Z3 2.19 does not handle "bvsrem ... bv0" correctly *)
 
     (``x:word8 < 0w /\ y < 0w  ==> (word_srem x y = -word_mod (-x) (-y))``,
-      [(*thm_AUTO, thm_YO, thm_Z3, thm_Z3p*)]),
+      [(*thm_AUTO, thm_YO,*)thm_Z3(*, thm_Z3p*)]),
     (``x:word8 < 0w /\ y >= 0w ==> (word_srem x y = -word_mod (-x) y)``,
       [(*thm_AUTO, thm_YO, thm_Z3, thm_Z3p*)]),
     (``x:word8 >= 0w /\ y < 0w ==> (word_srem x y = word_mod x (-y))``,
-      [(*thm_AUTO, thm_YO, thm_Z3, thm_Z3p*)]),
+      [(*thm_AUTO, thm_YO,*)thm_Z3(*, thm_Z3p*)]),
     (``x:word8 >= 0w /\ y >= 0w ==> (word_srem x y = word_mod x y)``,
+      [(*thm_AUTO, thm_YO, thm_Z3, thm_Z3p*)]),
+
+    (``x:word8 < 0w /\ y < 0w  ==> (word_smod x y = -word_mod (-x) (-y))``,
+      [(*thm_AUTO, thm_YO,*)thm_Z3(*, thm_Z3p*)]),
+    (``x:word8 < 0w /\ y >= 0w ==> (word_smod x y = -word_mod (-x) y + y)``,
+      [(*thm_AUTO, thm_YO, thm_Z3, thm_Z3p*)]),
+    (``x:word8 >= 0w /\ y < 0w ==> (word_smod x y = word_mod x (-y) + y)``,
+      [(*thm_AUTO, thm_YO,*)thm_Z3(*, thm_Z3p*)]),
+    (``x:word8 >= 0w /\ y >= 0w ==> (word_smod x y = word_mod x y)``,
       [(*thm_AUTO, thm_YO, thm_Z3, thm_Z3p*)]),
 
     (``x:word32 << 0 = x``, [thm_AUTO, thm_YO, thm_Z3, thm_Z3p]),
