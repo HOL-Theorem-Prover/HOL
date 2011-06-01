@@ -311,6 +311,11 @@ local
       val name = ty_prefix ^ Int.toString (Redblackmap.numItems tydict)
       val decl = "(declare-sort " ^ name ^ " 0)\n"
     in
+      if !Library.trace > 0 andalso Type.is_type ty then
+        Feedback.HOL_WARNING "SmtLib" "translate_type"
+          ("uninterpreted type " ^ Hol_pp.type_to_string ty)
+      else
+        ();
       if !Library.trace > 2 then
         Feedback.HOL_MESG ("HolSmtLib (SmtLib): inventing name '" ^ name ^
           "' for HOL type '" ^ Hol_pp.type_to_string ty ^ "'")
@@ -453,6 +458,11 @@ local
             val (tydict, (rngdecls, rngty)) = translate_type (tydict, rngty)
             (* invent new name for 'rator' *)
             val name = tm_prefix ^ Int.toString (Redblackmap.numItems tmdict)
+            val _ = if !Library.trace > 0 andalso Term.is_const rator then
+              Feedback.HOL_WARNING "SmtLib" "translate_term"
+                ("uninterpreted constant " ^ Hol_pp.term_to_string rator)
+              else
+                ();
             val _ = if !Library.trace > 2 then
                 Feedback.HOL_MESG ("HolSmtLib (SmtLib): inventing name '" ^
                   name ^ "' for HOL term '" ^ Hol_pp.term_to_string rator ^
