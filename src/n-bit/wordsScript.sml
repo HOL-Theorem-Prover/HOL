@@ -319,10 +319,10 @@ val word_smod_def = Define`
       if word_msb b then
         word_2comp (word_mod (word_2comp a) (word_2comp b))
       else
-        word_mod (word_2comp a) b
+        word_add (word_2comp (word_mod (word_2comp a) b)) b
     else
       if word_msb b then
-        word_2comp (word_mod a (word_2comp b))
+        word_add (word_mod a (word_2comp b)) b
       else
         word_mod a b`;
 
