@@ -273,26 +273,7 @@ fun BOUNDED_EXISTS_CONV cnv M =
     Picks an arbitrary LEAST-subterm if there are multiple such.
    ---------------------------------------------------------------------- *)
 
-fun LEAST_ELIM_TAC (asl, w) = let
-  val least_terms = find_terms numSyntax.is_least w
-  val tbc = TRY_CONV BETA_CONV
-  fun doit t =
-    if free_in t w then
-      CONV_TAC (UNBETA_CONV t) THEN
-      MATCH_MP_TAC whileTheory.LEAST_ELIM THEN
-      CONV_TAC
-        (FORK_CONV
-           (BINDER_CONV tbc, (* ?n. P n *)
-            BINDER_CONV      (* !n. (!m. m < n ==> ~P m) /\ P n ==> Q n *)
-              (FORK_CONV
-                 (FORK_CONV
-                    (BINDER_CONV (RAND_CONV (RAND_CONV tbc)), (* !m.... *)
-                     tbc), (* P n *)
-                    tbc))))
-    else NO_TAC
-in
-  FIRST (map doit least_terms)
-end (asl, w)
+val LEAST_ELIM_TAC = DEEP_INTRO_TAC whileTheory.LEAST_ELIM
 
 (*---------------------------------------------------------------------------
     Simplification set for numbers (and booleans).

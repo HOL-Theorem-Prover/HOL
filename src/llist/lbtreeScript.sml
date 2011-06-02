@@ -612,21 +612,15 @@ val mindepth_def = Define`
 
 open numLib
 (* following tactic is used twice in theorem below - yerk *)
+val lelim = REWRITE_RULE [GSYM AND_IMP_INTRO] whileTheory.LEAST_ELIM
 val min_tac =
-    LEAST_ELIM_TAC THEN CONJ_TAC THENL [
-      SRW_TAC [][] THEN1 METIS_TAC [mem_depth],
-      Q.X_GEN_TAC `t2d` THEN SRW_TAC [][]
-    ] THEN
-    LEAST_ELIM_TAC THEN CONJ_TAC THENL [
-      SRW_TAC [][] THEN1 METIS_TAC [mem_depth],
-      Q.X_GEN_TAC `t1d` THEN SRW_TAC [][]
-    ] THEN
-    LEAST_ELIM_TAC THEN CONJ_TAC THENL [
-      SRW_TAC [][] THEN1 METIS_TAC [mem_thm, mem_depth],
-      SRW_TAC [][]
-    ] THEN
-    POP_ASSUM MP_TAC THEN ONCE_REWRITE_TAC [depth_cases] THEN
-    SRW_TAC [][] THENL [
+    SRW_TAC [ETA_ss][] THEN
+    IMP_RES_THEN (fn th => th |> MATCH_MP lelim |> DEEP_INTRO_TAC) mem_depth THEN
+    Q.X_GEN_TAC `t1d` THEN NTAC 2 STRIP_TAC THEN
+    Q.X_GEN_TAC `t2d` THEN NTAC 2 STRIP_TAC THEN
+    LEAST_ELIM_TAC THEN
+    ONCE_REWRITE_TAC [depth_cases] THEN
+    SRW_TAC [][EXISTS_OR_THM] THEN1 METIS_TAC [] THENL[
       `m = t1d`
          by (SPOSE_NOT_THEN ASSUME_TAC THEN
              `m < t1d \/ t1d < m` by DECIDE_TAC THENL [
@@ -673,7 +667,8 @@ val mindepth_thm = store_thm(
     min_tac,
     min_tac,
 
-    LEAST_ELIM_TAC THEN SRW_TAC [][] THEN1 METIS_TAC [mem_depth] THEN
+    SRW_TAC [ETA_ss][] THEN
+    IMP_RES_THEN (DEEP_INTRO_TAC o MATCH_MP lelim) mem_depth THEN SRW_TAC [][] THEN
     LEAST_ELIM_TAC THEN SRW_TAC [][]
        THEN1 METIS_TAC [mem_depth, depth_rules] THEN
     POP_ASSUM MP_TAC THEN
@@ -683,7 +678,8 @@ val mindepth_thm = store_thm(
     REPEAT STRIP_TAC THEN METIS_TAC [DECIDE ``SUC x < SUC y = x < y``,
                                      depth_rules],
 
-    LEAST_ELIM_TAC THEN SRW_TAC [][] THEN1 METIS_TAC [mem_depth] THEN
+    SRW_TAC [ETA_ss][] THEN
+    IMP_RES_THEN (DEEP_INTRO_TAC o MATCH_MP lelim) mem_depth THEN SRW_TAC [][] THEN
     LEAST_ELIM_TAC THEN SRW_TAC [][]
        THEN1 METIS_TAC [mem_depth, depth_rules] THEN
     POP_ASSUM MP_TAC THEN

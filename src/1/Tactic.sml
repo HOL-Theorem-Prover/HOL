@@ -897,16 +897,96 @@ fun SUFF_TAC tm (al, c) =
 fun KNOW_TAC tm = REVERSE (SUFF_TAC tm);
 
 (* ----------------------------------------------------------------------
+    DEEP_INTROk_TAC : thm -> tactic -> tactic
+
+
+   ---------------------------------------------------------------------- *)
+
+fun gvarify th = let
+  val th = SPEC_ALL th
+  val fvs = FVL [concl th] empty_tmset
+  val hfvs = hyp_frees th
+  val true_frees = HOLset.difference(fvs,hfvs)
+  fun foldthis (fv, acc) = (fv |-> genvar (type_of fv)) :: acc
+in
+  INST (HOLset.foldl foldthis [] true_frees) th
+end
+
+(* Finds a sub-term satisfying P and applies k to it.  If this raises a HOL_ERR,
+   keeps going to find another sub-term.  P is given the stack of 'governing'
+   bound variables. Searches top-down and left-to-right. If nothing is found that
+   works, return NONE. *)
+datatype 'a exn_trap = OK of 'a | EXN of exn
+datatype action = SEARCH of term | POP
+fun trap f x = OK (f x) handle e => EXN e
+fun bvfind_term P k t = let
+  fun search bvs actions =
+      case actions of
+        [] => NONE
+      | POP :: alist => search (tl bvs) alist
+      | SEARCH t :: alist => let
+        in
+          if P (bvs, t) then
+            case trap k t of
+              OK result => SOME result
+            | EXN (HOL_ERR _) => subterm bvs alist t
+            | EXN e => raise e
+          else subterm bvs alist t
+        end
+  and subterm bvs alist t =
+      case dest_term t of
+        COMB(t1, t2) => search bvs (SEARCH t1 :: SEARCH t2 :: alist)
+      | LAMB(bv, t) => search (bv::bvs) (SEARCH t :: POP :: alist)
+      | _ => search bvs alist
+in
+  search [] [SEARCH t]
+end
+
+fun IMP2AND_CONV t =
+    if is_imp t then
+      (RAND_CONV IMP2AND_CONV THENC
+       TRY_CONV (REWR_CONV AND_IMP_INTRO)) t
+    else ALL_CONV t
+
+fun DEEP_INTROk_TAC th tac (asl, g) = let
+  val th = th |> CONV_RULE (TOP_DEPTH_CONV RIGHT_IMP_FORALL_CONV THENC
+                            STRIP_QUANT_CONV IMP2AND_CONV)
+              |> GEN_ALL
+  val hyfrees = hyp_frees th
+  val hytyvars = hyp_tyvars th
+  val (_,Ppattern) = th |> concl |> strip_forall |> #2 |> dest_imp
+  val (Pvar, pattern) = dest_comb Ppattern
+  val _ = is_var Pvar orelse raise ERR "DEEP_INTROk_TAC"
+                                   "Conclusion not of form ``var (pattern)``"
+  fun test(bvs,t) = let
+    val ((theta_tms, tmids),_) =
+        raw_match (HOLset.listItems hytyvars) hyfrees pattern t ([],[])
+    val bv_set = HOLset.fromList Term.compare bvs
+    fun testtheta {redex,residue} = let
+      val rfrees = FVL [residue] empty_tmset
+    in
+      HOLset.isEmpty(HOLset.intersection(rfrees,bv_set))
+    end
+  in
+    List.all testtheta theta_tms andalso
+    HOLset.isEmpty(HOLset.intersection(bv_set, tmids))
+  end handle HOL_ERR _ (* if match fails *) => false
+  fun continuation subt =
+      (CONV_TAC (UNBETA_CONV subt) THEN
+       MATCH_MP_TAC th THEN BETA_TAC THEN tac) (asl, g)
+in
+  case bvfind_term test continuation g of
+    SOME result => result
+  | NONE => raise ERR "DEEP_INTROk_TAC" "No matching sub-terms"
+end
+
+fun DEEP_INTRO_TAC th = DEEP_INTROk_TAC th ALL_TAC
+
+(* ----------------------------------------------------------------------
     SELECT_ELIM_TAC
       eliminates a select term from the goal.
    ---------------------------------------------------------------------- *)
 
-fun SELECT_ELIM_TAC (g as (asl, w)) = let
-  val t = find_term is_select w
-in
-  CONV_TAC (UNBETA_CONV t) THEN
-  MATCH_MP_TAC SELECT_ELIM_THM THEN BETA_TAC
-end g
-
+val SELECT_ELIM_TAC = DEEP_INTRO_TAC SELECT_ELIM_THM
 
 end; (* Tactic *)
