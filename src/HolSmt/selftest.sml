@@ -851,10 +851,15 @@ in
     (``(x:word2 = y) = (x ' 0 = y ' 0) /\ (x ' 1 = y ' 1)``,
       [thm_AUTO, thm_YO(*, thm_Z3, thm_Z3p*)]),
 
-    (``0w:word32 = w2w (0w:word16)``, [thm_AUTO, thm_YO(*, thm_Z3, thm_Z3p*)]),
-    (``0w:word32 = w2w (0w:word32)``, [thm_AUTO, thm_YO(*, thm_Z3, thm_Z3p*)]),
+    (``0w:word32 = w2w (0w:word16)``, [thm_AUTO, thm_YO, thm_Z3(*, thm_Z3p*)]),
+    (``0w:word32 = w2w (0w:word32)``, [thm_AUTO, thm_YO, thm_Z3(*, thm_Z3p*)]),
     (``0w:word32 = w2w (0w:word64)``, [thm_AUTO, thm_YO(*, thm_Z3, thm_Z3p*)]),
-    (``x:word32 = w2w x``, [thm_AUTO, thm_YO(*, thm_Z3, thm_Z3p*)]),
+    (``x:word32 = w2w x``, [thm_AUTO, thm_YO, thm_Z3(*, thm_Z3p*)]),
+
+    (``0w:word32 = sw2sw (0w:word16)``, [thm_AUTO, thm_YO, thm_Z3(*, thm_Z3p*)]),
+    (``0w:word32 = sw2sw (0w:word32)``, [thm_AUTO, thm_YO, thm_Z3(*, thm_Z3p*)]),
+    (``0w:word32 = sw2sw (0w:word64)``, [thm_AUTO, thm_YO(*, thm_Z3, thm_Z3p*)]),
+    (``x:word32 = sw2sw x``, [thm_AUTO, thm_YO, thm_Z3(*, thm_Z3p*)]),
 
     (``(x:word32) + x = x``, [sat_YO, sat_Z3, sat_Z3p]),
     (``(x:word32) + y = y + x``, [thm_AUTO, thm_YO, thm_Z3, thm_Z3p]),
@@ -979,10 +984,10 @@ in
       [thm_AUTO, thm_YO(*, thm_Z3, thm_Z3p*)]),
 
     (* The Yices translation currently rejects polymorphic-width bit
-       vectors; the SMT-LIB translation treats their type - and
-       operations on them - as uninterpreted. *)
+       vectors; the SMT-LIB translation treats their type -- and
+       operations on them -- as uninterpreted. *)
 
-    (``x <=+ x``, [thm_AUTO, (*sat_YO,*) sat_Z3, sat_Z3p]),
+    (``x <=+ x``, [thm_AUTO(*, thm_YO, thm_Z3, thm_Z3p*)]),
 
     (* data types: constructors *)
 

@@ -250,15 +250,49 @@ local
         end) ts),
 (* TODO
     fcp_index
-
-    ("zero_extend", K_one_one (fn n => fn t => wordsSyntax.w2w (t,
-      fcpLib.index_type
-        (Arbnum.+ (fcpLib.index_to_num (wordsSyntax.dim_of t), n))))),
-
-    ("sign_extend", K_one_one (fn n => fn t => wordsSyntax.sw2sw (t,
-      fcpLib.index_type
-        (Arbnum.+ (fcpLib.index_to_num (wordsSyntax.dim_of t), n))))),
 *)
+    (wordsSyntax.w2w_tm, fn (t, ts) =>
+      SmtLib_Theories.one_arg (fn w =>
+        let
+          (* make sure that the result in HOL is at least as long as 'w' *)
+          val dim = fcpSyntax.dest_numeric_type (wordsSyntax.dim_of w)
+          val rngty = Lib.snd (boolSyntax.strip_fun (Term.type_of t))
+          val rngdim = fcpSyntax.dest_numeric_type
+            (wordsSyntax.dest_word_type rngty)
+          val _ = if Arbnum.>= (rngdim, dim) then
+              ()
+            else (
+              if !Library.trace > 0 then
+                WARNING "translate_term" "w2w: result type too short"
+              else
+                ();
+              raise ERR "<builtin_symbols.w2w_tm>" "result type too short"
+            )
+          val n = Arbnum.- (rngdim, dim)
+        in
+          ("(_ zero_extend " ^ Arbnum.toString n ^ ")", [w])
+        end) ts),
+    (wordsSyntax.sw2sw_tm, fn (t, ts) =>
+      SmtLib_Theories.one_arg (fn w =>
+        let
+          (* make sure that the result in HOL is at least as long as 'w' *)
+          val dim = fcpSyntax.dest_numeric_type (wordsSyntax.dim_of w)
+          val rngty = Lib.snd (boolSyntax.strip_fun (Term.type_of t))
+          val rngdim = fcpSyntax.dest_numeric_type
+            (wordsSyntax.dest_word_type rngty)
+          val _ = if Arbnum.>= (rngdim, dim) then
+              ()
+            else (
+              if !Library.trace > 0 then
+                WARNING "translate_term" "sw2sw: result type too short"
+              else
+                ();
+              raise ERR "<builtin_symbols.sw2sw_tm>" "result type too short"
+            )
+          val n = Arbnum.- (rngdim, dim)
+        in
+          ("(_ sign_extend " ^ Arbnum.toString n ^ ")", [w])
+        end) ts),
     (* rotation by a numeral; the corresponding HOL rotation operations that
        take two bit-vector arguments are not supported in SMT-LIB *)
     (wordsSyntax.word_rol_tm, fn (t, ts) =>
