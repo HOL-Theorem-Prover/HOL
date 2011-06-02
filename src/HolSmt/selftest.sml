@@ -849,7 +849,7 @@ in
       [thm_AUTO, thm_YO(*, thm_Z3, thm_Z3p*)]),
 
     (``(x:word2 = y) = (x ' 0 = y ' 0) /\ (x ' 1 = y ' 1)``,
-      [thm_AUTO, thm_YO(*, thm_Z3, thm_Z3p*)]),
+      [thm_AUTO, thm_YO, thm_Z3(*, thm_Z3p*)]),
 
     (``0w:word32 = w2w (0w:word16)``, [thm_AUTO, thm_YO, thm_Z3(*, thm_Z3p*)]),
     (``0w:word32 = w2w (0w:word32)``, [thm_AUTO, thm_YO, thm_Z3(*, thm_Z3p*)]),

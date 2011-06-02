@@ -248,9 +248,6 @@ local
         in
           ("(_ repeat " ^ Arbnum.toString n ^ ")", [w])
         end) ts),
-(* TODO
-    fcp_index
-*)
     (wordsSyntax.w2w_tm, fn (t, ts) =>
       SmtLib_Theories.one_arg (fn w =>
         let
@@ -569,6 +566,9 @@ in
       open Tactical simpLib
       val INT_ABS = intLib.ARITH_PROVE
         ``!x. ABS (x:int) = if x < 0i then 0i - x else x``
+      val WORD_BIT_EXTRACT = SIMP_PROVE (bossLib.std_ss ++ wordsLib.WORD_BIT_EQ_ss)
+        [wordsLib.WORD_DECIDE ``1w :word1 ' 0``]
+        ``!w:'a word i. i < dimindex (:'a) ==> (w ' i = ((i >< i) w = 1w:word1))``
       val WORD_SHIFT_BV = SIMP_PROVE bossLib.bool_ss
           [wordsTheory.word_shift_bv]
         ``(!w:'a word n. n < dimword (:'a) ==> (w << n = w <<~ n2w n)) /\
@@ -582,7 +582,7 @@ in
           integerTheory.INT_MAX, INT_ABS, wordsTheory.word_rol_bv_def,
           wordsTheory.word_ror_bv_def, wordsTheory.w2n_n2w] THEN
       SIMP_TAC (pureSimps.pure_ss ++ numSimps.REDUCE_ss ++ wordsLib.SIZES_ss)
-        [WORD_SHIFT_BV] THEN
+        [WORD_BIT_EXTRACT, WORD_SHIFT_BV] THEN
       Library.SET_SIMP_TAC THEN
       Tactic.BETA_TAC
     end
