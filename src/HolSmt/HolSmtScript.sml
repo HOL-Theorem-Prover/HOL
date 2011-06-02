@@ -13,9 +13,7 @@ struct
   val A = intLib.ARITH_PROVE
   val R = realLib.REAL_ARITH
   val W = wordsLib.WORD_DECIDE
-  val B = fn t => Tactical.prove (t, blastLib.BBLAST_TAC)
-
-  (*TODO*) fun X t = Thm.mk_thm ([], t)
+  val B = blastLib.BBLAST_PROVE
 
   (* simplify 't' using 'thms', then prove the simplified term using
      'TAUT_PROVE' *)
@@ -518,7 +516,11 @@ struct
     ``(0w:word32 = 0xFFFFFFFFw * sw2sw (x :word8)) ==> ~(x ' 1 <=> ~(x ' 0))``)
   val _ = s ("t033", B ``(0w:word32 = 0xFFFFFFFFw * sw2sw (x :word8)) ==>
       ~(x ' 2 <=> ~(x ' 0) /\ ~(x ' 1))``)
-  val _ = s ("t034", X ``(1w + (x :'a word) = y) ==> x ' 0 ==> ~(y ' 0)``)
+  val _ = s ("t034",
+    bossLib.METIS_PROVE [simpLib.SIMP_PROVE bossLib.bool_ss
+        [wordsTheory.WORD_ADD_BIT0, wordsLib.WORD_DECIDE ``1w :'a word ' 0``]
+        ``x ' 0 ==> ~(1w + (x :'a word)) ' 0``]
+      ``(1w + (x :'a word) = y) ==> x ' 0 ==> ~(y ' 0)``)
   val _ = s ("t035", S ``(1w = x :word1) \/ (0 >< 0) x <> (1w :word1)``)
 
   (* used to prove hypotheses of other proforma theorems (recursively) *)
