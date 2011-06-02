@@ -912,36 +912,6 @@ in
   INST (HOLset.foldl foldthis [] true_frees) th
 end
 
-(* Finds a sub-term satisfying P and applies k to it.  If this raises a HOL_ERR,
-   keeps going to find another sub-term.  P is given the stack of 'governing'
-   bound variables. Searches top-down and left-to-right. If nothing is found that
-   works, return NONE. *)
-datatype 'a exn_trap = OK of 'a | EXN of exn
-datatype action = SEARCH of term | POP
-fun trap f x = OK (f x) handle e => EXN e
-fun bvfind_term P k t = let
-  fun search bvs actions =
-      case actions of
-        [] => NONE
-      | POP :: alist => search (tl bvs) alist
-      | SEARCH t :: alist => let
-        in
-          if P (bvs, t) then
-            case trap k t of
-              OK result => SOME result
-            | EXN (HOL_ERR _) => subterm bvs alist t
-            | EXN e => raise e
-          else subterm bvs alist t
-        end
-  and subterm bvs alist t =
-      case dest_term t of
-        COMB(t1, t2) => search bvs (SEARCH t1 :: SEARCH t2 :: alist)
-      | LAMB(bv, t) => search (bv::bvs) (SEARCH t :: POP :: alist)
-      | _ => search bvs alist
-in
-  search [] [SEARCH t]
-end
-
 fun IMP2AND_CONV t =
     if is_imp t then
       (RAND_CONV IMP2AND_CONV THENC
@@ -975,7 +945,7 @@ fun DEEP_INTROk_TAC th tac (asl, g) = let
       (CONV_TAC (UNBETA_CONV subt) THEN
        MATCH_MP_TAC th THEN BETA_TAC THEN tac) (asl, g)
 in
-  case bvfind_term test continuation g of
+  case bvk_find_term test continuation g of
     SOME result => result
   | NONE => raise ERR "DEEP_INTROk_TAC" "No matching sub-terms"
 end

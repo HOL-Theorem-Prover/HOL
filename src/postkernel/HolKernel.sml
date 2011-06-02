@@ -194,6 +194,54 @@ fun find_term P =
  in find_tm
  end;
 
+(* ----------------------------------------------------------------------
+    bvk_find_term :
+     (term list * term -> bool) -> (term -> 'a) -> term -> 'a option
+
+    [bvk_find_term P k tm] searches tm for a sub-term satisfying P and
+    calls the continuation k on the first that it finds.  If k
+    succeeds on this sub-term, the result is wrapped in SOME.  If k
+    raises a HOL_ERR exception, control returns to bvk_find_term,
+    which continues to look for a sub-term satisfying P.  Other
+    exceptions are returned to the caller. If there is no sub-term
+    that both satisfies P and which k operates on successfully, the
+    result is NONE.
+
+    The search order is top-down, left-to-right (i.e., rators of combs
+    are examined before rands).
+
+    As with find_term, P should be total.  In addition, P is given not
+    just the sub-term of interest, but also the stack of bound
+    variables that have scope over the sub-term, with the innermost
+    bound variables appearing earlier in the list.
+   ---------------------------------------------------------------------- *)
+
+local
+datatype action = SEARCH of term | POP
+in
+fun bvk_find_term P k t = let
+  fun search bvs actions =
+      case actions of
+        [] => NONE
+      | POP :: alist => search (tl bvs) alist
+      | SEARCH t :: alist => let
+        in
+          if P (bvs, t) then
+            SOME (k t) handle HOL_ERR _ => subterm bvs alist t
+          else subterm bvs alist t
+        end
+  and subterm bvs alist t =
+      case dest_term t of
+        COMB(t1, t2) => search bvs (SEARCH t1 :: SEARCH t2 :: alist)
+      | LAMB(bv, t) => search (bv::bvs) (SEARCH t :: POP :: alist)
+      | _ => search bvs alist
+in
+  search [] [SEARCH t]
+end
+end (* local *)
+
+
+
 (*---------------------------------------------------------------------------
  * find_terms: (term -> bool) -> term -> term list
  *
