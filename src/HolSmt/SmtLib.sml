@@ -312,7 +312,7 @@ local
       val decl = "(declare-sort " ^ name ^ " 0)\n"
     in
       if !Library.trace > 0 andalso Type.is_type ty then
-        Feedback.HOL_WARNING "SmtLib" "translate_type"
+        WARNING "translate_type"
           ("uninterpreted type " ^ Hol_pp.type_to_string ty)
       else
         ();
@@ -459,7 +459,7 @@ local
             (* invent new name for 'rator' *)
             val name = tm_prefix ^ Int.toString (Redblackmap.numItems tmdict)
             val _ = if !Library.trace > 0 andalso Term.is_const rator then
-              Feedback.HOL_WARNING "SmtLib" "translate_term"
+              WARNING "translate_term"
                 ("uninterpreted constant " ^ Hol_pp.term_to_string rator)
               else
                 ();
