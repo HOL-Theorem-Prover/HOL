@@ -31,6 +31,28 @@ val initial_unique = Q.store_thm(
 `∀c x y. is_category c ∧ is_initial c x ∧ is_initial c y ⇒ uiso_objs c x y`,
 metis_tac [terminal_unique,is_initial_def,is_category_op_cat,op_cat_uiso_objs]);
 
+val is_terminal_cat_iso = Q.store_thm(
+"is_terminal_cat_iso", (* actually should work for just an equivalence *)
+`∀f c d x. cat_iso f ∧ (f :- c → d) ∧ is_terminal c x ⇒ is_terminal d (f@@x)`,
+srw_tac [][cat_iso_def] >>
+imp_res_tac cat_iso_pair_sym >>
+`is_functor f ∧ is_functor g` by fsrw_tac [][cat_iso_pair_def] >>
+`(f ≈> g) ∧ (g ≈> f)` by fsrw_tac [][cat_iso_pair_def] >>
+`faithful g` by metis_tac [cat_iso_embedding,embedding_def,cat_iso_def] >>
+fsrw_tac [][is_terminal_def,objf_in_obj] >>
+qx_gen_tac `y` >> strip_tac >>
+`g@@y ∈ f.dom.obj` by metis_tac [objf_in_obj,composable_def] >>
+first_x_assum (qspec_then `g@@y` mp_tac) >>
+srw_tac [][] >>
+imp_res_tac is_functor_is_category >>
+fsrw_tac [][EXISTS_UNIQUE_THM] >>
+qmatch_assum_rename_tac `h :- g@@y → x -:f.dom` [] >>
+`f##h :- f@@(g@@y) → f@@x -:f.cod` by metis_tac [morf_maps_to,maps_to_def] >>
+conj_tac >- metis_tac [functor_comp_objf,cat_iso_pair_def,id_functor_objf,composable_def] >>
+qx_gen_tac `h1` >> qx_gen_tac `h2` >> strip_tac >>
+fsrw_tac [][faithful_def,cat_iso_pair_def] >>
+metis_tac [morf_maps_to,functor_comp_objf,id_functor_objf,composable_def,maps_to_def]);
+
 val cone_cat_def = Define`
   cone_cat f = comma_cat (diagonal_functor f.dom f.cod) (itself_functor f)`;
 
@@ -47,10 +69,10 @@ match_mp_tac is_functor_itself_functor >>
 srw_tac [][]);
 val _ = export_rewrites["is_category_cone_cat"];
 
-val _ = type_abbrev("cone",``:('a,unit,('b,'a,'c,'d) nat_trans) morphism``);
-val _ = type_abbrev("cone_mor",``:(('a,'b,'c,'d) cone, ('a,'d) mor # (unit, unit) mor) mor``);
-val _ = overload_on("vertex",``λ(c:('a,'b,'c,'d)cone). c.dom``);
-val _ = overload_on("proj",``λ(c:('a,'b,'c,'d)cone) x. c.map@+x``);
+val _ = type_abbrev("cone",``:(γ,unit,(α,β,γ,δ) nat_trans) morphism``);
+val _ = type_abbrev("cone_mor",``:((α,β,γ,δ) cone, (γ,δ) mor # (unit, unit) mor) mor``);
+val _ = overload_on("vertex",``λ(c:(α,β,γ,δ)cone). c.dom``);
+val _ = overload_on("proj",``λ(c:(α,β,γ,δ)cone) x. c.map@+x``);
 val _ = overload_on("is_cone",``λd c. c ∈ (cone_cat d).obj``);
 val _ = overload_on("is_cone_mor",``λd f. f ∈ (cone_cat d).mor``);
 
@@ -110,7 +132,7 @@ fsrw_tac [][] >>
 metis_tac []);
 
 val mk_cone_def = Define`
-  (mk_cone d v ps : ('a,'b,'c,'d) cone) =
+  (mk_cone d v ps : (α,β,γ,δ) cone) =
   <| dom := v; cod := ();
      map := mk_nt <| dom := K_functor d.dom d.cod v;
                      cod := d;
@@ -189,7 +211,7 @@ match_mp_tac nt_eq_thm >>
 fsrw_tac [][]);
 
 val mk_cone_mor_def = Define`
-  (mk_cone_mor c1 c2 m : ('a,'b,'c,'d) cone_mor) =
+  (mk_cone_mor c1 c2 m : (α,β,γ,δ) cone_mor) =
     <| dom := c1; cod := c2; map := (m,ARB) |>`;
 
 val mk_cone_mor_dom_cod = Q.store_thm(
@@ -283,15 +305,15 @@ val has_limits_def = Define`
 (*
 val functor_cat_pointwise_limits = Q.store_thm(
 "functor_cat_pointwise_limits", (* Mac Lane p 111*)
-`∀D J P X tau. is_functor D ∧ (D :- J → [P→X]) ∧
-  (∀p. p ∈ P.obj ⇒ is_limit ((eval_functor P X p) ◎ D) (tau p)) ⇒
+`∀D J P X τ. is_functor D ∧ (D :- J → [P→X]) ∧
+  (∀p. p ∈ P.obj ⇒ is_limit ((eval_functor P X p) ◎ D) (τ p)) ⇒
     (∃L. is_functor L ∧ (L :- P → X) ∧
-         (∀p. p ∈ P.obj ⇒ (L@@p = vertex (tau p))) ∧
+         (∀p. p ∈ P.obj ⇒ (L@@p = vertex (τ p))) ∧
          let t = λL. (mk_nt <|dom := (diagonal_functor J [P→X])@@L; cod := D;
                               map := λj. mk_nt <|dom := ((diagonal_functor J [P→X])@@L)@@j; cod := D@@j;
-                                                 map := λp. proj (tau p) j|> |>) in
+                                                 map := λp. proj (τ p) j|> |>) in
          (is_nat_trans (t L)) ∧
-         (∀L'. is_functor L' ∧ (L' :- P → X) ∧ (∀p. p ∈ P.obj ⇒ (L'@@p = vertex (tau p))) ∧ is_nat_trans (t L') ⇒ (L' = L)) ∧
+         (∀L'. is_functor L' ∧ (L' :- P → X) ∧ (∀p. p ∈ P.obj ⇒ (L'@@p = vertex (τ p))) ∧ is_nat_trans (t L') ⇒ (L' = L)) ∧
          (is_limit D (mk_cone D L ((t L).map))))`,
 srw_tac [][] >>
 limit_universal
@@ -305,12 +327,30 @@ val functor_cat_has_limits = Q.store_thm(
 srw_tac [][has_limits_def] >>
 fsrw_tac [][GSYM RIGHT_EXISTS_IMP_THM,SKOLEM_THM] >>
 qabbrev_tac `j = d.dom` >>
-qabbrev_tac `tau = λp. f (eval_functor c v p ◎ d)` >>
-`∀p. p ∈ c.obj ⇒ is_limit (eval_functor c v p ◎ d) (tau p)` by
-  srw_tac [][Abbr`tau`] >>
-Q.ISPECL_THEN [`d`,`j`,`c`,`v`,`tau`] mp_tac functor_cat_pointwise_limits >>
+qabbrev_tac `τ = λp. f (eval_functor c v p ◎ d)` >>
+`∀p. p ∈ c.obj ⇒ is_limit (eval_functor c v p ◎ d) (τ p)` by
+  srw_tac [][Abbr`τ`] >>
+Q.ISPECL_THEN [`d`,`j`,`c`,`v`,`τ`] mp_tac functor_cat_pointwise_limits >>
 srw_tac [][LET_THM] >>
 metis_tac []);
+*)
+
+(*
+val _ = overload_on("empty_diagram",``λc. discrete_functor {} c ARB``);
+
+val is_functor_empty_diagram = Q.store_thm(
+"is_functor_empty_diagram",
+`∀c. is_category c ⇒ is_functor (empty_diagram c)`,
+srw_tac [][is_functor_discrete_functor]);
+val _ = export_rewrites["is_functor_empty_diagram"];
+
+val limit_empty_diagram_terminal = Q.store_thm(
+"limit_empty_diagram_terminal",
+`∀c. is_category c ⇒ (is_limit (empty_diagram c) = is_terminal c o vertex)`,
+srw_tac [][FUN_EQ_THM,is_limit_def] >>
+srw_tac [][is_terminal_def,is_cone_thm,EQ_IMP_THM] >- (
+  fsrw_tac [][is_cone_thm]
+why bother proving this?
 *)
 
 val _ = overload_on("product_diagram",``λc a b. discrete_functor {1;2} c (λn. if n = 1 then a else b)``);

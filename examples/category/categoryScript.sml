@@ -29,7 +29,7 @@ srw_tac [][EQ_IMP_THM] >- (
 metis_tac [extensional_restrict]);
 
 val _ = Hol_datatype`morphism = <|
-  dom : 'a; cod : 'b; map : 'c |>`;
+  dom : α; cod : β; map : γ |>`;
 
 val morphism_component_equality = DB.theorem"morphism_component_equality";
 
@@ -46,7 +46,7 @@ val _ = add_rule {
 val composable_def = Define`f ≈> g = (f.cod = g.dom)`;
 
 val compose_def = Define`
-  compose (c:('a,'b,'c) morphism -> ('b,'d,'e) morphism -> 'f) =
+  compose (c:(α,β,γ) morphism -> (β,δ,ε) morphism -> ζ) =
   CURRY (restrict
     (λ(f,g). <| dom := f.dom; cod := g.cod; map := c f g |>)
     {(f,g) | f ≈> g})`;
@@ -61,13 +61,13 @@ val _ = add_rule {
 
 val maps_to_def = Define`f :- x → y = (f.dom = x) ∧ (f.cod = y)`;
 
-val _ = type_abbrev("mor",``:('a,'a,'b) morphism``);
+val _ = type_abbrev("mor",``:(α,α,β) morphism``);
 
 val _ = Hol_datatype `category =
-  <| obj : 'a set ;
-     mor : ('a,'b) mor set ;
-     id_map : 'a -> 'b;
-     comp : ('a,'b) mor -> ('a,'b) mor -> 'b |>`;
+  <| obj : α set ;
+     mor : (α,β) mor set ;
+     id_map : α -> β;
+     comp : (α,β) mor -> (α,β) mor -> β |>`;
 
 val category_component_equality = DB.theorem "category_component_equality";
 
@@ -174,7 +174,7 @@ srw_tac [][compose_def,restrict_def]);
 val _ = export_rewrites["composable_def","maps_to_def","compose_thm"];
 
 val mk_cat_def = Define`
-  mk_cat (c:('a,'b) category) = <|
+  mk_cat (c:(α,β) category) = <|
     obj := c.obj;
     mor := c.mor;
     id_map := restrict c.id_map c.obj;
@@ -481,7 +481,7 @@ val _ = overload_on("inv_in_syntax",``λf c. inv_in c f``);
 
 val inv_elim_thm = Q.store_thm(
 "inv_elim_thm",
-`∀P (c:('a,'b) category) f g. is_category c ∧ f <≃> g -:c ∧ P g ⇒ P f⁻¹-:c`,
+`∀P (c:(α,β) category) f g. is_category c ∧ f <≃> g -:c ∧ P g ⇒ P f⁻¹-:c`,
 srw_tac [][inv_in_def] >>
 SELECT_ELIM_TAC >>
 srw_tac [SATISFY_ss][] >>
@@ -493,7 +493,7 @@ fun is_inv_in tm = let
   val (inv_in,[c,f]) = strip_comb tm
   val ("inv_in",ty) = dest_const inv_in
 in
-  can (match_type ``:('a,'b) category -> ('a,'b) mor -> ('a,'b) mor``) ty
+  can (match_type ``:(α,β) category -> (α,β) mor -> (α,β) mor``) ty
 end handle HOL_ERR _ => false | Bind => false;
 
 fun inv_elim_tac (g as (_, w)) = let
@@ -826,6 +826,52 @@ srw_tac [][composable_in_def] >>
 srw_tac [][pred_setTheory.EXTENSION] >>
 fsrw_tac [][oneTheory.one,morphism_component_equality,FUN_EQ_THM]);
 
+val indiscrete_cat_def = Define`
+  indiscrete_cat s = mk_cat <|
+    obj := s; mor := { <|dom := x; cod := y; map := ()|> | x ∈ s ∧ y ∈ s };
+    id_map := K ();
+    comp := λf g. f.map |>`;
+
+val is_category_indiscrete_cat = Q.store_thm(
+"is_category_indiscrete_cat",
+`∀s. is_category (indiscrete_cat s)`,
+srw_tac [][indiscrete_cat_def] >>
+fsrw_tac [DNF_ss]
+[category_axioms_def,maps_to_in_def,compose_in_def,
+ id_in_def,composable_in_def,restrict_def]);
+val _ = export_rewrites["is_category_indiscrete_cat"];
+
+val indiscrete_cat_obj_mor = Q.store_thm(
+"indiscrete_cat_obj_mor",
+`∀s. ((indiscrete_cat s).obj = s) ∧
+     ((indiscrete_cat s).mor = {f | f.dom ∈ s ∧ f.cod ∈ s })`,
+srw_tac [][indiscrete_cat_def,morphism_component_equality,oneTheory.one,EXTENSION]);
+val _ = export_rewrites["indiscrete_cat_obj_mor"];
+
+val indiscrete_cat_id = Q.store_thm(
+"indiscrete_cat_id",
+`∀s x. x ∈ s ⇒ (id x -:(indiscrete_cat s) = <|dom := x; cod := x; map := ()|>)`,
+srw_tac [][id_in_def,restrict_def,morphism_component_equality,oneTheory.one]);
+val _ = export_rewrites["indiscrete_cat_id"];
+
+val indiscrete_cat_maps_to = Q.store_thm(
+"indiscrete_cat_maps_to",
+`∀f x y s. f :- x → y -:(indiscrete_cat s) = (f :- x → y) ∧ x ∈ s ∧ y ∈ s`,
+srw_tac [][maps_to_in_def,EQ_IMP_THM] >> srw_tac [][]);
+val _ = export_rewrites["indiscrete_cat_maps_to"];
+
+val indiscrete_cat_composable = Q.store_thm(
+"indiscrete_cat_composable",
+`∀s f g. f ≈> g -:indiscrete_cat s = (f ≈> g) ∧ f ∈ (indiscrete_cat s).mor ∧ g ∈ (indiscrete_cat s).mor`,
+srw_tac [][composable_in_def,morphism_component_equality,EQ_IMP_THM]);
+val _ = export_rewrites["indiscrete_cat_composable"];
+
+val indiscrete_cat_compose_in = Q.store_thm(
+"indiscrete_cat_compose_in",
+`∀s f g.  f ≈> g -:indiscrete_cat s ⇒ ((g o f -:indiscrete_cat s) = compose (K (K ())) f g)`,
+fsrw_tac [][compose_in_def,restrict_def,oneTheory.one]);
+val _ = export_rewrites["indiscrete_cat_compose_in"];
+
 val _ = add_rule {
   term_name = "op_syntax",
   fixity = Suffix 2100,
@@ -1048,6 +1094,56 @@ metis_tac [op_cat_idem,is_category_op_cat] >>
 srw_tac [][uiso_objs_def,op_cat_iso_pair_between_objs] >>
 fsrw_tac [][EXISTS_UNIQUE_THM,EXISTS_PROD,FORALL_PROD] >>
 metis_tac [iso_pair_between_objs_sym,op_mor_idem]);
+
+val category_eq_thm = Q.store_thm(
+"category_eq_thm",
+`∀c1 c2. is_category c1 ∧ is_category c2 ∧
+         (c1.obj = c2.obj) ∧ (c1.mor = c2.mor) ∧
+         (∀x. x ∈ c1.obj ⇒ (id x -:c1 = id x -:c2)) ∧
+         (∀f g. f ≈> g -:c1 ⇒ (g o f -:c1 = g o f-:c2))
+⇒ (c1 = c2)`,
+srw_tac [][category_component_equality] >>
+srw_tac [][FUN_EQ_THM] >- (
+  qmatch_rename_tac `c1.id_map x = c2.id_map x` [] >>
+  Cases_on `x ∈ c1.obj` >- (
+    first_x_assum (qspec_then `x` mp_tac) >>
+    srw_tac [][id_in_def,restrict_def] >>
+    metis_tac [] ) >>
+  fsrw_tac [][is_category_def,extensional_category_def,extensional_def] >>
+  metis_tac [] ) >>
+qmatch_rename_tac `c1.comp f g = c2.comp f g` [] >>
+Cases_on `f ≈> g-:c1` >- (
+  first_x_assum (qspecl_then [`f`,`g`] mp_tac) >>
+  srw_tac [][compose_in_def,restrict_def,compose_def,composable_in_def] >>
+  fsrw_tac [][composable_in_def] >>
+  metis_tac [] ) >>
+fsrw_tac [][is_category_def,extensional_category_def,extensional_def,FORALL_PROD] >>
+fsrw_tac [][composable_in_def] >> metis_tac []);
+
+val op_discrete_cat = Q.store_thm(
+"op_discrete_cat",
+`∀s. (discrete_cat s)° = discrete_cat s`,
+srw_tac [][] >> match_mp_tac category_eq_thm >>
+srw_tac [][] >- (
+  srw_tac [DNF_ss][morphism_component_equality,EXTENSION] >>
+  metis_tac [] ) >>
+fsrw_tac [][compose_in_def,restrict_def,compose_def,op_cat_comp] >>
+srw_tac [][] >> fsrw_tac [][morphism_component_equality] >>
+srw_tac [][] >> metis_tac []);
+val _ = export_rewrites["op_discrete_cat"];
+
+val op_indiscrete_cat = Q.store_thm(
+"op_indiscrete_cat",
+`∀s. (indiscrete_cat s)° = indiscrete_cat s`,
+srw_tac [][] >> match_mp_tac category_eq_thm >>
+srw_tac [][] >- (
+  srw_tac [DNF_ss][morphism_component_equality,EXTENSION] >>
+  srw_tac [][EQ_IMP_THM] >>
+  fsrw_tac [][oneTheory.one] >>
+  qexists_tac `op_mor x` >>
+  srw_tac [][] ) >>
+srw_tac [][compose_in_def,restrict_def,oneTheory.one]);
+val _ = export_rewrites["op_indiscrete_cat"];
 
 val product_mor_def = Define`
   product_mor (f,g) =
