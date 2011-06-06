@@ -29,6 +29,9 @@ val _ = new_theory "standardisation"
 structure NewQ = Q
 structure Q = struct open Q open OldAbbrevTactics end
 
+val _ = set_fixity "=" (Infix(NONASSOC, 100))
+
+
 val RUNION_def = relationTheory.RUNION
 val ADD1 = arithmeticTheory.ADD1
 
@@ -307,11 +310,11 @@ val nlabel_eq = store_thm(
     SRW_TAC [][nlabel_thm] THEN
     SRW_TAC [][lLAMi_eq_thm, lLAM_eq_thm, EQ_IMP_THM, LAM_eq_thm] THENL [
       SRW_TAC [][tpm_eqr, nlabel_def, tpm_flip_args],
-      SRW_TAC [][nlabel_def, ltpm_flip_args]
+      SRW_TAC [][nlabel_def, tpm_flip_args]
     ],
     SRW_TAC [][LAM_eq_thm, lLAM_eq_thm, EQ_IMP_THM] THENL [
-      SRW_TAC [][tpm_eqr, nlabel_def, ltpm_flip_args],
-      SRW_TAC [][nlabel_def, ltpm_flip_args]
+      SRW_TAC [][tpm_eqr, nlabel_def, tpm_flip_args],
+      SRW_TAC [][nlabel_def, tpm_flip_args]
     ]
   ]);
 

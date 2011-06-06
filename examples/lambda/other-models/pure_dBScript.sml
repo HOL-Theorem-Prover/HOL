@@ -8,6 +8,8 @@ fun Store_thm(trip as (n,t,tac)) = store_thm trip before export_rewrites [n]
 
 val _ = new_theory "pure_dB"
 
+val _ = set_fixity "=" (Infix(NONASSOC, 100))
+
 (* the type of pure de Bruijn terms *)
 val _ = Hol_datatype`pdb = dV of num | dAPP of pdb => pdb | dABS of pdb`
 

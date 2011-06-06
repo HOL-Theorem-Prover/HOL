@@ -13,6 +13,12 @@ structure Parse = struct
 end
 open Parse
 
+val tmToString =
+    term_to_string
+        |> with_flag (Parse.current_backend, PPBackEnd.raw_terminal)
+        |> trace ("Unicode", 0)
+
+
 fun ERR f msg = raise (HOL_ERR {origin_function = f,
                                 origin_structure = "binderLib",
                                 message = msg})
@@ -300,7 +306,7 @@ fun check_for_errors tm = let
         NONE => ()
       | SOME t => ERR "prove_recursive_term_function_exists"
                       ("Unknown constructor "^
-                       term_to_string (#1 (strip_comb (rand (lhs t)))))
+                       tmToString (#1 (strip_comb (rand (lhs t)))))
   val () =
       case get_first
            (fn t => let val (c, args) = strip_comb (rand (lhs t))
@@ -312,7 +318,7 @@ fun check_for_errors tm = let
         NONE => ()
       | SOME (v, c) =>
         ERR "prove_recursive_term_function_exists"
-            (#1 (dest_const c)^"^'s argument "^term_to_string v^
+            (#1 (dest_const c)^"^'s argument "^tmToString v^
              " is not a variable")
 in
   (f, conjs)
@@ -451,7 +457,7 @@ in
                   "binderLib"
                   "prove_recursive_term_function_exists"
                   ("Couldn't prove function with swap over range - \n\
-                   \goal was "^term_to_string tm^"\n\
+                   \goal was "^tmToString tm^"\n\
                    \trying null range assumption");
                 callthis nameless_nti)
     end
@@ -459,7 +465,7 @@ in
 end handle InfoProofFailed tm =>
            raise ERR "prove_recursive_term_function_exists"
                      ("Couldn't prove function with swap over range - \n\
-                      \goal was "^term_to_string tm)
+                      \goal was "^tmToString tm)
 
 fun strip_tyannote acc (Absyn.TYPED(_, a, ty)) = strip_tyannote (ty::acc) a
   | strip_tyannote acc x = (List.rev acc, x)
@@ -485,7 +491,7 @@ in
 end handle InfoProofFailed tm =>
            raise ERR "prove_recursive_term_function_exists"
                      ("Couldn't prove function with swap over range - \n\
-                      \goal was "^term_to_string tm)
+                      \goal was "^tmToString tm)
 
 fun prove_recursive_term_function_exists' fin tm = let
   val f_thm = prove_recursive_term_function_exists0 fin tm
@@ -497,7 +503,7 @@ in
 end handle InfoProofFailed tm =>
            raise ERR "prove_recursive_term_function_exists"
                      ("Couldn't prove function with swap over range - \n\
-                      \goal was "^term_to_string tm)
+                      \goal was "^tmToString tm)
 
 
 fun define_wrapper worker q = let
@@ -536,6 +542,13 @@ fun define_wrapper worker q = let
            (EXISTS(mk_exists(f_t, defining_term), f_t)
                   (UNDISCH definition_ok0))
   end
+  (* feel that having the equation the other way (non-GSYMed) 'round may be
+     better in many theorem-proving circumstances.  But for the moment,
+     this way round provides backwards compatibility. *)
+  val base_definition =
+      CONV_RULE (QUANT_CONV (RAND_CONV (ONCE_REWRITE_CONV [EQ_SYM_EQ])))
+                base_definition
+
   val f_def =
       new_specification (fstr^"_def", [fstr], base_definition)
   val _ = add_const fstr
@@ -544,10 +557,18 @@ fun define_wrapper worker q = let
                        default_prover(subst [f_t |-> f_const] tm,
                                       SIMP_TAC bool_ss [f_def]))
   val f_invariants = let
-    val interesting_bit = CONJUNCT2 f_def
+    val interesting_bit =
+        f_def |> CONJUNCT2
+              |> PURE_REWRITE_RULE [combinTheory.K_THM, combinTheory.I_THM]
+    val (l,r) =
+        interesting_bit |> concl |> strip_forall |> #2
+                        |> strip_imp |> #2
+                        |> dest_eq
+    val (lf,_) = strip_comb l
+    val (rf, _) = strip_comb r
+    val nm = fstr^"_equivariant"
   in
-    save_thm(fstr^"_swap_invariant", interesting_bit) before
-    export_rewrites [fstr^"_swap_invariant"]
+    save_thm(nm, interesting_bit) before export_rewrites [nm]
   end
 in
   (f_thm, f_invariants)

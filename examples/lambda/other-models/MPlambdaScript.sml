@@ -215,6 +215,8 @@ val vclosed_parameter = Store_thm(
   ``vclosed (Parameter p)``,
   ONCE_REWRITE_TAC [vclosed_cases] THEN SRW_TAC [][]);
 
+val _ = set_fixity "=" (Infix(NONASSOC, 100))
+
 val vclosed_app = Store_thm(
   "vclosed_app",
   ``vclosed (App t1 t2) = vclosed t1 /\ vclosed t2``,

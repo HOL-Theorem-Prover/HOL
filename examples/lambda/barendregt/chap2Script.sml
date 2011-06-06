@@ -517,9 +517,9 @@ val is_var_vsubst_invariant = Store_thm(
   SRW_TAC [][SUB_THM, SUB_VAR]);
 
 val (bnf_thm, _) = define_recursive_term_function
-  `(bnf (VAR s) = T) /\
-   (bnf (t1 @@ t2) = bnf t1 /\ bnf t2 /\ ~is_abs t1) /\
-   (bnf (LAM v t) = bnf t)`;
+  `(bnf (VAR s) <=> T) /\
+   (bnf (t1 @@ t2) <=> bnf t1 /\ bnf t2 /\ ~is_abs t1) /\
+   (bnf (LAM v t) <=> bnf t)`;
 val _ = export_rewrites ["bnf_thm"]
 
 val bnf_Omega = Store_thm(
@@ -598,19 +598,18 @@ val swap_eq_var = store_thm(
   ``(tpm [(x,y)] t = VAR s) = (t = VAR (swapstr x y s))``,
   Q.SPEC_THEN `t` STRUCT_CASES_TAC term_CASES THEN
   SRW_TAC [][basic_swapTheory.swapstr_eq_left]);
-val _ = augment_srw_ss [rewrites [swap_eq_var]]
+val _ = augment_srw_ss [rewrites [GSYM swap_eq_var]]
 
 val (enf_thm, _) = define_recursive_term_function
-  `(enf (VAR s) = T) /\
-   (enf (t @@ u) = enf t /\ enf u) /\
-   (enf (LAM v t) = enf t /\ (is_comb t /\ (rand t = VAR v) ==>
-                              v IN FV (rator t)))`
+  `(enf (VAR s) <=> T) /\
+   (enf (t @@ u) <=> enf t /\ enf u) /\
+   (enf (LAM v t) <=> enf t /\ (is_comb t /\ rand t = VAR v ==>
+                                v IN FV (rator t)))`
 val _ = export_rewrites ["enf_thm"]
 
 val subst_eq_var = store_thm(
   "subst_eq_var",
-  ``([v/u] t = VAR s) = (t = VAR u) /\ (v = VAR s) \/
-                        (t = VAR s) /\ ~(u = s)``,
+  ``[v/u] t = VAR s <=> t = VAR u ∧ v = VAR s ∨ t = VAR s ∧ u ≠ s``,
   Q.SPEC_THEN `t` STRUCT_CASES_TAC term_CASES THEN
   SRW_TAC [][SUB_VAR, SUB_THM] THEN PROVE_TAC []);
 
@@ -623,7 +622,7 @@ val enf_vsubst_invariant = Store_thm(
   SRW_TAC [boolSimps.CONJ_ss][GSYM rand_subst_commutes, subst_eq_var] THEN
   SRW_TAC [][GSYM rator_subst_commutes, FV_SUB]);
 
-val benf_def = Define`benf t = bnf t /\ enf t`;
+val benf_def = Define`benf t <=> bnf t /\ enf t`;
 
 
 val has_bnf_def = Define`has_bnf t = ?t'. t == t' /\ bnf t'`;
