@@ -56,6 +56,15 @@ open quotient_sumTheory;
 open quotient_optionTheory;
 open Rsyntax;
 
+structure Parse =
+struct
+  open Parse
+  val (Type,Term) = parse_from_grammars(quotient_option_grammars)
+  fun == q _ = Type q
+  fun -- q _ = Term q
+end
+open Parse
+
 
 (* In interactive sessions, omit the chatting section below. *)
 
