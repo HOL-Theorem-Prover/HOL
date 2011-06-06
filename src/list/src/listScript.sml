@@ -402,6 +402,10 @@ val EL_MAP = store_thm("EL_MAP",
     INDUCT_TAC THEN LIST_INDUCT_TAC
     THEN ASM_REWRITE_TAC[LENGTH,EL,MAP,LESS_MONO_EQ,NOT_LESS_0,HD,TL]);
 
+val MAP_TL = Q.store_thm("MAP_TL",
+  `!l f. ~NULL l ==> (MAP f (TL l) = TL (MAP f l))`,
+  Induct THEN REWRITE_TAC [NULL_DEF, TL, MAP]);
+
 val EVERY_EL = store_thm ("EVERY_EL",
  --`!(l:'a list) P. EVERY P l = !n. n < LENGTH l ==> P (EL n l)`--,
       LIST_INDUCT_TAC THEN
@@ -2150,6 +2154,10 @@ val _ = export_rewrites ["EL_GENLIST"]
 val HD_GENLIST = save_thm("HD_GENLIST",
   (SIMP_RULE arith_ss [EL] o Q.SPECL [`f`,`SUC n`,`0`]) EL_GENLIST);
 
+val HD_GENLIST_COR = Q.store_thm("HD_GENLIST_COR",
+  `!n f. 0 < n ==> (HD (GENLIST f n) = f 0)`,
+  Cases THEN REWRITE_TAC [prim_recTheory.LESS_REFL, HD_GENLIST]);
+
 val GENLIST_FUN_EQ = store_thm("GENLIST_FUN_EQ",
   ``!n f g. (GENLIST f n = GENLIST g n) = (!x. x < n ==> (f x = g x))``,
   SIMP_TAC bool_ss [LIST_EQ_REWRITE, LENGTH_GENLIST, EL_GENLIST]);
@@ -2193,6 +2201,11 @@ val GENLIST_CONS = store_thm(
   "GENLIST_CONS",
   ``GENLIST f (SUC n) = f 0 :: (GENLIST (f o SUC) n)``,
   Induct_on `n` THEN SRW_TAC [][GENLIST, SNOC]);
+
+val NULL_GENLIST = Q.store_thm("NULL_GENLIST",
+  `!n f. NULL (GENLIST f n) = (n = 0)`,
+  Cases THEN
+  REWRITE_TAC [numTheory.NOT_SUC, NULL_DEF, CONJUNCT1 GENLIST, GENLIST_CONS]);
 
 val GENLIST_AUX_lem = Q.prove(
   `!n l1 l2. GENLIST_AUX f n l1 ++ l2 = GENLIST_AUX f n (l1 ++ l2)`,
