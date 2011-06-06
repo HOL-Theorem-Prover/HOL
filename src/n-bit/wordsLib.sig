@@ -31,6 +31,8 @@ sig
     val WORD_MOD_BITS_CONV  : conv
     val WORD_CONV           : conv
     val WORD_BIT_EQ_CONV    : conv
+    val EXTEND_EXTRACT_CONV : conv
+    val EXPAND_REDUCE_CONV  : conv
 
     val n2w_INTRO_TAC       : int -> tactic
 

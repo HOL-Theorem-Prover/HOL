@@ -1174,6 +1174,29 @@ val WORD_SUB_ss =
 
 (* ------------------------------------------------------------------------- *)
 
+fun EXTEND_EXTRACT_CONV tm =
+let
+  val (h,l,w,ty) = wordsSyntax.dest_word_extract tm
+  val B = fcpLib.index_to_num ty
+  val C = Arbnum.- (Arbnum.plus1 (numLib.dest_numeral h), numLib.dest_numeral l)
+in
+  if Arbnum.< (C, B) then
+    let
+      val c_ty = fcpLib.index_type C
+      val c_tm = boolSyntax.mk_eq (fcpSyntax.mk_dimindex c_ty,
+                   numSyntax.mk_minus (numSyntax.mk_plus (h, ``1n``), l))
+      val c_thm = (Conv.LHS_CONV SIZES_CONV THENC numLib.REDUCE_CONV) c_tm
+      val c_thm = Drule.EQT_ELIM c_thm
+    in
+      Drule.MATCH_MP
+         (Thm.INST_TYPE [Type.beta |-> ty, Type.gamma |-> c_ty]
+            (Drule.ISPECL [h,l,w] EXTEND_EXTRACT))
+         c_thm
+    end
+  else
+    raise ERR "EXTEND_EXTRACT_CONV" ""
+end
+
 val LET_RULE = SIMP_RULE (bool_ss++boolSimps.LET_ss) [];
 val OR_AND_COMM_RULE = ONCE_REWRITE_RULE [WORD_ADD_COMM, WORD_OR_COMM];
 
@@ -1196,6 +1219,36 @@ val WORD_EXTRACT_ss =
       WORD_BITS_EXTRACT, WORD_w2w_EXTRACT, sw2sw_w2w, word_lsb, word_msb] @
       map (REWRITE_RULE [WORD_BITS_EXTRACT])
         [WORD_ALL_BITS, WORD_SLICE_THM, WORD_BIT_BITS])];
+
+(* ------------------------------------------------------------------------- *)
+
+local
+  open listTheory
+  val cmp = reduceLib.num_compset()
+  val _ = computeLib.add_thms
+            [foldl_reduce_and, foldl_reduce_or, foldl_reduce_xor,
+             foldl_reduce_nand, foldl_reduce_nor, foldl_reduce_xnor,
+             GENLIST_AUX_compute, GENLIST_GENLIST_AUX, FOLDL, HD, TL] cmp
+  val _ = computeLib.add_conv
+            (``fcp$dimindex:'a itself -> num``, 1, SIZES_CONV) cmp
+  val conv = computeLib.CBV_CONV cmp
+  fun reduce_thm f ty =
+        if Lib.can (fcpLib.index_to_num o dest_word_type) ty then
+          conv (f (Term.mk_var ("w", ty)))
+        else
+          raise ERR "EXPAND_WORD_REDUCE_CONV" ""
+  fun reduce f w tm = Conv.REWR_CONV (reduce_thm f (Term.type_of w)) tm
+in
+  fun EXPAND_REDUCE_CONV tm =
+    case boolSyntax.dest_strip_comb tm
+    of ("words$reduce_and",  [w]) => reduce wordsSyntax.mk_reduce_and  w tm
+     | ("words$reduce_or",   [w]) => reduce wordsSyntax.mk_reduce_or   w tm
+     | ("words$reduce_xor",  [w]) => reduce wordsSyntax.mk_reduce_xor  w tm
+     | ("words$reduce_nand", [w]) => reduce wordsSyntax.mk_reduce_nand w tm
+     | ("words$reduce_nor",  [w]) => reduce wordsSyntax.mk_reduce_nor  w tm
+     | ("words$reduce_xnor", [w]) => reduce wordsSyntax.mk_reduce_xnor w tm
+     | _ => raise ERR "EXPAND_WORD_REDUCE_CONV" ""
+end
 
 (* ------------------------------------------------------------------------- *)
 

@@ -565,24 +565,14 @@ in
     let
       open Tactical simpLib
       val INT_ABS = intLib.ARITH_PROVE
-        ``!x. ABS (x:int) = if x < 0i then 0i - x else x``
-      val WORD_BIT_EXTRACT = SIMP_PROVE (bossLib.std_ss ++ wordsLib.WORD_BIT_EQ_ss)
-        [wordsLib.WORD_DECIDE ``1w :word1 ' 0``]
-        ``!w:'a word i. i < dimindex (:'a) ==> (w ' i = ((i >< i) w = 1w:word1))``
-      val WORD_SHIFT_BV = SIMP_PROVE bossLib.bool_ss
-          [wordsTheory.word_shift_bv]
-        ``(!w:'a word n. n < dimword (:'a) ==> (w << n = w <<~ n2w n)) /\
-          (!w:'a word n. n < dimword (:'a) ==> (w >> n = w >>~ n2w n)) /\
-          (!w:'a word n. n < dimword (:'a) ==> (w >>> n = w >>>~ n2w n))``
+                      ``!x. ABS (x:int) = if x < 0i then 0i - x else x``
     in
       REPEAT Tactic.GEN_TAC THEN
       (if simp_let then Library.LET_SIMP_TAC else ALL_TAC) THEN
       SIMP_TAC pureSimps.pure_ss
         [boolTheory.bool_case_DEF, integerTheory.INT_MIN,
-          integerTheory.INT_MAX, INT_ABS, wordsTheory.word_rol_bv_def,
-          wordsTheory.word_ror_bv_def, wordsTheory.w2n_n2w] THEN
-      SIMP_TAC (pureSimps.pure_ss ++ numSimps.REDUCE_ss ++ wordsLib.SIZES_ss)
-        [WORD_BIT_EXTRACT, WORD_SHIFT_BV] THEN
+          integerTheory.INT_MAX, INT_ABS] THEN
+      Library.WORD_SIMP_TAC THEN
       Library.SET_SIMP_TAC THEN
       Tactic.BETA_TAC
     end

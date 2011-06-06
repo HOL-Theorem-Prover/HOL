@@ -275,8 +275,42 @@ struct
   val LET_SIMP_TAC =
     simpLib.SIMP_TAC (simpLib.mk_simpset [boolSimps.LET_ss]) []
 
-(*
   (* A tactic that simplifies certain word expressions. *)
+
+  val TO_WORD_EXTRACT = Q.prove(
+        `(!w : 'a word.
+            dimindex(:'b) < dimindex(:'a) ==>
+            (w2w w : 'b word = (dimindex(:'b) - 1 >< 0) w)) /\
+         (!w : 'a word.
+            dimindex(:'b) < dimindex(:'a) ==>
+            (sw2sw w : 'b word = (dimindex(:'b) - 1 >< 0) w))`,
+        SRW_TAC [wordsLib.WORD_BIT_EQ_ss] [])
+
+  val WORD_BIT_EXTRACT = simpLib.SIMP_PROVE
+        (bossLib.std_ss ++ wordsLib.WORD_BIT_EQ_ss)
+        [wordsLib.WORD_DECIDE ``1w :word1 ' 0``]
+      ``!w:'a word i. i < dimindex (:'a) ==> (w ' i = ((i >< i) w = 1w:word1))``
+
+  val WORD_SHIFT_BV = simpLib.SIMP_PROVE bossLib.bool_ss
+        [wordsTheory.word_shift_bv]
+      ``(!w:'a word n. n < dimword (:'a) ==> (w << n = w <<~ n2w n)) /\
+        (!w:'a word n. n < dimword (:'a) ==> (w >> n = w >>~ n2w n)) /\
+        (!w:'a word n. n < dimword (:'a) ==> (w >>> n = w >>>~ n2w n))``
+
+  val bit_field_insert_rwt = simpLib.SIMP_RULE
+        (bossLib.bool_ss ++ boolSimps.LET_ss) [] wordsTheory.bit_field_insert;
+
+  val WORD_SIMP_TAC =
+      Tactic.CONV_TAC (Conv.DEPTH_CONV wordsLib.EXPAND_REDUCE_CONV) THEN
+      SIMP_TAC (pureSimps.pure_ss ++ numSimps.REDUCE_ss ++ wordsLib.SIZES_ss)
+        [wordsTheory.word_rol_bv_def, wordsTheory.word_ror_bv_def,
+         wordsTheory.w2n_n2w, wordsTheory.word_bit_def, bit_field_insert_rwt,
+         wordsTheory.word_lsb_def, wordsTheory.word_msb_def,
+         wordsTheory.WORD_SLICE_THM, wordsTheory.WORD_BITS_EXTRACT,
+         WORD_BIT_EXTRACT, WORD_SHIFT_BV, TO_WORD_EXTRACT] THEN
+      Tactic.CONV_TAC (Conv.DEPTH_CONV wordsLib.EXTEND_EXTRACT_CONV)
+
+(*
   val WORD_SIMP_TAC =
     simpLib.SIMP_TAC (simpLib.++ (bossLib.pure_ss, wordsLib.WORD_ss))
       [wordsTheory.EXTRACT_ALL_BITS, wordsTheory.WORD_EXTRACT_ZERO,

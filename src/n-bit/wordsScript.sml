@@ -949,6 +949,9 @@ val WORD_NEG_1 = store_thm("WORD_NEG_1",
     \\ ASM_SIMP_TAC arith_ss [DECIDE ``0 < x /\ ~(x = 1) ==> 1 < x``,
          LESS_MOD,ZERO_LT_TWOEXP,dimword_def]);
 
+val WORD_NEG_1_T = Theory.save_thm("WORD_NEG_1_T",
+  REWRITE_RULE [GSYM WORD_NEG_1] word_T);
+
 val WORD_MSB_1COMP = store_thm("WORD_MSB_1COMP",
   `!w. word_msb ~w = ~word_msb w`,
   SRW_TAC [fcpLib.FCP_ss] [DIMINDEX_GT_0,word_msb_def,word_1comp_def]);
@@ -1658,6 +1661,16 @@ val EXTRACT_JOIN_ADD = store_thm("EXTRACT_JOIN_ADD",
           \\ SRW_TAC [fcpLib.FCP_ss, ARITH_ss] [])
     \\ ASM_SIMP_TAC std_ss [EXTRACT_JOIN]);
 
+val EXTEND_EXTRACT = Q.store_thm("EXTEND_EXTRACT",
+  `!h l w : 'a word.
+      (dimindex(:'c) = h + 1 - l) ==>
+      ((h >< l) w : 'b word = w2w ((h >< l) w : 'c word))`,
+  SRW_TAC [fcpLib.FCP_ss, ARITH_ss] [word_extract_def, word_bits_def, w2w]
+  \\ Cases_on `i < dimindex(:'c)`
+  \\ SRW_TAC [fcpLib.FCP_ss, ARITH_ss] [w2w]
+  \\ Cases_on `i < dimindex(:'a)`
+  \\ SRW_TAC [fcpLib.FCP_ss, ARITH_ss] [w2w]);
+
 val WORD_SLICE_OVER_BITWISE = store_thm("WORD_SLICE_OVER_BITWISE",
   `(!h l v:'a word w:'a word.
       (h '' l) v && (h '' l) w = (h '' l) (v && w)) /\
@@ -1905,6 +1918,71 @@ val word_replicate_concat_word_list = Q.store_thm
      \\ `?x. i = x + A` by METIS_TAC [NOT_LESS, LESS_EQ_ADD_EXISTS, ADD_COMM]
      \\ SRW_TAC [ARITH_ss] [ADD_MODULUS_RIGHT]
      \\ Cases_on `n` \\ SRW_TAC [ARITH_ss] [ZERO_LESS_MULT]);
+
+val bit_field_insert = Q.store_thm("bit_field_insert",
+  `!h l (a:'a word) (b:'b word).
+      h < l + dimindex(:'a) ==>
+      (bit_field_insert h l a b =
+        let mask = (h '' l) (-1w) in
+          (w2w a << l) && mask !! b && ~mask)`,
+  SRW_TAC [fcpLib.FCP_ss, boolSimps.LET_ss, ARITH_ss]
+        [bit_field_insert_def, word_modify_def,  word_lsl_def, w2w,
+         word_slice_def, word_and_def, word_or_def, word_1comp_def,
+         WORD_NEG_1_T]
+  \\ SRW_TAC [ARITH_ss] []);
+
+(* ------------------------------------------------------------------------- *)
+(* Reduce operations : theorems                                              *)
+(* ------------------------------------------------------------------------- *)
+
+val genlist_dimindex_not_null = Q.prove(
+  `!f. ~NULL (GENLIST f (dimindex(:'a)))`,
+  SRW_TAC [ARITH_ss] [listTheory.NULL_GENLIST, DECIDE ``0 < n ==> (n <> 0n)``]);
+
+fun mk_word_reduce_thm (name,f,thm1,thm2,g,h) =
+let
+  val lem = Q.prove(
+    `!l b.
+       ((FOLDL ^g b l) : unit word) ' 0 =
+       FOLDL ^h (b ' 0) (MAP (\x. x ' 0) l)`,
+    Induct \\ SRW_TAC [fcpLib.FCP_ss] [thm1]
+    )
+in
+  Q.store_thm(name,
+  `!w:'a word.
+      ^f w =
+      let l = GENLIST
+                (\i. let n = dimindex(:'a) - 1 - i in (n >< n) w : unit word)
+                (dimindex(:'a))
+      in
+        FOLDL ^g (HD l) (TL l)`,
+  SRW_TAC [boolSimps.LET_ss, fcpLib.FCP_ss]
+          [fcpTheory.index_one, word_reduce_def, thm2]
+  \\ `i = 0` by DECIDE_TAC
+  \\ SRW_TAC [fcpLib.FCP_ss, ARITH_ss]
+       [lem, listTheory.MAP_GENLIST, listTheory.HD_GENLIST_COR,
+        listTheory.MAP_TL, genlist_dimindex_not_null, word_extract_def,
+        word_bits_def, w2w]
+  \\ MATCH_MP_TAC (METIS_PROVE []
+       ``(l1 = l2) ==> (FOLDL f b (TL l1) = FOLDL f b (TL l2))``)
+  \\ SRW_TAC [fcpLib.FCP_ss, ARITH_ss] [listTheory.GENLIST_FUN_EQ, w2w]
+  )
+end
+
+val mk_word_reduce_thms =
+  List.map mk_word_reduce_thm
+    [("foldl_reduce_and",  ``$reduce_and``,  word_and_def,  reduce_and_def,
+      ``(&&):unit word->unit word->unit word``, ``(/\)``),
+     ("foldl_reduce_or",   ``$reduce_or``,   word_or_def,   reduce_or_def,
+      ``(!!):unit word->unit word->unit word``, ``(\/)``),
+     ("foldl_reduce_xor",   ``$reduce_xor``,  word_xor_def, reduce_xor_def,
+      ``(??):unit word->unit word->unit word``, ``(<>):bool->bool->bool``),
+     ("foldl_reduce_nand", ``$reduce_nand``, word_nand_def, reduce_nand_def,
+      ``word_nand:unit word->unit word->unit word``, ``(\a b. ~(a /\ b))``),
+     ("foldl_reduce_nor",  ``$reduce_nor``,  word_nor_def,  reduce_nor_def,
+      ``word_nor:unit word->unit word->unit word``,  ``(\a b. ~(a \/ b))``),
+     ("foldl_reduce_xnor", ``$reduce_xnor``, word_xnor_def, reduce_xnor_def,
+      ``word_xnor:unit word->unit word->unit word``, ``(=):bool->bool->bool``)];
 
 (* ......................................................................... *)
 
