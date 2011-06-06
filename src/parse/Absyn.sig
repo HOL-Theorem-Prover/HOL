@@ -53,6 +53,7 @@ sig
   val dest_exists1 : absyn -> vstruct * absyn
   val dest_select  : absyn -> vstruct * absyn
   val dest_binder  : string -> absyn -> vstruct * absyn
+  val dest_binop   : string -> absyn -> absyn * absyn
 
   val list_mk_app     : absyn * absyn list -> absyn
   val list_mk_lam     : vstruct list * absyn -> absyn

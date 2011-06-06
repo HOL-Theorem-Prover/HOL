@@ -1538,6 +1538,11 @@ in
 fun munge eq (eqs,fset,V) =
  let val (vlist,body) = Absyn.strip_forall eq
      val (lhs0,rhs)   = Absyn.dest_eq body
+                        handle HOL_ERR _ =>
+                        Absyn.dest_binop "<=>" body
+                        handle HOL_ERR _ =>
+                               raise ERRloc "munge" (Absyn.locn_of_absyn body)
+                                     "Expected an equality"
      val   _          = if exists wildcard (names_of rhs []) then
                          raise ERRloc "munge" (Absyn.locn_of_absyn rhs)
                                       "wildcards on rhs" else ()
