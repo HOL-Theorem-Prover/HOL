@@ -68,7 +68,7 @@ val hastype_swap = store_thm(
 
 val hastype_swap_eqn = store_thm(
   "hastype_swap_eqn",
-  ``Γ ⊢ π·m ◁ A = π⁻¹ · Γ ⊢ m ◁ A``,
+  ``Γ ⊢ π·m ◁ A <=> π⁻¹ · Γ ⊢ m ◁ A``,
   METIS_TAC [hastype_swap, tpm_inverse, ctxtswap_inverse]);
 
 val hastype_valid_ctxt = store_thm(

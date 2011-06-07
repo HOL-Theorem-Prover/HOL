@@ -245,8 +245,8 @@ val (tmrec_def, tmrec_ind) = Defn.tprove(
     SRW_TAC [][] THEN SRW_TAC [ARITH_ss][]
   ]);
 
-val _ = overload_on ("→", ``fnpm``)
-val _ = set_fixity "→" (Infixr 700)
+val _ = temp_overload_on ("→", ``fnpm``)
+val _ = temp_set_fixity "→" (Infixr 700)
 
 val eqv_helpers =
 ``(∀x y s p:'p. x ∉ A ∧ y ∉ A ==>

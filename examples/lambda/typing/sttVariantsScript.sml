@@ -178,7 +178,7 @@ val hastype2_valid_ctxt = store_thm(
 
 val hastype2_swap_eqn = store_thm(
   "hastype2_swap_eqn",
-  ``G ||- tpm pi m -: A = ctxtswap (REVERSE pi) G ||- m -: A``,
+  ``G ||- tpm pi m -: A <=> ctxtswap (REVERSE pi) G ||- m -: A``,
   METIS_TAC [ctxtswap_inverse, hastype2_swap, tpm_inverse]);
 
 val hastype2_hastype = prove(
@@ -208,7 +208,7 @@ val hastype_hastype2 = prove(
 
 val hastype_hastype2_eqn = store_thm(
   "hastype_hastype2_eqn",
-  ``G |- m -: A = G ||- m -: A``,
+  ``G |- m -: A <=> G ||- m -: A``,
   METIS_TAC [hastype2_hastype, hastype_hastype2]);
 
 val _ = export_theory ()
