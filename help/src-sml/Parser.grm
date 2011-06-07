@@ -315,6 +315,9 @@ SigExp :
                     ((ModIdleft, ModIdright),
                      Asynt.SIGIDsigexp ModId,
                      SigModTypBind)
+   | SIG KWSpec_seq END
+                    ((SIGleft, ENDright), Asynt.AnonSigThing KWSpec_seq, [])
+
 
 SigModTypBind :
     TYPE TyVarSeq TypeIdent EQUALS Ty

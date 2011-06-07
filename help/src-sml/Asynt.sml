@@ -93,6 +93,7 @@ datatype Spec' =
   | STRUCTUREspec of ModDesc
 and ModDesc = MODDESCmoddesc of ModId * SigExp
 and SigExp' = SIGIDsigexp of SigId
+  | AnonSigThing of Spec list
 withtype Spec = Location * Spec'
 and SigExp = Location * SigExp' * TypBind list;
 
