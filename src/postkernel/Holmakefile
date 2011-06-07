@@ -1,8 +1,0 @@
-FTHEORYD = $(dprot $(SIGOBJ)/FinalTheory-sig.ui)
-FTHEORY = $(protect $(SIGOBJ)/FinalTheory-sig.ui)
-
-OVERLAYD = $(dprot $(SIGOBJ)/Overlay.ui)
-OVERLAY = $(protect $(SIGOBJ)/Overlay.ui)
-
-Theory.ui: Theory.sig $(FTHEORYD) $(OVERLAYD)
-	$(HOLMOSMLC) -c $(FTHEORY) $(OVERLAY) $<
