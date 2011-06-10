@@ -92,13 +92,13 @@ in
    begin_style [Underline]; add_string "Underline"; end_style(); add_newline();
    map (fn c => (
       add_string "Foreground ";
-      begin_style [FG c]; 
-          add_string (color_name_fw c); 
+      begin_style [FG c];
+          add_string (color_name_fw c);
       end_style(); add_newline())) color_list;
    map (fn c => (
       add_string "Background ";
-      begin_style [BG c]; 
-          add_string (color_name_fw c); 
+      begin_style [BG c];
+          add_string (color_name_fw c);
       end_style(); add_newline())) color_list;
 
    add_newline(); add_newline();
@@ -111,8 +111,8 @@ in
       add_string "--------------------------------------------------"; add_newline()
    );
    map (fn (s, styL) => (
-      begin_style styL; 
-          add_string s; 
+      begin_style styL;
+          add_string s;
       end_style(); add_newline())) full_styles;
    add_newline();add_newline();
 
@@ -128,7 +128,7 @@ val _ = test_terminal false (PPBackEnd.raw_terminal);
 val _ = print "emacs terminal\n";
 val _ = print "==============\n\n";
 val _ = test_terminal false (PPBackEnd.emacs_terminal);
-			 
+
 val _ = print "vt100 terminal\n";
 val _ = print "==============\n\n";
 val _ = test_terminal false (PPBackEnd.vt100_terminal);
@@ -155,6 +155,40 @@ in
    (#end_block terminal) pp_out;
    PP.flush_ppstream pp_out
 end;
+
+
+(* ----------------------------------------------------------------------
+    Tests of the base lexer
+   ---------------------------------------------------------------------- *)
+
+open base_tokens
+fun dest (BT_Ident s, _) = s
+  | dest _ = raise Fail "Couldn't dest a base token."
+fun die s = (print (s^"\n"); OS.Process.exit OS.Process.failure)
+
+fun quoteToString [QUOTE s] = "`"^s^"`"
+  | quoteToString _ = die "Bad test quotation"
+fun tprint q = let
+  val qs = "Testing "^quoteToString q
+in
+  StringCvt.padRight #" " 65 qs
+end
+
+fun test (q, slist) = let
+  val _ = print (tprint q)
+in
+  if map dest (qbuf.lex_to_toklist q) <> slist then die "FAILED!"
+  else print "OK\n"
+end handle LEX_ERR (s,_) => die ("FAILED!\n  [LEX_ERR "^s^"]")
+         | e => die ("FAILED\n ["^exnMessage e^"]")
+
+val _ = app test [(`abc`, ["abc"]),
+                  (`x+y`, ["x+y"]),
+                  (`x +y`, ["x", "+y"]),
+                  (`x ++ y`, ["x", "++", "y"]),
+                  (`x (* *)y`, ["x", "y"]),
+                  (`x(**)y`, ["x", "y"]),
+                  (`+(**)y`, ["+", "y"])]
 
 (*
 
