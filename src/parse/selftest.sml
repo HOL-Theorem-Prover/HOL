@@ -161,6 +161,7 @@ end;
     Tests of the base lexer
    ---------------------------------------------------------------------- *)
 
+val _ = print "** Testing basic lexing functionality\n\n"
 open base_tokens
 fun dest (BT_Ident s, _) = s
   | dest _ = raise Fail "Couldn't dest a base token."
@@ -183,12 +184,18 @@ end handle LEX_ERR (s,_) => die ("FAILED!\n  [LEX_ERR "^s^"]")
          | e => die ("FAILED\n ["^exnMessage e^"]")
 
 val _ = app test [(`abc`, ["abc"]),
+                  (`(`, ["("]),
+                  (`a(a`, ["a(a"]),
                   (`x+y`, ["x+y"]),
                   (`x +y`, ["x", "+y"]),
                   (`x ++ y`, ["x", "++", "y"]),
                   (`x (* *)y`, ["x", "y"]),
                   (`x(**)y`, ["x", "y"]),
-                  (`+(**)y`, ["+", "y"])]
+                  (`+(**)y`, ["+", "y"]),
+                  (`((*x*)`, ["("]),
+                  (`+(%*%((*"*)-*foo`,["+(%*%(", "-*foo"]),
+                  (`"(*"`, ["\"(*\""])
+                 ]
 
 (*
 
