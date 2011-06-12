@@ -463,6 +463,17 @@ val some_elim = store_thm(
   SRW_TAC [][some_def] THEN METIS_TAC []);
 val _ = set_fixity "some" Binder
 
+val some_F = store_thm(
+  "some_F",
+  ``(some x. F) = NONE``,
+  DEEP_INTRO_TAC some_intro THEN SRW_TAC [][]);
+val _ = export_rewrites ["some_F"]
+
+val some_EQ = store_thm(
+  "some_EQ",
+  ``((some x. x = y) = SOME y) /\ ((some x. y = x) = SOME y)``,
+  CONJ_TAC THEN DEEP_INTRO_TAC some_intro THEN SRW_TAC [][]);
+val _ = export_rewrites ["some_EQ"]
 
 val option_case_cong =
   save_thm("option_case_cong",

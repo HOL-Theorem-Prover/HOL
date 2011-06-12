@@ -188,18 +188,6 @@ val FORALL_TERM = store_thm(
   EQ_TAC THEN SRW_TAC [][] THEN
   Q.SPEC_THEN `t` STRUCT_CASES_TAC term_CASES THEN SRW_TAC [][]);
 
-val some_F = store_thm(
-  "some_F",
-  ``(some x. F) = NONE``,
-  DEEP_INTRO_TAC optionTheory.some_intro THEN SRW_TAC [][]);
-val _ = export_rewrites ["some_F"]
-
-val some_EQ = store_thm(
-  "some_EQ",
-  ``((some x. x = y) = SOME y) ∧ ((some x. y = x) = SOME y)``,
-  CONJ_TAC THEN DEEP_INTRO_TAC optionTheory.some_intro THEN SRW_TAC [][]);
-val _ = export_rewrites ["some_EQ"]
-
 val some_PAIR_EQ = prove(
   ``(some (x,y). (x' = x) /\ (y' = y)) = SOME(x',y')``,
   DEEP_INTRO_TAC optionTheory.some_intro THEN
