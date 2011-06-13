@@ -220,11 +220,9 @@ val (tmrec_def, tmrec_ind) = Defn.tprove(
   WF_REL_TAC `measure (tmsize o FST o SND o SND o SND o SND o SND)` THEN
   SRW_TAC [][] THENL [
     Q.SPEC_THEN `t` FULL_STRUCT_CASES_TAC term_CASES THEN
-    FULL_SIMP_TAC (srw_ss() ++ ARITH_ss)
-                  [some_F, some_PAIR_EQ, some_PAIR_F],
+    FULL_SIMP_TAC (srw_ss() ++ ARITH_ss) [some_PAIR_EQ, some_PAIR_F],
     Q.SPEC_THEN `t` FULL_STRUCT_CASES_TAC term_CASES THEN
-    FULL_SIMP_TAC (srw_ss() ++ ARITH_ss)
-                  [some_F, some_PAIR_EQ, some_PAIR_F],
+    FULL_SIMP_TAC (srw_ss() ++ ARITH_ss) [some_PAIR_EQ, some_PAIR_F],
     Q.SPEC_THEN `t` FULL_STRUCT_CASES_TAC term_CASES THEN
     FULL_SIMP_TAC (srw_ss() ++ ARITH_ss)
                   [some_PAIR_EQ, some_PAIR_F, LAM_eq_thm] THEN
