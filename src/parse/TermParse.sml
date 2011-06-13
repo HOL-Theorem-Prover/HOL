@@ -69,11 +69,13 @@ end;
     to handle let-expressions (and maybe other things).
    ---------------------------------------------------------------------- *)
 
-fun to_vstruct t = let
+local
   open Absyn
   fun ultimately s (IDENT (_, s'))      = (s = s')
     | ultimately s (TYPED (_, t', _))   = ultimately s t'
     | ultimately s _ = false
+in
+fun to_vstruct t = let
 in
   case t of
     IDENT (locn,s)    => VIDENT (locn,s)
@@ -85,7 +87,30 @@ in
   | t => raise Fail ("term "^locn.toString (locn_of_absyn t)^" not suitable as varstruct")
 end
 
+fun to_ty_vstruct t = let
+  fun dest_itself ty =
+    let val (opr,arg) = Pretype.dest_app_type ty
+        val {Thy,Tyop,Kind} = Pretype.dest_con_type opr
+    in if Thy="bool" andalso Tyop="itself" then (* arg *)
+         if can Pretype.dest_var_type (Pretype.the_var_type arg) then arg
+         else raise ERROR "to_ty_vstruct" "not an itself type of a type variable"
+       else raise ERROR "to_ty_vstruct" "not an itself type"
+    end
+  val is_itself = can dest_itself
+in
+  case t of
+    APP(locn,APP(_,comma, TYPED(_,QIDENT(_,"bool","the_value"),ty)),t2) =>
+      if ultimately "," comma then
+        if is_itself ty then VTPAIR(locn, dest_itself ty, to_vstruct t2)
+        else raise Fail ("type "^locn.toString locn^" not a type variable")
+      else raise Fail ("type "^locn.toString locn^" not suitable as ty_varstruct")
+  | t => raise Fail ("term "^locn.toString (locn_of_absyn t)^" not suitable as ty_varstruct")
+end
+end (* local *)
+
 fun reform_def (t1, t2) =
+ (to_ty_vstruct t1, t2)
+  handle Fail _ =>
  (to_vstruct t1, t2)
   handle Fail _ =>
    let open Absyn
@@ -118,9 +143,11 @@ fun munge_let binding_term body = let
   val central_locn = locn.Loc_Near (locn_of_absyn body) (*TODO:not quite right*)
   val central_abstraction =
       List.foldr (fn (v,M) => LAM(central_locn,v,M)) body L
+  fun LET_fn (LAM(_,VTPAIR _,_)) = "UNPACK"
+    | LET_fn _                   = "LET"
 in
   List.foldl (fn(arg, b) => APP(central_locn,
-                                APP(binding_locn,IDENT (binding_locn,"LET"),b),
+                                APP(binding_locn,IDENT (binding_locn,LET_fn b),b),
                                 arg))
              central_abstraction
              R
@@ -231,9 +258,10 @@ in
     fun binder(VIDENT (l,s))    = make_binding_occ l s
       | binder(VPAIR(l,v1,v2))  = make_vstruct oinfo l [binder v1, binder v2]
                                                NONE
+      | binder(VTPAIR(l,ty,v2)) = make_ty_vstruct oinfo l (tybinder ty) (binder v2) NONE
       | binder(VAQ (l,x))       = make_aq_binding_occ l x
       | binder(VTYPED(l,v,pty)) = make_vstruct oinfo l [binder v] (SOME (to_ptyInEnv pty))
-    fun tybinder(Pretype.PT(Pretype.Vartype(s,kd),l)) = (make_tybinding_occ l s kd)
+    and tybinder(Pretype.PT(Pretype.Vartype(s,kd),l)) = (make_tybinding_occ l s kd)
       | tybinder(Pretype.PT(Pretype.TyKindConstr{Ty,Kind},l)) = make_kind_tybinding_occ l (tybinder Ty) Kind
       | tybinder(Pretype.PT(Pretype.TyRankConstr{Ty,Rank},l)) = make_rank_tybinding_occ l (tybinder Ty) Rank
       | tybinder(Pretype.PT(_,l)) = raise ERROR "tybinder" "not a variable type"

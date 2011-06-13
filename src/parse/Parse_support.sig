@@ -54,6 +54,8 @@ sig
                               pretype_in_env -> pretype_in_env
   val make_vstruct          : overload_info -> locn.locn -> bvar_in_env list ->
                               pretype_in_env option -> bvar_in_env
+  val make_ty_vstruct       : overload_info -> locn.locn -> bvar_in_env -> bvar_in_env ->
+                              pretype_in_env option -> bvar_in_env
   val make_constrained      : locn.locn -> preterm_in_env -> pretype_in_env -> preterm_in_env
   val make_kind_constr_type : locn.locn -> pretype_in_env -> prekind -> pretype_in_env
   val make_rank_constr_type : locn.locn -> pretype_in_env -> prerank -> pretype_in_env

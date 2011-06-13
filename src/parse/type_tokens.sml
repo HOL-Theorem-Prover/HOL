@@ -47,6 +47,7 @@ fun munge slist = String.concat (List.rev slist)
 fun special_symb c = c = #"(" orelse c = #")" orelse c = #"," orelse c = #"." orelse
                      c = #":" (* orelse c = #"!" orelse c = #"\\" *)
 
+fun lambdap (part1:'a list, part2:'a list) (s:'a) = (NONE : ('a list * 'a list) option)
 fun typeidentp (part1, part2) s = let
   open UnicodeChars
   (* record whether or not we're onto part2 by checking if part2 is non-null *)
@@ -125,6 +126,7 @@ fun split_and_check fb s locn = let
 in
   if s0 = "'" orelse (isGreekLower i andalso !greek_tyvars) then
     consume_type typevarp (TypeVar o munge) [s0] srest
+  else if i = 955 (*= 0x3BB, lambda char*) then consume_type lambdap MkTypeIdent ([s0],[]) srest
   else if isAlpha s0 then consume_type typeidentp MkTypeIdent ([s0],[]) srest
   else if Char.isDigit (String.sub(s0,0)) then
     consume_type numeraltypep MkNumType ([s0], NONE) srest

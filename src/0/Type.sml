@@ -1938,9 +1938,11 @@ and ge1_ty t1 t2 =
        | (u as TyCon _,v as TyCon _) => type_con_ge(u,v)
        | (TyApp(p,t1),TyApp(q,t2)) => ge1_ty p q andalso ge_ty t1 t2
        | (TyAll((_,k1),t1),
-          TyAll((_,k2),t2)) => k1 :>=: k2 andalso ge_ty t1 t2
+          TyAll((_,k2),t2)) => k1 = k2 andalso ge_ty t1 t2
+       (* TyAll((_,k2),t2)) => k1 :>=: k2 andalso ge_ty t1 t2 *)
        | (TyAbs((_,k1),t1),
-          TyAbs((_,k2),t2)) => k1 :>=: k2 andalso ge1_ty t1 t2
+          TyAbs((_,k2),t2)) => k1 = k2 andalso ge1_ty t1 t2
+       (* TyAbs((_,k2),t2)) => k1 :>=: k2 andalso ge1_ty t1 t2 *)
        | (M,N) => (M=N)
 end
 
@@ -2141,15 +2143,17 @@ local
   in fn kd => with_flag (varcomplain,false) mk_var_type(name, kd)
   end
   val mk_dummy_ty = mk_fresh_dummy_ty ()
-(*
+(**)
   val dummy_name = fst(dest_var_type (mk_dummy_ty (typ 0)))
-  fun is_con_dummy_ty ty = is_gen_tyvar ty andalso not (fst(dest_var_type ty) = dummy_name)
-*)
+  fun is_dummy_ty ty = (*is_gen_tyvar ty andalso*) not (fst(dest_var_type ty) = dummy_name)
+(**)
   val mk_con_dummy_ty = mk_fresh_dummy_ty ()
   val con_dummy_name = fst(dest_var_type (mk_con_dummy_ty (typ 0)))
   fun is_con_dummy_ty ty = (fst(dest_var_type ty) = con_dummy_name)
   fun var_cmp (x as TyFv(xs,xkd)) (TyFv(ys,ykd)) =
-      (xs = ys) andalso (if is_con_dummy_ty x then xkd :=: ykd else xkd = ykd)
+      (xs = ys) andalso (if is_con_dummy_ty x then xkd :=: ykd
+                         else if xs=dummy_name then ykd :>=: xkd
+                         else xkd = ykd)
     | var_cmp anything other = false
 
   fun rator_type ty = fst (dest_app_type ty)
@@ -2456,7 +2460,8 @@ fun type_homatch kdavoids lconsts rkin kdins (insts, []) = insts
       else (* vty not a type var *) let
           val (vhop, vargs) = strip_app_type vty (* vhop should be a type variable *)
           val afvs = type_varsl vargs
-          val inst_fn = inst_rank_kind (fst rkin) (fst kdins)
+          val (_,kdins') = Kind.norm_subst(rkin,kdins)
+          val inst_fn = inst_rank_kind (fst rkin) (fst kdins')
         in
           (let
              val tyins =

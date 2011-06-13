@@ -147,17 +147,6 @@ fun ast_deftypes (str,form) = [str]
 fun asts_deftypes asts = list_union ast_deftypes asts
 
 
-(*
-fun kind_rank_to_string (kd,rk) =
-    if current_trace "kinds" = 0 then "" else
-      let open Prekind Prerank
-      in   (if prekind_compare(kd,typ Zerorank) = EQUAL
-            then "" else ":" ^ prekind_to_string kd)
-         ^ (if prerank_compare(rk,Zerorank) = EQUAL
-            then "" else ":<=" ^ prerank_to_string rk)
-      end
-*)
-
 datatype pp_pty_state = none | left | right
 
 fun pp_pretype pps ty =
@@ -944,10 +933,13 @@ fun KC printers deftys params = let
        => let val show_kinds = Feedback.get_tracefn "kinds"
               val tmp = show_kinds()
               val _   = Feedback.set_trace "kinds" 2
+              val show_ranks = Feedback.get_tracefn "ranks"
+              val tmp2 = show_ranks()
+              val _   = Feedback.set_trace "ranks" 3
               val opr' = def_toType deftys params opr
-                handle e => (Feedback.set_trace "kinds" tmp; raise e)
+                handle e => (Feedback.set_trace "kinds" tmp; Feedback.set_trace "ranks" tmp2; raise e)
               val arg' = def_toType deftys params arg
-                handle e => (Feedback.set_trace "kinds" tmp; raise e)
+                handle e => (Feedback.set_trace "kinds" tmp; Feedback.set_trace "ranks" tmp2; raise e)
               val message =
                   String.concat
                       [
@@ -970,6 +962,7 @@ fun KC printers deftys params = let
                        "kind unification failure message: ", message, "\n"]
           in
             Feedback.set_trace "kinds" tmp;
+            Feedback.set_trace "ranks" tmp2;
             kcheck_say message;
             last_kcerror := SOME (TyAppFail(opr',arg'));
             raise ERR "kindcheck" "failed"
@@ -985,10 +978,13 @@ fun KC printers deftys params = let
        => let val show_kinds = Feedback.get_tracefn "kinds"
               val tmp = show_kinds()
               val _   = Feedback.set_trace "kinds" 2
+              val show_ranks = Feedback.get_tracefn "ranks"
+              val tmp2 = show_ranks()
+              val _   = Feedback.set_trace "ranks" 3
               val real_type = def_toType deftys params Body
-                handle e => (Feedback.set_trace "kinds" tmp; raise e)
+                handle e => (Feedback.set_trace "kinds" tmp; Feedback.set_trace "ranks" tmp2; raise e)
               val real_kind = Prekind.toKind type_kd
-                handle e => (Feedback.set_trace "kinds" tmp; raise e)
+                handle e => (Feedback.set_trace "kinds" tmp; Feedback.set_trace "ranks" tmp2; raise e)
               val message =
                   String.concat
                       [
@@ -1005,6 +1001,7 @@ fun KC printers deftys params = let
                        "kind unification failure message: ", message, "\n"]
           in
             Feedback.set_trace "kinds" tmp;
+            Feedback.set_trace "ranks" tmp2;
             kcheck_say message;
             last_kcerror := SOME (TyUnivFail(real_type));
             raise ERR "kindcheck" "failed"
@@ -1019,10 +1016,13 @@ fun KC printers deftys params = let
        => let val show_kinds = Feedback.get_tracefn "kinds"
               val tmp = show_kinds()
               val _   = Feedback.set_trace "kinds" 2
+              val show_ranks = Feedback.get_tracefn "ranks"
+              val tmp2 = show_ranks()
+              val _   = Feedback.set_trace "ranks" 3
               val real_type = def_toType deftys params Ty
-                handle e => (Feedback.set_trace "kinds" tmp; raise e)
+                handle e => (Feedback.set_trace "kinds" tmp; Feedback.set_trace "ranks" tmp2; raise e)
               val real_kind = Prekind.toKind Kind
-                handle e => (Feedback.set_trace "kinds" tmp; raise e)
+                handle e => (Feedback.set_trace "kinds" tmp; Feedback.set_trace "ranks" tmp2; raise e)
               val message =
                   String.concat
                       [
@@ -1040,6 +1040,7 @@ fun KC printers deftys params = let
                        "kind unification failure message: ", message, "\n"]
           in
             Feedback.set_trace "kinds" tmp;
+            Feedback.set_trace "ranks" tmp2;
             kcheck_say message;
             last_kcerror := SOME (TyKindConstrFail(real_type, real_kind));
             raise ERR "kindcheck" "failed"
@@ -1051,10 +1052,13 @@ fun KC printers deftys params = let
        => let val show_kinds = Feedback.get_tracefn "kinds"
               val tmp = show_kinds()
               val _   = Feedback.set_trace "kinds" 2
+              val show_ranks = Feedback.get_tracefn "ranks"
+              val tmp2 = show_ranks()
+              val _   = Feedback.set_trace "ranks" 3
               val real_type = def_toType deftys params Ty
-                handle e => (Feedback.set_trace "kinds" tmp; raise e)
+                handle e => (Feedback.set_trace "kinds" tmp; Feedback.set_trace "ranks" tmp2; raise e)
               val real_rank = Prerank.toRank Rank
-                handle e => (Feedback.set_trace "kinds" tmp; raise e)
+                handle e => (Feedback.set_trace "kinds" tmp; Feedback.set_trace "ranks" tmp2; raise e)
               val message =
                   String.concat
                       [
@@ -1071,6 +1075,7 @@ fun KC printers deftys params = let
                        "rank unification failure message: ", message, "\n"]
           in
             Feedback.set_trace "kinds" tmp;
+            Feedback.set_trace "ranks" tmp2;
             kcheck_say message;
             last_kcerror := SOME (TyRankConstrFail(real_type, real_rank));
             raise ERR "rankcheck" "failed"
@@ -1080,10 +1085,13 @@ fun KC printers deftys params = let
        => let val show_kinds = Feedback.get_tracefn "kinds"
               val tmp = show_kinds()
               val _   = Feedback.set_trace "kinds" 2
+              val show_ranks = Feedback.get_tracefn "ranks"
+              val tmp2 = show_ranks()
+              val _   = Feedback.set_trace "ranks" 3
               val real_type = def_toType deftys params Ty
-                handle e => (Feedback.set_trace "kinds" tmp; raise e)
+                handle e => (Feedback.set_trace "kinds" tmp; Feedback.set_trace "ranks" tmp2; raise e)
               val real_rank = Prerank.toRank Rank
-                handle e => (Feedback.set_trace "kinds" tmp; raise e)
+                handle e => (Feedback.set_trace "kinds" tmp; Feedback.set_trace "ranks" tmp2; raise e)
               val message =
                   String.concat
                       [
@@ -1100,6 +1108,7 @@ fun KC printers deftys params = let
                        "rank unification failure message: ", message, "\n"]
           in
             Feedback.set_trace "kinds" tmp;
+            Feedback.set_trace "ranks" tmp2;
             kcheck_say message;
             last_kcerror := SOME (TyRankLEConstrFail(real_type, real_rank));
             raise ERR "rankcheck" "failed"

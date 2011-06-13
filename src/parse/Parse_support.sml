@@ -740,6 +740,17 @@ in
                end
 end
 
+fun make_ty_vstruct (oinfo:overload_info) l (ty:bvar_in_env) (bv:bvar_in_env) tyo E = let
+in
+  case tyo of
+    NONE    => let val (f,E' ) = ty E
+                   val (F,E'') = bv E'
+               in
+                 ((fn b => f(F b)), E'')
+               end
+  | SOME ty0 => raise ERRORloc "make_ty_vstruct" l "type annotation of type_vstruct"
+end
+
 
 (*---------------------------------------------------------------------------
  * Let bindings

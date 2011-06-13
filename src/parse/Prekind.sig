@@ -54,12 +54,15 @@ val has_free_uvar : prekind -> bool
    To further complicate things, the bind argument also gets a copy of
    gen_unify to call, if it should choose.
 *)
+(*
 val gen_unify :
+  (int -> prerank -> prerank -> ('a -> 'a * unit option)) ->
   (int -> prerank -> prerank -> ('a -> 'a * unit option)) ->
   (int -> prerank -> prerank -> ('a -> 'a * unit option)) ->
   (int -> (prekind -> prekind -> ('a -> 'a * unit option)) ->
    (uvarkind ref -> (prekind -> ('a -> 'a * unit option)))) ->
   string -> int -> prekind -> prekind -> ('a -> 'a * unit option)
+*)
 val unify : prekind -> prekind -> unit
 val unify_le : prekind -> prekind -> unit
 val can_unify : prekind -> prekind -> bool

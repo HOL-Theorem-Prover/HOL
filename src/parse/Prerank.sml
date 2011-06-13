@@ -17,6 +17,9 @@ fun is_debug() = (!debug) >= 4;
    Replaces "debug_preterm", "debug_pretype, "debug_prekind", and "debug_prerank".
 *)
 
+val show_ranks = ref 1
+val _ = Feedback.register_trace("ranks", show_ranks, 3)
+
 val TCERR = mk_HOL_ERR "Prerank";
 
 datatype prerank
@@ -421,7 +424,7 @@ infix ref_remove
 fun r ref_remove value = ref_remove0 [] r value
 
 fun ref_remove_all0 rs r value = (* experimental; shouldn't diverge *)
- (if true (*length rs < 8*) (*current_trace "kinds" < 2*) then () else
+ (if true (*length rs < 8*) (*current_trace "ranks" < 2*) then () else
    (print ("**ref_remove_all["^Int.toString(length rs)^": ");
     () (*print (prerank_to_string value ^ "\n")*) );
   let val res =
@@ -466,7 +469,7 @@ fun ref_remove_all0 rs r value = (* experimental; shouldn't diverge *)
                                  ) (false,[]) rks
                    in (chgd, SOME (shrink_rank (Maxrank (rev rks'))))
                    end
-  in if true (*length rs < 8*) (*current_trace "kinds" < 2*) then () else
+  in if true (*length rs < 8*) (*current_trace "ranks" < 2*) then () else
        (print ("]\n"));
      res
   end

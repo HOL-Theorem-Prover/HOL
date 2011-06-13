@@ -59,7 +59,7 @@ fun ge0 (UVarkind (ref(SOMEK (PK(kd,l)))))    kd'              = ge0 kd kd'
   | ge0 kd                (UVarkind (ref(SOMEK (PK(kd',l)))) ) = ge0 kd kd'
   | ge0 (Varkind(s,rk))            (Varkind(s',rk'))           = s=s' andalso Prerank.eq rk rk'
   | ge0 (Typekind rk)              (Typekind rk')              = Prerank.leq rk' rk
-  | ge0 (Arrowkind(kd1,kd2))       (Arrowkind(kd1',kd2'))      = ge kd1 kd1' andalso ge kd2 kd2'
+  | ge0 (Arrowkind(kd1,kd2))       (Arrowkind(kd1',kd2'))      = eq kd1 kd1' andalso ge kd2 kd2'
   | ge0 (KdRankConstr{Kd=kd, Rank=rk}) (KdRankConstr{Kd=kd', Rank=rk'})
                                                                = ge kd kd' andalso Prerank.leq rk' rk
   | ge0 (UVarkind (r as ref (NONEK _))) (UVarkind (r' as ref (NONEK _))) = r=r'
@@ -157,7 +157,7 @@ fun prekind_to_string (kd as PK(kd0,locn)) =
 fun default_rank Prerank.Zerorank = true
   | default_rank _ = false
 fun pp_if_prerank add_string pp_prerank rk =
-      if current_trace "kinds" < 2 orelse default_rank rk then ()
+      if current_trace "ranks" < 2 orelse default_rank rk then ()
       else (add_string ":";
             pp_prerank rk)
 
@@ -418,10 +418,12 @@ fun unsafe_bind n f r value =
 (* eta-expansion *is* necessary *)
 fun gen_unify (rank_unify   :int -> prerank -> prerank -> ('a -> 'a * unit option))
               (rank_unify_le:int -> prerank -> prerank -> ('a -> 'a * unit option))
+              (rank_unify_eq:int -> prerank -> prerank -> ('a -> 'a * unit option))
               (bind : int -> (prekind -> prekind -> ('a -> 'a * unit option)) ->
                       (uvarkind ref -> (prekind -> ('a -> 'a * unit option))))
               s n (kd1 as PK(k1,locn1)) (kd2 as PK(k2,locn2)) e = let
-  val gen_unify = gen_unify rank_unify rank_unify_le bind s (n+1)
+  val gen_unify_eq = gen_unify rank_unify rank_unify_eq rank_unify_eq bind s (n+1)
+  val gen_unify    = gen_unify rank_unify rank_unify_le rank_unify_eq bind s (n+1)
   val rank_unify = rank_unify (n+1)
   val rank_unify_le = rank_unify_le (n+1)
   val bind = bind (n+1)
@@ -459,7 +461,7 @@ report "Unifying kinds" s n kd1 kd2 (
                                             >> rank_unify rk1 rk2
   | (Typekind rk1, Typekind rk2) => rank_unify_le rk1 rk2
   | (Arrowkind(kd11, kd12), Arrowkind(kd21, kd22)) =>
-       gen_unify kd11 kd21 >> gen_unify kd12 kd22
+       gen_unify_eq(* ? *) kd11 kd21 >> gen_unify kd12 kd22
   | (KdRankConstr{Kd=kd1',Rank=rk1}, _) =>
        rank_unify (prank_of kd1') rk1 >> gen_unify kd1' kd2
   | (_, KdRankConstr{Kd=kd2',Rank=rk2}) =>
@@ -468,23 +470,23 @@ report "Unifying kinds" s n kd1 kd2 (
 )
  end e
 
-val unsafe_unify = gen_unify rank_unify rank_unify unsafe_bind "= "
-val unsafe_unify_le = gen_unify rank_unify rank_unify_le unsafe_bind "<="
-val unsafe_conty_unify = gen_unify rank_unify no_rank_unify unsafe_bind "=?"
+val unsafe_unify = gen_unify rank_unify rank_unify rank_unify unsafe_bind "= "
+val unsafe_unify_le = gen_unify rank_unify rank_unify_le rank_unify unsafe_bind "<="
+val unsafe_conty_unify = gen_unify rank_unify no_rank_unify no_rank_unify unsafe_bind "=?"
 
 fun unify k1 k2 =
-  case (gen_unify rank_unify rank_unify unsafe_bind "= " 0 k1 k2 ([],[]))
+  case (gen_unify rank_unify rank_unify rank_unify unsafe_bind "= " 0 k1 k2 ([],[]))
    of (bindings, SOME ()) => ()
     | (_, NONE) => raise TCERR "unify" "unify failed";
 
 fun unify_le k1 k2 =
-  case (gen_unify rank_unify rank_unify_le unsafe_bind "<=" 0 k1 k2 ([],[]))
+  case (gen_unify rank_unify rank_unify_le rank_unify unsafe_bind "<=" 0 k1 k2 ([],[]))
    of (bindings, SOME ()) => ()
     | (_, NONE) => raise TCERR "unify_le" "unify failed";
 
 fun can_unify k1 k2 = let
   val ((rank_bindings,kind_bindings), result) =
-        gen_unify rank_unify rank_unify unsafe_bind "= " 0 k1 k2 ([],[])
+        gen_unify rank_unify rank_unify rank_unify unsafe_bind "= " 0 k1 k2 ([],[])
   val _ = app (fn (r, oldvalue) => r := oldvalue) rank_bindings
   val _ = app (fn (r, oldvalue) => r := oldvalue) kind_bindings
 in
@@ -493,7 +495,7 @@ end
 
 fun can_unify_le k1 k2 = let
   val ((rank_bindings,kind_bindings), result) =
-        gen_unify rank_unify rank_unify_le unsafe_bind "<=" 0 k1 k2 ([],[])
+        gen_unify rank_unify rank_unify_le rank_unify unsafe_bind "<=" 0 k1 k2 ([],[])
   val _ = app (fn (r, oldvalue) => r := oldvalue) rank_bindings
   val _ = app (fn (r, oldvalue) => r := oldvalue) kind_bindings
 in
@@ -577,9 +579,9 @@ report "Binding safely = kind" "= " n (PK(UVarkind r, locn.Loc_None)) value (fn 
         else ((renv,(r, SOMEK value)::kenv), SOME ())
 )) env
 
-val safe_unify = gen_unify rank_unify rank_unify safe_bind "= "
-val safe_unify_le = gen_unify rank_unify rank_unify_le safe_bind "<="
-val safe_conty_unify = gen_unify rank_unify no_rank_unify safe_bind "=?"
+val safe_unify = gen_unify rank_unify rank_unify rank_unify safe_bind "= "
+val safe_unify_le = gen_unify rank_unify rank_unify_le rank_unify safe_bind "<="
+val safe_conty_unify = gen_unify rank_unify no_rank_unify no_rank_unify safe_bind "=?"
 end
 
 (* needs changing *)

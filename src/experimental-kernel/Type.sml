@@ -2158,12 +2158,14 @@ and abeconv_ge1_ty n (E as (env1,env2)) p = EQ p orelse
        | (u as TyCon _,v as TyCon _) => type_con_ge (u,v)
        | (TyApp(p,t1),TyApp(q,t2)) => abeconv_ge1_ty n E (p,q) andalso abeconv_ge0_ty n E (t1,t2)
        | (TyAbs(x1 as (_,k1),ty1),
-          TyAbs(x2 as (_,k2),ty2)) => k1 :>=: k2 andalso
+          TyAbs(x2 as (_,k2),ty2)) => k1 = k2 andalso
+       (* TyAbs(x2 as (_,k2),ty2)) => k1 :>=: k2 andalso *)
                                       let val E' = (insert(env1, Tyv x1, n), insert(env2, Tyv x2, n))
                                       in abeconv_ge0_ty (n+1) E' (ty1,ty2)
                                       end
        | (TyAll(x1 as (_,k1),ty1),
-          TyAll(x2 as (_,k2),ty2)) => k1 :>=: k2 andalso
+          TyAll(x2 as (_,k2),ty2)) => k1 = k2 andalso
+       (* TyAll(x2 as (_,k2),ty2)) => k1 :>=: k2 andalso *)
                                       let val E' = (insert(env1, Tyv x1, n), insert(env2, Tyv x2, n))
                                       in abeconv_ge0_ty (n+1) E' (ty1,ty2)
                                       end
@@ -2381,11 +2383,17 @@ local
   in fn kd => with_flag (varcomplain,false) mk_var_type(name, kd)
   end
   val mk_dummy_ty = mk_fresh_dummy_ty ()
+(**)
+  val dummy_name = fst(dest_var_type (mk_dummy_ty (typ 0)))
+  fun is_dummy_ty ty = (*is_gen_tyvar ty andalso*) not (fst(dest_var_type ty) = dummy_name)
+(**)
   val mk_con_dummy_ty = mk_fresh_dummy_ty ()
   val con_dummy_name = fst(dest_var_type (mk_con_dummy_ty (typ 0)))
   fun is_con_dummy_ty ty = (fst(dest_var_type ty) = con_dummy_name)
   fun var_cmp (x as Tyv(xs,xkd)) (Tyv(ys,ykd)) =
-      (xs = ys) andalso (if is_con_dummy_ty x then xkd :=: ykd else xkd = ykd)
+      (xs = ys) andalso (if is_con_dummy_ty x then xkd :=: ykd
+                         else if xs=dummy_name then ykd :>=: xkd
+                         else xkd = ykd)
     | var_cmp anything other = false
 
   fun rator_type ty = fst (dest_app_type ty)
@@ -2662,7 +2670,8 @@ fun type_homatch kdavoids lconsts rkin kdins (insts, homs) = let
       else (* vty not a type var *) let
           val (vhop, vargs) = strip_app_type vty (* vhop should be a type variable *)
           val afvs = type_varsl vargs
-          val inst_fn = inst_rank_kind (fst rkin) (fst kdins)
+          val (_,kdins') = Kind.norm_subst(rkin,kdins)
+          val inst_fn = inst_rank_kind (fst rkin) (fst kdins')
         in
           (let
              val tyins =

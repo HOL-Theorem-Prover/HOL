@@ -614,16 +614,17 @@ fun create_const errstr (const as (r,GRND pat)) Ty =
       in case (tyS,kdS,rkS)
           of ([],[],0) => Const const
            | (S,_,_) => Const(r, maybe_GRND Ty')
-(*
+(* for speed, comment this out: *)
       end handle e as HOL_ERR _ => raise (wrap_exn ("Term."^errstr)
              (String.concat["\nNot a type instance: ", KernelSig.id_toString r,
                               "\nof primitive type\n", type_to_string pat,
                               "\ncannot have type\n", type_to_string Ty]) e)
-*)
+(*
       end handle HOL_ERR _ => raise (ERR errstr
              (String.concat["Not a type instance: ", KernelSig.id_toString r,
                               "\nof primitive type\n", type_to_string pat,
                               "\ncannot have type\n", type_to_string Ty]))
+*)
 
 
 fun mk_thy_const {Thy,Name,Ty} = let
@@ -2457,10 +2458,11 @@ in
           val (vhop, vtyargs) = strip_tycomb vtm0
           val afvs = free_varsl vargs
           val aftyvs = type_varsl vtyargs
-          val tyins' = map (fn {redex,residue} => Type.inst_rank_kind (fst rkin) (fst kdins) redex |-> residue)
+          val ((rkin',_),(kdins',_)) = Kind.norm_subst(rkin,kdins)
+          val tyins' = map (fn {redex,residue} => Type.inst_rank_kind rkin' kdins' redex |-> residue)
                            (fst tyins)
-          val inst_fn = inst_rk_kd_ty (fst rkin) (fst kdins) tyins'
-          val ty_inst_fn = Type.inst_rk_kd_ty (fst rkin) (fst kdins) tyins'
+          val inst_fn = inst_rk_kd_ty rkin' kdins' tyins'
+          val ty_inst_fn = Type.inst_rk_kd_ty rkin' kdins' tyins'
           val ty_insts = List.mapPartial determ insts
         in
           (let
@@ -2537,10 +2539,11 @@ in
       else (* if is_tycomb vtm then *) let
           val (vhop, vtyargs) = strip_tycomb vtm
           val aftyvs = type_varsl vtyargs
-          val tyins' = map (fn {redex,residue} => Type.inst_rank_kind (fst rkin) (fst kdins) redex |-> residue)
+          val ((rkin',_),(kdins',_)) = Kind.norm_subst(rkin,kdins)
+          val tyins' = map (fn {redex,residue} => Type.inst_rank_kind rkin' kdins' redex |-> residue)
                            (fst tyins)
-          val inst_fn = inst_rk_kd_ty (fst rkin) (fst kdins) tyins'
-          val ty_inst_fn = Type.inst_rk_kd_ty (fst rkin) (fst kdins) tyins'
+          val inst_fn = inst_rk_kd_ty rkin' kdins' tyins'
+          val ty_inst_fn = Type.inst_rk_kd_ty rkin' kdins' tyins'
           val ty_insts = List.mapPartial determ insts
         in
           (let

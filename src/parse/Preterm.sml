@@ -283,6 +283,7 @@ fun tyVars ptm =  (* the pretype variable names in a preterm *)
 local val union = Lib.op_union Pretype.eq
       val subtract = Lib.op_set_diff Pretype.eq
       val type_vars = Pretype.type_vars
+      val the_var_type = Pretype.the_var_type
       fun tyV (Var{Ty,...}) k             = k (type_vars Ty)
         | tyV (Const{Ty,...}) k           = k (type_vars Ty)
         | tyV (Comb{Rator,Rand,...}) k    = tyV Rand (fn q1 =>
@@ -291,7 +292,7 @@ local val union = Lib.op_union Pretype.eq
                                             k (union q (type_vars Rand)))
         | tyV (Abs{Bvar,Body,...}) k      = tyV Body (fn q1 =>
                                             tyV Bvar (fn q2 => k (union q2 q1)))
-        | tyV (TyAbs{Bvar,Body,...}) k    = tyV Body (fn q => k (subtract q [Bvar]))
+        | tyV (TyAbs{Bvar,Body,...}) k    = tyV Body (fn q => k (subtract q [the_var_type Bvar]))
         | tyV (Antiq{Tm,...}) k           = map Pretype.fromType (Term.type_vars_in_term Tm)
         | tyV (Constrained{Ptm,Ty,...}) k = tyV Ptm (fn q =>
                                             k (union q (type_vars Ty)))
@@ -568,9 +569,22 @@ fun default_rank Zerorank = true
 fun add_rank_string Zerorank = ""
   | add_rank_string rk = ":" ^ prerank_to_string rk
 fun pp_if_prerank add_string pp_prerank rk =
-      if current_trace "kinds" < 2 orelse default_rank rk then ()
+      if current_trace "ranks" + (if default_rank rk then 0 else 1) < 3 then ()
       else (add_string " : ";
             pp_prerank rk)
+fun pp_if_prekind_rank add_string pp_prekind pp_prerank kd =
+  let val pr_kd = current_trace "kinds" + (if default_kind kd then 0 else 1) > 1
+      val rk = Prekind.prank_of kd handle Fail _ => Prerank.new_uvar()
+      val pr_rk = if pr_kd then false
+                  else current_trace "ranks" + (if default_rank rk then 0 else 1) > 2
+  in
+      if not pr_kd then ()
+      else (add_string ": ";
+            pp_prekind kd);
+      if not pr_rk then ()
+      else (add_string ":<=";
+            pp_prerank rk)
+  end
 fun print_prerank rk = print (prerank_to_string rk ^ "; ")
 fun print_prekind kd = print (prekind_to_string kd ^ "; ")
 end
@@ -585,6 +599,7 @@ fun pp_preterm pps tm =
      val pp_prerank = Prerank.pp_prerank pps
      val pp_if_prekind = pp_if_prekind add_string pp_prekind
      val pp_if_prerank = pp_if_prerank add_string pp_prerank
+     val pp_if_prekind_rank = pp_if_prekind_rank add_string pp_prekind pp_prerank
      val pp_pretype = Pretype.pp_pretype pps
      fun pppreterm tm =
        case tm of
@@ -595,12 +610,12 @@ fun pp_preterm pps tm =
                                 pp_pretype Ty;
                                 end_block();
                                 add_string ")")
-         | Const {Thy, Name, Ty, ...} => (if current_trace "kinds" < 2 then () else add_string "[";
+         | Const {Thy, Name, Ty, ...} => (if current_trace "ranks" < 3 then () else add_string "[";
                                           if Thy = "bool" orelse Thy = "min" then
                                               add_string Name
                                             else add_string (Thy ^ "$" ^ Name);
-                                            pp_if_prerank (Prekind.prank_of (Pretype.pkind_of Ty));
-                                            if current_trace "kinds" < 2 then () else add_string "]" )
+                                            pp_if_prerank (Pretype.prank_of_type Ty);
+                                            if current_trace "ranks" < 3 then () else add_string "]" )
          | Comb{Rator, Rand, ...} => (add_string "(";
                                begin_block INCONSISTENT 0;
                                pppreterm Rator;
@@ -753,7 +768,7 @@ fun to_term tm =
           val clean = (*Type.vacuum o*) Pretype.clean o Pretype.remove_made_links
 (*
           fun clean ty = (print "\ncleaning type:\n  ";
-                          set_trace "kinds" 2;
+                          set_trace "ranks" 3;
                           Pretype.print_pretype ty; print "\n";
                           let val ty' = Pretype.clean (Pretype.remove_made_links ty)
                           in print "to:\n  ";
@@ -767,7 +782,7 @@ fun to_term tm =
                             else Ty
               in Pretype.replace_null_links Ty' >- (fn _ => return Ty')
               end
-          val _ = if not (is_debug()) then () else (print "\nto_term:\n"; set_trace "kinds" 2; print_preterm tm; print "\n")
+          val _ = if not (is_debug()) then () else (print "\nto_term:\n"; set_trace "ranks" 3; print_preterm tm; print "\n")
         in
           case tm of
             Var{Name,Ty,...} => prepare Ty >- (fn Ty' =>
@@ -779,7 +794,7 @@ fun to_term tm =
           | Const{Name,Thy,Ty,...} =>
                 prepare Ty >- (fn Ty' =>
                 return (Term.mk_thy_const{Name=Name, Thy=Thy, Ty=clean Ty'})
-                             handle e as HOL_ERR _ =>
+                             handle e as HOL_ERR _ => if not (is_debug()) then raise e else
                                 (print ("ERROR in cleanup(Const) of "^Thy^"$"^Name^":\n");
                                  set_trace "kinds" 2;
                                  Pretype.print_pretype Ty'; print "\n";
@@ -798,9 +813,9 @@ fun to_term tm =
                   in
                     list_mk_comb(Term.subst inst res0,
                                  List.drop(args, length inst))
-                             handle e as HOL_ERR _ =>
+                             handle e as HOL_ERR _ => if not (is_debug()) then raise e else
                                 (print "ERROR in cleanup(Pattern):\n";
-                                 set_trace "kinds" 2;
+                                 set_trace "ranks" 3;
                                  print_preterm tm; print "\n";
                                  print "Oper term: "; debug_term f_t; print "\n";
                                  print "Arg terms: "; debug_terms args; print "\n";
@@ -816,7 +831,7 @@ fun to_term tm =
               | _ => cleanup f >- (fn f' =>
                      mmap cleanup args >- (fn args' =>
                      return ((list_mk_comb(f', args'))
-                             handle e as HOL_ERR _ =>
+                             handle e as HOL_ERR _ => if not (is_debug()) then raise e else
                                 (let fun strip_fun_type ty = let val (d,r) = Type.dom_rng ty
                                                                  val (ds,base) = strip_fun_type r
                                                              in (d::ds,base)
@@ -835,7 +850,7 @@ fun to_term tm =
 (**)
                                  in
                                  print "ERROR in cleanup:\n";
-                                 set_trace "kinds" 2;
+                                 set_trace "ranks" 3;
                                  debug_term f'; print " "; debug_terms args'; print "\n";
                                  print "Oper type: "; debug_type (type_of f'); print "\n";
                                  print "Oper dtypes: "; debug_types f_arg_tys; print "\n";
@@ -864,11 +879,13 @@ fun to_term tm =
           | Overloaded _ => raise ERRloc "to_term" (locn tm)
                                          "applied to Overloaded"
           | Pattern{Ptm,...} => cleanup Ptm
-        end handle e as HOL_ERR _ => (print "ERROR in cleanup:\n"; print_preterm tm; print "\n"; Raise e)
+        end handle e as HOL_ERR _ => if not (is_debug()) then raise e else
+                                       (print "ERROR in cleanup:\n"; print_preterm tm; print "\n"; Raise e)
         val K = kindVars tm
         val V = tyVars tm
         val ((newK,newV), result) = cleanup tm (K,V)
-                   handle e as HOL_ERR _ => (print "ERROR in to_term:\n"; print_preterm tm; print "\n"; Raise e)
+                   handle e as HOL_ERR _ => if not (is_debug()) then raise e else
+                                              (print "ERROR in to_term:\n"; print_preterm tm; print "\n"; Raise e)
         val guessed_kindvars = List.take(newK, length newK - length K)
         val guessed_vars = List.take(newV, length newV - length V)
         val _ =
@@ -1292,6 +1309,7 @@ fun list_mk_tycomb(tm,[]) = tm
 val univcomplain = ref true
 val _ = register_btrace ("Var of Universal Type Complaint", univcomplain)
 
+(*
 fun high_o (Const{Thy="combin", Name="o", Ty=Ty, ...}) =
        current_trace "debug_type_inference" > 0 andalso
           Prerank.leq (Prerank.Sucrank Prerank.Zerorank) (Pretype.prank_of_type Ty)
@@ -1325,6 +1343,7 @@ fun check_for_high_o (Const{Thy="combin", Name="o", Ty=Ty, ...}) =
   | check_for_high_o (Constrained{Ptm,...}) = check_for_high_o Ptm
   | check_for_high_o (Pattern{Ptm,...}) = check_for_high_o Ptm
   | check_for_high_o _ = ()
+*)
 
 fun check_for f (c as Const _) = f c
   | check_for f (v as Var _) = f v
@@ -1468,6 +1487,7 @@ fun TC printers = let
                         ^ preterm_to_string Rand ^ "\n"
                         ^ "Types: rator:\n" ^ Pretype.pretype_to_string Rator_ty ^ "\n"
                         ^ "   to: rand :\n" ^ Pretype.pretype_to_string Rand_ty ^ "\n");
+(*
               if check_for high_o Rator' andalso
                  check_for high_unit Rand'
               then (let val c_o = rator Rator'
@@ -1479,7 +1499,7 @@ fun TC printers = let
                         val unit_rk = Prekind.prank_of unit_kd
                     in
                       Globals.show_types := true;
-                      set_trace "kinds" 2;
+                      set_trace "ranks" 3;
                       print "\nVIOLATION\n\n";
                       print_preterm (Comb{Rator=Rator', Rand=Rand', Locn=Locn});
                       print "\n";
@@ -1505,6 +1525,7 @@ fun TC printers = let
                                  ("found high combin$o and a high unit as well"))
                     end)
               else ();
+*)
               Comb{Rator=Rator', Rand=Rand', Locn=Locn})
              handle (e as Feedback.HOL_ERR{origin_structure="Pretype",
                                            origin_function="unify",message})
@@ -1624,16 +1645,21 @@ fun TC printers = let
           end
         | (e as Feedback.HOL_ERR{origin_structure="Prekind",
                                      origin_function="unify",message})
-       => let val show_kinds = Feedback.get_tracefn "kinds"
+       => let val show_ranks = Feedback.get_tracefn "ranks"
+              val show_kinds = Feedback.get_tracefn "kinds"
               val tmp0 = !Globals.show_types
               val _ = Globals.show_types := true
               val tmp1 = show_kinds()
               val _   = Feedback.set_trace "kinds" 2
+              val tmp2 = show_ranks()
+              val _   = Feedback.set_trace "ranks" 3
               val Rator_tm = to_term (overloading_resolution0 Rator')
-                       handle e => (Globals.show_types := tmp0; Feedback.set_trace "kinds" tmp1; raise e)
+                       handle e => (Globals.show_types := tmp0; Feedback.set_trace "kinds" tmp1;
+                                    Feedback.set_trace "ranks" tmp2; raise e)
               val Pretype.PT(_,rand_locn) = Rand
               val Rand_ty = Pretype.toType Rand
-                       handle e => (Globals.show_types := tmp0; Feedback.set_trace "kinds" tmp1; raise e)
+                       handle e => (Globals.show_types := tmp0; Feedback.set_trace "kinds" tmp1;
+                                    Feedback.set_trace "ranks" tmp2; raise e)
               val message =
                   String.concat
                       [
@@ -1657,6 +1683,7 @@ fun TC printers = let
           in
             Globals.show_types := tmp0;
             Feedback.set_trace "kinds" tmp1;
+            Feedback.set_trace "ranks" tmp2;
             tcheck_say message;
             last_tcerror := SOME (TyAppKindFail(Rator_tm,Rand_ty), rand_locn);
             raise ERRloc"typecheck" (rand_locn (* arbitrary *)) "failed"
@@ -1668,12 +1695,17 @@ fun TC printers = let
               val show_kinds = Feedback.get_tracefn "kinds"
               val tmp1 = show_kinds()
               val _   = Feedback.set_trace "kinds" 2
+              val show_ranks = Feedback.get_tracefn "ranks"
+              val tmp2 = show_ranks()
+              val _   = Feedback.set_trace "ranks" 3
               val Rator_tm = to_term (overloading_resolution0 Rator')
-                             handle e => (Globals.show_types := tmp0; Feedback.set_trace "kinds" tmp1; raise e)
+                             handle e => (Globals.show_types := tmp0; Feedback.set_trace "kinds" tmp1;
+                                    Feedback.set_trace "ranks" tmp2; raise e)
               val Rator_ty = Type.deep_beta_eta_ty (Term.type_of Rator_tm)
               val Pretype.PT(_,rand_locn) = Rand
               val Rand_ty = Pretype.toType Rand
-                            handle e => (Globals.show_types := tmp0; Feedback.set_trace "kinds" tmp1; raise e)
+                            handle e => (Globals.show_types := tmp0; Feedback.set_trace "kinds" tmp1;
+                                    Feedback.set_trace "ranks" tmp2; raise e)
               val message =
                   String.concat
                       [
@@ -1701,6 +1733,7 @@ fun TC printers = let
           in
             Globals.show_types := tmp0;
             Feedback.set_trace "kinds" tmp1;
+            Feedback.set_trace "ranks" tmp2;
             tcheck_say message;
             last_tcerror := SOME (TyAppRankFail(Rator_tm,Rand_ty), rand_locn);
             raise ERRloc"typecheck" (rand_locn (* arbitrary *)) "failed"
@@ -1756,6 +1789,9 @@ fun TC printers = let
        => let val show_kinds = Feedback.get_tracefn "kinds"
               val tmp = show_kinds()
               val _   = Feedback.set_trace "kinds" 2
+              val show_ranks = Feedback.get_tracefn "ranks"
+              val tmp2 = show_ranks()
+              val _   = Feedback.set_trace "ranks" 3
               val ty_locn = pty_locn Ty
               val real_type = (Pretype.toType Ty
                          handle e => raise (wrap_exn "Preterm" "check.Var" e))
@@ -1777,6 +1813,7 @@ fun TC printers = let
                        "kind unification failure message: ", message, "\n"]
           in
             Feedback.set_trace "kinds" tmp;
+            Feedback.set_trace "ranks" tmp2;
             tcheck_say message;
             last_tcerror := SOME (VarKindFail(Name, real_type), ty_locn);
             raise ERRloc"kindcheck" (pty_locn Ty (* arbitrary *)) "failed"
@@ -1804,6 +1841,9 @@ fun TC printers = let
        => let val show_kinds = Feedback.get_tracefn "kinds"
               val tmp = show_kinds()
               val _   = Feedback.set_trace "kinds" 2
+              val show_ranks = Feedback.get_tracefn "ranks"
+              val tmp2 = show_ranks()
+              val _   = Feedback.set_trace "ranks" 3
               val ty_locn = pty_locn Ty
               val real_type = (Pretype.toType Ty
                          handle e => raise (wrap_exn "Preterm" "check.Const" e))
@@ -1826,6 +1866,7 @@ fun TC printers = let
                        "kind unification failure message: ", message, "\n"]
           in
             Feedback.set_trace "kinds" tmp;
+            Feedback.set_trace "ranks" tmp2;
             tcheck_say message;
             last_tcerror := SOME (ConstKindFail(Name, Thy, real_type), ty_locn);
             raise ERRloc"kindcheck" (pty_locn Ty (* arbitrary *)) "failed"
@@ -1842,6 +1883,9 @@ fun TC printers = let
        => let val show_kinds = Feedback.get_tracefn "kinds"
               val tmp = show_kinds()
               val _   = Feedback.set_trace "kinds" 2
+              val show_ranks = Feedback.get_tracefn "ranks"
+              val tmp2 = show_ranks()
+              val _   = Feedback.set_trace "ranks" 3
               val real_term = to_term (overloading_resolution0 Ptm)
                               handle e => (check Ptm; Feedback.set_trace "kinds" tmp; raise e)
               val ty_locn = pty_locn Ty
@@ -1865,6 +1909,7 @@ fun TC printers = let
                        "kind unification failure message: ", message, "\n"]
           in
             Feedback.set_trace "kinds" tmp;
+            Feedback.set_trace "ranks" tmp2;
             tcheck_say message;
             last_tcerror := SOME (ConstrainKindFail(real_term, real_type), ty_locn);
             raise ERRloc"kindcheck" (pty_locn Ty (* arbitrary *)) "failed"

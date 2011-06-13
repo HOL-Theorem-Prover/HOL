@@ -400,11 +400,14 @@ fun pp_term (G : grammar) TyG backend = let
   fun tystr ty =
       let val cur_ftyvars_seen = !type_pp.ftyvars_seen
           val cur_kinds = current_trace "kinds"
+          val cur_ranks = current_trace "ranks"
           val _ = set_trace "kinds" 0
+          val _ = set_trace "ranks" 0
           val str = ty_to_str ty
       in
         type_pp.ftyvars_seen := cur_ftyvars_seen;
         set_trace "kinds" cur_kinds;
+        set_trace "ranks" cur_ranks;
         str
       end
   val {restr_binders,lambda,type_lambda,endbinding,
@@ -574,6 +577,14 @@ fun pp_term (G : grammar) TyG backend = let
   end handle HOL_ERR _ => false
   val is_let = is_let0 1
 
+  fun is_unpack0 n tm = let
+    val (unpack_tm,f_tm) = dest_comb(rator tm)
+  in
+    grammar_name G unpack_tm = SOME "UNPACK" andalso
+    (length (#1 (my_strip_abs (#2 (my_dest_tyabs f_tm)))) >= n orelse is_unpack0 (n + 1) f_tm)
+  end handle HOL_ERR _ => false
+  val is_unpack = is_unpack0 1
+
 
 
   fun dest_vstruct bnder res t =
@@ -705,17 +716,32 @@ fun pp_term (G : grammar) TyG backend = let
     strip n [] tm
   end
 
+  fun strip_ntyv_vstructs n tm = let
+    fun strip n acc tm =
+        if n <= 0 then (List.rev acc, tm)
+        else let
+            val (btyvar, body1) = dest_tyvstruct NONE tm
+            val (bvar, body) = dest_vstruct NONE NONE body1
+          in
+            strip (n - 1) ((btyvar,bvar) :: acc) body
+          end
+  in
+    strip n [] tm
+  end
+
   datatype comb_posn = RatorCP | RandCP | NoCP
 
   fun pr_term binderp showtypes showtypes_v vars_seen pps ppfns combpos tm
               pgrav lgrav rgrav depth = let
 
+(*
     fun pr_term1 binderp showtypes showtypes_v vars_seen pps ppfns combpos tm
               pgrav lgrav rgrav depth
       = time backend pps "pr_term" (pr_term binderp showtypes showtypes_v vars_seen pps ppfns combpos tm
               pgrav lgrav rgrav) depth
               handle e => Raise (wrap_exn "term_pp.pr_term" "<entrance>" e) (* debugging *)
     val pr_term = pr_term1
+*)
 
     val _ =
         if printers_exist then let
@@ -1714,6 +1740,73 @@ fun pp_term (G : grammar) TyG backend = let
       bvars_seen := old_bvars_seen
     end
 
+    fun pr_unpack0 tm = let
+      fun find_base acc tm =
+        if is_unpack tm then let
+          val (unpack_tm, args) = strip_comb tm
+        in
+          find_base (List.nth(args, 1)::acc) (hd args)
+        end
+        else (acc, tm)
+      val unpackboundvars = ref []
+      val unpackboundtyvars = ref []
+      fun pr_unpackeq ((btyv, bv), tm2) = let
+        val old_ty_seen = !type_pp.btyvars_seen
+        val old_seen = !bvars_seen
+      in
+        begin_block INCONSISTENT 2;
+        add_string "(";
+        add_string ":"; pr_type true btyv;
+        type_pp.btyvars_seen := btyv :: !type_pp.btyvars_seen;
+        add_string ","; pr_vstruct bv;
+        add_string ")"; spacep true;
+        bvars_seen := old_seen;
+        type_pp.btyvars_seen := old_ty_seen;
+        add_string "="; spacep true;
+        begin_block INCONSISTENT 2;
+        pr_term tm2 Top Top Top (decdepth depth);
+        end_block();
+        unpackboundvars := free_vars (bv2term bv) @ !unpackboundvars;
+        unpackboundtyvars := btyv :: !unpackboundtyvars;
+        end_block()
+      end
+      val (values, abstr) = find_base [] tm
+      val (varnames, body) =
+          strip_ntyv_vstructs (length values) abstr
+      val name_value_pairs = ListPair.zip (varnames, values)
+    in
+      (* put a block around the "let ... in" phrase *)
+      begin_block CONSISTENT 0;
+      add_string "let"; add_string " ";
+      (* put a block around the variable bindings *)
+      begin_block INCONSISTENT 0;
+      pr_list pr_unpackeq (fn () => (add_string " "; add_string "and"))
+              (fn () => spacep true) name_value_pairs;
+      end_block(); (* end of variable binding block *)
+      bvars_seen := !bvars_seen @ !unpackboundvars;
+      type_pp.btyvars_seen := !type_pp.btyvars_seen @ !unpackboundtyvars;
+      if is_unpack body then (spacep true; add_string "in"; end_block();
+                              spacep true; pr_unpack0 body)
+      else (end_block(); spacep true; add_string "in";
+            add_break(1,2);
+            (* a lie! but it works *)
+            pr_term body RealTop RealTop RealTop (decdepth depth))
+    end
+
+    fun pr_unpack lgrav rgrav tm = let
+      val addparens = lgrav <> RealTop orelse rgrav <> RealTop
+      val old_btyvars_seen = !type_pp.btyvars_seen
+      val old_bvars_seen = !bvars_seen
+    in
+      pbegin addparens;
+      begin_block CONSISTENT 0;
+      pr_unpack0 tm;
+      end_block();
+      pend addparens;
+      type_pp.btyvars_seen := old_btyvars_seen;
+      bvars_seen := old_bvars_seen
+    end
+
     fun print_ty_antiq tm = let
       val ty = parse_type.dest_ty_antiq tm
     in
@@ -1800,7 +1893,9 @@ fun pp_term (G : grammar) TyG backend = let
           pend print_type; end_block()
         end
       | CONST{Name, Thy, Ty} => let
-          fun add_prim_name () = add_string (Thy ^ "$" ^ Name)
+          fun add_prim_name () = (add_string (Thy ^ "$" ^ Name);
+                                  if current_trace "ranks" < 3 then () else
+                                     add_string (":" ^ rank_to_string(Type.rank_of_type Ty)))
           fun with_type action = let
           in
             pbegin true;
@@ -1980,6 +2075,10 @@ fun pp_term (G : grammar) TyG backend = let
                 | _ => ()
               else ()
 
+          (* unpack expressions *)
+          val () = if is_unpack tm then (pr_unpack lgrav rgrav tm; raise SimpleExit)
+                   else ()
+
           (* let expressions *)
           val () = if is_let tm then (pr_let lgrav rgrav tm; raise SimpleExit)
                    else ()
@@ -2059,8 +2158,8 @@ fun pp_term (G : grammar) TyG backend = let
                     | SUFFIX (STD_suffix list) =>
                       numTMs (rule_elements (#elements (hd list))) =
                       length args
-                    | SUFFIX Type_annotation => raise Fail "Can't happen 90210"
-                    | SUFFIX Type_application => raise Fail "Can't happen 90210"
+                    | SUFFIX TYPE_annotation => raise Fail "Can't happen 90210"
+                    | SUFFIX TYPE_application => raise Fail "Can't happen 90210"
                     | CLOSEFIX list =>
                       numTMs (rule_elements (#elements (hd list))) - 1 =
                       length args

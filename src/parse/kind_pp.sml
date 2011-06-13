@@ -15,7 +15,7 @@ datatype single_rule
 
 val ERR = mk_HOL_ERR "kind_pp" "pp_kind";
 
-val pp_arity_kinds = ref true
+val pp_arity_kinds = ref false
 val _ = register_btrace("pp_arity_kinds", pp_arity_kinds)
 
 fun dest_arity_kind kd = Kind.arity_of kd
@@ -61,17 +61,20 @@ fun pp_kind0 (G:grammar) backend = let
       pend parens_needed
     end
 
+    val show_ranks = Feedback.get_tracefn "ranks"
+    fun rank_string rk =
+      if show_ranks() + (if rk = rho then 0 else 1) < 2 then ""
+      else ":" ^ rank_to_string rk
+
   in
     if depth = 0 then add_string "..."
     else if is_type_kind kd then
         let val rk = dest_type_kind kd
-        in add_string ("ty" ^
-                       (if rk = rho then "" else ":" ^ rank_to_string rk))
+        in add_string ("ty" ^ rank_string rk)
         end
     else if is_var_kind kd then
         let val (s,rk) = dest_var_kind kd
-        in add_string (s ^
-                       (if rk = rho then "" else ":" ^ rank_to_string rk))
+        in add_string (s ^ rank_string rk)
         end
     else
         let val _ = Lib.assert (Lib.equal true) (!pp_arity_kinds)

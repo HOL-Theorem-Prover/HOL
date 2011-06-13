@@ -68,6 +68,7 @@ val ge_kind = Prekind.ge
 
 fun eq_tyvar (s,kd) (s',kd') = s=s' (*andalso eq_kind kd kd'*)
 (* kind comparison omitted because in parser, kinds might not be fully unified yet *)
+fun eq_tyvar_kinds (s,kd) (s',kd') = eq_kind kd kd'
 
 fun Vartype_of0 (Vartype v) = v
   | Vartype_of0 (TyKindConstr{Ty, Kind}) =
@@ -94,8 +95,10 @@ fun eq_env0 e1 e2 (Vartype v)                (Vartype v')              = eq_vart
                                                                            andalso eq_kind Kind Kind'
   | eq_env0 e1 e2 (TyApp(ty1,ty2))           (TyApp(ty1',ty2'))        = eq_env e1 e2 ty1 ty1' andalso eq_env e1 e2 ty2 ty2'
   | eq_env0 e1 e2 (TyUniv(ty1,ty2))          (TyUniv(ty1',ty2'))       =
+          eq_tyvar_kinds (Vartype_of ty1) (Vartype_of ty1') andalso
           eq_env (Vartype_of ty1::e1) (Vartype_of ty1'::e2) ty2 ty2'
   | eq_env0 e1 e2 (TyAbst(ty1,ty2))          (TyAbst(ty1',ty2'))       =
+          eq_tyvar_kinds (Vartype_of ty1) (Vartype_of ty1') andalso
           eq_env (Vartype_of ty1::e1) (Vartype_of ty1'::e2) ty2 ty2'
   | eq_env0 e1 e2 (TyKindConstr{Ty=ty, Kind=kd })
                   (TyKindConstr{Ty=ty',Kind=kd'})                      = eq_env e1 e2 ty ty' andalso eq_kind kd kd'
@@ -118,8 +121,10 @@ fun ge_env0 e1 e2 (Vartype v)                (Vartype v')              = ge_vart
                                                                            andalso ge_kind Kind Kind'
   | ge_env0 e1 e2 (TyApp(ty1,ty2))           (TyApp(ty1',ty2'))        = ge_env e1 e2 ty1 ty1' andalso ge_env e1 e2 ty2 ty2'
   | ge_env0 e1 e2 (TyUniv(ty1,ty2))          (TyUniv(ty1',ty2'))       =
+          eq_tyvar_kinds (Vartype_of ty1) (Vartype_of ty1') andalso
           ge_env (Vartype_of ty1::e1) (Vartype_of ty1'::e2) ty2 ty2'
   | ge_env0 e1 e2 (TyAbst(ty1,ty2))          (TyAbst(ty1',ty2'))       =
+          eq_tyvar_kinds (Vartype_of ty1) (Vartype_of ty1') andalso
           ge_env (Vartype_of ty1::e1) (Vartype_of ty1'::e2) ty2 ty2'
   | ge_env0 e1 e2 (TyKindConstr{Ty=ty, Kind=kd })
                   (TyKindConstr{Ty=ty',Kind=kd'})                      = ge_env e1 e2 ty ty' andalso ge_kind kd kd'
@@ -419,12 +424,13 @@ end
 
 local val insert = Lib.op_insert eq
       val mem    = Lib.op_mem eq
+      val the_var = the_var_type
       fun TV (v as PT(Vartype _,_)) B A k = if mem v B then k A
                                             else k (insert v A)
         | TV (PT(Contype _,_)) B A k      = k A
         | TV (PT(TyApp(opr, ty),_)) B A k = TV opr B A (fn q => TV ty B q k)
-        | TV (PT(TyUniv(v,ty),_)) B A k   = TV ty (insert v B) A k
-        | TV (PT(TyAbst(v,ty),_)) B A k   = TV ty (insert v B) A k
+        | TV (PT(TyUniv(v,ty),_)) B A k   = TV ty (insert (the_var v) B) A k
+        | TV (PT(TyAbst(v,ty),_)) B A k   = TV ty (insert (the_var v) B) A k
         | TV (PT(TyKindConstr{Ty,Kind},_)) B A k = TV Ty B A k
         | TV (PT(TyRankConstr{Ty,Rank},_)) B A k = TV Ty B A k
         | TV (v as PT(UVar(ref(NONEU _ )),_)) B A k = if mem v B then k A
@@ -474,6 +480,10 @@ end;
 fun ((ty1 as PT(_,loc1)) --> (ty2 as PT(_,loc2))) =
   let val max = Prerank.mk_Maxrank
       val rank = max(prank_of_type ty1, prank_of_type ty2)
+                 handle Fail _    => (* prank_of can fail if types not yet checked *)
+                 Prerank.new_uvar()
+                 handle HOL_ERR _ => (* prank_of can fail if types not yet checked *)
+                 Prerank.new_uvar()
       val kind = Prekind.typ rank
   in
     PT(TyApp(PT(TyApp(PT(Contype {Thy = "min", Tyop = "fun",
@@ -518,7 +528,7 @@ fun variant_type fvs v = if is_var_type v then gen_variant "variant_type" fvs v
 
 fun mk_exist_type (x as PT(Vartype(nm,kd),locn),body) =
   let open Prekind
-      val x0 = PT(Vartype(nm, typ (prank_of kd)),locn)
+      val x0 = PT(Vartype(nm, typ (Prerank.new_uvar())),locn)
       val y  = variant_type (x0 :: type_vars body) x0
     in mk_univ_type(y, mk_univ_type(x, body --> y) --> y)
     end
@@ -575,16 +585,6 @@ fun apply_subst subst (pt as PT (pty, locn)) =
  *    Converting pretypes to strings, for printing.                          *
  *---------------------------------------------------------------------------*)
 
-(*
-fun kind_rank_to_string (kd,rk) =
-    if current_trace "kinds" = 0 then "" else
-      let open Prekind Prerank
-      in   (if prekind_compare(kd,typ) = EQUAL
-            then "" else ":" ^ prekind_to_string kd)
-         ^ (if prerank_compare(rk,Zerorank) = EQUAL
-            then "" else ":<=" ^ prerank_to_string rk)
-      end
-*)
 local open Prekind Prerank Portable
 in
 fun default_kind (PK(Typekind Zerorank,_)) = true
@@ -600,9 +600,22 @@ fun default_rank Zerorank = true
 fun add_rank_string Zerorank = ""
   | add_rank_string rk = ":" ^ prerank_to_string rk
 fun pp_if_prerank add_string pp_prerank rk =
-      if current_trace "kinds" < 2 orelse default_rank rk then ()
+      if current_trace "ranks" + (if default_rank rk then 0 else 1) < 3 then ()
       else (add_string ":";
             pp_prerank rk)
+fun pp_if_prekind_rank add_string pp_prekind pp_prerank kd =
+  let val pr_kd = current_trace "kinds" + (if default_kind kd then 0 else 1) > 1
+      val rk = Prekind.prank_of kd handle Fail _ => Prerank.new_uvar()
+      val pr_rk = if pr_kd then false
+                  else current_trace "ranks" + (if default_rank rk then 0 else 1) > 2
+  in
+      if not pr_kd then ()
+      else (add_string ": ";
+            pp_prekind kd);
+      if not pr_rk then ()
+      else (add_string ":<=";
+            pp_prerank rk)
+  end
 end
 
 datatype pp_pty_state = none | left | right | uvar
@@ -615,6 +628,7 @@ fun pp_pretype pps ty =
      val pp_prerank = Prerank.pp_prerank pps
      val pp_if_prekind = pp_if_prekind add_string pp_prekind
      val pp_if_prerank = pp_if_prerank add_string pp_prerank
+     val pp_if_prekind_rank = pp_if_prekind_rank add_string pp_prekind pp_prerank
      fun pppretype state (ty as PT(ty0,locn)) =
        case ty0 of
            UVar(r as ref (SOMEU pty')) => let
@@ -626,17 +640,17 @@ fun pp_pretype pps ty =
              if state <> uvar then end_block() else ()
            end
          | UVar(r as ref (NONEU kd)) => (add_string (Int.toString (checkref r));
-                                         pp_if_prekind kd )
+                                         pp_if_prekind_rank kd )
          | Vartype(s,kd) => (add_string ("V(" ^ s);
-                             pp_if_prekind kd;
+                             pp_if_prekind_rank kd;
                              add_string ")")
-         | Contype {Thy, Tyop, Kind} => (if current_trace "kinds" < 2 then () else
+         | Contype {Thy, Tyop, Kind} => (if current_trace "ranks" < 3 then () else
                                            add_string "[";
                                          if Thy = "bool" orelse Thy = "min" then
                                            add_string Tyop
                                          else add_string (Thy ^ "$" ^ Tyop);
                                          pp_if_prerank (Prekind.prank_of Kind);
-                                         if current_trace "kinds" < 2 then () else
+                                         if current_trace "ranks" < 3 then () else
                                            add_string "]" )
          | TyApp(PT(TyApp(PT(Contype{Tyop="fun",Kind,...},_), ty1),_), ty2) =>
                               (if state = none then begin_block INCONSISTENT 0
@@ -645,11 +659,11 @@ fun pp_pretype pps ty =
                                else ();
                                pppretype left ty1;
                                add_string " ";
-                               if current_trace "kinds" < 2 then () else
+                               if current_trace "ranks" < 3 then () else
                                  add_string "[";
                                add_string "->";
                                pp_if_prerank (Prekind.prank_of Kind);
-                               if current_trace "kinds" < 2 then () else
+                               if current_trace "ranks" < 3 then () else
                                  add_string "]";
                                add_break(1,0);
                                pppretype right ty2;
@@ -664,11 +678,11 @@ fun pp_pretype pps ty =
                                else ();
                                pppretype left ty1;
                                add_string " ";
-                               if current_trace "kinds" < 2 then () else
+                               if current_trace "ranks" < 3 then () else
                                  add_string "[";
                                add_string "->";
                                pp_if_prerank (Prekind.prank_of Kind);
-                               if current_trace "kinds" < 2 then () else
+                               if current_trace "ranks" < 3 then () else
                                  add_string "]";
                                add_break(1,0);
                                pppretype right ty2;
@@ -1388,7 +1402,7 @@ fun rank_unify n r1 r2 (rk_env,kd_env,ty_env) =
   in if not (is_debug()) then () else
      case result of SOME _ => () | NONE =>
          (print "\nrank_unify failed:\n";
-          print (Prerank.prerank_to_string r1 ^ " compared to\n" ^
+          print (Prerank.prerank_to_string r1 ^ "\ncompared to\n" ^
                  Prerank.prerank_to_string r2 ^ "\n"));
      ((rk_env',kd_env,ty_env), result)
   end
@@ -1439,11 +1453,11 @@ fun report s cmp n ty1 ty2 m e =
   in case result
        of NONE => if not (is_debug()) then () else
                   (print ("\n" ^ spaces n ^ s ^ " failed for\n" ^ spaces n);
-                   print (pretype_to_string ty1 ^ " compared to\n" ^ spaces n);
+                   print (pretype_to_string ty1 ^ "\ncompared to\n" ^ spaces n);
                    print (pretype_to_string ty2 ^ "\n"))
       | SOME() => if not (is_debug()) then () else
                   (print ("\n" ^ spaces n ^ s ^ " succeeded for\n" ^ spaces n);
-                   print (pretype_to_string ty1 ^ " compared to\n" ^ spaces n);
+                   print (pretype_to_string ty1 ^ "\ncompared to\n" ^ spaces n);
                    print (pretype_to_string ty2 ^ "\n"));
       (e',result)
   end
@@ -1865,7 +1879,7 @@ val safe_unify_le = do_beta_first safe_unify_le0
 end
 
 (* Temporarily put in this test to check safe unification vs unsafe, for all normal unifications.
-   Remove for deployment, but use for hard test of safe unification. *)
+   Remove for deployment, but use for hard test of safe unification.
 fun unify t1 t2 =
   let val (safe_bindings, safe_res) = safe_unify t1 t2 ([],[],[])
       val t1' = deep_beta_eta_ty t1
@@ -1894,7 +1908,7 @@ fun unify t1 t2 =
                      | NONE =>
                    raise TCERR "unify" "unify failed"
   end;
-
+*)
 
 (*---------------------------------------------------------------------------*
  * Passes over a type, turning all of the free type variables not in the     *
@@ -2244,13 +2258,13 @@ fun KC printers = let
                  ^ pretype_to_string arg ^ "\n") )
        handle (e as Feedback.HOL_ERR{origin_structure,origin_function,message})
        => let val _ = throw_non_unify e
-              val show_kinds = Feedback.get_tracefn "kinds"
-              val tmp = show_kinds()
-              val _   = Feedback.set_trace "kinds" 2
+              val show_ranks = Feedback.get_tracefn "ranks"
+              val tmp = show_ranks()
+              val _   = Feedback.set_trace "ranks" 3
               val opr' = toType opr
-                handle e => (Feedback.set_trace "kinds" tmp; raise e)
+                handle e => (Feedback.set_trace "ranks" tmp; raise e)
               val arg' = toType arg
-                handle e => (Feedback.set_trace "kinds" tmp; raise e)
+                handle e => (Feedback.set_trace "ranks" tmp; raise e)
               val message =
                   String.concat
                       [
@@ -2272,7 +2286,7 @@ fun KC printers = let
 
                        "kind unification failure message: ", message, "\n"]
           in
-            Feedback.set_trace "kinds" tmp;
+            Feedback.set_trace "ranks" tmp;
             kcheck_say message;
             last_kcerror := SOME (TyAppFail(opr',arg'), Locn arg);
             raise ERRloc"kindcheck" (Locn opr (* arbitrary *)) "failed"
@@ -2294,11 +2308,11 @@ fun KC printers = let
         Prekind.unify (pkind_of Body) (Prekind.typ (Prerank.new_uvar()))
        handle (e as Feedback.HOL_ERR{origin_structure,origin_function,message})
        => let val _ = throw_non_unify e
-              val show_kinds = Feedback.get_tracefn "kinds"
-              val tmp = show_kinds()
-              val _   = Feedback.set_trace "kinds" 2
+              val show_ranks = Feedback.get_tracefn "ranks"
+              val tmp = show_ranks()
+              val _   = Feedback.set_trace "ranks" 3
               val real_type = toType Body
-                handle e => (Feedback.set_trace "kinds" tmp; raise e)
+                handle e => (Feedback.set_trace "ranks" tmp; raise e)
               val message =
                   String.concat
                       [
@@ -2313,7 +2327,7 @@ fun KC printers = let
 
                        "kind unification failure message: ", message, "\n"]
           in
-            Feedback.set_trace "kinds" tmp;
+            Feedback.set_trace "ranks" tmp;
             kcheck_say message;
             last_kcerror := SOME (TyUnivFail(real_type), Locn Body);
             raise ERRloc "kindcheck" locn "failed"
@@ -2327,14 +2341,14 @@ fun KC printers = let
         Prekind.unify (pkind_of Ty) Kind
        handle (e as Feedback.HOL_ERR{origin_structure,origin_function,message})
        => let val _ = throw_non_unify e
-              val show_kinds = Feedback.get_tracefn "kinds"
-              val tmp = show_kinds()
-              val _   = Feedback.set_trace "kinds" 2
+              val show_ranks = Feedback.get_tracefn "ranks"
+              val tmp = show_ranks()
+              val _   = Feedback.set_trace "ranks" 3
               val real_type = toType Ty
-                handle e => (Feedback.set_trace "kinds" tmp; raise e)
+                handle e => (Feedback.set_trace "ranks" tmp; raise e)
               val Prekind.PK(_,kd_locn) = Kind
               val real_kind = Prekind.toKind Kind
-                handle e => (Feedback.set_trace "kinds" tmp; raise e)
+                handle e => (Feedback.set_trace "ranks" tmp; raise e)
               val message =
                   String.concat
                       [
@@ -2351,7 +2365,7 @@ fun KC printers = let
 
                        "kind unification failure message: ", message, "\n"]
           in
-            Feedback.set_trace "kinds" tmp;
+            Feedback.set_trace "ranks" tmp;
             kcheck_say message;
             last_kcerror := SOME (TyKindConstrFail(real_type, real_kind), kd_locn);
             raise ERRloc "kindcheck" locn "failed"
@@ -2359,18 +2373,18 @@ fun KC printers = let
     | check (PT(TyRankConstr{Ty,Rank},locn)) =
        (check Ty;
         if not (is_debug()) then () else
-          print ("\nChecking rank constraint of type:\n" ^ pretype_to_string Ty ^ " compared to\n"
+          print ("\nChecking rank constraint of type:\n" ^ pretype_to_string Ty ^ "\ncompared to\n"
                   ^ Prerank.prerank_to_string Rank ^ "\n");
         Prerank.unify (prank_of_type Ty) Rank
        handle (e as Feedback.HOL_ERR{origin_structure,origin_function,message})
        => let val _ = throw_non_unify e
-              val show_kinds = Feedback.get_tracefn "kinds"
-              val tmp = show_kinds()
-              val _   = Feedback.set_trace "kinds" 2
+              val show_ranks = Feedback.get_tracefn "ranks"
+              val tmp = show_ranks()
+              val _   = Feedback.set_trace "ranks" 3
               val real_type = toType Ty
-                handle e => (Feedback.set_trace "kinds" tmp; raise e)
+                handle e => (Feedback.set_trace "ranks" tmp; raise e)
               val real_rank = Prerank.toRank Rank
-                handle e => (Feedback.set_trace "kinds" tmp; raise e)
+                handle e => (Feedback.set_trace "ranks" tmp; raise e)
               val message =
                   String.concat
                       [
@@ -2388,7 +2402,7 @@ fun KC printers = let
 
                        "rank unification failure message: ", message, "\n"]
           in
-            Feedback.set_trace "kinds" tmp;
+            Feedback.set_trace "ranks" tmp;
             kcheck_say message;
             last_kcerror := SOME ( (if origin_function="unify" then TyRankConstrFail else TyRankLEConstrFail)
                                    (real_type, real_rank), locn);

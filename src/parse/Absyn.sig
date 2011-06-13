@@ -8,6 +8,7 @@ sig
        = VAQ    of locn.locn * term
        | VIDENT of locn.locn * string
        | VPAIR  of locn.locn * vstruct * vstruct
+       | VTPAIR of locn.locn * pretype * vstruct
        | VTYPED of locn.locn * vstruct * pretype
 
    datatype absyn

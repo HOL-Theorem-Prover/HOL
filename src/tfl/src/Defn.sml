@@ -1461,6 +1461,7 @@ in
 fun vnames_of (VAQ(_,tm)) S = union (map (fst o Term.dest_var) (all_vars tm)) S
   | vnames_of (VIDENT(_,s)) S = union [s] S
   | vnames_of (VPAIR(_,v1,v2)) S = vnames_of v1 (vnames_of v2 S)
+  | vnames_of (VTPAIR(_,_,v)) S = vnames_of v S
   | vnames_of (VTYPED(_,v,_)) S = vnames_of v S
 
 fun names_of (AQ(_,tm)) S = union (map (fst o Term.dest_var) (all_vars tm)) S

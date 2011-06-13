@@ -148,6 +148,7 @@ in
 end
 
 val show_kinds = Feedback.get_tracefn "kinds"
+val show_ranks = Feedback.get_tracefn "ranks"
 
 val ftyvars_seen = ref ([] : hol_type list)
 val btyvars_seen = ref ([] : hol_type list)
@@ -402,7 +403,7 @@ fun pp_type0 (G:grammar) backend = let
                   pr_ty binderp pps arg1 (Lfx (prec, printthis)) (depth - 1);
                   add_break(1,0);
                   add_ann_string (printthis, TySyn tooltip);
-                  if current_trace "kinds" < 2 then () else
+                  if show_ranks() < 3 then () else
                     let val rk = rank_of_type (#1 (strip_app_type ty))
                     in if rk = Rank.rho then () else
                         add_string (":" ^ Rank.rank_to_string rk)

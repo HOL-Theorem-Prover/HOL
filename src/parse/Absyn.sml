@@ -14,6 +14,7 @@ val ERRloc = mk_HOL_ERRloc "Absyn";
        = VAQ    of locn.locn * term
        | VIDENT of locn.locn * string
        | VPAIR  of locn.locn * vstruct * vstruct
+       | VTPAIR of locn.locn * pretype * vstruct
        | VTYPED of locn.locn * vstruct * pretype
 
    datatype absyn
@@ -81,6 +82,7 @@ fun locn_of_vstruct x
         VAQ    (locn,_)   => locn
       | VIDENT (locn,_)   => locn
       | VPAIR  (locn,_,_) => locn
+      | VTPAIR (locn,_,_) => locn
       | VTYPED (locn,_,_) => locn
 
 fun mk_AQ x        = AQ   (nolocn,x)

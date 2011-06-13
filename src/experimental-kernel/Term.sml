@@ -2470,10 +2470,11 @@ in
           val (vhop, vtyargs) = strip_tycomb vtm0
           val afvs = free_varsl vargs
           val aftyvs = type_varsl vtyargs
-          val tyins' = map (fn {redex,residue} => Type.inst_rank_kind (fst rkin) (fst kdins) redex |-> residue)
+          val ((rkin',_),(kdins',_)) = Kind.norm_subst(rkin,kdins)
+          val tyins' = map (fn {redex,residue} => Type.inst_rank_kind rkin' kdins' redex |-> residue)
                            (fst tyins)
-          val inst_fn = inst_rk_kd_ty (fst rkin) (fst kdins) tyins'
-          val ty_inst_fn = Type.inst_rk_kd_ty (fst rkin) (fst kdins) tyins'
+          val inst_fn = inst_rk_kd_ty rkin' kdins' tyins'
+          val ty_inst_fn = Type.inst_rk_kd_ty rkin' kdins' tyins'
           val ty_insts = List.mapPartial determ insts
         in
           (let
@@ -2550,10 +2551,11 @@ in
       else (* if is_tycomb vtm then *) let
           val (vhop, vtyargs) = strip_tycomb vtm
           val aftyvs = type_varsl vtyargs
-          val tyins' = map (fn {redex,residue} => Type.inst_rank_kind (fst rkin) (fst kdins) redex |-> residue)
+          val ((rkin',_),(kdins',_)) = Kind.norm_subst(rkin,kdins)
+          val tyins' = map (fn {redex,residue} => Type.inst_rank_kind rkin' kdins' redex |-> residue)
                            (fst tyins)
-          val inst_fn = inst_rk_kd_ty (fst rkin) (fst kdins) tyins'
-          val ty_inst_fn = Type.inst_rk_kd_ty (fst rkin) (fst kdins) tyins'
+          val inst_fn = inst_rk_kd_ty rkin' kdins' tyins'
+          val ty_inst_fn = Type.inst_rk_kd_ty rkin' kdins' tyins'
           val ty_insts = List.mapPartial determ insts
         in
           (let

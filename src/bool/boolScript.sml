@@ -329,6 +329,14 @@ val PACK_DEF =
 
 val _ = add_const "PACK";
 
+val UNPACK_DEF =
+ Definition.new_definition
+   ("UNPACK_DEF",     Term `UNPACK = \(f : !'x:'k. 'x ('a:'k => ty) -> 'r)
+                                      (P : !'y. (!'x:'k. 'x 'a -> 'y) -> 'y).
+                                      P [:'r:] f`);
+
+val _ = add_const "UNPACK";
+
 val COND_DEF =
  Definition.new_definition
    ("COND_DEF",       Term `COND = \t t1 t2.
