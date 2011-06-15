@@ -3146,6 +3146,8 @@ val CROSS_DEF = Q.new_definition(
   `CROSS P Q = { p | FST p IN P /\ SND p IN Q }`);
 val _ = set_fixity "CROSS" (Infixl 600);
 val _ = Unicode.unicode_version {tmnm = "CROSS", u = UTF8.chr 0xD7}
+val _ = TeX_notation {hol = "CROSS", TeX = ("\\ensuremath{\\times}", 1)}
+val _ = TeX_notation {hol = UTF8.chr 0xD7, TeX = ("\\ensuremath{\\times}", 1)}
 
 val IN_CROSS = store_thm(
   "IN_CROSS",
