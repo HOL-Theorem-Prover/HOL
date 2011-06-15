@@ -1439,6 +1439,7 @@ fun pp_term (G : grammar) TyG backend = let
       val name_value_pairs = ListPair.zip (varnames, values)
       val bodyletp = is_let body
       fun record_bvars new =
+          (* overriding term_pp_utils's version; this one has a different type also *)
           getbvs >- (fn old => setbvs (HOLset.addList(old,new)))
     in
       (* put a block around the "let ... in" phrase *)
