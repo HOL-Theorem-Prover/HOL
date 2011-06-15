@@ -42,19 +42,25 @@ decision procedures.<p></li>
 <li><p><code>HolSmtLib</code> provides a translation from HOL into
 <a href="http://combination.cs.uiowa.edu/smtlib/">SMT-LIB</a>&nbsp;2
 format.  (Support for SMT-LIB&nbsp;1.2 has been
-discontinued. Incompatibility.)<p></li>
+discontinued. <b>Incompatibility</b>.)<p></li>
 
 <li><p><code>HolQbfLib</code> supports checking both validity and
 invalidity certificates for Squolem 2.02. (Support for Squolem 1.x has
-been discontinued. Incompatibility.)</p></li>
+been discontinued. <b>Incompatibility</b>.)</p></li>
 
 <li><p><code>wordsSyntax.mk_word_replicate</code> computes the width
 of the resulting word when applied to a numeral and a fixed-width
-word. Minor incompatibility.</p></li>
+word. Minor <b>incompatibility</b>.</p></li>
 
 <li><p>The new <code>numLib.MOD_ss</code> simpset fragment simplifies a number of expressions involving natural number modulus (<code>MOD</code>).
 For example, <code>(7*x&nbsp;+&nbsp;3)&nbsp;MOD&nbsp;2</code> will automatically simplify to <code>(x&nbsp;+&nbsp;1)&nbsp;MOD&nbsp;2</code>.
 
+
+<li><p>User pretty-printers now have to be of a different type.
+This <b>incompatibility</b> affects the function <code>add_user_printer</code>.
+Users have to write their pretty-printers in a monadic style, where pretty-printing components are linked with an infix <code>&gt;&gt;</code> connective.
+The advantage of the new system is that it gives pretty-printers access to information about which variables are bound and free, and the ability to change this status when making recursive calls to the built-in printer.
+It will also be easier to extend the system with new functionality along the same lines.
 </ul>
 
 <h2 id="bugs-fixed">Bugs fixed:</h2>
@@ -63,6 +69,20 @@ For example, <code>(7*x&nbsp;+&nbsp;3)&nbsp;MOD&nbsp;2</code> will automatically
 
 <li><p><code>numSimps.REDUCE_ss</code> no longer diverges on certain
 terms.</p></li>
+
+<li><p>There is now LaTeX notation for the operation of cross-product on sets (written <em>A&nbsp;×&nbsp;B</em>), and for the numeric pairing function (written <em>n&nbsp;⊗&nbsp;m</em>).</p></li>
+
+<li><p>The lexer now tokenizes the input <code>``&quot;(*&quot;``</code> correctly.</p>
+<p>Also handle occurrences of such strings in <code>Theory.sig</code> files, which can cause them to become invalid SML.</p>
+</li>
+
+<li><p>When making definitions with <code>Define</code> (and <code>Hol_defn</code>, and others), one can now use the boolean equivalence syntax (<code><=></code> or <code>⇔</code>), not just <code>=</code>.</p>
+</li>
+
+<li><p>The <code>SimpL</code> and <code>SimpR</code> directives for controlling the position of simplification were only working with binary relations, not functions (such as <code>+</code>, say).
+Thanks to Ramana Kumar for the report of the bug.
+
+<li><p>Fix type-parsing bug when array suffixes and normal suffixes (such as <code>list</code>) interact.  Now, both <code>:bool[32]&nbsp;list</code> and <code>:bool&nbsp;list[32]</code> parse correctly.
 
 </ul>
 
@@ -78,12 +98,88 @@ for the definition and theorems.
 
 
 <li><p>
-A formalisation of the complex numbers by Yong Guan, Liming Li, Minhua Wu and Zhiping Shi.
+A formalisation of the complex numbers (<code>complexTheory</code>) by Yong Guan, Liming Li, Minhua Wu and Zhiping Shi.
 The authors referred to the HOL Light theory by John Harrison and the theory in PVS.
 It includes treatments of the complex numbers in the real pair form, the polar form and the exponential form, with basic arithmetic results and some other theorems.
+
+<li><p>A theory of relations based on sets of pairs (<code>set_relationTheory</code>).
+Most of the theorems are about orders, including Zorn’s lemma, and a lemma stating that “stream-like” partial orders can be extended to “stream-like” linear orders.
+Also add a theorem to <code>llist</code> that “stream-like” linear orders can be converted into lazy lists.
+Thanks to Scott Owens for this development.
+
 </ul>
 
 <h2 id="new-tools">New tools:</h2>
+
+<ul>
+<li>
+<p>A few extra tools in <code>wordsLib</code>:
+<dl>
+     <dt> <code>WORD_SUB_CONV</code> / <code>WORD_SUB_ss</code>
+<dd>
+<p> These can be used to simplify applications of unary/binary minus, introducing or eliminating subtractions where possible.
+These must <em>not</em> be used simulataneously with <code>srw_ss</code>, <code>WORD_ARITH_ss</code> or <code>WORD_ss</code> (as this will likely result in non-termination).
+However, can be used to good effect afterwards.
+For example:
+<pre>
+        wordsLib.WORD_SUB_CONV ``a + -1w * b``
+          |- a + -1w * b = a - b
+
+        wordsLib.WORD_SUB_CONV ``-(a - b)``
+          |- -(a - b) = b - a
+
+        wordsLib.WORD_SUB_CONV ``a + b * 3w : word2``
+          |- a + b * 3w = a - b
+
+        wordsLib.WORD_SUB_CONV ``192w * a + b : word8``
+          |- 192w * a + b = b - 64w * a
+</pre>
+
+<dt><code>WORD_DIV_LSR_CONV</code>
+<dd><p>
+         Convert division by a power of two into a right shift.  For example:
+<pre>
+        wordsLib.WORD_DIV_LSR_CONV ``(a:word8) // 8w``
+           |- a // 8w = a &gt;&gt;&gt; 3
+</pre>
+
+<dt><code>BITS_INTRO_CONV</code> / <code>BITS_INTRO_ss</code>
+<dd>
+    <p>     These convert <code>DIV</code> and <code>MOD</code> by powers of two into application of BITS.
+         For example:
+<pre>
+        wordsLib.BITS_INTRO_CONV ``(a DIV 4) MOD 8``;
+          |- (a DIV 4) MOD 8 = BITS 4 2 a
+
+        wordsLib.BITS_INTRO_CONV ``(a MOD 32) DIV 8``;
+          |- a MOD 32 DIV 8 = BITS 4 3 a
+
+        wordsLib.BITS_INTRO_CONV ``a MOD 2 ** 4``;
+          |- a MOD 2 ** 4 = BITS 3 0 a
+
+        wordsLib.BITS_INTRO_CONV ``a MOD dimword (:'a)``;
+          |- a MOD dimword (:'a) = BITS (dimindex (:'a) - 1) 0 a
+</pre>
+
+<dt><code>n2w_INTRO_TAC &lt;<em>int</em>&gt;</code>
+<dd><p> Attempts to convert goals of the form <code>``a = b``</code>, <code>``a&nbsp;&lt;&nbsp;b``</code> and <code>``a &lt;= b``</code> into goals of the form <code>``n2w a = n2w b``</code>, <code>``n2w a &lt;+ n2w b``</code> and <code>``n2w a &lt;=+ n2w b``</code>.
+The integer argument denotes the required word size.
+This enables some bounded problems (over the naturals) to be proved using bit-vector tactics.
+For example, the goal:
+<pre>
+        `((11 &gt;&lt; 8) (imm12:word16) : word12) &lt;&gt; 0w ==>
+         ((31 + 2 * w2n ((11 &gt;&lt; 8) imm12 : word12)) MOD 32 =
+          w2n (2w * (11 &gt;&lt; 8) imm12 + -1w : word32))`
+</pre>
+<p>         can be solved with
+<pre>
+        STRIP_TAC THEN n2w_INTRO_TAC 32 THEN FULL_BBLAST_TAC
+</pre>
+</dl>
+
+
+
+</ul>
 
 <h2 id="new-examples">New examples:</h2>
 
