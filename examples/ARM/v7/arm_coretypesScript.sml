@@ -138,6 +138,9 @@ val _ = disable_tyabbrev_printing "proc";
 
 (* ------------------------------------------------------------------------ *)
 
+val _ = overload_on("UInt", ``\w. int_of_num (w2n w)``);
+val _ = overload_on("SInt", ``w2i``);
+
 val align_def = zDefine
   `align (w : 'a word, n : num) : 'a word = n2w (n * (w2n w DIV n))`;
 

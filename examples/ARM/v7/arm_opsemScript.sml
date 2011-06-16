@@ -31,9 +31,6 @@ val _ = temp_overload_on (parmonadsyntax.monad_bind, ``seqT``);
 val _ = temp_overload_on (parmonadsyntax.monad_par,  ``parT``);
 val _ = temp_overload_on ("return", ``constT``);
 
-val _ = overload_on("UInt", ``\w. int_of_num (w2n w)``);
-val _ = overload_on("SInt", ``w2i``);
-
 val _ = overload_on("UNKNOWN", ``ARB:bool``);
 val _ = overload_on("UNKNOWN", ``ARB:word32``);
 val _ = overload_on("BITS16_UNKNOWN", ``[ARB;ARB] : word8 list``);
