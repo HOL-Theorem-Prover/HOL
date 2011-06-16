@@ -751,19 +751,19 @@ val _ = export_rewrites
  "unit_cat_mor_dom_cod_map","unit_cat_maps_to"];
 
 val discrete_mor_def = Define`
-  discrete_mor x = <|dom := x; cod := x; map := x|>`;
+  discrete_mor x = <|dom := x; cod := x; map := ()|>`;
 
 val discrete_mor_components = Q.store_thm(
 "discrete_mor_components",
 `∀x. ((discrete_mor x).dom = x) ∧
      ((discrete_mor x).cod = x) ∧
-     ((discrete_mor x).map = x)`,
+     ((discrete_mor x).map = ())`,
 srw_tac [][discrete_mor_def]);
 val _ = export_rewrites["discrete_mor_components"];
 
 val discrete_cat_def = Define`
   discrete_cat s = mk_cat <| obj := s; mor := IMAGE discrete_mor s;
-    id_map := I; comp := λf g. f.map |>`;
+    id_map := K (); comp := K (K ()) |>`;
 
 val is_category_discrete_cat = Q.store_thm(
 "is_category_discrete_cat",
@@ -830,7 +830,7 @@ val indiscrete_cat_def = Define`
   indiscrete_cat s = mk_cat <|
     obj := s; mor := { <|dom := x; cod := y; map := ()|> | x ∈ s ∧ y ∈ s };
     id_map := K ();
-    comp := λf g. f.map |>`;
+    comp := K (K ()) |>`;
 
 val is_category_indiscrete_cat = Q.store_thm(
 "is_category_indiscrete_cat",
