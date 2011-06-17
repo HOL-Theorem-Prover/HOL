@@ -312,19 +312,25 @@ val word_srem_def = Define`
       else
         word_mod a b`;
 
-(* 2's complement signed remainder (sign follows divisor) *)
+(* 2's complement signed remainder (sign follows divisor), as in SMT-LIB *)
 val word_smod_def = Define`
-  word_smod a b =
-    if word_msb a then
-      if word_msb b then
-        word_2comp (word_mod (word_2comp a) (word_2comp b))
+  word_smod s t =
+    let abs_s = if word_msb s then word_2comp s else s
+    and abs_t = if word_msb t then word_2comp t else t in
+    let u = word_mod abs_s abs_t in
+      if u = 0w then
+        u
       else
-        word_add (word_2comp (word_mod (word_2comp a) b)) b
-    else
-      if word_msb b then
-        word_add (word_mod a (word_2comp b)) b
-      else
-        word_mod a b`;
+        if word_msb s then
+          if word_msb t then
+            word_2comp u
+          else
+            word_add (word_2comp u) t
+        else
+          if word_msb t then
+            word_add u t
+          else
+            u`;
 
 val word_L2_def = Define `word_L2 = word_mul word_L word_L`;
 
