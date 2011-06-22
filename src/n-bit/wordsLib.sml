@@ -79,18 +79,21 @@ local
 
   val rule = REWRITE_RULE
                [TIMES_2EXP1, arithmeticTheory.TIMES2, GSYM numeralTheory.iDUB]
-  val rwts = List.map rule [INT_MIN_def, dimword_IS_TWICE_INT_MIN]
+  val rwts = List.map rule [INT_MIN_def, dimword_IS_TWICE_INT_MIN,
+                            UINT_MAX_def, INT_MAX_def, INT_MIN_SUM]
 
   val conv = PURE_REWRITE_CONV rwts
              THENC fcpLib.INDEX_CONV
              THENC computeLib.CBV_CONV compset
 
-  val exn = ERR "SIZES_CONV" "Term not dimword, dimindex, INT_MIN or FINITE"
+  val exn = ERR "SIZES_CONV"
+              "Term not dimword, dimindex, INT_MIN, INT_MAX, UINT_MAX or FINITE"
 in
   fun SIZES_CONV t = let
        val rtr = Lib.with_exn (fst o dest_const o rator) t exn
        val _ = (rtr = "dimword") orelse (rtr = "dimindex") orelse
-               (rtr = "INT_MIN") orelse (rtr = "FINITE") orelse raise exn
+               (rtr = "INT_MIN") orelse (rtr = "FINITE") orelse
+               (rtr = "INT_MAX") orelse (rtr = "UINT_MAX") orelse raise exn
     in
       Conv.CHANGED_CONV (computeLib.CBV_CONV sizes_comp) t
       handle HOL_ERR _ =>
@@ -107,6 +110,8 @@ val SIZES_ss =
        pats = [``fcp$dimindex(:'a)``,
                ``pred_set$FINITE (pred_set$UNIV:'a set)``,
                ``words$INT_MIN(:'a)``,
+               ``words$INT_MAX(:'a)``,
+               ``words$UINT_MAX(:'a)``,
                ``words$dimword(:'a)``]}];
 
 val SUC_RULE = CONV_RULE numLib.SUC_TO_NUMERAL_DEFN_CONV;
@@ -212,11 +217,12 @@ local
    NUM_RULE [NUMERAL_DIV_2EXP,numeralTheory.MOD_2EXP] `n:num` SLICE_def,
    (SIMP_RULE std_ss [GSYM ODD_MOD2_LEM,arithmeticTheory.MOD_2EXP_def,
       BITS_def,SUC_SUB] o NUM_RULE [BITS_ZERO2] `n:num`) BIT_def,
-   UINT_MAX_def, INT_MAX_def, INT_MIN_SUM,
    SUC_RULE MOD_2EXP_EQ, SUC_RULE BOOLIFY_def, bit_update_compute,
    numeral_log2,numeral_ilog2,LOG_compute,LOWEST_SET_BIT_compute,
    n2w_w2n, w2n_n2w_compute, MOD_WL1 w2w_n2w, Q.SPEC `^n2w n` sw2sw_def,
    word_len_def, word_L_def, word_H_def, word_T_def,
+   saturate_w2w_n2w, saturate_n2w_def,
+   saturate_add_def, saturate_sub_def, saturate_mul_def,
    word_join_def, Q.SPECL [`^n2w n`,`n2w m:'b word`] word_concat_def,
    Q.SPEC `^Na` word_replicate_concat_word_list, concat_word_list_def,
    word_reverse_n2w, word_modify_n2w, bit_field_insert_def,
@@ -261,26 +267,28 @@ in
        mrw (GSYM arithmeticTheory.MOD_2EXP_def)) thms
 end;
 
-fun words_compset () =
-let open computeLib
-    val compset = reduceLib.num_compset()
-    val _ = listSimps.list_rws compset
-    val _ = add_thms thms compset
-    val _ = add_conv(``fcp$dimindex:'a itself -> num``, 1, SIZES_CONV) compset
-    val _ = add_conv(``words$dimword:'a itself -> num``, 1, SIZES_CONV) compset
-    val _ = add_conv(``words$INT_MIN:'a itself -> num``, 1, SIZES_CONV) compset
-    val _ = add_conv(``min$= : 'a word -> 'a word -> bool``, 2, word_EQ_CONV)
-              compset
-in
-  compset
-end;
+fun add_word_convs cmp =
+  List.app (fn x => computeLib.add_conv x cmp)
+    [(fcpSyntax.dimindex_tm,   1, SIZES_CONV),
+     (wordsSyntax.dimword_tm,  1, SIZES_CONV),
+     (wordsSyntax.uint_max_tm, 1, SIZES_CONV),
+     (wordsSyntax.int_min_tm,  1, SIZES_CONV),
+     (wordsSyntax.int_max_tm,  1, SIZES_CONV),
+     (``min$= : 'a word -> 'a word -> bool``, 2, word_EQ_CONV)];
 
 val _ = computeLib.add_funs thms;
-val _ = computeLib.add_convs
-  [(``fcp$dimindex:'a itself -> num``, 1, SIZES_CONV),
-   (``words$dimword:'a itself -> num``, 1, SIZES_CONV),
-   (``words$INT_MIN:'a itself -> num``, 1, SIZES_CONV),
-   (``min$= : 'a word -> 'a word -> bool``, 2, word_EQ_CONV)];
+val _ = add_word_convs computeLib.the_compset
+
+fun words_compset () =
+let
+  open computeLib
+  val compset = reduceLib.num_compset()
+in
+  listSimps.list_rws compset;
+  add_thms thms compset;
+  add_word_convs compset;
+  compset
+end;
 
 val WORD_EVAL_CONV = computeLib.CBV_CONV (words_compset());
 val WORD_EVAL_RULE = CONV_RULE WORD_EVAL_CONV;
@@ -593,7 +601,7 @@ local
                     else if is_word_literal t then mk_var("   ", type_of t)
                     else t
   fun add_coeff (t:term) : thm = if is_good t then ALL_CONV t
-                    else REWR_CONV (GSYM WORD_MULT_LEFT_1) t
+                                 else REWR_CONV (GSYM WORD_MULT_LEFT_1) t
   val distrib = GSYM WORD_RIGHT_ADD_DISTRIB
   val WORD_REDUCE_CONV = PURE_REWRITE_CONV WORD_LITERAL_ADD_thms
                            THENC WORD_LITERAL_REDUCE_CONV
@@ -873,7 +881,7 @@ local
                       mk_var("   ", type_of t)
                     else t
   fun add_coeff (t:term) : thm = if is_good t then ALL_CONV t
-                    else REWR_CONV (GSYM WORD_AND_LEFT_T) t
+                                 else REWR_CONV (GSYM WORD_AND_LEFT_T) t
 in
   local
     val distrib = GSYM WORD_RIGHT_AND_OVER_OR
@@ -1416,7 +1424,7 @@ local
          | SOME ("arithmetic$<=", [l,r]) => SOME (word_ls_imp_num_ls,l,r)
          | _ => NONE
 
-  val n2w_INTRO : int -> tactic =
+  val n2w_INTRO: int -> tactic =
     fn sz => fn (asl,g) =>
       case get_intro_thm g
       of SOME (intro_thm,l,r) =>
@@ -2070,6 +2078,7 @@ in
                          THENC DEPTH_CONV (conv THENC EQ_CONV)
                          THENC REWRITE_CONV []) tm)
           end handle UNCHANGED => raise ERR "WORD_DP" "Failed to prove goal"
+   val WORD_ARITH_PROVE  = WORD_DP WORD_ARITH_CONV DECIDE
    val WORD_DECIDE = WORD_DP WORD_CONV DECIDE
 end;
 
@@ -2113,12 +2122,13 @@ fun mk_word_size n =
       val TYPE = mk_type("cart", [bool, typ])
       val dimindex = fcpLib.DIMINDEX N
       val finite = fcpLib.FINITE N
-      val _ = save_thm("dimindex_" ^ SN, dimindex)
-      val _ = save_thm("finite_" ^ SN, finite)
-      val INT_MIN = save_thm("INT_MIN_" ^ SN,
+      fun save x = Feedback.trace ("Theory.save_thm_reporting", 0) save_thm x
+      val _ = save ("dimindex_" ^ SN, dimindex)
+      val _ = save ("finite_" ^ SN, finite)
+      val INT_MIN = save ("INT_MIN_" ^ SN,
                      (SIMP_RULE std_ss [dimindex] o
                       Thm.INST_TYPE [``:'a`` |-> typ]) INT_MIN_def)
-      val dimword = save_thm("dimword_" ^ SN,
+      val dimword = save ("dimword_" ^ SN,
                      (SIMP_RULE std_ss [INT_MIN] o
                       Thm.INST_TYPE [``:'a`` |-> typ]) dimword_IS_TWICE_INT_MIN)
   in
@@ -2162,38 +2172,62 @@ val Induct_word =
 
 val word_pp_mode = ref 0;
 val word_cast_on = ref false;
+val int_word_pp  = ref false;
 
-fun print_word f Gs backend sys ppfns gravs d t = let
-   open Portable term_pp_types smpp
-   infix >>
-   val {add_string=str,add_break=brk,...} = ppfns : term_pp_types.ppstream_funs
-   val (n,x) = dest_n2w t
-   val m = fcpLib.index_to_num x handle HOL_ERR _ => Arbnum.zero
-   val v = numSyntax.dest_numeral n
+local
+  fun lsr (x, y) =
+    if x = Arbnum.zero orelse y = Arbnum.zero then
+      x
+    else
+      lsr (Arbnum.div2 x, Arbnum.less1 y)
+
+  fun int_word (v, m) =
+    if !int_word_pp andalso m <> Arbnum.zero then
+      let
+         val top = lsr (v, Arbnum.less1 m)
+         val neg = top = Arbnum.one
+         val nv = if neg then Arbnum.- (Arbnum.pow (Arbnum.two, m), v) else v
+      in
+        (neg, nv)
+      end
+    else
+      (false, v)
 in
-  (if !Globals.show_types orelse !word_cast_on then str "(" else nothing) >>
-  str
-   ((case f (Arbnum.toInt m, v) of
-       StringCvt.DEC => Arbnum.toString v
-     | StringCvt.BIN => "0b"^(Arbnum.toBinString v)
-     | StringCvt.OCT => if !base_tokens.allow_octal_input orelse
-                           Arbnum.<(v, Arbnum.fromInt 8)
-                        then
-                          "0" ^(Arbnum.toOctString v)
-                        else
-                          (Feedback.HOL_MESG "Octal output is only supported \
-                             \when base_tokens.allow_octal_input is true.";
-                           Arbnum.toString v)
-     | StringCvt.HEX => "0x"^(Arbnum.toHexString v)) ^ "w") >>
-  (if !Globals.show_types orelse !word_cast_on then
-     brk (1,2) >> liftpp (fn pps => pp_type pps (type_of t)) >> str ")"
-   else nothing)
-end handle HOL_ERR _ => raise term_pp_types.UserPP_Failed;
+  fun print_word f Gs backend sys ppfns gravs d t = let
+     open Portable term_pp_types smpp
+     infix >>
+     val {add_string=str,add_break=brk,...} = ppfns: term_pp_types.ppstream_funs
+     val (n,x) = dest_n2w t
+     val m = fcpLib.index_to_num x handle HOL_ERR _ => Arbnum.zero
+     val v = numSyntax.dest_numeral n
+     val (neg, v) = int_word (v, m)
+  in
+    (if !Globals.show_types orelse !word_cast_on then str "(" else nothing) >>
+    (if neg then str "-" else nothing) >>
+    str
+     ((case f (Arbnum.toInt m, v) of
+         StringCvt.DEC => Arbnum.toString v
+       | StringCvt.BIN => "0b"^(Arbnum.toBinString v)
+       | StringCvt.OCT => if !base_tokens.allow_octal_input orelse
+                             Arbnum.<(v, Arbnum.fromInt 8)
+                          then
+                            "0" ^(Arbnum.toOctString v)
+                          else
+                            (Feedback.HOL_MESG "Octal output is only supported \
+                               \when base_tokens.allow_octal_input is true.";
+                             Arbnum.toString v)
+       | StringCvt.HEX => "0x"^(Arbnum.toHexString v)) ^ "w") >>
+    (if !Globals.show_types orelse !word_cast_on then
+       brk (1,2) >> liftpp (fn pps => pp_type pps (type_of t)) >> str ")"
+     else nothing)
+  end handle HOL_ERR _ => raise term_pp_types.UserPP_Failed
+end
 
 fun output_words_as f = Parse.temp_add_user_printer
   ("wordsLib.print_word", ``words$n2w x : 'a word``, print_word f);
 
-val _ = Feedback.register_trace("word printing", word_pp_mode, 4);
+val _ = Feedback.register_trace ("word printing", word_pp_mode, 4);
+val _ = Feedback.register_btrace ("word pp as 2's comp", int_word_pp);
 
 val _ = output_words_as
    (fn (l, v) =>
@@ -2230,7 +2264,7 @@ fun word_cast Gs backend sys ppfns (pg,lg,rg) d t =
 let
    open Portable term_pp_types smpp
    infix >>
-   val {add_string=str,add_break=brk,ublock,...} = ppfns :ppstream_funs
+   val {add_string=str,add_break=brk,ublock,...} = ppfns: ppstream_funs
    fun stype tm = String.extract(type_to_string (type_of tm),1,NONE)
    fun delim i act = case pg of
                         Prec(j,_) => if i <= j then act else nothing

@@ -37,6 +37,7 @@ sig
     val n2w_INTRO_TAC       : int -> tactic
 
     val WORD_DP             : conv -> conv -> conv
+    val WORD_ARITH_PROVE    : conv
     val WORD_DECIDE         : conv
     val WORD_DECIDE_TAC     : tactic
 

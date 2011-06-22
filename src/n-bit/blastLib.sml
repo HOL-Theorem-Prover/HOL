@@ -638,7 +638,7 @@ local
              (Conv.STRIP_QUANT_CONV (Conv.RHS_CONV
                 (EVAL_CONV THENC PURE_REWRITE_CONV [wordsTheory.WORD_ADD_0])))
 
-  val mul_rwts = ref ([] : thm list)
+  val mul_rwts = ref ([]: thm list)
 in
   fun BLAST_MUL_CONV tm =
         let
@@ -1092,7 +1092,7 @@ local
   val arb_tm = wordsSyntax.mk_n2w (arb_num_tm, Type.alpha)
   fun mk_zero_subst v =
         (v |-> Term.inst [Type.alpha |-> wordsSyntax.dim_of v] arb_tm)
-  fun add_subst (s1 : (term, term) Lib.subst, s2 : (term, term) Lib.subst) =
+  fun add_subst (s1: (term, term) Lib.subst, s2: (term, term) Lib.subst) =
         let val reds = List.map (#redex) s2
             fun okay v = Lib.all (not o term_eq v) reds
         in

@@ -532,6 +532,29 @@ val _ = overload_on ("@@",Term`$word_concat`);
 val _ = add_infix("@@",700,HOLgrammars.RIGHT);
 
 (* ------------------------------------------------------------------------- *)
+(*  Saturating maps/operations : definitions                                 *)
+(* ------------------------------------------------------------------------- *)
+
+val saturate_n2w_def = Define`
+  (saturate_n2w: num -> 'a word) n =
+    if dimword(:'a) <= n then word_T else n2w n`;
+
+val saturate_w2w_def = zDefine`
+  saturate_w2w (w: 'a word) = saturate_n2w (w2n w)`;
+
+val saturate_add_def = Define`
+  saturate_add (a: 'a word) (b: 'a word) =
+    saturate_n2w (w2n a + w2n b) : 'a word`;
+
+val saturate_sub_def = Define`
+  saturate_sub (a: 'a word) (b: 'a word) =
+    n2w (w2n a - w2n b) : 'a word`;
+
+val saturate_mul_def = Define`
+  saturate_mul (a: 'a word) (b: 'a word) =
+    saturate_n2w (w2n a * w2n b) : 'a word`;
+
+(* ------------------------------------------------------------------------- *)
 (*  Theorems                                                                 *)
 (* ------------------------------------------------------------------------- *)
 
@@ -549,6 +572,10 @@ val dimword_IS_TWICE_INT_MIN = store_thm(
   Cases_on `dimindex(:'a)` THEN1 FULL_SIMP_TAC (srw_ss()) [] THEN
   SRW_TAC [][EXP]);
 
+val dimword_sub_int_min = Q.store_thm("dimword_sub_int_min",
+  `dimword(:'a) - INT_MIN(:'a) = INT_MIN(:'a)`,
+  SRW_TAC [ARITH_ss] [dimword_IS_TWICE_INT_MIN]);
+
 val DIMINDEX_GT_0 = save_thm("DIMINDEX_GT_0",
   PROVE [DECIDE ``!s. 1 <= s ==> 0 < s``,DIMINDEX_GE_1] ``0 < dimindex(:'a)``);
 val _ = export_rewrites ["DIMINDEX_GT_0"];
@@ -565,14 +592,6 @@ val DIMINDEX_LT =
 
 val EXISTS_HB = save_thm("EXISTS_HB",
   PROVE [DIMINDEX_GT_0,LESS_ADD_1,ADD1,ADD] ``?m. ^WL = SUC m``);
-
-val dimindex_dimword_le_iso = Q.store_thm("dimindex_dimword_le_iso",
-  `dimindex (:'a) <= dimindex (:'b) = dimword (:'a) <= dimword (:'b)`,
-  SRW_TAC [] [logrootTheory.LE_EXP_ISO, fcpTheory.dimindex_def, dimword_def]);
-
-val dimindex_dimword_lt_iso = Q.store_thm("dimindex_dimword_lt_iso",
-  `dimindex (:'a) < dimindex (:'b) = dimword (:'a) < dimword (:'b)`,
-  SRW_TAC [] [logrootTheory.LT_EXP_ISO, fcpTheory.dimindex_def, dimword_def]);
 
 val MOD_DIMINDEX = store_thm("MOD_DIMINDEX",
   `!n. n MOD dimword (:'a) = BITS (^WL - 1) 0 n`,
@@ -602,14 +621,112 @@ val INT_MIN_SUM = store_thm("INT_MIN_SUM",
 val ZERO_LT_INT_MIN = Q.store_thm("ZERO_LT_INT_MIN",
   `0n < INT_MIN (:'a)`,
   SRW_TAC [] [INT_MIN_def]);
+val _ = export_rewrites ["ZERO_LT_INT_MIN"];
+
+val ZERO_LT_INT_MAX = Q.store_thm("ZERO_LT_INT_MAX",
+  `1 < dimindex(:'a) ==> 0n < INT_MAX (:'a)`,
+  SRW_TAC [] [INT_MAX_def, INT_MIN_def]
+  \\ `1n <= dimindex (:'a) - 1` by DECIDE_TAC
+  \\ IMP_RES_TAC bitTheory.TWOEXP_MONO2
+  \\ FULL_SIMP_TAC bool_ss [EVAL ``2n ** 1``]
+  \\ DECIDE_TAC
+);
+
+val ZERO_LE_INT_MAX = Q.store_thm("ZERO_LE_INT_MAX",
+  `0n <= INT_MAX (:'a)`,
+  SRW_TAC [] [INT_MAX_def, INT_MIN_def]);
+
+val ZERO_LT_UINT_MAX = Q.store_thm("ZERO_LT_UINT_MAX",
+  `0n < UINT_MAX (:'a)`,
+  SRW_TAC [] [UINT_MAX_def, ONE_LT_dimword, DECIDE ``1n < n ==> (0 < n - 1)``]);
+val _ = export_rewrites ["ZERO_LT_UINT_MAX"];
 
 val INT_MIN_LT_DIMWORD = Q.store_thm("INT_MIN_LT_DIMWORD",
   `INT_MIN (:'a) < dimword (:'a)`,
   SRW_TAC [] [INT_MIN_def, DIMINDEX_GT_0, dimword_def]);
 
+val INT_MAX_LT_DIMWORD = Q.store_thm("INT_MAX_LT_DIMWORD",
+  `INT_MAX (:'a) < dimword (:'a)`,
+  SRW_TAC [ARITH_ss] [INT_MAX_def, INT_MIN_LT_DIMWORD]
+);
+
 val dimindex_lt_dimword = Q.store_thm("dimindex_lt_dimword",
   `dimindex(:'a) < dimword(:'a)`,
   SRW_TAC [] [dimword_def, arithmeticTheory.X_LT_EXP_X]);
+
+val BOUND_ORDER = Q.store_thm("BOUND_ORDER",
+  `INT_MAX (:'a) < INT_MIN (:'a) /\
+   INT_MIN (:'a) <= UINT_MAX (:'a) /\
+   UINT_MAX (:'a) < dimword (:'a)`,
+  SRW_TAC [ARITH_ss]
+    [UINT_MAX_def, INT_MAX_def, ZERO_LT_INT_MIN, INT_MIN_LT_DIMWORD,
+     DECIDE ``0n < b /\ a < b ==> a <= b - 1``]);
+
+val iso_lem =
+  DECIDE ``0n < a /\ 0n < b ==>
+             ((a = b) = (a - 1 = b - 1)) /\
+             ((a < b) = (a - 1 < b - 1)) /\
+             ((a <= b) = (a - 1 <= b - 1))``;
+
+val dimindex_dimword_iso = Q.store_thm("dimindex_dimword_iso",
+  `(dimindex (:'a) = dimindex (:'b)) = (dimword (:'a) = dimword (:'b))`,
+  SRW_TAC [] [fcpTheory.dimindex_def, dimword_def]);
+
+val dimindex_dimword_le_iso = Q.store_thm("dimindex_dimword_le_iso",
+  `dimindex (:'a) <= dimindex (:'b) = dimword (:'a) <= dimword (:'b)`,
+  SRW_TAC [] [logrootTheory.LE_EXP_ISO, fcpTheory.dimindex_def, dimword_def]);
+
+val dimindex_dimword_lt_iso = Q.store_thm("dimindex_dimword_lt_iso",
+  `dimindex (:'a) < dimindex (:'b) = dimword (:'a) < dimword (:'b)`,
+  SRW_TAC [] [logrootTheory.LT_EXP_ISO, fcpTheory.dimindex_def, dimword_def]);
+
+
+
+val dimindex_int_min_iso = Q.store_thm("dimindex_int_min_iso",
+  `(dimindex (:'a) = dimindex (:'b)) = (INT_MIN (:'a) = INT_MIN (:'b))`,
+  SRW_TAC [] [INT_MIN_def] \\ SIMP_TAC (srw_ss()) [iso_lem]);
+
+val dimindex_int_min_le_iso = Q.store_thm("dimindex_int_min_le_iso",
+  `(dimindex (:'a) <= dimindex (:'b)) = (INT_MIN (:'a) <= INT_MIN (:'b))`,
+  SRW_TAC [] [INT_MIN_def] \\ SIMP_TAC (srw_ss()) [iso_lem]);
+
+val dimindex_int_min_lt_iso = Q.store_thm("dimindex_int_min_lt_iso",
+  `(dimindex (:'a) < dimindex (:'b)) = (INT_MIN (:'a) < INT_MIN (:'b))`,
+  SRW_TAC [] [INT_MIN_def] \\ SIMP_TAC (srw_ss()) [iso_lem]);
+
+
+
+val dimindex_int_max_iso = Q.store_thm("dimindex_int_max_iso",
+  `(dimindex (:'a) = dimindex (:'b)) = (INT_MAX (:'a) = INT_MAX (:'b))`,
+  SRW_TAC [] [INT_MAX_def, dimindex_int_min_iso]
+  \\ SIMP_TAC (srw_ss()) [iso_lem]);
+
+val dimindex_int_max_le_iso = Q.store_thm("dimindex_int_max_le_iso",
+  `(dimindex (:'a) <= dimindex (:'b)) = (INT_MAX (:'a) <= INT_MAX (:'b))`,
+  SIMP_TAC bool_ss [INT_MAX_def, dimindex_int_min_le_iso,
+    iso_lem, DIMINDEX_GT_0, ZERO_LT_INT_MIN]);
+
+val dimindex_int_max_lt_iso = Q.store_thm("dimindex_int_max_lt_iso",
+  `(dimindex (:'a) < dimindex (:'b)) = (INT_MAX (:'a) < INT_MAX (:'b))`,
+  SIMP_TAC bool_ss [INT_MAX_def, dimindex_int_min_lt_iso,
+    iso_lem, DIMINDEX_GT_0, ZERO_LT_INT_MIN]);
+
+
+
+val dimindex_uint_max_iso = Q.store_thm("dimindex_uint_max_iso",
+  `(dimindex (:'a) = dimindex (:'b)) = (UINT_MAX (:'a) = UINT_MAX (:'b))`,
+  SRW_TAC [] [UINT_MAX_def, dimindex_dimword_iso]
+  \\ SIMP_TAC (srw_ss()) [iso_lem]);
+
+val dimindex_uint_max_le_iso = Q.store_thm("dimindex_uint_max_le_iso",
+  `(dimindex (:'a) <= dimindex (:'b)) = (UINT_MAX (:'a) <= UINT_MAX (:'b))`,
+  SIMP_TAC bool_ss [UINT_MAX_def, dimindex_dimword_le_iso,
+    iso_lem, ZERO_LT_dimword]);
+
+val dimindex_uint_max_lt_iso = Q.store_thm("dimindex_uint_max_lt_iso",
+  `(dimindex (:'a) < dimindex (:'b)) = (UINT_MAX (:'a) < UINT_MAX (:'b))`,
+  SIMP_TAC bool_ss [UINT_MAX_def, dimindex_dimword_lt_iso,
+    iso_lem, ZERO_LT_dimword]);
 
 (* ------------------------------------------------------------------------- *)
 (*  Domain transforming maps : theorems                                      *)
@@ -701,6 +818,13 @@ val _ = TypeBase.write [TypeBasePure.mk_nondatatype_info
      {nchotomy = SOME ranged_word_nchotomy, encode=NONE,
       size = SOME (``\(v1:bool->num) (v2:'a->num) (v3:'a word). w2n v3``,
                    CONJUNCT1 (SPEC_ALL AND_CLAUSES))})];
+
+val dimindex_1_cases = Q.store_thm("dimindex_1_cases",
+  `!a:'a word.  (dimindex(:'a) = 1) ==> (a = 0w) \/ (a = 1w)`,
+  Cases \\ STRIP_TAC
+  \\ FULL_SIMP_TAC std_ss [dimword_def]
+  \\ `(n = 0) \/ (n = 1)` by DECIDE_TAC
+  \\ ASM_REWRITE_TAC []);
 
 val mod_dimindex = Q.store_thm("mod_dimindex",
   `!n. n MOD dimindex (:'a) < dimword (:'a)`,
@@ -2597,18 +2721,10 @@ val n2w_sub_eq_0 = Q.store_thm("n2w_sub_eq_0",
   \\ `a - b = 0n` by DECIDE_TAC
   \\ ASM_REWRITE_TAC []);
 
-val INT_MIN_GT_0 = prove(
-  `0 < INT_MIN(:'a)`,
-  SRW_TAC [] [INT_MIN_def, ZERO_LT_TWOEXP]);
-
 val WORD_H_WORD_L = store_thm("WORD_H_WORD_L",
   `INT_MAXw = INT_MINw - 1w`,
   SRW_TAC [] [word_H_def, word_L_def, word_sub_def, WORD_LITERAL_ADD,
-     INT_MIN_GT_0, INT_MAX_def, DECIDE ``0 < n ==> 1 <= n``]);
-
-val INT_MIN_LT_dimword = prove(
-  `INT_MIN (:'a) < dimword (:'a)`,
-  SRW_TAC [] [INT_MIN_def, dimword_def, DIMINDEX_GT_0]);
+     ZERO_LT_INT_MIN, INT_MAX_def, DECIDE ``0 < n ==> 1 <= n``]);
 
 val word_L_MULT = store_thm("word_L_MULT",
   `!n. n2w n * INT_MINw = if EVEN n then 0w else INT_MINw`,
@@ -2620,7 +2736,7 @@ val word_L_MULT = store_thm("word_L_MULT",
     \\ SRW_TAC [] [SYM dimword_IS_TWICE_INT_MIN]
     \\ SRW_TAC [] [ONCE_REWRITE_RULE [MULT_COMM] MOD_MULT,
                    ONCE_REWRITE_RULE [MULT_COMM] MOD_EQ_0,
-                   ZERO_LT_dimword, INT_MIN_LT_dimword]);
+                   ZERO_LT_dimword, INT_MIN_LT_DIMWORD]);
 
 (* ------------------------------------------------------------------------- *)
 (*  Shifts : theorems                                                        *)
@@ -4111,6 +4227,103 @@ val w2n_add = Q.store_thm("w2n_add",
 
 (* ------------------------------------------------------------------------- *)
 
+val saturate_w2w_n2w = Q.store_thm("saturate_w2w_n2w",
+  `!n.
+    saturate_w2w (n2w n : 'a word) : 'b word =
+      let m = n MOD dimword(:'a) in
+        if dimindex(:'b) <= dimindex(:'a) /\ dimword(:'b) <= m then
+          word_T
+        else
+          n2w m`,
+  SRW_TAC [boolSimps.LET_ss] [saturate_w2w_def, saturate_n2w_def]
+  \\ `dimword(:'a) < dimword(:'b)`
+  by FULL_SIMP_TAC arith_ss [dimindex_dimword_lt_iso]
+  \\ `dimword(:'a) < n MOD dimword (:'a)` by DECIDE_TAC
+  \\ `n MOD dimword(:'a) < dimword(:'a)` by SRW_TAC [ARITH_ss] []
+  \\ FULL_SIMP_TAC arith_ss []);
+
+val saturate_w2w = Q.store_thm("saturate_w2w",
+  `!w: 'a word.
+    saturate_w2w w : 'b word =
+      if dimindex(:'b) <= dimindex(:'a) /\ w2w (word_T: 'b word) <=+ w then
+        word_T
+      else
+        w2w w`,
+  Cases
+  \\ `UINT_MAX (:'b) <= n /\ n < dimword(:'b) ==> (n = UINT_MAX (:'b))`
+  by SRW_TAC [ARITH_ss] [UINT_MAX_def]
+  \\ Cases_on `dimindex(:'b) <= dimindex(:'a)`
+  \\ Cases_on `dimindex(:'b) = dimindex(:'a)`
+  \\ IMP_RES_TAC dimindex_dimword_iso
+  \\ SRW_TAC [boolSimps.LET_ss, ARITH_ss]
+       [GSYM MOD_DIMINDEX, BOUND_ORDER, word_ls_n2w, word_T_def,
+        w2w_n2w, saturate_w2w_n2w]
+  \\ FULL_SIMP_TAC arith_ss [NOT_LESS_EQUAL]
+  THEN1 (`UINT_MAX (:'b) < dimword(:'a)` by METIS_TAC [BOUND_ORDER]
+         \\ FULL_SIMP_TAC arith_ss [])
+  \\ `dimword (:'b) < dimword (:'a)`
+  by SRW_TAC [ARITH_ss] [GSYM dimindex_dimword_lt_iso]
+  \\ `UINT_MAX (:'b) < dimword (:'b)` by SRW_TAC [ARITH_ss] [BOUND_ORDER]
+  \\ `UINT_MAX (:'b) < dimword (:'a)` by DECIDE_TAC
+  \\ FULL_SIMP_TAC arith_ss []
+);
+
+val saturate_sub = Q.store_thm("saturate_sub",
+  `!a b. saturate_sub a b = if a <=+ b then 0w else a - b`,
+  RW_TAC arith_ss [WORD_LS, saturate_sub_def, n2w_sub_eq_0, n2w_w2n, n2w_sub]);
+
+val saturate_add = Q.store_thm("saturate_add",
+  `!a b.
+      saturate_add a b =
+        if UINT_MAXw - a <=+ b then
+          UINT_MAXw
+        else
+          a + b`,
+  SRW_TAC [] [saturate_add_def, saturate_n2w_def, word_add_def, WORD_LS]
+  \\ Cases_on `a`
+  \\ Cases_on `b`
+  \\ FULL_SIMP_TAC (srw_ss()++ARITH_ss)
+       [word_T_def, UINT_MAX_def, GSYM n2w_sub]);
+
+val dimindex_dub = Q.prove(
+  `FINITE (univ(:'a)) ==> dimindex(:'a) <= dimindex(:'a + 'a)`,
+  SRW_TAC [] [fcpTheory.index_sum]);
+
+val dimword_dub = Q.prove(
+  `FINITE (univ(:'a)) ==> (dimword(:'a + 'a) = dimword(:'a) * dimword(:'a))`,
+  SRW_TAC [] [dimword_def, fcpTheory.index_sum, EXP_ADD]);
+
+val NOT_FINITE_IMP_dimword_2 = Q.store_thm("NOT_FINITE_IMP_dimword_2",
+  `~FINITE (univ(:'a)) ==> (dimword(:'a) = 2)`,
+  SRW_TAC [] [dimword_def, fcpTheory.NOT_FINITE_IMP_dimindex_1]);
+
+val lt_2_mul = Q.prove(
+  `!a b. a < 2n /\ b < 2n ==> ~(2 <= a * b)`,
+  SRW_TAC [] [NOT_LESS_EQUAL, DECIDE ``a < 2n = (a = 0) \/ (a = 1)``]);
+
+val saturate_mul = Q.store_thm("saturate_mul",
+  `!a b.
+      saturate_mul a b =
+        if FINITE (univ(:'a)) /\
+           w2w (UINT_MAXw: 'a word) <=+ w2w a * w2w b : ('a + 'a) word 
+        then
+          UINT_MAXw: 'a word
+        else
+          a * b`,
+  Cases_on `FINITE (univ(:'a))`
+  \\ SRW_TAC []
+       [dimindex_dub, dimword_dub, saturate_mul_def, saturate_n2w_def,
+        word_mul_def, w2n_w2w, WORD_LS, NOT_FINITE_IMP_dimword_2]
+  \\ Cases_on `a`
+  \\ Cases_on `b`
+  \\ FULL_SIMP_TAC (srw_ss()++ARITH_ss)
+       [LESS_MULT_MONO2, word_T_def, UINT_MAX_def]
+  \\ Q.PAT_ASSUM `~FINITE (univ(:'a))` ASSUME_TAC
+  \\ FULL_SIMP_TAC std_ss [NOT_FINITE_IMP_dimword_2, lt_2_mul]
+);
+
+(* ------------------------------------------------------------------------- *)
+
 val WORD_DIVISION = store_thm("WORD_DIVISION",
   `!w. w <> 0w ==>
        !v. (v = (v // w) * w + word_mod v w) /\ word_mod v w <+ w`,
@@ -4445,7 +4658,9 @@ val WORD_SUB_LE = store_thm("WORD_SUB_LE",
 (* Create a few word sizes                                                   *)
 (* ------------------------------------------------------------------------- *)
 
-val sizes = [1, 2, 3, 4, 5, 6, 7, 8, 12, 16, 20, 24, 28, 30, 32, 64];
+val sizes =
+  [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12,
+   16, 20, 24, 28, 30, 32, 48, 64, 96, 128];
 
 fun mk_word_size n =
   let val N = Arbnum.fromInt n
@@ -4454,12 +4669,13 @@ fun mk_word_size n =
       val TYPE = mk_type("cart", [bool, typ])
       val dimindex = fcpLib.DIMINDEX N
       val finite = fcpLib.FINITE N
-      val _ = save_thm("dimindex_" ^ SN, dimindex)
-      val _ = save_thm("finite_" ^ SN, finite)
-      val INT_MIN = save_thm("INT_MIN_" ^ SN,
+      fun save x = Feedback.trace ("Theory.save_thm_reporting", 0) save_thm x
+      val _ = save ("dimindex_" ^ SN, dimindex)
+      val _ = save ("finite_" ^ SN, finite)
+      val INT_MIN = save ("INT_MIN_" ^ SN,
                      (SIMP_RULE std_ss [dimindex] o
                       Thm.INST_TYPE [``:'a`` |-> typ]) INT_MIN_def)
-      val dimword = save_thm("dimword_" ^ SN,
+      val dimword = save ("dimword_" ^ SN,
                      (SIMP_RULE std_ss [INT_MIN] o
                       Thm.INST_TYPE [``:'a`` |-> typ]) dimword_IS_TWICE_INT_MIN)
   in
