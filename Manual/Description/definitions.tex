@@ -401,6 +401,7 @@ theorems and definitions being added for each of the defined types.
 
 \section{Record Types}\label{sec:records}
 \index{type definitions, in HOL logic@type definitions, in \HOL{} logic!record types}
+\index{record types}
 
 Record types are convenient ways of bundling together a number of
 component types, and giving those components names so as to facilitate
@@ -451,7 +452,7 @@ selection notation to access the values of a record's field.  Thus,
 one would write the expression: \holtxt{bob.employed} in order
 to return the value of {\tt bob}'s {\tt employed} field.  The
 alternative, \holtxt{person\_employed bob}, works, but would be
-printed using the first syntax, with the full-stop.
+printed using the first syntax, with the full-stop.\index{record types!field selection notation}
 
 The functional update functions are given the names
 \mbox{``$\langle$\textsl{record-type}$\rangle$\texttt{\_}$\langle$\textsl{field}$\rangle$\texttt{\_fupd}''}
