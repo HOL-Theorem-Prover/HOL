@@ -195,6 +195,13 @@ re-raised.</p></li>
 <li><p><code>Lib.gather</code> removed;
 use <code>{Lib,List}.filter</code> instead.</p></li>
 
+<li><p>The ugly situation whereby we had fixities called <code>Prefix</code> and <code>TruePrefix</code>, but <code>Prefix</code> really encoded an absence of fixity, has been done away with.
+Now the fixity <code>Prefix</code> codes for what used to be <code>TruePrefix</code>, and in relevant situations where a <code>fixity</code> value was required, a <code>fixity&nbsp;option</code> can be provided instead.
+In this situation <code>NONE</code> is used to indicate the absence of a fixity.
+
+<p>The function <code>set_fixity</code> takes a <code>fixity</code>, not a <code>fixity&nbsp;option</code>, so its old ability to remove fixities has disappeared.
+If you wish to do this, you should use the function <code>remove_rules_for_term</code>.
+
 </ul>
 
 <hr>
