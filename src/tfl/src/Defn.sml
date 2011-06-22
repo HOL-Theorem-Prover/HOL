@@ -428,7 +428,10 @@ in
 fun been_stored (s,thm) =
   (add_persistent_funs [(s,thm)];
    if !chatting then
-     mesg ("Definition has been stored under "^Lib.quote s^".\n")
+     mesg ((if !Globals.interactive then
+              "Definition has been stored under "
+            else
+              "Saved definition __ ") ^Lib.quote s^"\n")
    else ()
    );
 end
@@ -436,14 +439,19 @@ end
 fun store(stem,eqs,ind) =
   let val eqs_bind = defSuffix stem
       val ind_bind = indSuffix stem
-      val   _  = save_thm(ind_bind, ind)
-      val eqns = save_thm(eqs_bind, eqs)
+      fun save x = Feedback.trace ("Theory.save_thm_reporting", 0) save_thm x
+      val   _  = save (ind_bind, ind)
+      val eqns = save (eqs_bind, eqs)
       val _ = add_persistent_funs [(eqs_bind,eqs)]
          handle e => HOL_MESG ("Unable to add "^eqs_bind^" to global compset")
   in
     mesg (String.concat
-       [   "Equations stored under ", Lib.quote eqs_bind,
-        ".\nInduction stored under ", Lib.quote ind_bind, ".\n"])
+            (if !Globals.interactive then
+               [   "Equations stored under ", Lib.quote eqs_bind,
+                ".\nInduction stored under ", Lib.quote ind_bind, ".\n"]
+             else
+               [  "Saved definition __ ", Lib.quote eqs_bind,
+                "\nSaved induction ___ ", Lib.quote ind_bind, "\n"]))
   end;
 
 local
