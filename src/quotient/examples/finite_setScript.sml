@@ -507,47 +507,47 @@ val fnlist =
     [{def_name="Empty_def",
       fname="Empty",
       func= ``[] :'a list``,
-      fixity=Prefix},
+      fixity=NONE},
 
      {def_name="Insert_def",
       fname="Insert",
       func= ``CONS :'a -> 'a list -> 'a list``,
-      fixity=Infixr 490},
+      fixity=SOME(Infixr 490)},
 
      {def_name="In_def",
       fname="In",
       func= ``MEM :'a -> 'a list -> bool``,
-      fixity=Infix(NONASSOC,425)},
+      fixity=SOME(Infix(NONASSOC,425))},
 
      {def_name="Card_def",
       fname="Card",
       func= ``Card1 :'a list -> num``,
-      fixity=Prefix},
+      fixity=NONE},
 
      {def_name="Delete_def",
       fname="Delete",
       func= ``$Delete1 :'a list -> 'a -> 'a list``,
-      fixity=Infixl 500},
+      fixity=SOME(Infixl 500)},
 
      {def_name="Union_def",
       fname="Union",
       func= ``APPEND :'a list -> 'a list -> 'a list``,
-      fixity=Infixl 500},
+      fixity=SOME(Infixl 500)},
 
      {def_name="Inter_def",
       fname="Inter",
       func= ``$Inter1 :'a list -> 'a list -> 'a list``,
-      fixity=Infixl 600},
+      fixity=SOME(Infixl 600)},
 
      {def_name="Fold_def",
       fname="Fold",
       func= ``Fold1 :('b -> 'b -> 'b) -> ('a -> 'b) -> 'b -> 'a list -> 'b``,
-      fixity=Prefix},
+      fixity=NONE},
 
      {def_name="fset2set_def",
       fname="fset2set",
       func= ``list2set :'a list -> 'a -> bool``,
-      fixity=Prefix}
+      fixity=NONE}
     ];
 
 

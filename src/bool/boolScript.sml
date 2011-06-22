@@ -177,7 +177,7 @@ val _ = add_const "TYPE_DEFINITION";
 
 open Portable;
 val _ = add_rule {term_name   = "~",
-                  fixity      = TruePrefix 900,
+                  fixity      = Prefix 900,
                   pp_elements = [TOK "~"],
                   paren_style = OnlyIfNecessary,
                   block_style = (AroundEachPhrase, (CONSISTENT, 0))};
@@ -189,7 +189,7 @@ val _ = TeX_notation {hol = UChar.neg, TeX = ("\\HOLTokenNeg{}",1)}
    the pretty-printer handles these specially.  These declarations are only
    for the parser's benefit. *)
 val _ = add_rule {term_name   = GrammarSpecials.let_special,
-                  fixity = TruePrefix 2,
+                  fixity = Prefix 2,
                   pp_elements = [TOK "let", BreakSpace(1,0), TM,
                                  BreakSpace(1, 0), TOK "in",
                                  BreakSpace(1, 0)],
@@ -203,7 +203,7 @@ val _ = add_rule {term_name = GrammarSpecials.and_special,
                   block_style = (AroundEachPhrase, (INCONSISTENT, 0))}
 
 val _ = add_rule{term_name   = "COND",
-                 fixity      = TruePrefix 70,
+                 fixity      = Prefix 70,
                  pp_elements = [PPBlock([TOK "if", BreakSpace(1,2), TM,
                                          BreakSpace(1,0),
                                          TOK "then"], (CONSISTENT, 0)),
@@ -4346,7 +4346,7 @@ val _ = add_rule{pp_elements = [PPBlock([TOK "case", BreakSpace(1,2),
                                          TM, BreakSpace(1,2), TOK "of"],
                                         (PP.CONSISTENT, 0)),
                                 BreakSpace(1,3)],
-                 fixity = TruePrefix 7,
+                 fixity = Prefix 7,
                  block_style = (AroundEachPhrase, (PP.CONSISTENT, 0)),
                  paren_style = OnlyIfNecessary,
                  term_name = GrammarSpecials.case_special};

@@ -877,35 +877,35 @@ val Lam1_Abs1 = store_thm
 val equivs = [ALPHA_EQUIV];
 
 val fnlist = [{def_name="Con_def", fname="Con",
-               func= (--`Con1 :'a->^term`--), fixity=Prefix
+               func= (--`Con1 :'a->^term`--), fixity=NONE
                                         (* see structure Parse *)},
               {def_name="Var_def", fname="Var",
-               func= (--`Var1 :var -> ^term`--), fixity=Prefix},
+               func= (--`Var1 :var -> ^term`--), fixity=NONE},
               {def_name="App_def", fname="App",
                func= (--`App1 :^term -> ^term -> ^term`--),
-               fixity=Prefix},
+               fixity=NONE},
               {def_name="Lam_def", fname="Lam",
-               func= (--`Lam1 :var -> ^term -> ^term`--), fixity=Prefix},
+               func= (--`Lam1 :var -> ^term -> ^term`--), fixity=NONE},
               {def_name="Abs_def", fname="Abs",
-               func= (--`Abs1 :(var -> ^term) -> ^term`--), fixity=Prefix},
+               func= (--`Abs1 :(var -> ^term) -> ^term`--), fixity=NONE},
               {def_name="HEIGHT_def", fname="HEIGHT",
-               func= (--`HEIGHT1 :^term -> num`--), fixity=Prefix},
+               func= (--`HEIGHT1 :^term -> num`--), fixity=NONE},
               {def_name="FV_def", fname="FV",
-               func= (--`FV1 :^term -> var -> bool`--), fixity=Prefix},
+               func= (--`FV1 :^term -> var -> bool`--), fixity=NONE},
               {def_name="SUB_def", fname="SUB",
-               func= (--`SUB1 :^subs -> var -> ^term`--), fixity=Prefix},
+               func= (--`SUB1 :^subs -> var -> ^term`--), fixity=NONE},
               {def_name="FV_subst_def", fname="FV_subst",
                func= (--`FV_subst1 :^subs -> (var -> bool) -> var -> bool`--),
-               fixity=Prefix},
+               fixity=NONE},
               {def_name="SUBt_def", fname="SUBt",
                func= (--`SUB1t :^term -> ^subs -> ^term`--),
-               fixity=Infix(NONASSOC,150)},
+               fixity=SOME(Infix(NONASSOC,150))},
               {def_name="vsubst_def", fname="/",
                func= (--`$// :var list -> var list -> ^subs`--),
-               fixity=Infix(NONASSOC,150)},
+               fixity=SOME(Infix(NONASSOC,150))},
               {def_name="subst_eq_def", fname="subst_eq",
                func= (--`ALPHA_subst:(var -> bool) ->^subs ->^subs -> bool`--),
-               fixity=Prefix}
+               fixity=NONE}
              ];
 
 

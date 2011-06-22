@@ -363,7 +363,7 @@ val aeq_equiv = prove(
   METIS_TAC [aeq_refl, aeq_sym, aeq_trans]);
 
 fun mk_def(s,t) =
-    {def_name = s ^ "_def", fixity = Prefix, fname = s, func = t};
+    {def_name = s ^ "_def", fixity = NONE, fname = s, func = t};
 
 
 fun m th = SIMP_RULE (bool_ss ++ boolSimps.DNF_ss) [] th

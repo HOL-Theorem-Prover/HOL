@@ -238,10 +238,10 @@ val EQ_UNIV =
      REWRITE_TAC [EXTENSION,IN_UNIV]);
 
 val _ = overload_on ("univ", ``\x:'a itself. UNIV : 'a set``)
-val _ = set_fixity "univ" (TruePrefix 2200)
+val _ = set_fixity "univ" (Prefix 2200)
 
 val _ = overload_on (UnicodeChars.universal_set, ``\x:'a itself. UNIV: 'a set``)
-val _ = set_fixity UnicodeChars.universal_set (TruePrefix 2200)
+val _ = set_fixity UnicodeChars.universal_set (Prefix 2200)
 
 fun univ_printer (tyg, tmg) backend printer ppfns gravs depth tm = let
   open smpp infix >>

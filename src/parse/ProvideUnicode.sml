@@ -100,7 +100,7 @@ fun getrule G term_name = let
                             blist
             end
           | PREFIX (STD_prefix rrlist) =>
-            search_rrlist (TruePrefix (valOf fixopt)) tf_opt
+            search_rrlist (Prefix (valOf fixopt)) tf_opt
                           (fn tfopt => get_rule_data tfopt rest)
                           rrlist
           | SUFFIX TYPE_annotation => get_rule_data tf_opt rest

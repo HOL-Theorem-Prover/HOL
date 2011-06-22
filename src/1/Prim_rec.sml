@@ -261,7 +261,7 @@ fun new_recursive_definition0 ax name tm =
   Rsyntax.new_specification
     {sat_thm=eth, name=name,
      consts = map (fn t => {const_name = fst(dest_var t),
-                            fixity = Parse.Prefix}) evs }
+                            fixity = NONE}) evs }
  end;
 
 (* test with:

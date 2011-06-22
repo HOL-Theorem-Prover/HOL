@@ -795,7 +795,7 @@ val recursion0 = prove(
   ]);
 
 fun mk_def(s,t) =
-    {def_name = s ^ "_def", fixity = Prefix, fname = s, func = t};
+    {def_name = s ^ "_def", fixity = NONE, fname = s, func = t};
 
 (* some trivialities that are either needed for the lifting, or which are
    wanted to be part of it *)

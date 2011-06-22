@@ -103,7 +103,7 @@ val SUB = new_recursive_definition
      integer, real, words, rat
 *)
 val _ = add_rule { term_name = "numeric_negate",
-                   fixity = TruePrefix 900,
+                   fixity = Prefix 900,
                    pp_elements = [TOK "-"],
                    paren_style = OnlyIfNecessary,
                    block_style = (AroundEachPhrase, (PP.CONSISTENT,0))};
@@ -111,7 +111,7 @@ val _ = add_rule { term_name = "numeric_negate",
 (* Similarly, add syntax for the injection from nats symbol (&).  This isn't
    required in this theory, but will be used by descendents. *)
 val _ = add_rule {term_name = GrammarSpecials.num_injection,
-                  fixity = TruePrefix 900,
+                  fixity = Prefix 900,
                   pp_elements = [TOK GrammarSpecials.num_injection],
                   paren_style = OnlyIfNecessary,
                   block_style = (AroundEachPhrase, (PP.CONSISTENT,0))};

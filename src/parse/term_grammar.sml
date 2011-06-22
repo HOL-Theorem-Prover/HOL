@@ -98,7 +98,7 @@ datatype grammar_rule =
        | LISTRULE of listspec list
 
 datatype rule_fixity =
-  Infix of associativity * int | Closefix | Suffix of int | TruePrefix of int
+  Infix of associativity * int | Closefix | Suffix of int | Prefix of int
 
 datatype user_delta =
          GRULE of {term_name : string,
@@ -805,7 +805,7 @@ fun rule_fixityToString f =
     Infix(a,i) => "Infix("^assocToString a^", "^Int.toString i^")"
   | Closefix => "Closefix"
   | Suffix p => "Suffix "^Int.toString p
-  | TruePrefix p => "TruePrefix "^Int.toString p
+  | Prefix p => "Prefix "^Int.toString p
 
 
 fun rrec2delta rf (rr : rule_record) = let
@@ -853,7 +853,7 @@ fun rules_for G nm = let
           case grule of
             PREFIX (BINDER blist) => search (search_blist acc blist) rest
           | PREFIX (STD_prefix rrlist) =>
-            search (search_rrlist (TruePrefix (valOf fixopt)) acc rrlist)
+            search (search_rrlist (Prefix (valOf fixopt)) acc rrlist)
                    rest
           | SUFFIX (STD_suffix rrlist) =>
             search (search_rrlist (Suffix (valOf fixopt)) acc rrlist)
@@ -881,7 +881,7 @@ fun add_rule G0 {term_name = s : string, fixity = f, pp_elements,
     case f of
       Infix (a,p) => (SOME p, INFIX(STD_infix([rr], a)))
     | Suffix p => (SOME p, SUFFIX (STD_suffix [rr]))
-    | TruePrefix p => (SOME p, PREFIX (STD_prefix [rr]))
+    | Prefix p => (SOME p, PREFIX (STD_prefix [rr]))
     | Closefix => (NONE, CLOSEFIX [rr])
 in
   G0 Gmerge [new_rule]
@@ -980,7 +980,7 @@ fun get_precedence (G:grammar) s = let
         if elmem s elms then SOME(Infix(assoc, valOf p))
         else NONE
     | PREFIX(STD_prefix elms) =>
-          if elmem s elms then SOME (TruePrefix (valOf p))
+          if elmem s elms then SOME (Prefix (valOf p))
           else NONE
     | SUFFIX (STD_suffix elms) => if elmem s elms then SOME (Suffix (valOf p))
                                   else NONE
@@ -1508,12 +1508,12 @@ fun fixity_encode f =
     case f of
       Infix(a,p) => "I" ^ assoc_encode a ^ IntData.encode p
     | Suffix p => "S" ^ IntData.encode p
-    | TruePrefix p => "T" ^ IntData.encode p
+    | Prefix p => "P" ^ IntData.encode p
     | Closefix => "C"
 val fixity_reader =
     (literal "I" >> map Infix (assoc_reader >* IntData.reader)) ||
     (literal "S" >> map Suffix IntData.reader) ||
-    (literal "T" >> map TruePrefix IntData.reader) ||
+    (literal "P" >> map Prefix IntData.reader) ||
     (literal "C" >> return Closefix)
 
 fun user_delta_encode ud =

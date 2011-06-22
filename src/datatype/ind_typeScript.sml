@@ -55,8 +55,8 @@ val NUMPAIR_INJ = store_thm (
   SIMP_TAC hol_ss [EQ_MULT_LCANCEL, EQ_ADD_RCANCEL, EXP_EQ_0]);
 
 val NUMPAIR_DEST = Rsyntax.new_specification {
-  consts = [{const_name = "NUMFST", fixity = Prefix},
-            {const_name = "NUMSND", fixity = Prefix}],
+  consts = [{const_name = "NUMFST", fixity = NONE},
+            {const_name = "NUMSND", fixity = NONE}],
   name = "NUMPAIR_DEST",
   sat_thm = MATCH_MP INJ_INVERSE2 NUMPAIR_INJ};
 
@@ -77,8 +77,8 @@ val NUMSUM_INJ = store_thm(
   SIMP_TAC hol_ss [INV_SUC_EQ, EQ_MULT_LCANCEL]);
 
 val NUMSUM_DEST = Rsyntax.new_specification{
-  consts = [{const_name = "NUMLEFT", fixity = Prefix},
-            {const_name = "NUMRIGHT", fixity = Prefix}],
+  consts = [{const_name = "NUMLEFT", fixity = NONE},
+            {const_name = "NUMRIGHT", fixity = NONE}],
   name = "NUMSUM_DEST",
   sat_thm = MATCH_MP INJ_INVERSE2 NUMSUM_INJ};
 

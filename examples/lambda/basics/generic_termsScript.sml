@@ -507,7 +507,7 @@ val var_respects_aeq = store_thm(
    ---------------------------------------------------------------------- *)
 
 fun mk_def(s,t) =
-    {def_name = s ^ "_def", fixity = Prefix, fname = s, func = t};
+    {def_name = s ^ "_def", fixity = NONE, fname = s, func = t};
 
 val ptpm_fv' =
     ptpm_fv |> CONJUNCT1 |> REWRITE_RULE [EXTENSION]

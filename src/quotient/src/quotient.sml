@@ -1207,11 +1207,11 @@ fun make_quotient quots tyop_quots ty = make_hyp_quotient [] quots tyop_quots ty
 
 (*
 structure Parse:
-datatype fixity = RF of term_grammar.rule_fixity | Prefix | Binder
+datatype fixity = RF of term_grammar.rule_fixity | Binder
 
 structure term_grammar:
 datatype rule_fixity =
-  Infix of associativity * int | Closefix | Suffix of int | TruePrefix of int
+  Infix of associativity * int | Closefix | Suffix of int | Prefix of int
 
 structure HOLgrammars :
 datatype associativity = LEFT | RIGHT | NONASSOC
@@ -1516,32 +1516,32 @@ fun define_quotient_lifted_function quot_ths tyops tyop_simps =
 
 (* The following notes are to explain the treatment of fixities:
 structure Parse:
-datatype fixity = RF of term_grammar.rule_fixity | Prefix | Binder
+datatype fixity = RF of term_grammar.rule_fixity | Binder
 
 structure term_grammar:
 datatype rule_fixity =
-  Infix of associativity * int | Closefix | Suffix of int | TruePrefix of int
+  Infix of associativity * int | Closefix | Suffix of int | Prefix of int
 
 structure HOLgrammars :
 datatype associativity = LEFT | RIGHT | NONASSOC
 *)
 
             case fixity of
-              Prefix =>
+              NONE =>
                     new_definition(def_name, def)
-            | Binder =>
+            | SOME Binder =>
                     new_binder_definition(def_name, def)
-            | RF rule_fixity =>
+            | SOME (RF rule_fixity) =>
                (case rule_fixity of
                   term_grammar.Infix (associativity, priority) =>
                     Definition.new_definition(def_name, def)
                      before
                     Parse.add_infix(nam, priority, associativity)
-                | term_grammar.TruePrefix priority =>
+                | term_grammar.Prefix priority =>
                     Definition.new_definition(def_name, def)
                      before
                     Parse.add_rule{term_name=nam,
-                                   fixity=TruePrefix priority,
+                                   fixity=Prefix priority,
                                    pp_elements=[TOK nam],
                                    paren_style=OnlyIfNecessary,
                                    block_style=(AroundEachPhrase,

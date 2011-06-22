@@ -265,24 +265,6 @@ val msgrel_EQUIV = save_thm("msgrel_EQUIV",
 
 val equivs = [msgrel_EQUIV];
 
-val fnlist = [{def_name="Nonce_def",      fname="Nonce",
-               func= (--`Nonce1`--),      fixity=Prefix},
-              {def_name="Mpair_def",      fname="Mpair",
-               func= (--`Mpair1`--),      fixity=Prefix},
-              {def_name="Crypt_def",      fname="Crypt",
-               func= (--`Crypt1`--),      fixity=Prefix},
-              {def_name="Decrypt_def",    fname="Decrypt",
-               func= (--`Decrypt1`--),    fixity=Prefix},
-              {def_name="nonces_def",     fname="nonces",
-               func= (--`freenonces1`--), fixity=Prefix},
-              {def_name="left_def",       fname="left",
-               func= (--`freeleft1 `--),  fixity=Prefix},
-              {def_name="right_def",      fname="right",
-               func= (--`freeright1 `--), fixity=Prefix},
-              {def_name="is_nonce_def",    fname="is_nonce",
-               func= (--`is_nonce1 `--),  fixity=Prefix}
-             ];
-
 val old_thms =
      [msg1_cases,
       CD,
@@ -300,6 +282,7 @@ val old_thms =
 (* ==================================================== *)
 
 val _ = quotient.chatting := true;
+fun mk_fn (nm,t) = {def_name=nm^"_def", fname = nm, func = t, fixity = NONE}
 
 val [msg_cases,
       msgCD,
@@ -312,7 +295,14 @@ val [msg_cases,
      ] =
     define_quotient_types
     {types = [{name = "msg", equiv = msgrel_EQUIV}],
-     defs = fnlist,
+     defs = map mk_fn [("Nonce", ``Nonce1``),
+                       ("Mpair", ``Mpair1``),
+                       ("Crypt", ``Crypt1``),
+                       ("Decrypt", ``Decrypt1``),
+                       ("nonces", ``freenonces1``),
+                       ("left", ``freeleft1``),
+                       ("right", ``freeright1``),
+                       ("is_nonce", ``is_nonce1``)],
      tyop_equivs = [],
      tyop_quotients = [FUN_QUOTIENT],
      tyop_simps = [FUN_REL_EQ, FUN_MAP_I],

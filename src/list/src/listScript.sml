@@ -245,7 +245,7 @@ val MAP2 =
   in
       Rsyntax.new_specification{
         name = "MAP2", sat_thm = lemma,
-        consts = [{const_name="MAP2", fixity=Prefix}]
+        consts = [{const_name="MAP2", fixity=NONE}]
       }
   end
 
@@ -1174,7 +1174,7 @@ val ZIP =
      end)
     in
     Rsyntax.new_specification
-        {consts = [{const_name = "ZIP", fixity = Prefix}],
+        {consts = [{const_name = "ZIP", fixity = NONE}],
          name = "ZIP",
          sat_thm = lemma
         }

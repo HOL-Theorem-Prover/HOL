@@ -29,7 +29,7 @@ val aeq_psize = prove(
   Induct_on `aeq` THEN SRW_TAC [][psize_def, psize_ptpm]);
 
 fun mk_def(s,t) =
-    {def_name = s ^ "_def", fixity = Prefix, fname = s, func = t};
+    {def_name = s ^ "_def", fixity = NONE, fname = s, func = t};
 val app_respects_aeq = List.nth(CONJUNCTS aeq_rules, 1)
 
 val ptpm_fv' = (CONV_RULE (BINDER_CONV

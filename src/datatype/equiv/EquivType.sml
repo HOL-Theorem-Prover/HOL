@@ -232,7 +232,7 @@ fun define_equivalence_type{name=tyname, equiv, defs = fnlist,
                         else r0
                   end
       in
-        if fixity <> Prefix then Parse.set_fixity fname fixity else ();
+        (case fixity of SOME fxty => Parse.set_fixity fname fxty | NONE => ());
         new_definition(def_name, mk_eq(l,r))
      end
 

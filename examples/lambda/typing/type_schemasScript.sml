@@ -523,7 +523,7 @@ val forall_respects_aeq = prove(
   METIS_TAC [avoid_finite_set, FINITE_fv, aeq_rtypm]);
 
 val tyfun_respects_aeq = List.nth(CONJUNCTS aeq_rules, 1)
-fun mk_def (n,t) = {def_name = n ^ "_def", fname = n, func = t, fixity = Prefix}
+fun mk_def (n,t) = {def_name = n ^ "_def", fname = n, func = t, fixity = NONE}
 
 val okpm_respects = prove(
   ``!t1 t2. aeq t1 t2 ==> (okpm pi vs avoids t1 =

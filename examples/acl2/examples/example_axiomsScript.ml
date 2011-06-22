@@ -39,7 +39,7 @@ new_theory "example_axioms";
 (* |= p is defined below to mean "p is true in the HOL model of ACL2"        *)
 (*                                                                           *)
 (*****************************************************************************)
-set_fixity "|=" (TruePrefix 11);                (* Give "|=" weak precedence *)
+set_fixity "|=" (Prefix 11);                (* Give "|=" weak precedence *)
 val ACL2_THM_def =
  xDefine "ACL2_THM"
   `(|= p) = (not(equal p nil) = t)`;
