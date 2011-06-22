@@ -103,6 +103,7 @@ src/finite_map
 !examples/ind_def
 !!examples/decidable_separationLogic/src/
 src/bag
+!!examples/unification/triangular/first-order
 src/n-bit
 !examples/ARM/arm6-verification
 !!examples/ARM/arm6-verification/correctness
@@ -134,6 +135,7 @@ src/opentheory
 [mosml]!!examples/HolCheck
 src/datatype/inftree
 !examples/lambda/basics
+!!examples/unification/triangular/nominal
 !examples/lambda/barendregt
 !examples/computability
 !!examples/lambda/other-models
