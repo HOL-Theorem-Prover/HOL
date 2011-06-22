@@ -2,6 +2,8 @@ signature lcsymtacs =
 sig
 
   include Abbrev
+  val all_tac : tactic
+  val kall_tac : 'a -> tactic
   val strip_tac : tactic
   val conj_tac : tactic
   val conj_asm1_tac : tactic
@@ -16,11 +18,13 @@ sig
   val suff_tac : term -> tactic
 
   val rewrite_tac : thm list -> tactic
+  val once_rewrite_tac : thm list -> tactic
   val asm_rewrite_tac : thm list -> tactic
   val ho_match_mp_tac : thm_tactic
   val mp_tac : thm_tactic
   val match_mp_tac : thm_tactic
 
+  val rule_assum_tac : (thm -> thm) -> tactic
   val pop_assum : thm_tactic -> tactic
   val first_assum : thm_tactic -> tactic
   val first_x_assum : thm_tactic -> tactic
@@ -52,12 +56,14 @@ sig
 
   val map_every : ('a -> tactic) -> 'a list -> tactic
 
+  val decide_tac : tactic
   val metis_tac : thm list -> tactic
   val prove_tac : thm list -> tactic
 
   val simp_tac : simpLib.simpset -> thm list -> tactic
   val asm_simp_tac : simpLib.simpset -> thm list -> tactic
   val full_simp_tac : simpLib.simpset -> thm list -> tactic
+  val rw_tac : simpLib.simpset -> thm list -> tactic
   val srw_tac : simpLib.ssfrag list -> thm list -> tactic
   val fsrw_tac : simpLib.ssfrag list -> thm list -> tactic
 
