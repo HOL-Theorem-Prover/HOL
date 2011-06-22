@@ -92,7 +92,7 @@ val _ = export_rewrites["maps_to_in_dom_cod"];
 
 val _ = add_rule {
   term_name = "id_in_syntax",
-  fixity = TruePrefix 625,
+  fixity = Prefix 625,
   pp_elements = [TOK"id",HS,TM,HS,TOK"-:"],
   paren_style = OnlyIfNecessary,
   block_style = (AroundEachPhrase, (PP.INCONSISTENT, 0))
