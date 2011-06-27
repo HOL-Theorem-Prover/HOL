@@ -214,7 +214,7 @@ val _ = emitML (!Globals.emitMLDir) ("arm",
   map (DEFN o int_rule)
    ([IMP_DISJ_THM,
      (* arm_coretypes *)
-     n2w_rule (Q.SPEC `n` sign_extend_def), n2w_rule align_def, aligned_def,
+     n2w_rule align_def, aligned_def,
      n2w_rule count_leading_zeroes_def,
      n2w_rule lowest_set_bit_compute, SUM, bit_count_upto_def,
      n2w_rule bit_count_def, zero_extend32_def,

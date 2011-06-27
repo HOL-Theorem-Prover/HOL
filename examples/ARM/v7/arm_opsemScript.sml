@@ -55,8 +55,6 @@ val _ = temp_overload_on
   ("ARCH2",
      ``\enc a. ARCH (if enc = Encoding_Thumb2 then thumb2_support else a)``);
 
-val _ = TexTokenMap.TeX_notation {hol = "CROSS", TeX = ("\\HOLTokenProd{}", 1)};
-
 (* ------------------------------------------------------------------------ *)
 
 val unaligned_support_def = Define`
