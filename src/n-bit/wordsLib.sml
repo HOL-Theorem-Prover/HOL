@@ -770,7 +770,7 @@ local
                ((if pick_left_coeff x z then x else z, y)::a) (t, r)
          | _ => raise ERR "pick_coeff_terms" "")
   fun join_coeff_terms (z as (_,y)) l =
-    if List.null (fst (partition_same y l)) then
+    if Lib.all (fn (_,x) => x <> y) l then
       z::l
     else
       raise ERR "join_coeff_terms" ""
