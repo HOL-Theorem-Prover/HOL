@@ -769,31 +769,29 @@ local
              pick_coeff_terms
                ((if pick_left_coeff x z then x else z, y)::a) (t, r)
          | _ => raise ERR "pick_coeff_terms" "")
-  fun join_coeff_terms a =
-    fn ([], l) => a @ l
-     | (l, []) => a @ l
-     | ((x, y)::t, l) =>
-        case partition_same y l
-        of ([], r) => join_coeff_terms ((x, y)::a) (t, r)
-         | _ => raise ERR "join_coeff_terms" ""
+  fun join_coeff_terms (z as (_,y)) l =
+    if List.null (fst (partition_same y l)) then
+      z::l
+    else
+      raise ERR "join_coeff_terms" ""
   fun mk_one tm = wordsSyntax.mk_n2w (``1n``, wordsSyntax.dim_of tm)
-  fun get_coeff_terms tm =
+  fun get_coeff_terms a tm =
     case Lib.total boolSyntax.dest_strip_comb tm
     of SOME ("words$word_add", [l, r]) =>
-            join_coeff_terms [] (get_coeff_terms l, get_coeff_terms r)
+            get_coeff_terms (get_coeff_terms a l) r
      | SOME ("words$word_mul", [l, r]) =>
             if is_zero l then
               raise ERR "get_coeff_terms" "zero"
             else if is_word_literal l then
-              [(l, r)]
+              join_coeff_terms (l, r) a
             else
-              [(mk_one tm, tm)]
+              join_coeff_terms (mk_one tm, tm) a
      | _ => if is_zero tm then
               raise ERR "get_coeff_terms" "zero"
             else if is_word_literal tm then
-              [(tm, mk_one tm)]
+              join_coeff_terms (tm, mk_one tm) a
             else
-              [(mk_one tm, tm)]
+              join_coeff_terms (mk_one tm, tm) a
   val lcancel_sub = Conv.GSYM wordsTheory.WORD_LCANCEL_SUB
   fun mk_cancel_thm x =
     let
@@ -838,8 +836,8 @@ in
     val _ = wordsSyntax.is_word_type (Term.type_of l)
             andalso not (wordsSyntax.is_word_sub l)
             orelse raise ERR "WORD_CANCEL_CONV" "Is subraction"
-    val l = if is_zero l then [] else get_coeff_terms l
-    val r = if is_zero r then [] else get_coeff_terms r
+    val l = if is_zero l then [] else get_coeff_terms [] l
+    val r = if is_zero r then [] else get_coeff_terms [] r
   in
     case pick_coeff_terms [] (l, r)
     of [] =>
