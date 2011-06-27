@@ -423,8 +423,8 @@ end
 
 local
   val word_ss = std_ss++wordsLib.SIZES_ss++wordsLib.WORD_ARITH_ss++
-                wordsLib.WORD_LOGIC_ss++wordsLib.WORD_SHIFT_ss
-                ++wordsLib.WORD_CANCEL_ss
+                wordsLib.WORD_LOGIC_ss++wordsLib.WORD_SHIFT_ss++
+                wordsLib.WORD_CANCEL_ss
 
   val SYM_WORD_NOT_LOWER = GSYM WORD_NOT_LOWER;
 
@@ -663,7 +663,6 @@ end
 
 local
   val word_join = SIMP_RULE (std_ss++boolSimps.LET_ss) [] word_join_def
-  (* ``(-1w * a) << n = -1w * (a << n)`` *)
   val index_cond =
       ``(if b then x:'a word else y) ' i = if b then x ' i else y ' i``
         |> simpLib.SIMP_PROVE std_ss [COND_RAND, COND_RATOR] |> GEN_ALL

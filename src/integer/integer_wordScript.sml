@@ -380,7 +380,8 @@ val w2w_i2w = Q.store_thm("w2w_i2w",
   `!i. dimindex(:'a) <= dimindex(:'b) ==>
        (w2w (i2w i : 'b word) = i2w i : 'a word)`,
   SRW_TAC [] [i2w_def, wordsTheory.w2w_n2w, wordsTheory.word_2comp_def]
-  \\ `?q. 0n < q /\ Num (-i) MOD (q * dimword (:'a)) < q * dimword (:'a) /\         (dimword (:'b) = q * dimword (:'a))`
+  \\ `?q. 0n < q /\ Num (-i) MOD (q * dimword (:'a)) < q * dimword (:'a) /\
+      (dimword (:'b) = q * dimword (:'a))`
   by (IMP_RES_TAC arithmeticTheory.LESS_EQUAL_ADD
       \\ Q.EXISTS_TAC `2n ** p`
       \\ FULL_SIMP_TAC arith_ss [ZERO_LT_TWOEXP, dimword_def, GSYM EXP_ADD])

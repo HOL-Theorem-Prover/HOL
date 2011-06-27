@@ -1,5 +1,5 @@
 open HolKernel boolLib bossLib Parse;
-open EmitML wordsTheory;
+open EmitML fcpLib wordsTheory;
 open fcp_emitTheory bit_emitTheory;
 
 val _ = new_theory "words_emit";
@@ -130,6 +130,7 @@ fun defs ocaml =
        word_reduce_n2w, reduce_and_n2w, reduce_or_n2w, reduce_xor_def,
        reduce_xnor, reduce_nand_def, reduce_nor_def, bit_field_insert,
        w2l_def,w2s_def,
+       word_sign_extend_def,
        word_to_bin_list_def,word_to_oct_list_def,
        word_to_dec_list_def,word_to_hex_list_def,
        word_to_bin_string_def,word_to_oct_string_def,
