@@ -34,7 +34,6 @@ val _ = print (prs 65 "Printing :('a + 'b)[32]")
 val _ = if type_to_string ty2 = ":('a + 'b)[32]" then print "OK\n"
         else (print "FAILED\n"; die())
 
-
 fun test (c:conv) tm = let
   val rt = Timer.startRealTimer ()
   val res = Lib.total c tm
@@ -79,6 +78,17 @@ in
                  | SOME s => s) ^ "\n");
   case res of SOME _ => die() | _ => ()
 end
+
+(*
+fun test_conv (c:conv) tm = let
+  val rt = Timer.startRealTimer ()
+  val res = QCONV c tm
+  val elapsed = Timer.checkRealTimer rt
+in
+  TextIO.print (Time.toString elapsed ^ "\n");
+  TextIO.print (thm_to_string res ^ "\n")
+end
+*)
 
 fun time_to_minutes e =
 let
@@ -466,6 +476,31 @@ val _ = blast_true
 
 val _ = blast_true
   ``a <+ 10w /\ b <+ 10w ==> (a * b <=+ 81w : word8)``;
+
+val _ = blast_true
+  ``(a + x + c + d - e + 0w = c + -(g - x)) = (-e = -(g + d + a))``;
+
+val _ = blast_fail
+  ``a << 2 + b = b + a * 4w``;
+
+val _ = blast_true
+  ``(-a * (b + c) + b = -a * b) = (-a * c = -b)``;
+
+val _ = blast_true
+  ``(a + 4w = b + 2w) = (a + 2w = b)``;
+
+val _ = blast_true
+  ``(a + 4w = b - 2w) = (a + 6w = b)``;
+
+val _ = blast_true
+  ``(-a = -b) = (a = b)``;
+
+val _ = blast_true
+   ``(a + 4w = b) = (b + 4w = a : word3)``;
+
+val _ = blast_true
+   ``(x + b * 4w + c * 4w = q + e * 4w - r : word3) =
+     (4w * b + 4w * c + 4w * e + x + r = q)``
 
 val elapsed = Timer.checkRealTimer tt;
 

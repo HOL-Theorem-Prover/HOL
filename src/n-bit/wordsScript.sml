@@ -2030,7 +2030,8 @@ val WORD_LITERAL_XOR = store_thm("WORD_LITERAL_XOR",
 
 val SNOC_GENLIST_K = Q.prove(
   `!n c. SNOC c (GENLIST (K c) n) = c::(GENLIST (K c) n)`,
-  Induct \\ FULL_SIMP_TAC (srw_ss())  [rich_listTheory.GENLIST, listTheory.SNOC]);
+  Induct \\ FULL_SIMP_TAC (srw_ss())  [rich_listTheory.GENLIST, listTheory.SNOC]
+);
 
 val word_replicate_concat_word_list = Q.store_thm
  ("word_replicate_concat_word_list",
@@ -2422,11 +2423,12 @@ val WORD_ADD_SUB_SYM = store_thm("WORD_ADD_SUB_SYM",
 val WORD_ADD_LINV = store_thm("WORD_ADD_LINV",
   `!w:'a word. - w + w = 0w`,
   ARITH_WORD_TAC
-    \\ STRIP_ASSUME_TAC
-         ((REWRITE_RULE [ZERO_LT_TWOEXP] o SPECL [`n`,`2 ** ^WL`]) DA)
-    \\ ASM_SIMP_TAC std_ss [MOD_MULT]
-    \\ ONCE_REWRITE_TAC [GSYM n2w_mod]
-    \\ ASM_SIMP_TAC arith_ss [GSYM MULT,MOD_EQ_0,ZERO_LT_TWOEXP,word_0,dimword_def]);
+  \\ STRIP_ASSUME_TAC
+       ((REWRITE_RULE [ZERO_LT_TWOEXP] o SPECL [`n`,`2 ** ^WL`]) DA)
+  \\ ASM_SIMP_TAC std_ss [MOD_MULT]
+  \\ ONCE_REWRITE_TAC [GSYM n2w_mod]
+  \\ ASM_SIMP_TAC arith_ss
+       [GSYM MULT,MOD_EQ_0,ZERO_LT_TWOEXP,word_0,dimword_def]);
 
 val WORD_ADD_RINV = store_thm("WORD_ADD_RINV",
   `!w:'a word. w + - w = 0w`,
@@ -2518,7 +2520,8 @@ val WORD_SUB_SUB2 = save_thm("WORD_SUB_SUB2",
 
 val WORD_EQ_SUB_LADD = store_thm("WORD_EQ_SUB_LADD",
   `!v:'a word w x. (v = w - x) = (v + x = w)`,
-  METIS_TAC [word_sub_def,WORD_ADD_ASSOC,WORD_ADD_LINV,WORD_ADD_RINV,WORD_ADD_0]);
+  METIS_TAC
+    [word_sub_def,WORD_ADD_ASSOC,WORD_ADD_LINV,WORD_ADD_RINV,WORD_ADD_0]);
 
 val WORD_EQ_SUB_RADD = store_thm("WORD_EQ_SUB_RADD",
   `!v:'a word w x. (v - w = x) = (v = x + w)`,
@@ -4433,7 +4436,8 @@ val word_concat_0_eq = Q.store_thm("word_concat_0_eq",
   `!x y. FINITE univ(:'a) /\
          dimindex (:'b) <= dimindex (:'c) /\ y < dimword(:'b) ==>
      (((0w :'a word) @@ (x :'b word) = (n2w y :'c word)) <=> (x = n2w y))`,
-   Cases \\ SRW_TAC [numSimps.ARITH_ss] [dimindex_dimword_le_iso, word_concat_0]);
+   Cases
+   \\ SRW_TAC [numSimps.ARITH_ss] [dimindex_dimword_le_iso, word_concat_0]);
 
 val word_join_word_T = store_thm("word_join_word_T",
   `word_join (- 1w) (- 1w) = - 1w`,

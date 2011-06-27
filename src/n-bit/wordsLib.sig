@@ -13,6 +13,7 @@ sig
     val WORD_SUB_ss         : simpLib.ssfrag
     val WORD_SHIFT_ss       : simpLib.ssfrag
     val WORD_ARITH_EQ_ss    : simpLib.ssfrag
+    val WORD_CANCEL_ss      : simpLib.ssfrag
     val WORD_BIT_EQ_ss      : simpLib.ssfrag
     val WORD_EXTRACT_ss     : simpLib.ssfrag
     val WORD_MUL_LSL_ss     : simpLib.ssfrag
@@ -24,6 +25,7 @@ sig
 
     val BITS_INTRO_CONV     : conv
     val WORD_ARITH_CONV     : conv
+    val WORD_CANCEL_CONV    : conv
     val WORD_LOGIC_CONV     : conv
     val WORD_SUB_CONV       : conv
     val WORD_MUL_LSL_CONV   : conv
