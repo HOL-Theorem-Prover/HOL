@@ -480,7 +480,7 @@ val _ = blast_true
 val _ = blast_true
   ``(a + x + c + d - e + 0w = c + -(g - x)) = (-e = -(g + d + a))``;
 
-val _ = blast_fail
+val _ = blast_true
   ``a << 2 + b = b + a * 4w``;
 
 val _ = blast_true

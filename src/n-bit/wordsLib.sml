@@ -573,6 +573,9 @@ fun WORD_LITERAL_REDUCE_CONV t =
   else
     numLib.REDUCE_CONV t;
 
+val WORD_ADD_REDUCE_CONV =
+  PURE_REWRITE_CONV WORD_LITERAL_ADD_thms THENC WORD_LITERAL_REDUCE_CONV;
+
 val gci_word_mul = GenPolyCanon.GCI
     {dest = wordsSyntax.dest_word_mul,
      is_literal = fn t => is_word_literal t orelse
@@ -605,16 +608,14 @@ local
   fun add_coeff (t:term) : thm = if is_good t then ALL_CONV t
                                  else REWR_CONV (GSYM WORD_MULT_LEFT_1) t
   val distrib = GSYM WORD_RIGHT_ADD_DISTRIB
-  val WORD_REDUCE_CONV = PURE_REWRITE_CONV WORD_LITERAL_ADD_thms
-                           THENC WORD_LITERAL_REDUCE_CONV
   fun merge t = let
     val (l, r) = wordsSyntax.dest_word_add t
   in
     if is_word_literal l andalso is_word_literal r then
-      WORD_REDUCE_CONV
+      WORD_ADD_REDUCE_CONV
     else
       Conv.BINOP_CONV add_coeff THENC
-      REWR_CONV distrib THENC LAND_CONV WORD_REDUCE_CONV
+      REWR_CONV distrib THENC LAND_CONV WORD_ADD_REDUCE_CONV
   end t
 in
   val gci_word_add = GenPolyCanon.GCI
@@ -631,7 +632,7 @@ in
      postnorm = REWRITE_CONV word_mult_clauses,
      left_id = CONJUNCT2 WORD_ADD_0,
      right_id = CONJUNCT1 WORD_ADD_0,
-     reducer = WORD_REDUCE_CONV}
+     reducer = WORD_ADD_REDUCE_CONV}
 end;
 
 local
@@ -1238,11 +1239,15 @@ local
           Conv.ALL_CONV) tm
 
   val LSL_MUL_CONV =
-        LSL_CONV THENC MUL_DISTRIB_CONV THENC Conv.LAND_CONV WORD_EVAL_CONV
+        LSL_CONV
+        THENC MUL_DISTRIB_CONV
+        THENC Conv.LAND_CONV WORD_ADD_REDUCE_CONV
 in
   fun WORD_MUL_LSL_CONV tm = let
     val (l, r) = wordsSyntax.dest_word_mul tm
     val (v, sz) = wordsSyntax.dest_mod_word_literal l
+                  handle HOL_ERR _ =>
+                    (wordsSyntax.dest_word_literal l, Arbnum.zero)
     val v2 = wordsSyntax.dest_word_literal l
     val conv = if v <> v2 then
                 Conv.REWR_CONV (Drule.EQT_ELIM
@@ -1254,11 +1259,11 @@ in
   in
     Thm.TRANS thm
      (let val rwt = if v = Arbnum.zero then
-                       hd word_mult_clauses
-                     else if v = Arbnum.one then
-                       List.nth (word_mult_clauses, 2)
-                     else
-                       SYM (LSL_MUL_CONV (mk_sum_shifts (Term.type_of tm, v)))
+                      hd word_mult_clauses
+                    else if v = Arbnum.one then
+                      List.nth (word_mult_clauses, 2)
+                    else
+                      SYM (LSL_MUL_CONV (mk_sum_shifts (Term.type_of tm, v)))
       in
         Conv.REWR_CONV rwt tm
       end)

@@ -419,35 +419,6 @@ in
        | NONE => raise ERR "fcp_eq_thm" ""
 end
 
-(* ------------------------------------------------------------------------ *)
-
-local
-  val word_ss = std_ss++wordsLib.SIZES_ss++wordsLib.WORD_ARITH_ss++
-                wordsLib.WORD_LOGIC_ss++wordsLib.WORD_SHIFT_ss++
-                wordsLib.WORD_CANCEL_ss
-
-  val SYM_WORD_NOT_LOWER = GSYM WORD_NOT_LOWER;
-
-  val bit_rwts = [word_lsb_def, word_msb_def, word_bit_def]
-
-  val order_rwts =
-    [WORD_HIGHER,
-     REWRITE_RULE [SYM_WORD_NOT_LOWER] WORD_HIGHER_EQ,
-     SYM_WORD_NOT_LOWER,
-     WORD_GREATER,
-     WORD_GREATER_EQ,
-     REWRITE_RULE [SYM_WORD_NOT_LOWER, word_L_def] WORD_LT_LO,
-     REWRITE_RULE [SYM_WORD_NOT_LOWER, word_L_def] WORD_LE_LS,
-     WORD_LOWER_REFL, WORD_LOWER_EQ_REFL,
-     WORD_LESS_REFL, WORD_LESS_EQ_REFL,
-     WORD_0_LS, WORD_LESS_0_word_T,
-     WORD_LS_word_0, WORD_LO_word_0]
-in
-  val WORD_SIMP_CONV = SIMP_CONV word_ss bit_rwts
-                       THENC REWRITE_CONV order_rwts
-                       THENC Conv.DEPTH_CONV wordsLib.SIZES_CONV
-end
-
 (* ------------------------------------------------------------------------
    SMART_MUL_LSL_CONV : converts ``n2w n * w`` into either
                         ``w << p1 + ... + w << pn`` or
@@ -476,8 +447,12 @@ in
            else
              raise ERR "SMART_MUL_LSL_CONV" "not -1w * x"
        | NONE =>
-          let val (N,sz) = wordsSyntax.dest_mod_word_literal l in
-            if Arbnum.<(N, Arbnum.fromInt 11) then
+          let
+            val (N,sz) = wordsSyntax.dest_mod_word_literal l
+                         handle HOL_ERR _ =>
+                           (wordsSyntax.dest_word_literal l, Arbnum.zero)
+          in
+            if sz = Arbnum.zero orelse Arbnum.<(N, Arbnum.fromInt 11) then
               wordsLib.WORD_MUL_LSL_CONV tm
             else
               let
@@ -499,6 +474,38 @@ in
               end
           end
     end
+end
+
+(* ------------------------------------------------------------------------ *)
+
+local
+  val word_ss = std_ss++wordsLib.SIZES_ss++wordsLib.WORD_ARITH_ss++
+                wordsLib.WORD_LOGIC_ss++wordsLib.WORD_SHIFT_ss++
+                wordsLib.WORD_CANCEL_ss
+
+  val SYM_WORD_NOT_LOWER = GSYM WORD_NOT_LOWER;
+
+  val bit_rwts = [word_lsb_def, word_msb_def, word_bit_def]
+
+  val order_rwts =
+    [WORD_HIGHER,
+     REWRITE_RULE [SYM_WORD_NOT_LOWER] WORD_HIGHER_EQ,
+     SYM_WORD_NOT_LOWER,
+     WORD_GREATER,
+     WORD_GREATER_EQ,
+     REWRITE_RULE [SYM_WORD_NOT_LOWER, word_L_def] WORD_LT_LO,
+     REWRITE_RULE [SYM_WORD_NOT_LOWER, word_L_def] WORD_LE_LS,
+     WORD_LOWER_REFL, WORD_LOWER_EQ_REFL,
+     WORD_LESS_REFL, WORD_LESS_EQ_REFL,
+     WORD_0_LS, WORD_LESS_0_word_T,
+     WORD_LS_word_0, WORD_LO_word_0]
+in
+  val WORD_SIMP_CONV =
+        SIMP_CONV word_ss bit_rwts
+        THENC REWRITE_CONV order_rwts
+        THENC Conv.DEPTH_CONV wordsLib.SIZES_CONV
+        THENC Conv.DEPTH_CONV SMART_MUL_LSL_CONV
+        THENC Conv.DEPTH_CONV WORD_DIV_LSR_CONV
 end
 
 (* ------------------------------------------------------------------------
@@ -757,9 +764,7 @@ local
              ROL_BV_CONV) cmp
 in
   val BLAST_CONV =
-        Conv.DEPTH_CONV SMART_MUL_LSL_CONV
-        THENC Conv.DEPTH_CONV WORD_DIV_LSR_CONV
-        THENC PURE_REWRITE_CONV [GSYM word_sub_def, WORD_SUB]
+        PURE_REWRITE_CONV [GSYM word_sub_def, WORD_SUB]
         THENC computeLib.CBV_CONV cmp
         THENC WORD_LIT_CONV
 end;
