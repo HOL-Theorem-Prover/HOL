@@ -2462,23 +2462,6 @@ val load_multiple_instr_def = iDefine`
                     (read_memA ii (address i,4) >>=
                     (\d. write_reg_mode ii (n2w i,mode) (word32 d)))) >>=
            (\unit_list:unit list.
-            ((if registers ' 15 then
-               read_memA ii (address 15,4) >>=
-               (\d.
-                  if system then
-                    current_mode_is_user_or_system ii >>=
-                    (\is_user_or_system.
-                      if is_user_or_system then
-                        errorT "load_multiple_instr: unpredictable"
-                      else
-                        read_spsr ii >>=
-                        (\spsr.
-                           cpsr_write_by_instr ii (encode_psr spsr, 0b1111w, T)
-                             >>= (\u. branch_write_pc ii (word32 d))))
-                  else
-                    load_write_pc ii (word32 d))
-              else
-                increment_pc ii enc) |||
               condT wback
                 (if ~(registers ' (w2n n)) then
                    if add then
@@ -2486,8 +2469,26 @@ val load_multiple_instr_def = iDefine`
                    else
                      write_reg ii n (base - length)
                  else
-                   write_reg ii n UNKNOWN)) >>=
-                unit2)))`;
+                   write_reg ii n UNKNOWN) >>=
+              (\u:unit.
+                 if registers ' 15 then
+                   read_memA ii (address 15,4) >>=
+                   (\d.
+                      if system then
+                        current_mode_is_user_or_system ii >>=
+                        (\is_user_or_system.
+                          if is_user_or_system then
+                            errorT "load_multiple_instr: unpredictable"
+                          else
+                            read_spsr ii >>=
+                            (\spsr.
+                               cpsr_write_by_instr ii (encode_psr spsr, 0b1111w, T)
+                                 >>= (\u. branch_write_pc ii (word32 d))))
+                      else
+                        load_write_pc ii (word32 d))
+                 else
+                   increment_pc ii enc))))`;
+
 
 (* ........................................................................
    T,A:  PUSH<c>   <registers>

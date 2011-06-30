@@ -72,6 +72,7 @@ in
 end
 
 fun flag tm = mk_var (fst (dest_const tm), bool);
+fun spsr_flag tm = mk_var ("s" ^ fst (dest_const tm), bool);
 
 val psrN = flag ``psrN``
 val psrZ = flag ``psrZ``
@@ -82,12 +83,28 @@ val psrE = flag ``psrE``
 val psrA = flag ``psrA``
 val psrI = flag ``psrI``
 val psrF = flag ``psrF``
+val psrJ = flag ``psrJ``
+val psrT = flag ``psrT``
+
+val spsrN = spsr_flag ``psrN``
+val spsrZ = spsr_flag ``psrZ``
+val spsrC = spsr_flag ``psrC``
+val spsrV = spsr_flag ``psrV``
+val spsrQ = spsr_flag ``psrQ``
+val spsrE = spsr_flag ``psrE``
+val spsrA = spsr_flag ``psrA``
+val spsrI = spsr_flag ``psrI``
+val spsrF = spsr_flag ``psrF``
+val spsrJ = spsr_flag ``psrJ``
+val spsrT = spsr_flag ``psrT``
 
 val sctlrNMFI = flag ``sctlrNMFI``
 
 val GE = mk_var ("GE", ``:word4``);
+val spsrGE = mk_var ("spsrGE", ``:word4``);
 
 val mode = mk_var ("mode", ``:word5``);
+val spsrmode = mk_var ("spsrmode", ``:word5``);
 
 fun reg i = mk_var ("r" ^ Int.toString i, ``:word32``);
 
@@ -419,6 +436,34 @@ val _ = test "validate_arm_step"
      (psrF, ``~^sctlrNMFI \/ ^psrF``),
      (mode, ``27w : word5``),
      (r15, ``^r15 + 4w``)])
+  ];
+
+(*
+val go = step "fiq";
+*)
+val _ = test "validate_arm_step" (fn l => List.map (validate_arm_step "fiq") l)
+  [("ldm sp!,{r0,r1,pc}^",
+    [(psrN, spsrN),
+     (psrZ, spsrZ),
+     (psrC, spsrC),
+     (psrV, spsrV),
+     (psrQ, spsrQ),
+     (psrJ, spsrJ),
+     (GE, spsrGE),
+     (psrE, spsrE),
+     (psrA, spsrA),
+     (psrI, spsrI),
+     (psrF, ``if ~^sctlrNMFI \/ ~^spsrF then spsrF else ^psrF``),
+     (psrT, spsrT),
+     (mode, spsrmode),
+     (r15, ``align
+               (^mem (^r13 + 11w) @@ mem (r13 + 10w) @@ mem (r13 + 9w) @@
+                 mem (r13 + 8w),if ~^spsrJ /\ ~^spsrT then 4 else 2)``),
+     (r13, ``^r13 + 12w``),
+     (r1, ``^mem (^r13 + 7w) @@ mem (r13 + 6w) @@
+             mem (r13 + 5w) @@ mem (r13 + 4w)``),
+     (r0, ``^mem (^r13 + 3w) @@ mem (r13 + 2w) @@
+             mem (r13 + 1w) @@ mem r13``)])
   ];
 
 val _ = test "arm_steps_from_quote v7 conds" (arm_steps_from_quote "v7")`
