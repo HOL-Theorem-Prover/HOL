@@ -839,7 +839,8 @@ fun to_term tm =
                                      val (f_arg_tys,_) = strip_fun_type (type_of f')
 (**)
                                      val arg1 = el 1 args'
-                                     val (o_tm,[mapf_tm,unit_tycmb]) = strip_comb arg1
+                                     val (o_mapf_tm,unit_tycmb) = dest_comb arg1
+                                     val (o_tm,mapf_tm) = dest_comb o_mapf_tm
                                      val unit_tycmb_ty = type_of unit_tycmb
                                      val _ = (print "unit_tycmb_ty: "; debug_type unit_tycmb_ty; print "\n")
                                      val bad_a = fst(Type.dom_rng unit_tycmb_ty)
@@ -1458,7 +1459,9 @@ fun TC printers = let
               (* Test if Rator is a var with universal type but no constraint *)
               let val {Name, Ty, Locn} = dest_var Rand'
                   open Pretype
-                  val PT(UVar (r as ref (NONEU _)),tylocn) = the_var_type Rand_ty
+                  fun the_uvar_ref(PT(UVar (r as ref (NONEU _)),_)) = r
+                    | the_uvar_ref _ = raise ERR "the_uvar_ref" "not a UVar (NONE)"
+                  val r = the_uvar_ref (the_var_type Rand_ty)
                   val dom_ty = #1 (dom_rng Rator_ty)
                   fun is_uvar_type(PT(UVar r,loc)) = true
                     | is_uvar_type _ = false

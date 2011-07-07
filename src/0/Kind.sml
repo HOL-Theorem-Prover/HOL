@@ -59,7 +59,7 @@ fun ((Type r1) :=: (Type r2)) = true
 (* Kind containment: kinds match, but ranks are same or lower than container *)
 fun ((Type r1) :>=: (Type r2)) = ge_rk(r1,r2)
   | ((KdVar (s1,r1)) :>=: (KdVar (s2,r2))) = (s1 = s2) andalso (r1 = r2)
-  | ((Oper (k1s,k1t)) :>=: (Oper (k2s,k2t))) = (k1s :>=: k2s) andalso (k1t :>=: k2t)
+  | ((Oper (k1s,k1t)) :>=: (Oper (k2s,k2t))) = (k1s = k2s) andalso (k1t :>=: k2t)
   | (_ :>=: _) = false;
 
 fun mk_arity 0 = Type rho

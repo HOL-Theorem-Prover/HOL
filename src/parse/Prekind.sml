@@ -461,7 +461,7 @@ report "Unifying kinds" s n kd1 kd2 (
                                             >> rank_unify rk1 rk2
   | (Typekind rk1, Typekind rk2) => rank_unify_le rk1 rk2
   | (Arrowkind(kd11, kd12), Arrowkind(kd21, kd22)) =>
-       gen_unify_eq(* ? *) kd11 kd21 >> gen_unify kd12 kd22
+       gen_unify_eq kd11 kd21 >> gen_unify kd12 kd22
   | (KdRankConstr{Kd=kd1',Rank=rk1}, _) =>
        rank_unify (prank_of kd1') rk1 >> gen_unify kd1' kd2
   | (_, KdRankConstr{Kd=kd2',Rank=rk2}) =>

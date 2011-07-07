@@ -1532,18 +1532,19 @@ fun gen_unify (kind_unify   :int -> prekind -> prekind -> ('a -> 'a * unit optio
     | unify_var (ty as PT(Vartype _,_))             = return ty
     | unify_var ty = (print ("unify_var fails on " ^ pretype_to_string ty ^ "\n"); fail)
   (* bvar_unify's inputs are reduced to either Vartype or UVar(NONEU),
-     and then unified, returning the reduced types *)
+     and then unified, returning the reduced types;
+     the kinds must be unified to be eaual, not <=. *)
   fun bvar_unify ty1 (PT(UVar (r as ref (NONEU kd)),_)) =
-         kind_unify(*_le*) (pkind_of ty1) kd >>
+         kind_unify (pkind_of ty1) kd >>
          bind gen_unify c2 c1 r ty1 >> 
          unify_var ty1 >- (fn ty1' => return (ty1',ty1'))
     | bvar_unify (PT(UVar (r as ref (NONEU kd)),_)) ty2 =
-         kind_unify(*_le*) kd (pkind_of ty2) >>
+         kind_unify kd (pkind_of ty2) >>
          bind gen_unify c1 c2 r ty2 >>
          unify_var ty2 >- (fn ty2' => return (ty2',ty2'))
     | bvar_unify (ty1 as PT(Vartype (tv1 as (s1,kd1)),_))
                  (ty2 as PT(Vartype (tv2 as (s2,kd2)),_)) =
-         kind_unify_le kd1 kd2 >> return (ty1,ty2)
+         kind_unify kd1 kd2 >> return (ty1,ty2)
     | bvar_unify ty1 ty2 =
          unify_var ty1 >- (fn ty1' =>
          unify_var ty2 >- (fn ty2' =>

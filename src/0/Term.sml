@@ -614,17 +614,17 @@ fun create_const errstr (const as (r,GRND pat)) Ty =
       in case (tyS,kdS,rkS)
           of ([],[],0) => Const const
            | (S,_,_) => Const(r, maybe_GRND Ty')
-(* for speed, comment this out: *)
+(* for speed, comment this out:
       end handle e as HOL_ERR _ => raise (wrap_exn ("Term."^errstr)
              (String.concat["\nNot a type instance: ", KernelSig.id_toString r,
                               "\nof primitive type\n", type_to_string pat,
                               "\ncannot have type\n", type_to_string Ty]) e)
-(*
+*)
       end handle HOL_ERR _ => raise (ERR errstr
              (String.concat["Not a type instance: ", KernelSig.id_toString r,
                               "\nof primitive type\n", type_to_string pat,
                               "\ncannot have type\n", type_to_string Ty]))
-*)
+(**)
 
 
 fun mk_thy_const {Thy,Name,Ty} = let
