@@ -1993,7 +1993,7 @@ The following \ML\ function makes a type definition in the \HOL{} system.
 \begin{holboxed}
 \index{new_type_definition@\ml{new\_type\_definition}|pin}
 \begin{verbatim}
-   new_type_definition : (string * term * thm) -> thm
+   new_type_definition : (string * thm) -> thm
 \end{verbatim}\end{holboxed}
 
 \noindent If $t$ is a term of type
@@ -2001,17 +2001,20 @@ $\sigma$\ml{->bool} containing $n$ distinct type variables, then
 evaluating:
 
 {\def\op{{\normalsize\sl op}}
-\begin{hol}\begin{alltt}
-   new_type_definition("{\op}", \m{t}, |- ?\m{x}.\m{\:t \;x})
-\end{alltt}\end{hol}}
+\begin{hol}
+\begin{alltt}
+   new_type_definition("{\op}", |- ?\(x\). \(t\) \(x\))
+\end{alltt}
+\end{hol}}
 
 \noindent results in \ty{op} being declared as a new $n$-ary type operator
 characterized by the definitional
 \index{definitional axioms}\index{type operators, in HOL logic@type operators, in \HOL{} logic!definitional axioms for} axiom:
-
-\begin{hol}\begin{alltt}
+\begin{hol}
+\begin{alltt}
    |- ?rep. TYPE\_DEFINITION \m{t} rep
-\end{alltt}\end{hol}
+\end{alltt}
+\end{hol}
 
 \noindent which is stored as a definition with the automatically
 generated name
@@ -2027,8 +2030,7 @@ is defined in the theory \ml{bool} by:
 \end{verbatim}
 \end{hol}
 
-\noindent Executing \ml{new\_type\_definition("\ty{op}",\ }$t$\ml{,\
-|- ?}$x$\ml{.}\ $t\ x$\ml{)} fails if:
+\noindent Executing \ml{new\_type\_definition("\ty{op}", |- ?}$x$\ml{.}\ $t\ x$\ml{)} fails if:
 \begin{myenumerate}
 \item $t$ does not have a type of the form $\sigma$\ml{->bool}.
 \end{myenumerate}
@@ -2159,9 +2161,11 @@ is one-to-one for values that satisfy \m{P}, and returns the theorem:
 is onto, returning the theorem:
 
 {\def\bk{\char'134}
-\begin{hol}\begin{alltt}
+\begin{hol}
+\begin{alltt}
    |- !a. ?r. (a = \m{abs} r) /\bk \m{P} r
-\end{alltt}\end{hol}}
+\end{alltt}
+\end{hol}}
 
 \noindent All four functions will fail if applied to any theorem that does not
 have the form of a theorem returned by \ml{define\_new\_type\_bijections}.
