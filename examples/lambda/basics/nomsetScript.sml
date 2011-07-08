@@ -4,7 +4,7 @@ local open stringTheory in end;
 
 open pred_setTheory
 
-open basic_swapTheory NEWLib
+open basic_swapTheory NEWLib lcsymtacs
 
 val _ = new_theory "nomset";
 
@@ -417,6 +417,29 @@ val listpm_nil = store_thm(
   ``is_perm pm ⇒ (listpm pm [] x = x)``,
   SRW_TAC [ETA_ss][is_perm_nil])
 
+val LENGTH_listpm = store_thm(
+  "LENGTH_listpm",
+  ``LENGTH (listpm pm pi l) = LENGTH l``,
+  Induct_on `l` >> srw_tac [][])
+val _ = export_rewrites ["LENGTH_listpm"]
+
+val EL_listpm = store_thm(
+  "EL_listpm",
+  ``∀l n. n < LENGTH l ==> (EL n (listpm pm pi l) = pm pi (EL n l))``,
+  Induct >> srw_tac [][] >> Cases_on `n` >> srw_tac [][] >>
+  fsrw_tac [][]);
+val _ = export_rewrites ["EL_listpm"]
+
+val MEM_listpm = store_thm(
+  "MEM_listpm",
+  ``is_perm pm ==> (MEM x (listpm pm pi l) ⇔ MEM (pm pi⁻¹ x) l)``,
+  Induct_on `l` >> srw_tac [][is_perm_eql]);
+
+val MEM_listpm_EXISTS = store_thm(
+  "MEM_listpm_EXISTS",
+  ``MEM x (listpm pm pi l) ⇔ ∃y. MEM y l ∧ (x = pm pi y)``,
+  Induct_on `l` >> srw_tac [][] >> metis_tac []);
+
 (* lists of pairs of strings, (concrete rep for permutations) *)
 val _ = overload_on ("cpmpm", ``listpm (pairpm lswapstr lswapstr)``);
 
@@ -670,6 +693,17 @@ val listsupp_REVERSE = Store_thm(
   "listsupp_REVERSE",
   ``supp (listpm p) (REVERSE l) = supp (listpm p) l``,
   Induct_on `l` THEN SRW_TAC [][UNION_COMM]);
+
+val IN_supp_listpm = store_thm(
+  "IN_supp_listpm",
+  ``a ∈ supp (listpm pm) l ⇔ ∃e. MEM e l ∧ a ∈ supp pm e``,
+  Induct_on `l` >> srw_tac [DNF_ss][]);
+
+val NOT_IN_supp_listpm = store_thm(
+  "NOT_IN_supp_listpm",
+  ``a ∉ supp (listpm pm) l ⇔ ∀e. MEM e l ⇒ a ∉ supp pm e``,
+  metis_tac [IN_supp_listpm])
+
 
 (* concrete permutations, which get their own overload for calculating their
    support *)
