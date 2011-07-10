@@ -770,13 +770,27 @@ val LIST_REL_genind_gtpm_eqn = store_thm(
 
 val _ = augment_srw_ss [rewrites [FINITE_GFV, LIST_REL_genind_gtpm_eqn]]
 
+val _ = overload_on ("gtpml", ``listpm gtpm``)
+val gtpml_eqr = store_thm(
+"gtpml_eqr",
+``!t u. (t = gtpml pi u) = (gtpml (REVERSE pi) t = u)``,
+srw_tac [][is_perm_eql]);
+
+val genind_GLAM_eqn = store_thm(
+  "genind_GLAM_eqn",
+  ``genind vp lp n (GLAM v bv ts us) =
+      ∃tns uns. LIST_REL (genind vp lp) tns ts ∧
+                LIST_REL (genind vp lp) uns us ∧
+                lp n bv tns uns``,
+  srw_tac [DNF_ss][genind_cases, gterm_distinct, GLAM_eq_thm] >>
+  srw_tac [][gtpml_eqr, perm_supp] >> metis_tac []);
+
 val finite_gfvl = prove(
   ``FINITE (GFVl ts)``,
   Induct_on `ts` >> srw_tac [][MEM_MAP] >> srw_tac [][]);
 
 val _ = augment_srw_ss [rewrites [finite_gfvl]]
 
-val _ = overload_on ("gtpml", ``listpm gtpm``)
 
 val bvc_genind = store_thm(
   "bvc_genind",
@@ -950,7 +964,7 @@ val sidecond_def = Define`
 val FCB_def = Define`
   FCB dpm ppm A ^vp ^lp ^lf =
   ∀a n v bv r1 r2 ts us p.
-             a ∉ A ∧
+             a ∉ A ∧ a ∉ GFVl us ∧ a ∉ supp ppm p ∧
              LIST_REL (relsupp A dpm ppm) ts r1 ∧
              LIST_REL (relsupp A dpm ppm) us r2 ∧
              genind vp lp n (GLAM v bv ts us) ⇒
@@ -973,9 +987,10 @@ val tmrec_GLAM = tmrec_def |> Q.INST [`t` |-> `GLAM v bv ts us`]
   |> C (foldr (uncurry Q.GEN)) [`v`,`bv`,`ts`,`us`]
 
 val gtpm_GVAR = gtpm_thm |> CONJUNCT1
-val genind_GVAR = prove(
-``genind vp lp n (GVAR s vv) = vp n vv``,
-srw_tac [][genind_cases,gterm_distinct,gterm_11]);
+val genind_GVAR = store_thm(
+  "genind_GVAR",
+  ``genind vp lp n (GVAR s vv) = vp n vv``,
+  srw_tac [][genind_cases,gterm_distinct,gterm_11]);
 val GFV_GVAR = GFV_thm |> CONJUNCT1
 
 val notinsupp_I = prove(
@@ -983,30 +998,15 @@ val notinsupp_I = prove(
   is_perm pm ∧ FINITE A ∧ support pm x A ∧ e ∉ A ⇒ e ∉ supp pm x``,
 metis_tac [supp_smallest, SUBSET_DEF]);
 
-val sorry : tactic = fn g => ([],fn _ => mk_thm g)
-
 val gtpm_eqr = store_thm(
 "gtpm_eqr",
 ``(t = gtpm pi u) = (gtpm (REVERSE pi) t = u)``,
 METIS_TAC [gtpm_inverse]);
 
-val MAP_gtpm_eqr = store_thm(
-"MAP_gtpm_eqr",
-``!t u. (t = MAP (gtpm pi) u) = (u = MAP (gtpm (REVERSE pi)) t)``,
-Induct >- srw_tac [][] >>
-gen_tac >>
-Cases >- srw_tac [][] >>
-srw_tac [][gtpm_eqr] >>
-metis_tac [gtpm_eqr]);
-
 val lswapstr_sing = Q.store_thm(
 "lswapstr_sing",
 `lswapstr [(x,y)] z = swapstr x y z`,
 srw_tac [][lswapstr_def]);
-
-val pm_sing_o = prove(
-``is_perm pm ==> (pm [xy] o pm [xy] = I)``,
-srw_tac [][FUN_EQ_THM,is_perm_sing_inv]);
 
 val trec_fnpm = prove(
   ``(ppm → apm) π (tmrec A ppm vf lf t) =
@@ -1037,11 +1037,6 @@ srw_tac [][gtmsize_thm] >>
 imp_res_tac SUM_MAP_MEM >>
 pop_assum (qspec_then `gtmsize` mp_tac) >>
 DECIDE_TAC);
-
-val gtpml_eqr = store_thm(
-"gtpml_eqr",
-``!t u. (t = gtpml pi u) = (gtpml (REVERSE pi) t = u)``,
-srw_tac [][is_perm_eql]);
 
 val is_perm_decompose_o = store_thm(
 "is_perm_decompose_o",
@@ -1138,7 +1133,7 @@ reverse conj_tac >- (
   Cases_on `b=s'` >> fsrw_tac [][] >- (
     fsrw_tac [][FCB_def] >>
     first_x_assum match_mp_tac >>
-    fsrw_tac [][] >>
+    fsrw_tac [][NOT_IN_supp_listpm] >>
     map_every qexists_tac [`n`,`s'`] >>
     fsrw_tac [][LIST_REL_EL_EQN,EL_MAP,relsupp_def] >>
     srw_tac [][] >> first_x_assum (match_mp_tac o MP_CANON) >>
@@ -1350,16 +1345,6 @@ disch_then (match_mp_tac o GSYM) >>
 qunabbrev_tac `xyus` >>
 fsrw_tac [][MEM_listpm_EXISTS, gtmsize_gtpm] >>
 metis_tac [genind_GLAM_subterm, gtmsize_GLAM_subterm]);
-
-val lswapstr_sing = Q.store_thm(
-"lswapstr_sing",
-`lswapstr [(x,y)] z = swapstr x y z`,
-srw_tac [][]);
-
-val gtpm_eqr = store_thm(
-"gtpm_eqr",
-``(t = gtpm pi u) = (gtpm (REVERSE pi) t = u)``,
-metis_tac [gtpm_inverse]);
 
 fun udplus th =
     th |> REWRITE_RULE [GSYM CONJ_ASSOC]
