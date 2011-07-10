@@ -1229,13 +1229,7 @@ map_every qx_gen_tac [`s''`, `bv'`, `ts''`, `us'`] >>
 srw_tac [][] >>
 `(bv' = bv) ∧ (us' = gtpml [(x,y)] us)` by fsrw_tac [][GLAM_eq_thm] >>
 rpt VAR_EQ_TAC >>
-qpat_assum `sidecond AA BB CC DD EE FF GG`
-   (fn th => th |> SIMP_RULE (srw_ss()) [sidecond_def] |> CONJUNCTS
-                |> last |> (fn th' => assume_tac th >> assume_tac th')) >>
-(fn (asl,w) =>
-  pop_assum (fn rwt => mp_tac (PART_MATCH (lhs o #2 o strip_imp)
-                                          rwt
-                                          (lhs w))) (asl,w)) >>
+sidecond_tac lhs >>
 disch_then (fn th => asm_simp_tac (srw_ss()) [th]) >>
 qpat_assum `GLAM (swapstr x y s') bv Z1 Z2 = Z3` mp_tac >>
 srw_tac [][GLAM_eq_thm] >>
@@ -1303,13 +1297,7 @@ reverse conj_tac >- (
   asm_simp_tac (srw_ss()) [support_def] >>
   map_every qx_gen_tac [`w`,`z`] >>
   strip_tac >>
-  qpat_assum `sidecond AA BB CC DD EE FF GG`
-     (fn th => th |> SIMP_RULE (srw_ss()) [sidecond_def] |> CONJUNCTS
-                  |> last |> assume_tac) >>
-  (fn (asl,w) =>
-    pop_assum (fn rwt => mp_tac (PART_MATCH (lhs o #2 o strip_imp)
-                                            rwt
-                                            (lhs w))) (asl,w)) >>
+  sidecond_tac lhs >>
   asm_simp_tac (srw_ss()) [] >>
   disch_then (K ALL_TAC) >>
   asm_simp_tac (srw_ss()) [listpm_tMAP, supp_fresh] >>
