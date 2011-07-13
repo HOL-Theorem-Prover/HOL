@@ -619,6 +619,12 @@ val supp_smallest = store_thm(
   `FINITE {b | ~(pm [(a,b)] x = x)}` by METIS_TAC [SUBSET_FINITE] THEN
   FULL_SIMP_TAC (srw_ss()) [supp_def, INFINITE_DEF]);
 
+val notinsupp_I = store_thm(
+  "notinsupp_I",
+  ``∀A apm e x.
+       is_perm apm ∧ FINITE A ∧ support apm x A ∧ e ∉ A ==> e ∉ supp apm x``,
+  metis_tac [supp_smallest, SUBSET_DEF]);
+
 val lemma0 = prove(
   ``COMPL (e INSERT s) = COMPL s DELETE e``,
   SRW_TAC [][EXTENSION] THEN METIS_TAC []);
