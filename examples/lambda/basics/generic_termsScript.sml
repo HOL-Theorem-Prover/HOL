@@ -993,11 +993,6 @@ val genind_GVAR = store_thm(
   srw_tac [][genind_cases,gterm_distinct,gterm_11]);
 val GFV_GVAR = GFV_thm |> CONJUNCT1
 
-val notinsupp_I = prove(
-``∀A pm e x.
-  is_perm pm ∧ FINITE A ∧ support pm x A ∧ e ∉ A ⇒ e ∉ supp pm x``,
-metis_tac [supp_smallest, SUBSET_DEF]);
-
 val gtpm_eqr = store_thm(
 "gtpm_eqr",
 ``(t = gtpm pi u) = (gtpm (REVERSE pi) t = u)``,
@@ -1425,5 +1420,67 @@ srw_tac [][listTheory.MAP_EQ_f, Abbr`X1`, Abbr`X2`, Abbr`Y1`, Abbr`Y2`,
    by (srw_tac [][] >> metis_tac [genind_GLAM_subterm]) >>
 pop_assum (assume_tac o CONJUNCT1 o MATCH_MP eqvfresh_I) >>
 srw_tac [][is_perm_sing_inv]);
+
+val FORALL_ONE = prove(
+  ``(!u:one. P u) = P ()``,
+  SRW_TAC [][EQ_IMP_THM, oneTheory.one_induction]);
+val FORALL_ONE_FN = prove(
+  ``(!uf : one -> 'a. P uf) = !a. P (\u. a)``,
+  SRW_TAC [][EQ_IMP_THM] THEN
+  POP_ASSUM (Q.SPEC_THEN `uf ()` MP_TAC) THEN
+  Q_TAC SUFF_TAC `(\y. uf()) = uf` THEN1 SRW_TAC [][] THEN
+  SRW_TAC [][FUN_EQ_THM, oneTheory.one]);
+
+val EXISTS_ONE_FN = prove(
+  ``(?f : 'a -> one -> 'b. P f) = (?f : 'a -> 'b. P (\x u. f x))``,
+  SRW_TAC [][EQ_IMP_THM] THENL [
+    Q.EXISTS_TAC `\a. f a ()` THEN SRW_TAC [][] THEN
+    Q_TAC SUFF_TAC `(\x u. f x ()) = f` THEN1 SRW_TAC [][] THEN
+    SRW_TAC [][FUN_EQ_THM, oneTheory.one],
+    Q.EXISTS_TAC `\a u. f a` THEN SRW_TAC [][]
+  ]);
+
+val FORALL_UNITFN_LIST = prove(
+  ``(!ufs : (unit -> 'a) list. P ufs) <=>
+    (!us : 'a list. P (MAP (\e u. e) us))``,
+  srw_tac [][EQ_IMP_THM] >>
+  first_x_assum (qspec_then `MAP (\f. f ()) ufs` mp_tac) >>
+  srw_tac [][listTheory.MAP_MAP_o, combinTheory.o_ABS_R] >>
+  qsuff_tac `(λf u. f ()) = I` >-
+    (disch_then SUBST_ALL_TAC >> fsrw_tac [][]) >>
+  srw_tac [][FUN_EQ_THM, oneTheory.one]);
+
+
+val MAP_EQ_CONS = prove(
+  ``(MAP f l = h::t) <=> ?h0 t0. (l = h0::t0) ∧ (h = f h0) ∧ (t = MAP f t0)``,
+  Cases_on `l` >> srw_tac [][] >> metis_tac []);
+
+val LIST_REL_MAP2 = prove(
+  ``∀l2. LIST_REL R l1 (MAP f l2) =
+         LIST_REL (\e1 e2. R e1 (f e2)) l1 l2``,
+  Induct_on `l1` >> ONCE_REWRITE_TAC [listTheory.LIST_REL_cases] >>
+  srw_tac [DNF_ss][MAP_EQ_CONS]);
+
+val gtm_recursion = save_thm(
+  "gtm_recursion",
+  parameter_tm_recursion
+      |> INST_TYPE [``:ρ`` |-> ``:unit``]
+      |> Q.INST [`vf` |-> `λs vv u. vr s vv`,
+                 `lf` |-> `λv bv rs1 rs2 ts1 ts2 u.
+                             lr v bv (MAP (\f. f ()) rs1)
+                                     (MAP (\f. f ()) rs2)
+                                     ts1
+                                     ts2`,
+                 `ppm` |-> `K I : unit pm`]
+      |> SIMP_RULE (srw_ss() ++ ETA_ss)
+                   [FORALL_ONE, FORALL_ONE_FN, fnpm_def,
+                    FORALL_UNITFN_LIST, LIST_REL_MAP2,
+                    EXISTS_ONE_FN, listTheory.MAP_MAP_o,
+                    combinTheory.o_ABS_R,
+                    sidecond_def, FCB_def, listpm_MAP,
+                    relsupp_def]
+      |> SIMP_RULE (srw_ss()) [GSYM listpm_MAP])
+
+
 
 val _ = export_theory()
