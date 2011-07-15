@@ -948,7 +948,7 @@ val sidecond_def = Define`
        x ∉ A ∧ y ∉ A ∧ genind vp lp n (GVAR s vv) ⇒
        (dpm [(x,y)] (^vf s vv p) = ^vf (lswapstr [(x,y)] s) vv (ppm [(x,y)] p))) ∧
     (∀x y n v bv r1 r2 ts us p.
-       x ∉ A ∧ y ∉ A ∧
+       x ∉ A ∧ y ∉ A ∧ v ∉ A ∧
        genind vp lp n (GLAM v bv ts us) ∧
        LIST_REL (relsupp A dpm ppm) ts r1 ∧
        LIST_REL (relsupp A dpm ppm) us r2 ∧
