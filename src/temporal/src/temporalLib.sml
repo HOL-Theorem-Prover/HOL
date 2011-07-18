@@ -831,7 +831,7 @@ fun UNSAFE_TEMP_DEFS_CONV t =
 (* ************************************************************************************	*)
 (* The conversion LTL2OMEGA_CONV finally does what its name indicates. Given an LTL 	*)
 (* formula in the form as mentioned in the comment on the conversion TEMP_DEFS_CONV,	*)
-(* LTL2OMEGA_CONV computes an equivalent generalized Büchi automaton and proves the 	*)
+(* LTL2OMEGA_CONV computes an equivalent generalized BÃ¼chi automaton and proves the 	*)
 (* equivalence with the given LTL formula. 						*)
 (* ------------------------------------------------------------------------------------	*)
 (* LTL2OMEGA_CONV (--`ALWAYS (\t. (EVENTUAL a) t = a t \/ NEXT (EVENTUAL a) t) 0`--); 	*)
@@ -1366,7 +1366,7 @@ fun print_smv_info smv_info =
 
 
 (* ************************************************************************************	*)
-(* Given a generalized co-Büchi automaton, the conversion SMV_AUTOMATON_CONV checks for	*)
+(* Given a generalized co-BÃ¼chi automaton, the conversion SMV_AUTOMATON_CONV checks for	*)
 (* nonemptiness of the automaton. If the language accepted by the automaton is empty, 	*)
 (* the conversion generates the following theorem: |- (?a_1...a_n. automaton) = F, where*)
 (* a_1,...,a_n are the free variables of the given automaton formula.			*)
