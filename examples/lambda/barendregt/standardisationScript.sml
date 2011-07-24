@@ -762,16 +762,16 @@ val zero_thm = store_thm(
     (zero n (LAMi m v t u) =
           if m = n then LAMi 0 v (zero n t) (zero n u)
           else LAM v (zero n t) @@ zero n u)``,
-  SRW_TAC [][zero_def, nlabel_thm, n_posns_def, strip_label_thm,
-             nlabel_app_no_nil] THEN
-  FULL_SIMP_TAC (srw_ss()) []);
+  ASM_SIMP_TAC (srw_ss())[zero_def, nlabel_thm, n_posns_def, strip_label_thm,
+                          nlabel_app_no_nil] THEN
+  Cases_on `n = m` THEN SRW_TAC [][]);
 
 val n_posns_zero = store_thm(
   "n_posns_zero",
   ``!M n. n_posns 0 (zero n M) = n_posns n M``,
   HO_MATCH_MP_TAC simple_lterm_induction THEN
   SRW_TAC [][n_posns_def, zero_thm] THEN
-  SRW_TAC [][n_posns_def] THEN
+  Cases_on `n = y` THEN SRW_TAC [][n_posns_def] THEN
   SRW_TAC [][EXTENSION, EQ_IMP_THM]);
 
 val zero_vsubst = store_thm(
