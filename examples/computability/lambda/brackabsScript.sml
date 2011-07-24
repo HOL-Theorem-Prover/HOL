@@ -5,9 +5,10 @@ open termTheory
 val _ = new_theory "brackabs"
 
 val _ = remove_ovl_mapping "LAM" {Name="LAM", Thy="labelledTerms"}
-val _ = remove_ovl_mapping "FV"  {Name="FV",  Thy="labelledTerms"}
+val _ = clear_overloads_on "FV"
+val _ = overload_on ("FV", ``supp tpm``)
 val _ = remove_ovl_mapping "VAR" {Name="VAR", Thy="labelledTerms"}
-val _ = remove_ovl_mapping "@@"  {Name="APP", Thy="labelledTerms"}
+val _ = remove_ovl_mapping "APP"  {Name="APP", Thy="labelledTerms"}
 
 
 val NOT_IN_SUB = prove(
