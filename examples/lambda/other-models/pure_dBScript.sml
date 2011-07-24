@@ -396,6 +396,20 @@ val dFVs_dLAM = store_thm(
   METIS_TAC [sn_iso_num]);
 val _ = export_rewrites ["dFVs_dLAM"]
 
+val dpm_ALPHA = store_thm(
+  "dpm_ALPHA",
+  ``u ∉ dFVs t ==> (dLAM (s2n u) (dpm [(u,v)] t) = dLAM (s2n v) t)``,
+  SRW_TAC [][dLAM_def, lift_dpm] THEN
+  `sub (dV 0) (s2n u + 1) (dpm [(ginc 0 u, ginc 0 v)] (lift t 0)) =
+   dpm [(ginc 0 u, ginc 0 v)] (sub (dV 0) (s2n v + 1) (lift t 0))`
+     by SRW_TAC [][dpm_sub, ginc_0] THEN
+  POP_ASSUM SUBST1_TAC THEN
+  MATCH_MP_TAC dpm_fresh THEN
+  SRW_TAC [][dFVs_sub, ginc_0, dFVs_lift, IN_dFV] THEN
+  FULL_SIMP_TAC (srw_ss() ++ ARITH_ss) []);
+
+val _ = augment_srw_ss [simpLib.name_ss "fromTerm_def" (rewrites [dpm_ALPHA])]
+
 (* now that we know what the free variables of dLAM are, the definition
    below can go through *)
 val (fromTerm_def,fromTerm_tpm) = binderLib.define_recursive_term_function`
@@ -404,6 +418,7 @@ val (fromTerm_def,fromTerm_tpm) = binderLib.define_recursive_term_function`
   (fromTerm (LAM v t) = dLAM (s2n v) (fromTerm t))
 `
 val _ = export_rewrites ["fromTerm_def"]
+val _ = diminish_srw_ss ["fromTerm_def"]
 
 val fromTerm_eq0 = prove(
   ``((fromTerm t = dV j) = (t = VAR (n2s j))) /\
