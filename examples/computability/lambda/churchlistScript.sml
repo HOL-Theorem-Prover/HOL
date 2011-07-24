@@ -148,19 +148,19 @@ val wh_narg_cis_zero = store_thm(
   SRW_TAC [][cis_zero_def] THEN ASM_SIMP_TAC (whfy(srw_ss())) [] THEN
   FULL_SIMP_TAC (srw_ss()) [church_def] THEN
   Q_TAC (NEW_TAC "z") `FV N ∪ {"z"; "s"}` THEN
-  `LAM "z" (LAM "s" (FUNPOW ((@@) (VAR "s")) n (VAR "z"))) =
-   LAM z (LAM "s" (FUNPOW ((@@) (VAR "s")) n (VAR z)))`
+  `LAM "z" (LAM "s" (FUNPOW (APP (VAR "s")) n (VAR "z"))) =
+   LAM z (LAM "s" (FUNPOW (APP (VAR "s")) n (VAR z)))`
      by SRW_TAC [][LAM_eq_thm] THEN
   POP_ASSUM SUBST_ALL_TAC THEN
-  `∃N0. N -w->* LAM z N0 ∧ N0 -n->* LAM "s" (FUNPOW ((@@) (VAR "s")) n (VAR z))`
+  `∃N0. N -w->* LAM z N0 ∧ N0 -n->* LAM "s" (FUNPOW (APP (VAR "s")) n (VAR z))`
      by METIS_TAC [normstar_to_abs_wstar] THEN
   ASM_SIMP_TAC (whfy(srw_ss())) [] THEN
   Q_TAC (NEW_TAC "s") `FV N0 ∪ {"s"; z}` THEN
-  `LAM "s" (FUNPOW ((@@) (VAR "s")) n (VAR z)) =
-     LAM s (FUNPOW ((@@) (VAR s)) n (VAR z))`
+  `LAM "s" (FUNPOW (APP (VAR "s")) n (VAR z)) =
+     LAM s (FUNPOW (APP (VAR s)) n (VAR z))`
     by SRW_TAC [][LAM_eq_thm] THEN
   POP_ASSUM SUBST_ALL_TAC THEN
-  `∃N1. N0 -w->* LAM s N1 ∧ N1 -n->* FUNPOW ((@@) (VAR s)) n (VAR z)`
+  `∃N1. N0 -w->* LAM s N1 ∧ N1 -n->* FUNPOW (APP (VAR s)) n (VAR z)`
     by METIS_TAC [normstar_to_abs_wstar] THEN
   ASM_SIMP_TAC (whfy(srw_ss())) [] THEN
   Cases_on `n` THEN
@@ -391,7 +391,7 @@ val cfilter_cvlist = store_thm(
 
 val cmap_cvlist = store_thm(
   "cmap_cvlist",
-  ``cmap @@ f @@ cvlist l == cvlist (MAP ((@@) f) l)``,
+  ``cmap @@ f @@ cvlist l == cvlist (MAP (APP f) l)``,
   Induct_on `l` THEN
   ASM_SIMP_TAC (bsrw_ss()) [cmap_behaviour, Cong cvcons_cong]);
 

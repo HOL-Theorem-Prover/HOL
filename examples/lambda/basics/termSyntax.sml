@@ -9,7 +9,7 @@ val string_ty = stringSyntax.string_ty
 val term_ty = mk_thy_type {Tyop = "term", Thy = "term", Args = []}
 
 val VAR_t = mk_thy_const{Name = "VAR", Thy = "term", Ty = string_ty --> term_ty}
-val APP_t = mk_thy_const{Name = "@@", Thy = "term",
+val APP_t = mk_thy_const{Name = "APP", Thy = "term",
                          Ty = term_ty --> term_ty --> term_ty}
 val LAM_t = mk_thy_const{Name = "LAM", Thy = "term",
                          Ty = string_ty --> term_ty --> term_ty}

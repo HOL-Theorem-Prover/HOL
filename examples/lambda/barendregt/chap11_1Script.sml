@@ -10,90 +10,18 @@ val _ = new_theory "chap11_1";
 
 fun Store_Thm(n,t,tac) = store_thm(n,t,tac) before export_rewrites [n]
 
-val lterm_CASES = store_thm(
-  "lterm_CASES",
-  ``!M. (?s. M = VAR s) \/ (?N P. M = N @@ P) \/
-        (?v N. M = LAM v N) \/ (?v n N P. M = LAMi n v N P)``,
-  HO_MATCH_MP_TAC simple_lterm_induction THEN
-  SRW_TAC [][] THEN METIS_TAC []);
-
-
-(* definition of lsize - testing recursion code *)
-val lsize_supp_lemma = prove(
-  ``supp (fnpm (pairpm (K I) ltpm) (pairpm (K I) ltpm))
-         (\aN. f (FST aN), LAMi n v M (SND aN)) =
-    FV M DELETE v``,
-  Q.MATCH_ABBREV_TAC `supp p g = Set` THEN
-  `support p g Set`
-     by (UNABBREV_ALL_TAC THEN
-         SRW_TAC [][support_def, fnpm_def, FUN_EQ_THM] THEN
-         SRW_TAC [][lLAMi_eq_thm, basic_swapTheory.swapstr_def] THEN
-         SRW_TAC [][ltpm_fresh] THEN
-         SRW_TAC [boolSimps.CONJ_ss][ltpm_flip_args]) THEN
-  UNABBREV_ALL_TAC THEN
-  MATCH_MP_TAC supp_unique_apart THEN
-  SRW_TAC [][] THEN
-  SRW_TAC [][fnpm_def, FUN_EQ_THM, lLAMi_eq_thm] THENL [
-    METIS_TAC [ltpm_apart, ltpm_flip_args],
-    Cases_on `b = v` THEN SRW_TAC [][]
-  ])
-
-val (lsize_thm,_) = define_recursive_term_function'
-  (SIMP_CONV (srw_ss()) [lsize_supp_lemma])
-  `(lsize (VAR s) = 1) /\
-   (lsize (M @@ N) = lsize M + lsize N + 1) /\
-   (lsize (LAM v M) = lsize M + 1) /\
-   (lsize (LAMi n v M N) = lsize M + lsize N + 2)`
-
 (* ----------------------------------------------------------------------
     phi function for reducing all labelled redexes
    ---------------------------------------------------------------------- *)
 
-val phisupp_lemma = prove(
-  ``supp (fnpm (pairpm tpm ltpm) (pairpm tpm ltpm))
-         (\u. ([FST u/v] M1, LAMi n v M2 (SND u))) =
-    (FV M1 UNION FV M2) DELETE v``,
-  MATCH_MP_TAC supp_unique_apart THEN
-  SRW_TAC [][FUN_EQ_THM, fnpm_def, lLAMi_eq_thm, tpm_subst] THEN
-  SRW_TAC [][ONCE_REWRITE_RULE [ltpm_flip_args] ltpm_apart,
-             basic_swapTheory.swapstr_thm]
-  THENL [
-    SRW_TAC [][support_def, fnpm_def, FUN_EQ_THM, tpm_subst,
-               tpm_fresh, lLAMi_eq_thm] THEN
-    SRW_TAC [][tpm_fresh, ltpm_fresh]
-    THENL [
-      Cases_on `x = v` THEN SRW_TAC [][tpm_fresh, lemma14b] THEN
-      Cases_on `y = v` THEN SRW_TAC [][tpm_fresh, lemma14b],
-      Cases_on `x = v` THEN SRW_TAC [][ltpm_fresh] THEN
-      Cases_on `y = v` THEN SRW_TAC [][ltpm_fresh],
-      Cases_on `x = v` THEN SRW_TAC [][] THEN
-      SRW_TAC [][fresh_tpm_subst, lemma15a],
-      SRW_TAC [boolSimps.CONJ_ss][],
-      `tpm [(v,y)] M1 = [VAR y/v] M1`
-         by METIS_TAC [fresh_tpm_subst, tpm_flip_args] THEN
-      SRW_TAC [][lemma15a],
-      SRW_TAC [boolSimps.CONJ_ss][ltpm_flip_args]
-    ],
-    Cases_on `b = v` THEN SRW_TAC [][] THENL [
-      Q.EXISTS_TAC `(VAR a, dontcare)` THEN SRW_TAC [][] THEN
-      DISJ1_TAC THEN STRIP_TAC THEN
-      POP_ASSUM (MP_TAC o Q.AP_TERM `FV : term -> string set`) THEN
-      SRW_TAC [][EXTENSION, FV_SUB] THEN
-      Q.EXISTS_TAC `a` THEN SRW_TAC [][],
-      Q.EXISTS_TAC `(VAR v, dontcare)` THEN SRW_TAC [][] THEN
-      METIS_TAC [tpm_apart, tpm_flip_args]
-    ],
-    Q.EXISTS_TAC `(VAR a, dontcare)` THEN SRW_TAC [][] THEN
-    DISJ1_TAC THEN STRIP_TAC THEN
-    POP_ASSUM (MP_TAC o Q.AP_TERM `FV : term -> string set`) THEN
-    SRW_TAC [][EXTENSION, FV_SUB] THEN
-    Q.EXISTS_TAC `b` THEN SRW_TAC [][],
-    Cases_on `b = v` THEN SRW_TAC [][]
-  ])
+val NOT_IN_SUB1_I = prove(
+  ``∀M:term. v ∉ FV N ==> v ∉ FV ([N/v]M)``,
+  HO_MATCH_MP_TAC nc_INDUCTION2 THEN Q.EXISTS_TAC `FV N ∪ {v}` THEN
+  SRW_TAC [][SUB_VAR]);
 
 val (phi_thm, _) =
     define_recursive_term_function'
-      (SIMP_CONV (srw_ss()) [tpm_subst, phisupp_lemma])
+      (SIMP_CONV (srw_ss()) [tpm_subst, NOT_IN_SUB1_I])
       `(phi (VAR s) = VAR s : term) /\
        (phi (M @@ N) = phi M @@ phi N) /\
        (phi (LAM v M) = LAM v (phi M)) /\
@@ -109,6 +37,12 @@ val FV_phi = store_thm(
     METIS_TAC [],
     FULL_SIMP_TAC (srw_ss()) [FV_SUB] THEN METIS_TAC [IN_UNION, IN_DELETE]
   ]);
+
+val NOT_IN_lSUB_I = Store_Thm(
+  "NOT_IN_lSUB_I",
+  ``∀M:lterm. v ∉ FV N ∧ v ≠ u ∧ v ∉ FV M ==> v ∉ FV ([N/u]M)``,
+  HO_MATCH_MP_TAC lterm_bvc_induction THEN Q.EXISTS_TAC `FV N ∪ {u;v}` THEN
+  SRW_TAC [][lSUB_VAR]);
 
 val phi_vsubst_commutes = store_thm(
   "phi_vsubst_commutes",
@@ -138,15 +72,12 @@ val supp_lamax_app = prove(
     SRW_TAC [][LAM_eq_thm, ONCE_REWRITE_RULE [tpm_flip_args] tpm_apart] THEN
     Cases_on `b = v` THEN SRW_TAC [][],
     SRW_TAC [][LAM_eq_thm, ONCE_REWRITE_RULE [tpm_flip_args] tpm_apart],
-    SRW_TAC [][lLAMi_eq_thm,
-               ONCE_REWRITE_RULE [ltpm_flip_args] ltpm_apart] THEN
+    SRW_TAC [][lLAMi_eq_thm, ltpm_apart] THEN
     Cases_on `b = v` THEN SRW_TAC [][],
-    SRW_TAC [][lLAMi_eq_thm,
-               ONCE_REWRITE_RULE [ltpm_flip_args] ltpm_apart]
+    SRW_TAC [][lLAMi_eq_thm, ltpm_apart]
   ]);
 
-val (strip_label_thm,_) = define_recursive_term_function'
-  (SIMP_CONV (srw_ss()) [supp_lamax_app])
+val (strip_label_thm,_) = define_recursive_term_function
   `(strip_label (VAR s) = VAR s : term) /\
    (strip_label (M @@ N) = strip_label M @@ strip_label N) /\
    (strip_label (LAM v M) = LAM v (strip_label M)) /\

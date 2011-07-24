@@ -40,7 +40,7 @@ val (one_hole_context_rules, one_hole_context_ind, one_hole_context_cases) =
 
 val leftctxt = store_thm(
   "leftctxt",
-  ``!z. one_hole_context ($@@ z)``,
+  ``!z. one_hole_context (APP z)``,
   Q_TAC SUFF_TAC `!z. one_hole_context (\t. z @@ (\x. x) t)` THEN1
      SRW_TAC [boolSimps.ETA_ss][] THEN
   SRW_TAC [][one_hole_context_rules]);
@@ -593,12 +593,10 @@ val extra_LAM_DISJOINT = store_thm(
   SRW_TAC [][SUB_THM, ISUB_LAM]);
 val _ = export_rewrites ["extra_LAM_DISJOINT"]
 
-val swap_eq_var = store_thm(
-  "swap_eq_var",
-  ``(tpm [(x,y)] t = VAR s) = (t = VAR (swapstr x y s))``,
-  Q.SPEC_THEN `t` STRUCT_CASES_TAC term_CASES THEN
-  SRW_TAC [][basic_swapTheory.swapstr_eq_left]);
-val _ = augment_srw_ss [rewrites [GSYM swap_eq_var]]
+val tpm_eq_var = prove(
+  ``(tpm pi t = VAR s) <=> (t = VAR (lswapstr pi⁻¹ s))``,
+  SRW_TAC [][tpm_eql]);
+val _ = augment_srw_ss [rewrites [tpm_eq_var]]
 
 val (enf_thm, _) = define_recursive_term_function
   `(enf (VAR s) <=> T) /\

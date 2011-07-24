@@ -669,6 +669,21 @@ val supp_discrete = Store_thm(
   ``supp (K I) x = {}``,
   SRW_TAC [][supp_def, INFINITE_DEF]);
 
+val supp_unitfn = store_thm(
+  "supp_unitfn",
+  ``is_perm apm ==> (supp (fnpm (K I) apm) (λu:unit. a) = supp apm a)``,
+  strip_tac >>
+  Cases_on `∃x. x ∉ supp apm a` >| [
+    fsrw_tac [][] >>
+    match_mp_tac (GEN_ALL supp_unique_apart) >>
+    srw_tac [][support_def, FUN_EQ_THM, fnpm_def, supp_fresh] >-
+      metis_tac [supp_absence_FINITE] >>
+    metis_tac [supp_apart],
+    fsrw_tac [][] >>
+    `supp apm a = univ(:string)` by srw_tac [][EXTENSION] >>
+    fsrw_tac [][EXTENSION, supp_def, FUN_EQ_THM, fnpm_def]
+  ])
+
 (* options *)
 val supp_optpm = store_thm(
   "supp_optpm",
@@ -888,11 +903,17 @@ val support_fnapp = store_thm(
 
 val supp_fnapp = store_thm(
   "supp_fnapp",
-  ``is_perm dpm /\ is_perm rpm /\ FINITE (supp (fnpm dpm rpm) f) /\
-    FINITE (supp dpm x) ==>
+  ``is_perm dpm /\ is_perm rpm ==>
     supp rpm (f x) SUBSET supp (fnpm dpm rpm) f UNION supp dpm x``,
   METIS_TAC [supp_smallest, FINITE_UNION, supp_supports, fnpm_is_perm,
-             support_fnapp]);
+             support_fnapp, supp_finite_or_UNIV, SUBSET_UNIV,
+             UNION_UNIV]);
+
+val notinsupp_fnapp = store_thm(
+  "notinsupp_fnapp",
+  ``is_perm dpm ∧ is_perm rpm ∧ v ∉ supp (fnpm dpm rpm) f ∧ v ∉ supp dpm x ==>
+    v ∉ supp rpm (f x)``,
+  prove_tac [supp_fnapp, SUBSET_DEF, IN_UNION]);
 
 open finite_mapTheory
 val fmpm_def = Define`

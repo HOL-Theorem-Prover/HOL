@@ -15,6 +15,7 @@ val _ = set_trace "Unicode" 1
 val _ = remove_ovl_mapping "LAM" {Name="LAM", Thy="labelledTerms"}
 val _ = remove_ovl_mapping "FV"  {Name="FV",  Thy="labelledTerms"}
 val _ = remove_ovl_mapping "VAR" {Name="VAR", Thy="labelledTerms"}
+val _ = remove_ovl_mapping "APP"  {Name="APP", Thy="labelledTerms"}
 val _ = remove_ovl_mapping "@@"  {Name="APP", Thy="labelledTerms"}
 
 fun Store_thm(n,t,tac) = store_thm(n,t,tac) before export_rewrites [n]
