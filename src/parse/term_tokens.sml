@@ -95,24 +95,37 @@ in
   recurse (Substring.full s)
 end
 
-fun MkID (s, loc) = let
+fun MkID qb (s, loc) = let
+  val {advance, pushstring} = qb
   val c = String.sub(s,0)
 in
   if Char.isDigit c then
-    if CharVector.exists (Lib.equal #".") s then
-      Fraction (base_tokens.parse_fraction (s,loc))
-    else
-      Numeral (base_tokens.parse_numeric_literal (s, loc))
+    case CharVector.findi (fn (i,c) => c = #".") s of
+      NONE => (advance(); Numeral (base_tokens.parse_numeric_literal (s, loc)))
+    | SOME (j, _) => let
+      in
+        if j = size s - 1 then let
+            val (locn1, locn2) = locn.split_at (size s - 1) loc
+          in
+            pushstring (".", locn2);
+            Numeral (base_tokens.parse_numeric_literal
+                         (String.substring(s,0,size s - 1), locn1))
+          end
+        else
+          (advance(); Fraction (base_tokens.parse_fraction (s,loc)))
+      end
   else if c = #"'" then
-    if str_all (fn c => c = #"'") s then Ident s
+    if str_all (fn c => c = #"'") s then (advance(); Ident s)
     else raise LEX_ERR ("Term idents can't begin with prime characters",loc)
-  else Ident s
+  else (advance(); Ident s)
 end
 
 open qbuf
 
 fun split_ident mixedset s locn qb = let
   val {advance,replace_current} = qb
+  val qb' = {advance = advance,
+             pushstring = (fn (s,loc) => replace_current (BT_Ident s, loc))}
   val s0 = String.sub(s, 0)
   val is_char = s0 = #"#" andalso size s > 1 andalso String.sub(s,1) = #"\""
   val ID = Ident
@@ -128,7 +141,7 @@ in
       | _ => raise LEX_ERR ("Can't use $-quoting of this sort of token", locn')
     end
   else if not (mixed s) andalso not (s_has_nonagg_char s) then
-    (advance (); (MkID (s, locn), locn))
+    (MkID qb' (s, locn), locn)
   else
     case UTF8Set.longest_pfx_member(mixedset, s) of
       NONE => (* identifier blob doesn't occur in list of known keywords *) let
@@ -145,43 +158,54 @@ in
                     if test s then grab test (s::acc) rest
                     else (String.concat (List.rev acc), s^rest)
                   end
-            val (tok,sfx) =
-                if s_has_nonagg_char c then (ID c, rest)
-                else let
-                    val (pfx0, sfx0) = grab (categorise c) [c] rest
-                  in
-                    if size sfx0 <> 0 andalso String.sub(sfx0,0) = #"$" then
-                      if size sfx0 > 1 then let
-                          val sfx0_1 = String.extract(sfx0, 1, NONE)
-	                  val c0 = String.sub(sfx0_1, 0)
-                          val rest = String.extract(sfx0_1, 1, NONE)
-                        in
-                          if c0 = #"0" then
-                            (* special case - "0" can be a constant name *)
-                            if rest = "" then (QIdent(pfx0,"0"), "")
-                            else raise LEX_ERR (sfx0_1 ^ " cannot be the name\
-                                                         \ of a constant",
-                                                locn)
-                          else let
-	                      val (qid2, sfx) =
-                                  grab (constid_categorise (str c0))
-                                       [str c0]
-                                       rest
-                                       handle Fail s => raise LEX_ERR (s, locn)
-	                    in
-	                      (QIdent(pfx0,qid2), sfx)
-                            end
-                        end
-                      else
-                        raise LEX_ERR ("Malformed qualified ident", locn)
-                    else (MkID (pfx0,locn), sfx0)
-                  end
-            val (locn1, locn2) = locn.split_at (size s - size sfx) locn
+            fun stdfinish (tok, sfx) = let
+              val (locn1, locn2) = locn.split_at (size s - size sfx) locn
+            in
+              if size sfx <> 0 then (replace_current (BT_Ident sfx, locn2);
+                                     (tok, locn1))
+              else (advance(); (tok, locn))
+            end
           in
-            if size sfx <> 0 then
-              (replace_current (BT_Ident sfx,locn2); (tok, locn1))
-            else
-              (advance (); (tok, locn))
+            if s_has_nonagg_char c then stdfinish (ID c, rest)
+            else let
+                val (pfx0, sfx0) = grab (categorise c) [c] rest
+              in
+                if size sfx0 <> 0 andalso String.sub(sfx0,0) = #"$" then
+                  if size sfx0 > 1 then let
+                      val sfx0_1 = String.extract(sfx0, 1, NONE)
+	              val c0 = String.sub(sfx0_1, 0)
+                      val rest = String.extract(sfx0_1, 1, NONE)
+                    in
+                      if c0 = #"0" then
+                        (* special case - "0" can be a constant name *)
+                        if rest = "" then stdfinish (QIdent(pfx0,"0"), "")
+                        else raise LEX_ERR (sfx0_1 ^ " cannot be the name\
+                                                     \ of a constant",
+                                            locn)
+                      else let
+	                  val (qid2, sfx) =
+                              grab (constid_categorise (str c0))
+                                   [str c0]
+                                   rest
+                                   handle Fail s => raise LEX_ERR (s, locn)
+	                in
+	                  stdfinish (QIdent(pfx0,qid2), sfx)
+                        end
+                    end
+                  else
+                    raise LEX_ERR ("Malformed qualified ident", locn)
+                else if size sfx0 = 0 then (MkID qb' (pfx0,locn), locn)
+                else let
+                    val (locn1,locn2) = locn.split_at (size pfx0) locn
+                    fun adv() = replace_current (BT_Ident sfx0, locn2)
+                    fun push (s,loc) =
+                        replace_current (BT_Ident (s ^ sfx0),
+                                         locn.between loc locn2)
+                  in
+                    (MkID {advance = adv, pushstring = push} (pfx0, locn),
+                     locn)
+                  end
+              end
           end
       end
     | SOME {pfx,rest} => let
