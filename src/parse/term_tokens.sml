@@ -40,13 +40,13 @@ in
   #"a" <= c andalso c <= #"f"
 end
 fun numberp s = Char.isDigit (String.sub(s,0)) orelse s = "_" orelse
-                s = "x" orelse
-                ishexdigit s
+                s = "x" orelse s = "." orelse ishexdigit s orelse
+                Char.isLower (String.sub(s,0))
 
 fun categorise c =
     if s_has_nonagg_char c orelse c = UnicodeChars.neg then s_has_nonagg_char
-    else if term_identp c then term_identp
     else if Char.isDigit (String.sub(c,0)) then numberp
+    else if term_identp c then term_identp
     else term_symbolp
 
 fun constid_categorise c =
@@ -99,7 +99,10 @@ fun MkID (s, loc) = let
   val c = String.sub(s,0)
 in
   if Char.isDigit c then
-    Numeral (base_tokens.parse_numeric_literal (s, loc))
+    if CharVector.exists (Lib.equal #".") s then
+      Fraction (base_tokens.parse_fraction (s,loc))
+    else
+      Numeral (base_tokens.parse_numeric_literal (s, loc))
   else if c = #"'" then
     if str_all (fn c => c = #"'") s then Ident s
     else raise LEX_ERR ("Term idents can't begin with prime characters",loc)

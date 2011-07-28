@@ -219,7 +219,21 @@ val _ = app test [("abc", [Ident "abc"]),
                   ("12", [Numeral (ai 12, NONE)]),
                   ("-12", [Ident "-", Numeral (ai 12, NONE)]),
                   ("((-12", [Ident "(", Ident "(", Ident "-",
-                             Numeral (ai 12, NONE)])]
+                             Numeral (ai 12, NONE)]),
+                  ("1.2", [Fraction{wholepart = ai 1, fracpart = ai 2,
+                                    places = 1}]),
+                  ("-1.2", [Ident "-",
+                            Fraction{wholepart = ai 1, fracpart = ai 2,
+                                     places = 1}]),
+                  ("~1.2", [Ident "~",
+                            Fraction{wholepart = ai 1, fracpart = ai 2,
+                                     places = 1}]),
+                  ("(2n*e", [Ident "(", Numeral (ai 2, SOME #"n"),
+                             Ident "*", Ident "e"]),
+                  ("2_001", [Numeral (ai 2001, NONE)]),
+                  ("2.000_023", [Fraction{wholepart = ai 2, places = 6,
+                                          fracpart = ai 23}])
+                  ]
 
 
 (*

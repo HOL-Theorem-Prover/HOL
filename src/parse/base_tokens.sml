@@ -2,12 +2,12 @@ structure base_tokens :> base_tokens =
 struct
 
 exception LEX_ERR of string * locn.locn
+type fracinfo = {wholepart: Arbnum.num, fracpart: Arbnum.num, places : int}
 
 datatype 'a base_token =
          BT_Ident of string
        | BT_Numeral of (Arbnum.num * char option)
-       | BT_DecimalFraction of {wholepart: Arbnum.num, fracpart: Arbnum.num,
-                                places : int}
+       | BT_DecimalFraction of fracinfo
        | BT_AQ of 'a
        | BT_EOI
 
@@ -31,7 +31,7 @@ fun check p exnstring (s,loc) = let
       case getc ss of
         NONE => s
       | SOME (c,ss) => if p c then check ss
-                       else raise LEX_ERR (exnstring, loc)
+                       else raise LEX_ERR (exnstring ^ ": " ^ s, loc)
 in
   check (full s)
 end
@@ -82,5 +82,21 @@ in
                 copt)
     end
 end
+
+fun parse_fraction (s, loc) =
+    case String.fields (Lib.equal #".") s of
+      [] => raise Fail ("parse_fraction: impossible: "^s)
+    | [_] => raise LEX_ERR ("Decimal fraction with no fractional part: " ^s,
+                            loc)
+    | [npart, fpart] => let
+        val fpart = strip_underscores fpart
+      in
+        {wholepart = Arbnum.fromString (strip_underscores npart),
+         fracpart = Arbnum.fromString fpart,
+         places = String.size fpart}
+      end
+    | _ => raise LEX_ERR ("Decimal fraction with too many decimal points: "^s,
+                          loc)
+
 
 end; (* struct *)
