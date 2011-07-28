@@ -6,11 +6,15 @@ exception LEX_ERR of string * locn.locn
   datatype base_token0 =
     BT0_Ident of string
   | BT0_Numeral of (Arbnum.num * char option)
+  | BT0_DecimalFraction of {wholepart: Arbnum.num, fracpart: Arbnum.num,
+                            places : int}
   | BT0_EOI
 
 datatype 'a base_token =
          BT_Ident of string
        | BT_Numeral of (Arbnum.num * char option)
+       | BT_DecimalFraction of {wholepart: Arbnum.num, fracpart: Arbnum.num,
+                                places : int}
        | BT_AQ of 'a
        | BT_EOI
 
@@ -22,6 +26,9 @@ fun toString (BT_Ident s) = s
   | toString (BT_Numeral(s, copt)) = Arbnum.toString s ^
                                      (case copt of SOME c => String.str c
                                                  | NONE => "")
+  | toString (BT_DecimalFraction{wholepart,fracpart,places}) =
+      Arbnum.toString wholepart ^ "." ^
+      StringCvt.padLeft #"0" places (Arbnum.toString fracpart)
   | toString (BT_AQ x) = "<AntiQuote>"
   | toString BT_EOI = "<End of Input>"
 

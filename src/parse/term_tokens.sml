@@ -9,6 +9,8 @@ struct
     Ident of string
   | Antiquote of 'a
   | Numeral of (Arbnum.num * char option)
+  | Fraction of {wholepart : Arbnum.num, fracpart : Arbnum.num,
+                 places : int}
   | QIdent of (string * string)
 
 
@@ -200,10 +202,11 @@ fn qb => let
    val (bt,locn) = current qb
    in
      case bt of
-         BT_Numeral p   => (advance qb; SOME (Numeral p,locn))
-       | BT_AQ x        => (advance qb; SOME (Antiquote x,locn))
-       | BT_EOI         => NONE
-       | BT_Ident s     => let
+         BT_Numeral p         => (advance qb; SOME (Numeral p,locn))
+       | BT_DecimalFraction r => (advance qb; SOME (Fraction r, locn))
+       | BT_AQ x              => (advance qb; SOME (Antiquote x,locn))
+       | BT_EOI               => NONE
+       | BT_Ident s           => let
            val qbfns = {advance = (fn () => advance qb),
                         replace_current = (fn p => replace_current p qb)}
            val (tok,locn') = split s locn qbfns

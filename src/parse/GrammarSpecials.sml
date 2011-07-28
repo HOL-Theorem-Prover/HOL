@@ -6,6 +6,7 @@ struct
   val let_special = " _ let"
   val and_special = " _ and"
   val fakeconst_special = " _ fakeconst"
+  val decimal_fraction_special = "/decfrac/"
 
   val recsel_special = " _ record select"
   val recupd_special = " _ record update"

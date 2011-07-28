@@ -739,6 +739,7 @@ fun parse_term (G : grammar) typeparser = let
             else (Id, locn, SOME tt)
         | Antiquote _ => (Id, locn, SOME tt)
         | Numeral _ => (Id, locn, SOME tt)
+        | Fraction _ => (Id, locn, SOME tt)
         | QIdent _ => (Id, locn, SOME tt)
       end
     | SOME (tt as PreType ty,locn) => (TypeTok, locn, SOME tt)
@@ -934,6 +935,16 @@ fun parse_term (G : grammar) typeparser = let
       end
     | (((Terminal Id,locn), Token tt)::_) => let
         exception Temp of string
+        val mk_numeral =
+            Literal.gen_mk_numeral
+                {mk_comb  = fn (x,y) => (COMB(x,y),locn),
+                 ZERO     = (QIDENT ("num"       , "0"      ),locn),
+                 ALT_ZERO = (QIDENT ("arithmetic", "ZERO"   ),locn),
+                 NUMERAL  = (QIDENT ("arithmetic", "NUMERAL"),locn),
+                 BIT1     = (QIDENT ("arithmetic", "BIT1")  ,locn),
+                 BIT2     = (QIDENT ("arithmetic", "BIT2")  ,locn)}
+        fun inject_np NONE t = t
+          | inject_np (SOME s) t = (COMB((VAR s,locn), t),locn)
       in
         pop >> invstructp >-
         (fn inv => let
@@ -943,18 +954,28 @@ fun parse_term (G : grammar) typeparser = let
               in
                 raise Temp "can't have numerals in binding positions"
               end
+            | (VSRES_VS, Fraction _) => let
+              in
+                raise Temp "can't have fractions in binding positions"
+              end
+            | (_, Fraction{wholepart,fracpart,places}) => let
+                val _ = not (null num_info) orelse
+                        raise Temp "No fractions/numerals allowed"
+                val ten = Arbnum.fromInt 10
+                val denominator = Arbnum.pow(ten, Arbnum.fromInt places)
+                val numerator = Arbnum.+(Arbnum.*(denominator,wholepart),
+                                         fracpart)
+                val mknum = inject_np (SOME fromNum_str) o mk_numeral
+              in
+                liftlocn NonTerminal
+                         (COMB((COMB((VAR decimal_fraction_special,
+                                      locn.Loc_None),
+                                     mknum numerator), locn.Loc_None),
+                               mknum denominator),
+                          locn)
+              end
             | (_, Numeral(dp, copt)) => let
-                val numeral_part =
-                  Literal.gen_mk_numeral
-                       {mk_comb  = fn (x,y) => (COMB(x,y),locn),
-                        ZERO     = (QIDENT ("num"       , "0"      ),locn),
-                        ALT_ZERO = (QIDENT ("arithmetic", "ZERO"   ),locn),
-                        NUMERAL  = (QIDENT ("arithmetic", "NUMERAL"),locn),
-                        BIT1     = (QIDENT ("arithmetic", "BIT1")  ,locn),
-                        BIT2     = (QIDENT ("arithmetic", "BIT2")  ,locn)}
-                       dp
-                fun inject_np NONE = numeral_part
-                  | inject_np (SOME s) = (COMB((VAR s,locn), numeral_part),locn)
+                val numeral_part = mk_numeral dp
               in
                 case copt of
                   SOME c => let
@@ -965,7 +986,8 @@ fun parse_term (G : grammar) typeparser = let
                       in
                         raise Temp ("Invalid suffix "^str c^ " for numeral")
                       end
-                    | SOME (_, strop) => liftlocn NonTerminal (inject_np strop)
+                    | SOME (_, strop) => liftlocn NonTerminal
+                                                  (inject_np strop numeral_part)
                   end
                 | NONE =>
                   if null num_info then
@@ -973,17 +995,17 @@ fun parse_term (G : grammar) typeparser = let
                       (WARN "term_parser"
                        ("\n   0 treated specially and allowed - "^
                         "no other numerals permitted");
-                      liftlocn NonTerminal (inject_np NONE))
+                      liftlocn NonTerminal (inject_np NONE numeral_part))
                     else
                        raise Temp "No numerals currently allowed"
                   else let
                     val fns = fromNum_str
                   in
                     if Overload.is_overloaded overload_info fns then
-                      liftlocn NonTerminal (inject_np (SOME fns))
+                      liftlocn NonTerminal (inject_np (SOME fns) numeral_part)
                     else
-                       raise Temp ("No overloadings exist for "^fns^
-                                   ": use character suffix for numerals")
+                      raise Temp ("No overloadings exist for "^fns^
+                                  ": use character suffix for numerals")
                       (* NonTerminal (inject_np (#2 (hd num_info))) *)
                   end
               end

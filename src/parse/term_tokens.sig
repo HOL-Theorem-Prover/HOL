@@ -5,6 +5,8 @@ sig
     Ident of string
   | Antiquote of 'a
   | Numeral of (Arbnum.num * char option)
+  | Fraction of {wholepart : Arbnum.num, fracpart : Arbnum.num,
+                 places : int}
   | QIdent of (string * string)
 
   val lex : string list -> 'a qbuf.qbuf -> 'a term_token locn.located option

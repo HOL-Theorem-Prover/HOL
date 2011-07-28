@@ -6,11 +6,15 @@ sig
   datatype base_token0 =
     BT0_Ident of string
   | BT0_Numeral of (Arbnum.num * char option)
+  | BT0_DecimalFraction of {wholepart: Arbnum.num, fracpart: Arbnum.num,
+                            places : int}
   | BT0_EOI
 
   datatype 'a base_token =
     BT_Ident of string
   | BT_Numeral of (Arbnum.num * char option)
+  | BT_DecimalFraction of {wholepart: Arbnum.num, fracpart: Arbnum.num,
+                            places : int}
   | BT_AQ of 'a
   | BT_EOI
 

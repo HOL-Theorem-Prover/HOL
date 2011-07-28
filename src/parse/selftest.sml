@@ -163,8 +163,6 @@ end;
 
 val _ = print "** Testing basic lexing functionality\n\n"
 open base_tokens
-fun dest (BT_Ident s, _) = s
-  | dest _ = raise Fail "Couldn't dest a base token."
 fun die s = (print (s^"\n"); OS.Process.exit OS.Process.failure)
 
 fun quoteToString [QUOTE s] = "`"^s^"`"
@@ -178,12 +176,20 @@ end
 fun test (q, slist) = let
   val _ = print (tprint q)
 in
-  if map dest (qbuf.lex_to_toklist q) <> slist then die "FAILED!"
+  if map (base_tokens.toString o #1) (qbuf.lex_to_toklist q) <> slist then
+    die "FAILED!"
   else print "OK\n"
 end handle LEX_ERR (s,_) => die ("FAILED!\n  [LEX_ERR "^s^"]")
          | e => die ("FAILED\n ["^exnMessage e^"]")
 
 val _ = app test [(`abc`, ["abc"]),
+                  (`12`, ["12"]),
+                  (`3.0`, ["3.0"]),
+                  (`3.00`, ["3.00"]),
+                  (`0xab`, ["171"]),
+                  (`12.1`, ["12.1"]),
+                  (`12.01`, ["12.01"]),
+                  (`12.010`, ["12.010"]),
                   (`(`, ["("]),
                   (`a(a`, ["a(a"]),
                   (`x+y`, ["x+y"]),

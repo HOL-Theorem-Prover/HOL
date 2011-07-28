@@ -86,6 +86,17 @@ locpragma = "(*#loc" {space}+ {numeric}* {space}+ {numeric}* {space}* "*)";
 %%
 <INITIAL>{locpragma} => (dolocpragma yyarg yypos yytext; continue());
 <INITIAL>"(*" => (YYBEGIN comment; incommentp := 1; continue());
+<INITIAL>{numeric}+ "." {numeric}+ =>
+  (let val toks = String.tokens (Lib.equal #".") yytext
+       val npart = hd toks
+       val fpart = hd (tl toks)
+       val loc = getLoc yyarg yypos yytext
+   in
+     (BT0_DecimalFraction {wholepart = Arbnum.fromString npart,
+                           fracpart = Arbnum.fromString fpart,
+                           places = size fpart},
+      loc)
+   end);
 <INITIAL>("0b" {digitseq} | "0x" {hexdigitseq} | {numeric} ({numeric} | _)* )
          {alpha}? =>
     (let val loc = getLoc yyarg yypos yytext
