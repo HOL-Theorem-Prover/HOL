@@ -22,5 +22,7 @@ sig
 
   val nonagg_c     : char -> bool
 
+  val lextest : string list -> string -> 'a term_token list
+
 end
 

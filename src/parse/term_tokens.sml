@@ -246,6 +246,16 @@ fun is_ident (Ident _) = true
 fun is_aq (Antiquote _) = true
   | is_aq _ = false
 
+fun lextest toks s = let
+  val qb = qbuf.new_buffer [QUOTE s]
+  fun recurse acc =
+      case lex toks qb of
+        NONE => List.rev acc
+      | SOME (t,_) => recurse (t::acc)
+in
+  recurse []
+end
+
 end (* struct *)
 
 (* good parsing/lexing test:
