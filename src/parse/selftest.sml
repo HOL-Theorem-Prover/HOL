@@ -203,6 +203,25 @@ val _ = app test [(`abc`, ["abc"]),
                   (`"(*"`, ["\"(*\""])
                  ]
 
+(* tests of the term lexer *)
+fun test (s, toklist : unit term_tokens.term_token list) = let
+  val _ = print (StringCvt.padRight #" " 65
+                                    ("Term token testing " ^ Lib.quote s))
+in
+  if term_tokens.lextest [] s = toklist then print "OK\n"
+  else die "FAILED!"
+end handle LEX_ERR (s,_) => die ("FAILED!\n  [LEX_ERR "^s^"]")
+         | e => die ("FAILED\n ["^exnMessage e^"]")
+
+open term_tokens
+val ai = Arbnum.fromInt
+val _ = app test [("abc", [Ident "abc"]),
+                  ("12", [Numeral (ai 12, NONE)]),
+                  ("-12", [Ident "-", Numeral (ai 12, NONE)]),
+                  ("((-12", [Ident "(", Ident "(", Ident "-",
+                             Numeral (ai 12, NONE)])]
+
+
 (*
 
 full test including backgrounds
