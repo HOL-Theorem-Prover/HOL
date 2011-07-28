@@ -44,11 +44,11 @@ struct
     reader
   end
 
-  fun lift_tok (BT0_Ident s) = BT_Ident s
-    | lift_tok (BT0_Numeral p) = BT_Numeral p
-    | lift_tok (BT0_DecimalFraction r) = BT_DecimalFraction r
-    | lift_tok BT0_EOI = BT_EOI
-
+  fun lift_tok (BT_Ident s) = BT_Ident s
+    | lift_tok (BT_Numeral p) = BT_Numeral p
+    | lift_tok (BT_DecimalFraction r) = BT_DecimalFraction r
+    | lift_tok BT_EOI = BT_EOI
+    | lift_tok (BT_AQ _) = raise Fail "qbuf: Should never happen"
 
   fun leading_quotes acc nf (q as QUOTE s :: t) = leading_quotes (s::acc) (nf+1) t
     | leading_quotes acc nf t = (String.concat (List.rev acc), nf, t)
