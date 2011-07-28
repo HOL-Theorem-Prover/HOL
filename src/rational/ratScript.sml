@@ -220,6 +220,7 @@ val _ = set_fixity "//" (Infixl 600)
 val _ = overload_on ("+",  ``rat_add``);
 val _ = overload_on ("-",  ``rat_sub``);
 val _ = overload_on ("*",  ``rat_mul``);
+val _ = overload_on (GrammarSpecials.decimal_fraction_special, ``rat_div``);
 val _ = overload_on ("/",  ``rat_div``);
 val _ = overload_on ("<",  ``rat_les``);
 val _ = overload_on ("<=", ``rat_leq``);
@@ -228,6 +229,14 @@ val _ = overload_on (">=", ``rat_geq``);
 val _ = overload_on ("~",  ``rat_ainv``);
 val _ = overload_on ("numeric_negate",  ``rat_ainv``);
 val _ = overload_on ("//",  ``rat_cons``);
+
+val _ = add_user_printer
+            ("(DecimalFractionPP.fraction{Thy=\"rat\",Division=\"rat_div\",\
+             \fromNum=\"rat_of_num\"})",
+             ``&(NUMERAL x) / &(NUMERAL y)``,
+             DecimalFractionPP.fraction{Thy="rat",Division="rat_div",
+                                        fromNum="rat_of_num"})
+
 
 (*--------------------------------------------------------------------------
  *  RAT: thm
