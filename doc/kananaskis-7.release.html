@@ -8,7 +8,7 @@
 <!--
   body {color: #333333; background: #FFFFFF;
         margin-left: 1em; margin-right: 1em }
-  code, pre {color: #660066; font-weight: bold; /* font-size: smaller */}
+  code, pre {color: #660066; font-weight: bold; font-family: "Andale Mono", "Lucida Console", monospace; font-size: smaller}
 -->
 </style>
 
@@ -63,7 +63,7 @@ The advantage of the new system is that it gives pretty-printers access to infor
 It will also be easier to extend the system with new functionality along the same lines.
 
 <li><p>The system supports syntax for decimal fractions (<em>e.g.</em>, <code>3.021</code>).
-This syntax maps to division terms of the form <em>n/10<sup>m</sup></em>.
+This syntax maps to division terms of the form <em>n</em>&nbsp;/&nbsp;10<em><sup>m</sup></em>.
 Thus <code>3.012</code> maps to the term <code>3012&nbsp;/&nbsp;1000</code>.
 This transformation is reversed by the pretty-printer.
 In the core system, this syntax is enabled for the real, rational and <a href="
@@ -170,7 +170,7 @@ For example:
 </pre>
 
 <dt><code>n2w_INTRO_TAC &lt;<em>int</em>&gt;</code>
-<dd><p> Attempts to convert goals of the form <code>``a = b``</code>, <code>``a&nbsp;&lt;&nbsp;b``</code> and <code>``a &lt;= b``</code> into goals of the form <code>``n2w a = n2w b``</code>, <code>``n2w a &lt;+ n2w b``</code> and <code>``n2w a &lt;=+ n2w b``</code>.
+<dd><p> Attempts to convert goals of the form <code>``a = b``</code>, <code>``a&nbsp;&lt;&nbsp;b``</code> and <code>``a &lt;= b``</code> into goals of the form <code>``n2w&nbsp;a = n2w&nbsp;b``</code>, <code>``n2w&nbsp;a &lt;+ n2w&nbsp;b``</code> and <code>``n2w&nbsp;a &lt;=+ n2w&nbsp;b``</code>.
 The integer argument denotes the required word size.
 This enables some bounded problems (over the naturals) to be proved using bit-vector tactics.
 For example, the goal:
@@ -201,7 +201,7 @@ In <code>examples/unification/triangular</code>.
 <ul>
 
 <li><p><code>Lib.itotal</code> removed; use <code>Lib.total</code>
-instead. Note that <code>handle _</code> is harmful:
+instead. Note that <code>handle&nbsp;_</code> is harmful:
 exception <code>Interrupt</code> should never be handled without being
 re-raised.</p></li>
 
