@@ -55,7 +55,7 @@ in
   "Add -expk to build an experimental kernel.\n\
   \Add -stdknl to force the standard kernel.\n\
   \Add -selftest to do self-tests, where defined.\n\
-  \       Follow -selftest with a number to indicate level\n\
+  \       Optionally follow -selftest with a number to indicate level\n\
   \       of testing, the higher the number the more testing\n\
   \       will be done.\n\
   \Add -seq <fname> to use fname as build-sequence\n\
