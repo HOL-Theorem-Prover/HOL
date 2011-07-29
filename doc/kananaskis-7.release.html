@@ -61,6 +61,14 @@ This <b>incompatibility</b> affects the function <code>add_user_printer</code>.
 Users have to write their pretty-printers in a monadic style, where pretty-printing components are linked with an infix <code>&gt;&gt;</code> connective.
 The advantage of the new system is that it gives pretty-printers access to information about which variables are bound and free, and the ability to change this status when making recursive calls to the built-in printer.
 It will also be easier to extend the system with new functionality along the same lines.
+
+<li><p>The system supports syntax for decimal fractions (<em>e.g.</em>, <code>3.021</code>).
+This syntax maps to division terms of the form <em>n/10<sup>m</sup></em>.
+Thus <code>3.012</code> maps to the term <code>3012&nbsp;/&nbsp;1000</code>.
+This transformation is reversed by the pretty-printer.
+In the core system, this syntax is enabled for the real, rational and <a href="
+#complex">complex</a> theories.
+
 </ul>
 
 <h2 id="bugs-fixed">Bugs fixed:</h2>
@@ -97,7 +105,7 @@ requires a natural number as the exponent.)  Thanks to Umair Siddique
 for the definition and theorems.
 
 
-<li><p>
+<li id="complex"><p>
 A formalisation of the complex numbers (<code>complexTheory</code>) by Yong Guan, Liming Li, Minhua Wu and Zhiping Shi.
 The authors referred to the HOL Light theory by John Harrison and the theory in PVS.
 It includes treatments of the complex numbers in the real pair form, the polar form and the exponential form, with basic arithmetic results and some other theorems.
