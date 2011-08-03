@@ -235,7 +235,9 @@ val _ = app test [("abc", [Ident "abc"]),
                                           fracpart = ai 23}]),
                   ("0.", [Numeral (ai 0, NONE), Ident "."]),
                   ("a0.", [Ident "a0", Ident "."]),
-                  ("-0.", [Ident "-", Numeral (ai 0, NONE), Ident "."])
+                  ("-0.", [Ident "-", Numeral (ai 0, NONE), Ident "."]),
+                  ("{2.3", [Ident "{", Fraction{wholepart = ai 2, places = 1,
+                                                fracpart = ai 3}])
                   ]
 
 
