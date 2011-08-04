@@ -50,9 +50,9 @@ fun polynom_sign ty ring =
   end
 
 fun spolynom_sign ty sring =
-  let val (P,M) = case map sring_field [`SRP ^sring`,`SRM ^sring`]
-                  of [P,M,N] => (P,M)
-                   | _ => raise Match
+  let val (P,M) = case map sring_field [`SRP ^sring`,`SRM ^sring`] of
+                    [P,M] => (P,M)
+                  | _ => raise Match
   in
   { Vars=inst_ty ty spvar,
     Csts=inst_ty ty spcst,
