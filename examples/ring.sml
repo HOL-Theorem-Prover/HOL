@@ -32,7 +32,7 @@ val sum_def =
 val lemma = Q.prove
 (`!n:num. sum (\m. m * m) n * 6 = n * (n+1) * (2 * n + 1)`,
  Induct
-   THEN RW_TAC arith_ss [sum_def,RIGHT_ADD_DISTRIB]
+   THEN RW_TAC std_ss [sum_def,RIGHT_ADD_DISTRIB]
    THEN NUM_RING_TAC);
 
 val sum_squares = Q.prove
