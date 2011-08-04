@@ -7,18 +7,23 @@
    First, we try some examples on natural numbers
  ---------------------------------------------------------------------------*)
 
-load "numRingLib"; open numRingLib;
+open HolKernel Parse boolLib bossLib
+open numRingLib;
+
+val _ = new_theory "ringExamples"
 
 val num_norm_conv = NUM_NORM_CONV o Parse.Term
 val num_ring_conv = NUM_RING_CONV o Parse.Term;
 
-num_norm_conv ` 3*(9+7) : num `;             (* normalization *)
-num_norm_conv `x+y+x : num`;
-num_norm_conv `(a+b)*(a+b) : num`;
-num_norm_conv `(b+a)*(b+a) : num`;
-num_norm_conv `(a+b)*(a+b)*(a+b) : num`;
+val res1 = num_norm_conv ` 3*(9+7) : num `;             (* normalization *)
+val res2 = num_norm_conv `x+y+x : num`;
+val res3 = num_norm_conv `(a+b)*(a+b) : num`;
+val res4 = num_norm_conv `(b+a)*(b+a) : num`;
+val res5 = num_norm_conv `(a+b)*(a+b)*(a+b) : num`;
 
-num_ring_conv `(a+b)*(a+b) = (b+a)*(b+a) : num`;  (* equality *)
+val res6 = num_ring_conv `(a+b)*(a+b) = (b+a)*(b+a) : num`;  (* equality *)
+val _ = if rhs (concl res6) <> boolSyntax.T then raise Fail "res6 test failed"
+        else ()
 
 (*---------------------------------------------------------------------------
       An example: sum of squares
@@ -47,26 +52,29 @@ val sum_squares = Q.prove
        Now the integers
  ---------------------------------------------------------------------------*)
 
-load "integerRingLib"; open integerRingLib;
+open integerRingLib;
 
 val int_norm_conv = INT_NORM_CONV o Parse.Term
 val int_ring_conv = INT_RING_CONV o Parse.Term;
 
-int_norm_conv `~(3 * (9 - 7)) : int`;        (* normalization *)
-int_norm_conv `x+y+x:int`;
-int_norm_conv `(a+b)*(a+b) : int`;
-int_norm_conv `(b+a)*(b+a) : int`;
-int_norm_conv `(a+b)*(a+b)*(a+b) : int`;
-int_norm_conv `(a-b)*(a+b) : int`;
+val _ = int_norm_conv `~(3 * (9 - 7)) : int`;        (* normalization *)
+val _ = int_norm_conv `x+y+x:int`;
+val _ = int_norm_conv `(a+b)*(a+b) : int`;
+val _ = int_norm_conv `(b+a)*(b+a) : int`;
+val _ = int_norm_conv `(a+b)*(a+b)*(a+b) : int`;
+val _ = int_norm_conv `(a-b)*(a+b) : int`;
 
-int_ring_conv `(a+b)*(a+b) = (b+a)*(b+a) :int`;   (* equality *)
+val res7 = int_ring_conv `(a+b)*(a+b) = (b+a)*(b+a) :int`;   (* equality *)
+val _ = if rhs (concl res7) <> boolSyntax.T then raise Fail "res7 test failed"
+        else ()
 
 
 (*---------------------------------------------------------------------------
        Bigger test: 8 squares
  ---------------------------------------------------------------------------*)
 
-Count.apply int_ring_conv
+val _ = Q.store_thm(
+  "big_int_ring_example",
    `(p1*p1+q1*q1+r1*r1+s1*s1+t1*t1+u1*u1+v1*v1+w1*w1)
   * (p2*p2+q2*q2+r2*r2+s2*s2+t2*t2+u2*u2+v2*v2+w2*w2)
 
@@ -95,4 +103,9 @@ Count.apply int_ring_conv
     +
     (p1*w2-q1*v2+r1*u2+s1*t2-t1*s2-u1*r2+v1*q2+w1*p2)*
     (p1*w2-q1*v2+r1*u2+s1*t2-t1*s2-u1*r2+v1*q2+w1*p2)
-    : int`;
+    : int`,
+  CONV_TAC (Count.apply INT_RING_CONV))
+
+val _ = export_theory()
+
+
