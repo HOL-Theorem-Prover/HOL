@@ -1,9 +1,0 @@
-INCLUDES=.. ../dff
-
-#INCLUDES=.. ../dff word32 
-#EXTRA_CLEANS = word32Lib.sml
-#
-#word32Theory.ui word32Theory.uo word32Lib.ui word32Lib.uo: \
-#   $(SIGOBJ)/wordFunctor.ui $(SIGOBJ)/wordFunctorLib.ui $(SIGOBJ)/bitsTheory.ui
-#	$(HOLDIR)/src/n_bit/mkword.exe 32
-
