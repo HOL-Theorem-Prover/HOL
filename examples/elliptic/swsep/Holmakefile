@@ -1,1 +1,0 @@
-INCLUDES=${HOLDIR}/examples/dev/sw ${HOLDIR}/examples/elliptic/arm ${HOLDIR}/examples/elliptic/sep  ${HOLDIR}/examples/elliptic/spec
