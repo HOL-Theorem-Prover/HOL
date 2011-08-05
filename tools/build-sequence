@@ -108,8 +108,8 @@ src/n-bit
 !examples/ARM/arm6-verification
 !!examples/ARM/arm6-verification/correctness
 src/ring/src
-!examples/rings
 src/integer
+!examples/rings
 src/llist
 src/path
 !src/integer/testing
