@@ -151,6 +151,8 @@ src/temporal/src
 # Examples only from here on
 #
 !examples/MLsyntax
+!examples/zfset
+!!examples/category
 !!examples/miller/ho_prover
 !!examples/miller/miller
 !examples/ordinal
