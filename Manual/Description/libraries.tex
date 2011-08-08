@@ -762,11 +762,12 @@ Normally
 \] but \[
   \holtxt{\~{}}\; x\; y\qquad\mbox{is parsed as}\qquad
   \holtxt{\~{}}\; (x\; y)
-\] because the precedence of \verb+~+ is lower than that of function
-application.  The unary negation symbol would also typically be
-defined as a true prefix, if only to allow one to write \[ {\it
-  negop}\,{\it negop}\,3
-\] (whatever {\it negop} happened to be) without needing extra parentheses.
+\]
+because the precedence of \verb+~+ is lower than that of function application.
+The unary negation symbol would also typically be defined as a prefix, if only to allow one to write \[
+  {\it negop}\,{\it negop}\,3
+\]
+(whatever {\it negop} happened to be) without needing extra parentheses.
 
 On the other hand, the \holtxt{univ} syntax for the universal set (see Section~\ref{sec:theory-of-sets}\index{universal set}) is an example of a prefix operator that binds more tightly than application.
 This means that \holtxt{f\,univ(:'a)} is parsed as \holtxt{f(univ(:'a))}, not \holtxt{(f univ)(:'a)} (which parse would fail to type-check).

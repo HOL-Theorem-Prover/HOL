@@ -3486,7 +3486,7 @@ One of these forms will be used to print \holtxt{UNIV} by default.
 The user trace (see Section~\ref{sec:traces}) \ml{"Univ~pretty-printing"} can be set to zero to cancel this behaviour.
 Additionally, the trace \ml{"Unicode Univ printing"} can be used to stop the U+1D54C syntax from being used, even if the Unicode trace is set.
 
-The symbols \holtxt{univ} and \holtxt{$\mathbb{U}$} are high-priority ``true prefixes'' (see Section~\ref{sec:parseprint:fixities}), and overloaded patterns (see Section~\ref{sec:parser:syntactic-patterns}) mapping a value of the itself type to the corresponding \holtxt{UNIV} constant.
+The symbols \holtxt{univ} and \holtxt{$\mathbb{U}$} are high-priority prefixes (see Section~\ref{sec:parseprint:fixities}), and overloaded patterns (see Section~\ref{sec:parser:syntactic-patterns}) mapping a value of the itself type to the corresponding \holtxt{UNIV} constant.
 One effect is that one can write things like
 \begin{hol}
 \begin{verbatim}
