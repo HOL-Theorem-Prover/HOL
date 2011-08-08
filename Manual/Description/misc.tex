@@ -74,7 +74,7 @@ Therefore the following example queries can be made:
 \index{traces, controlling HOL feedback@traces, controlling \HOL{} feedback}
 \label{sec:traces}
 
-The trace system gives the user one central interface with which to control most of \HOL's many different flags, though they be scattered all over the system, defined in different modules.
+The trace system gives the user one central interface with which to control most of \HOL's many different flags, though they be scattered all over the system, and defined in different modules.
 These flags are typically those that determine the level to which \HOL{} tools provide information to the user while operating.
 For example, a trace level of zero will usually make a tool remain completely
 silent while it operates.
@@ -94,7 +94,7 @@ There are three core functions, all in the \ml{Feedback} structure:
 
 The \ml{traces} function returns a list of all the traces in the system.
 The \ml{set\_trace} function allows the user to set a trace directly.
-The effect of this might be seen in a subsequent call \ml{traces()}.
+The effect of this might be seen in a subsequent call to \ml{traces()}.
 Finally, the \ml{trace} function allows for a trace to be temporarily set while a function executes, restoring the trace to its old value when the function returns (whether normally, or with an exception).
 
 
