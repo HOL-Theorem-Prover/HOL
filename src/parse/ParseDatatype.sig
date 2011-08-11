@@ -6,6 +6,7 @@ sig
  | dContype of {Thy : string option, Tyop : string, Kind : Prekind.prekind}
  | dTyApp  of pretype * pretype
  | dTyUniv of pretype * pretype
+ | dTyExist of pretype * pretype
  | dTyAbst of pretype * pretype
  | dTyKindConstr of {Ty : pretype, Kind : Prekind.prekind}
  | dTyRankConstr of {Ty : pretype, Rank : Prerank.prerank}

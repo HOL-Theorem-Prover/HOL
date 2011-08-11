@@ -6,15 +6,17 @@ infix >> >-;
 
 val debug = ref 0
 val _ = Feedback.register_trace("debug_type_inference", debug, 5)
-fun is_debug() = (!debug) >= 4;
+fun is_debug() = (!debug) >= 5;
 
 (* must be between 0 and 4, inclusive;
      0 - no tracing of type inference
-     1 - trace checking of preterms
-     2 - also trace checking of pretypes and type inference
-     3 - also trace checking of prekinds and kind inference
-     4 - also trace checking of preranks and rank inference
+     1 - trace checking of higher order type inference
+     2 - also trace checking of preterms
+     3 - also trace checking of pretypes and type inference
+     4 - also trace checking of prekinds and kind inference
+     5 - also trace checking of preranks and rank inference
    Replaces "debug_preterm", "debug_pretype, "debug_prekind", and "debug_prerank".
+   Warning: can produce copious trace output!
 *)
 
 val show_ranks = ref 1
@@ -65,6 +67,23 @@ and eq0 (UVarrank (ref(SOME (EQUAL,rk))))  rk'                         = eq rk r
 (*| eq0 (UVarrank (ref(SOME (_,rk))))  rk'                             = false *)
 (*| eq0 rk                          (UVarrank (ref(SOME (_,rk'))))     = false *)
   | eq0 _                              _                               = false
+
+fun lt rk rk' = not (Portable.pointer_eq(rk,rk')) andalso lt0 rk rk'
+and lt0 rk                       (UVarrank (ref(SOME (EQUAL,rk'))))    = lt rk rk'
+  | lt0 (UVarrank (ref(SOME (EQUAL,rk))))  rk'                         = lt rk rk'
+  | lt0 _                              Zerorank                        = false
+  | lt0 (Zerorank)                     (Sucrank _)                     = true
+  | lt0 (Sucrank rk)                   (Sucrank rk')                   = lt rk rk'
+  | lt0 rk                             (Sucrank rk')                   = leq rk rk'
+  | lt0 (Maxrank rks)                  rk                              = all (gt rk) rks
+  | lt0 rk                             (Maxrank rks)                   = exists (lt rk) rks
+  | lt0 (rk as UVarrank (r as ref _))  (UVarrank (r' as ref(SOME (GREATER,rk')))) = not(r=r') andalso lt rk rk'
+  | lt0 (UVarrank (r as ref(SOME(LESS,rk))))      (rk' as UVarrank (r' as ref _)) = not(r=r') andalso lt rk rk'
+  | lt0 rk                       (UVarrank (ref(SOME (GREATER,rk'))))  = lt rk rk'
+(*| lt0 (UVarrank (r as ref(SOME(LESS,rk))))      rk'                  = lt rk rk' *)
+  | lt0 _                              _                               = false
+
+and gt rk rk' = lt rk' rk
 
 (* ----------------------------------------------------------------------
     A total ordering on preranks.
@@ -209,7 +228,7 @@ fun prerank_to_string0 rs (UVarrank (r as ref NONE)) =
          (": " ^ (if ord = EQUAL then "=" else if ord = GREATER then ">=" else "<=")
                ^ prerank_to_string0 (r::rs) rk))
   | prerank_to_string0 rs (Zerorank) = "0"
-  | prerank_to_string0 rs (Sucrank rk) = prerank_to_string0 rs rk ^ "+1"
+  | prerank_to_string0 rs (Sucrank rk) = "(" ^ prerank_to_string0 rs rk ^ "+1)"
   | prerank_to_string0 rs (Maxrank rks) = "max(" ^ preranks_to_string0 rs rks ^ ")"
 
 and preranks_to_string0 rs [] = ""
@@ -674,6 +693,12 @@ report "Binding < rank" "<=" n (UVarrank r) value (
   end;
 
 
+fun Decrank (Sucrank rk) = rk
+  | Decrank (Maxrank rks) = Maxrank (map Decrank rks)
+  | Decrank (UVarrank (ref(SOME (EQUAL,rk)))) = Decrank rk
+  | Decrank rk = rk
+
+
 (* first argument is a function which performs a binding between a
    pretype reference and another pretype, updating some sort of environment
    (the 'a), returning the new alpha and a unit option, SOME () for a
@@ -702,10 +727,14 @@ report "Unifying ranks" "<=" n rk1 rk2 (
             then bind_less gen_unify_le (n+1) r1 rk2
             else bind_greater gen_unify gen_unify_le (n+1) r2 rk1
   | (_, UVarrank r) => bind_greater gen_unify gen_unify_le (n+1) r rk1
-  | (UVarrank r, _) => bind_less gen_unify_le (n+1) r rk2
-  | (Maxrank rs, _) => mmap (C gen_unify_le_1 rk2) (rev rs) >> ok
   | (Zerorank, _) => ok
   | (Sucrank rk1, Sucrank rk2) => gen_unify_le_1 rk1 rk2
+  | (UVarrank r, Sucrank rk2') => if has_free_uvar rk2
+                                  then gen_unify_le_1 rk1 rk2'
+                                  else bind_less gen_unify_le (n+1) r rk2
+  | (_, Sucrank rk2) => gen_unify_le_1 (Decrank rk1) rk2
+  | (UVarrank r, _) => bind_less gen_unify_le (n+1) r rk2
+  | (Maxrank rs, _) => mmap (C gen_unify_le_1 rk2) (rev rs) >> ok
   | (_, Maxrank rs) => tryall (gen_unify_le_1 rk1) (rev (shrink_list rs))
   | _ => fail
 )

@@ -10,7 +10,7 @@ infixr 3 ==>;
 
 val Zerorank = Prerank.Zerorank
 
-fun is_debug() = current_trace "debug_type_inference" >= 3;
+fun is_debug() = current_trace "debug_type_inference" >= 4;
 
 val show_kinds = ref 1
 val _ = Feedback.register_trace("kinds", show_kinds, 2)
@@ -422,7 +422,7 @@ fun gen_unify (rank_unify   :int -> prerank -> prerank -> ('a -> 'a * unit optio
               (bind : int -> (prekind -> prekind -> ('a -> 'a * unit option)) ->
                       (uvarkind ref -> (prekind -> ('a -> 'a * unit option))))
               s n (kd1 as PK(k1,locn1)) (kd2 as PK(k2,locn2)) e = let
-  val gen_unify_eq = gen_unify rank_unify rank_unify_eq rank_unify_eq bind s (n+1)
+  val gen_unify_eq = gen_unify rank_unify rank_unify_eq rank_unify_eq bind " =" (n+1)
   val gen_unify    = gen_unify rank_unify rank_unify_le rank_unify_eq bind s (n+1)
   val rank_unify = rank_unify (n+1)
   val rank_unify_le = rank_unify_le (n+1)
@@ -444,18 +444,30 @@ report "Unifying kinds" s n kd1 kd2 (
     (Typekind rk1, UVarkind (r as ref (NONEK rk))) =>
        rank_unify_le rk1 rk >> bind gen_unify r (PK((Typekind rk),locn2)) (* experimental *)
   | (Arrowkind(kd11, kd12), UVarkind (r as ref (NONEK rk))) =>
-       let val kd2' = PK(Arrowkind(all_new_uvar(),all_new_uvar()),locn2)
+       let (*val kd21 = all_new_uvar()
+           and kd22 = all_new_uvar()
+           val kd2' = PK(Arrowkind(kd21,kd22),locn2)*)
+           val kd2' = PK(Arrowkind(all_new_uvar(),all_new_uvar()),locn2)
        in rank_unify (prank_of kd2') rk >> bind gen_unify r kd2' >> gen_unify kd1 kd2'
+       (*in rank_unify_le (prank_of kd2') rk >>
+          gen_unify_eq kd11 kd21 >> gen_unify kd12 kd22 >> bind gen_unify r kd2'*)
        end
-  | (_, UVarkind (r as ref (NONEK rk))) => rank_unify(*_le*) (prank_of kd1) rk >> bind gen_unify r kd1
+  (*| (_, UVarkind (r as ref (NONEK rk))) => rank_unify(*_le*) (prank_of kd1) rk >> bind gen_unify r kd1*)
+  | (_, UVarkind (r as ref (NONEK rk))) => rank_unify_le (prank_of kd1) rk >> bind gen_unify r kd1
   | (k1, UVarkind (r as ref (SOMEK k2))) => gen_unify kd1 k2
   | (UVarkind (r as ref (NONEK rk)), Typekind rk2) =>
        rank_unify_le rk rk2 >> bind gen_unify r (PK((Typekind rk),locn1)) (* experimental *)
   | (UVarkind (r as ref (NONEK rk)), Arrowkind(kd21, kd22)) =>
-       let val kd1' = PK(Arrowkind(all_new_uvar(),all_new_uvar()),locn2)
+       let (*val kd11 = all_new_uvar()
+           and kd12 = all_new_uvar()
+           val kd1' = PK(Arrowkind(kd11,kd12),locn2)*)
+           val kd1' = PK(Arrowkind(all_new_uvar(),all_new_uvar()),locn2)
        in rank_unify rk (prank_of kd1') >> bind gen_unify r kd1' >> gen_unify kd1' kd2
+       (*in rank_unify rk (prank_of kd1') >>
+          gen_unify_eq kd11 kd21 >> gen_unify kd12 kd22 >> bind gen_unify r kd1'*)
        end
-  | (UVarkind (r as ref (NONEK rk)), _) => rank_unify(*_le*) rk (prank_of kd2) >> bind gen_unify r kd2
+  (*| (UVarkind (r as ref (NONEK rk)), _) => rank_unify(*_le*) rk (prank_of kd2) >> bind gen_unify r kd2*)
+  | (UVarkind (r as ref (NONEK rk)), _) => rank_unify_le rk (prank_of kd2) >> bind gen_unify r kd2
   | (UVarkind (r as ref (SOMEK k1)), k2) => gen_unify k1 kd2
   | (Varkind (s1,rk1), Varkind (s2,rk2)) => (fn e => (if s1 = s2 then ok else fail) e)
                                             >> rank_unify rk1 rk2

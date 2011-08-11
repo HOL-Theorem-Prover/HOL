@@ -12,6 +12,7 @@ sig
   val prim_kind_of  : {Thy:string,Tyop:string} -> kind
   val rank_of_type  : hol_type -> rank
   val rank_of_univ_dom : hol_type -> rank
+  val rank_of_exist_dom : hol_type -> rank
   val check_kind_of : hol_type -> kind
   val is_well_kinded: hol_type -> bool
   val kind_vars     : hol_type -> kind list
@@ -66,6 +67,13 @@ sig
   val strip_univ_type : hol_type -> hol_type list * hol_type
   val is_univ_type  : hol_type -> bool
 
+  val mk_exist_type  : hol_type * hol_type -> hol_type
+  val list_mk_exist_type : hol_type list * hol_type -> hol_type
+  val list_mk_exist_type_binder : hol_type option -> string -> hol_type list * hol_type -> hol_type
+  val dest_exist_type: hol_type -> hol_type * hol_type
+  val strip_exist_type : hol_type -> hol_type list * hol_type
+  val is_exist_type  : hol_type -> bool
+
   val mk_abs_type   : hol_type * hol_type -> hol_type
   val list_mk_abs_type : hol_type list * hol_type -> hol_type
   val list_mk_abs_type_binder : hol_type option -> string -> hol_type list * hol_type -> hol_type
@@ -89,6 +97,7 @@ sig
 (* val subtype       : hol_type -> hol_type -> bool *)
   val polymorphic   : hol_type -> bool
   val universal     : hol_type -> bool
+  val existential   : hol_type -> bool
   val abstraction   : hol_type -> bool
   val is_omega      : hol_type -> bool
 (* val kind_rank_compare : (kind * int) * (kind * int) -> order *)

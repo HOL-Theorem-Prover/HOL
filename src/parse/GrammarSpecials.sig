@@ -7,6 +7,7 @@ sig
   val resquan_special : string
   val let_special : string
   val and_special : string
+  val pack_special : string
   val fakeconst_special : string
 
   (* special strings for records *)

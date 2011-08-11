@@ -1026,6 +1026,7 @@ fun replace1 f (v as dVartype _) = v
   | replace1 f (c as dContype{Tyop,Thy,Kind}) = f Tyop
   | replace1 f (ap as dTyApp(opr,arg)) = dTyApp(replace1 f opr, replace1 f arg)
   | replace1 f (dTyUniv(bvar,body)) = dTyUniv(replace1 f bvar, replace1 f body)
+  | replace1 f (dTyExist(bvar,body)) = dTyExist(replace1 f bvar, replace1 f body)
   | replace1 f (dTyAbst(bvar,body)) = dTyAbst(replace1 f bvar, replace1 f body)
   | replace1 f (dTyKindConstr{Ty,Kind}) = dTyKindConstr{Ty=replace1 f Ty,Kind=Kind}
   | replace1 f (dTyRankConstr{Ty,Rank}) = dTyRankConstr{Ty=replace1 f Ty,Rank=Rank}
@@ -1035,6 +1036,7 @@ fun replace f (v as dVartype _) = v
   | replace f (a as dTyApp(opr,arg)) = let val (head,args) = strip_TyApp a in
                replace1 f head handle _ => list_mk_TyApp(head, map (replace f) args) end
   | replace f (dTyUniv(bvar,body)) = dTyUniv(replace f bvar, replace f body)
+  | replace f (dTyExist(bvar,body)) = dTyExist(replace f bvar, replace f body)
   | replace f (dTyAbst(bvar,body)) = dTyAbst(replace f bvar, replace f body)
   | replace f (dTyKindConstr{Ty,Kind}) = dTyKindConstr{Ty=replace f Ty,Kind=Kind}
   | replace f (dTyRankConstr{Ty,Rank}) = dTyRankConstr{Ty=replace f Ty,Rank=Rank}
@@ -1067,9 +1069,14 @@ fun pretype_of ty =
      in dTyUniv(pretype_of bvar, pretype_of body)
      end
    handle _ =>
+     let val (bvar,body) = dest_exist_type ty
+     in dTyExist(pretype_of bvar, pretype_of body)
+     end
+   handle _ =>
      let val (bvar,body) = dest_abs_type ty
      in dTyAbst(pretype_of bvar, pretype_of body)
      end
+   handle e => raise (wrap_exn "EmitML.pretype_of" "unexpected pretype" e)
 end;
 
 (*---------------------------------------------------------------------------*)

@@ -202,41 +202,6 @@ fun strip_all_comb tm =
   in strip [] tm
   end
 
-fun mk_exist_type (x,body) =
-  let val (nm,kd) = dest_var_type x
-                    handle HOL_ERR _ => raise ERR "mk_exist_type" "first arg is not a type variable"
-      val _ = if is_type_kind (kind_of body) then ()
-              else raise ERR "mk_exist_type" "kind of second arg is not type kind"
-      val x0 = mk_var_type(nm, typ (rank_of kd))
-      val y  = variant_type (x :: x0 :: type_vars body) x0
-  in mk_univ_type(y, mk_univ_type(x, body --> y) --> y)
-  end
-
-fun list_mk_exist_type (xs,body) =
-  let fun make (x::xs) tm = mk_exist_type (x, make xs tm)
-        | make [] tm = tm
-  in make xs body
-  end
-
-fun dest_exist_type ty =
-  let val (y, ty1) = dest_univ_type ty
-      val (ty2,ty3) = dom_rng ty1
-      val _ = assert (equal ty3) y
-      val (x, ty4) = dest_univ_type ty2
-      val (body, ty5) = dom_rng ty4
-      val _ = assert (equal ty5) y
-  in (x,body)
-  end handle HOL_ERR _ => raise ERR "dest_exist_type" "not an existential type"
-
-fun strip_exist_type ty =
-    let val (x, ty1) = dest_exist_type ty
-        val (xs, body) = strip_exist_type ty1
-    in (x::xs, body)
-    end
-    handle HOL_ERR _ => ([], ty)
-
-val is_exist_type = can dest_exist_type
-
 datatype lambda
    = VAR    of string * hol_type
    | CONST  of {Name:string, Thy:string, Ty:hol_type}
@@ -259,11 +224,13 @@ datatype omega_type
    | TYCONST of {Thy:string, Tyop:string, Kind:kind}
    | TYAPP  of hol_type * hol_type
    | TYUNIV of hol_type * hol_type
+   | TYEXIS of hol_type * hol_type
    | TYABS  of hol_type * hol_type;
 
 fun destruct_type Ty =
   TYAPP   (dest_app_type     Ty) handle HOL_ERR _ =>
   TYUNIV  (dest_univ_type    Ty) handle HOL_ERR _ =>
+  TYEXIS  (dest_exist_type   Ty) handle HOL_ERR _ =>
   TYABS   (dest_abs_type     Ty) handle HOL_ERR _ =>
   TYVAR   (dest_var_type     Ty) handle HOL_ERR _ =>
   TYCONST (dest_thy_con_type Ty);

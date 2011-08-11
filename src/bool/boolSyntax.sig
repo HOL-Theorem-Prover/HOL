@@ -10,6 +10,8 @@ sig
   val equality       : term
   val implication    : term
   val select         : term
+  val pack           : term
+  val unpack         : term
   val T              : term
   val F              : term
   val universal      : term

@@ -32,6 +32,7 @@ fun thm_of (ORIG x)     = x
 type dtyinfo =
            {ty           : hol_type,
             axiom        : shared_thm,
+            axiom_rk     : int -> shared_thm,
             induction    : shared_thm,
             case_def     : thm,
             case_cong    : thm,
@@ -124,8 +125,16 @@ fun axiom_of0 (DFACTS {axiom,...}) = axiom
   | axiom_of0 (NFACTS (ty,_)) =
       raise ERR "axiom_of0" (dollarty ty^" is not a datatype");
 
+fun axiom_rk_of0 (DFACTS {axiom_rk,...}) = axiom_rk
+  | axiom_rk_of0 (NFACTS (ty,_)) =
+      raise ERR "axiom_rk_of0" (dollarty ty^" is not a datatype");
+
 fun axiom_of (DFACTS {axiom,...}) = thm_of axiom
   | axiom_of (NFACTS (ty,_)) =
+      raise ERR "axiom_of" (dollarty ty^" is not a datatype");
+
+fun axiom_rk_of (DFACTS {axiom_rk,...}) = (fn rk => thm_of (axiom_rk rk))
+  | axiom_rk_of (NFACTS (ty,_)) =
       raise ERR "axiom_of" (dollarty ty^" is not a datatype");
 
 fun size_of0 (DFACTS {size,...}) = size
@@ -154,10 +163,10 @@ fun lift_of(DFACTS {lift,...}) = lift
  ---------------------------------------------------------------------------*)
 
 fun put_nchotomy th (DFACTS
-      {ty,axiom, case_const,case_cong,case_def, constructors,
+      {ty, axiom, axiom_rk, case_const,case_cong,case_def, constructors,
        induction, nchotomy, distinct, one_one, fields,
         accessors, updates, simpls, size, encode, lift})
-    = DFACTS{ty=ty,axiom=axiom, case_const=case_const,
+    = DFACTS{ty=ty,axiom=axiom, axiom_rk=axiom_rk, case_const=case_const,
             case_cong=case_cong,case_def=case_def, constructors=constructors,
             induction=induction, nchotomy=th, distinct=distinct,
             one_one=one_one, fields=fields,
@@ -167,11 +176,11 @@ fun put_nchotomy th (DFACTS
       NFACTS(ty,{nchotomy=SOME th,size=size,encode=encode});
 
 fun put_simpls thl (DFACTS
- {ty,axiom, case_const, case_cong, case_def, constructors,
+ {ty, axiom, axiom_rk, case_const, case_cong, case_def, constructors,
   induction, nchotomy, distinct, one_one, fields,
   accessors, updates, simpls, size, encode,lift})
   =
-  DFACTS {ty=ty,axiom=axiom, case_const=case_const,
+  DFACTS {ty=ty,axiom=axiom, axiom_rk=axiom_rk, case_const=case_const,
             case_cong=case_cong,case_def=case_def,constructors=constructors,
             induction=induction, nchotomy=nchotomy, distinct=distinct,
             one_one=one_one, fields=fields, accessors=accessors, updates=updates,
@@ -179,11 +188,11 @@ fun put_simpls thl (DFACTS
  | put_simpls _ _ = raise ERR "put_simpls" "not a datatype";
 
 fun put_induction th (DFACTS
- {ty,axiom, case_const,case_cong,case_def,constructors,
+ {ty, axiom, axiom_rk, case_const,case_cong,case_def,constructors,
   induction, nchotomy, distinct, one_one, fields,
   accessors, updates, simpls, size, encode,lift})
   =
-  DFACTS {ty=ty,axiom=axiom, case_const=case_const,
+  DFACTS {ty=ty, axiom=axiom, axiom_rk=axiom_rk, case_const=case_const,
           case_cong=case_cong,case_def=case_def, constructors=constructors,
           induction=th, nchotomy=nchotomy, distinct=distinct,
           one_one=one_one, fields=fields, accessors=accessors, updates=updates,
@@ -191,11 +200,11 @@ fun put_induction th (DFACTS
  | put_induction _ _ = raise ERR "put_induction" "not a datatype";
 
 fun put_size (size_tm,size_rw) (DFACTS
-       {ty,axiom, case_const,case_cong,case_def,constructors,
+       {ty, axiom, axiom_rk, case_const,case_cong,case_def,constructors,
         induction, nchotomy, distinct, one_one, fields,
         accessors, updates, simpls, size, encode,lift})
     =
-    DFACTS {ty=ty,axiom=axiom, case_const=case_const,
+    DFACTS {ty=ty, axiom=axiom, axiom_rk=axiom_rk, case_const=case_const,
             case_cong=case_cong,case_def=case_def,constructors=constructors,
             induction=induction, nchotomy=nchotomy, distinct=distinct,
             one_one=one_one, fields=fields,
@@ -206,11 +215,11 @@ fun put_size (size_tm,size_rw) (DFACTS
                  encode=encode});
 
 fun put_encode (encode_tm,encode_rw) (DFACTS
-       {ty,axiom, case_const,case_cong,case_def,constructors,
+       {ty, axiom, axiom_rk, case_const,case_cong,case_def,constructors,
         induction, nchotomy, distinct, one_one, fields,
         accessors, updates, simpls, size, encode,lift})
      =
-     DFACTS{ty=ty,axiom=axiom, case_const=case_const,
+     DFACTS{ty=ty,axiom=axiom, axiom_rk=axiom_rk, case_const=case_const,
             case_cong=case_cong,case_def=case_def,constructors=constructors,
             induction=induction, nchotomy=nchotomy, distinct=distinct,
             one_one=one_one, fields=fields,
@@ -220,11 +229,11 @@ fun put_encode (encode_tm,encode_rw) (DFACTS
      NFACTS(ty,{nchotomy=nchotomy,size=size,encode=SOME(encode_tm,thm_of encode_rw)});
 
 fun put_lift lift_tm (DFACTS
- {ty,axiom, case_const,case_cong,case_def,constructors,
+ {ty, axiom, axiom_rk, case_const,case_cong,case_def,constructors,
   induction, nchotomy, distinct, one_one, fields,
   accessors, updates, simpls, size, encode, lift})
   =
-  DFACTS {ty=ty,axiom=axiom, case_const=case_const,
+  DFACTS {ty=ty, axiom=axiom, axiom_rk=axiom_rk, case_const=case_const,
             case_cong=case_cong,case_def=case_def,constructors=constructors,
             induction=induction, nchotomy=nchotomy, distinct=distinct,
             one_one=one_one, fields=fields,
@@ -233,11 +242,11 @@ fun put_lift lift_tm (DFACTS
  | put_lift _ _ = raise ERR "put_lift" "not a datatype";
 
 fun put_fields flds (DFACTS
- {ty,axiom, case_const,case_cong,case_def,constructors,
+ {ty, axiom, axiom_rk, case_const,case_cong,case_def,constructors,
   induction, nchotomy, distinct, one_one, fields,
   accessors, updates, simpls, size, encode, lift})
   =
-  DFACTS {ty=ty,axiom=axiom, case_const=case_const,
+  DFACTS {ty=ty,axiom=axiom, axiom_rk=axiom_rk, case_const=case_const,
             case_cong=case_cong,case_def=case_def,constructors=constructors,
             induction=induction, nchotomy=nchotomy, distinct=distinct,
             one_one=one_one, fields=flds,
@@ -246,11 +255,11 @@ fun put_fields flds (DFACTS
  | put_fields _ _ = raise ERR "put_fields" "not a datatype";
 
 fun put_accessors thl (DFACTS
- {ty,axiom, case_const,case_cong,case_def,constructors,
+ {ty, axiom, axiom_rk, case_const,case_cong,case_def,constructors,
   induction, nchotomy, distinct, one_one, fields,
   accessors, updates, simpls, size, encode, lift})
   =
-  DFACTS {ty=ty,axiom=axiom, case_const=case_const,
+  DFACTS {ty=ty, axiom=axiom, axiom_rk=axiom_rk, case_const=case_const,
             case_cong=case_cong,case_def=case_def,constructors=constructors,
             induction=induction, nchotomy=nchotomy, distinct=distinct,
             one_one=one_one, fields=fields,
@@ -259,11 +268,11 @@ fun put_accessors thl (DFACTS
  | put_accessors _ _ = raise ERR "put_accessors" "not a datatype";
 
 fun put_updates thl (DFACTS
- {ty,axiom, case_const,case_cong,case_def,constructors,
+ {ty, axiom, axiom_rk, case_const,case_cong,case_def,constructors,
   induction, nchotomy, distinct, one_one, fields,
   accessors, updates, simpls, size, encode, lift})
   =
-  DFACTS {ty=ty,axiom=axiom, case_const=case_const,
+  DFACTS {ty=ty, axiom=axiom, axiom_rk=axiom_rk, case_const=case_const,
             case_cong=case_cong,case_def=case_def,constructors=constructors,
             induction=induction, nchotomy=nchotomy, distinct=distinct,
             one_one=one_one, fields=fields,
@@ -297,7 +306,7 @@ val defn_const =
  * numbers are in the context, which is not necessarily true.                *
  *---------------------------------------------------------------------------*)
 
-fun mk_datatype_info {ax,case_def,case_cong,induction,
+fun mk_datatype_info_rk {ax,ax_rk,case_def,case_cong,induction,
                       nchotomy,size,encode,lift,one_one,
                       fields, accessors, updates, distinct} =
   let val (ty,ty_names,constructors) = basic_info case_def
@@ -321,33 +330,44 @@ fun mk_datatype_info {ax,case_def,case_cong,induction,
       size         = size,
       encode       = encode,
       lift         = lift,
+      axiom_rk     = ax_rk,
       axiom        = ax}
   end;
 
+fun mk_datatype_info {ax,case_def,case_cong,induction,
+                      nchotomy,size,encode,lift,one_one,
+                      fields, accessors, updates, distinct} =
+  mk_datatype_info_rk {ax=ax,ax_rk=fn _ => ax,case_def=case_def,
+                       case_cong=case_cong,induction=induction,
+                       nchotomy=nchotomy,size=size,encode=encode,
+                       lift=lift,one_one=one_one,fields=fields,
+                       accessors=accessors,updates=updates,distinct=distinct};
 
-local fun mk_ti (n,ax,ind)
+local fun mk_ti (n,ax,ax_rk,ind)
                 (cdef::cds) (ccong::cgs) (oo::oos) (d::ds) (nch::nchs) =
-            mk_datatype_info{ax=COPY(n,ax), induction=COPY(n,ind),
+            mk_datatype_info_rk{ax=COPY(n,ax),
+                      ax_rk= fn rk => COPY(n,ax_rk rk),
+                      induction=COPY(n,ind),
                       case_def=cdef,case_cong=ccong, nchotomy=nch,
                       one_one=oo, distinct=d,size=NONE, encode=NONE,
                       lift=NONE, fields=[], accessors=[],updates=[]}
-            :: mk_ti (n,ax,ind) cds cgs oos ds nchs
+            :: mk_ti (n,ax,ax_rk,ind) cds cgs oos ds nchs
         | mk_ti _ [] [] [] [] [] = []
         | mk_ti _ [] _ _ _ _ = raise ERR "gen_tyinfo" "Too few case defns"
         | mk_ti _ _ _ _ _ _  = raise ERR "gen_tyinfo" "Too many case defns"
 in
-fun gen_datatype_info {ax, ind, case_defs} =
+fun gen_datatype_info_rk {ax, ax_rk, ind, case_defs} =
  let val nchotomyl  = prove_cases_thm ind
      val case_congs = map2 case_cong_thm nchotomyl case_defs
-     val one_ones   = prove_constructors_one_one ax
-     val distincts  = prove_constructors_distinct ax
+     val one_ones   = prove_constructors_one_one_rk (ax,ax_rk)
+     val distincts  = prove_constructors_distinct_rk (ax,ax_rk)
      val _ = (length nchotomyl  = length case_congs andalso
               length case_congs = length one_ones   andalso
               length one_ones   = length distincts)
         orelse raise ERR "gen_tyinfo"
                  "Number of theorems automatically proved doesn't match up"
-     val tyinfo_1 = mk_datatype_info
-           {ax=ORIG ax, induction=ORIG ind,
+     val tyinfo_1 = mk_datatype_info_rk
+           {ax=ORIG ax, ax_rk= fn rk => ORIG (ax_rk rk), induction=ORIG ind,
             case_def = hd case_defs, case_cong = hd case_congs,
             nchotomy = hd nchotomyl,
             size=NONE, encode=NONE, lift=NONE,
@@ -356,11 +376,13 @@ fun gen_datatype_info {ax, ind, case_defs} =
  in
    if length nchotomyl = 1 then [tyinfo_1]
    else let val tyname = ty_name_of tyinfo_1
-        in tyinfo_1 :: mk_ti (tyname,ax,ind)
+        in tyinfo_1 :: mk_ti (tyname,ax,ax_rk,ind)
                           (tl case_defs) (tl case_congs)
                           (tl one_ones) (tl distincts) (tl nchotomyl)
         end
  end
+fun gen_datatype_info {ax, ind, case_defs} =
+  gen_datatype_info_rk{ax=ax, ax_rk=fn _ => ax, ind=ind, case_defs=case_defs}
 end;
 
 fun mk_nondatatype_info (ty,record) = NFACTS(ty,record);
@@ -375,7 +397,7 @@ fun pp_tyinfo ppstrm (d as DFACTS recd) =
      val pp_term = Parse.pp_term ppstrm
      val pp_thm = Parse.pp_thm ppstrm
      val {ty,constructors, case_const, case_def, case_cong, induction,
-          nchotomy,one_one,distinct,simpls,size,encode,lift,axiom,
+          nchotomy,one_one,distinct,simpls,size,encode,lift,axiom,axiom_rk,
           fields, accessors, updates} = recd
      val ty_namestring = name_pair (ty_name_of d)
  in
@@ -516,6 +538,8 @@ fun normalise_ty ty = let
               recurse (recurse (dict, bvar::env, usethis) [body]) rest
           | TYUNIV (bvar,body) =>
               recurse (recurse (dict, bvar::env, usethis) [body]) rest
+          | TYEXIS (bvar,body) =>
+              recurse (recurse (dict, bvar::env, usethis) [body]) rest
         end
   val (inst0, _, _) = recurse (Binarymap.mkDict Type.compare, [], Type.alpha) [ty]
   fun set_kd src trg =
@@ -577,6 +601,11 @@ fun tysize ty =
       end
     else if Type.is_univ_type ty then let
         val (a,body) = Type.dest_univ_type ty
+      in
+        tysize a + tysize body
+      end
+    else if Type.is_exist_type ty then let
+        val (a,body) = Type.dest_exist_type ty
       in
         tysize a + tysize body
       end
@@ -753,6 +782,7 @@ fun typeValue (theta,gamma,undef) =
                     in mk_abs(bvar_tm, body_tm)
                     end
            else if is_univ_type ty then undef ty
+           else if is_exist_type ty then undef ty
            else raise ERR "tysize" "impossible type"
  in tyValue
  end (* fun typeValue *)

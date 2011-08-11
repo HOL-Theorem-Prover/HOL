@@ -52,8 +52,12 @@ sig
   (* converts a preterm into a term.  Will guess type variables for
      unassigned pretypes if Globals.guessing_tyvars is true.
      Will fail if the preterm contains any Overloaded constructors, or
-     if the types attached to the leaves aren't valid for the kernel.  *)
-  val to_term : preterm -> term
+     if the types attached to the leaves aren't valid for the kernel.
+     Will throw an exception if any constants cannot be instantiated
+     with the specified types, or if various other constraints are not true.  *)
+  val to_term :
+        ((term -> string) * (hol_type -> string) * (kind -> string)) option ->
+        preterm -> term
 
 
   (* deals with case expressions, which need to be properly typed and
@@ -78,6 +82,7 @@ sig
          | ConstrainKindFail of term * hol_type
          | ConstrainFail of term * hol_type
          | OvlNoType of string * hol_type
+         | TyAbsFail of hol_type * term
 
   val last_tcerror : (tcheck_error * locn.locn) option ref
 

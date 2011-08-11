@@ -22,6 +22,7 @@ sig
 
 
    val new_recursive_definition : {name:string, rec_axiom:thm, def:term} -> thm
+   val new_recursive_definition_rk : {name:string, rec_axiom:thm, rec_axiom_rk:int->thm, def:term} -> thm
 
    (*------------------------------------------------------------------------
       Because a type axiom can be for multiple (mutually recursive) types at
@@ -30,6 +31,7 @@ sig
     -------------------------------------------------------------------------*)
 
    val define_case_constant : thm -> thm list
+   val define_case_constant_rk : thm * (int -> thm) -> thm list
 
    val INDUCT_THEN                 : thm -> (thm -> tactic) -> tactic
    val prove_rec_fn_exists         : thm -> term -> thm
@@ -44,6 +46,8 @@ sig
    val case_cong_thm               : thm -> thm -> thm
    val prove_constructors_distinct : thm -> thm option list
    val prove_constructors_one_one  : thm -> thm option list
+   val prove_constructors_distinct_rk : thm * (int -> thm) -> thm option list
+   val prove_constructors_one_one_rk  : thm * (int -> thm) -> thm option list
 
    (* A utility function *)
    val EXISTS_EQUATION             : term -> thm -> thm

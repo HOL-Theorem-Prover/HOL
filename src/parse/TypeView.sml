@@ -8,6 +8,7 @@ open Type
                     | TyV_App of hol_type * hol_type
                     | TyV_Abs of tyvar * hol_type
                     | TyV_All of tyvar * hol_type
+                    | TyV_Exi of tyvar * hol_type
 
   fun fromType ty =
       if is_vartype ty then TyV_Var (dest_var_type ty)
@@ -23,8 +24,13 @@ open Type
         in
           TyV_All (dest_var_type tyv, ty)
         end
+      else if is_exist_type ty then let
+          val (tyv,ty) = dest_exist_type ty
+        in
+          TyV_Exi (dest_var_type tyv, ty)
+        end
       else raise Feedback.mk_HOL_ERR "TypeView" "fromType"
-            ("not a var, const, app, abs, or univ type: " (*^ Type.type_to_string ty*))
+            ("not a var, const, app, abs, univ, or exist type: " (*^ Type.type_to_string ty*))
 
   fun toType tyv =
       case tyv of
@@ -33,6 +39,7 @@ open Type
       | TyV_App (ty1, ty2) => mk_app_type (ty1, ty2)
       | TyV_Abs (tyv, ty) => mk_abs_type (mk_var_type tyv, ty)
       | TyV_All (tyv, ty) => mk_univ_type (mk_var_type tyv, ty)
+      | TyV_Exi (tyv, ty) => mk_exist_type (mk_var_type tyv, ty)
 
 end;
 

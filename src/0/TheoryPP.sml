@@ -61,10 +61,10 @@ fun pp_kind mvarkind pps kd =
 (* Print a type                                                              *)
 (*---------------------------------------------------------------------------*)
 
-fun pp_type mvarkind mvartype mvartypeopr mtype mcontype mapptype mabstype munivtype pps ty =
+fun pp_type mvarkind mvartype mvartypeopr mtype mcontype mapptype mabstype munivtype mexistype pps ty =
  let open Portable Type
      val pp_kind = pp_kind mvarkind pps
-     val pp_type = pp_type mvarkind mvartype mvartypeopr mtype mcontype mapptype mabstype munivtype pps
+     val pp_type = pp_type mvarkind mvartype mvartypeopr mtype mcontype mapptype mabstype munivtype mexistype pps
      val {add_string,add_break,begin_block,end_block,
           add_newline,flush_ppstream,...} = with_ppstream pps
      fun pp_type_par ty = if mem ty [alpha,beta,gamma,delta] then pp_type ty
@@ -163,6 +163,17 @@ fun pp_type mvarkind mvartype mvartypeopr mtype mcontype mapptype mabstype muniv
        let val (Bvar,Body) = dest_univ_type ty
        in
            add_string munivtype;
+           begin_block INCONSISTENT 0;
+           add_break (1,0);
+           pp_type_par Bvar;
+           add_break (1,0);
+           pp_type_par Body;
+           end_block ()
+       end
+  else if is_exist_type ty then
+       let val (Bvar,Body) = dest_exist_type ty
+       in
+           add_string mexistype;
            begin_block INCONSISTENT 0;
            add_break (1,0);
            pp_type_par Bvar;
@@ -332,6 +343,11 @@ fun debug_type ty =
       in print "(!"; debug_type v; print ". ";
          debug_type b; print ")"
       end
+    else if is_exist_type ty then let
+        val (v,b) = dest_exist_type ty
+      in print "(?"; debug_type v; print ". ";
+         debug_type b; print ")"
+      end
     else print "debug_type: unrecognized type\n"
 end
 
@@ -357,6 +373,10 @@ fun hash_type ty n =
      let val (tyv,body) = Type.dest_univ_type ty                             
      in hash_type body (hash_type tyv n)
      end
+  handle HOL_ERR _ =>
+     let val (tyv,body) = Type.dest_exist_type ty                             
+     in hash_type body (hash_type tyv n)
+     end
   handle HOL_ERR e => (debug_type ty; Raise (HOL_ERR e))
 
 local open Term in
@@ -367,7 +387,9 @@ fun debug_term tm =
       end
     else if is_const tm then let
         val (s,ty) = dest_const tm
-      in print s
+      in print s;
+         print " :";
+         debug_type ty
       end
     else if is_comb tm then let
         val (f,a) = dest_comb tm
@@ -584,7 +606,7 @@ fun pp_struct info_record ppstrm =
      val {add_string,add_break,begin_block,end_block, add_newline,
           flush_ppstream,...} = Portable.with_ppstream ppstrm
      val pp_tm = pp_raw ppstrm
-     val pp_ty = with_parens (pp_type "K" "U" "R" "T" "O" "P" "B" "N") ppstrm
+     val pp_ty = with_parens (pp_type "K" "U" "R" "T" "O" "P" "B" "N" "X") ppstrm
      val pp_kd = pp_kind "K" ppstrm
      val pp_tag = Tag.pp_to_disk ppstrm
      fun pblock(header, ob_pr, obs) =
@@ -748,6 +770,7 @@ fun pp_struct info_record ppstrm =
       add_string"fun P a b     = mk_app_type(a,b)";        add_newline();
       add_string"fun B a b     = mk_abs_type(a,b)";        add_newline();
       add_string"fun N a b     = mk_univ_type(a,b)";       add_newline();
+      add_string"fun X a b     = mk_exist_type(a,b)";      add_newline();
       add_newline();
       pblock ("Parents", add_string o pparent,
               thid_sort parents1);

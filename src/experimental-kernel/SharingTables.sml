@@ -170,6 +170,7 @@ datatype shared_type = TYV of string * int
                      | TYAp of int * int
                      | TYAbs of int * int
                      | TYUni of int * int
+                     | TYExi of int * int
 
 type typetable = {tysize : int,
                   tymap : (hol_type, int)Map.dict,
@@ -226,7 +227,7 @@ fun make_shared_type ty (tables as (idtable, kdtable, table)) =
               tymap = Map.insert(tymap, ty, tysize),
               tylist = TYAbs (bvi,bodyi) :: tylist}))
           end
-        else (* if is_univ_type ty then *) let
+        else if is_univ_type ty then let
             val (bv,body) = dest_univ_type ty
             val (bvi, tables) = make_shared_type bv tables
             val (bodyi, tables) = make_shared_type body tables
@@ -237,6 +238,18 @@ fun make_shared_type ty (tables as (idtable, kdtable, table)) =
              {tysize = tysize + 1,
               tymap = Map.insert(tymap, ty, tysize),
               tylist = TYUni (bvi,bodyi) :: tylist}))
+          end
+        else (* if is_exist_type ty then *) let
+            val (bv,body) = dest_exist_type ty
+            val (bvi, tables) = make_shared_type bv tables
+            val (bodyi, tables) = make_shared_type body tables
+            val (idtable, kdtable, tytable) = tables
+            val {tysize, tymap, tylist} = tytable
+          in
+            (tysize, (idtable, kdtable,
+             {tysize = tysize + 1,
+              tymap = Map.insert(tymap, ty, tysize),
+              tylist = TYExi (bvi,bodyi) :: tylist}))
           end
       end
 
@@ -282,6 +295,13 @@ fun build_type_vector idv kdv shtylist = let
           (n + 1,
            Map.insert(tymap, n, Type.mk_univ_type (bv,body)))
         end
+      | TYExi (bvi,bodyi) => let
+          val bv = Map.find(tymap, bvi)
+          val body = Map.find(tymap, bodyi)
+        in
+          (n + 1,
+           Map.insert(tymap, n, Type.mk_exist_type (bv,body)))
+        end
   val (_, tymap) =
       List.foldl build1 (0, Map.mkDict Int.compare) shtylist
 in
@@ -301,6 +321,7 @@ fun output_typetable pps {idtable_nm,kdtable_nm,tytable_nm} (tytable : typetable
       | TYAp (opri,argi)  => out ("TYAp"  ^ ipair_string(opri,argi))
       | TYAbs (bvi,bodyi) => out ("TYAbs" ^ ipair_string(bvi,bodyi))
       | TYUni (bvi,bodyi) => out ("TYUni" ^ ipair_string(bvi,bodyi))
+      | TYExi (bvi,bodyi) => out ("TYExi" ^ ipair_string(bvi,bodyi))
   fun output_shtypes [] = ()
     | output_shtypes [x] = output_shtype x
     | output_shtypes (x::xs) = (output_shtype x; out ",";

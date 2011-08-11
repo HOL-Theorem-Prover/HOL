@@ -53,11 +53,6 @@ struct
                             !Meta.quietdec)
   fun amquiet () = !Meta.quietdec
 end;
-
-
-
-
-
 *)
 
 open HolKernel Parse
@@ -322,6 +317,7 @@ val LET_DEF =
 
 val _ = add_const "LET";
 
+(*
 val PACK_DEF =
  Definition.new_definition
    ("PACK_DEF",       Term `PACK = \:'r:'k. \:('a:'k => ty). \M:'r 'a.
@@ -336,6 +332,8 @@ val UNPACK_DEF =
                                       P [:'r:] f`);
 
 val _ = add_const "UNPACK";
+*)
+
 
 val COND_DEF =
  Definition.new_definition
@@ -398,6 +396,12 @@ val _ = add_rule {term_name = GrammarSpecials.and_special,
                   paren_style = OnlyIfNecessary,
                   block_style = (AroundEachPhrase, (INCONSISTENT, 0))}
 
+val _ = add_rule {term_name   = GrammarSpecials.pack_special,
+                  fixity = TruePrefix 1000,
+                  pp_elements = [TOK "pack", BreakSpace(1,0)],
+                  paren_style = OnlyIfNecessary,
+                  block_style = (AroundEachPhrase, (INCONSISTENT, 0))};
+
 val _ = add_rule{term_name   = "COND",
                  fixity      = TruePrefix 70,
                  pp_elements = [PPBlock([TOK "if", BreakSpace(1,2), TM,
@@ -432,22 +436,6 @@ val BOOL_CASES_AX =
  new_axiom
    ("BOOL_CASES_AX", Term `!t. (t=T) \/ (t=F)`);
 
-(*
-val _ = set_trace "types" 1;
-val _ = set_trace "kinds" 2;
-val _ = set_trace "debug_preterm" 1; (* for debugging only; remove later. *)
-val _ = set_trace "debug_pretype" 1; (* for debugging only; remove later. *)
-val _ = set_trace "debug_prekind" 1; (* for debugging only; remove later. *)
-val _ = set_trace "debug_prerank" 1; (* for debugging only; remove later. *)
-
-val _ = set_trace "debug_preterm" 0; (* for debugging only; remove later. *)
-val _ = set_trace "debug_pretype" 0; (* for debugging only; remove later. *)
-val _ = set_trace "debug_prekind" 0; (* for debugging only; remove later. *)
-val _ = set_trace "debug_prerank" 0; (* for debugging only; remove later. *)
-val _ = set_trace "types" 0;
-val _ = set_trace "kinds" 1;
-*)
-
 val TY_ETA_AX = (* New for HOL-Omega *)
  new_axiom
    ("TY_ETA_AX",     Term `!t:(!'a:'k.'a ('b:'k=>ty:1)). (\:'a. t [:'a:]) = t`);
@@ -463,6 +451,28 @@ val SELECT_AX =
 val INFINITY_AX =
  new_axiom
    ("INFINITY_AX",   Term `?f:ind->ind. ONE_ONE f /\ ~ONTO f`);
+
+val UNPACK_PACK_AX = (* New for HOL-Omega *)
+ new_axiom
+   ("UNPACK_PACK_AX",Term `!:('a:'k => ty:1) ('b:ty:1) ('y:'k).
+                             !(f: !'x:'k. 'x 'a -> 'b) (t: 'y 'a).
+                               UNPACK f (PACK [:'y:] t) = f [:'y:] t`);
+
+val PACK_EXT_AX = (* New for HOL-Omega *)
+ new_axiom
+   ("PACK_EXT_AX",   Term `!:('a:'k => ty:1).
+                             !p q: ?'x:'k. 'x 'a.
+                               (!:'b:ty:1.
+                                  !f: !'x:'k. 'x 'a -> 'b.
+                                     UNPACK f p = UNPACK f q)
+                               ==> (p = q)`);
+
+val PACK_ONTO_AX = (* New for HOL-Omega *)
+ new_axiom
+   ("PACK_ONTO_AX",  Term `!:('a:'k => ty:1).
+                             !(p: ?'x:'k. 'x 'a).
+                               ?:'y:'k. ?t:'y 'a.
+                                  p = PACK [:'y:] t`);
 
 
 (*---------------------------------------------------------------------------*
@@ -502,26 +512,6 @@ val RES_EXISTS_DEF =
    ("RES_EXISTS_DEF", Term `RES_EXISTS = \p m. ?x : 'a. x IN p /\ m x`);
 
 val _ = (add_const "RES_EXISTS"; associate_restriction ("?",  "RES_EXISTS"));
-
-(*
-val _ = set_trace "types" 1;
-val _ = set_trace "kinds" 2;
-val _ = set_trace "debug_preterm" 1; (* for debugging only; remove later. *)
-val _ = set_trace "debug_pretype" 1; (* for debugging only; remove later. *)
-val _ = set_trace "debug_prekind" 1; (* for debugging only; remove later. *)
-val _ = set_trace "debug_prerank" 1; (* for debugging only; remove later. *)
-
-Term `!x:'a. P x`;
-Term `(?(x : 'a) :: p. m x)`;
-Term `!(x : 'a) y :: p. m x /\ m y ==> (x = y)`;
-
-val _ = set_trace "debug_preterm" 0; (* for debugging only; remove later. *)
-val _ = set_trace "debug_pretype" 0; (* for debugging only; remove later. *)
-val _ = set_trace "debug_prekind" 0; (* for debugging only; remove later. *)
-val _ = set_trace "debug_prerank" 0; (* for debugging only; remove later. *)
-val _ = set_trace "types" 0;
-val _ = set_trace "kinds" 1;
-*)
 
 val RES_EXISTS_UNIQUE_DEF =
  Definition.new_definition
@@ -1014,18 +1004,6 @@ val EXISTS_THM =
 val _ = save_thm("FORALL_THM",FORALL_THM);
 val _ = save_thm("EXISTS_THM",EXISTS_THM);
 
-
-(*
-val _ = set_trace "types" 1;
-val _ = set_trace "kinds" 2;
-val _ = set_trace "debug_type_inference" 2; (* for debugging only; remove later. *)
-
-val tm1 = Term `!t. t`;
-
-val _ = set_trace "debug_type_inference" 0; (* for debugging only; remove later. *)
-val _ = set_trace "types" 0;
-val _ = set_trace "kinds" 1;
-*)
 
 val TY_FORALL_THM =
   SYM (AP_TERM (Term `$!: :(!'a:'k.bool)->bool`)
@@ -1734,6 +1712,34 @@ val TY_FUN_EQ_THM =
 val _ = save_thm("TY_FUN_EQ_THM",TY_FUN_EQ_THM);
 
 (*---------------------------------------------------------------------------
+      PACK_EQ_THM  |- !p q. (p = q) = !f. UNPACK f p = UNPACK f q
+ ---------------------------------------------------------------------------*)
+
+val PACK_EQ_THM =
+  let val a = Type.mk_var_type("'a", Kind.kappa ==> Kind.typ 1)
+      val b = Type.mk_var_type("'b", Kind.kappa)
+      val ety = Type.mk_exist_type(b, Type.mk_app_type(a,b))
+      val p = mk_var("p", ety)
+      val q = mk_var("q", ety)
+      val c = Type.mk_var_type("'c", Kind.kappa)
+      val d = Type.mk_var_type("'d", Kind.typ 1)
+      val fty = mk_univ_type(c, mk_app_type(a,c) --> d)
+      val f = mk_var("f", fty)
+      val U = mk_thy_const{Thy="min",Name="UNPACK",Ty=fty --> ety --> d}
+      val p_eq_q = mk_eq(p,q)
+      val Uf = mk_comb(U,f)
+      val Ufp_eq_Ufq = mk_eq(mk_comb(Uf,p),mk_comb(Uf,q))
+      val uq_Ufp_eq_Ufq = mk_tyforall(d,mk_forall(f,Ufp_eq_Ufq))
+      val th1 = TY_GEN d (GEN f (AP_TERM Uf (ASSUME p_eq_q)))
+      val th2 = MP (SPEC_ALL (TY_SPEC_ALL PACK_EXT_AX)) (ASSUME uq_Ufp_eq_Ufq)
+  in
+    GEN p (GEN q
+        (IMP_ANTISYM_RULE (DISCH_ALL th1) (DISCH_ALL th2)))
+  end;
+
+val _ = save_thm("PACK_EQ_THM",PACK_EQ_THM);
+
+(*---------------------------------------------------------------------------
  *    |- !x y z. x=y  /\  y=z  ==>  x=z
  *---------------------------------------------------------------------------*)
 
@@ -2017,20 +2023,6 @@ val _ = save_thm("SELECT_REFL_2", SELECT_REFL_2);
 (*---------------------------------------------------------------------------*)
 (* SELECT_UNIQUE = |- !P x. (!y. P y = (y = x)) ==> ($@ P = x)               *)
 (*---------------------------------------------------------------------------*)
-
-(*
-val _ = set_trace "types" 1;
-val _ = set_trace "kinds" 2;
-val _ = set_trace "debug_preterm" 1; (* for debugging only; remove later. *)
-val _ = set_trace "debug_pretype" 1; (* for debugging only; remove later. *)
-val _ = set_trace "debug_prekind" 1; (* for debugging only; remove later. *)
-val _ = set_trace "debug_prerank" 1; (* for debugging only; remove later. *)
-
-val _ = set_trace "debug_preterm" 0; (* for debugging only; remove later. *)
-val _ = set_trace "debug_pretype" 0; (* for debugging only; remove later. *)
-val _ = set_trace "debug_prekind" 0; (* for debugging only; remove later. *)
-val _ = set_trace "debug_prerank" 0; (* for debugging only; remove later. *)
-*)
 
 val SELECT_UNIQUE =
   let fun mksym tm = DISCH tm (SYM(ASSUME tm))
@@ -3608,94 +3600,9 @@ val _ = save_thm("COND_RAND", COND_RAND);
 (*				       	                 PVH 2008.07.29 *)
 (* ---------------------------------------------------------------------*)
 
-(*
-val _ = set_trace "types" 1;
-val _ = set_trace "kinds" 2;
-val _ = set_trace "debug_preterm" 1; (* for debugging only; remove later. *)
-val _ = set_trace "debug_pretype" 1; (* for debugging only; remove later. *)
-val _ = set_trace "debug_prekind" 1; (* for debugging only; remove later. *)
-val _ = set_trace "debug_prerank" 1; (* for debugging only; remove later. *)
-
-val _ = set_trace "debug_preterm" 0; (* for debugging only; remove later. *)
-val _ = set_trace "debug_pretype" 0; (* for debugging only; remove later. *)
-val _ = set_trace "debug_prekind" 0; (* for debugging only; remove later. *)
-val _ = set_trace "debug_prerank" 0; (* for debugging only; remove later. *)
-val _ = set_trace "types" 0;
-val _ = set_trace "kinds" 1;
-
-Problems is that in 'val tm = ...' that 'b is given rank 1 by default.  Why?  Doesn't happen for 'val f ='.
-The "if" must impose a rank relationship that causes 'b to get rank 1.
-
-    val tm = (--`(if b then (f: !'a:'k.'a 'b) else g) [:'a:] = (if b then f [:'a:] else g [:'a:])`--)
-See
-- > val tm =
-    `if (b :bool) then (f :∀γ: 'k. γ (β: 'k => ty:=0)) else (g :∀γ: 'k. γ β)
-       [:α: 'k:] =
-     if b then f [:α:] else g [:α:]` : term (* EVIL *)
-vs
-- > val tm =
-    `if (b :bool) then (f :∀γ: 'k. γ (β: 'k => ty)) else (g :∀γ: 'k. γ β)
-       [:α: 'k:] =
-     if b then f [:α:] else g [:α:]` : term (* GOOD *)
-
-Term`(if b then (f: !'a:'k.'a 'b:<=0) else g) [:'a:] = z`;
-
-Term`(if b then (f: !'a:'k.'a 'b:<=0) else g) [:'a:] = z`;
-
-Checking application:
-=:>= 0 applied to
-((((COND:= max(= >= r+1, = ?9836936) (b: 9834876: bool))
-   ((f:
-     9834808:
-       (!V('a): 'k:9831938: =9834712: >=r : 'k:9831938: =9834712: >=r.
-           (V('a): 'k:9831938: =9834712: >=r
-            V('b): 'k:9831938: =9834712: >=r => ty:9836884: =?9836936))) :
-      (!V('a): 'k:9831938: =9834712: >=r : 'k:9831938: =9834712: >=r.
-          (V('a): 'k:9831938: =9834712: >=r
-           V('b): 'k:9831938: =9834712: >=r => ty:9836884: =?9836936))))
-  (g:
-   9834634: 9835190:
-     (!V('a): 'k:9831938: =9834712: >=r : 'k:9831938: =9834712: >=r.
-         (V('a): 'k:9831938: =9834712: >=r
-          V('b): 'k:9831938: =9834712: >=r => ty:9836884: =?9836936))))
- [:V('a): 'k:9831938: =9834712: >=r:])
-Types: rator: 9834446: ty:9834502: >=0 ->:>= 0 9834446: ty:9834502: >=0 ->:>= 0 bool
-   to: rand : (V('a): 'k:9831938: =9834712: >=r
- V('b): 'k:9831938: =9834712: >=r => ty:9836884: =?9836936)
-
-Type unification: 
-(V('a): 'k:9831938: =9834712: >=r
- V('b): 'k:9831938: =9834712: >=r => ty:9836884: =?9836936)
-to be  =    to: 
-9834446: ty:9834502: >=0
-
-Unifying kinds: 
-9836906: ty:9836884: =?9836936
-to be  =    to: 
-ty:9834502: >=0
-
-  Unifying kinds: ty:9836884: =?9836936
-  to be  =    to: ty:9834502: >=0
-
-    Unifying ranks: 9836884: =?9836936
-    to be =     vs: 9834502: >=0
-
-- - - Term`(if b then (f: !'a:'k.'a 'b) else g) [:'a:] = (if b then f [:'a:] else g [:'a:])`;
-
-Checking term const = of type
-  68504: ty:?68080 ->:?68080 68504: ty:?68080 ->:?68080 bool
-Checking kind of type has kind ty.
-
-Why is the rank of = going to default to =0, just because of the bool there?
-Better that it not.
-*)
-
 
 val COND_TY_COMB =
 let
-(*  val f = --`f: !'a:'k. 'a 'b`-- (* rank 1 *)
-    val g = --`g: !'a:'k. 'a 'b`--
-*)
     val f = --`f: !'a. 'a ('b:'k => ty)`-- (* rank 1 *)
     val g = --`g: !'a. 'a ('b:'k => ty)`--
     val a = mk_var_type("'a", kappa)
@@ -3703,8 +3610,7 @@ let
     val fa = --`^f [:'a:'k:]`-- and ga = --`^g [:'a:'k:]`-- (* rank 0 *)
     val t1 = --`t1:'a`--
     val t2 = --`t2:'a`--
-(*  val theta1 = [Type`:'a:<=1` |-> Type`: !'a:'k. 'a 'b`] *)
-    val theta1 = [Type`:'a:<=1` |-> Type`: !'a. 'a ('b:'k => ty)`]
+    val theta1 = [Type`:'a:<=1` |-> Type`: !'a:'k. 'a 'b`]
     val theta2 = [Type`:'a`     |-> Type`:'a 'b:'k=>ty`]
     val (COND_T,COND_F) = (GENL[t1,t2]##GENL[t1,t2])
                           (CONJ_PAIR(SPEC_ALL COND_CLAUSES))
@@ -4998,22 +4904,6 @@ val boolAxiom = save_thm("boolAxiom",
 (* bool_INDUCT |- !P. P T /\ P F ==> !b. P b                                 *)
 (* ------------------------------------------------------------------------- *)
 
-(*
-val _ = set_trace "types" 1;
-val _ = set_trace "kinds" 2;
-val _ = set_trace "debug_preterm" 1; (* for debugging only; remove later. *)
-val _ = set_trace "debug_pretype" 1; (* for debugging only; remove later. *)
-val _ = set_trace "debug_prekind" 1; (* for debugging only; remove later. *)
-val _ = set_trace "debug_prerank" 1; (* for debugging only; remove later. *)
-
-val _ = set_trace "debug_preterm" 0; (* for debugging only; remove later. *)
-val _ = set_trace "debug_pretype" 0; (* for debugging only; remove later. *)
-val _ = set_trace "debug_prekind" 0; (* for debugging only; remove later. *)
-val _ = set_trace "debug_prerank" 0; (* for debugging only; remove later. *)
-val _ = set_trace "types" 0;
-val _ = set_trace "kinds" 1;
-*)
-
 val bool_INDUCT = save_thm("bool_INDUCT",
  let val P = Term`P:bool -> bool`
      val b = Term `b:bool`
@@ -5063,16 +4953,6 @@ val bool_case_CONG = save_thm("bool_case_CONG",
  in
    GENL (rev fvs) th
  end);
-
-(*
-val _ = set_trace "debug_pretype" 1; (* for debugging only; remove later. *)
-val _ = set_trace "debug_prekind" 1; (* for debugging only; remove later. *)
-val _ = set_trace "debug_prerank" 1; (* for debugging only; remove later. *)
-
-val _ = set_trace "debug_pretype" 0; (* for debugging only; remove later. *)
-val _ = set_trace "debug_prekind" 0; (* for debugging only; remove later. *)
-val _ = set_trace "debug_prerank" 0; (* for debugging only; remove later. *)
-*)
 
 val FORALL_BOOL = save_thm
 ("FORALL_BOOL",
@@ -5212,27 +5092,6 @@ end
 (*---------------------------------------------------------------------------
      The definition of restricted abstraction.
  ---------------------------------------------------------------------------*)
-
-(*
-val _ = set_trace "debug_preterm" 1; (* for debugging only; remove later. *)
-val _ = set_trace "debug_pretype" 1; (* for debugging only; remove later. *)
-val _ = set_trace "debug_prekind" 1; (* for debugging only; remove later. *)
-val _ = set_trace "debug_prerank" 1; (* for debugging only; remove later. *)
-val _ = set_trace "types" 1;
-val _ = set_trace "kinds" 2;
-
-Term `(?(x : 'a) :: p. m x)`;
-Term `!(x : 'a) y :: p. m x /\ m y ==> (x = y)`;
-Term `\b (x:'a). COND b x`;
-Term `(COND b x) : 'a -> 'a`;
-Term `COND b (x : 'a)`;
-
-val _ = set_trace "debug_pretype" 0; (* for debugging only; remove later. *)
-val _ = set_trace "debug_prekind" 0; (* for debugging only; remove later. *)
-val _ = set_trace "debug_prerank" 0; (* for debugging only; remove later. *)
-val _ = set_trace "types" 0;
-val _ = set_trace "kinds" 1;
-*)
 
 val RES_ABSTRACT_EXISTS =
   let
@@ -5672,17 +5531,29 @@ val DATATYPE_BOOL = save_thm("DATATYPE_BOOL",
     Set up the "itself" type constructor and its one value
    ---------------------------------------------------------------------- *)
 
+val KIND_ITSELF_TYPE_SPEC = let
+  val a = Type `:'a: 'k => ty`
+  val kind_itself_exists = TY_EXISTS (Term`?:'a:'k=>ty. T`, a) TRUTH
+in
+  new_type_specification("kind_itself", ["kind_itself"], kind_itself_exists)
+end
+val _ = add_type "kind_itself"
+
 val ITSELF_TYPE_DEF = let
-  val itself_exists = SPEC (Term`ARB:'a`) EXISTS_REFL
+  val alpha_k = Type`:'a:'k kind_itself`
+  val ARB_tm = mk_const("ARB", alpha_k)
+  val x_tm = mk_var("x", alpha_k)
+  val INSTTY = INST_TYPE [alpha |-> alpha_k]
+  val itself_exists = SPEC ARB_tm (INSTTY EXISTS_REFL)
   val eq_sym_eq' =
-      AP_TERM (Term`$? :('a -> bool) -> bool`)
-              (ABS (Term`x:'a`) (SPECL [Term`x:'a`, Term`ARB:'a`] EQ_SYM_EQ))
+      AP_TERM (Term`$? :('a:'k kind_itself -> bool) -> bool`)
+              (ABS x_tm (SPECL [x_tm, ARB_tm] (INSTTY EQ_SYM_EQ)))
 in
   new_type_definition("itself", EQ_MP eq_sym_eq' itself_exists)
 end
 val _ = add_type "itself"
 
-val _ = new_constant("the_value", Type`:'a itself`)
+val _ = new_constant("the_value", Type`:'a:'k itself`)
 val _ = add_const "the_value"
 
 (* prove uniqueness of the itself value:
@@ -5691,38 +5562,39 @@ val _ = add_const "the_value"
 val ITSELF_UNIQUE = let
   val typedef_asm = ASSUME (#2 (dest_exists (concl ITSELF_TYPE_DEF)))
   val typedef_eq0 =
-      AP_THM (PURE_INST_TYPE [beta |-> ==`:'a itself`==] TYPE_DEFINITION)
-             (--`$= (ARB:'a)`--)
+      AP_THM (PURE_INST_TYPE [alpha |-> ==`:'a:'k kind_itself`==,
+                              beta  |-> ==`:'a:'k itself`==] TYPE_DEFINITION)
+             (--`$= (ARB:'a:'k kind_itself)`--)
   val typedef_eq0 = RIGHT_BETA typedef_eq0
-  val typedef_eq = AP_THM typedef_eq0 (--`rep:'a itself -> 'a`--)
+  val typedef_eq = AP_THM typedef_eq0 (--`rep:'a:'k itself -> 'a:'k kind_itself`--)
   val typedef_eq = RIGHT_BETA typedef_eq
   val (typedef_11, typedef_onto) = CONJ_PAIR (EQ_MP typedef_eq typedef_asm)
-  val onto' = INST [--`x:'a`-- |-> --`(rep:'a itself -> 'a) i`--]
+  val onto' = INST [--`x:'a:'k kind_itself`-- |-> --`(rep:'a:'k itself -> 'a:'k kind_itself) i`--]
                    (#2 (EQ_IMP_RULE (SPEC_ALL typedef_onto)))
   val allreps_arb = let
-    val ex' = EXISTS (--`?x':'a itself. rep i = rep x':'a`--, --`i:'a itself`--)
-                     (REFL (--`(rep:'a itself -> 'a) i`--))
+    val ex' = EXISTS (--`?x':'a:'k itself. rep i = rep x':'a:'k kind_itself`--, --`i:'a:'k itself`--)
+                     (REFL (--`(rep:'a:'k itself -> 'a kind_itself) i`--))
   in
     SYM (MP onto' ex')
   end
   val allreps_repthevalue =
       TRANS allreps_arb
-            (SYM (INST [--`i:'a itself`-- |-> --`bool$the_value : 'a itself`--] allreps_arb))
+            (SYM (INST [--`i:'a:'k itself`-- |-> --`bool$the_value : 'a:'k itself`--] allreps_arb))
   val all_eq_thevalue =
-      GEN_ALL (MP (SPECL [--`i:'a itself`--, --`bool$the_value : 'a itself`--] typedef_11)
+      GEN_ALL (MP (SPECL [--`i:'a:'k itself`--, --`bool$the_value : 'a:'k itself`--] typedef_11)
                   allreps_repthevalue)
 in
   save_thm("ITSELF_UNIQUE",
-           CHOOSE (--`rep:'a itself -> 'a`--, ITSELF_TYPE_DEF) all_eq_thevalue)
+           CHOOSE (--`rep:'a:'k itself -> 'a kind_itself`--, ITSELF_TYPE_DEF) all_eq_thevalue)
 end
 
 (* prove a datatype axiom for the type, allowing definitions of the form
     f (:'a) = ...
 *)
 val itself_Axiom = let
-  val witness = --`(\x:'b itself. e : 'a)`--
-  val fn_behaves = BETA_CONV  (mk_comb(witness, --`(:'b)`--))
-  val fn_exists = EXISTS (--`?f:'b itself -> 'a. f (:'b) = e`--, witness)
+  val witness = --`(\x:'b:'k itself. e : 'a)`--
+  val fn_behaves = BETA_CONV  (mk_comb(witness, --`(:'b:'k)`--))
+  val fn_exists = EXISTS (--`?f:'b:'k itself -> 'a. f (:'b) = e`--, witness)
                   fn_behaves
 in
   save_thm("itself_Axiom", GEN_ALL fn_exists)
@@ -5730,9 +5602,9 @@ end
 
 (* prove induction *)
 val itself_induction = let
-  val pval = ASSUME (--`P (:'a) : bool`--)
+  val pval = ASSUME (--`P (:'a:'k) : bool`--)
   val pi =
-      EQ_MP (SYM (AP_TERM (--`P:'a itself -> bool`--) (SPEC_ALL ITSELF_UNIQUE)))
+      EQ_MP (SYM (AP_TERM (--`P:'a:'k itself -> bool`--) (SPEC_ALL ITSELF_UNIQUE)))
             pval
 in
   save_thm("itself_induction", GEN_ALL (DISCH_ALL (GEN_ALL pi)))
@@ -5740,13 +5612,13 @@ end
 
 (* define case operator *)
 val itself_case_thm = let
-  val witness = --`\(b:'b) (i:'a itself). b`--
+  val witness = --`\(b:'b) (i:'a:'k itself). b`--
   val witness_applied1 = BETA_CONV (mk_comb(witness, --`b:'b`--))
-  val witness_applied2 = RIGHT_BETA (AP_THM witness_applied1 (--`(:'a)`--))
+  val witness_applied2 = RIGHT_BETA (AP_THM witness_applied1 (--`(:'a:'k)`--))
 in
   new_specification("itself_case_thm",
                     ["itself_case"],
-                    EXISTS (--`?f:'b -> 'a itself -> 'b. !b. f b (:'a) = b`--,
+                    EXISTS (--`?f:'b -> 'a itself -> 'b. !b. f b (:'a:'k) = b`--,
                             witness)
                            (GEN_ALL witness_applied2))
 end
@@ -5817,22 +5689,6 @@ val _ = unicode_version {u = UChar.not_elementof, tmnm = "NOTIN"}
 val _ = TeX_notation {hol="NOTIN", TeX = ("\\HOLTokenNotIn{}",1)}
 val _ = TeX_notation {hol=UChar.not_elementof,
                       TeX = ("\\HOLTokenNotIn{}",1)}
-
-(*
-val _ = set_trace "types" 1;
-val _ = set_trace "kinds" 2;
-val _ = set_trace "debug_preterm" 1; (* for debugging only; remove later. *)
-val _ = set_trace "debug_pretype" 1; (* for debugging only; remove later. *)
-val _ = set_trace "debug_prekind" 1; (* for debugging only; remove later. *)
-val _ = set_trace "debug_prerank" 1; (* for debugging only; remove later. *)
-
-val _ = set_trace "debug_preterm" 0; (* for debugging only; remove later. *)
-val _ = set_trace "debug_pretype" 0; (* for debugging only; remove later. *)
-val _ = set_trace "debug_prekind" 0; (* for debugging only; remove later. *)
-val _ = set_trace "debug_prerank" 0; (* for debugging only; remove later. *)
-val _ = set_trace "types" 0;
-val _ = set_trace "kinds" 1;
-*)
 
 (* not iff *)
 val _ = overload_on ("<=/=>", (--`$<> : bool -> bool -> bool`--))

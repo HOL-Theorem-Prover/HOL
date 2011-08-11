@@ -54,18 +54,32 @@ val termsig = KernelSig.new_table() : holty KernelSig.symboltable
  *---------------------------------------------------------------------------*)
 
 local
-  open KernelSig Type
+  open KernelSig Type Kind
   val eq_ty = POLY (alpha --> alpha --> bool)
   val hil_ty = POLY ((alpha --> bool) --> alpha)
   val imp_ty = GRND (bool --> bool --> bool)
+
+  (* for HOL-Omega, PACK and UNPACK: *)
+  val rty = mk_var_type("'r", typ 1)
+  val aty = mk_var_type("'a", kappa ==> typ 1)
+  val xty = mk_var_type("'x", kappa)
+  val axty = mk_app_type(aty,xty)
+  val ety = mk_exist_type(xty, axty)
+  (* val pack_ty = POLY (list_mk_univ_type([xty,aty], axty --> ety)) *)
+  val pack_ty = POLY (mk_univ_type(xty, axty --> ety))
+  val unpack_ty = POLY (mk_univ_type(xty, axty --> rty) --> ety --> rty)
 in
   val eq_id = insert(termsig,{Name = "=", Thy = "min"}, eq_ty)
   val hil_id = insert(termsig,{Name = "@", Thy = "min"}, hil_ty)
   val imp_id = insert(termsig,{Name = "==>", Thy = "min"}, imp_ty)
+  val pack_id = insert(termsig,{Name = "PACK", Thy = "min"}, pack_ty)
+  val unpack_id = insert(termsig,{Name = "UNPACK", Thy = "min"}, unpack_ty)
 
   val eqc = Const (eq_id,eq_ty)
   val hil = Const (hil_id,hil_ty)
   val imp = Const (imp_id,imp_ty)
+  val pack = Const (pack_id,pack_ty)
+  val unpack = Const (unpack_id,unpack_ty)
 end
 
 (*---------------------------------------------------------------------------*
@@ -122,7 +136,7 @@ local fun lookup 0 (ty::_)  = ty
         | ty_of _ _ _ = raise ERR "type_of" "term construction"
       fun rk_of_tm (Comb(Rator, Rand)) T E  = Rank.max(rk_of_tm Rator T E, rk_of_tm Rand T E)
         | rk_of_tm (TComb(Tm, Ty)) T E      = Rank.max(rk_of_tm Tm T E, Type.rk_of Ty T)
-        | rk_of_tm (Abs(Fv(_,Ty),Body)) T E = Rank.max(Type.rk_of Ty T, rk_of_tm Body T E)
+        | rk_of_tm (Abs(Fv(_,Ty),Body)) T E = Rank.max(Type.rk_of Ty T, rk_of_tm Body T (Ty::E))
 	| rk_of_tm (t as Clos _) T E        = rk_of_tm (push_clos t) T E
         | rk_of_tm tm T E                   = Type.rk_of (ty_of tm T E) T
 in
@@ -417,6 +431,7 @@ local fun lookup 0 (ty::_)  = ty
         | lift i E (TyApp(opr,arg)) = TyApp(lift i E opr, lift i E arg)
         | lift i E (TyAbs(bv,body)) = TyAbs(bv, lift (i+1) E body)
         | lift i E (TyAll(bv,body)) = TyAll(bv, lift (i+1) E body)
+        | lift i E (TyExi(bv,body)) = TyExi(bv, lift (i+1) E body)
       fun vars E (v as Fv(n,ty)) A    = Lib.op_insert eq (Fv(n, if null E then ty
                                                                 else lift 0 E ty)) A
         | vars E (Comb(Rator,Rand)) A = vars E Rand (vars E Rator A)
@@ -602,7 +617,8 @@ fun create_const errstr (const as (r,GRND pat)) Ty =
       if eq_ty Ty pat then Const const
       else (* can happen if a *rank* instance!!! *)
            (let val (tyS,kdS,rkS) = Type.kind_match_type pat Ty
-                val Ty' = Type.inst_rk_kd_ty rkS kdS tyS pat
+                val reduce = if null tyS then I else Type.deep_beta_eta_ty
+                val Ty' = reduce (Type.inst_rk_kd_ty rkS kdS tyS pat)
             in Const (r, maybe_GRND Ty')
             end handle HOL_ERR _ =>
             raise (ERR "create_const"
@@ -610,7 +626,8 @@ fun create_const errstr (const as (r,GRND pat)) Ty =
                              "\ndoes not match\n",  type_to_string Ty])))
   | create_const errstr (const as (r,POLY pat)) Ty =
       let val (tyS,kdS,rkS) = Type.kind_match_type pat Ty
-          val Ty' = Type.inst_rk_kd_ty rkS kdS tyS pat
+          val reduce = if null tyS then I else Type.deep_beta_eta_ty
+          val Ty' = reduce (Type.inst_rk_kd_ty rkS kdS tyS pat)
       in case (tyS,kdS,rkS)
           of ([],[],0) => Const const
            | (S,_,_) => Const(r, maybe_GRND Ty')
@@ -835,6 +852,7 @@ fun ty_beta_conv (TComb(TAbs(_,Body), Rand)) =
          and subs_ty (v as TyBv j,i)      = if i=j then Rand else v
            | subs_ty (TyApp(opr,arg),i)   = TyApp(subs_ty(opr,i), subs_ty(arg,i))
            | subs_ty (TyAll(bv,Body),i)   = TyAll(bv, subs_ty(Body,i+1))
+           | subs_ty (TyExi(bv,Body),i)   = TyExi(bv, subs_ty(Body,i+1))
            | subs_ty (TyAbs(bv,Body),i)   = TyAbs(bv, subs_ty(Body,i+1))
            | subs_ty (ty,_) = ty (* e.g., free type variables *)
      in
@@ -920,6 +938,7 @@ local fun pop (tm as Fv(s,ty),k)    = Fv(s,pop_ty(ty,k))
            if i=k then raise ERR "ty_eta_conv" "not a type eta-redex" else v
         | pop_ty (TyApp(opr,arg),k) = TyApp(pop_ty(opr,k), pop_ty(arg,k))
         | pop_ty (TyAll(bv,Body),k) = TyAll(bv, pop_ty(Body,k+1))
+        | pop_ty (TyExi(bv,Body),k) = TyExi(bv, pop_ty(Body,k+1))
         | pop_ty (TyAbs(bv,Body),k) = TyAbs(bv, pop_ty(Body,k+1))
         | pop_ty (ty,_) = ty (* e.g., free type variables *)
       fun ty_eta_body (TComb(Rator,TyBv 0)) = pop (Rator,0)
@@ -1340,6 +1359,8 @@ fun list_mk_tybinder opt =
                                                k (TyApp(opr,arg))))
           | bindty (TyAll(bv,Body)) vmap k = bindty Body (increment vmap)
                                                (fn body => k (TyAll(bv,body)))
+          | bindty (TyExi(bv,Body)) vmap k = bindty Body (increment vmap)
+                                               (fn body => k (TyExi(bv,body)))
           | bindty (TyAbs(bv,Body)) vmap k = bindty Body (increment vmap)
                                                (fn body => k (TyAbs(bv,body)))
           | bindty ty _ k = k ty (* constant *)
@@ -1379,6 +1400,7 @@ fun mk_tyabs(Bvar as TyFv Bvarty, Body) =
             | bindty (v as TyBv j) i    = if j>i then TyBv (j+1) else v (* new *)
             | bindty (TyApp(opr,arg)) i = TyApp(bindty opr i, bindty arg i)
             | bindty (TyAll(bv,Body)) i = TyAll(bv, bindty Body (i+1))
+            | bindty (TyExi(bv,Body)) i = TyExi(bv, bindty Body (i+1))
             | bindty (TyAbs(bv,Body)) i = TyAbs(bv, bindty Body (i+1))
             | bindty ty _ = ty (* constant *)
       in
@@ -1600,6 +1622,7 @@ fun strip_tybinder opt =
              | NONE => (insertAVbody n; k capt))
        | CVts (TyApp(Opr,A)) capt k = CVts Opr capt (fn c => CVts A c k)
        | CVts (TyAll(bv,B)) capt k  = CVts B capt k
+       | CVts (TyExi(bv,B)) capt k  = CVts B capt k
        | CVts (TyAbs(bv,B)) capt k  = CVts B capt k
        | CVts ty capt k = k capt
      fun unclash insert [] = ()
@@ -1628,6 +1651,7 @@ fun strip_tybinder opt =
        | unbindt (TyApp(Opr,A))j k   = unbindt Opr j (fn opr =>
                                        unbindt A j (fn a => k(TyApp(opr,a))))
        | unbindt (TyAll(a,B)) j k    = unbindt B (j+1) (fn q => k(TyAll(a,q)))
+       | unbindt (TyExi(a,B)) j k    = unbindt B (j+1) (fn q => k(TyExi(a,q)))
        | unbindt (TyAbs(a,B)) j k    = unbindt B (j+1) (fn q => k(TyAbs(a,q)))
        | unbindt ty j k = k ty
  in
@@ -1659,6 +1683,7 @@ fun dest_tyabs(TAbs(Bvar as (Name,_), Body)) =
           | destty (v as TyFv(s,_)) i   = if Name=s then raise CLASH else v
           | destty (TyApp(opr,arg)) i   = TyApp(destty opr i, destty arg i)
           | destty (TyAll(bv,Body)) i   = TyAll(bv, destty Body (i+1))
+          | destty (TyExi(bv,Body)) i   = TyExi(bv, destty Body (i+1))
           | destty (TyAbs(bv,Body)) i   = TyAbs(bv, destty Body (i+1))
           | destty opr _ = opr (* constant *)
     in (TyFv Bvar, dest Body 0)
@@ -1729,6 +1754,7 @@ local
   fun freety (TyBv i) m         = i<m
     | freety (TyApp(Opr,Arg)) m = freety Opr m andalso freety Arg m
     | freety (TyAll(_,Body)) m  = freety Body (m+1)
+    | freety (TyExi(_,Body)) m  = freety Body (m+1)
     | freety (TyAbs(_,Body)) m  = freety Body (m+1)
     | freety _ _ = true
   fun free (Bv i) n m             = i<n
@@ -2026,6 +2052,7 @@ fun trav tyf tmf =
         | trvty (TyApp(Opr,Arg)) = (trvty Arg; trvty Opr)
         | trvty (TyAbs(Bvar,Body)) = (trvty (TyFv Bvar); trvty Body)
         | trvty (TyAll(Bvar,Body)) = (trvty (TyFv Bvar); trvty Body)
+        | trvty (TyExi(Bvar,Body)) = (trvty (TyFv Bvar); trvty Body)
         | trvty _ = ()
       fun try_tmf a =
           if unbound_ty(type_of a) then trvty (type_of a) else tmf a
@@ -2071,6 +2098,10 @@ fun pp_raw_term tyindex index pps tm =
             ppty Body; add_string ")" )
        | ppty (TyAll(Bvar,Body)) =
           ( add_string "(!";
+            ppty (TyFv Bvar); add_string dot; add_break(1,0);
+            ppty Body; add_string ")" )
+       | ppty (TyExi(Bvar,Body)) =
+          ( add_string "(?";
             ppty (TyFv Bvar); add_string dot; add_break(1,0);
             ppty Body; add_string ")" )
        | ppty (TyBv i) = add_string (dollar^Lib.int_to_string i)
@@ -2328,17 +2359,20 @@ fun separate_insts kdavoids tyavoids rkS kdS tyS insts = let
                                   sof))
         patterns []
   val (tyins,kdins,rkin) = get_type_kind_rank_insts kdavoids tyavoids realinsts (tyS,kdS,rkS)
+  val kdins' as (kdS',_) = snd (Kind.norm_subst (rkin,kdins))
+  val inst_rk_kd = Type.inst_rank_kind (fst rkin) kdS'
   val tyinsts = mapfilter (fn {redex = x, residue = t} => let
-                   val x' = Type.inst_rank_kind (fst rkin) (fst kdins) x
+                   val x' = inst_rk_kd x
                  in
-                   if t = x' then raise ERR "separate_insts" ""
+                   if t = x' then raise ERR "separate_insts" "" (* orelse ge_ty x' t ? *)
                              else {redex = x', residue = t}
                  end) (fst tyins)
   val tyins' = (tyinsts,snd tyins)
+  val inst_rk_kd_ty = Type.inst_rk_kd_ty (fst rkin) kdS' tyinsts
   val tminsts = mapfilter (fn {redex = x, residue = t} => let
                    val x' = let val (xn,xty) = dest_var x
                             in
-                              mk_var(xn, Type.inst_rk_kd_ty (fst rkin) (fst kdins) tyinsts xty)
+                              mk_var(xn, inst_rk_kd_ty xty)
                             end
                  in
                    if aconv t x' then raise ERR "separate_insts" ""
@@ -2349,7 +2383,7 @@ fun separate_insts kdavoids tyavoids rkS kdS tyS insts = let
                    else raise ERR "separate_insts" "bad term subst: type mismatch" (* This covers an error in normal HOL *)
               ) tminsts
 in
-  (betacounts, tminsts, tyins', kdins, rkin)
+  (betacounts, tminsts, tyins', kdins', rkin)
 end
 
 fun tyenv_in_dom x (env, idlist) = op_mem eq_ty x idlist orelse in_dom_ty x env

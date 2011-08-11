@@ -585,6 +585,14 @@ fun pp_term (G : grammar) TyG backend = let
   end handle HOL_ERR _ => false
   val is_unpack = is_unpack0 1
 
+  fun dest_pack tm = let
+      val (tm1,body) = dest_comb tm
+      val (pack_tm,rty) = dest_tycomb tm1
+    in if grammar_name G pack_tm = SOME "PACK" then (rty,body)
+       else raise PP_ERR "" ""
+    end handle HOL_ERR _ =>  raise PP_ERR "dest_pack" "not a pack"
+  fun is_pack tm = can dest_pack tm
+
 
 
   fun dest_vstruct bnder res t =
@@ -1740,6 +1748,35 @@ fun pp_term (G : grammar) TyG backend = let
       bvars_seen := old_bvars_seen
     end
 
+    fun pr_pack0 tm = let
+      fun pr_packpr (rty,body) = let
+      in
+        begin_block INCONSISTENT 2;
+        add_string "(";
+        add_string ":"; pr_type true rty;
+        add_string ",";
+        add_break(0,0);
+        pr_term body Top Top Top (decdepth depth);
+        add_string ")";
+        end_block()
+      end
+      val (rty,body) = dest_pack tm
+    in
+      add_string "pack";
+      add_break(1,2);
+      pr_packpr (rty,body)
+    end
+
+    fun pr_pack lgrav rgrav tm = let
+      val addparens = lgrav <> RealTop orelse rgrav <> RealTop
+    in
+      pbegin addparens;
+      begin_block CONSISTENT 0;
+      pr_pack0 tm;
+      end_block();
+      pend addparens
+    end
+
     fun pr_unpack0 tm = let
       fun find_base acc tm =
         if is_unpack tm then let
@@ -2074,6 +2111,10 @@ fun pp_term (G : grammar) TyG backend = let
                    end handle CaseConversionFailed => ())
                 | _ => ()
               else ()
+
+          (* pack expressions *)
+          val () = if is_pack tm then (pr_pack lgrav rgrav tm; raise SimpleExit)
+                   else ()
 
           (* unpack expressions *)
           val () = if is_unpack tm then (pr_unpack lgrav rgrav tm; raise SimpleExit)

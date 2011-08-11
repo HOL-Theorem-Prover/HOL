@@ -13,6 +13,7 @@ datatype type_structure =
          TYCON  of {Thy : string, Tyop : string, Kind : Kind.kind}
        | TYAPP  of type_structure * type_structure
        | TYUNIV of type_structure * type_structure
+       | TYEXIS of type_structure * type_structure
        | TYABST of type_structure * type_structure
        | TYVAR  of string * Kind.kind
        | PARAM  of int    * Kind.kind
@@ -24,6 +25,7 @@ fun typstruct_uptodate ts =
     | TYCON {Thy, Tyop, Kind} => isSome (Type.op_kind {Thy = Thy, Tyop = Tyop})
     | TYAPP (opr,arg) => typstruct_uptodate opr andalso typstruct_uptodate arg
     | TYUNIV (bvar,body) => typstruct_uptodate body
+    | TYEXIS (bvar,body) => typstruct_uptodate body
     | TYABST (bvar,body) => typstruct_uptodate body
 (*
     | TYOP {Thy, Tyop, Args} => isSome (Type.op_arity {Thy = Thy, Tyop = Tyop})
@@ -57,6 +59,8 @@ fun inst_rank_kind rkS kdS (TYVAR (str,kd)) =
        TYABST (inst_rank_kind rkS kdS bvar, inst_rank_kind rkS kdS body)
   | inst_rank_kind rkS kdS (TYUNIV (bvar,body)) =
        TYUNIV (inst_rank_kind rkS kdS bvar, inst_rank_kind rkS kdS body)
+  | inst_rank_kind rkS kdS (TYEXIS (bvar,body)) =
+       TYEXIS (inst_rank_kind rkS kdS bvar, inst_rank_kind rkS kdS body)
   | inst_rank_kind rkS kdS (PARAM (n,kd)) =
        PARAM (n, Kind.inst_rank_kind rkS kdS kd)
 
@@ -109,6 +113,7 @@ fun structure_to_type st =
       TYCON {Thy,Tyop,Kind} => Type.mk_thy_con_type {Thy=Thy, Tyop=Tyop, Kind=Kind}
     | TYAPP (opr,arg) => Type.mk_app_type(structure_to_type opr, structure_to_type arg)
     | TYUNIV (bvar,body) => Type.mk_univ_type(structure_to_type bvar, structure_to_type body)
+    | TYEXIS (bvar,body) => Type.mk_exist_type(structure_to_type bvar, structure_to_type body)
     | TYABST (bvar,body) => Type.mk_abs_type(structure_to_type bvar, structure_to_type body)
     | TYVAR (str,kd) => Type.mk_var_type(str,kd)
 (*
@@ -123,6 +128,7 @@ fun params0 acc (PARAM (i,kd)) = HOLset.add(acc, i)
   | params0 acc (TYVAR (str,kd)) = acc
   | params0 acc (TYAPP (opr,arg)) = params0 (params0 acc opr) arg
   | params0 acc (TYUNIV (bvar,body)) = params0 (params0 acc bvar) body
+  | params0 acc (TYEXIS (bvar,body)) = params0 (params0 acc bvar) body
   | params0 acc (TYABST (bvar,body)) = params0 (params0 acc bvar) body
 (*
   | params0 acc (TYOP{Args,...}) = foldl (fn (t,set) => params0 set t) acc Args
@@ -277,6 +283,7 @@ fun check_structure st = let
     | param_numbers (TYVAR _, pset) = pset
     | param_numbers (TYAPP(opr,arg), pset) = param_numbers (arg, param_numbers (opr,pset))
     | param_numbers (TYUNIV(bvar,body), pset) = param_numbers (body, param_numbers (bvar,pset))
+    | param_numbers (TYEXIS(bvar,body), pset) = param_numbers (body, param_numbers (bvar,pset))
     | param_numbers (TYABST(bvar,body), pset) = param_numbers (body, param_numbers (bvar,pset))
   val pset = param_numbers (st, HOLset.empty Int.compare)
   val plist = HOLset.listItems pset
@@ -434,6 +441,7 @@ fun get_params0 acc (PARAM (i,kd)) = HOLset.add(acc, (i,kd))
   | get_params0 acc (TYVAR (str,kd)) = acc
   | get_params0 acc (TYAPP (opr,arg)) = get_params0 (get_params0 acc opr) arg
   | get_params0 acc (TYUNIV (bvar,body)) = get_params0 (get_params0 acc bvar) body
+  | get_params0 acc (TYEXIS (bvar,body)) = get_params0 (get_params0 acc bvar) body
   | get_params0 acc (TYABST (bvar,body)) = get_params0 (get_params0 acc bvar) body
 val get_params = get_params0 (HOLset.empty (Lib.pair_compare (Int.compare,Kind.kind_compare)))
 
@@ -580,6 +588,10 @@ fun tysize ty =
       end
     else if Type.is_univ_type ty then
       let val (bvar,body) = Type.dest_univ_type ty
+      in 1 + tysize body
+      end
+    else if Type.is_exist_type ty then
+      let val (bvar,body) = Type.dest_exist_type ty
       in 1 + tysize body
       end
     else raise GrammarError "tysize: impossible type"

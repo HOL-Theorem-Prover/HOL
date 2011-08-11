@@ -12,6 +12,7 @@ sig
                        | TYAp of int * int
                        | TYAbs of int * int
                        | TYUni of int * int
+                       | TYExi of int * int
   datatype shared_term = TMV of string * int
                        | TMC of int * int
                        | TMAp of int * int

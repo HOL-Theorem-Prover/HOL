@@ -28,6 +28,7 @@ TApp   ::= Leaf | Tuple Leaf
       TYCON  of {Thy : string, Tyop : string, Kind : Kind.kind}
     | TYAPP  of type_structure * type_structure
     | TYUNIV of type_structure * type_structure
+    | TYEXIS of type_structure * type_structure
     | TYABST of type_structure * type_structure
     | TYVAR  of string * Kind.kind
     | PARAM  of int    * Kind.kind

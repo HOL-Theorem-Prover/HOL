@@ -129,10 +129,17 @@ fun tysubst theta ty =
             in if null theta' then ty
                else mk_abs_type(bv, tysubst theta' body)
             end
-       else let val (bv,body) = dest_univ_type ty
+       else if is_univ_type ty then
+            let val (bv,body) = dest_univ_type ty
                 val theta' = remove_type_var_subst bv theta
             in if null theta' then ty
                else mk_univ_type(bv, tysubst theta' body)
+            end
+       else (* if is_exist_type ty then *)
+            let val (bv,body) = dest_exist_type ty
+                val theta' = remove_type_var_subst bv theta
+            in if null theta' then ty
+               else mk_exist_type(bv, tysubst theta' body)
             end;
 
 fun name_vartype_opr ty = #1 (dest_var_type ty)
@@ -508,10 +515,10 @@ end;
 (* (These are kept just long enough to derive the key property.)             *)
 (* ------------------------------------------------------------------------- *)
 
-fun create_recursive_functions tybijpairs consindex conthms rth = let
+fun create_recursive_functions tybijpairs consindex conthms rank rth = let
   val domtys = map (hd o snd o strip_app_type o type_of o snd o snd) consindex
   val recty = (hd o snd o strip_app_type o type_of o fst o snd o hd) consindex
-  val ranty = mk_var_type("'Z", typ (rank_of_type recty))
+  val ranty = mk_var_type("'Z", typ rank (*(rank_of_type recty)*) )
   val fnn = mk_var("fn", recty --> ranty)
   and fns = make_args "fn" [] (map (C (curry op -->) ranty) domtys)
   val args = make_args "a" [] domtys
@@ -594,10 +601,10 @@ local
       end
     end
 in
-  fun create_recursion_iso_constructor consindex = let
+  fun create_recursion_iso_constructor consindex rank = let
     val recty = hd(snd(strip_app_type(type_of(fst(hd consindex)))))
     val domty = hd(snd(strip_app_type recty))
-    val zty = mk_var_type("'Z", typ (rank_of_type domty))
+    val zty = mk_var_type("'Z", typ rank (*(rank_of_type domty)*) )
     val s = mk_var("s",numty --> zty)
     val i = mk_var("i",domty)
     and r = mk_var("r", numty --> recty)
@@ -645,8 +652,8 @@ local
   val CCONV1 = funpow 3 RATOR_CONV fcons_reduce
 *)
 in
-  fun  derive_recursion_theorem tybijpairs consindex conthms rath = let
-    val isocons = map (create_recursion_iso_constructor consindex) conthms
+  fun  derive_recursion_theorem tybijpairs consindex conthms rank rath = let
+    val isocons = map (create_recursion_iso_constructor consindex rank) conthms
     val ty = type_of(hd isocons)
     val fcons = mk_const("ind_type", "FCONS",[Type.alpha |-> ty])
     and fnil = mk_const("ind_type", "FNIL",[Type.alpha |-> ty])
@@ -715,10 +722,13 @@ fun define_type_raw def = let
      RIGHT_BETAS args th end) condefs
   val iith = instantiate_induction_theorem consindex ith
   val fth = derive_induction_theorem consindex tybijpairs conthms iith rth
-  val rath = create_recursive_functions tybijpairs consindex conthms rth
-  val kth = derive_recursion_theorem tybijpairs consindex conthms rath
+  fun kfun rank = let
+    val rath = create_recursive_functions tybijpairs consindex conthms rank rth
+    val kth = derive_recursion_theorem tybijpairs consindex conthms rank rath
+  in kth
+  end
 in
-  (fth,kth)
+  (fth,kfun)
 end;
 
 (* Test the above with:
@@ -913,7 +923,7 @@ end;
 fun define_type_mutual def = let
   val (ith,rth) = define_type_raw def
 in
-  (ith,generalize_recursion_theorem rth)
+  (ith,generalize_recursion_theorem o rth)
 end
 
 (* Test the above with:
@@ -962,6 +972,12 @@ fun occurs_in ty bigty =
     end
   else if is_univ_type bigty then let
       val (bvar,body) = dest_univ_type bigty
+      val (_,kd) = dest_var_type bvar
+      val gvar = Type.gen_var_type kd
+    in occurs_in ty (type_subst [bvar |-> gvar] body)
+    end
+  else if is_exist_type bigty then let
+      val (bvar,body) = dest_exist_type bigty
       val (_,kd) = dest_var_type bvar
       val gvar = Type.gen_var_type kd
     in occurs_in ty (type_subst [bvar |-> gvar] body)
@@ -1333,6 +1349,11 @@ local
       in
         app_letter body
       end
+    else if is_exist_type ty then let
+        val (bvar,body) = dest_exist_type ty
+      in
+        app_letter body
+      end
     else raise ERR "app_letter" "impossible type"
   fun new_name ctxt ty = let
     fun nvary ctxt nm n = let
@@ -1441,6 +1462,12 @@ local
                    in
                      mk_univ_type(bvar, modify_type theta' body)
                    end
+                 else if is_exist_type ty then let
+                     val (bvar,body) = dest_exist_type ty
+                     val theta' = (bvar |-> bvar) :: theta
+                   in
+                     mk_exist_type(bvar, modify_type theta' body)
+                   end
                  else raise ERR "modify_type" "impossible type")
 
   fun modify_item alist (s,l) = (s,map (modify_type alist) l)
@@ -1498,11 +1525,31 @@ local
     val cls' = zip mtys (map (map (recover_clause id)) pcons)
     val tyal = map (fn ty => ty |-> mk_var_type("'"^fst(dest_type ty)^id, kind_of ty)) mtys
     val cls'' = map (modify_type tyal ## map (modify_item tyal)) cls'
+    val INSTFN = INST_RK_KD_TY (rkin, kdins, tyins)
   in
-    (k,tyal,cls'',Thm.INST_TYPE tyins ith, Thm.INST_TYPE tyins rth)
+    (k,tyal,cls'', INSTFN ith, INSTFN rth)
   end
 
+  fun orig_type_name ty = String.extract(#1(dest_var_type ty),1,NONE)
+
+  fun check_base_kind dty cn ty =
+    if is_type_kind (kind_of ty) then ()
+    else raise ERR "define_type_nested"
+               ("In the definition of type " ^ orig_type_name dty ^
+                ",\nthe constructor " ^ cn ^
+                " has an argument of type " ^ type_to_string ty ^
+                ";\nthe type " ^ type_to_string ty ^
+                " should have kind ty, but instead has kind " ^
+                kind_to_string (kind_of ty) ^ ".\n")
+
+  fun check_spec_kinds dty (cn,tys) =
+    map (check_base_kind dty cn) tys
+
+  fun check_def_kinds def =
+    map (fn (dty,specs) => map (check_spec_kinds dty) specs) def
+
   fun define_type_nested' def = let
+    val _ = check_def_kinds def
     val n = length(itlist (curry op@) (map (map fst o snd) def) [])
     val newtys = map fst def
     val utys = Lib.U (itlist (union o map snd o snd) def [])
@@ -1510,16 +1557,17 @@ local
     val rectys = filter (is_nested newtys) utys
   in
     if rectys = [] then let
-        val (th1,th2) = define_type_basecase def
+        val (th1,th2fn) = define_type_basecase def
+        val th2 = th2fn 0
       in
-        (n,th1,th2)
+        (n,th1,th2,th2fn)
       end
     else let
         val nty = hd (Listsort.sort (flip_cmp (measure_cmp type_size)) rectys)
         val (k,tyal,ncls,ith,rth) =
             create_auxiliary_clauses nty ((*map dest_vartype*) utyvars)
         val cls = map (modify_clause tyal) def @ ncls
-        val (_,ith1,rth1) = define_type_nested' cls
+        val (_,ith1,rth1,rth1_fn) = define_type_nested' cls
         val xnewtys = map (hd o snd o strip_app_type o type_of)
                           (fst(strip_exists(snd(strip_forall(concl rth1)))))
         val xtyal = let
@@ -1577,8 +1625,37 @@ local
         end
         val dths = map mk_newcon ncjs
         val (ith6,rth6) = CONJ_PAIR(PURE_REWRITE_RULE dths irth6)
+        fun rth6_fn rank = let
+          val rth1 = rth1_fn rank
+          val (isoth,rclauses) =
+              prove_inductive_types_isomorphic n k (ith0,rth0) (ith1,rth1)
+          val rth3 = rth1
+          val vtylist = itlist (insert o type_of) (variables(concl rth3)) []
+          val isoths = CONJUNCTS isoth
+          val ctylist =
+            filter
+                (fn ty => List.exists (fn t => occurs_in t ty) isotys)
+                vtylist
+          val atylist = itlist (union o striplist dest_fun_ty) ctylist []
+          val isoths' = map (lift_type_bijections isoths)
+                            (filter (fn ty => List.exists
+                                                  (fn t => occurs_in t ty)
+                                                  isotys)
+                                    atylist)
+          val cisoths =
+              map (BETA_RULE o lift_type_bijections isoths') ctylist
+          val uisoths = map ISO_USAGE_RULE cisoths
+          val visoths = map (ASSUME o concl) uisoths
+          val rth4 =
+              itlist PROVE_HYP uisoths (REWRITE_FUN_EQ_RULE visoths rth3)
+          val rth5 = REWRITE_RULE
+                          (rclauses :: map SIMPLE_ISO_EXPAND_RULE isoths') rth4
+          val rth6 = repeat SCRUB_ASSUMPTION rth5
+          val rth7 = PURE_REWRITE_RULE dths rth6
+        in rth7
+        end
       in
-        (n,ith6,rth6)
+        (n,ith6,rth6,rth6_fn)
       end
   end
 
@@ -1609,7 +1686,7 @@ val define_type_nested = fn def =>
                          |> trace ("Vartype Format Complaint", 0)
                          |> with_flag (Globals.checking_type_names, false)
                          |> with_flag (Globals.checking_const_names, false)
-     val (p,ith0,rth0) = defnested def
+     val (p,ith0,rth0,rth0_fn) = defnested def
      val (avs,etm) = strip_forall(concl rth0)
      val allcls = conjuncts(snd(strip_exists etm))
      val relcls = fst(chop_list (length truecons) allcls)
@@ -1621,16 +1698,34 @@ val define_type_nested = fn def =>
      val ith1 = SUBS cdefs ith0
      and rth1 = GENL tavs (SUBS cdefs (SPECL tavs rth0))
      val retval = (p,ith1,rth1)
+     fun rth1_fn rank = let
+       val rth0 = rth0_fn rank
+       val (avs,etm) = strip_forall(concl rth0)
+       val allcls = conjuncts(snd(strip_exists etm))
+       val relcls = fst(chop_list (length truecons) allcls)
+       val gencons = map(repeat rator o rand o lhand o snd o strip_forall) relcls
+       val tavs = make_args "f" [] (map type_of avs)
+       val rth1 = GENL tavs (SUBS cdefs (SPECL tavs rth0))
+     in canonicalise_tyvars def rth1
+     end
+     handle e => raise (wrap_exn "ind_types" "define_type_nested" e)
   in
     {induction = munge_ind_thm ith1,
-     recursion = canonicalise_tyvars def rth1} before
+     recursion = canonicalise_tyvars def rth1,
+     recursion_rk = rth1_fn} before
     remove_intermediate_junk()
   end
 end;
 
 fun define_type d =
-  define_type_nested d
+  let val {induction,recursion,recursion_rk} = define_type_nested d
+  in {induction=induction,recursion=recursion}
+  end
   handle e => raise (wrap_exn "ind_types" "define_type" e);
+
+fun define_type_rk d =
+  define_type_nested d
+  handle e => raise (wrap_exn "ind_types" "define_type_rk" e);
 
 (* test this with:
 

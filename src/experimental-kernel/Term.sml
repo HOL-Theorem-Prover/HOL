@@ -333,9 +333,10 @@ fun mk_const(s, ty) =
   let val const as (id,basety) = first_decl "mk_const" s
   in
     let val (tyS,kdS,rkS) = Type.kind_match_type basety ty
+        val reduce = if null tyS then I else Type.deep_beta_eta_ty
     in case (tyS,kdS,rkS)
         of ([],[],0) => Const const
-         | (S,_,_) => Const(id, Type.inst_rk_kd_ty rkS kdS tyS basety)
+         | (S,_,_) => Const(id, reduce (Type.inst_rk_kd_ty rkS kdS tyS basety))
     end handle HOL_ERR _ => raise (ERR "mk_const"
              (String.concat["Not a type instance: ", KernelSig.id_toString id,
                               "\nof primitive type\n", type_to_string basety,
@@ -352,9 +353,12 @@ fun mk_thy_const {Thy,Name,Ty} = let
 in
   case KernelSig.peek(const_table, k) of
     NONE => raise ERR "mk_thy_const" ("No such constant: "^id2string k)
-  | SOME (id,basety) => if can (kind_match_type basety) Ty then
-                          Const(id, Ty)
-                        else raise ERR "mk_thy_const"
+  | SOME (id,basety) => let val (tyS,kdS,rkS) = Type.kind_match_type basety Ty
+                            val reduce = if null tyS then I else Type.deep_beta_eta_ty
+                            val Ty' = reduce (Type.inst_rk_kd_ty rkS kdS tyS basety)
+                        in Const(id, Ty')
+                        end handle HOL_ERR_ =>
+                            raise ERR "mk_thy_const"
                                        ("Not a type instance: "^id2string k)
 end
 
@@ -2101,6 +2105,31 @@ in
   prim_new_const k ((alpha --> bool) --> alpha)
 end
 
+local
+  (* for HOL-Omega, PACK and UNPACK: *)
+  val rty = mk_var_type("'r", typ 1)
+  val aty = mk_var_type("'a", kappa ==> typ 1)
+  val xty = mk_var_type("'x", kappa)
+  val axty = mk_app_type(aty,xty)
+  val ety = mk_exist_type(xty, axty)
+  val pack_ty = mk_univ_type(xty, axty --> ety)
+  val unpack_ty = mk_univ_type(xty, axty --> rty) --> ety --> rty
+in
+
+  val pack = let
+    val k = {Name = "PACK", Thy = "min"}
+  in
+    prim_new_const k pack_ty
+  end
+
+  val unpack = let
+    val k = {Name = "UNPACK", Thy = "min"}
+  in
+    prim_new_const k unpack_ty
+  end
+
+end (* local *)
+
 fun dest_eq_ty t = let
   val (fx, y) = dest_comb t
   val (f, x) = dest_comb fx
@@ -2351,17 +2380,20 @@ fun separate_insts kdavoids tyavoids rkS kdS tyS insts = let
                                   sof))
         patterns []
   val (tyins,kdins,rkin) = get_type_kind_rank_insts kdavoids tyavoids realinsts (tyS,kdS,rkS)
+  val kdins' as (kdS',_) = snd (Kind.norm_subst (rkin,kdins))
+  val inst_rk_kd = Type.inst_rank_kind (fst rkin) kdS'
   val tyinsts = mapfilter (fn {redex = x, residue = t} => let
-                   val x' = Type.inst_rank_kind (fst rkin) (fst kdins) x
+                   val x' = inst_rk_kd x
                  in
                    if t = x' then raise ERR "separate_insts" ""
                              else {redex = x', residue = t}
                  end) (fst tyins)
   val tyins' = (tyinsts,snd tyins)
+  val inst_rk_kd_ty = Type.inst_rk_kd_ty (fst rkin) kdS' tyinsts
   val tminsts = mapfilter (fn {redex = x, residue = t} => let
                    val x' = let val (xn,xty) = dest_var x
                             in
-                              mk_var(xn, Type.inst_rk_kd_ty (fst rkin) (fst kdins) tyinsts xty)
+                              mk_var(xn, inst_rk_kd_ty xty)
                             end
                  in
                    if aconv t x' then raise ERR "separate_insts" ""
@@ -2372,7 +2404,7 @@ fun separate_insts kdavoids tyavoids rkS kdS tyS insts = let
                    else raise ERR "separate_insts" "bad term subst: type mismatch" (* This covers an error in normal HOL *)
               ) tminsts
 in
-  (betacounts, tminsts, tyins', kdins, rkin)
+  (betacounts, tminsts, tyins', kdins', rkin)
 end
 
 fun tyenv_in_dom x (env, idlist) = op_mem eq_ty x idlist orelse in_dom_ty x env

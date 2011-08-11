@@ -1471,6 +1471,8 @@ in
                         pp_elements = [HardSpace 1, RE (TOK "="),
                                        BreakSpace(1,0)],
                         paren_style = OnlyIfNecessary}
+         |> add_const ("PACK",   prim_mk_const{Name = "PACK",   Thy = "min"})
+         |> add_const ("UNPACK", prim_mk_const{Name = "UNPACK", Thy = "min"})
 
 end
 (* ----------------------------------------------------------------------

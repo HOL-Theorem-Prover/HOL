@@ -125,6 +125,7 @@ fun prove_recordtype_thms (tyinfo, fields) = let
 
   val app2 = C (curry op^)
   val typthm = TypeBasePure.axiom_of tyinfo
+  val typthm_rk = TypeBasePure.axiom_rk_of tyinfo
   val (thyname,typename) = TypeBasePure.ty_name_of tyinfo
   val constructor =
     case TypeBasePure.constructors_of tyinfo of
@@ -178,8 +179,8 @@ fun prove_recordtype_thms (tyinfo, fields) = let
     (access_fn_names, typeletters, accfn_types)
   val access_defns =
     ListPair.map
-    (fn (name, tm) => Prim_rec.new_recursive_definition
-     {def = tm, name = name, rec_axiom = typthm})
+    (fn (name, tm) => Prim_rec.new_recursive_definition_rk
+     {def = tm, name = name, rec_axiom = typthm, rec_axiom_rk = typthm_rk})
     (access_fn_names, access_defn_terms)
   val accessor_thm =
     save_thm(typename^"_accessors", LIST_CONJ access_defns)
@@ -207,7 +208,8 @@ fun prove_recordtype_thms (tyinfo, fields) = let
                                             (fupd_terms, typeletters)
   val fupd_def_terms = List.rev fupd_def_terms0
   fun mk_defn_th (n, t) =
-      new_recursive_definition {def = t, name = n, rec_axiom = typthm}
+      new_recursive_definition_rk {def = t, name = n, rec_axiom = typthm,
+                                   rec_axiom_rk = typthm_rk}
   val fupdfn_thms = ListPair.map mk_defn_th (fupd_names, fupd_def_terms)
   val fupdfn_thm =
     save_thm(typename^"_fn_updates", LIST_CONJ fupdfn_thms)

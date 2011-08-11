@@ -107,7 +107,12 @@ fun structure_to_string st = let
                        recurse false body ^
                        (if paren then ")" else "")
       | TYUNIV (bvar,body) =>
-                       (if paren then "(" else "") ^ "\\" ^
+                       (if paren then "(" else "") ^ "!" ^
+                       recurse true bvar ^ ". " ^
+                       recurse false body ^
+                       (if paren then ")" else "")
+      | TYEXIS (bvar,body) =>
+                       (if paren then "(" else "") ^ "?" ^
                        recurse true bvar ^ ". " ^
                        recurse false body ^
                        (if paren then ")" else "")
@@ -252,7 +257,7 @@ fun pp_type0 (G:grammar) backend = let
             if k <> typ rho orelse show_kinds() = 2 then let
                 val p = rank_of k <> rho andalso not (Kind.is_arity k)
               in
-                add_string ": ";
+                add_string " :";
                 pbegin p;
                 pp_kind pps k;
                 pend p
@@ -268,7 +273,7 @@ fun pp_type0 (G:grammar) backend = let
             val s = uniconvert s
             val bound = binderp orelse Lib.mem tyv (!btyvars_seen)
             val kd_annot = (* if k = Kind.typ then "" else *)
-                           ": " ^ kind_to_string k
+                           " :" ^ kind_to_string k
             val annot = (if bound then TyBV else TyFV)
                         (k, fn () => s ^ kd_annot)
         in if new then print_sk grav annot (s,k)
@@ -281,7 +286,7 @@ fun pp_type0 (G:grammar) backend = let
         let val {Thy, Tyop, Kind} = dest_thy_con_type tyc
             val fullname = Thy ^ "$" ^ Tyop
             val kd_annot = if Kind = Kind.typ Rank.rho then ""
-                           else ": " ^ kind_to_string Kind
+                           else " :" ^ kind_to_string Kind
             val annot_str = fullname ^ kd_annot
             val annot = TyOp (fn () => annot_str)
         in print_sk grav annot (fullname,Kind)
@@ -479,9 +484,7 @@ fun pp_type0 (G:grammar) backend = let
               btyvars_seen := prev_btyvars_seen
             end
           | TyV_All _ => let
-              val existential = HolKernel.is_exist_type ty
-              val (vars, body) = (if existential then HolKernel.strip_exist_type
-                                                 else strip_univ_type ) ty
+              val (vars, body) = strip_univ_type ty
               val prev_btyvars_seen = !btyvars_seen
               val parens = case grav of
                              Top => false
@@ -491,7 +494,33 @@ fun pp_type0 (G:grammar) backend = let
             in
               pbegin parens;
               begin_block CONSISTENT 2;
-              add_string (hd (if existential then exists else forall));
+              add_string (hd forall);
+              begin_block INCONSISTENT 2;
+              pr_list (fn arg => pr_ty true pps arg grav (depth - 1))
+                      (fn () => ())
+                      (fn () => add_break (1, 0))
+                      vars;
+              end_block ();
+              add_string ".";
+              btyvars_seen := vars @ prev_btyvars_seen;
+              add_break (1,0);
+              pr_ty false pps body Top (depth - 1);
+              end_block ();
+              pend parens;
+              btyvars_seen := prev_btyvars_seen
+            end
+          | TyV_Exi _ => let
+              val (vars, body) = strip_exist_type ty
+              val prev_btyvars_seen = !btyvars_seen
+              val parens = case grav of
+                             Top => false
+                           | _ => true
+                       (*    Lfx _ => true
+                           | _ => false *)
+            in
+              pbegin parens;
+              begin_block CONSISTENT 2;
+              add_string (hd exists);
               begin_block INCONSISTENT 2;
               pr_list (fn arg => pr_ty true pps arg grav (depth - 1))
                       (fn () => ())

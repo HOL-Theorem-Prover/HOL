@@ -262,6 +262,13 @@ val pair_Axiom = Q.store_thm("pair_Axiom",
  `!f:'a->'b->'c. ?fn. !x y. fn (x,y) = f x y`,
  GEN_TAC THEN Q.EXISTS_TAC`UNCURRY f` THEN REWRITE_TAC[UNCURRY_DEF]);
 
+fun pair_Axiom_rk rk =
+  let val c = ty_antiq(mk_var_type("'c", Kind.typ rk))
+  in TAC_PROOF(([],Term
+     `!f:'a->'b->^c. ?fn. !x y. fn (x,y) = f x y`),
+     GEN_TAC THEN Q.EXISTS_TAC`UNCURRY f` THEN REWRITE_TAC[UNCURRY_DEF])
+  end;
+
 (* -------------------------------------------------------------------------*)
 (*   UNCURRY_CONG =                                                         *)
 (*           |- !f' f M' M.                                                 *)
@@ -518,9 +525,17 @@ val _ = adjoin_to_theory
        fun NL() = PP.add_newline ppstrm
    in
       S "val pair_rws = [PAIR, FST, SND];";                  NL();
+      S "fun pair_Axiom_rk rk ="; NL();
+      S "  let val c = Parse.ty_antiq(mk_var_type(\"'c\", Kind.typ rk))"; NL();
+      S "      open Tactic Tactical Rewrite"; NL();
+      S "  in TAC_PROOF(([],Parse.Term"; NL();
+      S "     `!f:'a->'b->^c. ?fn. !x y. fn (x,y) = f x y`),"; NL();
+      S "     GEN_TAC THEN Q.EXISTS_TAC`UNCURRY f` THEN REWRITE_TAC[UNCURRY_DEF])"; NL();
+      S "  end;"; NL();
       S "val _ = TypeBase.write";                            NL();
-      S "  [TypeBasePure.mk_datatype_info";                  NL();
+      S "  [TypeBasePure.mk_datatype_info_rk";               NL();
       S "     {ax=TypeBasePure.ORIG pair_Axiom,";            NL();
+      S "      ax_rk= fn rk => TypeBasePure.ORIG (pair_Axiom_rk rk),"; NL();
       S "      case_def=pair_case_thm,";                     NL();
       S "      case_cong=pair_case_cong,";                   NL();
       S "      induction=TypeBasePure.ORIG pair_induction,"; NL();

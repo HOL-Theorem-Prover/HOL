@@ -105,10 +105,10 @@ fun pp_kind mvarkind pps kd =
 (* Print a type                                                              *)
 (*---------------------------------------------------------------------------*)
 
-fun pp_type mvarkind mvartype mvartypeopr mtype mcontype mapptype mabstype munivtype pps ty =
+fun pp_type mvarkind mvartype mvartypeopr mtype mcontype mapptype mabstype munivtype mexistype pps ty =
  let open Portable Type
      val pp_kind = pp_kind mvarkind pps
-     val pp_type = pp_type mvarkind mvartype mvartypeopr mtype mcontype mapptype mabstype munivtype pps
+     val pp_type = pp_type mvarkind mvartype mvartypeopr mtype mcontype mapptype mabstype munivtype mexistype pps
      val {add_string,add_break,begin_block,end_block,
           add_newline,flush_ppstream,...} = with_ppstream pps
      fun pp_type_par ty = if mem ty [alpha,beta,gamma,delta] then pp_type ty
@@ -202,6 +202,17 @@ fun pp_type mvarkind mvartype mvartypeopr mtype mcontype mapptype mabstype muniv
        let val (Bvar,Body) = dest_univ_type ty
        in
            add_string munivtype;
+           begin_block INCONSISTENT 0;
+           add_break (1,0);
+           pp_type_par Bvar;
+           add_break (1,0);
+           pp_type_par Body;
+           end_block ()
+       end
+  else if is_exist_type ty then
+       let val (Bvar,Body) = dest_exist_type ty
+       in
+           add_string mexistype;
            begin_block INCONSISTENT 0;
            add_break (1,0);
            pp_type_par Bvar;
@@ -591,6 +602,7 @@ in
              add_string"fun P a b    = mk_app_type(a,b)"   >> add_newline >>
              add_string"fun B a b    = mk_abs_type(a,b)"   >> add_newline >>
              add_string"fun N a b    = mk_univ_type(a,b)"  >> add_newline >>
+             add_string"fun X a b    = mk_exist_type(a,b)" >> add_newline >>
              pblock ("Parents", add_string o pparent,
                      thid_sort parents1) >>
              add_newline >>

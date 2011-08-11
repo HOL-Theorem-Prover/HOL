@@ -9,6 +9,7 @@ datatype label = TV
                | TAPP
                | TABS
                | TUNI
+               | TEXI
   (* The kind records kind of constant - this is necessary when
      types are redefined.  If the old and new versions have the
      same kind, all is well, but if they are different then the data
@@ -57,6 +58,9 @@ fun labcmp p =
     | (TABS, _) => LESS
     | (_, TABS) => GREATER
     | (TUNI, TUNI) => EQUAL
+    | (TUNI, _) => LESS
+    | (_, TUNI) => GREATER
+    | (TEXI, TEXI) => EQUAL
 
 datatype 'a N = LF of (hol_type,'a) Binarymap.dict
               | ND of (label,'a N) Binarymap.dict
@@ -100,6 +104,10 @@ fun ndest_type (ty,env) =
     else if is_univ_type ty then
       let val (bvar,body) = dest_univ_type ty
       in (TUNI, [(body,bvar::env)])
+      end
+    else if is_exist_type ty then
+      let val (bvar,body) = dest_exist_type ty
+      in (TEXI, [(body,bvar::env)])
       end
     else raise Fail "TypeNet.ndest_type: catastrophic type destruction"
 

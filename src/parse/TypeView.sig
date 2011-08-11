@@ -9,6 +9,7 @@ sig
                     | TyV_App of hol_type * hol_type
                     | TyV_Abs of tyvar * hol_type
                     | TyV_All of tyvar * hol_type
+                    | TyV_Exi of tyvar * hol_type
 
   val fromType : hol_type -> TypeView
   val toType : TypeView -> hol_type

@@ -17,7 +17,6 @@ app load ["quotient_pairTheory","quotient_listTheory","rich_listTheory"];
 
 open combinTheory combinSimps
 
-val _ = set_trace "Unicode" 1;
 val _ = set_trace "kinds" 0;
 
 
@@ -244,6 +243,7 @@ val _ = add_infix("oo", 800, HOLgrammars.RIGHT);
 val _ = overload_on ("o", Term`$oo : 'G functor -> 'F functor -> ('F o 'G) functor`);
 (*
 val _ = set_trace "overload" 1;
+val _ = set_trace "debug_type_inference" 2;
 *)
 
 val functor_o = store_thm

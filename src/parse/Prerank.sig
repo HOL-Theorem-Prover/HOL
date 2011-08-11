@@ -16,8 +16,9 @@ type oprerank = order * prerank
 
 val mk_Maxrank : prerank * prerank -> prerank
 
-val eq : prerank -> prerank -> bool
+val eq  : prerank -> prerank -> bool
 val leq : prerank -> prerank -> bool
+val lt  : prerank -> prerank -> bool
 val prerank_compare : prerank * prerank -> order
 val prerank_to_string : prerank -> string
 

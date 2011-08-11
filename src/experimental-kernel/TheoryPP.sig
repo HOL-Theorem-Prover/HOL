@@ -12,7 +12,7 @@ sig
  type kind = Kind.kind
  type ppstream = Portable.ppstream
 
- val pp_type : string -> string -> string -> string -> string -> string ->
+ val pp_type : string -> string -> string -> string -> string -> string -> string ->
                string -> string -> ppstream -> hol_type -> unit
 
  val pp_sig_hook : (unit -> unit) ref  (* XXX minimal change to make HOL build *)

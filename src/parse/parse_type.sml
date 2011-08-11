@@ -64,6 +64,7 @@ fun parse_type (tyfns :
         fun nargs (PARAM (n,kd)) = n + 1
           | nargs (TYAPP  (opr, arg )) = max (nargs opr,  nargs arg)
           | nargs (TYUNIV (bvar,body)) = max (nargs bvar, nargs body)
+          | nargs (TYEXIS (bvar,body)) = max (nargs bvar, nargs body)
           | nargs (TYABST (bvar,body)) = max (nargs bvar, nargs body)
           | nargs _ = 0
     in nargs st
@@ -75,6 +76,7 @@ fun parse_type (tyfns :
         TYCON  {Thy, Tyop, Kind} => pConType {Thy=Thy, Tyop=Tyop, Kind=Prekind.fromKind Kind, Locn=locn}
       | TYAPP  (opr,arg)   => pAppType (stv opr,  stv arg)
       | TYUNIV (bvar,body) => pUnivType(stv bvar, stv body)
+      | TYEXIS (bvar,body) => pExistType(stv bvar, stv body)
       | TYABST (bvar,body) => pAbstType(stv bvar, stv body)
       | TYVAR  (str,kd)    => pVartype ((str, Prekind.fromKind kd), locn)
 (*

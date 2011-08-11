@@ -356,8 +356,9 @@ in
                           val ptm1 = Preterm.typecheck_phase1 NONE ptm0
                           val ptm2 = Preterm.overloading_resolution ptm1
                           val ptm = Preterm.typecheck_phase1 NONE ptm2
+                          val pfns = SOME (term_to_string, type_to_string, kind_to_string)
                         in
-                          Preterm.to_term ptm |> do_tminsts pos opts
+                          Preterm.to_term pfns ptm |> do_tminsts pos opts
                         end
                      else
                          Parse.Term [QQ parse_start, QQ spec]

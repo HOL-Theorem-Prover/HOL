@@ -48,6 +48,13 @@ sig
  val strip_univ_type : hol_type -> hol_type list * hol_type
  val is_univ_type  : hol_type -> bool
 
+ val mk_exist_type  : hol_type * hol_type -> hol_type
+ val list_mk_exist_type : hol_type list * hol_type -> hol_type
+ val list_mk_exist_type_binder : hol_type option -> string -> hol_type list * hol_type -> hol_type
+ val dest_exist_type: hol_type -> hol_type * hol_type
+ val strip_exist_type : hol_type -> hol_type list * hol_type
+ val is_exist_type  : hol_type -> bool
+
  val mk_abs_type   : hol_type * hol_type -> hol_type
  val list_mk_abs_type : hol_type list * hol_type -> hol_type
  val list_mk_abs_type_binder : hol_type option -> string -> hol_type list * hol_type -> hol_type

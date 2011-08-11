@@ -78,6 +78,7 @@ val empty_pretyvarset = HOLset.empty Pretype.pretyvar_compare
  ---------------------------------------------------------------------------*)
 
 val define_type = ind_types.define_type;
+val define_type_rk = ind_types.define_type_rk;
 
 (*---------------------------------------------------------------------------*)
 (* Generate a string that, when evaluated as ML, will create the given type. *)
@@ -134,10 +135,10 @@ fun pp_kind mvarkind pps kd =
 (* Print a type                                                              *)
 (*---------------------------------------------------------------------------*)
 
-fun extern_type mvarkind mvartype mvartypeopr mtype mcontype mapptype mabstype munivtype pps ty =
+fun extern_type mvarkind mvartype mvartypeopr mtype mcontype mapptype mabstype munivtype mexistype pps ty =
  let open Portable Type
      val pp_kind = pp_kind mvarkind pps
-     val extern_type = extern_type mvarkind mvartype mvartypeopr mtype mcontype mapptype mabstype munivtype pps
+     val extern_type = extern_type mvarkind mvartype mvartypeopr mtype mcontype mapptype mabstype munivtype mexistype pps
      val {add_string,add_break,begin_block,end_block,
           add_newline,flush_ppstream,...} = with_ppstream pps
      fun is_fun_type ty = let val {Thy,Tyop,Args} = dest_thy_type ty
@@ -240,6 +241,17 @@ fun extern_type mvarkind mvartype mvartypeopr mtype mcontype mapptype mabstype m
            extern_type_par Body;
            end_block ()
        end
+  else if is_exist_type ty then
+       let val (Bvar,Body) = dest_exist_type ty
+       in
+           add_string mexistype;
+           begin_block INCONSISTENT 0;
+           add_break (1,0);
+           extern_type_par Bvar;
+           add_break (1,0);
+           extern_type_par Body;
+           end_block ()
+       end
   else raise ERR "extern_type" "unrecognized type"
  end
 
@@ -252,7 +264,7 @@ fun pp_fields ppstrm fields =
  let open Portable
      val {add_break,add_newline,
           add_string,begin_block,end_block,...} = with_ppstream ppstrm
-     val extern_type = with_parens (extern_type "K" "U" "R" "T" "O" "P" "B" "N") ppstrm
+     val extern_type = with_parens (extern_type "K" "U" "R" "T" "O" "P" "B" "N" "X") ppstrm
      fun pp_field (s,ty) =
         (begin_block CONSISTENT 0;
          add_string ("("^Lib.quote s);
@@ -272,6 +284,7 @@ fun pp_fields ppstrm fields =
   add_string "    fun P a b     = mk_app_type(a,b)";        add_newline();
   add_string "    fun B a b     = mk_abs_type(a,b)";        add_newline();
   add_string "    fun N a b     = mk_univ_type(a,b)";       add_newline();
+  add_string "    fun X a b     = mk_exist_type(a,b)";      add_newline();
   add_string "in"; add_newline();
   begin_block CONSISTENT 0;
    add_string "[";
@@ -367,6 +380,8 @@ fun to_tyspecs ASTs =
             mk_var_type (s,Prekind.toKind kd)
        | mk_hol_ty (dTyUniv(bvar,body)) =
             mk_univ_type(mk_hol_ty bvar, mk_hol_ty body)
+       | mk_hol_ty (dTyExist(bvar,body)) =
+            mk_exist_type(mk_hol_ty bvar, mk_hol_ty body)
        | mk_hol_ty (dTyAbst(bvar,body)) =
             mk_abs_type(mk_hol_ty bvar, mk_hol_ty body)
        | mk_hol_ty (dTyKindConstr{Ty,...}) = mk_hol_ty Ty
@@ -419,8 +434,11 @@ end;
 
 fun tyspecs_of q = to_tyspecs (ParseDatatype.parse q);
 
-val new_asts_datatype = define_type o to_tyspecs;
-fun new_datatype q    = new_asts_datatype (ParseDatatype.parse q);
+val new_asts_datatype = define_type_rk o to_tyspecs;
+fun new_datatype q    = let val {induction,recursion,recursion_rk} =
+                               new_asts_datatype (ParseDatatype.parse q)
+                        in {induction=induction, recursion=recursion}
+                        end
 
 
 (*---------------------------------------------------------------------------*)
@@ -485,6 +503,17 @@ local
        handle HOL_ERR _ => tyinfol
 in
 
+fun build_tyinfos_rk db {induction,recursion,recursion_rk} =
+ let val case_defs = Prim_rec.define_case_constant_rk (recursion,recursion_rk)
+     val tyinfol = TypeBasePure.gen_datatype_info_rk
+                    {ax=recursion, ax_rk=recursion_rk,
+                     ind=induction, case_defs=case_defs}
+ in
+   case define_size_rk recursion recursion_rk db
+    of NONE => (HOL_MESG "Couldn't define size function"; tyinfol)
+     | SOME s => insert_size s tyinfol
+    end
+
 fun build_tyinfos db {induction,recursion} =
  let val case_defs = Prim_rec.define_case_constant recursion
      val tyinfol = TypeBasePure.gen_datatype_info
@@ -517,6 +546,8 @@ fun pretype_ops acc ptysl =
             | dTyApp (opr,arg) =>
                  pretype_ops acc ([opr,arg] :: more_ptys :: rest)
             | dTyUniv (bvar,body) =>
+                 pretype_ops acc ([bvar,body] :: more_ptys :: rest)
+            | dTyExist (bvar,body) =>
                  pretype_ops acc ([bvar,body] :: more_ptys :: rest)
             | dTyAbst (bvar,body) =>
                  pretype_ops acc ([bvar,body] :: more_ptys :: rest)
@@ -1081,6 +1112,7 @@ local
   in
     case pty of
       dTyUniv(bvar,body) => dTyUniv(bvar, reform_tyops prevtypes body)
+    | dTyExist(bvar,body) => dTyExist(bvar, reform_tyops prevtypes body)
     | dTyAbst(bvar,body) => dTyAbst(bvar, reform_tyops prevtypes body)
     | dTyApp(opr as dContype{Thy, Tyop, Kind}, arg) =>
          dTyApp(opr, reform_tyops prevtypes arg)
@@ -1189,7 +1221,7 @@ in
   else if is_enum_type_spec astl then (db, build_enum_tyinfos astl)
   else (db,
         map add_record_facts
-            (zip (build_tyinfos db (new_asts_datatype astl))
+            (zip (build_tyinfos_rk db (new_asts_datatype astl))
                  (map field_names_of astl)))
 end (* let *)
 end (* local *)
@@ -1207,6 +1239,7 @@ fun find_vartypes (pty, acc) =
   | dContype _ => acc
   | dTyApp(opr,arg) => List.foldl find_vartypes acc [opr,arg]
   | dTyUniv(bvar,body) => List.foldl find_vartypes acc [bvar,body]
+  | dTyExist(bvar,body) => List.foldl find_vartypes acc [bvar,body]
   | dTyAbst(bvar,body) => List.foldl find_vartypes acc [bvar,body]
   | dTyKindConstr{Ty,...} => find_vartypes (Ty, acc)
   | dTyRankConstr{Ty,...} => find_vartypes (Ty, acc)

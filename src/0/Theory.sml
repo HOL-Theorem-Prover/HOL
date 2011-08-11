@@ -490,6 +490,12 @@ fun uptodate_type ty = let open Type in
                 uptodate_type btyvar andalso
                 uptodate_type body
               end
+            else if is_exist_type ty then let
+                val (btyvar, body) = dest_exist_type ty
+              in
+                uptodate_type btyvar andalso
+                uptodate_type body
+              end
             else raise Fail "uptodate_type: this can't happen"
     end;
 

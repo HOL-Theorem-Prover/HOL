@@ -1586,6 +1586,11 @@ fun debug_type ty =
       in print "(!"; debug_type v; print ". ";
          debug_type b; print ")"
       end
+    else if is_exist_type ty then let
+        val (v,b) = dest_exist_type ty
+      in print "(?"; debug_type v; print ". ";
+         debug_type b; print ")"
+      end
     else print "debug_type: unrecognized type"
 end
 
@@ -1597,7 +1602,9 @@ fun debug_term tm =
       end
     else if is_const tm then let
         val (s,ty) = dest_const tm
-      in print s
+      in print s;
+         print " :";
+         debug_type ty
       end
     else if is_comb tm then let
         val (f,a) = dest_comb tm

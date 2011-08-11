@@ -5,6 +5,7 @@ struct
   val bracket_special = "_ bracket"
   val let_special = " _ let"
   val and_special = " _ and"
+  val pack_special = " _ pack"
   val fakeconst_special = " _ fakeconst"
 
   val recsel_special = " _ record select"

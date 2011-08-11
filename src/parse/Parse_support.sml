@@ -121,6 +121,14 @@ local
                   from_ty l (destruct_type body) (lscope, scope, free, (s,pkd)::scope_ty, free_ty)
        in (PT(TyUniv(PT(Vartype v',l),body'),l), (lscope, scope, free, scope_ty, free_ty'))
        end
+    | TYEXIS(bvar,body) =>
+       let val (s,kd) = Type.dest_var_type bvar
+           val pkd = Prekind.fromKind kd
+           val v' = (s,pkd)
+           val (body',(_,_,_,_,free_ty')) =
+                  from_ty l (destruct_type body) (lscope, scope, free, (s,pkd)::scope_ty, free_ty)
+       in (PT(TyExis(PT(Vartype v',l),body'),l), (lscope, scope, free, scope_ty, free_ty'))
+       end
     | TYABS(bvar,body) =>
        let val (s,kd) = Type.dest_var_type bvar
            val pkd = Prekind.fromKind kd
@@ -267,6 +275,7 @@ fun make_binding_type_occ l s binder E =
   case binder
    of "\\" => ((fn b => PT(TyAbst(pty,b), locn.near (tylocn b))), E')
     | "!"  => ((fn b => PT(TyUniv(pty,b), locn.near (tylocn b))), E')
+    | "?"  => ((fn b => PT(TyExis(pty,b), locn.near (tylocn b))), E')
     |  _   => raise ERROR "make_binding_type_occ" ("invalid binder: " ^ binder)
  end;
 
@@ -275,6 +284,8 @@ in
 fun cdomkd M [] = M
   | cdomkd (PT(TyUniv(Bvar,Body),Locn)) (kd::rst) =
        PT(TyUniv(PT(TyKindConstr{Ty=Bvar,Kind=kd},Locn), cdomkd Body rst), Locn)
+  | cdomkd (PT(TyExis(Bvar,Body),Locn)) (kd::rst) =
+       PT(TyExis(PT(TyKindConstr{Ty=Bvar,Kind=kd},Locn), cdomkd Body rst), Locn)
   | cdomkd (PT(TyAbst(Bvar,Body),Locn)) (kd::rst) =
        PT(TyAbst(PT(TyKindConstr{Ty=Bvar,Kind=kd},Locn), cdomkd Body rst), Locn)
   | cdomkd x y = raise ERRORloc "cdomkd" (Pretype.tylocn x) "missing case"
@@ -289,6 +300,8 @@ in
 fun cdomrk M [] = M
   | cdomrk (PT(TyUniv(Bvar,Body),Locn)) (rk::rst) =
        PT(TyUniv(PT(TyRankConstr{Ty=Bvar,Rank=rk},Locn), cdomrk Body rst), Locn)
+  | cdomrk (PT(TyExis(Bvar,Body),Locn)) (rk::rst) =
+       PT(TyExis(PT(TyRankConstr{Ty=Bvar,Rank=rk},Locn), cdomrk Body rst), Locn)
   | cdomrk (PT(TyAbst(Bvar,Body),Locn)) (rk::rst) =
        PT(TyAbst(PT(TyRankConstr{Ty=Bvar,Rank=rk},Locn), cdomrk Body rst), Locn)
   | cdomrk x y = raise ERRORloc "cdomrk" (Pretype.tylocn x) "missing case"

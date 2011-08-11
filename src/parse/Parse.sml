@@ -502,6 +502,7 @@ in case ty0 of
    | Contype{Thy,Tyop,Kind} => make_type_constant l {Thy=Thy,Tyop=Tyop}
    | TyApp(ty1,ty2   ) => list_make_app_type l (map to_ptyInEnv [ty1,ty2])
    | TyUniv(bvar,body) => bind_type l [binder_type "!"  bvar] (to_ptyInEnv body)
+   | TyExis(bvar,body) => bind_type l [binder_type "?"  bvar] (to_ptyInEnv body)
    | TyAbst(bvar,body) => bind_type l [binder_type "\\" bvar] (to_ptyInEnv body)
    | TyKindConstr{Ty,Kind}     => make_kind_constr_type l (to_ptyInEnv Ty) Kind
    | TyRankConstr{Ty,Rank}     => make_rank_constr_type l (to_ptyInEnv Ty) Rank
@@ -1108,7 +1109,7 @@ fun temp_type_abbrev (s, ty) = let
           val tyvar as (str, kd) = dest_var_type ty
         in if mem ty bvars then type_grammar.TYVAR(str,kd)
            else if not (null bvars) then raise ERROR "temp_type_abbrev"
-                     ("abbreviation type parameter not allowed within universal type or type abstraction;\n"
+                     ("abbreviation type parameter not allowed within universal or existential type or type abstraction;\n"
                       ^"Use no parameters but define as a type abstraction instead to indicate parameters.")
            else type_grammar.PARAM (Binarymap.find(pset, ty), kd)
         end
@@ -1123,6 +1124,10 @@ fun temp_type_abbrev (s, ty) = let
       else if is_univ_type ty then let
           val (ty1, ty2) = Type.dest_univ_type ty
         in type_grammar.TYUNIV (mk_structure pset (ty1::bvars) ty1, mk_structure pset (ty1::bvars) ty2)
+        end
+      else if is_exist_type ty then let
+          val (ty1, ty2) = Type.dest_exist_type ty
+        in type_grammar.TYEXIS (mk_structure pset (ty1::bvars) ty1, mk_structure pset (ty1::bvars) ty2)
         end
       else if is_abs_type ty then let
           val (ty1, ty2) = Type.dest_abs_type ty
@@ -1142,7 +1147,7 @@ in
   full_update_grms ("temp_type_abbrev",
                     String.concat ["(", mlquote s, ", ",
                                    PP.pp_to_string (!Globals.linewidth)
-                                                   (TheoryPP.pp_type "K" "U" "R" "T" "O" "P" "B" "N")
+                                                   (TheoryPP.pp_type "K" "U" "R" "T" "O" "P" "B" "N" "X")
                                                    ty,
                                    ")"],
                     if not (Kind.is_type_kind (kind_of ty)) then NONE else

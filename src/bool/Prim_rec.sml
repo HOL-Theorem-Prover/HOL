@@ -129,12 +129,13 @@ fun findax c ((p,ax)::rst) =
         handle HOL_ERR _ => let val (a,l) = findax c rst in (a,(p,ax)::l) end)
   | findax c [] = raise ERR "prove_raw_recursive_functions_exist" "findax";
 
-fun prove_raw_recursive_functions_exist ax tm = let
+fun prove_raw_recursive_functions_exist ax ax_rk tm = let
   val rawcls = conjuncts tm
   val spcls = map (snd o strip_forall) rawcls
   val lpats = map (strip_comb o lhand) spcls
   val ufns = itlist (op_insert eq o fst) lpats []
-  val axth = SPEC_ALL ax
+  val ufns_rk = rank_of_type (snd (dom_rng (type_of (hd ufns))))
+  val axth = SPEC_ALL (if ufns_rk = 0 then ax else ax_rk ufns_rk)
   val (exvs,axbody) = strip_exists (concl axth)
   val axcls = conjuncts axbody
   val f = repeat rator o rand o lhand o snd o strip_forall
@@ -181,10 +182,10 @@ val prove_canon_recursive_functions_exist = let
     GENL avs (RIGHT_BETAS vargs (SPECL fvs def))
   end
 in
-  fn ax => fn tm => let
+  fn ax => fn ax_rk => fn tm => let
     val ths = map canonize (conjuncts tm)
     val atm = list_mk_conj (map (hd o hyp) ths)
-    val eth = prove_raw_recursive_functions_exist ax atm
+    val eth = prove_raw_recursive_functions_exist ax ax_rk atm
     val aths = CONJUNCTS(ASSUME atm)
     val rth = end_itlist CONJ (map2 PROVE_HYP aths ths)
     val evs = fst(strip_exists(concl eth))
@@ -208,7 +209,7 @@ fun universalise_clauses tm =
    list_mk_conj gcls
  end
 
-val prove_recursive_functions_exist =
+val prove_recursive_functions_exist_rk =
  let fun reshuffle fnn args acc =
       let val args' = uncurry (C (curry op@)) (Lib.partition is_var args)
       in if list_cmp eq args args' then acc
@@ -228,7 +229,7 @@ val prove_recursive_functions_exist =
       let val (lhs, rhs) = dest_eq t
       in MP (Thm.INST [lhs |-> rhs] (DISCH t th)) (REFL rhs)
       end
-     fun prove_once_universalised ax tm =
+     fun prove_once_universalised ax ax_rk tm =
       let val rawcls = conjuncts tm
           val spcls = map (snd o strip_forall) rawcls
           val lpats = map (strip_comb o lhand) spcls
@@ -240,7 +241,7 @@ val prove_recursive_functions_exist =
                       (REPEATC (CHANGED_CONV
                                   (PURE_REWRITE_CONV trths THENC
                                    DEPTH_CONV BETA_CONV))) tm
-          val eth = prove_canon_recursive_functions_exist ax (rand(concl tth))
+          val eth = prove_canon_recursive_functions_exist ax ax_rk (rand(concl tth))
           val (evs,ebod) = strip_exists(concl eth)
           val fth = itlist SIMPLE_EXISTS ufns (EQ_MP (SYM tth) (ASSUME ebod))
           val gth = itlist scrub_def (map concl trths) fth
@@ -248,8 +249,11 @@ val prove_recursive_functions_exist =
         PROVE_HYP eth (itlist SIMPLE_CHOOSE evs gth)
       end
 in
-  fn ax => fn tm => prove_once_universalised ax (universalise_clauses tm)
+  fn ax => fn ax_rk => fn tm => prove_once_universalised ax ax_rk (universalise_clauses tm)
 end
+
+fun prove_recursive_functions_exist ax =
+    prove_recursive_functions_exist_rk ax (fn _ => ax)
 
 val prove_rec_fn_exists = prove_recursive_functions_exist
 
@@ -257,8 +261,8 @@ val prove_rec_fn_exists = prove_recursive_functions_exist
 (* Version that defines function(s).                                        *)
 (* ------------------------------------------------------------------------ *)
 
-fun new_recursive_definition0 ax name tm =
- let val eth = prove_recursive_functions_exist ax tm
+fun new_recursive_definition0 ax ax_rk name tm =
+ let val eth = prove_recursive_functions_exist_rk ax ax_rk tm
      val (evs,bod) = strip_exists(concl eth)
  in
   Rsyntax.new_specification
@@ -346,8 +350,11 @@ fun new_recursive_definition0 ax name tm =
      Make a new recursive function definition.
  ---------------------------------------------------------------------------*)
 
+fun new_recursive_definition_rk {name,rec_axiom,rec_axiom_rk,def} =
+  new_recursive_definition0 rec_axiom rec_axiom_rk name def;
+
 fun new_recursive_definition {name,rec_axiom,def} =
-  new_recursive_definition0 rec_axiom name def;
+  new_recursive_definition0 rec_axiom (fn _ => rec_axiom) name def;
 
 (*---------------------------------------------------------------------------
    Given axiom and the name of the type, return a list of terms
@@ -456,6 +463,25 @@ fun define_case_constant ax =
           val eqns = generate_case_constant_eqns ty cs
       in new_recursive_definition
              {name=name^"_case_def", rec_axiom=ax, def=eqns}
+      end
+ in
+  map mk_defn usethese
+end
+
+fun define_case_constant_rk (ax,ax_rk) =
+ let val oktypes = doms_of_tyaxiom ax
+     val conjs = strip_conj (#2 (strip_exists (#2 (strip_forall (concl ax)))))
+     val newfns = map (rator o lhs o #2 o strip_forall) conjs
+     val newtypes = map type_of newfns
+     val usethese = op_mk_set eq_ty
+           (List.filter (fn ty => Lib.op_mem eq_ty (#1 (dom_rng ty)) oktypes) newtypes)
+     fun mk_defn ty =
+      let val (dty,rty) = dom_rng ty
+          val name = (#1 o dest_con_type o fst o strip_app_type) dty
+          val cs = type_constructors_with_args ax name
+          val eqns = generate_case_constant_eqns ty cs
+      in new_recursive_definition_rk
+             {name=name^"_case_def", rec_axiom=ax, rec_axiom_rk=ax_rk, def=eqns}
       end
  in
   map mk_defn usethese
@@ -1442,7 +1468,7 @@ fun mk_subst2 [] [] = []
   get the desired equation.
 *)
 
-fun prove_const_one_one th tm = let
+fun prove_const_one_one th th_rk tm = let
   val (vs,(lhs,_)) = (I ## dest_eq)(strip_forall tm)
   val C = rand lhs
   val funtype =
@@ -1455,7 +1481,7 @@ fun prove_const_one_one th tm = let
   val C' = subst (mk_subst2 vvs vs) C
   val eqn =
     list_mk_forall(vs @ vvs, mk_comb(f_ap_vs, C') == fn_body)
-  val fn_exists_thm = prove_recursive_functions_exist th eqn
+  val fn_exists_thm = prove_recursive_functions_exist_rk th th_rk eqn
   val eqn_thm = ASSUME (snd (dest_exists (concl fn_exists_thm)))
   val C_eq_C'_t = C == C'
   val C_eq_C' = ASSUME C_eq_C'_t
@@ -1507,7 +1533,7 @@ local
   end
 in
 
-  fun prove_constructors_one_one th = let
+  fun prove_constructors_one_one_rk (th,th_rk) = let
     val all_eqns =
       strip_conj (snd (strip_exists(snd(strip_forall(concl th)))))
     val axtypes = doms_of_tyaxiom th
@@ -1520,7 +1546,7 @@ in
     in
       if null funs then NONE
       else
-        SOME (LIST_CONJ (map (prove_const_one_one th) funs))
+        SOME (LIST_CONJ (map (prove_const_one_one th th_rk) funs))
         handle HOL_ERR _ =>
           raise ERR "prove_constructors_one_one" ""
     end
@@ -1531,6 +1557,9 @@ in
   in
     List.mapPartial maybe_prove (partition same_domain all_eqns)
   end
+
+  fun prove_constructors_one_one th =
+    prove_constructors_one_one_rk (th,fn _ => th)
 
 
 (* =====================================================================*)
@@ -1735,7 +1764,7 @@ fun ctrs_with_args clauses =
  in map get_ctr clauses
  end
 
-fun prove_constructors_distinct thm = let
+fun prove_constructors_distinct_rk (thm,thm_rk) = let
   val all_eqns = strip_conj(snd(strip_exists(snd(strip_forall(concl thm)))))
   val axtypes = doms_of_tyaxiom thm
   fun eqn_type eq = type_of (rand (lhs (#2 (strip_forall eq))))
@@ -1771,6 +1800,9 @@ fun prove_constructors_distinct thm = let
 in
   List.mapPartial maybe_prove_cd_for_type (partition same_domain all_eqns)
 end
+
+fun prove_constructors_distinct thm =
+  prove_constructors_distinct_rk (thm, fn rk:int => thm)
 
 end (* local where partition is defined *)
 

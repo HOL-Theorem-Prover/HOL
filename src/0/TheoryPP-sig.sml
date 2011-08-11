@@ -14,7 +14,7 @@ sig
  type num = Arbnum.num
 
  val pp_type : string -> string -> string -> string -> string -> string ->
-               string -> string -> ppstream -> hol_type -> unit
+               string -> string -> string -> ppstream -> hol_type -> unit
 
  val pp_sig
    : (ppstream -> thm -> unit)

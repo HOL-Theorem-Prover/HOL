@@ -160,6 +160,7 @@ fun tysize (theta,omega,gamma) clause ty =
                     in mk_abs(bvar_tm, body_tm)
                     end
            else if is_univ_type ty then Kzero ty
+           else if is_exist_type ty then Kzero ty
            else raise ERR "tysize" "impossible type"
 end;
 
@@ -178,7 +179,7 @@ local open arithmeticTheory
       val Zero  = numSyntax.zero_tm
       val One   = numSyntax.term_of_int 1
 in
-fun define_size ax db =
+fun define_size_rk ax rec_fn db =
  let val dtys = Prim_rec.doms_of_tyaxiom ax  (* primary types in axiom *)
      val tyvars = Lib.U (map (snd o dest_type) dtys)
      val (_, abody) = strip_forall(concl ax)
@@ -246,9 +247,11 @@ fun define_size ax db =
                       ((DEPTH_CONV BETA_CONV THENC
                         Rewrite.PURE_REWRITE_CONV zero_rws) pre_defn0))
                      handle UNCHANGED => pre_defn0
+     val rank = rank_of_term pre_defn1 (* this can be improved *)
+     val ax' = if rank=0 then ax else rec_fn rank
      val defn = new_recursive_definition
                  {name=def_name^"_size_def",
-                  rec_axiom=ax, def=pre_defn1}
+                  rec_axiom=ax', def=pre_defn1}
      val cty = (I##(type_of o last)) o strip_comb o lhs o snd o strip_forall
      val ctyl = Lib.op_mk_set (pair_cmp eq equal) (map cty (strip_conj (concl defn)))
      val const_tyl = filter (fn (c,ty) => mem ty dtys) ctyl
@@ -257,6 +260,8 @@ fun define_size ax db =
     SOME {def=defn,const_tyopl=const_tyopl}
  end
  handle HOL_ERR _ => NONE
+
+ fun define_size ax db = define_size_rk ax (fn _ => ax) db
 end;
 
 end

@@ -18,6 +18,7 @@ sig
    val register_update_fn : (tyinfo list -> tyinfo list) -> unit
 
    val axiom_of           : hol_type -> thm
+   val axiom_rk_of        : hol_type -> int -> thm
    val induction_of       : hol_type -> thm
    val constructors_of    : hol_type -> term list
    val case_const_of      : hol_type -> term
@@ -34,6 +35,7 @@ sig
    val encode_of          : hol_type -> term * thm
 
    val axiom_of0          : hol_type -> shared_thm
+   val axiom_rk_of0       : hol_type -> int -> shared_thm
    val induction_of0      : hol_type -> shared_thm
    val size_of0           : hol_type -> (term * shared_thm) option
    val encode_of0         : hol_type -> (term * shared_thm) option

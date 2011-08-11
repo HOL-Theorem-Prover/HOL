@@ -104,6 +104,7 @@ struct
         | TYAp (opri,argi)  => out ("TYAp"  ^ ipair_string(opri,argi))
         | TYAbs (bvi,bodyi) => out ("TYAbs" ^ ipair_string(bvi,bodyi))
         | TYUni (bvi,bodyi) => out ("TYUni" ^ ipair_string(bvi,bodyi))
+        | TYExi (bvi,bodyi) => out ("TYExi" ^ ipair_string(bvi,bodyi))
     val _ = Portable.pr_list pr_sty (fn () => ())
                              (fn () => PP.add_break pps (1,0))
                              (List.rev (#tylist tytable))

@@ -19,6 +19,7 @@ sig
  (*---------------------------------------------------------------------------*)
 
  val define_type   : tyspec list -> {induction:thm, recursion:thm}
+ val define_type_rk: tyspec list -> {induction:thm, recursion:thm, recursion_rk:int->thm}
  val new_datatype  : hol_type quotation -> {induction:thm, recursion:thm}
 
  (*---------------------------------------------------------------------------*)
@@ -38,6 +39,10 @@ sig
 
  val build_tyinfos : typeBase
                          -> {induction:thm, recursion:thm}
+                           -> tyinfo list
+ 
+ val build_tyinfos_rk : typeBase
+                         -> {induction:thm, recursion:thm, recursion_rk:int->thm}
                            -> tyinfo list
  
  val write_tyinfos : (tyinfo * string) list -> unit

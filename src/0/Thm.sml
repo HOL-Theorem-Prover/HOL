@@ -273,9 +273,9 @@ fun ABS v (THM(ocl,asl,c)) =
  end;
 
 (*---------------------------------------------------------------------------*
- *         A |- t1 = t2                                                      *
- *   --------------------------  TY_ABS x      [Where 'a is not free in A]   *
- *    A |- (!'a.t1) = (!'a.t2)                                               *
+ *          A |- t1 = t2                                                     *
+ *   ----------------------------  TY_ABS x     [Where 'a is not free in A]  *
+ *    A |- (\:'a.t1) = (\:'a.t2)                                             *
  *---------------------------------------------------------------------------*)
 
 fun TY_ABS a (THM(ocl,asl,c)) =
@@ -1604,6 +1604,11 @@ fun debug_type ty =
       in print "(!"; debug_type v; print ". ";
          debug_type b; print ")"
       end
+    else if is_exist_type ty then let
+        val (v,b) = dest_exist_type ty
+      in print "(?"; debug_type v; print ". ";
+         debug_type b; print ")"
+      end
     else print "debug_type: unrecognized type";
     if current_trace "kinds" > 1
       then (print ":"; debug_kind (kind_of ty))
@@ -1621,7 +1626,9 @@ fun debug_term tm =
       end
     else if is_const tm then let
         val (s,ty) = dest_const tm
-      in print s
+      in print s;
+         print " :";
+         debug_type ty
       end
     else if is_comb tm then let
         val (f,a) = dest_comb tm
@@ -1663,6 +1670,7 @@ datatype lexeme
    | lamb
    | tylamb
    | exclam
+   | questn
    | lparen
    | rparen
    | tyapp
@@ -1708,6 +1716,7 @@ fun lexer (ss1,qs1) =
          | #"\\" => SOME(lamb,  (ss2,qs1))
          | #"/"  => SOME(tylamb,(ss2,qs1))
          | #"!"  => SOME(exclam,(ss2,qs1))
+         | #"?"  => SOME(questn,(ss2,qs1))
          | #"("  => SOME(lparen,(ss2,qs1))
          | #")"  => SOME(rparen,(ss2,qs1))
          | #":"  => SOME(tyapp, (ss2,qs1))
@@ -1747,6 +1756,7 @@ fun parse_raw tytable table =
            (case lexer rst
              of SOME (lamb,   rst') => glambty (stk,rst')
               | SOME (exclam, rst') => gallty  (stk,rst')
+              | SOME (questn, rst') => gexity  (stk,rst')
               |    _                => parsetyl (parsety (stk,rst)))
         |  _ => (stk,ss)
      and
@@ -1770,6 +1780,14 @@ fun parse_raw tytable table =
               of (h::t,rst1) => (Ty(TyAll(tvof(tyindex n),tyof h))::t, eat_rparen rst1)
                |   _         => ERR "gallty" "impossible")
         | _ => ERR "gallty" "expected an identifier"
+     and
+     gexity (stk,ss) =
+      case lexer ss
+       of SOME (ident n, rst) =>
+            (case parsety (stk, eat_dot rst)
+              of (h::t,rst1) => (Ty(TyExi(tvof(tyindex n),tyof h))::t, eat_rparen rst1)
+               |   _         => ERR "gexity" "impossible")
+        | _ => ERR "gexity" "expected an identifier"
      fun parse (stk,ss) =
       case lexer ss
        of SOME (bvar n,  rst) => (Tm(Bv n)::stk,rst)

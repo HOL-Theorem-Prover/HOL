@@ -23,6 +23,8 @@ val ERR = mk_HOL_ERR "boolSyntax";
 val equality     = prim_mk_const {Name="=",            Thy="min"};
 val implication  = prim_mk_const {Name="==>",          Thy="min"};
 val select       = prim_mk_const {Name="@",            Thy="min"};
+val pack         = prim_mk_const {Name="PACK",         Thy="min"};
+val unpack       = prim_mk_const {Name="UNPACK",       Thy="min"};
 val T            = prim_mk_const {Name="T",            Thy="bool"};
 val F            = prim_mk_const {Name="F",            Thy="bool"};
 val universal    = prim_mk_const {Name="!",            Thy="bool"};
@@ -94,7 +96,14 @@ fun mk_literal_case (func,arg) =
 
 fun mk_arb ty = inst [alpha |-> ty] arb;
 
-fun mk_itself ty = inst [alpha |-> ty] the_value;
+fun mk_itself ty =
+  let val kd = kind_of ty
+      val rk = rank_of kd
+      val kappa' = mk_var_kind("'k", rk)
+      val alpha' = mk_var_type ("'a", kd)
+  in
+     inst_rk_kd_ty rk [kappa' |-> kd] [alpha' |-> ty] the_value
+  end;
 
 fun mk_icomb (t1, t2) =
   let

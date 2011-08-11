@@ -134,8 +134,12 @@ in
               (replace_current (BT_Ident (String.extract(s, 2, NONE)),locn'');
                (ID (String.extract (s, 0, SOME 2)),locn')) end
             else (advance(); (ID s,locn))
-  (* As an exception, don't aggregate ":!" since this probably begins a universal type *)
-  else if prefix2 #":" #"!" orelse prefix4 #":" #"\u0080" then
+  (* As an exception, don't aggregate ":!" since this probably begins a universal type
+                                   or ":?" since this probably begins an existential type
+                                   or ":\" since this probably begins an type abstraction *)
+  else if prefix2 #":" #"!"  orelse prefix4 #":" #"\u0080" orelse
+          prefix2 #":" #"?"  orelse prefix4 #":" #"\u0083" orelse
+          prefix2 #":" #"\\" orelse prefix4 #":" #"\u00bb"  then
               let val (locn',locn'') = locn.split_at 1 locn in
               (replace_current (BT_Ident (String.extract(s, 1, NONE)),locn'');
                (ID (String.extract (s, 0, SOME 1)),locn')) end

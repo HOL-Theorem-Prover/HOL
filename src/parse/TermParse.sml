@@ -153,6 +153,33 @@ in
              R
 end
 
+fun munge_pack pkg_locn pkg_pair = let
+  open Absyn
+  fun is_pair tm = case tm of APP(_,APP(_, IDENT (_,","), _), _) => true
+                            | _ => false
+  fun dest_pair (APP(_, APP(_, IDENT (_,","), t1), t2)) = (t1, t2)
+    | dest_pair t = raise Fail (locn.toString (locn_of_absyn t)^
+                              ":\n(pre-)term not a pair")
+  val _ = is_pair pkg_pair
+          orelse raise ERRORloc "Term" (locn_of_absyn pkg_pair)
+                                "pack without (:type, body) argument"
+  val (theval, body) = dest_pair pkg_pair
+  fun is_the_value tm = case tm of (TYPED(_, QIDENT(_,"bool","the_value"), _)) => true
+                                 | _ => false
+  fun dest_the_value (TYPED(_,QIDENT(_,"bool","the_value"),its_ty)) = its_ty
+    | dest_the_value _ = raise Fail (locn.toString (locn_of_absyn pkg_pair)^
+                                   ":\n(pre-)term not the_value")
+  val _ = is_the_value theval
+          orelse raise ERRORloc "Term" (locn_of_absyn theval)
+                                "non-type found for type argument of pack"
+  val itself_ty = dest_the_value theval
+  val rty = snd (Pretype.dest_app_type itself_ty)
+  val type_locn = locn_of_absyn theval
+  val body_locn = locn.between pkg_locn (locn_of_absyn body)
+in
+  APP(pkg_locn, TYAPP(type_locn, IDENT (pkg_locn,"PACK"), rty), body)
+end
+
 fun traverse applyp f t = let
   open Absyn
   val traverse = traverse applyp f
@@ -172,15 +199,20 @@ fun absyn_phase2 t0 = let
   open Absyn
   fun let_remove f (APP(_,APP(_,IDENT _, t1), t2)) = munge_let (f t1) (f t2)
     | let_remove _ _ = raise Fail "Can't happen"
+  fun pack_remove f (APP(l1,IDENT _, t1)) = munge_pack l1 (f t1)
+    | pack_remove _ _ = raise Fail "Can't happen"
   val t1 =
       traverse (fn APP(_,APP(_,IDENT (_,letstr), _), _) => letstr = let_special
                  | otherwise => false) let_remove t0
+  val t2 =
+      traverse (fn APP(_,IDENT (_,packstr), _) => packstr = pack_special
+                 | otherwise => false) pack_remove t1
   val _ =
     traverse (fn IDENT(_,andstr) => andstr = and_special | _ => false)
     (fn _ => fn t => raise ERRORloc "Term" (locn_of_absyn t)
-                                    "Invalid use of reserved word and") t1
+                                    "Invalid use of reserved word and") t2
 in
-  t1
+  t2
 end
 
 
@@ -236,6 +268,7 @@ in case ty0 of
    | Contype{Thy,Tyop,Kind} => make_type_constant l {Thy=Thy,Tyop=Tyop}
    | TyApp(ty1,ty2   ) => list_make_app_type l (map to_ptyInEnv [ty1,ty2])
    | TyUniv(bvar,body) => bind_type l [binder_type "!"  bvar] (to_ptyInEnv body)
+   | TyExis(bvar,body) => bind_type l [binder_type "?"  bvar] (to_ptyInEnv body)
    | TyAbst(bvar,body) => bind_type l [binder_type "\\" bvar] (to_ptyInEnv body)
    | TyKindConstr{Ty,Kind}     => make_kind_constr_type l (to_ptyInEnv Ty) Kind
    | TyRankConstr{Ty,Rank}     => make_rank_constr_type l (to_ptyInEnv Ty) Rank
@@ -401,6 +434,9 @@ local
                                       gtfty (strip_tycsts Bvar::boundtyvars) Body),
                                locn)
     | TyUniv(Bvar, Body) => PT(TyUniv(Bvar,
+                                      gtfty (strip_tycsts Bvar::boundtyvars) Body),
+                               locn)
+    | TyExis(Bvar, Body) => PT(TyExis(Bvar,
                                       gtfty (strip_tycsts Bvar::boundtyvars) Body),
                                locn)
     | TyKindConstr{Ty,Kind} => PT(TyKindConstr{Ty = gtfty boundtyvars Ty, Kind = Kind},

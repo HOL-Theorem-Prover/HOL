@@ -54,8 +54,9 @@ datatype hol_type = TyFv of tyvar
                   | TyBv of int
                   | TyCon of tyconst
                   | TyApp of hol_type * hol_type
+                  | TyAbs of tyvar * hol_type
                   | TyAll of tyvar * hol_type
-                  | TyAbs of tyvar * hol_type;
+                  | TyExi of tyvar * hol_type;
 
 
 (*---------------------------------------------------------------------------*

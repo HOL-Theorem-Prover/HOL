@@ -107,7 +107,8 @@ val BOOL_ss = SSFRAG
           ONCE_REWRITE_RULE [DISJ_COMM] EXCLUDED_MIDDLE,
           bool_case_thm,
           NOT_AND,
-          SELECT_REFL, SELECT_REFL_2, RES_FORALL_TRUE, RES_EXISTS_FALSE],
+          SELECT_REFL, SELECT_REFL_2, RES_FORALL_TRUE, RES_EXISTS_FALSE,
+          UNPACK_PACK_AX],
    congs = [literal_cong], filter = NONE, ac = [], dprocs = []};
 
 

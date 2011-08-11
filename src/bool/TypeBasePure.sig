@@ -27,7 +27,24 @@ sig
               accessors : thm list,
               updates   : thm list} -> tyinfo
 
+   val mk_datatype_info_rk
+           : {ax        : shared_thm,
+              ax_rk     : int -> shared_thm,
+              induction : shared_thm,
+              case_def  : thm,
+              case_cong : thm,
+              nchotomy  : thm,
+              size      : (term * shared_thm) option,
+              encode    : (term * shared_thm) option,
+              lift      : term option,
+              one_one   : thm option,
+              distinct  : thm option,
+              fields    : (string * hol_type) list,
+              accessors : thm list,
+              updates   : thm list} -> tyinfo
+
    val gen_datatype_info : {ax:thm,ind:thm,case_defs:thm list} -> tyinfo list
+   val gen_datatype_info_rk : {ax:thm,ax_rk:int->thm,ind:thm,case_defs:thm list} -> tyinfo list
 
    val mk_nondatatype_info
            : hol_type *
@@ -41,6 +58,7 @@ sig
    val ty_name_of      : tyinfo -> string * string
 
    val axiom_of        : tyinfo -> thm
+   val axiom_rk_of     : tyinfo -> int -> thm
    val induction_of    : tyinfo -> thm
    val constructors_of : tyinfo -> term list
    val case_const_of   : tyinfo -> term
@@ -58,6 +76,7 @@ sig
    val lift_of         : tyinfo -> term option
 
    val axiom_of0       : tyinfo -> shared_thm
+   val axiom_rk_of0    : tyinfo -> int -> shared_thm
    val induction_of0   : tyinfo -> shared_thm
    val size_of0        : tyinfo -> (term * shared_thm) option
    val encode_of0      : tyinfo -> (term * shared_thm) option

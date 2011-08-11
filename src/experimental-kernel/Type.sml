@@ -98,6 +98,7 @@ datatype hol_type = Tyv of tyvar
                   | TyCon of tyconst
                   | TyApp of hol_type * hol_type
                   | TyAll of tyvar * hol_type
+                  | TyExi of tyvar * hol_type
                   | TyAbs of tyvar * hol_type
 
 val funref = #1 (KernelSig.find(operator_table, {Thy="min", Name = "fun"}))
@@ -110,6 +111,7 @@ fun uptodate_type (Tyv s) = true
   | uptodate_type (TyCon(info,kd)) = KernelSig.uptodate_id info
   | uptodate_type (TyApp(opr,arg)) = uptodate_type opr andalso uptodate_type arg
   | uptodate_type (TyAll(bv,body)) = uptodate_type body
+  | uptodate_type (TyExi(bv,body)) = uptodate_type body
   | uptodate_type (TyAbs(bv,body)) = uptodate_type body
 
 
@@ -138,9 +140,11 @@ local
                              end))
       | TyAbs((_, kd1), body) => knd_of body (fn kd2 => k (kd1 ==> kd2))
       | TyAll((_, kd1), body) => k (typ (rnk_of ty Lib.I)) (* NOT knd_of body k *)
+      | TyExi((_, kd1), body) => k (typ (rnk_of ty Lib.I)) (* NOT knd_of body k *)
   and rnk_of ty k =
       case ty of
         TyAll((_, kd1), body) => rnk_of body (fn rk => k (max(suc(rank_of kd1), rk)))
+      | TyExi((_, kd1), body) => rnk_of body (fn rk => k (max(suc(rank_of kd1), rk)))
       | _ => k (rank_of (knd_of ty Lib.I))
 
 in
@@ -152,6 +156,9 @@ end
 
 fun rank_of_univ_dom (TyAll((_,kd),_)) = rank_of kd
   | rank_of_univ_dom _ = raise ERR "rank_of_univ_dom" "not a universal type"
+
+fun rank_of_exist_dom (TyExi((_,kd),_)) = rank_of kd
+  | rank_of_exist_dom _ = raise ERR "rank_of_exist_dom" "not an existential type"
 
 (*---------------------------------------------------------------------------*
  * Computing the kind of a type, not assuming it is well-kinded.             *
@@ -175,9 +182,11 @@ local
              end)
       | TyAbs((_, kd1), body) => knd_of body (fn kd2 => k (kd1 ==> kd2))
       | TyAll((_, kd1), body) => k (typ (rnk_of ty Lib.I)) (* NOT knd_of body k *)
+      | TyExi((_, kd1), body) => k (typ (rnk_of ty Lib.I)) (* NOT knd_of body k *)
   and rnk_of ty k =
       case ty of
         TyAll((_, kd1), body) => rnk_of body (fn rk => k (max(suc(rank_of kd1), rk)))
+      | TyExi((_, kd1), body) => rnk_of body (fn rk => k (max(suc(rank_of kd1), rk)))
       | _ => rank_of (knd_of ty Lib.I)
 
 in
@@ -205,6 +214,8 @@ local fun kdV (Tyv(s,kd)) k          = k (Kind.kind_vars kd)
                                        k (union (Kind.kind_vars kd) q))
         | kdV (TyAll((s,kd),Body)) k = kdV Body (fn q =>
                                        k (union (Kind.kind_vars kd) q))
+        | kdV (TyExi((s,kd),Body)) k = kdV Body (fn q =>
+                                       k (union (Kind.kind_vars kd) q))
       fun kdVs (ty::tys) k           = kdV ty (fn q1 =>
                                        kdVs tys (fn q2 => k (union q2 q1)))
         | kdVs [] k                  = k []
@@ -230,10 +241,13 @@ fun is_abs_type  (TyAbs _) = true
   | is_abs_type  _ = false
 fun is_univ_type (TyAll _) = true
   | is_univ_type _ = false
+fun is_exist_type (TyExi _) = true
+  | is_exist_type _ = false
 
 (*---------------------------------------------------------------------------*
  * Types, as seen by the user, should satisfy exactly one of                 *
- * is_var_type, is_con_type, is_app_type, is_abs_type, or is_univ_type.      *
+ * is_var_type, is_con_type, is_app_type, is_abs_type, is_univ_type,         *
+ * or is_exist_type.                                                         *
  * Legacy types will be seen as exactly one of is_vartype or is_type.        *
  *---------------------------------------------------------------------------*)
 
@@ -354,6 +368,7 @@ val vacuum =
           end
         | vac E (opr as TyCon _) = vacuum_opr E (opr,[])
         | vac E (TyAll(Bvar as (_,kd),Body)) = TyAll(Bvar,vac (kd::E) Body)
+        | vac E (TyExi(Bvar as (_,kd),Body)) = TyExi(Bvar,vac (kd::E) Body)
         | vac E (TyAbs(Bvar as (_,kd),Body)) = TyAbs(Bvar,vac (kd::E) Body)
         | vac _ ty = raise UNCHANGEDTY
   in fn ty => vac [] ty handle UNCHANGEDTY => ty
@@ -522,6 +537,8 @@ end
 
 val strip_abs_type = strip_abs_binder NONE
 
+(* Universal types *)
+
 fun mk_univ_type(Tyv v, body) =
     if is_type_kind (kind_of body) then TyAll(v, body)
     else raise ERR "mk_univ_type" "kind of body is not the base kind"
@@ -553,6 +570,40 @@ in
 end
 
 val strip_univ_type = strip_univ_binder NONE
+
+(* Existential types *)
+
+fun mk_exist_type(Tyv v, body) =
+    if is_type_kind (kind_of body) then TyExi(v, body)
+    else raise ERR "mk_exist_type" "kind of body is not the base kind"
+  | mk_exist_type _ = raise ERR "mk_exist_type" "First argument is not a variable"
+
+fun dest_exist_type(TyExi(v, body)) = (Tyv v, body)
+  | dest_exist_type _ = raise ERR "dest_exist_type" "Not an existential type"
+
+fun strip_exist_binder binder = let
+  val f = case binder of
+            NONE => (fn ty => if is_exist_type ty then SOME ty else NONE)
+          | SOME c => (fn ty => let
+                            val (rator, rand) = dest_app_type ty
+                          in
+                            if same_tyconst rator c andalso is_exist_type rand then
+                              SOME rand
+                            else NONE
+                          end handle HOL_ERR _ => NONE)
+  fun recurse acc ty =
+      case f ty of
+        NONE => (List.rev acc, ty)
+      | SOME exist => let
+          val (v, body) = dest_exist_type exist
+        in
+          recurse (v::acc) body
+        end
+in
+  recurse []
+end
+
+val strip_exist_type = strip_exist_binder NONE
 
 
 fun argkds_string [] = "..."
@@ -716,7 +767,7 @@ fun type_con_ge (TyCon(c1,k1), TyCon(c2,k2)) =
 
 (* ----------------------------------------------------------------------
     A total, "symmetric" ordering on types that respects alpha equivalence.
-    Tyv < TyCon < TyApp < TyAll < TyAbs
+    Tyv < TyCon < TyApp < TyAll < TyExi < TyAbs
    ---------------------------------------------------------------------- *)
 
 structure Map = Binarymap
@@ -753,6 +804,7 @@ fun prim_compare0 n E (u as Tyv _, v as Tyv _)     = map_type_var_compare E (u,v
   | prim_compare0 n E (TyApp p1, TyApp p2)         = Lib.pair_compare(prim_compare0 n E,prim_compare0 n E)(p1,p2)
   | prim_compare0 n E (TyApp _, _)                 = LESS
   | prim_compare0 n E (TyAll _, TyAbs _)           = LESS
+  | prim_compare0 n E (TyAll _, TyExi _)           = LESS
   | prim_compare0 n (E as (env1, env2))
                  (TyAll(x1 as (_,k1),ty1),
                   TyAll(x2 as (_,k2),ty2)) =
@@ -760,6 +812,14 @@ fun prim_compare0 n E (u as Tyv _, v as Tyv _)     = map_type_var_compare E (u,v
                          prim_compare0 (n + 1) (insert(env1, Tyv x1, n), insert(env2, Tyv x2, n)))
                         ((k1,ty1), (k2,ty2))
   | prim_compare0 n E (TyAll _, _)                 = GREATER
+  | prim_compare0 n E (TyExi _, TyAbs _)           = LESS
+  | prim_compare0 n (E as (env1, env2))
+                 (TyExi(x1 as (_,k1),ty1),
+                  TyExi(x2 as (_,k2),ty2)) =
+        Lib.pair_compare(kind_compare,
+                         prim_compare0 (n + 1) (insert(env1, Tyv x1, n), insert(env2, Tyv x2, n)))
+                        ((k1,ty1), (k2,ty2))
+  | prim_compare0 n E (TyExi _, _)                 = GREATER
   | prim_compare0 n (E as (env1, env2))
                  (TyAbs(x1 as (_,k1),ty1),
                   TyAbs(x2 as (_,k2),ty2)) =
@@ -781,6 +841,7 @@ fun compare0 n E (u as Tyv _, v as Tyv _)     = map_type_var_compare E (u,v)
   | compare0 n E (TyApp p1, TyApp p2)         = Lib.pair_compare(compare0 n E,compare0 n E)(p1,p2)
   | compare0 n E (TyApp _, _)                 = LESS
   | compare0 n E (TyAll _, TyAbs _)           = LESS
+  | compare0 n E (TyAll _, TyExi _)           = LESS
   | compare0 n (E as (env1, env2))
                  (TyAll(x1 as (_,k1),ty1),
                   TyAll(x2 as (_,k2),ty2)) =
@@ -788,6 +849,14 @@ fun compare0 n E (u as Tyv _, v as Tyv _)     = map_type_var_compare E (u,v)
                          compare0 (n + 1) (insert(env1, Tyv x1, n), insert(env2, Tyv x2, n)))
                         ((k1,ty1), (k2,ty2))
   | compare0 n E (TyAll _, _)                 = GREATER
+  | compare0 n E (TyExi _, TyAbs _)           = LESS
+  | compare0 n (E as (env1, env2))
+                 (TyExi(x1 as (_,k1),ty1),
+                  TyExi(x2 as (_,k2),ty2)) =
+        Lib.pair_compare(kind_compare,
+                         compare0 (n + 1) (insert(env1, Tyv x1, n), insert(env2, Tyv x2, n)))
+                        ((k1,ty1), (k2,ty2))
+  | compare0 n E (TyExi _, _)                 = GREATER
   | compare0 n (E as (env1, env2))
                  (TyAbs(x1 as (_,k1),ty1),
                   TyAbs(x2 as (_,k2),ty2)) =
@@ -822,11 +891,18 @@ fun compare0 L R (u as Tyv _, v as Tyv _)     = env_type_var_compare L R (u,v)
   | compare0 L R (TyApp p1, TyApp p2)         = Lib.pair_compare(compare0 L R,compare0 L R)(p1,p2)
   | compare0 L R (TyApp _, _)                 = LESS
   | compare0 L R (TyAll _, TyAbs _)           = LESS
+  | compare0 L R (TyAll _, TyExi _)           = LESS
   | compare0 L R (TyAll(x1 as (_,k1),ty1),
             TyAll(x2 as (_,k2),ty2))      =
                                  Lib.pair_compare(kind_compare,compare0 (Tyv x1::L) (Tyv x2::R))
                                                  ((k1,ty1),(k2,ty2))
   | compare0 L R (TyAll _, _)                 = GREATER
+  | compare0 L R (TyExi _, TyAbs _)           = LESS
+  | compare0 L R (TyExi(x1 as (_,k1),ty1),
+            TyExi(x2 as (_,k2),ty2))      =
+                                 Lib.pair_compare(kind_compare,compare0 (Tyv x1::L) (Tyv x2::R))
+                                                 ((k1,ty1),(k2,ty2))
+  | compare0 L R (TyExi _, _)                 = GREATER
   | compare0 L R (TyAbs(x1 as (_,k1),ty1),
             TyAbs(x2 as (_,k2),ty2))      =
                                  Lib.pair_compare(kind_compare,compare0 (Tyv x1::L) (Tyv x2::R))
@@ -852,6 +928,8 @@ fun asubtype t1 t2 = EQ(t1,t2) orelse
    | (TyApp(p,t1),TyApp(q,t2)) => asubtype p q andalso asubtype t1 t2
    | (TyAll((_,k1,r1),t1),
       TyAll((_,k2,r2),t2)) => k1 = k2 andalso r1 <= r2 andalso asubtype t1 t2
+   | (TyExi((_,k1,r1),t1),
+      TyExi((_,k2,r2),t2)) => k1 = k2 andalso r1 <= r2 andalso asubtype t1 t2
    | (TyAbs((_,k1,r1),t1),
       TyAbs((_,k2,r2),t2)) => k1 = k2 andalso r1 <= r2 andalso asubtype t1 t2
    | (M,N)       => (M=N)
@@ -870,6 +948,8 @@ fun type_vars_set acc bvs [] = acc
       type_vars_set (type_vars_set acc (HOLset.add(bvs, Tyv bv)) [body]) bvs rest
   | type_vars_set acc bvs (TyAll(bv,body) :: rest) =
       type_vars_set (type_vars_set acc (HOLset.add(bvs, Tyv bv)) [body]) bvs rest
+  | type_vars_set acc bvs (TyExi(bv,body) :: rest) =
+      type_vars_set (type_vars_set acc (HOLset.add(bvs, Tyv bv)) [body]) bvs rest
 
 fun type_vars ty = HOLset.listItems (type_vars_set empty_tyset empty_tyset [ty])
 
@@ -881,6 +961,7 @@ fun exists_tyvar P = let
     | occ E (TyApp(opr,arg)) = occ E opr orelse occ E arg
     | occ E (TyAbs(bv,body)) = occ (Tyv bv::E) body
     | occ E (TyAll(bv,body)) = occ (Tyv bv::E) body
+    | occ E (TyExi(bv,body)) = occ (Tyv bv::E) body
 in
   occ []
 end
@@ -892,6 +973,7 @@ end
 fun type_var_in ty =
    let fun f1 (TyApp(opr,ty)) = (f2 opr) orelse (f2 ty)
          | f1 (TyAll(bv,Body)) = not (Tyv bv = ty) andalso f2 Body
+         | f1 (TyExi(bv,Body)) = not (Tyv bv = ty) andalso f2 Body
          | f1 (TyAbs(bv,Body)) = not (Tyv bv = ty) andalso f2 Body
          | f1 _ = false
        and f2 t = type_eq t ty orelse f1 t
@@ -909,20 +991,30 @@ fun polymorphic (TyCon (_,Kd))    = Kind.polymorphic Kd
   | polymorphic (Tyv _)           = true
   | polymorphic (TyApp (Opr,Arg)) = polymorphic Opr orelse polymorphic Arg
   | polymorphic (TyAll (_,Body))  = true (* alt: polymorphic Body *)
+  | polymorphic (TyExi (_,Body))  = true (* alt: polymorphic Body *)
   | polymorphic (TyAbs (_,Body))  = true (* alt: polymorphic Body *)
 
 fun universal (TyAll _)         = true
   | universal (TyApp (Opr,Arg)) = universal Opr orelse universal Arg
   | universal (TyAbs (_,Body))  = universal Body
+  | universal (TyExi (_,Body))  = universal Body
   | universal _                 = false
+
+fun existential (TyExi _)         = true
+  | existential (TyApp (Opr,Arg)) = existential Opr orelse existential Arg
+  | existential (TyAbs (_,Body))  = existential Body
+  | existential (TyAll (_,Body))  = existential Body
+  | existential _                 = false
 
 fun abstraction (TyAbs _)         = true
   | abstraction (TyApp (Opr,Arg)) = abstraction Opr orelse abstraction Arg
   | abstraction (TyAll (_,Body))  = abstraction Body
+  | abstraction (TyExi (_,Body))  = abstraction Body
   | abstraction _                 = false
 
 fun is_omega (TyAbs _)         = true
   | is_omega (TyAll _)         = true
+  | is_omega (TyExi _)         = true
   | is_omega (TyApp (Opr,Arg)) = is_omega Opr orelse is_omega Arg
   | is_omega (Tyv  (_,k))      = not (k = Kind.typ 0)
   | is_omega (TyCon(_,k))      = not (Kind.is_arity k andalso Kind.rank_of k = 0)
@@ -1111,6 +1203,12 @@ local
           FVI {current = safe_delete(current bodyvs, Tyv v),
                left = NONE, right = NONE, inabs = SOME bodyvs}
         end
+      | TyExi(v, body) => let
+          val bodyvs = calculate_fvinfo body
+        in
+          FVI {current = safe_delete(current bodyvs, Tyv v),
+               left = NONE, right = NONE, inabs = SOME bodyvs}
+        end
 
   fun filtertheta theta fvset = let
     (* Removes entries in theta for things not in fvset.  theta likely to
@@ -1232,6 +1330,41 @@ local
           else
             TyAll(v, augvsubst theta new_fvi body)
         end
+      | TyExi(v, body) => let
+          val tyv = Tyv v
+          val theta = #1 (remove(theta, tyv)) handle NotFound => theta
+          val (vname, vkd) = v
+          val currentfvs = current fvi
+          (* first calculate the new names we are about to introduce into
+             the type *)
+          fun foldthis (k,v,acc) =
+              if HOLset.member(currentfvs, k) then
+                HOLset.union(acc, force (#1 v))
+              else acc
+          val newnames = foldl foldthis empty_stringset theta
+          val new_fvi = inabs fvi
+        in
+          if HOLset.member(newnames, vname) then let
+              (* now need to vary v, avoiding both newnames, and also the
+                 existing free-names of the whole term. *)
+              fun foldthis (fv, acc) = HOLset.add(acc, #1 (dest_var_type fv))
+              val allfreenames = HOLset.foldl foldthis newnames (current fvi)
+              val new_vname = set_name_variant allfreenames vname
+              val new_v = (new_vname, vkd)
+              val new_theta =
+                  if HOLset.member(current new_fvi, tyv) then let
+                      val singleton = HOLset.singleton String.compare new_vname
+                    in
+                      insert(theta, tyv, (Susp.delay (fn () => singleton),
+                                          mk_var_type new_v))
+                    end
+                  else theta
+            in
+              TyExi(new_v, augvsubst new_theta new_fvi body)
+            end
+          else
+            TyExi(v, augvsubst theta new_fvi body)
+        end
 
   fun augment_vsubst theta ty = let
           val fvi = calculate_fvinfo ty
@@ -1249,6 +1382,7 @@ local
       | TyApp p  => qcomb TyApp (vsubst theta) p
       | TyAbs _ => augment_vsubst theta ty
       | TyAll _ => augment_vsubst theta ty
+      | TyExi _ => augment_vsubst theta ty
 
 
   fun vsub_insert(fm, k, v) =
@@ -1425,6 +1559,73 @@ local
                        end
                      else raise e
         end
+      | TyExi(v as (vname,vkd), body) => let
+          val (changed,v') = (true, (vname,inst_kd vkd))
+                             handle Unchanged => (false, v)
+          val tyv = Tyv v'
+          val tyS = #1 (remove(tyS, tyv)) handle NotFound => tyS
+          val (_, vkd') = v'
+          val currentfvs = inst_tyset inst_kd (current fvi)
+          (* first calculate the new names we are about to introduce into
+             the type *)
+          fun foldthis (k,v,acc) =
+              if HOLset.member(currentfvs, k) then
+                HOLset.union(acc, force (#1 v))
+              else acc
+          val newnames = foldl foldthis empty_stringset tyS
+          val new_fvi = inabs fvi
+          val new_ctxt = insert(ctxt, v', vkd)
+        in
+          let val (new_v,body') =
+            if HOLset.member(newnames, vname) then let
+              (* now need to vary v, avoiding both newnames, and also the
+                 existing free-names of the whole term. *)
+              fun foldthis (fv, acc) = HOLset.add(acc, #1 (dest_var_type fv))
+              val allfreenames = HOLset.foldl foldthis newnames currentfvs (*(inst_tyset inst_kd (current fvi))*)
+              val new_vname = set_name_variant allfreenames vname
+              val new_v = (new_vname, vkd')
+              val new_tyS =
+                  if HOLset.member(inst_tyset inst_kd (current new_fvi), tyv) then let
+                      val singleton = HOLset.singleton String.compare new_vname
+                    in
+                      insert(tyS, tyv, (Susp.delay (fn () => singleton),
+                                          mk_var_type new_v))
+                    end
+                  else tyS
+              in
+                (new_v, SOME(augvsubst new_tyS new_ctxt new_fvi body)
+                        handle Unchanged => NONE)
+              end
+            else
+              (v', SOME(augvsubst tyS new_ctxt new_fvi body)
+                   handle Unchanged => NONE)
+          in
+            case (body', changed) of
+              (SOME t, _) => TyExi(new_v, t)
+            | (NONE, true) => TyExi(new_v, body)
+            | (NONE, false) => raise Unchanged
+          end handle e as NeedToRename v'' =>
+                     if v' = v'' then let
+                         val free_names = free_names ty
+                         val new_name = set_name_variant free_names vname
+                         val newv = (new_name, vkd)
+                         val swap_theta = vsub_insert(emptyvsubst, Tyv v, Tyv newv)
+(*
+                       in
+                         augvsubst tyS ctxt fvi (TyExi(newv, vsubst swap_theta body))
+                       end
+*)
+                         val sw_ctxt = mkDict tyvar_compare : (string * kind, kind) dict
+                         val sw_fvi = inabs fvi
+                         val body' = augvsubst_rkt 0 [] swap_theta sw_ctxt sw_fvi body
+                                     handle Unchanged => body
+                         val ty' = TyExi(newv, body')
+                         val fvi' = calculate_fvinfo ty'
+                       in
+                         augvsubst tyS ctxt fvi' ty'
+                       end
+                     else raise e
+        end
     in
       augvsubst tyS ctxt fvi ty
     end
@@ -1453,6 +1654,7 @@ local
         | TyApp p  => qcomb TyApp vsub p
         | TyAbs _ => augment_vsubst_rkt rkS kdS tyS ty
         | TyAll _ => augment_vsubst_rkt rkS kdS tyS ty
+        | TyExi _ => augment_vsubst_rkt rkS kdS tyS ty
     in vsub
     end
 
@@ -1482,6 +1684,14 @@ local
                 val newtheta = foldl modify_theta emptysubst theta
               in
                 TyAll(v, ssubst newtheta body)
+              end
+            | TyExi(v, body) => let
+                fun modify_theta (k,value,newtheta) =
+                    if type_var_in (Tyv v) k then newtheta
+                    else insert(newtheta, k, value)
+                val newtheta = foldl modify_theta emptysubst theta
+              in
+                TyExi(v, ssubst newtheta body)
               end
             | _ => raise Unchanged
           end
@@ -1647,6 +1857,7 @@ fun inst_rank [] = Lib.I
         | inc_rk (TyCon(s,kd))        = TyCon(s,inst_kd kd) (* current design DOES inst this kd's rank *)
         | inc_rk (TyApp(opr, ty))     = TyApp(inc_rk opr,  inc_rk ty)
         | inc_rk (TyAll((s,kd),Body)) = TyAll((s,inst_kd kd), inc_rk Body)
+        | inc_rk (TyExi((s,kd),Body)) = TyExi((s,inst_kd kd), inc_rk Body)
         | inc_rk (TyAbs((s,kd),Body)) = TyAbs((s,inst_kd kd), inc_rk Body)
   in (* vacuum o *) inc_rk
   end
@@ -1733,6 +1944,28 @@ local
                        end
                      else raise e
         end
+      | TyExi (v as (name, kd), body) => let
+            val (changed, v') = case kd_sub rkS theta kd of
+                                  SAME => (false, v)
+                                | DIFF kd' => (true, (name, kd'))
+        in let
+             val body' = SOME (inst1 rkS theta (Map.insert(ctxt, v', kd)) body)
+                 handle Unchanged => NONE
+           in
+             case (body', changed) of
+               (SOME t, _) => TyExi(v', t)
+             | (NONE, true) => TyExi(v', body)
+             | (NONE, false) => raise Unchanged
+           end handle e as NeedToRename v'' =>
+                     if v' = v'' then let
+                         val free_names = free_names t
+                         val new_name = set_name_variant free_names name
+                         val newv = (new_name, kd)
+                       in
+                         inst1 rkS theta ctxt (TyExi(newv, pure_type_subst [Tyv v |-> Tyv newv] body))
+                       end
+                     else raise e
+        end
 in
 
 val inst_rank_kind1 = inst1 (* requires context; may throw Unchanged, NeedToRename *)
@@ -1810,6 +2043,35 @@ end (* local *)
 
 val list_mk_univ_type = list_mk_univ_type_binder NONE "list_mk_univ_type"
 
+local
+  val FORMAT = ERR "list_mk_exist_type_binder"
+   "expected first arg to be a type constant of kind :(<kd>_1 => <kd>_2) => <kd>_3"
+  fun check_opt NONE = Lib.I
+    | check_opt (SOME c) =
+      if not(is_con_type c) then raise FORMAT
+      else case total (fst o Kind.kind_dom_rng o fst o Kind.kind_dom_rng o kind_of) c of
+             NONE => raise FORMAT
+           | SOME kd => (fn exist =>
+                            let val dom = fst(Kind.kind_dom_rng(kind_of exist))
+                            in mk_app_type (inst_kind[kd |-> dom] c, exist)
+                            end)
+in
+fun list_mk_exist_type_binder binder caller = let
+  val f = check_opt binder
+  (* As of Mosml2.00, List.foldr is clearly not tail recursive, and you can
+     blow the stack with big lists here.  Thus, the reversing of the list and
+     the use of foldl instead, relying on the fact that it's hard to imagine
+     not writing foldl tail-recursively *)
+in
+  fn (vlist, ty) =>
+    if not (all is_var_type vlist) then raise ERR caller "bound variable arg not a type variable"
+    else if not (is_type_kind (kind_of ty)) then raise ERR caller "kind of body is not the base kind"
+    else List.foldl (f o mk_exist_type) ty (List.rev vlist)
+end
+end (* local *)
+
+val list_mk_exist_type = list_mk_exist_type_binder NONE "list_mk_exist_type"
+
 
 (* ---------------------------------------------------------------------*)
 (* Beta conversion section, including conversionals for depth search    *)
@@ -1847,7 +2109,7 @@ fun rand_conv_ty conv (TyApp(Rator,Rand)) = let
 (*
     handle HOL_ERR {origin_function, message, origin_structure} =>
       if Lib.mem origin_function
-           ["rand_conv_ty", "rator_conv_ty", "abs_conv_ty", "univ_conv_ty"]
+           ["rand_conv_ty", "rator_conv_ty", "abs_conv_ty", "univ_conv_ty", "exist_conv_ty"]
          andalso origin_structure = "Type"
       then
         raise ERR "rand_conv_ty" message
@@ -1868,7 +2130,7 @@ fun rator_conv_ty conv (TyApp(Rator,Rand)) = let
 (*
     handle HOL_ERR {origin_function, message, origin_structure} =>
       if Lib.mem origin_function
-           ["rand_conv_ty", "rator_conv_ty", "abs_conv_ty", "univ_conv_ty"]
+           ["rand_conv_ty", "rator_conv_ty", "abs_conv_ty", "univ_conv_ty", "exist_conv_ty"]
          andalso origin_structure = "Type"
       then
         raise ERR "rator_conv_ty" message
@@ -1902,7 +2164,7 @@ fun abs_conv_ty conv (TyAbs(Bvar,Body)) = let
 (*
     handle HOL_ERR {origin_function, message, origin_structure} =>
       if Lib.mem origin_function
-           ["rand_conv_ty", "rator_conv_ty", "abs_conv_ty", "univ_conv_ty"]
+           ["rand_conv_ty", "rator_conv_ty", "abs_conv_ty", "univ_conv_ty", "exist_conv_ty"]
          andalso origin_structure = "Type"
       then
         raise ERR "abs_conv_ty" message
@@ -1923,7 +2185,7 @@ fun univ_conv_ty conv (TyAll(Bvar,Body)) = let
 (*
     handle HOL_ERR {origin_function, message, origin_structure} =>
       if Lib.mem origin_function
-           ["rand_conv_ty", "rator_conv_ty", "abs_conv_ty", "univ_conv_ty"]
+           ["rand_conv_ty", "rator_conv_ty", "abs_conv_ty", "univ_conv_ty", "exist_conv_ty"]
          andalso origin_structure = "Type"
       then
         raise ERR "univ_conv_ty" message
@@ -1934,6 +2196,27 @@ in
   TyAll(Bvar, Newbody)
 end
   | univ_conv_ty _ _ = raise ERR "univ_conv_ty" "not a universal type"
+
+(* ----------------------------------------------------------------------
+    exist_conv_ty conv ``: !'a. t['a]`` applies conv to t['a]
+   ---------------------------------------------------------------------- *)
+
+fun exist_conv_ty conv (TyExi(Bvar,Body)) = let
+  val Newbody = conv Body
+(*
+    handle HOL_ERR {origin_function, message, origin_structure} =>
+      if Lib.mem origin_function
+           ["rand_conv_ty", "rator_conv_ty", "abs_conv_ty", "univ_conv_ty", "exist_conv_ty"]
+         andalso origin_structure = "Type"
+      then
+        raise ERR "exist_conv_ty" message
+      else
+        raise ERR "exist_conv_ty" (origin_function ^ ": " ^ message)
+*)
+in
+  TyExi(Bvar, Newbody)
+end
+  | exist_conv_ty _ _ = raise ERR "exist_conv_ty" "not an existential type"
 
 (*---------------------------------------------------------------------------
  * Conversion that always fails;  identity element for orelse_ty.
@@ -2017,7 +2300,8 @@ fun repeat_ty conv ty =
 fun try_conv_ty conv = conv orelse_ty all_conv_ty;
 
 fun sub_conv_ty conv =
-    try_conv_ty (app_conv_ty conv orelse_ty abs_conv_ty conv orelse_ty univ_conv_ty conv)
+    try_conv_ty (app_conv_ty conv orelse_ty abs_conv_ty conv
+                 orelse_ty univ_conv_ty conv orelse_ty exist_conv_ty conv)
 
 fun head_betan_ty (TyApp(M as TyAbs _, N))
        = let val (btyv,body) = dest_abs_type M
@@ -2131,6 +2415,11 @@ and abconv1_ty n (E as (env1,env2)) p = EQ p orelse
                                       let val E' = (insert(env1, Tyv x1, n), insert(env2, Tyv x2, n))
                                       in abconv0_ty (n+1) E' (ty1,ty2)
                                       end
+       | (TyExi(x1 as (_,k1),ty1),
+          TyExi(x2 as (_,k2),ty2)) => k1 = k2 andalso
+                                      let val E' = (insert(env1, Tyv x1, n), insert(env2, Tyv x2, n))
+                                      in abconv0_ty (n+1) E' (ty1,ty2)
+                                      end
        | _ => false
 
 fun abeconv0_ty n E (t1,t2) = abeconv1_ty n E (head_beta_eta_ty t1, head_beta_eta_ty t2)
@@ -2146,6 +2435,11 @@ and abeconv1_ty n (E as (env1,env2)) p = EQ p orelse
                                       end
        | (TyAll(x1 as (_,k1),ty1),
           TyAll(x2 as (_,k2),ty2)) => k1 = k2 andalso
+                                      let val E' = (insert(env1, Tyv x1, n), insert(env2, Tyv x2, n))
+                                      in abeconv0_ty (n+1) E' (ty1,ty2)
+                                      end
+       | (TyExi(x1 as (_,k1),ty1),
+          TyExi(x2 as (_,k2),ty2)) => k1 = k2 andalso
                                       let val E' = (insert(env1, Tyv x1, n), insert(env2, Tyv x2, n))
                                       in abeconv0_ty (n+1) E' (ty1,ty2)
                                       end
@@ -2166,6 +2460,12 @@ and abeconv_ge1_ty n (E as (env1,env2)) p = EQ p orelse
        | (TyAll(x1 as (_,k1),ty1),
           TyAll(x2 as (_,k2),ty2)) => k1 = k2 andalso
        (* TyAll(x2 as (_,k2),ty2)) => k1 :>=: k2 andalso *)
+                                      let val E' = (insert(env1, Tyv x1, n), insert(env2, Tyv x2, n))
+                                      in abeconv_ge0_ty (n+1) E' (ty1,ty2)
+                                      end
+       | (TyExi(x1 as (_,k1),ty1),
+          TyExi(x2 as (_,k2),ty2)) => k1 = k2 andalso
+       (* TyExi(x2 as (_,k2),ty2)) => k1 :>=: k2 andalso *)
                                       let val E' = (insert(env1, Tyv x1, n), insert(env2, Tyv x2, n))
                                       in abeconv_ge0_ty (n+1) E' (ty1,ty2)
                                       end
@@ -2246,12 +2546,20 @@ and compare1 n (E as (env1,env2)) p =
        | (TyApp p1,TyApp p2)         => Lib.pair_compare(compare0 n E,compare0 n E)(p1,p2)
        | (TyApp _, _)                => LESS
        | (TyAll _, TyAbs _)          => LESS
+       | (TyAll _, TyExi _)          => LESS
        | (TyAll(x1 as (_,k1),ty1),
           TyAll(x2 as (_,k2),ty2))   =>
               Lib.pair_compare(kind_compare,
                                compare0 (n+1) (insert(env1, Tyv x1, n), insert(env2, Tyv x2, n)))
                               ((k1,ty1),(k2,ty2))
        | (TyAll _, _)                => GREATER
+       | (TyExi _, TyAbs _)          => LESS
+       | (TyExi(x1 as (_,k1),ty1),
+          TyExi(x2 as (_,k2),ty2))   =>
+              Lib.pair_compare(kind_compare,
+                               compare0 (n+1) (insert(env1, Tyv x1, n), insert(env2, Tyv x2, n)))
+                              ((k1,ty1),(k2,ty2))
+       | (TyExi _, _)                => GREATER
        | (TyAbs(x1 as (_,k1),ty1),
           TyAbs(x2 as (_,k2),ty2))   =>
               Lib.pair_compare(kind_compare,
@@ -2297,6 +2605,10 @@ fun pp_raw_type pps ty =
             pp Body; add_string ")" )
       | pp (TyAll(Btyvar,Body)) =
           ( add_string "(!:";
+            pp (Tyv Btyvar); add_string dot; add_break(1,0);
+            pp Body; add_string ")" )
+      | pp (TyExi(Btyvar,Body)) =
+          ( add_string "(?:";
             pp (Tyv Btyvar); add_string dot; add_break(1,0);
             pp Body; add_string ")" )
       | pp (TyApp(Rator as TyApp(TyCon(id,_),Rand1),Rand2)) =
@@ -2449,6 +2761,16 @@ local
       in
         type_pmatch lconsts ((vv |-> cv)::env) vbod cbod sofar'
       end
+    else if is_exist_type vty then let
+        val (vv,vbod) = dest_exist_type vty
+        val (cv,cbod) = dest_exist_type cty
+                handle HOL_ERR _ => MERR "existential type mismatched with non-existential type"
+        val (_, vkd, vrk) = dest_var_type vv
+        val (_, ckd, crk) = dest_var_type cv
+        val sofar' = (safe_insert_tya (mk_dummy_ty(vkd,vrk) |-> mk_dummy_ty(ckd,crk)) insts, homs)
+      in
+        type_pmatch lconsts ((vv |-> cv)::env) vbod cbod sofar'
+      end
     else (* is_app_type *) let
         val vhop = repeat rator_type vty
       in
@@ -2546,6 +2868,17 @@ local
                type_pmatch lconsts ((vv |-> cv)::env) vbody cbody sofar'
              end
          | _ => MERR "universal type mismatched with non-universal type")
+    | type_pmatch_1 lconsts env (vty as TyExi((_,vkd),_)) cty (insts,homs)
+      = (case cty of
+           TyExi((_,ckd),_) =>
+             let
+               val (vv,vbody) = dest_exist_type vty
+               val (cv,cbody) = dest_exist_type cty
+               val sofar' = (safe_insert_tya (mk_dummy_ty vkd |-> mk_dummy_ty ckd) insts, homs)
+             in
+               type_pmatch lconsts ((vv |-> cv)::env) vbody cbody sofar'
+             end
+         | _ => MERR "existential type mismatched with non-existential type")
 
 
 fun get_rank_kind_insts avoids (env:(hol_type,hol_type)subst) L (rk,(kdS,Id)) =
@@ -2651,6 +2984,16 @@ fun type_homatch kdavoids lconsts rkin kdins (insts, homs) = let
     end
   val (distv_homs,real_homs) = partition args_are_distinct_vars fixed_homs
   val ordered_homs = var_homs @ distv_homs @ real_homs @ basic_homs
+  val (_,kdins') = Kind.norm_subst(rkin,kdins)
+  val inst_fn = inst_rank_kind (fst rkin) (fst kdins')
+  fun fix_con_dummy_ty (i as {redex,residue}) =
+    if is_con_dummy_ty redex
+      (* then equalize the ranks of the "floating" constant instances *)
+      then let val redex' = inst_fn redex
+               val inc = Int.max(rank_of_type redex' - rank_of_type residue, 0)
+           in redex |-> inst_rank inc residue
+           end
+      else i
   fun homatch rkin kdins (insts, homs) =
   if homs = [] then insts
   else let
@@ -2715,7 +3058,6 @@ fun type_homatch kdavoids lconsts rkin kdins (insts, homs) = let
                        let
                          val chop = find_residue(*_ty*) vhop insts (* may raise NOT_FOUND *)
                          val _ = if eq_ty vhop chop then raise NOT_FOUND else ()
-                         (* val vty1 = deep_beta_eta_ty (pure_type_subst (map_redexes inst_fn ((vhop |-> chop)::env)) (inst_fn vty)) *)
                          val vty1 = deep_beta_eta_ty (pure_type_subst (map_redexes inst_fn (env@insts)) (inst_fn vty))
                                         handle HOL_ERR _ => vty
                        in
@@ -2840,7 +3182,7 @@ fun type_homatch kdavoids lconsts rkin kdins (insts, homs) = let
         end
     end
 in
-  homatch rkin kdins (insts, ordered_homs)
+  homatch rkin kdins (map fix_con_dummy_ty insts, ordered_homs)
 end
 
 in
@@ -2904,6 +3246,7 @@ local
 (*
   fun free (TyApp(Opr,Arg)) n = free Opr n andalso free Arg n
     | free (TyAll(_,Body)) n  = free Body (n+1)
+    | free (TyExi(_,Body)) n  = free Body (n+1)
     | free (TyAbs(_,Body)) n  = free Body (n+1)
     | free _ _                = true
   fun bound_by_scope scoped M = if scoped then not (free M 0) else false
@@ -2973,6 +3316,7 @@ and RM0 ((TyApp (opr1,arg1))::ps) ((TyApp (opr2,arg2))::obs) tyS
                 (*,kdS,rkS*) (*, kdS',rkS' *) )
             end
   | RM0 ((TyAll _)::_) _ _ = raise HIGHER_ORDER
+  | RM0 ((TyExi _)::_) _ _ = raise HIGHER_ORDER
   | RM0 ((TyAbs _)::_) _ _ = raise HIGHER_ORDER
   | RM0 all others _       = MERR "different constructors"
 end
@@ -3091,6 +3435,7 @@ fun size acc tylist =
         | TyApp(ty1,ty2) => size (1 + acc) ((ty1 :: ty2 :: tys1) :: tys2)
         | TyAbs(_, body) => size (1 + acc) ((body :: tys1) :: tys2)
         | TyAll(_, body) => size (1 + acc) ((body :: tys1) :: tys2)
+        | TyExi(_, body) => size (1 + acc) ((body :: tys1) :: tys2)
       end
 
 fun type_size ty = size 0 [[ty]]
