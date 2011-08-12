@@ -317,23 +317,6 @@ val LET_DEF =
 
 val _ = add_const "LET";
 
-(*
-val PACK_DEF =
- Definition.new_definition
-   ("PACK_DEF",       Term `PACK = \:'r:'k. \:('a:'k => ty). \M:'r 'a.
-                                      \:'y. \f:(!'x:'k. 'x 'a -> 'y). f [:'r:] M`);
-
-val _ = add_const "PACK";
-
-val UNPACK_DEF =
- Definition.new_definition
-   ("UNPACK_DEF",     Term `UNPACK = \(f : !'x:'k. 'x ('a:'k => ty) -> 'r)
-                                      (P : !'y. (!'x:'k. 'x 'a -> 'y) -> 'y).
-                                      P [:'r:] f`);
-
-val _ = add_const "UNPACK";
-*)
-
 
 val COND_DEF =
  Definition.new_definition
@@ -411,18 +394,6 @@ val _ = add_rule{term_name   = "COND",
                                 TOK "else", BreakSpace(1,2)],
                  paren_style = OnlyIfNecessary,
                  block_style = (AroundEachPhrase, (CONSISTENT, 0))};
-
-(*
-val _ = add_rule{term_name   = "PACK",
-                 fixity      = TruePrefix 70,
-                 pp_elements = [PPBlock([TOK "pack", BreakSpace(1,2), TY,
-                                         BreakSpace(1,0),
-                                         TOK "by"], (CONSISTENT, 0)),
-                                BreakSpace(1,2), TY, BreakSpace(1,0),
-                                TOK "body", BreakSpace(1,2)],
-                 paren_style = OnlyIfNecessary,
-                 block_style = (AroundEachPhrase, (CONSISTENT, 0))};
-*)
 
 
 (*---------------------------------------------------------------------------*

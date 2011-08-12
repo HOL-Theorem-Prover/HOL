@@ -599,9 +599,9 @@ fun pp_pretype pps ty =
                                if current_trace "ranks" < 3 then () else
                                  add_string "[";
                                add_string "->";
-                               pp_if_prerank (Prekind.prank_of Kind);
                                if current_trace "ranks" < 3 then () else
-                                 add_string "]";
+                                 (pp_if_prerank (Prekind.prank_of Kind);
+                                  add_string "]");
                                add_break(1,0);
                                pppretype right ty2;
                                if state = none then end_block()
@@ -618,9 +618,9 @@ fun pp_pretype pps ty =
                                if current_trace "ranks" < 3 then () else
                                  add_string "[";
                                add_string "->";
-                               pp_if_prerank (Prekind.prank_of Kind);
                                if current_trace "ranks" < 3 then () else
-                                 add_string "]";
+                                 (pp_if_prerank (Prekind.prank_of Kind);
+                                  add_string "]");
                                add_break(1,0);
                                pppretype right ty2;
                                if state = none then end_block()
