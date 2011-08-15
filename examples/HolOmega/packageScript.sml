@@ -55,8 +55,12 @@ val ety1_vars = type_vars ety1;
 val ety2 = ``:?'a. 'a -> 'b``;
 val ety2_vars = type_vars ety2;
 
-val ety3 = ``:?'a 'c. 'a -> 'b -> 'c``;
-val ety3_vars = type_vars ety3;
+val ety2' = mk_exist_type(alpha, alpha --> beta);
+val check = eq_ty ety2 ety2';
+
+val (bvar,body) = dest_exist_type ety2;
+
+val ety3 = list_mk_exist_type ([alpha,gamma], alpha --> beta --> gamma);
 val (ety3_bvars,ety3_body) = strip_exist_type ety3;
 
 
@@ -76,11 +80,17 @@ val package2_ty = type_of package2;
 val package3 = ``pack (:bool, T) : ?'x. 'x``;
 val package3_ty = type_of package3;
 
-val package4 = ``pack (:num, (0, \x:num. SUC x)) : ?'x. 'x # ('x -> num)``;
+val check = eq_ty package2_ty package3_ty;
+
+val package4 =
+    ``pack (:num, (0, \x:num. SUC x)) : ?'x. 'x # ('x -> num)``;
 val package4_ty = type_of package4;
 
-val package5 = ``pack (:bool, (T, \x:bool. 0)) : ?'x. 'x # ('x -> num)``;
+val package5 =
+    ``pack (:bool, (T, \x:bool. 0)) : ?'x. 'x # ('x -> num)``;
 val package5_ty = type_of package5;
+
+val check = eq_ty package4_ty package5_ty;
 
 
 (* Using packages *)
@@ -134,11 +144,12 @@ val _ = Hol_datatype
 
 val counter_kind = kind_of ``:counter_recd1``
 
-val counterADT = ``pack ( :num,
-                          <| new := 1;
-                             get := \i:num. i;
-                             inc := \i:num. SUC i
-                          |> ) : ?'a. 'a counter_recd1``;
+val counterADT =
+       ``pack ( :num,
+                <| new := 1;
+                   get := \i:num. i;
+                   inc := \i:num. SUC i
+                |> ) : ?'a. 'a counter_recd1``;
 
 val counterADT_type = type_of counterADT; (* note: an existential type *)
 
@@ -162,6 +173,7 @@ val _ = Hol_datatype
                         toggle : 'a -> 'a;
                         reset  : 'a -> 'a
                       |>`;
+val flipflop_recd1_kd = kind_of ``:flipflop_recd1``;
 
 val counter_ex3 =
   ``let (:'Counter,counter) = ^counterADT in

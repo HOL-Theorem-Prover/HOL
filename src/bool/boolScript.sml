@@ -433,9 +433,8 @@ val PACK_EXT_AX = (* New for HOL-Omega *)
  new_axiom
    ("PACK_EXT_AX",   Term `!:('a:'k => ty:1).
                              !p q: ?'x:'k. 'x 'a.
-                               (!:'b:ty:1.
-                                  !f: !'x:'k. 'x 'a -> 'b.
-                                     UNPACK f p = UNPACK f q)
+                               (!P: !'x:'k. 'x 'a -> bool.
+                                   UNPACK P p = UNPACK P q)
                                ==> (p = q)`);
 
 val PACK_ONTO_AX = (* New for HOL-Omega *)
@@ -1683,7 +1682,7 @@ val TY_FUN_EQ_THM =
 val _ = save_thm("TY_FUN_EQ_THM",TY_FUN_EQ_THM);
 
 (*---------------------------------------------------------------------------
-      PACK_EQ_THM  |- !p q. (p = q) = !f. UNPACK f p = UNPACK f q
+      PACK_EQ_THM  |- !p q. (p = q) = !P. UNPACK P p = UNPACK P q
  ---------------------------------------------------------------------------*)
 
 val PACK_EQ_THM =
@@ -1693,16 +1692,15 @@ val PACK_EQ_THM =
       val p = mk_var("p", ety)
       val q = mk_var("q", ety)
       val c = Type.mk_var_type("'c", Kind.kappa)
-      val d = Type.mk_var_type("'d", Kind.typ 1)
-      val fty = mk_univ_type(c, mk_app_type(a,c) --> d)
-      val f = mk_var("f", fty)
-      val U = mk_thy_const{Thy="min",Name="UNPACK",Ty=fty --> ety --> d}
+      val Pty = mk_univ_type(c, mk_app_type(a,c) --> bool)
+      val P = mk_var("P", Pty)
+      val U = mk_thy_const{Thy="min",Name="UNPACK",Ty=Pty --> ety --> bool}
       val p_eq_q = mk_eq(p,q)
-      val Uf = mk_comb(U,f)
-      val Ufp_eq_Ufq = mk_eq(mk_comb(Uf,p),mk_comb(Uf,q))
-      val uq_Ufp_eq_Ufq = mk_tyforall(d,mk_forall(f,Ufp_eq_Ufq))
-      val th1 = TY_GEN d (GEN f (AP_TERM Uf (ASSUME p_eq_q)))
-      val th2 = MP (SPEC_ALL (TY_SPEC_ALL PACK_EXT_AX)) (ASSUME uq_Ufp_eq_Ufq)
+      val UP = mk_comb(U,P)
+      val UPp_eq_UPq = mk_eq(mk_comb(UP,p),mk_comb(UP,q))
+      val uq_UPp_eq_UPq = mk_forall(P,UPp_eq_UPq)
+      val th1 = GEN P (AP_TERM UP (ASSUME p_eq_q))
+      val th2 = MP (SPEC_ALL (TY_SPEC_ALL PACK_EXT_AX)) (ASSUME uq_UPp_eq_UPq)
   in
     GEN p (GEN q
         (IMP_ANTISYM_RULE (DISCH_ALL th1) (DISCH_ALL th2)))
