@@ -49,7 +49,7 @@ val DEPDIR:string   = ".HOLMK";   (* where Holmake dependencies kept  *)
           END user-settable parameters
  ---------------------------------------------------------------------------*)
 
-val version_number = 7
+val version_number = 8
 val release_string = "Kananaskis"
 
 
