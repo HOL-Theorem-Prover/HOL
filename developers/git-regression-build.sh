@@ -119,7 +119,8 @@ esac
  echo "ML Implementation: $mlsys" &&
  echo "Started: "$(date +"%a, %d %b %Y %H:%M:%S %z") &&
  echo "Extra commandline arguments: $@" &&
- echo "Revision: $(git log -n1 --oneline HEAD)"
+ echo -n "Revision: " &&
+ git log -n1 --oneline HEAD &&
  if [ "$updated_ok" ]
  then
      cat update-log
