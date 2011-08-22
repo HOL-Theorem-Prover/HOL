@@ -175,14 +175,13 @@ fun partition_ssfrags names ssdata =
 
 type net = ((term list -> term -> thm) -> term list -> conv) Ho_Net.net;
 
-abstype simpset =
+datatype simpset =
      SS of {mk_rewrs    : (controlled_thm -> controlled_thm list),
             ssfrags     : ssfrag list,
             initial_net : net,
             dprocs      : reducer list,
             travrules   : travrules,
             limit       : int option}
-with
 
  val empty_ss = SS {mk_rewrs=fn x => [x],
                     ssfrags = [], limit = NONE,
@@ -537,8 +536,6 @@ fun remove_ssfrags ss names =
        limit = #limit ssdata};
 
  fun SIMP_QCONV ss = TRAVERSE (traversedata_for_ss ss);
-
-end (* abstype for SS *)
 
 val Cong = markerLib.Cong
 val AC   = markerLib.AC;

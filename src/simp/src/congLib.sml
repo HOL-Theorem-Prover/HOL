@@ -197,14 +197,12 @@ datatype congsetfrag = CSFRAG of
 
 
 
-abstype congset = CS of
+datatype congset = CS of
    {cong_reducer : Traverse.reducer,
     limit : int option,
     relations : preorder list,
     dprocs : Traverse.reducer list,
     travrules  : travrules list}
-
-with
 
 val empty_congset = CS {cong_reducer=cong_reducer,
                     relations=[equalityPreorder],
@@ -290,8 +288,6 @@ fun CONGRUENCE_SIMP_CONV relation (cs as (CS csdata)) ss =
   in
     conv
   end;
-
-end (*Datatype congset*)
 
 
 val CONGRUENCE_EQ_SIMP_CONV = CONGRUENCE_SIMP_CONV ``$=``;
