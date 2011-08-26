@@ -390,7 +390,6 @@ val _ = OS.Process.atExit (fn () => ignore (finish_logging false))
 *)
 val HOLDIR    = case cmdl_HOLDIR of NONE => HOLDIR0 | SOME s => s
 val POLYMLLIBDIR =  case cmdl_POLYMLLIBDIR of NONE => POLYMLLIBDIR0 | SOME s => s
-val POLY =  case cmdl_POLY of NONE => fullPath [HOLDIR, "bin", "hol.builder"] | SOME s => s
 (*val MOSMLCOMP = fullPath [HOLDIR, "tools-poly/polymlc"]*)
 val SIGOBJ    = normPath(OS.Path.concat(HOLDIR, "sigobj"));
 
@@ -495,6 +494,21 @@ val hmake_no_sigobj = member "NO_SIGOBJ" hmake_options
 val hmake_qof = member "QUIT_ON_FAILURE" hmake_options
 val hmake_noprereqs = member "NO_PREREQS" hmake_options
 val extra_cleans = envlist "EXTRA_CLEANS"
+
+val POLY =
+    case cmdl_POLY of
+      NONE => let
+        val default = fullPath [HOLDIR, "bin", "hol.builder"]
+      in
+        case envlist "HOLHEAP" of
+          [] => default
+        | [x] => x
+        | xs => (warn ("Can't interpret "^String.concatWith " " xs ^
+                       " as a HOL HEAP spec; using default hol.builder.");
+                 default)
+      end
+    | SOME s => s
+
 
 val quit_on_failure = quit_on_failure orelse hmake_qof
 val no_prereqs = no_prereqs orelse hmake_noprereqs
