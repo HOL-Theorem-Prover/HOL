@@ -509,6 +509,15 @@ val POLY =
       end
     | SOME s => s
 
+val (poly_localp, EXE_POLY) =
+    if Path.isRelative POLY then let
+        val d = Path.dir POLY
+      in
+        if d = "" then (true, Path.concat(".", POLY)) else
+        if d = "." then (true, POLY)
+        else (false, POLY)
+      end
+    else (false, POLY)
 
 val quit_on_failure = quit_on_failure orelse hmake_qof
 val no_prereqs = no_prereqs orelse hmake_noprereqs
@@ -620,7 +629,7 @@ let val out = TextIO.openOut result
       (TextIO.output (out, s); TextIO.output (out, "\n"))
 in
   p "#!/bin/sh";
-  p (POLY ^ "<<'__end-of-file__'");
+  p (EXE_POLY ^ "<<'__end-of-file__'");
   p "val _ = PolyML.Compiler.prompt1:=\"\";";
   p "val _ = PolyML.Compiler.prompt2:=\"\";";
   p "val _ = PolyML.print_depth 0;";
@@ -1339,12 +1348,7 @@ in
     end
 end
 
-fun maybe_add_heap tgts = let
-  val d = Path.dir POLY
-in
-  if d = "" orelse d = "." then POLY::tgts
-  else tgts
-end
+fun maybe_add_heap tgts = if poly_localp then POLY :: tgts else tgts
 
 in
   case targets of
