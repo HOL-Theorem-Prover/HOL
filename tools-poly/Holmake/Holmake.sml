@@ -1339,23 +1339,30 @@ in
     end
 end
 
+fun maybe_add_heap tgts = let
+  val d = Path.dir POLY
+in
+  if d = "" orelse d = "." then POLY::tgts
+  else tgts
+end
+
 in
   case targets of
     [] => let
       val targets = generate_all_plausible_targets ()
+      val targets = map fromFile targets
+      val targets = maybe_add_heap targets
       val _ =
         if debug then let
-            val tgtstrings0 = map fromFile targets
             val tgtstrings =
                 map (fn s => if OS.FileSys.access(s, []) then s else s ^ "(*)")
-                    tgtstrings0
+                    targets
           in
             print("Generated targets are: "^print_list tgtstrings ^ "\n")
           end
         else ()
     in
-      maybe_recurse
-          (fn () => finish_logging (strategy  (map (fromFile) targets)))
+      maybe_recurse (fn () => finish_logging (strategy  targets))
     end
   | xs => let
       fun isPhony x = member x ["clean", "cleanDeps", "cleanAll"] orelse
@@ -1363,7 +1370,11 @@ in
     in
       if List.all isPhony xs then
         if finish_logging (strategy xs) then SOME visiteddirs else NONE
-      else maybe_recurse (fn () => finish_logging (strategy xs))
+      else let
+          val xs = maybe_add_heap xs
+        in
+          maybe_recurse (fn () => finish_logging (strategy xs))
+        end
     end
 end
 
