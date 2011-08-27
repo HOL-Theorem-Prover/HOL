@@ -578,19 +578,21 @@ fun (s in_target t) = case extra_deps t of NONE => false | SOME l => member s l
 fun addPath I file =
   if OS.Path.isAbsolute file then
     file
-  else
-    let val p = List.find (fn p =>
-                            OS.FileSys.access (OS.Path.concat (p, file ^ ".ui"), []))
-                          (OS.FileSys.getDir() :: I)
+  else let
+      val p = List.find (fn p =>
+                            FileSys.access (Path.concat (p, file ^ ".ui"), []))
+                        (FileSys.getDir() :: I)
     in
       case p of
            NONE => OS.Path.concat (OS.FileSys.getDir(), file)
          | SOME p => OS.Path.concat (p, file)
     end;
 
-fun poly_compile file I deps =
-let val modName = fromFileNoSuf file
-    val depMods = List.map (addPath I o fromFileNoSuf) deps
+fun poly_compile file I deps = let
+  val modName = fromFileNoSuf file
+  fun mapthis (Unhandled _) = NONE
+    | mapthis f = SOME (fromFileNoSuf f)
+  val depMods = List.map (addPath I) (List.mapPartial mapthis deps)
 in
 case file of
   SIG _ =>
@@ -945,7 +947,9 @@ in
       val tcdeps = collect_all_dependencies [] [f]
       val uo_deps =
           List.mapPartial (fn (UI x) => SOME (UO x) | _ => NONE) tcdeps
-      val alldeps = set_union (set_union tcdeps uo_deps) file_dependencies
+      val heap_deps = if poly_localp then [Unhandled POLY] else []
+      val alldeps = set_union (set_union tcdeps uo_deps)
+                              (set_union file_dependencies heap_deps)
     in
       case f of
         SML x => let
@@ -1348,14 +1352,11 @@ in
     end
 end
 
-fun maybe_add_heap tgts = if poly_localp then POLY :: tgts else tgts
-
 in
   case targets of
     [] => let
       val targets = generate_all_plausible_targets ()
       val targets = map fromFile targets
-      val targets = maybe_add_heap targets
       val _ =
         if debug then let
             val tgtstrings =
@@ -1374,11 +1375,8 @@ in
     in
       if List.all isPhony xs then
         if finish_logging (strategy xs) then SOME visiteddirs else NONE
-      else let
-          val xs = maybe_add_heap xs
-        in
-          maybe_recurse (fn () => finish_logging (strategy xs))
-        end
+      else
+        maybe_recurse (fn () => finish_logging (strategy xs))
     end
 end
 
