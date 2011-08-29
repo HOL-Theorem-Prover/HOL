@@ -226,7 +226,6 @@ verdict ("OS", OS);
 verdict ("poly", poly);
 verdict ("polymllibdir", polymllibdir);
 verdict ("holdir", holdir);
-verdict ("dynlib_available", Bool.toString dynlib_available);
 
 print "\nConfiguration will begin with above values.  If they are wrong\n";
 print "press Control-C.\n\n";
