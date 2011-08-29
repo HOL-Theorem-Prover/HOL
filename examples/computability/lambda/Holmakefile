@@ -1,3 +1,24 @@
 INCLUDES = ../../lambda/barendregt ../../lambda/basics \
            ../../lambda/other-models ../
 OPTIONS = QUIT_ON_FAILURE
+HOLHEAP = computability-heap
+EXTRA_CLEANS = $(HOLHEAP) $(HOLHEAP).o
+
+BARE_THYS = ../../lambda/barendregt/normal_order \
+            ../../lambda/other-models/pure_dB
+DEPS_poly = $(patsubst %,%Theory.uo,$(BARE_THYS))
+DEPS_mosml =
+
+TARGET_poly = $(HOLHEAP)
+TARGET_mosml = brackabs.sml
+
+COMM_mosml =
+COMM_poly = \
+   (echo computability-heap ; \
+    for i in $(BARE_THYS) ; do echo $${i}Theory ; done) | \
+   $(protect $(HOLDIR)/bin/hol.builder) \
+      $(protect $(HOLDIR)/tools-poly/genbuild.ML)  && \
+   cc -o $@ computability-heap.o $(POLY_LDFLAGS)
+
+$(TARGET_$(ML_SYSNAME)): $(DEPS_$(ML_SYSNAME))
+	$(COMM_$(ML_SYSNAME))

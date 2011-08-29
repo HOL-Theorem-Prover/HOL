@@ -107,3 +107,6 @@ examples/muddy/muddyC/buddy/src/libbdd.a
 examples/muddy/muddyC/muddy.so
 
 examples/ordinal/ordinalML.*
+
+examples/computability/lambda/computability-heap
+
