@@ -58,6 +58,12 @@ sig
   val tprove0    : defn * tactic -> thm * thm
   val tprove     : defn * tactic -> thm * thm
   val tstore_defn : defn * tactic -> thm * thm
+ 
+  (* Do a termination proof without the DefnBase.defn object around.  The 
+     first theorem should be the equations and the second the induction 
+     principle, e.g., as written by Defn.save_defn. *)
+  val tgoal_no_defn  : (thm * thm) -> proofs
+  val tprove_no_defn : (thm * thm) * tactic -> thm * thm
 
   val SUC_TO_NUMERAL_DEFN_CONV_hook : (term -> thm) ref
 
