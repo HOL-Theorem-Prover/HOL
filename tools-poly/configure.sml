@@ -396,8 +396,22 @@ val _ =
    FileSys.chDir cdir)
    handle _ => die "Failed to build build.";
 
+(* ----------------------------------------------------------------------
+    Generate heapname executable
+   ---------------------------------------------------------------------- *)
 
-end;
+val _ = let
+in
+  echo "Making bin/heapname utility";
+  FileSys.chDir toolsdir;
+  system_ps (POLY ^ " < heapname.ML");
+  compile systeml (fullPath [HOLDIR,"bin","heapname"]) "heapname.o";
+  FileSys.chDir cdir
+end handle _ => die "Failed to build heapname."
+
+
+
+end (* local *)
 
 (*---------------------------------------------------------------------------
     Instantiate tools/hol-mode.src, and put it in tools/hol-mode.el
@@ -456,25 +470,27 @@ val _ =
     closeOut tar4
   end;
 
+
+
+
+
 (*---------------------------------------------------------------------------
       Generate shell scripts for running HOL.
  ---------------------------------------------------------------------------*)
 
-val _ =
- let val _ = echo "Generating bin/hol."
-     val target      = fullPath [holdir, "bin", "hol.bare"]
-     val target_boss = fullPath [holdir, "bin", "hol"]
+val _ = let
+  val _ = echo "Generating bin/hol."
+  val target      = fullPath [holdir, "bin", "hol.bare"]
+  val target_boss = fullPath [holdir, "bin", "hol"]
+  val hol0_heap   = fullPath[HOLDIR,"bin", "hol.builder0"]
+  val hol_heapcalc= "$(" ^ fullPath[HOLDIR,"bin","heapname"] ^ ")"
  in
    (* "unquote" scripts use the unquote executable to provide nice
       handling of double-backquote characters *)
-   emit_hol_unquote_script target "hol.builder0"
-     ["prelude.ML"];
-   emit_hol_unquote_script target_boss "hol.builder"
-     ["prelude.ML", "prelude2.ML"];
-   emit_hol_script (target ^ ".noquote") "hol.builder0"
-     ["prelude.ML"];
-   emit_hol_script (target_boss ^ ".noquote") "hol.builder"
-     ["prelude.ML", "prelude2.ML"]
+   emit_hol_unquote_script target hol0_heap ["prelude.ML"];
+   emit_hol_unquote_script target_boss hol_heapcalc ["prelude.ML", "prelude2.ML"];
+   emit_hol_script (target ^ ".noquote") hol0_heap ["prelude.ML"];
+   emit_hol_script (target_boss ^ ".noquote") hol_heapcalc ["prelude.ML", "prelude2.ML"]
  end;
 
 val _ = print "\nFinished configuration!\n";

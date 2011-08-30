@@ -43,6 +43,7 @@ bin/hol.noquote
 bin/unquote
 bin/hol.builder
 bin/hol.builder0
+bin/heapname
 
 tools*/Holmake/Systeml.sml
 tools/Holmake/Lexer.sml
