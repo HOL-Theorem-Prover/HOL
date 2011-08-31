@@ -45,6 +45,8 @@ bin/hol.builder
 bin/hol.builder0
 bin/heapname
 
+developers/docfiles/*.txt
+
 tools*/Holmake/Systeml.sml
 tools/Holmake/Lexer.sml
 tools/Holmake/Parser.sig
