@@ -336,6 +336,25 @@ val _ = app tpp [
            bound "f", " ", fx, " /\\ ", fy])
 ]
 
+(* test DiskThms *)
+val _ = let
+  val _ = tprint "Testing DiskThms"
+  val filename = OS.FileSys.tmpName ()
+  val _ = DiskThms.write_file filename [("AND_CLAUSES", boolTheory.AND_CLAUSES),
+                                        ("OR_CLAUSES", boolTheory.OR_CLAUSES)]
+  val readresult = DiskThms.read_file filename
+  val ((nm1,th1), (nm2, th2)) =
+      case readresult of
+        [x,y] => (x,y)
+      | _ => die "FAILED"
+in
+  nm1 = "AND_CLAUSES" andalso nm2 = "OR_CLAUSES" andalso
+  aconv (th1 |> concl) (concl boolTheory.AND_CLAUSES) andalso
+  aconv (th2 |> concl) (concl boolTheory.OR_CLAUSES) andalso
+  (print "OK\n"; true) orelse
+  die "FAILED"
+end
+
 
 val _ = Process.exit (if List.all substtest tests then Process.success
                       else Process.failure)
