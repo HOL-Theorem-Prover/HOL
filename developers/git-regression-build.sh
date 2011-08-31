@@ -71,7 +71,7 @@ else
     updated_ok=
 fi
 
-rev=$(git log --oneline -n1 HEAD | awk '{print $1}')
+rev=$(git log --pretty=format:'%h' -n1 HEAD)
 cd developers
 mlsys=$($ML < mlsysinfo.sml | grep MLSYSTEM | awk '{print $3}')
 cd ..
@@ -120,7 +120,7 @@ esac
  echo "Started: "$(date +"%a, %d %b %Y %H:%M:%S %z") &&
  echo "Extra commandline arguments: $@" &&
  echo -n "Revision: " &&
- git log -n1 --oneline HEAD &&
+ git log -n1 --pretty=format:'%h %s%n' HEAD &&
  if [ "$updated_ok" ]
  then
      cat update-log

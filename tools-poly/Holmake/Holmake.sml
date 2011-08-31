@@ -658,8 +658,8 @@ end
 handle IO.Io _ => OS.Process.failure
 
 
-datatype cmd_line = Mosml_compile of string list * string
-                  | Mosml_link of string * string list
+datatype cmd_line = Mosml_compile of File list * string
+                  | Mosml_link of string * File list
                   | Mosml_error
 
 fun process_mosml_args c =
@@ -690,7 +690,7 @@ let fun isSource t = OS.Path.ext t = SOME "sig" orelse
           ((if isSource file then
               src_file := SOME file
             else if isObj file then
-              obj_files := (OS.Path.base file)::(!obj_files)
+              obj_files := toFile file::(!obj_files)
             else
               ());
            process_args rest);
@@ -719,8 +719,8 @@ in
   if isHolmosmlcc orelse isHolmosmlc orelse isMosmlc then
     case process_mosml_args (if isHolmosmlcc then " -c " ^ c else c) of
          (Mosml_compile (objs, src), I) =>
-           poly_compile (toFile src) I (deps@(List.map toFile objs))
-       | (Mosml_link (result, objs), I) => poly_link result objs
+           poly_compile (toFile src) I (deps @ objs)
+       | (Mosml_link (result, objs), I) => poly_link result (map fromFileNoSuf objs)
        | (Mosml_error, _) => OS.Process.failure
   else
     let

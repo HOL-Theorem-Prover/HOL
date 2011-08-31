@@ -1650,10 +1650,8 @@ fun get_WF tmlist =
  pluck (same_const WF_tm o rator) tmlist
  handle HOL_ERR _ => raise ERR "get_WF" "unexpected termination condition";
 
-fun TC_TAC defn =
- let val E = LIST_CONJ (eqns_of defn)
-     val I = Option.valOf (ind_of defn)
-     val th = CONJ E I
+fun TC_TAC0 E I =
+ let val th = CONJ E I
      val asl = hyp th
      val hyps' = let val (wfr,rest) = get_WF asl
                  in wfr::rest end handle HOL_ERR _ => asl
@@ -1664,6 +1662,23 @@ fun TC_TAC defn =
     of ([([],g)],validation) => (([],g), fn th => validation [th])
      | _  => raise ERR "TC_TAC" "unexpected output"
  end;
+
+fun TC_TAC defn =
+ let val E = LIST_CONJ (eqns_of defn)
+     val I = Option.valOf (ind_of defn)
+ in
+   TC_TAC0 E I
+ end;
+
+fun tgoal_no_defn0 (def,ind) =
+   if null (op_U aconv [(hyp def)])
+   then raise ERR "tgoal" "no termination conditions"
+   else let val (g,validation) = TC_TAC0 def ind
+        in proofManagerLib.add (Manager.new_goalstack g validation)
+        end handle HOL_ERR _ => raise ERR "tgoal" "";
+
+fun tgoal_no_defn (def,ind) = 
+  Lib.with_flag (proofManagerLib.chatting,false) tgoal_no_defn0 (def,ind);
 
 fun tgoal0 defn =
    if null (tcs_of defn)
@@ -1678,7 +1693,7 @@ fun tgoal defn = Lib.with_flag (proofManagerLib.chatting,false) tgoal0 defn;
      The error handling here is pretty coarse.
  ---------------------------------------------------------------------------*)
 
-fun tprove0 (defn,tactic) =
+fun tprove2 tgoal0 (defn,tactic) =
   let val _ = tgoal0 defn
       val _ = proofManagerLib.expand tactic  (* should finish proof off *)
       val th  = proofManagerLib.top_thm ()
@@ -1690,16 +1705,19 @@ fun tprove0 (defn,tactic) =
   end
   handle e => (proofManagerLib.drop(); raise wrap_exn "Defn" "tprove" e)
 
-
-fun tprove p =
+fun tprove1 tgoal0 p =
   let
-    val (eqns,ind) = Lib.with_flag (proofManagerLib.chatting,false) tprove0 p
+    val (eqns,ind) = Lib.with_flag (proofManagerLib.chatting,false) (tprove2 tgoal0) p
     val () = if not (!computeLib.auto_import_definitions) then ()
              else computeLib.add_funs
                     [eqns, CONV_RULE (!SUC_TO_NUMERAL_DEFN_CONV_hook) eqns]
   in
     (eqns, ind)
   end
+
+fun tprove p = tprove1 tgoal0 p
+fun tprove0 p = tprove2 tgoal0 p
+fun tprove_no_defn p = tprove1 tgoal_no_defn0 p
 
 fun tstore_defn (d,t) =
   let val (def,ind) = tprove0 (d,t)

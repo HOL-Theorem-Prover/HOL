@@ -99,6 +99,14 @@ he strips these tokens from the ends of the region
   end:   ( [
   both:  , THEN THENL THEN1 << >> ++ \\ by
 
+== Leading string ==
+
+Vimhol uses <LocalLeader> as the leading string for all commands.
+We have assumed above that <LocalLeader> is set to "h".
+You can change the key sequence used to signal the start of a Vimhol command by
+setting the variable maplocalleader before loading hol.vim.
+See filetype.vim for an example (by default, it is set there to "h").
+
 == Unicode ==
 
 An alternative to the abbreviations described below are built-in Vim digraphs.
