@@ -5,6 +5,7 @@ struct
 
   val operators = [("+", intSyntax.plus_tm),
                    ("-", intSyntax.minus_tm),
+                   ("numeric_negate", intSyntax.negate_tm),
                    ("*", intSyntax.mult_tm),
                    ("/", intSyntax.div_tm),
                    ("<", intSyntax.less_tm),
@@ -15,13 +16,22 @@ struct
                    (GrammarSpecials.num_injection, intSyntax.int_injection)];
 
 fun deprecate_int () = let
-  fun losety {Name,Thy,Ty} = {Name = Name, Thy = Thy}
-  fun doit (s, t) = Parse.temp_remove_ovl_mapping s (losety (dest_thy_const t))
+  fun doit (s, t) =
+     let val {Name,Thy,...} = dest_thy_const t in
+        Parse.temp_send_to_back_overload s {Name = Name, Thy = Thy}
+     end
 in
-  app (ignore o doit) operators
+  List.app doit operators
 end
 
-fun prefer_int () = app Parse.temp_overload_on operators
+fun prefer_int () = let
+  fun doit (s, t) =
+     let val {Name,Thy,...} = dest_thy_const t in
+        Parse.temp_bring_to_front_overload s {Name = Name, Thy = Thy}
+     end
+in
+  List.app doit operators
+end
 
 val ARITH_CONV = Omega.OMEGA_CONV
 val ARITH_TAC = Omega.OMEGA_TAC
