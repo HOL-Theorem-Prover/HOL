@@ -1,4 +1,4 @@
-open HolKernel bossLib boolLib Parse termTheory chap2Theory reductionEval binderLib relationTheory lcsymtacs
+open HolKernel bossLib boolLib Parse termTheory chap2Theory chap3Theory reductionEval binderLib relationTheory lcsymtacs
 
 val _ = new_theory "abselim"
 
@@ -36,17 +36,82 @@ val absfree_abselim_id = store_thm(
 ho_match_mp_tac absfree_ind >>
 srw_tac [][abselim_rules]);
 
-val size_positive = store_thm(
-"size_positive",
-``∀t. 0 < size t``,
-ho_match_mp_tac nc_INDUCTION2 >>
-srw_tac [ARITH_ss][] >>
-qexists_tac `{}` >> srw_tac [][]);
-val size_nonzero = store_thm(
-"size_nonzero",
-``∀t. size t ≠ 0``,
-metis_tac [prim_recTheory.LESS_REFL,size_positive])
-val _ = export_rewrites["size_positive","size_nonzero"]
+val lameq_lamext = store_thm(
+"lameq_lamext",
+``∀t u. t == u ⇒ lamext t u``,
+ho_match_mp_tac lameq_ind >>
+metis_tac [lamext_rules])
+
+val lamext_refl = store_thm(
+  "lamext_refl",
+  ``lamext M M``,
+  SRW_TAC [][lamext_rules]);
+val _ = export_rewrites["lamext_refl"];
+
+val lamext_app_cong = store_thm(
+  "lamext_app_cong",
+  ``lamext M1 M2 ==> lamext N1 N2 ==> lamext (M1 @@ N1) (M2 @@ N2)``,
+  METIS_TAC [lamext_rules]);
+
+val [_,lamext_refl,lamext_sym,lamext_trans,_,_,_,lamext_ext] = CONJUNCTS lamext_rules
+val [_,conversion_sym,conversion_trans,conversion_subset,_,_] = CONJUNCTS (SPEC_ALL conversion_rules)
+
+val lamext_betaeta = store_thm(
+"lamext_betaeta",
+``lamext = conversion (β RUNION η)``,
+metis_tac [lemma2_14,beta_eta_lameta,FUN_EQ_THM]);
+
+val abselim_lamext = store_thm(
+"abselim_lamext",
+``∀t u. abselim t u ⇒ lamext t u``,
+ho_match_mp_tac abselim_ind >>
+conj_tac >- srw_tac [][] >>
+conj_tac >- srw_tac [][lamext_app_cong] >>
+conj_tac >- (
+  map_every qx_gen_tac [`t`,`u`,`x`] >>
+  strip_tac >>
+  match_mp_tac lamext_ext >>
+  Q_TAC (NEW_TAC "z") `FV (LAM x t @@ (K @@ u))` >>
+  qexists_tac `z` >> conj_tac >- fsrw_tac [][] >>
+  srw_tac [][lamext_betaeta] >>
+  match_mp_tac conversion_trans >>
+  qexists_tac `t` >>
+  conj_tac >- (
+    match_mp_tac conversion_subset >>
+    srw_tac [][RUNION,beta_def] >>
+    disj1_tac >>
+    map_every qexists_tac [`x`,`t`] >>
+    srw_tac [][lemma14b] ) >>
+  match_mp_tac conversion_trans >>
+  qexists_tac `u` >>
+  conj_tac >- (
+    srw_tac [][SYM lamext_betaeta] ) >>
+  srw_tac [][SYM lamext_betaeta] >>
+  match_mp_tac lameq_lamext >>
+  srw_tac [BETA_ss][] ) >>
+conj_tac >- (
+  srw_tac [][] >>
+  match_mp_tac lamext_ext >>
+  Q_TAC (NEW_TAC "z") `FV (LAM x (VAR x) @@ (S @@ K @@ K))` >>
+  qexists_tac `z` >> srw_tac [][] >>
+  match_mp_tac lameq_lamext >>
+  srw_tac [BETA_ss][] ) >>
+conj_tac >-
+  metis_tac [lamext_rules] >>
+conj_tac >- (
+  rpt gen_tac >>
+  strip_tac >>
+  pop_assum (K ALL_TAC) >>
+  match_mp_tac lamext_ext >>
+  Q_TAC (NEW_TAC "z") `FV (LAM x (t1 @@ t2) @@ (S @@ t1' @@ t2'))` >>
+  qexists_tac `z` >> fsrw_tac [][] >>
+  match_mp_tac lamext_sym >>
+  match_mp_tac lamext_trans >>
+  qexists_tac `S @@ (LAM x t1) @@ (LAM x t2) @@ VAR z` >>
+  conj_tac >- PROVE_TAC [lamext_rules] >>
+  match_mp_tac lameq_lamext >>
+  srw_tac [BETA_ss][] ) >>
+srw_tac [][lamext_refl]);
 
 val lemma1 = prove(
 ``x ∉ FV t ⇒ (LAM x (tpm [(x,y)] t) = LAM y t)``,
