@@ -1,7 +1,7 @@
 open bossLib Theory Parse res_quanTheory Defn Tactic boolLib
 open finite_mapTheory listTheory pairTheory pred_setTheory
 open set_relationTheory sortingTheory stringTheory wordsTheory
-open MinimlTheory
+open MiniMLTheory
 
 open lcsymtacs
 
