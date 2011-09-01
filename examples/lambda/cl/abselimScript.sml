@@ -215,30 +215,45 @@ Cases_on `LAM y t = K` >- (
   `x ∈ FV K` by metis_tac [] >> fsrw_tac [][K_def] ) >>
 srw_tac [ARITH_ss][])
 
-val LAM_tpm = prove(
-``x ∉ FV t ⇒ (LAM x (tpm [(x,y)] t) = LAM y t)``,
-srw_tac [][LAM_eq_thm] >>
-Cases_on `x=y` >> srw_tac [][] >>
-srw_tac [][tpm_flip_args]);
+val [abselim_VAR,abselim_APP,abselim_LAM,abselim_LAM_VAR,abselim_LAM_LAM,abselim_LAM_APP,abselim_S,abselim_K] = CONJUNCTS abselim_rules
 
-val LAM_tpm' = prove(
-``x ∉ FV t ⇒ (LAM x (tpm [(y,x)] t) = LAM y t)``,
-srw_tac [][LAM_eq_thm] >>
-Cases_on `x=y` >> srw_tac [][] >>
-srw_tac [][tpm_flip_args]);
-
-(*
 val abselim_tpm = store_thm(
 "abselim_tpm",
 ``∀t u. abselim t u ⇒ ∀x y. abselim (tpm [(x,y)] t) (tpm [(x,y)] u)``,
 ho_match_mp_tac abselim_ind >>
-conj_tac >- ( srw_tac [][] >> metis_tac [abselim_cases] ) >>
+conj_tac >- srw_tac [][abselim_VAR] >>
+conj_tac >- srw_tac [][abselim_APP] >>
+conj_tac >- srw_tac [][abselim_LAM,tpm_fresh] >>
+conj_tac >- srw_tac [][abselim_LAM_VAR,tpm_fresh] >>
 conj_tac >- (
-  srw_tac [][]
-  srw_tac [][abselim_cases]
-*)
+  srw_tac [][] >>
+  match_mp_tac abselim_LAM_LAM >>
+  srw_tac [][] >>
+  qexists_tac `(tpm [(x',y')] u)` >>
+  `tpm [(x',y')] (LAM x (LAM y t)) ≠ tpm [(x',y')] S` by metis_tac [tpm_inverse] >>
+  `tpm [(x',y')] (LAM x (LAM y t)) ≠ tpm [(x',y')] K` by metis_tac [tpm_inverse] >>
+  fsrw_tac [][tpm_fresh] ) >>
+conj_tac >- (
+  rpt gen_tac >>
+  strip_tac >>
+  rpt gen_tac >>
+  asm_simp_tac (srw_ss()) [tpm_fresh] >>
+  match_mp_tac abselim_LAM_APP >>
+  fsrw_tac [][] ) >>
+srw_tac [][tpm_fresh,abselim_S,abselim_K]);
 
-(*
+val abselim_FV = store_thm(
+"abselim_FV",
+``∀t u. abselim t u ⇒ (FV t = FV u)``,
+ho_match_mp_tac abselim_ind >>
+conj_tac >- srw_tac [][] >>
+conj_tac >- srw_tac [][] >>
+conj_tac >- fsrw_tac [][pred_setTheory.DELETE_NON_ELEMENT] >>
+conj_tac >- srw_tac [][] >>
+conj_tac >- srw_tac [][] >>
+conj_tac >- fsrw_tac [][pred_setTheory.DELETE_NON_ELEMENT,pred_setTheory.UNION_DELETE] >>
+srw_tac [][]);
+
 val abselim_unique = store_thm(
 "abselim_unique",
 ``∀t u1 u2. abselim t u1 ∧ abselim t u2 ⇒ (u1 = u2)``,
@@ -295,8 +310,8 @@ conj_tac >- (
 conj_tac >- (
   srw_tac [][] >>
   qspecl_then [`LAM x (LAM y t)`,`u2`] mp_tac abselim_cases >>
-  fsrw_tac [][] >>
-  srw_tac [][] >- (
+  full_simp_tac std_ss [term_distinct] >>
+  strip_tac >- (
     fsrw_tac [][LAM_eq_thm] >>
     srw_tac [][] >> fsrw_tac [][] >>
     fsrw_tac [][tpm_eqr] >>
@@ -305,52 +320,30 @@ conj_tac >- (
     qpat_assum `x <> x'` assume_tac >>
     qpat_assum `x <> y` assume_tac >>
     Cases_on`x'=y` >> fsrw_tac [][] )
+  >- ( fsrw_tac [][LAM_eq_thm] )
   >- (
-    fsrw_tac [][LAM_eq_thm] )
-  >- (
-    fsrw_tac [][LAM_eq_thm] >> srw_tac [][] >- (
-      first_x_assum match_mp_tac >>
-      `u1 = r1` by (
-        first_x_assum match_mp_tac >>
-        srw_tac [][] ) >>
-      srw_tac [][] )
-    >- (
-      first_x_assum match_mp_tac >>
-      `u1 = r1` by (
-        first_x_assum match_mp_tac >>
-        fsrw_tac [][LAM_tpm] ) >>
-      srw_tac [][] )
-    >- (
-      first_x_assum match_mp_tac >>
-      `u1 = tpm [(x,x')] r1` by (
-        first_x_assum match_mp_tac >>
-        Cases_on `x=y'` >> fsrw_tac [][]
-
-    qsuff_tac `LAM x u1 = LAM x' r1` >- metis_tac [] >>
-    Cases_on `x ∉ FV r1` >- (
-      `LAM x' r1 = tpm [(x,x')] (LAM x' 
-    srw_tac [][LAM_eq_thm] >>
-    Cases_on `x=x'` >> fsrw_tac [][] >>
-    fsrw_tac [][tpm_fresh]
-    fsrw_tac [][LAM_eq_thm] >>
-    srw_tac [][] >> fsrw_tac [][] >> srw_tac [][] >>
-    DB.match [] ``LAM y (tpm pi x)``
-    res_tac >> srw_tac [][] >>
-
-    fsrw_tac [][]
-
-    fsrw_tac [][basic_swapTheory.swapstr_def]
-    srw_tac [][]
-  srw_tac [][] >>
-  fsrw_tac [][tpm_fresh] >- (
-    `u1 = r1` by metis_tac [] >>
+    Cases_on `x=x'` >- (
+      qpat_assum `LAM x tt = LAM x' ttt` mp_tac >>
+      asm_simp_tac (srw_ss()) [Once LAM_eq_thm] >>
+      metis_tac [] ) >>
+    qpat_assum `LAM x tt = LAM x' ttt` mp_tac >>
+    asm_simp_tac (srw_ss()) [Once LAM_eq_thm] >>
+    `abselim (tpm [(x,x')] (LAM y' t')) (tpm [(x,x')] r1)` by metis_tac [abselim_tpm] >>
+    fsrw_tac [][] >> rpt strip_tac >>
+    fsrw_tac [][] >>
+    `u1 = tpm [(x,x')] r1` by metis_tac [] >>
+    fsrw_tac [][] >>
+    `abselim (tpm [(x,x')] (LAM x' r1)) (tpm [(x,x')] u2)` by metis_tac [abselim_tpm] >>
+    fsrw_tac [][] >>
+    `u1' = tpm [(x,x')] u2` by metis_tac [] >>
     srw_tac [][] >>
-    qspecl_then [`LAM x r1`,`u2`] mp_tac abselim_cases >>
-    fsrw_tac [][LAM_eq_thm] >>
-    srw_tac [][]
- ... ))
-
- ) >>
+    match_mp_tac tpm_fresh >>
+    `FV u2 = FV (LAM x' r1)` by metis_tac [abselim_FV] >>
+    fsrw_tac [][] >>
+    `FV r1 = FV (LAM y' t')` by metis_tac [abselim_FV] >>
+    fsrw_tac [][] >>
+    Cases_on `x=y'` >> fsrw_tac [][] ) >>
+  fsrw_tac [][LAM_eq_thm] ) >>
 conj_tac >- (
   rpt gen_tac >>
   strip_tac >>
@@ -358,20 +351,61 @@ conj_tac >- (
   qspecl_then [`LAM x (t1 @@ t2)`,`u2`] mp_tac abselim_cases >>
   qabbrev_tac `fva = (x ∈ FV (t1 @@ t2))` >>
   fsrw_tac [][] >>
+  qpat_assum `abselim (LAM x (t1 @@ t2)) u2` (K ALL_TAC) >>
   fsrw_tac [][S_def,LAM_eq_thm,K_def] >>
-  fsrw_tac [][GSYM S_def] >>
-  unabbrev_all_tac >>
+  fsrw_tac [][GSYM S_def, GSYM K_def] >>
   qmatch_abbrev_tac `aa ∨ bb ⇒ cc` >>
   strip_tac >- (
     unabbrev_all_tac >>
     fsrw_tac [][tpm_eqr] >> srw_tac [][] >>
     fsrw_tac [][] ) >>
-  unabbrev_all_tac >>
+  qunabbrev_tac `aa` >>
+  full_simp_tac std_ss [Abbr`cc`,Abbr`bb`,(GSYM pred_setTheory.IN_UNION)] >-
+    fsrw_tac [][] >>
+  qabbrev_tac `fva' = x' ∈ FV t1' ∪ FV t2'` >>
+  qpat_assum `Abbrev (fva = X)` assume_tac >>
   fsrw_tac [][] >>
-  conj_tac >>
-  first_x_assum match_mp_tac >>
+  `abselim (tpm [(x,x')] (LAM x' t1')) (tpm [(x,x')] t1'')` by metis_tac [abselim_tpm] >>
+  `abselim (tpm [(x,x')] (LAM x' t2')) (tpm [(x,x')] t2'')` by metis_tac [abselim_tpm] >>
+  fsrw_tac [][] >>
+  res_tac >>
+  `(FV t1'' = FV (LAM x' t1')) ∧ (FV t2'' = FV (LAM x' t2'))` by metis_tac [abselim_FV] >>
+  srw_tac [][tpm_fresh] ) >>
+conj_tac >- (
+  srw_tac [][] >>
+  qspecl_then [`S`,`u2`] mp_tac abselim_cases >>
+  srw_tac [][]
+  >- srw_tac [][S_def]
+  >- fsrw_tac [][S_def]
+  >- (
+    fsrw_tac [][S_def,LAM_eq_thm] >- (
+      srw_tac [][] >> fsrw_tac [][] ) >>
+    fsrw_tac [][tpm_eqr] >> srw_tac [][] >>
+    fsrw_tac [][] >>
+    Cases_on `x="x"` >> fsrw_tac [][] >>
+    Cases_on `x="y"` >> fsrw_tac [][] >>
+    Cases_on `x="z"` >> fsrw_tac [][] )
+  >- ( fsrw_tac [][S_def,LAM_eq_thm] )
+  >- ( metis_tac [] )
+  >- ( fsrw_tac [][S_def,LAM_eq_thm] )
+  >- ( fsrw_tac [][S_def,LAM_eq_thm] )
+  >- ( fsrw_tac [][] ) ) >>
+srw_tac [][] >>
+qspecl_then [`K`,`u2`] mp_tac abselim_cases >>
+srw_tac [][]
+>- srw_tac [][K_def]
+>- fsrw_tac [][K_def]
+>- (
+  fsrw_tac [][K_def,LAM_eq_thm] >- (
+    srw_tac [][] >> fsrw_tac [][] ) >>
   fsrw_tac [][tpm_eqr] >> srw_tac [][] >>
-  fsrw_tac [][LAM_tpm]
-*)
+  fsrw_tac [][] >>
+  Cases_on `x="x"` >> fsrw_tac [][] >>
+  Cases_on `x="y"` >> fsrw_tac [][] )
+>- ( fsrw_tac [][K_def,LAM_eq_thm] )
+>- ( metis_tac [] )
+>- ( fsrw_tac [][K_def,LAM_eq_thm] )
+>- ( fsrw_tac [][K_def,LAM_eq_thm] )
+>- ( fsrw_tac [][] ) )
 
 val _ = export_theory ()
