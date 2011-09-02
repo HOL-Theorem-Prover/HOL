@@ -95,16 +95,16 @@ val _ = export_rewrites ["MEM_ctxtswap"]
 
 val ctxtFV_ctxtswap = store_thm(
   "ctxtFV_ctxtswap",
-  ``ctxtFV (ctxtswap pi G) = setpm lswapstr pi (ctxtFV G)``,
+  ``ctxtFV (ctxtswap pi G) = setpm string_pmact pi (ctxtFV G)``,
   SRW_TAC [][ctxtFV_MEM, pred_setTheory.EXTENSION] THEN
-  METIS_TAC [MEM_ctxtswap, basic_swapTheory.lswapstr_inverse]);
+  METIS_TAC [MEM_ctxtswap, basic_swapTheory.lswapstr_inverse, stringpm_raw]);
 val _ = export_rewrites ["ctxtFV_ctxtswap"]
 
 
 (* valid_ctxt also respects permutation *)
 val valid_ctxt_swap0 = prove(
   ``!G. valid_ctxt G ==> !x y. valid_ctxt (ctxtswap pi G)``,
-  Induct THEN ASM_SIMP_TAC (srw_ss()) [pairTheory.FORALL_PROD]);
+  Induct THEN ASM_SIMP_TAC (srw_ss()) [pairTheory.FORALL_PROD, stringpm_raw]);
 
 val valid_ctxt_swap = store_thm(
   "valid_ctxt_swap",

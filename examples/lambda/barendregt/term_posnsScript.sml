@@ -178,7 +178,7 @@ val v_posns_exists =
     termTheory.tm_recursion
         |> INST_TYPE [alpha |-> ``:posn set``]
         |> SPEC_ALL
-        |> Q.INST [`apm` |-> `K I`,
+        |> Q.INST [`apm` |-> `discrete_pmact`,
              `A` |-> `{v}`,
              `vr` |-> `^vp'_var`,
              `ap` |-> `\rt ru t u. IMAGE (CONS Lt) rt UNION IMAGE (CONS Rt) ru`,
@@ -371,7 +371,7 @@ val bv_posns_at_exists0 =
     tm_recursion_nosideset
         |> SPEC_ALL
         |> INST_TYPE [alpha |-> ``:redpos list -> redpos list set``]
-        |> Q.INST [`apm` |-> `K I`,
+        |> Q.INST [`apm` |-> `discrete_pmact`,
              `vr` |-> `\s l. {}`,
              `ap` |-> `\rt ru t u l.
                            case l of

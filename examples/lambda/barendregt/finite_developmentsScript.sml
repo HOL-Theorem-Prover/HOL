@@ -48,16 +48,16 @@ val lsubstitutive_lpermutative = store_thm(
   SRW_TAC [][] THEN
   `(ltpm ((x,y)::pi) M = ltpm [(x,y)] (ltpm pi M)) /\
    (ltpm ((x,y)::pi) N = ltpm [(x,y)] (ltpm pi N))`
-     by SRW_TAC [][GSYM ltpm_APPEND] THEN
+     by SRW_TAC [][GSYM pmact_decompose] THEN
   SRW_TAC [][] THEN
   Q.MATCH_ABBREV_TAC `R (ltpm [(x,y)] MM) (ltpm [(x,y)] NN)` THEN
   Q_TAC (NEW_TAC "z") `{x;y} UNION FV MM UNION FV NN` THEN
   Q_TAC SUFF_TAC `(ltpm [(x,y)] MM = [VAR y/z] ([VAR x/y] ([VAR z/x] MM))) /\
                   (ltpm [(x,y)] NN = [VAR y/z] ([VAR x/y] ([VAR z/x] NN)))`
         THEN1 SRW_TAC [][] THEN
-  ASM_SIMP_TAC (srw_ss()) [GSYM fresh_ltpm_subst, GSYM ltpm_APPEND] THEN
+  ASM_SIMP_TAC (srw_ss()) [GSYM fresh_ltpm_subst, GSYM pmact_decompose] THEN
   Q_TAC SUFF_TAC `[(x,y)] == [(y,z); (x,y); (z,x)]`
-        THEN1 METIS_TAC [nomsetTheory.is_perm_def, ltpm_is_perm] THEN
+        THEN1 METIS_TAC [nomsetTheory.pmact_permeq] THEN
   SRW_TAC [][nomsetTheory.permeq_def, FUN_EQ_THM] THEN
   Cases_on `x' = x` THEN SRW_TAC [][] THEN
   Cases_on `x' = z` THEN SRW_TAC [][] THEN
@@ -101,21 +101,21 @@ val labelled_redn_bvc_ind = store_thm(
   Q_TAC SUFF_TAC
         `!M pos N. labelled_redn beta M pos N ==>
                    !p. P (tpm p M) pos (tpm p N)`
-        THEN1 METIS_TAC [tpm_NIL] THEN
+        THEN1 METIS_TAC [pmact_nil] THEN
   HO_MATCH_MP_TAC labelled_redn_ind THEN SRW_TAC [][beta_def] THENL [
     SRW_TAC [][tpm_subst] THEN
     Q.MATCH_ABBREV_TAC `P (LAM v M @@ N) [] ([N/v]M)` THEN
     Q_TAC (NEW_TAC "z") `X UNION FV M UNION FV N` THEN
     `LAM v M = LAM z (tpm [(z,v)] M)` by SRW_TAC [][tpm_ALPHA] THEN
     `[N/v] M = [N/z] ([VAR z/v] M)` by SRW_TAC [][lemma15a] THEN
-    SRW_TAC [][GSYM tpm_APPEND, GSYM fresh_tpm_subst],
+    SRW_TAC [][GSYM pmact_decompose, GSYM fresh_tpm_subst],
 
     Q.MATCH_ABBREV_TAC `P (LAM vv MM) (In::pos) (LAM vv NN)` THEN
     Q_TAC (NEW_TAC "z") `X UNION FV MM UNION FV NN` THEN
     `(LAM vv MM = LAM z (tpm [(z,vv)] MM)) /\
      (LAM vv NN = LAM z (tpm [(z,vv)] NN))`
         by SRW_TAC [][tpm_ALPHA] THEN
-    SRW_TAC [][Abbr`MM`, Abbr`NN`, GSYM tpm_APPEND]
+    SRW_TAC [][Abbr`MM`, Abbr`NN`, GSYM pmact_decompose]
   ]);
 
 val labelled_redn_beta_tpm_imp = store_thm(
@@ -131,7 +131,7 @@ val labelled_redn_beta_tpm_eqn = store_thm(
   "labelled_redn_beta_tpm_eqn",
   ``labelled_redn beta (tpm p M) pos N =
     labelled_redn beta M pos (tpm (REVERSE p) N)``,
-  METIS_TAC [labelled_redn_beta_tpm_imp, tpm_inverse]);
+  METIS_TAC [labelled_redn_beta_tpm_imp, pmact_inverse]);
 
 
 (* relationship to unlabelled reductions *)
@@ -188,7 +188,7 @@ val lrcc_bvc_b01_ind = store_thm(
   REPEAT GEN_TAC THEN STRIP_TAC THEN
   Q_TAC SUFF_TAC `!M pos N. lrcc (beta0 RUNION beta1) M pos N ==>
                             !p. P (ltpm p M) pos (ltpm p N)`
-        THEN1 METIS_TAC [ltpm_NIL] THEN
+        THEN1 METIS_TAC [pmact_nil] THEN
   HO_MATCH_MP_TAC lrcc_ind THEN SRW_TAC [][beta0_def, beta1_def, RUNION]
   THENL [
     SRW_TAC [][ltpm_subst] THEN
@@ -210,20 +210,20 @@ val lrcc_bvc_b01_ind = store_thm(
     Q_TAC (NEW_TAC "z") `X UNION FV MM UNION FV NN` THEN
     `(LAM vv MM = LAM z (ltpm [(z,vv)] MM)) /\
      (LAM vv NN = LAM z (ltpm [(z,vv)] NN))` by SRW_TAC [][ltpm_ALPHA] THEN
-    SRW_TAC [][Abbr`MM`, Abbr`NN`, GSYM ltpm_APPEND],
+    SRW_TAC [][Abbr`MM`, Abbr`NN`, GSYM pmact_decompose],
     Q.MATCH_ABBREV_TAC `P (LAMi n vv ZZ MM) (Rt::Pos) (LAMi n vv ZZ NN)` THEN
     Q_TAC (NEW_TAC "z") `FV ZZ UNION FV MM UNION FV NN UNION X` THEN
     `(LAMi n vv ZZ MM = LAMi n z (ltpm [(z,vv)] ZZ) MM) /\
      (LAMi n vv ZZ NN = LAMi n z (ltpm [(z,vv)] ZZ) NN)`
        by SRW_TAC [][ltpm_ALPHAi] THEN
-    SRW_TAC [][Abbr`MM`, Abbr`NN`, GSYM ltpm_APPEND],
+    SRW_TAC [][Abbr`MM`, Abbr`NN`, GSYM pmact_decompose],
     Q.MATCH_ABBREV_TAC
       `P (LAMi n vv MM ZZ) (Lt::In::pos) (LAMi n vv NN ZZ)` THEN
     Q_TAC (NEW_TAC "z") `FV ZZ UNION FV MM UNION FV NN UNION X` THEN
     `(LAMi n vv MM ZZ = LAMi n z (ltpm [(z,vv)] MM) ZZ) /\
      (LAMi n vv NN ZZ = LAMi n z (ltpm [(z,vv)] NN) ZZ)`
        by SRW_TAC [][ltpm_ALPHAi] THEN
-    SRW_TAC [][Abbr`MM`, Abbr`NN`, GSYM ltpm_APPEND]
+    SRW_TAC [][Abbr`MM`, Abbr`NN`, GSYM pmact_decompose]
   ]);
 
 val lrcc_bvc_ind = store_thm(
@@ -245,27 +245,27 @@ val lrcc_bvc_ind = store_thm(
   REPEAT GEN_TAC THEN STRIP_TAC THEN
   Q_TAC SUFF_TAC `!M pos N. lrcc R M pos N ==>
                             !p. P (ltpm p M) pos (ltpm p N)`
-        THEN1 METIS_TAC [ltpm_NIL] THEN
+        THEN1 METIS_TAC [pmact_nil] THEN
   HO_MATCH_MP_TAC lrcc_ind THEN SRW_TAC [][] THENL [
     METIS_TAC [lpermutative_def],
     Q.MATCH_ABBREV_TAC `P (LAM vv MM) (In::pos) (LAM vv NN)` THEN
     Q_TAC (NEW_TAC "z") `X UNION FV MM UNION FV NN` THEN
     `(LAM vv MM = LAM z (ltpm [(z,vv)] MM)) /\
      (LAM vv NN = LAM z (ltpm [(z,vv)] NN))` by SRW_TAC [][ltpm_ALPHA] THEN
-    SRW_TAC [][Abbr`MM`, Abbr`NN`, GSYM ltpm_APPEND],
+    SRW_TAC [][Abbr`MM`, Abbr`NN`, GSYM pmact_decompose],
     Q.MATCH_ABBREV_TAC `P (LAMi n vv ZZ MM) (Rt::Pos) (LAMi n vv ZZ NN)` THEN
     Q_TAC (NEW_TAC "z") `FV ZZ UNION FV MM UNION FV NN UNION X` THEN
     `(LAMi n vv ZZ MM = LAMi n z (ltpm [(z,vv)] ZZ) MM) /\
      (LAMi n vv ZZ NN = LAMi n z (ltpm [(z,vv)] ZZ) NN)`
        by SRW_TAC [][ltpm_ALPHAi] THEN
-    SRW_TAC [][Abbr`MM`, Abbr`NN`, GSYM ltpm_APPEND],
+    SRW_TAC [][Abbr`MM`, Abbr`NN`, GSYM pmact_decompose],
     Q.MATCH_ABBREV_TAC
       `P (LAMi n vv MM ZZ) (Lt::In::pos) (LAMi n vv NN ZZ)` THEN
     Q_TAC (NEW_TAC "z") `FV ZZ UNION FV MM UNION FV NN UNION X` THEN
     `(LAMi n vv MM ZZ = LAMi n z (ltpm [(z,vv)] MM) ZZ) /\
      (LAMi n vv NN ZZ = LAMi n z (ltpm [(z,vv)] NN) ZZ)`
        by SRW_TAC [][ltpm_ALPHAi] THEN
-    SRW_TAC [][Abbr`MM`, Abbr`NN`, GSYM ltpm_APPEND]
+    SRW_TAC [][Abbr`MM`, Abbr`NN`, GSYM pmact_decompose]
   ]);
 
 
@@ -382,7 +382,7 @@ val lrcc_b01_ltpm_eqn = store_thm(
   "lrcc_b01_ltpm_eqn",
   ``lrcc (beta0 RUNION beta1) (ltpm p M) pos N =
     lrcc (beta0 RUNION beta1) M pos (ltpm (REVERSE p) N)``,
-  METIS_TAC [lrcc_b01_ltpm_imp, ltpm_inverse]);
+  METIS_TAC [lrcc_b01_ltpm_imp, pmact_inverse]);
 
 val lrcc_lcc = store_thm(
   "lrcc_lcc",
@@ -399,7 +399,7 @@ val lrcc_beta_lam = store_thm(
   SRW_TAC [][Once lrcc_cases, SimpLHS] THEN
   SRW_TAC [][relationTheory.RUNION, beta0_def, beta1_def, lLAM_eq_thm,
              ltpm_eqr, EQ_IMP_THM] THEN
-  FULL_SIMP_TAC (srw_ss()) [lrcc_b01_ltpm_eqn, ltpm_flip_args] THENL [
+  FULL_SIMP_TAC (srw_ss()) [lrcc_b01_ltpm_eqn, pmact_flip_args] THENL [
     MAP_EVERY IMP_RES_TAC [lrcc_lcc, lcc_beta_FV] THEN
     FULL_SIMP_TAC (srw_ss()) [] THEN
     PROVE_TAC [basic_swapTheory.swapstr_def],
@@ -580,12 +580,6 @@ val IN_term_IN_redex_posns = store_thm(
   ``!x M. x IN M <=> x IN redex_posns M``,
   SRW_TAC [][redex_posns_redex_occurrence]);
 
-val supp_discrete_fun = prove(
-  ``supp (fnpm (K I) (K I)) f = {}``,
-  MATCH_MP_TAC nomsetTheory.supp_unique_apart THEN
-  SRW_TAC [][nomsetTheory.support_def, FUN_EQ_THM,
-             nomsetTheory.fnpm_def]);
-
 val ordering = prove(
   ``(?f:lterm -> num -> 'a. P f) = (?f. P (\n t. f t n))``,
   EQ_TAC THEN SRW_TAC [][] THENL [
@@ -596,7 +590,7 @@ val n_posns_exists =
     parameter_ltm_recursion
         |> INST_TYPE [alpha |-> ``:posn set``, ``:ρ`` |-> ``:num``]
         |> Q.INST [`vr` |-> `\s n. {}`, `A` |-> `{}`,
-                   `apm` |-> `K I`,
+                   `apm` |-> `discrete_pmact`,
                    `ap` |-> `\r1 r2 t1 t2 n.
                                IMAGE (CONS Lt) (r1 n) ∪ IMAGE (CONS Rt) (r2 n)`,
                    `lm` |-> `\r v t n. IMAGE (CONS In) (r n)`,
@@ -604,7 +598,7 @@ val n_posns_exists =
                                IMAGE (APPEND [Lt; In]) (r1 n) UNION
                                IMAGE (CONS Rt) (r2 n) UNION
                                (if n = m then {[]} else {})`,
-                   `ppm` |-> `K I`]
+                   `ppm` |-> `discrete_pmact`]
         |> SIMP_RULE (srw_ss()) [fnpm_def, ordering]
         |> CONV_RULE (DEPTH_CONV (nomdatatype.rename_vars [("p", "n")]) THENC
                       BINDER_CONV (RAND_CONV (ONCE_REWRITE_CONV [EQ_SYM_EQ])))
@@ -642,7 +636,7 @@ val rAPP_exists =
              `vr` |-> `\s (n,p). VAR s @@ p`,
              `lm` |-> `\rt v t (n,p). LAMi n v t p`,
              `li` |-> `\rt ru n v t u (m,p). LAMi n v t u @@ p`,
-             `apm` |-> `ltpm`, `ppm` |-> `pairpm (K I) ltpm`, `A` |-> `{}`]
+             `apm` |-> `lterm_pmact`, `ppm` |-> `pair_pmact discrete_pmact lterm_pmact`, `A` |-> `{}`]
         |> SIMP_RULE (srw_ss()) [ltpm_ALPHA, ltpm_ALPHAi, ordering,
                                  pairTheory.FORALL_PROD]
         |> CONV_RULE (DEPTH_CONV
@@ -725,7 +719,7 @@ val nlabel_exists =
     parameter_tm_recursion
         |> INST_TYPE [alpha |-> ``:lterm``, ``:ρ`` |-> ``:num # posn set``]
         |> Q.INST
-            [`apm` |-> `ltpm`, `A` |-> `{}`, `ppm` |-> `K I`,
+            [`apm` |-> `lterm_pmact`, `A` |-> `{}`, `ppm` |-> `discrete_pmact`,
              `vr` |-> `\s nps. VAR s`,
              `ap` |-> `\rt ru t u (n,ps).
                         if [] IN ps then
@@ -740,7 +734,7 @@ val nlabel_exists =
                                      {p | In::p IN ps} INTER redex_posns t))`]
             |> SIMP_RULE (srw_ss()) [pairTheory.FORALL_PROD, fnpm_def,
                                      ltpm_if, ordering]
-            |> prove_alpha_fcbhyp {ppm = ``K I : (num # posn set) pm``,
+            |> prove_alpha_fcbhyp {ppm = ``discrete_pmact : (num # posn set) pmact``,
                                    alphas = [ltpm_ALPHA],
                                    rwts = []}
             |> CONV_RULE (DEPTH_CONV
@@ -1308,7 +1302,7 @@ val labelled_redn_lam = store_thm(
        ?t' r'. labelled_redn beta t r' t' /\ (y = LAM v t') /\ (r = In::r')``,
   REPEAT GEN_TAC THEN EQ_TAC THENL [
     SRW_TAC [][beta_def, Once labelled_redn_cases, SimpL ``(==>)``] THEN
-    FULL_SIMP_TAC (srw_ss()) [LAM_eq_thm, tpm_eqr, tpm_flip_args] THEN
+    FULL_SIMP_TAC (srw_ss()) [LAM_eq_thm, tpm_eqr, pmact_flip_args] THEN
     SRW_TAC [][] THEN
     FULL_SIMP_TAC (srw_ss()) [labelled_redn_beta_tpm_eqn] THEN
     `!a. a IN FV (tpm [(v,v')] y') ==> a IN FV t`
@@ -2001,7 +1995,7 @@ val w_at_exists =
                          || (Rt::p0) -> ru p0 (\p. w (Rt::p))
                          || _ -> term_weight (t @@ u) w`,
            `vr` |-> `\s p w. term_weight (VAR s) w`,
-           `apm` |-> `K I`] o SPEC_ALL o
+           `apm` |-> `discrete_pmact`] o SPEC_ALL o
    INST_TYPE [alpha |-> ``:redpos list -> (redpos list -> num) -> num``])
   tm_recursion_nosideset
 
@@ -3582,10 +3576,10 @@ val lcc_beta0_LAMi = store_thm(
     DISJ2_TAC THEN DISJ1_TAC THEN
     FULL_SIMP_TAC (srw_ss()) [lLAMi_eq_thm] THEN
     Q.EXISTS_TAC `ltpm [(v,v')] y` THEN
-    SRW_TAC [][ltpm_flip_args, lcc_b0_tpm_imp] THEN
+    SRW_TAC [][pmact_flip_args, lcc_b0_tpm_imp] THEN
     PROVE_TAC [lcc_beta_FV, lrcc_RUNION, lrcc_lcompat_closure],
     DISJ2_TAC THEN DISJ2_TAC THEN
-    FULL_SIMP_TAC (srw_ss()) [lLAMi_eq_thm, ltpm_flip_args],
+    FULL_SIMP_TAC (srw_ss()) [lLAMi_eq_thm, pmact_flip_args],
     PROVE_TAC [],
     PROVE_TAC []
   ]);
@@ -3608,7 +3602,7 @@ val lcc_beta0_LAM = store_thm(
   SRW_TAC [][beta0_def, EQ_IMP_THM] THENL [
     FULL_SIMP_TAC (srw_ss()) [lLAM_eq_thm] THEN
     Q.EXISTS_TAC `ltpm [(v,v')] y` THEN
-    SRW_TAC [][lcc_b0_tpm_imp, ltpm_flip_args] THEN
+    SRW_TAC [][lcc_b0_tpm_imp, pmact_flip_args] THEN
     PROVE_TAC [lcc_beta_FV, lrcc_RUNION, lrcc_lcompat_closure],
 
     PROVE_TAC []

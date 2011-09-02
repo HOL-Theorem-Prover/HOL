@@ -1,7 +1,17 @@
 structure nomdatatype :> nomdatatype =
 struct
 
-  open binderLib HolKernel Parse boolLib generic_termsTheory
+open binderLib HolKernel Parse boolLib generic_termsTheory
+open nomsetTheory
+
+type coninfo = {con_termP : thm, con_def : thm}
+
+val cpm_ty = let val sty = stringSyntax.string_ty
+             in
+               listSyntax.mk_list_type (pairSyntax.mk_prod (sty, sty))
+             end
+
+fun list_mk_icomb(f, args) = List.foldl (mk_icomb o swap) f args
 
 (* utility functions *)
 fun rpt_hyp_dest_conj th = let
@@ -194,83 +204,6 @@ in
   else NO_CONV
 end t
 
-(* Vacuous FCBs are of the form
-     !vars.... . sideconds ==> v ∉ supp dpm (af args)
-   where none of the args are v, and where the sideconds are sufficient to establish
-   that v is not in the support of the args, nor in the support of af.
-
-   These arise from the encoding of non-binding recursive constructors with the GLAM
-   constructor, which introduces an unused binding name.
-*)
-
-fun impconcl t = t |> strip_forall |> #2 |> dest_imp |> #2
-val argcong = let
-  val fg = mk_eq(mk_var("f", alpha --> beta), mk_var("g", alpha --> beta))
-  val xy = mk_eq(mk_var("x", alpha), mk_var("y", alpha))
-  val (xy_th, fg_th) = CONJ_PAIR (ASSUME (mk_conj(xy, fg)))
-in
-  MK_COMB (fg_th, xy_th) |> DISCH_ALL |> GEN_ALL
-end
-
-val is_perm_t = prim_mk_const{Thy = "nomset", Name = "is_perm"}
-fun elim_vacuous_FCBs {finite_fv,tpm_is_perm} th = let
-  val h = hyp th
-  fun spot_vacuous t = let
-    val c = t |> impconcl |> dest_neg
-    val (v,supp_t) = pred_setSyntax.dest_in c
-  in
-    if free_in v supp_t then NONE else SOME(t,repeat rator (rand supp_t))
-  end handle HOL_ERR _ => NONE
-  val vacs = List.mapPartial spot_vacuous h
-  fun permfor v t = let
-    val c = t |> impconcl
-  in
-    Term.aconv v (repeat rator (rhs c))
-  end handle HOL_ERR _ => false
-  val vac_pms = map (fn (t,v) => (t,v,valOf (List.find (permfor v) h))) vacs
-  val finite_t = valOf (List.find pred_setSyntax.is_finite h)
-  val perm_t = valOf (List.find (same_const is_perm_t o rator) h)
-  fun GET_FRESH_SETS (asl,w) = let
-    val (_, bod) = dest_exists w
-    val vnotinA_c = last (strip_conj bod)
-    val v = lhand (dest_neg vnotinA_c)
-    fun getset t = let
-      val (v', s) = t |> dest_neg |> pred_setSyntax.dest_in
-    in
-      if aconv v' v then SOME s else NONE
-    end handle HOL_ERR _ => NONE
-    val sets = List.mapPartial getset asl
-  in
-    EXISTS_TAC (List.foldr pred_setSyntax.mk_union (hd sets) (tl sets))
-  end (asl,w)
-  open nomsetTheory
-  fun mk_result(goal,v,pm) =
-      TAC_PROOF(([], goal),
-                REPEAT GEN_TAC THEN STRIP_TAC THEN
-                MATCH_MP_TAC nomsetTheory.notinsupp_I THEN
-                GET_FRESH_SETS THEN REPEAT CONJ_TAC THENL [
-                  ACCEPT_TAC (ASSUME perm_t),
-                  REWRITE_TAC [ASSUME finite_t, finite_fv,
-                               pred_setTheory.FINITE_UNION],
-                  REWRITE_TAC [support_def, pred_setTheory.IN_UNION,
-                               DE_MORGAN_THM] THEN REPEAT STRIP_TAC THEN
-                  (fn (asl,w) =>
-                      MP_TAC (PART_MATCH (lhs o #2 o strip_imp) (ASSUME pm) (lhs w))
-                             (asl,w)) THEN
-                  ASM_REWRITE_TAC [] THEN DISCH_THEN SUBST1_TAC THEN
-                  REPEAT (MATCH_MP_TAC argcong THEN CONJ_TAC THEN1
-                            (MATCH_MP_TAC supp_fresh THEN
-                             ASM_REWRITE_TAC [tpm_is_perm, ASSUME perm_t] THEN
-                             CONJ_TAC THEN FIRST_X_ASSUM MATCH_MP_TAC THEN
-                             ASM_REWRITE_TAC [])) THEN
-                  REFL_TAC,
-                  ASM_REWRITE_TAC [pred_setTheory.IN_UNION]
-                ])
-  val elims = map mk_result vac_pms
-in
-  List.foldl (uncurry PROVE_HYP) th elims
-end
-
 fun lift_exfunction {repabs_pseudo_id, term_REP_t, cons_info} th = let
   fun mk_conremove {con_termP, con_def} =
       con_termP |> MATCH_MP repabs_pseudo_id
@@ -355,5 +288,85 @@ fun prove_alpha_fcbhyp {ppm, alphas, rwts} th = let
 in
   HOLset.foldl foldthis th (hypset th)
 end
+
+val pi_t = mk_var("pi", cpm_ty)
+val gterm_ty = mk_thy_type {Tyop = "gterm", Thy = "generic_terms",
+                            Args = [beta,alpha]}
+val pmact_t = prim_mk_const{Name = "pmact", Thy = "nomset"}
+val mk_pmact_t = prim_mk_const{Name = "mk_pmact", Thy = "nomset"}
+val raw_gtpm_t =
+    mk_thy_const{Name = "raw_gtpm", Thy = "generic_terms",
+                 Ty = cpm_ty --> gterm_ty --> gterm_ty}
+val gtpm_t = mk_icomb(pmact_t, mk_icomb(mk_pmact_t, raw_gtpm_t))
+
+fun defined_const th = th |> concl |> strip_forall |> #2 |> lhs |> repeat rator
+
+val pmact_absrep' = pmact_bijections |> CONJUNCT2 |> GSYM
+
+fun Save_thm(n, th) = save_thm(n,th) before BasicProvers.export_rewrites [n]
+
+fun define_permutation { name_pfx, name, term_ABS_t, term_REP_t,
+                         absrep_id, repabs_pseudo_id, newty,
+                         genind_term_REP, cons_info} = let
+  val tpm_name = name_pfx ^ "pm"
+  val raw_tpm_name = "raw_" ^ tpm_name
+  val raw_tpm_t = mk_var(raw_tpm_name, cpm_ty --> newty --> newty)
+  val t = mk_var("t", newty)
+  val raw_tpm_def = new_definition(
+    raw_tpm_name ^ "_def",
+    mk_eq(list_mk_comb(raw_tpm_t, [pi_t, t]),
+          mk_comb(term_ABS_t,
+                  list_mk_icomb(gtpm_t, [pi_t, mk_comb(term_REP_t, t)]))))
+  val raw_tpm_t = defined_const raw_tpm_def
+  val t_pmact_name = name ^ "_pmact"
+  val t_pmact_t = mk_icomb(mk_pmact_t, raw_tpm_t)
+  val tpm_t = mk_icomb(pmact_t, t_pmact_t)
+  val _ = overload_on (t_pmact_name, t_pmact_t)
+  val _ = overload_on (tpm_name, tpm_t)
+  val (termP_t, REPg) = dest_comb (concl genind_term_REP)
+  val termP_gtpmREP =
+      mk_comb(termP_t, list_mk_icomb(gtpm_t, [pi_t, REPg]))
+             |> PURE_REWRITE_CONV [genind_gtpm_eqn]
+             |> SYM |> C EQ_MP genind_term_REP
+  val term_REP_raw_tpm =
+      raw_tpm_def |> SPEC_ALL |> AP_TERM term_REP_t
+                  |> PURE_REWRITE_RULE [MATCH_MP repabs_pseudo_id termP_gtpmREP]
+  val tpm_raw = store_thm(
+    tpm_name ^ "_raw",
+    mk_eq(tpm_t, raw_tpm_t),
+    REWRITE_TAC[pmact_absrep', is_pmact_def, FUN_EQ_THM, raw_tpm_def,
+                pmact_nil, pmact_decompose, absrep_id] THEN
+    REPEAT CONJ_TAC THENL [
+      REPEAT GEN_TAC THEN
+      NTAC 2 AP_TERM_TAC THEN CONV_TAC (REWR_CONV EQ_SYM_EQ) THEN
+      REWRITE_TAC [GSYM term_REP_raw_tpm, absrep_id],
+      REPEAT STRIP_TAC THEN
+      AP_TERM_TAC THEN AP_THM_TAC THEN
+      Q.ISPEC_THEN `gtpm`     (fn is_pmact_def =>
+      Q.ISPEC_THEN `gt_pmact` (fn is_pmact_pmact =>
+        is_pmact_def |> C EQ_MP is_pmact_pmact
+                     |> CONJUNCTS |> last
+                     |> MATCH_MP_TAC) is_pmact_pmact) is_pmact_def THEN
+      POP_ASSUM ACCEPT_TAC
+    ])
+  val term_REP_tpm = SUBS [GSYM tpm_raw] term_REP_raw_tpm
+  fun tpm_clause {con_termP, con_def} =
+      con_def |> SPEC_ALL
+              |> AP_TERM (mk_comb(tpm_t, pi_t))
+              |> CONV_RULE (RAND_CONV (REWR_CONV
+                                           (SUBS [GSYM tpm_raw] raw_tpm_def)))
+              |> REWRITE_RULE [MATCH_MP repabs_pseudo_id con_termP,
+                               gtpm_thm, listTheory.MAP, listpm_thm]
+              |> REWRITE_RULE [GSYM con_def, GSYM term_REP_tpm]
+              |> GEN_ALL
+  val tpm_thm = Save_thm(tpm_name ^ "_thm",
+                         LIST_CONJ (map tpm_clause cons_info))
+in
+  {term_REP_tpm = term_REP_tpm, tpm_thm = tpm_thm, t_pmact_t = t_pmact_t,
+   tpm_t = tpm_t}
+end
+
+
+
 
 end (* struct *)

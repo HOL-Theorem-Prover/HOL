@@ -1,5 +1,5 @@
 open HolKernel boolLib Parse bossLib
-open binderLib metisLib termTheory contextlistsTheory
+open binderLib nomsetTheory metisLib termTheory contextlistsTheory
 open chap3Theory
 
 val _ = new_theory "stt";
@@ -69,7 +69,7 @@ val hastype_swap = store_thm(
 val hastype_swap_eqn = store_thm(
   "hastype_swap_eqn",
   ``Γ ⊢ π·m ◁ A <=> π⁻¹ · Γ ⊢ m ◁ A``,
-  METIS_TAC [hastype_swap, tpm_inverse, ctxtswap_inverse]);
+  METIS_TAC [hastype_swap, pmact_inverse, ctxtswap_inverse]);
 
 val hastype_valid_ctxt = store_thm(
   "hastype_valid_ctxt",
@@ -104,7 +104,7 @@ val hastype_bvc_ind = store_thm(
   REPEAT GEN_TAC THEN STRIP_TAC THEN
   Q_TAC SUFF_TAC `∀G m A. G ⊢ m ◁ A ⇒
                           ∀x π. P (π·G) (π·m) A x`
-        THEN1 METIS_TAC [tpm_NIL, ctxtswap_NIL] THEN
+        THEN1 METIS_TAC [pmact_nil, ctxtswap_NIL] THEN
   HO_MATCH_MP_TAC strong_hastype_ind THEN SRW_TAC [][hastype_rules] THENL [
     METIS_TAC [hastype_rules, hastype_swap],
     Q.MATCH_ABBREV_TAC
@@ -114,7 +114,7 @@ val hastype_bvc_ind = store_thm(
                          FV (π·m) ∪ fv c` THEN
     `LAM (π·v) (π·m) =
      LAM z ([(z,π·v)]·(π·m))` by SRW_TAC [][tpm_ALPHA] THEN
-    SRW_TAC [][GSYM tpm_APPEND] THEN
+    SRW_TAC [][GSYM pmact_decompose] THEN
     FIRST_X_ASSUM MATCH_MP_TAC THEN
     `valid_ctxt ((v,A)::G)` by METIS_TAC [hastype_valid_ctxt] THEN
     `v # G` by FULL_SIMP_TAC (srw_ss()) [ctxtFV_MEM] THEN
