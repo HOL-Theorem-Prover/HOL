@@ -59,7 +59,6 @@ structure prim_recScript =
 struct
 
 open HolKernel boolLib Prim_rec Parse
-infix THEN THENL;
 
 type thm = Thm.thm
 
