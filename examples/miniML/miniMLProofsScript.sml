@@ -10,6 +10,8 @@ val rw = srw_tac []
 val wf_rel_tac = WF_REL_TAC
 val induct_on = Induct_on
 val cases_on = Cases_on;
+val every_case_tac = BasicProvers.EVERY_CASE_TAC;
+val full_case_tac = BasicProvers.FULL_CASE_TAC;
 
 val _ = new_theory "miniMLProofs";
 
@@ -73,34 +75,7 @@ val untyped_safety_thm = Q.store_thm ("untyped_safety_thm",
 `∀envC env ds st. 
   (d_step (envC, env, ds, st) = Stuck) = (ds = []) ∧ (st = NONE)`,
 rw [d_step_def, e_step_def, continue_def, push_def] >>
-cases_on `st` >>
-rw [] >|
-[cases_on `ds` >>
-     rw [] >>
-     cases_on `h` >>
-     rw [],
- cases_on `x` >>
-     rw [] >> 
-     cases_on `r` >>
-     rw [] >>
-     cases_on `r'`>> 
-     rw [] >>
-     cases_on `r` >>
-     rw [] >>
-     cases_on `q'''` >>
-     rw [] >|
-     [cases_on `pmatch q' q v env` >>
-          rw [],
-      cases_on `v` >>
-          rw [] >>
-          cases_on `l` >>
-          rw [] >>
-          cases_on `lookup s q'` >>
-          rw [] >>
-          cases_on `x` >>
-          rw [],
-      cases_on `lookup s q''` >>
-          rw []]]);
+every_case_tac);
 
 (* --------------------------- Type soundness ------------------------------- *)
 
@@ -398,20 +373,13 @@ fs [] >|
      fs [] >|
      [imp_res_tac type_funs_lookup2 >>
           fs [],
-      cases_on `op` >>
-          fs [],
-      cases_on `op` >>
-          fs [],
-      cases_on `op` >>
-          fs [],
-      cases_on `op` >>
-          fs [],
-      cases_on `op` >>
-          fs [],
-      cases_on `op` >>
-          fs [],
-      cases_on `op` >>
-          fs [],
+      metis_tac [log_nchotomy],
+      metis_tac [log_nchotomy],
+      metis_tac [log_nchotomy],
+      metis_tac [log_nchotomy],
+      metis_tac [log_nchotomy],
+      metis_tac [log_nchotomy],
+      metis_tac [log_nchotomy],
       cases_on `pes` >>
             rw [] >-
             fs [e_step_def, continue_def] >>
@@ -540,30 +508,16 @@ rw [pmatch_def] >|
      rw [Once type_e_cases, bind_def] >>
      metis_tac [type_val_weaken_stengthen_lem, v_is_value_def],
  metis_tac [],
- cases_on `lookup n envC` >>
-     fs [] >>
-     cases_on `x` >>
-     fs [] >>
-     cases_on `n IN r ∧ n IN r ∧ (LENGTH ps = q) ∧ (LENGTH es = q)` >>
-     fs [] >>
+ every_case_tac >>
      fs [] >>
      qpat_assum `type_e tenvC tenv epat t`
              (ASSUME_TAC o SIMP_RULE (srw_ss()) [Once type_e_cases]) >>
      fs [] >>
      metis_tac [v_is_value_def, RES_FORALL],
- cases_on `lookup n envC` >>
-     fs [] >>
-     cases_on `x` >>
-     fs [] >>
-     cases_on `lookup n' envC` >>
-     fs [] >>
-     cases_on `x` >>
-     fs [] >>
-     cases_on `n IN r' ∧ n' IN r ∧ (LENGTH ps = q) ∧ (LENGTH es = q')` >>
-     fs [] >>
+ every_case_tac >>
      fs [],
  metis_tac [],
- cases_on `pmatch envC p v env` >>
+ every_case_tac >>
      fs [] >>
      qpat_assum `type_es tenvC tenv (Val v::es) ts`
              (ASSUME_TAC o SIMP_RULE (srw_ss ()) [Once type_e_cases]) >>
@@ -668,16 +622,14 @@ fs [v_is_value_def, push_def] >>
 rw [] >|
 [cases_on `v_is_value v` >>
      fs [] >|
-     [fs [continue_def] >>
+     [fs [continue_def, push_def] >>
           cases_on `c` >>
-          fs [push_def] >>
+          fs [] >>
           cases_on `h` >>
           fs [] >>
           cases_on `q` >>
           fs [] >|
-          [cases_on `o'` >>
-               fs [] >>
-               cases_on `v` >>
+          [every_case_tac >>
                fs [] >|
                [fs [Once type_ctxts_cases, type_ctxt_cases] >>
                     rw [] >>
@@ -691,7 +643,7 @@ rw [] >|
                            (ASSUME_TAC o 
                             SIMP_RULE (srw_ss()) [Once type_e_cases]) >> 
                     metis_tac []],
-           cases_on `o'` >>
+           every_case_tac >>
                fs [] >>
                qpat_assum `type_ctxts tenvC ((Capp2 l s e (),r)::c') t1 t`
                  (ASSUME_TAC o SIMP_RULE (srw_ss()) [Once type_ctxts_cases]) >> 
@@ -701,11 +653,7 @@ rw [] >|
                rw [] >>
                metis_tac [type_e_rules, v_is_value_def, 
                           type_val_weaken_stengthen_lem, bind_def],
-           cases_on `o'` >>
-               fs [] >>
-               cases_on `find_recfun s l0` >>
-               fs [] >>
-               cases_on `x` >>
+           every_case_tac >>
                fs [] >>
                qpat_assum `type_ctxts tenvC ((Capp3 l l0 s (),r)::c') t1 t`
                  (ASSUME_TAC o SIMP_RULE (srw_ss()) [Once type_ctxts_cases]) >> 
@@ -721,61 +669,37 @@ rw [] >|
                match_mp_tac type_env_merge_lem >>
                rw [] >>
                metis_tac [type_recfun_env],
-           cases_on `o'` >>
-               fs [] >>
-               cases_on `v` >>
+           every_case_tac >>
                fs [return_def] >>
-               cases_on `l` >>
-               cases_on `l'` >>
                fs [] >>
-               cases_on `b` >>
-               fs []>>
+               rw [] >>
                qpat_assum `type_ctxts tenvC cpat t1 t`
                  (ASSUME_TAC o SIMP_RULE (srw_ss()) [Once type_ctxts_cases]) >> 
                fs [type_ctxt_cases] >>
                rw [] >>
                metis_tac [type_val_weaken_stengthen_lem, v_is_value_def],
-           cases_on `o0` >> 
+           every_case_tac >>
                fs [] >>
                rw [] >>
                fs [Once type_ctxts_cases, type_ctxt_cases] >>
                metis_tac [type_val_weaken_stengthen_lem, v_is_value_def],
-           cases_on `o0` >>
-               fs [] >>
-               cases_on `v'` >>
+           every_case_tac >>
                fs [return_def] >>
-               cases_on `v` >>
                fs [] >>
-               cases_on `l` >>
-               fs [] >>
-               cases_on `l'` >>
-               fs [] >>
-               cases_on `o'` >>
-               fs [] >>
+               rw [] >>
                qpat_assum `type_ctxts tenvC cpat t1 t`
                  (ASSUME_TAC o SIMP_RULE (srw_ss()) [Once type_ctxts_cases]) >> 
                fs [type_ctxt_cases] >> 
                metis_tac [type_e_rules],
-           cases_on `o'` >>
+           every_case_tac >>
                fs [] >>
-               cases_on `v` >>
-               fs [] >>
-               cases_on `l` >>
-               fs [] >>
-               cases_on `b` >>
-               fs [] >>
+               rw [] >>
                qpat_assum `type_ctxts tenvC cpat t1 t`
                  (ASSUME_TAC o SIMP_RULE (srw_ss()) [Once type_ctxts_cases]) >> 
                fs [type_ctxt_cases] >>
                rw [] >>
                metis_tac [],
-           cases_on `o'` >>
-               fs [] >>
-               cases_on `l` >>
-               fs [] >>
-               cases_on `h` >>
-               fs [] >>
-               cases_on `pmatch envC q v r` >>
+           every_case_tac >>
                fs [] >>
                rw [] >>
                qpat_assum `type_ctxts tenvC cpat t1 t`
@@ -787,7 +711,7 @@ rw [] >|
                     metis_tac [type_val_weaken_stengthen_lem, v_is_value_def],
                 metis_tac [type_val_weaken_stengthen_lem, v_is_value_def,
                            pmatch_type_preservation]],
-           cases_on `o'` >>
+           every_case_tac >>
                fs [] >>
                qpat_assum `type_ctxts tenvC cpat t1 t`
                  (ASSUME_TAC o SIMP_RULE (srw_ss()) [Once type_ctxts_cases]) >> 
@@ -798,9 +722,7 @@ rw [] >|
                rw [] >>
                rw [Once type_e_cases, bind_def] >>
                metis_tac [type_val_weaken_stengthen_lem, v_is_value_def],
-           cases_on `o'` >>
-               fs [] >>
-               cases_on `l0` >>
+           every_case_tac >>
                fs [return_def] >>                 
                rw [] >|
                [qpat_assum `type_ctxts tenvC cpat t1 t`
@@ -837,15 +759,7 @@ rw [] >|
                     rw [] >>
                     metis_tac [type_es_end_lem, type_val_weaken_stengthen_lem,
                                v_is_value_def]]],
-      cases_on `v` >>
-          fs [] >>
-          cases_on `l` >>
-          fs [] >>
-          cases_on `lookup s envC` >>
-          fs [] >>
-          cases_on `x` >>
-          fs [] >>
-          cases_on `q = SUC (LENGTH t')` >>
+      every_case_tac >>
           fs [] >>
           rw [] >>
           qpat_assum `type_e tenvC tenv (Val (Con s (e'::t'))) t1` 
@@ -867,7 +781,7 @@ rw [] >|
           qexists_tac `t'''` >>
           rw [] >>
           metis_tac [type_e_rules, APPEND]],
- cases_on `lookup s env` >>
+ every_case_tac >>
      fs [] >>
      rw [] >>
      qexists_tac `t1` >>
@@ -896,7 +810,7 @@ rw [] >|
  pop_assum (ASSUME_TAC o SIMP_RULE (srw_ss()) [Once type_e_cases]) >> 
      rw [Once type_ctxts_cases, type_ctxt_cases] >>
      metis_tac [],
- cases_on `¬ALL_DISTINCT (MAP (λ(x,y,z). x) l)` >>
+ every_case_tac >>
      fs [] >>
      rw [] >>
      qpat_assum `type_e tenvC tenv epat t1`
@@ -906,25 +820,25 @@ rw [] >|
      qexists_tac `merge tenv' tenv` >>
      rw [] >>
      rw [build_rec_env_lem] >>
-         match_mp_tac type_env_merge_lem >>
-         rw [] >>
-         match_mp_tac type_recfun_env >>
-         metis_tac []]);
+     match_mp_tac type_env_merge_lem >>
+     rw [] >>
+     match_mp_tac type_recfun_env >>
+     metis_tac []]);
 
 (* ------------------------- Big step determinacy ----------------------- *)
 
 val big_exp_determ = Q.prove (
-`(∀ envc env e bv1.
-   evaluate envc env e bv1 ⇒
-   ∀ bv2. evaluate envc env e bv2 ⇒
+`(∀ cenv env e bv1.
+   evaluate cenv env e bv1 ⇒
+   ∀ bv2. evaluate cenv env e bv2 ⇒
    (bv1 = bv2)) ∧
- (∀ envc env es bv1.
-   evaluate_list envc env es bv1 ⇒
-   ∀ bv2. evaluate_list envc env es bv2 ⇒
+ (∀ cenv env es bv1.
+   evaluate_list cenv env es bv1 ⇒
+   ∀ bv2. evaluate_list cenv env es bv2 ⇒
    (bv1 = bv2)) ∧
- (∀ envc env v pes bv1.
-   evaluate_match envc env v pes bv1 ⇒
-   ∀ bv2. evaluate_match envc env v pes bv2 ⇒
+ (∀ cenv env v pes bv1.
+   evaluate_match cenv env v pes bv1 ⇒
+   ∀ bv2. evaluate_match cenv env v pes bv2 ⇒
    (bv1 = bv2))`,
 HO_MATCH_MP_TAC evaluate_ind >>
 rw [] >>
@@ -936,4 +850,126 @@ res_tac >>
 fs [] >>
 rw []);
 
+(* ------------------------ Big step/small step equivalence ----------------- *)
+
+val evaluate_ctxts_def = Q.prove (
+`∀ cenv v v' c env cs bv err.
+  (evaluate_ctxts cenv [] v (Bvalue v') = (v = v')) ∧
+  (evaluate_ctxts cenv ((c,env)::cs) v bv =
+     (∃ v' err.
+       (evaluate_ctxt cenv env c v (Bvalue v') ∧
+        evaluate_ctxts cenv cs v' bv) ∨
+       (evaluate_ctxt cenv env c v (Berror err) ∧ 
+        (bv = Berror err))))`,
+rw [] >|
+[rw [Once evaluate_ctxts_cases] >>
+     metis_tac [],
+ EQ_TAC >>
+     rw [] >|
+     [pop_assum 
+            (ASSUME_TAC o SIMP_RULE (srw_ss ()) [Once evaluate_ctxts_cases]) >>
+          rw [] >>
+          metis_tac [],
+      rw [Once evaluate_ctxts_cases] >>
+          metis_tac [],
+      rw [Once evaluate_ctxts_cases] >>
+          metis_tac []]]);
+
+          (*
+val evaluate_value = Q.prove (
+`(∀ v cenv env v. 
+  v_is_value v ∧ ¬(evaluate cenv env (Val v) (Berror F)) 
+  ⇒ 
+  evaluate cenv env (Val v) (Bvalue v)) ∧
+ (∀ es. 
+  (∀(e :: (set es)). is_value e) ∧ ¬(evaluate cenv env (Val v) (Berror F))
+  ⇒ 
+  evaluate_list cenv env (List.map Val es) (Bvalue es))`, 
+induct_on `v` >>
+rw [v_is_value_def] >>
+fs [Once evaluate_cases] >>
+cases_on `lookup s cenv = NONE` >>
+fs [] >>
+rw [] >>
+`?ns. lookup s cenv = SOME (LENGTH l,ns)` by
+          (cases_on `lookup s cenv` >>
+           rw [] >>
+           cases_on `x` >>
+           rw []) >>
+           
+
+val exp_evaluation_preservation = Q.prove (
+`!cenv env e c bv cenv' env' e' c'. 
+  evaluate_state (cenv,env,e,c) bv ∧ 
+  (e_step (cenv,env,e,c) = (State (cenv',env',e',c')))
+  ⇒ 
+  evaluate_state (cenv',env',e',c') bv`
+rw [e_step_def, push_def] >>
+cases_on `e` >>
+fs [] >>
+rw [] >|
+[cases_on `v_is_value v` >>
+     fs [] >|
+     [fs [continue_def] >>
+          cases_on `c` >>
+          fs [] >>
+          cases_on `h` >>
+          fs [] >>
+          cases_on `q` >>
+          fs [push_def] >|
+          [every_case_tac >>
+               fs [evaluate_state_cases, evaluate_ctxts_def] >>
+               qpat_assum `evaluate envC env (Val vpat) bvpat`
+                 (ASSUME_TAC o SIMP_RULE (srw_ss ()) [Once evaluate_cases]) >>
+               rw [evaluate_ctxts_def] >>
+               fs [evaluate_ctxt_cases] >>
+               metis_tac [],
+               (*
+           every_case_tac >>
+               fs [evaluate_state_cases, evaluate_ctxts_def,
+                   evaluate_ctxt_cases] >>
+               rw [] >>
+               metis_tac []
+               *)
+           all_tac,
+           all_tac,
+           all_tac,
+           all_tac,
+           all_tac,
+           all_tac,
+           all_tac,
+           all_tac,
+           all_tac],
+      every_case_tac >>
+          fs [] >>
+          rw [] >>
+          fs [evaluate_state_cases] >>
+          qpat_assum `evaluate envC env (Val vpat) bvpat`
+               (ASSUME_TAC o SIMP_RULE (srw_ss ()) [Once evaluate_cases]) >>
+          fs [] >>
+          all_tac],
+ every_case_tac >>
+     fs [] >>
+     rw [] >>
+     fs [evaluate_state_cases] >>
+     rw [] >>
+     all_tac,
+ fs [evaluate_state_cases] >>
+     rw [] >>
+     all_tac,
+ fs [evaluate_state_cases] >>
+     rw [] >>
+     fs [evaluate_ctxts_def, evaluate_ctxt_cases] >>
+     rw [] >>
+     qpat_assum `evaluate cenv env (App epat1 epat2) bvpat` 
+           (ASSUME_TAC o SIMP_RULE (srw_ss ()) [Once evaluate_cases]) >>
+     fs [] >>
+     all_tac,
+ all_tac,
+ all_tac,
+ all_tac,
+ all_tac,
+ all_tac,
+ all_tac]
+ *)
 val _ = export_theory ();

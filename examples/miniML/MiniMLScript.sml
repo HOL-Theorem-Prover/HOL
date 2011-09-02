@@ -559,14 +559,24 @@ evaluate cenv env (Val (Lit l)) (Bvalue (Lit l)))
 
 /\
 
-(! cenv env cn es vs.
+(! cenv env cn es vs ns.
+(lookup cn cenv = SOME (LENGTH es,ns)) /\
 evaluate_list cenv env es (Bvalue vs)
 ==>
 evaluate cenv env (Val (Con cn es)) (Bvalue (Con cn (MAP Val vs))))
 
 /\
 
-(! cenv env cn es err.
+(! cenv env cn es l ns.
+(lookup cn cenv = NONE) \/ 
+((lookup cn cenv = SOME (l,ns)) /\ l <> LENGTH es)
+==>
+evaluate cenv env (Val (Con cn es)) (Berror F))
+
+/\
+
+(! cenv env cn es err ns.
+(lookup cn cenv = SOME (LENGTH es,ns)) /\
 evaluate_list cenv env es (Berror err)
 ==>
 evaluate cenv env (Val (Con cn es)) (Berror err))
@@ -1282,5 +1292,160 @@ type_e tenvC tenv e t1
 type_state tenvC (envC, env, e, c) t2)`;
 
 (* TODO: Typing d_states *)
+
+
+(* ------ Auxiliary relations for proving Big/small step equivalence ------ *)
+
+(*val evaluate_ctxt : envC -> envE -> ctxt -> v -> v big_step_result -> bool*)
+(*val evaluate_ctxts : envC -> (ctxt*envE) list -> v -> v big_step_result -> bool*)
+(*val evaluate_state : state -> v big_step_result -> bool*)
+
+val _ = Hol_reln `
+
+(! cenv env e env' n e' bv v.
+evaluate cenv env e (Bvalue v) /\
+evaluate cenv (bind n v env') e' bv
+==>
+evaluate_ctxt cenv env (Capp1 () e) (Closure env' n e') bv)
+
+/\
+
+(! cenv env e v bv e' funs fn n env'.
+evaluate cenv env e (Bvalue v) /\
+(find_recfun fn funs = SOME (n,e')) /\
+evaluate cenv (bind n v (build_rec_env funs env')) e' bv
+==>
+evaluate_ctxt cenv env (Capp1 () e) (Recclosure env' funs fn) bv)
+
+/\
+
+(! cenv env e v l cn es.
+((v = Lit l) \/ (v = Con cn es))
+==>
+evaluate_ctxt cenv env (Capp1 () e) v (Berror F)) 
+
+/\
+
+(! cenv env e v env' funs fn n err e'.
+((v = Closure env' n e') \/ (v = Recclosure env' funs fn)) /\
+evaluate cenv env e (Berror err)
+==>
+evaluate_ctxt cenv env (Capp1 () e) v (Berror err)) 
+
+/\
+
+(! cenv env e v fn funs env'.
+evaluate cenv env e (Bvalue v) /\
+(find_recfun fn funs = NONE) 
+==>
+evaluate_ctxt cenv env (Capp1 () e) (Recclosure env' funs fn) (Berror F)) 
+
+/\
+
+(! cenv env env' n e v bv.
+evaluate cenv (bind n v env') e bv
+==>
+evaluate_ctxt cenv env (Capp2 env' n e ()) v bv)
+
+/\
+
+(! cenv env env' funs fn v bv e' n.
+(find_recfun fn funs = SOME (n,e')) /\
+evaluate cenv (bind n v (build_rec_env funs env')) e' bv
+==>
+evaluate_ctxt cenv env (Capp3 env' funs fn ()) v bv)
+
+/\
+
+(! cenv env env' funs fn v.
+(find_recfun fn funs = NONE)
+==>
+evaluate_ctxt cenv env (Capp3 env' funs fn ()) v (Berror F))
+
+/\
+
+(! cenv env op e v bv.
+evaluate cenv env (Log op (Val v) e) bv
+==>
+evaluate_ctxt cenv env (Clog op () e) v bv)
+
+/\
+
+(! cenv env op e v bv.
+evaluate cenv env (Op op (Val v) e) bv
+==>
+evaluate_ctxt cenv env (Cop1 op () e) v bv)
+
+/\
+
+(! cenv env op v1 v2 bv.
+evaluate cenv env (Op op (Val v1) (Val v2)) bv
+==>
+evaluate_ctxt cenv env (Cop2 op v1 ()) v2 bv)
+
+/\
+
+(! cenv env e1 e2 v bv.
+evaluate cenv env (If (Val v) e1 e2) bv
+==>
+evaluate_ctxt cenv env (Cif () e1 e2) v bv)
+
+/\
+
+(! cenv env pes v bv.
+evaluate cenv env (Mat (Val v) pes) bv
+==>
+evaluate_ctxt cenv env (Cmat () pes) v bv)
+
+/\
+
+(! cenv env n e v bv.
+evaluate cenv env (Let n (Val v) e) bv
+==>
+evaluate_ctxt cenv env (Clet n () e) v bv)
+
+/\
+
+(! cenv env n vs es v bv.
+evaluate cenv env (Val (Con n (MAP Val (REVERSE vs) ++ ([Val v] ++ es)))) bv
+==>
+evaluate_ctxt cenv env (Ccon n vs () es) v bv)`;
+
+val _ = Hol_reln `
+
+(! cenv v.
+T
+==>
+evaluate_ctxts cenv [] v (Bvalue v))
+
+/\
+
+(! cenv c cs env v v' bv.
+evaluate_ctxt cenv env c v (Bvalue v') /\
+evaluate_ctxts cenv cs v' bv 
+==>
+evaluate_ctxts cenv ((c,env)::cs) v bv)
+
+/\
+
+(! cenv c cs v env err.
+evaluate_ctxt cenv env c v (Berror err)
+==>
+evaluate_ctxts cenv ((c,env)::cs) v (Berror err))`;
+
+val _ = Hol_reln `
+
+(! cenv env e c v bv.
+evaluate cenv env e (Bvalue v) /\
+evaluate_ctxts cenv c v bv
+==>
+evaluate_state (cenv, env, e, c) bv)
+
+/\
+
+(! cenv env e c err.
+evaluate cenv env e (Berror err)
+==>
+evaluate_state (cenv, env, e, c) (Berror err))`;
 val _ = export_theory()
 
