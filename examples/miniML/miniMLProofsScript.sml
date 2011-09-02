@@ -3,7 +3,7 @@ open finite_mapTheory listTheory pairTheory pred_setTheory
 open set_relationTheory sortingTheory stringTheory wordsTheory
 open MiniMLTheory
 
-open lcsymtacs
+open lcsymtacs;
 
 val fs = full_simp_tac (srw_ss ())
 val rw = srw_tac []
@@ -911,5 +911,29 @@ rw [] >|
          match_mp_tac type_recfun_env >>
          metis_tac []]);
 
+(* ------------------------- Big step determinacy ----------------------- *)
+
+val big_exp_determ = Q.prove (
+`(∀ envc env e bv1.
+   evaluate envc env e bv1 ⇒
+   ∀ bv2. evaluate envc env e bv2 ⇒
+   (bv1 = bv2)) ∧
+ (∀ envc env es bv1.
+   evaluate_list envc env es bv1 ⇒
+   ∀ bv2. evaluate_list envc env es bv2 ⇒
+   (bv1 = bv2)) ∧
+ (∀ envc env v pes bv1.
+   evaluate_match envc env v pes bv1 ⇒
+   ∀ bv2. evaluate_match envc env v pes bv2 ⇒
+   (bv1 = bv2))`,
+HO_MATCH_MP_TAC evaluate_ind >>
+rw [] >>
+pop_assum (ASSUME_TAC o SIMP_RULE (srw_ss ()) [Once evaluate_cases]) >>
+fs [] >>
+rw [] >>
+fs [] >>
+res_tac >>
+fs [] >>
+rw []);
 
 val _ = export_theory ();

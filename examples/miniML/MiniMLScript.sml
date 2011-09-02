@@ -537,7 +537,332 @@ val _ = Define `
   ))`;
 
 
-(* ------------------------ Type system ---------------------------------*)
+(* ------------------------ Big step semantics -------------------------- *)
+
+(* Berror should be true for a BindError and false for a TypeError *)
+val _ = Hol_datatype `
+(*  'a *) big_step_result =
+    Bvalue of 'a
+  | Berror of bool`;
+
+
+(*val evaluate : envC -> envE -> exp -> v big_step_result -> bool*)
+(*val evaluate_list : envC -> envE -> exp list -> v list big_step_result -> bool*)
+(*val evaluate_match : envC -> envE -> v -> (pat * exp) list -> v big_step_result -> bool*)
+
+val _ = Hol_reln `
+
+(! cenv env l.
+T
+==>
+evaluate cenv env (Val (Lit l)) (Bvalue (Lit l)))
+
+/\
+
+(! cenv env cn es vs.
+evaluate_list cenv env es (Bvalue vs)
+==>
+evaluate cenv env (Val (Con cn es)) (Bvalue (Con cn (MAP Val vs))))
+
+/\
+
+(! cenv env cn es err.
+evaluate_list cenv env es (Berror err)
+==>
+evaluate cenv env (Val (Con cn es)) (Berror err))
+
+/\
+
+(! cenv env env' n exp.
+T
+==>
+evaluate cenv env (Val (Closure env' n exp)) (Bvalue (Closure env' n exp)))
+
+/\
+
+(! cenv env env' funs fn.
+T
+==>
+evaluate cenv env (Val (Recclosure env' funs fn)) (Bvalue (Recclosure env' funs fn)))
+
+/\
+
+(! cenv env n v.
+(lookup n env = SOME v)
+==>
+evaluate cenv env (Var n) (Bvalue v))
+
+/\
+
+(! cenv env n.
+(lookup n env = NONE)
+==>
+evaluate cenv env (Var n) (Berror F))
+
+/\
+
+(! cenv env n e.
+T
+==>
+evaluate cenv env (Fun n e) (Bvalue (Closure env n e)))
+
+/\
+
+(! cenv env e1 e2 env' n e v bv.
+evaluate cenv env e1 (Bvalue (Closure env' n e)) /\
+evaluate cenv env e2 (Bvalue v) /\
+evaluate cenv (bind n v env') e bv
+==>
+evaluate cenv env (App e1 e2) bv)
+
+/\
+
+(! cenv env e1 e2 env' funs fn v bv n e.
+evaluate cenv env e1 (Bvalue (Recclosure env' funs fn)) /\
+evaluate cenv env e2 (Bvalue v) /\
+(find_recfun fn funs = SOME (n,e)) /\
+evaluate cenv (bind n v (build_rec_env funs env')) e bv
+==>
+evaluate cenv env (App e1 e2) bv)
+
+/\
+
+(! cenv env e1 e2 err.
+evaluate cenv env e1 (Berror err)
+==>
+evaluate cenv env (App e1 e2) (Berror err))
+
+/\
+
+(! cenv env e1 e2 v l cn es.
+evaluate cenv env e1 (Bvalue v) /\
+((v = Lit l) \/ (v = Con cn es))
+==>
+evaluate cenv env (App e1 e2) (Berror F))
+
+/\
+
+(! cenv env e1 e2 v env' funs fn n e err.
+evaluate cenv env e1 (Bvalue v) /\
+((v = Closure env' n e) \/ (v = Recclosure env' funs fn)) /\
+evaluate cenv env e2 (Berror err)
+==>
+evaluate cenv env (App e1 e2) (Berror err))
+
+/\
+
+(! cenv env e1 e2 env' funs fn v.
+evaluate cenv env e1 (Bvalue (Recclosure env' funs fn)) /\
+evaluate cenv env e2 (Bvalue v) /\
+(find_recfun fn funs = NONE) 
+==>
+evaluate cenv env (App e1 e2) (Berror F))
+
+
+/\
+
+(! cenv env e1 e2 bv.
+evaluate cenv env e1 (Bvalue (Lit (Bool T))) /\
+evaluate cenv env e2 bv
+==>
+evaluate cenv env (Log And e1 e2) bv)
+
+/\
+
+(! cenv env e1 e2 bv.
+evaluate cenv env e1 bv /\
+~ (bv = Bvalue (Lit (Bool T)))
+==>
+evaluate cenv env (Log And e1 e2) bv)
+
+/\
+
+(! cenv env e1 e2 bv.
+evaluate cenv env e1 (Bvalue (Lit (Bool F))) /\
+evaluate cenv env e2 bv
+==>
+evaluate cenv env (Log Or e1 e2) bv)
+
+/\
+
+(! cenv env e1 e2 bv.
+evaluate cenv env e1 bv /\
+~ (bv = Bvalue (Lit (Bool F)))
+==>
+evaluate cenv env (Log Or e1 e2) bv)
+
+/\
+
+(! cenv env e1 e2 op n1 n2.
+evaluate cenv env e1 (Bvalue (Lit (Num n1))) /\
+evaluate cenv env e2 (Bvalue (Lit (Num n2)))
+==>
+evaluate cenv env (Op (Opn op) e1 e2) (Bvalue (Lit (Num (op n1 n2)))))
+
+/\
+
+(! cenv env e1 e2 op n1 n2.
+evaluate cenv env e1 (Bvalue (Lit (Num n1))) /\
+evaluate cenv env e2 (Bvalue (Lit (Num n2)))
+==>
+evaluate cenv env (Op (Opb op) e1 e2) (Bvalue (Lit (Bool (op n1 n2)))))
+
+/\
+
+(! cenv env e1 e2 op err.
+evaluate cenv env e1 (Berror err)
+==>
+evaluate cenv env (Op op e1 e2) (Berror err))
+
+/\
+
+(! cenv env e1 e2 op v err.
+evaluate cenv env e1 (Bvalue v) /\
+evaluate cenv env e2 (Berror err)
+==>
+evaluate cenv env (Op op e1 e2) (Berror err))
+
+/\
+
+(! cenv env e1 e2 op v1 v2.
+evaluate cenv env e1 (Bvalue v1) /\
+evaluate cenv env e2 (Bvalue v2) /\
+(~ (? n1. v1 = Lit (Num n1)) \/ ~ (? n2. v2 = Lit (Num n2)))
+==>
+evaluate cenv env (Op op e1 e2) (Berror F))
+
+/\
+
+(! cenv env e1 e2 e3 bv.
+evaluate cenv env e1 (Bvalue (Lit (Bool T))) /\
+evaluate cenv env e2 bv
+==>
+evaluate cenv env (If e1 e2 e3) bv)
+
+/\
+
+(! cenv env e1 e2 e3 bv.
+evaluate cenv env e1 (Bvalue (Lit (Bool F))) /\
+evaluate cenv env e3 bv
+==>
+evaluate cenv env (If e1 e2 e3) bv)
+
+/\
+
+(! cenv env e1 e2 e3 v.
+evaluate cenv env e1 (Bvalue v) /\
+(v <> Lit (Bool T) /\ v <> Lit (Bool F))
+==>
+evaluate cenv env (If e1 e2 e3) (Berror F))
+
+/\
+
+(! cenv env e1 e2 e3 err.
+evaluate cenv env e1 (Berror err)
+==>
+evaluate cenv env (If e1 e2 e3) (Berror err))
+
+/\
+
+(! cenv env e pes v bv.
+evaluate cenv env e (Bvalue v) /\
+evaluate_match cenv env v pes bv
+==>
+evaluate cenv env (Mat e pes) bv)
+
+/\
+
+(! cenv env e pes err.
+evaluate cenv env e (Berror err)
+==>
+evaluate cenv env (Mat e pes) (Berror err))
+
+/\
+
+(! cenv env n e1 e2 v bv.
+evaluate cenv env e1 (Bvalue v) /\
+evaluate cenv (bind n v env) e2 bv
+==>
+evaluate cenv env (Let n e1 e2) bv)
+
+/\
+
+(! cenv env n e1 e2 err.
+evaluate cenv env e1 (Berror err)
+==>
+evaluate cenv env (Let n e1 e2) (Berror err))
+
+/\
+
+(! cenv env funs e bv.
+evaluate cenv (build_rec_env funs env) e bv
+==>
+evaluate cenv env (Letrec funs e) bv)
+
+/\
+
+(! cenv env.
+T
+==>
+evaluate_list cenv env [] (Bvalue []))
+
+/\
+
+(! cenv env e es v vs.
+evaluate cenv env e (Bvalue v) /\
+evaluate_list cenv env es (Bvalue vs)
+==>
+evaluate_list cenv env (e::es) (Bvalue (v::vs)))
+
+/\
+
+(! cenv env e es err.
+evaluate cenv env e (Berror err)
+==>
+evaluate_list cenv env (e::es) (Berror err))
+
+/\
+
+(! cenv env e es v err.
+evaluate cenv env e (Bvalue v) /\
+evaluate_list cenv env es (Berror err)
+==>
+evaluate_list cenv env (e::es) (Berror err))
+
+/\
+
+(! cenv env v.
+T
+==>
+evaluate_match cenv env v [] (Berror T))
+
+/\
+
+(! cenv env v p e pes env' bv.
+(pmatch cenv p v env = Match env') /\
+evaluate cenv env' e bv
+==>
+evaluate_match cenv env v ((p,e)::pes) bv)
+
+/\
+
+(! cenv env v p e pes bv.
+(pmatch cenv p v env = No_match) /\
+evaluate_match cenv env v pes bv
+==>
+evaluate_match cenv env v ((p,e)::pes) bv)
+
+/\
+
+(! cenv env v p e pes.
+(pmatch cenv p v env = Match_type_error)
+==>
+evaluate_match cenv env v ((p,e)::pes) (Berror F))`;
+
+
+(* TODO: declaration evaluation *)
+
+(* ------------------------ Type system --------------------------------- *)
 
 (* The type system does not currently support let polymorphism, but does 
 * support polymorphic datatypes *)
