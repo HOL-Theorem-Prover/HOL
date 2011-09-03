@@ -90,6 +90,8 @@ src/boss
 [poly]bin/hol
 
 !src/tfl/src/test
+src/opentheory
+src/opentheory/logging
 src/TeX
 !examples/RSA
 src/sort
@@ -127,7 +129,6 @@ src/complex
 !!examples/separationLogic/src/
 src/HolQbf
 src/HolSmt
-src/opentheory
 !examples/misc
 # these examples require Muddy, which is MoscowML specific
 [mosml]!examples/muddy/muddyC
