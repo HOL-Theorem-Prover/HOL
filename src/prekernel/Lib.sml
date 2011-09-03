@@ -356,6 +356,12 @@ fun pair_compare (acmp, bcmp) ((a1, b1), (a2, b2)) =
 fun measure_cmp f (x,y) = Int.compare(f x, f y)
 fun inv_img_cmp f c (x,y) = c (f x, f y)
 
+(* streamlined combination of inv_img_cmp and pair_compare *)
+fun lex_cmp (c1,c2) (f1,f2) (x1,x2) =
+  case c1(f1 x1, f1 x2) of
+    EQUAL => c2(f2 x1, f2 x2)
+  | x => x
+
 (*---------------------------------------------------------------------------*
  * For loops                                                                 *
  *---------------------------------------------------------------------------*)
