@@ -7,6 +7,9 @@ sig
   type 'a to_ot  = ('a,string) Map.dict
   type 'a from_ot= (string,'a) Map.dict
 
+  val thy_tyop_cmp  : thy_tyop  * thy_tyop  -> order
+  val thy_const_cmp : thy_const * thy_const -> order
+
   val temp_OpenTheory_tyop_name  : {tyop :thy_tyop , name:string} -> unit
   val temp_OpenTheory_const_name : {const:thy_const, name:string} -> unit
   val OpenTheory_tyop_name  : {tyop :thy_tyop , name:string} -> unit
