@@ -13,4 +13,6 @@ datatype object
 | OThm of Thm.thm
 
 val object_compare : object * object -> order
+
+val DEDUCT_ANTISYM : Thm.thm -> Thm.thm -> Thm.thm
 end

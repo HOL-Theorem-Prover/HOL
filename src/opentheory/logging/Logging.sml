@@ -30,6 +30,17 @@ fun log_list log = let
     | logl (h::t) = (log h; logl t; log_command "cons")
 in logl end
 
+fun log_pair loga logb (a,b) = let
+  val _ = loga a
+  val _ = logb b
+  val _ = log_nil ()
+  val _ = log_command "cons"
+  val _ = log_command "cons"
+in () end
+
+fun log_redres loga logb {redex,residue} =
+  log_pair loga logb (redex,residue)
+
 val (log_term, log_thm, log_clear) = let
   val (reset_key,next_key) = let
     val key = ref 0
@@ -58,7 +69,7 @@ val (log_term, log_thm, log_clear) = let
       in true end
   | NONE => false
 
-  fun log_type_var ty = log_name (dest_vartype ty)
+  fun log_type_var ty = log_name (Type.dest_vartype ty)
 
   local open OpenTheoryMap in
     fun log_tyop_name tyop =
@@ -92,8 +103,9 @@ val (log_term, log_thm, log_clear) = let
   fun log_type ty = let
     val ob = OType ty
   in if saved ob then () else let
+    open Feedback
     val _ = let
-      val {Thy,Args,Tyop} = dest_thy_type ty
+      val {Thy,Args,Tyop} = Type.dest_thy_type ty
       val _ = log_tyop {Thy=Thy,Tyop=Tyop}
       val _ = log_list log_type Args
       val _ = log_command "opType"
@@ -108,7 +120,7 @@ val (log_term, log_thm, log_clear) = let
   fun log_var v = let
     val ob = OVar v
   in if saved ob then () else let
-    val (n,ty) = dest_var v
+    val (n,ty) = Term.dest_var v
     val _ = log_name n
     val _ = log_type ty
     val _ = log_command "var"
@@ -119,6 +131,7 @@ val (log_term, log_thm, log_clear) = let
   fun log_term tm = let
     val ob = OTerm tm
   in if saved ob then () else let
+    open Term Feedback
     val _ = let
       val {Thy,Name,Ty} = dest_thy_const tm
       val _ = log_const {Thy=Thy,Name=Name}
@@ -142,7 +155,96 @@ val (log_term, log_thm, log_clear) = let
     in () end
   end
 
-  fun log_thm th = raise (Fail "unimplemented")
+  val log_subst =
+    log_pair
+      (log_list (log_redres log_type_var log_type))
+      (log_list (log_redres log_var log_term))
+  fun log_type_subst s = log_subst (s,[])
+  fun log_term_subst s = log_subst ([],s)
+
+  (* Attribution: ideas for reconstructing DISCH, MP, etc.
+     taken from HOL Light code *)
+  (* Note: Using Metis below may be untenable (it could introduce a loop).
+     So it would be better to construct the proof by hand (possibly
+     after looking at a trace). But the theorem is in the OpenTheory
+     standard library, so maybe the best thing to do is to special-case it
+     with an Axiom_prf. (Other theorems might need that treatment too.) *)
+  local open metisLib Thm Conv HOLset in
+    val IMP_DEF = METIS_PROVE[]``$==> = \p q. p /\ q <=> p``
+    val p = ``p:bool``
+    val q = ``q:bool``
+    val DISCH_pth = SYM(BETA_RULE (AP_THM (AP_THM IMP_DEF p) q))
+    val MP_pth = let
+      val th1 = BETA_RULE (AP_THM (AP_THM IMP_DEF p) q)
+      val th2 = EQ_MP th1 (ASSUME ``p ==> q``)
+    in CONJUNCT2 (EQ_MP (SYM th2) (ASSUME p)) end
+    fun MP_PROVE_HYP ath bth =
+      if member (hypset bth, concl ath)
+      then EQ_MP (DEDUCT_ANTISYM ath bth) ath
+      else bth
+  end
+
+  fun log_thm th = let
+    open Thm val op |-> = Lib.|->
+    val ob = OThm th
+  in if saved ob then () else let
+    val _ = case proof th of
+      Axiom_prf => let
+      val _ = log_list log_term (hyp th)
+      val _ = log_term (concl th)
+      val _ = log_command "axiom"
+      in () end
+    | ASSUME_prf tm => let
+      val _ = log_term tm
+      val _ = log_command "assume"
+      in () end
+    | REFL_prf tm => let
+      val _ = log_term tm
+      val _ = log_command "refl"
+      in () end
+    | BETA_CONV_prf tm => let
+      val _ = log_term tm
+      val _ = log_command "betaConv"
+      in () end
+    | ABS_prf (v,th) => let
+      val _ = log_var v
+      val _ = log_thm th
+      val _ = log_command "absThm"
+      in () end
+    | DISCH_prf (tm,th) => let
+      val th1 = CONJ (ASSUME tm) th
+      val th2 = CONJUNCT1 (ASSUME (concl th1))
+      val th4 = INST [tm|->p, concl th|->q] DISCH_pth
+      val _ = log_thm th4
+      val _ = log_thm th1
+      val _ = log_thm th2
+      val _ = log_command "deductAntisym"
+      val _ = log_command "eqMp"
+      in () end
+    | MP_prf (th1,th2) => let
+      open boolSyntax
+      val (ant,con) = dest_imp(concl th1)
+      val th3 = INST [ant|->p, con|->q] MP_pth
+      val th4 = MP_PROVE_HYP th1 th3
+      val _ = log_thm (MP_PROVE_HYP th2 th4)
+      in () end
+    | SUBST_prf (s,tm,th) =>
+      raise ERR "log_thm" "SUBST_prf not implemented"
+    | INST_TYPE_prf (s,th) => let
+      val _ = log_type_subst s
+      val _ = log_thm th
+      val _ = log_command "subst"
+      in () end
+    | INST_prf (s,th) => let
+      val _ = log_term_subst s
+      val _ = log_thm th
+      val _ = log_command "subst"
+      in () end
+    | TODO_prf =>
+      raise ERR "log_thm" "TODO_prf not implemented"
+    val _ = save_dict ob
+    in () end
+  end
 
 in (log_term, log_thm, reset_dict) end
 

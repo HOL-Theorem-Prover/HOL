@@ -116,8 +116,10 @@ and proof =
 | MP_prf of thm * thm
 | SUBST_prf of (term,thm)Lib.subst * term * thm
 | INST_TYPE_prf of (hol_type,hol_type)Lib.subst * thm
+| INST_prf of (term,term)Lib.subst * thm
 | TODO_prf
 
+fun proof (THM(_,_,_,p)) = p
 
 fun single_hyp tm = HOLset.singleton Term.compare tm
 val empty_hyp = Term.empty_tmset
@@ -950,7 +952,7 @@ fun INST [] th = th
           val substf = subst theta
         in
           make_thm Count.Inst
-            (tag th, hypset_map substf (hypset th), substf (concl th), TODO_prf)
+            (tag th, hypset_map substf (hypset th), substf (concl th), INST_prf(theta,th))
           handle HOL_ERR _ => ERR "INST" ""
         end
       else

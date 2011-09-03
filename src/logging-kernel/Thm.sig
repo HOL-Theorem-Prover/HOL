@@ -15,6 +15,9 @@ sig
   | MP_prf of thm * thm
   | SUBST_prf of (term,thm)Lib.subst * term * thm
   | INST_TYPE_prf of (hol_type,hol_type)Lib.subst * thm
+  | INST_prf of (term,term)Lib.subst * thm
   | TODO_prf
+
+  val proof : thm -> proof
 
 end

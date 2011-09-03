@@ -2,13 +2,6 @@ structure Opentheory :> Opentheory = struct
 
 open boolSyntax HolKernel Parse OpenTheoryMap OpenTheoryCommon
 
-local open Drule Conv in
-  fun DEDUCT_ANTISYM th1 th2 =
-    IMP_ANTISYM_RULE
-      (DISCH (concl th2) th1)
-      (DISCH (concl th1) th2)
-end
-
 val ERR = mk_HOL_ERR "Opentheory"
 
 type reader = {
