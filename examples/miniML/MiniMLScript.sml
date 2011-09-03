@@ -134,6 +134,8 @@ val _ = Hol_datatype `
 val _ = Hol_datatype `
  exp = 
     Val of v
+  (* Constructor application *)
+  | Con of conN => exp list
   | Var of varN
   | Fun of varN => exp
   | App of exp => exp
@@ -149,13 +151,11 @@ val _ = Hol_datatype `
    * varN is the function's name, and the second varN is its parameter *)
   | Letrec of (varN # varN # exp) list => exp
 
-(* Value forms
-   A Con isn't a value unless all of its sub-expressions are (see is_value
-   below) *)
+(* Value forms *)
 ; v =
     Lit of lit
   (* Constructor application *)
-  | Con of conN => exp list
+  | Conv of conN => v list
   (* Function closures
      The environment is used for the free variables in the function *)
   | Closure of (varN, v) env => varN => exp
@@ -166,7 +166,7 @@ val _ = Hol_datatype `
   | Recclosure of (varN, v) env => (varN # varN # exp) list => varN`;
 
 
-(* Environments, all the v's should satisfy v_is_value (below) *)
+(* Environments *)
 val _ = type_abbrev( "envE" , ``: (varN, v) env``);
 
 (* Declarations *)
@@ -189,26 +189,8 @@ val _ = type_abbrev( "decs" , ``: dec list``);
  * type *) 
 val _ = type_abbrev( "envC" , ``: (conN, num # conN set) env``);
 
-(* Constructor calls are only values if there arguments are *)
-(*val v_is_value : v -> bool*)
-(*val is_value : exp -> bool*)
- val v_is_value_defn = Hol_defn "v_is_value" `
- 
-(v_is_value (Lit _) = T)
-/\
-(v_is_value (Con n es) = ! (e :: LIST_TO_SET es). is_value e)
-/\
-(v_is_value _ = T)
-/\ 
-(is_value (Val v) = v_is_value v)
-/\
-(is_value _ = F)`;
-
-val _ = Defn.save_defn v_is_value_defn;
-
 (* Evaluation contexts 
- * The hole is denoted by the unit type
- * All values of type v should satisfy v_is_value *)
+ * The hole is denoted by the unit type *)
 val _ = Hol_datatype `
  ctxt = 
     Capp1 of unit => exp
@@ -244,14 +226,14 @@ val _ = Hol_datatype `
   | Match of envE`;
 
 
-(* A big-step pattern matcher, v should satisfy v_is_value.  If the value
+(* A big-step pattern matcher.  If the value
  * matches the pattern, return an environment with the pattern variables bound
  * to the corresponding sub-terms of the value; this environment extends the
  * environment given as an argument.  No_match is returned when there is no
  * match, but any constructors encountered in determining the match failure are
- * applied to the correct number of arguments, and constructors in corresponding
- * positions in the pattern and value come from the same type.  Match_type_error
- * is returned when one of these conditions is violated *)
+ * applied to the correct number of arguments, and constructors in
+ * corresponding positions in the pattern and value come from the same type.
+ * Match_type_error is returned when one of these conditions is violated *)
 
 (*val pmatch : envC -> pat -> v -> envE -> match_result*)
  val pmatch_defn = Hol_defn "pmatch" `
@@ -266,13 +248,13 @@ val _ = Hol_datatype `
   else
     Match_type_error)
 /\
-(pmatch envC (Pcon n ps) (Con n' es) env =
+(pmatch envC (Pcon n ps) (Conv n' vs) env =
   (case (lookup n envC, lookup n' envC) of
        (SOME (l, ns), SOME (l', ns')) ->
-        if n IN ns' /\ n' IN ns /\ (LENGTH ps = l) /\ (LENGTH es = l')
+        if n IN ns' /\ n' IN ns /\ (LENGTH ps = l) /\ (LENGTH vs = l')
         then
           if n = n' then
-            pmatch_list envC ps es env
+            pmatch_list envC ps vs env
           else
             No_match
         else
@@ -284,11 +266,11 @@ val _ = Hol_datatype `
 /\
 (pmatch_list envC [] [] env = Match env)
 /\
-(pmatch_list envC (p::ps) (Val v::es) env =
+(pmatch_list envC (p::ps) (v::vs) env =
   (case pmatch envC p v env of
        No_match -> No_match
     || Match_type_error -> Match_type_error
-    || Match env' -> pmatch_list envC ps es env'
+    || Match env' -> pmatch_list envC ps vs env'
   ))
 /\
 (pmatch_list envC _ _ env = Match_type_error)`;
@@ -352,7 +334,7 @@ val _ = Defn.save_defn build_rec_env_defn;
 
 val _ = Defn.save_defn find_recfun_defn;
 
-(* apply a context to a value, v should satisfy v_is_value *)
+(* apply a context to a value *)
 (*val continue : envC -> v -> (ctxt * envE) list -> state step_result*)
 val _ = Define `
  (continue envC v cs =
@@ -409,7 +391,7 @@ val _ = Define `
     || (Clet n () e, env) :: c ->
         State (envC, bind n v env, e, c) 
     || (Ccon n vs () [], env) :: c ->
-        return envC env (Con n (REVERSE (Val v :: MAP Val vs))) c
+        return envC env (Conv n (REVERSE (v::vs))) c
     || (Ccon n vs () (e::es), env) :: c ->
         push envC env e (Ccon n (v::vs) () es) c
   ))`;
@@ -426,21 +408,17 @@ val _ = Define `
  (e_step (envC, env, e, c) =
   (case e of
        Val v  -> 
-        if v_is_value v then
-          continue envC v c
-        else
-          (case v of
-               Con n (e::es) -> 
-                (case lookup n envC of
-                     NONE -> TypeError
-                  || SOME (l,_) -> 
-                      if l = LENGTH (e::es) then
-                        push envC env e (Ccon n [] () es) c
-                      else
-                        TypeError
-                )
-            || _ -> TypeError
-          )
+	continue envC v c
+    || Con n es -> 
+        (case lookup n envC of
+             NONE -> TypeError
+          || SOME (l,_) -> 
+              (case es of
+                   [] -> return envC env (Conv n []) c
+                || e::es ->
+                    push envC env e (Ccon n [] () es) c
+              )
+        )
     || Var n ->
         (case lookup n env of
              NONE -> TypeError
@@ -501,19 +479,11 @@ val _ = Define `
  (d_step (envC, env, ds, st) =
   (case st of
        SOME (p, (envC, env', Val v, c)) -> 
-        if v_is_value v then
-          (case pmatch envC p v env of
-               Match env' -> State (envC, env', ds, NONE)
-            || No_match -> BindError
-            || Match_type_error -> TypeError
-          )
-        else
-          (case e_step (envC, env', Val v, c) of
-               Stuck -> Stuck
-            || TypeError -> TypeError
-            || BindError -> BindError
-            || State st -> State (envC, env, ds, SOME (p, st))
-          )
+        (case pmatch envC p v env of
+             Match env' -> State (envC, env', ds, NONE)
+          || No_match -> BindError
+          || Match_type_error -> TypeError
+        )
     || SOME (p, (envC, env', e, c)) -> 
         (case e_step (envC, env', e, c) of
              Stuck -> Stuck
@@ -552,10 +522,10 @@ val _ = Hol_datatype `
 
 val _ = Hol_reln `
 
-(! cenv env l.
+(! cenv env v.
 T
 ==>
-evaluate cenv env (Val (Lit l)) (Bvalue (Lit l)))
+evaluate cenv env (Val v) (Bvalue v))
 
 /\
 
@@ -563,7 +533,7 @@ evaluate cenv env (Val (Lit l)) (Bvalue (Lit l)))
 (lookup cn cenv = SOME (LENGTH es,ns)) /\
 evaluate_list cenv env es (Bvalue vs)
 ==>
-evaluate cenv env (Val (Con cn es)) (Bvalue (Con cn (MAP Val vs))))
+evaluate cenv env (Con cn es) (Bvalue (Conv cn vs)))
 
 /\
 
@@ -571,7 +541,7 @@ evaluate cenv env (Val (Con cn es)) (Bvalue (Con cn (MAP Val vs))))
 (lookup cn cenv = NONE) \/ 
 ((lookup cn cenv = SOME (l,ns)) /\ l <> LENGTH es)
 ==>
-evaluate cenv env (Val (Con cn es)) (Berror F))
+evaluate cenv env (Con cn es) (Berror F))
 
 /\
 
@@ -579,21 +549,7 @@ evaluate cenv env (Val (Con cn es)) (Berror F))
 (lookup cn cenv = SOME (LENGTH es,ns)) /\
 evaluate_list cenv env es (Berror err)
 ==>
-evaluate cenv env (Val (Con cn es)) (Berror err))
-
-/\
-
-(! cenv env env' n exp.
-T
-==>
-evaluate cenv env (Val (Closure env' n exp)) (Bvalue (Closure env' n exp)))
-
-/\
-
-(! cenv env env' funs fn.
-T
-==>
-evaluate cenv env (Val (Recclosure env' funs fn)) (Bvalue (Recclosure env' funs fn)))
+evaluate cenv env (Con cn es) (Berror err))
 
 /\
 
@@ -644,9 +600,9 @@ evaluate cenv env (App e1 e2) (Berror err))
 
 /\
 
-(! cenv env e1 e2 v l cn es.
+(! cenv env e1 e2 v l cn vs.
 evaluate cenv env e1 (Bvalue v) /\
-((v = Lit l) \/ (v = Con cn es))
+((v = Lit l) \/ (v = Conv cn vs))
 ==>
 evaluate cenv env (App e1 e2) (Berror F))
 
@@ -970,12 +926,13 @@ type_e cenv tenv (Val (Lit (Num n))) Tnum)
 
 /\
 
-(! cenv tenv cn es tvs tn ts' ts.
+(! cenv tenv cn vs tvs tn ts' ts.
 (LENGTH tvs = LENGTH ts') /\
-type_es cenv tenv es (MAP (type_subst (ZIP ( tvs, ts'))) ts) /\
+type_es cenv tenv (MAP Val vs) 
+  (MAP (type_subst (ZIP ( tvs, ts'))) ts) /\
 (lookup cn cenv = SOME (tvs, ts, tn))
 ==>
-type_e cenv tenv (Val (Con cn es)) (Tapp ts' tn))
+type_e cenv tenv (Val (Conv cn vs)) (Tapp ts' tn))
 
 /\
 
@@ -993,6 +950,15 @@ type_funs cenv (merge tenv'' tenv') funs tenv'' /\
 (lookup n tenv'' = SOME t)
 ==>
 type_e cenv tenv (Val (Recclosure env funs n)) t)
+
+/\
+
+(! cenv tenv cn es tvs tn ts' ts.
+(LENGTH tvs = LENGTH ts') /\
+type_es cenv tenv es (MAP (type_subst (ZIP ( tvs, ts'))) ts) /\
+(lookup cn cenv = SOME (tvs, ts, tn))
+==>
+type_e cenv tenv (Con cn es) (Tapp ts' tn))
 
 /\
 
@@ -1100,7 +1066,6 @@ type_env cenv [] [])
 /\
 
 (! cenv n v env t tenv.
-v_is_value v /\
 type_e cenv [] (Val v) t /\
 type_env cenv env tenv
 ==>
@@ -1216,16 +1181,14 @@ type_ctxt cenv tenv (Cop1 (Opb op) () e) Tnum Tbool)
 /\
 
 (! cenv tenv op v.
-type_e cenv tenv (Val v) Tnum /\
-v_is_value v
+type_e cenv tenv (Val v) Tnum
 ==>
 type_ctxt cenv tenv (Cop2 (Opn op) v ()) Tnum Tnum)
 
 /\
 
 (! cenv tenv op v.
-type_e cenv tenv (Val v) Tnum /\
-v_is_value v
+type_e cenv tenv (Val v) Tnum
 ==>
 type_ctxt cenv tenv (Cop2 (Opb op) v ()) Tnum Tbool)
 
@@ -1260,8 +1223,7 @@ type_ctxt cenv tenv (Clet n () e) t1 t2)
 type_es cenv tenv (REVERSE (MAP Val vs)) 
         (MAP (type_subst (ZIP ( tvs, ts'))) ts1) /\
 type_es cenv tenv es (MAP (type_subst (ZIP ( tvs, ts'))) ts2) /\
-(lookup cn cenv = SOME (tvs, ts1++([t]++ts2), tn)) /\
-(! (v :: LIST_TO_SET vs). v_is_value v)
+(lookup cn cenv = SOME (tvs, ts1++([t]++ts2), tn))
 ==>
 type_ctxt cenv tenv (Ccon cn vs () es) (type_subst (ZIP ( tvs, ts')) t) 
           (Tapp ts' tn))`;
@@ -1320,7 +1282,7 @@ evaluate_ctxt cenv env (Capp1 () e) (Recclosure env' funs fn) bv)
 /\
 
 (! cenv env e v l cn es.
-((v = Lit l) \/ (v = Con cn es))
+((v = Lit l) \/ (v = Conv cn es))
 ==>
 evaluate_ctxt cenv env (Capp1 () e) v (Berror F)) 
 
@@ -1407,7 +1369,7 @@ evaluate_ctxt cenv env (Clet n () e) v bv)
 /\
 
 (! cenv env n vs es v bv.
-evaluate cenv env (Val (Con n (MAP Val (REVERSE vs) ++ ([Val v] ++ es)))) bv
+evaluate cenv env (Con n (MAP Val (REVERSE vs) ++ ([Val v] ++ es))) bv
 ==>
 evaluate_ctxt cenv env (Ccon n vs () es) v bv)`;
 
