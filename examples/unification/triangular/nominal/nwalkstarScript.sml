@@ -144,16 +144,14 @@ SIMP_TAC (srw_ss()) [inv_image_def,LEX_DEF] THEN
 Cases_on `t` THEN SRW_TAC [][] THENL [
   `∀u. u IN nvars (nPair t1 t2) ⇒ (nvR s)^+ u n`
   by METIS_TAC [nvwalk_nvR,ntermeq_thm] THEN
-  DISJ1_TAC THEN MATCH_MP_TAC TC_SUBSET THEN
+  MATCH_MP_TAC TC_SUBSET THEN
   SRW_TAC [][mlt1_def] THEN
   MAP_EVERY Q.EXISTS_TAC [`n`,`nvarb t2`,`{||}`] THEN
   SRW_TAC [][],
-  Q.MATCH_RENAME_TAC `X ∨ Y ∧ measure npair_count t2 (nPair t1 t2)` ["X","Y"] THEN
+  Q.MATCH_RENAME_TAC `X ∨ Y ∧ 0 < 1 + npair_count t1` ["X","Y"] THEN
   Cases_on `nvarb t1 = {||}` THEN1
-  SRW_TAC [ARITH_ss][measure_thm] THEN
-  DISJ1_TAC THEN POP_ASSUM MP_TAC THEN
-  STRIP_TAC THEN
-  Q.MATCH_ABBREV_TAC `(mlt1 R)^+ b2 (b1 + b2)` THEN
+    SRW_TAC [ARITH_ss][] THEN
+  DISJ1_TAC THEN Q.MATCH_ABBREV_TAC `(mlt1 R)^+ b2 (b1 + b2)` THEN
   Q_TAC SUFF_TAC `(mlt1 R)^+ b2 (b2 + b1)` THEN1
     METIS_TAC [COMM_BAG_UNION] THEN
   MATCH_MP_TAC TC_mlt1_UNION2_I THEN
@@ -167,30 +165,29 @@ SIMP_TAC (srw_ss()) [inv_image_def,LEX_DEF] THEN
 Cases_on `t` THEN SRW_TAC [][] THENL [
   `∀u. u IN nvars (nPair t1 t2) ⇒ (nvR s)^+ u n`
   by METIS_TAC [nvwalk_nvR,ntermeq_thm] THEN
-  DISJ1_TAC THEN MATCH_MP_TAC TC_SUBSET THEN
+  MATCH_MP_TAC TC_SUBSET THEN
   SRW_TAC [][mlt1_def] THEN
   MAP_EVERY Q.EXISTS_TAC [`n`,`nvarb t1`,`{||}`] THEN
   SRW_TAC [][],
-  Q.MATCH_RENAME_TAC `X ∨ Y ∧ measure npair_count t1 (nPair t1 t2)` ["X","Y"] THEN
+  Q.MATCH_RENAME_TAC
+    `X ∨ Y ∧ npair_count t1 < 1 + npair_count t1 + npair_count t2`
+    ["X","Y"] THEN
   Cases_on `nvarb t2 = {||}` THEN1
-  SRW_TAC [ARITH_ss][measure_thm] THEN
-  DISJ1_TAC THEN POP_ASSUM MP_TAC THEN
-  STRIP_TAC THEN MATCH_MP_TAC TC_mlt1_UNION2_I THEN
+    SRW_TAC [ARITH_ss][] THEN
+  DISJ1_TAC THEN MATCH_MP_TAC TC_mlt1_UNION2_I THEN
   SRW_TAC [][]
 ])
 
 val th3 = prove(``nwfs s ⇒ ^(h3)``,
 STRIP_TAC THEN REPEAT GEN_TAC THEN
 SIMP_TAC (srw_ss()) [inv_image_def,LEX_DEF] THEN
-Cases_on `t` THEN SRW_TAC [][] THENL [
-  `∀u. u IN nvars (Tie a t') ⇒ (nvR s)^+ u n`
+Cases_on `t` THEN SRW_TAC [][] THEN
+`∀u. u IN nvars (Tie a t') ⇒ (nvR s)^+ u n`
   by METIS_TAC [nvwalk_nvR,ntermeq_thm] THEN
-  DISJ1_TAC THEN MATCH_MP_TAC TC_SUBSET THEN
-  SRW_TAC [][mlt1_def] THEN
-  MAP_EVERY Q.EXISTS_TAC [`n`,`nvarb t'`,`{||}`] THEN
-  SRW_TAC [][],
-  SRW_TAC [][measure_thm]
-])
+MATCH_MP_TAC TC_SUBSET THEN
+SRW_TAC [][mlt1_def] THEN
+MAP_EVERY Q.EXISTS_TAC [`n`,`nvarb t'`,`{||}`] THEN
+SRW_TAC [][])
 
 val th4 = prove(``nwfs s ⇒ ^(h4)``,
 SRW_TAC [][nwfs_def] THEN

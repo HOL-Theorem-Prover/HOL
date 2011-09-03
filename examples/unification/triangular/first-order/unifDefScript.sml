@@ -164,7 +164,7 @@ metis_tac [uR_RSUBSET_uR_lex,RSUBSET])
 val uR_lex1_def = Define`
   uR_lex1 (sx,c1,c2) (s,t1,t2) =
   (s SUBMAP sx ∧ s ≠ sx ∨ (
-    (s = sx) ∧ 
+    (s = sx) ∧
     allvars sx c1 c2 PSUBSET allvars s t1 t2 ∨ (
       (allvars sx c1 c2 = allvars s t1 t2) ∧
       pair_count (walk* sx c1) < pair_count (walk* s t1))))`
@@ -239,13 +239,13 @@ SPOSE_NOT_THEN STRIP_ASSUME_TAC THEN
             (allvars (FST(f m)) (FST(SND(f m))) (SND(SND(f m))))`
         by (METIS_TAC [measure_thm,FINITE_allvars,CARD_PSUBSET])
         THEN
-      `WF (measure (CARD:((num -> bool) -> num)))` by METIS_TAC [WF_measure] THEN
-      FULL_SIMP_TAC (srw_ss()) [WF_IFF_WELLFOUNDED,wellfounded_def] THEN
+      `WF (measure (CARD:((num -> bool) -> num)))` by SRW_TAC [][] THEN
+      FULL_SIMP_TAC bool_ss [WF_IFF_WELLFOUNDED,wellfounded_def] THEN
       POP_ASSUM (Q.SPEC_THEN
                    `\n.LET (\t.allvars (FST t) (FST(SND t)) (SND(SND t)))
                            (f (FUNPOW f' n 0))`
                  MP_TAC) THEN
-      SRW_TAC [][LET_THM,FUNPOW_SUC]) THEN
+      FULL_SIMP_TAC (srw_ss()) [LET_THM,FUNPOW_SUC]) THEN
 `?m.!n.m < n ==> ((FST(f m)) = (FST(f n)))`
 by (Q.ISPECL_THEN
     [`FST o f`,
@@ -257,14 +257,12 @@ by (Q.ISPECL_THEN
       METIS_TAC [UNION_DIFF,allvars_def,substvars_def,SUBSET_UNION,SUBSET_TRANS]
     ]) THEN
 Q.ABBREV_TAC `z = MAX m m'` THEN
-`!n. z < n ==> (FST(f n) = FST(f m'))`
-  by (METIS_TAC [MAX_LT]) THEN
-`!n.z < n ==> measure (pair_count o (walkstar (FST(f m'))))
+`!n. z < n ==> (FST(f n) = FST(f m'))` by (METIS_TAC [MAX_LT]) THEN
+`!n. z < n ==> measure (pair_count o (walkstar (FST(f m'))))
                (FST(SND(f(SUC n)))) (FST(SND(f n)))`
-  by (METIS_TAC [LESS_SUC]) THEN
-`WF (measure (pair_count o (walkstar (FST(f m')))))`
-  by (METIS_TAC [WF_measure]) THEN
-FULL_SIMP_TAC (srw_ss()) [WF_IFF_WELLFOUNDED,wellfounded_def] THEN
+  by (SRW_TAC [][] THEN METIS_TAC [LESS_SUC]) THEN
+`WF (measure (pair_count o (walkstar (FST(f m')))))` by SRW_TAC [][] THEN
+FULL_SIMP_TAC bool_ss [WF_IFF_WELLFOUNDED,wellfounded_def] THEN
 POP_ASSUM (Q.SPEC_THEN `\n.(FST(SND(f(z+n+1))))` MP_TAC) THEN
 SRW_TAC [][] THEN
 Q.PAT_ASSUM `!n.z < n ==> measure X Y Z` (Q.SPEC_THEN `z+n+1` MP_TAC) THEN
@@ -318,11 +316,11 @@ METIS_TAC [vwalk_to_Pair_SUBSET_rangevars,substvars_def,SUBSET_TRANS,SUBSET_UNIO
 val walkstar_subterm_smaller = Q.store_thm(
 "walkstar_subterm_smaller",
 `wfs s /\ (walk s t1 = Pair t1a t1d) ==>
-  measure (pair_count o walkstar s) t1a t1 /\
-  measure (pair_count o walkstar s) t1d t1`,
+  pair_count (walkstar s t1a) < pair_count (walkstar s t1) /\
+  pair_count (walkstar s t1d) < pair_count (walkstar s t1)`,
 SRW_TAC [][walk_def] THEN
 Cases_on `t1` THEN FULL_SIMP_TAC (srw_ss()) [] THEN
-FULL_SIMP_TAC (srw_ss() ++ ARITH_ss) [measure_thm]);
+FULL_SIMP_TAC (srw_ss() ++ ARITH_ss) []);
 
 val tca_thm = Q.store_thm(
 "tca_thm",
@@ -387,7 +385,8 @@ val walkstar_subterm_FUPDATE = Q.store_thm(
 "walkstar_subterm_FUPDATE",
 `wfs s /\ v NOTIN FDOM s /\ v NOTIN vars (walkstar s t) /\
  (walk s t1 = Pair t1a t1d) ==>
- measure (pair_count o walkstar (s |+ (v,t))) t1d t1`,
+  pair_count (walkstar (s |+ (v,t)) t1d) <
+  pair_count (walkstar (s |+ (v,t)) t1)`,
 SRW_TAC [][] THEN
 `wfs (s |+ (v,t))` by METIS_TAC [wfs_extend] THEN
 `s SUBMAP (s |+ (v,t))` by METIS_TAC [SUBMAP_FUPDATE_EQN] THEN

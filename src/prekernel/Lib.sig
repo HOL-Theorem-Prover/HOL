@@ -147,6 +147,7 @@ sig
   val list_compare  : 'a cmp -> 'a list cmp
   val measure_cmp   : ('a -> int) -> 'a cmp
   val inv_img_cmp   : ('b -> 'a) -> 'a cmp -> 'b cmp
+  val lex_cmp       : ('b cmp * 'c cmp) -> (('a -> 'b) * ('a -> 'c)) -> 'a cmp
   val flip_cmp      : 'a cmp -> 'a cmp
   val flip_order    : order -> order
 
