@@ -37,6 +37,21 @@ val elim_sorthyp_exists = prove(
   ``(∃a. (atom_sort a = ^sort_t) ∧ P a) ⇔ (∃v. P (from_term_atom v))``,
   metis_tac [term_atom_bijections]);
 
+local
+  fun CONJUNCTS_CONV conv tm = if can dest_conj tm then FORK_CONV (conv, CONJUNCTS_CONV conv) tm else conv tm
+  val pth = PROVE [] ``(P ==> (atom_sort a = "term_atom") ==> Q) = ((atom_sort a = "term_atom") ==> P ==> Q)``
+  fun elim_1sorthyp_conv tm = let
+    val h = find_term (fn tm => fst(dest_const(rator(lhs tm))) = "atom_sort" handle _ => false) tm
+    val v = rand(lhs h)
+  in (RESORT_FORALL_CONV (fn ls => let val (vl,rs) = partition (equal v) ls in rs @ vl end)
+      THENC SIMP_CONV std_ss [GSYM AND_IMP_INTRO, pth, elim_sorthyp_forall]
+      THENC SIMP_CONV std_ss [AND_IMP_INTRO])
+  end tm
+  val elim_sorthyp_conv = STRIP_QUANT_CONV (LAND_CONV (CONJUNCTS_CONV (TRY_CONV elim_1sorthyp_conv)))
+in
+  val elim_sorthyp = CONV_RULE elim_sorthyp_conv
+end
+
 val vp = ``(λn s u:unit. (n = 0) ∧ (s = ^sort_t))``
 val lp = ``(λn s (d:unit + unit) tns uns.
                (n = 0) ∧ (s = ^sort_t) ∧ ISL d ∧ (tns = []) ∧ (uns = [0;0]) ∨
@@ -189,7 +204,7 @@ val term_ind =
                       IN_UNION, NOT_IN_EMPTY, oneTheory.FORALL_ONE,
                       genind_exists, LIST_REL_CONS1, LIST_REL_NIL]
         |> Q.INST [`Q` |-> `λt. P (term_ABS t)`]
-        |> SIMP_RULE std_ss [LAM_def'', APP_def'', VAR_def'', absrep_id]
+        |> SIMP_RULE std_ss [LAM_def'', APP_def'', VAR_def'', absrep_id] (* elim_sortyhp? *)
         |> SIMP_RULE (srw_ss()) [GSYM supp_tpm]
         |> elim_unnecessary_atoms {finite_fv = FINITE_FV}
                                   [ASSUME ``!x:'c. FINITE (fv x:atom set)``]
