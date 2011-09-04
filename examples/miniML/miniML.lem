@@ -357,11 +357,14 @@ let e_step (envC, env, e, c) =
         match lookup n envC with
           | None -> TypeError
           | Some (l,_) -> 
-              match es with
-                | [] -> return envC env (Conv n []) c
-                | e::es ->
-                    push envC env e (Ccon n [] () es) c
-              end
+	      if l = List.length es then
+                match es with
+                  | [] -> return envC env (Conv n []) c
+                  | e::es ->
+                      push envC env e (Ccon n [] () es) c
+                end
+              else
+                TypeError
         end
     | Var n ->
         match lookup n env with

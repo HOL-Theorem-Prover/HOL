@@ -385,7 +385,9 @@ fs [] >|
      imp_res_tac consistent_con_env_lem >>
      rw [] >>
      every_case_tac >>
-     fs [return_def],
+     fs [return_def] >>
+     imp_res_tac type_es_length_lem >>
+     fs [],
  fs [Once type_e_cases] >>
      rw [] >>
      fs [lookup_def, bind_def] >>
@@ -859,6 +861,15 @@ rw [] >>
 metis_tac [evaluate_value, big_step_result_distinct, big_step_result_11,
            big_exp_determ]);
 
+val ev_lem1 = Q.prove (
+`!cenv env v err. ¬evaluate cenv env (Val v) (Berror err)`,
+rw [] >>
+CCONTR_TAC >>
+`evaluate cenv env (Val v) (Bvalue v)` by metis_tac [evaluate_value] >>
+fs [] >>
+imp_res_tac big_exp_determ >>
+fs []);
+
 (*
 val exp_evaluation_preservation = Q.prove (
 `!cenv env e c bv cenv' env' e' c'. 
@@ -897,43 +908,202 @@ rw [] >|
           imp_res_tac evaluate_value_determ >>
           fs [] >>
           metis_tac [big_step_result_distinct, evaluate_value, big_exp_determ],
-      all_tac,
-      all_tac,
+      every_case_tac >>
+          fs [return_def] >>
+          rw [] >>
+          fs [evaluate_state_cases, evaluate_ctxts_def, evaluate_ctxt_cases] >>
+          rw [] >>
+          imp_res_tac evaluate_value_determ >>
+          fs [ev_lem1] >>
+          rw [] >>
+          qpat_assum `evaluate cenv env' (Log oppat vpat e) bvpat`
+            (ASSUME_TAC o SIMP_RULE (srw_ss ()) [Once evaluate_cases]) >>
+          fs [] >>
+          imp_res_tac evaluate_value_determ >>
+          fs [ev_lem1] >>
+          metis_tac [big_step_result_distinct, evaluate_value, big_exp_determ],
+      every_case_tac >>
+          fs [evaluate_state_cases, evaluate_ctxts_def,
+              evaluate_ctxt_cases, ev_lem1] >>
+          rw [] >>
+          imp_res_tac evaluate_value_determ >>
+          fs [] >>
+          qpat_assum `evaluate cenv env' (Op oppat vpat e) bvpat`
+            (ASSUME_TAC o SIMP_RULE (srw_ss ()) [Once evaluate_cases]) >>
+          fs [evaluate_ctxts_def, evaluate_ctxt_cases] >>
+          imp_res_tac evaluate_value_determ >>
+          fs [ev_lem1] >>
+          rw [] >>
+          disj1_tac >|
+          [qexists_tac `Lit (Num n2)`,
+           qexists_tac `Lit (Num n2)`,
+           qexists_tac `v2`,
+           qexists_tac `v2`] >>
+          rw [] >>
+          once_rewrite_tac [evaluate_cases] >>
+          rw [] >>
+          once_rewrite_tac [evaluate_cases] >>
+          rw [],
       all_tac,
       all_tac,
       all_tac,
       all_tac,
       all_tac],
  every_case_tac >>
-     fs [] >>
+     fs [return_def] >>
      rw [] >>
      fs [evaluate_state_cases] >>
-     qpat_assum `evaluate envC env (Val vpat) bvpat`
+     qpat_assum `evaluate cenv env (Con n vpat) bvpat`
           (ASSUME_TAC o SIMP_RULE (srw_ss ()) [Once evaluate_cases]) >>
      fs [] >>
-     all_tac,
+     rw [] >>
+     fs [evaluate_ctxts_def, evaluate_ctxt_cases] >>
+     rw [] >|
+     [fs [Once evaluate_cases],
+      fs [Once evaluate_cases],
+      pop_assum (ASSUME_TAC o SIMP_RULE (srw_ss ()) [Once evaluate_cases]) >>
+          fs [] >>
+          rw [] >>
+          disj1_tac >>
+          qexists_tac `v` >>
+          rw [] >>
+          qexists_tac `Conv s (v::vs')` >>
+          rw [] >>
+          once_rewrite_tac [evaluate_cases] >>
+          rw [] >>
+          once_rewrite_tac [evaluate_cases] >>
+          rw [] >>
+          metis_tac [evaluate_value],
+      pop_assum (ASSUME_TAC o SIMP_RULE (srw_ss ()) [Once evaluate_cases]) >>
+          fs [] >>
+          rw [] >>
+          disj1_tac >>
+          qexists_tac `v` >>
+          rw [] >>
+          qexists_tac `Conv s (v::vs')` >>
+          rw [] >>
+          once_rewrite_tac [evaluate_cases] >>
+          rw [] >>
+          once_rewrite_tac [evaluate_cases] >>
+          rw [] >>
+          metis_tac [evaluate_value]],
  every_case_tac >>
      fs [] >>
      rw [] >>
      fs [evaluate_state_cases] >>
      rw [] >>
-     all_tac,
+     qpat_assum `evaluate cenv env (Var s) bvpat`
+             (ASSUME_TAC o SIMP_RULE (srw_ss ()) [Once evaluate_cases]) >>
+     fs [] >>
+     metis_tac [evaluate_value],
  fs [evaluate_state_cases] >>
      rw [] >>
-     all_tac,
+     qpat_assum `evaluate cenv env (Fun s e'') bvpat`
+             (ASSUME_TAC o SIMP_RULE (srw_ss ()) [Once evaluate_cases]) >>
+     fs [] >>
+     metis_tac [evaluate_value],
  fs [evaluate_state_cases] >>
+     rw [] >>
+     qpat_assum `evaluate cenv env (App e' e0) bvpat`
+             (ASSUME_TAC o SIMP_RULE (srw_ss ()) [Once evaluate_cases]) >>
+     fs [] >>
      rw [] >>
      fs [evaluate_ctxts_def, evaluate_ctxt_cases] >>
      rw [] >>
-     qpat_assum `evaluate cenv env (App epat1 epat2) bvpat` 
-           (ASSUME_TAC o SIMP_RULE (srw_ss ()) [Once evaluate_cases]) >>
+     metis_tac [evaluate_value],
+ fs [evaluate_state_cases] >>
+     rw [] >>
+     qpat_assum `evaluate cenv env (Log l e' e0) bvpat`
+             (ASSUME_TAC o SIMP_RULE (srw_ss ()) [Once evaluate_cases]) >>
      fs [] >>
-     all_tac,
- all_tac,
- all_tac,
- all_tac,
- all_tac,
- all_tac,
- all_tac]
+     rw [] >>
+     fs [evaluate_ctxts_def, evaluate_ctxt_cases] >>
+     rw [] >>
+     disj1_tac >|
+     [qexists_tac `Lit (Bool T)`,
+      qexists_tac `v`,
+      qexists_tac `Lit (Bool F)`,
+      qexists_tac `v`,
+      qexists_tac `Lit (Bool T)`,
+      qexists_tac `Lit (Bool F)`] >>
+     rw [] >>
+     once_rewrite_tac [evaluate_cases] >>
+     rw [] >>
+     metis_tac [evaluate_value],
+ fs [evaluate_state_cases] >>
+     rw [] >>
+     qpat_assum `evaluate cenv env (Op o' e' e0) bvpat`
+             (ASSUME_TAC o SIMP_RULE (srw_ss ()) [Once evaluate_cases]) >>
+     fs [] >>
+     rw [] >>
+     fs [evaluate_ctxts_def, evaluate_ctxt_cases] >>
+     rw [] >>
+     disj1_tac >|
+     [qexists_tac `Lit (Num n1)`,
+      qexists_tac `Lit (Num n1)`,
+      qexists_tac `v`,
+      qexists_tac `v1`,
+      qexists_tac `v1`] >>
+     rw [] >>
+     once_rewrite_tac [evaluate_cases] >>
+     rw [] >>
+     metis_tac [evaluate_value],
+ fs [evaluate_state_cases] >>
+     rw [] >>
+     qpat_assum `evaluate cenv env (If e' e0 e1) bvpat`
+             (ASSUME_TAC o SIMP_RULE (srw_ss ()) [Once evaluate_cases]) >>
+     fs [] >>
+     rw [] >>
+     fs [evaluate_ctxts_def, evaluate_ctxt_cases] >>
+     rw [] >>
+     disj1_tac >|
+     [qexists_tac `Lit (Bool T)`,
+      qexists_tac `Lit (Bool F)`,
+      qexists_tac `Lit (Bool T)`,
+      qexists_tac `Lit (Bool F)`,
+      qexists_tac `v`] >>
+     rw [] >>
+     once_rewrite_tac [evaluate_cases] >>
+     rw [] >>
+     metis_tac [evaluate_value],
+ fs [evaluate_state_cases] >>
+     rw [] >>
+     qpat_assum `evaluate cenv env (Mat e' l) bvpat`
+             (ASSUME_TAC o SIMP_RULE (srw_ss ()) [Once evaluate_cases]) >>
+     fs [] >>
+     rw [] >>
+     fs [evaluate_ctxts_def, evaluate_ctxt_cases] >>
+     rw [] >>
+     disj1_tac >|
+     [qexists_tac `v'`,
+      qexists_tac `v`] >>
+     rw [] >>
+     once_rewrite_tac [evaluate_cases] >>
+     rw [] >>
+     metis_tac [evaluate_value],
+ fs [evaluate_state_cases] >>
+     rw [] >>
+     qpat_assum `evaluate cenv env (Let s e' e0) bvpat`
+             (ASSUME_TAC o SIMP_RULE (srw_ss ()) [Once evaluate_cases]) >>
+     fs [] >>
+     rw [] >>
+     fs [evaluate_ctxts_def, evaluate_ctxt_cases] >>
+     rw [] >>
+     disj1_tac >|
+     [qexists_tac `v'`,
+      qexists_tac `v`] >>
+     rw [] >>
+     once_rewrite_tac [evaluate_cases] >>
+     rw [] >>
+     metis_tac [evaluate_value],
+ every_case_tac >>
+     fs [evaluate_state_cases] >>
+     rw [] >>
+     qpat_assum `evaluate cenv env (Letrec l e') bvpat`
+             (ASSUME_TAC o SIMP_RULE (srw_ss ()) [Once evaluate_cases]) >>
+     fs [] >>
+     metis_tac []]
  *)
+
+
 val _ = export_theory ();
