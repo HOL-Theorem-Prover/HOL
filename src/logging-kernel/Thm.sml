@@ -117,6 +117,7 @@ and proof =
 | SUBST_prf of (term,thm)Lib.subst * term * thm
 | INST_TYPE_prf of (hol_type,hol_type)Lib.subst * thm
 | INST_prf of (term,term)Lib.subst * thm
+| ALPHA_prf of term * term
 | TODO_prf
 
 fun proof (THM(_,_,_,p)) = p
@@ -342,7 +343,7 @@ fun ALPHA t1 t2 =
    if aconv t1 t2 then
      make_thm Count.Alpha (empty_tag, empty_hyp,
                            mk_eq_nocheck (type_of t1) t1 t2,
-                           TODO_prf)
+                           ALPHA_prf(t1,t2))
    else ERR "ALPHA" "Terms not alpha-convertible";
 
 (*---------------------------------------------------------------------------*

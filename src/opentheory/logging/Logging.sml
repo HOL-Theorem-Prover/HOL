@@ -194,6 +194,14 @@ val (log_term, log_thm, log_clear) = let
       val _ = log_term (concl th)
       val _ = log_command "axiom"
       in () end
+    | ALPHA_prf (t1,t2) => let
+      open Term Lib Type boolSyntax
+      val _ = log_thm (REFL (mk_comb(inst[alpha|->type_of t1]equality,t1)))
+      val _ = log_thm (REFL t2)
+      val _ = log_command "appThm"
+      val _ = log_thm (REFL t1)
+      val _ = log_command "eqMp"
+      in () end
     | ASSUME_prf tm => let
       val _ = log_term tm
       val _ = log_command "assume"
@@ -228,8 +236,32 @@ val (log_term, log_thm, log_clear) = let
       val th4 = MP_PROVE_HYP th1 th3
       val _ = log_thm (MP_PROVE_HYP th2 th4)
       in () end
-    | SUBST_prf (s,tm,th) =>
-      raise ERR "log_thm" "SUBST_prf not implemented"
+    | SUBST_prf (map,tm,th) => let
+      open Thm Term Feedback HOLset Lib
+      fun log_rconv bvs source template = (* return |- source = template[rhs/vars] *)
+        log_thm(ALPHA source template)
+      handle HOL_ERR _ =>
+        if is_var template
+        then if member(bvs,template)
+             then log_thm (REFL template)
+             else log_thm (valOf(subst_assoc (equal template) map))
+      else let
+        val (sf,sa) = dest_comb source
+        val (tf,ta) = dest_comb template
+        val _ = log_rconv bvs sf tf
+        val _ = log_rconv bvs sa ta
+        val _ = log_command "appThm"
+      in () end handle HOL_ERR _ => let
+        val (sv,sb) = dest_abs source
+        val (tv,tb) = dest_abs template
+        val _ = log_rconv (add(bvs,tv)) sb tb
+        val _ = log_var tv
+        val _ = log_command "absThm"
+      in () end
+      val _ = log_rconv empty_varset (concl th) tm
+      val _ = log_thm th
+      val _ = log_command "eqMp"
+      in () end
     | INST_TYPE_prf (s,th) => let
       val _ = log_type_subst s
       val _ = log_thm th

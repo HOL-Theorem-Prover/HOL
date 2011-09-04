@@ -8,6 +8,7 @@ sig
   datatype proof =
     Axiom_prf
   | ASSUME_prf of term
+  | ALPHA_prf of term * term
   | REFL_prf of term
   | BETA_CONV_prf of term
   | ABS_prf of term * thm
