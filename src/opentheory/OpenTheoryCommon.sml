@@ -43,11 +43,4 @@ fun c (ONum    x1, ONum    x2) = Int.compare                (x1,x2)
   | c (OThm    x1, OThm    x2) = thm_compare                (x1,x2)
 in c end
 
-local open Thm Drule in
-  fun DEDUCT_ANTISYM th1 th2 =
-    IMP_ANTISYM_RULE
-      (DISCH (concl th2) th1)
-      (DISCH (concl th1) th2)
-end
-
 end

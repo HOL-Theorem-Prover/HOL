@@ -118,6 +118,16 @@ and proof =
 | INST_TYPE_prf of (hol_type,hol_type)Lib.subst * thm
 | INST_prf of (term,term)Lib.subst * thm
 | ALPHA_prf of term * term
+| GEN_ABS_prf of term option * term list * thm
+| SYM_prf of thm
+| TRANS_prf of thm * thm
+| MK_COMB_prf of thm * thm
+| AP_TERM_prf of term * thm
+| AP_THM_prf of thm * term
+| EQ_MP_prf of thm * thm
+| EQ_IMP_RULE1_prf of thm
+| EQ_IMP_RULE2_prf of thm
+| SPEC_prf of term * thm
 | TODO_prf
 
 fun proof (THM(_,_,_,p)) = p
@@ -269,7 +279,7 @@ fun GEN_ABS opt vlist (th as THM(ocl,asl,c,_)) =
              val lhs' = list_mk_binder opt (vlist,lhs)
              val rhs' = list_mk_binder opt (vlist,rhs)
          in make_thm Count.GenAbs
-               (ocl,asl,mk_eq_nocheck (Term.type_of lhs') lhs' rhs',TODO_prf)
+               (ocl,asl,mk_eq_nocheck (Term.type_of lhs') lhs' rhs',GEN_ABS_prf(opt,vlist,th))
          end
     else ERR "GEN_ABS" "variable(s) free in the assumptions"
  end
@@ -365,7 +375,7 @@ fun ALPHA t1 t2 =
 fun SYM th =
  let val (lhs,rhs,ty) = Term.dest_eq_ty (concl th)
   in make_thm Count.Sym
-        (tag th, hypset th, mk_eq_nocheck ty rhs lhs, TODO_prf)
+        (tag th, hypset th, mk_eq_nocheck ty rhs lhs, SYM_prf(th))
  end
  handle HOL_ERR _ => ERR "SYM" "";
 
@@ -394,7 +404,7 @@ fun TRANS th1 th2 =
        val hyps = union_hyp (hypset th1) (hypset th2)
        val ocls = Tag.merge (tag th1) (tag th2)
    in
-     make_thm Count.Trans (ocls, hyps, mk_eq_nocheck ty lhs1 rhs2, TODO_prf)
+     make_thm Count.Trans (ocls, hyps, mk_eq_nocheck ty lhs1 rhs2, TRANS_prf(th1,th2))
    end
    handle HOL_ERR _ => ERR "TRANS" "";
 
@@ -419,7 +429,7 @@ fun MK_COMB (funth,argth) =
      make_thm Count.MkComb
          (Tag.merge (tag funth) (tag argth),
           union_hyp (hypset funth) (hypset argth),
-          mk_eq_nocheck (rng ty) (mk_comb(f,x)) (mk_comb(g,y)), TODO_prf)
+          mk_eq_nocheck (rng ty) (mk_comb(f,x)) (mk_comb(g,y)), MK_COMB_prf(funth,argth))
    end
    handle HOL_ERR _ => ERR "MK_COMB" "";
 
@@ -445,7 +455,7 @@ fun AP_TERM f th =
  let val (lhs,rhs,_) = Term.dest_eq_ty (concl th)
  in make_thm Count.ApTerm
        (tag th, hypset th,
-        mk_eq_nocheck (rng (type_of f)) (mk_comb(f,lhs)) (mk_comb(f,rhs)), TODO_prf)
+        mk_eq_nocheck (rng (type_of f)) (mk_comb(f,lhs)) (mk_comb(f,rhs)), AP_TERM_prf(f,th))
  end
  handle HOL_ERR _ => ERR "AP_TERM" "";
 
@@ -472,7 +482,7 @@ fun AP_THM th tm =
  let val (lhs,rhs,ty) = Term.dest_eq_ty (concl th)
  in make_thm Count.ApThm
        (tag th, hypset th,
-        mk_eq_nocheck (rng ty) (mk_comb(lhs,tm)) (mk_comb(rhs,tm)), TODO_prf)
+        mk_eq_nocheck (rng ty) (mk_comb(lhs,tm)) (mk_comb(rhs,tm)), AP_THM_prf(th,tm))
  end
  handle HOL_ERR _ => ERR "AP_THM" "";
 
@@ -496,7 +506,7 @@ fun EQ_MP th1 th2 =
        val _ = Assert (aconv lhs (concl th2)) "" ""
    in
     make_thm Count.EqMp (Tag.merge (tag th1) (tag th2),
-                         union_hyp (hypset th1) (hypset th2), rhs, TODO_prf)
+                         union_hyp (hypset th1) (hypset th2), rhs, EQ_MP_prf(th1,th2))
    end handle HOL_ERR _ => ERR "EQ_MP" "";
 
 (*---------------------------------------------------------------------------
@@ -518,8 +528,8 @@ fun EQ_IMP_RULE th =
      and A = hypset th
      and O = tag th
  in if ty = Type.bool
-    then (make_thm Count.EqImpRule(O,A, mk_imp_nocheck(lhs, rhs), TODO_prf),
-          make_thm Count.EqImpRule(O,A, mk_imp_nocheck(rhs, lhs), TODO_prf))
+    then (make_thm Count.EqImpRule(O,A, mk_imp_nocheck(lhs, rhs), EQ_IMP_RULE1_prf th),
+          make_thm Count.EqImpRule(O,A, mk_imp_nocheck(rhs, lhs), EQ_IMP_RULE2_prf th))
     else ERR "" ""
  end
  handle HOL_ERR _ => ERR "EQ_IMP_RULE" "";
@@ -577,7 +587,7 @@ fun SPEC t th =
    Assert (Name="!" andalso Thy="bool")
           "SPEC" "Theorem not universally quantified";
    make_thm Count.Spec
-       (tag th, hypset th, beta_conv(mk_comb(Rand, t)), TODO_prf)
+       (tag th, hypset th, beta_conv(mk_comb(Rand, t)), SPEC_prf(t,th))
        handle HOL_ERR _ =>
               raise thm_err "SPEC"
                     "Term argument's type not equal to bound variable's"

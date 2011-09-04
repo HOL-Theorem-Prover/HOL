@@ -169,7 +169,7 @@ val (log_term, log_thm, log_clear) = let
      after looking at a trace). But the theorem is in the OpenTheory
      standard library, so maybe the best thing to do is to special-case it
      with an Axiom_prf. (Other theorems might need that treatment too.) *)
-  local open metisLib Thm Conv HOLset in
+  local open metisLib Thm Conv boolTheory boolSyntax Term Drule in
     val IMP_DEF = METIS_PROVE[]``$==> = \p q. p /\ q <=> p``
     val p = ``p:bool``
     val q = ``q:bool``
@@ -178,10 +178,12 @@ val (log_term, log_thm, log_clear) = let
       val th1 = BETA_RULE (AP_THM (AP_THM IMP_DEF p) q)
       val th2 = EQ_MP th1 (ASSUME ``p ==> q``)
     in CONJUNCT2 (EQ_MP (SYM th2) (ASSUME p)) end
-    fun MP_PROVE_HYP ath bth =
-      if member (hypset bth, concl ath)
-      then EQ_MP (DEDUCT_ANTISYM ath bth) ath
-      else bth
+    val SPEC_pth = let
+      val P = mk_var("P",alpha-->bool)
+      val th1 = EQ_MP (AP_THM FORALL_DEF P) (ASSUME (mk_comb(universal,P)))
+      val th2 = AP_THM (CONV_RULE BETA_CONV th1) (mk_var("x",alpha))
+      val th3 = CONV_RULE (RAND_CONV BETA_CONV) th2
+      in DISCH_ALL (EQT_ELIM th3) end
   end
 
   fun log_thm th = let
@@ -232,12 +234,18 @@ val (log_term, log_thm, log_clear) = let
     | MP_prf (th1,th2) => let
       open boolSyntax
       val (ant,con) = dest_imp(concl th1)
-      val th3 = INST [ant|->p, con|->q] MP_pth
-      val th4 = MP_PROVE_HYP th1 th3
-      val _ = log_thm (MP_PROVE_HYP th2 th4)
+      val _ = log_thm th1
+      val _ = log_thm th2
+      val _ = log_thm (INST [p|->ant, q|->con] MP_pth)
+      val _ = log_command "deductAntisym"
+      val _ = saved (OThm th2)
+      val _ = log_command "eqMp"
+      val _ = log_command "deductAntisym"
+      val _ = saved (OThm th1)
+      val _ = log_command "eqMp"
       in () end
     | SUBST_prf (map,tm,th) => let
-      open Thm Term Feedback HOLset Lib
+      open Term Feedback HOLset Lib
       fun log_rconv bvs source template = (* return |- source = template[rhs/vars] *)
         log_thm(ALPHA source template)
       handle HOL_ERR _ =>
@@ -272,6 +280,67 @@ val (log_term, log_thm, log_clear) = let
       val _ = log_thm th
       val _ = log_command "subst"
       in () end
+    | GEN_ABS_prf (c,vlist,th) => let
+      open Type Lib boolSyntax
+      val dom = fst o dom_rng
+      fun foo th = let val (_,_,ty) = dest_eq_ty(concl th) in dom ty end
+      val f = case c of
+        SOME c => let val ty = dom(dom(type_of c))
+        in fn th => AP_TERM (inst[ty|->foo th] c) th end
+      | NONE => I
+      val _ = log_thm (List.foldr (f o uncurry ABS) th vlist)
+      in () end
+    | SYM_prf th => let
+      val tm = concl th
+      val (l,r) = boolSyntax.dest_eq tm
+      val lth = REFL l
+      val _ = log_term (Term.rator(Term.rator tm))
+      val _ = log_command "refl"
+      val _ = log_thm th
+      val _ = log_command "appThm"
+      val _ = log_thm lth
+      val _ = log_command "appThm"
+      val _ = log_thm lth
+      val _ = log_command "eqMp"
+      in () end
+    | TRANS_prf (th1,th2) => let
+      val _ = log_term (Term.rator(concl th1))
+      val _ = log_command "refl"
+      val _ = log_thm th2
+      val _ = log_command "appThm"
+      val _ = log_thm th1
+      val _ = log_command "eqMp"
+      in () end
+    | MK_COMB_prf (th1,th2) => let
+      val _ = log_thm th1
+      val _ = log_thm th2
+      val _ = log_command "appThm"
+      in () end
+    | AP_TERM_prf (tm,th) => log_thm (MK_COMB(REFL tm, th))
+    | AP_THM_prf  (th,tm) => log_thm (MK_COMB(th, REFL tm))
+    | EQ_MP_prf (th1,th2) => let
+      val _ = log_thm th1
+      val _ = log_thm th2
+      val _ = log_command "eqMp"
+      in () end
+    | EQ_IMP_RULE1_prf th => let
+      open boolSyntax
+      val (t1,t2) = dest_eq(concl th)
+      val _ = log_thm (DISCH t1 (EQ_MP th (ASSUME t1)))
+      in () end
+    | EQ_IMP_RULE2_prf th => let
+      open boolSyntax
+      val (t1,t2) = dest_eq(concl th)
+      val _ = log_thm (DISCH t2 (EQ_MP (SYM th) (ASSUME t2)))
+      in () end
+    | SPEC_prf (tm,th) => let
+      open Term Type Drule Lib
+      val abs = rand(concl th)
+      val (v,_) = dest_abs abs
+      val vty = type_of v
+      val pth = INST_TY_TERM ([mk_var("P",vty-->bool)|->abs,mk_var("x",vty)|->tm],[alpha|->vty]) SPEC_pth
+      val _ = log_thm (CONV_RULE BETA_CONV (MP pth th))
+      in () end
     | TODO_prf =>
       raise ERR "log_thm" "TODO_prf not implemented"
     val _ = save_dict ob
@@ -285,10 +354,10 @@ fun export_thm th = let
       Not_logging => ()
     | Active_logging _ => let
       val _ = log_thm th
-      val _ = log_list log_term (Thm.hyp th)
-      val _ = log_term (Thm.concl th)
+      val _ = log_list log_term (hyp th)
+      val _ = log_term (concl th)
            in log_command "thm" end
-(*  val _ = Thm.delete_proof th *)
+(*  val _ = delete_proof th *)
 in () end
 
 local val op ^ = OS.Path.concat in
