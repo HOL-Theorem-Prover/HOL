@@ -120,7 +120,10 @@ fun read_buildsequence {kernelpath} bseq_fname = let
               else read_file acc fstr
             end
         end
-  val bseq_file = TextIO.openIn bseq_fname
+  val bseq_file =
+      TextIO.openIn bseq_fname
+      handle IO.Io _ => die ("Fatal error: couldn't open sequence file: "^
+                             bseq_fname)
 in
   read_file [] bseq_file before TextIO.closeIn bseq_file
 end
