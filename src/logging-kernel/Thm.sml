@@ -128,6 +128,22 @@ and proof =
 | EQ_IMP_RULE1_prf of thm
 | EQ_IMP_RULE2_prf of thm
 | SPEC_prf of term * thm
+| GEN_prf of term * thm
+| EXISTS_prf of term * term * thm
+| CHOOSE_prf of term * thm * thm
+| CONJ_prf of thm * thm
+| CONJUNCT1_prf of thm
+| CONJUNCT2_prf of thm
+| DISJ1_prf of thm * term
+| DISJ2_prf of term * thm
+| DISJ_CASES_prf of thm * thm * thm
+| NOT_INTRO_prf of thm
+| NOT_ELIM_prf of thm
+| CCONTR_prf of term * thm
+| Beta_prf of thm
+| Mk_comb_prf of thm * thm * thm
+| Mk_abs_prf of thm * term * thm
+| Specialize_prf of term * thm
 | TODO_prf
 
 fun proof (THM(_,_,_,p)) = p
@@ -624,7 +640,7 @@ fun GEN x th =
   let val (asl,c) = sdest_thm th
   in if var_occursl x asl
      then ERR  "GEN" "variable occurs free in hypotheses"
-     else make_thm Count.Gen(tag th, asl, Susp.force mk_forall x c, TODO_prf)
+     else make_thm Count.Gen(tag th, asl, Susp.force mk_forall x c, GEN_prf(x,th))
           handle HOL_ERR _ => ERR "GEN" ""
   end;
 
@@ -670,7 +686,7 @@ fun EXISTS (w,t) th =
      val _ = Assert ("?"=Name andalso Thy="bool") "EXISTS" mesg1
      val _ = Assert (aconv (beta_conv(mk_comb(Rand,t))) (concl th))
                     "EXISTS" mesg2
-   in make_thm Count.Exists (tag th, hypset th, w, TODO_prf)
+   in make_thm Count.Exists (tag th, hypset th, w, EXISTS_prf(w,t,th))
    end
 end;
 
@@ -722,7 +738,7 @@ fun CHOOSE (v,xth) bth =
        Credit for pointing out this optimisation to Jim Grundy and
        Tom Melham. *)
   in make_thm Count.Choose
-       (Tag.merge (tag xth) (tag bth), newhyps,  b_c, TODO_prf)
+       (Tag.merge (tag xth) (tag bth), newhyps,  b_c, CHOOSE_prf(v,xth,bth))
   end
   handle HOL_ERR _ => ERR "CHOOSE" "";
 
@@ -744,7 +760,7 @@ fun CONJ th1 th2 =
    make_thm Count.Conj
         (Tag.merge (tag th1) (tag th2),
          union_hyp (hypset th1) (hypset th2),
-         Susp.force mk_conj(concl th1, concl th2), TODO_prf)
+         Susp.force mk_conj(concl th1, concl th2), CONJ_prf(th1,th2))
    handle HOL_ERR _ => ERR "CONJ" "";
 
 
@@ -773,7 +789,7 @@ fun conj1 tm =
 
 
 fun CONJUNCT1 th =
-  make_thm Count.Conjunct1 (tag th, hypset th, conj1 (concl th), TODO_prf)
+  make_thm Count.Conjunct1 (tag th, hypset th, conj1 (concl th), CONJUNCT1_prf th)
   handle HOL_ERR _ => ERR "CONJUNCT1" "";
 
 
@@ -800,7 +816,7 @@ fun conj2 tm =
   end
 
 fun CONJUNCT2 th =
- make_thm Count.Conjunct2 (tag th, hypset th, conj2 (concl th), TODO_prf)
+ make_thm Count.Conjunct2 (tag th, hypset th, conj2 (concl th), CONJUNCT2_prf th)
   handle HOL_ERR _ => ERR "CONJUNCT2" "";
 
 
@@ -816,7 +832,7 @@ fun CONJUNCT2 th =
  *---------------------------------------------------------------------------*)
 
 fun DISJ1 th w = make_thm Count.Disj1
- (tag th, hypset th, Susp.force mk_disj (concl th, w), TODO_prf)
+ (tag th, hypset th, Susp.force mk_disj (concl th, w), DISJ1_prf(th,w))
  handle HOL_ERR _ => ERR "DISJ1" "";
 
 
@@ -832,7 +848,7 @@ fun DISJ1 th w = make_thm Count.Disj1
  *---------------------------------------------------------------------------*)
 
 fun DISJ2 w th = make_thm Count.Disj2
- (tag th, hypset th, Susp.force mk_disj(w,concl th), TODO_prf)
+ (tag th, hypset th, Susp.force mk_disj(w,concl th), DISJ2_prf(w,th))
  handle HOL_ERR _ => ERR "DISJ2" "";
 
 
@@ -870,7 +886,7 @@ fun DISJ_CASES dth ath bth =
        (itlist Tag.merge [tag dth, tag ath, tag bth] empty_tag,
         union_hyp (hypset dth) (union_hyp (disch(disj1, hypset ath))
                                        (disch(disj2, hypset bth))),
-        concl ath, TODO_prf)
+        concl ath, DISJ_CASES_prf(dth,ath,bth))
   end
   handle HOL_ERR _ => ERR "DISJ_CASES" "";
 
@@ -892,7 +908,7 @@ fun DISJ_CASES dth ath bth =
 fun NOT_INTRO th =
   let val (ant,c) = dest_imp(concl th)
   in Assert (c = Susp.force F) "" "";
-     make_thm Count.NotIntro  (tag th, hypset th, Susp.force mk_neg ant, TODO_prf)
+     make_thm Count.NotIntro  (tag th, hypset th, Susp.force mk_neg ant, NOT_INTRO_prf th)
   end
   handle HOL_ERR _ => ERR "NOT_INTRO" "";
 
@@ -920,7 +936,7 @@ fun NOT_ELIM th =
   case with_exn dest (concl th) (thm_err "NOT_ELIM" "")
    of ({Name="~", Thy="bool",...},Rand)
        => make_thm Count.NotElim
-             (tag th, hypset th, mk_imp_nocheck(Rand, Susp.force F), TODO_prf)
+             (tag th, hypset th, mk_imp_nocheck(Rand, Susp.force F), NOT_ELIM_prf th)
     | otherwise => ERR "NOT_ELIM" ""
 end;
 
@@ -948,7 +964,7 @@ end;
 fun CCONTR w fth =
   (Assert (concl fth = Susp.force F) "CCONTR" "";
    make_thm Count.Ccontr
-       (tag fth, disch(Susp.force mk_neg w, hypset fth), w, TODO_prf)
+       (tag fth, disch(Susp.force mk_neg w, hypset fth), w, CCONTR_prf(w,fth))
      handle HOL_ERR _ => ERR "CCONTR" "");
 
 
@@ -988,7 +1004,7 @@ fun INST [] th = th
 fun Beta th =
    let val (lhs, rhs, ty) = Term.dest_eq_ty (concl th)
    in make_thm Count.Beta
-        (tag th, hypset th, mk_eq_nocheck ty lhs (Term.lazy_beta_conv rhs), TODO_prf)
+        (tag th, hypset th, mk_eq_nocheck ty lhs (Term.lazy_beta_conv rhs), Beta_prf th)
    end
    handle HOL_ERR _ => ERR "Beta" "";
 
@@ -1024,7 +1040,7 @@ fun Mk_comb thm =
              val _ = Assert (EQ(lhs2,Rand)) "" ""
              val (ocls,hyps) = tag_hyp_union [thm, th1', th2']
          in make_thm Count.MkComb
-	   (ocls, hyps,mk_eq_nocheck ty lhs (mk_comb(rhs1,rhs2)), TODO_prf)
+	   (ocls, hyps,mk_eq_nocheck ty lhs (mk_comb(rhs1,rhs2)), Mk_comb_prf (thm,th1',th2'))
          end
 	 handle HOL_ERR _ => ERR "Mk_comb" "";
        val aty = type_of Rand    (* typing! *)
@@ -1057,7 +1073,7 @@ fun Mk_abs thm =
              val _ = Assert (not (var_occursl Bvar (hypset th1'))) "" ""
              val (ocls,hyps) = tag_hyp_union [thm, th1']
          in make_thm Count.Abs
-	   (ocls, hyps, mk_eq_nocheck ty lhs (mk_abs(Bvar, rhs1)), TODO_prf)
+	   (ocls, hyps, mk_eq_nocheck ty lhs (mk_abs(Bvar, rhs1)), Mk_abs_prf (thm,Bvar,th1'))
          end
 	 handle HOL_ERR _ => ERR "Mk_abs" ""
        val th1 = refl_nocheck (rng ty) Body
@@ -1075,7 +1091,7 @@ fun Specialize t th =
    in
      Assert (Thy="bool" andalso Name="!") "" "";
      make_thm Count.Spec
-        (tag th, hypset th, Term.lazy_beta_conv(mk_comb(Rand,t)), TODO_prf)
+        (tag th, hypset th, Term.lazy_beta_conv(mk_comb(Rand,t)), Specialize_prf(t,th))
    end
    handle HOL_ERR _ => ERR "Specialize" "";
 
@@ -1086,7 +1102,7 @@ fun Specialize t th =
 fun mk_oracle_thm tg (asl,c) =
   (Assert (Lib.all is_bool (c::asl)) "mk_oracle_thm"  "not a proposition"
    ; Assert (tg <> "DISK_THM") "mk_oracle_thm"  "invalid user tag"
-   ; make_thm Count.Oracle (Tag.read tg,list_hyp asl,c, TODO_prf));
+   ; make_thm Count.Oracle (Tag.read tg,list_hyp asl,c, Axiom_prf));
 
 
 val mk_thm = mk_oracle_thm "MK_THM";
@@ -1100,7 +1116,7 @@ fun add_tag (tag1, THM(tag2, h,c,p)) = THM(Tag.merge tag1 tag2, h, c,p)
 
 fun mk_axiom_thm (r,c) =
    (Assert (type_of c = bool) "mk_axiom_thm"  "Not a proposition!";
-    make_thm Count.Axiom (Tag.ax_tag r, empty_hyp, c, TODO_prf))
+    make_thm Count.Axiom (Tag.ax_tag r, empty_hyp, c, Axiom_prf))
 
 fun mk_defn_thm (witness_tag, c) =
    (Assert (type_of c = bool) "mk_defn_thm"  "Not a proposition!";
@@ -1239,7 +1255,7 @@ fun disk_thm (s, termlist) = let
   val c = hd termlist
   val asl = tl termlist
 in
-  mk_disk_thm(Tag.read_disk_tag s,list_hyp asl,c,TODO_prf)
+  mk_disk_thm(Tag.read_disk_tag s,list_hyp asl,c,Axiom_prf)
 end
 end; (* local *)
 
