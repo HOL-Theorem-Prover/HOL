@@ -73,11 +73,11 @@ val (log_term, log_thm, log_clear) = let
 
   local open OpenTheoryMap in
     fun log_tyop_name tyop =
-      Map.find(tyop_to_ot_map(),tyop)
+      log_name (Map.find(tyop_to_ot_map(),tyop))
     handle Map.NotFound
     => raise ERR "log_tyop_name" ("No OpenTheory name for "^(#Thy tyop)^"$"^(#Tyop tyop))
     fun log_const_name const =
-      Map.find(const_to_ot_map(),const)
+      log_name (Map.find(const_to_ot_map(),const))
     handle Map.NotFound
     => raise ERR "log_const_name" ("No OpenTheory name for "^(#Thy const)^"$"^(#Name const))
   end
@@ -460,8 +460,13 @@ val (log_term, log_thm, log_clear) = let
     | Mk_comb_prf (th,th1,th2) => log_thm (TRANS th (MK_COMB(th1,th2)))
     | Mk_abs_prf (th,bv,th1) => log_thm (TRANS th (ABS bv th1))
     | Specialize_prf (t,th) => log_thm (SPEC t th)
-    | TODO_prf =>
-      raise ERR "log_thm" "TODO_prf not implemented"
+    | Def_const_prf (c,t) => let
+      val _ = log_const_name c
+      val _ = log_term t
+      val _ = log_command "defineConst"
+      in () end
+    | Def_spec_prf => raise (Fail"Def_spec_prf unimplemented")
+    | Def_tyop_prf => raise (Fail"Def_tyop_prf unimplemented")
     val _ = save_dict ob
     in () end
   end

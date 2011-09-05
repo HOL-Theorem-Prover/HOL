@@ -144,7 +144,9 @@ and proof =
 | Mk_comb_prf of thm * thm * thm
 | Mk_abs_prf of thm * term * thm
 | Specialize_prf of term * thm
-| TODO_prf
+| Def_const_prf of {Thy:string,Name:string} * term
+| Def_tyop_prf
+| Def_spec_prf
 
 fun proof (THM(_,_,_,p)) = !p
 fun delete_proof (THM(_,_,_,p)) = p := Axiom_prf
@@ -1119,9 +1121,9 @@ fun mk_axiom_thm (r,c) =
    (Assert (type_of c = bool) "mk_axiom_thm"  "Not a proposition!";
     make_thm Count.Axiom (Tag.ax_tag r, empty_hyp, c, Axiom_prf))
 
-fun mk_defn_thm (witness_tag, c) =
+fun mk_defn_thm (witness_tag, c, p) =
    (Assert (type_of c = bool) "mk_defn_thm"  "Not a proposition!";
-    make_thm Count.Definition (witness_tag,empty_hyp,c, TODO_prf))
+    make_thm Count.Definition (witness_tag,empty_hyp,c, p))
 
 (* ----------------------------------------------------------------------
     Making definitional theorems
@@ -1202,7 +1204,7 @@ fun prim_type_definition (name as {Thy, Tyop}, thm) = let
   val TYDEF     = mk_thy_const{Name="TYPE_DEFINITION", Thy="bool",
                                Ty = Pty --> (repty-->bool)}
 in
-  mk_defn_thm(tag thm, mk_exists(rep, list_mk_comb(TYDEF,[P,rep])))
+  mk_defn_thm(tag thm, mk_exists(rep, list_mk_comb(TYDEF,[P,rep])), Def_tyop_prf)
 end
 
 fun prim_constant_definition Thy M = let
@@ -1225,7 +1227,7 @@ fun prim_constant_definition Thy M = let
   val checked = check_tyvars (type_vars_in_term rhs) Ty DEF_ERR
   val new_lhs = Term.prim_new_const {Name = Name, Thy = Thy} Ty
 in
-  mk_defn_thm(empty_tag, mk_eq(new_lhs, rhs))
+  mk_defn_thm(empty_tag, mk_eq(new_lhs, rhs),Def_const_prf({Name=Name,Thy=Thy},rhs))
 end
 
 fun bind thy s ty =
@@ -1245,7 +1247,7 @@ fun prim_specification thyname cnames th = let
   val checked   = List.app (vOK (type_vars_in_term body)) V
   fun addc v s  = v |-> bind thyname s (snd(dest_var v))
 in
-  mk_defn_thm (tag th, subst (map2 addc V cnames) body)
+  mk_defn_thm (tag th, subst (map2 addc V cnames) body, Def_spec_prf)
 end
 
 

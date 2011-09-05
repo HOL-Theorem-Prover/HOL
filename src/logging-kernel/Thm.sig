@@ -40,10 +40,12 @@ sig
   | SYM_prf of thm
   | TRANS_prf of thm * thm
   | Beta_prf of thm
+  | Def_tyop_prf
+  | Def_const_prf of {Thy:string,Name:string} * term
+  | Def_spec_prf
   | Mk_abs_prf of thm * term * thm
   | Mk_comb_prf of thm * thm * thm
   | Specialize_prf of term * thm
-  | TODO_prf
 
   val proof : thm -> proof
   val delete_proof : thm -> unit
