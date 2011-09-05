@@ -144,9 +144,9 @@ and proof =
 | Mk_comb_prf of thm * thm * thm
 | Mk_abs_prf of thm * term * thm
 | Specialize_prf of term * thm
-| Def_const_prf of {Thy:string,Name:string} * term
 | Def_tyop_prf
-| Def_spec_prf
+| Def_const_prf of {Thy:string,Name:string} * term
+| Def_spec_prf of term list * thm
 
 fun proof (THM(_,_,_,p)) = !p
 fun delete_proof (THM(_,_,_,p)) = p := Axiom_prf
@@ -1102,13 +1102,14 @@ fun Specialize t th =
  * Construct a theorem directly and attach the given tag to it.              *
  *---------------------------------------------------------------------------*)
 
-fun mk_oracle_thm tg (asl,c) =
+fun mk_proof_oracle_thm p tg (asl,c) =
   (Assert (Lib.all is_bool (c::asl)) "mk_oracle_thm"  "not a proposition"
    ; Assert (tg <> "DISK_THM") "mk_oracle_thm"  "invalid user tag"
-   ; make_thm Count.Oracle (Tag.read tg,list_hyp asl,c, Axiom_prf));
+   ; make_thm Count.Oracle (Tag.read tg,list_hyp asl,c, p));
 
-
-val mk_thm = mk_oracle_thm "MK_THM";
+val mk_oracle_thm = mk_proof_oracle_thm Axiom_prf
+fun mk_proof_thm p = mk_proof_oracle_thm p "MK_THM"
+val mk_thm = mk_proof_thm Axiom_prf
 
 fun add_tag (tag1, THM(tag2, h,c,p)) = THM(Tag.merge tag1 tag2, h, c,p)
 
@@ -1246,8 +1247,9 @@ fun prim_specification thyname cnames th = let
   fun vOK V v   = check_tyvars V (type_of v) SPEC_ERR
   val checked   = List.app (vOK (type_vars_in_term body)) V
   fun addc v s  = v |-> bind thyname s (snd(dest_var v))
+  val sigma     = map2 addc V cnames
 in
-  mk_defn_thm (tag th, subst (map2 addc V cnames) body, Def_spec_prf)
+  mk_defn_thm (tag th, subst sigma body, Def_spec_prf(map #residue sigma,th))
 end
 
 

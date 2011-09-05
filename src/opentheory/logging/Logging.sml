@@ -169,6 +169,7 @@ val (log_term, log_thm, log_clear) = let
     val IMP_DEF = mk_thm([],``$==> = \p q. p /\ q <=> p``)
     val EXISTS_DEF = mk_thm([],``$? = \P:'a->bool. !q. (!x. P x ==> q) ==> q``)
     val AND_DEF = mk_thm([],``$/\ = \p q. (\f:bool->bool->bool. f p q) = (\f. f T T)``)
+    val EXISTS_THM = boolTheory.EXISTS_DEF
     val p = ``p:bool``
     val q = ``q:bool``
     val DISCH_pth = SYM(BETA_RULE (AP_THM (AP_THM IMP_DEF p) q))
@@ -230,10 +231,18 @@ val (log_term, log_thm, log_clear) = let
     val NOT_ELIM_pth = CONV_RULE (RAND_CONV BETA_CONV) (AP_THM NOT_DEF P)
     val NOT_INTRO_pth = SYM NOT_ELIM_pth
     val CCONTR_pth = SPEC P (EQ_MP F_DEF (ASSUME F))
+    val SEL_RULE = CONV_RULE (RATOR_CONV (REWR_CONV EXISTS_THM) THENC BETA_CONV)
+    fun specify c th = let
+      val th1 = SEL_RULE th
+      val (l,r) = dest_comb(concl th1)
+      val ty = type_of r
+      val thyc = let val {Name,Thy,...} = dest_thy_const c in {Name=Name,Thy=Thy} end
+      val th2 = mk_proof_thm (Def_const_prf(thyc,r)) ([],mk_eq(c,r))
+      in CONV_RULE BETA_CONV (EQ_MP (AP_TERM l (SYM th2)) th1) end
   end
 
   fun log_thm th = let
-    open Thm val op |-> = Lib.|->
+    open Thm Term Type Lib Drule boolSyntax
     val ob = OThm th
   in if saved ob then () else let
     val _ = case proof th of
@@ -465,7 +474,7 @@ val (log_term, log_thm, log_clear) = let
       val _ = log_term t
       val _ = log_command "defineConst"
       in () end
-    | Def_spec_prf => raise (Fail"Def_spec_prf unimplemented")
+    | Def_spec_prf (consts,th) => log_thm (rev_itlist specify consts th)
     | Def_tyop_prf => raise (Fail"Def_tyop_prf unimplemented")
     val _ = save_dict ob
     in () end
