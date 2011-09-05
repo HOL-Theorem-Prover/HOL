@@ -49,6 +49,7 @@ fun create_heap (objs, outputheap, base) = let
   val ostrm = openOut ofile
   fun p s = output(ostrm, s ^ "\n")
 in
+  p ("val heapname = \""^outputheap^"\";");
   p "local";
   p "fun hload s = (print (\"Loading \"^s^\"\\n\"); load s)";
   p ("val _ = List.map hload [" ^
