@@ -1,6 +1,10 @@
 (* this is an -*- sml -*- file *)
 val _ = PolyML.print_depth 0;
 
+val _ = if heapname <> "hol.builder" then
+          TextIO.output(TextIO.stdOut, "[In non-standard heap: "^heapname^"]\n")
+        else ()
+
 local (* install prettyprinters for simpsets and ssfrags *)
 fun pp2polypp (f : PP.ppstream -> 'a -> unit)
               (putString : string -> unit,

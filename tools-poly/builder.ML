@@ -1,4 +1,5 @@
 (* this is an -*- sml -*- file*)
+val heapname = "hol.builder";
 local
 val pd = !PolyML.Compiler.printDepth;
 infix ++

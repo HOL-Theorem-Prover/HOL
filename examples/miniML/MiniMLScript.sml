@@ -413,11 +413,14 @@ val _ = Define `
         (case lookup n envC of
              NONE -> TypeError
           || SOME (l,_) -> 
-              (case es of
-                   [] -> return envC env (Conv n []) c
-                || e::es ->
-                    push envC env e (Ccon n [] () es) c
-              )
+	      if l = LENGTH es then
+                (case es of
+                     [] -> return envC env (Conv n []) c
+                  || e::es ->
+                      push envC env e (Ccon n [] () es) c
+                )
+              else
+                TypeError
         )
     || Var n ->
         (case lookup n env of

@@ -481,6 +481,11 @@ val _ =
   emit_hol_script target_boss qend_boss
  end;
 
+(* Remove Poly/HOL executables from bin, if they're there *)
+val _ = FileSys.remove (fullPath [holdir, "bin", "heapname"]) handle _ => ()
+val _ = FileSys.remove (fullPath [holdir, "bin", "buildheap"]) handle _ => ()
+
+
 (*---------------------------------------------------------------------------
     Compile the quotation preprocessor used by bin/hol.unquote and
     put it in bin/

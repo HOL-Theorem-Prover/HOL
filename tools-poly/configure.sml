@@ -409,6 +409,17 @@ in
   FileSys.chDir cdir
 end handle _ => die "Failed to build heapname."
 
+(* ----------------------------------------------------------------------
+    Generate buildheap executable
+   ---------------------------------------------------------------------- *)
+val _ = let
+in
+  echo "Making bin/buildheap utility";
+  FileSys.chDir toolsdir;
+  system_ps (POLY ^ " < buildheap.ML");
+  compile systeml (fullPath [HOLDIR, "bin", "buildheap"]) "buildheap.o";
+  FileSys.chDir cdir
+end handle _ => die "Failed to build buildheap."
 
 
 end (* local *)
