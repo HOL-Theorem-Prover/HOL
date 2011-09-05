@@ -46,5 +46,6 @@ sig
   | TODO_prf
 
   val proof : thm -> proof
+  val delete_proof : thm -> unit
 
 end

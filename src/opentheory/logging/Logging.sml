@@ -476,7 +476,7 @@ fun export_thm th = let
       val _ = log_list log_term (hyp th)
       val _ = log_term (concl th)
            in log_command "thm" end
-(*  val _ = delete_proof th *)
+    val _ = delete_proof th
 in () end
 
 local val op ^ = OS.Path.concat in
