@@ -144,7 +144,7 @@ and proof =
 | Mk_comb_prf of thm * thm * thm
 | Mk_abs_prf of thm * term * thm
 | Specialize_prf of term * thm
-| Def_tyop_prf
+| Def_tyop_prf of {Thy:string,Tyop:string} * hol_type list * thm * hol_type
 | Def_const_prf of {Thy:string,Name:string} * term
 | Def_spec_prf of term list * thm
 
@@ -1205,7 +1205,7 @@ fun prim_type_definition (name as {Thy, Tyop}, thm) = let
   val TYDEF     = mk_thy_const{Name="TYPE_DEFINITION", Thy="bool",
                                Ty = Pty --> (repty-->bool)}
 in
-  mk_defn_thm(tag thm, mk_exists(rep, list_mk_comb(TYDEF,[P,rep])), Def_tyop_prf)
+  mk_defn_thm(tag thm, mk_exists(rep, list_mk_comb(TYDEF,[P,rep])), Def_tyop_prf(name,tyvars,thm,newty))
 end
 
 fun prim_constant_definition Thy M = let

@@ -40,7 +40,7 @@ sig
   | SYM_prf of thm
   | TRANS_prf of thm * thm
   | Beta_prf of thm
-  | Def_tyop_prf
+  | Def_tyop_prf of {Thy:string,Tyop:string} * hol_type list * thm * hol_type
   | Def_const_prf of {Thy:string,Name:string} * term
   | Def_spec_prf of term list * thm
   | Mk_abs_prf of thm * term * thm

@@ -72,8 +72,10 @@ val (log_term, log_thm, log_clear) = let
   fun log_type_var ty = log_name (Type.dest_vartype ty)
 
   local open OpenTheoryMap in
-    fun log_tyop_name tyop =
-      log_name (Map.find(tyop_to_ot_map(),tyop))
+    fun log_tyop_name tyop = let
+      val n = Map.find(tyop_to_ot_map(),tyop)
+      val _ = log_name n
+      in n end
     handle Map.NotFound
     => raise ERR "log_tyop_name" ("No OpenTheory name for "^(#Thy tyop)^"$"^(#Tyop tyop))
     fun log_const_name const =
@@ -231,7 +233,8 @@ val (log_term, log_thm, log_clear) = let
     val NOT_ELIM_pth = CONV_RULE (RAND_CONV BETA_CONV) (AP_THM NOT_DEF P)
     val NOT_INTRO_pth = SYM NOT_ELIM_pth
     val CCONTR_pth = SPEC P (EQ_MP F_DEF (ASSUME F))
-    val SEL_RULE = CONV_RULE (RATOR_CONV (REWR_CONV EXISTS_THM) THENC BETA_CONV)
+    val SEL_CONV = RATOR_CONV (REWR_CONV EXISTS_THM) THENC BETA_CONV
+    val SEL_RULE = CONV_RULE SEL_CONV
     fun specify c th = let
       val th1 = SEL_RULE th
       val (l,r) = dest_comb(concl th1)
@@ -239,6 +242,9 @@ val (log_term, log_thm, log_clear) = let
       val thyc = let val {Name,Thy,...} = dest_thy_const c in {Name=Name,Thy=Thy} end
       val th2 = mk_proof_thm (Def_const_prf(thyc,r)) ([],mk_eq(c,r))
       in CONV_RULE BETA_CONV (EQ_MP (AP_TERM l (SYM th2)) th1) end
+    val EXISTENCE_RULE = CONV_RULE (SEL_CONV THENC (RATOR_CONV ETA_CONV))
+    fun mk_ra (b,r,rep,abs) = mk_eq(mk_comb(b,r),mk_eq(mk_comb(rep,mk_comb(abs,r)),r))
+    fun mk_ar (abs,rep,a)   = mk_eq(mk_comb(abs,mk_comb(rep,a)),a)
   end
 
   fun log_thm th = let
@@ -473,13 +479,71 @@ val (log_term, log_thm, log_clear) = let
       val _ = log_const_name c
       val _ = log_term t
       val _ = log_command "defineConst"
+      val k = save_dict ob
+      val _ = log_command "pop"
+      val _ = log_command "pop"
+      val _ = log_num k
+      val _ = log_command "ref"
       in () end
     | Def_spec_prf (consts,th) => log_thm (rev_itlist specify consts th)
-    | Def_tyop_prf => raise (Fail"Def_tyop_prf unimplemented")
+    | Def_tyop_prf (name,tyvars,th,aty) => let
+      val n = log_tyop_name name
+      val abs_name = n^".abs"
+      val rep_name = n^".rep"
+      val _ = log_name abs_name
+      val _ = log_name rep_name
+      val _ = log_list log_type_var tyvars
+      val _ = log_thm (EXISTENCE_RULE th)
+      val _ = log_command "defineTypeOp"
+      val (_,phi) = dest_exists (concl th)
+      val (rty,_) = dom_rng(type_of phi)
+      val a       = mk_var("a",aty)
+      val b       = mk_var("b",aty)
+      val r       = mk_var("r",rty)
+      val absty   = rty --> aty
+      val repty   = aty --> rty
+      val abs     = prim_new_const {Thy="Logging",Name=abs_name} absty
+      val rep     = prim_new_const {Thy="Logging",Name=rep_name} repty
+      val ra      = mk_thm([],mk_ra(phi,r,rep,abs))
+      val _       = save_dict (OThm ra)
+      val _       = log_command "pop"
+      val ar      = mk_thm([],mk_ar(abs,rep,a))
+      val _       = save_dict (OThm ar)
+      val _       = log_command "pop"
+      val _       = log_command "pop"
+      val _       = log_command "pop"
+      val _       = log_command "pop"
+      val v       = genvar repty
+      val TYDEFTH = INST_TYPE [alpha|->rty,beta|->aty] TYPE_DEFINITION
+      val TYDEF   = (lhs(concl TYDEFTH))
+      val w       = mk_exists(v,mk_comb(mk_comb(TYDEF,phi),v))
+      val _       = log_thm (
+        prove (w, EXISTS_TAC rep THEN
+                  CONV_TAC (RATOR_CONV (RATOR_CONV (REWR_CONV TYDEFTH))) THEN
+                  BETA_TAC THEN
+                  CONJ_TAC THEN1 (
+                    X_GEN_TAC a THEN
+                    X_GEN_TAC b THEN
+                    DISCH_THEN (fn th =>
+                      ACCEPT_TAC (
+                        TRANS
+                          (TRANS (SYM ar) (AP_TERM abs th))
+                          (INST [a|->b] ar)))) THEN
+                  X_GEN_TAC r THEN
+                  CONV_TAC (LAND_CONV (REWR_CONV ra)) THEN
+                  EQ_TAC THEN1 (
+                    DISCH_THEN (fn th =>
+                      EXISTS_TAC (rand(lhs(concl th))) THEN
+                      ACCEPT_TAC (SYM th)) THEN
+                  DISCH_THEN (X_CHOOSE_THEN a (fn th =>
+                    CONV_TAC (RAND_CONV (REWR_CONV th)) THEN
+                    CONV_TAC (LAND_CONV (RAND_CONV (RAND_CONV (REWR_CONV th)))) THEN
+                    CONV_TAC (LAND_CONV (RAND_CONV (REWR_CONV ar))) THEN
+                    REFL_TAC )))) )
+      in () end
     val _ = save_dict ob
     in () end
   end
-
 in (log_term, log_thm, reset_dict) end
 
 fun export_thm th = let
