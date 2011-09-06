@@ -245,6 +245,37 @@ val (log_term, log_thm, log_clear) = let
     val EXISTENCE_RULE = CONV_RULE (SEL_CONV THENC (RATOR_CONV ETA_CONV))
     fun mk_ra (b,r,rep,abs) = mk_eq(mk_comb(b,r),mk_eq(mk_comb(rep,mk_comb(abs,r)),r))
     fun mk_ar (abs,rep,a)   = mk_eq(mk_comb(abs,mk_comb(rep,a)),a)
+    val Def_tyop_pth = let
+      val phi = mk_var("phi",alpha-->bool)
+      val abs = mk_var("abs",alpha-->beta)
+      val rep = mk_var("rep",beta-->alpha)
+      val a   = mk_var("a",beta)
+      val r   = mk_var("r",alpha)
+      val ar  = ASSUME (mk_forall(a,mk_ar(abs,rep,a)))
+      val ra  = ASSUME (mk_forall(r,mk_ra(phi,r,rep,abs)))
+      val c             = concl TYPE_DEFINITION
+      val tyd           = lhs c
+      val (c1,c2)       = dest_conj(snd(dest_abs(snd(dest_abs(rhs c)))))
+      val ([x',x''],_)  = strip_forall c1
+      val (x,_)         = dest_forall c2
+      val w   = mk_comb(mk_comb(tyd,phi),rep)
+      val th1 = BETA_RULE (AP_THM (AP_THM TYPE_DEFINITION phi) rep)
+      val rx' = mk_comb(rep,x')
+      val rr  = mk_eq(rx',mk_comb(rep,x''))
+      val xar = SPEC x' ar
+      val th2 = TRANS (TRANS (SYM xar) (AP_TERM abs (ASSUME rr))) (SPEC x'' ar)
+      val th3 = GEN x' (GEN x'' (DISCH rr th2))
+      val phx = mk_comb(phi,x)
+      val xre = mk_eq(x,rx')
+      val exr = mk_exists(x',xre)
+      val xra = SPEC x ra
+      val th4 = DISCH phx (EXISTS (exr,mk_comb(abs,x)) (SYM (EQ_MP xra (ASSUME phx))))
+      val xrt = ASSUME xre
+      val th5 = TRANS (REFL rx') (SYM xrt)
+      val th6 = TRANS (AP_TERM rep (TRANS (AP_TERM abs xrt) xar)) th5
+      val th7 = DISCH exr (CHOOSE (x',ASSUME exr) (EQ_MP (SYM xra) th6))
+      val th8 = GEN x (IMP_ANTISYM_RULE th4 th7)
+      in EXISTS (mk_exists(rep,w),rep) (EQ_MP (SYM th1) (CONJ th3 th8)) end
   end
 
   fun log_thm th = let
@@ -498,7 +529,6 @@ val (log_term, log_thm, log_clear) = let
       val (_,phi) = dest_exists (concl th)
       val (rty,_) = dom_rng(type_of phi)
       val a       = mk_var("a",aty)
-      val b       = mk_var("b",aty)
       val r       = mk_var("r",rty)
       val absty   = rty --> aty
       val repty   = aty --> rty
@@ -513,33 +543,11 @@ val (log_term, log_thm, log_clear) = let
       val _       = log_command "pop"
       val _       = log_command "pop"
       val _       = log_command "pop"
-      val v       = genvar repty
-      val TYDEFTH = INST_TYPE [alpha|->rty,beta|->aty] TYPE_DEFINITION
-      val TYDEF   = (lhs(concl TYDEFTH))
-      val w       = mk_exists(v,mk_comb(mk_comb(TYDEF,phi),v))
-      val _       = log_thm (
-        prove (w, EXISTS_TAC rep THEN
-                  CONV_TAC (RATOR_CONV (RATOR_CONV (REWR_CONV TYDEFTH))) THEN
-                  BETA_TAC THEN
-                  CONJ_TAC THEN1 (
-                    X_GEN_TAC a THEN
-                    X_GEN_TAC b THEN
-                    DISCH_THEN (fn th =>
-                      ACCEPT_TAC (
-                        TRANS
-                          (TRANS (SYM ar) (AP_TERM abs th))
-                          (INST [a|->b] ar)))) THEN
-                  X_GEN_TAC r THEN
-                  CONV_TAC (LAND_CONV (REWR_CONV ra)) THEN
-                  EQ_TAC THEN1 (
-                    DISCH_THEN (fn th =>
-                      EXISTS_TAC (rand(lhs(concl th))) THEN
-                      ACCEPT_TAC (SYM th)) THEN
-                  DISCH_THEN (X_CHOOSE_THEN a (fn th =>
-                    CONV_TAC (RAND_CONV (REWR_CONV th)) THEN
-                    CONV_TAC (LAND_CONV (RAND_CONV (RAND_CONV (REWR_CONV th)))) THEN
-                    CONV_TAC (LAND_CONV (RAND_CONV (REWR_CONV ar))) THEN
-                    REFL_TAC )))) )
+      val pth     = INST_TY_TERM ([mk_var("phi",rty-->bool)|->phi,
+                                   mk_var("abs",rty-->aty)|->abs,
+                                   mk_var("rep",aty-->rty)|->rep],
+                                  [alpha|->rty,beta|->aty]) Def_tyop_pth
+      val _       = log_thm (PROVE_HYP (GEN r ra) (PROVE_HYP (GEN a ar) pth))
       in () end
     val _ = save_dict ob
     in () end
