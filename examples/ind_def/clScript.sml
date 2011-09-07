@@ -2,6 +2,21 @@ open HolKernel Parse boolLib
 
 open bossLib simpLib
 
+local open Logging in
+  val _ = set_trace "opentheory logging" 5
+  val new_theory = start_logging o new_theory
+  val store_thm = export_thm o store_thm
+  val export_theory = export_theory o stop_logging
+end
+
+local open OpenTheoryMap in
+  val ns = "combinatoryLogicExample."
+  fun c x = OpenTheory_const_name {const={Thy="cl",Name=x},name=ns^x}
+  val _ = c "confluent"
+  val _ = c "RTC"
+  val _ = c "normform"
+end
+
 val _ = new_theory "cl";
 
 val _ = Hol_datatype `cl = S | K | # of cl => cl`;

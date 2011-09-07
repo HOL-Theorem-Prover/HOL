@@ -6,6 +6,52 @@ structure Map = OpenTheoryMap.Map
 
 val ERR = Feedback.mk_HOL_ERR "Logging"
 
+val verbosity = ref 0
+val _ = Feedback.register_trace("opentheory logging",verbosity,5)
+
+val proof_type = let open Thm fun
+ f Axiom_prf = "Axiom"
+|f (ABS_prf _) = "ABS"
+|f (ALPHA_prf _) = "ALPHA"
+|f (AP_TERM_prf _) = "AP_TERM"
+|f (AP_THM_prf _) = "AP_THM"
+|f (ASSUME_prf _) = "ASSUME"
+|f (BETA_CONV_prf _) = "BETA_CONV"
+|f (CCONTR_prf _) = "CCONTR"
+|f (CHOOSE_prf _) = "CHOOSE"
+|f (CONJ_prf _) = "CONJ"
+|f (CONJUNCT1_prf _) = "CONJUNCT1"
+|f (CONJUNCT2_prf _) = "CONJUNCT2"
+|f (DISCH_prf _) = "DISCH"
+|f (DISJ_CASES_prf _) = "DISJ_CASES"
+|f (DISJ1_prf _) = "DISJ1"
+|f (DISJ2_prf _) = "DISJ2"
+|f (EQ_IMP_RULE1_prf _) = "EQ_IMP_RULE1"
+|f (EQ_IMP_RULE2_prf _) = "EQ_IMP_RULE2"
+|f (EQ_MP_prf _) = "EQ_MP"
+|f (EXISTS_prf _) = "EXISTS"
+|f (GEN_prf _) = "GEN"
+|f (GEN_ABS_prf _) = "GEN_ABS"
+|f (INST_TYPE_prf _) = "INST_TYPE"
+|f (INST_prf _) = "INST"
+|f (MK_COMB_prf _) = "MK_COMB"
+|f (MP_prf _) = "MP"
+|f (NOT_INTRO_prf _) = "NOT_INTRO"
+|f (NOT_ELIM_prf _) = "NOT_ELIM"
+|f (REFL_prf _) = "REFL"
+|f (SPEC_prf _) = "SPEC"
+|f (SUBST_prf _) = "SUBST"
+|f (SYM_prf _) = "SYM"
+|f (TRANS_prf _) = "TRANS"
+|f (Beta_prf _) = "Beta"
+|f (Def_tyop_prf _) = "Def_tyop"
+|f (Def_const_prf _) = "Def_const"
+|f (Def_spec_prf _) = "Def_spec"
+|f (Mk_abs_prf _) = "Mk_abs"
+|f (Mk_comb_prf _) = "Mk_comb"
+|f (Specialize_prf _) = "Specialize"
+in f end
+
 datatype log_state =
   Not_logging
 | Active_logging of TextIO.outstream
@@ -279,15 +325,43 @@ val (log_term, log_thm, log_clear) = let
   end
 
   fun log_thm th = let
-    open Thm Term Type Lib Drule Conv boolSyntax
+    open Thm Term Type Lib Drule Conv boolSyntax Feedback
     val ob = OThm th
   in if saved ob then () else let
+    val ths = Susp.delay (fn () => (Parse.thm_to_backend_string th))
+    val _ = if !verbosity >= 3 then HOL_MESG("Start a "^proof_type (proof th)^" proof for "^(Susp.force ths)) else ()
     val _ = case proof th of
+
+    (* 0: no recursive calls to log_thm *)
       Axiom_prf => let
       val _ = log_list log_term (hyp th)
       val _ = log_term (concl th)
       val _ = log_command "axiom"
       in () end
+    | ASSUME_prf tm => let
+      val _ = log_term tm
+      val _ = log_command "assume"
+      in () end
+    | BETA_CONV_prf tm => let
+      val _ = log_term tm
+      val _ = log_command "betaConv"
+      in () end
+    | REFL_prf tm => let
+      val _ = log_term tm
+      val _ = log_command "refl"
+      in () end
+    | Def_const_prf (c,t) => let
+      val _ = log_const_name c
+      val _ = log_term t
+      val _ = log_command "defineConst"
+      val k = save_dict ob
+      val _ = log_command "pop"
+      val _ = log_command "pop"
+      val _ = log_num k
+      val _ = log_command "ref"
+      in () end
+
+    (* 1: recursive calls to proofs <=0 only *)
     | ALPHA_prf (t1,t2) => let
       val _ = log_thm (REFL (mk_comb(inst[alpha|->type_of t1]equality,t1)))
       val _ = log_thm (REFL t2)
@@ -295,23 +369,116 @@ val (log_term, log_thm, log_clear) = let
       val _ = log_thm (REFL t1)
       val _ = log_command "eqMp"
       in () end
-    | ASSUME_prf tm => let
-      val _ = log_term tm
-      val _ = log_command "assume"
-      in () end
-    | REFL_prf tm => let
-      val _ = log_term tm
-      val _ = log_command "refl"
-      in () end
-    | BETA_CONV_prf tm => let
-      val _ = log_term tm
-      val _ = log_command "betaConv"
-      in () end
+
+    (* 2: recursive calls to subproofs only *)
     | ABS_prf (v,th) => let
       val _ = log_var v
       val _ = log_thm th
       val _ = log_command "absThm"
       in () end
+    | EQ_MP_prf (th1,th2) => let
+      val _ = log_thm th1
+      val _ = log_thm th2
+      val _ = log_command "eqMp"
+      in () end
+    | INST_prf (s,th) => let
+      val _ = log_term_subst s
+      val _ = log_thm th
+      val _ = log_command "subst"
+      in () end
+    | INST_TYPE_prf (s,th) => let
+      val _ = log_type_subst s
+      val _ = log_thm th
+      val _ = log_command "subst"
+      in () end
+    | MK_COMB_prf (th1,th2) => let
+      val _ = log_thm th1
+      val _ = log_thm th2
+      val _ = log_command "appThm"
+      in () end
+    | TRANS_prf (th1,th2) => let
+      val _ = log_term (rator(concl th1))
+      val _ = log_command "refl"
+      val _ = log_thm th2
+      val _ = log_command "appThm"
+      val _ = log_thm th1
+      val _ = log_command "eqMp"
+      in () end
+
+    (* 3: recursive calls to proofs <=2 only *)
+    | AP_TERM_prf (tm,th) => log_thm (MK_COMB(REFL tm, th))
+    | AP_THM_prf  (th,tm) => log_thm (MK_COMB(th, REFL tm))
+    | Mk_comb_prf (th,th1,th2) => log_thm (TRANS th (MK_COMB(th1,th2)))
+    | Mk_abs_prf (th,bv,th1) => log_thm (TRANS th (ABS bv th1))
+    (* CONV_RULE (EQ_MP) *)
+    (* THENC (TRANS) *)
+    (* ALPHA_CONV (ALPHA) *)
+
+    (* 4: recursive calls to proofs <=3 and subproofs only *)
+    | SUBST_prf (map,tm,th) => let
+      fun log_rconv bvs source template = (* return |- source = template[rhs/vars] *)
+        log_thm(ALPHA source template)
+      handle HOL_ERR _ =>
+        if is_var template
+        then if HOLset.member(bvs,template)
+             then log_thm (REFL template)
+             else log_thm (valOf(subst_assoc (equal template) map))
+      else let
+        val (sf,sa) = dest_comb source
+        val (tf,ta) = dest_comb template
+        val _ = log_rconv bvs sf tf
+        val _ = log_rconv bvs sa ta
+        val _ = log_command "appThm"
+      in () end handle HOL_ERR _ => let
+        val (sv,sb) = dest_abs source
+        val (tv,tb) = dest_abs template
+        val _ = log_rconv (HOLset.add(bvs,tv)) sb tb
+        val _ = log_var tv
+        val _ = log_command "absThm"
+      in () end
+      val _ = log_rconv empty_varset (concl th) tm
+      val _ = log_thm th
+      val _ = log_command "eqMp"
+      in () end
+    | SYM_prf th => let
+      val tm = concl th
+      val (l,r) = boolSyntax.dest_eq tm
+      val lth = REFL l
+      val _ = log_term (rator(rator tm))
+      val _ = log_command "refl"
+      val _ = log_thm th
+      val _ = log_command "appThm"
+      val _ = log_thm lth
+      val _ = log_command "appThm"
+      val _ = log_thm lth
+      val _ = log_command "eqMp"
+      in () end
+    (* ABS_CONV (ALPHA_CONV,TRANS,ABS) *)
+    (* COMB_CONV (MK_COMB,AP_THM,AP_TERM) *)
+    (* SUB_CONV (COMB_CONV,ABS_CONV) *)     (* easy to see topsort here *)
+    (* DEPTH_CONV (SUB_CONV, THENC) *)
+    (* BETA_RULE (CONV_RULE,DEPTH_CONV,BETA_CONV) *)
+    (* DISCH_pth (SYM,BETA_RULE,AP_THM) *)
+
+    (* 5: *)
+
+    (* 6: expect disaster *)
+    (* MP_pth (BETA_RULE,AP_THM,EQ_MP,ASSUME,CONJUNCT2,SYM) *)
+    (* EQT_INTRO (EQ_MP,SPEC) *)
+    (* CONJ_pth (ASSUME,MK_COMB,AP_TERM,EQT_INTRO,ABS,BETA_RULE,AP_THM,EQ_MP,SYM) *)
+    | CONJ_prf (th1,th2) => let
+      val th = INST [p|->concl th1,q|->concl th2] CONJ_pth
+      val _ = log_thm (PROVE_HYP th2 (PROVE_HYP th1 th))
+      in () end
+    | CONJUNCT1_prf th => let
+      val (l,r) = dest_conj(concl th)
+      val _ = log_thm (PROVE_HYP th (INST [P|->l,Q|->r] CONJUNCT1_pth))
+      in () end
+    | CONJUNCT2_prf th => let
+      val (l,r) = dest_conj(concl th)
+      val _ = log_thm (PROVE_HYP th (INST [P|->l,Q|->r] CONJUNCT2_pth))
+      in () end
+    | Specialize_prf (t,th) => log_thm (SPEC t th)
     | DISCH_prf (tm,th) => let
       val th1 = CONJ (ASSUME tm) th
       val th2 = CONJUNCT1 (ASSUME (concl th1))
@@ -334,42 +501,7 @@ val (log_term, log_thm, log_clear) = let
       val _ = saved (OThm th1)
       val _ = log_command "eqMp"
       in () end
-    | SUBST_prf (map,tm,th) => let
-      fun log_rconv bvs source template = (* return |- source = template[rhs/vars] *)
-        log_thm(ALPHA source template)
-      handle Feedback.HOL_ERR _ =>
-        if is_var template
-        then if HOLset.member(bvs,template)
-             then log_thm (REFL template)
-             else log_thm (valOf(subst_assoc (equal template) map))
-      else let
-        val (sf,sa) = dest_comb source
-        val (tf,ta) = dest_comb template
-        val _ = log_rconv bvs sf tf
-        val _ = log_rconv bvs sa ta
-        val _ = log_command "appThm"
-      in () end handle Feedback.HOL_ERR _ => let
-        val (sv,sb) = dest_abs source
-        val (tv,tb) = dest_abs template
-        val _ = log_rconv (HOLset.add(bvs,tv)) sb tb
-        val _ = log_var tv
-        val _ = log_command "absThm"
-      in () end
-      val _ = log_rconv empty_varset (concl th) tm
-      val _ = log_thm th
-      val _ = log_command "eqMp"
-      in () end
-    | INST_TYPE_prf (s,th) => let
-      val _ = log_type_subst s
-      val _ = log_thm th
-      val _ = log_command "subst"
-      in () end
-    | INST_prf (s,th) => let
-      val _ = log_term_subst s
-      val _ = log_thm th
-      val _ = log_command "subst"
-      in () end
-    | GEN_ABS_prf (c,vlist,th) => let
+    | GEN_ABS_prf (c,vlist,th) => (let
       val dom = fst o dom_rng
       fun foo th = let val (_,_,ty) = dest_eq_ty(concl th) in dom ty end
       val f = case c of
@@ -377,39 +509,6 @@ val (log_term, log_thm, log_clear) = let
         in fn th => AP_TERM (inst[ty|->foo th] c) th end
       | NONE => I
       val _ = log_thm (List.foldr (f o uncurry ABS) th vlist)
-      in () end
-    | SYM_prf th => let
-      val tm = concl th
-      val (l,r) = boolSyntax.dest_eq tm
-      val lth = REFL l
-      val _ = log_term (rator(rator tm))
-      val _ = log_command "refl"
-      val _ = log_thm th
-      val _ = log_command "appThm"
-      val _ = log_thm lth
-      val _ = log_command "appThm"
-      val _ = log_thm lth
-      val _ = log_command "eqMp"
-      in () end
-    | TRANS_prf (th1,th2) => let
-      val _ = log_term (rator(concl th1))
-      val _ = log_command "refl"
-      val _ = log_thm th2
-      val _ = log_command "appThm"
-      val _ = log_thm th1
-      val _ = log_command "eqMp"
-      in () end
-    | MK_COMB_prf (th1,th2) => let
-      val _ = log_thm th1
-      val _ = log_thm th2
-      val _ = log_command "appThm"
-      in () end
-    | AP_TERM_prf (tm,th) => log_thm (MK_COMB(REFL tm, th))
-    | AP_THM_prf  (th,tm) => log_thm (MK_COMB(th, REFL tm))
-    | EQ_MP_prf (th1,th2) => let
-      val _ = log_thm th1
-      val _ = log_thm th2
-      val _ = log_command "eqMp"
       in () end
     | EQ_IMP_RULE1_prf th => let
       val (t1,t2) = dest_eq(concl th)
@@ -450,18 +549,6 @@ val (log_term, log_thm, log_clear) = let
       val th5 = INST_TY_TERM ([P|->abs,Q|->concl th2],[alpha|->vty]) CHOOSE_pth
       val _ = log_thm (MP (MP th5 th4) th1)
       in () end
-    | CONJ_prf (th1,th2) => let
-      val th = INST [p|->concl th1,q|->concl th2] CONJ_pth
-      val _ = log_thm (PROVE_HYP th2 (PROVE_HYP th1 th))
-      in () end
-    | CONJUNCT1_prf th => let
-      val (l,r) = dest_conj(concl th)
-      val _ = log_thm (PROVE_HYP th (INST [P|->l,Q|->r] CONJUNCT1_pth))
-      in () end
-    | CONJUNCT2_prf th => let
-      val (l,r) = dest_conj(concl th)
-      val _ = log_thm (PROVE_HYP th (INST [P|->l,Q|->r] CONJUNCT2_pth))
-      in () end
     | DISJ1_prf (th,tm) => let
       val _ = log_thm (PROVE_HYP th (INST [P|->concl th,Q|->tm] DISJ1_pth))
       in () end
@@ -485,19 +572,6 @@ val (log_term, log_thm, log_clear) = let
       val _ = log_thm (PROVE_HYP th (INST [P|->tm] CCONTR_pth))
       in () end
     | Beta_prf th => log_thm (RIGHT_BETA th)
-    | Mk_comb_prf (th,th1,th2) => log_thm (TRANS th (MK_COMB(th1,th2)))
-    | Mk_abs_prf (th,bv,th1) => log_thm (TRANS th (ABS bv th1))
-    | Specialize_prf (t,th) => log_thm (SPEC t th)
-    | Def_const_prf (c,t) => let
-      val _ = log_const_name c
-      val _ = log_term t
-      val _ = log_command "defineConst"
-      val k = save_dict ob
-      val _ = log_command "pop"
-      val _ = log_command "pop"
-      val _ = log_num k
-      val _ = log_command "ref"
-      in () end
     | Def_spec_prf (consts,th) => log_thm (rev_itlist specify consts th)
     | Def_tyop_prf (name,tyvars,th,aty) => let
       val n = log_tyop_name name
@@ -531,20 +605,26 @@ val (log_term, log_thm, log_clear) = let
                                   [alpha|->rty,beta|->aty]) Def_tyop_pth
       val _       = log_thm (PROVE_HYP (GEN r ra) (PROVE_HYP (GEN a ar) pth))
       in () end
+    val _ = if !verbosity >= 3 then HOL_MESG("Finish proof for "^(Susp.force ths)) else ()
     val _ = save_dict ob
     in () end
   end
 in (log_term, log_thm, reset_dict) end
 
 fun export_thm th = let
-  open Thm
+  open Thm Feedback Parse
   val _ = case !log_state of
       Not_logging => ()
     | Active_logging _ => let
+      val v = !verbosity >= 2
+      val s = thm_to_backend_string th
+      val _ = if v then HOL_MESG("Start logging\n"^s^"\n") else ()
       val _ = log_thm th
       val _ = log_list log_term (hyp th)
       val _ = log_term (concl th)
-           in log_command "thm" end
+      val _ = log_command "thm"
+      val _ = if v then HOL_MESG("Finish logging\n"^s^"\n") else ()
+      in () end
     val _ = delete_proof th
 in th end
 
@@ -556,7 +636,8 @@ val mk_path = let
   exception exists
   fun mk_path name = let
     val path = OS.Path.concat(opentheory_dir,OS.Path.joinBaseExt{base=name,ext=SOME"art"})
-  in if OS.FileSys.access(path,[]) then raise exists else path end
+    in path end
+(*  in if OS.FileSys.access(path,[]) then raise exists else path end *)
 in fn name => let
      fun try n = mk_path (name^(Int.toString n)) handle exists => try (n+1)
    in mk_path name handle exists => try 0 end
