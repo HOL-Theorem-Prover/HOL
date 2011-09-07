@@ -124,11 +124,11 @@ val (log_term, log_thm, log_clear) = let
       val _ = log_name n
       in n end
     handle Map.NotFound
-    => raise ERR "log_tyop_name" ("No OpenTheory name for "^(#Thy tyop)^"$"^(#Tyop tyop))
+    => raise ERR "log_tyop_name" ("No OpenTheory name for type "^(#Thy tyop)^"$"^(#Tyop tyop))
     fun log_const_name const =
       log_name (Map.find(const_to_ot_map(),const))
     handle Map.NotFound
-    => raise ERR "log_const_name" ("No OpenTheory name for "^(#Thy const)^"$"^(#Name const))
+    => raise ERR "log_const_name" ("No OpenTheory name for constant "^(#Thy const)^"$"^(#Name const))
   end
 
   fun log_tyop tyop = let
@@ -340,7 +340,9 @@ val (log_term, log_thm, log_clear) = let
     val ob = OThm th
   in if saved ob then () else let
     val ths = Susp.delay (fn () => (Parse.thm_to_backend_string th))
-    val _ = if !verbosity >= 3 then HOL_MESG("Start a "^proof_type (proof th)^" proof for "^(Susp.force ths)) else ()
+    val _ = if !verbosity >= 3 then HOL_MESG("Start a "^proof_type (proof th)^" proof for "^(Susp.force ths))
+       else if !verbosity >= 2 then HOL_MESG(proof_type (proof th))
+       else ()
     val _ = case proof th of
 
     (* 0: no recursive calls to log_thm *)

@@ -3,7 +3,7 @@ open HolKernel Parse boolLib
 open bossLib simpLib
 
 local open Logging in
-  val _ = set_trace "opentheory logging" 5
+  val _ = set_trace "opentheory logging" 2
   val new_theory = start_logging o new_theory
   val store_thm = export_thm o store_thm
   val export_theory = export_theory o stop_logging
@@ -12,9 +12,17 @@ end
 local open OpenTheoryMap in
   val ns = "combinatoryLogicExample."
   fun c x = OpenTheory_const_name {const={Thy="cl",Name=x},name=ns^x}
-  val _ = c "confluent"
+  fun t x = OpenTheory_tyop_name {tyop={Thy="cl",Tyop=x},name=ns^x}
+  val _ = t "cl"
+  val _ = c "S"
+  val _ = c "K"
+  val _ = c "#"
+  val _ = c "-->"
+  val _ = c "-||->"
   val _ = c "RTC"
+  val _ = c "confluent"
   val _ = c "normform"
+  val _ = c "diamond"
 end
 
 val _ = new_theory "cl";
