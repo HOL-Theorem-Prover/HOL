@@ -50,6 +50,7 @@ val proof_type = let open Thm fun
 |f (Mk_abs_prf _) = "Mk_abs"
 |f (Mk_comb_prf _) = "Mk_comb"
 |f (Specialize_prf _) = "Specialize"
+|f (deductAntisym_prf _) = "deductAntisym"
 in f end
 
 datatype log_state =
@@ -213,13 +214,23 @@ val (log_term, log_thm, log_clear) = let
   (* Attribution: ideas (and code) for reconstructing DISCH, SPEC, GEN, etc.
                   taken from HOL Light *)
   local open metisLib Thm Conv boolTheory boolSyntax Term Type Lib Drule in
+    fun proveHyp th1 th2 =
+    case HOLset.find (aconv (concl th1)) (hypset th2) of
+        SOME _ => EQ_MP (deductAntisym th1 th2) th1
+      | NONE => th2
+    val p = ``p:bool``
+    val q = ``q:bool``
+    val eqtIntro = let
+      val pth = let
+        val th1 = deductAntisym (ASSUME p) TRUTH
+        val th2 = EQT_ELIM(ASSUME(concl th1))
+        in deductAntisym th2 th1 end
+      in fn th => EQ_MP (INST[p|->concl th] pth) th end
     (* These are in the OpenTheory standard library, so we can give them axiom proofs *)
     val IMP_DEF = mk_thm([],``$==> = \p q. p /\ q <=> p``)
     val EXISTS_DEF = mk_thm([],``$? = \P:'a->bool. !q. (!x. P x ==> q) ==> q``)
     val AND_DEF = mk_thm([],``$/\ = \p q. (\f:bool->bool->bool. f p q) = (\f. f T T)``)
     val EXISTS_THM = boolTheory.EXISTS_DEF
-    val p = ``p:bool``
-    val q = ``q:bool``
     val DISCH_pth = SYM(BETA_RULE (AP_THM (AP_THM IMP_DEF p) q))
     val MP_pth = let
       val th1 = BETA_RULE (AP_THM (AP_THM IMP_DEF p) q)
@@ -251,7 +262,7 @@ val (log_term, log_thm, log_clear) = let
     val CONJ_pth = let
       val pth = ASSUME p
       val qth = ASSUME q
-      val th1 = MK_COMB(AP_TERM f (EQT_INTRO pth),EQT_INTRO qth)
+      val th1 = MK_COMB(AP_TERM f (eqtIntro pth),eqtIntro qth)
       val th2 = ABS f th1
       val th3 = BETA_RULE (AP_THM (AP_THM AND_DEF p) q)
       in EQ_MP (SYM th3) th2 end
@@ -376,6 +387,11 @@ val (log_term, log_thm, log_clear) = let
       val _ = log_thm th
       val _ = log_command "absThm"
       in () end
+    | deductAntisym_prf (th1,th2) => let
+      val _ = log_thm th1
+      val _ = log_thm th2
+      val _ = log_command "deductAntisym"
+      in () end
     | EQ_MP_prf (th1,th2) => let
       val _ = log_thm th1
       val _ = log_thm th2
@@ -413,6 +429,8 @@ val (log_term, log_thm, log_clear) = let
     (* CONV_RULE (EQ_MP) *)
     (* THENC (TRANS) *)
     (* ALPHA_CONV (ALPHA) *)
+    (* proveHyp (EQ_MP,deductAntisym) *)
+    (* INST_TY_TERM (INST,INST_TYPE) *)
 
     (* 4: recursive calls to proofs <=3 and subproofs only *)
     | SUBST_prf (map,tm,th) => let
@@ -453,42 +471,36 @@ val (log_term, log_thm, log_clear) = let
       val _ = log_thm lth
       val _ = log_command "eqMp"
       in () end
+    (* RAND_CONV (AP_TERM) *)
+    (* EQT_ELIM (EQ_MP,SYM) *)
+    (* eqtIntro (deductAntisym,ASSUME,EQT_ELIM,EQ_MP,INST) *)
+    (* CONJ_pth (ASSUME,MK_COMB,AP_TERM,eqtIntro,ABS,BETA_RULE,AP_THM,EQ_MP,SYM) *)
     (* ABS_CONV (ALPHA_CONV,TRANS,ABS) *)
     (* COMB_CONV (MK_COMB,AP_THM,AP_TERM) *)
     (* SUB_CONV (COMB_CONV,ABS_CONV) *)     (* easy to see topsort here *)
     (* DEPTH_CONV (SUB_CONV, THENC) *)
+    (* REDEPTH_CONV (SUB_CONV,THENC) *)
     (* BETA_RULE (CONV_RULE,DEPTH_CONV,BETA_CONV) *)
+    (* REBETA_RULE (CONV_RULE,REDEPTH_CONV,BETA_CONV) *)
     (* DISCH_pth (SYM,BETA_RULE,AP_THM) *)
+    (* CONJUNCTn_pth (CONV_RULE,RAND_CONV,BETA_CONV,AP_THM,EQ_MP,ASSUME,EQT_ELIM,REBETA_RULE) *)
 
-    (* 5: *)
-
-    (* 6: expect disaster *)
-    (* MP_pth (BETA_RULE,AP_THM,EQ_MP,ASSUME,CONJUNCT2,SYM) *)
-    (* EQT_INTRO (EQ_MP,SPEC) *)
-    (* CONJ_pth (ASSUME,MK_COMB,AP_TERM,EQT_INTRO,ABS,BETA_RULE,AP_THM,EQ_MP,SYM) *)
+    (* 5: recursive calls to proofs <=4 and subproofs *)
     | CONJ_prf (th1,th2) => let
       val th = INST [p|->concl th1,q|->concl th2] CONJ_pth
-      val _ = log_thm (PROVE_HYP th2 (PROVE_HYP th1 th))
+      val _ = log_thm (proveHyp th2 (proveHyp th1 th))
       in () end
     | CONJUNCT1_prf th => let
       val (l,r) = dest_conj(concl th)
-      val _ = log_thm (PROVE_HYP th (INST [P|->l,Q|->r] CONJUNCT1_pth))
+      val _ = log_thm (proveHyp th (INST [P|->l,Q|->r] CONJUNCT1_pth))
       in () end
     | CONJUNCT2_prf th => let
       val (l,r) = dest_conj(concl th)
-      val _ = log_thm (PROVE_HYP th (INST [P|->l,Q|->r] CONJUNCT2_pth))
+      val _ = log_thm (proveHyp th (INST [P|->l,Q|->r] CONJUNCT2_pth))
       in () end
-    | Specialize_prf (t,th) => log_thm (SPEC t th)
-    | DISCH_prf (tm,th) => let
-      val th1 = CONJ (ASSUME tm) th
-      val th2 = CONJUNCT1 (ASSUME (concl th1))
-      val th4 = INST [p|->tm, q|->concl th] DISCH_pth
-      val _ = log_thm th4
-      val _ = log_thm th1
-      val _ = log_thm th2
-      val _ = log_command "deductAntisym"
-      val _ = log_command "eqMp"
-      in () end
+
+    (* 6: etc *)
+    (* MP_pth (BETA_RULE,AP_THM,EQ_MP,ASSUME,CONJUNCT2,SYM) *)
     | MP_prf (th1,th2) => let
       val (ant,con) = dest_imp(concl th1)
       val _ = log_thm th1
@@ -501,7 +513,41 @@ val (log_term, log_thm, log_clear) = let
       val _ = saved (OThm th1)
       val _ = log_command "eqMp"
       in () end
-    | GEN_ABS_prf (c,vlist,th) => (let
+    | DISCH_prf (tm,th) => let
+      val th1 = CONJ (ASSUME tm) th
+      val th2 = CONJUNCT1 (ASSUME (concl th1))
+      val th4 = INST [p|->tm, q|->concl th] DISCH_pth
+      val _ = log_thm th4
+      val _ = log_thm th1
+      val _ = log_thm th2
+      val _ = log_command "deductAntisym"
+      val _ = log_command "eqMp"
+      in () end
+    (* GEN_pth (ASSUME,AP_THM,SYM,CONV_RULE,RAND_CONV,BETA_CONV,EQ_MP) *)
+    | GEN_prf (v,th) => let
+      val vty = type_of v
+      val P   = mk_var("P",vty-->bool)
+      val pth = INST_TY_TERM ([P|->mk_abs(v,concl th)],[alpha|->vty]) GEN_pth
+      val _ = log_thm (proveHyp (ABS v (eqtIntro th)) pth)
+      in () end
+    (* DISJn_pth (MP,ASSUME,GEN,DISCH,EQ_MP,SYM) *)
+    | DISJ1_prf (th,tm) => let
+      val _ = log_thm (proveHyp th (INST [P|->concl th,Q|->tm] DISJ1_pth))
+      in () end
+    | DISJ2_prf (tm,th) => let
+      val _ = log_thm (proveHyp th (INST [P|->concl th,Q|->tm] DISJ2_pth))
+      in () end
+    (* DISCH_ALL (DISCH) *)
+    (* SPEC_pth (EQ_MP,AP_THM,ASSUME,CONV_RULE,BETA_CONV,RAND_CONV,DISCH_ALL,EQT_ELIM) *)
+    | SPEC_prf (tm,th) => let
+      val abs = rand(concl th)
+      val (v,_) = dest_abs abs
+      val vty = type_of v
+      val pth = INST_TY_TERM ([mk_var("P",vty-->bool)|->abs,mk_var("x",vty)|->tm],[alpha|->vty]) SPEC_pth
+      val _ = log_thm (CONV_RULE BETA_CONV (MP pth th))
+      in () end
+    | Specialize_prf (t,th) => log_thm (SPEC t th)
+    | GEN_ABS_prf (c,vlist,th) => let
       val dom = fst o dom_rng
       fun foo th = let val (_,_,ty) = dest_eq_ty(concl th) in dom ty end
       val f = case c of
@@ -518,25 +564,12 @@ val (log_term, log_thm, log_clear) = let
       val (t1,t2) = dest_eq(concl th)
       val _ = log_thm (DISCH t2 (EQ_MP (SYM th) (ASSUME t2)))
       in () end
-    | SPEC_prf (tm,th) => let
-      val abs = rand(concl th)
-      val (v,_) = dest_abs abs
-      val vty = type_of v
-      val pth = INST_TY_TERM ([mk_var("P",vty-->bool)|->abs,mk_var("x",vty)|->tm],[alpha|->vty]) SPEC_pth
-      val _ = log_thm (CONV_RULE BETA_CONV (MP pth th))
-      in () end
-    | GEN_prf (v,th) => let
-      val vty = type_of v
-      val P   = mk_var("P",vty-->bool)
-      val pth = INST_TY_TERM ([P|->mk_abs(v,concl th)],[alpha|->vty]) GEN_pth
-      val _ = log_thm (PROVE_HYP (ABS v (EQT_INTRO th)) pth)
-      in () end
     | EXISTS_prf (fm,tm,th) => let
       val ty = type_of tm
       val (qf,abs) = dest_comb fm
       val bth = BETA_CONV(mk_comb(abs,tm))
       val cth = INST_TY_TERM ([mk_var("P",ty)|->abs,mk_var("x",ty)|->tm],[alpha|->ty]) EXISTS_pth
-      val _ = log_thm (PROVE_HYP (EQ_MP (SYM bth) th) cth)
+      val _ = log_thm (proveHyp (EQ_MP (SYM bth) th) cth)
       in () end
     | CHOOSE_prf (v,th1,th2) => let
       val vty = type_of v
@@ -549,18 +582,12 @@ val (log_term, log_thm, log_clear) = let
       val th5 = INST_TY_TERM ([P|->abs,Q|->concl th2],[alpha|->vty]) CHOOSE_pth
       val _ = log_thm (MP (MP th5 th4) th1)
       in () end
-    | DISJ1_prf (th,tm) => let
-      val _ = log_thm (PROVE_HYP th (INST [P|->concl th,Q|->tm] DISJ1_pth))
-      in () end
-    | DISJ2_prf (tm,th) => let
-      val _ = log_thm (PROVE_HYP th (INST [P|->concl th,Q|->tm] DISJ2_pth))
-      in () end
     | DISJ_CASES_prf (th0,th1,th2) => let
       val c1 = concl th1
       val c2 = concl th2
       val (l,r) = dest_disj (concl th0)
       val th = INST [P|->l,Q|->r,R|->c1] DISJ_CASES_pth
-      val _ = log_thm (PROVE_HYP (DISCH r th2) (PROVE_HYP (DISCH l th1) (PROVE_HYP th0 th)))
+      val _ = log_thm (proveHyp (DISCH r th2) (proveHyp (DISCH l th1) (proveHyp th0 th)))
       in () end
     | NOT_INTRO_prf th => let
       val _ = log_thm (EQ_MP (INST [P|->rand(rator(concl th))] NOT_INTRO_pth) th)
@@ -569,7 +596,7 @@ val (log_term, log_thm, log_clear) = let
       val _ = log_thm (EQ_MP (INST [P|->rand(concl th)] NOT_ELIM_pth) th)
       in () end
     | CCONTR_prf (tm,th) => let
-      val _ = log_thm (PROVE_HYP th (INST [P|->tm] CCONTR_pth))
+      val _ = log_thm (proveHyp th (INST [P|->tm] CCONTR_pth))
       in () end
     | Beta_prf th => log_thm (RIGHT_BETA th)
     | Def_spec_prf (consts,th) => log_thm (rev_itlist specify consts th)
@@ -603,7 +630,7 @@ val (log_term, log_thm, log_clear) = let
                                    mk_var("abs",rty-->aty)|->abs,
                                    mk_var("rep",aty-->rty)|->rep],
                                   [alpha|->rty,beta|->aty]) Def_tyop_pth
-      val _       = log_thm (PROVE_HYP (GEN r ra) (PROVE_HYP (GEN a ar) pth))
+      val _       = log_thm (proveHyp (GEN r ra) (proveHyp (GEN a ar) pth))
       in () end
     val _ = if !verbosity >= 3 then HOL_MESG("Finish proof for "^(Susp.force ths)) else ()
     val _ = save_dict ob

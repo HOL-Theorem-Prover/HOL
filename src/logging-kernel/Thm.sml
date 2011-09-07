@@ -147,6 +147,7 @@ and proof =
 | Def_tyop_prf of {Thy:string,Tyop:string} * hol_type list * thm * hol_type
 | Def_const_prf of {Thy:string,Name:string} * term
 | Def_spec_prf of term list * thm
+| deductAntisym_prf of thm * thm
 
 fun proof (THM(_,_,_,p)) = !p
 fun delete_proof (THM(_,_,_,p)) = p := Axiom_prf
@@ -1263,5 +1264,11 @@ in
   mk_disk_thm(Tag.read_disk_tag s,list_hyp asl,c,Axiom_prf)
 end
 end; (* local *)
+
+(* Some OpenTheory kernel rules *)
+fun deductAntisym (th1 as THM(o1,a1,c1,p1)) (th2 as THM(o2,a2,c2,p2)) = let
+  val a1' = disch (c2,a1)
+  val a2' = disch (c1,a2)
+in make_thm Count.Axiom (Tag.merge o1 o2, union_hyp a1' a2', mk_eq_nocheck bool c1 c2, deductAntisym_prf(th1,th2)) end
 
 end (* Thm *)

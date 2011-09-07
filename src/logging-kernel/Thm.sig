@@ -46,9 +46,12 @@ sig
   | Mk_abs_prf of thm * term * thm
   | Mk_comb_prf of thm * thm * thm
   | Specialize_prf of term * thm
+  | deductAntisym_prf of thm * thm
 
   val proof : thm -> proof
   val delete_proof : thm -> unit
   val mk_proof_thm : proof -> term list * term -> thm
+
+  val deductAntisym : thm -> thm -> thm
 
 end
