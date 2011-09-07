@@ -139,17 +139,17 @@ val (log_term, log_thm, log_clear) = let
       val _ = log_const {Thy=Thy,Name=Name}
       val _ = log_type Ty
       val _ = log_command "constTerm"
-    in () end handle HOL_ERR _ => let
+    in () end handle HOL_ERR {origin_function="dest_thy_const",...} => let
       val (t1,t2) = dest_comb tm
       val _ = log_term t1
       val _ = log_term t2
       val _ = log_command "appTerm"
-    in () end handle HOL_ERR _ => let
+    in () end handle HOL_ERR {origin_function="dest_comb",...} => let
       val (v,b) = dest_abs tm
       val _ = log_var v
       val _ = log_term b
       val _ = log_command "absTerm"
-    in () end handle HOL_ERR _ => let
+    in () end handle HOL_ERR {origin_function="dest_abs",...} => let
       val _ = log_var tm
       val _ = log_command "varTerm"
     in () end
@@ -315,7 +315,7 @@ val (log_term, log_thm, log_clear) = let
     | DISCH_prf (tm,th) => let
       val th1 = CONJ (ASSUME tm) th
       val th2 = CONJUNCT1 (ASSUME (concl th1))
-      val th4 = INST [tm|->p, concl th|->q] DISCH_pth
+      val th4 = INST [p|->tm, q|->concl th] DISCH_pth
       val _ = log_thm th4
       val _ = log_thm th1
       val _ = log_thm th2
@@ -428,7 +428,9 @@ val (log_term, log_thm, log_clear) = let
       in () end
     | GEN_prf (v,th) => let
       val vty = type_of v
-      val pth = INST_TY_TERM ([mk_var("P",vty-->bool)|->mk_abs(x,concl th)],[alpha|->vty]) GEN_pth
+      val P   = mk_var("P",vty-->bool)
+      val x   = mk_var("x",vty)
+      val pth = INST_TY_TERM ([P|->mk_abs(x,concl th)],[alpha|->vty]) GEN_pth
       val _ = log_thm (PROVE_HYP (ABS x (EQT_INTRO th)) pth)
       in () end
     | EXISTS_prf (fm,tm,th) => let
@@ -554,7 +556,7 @@ end
 val mk_path = let
   exception exists
   fun mk_path name = let
-    val path = OS.Path.concat(opentheory_dir,OS.Path.joinBaseExt{base=name,ext=SOME"4rt"})
+    val path = OS.Path.concat(opentheory_dir,OS.Path.joinBaseExt{base=name,ext=SOME"art"})
   in if OS.FileSys.access(path,[]) then raise exists else path end
 in fn name => let
      fun try n = mk_path (name^(Int.toString n)) handle exists => try (n+1)
