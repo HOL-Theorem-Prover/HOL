@@ -563,7 +563,7 @@ fun export_thm th = let
       val _ = log_term (concl th)
            in log_command "thm" end
     val _ = delete_proof th
-in () end
+in th end
 
 local val op ^ = OS.Path.concat in
   val opentheory_dir = Globals.HOLDIR^"src"^"opentheory"
