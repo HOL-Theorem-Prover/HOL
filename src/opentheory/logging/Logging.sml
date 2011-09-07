@@ -158,7 +158,7 @@ val (log_term, log_thm, log_clear) = let
       val _ = log_tyop {Thy=Thy,Tyop=Tyop}
       val _ = log_list log_type Args
       val _ = log_command "opType"
-    in () end handle HOL_ERR _ => let
+    in () end handle HOL_ERR {origin_function="dest_thy_type",...} => let
       val _ = log_type_var ty
       val _ = log_command "varType"
     in () end
@@ -568,7 +568,7 @@ val (log_term, log_thm, log_clear) = let
       val ty = type_of tm
       val (qf,abs) = dest_comb fm
       val bth = BETA_CONV(mk_comb(abs,tm))
-      val cth = INST_TY_TERM ([mk_var("P",ty)|->abs,mk_var("x",ty)|->tm],[alpha|->ty]) EXISTS_pth
+      val cth = INST_TY_TERM ([mk_var("P",ty-->bool)|->abs,mk_var("x",ty)|->tm],[alpha|->ty]) EXISTS_pth
       val _ = log_thm (proveHyp (EQ_MP (SYM bth) th) cth)
       in () end
     | CHOOSE_prf (v,th1,th2) => let
