@@ -57,7 +57,7 @@ val (log_term, log_thm, log_clear) = let
       SOME k => k
     | NONE => let
         val k = next_key()
-        val _ = Map.insert(!dict,x,k)
+        val _ = dict := Map.insert(!dict,x,k)
         val _ = log_num k
         val _ = log_command "def"
       in k end
