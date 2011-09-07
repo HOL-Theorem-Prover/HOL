@@ -579,7 +579,7 @@ val (log_term, log_thm, log_clear) = let
       val pat = subst [bv|->v] bod
       val th3 = CONV_RULE BETA_CONV (ASSUME cmb)
       val th4 = GEN v (DISCH cmb (MP (DISCH pat th2) th3))
-      val th5 = INST_TY_TERM ([P|->abs,Q|->concl th2],[alpha|->vty]) CHOOSE_pth
+      val th5 = INST_TY_TERM ([mk_var("P",vty-->bool)|->abs,Q|->concl th2],[alpha|->vty]) CHOOSE_pth
       val _ = log_thm (MP (MP th5 th4) th1)
       in () end
     | DISJ_CASES_prf (th0,th1,th2) => let
