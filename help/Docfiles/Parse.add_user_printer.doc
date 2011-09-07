@@ -159,7 +159,8 @@ itself only with printing conjunctions.  Note how the actions that make up the p
     end handle HOL_ERR _ => raise term_pp_types.UserPP_Failed;
   >  val myprint = fn :
        'a -> 'b ->
-       (grav * grav * grav -> int -> term -> (term_pp_types.printing_info,'c)smpp.t) ->
+       (grav * grav * grav -> int -> term ->
+         (term_pp_types.printing_info,'c)smpp.t) ->
        term_pp_types.ppstream_funs -> 'd -> int -> term ->
        (term_pp_types.printing_info,unit)smpp.t
 
