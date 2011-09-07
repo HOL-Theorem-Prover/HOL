@@ -166,7 +166,7 @@ val (log_term, log_thm, log_clear) = let
 
   (* Attribution: ideas (and code) for reconstructing DISCH, SPEC, GEN, etc.
                   taken from HOL Light *)
-  local open metisLib Thm Conv boolTheory boolSyntax Term Drule in
+  local open metisLib Thm Conv boolTheory boolSyntax Term Type Lib Drule in
     (* These are in the OpenTheory standard library, so we can give them axiom proofs *)
     val IMP_DEF = mk_thm([],``$==> = \p q. p /\ q <=> p``)
     val EXISTS_DEF = mk_thm([],``$? = \P:'a->bool. !q. (!x. P x ==> q) ==> q``)
@@ -279,7 +279,7 @@ val (log_term, log_thm, log_clear) = let
   end
 
   fun log_thm th = let
-    open Thm Term Type Lib Drule boolSyntax
+    open Thm Term Type Lib Drule Conv boolSyntax
     val ob = OThm th
   in if saved ob then () else let
     val _ = case proof th of
@@ -289,7 +289,6 @@ val (log_term, log_thm, log_clear) = let
       val _ = log_command "axiom"
       in () end
     | ALPHA_prf (t1,t2) => let
-      open Term Lib Type boolSyntax
       val _ = log_thm (REFL (mk_comb(inst[alpha|->type_of t1]equality,t1)))
       val _ = log_thm (REFL t2)
       val _ = log_command "appThm"
@@ -324,7 +323,6 @@ val (log_term, log_thm, log_clear) = let
       val _ = log_command "eqMp"
       in () end
     | MP_prf (th1,th2) => let
-      open boolSyntax
       val (ant,con) = dest_imp(concl th1)
       val _ = log_thm th1
       val _ = log_thm th2
@@ -337,12 +335,11 @@ val (log_term, log_thm, log_clear) = let
       val _ = log_command "eqMp"
       in () end
     | SUBST_prf (map,tm,th) => let
-      open Term Feedback HOLset Lib
       fun log_rconv bvs source template = (* return |- source = template[rhs/vars] *)
         log_thm(ALPHA source template)
-      handle HOL_ERR _ =>
+      handle Feedback.HOL_ERR _ =>
         if is_var template
-        then if member(bvs,template)
+        then if HOLset.member(bvs,template)
              then log_thm (REFL template)
              else log_thm (valOf(subst_assoc (equal template) map))
       else let
@@ -351,10 +348,10 @@ val (log_term, log_thm, log_clear) = let
         val _ = log_rconv bvs sf tf
         val _ = log_rconv bvs sa ta
         val _ = log_command "appThm"
-      in () end handle HOL_ERR _ => let
+      in () end handle Feedback.HOL_ERR _ => let
         val (sv,sb) = dest_abs source
         val (tv,tb) = dest_abs template
-        val _ = log_rconv (add(bvs,tv)) sb tb
+        val _ = log_rconv (HOLset.add(bvs,tv)) sb tb
         val _ = log_var tv
         val _ = log_command "absThm"
       in () end
@@ -373,7 +370,6 @@ val (log_term, log_thm, log_clear) = let
       val _ = log_command "subst"
       in () end
     | GEN_ABS_prf (c,vlist,th) => let
-      open Type Lib boolSyntax
       val dom = fst o dom_rng
       fun foo th = let val (_,_,ty) = dest_eq_ty(concl th) in dom ty end
       val f = case c of
@@ -386,7 +382,7 @@ val (log_term, log_thm, log_clear) = let
       val tm = concl th
       val (l,r) = boolSyntax.dest_eq tm
       val lth = REFL l
-      val _ = log_term (Term.rator(Term.rator tm))
+      val _ = log_term (rator(rator tm))
       val _ = log_command "refl"
       val _ = log_thm th
       val _ = log_command "appThm"
@@ -396,7 +392,7 @@ val (log_term, log_thm, log_clear) = let
       val _ = log_command "eqMp"
       in () end
     | TRANS_prf (th1,th2) => let
-      val _ = log_term (Term.rator(concl th1))
+      val _ = log_term (rator(concl th1))
       val _ = log_command "refl"
       val _ = log_thm th2
       val _ = log_command "appThm"
@@ -416,17 +412,14 @@ val (log_term, log_thm, log_clear) = let
       val _ = log_command "eqMp"
       in () end
     | EQ_IMP_RULE1_prf th => let
-      open boolSyntax
       val (t1,t2) = dest_eq(concl th)
       val _ = log_thm (DISCH t1 (EQ_MP th (ASSUME t1)))
       in () end
     | EQ_IMP_RULE2_prf th => let
-      open boolSyntax
       val (t1,t2) = dest_eq(concl th)
       val _ = log_thm (DISCH t2 (EQ_MP (SYM th) (ASSUME t2)))
       in () end
     | SPEC_prf (tm,th) => let
-      open Term Type Drule Lib
       val abs = rand(concl th)
       val (v,_) = dest_abs abs
       val vty = type_of v
@@ -434,13 +427,11 @@ val (log_term, log_thm, log_clear) = let
       val _ = log_thm (CONV_RULE BETA_CONV (MP pth th))
       in () end
     | GEN_prf (v,th) => let
-      open Term Type Drule Lib
       val vty = type_of v
       val pth = INST_TY_TERM ([mk_var("P",vty-->bool)|->mk_abs(x,concl th)],[alpha|->vty]) GEN_pth
       val _ = log_thm (PROVE_HYP (ABS x (EQT_INTRO th)) pth)
       in () end
     | EXISTS_prf (fm,tm,th) => let
-      open Term Drule Lib
       val ty = type_of tm
       val (qf,abs) = dest_comb fm
       val bth = BETA_CONV(mk_comb(abs,tm))
@@ -448,7 +439,6 @@ val (log_term, log_thm, log_clear) = let
       val _ = log_thm (PROVE_HYP (EQ_MP (SYM bth) th) cth)
       in () end
     | CHOOSE_prf (v,th1,th2) => let
-      open Term Drule Lib
       val vty = type_of v
       val abs = rand(concl th1)
       val (bv,bod) = dest_abs abs
@@ -460,30 +450,24 @@ val (log_term, log_thm, log_clear) = let
       val _ = log_thm (MP (MP th5 th4) th1)
       in () end
     | CONJ_prf (th1,th2) => let
-      open Drule Lib
       val th = INST [p|->concl th1,q|->concl th2] CONJ_pth
       val _ = log_thm (PROVE_HYP th2 (PROVE_HYP th1 th))
       in () end
     | CONJUNCT1_prf th => let
-      open Term boolSyntax Lib
       val (l,r) = dest_conj(concl th)
       val _ = log_thm (PROVE_HYP th (INST [P|->l,Q|->r] CONJUNCT1_pth))
       in () end
     | CONJUNCT2_prf th => let
-      open Term boolSyntax Lib
       val (l,r) = dest_conj(concl th)
       val _ = log_thm (PROVE_HYP th (INST [P|->l,Q|->r] CONJUNCT2_pth))
       in () end
     | DISJ1_prf (th,tm) => let
-      open Drule Lib
       val _ = log_thm (PROVE_HYP th (INST [P|->concl th,Q|->tm] DISJ1_pth))
       in () end
     | DISJ2_prf (tm,th) => let
-      open Drule Lib
       val _ = log_thm (PROVE_HYP th (INST [P|->concl th,Q|->tm] DISJ2_pth))
       in () end
     | DISJ_CASES_prf (th0,th1,th2) => let
-      open boolSyntax
       val c1 = concl th1
       val c2 = concl th2
       val (l,r) = dest_disj (concl th0)
@@ -491,18 +475,15 @@ val (log_term, log_thm, log_clear) = let
       val _ = log_thm (PROVE_HYP (DISCH r th2) (PROVE_HYP (DISCH l th1) (PROVE_HYP th0 th)))
       in () end
     | NOT_INTRO_prf th => let
-      open Term Lib
       val _ = log_thm (EQ_MP (INST [P|->rand(rator(concl th))] NOT_INTRO_pth) th)
       in () end
     | NOT_ELIM_prf th => let
-      open Term Lib
       val _ = log_thm (EQ_MP (INST [P|->rand(concl th)] NOT_ELIM_pth) th)
       in () end
     | CCONTR_prf (tm,th) => let
-      open Lib
       val _ = log_thm (PROVE_HYP th (INST [P|->tm] CCONTR_pth))
       in () end
-    | Beta_prf th => log_thm (Drule.RIGHT_BETA th)
+    | Beta_prf th => log_thm (RIGHT_BETA th)
     | Mk_comb_prf (th,th1,th2) => log_thm (TRANS th (MK_COMB(th1,th2)))
     | Mk_abs_prf (th,bv,th1) => log_thm (TRANS th (ABS bv th1))
     | Specialize_prf (t,th) => log_thm (SPEC t th)
@@ -555,6 +536,7 @@ val (log_term, log_thm, log_clear) = let
 in (log_term, log_thm, reset_dict) end
 
 fun export_thm th = let
+  open Thm
   val _ = case !log_state of
       Not_logging => ()
     | Active_logging _ => let
