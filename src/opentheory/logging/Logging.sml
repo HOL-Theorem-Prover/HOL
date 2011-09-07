@@ -429,9 +429,8 @@ val (log_term, log_thm, log_clear) = let
     | GEN_prf (v,th) => let
       val vty = type_of v
       val P   = mk_var("P",vty-->bool)
-      val x   = mk_var("x",vty)
-      val pth = INST_TY_TERM ([P|->mk_abs(x,concl th)],[alpha|->vty]) GEN_pth
-      val _ = log_thm (PROVE_HYP (ABS x (EQT_INTRO th)) pth)
+      val pth = INST_TY_TERM ([P|->mk_abs(v,concl th)],[alpha|->vty]) GEN_pth
+      val _ = log_thm (PROVE_HYP (ABS v (EQT_INTRO th)) pth)
       in () end
     | EXISTS_prf (fm,tm,th) => let
       val ty = type_of tm
