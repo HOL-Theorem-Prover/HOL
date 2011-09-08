@@ -125,7 +125,9 @@ val (log_term, log_thm, log_clear) = let
       in n end
     handle Map.NotFound
     => raise ERR "log_tyop_name" ("No OpenTheory name for type "^(#Thy tyop)^"$"^(#Tyop tyop))
-    fun log_const_name const =
+    fun log_const_name {Thy="Logging",Name} =
+      log_name Name
+    |   log_const_name const =
       log_name (Map.find(const_to_ot_map(),const))
     handle Map.NotFound
     => raise ERR "log_const_name" ("No OpenTheory name for constant "^(#Thy const)^"$"^(#Name const))
@@ -611,7 +613,7 @@ val (log_term, log_thm, log_clear) = let
       val _ = log_list log_type_var tyvars
       val _ = log_thm (EXISTENCE_RULE th)
       val _ = log_command "defineTypeOp"
-      val (_,phi) = dest_exists (concl th)
+      val (phi,_) = dest_comb (snd(dest_exists(concl th)))
       val (rty,_) = dom_rng(type_of phi)
       val a       = mk_var("a",aty)
       val r       = mk_var("r",rty)
