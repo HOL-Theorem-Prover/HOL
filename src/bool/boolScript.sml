@@ -169,6 +169,7 @@ val TYPE_DEFINITION =
                               (!x. P x = (?x'. x = rep x'))`);
 
 val _ = add_const "TYPE_DEFINITION";
+val _ = OpenTheory_const_name {const={Thy="bool",Name="TYPE_DEFINITION"},name="HOL4.TYPE_DEFINITION"}
 
 
 (*---------------------------------------------------------------------------*
@@ -242,6 +243,7 @@ val INFINITY_AX =
  *---------------------------------------------------------------------------*)
 
 val arb = new_constant("ARB",alpha);  (* Doesn't have to be defined at all. *)
+val _ = OpenTheory_const_name {const={Thy="bool",Name="arb"},name="Data.Bool.arb"}
 
 val bool_case_DEF =
  Definition.new_definition
