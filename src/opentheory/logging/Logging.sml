@@ -342,8 +342,8 @@ val (log_term, log_thm, log_clear) = let
     val ob = OThm th
   in if saved ob then () else let
     val ths = Susp.delay (fn () => (Parse.thm_to_backend_string th))
-    val _ = if !verbosity >= 3 then HOL_MESG("Start a "^proof_type (proof th)^" proof for "^(Susp.force ths))
-       else if !verbosity >= 2 then HOL_MESG(proof_type (proof th))
+    val _ = if !verbosity >= 4 then HOL_MESG("Start a "^proof_type (proof th)^" proof for "^(Susp.force ths))
+       else if !verbosity >= 3 then HOL_MESG(proof_type (proof th))
        else ()
     val _ = case proof th of
 
@@ -636,7 +636,7 @@ val (log_term, log_thm, log_clear) = let
                                   [alpha|->rty,beta|->aty]) Def_tyop_pth
       val _       = log_thm (proveHyp (GEN r ra) (proveHyp (GEN a ar) pth))
       in () end
-    val _ = if !verbosity >= 3 then HOL_MESG("Finish proof for "^(Susp.force ths)) else ()
+    val _ = if !verbosity >= 4 then HOL_MESG("Finish proof for "^(Susp.force ths)) else ()
     val _ = save_dict ob
     in () end
   end
@@ -647,7 +647,7 @@ fun export_thm th = let
   val _ = case !log_state of
       Not_logging => ()
     | Active_logging _ => let
-      val v = !verbosity >= 2
+      val v = !verbosity >= 1
       val s = thm_to_backend_string th
       val _ = if v then HOL_MESG("Start logging\n"^s^"\n") else ()
       val _ = log_thm th
@@ -664,14 +664,17 @@ local val op ^ = OS.Path.concat in
 end
 
 val mk_path = let
-  exception exists
+  exception exists of string
   fun mk_path name = let
     val path = OS.Path.concat(opentheory_dir,OS.Path.joinBaseExt{base=name,ext=SOME"art"})
-    in path end
-(*  in if OS.FileSys.access(path,[]) then raise exists else path end *)
+    in if OS.FileSys.access(path,[]) then raise exists path else path end
 in fn name => let
-     fun try n = mk_path (name^(Int.toString n)) handle exists => try (n+1)
-   in mk_path name handle exists => try 0 end
+     fun try n = mk_path (name^(Int.toString n)) handle exists _ => try (n+1)
+   in mk_path name handle exists old => let
+      val new = try 0
+      val _ = if !verbosity >= 1 then Feedback.HOL_MESG(old^" exists, logging to "^new^" instead.") else ()
+      in new end
+   end
 end
 
 fun start_logging() =
