@@ -66,7 +66,7 @@ fun log_raw s =
 
 fun log_num n = log_raw (Int.toString n)
 
-fun log_name s = log_raw ("\""^String.toString s^"\"")
+fun log_name s = log_raw ("\""^s^"\"")
 
 fun log_command s = log_raw s
 
