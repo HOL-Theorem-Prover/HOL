@@ -13,4 +13,7 @@ datatype object
 | OThm of Thm.thm
 
 val object_compare : object * object -> order
+
+val tyvar_to_ot   : string -> string
+val tyvar_from_ot : string -> string
 end

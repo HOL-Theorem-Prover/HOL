@@ -116,7 +116,7 @@ val (log_term, log_thm, log_clear) = let
       in true end
   | NONE => false
 
-  fun log_type_var ty = log_name (Type.dest_vartype ty)
+  fun log_type_var ty = log_name (tyvar_to_ot (Type.dest_vartype ty))
 
   local open OpenTheoryMap in
     fun log_tyop_name tyop = let

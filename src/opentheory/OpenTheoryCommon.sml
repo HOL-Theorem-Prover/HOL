@@ -1,5 +1,17 @@
 structure OpenTheoryCommon :> OpenTheoryCommon = struct
 
+local open String in
+fun tyvar_from_ot s =
+  if sub(s,0) = #"'" then s
+  else if size s = 1 then "'"^(str(Char.toLower (sub(s,0))))
+  else "'"^s
+fun tyvar_to_ot s =
+  if sub(s,0) = #"'" then
+    if size s = 2 then str(Char.toUpper (sub(s,1)))
+    else extract(s,1,NONE)
+  else s
+end
+
 datatype object
 = ONum of int
 | OName of string
