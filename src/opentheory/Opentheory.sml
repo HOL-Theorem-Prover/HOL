@@ -11,12 +11,12 @@ end
 
 val ERR = mk_HOL_ERR "Opentheory"
 
-type reader = {
-  define_tyop  : string ->
-                 {ax:thm, args:hol_type list, rep:string, abs:string} ->
-                 {rep_abs:thm, abs_rep:thm, rep:term, abs:term, tyop:thy_tyop},
-  define_const : string -> term -> {const:thy_const, def:thm},
-  axiom        : thm Net.net -> (term list * term) -> thm}
+type reader =
+{ define_tyop  : {name:thy_tyop, ax:thm, args:hol_type list, rep:thy_const, abs:thy_const} ->
+                 {rep_abs:thm, abs_rep:thm, rep:term, abs:term}
+, define_const : thy_const -> term -> thm
+, axiom        : thm Net.net -> (term list * term) -> thm
+}
 
 fun st_(st,{stack,dict,thms}) = {stack=st,dict=dict,thms=thms}
 fun push (ob,st) = st_(ob::(#stack st),st)
@@ -24,6 +24,8 @@ local open Substring in
   val trimlr = fn s => string(trimr 1 (triml 1 (full s)))
   val trimr  = fn s => string(trimr 1 (full s))
 end
+
+fun thy_const_to_string {Thy,Name} = Thy^"$"^Name
 
 fun raw_read_article {tyop_from_ot,const_from_ot} input {define_tyop,define_const,axiom} = let
   val ERR = ERR "read_article"
@@ -53,12 +55,15 @@ fun raw_read_article {tyop_from_ot,const_from_ot} input {define_tyop,define_cons
     | f "deductAntisym"(st as {stack=OThm t1::OThm t2::os,...}) = st_(OThm(DEDUCT_ANTISYM t1 t2)::os,st)
     | f "def"         {stack=ONum k::x::os,dict,thms}           = {stack=x::os,dict=Map.insert(dict,k,x),thms=thms}
     | f "defineConst" (st as {stack=OTerm t::OName n::os,...})  = let
-        val {const,def} = define_const n t
-        handle Map.NotFound => raise ERR ("defineConst: no map from "^n^" to a definition function")
-      in st_(OThm def::OConst const::os,st) end
+        val c = ot_to_const "defineConst" n
+        val def = define_const c t
+        handle Map.NotFound => raise ERR ("defineConst: no map from "^thy_const_to_string c^" to a definition function")
+      in st_(OThm def::OConst c::os,st) end
     | f "defineTypeOp"  (st as {stack=OThm ax::OList ls::OName rep::OName abs::OName n::os,...}) = let
         val ls = List.map (fn OName s => mk_vartype s | _ => raise ERR "defineTypeOp failed to pop a list of names") ls
-        val {abs,rep,abs_rep,rep_abs,tyop} = define_tyop n {ax=ax,args=ls,rep=rep,abs=abs}
+        val tyop = ot_to_tyop "defineTypeOp" n
+        val ot_to_const = ot_to_const "defineTypeOp"
+        val {abs,rep,abs_rep,rep_abs} = define_tyop {name=tyop,ax=ax,args=ls,rep=ot_to_const rep,abs=ot_to_const abs}
         val {Thy,Name,...} = dest_thy_const rep val rep = {Thy=Thy,Name=Name}
         val {Thy,Name,...} = dest_thy_const abs val abs = {Thy=Thy,Name=Name}
       in st_(OThm rep_abs::OThm abs_rep::OConst rep::OConst abs::OTypeOp tyop::os,st) end
