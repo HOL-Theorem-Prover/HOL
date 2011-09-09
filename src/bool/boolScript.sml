@@ -243,7 +243,7 @@ val INFINITY_AX =
  *---------------------------------------------------------------------------*)
 
 val arb = new_constant("ARB",alpha);  (* Doesn't have to be defined at all. *)
-val _ = OpenTheory_const_name {const={Thy="bool",Name="arb"},name="Data.Bool.arb"}
+val _ = OpenTheory_const_name {const={Thy="bool",Name="ARB"},name="Data.Bool.arb"}
 
 val bool_case_DEF =
  Definition.new_definition
