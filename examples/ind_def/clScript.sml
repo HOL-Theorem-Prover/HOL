@@ -28,10 +28,11 @@ local open OpenTheoryMap in
   val _ = c0 " @ind_typecl2" "ind_type.cl2"
   val _ = c0 " @ind_typecl1" "ind_type.cl1"
   val _ = c0 " @ind_typecl0" "ind_type.cl0"
-  (* TODO why are these here? *)
   val _ = c0 "old0-> @ind_typecl2<-old" "ind_type.junk_0"
   val _ = c0 "old1-> @ind_typecl1<-old" "ind_type.junk_1"
   val _ = c0 "old2-> @ind_typecl0<-old" "ind_type.junk_2"
+  val _ = c0 "mk_cl" "ind_type.mk_cl"
+  val _ = c0 "dest_cl" "ind_type.dest_cl"
 end
 *)
 
