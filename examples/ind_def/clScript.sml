@@ -2,7 +2,6 @@ open HolKernel Parse boolLib
 
 open bossLib simpLib
 
-(*
 local open Logging in
   val _ = set_trace "opentheory logging" 1
   val new_theory = start_logging o new_theory
@@ -43,7 +42,6 @@ local open OpenTheoryMap in
   val _ = c0 "mk_cl" "ind_type.mk_cl"
   val _ = c0 "dest_cl" "ind_type.dest_cl"
 end
-*)
 
 val _ = new_theory "cl";
 

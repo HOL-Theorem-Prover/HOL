@@ -68,6 +68,8 @@ fun log_num n = log_raw (Int.toString n)
 
 fun log_name s = log_raw ("\""^s^"\"")
 
+fun log_comment s = () (* log_raw ("#"^(String.translate (fn #"\n" => "\n#" | c => String.str c) s)) *)
+
 fun log_command s = log_raw s
 
 fun log_nil () = log_command "nil"
@@ -342,9 +344,11 @@ val (log_term, raw_log_thm, log_clear) = let
     val ob = OThm th
   in if saved ob then () else let
     val ths = Susp.delay (fn () => (Parse.thm_to_backend_string th))
-    val _ = if !verbosity >= 4 then HOL_MESG("Start a "^proof_type (proof th)^" proof for "^(Susp.force ths))
+    val pt  = proof_type (proof th)
+    val _ = if !verbosity >= 4 then HOL_MESG("Start a "^pt^" proof for "^(Susp.force ths))
        else if !verbosity >= 3 then HOL_MESG(proof_type (proof th))
        else ()
+    val _ = log_comment ("begin "^pt)
     val _ = case proof th of
 
     (* 0: no recursive calls to log_thm *)
@@ -637,6 +641,7 @@ val (log_term, raw_log_thm, log_clear) = let
       val _       = log_thm (proveHyp (GEN r ra) (proveHyp (GEN a ar) pth))
       in () end
     val _ = if !verbosity >= 4 then HOL_MESG("Finish proof for "^(Susp.force ths)) else ()
+    val _ = log_comment("end "^pt)
     val _ = save_dict ob
     in () end
   end
