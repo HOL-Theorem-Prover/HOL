@@ -318,7 +318,7 @@ fun extend_ruledb warn env {targets,dependencies,commands} (rdb,ddb) = let
   val deps = map dequote (tokenize (perform_substitution env dependencies))
 in
   if null commands then
-    (rdb, List.foldl (fn (tgt, ddb) => app_insert(ddb, tgt, deps)) ddb tgts)
+    (rdb, List.foldl (fn (tgt, ddb) => app_insert(ddb, tgt, deps)) ddb tgts, tgts)
   else let
       val info = {dependencies = deps, commands = commands}
       fun foldthis (t, dict) =
@@ -331,7 +331,7 @@ in
               Binarymap.insert(dict, t, info)
             end
     in
-      (List.foldl foldthis rdb tgts, ddb)
+      (List.foldl foldthis rdb tgts, ddb, tgts)
     end
 end
 

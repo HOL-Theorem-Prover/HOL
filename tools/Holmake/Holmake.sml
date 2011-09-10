@@ -349,6 +349,7 @@ val {targets, debug, dontmakes, show_usage, allfast, fastfiles,
      quit_on_failure, no_hmakefile, user_hmakefile, no_overlay,
      user_overlay, keep_going_flag, quiet_flag, do_logging_flag} =
   parse_command_line (CommandLine.arguments())
+val nob2002 = nob2002 orelse Systeml.HAVE_BASIS2002
 
 val (output_functions as {warn,tgtfatal,diag,info}) =
     output_functions {debug = debug, quiet_flag = quiet_flag}
@@ -473,22 +474,49 @@ val hmakefile =
       if exists_readable s then s
       else die_with ("Couldn't read/find makefile: "^s)
 
-val hmakefile_toks =
+val base_env = let
+  open Holmake_types
+  val basis_string = if nob2002 then [] else [LIT " basis2002.ui"]
+  val alist = [
+    ("ISIGOBJ", [VREF "if $(findstring NO_SIGOBJ,$(OPTIONS)),,$(SIGOBJ)"]),
+    ("MOSML_INCLUDES", [VREF ("patsubst %,-I %,"^
+                              (if cline_no_sigobj then ""
+                               else "$(ISIGOBJ)") ^
+                              " $(INCLUDES) $(PREINCLUDES)")]),
+    ("HOLMOSMLC", [VREF "MOSMLCOMP", LIT (" -q "), VREF "MOSML_INCLUDES"] @
+                  basis_string),
+    ("HOLMOSMLC-C",
+     [VREF "MOSMLCOMP", LIT (" -q "), VREF "MOSML_INCLUDES", LIT " -c "] @
+     basis_string @ [LIT " "] @
+     [VREF ("if $(findstring NO_OVERLAY,$(OPTIONS)),,"^DEFAULT_OVERLAY)]),
+    ("MOSMLC",  [VREF "MOSMLCOMP", LIT " ", VREF "MOSML_INCLUDES"]),
+    ("MOSMLDIR", [LIT MOSMLDIR]),
+    ("MOSMLCOMP", [VREF "protect $(MOSMLDIR)/mosmlc"]),
+    ("MOSMLLEX", [VREF "protect $(MOSMLDIR)/mosmllex"]),
+    ("MOSMLYAC", [VREF "protect $(MOSMLDIR)/mosmlyac"])] @
+    (if Systeml.HAVE_BASIS2002 then [("HAVE_BASIS2002", [LIT "1"])] else [])
+in
+  List.foldl (fn (kv,acc) => Holmake_types.env_extend kv acc)
+             Holmake_types.base_environment
+             alist
+end
+
+
+
+val (hmakefile_env,extra_rules,first_target) =
   if exists_readable hmakefile andalso not no_hmakefile
   then let
       val () = if debug then
                 print ("Reading additional information from "^hmakefile^"\n")
               else ()
     in
-      ReadHMF.read hmakefile
+      ReadHMF.read hmakefile base_env
     end
-  else []
+  else (base_env,
+        Holmake_types.empty_ruledb,
+        NONE)
 
-val hmakefile_env0 = let open Holmake_types
-                     in
-                       extend_env hmakefile_toks base_environment
-                     end
-val envlist = envlist hmakefile_env0
+val envlist = envlist hmakefile_env
 
 val hmake_includes = envlist "INCLUDES"
 val hmake_options = envlist "OPTIONS"
@@ -503,7 +531,7 @@ val hmake_qof = member "QUIT_ON_FAILURE" hmake_options
 val hmake_noprereqs = member "NO_PREREQS" hmake_options
 val extra_cleans = envlist "EXTRA_CLEANS"
 
-val nob2002 = nob2002 orelse hmake_no_basis2002 orelse Systeml.HAVE_BASIS2002
+val nob2002 = nob2002 orelse hmake_no_basis2002
 
 val quit_on_failure = quit_on_failure orelse hmake_qof
 val no_prereqs = no_prereqs orelse hmake_noprereqs
@@ -523,45 +551,18 @@ val actual_overlay =
 
 val std_include_flags = if no_sigobj then [] else ["-I", SIGOBJ]
 
-val hmakefile_env = let
-  open Holmake_types
-  val addincludes = spacify (map Systeml.protect additional_includes)
-  val stdincludes =
-      spacify (map Systeml.protect (hmake_preincludes @ std_include_flags)) ^
-      " " ^ addincludes
-  val basis_string = if nob2002 then [] else [LIT " basis2002.ui"]
-in
-  (fn s =>
-      case s of
-        "HOLMOSMLC" => [VREF "MOSMLCOMP", LIT (" -q "^stdincludes)] @
-                       basis_string
-      | "HOLMOSMLC-C" => let
-          val overlaystring = case actual_overlay of NONE => []
-                                                   | SOME s => [LIT s]
-        in
-          [VREF "MOSMLCOMP", LIT (" -q "^stdincludes^" -c ")] @
-          basis_string @ [LIT " "] @ overlaystring
-        end
-      | "MOSMLC" => [VREF "MOSMLCOMP", LIT (" "^addincludes)]
-      | "MOSMLDIR" => [LIT MOSMLDIR]
-      | "MOSMLCOMP" => [VREF "protect $(MOSMLDIR)/mosmlc"]
-      | "MOSMLLEX" => [VREF "protect $(MOSMLDIR)/mosmllex"]
-      | "MOSMLYAC" => [VREF "protect $(MOSMLDIR)/mosmlyac"]
-      | _ => if s = "HAVE_BASIS2002" andalso Systeml.HAVE_BASIS2002 then
-               [LIT "1"]
-             else hmakefile_env0 s)
-end
 
-val (first_target, extra_rules) =
-    Holmake_types.mk_rules warn hmakefile_toks hmakefile_env
+fun extra_deps t =
+    Option.map #dependencies
+               (Holmake_types.get_rule_info extra_rules hmakefile_env t)
 
-fun extra_deps t = Option.map #dependencies (Binarymap.peek(extra_rules, t))
-
-fun extra_commands t = Option.map #commands (Binarymap.peek(extra_rules, t))
+fun extra_commands t =
+    Option.map #commands
+               (Holmake_types.get_rule_info extra_rules hmakefile_env t)
 
 val extra_targets = Binarymap.foldr (fn (k,_,acc) => k::acc) [] extra_rules
 
-fun extra_rule_for t = Binarymap.peek(extra_rules, t)
+fun extra_rule_for t = Holmake_types.get_rule_info extra_rules hmakefile_env t
 
 (* treat targets as sets *)
 infix in_target

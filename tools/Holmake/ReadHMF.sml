@@ -116,11 +116,39 @@ in
     end
 end
 
-fun readall acc b =
+fun readall (acc as (tgt1,env,ruledb,depdb)) b =
     case process_line b of
-      (b', EOF) => (close_buf b'; List.rev acc)
-    | (b', x) => readall (to_token x::acc) b'
+      (b', EOF) => let
+        val _ = close_buf b'
+        fun foldthis (tgt,deps,acc) =
+            case Binarymap.peek(acc,tgt) of
+              NONE => Binarymap.insert(acc,tgt,
+                                       {dependencies = deps, commands = []})
+            | SOME {dependencies, commands} =>
+              Binarymap.insert(acc,tgt, {dependencies = dependencies @ deps,
+                                         commands = commands})
+      in
+        (env,Binarymap.foldl foldthis ruledb depdb,tgt1)
+      end
+    | (b', x) => let
+        fun warn s = TextIO.output(TextIO.stdErr, s ^ "\n")
+      in
+        case to_token x of
+          HM_defn def => readall (tgt1,env_extend def env, ruledb, depdb) b'
+        | HM_rule rinfo => let
+            val (rdb',depdb',tgts) = extend_ruledb warn env rinfo (ruledb,depdb)
+            val tgt1' =
+                case tgt1 of
+                  NONE => List.find (fn s => s <> ".PHONY") tgts
+                | _ => tgt1
+          in
+            readall (tgt1',env,rdb',depdb') b'
+          end
+      end
 
-fun read fname = readall [] (init_buf fname)
+fun read fname env =
+    readall (NONE, env, empty_ruledb,
+             Binarymap.mkDict String.compare)
+            (init_buf fname)
 
 end (* struct *)

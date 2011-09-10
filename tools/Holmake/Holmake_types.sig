@@ -29,17 +29,19 @@ val extract_cmd_quotation : Substring.substring -> quotation
 
 type rule_info = {dependencies : string list, commands : string list}
 
-type ruledb
+type ruledb =
+     (string, {dependencies:string list, commands : quotation list})Binarymap.dict
 type depdb = (string,string list)Binarymap.dict
 val empty_ruledb : ruledb
 val extend_ruledb : (string -> unit) -> env -> raw_rule_info ->
-                    (ruledb * depdb) -> (ruledb * depdb)
+                    (ruledb * depdb) -> (ruledb * depdb * string list)
 val get_rule_info : ruledb -> env -> string -> rule_info option
 
 (*
 
    [extend_ruledb warn env rule_info (rdb,ddb)] returns a pair of a
-   rule database and dependency database, extending those given as inputs.
+   rule database and dependency database, extending those given as inputs, and
+   a list of the targets of the rule.
 
    The databases are used to map target names to dependency and
    command information (using the get_rule_info function).  The warn
