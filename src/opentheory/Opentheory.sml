@@ -18,7 +18,7 @@ type reader =
 , axiom        : thm Net.net -> (term list * term) -> thm
 }
 
-fun st_(st,{stack,dict,thms}) = {stack=st,dict=dict,thms=thms}
+fun st_(st,{stack,dict,thms,...}) = {stack=st,dict=dict,thms=thms}
 fun push (ob,st) = st_(ob::(#stack st),st)
 local open Substring in
   val trimlr = fn s => string(trimr 1 (triml 1 (full s)))
@@ -51,7 +51,7 @@ fun raw_read_article {tyop_from_ot,const_from_ot} input {define_tyop,define_cons
     | f "constTerm"    (st as {stack=OType Ty::OConst {Thy,Name}::os,...})
                      = st_(OTerm(mk_thy_const {Ty=Ty,Thy=Thy,Name=Name})::os,st)
     | f "deductAntisym"(st as {stack=OThm t1::OThm t2::os,...}) = st_(OThm(DEDUCT_ANTISYM t1 t2)::os,st)
-    | f "def"         {stack=ONum k::x::os,dict,thms}           = {stack=x::os,dict=Map.insert(dict,k,x),thms=thms}
+    | f "def"         {stack=ONum k::x::os,dict,thms,...}       = {stack=x::os,dict=Map.insert(dict,k,x),thms=thms}
     | f "defineConst" (st as {stack=OTerm t::OName n::os,...})  = let
         val c = ot_to_const "defineConst" n
         val def = define_const c t
@@ -73,7 +73,7 @@ fun raw_read_article {tyop_from_ot,const_from_ot} input {define_tyop,define_cons
     | f "pop"    (st as {stack=x::os,...})                   = st_(os,st)
     | f "ref"    (st as {stack=ONum k::os,dict,...})         = st_(Map.find(dict,k)::os,st)
     | f "refl"   (st as {stack=OTerm t::os,...})             = st_(OThm(REFL t)::os,st)
-    | f "remove" {stack=ONum k::os,dict,thms}                = let
+    | f "remove" {stack=ONum k::os,dict,thms,...}            = let
         val (dict,x) = Map.remove(dict,k)
       in {stack=x::os,dict=dict,thms=thms} end
     | f "subst"  (st as {stack=OThm th::OList[OList tys,OList tms]::os,...}) = let
@@ -84,7 +84,7 @@ fun raw_read_article {tyop_from_ot,const_from_ot} input {define_tyop,define_cons
         val th = INST_TYPE tys th
         val th = INST tms th
       in st_(OThm th::os,st) end
-    | f "thm"    {stack=OTerm c::OList ls::OThm th::os,dict,thms} = let
+    | f "thm"    {stack=OTerm c::OList ls::OThm th::os,dict,thms,...} = let
         val th = EQ_MP (ALPHA (concl th) c) th
         handle HOL_ERR _ => raise ERR "thm: desired conclusion not alpha-equivalent to theorem's conclusion"
         fun ft (OTerm h, th) = let
@@ -106,16 +106,18 @@ fun raw_read_article {tyop_from_ot,const_from_ot} input {define_tyop,define_cons
     | f "var"     (st as {stack=OType t::OName n::os,...}) = st_(OVar(mk_var(n,t))::os,st)
     | f "varTerm" (st as {stack=OVar t::os,...})           = st_(OTerm t::os,st)
     | f "varType" (st as {stack=OName n::os,...})          = st_(OType(mk_vartype (tyvar_from_ot n))::os,st)
-    | f s st = let val c = String.sub(s,0) open Char Option Int
+    | f s (st as {stack,dict,thms,...}) = let val c = String.sub(s,0) open Char Option Int
       in if c = #"\"" then push(OName(trimlr s),st) else
          if isDigit c then push(ONum(valOf(fromString s)),st) else
-         if c = #"#" then st else
+         if c = #"#" then {stack=stack,dict=dict,thms=thms} else
          raise ERR ("Unknown command: "^s)
       end
-  fun loop x = case TextIO.inputLine input of
+  fun loop (x as {line_num,...}) = case TextIO.inputLine input of
     NONE => x before TextIO.closeIn(input)
-  | SOME line => loop (f (trimr line) x)
-in #thms (loop {stack=[],dict=Map.mkDict(Int.compare),thms=Net.empty}) end
+  | SOME line => let
+      val {stack,dict,thms} = f (trimr line) x
+    in loop {stack=stack,dict=dict,thms=thms,line_num=line_num+1} end
+in #thms (loop {stack=[],dict=Map.mkDict(Int.compare),thms=Net.empty,line_num=1}) end
 
 fun read_article s r =
   raw_read_article
