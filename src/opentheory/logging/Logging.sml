@@ -539,7 +539,7 @@ val (log_term, raw_log_thm, log_clear) = let
       val _ = log_thm (proveHyp th (INST [P|->concl th,Q|->tm] DISJ1_pth))
       in () end
     | DISJ2_prf (tm,th) => let
-      val _ = log_thm (proveHyp th (INST [P|->concl th,Q|->tm] DISJ2_pth))
+      val _ = log_thm (proveHyp th (INST [Q|->concl th,P|->tm] DISJ2_pth))
       in () end
     (* DISCH_ALL (DISCH) *)
     (* SPEC_pth (EQ_MP,AP_THM,ASSUME,CONV_RULE,BETA_CONV,RAND_CONV,DISCH_ALL,EQT_ELIM) *)
