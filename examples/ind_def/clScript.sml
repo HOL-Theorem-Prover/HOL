@@ -8,6 +8,15 @@ local open Logging in
   val new_theory = start_logging o new_theory
   val store_thm = export_thm o store_thm
   val export_theory = export_theory o stop_logging
+  val Define = log_thm o Define
+  fun Hol_reln q = let
+    val r as (x,_,_) = bossLib.Hol_reln q
+    val _ = log_thm x
+    in r end
+  fun xHol_reln s q = let
+    val r as (x,_,_) = bossLib.xHol_reln s q
+    val _ = log_thm x
+    in r end
 end
 
 local open OpenTheoryMap in
@@ -39,6 +48,7 @@ end
 val _ = new_theory "cl";
 
 val _ = Hol_datatype `cl = S | K | # of cl => cl`;
+val _ = Logging.log_thm (definition "cl_TY_DEF")
 
 val _ = set_fixity "#"  (Infixl 1100);
 

@@ -88,7 +88,7 @@ in () end
 fun log_redres loga logb {redex,residue} =
   log_pair loga logb (redex,residue)
 
-val (log_term, log_thm, log_clear) = let
+val (log_term, raw_log_thm, log_clear) = let
   val (reset_key,next_key) = let
     val key = ref 0
     fun reset() = key := 0
@@ -650,13 +650,21 @@ fun export_thm th = let
       val v = !verbosity >= 1
       val s = thm_to_backend_string th
       val _ = if v then HOL_MESG("Start logging\n"^s^"\n") else ()
-      val _ = log_thm th
+      val _ = raw_log_thm th
       val _ = log_list log_term (hyp th)
       val _ = log_term (concl th)
       val _ = log_command "thm"
       val _ = if v then HOL_MESG("Finish logging\n"^s^"\n") else ()
       in () end
     val _ = delete_proof th
+in th end
+
+fun log_thm th = let
+  val _ = case !log_state of
+    Not_logging => ()
+  | Active_logging _ =>
+    raw_log_thm th
+  val _ = Thm.delete_proof th
 in th end
 
 local val op ^ = OS.Path.concat in
