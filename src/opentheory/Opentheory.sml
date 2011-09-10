@@ -33,6 +33,7 @@ fun raw_read_article {tyop_from_ot,const_from_ot} input {define_tyop,define_cons
   handle Map.NotFound => raise ERR (c^": no map from "^s^" to a constant")
   fun ot_to_tyop  c s = Map.find(tyop_from_ot ,s)
   handle Map.NotFound => raise ERR (c^": no map from "^s^" to a type operator")
+  val mk_vartype = mk_vartype o tyvar_from_ot
   fun f "absTerm"(st as {stack=OTerm b::OVar v::os,...}) = st_(OTerm(mk_abs(v,b))::os,st)
     | f "absThm" (st as {stack=OThm th::OVar v::os,...}) = (st_(OThm(ABS v th)::os,st)
       handle HOL_ERR e => raise ERR ("absThm: failed with "^format_ERR e))
@@ -105,7 +106,7 @@ fun raw_read_article {tyop_from_ot,const_from_ot} input {define_tyop,define_cons
     | f "typeOp"  (st as {stack=OName n::os,...})          = st_(OTypeOp (ot_to_tyop "typeOp" n)::os,st)
     | f "var"     (st as {stack=OType t::OName n::os,...}) = st_(OVar(mk_var(n,t))::os,st)
     | f "varTerm" (st as {stack=OVar t::os,...})           = st_(OTerm t::os,st)
-    | f "varType" (st as {stack=OName n::os,...})          = st_(OType(mk_vartype (tyvar_from_ot n))::os,st)
+    | f "varType" (st as {stack=OName n::os,...})          = st_(OType(mk_vartype n)::os,st)
     | f s (st as {stack,dict,thms,...}) = let val c = String.sub(s,0) open Char Option Int
       in if c = #"\"" then push(OName(trimlr s),st) else
          if isDigit c then push(ONum(valOf(fromString s)),st) else
