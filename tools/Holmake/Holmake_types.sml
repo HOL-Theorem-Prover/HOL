@@ -204,10 +204,7 @@ fun to_token pt =
       end
     | EOF => raise Fail "No EOF-equivalent"
 
-fun commafy0 [] = []
-  | commafy0 [x] = [x]
-  | commafy0 (h::t) = h :: ", " :: commafy0 t
-val commafy = String.concat o commafy0
+val commafy = String.concatWith ", "
 
 fun argtokenize ss = let
   open Substring
