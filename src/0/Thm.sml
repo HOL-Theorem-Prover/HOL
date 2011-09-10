@@ -12,7 +12,7 @@
 (*               : July 2000, Konrad Slind                               *)
 (* ===================================================================== *)
 
-structure Thm : RawThm =
+structure Thm :> Thm =
 struct
 
 open Feedback Lib Term KernelTypes Tag
@@ -1555,8 +1555,7 @@ val mk_thm = mk_oracle_thm "MK_THM"
 fun add_tag (tag1, THM(tag2, h,c)) = THM(Tag.merge tag1 tag2, h, c)
 
 (*---------------------------------------------------------------------------*
- *    The following two are only used in Theory, and are not                 *
- *     externally available.                                                 *
+ *    The following two are only used internally
  *---------------------------------------------------------------------------*)
 
 fun mk_axiom_thm (r,c) =
@@ -1566,7 +1565,6 @@ fun mk_axiom_thm (r,c) =
 fun mk_defn_thm (witness_tag, c) =
    (Assert (Type.eq_ty (type_of c) bool) "mk_defn_thm"  "Not a proposition!";
     make_thm Count.Definition (witness_tag,empty_hyp,c))
-
 
 fun debug_kind kd = print (Kind.kind_to_string kd)
 
@@ -1660,10 +1658,196 @@ fun debug_term tm =
 end
 
 
-(*---------------------------------------------------------------------------*
- * Fetching theorems from disk. The following parses the "raw" term          *
- * representation found in exported theory files.                            *
- *---------------------------------------------------------------------------*)
+(* ----------------------------------------------------------------------
+    Primitive Definition Principles
+   ---------------------------------------------------------------------- *)
+
+fun ERR f msg = HOL_ERR {origin_structure = "Thm",
+                         origin_function = f, message = msg}
+val TYDEF_ERR = ERR "prim_type_definition"
+val TYSPEC_ERR= ERR "new_type_specification"
+val DEF_ERR   = ERR "new_definition"
+val SPEC_ERR  = ERR "new_specification"
+
+val TYDEF_FORM_ERR = TYDEF_ERR "expected a theorem of the form \"?x. P x\""
+val DEF_FORM_ERR   = DEF_ERR   "expected a term of the form \"v = M\""
+
+(* some simple term manipulation functions *)
+fun mk_exists (absrec as (Bvar,_)) =
+  mk_comb(mk_thy_const{Name="?",Thy="bool", Ty= (type_of Bvar-->bool)-->bool},
+          mk_abs absrec)
+
+fun dest_exists M =
+ let val (Rator,Rand) = with_exn dest_comb M (TYDEF_ERR"dest_exists")
+ in case total dest_thy_const Rator
+     of SOME{Name="?",Thy="bool",...} => dest_abs Rand
+      | otherwise => raise TYDEF_ERR"dest_exists"
+ end
+
+fun dest_tyexists M =
+ let val (Rator,Rand) = with_exn dest_comb M (TYSPEC_ERR"dest_tyexists")
+ in case total dest_thy_const Rator
+     of SOME{Name="?:",Thy="bool",...} => dest_tyabs Rand
+      | otherwise => raise TYSPEC_ERR"dest_tyexists"
+ end
+
+fun dest_eq M =
+  let val (Rator,r) = dest_comb M
+      val (eq,l) = dest_comb Rator
+  in case dest_thy_const eq
+      of {Name="=",Thy="min",...} => (l,r)
+       | _ => raise ERR "dest_eq" "not an equality"
+  end;
+
+fun mk_eq (lhs,rhs) =
+ let val ty = type_of lhs
+     val eq = mk_thy_const{Name="=",Thy="min",Ty=ty-->ty-->bool}
+ in list_mk_comb(eq,[lhs,rhs])
+ end;
+
+fun nstrip_exists 0 t = ([],t)
+  | nstrip_exists n t =
+     let val (Bvar, Body) = dest_exists t
+         val (l,t'') = nstrip_exists (n-1) Body
+     in (Bvar::l, t'')
+     end;
+
+fun nstrip_tyexists 0 t = ([],t)
+  | nstrip_tyexists n t =
+     let val (Bvar, Body) = dest_tyexists t
+         val (l,t'') = nstrip_tyexists (n-1) Body
+     in (Bvar::l, t'')
+     end;
+
+(* standard checks *)
+fun check_null_hyp th f =
+  if null(hyp th) then ()
+  else raise f "theorem must have no assumptions";
+
+fun check_free_vars tm f =
+  case free_vars tm
+   of [] => ()
+    | V  => raise f (String.concat
+            ("Free variables in rhs of definition: "
+             :: commafy (map (Lib.quote o fst o dest_var) V)));
+
+fun check_free_tyvars tm f =
+  case type_vars_in_term tm
+   of [] => ()
+    | V  => raise f (String.concat
+            ("Free type variables in specification: "
+             :: commafy (map (Lib.quote o fst o Type.dest_var_type) V)));
+
+fun check_tyvars body_tyvars ty f =
+ case Lib.set_diff body_tyvars (Type.type_vars ty)
+  of [] => ()
+   | extras =>
+      raise f (String.concat
+         ("Unbound type variable(s) in definition: "
+           :: commafy (map (Lib.quote o Type.dest_vartype) extras)));
+
+fun check_kdvars body_kdvars bound_kdvars f =
+ case Lib.set_diff body_kdvars bound_kdvars
+  of [] => ()
+   | extras =>
+      raise f (String.concat
+         ("Unbound kind variable(s) in definition: "
+           :: commafy (map (Lib.quote o fst o Kind.dest_var_kind) extras)));
+
+fun prim_type_definition (name as {Thy, Tyop}, thm) = let
+  val (_,Body)  = with_exn dest_exists (concl thm) TYDEF_FORM_ERR
+  val P         = with_exn rator Body TYDEF_FORM_ERR
+  val Pty       = type_of P
+  val (dom,rng) = with_exn Type.dom_rng Pty TYDEF_FORM_ERR
+  val tyvars    = Listsort.sort Type.compare (type_vars_in_term P)
+  val checked   = check_null_hyp thm TYDEF_ERR
+  val checked   =
+      assert_exn null (free_vars P)
+                 (TYDEF_ERR "subset predicate must be a closed term")
+  val checked   = check_kdvars (kind_vars_in_term P) (Type.kind_varsl tyvars) TYDEF_ERR
+  val checked   = assert_exn (Type.eq_ty bool) rng
+                             (TYDEF_ERR "subset predicate has the wrong type")
+  val newkd     = List.foldr (op Kind.==>) (Type.kind_of dom) (map Type.kind_of tyvars)
+  val   _       = Type.prim_new_type_opr name newkd
+  val newty     = Type.mk_thy_type{Tyop=Tyop,Thy=Thy,Args=tyvars}
+  val repty     = newty --> dom
+  val rep       = mk_primed_var("rep", repty)
+  val TYDEF     = mk_thy_const{Name="TYPE_DEFINITION", Thy="bool",
+                               Ty = Pty --> (repty-->bool)}
+in
+  mk_defn_thm(tag thm, mk_exists(rep, list_mk_comb(TYDEF,[P,rep])))
+end
+
+fun prim_type_specification thyname tnames th = let
+  val con       = concl th
+  val checked   = check_null_hyp th TYSPEC_ERR
+  val checked   = check_free_vars con TYSPEC_ERR
+  val checked   = check_free_tyvars con TYSPEC_ERR
+  val checked   = assert_exn (op=) (length(mk_set tnames),length tnames)
+                  (TYSPEC_ERR "duplicate type names in specification")
+  val (tyvs,Q)  = with_exn (nstrip_tyexists (length tnames)) con
+                  (TYSPEC_ERR "too few existentially quantified type variables")
+  fun vOK V a   = check_kdvars V (Type.kind_vars a) TYSPEC_ERR
+  val checked   = List.app (vOK (kind_vars_in_term Q)) tyvs
+  fun newty n k = (Type.prim_new_type_opr {Thy=thyname,Tyop=n} k;
+                   Type.mk_thy_con_type{Thy=thyname,Tyop=n,Kind=k})
+  val kds       = map (snd o Type.dest_var_type) tyvs
+  val newtys    = map2 newty tnames kds
+  val newQ      = inst (map (op |->) (zip tyvs newtys)) Q
+ in
+   mk_defn_thm(tag th, newQ)
+ end
+
+fun prim_constant_definition Thy M = let
+  val (lhs, rhs) = with_exn dest_eq M DEF_FORM_ERR
+  val {Name, Thy, Ty} =
+      if is_const lhs then let
+          val r as {Name, Ty, ...} = dest_thy_const lhs
+          (* note how we ignore the constant's theory; this is because the
+             user may be defining another version of an earlier constant *)
+        in
+          {Name = Name, Thy = Thy, Ty = Ty}
+        end
+      else if is_var lhs then let
+          val (n, ty) = dest_var lhs
+        in
+          {Name = n, Ty = ty, Thy = Thy}
+        end
+      else raise DEF_FORM_ERR
+  val checked = check_free_vars rhs DEF_ERR
+  val checked = check_tyvars (type_vars_in_term rhs) Ty DEF_ERR
+  val checked = check_kdvars (kind_vars_in_term rhs) (Type.kind_vars Ty) DEF_ERR
+  val new_lhs = Term.prim_new_const {Name = Name, Thy = Thy} Ty
+in
+  mk_defn_thm(empty_tag, mk_eq(new_lhs, rhs))
+end
+
+fun bind thy s ty =
+    Term.prim_new_const {Name = s, Thy = thy} ty
+
+fun prim_specification thyname cnames th = let
+  val con       = concl th
+  val checked   = check_null_hyp th SPEC_ERR
+  val checked   = check_free_vars con SPEC_ERR
+  val checked   =
+      assert_exn (op=) (length(mk_set cnames),length cnames)
+                 (SPEC_ERR "duplicate constant names in specification")
+  val (V,body)  =
+      with_exn (nstrip_exists (length cnames)) con
+               (SPEC_ERR "too few existentially quantified variables")
+  fun vOK V v   = check_tyvars V (type_of v) SPEC_ERR
+  val checked   = List.app (vOK (type_vars_in_term body)) V
+  fun vOKkd V v = check_kdvars V (Type.kind_vars (type_of v)) SPEC_ERR
+  val checked   = List.app (vOKkd (kind_vars_in_term body)) V
+  fun addc v s  = v |-> bind thyname s (snd(dest_var v))
+in
+  mk_defn_thm (tag th, subst (map2 addc V cnames) body)
+end
+
+
+
+
+(*
 
 datatype lexeme
    = dot
@@ -1680,16 +1864,6 @@ datatype lexeme
    | ident of int
    | bvar  of int
    | name  of string;
-
-local val numeric = Char.contains "0123456789"
-in
-fun take_numb ss0 =
-  let val (ns, ss1) = Substring.splitl numeric ss0
-  in case Int.fromString (Substring.string ns)
-      of SOME i => (i,ss1)
-       | NONE   => ERR "take_numb" ""
-  end
-end;
 
 local fun is_quote c = (c <> #"\"")
 in
@@ -1860,7 +2034,8 @@ fun parse_raw tytable table =
    | otherwise => ERR "raw term parser" "expected a quotation"
  end;
 
-local val mk_disk_thm = make_thm Count.Disk
+local
+  val mk_disk_thm  = make_thm Count.Disk
 in
 fun disk_thm tyvect vect =
   let val rtp = parse_raw tyvect vect
@@ -1868,5 +2043,20 @@ fun disk_thm tyvect vect =
         mk_disk_thm(Tag.read_disk_tag s,list_hyp (map rtp asl),rtp w)
   end
 end;
+
+*)
+
+
+
+local
+  val mk_disk_thm  = make_thm Count.Disk
+in
+fun disk_thm (s, termlist) = let
+  val c = hd termlist
+  val asl = tl termlist
+in
+  mk_disk_thm(Tag.read_disk_tag s,list_hyp asl,c)
+end
+end; (* local *)
 
 end (* Thm *)

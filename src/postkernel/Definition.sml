@@ -16,12 +16,12 @@
 (* DATE          : October 1, 2000     -- union of previous 3 modules    *)
 (* ===================================================================== *)
 
-structure Definition : RawDefinition =
+structure Definition :> Definition =
 struct
 
-open Feedback Lib KernelTypes Kind Type Term
+open Feedback Lib Kind Type Term Thm
 
-infixr --> |-> ==>;
+infixr ==> --> |->;
 
 val ERR       = mk_HOL_ERR "Definition";
 val TYDEF_ERR = ERR "new_type_definition"
@@ -44,11 +44,8 @@ val current_theory = Theory.current_theory;
 fun dest_atom tm = (dest_var tm handle HOL_ERR _ => dest_const tm)
 
 fun mk_exists (absrec as (Bvar,_)) =
-  let val Bvar_ty = type_of Bvar
-  in
-    mk_comb(mk_thy_const{Name="?",Thy="bool", Ty= (Bvar_ty-->bool)-->bool},
-            mk_abs absrec)
-  end
+  mk_comb(mk_thy_const{Name="?",Thy="bool", Ty= (type_of Bvar-->bool)-->bool},
+          mk_abs absrec)
 
 fun dest_exists M =
  let val (Rator,Rand) = with_exn dest_comb M (TYDEF_ERR"dest_exists")
@@ -126,73 +123,34 @@ fun check_kdvars body_kdvars bound_kdvars f =
          ("Unbound kind variable(s) in definition: "
            :: commafy (map (Lib.quote o fst o dest_var_kind) extras)));
 
-fun bind s ty =
-  (Theory.new_constant (s,ty);
-   mk_thy_const {Name=s,Ty=ty,Thy=current_theory()}
-  );
-
-fun mk_def (w as TERM _, tm)    = (w, Thm.mk_defn_thm (Tag.empty_tag, tm))
-  | mk_def (w as THEOREM th,tm) = (w, Thm.mk_defn_thm (Thm.tag th, tm))
-
 val new_definition_hook = ref
-    ((fn tm => ([]:term list, tm:term)),
-     (fn (V:term list,th:thm) =>
+    ((fn tm => ([], tm)),
+     (fn (V,th) =>
        if null V then th
        else raise ERR "new_definition" "bare post-processing phase"));
 
-val (new_specification_hook:(string list -> unit) ref) = ref
+val new_specification_hook = ref
  (fn _ => raise ERR "new_specification"
-            "introduced constants have not been added to the grammar")
+            "introduced constants have not been added to the parser")
 
 (*---------------------------------------------------------------------------*)
 (*                DEFINITION PRINCIPLES                                      *)
 (*---------------------------------------------------------------------------*)
 
-fun new_type_definition (name,thm) =
- let val (_,Body)  = with_exn dest_exists (Thm.concl thm) TYDEF_FORM_ERR
-     val P         = with_exn rator Body TYDEF_FORM_ERR
-     val Pty       = type_of P
-     val (dom,rng) = with_exn dom_rng Pty TYDEF_FORM_ERR
-     val tyvars    = Listsort.sort Type.compare (type_vars_in_term P)
-     val checked   = check_null_hyp thm TYDEF_ERR
-     val checked   = assert_exn null (free_vars P)
-                       (TYDEF_ERR "subset predicate must be a closed term")
-     val checked   = check_kdvars (kind_vars_in_term P) (kind_varsl tyvars) TYDEF_ERR
-                       handle e => raise (wrap_exn "new_type_definition" "check_kdvars" e)
-     val checked   = assert_exn (eq_ty bool) rng
-                      (TYDEF_ERR "subset predicate has the wrong type")
-     val newkd     = List.foldr (op ==>) (kind_of dom) (map kind_of tyvars)
-     val   _       = Theory.new_type_opr(name, newkd)
-     val newty     = mk_thy_type{Tyop=name,Thy=current_theory(),Args=tyvars}
-     val repty     = newty --> dom
-     val rep       = mk_primed_var("rep", repty)
-     val TYDEF     = mk_thy_const{Name="TYPE_DEFINITION", Thy="bool",
-                                    Ty = Pty --> (repty-->bool)}
-     val (wit,def) = mk_def (THEOREM thm,
-                        mk_exists(rep, list_mk_comb(TYDEF,[P,rep])))
+fun new_type_definition (name,thm) = let
+  val Thy = Theory.current_theory()
+  val tydef = Thm.prim_type_definition({Thy = Thy, Tyop = name}, thm)
  in
-   Theory.store_type_definition (name^"_TY_DEF", name, wit, def)
+   Theory.store_definition (name^"_TY_DEF", tydef)
  end
  handle e => raise (wrap_exn "Definition" "new_type_definition" e);
 
 
-fun new_type_specification (name,tnames,th) =
- let val checked   = check_null_hyp th TYSPEC_ERR
-     val checked   = check_free_vars (Thm.concl th) TYSPEC_ERR
-     val checked   = check_free_tyvars (Thm.concl th) TYSPEC_ERR
-     val checked   = assert_exn (op=) (length(mk_set tnames),length tnames)
-                     (TYSPEC_ERR "duplicate type names in specification")
-     val (tyvs,Q)  = with_exn (nstrip_tyexists (length tnames)) (Thm.concl th)
-                     (TYSPEC_ERR "too few existentially quantified type variables")
-     fun vOK V a   = check_kdvars V (kind_vars a) TYSPEC_ERR
-     val checked   = List.app (vOK (kind_vars_in_term Q)) tyvs
-     fun newty n k = (Theory.new_type_opr(n,k); mk_thy_con_type{Thy=current_theory(),Tyop=n,Kind=k})
-     val kds       = map (snd o dest_var_type) tyvs
-     val newtys    = map2 newty tnames kds
-     val newQ      = inst (map (op |->) (zip tyvs newtys)) Q
-     val (wit,def) = mk_def (THEOREM th, newQ)
+fun new_type_specification (name, tnames, thm) = let
+  val Thy = Theory.current_theory()
+  val tydef = Thm.prim_type_specification Thy tnames thm
  in
-   Theory.store_definition (name^"_TY_SPEC", tnames, wit, def)
+   Theory.store_definition (name^"_TY_SPEC", tydef)
  end
  handle e => raise (wrap_exn "Definition" "new_type_specification" e);
 
@@ -200,41 +158,18 @@ fun new_type_specification (name,tnames,th) =
 fun new_definition(name,M) =
  let val (dest,post) = !new_definition_hook
      val (V,eq)      = dest M
-                         handle e => raise (wrap_exn "new_definition" "dest M" e)
-     val (lhs,rhs)   = with_exn dest_eq eq DEF_FORM_ERR
-                         handle e => raise (wrap_exn "new_definition" "dest_eq eq" e)
-     val (Name,Ty)   = with_exn dest_atom lhs DEF_FORM_ERR
-                         handle e => raise (wrap_exn "new_definition" "dest_atom lhs" e)
-     val checked     = check_free_vars rhs DEF_ERR
-                         handle e => raise (wrap_exn "new_definition" "check_free_vars" e)
-     val checked     = check_tyvars (type_vars_in_term rhs) Ty DEF_ERR
-                         handle e => raise (wrap_exn "new_definition" "check_tyvars" e)
-     val checked     = check_kdvars (kind_vars_in_term rhs) (kind_vars Ty) DEF_ERR
-                         handle e => raise (wrap_exn "new_definition" "check_kdvars" e)
-     val (wit,def)   = mk_def(TERM rhs, mk_eq(bind Name Ty, rhs))
-                         handle e => raise (wrap_exn "new_definition" "mk_def" e)
+     val def_th      = Thm.prim_constant_definition (current_theory()) eq
  in
-   Theory.store_definition (name, [Name], wit, post(V,def) handle e => (print "post\n";Raise e))
+   Theory.store_definition (name, post(V,def_th))
  end
  handle e => raise (wrap_exn "Definition" "new_definition" e);
 
 
-fun new_specification (name, cnames, th) =
- let val checked   = check_null_hyp th SPEC_ERR
-     val checked   = check_free_vars (Thm.concl th) SPEC_ERR
-     val checked   = assert_exn (op=) (length(mk_set cnames),length cnames)
-                     (SPEC_ERR "duplicate constant names in specification")
-     val (V,body)  = with_exn (nstrip_exists (length cnames)) (Thm.concl th)
-                     (SPEC_ERR "too few existentially quantified variables")
-     fun vOK V v   = check_tyvars V (type_of v) SPEC_ERR
-     val checked   = List.app (vOK (type_vars_in_term body)) V
-     fun vOKkd V v = check_kdvars V (kind_vars (type_of v)) SPEC_ERR
-     val checked   = List.app (vOKkd (kind_vars_in_term body)) V
-     fun addc v s  = v |-> bind s (snd(dest_var v))
-     val (wit,def) = mk_def (THEOREM th, subst (map2 addc V cnames) body)
-     val final     =  Theory.store_definition (name, cnames, wit, def)
+fun new_specification (name, cnames, th) = let
+  val def   = Thm.prim_specification(current_theory()) cnames th
+  val final = Theory.store_definition (name, def)
  in
-    !new_specification_hook cnames   (* tell parser about the new names *)
+  !new_specification_hook cnames   (* tell parser about the new names *)
   ; final
  end
  handle e => raise (wrap_exn "Definition" "new_specification" e);

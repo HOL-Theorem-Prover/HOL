@@ -59,8 +59,14 @@ val operator_table = KernelSig.new_table()
 fun prim_delete_type (k as {Thy, Tyop}) =
     ignore (KernelSig.retire_name(operator_table, {Thy = Thy, Name = Tyop}))
 
-fun prim_new_type {Thy,Tyop} kd =
+fun prim_new_type_opr {Thy,Tyop} kd =
   ignore (KernelSig.insert(operator_table,{Thy=Thy,Name=Tyop},kd))
+
+fun prim_new_type (r as {Thy,Tyop}) n = let
+  val _ = n >= 0 orelse failwith "invalid arity"
+in
+  prim_new_type_opr r (mk_arity n)
+end
 
 fun thy_types s = let
   fun foldthis (kn,(_,kind),acc) =
@@ -82,9 +88,9 @@ end
 fun del_segment s = KernelSig.del_segment(operator_table, s)
 
 fun minseg s = {Thy = "min", Tyop = s}
-val _ = prim_new_type (minseg "fun" ) (mk_arity 2)
-val _ = prim_new_type (minseg "bool") (mk_arity 0)
-val _ = prim_new_type (minseg "ind" ) (mk_arity 0)
+val _ = prim_new_type_opr (minseg "fun" ) (mk_arity 2)
+val _ = prim_new_type_opr (minseg "bool") (mk_arity 0)
+val _ = prim_new_type_opr (minseg "ind" ) (mk_arity 0)
 
 (*---------------------------------------------------------------------------
                 Declare the SML type of HOL types

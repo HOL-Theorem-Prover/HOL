@@ -98,6 +98,7 @@ sig
  val exists_tyvar  : (hol_type -> bool) -> hol_type -> bool
  val polymorphic   : hol_type -> bool
  val universal     : hol_type -> bool
+ val existential   : hol_type -> bool
  val abstraction   : hol_type -> bool
  val is_omega      : hol_type -> bool
  val tyvar_compare : tyvar * tyvar -> order
@@ -148,5 +149,20 @@ sig
 (* val type_to_string : hol_type -> string *) (* for low-level error messages only; superceeded *)
 
  val type_size : hol_type -> int
+
+ val ty_sub        : (hol_type,hol_type) Lib.subst -> hol_type ->
+                      hol_type Lib.delta
+
+
+ (* accessing and manipulating theory information for types *)
+ val prim_new_type : {Thy:string, Tyop:string} -> int -> unit
+ val prim_new_type_opr : {Thy:string, Tyop:string} -> kind -> unit
+ val prim_delete_type : {Thy:string, Tyop:string} -> unit
+ val thy_types : string -> (string * int) list
+ val thy_type_oprs : string -> (string * kind) list
+ val del_segment : string -> unit
+ val uptodate_type : hol_type -> bool
+
+
 
 end

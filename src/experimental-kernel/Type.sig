@@ -15,7 +15,6 @@ sig
   val raw_type_eq   : hol_type -> hol_type -> bool
   val raw_empty_tyset : hol_type  HOLset.set
 
-  val ty_sub        : (hol_type,hol_type) Lib.subst -> hol_type -> hol_type Lib.delta
   val pure_ty_sub   : (hol_type,hol_type) Lib.subst -> hol_type -> hol_type Lib.delta (* expects kinds, ranks match *)
   val rk_kd_ty_sub  : rank -> (kind,kind) Lib.subst ->
                       (hol_type,hol_type) Lib.subst -> hol_type -> hol_type Lib.delta (* expects kinds, ranks match *)
@@ -57,14 +56,6 @@ sig
                             {redex : hol_type, residue : hol_type} list ->
                             (rank * bool) * ({redex : kind, residue : kind} list * kind list) ->
                             (rank * bool) * ({redex : kind, residue : kind} list * kind list)
-
-  (* accessing and manipulating theory information for types *)
-  val prim_new_type : {Thy:string, Tyop:string} -> kind -> unit
-  val prim_delete_type : {Thy:string, Tyop:string} -> unit
-  val thy_types : string -> (string * int) list
-  val thy_type_oprs : string -> (string * kind) list
-  val del_segment : string -> unit
-  val uptodate_type : hol_type -> bool
 
   val type_to_string: hol_type -> string
 

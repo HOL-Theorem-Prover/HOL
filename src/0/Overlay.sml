@@ -11,9 +11,6 @@ struct
   structure Term       = Term
   structure Tag        = Tag
   structure Thm        = Thm
-  structure TheoryPP   = TheoryPP
-  structure Theory     = Theory
-  structure Definition = Definition
   structure Net        = Net
 end
 

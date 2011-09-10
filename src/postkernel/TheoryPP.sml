@@ -112,7 +112,7 @@ fun pp_type mvarkind mvartype mvartypeopr mtype mcontype mapptype mabstype muniv
      val {add_string,add_break,begin_block,end_block,
           add_newline,flush_ppstream,...} = with_ppstream pps
      fun pp_type_par ty = if mem ty [alpha,beta,gamma,delta] then pp_type ty
-                          else if can raw_dom_rng ty then pp_type ty
+                          else if can (*raw_dom_rng*) dom_rng ty then pp_type ty
                           else (add_string "("; pp_type ty; add_string ")")
  in
   if is_vartype ty
@@ -507,7 +507,7 @@ fun pp_struct info_record = let
 
   fun pp_tm tm =
       (add_string "read\"">>
-       add_string (RawParse.pp_raw_term
+       add_string (Term.write_raw
                      (fn ty => Map.find(#tymap tytable, ty))
                      (fn t => Map.find(#termmap tmtable, t))
                      tm)>>
@@ -535,7 +535,7 @@ fun pp_struct info_record = let
            (stringbrk "local" >>
             block CONSISTENT 0
               (stringbrk"val DT = Thm.disk_thm" >>
-               stringbrk"fun read s = RawParse.readTerm tyvector tmvector s") >>
+               stringbrk"val read = Term.read_raw tyvector tmvector") >>
             add_newline >>
             add_string"in" >> add_newline >>
             block CONSISTENT 0

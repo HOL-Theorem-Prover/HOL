@@ -11,6 +11,8 @@
 *.grm-sig.sml
 *.grm.desc
 *.exe
+*.sig[0-9]
+*.sml[0-9]
 
 # LaTeX guff
 *.aux

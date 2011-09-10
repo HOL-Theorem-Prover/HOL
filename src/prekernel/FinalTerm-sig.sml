@@ -154,4 +154,19 @@ sig
   val empty_varset  : term set
 
   val term_size     : term -> int
+
+  (* theory segment related functionality *)
+  val uptodate_term     : term -> bool
+
+  val thy_consts        : string -> term list
+  val del_segment       : string -> unit
+
+  val prim_new_const    : KernelSig.kernelname -> hol_type -> term
+  val prim_delete_const : KernelSig.kernelname -> unit
+
+  (* printed theory functionality *)
+  val read_raw : hol_type vector -> term vector -> string -> term
+  val write_raw : (hol_type -> int) -> (term -> int) -> term -> string
+
+
 end

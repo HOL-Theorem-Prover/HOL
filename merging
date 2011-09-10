@@ -1,52 +1,9 @@
-If the last time you merged changes to the HOL trunk into HOL-Omega
-was 5651, and the current version of the main HOL trunk is 5659:
-
-(Use Query > Log to find out the last merged version, and the current
-version of the HOL trunk is visible in RapidSVN.
-Or in a shell type "svn update" to find out the current main HOL version.)
-
-Make sure each working copy is updated;
-
-In RapidSVN, select Repository > Merge; brings up a dialog box. Fill in:
-
-First working copy or URL:                             Revision
-https://hol.svn.sf.net/svnroot/hol/HOL                  5651
-
-Second working copy or URL:                            Revision
-https://hol.svn.sf.net/svnroot/hol/HOL                  5659
-
-Destination path:
-/usr/local/hol/hol-omega
-
-Do use https; required by SourceForge, see
-http://sourceforge.net/community/forum/topic.php?id=2969&page.
-
-With the "Recursive" button checked, but the "Force" button not checked,
-
-Press "OK".
-
-This should copy the independent changes on the trunk into the HOL-Omega
-branch.
-
-!!! These should be checked; and any conflicts resolved.
-
-Then when it is fine, check it into the SourceForge repository for
-HOL-Omega:
-
-svn status
-< should show the modified files >
-
-IMPORTANT! Must give the REVISION NUMBERS in the message!!!
-
-svn commit -m "ported revisions 5651:5659 from HOL to HOL-Omega"
-
-If things go wrong, you can recover to the current state of the systems
-by typing in a shell in the main hol-omega directory
-
-svn revert -R .
+HOL4 and HOL-Omega are managed by the Git version control system as of August 2011.
+This file is no longer being updated, as the changes are better tracked in Git.
 
 ----------------------------
-Merge Log:
+----------------------------
+Subversion Merge Log:
 
 9051:  Ported revisions 8730:8800 from HOL to HOL-Omega.
 
@@ -202,3 +159,53 @@ Also revised instructions on porting and merging such revisions into HOL-Omega.
 5660:  Compared HOL-Omega branch 5651 to HOL trunk 5659;
        Ported revisions 5651:5659 from HOL to HOL-Omega.
 
+-------------------------------------------------------
+
+Instructions for Subversion: (now obsolete)
+
+If the last time you merged changes to the HOL trunk into HOL-Omega
+was 5651, and the current version of the main HOL trunk is 5659:
+
+(Use Query > Log to find out the last merged version, and the current
+version of the HOL trunk is visible in RapidSVN.
+Or in a shell type "svn update" to find out the current main HOL version.)
+
+Make sure each working copy is updated;
+
+In RapidSVN, select Repository > Merge; brings up a dialog box. Fill in:
+
+First working copy or URL:                             Revision
+https://hol.svn.sf.net/svnroot/hol/HOL                  5651
+
+Second working copy or URL:                            Revision
+https://hol.svn.sf.net/svnroot/hol/HOL                  5659
+
+Destination path:
+/usr/local/hol/hol-omega
+
+Do use https; required by SourceForge, see
+http://sourceforge.net/community/forum/topic.php?id=2969&page.
+
+With the "Recursive" button checked, but the "Force" button not checked,
+
+Press "OK".
+
+This should copy the independent changes on the trunk into the HOL-Omega
+branch.
+
+!!! These should be checked; and any conflicts resolved.
+
+Then when it is fine, check it into the SourceForge repository for
+HOL-Omega:
+
+svn status
+< should show the modified files >
+
+IMPORTANT! Must give the REVISION NUMBERS in the message!!!
+
+svn commit -m "ported revisions 5651:5659 from HOL to HOL-Omega"
+
+If things go wrong, you can recover to the current state of the systems
+by typing in a shell in the main hol-omega directory
+
+svn revert -R .

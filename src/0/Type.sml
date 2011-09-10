@@ -48,6 +48,29 @@ exception UNCHANGEDTY;
  ---------------------------------------------------------------------------*)
 
 val typesig = KernelSig.new_table() : kind KernelSig.symboltable
+fun prim_delete_type (k as {Thy, Tyop}) =
+    ignore (KernelSig.retire_name(typesig, {Thy = Thy, Name = Tyop}))
+
+fun prim_new_type_opr {Thy,Tyop} kd = let
+in
+  ignore (KernelSig.insert(typesig,{Thy=Thy,Name=Tyop},kd))
+end
+fun prim_new_type (r as {Thy,Tyop}) n = let
+  val _ = n >= 0 orelse failwith "invalid arity"
+in
+  prim_new_type_opr r (mk_arity n)
+end
+fun del_segment s = KernelSig.del_segment(typesig, s)
+
+fun uptodate_type (TyFv _) = true
+  | uptodate_type (TyBv _) = true
+  | uptodate_type (TyCon(info,_)) = KernelSig.uptodate_id info
+  | uptodate_type (TyApp(opr,arg)) = uptodate_type opr andalso uptodate_type arg
+  | uptodate_type (TyAbs(bv,body)) = uptodate_type body
+  | uptodate_type (TyAll(bv,body)) = uptodate_type body
+  | uptodate_type (TyExi(bv,body)) = uptodate_type body
+
+
 
 
 (*---------------------------------------------------------------------------*
@@ -533,6 +556,12 @@ fun type_con_ge (TyCon(c1,k1), TyCon(c2,k2)) =
           | x => false)
   | type_con_ge _ =raise ERR "type_con_ge" "constants required";
 
+fun prim_type_con_compare (TyCon(c1,k1), TyCon(c2,k2)) =
+       (case KernelSig.id_compare (c1,c2)
+         of EQUAL => kind_compare (k1,k2)
+          | x => x)
+  | prim_type_con_compare _ =raise ERR "prim_type_con_compare" "constants required";
+
 (* ----------------------------------------------------------------------
     A total ordering on types that respects alpha equivalence.
     TyFv < TyBv < TyCon < TyApp < TyAll < TyExi < TyAbs
@@ -574,7 +603,43 @@ fun compare p =
                                                  ((k1,ty1),(k2,ty2))
     | (TyAbs _, _)                 => GREATER
 ;
-val prim_compare = compare
+
+fun prim_compare p =
+    if Portable.pointer_eq p then EQUAL else
+    case p of
+      (u as TyFv _, v as TyFv _)   => type_var_compare (u,v)
+    | (TyFv _, _)                  => LESS
+    | (TyBv _, TyFv _)             => GREATER
+    | (TyBv i, TyBv j)             => Int.compare (i,j)
+    | (TyBv _, _)                  => LESS
+    | (TyCon _, TyFv _)            => GREATER
+    | (TyCon _, TyBv _)            => GREATER
+    | (u as TyCon _, v as TyCon _) => prim_type_con_compare (u,v)
+    | (TyCon _, _)                 => LESS
+    | (TyApp _, TyFv _)            => GREATER
+    | (TyApp _, TyBv _)            => GREATER
+    | (TyApp _, TyCon _)           => GREATER
+    | (TyApp p1, TyApp p2)         => Lib.pair_compare(prim_compare,prim_compare)(p1,p2)
+    | (TyApp _, _)                 => LESS
+    | (TyAll _, TyAbs _)           => LESS
+    | (TyAll _, TyExi _)           => LESS
+    | (TyAll((_,k1),ty1),
+       TyAll((_,k2),ty2))          =>
+                                 Lib.pair_compare(kind_compare,prim_compare)
+                                                 ((k1,ty1),(k2,ty2))
+    | (TyAll _, _)                 => GREATER
+    | (TyExi _, TyAbs _)           => LESS
+    | (TyExi((_,k1),ty1),
+       TyExi((_,k2),ty2))          =>
+                                 Lib.pair_compare(kind_compare,prim_compare)
+                                                 ((k1,ty1),(k2,ty2))
+    | (TyExi _, _)                 => GREATER
+    | (TyAbs((_,k1),ty1),
+       TyAbs((_,k2),ty2))          =>
+                                 Lib.pair_compare(kind_compare,prim_compare)
+                                                 ((k1,ty1),(k2,ty2))
+    | (TyAbs _, _)                 => GREATER
+;
 
 val empty_tyset = HOLset.empty compare
 fun type_eq t1 t2 = compare(t1,t2) = EQUAL;
@@ -2351,7 +2416,8 @@ fun pp_raw_type pps ty =
           ( add_string "(("; pps e args; add_string ")";
             add_break(1,0); pp e c; add_string ")" )
           end
-      | pp e (TyBv i) = pp e (fetch i e)
+      | pp e (TyBv i) = (pp e (fetch i e)
+                         handle HOL_ERR _ => add_string (dollar^Lib.int_to_string i)) (* this line only for debugging *)
                         (* add_string (dollar^Lib.int_to_string i) *)
       | pp e (TyFv (name,kind)) =
          ( add_string name;

@@ -2,10 +2,10 @@ OPTIONS=NO_OVERLAY
 
 PORTABLED = $(dprot $(SIGOBJ)/Portable.ui)
 
-FinalTag-sig.uo: FinalTag-sig.sml $(PORTABLED)
+FinalTag-sig.uo: FinalTag-sig.sml Nonce.ui $(PORTABLED)
 	$(HOLMOSMLC) -c -toplevel $<
 
-FinalTerm-sig.uo: FinalTerm-sig.sml HOLset.ui Lib.uo
+FinalTerm-sig.uo: FinalTerm-sig.sml HOLset.ui Lib.uo KernelSig.ui
 	$(HOLMOSMLC) -c -toplevel $<
 
 FinalType-sig.uo: FinalType-sig.sml Lib.ui
@@ -18,4 +18,7 @@ FinalRank-sig.uo: FinalRank-sig.sml
 	$(HOLMOSMLC) -c -toplevel $<
 
 FinalTheory-sig.uo: FinalTheory-sig.sml Lib.uo $(PORTABLED)
+	$(HOLMOSMLC) -c -toplevel $<
+
+FinalThm-sig.uo: FinalThm-sig.sml Nonce.ui Lib.uo $(PORTABLED)
 	$(HOLMOSMLC) -c -toplevel $<

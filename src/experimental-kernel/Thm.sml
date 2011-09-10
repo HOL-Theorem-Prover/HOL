@@ -1729,7 +1729,7 @@ fun prim_type_definition (name as {Thy, Tyop}, thm) = let
   val checked   = assert_exn (Type.eq_ty bool) rng
                              (TYDEF_ERR "subset predicate has the wrong type")
   val newkd     = List.foldr (op ==>) (Type.kind_of dom) (map Type.kind_of tyvars)
-  val   _       = Type.prim_new_type name newkd
+  val   _       = Type.prim_new_type_opr name newkd
   val newty     = Type.mk_thy_type{Tyop=Tyop,Thy=Thy,Args=tyvars}
   val repty     = newty --> dom
   val rep       = mk_primed_var("rep", repty)
@@ -1752,7 +1752,7 @@ fun prim_type_specification thyname tnames th = let
                (TYSPEC_ERR "too few existentially quantified type variables")
   fun vOK V a   = check_kdvars V (Type.kind_vars a) TYSPEC_ERR
   val checked   = List.app (vOK (kind_vars_in_term body)) V
-  fun newty n k = (Type.prim_new_type {Thy=thyname,Tyop=n} k;
+  fun newty n k = (Type.prim_new_type_opr {Thy=thyname,Tyop=n} k;
                    Type.mk_thy_con_type {Thy=thyname,Tyop=n,Kind=k})
   val kds       = map (snd o Type.dest_var_type) V
   val newtys    = map2 newty tnames kds

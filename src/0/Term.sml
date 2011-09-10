@@ -46,7 +46,19 @@ infix |-> ##;
                Create the signature for HOL terms
  ---------------------------------------------------------------------------*)
 
+
 val termsig = KernelSig.new_table() : holty KernelSig.symboltable
+fun prim_delete_const kn = ignore (KernelSig.retire_name(termsig, kn))
+fun prim_new_const (k as {Thy,Name}) ty = let
+  val hty = if Type.polymorphic ty then POLY ty else GRND ty
+  val id = KernelSig.insert(termsig, k, hty)
+in
+  Const(id, hty)
+end
+fun del_segment s = KernelSig.del_segment(termsig, s)
+
+
+
 
 (*---------------------------------------------------------------------------*
  * Builtin constants. These are in every HOL signature, and it is            *
@@ -1542,7 +1554,6 @@ fun dest_abs(Abs(Bvar as Fv(Name,Ty), Body)) =
   | dest_abs _ = raise ERR "dest_abs" "not a lambda abstraction"
 end;
 
-open KernelSig
 (* Now for stripping binders of type abstractions of terms. *)
 
 local fun peel f (t as Clos _) A = peel f (push_clos t) A
@@ -1695,6 +1706,9 @@ fun dest_tyabs(TAbs(Bvar as (Name,_), Body)) =
   | dest_tyabs _ = raise ERR "dest_tyabs" "not a type abstraction"
 end;
 
+local
+open KernelSig
+in
 fun break_abs(Abs(_,Body)) = Body
   | break_abs(t as Clos _) = break_abs (push_clos t)
   | break_abs _ = raise ERR "break_abs" "not an abstraction";
@@ -1702,8 +1716,6 @@ fun break_abs(Abs(_,Body)) = Body
 fun break_tyabs(TAbs(_,Body)) = Body
   | break_tyabs(t as Clos _) = break_tyabs (push_clos t)
   | break_tyabs _ = raise ERR "break_tyabs" "not a type abstraction";
-
-
 
 fun dest_thy_const (Const(id,ty)) =
       let val {Name,Thy} = name_of_id id
@@ -1716,6 +1728,7 @@ fun break_const (Const p) = (I##to_hol_type) p
 
 fun dest_const (Const(id,ty)) = (name_of id, to_hol_type ty)
   | dest_const _ = raise ERR "dest_const" "not a const"
+end
 
 (*---------------------------------------------------------------------------
                Derived destructors
@@ -1789,9 +1802,10 @@ local
         end
   fun add_env mp (lctys,env,insts_homs) = (lctys,mp::env,insts_homs)
   fun drop_env (tmS,(lctys,env,insts_homs),kdS,rkS) = (tmS,(lctys,tl env,insts_homs),kdS,rkS)
+  open KernelSig
 in
 fun RM [] theta = theta
-  | RM (((v as Fv(_,Ty)),tm,scoped)::rst) ((S1 as (tmS,Id)),tyS,kdS,rkS)
+  | RM (((v as Fv(n,Ty)),tm,scoped)::rst) ((S1 as (tmS,Id)),tyS,kdS,rkS)
      = if bound_by_scope scoped tm
        then MERR "variable bound by scope"
        else let val (tyS',kdS',rkS') = tymatch Ty (type_of tm) (tyS,kdS,rkS)
@@ -1802,7 +1816,8 @@ fun RM [] theta = theta
                                      then (tmS,HOLset.add(Id,v))
                                      else ((v |-> tm)::tmS,Id)
                    | SOME tm' => if aconv tm' tm then S1
-                                 else MERR "double bind on variable"),
+                                 else MERR ("double bind on variable "^
+                                            Lib.quote n)),
                 tyS',kdS',rkS')
             end
   | RM ((Const(c1,ty1),Const(c2,ty2),_)::rst) (tmS,tyS,kdS,rkS)
@@ -1918,11 +1933,6 @@ end (* local *)
 fun kind_match_terml rkfixed kdfixed tyfixed tmfixed pat ob =
  kind_norm_subst (raw_kind_match rkfixed kdfixed tyfixed tmfixed pat ob ([],[],[],0))
 
-(*
-fun kind_match_terml0 kdfixed tyfixed tmfixed pat ob =
- kind_norm_subst (raw_kind_match kdfixed tyfixed tmfixed pat ob ([],[],[],0))
-*)
-
 fun match_terml tyfixed tmfixed pat ob =
  let val (tmS,tyS,kdS,rkS) = kind_match_terml false [] tyfixed tmfixed pat ob
  in if null kdS andalso rkS = 0 then (tmS,tyS)
@@ -1930,9 +1940,6 @@ fun match_terml tyfixed tmfixed pat ob =
  end
 
 val kind_match_term = kind_match_terml false [] [] empty_varset
-
-(*val kind_match_term0 = kind_match_terml0 [] [] empty_varset*)
-(*val kind_match_term0 = kind_match_terml [0] [] [] empty_varset*)
 
 fun match_term pat ob =
  let val (tmS,tyS,kdS,rkS) = kind_match_term pat ob
@@ -2076,7 +2083,14 @@ val dot     = "."
 val dollar  = "$"
 val percent = "%"
 val slash   = "/"
-val colon   = ":";
+val colon   = ":"
+val tilde   = "~";
+
+(* marker used to delimit names as "quoted" strings *)
+val nameq = tilde;
+(* val nameq = "\\\""; *)
+val nameqc = List.last (explode nameq); (* avoids possible initial backslash *)
+(* nameqc used in "take_name" below; also, string constant in "lexer" below *)
 
 fun ty2tmE ty E = let val kd = Type.kd_of ty E
                       val a = mk_var_type("'carrier", kd ==> Kind.typ Rank.rho)
@@ -2089,11 +2103,12 @@ fun tm2ty tm = snd (dest_app_type (snd (dest_var tm)))
 fun pp_raw_term tyindex index pps tm =
  let open Portable
      val {add_string,add_break,begin_block,end_block,...} = with_ppstream pps
+     fun quote s = nameq ^ s ^ nameq
      fun ppty (TyApp(Opr,Arg)) =
           ( add_string "("; ppty Arg; add_break(1,0);
             ppty Opr; add_string ")" )
        | ppty (TyAbs(Bvar,Body)) =
-          ( add_string "(\\";
+          ( add_string "(|";
             ppty (TyFv Bvar); add_string dot; add_break(1,0);
             ppty Body; add_string ")" )
        | ppty (TyAll(Bvar,Body)) =
@@ -2112,7 +2127,7 @@ fun pp_raw_term tyindex index pps tm =
             add_string (quote n); add_break(1,0);
             ppty Ty; add_string ")" )
        | ppunb (Const(id,Ty)) =
-          let val {Name,Thy} = name_of_id id
+          let val {Name,Thy} = KernelSig.name_of_id id
               val (opr,ty) = case Ty of POLY t => ("=",t) | GRND t => ("-",t)
           in
           ( add_string "(";
@@ -2124,7 +2139,7 @@ fun pp_raw_term tyindex index pps tm =
        | ppunb _ = raise ERR "pp_raw_term" "non-atom: can't happen"
 
      fun pp (Abs(Bvar,Body)) =
-          ( add_string "(\\";
+          ( add_string "(|";
             pp Bvar; add_string dot; add_break(1,0);
             pp Body; add_string ")" )
        | pp (TAbs(Btyvar,Body)) =
@@ -2139,13 +2154,11 @@ fun pp_raw_term tyindex index pps tm =
                              ppty Ty; add_string ")" )
        | pp (Bv i) = add_string (dollar^Lib.int_to_string i)
        | pp a      = if unbound_ty(type_of a) (* free variable or constant *)
-                     then ppunb a                            
+                     then ppunb a
                      else add_string (percent^Lib.int_to_string (index a))
  in
    begin_block INCONSISTENT 0;
-   add_string "`";
    pp (norm_clos tm);
-   add_string "`";
    end_block()
  end handle e => Raise e;
 
@@ -2156,6 +2169,256 @@ fun pp_raw_term tyindex index pps tm =
 fun sprint pp x = HOLPP.pp_to_string 75 pp x
 
 val term_to_string = sprint (pp_raw_term (fn t => ~1) (fn t => ~1));
+
+fun write_raw tyindex index =
+    String.translate (fn #"\n" => " " | c => str c) o
+    HOLPP.pp_to_string 75 (pp_raw_term tyindex index)
+
+(*---------------------------------------------------------------------------*
+ * Fetching theorems from disk. The following parses the "raw" term          *
+ * representation found in exported theory files.                            *
+ *---------------------------------------------------------------------------*)
+
+local
+datatype lexeme
+   = dot
+   | lamb
+   | tylamb
+   | exclam
+   | questn
+   | lparen
+   | rparen
+   | tyapp
+   | var
+   | const
+   | pconst
+   | ident of int
+   | bvar  of int
+   | name  of string; (* do we need `name`? *)
+
+local fun is_quote c = (c <> nameqc) (* #"\"" *)
+in
+fun take_name ss0 =
+  let val (ns, ss1) = Substring.splitl is_quote ss0
+      val ss2 = Substring.triml 1 ss1
+  in (Substring.string ns, ss2)
+  end
+end;
+
+local val numeric = Char.contains "0123456789"
+in
+fun take_numb ss0 =
+  let val (ns, ss1) = Substring.splitl numeric ss0
+  in case Int.fromString (Substring.string ns)
+      of SOME i => (i,ss1)
+       | NONE   => raise ERR "take_numb" ""
+  end
+end;
+
+(* don't allow numbers to be split across fragments *)
+
+fun lexer ss1 =
+  case Substring.getc (Lib.deinitcommentss ss1) of
+                      (* was: (Substring.dropl Char.isSpace ss1) *)
+    NONE => NONE
+  | SOME (c,ss2) =>
+    case c of
+      #"."  => SOME(dot,   ss2)
+    | #"|"  => SOME(lamb,  ss2)
+    | #"/"  => SOME(tylamb,ss2)
+    | #"!"  => SOME(exclam,ss2)
+    | #"?"  => SOME(questn,ss2)
+    | #"("  => SOME(lparen,ss2)
+    | #")"  => SOME(rparen,ss2)
+    | #":"  => SOME(tyapp, ss2)
+    | #"@"  => SOME(var,   ss2)
+    | #"-"  => SOME(const, ss2)
+    | #"="  => SOME(pconst,ss2)
+    | #"%"  => let val (n,ss3) = take_numb ss2 in SOME(ident n, ss3) end
+    | #"$"  => let val (n,ss3) = take_numb ss2 in SOME(bvar n,  ss3) end
+(*  | #"\"" => let val (n,ss3) = take_name ss2 in SOME(name n,  ss3) end *)
+    | #"~" => let val (n,ss3) = take_name ss2 in SOME(name n,  ss3) end
+    |   _   => raise ERR "raw lexer" "bad character";
+
+fun lexeme_ss ss =
+  case lexer ss
+   of SOME (bvar n, _) => "bvar " ^ Int.toString n
+    | SOME (ident n, _) => "ident " ^ Int.toString n
+    | SOME (name s, _) => "name " ^ s
+    | SOME (dot, _) => "dot"
+    | SOME (lamb, _) => "lamb"
+    | SOME (tylamb, _) => "tylamb"
+    | SOME (exclam, _) => "exclam"
+    | SOME (questn, _) => "questn"
+    | SOME (lparen, _) => "lparen"
+    | SOME (rparen, _) => "rparen"
+    | SOME (tyapp, _) => "tyapp"
+    | SOME (var, _) => "var"
+    | SOME (const, _) => "const"
+    | SOME (pconst, _) => "pconst"
+    | NONE => "NONE"
+
+fun eat_rparen ss =
+  case lexer ss
+   of SOME (rparen, ss') => ss'
+    |   _ => raise ERR "eat_rparen" "expected right parenthesis";
+
+fun eat_dot ss =
+  case lexer ss
+   of SOME (dot, ss') => ss'
+    |   _ => raise ERR "eat_dot" "expected a \".\"";
+
+datatype stackitem = Tm of term | Ty of hol_type
+
+fun tmof (Tm tm) = tm
+  | tmof (Ty _ ) = raise ERR "tmof" "not a term"
+fun tyof (Ty ty) = ty
+  | tyof (Tm _ ) = raise ERR "tyof" "not a type"
+
+in
+fun read_raw tyv tmv = let
+  fun tyindex i = Vector.sub(tyv, i)
+  fun index i = Vector.sub(tmv, i)
+  val tvof = Type.dest_var_type
+  fun parsety (stk,ss) =
+   case lexer ss
+    of SOME (bvar n,  rst) => (Ty(TyBv n)::stk,rst)
+     | SOME (ident n, rst) => (Ty(tyindex n)::stk,rst)
+     | SOME (lparen,  rst) =>
+        (case lexer rst
+          of SOME (lamb,   rst') => glambty (stk,rst')
+           | SOME (exclam, rst') => gallty  (stk,rst')
+           | SOME (questn, rst') => gexity  (stk,rst')
+           |    _                => parsetyl (parsety (stk,rst)))
+     |  _ => (stk,ss)
+  and
+  parsetyl (stk,ss) =
+     case parsety (stk,ss)
+      of (h1::h2::t, ss') => (Ty(TyApp(tyof h1,tyof h2))::t, eat_rparen ss')
+       |   _              => raise ERR "parsetyl" "impossible"
+  and
+  glambty (stk,ss) =
+   case lexer ss
+    of SOME (ident n, rst) =>
+         (case parsety (stk, eat_dot rst)
+           of (h::t,rst1) => (Ty(TyAbs(tvof(tyindex n),tyof h))::t, eat_rparen rst1)
+            |   _         => raise ERR "glambty" "impossible")
+     | _ => raise ERR "glambty" "expected an identifier"
+  and
+  gallty (stk,ss) =
+   case lexer ss
+    of SOME (ident n, rst) =>
+         (case parsety (stk, eat_dot rst)
+           of (h::t,rst1) => (Ty(TyAll(tvof(tyindex n),tyof h))::t, eat_rparen rst1)
+            |   _         => raise ERR "gallty" "impossible")
+     | _ => raise ERR "gallty" "expected an identifier"
+  and
+  gexity (stk,ss) =
+   case lexer ss
+    of SOME (ident n, rst) =>
+         (case parsety (stk, eat_dot rst)
+           of (h::t,rst1) => (Ty(TyExi(tvof(tyindex n),tyof h))::t, eat_rparen rst1)
+            |   _         => raise ERR "gexity" "impossible")
+     | _ => raise ERR "gexity" "expected an identifier"
+
+  fun parse (stk,ss) =
+      case lexer ss of
+        SOME (bvar n,  rst) => (Tm(Bv n)::stk,rst)
+      | SOME (ident n, rst) => (Tm(index n)::stk,rst)
+      | SOME (lparen,  rst) =>
+        (case lexer rst
+          of SOME (lamb,   rst') => glamb (stk,rst')
+           | SOME (tylamb, rst') => gtylamb (stk,rst')
+           | SOME (var,    rst') => gvar (stk,rst')
+           | SOME (const,  rst') => gconst false (stk,rst')
+           | SOME (pconst, rst') => gconst true  (stk,rst')
+           | SOME (tyapp,  rst') => gtyapp (parse (stk,rst'))
+           |    _                => parsel (parse (stk,rst)))
+      |  _ => (stk,ss)
+  and
+     parsel (stk,ss) =
+        case parse (stk,ss)
+         of (h1::h2::t, ss') => (Tm(Comb(tmof h2,tmof h1))::t, eat_rparen ss')
+          |   _              => raise ERR "raw.parsel" "impossible"
+  and
+     gvar (stk,ss) =
+        case lexer ss
+         of SOME (name n, rst) =>
+              (case parsety (stk, rst)
+                of (h::t,rst1) => (Tm(Fv(n,tyof h))::t, eat_rparen rst1)
+                 |   _         => raise ERR "gvar" "impossible")
+          | _ => raise ERR "gvar" "expected a name"
+     and
+     gconst poly (stk,ss) =
+        case lexer ss
+         of SOME (name n, rst) =>
+              (case lexer rst
+                of SOME (name thy, rst1) =>
+                     (case parsety (stk, rst1)
+                       of (h::t,rst2) => let val ty = tyof h
+                                             val ty' = if poly then POLY ty else GRND ty
+                                             val id = case prim_mk_const{Name=n,Thy=thy}
+                                                       of Const(id,_) => id
+                                                        | _ => raise ERR "gconst" "impossible const"
+                                         in (Tm(Const(id,ty'))::t, eat_rparen rst2)
+                                         end
+                        |   _         => raise ERR "gconst" "impossible")
+                 |   _         => raise ERR "gconst" "expected a theory name")
+          | _ => raise ERR "gconst" "expected a constant name"
+     and
+     gtyapp (stk,ss) =
+        case parsety (stk,ss)
+         of (h1::h2::t, ss') => (Tm(TComb(tmof h2,tyof h1))::t, eat_rparen ss')
+          |   _              => raise ERR "raw.gtyapp" "impossible"
+     and
+     glamb (stk,ss) =
+     case parse (stk, ss) (* parse the bound variable, push on stack *)
+       of (stk1, rst) =>
+            (case parse (stk1, eat_dot rst) (* parse the body *)
+              of (h::v::t,rst1) => (Tm(Abs(tmof v,tmof h))::t, eat_rparen rst1)
+               |   _            => raise ERR "glamb" "impossible")
+     and
+     gtylamb (stk,ss) =
+      case lexer ss
+       of SOME (ident n, rst) =>
+            (case parse (stk, eat_dot rst)
+              of (h::t,rst1) => (Tm(TAbs(tvof(tyindex n),tmof h))::t, eat_rparen rst1)
+               |   _         => raise ERR "gtylamb" "impossible")
+        | _ => raise ERR "gtylamb" "expected an identifier"
+in
+fn s =>
+   case parse ([], Substring.full s)
+     of ([v], _)  => tmof v
+      | otherwise => raise ERR "raw term parser" "parse failed"
+end;
+end (* local *)
+
+(* ----------------------------------------------------------------------
+    Is a term up-to-date wrt the theory?
+   ---------------------------------------------------------------------- *)
+
+fun uptodate_term t = let
+  open Type
+  fun recurse tmlist =
+      case tmlist of
+        [] => true
+      | t::rest => let
+        in
+          case t of
+            Fv(_, ty) => Type.uptodate_type ty andalso recurse rest
+          | Const(info, ty) => KernelSig.uptodate_id info andalso
+                               uptodate_type (to_hol_type ty) andalso
+                               recurse rest
+          | Comb(f,x) => recurse (f::x::rest)
+          | TComb(f,ty) => Type.uptodate_type ty andalso recurse (f::rest)
+          | Abs(v,bod) => recurse (v::bod::rest)
+          | TAbs(a,bod) => Type.uptodate_type (TyFv a) andalso recurse (bod::rest)
+          | Bv _ => recurse rest
+          | Clos _ => recurse (push_clos t :: rest)
+        end
+in
+  recurse [t]
+end
 
 
 (*---------------------------------------------------------------------------
