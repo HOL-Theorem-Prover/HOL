@@ -12,6 +12,9 @@ fun tyvar_to_ot s =
   else s
 end
 
+fun thy_const_to_string {Thy,Name} = Thy^"$"^Name
+fun thy_tyop_to_string  {Thy,Tyop} = Thy^"$"^Tyop
+
 datatype object
 = ONum of int
 | OName of string

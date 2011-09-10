@@ -1,6 +1,9 @@
 signature OpenTheoryCommon =
 sig
 
+val thy_tyop_to_string  : OpenTheoryMap.thy_tyop  -> string
+val thy_const_to_string : OpenTheoryMap.thy_const -> string
+
 datatype object
 = ONum of int
 | OName of string

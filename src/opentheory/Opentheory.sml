@@ -25,8 +25,6 @@ local open Substring in
   val trimr  = fn s => string(trimr 1 (full s))
 end
 
-fun thy_const_to_string {Thy,Name} = Thy^"$"^Name
-
 fun raw_read_article {tyop_from_ot,const_from_ot} input {define_tyop,define_const,axiom} = let
   val ERR = ERR "read_article"
   fun unOTermls c = List.map (fn OTerm t => t | _ => raise ERR (c^" failed to pop a list of terms"))
