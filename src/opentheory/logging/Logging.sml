@@ -459,8 +459,8 @@ val (log_term, log_thm, log_clear) = let
       in () end handle HOL_ERR _ => let
         val (sv,sb) = dest_abs source
         val (tv,tb) = dest_abs template
-        val _ = log_rconv (HOLset.add(bvs,tv)) sb tb
         val _ = log_var tv
+        val _ = log_rconv (HOLset.add(bvs,tv)) sb tb
         val _ = log_command "absThm"
       in () end
       val _ = log_rconv empty_varset (concl th) tm
