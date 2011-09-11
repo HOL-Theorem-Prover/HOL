@@ -17,6 +17,7 @@ val _ = OpenTheory_const_name{const={Thy="OTcl",Name="#"},name="combinatoryLogic
 
 val _ = OpenTheory_const_name{const={Thy="OTcl",Name="mk_cl"},name="combinatoryLogicExample.ind_type.mk_cl"}
 val _ = OpenTheory_const_name{const={Thy="OTcl",Name="dest_cl"},name="combinatoryLogicExample.ind_type.dest_cl"}
+val _ = OpenTheory_const_name{const={Thy="OTcl",Name="cl_case"},name="combinatoryLogicExample.ind_type.cl_case"}
 
 val _ = OpenTheory_const_name{const={Thy="OTcl",Name="junk_rep"},name="combinatoryLogicExample.cl.rep"}
 val _ = OpenTheory_const_name{const={Thy="OTcl",Name="junk_abs"},name="combinatoryLogicExample.cl.abs"}
@@ -32,18 +33,20 @@ val reader = {
     val [ar,ra] = CONJUNCTS bij
     val _ = Feedback.HOL_MESG("Defined tyop "^Tyop)
     in {rep_abs=SPEC_ALL ra,abs_rep=SPEC_ALL ar} end
-    | _ => raise Fail "define_tyop",
+               | _ => raise Fail "define_tyop",
 
-  define_const=fn name => raise Fail ("define_const "^(thy_const_to_string name)),
+  define_const=fn {Thy="OTcl",Name} => (fn rhs => new_definition (Name^"_def",mk_eq(mk_var(Name,type_of rhs),rhs)))
+                | _ => raise Fail "define_const ",
 
   axiom=let
     open boolTheory
-    val l = ref [imp_def,FORALL_DEF,TRUTH,and_def,ETA_AX,EXISTS_DEF,IMP_ANTISYM_AX,OR_DEF,exists_def,
-                 MONO_OR,IMP_CLAUSES,MONO_EXISTS,MONO_AND,TYPE_DEFINITION]
+    val l = ref [imp_def,and_def,exists_def]
     fun a ths (h,c) = let
       val (th,r) = Lib.pluck (fn th => c = concl th) (!l)
       val _ = l := r
-    in th end handle HOL_ERR _ => raise Fail("axiom "^Parse.term_to_backend_string c)
+    in th end handle HOL_ERR _ =>
+      fst(snd(hd(DB.match ["bool"] c)))
+    handle _ => raise Fail("axiom "^Parse.term_to_backend_string c)
   in a end
 }
 val thms = read_article file reader

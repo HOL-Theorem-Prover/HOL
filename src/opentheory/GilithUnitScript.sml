@@ -1,6 +1,7 @@
 open bossLib boolLib OpenTheoryMap Opentheory HolKernel
 val Thy = "GilithUnit"
 val _ = new_theory Thy
+(*
 val tmp = OS.FileSys.tmpName()
 val pkg = "unit-1.0"
 val cmd = ("opentheory info --article -o "^tmp^" "^pkg)
@@ -36,4 +37,5 @@ val reader = {
 val thms = read_article tmp reader
 in save_thm("exports",LIST_CONJ(Net.listItems thms)) end
 else save_thm("exports",boolTheory.TRUTH)
+*)
 val _ = export_theory ()
