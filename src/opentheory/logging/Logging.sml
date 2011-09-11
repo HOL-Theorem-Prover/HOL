@@ -296,13 +296,14 @@ val (log_term, log_thm, log_clear) = let
     val CCONTR_pth = SPEC P (EQ_MP F_DEF (ASSUME F))
     val SEL_CONV = RATOR_CONV (REWR_CONV EXISTS_THM) THENC BETA_CONV
     val SEL_RULE = CONV_RULE SEL_CONV
-    fun specify c th = let
+    fun specify c (th,defs) = let
       val th1 = SEL_RULE th
       val (l,r) = dest_comb(concl th1)
-      val ty = type_of r
-      val thyc = let val {Name,Thy,...} = dest_thy_const c in {Name=Name,Thy=Thy} end
-      val th2 = mk_proof_thm (Def_const_prf(thyc,r)) ([],mk_eq(c,r))
-      in CONV_RULE BETA_CONV (EQ_MP (AP_TERM l (SYM th2)) th1) end
+      val {Thy,Name,...} = dest_thy_const c
+      val th2 = mk_proof_thm (Def_const_prf({Thy=Thy,Name=Name},r)) ([],mk_eq(c,r))
+      val defs = th2 :: defs
+      val th = CONV_RULE BETA_CONV (EQ_MP (AP_TERM l (SYM th2)) th1)
+      in (th,defs) end
     val EXISTENCE_RULE = CONV_RULE (SEL_CONV THENC (RATOR_CONV ETA_CONV))
     fun mk_ra (b,r,rep,abs) = mk_eq(mk_comb(b,r),mk_eq(mk_comb(rep,mk_comb(abs,r)),r))
     fun mk_ar (abs,rep,a)   = mk_eq(mk_comb(abs,mk_comb(rep,a)),a)
@@ -607,7 +608,11 @@ val (log_term, log_thm, log_clear) = let
       val _ = log_thm (proveHyp th (INST [P|->tm] CCONTR_pth))
       in () end
     | Beta_prf th => log_thm (RIGHT_BETA th)
-    | Def_spec_prf (consts,th) => log_thm (rev_itlist specify consts th)
+    | Def_spec_prf (cs,th) => let
+      val (th,defs) = rev_itlist specify cs (th,[])
+      val _ = app log_thm (rev defs)
+      val _ = log_thm th
+      in () end
     | Def_tyop_prf (name,tyvars,th,aty) => let
       val n = log_tyop_name name
       val abs_name = n^".abs"
