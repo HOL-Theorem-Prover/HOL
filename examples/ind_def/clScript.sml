@@ -7,15 +7,10 @@ local open Logging in
   val new_theory = start_logging o new_theory
   val store_thm = export_thm o store_thm
   val export_theory = export_theory o stop_logging
-  val Define = log_thm o Define
-  fun Hol_reln q = let
-    val r as (x,_,_) = bossLib.Hol_reln q
-    val _ = log_thm x
-    in r end
-  fun xHol_reln s q = let
-    val r as (x,_,_) = bossLib.xHol_reln s q
-    val _ = log_thm x
-    in r end
+  val Define = fn q => Define q before log_definitions()
+  val Hol_datatype = fn q => Hol_datatype q before log_definitions()
+  val Hol_reln = fn q => Hol_reln q before log_definitions()
+  val xHol_reln = fn s => fn q => xHol_reln s q before log_definitions()
 end
 
 local open OpenTheoryMap in
@@ -41,12 +36,18 @@ local open OpenTheoryMap in
   val _ = c0 "old2-> @ind_typecl0<-old" "ind_type.junk_2"
   val _ = c0 "mk_cl" "ind_type.mk_cl"
   val _ = c0 "dest_cl" "ind_type.dest_cl"
+  val _ = c0 "cl_case" "ind_type.cl_case"
+  val _ = c0 "cl_size" "ind_type.cl_size"
+  (* these should be moved into the appropriate theories *)
+  val _ = OpenTheory_const_name {const={Thy="arithmetic",Name="+"},name="Number.Natural.+"}
+  val _ = OpenTheory_const_name {const={Thy="arithmetic",Name="NUMERAL"},name="Unwanted.id"}
+  val _ = OpenTheory_const_name {const={Thy="arithmetic",Name="BIT1"},name="Number.Numeral.bit1"}
+  val _ = OpenTheory_const_name {const={Thy="arithmetic",Name="ZERO"},name="Number.Numeral.zero"}
 end
 
 val _ = new_theory "cl";
 
 val _ = Hol_datatype `cl = S | K | # of cl => cl`;
-val _ = Logging.log_thm (definition "cl_TY_DEF")
 
 val _ = set_fixity "#"  (Infixl 1100);
 

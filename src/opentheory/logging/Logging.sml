@@ -90,7 +90,7 @@ in () end
 fun log_redres loga logb {redex,residue} =
   log_pair loga logb (redex,residue)
 
-val (log_term, raw_log_thm, log_clear) = let
+val (log_term, log_thm, log_clear) = let
   val (reset_key,next_key) = let
     val key = ref 0
     fun reset() = key := 0
@@ -655,21 +655,13 @@ fun export_thm th = let
       val v = !verbosity >= 1
       val s = thm_to_backend_string th
       val _ = if v then HOL_MESG("Start logging\n"^s^"\n") else ()
-      val _ = raw_log_thm th
+      val _ = log_thm th
       val _ = log_list log_term (hyp th)
       val _ = log_term (concl th)
       val _ = log_command "thm"
       val _ = if v then HOL_MESG("Finish logging\n"^s^"\n") else ()
       in () end
     val _ = delete_proof th
-in th end
-
-fun log_thm th = let
-  val _ = case !log_state of
-    Not_logging => ()
-  | Active_logging _ =>
-    raw_log_thm th
-  val _ = Thm.delete_proof th
 in th end
 
 local val op ^ = OS.Path.concat in
@@ -690,12 +682,23 @@ in fn name => let
    end
 end
 
+val defn_thms = ref []
+fun add_defn th = (
+  Feedback.HOL_MESG(Parse.thm_to_backend_string th);
+  defn_thms := th :: !defn_thms)
+
+fun log_definitions() = (
+  app log_thm (rev (!defn_thms));
+  defn_thms := [])
+
 fun start_logging() =
   case !log_state of
     Not_logging => let
       val name = Theory.current_theory()
       val path = mk_path name
       val file = TextIO.openOut path
+      val _    = Thm.set_definition_callback add_defn
+      val _    = defn_thms := []
     in log_state := Active_logging file end
   | Active_logging _ => ()
 
@@ -704,6 +707,8 @@ fun stop_logging() =
     Active_logging h => let
       val _ = log_clear ()
       val _ = TextIO.closeOut h
+      val _ = Thm.clear_definition_callback()
+      val _ = defn_thms := []
     in log_state := Not_logging end
   | Not_logging => ()
 

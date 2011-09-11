@@ -54,4 +54,7 @@ sig
 
   val deductAntisym : thm -> thm -> thm
 
+  val set_definition_callback   : (thm -> unit) -> unit
+  val clear_definition_callback : unit -> unit
+
 end

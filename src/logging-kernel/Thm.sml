@@ -1123,9 +1123,15 @@ fun mk_axiom_thm (r,c) =
    (Assert (type_of c = bool) "mk_axiom_thm"  "Not a proposition!";
     make_thm Count.Axiom (Tag.ax_tag r, empty_hyp, c, Axiom_prf))
 
+val defn_callback = ref (K ())
+fun set_definition_callback f = defn_callback := f
+fun clear_definition_callback () = defn_callback := K ()
+
 fun mk_defn_thm (witness_tag, c, p) =
    (Assert (type_of c = bool) "mk_defn_thm"  "Not a proposition!";
-    make_thm Count.Definition (witness_tag,empty_hyp,c, p))
+    let val th = make_thm Count.Definition (witness_tag,empty_hyp,c, p)
+        val _  = (!defn_callback) th
+        in th end)
 
 (* ----------------------------------------------------------------------
     Making definitional theorems
