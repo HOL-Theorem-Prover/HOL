@@ -6,17 +6,17 @@ type thy_const = OpenTheoryMap.thy_const
 (* record of data an article reader must provide: *)
 type reader = {
   define_tyop  : {name:thy_tyop, ax:thm, args:hol_type list, rep:thy_const, abs:thy_const} ->
-                 {rep_abs:thm, abs_rep:thm, rep:term, abs:term},
+                 {rep_abs:thm, abs_rep:thm},
   define_const : thy_const -> term -> thm,
   axiom        : thm Net.net -> (term list * term) -> thm}
 
 (*
-[define_tyop r] will be called when the article wants to define a type.
-[r] consists of the name of the type operator to be defined, the type axiom, a
-list of arguments (type variables) for the type operator in the desired order,
-and the names of the rep and abs constants. The call must return the rep and
-abs constants, and the type bijection theorems.
-If the type axiom is |- P t then the bijection theorems are:
+[define_tyop r] will be called when the article wants to define a type. [r]
+consists of the name of the type operator to be defined, the type axiom, a list
+of arguments (type variables) for the type operator in the desired order, and
+the names of the rep and abs constants. The call must return the type bijection
+theorems. The type axiom will be of the form |- P t. The bijection theorems
+should be:
   abs_rep = |- abs (rep a) = a
   rep_abs = |- P r = (rep(abs r) = r)
 

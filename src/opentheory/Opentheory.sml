@@ -13,7 +13,7 @@ val ERR = mk_HOL_ERR "Opentheory"
 
 type reader =
 { define_tyop  : {name:thy_tyop, ax:thm, args:hol_type list, rep:thy_const, abs:thy_const} ->
-                 {rep_abs:thm, abs_rep:thm, rep:term, abs:term}
+                 {rep_abs:thm, abs_rep:thm}
 , define_const : thy_const -> term -> thm
 , axiom        : thm Net.net -> (term list * term) -> thm
 }
@@ -62,7 +62,9 @@ fun raw_read_article {tyop_from_ot,const_from_ot} input {define_tyop,define_cons
         val ls = List.map (fn OName s => mk_vartype s | _ => raise ERR "defineTypeOp failed to pop a list of names") ls
         val tyop = ot_to_tyop "defineTypeOp" n
         val ot_to_const = ot_to_const "defineTypeOp"
-        val {abs,rep,abs_rep,rep_abs} = define_tyop {name=tyop,ax=ax,args=ls,rep=ot_to_const rep,abs=ot_to_const abs}
+        val {abs_rep,rep_abs} = define_tyop {name=tyop,ax=ax,args=ls,rep=ot_to_const rep,abs=ot_to_const abs}
+        val (abs,foo) = dest_comb(lhs(concl abs_rep))
+        val (rep,_)   = dest_comb foo
         val {Thy,Name,...} = dest_thy_const rep val rep = {Thy=Thy,Name=Name}
         val {Thy,Name,...} = dest_thy_const abs val abs = {Thy=Thy,Name=Name}
       in st_(OThm rep_abs::OThm abs_rep::OConst rep::OConst abs::OTypeOp tyop::os,st) end
