@@ -402,6 +402,8 @@ val (log_term, log_thm, log_clear) = let
       val _ = log_command "deductAntisym"
       in () end
     | EQ_MP_prf (th1,th2) => let
+      val _ = () (* log_comment (Parse.thm_to_string th1) *)
+      val _ = () (* log_comment (Parse.thm_to_string th2) *)
       val _ = log_thm th1
       val _ = log_thm th2
       val _ = log_command "eqMp"
@@ -693,9 +695,7 @@ in fn name => let
 end
 
 val defn_thms = ref []
-fun add_defn th = (
-  Feedback.HOL_MESG(Parse.thm_to_backend_string th);
-  defn_thms := th :: !defn_thms)
+fun add_defn th = defn_thms := th :: !defn_thms
 
 fun log_definitions() = (
   app log_thm (rev (!defn_thms));

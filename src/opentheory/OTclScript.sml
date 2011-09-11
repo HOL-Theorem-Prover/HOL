@@ -14,16 +14,32 @@ val _ = OpenTheory_const_name{const={Thy="OTcl",Name="-->"},name="combinatoryLog
 val _ = OpenTheory_const_name{const={Thy="OTcl",Name="S"},name="combinatoryLogicExample.S"}
 val _ = OpenTheory_const_name{const={Thy="OTcl",Name="K"},name="combinatoryLogicExample.K"}
 val _ = OpenTheory_const_name{const={Thy="OTcl",Name="#"},name="combinatoryLogicExample.#"}
+val _ = OpenTheory_const_name{const={Thy="OTcl",Name="RTC"},name="combinatoryLogicExample.RTC"}
+val _ = OpenTheory_const_name{const={Thy="OTcl",Name="normform"},name="combinatoryLogicExample.normform"}
+val _ = OpenTheory_const_name{const={Thy="OTcl",Name="diamond"},name="combinatoryLogicExample.diamond"}
+val _ = OpenTheory_const_name{const={Thy="OTcl",Name="-||->"},name="combinatoryLogicExample.-||->"}
 
 val _ = OpenTheory_const_name{const={Thy="OTcl",Name="mk_cl"},name="combinatoryLogicExample.ind_type.mk_cl"}
 val _ = OpenTheory_const_name{const={Thy="OTcl",Name="dest_cl"},name="combinatoryLogicExample.ind_type.dest_cl"}
 val _ = OpenTheory_const_name{const={Thy="OTcl",Name="cl_case"},name="combinatoryLogicExample.ind_type.cl_case"}
+val _ = OpenTheory_const_name{const={Thy="OTcl",Name="cl_size"},name="combinatoryLogicExample.ind_type.cl_size"}
 
 val _ = OpenTheory_const_name{const={Thy="OTcl",Name="junk_rep"},name="combinatoryLogicExample.cl.rep"}
 val _ = OpenTheory_const_name{const={Thy="OTcl",Name="junk_abs"},name="combinatoryLogicExample.cl.abs"}
 val _ = OpenTheory_const_name{const={Thy="OTcl",Name="junk_cl0"},name="combinatoryLogicExample.ind_type.cl0"}
 val _ = OpenTheory_const_name{const={Thy="OTcl",Name="junk_cl1"},name="combinatoryLogicExample.ind_type.cl1"}
 val _ = OpenTheory_const_name{const={Thy="OTcl",Name="junk_cl2"},name="combinatoryLogicExample.ind_type.cl2"}
+
+(* should be in other theories *)
+  val _ = OpenTheory_const_name {const={Thy="arithmetic",Name="+"},name="Number.Natural.+"}
+  val _ = OpenTheory_const_name {const={Thy="arithmetic",Name="NUMERAL"},name="Unwanted.id"}
+  val _ = OpenTheory_const_name {const={Thy="arithmetic",Name="BIT1"},name="Number.Numeral.bit1"}
+
+fun ML_name "#" = "APP"
+  | ML_name "-->" = "redn"
+  | ML_name "-||->" = "predn"
+  | ML_name s = s
+
 val reader = {
   define_tyop=fn {name={Thy="OTcl",Tyop},ax,args,rep={Thy="OTcl",Name=rep},abs={Thy="OTcl",Name=abs}} => let
     val (P,t) = dest_comb (concl ax)
@@ -35,7 +51,7 @@ val reader = {
     in {rep_abs=SPEC_ALL ra,abs_rep=SPEC_ALL ar} end
                | _ => raise Fail "define_tyop",
 
-  define_const=fn {Thy="OTcl",Name} => (fn rhs => new_definition (Name^"_def",mk_eq(mk_var(Name,type_of rhs),rhs)))
+  define_const=fn {Thy="OTcl",Name} => (fn rhs => new_definition ((ML_name Name)^"_def",mk_eq(mk_var(Name,type_of rhs),rhs)))
                 | _ => raise Fail "define_const ",
 
   axiom=let
@@ -45,7 +61,7 @@ val reader = {
       val (th,r) = Lib.pluck (fn th => c = concl th) (!l)
       val _ = l := r
     in th end handle HOL_ERR _ =>
-      fst(snd(hd(DB.match ["bool"] c)))
+      fst(snd(Lib.first(fn (_,(th,_)) => aconv (concl th) c) (DB.match ["bool","ind_type","sat","combin"] c)))
     handle _ => raise Fail("axiom "^Parse.term_to_backend_string c)
   in a end
 }
