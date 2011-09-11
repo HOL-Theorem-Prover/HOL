@@ -2,11 +2,8 @@ open HolKernel boolLib Parse bossLib generic_termsTheory
 
 open boolSimps
 
-open nomsetTheory
-open pred_setTheory
-open lcsymtacs
-open binderLib
-open nomdatatype
+open nomsetTheory pred_setTheory lcsymtacs binderLib nomdatatype
+
 val _ = new_theory "term";
 
 val _ = set_fixity "=" (Infix(NONASSOC, 450))
@@ -16,48 +13,86 @@ fun Store_thm(nm,t,tac) = store_thm(nm,t,tac) before export_rewrites [nm]
 
 val tyname = "term"
 
-val vp = ``(λn u:unit. n = 0)``
-val lp = ``(λn (d:unit + unit) tns uns.
-               (n = 0) ∧ ISL d ∧ (tns = []) ∧ (uns = [0;0]) ∨
-               (n = 0) ∧ ISR d ∧ (tns = [0]) ∧ (uns = []))``
+val sort = "term_atom";
+val sort_t = stringSyntax.fromMLstring sort;
+val existence = prove(``?a. (λa. atom_sort a = ^sort_t) a``, qexists_tac `Atom ^sort_t ARB` >> srw_tac [][]);
+val tyax = new_type_definition (sort, existence);
+val term_atom_bijections = define_new_type_bijections { tyax = tyax,
+  ABS = "to_"^sort, REP = "from_"^sort, name = sort^"_bijections" }
+val term_atom_sort = Store_thm(
+"term_atom_sort",
+``atom_sort (from_term_atom a) = ^sort_t``,
+metis_tac [term_atom_bijections])
+
+val term_atom_bij' = BETA_RULE term_atom_bijections
+
+val elim_sorthyp_forall = prove(
+  ``(∀a. (atom_sort a = ^sort_t) ⇒ P a) ⇔ (∀v. P (from_term_atom v))``,
+  EQ_TAC >> strip_tac >> gen_tac >| [
+   pop_assum match_mp_tac >> rewrite_tac [term_atom_sort],
+   disch_then (fn th => th |> EQ_MP (term_atom_bij' |> CONJUNCT2 |> Q.SPEC `a`)
+                           |> SYM |> SUBST1_TAC) >> PURE_ASM_REWRITE_TAC []
+  ]);
+val elim_sorthyp_exists = prove(
+  ``(∃a. (atom_sort a = ^sort_t) ∧ P a) ⇔ (∃v. P (from_term_atom v))``,
+  metis_tac [term_atom_bijections]);
+
+val vp = ``(λn s u:unit. (n = 0) ∧ (s = ^sort_t))``
+val lp = ``(λn s (d:unit + unit) tns uns.
+               (n = 0) ∧ (s = ^sort_t) ∧ ISL d ∧ (tns = []) ∧ (uns = [0;0]) ∨
+               (n = 0) ∧ (s = ^sort_t) ∧ ISR d ∧ (tns = [0]) ∧ (uns = []))``
 
 val {term_ABS_pseudo11, term_REP_11, genind_term_REP, genind_exists,
      termP, absrep_id, repabs_pseudo_id, term_REP_t, term_ABS_t, newty, ...} =
-    new_type_step1 tyname {vp=vp, lp = lp}
+    new_type_step1 tyname {vp=vp, lp=lp,
+      existence=prove(``?x. genind ^vp ^lp 0 x``,
+                      qexists_tac `GVAR (Atom ^sort_t ARB) ARB` >>
+                      srw_tac [][genind_GVAR])}
 val [gvar,glam] = genind_rules |> SPEC_ALL |> CONJUNCTS
 
-val LAM_t = mk_var("LAM", ``:string -> ^newty -> ^newty``)
+val LAM_t = mk_var("LAM", ``:term_atom -> ^newty -> ^newty``)
 val LAM_def = new_definition(
   "LAM_def",
-  ``^LAM_t v t = ^term_ABS_t (GLAM v (INR ()) [^term_REP_t t] [])``)
+  ``^LAM_t v t = ^term_ABS_t (GLAM (from_term_atom v) (INR ()) [^term_REP_t t] [])``)
 val LAM_termP = prove(
   mk_comb(termP, LAM_def |> SPEC_ALL |> concl |> rhs |> rand),
   match_mp_tac glam >> srw_tac [][genind_term_REP]);
 val LAM_t = defined_const LAM_def
 
+val LAM_def'' = prove(
+  ``(atom_sort v = ^sort_t) ⇒ (^term_ABS_t (GLAM v (INR ()) [^term_REP_t t] []) = ^LAM_t (to_term_atom v) t)``,
+  metis_tac [LAM_def,term_atom_bijections])
 
 val APP_t = mk_var("APP", ``:^newty -> ^newty -> ^newty``)
 val APP_def = new_definition(
   "APP_def",
   ``^APP_t t1 t2 =
-       ^term_ABS_t (GLAM ARB (INL ()) [] [^term_REP_t t1; ^term_REP_t t2])``);
+       ^term_ABS_t (GLAM (from_term_atom ARB) (INL ()) [] [^term_REP_t t1; ^term_REP_t t2])``);
 val APP_termP = prove(
-  ``^termP (GLAM x (INL ()) [] [^term_REP_t t1; ^term_REP_t t2])``,
+  ``^termP (GLAM (from_term_atom x) (INL ()) [] [^term_REP_t t1; ^term_REP_t t2])``,
   match_mp_tac glam >> srw_tac [][genind_term_REP])
 val APP_t = defined_const APP_def
 
 val APP_def' = prove(
-  ``^term_ABS_t (GLAM v (INL ()) [] [^term_REP_t t1; ^term_REP_t t2]) = ^APP_t t1 t2``,
+  ``^term_ABS_t (GLAM (from_term_atom v) (INL ()) [] [^term_REP_t t1; ^term_REP_t t2]) = ^APP_t t1 t2``,
   srw_tac [][APP_def, GLAM_NIL_EQ, term_ABS_pseudo11, APP_termP]);
 
-val VAR_t = mk_var("VAR", ``:string -> ^newty``)
+val APP_def'' = prove(
+  ``(atom_sort v = ^sort_t) ⇒ (^term_ABS_t (GLAM v (INL ()) [] [^term_REP_t t1; ^term_REP_t t2]) = ^APP_t t1 t2)``,
+  metis_tac [APP_def',term_atom_bijections])
+
+val VAR_t = mk_var("VAR", ``:term_atom -> ^newty``)
 val VAR_def = new_definition(
   "VAR_def",
-  ``^VAR_t s = ^term_ABS_t (GVAR s ())``);
+  ``^VAR_t s = ^term_ABS_t (GVAR (from_term_atom s) ())``);
 val VAR_termP = prove(
   mk_comb(termP, VAR_def |> SPEC_ALL |> concl |> rhs |> rand),
   srw_tac [][genind_rules]);
 val VAR_t = defined_const VAR_def
+
+val VAR_def'' = prove(
+  ``(atom_sort v = ^sort_t) ⇒ (^term_ABS_t (GVAR v ()) = ^VAR_t (to_term_atom v))``,
+  metis_tac [VAR_def,term_atom_bijections]);
 
 val cons_info =
     [{con_termP = VAR_termP, con_def = VAR_def},
@@ -92,7 +127,8 @@ val supptpm_support = prove(
   srw_tac [][support_def, tpm_def', supp_fresh, absrep_id]);
 
 val supptpm_apart = prove(
-  ``x ∈ supp gt_pmact (^term_REP_t ^t) ∧ y ∉ supp gt_pmact (^term_REP_t ^t) ⇒
+  ``x ∈ supp gt_pmact (^term_REP_t ^t) ∧ y ∉ supp gt_pmact (^term_REP_t ^t) ∧
+    (atom_sort x = atom_sort y) ⇒
     ^tpm_t [(x,y)] ^t ≠ ^t``,
   srw_tac [][tpm_def']>>
   DISCH_THEN (MP_TAC o AP_TERM term_REP_t) >>
@@ -153,10 +189,10 @@ val term_ind =
                       IN_UNION, NOT_IN_EMPTY, oneTheory.FORALL_ONE,
                       genind_exists, LIST_REL_CONS1, LIST_REL_NIL]
         |> Q.INST [`Q` |-> `λt. P (term_ABS t)`]
-        |> SIMP_RULE std_ss [GSYM LAM_def, APP_def', GSYM VAR_def, absrep_id]
+        |> SIMP_RULE std_ss [LAM_def'', APP_def'', VAR_def'', absrep_id]
         |> SIMP_RULE (srw_ss()) [GSYM supp_tpm]
         |> elim_unnecessary_atoms {finite_fv = FINITE_FV}
-                                  [ASSUME ``!x:'c. FINITE (fv x:string set)``]
+                                  [ASSUME ``!x:'c. FINITE (fv x:atom set)``]
         |> SPEC_ALL |> UNDISCH
         |> genit |> DISCH_ALL |> Q.GEN `fv` |> Q.GEN `P`
 
@@ -173,8 +209,15 @@ val nc_INDUCTION2 = store_thm(
       (∀t u. P t ∧ P u ==> P (APP t u)) ∧
       (∀y u. y ∉ X ∧ P u ==> P (LAM y u)) ∧ FINITE X ==>
       ∀u. P u``,
-  metis_tac [mkX_ind term_ind]);
+  srw_tac [][] >>
+  match_mp_tac (mkX_ind term_ind) >>
+  qexists_tac `IMAGE from_term_atom X` >> srw_tac [][] >>
+  metis_tac [term_atom_bijections]);
 
+val from_term_atom_11 = Store_thm(
+"from_term_atom_11",
+``(from_term_atom a1 = from_term_atom a2) = (a1 = a2)``,
+metis_tac [term_atom_bijections]);
 
 val LAM_eq_thm = save_thm(
   "LAM_eq_thm",
@@ -182,7 +225,7 @@ val LAM_eq_thm = save_thm(
      |> SIMP_CONV (srw_ss()) [LAM_def, LAM_termP, term_ABS_pseudo11,
                               GLAM_eq_thm, term_REP_11, GSYM term_REP_tpm,
                               GSYM supp_tpm]
-     |> GENL [``u:string``, ``v:string``, ``t1:term``, ``t2:term``]);
+     |> GENL [``u:term_atom``, ``v:term_atom``, ``t1:term``, ``t2:term``]);
 
 
 
@@ -191,12 +234,12 @@ val (_, repty) = dom_rng (type_of term_REP_t)
 val repty' = ty_antiq repty
 
 val tlf =
-  ``λ(v:string) (u:unit + unit) (ds1:(ρ -> α) list) (ds2:(ρ -> α)  list)
+  ``λ(v:atom) (u:unit + unit) (ds1:(ρ -> α) list) (ds2:(ρ -> α)  list)
                                 (ts1:^repty' list) (ts2:^repty' list) (p:ρ).
        if ISR u then tlf (HD ds1) v (term_ABS (HD ts1)) p: α
        else taf (HD ds2) (HD (TL ds2)) (term_ABS (HD ts2))
                 (term_ABS (HD (TL ts2))) p: α``
-val tvf = ``λ(s:string) (u:unit) (p:ρ). tvf s p : α``
+val tvf = ``λ(s:atom) (u:unit) (p:ρ). tvf s p : α``
 
 val LENGTH_NIL' =
     CONV_RULE (BINDER_CONV (LAND_CONV (REWR_CONV EQ_SYM_EQ)))
@@ -258,7 +301,7 @@ val parameter_tm_recursion = save_thm(
                           cons_info = cons_info}
       |> DISCH_ALL
       |> elim_unnecessary_atoms {finite_fv = FINITE_FV}
-                                [ASSUME ``FINITE (A:string set)``,
+                                [ASSUME ``FINITE (A:atom set)``,
                                  ASSUME ``!p:ρ. FINITE (supp ppm p)``]
       |> UNDISCH_ALL |> DISCH_ALL
       |> REWRITE_RULE [AND_IMP_INTRO]

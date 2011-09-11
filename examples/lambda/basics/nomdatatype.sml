@@ -6,10 +6,10 @@ open nomsetTheory
 
 type coninfo = {con_termP : thm, con_def : thm}
 
-val cpm_ty = let val sty = stringSyntax.string_ty
-             in
-               listSyntax.mk_list_type (pairSyntax.mk_prod (sty, sty))
-             end
+val atom_ty = mk_thy_type {Thy="basic_swap",Tyop="atom",Args=[]}
+val string_ty = stringSyntax.string_ty
+
+val cpm_ty = listSyntax.mk_list_type (pairSyntax.mk_prod (atom_ty, atom_ty))
 
 fun list_mk_icomb(f, args) = List.foldl (mk_icomb o swap) f args
 
@@ -40,7 +40,10 @@ fun hCONJ th1 th2 =
     | _ => CONJ th1 th2
 
 val FINITE_t = mk_thy_const{Name = "FINITE", Thy = "pred_set",
-                            Ty = (stringSyntax.string_ty --> bool) --> bool}
+                            Ty = (string_ty --> bool) --> bool}
+
+val atom_sort_t = mk_thy_const{
+  Name="atom_sort",Thy="basic_swap",Ty=atom_ty --> string_ty}
 
 fun elim_unnecessary_atoms {finite_fv} fths = let
   fun mainconv t = let
@@ -49,7 +52,7 @@ fun elim_unnecessary_atoms {finite_fv} fths = let
                      [] => raise mk_HOL_ERR "nomdatatype" "elim_unnecessary_atoms"
                                             "Not a forall"
                    | v::vs => (v,vs)
-    val _ = Type.compare(type_of v, stringSyntax.string_ty) = EQUAL orelse
+    val _ = Type.compare(type_of v, atom_ty) = EQUAL orelse
             raise mk_HOL_ERR "nomdatatype" "elim_unnecessary_atoms"
                              "Forall not of an atom"
     val (h, c) = dest_imp bod
@@ -60,6 +63,8 @@ fun elim_unnecessary_atoms {finite_fv} fths = let
       open pred_setTheory pred_setSyntax
       val (v, bod) = dest_exists t
       val cs = strip_conj bod
+      val ([c],cs) = partition (can (find_term (equal atom_sort_t))) cs
+      val (_,sort) = dest_eq c
       fun getset t = let
         val t0 = dest_neg t
       in
@@ -71,9 +76,11 @@ fun elim_unnecessary_atoms {finite_fv} fths = let
       val finite_th =
         REWRITE_CONV (FINITE_UNION::FINITE_INSERT::FINITE_EMPTY::finite_fv::fths)
                      finite_t
-      val fresh_exists = MATCH_MP basic_swapTheory.new_exists (EQT_ELIM finite_th)
+      val new_exists = ONCE_REWRITE_RULE [CONJ_SYM] basic_swapTheory.new_exists
+      val fresh_exists = MATCH_MP new_exists (EQT_ELIM finite_th)
                                   |> REWRITE_RULE [IN_UNION, IN_INSERT, NOT_IN_EMPTY,
                                                    DE_MORGAN_THM, GSYM CONJ_ASSOC]
+                                  |> SPEC sort
     in
       EQT_INTRO fresh_exists
     end
@@ -99,15 +106,14 @@ val gterm_ty = mk_thy_type {Thy = "generic_terms", Tyop = "gterm",
 local
   val num_ty = numSyntax.num
   val numlist_ty = listSyntax.mk_list_type num_ty
-  val string_ty = stringSyntax.string_ty
 in
 val genind_t =
   mk_thy_const {Thy = "generic_terms", Name = "genind",
-                Ty = (num_ty --> alpha --> bool) -->
-                     (num_ty --> beta --> numlist_ty --> numlist_ty --> bool) -->
+                Ty = (num_ty --> string_ty --> alpha --> bool) -->
+                     (num_ty --> string_ty --> beta --> numlist_ty --> numlist_ty --> bool) -->
                      num_ty --> gterm_ty --> bool}
 val GVAR_t = mk_thy_const {Thy = "generic_terms", Name = "GVAR",
-                           Ty = string_ty --> alpha --> gterm_ty}
+                           Ty = atom_ty --> alpha --> gterm_ty}
 end
 
 fun first2 l =
@@ -115,23 +121,16 @@ fun first2 l =
       (x::y::_) => (x,y)
     | _ => raise Fail "first2: list doesn't have at least two elements"
 
-fun new_type_step1 tyname {vp, lp} = let
+fun new_type_step1 tyname {vp, lp, existence} = let
   val list_mk_icomb = uncurry (List.foldl (mk_icomb o swap))
   val termP = list_mk_icomb (genind_t, [vp,lp,numSyntax.mk_numeral Arbnum.zero])
   fun termPf x = mk_comb(termP, x)
   val (gtty,_) = dom_rng (type_of termP)
   val x = mk_var("x",gtty) and y = mk_var("y", gtty)
-  val (glam_ty, gvar_ty) = first2 (#2 (dest_type gtty))
+  (* val (glam_ty, gvar_ty) = first2 (#2 (dest_type gtty)) *)
   infix /\
   fun t1 /\ t2 = mk_conj (t1, t2)
-  val term_exists =
-      prove(mk_exists(x, mk_comb(termP, x)),
-            EXISTS_TAC (list_mk_icomb(inst [beta |-> glam_ty] GVAR_t,
-                                      [mk_arb stringSyntax.string_ty,
-                                       mk_arb gvar_ty])) THEN
-            MATCH_MP_TAC (genind_rules |> SPEC_ALL |> CONJUNCT1) THEN
-            BETA_TAC THEN REWRITE_TAC [])
-  val term_bij_ax = new_type_definition (tyname, term_exists)
+  val term_bij_ax = new_type_definition (tyname, existence)
   val newty = term_bij_ax |> concl |> dest_exists |> #1 |> type_of |> dom_rng |> #1
   val term_ABSREP =
       define_new_type_bijections { ABS = tyname ^ "_ABS", REP = tyname ^ "_REP",

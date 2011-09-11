@@ -61,9 +61,9 @@ val tpm_cvpr = Store_thm(
   SRW_TAC [][cvpr_def, LET_THM] THEN
   NTAC 2 (NEW_ELIM_TAC THEN SRW_TAC [][]) THEN
   SRW_TAC [CONJ_ss][LAM_eq_thm] THEN
-  Cases_on `lswapstr pi v = v'` THEN SRW_TAC [][] THEN
+  Cases_on `lswapstr pi v = v'` THEN SRW_TAC [][nomsetTheory.stringpm_raw] THEN
   ONCE_REWRITE_TAC [EQ_SYM_EQ] THEN
-  MATCH_MP_TAC tpm_fresh THEN SRW_TAC [][]);
+  MATCH_MP_TAC tpm_fresh THEN SRW_TAC [][nomsetTheory.stringpm_raw]);
 
 val cpair_def = Define`
   cpair = LAM "x" (LAM "y" (LAM "f" (VAR "f" @@ VAR "x" @@ VAR "y")))

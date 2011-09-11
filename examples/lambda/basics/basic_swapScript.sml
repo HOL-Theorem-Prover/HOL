@@ -8,32 +8,47 @@ fun Store_Thm(s, t, tac) = (store_thm(s,t,tac) before
                             export_rewrites [s])
 
 (* ----------------------------------------------------------------------
-    swapping over strings
+    new type of atoms, allowing different sorts of atoms
+   ---------------------------------------------------------------------- *)
+val _ = Hol_datatype`atom =
+  Atom of string => string`;
+
+val atom_sort_def = Define`
+  atom_sort (Atom s n) = s`;
+
+val atom_name_def = Define`
+  atom_name (Atom s n) = n`;
+
+val _ = export_rewrites["atom_sort_def","atom_name_def"];
+
+(* ----------------------------------------------------------------------
+    atom swapping
    ---------------------------------------------------------------------- *)
 
-val swapstr_def = Define`
-  swapstr x y (s:string) = if x = s then y else if y = s then x else s
-`;
+val swap_def = Define`
+  swap x y s = if atom_sort x = atom_sort y then
+                 if x = s then y else if y = s then x else s
+               else s`;
 
-val swapstr_id = Store_Thm(
-  "swapstr_id",
-  ``swapstr x x s = s``,
-  SRW_TAC [][swapstr_def]);
+val swap_id = Store_Thm(
+  "swap_id",
+  ``swap x x s = s``,
+  SRW_TAC [][swap_def]);
 
-val swapstr_inverse = Store_Thm(
-  "swapstr_inverse",
-  ``swapstr x y (swapstr x y s) = s``,
-  SRW_TAC [][swapstr_def] THEN METIS_TAC []);
+val swap_inverse = Store_Thm(
+  "swap_inverse",
+  ``swap x y (swap x y s) = s``,
+  SRW_TAC [][swap_def] THEN METIS_TAC []);
 
-val swapstr_eq_left = store_thm(
-  "swapstr_eq_left",
-  ``(swapstr x y s = t) = (s = swapstr x y t)``,
-  SRW_TAC [][swapstr_def] THEN METIS_TAC []);
+val swap_eq_left = store_thm(
+  "swap_eq_left",
+  ``(swap x y s = t) = (s = swap x y t)``,
+  SRW_TAC [][swap_def] THEN METIS_TAC []);
 
-val swapstr_11 = Store_Thm(
-  "swapstr_11",
-  ``(swapstr x y s1 = swapstr x y s2) = (s1 = s2)``,
-  SRW_TAC [][swapstr_eq_left]);
+val swap_11 = Store_Thm(
+  "swap_11",
+  ``(swap x y s1 = swap x y s2) = (s1 = s2)``,
+  SRW_TAC [][swap_eq_left]);
 
 fun simp_cond_tac (asl, g) = let
   val eqn = find_term (fn t => is_eq t andalso is_var (lhs t) andalso
@@ -43,65 +58,71 @@ in
   ASM_SIMP_TAC bool_ss []
 end (asl, g)
 
-val swapstr_swapstr = Store_Thm(
-  "swapstr_swapstr",
-  ``swapstr (swapstr x y u) (swapstr x y v) (swapstr x y s) =
-    swapstr x y (swapstr u v s)``,
-  REWRITE_TAC [swapstr_def] THEN REPEAT simp_cond_tac);
+val swap_swap = Store_Thm(
+  "swap_swap",
+  ``swap (swap x y u) (swap x y v) (swap x y s) =
+    swap x y (swap u v s)``,
+  REWRITE_TAC [swap_def] THEN
+  REVERSE (Cases_on `atom_sort x = atom_sort y`) THEN1
+    SRW_TAC [][] THEN
+  REPEAT simp_cond_tac THEN
+  SRW_TAC [][] THEN FULL_SIMP_TAC (srw_ss()) []);
 
-val swapstr_comm = Store_Thm(
-  "swapstr_comm",
-  ``swapstr y x s = swapstr x y s``,
-  SRW_TAC [][swapstr_def] THEN METIS_TAC []);
+val swap_comm = Store_Thm(
+  "swap_comm",
+  ``swap y x s = swap x y s``,
+  SRW_TAC [][swap_def] THEN METIS_TAC []);
 
-val swapstr_thm = Store_Thm(
-  "swapstr_thm",
-  ``(swapstr x y x = y) /\ (swapstr x y y = x) /\
-    (~(x = a) /\ ~(y = a) ==> (swapstr x y a = a))``,
-  SRW_TAC [][swapstr_def]);
+val swap_thm = Store_Thm(
+  "swap_thm",
+  ``((atom_sort x = atom_sort y) ==> (swap x y x = y)) /\
+    ((atom_sort x = atom_sort y) ==> (swap x y y = x)) /\
+    (~(atom_sort x = atom_sort y) ==> (swap x y a = a)) /\
+    (~(x = a) /\ ~(y = a) ==> (swap x y a = a))``,
+  SRW_TAC [][swap_def]);
 
 (* ----------------------------------------------------------------------
-    swapping lists of pairs over strings (a foldr)
+    swapping lists of pairs of atoms (a foldr)
    ---------------------------------------------------------------------- *)
 
-val lswapstr_def = Define`
-  (lswapstr [] s = s) /\
-  (lswapstr (h::t) s = swapstr (FST h) (SND h) (lswapstr t s))
+val lswap_def = Define`
+  (lswap [] s = s) /\
+  (lswap (h::t) s = swap (FST h) (SND h) (lswap t s))
 `;
-val _ = export_rewrites ["lswapstr_def"]
+val _ = export_rewrites ["lswap_def"]
 
-val lswapstr_APPEND = store_thm(
-  "lswapstr_APPEND",
-  ``lswapstr (p1 ++ p2) s = lswapstr p1 (lswapstr p2 s)``,
-  Induct_on `p1` THEN SRW_TAC [][lswapstr_def]);
+val lswap_APPEND = store_thm(
+  "lswap_APPEND",
+  ``lswap (p1 ++ p2) s = lswap p1 (lswap p2 s)``,
+  Induct_on `p1` THEN SRW_TAC [][lswap_def]);
 
-val lswapstr_inverse = store_thm(
-  "lswapstr_inverse",
-  ``!p s. (lswapstr (REVERSE p) (lswapstr p s) = s) /\
-          (lswapstr p (lswapstr (REVERSE p) s) = s)``,
-  Induct THEN SRW_TAC [][lswapstr_def, lswapstr_APPEND]);
-val _ = export_rewrites ["lswapstr_inverse"]
+val lswap_inverse = store_thm(
+  "lswap_inverse",
+  ``!p s. (lswap (REVERSE p) (lswap p s) = s) /\
+          (lswap p (lswap (REVERSE p) s) = s)``,
+  Induct THEN SRW_TAC [][lswap_def, lswap_APPEND]);
+val _ = export_rewrites ["lswap_inverse"]
 
-val lswapstr_11 = store_thm(
-  "lswapstr_11",
-  ``(lswapstr p s = lswapstr p t) = (s = t)``,
-  METIS_TAC [lswapstr_inverse]);
-val _ = export_rewrites ["lswapstr_11"]
+val lswap_11 = store_thm(
+  "lswap_11",
+  ``(lswap p s = lswap p t) = (s = t)``,
+  METIS_TAC [lswap_inverse]);
+val _ = export_rewrites ["lswap_11"]
 
-val lswapstr_eql = store_thm(
-  "lswapstr_eql",
-  ``(lswapstr p s = t) = (s = lswapstr (REVERSE p) t)``,
-  METIS_TAC [lswapstr_inverse]);
+val lswap_eql = store_thm(
+  "lswap_eql",
+  ``(lswap p s = t) = (s = lswap (REVERSE p) t)``,
+  METIS_TAC [lswap_inverse]);
 
-val lswapstr_eqr = store_thm(
-  "lswapstr_eqr",
-  ``(s = lswapstr p t) = (lswapstr (REVERSE p) s =  t)``,
-  METIS_TAC [lswapstr_inverse]);
+val lswap_eqr = store_thm(
+  "lswap_eqr",
+  ``(s = lswap p t) = (lswap (REVERSE p) s =  t)``,
+  METIS_TAC [lswap_inverse]);
 
-val lswapstr_sing_to_back = store_thm(
-  "lswapstr_sing_to_back",
-  ``!p u v s. swapstr (lswapstr p u) (lswapstr p v) (lswapstr p s) =
-              lswapstr p (swapstr u v s)``,
+val lswap_sing_to_back = store_thm(
+  "lswap_sing_to_back",
+  ``!p u v s. swap (lswap p u) (lswap p v) (lswap p s) =
+              lswap p (swap u v s)``,
   Induct THEN ASM_SIMP_TAC (srw_ss()) [pairTheory.FORALL_PROD]);
 
 (* ----------------------------------------------------------------------
@@ -117,11 +138,17 @@ val INFINITE_STR_UNIV = store_thm(
 
 val new_exists = store_thm(
   "new_exists",
-  ``!s : string set. FINITE s ==> ?x. ~(x IN s)``,
-  Q_TAC SUFF_TAC `INFINITE (UNIV : string set)`
-        THEN1 METIS_TAC [pred_setTheory.IN_UNIV,
-                         pred_setTheory.IN_INFINITE_NOT_FINITE] THEN
-  SRW_TAC [][INFINITE_STR_UNIV]);
+  ``!A s. FINITE A ==> ?a. ~(a IN A) /\ (atom_sort a = s)``,
+  SRW_TAC [][] THEN
+  `?n. ~(n IN (IMAGE atom_name A))` by
+    METIS_TAC [pred_setTheory.IN_UNIV,
+               pred_setTheory.IMAGE_FINITE,
+               pred_setTheory.IN_INFINITE_NOT_FINITE,
+               INFINITE_STR_UNIV] THEN
+  Q.EXISTS_TAC `Atom s n` THEN
+  FULL_SIMP_TAC (srw_ss()) [] THEN
+  POP_ASSUM (Q.SPEC_THEN `Atom s n` MP_TAC) THEN
+  SRW_TAC [][])
 
 val NEW_def =
     new_specification
@@ -130,8 +157,8 @@ val NEW_def =
 
 val NEW_ELIM_RULE = store_thm(
   "NEW_ELIM_RULE",
-  ``!P X. FINITE X /\ (!v:string. ~(v IN X) ==> P v) ==>
-          P (NEW X)``,
+  ``!P A s. FINITE A /\ (!a. ~(a IN A) /\ (atom_sort a = s) ==> P a) ==>
+            P (NEW A s)``,
   PROVE_TAC [NEW_def]);
 
 val _ = export_theory();

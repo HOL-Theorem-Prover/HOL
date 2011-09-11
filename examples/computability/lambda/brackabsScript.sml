@@ -1,12 +1,12 @@
 open HolKernel Parse reductionEval bossLib boolLib binderLib
 
-open termTheory
+open nomsetTheory termTheory
 
 val _ = new_theory "brackabs"
 
 val _ = remove_ovl_mapping "LAM" {Name="LAM", Thy="labelledTerms"}
 val _ = clear_overloads_on "FV"
-val _ = overload_on ("FV", ``supp tpm``)
+val _ = overload_on ("FV", ``supp term_pmact``)
 val _ = remove_ovl_mapping "VAR" {Name="VAR", Thy="labelledTerms"}
 val _ = remove_ovl_mapping "APP"  {Name="APP", Thy="labelledTerms"}
 
@@ -34,7 +34,7 @@ val B_I_uncond = store_thm(
   ASM_SIMP_TAC (bsrw_ss()) [] THEN
   `∀x y. (x = y) ⇒ (x == y)` by SRW_TAC [][] THEN POP_ASSUM MATCH_MP_TAC THEN
   SRW_TAC [boolSimps.CONJ_ss][LAM_eq_thm, tpm_fresh, NOT_IN_SUB] THEN
-  SRW_TAC [][GSYM fresh_tpm_subst, tpm_flip_args]);
+  SRW_TAC [][GSYM fresh_tpm_subst, pmact_flip_args]);
 
 val B_I = store_thm(
   "B_I",
@@ -60,7 +60,7 @@ val C_I = store_thm(
   ASM_SIMP_TAC (bsrw_ss()) [NOT_IN_SUB] THEN
   `∀x y. (x = y) ⇒ (x == y)` by SRW_TAC [][] THEN POP_ASSUM MATCH_MP_TAC THEN
   SRW_TAC [boolSimps.CONJ_ss][LAM_eq_thm, tpm_fresh, NOT_IN_SUB] THEN
-  SRW_TAC [][GSYM fresh_tpm_subst, tpm_flip_args]);
+  SRW_TAC [][GSYM fresh_tpm_subst, pmact_flip_args]);
 
 val I_I = store_thm(
   "I_I",

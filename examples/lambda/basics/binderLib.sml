@@ -234,7 +234,7 @@ fun FRESH_TAC (g as (asl, w)) = let
             val th = MP th' freshthm
           in
             SUBST_ALL_TAC th THEN
-            ASM_SIMP_TAC (srw_ss()) (basic_swapTheory.swapstr_def ::
+            ASM_SIMP_TAC (srw_ss()) (basic_swapTheory.swap_def ::
                                      get_pm_rewrites (type_of t))
           end
 

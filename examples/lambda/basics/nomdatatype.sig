@@ -4,7 +4,7 @@ sig
   include Abbrev
   type coninfo = {con_termP : thm, con_def : thm}
 
-  val new_type_step1 : string -> {vp:term,lp:term} ->
+  val new_type_step1 : string -> {vp:term,lp:term,existence:thm} ->
                        {term_ABS_pseudo11 : thm,
                         term_REP_11 : thm,
                         term_REP_t : term,

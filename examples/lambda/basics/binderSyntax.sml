@@ -10,10 +10,10 @@ end
 open Parse
 
 val mk_prod = pairSyntax.mk_prod
-val string_ty = stringSyntax.string_ty
+val atom_ty = mk_thy_type{Thy="basic_swap",Args=[],Tyop="atom"}
 val mk_list_type = listSyntax.mk_list_type
 
-val cperm_ty = mk_list_type (mk_prod(string_ty, string_ty))
+val cperm_ty = mk_list_type (mk_prod(atom_ty, atom_ty))
 
 fun mk_perm_type ty = cperm_ty --> (ty --> ty)
 fun dest_perm_type ty = let
@@ -43,8 +43,8 @@ val pairpm_t = mk_thy_const {Thy = "pairpm", Name = "pairpm",
 val listpm_t = mk_thy_const {Thy = "listpm", Name = "listpm",
                              Ty = mk_perm_type alpha -->
                                   mk_perm_type (mk_list_type alpha)}
-val stringpm_t = mk_thy_const {Thy = "basic_swap", Name = "lswapstr",
-                               Ty = mk_perm_type string_ty}
+val atompm_t = mk_thy_const {Thy = "basic_swap", Name = "lswap",
+                               Ty = mk_perm_type atom_ty}
 val nullpm_t = combinSyntax.mk_K_1 (combinSyntax.I_tm, cperm_ty)
 
 fun mk_fnpm (dp, rp) = let
