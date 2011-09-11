@@ -443,27 +443,32 @@ val (log_term, log_thm, log_clear) = let
 
     (* 4: recursive calls to proofs <=3 and subproofs only *)
     | SUBST_prf (map,tm,th) => let
-      fun log_rconv bvs source template = (* return |- source = template[rhs/vars] *)
+      val (h,source) = dest_thm th
+      val fvs = FVL (source::h) empty_varset
+      fun f {residue,...} = let val (h,c) = dest_thm residue in FVL (c::h) end
+      val fvs = itlist f map fvs
+      fun log_rconv fvs source template = (* return |- source = template[rhs/vars] *)
         log_thm(ALPHA source template)
       handle HOL_ERR _ =>
         if is_var template
-        then if HOLset.member(bvs,template)
-             then log_thm (REFL template)
-             else log_thm (valOf(subst_assoc (equal template) map))
+        then log_thm (valOf(subst_assoc (equal template) map))
       else let
         val (sf,sa) = dest_comb source
         val (tf,ta) = dest_comb template
-        val _ = log_rconv bvs sf tf
-        val _ = log_rconv bvs sa ta
+        val _ = log_rconv fvs sf tf
+        val _ = log_rconv fvs sa ta
         val _ = log_command "appThm"
       in () end handle HOL_ERR _ => let
         val (sv,sb) = dest_abs source
         val (tv,tb) = dest_abs template
-        val _ = log_var tv
-        val _ = log_rconv (HOLset.add(bvs,tv)) sb tb
+        val vv = prim_variant (HOLset.listItems fvs) tv
+        val sb = subst [sv|->vv] sb
+        val tb = subst [tv|->vv] tb
+        val _ = log_var vv
+        val _ = log_rconv (HOLset.add(fvs,vv)) sb tb
         val _ = log_command "absThm"
       in () end
-      val _ = log_rconv empty_varset (concl th) tm
+      val _ = log_rconv fvs source tm
       val _ = log_thm th
       val _ = log_command "eqMp"
       in () end
