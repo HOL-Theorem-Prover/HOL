@@ -8,11 +8,9 @@ fun readline lnum strm = let
       case latest of
         NONE => if null acc then NONE
               else SOME (lnum + 1, String.concat (List.rev acc))
-      | SOME "" => if null acc then NONE
-                   else SOME (lnum + 1, String.concat (List.rev acc))
       | SOME "\n" => SOME (lnum + 1, String.concat (List.rev acc))
-      | SOME s => let 
-          val s0 = if String.sub(s, size s - 2) = #"\r" then 
+      | SOME s => let
+          val s0 = if String.sub(s, size s - 2) = #"\r" then
                      String.extract(s, 0, SOME (size s - 2))
                    else String.extract(s, 0, SOME (size s - 1))
         in
