@@ -36,7 +36,7 @@ fun raw_read_article {tyop_from_ot,const_from_ot} input {define_tyop,define_cons
   val mk_vartype = mk_vartype o tyvar_from_ot
   fun f "absTerm"(st as {stack=OTerm b::OVar v::os,...}) = st_(OTerm(mk_abs(v,b))::os,st)
     | f "absThm" (st as {stack=OThm th::OVar v::os,...}) = (st_(OThm(ABS v th)::os,st)
-      handle HOL_ERR e => raise ERR ("absThm: failed with "^format_ERR e))
+      handle HOL_ERR e => raise ERR "absThm: failed")
     | f "appTerm"(st as {stack=OTerm x::OTerm f::os,...})= st_(OTerm(mk_comb(f,x))::os,st)
     | f "appThm" (st as {stack=OThm xy::OThm fg::os,...})= let
         val (f,g) = dest_eq(concl fg)
@@ -69,7 +69,7 @@ fun raw_read_article {tyop_from_ot,const_from_ot} input {define_tyop,define_cons
         val {Thy,Name,...} = dest_thy_const abs val abs = {Thy=Thy,Name=Name}
       in st_(OThm rep_abs::OThm abs_rep::OConst rep::OConst abs::OTypeOp tyop::os,st) end
     | f "eqMp"   (st as {stack=OThm f::OThm fg::os,...})     = (st_(OThm(EQ_MP fg f)::os,st)
-      handle HOL_ERR _ => raise ERR ("EqMp failed on "^thm_to_string fg^" and "^thm_to_string f))
+      handle HOL_ERR e => raise ERR "EqMp failed")
     | f "nil"    st                                          = push(OList [],st)
     | f "opType" (st as {stack=OList ls::OTypeOp {Thy,Tyop}::os,...})
                = st_(OType(mk_thy_type{Thy=Thy,Tyop=Tyop,Args=unOTypels "opType" ls})::os,st)
@@ -113,7 +113,7 @@ fun raw_read_article {tyop_from_ot,const_from_ot} input {define_tyop,define_cons
       in if c = #"\"" then push(OName(trimlr s),st) else
          if isDigit c then push(ONum(valOf(fromString s)),st) else
          if c = #"#" then {stack=stack,dict=dict,thms=thms} else
-         raise ERR ("Unknown command: "^s)
+         raise ERR ("Unknown command (or bad arguments): "^s)
       end
   fun loop (x as {line_num,...}) = case TextIO.inputLine input of
     NONE => x before TextIO.closeIn(input)
