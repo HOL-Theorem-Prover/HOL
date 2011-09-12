@@ -38,10 +38,7 @@ local open OpenTheoryMap in
   val _ = c0 "dest_cl" "ind_type.dest_cl"
   val _ = c0 "cl_case" "ind_type.cl_case"
   val _ = c0 "cl_size" "ind_type.cl_size"
-  (* these should be moved into the appropriate theories *)
-  val _ = OpenTheory_const_name {const={Thy="arithmetic",Name="+"},name="Number.Natural.+"}
-  val _ = OpenTheory_const_name {const={Thy="arithmetic",Name="NUMERAL"},name="Unwanted.id"}
-  val _ = OpenTheory_const_name {const={Thy="arithmetic",Name="BIT1"},name="Number.Numeral.bit1"}
+  (* not sure how to deal with this properly: *)
   val _ = OpenTheory_const_name {const={Thy="arithmetic",Name="ZERO"},name="Number.Numeral.zero"}
 end
 

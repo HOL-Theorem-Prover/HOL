@@ -21,7 +21,7 @@ struct
 
 open HolKernel boolLib Parse
      Prim_rec simpLib boolSimps metisLib BasicProvers;
-
+open OpenTheoryMap
 
 val _ = new_theory "arithmetic";
 
@@ -62,6 +62,9 @@ val ADD = new_recursive_definition
 
 val _ = set_fixity "+" (Infixl 500);
 
+val _ = OpenTheory_const_name
+  {const={Thy="arithmetic",Name="+"},name="Number.Natural.+"}
+
 (*---------------------------------------------------------------------------*
  * Define NUMERAL, a tag put on numeric literals, and the basic constructors *
  * of the "numeral type".                                                    *
@@ -81,6 +84,11 @@ val BIT2 =
 val _ = new_definition(
   GrammarSpecials.nat_elim_term,
   --`^(mk_var(GrammarSpecials.nat_elim_term, Type`:num->num`)) n = n`--);
+
+val _ = OpenTheory_const_name
+  {const={Thy="arithmetic",Name="NUMERAL"},name="Unwanted.id"}
+val _ = OpenTheory_const_name
+  {const={Thy="arithmetic",Name="BIT1"},name="Number.Numeral.bit1"}
 
 (*---------------------------------------------------------------------------*
  * After this call, numerals parse into `NUMERAL( ... )`                     *

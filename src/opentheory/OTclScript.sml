@@ -30,11 +30,6 @@ val _ = OpenTheory_const_name{const={Thy="OTcl",Name="junk_cl0"},name="combinato
 val _ = OpenTheory_const_name{const={Thy="OTcl",Name="junk_cl1"},name="combinatoryLogicExample.ind_type.cl1"}
 val _ = OpenTheory_const_name{const={Thy="OTcl",Name="junk_cl2"},name="combinatoryLogicExample.ind_type.cl2"}
 
-(* should be in other theories *)
-  val _ = OpenTheory_const_name {const={Thy="arithmetic",Name="+"},name="Number.Natural.+"}
-  val _ = OpenTheory_const_name {const={Thy="arithmetic",Name="NUMERAL"},name="Unwanted.id"}
-  val _ = OpenTheory_const_name {const={Thy="arithmetic",Name="BIT1"},name="Number.Numeral.bit1"}
-
 fun ML_name "#" = "APP"
   | ML_name "-->" = "redn"
   | ML_name "-||->" = "predn"
