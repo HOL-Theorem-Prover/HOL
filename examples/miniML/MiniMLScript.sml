@@ -443,7 +443,10 @@ val _ = Define `
  (e_step (envC, env, e, c) =
   (case e of
        Raise e -> 
-        if c <> [] then Estep (envC, emp, Raise e, []) else Estuck
+        (case c of
+             [] -> Estuck
+          || _::c -> Estep (envC,env,Raise e,c)
+        )
     || Val v  -> 
 	continue envC v c
     || Con n es -> 
@@ -685,6 +688,13 @@ evaluate cenv env (Log op e1 e2) (Rerr Rtype_error))
 
 /\
 
+(! cenv env op e1 e2 err.
+evaluate cenv env e1 (Rerr err)
+==>
+evaluate cenv env (Log op e1 e2) (Rerr err))
+
+/\
+
 (! cenv env e1 e2 e3 v e' bv.
 evaluate cenv env e1 (Rval v) /\
 (do_if v e2 e3 = SOME e') /\
@@ -741,11 +751,20 @@ evaluate cenv env (Let n e1 e2) (Rerr err))
 /\
 
 (! cenv env funs e bv.
+ALL_DISTINCT (MAP (\ (x,y,z) . x) funs) /\
 evaluate cenv (build_rec_env funs env) e bv
 ==>
 evaluate cenv env (Letrec funs e) bv)
 
 /\
+
+(! cenv env funs e.
+~ (ALL_DISTINCT (MAP (\ (x,y,z) . x) funs))
+==>
+evaluate cenv env (Letrec funs e) (Rerr Rtype_error))
+
+/\
+
 
 (! cenv env.
 T

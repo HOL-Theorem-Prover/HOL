@@ -377,7 +377,10 @@ val e_step : state -> e_step_result
 let e_step (envC, env, e, c) =
   match e with
     | Raise e -> 
-        if c <> [] then Estep (envC, emp, Raise e, []) else Estuck
+        match c with
+          | [] -> Estuck
+          | _::c -> Estep (envC,env,Raise e,c)
+        end
     | Val v  -> 
 	continue envC v c
     | Con n es -> 
@@ -606,6 +609,13 @@ evaluate cenv env (Log op e1 e2) (Rerr Rtype_error)
 
 and
 
+forall cenv env op e1 e2 err.
+evaluate cenv env e1 (Rerr err)
+==>
+evaluate cenv env (Log op e1 e2) (Rerr err)
+
+and
+
 forall cenv env e1 e2 e3 v e' bv.
 evaluate cenv env e1 (Rval v) &&
 do_if v e2 e3 = Some e' &&
@@ -662,11 +672,20 @@ evaluate cenv env (Let n e1 e2) (Rerr err)
 and
 
 forall cenv env funs e bv.
+all_distinct (List.map (fun (x,y,z) -> x) funs) &&
 evaluate cenv (build_rec_env funs env) e bv
 ==>
 evaluate cenv env (Letrec funs e) bv
 
 and
+
+forall cenv env funs e.
+not (all_distinct (List.map (fun (x,y,z) -> x) funs))
+==>
+evaluate cenv env (Letrec funs e) (Rerr Rtype_error)
+
+and
+
 
 forall cenv env.
 true
