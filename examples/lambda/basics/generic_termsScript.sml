@@ -51,8 +51,8 @@ val finite_fv = store_thm(
 val _ = augment_srw_ss [rewrites [finite_fv]]
 
 val raw_ptpm_def = Define`
-  (raw_ptpm p (var s vv) = var (perm_of p s) vv) ∧
-  (raw_ptpm p (lam v bv bndts unbndts) = lam (perm_of p v)
+  (raw_ptpm p (var s vv) = var (lswapstr p s) vv) ∧
+  (raw_ptpm p (lam v bv bndts unbndts) = lam (lswapstr p v)
                                          bv
                                          (raw_ptpml p bndts)
                                          (raw_ptpml p unbndts)) ∧
@@ -74,7 +74,7 @@ val raw_ptpm_compose = prove(
   ``(∀t:(α,β)pregterm. raw_ptpm p1 (raw_ptpm p2 t) = raw_ptpm (p1 ++ p2) t) ∧
     (∀l:(α,β)pregterm list.
         raw_ptpml p1 (raw_ptpml p2 l) = raw_ptpml (p1 ++ p2) l)``,
-  ho_match_mp_tac oldind >> srw_tac [][lswapstr_APPEND, raw_ptpm_def]);
+  ho_match_mp_tac oldind >> srw_tac [][raw_ptpm_def, pmact_decompose]);
 
 val raw_ptpm_permeq = prove(
   ``(∀x. lswapstr p1 x = lswapstr p2 x) ⇒
@@ -89,7 +89,7 @@ val ptpm_raw = prove(
   srw_tac [][is_pmact_def] >|[
     srw_tac [][raw_ptpm_nil],
     srw_tac [][raw_ptpm_compose],
-    fsrw_tac [][raw_ptpm_permeq, FUN_EQ_THM, permeq_def]
+    fsrw_tac [][raw_ptpm_permeq, permeq_thm, FUN_EQ_THM]
 ]));
 val ptpm_raw = INST_TYPE[gamma|->alpha,delta|->beta] ptpm_raw;
 
@@ -165,7 +165,7 @@ val allatoms_perm = store_thm(
     (∀l:(α,β)pregterm list.
       allatomsl (listpm pt_pmact p l) = ssetpm p (allatomsl l))``,
   ho_match_mp_tac oldind >>
-  srw_tac [][stringpm_raw, allatoms_def, pmact_INSERT, pmact_UNION]);
+  srw_tac [][allatoms_def, pmact_INSERT, pmact_UNION]);
 
 val (aeq_rules, aeq_ind, aeq_cases) = Hol_reln`
   (!s vv. aeq (var s vv) (var s vv)) /\
@@ -193,8 +193,8 @@ val aeq_ptpm_lemma = store_thm(
   ho_match_mp_tac aeq_ind >> srw_tac [][aeq_rules, ptpml_listpm] >>
   match_mp_tac aeq_lam >>
   Q.EXISTS_TAC `lswapstr p z` THEN
-  srw_tac [][stringpm_raw, allatoms_perm, pmact_IN] >>
-  srw_tac [][ptpml_listpm, pmact_sing_to_back ]);
+  srw_tac [][allatoms_perm, pmact_IN] >>
+  srw_tac [][ptpml_listpm, pmact_sing_to_back]);
 
 val aeq_ptpm_eqn = store_thm(
   "aeq_ptpm_eqn",
@@ -945,10 +945,7 @@ val gtpm_eqr = store_thm(
 ``(t = gtpm pi u) = (gtpm (REVERSE pi) t = u)``,
 METIS_TAC [pmact_inverse]);
 
-val lswapstr_sing = Q.store_thm(
-"lswapstr_sing",
-`lswapstr [(x,y)] z = swapstr x y z`,
-srw_tac [][lswapstr_def]);
+val lswapstr_sing = Q.prove(`lswapstr [(x,y)] z = swapstr x y z`, srw_tac [][]);
 
 val trec_fnpm = prove(
   ``(ppm → apm) π (tmrec A ppm vf lf t) =

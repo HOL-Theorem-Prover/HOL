@@ -163,11 +163,7 @@ val ltpm_subst = store_thm(
   "ltpm_subst",
   ``!M. ltpm p ([N/v]M) = [ltpm p N/lswapstr p v] (ltpm p M)``,
   HO_MATCH_MP_TAC lterm_bvc_induction THEN Q.EXISTS_TAC `v INSERT FV N` THEN
-  SRW_TAC [][lSUB_VAR] THEN1 (
-    (lSUB_THM |> CONJUNCTS |> C (curry List.nth) 3 |> GSYM |> MATCH_MP_TAC) THEN
-    SRW_TAC [][stringpm_raw] ) THEN
-  (lSUB_THM |> CONJUNCTS |> C (curry List.nth) 4 |> GSYM |> MATCH_MP_TAC) THEN
-    SRW_TAC [][stringpm_raw]);
+  SRW_TAC [][lSUB_VAR]);
 
 val l14c = store_thm(
   "l14c",
