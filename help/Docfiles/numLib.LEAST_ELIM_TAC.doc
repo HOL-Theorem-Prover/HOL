@@ -52,6 +52,6 @@ If there are multiple different {LEAST}-terms in the goal, then
 standard {find_terms} function.
 
 \SEEALSO
-Tactic.SELECT_ELIM_TAC.
+Tactic.DEEP_INTRO_TAC, Tactic.SELECT_ELIM_TAC.
 
 \ENDDOC

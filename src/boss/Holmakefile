@@ -8,7 +8,7 @@ builder0 = $(HOLDIR)/bin/hol.builder0
 boss_deps = listTheory pred_setTheory arithmeticTheory numLib \
             pred_setLib pred_setSimps numSimps optionTheory
 DEPS_poly = bossLib.uo $(patsubst %,$(dprot $(SIGOBJ)/%.uo),$(boss_deps)) \
-            $(dprot $(builder0))
+            $(dprot $(builder0)) $(dprot $(HOLDIR)/tools-poly/builder.ML)
 DEPS_mosml =
 
 COMM_poly = cd $(protect $(HOLDIR)/tools-poly) && \
