@@ -676,23 +676,7 @@ fun export_thm th = let
     val _ = delete_proof th
 in th end
 
-local val op ^ = OS.Path.concat in
-  val opentheory_dir = Globals.HOLDIR^"src"^"opentheory"
-end
-
-val mk_path = let
-  exception exists of string
-  fun mk_path name = let
-    val path = OS.Path.concat(opentheory_dir,OS.Path.joinBaseExt{base=name,ext=SOME"art"})
-    in if OS.FileSys.access(path,[]) then raise exists path else path end
-in fn name => let
-     fun try n = mk_path (name^(Int.toString n)) handle exists _ => try (n+1)
-   in mk_path name handle exists old => let
-      val new = try 0
-      val _ = if !verbosity >= 1 then Feedback.HOL_MESG(old^" exists, logging to "^new^" instead.") else ()
-      in new end
-   end
-end
+fun mk_path name = OS.Path.concat(OS.FileSys.getDir(),OS.Path.joinBaseExt{base=name,ext=SOME"art"})
 
 val defn_thms = ref []
 fun add_defn th = defn_thms := th :: !defn_thms
