@@ -150,8 +150,6 @@ val raw_MPpm_def = Define`
 `;
 val _ = export_rewrites ["raw_MPpm_def"]
 
-val lswapstr_APPEND = basic_swapTheory.lswapstr_APPEND
-
 val _ = overload_on("MP_pmact",``mk_pmact raw_MPpm``);
 val _ = overload_on("MPpm", ``pmact MP_pmact``);
 
@@ -161,14 +159,14 @@ val MPpm_raw = store_thm(
   SRW_TAC [][GSYM pmact_bijections] THEN
   SRW_TAC [][is_pmact_def] THENL [
     Induct_on `x` THEN SRW_TAC [][],
-    Induct_on `x` THEN SRW_TAC [][lswapstr_APPEND],
-    FULL_SIMP_TAC (srw_ss()) [permeq_def, FUN_EQ_THM] THEN
+    Induct_on `x` THEN SRW_TAC [][pmact_decompose],
+    FULL_SIMP_TAC (srw_ss()) [permeq_thm, FUN_EQ_THM] THEN
     Induct THEN SRW_TAC [][]
   ]);
 
 val MPpm_thm = save_thm(
 "MPpm_thm",
-raw_MPpm_def |> SUBS [GSYM MPpm_raw, GSYM stringpm_raw]);
+raw_MPpm_def |> SUBS [GSYM MPpm_raw]);
 val _ = export_rewrites["MPpm_thm"];
 
 val MPpm_fresh = Store_thm(
@@ -265,8 +263,7 @@ val independent_pvsub = prove(
 val IN_params_MPpm = store_thm(
   "IN_params_MPpm",
   ``x IN params (MPpm pi M) = lswapstr (REVERSE pi) x IN params M``,
-  Induct_on `M` THEN SRW_TAC [][] THEN
-  SRW_TAC [][basic_swapTheory.lswapstr_eqr, stringpm_raw]);
+  Induct_on `M` THEN SRW_TAC [][pmact_eql]);
 
 val independent_psub_vsub = prove(
   ``!M v p1 p2 p3.
@@ -566,7 +563,7 @@ val params_vsub = store_thm(
 val convert_MPpm = prove(
   ``!t M. convert t M ==> !pi. convert (MPpm pi t) (tpm pi M)``,
   HO_MATCH_MP_TAC convert_ind THEN
-  SRW_TAC [][convert_rules, MPpm_vsub, stringpm_raw] THEN
+  SRW_TAC [][convert_rules, MPpm_vsub] THEN
   MATCH_MP_TAC (last (CONJUNCTS convert_rules)) THEN
   SRW_TAC [][IN_params_MPpm]);
 
@@ -595,7 +592,7 @@ val convert_strong_ind = store_thm(
                         !c pi. P (MPpm pi t) (tpm pi M) c`
         THEN1 METIS_TAC [pmact_nil] THEN
   HO_MATCH_MP_TAC convert_ind THEN
-  SRW_TAC [][convert_rules, MPpm_vsub, stringpm_raw] THEN
+  SRW_TAC [][convert_rules, MPpm_vsub] THEN
   Q_TAC (NEW_TAC "z") `FV (tpm pi M) UNION f c UNION params (MPpm pi t)` THEN
   `LAM (lswapstr pi u) (tpm pi M) = LAM z (tpm [(z, lswapstr pi u)] (tpm pi M))`
      by SRW_TAC [][termTheory.tpm_ALPHA] THEN
@@ -610,7 +607,7 @@ val convert_strong_ind = store_thm(
               by METIS_TAC [convert_MPpm_E] THEN
            POP_ASSUM MP_TAC THEN
            ASM_SIMP_TAC bool_ss [MPpm_vsub] THEN
-           SRW_TAC [][GSYM pmact_decompose, stringpm_raw]) THEN
+           SRW_TAC [][GSYM pmact_decompose]) THEN
   FIRST_X_ASSUM (Q.SPECL_THEN [`d`, `((z,lswapstr pi u)::pi)`] MP_TAC) THEN
   SRW_TAC [][GSYM pmact_decompose]);
 
@@ -791,7 +788,7 @@ val mpbeta_MPpm = prove(
   HO_MATCH_MP_TAC mpbeta_ind THEN
   SRW_TAC [][mpbeta_rules, MPpm_vsub] THENL [
     MATCH_MP_TAC (List.nth(CONJUNCTS mpbeta_rules, 2)) THEN
-    Q.EXISTS_TAC `stringpm pi p` THEN SRW_TAC [][IN_params_MPpm, stringpm_raw],
+    Q.EXISTS_TAC `stringpm pi p` THEN SRW_TAC [][IN_params_MPpm],
     MATCH_MP_TAC (last (CONJUNCTS mpbeta_rules)) THEN
     `MPpm pi (Abs x M) = Abs x (MPpm pi M)` by SRW_TAC [][] THEN
     METIS_TAC [vclosed_MPpm]
