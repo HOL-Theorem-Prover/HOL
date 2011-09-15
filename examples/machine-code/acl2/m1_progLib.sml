@@ -14,16 +14,16 @@ open arithmeticTheory;
 
 fun m1_spec s = let
   val m1_thms = [M1_ICONST,M1_ILOAD,M1_ISTORE,M1_IADD,M1_ISUB,M1_IMUL,M1_GOTO,M1_IFLE];
-  val tm = Parse.Term [QUOTE s]  
+  val tm = Parse.Term [QUOTE s]
   fun match_thm th = let
-    val (_,_,c,_) = helperLib.dest_spec (concl th)  
+    val (_,_,c,_) = helperLib.dest_spec (concl th)
     val c = c |> rator |> rand |> rand
     val m = fst (match_term c tm)
-    in INST m th end  
+    in INST m th end
   val th = match_thm (first (can match_thm) m1_thms)
-  val pc_offset = 
+  val pc_offset =
     th |> concl |> rand |> rand |> rand |> rand |> rand
-       |> (fn x => numSyntax.int_of_term x handle HOL_ERR _ => 
+       |> (fn x => numSyntax.int_of_term x handle HOL_ERR _ =>
                    Arbint.toInt(intSyntax.int_of_term x))
   val th = let
     val pat = find_term (can (match_term ``tL a v``)) (concl th)
@@ -60,7 +60,7 @@ fun sexp_finalise_decompile (res,def) = let
   val _ = (prev := (res,def))
   val _ = echo 2 " - converting to produce sexp\n"
   fun sexp_result output = let
-    fun ff [] = (fst o dest_eq o concl) nil_def 
+    fun ff [] = (fst o dest_eq o concl) nil_def
       | ff (v::vs) = mk_comb(mk_comb(``cons``,v),ff vs)
     in mk_pabs(output,ff (dest_tuple output)) end;
   val fhd = hd (CONJUNCTS def)
@@ -88,14 +88,14 @@ fun sexp_finalise_decompile (res,def) = let
         if tm = tm1 then FUN_VAL new_lhs
         else FUN_VAL (snd (dest_pabs fix))
   val tm3 = ftree2tm (rw (tm2ftree tm2))
-  val goal = mk_eq(new_lhs,tm3)  
-  val inferred = prove(goal,  
+  val goal = mk_eq(new_lhs,tm3)
+  val inferred = prove(goal,
     REWRITE_TAC [def3]
     THEN CONV_TAC (RATOR_CONV (ONCE_REWRITE_CONV [f]))
     THEN REPEAT (AUTO_DECONSTRUCT_TAC cdr)
     THEN SIMP_TAC std_ss []
     THEN CONV_TAC (DEPTH_CONV FORCE_PBETA_CONV)
-    THEN SIMP_TAC std_ss []) 
+    THEN SIMP_TAC std_ss [])
   val def2 = REWRITE_RULE [ite_intro] inferred
   val tm7 = cdr tm1
   fun ff [] = [] | ff (v::vs) = let
@@ -117,7 +117,7 @@ fun sexp_finalise_decompile (res,def) = let
     | flatten (FUN_LET (x,y,t)) = let
        val (tm1,tm2) = dest_let y
        val (v,tm1) = dest_abs tm1
-       val xs = (v,tm2) :: Lib.zip (dest_tuple x) (dest_tuple tm1)  
+       val xs = (v,tm2) :: Lib.zip (dest_tuple x) (dest_tuple tm1)
        in foldr (fn ((x,y),z) => FUN_LET (x,y,z)) (flatten t) xs end
        handle HOL_ERR _ => FUN_LET (x,y,flatten t)
   val (tm10,tm11) = (dest_eq o concl o SPEC_ALL) def2
@@ -127,7 +127,7 @@ fun sexp_finalise_decompile (res,def) = let
     CONV_TAC (RATOR_CONV (ONCE_REWRITE_CONV [def2]))
     THEN SIMP_TAC std_ss [LET_DEF])
   val def2 = REWRITE_RULE [ite_intro] def2
-  val def2 = SIMP_RULE bool_ss [top_defun,pop_defun,push_defun,nth_lemma, 
+  val def2 = SIMP_RULE bool_ss [top_defun,pop_defun,push_defun,nth_lemma,
        LET_DEF,nth_1,cdr_def,car_def,ite_def,not_eq_nil] def2
   val def2 = REWRITE_RULE [ite_intro] def2
   in (res,def2) end;

@@ -431,16 +431,16 @@ local
   val PFORALL_THM2 = prove (
     ``!P:'a->'b->bool. (!x. $! (P x)) = $! (UNCURRY P)``,
     GEN_TAC THEN
-    Q.SUBGOAL_THEN `P = (\x y. P x y)` 
-       (fn thm => ONCE_ASM_REWRITE_TAC [thm]) 
+    Q.SUBGOAL_THEN `P = (\x y. P x y)`
+       (fn thm => ONCE_ASM_REWRITE_TAC [thm])
     THEN1 (REWRITE_TAC [FUN_EQ_THM] THEN BETA_TAC THEN REWRITE_TAC[]) THEN
     BETA_TAC THEN REWRITE_TAC [PFORALL_THM]);
 
   val PEXISTS_THM2 = prove (
     ``!P:'a->'b->bool. (?x. $? (P x)) = $? (UNCURRY P)``,
     GEN_TAC THEN
-    Q.SUBGOAL_THEN `P = (\x y. P x y)` 
-       (fn thm => ONCE_ASM_REWRITE_TAC [thm]) 
+    Q.SUBGOAL_THEN `P = (\x y. P x y)`
+       (fn thm => ONCE_ASM_REWRITE_TAC [thm])
     THEN1 (REWRITE_TAC [FUN_EQ_THM] THEN BETA_TAC THEN REWRITE_TAC[]) THEN
     BETA_TAC THEN REWRITE_TAC [PEXISTS_THM]);
 in

@@ -474,10 +474,10 @@ end;
 fun head_term thm =
 let val x = fst (dest_imp_only (concl thm))
             handle e => wrapException "head_term" e;
-in  (let val r = fst (dest_conj x) 
+in  (let val r = fst (dest_conj x)
      in if is_conj r then hd (strip_conj r) else r
      end) handle _ => x
-end  
+end
 
 fun resolve_head_term protect rthm thm assumptions =
 let	val thm' = if is_conj (fst (dest_imp_only (concl thm))) then
@@ -699,7 +699,7 @@ in
 			else result
 end
 fun mapchanged f [] = []
-  | mapchanged f (x::xs) = 
+  | mapchanged f (x::xs) =
   (f x :: mapchanged f xs) handle UNCHANGED => mapchanged f xs
 fun IAL oset L (assums,extras) =
 let	val to_avoid = free_varsl oset

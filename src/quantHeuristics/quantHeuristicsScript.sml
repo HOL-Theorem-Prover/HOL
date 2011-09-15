@@ -142,13 +142,13 @@ METIS_TAC[]);
 (******************************************************************************)
 
 val GUESS_RULES_EQUATION_TRUE = store_thm ("GUESS_RULES_EQUATION_TRUE",
-``!i P Q. 
+``!i P Q.
   (P i = Q i) ==>
   GUESS_TRUE (\xxx:unit. i) (\x. P x = Q x)``,
 SIMP_TAC std_ss [GUESS_REWRITES]);
 
 val GUESS_RULES_EQUATION_FALSE = store_thm ("GUESS_RULES_EQUATION_FALSE",
-``!i P Q. 
+``!i P Q.
   (!fv. ~(P (i fv) = Q (i fv))) ==>
   GUESS_FALSE i (\x. P x = Q x)``,
 SIMP_TAC std_ss [GUESS_REWRITES]);
@@ -242,7 +242,7 @@ val GUESS_RULES_DISJ = store_thm ("GUESS_RULES_DISJ",
 
   (GUESS_EXISTS_STRONG i (\x. P x) /\
    GUESS_EXISTS_STRONG i (\x. Q x) ==>
-   GUESS_EXISTS_STRONG i (\x. P x \/ Q x)) /\ 
+   GUESS_EXISTS_STRONG i (\x. P x \/ Q x)) /\
 
   (GUESS_FORALL (\xxx:unit. iK) (\x. P x) /\
    GUESS_FORALL (\xxx:unit. iK) (\x. Q x) ==>
@@ -280,7 +280,7 @@ let
    val thm2 = REWRITE_RULE [GSYM DE_MORGAN_THM] thm1
    val thm3 = SIMP_RULE std_ss [GUESSES_NEG_REWRITE] thm2
 in
-   thm3 
+   thm3
 end);
 
 
@@ -308,7 +308,7 @@ local
 
 (*
 val thmL = [GUESS_RULES_NEG, GUESS_RULES_DISJ, GUESS_RULES_CONJ,
-            GUESS_RULES_IMP, GUESSES_RULES_CONSTANT_EXISTS, 
+            GUESS_RULES_IMP, GUESSES_RULES_CONSTANT_EXISTS,
             GUESSES_RULES_CONSTANT_FORALL, ELIM_UNLICKLY_THM]
 
 val tmL = [``\x:'a. P x <=> Q x``, ``\x. p <=> Q x``, ``\x. P x <=> q``]
@@ -355,8 +355,8 @@ let
    in
        (xthmL1', xthmL2')
    end;
-             
-   val (thmL1, thmL2) = unzip (map basic_thms thmL0); 
+
+   val (thmL1, thmL2) = unzip (map basic_thms thmL0);
 in
    (flatten thmL1, flatten thmL2)
 end;
@@ -388,8 +388,8 @@ in
       val (currentL1, currentL2) = prepare_org_thms rewr tmL
       val ruleL = prepare_rules thmL;
 
-      fun doit cL = 
-        filter (fn x => not (same_const ((fst o dest_imp o concl) x) F)) 
+      fun doit cL =
+        filter (fn x => not (same_const ((fst o dest_imp o concl) x) F))
           (apply_rules ruleL [] cL);
 
       val thmL1 =  doit currentL1;
@@ -472,7 +472,7 @@ val GUESS_RULES_COND = store_thm ("GUESS_RULES_COND",
    (GUESS_FALSE i (\x. b x) /\
     GUESS_FALSE i (\x. Q x) ==>
     GUESS_FALSE i (\x. if b x then P x else Q x)) /\
- 
+
    (GUESS_FALSE i (\x. b x) /\
     GUESS_TRUE i (\x. Q x) ==>
     GUESS_TRUE i (\x. if b x then P x else Q x)) /\
@@ -480,7 +480,7 @@ val GUESS_RULES_COND = store_thm ("GUESS_RULES_COND",
    (GUESS_TRUE i (\x. b x) /\
     GUESS_FALSE i (\x. P x) ==>
     GUESS_FALSE i (\x. if b x then P x else Q x)) /\
- 
+
    (GUESS_TRUE i (\x. b x) /\
     GUESS_TRUE i (\x. P x) ==>
     GUESS_TRUE i (\x. if b x then P x else Q x)) /\
@@ -509,7 +509,7 @@ METIS_TAC[]);
 val GUESS_RULES_FORALL___NEW_FV = store_thm ("GUESS_RULES_FORALL___NEW_FV",
 ``((!y. GUESS_FALSE (iy y) (\x. P x y)) ==>
    GUESS_FALSE (\fv. iy (FST fv) (SND fv)) (\x. !y. P x y)) /\
-  
+
   ((!y. GUESS_FORALL (iy y) (\x. P x y)) ==>
    GUESS_FORALL (\fv. iy (FST fv) (SND fv)) (\x. !y. P x y)) /\
 
@@ -526,7 +526,7 @@ METIS_TAC[]);
 val GUESS_RULES_FORALL___NEW_FV_1 = store_thm ("GUESS_RULES_FORALL___NEW_FV_1",
 ``((!y. GUESS_FALSE (\xxx:unit. (i y)) (\x. P (x:'c) (y:'a))) ==>
    GUESS_FALSE i (\x. !y. P x y)) /\
-  
+
   ((!y. GUESS_FORALL (\xxx:unit. (i y)) (\x. P x y)) ==>
    GUESS_FORALL i (\x. !y. P x y)) /\
 
@@ -544,7 +544,7 @@ METIS_TAC[]);
 val GUESS_RULES_FORALL = store_thm ("GUESS_RULES_FORALL",
 ``((!y. GUESS_FALSE i (\x. P x y)) ==>
    GUESS_FALSE i (\x. !y. P x y)) /\
-  
+
   ((!y. GUESS_FORALL i (\x. P x y)) ==>
    GUESS_FORALL i (\x. !y. P x y)) /\
 
@@ -570,7 +570,7 @@ local
 fun mk_exists_thm thm =
 let
    val thm0 = INST [
-      ``P:'c -> 'a -> bool`` |-> ``\x y. ~((P:'c -> 'a ->bool) x y)``] thm      
+      ``P:'c -> 'a -> bool`` |-> ``\x y. ~((P:'c -> 'a ->bool) x y)``] thm
    val thm1 = BETA_RULE thm0
    val thm2 = SIMP_RULE pure_ss [GSYM NOT_FORALL_THM, GSYM NOT_EXISTS_THM,
         GUESSES_NEG_REWRITE] thm1
@@ -633,7 +633,7 @@ val GUESS_RULES_ELIM_UNIT = store_thm ("GUESS_RULES_ELIM_UNIT",
   (GUESS_FORALL_STRONG (i:('a # unit) -> 'b) vt =
    GUESS_FORALL_STRONG (\x:'a. i (x,())) vt)``,
 
-SIMP_TAC std_ss [GUESS_REWRITES, FORALL_PROD, 
+SIMP_TAC std_ss [GUESS_REWRITES, FORALL_PROD,
    EXISTS_PROD, QUANT_UNIT_ELIM]);
 
 

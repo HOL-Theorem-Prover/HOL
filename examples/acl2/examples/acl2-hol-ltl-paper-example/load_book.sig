@@ -1,6 +1,6 @@
 signature load_book =
 
-sig 
+sig
 
  include Abbrev
 

@@ -481,27 +481,27 @@ val aMEM_def = Define `aMEM m = aBYTE_MEMORY (FDOM m) (\x. m ' x)`;
 (*
 val _ = wordsLib.guess_lengths();
 val READ32_def = Define `
-  READ32 a (m:word32 |-> word8) = 
+  READ32 a (m:word32 |-> word8) =
     (m ' (a + 3w) @@ m ' (a + 2w) @@ m ' (a + 1w) @@ m ' (a)):word32`;
 
 val WRITE32_def = Define `
-  WRITE32 (a:word32) (w:word32) m = 
+  WRITE32 (a:word32) (w:word32) m =
     m |+ (a + 0w, (( 7 ><  0) w):word8)
       |+ (a + 1w, ((15 ><  8) w):word8)
       |+ (a + 2w, ((23 >< 16) w):word8)
       |+ (a + 3w, ((31 >< 24) w):word8)`;
 
 val WRITE32_THM = store_thm("WRITE32_THM",
-  ``!a w. 
+  ``!a w.
      (((a + 3w =+ (31 >< 24) w)
        ((a + 2w =+ (23 >< 16) w)
         ((a + 1w =+ (15 >< 8) w)
-         ((a =+ (7 >< 0) w) (\x. m ' x))))) = 
+         ((a =+ (7 >< 0) w) (\x. m ' x))))) =
       (\x. WRITE32 a w m ' x)) /\
      (((a =+ (7 >< 0) w)
        ((a + 0x1w =+ (15 >< 8) w)
         ((a + 0x2w =+ (23 >< 16) w)
-         ((a + 0x3w =+ (31 >< 24) w) (\x. m ' x))))) = 
+         ((a + 0x3w =+ (31 >< 24) w) (\x. m ' x))))) =
        (\x. WRITE32 a w m ' x))``,
   SIMP_TAC std_ss [WRITE32_def,FAPPLY_FUPDATE_THM,APPLY_UPDATE_THM,FUN_EQ_THM]
   \\ SRW_TAC [] [] \\ FULL_SIMP_TAC (std_ss++SIZES_ss) [WORD_EQ_ADD_LCANCEL,
@@ -684,8 +684,8 @@ val SEP_HIDE_ARRAY_def = Define `
   SEP_HIDE_ARRAY p i a n = SEP_EXISTS xs. SEP_ARRAY p i a xs * cond (LENGTH xs = n)`;
 
 val aSTACK_def = Define `
-  aSTACK bp n xs = 
-    SEP_ARRAY aM 4w bp xs * cond (ALIGNED bp) * 
+  aSTACK bp n xs =
+    SEP_ARRAY aM 4w bp xs * cond (ALIGNED bp) *
     SEP_HIDE_ARRAY aM (-4w) (bp - 4w) n`;
 
 val SEP_HIDE_ARRAY_SUC = prove(
@@ -707,7 +707,7 @@ val SEP_EXISTS_aSTACK = store_thm("SEP_EXISTS_aSTACK",
   SIMP_TAC std_ss [SEP_CLAUSES,aSTACK_def,GSYM ADD1,ALIGNED,
       SEP_HIDE_ARRAY_SUC,SEP_ARRAY_def,WORD_ADD_SUB]
   THEN SIMP_TAC std_ss [SEP_CLAUSES,SEP_HIDE_def,STAR_ASSOC,GSYM word_sub_def]
-  THEN SIMP_TAC std_ss [AC STAR_ASSOC STAR_COMM]); 
+  THEN SIMP_TAC std_ss [AC STAR_ASSOC STAR_COMM]);
 
 
 (* ----------------------------------------------------------------------------- *)
@@ -716,11 +716,11 @@ val SEP_EXISTS_aSTACK = store_thm("SEP_EXISTS_aSTACK",
 
 val _ = wordsLib.guess_lengths();
 val READ32_def = Define `
-  READ32 a (m:word32 -> word8) = 
+  READ32 a (m:word32 -> word8) =
     (m (a + 3w) @@ m (a + 2w) @@ m (a + 1w) @@ m (a)):word32`;
 
 val WRITE32_def = Define `
-  WRITE32 (a:word32) (w:word32) m = 
+  WRITE32 (a:word32) (w:word32) m =
     ((a + 0w =+ (w2w w):word8)
     ((a + 1w =+ (w2w (w >>> 8)):word8)
     ((a + 2w =+ (w2w (w >>> 16)):word8)
@@ -731,9 +731,9 @@ val WRITE32_blast_lemma = blastLib.BBLAST_PROVE
     (((15 ><  8) (w:word32)) = (w2w (w >>> 8)):word8) /\
     (((23 >< 16) (w:word32)) = (w2w (w >>> 16)):word8) /\
     (((31 >< 24) (w:word32)) = (w2w (w >>> 24)):word8)``
-  
+
 val WRITE32_THM = store_thm("WRITE32_THM",
-  ``!a w. 
+  ``!a w.
      (((a      =+ (( 7 ><  0) w):word8)
       ((a + 1w =+ ((15 ><  8) w):word8)
       ((a + 2w =+ ((23 >< 16) w):word8)

@@ -6,7 +6,7 @@ open codegen_inputLib helperLib;
 
 (* -- target-specific part begins -- *)
 
-open codegen_x64Lib codegen_x86Lib codegen_armLib codegen_ppcLib; 
+open codegen_x64Lib codegen_x86Lib codegen_armLib codegen_ppcLib;
 
 fun assembler_tools target =
   if target = "arm" then (arm_encode_instruction, arm_encode_branch, arm_branch_to_string) else
@@ -276,7 +276,7 @@ fun get_tools th = let
   val s = get_model_name th
   in if s = "PPC_MODEL" then prog_ppcLib.ppc_tools else
      if s = "X86_MODEL" then prog_x86Lib.x86_tools else
-     if s = "X64_MODEL" then prog_x64Lib.x64_tools else 
+     if s = "X64_MODEL" then prog_x64Lib.x64_tools else
      if s = "ARM_MODEL" then prog_armLib.arm_tools else fail() end
 
 fun add_assignment (tm1,tm2,th,len) = let

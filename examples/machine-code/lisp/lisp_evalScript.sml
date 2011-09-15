@@ -125,7 +125,7 @@ val (thms,_,_) = compile_all ``
  (lisp_find_in_list ^STATE =
     if ~(isDot y) then let exp = Sym "nil" in ^STATE else
       let x = CAR y in
-        if exp = x then let exp = Sym "t" in ^STATE else  
+        if exp = x then let exp = Sym "t" in ^STATE else
           let y = CDR y in
             lisp_find_in_list ^STATE)
   /\
@@ -135,14 +135,14 @@ val (thms,_,_) = compile_all ``
       let exp = CAR alist in
       let exp = CAR exp in
       let y = CAR stack in
-      let (exp,x,y,z,stack,alist,l) = lisp_find_in_list ^STATE in 
+      let (exp,x,y,z,stack,alist,l) = lisp_find_in_list ^STATE in
         if exp = Sym "nil" then ^STATE else
           let z = LISP_SUB z (Val 1) in
           let alist = CDR alist in
-            lisp_reduce_alist_aux ^STATE) 
+            lisp_reduce_alist_aux ^STATE)
   /\
- (lisp_reduce_alist ^STATE = 
-    if isDot stack then 
+ (lisp_reduce_alist ^STATE =
+    if isDot stack then
       let z = CAR stack in
         if isDot z then ^STATE else
         if isSym z then ^STATE else
@@ -154,12 +154,12 @@ val (thms,_,_) = compile_all ``
           let x = exp in
           let exp = y in
           let exp = Dot exp x in
-          let stack = exp in  
+          let stack = exp in
           let (exp,x,y,z,stack,alist,l) = lisp_reduce_alist_aux ^STATE in
           let stack = CDR stack in
           let y = CDR stack in
           let stack = CAR stack in
-          let exp = CAR stack in 
+          let exp = CAR stack in
           let stack = CDR stack in
             if z = Val 0 then ^STATE else
               let x = z in
@@ -177,7 +177,7 @@ val (thms,_,_) = compile_all ``
       let y = CDR x in
       let x = CAR x in
         if x = Sym "lambda" then
-          let x = CAR y in    
+          let x = CAR y in
           let (exp,x,y,z,stack,alist,l) = lisp_reduce_alist ^STATE in
           let z = exp in      (* z hold evaluated args   *)
           let x = exp in

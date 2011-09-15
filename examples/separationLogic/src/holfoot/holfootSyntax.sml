@@ -3,8 +3,8 @@ struct
 
 (*
 quietdec := true;
-loadPath := (Globals.HOLDIR ^ "/examples/separationLogic/src") :: 
-            (Globals.HOLDIR ^ "/examples/separationLogic/src/holfoot") :: 
+loadPath := (Globals.HOLDIR ^ "/examples/separationLogic/src") ::
+            (Globals.HOLDIR ^ "/examples/separationLogic/src/holfoot") ::
             !loadPath;
 
 map load ["finite_mapTheory", "vars_as_resourceTheory", "holfootTheory"];
@@ -21,7 +21,7 @@ open separationLogicSyntax
 quietdec := false;
 *)
 
-fun holfoot_mk_const n = 
+fun holfoot_mk_const n =
    prim_mk_const {Name = n, Thy = "holfoot"}
 
 val holfoot_heap_ty =  Type `:holfoot_heap`;
@@ -111,24 +111,24 @@ val dest_holfoot_prog_field_assign = strip_comb_3 holfoot_prog_field_assign_term
 val is_holfoot_prog_field_assign = (can dest_holfoot_prog_field_assign);
 
 val holfoot_prog_procedure_call_term =
-``var_res_prog_procedure_call:string -> 
+``var_res_prog_procedure_call:string ->
     (holfoot_var list # holfoot_a_expression list) -> holfoot_program``
 
 val holfoot_prog_parallel_procedure_call_term =
 ``var_res_prog_parallel_procedure_call:
-    string -> (holfoot_var list # holfoot_a_expression list) -> 
-    string -> (holfoot_var list # holfoot_a_expression list) -> 
+    string -> (holfoot_var list # holfoot_a_expression list) ->
+    string -> (holfoot_var list # holfoot_a_expression list) ->
     holfoot_program``
 
 val holfoot_prog_assign_term = ``var_res_prog_assign:holfoot_var -> holfoot_a_expression -> holfoot_program``
 val holfoot_prog_block_term = ``asl_prog_block : holfoot_program list -> holfoot_program``;
 val holfoot_prog_cond_term = ``asl_prog_cond:holfoot_state asl_predicate -> holfoot_program -> holfoot_program -> holfoot_program``
-val holfoot_prog_with_resource_term = 
+val holfoot_prog_with_resource_term =
    ``asl_prog_cond_critical_section:string->holfoot_state asl_predicate->holfoot_program->holfoot_program``
 val dest_holfoot_prog_with_resource = strip_comb_3 holfoot_prog_with_resource_term;
 val is_holfoot_prog_with_resource = can dest_holfoot_prog_with_resource
 
-val holfoot_prog_while_term = 
+val holfoot_prog_while_term =
    ``asl_prog_while:holfoot_state asl_predicate->holfoot_program->holfoot_program``
 
 
@@ -213,14 +213,14 @@ val holfoot_ap_emp_term = ``asl_emp holfoot_separation_combinator``
 val holfoot_ap_star_term = ``asl_star holfoot_separation_combinator``
 val holfoot_ap_bigstar_list_term = ``asl_bigstar_list holfoot_separation_combinator``
 
-val holfoot_prop_input_ap_distinct_term = 
+val holfoot_prop_input_ap_distinct_term =
 ``(var_res_prop_input_ap_distinct DISJOINT_FMAP_UNION):
   (holfoot_var set # holfoot_var set) -> holfoot_var list ->
   holfoot_a_proposition -> holfoot_a_proposition``
 
-val holfoot_prop_input_ap_term = 
+val holfoot_prop_input_ap_term =
 ``(var_res_prop_input_ap DISJOINT_FMAP_UNION):
-  (holfoot_var set # holfoot_var set) -> 
+  (holfoot_var set # holfoot_var set) ->
   holfoot_a_proposition -> holfoot_a_proposition``
 
 
@@ -241,13 +241,13 @@ val HOLFOOT_VAR_RES_FRAME_SPLIT___EMP_PRED_term =
 
 val HOLFOOT_SPECIFICATION_term =
 ``(ASL_SPECIFICATION holfoot_separation_combinator) :
-     (string # holfoot_a_proposition) list -> 
+     (string # holfoot_a_proposition) list ->
      (bool # string # (holfoot_var list # num list -> holfoot_program)
-           # (holfoot_var list # num list -> holfoot_program)) list -> 
+           # (holfoot_var list # num list -> holfoot_program)) list ->
      bool``;
 
 
-val holfoot_lock_invariant_term = 
+val holfoot_lock_invariant_term =
    ``(var_res_lock_invariant DISJOINT_FMAP_UNION):(holfoot_var set) -> holfoot_a_proposition -> holfoot_a_proposition``
 
 val HOLFOOT_LOCK_ENV_MAP_term =

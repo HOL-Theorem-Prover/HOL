@@ -1,4 +1,4 @@
- 
+
 open HolKernel boolLib bossLib Parse;
 open progTheory set_sepTheory addressTheory prog_armTheory;
 open listTheory pred_setTheory arithmeticTheory wordsTheory;
@@ -20,13 +20,13 @@ val aLIST_def = Define `
 val aLIST_NIL = prove(
   ``!s. (aLIST a xs) s ==> ((a = 0w) = (xs = []))``,
   Cases_on `xs` THEN SIMP_TAC std_ss [aLIST_def,SEP_EXISTS_THM,
-    cond_STAR,GSYM STAR_ASSOC,NOT_CONS_NIL] 
+    cond_STAR,GSYM STAR_ASSOC,NOT_CONS_NIL]
   THEN REPEAT STRIP_TAC THEN FULL_SIMP_TAC std_ss [cond_def])
 
 val SPEC_SPLIT_LIST = prove(
   ``SPEC m (p * cond (~GUARD n (xs = []))) c (q xs) =
     SPEC m (p * cond (~GUARD n (xs = []))) c (q (HD xs :: TL xs))``,
-  Cases_on `xs` THEN SIMP_TAC std_ss [SPEC_MOVE_COND,GUARD_def,HD,TL]);  
+  Cases_on `xs` THEN SIMP_TAC std_ss [SPEC_MOVE_COND,GUARD_def,HD,TL]);
 
 val aLIST_NIL_INTRO = prove(
   ``!x. (x = []) ==> (aR a 0w = SEP_EXISTS b. aR a b * aLIST b x)``,
@@ -42,7 +42,7 @@ fun list_dest_sep_exists tm = let
 
 fun standardise_var_names th = let
   val (_,p,_,q) = dest_spec (concl th)
-  val (ps,p) = list_dest_sep_exists p 
+  val (ps,p) = list_dest_sep_exists p
   val (qs,q) = list_dest_sep_exists q
   val pts = map dest_comb (find_terms (can (match_term ``aR x y``)) p)
   val qts = map dest_comb (find_terms (can (match_term ``aR x y``)) q)
@@ -56,7 +56,7 @@ fun standardise_var_names th = let
 fun ABBREV_aLIST th = let
   val _ = if hyp th = [] then () else fail()
   val (_,p,_,q) = dest_spec (concl th)
-  val (_,p) = list_dest_sep_exists p 
+  val (_,p) = list_dest_sep_exists p
   val (_,q) = list_dest_sep_exists q
   val pts = map dest_comb (find_terms (can (match_term ``aLIST x y``)) p)
   val qts = map dest_comb (find_terms (can (match_term ``aLIST x y``)) q)
@@ -66,17 +66,17 @@ fun ABBREV_aLIST th = let
   val th = SIMP_RULE bool_ss (map (GSYM o ASSUME) ys) th
   in th end handle HOL_ERR _ => th;
 
-fun INTRO_M th = let    
+fun INTRO_M th = let
   val g = find_term (can (match_term ``aMEMORY df f``))
   val f = cdr (g (car (concl th)))
   val th = RW [ALIGNED_INTRO] (DISCH_ALL (UNABBREV_ALL th))
   val (a,df) = pred_setSyntax.dest_in (find_term (pred_setSyntax.is_in) (concl th))
   val lm = SPEC_ALL (SPECL [a,f] aM_THM)
-  val f2 = cdr (g (concl lm))    
+  val f2 = cdr (g (concl lm))
   val th = (SIMP_RULE std_ss [lm,IN_INSERT])
         (INST [f|->f2,df|->pred_setSyntax.mk_set[a]] th)
   val th = RW [GSYM SPEC_MOVE_COND,combinTheory.APPLY_UPDATE_THM] th
-  val th = RW1 [SPEC_MOVE_COND_POST] th  
+  val th = RW1 [SPEC_MOVE_COND_POST] th
   in th end handle HOL_ERR _ => th;
 
 
@@ -97,19 +97,19 @@ fun FINALISE_FUNC def = let
   val def = SIMP_RULE std_ss [LET_DEF,NOT_NIL_CONS,HD,TL] def
   val def = CONV_RULE (DEPTH_CONV FORCE_PBETA_CONV) def
   val def = SIMP_RULE std_ss [LET_DEF,NOT_NIL_CONS,HD,TL] def
-  in def end;  
+  in def end;
 
 fun SPEC_COMPOSE_PREPROCESS th = let
-  val th = INTRO_M th 
+  val th = INTRO_M th
   val th = RW [cond_CONJ,STAR_ASSOC] th
-  val th = if not (can (match_term ``x = 0w:word32``) (hd (hyp th))) 
-              handle Empty => true then th 
+  val th = if not (can (match_term ``x = 0w:word32``) (hd (hyp th)))
+              handle Empty => true then th
            else let
              val th2 = UNABBREV_ALL th
              val lemma = SPEC (mk_var("s0@ys",``:word32 list``)) aLIST_NIL_INTRO
              val th2 = SIMP_RULE std_ss [UNDISCH lemma,SEP_CLAUSES] th2
              in th2 end
-  in th end; 
+  in th end;
 
 fun SPEC_COMPOSE_POSTPROCESS th = let
   val th = SEP_REWRITE_RULE [aLIST_NIL] th
@@ -127,8 +127,8 @@ fun SPEC_COMPOSE_FINALISE th = let
   val th = ABBREV_aLIST th
   in th end;
 
-fun shape_of_loop (th:thm) = 
-  RW [SEP_CLAUSES] (SPEC_FRAME_RULE (Q.SPECL [`emp`,`{}`] (ISPEC ``ARM_MODEL`` SPEC_REFL)) 
+fun shape_of_loop (th:thm) =
+  RW [SEP_CLAUSES] (SPEC_FRAME_RULE (Q.SPECL [`emp`,`{}`] (ISPEC ``ARM_MODEL`` SPEC_REFL))
     ``SEP_EXISTS a b. aR 1w a * aLIST a xs * aR 2w b * aLIST b ys``)
 
 
@@ -143,7 +143,7 @@ val _ = add_modifier "shape 24" shape_of_loop;
 
 (* now we can decompile the list reverse example in a smart way *)
 
-val name = "rev" 
+val name = "rev"
 val qcode = `
   E3A02000    (*   0      mov r2,#0          *)
   EA000003    (*   4      b L2               *)

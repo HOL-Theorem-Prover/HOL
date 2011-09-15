@@ -15,8 +15,8 @@
 ******************************************************************************)
 (* The commented out stuff below should be loaded in interactive sessions
 quietdec := true;
-map 
- load  
+map
+ load
  ["intLib","gcdTheory", "fracLib", "ratLib"];
 open intLib gcdTheory fracLib ratLib ratTheory;
 quietdec := false;
@@ -109,24 +109,24 @@ val COMPLEX_RECIPROCAL_def =
 (* Complex comparisions                                                      *)
 (*****************************************************************************)
 
-val COMPLEX_LT_def = 
- Define 
-  `COMPLEX_LT (com ra ia) (com rb ib) = 
+val COMPLEX_LT_def =
+ Define
+  `COMPLEX_LT (com ra ia) (com rb ib) =
     (ra < rb) \/ ((ra = rb) /\ (ia < ib))`;
 
-val COMPLEX_LE_def = 
- Define 
-  `COMPLEX_LE (com ra ia) (com rb ib) = 
+val COMPLEX_LE_def =
+ Define
+  `COMPLEX_LE (com ra ia) (com rb ib) =
     (ra < rb) \/ ((ra = rb) /\ (ia <= ib))`;
 
-val COMPLEX_GT_def = 
- Define 
-  `COMPLEX_GT (com ra ia) (com rb ib) = 
+val COMPLEX_GT_def =
+ Define
+  `COMPLEX_GT (com ra ia) (com rb ib) =
     (ra > rb) \/ ((ra = rb) /\ (ia > ib))`;
 
-val COMPLEX_GE_def = 
- Define 
-  `COMPLEX_GE (com ra ia) (com rb ib) = 
+val COMPLEX_GE_def =
+ Define
+  `COMPLEX_GE (com ra ia) (com rb ib) =
     (ra > rb) \/ ((ra = rb) /\ (ia >= ib))`;
 
 (*****************************************************************************)
@@ -183,7 +183,7 @@ val DIVIDES_def = Define `DIVIDES m n = (Num(ABS n) MOD Num(ABS m) = 0)`;
 (*                                                                           *)
 (*****************************************************************************)
 val IS_INT_def =
- Define 
+ Define
   `IS_INT(com a b) = DIVIDES (rat_dnm a) (rat_nmr a) /\ (b = rat_0)`;
 
 (*****************************************************************************)
@@ -200,9 +200,9 @@ val IS_INT_def =
 (*****************************************************************************)
 val reduce_def =
  Define
-  `reduce(x,y) = 
+  `reduce(x,y) =
     let n = &(gcd (Num(ABS x)) (Num(ABS y))) in (x/n, y/n)`;
-      
+
 (*****************************************************************************)
 (* Reduce a rational to lowest terms and return numerator as an integer      *)
 (*****************************************************************************)
@@ -221,32 +221,32 @@ val reduced_dnm_def =
 (* Multiplication theorems for use in translation                            *)
 (*****************************************************************************)
 
-val COMPLEX_MULT_COMM = 
+val COMPLEX_MULT_COMM =
  store_thm
    ("COMPLEX_MULT_COMM",
     ``a * b = b * a:complex_rational``,
-    Cases_on `a` THEN Cases_on `b` 
-     THEN RW_TAC std_ss [COMPLEX_MULT_def] 
+    Cases_on `a` THEN Cases_on `b`
+     THEN RW_TAC std_ss [COMPLEX_MULT_def]
      THEN METIS_TAC [RAT_MUL_COMM,RAT_ADD_COMM]);
 
-val COMPLEX_MULT_ASSOC = 
+val COMPLEX_MULT_ASSOC =
  store_thm
   ("COMPLEX_MULT_ASSOC",
    ``a * (b * c) = a * b * c:complex_rational``,	
-   Cases_on `a` THEN Cases_on `b` THEN Cases_on `c` 
-    THEN RW_TAC std_ss 
+   Cases_on `a` THEN Cases_on `b` THEN Cases_on `c`
+    THEN RW_TAC std_ss
           [COMPLEX_MULT_def,RAT_LDISTRIB,RAT_RDISTRIB,
            RAT_SUB_ADDAINV,GSYM RAT_AINV_LMUL,GSYM RAT_AINV_RMUL,
-           RAT_ADD_ASSOC,RAT_MUL_ASSOC,RAT_AINV_ADD] 
+           RAT_ADD_ASSOC,RAT_MUL_ASSOC,RAT_AINV_ADD]
     THEN METIS_TAC
           [RAT_MUL_COMM,RAT_MUL_ASSOC,RAT_ADD_COMM,RAT_ADD_ASSOC]);
 
-val COMPLEX_MULT_RID = 
- store_thm 
+val COMPLEX_MULT_RID =
+ store_thm
   ("COMPLEX_MULT_RID",
    ``a * com_1 = a``,
-   Cases_on `a` 
-    THEN RW_TAC std_ss 
+   Cases_on `a`
+    THEN RW_TAC std_ss
           [com_1_def,COMPLEX_MULT_def,GSYM rat_0,rat_0_def,
            GSYM rat_1,rat_1_def,RAT_MUL_RID,RAT_MUL_RZERO,
            RAT_ADD_RID,RAT_SUB_RID]);

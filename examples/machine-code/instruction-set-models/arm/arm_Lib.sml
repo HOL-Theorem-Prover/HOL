@@ -34,7 +34,7 @@ fun GENLIST_CONV tm = let
   val (x,y) = dest_comb y
   val _ = if numSyntax.is_numeral z then () else fail()
   val v = genvar(type_of y)
-  in INST [v|->y] (EVAL (mk_comb(mk_comb(x,v),z))) end 
+  in INST [v|->y] (EVAL (mk_comb(mk_comb(x,v),z))) end
   handle HOL_ERR _ => ALL_CONV tm;
 
 val genlist_ss = conv_term_ss GENLIST_CONV "genlist" ``GENLIST (f:num->'b) x``;

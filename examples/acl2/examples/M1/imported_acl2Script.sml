@@ -22,8 +22,8 @@
 ******************************************************************************)
 (* The commented out stuff below should be loaded in interactive sessions
 quietdec := true;
-app 
- load  
+app
+ load
  ["complex_rationalTheory", "sexp","acl2_packageTheory"];
 open complex_rationalTheory sexp acl2_packageTheory stringLib;
 Globals.checking_const_names := false;
@@ -39,7 +39,7 @@ open HolKernel Parse boolLib bossLib;
 * Open theories (including ratTheory from Jens Brandt).
 ******************************************************************************)
 
-open stringLib fracTheory ratTheory sexp complex_rationalTheory sexpTheory 
+open stringLib fracTheory ratTheory sexp complex_rationalTheory sexpTheory
      hol_defaxiomsTheory acl2_packageTheory sexp;
 
 open problem_set_1_answers m1_story;

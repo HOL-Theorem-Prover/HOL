@@ -43,6 +43,6 @@ sig
     val decompile_as_single_function : bool ref
     val decompiler_set_pc            : (int -> thm -> thm) ref
 
-    val AUTO_DECONSTRUCT_TAC  : (term -> term) -> tactic 
+    val AUTO_DECONSTRUCT_TAC  : (term -> term) -> tactic
 
 end

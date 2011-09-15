@@ -37,7 +37,7 @@ val match_list_def = Define `
 
 val match_list_raw_def = Define `
   match_list_raw g step pre res list =
-    (\w:bool list. SOME (g,w)) >> 
+    (\w:bool list. SOME (g,w)) >>
     option_try (MAP (\(x,y). match step (pre x) >> (res y)) list)`;
 
 
@@ -89,11 +89,11 @@ val assert_option_then_lemma = prove(
   ``!p b. (assert (\g. T) >> p = p) /\
           (assert b >> DF = DF >> assert b) /\
           (assert b >> DT = DT >> assert b)``,
-  REPEAT STRIP_TAC 
+  REPEAT STRIP_TAC
   THEN SRW_TAC [] [option_then_def,assert_def,FUN_EQ_THM,LET_DEF,pairTheory.FORALL_PROD]
   THEN Cases_on `p_2` THEN SRW_TAC [] [DF_def,DT_def]
   THEN Cases_on `h` THEN FULL_SIMP_TAC std_ss [DF_def,DT_def,assert_def]);
-  
+
 val assert_option_then_thm = store_thm("assert_option_then_thm",
   ``!p q b. (assert (\g. T) >> p = p) /\
             (q >> assert (\g. T) >> p = q >> p) /\

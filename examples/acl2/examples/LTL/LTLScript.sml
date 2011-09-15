@@ -88,11 +88,11 @@ val Formula_def =
 val FormulaMonotonicity =
  time store_thm
   ("FormulaMonotonicity",
-   ``!f Vars1 Vars2. 
+   ``!f Vars1 Vars2.
       Formula Vars1 f /\ Vars1 SUBSET Vars2 ==> Formula Vars2 f``,
    Induct
     THEN RW_TAC std_ss []
-    THEN FULL_SIMP_TAC std_ss 
+    THEN FULL_SIMP_TAC std_ss
           [Formula_def,SPECIFICATION,pred_setTheory.SUBSET_DEF]
     THEN METIS_TAC[]);
 
@@ -126,15 +126,15 @@ val _ = hide "S";
 val model_def =
  Hol_datatype
   `model =
-    <| S: 'state set; 
+    <| S: 'state set;
       (* set of all states *)
        S0:'state set ;
       (* initial states *)
-       R: ('state # 'state) set; 
+       R: ('state # 'state) set;
       (* transition relation *)
        L: 'state -> 'prop set
       (* maps a state to the set of propositions true in that state *)
-    |>`; 
+    |>`;
 
 (******************************************************************************
 * Requirements for a model to be a well-formed Kripke structure
@@ -168,7 +168,7 @@ val g_simps =
    GSYM
    [int_def,nat_def,List_def,asym_def,csym_def,ksym_def,osym_def,
     States_def,InitialStates_def,Variables_def,Transition_def,
-    Equations_def,LabelFn_def,GSYM implies2hol,GSYM ANDL_REWRITE]);   
+    Equations_def,LabelFn_def,GSYM implies2hol,GSYM ANDL_REWRITE]);
 
 val ll_simp = map (map (I ## SIMP_RULE list_ss g_simps)) ll;
 val lp_simp = map (map (I ## SIMP_RULE list_ss g_simps)) lp;
@@ -195,12 +195,12 @@ val ModelSanity =
  store_thm
   ("ModelSanity",
    ``!m. (|= circuit_modelp m) ==> MODEL(HOL_MODEL m)``,
-   RW_TAC std_ss 
+   RW_TAC std_ss
     [MODEL_def,HOL_MODEL_def,SPECIFICATION,pred_setTheory.SUBSET_DEF,
      initial_state_is_state_thm,range_transition_relation_thm]
     THEN METIS_TAC[range_transition_relation_thm]);
 
-val cone_of_influence_reduction_is_circuit_p_thm = 
+val cone_of_influence_reduction_is_circuit_p_thm =
  slurp_thm "cone_of_influence_reduction_is_circuit_p";
 
 val create_kripke_produces_circuit_model_thm =
@@ -261,8 +261,8 @@ val equal_memberp_imp =
 val BisimLemma =
  time store_thm
   ("BisimLemma",
-   ``!m1 m2 Vars. (|= circuit_modelp m1) /\ 
-                  (|= circuit_modelp m2) /\ 
+   ``!m1 m2 Vars. (|= circuit_modelp m1) /\
+                  (|= circuit_modelp m2) /\
                   (|= (c_bisim_equiv m1 m2 Vars))
                   ==>
                   BISIM_EQ (HOL_MODEL m1) (HOL_MODEL m2) (SexpToSet Vars)``,
@@ -273,9 +273,9 @@ val BisimLemma =
       [RW_TAC (srw_ss()) [HOL_MODEL_def, BISIM_def, SPECIFICATION, SexpToSet_def]
         THENL
          [METIS_TAC [bisim_lemma_1_thm,SPECIFICATION,equal_memberp_imp],
-          Q.EXISTS_TAC `?` 
+          Q.EXISTS_TAC `?`
            THEN ...,
-          Q.EXISTS_TAC `?` 
+          Q.EXISTS_TAC `?`
            THEN ...],
 
         Q.EXISTS_TAC
@@ -290,7 +290,7 @@ val BisimLemma =
          THEN METIS_TAC
                [c_bisimilar_equiv_implies_init_greater_init_n_greater_m_thm,
                 c_bisimilar_equiv_implies_bisimilar_initial_states_n_greater_m_thm]]);
-        
+
 
 
 
@@ -498,8 +498,8 @@ corresponds to (c-bisim-equiv M M' vars)
    Lemma 31, p 172 of Clarke et al.
 *)
 
-(* 
-* Auxiliary path-constructing function used in proof of Lemma1a 
+(*
+* Auxiliary path-constructing function used in proof of Lemma1a
 * Makes a path in M B-bisimilar to p starting from s
 *)
 val MAKE_PATH_def =
@@ -511,9 +511,9 @@ val MAKE_PATH_REC =
  prove
   (``(MAKE_PATH M B p s 0 =  s)
      /\
-     (MAKE_PATH M B p s (SUC n) = 
+     (MAKE_PATH M B p s (SUC n) =
        @t'. M.R(MAKE_PATH M B p s n, t') /\ B(p(SUC n),t'))``,
-   RW_TAC std_ss 
+   RW_TAC std_ss
     [MAKE_PATH_def,prim_recTheory.PRIM_REC_THM,DECIDE``n+1 = SUC n``]);
 
 val Lemma1a =
@@ -527,7 +527,7 @@ val Lemma1a =
     THEN `!n. (p n) IN M.S` by METIS_TAC[PATH_LEMMA]
     THEN FULL_SIMP_TAC std_ss [IN_DEF,PATH_def]
     THEN Q.EXISTS_TAC `MAKE_PATH M' B p s'`
-    THEN SIMP_TAC std_ss 
+    THEN SIMP_TAC std_ss
           [prim_recTheory.PRIM_REC_THM,GSYM FORALL_AND_THM,MAKE_PATH_REC]
     THEN Induct
     THEN FULL_SIMP_TAC pure_ss [DECIDE ``n + 1 = SUC n``,PATH_def]
@@ -551,7 +551,7 @@ val Lemma1b =
       MODEL M /\ MODEL M' /\ BISIM M M' B Vary
        ==>
        !s s'. s IN M.S /\ s' IN M'.S /\ B(s,s')
-              ==> !p'. PATH M' s' p' 
+              ==> !p'. PATH M' s' p'
                        ==> ?p. PATH M s p /\ !i. M.S(p i) /\ B(p i, p' i)``,
     METIS_TAC
      [BISIM_SYM,
@@ -570,10 +570,10 @@ val Lemma1 =
         ==>
         !s s'. s IN M.S /\ s' IN M'.S /\ B(s,s')
                ==>
-               (!p. PATH M s p 
+               (!p. PATH M s p
                     ==> ?p'. PATH M' s' p' /\ !i. M'.S(p' i) /\ B(p i, p' i))
                /\
-               (!p'. PATH M' s' p' 
+               (!p'. PATH M' s' p'
                      ==> ?p. PATH M s p /\ !i. M.S(p i) /\ B(p i, p' i))``,
    METIS_TAC[Lemma1a,Lemma1b]);
 
@@ -599,7 +599,7 @@ val PATH_SUFFIX =
 val PATH_SUFFIX_IN =
  store_thm
   ("PATH_SUFFIX_IN",
-   ``!M s p. MODEL M /\ M.S s /\ PATH M s p 
+   ``!M s p. MODEL M /\ M.S s /\ PATH M s p
              ==> !n i. M.S (SUFFIX p n i)``,
    RW_TAC std_ss [MODEL_def,PATH_def,SUFFIX_def,IN_DEF]
     THEN Induct_on `n` THEN Induct_on `i`
@@ -616,8 +616,8 @@ val Lemma2 =
       MODEL M /\ MODEL M' /\ BISIM M M' B Vars
        ==>
        !f s s'. s IN M.S /\ s' IN M'.S /\ B(s,s')
-                ==> 
-                !p p'. 
+                ==>
+                !p p'.
                  PATH M s p /\ PATH M' s' p' /\ (!i. B(p i, p' i))
                             /\ (Formula Vars f)
                  ==> (SEM M p f = SEM M' p' f)``,
@@ -651,7 +651,7 @@ val Lemma2 =
 val Theorem1 =
  time store_thm
   ("Theorem1",
-   ``!M M'. MODEL M /\ MODEL M' /\ BISIM_EQ M M' Vars 
+   ``!M M'. MODEL M /\ MODEL M' /\ BISIM_EQ M M' Vars
             ==> !f. Formula Vars f ==> (SAT M f = SAT M' f)``,
    RW_TAC std_ss [BISIM_EQ_def,SAT_def,SPECIFICATION]
     THEN EQ_TAC
@@ -685,7 +685,7 @@ assumption on the transition relation R that:
 
 I think this corresponds to the Sandip assumption, based on what you
 said in an email:
-  
+
   ------------------------------------------------------------------
   I was however able to prove the following:
 
@@ -711,7 +711,7 @@ good, then I will use this approach when adding Vars.
 The reformulation defines a function that converts a Sandip
 s-expression representation of a model ``m:sexp`` to a HOL Kripke
 structures ``MAKE_HOL_MODEL m`` which has HOL type
-``(sexp,sexp)model`` - i.e. both states and propositions are 
+``(sexp,sexp)model`` - i.e. both states and propositions are
 s-expressions. The definition packages up your definitions of S, S0,
 L, R into a HOL record structure:
 
@@ -727,14 +727,14 @@ L, R into a HOL record structure:
 The HOL Theorem1:
 
    |- !M M'.
-       MODEL M /\ MODEL M' /\ BISIM_EQ M M' 
-       ==> 
+       MODEL M /\ MODEL M' /\ BISIM_EQ M M'
+       ==>
        !f. SAT M f <=> SAT M' f
 
 can then be instantiated to
 
    |- MODEL (MAKE_HOL_MODEL m1) /\ MODEL (MAKE_HOL_MODEL m2) /\
-      BISIM_EQ (MAKE_HOL_MODEL m1) (MAKE_HOL_MODEL m2) 
+      BISIM_EQ (MAKE_HOL_MODEL m1) (MAKE_HOL_MODEL m2)
       ==>
       !f. SAT (MAKE_HOL_MODEL m1) f <=> SAT (MAKE_HOL_MODEL m2) f
 
@@ -764,7 +764,7 @@ and
 
 I think you've already done these.
 
-The third assumption of Theorem1 is 
+The third assumption of Theorem1 is
 
  BISIM_EQ (MAKE_HOL_MODEL m1) (MAKE_HOL_MODEL m2)
 
@@ -796,11 +796,11 @@ case that m2 is COIR m1).
         (|= memberp s0' (g InitialStates m2)) ==>
         ?s0. (|= memberp s0 (g InitialStates m1)) /\ B (s0,s0')
 
-I haven't looked at your LTLscript-*.sml files in detail yet 
+I haven't looked at your LTLscript-*.sml files in detail yet
 (I suspect some of the stuff above may duplicate or clash with
 LTLscript-3.sml). I'll do that next. BTW Holmake requires that source
 files that create theories are of the exact form
-<TheoryName>Script.sml (note capitalised "S"). This is indeed horrible, 
+<TheoryName>Script.sml (note capitalised "S"). This is indeed horrible,
 but one has to live with it, so we may need to switch to LTLScript-*.sml.
 
 *)

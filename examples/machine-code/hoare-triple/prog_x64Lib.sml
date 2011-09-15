@@ -247,15 +247,15 @@ fun introduce_zMEMORY th = if
     val th = SIMP_RULE (bool_ss++sep_cond_ss) [] th
     in th end end
 
-fun introduce_zSTACK th = 
+fun introduce_zSTACK th =
   if not (can (find_term (fn x => x = ``RSP``)) (concl th)) then th else let
   val pattern = ``zM (a + 4w) x1 * zM a x2``
-  val tag = (RW [GSYM STAR_ASSOC] th) |> concl |> car 
+  val tag = (RW [GSYM STAR_ASSOC] th) |> concl |> car
             |> find_term (can (match_term pattern))
   val x1 = (cdr o cdr o car) tag
   val x2 = (cdr o cdr) tag
-  val a = (cdr o car o cdr) tag 
-  val _ = mem (mk_var("r4",``:word64``)) (free_vars a) orelse fail() 
+  val a = (cdr o car o cdr) tag
+  val _ = mem (mk_var("r4",``:word64``)) (free_vars a) orelse fail()
   val res = SPECL [a,mk_var("xx",``:word64``)] (RW1[STAR_COMM]zM64_def)
   val y1 = (cdr o cdr o car) ((snd o dest_eq o concl) res)
   val y2 = (cdr o cdr) ((snd o dest_eq o concl) res)
@@ -276,7 +276,7 @@ fun calculate_length_and_jump th = let
     (th,l,NONE) end
 
 fun post_process_thm mpred th = let
-  val th = if mpred = zMEM_AUTO then introduce_zSTACK th else th 
+  val th = if mpred = zMEM_AUTO then introduce_zSTACK th else th
   val th = RW [GSYM zR_def] th
   val th = SIMP_RULE (std_ss++sw2sw_ss++w2w_ss) [wordsTheory.word_mul_n2w,SEP_CLAUSES] th
   val th = CONV_RULE FIX_WORD32_ARITH_CONV th
@@ -370,7 +370,7 @@ fun x64_prove_one_spec th c = let
 
 fun x64_prove_specs mpred s = let
   val th = x64_step s
-  val th = if mpred = zMEM_BYTE_MEMORY then 
+  val th = if mpred = zMEM_BYTE_MEMORY then
              RW [ZWRITE_MEM2_WORD32_def,ZREAD_MEM2_WORD32_def] th else th
   val c = calc_code th
   val th = pre_process_thm th

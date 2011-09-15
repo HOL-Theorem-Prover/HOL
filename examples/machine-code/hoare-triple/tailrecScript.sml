@@ -9,7 +9,7 @@ val op \\ = op THEN;
 
 
 (* ---- definitions ----- *)
- 
+
 val TAILREC_PRE_def = Define `
   TAILREC_PRE f1 guard precondition (x:'a) =
     (!k. (!m. m < k ==> guard (FUNPOW f1 m x)) ==> precondition (FUNPOW f1 k x)) /\
@@ -19,13 +19,13 @@ val TAILREC_def = Define `
   TAILREC f1 (f2:'a->'b) g x = f2 (WHILE g f1 x)`;
 
 val SHORT_TAILREC_def = Define `
-  SHORT_TAILREC (f:'a -> ('a + 'b) # bool) = 
+  SHORT_TAILREC (f:'a -> ('a + 'b) # bool) =
     TAILREC (OUTL o FST o f) (OUTR o FST o f) (ISL o FST o f)`;
 
 val SHORT_TAILREC_PRE_def = Define `
-  SHORT_TAILREC_PRE (f:'a -> ('a + 'b) # bool) = 
+  SHORT_TAILREC_PRE (f:'a -> ('a + 'b) # bool) =
     TAILREC_PRE (OUTL o FST o f) (ISL o FST o f) (SND o f)`;
- 
+
 
 (* ---- theorems ---- *)
 
@@ -82,13 +82,13 @@ val TAILREC_EQ_THM = store_thm("TAILREC_EQ_THM",
   SIMP_TAC std_ss []);
 
 val SHORT_TAILREC_THM = store_thm("SHORT_TAILREC_THM",
-  ``!(f:'a -> ('a + 'b) # bool) x. 
+  ``!(f:'a -> ('a + 'b) # bool) x.
       (SHORT_TAILREC f x = if ISL (FST (f x)) then SHORT_TAILREC f (OUTL (FST (f x)))
                                              else OUTR (FST (f x))) /\
-      (SHORT_TAILREC_PRE f x = 
+      (SHORT_TAILREC_PRE f x =
        SND (f x) /\ (ISL (FST (f x)) ==> SHORT_TAILREC_PRE f (OUTL (FST (f x)))))``,
   SIMP_TAC std_ss [SHORT_TAILREC_def,SHORT_TAILREC_PRE_def] \\ REPEAT STRIP_TAC
-  \\ CONV_TAC (RATOR_CONV (ONCE_REWRITE_CONV [TAILREC_THM,TAILREC_PRE_THM]))  
+  \\ CONV_TAC (RATOR_CONV (ONCE_REWRITE_CONV [TAILREC_THM,TAILREC_PRE_THM]))
   \\ SIMP_TAC std_ss []);
-  
+
 val _ = export_theory();

@@ -35,10 +35,10 @@ val _ = print "cleanable stuff in help/src-sml\n\n"
 
 val _ = print "Compiling win-config.exe"
 val _ = FileSys.chDir (fullPath [holdir, "tools"])
-val _ = if Process.isSuccess 
+val _ = if Process.isSuccess
              (systeml ["mosmlc", "-I", "Holmake", "-o", "win-config.exe",
                        "win-config.sml"])
-        then ()         
+        then ()
         else (print "Compilation failed!\n"; Process.exit Process.failure)
 val _ = FileSys.chDir holdir
 

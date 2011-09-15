@@ -1516,8 +1516,8 @@ val WORD_SLICE_THM = store_thm("WORD_SLICE_THM",
     ``(h '' l) a = a && n2w (2 ** SUC h - 2 ** l)``,
     RW_TAC int_ss [fcpTheory.CART_EQ,fcpTheory.FCP_BETA,word_bits_def,
     	   word_and_def,word_lsr_def,
-	   PROVE [word_index_n2w] 
-             ``i < dimindex (:'a) ==> ((n2w n :'a word) ' i = BIT i n)``, 
+	   PROVE [word_index_n2w]
+             ``i < dimindex (:'a) ==> ((n2w n :'a word) ' i = BIT i n)``,
             word_asr_def, BIT_RANGE,TOP_BIT_THM,word_slice_def] THEN
     EQ_TAC THEN RW_TAC int_ss []);
 

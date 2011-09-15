@@ -76,7 +76,7 @@ val GCD =
 val gcd_ind = GEN_ALL (DB.fetch "-" "gcd_ind");
 
 
-val GCD_IS_GCD = 
+val GCD_IS_GCD =
   store_thm("GCD_IS_GCD",
      ``!a b. is_gcd a b (gcd a b)``,
    recInduct gcd_ind THEN ARW [GCD] THEN
@@ -405,15 +405,15 @@ val divides_IMP = prove(
 
 val GCD_CANCEL_MULT = store_thm("GCD_CANCEL_MULT",
   ``!m n k. (gcd m k = 1) ==> (gcd m (k * n) = gcd m n)``,
-  REPEAT STRIP_TAC  
+  REPEAT STRIP_TAC
   THEN REWRITE_TAC [GCD_EQ_IS_GCD,IS_GCD,GCD_THM]
-  THEN REPEAT STRIP_TAC  
+  THEN REPEAT STRIP_TAC
   THEN1 (MATCH_MP_TAC divides_IMP THEN REWRITE_TAC [GCD_THM])
   THEN REVERSE (`divides d n` by ALL_TAC) THEN1 METIS_TAC [GCD_THM]
   THEN MATCH_MP_TAC L_EUCLIDES
   THEN Q.EXISTS_TAC `k`
   THEN ASM_REWRITE_TAC []
-  THEN FULL_SIMP_TAC bool_ss [IS_GCD,GCD_EQ_IS_GCD,ONE_DIVIDES_ALL]   
+  THEN FULL_SIMP_TAC bool_ss [IS_GCD,GCD_EQ_IS_GCD,ONE_DIVIDES_ALL]
   THEN REPEAT STRIP_TAC
   THEN Q.PAT_ASSUM `!d.bbb` MATCH_MP_TAC
   THEN IMP_RES_TAC DIVIDES_TRANS
@@ -433,8 +433,8 @@ val ODD_IMP_GCD_CANCEL_EVEN = prove(
   THEN FULL_SIMP_TAC bool_ss [ODD_EVEN]);
 
 val BINARY_GCD = store_thm("BINARY_GCD",
-  ``!m n. 
-      (EVEN m /\ EVEN n ==> (gcd m n = 2 * gcd (m DIV 2) (n DIV 2))) /\ 
+  ``!m n.
+      (EVEN m /\ EVEN n ==> (gcd m n = 2 * gcd (m DIV 2) (n DIV 2))) /\
       (EVEN m /\ ODD n ==> (gcd m n = gcd (m DIV 2) n))``,
   SIMP_TAC bool_ss [EVEN_EXISTS] THEN REVERSE (REPEAT STRIP_TAC)
   THEN `0 < 2` by (MATCH_MP_TAC PRIME_POS THEN REWRITE_TAC [PRIME_2])

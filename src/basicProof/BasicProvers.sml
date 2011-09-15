@@ -371,7 +371,7 @@ fun first_subterm f tm = f (case_find_subterm (can f) tm);
 fun scrutinized_and_free_in tm =
  let fun free_case t =
         let val (_, a) = dest_comb t
-        in if TypeBase.is_case t andalso free_in a tm 
+        in if TypeBase.is_case t andalso free_in a tm
               then a else raise ERR "free_case" ""
         end
 
@@ -384,11 +384,11 @@ fun scrutinized_and_free_in tm =
  end;
 
 fun PURE_TOP_CASE_TAC (g as (_, tm)) =
- let val t = first_term (scrutinized_and_free_in tm) tm 
+ let val t = first_term (scrutinized_and_free_in tm) tm
  in Cases_on `^t` end g;
 
 fun PURE_CASE_TAC (g as (_, tm)) =
- let val t = first_subterm (scrutinized_and_free_in tm) tm 
+ let val t = first_subterm (scrutinized_and_free_in tm) tm
  in Cases_on `^t` end g;
 
 fun PURE_FULL_CASE_TAC (g as (asl,w)) =
@@ -406,7 +406,7 @@ fun case_rws tyi =
         tot TypeBasePure.one_one_of tyi]
 
 fun case_rwlist () =
- itlist (fn tyi => fn rws => case_rws tyi @ rws) 
+ itlist (fn tyi => fn rws => case_rws tyi @ rws)
         (TypeBase.elts()) [];
 
 fun PURE_CASE_SIMP_CONV rws = simpLib.SIMP_CONV boolSimps.bool_ss rws
@@ -418,14 +418,14 @@ end;
 (* Q: what should CASE_TAC do with literal case expressions?                 *)
 (*---------------------------------------------------------------------------*)
 
-fun is_refl tm = 
+fun is_refl tm =
  let val (l,r) = dest_eq tm
  in aconv l r
  end handle HOL_ERR _ => false;
 
-fun TRIV_LET_CONV tm = 
+fun TRIV_LET_CONV tm =
  let val (_,a) = boolSyntax.dest_let tm
- in if is_var a orelse is_const a 
+ in if is_var a orelse is_const a
         orelse Literal.is_literal a
     then (REWR_CONV LET_THM THENC BETA_CONV) tm
     else NO_CONV tm
@@ -435,15 +435,15 @@ fun SIMP_OLD_ASSUMS (orig as (asl1,_)) (gl as (asl2,_)) =
  let val new = op_set_diff aconv asl2 asl1
  in if null new then ALL_TAC
     else let val thms = map ASSUME new
-          in MAP_EVERY (Lib.C UNDISCH_THEN (K ALL_TAC)) new THEN 
+          in MAP_EVERY (Lib.C UNDISCH_THEN (K ALL_TAC)) new THEN
               RULE_ASSUM_TAC (REWRITE_RULE thms) THEN
               MAP_EVERY ASSUME_TAC thms
           end
  end gl;
 
-fun USE_NEW_ASSUM orig_goal cgoal = 
- (TRY (WEAKEN_TAC is_refl) THEN 
-  ASM_REWRITE_TAC[] THEN 
+fun USE_NEW_ASSUM orig_goal cgoal =
+ (TRY (WEAKEN_TAC is_refl) THEN
+  ASM_REWRITE_TAC[] THEN
   SIMP_OLD_ASSUMS orig_goal THEN
   CONV_TAC (DEPTH_CONV TRIV_LET_CONV)) cgoal;
 
@@ -451,13 +451,13 @@ fun USE_NEW_ASSUM orig_goal cgoal =
 (* Do a case analysis in the conclusion of the goal, then simplify a bit.    *)
 (*---------------------------------------------------------------------------*)
 
-fun CASE_TAC gl = 
+fun CASE_TAC gl =
  (PURE_CASE_TAC THEN USE_NEW_ASSUM gl THEN CONV_TAC CASE_SIMP_CONV) gl;
 
-fun TOP_CASE_TAC gl = 
+fun TOP_CASE_TAC gl =
  (PURE_TOP_CASE_TAC THEN USE_NEW_ASSUM gl THEN CONV_TAC CASE_SIMP_CONV) gl;
 
-   
+
 (*---------------------------------------------------------------------------*)
 (* Do a case analysis anywhere in the goal, then simplify a bit.             *)
 (*---------------------------------------------------------------------------*)
@@ -477,16 +477,16 @@ fun FULL_CASE_TAC goal =
 (* than REPEAT FULL_CASE_TAC.                                                *)
 (*---------------------------------------------------------------------------*)
 
-fun EVERY_CASE_TAC goal = 
+fun EVERY_CASE_TAC goal =
  let val rws = case_rwlist()
      val case_conv = PURE_CASE_SIMP_CONV rws
      val asm_rule = BETA_RULE o Rewrite.REWRITE_RULE rws
      fun tac a = (PURE_FULL_CASE_TAC THEN USE_NEW_ASSUM a THEN
-                  RULE_ASSUM_TAC asm_rule THEN 
+                  RULE_ASSUM_TAC asm_rule THEN
                   CONV_TAC case_conv) a
  in REPEAT tac
  end goal;
- 
+
 (*===========================================================================*)
 (* Rewriters                                                                 *)
 (*===========================================================================*)

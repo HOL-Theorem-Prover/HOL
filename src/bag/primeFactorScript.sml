@@ -2,7 +2,7 @@
 (* Fundamental theorem of arithmetic for num.                                *)
 (*---------------------------------------------------------------------------*)
 
-open HolKernel Parse boolLib simpLib BasicProvers metisLib 
+open HolKernel Parse boolLib simpLib BasicProvers metisLib
      bagTheory dividesTheory arithmeticTheory;
 
 (* Interactive
@@ -50,7 +50,7 @@ val PRIME_FACTORS_EXIST = Q.store_thm
   `q < n` by
      (STRIP_ASSUME_TAC (DECIDE ``q < n \/ (q=n) \/ n < q``) THENL
       [FULL_SIMP_TAC arith_ss [MULT_EQ_ID] THEN METIS_TAC [NOT_PRIME_1],
-       `0 < m /\ 0 < q` 
+       `0 < m /\ 0 < q`
            by METIS_TAC [ZERO_LESS_MULT,DECIDE ``0 < 1``,LESS_TRANS] THEN
        RW_TAC arith_ss [] THEN
        `(m=1) \/ 1 < m` by DECIDE_TAC THEN METIS_TAC [NOT_PRIME_1]]) THEN

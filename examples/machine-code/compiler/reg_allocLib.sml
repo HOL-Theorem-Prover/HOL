@@ -11,7 +11,7 @@ local
     val ys = map (fn x => ISPECL [mk_var("w",``:word32``),x] WORD_MUL_LSL) ys
     val ys = map (GSYM o (CONV_RULE (RAND_CONV EVAL))) ys
     val ys = map (ONCE_REWRITE_RULE [WORD_MULT_COMM]) ys @ ys
-    in ys end      
+    in ys end
   in
     fun add_abbrevs thms = (compiler_abbrevs := thms @ (!compiler_abbrevs))
     fun COMPILER_UNABBREV_CONV tm = REWRITE_CONV (!compiler_abbrevs) tm
@@ -45,10 +45,10 @@ fun intersect xs ys = filter (fn y => mem y xs) ys
 fun dest_tuple tm =
   let val (x,y) = pairSyntax.dest_pair tm in x :: dest_tuple y end handle HOL_ERR e => [tm];
 
-fun list_find x [] = fail() 
+fun list_find x [] = fail()
   | list_find x ((y,z)::zs) = if x = y then z else list_find x zs
 
-val EXPAND_LET_CONV = 
+val EXPAND_LET_CONV =
   (RATOR_CONV o RATOR_CONV) (ONCE_REWRITE_CONV [LET_DEF]) THENC
    RATOR_CONV BETA_CONV THENC BETA_CONV THENC BETA_CONV
 
@@ -59,18 +59,18 @@ fun mk_tuple [] = ``()``
 
 (* this conversion flattens large expressions into compilable assignments *)
 
-fun BOTTOM_UP_CONV c tm = 
-  case dest_term tm of 
-    COMB _ => (RAND_CONV (BOTTOM_UP_CONV c) THENC 
-               RATOR_CONV (BOTTOM_UP_CONV c) THENC 
+fun BOTTOM_UP_CONV c tm =
+  case dest_term tm of
+    COMB _ => (RAND_CONV (BOTTOM_UP_CONV c) THENC
+               RATOR_CONV (BOTTOM_UP_CONV c) THENC
                TRY_CONV c) tm
-  | LAMB _ => (ABS_CONV (BOTTOM_UP_CONV c) THENC 
+  | LAMB _ => (ABS_CONV (BOTTOM_UP_CONV c) THENC
                TRY_CONV c) tm
   | _ =>      (TRY_CONV c) tm
 
-fun TOP_DOWN_CONV c tm = 
-  (TRY_CONV c THENC (fn tm => 
-    case dest_term tm of 
+fun TOP_DOWN_CONV c tm =
+  (TRY_CONV c THENC (fn tm =>
+    case dest_term tm of
       COMB _ => (RAND_CONV (TOP_DOWN_CONV c) THENC RATOR_CONV (TOP_DOWN_CONV c)) tm
     | LAMB _ => (ABS_CONV (TOP_DOWN_CONV c)) tm
     | _ =>      ALL_CONV tm)) tm
@@ -89,8 +89,8 @@ fun FLATTEN_EXPS_CONV tm = let
     val r0 = mk_var("r0",``:word32``)
     val tm = subst (map (fn x => x |-> r0) vs) tm
     val result = case term2guard tm of
-                    GUARD_OTHER _ => false  
-                  | GUARD_NOT (GUARD_OTHER _) => false  
+                    GUARD_OTHER _ => false
+                  | GUARD_NOT (GUARD_OTHER _) => false
                   | _ => true
                  handle HOL_ERR _ => false | Empty => false
     in result end handle HOL_ERR _ => false
@@ -99,7 +99,7 @@ fun FLATTEN_EXPS_CONV tm = let
     val t = find_term (fn x => is_compilable x andalso not (is_var x)) rhs
     val ty = type_of t
     val temp = mk_temp_var ty
-    val temp = if ty = ``:word32`` then temp else 
+    val temp = if ty = ``:word32`` then temp else
                  find_term (fn v => is_var v andalso (ty = type_of v)) t
                  handle HOL_ERR _ => temp
     in divide_aux g (xs @ [(temp,t)], subst [t |-> temp] rhs) end
@@ -109,29 +109,29 @@ fun FLATTEN_EXPS_CONV tm = let
     val (xs,rhs) = divide_aux g (xs,rhs)
     val xs = partition (fn x => type_of (fst x) = ``:word32``) xs
     in (xs,rhs) end
-  fun CONJUNCTS_CONV c tm = 
+  fun CONJUNCTS_CONV c tm =
     if is_conj tm then BINOP_CONV (CONJUNCTS_CONV c) tm else c tm
-  fun FORALL_CONV c tm = 
-    if is_forall tm then QUANT_CONV (FORALL_CONV c) tm else c tm 
-  val FUNC_BODY_CONV = CONJUNCTS_CONV o FORALL_CONV o RAND_CONV  
+  fun FORALL_CONV c tm =
+    if is_forall tm then QUANT_CONV (FORALL_CONV c) tm else c tm
+  val FUNC_BODY_CONV = CONJUNCTS_CONV o FORALL_CONV o RAND_CONV
   fun FLAT_CONV tm = let
     val f = tm2ftree tm
     fun lets ([],y) = y
-      | lets ((x1,x2)::xs,y) = FUN_LET (x1,x2,lets (xs,y)) 
+      | lets ((x1,x2)::xs,y) = FUN_LET (x1,x2,lets (xs,y))
     fun ftree_each (FUN_VAL rhs) = let
-          val (xs,rhs2) = divide is_compilable ([],rhs)  
+          val (xs,rhs2) = divide is_compilable ([],rhs)
           in lets (xs,FUN_VAL rhs2) end
       | ftree_each (FUN_LET (lhs,rhs,t)) = let
-          val (xs,rhs2) = divide is_compilable ([],rhs)  
+          val (xs,rhs2) = divide is_compilable ([],rhs)
           in lets (xs,FUN_LET (lhs,rhs2,ftree_each t)) end
       | ftree_each (FUN_IF (b,t1,t2)) = let
-          val (xs,b2) = divide is_c_guard ([],b)  
+          val (xs,b2) = divide is_c_guard ([],b)
           in lets (xs,FUN_IF (b2,ftree_each t1,ftree_each t2)) end
       | ftree_each (FUN_COND (b,t)) = FUN_COND (b,ftree_each t)
     val tm2 = ftree2tm (ftree_each f)
     fun EXPAND_TEMPVARLET_CONV tm = let
       val (v,x) = dest_abs (fst (dest_let tm))
-      in if is_temp_var v then EXPAND_LET_CONV tm else NO_CONV tm end 
+      in if is_temp_var v then EXPAND_LET_CONV tm else NO_CONV tm end
       handle HOL_ERR _ => NO_CONV tm
     val goal = mk_eq(tm,tm2)
     val result = auto_prove "FLAT_CONV" (goal,
@@ -146,7 +146,7 @@ fun FLATTEN_EXPS_CONV tm = let
 fun not_fixed_reg v = let
   val (name,ty) = dest_var v
   val ii = explode name
-  val reg = mem (hd ii) [#"r",#"s"] andalso 
+  val reg = mem (hd ii) [#"r",#"s"] andalso
             (filter (fn x => not (mem x [#"0",#"1",#"2",#"3",#"4",#"5",#"6",#"7",#"8",#"9",#"'"])) (tl ii) = [])
   in (ty = ``:word32``) andalso not reg end
   handle HOL_ERR _ => false
@@ -154,12 +154,12 @@ fun not_fixed_reg v = let
 val SSA_CONV = let
   fun rename tm = let
     val (v,x) = dest_abs tm
-    in if not_fixed_reg v then ALPHA_CONV (mk_t_var(type_of v)) tm 
+    in if not_fixed_reg v then ALPHA_CONV (mk_t_var(type_of v)) tm
                           else NO_CONV tm end
   in BOTTOM_UP_CONV rename end
 
 val COMMON_SUBEXP_CONV = let
-  fun aux tm = let  
+  fun aux tm = let
     val (x,y) = dest_let tm
     val (v,x) = dest_abs x
     val _ = dest_var v
@@ -168,10 +168,10 @@ val COMMON_SUBEXP_CONV = let
     val x2 = subst [y|->v] x
     val tm2 = mk_let(mk_abs(v,x2),y)
     val goal = mk_eq(tm,tm2)
-    val EXPAND_LET_CONV = 
+    val EXPAND_LET_CONV =
       (RATOR_CONV o RATOR_CONV) (ONCE_REWRITE_CONV [LET_DEF]) THENC
        RATOR_CONV BETA_CONV THENC BETA_CONV THENC BETA_CONV
-    val thi = auto_prove "" (goal,  
+    val thi = auto_prove "" (goal,
       CONV_TAC (BINOP_CONV EXPAND_LET_CONV) THEN REWRITE_TAC [])
     fun DELETE_EXTRA_MOVE_CONV tm = let
       val (x,y) = dest_let tm
@@ -179,7 +179,7 @@ val COMMON_SUBEXP_CONV = let
       val _ = dest_var v
       val _ = dest_var y
       val _ = if not_fixed_reg v then () else fail()
-      in EXPAND_LET_CONV tm end           
+      in EXPAND_LET_CONV tm end
     in ((fn tm => thi) THENC BOTTOM_UP_CONV DELETE_EXTRA_MOVE_CONV) tm end
   in TOP_DOWN_CONV aux end
 
@@ -199,7 +199,7 @@ fun parallel_assign tm2 tm = let (* both tm and tm2 must be tuples of variables 
         val aux = filter (fn (lhs,rhs) => not (mem x (free_vars rhs))) aux
         in (x,y) :: forward xs ((x,y)::aux) end
   val rs = forward rs []
-  (* optimise: remove unused temporary variables *)  
+  (* optimise: remove unused temporary variables *)
   fun is_used x [] = not (is_temp_var x)
     | is_used x ((y,z)::xs) = if mem x (free_vars z) then true else is_used x xs
   fun in_tail [] = []
@@ -209,7 +209,7 @@ fun parallel_assign tm2 tm = let (* both tm and tm2 must be tuples of variables 
 
 fun FIX_CALL_RETURN_VALUES_CONV tm = let
   (* find one return value for each function *)
-  fun in_out x = let 
+  fun in_out x = let
     val (lhs,rhs) = dest_eq x
     fun leaves (FUN_COND (_,t)) = leaves t
       | leaves (FUN_LET (_,_,t)) = leaves t
@@ -221,47 +221,47 @@ fun FIX_CALL_RETURN_VALUES_CONV tm = let
   val io = map in_out xs
   (* invent new temporaries for each return value *)
   fun invent_new_temps (x,(y,z)) = let
-    val f = map (fn z => if is_t_var z then mk_t_var(type_of z) else z) 
+    val f = map (fn z => if is_t_var z then mk_t_var(type_of z) else z)
     in (x,(y,mk_tuple (f (dest_tuple z)))) end
   val io = map invent_new_temps io
   (* add restrictions on already compiled components *)
   (* ... *)
-  (* make sure all function calls/returns respect this io restriction *)  
-  fun CONJUNCTS_CONV c tm = 
+  (* make sure all function calls/returns respect this io restriction *)
+  fun CONJUNCTS_CONV c tm =
     if is_conj tm then BINOP_CONV (CONJUNCTS_CONV c) tm else c tm
-  fun FORALL_CONV c tm = 
-    if is_forall tm then QUANT_CONV (FORALL_CONV c) tm else c tm 
+  fun FORALL_CONV c tm =
+    if is_forall tm then QUANT_CONV (FORALL_CONV c) tm else c tm
   val FUNC_BODY_CONV = CONJUNCTS_CONV o FORALL_CONV
   fun FLAT_CONV tm = let
     val func_tm = (car o fst o dest_eq) tm
     val f = tm2ftree (cdr tm)
     fun lets [] y = y
-      | lets ((x1,x2)::xs) y = FUN_LET (x1,x2,lets xs y) 
+      | lets ((x1,x2)::xs) y = FUN_LET (x1,x2,lets xs y)
     fun ftree_each (FUN_IF (b,t1,t2)) = FUN_IF (b,ftree_each t1,ftree_each t2)
       | ftree_each (FUN_COND (b,t)) = FUN_COND (b,ftree_each t)
       | ftree_each (FUN_VAL rhs) = let
           val call = (car rhs = func_tm) handle HOL_ERR _ => false
           val x = (if call then fst else snd) (list_find func_tm io)
           val rhs2 = if call then cdr rhs else rhs
-          val rs1 = parallel_assign x rhs2                   
+          val rs1 = parallel_assign x rhs2
           val ret = if call then mk_comb(func_tm,x) else x
           in lets rs1 (FUN_VAL ret) end
       | ftree_each (FUN_LET (lhs,rhs,t)) = let
           val (x,y) = list_find (car rhs) io
-          val rs1 = parallel_assign x (cdr rhs)                   
+          val rs1 = parallel_assign x (cdr rhs)
           val rs2 = parallel_assign lhs y
           in lets rs1 (FUN_LET (y,mk_comb(car rhs,x),lets rs2 (ftree_each t))) end
           handle HOL_ERR _ => FUN_LET (lhs,rhs,ftree_each t)
     val tm2 = ftree2tm (ftree_each f)
     fun EXPAND_TEMPVARLET_CONV tm = let
       val (v,x) = dest_abs (fst (dest_let tm))
-      in if is_temp_var v then EXPAND_LET_CONV tm else NO_CONV tm end 
+      in if is_temp_var v then EXPAND_LET_CONV tm else NO_CONV tm end
       handle HOL_ERR _ => NO_CONV tm
     val goal = mk_eq(tm,mk_eq((fst o dest_eq) tm,tm2))
     val result = auto_prove "FLAT_CONV" (goal,SIMP_TAC std_ss [LET_DEF])
     in result end
-  val result = FUNC_BODY_CONV FLAT_CONV tm  
-  in result end; 
+  val result = FUNC_BODY_CONV FLAT_CONV tm
+  in result end;
 
 
 (* clash graph and reg allocation *)
@@ -286,10 +286,10 @@ fun clash_graph ts = let
   fun ok_var x = (type_of x = ``:word32``)
   fun add_live_set2 ls1 ls2 t = FUN_COND
        (mk_eq(listSyntax.mk_list(all_distinct ls1,``:word32``),
-              listSyntax.mk_list(all_distinct ls2,``:word32``)),t) 
+              listSyntax.mk_list(all_distinct ls2,``:word32``)),t)
   fun add_live_set ls t = add_live_set2 ls [] t
   val fs = map (car o fst) ts
-  fun get_internal_vars rhs = 
+  fun get_internal_vars rhs =
     if not (mem (car rhs) fs) handle HOL_ERR _ => true then [] else
       subroutine_internal_vars (hd (filter (fn (x,_) => x = rhs) ts))
   fun live (FUN_VAL tm) = let
@@ -304,7 +304,7 @@ fun clash_graph ts = let
         val t = add_live_set ls (FUN_IF (tm,y1,y2))
         in (ls,t) end
     | live (FUN_LET (lhs,rhs,t)) = let
-        val (ls,tt) = live t 
+        val (ls,tt) = live t
         val vs = (filter ok_var (free_vars lhs))
         val ls2 = diff ls vs
         val ls = ls2 @ (filter ok_var (free_vars rhs))
@@ -319,9 +319,9 @@ fun clash_graph ts = let
          val f = fst o listSyntax.dest_list
          val (x1,x2) = dest_eq tm
          in (f x1, f x2) :: collect t end
-  val live_sets = append_lists (map (fn (f,t) => (collect (snd (live t)))) ts)  
+  val live_sets = append_lists (map (fn (f,t) => (collect (snd (live t)))) ts)
   fun clash [] y z = false
-    | clash ((x1,x2)::xs) y z = 
+    | clash ((x1,x2)::xs) y z =
         (mem y x1 andalso mem z x1) orelse
         (mem y x1 andalso mem z x2) orelse
         (mem y x2 andalso mem z x1) orelse clash xs y z
@@ -334,7 +334,7 @@ fun move_assignments ts graph = let
   fun pref (FUN_COND (_,t)) = pref t
     | pref (FUN_IF (_,t1,t2)) = pref t1 @ pref t2
     | pref (FUN_VAL tm) = []
-    | pref (FUN_LET (x,y,t)) = 
+    | pref (FUN_LET (x,y,t)) =
         if is_var x andalso is_var y then (x,y)::pref t else pref t
   val moves = append_lists (map (pref o snd) ts)
   in moves end;
@@ -342,14 +342,14 @@ fun move_assignments ts graph = let
 (* iterated_register_coalescing implements algorithm by George and Appel '96 *)
 fun iterated_register_coalescing graph moves freq is_colourable n = let
   val init_graph = graph
-  fun kk n = if n < 0 then [] else n::kk(n-1)   
+  fun kk n = if n < 0 then [] else n::kk(n-1)
   val regs = map (fn n => mk_var("r" ^ (int_to_string n),``:word32``)) (rev (kk (n-1)))
-  val gsort = sort (fn (xz,x) => fn (yz:term,y:term list) => length x <= length y) 
-  val r = map fst (filter (fn (x,xs) => mem x regs) graph)   
+  val gsort = sort (fn (xz,x) => fn (yz:term,y:term list) => length x <= length y)
+  val r = map fst (filter (fn (x,xs) => mem x regs) graph)
   val q = filter (fn (x,xs) => not (mem x regs)) graph
   fun move_related [] = []
     | move_related ((x,y)::moves) = x::y::move_related moves
-  fun print_graph graph = 
+  fun print_graph graph =
     (map (fn (v,ns) => (print "\n  "; print_term v; print ":";
           map (fn x => (print " "; print_term x)) ns)) graph; print "\n")
   fun join_all joined x = join_all joined (list_find x joined) handle HOL_ERR _ => x
@@ -371,13 +371,13 @@ fun iterated_register_coalescing graph moves freq is_colourable n = let
   fun busy w = list_find w freq handle HOL_ERR _ => 0
   fun no_print s = print ("    " ^ s ^ "\n")
   fun build_stack graph moves joined n result =
-    (* simplification: ?w. ~(w IN ms) and degree w < n, then remove from graph *) let 
+    (* simplification: ?w. ~(w IN ms) and degree w < n, then remove from graph *) let
     (* val _ = no_print_graph graph *)
     val ms = move_related moves
     val not_ms_graph = filter (fn (v,neighbours) => not (mem v ms)) graph
     val ws = map fst (filter (fn (v,ns) => length ns < n) not_ms_graph)
     val ws = filter is_colourable ws
-    val ws = sort (fn x => fn y => busy x >= busy y) ws   
+    val ws = sort (fn x => fn y => busy x >= busy y) ws
     val w = first (K true) ws (* select most busy *)
     val (graph,moves,joined) = delete_vertex w (graph,moves,joined)
     val _ = no_print ("!" ^ term_to_string w ^ " ")
@@ -391,7 +391,7 @@ fun iterated_register_coalescing graph moves freq is_colourable n = let
     val moves2 = filter (fn (x,y) => is_colourable x orelse is_colourable y) moves2
     val moves2 = filter (fn (x,y) => not (x = y)) moves2
     val (x,y) = first (fn (x,y) => true) moves2
-    val (x,y) = if is_colourable y then (x,y) else (y,x) 
+    val (x,y) = if is_colourable y then (x,y) else (y,x)
     val (graph,moves,joined) = merge_vertexes x y (graph,moves,joined)
     val _ = no_print (term_to_string x ^ "<--" ^ term_to_string y ^ " ")
     in build_stack graph moves joined n result end handle HOL_ERR _ =>
@@ -402,7 +402,7 @@ fun iterated_register_coalescing graph moves freq is_colourable n = let
     (* spilling: select a vertex and spill it *) let
     val ws = map fst graph
     val ws = filter is_colourable ws
-    val ws = sort (fn x => fn y => busy x <= busy y) ws   
+    val ws = sort (fn x => fn y => busy x <= busy y) ws
     val w = if ws = [] then fail () else hd ws (* select least busy *)
     val (graph,moves,joined) = delete_vertex w (graph,moves,joined)
     val _ = no_print ("^" ^ term_to_string w ^ " ")
@@ -415,32 +415,32 @@ fun iterated_register_coalescing graph moves freq is_colourable n = let
     fun score c = foldr (op +) 0 (map (fn (x,y) => if c x = c y then 1 else 0) moves)
     val xs = map (fn p => (p,score (update x p c))) options
     val result = fst (hd (sort (fn (_,x) => fn (_,y) => y <= x) xs))
-    in result end handle HOL_ERR _ => hd options 
+    in result end handle HOL_ERR _ => hd options
     handle Empty => failwith "no more registers"
   fun colour [] (c,r) = c
-    | colour ((x,ty)::stack) (c,r) = 
+    | colour ((x,ty)::stack) (c,r) =
         if ty = "r" then let
           val qs = map snd (filter (fn (v,ns) => coalesced v = x) graph)
           val qs = map coalesced (append_lists qs)
           val zs = filter (fn z => mem z r) qs
           val zs = map c zs
           val new_colour = select_colour x (diff regs zs) c
-          in colour stack (update x new_colour c, x::r) end 
+          in colour stack (update x new_colour c, x::r) end
         else let
           val qs = map snd (filter (fn (v,ns) => coalesced v = x) graph)
           val qs = map coalesced (append_lists qs)
           val zs = filter (fn z => mem z r) qs
           val zs = map c zs
           fun next_stack i = let
-            val z = mk_var("s" ^ int_to_string i,``:word32``) 
-            in if mem z zs then next_stack (i+1) else z end  
+            val z = mk_var("s" ^ int_to_string i,``:word32``)
+            in if mem z zs then next_stack (i+1) else z end
           val z = next_stack 0
-          in colour stack (update x z c, x::r) end 
+          in colour stack (update x z c, x::r) end
   val colouring = colour stack (I,r) o join_all joined
   (* check validity of colouring *)
   val g = map (fn (v,ns) => (colouring v, map colouring ns)) graph
-  val _ = if filter (fn (x,xs) => mem x xs) g = [] then () 
-          else (print "\n\nRegister allocator produced invalid result.\n\n"; fail()) 
+  val _ = if filter (fn (x,xs) => mem x xs) g = [] then ()
+          else (print "\n\nRegister allocator produced invalid result.\n\n"; fail())
   in (colouring) end
 
 (* provide a list representing the frequency of use/def of each variable,
@@ -463,7 +463,7 @@ fun frequency ts = let
         val inner_s = if is_rec t then inner_s * 16 else inner_s
         in count v t2 (occ v lhs (occ v rhs (inner_s + s))) end
   val freq = map (fn v => (v,count v (snd (last ts)) 0)) vs
-  in freq end;  
+  in freq end;
 
 fun REMOVE_REFL_LET_CONV tm = let
   val (x,y) = dest_let tm
@@ -479,13 +479,13 @@ fun REMOVE_DEAD_LET_CONV tm = let
 
 fun REG_ALLOC_CONV n tm = let
   val xs = map (repeat (snd o dest_forall)) (list_dest dest_conj tm)
-  val ts = map (fn x => ((cdr o car) x, tm2ftree (cdr x))) xs  
+  val ts = map (fn x => ((cdr o car) x, tm2ftree (cdr x))) xs
   val graph = clash_graph ts
   val moves = move_assignments ts graph
   val freq = frequency ts
   val is_colourable = is_t_var
   val colouring = iterated_register_coalescing graph moves freq is_colourable n
-  fun COLOUR_ALPHA_CONV colouring tm = 
+  fun COLOUR_ALPHA_CONV colouring tm =
     ALPHA_CONV (colouring (fst (dest_abs tm))) tm handle HOL_ERR _ => NO_CONV tm
   val thi = (BOTTOM_UP_CONV REMOVE_DEAD_LET_CONV THENC
              BOTTOM_UP_CONV (COLOUR_ALPHA_CONV colouring) THENC
@@ -526,9 +526,9 @@ fun allocate_registers n input_tm = let
               this might lead the reg allocator to coalesce x and y,
               alternatively augment 'moves' to have artificial (x,y) edge
               but many of these are commutative, should there be (x,[y,z]) edge?
-           2. assume infinite number of regs, make 
+           2. assume infinite number of regs, make
                 regs 5,6,7,etc. --> stack locations 0,1,2,3,etc.
-              reserve one register for loading when two stack locations are 
+              reserve one register for loading when two stack locations are
               used in the same instruction
 *)
 
@@ -550,8 +550,8 @@ val is_colourable = is_t_var
 
 fun get_graph i = let
   fun n_filter i [] = []
-    | n_filter i (x::xs) = 
-        if i mod 2 = 0 then n_filter (i div 2) xs 
+    | n_filter i (x::xs) =
+        if i mod 2 = 0 then n_filter (i div 2) xs
         else x :: n_filter (i div 2) xs
   fun adj vs edges = map (fn v => (v,map snd (filter (fn x => fst x = v) edges))) vs
   val ts = n_filter i edges
@@ -560,16 +560,16 @@ fun get_graph i = let
   in (adj qs ts, moves) end;
 
 fun try_inst i = let
-  val (graph,moves) = get_graph i  
+  val (graph,moves) = get_graph i
   val _ = print (int_to_string i)
   val _ = print "/"
   val _ = print (int_to_string max2)
   val _ = print " "
-  val ok = (iterated_register_coalescing graph moves freq is_colourable n; true) 
-           handle HOL_ERR _ => false  
+  val ok = (iterated_register_coalescing graph moves freq is_colourable n; true)
+           handle HOL_ERR _ => false
   val _ = print "\n"
   in if not ok then print ("\n\nFailed at "^int_to_string i^".\n\n") else
-     if i < max2 then try_inst (i+1) else print "\n\nDone!\n\n" end;  
+     if i < max2 then try_inst (i+1) else print "\n\nDone!\n\n" end;
 
 val _ = try_inst 0
 

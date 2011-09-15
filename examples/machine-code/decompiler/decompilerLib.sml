@@ -47,7 +47,7 @@ fun get_abbreviate_code () = !abbreviate_code;
 fun add_modifier name f = let
   val current = !user_defined_modifier
   in user_defined_modifier := (fn x => if x = name then f else current x) end;
-fun remove_all_modifiers () = 
+fun remove_all_modifiers () =
   user_defined_modifier := (fn (name:string) => fn (th:thm) => th);
 fun modifier name th = (!user_defined_modifier) name th;
 
@@ -79,7 +79,7 @@ fun disjoint xs ys = diff xs ys = xs
 fun negate tm = dest_neg tm handle HOL_ERR e => mk_neg tm
 fun the (SOME x) = x | the NONE = fail()
 
-fun is_new_var v = (String.isPrefix "new@" o fst o dest_var) v handle HOL_ERR _ => false 
+fun is_new_var v = (String.isPrefix "new@" o fst o dest_var) v handle HOL_ERR _ => false
 fun dest_new_var tm = if not (is_new_var tm) then fail() else let
   val (s,ty) = dest_var tm
   in mk_var(implode (drop 4 (explode s)), ty) end
@@ -125,8 +125,8 @@ fun strip_string s = let
   fun strip_space [] = []
     | strip_space (x::xs) =
         if mem x [#" ",#"\t",#"\n"] then strip_space xs else x::xs
-  in (implode o rev o strip_space o rev o strip_space o explode) s end;  
-  
+  in (implode o rev o strip_space o rev o strip_space o explode) s end;
+
 fun strings_to_qcode strs = [(QUOTE o concat o map (fn x => x ^ "\n")) strs]
 
 fun quote_to_strings q = let (* turns a quote `...` into a list of strings *)
@@ -134,7 +134,7 @@ fun quote_to_strings q = let (* turns a quote `...` into a list of strings *)
   val xs = explode (get_QUOTE (hd q))
   fun strip_comments l [] = []
     | strip_comments l [x] = if 0 < l then [] else [x]
-    | strip_comments l (x::y::xs) = 
+    | strip_comments l (x::y::xs) =
         if x = #"(" andalso y = #"*" then strip_comments (l+1) xs else
         if x = #"*" andalso y = #")" then strip_comments (l-1) xs else
         if 0 < l    then strip_comments l (y::xs) else x :: strip_comments l (y::xs)
@@ -198,7 +198,7 @@ fun name_for_abbrev tm =
     (to_lower o fst o dest_const o cdr o car) tm
   else if can (match_term ``(f ((n2w n):'a word) (x:'c)):'d``) tm then
     "r" ^ ((int_to_string o numSyntax.int_of_term o cdr o cdr o car) tm)
-  else 
+  else
     fst (dest_var (repeat cdr tm)) handle HOL_ERR e =>
     fst (dest_var (find_term is_var tm)) handle HOL_ERR e =>
     fst (dest_const (repeat car (get_sep_domain tm)));
@@ -246,13 +246,13 @@ fun ABBREV_PRECOND prefix th = let
 
 fun ABBREV_STACK prefix th = let
   val (_,p,_,q) = dest_spec (concl th)
-  val f = find_term (fn tm => mem (car tm) stack_terms handle HOL_ERR _ => false) 
+  val f = find_term (fn tm => mem (car tm) stack_terms handle HOL_ERR _ => false)
   val s_pre = f p
   val s_post = f q
   val xs = map (fn {redex=x1, residue=x2} => (x1,x2)) (fst (match_term s_pre s_post))
-  val th1 = CONV_RULE (UNBETA_CONV s_post) th 
+  val th1 = CONV_RULE (UNBETA_CONV s_post) th
   val ys = map (fn (x1,x2) => mk_eq(mk_var(prefix ^ fst (dest_var x1), type_of x1),x2)) xs
-  val rw = map (GSYM o ASSUME) ys 
+  val rw = map (GSYM o ASSUME) ys
   val cs = map (fn th => fn tm => if tm = fst (dest_eq (concl th)) then th else NO_CONV tm) rw
   fun each [] = ALL_CONV | each (c::cs) = c ORELSEC each cs
   val th1 = CONV_RULE (RAND_CONV (DEPTH_CONV (each cs)) THENC BETA_CONV) th1
@@ -343,7 +343,7 @@ fun derive_individual_specs tools (code:string list) = let
   val delete_spaces = (implode o filter (fn x => not(x = #" ")) o explode)
   fun list_find name [] = fail ()
     | list_find name ((x,y)::xs) = if name = x then y else list_find name xs
-  fun get_specs (instruction,(n,ys)) = 
+  fun get_specs (instruction,(n,ys)) =
     if String.isPrefix "insert:" (delete_spaces instruction) then let
       val name = delete_spaces instruction
       val name = substring(name,7,length (explode name) - 7)
@@ -554,7 +554,7 @@ fun extract_loops jumps = let
   (* sort internal  *)
   val int_sort = sort (fn x => fn (y:int) => x <= y)
   val loops = map (fn (xs,ys) => (int_sort xs, int_sort ys)) loops
-  (* deal with option to return result as a single function *)  
+  (* deal with option to return result as a single function *)
   val loops = if not (!decompile_as_single_function) then loops else let
     val entry = all_distinct (append_lists (map fst loops))
     val exit = diff (all_distinct (append_lists (map snd loops))) entry
@@ -586,16 +586,16 @@ end;
 (* functions for composing SPEC theorems *)
 
 fun replace_new_vars v th = let
-  fun mk_new_var prefix v = let 
+  fun mk_new_var prefix v = let
     val (n,ty) = dest_var v
-    val _ = if String.isPrefix "new@" n then () else fail() 
+    val _ = if String.isPrefix "new@" n then () else fail()
     in mk_var (prefix ^ "@" ^ (implode o drop 4 o explode) n, ty) end
-  fun rename_new tm = 
-    if is_comb tm then (RATOR_CONV rename_new THENC RAND_CONV rename_new) tm else 
+  fun rename_new tm =
+    if is_comb tm then (RATOR_CONV rename_new THENC RAND_CONV rename_new) tm else
     if not (is_abs tm) then ALL_CONV tm else let
       val (x,y) = dest_abs tm
-      val conv = ALPHA_CONV (mk_new_var v x) handle HOL_ERR e => ALL_CONV 
-      in (conv THENC ABS_CONV rename_new) tm end 
+      val conv = ALPHA_CONV (mk_new_var v x) handle HOL_ERR e => ALL_CONV
+      in (conv THENC ABS_CONV rename_new) tm end
   val th = GEN_ALL (DISCH_ALL th)
   val th = CONV_RULE rename_new th
   val th = UNDISCH_ALL (SPEC_ALL th)
@@ -628,30 +628,30 @@ fun format_for_multi_entry entry thms = let
     | mk ((x,y)::xs) = mk_cond(mk_eq(pos,x),y,mk xs)
   val tm = mk xs
   val case_list = map (fn (x,y) => mk_eq(pos,x)) xs
-  val format = 
+  val format =
     mk_imp(``GUARD 0 (pos = k:num)``,
            mk_eq(mk_comb(pc_tm,mk_var("t1",``:word32``)),
                  mk_comb(pc_tm,mk_var("t2",``:word32``))))
   val format = subst [``t2:word32``|->tm] format
   fun mk_sub (x,y) = subst [``k:num``|->x, ``t1:word32``|->y] format
-  fun mk_goals [] rest = fail() 
-    | mk_goals [(x,y)] rest = [mk_conj(mk_imp(rest,snd (dest_imp (mk_sub (x,y)))),mk_sub (x,y))] 
+  fun mk_goals [] rest = fail()
+    | mk_goals [(x,y)] rest = [mk_conj(mk_imp(rest,snd (dest_imp (mk_sub (x,y)))),mk_sub (x,y))]
     | mk_goals ((x,y)::xs) rest = let
        val xy = mk_sub (x,y)
        val r = mk_neg((cdr o car) xy)
        in mk_conj(mk_imp(rest,xy),xy) :: mk_goals xs (mk_conj(rest,r)) end
-  val goals = mk_goals xs T  
-  fun two_conj th = let 
-    val xs = CONJUNCTS th 
+  val goals = mk_goals xs T
+  fun two_conj th = let
+    val xs = CONJUNCTS th
     in if length xs = 1 then (hd xs, hd xs) else (el 1 xs, el 2 xs) end
-  val ys = map (fn goal => (two_conj o RW[AND_IMP_INTRO,GSYM CONJ_ASSOC,WORD_ADD_0]) 
+  val ys = map (fn goal => (two_conj o RW[AND_IMP_INTRO,GSYM CONJ_ASSOC,WORD_ADD_0])
                     (prove(goal,SIMP_TAC std_ss [GUARD_def]))) goals
   val posts = map snd ys
   val pres = map fst ys
   val posts = map (RW [GUARD_def] o INST [pos|->mk_var("s10000@pos",type_of pos)]) posts
   fun RW_CONV [] tm = NO_CONV tm
-    | RW_CONV (th::xs) tm = 
-       if fst (dest_eq (concl th)) = tm then th else RW_CONV xs tm 
+    | RW_CONV (th::xs) tm =
+       if fst (dest_eq (concl th)) = tm then th else RW_CONV xs tm
        handle HOL_ERR _ => NO_CONV tm
   fun process th = let
     val th = CONV_RULE (PRE_CONV (DEPTH_CONV (RW_CONV (map UNDISCH pres)))) th
@@ -673,7 +673,7 @@ datatype mc_tree =
 fun basic_find_composition th1 (th2,l2,j2) = let
   val th1 = modifier "pre" th1
   val th2 = modifier "pre" th2
-  val th = remove_primes (SPEC_COMPOSE th1 th2) handle HOL_ERR e => 
+  val th = remove_primes (SPEC_COMPOSE th1 th2) handle HOL_ERR e =>
            remove_primes (SPEC_COMPOSE th1 (UNABBREV_ALL th2))
   val th = modifier "post" th
   val th = RW [WORD_CMP_NORMALISE] th
@@ -738,7 +738,7 @@ fun map_spectree f (LEAF (thm,i)) = LEAF (f thm,i)
 
 fun merge_entry_points [] ts = hd ts
   | merge_entry_points [x] ts = hd ts
-  | merge_entry_points (x::xs) ts = let 
+  | merge_entry_points (x::xs) ts = let
       val t1 = merge_entry_points xs (tl ts)
       in BRANCH (mk_comb(``GUARD 0``,x), hd ts, t1) end
 
@@ -758,11 +758,11 @@ fun generate_spectree thms (entry,exit) = let
   val ts = map (fn i => let
              val th = modifier ("shape " ^ int_to_string i) default_th
              val t = tree_composition (th,i,thms,entry,exit,conds,firstTime)
-             in (i,t) end) is  
+             in (i,t) end) is
   val t = merge_entry_points case_list (map snd ts)
-  val t = if not (is_eq (concl (SPEC_ALL hide_th))) then t 
+  val t = if not (is_eq (concl (SPEC_ALL hide_th))) then t
           else map_spectree (HIDE_STATUS_RULE true hide_th) t
-  val t = map_spectree (modifier "spec") t 
+  val t = map_spectree (modifier "spec") t
   in t end;
 
 (*
@@ -809,13 +809,13 @@ fun prepare_sep_disj_posts th1 th2 = let
   val (_,_,_,q1) = dest_spec (concl th1)
   val (_,_,_,q2) = dest_spec (concl th2)
   in if can dest_sep_disj q1 orelse can dest_sep_disj q2 then let
-       val th1 = if can dest_sep_disj q2 then 
+       val th1 = if can dest_sep_disj q2 then
                    SPEC (snd (dest_sep_disj q2)) (MATCH_MP SPEC_ADD_DISJ th1) else th1
-       val th2 = if can dest_sep_disj q1 then 
+       val th2 = if can dest_sep_disj q1 then
                    SPEC (snd (dest_sep_disj q1)) (MATCH_MP SPEC_ADD_DISJ th2) else th2
        val f = RW [SEP_CLAUSES] o
-               CONV_RULE ((RAND_CONV o RAND_CONV) 
-                          (SIMP_CONV std_ss [AC SEP_DISJ_ASSOC SEP_DISJ_COMM])) o            
+               CONV_RULE ((RAND_CONV o RAND_CONV)
+                          (SIMP_CONV std_ss [AC SEP_DISJ_ASSOC SEP_DISJ_COMM])) o
                RW [SEP_DISJ_ASSOC]
        val th1 = f th1
        val th2 = f th2
@@ -937,7 +937,7 @@ fun init_clean th = let
   val th = CONV_RULE ((RATOR_CONV o RAND_CONV)
                      (SIMP_CONV bool_ss [GSYM CONJ_ASSOC,NOT_IF])) th
   val th = remove_primes th
-  fun bool_var_assign_conv tm = 
+  fun bool_var_assign_conv tm =
     if is_conj tm then BINOP_CONV bool_var_assign_conv tm else
     if is_cond tm then BINOP_CONV bool_var_assign_conv tm else
     if is_var tm andalso type_of tm = ``:bool`` then SPEC tm GUARD_T else
@@ -1199,7 +1199,7 @@ fun PRINT_GOAL_TAC s (hs,goal) = let
 *)
 
 fun GUIDED_INST_EXISTS_TAC finder1 cc2 (hs,goal) = let
-  val tm = finder1 goal    
+  val tm = finder1 goal
   val (xs,x) = pairSyntax.dest_anylet tm
   val (lhs,rhs) = hd xs
   val ys = dest_tuple lhs
@@ -1208,7 +1208,7 @@ fun GUIDED_INST_EXISTS_TAC finder1 cc2 (hs,goal) = let
   val cond_var = mk_var("cond",``:bool``)
   in (if ys = [cond_var] then ALL_TAC (hs,goal)
       else CONV_TAC (cc2 (SUBST_EXISTS_CONV ys zs)) (hs,goal)) end
-  handle e => let 
+  handle e => let
     val _ = print "\n\nGUIDED_INST_EXISTS_TAC should not fail.\n\nGoal:\n\n"
     val _ = print_term goal
     val _ = print "\n\n"
@@ -1431,33 +1431,33 @@ fun SORT_SEP_CONV tm = let
   in thi end;
 
 fun LET_EXPAND_POS_CONV tm = let
-  val x = (fst o dest_abs o fst o dest_let) tm 
+  val x = (fst o dest_abs o fst o dest_let) tm
   in if not (x = mk_var("pos",``:num``)) then fail () else
      ((RATOR_CONV o RATOR_CONV) (ONCE_REWRITE_CONV [LET_DEF])
-      THENC RATOR_CONV BETA_CONV THENC BETA_CONV THENC BETA_CONV) tm end 
+      THENC RATOR_CONV BETA_CONV THENC BETA_CONV THENC BETA_CONV) tm end
   handle HOL_ERR _ => NO_CONV tm;
 
-fun DEST_NEW_VAR_CONV tm = 
-  ALPHA_CONV (dest_new_var (fst (dest_abs tm))) tm handle HOL_ERR _ => NO_CONV tm; 
+fun DEST_NEW_VAR_CONV tm =
+  ALPHA_CONV (dest_new_var (fst (dest_abs tm))) tm handle HOL_ERR _ => NO_CONV tm;
 
-fun SEP_EXISTS_CONV c tm = 
-  if can dest_sep_exists tm 
+fun SEP_EXISTS_CONV c tm =
+  if can dest_sep_exists tm
   then RAND_CONV (ABS_CONV (SEP_EXISTS_CONV c)) tm else ALL_CONV tm; (* is this right? shouldn't it be: c tm *)
 
-fun SEP_DISJ_CONV c tm = 
+fun SEP_DISJ_CONV c tm =
   if can dest_sep_disj tm
   then ((RATOR_CONV o RAND_CONV) c) tm else c tm;
 
-val GEN_TUPLE_LEMMA = GSYM (CONV_RULE ((RATOR_CONV o RAND_CONV o RAND_CONV) 
+val GEN_TUPLE_LEMMA = GSYM (CONV_RULE ((RATOR_CONV o RAND_CONV o RAND_CONV)
    (ALPHA_CONV (mk_var("_",``:'a # 'b``)))) FORALL_PROD)
-fun GEN_TUPLE tm th = 
+fun GEN_TUPLE tm th =
   if not (pairSyntax.is_pair tm) then GEN tm th else let
     val (w,tm2) = pairSyntax.dest_pair tm
     val th = GEN_TUPLE tm2 th
     val v = fst (dest_forall (concl th))
     val th = CONV_RULE (UNBETA_CONV (pairSyntax.mk_pair(w,v))) (SPEC v th)
     val x = genvar(type_of tm)
-    val th = GEN x (CONV_RULE BETA_CONV 
+    val th = GEN x (CONV_RULE BETA_CONV
                (SPEC x (PURE_REWRITE_RULE [GEN_TUPLE_LEMMA] (GEN w (GEN v th)))))
     in th end;
 
@@ -1480,7 +1480,7 @@ fun extract_function name th entry exit function_in_out = let
   val th = foldr new_abbrev th output
   val th = introduce_lets th
   val avoid_vars = case function_in_out of NONE => [] | SOME (p,q) => free_vars q
-  val th = remove_constant_new_assigment avoid_vars th 
+  val th = remove_constant_new_assigment avoid_vars th
   val pc = get_pc()
   val pc_type = (hd o snd o dest_type o type_of) pc
   val th = INST [mk_var("new@p",pc_type) |-> mk_var("set@p",pc_type)] th
@@ -1488,14 +1488,14 @@ fun extract_function name th entry exit function_in_out = let
   (* extract: step function and input, output tuples *)
   fun gen_pc n = if n = 0 then mk_var("p",pc_type) else
     (ASSUME (mk_eq(mk_var("_",pc_type),mk_var("p",pc_type))))
-            |> (!decompiler_set_pc) n |> concl |> cdr  
-    handle HOL_ERR _ => subst [mk_var("n",``:num``) |-> numSyntax.term_of_int n] 
+            |> (!decompiler_set_pc) n |> concl |> cdr
+    handle HOL_ERR _ => subst [mk_var("n",``:num``) |-> numSyntax.term_of_int n]
       (inst [``:'a``|->(hd o tl o snd o dest_type) pc_type] ``(p:'a word) + n2w n``)
   val exit_tm = gen_pc (hd exit)
   val entry_tm = (snd o dest_eq o find_term (fn tm => let
                    val (x,y) = dest_eq tm
                    in fst (dest_var x) = "set@p" andalso not (y = exit_tm) end
-                   handle HOL_ERR _ => false) o concl) th 
+                   handle HOL_ERR _ => false) o concl) th
                  handle HOL_ERR _ => gen_pc (hd entry)
   val final_node = mk_eq(mk_var("set@p",pc_type),exit_tm)
   fun is_terminal_node tm = can (find_term (fn x => x = final_node)) tm
@@ -1528,18 +1528,18 @@ fun extract_function name th entry exit function_in_out = let
   val new_input = list_mk_pair (map add_new_tag input)
   val cond_var = mk_var("cond",``:bool``)
   fun mk_exit tm = pairSyntax.mk_pair(tm,cond_var)
-  val step_fun = mk_pabs(x_in,ftree2tm (leaves t (fn x => 
-                if is_terminal_node x 
-                then mk_exit(sumSyntax.mk_inr(new_into_subst x x_out,type_of x_in)) 
+  val step_fun = mk_pabs(x_in,ftree2tm (leaves t (fn x =>
+                if is_terminal_node x
+                then mk_exit(sumSyntax.mk_inr(new_into_subst x x_out,type_of x_in))
                 else mk_exit(sumSyntax.mk_inl(new_into_subst x x_in,type_of x_out)))))
   val step_fun = (snd o dest_eq o concl o QCONV (REWRITE_CONV [GSYM CONJ_ASSOC]))
                  (subst [cond_var |-> T] step_fun)
-  (* define functions *)  
+  (* define functions *)
   val func_name = name
   val tm_option = NONE
-  val (main_thm,main_def,pre_thm,pre_def) = 
-         tailrecLib.tailrec_define_from_step func_name step_fun tm_option  
-  val finalise = CONV_RULE (REMOVE_TAGS_CONV THENC DEPTH_CONV (LET_EXPAND_POS_CONV)) 
+  val (main_thm,main_def,pre_thm,pre_def) =
+         tailrecLib.tailrec_define_from_step func_name step_fun tm_option
+  val finalise = CONV_RULE (REMOVE_TAGS_CONV THENC DEPTH_CONV (LET_EXPAND_POS_CONV))
   val main_thm = finalise main_thm
   val pre_thm = finalise pre_thm
   (* define temporary abbreviation *)
@@ -1559,18 +1559,18 @@ fun extract_function name th entry exit function_in_out = let
     val fake_eq = subst [c|->v] ((concl o SPEC_ALL) main_thm)
     val defn = Hol_defn dummy_name [ANTIQUOTE fake_eq]
     val gs = TotalDefn.guessR defn
-    fun case_tac x = 
+    fun case_tac x =
       TotalDefn.WF_REL_TAC [ANTIQUOTE x]
       THEN SRW_TAC [] [] THEN SIMP_TAC std_ss [GSYM word_sub_def]
       THEN REPEAT (POP_ASSUM MP_TAC)
       THEN SIMP_TAC std_ss (!termination_simps) THEN NO_TAC
     val AUX_TAC = FIRST (map case_tac gs)
     (* set_goal([],goal) *)
-    val tac = 
+    val tac =
       PURE_REWRITE_TAC [pre_def,tailrecTheory.SHORT_TAILREC_PRE_def]
       THEN MATCH_MP_TAC tailrecTheory.TAILREC_PRE_IMP
       THEN Tactical.REVERSE STRIP_TAC
-      THEN1 (SIMP_TAC std_ss [pairTheory.FORALL_PROD] 
+      THEN1 (SIMP_TAC std_ss [pairTheory.FORALL_PROD]
              THEN SRW_TAC [] [step_def,LET_DEF])
       THEN SIMP_TAC std_ss [step_def,LET_DEF,pairTheory.FORALL_PROD,GUARD_def]
       THEN AUX_TAC
@@ -1583,7 +1583,7 @@ fun extract_function name th entry exit function_in_out = let
   val (th1,th2) = (th,th)
   val finder = cdr o el 2 o list_dest dest_conj o fst o dest_imp
   val tac2 = SIMP_TAC std_ss [step_def]
-             THEN REPEAT (AUTO_DECONSTRUCT_TAC finder) 
+             THEN REPEAT (AUTO_DECONSTRUCT_TAC finder)
              THEN SIMP_TAC std_ss [sumTheory.OUTL,sumTheory.OUTR,
                                    sumTheory.ISR,sumTheory.ISL]
   val thi = ISPEC step_const SPEC_SHORT_TAILREC
@@ -1599,7 +1599,7 @@ fun extract_function name th entry exit function_in_out = let
     val pre = (free_vars o cdr o car o car o snd o dest_imp o concl) th1
     val ws = diff pre (mk_var("p",pc_type)::input)
     val tm = (fst o dest_imp o concl o DISCH_ALL) th1
-    val ts = (list_dest dest_forall o snd o dest_conj o fst o dest_imp o concl o SPEC_ALL) thi    
+    val ts = (list_dest dest_forall o snd o dest_conj o fst o dest_imp o concl o SPEC_ALL) thi
     val goal = (fst o dest_imp o last) ts
     val goal = subst [el 1 ts |-> x_in, el 2 ts |-> new_output] goal
     val goal = mk_imp(goal,tm)
@@ -1622,7 +1622,7 @@ fun extract_function name th entry exit function_in_out = let
     val pre = (free_vars o cdr o car o car o snd o dest_imp o concl) th2
     val vs = diff pre (mk_var("p",pc_type)::input)
     val tm = (fst o dest_imp o concl o DISCH_ALL) th2
-    val ts = (list_dest dest_forall o fst o dest_conj o fst o dest_imp o concl o SPEC_ALL) thi    
+    val ts = (list_dest dest_forall o fst o dest_conj o fst o dest_imp o concl o SPEC_ALL) thi
     val goal = (fst o dest_imp o last) ts
     val goal = subst [el 1 ts |-> x_in, el 2 ts |-> new_input] goal
     val goal = mk_imp(goal,tm)
@@ -1633,7 +1633,7 @@ fun extract_function name th entry exit function_in_out = let
     val lemma2 = HIDE_PRE_VARS ws lemma2
     in RW [GSYM step_def] lemma2 end
     handle e => (print "\n\nDecompiler failed to prove 'lemma 2'.\n\n"; raise e)
-  val sort_conv = PRE_CONV (SEP_EXISTS_CONV SORT_SEP_CONV) THENC 
+  val sort_conv = PRE_CONV (SEP_EXISTS_CONV SORT_SEP_CONV) THENC
                   POST_CONV (SEP_EXISTS_CONV (SEP_DISJ_CONV SORT_SEP_CONV))
   val lemma1 = CONV_RULE (RAND_CONV sort_conv) lemma1
   val lemma2 = CONV_RULE (RAND_CONV sort_conv) lemma2
@@ -1641,18 +1641,18 @@ fun extract_function name th entry exit function_in_out = let
   val simp_lemma = let
     val (x,y) = dest_eq (concl (SPEC_ALL main_thm))
     val _ = if can (find_term (fn tm => car x = tm)) y then fail () else ()
-    val goal = mk_eq((fst o dest_imp o concl o 
-      ISPEC (pairSyntax.mk_fst(mk_comb(step_fun,x_in)))) sumTheory.INL,F)  
-    val simp_lemma = auto_prove "simp_lemma" (goal,SIMP_TAC std_ss []    
-      THEN REPEAT (AUTO_DECONSTRUCT_TAC (cdr o cdr o cdr)) 
-      THEN SIMP_TAC std_ss []) 
+    val goal = mk_eq((fst o dest_imp o concl o
+      ISPEC (pairSyntax.mk_fst(mk_comb(step_fun,x_in)))) sumTheory.INL,F)
+    val simp_lemma = auto_prove "simp_lemma" (goal,SIMP_TAC std_ss []
+      THEN REPEAT (AUTO_DECONSTRUCT_TAC (cdr o cdr o cdr))
+      THEN SIMP_TAC std_ss [])
     val simp_lemma = Q.SPEC `x` (GEN_TUPLE x_in simp_lemma)
     val simp_lemma = PURE_REWRITE_RULE [GSYM step_def] simp_lemma
     in GEN_ALL simp_lemma end handle HOL_ERR _ => TRUTH
   (* deal with SEP_DISJ in post -- move to pre *)
-  val lemma1 = DISCH_ALL (MATCH_MP SPEC_PRE_DISJ_INTRO (UNDISCH lemma1)) 
+  val lemma1 = DISCH_ALL (MATCH_MP SPEC_PRE_DISJ_INTRO (UNDISCH lemma1))
                handle HOL_ERR _ => lemma1
-  val lemma2 = DISCH_ALL (MATCH_MP SPEC_PRE_DISJ_INTRO (UNDISCH lemma2)) 
+  val lemma2 = DISCH_ALL (MATCH_MP SPEC_PRE_DISJ_INTRO (UNDISCH lemma2))
                handle HOL_ERR _ => lemma2
   (* certificate theorem *)
   fun remove_new_tags tm = let
@@ -1677,7 +1677,7 @@ fun extract_function name th entry exit function_in_out = let
   val goal = (snd o dest_imp o concl) thi
   val th = auto_prove "decompiler certificate" (goal,
     MATCH_MP_TAC thi THEN STRIP_TAC
-    THEN1 (ONCE_REWRITE_TAC [simp_lemma] THEN REWRITE_TAC [] THEN 
+    THEN1 (ONCE_REWRITE_TAC [simp_lemma] THEN REWRITE_TAC [] THEN
            REPEAT STRIP_TAC THEN MATCH_MP_TAC l2 THEN ASM_SIMP_TAC std_ss [])
     THEN1 (REPEAT STRIP_TAC THEN MATCH_MP_TAC l1 THEN ASM_SIMP_TAC std_ss []))
   val th = SPEC x_in th
@@ -1687,7 +1687,7 @@ fun extract_function name th entry exit function_in_out = let
   val th = th |> RW [SPEC_MOVE_COND] |> UNDISCH |> SIMP_RULE std_ss [SPEC_PRE_DISJ]
               |> CONJUNCTS |> hd |> DISCH_ALL |> RW [GSYM SPEC_MOVE_COND]
   val th = SPEC_ALL (SIMP_RULE bool_ss [SEP_CLAUSES,GSYM SPEC_PRE_EXISTS] th)
-  val th = CONV_RULE (DEPTH_CONV DEST_NEW_VAR_CONV) th  
+  val th = CONV_RULE (DEPTH_CONV DEST_NEW_VAR_CONV) th
   (* clean up and save function definitions *)
   val _ = delete_const (fst (dest_const step_const))
   val _ = echo 1 " done.\n"
@@ -1729,7 +1729,7 @@ fun decompile_io (tools :decompiler_tools) name fio (qcode :term quotation) = le
 *)
       val function_in_out = (NONE: (term * term) option)
       val suff = int_to_string (length loops)
-      val (part_name,function_in_out) = if length loops = 0 then (name,fio) 
+      val (part_name,function_in_out) = if length loops = 0 then (name,fio)
                                         else (name ^ suff,function_in_out)
       val (def,pre,result) = decompile_part part_name thms (entry,exit) function_in_out
       val thms = prepare_for_reuse entry (result,0,SOME (hd exit)) 0 @ thms
