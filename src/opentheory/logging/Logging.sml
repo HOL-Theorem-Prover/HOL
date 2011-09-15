@@ -181,12 +181,20 @@ val (log_term, log_thm, log_clear) = let
     in () end
   end
 
+  fun strip_old s = let
+    open Substring
+    val s = triml 3 (trimr 5 (full s))
+    val (_,s) = splitl Char.isDigit s
+    val s = triml 2 s
+  in string s end
+
   fun log_term tm = let
     val ob = OTerm tm
   in if saved ob then () else let
     open Term Feedback
     val _ = let
       val {Thy,Name,Ty} = dest_thy_const tm
+      val Name = if Theory.uptodate_term tm then Name else strip_old Name
       val _ = log_const {Thy=Thy,Name=Name}
       val _ = log_type Ty
       val _ = log_command "constTerm"
@@ -376,6 +384,7 @@ val (log_term, log_thm, log_clear) = let
       val _ = log_command "defineConst"
       val k = save_dict ob
       val _ = log_command "pop"
+      val _ = save_dict (OConst c)
       val _ = log_command "pop"
       val _ = log_num k
       val _ = log_command "ref"
@@ -635,16 +644,21 @@ val (log_term, log_thm, log_clear) = let
       val r       = mk_var("r",rty)
       val absty   = rty --> aty
       val repty   = aty --> rty
-      val abs     = prim_new_const {Thy="Logging",Name=abs_name} absty
-      val rep     = prim_new_const {Thy="Logging",Name=rep_name} repty
+      val abstc   = {Thy="Logging",Name=abs_name}
+      val reptc   = {Thy="Logging",Name=rep_name}
+      val abs     = prim_new_const abstc absty
+      val rep     = prim_new_const reptc repty
       val ra      = mk_thm([],mk_ra(phi,r,rep,abs))
       val _       = save_dict (OThm ra)
       val _       = log_command "pop"
       val ar      = mk_thm([],mk_ar(abs,rep,a))
       val _       = save_dict (OThm ar)
       val _       = log_command "pop"
+      val _       = save_dict (OConst reptc)
       val _       = log_command "pop"
+      val _       = save_dict (OConst abstc)
       val _       = log_command "pop"
+      val _       = save_dict (OTypeOp name)
       val _       = log_command "pop"
       val pth     = INST_TY_TERM ([mk_var("phi",rty-->bool)|->phi,
                                    mk_var("abs",rty-->aty)|->abs,
