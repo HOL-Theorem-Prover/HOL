@@ -59,37 +59,41 @@ val FINITE_fv = store_thm(
   Induct THEN SRW_TAC [][pred_setTheory.FINITE_DIFF]);
 val _ = export_rewrites ["FINITE_fv"]
 
-val rtypm_def = Define`
-  (rtypm pi (tyvar s) = tyvar (lswapstr pi s)) /\
-  (rtypm pi (tyfun ty1 ty2) = tyfun (rtypm pi ty1) (rtypm pi ty2)) /\
-  (rtypm pi (tyforall vs ty) = tyforall (setpm lswapstr pi vs)
-                                        (rtypm pi ty))
+val raw_rtypm_def = Define`
+  (raw_rtypm pi (tyvar s) = tyvar (stringpm pi s)) /\
+  (raw_rtypm pi (tyfun ty1 ty2) = tyfun (raw_rtypm pi ty1) (raw_rtypm pi ty2)) /\
+  (raw_rtypm pi (tyforall vs ty) = tyforall (ssetpm pi vs) (raw_rtypm pi ty))
 `;
-val _ = export_rewrites ["rtypm_def"]
+val _ = export_rewrites["raw_rtypm_def"];
 
-val fv_rtypm = prove(
-  ``fv (rtypm pi ty) = setpm lswapstr pi (fv ty)``,
-  Induct_on `ty` THEN SRW_TAC [][perm_INSERT, perm_UNION, perm_DIFF]);
+val _ = overload_on("rty_pmact", ``mk_pmact raw_rtypm``);
+val _ = overload_on("rtypm", ``pmact rty_pmact``);
 
-
-val rtypm_is_perm = store_thm(
-  "rtypm_is_perm",
-  ``is_perm rtypm``,
-  SRW_TAC [][is_perm_def] THENL [
-    Induct_on `x` THEN SRW_TAC [ETA_ss][is_perm_nil],
-    Induct_on `x` THEN
-    SRW_TAC [ETA_ss][lswapstr_APPEND, is_perm_decompose],
+val rtypm_raw = store_thm(
+  "rtypm_raw",
+  ``rtypm = raw_rtypm``,
+  SRW_TAC [][GSYM pmact_bijections] THEN
+  SRW_TAC [][is_pmact_def] THENL [
+    Induct_on `x` THEN SRW_TAC [][],
+    Induct_on `x` THEN SRW_TAC [][pmact_decompose],
     FULL_SIMP_TAC (srw_ss()) [FUN_EQ_THM] THEN
     Induct THEN SRW_TAC [][] THEN
-    METIS_TAC [fnpm_is_perm, discrete_is_perm, perm_of_is_perm, is_perm_def,
-               permeq_def]
+    METIS_TAC [pmact_permeq]
   ]);
-val _ = export_rewrites ["rtypm_is_perm"]
+
+val rtypm_thm = save_thm(
+"rtypm_thm",
+raw_rtypm_def |> SUBS [GSYM rtypm_raw]);
+val _ = export_rewrites["rtypm_thm"];
+
+val fv_rtypm = prove(
+  ``fv (rtypm pi ty) = ssetpm pi (fv ty)``,
+  Induct_on `ty` THEN SRW_TAC [][pmact_INSERT, pmact_UNION, pmact_DIFF]);
 
 val okpm_def = Define`
   okpm pi bvs avds t =
-     (!s. s IN bvs /\ s IN fv t ==> ~(lswapstr pi s IN avds)) /\
-     (!s. ~(s IN bvs) /\ s IN fv t ==> (lswapstr pi s = s))
+     (!s. s IN bvs /\ s IN fv t ==> ~(stringpm pi s IN avds)) /\
+     (!s. ~(s IN bvs) /\ s IN fv t ==> (stringpm pi s = s))
 `;
 
 fun Prove(t,tac) = let val th = prove(t,tac)
@@ -125,7 +129,7 @@ val aeq_example2 = prove(
     MAP_EVERY Q.EXISTS_TAC [`[(x, z)]`, `[(a, z)]`] THEN
     SRW_TAC [][],
     Cases_on `lswapstr pi2 a = a` THEN SRW_TAC [][] THEN
-    Cases_on `lswapstr pi1 x = a` THEN SRW_TAC [][]
+    Cases_on `lswapstr pi1 x = a` THEN SRW_TAC [][stringpm_raw]
   ]);
 
 val aeq_example3 = prove(
@@ -148,7 +152,7 @@ val aeq_example4 = prove(
   SRW_TAC [][Once aeq_cases] THEN SRW_TAC [][Once aeq_cases] THEN
   SRW_TAC [][okpm_def] THEN
   SRW_TAC [DNF_ss][] THEN
-  METIS_TAC [basic_swapTheory.lswapstr_11]);
+  METIS_TAC [basic_swapTheory.lswapstr_11,stringpm_raw]);
 
 fun find_small_cond t = let
   fun recurse t k =
@@ -171,29 +175,33 @@ in
 end (asl, g)
 
 val rtypm_cpmpm = (SIMP_RULE (srw_ss()) []  o
-                   Q.INST [`pm` |-> `rtypm`] o
+                   Q.INST [`pm` |-> `rty_pmact`] o
                    INST_TYPE [alpha |-> ``:type``])
                   pm_pm_cpmpm
 
+val lswapstr_lswapstr_cpmpm = REWRITE_RULE [stringpm_raw] stringpm_stringpm_cpmpm
+
 val rtypm_okpm = prove(
   ``okpm (cpmpm pi pi0)
-             (setpm lswapstr pi bvs)
-             (setpm lswapstr pi avds)
+             (setpm string_pmact pi bvs)
+             (setpm string_pmact pi avds)
              (rtypm pi t) =
     okpm pi0 bvs avds t``,
-  SRW_TAC [][okpm_def, fv_rtypm, perm_IN, EQ_IMP_THM] THENL [
+  SRW_TAC [][okpm_def, fv_rtypm, pmact_IN, EQ_IMP_THM] THENL [
     FULL_SIMP_TAC (srw_ss()) [Once lswapstr_lswapstr_cpmpm,
-                              is_perm_inverse] THEN
+                              pmact_inverse, stringpm_raw] THEN
     FIRST_ASSUM (Q.SPEC_THEN `lswapstr pi s`
                              (MATCH_MP_TAC o SIMP_RULE (srw_ss()) [])) THEN
     SRW_TAC [][],
 
     FIRST_X_ASSUM (Q.SPEC_THEN `lswapstr pi s` MP_TAC) THEN
-    SRW_TAC [][basic_swapTheory.lswapstr_eqr] THEN
-    FULL_SIMP_TAC (srw_ss()) [Once lswapstr_lswapstr_cpmpm, is_perm_inverse],
+    SRW_TAC [][basic_swapTheory.lswapstr_eqr, stringpm_raw] THEN
+    FULL_SIMP_TAC (srw_ss()) [Once lswapstr_lswapstr_cpmpm, pmact_inverse],
 
-    ONCE_REWRITE_TAC [lswapstr_lswapstr_cpmpm] THEN SRW_TAC [][is_perm_inverse],
+    FULL_SIMP_TAC (srw_ss()) [Once lswapstr_lswapstr_cpmpm,stringpm_raw] THEN
+    SRW_TAC [][pmact_inverse],
 
+    FULL_SIMP_TAC (srw_ss()) [stringpm_raw] THEN
     `lswapstr pi0 (lswapstr (REVERSE pi) s) = lswapstr (REVERSE pi) s`
        by SRW_TAC [][] THEN
     POP_ASSUM MP_TAC THEN
@@ -207,8 +215,7 @@ val aeq_rtypm = prove(
   HO_MATCH_MP_TAC aeq_ind THEN SRW_TAC [][aeq_rules] THEN
   MATCH_MP_TAC (last (CONJUNCTS aeq_rules))  THEN
   MAP_EVERY Q.EXISTS_TAC [`cpmpm pi pi1`, `cpmpm pi pi2`] THEN
-  ASM_SIMP_TAC bool_ss [rtypm_okpm, fv_rtypm, GSYM perm_UNION,
-                        perm_of_is_perm] THEN
+  ASM_SIMP_TAC bool_ss [rtypm_okpm, fv_rtypm, GSYM pmact_UNION] THEN
   ASM_SIMP_TAC (srw_ss()) [GSYM rtypm_cpmpm]);
 
 
@@ -234,14 +241,18 @@ val avoid_finite_set0 = prove(
     Q_TAC (NEW_TAC "z") `e INSERT (patoms pi) UNION ub` THEN
     Q.EXISTS_TAC `(z,e)::pi` THEN SRW_TAC [][] THENL [
       METIS_TAC [],
-      SRW_TAC [][basic_swapTheory.swapstr_eq_left, is_perm_eql,
+      SRW_TAC [][basic_swapTheory.swapstr_eq_left, pmact_eql,
                  listsupp_REVERSE, perm_of_unchanged],
 
       SRW_TAC [][perm_of_unchanged] THEN METIS_TAC [SUBSET_DEF],
 
       SRW_TAC [][basic_swapTheory.swapstr_eq_left] THEN
-      SRW_TAC [][is_perm_eql, perm_of_unchanged, listsupp_REVERSE] THEN
-      METIS_TAC [SUBSET_DEF],
+      SPOSE_NOT_THEN STRIP_ASSUME_TAC THEN SRW_TAC [][] THEN
+      `lswapstr pi x = x` by (
+        IMP_RES_TAC perm_of_unchanged THEN
+        FULL_SIMP_TAC (srw_ss()) [] ) THEN
+      FULL_SIMP_TAC (srw_ss()) [SUBSET_DEF] THEN
+      METIS_TAC [],
 
       `~(e IN patoms pi)` by SRW_TAC [][] THEN
       `swapstr e z (lswapstr pi x) = lswapstr [(e,z)] (lswapstr pi x)`
@@ -257,13 +268,18 @@ val avoid_finite_set0 = prove(
       METIS_TAC [SUBSET_DEF, basic_swapTheory.swapstr_def]
     ],
     Q.EXISTS_TAC `pi` THEN SRW_TAC [][] THENL [
-      SRW_TAC [][is_perm_eql, perm_of_unchanged, listsupp_REVERSE] THEN
-      METIS_TAC [],
+      SPOSE_NOT_THEN STRIP_ASSUME_TAC THEN SRW_TAC [][] THEN
+      `lswapstr pi x NOTIN patoms (REVERSE pi)` by (
+        RES_TAC THEN SRW_TAC [][listsupp_REVERSE] ) THEN
+      IMP_RES_TAC perm_of_unchanged THEN
+      FULL_SIMP_TAC (srw_ss()) [] THEN POP_ASSUM (ASSUME_TAC o SYM) THEN
+      FULL_SIMP_TAC (srw_ss()) [],
       SRW_TAC [][perm_of_unchanged]
     ]
   ]);
 
-val avoid_finite_set = SIMP_RULE (srw_ss()) [] (Q.SPEC `ub` avoid_finite_set0)
+val avoid_finite_set = SUBS [GSYM stringpm_raw]
+  (SIMP_RULE (srw_ss()) [] (Q.SPEC `ub` avoid_finite_set0))
 
 val aeq_refl = prove(
   ``!t. aeq t t``,
@@ -280,45 +296,42 @@ val aeq_fv = prove(
   Cases_on `x IN vs` THEN SRW_TAC [][] THENL [
     Cases_on `x IN us` THEN SRW_TAC [][] THEN
     STRIP_TAC THEN
-    `lswapstr pi2 x = x` by METIS_TAC [okpm_def] THEN
-    `lswapstr (REVERSE pi2) x = x`
-       by METIS_TAC [perm_of_is_perm, is_perm_eql] THEN
-    `lswapstr (REVERSE pi1) x IN fv t` by METIS_TAC [] THEN
-    Cases_on `lswapstr (REVERSE pi1) x IN vs` THENL [
-      `~(lswapstr pi1 (lswapstr (REVERSE pi1) x) IN fv u)`
-         by METIS_TAC [okpm_def, IN_UNION] THEN
+    `stringpm pi2 x = x` by METIS_TAC [okpm_def] THEN
+    `stringpm (REVERSE pi2) x = x`
+       by METIS_TAC [pmact_eql] THEN
+    `stringpm (REVERSE pi1) x IN fv t` by METIS_TAC [] THEN
+    Cases_on `stringpm (REVERSE pi1) x IN vs` THENL [
+      `~(stringpm pi1 (stringpm (REVERSE pi1) x) IN fv u)`
+         by PROVE_TAC [okpm_def, IN_UNION] THEN
       FULL_SIMP_TAC (srw_ss()) [],
-      `lswapstr pi1 (lswapstr (REVERSE pi1) x) = lswapstr (REVERSE pi1) x`
-         by METIS_TAC [okpm_def] THEN
+      `stringpm pi1 (stringpm (REVERSE pi1) x) = stringpm (REVERSE pi1) x`
+         by PROVE_TAC [okpm_def] THEN
       FULL_SIMP_TAC (srw_ss()) [] THEN METIS_TAC []
     ],
     Cases_on `x IN us` THEN SRW_TAC [][] THENL [
       STRIP_TAC THEN
-      `lswapstr pi1 x = x` by METIS_TAC [okpm_def] THEN
-      `lswapstr (REVERSE pi1) x = x`
-         by METIS_TAC [perm_of_is_perm, is_perm_eql] THEN
-      `lswapstr (REVERSE pi2) x IN fv u` by METIS_TAC [] THEN
-      Cases_on `lswapstr (REVERSE pi2) x IN us` THEN
-      METIS_TAC [okpm_def, IN_UNION, is_perm_inverse,
-                 perm_of_is_perm],
+      `stringpm pi1 x = x` by PROVE_TAC [okpm_def] THEN
+      `stringpm (REVERSE pi1) x = x`
+         by METIS_TAC [pmact_eql] THEN
+      `stringpm (REVERSE pi2) x IN fv u` by METIS_TAC [] THEN
+      Cases_on `stringpm (REVERSE pi2) x IN us` THEN
+      PROVE_TAC [okpm_def, IN_UNION, pmact_inverse],
 
       Cases_on `x IN fv t` THENL [
-        `lswapstr pi1 x = x` by METIS_TAC [okpm_def] THEN
-        `lswapstr (REVERSE pi1) x = x`
-           by METIS_TAC [perm_of_is_perm, is_perm_eql] THEN
-        `lswapstr (REVERSE pi2) x IN fv u` by METIS_TAC [] THEN
-        Cases_on `lswapstr (REVERSE pi2) x IN us` THEN
-        METIS_TAC [okpm_def, IN_UNION, is_perm_inverse,
-                   perm_of_is_perm],
+        `stringpm pi1 x = x` by PROVE_TAC [okpm_def] THEN
+        `stringpm (REVERSE pi1) x = x`
+           by METIS_TAC [pmact_eql] THEN
+        `stringpm (REVERSE pi2) x IN fv u` by METIS_TAC [] THEN
+        Cases_on `stringpm (REVERSE pi2) x IN us` THEN
+        PROVE_TAC [okpm_def, IN_UNION, pmact_inverse],
 
         SRW_TAC [][] THEN STRIP_TAC THEN
-        `lswapstr pi2 x = x` by METIS_TAC [okpm_def] THEN
-        `lswapstr (REVERSE pi2) x = x`
-           by METIS_TAC [perm_of_is_perm, is_perm_eql] THEN
-        `lswapstr (REVERSE pi1) x IN fv t` by METIS_TAC [] THEN
-        Cases_on `lswapstr (REVERSE pi1) x IN vs` THEN
-        METIS_TAC [okpm_def, IN_UNION, is_perm_inverse,
-                   perm_of_is_perm]
+        `stringpm pi2 x = x` by PROVE_TAC [okpm_def] THEN
+        `stringpm (REVERSE pi2) x = x`
+           by METIS_TAC [pmact_eql] THEN
+        `stringpm (REVERSE pi1) x IN fv t` by METIS_TAC [] THEN
+        Cases_on `stringpm (REVERSE pi1) x IN vs` THEN
+        PROVE_TAC [okpm_def, IN_UNION, pmact_inverse]
       ]
     ]
   ]);
@@ -343,7 +356,7 @@ val strong_aeq_ind = IndDefLib.derive_strong_induction(aeq_rules, aeq_ind)
 
 val aeq_rtypm_eqn = prove(
   ``aeq (rtypm pi ty1) (rtypm pi ty2) = aeq ty1 ty2``,
-  METIS_TAC [rtypm_is_perm, is_perm_inverse, aeq_rtypm])
+  METIS_TAC [pmact_inverse, aeq_rtypm])
 
 val okpm_exists = store_thm(
   "okpm_exists",
@@ -355,24 +368,22 @@ val okpm_exists = store_thm(
       Cases_on `e IN bvs` THENL [
         Q_TAC (NEW_TAC "z") `patoms pi UNION fv ty UNION {e} UNION s` THEN
         Q.EXISTS_TAC `(z,e) :: pi` THEN SRW_TAC [][] THENL [
-          SRW_TAC [][basic_swapTheory.swapstr_eq_left,
-                     is_perm_eql, listsupp_REVERSE, perm_of_unchanged] THEN
-          METIS_TAC [],
+          SRW_TAC [][basic_swapTheory.swapstr_eq_left, pmact_eql] THEN
+          SPOSE_NOT_THEN STRIP_ASSUME_TAC THEN SRW_TAC [][] THEN
+          METIS_TAC [perm_of_unchanged,listsupp_REVERSE,stringpm_raw],
           SRW_TAC [][basic_swapTheory.swapstr_def],
           `~(z = s')` by METIS_TAC [] THEN
           `~(e = s')` by METIS_TAC [] THEN SRW_TAC [][]
         ],
         Q.EXISTS_TAC `pi` THEN SRW_TAC [][] THEN
-        `lswapstr pi e = e` by METIS_TAC [] THEN
-        `lswapstr (REVERSE pi) e = e`
-           by METIS_TAC [is_perm_eql, perm_of_is_perm] THEN
-        SRW_TAC [][is_perm_eql] THEN METIS_TAC []
+        `stringpm pi e = e` by METIS_TAC [] THEN
+        `stringpm (REVERSE pi) e = e` by METIS_TAC [pmact_eql] THEN
+        SRW_TAC [][pmact_eql] THEN METIS_TAC []
       ],
       Q_TAC (NEW_TAC "z") `patoms pi UNION fv ty UNION {e} UNION s` THEN
       Q.EXISTS_TAC `(z,e) :: pi` THEN SRW_TAC [][] THENL [
-        SRW_TAC [][basic_swapTheory.swapstr_eq_left,
-                   is_perm_eql, listsupp_REVERSE, perm_of_unchanged] THEN
-        METIS_TAC [],
+        SRW_TAC [][basic_swapTheory.swapstr_eq_left, pmact_eql] THEN
+        METIS_TAC [perm_of_unchanged,listsupp_REVERSE,stringpm_raw],
         SRW_TAC [][basic_swapTheory.swapstr_def],
         `~(z = s')` by METIS_TAC [] THEN
         `~(e = s')` by METIS_TAC [] THEN SRW_TAC [][]
@@ -392,111 +403,111 @@ val aeq_trans = prove(
      by SRW_TAC [][aeq_rtypm_eqn] THEN
   POP_ASSUM (Q.SPECL_THEN [`pi`, `rtypm (REVERSE pi) t3`]
                           (ASSUME_TAC o GEN_ALL o
-                           SIMP_RULE (srw_ss()) [is_perm_inverse])) THEN
+                           SIMP_RULE (srw_ss()) [pmact_inverse])) THEN
   `?pi. okpm pi us (fv t UNION fv u UNION fv u') u`
      by SRW_TAC [][okpm_exists] THEN
 
   MAP_EVERY Q.EXISTS_TAC [`pi ++ REVERSE pi2 ++ pi1`,
                           `pi ++ REVERSE pi1' ++ pi2'`] THEN
-  FULL_SIMP_TAC (srw_ss()) [is_perm_decompose] THEN
-  SRW_TAC [][okpm_def, lswapstr_APPEND] THENL [
-    `~(lswapstr pi1 s IN fv t) /\ ~(lswapstr pi1 s IN fv u)`
+  FULL_SIMP_TAC (srw_ss()) [pmact_decompose] THEN
+  SRW_TAC [][okpm_def, pmact_decompose] THENL [
+    `~(stringpm pi1 s IN fv t) /\ ~(stringpm pi1 s IN fv u)`
        by FULL_SIMP_TAC (srw_ss()) [okpm_def] THEN
-    `lswapstr pi1 s IN fv (rtypm pi1 t)` by SRW_TAC [][fv_rtypm] THEN
+    `stringpm pi1 s IN fv (rtypm pi1 t)` by SRW_TAC [][fv_rtypm] THEN
     `fv (rtypm pi1 t) = fv (rtypm pi2 u)` by METIS_TAC [aeq_fv] THEN
-    `lswapstr pi1 s IN fv (rtypm pi2 u)` by METIS_TAC [] THEN
-    `lswapstr (REVERSE pi2) (lswapstr pi1 s) IN fv u`
+    `stringpm pi1 s IN fv (rtypm pi2 u)` by METIS_TAC [] THEN
+    `stringpm (REVERSE pi2) (stringpm pi1 s) IN fv u`
        by FULL_SIMP_TAC (srw_ss()) [fv_rtypm] THEN
-    `lswapstr (REVERSE pi2) (lswapstr pi1 s) IN us`
+    `stringpm (REVERSE pi2) (stringpm pi1 s) IN us`
        by (SPOSE_NOT_THEN ASSUME_TAC THEN
-           `lswapstr (REVERSE pi2) (lswapstr pi1 s) =
-            lswapstr pi2 (lswapstr (REVERSE pi2) (lswapstr pi1 s))`
+           `stringpm (REVERSE pi2) (stringpm pi1 s) =
+            stringpm pi2 (stringpm (REVERSE pi2) (stringpm pi1 s))`
               by METIS_TAC [okpm_def] THEN
-           ` _ = lswapstr pi1 s` by SRW_TAC [][is_perm_inverse] THEN
+           ` _ = stringpm pi1 s` by SRW_TAC [][pmact_inverse] THEN
            METIS_TAC []) THEN
     FULL_SIMP_TAC (srw_ss()) [okpm_def],
 
-    `~(lswapstr pi1 s IN fv t) /\ ~(lswapstr pi1 s IN fv u)`
+    `~(stringpm pi1 s IN fv t) /\ ~(stringpm pi1 s IN fv u)`
        by FULL_SIMP_TAC (srw_ss()) [okpm_def] THEN
-    `lswapstr pi1 s IN fv (rtypm pi1 t)` by SRW_TAC [][fv_rtypm] THEN
+    `stringpm pi1 s IN fv (rtypm pi1 t)` by SRW_TAC [][fv_rtypm] THEN
     `fv (rtypm pi1 t) = fv (rtypm pi2 u)` by METIS_TAC [aeq_fv] THEN
-    `lswapstr pi1 s IN fv (rtypm pi2 u)` by METIS_TAC [] THEN
-    `lswapstr (REVERSE pi2) (lswapstr pi1 s) IN fv u`
+    `stringpm pi1 s IN fv (rtypm pi2 u)` by METIS_TAC [] THEN
+    `stringpm (REVERSE pi2) (stringpm pi1 s) IN fv u`
        by FULL_SIMP_TAC (srw_ss()) [fv_rtypm] THEN
-    `lswapstr (REVERSE pi2) (lswapstr pi1 s) IN us`
+    `stringpm (REVERSE pi2) (stringpm pi1 s) IN us`
        by (SPOSE_NOT_THEN ASSUME_TAC THEN
-           `lswapstr (REVERSE pi2) (lswapstr pi1 s) =
-            lswapstr pi2 (lswapstr (REVERSE pi2) (lswapstr pi1 s))`
+           `stringpm (REVERSE pi2) (stringpm pi1 s) =
+            stringpm pi2 (stringpm (REVERSE pi2) (stringpm pi1 s))`
               by METIS_TAC [okpm_def] THEN
-           ` _ = lswapstr pi1 s` by SRW_TAC [][is_perm_inverse] THEN
+           ` _ = stringpm pi1 s` by SRW_TAC [][pmact_inverse] THEN
            METIS_TAC []) THEN
     FULL_SIMP_TAC (srw_ss()) [okpm_def],
 
-    `lswapstr pi1 s = s` by METIS_TAC [okpm_def] THEN
+    `stringpm pi1 s = s` by METIS_TAC [okpm_def] THEN
     SRW_TAC [][] THEN
     `s IN fv (rtypm pi1 t)` by (SRW_TAC [][fv_rtypm] THEN
-                                METIS_TAC [is_perm_eql, perm_of_is_perm]) THEN
+                                METIS_TAC [pmact_eql]) THEN
     `fv (rtypm pi1 t) = fv (rtypm pi2 u)` by METIS_TAC [aeq_fv] THEN
     `s IN fv (rtypm pi2 u)` by METIS_TAC [] THEN
-    `lswapstr (REVERSE pi2) s IN fv u`
+    `stringpm (REVERSE pi2) s IN fv u`
        by FULL_SIMP_TAC (srw_ss()) [fv_rtypm] THEN
-    `~(lswapstr (REVERSE pi2) s IN us)`
+    `~(stringpm (REVERSE pi2) s IN us)`
        by (STRIP_TAC THEN
-           `~(lswapstr pi2 (lswapstr (REVERSE pi2) s) IN fv t)`
+           `~(stringpm pi2 (stringpm (REVERSE pi2) s) IN fv t)`
               by METIS_TAC [okpm_def, IN_UNION] THEN
            FULL_SIMP_TAC (srw_ss()) []) THEN
-    `lswapstr pi2 (lswapstr (REVERSE pi2) s) = lswapstr (REVERSE pi2) s`
+    `stringpm pi2 (stringpm (REVERSE pi2) s) = stringpm (REVERSE pi2) s`
        by METIS_TAC [okpm_def] THEN
     FULL_SIMP_TAC (srw_ss()) [] THEN
     POP_ASSUM (ASSUME_TAC o SYM) THEN FULL_SIMP_TAC (srw_ss()) [] THEN
     FULL_SIMP_TAC (srw_ss()) [okpm_def],
 
-    `~(lswapstr pi2' s IN fv u) /\ ~(lswapstr pi2' s IN fv u')`
+    `~(stringpm pi2' s IN fv u) /\ ~(stringpm pi2' s IN fv u')`
        by FULL_SIMP_TAC (srw_ss()) [okpm_def] THEN
-    `lswapstr pi2' s IN fv (rtypm pi2' u')` by SRW_TAC [][fv_rtypm] THEN
+    `stringpm pi2' s IN fv (rtypm pi2' u')` by SRW_TAC [][fv_rtypm] THEN
     `fv (rtypm pi1' u) = fv (rtypm pi2' u')` by METIS_TAC [aeq_fv] THEN
-    `lswapstr pi2' s IN fv (rtypm pi1' u)` by METIS_TAC [] THEN
-    `lswapstr (REVERSE pi1') (lswapstr pi2' s) IN fv u`
+    `stringpm pi2' s IN fv (rtypm pi1' u)` by METIS_TAC [] THEN
+    `stringpm (REVERSE pi1') (stringpm pi2' s) IN fv u`
        by FULL_SIMP_TAC (srw_ss()) [fv_rtypm] THEN
-    `lswapstr (REVERSE pi1') (lswapstr pi2' s) IN us`
+    `stringpm (REVERSE pi1') (stringpm pi2' s) IN us`
        by (SPOSE_NOT_THEN ASSUME_TAC THEN
-           `lswapstr (REVERSE pi1') (lswapstr pi2' s) =
-            lswapstr pi1' (lswapstr (REVERSE pi1') (lswapstr pi2' s))`
+           `stringpm (REVERSE pi1') (stringpm pi2' s) =
+            stringpm pi1' (stringpm (REVERSE pi1') (stringpm pi2' s))`
               by METIS_TAC [okpm_def] THEN
-           ` _ = lswapstr pi2' s` by SRW_TAC [][] THEN
+           ` _ = stringpm pi2' s` by SRW_TAC [][] THEN
            METIS_TAC []) THEN
     FULL_SIMP_TAC (srw_ss()) [okpm_def],
 
-    `~(lswapstr pi2' s IN fv u) /\ ~(lswapstr pi2' s IN fv u')`
+    `~(stringpm pi2' s IN fv u) /\ ~(stringpm pi2' s IN fv u')`
        by FULL_SIMP_TAC (srw_ss()) [okpm_def] THEN
-    `lswapstr pi2' s IN fv (rtypm pi2' u')` by SRW_TAC [][fv_rtypm] THEN
+    `stringpm pi2' s IN fv (rtypm pi2' u')` by SRW_TAC [][fv_rtypm] THEN
     `fv (rtypm pi1' u) = fv (rtypm pi2' u')` by METIS_TAC [aeq_fv] THEN
-    `lswapstr pi2' s IN fv (rtypm pi1' u)` by METIS_TAC [] THEN
-    `lswapstr (REVERSE pi1') (lswapstr pi2' s) IN fv u`
+    `stringpm pi2' s IN fv (rtypm pi1' u)` by METIS_TAC [] THEN
+    `stringpm (REVERSE pi1') (stringpm pi2' s) IN fv u`
        by FULL_SIMP_TAC (srw_ss()) [fv_rtypm] THEN
-    `lswapstr (REVERSE pi1') (lswapstr pi2' s) IN us`
+    `stringpm (REVERSE pi1') (stringpm pi2' s) IN us`
        by (SPOSE_NOT_THEN ASSUME_TAC THEN
-           `lswapstr (REVERSE pi1') (lswapstr pi2' s) =
-            lswapstr pi1' (lswapstr (REVERSE pi1') (lswapstr pi2' s))`
+           `stringpm (REVERSE pi1') (stringpm pi2' s) =
+            stringpm pi1' (stringpm (REVERSE pi1') (stringpm pi2' s))`
               by METIS_TAC [okpm_def] THEN
-           ` _ = lswapstr pi2' s` by SRW_TAC [][] THEN
+           ` _ = stringpm pi2' s` by SRW_TAC [][] THEN
            METIS_TAC []) THEN
     FULL_SIMP_TAC (srw_ss()) [okpm_def],
 
-    `lswapstr pi2' s = s` by METIS_TAC [okpm_def] THEN
+    `stringpm pi2' s = s` by METIS_TAC [okpm_def] THEN
     SRW_TAC [][] THEN
     `s IN fv (rtypm pi2' u')` by (SRW_TAC [][fv_rtypm] THEN
-                                  METIS_TAC [is_perm_eql, perm_of_is_perm]) THEN
+                                  METIS_TAC [pmact_eql]) THEN
     `fv (rtypm pi1' u) = fv (rtypm pi2' u')` by METIS_TAC [aeq_fv] THEN
     `s IN fv (rtypm pi1' u)` by METIS_TAC [] THEN
-    `lswapstr (REVERSE pi1') s IN fv u`
+    `stringpm (REVERSE pi1') s IN fv u`
        by FULL_SIMP_TAC (srw_ss()) [fv_rtypm] THEN
-    `~(lswapstr (REVERSE pi1') s IN us)`
+    `~(stringpm (REVERSE pi1') s IN us)`
        by (STRIP_TAC THEN
-           `~(lswapstr pi1' (lswapstr (REVERSE pi1') s) IN fv u')`
+           `~(stringpm pi1' (stringpm (REVERSE pi1') s) IN fv u')`
               by METIS_TAC [okpm_def, IN_UNION] THEN
            FULL_SIMP_TAC (srw_ss()) []) THEN
-    `lswapstr pi1' (lswapstr (REVERSE pi1') s) = lswapstr (REVERSE pi1') s`
+    `stringpm pi1' (stringpm (REVERSE pi1') s) = stringpm (REVERSE pi1') s`
        by METIS_TAC [okpm_def] THEN
     FULL_SIMP_TAC (srw_ss()) [] THEN
     POP_ASSUM (ASSUME_TAC o SYM) THEN FULL_SIMP_TAC (srw_ss()) [] THEN
@@ -504,11 +515,11 @@ val aeq_trans = prove(
 
     Q_TAC SUFF_TAC `aeq (rtypm (pi ++ REVERSE pi2) (rtypm pi1 t))
                         (rtypm (pi ++ REVERSE pi1') (rtypm pi2' u'))`
-          THEN1 SRW_TAC [][is_perm_decompose] THEN
+          THEN1 SRW_TAC [][pmact_decompose] THEN
     FIRST_X_ASSUM MATCH_MP_TAC THEN
-    SRW_TAC [][is_perm_decompose, is_perm_inverse] THEN
+    SRW_TAC [][pmact_decompose, pmact_inverse] THEN
     SRW_TAC [][aeq_rtypm_eqn] THEN
-    METIS_TAC [aeq_rtypm_eqn, is_perm_inverse, rtypm_is_perm]
+    METIS_TAC [aeq_rtypm_eqn, pmact_inverse]
   ]);
 
 val aeq_equiv = prove(
@@ -532,13 +543,13 @@ val okpm_respects = prove(
 
 val liftrule = quotientLib.define_quotient_types_std_rule {
   types = [{name = "tyschema", equiv = aeq_equiv}],
-  defs = [mk_def ("tyspm", ``rtypm``),
+  defs = [mk_def ("raw_tyspm", ``raw_rtypm``),
           mk_def ("tysFV", ``fv``),
           mk_def ("TYALL", ``tyforall``),
           mk_def ("TYFUN", ``tyfun``),
           mk_def ("TYV", ``tyvar``),
           mk_def ("OKpm", ``okpm``)],
-  respects = [SIMP_RULE (bool_ss ++ DNF_ss) [] aeq_rtypm,
+  respects = [SIMP_RULE (bool_ss ++ DNF_ss) [rtypm_raw] aeq_rtypm,
               forall_respects_aeq, tyfun_respects_aeq,
               aeq_fv, okpm_respects]}
 
@@ -546,28 +557,21 @@ fun Save_thm(s,th) = save_thm(s,th) before export_rewrites [s]
 fun Store_thm(s,t,tac) = store_thm(s,t,tac) before export_rewrites [s]
 val tysFV_thm = Save_thm("tysFV_thm", liftrule fv_def)
 val tysFV_FINITE = Save_thm("tysFV_FINITE", liftrule FINITE_fv)
-val tyspm_thm = Save_thm("tyspm_thm", liftrule rtypm_def)
+val is_pmact_raw_tyspm = is_pmact_pmact |> Q.ISPEC `rty_pmact`
+                         |> REWRITE_RULE [rtypm_raw,is_pmact_def] |> liftrule
+val _ = overload_on("tys_pmact",``mk_pmact raw_tyspm``);
+val _ = overload_on("tyspm",``pmact tys_pmact``);
+val tyspm_raw = store_thm("tyspm_raw",``tyspm = raw_tyspm``,
+  SRW_TAC [][GSYM pmact_bijections,is_pmact_def,is_pmact_raw_tyspm])
+fun liftrule' th = th |> SUBS [rtypm_raw] |> liftrule |> SUBS [GSYM tyspm_raw]
+val tyspm_thm = Save_thm("tyspm_thm", liftrule' rtypm_thm)
 val tys_ind = save_thm("tys_ind", liftrule (TypeBase.induction_of ``:type``))
 val OKpm_thm = save_thm("OKpm_thm", liftrule okpm_def)
-val OKpm_eqvt = save_thm("OKpm_eqvt", liftrule rtypm_okpm)
-val tysFV_tyspm = save_thm("tysFV_tyspm", liftrule fv_rtypm)
-val tyseq_rule = liftrule aeq_rules
+val OKpm_eqvt = save_thm("OKpm_eqvt", liftrule' rtypm_okpm)
+val tysFV_tyspm = save_thm("tysFV_tyspm", liftrule' fv_rtypm)
+val tyseq_rule = liftrule' aeq_rules
 
 val OKpm_exists = save_thm("OKpm_exists", liftrule okpm_exists)
-
-val tyspm_is_perm = Store_thm(
-  "tyspm_is_perm",
-  ``is_perm tyspm``,
-  SRW_TAC [][is_perm_def] THENL [
-    Q.ID_SPEC_TAC `x` THEN HO_MATCH_MP_TAC tys_ind THEN
-    SRW_TAC [ETA_ss][is_perm_nil],
-    Q.ID_SPEC_TAC `x` THEN HO_MATCH_MP_TAC tys_ind THEN
-    SRW_TAC [ETA_ss][lswapstr_APPEND, is_perm_decompose],
-    FULL_SIMP_TAC (srw_ss()) [FUN_EQ_THM] THEN
-    HO_MATCH_MP_TAC tys_ind THEN SRW_TAC [][] THEN
-    METIS_TAC [fnpm_is_perm, discrete_is_perm, perm_of_is_perm, is_perm_def,
-               permeq_def]
-  ]);
 
 val OKpm_increase = store_thm(
   "OKpm_increase",
@@ -593,14 +597,14 @@ val OKpm_avoids = prove(
         SRW_TAC [][] THEN
         FULL_SIMP_TAC (srw_ss()) [DISJOINT_DEF, EXTENSION] THEN
         METIS_TAC [],
-        `lswapstr (cpmpm [(z,e)] pi) s = lswapstr [(z,e)] (lswapstr pi s)`
-           by (ONCE_REWRITE_TAC [lswapstr_lswapstr_cpmpm] THEN
+        `stringpm (cpmpm [(z,e)] pi) s = stringpm [(z,e)] (stringpm pi s)`
+           by (ONCE_REWRITE_TAC [stringpm_stringpm_cpmpm] THEN
                `~(e = s) /\ ~(z = s)` by METIS_TAC [] THEN
                SRW_TAC [][]) THEN
         SRW_TAC [][] THEN SRW_TAC [][basic_swapTheory.swapstr_def],
         `~(e = s) /\ ~(z = s)` by METIS_TAC [] THEN
-        `lswapstr (cpmpm [(z,e)] pi) s = lswapstr [(z,e)] (lswapstr pi s)`
-           by (ONCE_REWRITE_TAC [lswapstr_lswapstr_cpmpm] THEN
+        `stringpm (cpmpm [(z,e)] pi) s = stringpm [(z,e)] (stringpm pi s)`
+           by (ONCE_REWRITE_TAC [stringpm_stringpm_cpmpm] THEN
                `~(e = s) /\ ~(z = s)` by METIS_TAC [] THEN
                SRW_TAC [][]) THEN
         SRW_TAC [][]
@@ -615,7 +619,7 @@ val tys_fresh = store_thm(
   HO_MATCH_MP_TAC tys_ind THEN SRW_TAC [][] THENL [
     SRW_TAC [][] THEN MATCH_MP_TAC (last (CONJUNCTS tyseq_rule)) THEN
     SRW_TAC [][] THEN
-    `setpm lswapstr [(a,b)] (tysFV ty) = tysFV ty`
+    `setpm string_pmact [(a,b)] (tysFV ty) = tysFV ty`
        by SRW_TAC [][GSYM tysFV_tyspm] THEN
     `DISJOINT {a;b} (tysFV ty)` by SRW_TAC [][DISJOINT_DEF, EXTENSION] THEN
     `?pi. DISJOINT (patoms pi) {a;b} /\ OKpm pi f (tysFV ty) ty `
@@ -633,21 +637,20 @@ val tys_fresh = store_thm(
         by METIS_TAC [OKpm_exists] THEN
     MAP_EVERY Q.EXISTS_TAC [`pi ++ [(a,b)]`, `pi`] THEN SRW_TAC [][] THENL [
       SRW_TAC [][OKpm_thm, tysFV_tyspm] THENL [
-        SRW_TAC [][lswapstr_APPEND] THEN
-        `~(lswapstr pi (swapstr a b s) IN tysFV (tyspm [(a,b)] ty))`
+        SRW_TAC [][pmact_decompose] THEN
+        `~(stringpm pi (swapstr a b s) IN tysFV (tyspm [(a,b)] ty))`
            by FULL_SIMP_TAC (srw_ss()) [OKpm_thm] THEN
-        FULL_SIMP_TAC (srw_ss()) [tysFV_tyspm,
-                                  lswapstr_APPEND],
+        FULL_SIMP_TAC (srw_ss()) [tysFV_tyspm],
 
-        SRW_TAC [][lswapstr_APPEND] THEN
+        SRW_TAC [][pmact_decompose] THEN
         FULL_SIMP_TAC (srw_ss()) [OKpm_thm],
 
-        SRW_TAC [][lswapstr_APPEND] THEN
+        SRW_TAC [][pmact_decompose] THEN
         `~(s = a)` by (STRIP_TAC THEN FULL_SIMP_TAC (srw_ss()) []) THEN
         `~(s = b)` by (STRIP_TAC THEN FULL_SIMP_TAC (srw_ss()) []) THEN
         FULL_SIMP_TAC (srw_ss()) [OKpm_thm]
       ],
-      SRW_TAC [][is_perm_decompose, is_perm_sing_inv]
+      SRW_TAC [][pmact_decompose, pmact_sing_inv]
     ],
 
     MATCH_MP_TAC (last (CONJUNCTS tyseq_rule)) THEN
@@ -656,21 +659,20 @@ val tys_fresh = store_thm(
         by METIS_TAC [OKpm_exists] THEN
     MAP_EVERY Q.EXISTS_TAC [`pi ++ [(a,b)]`, `pi`] THEN SRW_TAC [][] THENL [
       SRW_TAC [][OKpm_thm, tysFV_tyspm] THENL [
-        SRW_TAC [][lswapstr_APPEND] THEN
-        `~(lswapstr pi (swapstr a b s) IN tysFV (tyspm [(a,b)] ty))`
+        SRW_TAC [][pmact_decompose] THEN
+        `~(stringpm pi (swapstr a b s) IN tysFV (tyspm [(a,b)] ty))`
            by FULL_SIMP_TAC (srw_ss()) [OKpm_thm] THEN
-        FULL_SIMP_TAC (srw_ss()) [tysFV_tyspm,
-                                  lswapstr_APPEND],
+        FULL_SIMP_TAC (srw_ss()) [tysFV_tyspm],
 
-        SRW_TAC [][lswapstr_APPEND] THEN
+        SRW_TAC [][pmact_decompose] THEN
         FULL_SIMP_TAC (srw_ss()) [OKpm_thm],
 
-        SRW_TAC [][lswapstr_APPEND] THEN
+        SRW_TAC [][pmact_decompose] THEN
         `~(s = a)` by (STRIP_TAC THEN FULL_SIMP_TAC (srw_ss()) []) THEN
         `~(s = b)` by (STRIP_TAC THEN FULL_SIMP_TAC (srw_ss()) []) THEN
         FULL_SIMP_TAC (srw_ss()) [OKpm_thm]
       ],
-      SRW_TAC [][is_perm_decompose, is_perm_sing_inv]
+      SRW_TAC [][pmact_decompose]
     ],
 
     MATCH_MP_TAC (last (CONJUNCTS tyseq_rule)) THEN
@@ -679,25 +681,17 @@ val tys_fresh = store_thm(
         by METIS_TAC [OKpm_exists] THEN
     MAP_EVERY Q.EXISTS_TAC [`pi ++ [(a,b)]`, `pi`] THEN
     SRW_TAC [][] THENL [
-      SRW_TAC [][OKpm_thm, tysFV_tyspm, lswapstr_APPEND] THENL [
-        `~(lswapstr pi (swapstr a b s) IN tysFV (tyspm [(a,b)] ty))`
+      SRW_TAC [][OKpm_thm, tysFV_tyspm, pmact_decompose] THENL [
+        `~(stringpm pi (swapstr a b s) IN tysFV (tyspm [(a,b)] ty))`
            by FULL_SIMP_TAC (srw_ss()) [OKpm_thm] THEN
-        FULL_SIMP_TAC (srw_ss()) [tysFV_tyspm, lswapstr_APPEND],
+        FULL_SIMP_TAC (srw_ss()) [tysFV_tyspm, pmact_decompose],
         FULL_SIMP_TAC (srw_ss()) [OKpm_thm],
         `~(a = s)` by (STRIP_TAC THEN FULL_SIMP_TAC (srw_ss()) []) THEN
         `~(b = s)` by (STRIP_TAC THEN FULL_SIMP_TAC (srw_ss()) []) THEN
         FULL_SIMP_TAC (srw_ss()) [OKpm_thm]
       ],
-      SRW_TAC [][is_perm_decompose, is_perm_sing_inv]
+      SRW_TAC [][pmact_decompose]
     ]
   ]);
 
 val _ = export_theory ();
-
-
-
-
-
-
-
-

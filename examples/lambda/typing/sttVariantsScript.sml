@@ -1,6 +1,6 @@
 open HolKernel boolLib bossLib Parse
 
-open termTheory sttTheory contextlistsTheory NEWLib
+open termTheory sttTheory contextlistsTheory NEWLib nomsetTheory
 
 val _ = new_theory "sttVariants"
 
@@ -21,7 +21,7 @@ val hastype_cofin_ind = store_thm(
        !G m A. G |- m -: A ==> P G m A``,
   GEN_TAC THEN STRIP_TAC THEN
   Q_TAC SUFF_TAC `!G m A. G |- m -: A ==> !pi. P (ctxtswap pi G) (tpm pi m) A`
-        THEN1 METIS_TAC [tpm_NIL, ctxtswap_NIL] THEN
+        THEN1 METIS_TAC [pmact_nil, ctxtswap_NIL] THEN
   HO_MATCH_MP_TAC strong_hastype_ind THEN
   SRW_TAC [][] THEN1 METIS_TAC [] THEN
   Q_TAC (NEW_TAC "z") `FV (tpm pi m) UNION ctxtFV (ctxtswap pi G) UNION
@@ -41,17 +41,16 @@ val hastype_cofin_ind = store_thm(
   `ctxtswap ((y,lswapstr pi x)::pi) G =
       ctxtswap [(y,lswapstr pi x)] (ctxtswap pi G)`
      by SRW_TAC [][GSYM ctxtswap_APPEND] THEN
-  `_ = ctxtswap pi G` by SRW_TAC [][ctxtswap_fresh] THEN
+  `_ = ctxtswap pi G` by SRW_TAC [][ctxtswap_fresh,stringpm_raw] THEN
   `[VAR y/z] (tpm [(z,lswapstr pi x)] (tpm pi m)) =
      tpm [(y,z)] (tpm [(z,lswapstr pi x)] (tpm pi m))`
        by SRW_TAC [][fresh_tpm_subst] THEN
   `_ = tpm [(lswapstr [(y,z)] z, lswapstr [(y,z)] (lswapstr pi x))]
            (tpm [(y,z)] (tpm pi m))`
-       by SRW_TAC [][Once (GSYM tpm_sing_to_back)] THEN
+       by SRW_TAC [][Once (GSYM pmact_sing_to_back)] THEN
   `_ = tpm [(y,lswapstr pi x)] (tpm pi m)`
-       by SRW_TAC [][tpm_fresh, nomsetTheory.perm_of_is_perm,
-                     nomsetTheory.supp_apart] THEN
-  SRW_TAC [][GSYM tpm_APPEND]);
+       by SRW_TAC [][tpm_fresh, nomsetTheory.supp_apart] THEN
+  SRW_TAC [][GSYM pmact_decompose]);
 
 (* and a "cofinite" introduction rule for the abstraction case *)
 val cofin_hastype_abs_I = store_thm(
@@ -116,7 +115,7 @@ val hastype2_swap = store_thm(
     METIS_TAC [hastype2_rules],
     MATCH_MP_TAC (last (CONJUNCTS hastype2_rules)) THEN
     SRW_TAC [][tpm_subst_out] THEN
-    METIS_TAC [basic_swapTheory.lswapstr_inverse]
+    METIS_TAC [basic_swapTheory.lswapstr_inverse, stringpm_raw]
   ]);
 
 val hastype2_bvc_ind = store_thm(
@@ -141,7 +140,7 @@ val hastype2_bvc_ind = store_thm(
   REPEAT GEN_TAC THEN STRIP_TAC THEN
   Q_TAC SUFF_TAC `!G m ty. G ||- m -: ty ==>
                            !pi x. P (ctxtswap pi G) (tpm pi m) ty x`
-        THEN1 METIS_TAC [tpm_NIL, ctxtswap_NIL] THEN
+        THEN1 METIS_TAC [pmact_nil, ctxtswap_NIL] THEN
   HO_MATCH_MP_TAC hastype2_ind THEN
   SRW_TAC [][] THEN1 METIS_TAC [] THEN
   Q.MATCH_ABBREV_TAC `P GG (LAM vv MM) (A --> B) xx` THEN
@@ -155,15 +154,15 @@ val hastype2_bvc_ind = store_thm(
                                `(z,vv)::pi`, `y`]
                  MP_TAC) THEN
   ASM_SIMP_TAC (srw_ss()) [basic_swapTheory.lswapstr_APPEND] THEN
-  `~(vv IN ctxtFV GG)` by SRW_TAC [][Abbr`vv`, Abbr`GG`] THEN
+  `~(vv IN ctxtFV GG)` by SRW_TAC [][Abbr`vv`, Abbr`GG`, stringpm_raw] THEN
   `ctxtswap ((z,vv)::pi) G = ctxtswap [(z,vv)] GG`
      by SRW_TAC [][Abbr`GG`, GSYM ctxtswap_APPEND] THEN
   ` _ = GG` by SRW_TAC [][ctxtswap_fresh] THEN
   `tpm ((z,vv)::pi) m = tpm [(z,vv)] MM`
-     by SRW_TAC [][Abbr`MM`, GSYM tpm_APPEND] THEN
+     by SRW_TAC [][Abbr`MM`, GSYM pmact_decompose] THEN
   SRW_TAC [][] THEN
   FIRST_X_ASSUM MATCH_MP_TAC THEN
-  FULL_SIMP_TAC (srw_ss()) [basic_swapTheory.lswapstr_APPEND]);
+  FULL_SIMP_TAC (srw_ss()) [basic_swapTheory.lswapstr_APPEND, stringpm_raw]);
 
 val hastype2_bvc_ind0 = save_thm(
   "hastype2_bvc_ind0",
@@ -179,7 +178,7 @@ val hastype2_valid_ctxt = store_thm(
 val hastype2_swap_eqn = store_thm(
   "hastype2_swap_eqn",
   ``G ||- tpm pi m -: A <=> ctxtswap (REVERSE pi) G ||- m -: A``,
-  METIS_TAC [ctxtswap_inverse, hastype2_swap, tpm_inverse]);
+  METIS_TAC [ctxtswap_inverse, hastype2_swap, pmact_inverse]);
 
 val hastype2_hastype = prove(
   ``!G m A. G ||- m -: A ==> G |- m -: A``,
