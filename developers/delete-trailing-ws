@@ -1,0 +1,3 @@
+#!/bin/sh
+
+find . \( -name '*.sml' -o -name '*.sig' \) \! -name '*Theory.sml' \! -name '*Theory.sig' -exec grep -q ' \+$' \{\} \; -print -exec perl -i -pe 's/ +$//;' \{\} +

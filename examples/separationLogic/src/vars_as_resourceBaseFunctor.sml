@@ -1,5 +1,5 @@
-functor vars_as_resourceBaseFunctor (var_res_param : 
-sig     
+functor vars_as_resourceBaseFunctor (var_res_param :
+sig
     val combinator_thmL              : Abbrev.thm list
     val prover_extra                 : unit -> Abbrev.thm list * Abbrev.thm list
     val varlist_rwts                 : unit -> Abbrev.thm list
@@ -13,7 +13,7 @@ sig
        val var_res_prove___no_expn    : Abbrev.term -> Abbrev.thm
        val var_res_assumptions_prove  : Abbrev.thm -> Abbrev.thm
        val var_res_precondition_prove : Abbrev.thm -> Abbrev.thm
-       val var_res_precondition_assumption_prove : 
+       val var_res_precondition_assumption_prove :
                                         Abbrev.term option -> Abbrev.thm -> Abbrev.thm
        val raise_var_res_prove_expn   : exn -> 'a
 
@@ -43,7 +43,7 @@ sig
        val GENERATE___var_res_exp_varlist_update___REWRITES : term -> term -> term -> (term * thm list)
        val cond_rewrite___varlist_update : thm list -> conv
        val BAG_NORMALISE_CONV : conv;
-     
+
 
        val VAR_RES_FRAME_SPLIT___imp_CONV               : conv -> conv
        val VAR_RES_FRAME_SPLIT___split_CONV             : conv -> conv
@@ -151,14 +151,14 @@ fun GABS_CONV conv tm =
         LAMB(Bvar,Body) => ((ABS_CONV conv tm) handle HOL_ERR _ =>
         let
            fun conv2 tm =
-              SPEC Bvar (GEN_ASSUM Bvar (conv tm));	    
+              SPEC Bvar (GEN_ASSUM Bvar (conv tm));	
         in
           ABS_CONV conv2 tm
         end)
     | _ => raise ERR "GABS_CONV" "Term not an abstraction"
 
 
-fun GSUB_CONV conv t =    
+fun GSUB_CONV conv t =
     (TRY_CONV (COMB_CONV conv ORELSEC GABS_CONV conv) t)
 
 fun GREDEPTH_CONV conv tm =
@@ -240,15 +240,15 @@ val var_res_prove_RWL = [
           var_res_param.combinator_thmL,
           (fst extra), var_res_prove_RWL]
       val var_res_prove_cs = listLib.list_compset ();
-      val _ = computeLib.add_thms rewrites var_res_prove_cs 
+      val _ = computeLib.add_thms rewrites var_res_prove_cs
       val _ = computeLib.add_conv (stringSyntax.ord_tm, 1, stringLib.ORD_CHR_CONV) var_res_prove_cs
       val _ = computeLib.add_thms [stringTheory.CHR_ORD,stringTheory.CHAR_EQ_THM,stringTheory.ORD_11] var_res_prove_cs
 
       val strengthen = append [VAR_RES_IS_STACK_IMPRECISE___USED_VARS___VAR_RES_REWRITES,
                                FEVERY_STRENGTHEN_THM]
-                       (snd extra) 
+                       (snd extra)
    in
-      FULL_EXT_CONSEQ_REWRITE_CONV 
+      FULL_EXT_CONSEQ_REWRITE_CONV
             (CONSEQ_CONV_get_context_congruences CONSEQ_CONV_IMP_CONTEXT)
             prover_cache_opt NONE true true []
             [(true, SOME 1, K (CHANGED_CONV (computeLib.CBV_CONV var_res_prove_cs))),
@@ -424,13 +424,13 @@ end;
 
 
 fun VAR_RES_FRAME_SPLIT___imp_CONV c  =
-    (RATOR_CONV o RAND_CONV) c 
+    (RATOR_CONV o RAND_CONV) c
 
 fun VAR_RES_FRAME_SPLIT___split_CONV c  =
-    (RATOR_CONV o RATOR_CONV o RAND_CONV) c 
+    (RATOR_CONV o RATOR_CONV o RAND_CONV) c
 
 fun VAR_RES_FRAME_SPLIT___context_CONV c  =
-    (RATOR_CONV o RATOR_CONV o RATOR_CONV o RAND_CONV) c 
+    (RATOR_CONV o RATOR_CONV o RATOR_CONV o RAND_CONV) c
 
 fun VAR_RES_FRAME_SPLIT___context_split_imp_CONV c =
    (VAR_RES_FRAME_SPLIT___context_CONV c THENC
@@ -482,7 +482,7 @@ fun var_res_prop_binexpression_cond___asl_false___NORMALISE_CONV tt =
     let
        val (f, p,e1,e2,p1,p2) = dest_var_res_prop_binexpression_cond tt
 
-       val (P, thm0) = if is_asl_false p1 then 
+       val (P, thm0) = if is_asl_false p1 then
                      (p2, var_res_prop_binexpression_cond___asl_false___true)
                   else if is_asl_false p2 then
                      (p1, var_res_prop_binexpression_cond___asl_false___false)
@@ -697,7 +697,7 @@ let
    val thm2 = VAR_RES_FRAME_SPLIT_INFERENCE___SIMPLE_CONST_INTRO___CONV e tt;
 
    (*use nice new constant name*)
-   val c_name = if (isSome c_name_opt) then valOf c_name_opt else 
+   val c_name = if (isSome c_name_opt) then valOf c_name_opt else
                    (get_const_name_for_exp "_const" e);
    val thm3 = CONV_RULE (RHS_CONV (RENAME_VARS_CONV [c_name])) thm2
 in
@@ -720,7 +720,7 @@ in
 end
 
 
-fun VAR_RES_FRAME_SPLIT_INFERENCE___CONST_LIST_INTRO___CONV []  = ALL_CONV 
+fun VAR_RES_FRAME_SPLIT_INFERENCE___CONST_LIST_INTRO___CONV []  = ALL_CONV
   | VAR_RES_FRAME_SPLIT_INFERENCE___CONST_LIST_INTRO___CONV ((e, c_name_opt)::vL) =
      (VAR_RES_FRAME_SPLIT_INFERENCE___CONST_INTRO___CONV e c_name_opt) THENC
      (STRIP_QUANT_CONV (
@@ -743,8 +743,8 @@ local
              val new_eq = if turn then GSYM thm else thm
           in
              prepare_context (new_eq::acc) thms
-          end 
-       else 
+          end
+       else
           prepare_context (thm::acc) thms
 
    val var_res_prop_general_rewrites = [
@@ -765,14 +765,14 @@ local
          var_res_exp_is_defined___const,
          GSYM var_res_prop_equal_def,
          GSYM var_res_prop_unequal_def]
-   
+
    val ss_1 = std_ss ++ (simpLib.rewrites var_res_prop_general_rewrites);
    val ss_2 = ss_1 ++ (simpLib.merge_ss [
             simpLib.conv_ss {conv = K (K var_res_prop_equal_unequal___NORMALISE_CONV),
-                 key = NONE, name = "var_res_prop_equal_unequal___NORMALISE_CONV", 
+                 key = NONE, name = "var_res_prop_equal_unequal___NORMALISE_CONV",
                  trace = 2},
             simpLib.conv_ss {conv = K (K var_res_prop_binexpression_cond___asl_false___NORMALISE_CONV),
-                 key = NONE, name = "var_res_prop_binexpression_cond___asl_false___NORMALISE_CONV", 
+                 key = NONE, name = "var_res_prop_binexpression_cond___asl_false___NORMALISE_CONV",
                  trace = 2}])
 
    val ss_final = ss_2
@@ -818,7 +818,7 @@ let
 
    val (var_ty, data_ty) = (pairSyntax.dest_prod (listSyntax.dest_list_type (type_of vcL_t)))
 
-   val vcL_t_v = 
+   val vcL_t_v =
        let
           val vL_tL = map (fst o pairSyntax.dest_pair) ((fst o listSyntax.dest_list) vcL_t)
           val vL_tvL = map (fn v => pairSyntax.mk_pair (v, genvar data_ty)) vL_tL
@@ -856,7 +856,7 @@ fun o_ABS_R___PAIRED_CONV t =
       val (vs,_) = pairSyntax.dest_pabs (rand t);
       val conv1 = (RAND_CONV pairTools.PABS_ELIM_CONV)
       val conv2 = HO_REWR_CONV combinTheory.o_ABS_R
-      val conv3 = pairTools.PABS_INTRO_CONV vs     
+      val conv3 = pairTools.PABS_INTRO_CONV vs
    in
       (conv1 THENC conv2 THENC conv3) t
    end handle HOL_ERR _ => raise UNCHANGED;
@@ -864,12 +864,12 @@ fun o_ABS_R___PAIRED_CONV t =
 val var_res_exp_varlist_update___exists_CONV =
    HO_REWR_CONV (el 8 (BODY_CONJUNCTS var_res_prop_varlist_update___BOOL));
 
-fun conv_termL_GEN () = COND_REWRITE_CONV___PREPROCESS 
+fun conv_termL_GEN () = COND_REWRITE_CONV___PREPROCESS
    (var_res___varlist_update_NO_VAR_THM::MAP::
     (GSYM o_f_FUPDATE_WEAK)::
     o_f_FEMPTY::(var_res_param.varlist_rwts ()))@
    [(o_ABS_R___PAIRED_CONV,Term `var_res_prop_varlist_update vcL o X`),
-    (var_res_exp_varlist_update___exists_CONV, 
+    (var_res_exp_varlist_update___exists_CONV,
      Term `var_res_exp_varlist_update vcL (asl_exists x. p x)`)];
 
 val conv_termL = ref (conv_termL_GEN ())
@@ -879,7 +879,7 @@ in
 fun update_varlist_rwts () =
    conv_termL := (conv_termL_GEN ());
 
-(* 
+(*
 val SOME (rewrL, t) = !tref *)
 fun cond_rewrite___varlist_update rewrL =
     let val conv = EXT_COND_REWRITE_CONV false (!conv_termL) rewrL in
@@ -898,7 +898,7 @@ fun cond_rewrite___varlist_update rewrL =
             print_term (rhs (concl thm0));
             print "\n\n";
             Feedback.fail()) else ()
-         end 
+         end
     in
        thm0
     end end;
@@ -931,7 +931,7 @@ let
    val imp_thm = var_res_prop___var_res_prop_varlist_update___EVAL vcL_t (rhs (concl pre_thm))
    val imp_thm2 = CONV_RULE ((RATOR_CONV o RAND_CONV) (K (GSYM pre_thm))) imp_thm
    val pre' = rand (concl imp_thm2);
-   
+
    val thm0 = ISPECL [f, pre, pre', prog, post] VAR_RES_COND_HOARE_TRIPLE___COND_PROP_STRONG_EQUIV;
    val thm1 = MP thm0 imp_thm2
 in
@@ -967,13 +967,13 @@ fun simpset_no_context_strengthen_conseq_conv conv =
    (fn p => (K (STRENGTHEN_CONSEQ_CONV (conv (#do_prop_simps p, #prop_simp_ss p))))):var_res_inference
 
 fun simpset_strengthen_conseq_conv conv =
-   (fn p => (fn context => (STRENGTHEN_CONSEQ_CONV 
+   (fn p => (fn context => (STRENGTHEN_CONSEQ_CONV
        (conv (#do_prop_simps p, #prop_simp_ss p) context)))):var_res_inference
 
 fun expands_strengthen_conseq_conv conv =
-   (fn p => (fn context => (STRENGTHEN_CONSEQ_CONV 
+   (fn p => (fn context => (STRENGTHEN_CONSEQ_CONV
          (conv (#expands_level p) (#do_prop_simps p, #prop_simp_ss p) context)))):var_res_inference
-									     
+									
 
 fun update_var_res_param () =
     (update_varlist_rwts();update_prover_extra();prover_cache_clear ();());

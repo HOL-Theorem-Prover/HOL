@@ -3,9 +3,9 @@ struct
 
 (*
 quietdec := true;
-loadPath := 
-            (concat [Globals.HOLDIR, "/examples/separationLogic/src"]) :: 
-            (concat [Globals.HOLDIR, "/examples/separationLogic/src/holfoot"]) :: 
+loadPath :=
+            (concat [Globals.HOLDIR, "/examples/separationLogic/src"]) ::
+            (concat [Globals.HOLDIR, "/examples/separationLogic/src/holfoot"]) ::
             !loadPath;
 
 map load ["finite_mapTheory", "holfootTheory",
@@ -13,7 +13,7 @@ map load ["finite_mapTheory", "holfootTheory",
 show_assums := true;
 *)
 
-open HolKernel Parse boolLib finite_mapTheory 
+open HolKernel Parse boolLib finite_mapTheory
 open Parsetree;
 open separationLogicSyntax
 open vars_as_resourceSyntax
@@ -40,23 +40,23 @@ let
           tag, exp1, Absyn.mk_AQ holfoot_data_list___EMPTY_tm, exp2]);
 
    (* list(x) *)
-   val _ = add_genpred ("list", [Aspred_arg_ty_exp], 
+   val _ = add_genpred ("list", [Aspred_arg_ty_exp],
                  fn [exp1] => mk_holfoot_ap_list_seg_absyn (
-                     Absyn.mk_AQ (string2holfoot_tag (!list_link_tag)), 
-                     exp1, 
+                     Absyn.mk_AQ (string2holfoot_tag (!list_link_tag)),
+                     exp1,
                      Absyn.mk_AQ (holfoot_exp_null_term)));
    (* lseg(x,y) *)
-   val _ = add_genpred ("lseg", [Aspred_arg_ty_exp,Aspred_arg_ty_comma,Aspred_arg_ty_exp], 
+   val _ = add_genpred ("lseg", [Aspred_arg_ty_exp,Aspred_arg_ty_comma,Aspred_arg_ty_exp],
                  fn [exp1,exp2] => mk_holfoot_ap_list_seg_absyn (
-                     Absyn.mk_AQ (string2holfoot_tag (!list_link_tag)), 
-                     exp1, 
+                     Absyn.mk_AQ (string2holfoot_tag (!list_link_tag)),
+                     exp1,
                      exp2));
 
    (* lseg(tag;x,y) *)
-   val _ = add_genpred ("lseg", [Aspred_arg_ty_tag, Aspred_arg_ty_semi, Aspred_arg_ty_exp, Aspred_arg_ty_comma, Aspred_arg_ty_exp], 
+   val _ = add_genpred ("lseg", [Aspred_arg_ty_tag, Aspred_arg_ty_semi, Aspred_arg_ty_exp, Aspred_arg_ty_comma, Aspred_arg_ty_exp],
                  fn [tag,exp1,exp2] => mk_holfoot_ap_list_seg_absyn (
-                     tag, 
-                     exp1, 
+                     tag,
+                     exp1,
                      exp2));
 
 
@@ -66,32 +66,32 @@ let
 
 
    (* data_list(x,data) *)
-   val _ = add_genpred ("data_list", [Aspred_arg_ty_exp, Aspred_arg_ty_comma, Aspred_arg_ty_hol], 
+   val _ = add_genpred ("data_list", [Aspred_arg_ty_exp, Aspred_arg_ty_comma, Aspred_arg_ty_hol],
                  fn [exp1,data] => mk_holfoot_ap_data_list_seg_absyn (
-                     Absyn.mk_AQ (string2holfoot_tag (!list_link_tag)), 
-                     exp1, 
+                     Absyn.mk_AQ (string2holfoot_tag (!list_link_tag)),
+                     exp1,
                      Absyn.mk_AQ (string2holfoot_tag (!data_list_tag)),
-                     data, 
+                     data,
                      Absyn.mk_AQ (holfoot_exp_null_term)));
 
 
    (* data_lseg(x,data,y) *)
-   val _ = add_genpred ("data_lseg", [Aspred_arg_ty_exp,Aspred_arg_ty_comma,Aspred_arg_ty_hol,Aspred_arg_ty_comma,Aspred_arg_ty_exp], 
+   val _ = add_genpred ("data_lseg", [Aspred_arg_ty_exp,Aspred_arg_ty_comma,Aspred_arg_ty_hol,Aspred_arg_ty_comma,Aspred_arg_ty_exp],
                  fn [exp1,data,exp2] => mk_holfoot_ap_data_list_seg_absyn (
-                     Absyn.mk_AQ (string2holfoot_tag (!list_link_tag)), 
-                     exp1, 
+                     Absyn.mk_AQ (string2holfoot_tag (!list_link_tag)),
+                     exp1,
                      Absyn.mk_AQ (string2holfoot_tag (!data_list_tag)),
-                     data, 
+                     data,
                      exp2));
 
    (* data_lseg(tag;x,dtag:data,y) *)
-   val _ = add_genpred ("data_lseg", [Aspred_arg_ty_tag, Aspred_arg_ty_semi, 
+   val _ = add_genpred ("data_lseg", [Aspred_arg_ty_tag, Aspred_arg_ty_semi,
                                       Aspred_arg_ty_exp, Aspred_arg_ty_comma,
                                       Aspred_arg_ty_tag, Aspred_arg_ty_colon,
-                                      Aspred_arg_ty_hol, Aspred_arg_ty_comma, 
-                                      Aspred_arg_ty_exp], 
+                                      Aspred_arg_ty_hol, Aspred_arg_ty_comma,
+                                      Aspred_arg_ty_exp],
                  fn [tag,exp1,dtag,data,exp2] => mk_holfoot_ap_data_list_seg_absyn (
-                     tag, 
+                     tag,
                      exp1, dtag,data,
                      exp2));
 
@@ -101,38 +101,38 @@ let
                       Absyn.mk_pair (tagL, tagR), exp])
 
    (* tree(x) *)
-   val _ = add_genpred ("tree", [Aspred_arg_ty_exp], 
+   val _ = add_genpred ("tree", [Aspred_arg_ty_exp],
                  fn [exp] => mk_holfoot_ap_tree_absyn (
                      Absyn.mk_AQ (string2holfoot_tag (#1 (!tree_link_tags))),
                      Absyn.mk_AQ (string2holfoot_tag (#2 (!tree_link_tags))),
                      exp));
 
    (* tree(tagL,tagR,x) *)
-   val _ = add_genpred ("tree", [Aspred_arg_ty_tag, Aspred_arg_ty_comma, Aspred_arg_ty_tag, Aspred_arg_ty_comma, Aspred_arg_ty_exp], 
+   val _ = add_genpred ("tree", [Aspred_arg_ty_tag, Aspred_arg_ty_comma, Aspred_arg_ty_tag, Aspred_arg_ty_comma, Aspred_arg_ty_exp],
                  fn [tagL, tagR, exp] => mk_holfoot_ap_tree_absyn (
                      tagL,tagR,exp));
 
 
    fun mk_holfoot_ap_data_tree_absyn (tagL, exp, dtagL, data) =
       Absyn.list_mk_app(Absyn.mk_AQ holfoot_ap_data_tree_term, [
-                tagL, exp, 
+                tagL, exp,
                 Absyn.mk_pair (dtagL, data)]);
 
    (* data_tree(x,data) *)
-   val _ = add_genpred ("data_tree", [Aspred_arg_ty_exp, Aspred_arg_ty_comma, Aspred_arg_ty_hol], 
+   val _ = add_genpred ("data_tree", [Aspred_arg_ty_exp, Aspred_arg_ty_comma, Aspred_arg_ty_hol],
                  fn [exp,data] => mk_holfoot_ap_data_tree_absyn (
                      mk_list [Absyn.mk_AQ (string2holfoot_tag (#1 (!tree_link_tags))),
                       Absyn.mk_AQ (string2holfoot_tag (#2 (!tree_link_tags)))],
-                     exp, 
+                     exp,
                      mk_list [Absyn.mk_AQ (string2holfoot_tag (!tree_data_tag))],
                      data))
 
    (* data_tree(x,dtagL:data) *)
-   val _ = add_genpred ("data_tree", [Aspred_arg_ty_exp, Aspred_arg_ty_comma, Aspred_arg_ty_list Aspred_arg_ty_tag, Aspred_arg_ty_colon, Aspred_arg_ty_hol], 
+   val _ = add_genpred ("data_tree", [Aspred_arg_ty_exp, Aspred_arg_ty_comma, Aspred_arg_ty_list Aspred_arg_ty_tag, Aspred_arg_ty_colon, Aspred_arg_ty_hol],
                  fn [exp,dtagL,data] => mk_holfoot_ap_data_tree_absyn (
                      mk_list [Absyn.mk_AQ (string2holfoot_tag (#1 (!tree_link_tags))),
                       Absyn.mk_AQ (string2holfoot_tag (#2 (!tree_link_tags)))],
-                     exp, 
+                     exp,
                      dtagL,
                      data))
 
@@ -141,10 +141,10 @@ let
               Aspred_arg_ty_list Aspred_arg_ty_tag, Aspred_arg_ty_semi,
               Aspred_arg_ty_exp, Aspred_arg_ty_comma,
               Aspred_arg_ty_list Aspred_arg_ty_tag, Aspred_arg_ty_colon,
-              Aspred_arg_ty_hol], 
+              Aspred_arg_ty_hol],
                  fn [tagL,exp,dtagL,data] => mk_holfoot_ap_data_tree_absyn (
                      tagL,
-                     exp, 
+                     exp,
                      dtagL,
                      data))
 
@@ -156,9 +156,9 @@ let
    (* array(b,n) *)
    val _ = add_genpred ("array", [
               Aspred_arg_ty_exp, Aspred_arg_ty_comma,
-              Aspred_arg_ty_exp], 
+              Aspred_arg_ty_exp],
                  fn [exp1,exp2] => mk_holfoot_ap_array_absyn (
-                     exp1, 
+                     exp1,
                      exp2))
 
 
@@ -171,9 +171,9 @@ let
    val _ = add_genpred ("data_array", [
               Aspred_arg_ty_exp, Aspred_arg_ty_comma,
               Aspred_arg_ty_exp, Aspred_arg_ty_comma,
-              Aspred_arg_ty_hol], 
+              Aspred_arg_ty_hol],
                  fn [exp1,exp2,data] => mk_holfoot_ap_data_array_absyn (
-                     exp1, 
+                     exp1,
                      exp2,
                      Absyn.mk_AQ (string2holfoot_tag (!array_data_tag)),
                      data))
@@ -183,9 +183,9 @@ let
               Aspred_arg_ty_exp, Aspred_arg_ty_comma,
               Aspred_arg_ty_exp, Aspred_arg_ty_comma,
               Aspred_arg_ty_tag, Aspred_arg_ty_colon,
-              Aspred_arg_ty_hol], 
+              Aspred_arg_ty_hol],
                  fn [exp1,exp2,dtag,data] => mk_holfoot_ap_data_array_absyn (
-                     exp1, 
+                     exp1,
                      exp2,
                      dtag,
                      data))
@@ -197,9 +197,9 @@ let
    (* interval(b,e) *)
    val _ = add_genpred ("interval", [
               Aspred_arg_ty_exp, Aspred_arg_ty_comma,
-              Aspred_arg_ty_exp], 
+              Aspred_arg_ty_exp],
                  fn [exp1,exp2] => mk_holfoot_ap_interval_absyn (
-                     exp1, 
+                     exp1,
                      exp2))
 
    fun mk_holfoot_ap_data_interval_absyn (exp1, exp2, dtag, data) =
@@ -211,9 +211,9 @@ let
    val _ = add_genpred ("data_interval", [
               Aspred_arg_ty_exp, Aspred_arg_ty_comma,
               Aspred_arg_ty_exp, Aspred_arg_ty_comma,
-              Aspred_arg_ty_hol], 
+              Aspred_arg_ty_hol],
                  fn [exp1,exp2,data] => mk_holfoot_ap_data_interval_absyn (
-                     exp1, 
+                     exp1,
                      exp2,
                      Absyn.mk_AQ (string2holfoot_tag (!array_data_tag)),
                      data))
@@ -223,9 +223,9 @@ let
               Aspred_arg_ty_exp, Aspred_arg_ty_comma,
               Aspred_arg_ty_exp, Aspred_arg_ty_comma,
               Aspred_arg_ty_tag, Aspred_arg_ty_colon,
-              Aspred_arg_ty_hol], 
+              Aspred_arg_ty_hol],
                  fn [exp1,exp2,dtag,data] => mk_holfoot_ap_data_interval_absyn (
-                     exp1, 
+                     exp1,
                      exp2,
                      dtag,
                      data))
@@ -237,9 +237,9 @@ let
           tag, exp1, Absyn.mk_AQ holfoot_data_list___EMPTY_tm, exp2]);
 
    (* queue(f,r) *)
-   val _ = add_genpred ("queue", [Aspred_arg_ty_exp, Aspred_arg_ty_comma, Aspred_arg_ty_exp], 
+   val _ = add_genpred ("queue", [Aspred_arg_ty_exp, Aspred_arg_ty_comma, Aspred_arg_ty_exp],
                  fn [exp1,exp2] => mk_holfoot_ap_queue_absyn (
-                     Absyn.mk_AQ (string2holfoot_tag (!list_link_tag)), 
+                     Absyn.mk_AQ (string2holfoot_tag (!list_link_tag)),
                      exp1, exp2));
 
 
@@ -249,27 +249,27 @@ let
 
 
    (* data_queue(x,data,r) *)
-   val _ = add_genpred ("data_queue", [Aspred_arg_ty_exp, Aspred_arg_ty_comma, Aspred_arg_ty_hol, Aspred_arg_ty_comma, Aspred_arg_ty_exp], 
+   val _ = add_genpred ("data_queue", [Aspred_arg_ty_exp, Aspred_arg_ty_comma, Aspred_arg_ty_hol, Aspred_arg_ty_comma, Aspred_arg_ty_exp],
                  fn [exp1,data,exp2] => mk_holfoot_ap_data_queue_absyn (
-                     Absyn.mk_AQ (string2holfoot_tag (!list_link_tag)), 
-                     exp1, 
+                     Absyn.mk_AQ (string2holfoot_tag (!list_link_tag)),
+                     exp1,
                      Absyn.mk_AQ (string2holfoot_tag (!data_list_tag)),
-                     data, 
+                     data,
                      exp2));
 
 
    (* data_queue(tl;x,dta:data,r) *)
    val _ = add_genpred ("data_queue", [
                  Aspred_arg_ty_tag, Aspred_arg_ty_semi,
-                 Aspred_arg_ty_exp, Aspred_arg_ty_comma, 
+                 Aspred_arg_ty_exp, Aspred_arg_ty_comma,
                  Aspred_arg_ty_tag, Aspred_arg_ty_colon,
                  Aspred_arg_ty_hol, Aspred_arg_ty_comma,
-                 Aspred_arg_ty_exp], 
+                 Aspred_arg_ty_exp],
                  fn [tag,exp1,dtag,data,exp2] => mk_holfoot_ap_data_queue_absyn (
                      tag,
-                     exp1, 
+                     exp1,
                      dtag,
-                     data, 
+                     data,
                      exp2));
 in
    ()
@@ -281,7 +281,7 @@ let
    val _ = add_default_genpreds ();
 in
    ()
-end; 
+end;
 
 
 val _ = init_genpreds ();

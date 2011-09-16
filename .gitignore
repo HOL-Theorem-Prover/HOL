@@ -44,6 +44,7 @@ bin/unquote
 bin/hol.builder
 bin/hol.builder0
 bin/heapname
+bin/buildheap
 
 developers/docfiles/*.txt
 

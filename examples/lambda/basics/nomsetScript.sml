@@ -257,7 +257,7 @@ val pmact_eql = store_thm(
   SRW_TAC [][is_pmact_def, EQ_IMP_THM] THEN
   SRW_TAC [][pmact_decompose]);
 
-val pmact_injective = store_thm(
+val pmact_injective = Store_thm(
   "pmact_injective",
   ``(pmact pm p x = pmact pm p y) = (x = y)``,
   METIS_TAC [pmact_inverse]);
@@ -1258,7 +1258,9 @@ val fresh_equivariant = store_thm(
 val _ = overload_on ("aset_pmact",``set_pmact atom_pmact``);
 val _ = overload_on ("asetpm", ``pmact aset_pmact``)
 
-val cpmsupp_avoids = perm_of_unchanged
+val cpmsupp_avoids =
+    perm_of_unchanged
+        |> SIMP_RULE bool_ss [SimpR ``(==>)``, Once (GSYM stringpm_raw)]
 (*
    given a finite set of atoms and some other set to avoid, we can
    exhibit a pi that maps the original set away from the avoid set, and

@@ -250,7 +250,7 @@ let val _ = perform "add_string_translations"
     	    (DECIDE ``!x. (sexp_to_bool o stringp) x ==>
 	    	    	  (sexp_to_bool o stringp) x``)
 
-    val _ = functionEncodeLib.add_terminal 
+    val _ = functionEncodeLib.add_terminal
             ("str ?", op&&& o (equal ``str`` ## stringSyntax.is_string_literal) o dest_comb);
 in
     ()
@@ -1131,8 +1131,8 @@ val fmap = mk_type("fmap", [alpha,beta])
 (* ONEONE_DECENC_THM                                                         *)
 (*****************************************************************************)
 
-fun ONEONE_DECENC_THM t = 
-let val _ = if type_vars t = [] then () else 
+fun ONEONE_DECENC_THM t =
+let val _ = if type_vars t = [] then () else
     	       raise (polyExn (Standard, [], "Not a ground type: " ^ type_to_string t))
     val thm1 = generate_coding_theorem sexp "encode_decode_map" t
     val thm2 = generate_source_theorem "map_id" t
@@ -1145,7 +1145,7 @@ fun ONEONE_ENC_THM t =
 
 local
 (* Make a 11 term *)
-fun mk11 term = 
+fun mk11 term =
 let val (t1,t2) = dom_rng (type_of term)
 in  mk_comb(mk_const("ONE_ONE", (t1 --> t2) --> bool), term)
 end;
@@ -1165,15 +1165,15 @@ let val cc = if exists_coding_theorem_conclusion sexp s
     val t1 = if exists_coding_theorem_conclusion sexp s
                 then generate_coding_theorem sexp s (base_type t)
 		else generate_source_theorem s (base_type t);
-    val t2 = REWRITE_RULE [fmap_encodeTheory.ONE_ONE_I] 
-             (PART_MATCH (lhs o snd o strip_imp) (SPEC_ALL t1) 
+    val t2 = REWRITE_RULE [fmap_encodeTheory.ONE_ONE_I]
+             (PART_MATCH (lhs o snd o strip_imp) (SPEC_ALL t1)
     	     		 (lhs (snd (strip_imp (snd (strip_forall cc))))))
 
-    val thm1 = if null (type_vars (fdom t)) 
-                  then ONEONE_DECENC_THM (fdom t) 
+    val thm1 = if null (type_vars (fdom t))
+                  then ONEONE_DECENC_THM (fdom t)
                   else ASSUME (fst (dest_imp (concl t2)))
 
-    val matched = MATCH_MP t2 thm1 handle _ => 
+    val matched = MATCH_MP t2 thm1 handle _ =>
     		  MATCH_MP t2 (MATCH_MP fmap_encodeTheory.ONE_ONE_RING thm1) handle _ =>
 		  t2
 
@@ -1205,12 +1205,12 @@ let val (vars,prev) = strip_forall (previous target t)
     val _ = if is_fmap t andalso null (find_terms (can (match_term (valOf enc))) prev)
     	       then raise (polyExn (Standard, [], "No encoder in conclusion of theorem"))
 	       else ()
-    val pdecs = if is_fmap t andalso null pdec 
-    	      	   then (find_terms (can (match_term (encodeLib.get_decode_function target (fdom t)))) prev @ 
+    val pdecs = if is_fmap t andalso null pdec
+    	      	   then (find_terms (can (match_term (encodeLib.get_decode_function target (fdom t)))) prev @
                          [encodeLib.get_decode_function target (fdom t)])
 		   else pdec
     val vars' = union vars (if is_fmap t then free_vars (hd pdecs) else [])
-in  
+in
     list_mk_forall(vars', if not (is_fmap t) orelse null (type_vars (fdom t))
        then prev
        else mk_imp(mk11 (combinSyntax.mk_o(hd pdecs, valOf enc)), prev))
@@ -1224,7 +1224,7 @@ fun oneone_enc_conclusion previous target t =
 let val (vars,prev) = strip_forall (previous target t)
     val sub = type_subst (map (fn x => x |-> gen_tyvar()) (type_vars t))
     val enc = if is_fmap t then SOME (encodeLib.get_encode_function target (fdom t)) else NONE
-in  
+in
     list_mk_forall(vars, if not (is_fmap t) orelse null (type_vars (fdom t))
        then prev
        else mk_imp(mk11 (valOf enc), prev))
@@ -1240,7 +1240,7 @@ let val (vars,prev) = strip_forall (previous x)
     val pvars = filter is_var (mapfilter (rand o rator) coders)
     val imps = map mk11 (filter (C mem pvars) vars)
 in
-    list_mk_forall(vars, 
+    list_mk_forall(vars,
          if null imps then prev else mk_imp(list_mk_conj imps, prev))
 end
 end
@@ -1251,7 +1251,7 @@ in
 fun add_fmap_translations () =
 let val _ = perform "add_fmap_translations"
     val _ = add_translation sexp fmap
-    
+
     val _ = add_rule_coding_theorem_generator "encode_decode_map" is_fmap
 
     val _ = add_coding_theorem sexp fmap "encode_detect_all" ENCDETALL_FMAP;
@@ -1309,7 +1309,7 @@ end;
 local
 open fmap_encodeTheory
 in
-fun add_fmap_rewrites () = 
+fun add_fmap_rewrites () =
 let val _ = add_standard_rewrite 0 "fmap_p" sorted_car_rewrite;
     val _ = add_standard_rewrite 0 "FDOM" fdom_rewrite;
     val _ = add_standard_rewrite 0 "FAPPLY" apply_rewrite;

@@ -5,10 +5,10 @@ struct
   type thy_const = {Thy:string,Name:string}
   type 'a to_ot  = ('a,string) Map.dict
   type 'a from_ot= (string,'a) Map.dict
-  fun lex_cmp c (f1,f2) (x1,x2) =
-    case c(f1 x1,f1 x2) of EQUAL => c(f2 x1,f2 x2) | z => z
-  val thy_tyop_cmp : thy_tyop Lib.cmp  = lex_cmp String.compare (#Tyop,#Thy)
-  val thy_const_cmp : thy_const Lib.cmp = lex_cmp String.compare (#Name,#Thy)
+  local open Lib val s = String.compare in
+    val thy_tyop_cmp  : thy_tyop cmp  = lex_cmp (s,s) (#Tyop,#Thy)
+    val thy_const_cmp : thy_const cmp = lex_cmp (s,s) (#Name,#Thy)
+  end
   val the_tyop_to_ot   = ref (Map.mkDict thy_tyop_cmp)
   val the_tyop_from_ot = ref (Map.mkDict String.compare)
   val the_const_to_ot  = ref (Map.mkDict thy_const_cmp)

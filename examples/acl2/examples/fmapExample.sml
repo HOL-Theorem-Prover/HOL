@@ -118,8 +118,8 @@ val neval_def =
 (* as 'neval' but returns 0 where 'neval' would stop evaluating.             *)
 (*****************************************************************************)
 
-val safe_neval_def = 
-  Define 
+val safe_neval_def =
+  Define
   `(safe_neval (Var v) s = if v IN FDOM s /\ isScalar (s ' v) then ScalarOf(s ' v) else 0i) /\
    (safe_neval (Arr a e) s = if a IN FDOM s /\ isArray (s ' a) /\ integer$int_le 0i (safe_neval e s) /\ Num (safe_neval e s) IN FDOM (ArrayOf (s ' a)) then (ArrayOf(s ' a) ' (Num(safe_neval e s))) else 0i) /\
    (safe_neval (Const c) s = c) /\
@@ -133,7 +133,7 @@ val safe_neval_def =
 (* We can then use this to define nevaluates as follows:                     *)
 (*****************************************************************************)
 
-val nevaluates_def = 
+val nevaluates_def =
   Define `(nevaluates (Var v) s = v IN FDOM s /\ isScalar (s ' v)) /\
           (nevaluates (Arr a e) s = a IN FDOM s /\ isArray (s ' a) /\ integer$int_le 0i (safe_neval e s) /\ nevaluates e s /\ Num (safe_neval e s) IN FDOM (ArrayOf (s ' a))) /\
 	  (nevaluates (Const c) s = T) /\
@@ -188,13 +188,13 @@ val safe_beval_def =
    (safe_beval (Or b1 b2) s = (safe_beval b1 s \/ safe_beval b2 s)) /\
    (safe_beval (Not e) s = ~(safe_beval e s))`;
 
-val bevaluates_def = 
+val bevaluates_def =
  Define
-  `(bevaluates (Equal e1 e2) s = nevaluates e1 s /\ nevaluates e2 s) /\ 
-   (bevaluates (Less e1 e2) s = nevaluates e1 s /\ nevaluates e2 s) /\ 
-   (bevaluates (LessEq e1 e2) s = nevaluates e1 s /\ nevaluates e2 s) /\ 
-   (bevaluates (Greater e1 e2) s = nevaluates e1 s /\ nevaluates e2 s) /\ 
-   (bevaluates (GreaterEq e1 e2) s = nevaluates e1 s /\ nevaluates e2 s) /\ 
+  `(bevaluates (Equal e1 e2) s = nevaluates e1 s /\ nevaluates e2 s) /\
+   (bevaluates (Less e1 e2) s = nevaluates e1 s /\ nevaluates e2 s) /\
+   (bevaluates (LessEq e1 e2) s = nevaluates e1 s /\ nevaluates e2 s) /\
+   (bevaluates (Greater e1 e2) s = nevaluates e1 s /\ nevaluates e2 s) /\
+   (bevaluates (GreaterEq e1 e2) s = nevaluates e1 s /\ nevaluates e2 s) /\
    (bevaluates (And b1 b2) s = bevaluates b1 s /\ bevaluates b2 s) /\
    (bevaluates (Or b1 b2) s = bevaluates b1 s /\ bevaluates b2 s) /\
    (bevaluates (Not e) s = bevaluates e s)`;
@@ -225,7 +225,7 @@ val aeval_def =
 (* aevaluates defines when aeval will complete                               *)
 (*****************************************************************************)
 
-val aevaluates_def = 
+val aevaluates_def =
  Define
   `(aevaluates (ArrConst f) s = T) /\
    (aevaluates (ArrVar v) s = v IN FDOM s) /\
@@ -273,7 +273,7 @@ val safe_naeval_def =
   `(safe_naeval (INL e) s = Scalar(safe_neval e s)) /\
    (safe_naeval (INR a) s = Array(safe_aeval a s))`;
 
-val naevaluates_def = 
+val naevaluates_def =
  Define
   `(naevaluates (INL e) s = nevaluates e s) /\
    (naevaluates (INR a) s = aevaluates a s)`;
@@ -287,7 +287,7 @@ val _ = acl2encodeLib.translate_simple_function [(``safe_naeval``,"acl2naeval")]
 (*****************************************************************************)
 (* Translations of other definitions...                                      *)
 (*****************************************************************************)
- 
+
 val Update_def =
  Define
   `Update v e s = s |+ (v, naeval e s)`;
@@ -296,7 +296,7 @@ val safe_Update_def =
  Define
   `safe_Update v e s = s |+ (v, safe_naeval e s)`;
 
-val Updates_def = 
+val Updates_def =
  Define
   `Updates v e s = naevaluates e s`;
 
@@ -422,7 +422,7 @@ val _ = set_fixity ";;" (Infixr 180);
 (* inductively by the set of rules shown below.                              *)
 (*---------------------------------------------------------------------------*)
 
-val (rules,induction,ecases) = 
+val (rules,induction,ecases) =
  Hol_reln
    `(!s.      EVAL Skip s s)
  /\ (!s v e.   EVAL (GenAssign v e) s (Update v e s))
@@ -3386,7 +3386,7 @@ val Least_AnWhile_LEMMA =
        THEN `IS_SOME (SOME_FUNPOW f n x)` by METIS_TAC[option_CLAUSES]
        THEN `~beval b (THE (SOME_FUNPOW f n x))` by METIS_TAC[option_CLAUSES]
        THEN `(!m. IS_SOME (SOME_FUNPOW f m x) /\
-                  ~beval b (THE (SOME_FUNPOW f m x)) ==> n <= m) 
+                  ~beval b (THE (SOME_FUNPOW f m x)) ==> n <= m)
                    ==> EVAL (AnWhile b R c) x s2`
              by METIS_TAC[SOME_11]
        THEN `!m. IS_SOME (SOME_FUNPOW f (SUC m) s1) /\

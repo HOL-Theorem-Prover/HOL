@@ -123,9 +123,9 @@ val is_asl_trivial_cond   : term -> bool
 val dest_asl_star         : term -> term * term * term
 val strip_asl_star        : term -> term list
 val is_asl_star           : term -> bool
-val dest_asl_exists       : term -> term * term 
+val dest_asl_exists       : term -> term * term
 val is_asl_exists         : term -> bool
-val dest_asl_exists_list  : term -> term * term 
+val dest_asl_exists_list  : term -> term * term
 val is_asl_exists_list    : term -> bool
 
 

@@ -17,7 +17,6 @@ open binderLib
 open nomsetTheory pred_setTheory
 
 fun Store_thm (p as (n,t,tac)) = store_thm p before export_rewrites [n]
-val lswapstr_APPEND = basic_swapTheory.lswapstr_APPEND
 
 val _ = new_theory "lnameless"
 
@@ -51,15 +50,15 @@ val lnpm_raw = store_thm(
   "lnpm_raw",
   ``lnpm = raw_lnpm``,
   SRW_TAC [][GSYM pmact_bijections] THEN
-  SRW_TAC [][is_pmact_def, permeq_def, FUN_EQ_THM] THENL [
+  SRW_TAC [][is_pmact_def, permeq_thm, FUN_EQ_THM] THENL [
     Induct_on `x` THEN SRW_TAC [][],
-    Induct_on `x` THEN SRW_TAC [][lswapstr_APPEND],
+    Induct_on `x` THEN SRW_TAC [][pmact_decompose],
     Induct_on `x` THEN SRW_TAC [][]
   ]);
 
 val lnpm_thm = save_thm(
 "lnpm_thm",
-raw_lnpm_def |> SUBS [GSYM lnpm_raw, GSYM stringpm_raw]);
+raw_lnpm_def |> SUBS [GSYM lnpm_raw]);
 val _ = export_rewrites["lnpm_thm"];
 
 val lnpm_open = prove(
@@ -99,7 +98,7 @@ val lclosed_eqvt = prove(
   ``!t. lclosed t ==> !pi. lclosed (lnpm pi t)``,
   HO_MATCH_MP_TAC lclosed_ind THEN SRW_TAC [][lclosed_rules, lnpm_open] THEN
   MATCH_MP_TAC (last (CONJUNCTS lclosed_rules)) THEN
-  Q.EXISTS_TAC `stringpm pi s` THEN
+  Q.EXISTS_TAC `lswapstr pi s` THEN
   SRW_TAC [][fv_lnpm]);
 
 val lclosed_gen_bvc_ind = store_thm(
@@ -246,7 +245,7 @@ val _ = export_rewrites ["ctxtswap_sing_inv"]
 val ctxtswap_APPEND = store_thm(
   "ctxtswap_APPEND",
   ``!p1 p2. ctxtswap (p1 ++ p2) G = ctxtswap p1 (ctxtswap p2 G)``,
-  Induct_on `G` THEN SRW_TAC [][basic_swapTheory.lswapstr_APPEND]);
+  Induct_on `G` THEN SRW_TAC [][pmact_decompose]);
 
 (* context membership "respects" permutation *)
 val MEM_ctxtswap = store_thm(
@@ -321,11 +320,11 @@ val (typing_rules, typing_ind, typing_cases) = Hol_reln`
 val typing_eqvt = store_thm(
   "typing_eqvt",
   ``!G t ty. typing G t ty ==> !pi. typing (ctxtswap pi G) (lnpm pi t) ty``,
-  HO_MATCH_MP_TAC typing_ind THEN SRW_TAC [][typing_rules, lnpm_open, stringpm_raw] THENL [
+  HO_MATCH_MP_TAC typing_ind THEN SRW_TAC [][typing_rules, lnpm_open] THENL [
     METIS_TAC [typing_rules],
     MATCH_MP_TAC (last (CONJUNCTS typing_rules)) THEN
     Q.EXISTS_TAC `lswapstr pi s` THEN
-    SRW_TAC [][fv_lnpm, stringpm_raw]
+    SRW_TAC [][fv_lnpm]
   ]);
 
 
@@ -361,11 +360,11 @@ val typing_bvc_ind = store_thm(
                            !pi. typing (ctxtswap pi G) (lnpm pi t) ty /\
                                 P (ctxtswap pi G) (lnpm pi t) ty`
         THEN1 METIS_TAC [pmact_nil, ctxtswap_NIL] THEN
-  HO_MATCH_MP_TAC typing_ind THEN SRW_TAC [][lnpm_open, typing_rules,stringpm_raw] THENL [
+  HO_MATCH_MP_TAC typing_ind THEN SRW_TAC [][lnpm_open, typing_rules] THENL [
     METIS_TAC [typing_rules],
     METIS_TAC [],
     MATCH_MP_TAC (last (CONJUNCTS typing_rules)) THEN
-    Q.EXISTS_TAC `lswapstr pi s` THEN SRW_TAC [][fv_lnpm,stringpm_raw],
+    Q.EXISTS_TAC `lswapstr pi s` THEN SRW_TAC [][fv_lnpm],
 
     Q_TAC (NEW_TAC "z") `fv (lnpm pi t) UNION X UNION
                          ctxtFV (ctxtswap pi G) UNION
@@ -376,14 +375,14 @@ val typing_bvc_ind = store_thm(
     ASM_SIMP_TAC (srw_ss()) [] THEN
     STRIP_TAC THEN
     `lnpm [(lswapstr pi s, z)] (lnpm pi t) = lnpm pi t`
-       by SRW_TAC [][lnpm_fresh, fv_lnpm, stringpm_raw] THEN
+       by SRW_TAC [][lnpm_fresh, fv_lnpm] THEN
     `~(s IN ctxtFV G)`
        by (IMP_RES_TAC typing_valid_ctxt THEN
            FULL_SIMP_TAC bool_ss [valid_ctxt_CONS] THEN
            FULL_SIMP_TAC (srw_ss()) [ctxtFV_ctxtswap, pmact_decompose] THEN
-           FULL_SIMP_TAC (srw_ss()) [stringpm_raw]) THEN
+           FULL_SIMP_TAC (srw_ss()) []) THEN
     `ctxtswap [(lswapstr pi s,z)] (ctxtswap pi G) = ctxtswap pi G`
-       by SRW_TAC [][ctxtswap_fresh, stringpm_raw] THEN
+       by SRW_TAC [][ctxtswap_fresh] THEN
     FULL_SIMP_TAC (srw_ss()) [GSYM pmact_decompose,
                               GSYM ctxtswap_APPEND]
   ]);
@@ -408,7 +407,7 @@ val typing_cofin_ind = store_thm(
                            !pi. P (ctxtswap pi G) (lnpm pi t) ty`
         THEN1 METIS_TAC [pmact_nil, ctxtswap_NIL] THEN
   HO_MATCH_MP_TAC strong_typing_ind THEN
-  SRW_TAC [][lnpm_open,stringpm_raw] THEN1 METIS_TAC [] THEN
+  SRW_TAC [][lnpm_open] THEN1 METIS_TAC [] THEN
   FIRST_X_ASSUM MATCH_MP_TAC THEN
   Q.EXISTS_TAC `fv (lnpm pi t) UNION ctxtFV (ctxtswap pi G)` THEN
   SRW_TAC [][] THEN
@@ -418,7 +417,7 @@ val typing_cofin_ind = store_thm(
                   (ctxtswap ((s',lswapstr pi s)::pi) G = ctxtswap pi G)`
         THEN1 SRW_TAC [][] THEN
   `lnpm [(s',lswapstr pi s)] (lnpm pi t) = lnpm pi t`
-      by SRW_TAC [][lnpm_fresh, fv_lnpm, stringpm_raw] THEN
+      by SRW_TAC [][lnpm_fresh, fv_lnpm] THEN
   FULL_SIMP_TAC (srw_ss()) [GSYM pmact_decompose] THEN
   `~(s IN ctxtFV G)`
       by (IMP_RES_TAC typing_valid_ctxt THEN
@@ -429,7 +428,7 @@ val typing_cofin_ind = store_thm(
   ` _ = ctxtswap [(s',lswapstr pi s)] (ctxtswap pi G)`
      by SRW_TAC [][ctxtswap_APPEND] THEN
   ` _ = ctxtswap pi G`
-     by SRW_TAC [][ctxtswap_fresh, stringpm_raw] THEN
+     by SRW_TAC [][ctxtswap_fresh] THEN
   SRW_TAC [][]);
 
 (* The approach in "Engineering Formal Metatheory" is to define a separate

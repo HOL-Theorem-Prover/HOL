@@ -17,11 +17,11 @@ val BAG_CARD_tm = mk_const("BAG_CARD", bag_ty --> num_ty);
 val EMPTY_BAG_tm = mk_const("EMPTY_BAG", bag_ty);
 val SUB_BAG_tm = mk_const("SUB_BAG", bag_ty --> bag_ty --> bool);
 val BAG_EQ_tm = mk_const("=", bag_ty --> bag_ty --> bool);
-val BAG_IMAGE_tm = mk_const("BAG_IMAGE", 
-   (Type.alpha --> Type.beta) --> (Type.alpha --> num_ty) --> 
+val BAG_IMAGE_tm = mk_const("BAG_IMAGE",
+   (Type.alpha --> Type.beta) --> (Type.alpha --> num_ty) -->
       (Type.beta --> num_ty));
 val BAG_ALL_DISTINCT_tm = mk_const("BAG_ALL_DISTINCT", bag_ty --> bool);
-val BAG_EVERY_tm = mk_const("BAG_EVERY", 
+val BAG_EVERY_tm = mk_const("BAG_EVERY",
    (Type.alpha --> bool) --> bag_ty --> bool)
 
 
@@ -96,7 +96,7 @@ val is_insert = can dest_insert
 fun mk_all_distinct b = mk_icomb (BAG_ALL_DISTINCT_tm, b);
 fun dest_all_distinct tm = let
   val (f, arg) = dest_comb tm
-  val _ = (aconv f BAG_ALL_DISTINCT_tm) orelse 
+  val _ = (aconv f BAG_ALL_DISTINCT_tm) orelse
           raise ERR "BAG_ALL_DISTINCT" ("not a BAG_ALL_DISTINCT")
 in
   arg
@@ -104,11 +104,11 @@ end
 val is_all_distinct = can dest_all_distinct
 
 
-fun mk_card tm = 
+fun mk_card tm =
   mk_icomb(BAG_CARD_tm, tm)
 fun dest_card tm = let
   val (f, arg) = dest_comb tm
-  val _ = (aconv f BAG_CARD_tm) orelse 
+  val _ = (aconv f BAG_CARD_tm) orelse
           raise ERR "BAG_CARD" ("not a BAG_CARD")
 in
   arg
@@ -116,7 +116,7 @@ end
 val is_card = can dest_card
 
 
-fun mk_image (tm1, tm2) = 
+fun mk_image (tm1, tm2) =
   list_mk_icomb(BAG_IMAGE_tm, [tm1, tm2])
 val dest_image = dest_binop "BAG_IMAGE" "dest_image"
 val is_image = can dest_image

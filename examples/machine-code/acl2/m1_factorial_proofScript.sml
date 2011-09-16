@@ -10,8 +10,8 @@ infix \\
 val op \\ = op THEN;
 
 val sexp_fact_def = acl2_fact_definition
-  |> SIMP_RULE bool_ss [top_defun,pop_defun,push_defun,nth_lemma, 
-       LET_DEF,nth_1,cdr_def,car_def,ite_def,not_eq_nil] 
+  |> SIMP_RULE bool_ss [top_defun,pop_defun,push_defun,nth_lemma,
+       LET_DEF,nth_1,cdr_def,car_def,ite_def,not_eq_nil]
 
 val FACT_def = Define `
   (FACT (0,m) = m) /\
@@ -29,26 +29,26 @@ val FACT_EQ_FACTORIAL = prove(
 
 val sexp_fact1_thm = prove(
   ``!n m. fact1_pre (List [],nat n,nat m) /\
-          (sexp_fact1 (List []) (nat n) (nat m) = 
+          (sexp_fact1 (List []) (nat n) (nat m) =
            List [nat 0; nat (FACT (n,m)); List []])``,
   Induct \\ FULL_SIMP_TAC std_ss [List_def] \\ ONCE_REWRITE_TAC [sexp_fact_def]
   \\ SIMP_TAC std_ss [FACT_def,car_def,less_nat,cdr_def,mult_nat,
        update_nth_lemma,update_nth_1,sexp_not]
-  \\ ONCE_REWRITE_TAC [] \\ ASM_SIMP_TAC std_ss [sexp_reduce_SUC]  
-  \\ SIMP_TAC std_ss [AC MULT_ASSOC MULT_COMM]); 
+  \\ ONCE_REWRITE_TAC [] \\ ASM_SIMP_TAC std_ss [sexp_reduce_SUC]
+  \\ SIMP_TAC std_ss [AC MULT_ASSOC MULT_COMM]);
 
 
 
 val sexp_fact_thm = prove(
   ``!n m. fact_pre (List [nat n; nat m],List []) /\
-          (sexp_fact (List [nat n; nat m]) (List []) = 
+          (sexp_fact (List [nat n; nat m]) (List []) =
            List [List [nat 0; nat (FACT (n,1))]; List [nat (FACT (n,1))]])``,
-  ONCE_REWRITE_TAC [sexp_fact_def]  
+  ONCE_REWRITE_TAC [sexp_fact_def]
   \\ SIMP_TAC std_ss [List_def,update_nth_1,car_def,cdr_def]
   \\ SIMP_TAC std_ss [GSYM List_def,sexp_fact1_thm]
   \\ SIMP_TAC std_ss [List_def,update_nth_1,car_def,cdr_def]);
 
-val m1_factorial_thm = acl2_fact_certificate 
+val m1_factorial_thm = acl2_fact_certificate
   |> Q.INST [`l`|->`List [nat n; nat m]`,`s`|->`List []`]
   |> SIMP_RULE std_ss [sexp_fact_thm,set_sepTheory.SEP_CLAUSES,LET_DEF,FACT_EQ_FACTORIAL,
        EVAL ``car (List (x::xs))``,EVAL ``car (cdr (List (x::y::xs)))``]

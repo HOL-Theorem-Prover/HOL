@@ -607,7 +607,7 @@ val arm_symbol_add_lemma = prove(
   \\ `(STRLEN s + 3) DIV 4 * 4 <= STRLEN s + 3` by
      (ASSUME_TAC (Q.SPEC `STRLEN s + 3` (SIMP_RULE std_ss [] (Q.SPEC `4` DIVISION)))
       \\ `(STRLEN s + 3) MOD 4 < 4` by SIMP_TAC std_ss [MOD_LESS] \\ DECIDE_TAC)
-  THEN1 
+  THEN1
      (Q.ABBREV_TAC `a2 = a + n2w (8 + (LENGTH h + 3) DIV 4 * 4)`
       \\ `w2n a + 4 < 4294967296 /\
           (w2n a + (8 + (STRLEN h + 3) DIV 4 * 4)) < 4294967296 /\

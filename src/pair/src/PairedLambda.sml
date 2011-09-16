@@ -294,7 +294,7 @@ let
    val used_vars_list = HOLset.listItems (
         HOLset.difference (vars_set, unused_vars_set));
 
-   val beta_conv = if gen then GEN_BETA_CONV else 
+   val beta_conv = if gen then GEN_BETA_CONV else
        (PAIRED_BETA_CONV ORELSEC BETA_CONV);
 
    (*generate the new result term

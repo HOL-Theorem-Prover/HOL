@@ -334,12 +334,12 @@ struct
       Forall v => Profile.profile "Forall" (fn() => GEN v th) ()
     | Exists (v,w) => Profile.profile "Exists" (fn () => let
         val th = EXISTS (mk_exists(v,concl th),v) th
-        val th = INST [v |-> w] th
-        val th = PROVE_HYP (REFL w) th
+        val ex = EXISTS (mk_exists(v,mk_eq(v,w)),w) (REFL w)
+        val th = CHOOSE (v,ex) th
       in th end ) ()
     | Ext (v,w) => Profile.profile "Ext" (fn () => let
-        val th = INST [v |-> w] th
-        val th = PROVE_HYP (REFL w) th
+        val ex = EXISTS (mk_exists(v,mk_eq(v,w)),w) (REFL w)
+        val th = CHOOSE (v,ex) th
       in th end ) ()
     val thm = Profile.profile "DISCH_ALL" DISCH_ALL (List.foldl foldthis (Profile.profile "UNDISCH_ALL" UNDISCH_ALL thm) deps)
 

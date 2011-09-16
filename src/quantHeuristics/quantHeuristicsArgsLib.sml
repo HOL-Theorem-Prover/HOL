@@ -79,8 +79,8 @@ let
    val vars = case (P v t) of NONE => raise QUANT_INSTANTIATE_HEURISTIC___no_guess_exp
                             | some => valOf some;
    val fvL = rev (free_vars vars)
- 
-   val gthmL = CONJUNCTS (ISPEC (mk_abs (v, t)) GUESS_PAIR_THM)   
+
+   val gthmL = CONJUNCTS (ISPEC (mk_abs (v, t)) GUESS_PAIR_THM)
 in
   {rewrites            = [],
    general             = [],
@@ -260,11 +260,11 @@ val list_qp =
 
 fun get_record_type_rewrites ty =
 let
-   fun type_rewrites ty = 
+   fun type_rewrites ty =
        let
           val ty_info = valOf (TypeBase.fetch ty)
           val (thyname,typename) = TypeBasePure.ty_name_of ty_info
-       in           
+       in
           if null (TypeBasePure.fields_of ty_info) then [] else
           (map (fn s => (DB.fetch thyname (typename^"_"^(fst s))))
              (TypeBasePure.fields_of ty_info)) @
@@ -274,7 +274,7 @@ let
             "_accfupds"])@
           ((valOf (TypeBasePure.one_one_of ty_info))::
           ((TypeBasePure.case_def_of ty_info)::
-          ((TypeBasePure.accessors_of ty_info)@(TypeBasePure.updates_of ty_info))))          
+          ((TypeBasePure.accessors_of ty_info)@(TypeBasePure.updates_of ty_info))))
        end;
 
   val constructor = hd (TypeBase.constructors_of ty)
@@ -298,18 +298,18 @@ let
    (*check whether something should be done*)
    val v_info = case TypeBase.fetch (type_of v) of NONE   => raise QUANT_INSTANTIATE_HEURISTIC___no_guess_exp
                                                  | SOME x => x
-   val _ = if null (TypeBasePure.fields_of v_info) orelse not (P v t) then 
+   val _ = if null (TypeBasePure.fields_of v_info) orelse not (P v t) then
               raise QUANT_INSTANTIATE_HEURISTIC___no_guess_exp else ()
    val (thyname,typename) = TypeBasePure.ty_name_of v_info
 
    val vars = let
-      val (v_name,_) = dest_var v 
+      val (v_name,_) = dest_var v
       fun mk_new_var (s, ty) = mk_var (v_name ^ "_" ^ s, ty);
       in
          map mk_new_var (TypeBasePure.fields_of v_info)
       end;
 
-   val thm0 = 
+   val thm0 =
         let
            val xthm0 = DB.fetch thyname (typename^"_literal_nchotomy")
 

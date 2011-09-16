@@ -3,19 +3,19 @@ struct
 
 (*
 quietdec := true;
-loadPath := (Globals.HOLDIR ^ "/examples/separationLogic/src") :: 
+loadPath := (Globals.HOLDIR ^ "/examples/separationLogic/src") ::
             !loadPath;
 show_assums := true;
 *)
 
-open HolKernel Parse boolLib finite_mapTheory 
+open HolKernel Parse boolLib finite_mapTheory
 open treeTheory separationLogicSyntax;
 
 (*
 quietdec := false;
 *)
 
-fun tree_mk_const n = 
+fun tree_mk_const n =
    prim_mk_const {Name = n, Thy = "tree"}
 
 val node_term = tree_mk_const "node";

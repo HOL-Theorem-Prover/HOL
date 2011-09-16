@@ -51,8 +51,8 @@ val finite_fv = store_thm(
 val _ = augment_srw_ss [rewrites [finite_fv]]
 
 val raw_ptpm_def = Define`
-  (raw_ptpm p (var s vv) = var (perm_of p s) vv) ∧
-  (raw_ptpm p (lam v bv bndts unbndts) = lam (perm_of p v)
+  (raw_ptpm p (var s vv) = var (lswapstr p s) vv) ∧
+  (raw_ptpm p (lam v bv bndts unbndts) = lam (lswapstr p v)
                                          bv
                                          (raw_ptpml p bndts)
                                          (raw_ptpml p unbndts)) ∧
@@ -89,7 +89,7 @@ val ptpm_raw = prove(
   srw_tac [][is_pmact_def] >|[
     srw_tac [][raw_ptpm_nil],
     srw_tac [][raw_ptpm_compose],
-    fsrw_tac [][raw_ptpm_permeq, FUN_EQ_THM, permeq_def]
+    fsrw_tac [][raw_ptpm_permeq, permeq_thm, FUN_EQ_THM]
 ]));
 val ptpm_raw = INST_TYPE[gamma|->alpha,delta|->beta] ptpm_raw;
 

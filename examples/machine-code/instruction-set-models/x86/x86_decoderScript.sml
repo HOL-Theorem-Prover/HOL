@@ -92,8 +92,8 @@ val x86_match_step_def = Define `
 (* syntax classes *)
 
 val x86_binop_def = Define `x86_binop =
-  [("ADC",Xadc); ("ADD",Xadd); ("AND",Xand); ("CMP",Xcmp); 
-   ("OR",Xor); ("SAR",Xsar); ("SHR",Xshr); ("SHL",Xshl); 
+  [("ADC",Xadc); ("ADD",Xadd); ("AND",Xand); ("CMP",Xcmp);
+   ("OR",Xor); ("SAR",Xsar); ("SHR",Xshr); ("SHL",Xshl);
    ("SBB",Xsbb); ("SUB",Xsub); ("TEST",Xtest); ("XOR",Xxor)]`;
 
 val x86_monop_def = Define `x86_monop =
@@ -339,7 +339,7 @@ val x86_syntax_list = `` [
 
     " C6 /0 ib  | MOV r/m8, imm8    ";
     " 88 /r     | MOV r/m8, r8      ";
-    " 0F B6 /r  | MOVZX r32, r/m8   "; 
+    " 0F B6 /r  | MOVZX r32, r/m8   ";
     " 38 /r     | CMP r/m8, r8      ";
     " 3A /r     | CMP r8, r/m8      ";
     " 80 /7 ib  | CMP r/m8, imm8    ";

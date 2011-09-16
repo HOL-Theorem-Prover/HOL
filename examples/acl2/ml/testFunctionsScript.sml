@@ -35,10 +35,10 @@ fun varftac f tac (a,g) =
 let val v = f g
 in  tac v (a,g)
 end
-val tactic = 
+val tactic =
     completeInduct_on `LENGTH x` THEN
-    Cases THEN 
-    TRY (varftac (rand o rand o rand o rand o rator) 
+    Cases THEN
+    TRY (varftac (rand o rand o rand o rand o rator)
     		 (fn v => STRUCT_CASES_TAC (ISPEC v list_CASES))) THEN
     RW_TAC arith_ss [LENGTH,SPLIT_def,arithmeticTheory.ADD1] THEN
     varftac (rand o rand o rator o rand o rand)

@@ -3,8 +3,8 @@ struct
 
 (*
 quietdec := true;
-loadPath := (Globals.HOLDIR ^ "/examples/separationLogic/src") :: 
-            (Globals.HOLDIR ^ "/examples/separationLogic/src/holfoot") :: 
+loadPath := (Globals.HOLDIR ^ "/examples/separationLogic/src") ::
+            (Globals.HOLDIR ^ "/examples/separationLogic/src/holfoot") ::
             !loadPath;
 
 map load ["finite_mapTheory", "separationLogicTheory"];
@@ -34,7 +34,7 @@ fun safe_dest_pair t =
 val FEMPTY_tm = ``FEMPTY:'a |-> 'b``;
 val FUPDATE_tm = ``$FUPDATE:('a |-> 'b) -> 'a # 'b -> ('a |-> 'b)``;
 
-fun strip_finite_map t = 
+fun strip_finite_map t =
     let
 	val (op_term, args) = strip_comb t;
     in
@@ -45,7 +45,7 @@ fun strip_finite_map t =
                ((pairLib.dest_pair (el 2 args))::slist, rest)
 	   end
        else if (same_const op_term FEMPTY_tm) then ([], NONE)
-       else ([], SOME t) 
+       else ([], SOME t)
     end handle HOL_ERR _ => ([], SOME t);
 
 
@@ -67,11 +67,11 @@ fun list2tuple8 l = (el 1 l, el 2 l, el 3 l, el 4 l, el 5 l, el 6 l, el 7 l, el 
 fun list2tuple9 l = (el 1 l, el 2 l, el 3 l, el 4 l, el 5 l, el 6 l, el 7 l, el 8 l, el 9 l);
 
 
-fun strip_comb_num n ff t = 
+fun strip_comb_num n ff t =
   let
      val (f, args) = strip_comb t;
      val _ = if (same_const f ff) andalso (length args = n) then () else Feedback.fail ()
-  in 
+  in
      args
   end;
 
@@ -91,7 +91,7 @@ fun strip_comb_9 ff = list2tuple9 o (strip_comb_num 9 ff);
 
 
 
-fun asl_mk_const n = 
+fun asl_mk_const n =
    prim_mk_const {Name = n, Thy = "separationLogic"}
 
 val asl_prog_parallel_term = asl_mk_const "asl_prog_parallel";
@@ -114,7 +114,7 @@ fun mk_asl_prog_block t = mk_icomb (asl_prog_block_term, t);
 val asl_prog_cond_term = asl_mk_const "asl_prog_cond";
 val dest_asl_prog_cond = strip_comb_3 asl_prog_cond_term;
 val is_asl_prog_cond = (can dest_asl_prog_cond);
-fun mk_asl_prog_cond (c,p1,p2) = 
+fun mk_asl_prog_cond (c,p1,p2) =
    list_mk_icomb(asl_prog_cond_term, [c,p1,p2]);
 
 val asl_prog_choice_term = asl_mk_const "asl_prog_choice";
@@ -126,7 +126,7 @@ val is_asl_prog_choice = (can dest_asl_prog_choice);
 val asl_prog_while_term = asl_mk_const "asl_prog_while";
 val dest_asl_prog_while = strip_comb_2 asl_prog_while_term;
 val is_asl_prog_while = (can dest_asl_prog_while);
-fun mk_asl_prog_while (c,p) = 
+fun mk_asl_prog_while (c,p) =
    list_mk_icomb(asl_prog_while_term, [c,p]);
 
 val asl_prog_assume_term = asl_mk_const "asl_prog_assume";
@@ -153,7 +153,7 @@ val is_ASL_PROGRAM_HOARE_TRIPLE = (can dest_ASL_PROGRAM_HOARE_TRIPLE);
 val ASL_PROGRAM_IS_ABSTRACTION_term = asl_mk_const "ASL_PROGRAM_IS_ABSTRACTION";
 val dest_ASL_PROGRAM_IS_ABSTRACTION = strip_comb_4 ASL_PROGRAM_IS_ABSTRACTION_term;
 val is_ASL_PROGRAM_IS_ABSTRACTION = (can dest_ASL_PROGRAM_IS_ABSTRACTION);
-fun mk_ASL_PROGRAM_IS_ABSTRACTION (xenv,penv,x,y) = 
+fun mk_ASL_PROGRAM_IS_ABSTRACTION (xenv,penv,x,y) =
    list_mk_icomb(ASL_PROGRAM_IS_ABSTRACTION_term, [xenv,penv,x,y]);
 
 
@@ -298,7 +298,7 @@ dest_asl_comment_location (rand (rator tt))
 
 fun save_dest_list_asl_comment_location tt =
    if (is_asl_comment_location tt) then
-      save_dest_asl_comment_location tt 
+      save_dest_asl_comment_location tt
    else
    let
       val (c, p, f) = save_dest_asl_comment_location (rand (rator tt))
@@ -329,26 +329,26 @@ fun dest_asl_comment t =
      val _ = if (length args = 2) then () else (Feedback.fail ());
      val (arg1, arg2) = (el 1 args, el 2 args);
 
-     val def_thm = 
-         if (same_const op_term asl_comment_location_term) then 
+     val def_thm =
+         if (same_const op_term asl_comment_location_term) then
             asl_comment_location_def
-         else if (same_const op_term asl_comment_location_string_term) then 
+         else if (same_const op_term asl_comment_location_string_term) then
             asl_comment_location_string_def
-         else if (same_const op_term asl_comment_location2_term) then 
+         else if (same_const op_term asl_comment_location2_term) then
             asl_comment_location2_def
-         else if (same_const op_term asl_comment_loop_invariant_term) then 
+         else if (same_const op_term asl_comment_loop_invariant_term) then
             asl_comment_loop_invariant_def
-         else if (same_const op_term asl_comment_abstraction_term) then 
+         else if (same_const op_term asl_comment_abstraction_term) then
             asl_comment_abstraction_def
-         else if (same_const op_term asl_comment_loop_spec_term) then 
+         else if (same_const op_term asl_comment_loop_spec_term) then
             asl_comment_loop_spec_def
-         else if (same_const op_term asl_comment_loop_unroll_term) then 
+         else if (same_const op_term asl_comment_loop_unroll_term) then
             asl_comment_loop_unroll_def
-         else if (same_const op_term asl_comment_block_spec_term) then 
+         else if (same_const op_term asl_comment_block_spec_term) then
             asl_comment_block_spec_def
          else Feedback.fail();
    in
-     (op_term, arg1, arg2, def_thm)   
+     (op_term, arg1, arg2, def_thm)
    end;
 
 val asl_comment_assert_term = asl_mk_const "asl_comment_assert"

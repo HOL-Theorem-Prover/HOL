@@ -37,6 +37,7 @@ struct
                      | DEF_AXIOM of Term.term
                      | ELIM_UNUSED of Term.term
                      | HYPOTHESIS of Term.term
+                     | IFF_TRUE of proofterm * Term.term
                      | LEMMA of proofterm * Term.term
                      | MONOTONICITY of proofterm list * Term.term
                      | MP of proofterm * proofterm * Term.term

@@ -1,8 +1,8 @@
 
 (* ========================= execSymbSMT.sml =====================
 
-   Verification by symbolic execution that uses SMTlib library written by 
-   Tjark Weber for testing feasability and correctness of paths. 
+   Verification by symbolic execution that uses SMTlib library written by
+   Tjark Weber for testing feasability and correctness of paths.
    YICES_TAC or Z3_TAC can be used.
 
 ------------------------------------------------------------------
@@ -361,18 +361,18 @@ fun resetAll() =
    external SMT solver *)
 
 val SMT_TAC = ref YICES_TAC;
-fun setSMT_TAC name = 
+fun setSMT_TAC name =
   if name = "Z3"
-  then 
+  then
      (print "Symbolic execution using Z3_TAC\n";
       SMT_TAC := Z3_TAC
      )
   else if name = "Z3_ORACLE"
-       then 
+       then
         (print "Symbolic execution using Z3_ORACLE_TAC\n";
         SMT_TAC := Z3_ORACLE_TAC
         )
-     else 
+     else
         (print "Symbolic execution using YICES_TAC\n";
         SMT_TAC := YICES_TAC)
 
@@ -571,7 +571,7 @@ fun testPath name pre path st =
     print "Testing feasability\n";
     print "======================\n";
     let val forallConj = forallQuantify (mk_neg conj)
-        val th = Tactical.prove(forallConj,!SMT_TAC) 
+        val th = Tactical.prove(forallConj,!SMT_TAC)
     in
        (print "======================\n";
 	print( "Path " ^ term_to_string(path) ^ "is unfeasable\n");
@@ -602,7 +602,7 @@ fun testPath name pre path st =
     end
 end;
 
-(*     
+(*
        (* try to show that the condition is impossible
           using SIMP_CONV*)
        let  val existsConj = existQuantify conj
@@ -637,7 +637,7 @@ handle ExtSolverTimeout =>
          (true,((Real.fromInt timeout)*0.001))
         )
 *)
-   
+
 
 
 
@@ -705,7 +705,7 @@ fun verifyPath name pre st1 st2 post path =
       (print "======================\n";
        print "Testing correctness\n";
        print "======================\n";
-       let val th = Tactical.prove(tm,!SMT_TAC) 
+       let val th = Tactical.prove(tm,!SMT_TAC)
        in
 
 	       ( incSMTSolvedPath();
@@ -1089,7 +1089,7 @@ in
 
 
 (* Do symbolic execution
--   name is the name of the program to be verified 
+-   name is the name of the program to be verified
    (name of file in opsemtools/java2opsem/testFiles/opsemFiles/
 -  spec is the relational specification of program name
 -  n is the number of symbolic execution step

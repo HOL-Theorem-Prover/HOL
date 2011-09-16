@@ -2,8 +2,8 @@ open HolKernel Parse boolLib bossLib;
 
 (*
 quietdec := true;
-loadPath := 
-            (Globals.HOLDIR ^ "/examples/separationLogic/src") :: 
+loadPath :=
+            (Globals.HOLDIR ^ "/examples/separationLogic/src") ::
             !loadPath;
 
 map load ["relationTheory", "pred_setTheory", "operatorTheory"];
@@ -20,7 +20,7 @@ quietdec := false;
 val _ = new_theory "tree";
 
 val tree = Hol_datatype `tree =
-    leaf 
+    leaf
   | node of 'a => tree list`
 
 
@@ -81,7 +81,7 @@ val SUBTREES_def = Define `SUBTREES = RTC DIRECT_SUBTREES`;
 
 val PSUBTREES_THM = store_thm ("PSUBTREES_THM",
 ``(PSUBTREES (leaf:'a tree) = EMPTY) /\
-  (!v:'a tL. PSUBTREES (node v tL) = 
+  (!v:'a tL. PSUBTREES (node v tL) =
              (set tL) UNION BIGUNION (set (MAP PSUBTREES tL)))``,
 
 SIMP_TAC std_ss [PSUBTREES_def, EXTENSION, NOT_IN_EMPTY] THEN
@@ -111,7 +111,7 @@ REPEAT CONJ_TAC THENL [
    ASM_REWRITE_TAC[DIRECT_SUBTREES_REWRITE]
 ]);
 
-   
+
 val PSUBTREES_REWRITE = store_thm ("PSUBTREES_REWRITE",
 ``(!t:'a tree. ~(PSUBTREES leaf t)) /\
   (!t:'a tree v tL. (PSUBTREES (node v tL) t =
@@ -124,7 +124,7 @@ SIMP_TAC list_ss [IN_LIST_TO_SET, MEM_MAP, LEFT_AND_OVER_OR, EXISTS_OR_THM,
 SIMP_TAC std_ss [IN_DEF] THEN PROVE_TAC[]);
 
 
-val SUBTREES_THM = store_thm ("SUBTREES_THM", 
+val SUBTREES_THM = store_thm ("SUBTREES_THM",
 ``!t. SUBTREES t = t INSERT PSUBTREES t``,
 SIMP_TAC std_ss [SUBTREES_def, PSUBTREES_def] THEN
 REWRITE_TAC [GSYM (el 1 (BODY_CONJUNCTS TC_RC_EQNS))] THEN
@@ -132,7 +132,7 @@ SIMP_TAC std_ss [EXTENSION, IN_INSERT] THEN
 SIMP_TAC (std_ss++EQUIV_EXTRACT_ss) [IN_DEF, RC_DEF]);
 
 
-val SUBTREES_REWRITE = store_thm ("SUBTREES_REWRITE", 
+val SUBTREES_REWRITE = store_thm ("SUBTREES_REWRITE",
 ``!t1 t2. SUBTREES t1 t2 = (t1 = t2) \/ (PSUBTREES t1 t2)``,
 REWRITE_TAC[SIMP_RULE std_ss [IN_DEF] IN_INSERT, SUBTREES_THM] THEN
 PROVE_TAC[]);
@@ -174,7 +174,7 @@ val WF_DIRECT_SUBTREES = store_thm ("WF_DIRECT_SUBTREES",
 MATCH_MP_TAC WF_SUBSET THEN
 Q.EXISTS_TAC `measure tree_size0` THEN
 REWRITE_TAC[prim_recTheory.WF_measure] THEN
-SIMP_TAC std_ss [prim_recTheory.measure_thm, 
+SIMP_TAC std_ss [prim_recTheory.measure_thm,
                  SIMP_RULE std_ss [IN_DEF] DIRECT_SUBTREES_size,
                  inv_DEF]);
 
@@ -184,7 +184,7 @@ val WF_PSUBTREES = store_thm ("WF_PSUBTREES",
 MATCH_MP_TAC WF_SUBSET THEN
 Q.EXISTS_TAC `measure tree_size0` THEN
 REWRITE_TAC[prim_recTheory.WF_measure] THEN
-SIMP_TAC std_ss [prim_recTheory.measure_thm, 
+SIMP_TAC std_ss [prim_recTheory.measure_thm,
                  SIMP_RULE std_ss [IN_DEF] PSUBTREES_size,
                  inv_DEF]);
 
@@ -193,7 +193,7 @@ val tree_STRONG_INDUCT = store_thm("tree_STRONG_INDUCT",
 ``!P. (!t. (!t'. t' IN PSUBTREES t ==> P t') ==> P t) ==>
       (!t. P t)``,
 REPEAT STRIP_TAC THEN
-completeInduct_on `tree_size0 t` THEN 
+completeInduct_on `tree_size0 t` THEN
 REPEAT STRIP_TAC THEN
 FULL_SIMP_TAC std_ss [GSYM RIGHT_FORALL_IMP_THM] THEN
 PROVE_TAC [PSUBTREES_size]);
@@ -212,7 +212,7 @@ FULL_SIMP_TAC list_ss [PSUBTREES_THM, IN_UNION, IN_LIST_TO_SET,
 		       EVERY_MEM]);
 
 
-val DEPTH_def = Define 
+val DEPTH_def = Define
 `(DEPTH leaf 0 = T) /\
  (DEPTH leaf (SUC n) = F) /\
  (DEPTH (node _ x) 0 = (x = [])) /\
@@ -226,9 +226,9 @@ val DEPTH_THM = store_thm ("DEPTH_THM",
       IMAGE SUC (BIGUNION (LIST_TO_SET (MAP DEPTH tL))))``,
 
 `!n t. n IN DEPTH t = DEPTH t n` by SIMP_TAC std_ss [IN_DEF] THEN
-ASM_SIMP_TAC std_ss [EXTENSION, IN_IMAGE, IN_SING] THEN 
+ASM_SIMP_TAC std_ss [EXTENSION, IN_IMAGE, IN_SING] THEN
 REPEAT STRIP_TAC THEN (
-   Cases_on `x` THEN 
+   Cases_on `x` THEN
    SIMP_TAC list_ss [DEPTH_def, COND_RAND, COND_RATOR, IN_SING, IN_IMAGE, NULL_EQ,
                      IN_BIGUNION, MEM_MAP, GSYM RIGHT_EXISTS_AND_THM, EXISTS_MEM]
 ) THEN
@@ -239,7 +239,7 @@ Cases_on `tL` THEN SIMP_TAC list_ss []);
 
 val FINITE_DEPTH = store_thm ("FINITE_DEPTH",
 ``!t. FINITE (DEPTH t)``,
-HO_MATCH_MP_TAC tree_INDUCT THEN 
+HO_MATCH_MP_TAC tree_INDUCT THEN
 SIMP_TAC std_ss [DEPTH_THM, FINITE_SING] THEN
 Induct_on `tL` THEN (
    SIMP_TAC list_ss [DEPTH_THM, FINITE_SING]
@@ -256,7 +256,7 @@ FULL_SIMP_TAC std_ss [EVERY_MEM]);
 
 val NOT_DEPTH_EMPTY = store_thm ("NOT_DEPTH_EMPTY",
 ``!t. ~(DEPTH t = EMPTY)``,
-HO_MATCH_MP_TAC tree_INDUCT THEN 
+HO_MATCH_MP_TAC tree_INDUCT THEN
 SIMP_TAC std_ss [DEPTH_THM, NOT_INSERT_EMPTY] THEN
 Induct_on `tL` THEN (
    SIMP_TAC list_ss [DEPTH_THM, NOT_INSERT_EMPTY]
@@ -283,12 +283,12 @@ PROVE_TAC[MIN_ASSOC, MIN_COMM]);
 
 val MAX_MAX_LIST = store_thm ("MAX_MAX_LIST",
 ``!n ns. MEM n ns ==> (n <= MAX_LIST ns)``,
-Induct_on `ns` THEN 
+Induct_on `ns` THEN
 ASM_SIMP_TAC list_ss [MIN_MAX_LIST_THM, DISJ_IMP_THM])
 
 val MIN_MIN_LIST = store_thm ("MIN_MIN_LIST",
 ``!n ns. MEM n ns ==> (MIN_LIST ns <= n)``,
-Induct_on `ns` THEN 
+Induct_on `ns` THEN
 ASM_SIMP_TAC list_ss [MIN_MAX_LIST_THM, DISJ_IMP_THM,
                       COND_RAND, COND_RATOR])
 
@@ -310,7 +310,7 @@ CONJ_TAC THEN (
    SIMP_TAC std_ss [NOT_INSERT_EMPTY, IMAGE_INSERT,
                     NOT_IN_EMPTY, MAX_SET_THM, IMAGE_EMPTY,
                     UNION_EMPTY, IMAGE_FINITE,
-                    MIN_MAX_SUC, MIN_SET_THM] 
+                    MIN_MAX_SUC, MIN_SET_THM]
 ));
 
 
@@ -363,7 +363,7 @@ SIMP_TAC std_ss [IN_SING, NOT_DEPTH_EMPTY, IN_INSERT]);
 val MAX_DEPTH___DIRECT_SUBTREES = store_thm ("MAX_DEPTH___DIRECT_SUBTREES",
 ``!t2:'a tree t1. t1 IN DIRECT_SUBTREES t2 ==> (MAX_DEPTH t1 < MAX_DEPTH t2)``,
 
-Cases_on `t2` THEN 
+Cases_on `t2` THEN
 SIMP_TAC std_ss [DIRECT_SUBTREES_def, NOT_IN_EMPTY,
                  IN_LIST_TO_SET] THEN
 REPEAT STRIP_TAC THEN
@@ -372,14 +372,14 @@ REPEAT STRIP_TAC THEN
 ASM_SIMP_TAC list_ss [MIN_MAX_DEPTH_THM]  THEN
 MATCH_MP_TAC MAX_MAX_LIST THEN
 SIMP_TAC std_ss [MEM_MAP] THEN
-Q.EXISTS_TAC `t1` THEN 
+Q.EXISTS_TAC `t1` THEN
 ASM_REWRITE_TAC[]);
 
 
 
 val MAX_DEPTH___DIRECT_SUBTREES___NODE = store_thm ("MAX_DEPTH___DIRECT_SUBTREES___NODE",
 ``!v tL t. MEM t tL ==> (MAX_DEPTH t < MAX_DEPTH (node v tL))``,
-REPEAT STRIP_TAC THEN 
+REPEAT STRIP_TAC THEN
 MATCH_MP_TAC MAX_DEPTH___DIRECT_SUBTREES THEN
 ASM_SIMP_TAC std_ss [DIRECT_SUBTREES_def, IN_LIST_TO_SET]);
 
@@ -395,7 +395,7 @@ SIMP_TAC arith_ss [transitive_def, SIMP_RULE std_ss [IN_DEF] MAX_DEPTH___DIRECT_
 
 
 
-val TREE_FOLD_def = tDefine "TREE_FOLD" 
+val TREE_FOLD_def = tDefine "TREE_FOLD"
   `(TREE_FOLD (base, f) leaf = base) /\
    (TREE_FOLD (base, f) (node v tL) =
       f v (MAP (TREE_FOLD (base, f)) tL))`
@@ -406,7 +406,7 @@ val TREE_FOLD_def = tDefine "TREE_FOLD"
                     MAX_DEPTH___DIRECT_SUBTREES___NODE]);
 
 
-val WIDTH_def = Define `WIDTH t n = TREE_FOLD (F, 
+val WIDTH_def = Define `WIDTH t n = TREE_FOLD (F,
    \v tL. (LENGTH tL = n) \/ EXISTS I tL) t`;
 
 
@@ -431,14 +431,14 @@ SIMP_TAC list_ss [WIDTH_THM, FINITE_EMPTY, FINITE_INSERT,
 
 val EMPTY_WIDTH = store_thm ("EMPTY_WIDTH",
 ``!t. (WIDTH t = EMPTY) = (IS_LEAF t)``,
-Cases_on `t` THEN 
+Cases_on `t` THEN
 SIMP_TAC std_ss [WIDTH_THM, IS_LEAF_def, NOT_EMPTY_INSERT]);
 
 
-val BALANCED_def = Define 
+val BALANCED_def = Define
 `BALANCED t n = (DEPTH t = {n})`
 
-val NARY_def = Define 
+val NARY_def = Define
 `NARY t n = (WIDTH t SUBSET {n})`;
 
 val BALANCED_11 = store_thm ("BALANCED_11",
@@ -472,7 +472,7 @@ REPEAT STRIP_TAC THEN EQ_TAC THENL [
                          MEM_MAP, GSYM LEFT_FORALL_IMP_THM, EVERY_MEM] THEN
    REPEAT STRIP_TAC THEN
    RES_TAC THEN
-   Cases_on `t` THEN 
+   Cases_on `t` THEN
    SIMP_TAC list_ss [IS_LEAF_def, EXTENSION, IN_SING] THEN
    REPEAT STRIP_TAC THEN EQ_TAC THEN STRIP_TAC THENL [
       PROVE_TAC[],
@@ -490,12 +490,12 @@ REPEAT STRIP_TAC THEN EQ_TAC THENL [
    FULL_SIMP_TAC std_ss [EVERY_MEM] THEN
    REPEAT STRIP_TAC THEN
    RES_TAC THEN (
-      Cases_on `y` THEN 
+      Cases_on `y` THEN
       FULL_SIMP_TAC list_ss [WIDTH_THM, NOT_IN_EMPTY, IS_LEAF_def, IN_SING]
    )
 ]);
 
-   
+
 
 val NARY_11 = store_thm ("NARY_11",
 ``!t n1 n2. NARY t n1 /\ NARY t n2 /\ ~(IS_LEAF t) ==> (n1 = n2)``,
@@ -590,7 +590,7 @@ val TREE_TO_LIST_def = Define `
 
 val TREE_TO_LIST_THM = store_thm ("TREE_TO_LIST_THM",
 ``(TREE_TO_LIST leaf = []) /\
-  (TREE_TO_LIST (node v tL) = 
+  (TREE_TO_LIST (node v tL) =
       v::(FLAT (MAP TREE_TO_LIST tL)))``,
 SIMP_TAC (std_ss++boolSimps.ETA_ss) [TREE_TO_LIST_def, TREE_FOLD_def]);
 
@@ -609,7 +609,7 @@ ASM_SIMP_TAC list_ss [LIST_TO_TREE_def, TREE_TO_LIST_THM,
    NARY_REWRITE, tree_11] THEN
 REPEAT STRIP_TAC THEN
 `?x. tL = [x]` by ALL_TAC THEN1 (
-   Cases_on `tL` THEN 
+   Cases_on `tL` THEN
    FULL_SIMP_TAC list_ss [LENGTH_NIL]
 ) THEN
 FULL_SIMP_TAC list_ss []);
@@ -618,7 +618,7 @@ FULL_SIMP_TAC list_ss []);
 
 val TREE_PATHS_def = Define `
    TREE_PATHS = TREE_FOLD ({[]},
-      (\v ps. IMAGE (\l. v::l) (FOLDR $UNION EMPTY ps)))` 
+      (\v ps. IMAGE (\l. v::l) (FOLDR $UNION EMPTY ps)))`
 
 val TREE_PATHS_THM = store_thm ("TREE_PATHS_THM",
  ``(TREE_PATHS leaf = {[]}) /\
@@ -646,7 +646,7 @@ val TREE_PATHS_NOT_EMPTY = store_thm ("TREE_PATHS_NOT_EMPTY",
    HO_MATCH_MP_TAC tree_INDUCT THEN
    SIMP_TAC std_ss [TREE_PATHS_THM, NOT_IN_EMPTY,
       IN_ABS, IN_INSERT, EVERY_MEM, WIDTH_THM, NOT_INSERT_EMPTY] THEN
-   REPEAT GEN_TAC THEN STRIP_TAC THEN 
+   REPEAT GEN_TAC THEN STRIP_TAC THEN
    ONCE_REWRITE_TAC[EXTENSION] THEN
    SIMP_TAC std_ss [IN_ABS, NOT_IN_EMPTY, IN_BIGUNION, IN_LIST_TO_SET,
       MEM_MAP, GSYM RIGHT_EXISTS_AND_THM] THEN

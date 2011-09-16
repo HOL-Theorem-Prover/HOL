@@ -20,7 +20,7 @@ val bytes_LEMMA = SIMP_RULE std_ss [LENGTH] (Q.SPEC `[v1;v2;v3;v4;v5;v6;v7;v8]` 
 
 val n2w_SIGN_EXTEND = prove(
   ``!n. n < 256 ==> (n2w (SIGN_EXTEND 8 32 n):word32 = sw2sw ((n2w n):word8))``,
-  SIMP_TAC (std_ss++SIZES_ss) [sw2sw_def,w2n_n2w]);  
+  SIMP_TAC (std_ss++SIZES_ss) [sw2sw_def,w2n_n2w]);
 
 fun raw_x86_decode s = let
   fun mk_bool_list n =
@@ -40,7 +40,7 @@ fun raw_x86_decode s = let
     val th = REWRITE_RULE [bits2num_w2bits,n2w_w2n] th
     in (th,l+4) end handle e => (th,l)
   val (th,l) = let
-    val x = find_term (can (match_term ``bits2num xs``)) (concl th) 
+    val x = find_term (can (match_term ``bits2num xs``)) (concl th)
     val th = REWRITE_RULE [bytes_LEMMA, MATCH_MP n2w_SIGN_EXTEND bytes_LEMMA] th
     val thi = Q.INST [`w`|->`imm8`] w2bits_word8
     val i = fst (match_term (snd (dest_comb x)) ((snd o dest_eq o concl o SPEC_ALL) thi))

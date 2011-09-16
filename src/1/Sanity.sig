@@ -9,7 +9,7 @@ sig
  val accepted_axioms  : string list ref;
  val accepted_oracles : string list ref;
 
- (* Traces 
+ (* Traces
 
     "Santity Check Strict":
     ------------------------
@@ -20,16 +20,16 @@ sig
     ------------------------
     Turn verbose reporting on or off.
     Default: true
-  
+
 
     "Santity Check Free Vars":
     --------------------------
     Turn checking for free top-level variables to different levels:
       0 : allow no free vars
       1 : if theorem starts with an allquantor, then allow no free vars
-      2 : no check        
+      2 : no check
     Default: 1
-  
+
 
     "Santity Check Var-Const Clash":
     --------------------------------
@@ -62,7 +62,7 @@ sig
 
 
  (* versions of prove, store_thm and save_thm that perform checks,
-    see trace "Sanity Check Strict" *)  
+    see trace "Sanity Check Strict" *)
  val sanity_prove : (term * tactic) -> thm
  val save_thm     : (string * thm) -> thm
  val store_thm    : (string * term * tactic) -> thm
