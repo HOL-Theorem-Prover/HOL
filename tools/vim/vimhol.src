@@ -21,10 +21,10 @@ local
                              end)
             | x :: l => (front := l; SOME x)
      end
-  open TextIO Thread FileSys Unix
+  open TextIO Thread OS.FileSys Unix
   val quiet = ref false
   fun warn s = if !quiet then () else output(stdErr, s)
-  local open Process Posix.FileSys in
+  local open OS.Process Posix.FileSys in
     fun die s = (warn s; exit failure)
     val () = if access(fifoPath, []) then let
                val st = stat fifoPath
@@ -41,7 +41,7 @@ local
   val c = ConditionVar.conditionVar ()
   val q = Queue.new ()
   val keepFiles = ref false
-  fun tryRemove s = remove s handle SysErr _ => ()
+  fun tryRemove s = remove s handle OS.SysErr _ => ()
   fun checkTryRemove s = if !keepFiles then () else tryRemove s
   fun removeQueue() = let
     fun loop() = case Queue.deque q of
@@ -68,7 +68,7 @@ local
   val tail = ref (execute("/usr/bin/env",["tail","/dev/null"]))
   val fifo = ref (openString "")
   fun stopTail () = (kill(!tail,Posix.Signal.term); reap (!tail); ())
-  fun restartTail () = (stopTail() handle SysErr _ => ();
+  fun restartTail () = (stopTail() handle OS.SysErr _ => ();
                         tail := execute("/usr/bin/env", ["tail", "-f", fifoPath]);
                         fifo := textInstreamOf (!tail))
   fun poller () = let in
@@ -93,7 +93,7 @@ local
     Thread.testInterrupt () handle Interrupt => (removeQueue(); Thread.exit());
     poller ()
   end
-  val () = Process.atExit stopTail
+  val () = OS.Process.atExit stopTail
   val () = restartTail ()
   val ppid = ref (Thread.fork(poller,[]))
 in
