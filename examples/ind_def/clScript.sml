@@ -3,10 +3,10 @@ open HolKernel Parse boolLib
 open bossLib simpLib
 
 local open OpenTheoryMap in
-  val ns = "combinatoryLogicExample."
-  fun c0 x y = OpenTheory_const_name {const={Thy="cl",Name=x},name=ns^y}
+  val ns = ["combinatoryLogicExample"]
+  fun c0 x y = OpenTheory_const_name {const={Thy="cl",Name=x},name=(ns,y)}
   fun c x = c0 x x
-  fun t x = OpenTheory_tyop_name {tyop={Thy="cl",Tyop=x},name=ns^x}
+  fun t x = OpenTheory_tyop_name {tyop={Thy="cl",Tyop=x},name=(ns,x)}
   val _ = t "cl"
   val _ = c "S"
   val _ = c "K"
@@ -17,15 +17,17 @@ local open OpenTheoryMap in
   val _ = c "confluent"
   val _ = c "normform"
   val _ = c "diamond"
-  val _ = c0 " @ind_typecl0" "ind_type.cl0"
-  val _ = c0 " @ind_typecl1" "ind_type.cl1"
-  val _ = c0 " @ind_typecl2" "ind_type.cl2"
-  val _ = c0 " @ind_typecl3" "ind_type.cl3"
-  val _ = c0 " @ind_typecl4" "ind_type.cl4"
-  val _ = c0 "cl_case" "ind_type.cl_case"
-  val _ = c0 "cl_size" "ind_type.cl_size"
+  val ns = ns @ ["ind_type"]
+  fun c0 x y = OpenTheory_const_name {const={Thy="cl",Name=x},name=(ns,y)}
+  val _ = c0 " @ind_typecl0" "cl0"
+  val _ = c0 " @ind_typecl1" "cl1"
+  val _ = c0 " @ind_typecl2" "cl2"
+  val _ = c0 " @ind_typecl3" "cl3"
+  val _ = c0 " @ind_typecl4" "cl4"
+  val _ = c0 "cl_case" "cl_case"
+  val _ = c0 "cl_size" "cl_size"
   (* not sure how to deal with this properly: *)
-  val _ = OpenTheory_const_name {const={Thy="arithmetic",Name="ZERO"},name="Number.Numeral.zero"}
+  val _ = OpenTheory_const_name {const={Thy="arithmetic",Name="ZERO"},name=(["Number","Numeral"],"zero")}
 end
 
 val _ = new_theory "cl";

@@ -66,7 +66,7 @@ fun log_raw s =
 
 fun log_num n = log_raw (Int.toString n)
 
-fun log_name s = log_raw ("\""^s^"\"")
+fun log_name s = log_raw ("\""^(OpenTheoryMap.otname_to_string s)^"\"")
 
 fun log_comment s = log_raw ("#"^(String.translate (fn #"\n" => "\n#" | c => String.str c) s))
 
@@ -128,7 +128,7 @@ val (log_term, log_thm, log_clear) = let
     handle Map.NotFound
     => raise ERR "log_tyop_name" ("No OpenTheory name for type "^(#Thy tyop)^"$"^(#Tyop tyop))
     fun log_const_name {Thy="Logging",Name} =
-      log_name Name
+      log_name ([],Name)
     |   log_const_name const =
       log_name (Map.find(const_to_ot_map(),const))
     handle Map.NotFound
@@ -174,7 +174,7 @@ val (log_term, log_thm, log_clear) = let
     val ob = OVar v
   in if saved ob then () else let
     val (n,ty) = Term.dest_var v
-    val _ = log_name n
+    val _ = log_name ([],n)
     val _ = log_type ty
     val _ = log_command "var"
     val _ = save_dict ob
@@ -632,8 +632,10 @@ val (log_term, log_thm, log_clear) = let
       in () end
     | Def_tyop_prf (name,tyvars,th,aty) => let
       val n = log_tyop_name name
-      val abs_name = n^".abs"
-      val rep_name = n^".rep"
+      val (ns,n) = n
+      val ns'    = ns@[n]
+      val abs_name = (ns',"abs")
+      val rep_name = (ns',"rep")
       val _ = log_name abs_name
       val _ = log_name rep_name
       val _ = log_list log_type_var tyvars
@@ -645,8 +647,9 @@ val (log_term, log_thm, log_clear) = let
       val r       = mk_var("r",rty)
       val absty   = rty --> aty
       val repty   = aty --> rty
-      val abstc   = {Thy="Logging",Name=abs_name}
-      val reptc   = {Thy="Logging",Name=rep_name}
+      val ots     = OpenTheoryMap.otname_to_string
+      val abstc   = {Thy="Logging",Name=ots abs_name}
+      val reptc   = {Thy="Logging",Name=ots rep_name}
       val abs     = prim_new_const abstc absty
       val rep     = prim_new_const reptc repty
       val ra      = mk_thm([],mk_ra(phi,r,rep,abs))

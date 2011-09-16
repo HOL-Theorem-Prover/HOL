@@ -29,11 +29,11 @@ fun raw_read_article {tyop_from_ot,const_from_ot} input {define_tyop,define_cons
   val ERR = ERR "read_article"
   fun unOTermls c = List.map (fn OTerm t => t | _ => raise ERR (c^" failed to pop a list of terms"))
   fun unOTypels c = List.map (fn OType t => t | _ => raise ERR (c^" failed to pop a list of types"))
-  fun ot_to_const c s = Map.find(const_from_ot,s)
+  fun ot_to_const c s = Map.find(const_from_ot,string_to_otname s)
   handle Map.NotFound => raise ERR (c^": no map from "^s^" to a constant")
-  fun ot_to_tyop  c s = Map.find(tyop_from_ot ,s)
+  fun ot_to_tyop  c s = Map.find(tyop_from_ot ,string_to_otname s)
   handle Map.NotFound => raise ERR (c^": no map from "^s^" to a type operator")
-  val mk_vartype = mk_vartype o tyvar_from_ot
+  val mk_vartype = mk_vartype o tyvar_from_ot o string_to_otname
   fun f "absTerm"(st as {stack=OTerm b::OVar v::os,...}) = st_(OTerm(mk_abs(v,b))::os,st)
     | f "absThm" (st as {stack=OThm th::OVar v::os,...}) = (st_(OThm(ABS v th)::os,st)
       handle HOL_ERR e => raise ERR "absThm: failed")

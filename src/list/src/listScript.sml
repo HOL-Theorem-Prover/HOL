@@ -69,9 +69,11 @@ val PAIR_EQ      = pairTheory.PAIR_EQ;
 val _ = Datatype.Hol_datatype `list = NIL | CONS of 'a => list`;
 
 local open OpenTheoryMap in
-val _ = OpenTheory_tyop_name{tyop={Thy="list",Tyop="list"},name="Data.List.list"}
-val _ = OpenTheory_const_name{const={Thy="list",Name="NIL"},name="Data.List.[]"}
-val _ = OpenTheory_const_name{const={Thy="list",Name="CONS"},name="Data.List.::"}
+val ns = ["Data","List"]
+val _ = OpenTheory_tyop_name{tyop={Thy="list",Tyop="list"},name=(ns,"list")}
+val _ = OpenTheory_const_name{const={Thy="list",Name="NIL"},name=(ns,"[]")}
+val _ = OpenTheory_const_name{const={Thy="list",Name="CONS"},name=(ns,"::")}
+val _ = OpenTheory_const_name{const={Thy="list",Name="LENGTH"},name=(ns,"length")}
 end
 
 (*---------------------------------------------------------------------------*)
@@ -156,7 +158,6 @@ val LENGTH = new_recursive_definition
        def = --`(LENGTH []     = 0) /\
      (!(h:'a) t. LENGTH (h::t) = SUC (LENGTH t))`--};
 val _ = export_rewrites ["LENGTH"]
-val _ = OpenTheoryMap.OpenTheory_const_name{const={Thy="list",Name="LENGTH"},name="Data.List.length"}
 
 val MAP = new_recursive_definition
       {name = "MAP",

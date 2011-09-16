@@ -1,15 +1,16 @@
 structure OpenTheoryCommon :> OpenTheoryCommon = struct
 
 local open String in
-fun tyvar_from_ot s =
+fun tyvar_from_ot ([],s) =
   if sub(s,0) = #"'" then s
   else if size s = 1 then "'"^(str(Char.toLower (sub(s,0))))
   else "'"^s
-fun tyvar_to_ot s =
+| tyvar_from_ot _ = raise Feedback.mk_HOL_ERR "OpenTheoryCommon" "tyvar_from_ot" "type variables must be in global namespace"
+fun tyvar_to_ot s = ([],
   if sub(s,0) = #"'" then
     if size s = 2 then str(Char.toUpper (sub(s,1)))
     else extract(s,1,NONE)
-  else s
+  else s)
 end
 
 fun thy_const_to_string {Thy,Name} = Thy^"$"^Name

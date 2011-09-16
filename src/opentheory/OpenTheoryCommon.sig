@@ -17,6 +17,6 @@ datatype object
 
 val object_compare : object * object -> order
 
-val tyvar_to_ot   : string -> string
-val tyvar_from_ot : string -> string
+val tyvar_to_ot   : string -> OpenTheoryMap.otname
+val tyvar_from_ot : OpenTheoryMap.otname -> string
 end

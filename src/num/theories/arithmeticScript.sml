@@ -63,7 +63,7 @@ val ADD = new_recursive_definition
 val _ = set_fixity "+" (Infixl 500);
 
 val _ = OpenTheory_const_name
-  {const={Thy="arithmetic",Name="+"},name="Number.Natural.+"}
+  {const={Thy="arithmetic",Name="+"},name=(["Number","Natural"],"+")}
 
 (*---------------------------------------------------------------------------*
  * Define NUMERAL, a tag put on numeric literals, and the basic constructors *
@@ -86,9 +86,9 @@ val _ = new_definition(
   --`^(mk_var(GrammarSpecials.nat_elim_term, Type`:num->num`)) n = n`--);
 
 val _ = OpenTheory_const_name
-  {const={Thy="arithmetic",Name="NUMERAL"},name="Unwanted.id"}
+  {const={Thy="arithmetic",Name="NUMERAL"},name=(["Unwanted"],"id")}
 val _ = OpenTheory_const_name
-  {const={Thy="arithmetic",Name="BIT1"},name="Number.Numeral.bit1"}
+  {const={Thy="arithmetic",Name="BIT1"},name=(["Number","Numeral"],"bit1")}
 
 (*---------------------------------------------------------------------------*
  * After this call, numerals parse into `NUMERAL( ... )`                     *

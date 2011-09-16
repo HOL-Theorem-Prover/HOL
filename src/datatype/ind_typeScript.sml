@@ -407,8 +407,9 @@ val _ = app (fn s => remove_ovl_mapping s {Name = s, Thy = "ind_type"})
              "FCONS", "ZCONSTR", "ZBOT", "BOTTOM", "CONSTR", "FNIL", "ISO"]
 
 local open OpenTheoryMap in
-  fun c x = OpenTheory_const_name{const={Thy="ind_type",Name=x},name="HOL4.Datatype."^x}
-  val _ = OpenTheory_tyop_name{tyop={Thy="ind_type",Tyop="recspace"},name="HOL4.Datatype.recspace"}
+  val ns = ["HOL4","Datatype"]
+  fun c x = OpenTheory_const_name{const={Thy="ind_type",Name=x},name=(ns,x)}
+  val _ = OpenTheory_tyop_name{tyop={Thy="ind_type",Tyop="recspace"},name=(ns,"recspace")}
   val _ = c "CONSTR"
   val _ = c "FCONS"
   val _ = c "FNIL"

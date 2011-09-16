@@ -86,9 +86,10 @@ val SUC_DEF = new_definition("SUC_DEF",
  --`SUC m = ABS_num(SUC_REP(REP_num m))`--);
 
 local open OpenTheoryMap in
-val _ = OpenTheory_tyop_name{tyop={Thy="num",Tyop="num"},name="Number.Natural.natural"}
-val _ = OpenTheory_const_name{const={Thy="num",Name="0"},name="Number.Numeral.zero"}
-val _ = OpenTheory_const_name{const={Thy="num",Name="SUC"},name="Number.Natural.suc"}
+val ns = ["Number","Natural"]
+val _ = OpenTheory_tyop_name{tyop={Thy="num",Tyop="num"},name=(ns,"natural")}
+val _ = OpenTheory_const_name{const={Thy="num",Name="0"},name=(["Number","Numeral"],"zero")}
+val _ = OpenTheory_const_name{const={Thy="num",Name="SUC"},name=(ns,"suc")}
 end
 
 (*---------------------------------------------------------------------------

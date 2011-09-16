@@ -8,29 +8,31 @@ SRW_TAC [][FUN_EQ_THM] THEN
 SUBST_TAC [GSYM (ISPEC ``P:'a->bool`` ETA_THM)] THEN
 METIS_TAC [])
 val file = "cl.art"
-val _ = OpenTheory_const_name{const={Thy="OTcl",Name="confluent"},name="combinatoryLogicExample.confluent"}
-val _ = OpenTheory_tyop_name{tyop={Thy="OTcl",Tyop="cl"},name="combinatoryLogicExample.cl"}
-val _ = OpenTheory_const_name{const={Thy="OTcl",Name="-->"},name="combinatoryLogicExample.-->"}
-val _ = OpenTheory_const_name{const={Thy="OTcl",Name="S"},name="combinatoryLogicExample.S"}
-val _ = OpenTheory_const_name{const={Thy="OTcl",Name="K"},name="combinatoryLogicExample.K"}
-val _ = OpenTheory_const_name{const={Thy="OTcl",Name="#"},name="combinatoryLogicExample.#"}
-val _ = OpenTheory_const_name{const={Thy="OTcl",Name="RTC"},name="combinatoryLogicExample.RTC"}
-val _ = OpenTheory_const_name{const={Thy="OTcl",Name="normform"},name="combinatoryLogicExample.normform"}
-val _ = OpenTheory_const_name{const={Thy="OTcl",Name="diamond"},name="combinatoryLogicExample.diamond"}
-val _ = OpenTheory_const_name{const={Thy="OTcl",Name="-||->"},name="combinatoryLogicExample.-||->"}
+val ns = ["combinatoryLogicExample"]
+val _ = OpenTheory_const_name{const={Thy="OTcl",Name="confluent"},name=(ns,"confluent")}
+val _ = OpenTheory_tyop_name{tyop={Thy="OTcl",Tyop="cl"},name=(ns,"cl")}
+val _ = OpenTheory_const_name{const={Thy="OTcl",Name="-->"},name=(ns,"-->")}
+val _ = OpenTheory_const_name{const={Thy="OTcl",Name="S"},name=(ns,"S")}
+val _ = OpenTheory_const_name{const={Thy="OTcl",Name="K"},name=(ns,"K")}
+val _ = OpenTheory_const_name{const={Thy="OTcl",Name="#"},name=(ns,"#")}
+val _ = OpenTheory_const_name{const={Thy="OTcl",Name="RTC"},name=(ns,"RTC")}
+val _ = OpenTheory_const_name{const={Thy="OTcl",Name="normform"},name=(ns,"normform")}
+val _ = OpenTheory_const_name{const={Thy="OTcl",Name="diamond"},name=(ns,"diamond")}
+val _ = OpenTheory_const_name{const={Thy="OTcl",Name="-||->"},name=(ns,"-||->")}
 
-val _ = OpenTheory_const_name{const={Thy="OTcl",Name="mk_cl"},name="combinatoryLogicExample.ind_type.mk_cl"}
-val _ = OpenTheory_const_name{const={Thy="OTcl",Name="dest_cl"},name="combinatoryLogicExample.ind_type.dest_cl"}
-val _ = OpenTheory_const_name{const={Thy="OTcl",Name="cl_case"},name="combinatoryLogicExample.ind_type.cl_case"}
-val _ = OpenTheory_const_name{const={Thy="OTcl",Name="cl_size"},name="combinatoryLogicExample.ind_type.cl_size"}
-
-val _ = OpenTheory_const_name{const={Thy="OTcl",Name="junk_rep"},name="combinatoryLogicExample.cl.rep"}
-val _ = OpenTheory_const_name{const={Thy="OTcl",Name="junk_abs"},name="combinatoryLogicExample.cl.abs"}
-val _ = OpenTheory_const_name{const={Thy="OTcl",Name="junk_cl0"},name="combinatoryLogicExample.ind_type.cl0"}
-val _ = OpenTheory_const_name{const={Thy="OTcl",Name="junk_cl1"},name="combinatoryLogicExample.ind_type.cl1"}
-val _ = OpenTheory_const_name{const={Thy="OTcl",Name="junk_cl2"},name="combinatoryLogicExample.ind_type.cl2"}
-val _ = OpenTheory_const_name{const={Thy="OTcl",Name="junk_cl3"},name="combinatoryLogicExample.ind_type.cl3"}
-val _ = OpenTheory_const_name{const={Thy="OTcl",Name="junk_cl4"},name="combinatoryLogicExample.ind_type.cl4"}
+val ns = ["combinatoryLogicExample","ind_type"]
+val _ = OpenTheory_const_name{const={Thy="OTcl",Name="mk_cl"},name=(ns,"mk_cl")}
+val _ = OpenTheory_const_name{const={Thy="OTcl",Name="dest_cl"},name=(ns,"dest_cl")}
+val _ = OpenTheory_const_name{const={Thy="OTcl",Name="cl_case"},name=(ns,"cl_case")}
+val _ = OpenTheory_const_name{const={Thy="OTcl",Name="cl_size"},name=(ns,"cl_size")}
+val _ = OpenTheory_const_name{const={Thy="OTcl",Name="junk_cl0"},name=(ns,"cl0")}
+val _ = OpenTheory_const_name{const={Thy="OTcl",Name="junk_cl1"},name=(ns,"cl1")}
+val _ = OpenTheory_const_name{const={Thy="OTcl",Name="junk_cl2"},name=(ns,"cl2")}
+val _ = OpenTheory_const_name{const={Thy="OTcl",Name="junk_cl3"},name=(ns,"cl3")}
+val _ = OpenTheory_const_name{const={Thy="OTcl",Name="junk_cl4"},name=(ns,"cl4")}
+val ns = ["combinatoryLogicExample","cl"]
+val _ = OpenTheory_const_name{const={Thy="OTcl",Name="junk_rep"},name=(ns,"rep")}
+val _ = OpenTheory_const_name{const={Thy="OTcl",Name="junk_abs"},name=(ns,"abs")}
 
 fun ML_name "#" = "APP"
   | ML_name "-->" = "redn"
