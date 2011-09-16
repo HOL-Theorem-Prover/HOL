@@ -22,8 +22,8 @@
 ******************************************************************************)
 (* The commented out stuff below should be loaded in interactive sessions
 quietdec := true;
-app 
- load  
+app
+ load
  ["complex_rationalTheory", "sexp","acl2_packageTheory"];
 open complex_rationalTheory sexp acl2_packageTheory stringLib;
 Globals.checking_const_names := false;
@@ -120,14 +120,14 @@ val _ =
 (*****************************************************************************)
 (* Definition of primitive constants and functions.                          *)
 (*****************************************************************************)
-val nil_def = 
- acl2Define "COMMON-LISP::NIL" `nil = sym "COMMON-LISP" "NIL"`; 
+val nil_def =
+ acl2Define "COMMON-LISP::NIL" `nil = sym "COMMON-LISP" "NIL"`;
 
-val t_def = 
- acl2Define "COMMON-LISP::T" `t = sym "COMMON-LISP" "T"`; 
+val t_def =
+ acl2Define "COMMON-LISP::T" `t = sym "COMMON-LISP" "T"`;
 
-val quote_def = 
- acl2Define "COMMON-LISP::QUOTE" `quote = sym "COMMON-LISP" "QUOTE"`; 
+val quote_def =
+ acl2Define "COMMON-LISP::QUOTE" `quote = sym "COMMON-LISP" "QUOTE"`;
 
 (*****************************************************************************)
 (* From axioms.lisp                                                          *)
@@ -144,7 +144,7 @@ val quote_def =
 (*   (equal x y))                                                            *)
 (*****************************************************************************)
 val equal_def =
- acl2Define "COMMON-LISP::EQUAL" 
+ acl2Define "COMMON-LISP::EQUAL"
   `equal (x:sexp) (y:sexp) = if x = y then t else nil`;
 
 (*****************************************************************************)
@@ -177,7 +177,7 @@ val rat_def = Define `rat n d = abs_rat(abs_frac(n,d))`;
 (*****************************************************************************)
 (* Construct a complex from four integers: an/ad + (bn/bd)i.                 *)
 (*****************************************************************************)
-val cpx_def = 
+val cpx_def =
  Define `cpx an ad bn bd = num(com (rat an ad) (rat bn bd))`;
 
 (*****************************************************************************)
@@ -243,7 +243,7 @@ val add_def =
 (*          (gv binary-* (x y) 0))))                                         *)
 (*****************************************************************************)
 val mult_def =
- acl2Define "ACL2::BINARY-*" 
+ acl2Define "ACL2::BINARY-*"
   `(mult (num x) (num y) = num(x*y)) /\
    (mult _       _       = int 0)`;
 
@@ -262,17 +262,17 @@ val mult_def =
 (*****************************************************************************)
 val less_def =
  acl2Define "COMMON-LISP::<"
-  `(less (num(com xr xi)) (num(com yr yi)) = 
-     if xr < yr 
+  `(less (num(com xr xi)) (num(com yr yi)) =
+     if xr < yr
       then t
       else (if xr = yr then (if xi < yi then t else nil) else nil))
    /\
-   (less _ (num(com yr yi)) = 
-     if rat_0 < yr 
+   (less _ (num(com yr yi)) =
+     if rat_0 < yr
       then t
       else (if rat_0 = yr then (if rat_0 < yi then t else nil) else nil))
    /\
-   (less (num(com xr xi)) _ = 
+   (less (num(com xr xi)) _ =
      if xr < rat_0
       then t
       else (if xr = rat_0 then (if xi < rat_0 then t else nil) else nil))
@@ -312,7 +312,7 @@ val unary_minus_def =
 (*****************************************************************************)
 val reciprocal_def =
  acl2Define "ACL2::UNARY-/"
-  `(reciprocal (num x) = 
+  `(reciprocal (num x) =
      if x = com_0 then int 0 else num(COMPLEX_RECIPROCAL x))
    /\
    (reciprocal _ = int 0)`;
@@ -380,7 +380,7 @@ val cdr_def =
 (*****************************************************************************)
 val realpart_def =
  acl2Define "COMMON-LISP::REALPART"
-  `(realpart(num(com a b)) = num(com a rat_0)) /\ 
+  `(realpart(num(com a b)) = num(com a rat_0)) /\
    (realpart _             = int 0)`;
 
 (*****************************************************************************)
@@ -394,7 +394,7 @@ val realpart_def =
 (*****************************************************************************)
 val imagpart_def =
  acl2Define "COMMON-LISP::IMAGPART"
-  `(imagpart(num(com a b)) = num(com b rat_0)) /\ 
+  `(imagpart(num(com a b)) = num(com b rat_0)) /\
    (imagpart _             = int 0)`;
 
 (*****************************************************************************)
@@ -433,8 +433,8 @@ val rationalp_def =
 (*****************************************************************************)
 val complex_rationalp_def =
  acl2Define "ACL2::COMPLEX-RATIONALP"
-  `(complex_rationalp(num(com a b)) = if b = rat_0 then nil else t) 
-   /\ 
+  `(complex_rationalp(num(com a b)) = if b = rat_0 then nil else t)
+   /\
    (complex_rationalp _ = nil)`;
 
 (*****************************************************************************)
@@ -493,13 +493,13 @@ val complex_rationalp_def =
 val complex_def =
  acl2Define "COMMON-LISP::COMPLEX"
   `(complex (num(com xr xi)) (num(com yr yi)) =
-     num(com (if (xi = rat_0) then xr else rat_0) 
+     num(com (if (xi = rat_0) then xr else rat_0)
              (if (yi = rat_0) then yr else rat_0)))
    /\
-   (complex (num(com xr xi)) _ = 
+   (complex (num(com xr xi)) _ =
      num(com (if (xi = rat_0) then xr else rat_0) rat_0))
    /\
-   (complex _ (num(com yr yi)) = 
+   (complex _ (num(com yr yi)) =
      num(com rat_0 (if (yi = rat_0) then yr else rat_0)))
    /\
    (complex _ _ = int 0)`;
@@ -533,7 +533,7 @@ val integerp_def =
 (*****************************************************************************)
 val numerator_def =
  acl2Define "COMMON-LISP::NUMERATOR"
-  `(numerator(num(com a b)) = 
+  `(numerator(num(com a b)) =
      if b = rat_0 then int(reduced_nmr a) else int 0)
    /\
    (numerator _ = int 0)`;
@@ -555,7 +555,7 @@ val numerator_def =
 (*****************************************************************************)
 val denominator_def =
  acl2Define "COMMON-LISP::DENOMINATOR"
-  `(denominator(num(com a b)) = 
+  `(denominator(num(com a b)) =
      if b = rat_0 then int(reduced_dnm a) else int 1)
    /\
    (denominator _ = int 1)`;
@@ -587,7 +587,7 @@ val char_code_def =
 (*****************************************************************************)
 val code_char_def =
  acl2Define "COMMON-LISP::CODE-CHAR"
-  `(code_char(num(com a b)) = 
+  `(code_char(num(com a b)) =
      if IS_INT(com a b) /\ (0 <= reduced_nmr a) /\ (reduced_nmr a < 256)
       then chr(CHR (Num(reduced_nmr a)))
       else chr(CHR 0))
@@ -627,7 +627,7 @@ val ite_def =
 (*****************************************************************************)
 val list_to_sexp_def =
  Define
-  `(list_to_sexp f [] = nil) /\ 
+  `(list_to_sexp f [] = nil) /\
    (list_to_sexp f (x::l) = cons (f x) (list_to_sexp f l))`;
 
 (*****************************************************************************)
@@ -672,9 +672,9 @@ val list_to_sexp_def =
 (*          (cons (code-char 0) (make-character-list (cdr x))))))            *)
 (*****************************************************************************)
 
-val sexp_size_def = 
+val sexp_size_def =
     (fetch "-" "sexp_size_def"
-     handle _ => 
+     handle _ =>
      Define
     `(sexp_size (sym a0 a1) = 1n) /\
      (sexp_size (str a) = 1) /\
@@ -682,16 +682,16 @@ val sexp_size_def =
      (sexp_size (num c) = 1) /\
      (sexp_size (cons x y) = 1 + sexp_size x + sexp_size y)`);
 
-val make_character_list_def = 
+val make_character_list_def =
  tDefine "make_character_list"
-  `(make_character_list(cons (chr c) y) = 
+  `(make_character_list(cons (chr c) y) =
      (cons (chr c) (make_character_list y)))
    /\
-   (make_character_list(cons x y) = 
-     (cons (code_char(int 0)) (make_character_list y))) 
+   (make_character_list(cons x y) =
+     (cons (code_char(int 0)) (make_character_list y)))
    /\
    (make_character_list _ = nil)`
-   (WF_REL_TAC `measure sexp_size` THEN 
+   (WF_REL_TAC `measure sexp_size` THEN
    RW_TAC arith_ss [sexp_size_def]);
 
 (*****************************************************************************)
@@ -720,7 +720,7 @@ val coerce_list_to_string_def =
      STRING c (coerce_list_to_string y))
    /\
    (coerce_list_to_string _ = "")`
-   (WF_REL_TAC `measure sexp_size` THEN 
+   (WF_REL_TAC `measure sexp_size` THEN
    RW_TAC arith_ss [sexp_size_def]);
 
 val coerce_def =
@@ -791,7 +791,7 @@ val BASIC_INTERN_def =
 (*****************************************************************************)
 val symbolp_def =
  acl2Define "COMMON-LISP::SYMBOLP"
-  `(symbolp (sym p n) = 
+  `(symbolp (sym p n) =
      if (BASIC_INTERN n p = sym p n) /\ ~(p = "") then t else nil)
    /\
    (symbolp _ = nil)`;
@@ -917,13 +917,13 @@ val LOOKUP_PKG_WITNESS =
 (*****************************************************************************)
 val LIST_LEX_ORDER_def =
  Define
-  `(LIST_LEX_ORDER R [] [] = F) 
+  `(LIST_LEX_ORDER R [] [] = F)
    /\
-   (LIST_LEX_ORDER R (a::al) [] = F) 
+   (LIST_LEX_ORDER R (a::al) [] = F)
    /\
-   (LIST_LEX_ORDER R [] (b::bl) = T) 
+   (LIST_LEX_ORDER R [] (b::bl) = T)
    /\
-   (LIST_LEX_ORDER R (a::al) (b::bl) = 
+   (LIST_LEX_ORDER R (a::al) (b::bl) =
      R a b \/ ((a = b) /\ LIST_LEX_ORDER R al bl))`;
 
 val LIST_LEX_ORDER_IRREFLEXIVE =
@@ -937,8 +937,8 @@ val LIST_LEX_ORDER_IRREFLEXIVE =
 val LIST_LEX_ORDER_ANTISYM =
  store_thm
   ("LIST_LEX_ORDER_ANTISYM",
-   ``(!x y. ~(R x y /\ R y x)) 
-     ==> 
+   ``(!x y. ~(R x y /\ R y x))
+     ==>
      !xl yl. ~(LIST_LEX_ORDER R xl yl /\ LIST_LEX_ORDER R yl xl)``,
    STRIP_TAC
     THEN Induct
@@ -954,8 +954,8 @@ val LIST_LEX_ORDER_ANTISYM =
 val LIST_LEX_ORDER_TRANS =
  store_thm
   ("LIST_LEX_ORDER_TRANS",
-   ``(!x y z. R x y /\ R y z ==> R x z) 
-     ==> 
+   ``(!x y z. R x y /\ R y z ==> R x z)
+     ==>
      !xl yl zl. LIST_LEX_ORDER R xl yl /\ LIST_LEX_ORDER R yl zl
                 ==>
                 LIST_LEX_ORDER R xl zl``,
@@ -979,8 +979,8 @@ val LIST_LEX_ORDER_TRANS =
 val LIST_LEX_ORDER_TRICHOTOMY =
  store_thm
   ("LIST_LEX_ORDER_TRICHOTOMY",
-   ``(!x y. R x y \/ R y x \/ (x = y)) 
-     ==> 
+   ``(!x y. R x y \/ R y x \/ (x = y))
+     ==>
      !xl yl. LIST_LEX_ORDER R xl yl \/ LIST_LEX_ORDER R yl xl \/ (xl = yl)``,
    STRIP_TAC
     THEN Induct
@@ -999,9 +999,9 @@ val LIST_LEX_ORDER_TRICHOTOMY =
 val STRING_LESS_def =
  Define
   `STRING_LESS s1 s2 =
-    LIST_LEX_ORDER 
-     ($< : num->num->bool) 
-     (MAP ORD (EXPLODE s1)) 
+    LIST_LEX_ORDER
+     ($< : num->num->bool)
+     (MAP ORD (EXPLODE s1))
      (MAP ORD (EXPLODE s2))`;
 
 val STRING_LESS_EQ_def =
@@ -1048,7 +1048,7 @@ val STRING_LESS_ANTISYM =
  store_thm
   ("STRING_LESS_ANTISYM",
    ``~STRING_LESS s1 s2 /\ ~STRING_LESS s2 s1 ==> (s1 = s2)``,
-   METIS_TAC 
+   METIS_TAC
     [STRING_LESS_def,
      stringTheory.EXPLODE_11,MAP_ORD_11,LIST_LEX_ORDER_TRICHOTOMY,
      DECIDE ``!(m:num) n. m<n \/ n<m \/ (m=n)``]);
@@ -1057,7 +1057,7 @@ val STRING_LESS_EQ_ANTISYM =
  store_thm
   ("STRING_LESS_EQ_ANTISYM",
    ``~STRING_LESS_EQ s1 s2 /\ ~STRING_LESS_EQ s2 s1 ==> (s1 = s2)``,
-   METIS_TAC 
+   METIS_TAC
     [STRING_LESS_EQ_def,STRING_LESS_def,
      stringTheory.EXPLODE_11,MAP_ORD_11,LIST_LEX_ORDER_TRICHOTOMY,
      DECIDE ``!(m:num) n. m<n \/ n<m \/ (m=n)``]);
@@ -1066,7 +1066,7 @@ val STRING_LESS_TRICHOTOMY =
  store_thm
   ("STRING_LESS_TRICHOTOMY",
    ``STRING_LESS s1 s2 \/ STRING_LESS s2 s1 \/ (s1 = s2)``,
-   METIS_TAC 
+   METIS_TAC
     [STRING_LESS_def,
      stringTheory.EXPLODE_11,MAP_ORD_11,LIST_LEX_ORDER_TRICHOTOMY,
      DECIDE ``!(m:num) n. m<n \/ n<m \/ (m=n)``]);
@@ -1075,7 +1075,7 @@ val STRING_LESS_EQ_TRICHOTOMY =
  store_thm
   ("STRING_LESS_EQ_TRICHOTOMY",
    ``STRING_LESS_EQ s1 s2 \/ STRING_LESS_EQ s2 s1``,
-   METIS_TAC 
+   METIS_TAC
     [STRING_LESS_EQ_def,STRING_LESS_def,
      stringTheory.EXPLODE_11,MAP_ORD_11,LIST_LEX_ORDER_TRICHOTOMY,
      DECIDE ``!(m:num) n. m<n \/ n<m \/ (m=n)``]);
@@ -1264,7 +1264,7 @@ val ACL2_TRUE =
 (*****************************************************************************)
 (* Same as translateTheory.bool_def                                          *)
 (*****************************************************************************)
-val bool_to_sexp_def = 
+val bool_to_sexp_def =
  Define `(bool_to_sexp T = t) /\ (bool_to_sexp F = nil)`;
 
 (*****************************************************************************)
@@ -1426,9 +1426,9 @@ val andl_fold =
  store_thm
   ("andl_fold",
    ``(ite x y nil = andl[x;y])
-     /\ 
+     /\
      (andl[x; andl(y::l)] = andl(x::(y::l)))
-     /\ 
+     /\
      (andl(andl(x::y::l1)::l2) = andl(x::y::(l1++l2)))``,
    RW_TAC std_ss [andl_def,ite_def,List_def]
     THENL
@@ -1505,10 +1505,10 @@ val itel_CONG1 =
  store_thm
   ("itel_CONG1",
    ``!p q x x' l l' y y'.
-      (p = q) 
-      /\ 
-      (~(q = nil) ==> (x = x')) 
-      /\ 
+      (p = q)
+      /\
+      (~(q = nil) ==> (x = x'))
+      /\
       ((q = nil) ==> (itel l y = itel l' y'))
       ==>
       (itel ((p,x)::l) y = itel ((q,x')::l') y')``,
@@ -1518,10 +1518,10 @@ val itel_CONG2 =
  store_thm
   ("itel_CONG2",
    ``!p q x x' l l' y y'.
-      (p = q) 
-      /\ 
-      ((|= q) ==> (x = x')) 
-      /\ 
+      (p = q)
+      /\
+      ((|= q) ==> (x = x'))
+      /\
       (~(|= q) ==> (itel l y = itel l' y'))
       ==>
       (itel ((p,x)::l) y = itel ((q,x')::l') y')``,
@@ -1563,18 +1563,18 @@ val sexp_size_cdr =
 val let_simp =
  store_thm
   ("let_simp",
-   ``(!P1 v y. 
+   ``(!P1 v y.
        (let (x,y) = (v,y) in P1 x y) = (let x = v in P1 x y))
      /\
-     (!P2 v y z. 
+     (!P2 v y z.
        (let (x,y,z) = (v,y,z) in P2 x y z) = (let x = v in P2 x y z))
      /\
-     (!P3 v y z w. 
+     (!P3 v y z w.
        (let (x,y,z,w) = (v,y,z,w) in P3 x y z w) = (let x = v in P3 x y z w))``,
    RW_TAC std_ss []
-    THEN FULL_SIMP_TAC std_ss [markerTheory.Abbrev_def]); 
+    THEN FULL_SIMP_TAC std_ss [markerTheory.Abbrev_def]);
 
-val forall_fold = 
+val forall_fold =
  store_thm
   ("forall_fold",
    ``bool_to_sexp (!v. |= P v) = forall x. P x``,
@@ -1596,7 +1596,7 @@ val bool_to_sexp =
 val forall2_thm =
  store_thm
   ("forall2_thm",
-   ``(bool_to_sexp !x y. |= P x y) = 
+   ``(bool_to_sexp !x y. |= P x y) =
       bool_to_sexp (!x. |= bool_to_sexp !y. |= P x y)``,
    RW_TAC std_ss [bool_to_sexp,ACL2_TRUE]
     THEN METIS_TAC[]);
@@ -1604,7 +1604,7 @@ val forall2_thm =
 val exists2_thm =
  store_thm
   ("exists2_thm",
-   ``(bool_to_sexp ?x y. |= P x y) = 
+   ``(bool_to_sexp ?x y. |= P x y) =
       bool_to_sexp (?x. |= bool_to_sexp ?y. |= P x y)``,
    RW_TAC std_ss [bool_to_sexp,ACL2_TRUE]
     THEN METIS_TAC[]);
@@ -1620,7 +1620,7 @@ val bool_to_sexp =
  prove
   (``bool_to_sexp b = if b then t else nil``,
    Cases_on `b`
-    THEN RW_TAC std_ss [bool_to_sexp_def,t_nil]);        
+    THEN RW_TAC std_ss [bool_to_sexp_def,t_nil]);
 
 val implies_def =
  acl2Define "ACL2::IMPLIES"
@@ -1647,7 +1647,7 @@ val consp_nil =
 val ite_simp =
  store_thm
   ("ite_simp",
-   ``!a b c. 
+   ``!a b c.
       ((|= (if a then b else c)) = (a /\ (|= b)) \/ (~a /\ |= c))
       /\
       (ite nil b c = c) /\ (ite t b c = b)``,
@@ -1662,7 +1662,7 @@ val andl_simp =
     GEN_TAC
      THEN Cases
      THEN RW_TAC std_ss [andl_def,t_nil,ite_def]
-     THEN METIS_TAC[]);  
+     THEN METIS_TAC[]);
 
 val not_def =
  acl2Define "COMMON-LISP::NOT"
@@ -1677,9 +1677,9 @@ val not_simp =
 val equal_memberp_imp =
  store_thm
   ("equal_memberp_imp",
-   ``!a s1 s2. 
-      (|= equal (memberp a s1) (memberp a s2)) 
-      ==> 
+   ``!a s1 s2.
+      (|= equal (memberp a s1) (memberp a s2))
+      ==>
       ((|= memberp a s1) = (|= memberp a s2))``,
    RW_TAC std_ss [equal_def,t_nil]);
 
@@ -1710,8 +1710,8 @@ val imported_symbol_names_def =
       then sym_name :: (imported_symbol_names pkg_name triples)
       else imported_symbol_names pkg_name triples)`;
 
-val _ = 
- add_acl2_simps 
+val _ =
+ add_acl2_simps
   [fetch "-" "sexp_11",ACL2_TRUE,
    caar_def,cadr_def,cdar_def,cddr_def,
    caaar_def,cdaar_def,cadar_def,cddar_def,caadr_def,cdadr_def,caddr_def,cdddr_def,
@@ -1722,7 +1722,7 @@ val _ =
 
 val _ = adjoin_to_theory
          {sig_ps = NONE,
-          struct_ps = 
+          struct_ps =
            SOME (fn ppstrm =>
                   PP.add_string ppstrm
                    ("val _ = DefnBase.write_congs" ^

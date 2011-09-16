@@ -6,8 +6,8 @@ open helperLib codegen_inputLib;
 open x64_encodeLib;
 
 
-fun x64_reg n = 
-  if n < 16 andalso not (n = 4) andalso not (n = 5) 
+fun x64_reg n =
+  if n < 16 andalso not (n = 4) andalso not (n = 5)
   then "r" ^ (int_to_string n) else fail()
 
 val x64_assign2assembly = let

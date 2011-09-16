@@ -190,7 +190,7 @@ val _ = TeX_notation {hol = UChar.neg, TeX = ("\\HOLTokenNeg{}",1)}
    the pretty-printer handles these specially.  These declarations are only
    for the parser's benefit. *)
 val _ = add_rule {term_name   = GrammarSpecials.let_special,
-                  fixity = Prefix 2,
+                  fixity = Prefix 8,
                   pp_elements = [TOK "let", BreakSpace(1,0), TM,
                                  BreakSpace(1, 0), TOK "in",
                                  BreakSpace(1, 0)],
@@ -4339,7 +4339,7 @@ val _ = add_rule{pp_elements = [HardSpace 1, TOK "->", BreakSpace(1,2)],
                  term_name = GrammarSpecials.case_arrow_special}
 
 val _ = add_rule{pp_elements = [BreakSpace(1,0), TOK "||", HardSpace 1],
-                 fixity = Infixr 8,
+                 fixity = Infixr 7,
                  block_style = (NoPhrasing, (PP.CONSISTENT, 0)),
                  paren_style = OnlyIfNecessary,
                  term_name = GrammarSpecials.case_split_special}
@@ -4348,7 +4348,7 @@ val _ = add_rule{pp_elements = [PPBlock([TOK "case", BreakSpace(1,2),
                                          TM, BreakSpace(1,2), TOK "of"],
                                         (PP.CONSISTENT, 0)),
                                 BreakSpace(1,3)],
-                 fixity = Prefix 7,
+                 fixity = Prefix 6,
                  block_style = (AroundEachPhrase, (PP.CONSISTENT, 0)),
                  paren_style = OnlyIfNecessary,
                  term_name = GrammarSpecials.case_special};

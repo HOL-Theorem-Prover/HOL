@@ -34,25 +34,25 @@ local
       Substring.dropr Char.isSpace (Substring.dropl Char.isSpace ls)
 
    val tokenfun_space = Substring.splitl is_not_space
-   fun tokenfun_brace ls = 
-       let 
+   fun tokenfun_brace ls =
+       let
            val (ls1, ls2) = Substring.splitl is_not_rbrace ls;
            val ls1' = Substring.triml 1 ls1
            val ls2' = Substring.triml 1 ls2
        in
            (ls1', ls2')
        end;
-   fun tokenfun ls = if is_lbrace (valOf(Substring.first ls)) then 
+   fun tokenfun ls = if is_lbrace (valOf(Substring.first ls)) then
             tokenfun_brace ls else tokenfun_space ls
 
-   fun parse_substring ls = 
+   fun parse_substring ls =
       if Substring.isEmpty ls then [] else
       let
          val (ls1, ls2) = tokenfun ls
          val ls1' = space_trim ls1
          val ls2' = space_trim ls2
       in
-         ls1'::(parse_substring ls2')            
+         ls1'::(parse_substring ls2')
       end;
 
 in
@@ -70,7 +70,7 @@ end;
 
 
 
-fun process_hix_line basedir ds l = 
+fun process_hix_line basedir ds l =
 let
    val ll = tokenise_hix_line l;
 in
@@ -119,7 +119,7 @@ in
    | ["UseFile", filename] =>
          (let
             val file = if Path.isAbsolute filename then filename else
-               Path.concat (basedir, filename) 
+               Path.concat (basedir, filename)
             val entryL = AssembleHolindexParser.parse_hdf_file file;
          in
             foldl (fn (de, ds) => parse_entry___add_to_data_store ds de) ds
@@ -127,7 +127,7 @@ in
          end handle Interrupt => raise Interrupt
                   | _ => (report_error ("Error while parsing '"^filename^"' in '"^basedir^"'");ds))
    | _ => (report_error ("Error line: "^l); ds)
-end; 
+end;
 
 
 
@@ -199,13 +199,13 @@ let
         in
            ()
         end else ();
-   val replacement_args = 
+   val replacement_args =
       {argpos = empty_posn, command=command, commpos = empty_posn,
        options = opts, argument=(valOf content)};
    val width_opt = mungeTools.optset_width opts;
    val width = if isSome width_opt then valOf width_opt else (!default_linewidth_ref);
    val fs = Portable.pp_to_string width mungeTools.replacement replacement_args
-   val _ = if fs = "" then (report_error 
+   val _ = if fs = "" then (report_error
            ("Error while formating "^(command2string command)^" '"^id^"'!");Feedback.fail()) else ();
 in
    UTF8.translate (fn " " => "\\ "
@@ -237,11 +237,11 @@ fun output_holtex_def command definetype os (id,
     latex    = latex_opt,
     ...}:data_entry)) =
 let
-   val cs = if isSome latex_opt then 
-      (report_error ("Notice: using user defined latex for "^(command2string command)^" '"^id^"'!");valOf latex_opt) else         
+   val cs = if isSome latex_opt then
+      (report_error ("Notice: using user defined latex for "^(command2string command)^" '"^id^"'!");valOf latex_opt) else
       holmunge_format command id options content_opt;
    val _ = if (cs = "") then Feedback.fail() else ();
-   val _ = if printed then 
+   val _ = if printed then
               output_holtex_def_internal (definetype,id,cs) os
            else ();
 in
@@ -252,14 +252,14 @@ end handle Interrupt => raise Interrupt
 
 
 fun process_type_defs os =
-   List.map (output_holtex_def mungeTools.Type "\\defineHOLty{" os) 
+   List.map (output_holtex_def mungeTools.Type "\\defineHOLty{" os)
 
 
 fun process_term_defs os =
-   List.map (output_holtex_def mungeTools.Term "\\defineHOLtm{" os) 
+   List.map (output_holtex_def mungeTools.Term "\\defineHOLtm{" os)
 
 fun process_thm_defs os =
-   List.map (output_holtex_def mungeTools.Theorem "\\defineHOLthm{" os) 
+   List.map (output_holtex_def mungeTools.Theorem "\\defineHOLthm{" os)
 
 fun output_all_defs os (thmL, termL, typeL) =
 let
@@ -290,50 +290,50 @@ end;
 val string_compare = String.collate (fn (c1, c2) =>
     Char.compare (Char.toUpper c1, Char.toUpper c2))
 
-fun entry_list_pos_compare ((id1, de1 as {pos_opt=NONE,...}:data_entry), 
+fun entry_list_pos_compare ((id1, de1 as {pos_opt=NONE,...}:data_entry),
                             (id2, de2 as {pos_opt=NONE,...}:data_entry)) =
     string_compare (id1, id2)
-  | entry_list_pos_compare ((id1, de1 as {pos_opt=SOME _,...}:data_entry), 
+  | entry_list_pos_compare ((id1, de1 as {pos_opt=SOME _,...}:data_entry),
                             (id2, de2 as {pos_opt=NONE,...}:data_entry)) =
     LESS
-  | entry_list_pos_compare ((id1, de1 as {pos_opt=NONE,...}:data_entry), 
+  | entry_list_pos_compare ((id1, de1 as {pos_opt=NONE,...}:data_entry),
                             (id2, de2 as {pos_opt=SOME _,...}:data_entry)) =
     GREATER
-  | entry_list_pos_compare ((id1, de1 as {pos_opt=SOME pos1,...}:data_entry), 
+  | entry_list_pos_compare ((id1, de1 as {pos_opt=SOME pos1,...}:data_entry),
                             (id2, de2 as {pos_opt=SOME pos2,...}:data_entry)) =
-        
+
     let
        val r = Int.compare(pos1,pos2)
     in if r = EQUAL then string_compare (id1,id2) else r end;
 
 
-fun entry_list_label_compare ((id1, de1 as {label=NONE,...}:data_entry), 
+fun entry_list_label_compare ((id1, de1 as {label=NONE,...}:data_entry),
                               (id2, de2 as {label=NONE,...}:data_entry)) =
     entry_list_pos_compare ((id1,de1),(id2,de2))
-  | entry_list_label_compare ((id1, de1 as {label=SOME _,...}:data_entry), 
+  | entry_list_label_compare ((id1, de1 as {label=SOME _,...}:data_entry),
                               (id2, de2 as {label=NONE,...}:data_entry)) =
     GREATER
-  | entry_list_label_compare ((id1, de1 as {label=NONE,...}:data_entry), 
+  | entry_list_label_compare ((id1, de1 as {label=NONE,...}:data_entry),
                               (id2, de2 as {label=SOME _,...}:data_entry)) =
     LESS
-  | entry_list_label_compare ((id1, de1 as {label=SOME l1,...}:data_entry), 
-                              (id2, de2 as {label=SOME l2,...}:data_entry)) =        
+  | entry_list_label_compare ((id1, de1 as {label=SOME l1,...}:data_entry),
+                              (id2, de2 as {label=SOME l2,...}:data_entry)) =
     let
-       val r = string_compare (l1,l2) 
+       val r = string_compare (l1,l2)
     in if r = EQUAL then entry_list_pos_compare ((id1,de1),(id2,de2)) else r end
 
 
-fun entry_list_thm_compare ((id1, de1 as {content=NONE,...}:data_entry), 
+fun entry_list_thm_compare ((id1, de1 as {content=NONE,...}:data_entry),
                             (id2, de2 as {content=NONE,...}:data_entry)) =
     entry_list_label_compare ((id1,de1),(id2,de2))
-  | entry_list_thm_compare ((id1, de1 as {content=SOME _,...}:data_entry), 
+  | entry_list_thm_compare ((id1, de1 as {content=SOME _,...}:data_entry),
                               (id2, de2 as {content=NONE,...}:data_entry)) =
     GREATER
-  | entry_list_thm_compare ((id1, de1 as {content=NONE,...}:data_entry), 
+  | entry_list_thm_compare ((id1, de1 as {content=NONE,...}:data_entry),
                             (id2, de2 as {content=SOME _,...}:data_entry)) =
     LESS
-  | entry_list_thm_compare ((id1, de1 as {content=SOME c1,...}:data_entry), 
-                            (id2, de2 as {content=SOME c2,...}:data_entry)) =        
+  | entry_list_thm_compare ((id1, de1 as {content=SOME c1,...}:data_entry),
+                            (id2, de2 as {content=SOME c2,...}:data_entry)) =
     let
        val (theory1,thm1) = destruct_theory_thm c1;
        val (theory2,thm2) = destruct_theory_thm c2;
@@ -352,7 +352,7 @@ fun process_index_pages pages =
 let
    val pL = Redblackset.listItems pages
    val pnL = List.map (fn s => (s, Int.fromString s)) pL
-   fun get_int (_, NONE) = 0 
+   fun get_int (_, NONE) = 0
      | get_int (_, (SOME n)) = n
    val pnL' = Listsort.sort (fn (a,b) => Int.compare (get_int a, get_int b)) pnL;
    val intL = List.map (fn p => (p,p)) pnL';
@@ -396,8 +396,8 @@ fun boolopt2latex (SOME b) def = bool2latex b
   | boolopt2latex NONE     def = def;
 
 fun output_holtex_index d (indextype,flagtype) os (id,
-  ({label    = label_opt, 
-    full_index = full_index, 
+  ({label    = label_opt,
+    full_index = full_index,
     pages    = pages,
     comment  = comment_opt, ...}:data_entry)) =
 let
@@ -463,7 +463,7 @@ let
     fun thmmapfun (id, de:data_entry) =
        let
           val label_opt = #label de;
-          val add_label = if (isSome label_opt) then 
+          val add_label = if (isSome label_opt) then
              (" "^(valOf label_opt)) else "";
           val content_opt = (#content de);
           val content = if isSome content_opt then valOf content_opt else id;
@@ -474,13 +474,13 @@ let
        in
           (id, thy, data_entry___update_label new_label de)
        end;
-    val thm_entryL'' = List.map thmmapfun thm_entryL'; 
+    val thm_entryL'' = List.map thmmapfun thm_entryL';
 
     val _ = Portable.output(os, "\\begin{HOLThmIndex}\n");
 
     fun foldfun ((id, thy, de), old_thy) =
-        let            
-            val _ = if ((!use_occ_sort_ref) orelse (thy = old_thy)) then () else 
+        let
+            val _ = if ((!use_occ_sort_ref) orelse (thy = old_thy)) then () else
                 (Portable.output(os, "   \\HOLThmIndexTheory{"^thy^"}\n"))
             val _ = output_holtex_index d ("      \\HOLThmIndexEntry{","holIndexLongThmFlag") os (id, de);
         in
@@ -516,18 +516,18 @@ end;
 
 (*
    val basename = Globals.HOLDIR ^ "/src/TeX/holindex-demo";
-   val file = (basename ^ ".hix")   
+   val file = (basename ^ ".hix")
    val (thmL, termL, typeL) = parse_hix file
 *)
 
 fun holindex basename =
 let
     val _ = error_found := false;
-    val ds = parse_hix (basename ^ ".hix")   
-    val os = Portable.open_out (basename ^ ".tde")   
+    val ds = parse_hix (basename ^ ".hix")
+    val os = Portable.open_out (basename ^ ".tde")
     val dd = output_all_defs os ds
     val _  = Portable.close_out os;
-    val os = Portable.open_out (basename ^ ".tid")   
+    val os = Portable.open_out (basename ^ ".tid")
     val _ = output_all_index os dd ds;
     val _  = Portable.close_out os;
     val _ = if (!error_found) then (Process.exit Process.failure) else ()

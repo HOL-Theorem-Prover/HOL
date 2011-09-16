@@ -295,6 +295,23 @@ end
 (* Makes a type definition for one of the defined subsets.                   *)
 (* ------------------------------------------------------------------------- *)
 
+val safepfx = " @ind_type"
+local
+  val count = ref 0
+  fun vary_to_avoid_constants () = let
+    val nm = safepfx ^ current_theory() ^ Int.toString (!count)
+  in
+    if (not (null (decls nm))) then (count := !count + 100;
+                                     vary_to_avoid_constants())
+    else (count := !count + 1; nm)
+  end
+in
+
+fun safeid_genvar ty = Term.mk_var(vary_to_avoid_constants(), ty)
+val safeid_genname = vary_to_avoid_constants
+
+end (* local *)
+
 fun define_inductive_type cdefs exth = let
   val extm = concl exth
   val epred = fst(strip_comb extm)
@@ -306,8 +323,7 @@ fun define_inductive_type cdefs exth = let
                       NONE => th
                     | SOME eq => scrubber (SCRUB_EQUATION eq th)
   val th4 = scrubber th3
-  val mkname = "mk_"^ename
-  and destname = "dest_"^ename
+  val mkname = safeid_genname() and destname = safeid_genname()
   val (bij1,bij2) = new_basic_type_definition ename (mkname,destname) th4
   val bij2a = AP_THM th2 (rand(rand(concl bij2)))
   val bij2b = TRANS bij2a bij2
@@ -1178,19 +1194,6 @@ fun SCRUB_ASSUMPTION th =
     MP (Thm.INST [l |-> r] (DISCH eqn th)) (REFL r)
  end
 
-val safepfx = " @ind_type"
-val safeid_genvar = let
-  val count = ref 0
-  fun vary_to_avoid_constants () = let
-    val nm = safepfx ^ current_theory() ^ Int.toString (!count)
-  in
-    if (not (null (decls nm))) then (count := !count + 100;
-                                     vary_to_avoid_constants())
-    else (count := !count + 1; nm)
-  end
-in
-  fn ty => Term.mk_var(vary_to_avoid_constants(), ty)
-end
 
 fun define_type_basecase def =
   let fun add_id s = fst(dest_var(safeid_genvar Type.bool))

@@ -391,7 +391,6 @@ val _ = OS.Process.atExit (fn () => ignore (finish_logging false))
 *)
 val HOLDIR    = case cmdl_HOLDIR of NONE => HOLDIR0 | SOME s => s
 val POLYMLLIBDIR =  case cmdl_POLYMLLIBDIR of NONE => POLYMLLIBDIR0 | SOME s => s
-(*val MOSMLCOMP = fullPath [HOLDIR, "tools-poly/polymlc"]*)
 val SIGOBJ    = normPath(OS.Path.concat(HOLDIR, "sigobj"));
 
 val UNQUOTER  = xable_string(fullPath [HOLDIR, "bin/unquote"])
@@ -467,22 +466,43 @@ val hmakefile =
       if exists_readable s then s
       else die_with ("Couldn't read/find makefile: "^s)
 
-val hmakefile_toks =
+val mosml_indicator = "%%MOSCOWML_INDICATOR%%"
+
+val base_env = let
+  open Holmake_types
+  val alist = [
+    ("ISIGOBJ", [VREF "if $(findstring NO_SIGOBJ,$(OPTIONS)),,$(SIGOBJ)"]),
+    ("MOSML_INCLUDES", [VREF ("patsubst %,-I %,"^
+                              (if cline_no_sigobj then ""
+                               else "$(ISIGOBJ)") ^
+                              " $(INCLUDES) $(PREINCLUDES)")]),
+    ("HOLMOSMLC", [VREF "MOSMLCOMP"]),
+    ("HOLMOSMLC-C", [VREF "MOSMLCOMP", LIT " -c "]),
+    ("MOSMLC",  [VREF "MOSMLCOMP"]),
+    ("MOSMLCOMP", [LIT mosml_indicator]),
+    ("POLY", [LIT (Systeml.protect Systeml.POLY)]),
+    ("POLYMLLIBDIR", [LIT POLYMLLIBDIR]),
+    ("POLY_LDFLAGS", [LIT (spacify (map Systeml.protect POLY_LDFLAGS))]),
+    ("POLY_LDFLAGS_STATIC", [LIT (spacify (map Systeml.protect POLY_LDFLAGS_STATIC))])]
+in
+  List.foldl (fn (kv,acc) => Holmake_types.env_extend kv acc)
+             Holmake_types.base_environment
+             alist
+end
+
+
+val (hmakefile_env, extra_rules, first_target) =
   if exists_readable hmakefile andalso not no_hmakefile
   then let
       val () = if debug then
                 print ("Reading additional information from "^hmakefile^"\n")
               else ()
     in
-      ReadHMF.read hmakefile
+      ReadHMF.read hmakefile base_env
     end
-  else []
+  else (base_env, Holmake_types.empty_ruledb, NONE)
 
-val hmakefile_env0 = let open Holmake_types
-                     in
-                       extend_env hmakefile_toks base_environment
-                     end
-val envlist = envlist hmakefile_env0
+val envlist = envlist hmakefile_env
 
 val hmake_includes = envlist "INCLUDES"
 val hmake_options = envlist "OPTIONS"
@@ -538,39 +558,17 @@ val actual_overlay =
 
 val std_include_flags = if no_sigobj then [] else ["-I", SIGOBJ]
 
-val hmakefile_env = let
-  open Holmake_types
-  val addincludes = spacify (map Systeml.protect additional_includes)
-  val stdincludes =
-      spacify (map Systeml.protect (hmake_preincludes @ std_include_flags)) ^
-      " " ^ addincludes
-in
-  (fn s =>
-      case s of
-        "HOLMOSMLC" => [VREF "MOSMLCOMP", LIT (" -q "^stdincludes)]
-      | "HOLMOSMLC-C" => let
-          val overlaystring = case actual_overlay of NONE => "" | SOME s => s
-        in
-          [VREF "MOSMLCOMP", LIT (" -q "^stdincludes^" -c "^overlaystring)]
-        end
-      | "MOSMLC" => [VREF "MOSMLCOMP", LIT (" "^addincludes)]
-      | "POLY" => [LIT (Systeml.protect Systeml.POLY)]
-      | "POLYMLLIBDIR" => [LIT POLYMLLIBDIR]
-      | "POLY_LDFLAGS" => [LIT (spacify (map Systeml.protect POLY_LDFLAGS))]
-      | "POLY_LDFLAGS_STATIC" => [LIT (spacify (map Systeml.protect POLY_LDFLAGS_STATIC))]
-      | _ => hmakefile_env0 s)
-end
+fun extra_deps t =
+    Option.map #dependencies
+               (Holmake_types.get_rule_info extra_rules hmakefile_env t)
 
-val (first_target, extra_rules) =
-    Holmake_types.mk_rules warn hmakefile_toks hmakefile_env
-
-fun extra_deps t = Option.map #dependencies (Binarymap.peek(extra_rules, t))
-
-fun extra_commands t = Option.map #commands (Binarymap.peek(extra_rules, t))
+fun extra_commands t =
+    Option.map #commands
+               (Holmake_types.get_rule_info extra_rules hmakefile_env t)
 
 val extra_targets = Binarymap.foldr (fn (k,_,acc) => k::acc) [] extra_rules
 
-fun extra_rule_for t = Binarymap.peek(extra_rules, t)
+fun extra_rule_for t = Holmake_types.get_rule_info extra_rules hmakefile_env t
 
 (* treat targets as sets *)
 infix in_target
@@ -663,44 +661,46 @@ datatype cmd_line = Mosml_compile of File list * string
                   | Mosml_link of string * File list
                   | Mosml_error
 
-fun process_mosml_args c =
-let fun isSource t = OS.Path.ext t = SOME "sig" orelse
-                     OS.Path.ext t = SOME "sml";
-    fun isObj t = OS.Path.ext t = SOME "uo" orelse
-                  OS.Path.ext t = SOME "ui";
-    val toks = String.tokens (fn c => c = #" ") c
-    val c = ref false
-    val q = ref false
-    val toplevel = ref false
-    val obj = ref NONE
-    val I = ref []
-    val obj_files = ref []
-    val src_file = ref NONE;
-    fun process_args [] = ()
-      | process_args ("-c"::rest) =
-          (c := true; process_args rest)
-      | process_args ("-q"::rest) =
-          (q := true; process_args rest)
-      | process_args ("-toplevel"::rest) =
-          (toplevel := true; process_args rest)
-      | process_args ("-o"::arg::rest) =
-          (obj := SOME arg; process_args rest)
-      | process_args ("-I"::arg::rest) =
-          (I := arg::(!I); process_args rest)
-      | process_args (file::rest) =
-          ((if isSource file then
-              src_file := SOME file
-            else if isObj file then
-              obj_files := toFile file::(!obj_files)
-            else
-              ());
-           process_args rest);
+fun process_mosml_args c = let
+  fun isSource t = OS.Path.ext t = SOME "sig" orelse OS.Path.ext t = SOME "sml"
+  fun isObj t = OS.Path.ext t = SOME "uo" orelse OS.Path.ext t = SOME "ui"
+  val toks = String.tokens (fn c => c = #" ") c
+  val c = ref false
+  val q = ref false
+  val toplevel = ref false
+  val obj = ref NONE
+  val I = ref []
+  val obj_files = ref []
+  val src_file = ref NONE
+  fun process_args [] = ()
+    | process_args ("-c"::rest) = (c := true; process_args rest)
+    | process_args ("-q"::rest) = (q := true; process_args rest)
+    | process_args ("-toplevel"::rest) = (toplevel := true; process_args rest)
+    | process_args ("-o"::arg::rest) = (obj := SOME arg; process_args rest)
+    | process_args ("-I"::arg::rest) = (I := arg::(!I); process_args rest)
+    | process_args (file::rest) = let
+      in
+        if file = mosml_indicator then ()
+        else if isSource file then
+          src_file := SOME file
+        else if isObj file then
+          obj_files := toFile file::(!obj_files)
+        else ();
+        process_args rest
+      end
 in
   process_args toks;
   ((case (!c, !src_file, !obj_files, !obj) of
          (true, SOME f, ofs, NONE) => Mosml_compile (List.rev ofs, f)
        | (false, NONE, ofs, SOME f) => Mosml_link (f, List.rev ofs)
-       | _ => Mosml_error),
+       | _ => let
+           fun ostring NONE = "NONE"
+             | ostring (SOME s) = "SOME "^s
+         in
+           diag ("mosml error: c = "^Bool.toString (!c)^", src_file = "^
+                 ostring (!src_file) ^ ", obj = "^ostring (!obj));
+           Mosml_error
+         end),
    List.rev (!I))
 end;
 
@@ -717,12 +717,20 @@ fun run_extra_command tgt c deps = let
     String.isPrefix "MOSMLC" c orelse
     String.isPrefix (perform_substitution hmakefile_env [VREF "MOSMLC"]) c
 in
-  if isHolmosmlcc orelse isHolmosmlc orelse isMosmlc then
-    case process_mosml_args (if isHolmosmlcc then " -c " ^ c else c) of
-         (Mosml_compile (objs, src), I) =>
-           poly_compile (toFile src) I (deps @ objs)
-       | (Mosml_link (result, objs), I) => poly_link result (map fromFileNoSuf objs)
-       | (Mosml_error, _) => OS.Process.failure
+  if isHolmosmlcc orelse isHolmosmlc orelse isMosmlc then let
+      val _ = diag ("Processing mosml build command: "^c)
+    in
+      case process_mosml_args (if isHolmosmlcc then " -c " ^ c else c) of
+        (Mosml_compile (objs, src), I) => poly_compile (toFile src) I (deps @ objs)
+      | (Mosml_link (result, objs), I) => let
+        in
+          diag ("Moscow ML command is link -o "^result^" ["^
+                String.concatWith ", " (map fromFile objs) ^ "]");
+          poly_link result (map fromFileNoSuf objs)
+        end
+      | (Mosml_error, _) => (warn ("*** Couldn't interpret Moscow ML command: "^c);
+                             OS.Process.failure)
+    end
   else
     let
       fun vref_ify cmd s =

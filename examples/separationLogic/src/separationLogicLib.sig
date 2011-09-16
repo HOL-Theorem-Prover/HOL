@@ -20,7 +20,7 @@ type asl_program_abstraction =  (term -> term) -> thm list -> simple_asl_program
 
 val search_ASL_PROGRAM_ABSTRACTION :
    (term -> term) ->
-   (asl_program_abstraction list) -> 
+   (asl_program_abstraction list) ->
    thm list -> simple_asl_program_abstraction;
 
 

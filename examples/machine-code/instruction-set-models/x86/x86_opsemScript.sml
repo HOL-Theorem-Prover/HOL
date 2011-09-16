@@ -222,12 +222,12 @@ val write_binop_def = Define `
   (write_binop ii _     x y ea = failureT)`;
 
 val write_binop_with_carry_def = Define `
-  (write_binop_with_carry ii Xadc x y cf ea = 
-       parT_unit (write_eflag ii X_CF (SOME (2**32 <= w2n x + w2n y + bool2num cf))) 
+  (write_binop_with_carry ii Xadc x y cf ea =
+       parT_unit (write_eflag ii X_CF (SOME (2**32 <= w2n x + w2n y + bool2num cf)))
       (parT_unit (write_eflag ii X_OF NONE)
                  (write_arith_result_no_CF_OF ii (x + y + n2w (bool2num cf)) ea))) /\
-  (write_binop_with_carry ii Xsbb x y cf ea = 
-       parT_unit (write_eflag ii X_CF (SOME (w2n x < w2n y + bool2num cf))) 
+  (write_binop_with_carry ii Xsbb x y cf ea =
+       parT_unit (write_eflag ii X_CF (SOME (w2n x < w2n y + bool2num cf)))
       (parT_unit (write_eflag ii X_OF NONE)
                  (write_arith_result_no_CF_OF ii (x - (y + n2w (bool2num cf))) ea))) /\
   (write_binop_with_carry ii _    x y cf ea = failureT)`;
@@ -295,10 +295,10 @@ val x86_exec_def = Define `
   (x86_exec ii (Xbinop binop_name ds) len = bump_eip ii len
        (if (binop_name = Xadc) \/ (binop_name = Xsbb) then
           seqT
-            (parT (parT (read_src_ea ii ds) (read_dest_ea ii ds)) 
+            (parT (parT (read_src_ea ii ds) (read_dest_ea ii ds))
                   (read_eflag ii X_CF))
                (\ (((ea_src,val_src),(ea_dest,val_dest)),val_cf).
-                  write_binop_with_carry ii binop_name 
+                  write_binop_with_carry ii binop_name
                     val_dest val_src val_cf ea_dest)
         else
           seqT

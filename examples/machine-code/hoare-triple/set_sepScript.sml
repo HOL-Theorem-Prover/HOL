@@ -80,12 +80,12 @@ val SEP_CLAUSES = store_thm("SEP_CLAUSES",
   \\ SPLIT_TAC);
 
 val SEP_EXISTS_COND = save_thm("SEP_EXISTS_COND",
-  (GEN_ALL o GSYM o Q.INST [`q`|->`cond c`] o hd o 
+  (GEN_ALL o GSYM o Q.INST [`q`|->`cond c`] o hd o
    CONJUNCTS o SPEC_ALL) SEP_CLAUSES);
 
 val SEP_EXISTS_THM = store_thm("SEP_EXISTS_THM",
- ``(SEP_EXISTS x. p x) s = ?x. p x s``,    
-  SIMP_TAC std_ss [SEP_EXISTS]); 
+ ``(SEP_EXISTS x. p x) s = ?x. p x s``,
+  SIMP_TAC std_ss [SEP_EXISTS]);
 
 val SPLIT_LEMMA = prove(
   ``!s t v. SPLIT s (t,v) = (v = s DIFF t) /\ t SUBSET s``,SPLIT_TAC);
@@ -140,7 +140,7 @@ val SEP_IMP_EQ = store_thm("SEP_IMP_EQ",
 
 val SEP_IMP_EXISTS_EXISTS = store_thm("SEP_IMP_EXISTS_EXISTS",
   ``(!x. SEP_IMP (p x) (q x)) ==> SEP_IMP ($SEP_EXISTS p) ($SEP_EXISTS q)``,
-  SIMP_TAC std_ss [SEP_IMP_def,SEP_EXISTS] \\ REPEAT STRIP_TAC 
+  SIMP_TAC std_ss [SEP_IMP_def,SEP_EXISTS] \\ REPEAT STRIP_TAC
   \\ Q.EXISTS_TAC `y` \\ ASM_SIMP_TAC std_ss []);
 
 val SEP_IMP_SEP_HIDE = store_thm("SEP_IMP_SEP_HIDE",
@@ -149,14 +149,14 @@ val SEP_IMP_SEP_HIDE = store_thm("SEP_IMP_SEP_HIDE",
 
 val SEP_DISJ_COMM = store_thm("SEP_DISJ_COMM",
   ``!p q. p \/ q = SEP_DISJ q p``,
-  SIMP_TAC std_ss [SEP_DISJ_def,FUN_EQ_THM] \\ REPEAT STRIP_TAC 
+  SIMP_TAC std_ss [SEP_DISJ_def,FUN_EQ_THM] \\ REPEAT STRIP_TAC
   \\ EQ_TAC \\ REPEAT STRIP_TAC \\ ASM_SIMP_TAC std_ss []);
 
 val SEP_DISJ_ASSOC = store_thm("SEP_DISJ_ASSOC",
   ``!p q r. SEP_DISJ (SEP_DISJ p q) r = p \/ (q \/ r)``,
-  SIMP_TAC std_ss [SEP_DISJ_def,FUN_EQ_THM] \\ REPEAT STRIP_TAC 
+  SIMP_TAC std_ss [SEP_DISJ_def,FUN_EQ_THM] \\ REPEAT STRIP_TAC
   \\ EQ_TAC \\ REPEAT STRIP_TAC \\ ASM_SIMP_TAC std_ss []);
- 
+
 val SPLIT_EQ = store_thm("SPLIT_EQ",
   ``!s u v. SPLIT s (u,v) = (u SUBSET s) /\ (v = s DIFF u)``,
   SIMP_TAC std_ss [SPLIT_def,SUBSET_DEF,EXTENSION,IN_DIFF,IN_UNION,
@@ -184,7 +184,7 @@ val write_fun2set = store_thm("write_fun2set",
   \\ METIS_TAC []);
 
 val one_fun2set = store_thm("one_fun2set",
-  ``!a x p f. (one (a,x) * p) (fun2set (f,d)) = 
+  ``!a x p f. (one (a,x) * p) (fun2set (f,d)) =
               (f a = x) /\ a IN d /\ p (fun2set (f,d DELETE a))``,
   SIMP_TAC std_ss [fun2set_def,one_STAR,GSPECIFICATION] \\ REPEAT STRIP_TAC
   \\ Cases_on `f a = x` \\ ASM_SIMP_TAC std_ss []
@@ -223,40 +223,40 @@ val fun2set_DELETE = store_thm("fun2set_DELETE",
                    FORALL_PROD] THEN METIS_TAC []);
 
 val SPLIT_fun2set_IMP = prove(
-  ``SPLIT (fun2set (f,df)) (u,v) ==> 
+  ``SPLIT (fun2set (f,df)) (u,v) ==>
     (u = fun2set(f,df DIFF { x | (x,f x) IN v }))``,
   SIMP_TAC std_ss [SPLIT_def] \\ REPEAT STRIP_TAC
   \\ FULL_SIMP_TAC std_ss [SPLIT_def,EXTENSION,IN_UNION,NOT_IN_EMPTY,
-      DISJOINT_DEF,IN_INTER,fun2set_def,GSPECIFICATION,IN_DIFF] 
+      DISJOINT_DEF,IN_INTER,fun2set_def,GSPECIFICATION,IN_DIFF]
   \\ METIS_TAC []);
-       
+
 val SPLIT_SYM_IMP = prove(
   ``SPLIT x (u,v) ==> SPLIT x (v,u) ``,
   SIMP_TAC std_ss [SPLIT_def,DISJOINT_DEF] \\ METIS_TAC [UNION_COMM,INTER_COMM]);
 
 val fun2set_STAR_IMP = store_thm("fun2set_STAR_IMP",
-  ``(p * q) (fun2set (f,df)) ==> 
+  ``(p * q) (fun2set (f,df)) ==>
     ?x y. p (fun2set (f,df DIFF y)) /\ q (fun2set (f,df DIFF x))``,
   SIMP_TAC std_ss [STAR_def] \\ REPEAT STRIP_TAC \\ IMP_RES_TAC SPLIT_SYM_IMP
-  \\ IMP_RES_TAC SPLIT_fun2set_IMP \\ METIS_TAC []);  
+  \\ IMP_RES_TAC SPLIT_fun2set_IMP \\ METIS_TAC []);
 
 val one_fun2set_IMP = store_thm("one_fun2set_IMP",
   ``(one (a,x)) (fun2set (f,df)) ==> (f a = x) /\ a IN df``,
   REPEAT STRIP_TAC
-  \\ IMP_RES_TAC (REWRITE_RULE [SEP_CLAUSES] (Q.SPECL [`a`,`x`,`emp`] one_fun2set))); 
+  \\ IMP_RES_TAC (REWRITE_RULE [SEP_CLAUSES] (Q.SPECL [`a`,`x`,`emp`] one_fun2set)));
 
-val DIFF_UNION = store_thm("DIFF_UNION", 
+val DIFF_UNION = store_thm("DIFF_UNION",
   ``!x y z. x DIFF y DIFF z = x DIFF (y UNION z)``,
   SIMP_TAC std_ss [EXTENSION,IN_DIFF,IN_UNION] \\ METIS_TAC []);
 
 val SEP_ARRAY_APPEND = store_thm("SEP_ARRAY_APPEND",
-  ``!xs ys p i a. 
+  ``!xs ys p i a.
       SEP_ARRAY p i a (xs ++ ys) =
       SEP_ARRAY p i a xs * SEP_ARRAY p i (a + n2w (LENGTH xs) * i) ys``,
   Induct \\ ASM_SIMP_TAC std_ss [SEP_ARRAY_def,STAR_ASSOC,
     listTheory.APPEND,listTheory.LENGTH,SEP_CLAUSES,WORD_MULT_CLAUSES,WORD_ADD_0]
   \\ SIMP_TAC std_ss [arithmeticTheory.ADD1,WORD_MULT_CLAUSES,GSYM word_add_n2w,
-       AC WORD_ADD_ASSOC WORD_ADD_COMM]);  
+       AC WORD_ADD_ASSOC WORD_ADD_COMM]);
 
 val SEP_REWRITE_THM = store_thm("SEP_REWRITE_THM",
   ``!q p x y. (!s. q s ==> (x = y)) ==> (q * p x = q * p y) /\ (p x * q = p y * q)``,

@@ -366,8 +366,7 @@ fun hmakefile_data HOLDIR =
             | _ => (case OS.Process.getEnv s of
                       NONE => [LIT ""]
                     | SOME v => [LIT v])
-        val toks = ReadHMF.read "Holmakefile"
-        val env = extend_env toks base_env
+        val (env, _, _) = ReadHMF.read "Holmakefile" base_environment
         fun envlist id =
             map dequote (tokenize (perform_substitution env [VREF id]))
       in

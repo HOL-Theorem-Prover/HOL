@@ -17,19 +17,19 @@ val _ = new_theory "jit_basic";
 
 val xSTACK2_def = Define `
   (xSTACK2 r ([],l) = SEP_F) /\
-  (xSTACK2 r (x::xs,l) = 
+  (xSTACK2 r (x::xs,l) =
     SEP_EXISTS a. cond (ALIGNED a) * xR r a * xSPACE a l * xLIST a (x::xs))`;
 
 val xSTACK2_xSTACK = let
   val (spec,_,s,_) = prog_x86Lib.x86_tools
-  val ((th1,_,_),_) = spec (x86_encode "mov eax,[ebp]") 
+  val ((th1,_,_),_) = spec (x86_encode "mov eax,[ebp]")
   val ((th2,_,_),_) = spec (x86_encode "lea edi,[ebp+4]")
-  val th = HIDE_STATUS_RULE true s (SPEC_COMPOSE_RULE [th1,th2])  
+  val th = HIDE_STATUS_RULE true s (SPEC_COMPOSE_RULE [th1,th2])
   val th = Q.INST [`df`|->`{ebp}`] (DISCH_ALL th)
   val th = INST [``f:word32->word32``|->``\y:word32.(x:word32)``] (DISCH_ALL th)
   val th = SIMP_RULE std_ss [IN_INSERT,NOT_IN_EMPTY,xM_THM] th
   val th = SIMP_RULE (bool_ss++sep_cond_ss) [SPEC_MOVE_COND,xM_THM,ALIGNED_INTRO] th
-  val th = RW [GSYM SPEC_MOVE_COND] th  
+  val th = RW [GSYM SPEC_MOVE_COND] th
   val th = SPEC_BOOL_FRAME_RULE th ``ALIGNED ebp``
   val th = HIDE_POST_RULE ``xM ebp`` th
   val th = SPEC_FRAME_RULE th ``xLIST (ebp+4w) xs * xSPACE ebp l``
@@ -50,22 +50,22 @@ val xSTACK2_xSTACK = let
   val lemma = prove(goal,
     SIMP_TAC std_ss [xSTACK2_def,xLIST_def,SEP_CLAUSES,SEP_IMP_def]
     \\ REPEAT STRIP_TAC \\ FULL_SIMP_TAC std_ss [SEP_EXISTS]
-    \\ FULL_SIMP_TAC (std_ss++sep_cond_ss) [cond_STAR]    
+    \\ FULL_SIMP_TAC (std_ss++sep_cond_ss) [cond_STAR]
     \\ Q.EXISTS_TAC `y` \\ FULL_SIMP_TAC (std_ss++star_ss) [])
   val th = MP th lemma
   val th = HIDE_PRE_RULE ``xR EDI`` th
-  in th end;  
+  in th end;
 
 val xSTACK_xSTACK2 = let
   val (spec,_,s,_) = prog_x86Lib.x86_tools
-  val ((th1,_,_),_) = spec (x86_encode "mov [edi-4],eax") 
+  val ((th1,_,_),_) = spec (x86_encode "mov [edi-4],eax")
   val ((th2,_,_),_) = spec (x86_encode "lea ebp,[edi-4]")
-  val th = HIDE_STATUS_RULE true s (SPEC_COMPOSE_RULE [th1,th2])  
+  val th = HIDE_STATUS_RULE true s (SPEC_COMPOSE_RULE [th1,th2])
   val th = Q.INST [`df`|->`{edi-4w}`] (DISCH_ALL th)
   val th = INST [``f:word32->word32``|->``\y:word32.(z:word32)``] (DISCH_ALL th)
   val th = SIMP_RULE std_ss [IN_INSERT,NOT_IN_EMPTY,xM_THM] th
   val th = SIMP_RULE (bool_ss++sep_cond_ss) [SPEC_MOVE_COND,xM_THM,ALIGNED_INTRO] th
-  val th = RW [GSYM SPEC_MOVE_COND,ALIGNED] th  
+  val th = RW [GSYM SPEC_MOVE_COND,ALIGNED] th
   val th = SPEC_BOOL_FRAME_RULE th ``ALIGNED edi``
   val th = SPEC_FRAME_RULE th ``xLIST edi xs * xSPACE (edi-4w) l``
   val th = Q.INST [`eax`|->`x`] th
@@ -79,8 +79,8 @@ val xSTACK_xSTACK2 = let
     \\ Q.EXISTS_TAC `edi-4w`
     \\ FULL_SIMP_TAC (std_ss++star_ss) [ALIGNED,WORD_SUB_ADD])
   val th = MP th lemma
-  val th = HIDE_PRE_RULE ``xM (edi - 4w)`` th 
-  val th = HIDE_PRE_RULE ``xR EBP`` th 
+  val th = HIDE_PRE_RULE ``xM (edi - 4w)`` th
+  val th = HIDE_PRE_RULE ``xR EBP`` th
   val th = EXISTS_PRE `edi` th
   val (th,goal) = SPEC_STRENGTHEN_RULE th ``
     xPC eip * xSTACK (x::xs,SUC l,p,ns) * ~xR EBP``
@@ -104,7 +104,7 @@ val x86_basic_jit = let
   val th = Q.INST [`t`|->`(y::ys,SUC l2,p2,ns)`] th
   val th = SPEC_COMPOSE_RULE [th,th4]
   val th = SIMP_RULE (std_ss++sep_cond_ss) [STAR_ASSOC] th
-  in th end;    
+  in th end;
 
 val _ = write_code_to_file "basic-jit.s" x86_basic_jit;
 

@@ -1,7 +1,7 @@
 open HolKernel Parse boolLib bossLib
 
 open chap3Theory pred_setTheory termTheory boolSimps
-open binderLib
+open nomsetTheory binderLib
 
 val _ = new_theory "head_reduction"
 
@@ -53,7 +53,7 @@ val tpm_hreduce_I = store_thm(
 val tpm_hreduce = store_thm(
   "tpm_hreduce",
   ``∀M N π. π·M -h-> π·N ⇔ M -h-> N``,
-  METIS_TAC [tpm_inverse, tpm_hreduce_I]);
+  METIS_TAC [pmact_inverse, tpm_hreduce_I]);
 
 val hreduce1_rwts = store_thm(
   "hreduce1_rwts",
@@ -77,12 +77,12 @@ val hreduce1_rwts = store_thm(
       `v # M2` by METIS_TAC [hreduce1_FV] THEN
       SRW_TAC [][GSYM tpm_ALPHA],
 
-      METIS_TAC [tpm_sing_inv, tpm_hreduce_I]
+      METIS_TAC [pmact_sing_inv, tpm_hreduce_I]
     ],
 
     SRW_TAC [DNF_ss][Once hreduce1_cases, LAM_eq_thm] THEN
     SRW_TAC [][EQ_IMP_THM, tpm_eqr] THEN
-    METIS_TAC [lemma15a, tpm_flip_args, fresh_tpm_subst]
+    METIS_TAC [lemma15a, pmact_flip_args, fresh_tpm_subst]
   ]);
 
 val hnf_def = Define`hnf M = ∀N. ¬(M -h-> N)`;
@@ -257,7 +257,7 @@ val whead_gen_bvc_ind = store_thm(
           ∀M N. M -w-> N ⇒ ∀x. P M N x``,
   REPEAT GEN_TAC THEN STRIP_TAC THEN
   Q_TAC SUFF_TAC `∀M N. M -w-> N ⇒ ∀π x. P (π·M) (π·N) x`
-        THEN1 METIS_TAC [tpm_NIL] THEN
+        THEN1 METIS_TAC [pmact_nil] THEN
   HO_MATCH_MP_TAC weak_head_ind THEN SRW_TAC [][tpm_subst] THEN
   Q_TAC (NEW_TAC "z") `{lswapstr π v} ∪ FV (π·M) ∪ FV (π·N) ∪ f x` THEN
   `LAM (lswapstr π v) (π·M) = LAM z ([VAR z/lswapstr π v](π·M))`

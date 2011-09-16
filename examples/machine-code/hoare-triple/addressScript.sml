@@ -732,7 +732,7 @@ val w2w_CLAUSES = store_thm("w2w_CLAUSES",
       ((w2w b1 = (w2w b2):word32) = (b1 = b2:word8)) /\
       ((w2w h1 = (w2w h2):word32) = (h1 = h2:word16)) /\
       (w2w ((w2w b1):word32) = b1) /\ (w2w ((w2w h1):word32) = h1)``,
-  REPEAT Cases_word  
+  REPEAT Cases_word
   \\ FULL_SIMP_TAC (std_ss++wordsLib.SIZES_ss) [w2w_def,n2w_w2n,w2n_n2w,n2w_11]
   \\ IMP_RES_TAC (DECIDE ``n < 256 ==> n < 4294967296:num``)
   \\ IMP_RES_TAC (DECIDE ``n < 65536 ==> n < 4294967296:num``)

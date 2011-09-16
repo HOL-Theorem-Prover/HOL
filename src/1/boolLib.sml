@@ -40,7 +40,7 @@ val COND_BOOL_CLAUSES =
           (!b t. (if b then t else T) = (b ==> t)) /\
           (!b e. (if b then F else e) = (~b /\ e)) /\
           (!b t. (if b then t else F) = (b /\ t))``,
-REPEAT (STRIP_TAC ORELSE COND_CASES_TAC ORELSE EQ_TAC) 
+REPEAT (STRIP_TAC ORELSE COND_CASES_TAC ORELSE EQ_TAC)
   THEN RULE_ASSUM_TAC (REWRITE_RULE[F_DEF])
   THEN (ACCEPT_TAC TRUTH ORELSE TRY(FIRST_ASSUM MATCH_ACCEPT_TAC))
   THEN ASM_REWRITE_TAC[]);
@@ -49,7 +49,7 @@ val _ = Ho_Rewrite.add_implicit_rewrites [COND_BOOL_CLAUSES];
 
 val IF_THEN_T_IMP =  (* better rewrite for RW_TAC *)
   prove(``!b e. (if b then T else e) = (~b ==> e)``,
-REPEAT (STRIP_TAC ORELSE COND_CASES_TAC ORELSE EQ_TAC) 
+REPEAT (STRIP_TAC ORELSE COND_CASES_TAC ORELSE EQ_TAC)
   THEN RULE_ASSUM_TAC (REWRITE_RULE[F_DEF])
   THEN (ACCEPT_TAC TRUTH ORELSE TRY(FIRST_ASSUM MATCH_ACCEPT_TAC))
   THEN ASM_REWRITE_TAC[]);

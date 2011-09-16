@@ -67,15 +67,15 @@ val _ = Hol_datatype `
                | Zloop      of Zcond => word64    (* Here Zcond over approximates possibilities. *)`;
 
 (* This semantics understands the following prefixes in addition to the REX prefix. *)
-val _ = Hol_datatype `Zprefix = Zlock 
-                              | Zbranch_taken 
-                              | Zbranch_not_taken 
+val _ = Hol_datatype `Zprefix = Zlock
+                              | Zbranch_taken
+                              | Zbranch_not_taken
                               | Zoperand_size_override `;
 
 val Zprefix_group_def = Define `
-  (Zprefix_group Zlock = 1) /\ 
-  (Zprefix_group Zbranch_taken = 2) /\ 
-  (Zprefix_group Zbranch_not_taken = 2) /\ 
+  (Zprefix_group Zlock = 1) /\
+  (Zprefix_group Zbranch_taken = 2) /\
+  (Zprefix_group Zbranch_not_taken = 2) /\
   (Zprefix_group Zoperand_size_override = 3)`;
 
 val _ = Hol_datatype `Zinst = Zfull_inst of Zprefix list => Zinstruction`;

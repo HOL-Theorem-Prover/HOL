@@ -250,7 +250,7 @@ fun non_standard_name_defn name q =
                      print name;
                      print " of ``";
                      print fname; print "`` ";
-                     map (fn ty => (print_type ty; print " ")) tyvars; 
+                     map (fn ty => (print_type ty; print " ")) tyvars;
                      print "\n";
                      err "non_standard_name_defn" "type variables not allowed")
       val qtm' = subst [f |-> mk_var(name,fty)] qtm
@@ -624,7 +624,7 @@ fun dest_mllambda (mlpair(mlpair(_,mlpair(params,mlpair(bdy,_))),args)) =
 (*****************************************************************************)
 fun is_mlinclude
      (mlpair(x,mlpair(mlstr book,n))) = (x = mlinclude)
- |  is_mlinclude _  = false; 
+ |  is_mlinclude _  = false;
 
 (*****************************************************************************)
 (* Include-book destructor: (INCLUDE-BOOK book) |--> book                    *)
@@ -647,7 +647,7 @@ fun mk_mlinclude book =
 (*****************************************************************************)
 fun is_mldefun
      (mlpair(x,mlpair(mlsym(_,_),mlpair(params,mlpair(bdy,n))))) =
-      (x = mldefun)         andalso 
+      (x = mldefun)         andalso
       is_mlsexp_list params andalso
       is_mlsexp_list bdy    andalso
       (n = mlnil)
@@ -705,7 +705,7 @@ fun dest_mldefun_sk d =
            of [_,nam,params,quant_bdy]
               => (case dest_mlsexp_list quant_bdy
                   of [quant,qvars,bdy]
-                     => (nam, dest_mlsexp_list params, 
+                     => (nam, dest_mlsexp_list params,
                          quant, dest_mlsexp_list qvars, bdy)
                   |  _
                      => err "dest_mldefun_sk" "bad quant case match")
@@ -720,8 +720,8 @@ fun dest_mldefun_sk d =
 (* (DEFUN-SK nam (x1 ... xn) (quant qvars bdy))                              *)
 (*****************************************************************************)
 fun mk_mldefun_sk (nam, params, quant, qvars, bdy) =
- mk_mlsexp_list 
-  [mldefun_sk, nam, mk_mlsexp_list params, 
+ mk_mlsexp_list
+  [mldefun_sk, nam, mk_mlsexp_list params,
    mk_mlsexp_list [quant, mk_mlsexp_list qvars, bdy]];
 
 (*****************************************************************************)
@@ -1934,12 +1934,12 @@ fun mk_acl2def d =
        val bdy_tm = mlsexp_to_term bdy
        val tm = list_mk_fun(param_vars, bdy_tm)
        val ty = type_of tm
-       val unbound_vars = 
+       val unbound_vars =
             subtract (free_vars bdy_tm) (name_to_var nam ty :: param_vars)
        val _ = if null unbound_vars
                 then ()
-                else (print("Mutual recursion? " 
-                           ^ snd(dest_mlsym nam) 
+                else (print("Mutual recursion? "
+                           ^ snd(dest_mlsym nam)
                            ^ " has unbound free variables: ");
                       map (fn tm => (print_term tm; print " ")) unbound_vars;
                       print"\n")
@@ -1960,11 +1960,11 @@ fun mk_acl2def d =
             if quant = ml_forall
              then list_mk_forall(quant_vars, quant_bdy) else
             if quant = ml_exists
-             then list_mk_exists(quant_vars, quant_bdy) 
+             then list_mk_exists(quant_vars, quant_bdy)
              else err "mk_acl2def" (snd(dest_mlsym quant) ^ ": bad quantifier")
        val tm = list_mk_fun(param_vars, ``bool_to_sexp ^quant_tm``)
        val ty = type_of tm
-       val unbound_vars = 
+       val unbound_vars =
             subtract (free_vars quant_tm) (name_to_var nam ty :: param_vars)
        val _ = if null unbound_vars
                 then ()
@@ -2140,7 +2140,7 @@ fun install(defun tm) =
          val (opr_name,opr_ty) = dest_var opr
          val _ = if not(null(Term.decls opr_name))
                   then (print "\"";
-                        print opr_name; 
+                        print opr_name;
                         print "\" can only be defined once\n";
                         err "install" "repeated defun event")
                   else ()
@@ -2205,7 +2205,7 @@ fun install(defun tm) =
          val newtm =
               list_mk_conj
                (map
-                 (gen_all 
+                 (gen_all
                    o (subst(map2 (fn opr => fn con => (opr |-> con)) tms con_list))
                    o spec_all)
                  (strip_conj(spec_all tm)))
@@ -2213,7 +2213,7 @@ fun install(defun tm) =
          val save_name = hol_name ^ "_mutual"
          val defthm_thm =
               save_thm
-               (save_name, 
+               (save_name,
                 CLEAN_ACL2_VARS (mk_acl2_thm "MUTUAL-RECURSION" acl2_name newtm))
      in
       (save_name,defthm_thm)
@@ -2241,7 +2241,7 @@ fun install(defun tm) =
          val save_name = hol_name ^ "_encap"
          val defthm_thm =
               save_thm
-               (save_name, 
+               (save_name,
                 CLEAN_ACL2_VARS(mk_acl2_thm "ENCAPSULATE" acl2_name newtm))
      in
       (save_name,defthm_thm)
@@ -2332,7 +2332,7 @@ fun match_defthm full_acl2_name mlsexp =
 (*****************************************************************************)
 
 fun run_with_test string =
-    (Process.system (string ^ "&& touch success") ; 
+    (Process.system (string ^ "&& touch success") ;
      can FileSys.remove "success");
 
 (*****************************************************************************)
@@ -2344,7 +2344,7 @@ fun print_defuns_to_mlsexps ql =
  let val sl = map preterm_to_string ql
      val _ = print_lisp_file "defun-tmp" (fn pr => map pr sl)
 in
-  if not (run_with_test 
+  if not (run_with_test
          (a2ml ^ " defun-tmp.lisp defun-tmp.ml >& defun-tmp.log"))
    then (print "a2ml defun-tmp.lisp defun-tmp.ml: Failed\n";
          print "\n";
@@ -2511,9 +2511,9 @@ fun export_acl2_theory () =
 val event_names = ref([] : string list);
 
 fun accumulate_discard_events [] = []
- |  accumulate_discard_events 
+ |  accumulate_discard_events
      ((ev as (mlpair(_,mlpair(mlsym(_,ev_name),_)))) :: evl) =
-      if mem ev_name (!event_names) 
+      if mem ev_name (!event_names)
        then accumulate_discard_events evl
        else (event_names := ev_name :: (!event_names);
              ev :: accumulate_discard_events evl)
@@ -2524,10 +2524,10 @@ fun accumulate_discard_events [] = []
 fun accumulate_discard_events [] = []
  |  accumulate_discard_events (ev :: evl) =
      if is_mldefun ev
-      then 
+      then
        let val (ev_sym,vs,bdy) = dest_mldefun ev
            val (pkg,ev_name) = dest_mlsym ev_sym
-       in if mem ev_name (!event_names) 
+       in if mem ev_name (!event_names)
            then accumulate_discard_events evl
            else (event_names := ev_name :: (!event_names);
                  ev :: accumulate_discard_events evl)
@@ -2535,21 +2535,21 @@ fun accumulate_discard_events [] = []
      if is_mlmutual ev (* WRONG! *)
       then ev :: accumulate_discard_events evl else
      if is_mldefthm ev
-      then   
+      then
        let val (ev_sym,bdy) = dest_mldefthm ev
            val (pkg,ev_name) = dest_mlsym ev_sym
-       in if mem ev_name (!event_names) 
+       in if mem ev_name (!event_names)
            then accumulate_discard_events evl
            else (event_names := ev_name :: (!event_names);
                  ev :: accumulate_discard_events evl)
        end else
      if is_mlinclude ev
-      then (print "accumulate_and_discard_events shouldn't encounter "; 
+      then (print "accumulate_and_discard_events shouldn't encounter ";
             print "INCLUDE-BOOK events, but it encountered:\n";
             pr_mlsexp ev;
             err "accumulate_and_discard_events" "bad event (INCLUDE-BOOK)")
       else
-       (print "Bad event:\n"; pr_mlsexp ev; 
+       (print "Bad event:\n"; pr_mlsexp ev;
         err "accumulate_and_discard_events" "bad event");
 *)
 
@@ -2558,7 +2558,7 @@ fun accumulate_discard_events [] = []
 (* Test if a list xl contains an element eq_fun to x                         *)
 (*****************************************************************************)
 fun remove_duplicates eq_fn [] = []
- |  remove_duplicates eq_fn (x :: xl) = 
+ |  remove_duplicates eq_fn (x :: xl) =
      x :: remove_duplicates eq_fn (op_set_diff eq_fn xl [x]);
 
 (*
@@ -2575,13 +2575,13 @@ fun event_name ev =
   then #1(dest_mldefun_sk ev) else
  if is_mldefaxiom ev
   then #1(dest_mldefaxiom ev) else
- if is_mlmutual ev 
+ if is_mlmutual ev
   then event_name(hd(dest_mlmutual ev)) else
  if is_mldefthm ev
   then #1(dest_mldefthm ev) else
  if is_mlinclude ev
   then mlsym((!current_package), dest_mlinclude ev) else
- (print "Unhandled arg to event_name\n"; 
+ (print "Unhandled arg to event_name\n";
   pr_mlsexp ev; print "\n";
   err "event_name" "unhandled arg");
 
@@ -2591,15 +2591,15 @@ fun event_name ev =
 (* Old version
 fun event_eq ev ev' =
  if is_mldefun ev
-  then is_mldefun ev' andalso 
+  then is_mldefun ev' andalso
        (#1(dest_mldefun ev) = #1(dest_mldefun ev')) else
  if is_mldefun_sk ev
-  then is_mldefun_sk ev' andalso 
+  then is_mldefun_sk ev' andalso
        (#1(dest_mldefun_sk ev) = #1(dest_mldefun_sk ev')) else
  if is_mldefaxiom ev
-  then is_mldefaxiom ev' andalso 
+  then is_mldefaxiom ev' andalso
        (#1(dest_mldefaxiom ev) = #1(dest_mldefaxiom ev')) else
- if is_mlmutual ev 
+ if is_mlmutual ev
   then is_mlmutual ev' andalso
        null(op_set_diff event_eq (dest_mlmutual ev) (dest_mlmutual ev')) andalso
        null(op_set_diff event_eq (dest_mlmutual ev') (dest_mlmutual ev)) else
@@ -2610,13 +2610,13 @@ fun event_eq ev ev' =
   then is_mlinclude ev' andalso
        (dest_mlinclude ev = dest_mlinclude ev')
   else
-   (print "Unhandled args to event_eq:\n"; 
+   (print "Unhandled args to event_eq:\n";
     pr_mlsexp ev; print "\n";
     pr_mlsexp ev';
     err "event_eq" "unhandled args");
 *)
 
-fun discard_duplicate_events evl = 
+fun discard_duplicate_events evl =
 (print "Discarding duplicated events.\n";
  remove_duplicates (fn ev => fn ev' => event_name ev = event_name ev') evl);
 

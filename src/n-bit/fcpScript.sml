@@ -16,7 +16,7 @@ val _ = new_theory "fcp";
 
 (* ------------------------------------------------------------------------- *)
 
-val _ = add_infix("HAS_SIZE",8,HOLgrammars.RIGHT);
+val _ = set_fixity "HAS_SIZE" (Infix(NONASSOC, 450))
 
 val HAS_SIZE = Define`
   (s HAS_SIZE n) = FINITE s /\ (CARD s = n)`;

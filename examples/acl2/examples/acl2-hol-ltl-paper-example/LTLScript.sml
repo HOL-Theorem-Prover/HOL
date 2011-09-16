@@ -110,15 +110,15 @@ val _ = hide "S";
 val model_def =
  Hol_datatype
   `model =
-    <| S: 'state set; 
+    <| S: 'state set;
       (* set of all states *)
        S0:'state set ;
       (* initial states *)
-       R: ('state # 'state) set; 
+       R: ('state # 'state) set;
       (* transition relation *)
        L: 'state -> 'prop set
       (* maps a state to the set of propositions true in that state *)
-    |>`; 
+    |>`;
 
 (******************************************************************************
 * Requirements for a model to be a well-formed Kripke structure
@@ -321,8 +321,8 @@ corresponds to (c-bisim-equiv M M' vars)
    Lemma 31, p 172 of Clarke et al.
 *)
 
-(* 
-* Auxiliary path-constructing function used in proof of Lemma1a 
+(*
+* Auxiliary path-constructing function used in proof of Lemma1a
 * Makes a path in M B-bisimilar to p starting from s
 *)
 val MAKE_PATH_def =
@@ -334,9 +334,9 @@ val MAKE_PATH_REC =
  prove
   (``(MAKE_PATH M B p s 0 =  s)
      /\
-     (MAKE_PATH M B p s (SUC n) = 
+     (MAKE_PATH M B p s (SUC n) =
        @t'. M.R(MAKE_PATH M B p s n, t') /\ B(p(SUC n),t'))``,
-   RW_TAC std_ss 
+   RW_TAC std_ss
     [MAKE_PATH_def,prim_recTheory.PRIM_REC_THM,DECIDE``n+1 = SUC n``]);
 
 val Lemma1a =
@@ -350,7 +350,7 @@ val Lemma1a =
     THEN `!n. (p n) IN M.S` by METIS_TAC[PATH_LEMMA]
     THEN FULL_SIMP_TAC std_ss [IN_DEF,PATH_def]
     THEN Q.EXISTS_TAC `MAKE_PATH M' B p s'`
-    THEN SIMP_TAC std_ss 
+    THEN SIMP_TAC std_ss
           [prim_recTheory.PRIM_REC_THM,GSYM FORALL_AND_THM,MAKE_PATH_REC]
     THEN Induct
     THEN FULL_SIMP_TAC pure_ss [DECIDE ``n + 1 = SUC n``,PATH_def]
@@ -374,7 +374,7 @@ val Lemma1b =
       MODEL M /\ MODEL M' /\ BISIM M M' B Vars
        ==>
        !s s'. s IN M.S /\ s' IN M'.S /\ B(s,s')
-              ==> !p'. PATH M' s' p' 
+              ==> !p'. PATH M' s' p'
                        ==> ?p. PATH M s p /\ !i. M.S(p i) /\ B(p i, p' i)``,
     METIS_TAC
      [BISIM_SYM,
@@ -393,10 +393,10 @@ val Lemma1 =
         ==>
         !s s'. s IN M.S /\ s' IN M'.S /\ B(s,s')
                ==>
-               (!p. PATH M s p 
+               (!p. PATH M s p
                     ==> ?p'. PATH M' s' p' /\ !i. M'.S(p' i) /\ B(p i, p' i))
                /\
-               (!p'. PATH M' s' p' 
+               (!p'. PATH M' s' p'
                      ==> ?p. PATH M s p /\ !i. M.S(p i) /\ B(p i, p' i))``,
    METIS_TAC[Lemma1a,Lemma1b]);
 
@@ -422,7 +422,7 @@ val PATH_SUFFIX =
 val PATH_SUFFIX_IN =
  store_thm
   ("PATH_SUFFIX_IN",
-   ``!M s p. MODEL M /\ M.S s /\ PATH M s p 
+   ``!M s p. MODEL M /\ M.S s /\ PATH M s p
              ==> !n i. M.S (SUFFIX p n i)``,
    RW_TAC std_ss [MODEL_def,PATH_def,SUFFIX_def,IN_DEF]
     THEN Induct_on `n` THEN Induct_on `i`
@@ -432,7 +432,7 @@ val PATH_SUFFIX_IN =
 
 (* Lemma  2, p 10 of Ray et al. Lemma 32, p 172 of Clarke et al. *)
 
-(* Mike's proof: runtime: 161.497s, gctime: 6.142s, systime: 0.410s. 
+(* Mike's proof: runtime: 161.497s, gctime: 6.142s, systime: 0.410s.
 val Lemma2 =
   time store_thm
   ("Lemma2",
@@ -440,8 +440,8 @@ val Lemma2 =
       MODEL M /\ MODEL M' /\ BISIM M M' B Vars
        ==>
        !f s s'. s IN M.S /\ s' IN M'.S /\ B(s,s')
-                ==> 
-                !p p'. 
+                ==>
+                !p p'.
                  PATH M s p /\ PATH M' s' p' /\ (!i. B(p i, p' i))
                             /\ (Atoms f SUBSET Vars)
                  ==> (SEM M p f = SEM M' p' f)``,
@@ -482,21 +482,21 @@ val Lemma2 =
       MODEL M /\ MODEL M' /\ BISIM M M' B Vars
        ==>
        !f s s'. s IN M.S /\ s' IN M'.S /\ B(s,s')
-                ==> 
-                !p p'. 
+                ==>
+                !p p'.
                  PATH M s p /\ PATH M' s' p' /\ (!i. B(p i, p' i))
                             /\ (Atoms f SUBSET Vars)
                  ==> (SEM M p f = SEM M' p' f)``,
    REPEAT GEN_TAC
     THEN SIMP_TAC std_ss [SUBSET_DEF]
     THEN STRIP_TAC
-    THEN Induct 
+    THEN Induct
     THEN RW_TAC (srw_ss()) [SEM_def,Atoms_def]
     THEN FULL_SIMP_TAC (srw_ss()) []
     THENL [FULL_SIMP_TAC std_ss [BISIM_def, PATH_def],
            METIS_TAC[], METIS_TAC[], METIS_TAC[],
-           ALL_TAC,ALL_TAC,ALL_TAC,ALL_TAC,ALL_TAC] 
-    THEN MAP_EVERY IMP_RES_TAC [PATH_SUFFIX,BISIM_SUFFIX] 
+           ALL_TAC,ALL_TAC,ALL_TAC,ALL_TAC,ALL_TAC]
+    THEN MAP_EVERY IMP_RES_TAC [PATH_SUFFIX,BISIM_SUFFIX]
     THEN `!i. p i IN M.S /\ p' i IN M'.S`
           by METIS_TAC [PATH_LEMMA, MODEL_def, SPECIFICATION]
     THEN METIS_TAC []);
@@ -505,8 +505,8 @@ val Lemma2 =
 val Theorem1 =
  time store_thm
   ("Theorem1",
-   ``!M M' Vars. 
-      MODEL M /\ MODEL M' /\ BISIM_EQ M M' Vars 
+   ``!M M' Vars.
+      MODEL M /\ MODEL M' /\ BISIM_EQ M M' Vars
       ==> !f. (Atoms f SUBSET Vars) ==> (SAT M f = SAT M' f)``,
    RW_TAC std_ss [BISIM_EQ_def,SAT_def,SPECIFICATION]
     THEN EQ_TAC

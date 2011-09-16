@@ -1,7 +1,7 @@
 structure holindexData :> holindexData =
 struct
 
-open Lib Feedback 
+open Lib Feedback
 
 val scomp = String.collate (fn (c1, c2) =>
     Char.compare (Char.toUpper c1, Char.toUpper c2))
@@ -281,10 +281,10 @@ in
 fun update_data_store (allow_new,error_fun) (sds_thm,sds_term,sds_type) "Thm" key upf =
    (update_data_substore (true, unknown_def ("Thm", error_fun)) sds_thm key upf,sds_term,sds_type)
 | update_data_store (allow_new,error_fun) (sds_thm,sds_term,sds_type) "Term" key upf =
-   (sds_thm, update_data_substore 
+   (sds_thm, update_data_substore
         (allow_new, unknown_def ("Term", error_fun)) sds_term key upf,sds_type)
 | update_data_store (allow_new,error_fun) (sds_thm,sds_term,sds_type) "Type" key upf =
-   (sds_thm, sds_term, update_data_substore 
+   (sds_thm, sds_term, update_data_substore
        (allow_new, unknown_def ("Type", error_fun)) sds_type key upf)
 | update_data_store _ _ ty _ _ =
    Feedback.failwith ("Unkwown entry_type '"^ty^"'!")
@@ -318,7 +318,7 @@ fun mk_parse_entry id =
     force_index = false,
     full_index  = NONE,
     comment     = NONE,
-    latex       = NONE,        
+    latex       = NONE,
     options     = NONE,
     content     = NONE}:parse_entry
 

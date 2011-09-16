@@ -18,7 +18,6 @@ sig
                   nullfv : term,
                   pm_constant : term,
                   pm_rewrites : thm list,
-                  fv_constant : term,
                   fv_rewrites : thm list,
                   binders : (term * int * thm) list }
   val nameless_nti : nominaltype_info

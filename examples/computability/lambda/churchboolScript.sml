@@ -14,7 +14,7 @@ val _ = set_trace "Unicode" 1
 
 val _ = remove_ovl_mapping "LAM" {Name="LAM", Thy="labelledTerms"}
 val _ = clear_overloads_on "FV"
-val _ = overload_on ("FV", ``supp tpm``)
+val _ = overload_on ("FV", ``supp term_pmact``)
 val _ = remove_ovl_mapping "VAR" {Name="VAR", Thy="labelledTerms"}
 val _ = remove_ovl_mapping "APP"  {Name="APP", Thy="labelledTerms"}
 

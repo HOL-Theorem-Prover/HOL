@@ -1229,7 +1229,7 @@ val WORD_ADD_XOR = store_thm("WORD_ADD_XOR",
   `!a b. (a && b = 0w) ==> (a + b = a ?? b)`,
   SIMP_TAC std_ss [WORD_ADD_OR]
     \\ SIMP_TAC std_ss [CART_EQ,word_0,word_xor_def,
-                      word_or_def,FCP_BETA,word_and_def] 
+                      word_or_def,FCP_BETA,word_and_def]
     \\ REPEAT STRIP_TAC \\ RES_TAC \\ ASM_SIMP_TAC std_ss []);
 
 val WORD_AND_EXP_SUB1 = store_thm("WORD_AND_EXP_SUB1",
@@ -2631,7 +2631,7 @@ val sw2sw_w2w_add = Q.store_thm("sw2sw_w2w_add",
      sw2sw w = (if word_msb w then -1w << dimindex (:'a) else 0w) + w2w w`,
   SRW_TAC [] [sw2sw_w2w, WORD_OR_CLAUSES, WORD_ADD_0]
   \\ MATCH_MP_TAC (GSYM WORD_ADD_OR)
-  \\ SRW_TAC [fcpLib.FCP_ss] 
+  \\ SRW_TAC [fcpLib.FCP_ss]
        [w2w, word_and_def, word_lsl_def, word_0, WORD_NEG_1]
   \\ Cases_on `i < dimindex (:'a)`
   \\ SRW_TAC [ARITH_ss] [word_T]);
@@ -4308,7 +4308,7 @@ val saturate_mul = Q.store_thm("saturate_mul",
   `!a b.
       saturate_mul a b =
         if FINITE (univ(:'a)) /\
-           w2w (UINT_MAXw: 'a word) <=+ w2w a * w2w b : ('a + 'a) word 
+           w2w (UINT_MAXw: 'a word) <=+ w2w a * w2w b : ('a + 'a) word
         then
           UINT_MAXw: 'a word
         else

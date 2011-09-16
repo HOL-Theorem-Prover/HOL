@@ -519,7 +519,7 @@ fun perm_reducer_get_context e =
 fun clean_perm_thm thm = filter (is_PERM o concl) (BODY_CONJUNCTS thm);
 fun clean_perm_thmL thmL = flatten (map clean_perm_thm thmL);
 fun normalise_RULE l thm = CONV_RULE (REPEATC (PERM_SIMP_CONV l)) thm handle HOL_ERR _ => thm
-fun normalise_RULE_bool l thm = 
+fun normalise_RULE_bool l thm =
    let val thm' = normalise_RULE l thm; in
       (not (aconv (concl thm) (concl thm')), thm')
    end;
@@ -528,26 +528,26 @@ fun perm_reducer_add_context old_thmL [] = old_thmL
   | perm_reducer_add_context old_thmL (new_thm::new_thmL) =
     case clean_perm_thm (normalise_RULE old_thmL new_thm) of
         [] => perm_reducer_add_context old_thmL new_thmL
-      | (new_thm'::new_thmL') => 
-        let 
+      | (new_thm'::new_thmL') =>
+        let
            val old_thmLb' = map (normalise_RULE_bool [new_thm']) old_thmL
            val (new_thmLb'', old_thmLb'') = partition fst old_thmLb';
            val new_thmL'' = map snd new_thmLb'';
            val old_thmL'' = map snd old_thmLb'';
         in
-           perm_reducer_add_context (new_thm'::old_thmL'') 
+           perm_reducer_add_context (new_thm'::old_thmL'')
               (append new_thmL'' (append new_thmL' new_thmL))
         end;
 
 val perm_simplify_thmL = perm_reducer_add_context [];
 
 fun perm_reducer_add_context2 (ctx, thmL) =
-   perm_reducer_context (perm_reducer_add_context 
+   perm_reducer_context (perm_reducer_add_context
                         (perm_reducer_get_context ctx) thmL);
 
 fun perm_reducer_add_context_simple (ctx, thmL) =
    perm_reducer_context (append (clean_perm_thmL thmL)
-                                (perm_reducer_get_context ctx)); 
+                                (perm_reducer_get_context ctx));
 
 val PERM_REDUCER =
   Traverse.REDUCER {name = SOME "PERM_REDUCER",
@@ -581,7 +581,7 @@ fun NORMALISE_ASM_PERM_TAC (asm, t) =
 let
    val (asm_perm, asm_rest) = partition is_PERM asm;
    val asm_perm_thmL = perm_simplify_thmL (map ASSUME asm_perm)
-   
+
    val asm' = append asm_rest (map concl asm_perm_thmL);
    fun reconstruct thm' = foldl (fn (h, thm) => PROVE_HYP h thm) thm' asm_perm_thmL
 in

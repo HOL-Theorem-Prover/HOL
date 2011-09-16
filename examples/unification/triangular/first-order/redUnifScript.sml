@@ -21,11 +21,11 @@ val tstep_def = Define`
   tstep (sl,bl) (sr,br) =
   (∃t1 t2.
     (walk sl t1 = walk sl t2) ∧
-    (br + {|(t1,t2)|} = bl) ∧ 
+    (br + {|(t1,t2)|} = bl) ∧
     (sr = sl)) ∨
   (∃t1 t2 t1a t1d t2a t2d.
-    (walk sl t1 = Pair t1a t1d) ∧ (walk sl t2 = Pair t2a t2d) ∧ 
-    (br + {|(t1,t2)|} = {|(t1a,t2a); (t1d,t2d)|} + bl) ∧ 
+    (walk sl t1 = Pair t1a t1d) ∧ (walk sl t2 = Pair t2a t2d) ∧
+    (br + {|(t1,t2)|} = {|(t1a,t2a); (t1d,t2d)|} + bl) ∧
     (sr = sl)) ∨
   (∃t1 t2 v t.
     ((walk sl t1 = Var v) ∧ (walk sl t2 = t) ∨
@@ -201,12 +201,12 @@ val tstep_def = Define`
   (∃t1 t2 c.
     (walk sl t1 = Const c) ∧
     (walk sl t2 = Const c) ∧
-    (er + {|(t1,t2)|} = el) ∧ 
+    (er + {|(t1,t2)|} = el) ∧
     (sr = sl)) ∨
   (∃t1 t2 t1a t1d t2a t2d.
     (walk sl t1 = Pair t1a t1d) ∧
-    (walk sl t2 = Pair t2a t2d) ∧ 
-    (er + {|(t1,t2)|} = {|(t1a,t2a); (t1d,t2d)|} + el) ∧ 
+    (walk sl t2 = Pair t2a t2d) ∧
+    (er + {|(t1,t2)|} = {|(t1a,t2a); (t1d,t2d)|} + el) ∧
     (sr = sl)) ∨
   (∃t1 t2 v t.
     (walk sl t1 = t) ∧
