@@ -308,6 +308,7 @@ val (log_term, log_thm, log_clear) = let
       val th1 = SEL_RULE th
       val (l,r) = dest_comb(concl th1)
       val {Thy,Name,...} = dest_thy_const c
+      val Name = if Theory.uptodate_term c then Name else strip_old Name
       val th2 = mk_proof_thm (Def_const_prf({Thy=Thy,Name=Name},r)) ([],mk_eq(c,r))
       val defs = th2 :: defs
       val th = CONV_RULE BETA_CONV (EQ_MP (AP_TERM l (SYM th2)) th1)

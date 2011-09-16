@@ -29,6 +29,8 @@ val _ = OpenTheory_const_name{const={Thy="OTcl",Name="junk_abs"},name="combinato
 val _ = OpenTheory_const_name{const={Thy="OTcl",Name="junk_cl0"},name="combinatoryLogicExample.ind_type.cl0"}
 val _ = OpenTheory_const_name{const={Thy="OTcl",Name="junk_cl1"},name="combinatoryLogicExample.ind_type.cl1"}
 val _ = OpenTheory_const_name{const={Thy="OTcl",Name="junk_cl2"},name="combinatoryLogicExample.ind_type.cl2"}
+val _ = OpenTheory_const_name{const={Thy="OTcl",Name="junk_cl3"},name="combinatoryLogicExample.ind_type.cl3"}
+val _ = OpenTheory_const_name{const={Thy="OTcl",Name="junk_cl4"},name="combinatoryLogicExample.ind_type.cl4"}
 
 fun ML_name "#" = "APP"
   | ML_name "-->" = "redn"
