@@ -24,9 +24,7 @@ val permeq_sym' = prove(``x == y <=> y == x``, METIS_TAC [permeq_sym])
 fun permify ss = simpLib.add_relsimp
                {trans = permeq_trans,
                 refl = GEN_ALL permeq_refl,
-                weakenings = Sus_eq_perms ::
-                             (lswapstr_eq_perms|>SPEC_ALL|>UNDISCH
-                                               |>SPEC_ALL|>DISCH_ALL) ::
+                weakenings = Sus_eq_perms :: pmact_permeq ::
                              !user_weakenings,
                 subsets = [],
                 rewrs = [SELECT_permeq_REFL, permof_inverse,

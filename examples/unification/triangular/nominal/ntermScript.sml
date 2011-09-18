@@ -3,12 +3,6 @@ open HolKernel boolLib bossLib Parse stringTheory nomsetTheory listTheory ramana
 val _ = new_theory "nterm";
 val _ = metisTools.limit :=  { time = NONE, infs = SOME 5000 };
 
-val lswapstr_decompose = save_thm("lswapstr_decompose",MATCH_MP is_perm_decompose perm_of_is_perm);
-val lswapstr_inverse = RWsave_thm("lswapstr_inverse",MATCH_MP is_perm_inverse perm_of_is_perm);
-val lswapstr_eq_perms = RWsave_thm("lswapstr_eq_perms", is_perm_def |> Q.ISPEC
-`lswapstr` |> C EQ_MP perm_of_is_perm |> funpow 2 CONJUNCT2 |> SIMP_RULE
-(bool_ss) [FUN_EQ_THM]);
-
 val permeq_exists = RWstore_thm(
 "permeq_exists",
 `(∃x. p == x) ∧ (∃x. x == p)`,
