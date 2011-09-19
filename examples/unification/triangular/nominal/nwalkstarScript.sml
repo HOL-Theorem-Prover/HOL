@@ -501,6 +501,6 @@ SRW_TAC [][] THEN
 (nvwalk_modulo_pi |> Q.SPECL [`s`,`l`,`n`] |> MP_TAC) THEN
 (nvwalk_modulo_pi |> Q.SPECL [`s`,`pi++l`,`n`] |> MP_TAC) THEN
 SRW_TAC [][] THEN Cases_on `nvwalk s [] n` THEN
-FULL_SIMP_TAC (psrw_ss()) [lswapstr_decompose, apply_pi_decompose]);
+FULL_SIMP_TAC (psrw_ss()) [pmact_decompose]);
 
 val _ = export_theory ()
