@@ -317,11 +317,6 @@ val _ = Define `
  (return envC env v c = Estep (envC, env, Val v, c))`;
 
 
-(*val type_error : envC -> envE -> ctxt list -> e_step_result*)
-val _ = Define `
- (type_error envC env c = Etype_error)`;
-
-
 (* Bind each function of a mutually recursive set of functions to its closure *)
 (*val build_rec_env : (varN * varN * exp) list -> envE -> envE*)
  val build_rec_env_defn = Hol_defn "build_rec_env" `
@@ -392,6 +387,15 @@ val _ = Define `
     NONE)`;
 
 
+(*val do_con_check : envC -> conN -> num -> bool*)
+val _ = Define `
+ (do_con_check envC n l =
+  (case lookup n envC of
+       NONE -> F
+    || SOME (l',ns) -> l = l' 
+  ))`;
+
+
 (* apply a context to a value *)
 (*val continue : envC -> v -> ctxt list -> e_step_result*)
 val _ = Define `
@@ -419,16 +423,22 @@ val _ = Define `
         Estep (envC, env, Raise Bind_error, c)
     || (Cmat () ((p,e)::pes), env) :: c ->
         (case pmatch envC p v env of
-             Match_type_error -> type_error envC env c
+             Match_type_error -> Etype_error
           || No_match -> push envC env (Val v) (Cmat () pes) c
           || Match env' -> Estep (envC, env', e, c)
         )
     || (Clet n () e, env) :: c ->
         Estep (envC, bind n v env, e, c) 
     || (Ccon n vs () [], env) :: c ->
-        return envC env (Conv n (REVERSE (v::vs))) c
+        if do_con_check envC n (LENGTH vs + 1) then
+          return envC env (Conv n (REVERSE (v::vs))) c
+        else
+          Etype_error
     || (Ccon n vs () (e::es), env) :: c ->
-        push envC env e (Ccon n (v::vs) () es) c
+        if do_con_check envC n (LENGTH vs + 1 + 1 + LENGTH es) then
+          push envC env e (Ccon n (v::vs) () es) c
+        else
+          Etype_error
   ))`;
 
 
@@ -450,21 +460,17 @@ val _ = Define `
     || Val v  -> 
 	continue envC v c
     || Con n es -> 
-        (case lookup n envC of
-             NONE -> type_error envC env c
-          || SOME (l,_) -> 
-	      if l = LENGTH es then
-                (case es of
-                     [] -> return envC env (Conv n []) c
-                  || e::es ->
-                      push envC env e (Ccon n [] () es) c
-                )
-              else
-                type_error envC env c
-        )
+        if do_con_check envC n (LENGTH es) then
+          (case es of
+               [] -> return envC env (Conv n []) c
+            || e::es ->
+                push envC env e (Ccon n [] () es) c
+          )
+        else
+          Etype_error
     || Var n ->
         (case lookup n env of
-             NONE -> type_error envC env c
+             NONE -> Etype_error
           || SOME v -> return envC env v c
         )
     || Fun n e -> return envC env (Closure env n e) c
@@ -475,7 +481,7 @@ val _ = Define `
     || Let n e1 e2 -> push envC env e1 (Clet n () e2) c
     || Letrec funs e ->
         if ~ (ALL_DISTINCT (MAP (\ (x,y,z) . x) funs)) then
-          type_error envC env c
+          Etype_error
         else
           Estep (envC, build_rec_env funs env, e, c)
   ))`;
@@ -592,24 +598,23 @@ evaluate cenv env (Val v) (Rval v))
 
 /\
 
-(! cenv env cn es vs ns.
-(lookup cn cenv = SOME (LENGTH es,ns)) /\
+(! cenv env cn es vs.
+do_con_check cenv cn (LENGTH es) /\
 evaluate_list cenv env es (Rval vs)
 ==>
 evaluate cenv env (Con cn es) (Rval (Conv cn vs)))
 
 /\
 
-(! cenv env cn es l ns.
-(lookup cn cenv = NONE) \/ 
-((lookup cn cenv = SOME (l,ns)) /\ l <> LENGTH es)
+(! cenv env cn es.
+~ (do_con_check cenv cn (LENGTH es))
 ==>
 evaluate cenv env (Con cn es) (Rerr Rtype_error))
 
 /\
 
-(! cenv env cn es err ns.
-(lookup cn cenv = SOME (LENGTH es,ns)) /\
+(! cenv env cn es err.
+do_con_check cenv cn (LENGTH es) /\
 evaluate_list cenv env es (Rerr err)
 ==>
 evaluate cenv env (Con cn es) (Rerr err))

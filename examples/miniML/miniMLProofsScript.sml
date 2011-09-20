@@ -61,8 +61,7 @@ val _ = save_thm ("type_subst_ind", type_subst_ind);
 val untyped_safety_thm = Q.store_thm ("untyped_safety_thm",
 `∀envC env ds st. 
   (d_step (envC, env, ds, st) = Dstuck) = (ds = []) ∧ (st = NONE)`,
-rw [d_step_def, e_step_def, continue_def, push_def, return_def, 
-    type_error_def] >>
+rw [d_step_def, e_step_def, continue_def, push_def, return_def] >>
 every_case_tac >>
 fs [LET_THM, do_app_def] >>
 every_case_tac >>

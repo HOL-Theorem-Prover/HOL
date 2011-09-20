@@ -52,7 +52,7 @@ val e_single_step_add_ctxt = Q.prove (
   (e_step (cenv,env,e,c++c'') = Estep (cenv',env',e',c'++c''))`,
 rw [e_step_def] >>
 cases_on `e` >>
-fs [type_error_def,push_def, return_def, emp_def] >>
+fs [push_def, return_def, emp_def] >>
 rw [] >>
 fs [] >>
 rw [] >>
@@ -67,7 +67,7 @@ fs [] >>
 cases_on `q` >>
 fs [] >>
 every_case_tac >>
-fs [type_error_def, push_def, return_def] >> 
+fs [push_def, return_def] >> 
 rw []);
 
 val e_single_error_add_ctxt = Q.prove (
@@ -77,7 +77,7 @@ val e_single_error_add_ctxt = Q.prove (
   (e_step (cenv,env,e,c++c'') = Etype_error)`,
 rw [e_step_def] >>
 cases_on `e` >>
-fs [type_error_def,push_def, return_def, emp_def] >>
+fs [push_def, return_def, emp_def] >>
 rw [] >>
 fs [] >>
 rw [] >>
@@ -92,7 +92,7 @@ fs [] >>
 cases_on `q` >>
 fs [] >>
 every_case_tac >>
-fs [type_error_def, push_def, return_def] >> 
+fs [push_def, return_def] >> 
 rw []);
 
 val e_step_add_ctxt_help = Q.prove (
@@ -178,6 +178,7 @@ rw [] >|
  rw [return_def, Once RTC_CASES1, e_step_reln_def, Once e_step_def, push_def] >>
      metis_tac []];
 
+(*
 val small_eval_con_empty = Q.prove (
 `!cenv env cn ns c r.
   (lookup cn cenv = SOME (0,ns))
@@ -193,6 +194,7 @@ val small_eval_con = Q.prove (
   (small_eval cenv env (Con cn (e1::es)) c r =
    small_eval cenv env e1 ((Ccon cn [] () es,env)::c) r)`,
 small_eval_step_tac);
+*)
 
 val small_eval_app = Q.prove (
 `!cenv env op e1 e2 c r. 
@@ -231,6 +233,7 @@ val small_eval_letrec = Q.prove (
    small_eval cenv (build_rec_env funs env) e1 c r)`,
 small_eval_step_tac);
 
+(*
 val (small_eval_list_rules, small_eval_list_ind, small_eval_list_cases) = Hol_reln `
 (!cenv env. small_eval_list cenv env [] (Rval [])) ∧
 (!cenv env e es v vs env'.
@@ -333,7 +336,7 @@ rw [] >>
                 (e_step (cenv,env'',e',c') = Etype_error)`
              by metis_tac [] >>
      metis_tac [RTC_SINGLE, transitive_RTC, transitive_def]]);
-
+*)
 
 val (small_eval_match_rules, small_eval_match_ind, small_eval_match_cases) = Hol_reln `
 (!cenv env v. small_eval_match cenv env v [] (Rerr (Rraise Bind_error))) ∧
@@ -390,7 +393,7 @@ rw [small_eval_def] >|
      qexists_tac `Val v` >>
      qexists_tac `[(Cmat () ((p,e)::pes),env)]` >>
      rw [RTC_REFL] >>
-     rw [e_step_def, continue_def, type_error_def]]);
+     rw [e_step_def, continue_def]]);
 
 val big_exp_to_small_exp = Q.prove (
 `(∀ cenv env e r.
@@ -409,6 +412,7 @@ rw [small_eval_app, small_eval_log, small_eval_if, small_eval_match,
      metis_tac [RTC_REFL],
  rw [small_eval_def] >>
      metis_tac [RTC_REFL],
+ (*
  cases_on `es` >>
      rw [small_eval_con, small_eval_con_empty] >|
      [rw [small_eval_def] >>
@@ -421,16 +425,14 @@ rw [small_eval_app, small_eval_log, small_eval_if, small_eval_match,
                     by metis_tac [small_eval_list_step] >>
           fs [] >>
           metis_tac []],
+ *)
+ all_tac,
  rw [small_eval_def, e_step_def] >>
      qexists_tac `env` >>
      qexists_tac `Con cn es` >>
-     rw [type_error_def] >>
+     rw [] >>
      metis_tac [RTC_REFL],
- rw [small_eval_def, e_step_def] >>
-     qexists_tac `env` >>
-     qexists_tac `Con cn es` >>
-     rw [type_error_def] >>
-     metis_tac [RTC_REFL],
+ (*
  cases_on `es` >>
      rw [small_eval_con, small_eval_con_empty] >>
      fs [Once small_eval_list_cases] >>
@@ -441,13 +443,15 @@ rw [small_eval_app, small_eval_log, small_eval_if, small_eval_match,
       metis_tac [APPEND,e_step_raise, e_step_add_ctxt, transitive_RTC,
                  transitive_def, e_single_error_add_ctxt],
       metis_tac [small_eval_list_terr]],
+ *)
+ all_tac,
  rw [small_eval_def] >>
      qexists_tac `env` >>
      rw [Once RTC_CASES1, e_step_reln_def, return_def, e_step_def], 
  rw [small_eval_def, e_step_def] >>
      qexists_tac `env` >>
      qexists_tac `Var n` >>
-     rw [type_error_def] >>
+     rw [] >>
      metis_tac [RTC_REFL],
  rw [small_eval_def] >>
      qexists_tac `env` >>
@@ -546,8 +550,8 @@ rw [small_eval_app, small_eval_log, small_eval_if, small_eval_match,
      qexists_tac `env` >>
      qexists_tac `Letrec funs e` >>
      qexists_tac `[]` >>
-     rw [RTC_REFL, e_step_def, type_error_def],
- metis_tac [small_eval_list_rules],
+     rw [RTC_REFL, e_step_def],
+ (*metis_tac [small_eval_list_rules],
  fs [small_eval_def] >>
      metis_tac [APPEND,e_step_add_ctxt, small_eval_list_rules],
  cases_on `err` >> 
@@ -556,9 +560,226 @@ rw [small_eval_app, small_eval_log, small_eval_if, small_eval_match,
  cases_on `err` >> 
      fs [small_eval_def] >>
      metis_tac [APPEND,e_step_add_ctxt, small_eval_list_rules], 
+ *)
+ all_tac,
+ all_tac,
+ all_tac,
+ all_tac,
  metis_tac [small_eval_match_rules],
  metis_tac [small_eval_match_rules],
  metis_tac [small_eval_match_rules],
  metis_tac [small_eval_match_rules]]);
 
+val evaluate_val = Q.prove (
+`!cenv env v v' err.
+  (evaluate cenv env (Val v) (Rval v') = (v = v')) ∧
+  ¬(evaluate cenv env (Val v) (Rerr err))`,
+rw [Once evaluate_cases] >>
+rw [Once evaluate_cases] >>
+metis_tac []);
+
+val evaluate_list_val = Q.prove (
+`!cenv env vs vs'.
+  evaluate_list cenv env (MAP Val vs) (Rval vs') = (vs = vs')`,
+induct_on `vs` >>
+rw [] >>
+rw [Once evaluate_cases] >-
+metis_tac [] >>
+EQ_TAC >>
+rw [evaluate_val]);
+
+val evaluate_raise = Q.prove (
+`!cenv env err bv.
+  (evaluate cenv env (Raise err) bv = (bv = Rerr (Rraise err)))`,
+rw [Once evaluate_cases]);
+
+val evaluate_ctxts_cons = Q.prove (
+`!cenv f cs v bv.
+  evaluate_ctxts cenv (f::cs) v bv = 
+  (?c env v'. 
+     (f = (c,env)) ∧
+     evaluate_ctxt cenv env c v (Rval v') ∧
+     evaluate_ctxts cenv cs v' bv) ∨
+  (?c env err.
+     (f = (c,env)) ∧
+     (bv = Rerr err) ∧
+     evaluate_ctxt cenv env c v (Rerr err))`,
+rw [] >>
+rw [Once evaluate_ctxts_cases] >>
+EQ_TAC >>
+rw [] >>
+metis_tac []);
+
+
+fun TAC q = 
+fs [evaluate_state_cases] >>
+ONCE_REWRITE_TAC [evaluate_cases] >>
+rw [] >>
+fs [evaluate_ctxts_cons, evaluate_ctxt_cases] >>
+qpat_assum `evaluate cenv env ^q p1`
+           (ASSUME_TAC o SIMP_RULE (srw_ss()) [Once evaluate_cases]) >>
+fs [evaluate_val] >>
+metis_tac [];
+
+
+`!cenv env e c cenv' env' e' c' bv.
+  (e_step (cenv,env,e,c) = Estep (cenv',env',e',c')) ∧
+  evaluate_state (cenv',env',e',c') bv
+  ⇒
+  evaluate_state (cenv,env,e,c) bv`,
+rw [e_step_def] >>
+cases_on `e` >>
+fs [] >>
+every_case_tac >>
+fs [push_def,return_def] >>
+rw [] >|
+[fs [evaluate_state_cases, Once evaluate_cases],
+ fs [continue_def] >>
+     cases_on `c` >>
+     fs [] >>
+     cases_on `h` >> 
+     fs [] >>
+     cases_on `q` >> 
+     fs [] >>
+     every_case_tac >>
+     fs [push_def, return_def] >>
+     rw [] >>
+     fs [evaluate_state_cases, evaluate_val, evaluate_ctxts_cons,
+         evaluate_ctxt_cases, evaluate_raise, do_con_check_def] >|
+     [qpat_assum `evaluate cenv env' (App o' (Val v) (Val v')) p1`
+               (ASSUME_TAC o SIMP_RULE (srw_ss()) [Once evaluate_cases]) >>
+          rw [Once evaluate_cases, evaluate_val] >-
+          metis_tac [],
+      cases_on `err` >>
+          disj2_tac >>
+          qpat_assum `evaluate cenv env' (App o' (Val v) (Val v')) p1`
+               (ASSUME_TAC o SIMP_RULE (srw_ss()) [Once evaluate_cases]) >>
+          rw [Once evaluate_cases, evaluate_val] >>
+          metis_tac [],
+      cases_on `err` >>
+          disj2_tac >>
+          rw [Once evaluate_cases, evaluate_val] >>
+          metis_tac [],
+      rw [Once evaluate_cases, evaluate_val] >>
+          metis_tac [],
+      cases_on `err` >>
+          disj2_tac >>
+          rw [Once evaluate_cases, evaluate_val] >>
+          metis_tac [],
+      rw [Once evaluate_cases, evaluate_val] >>
+          metis_tac [],
+      cases_on `err` >>
+          disj2_tac >>
+          rw [Once evaluate_cases, evaluate_val] >>
+          metis_tac [],
+      rw [Once evaluate_cases, evaluate_val] >>
+          metis_tac [],
+      cases_on `err` >>
+          disj2_tac >>
+          rw [Once evaluate_cases, evaluate_val] >>
+          metis_tac [],
+      disj2_tac >>
+          rw [Once evaluate_cases, evaluate_val] >>
+          rw [Once evaluate_cases],
+      rw [Once evaluate_cases, evaluate_val] >>
+          fs [Once evaluate_cases, evaluate_val] >>
+          metis_tac [],
+      cases_on `err` >>
+          disj2_tac >>
+          fs [Once evaluate_cases, evaluate_val] >>
+          rw [Once evaluate_cases, evaluate_val],
+      rw [Once evaluate_cases, evaluate_val] >>
+          rw [Once evaluate_cases, evaluate_val] >>
+          metis_tac [],
+      cases_on `err` >>
+          disj2_tac >>
+          rw [Once evaluate_cases, evaluate_val] >>
+          rw [Once evaluate_cases, evaluate_val] >>
+          metis_tac [],
+      rw [Once evaluate_cases, evaluate_val] >>
+          metis_tac [],
+      cases_on `err` >>
+          disj2_tac >>
+          rw [Once evaluate_cases, evaluate_val] >>
+          metis_tac [],
+      every_case_tac >>
+          fs [] >>
+          rw [Once evaluate_cases, do_con_check_def] >>
+          metis_tac [evaluate_list_val, MAP_APPEND, MAP]
+      every_case_tac >>
+          fs [] >>
+          rw [] >>
+          full_simp_tac (srw_ss()++ARITH_ss) [],
+      every_case_tac >>
+          fs [] >>
+          rw [] >>
+          full_simp_tac (srw_ss()++ARITH_ss) [],
+      every_case_tac >>
+          fs [] >>
+          rw [] >>
+          full_simp_tac (srw_ss()++ARITH_ss) [],
+      all_tac,
+      all_tac,
+      all_tac],
+ fs [evaluate_state_cases] >>
+     ONCE_REWRITE_TAC [evaluate_cases] >>
+     fs [evaluate_val] >>
+     ONCE_REWRITE_TAC [evaluate_cases] >>
+     rw [],
+ fs [evaluate_state_cases] >>
+     ONCE_REWRITE_TAC [evaluate_cases] >>
+     ONCE_REWRITE_TAC [hd (tl (CONJUNCTS evaluate_cases))] >>
+     rw [] >>
+     fs [evaluate_ctxts_cons, evaluate_ctxt_cases] >>
+     qpat_assum `evaluate cenv env (Con s (Val v::t)) p1`
+                (ASSUME_TAC o SIMP_RULE (srw_ss()) 
+                                 [Once evaluate_cases,
+                                  Once (hd (tl (CONJUNCTS evaluate_cases)))]) >>
+     fs [evaluate_val] >>
+     fs [] >> 
+     rw [] >-
+     metis_tac [] >>
+     pop_assum (ASSUME_TAC o SIMP_RULE (srw_ss()) [Once evaluate_cases]) >>
+     fs [evaluate_val] >>
+     metis_tac [optionTheory.NOT_SOME_NONE, optionTheory.SOME_11],
+ fs [evaluate_state_cases] >>
+     ONCE_REWRITE_TAC [evaluate_cases] >>
+     fs [evaluate_val],
+ fs [evaluate_state_cases] >>
+     fs [Once evaluate_cases] >>
+     metis_tac [],
+ fs [evaluate_state_cases] >>
+     ONCE_REWRITE_TAC [evaluate_cases] >>
+     rw [] >>
+     fs [evaluate_ctxts_cons, evaluate_ctxt_cases] >>
+     qpat_assum `evaluate cenv env (App o' (Val v) e0) p1`
+                (ASSUME_TAC o SIMP_RULE (srw_ss()) 
+                     [Once evaluate_cases]) >>
+     fs [evaluate_val] >>
+     metis_tac [],
+ TAC ``Log l (Val v) e0``,
+ TAC ``If (Val v) e0 e1``,
+ TAC ``Mat (Val v) l``,
+ TAC ``Let s (Val v) e0``,
+ fs [evaluate_state_cases] >>
+     ONCE_REWRITE_TAC [evaluate_cases] >>
+     fs [] >>
+     metis_tac []]
+
+
+      rw [Once evaluate_cases] >>
+          qpat_assum `evaluate cenv env' (Con s p1) p2` 
+                (ASSUME_TAC o SIMP_RULE (srw_ss()) 
+                     [Once evaluate_cases]) >>
+          fs []
+
+
+          metis_tac [evaluate_list_val, MAP_APPEND, MAP]
+
+
+
+
+
+
+metis_tac []
 val _ = export_theory ();

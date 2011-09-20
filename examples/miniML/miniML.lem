@@ -268,9 +268,6 @@ let push envC env e c' cs = Estep (envC, env, e, (c',env)::cs)
 val return : envC -> envE -> v -> ctxt list -> e_step_result
 let return envC env v c = Estep (envC, env, Val v, c)
 
-val type_error : envC -> envE -> ctxt list -> e_step_result
-let type_error envC env c = Etype_error
-
 (* Bind each function of a mutually recursive set of functions to its closure *)
 val build_rec_env : (varN * varN * exp) list -> envE -> envE
 let rec build_rec_env funs env =
@@ -329,6 +326,13 @@ let do_if v e1 e2 =
   else
     None
 
+val do_con_check : envC -> conN -> num -> bool
+let do_con_check envC n l =
+  match lookup n envC with
+    | None -> false
+    | Some (l',ns) -> l = l' 
+  end
+
 (* apply a context to a value *)
 val continue : envC -> v -> ctxt list -> e_step_result
 let continue envC v cs =
@@ -355,16 +359,22 @@ let continue envC v cs =
         Estep (envC, env, Raise Bind_error, c)
     | (Cmat () ((p,e)::pes), env) :: c ->
         match pmatch envC p v env with
-          | Match_type_error -> type_error envC env c
+          | Match_type_error -> Etype_error
           | No_match -> push envC env (Val v) (Cmat () pes) c
           | Match env' -> Estep (envC, env', e, c)
         end
     | (Clet n () e, env) :: c ->
         Estep (envC, bind n v env, e, c) 
     | (Ccon n vs () [], env) :: c ->
-        return envC env (Conv n (List.rev (v::vs))) c
+        if do_con_check envC n (List.length vs + 1) then
+          return envC env (Conv n (List.rev (v::vs))) c
+        else
+          Etype_error
     | (Ccon n vs () (e::es), env) :: c ->
-        push envC env e (Ccon n (v::vs) () es) c
+        if do_con_check envC n (List.length vs + 1 + 1 + List.length es) then
+          push envC env e (Ccon n (v::vs) () es) c
+        else
+          Etype_error
   end
 
 (* The single step expression evaluator.  Returns None if there is nothing to
@@ -384,21 +394,17 @@ let e_step (envC, env, e, c) =
     | Val v  -> 
 	continue envC v c
     | Con n es -> 
-        match lookup n envC with
-          | None -> type_error envC env c
-          | Some (l,_) -> 
-	      if l = List.length es then
-                match es with
-                  | [] -> return envC env (Conv n []) c
-                  | e::es ->
-                      push envC env e (Ccon n [] () es) c
-                end
-              else
-                type_error envC env c
-        end
+        if do_con_check envC n (List.length es) then
+          match es with
+            | [] -> return envC env (Conv n []) c
+            | e::es ->
+                push envC env e (Ccon n [] () es) c
+          end
+        else
+          Etype_error
     | Var n ->
         match lookup n env with
-          | None -> type_error envC env c
+          | None -> Etype_error
           | Some v -> return envC env v c
         end
     | Fun n e -> return envC env (Closure env n e) c
@@ -409,7 +415,7 @@ let e_step (envC, env, e, c) =
     | Let n e1 e2 -> push envC env e1 (Clet n () e2) c
     | Letrec funs e ->
         if not (all_distinct (List.map (fun (x,y,z) -> x) funs)) then
-          type_error envC env c
+          Etype_error
         else
           Estep (envC, build_rec_env funs env, e, c)
   end 
@@ -513,24 +519,23 @@ evaluate cenv env (Val v) (Rval v)
 
 and
 
-forall cenv env cn es vs ns.
-(lookup cn cenv = Some (List.length es,ns)) &&
+forall cenv env cn es vs.
+do_con_check cenv cn (List.length es) &&
 evaluate_list cenv env es (Rval vs)
 ==>
 evaluate cenv env (Con cn es) (Rval (Conv cn vs))
 
 and
 
-forall cenv env cn es l ns.
-(lookup cn cenv = None) || 
-(lookup cn cenv = Some (l,ns) && l <> List.length es)
+forall cenv env cn es.
+not (do_con_check cenv cn (List.length es))
 ==>
 evaluate cenv env (Con cn es) (Rerr Rtype_error)
 
 and
 
-forall cenv env cn es err ns.
-(lookup cn cenv = Some (List.length es,ns)) &&
+forall cenv env cn es err.
+do_con_check cenv cn (List.length es) &&
 evaluate_list cenv env es (Rerr err)
 ==>
 evaluate cenv env (Con cn es) (Rerr err)
