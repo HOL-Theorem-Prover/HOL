@@ -244,6 +244,12 @@ val pmact_eql = store_thm(
   SRW_TAC [][is_pmact_def, EQ_IMP_THM] THEN
   SRW_TAC [][pmact_decompose]);
 
+val pmact_eqr = save_thm(
+  "pmact_eqr",
+  pmact_eql |> Q.INST [`y` |-> `pmact pm p y`,
+                       `x` |-> `pmact pm p⁻¹ x`]
+            |> REWRITE_RULE [pmact_inverse]);
+
 val pmact_injective = Store_thm(
   "pmact_injective",
   ``(pmact pm p x = pmact pm p y) = (x = y)``,
