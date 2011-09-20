@@ -41,6 +41,9 @@ val NOT_FDOM_nvwalk = Q.store_thm(
   `nwfs s /\ v NOTIN FDOM s ==> (nvwalk s p v = Sus p v)`,
   SRW_TAC [] [Once nvwalk_def, FLOOKUP_DEF,permeq_refl])
 
+val pmact_permeq' = pmact_permeq |> UNDISCH |> REWRITE_RULE [FUN_EQ_THM]
+                                 |> SPEC_ALL |> DISCH_ALL
+
 val nvwalk_Vf = Q.store_thm(
 "nvwalk_Vf",
 `nwfs s ⇒ ∀p1 u p2. p1 == p2 ⇒ (nvwalk s p1 u = nvwalk s p2 u)`,
@@ -51,7 +54,7 @@ Cases_on `FLOOKUP s u` THEN1
    REPEAT (SRW_TAC [] [Once nvwalk_def, FLOOKUP_DEF])) THEN
 SRW_TAC [][Once nvwalk_def,SimpLHS] THEN
 SRW_TAC [][Once nvwalk_def,SimpRHS] THEN
-Cases_on `x` THEN SRW_TAC [][] THEN
+Cases_on `x` THEN SRW_TAC [][pmact_permeq'] THEN
 FIRST_X_ASSUM (Q.SPEC_THEN `@p'.p'==l` MP_TAC) THEN
 `l == (@p'.p'==l)` by (SELECT_ELIM_TAC THEN METIS_TAC [permeq_refl,permeq_sym]) THEN
 SRW_TAC [][] THEN FIRST_X_ASSUM MATCH_MP_TAC THEN
@@ -311,7 +314,7 @@ Cases_on `FLOOKUP s v` THEN
 FULL_SIMP_TAC (srw_ss()) [] THEN1 (
   Cases_on `x` THEN FULL_SIMP_TAC (srw_ss()) [nvwalk_case_thms] THEN
   TRY (SRW_TAC [][Once nvwalk_def] THEN NO_TAC) THEN
-  SRW_TAC [][Once nvwalk_def,SimpRHS,nvwalk_case_thms] ) THEN
+  SRW_TAC [][Once nvwalk_def,SimpRHS,nvwalk_case_thms, pmact_permeq'] ) THEN
 IMP_RES_TAC FLOOKUP_SUBMAP THEN
 Cases_on `x'` THEN FULL_SIMP_TAC (srw_ss()) [] THEN
 SRW_TAC [][] THEN

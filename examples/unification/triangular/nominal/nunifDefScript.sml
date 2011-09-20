@@ -51,7 +51,7 @@ val term_fcs_def = tDefine "term_fcs" `
   term_fcs a t =
   case t
   of Nom b -> if a = b then NONE else SOME {}
-  || Sus p v -> SOME {(perm_of (REVERSE p) a, v)}
+  || Sus p v -> SOME {(lswapstr (REVERSE p) a, v)}
   || Tie b tt -> if a = b then SOME {} else term_fcs a tt
   || nPair t1 t2 -> OPTION_MAP2 $UNION (term_fcs a t1) (term_fcs a t2)
   || nConst _ -> SOME {}`
@@ -63,7 +63,7 @@ val term_fcs_monadic_thm = Q.store_thm("term_fcs_monadic_thm",
 ` term_fcs a t =
   case t
   of Nom b -> if a = b then NONE else SOME {}
-  || Sus p v -> SOME {(perm_of (REVERSE p) a, v)}
+  || Sus p v -> SOME {(lswapstr (REVERSE p) a, v)}
   || Tie b tt -> if a = b then SOME {} else term_fcs a tt
   || nPair t1 t2 -> do fe1 <- term_fcs a t1; fe2 <- term_fcs a t2; SOME (fe1 ∪ fe2) od
   || nConst _ -> SOME {}`,
@@ -730,11 +730,12 @@ THEN ASM_SIMP_TAC (srw_ss()) [] THENL [
   SRW_TAC [][RESTRICT_LEMMA,uR_subtie] THENL [
     METIS_TAC [uR_subtie,uP_IMP_subtie_uR,uR_IMP_uP],
     `∀fex. uR ((s,fex),D,apply_pi [(s',s'')] D') ((s,fe),t1,t2)`
-    by METIS_TAC [uR_ignores_fe, uR_ignores_pi, apply_pi_nil, uR_subtie] THEN
+      by METIS_TAC [uR_ignores_fe, uR_ignores_pi,
+                    pmact_nil |> Q.ISPEC `nterm_pmact`, uR_subtie] THEN
     Cases_on `term_fcs s' (nwalk* s D')` THEN
     FULL_SIMP_TAC (srw_ss()) [RESTRICT_LEMMA] THEN
     `uP sx s D (apply_pi [(s',s'')] D')` by METIS_TAC [] THEN
-    `uP sx s D D'` by METIS_TAC [uP_ignores_pi,apply_pi_decompose,apply_pi_inverse] THEN
+    `uP sx s D D'` by METIS_TAC [uP_ignores_pi,apply_pi_inverse, pmact_nil] THEN
     MATCH_MP_TAC (GEN_ALL uR_IMP_uP) THEN
     METIS_TAC [uP_IMP_subtie_uR]
   ],
@@ -820,7 +821,7 @@ ntunify_defn,
 WF_REL_TAC `uR` THEN
 SRW_TAC [][WF_uR] THENL [
   SRW_TAC [][tctie_thm],
-  METIS_TAC [apply_pi_nil,tctie_thm],
+  METIS_TAC [pmact_nil,tctie_thm],
   SRW_TAC [][tcd_thm],
   SRW_TAC [][tca_thm]
 ])
@@ -830,7 +831,7 @@ hd(Defn.eqns_of ntunify_aux_defn) |>
 Q.INST[`R`|->`uR`] |>
 PROVE_HYP WF_uR |>
 (fn th => PROVE_HYP (prove(hd(hyp th),SRW_TAC[][tctie_thm])) th) |>
-(fn th => PROVE_HYP (prove(hd(hyp th),SRW_TAC[][] THEN METIS_TAC[apply_pi_nil,tctie_thm,PAIR])) th) |>
+(fn th => PROVE_HYP (prove(hd(hyp th),SRW_TAC[][] THEN METIS_TAC[pmact_nil,tctie_thm,PAIR])) th) |>
 (fn th => PROVE_HYP (prove(hd(hyp th),SRW_TAC[][tcd_thm])) th) |>
 (fn th => PROVE_HYP (prove(hd(hyp th),SRW_TAC[][tca_thm])) th);
 

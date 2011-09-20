@@ -126,8 +126,8 @@ val permeq_cons_monotone = store_thm(
   ``(p1 == p2) ==> (h::p1 == h::p2)``,
   SRW_TAC [][permeq_def, FUN_EQ_THM]);
 
-val permeq_swap_ends = store_thm(
-  "permeq_swap_ends",
+val permeq_swap_ends0 = store_thm(
+  "permeq_swap_ends0",
   ``!p x y. p ++ [(x,y)] == (perm_of p x, perm_of p y)::p``,
   Induct THEN SRW_TAC [][permeq_refl] THEN
   Q_TAC SUFF_TAC `h::(perm_of p x, perm_of p y)::p ==
@@ -846,9 +846,9 @@ val patoms_fresh = Store_thm(
   ``!p. x ∉ patoms p ∧ y ∉ patoms p ⇒ (cpmpm [(x,y)] p = p)``,
   METIS_TAC [supp_supports, support_def]);
 
-val perm_of_unchanged = store_thm(
-  "perm_of_unchanged",
-  ``!p. s ∉ patoms p ⇒ (perm_of p s = s)``,
+val lswapstr_unchanged = store_thm(
+  "lswapstr_unchanged",
+  ``!p. s ∉ patoms p ⇒ (lswapstr p s = s)``,
   Induct THEN SIMP_TAC (srw_ss()) [pairTheory.FORALL_PROD] THEN
   SRW_TAC [][swap_def]);
 
@@ -919,7 +919,7 @@ val patoms_cpmpm = store_thm(
 (* support for honest to goodness permutations, not just their
    representations *)
 val perm_supp_SUBSET_plistvars = prove(
-  ``!p. {s | ~(perm_of p s = s)} SUBSET
+  ``!p. {s | ~(lswapstr p s = s)} SUBSET
         FOLDR (\p a. {FST p; SND p} UNION a) {} p``,
   ASM_SIMP_TAC (srw_ss()) [pred_setTheory.SUBSET_DEF] THEN Induct THEN
   SRW_TAC [][] THEN
@@ -934,7 +934,7 @@ val lemma = MATCH_MP pred_setTheory.SUBSET_FINITE FINITE_plistvars
 
 val perm_supp_finite = store_thm(
   "perm_supp_finite",
-  ``FINITE {s | ~(perm_of p s = s)}``,
+  ``FINITE {s | ~(lswapstr p s = s)}``,
   MATCH_MP_TAC lemma THEN SRW_TAC [][perm_supp_SUBSET_plistvars]);
 
 val supp_perm_of = store_thm(
@@ -944,6 +944,7 @@ val supp_perm_of = store_thm(
   SRW_TAC [][perm_supp_finite] THENL [
     SRW_TAC [][support_def, FUN_EQ_THM, fnpm_def, perm_of_swap],
 
+    Q.X_GEN_TAC `s` THEN
     SRW_TAC [][pred_setTheory.SUBSET_DEF] THEN
     SPOSE_NOT_THEN ASSUME_TAC THEN
     Q_TAC (NEW_TAC "y") `(atom_sort x, {x; perm_of (REVERSE p) x} UNION s')` THEN
@@ -956,15 +957,14 @@ val supp_perm_of = store_thm(
     `(x,y) :: p == (perm_of p x, perm_of p y) :: p`
        by METIS_TAC [permeq_swap_ends, permeq_trans, permeq_sym,
                      listTheory.APPEND] THEN
-    `(x,y) :: (p ++ REVERSE p) ==
-        (perm_of p x, perm_of p y) :: (p ++ REVERSE p)`
+    `(x,y) :: (p ++ p⁻¹) == (lswapstr p x, lswapstr p y) :: (p ++ p⁻¹)`
        by METIS_TAC [app_permeq_monotone, listTheory.APPEND, permeq_refl] THEN
-    `!h. [h] == h :: (p ++ REVERSE p)`
+    `!h. [h] == h :: (p ++ p⁻¹)`
        by METIS_TAC [permeq_cons_monotone, permof_inverse, permeq_sym] THEN
-    `[(x,y)] == [(perm_of p x, perm_of p y)]`
+    `[(x,y)] == [(lswapstr p x, lswapstr p y)]`
        by METIS_TAC [permeq_trans, permeq_sym] THEN
-    `perm_of [(x,y)] x = perm_of [(perm_of p x, perm_of p y)] x`
-       by METIS_TAC [permeq_def] THEN
+    `lswapstr [(x,y)] x = lswapstr [(lswapstr p x, lswapstr p y)] x`
+       by METIS_TAC [permeq_thm] THEN
     POP_ASSUM MP_TAC THEN
     SIMP_TAC (srw_ss()) [] THEN
     `~(x = perm_of p y)` by METIS_TAC [permof_inverse_applied] THEN
@@ -1258,9 +1258,6 @@ val fresh_equivariant = store_thm(
 val _ = overload_on ("aset_pmact",``set_pmact atom_pmact``);
 val _ = overload_on ("asetpm", ``pmact aset_pmact``)
 
-val cpmsupp_avoids =
-    perm_of_unchanged
-        |> SIMP_RULE bool_ss [SimpR ``(==>)``, Once (GSYM stringpm_raw)]
 (*
    given a finite set of atoms and some other set to avoid, we can
    exhibit a pi that maps the original set away from the avoid set, and
