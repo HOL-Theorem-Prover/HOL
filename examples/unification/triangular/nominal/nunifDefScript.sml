@@ -735,7 +735,7 @@ THEN ASM_SIMP_TAC (srw_ss()) [] THENL [
     Cases_on `term_fcs s' (nwalk* s D')` THEN
     FULL_SIMP_TAC (srw_ss()) [RESTRICT_LEMMA] THEN
     `uP sx s D (apply_pi [(s',s'')] D')` by METIS_TAC [] THEN
-    `uP sx s D D'` by METIS_TAC [uP_ignores_pi,apply_pi_decompose,apply_pi_inverse] THEN
+    `uP sx s D D'` by METIS_TAC [uP_ignores_pi,apply_pi_inverse, pmact_nil] THEN
     MATCH_MP_TAC (GEN_ALL uR_IMP_uP) THEN
     METIS_TAC [uP_IMP_subtie_uR]
   ],
