@@ -386,31 +386,57 @@ fs [final_state_def] >|
      fs [Once type_ctxts_cases, type_ctxt_cases, return_def, push_def] >>
      rw [] >>
      fs [final_state_def] >>
-     every_case_tac >>
      fs [type_e_val] >>
      fs [type_op_cases] >>
      rw [] >>
      imp_res_tac canonical_values_thm >>
      fs [] >>
      rw [] >>
-     fs [do_app_def, do_if_def, do_log_def] >>
-     every_case_tac >>
-     fs [] >|
-     [qpat_assum `type_v tenvC (Recclosure x1 x2 x3) tpat`
+     fs [do_app_def, do_if_def, do_log_def] >|
+     [every_case_tac >>
+          fs [] >>
+          qpat_assum `type_v tenvC (Recclosure x1 x2 x3) tpat`
                 (ASSUME_TAC o SIMP_RULE (srw_ss()) [Once type_v_cases]) >>
           fs [] >>
           imp_res_tac type_funs_lookup2 >>
           fs [],
-      fs [RES_FORALL] >>
+      every_case_tac >>
+          fs [],
+      every_case_tac >>
+          fs [],
+      every_case_tac >>
+          fs [RES_FORALL] >>
           rw [] >>
           qpat_assum `∀x. (x = (q,r)) ∨ P x ⇒ Q x` 
                    (MP_TAC o Q.SPEC `(q,r)`) >>
               rw [] >>
+              CCONTR_TAC >>
+              fs [] >>
               `(pmatch envC q v env' = No_match) ∨
                (∃env. pmatch envC q v env' = Match env)` by 
                           metis_tac [pmatch_type_progress] >>
-              fs []],
+              fs [],
+      every_case_tac >>
+         fs [] >>
+         imp_res_tac consistent_con_env_lem >>
+         imp_res_tac type_es_length_lem >>
+         full_simp_tac (srw_ss()++ARITH_ss) [do_con_check_def],
+      every_case_tac >>
+         fs [] >>
+         imp_res_tac consistent_con_env_lem >>
+         imp_res_tac type_es_length_lem >>
+         full_simp_tac (srw_ss()++ARITH_ss) [do_con_check_def]],
  fs [Once type_v_cases] >>
+     rw [] >>
+     fs [] >>
+     imp_res_tac consistent_con_env_lem >>
+     rw [] >>
+     every_case_tac >>
+     fs [return_def] >>
+     imp_res_tac type_es_length_lem >>
+     fs [],
+ fs [do_con_check_def] >>
+     fs [Once type_v_cases] >>
      rw [] >>
      fs [] >>
      imp_res_tac consistent_con_env_lem >>
@@ -612,7 +638,7 @@ rw [] >|
      cases_on `q` >>
      fs [type_e_val] >>
      every_case_tac >>
-     fs [return_def, type_error_def] >>
+     fs [return_def] >>
      rw [] >>
      pop_assum (ASSUME_TAC o 
                 SIMP_RULE (srw_ss()) [Once type_ctxts_cases]) >> 
@@ -714,9 +740,27 @@ rw [] >|
           rw [] >>
           qexists_tac `ts1++[t''']` >>
           rw [] >> 
+          metis_tac [type_es_end_lem, type_es_val, type_e_val],
+      qpat_assum `type_es tenvC tenv' (e'::t'') ts2`
+                (ASSUME_TAC o SIMP_RULE (srw_ss()) [Once type_v_cases]) >> 
+          fs [] >>
+          rw [] >>
+          qexists_tac `t''''` >>
+          qexists_tac `tenv'` >>
+          rw [] >>
+          rw [type_ctxt_cases, Once type_ctxts_cases] >>
+          rw [] >>
+          qexists_tac `tenv'` >>
+          qexists_tac `Tapp ts' tn` >>
+          rw [] >>
+          cases_on `ts2` >>
+          fs [] >>
+          rw [] >>
+          qexists_tac `ts1++[t''']` >>
+          rw [] >> 
           metis_tac [type_es_end_lem, type_es_val, type_e_val]],
  every_case_tac >>
-     fs [return_def, type_error_def] >>
+     fs [return_def] >>
      rw [] >>
      qpat_assum `type_e tenvC tenv (Con s epat) t1` 
               (ASSUME_TAC o SIMP_RULE (srw_ss()) [Once type_v_cases]) >> 
@@ -744,7 +788,7 @@ rw [] >|
           rw [] >>
           metis_tac [type_v_rules, APPEND]],
  every_case_tac >>
-     fs [return_def, type_error_def] >>
+     fs [return_def] >>
      rw [] >>
      qexists_tac `t1` >>
      qexists_tac `tenv` >>
@@ -775,7 +819,7 @@ rw [] >|
      rw [Once type_ctxts_cases, type_ctxt_cases] >>
      metis_tac [],
  every_case_tac >>
-     fs [type_error_def] >>
+     fs [] >>
      rw [] >>
      qpat_assum `type_e tenvC tenv epat t1`
             (ASSUME_TAC o SIMP_RULE (srw_ss()) [Once type_v_cases]) >>
