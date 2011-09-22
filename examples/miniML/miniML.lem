@@ -104,6 +104,22 @@ type_subst s Tnum = Tnum
 and
 type_subst s Tbool = Tbool
 
+(* Check that the free type variables are in the given list *)
+val check_freevars : tvarN list -> t -> bool
+let rec
+check_freevars tvs (Tvar tv) =
+  List.mem tv tvs
+and
+check_freevars tvs (Tapp ts tn) =
+  List.for_all (check_freevars tvs) ts
+and
+check_freevars tvs (Tfn t1 t2) =
+  check_freevars tvs t1 && check_freevars tvs t2
+and
+check_freevars tvs Tnum = true
+and
+check_freevars tvs Tbool = true
+
 (* Patterns *)
 type pat =
   | Pvar of varN
@@ -925,6 +941,35 @@ let type_op op t1 t2 t3 =
     | _ -> false
   end
 
+val build_ctor_tenv : 
+  (tvarN list * typeN * (conN * t list) list) list -> tenvC -> tenvC option
+let rec
+build_ctor_tenv [] cenv = Some cenv
+and
+build_ctor_tenv ((tvs,tn,ctors)::tds) cenv =
+  let cenv' =
+    List.fold_right
+      (fun (cn,ts) cenv' ->
+         match cenv' with
+           | None -> None
+           | Some cenv' ->
+               if lookup cn cenv' <> None || 
+                  not (List.for_all (check_freevars tvs) ts) then
+                 None 
+               else
+                 Some (bind cn (tvs, ts, tn) cenv')
+         end)
+      ctors
+      (Some cenv)
+  in
+    if all_distinct tvs then
+      match cenv' with
+       | None -> None
+       | Some cenv' -> build_ctor_tenv tds cenv'
+      end
+    else
+      None
+
 indreln
 
 forall cenv tenv n t.
@@ -1177,11 +1222,10 @@ type_d cenv tenv (Dletrec funs) cenv (merge tenv' tenv)
 
 and
 
-(* TODO: typing declarations *)
-forall cenv tenv tdecs.
-false
+forall cenv tenv tdecs cenv'.
+(build_ctor_tenv tdecs cenv = Some cenv')
 ==>
-type_d cenv tenv (Dtype tdecs) cenv tenv
+type_d cenv tenv (Dtype tdecs) cenv' tenv
 
 indreln
 
@@ -1290,8 +1334,23 @@ type_e tenvC tenv e t1
 ==>
 type_state tenvC (envC, env, e, c) t2
 
-(* TODO: Typing d_states *)
+indreln
 
+forall tenvC envC env ds tenvC' tenv tenv'.
+type_env tenvC env tenv &&
+type_ds tenvC tenv ds tenvC' tenv'
+==>
+type_d_state tenvC (envC, env, ds, None) tenv'
+
+and
+
+forall tenvC envC env ds tenvC' tenv tenv' p envC' env' e c t tenv''.
+type_env tenvC env tenv &&
+type_state tenvC (envC',env',e,c) t &&
+type_p tenvC tenv p t tenv' &&
+type_ds tenvC tenv' ds tenvC' tenv''
+==>
+type_d_state tenvC (envC, env, ds, Some (p, (envC',env',e,c))) tenv''
 
 (* ------ Auxiliary relations for proving big/small step equivalence ------ *)
 

@@ -489,35 +489,50 @@ metis_tac [type_e_val]);
 (* A successful pattern match gives a binding environment with the type given by
 * the pattern type checker *)
 val pmatch_type_preservation = Q.prove (
-`(∀envC p v env env' (tenvC:tenvC) tenv.
+`(∀envC p v env env' (tenvC:tenvC) tenv t tenv'.
   (pmatch envC p v env = Match env') ∧
-  (∃t. type_v tenvC v t) ∧
+  type_v tenvC v t ∧
+  type_p tenvC tenv p t tenv' ∧
   type_env tenvC env tenv ⇒
-  ∃tenv'. type_env tenvC env' tenv') ∧
- (∀envC ps vs env env' (tenvC:tenvC) tenv.
+  type_env tenvC env' tenv') ∧
+ (∀envC ps vs env env' (tenvC:tenvC) tenv tenv' ts.
   (pmatch_list envC ps vs env = Match env') ∧
-  (∃ts. type_vs tenvC vs ts) ∧
+  type_vs tenvC vs ts ∧
+  type_ps tenvC tenv ps ts tenv' ∧
   type_env tenvC env tenv ⇒
-  ∃tenv'. type_env tenvC env' tenv')`,
+  type_env tenvC env' tenv')`,
 HO_MATCH_MP_TAC pmatch_ind >>
 rw [pmatch_def] >|
-[qexists_tac `(n,t) :: tenv` >>
-     rw [Once type_v_cases, bind_def, type_e_val],
- metis_tac [],
+[rw [Once type_v_cases, bind_def, type_e_val] >>
+     fs [Once type_p_cases, bind_def] >>
+     metis_tac [],
+ fs [Once type_p_cases],
  every_case_tac >>
      fs [type_e_val] >>
      qpat_assum `type_v tenvC vpat t`
              (ASSUME_TAC o SIMP_RULE (srw_ss()) [Once type_v_cases]) >>
+     fs [Once type_p_cases] >>
+     rw [] >>
+     fs [] >>
+     rw [] >>
+     cases_on `ps` >>
+     fs [] >>
+     qpat_assum `type_ps a b c d e`
+             (ASSUME_TAC o SIMP_RULE (srw_ss()) [Once type_p_cases]) >>
      fs [] >>
      metis_tac [],
  every_case_tac >>
      fs [],
- metis_tac [],
+ fs [Once type_p_cases],
  every_case_tac >>
      fs [] >>
      qpat_assum `type_vs tenvC (v::vs) ts`
              (ASSUME_TAC o SIMP_RULE (srw_ss ()) [Once type_v_cases]) >>
      fs [] >>
+     qpat_assum `type_ps a b c d e`
+             (ASSUME_TAC o SIMP_RULE (srw_ss()) [Once type_p_cases]) >>
+     fs [] >>
+     rw [] >>
      metis_tac []]);
 
 val build_rec_env_help_lem = Q.prove (
@@ -611,11 +626,11 @@ rw [Once type_v_cases]);
 (* If a step can be taken from a well-typed state, the resulting state has the
 * same type *)
 val exp_type_preservation = Q.prove (
-`∀(tenvC:tenvC) envC env e c t env' e' c'.
+`∀(tenvC:tenvC) envC env e c t envC' env' e' c'.
   type_state tenvC (envC, env, e, c) t ∧
-  (e_step (envC, env, e, c) = Estep (envC, env', e', c'))
+  (e_step (envC, env, e, c) = Estep (envC', env', e', c'))
   ⇒
-  type_state tenvC (envC, env', e', c') t`,
+  type_state tenvC (envC', env', e', c') t`,
 rw [type_state_cases] >>
 fs [e_step_def] >>
 cases_on `e` >>
@@ -832,5 +847,38 @@ rw [] >|
      rw [] >>
      match_mp_tac type_recfun_env >>
      metis_tac []]);
+
+val type_preservation = Q.prove (
+`!tenvC st tenvE st'.
+  type_d_state tenvC st tenvE ∧
+  (d_step st = Dstep st')
+  ⇒
+  type_d_state tenvC st' tenvE`,
+rw [type_d_state_cases] >>
+fs [d_step_def] >>
+every_case_tac >>
+fs [] >>
+rw [] >-
+(pop_assum (ASSUME_TAC o SIMP_RULE (srw_ss()) [Once type_ds_cases]) >>
+     fs [type_d_cases] >>
+     rw [type_state_cases, Once type_ctxts_cases, type_ctxt_cases] >>
+     metis_tac []) >-
+(qpat_assum `type_ds a b c d e`
+            (ASSUME_TAC o SIMP_RULE (srw_ss()) [Once type_ds_cases]) >>
+     fs [type_d_cases] >>
+     rw [build_rec_env_lem] >>
+     metis_tac [type_recfun_env, type_env_merge_lem]) >-
+(qpat_assum `type_ds a b c d e`
+            (ASSUME_TAC o SIMP_RULE (srw_ss()) [Once type_ds_cases]) >>
+     fs [type_d_cases] >>
+     `cenv' = tenvC`
+     metis_tac [])
+(fs [type_state_cases, Once type_ctxts_cases, type_e_val] >>
+     metis_tac [pmatch_type_preservation]) >>
+cases_on `p'` >>
+cases_on `r` >>
+cases_on `r'` >>
+rw [] >>
+metis_tac [exp_type_preservation]);
 
 val _ = export_theory ();

@@ -129,6 +129,25 @@ val _ = Hol_datatype `
 
 val _ = Defn.save_defn type_subst_defn;
 
+(* Check that the free type variables are in the given list *)
+(*val check_freevars : tvarN list -> t -> bool*)
+ val check_freevars_defn = Hol_defn "check_freevars" `
+
+(check_freevars tvs (Tvar tv) =
+  MEM tv tvs)
+/\
+(check_freevars tvs (Tapp ts tn) =
+  EVERY (check_freevars tvs) ts)
+/\
+(check_freevars tvs (Tfn t1 t2) =
+  check_freevars tvs t1 /\ check_freevars tvs t2)
+/\
+(check_freevars tvs Tnum = T)
+/\
+(check_freevars tvs Tbool = T)`;
+
+val _ = Defn.save_defn check_freevars_defn;
+
 (* Patterns *)
 val _ = Hol_datatype `
  pat =
@@ -1017,6 +1036,38 @@ val _ = Define `
   ))`;
 
 
+(*val build_ctor_tenv : 
+  (tvarN list * typeN * (conN * t list) list) list -> tenvC -> tenvC option*)
+ val build_ctor_tenv_defn = Hol_defn "build_ctor_tenv" `
+
+(build_ctor_tenv [] cenv = SOME cenv)
+/\
+(build_ctor_tenv ((tvs,tn,ctors)::tds) cenv =
+  let cenv' =
+    FOLDR 
+      (\ (cn,ts) cenv' .
+         (case cenv' of
+              NONE -> NONE
+           || SOME cenv' ->
+               if lookup cn cenv' <> NONE \/ 
+                  ~ (EVERY (check_freevars tvs) ts) then
+                 NONE 
+               else
+                 SOME (bind cn (tvs, ts, tn) cenv')
+         )) 
+      (SOME cenv) 
+      ctors
+  in
+    if ALL_DISTINCT tvs then
+      (case cenv' of
+          NONE -> NONE
+       || SOME cenv' -> build_ctor_tenv tds cenv'
+      )
+    else
+      NONE)`;
+
+val _ = Defn.save_defn build_ctor_tenv_defn;
+
 val _ = Hol_reln `
 
 (! cenv tenv n t.
@@ -1269,11 +1320,10 @@ type_d cenv tenv (Dletrec funs) cenv (merge tenv' tenv))
 
 /\
 
-(* TODO: typing declarations *)
-(! cenv tenv tdecs.
-F
+(! cenv tenv tdecs cenv'.
+(build_ctor_tenv tdecs cenv = SOME cenv')
 ==>
-type_d cenv tenv (Dtype tdecs) cenv tenv)`;
+type_d cenv tenv (Dtype tdecs) cenv' tenv)`;
 
 val _ = Hol_reln `
 
@@ -1382,8 +1432,23 @@ type_e tenvC tenv e t1
 ==>
 type_state tenvC (envC, env, e, c) t2)`;
 
-(* TODO: Typing d_states *)
+val _ = Hol_reln `
 
+(! tenvC envC env ds tenvC' tenv tenv'.
+type_env tenvC env tenv /\
+type_ds tenvC tenv ds tenvC' tenv'
+==>
+type_d_state tenvC (envC, env, ds, NONE) tenv')
+
+/\
+
+(! tenvC envC env ds tenvC' tenv tenv' p envC' env' e c t tenv''.
+type_env tenvC env tenv /\
+type_state tenvC (envC',env',e,c) t /\
+type_p tenvC tenv p t tenv' /\
+type_ds tenvC tenv' ds tenvC' tenv''
+==>
+type_d_state tenvC (envC, env, ds, SOME (p, (envC',env',e,c))) tenv'')`;
 
 (* ------ Auxiliary relations for proving big/small step equivalence ------ *)
 
