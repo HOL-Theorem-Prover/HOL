@@ -24,9 +24,12 @@ val _ = new_theory "MiniML"
  * 
  * The small-step operational semantics is based on the CEK machine.  The type
  * system is typical, but it doesn't yet support polymorphism.  The big step
- * semantics is also typical *)
+ * semantics is also typical.  The small-step and big-step semantics agree even
+ * on untyped programs. *)
 
 (*val all_distinct : forall 'a. 'a list -> bool*)
+
+(*val rtc : forall 'a. ('a -> 'a -> bool) -> ('a -> 'a -> bool)*)
 
 (* Environments *)
 val _ = type_abbrev((*  ('a,'b) *) "env" , ``: ('a#'b) list``);
@@ -387,6 +390,7 @@ val _ = Define `
     NONE)`;
 
 
+(* Check that a constructor is properly applied *)
 (*val do_con_check : envC -> conN -> num -> bool*)
 val _ = Define `
  (do_con_check envC n l =
@@ -542,8 +546,8 @@ val _ = Define `
         )
     || SOME (p, (envC, env', Raise err, [])) ->
         Draise err
-    || SOME (p, (envC, env', e, c)) -> 
-        (case e_step (envC, env', e, c) of
+    || SOME (p, (envC', env', e, c)) -> 
+        (case e_step (envC', env', e, c) of
              Estep st -> Dstep (envC, env, ds, SOME (p, st))
           || Etype_error -> Dtype_error
           || Estuck -> Dstuck
@@ -554,17 +558,20 @@ val _ = Define `
           || (Dlet p e) :: ds ->
               Dstep (envC, env, ds, SOME (p, (envC, env, e, [])))
           || (Dletrec funs) :: ds ->
-              Dstep (envC, build_rec_env funs env, ds, NONE)
+              if ~ (ALL_DISTINCT (MAP (\ (x,y,z) . x) funs)) then
+                Dtype_error
+              else
+                Dstep (envC, build_rec_env funs env, ds, NONE)
           || (Dtype tds) :: ds ->
               if check_dup_ctors tds envC then
-                Dtype_error
-              else 
                 Dstep (build_tdefs tds envC, env, ds, NONE)
+              else 
+                Dtype_error
       )
   ))`;
 
 
-(* ------------------------ Big step semantics -------------------------- *)
+(* Define a semantic function using the steps *)
 
 val _ = Hol_datatype `
  error_result = 
@@ -578,9 +585,68 @@ val _ = Hol_datatype `
   | Rerr of error_result`;
 
 
+(*val e_step_reln : state -> state -> bool*)
+(*val small_eval : envC -> envE -> exp -> ctxt list -> v result -> bool*)
+(*val d_step_reln : d_state -> d_state -> bool*)
+(*val d_small_eval : envC -> envE -> dec list -> (pat * state)option -> envE result -> bool*)
+
+val _ = Define `
+ (e_step_reln st1 st2 = 
+  (e_step st1 = Estep st2))`;
+
+
+ val small_eval_defn = Hol_defn "small_eval" `
+ 
+(small_eval cenv env e c (Rval v) =
+  ? env'. (RTC e_step_reln) (cenv,env,e,c) (cenv,env',Val v,[]))
+/\
+(small_eval cenv env e c (Rerr (Rraise err)) =
+  ? env'. (RTC e_step_reln) (cenv,env,e,c) (cenv,env',Raise err,[]))
+/\
+(small_eval cenv env e c (Rerr Rtype_error) =
+  ? env' e' c'. 
+    (RTC e_step_reln) (cenv,env,e,c) (cenv,env',e',c') /\
+    (e_step (cenv,env',e',c') = Etype_error))`;
+
+val _ = Defn.save_defn small_eval_defn;
+
+val _ = Define `
+ (d_step_reln st st' = 
+  (d_step st = Dstep st'))`;
+
+
+ val d_small_eval_defn = Hol_defn "d_small_eval" `
+
+(d_small_eval cenv env ds c (Rval env') =
+  ? cenv'. (RTC d_step_reln) (cenv,env,ds,c) (cenv',env',[],NONE))
+/\
+(d_small_eval cenv env ds c (Rerr Rtype_error) =
+  ? cenv' env' ds' c'. 
+    (RTC d_step_reln) (cenv,env,ds,c) (cenv',env',ds',c') /\
+    (d_step (cenv',env',ds',c') = Dtype_error))
+/\
+(d_small_eval cenv env ds c (Rerr (Rraise err)) =
+  ? cenv' env' ds' c'. 
+    (RTC d_step_reln) (cenv,env,ds,c) (cenv',env',ds',c') /\
+    (d_step (cenv',env',ds',c') = Draise err))`;
+
+val _ = Defn.save_defn d_small_eval_defn;
+
+(*val diverges : envC -> envE -> dec list -> bool*)
+val _ = Define `
+ (diverges cenv env ds =
+  ! cenv' env' ds' c'.
+    (RTC d_step_reln) (cenv,env,ds,NONE) (cenv',env',ds',c')
+    ==>
+    (? cenv'' env'' ds'' c''.
+      d_step_reln (cenv',env',ds',c') (cenv'',env'',ds'',c'')))`;
+
+
+(* ------------------------ Big step semantics -------------------------- *)
 (*val evaluate : envC -> envE -> exp -> v result -> bool*)
 (*val evaluate_list : envC -> envE -> exp list -> v list result -> bool*)
 (*val evaluate_match : envC -> envE -> v -> (pat * exp) list -> v result -> bool*)
+(*val evaluate_decs : envC -> envE -> dec list -> envE result -> bool*)
 
 val _ = Hol_reln `
 
@@ -829,8 +895,74 @@ evaluate_match cenv env v ((p,e)::pes) bv)
 ==>
 evaluate_match cenv env v ((p,e)::pes) (Rerr Rtype_error))`;
 
+val _ = Hol_reln `
 
-(* TODO: declaration evaluation *)
+(! cenv env.
+T
+==>
+evaluate_decs cenv env [] (Rval env))
+
+/\
+
+(! cenv env p e ds v env' r.
+evaluate cenv env e (Rval v) /\
+(pmatch cenv p v env = Match env') /\
+evaluate_decs cenv env' ds r
+==>
+evaluate_decs cenv env (Dlet p e :: ds) r)
+
+/\
+
+(! cenv env p e ds v.
+evaluate cenv env e (Rval v) /\
+(pmatch cenv p v env = No_match) 
+==>
+evaluate_decs cenv env (Dlet p e :: ds) (Rerr (Rraise Bind_error)))
+
+/\
+
+(! cenv env p e ds v.
+evaluate cenv env e (Rval v) /\
+(pmatch cenv p v env = Match_type_error) 
+==>
+evaluate_decs cenv env (Dlet p e :: ds) (Rerr (Rtype_error)))
+
+/\
+
+(! cenv env p e ds err.
+evaluate cenv env e (Rerr err)
+==>
+evaluate_decs cenv env (Dlet p e :: ds) (Rerr err))
+
+/\
+
+(! cenv env funs ds r.
+ALL_DISTINCT (MAP (\ (x,y,z) . x) funs) /\
+evaluate_decs cenv (build_rec_env funs env) ds r
+==>
+evaluate_decs cenv env (Dletrec funs :: ds) r)
+
+/\
+
+(! cenv env funs ds.
+~ (ALL_DISTINCT (MAP (\ (x,y,z) . x) funs))
+==>
+evaluate_decs cenv env (Dletrec funs :: ds) (Rerr Rtype_error))
+
+/\
+
+(! cenv env tds ds r.
+check_dup_ctors tds cenv /\
+evaluate_decs (build_tdefs tds cenv) env ds r
+==>
+evaluate_decs cenv env (Dtype tds :: ds) r)
+
+/\
+
+(! cenv env tds ds.
+~ (check_dup_ctors tds cenv)
+==>
+evaluate_decs cenv env (Dtype tds :: ds) (Rerr Rtype_error))`;
 
 (* ------------------------ Type system --------------------------------- *)
 

@@ -56,9 +56,10 @@ val _ = save_thm ("type_subst_ind", type_subst_ind);
 (* ------------------------------------------------------------------------- *)
 
 (* Prove that the small step semantics never gets stuck if there is still work
- * to do (i.e., it must detect all type errors *)
+ * to do (i.e., it must detect all type errors).  Thus, it either diverges or 
+ * gives a result. *)
 
-val untyped_safety_thm = Q.store_thm ("untyped_safety_thm",
+val untyped_safety_step = Q.prove (
 `∀envC env ds st. 
   (d_step (envC, env, ds, st) = Dstuck) = (ds = []) ∧ (st = NONE)`,
 rw [d_step_def, e_step_def, continue_def, push_def, return_def] >>
@@ -67,29 +68,24 @@ fs [LET_THM, do_app_def] >>
 every_case_tac >>
 fs []);
 
-(* ------------------------- Big step determinacy ----------------------- *)
-
-val big_exp_determ = Q.prove (
-`(∀ cenv env e bv1.
-   evaluate cenv env e bv1 ⇒
-   ∀ bv2. evaluate cenv env e bv2 ⇒
-   (bv1 = bv2)) ∧
- (∀ cenv env es bv1.
-   evaluate_list cenv env es bv1 ⇒
-   ∀ bv2. evaluate_list cenv env es bv2 ⇒
-   (bv1 = bv2)) ∧
- (∀ cenv env v pes bv1.
-   evaluate_match cenv env v pes bv1 ⇒
-   ∀ bv2. evaluate_match cenv env v pes bv2 ⇒
-   (bv1 = bv2))`,
-HO_MATCH_MP_TAC evaluate_ind >>
-rw [] >>
-pop_assum (ASSUME_TAC o SIMP_RULE (srw_ss ()) [Once evaluate_cases]) >>
-fs [] >>
-rw [] >>
-fs [] >>
-res_tac >>
-fs [] >>
-rw []);
+val untyped_safety_thm = Q.store_thm ("untyped_safety_thm",
+`!cenv env ds.
+  diverges cenv env ds ∨ ?r. d_small_eval cenv env ds NONE r`,
+rw [diverges_def, METIS_PROVE [] ``x ∨ y = ~x ⇒ y``, d_step_reln_def] >>
+cases_on `d_step (cenv',env',ds',c')` >>
+fs [untyped_safety_step] >|
+[cases_on `p` >>
+     cases_on `r` >> 
+     cases_on `r'` >> 
+     fs [],
+ qexists_tac `Rerr (Rraise e)` >>
+     rw [d_small_eval_def] >>
+     metis_tac [],
+ qexists_tac `Rerr Rtype_error` >>
+     rw [d_small_eval_def] >>
+     metis_tac [],
+ qexists_tac `Rval env'` >>
+     rw [d_small_eval_def] >>
+     metis_tac []]);
 
 val _ = export_theory ();
