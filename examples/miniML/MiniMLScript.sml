@@ -529,7 +529,7 @@ val _ = Define `
 
 (* Checks that no constructor is defined twice *)
 (*val check_dup_ctors : 
-    (tvarN list * typeN * (conN * t list) list) list -> envC -> bool*)
+    forall 'a. (tvarN list * typeN * (conN * t list) list) list -> (conN,'a) env -> bool*)
 val _ = Define `
  (check_dup_ctors tds envC =
   (! ((tvs, tn, condefs) :: LIST_TO_SET tds) ((n, ts) :: LIST_TO_SET condefs).
@@ -1036,37 +1036,29 @@ val _ = Define `
   ))`;
 
 
-(*val build_ctor_tenv : 
-  (tvarN list * typeN * (conN * t list) list) list -> tenvC -> tenvC option*)
- val build_ctor_tenv_defn = Hol_defn "build_ctor_tenv" `
+(*val check_ctor_tenv : 
+  tenvC -> (tvarN list * typeN * (conN * t list) list) list -> bool*)
+val _ = Define `
+ (check_ctor_tenv tenvC tds =
+  check_dup_ctors tds tenvC /\
+  EVERY
+    (\ (tvs,tn,ctors) .
+       ALL_DISTINCT tvs /\
+       EVERY 
+         (\ (cn,ts) . (EVERY (check_freevars tvs) ts))
+         ctors)
+    tds)`;
 
-(build_ctor_tenv [] cenv = SOME cenv)
-/\
-(build_ctor_tenv ((tvs,tn,ctors)::tds) cenv =
-  let cenv' =
-    FOLDR 
-      (\ (cn,ts) cenv' .
-         (case cenv' of
-              NONE -> NONE
-           || SOME cenv' ->
-               if lookup cn cenv' <> NONE \/ 
-                  ~ (EVERY (check_freevars tvs) ts) then
-                 NONE 
-               else
-                 SOME (bind cn (tvs, ts, tn) cenv')
-         )) 
-      (SOME cenv) 
-      ctors
-  in
-    if ALL_DISTINCT tvs then
-      (case cenv' of
-          NONE -> NONE
-       || SOME cenv' -> build_ctor_tenv tds cenv'
-      )
-    else
-      NONE)`;
 
-val _ = Defn.save_defn build_ctor_tenv_defn;
+(*val build_ctor_tenv : (tvarN list * typeN * (conN * t list) list) list -> tenvC*) 
+val _ = Define `
+ (build_ctor_tenv tds = 
+  FLAT
+    (MAP
+       (\ (tvs,tn,ctors) .
+          MAP (\ (cn,ts) . (cn,(tvs,ts,tn))) ctors)
+       tds))`;
+
 
 val _ = Hol_reln `
 
@@ -1309,36 +1301,36 @@ val _ = Hol_reln `
 type_p cenv tenv p t tenv' /\
 type_e cenv tenv e t
 ==>
-type_d cenv tenv (Dlet p e) cenv tenv')
+type_d cenv tenv (Dlet p e) emp tenv')
 
 /\
 
 (! cenv tenv funs tenv'.
 type_funs cenv (merge tenv' tenv) funs tenv'
 ==>
-type_d cenv tenv (Dletrec funs) cenv (merge tenv' tenv))
+type_d cenv tenv (Dletrec funs) emp (merge tenv' tenv))
 
 /\
 
-(! cenv tenv tdecs cenv'.
-(build_ctor_tenv tdecs cenv = SOME cenv')
+(! cenv tenv tdecs.
+check_ctor_tenv cenv tdecs
 ==>
-type_d cenv tenv (Dtype tdecs) cenv' tenv)`;
+type_d cenv tenv (Dtype tdecs) (build_ctor_tenv tdecs) tenv)`;
 
 val _ = Hol_reln `
 
 (! cenv tenv.
 T
 ==>
-type_ds cenv tenv [] cenv tenv)
+type_ds cenv tenv [] emp tenv)
 
 /\
 
 (! cenv tenv d ds cenv' tenv' cenv'' tenv''.
 type_d cenv tenv d cenv' tenv' /\
-type_ds cenv' tenv' ds cenv'' tenv''
+type_ds (merge cenv' cenv) tenv' ds cenv'' tenv''
 ==>
-type_ds cenv tenv (d::ds) cenv'' tenv'')`;
+type_ds cenv tenv (d::ds) (merge cenv' cenv'') tenv'')`;
 
 (* --------- Auxiliary definitions used in the type soundness proofs -------- *)
 
@@ -1438,17 +1430,17 @@ val _ = Hol_reln `
 type_env tenvC env tenv /\
 type_ds tenvC tenv ds tenvC' tenv'
 ==>
-type_d_state tenvC (envC, env, ds, NONE) tenv')
+type_d_state tenvC (envC, env, ds, NONE) tenvC' tenv')
 
 /\
 
-(! tenvC envC env ds tenvC' tenv tenv' p envC' env' e c t tenv''.
+(! tenvC envC env ds tenvC' tenv tenv' p env' e c t tenv''.
 type_env tenvC env tenv /\
-type_state tenvC (envC',env',e,c) t /\
+type_state tenvC (envC,env',e,c) t /\
 type_p tenvC tenv p t tenv' /\
 type_ds tenvC tenv' ds tenvC' tenv''
 ==>
-type_d_state tenvC (envC, env, ds, SOME (p, (envC',env',e,c))) tenv'')`;
+type_d_state tenvC (envC, env, ds, SOME (p, (envC,env',e,c))) tenvC' tenv'')`;
 
 (* ------ Auxiliary relations for proving big/small step equivalence ------ *)
 

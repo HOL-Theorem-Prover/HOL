@@ -67,6 +67,14 @@ recInduct (fetch "-" "consistent_con_env_ind") >>
 rw [lookup_def, consistent_con_env_def] >>
 rw []);
 
+val consistent_con_env_lem2 = Q.prove (
+`∀envC tenvC. consistent_con_env envC tenvC ⇒
+  (lookup cn tenvC = NONE) ⇒
+  (lookup cn envC = NONE)`,
+recInduct (fetch "-" "consistent_con_env_ind") >>
+rw [lookup_def, consistent_con_env_def] >>
+rw []);
+
 val type_es_length_lem = Q.prove (
 `∀tenvC tenv es ts.
   type_es tenvC tenv es ts ⇒ (LENGTH es = LENGTH ts)`,
@@ -362,6 +370,24 @@ val final_state_def = Define `
   (final_state (tenvC,env,Val v,[]) = T) ∧
   (final_state (tenvC,env,Raise err,[]) = T) ∧
   (final_state _ = F)`;
+
+val not_final_state = Q.prove (
+`!tenvC env e c.
+  ¬final_state (tenvC,env,e,c) = 
+     (?x y. c = x::y) ∨
+     (?cn es. e = Con cn es) ∨ 
+     (?v. e = Var v) ∨
+     (?x e'. e = Fun x e') \/
+     (?op e1 e2. e = App op e1 e2) ∨
+     (?op e1 e2. e = Log op e1 e2) ∨
+     (?e1 e2 e3. e = If e1 e2 e3) ∨
+     (?e' pes. e = Mat e' pes) ∨
+     (?n e1 e2. e = Let n e1 e2) ∨
+     (?funs e'. e = Letrec funs e')`,
+rw [] >>
+cases_on `e` >>
+cases_on `c` >>
+rw [final_state_def]);
 
 (* A well-typed expression state is either a value with no continuation, or it
 * can step to another state, or it steps to a BindError. *)
@@ -848,37 +874,220 @@ rw [] >|
      match_mp_tac type_recfun_env >>
      metis_tac []]);
 
-val type_preservation = Q.prove (
-`!tenvC st tenvE st'.
-  type_d_state tenvC st tenvE ∧
-  (d_step st = Dstep st')
+val get_first_tenv_def = Define `
+  (get_first_tenv ds NONE = 
+     case ds of
+         (Dtype tds::ds) -> build_ctor_tenv tds
+      || _ -> []) ∧
+  (get_first_tenv _ _ = [])`;
+
+val disjoint_env_def = Define `
+  disjoint_env e1 e2 = 
+    DISJOINT (set (MAP FST e1)) (set (MAP FST e2))`;
+
+val lookup_in = Q.prove (
+`!x e v. (lookup x e = SOME v) ⇒ MEM x (MAP FST e)`,
+induct_on `e` >>
+rw [lookup_def] >>
+cases_on `h` >>
+fs [lookup_def] >>
+metis_tac []);
+
+val lookup_notin = Q.prove (
+`!x e. (lookup x e = NONE) ⇒ ~MEM x (MAP FST e)`,
+induct_on `e` >>
+rw [lookup_def] >>
+cases_on `h` >>
+fs [lookup_def] >>
+every_case_tac >>
+fs []);
+
+val lookup_disjoint = Q.prove (
+`!x v e e'. (lookup x e = SOME v) ∧ disjoint_env e e' ⇒ 
+  (lookup x (merge e' e) = SOME v)`,
+induct_on `e'` >>
+rw [disjoint_env_def, merge_def, lookup_def] >>
+cases_on `h` >>
+fs [merge_def, lookup_def] >>
+fs [Once DISJOINT_SYM, DISJOINT_INSERT] >>
+`q ≠ x` by metis_tac [lookup_in] >>
+fs [disjoint_env_def] >>
+metis_tac [DISJOINT_SYM]);
+
+val tenvC_pat_weakening = Q.prove (
+`(!tenvC tenvE p t tenvE'. type_p tenvC tenvE p t tenvE' ⇒ 
+    !tenvC'. disjoint_env tenvC tenvC' ⇒ 
+             type_p (merge tenvC' tenvC) tenvE p t tenvE') ∧
+ (!tenvC tenvE ps ts tenvE'. type_ps tenvC tenvE ps ts tenvE' ⇒ 
+    !tenvC'. disjoint_env tenvC tenvC' ⇒ 
+             type_ps (merge tenvC' tenvC) tenvE ps ts tenvE')`,
+HO_MATCH_MP_TAC type_p_ind >>
+rw [] >>
+rw [Once type_p_cases] >>
+metis_tac [lookup_disjoint]);
+
+val tenvC_weakening = Q.prove (
+`(!tenvC v t. type_v tenvC v t ⇒ 
+    !tenvC'. disjoint_env tenvC tenvC' ⇒ type_v (merge tenvC' tenvC) v t) ∧
+ (!tenvC tenv e t. type_e tenvC tenv e t ⇒ 
+    !tenvC'. disjoint_env tenvC tenvC' ⇒ type_e (merge tenvC' tenvC) tenv e t) ∧
+ (!tenvC tenv es ts. type_es tenvC tenv es ts ⇒ 
+    !tenvC'. disjoint_env tenvC tenvC' ⇒ type_es (merge tenvC' tenvC) tenv es ts) ∧
+ (!tenvC vs ts. type_vs tenvC vs ts ⇒ 
+    !tenvC'. disjoint_env tenvC tenvC' ⇒ type_vs (merge tenvC' tenvC) vs ts) ∧
+ (!tenvC env tenv. type_env tenvC env tenv ⇒ 
+    !tenvC'. disjoint_env tenvC tenvC' ⇒ type_env (merge tenvC' tenvC) env tenv) ∧
+ (!tenvC tenv funs tenv'. type_funs tenvC tenv funs tenv' ⇒ 
+    !tenvC'. disjoint_env tenvC tenvC' ⇒ type_funs (merge tenvC' tenvC) tenv funs tenv')`,
+HO_MATCH_MP_TAC type_v_ind >>
+rw [] >>
+rw [Once type_v_cases] >>
+fs [RES_FORALL, FORALL_PROD] >>
+metis_tac [lookup_disjoint, tenvC_pat_weakening]);
+
+val check_ctor_tenv_dups_helper1 = Q.prove (
+`∀tenvC l y z.
+  (!x. MEM x l ⇒ (λ(n,ts). lookup n tenvC = NONE) x)
   ⇒
-  type_d_state tenvC st' tenvE`,
+  DISJOINT (set (MAP (λx. FST ((λ(cn,ts). (cn,y,ts,z)) x)) l))
+           (set (MAP FST tenvC))`,
+induct_on `l` >>
+rw [] >>
+cases_on `h` >>
+fs [] >>
+`(λ(n,ts). lookup n tenvC = NONE) (q,r)` by metis_tac [] >>
+fs [] >>
+metis_tac [lookup_notin]);
+
+val check_ctor_tenv_dups_helper2 = Q.prove (
+`!tds tenvC.
+  (∀((tvs,tn,condefs)::set tds) ((n,ts)::set condefs). lookup n tenvC = NONE) ⇒
+    disjoint_env tenvC (build_ctor_tenv tds)`,
+induct_on `tds` >>
+rw [build_ctor_tenv_def, disjoint_env_def] >|
+[fs [RES_FORALL] >>
+     cases_on `h` >>
+     fs [] >>
+     cases_on `r` >>
+     fs [] >>
+     `(λ(tvs,tn,condefs).
+         ∀x. MEM x condefs ⇒ (λ(n,ts). lookup n tenvC = NONE) x) (q,q',r')`
+                by metis_tac [] >>
+     fs [MAP_MAP_o, combinTheory.o_DEF] >>
+     metis_tac [check_ctor_tenv_dups_helper1],
+ fs [RES_FORALL] >>
+     `disjoint_env tenvC (build_ctor_tenv tds)` by metis_tac [] >>
+     fs [disjoint_env_def, build_ctor_tenv_def] >>
+     metis_tac [DISJOINT_SYM]]);
+
+val check_ctor_tenv_dups = Q.prove (
+`!tenvC tds. 
+  check_ctor_tenv tenvC tds ⇒ disjoint_env tenvC (build_ctor_tenv tds)`,
+rw [check_ctor_tenv_def, check_dup_ctors_def] >>
+metis_tac [check_ctor_tenv_dups_helper2]);
+
+(*
+val type_preservation = Q.prove (
+`!tenvC envC envE ds c envC' envE' ds' c' tenvE tenvC' st' tenvC''.
+  (tenvC'' = get_first_tenv ds c) ∧
+  type_d_state tenvC (envC,envE,ds,c) (merge tenvC'' tenvC') tenvE ∧
+  (d_step (envC,envE,ds,c) = Dstep (envC',envE',ds',c'))
+  ⇒
+  type_d_state (merge tenvC'' tenvC) (envC',envE',ds',c') tenvC' tenvE`,
 rw [type_d_state_cases] >>
 fs [d_step_def] >>
 every_case_tac >>
 fs [] >>
 rw [] >-
 (pop_assum (ASSUME_TAC o SIMP_RULE (srw_ss()) [Once type_ds_cases]) >>
-     fs [type_d_cases] >>
      rw [type_state_cases, Once type_ctxts_cases, type_ctxt_cases] >>
+     fs [get_first_tenv_def, merge_def, emp_def] >>
      metis_tac []) >-
 (qpat_assum `type_ds a b c d e`
             (ASSUME_TAC o SIMP_RULE (srw_ss()) [Once type_ds_cases]) >>
      fs [type_d_cases] >>
      rw [build_rec_env_lem] >>
-     metis_tac [type_recfun_env, type_env_merge_lem]) >-
+     fs [get_first_tenv_def, merge_def, emp_def] >>
+     metis_tac [merge_def, type_recfun_env, type_env_merge_lem]) >-
 (qpat_assum `type_ds a b c d e`
             (ASSUME_TAC o SIMP_RULE (srw_ss()) [Once type_ds_cases]) >>
-     fs [type_d_cases] >>
-     `cenv' = tenvC`
-     metis_tac [])
-(fs [type_state_cases, Once type_ctxts_cases, type_e_val] >>
-     metis_tac [pmatch_type_preservation]) >>
+     fs [type_d_cases, get_first_tenv_def, merge_def] >>
+     metis_tac [tenvC_weakening, merge_def, check_ctor_tenv_dups]) >-
+(fs [type_state_cases, Once type_ctxts_cases, type_e_val, merge_def,emp_def,
+     get_first_tenv_def] >>
+     metis_tac [pmatch_type_preservation, merge_def]) >>
 cases_on `p'` >>
 cases_on `r` >>
 cases_on `r'` >>
 rw [] >>
-metis_tac [exp_type_preservation]);
+fs [merge_def, emp_def, get_first_tenv_def] >>
+metis_tac [merge_def,exp_type_preservation]);
+*)
 
+val def_final_state_def = Define `
+  def_final_state (envC,envE,ds,c) = (c = NONE) ∧ (ds = [])`;
+
+val consistent_cenv_no_dups = Q.prove (
+`!l envC tenvC. 
+  consistent_con_env envC tenvC ∧
+  check_dup_ctors l tenvC
+  ⇒
+  check_dup_ctors l envC`,
+induct_on `l` >>
+rw [check_dup_ctors_def] >>
+fs [RES_FORALL] >>
+rw [] >|
+[cases_on `h` >>
+     fs [] >>
+     cases_on `r` >>
+     fs [] >>
+     `(λ(tvs,tn,condefs).
+        ∀x. MEM x condefs ⇒ (λ(n,ts). lookup n tenvC = NONE) x) (q,q',r')`
+              by metis_tac [] >>
+     fs [] >>
+     rw [] >>
+     cases_on `x` >>
+     fs [] >>
+     RES_TAC >>
+     fs [] >>
+     metis_tac [consistent_con_env_lem2],
+ `(λ(tvs,tn,condefs).
+    ∀x. MEM x condefs ⇒ (λ(n,ts). lookup n tenvC = NONE) x) x`
+              by metis_tac [] >>
+     cases_on `x` >>
+     fs [] >>
+     cases_on `r` >>
+     fs [] >>
+     rw [] >>
+     cases_on `x` >>
+     fs [] >>
+     RES_TAC >>
+     fs [] >>
+     metis_tac [consistent_con_env_lem2]]);
+(*
+val type_progress = Q.prove (
+`!tenvC envC envE ds c tenvC' tenvE.
+  type_d_state tenvC (envC,envE,ds,c) tenvC' tenvE ∧
+  consistent_con_env envC tenvC ∧
+  consistent_con_env2 envC tenvC ∧
+  ~def_final_state (envC,envE,ds,c)
+  ⇒
+  (?envC' envE' ds' c'. d_step (envC,envE,ds,c) = Dstep (envC',envE',ds',c'))
+  ∨
+  (?err. d_step (envC,envE,ds,c) = Draise err)`,
+rw [type_d_state_cases, d_step_def, def_final_state_def] >>
+rw [] >|
+[every_case_tac >>
+     fs [] >|
+     [fs [Once type_ds_cases, type_d_cases] >>
+          metis_tac [type_funs_distinct],
+      fs [Once type_ds_cases, type_d_cases, check_ctor_tenv_def] >>
+          metis_tac [consistent_cenv_no_dups]],
+ every_case_tac >>
+     fs [] >-
+     (fs [type_state_cases, type_e_val, Once type_ctxts_cases] >>
+           metis_tac [pmatch_type_progress, match_result_distinct]) >>
+
+metis_tac [exp_type_progress, not_final_state, e_step_result_distinct]
+*)
 val _ = export_theory ();

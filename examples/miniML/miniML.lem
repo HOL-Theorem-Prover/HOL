@@ -458,7 +458,7 @@ let build_tdefs tds envC =
 
 (* Checks that no constructor is defined twice *)
 val check_dup_ctors : 
-    (tvarN list * typeN * (conN * t list) list) list -> envC -> bool
+    forall 'a. (tvarN list * typeN * (conN * t list) list) list -> (conN,'a) env -> bool
 let check_dup_ctors tds envC =
   (forall ((tvs, tn, condefs) MEM tds) ((n, ts) MEM condefs).
    lookup n envC = None) &&
@@ -941,34 +941,25 @@ let type_op op t1 t2 t3 =
     | _ -> false
   end
 
-val build_ctor_tenv : 
-  (tvarN list * typeN * (conN * t list) list) list -> tenvC -> tenvC option
-let rec
-build_ctor_tenv [] cenv = Some cenv
-and
-build_ctor_tenv ((tvs,tn,ctors)::tds) cenv =
-  let cenv' =
-    List.fold_right
-      (fun (cn,ts) cenv' ->
-         match cenv' with
-           | None -> None
-           | Some cenv' ->
-               if lookup cn cenv' <> None || 
-                  not (List.for_all (check_freevars tvs) ts) then
-                 None 
-               else
-                 Some (bind cn (tvs, ts, tn) cenv')
-         end)
-      ctors
-      (Some cenv)
-  in
-    if all_distinct tvs then
-      match cenv' with
-       | None -> None
-       | Some cenv' -> build_ctor_tenv tds cenv'
-      end
-    else
-      None
+val check_ctor_tenv : 
+  tenvC -> (tvarN list * typeN * (conN * t list) list) list -> bool
+let check_ctor_tenv tenvC tds =
+  check_dup_ctors tds tenvC &&
+  List.for_all
+    (fun (tvs,tn,ctors) ->
+       all_distinct tvs &&
+       List.for_all 
+         (fun (cn,ts) -> (List.for_all (check_freevars tvs) ts))
+         ctors)
+    tds
+
+val build_ctor_tenv : (tvarN list * typeN * (conN * t list) list) list -> tenvC 
+let build_ctor_tenv tds = 
+  List.flatten
+    (List.map
+       (fun (tvs,tn,ctors) ->
+          List.map (fun (cn,ts) -> (cn,(tvs,ts,tn))) ctors)
+       tds)
 
 indreln
 
@@ -1211,36 +1202,36 @@ forall cenv tenv p e t tenv'.
 type_p cenv tenv p t tenv' &&
 type_e cenv tenv e t
 ==>
-type_d cenv tenv (Dlet p e) cenv tenv'
+type_d cenv tenv (Dlet p e) emp tenv'
 
 and
 
 forall cenv tenv funs tenv'.
 type_funs cenv (merge tenv' tenv) funs tenv'
 ==>
-type_d cenv tenv (Dletrec funs) cenv (merge tenv' tenv)
+type_d cenv tenv (Dletrec funs) emp (merge tenv' tenv)
 
 and
 
-forall cenv tenv tdecs cenv'.
-(build_ctor_tenv tdecs cenv = Some cenv')
+forall cenv tenv tdecs.
+check_ctor_tenv cenv tdecs
 ==>
-type_d cenv tenv (Dtype tdecs) cenv' tenv
+type_d cenv tenv (Dtype tdecs) (build_ctor_tenv tdecs) tenv
 
 indreln
 
 forall cenv tenv.
 true
 ==>
-type_ds cenv tenv [] cenv tenv
+type_ds cenv tenv [] emp tenv
 
 and
 
 forall cenv tenv d ds cenv' tenv' cenv'' tenv''.
 type_d cenv tenv d cenv' tenv' &&
-type_ds cenv' tenv' ds cenv'' tenv''
+type_ds (merge cenv' cenv) tenv' ds cenv'' tenv''
 ==>
-type_ds cenv tenv (d::ds) cenv'' tenv''
+type_ds cenv tenv (d::ds) (merge cenv' cenv'') tenv''
 
 (* --------- Auxiliary definitions used in the type soundness proofs -------- *)
 
@@ -1340,17 +1331,17 @@ forall tenvC envC env ds tenvC' tenv tenv'.
 type_env tenvC env tenv &&
 type_ds tenvC tenv ds tenvC' tenv'
 ==>
-type_d_state tenvC (envC, env, ds, None) tenv'
+type_d_state tenvC (envC, env, ds, None) tenvC' tenv'
 
 and
 
-forall tenvC envC env ds tenvC' tenv tenv' p envC' env' e c t tenv''.
+forall tenvC envC env ds tenvC' tenv tenv' p env' e c t tenv''.
 type_env tenvC env tenv &&
-type_state tenvC (envC',env',e,c) t &&
+type_state tenvC (envC,env',e,c) t &&
 type_p tenvC tenv p t tenv' &&
 type_ds tenvC tenv' ds tenvC' tenv''
 ==>
-type_d_state tenvC (envC, env, ds, Some (p, (envC',env',e,c))) tenv''
+type_d_state tenvC (envC, env, ds, Some (p, (envC,env',e,c))) tenvC' tenv''
 
 (* ------ Auxiliary relations for proving big/small step equivalence ------ *)
 
