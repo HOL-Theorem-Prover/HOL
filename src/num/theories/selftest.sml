@@ -44,9 +44,9 @@ val concat = String.concat
 
 val colourtests =
     [("Pretty-printing of case expression bound variables",
-      "case x of 0 -> 1 || SUC n -> n * 2",
-      concat ["case ",free "x"," of 0 -> 1 || ", "SUC ", bound "n", " -> ",
-              bound "n", " * 2"]),
+      "(case x of 0 => 1 | SUC n => n * 2)",
+      concat ["(case ",free "x"," of 0 => 1 | ", "SUC ", bound "n", " => ",
+              bound "n", " * 2)"]),
      ("Colouring simple LET", "let x = 3 in x + 1",
       concat ["let ", bound "x", " = 3 in ", bound "x", " + 1"]),
      ("Colouring simple LET with free on right",

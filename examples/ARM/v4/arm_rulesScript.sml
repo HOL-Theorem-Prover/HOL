@@ -486,9 +486,9 @@ val ARM_SMLAL = SYMBOLIC_EVAL_CONV MLA_MUL_ss (cntxt
 val BW = prove(
   `!c f d g0 g1 g2.
     (case (if c then Byte (f d) else Word d) of
-       Byte b  -> g0 b
-    || Half hw -> g1 hw
-    || Word w  -> g2 w) =
+       Byte b  => g0 b
+     | Half hw => g1 hw
+     | Word w  => g2 w) =
    (if c then g0 (f d) else g2 d)`, SRW_TAC [] []);
 
 val LDR_STR_ss =

@@ -205,12 +205,12 @@ fun thumb_expand_imm tm =
   ``if (11 -- 10) ^tm = 0b00w then
       let imm8 = (7 >< 0) ^tm : word8 in
         case (9 >< 8) ^tm : word2
-        of 0b00w -> w2w imm8
-        || 0b01w -> if imm8 = 0w then ARB else
+        of 0b00w => w2w imm8
+         | 0b01w => if imm8 = 0w then ARB else
                       word32 [imm8; 0b00000000w; imm8; 0b00000000w]
-        || 0b10w -> if imm8 = 0w then ARB else
+         | 0b10w => if imm8 = 0w then ARB else
                       word32 [0b00000000w; imm8; 0b00000000w; imm8]
-        || 0b11w -> if imm8 = 0w then ARB else
+         | 0b11w => if imm8 = 0w then ARB else
                       word32 [imm8; imm8; imm8; imm8]
     else
       let unrotated_value = (7 :+ T) ((6 >< 0) ^tm) in

@@ -25,11 +25,11 @@ val recCn_def = Define`
 val recPr_def = Define`
   recPr zf sf l =
     case l of
-       [] -> zf []
-    || 0::t -> zf t
-    || SUC n::t -> case recPr zf sf (n :: t) of
-                      NONE -> NONE
-                   || SOME r -> sf (n::r::t)
+      [] => zf []
+    | 0::t => zf t
+    | SUC n::t => case recPr zf sf (n :: t) of
+                    NONE => NONE
+                  | SOME r => sf (n::r::t)
 `;
 
 val (recfn_rules, recfn_ind, recfn_cases) = Hol_reln`

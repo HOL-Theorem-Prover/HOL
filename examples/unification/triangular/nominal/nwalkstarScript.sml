@@ -52,10 +52,10 @@ val noc_var1 = Q.prove(
   `!t v. noc s t v ==>
         !p u. (t = Sus p u) /\ nwfs s ==>
                case nvwalk s [] u
-               of Sus p v1 -> (v1 = v)
-               || Tie a t -> noc s t v
-               || nPair t1 t2 -> noc s t1 v ∨ noc s t2 v
-               || _ -> F`,
+               of Sus p v1 => (v1 = v)
+                | Tie a t => noc s t v
+                | nPair t1 t2 => noc s t1 v ∨ noc s t2 v
+                | _ => F`,
   HO_MATCH_MP_TAC noc_strong_ind THEN SRW_TAC [][]
     THEN1 (FULL_SIMP_TAC (srw_ss())[] THEN
            SRW_TAC [][Once nvwalk_def,FLOOKUP_DEF]) THEN
@@ -68,10 +68,10 @@ val noc_var1 = Q.prove(
 val noc_var2 = Q.prove(
   `nwfs s ==> !pn v. (pn = []) ∧
           (case nvwalk s pn v
-           of Sus p u -> (x = u)
-           || Tie a t -> noc s t x
-           || nPair t1 t2 -> noc s t1 x ∨ noc s t2 x
-           || _ -> F) ⇒
+           of Sus p u => (x = u)
+            | Tie a t => noc s t x
+            | nPair t1 t2 => noc s t1 x ∨ noc s t2 x
+            | _ => F) ⇒
           noc s (Sus p v) x`,
   DISCH_TAC THEN HO_MATCH_MP_TAC nvwalk_ind THEN SRW_TAC [][] THEN
   Cases_on `nvwalk s [] v` THEN FULL_SIMP_TAC (srw_ss()) [] THENL [
@@ -85,10 +85,10 @@ val noc_var2 = Q.prove(
 val noc_var = Q.prove(
   `nwfs s ==> (noc s (Sus p v) x =
           case nvwalk s [] v
-          of Sus p u -> (x = u)
-          || Tie a t -> noc s t x
-          || nPair t1 t2 -> noc s t1 x ∨ noc s t2 x
-          || _ -> F)`,
+          of Sus p u => (x = u)
+           | Tie a t => noc s t x
+           | nPair t1 t2 => noc s t1 x ∨ noc s t2 x
+           | _ => F)`,
 SRW_TAC [][EQ_IMP_THM] THENL [
   (noc_var1 |>
    Q.SPECL [`Sus p v`,`x`] |>
@@ -111,9 +111,9 @@ val noc_thm = RWsave_thm("noc_thm", LIST_CONJ [noc_nom, noc_var, noc_tie, noc_pa
 
 val pre_nwalkstar_def = TotalDefn.xDefineSchema "pre_nwalkstar"
 `nwalkstar t = case nwalk s t
-               of Tie a t -> Tie a (nwalkstar t)
-               || nPair t1 t2 -> nPair (nwalkstar t1) (nwalkstar t2)
-               || t -> t`;
+               of Tie a t => Tie a (nwalkstar t)
+                | nPair t1 t2 => nPair (nwalkstar t1) (nwalkstar t2)
+                | t => t`;
 
 val _ = overload_on("nwalk*",``nwalkstar``)
 
@@ -126,9 +126,9 @@ val _ = add_rule {block_style = (AroundEachPhrase, (PP.CONSISTENT, 0)),
 val _ = store_term_thm("nwalkstar_def_print", TermWithCase
 `nwfs s ⇒
 (nwalk* s t = case nwalk s t
-               of Tie a t -> Tie a (nwalk* s t)
-               || nPair t1 t2 -> nPair (nwalk* s t1) (nwalk* s  t2)
-               || t -> t)`);
+               of Tie a t => Tie a (nwalk* s t)
+                | nPair t1 t2 => nPair (nwalk* s t1) (nwalk* s  t2)
+                | t => t)`);
 
 val _ = overload_on("npair_count", ``nterm_size ARB``)
 

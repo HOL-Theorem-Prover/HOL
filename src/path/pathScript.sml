@@ -377,20 +377,20 @@ val path_Axiom = store_thm(
   ``!f: 'a -> 'b # ('c # 'a) option.
        ?g : 'a -> ('b, 'c) path.
          !x. g x = case f x of
-                      (y, NONE) -> stopped_at y
-                   || (y, SOME (l, v)) -> pcons y l (g v)``,
+                     (y, NONE) => stopped_at y
+                   | (y, SOME (l, v)) => pcons y l (g v)``,
   GEN_TAC THEN
   STRIP_ASSUME_TAC
     (Q.ISPEC `\(x:'a,ks:'c option).
                   case ks of
-                   NONE -> NONE
-                || SOME k -> (case f x : 'b # ('c # 'a) option of
-                                 (y, NONE) -> SOME((x, NONE), (k,y))
-                              || (y, SOME (l, v)) -> SOME((v, SOME l), (k,y)))`
+                    NONE => NONE
+                  | SOME k => (case f x : 'b # ('c # 'a) option of
+                                 (y, NONE) => SOME((x, NONE), (k,y))
+                               | (y, SOME (l, v)) => SOME((v, SOME l), (k,y)))`
              llist_Axiom) THEN
   Q.EXISTS_TAC `\x. case f x of
-                      (y, NONE) -> stopped_at y
-                   || (y, SOME (l, v)) -> toPath (y, g (v, SOME l))` THEN
+                      (y, NONE) => stopped_at y
+                    | (y, SOME (l, v)) => toPath (y, g (v, SOME l))` THEN
   SRW_TAC [][] THEN
   `?y lvs. f x = (y, lvs)` by PROVE_TAC [pairTheory.ABS_PAIR_THM] THEN
   SRW_TAC [][] THEN
@@ -688,8 +688,8 @@ val length_drop = store_thm(
   "length_drop",
   ``!p n. n IN PL p ==>
           (length (drop n p) = case (length p) of
-                                  NONE -> NONE
-                               || SOME m -> SOME (m - n))``,
+                                 NONE => NONE
+                               | SOME m => SOME (m - n))``,
   Induct_on `n` THENL [
     REPEAT STRIP_TAC THEN
     Cases_on `length p` THEN SRW_TAC [][drop_def],
@@ -1183,8 +1183,8 @@ val plink_def = new_specification(
                                                          g (tail p)))
                          in
                            case pair of
-                              (NONE, p) -> pullapart (\t. (NONE, t)) p
-                           || (SOME p1, p2) ->
+                             (NONE, p) => pullapart (\t. (NONE, t)) p
+                           | (SOME p1, p2) =>
                               if is_stopped p1 then
                                 pullapart (\t. (NONE, t)) p2
                               else
@@ -1385,8 +1385,8 @@ val unfold_thm = Q.store_thm
  `!proj f s.
    unfold proj f s =
      case f s of
-        NONE -> stopped_at (proj s)
-     || SOME (s',l) -> pcons (proj s) l (unfold proj f s')`,
+       NONE => stopped_at (proj s)
+     | SOME (s',l) => pcons (proj s) l (unfold proj f s')`,
  SRW_TAC [] [unfold_def] THEN
  Cases_on `f s` THEN
  SRW_TAC [] [stopped_at_def, pcons_def, toPath_11, Once LUNFOLD] THEN

@@ -1662,7 +1662,7 @@ fun pp_term (G : grammar) TyG backend = let
                          (add_string "{" >>
                           block CONSISTENT 0
                             (pr_term l Top Top Top (decdepth depth) >>
-                             add_string " |" >> spacep true >>
+                             add_string " |:" >> spacep true >>
                              pr_term vs Top Top Top (decdepth depth) >>
                              add_string " |" >> spacep true >>
                              pr_term r Top Top Top (decdepth depth)) >>

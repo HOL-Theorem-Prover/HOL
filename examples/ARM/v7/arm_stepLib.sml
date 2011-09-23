@@ -549,7 +549,7 @@ local
   fun mk_conform_mem (f,a,d) =
         combinSyntax.mk_update (a, mk_cond (f d, d, ``0w:word8``))
 
-  (* a =+ if GOOD_MODE ((4 >< 0) d) then d else d !! 31w *)
+  (* a =+ if GOOD_MODE ((4 >< 0) d) then d else d || 31w *)
   fun mk_good_mode_mem (a,d) =
         let val good = ``GOOD_MODE ((4 >< 0) ^d)`` in
           combinSyntax.mk_update

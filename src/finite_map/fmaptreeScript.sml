@@ -19,9 +19,9 @@ val _ = new_theory "fmaptree";
 val construct_def = Define`
   construct a kfm kl =
     case kl of
-       [] -> SOME a
-    || h :: t -> if h IN FDOM kfm then kfm ' h t
-                 else NONE
+      [] => SOME a
+    | h :: t => if h IN FDOM kfm then kfm ' h t
+                else NONE
 `;
 
 val (wf_rules, wf_ind, wf_cases) = Hol_reln`
@@ -129,8 +129,8 @@ val update_at_path_def = Define`
   (update_at_path (h::t) a ft =
      if h IN FDOM (map ft) then
        case update_at_path t a (map ft ' h) of
-          NONE -> NONE
-       || SOME ft' -> SOME (FTNode (item ft) (map ft |+ (h,ft')))
+         NONE => NONE
+       | SOME ft' => SOME (FTNode (item ft) (map ft |+ (h,ft')))
      else NONE)
 `;
 
@@ -139,8 +139,8 @@ val fupd_at_path_def = Define`
   (fupd_at_path (h::t) f ft =
      if h IN FDOM (map ft) then
        case fupd_at_path t f (map ft ' h) of
-          NONE -> NONE
-       || SOME ft' -> SOME (FTNode (item ft) (map ft |+ (h, ft')))
+         NONE => NONE
+       | SOME ft' => SOME (FTNode (item ft) (map ft |+ (h, ft')))
      else NONE)
 `;
 
@@ -188,8 +188,8 @@ val apply_path_SNOC = store_thm(
   "apply_path_SNOC",
   ``!ft x p. apply_path (p ++ [x]) ft =
              case apply_path p ft of
-                NONE -> NONE
-             || SOME ft' -> FLOOKUP (map ft') x``,
+               NONE => NONE
+             | SOME ft' => FLOOKUP (map ft') x``,
   Induct_on `p` THEN
   SRW_TAC [][apply_path_def, finite_mapTheory.FLOOKUP_DEF]);
 

@@ -222,13 +222,13 @@ val tunify_defn_q =`
   tunify s t1 t2 =
   if wfs s then
     case (walk s t1, walk s t2) of
-      (Var v1, Var v2) -> SOME if (v1 = v2) then s else (s |+ (v1,Var v2))
-   || (Var v1, t2) -> if oc s t2 v1 then NONE else SOME (s |+ (v1,t2))
-   || (t1, Var v2) -> if oc s t1 v2 then NONE else SOME (s |+ (v2,t1))
-   || (Pair t1a t1d, Pair t2a t2d) ->
+      (Var v1, Var v2) => SOME if (v1 = v2) then s else (s |+ (v1,Var v2))
+    | (Var v1, t2) => if oc s t2 v1 then NONE else SOME (s |+ (v1,t2))
+    | (t1, Var v2) => if oc s t1 v2 then NONE else SOME (s |+ (v2,t1))
+    | (Pair t1a t1d, Pair t2a t2d) =>
         do sx <- tunify s t1a t2a; tunify sx t1d t2d od
-   || (Const c1, Const c2) -> if (c1 = c2) then SOME s else NONE
-   || _ -> NONE
+    | (Const c1, Const c2) => if (c1 = c2) then SOME s else NONE
+    | _ => NONE
 else ARB`;
 
 val tunify_defn = Hol_defn "tunify" tunify_defn_q;
@@ -424,8 +424,8 @@ val walk_SUBMAP = Q.store_thm(
 "walk_SUBMAP",
 `wfs sx /\ s SUBMAP sx ==>
   case walk s t of
-     Var u -> walk sx t = walk sx (Var u)
-  || u -> walk sx t = u`,
+     Var u => walk sx t = walk sx (Var u)
+   | u => walk sx t = u`,
 Cases_on `t` THEN SRW_TAC [][walk_def] THEN
 MP_TAC (Q.SPECL [`n`,`s`] (UNDISCH vwalk_SUBMAP)) THEN
 SRW_TAC [][])
@@ -579,13 +579,13 @@ ext_s_check s v t = if oc s t v then NONE else SOME (s |+ (v,t))`
 val unify_exists = prove(
 ``?unify.!s t1 t2.wfs s ==> (unify s t1 t2 =
     case (walk s t1, walk s t2) of
-      (Var v1, Var v2) -> SOME if (v1 = v2) then s else (s |+ (v1,Var v2))
-   || (Var v1, t2) -> ext_s_check s v1 t2
-   || (t1, Var v2) -> ext_s_check s v2 t1
-   || (Pair t1a t1d, Pair t2a t2d) ->
+      (Var v1, Var v2) => SOME if (v1 = v2) then s else (s |+ (v1,Var v2))
+    | (Var v1, t2) => ext_s_check s v1 t2
+    | (t1, Var v2) => ext_s_check s v2 t1
+    | (Pair t1a t1d, Pair t2a t2d) =>
         do sx <- unify s t1a t2a; unify sx t1d t2d od
-   || (Const c1, Const c2) -> if (c1 = c2) then SOME s else NONE
-   || _ -> NONE)``,
+    | (Const c1, Const c2) => if (c1 = c2) then SOME s else NONE
+    | _ => NONE)``,
 Q.EXISTS_TAC `tunify` THEN
 SRW_TAC [][Once tunify_def,SimpLHS] THEN
 Cases_on `walk s t1` THEN Cases_on `walk s t2` THEN

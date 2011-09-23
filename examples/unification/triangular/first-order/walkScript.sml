@@ -17,9 +17,9 @@ val vwalk_def = save_thm("vwalk_def",vwalk_wfs_hyp
 (TotalDefn.xDefineSchema "pre_vwalk"
  `vwalk v =
     case FLOOKUP s v of
-          SOME (Var u) -> vwalk u
-       || SOME t -> t
-       || NONE -> Var v`) |> DISCH_ALL)
+         SOME (Var u) => vwalk u
+       | SOME t => t
+       | NONE => Var v`) |> DISCH_ALL)
 val vwalk_ind = save_thm("vwalk_ind",vwalk_wfs_hyp (theorem "pre_vwalk_ind"))
 
 val _ = store_term_thm("vwalk_def_print",
@@ -27,9 +27,9 @@ TermWithCase`
   wfs s ⇒
   (vwalk s v =
    case FLOOKUP s v of
-          SOME (Var u) -> vwalk s u
-       || SOME t -> t
-       || NONE -> Var v)`)
+         SOME (Var u) => vwalk s u
+       | SOME t => t
+       | NONE => Var v)`)
 
 val NOT_FDOM_vwalk = Q.store_thm(
   "NOT_FDOM_vwalk",
@@ -53,7 +53,7 @@ val vwalk_to_var = Q.store_thm(
   FIRST_X_ASSUM (Q.SPEC_THEN `u` MP_TAC) THEN SRW_TAC [][]);
 
 val walk_def = Define`
-  walk s t = case t of Var v -> vwalk s v || t -> t`;
+  walk s t = case t of Var v => vwalk s v | t => t`;
 
 val walk_thm = RWstore_thm(
 "walk_thm",
@@ -133,8 +133,8 @@ SRW_TAC [][vwalk_IN_FRANGE]);
 val vwalk_SUBMAP = Q.store_thm(
 "vwalk_SUBMAP",
 `wfs sx ==> !v s.s SUBMAP sx ==>
-   (case vwalk s v of Var u -> (vwalk sx v = vwalk sx u)
-                   || t -> (vwalk sx v = t))`,
+   (case vwalk s v of Var u => (vwalk sx v = vwalk sx u)
+                    | t => (vwalk sx v = t))`,
 STRIP_TAC THEN HO_MATCH_MP_TAC (Q.INST[`s`|->`sx`]vwalk_ind) THEN
 SRW_TAC [][] THEN
 `wfs s` by METIS_TAC [wfs_SUBMAP] THEN
@@ -164,9 +164,9 @@ val vwalk_al_thm = Q.store_thm(
 `wfs (alist_to_fmap al) ==>
   (vwalk_al al v =
    case ALOOKUP al v of
-     NONE -> Var v ||
-     SOME (Var u) -> vwalk_al al u ||
-     SOME t -> t)`,
+     NONE => Var v |
+     SOME (Var u) => vwalk_al al u |
+     SOME t => t)`,
 METIS_TAC [fmap_to_alist_to_fmap,vwalk_def,ALOOKUP_EQ_FLOOKUP]);
 
 val vwalk_al_eq_vwalk = Q.store_thm(

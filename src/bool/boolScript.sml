@@ -44,8 +44,7 @@ val _ = TeX_notation {hol = "|>", TeX = ("\\HOLTokenRightrec{}", 2)}
 (* case expressions *)
 val _ = TeX_notation {hol = "case", TeX = ("\\HOLKeyword{case}", 4)}
 val _ = TeX_notation {hol = "of",   TeX = ("\\HOLKeyword{of}", 2)}
-val _ = TeX_notation {hol = "->", TeX = ("\\HOLTokenMap{}", 1)}
-val _ = TeX_notation {hol = "||", TeX = ("\\HOLTokenOr{} ", 2)}
+val _ = TeX_notation {hol = "=>", TeX = ("\\HOLTokenImp{}", 1)}
 
 (* let expressions *)
 val _ = TeX_notation {hol = "let", TeX = ("\\HOLKeyword{let}", 3)}
@@ -4330,13 +4329,13 @@ val _ = let open GrammarSpecials
                           case_arrow_special]
         end
 
-val _ = add_rule{pp_elements = [HardSpace 1, TOK "->", BreakSpace(1,2)],
+val _ = add_rule{pp_elements = [HardSpace 1, TOK "=>", BreakSpace(1,2)],
                  fixity = Infixr 10,
                  block_style = (AroundEachPhrase, (PP.CONSISTENT, 0)),
                  paren_style = OnlyIfNecessary,
                  term_name = GrammarSpecials.case_arrow_special}
 
-val _ = add_rule{pp_elements = [BreakSpace(1,0), TOK "||", HardSpace 1],
+val _ = add_rule{pp_elements = [BreakSpace(1,0), TOK "|", HardSpace 1],
                  fixity = Infixr 7,
                  block_style = (NoPhrasing, (PP.CONSISTENT, 0)),
                  paren_style = OnlyIfNecessary,
@@ -4348,7 +4347,7 @@ val _ = add_rule{pp_elements = [PPBlock([TOK "case", BreakSpace(1,2),
                                 BreakSpace(1,3)],
                  fixity = Prefix 6,
                  block_style = (AroundEachPhrase, (PP.CONSISTENT, 0)),
-                 paren_style = OnlyIfNecessary,
+                 paren_style = Always,
                  term_name = GrammarSpecials.case_special};
 
 

@@ -1998,8 +1998,8 @@ natural numbers to \ml{bool\_ss}.
 <<HOL message: inventing new type variable names: 'a, 'b>>
 > val it = |- FST (x,y) + OUTR (INR z) = x + z : thm
 
-- SIMP_CONV std_ss [] ``case SOME x of NONE -> P || SOME y -> f y``;
-> val it = |- (case SOME x of NONE -> P || SOME v -> f v) = f x : thm
+- SIMP_CONV std_ss [] ``case SOME x of NONE => P | SOME y => f y``;
+> val it = |- (case SOME x of NONE => P | SOME v => f v) = f x : thm
 \end{verbatim}
 \end{session}
 
@@ -3496,10 +3496,10 @@ The fragment \ml{BIT\_ss} converts \holtxt{BIT} into membership test over a set 
 This simplification provides some support for reasoning about bitwise operations over arbitrary word lengths.  The arithmetic, logic and shift fragments help tidy up basic word expressions:
 \begin{session}
 \begin{verbatim}
-- conv wordsLib.WORD_LOGIC_ss ``a && 12w !! 11w && a``;
+- conv wordsLib.WORD_LOGIC_ss ``a && 12w || 11w && a``;
 <<HOL message: inventing new type variable names: 'a>>
 > val it =
-    |- a && 12w !! 11w && a = 15w && a :
+    |- a && 12w || 11w && a = 15w && a :
   thm
 
 - conv wordsLib.WORD_ARITH_ss ``3w * b + a + 2w * b - a * 4w:word2``;
@@ -3530,7 +3530,7 @@ The extract fragment is useful for reasoning about bit-field operations and is b
 - SIMP_CONV (std_ss++wordsLib.SIZES_ss++wordsLib.WORD_EXTRACT_ss) []
    ``(4 -- 1) ((a:word3) @@ (b:word2)) : word5``;
 > val it =
-    |- (4 -- 1) (a @@ b) = (2 >< 0) a << 1 !! (1 >< 1) b
+    |- (4 -- 1) (a @@ b) = (2 >< 0) a << 1 || (1 >< 1) b
      : thm
 \end{verbatim}
 \end{session}

@@ -137,12 +137,12 @@ val ARM_READ_TEEHBR_def = Define`
 val SPSR_MODE_def = Define`
   SPSR_MODE (m:word5) =
     case m
-    of 0b10001w -> SPSR_fiq
-    || 0b10010w -> SPSR_irq
-    || 0b10011w -> SPSR_svc
-    || 0b10110w -> SPSR_mon
-    || 0b10111w -> SPSR_abt
-    || _        -> SPSR_und`;
+    of 0b10001w => SPSR_fiq
+     | 0b10010w => SPSR_irq
+     | 0b10011w => SPSR_svc
+     | 0b10110w => SPSR_mon
+     | 0b10111w => SPSR_abt
+     | _        => SPSR_und`;
 
 val ARM_READ_SPSR_MODE_def = Define`
   ARM_READ_SPSR_MODE m s = s.psrs (0,SPSR_MODE m)`;
@@ -254,39 +254,39 @@ val ARM_WRITE_MEM_READ_def = Define`
 val RevLookUpRName_def = Define`
   RevLookUpRName (n:word4,m:word5) =
     case (n,m)
-    of (0w, _       ) -> RName_0usr
-    || (1w, _       ) -> RName_1usr
-    || (2w, _       ) -> RName_2usr
-    || (3w, _       ) -> RName_3usr
-    || (4w, _       ) -> RName_4usr
-    || (5w, _       ) -> RName_5usr
-    || (6w, _       ) -> RName_6usr
-    || (7w, _       ) -> RName_7usr
-    || (8w, 0b10001w) -> RName_8fiq
-    || (8w, _       ) -> RName_8usr
-    || (9w, 0b10001w) -> RName_9fiq
-    || (9w, _       ) -> RName_9usr
-    || (10w,0b10001w) -> RName_10fiq
-    || (10w,_       ) -> RName_10usr
-    || (11w,0b10001w) -> RName_11fiq
-    || (11w,_       ) -> RName_11usr
-    || (12w,0b10001w) -> RName_12fiq
-    || (12w,_       ) -> RName_12usr
-    || (13w,0b10001w) -> RName_SPfiq
-    || (13w,0b10010w) -> RName_SPirq
-    || (13w,0b10011w) -> RName_SPsvc
-    || (13w,0b10111w) -> RName_SPabt
-    || (13w,0b11011w) -> RName_SPund
-    || (13w,0b10110w) -> RName_SPmon
-    || (13w,_       ) -> RName_SPusr
-    || (14w,0b10001w) -> RName_LRfiq
-    || (14w,0b10010w) -> RName_LRirq
-    || (14w,0b10011w) -> RName_LRsvc
-    || (14w,0b10111w) -> RName_LRabt
-    || (14w,0b11011w) -> RName_LRund
-    || (14w,0b10110w) -> RName_LRmon
-    || (14w,_       ) -> RName_LRusr
-    || (15w,_       ) -> RName_PC`;
+    of (0w, _       ) => RName_0usr
+     | (1w, _       ) => RName_1usr
+     | (2w, _       ) => RName_2usr
+     | (3w, _       ) => RName_3usr
+     | (4w, _       ) => RName_4usr
+     | (5w, _       ) => RName_5usr
+     | (6w, _       ) => RName_6usr
+     | (7w, _       ) => RName_7usr
+     | (8w, 0b10001w) => RName_8fiq
+     | (8w, _       ) => RName_8usr
+     | (9w, 0b10001w) => RName_9fiq
+     | (9w, _       ) => RName_9usr
+     | (10w,0b10001w) => RName_10fiq
+     | (10w,_       ) => RName_10usr
+     | (11w,0b10001w) => RName_11fiq
+     | (11w,_       ) => RName_11usr
+     | (12w,0b10001w) => RName_12fiq
+     | (12w,_       ) => RName_12usr
+     | (13w,0b10001w) => RName_SPfiq
+     | (13w,0b10010w) => RName_SPirq
+     | (13w,0b10011w) => RName_SPsvc
+     | (13w,0b10111w) => RName_SPabt
+     | (13w,0b11011w) => RName_SPund
+     | (13w,0b10110w) => RName_SPmon
+     | (13w,_       ) => RName_SPusr
+     | (14w,0b10001w) => RName_LRfiq
+     | (14w,0b10010w) => RName_LRirq
+     | (14w,0b10011w) => RName_LRsvc
+     | (14w,0b10111w) => RName_LRabt
+     | (14w,0b11011w) => RName_LRund
+     | (14w,0b10110w) => RName_LRmon
+     | (14w,_       ) => RName_LRusr
+     | (15w,_       ) => RName_PC`;
 
 val ARM_READ_REG_MODE_def = Define`
   ARM_READ_REG_MODE x s = s.registers (0,RevLookUpRName x)`;
@@ -324,8 +324,8 @@ val CLEAR_EXCLUSIVE_LOCAL_def = Define`
 val STATE_OPTION_def = Define`
   STATE_OPTION f s =
     case f s
-    of Error _ -> NONE
-    || ValueState _ q -> SOME q`;
+    of Error _ => NONE
+     | ValueState _ q => SOME q`;
 
 val ARM_NEXT_def = Define`
   ARM_NEXT inp = STATE_OPTION (arm_next <| proc := 0 |> inp)`;
@@ -439,11 +439,11 @@ val align_aligned = Q.prove(
     \\ SRW_TAC [wordsLib.WORD_EXTRACT_ss] [align_248]
     \\ REWRITE_TAC [GSYM WORD_ADD_LSL]
     \\ Q.PAT_ABBREV_TAC `x:word32 = (f a + g b)`
-    << [`x << 1 + (0 >< 0) b = x << 1 !! (0 >< 0) b`
+    << [`x << 1 + (0 >< 0) b = x << 1 || (0 >< 0) b`
         by (MATCH_MP_TAC WORD_ADD_OR \\ SRW_TAC [wordsLib.WORD_BIT_EQ_ss] []),
-        `x << 2 + (1 >< 0) b = x << 2 !! (1 >< 0) b`
+        `x << 2 + (1 >< 0) b = x << 2 || (1 >< 0) b`
         by (MATCH_MP_TAC WORD_ADD_OR \\ SRW_TAC [wordsLib.WORD_BIT_EQ_ss] []),
-        `x << 3 + (2 >< 0) b = x << 3 !! (2 >< 0) b`
+        `x << 3 + (2 >< 0) b = x << 3 || (2 >< 0) b`
         by (MATCH_MP_TAC WORD_ADD_OR \\ SRW_TAC [wordsLib.WORD_BIT_EQ_ss] [])]
     \\ POP_ASSUM SUBST1_TAC
     \\ SRW_TAC [wordsLib.WORD_EXTRACT_ss] []
@@ -457,7 +457,7 @@ val align_aligned2 = Q.store_thm("align_aligned2",
     \\ REWRITE_TAC [GSYM WORD_ADD_LSL,
          wordsLib.WORD_DECIDE ``(a:word32) << 2 = a << 1 << 1``]
     \\ Q.ABBREV_TAC `x:word32 = ((31 >< 1) b + (31 >< 2) a << 1)`
-    \\ `x << 1 + (0 >< 0) b = x << 1 !! (0 >< 0) b`
+    \\ `x << 1 + (0 >< 0) b = x << 1 || (0 >< 0) b`
         by (MATCH_MP_TAC WORD_ADD_OR \\ SRW_TAC [wordsLib.WORD_BIT_EQ_ss] [])
     \\ POP_ASSUM SUBST1_TAC
     \\ SRW_TAC [wordsLib.WORD_EXTRACT_ss] []
@@ -512,17 +512,17 @@ val align_bits_sum = Q.store_thm("align_bits_sum",
     \\ FULL_SIMP_TAC (srw_ss()++wordsLib.WORD_BIT_EQ_ss) []);
 
 val align_or = Q.prove(
-  `(!a:word32. align (a,2) + 1w = align (a,2) !! 1w) /\
-   (!a:word32. align (a,4) + 1w = align (a,4) !! 1w) /\
-   (!a:word32. align (a,4) + 2w = align (a,4) !! 2w) /\
-   (!a:word32. align (a,4) + 3w = align (a,4) !! 3w)`, (* /\
-   (!a:word32. align (a,8) + 1w = align (a,8) !! 1w) /\
-   (!a:word32. align (a,8) + 2w = align (a,8) !! 2w) /\
-   (!a:word32. align (a,8) + 3w = align (a,8) !! 3w) /\
-   (!a:word32. align (a,8) + 4w = align (a,8) !! 4w) /\
-   (!a:word32. align (a,8) + 5w = align (a,8) !! 5w) /\
-   (!a:word32. align (a,8) + 6w = align (a,8) !! 6w) /\
-   (!a:word32. align (a,8) + 7w = align (a,8) !! 7w)`, *)
+  `(!a:word32. align (a,2) + 1w = align (a,2) || 1w) /\
+   (!a:word32. align (a,4) + 1w = align (a,4) || 1w) /\
+   (!a:word32. align (a,4) + 2w = align (a,4) || 2w) /\
+   (!a:word32. align (a,4) + 3w = align (a,4) || 3w)`, (* /\
+   (!a:word32. align (a,8) + 1w = align (a,8) || 1w) /\
+   (!a:word32. align (a,8) + 2w = align (a,8) || 2w) /\
+   (!a:word32. align (a,8) + 3w = align (a,8) || 3w) /\
+   (!a:word32. align (a,8) + 4w = align (a,8) || 4w) /\
+   (!a:word32. align (a,8) + 5w = align (a,8) || 5w) /\
+   (!a:word32. align (a,8) + 6w = align (a,8) || 6w) /\
+   (!a:word32. align (a,8) + 7w = align (a,8) || 7w)`, *)
   REPEAT STRIP_TAC \\ MATCH_MP_TAC WORD_ADD_OR
     \\ SRW_TAC [wordsLib.WORD_BIT_EQ_ss] [align_248]);
 
@@ -789,7 +789,7 @@ val aligned_bx_m1w = EVAL ``aligned_bx (-1w:word32)``;
 val align_bx_bit = Q.store_thm("align_bx_bit",
   `(!a:word32. (~a) ' 0 = ~a ' 0) /\
    (!a:word32 n. (a && n2w n) ' 0 = a ' 0 /\ ODD n) /\
-   (!a:word32 n. (a !! n2w n) ' 0 = a ' 0 \/ ODD n) /\
+   (!a:word32 n. (a || n2w n) ' 0 = a ' 0 \/ ODD n) /\
    (!a:word32 n. (a ?? n2w n) ' 0 = a ' 0 <> ODD n) /\
    (!a:word32 n. (a + n2w n) ' 0  = a ' 0 <> ODD n)`,
   SRW_TAC [wordsLib.WORD_BIT_EQ_ss]
@@ -820,7 +820,7 @@ val aligned_bx_eor = Q.store_thm("aligned_bx_eor",
   SRW_TAC [wordsLib.WORD_BIT_EQ_ss] [aligned_bx_def] \\ METIS_TAC []);
 
 val aligned_bx_orr = Q.prove(
-  `!a:word32 b. aligned_bx ((if aligned_bx (a !! b) then a else 1w) !! b)`,
+  `!a:word32 b. aligned_bx ((if aligned_bx (a || b) then a else 1w) || b)`,
   SRW_TAC [wordsLib.WORD_BIT_EQ_ss] [aligned_bx_def] \\ METIS_TAC []);
 
 val aligned_bx_orr = save_thm("aligned_bx_orr",
@@ -852,8 +852,8 @@ val aligned_bx_eor_pc = Q.store_thm("aligned_bx_eor_pc",
     \\ SRW_TAC [wordsLib.WORD_BIT_EQ_ss, ARITH_ss] [aligned_bx_def]);
 
 val aligned_bx_orr_pc = Q.store_thm("aligned_bx_orr_pc",
-  `(!pc:word32 b. aligned_bx ((align (pc,4) + 8w) !! b) = aligned_bx b) /\
-   !pc:word32 b. ((align (pc,4) + 8w) !! b) ' 0 = b ' 0`,
+  `(!pc:word32 b. aligned_bx ((align (pc,4) + 8w) || b) = aligned_bx b) /\
+   !pc:word32 b. ((align (pc,4) + 8w) || b) ' 0 = b ' 0`,
   NTAC 2 STRIP_TAC \\ REWRITE_TAC [word_plus8]
     \\ Q.ABBREV_TAC `x = align (pc,4) >>> 2 + 2w : word32`
     \\ SRW_TAC [wordsLib.WORD_BIT_EQ_ss, ARITH_ss] [aligned_bx_def]);
@@ -1016,8 +1016,8 @@ val aligned_bx_shift_pair = Q.prove(
    (!f:bool[32] # num -> bool[32] # bool x a:word32.
      x <> 0 /\ (FST (f (0w, x)) = 0w) ==>
       aligned_bx
-        ((if aligned_bx (a !! FST (f (a,x))) then a else 0w) !!
-         FST (f (if aligned_bx (a !! FST (f (a,x))) then a else 0w,x)))) /\
+        ((if aligned_bx (a || FST (f (a,x))) then a else 0w) ||
+         FST (f (if aligned_bx (a || FST (f (a,x))) then a else 0w,x)))) /\
    (!f:bool[32] # num -> bool[32] # bool x a:word32.
      x <> 0 /\ (FST (f (0w, x)) = 0w) ==>
       aligned_bx
@@ -1065,8 +1065,8 @@ val aligned_bx_rrx_pair = Q.store_thm("aligned_bx_rrx_pair",
                           then a else 0w)))) /\
    (!x a:word32.
       aligned_bx
-        ((if aligned_bx (a !! SND (word_rrx (x,a))) then a else 0w) !!
-         SND (word_rrx (x,if aligned_bx (a !! SND (word_rrx (x,a)))
+        ((if aligned_bx (a || SND (word_rrx (x,a))) then a else 0w) ||
+         SND (word_rrx (x,if aligned_bx (a || SND (word_rrx (x,a)))
                           then a else 0w)))) /\
    (!x a:word32.
       aligned_bx
@@ -1166,7 +1166,7 @@ val lem = Q.prove(
    (!x:word32. n2w (w2n x + 0x80000000) = x + 0x80000000w) /\
    (!x:word32. n2w (w2n x + 0x7FFFFFFF) = x + 0x7FFFFFFFw) /\
    (!x:word32. n2w (w2n (~x) + 1) = ~x + 1w) /\
-    !x:word32. n2w (w2n (x << 2) + 1) = x << 2 !! 1w`,
+    !x:word32. n2w (w2n (x << 2) + 1) = x << 2 || 1w`,
   REPEAT STRIP_TAC
     << [
       ONCE_REWRITE_TAC [GSYM n2w_mod]
@@ -1414,7 +1414,7 @@ val aligned_and_aligned_bx = Q.prove(
         then a else -8w,4)) /\
    (!f:bool[32] # num -> bool[32] # bool a:word32 x.
      aligned
-       (if aligned (a,4) /\ aligned_bx (a + 8w !! FST (f (a + 8w,x)))
+       (if aligned (a,4) /\ aligned_bx (a + 8w || FST (f (a + 8w,x)))
         then a else -8w,4))`,
   SRW_TAC [] [] \\ EVAL_TAC);
 
@@ -1471,7 +1471,7 @@ val aligned_and_aligned_bx_rrx = Q.prove(
         then a else -8w,4)) /\
    (!a:word32 x.
      aligned
-       (if aligned (a,4) /\ aligned_bx (a + 8w !! SND (word_rrx (x,a + 8w)))
+       (if aligned (a,4) /\ aligned_bx (a + 8w || SND (word_rrx (x,a + 8w)))
         then a else -8w,4))`,
   SRW_TAC [] [] \\ EVAL_TAC);
 
@@ -1613,9 +1613,9 @@ val aligned_bx_and_aligned = Q.prove(
    (!f:bool[32] # num -> bool[32] # bool x a:word32.
      x <> 0 /\ (FST (f (0w, x)) = 0w) ==>
      aligned_bx
-       ((if aligned (a,4) /\ aligned_bx (a + 8w !! FST (f (a + 8w,x)))
-         then a else -8w) + 8w !!
-        FST (f ((if aligned (a,4) /\ aligned_bx (a + 8w !! FST (f (a + 8w,x)))
+       ((if aligned (a,4) /\ aligned_bx (a + 8w || FST (f (a + 8w,x)))
+         then a else -8w) + 8w ||
+        FST (f ((if aligned (a,4) /\ aligned_bx (a + 8w || FST (f (a + 8w,x)))
                  then a else -8w) + 8w,x))))`,
   SRW_TAC [] [aligned_bx_0w] \\ EVAL_TAC);
 
@@ -1670,10 +1670,10 @@ val aligned_bx_and_aligned_rrx = Q.prove(
            then a else -8w) + 8w)))) /\
    (!x a:word32.
      aligned_bx
-       ((if aligned (a,4) /\ aligned_bx (a + 8w !! SND (word_rrx (x,a + 8w)))
-         then a else -8w) + 8w !!
+       ((if aligned (a,4) /\ aligned_bx (a + 8w || SND (word_rrx (x,a + 8w)))
+         then a else -8w) + 8w ||
         SND (word_rrx (x,
-          (if aligned (a,4) /\ aligned_bx (a + 8w !! SND (word_rrx (x,a + 8w)))
+          (if aligned (a,4) /\ aligned_bx (a + 8w || SND (word_rrx (x,a + 8w)))
            then a else -8w) + 8w))))`,
   SRW_TAC [] [aligned_bx_0w] \\ Cases_on `x` \\ EVAL_TAC);
 
@@ -1708,7 +1708,7 @@ val aligned_over_bitwise = Q.store_thm("aligned_over_bitwise",
   `(!a b:word32. aligned(align(a,4) + 8w && b, 4)) /\
    (!a:word32. ~aligned(~(align(a,4) + 8w), 4)) /\
    (!a b:word32. aligned(align(a,4) + 8w ?? b, 4) = aligned(b,4)) /\
-   (!a b:word32. aligned(a !! b, 4) = aligned(a,4) /\ aligned(b,4))`,
+   (!a b:word32. aligned(a || b, 4) = aligned(a,4) /\ aligned(b,4))`,
   SRW_TAC [wordsLib.WORD_EXTRACT_ss] [align_bits_sum, aligned_248, align_248,
          wordsLib.WORD_DECIDE ``((1 >< 0) (~a) = 0w:word2) =
                                 ((1 >< 0) (a:word32) = 3w:word2)``]
@@ -1790,8 +1790,8 @@ val aligned_aligned_shift = Q.prove(
         FST (f (if aligned (a ?? FST (f (b,x)), 4) then b else 0w,x)), 4)) /\
    (!f:bool[32] # num -> bool[32] # bool x a b.
       x <> 0 /\ (FST (f (0w, x)) = 0w) ==>
-      aligned ((if aligned (a !! FST (f (b,x)), 4) then a else 0w) !!
-        FST (f (if aligned (a !! FST (f (b,x)), 4) then b else 0w,x)), 4)) /\
+      aligned ((if aligned (a || FST (f (b,x)), 4) then a else 0w) ||
+        FST (f (if aligned (a || FST (f (b,x)), 4) then b else 0w,x)), 4)) /\
    (!f:bool[32] # num -> bool[32] # bool x a.
       x <> 0 /\ (FST (f (0w, x)) = 0w) ==>
       aligned (FST (f (if aligned (FST (f (a,x)) + -a,4) then a else 0w, x)) +
@@ -1905,9 +1905,9 @@ val aligned_aligned_rrx = Q.prove(
         SND (word_rrx (x,
           if aligned (a ?? SND (word_rrx (x,b)), 4) then b else 0w)), 4)) /\
    (!x a:word32 b.
-      aligned ((if aligned (a !! SND (word_rrx (x,b)), 4) then a else 0w) !!
+      aligned ((if aligned (a || SND (word_rrx (x,b)), 4) then a else 0w) ||
         SND (word_rrx (x,
-          if aligned (a !! SND (word_rrx (x,b)), 4) then b else 0w)), 4)) /\
+          if aligned (a || SND (word_rrx (x,b)), 4) then b else 0w)), 4)) /\
    (!x a:word32.
       aligned (SND (word_rrx (x,
           if aligned (SND (word_rrx (x,a)) + -a,4) then a else 0w)) +
@@ -2028,7 +2028,7 @@ val aligned_pc_thm = Q.store_thm("aligned_pc_thm",
 
 val aligned_bitwise_thm = Q.store_thm("aligned_bitwise_thm",
   `(!a:word32 b.
-      aligned (a,4) /\ aligned (b,4) ==> (align (a !! b, 4) = a !! b)) /\
+      aligned (a,4) /\ aligned (b,4) ==> (align (a || b, 4) = a || b)) /\
    (!a:word32 b.
       aligned (a,4) /\ aligned (b,4) ==> (align (a ?? b, 4) = a ?? b)) /\
    (!a:word32 b. aligned (a,4) ==> (align (a && b,4) = a && b))`,
@@ -2477,13 +2477,13 @@ val _ = Parse.overload_on
 
 val good_mode = Q.store_thm("good_mode",
   `(!n:word32.
-     (4 >< 0) (if GOOD_MODE ((4 >< 0) n) then n else n !! 31w) <> 22w:word5) /\
+     (4 >< 0) (if GOOD_MODE ((4 >< 0) n) then n else n || 31w) <> 22w:word5) /\
    (!n:word32.
-     GOOD_MODE ((4 >< 0) (if GOOD_MODE ((4 >< 0) n) then n else n !! 31w))) /\
+     GOOD_MODE ((4 >< 0) (if GOOD_MODE ((4 >< 0) n) then n else n || 31w))) /\
    (!n:word8.
-     (4 >< 0) (if GOOD_MODE ((4 >< 0) n) then n else n !! 31w) <> 22w:word5) /\
+     (4 >< 0) (if GOOD_MODE ((4 >< 0) n) then n else n || 31w) <> 22w:word5) /\
    (!n:word8.
-     GOOD_MODE ((4 >< 0) (if GOOD_MODE ((4 >< 0) n) then n else n !! 31w))) /\
+     GOOD_MODE ((4 >< 0) (if GOOD_MODE ((4 >< 0) n) then n else n || 31w))) /\
    (!psr.
      (if GOOD_MODE (psr.M) /\ (psr.IT = 0w) then psr
       else psr with <| IT := 0w; M := 16w |>).M <> 22w) /\
@@ -3570,7 +3570,7 @@ val ARM_ALIGN_BX_def = Define`
           align_pc
         else
          (case mode1
-          of Mode1_register imm5 type m ->
+          of Mode1_register imm5 type m =>
               (if (m = 15w) /\ (type = 0b00w) /\ (imm5 = 0w) then
                  align_pc
                else
@@ -3595,7 +3595,7 @@ val ARM_ALIGN_BX_def = Define`
                        let result = FST (data_processing_alu opc rn shifted C)
                        in
                          write___reg m (if aligned_bx result then rm else 0w))))
-            || _ -> align_pc)
+             | _ => align_pc)
       else
         align_pc >>=
         (\u:unit.
@@ -3622,13 +3622,13 @@ val ARM_ALIGN_BX_def = Define`
                      align_rn
              in
                (case mode1
-                of Mode1_immediate _                     -> align_rn
-                || Mode1_register _ _ m                  -> align_shift_reg m
-                || Mode1_register_shifted_register _ _ m -> constT ())))
+                of Mode1_immediate _                     => align_rn
+                 | Mode1_register _ _ m                  => align_shift_reg m
+                 | Mode1_register_shifted_register _ _ m => constT ())))
     else (* version < 6, aligned (result,4) *)
       if (n = 15w) \/ (opc = 0b1101w) \/ (opc = 0b1111w) then
         (case mode1
-          of Mode1_register imm5 type m ->
+          of Mode1_register imm5 type m =>
                (if opc IN {0b0000w; 0b1110w} then (* AND, BIC *)
                   align_pc
                 else if m = 15w then
@@ -3658,12 +3658,12 @@ val ARM_ALIGN_BX_def = Define`
                         write___reg m
                           (if aligned(result,4) then rm else
                              case opc
-                               of 0b0101w -> if C then -1w else 0w
-                               || 0b0110w -> if C then 0w else -1w
-                               || 0b0111w -> if C then 0w else 1w
-                               || 0b1111w -> -1w
-                               || _       -> 0w))))
-          || _ -> align_pc)
+                               of 0b0101w => if C then -1w else 0w
+                                | 0b0110w => if C then 0w else -1w
+                                | 0b0111w => if C then 0w else 1w
+                                | 0b1111w => -1w
+                                | _       => 0w))))
+           | _ => align_pc)
       else
         align_pc >>=
         (\u:unit.
@@ -3671,31 +3671,31 @@ val ARM_ALIGN_BX_def = Define`
            (\(shifted,C_shift).
              let result = FST (data_processing_alu opc rn shifted C) in
                (case mode1
-                of Mode1_immediate _ ->
+                of Mode1_immediate _ =>
                      write___reg n
                       (case opc
-                       of 0b0000w -> (* AND *)
+                       of 0b0000w => (* AND *)
                            (if aligned(result,4) then rn else 0w)
-                       || 0b1110w -> (* BIC *)
+                        | 0b1110w => (* BIC *)
                            (if aligned(result,4) then rn else 0w)
-                       || 0b0001w -> (* EOR *)
+                        | 0b0001w => (* EOR *)
                            (if aligned(result,4) then rn else shifted)
-                       || 0b1100w -> (* ORR *)
+                        | 0b1100w => (* ORR *)
                            (align(rn,4)) (* possibly no solution *)
-                       || 0b0010w -> (* SUB *)
+                        | 0b0010w => (* SUB *)
                            (align(result,4) + shifted)
-                       || 0b0011w -> (* RSB *)
+                        | 0b0011w => (* RSB *)
                            (shifted - align(result,4))
-                       || 0b0100w -> (* ADD *)
+                        | 0b0100w => (* ADD *)
                            (align(result,4) - shifted)
-                       || 0b0101w -> (* ADC *)
+                        | 0b0101w => (* ADC *)
                            (align(result,4) - shifted - if C then 1w else 0w)
-                       || 0b0110w -> (* SBC *)
+                        | 0b0110w => (* SBC *)
                            (align(result,4) + shifted + if C then 0w else 1w)
-                       || _       -> (* RSC *)
+                        | _       => (* RSC *)
                            (shifted + (if C then 0w else -1w) -
                             align(result,4)))
-                || Mode1_register imm5 type m ->
+                 | Mode1_register imm5 type m =>
                      if n = m then
                        if opc IN {0b0101w; 0b0110w; 0b0111w} then
                          constT () (* no solution *)
@@ -3719,26 +3719,26 @@ val ARM_ALIGN_BX_def = Define`
                      else
                        write___reg n
                          (case opc
-                          of 0b0000w -> (* AND *)
+                          of 0b0000w => (* AND *)
                               (if aligned(result,4) then rn else 0w)
-                          || 0b1110w -> (* BIC *)
+                           | 0b1110w => (* BIC *)
                               (if aligned(result,4) then rn else 0w)
-                          || 0b0001w -> (* EOR *)
+                           | 0b0001w => (* EOR *)
                               (if aligned(result,4) then rn else shifted)
-                          || 0b0010w -> (* SUB *)
+                           | 0b0010w => (* SUB *)
                               (align(result,4) + shifted)
-                          || 0b0011w -> (* RSB *)
+                           | 0b0011w => (* RSB *)
                               (shifted - align(result,4))
-                          || 0b0100w -> (* ADD *)
+                           | 0b0100w => (* ADD *)
                               (align(result,4) - shifted)
-                          || 0b0101w -> (* ADC *)
+                           | 0b0101w => (* ADC *)
                               (align(result,4) - shifted - if C then 1w else 0w)
-                          || 0b0110w -> (* SBC *)
+                           | 0b0110w => (* SBC *)
                               (align(result,4) + shifted + if C then 0w else 1w)
-                          || _       -> (* RSC *)
+                           | _       => (* RSC *)
                               (shifted + (if C then 0w else -1w) -
                                align(result,4)))
-                || Mode1_register_shifted_register _ _ m -> constT ())))
+                 | Mode1_register_shifted_register _ _ m => constT ())))
   and align_br m =
         align_pc >>=
         (\u:unit.
@@ -3755,11 +3755,11 @@ val ARM_ALIGN_BX_def = Define`
   in
     if npass then align_pc >>= (\u:unit. constT NONE) else
     case instr
-      of Branch (Branch_Exchange m) -> (* bx_write *)
+      of Branch (Branch_Exchange m) => (* bx_write *)
            align_br m
-      || Branch (Branch_Link_Exchange_Register m) -> (* bx_write *)
+       | Branch (Branch_Link_Exchange_Register m) => (* bx_write *)
            align_br m
-      || DataProcessing (Add_Sub add n d imm12) ->
+       | DataProcessing (Add_Sub add n d imm12) =>
            (* alu_write *)
            align_pc >>=
            (\u:unit.
@@ -3786,7 +3786,7 @@ val ARM_ALIGN_BX_def = Define`
                       (\u:unit. constT NONE))
                else
                  constT NONE)
-      || DataProcessing (Data_Processing opc setflags n d mode1) ->
+       | DataProcessing (Data_Processing opc setflags n d mode1) =>
            (* alu_write or branch_write *)
             condT (setflags /\ (d = 15w) /\
                    ((enc = Encoding_ARM) \/
@@ -3815,14 +3815,14 @@ val ARM_ALIGN_BX_def = Define`
                     align_dp opc n mode1 4 rn C >>= (\u:unit. constT NONE))
                else
                  align_pc >>= (\u:unit. constT NONE)))
-      || DataProcessing (Divide _ _ _ m) ->
+       | DataProcessing (Divide _ _ _ m) =>
            align_pc >>=
            (\u:unit.
               condT (m <> 15w)
                 (read_reg ii m >>=
                  (\rm. write___reg m (if rm <> 0w then rm else 1w))) >>=
               (\u:unit. constT NONE))
-      || LoadStore (Load indx add load_byte _ _ n t mode2) -> (* load_write *)
+       | LoadStore (Load indx add load_byte _ _ n t mode2) => (* load_write *)
            align_pc >>=
            (\u:unit.
              if ~load_byte /\ (t = 15w) then
@@ -3846,7 +3846,7 @@ val ARM_ALIGN_BX_def = Define`
                     (\u:unit. constT (SOME T)))
              else
                constT NONE)
-      || LoadStore (Load_Multiple indx add system _ n registers) ->
+       | LoadStore (Load_Multiple indx add system _ n registers) =>
            (* load_write *)
            align_pc >>=
            (\u:unit.
@@ -3875,7 +3875,7 @@ val ARM_ALIGN_BX_def = Define`
                     (\u:unit. constT (SOME T)))
              else
                constT NONE)
-      || LoadStore (Return_From_Exception P inc _ n) ->
+       | LoadStore (Return_From_Exception P inc _ n) =>
            align_pc >>=
            (\u:unit.
              (read__reg ii RName_PC ||| read_reg ii n) >>=
@@ -3890,16 +3890,16 @@ val ARM_ALIGN_BX_def = Define`
                         pc + 2w <> align (address,4))
                     then rn else rn + 4w) >>=
                  (\u:unit. constT (SOME F))))
-      || StatusAccess (Register_to_Status _ mask n) ->
+       | StatusAccess (Register_to_Status _ mask n) =>
            (align_pc ||| current_mode_is_priviledged ii) >>=
            (\(u:unit,priviledged).
               condT (mask ' 0 /\ priviledged /\ n <> 15w)
                 (read_reg ii n >>=
                  (\rn.
                     write___reg n
-                      (if GOOD_MODE ((4 >< 0) rn) then rn else rn !! 31w))) >>=
+                      (if GOOD_MODE ((4 >< 0) rn) then rn else rn || 31w))) >>=
               (\u:unit. constT NONE))
-      || _ -> align_pc >>= (\u:unit. constT NONE)`;
+       | _ => align_pc >>= (\u:unit. constT NONE)`;
 
 (* ------------------------------------------------------------------------- *)
 
@@ -3930,7 +3930,7 @@ val ARM_MEMORY_FOOTPRINT_def = Define`
                 constT NONE
               else
                 case mode2
-                  of Mode2_register _ _ m ->
+                  of Mode2_register _ _ m =>
                        if n = 15w then
                          read_reg ii m >>=
                          (\rm.
@@ -3950,7 +3950,7 @@ val ARM_MEMORY_FOOTPRINT_def = Define`
                        else
                          reg_align (n, address - rn, 4, rn) >>=
                          (\u:unit. constT (SOME (align (address,4))))
-                  || _ ->
+                   | _ =>
                        reg_align (n, address - rn, 4, rn) >>=
                        (\u:unit. constT (SOME (align (address,4))))))
   and align_mode3 (load,indx,add,N,B,n,mode3) =
@@ -3965,7 +3965,7 @@ val ARM_MEMORY_FOOTPRINT_def = Define`
                 constT NONE
               else
                 case mode3
-                  of Mode3_register _ m ->
+                  of Mode3_register _ m =>
                        if n = 15w then
                          read_reg ii m >>=
                          (\rm.
@@ -3983,23 +3983,23 @@ val ARM_MEMORY_FOOTPRINT_def = Define`
                        else
                          reg_align (n, address - rn, N, rn) >>=
                          (\u:unit. constT NONE)
-                  || _ ->
+                   | _ =>
                        reg_align (n, address - rn, N, rn) >>=
                        (\u:unit. constT NONE)))
   in
     if npass then constT NONE else
     case inst
-    of Branch (Table_Branch_Byte n is_tbh m) ->
+    of Branch (Table_Branch_Byte n is_tbh m) =>
          (read_reg ii n ||| read_reg ii m) >>=
          (\(rn,rm).
             condT is_tbh (reg_align (n,LSL(rm,1),2,rn)) >>=
             (\u:unit. constT NONE))
-    || Miscellaneous (Swap swap_byte n _ _) ->
+     | Miscellaneous (Swap swap_byte n _ _) =>
          read_reg ii n >>=
          (\rn.
             condT (~swap_byte) (reg_align (n,0w,4,rn)) >>=
             (\u:unit. constT NONE))
-    || LoadStore (Return_From_Exception P inc _ n) ->
+     | LoadStore (Return_From_Exception P inc _ n) =>
          read_reg ii n >>=
          (\rn.
             let address = if inc then rn else rn - 8w in
@@ -4007,7 +4007,7 @@ val ARM_MEMORY_FOOTPRINT_def = Define`
             in
               reg_align (n, address - rn, 4, rn) >>=
               (\u:unit. constT (SOME (align (address,4) + 4w))))
-    || LoadStore (Store_Return_State P inc _ mode) ->
+     | LoadStore (Store_Return_State P inc _ mode) =>
          read_reg_mode ii (13w,mode) >>=
          (\rn.
             let address = if inc then rn else rn - 8w in
@@ -4016,13 +4016,13 @@ val ARM_MEMORY_FOOTPRINT_def = Define`
               write_reg_mode ii (13w,mode)
                 (align (address, 4) - (address - rn)) >>=
               (\u:unit. constT NONE))
-    || LoadStore (Load indx add load_byte _ _ n _ mode2) ->
+     | LoadStore (Load indx add load_byte _ _ n _ mode2) =>
          align_mode2 (T,indx,add,load_byte,n,mode2)
-    || LoadStore (Load_Halfword indx add _ _ load_half _ n _ mode3) ->
+     | LoadStore (Load_Halfword indx add _ _ load_half _ n _ mode3) =>
          align_mode3 (T,indx,add,if load_half then 2 else 1,2,n,mode3)
-    || LoadStore (Load_Dual indx add _ n _ _ mode3) ->
+     | LoadStore (Load_Dual indx add _ n _ _ mode3) =>
          align_mode3 (T,indx,add,4,8,n,mode3)
-    || LoadStore (Load_Multiple indx add _ _ n registers) ->
+     | LoadStore (Load_Multiple indx add _ _ n registers) =>
          read_reg ii n >>=
          (\rn.
             let count = 4 * bit_count registers in
@@ -4033,24 +4033,24 @@ val ARM_MEMORY_FOOTPRINT_def = Define`
               reg_align (n, start_address - rn, 4, rn) >>=
               (\u:unit.
                  constT (SOME (align (start_address,4) + n2w (count - 4)))))
-    || LoadStore (Load_Exclusive n _ imm8) ->
+     | LoadStore (Load_Exclusive n _ imm8) =>
          read_reg ii n >>=
          (\rn. reg_align (n, (w2w imm8) << 2, 4, rn) >>= (\u:unit. constT NONE))
-    || LoadStore (Load_Exclusive_Doubleword n _ _) ->
+     | LoadStore (Load_Exclusive_Doubleword n _ _) =>
          read_reg ii n >>=
          (\rn. reg_align (n,0w,8,rn) >>= (\u:unit. constT NONE))
-    || LoadStore (Load_Exclusive_Halfword n _) ->
+     | LoadStore (Load_Exclusive_Halfword n _) =>
          read_reg ii n >>=
          (\rn. reg_align (n,0w,2,rn) >>= (\u:unit. constT NONE))
-    || LoadStore (Load_Exclusive_Byte n _) ->
+     | LoadStore (Load_Exclusive_Byte n _) =>
          read_reg ii n >>= (\rn. constT NONE)
-    || LoadStore (Store indx add store_byte _ _ n _ mode2) ->
+     | LoadStore (Store indx add store_byte _ _ n _ mode2) =>
          align_mode2 (F,indx,add,store_byte,n,mode2)
-    || LoadStore (Store_Halfword indx add _ _ n _ mode3) ->
+     | LoadStore (Store_Halfword indx add _ _ n _ mode3) =>
          align_mode3 (F,indx,add,2,2,n,mode3)
-    || LoadStore (Store_Dual indx add _ n _ _ mode3) ->
+     | LoadStore (Store_Dual indx add _ n _ _ mode3) =>
          align_mode3 (F,indx,add,4,8,n,mode3)
-    || LoadStore (Store_Multiple indx add _ _ n registers) ->
+     | LoadStore (Store_Multiple indx add _ _ n registers) =>
          read_reg ii n >>=
          (\rn.
             let count = 4 * bit_count registers in
@@ -4060,20 +4060,20 @@ val ARM_MEMORY_FOOTPRINT_def = Define`
             in
                reg_align (n, start_address - rn, 4, rn) >>=
                (\u:unit. constT NONE))
-    || LoadStore (Store_Exclusive n _ _ imm8) ->
+     | LoadStore (Store_Exclusive n _ _ imm8) =>
          read_reg ii n >>=
          (\rn.
             reg_align (n, (w2w imm8) << 2, 4, rn) >>=
             (\u:unit. constT NONE))
-    || LoadStore (Store_Exclusive_Doubleword n _ _ _) ->
+     | LoadStore (Store_Exclusive_Doubleword n _ _ _) =>
          read_reg ii n >>=
          (\rn. reg_align (n,0w,8,rn) >>= (\u:unit. constT NONE))
-    || LoadStore (Store_Exclusive_Halfword n _ _) ->
+     | LoadStore (Store_Exclusive_Halfword n _ _) =>
          read_reg ii n >>=
          (\rn. reg_align (n,0w,2,rn) >>= (\u:unit. constT NONE))
-    || LoadStore (Store_Exclusive_Byte n _ _) ->
+     | LoadStore (Store_Exclusive_Byte n _ _) =>
          read_reg ii n >>= (\rn. constT NONE)
-    || _ -> constT NONE`;
+     | _ => constT NONE`;
 
 (* ------------------------------------------------------------------------- *)
 

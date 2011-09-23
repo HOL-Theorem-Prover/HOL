@@ -102,35 +102,35 @@ val condition_encode_def = Define`
 
 val shift_encode_def = Define`
   (shift_encode (LSL Rm) = (w2w Rm):word32) /\
-  (shift_encode (LSR Rm) = 0x20w !! w2w Rm) /\
-  (shift_encode (ASR Rm) = 0x40w !! w2w Rm) /\
-  (shift_encode (ROR Rm) = 0x60w !! w2w Rm)`;
+  (shift_encode (LSR Rm) = 0x20w || w2w Rm) /\
+  (shift_encode (ASR Rm) = 0x40w || w2w Rm) /\
+  (shift_encode (ROR Rm) = 0x60w || w2w Rm)`;
 
 val addr_mode1_encode_def = Define`
   addr_mode1_encode op2 =
    case op2 of
-      Dp_immediate rot imm -> (0x2000000w !! w2w rot << 8 !! w2w imm):word32
-   || Dp_shift_immediate shift amount -> w2w amount << 7 !! shift_encode shift
-   || Dp_shift_register shift Rs -> 0x10w !! w2w Rs << 8 !! shift_encode shift`;
+     Dp_immediate rot imm => (0x2000000w || w2w rot << 8 || w2w imm):word32
+   | Dp_shift_immediate shift amount => w2w amount << 7 || shift_encode shift
+   | Dp_shift_register shift Rs => 0x10w || w2w Rs << 8 || shift_encode shift`;
 
 val addr_mode2_encode_def = Define`
   addr_mode2_encode op2 =
    case op2 of
-      Dt_immediate imm -> (w2w imm):word32
-   || Dt_shift_immediate shift amount ->
-        0x2000000w !! w2w amount << 7 !! shift_encode shift`;
+     Dt_immediate imm => (w2w imm):word32
+   | Dt_shift_immediate shift amount =>
+        0x2000000w || w2w amount << 7 || shift_encode shift`;
 
 val addr_mode3_encode_def = Define`
   addr_mode3_encode op2 =
    case op2 of
-      Dth_immediate imm -> 0x400000w !! ((7 >< 4) imm) << 8 !! ((3 >< 0) imm)
-   || Dth_register Rm -> (w2w Rm):word32`;
+     Dth_immediate imm => 0x400000w || ((7 >< 4) imm) << 8 || ((3 >< 0) imm)
+   | Dth_register Rm => (w2w Rm):word32`;
 
 val msr_mode_encode_def = Define`
   msr_mode_encode op =
    case op of
-      Msr_immediate rot imm -> (0x2000000w !! w2w rot << 8 !! w2w imm):word32
-   || Msr_register Rm -> w2w Rm`;
+     Msr_immediate rot imm => (0x2000000w || w2w rot << 8 || w2w imm):word32
+   | Msr_register Rm => w2w Rm`;
 
 val msr_psr_encode_def = Define`
   (msr_psr_encode CPSR_c = 0x10000w:word32) /\
@@ -152,96 +152,96 @@ val options_encode2_def = Define`
 
 val data_proc_encode_def = Define`
   data_proc_encode cond (op:word4) s (Rn:word4) (Rd:word4) Op2 =
-    condition_encode cond !! w2w op << 21 !! (if s then 0x100000w else 0w) !!
-       w2w Rn << 16 !! w2w Rd << 12 !! addr_mode1_encode Op2`;
+    condition_encode cond || w2w op << 21 || (if s then 0x100000w else 0w) ||
+       w2w Rn << 16 || w2w Rd << 12 || addr_mode1_encode Op2`;
 
 val instruction_encode_def = with_flag (priming, SOME "") Define`
   instruction_encode i =
     case i of
-       B  cond offset24 -> condition_encode cond !! 0xA000000w !! w2w offset24
-    || BL cond offset24 -> condition_encode cond !! 0xB000000w !! w2w offset24
-    || SWI cond -> condition_encode cond !! 0xF000000w
-    || AND cond s Rd Rn Op2 -> data_proc_encode cond 0w s Rn Rd Op2
-    || EOR cond s Rd Rn Op2 -> data_proc_encode cond 1w s Rn Rd Op2
-    || SUB cond s Rd Rn Op2 -> data_proc_encode cond 2w s Rn Rd Op2
-    || RSB cond s Rd Rn Op2 -> data_proc_encode cond 3w s Rn Rd Op2
-    || ADD cond s Rd Rn Op2 -> data_proc_encode cond 4w s Rn Rd Op2
-    || ADC cond s Rd Rn Op2 -> data_proc_encode cond 5w s Rn Rd Op2
-    || SBC cond s Rd Rn Op2 -> data_proc_encode cond 6w s Rn Rd Op2
-    || RSC cond s Rd Rn Op2 -> data_proc_encode cond 7w s Rn Rd Op2
-    || TST cond Rn Op2      -> data_proc_encode cond 8w T Rn 0w Op2
-    || TEQ cond Rn Op2      -> data_proc_encode cond 9w T Rn 0w Op2
-    || CMP cond Rn Op2      -> data_proc_encode cond 10w T Rn 0w Op2
-    || CMN cond Rn Op2      -> data_proc_encode cond 11w T Rn 0w Op2
-    || ORR cond s Rd Rn Op2 -> data_proc_encode cond 12w s Rn Rd Op2
-    || MOV cond s Rd Op2    -> data_proc_encode cond 13w s 0w Rd Op2
-    || BIC cond s Rd Rn Op2 -> data_proc_encode cond 14w s Rn Rd Op2
-    || MVN cond s Rd Op2    -> data_proc_encode cond 15w s 0w Rd Op2
-    || MUL cond s Rd Rm Rs ->
-         condition_encode cond !! (if s then 0x100090w else 0x90w) !!
-         w2w Rd << 16 !! w2w Rs << 8 !! w2w Rm
-    || MLA cond s Rd Rm Rs Rn ->
-         condition_encode cond !! (if s then 0x300090w else 0x200090w) !!
-         w2w Rd << 16 !! w2w Rn << 12 !! w2w Rs << 8 !! w2w Rm
-    || UMULL cond s RdLo RdHi Rm Rs ->
-         condition_encode cond !! (if s then 0x900090w else 0x800090w) !!
-         w2w RdHi << 16 !! w2w RdLo << 12 !! w2w Rs << 8 !! w2w Rm
-    || UMLAL cond s RdLo RdHi Rm Rs ->
-         condition_encode cond !! (if s then 0xB00090w else 0xA00090w) !!
-         w2w RdHi << 16 !! w2w RdLo << 12 !! w2w Rs << 8 !! w2w Rm
-    || SMULL cond s RdLo RdHi Rm Rs ->
-         condition_encode cond !! (if s then 0xD00090w else 0xC00090w) !!
-         w2w RdHi << 16 !! w2w RdLo << 12 !! w2w Rs << 8 !! w2w Rm
-    || SMLAL cond s RdLo RdHi Rm Rs ->
-         condition_encode cond !! (if s then 0xF00090w else 0xE00090w) !!
-         w2w RdHi << 16 !! w2w RdLo << 12 !! w2w Rs << 8 !! w2w Rm
-    || LDRH cond s h options Rd Rn mode3 ->
-         condition_encode cond !! (if s then 0x1000D0w else 0x100090w) !!
-         options_encode2 (h \/ (~h /\ ~s)) options !!
-         w2w Rn << 16 !! w2w Rd << 12 !! addr_mode3_encode mode3
-    || STRH cond options Rd Rn mode3 ->
-         condition_encode cond !! 0x90w !! options_encode2 T options !!
-         w2w Rn << 16 !! w2w Rd << 12 !! addr_mode3_encode mode3
-    || LDR cond b options Rd Rn offset ->
-         condition_encode cond !! 0x4100000w !! options_encode b options !!
-         w2w Rn << 16 !! w2w Rd << 12 !! addr_mode2_encode offset
-    || STR cond b options Rd Rn offset ->
-         condition_encode cond !! 0x4000000w !! options_encode b options !!
-         w2w Rn << 16 !! w2w Rd << 12 !! addr_mode2_encode offset
-    || LDM cond s options Rn list ->
-         condition_encode cond !! 0x8100000w !! options_encode s options !!
-         w2w Rn << 16 !! w2w list
-    || STM cond s options Rn list ->
-         condition_encode cond !! 0x8000000w !! options_encode s options !!
-         w2w Rn << 16 !! w2w list
-    || SWP cond b Rd Rm Rn ->
-         condition_encode cond !! (if b then 0x1400090w else 0x1000090w) !!
-         w2w Rn << 16 !! w2w Rd << 12 !! w2w Rm
-    || MRS cond R Rd ->
-         condition_encode cond !! (if R then 0x14F0000w else 0x10F0000w) !!
+      B  cond offset24 => condition_encode cond || 0xA000000w || w2w offset24
+    | BL cond offset24 => condition_encode cond || 0xB000000w || w2w offset24
+    | SWI cond => condition_encode cond || 0xF000000w
+    | AND cond s Rd Rn Op2 => data_proc_encode cond 0w s Rn Rd Op2
+    | EOR cond s Rd Rn Op2 => data_proc_encode cond 1w s Rn Rd Op2
+    | SUB cond s Rd Rn Op2 => data_proc_encode cond 2w s Rn Rd Op2
+    | RSB cond s Rd Rn Op2 => data_proc_encode cond 3w s Rn Rd Op2
+    | ADD cond s Rd Rn Op2 => data_proc_encode cond 4w s Rn Rd Op2
+    | ADC cond s Rd Rn Op2 => data_proc_encode cond 5w s Rn Rd Op2
+    | SBC cond s Rd Rn Op2 => data_proc_encode cond 6w s Rn Rd Op2
+    | RSC cond s Rd Rn Op2 => data_proc_encode cond 7w s Rn Rd Op2
+    | TST cond Rn Op2      => data_proc_encode cond 8w T Rn 0w Op2
+    | TEQ cond Rn Op2      => data_proc_encode cond 9w T Rn 0w Op2
+    | CMP cond Rn Op2      => data_proc_encode cond 10w T Rn 0w Op2
+    | CMN cond Rn Op2      => data_proc_encode cond 11w T Rn 0w Op2
+    | ORR cond s Rd Rn Op2 => data_proc_encode cond 12w s Rn Rd Op2
+    | MOV cond s Rd Op2    => data_proc_encode cond 13w s 0w Rd Op2
+    | BIC cond s Rd Rn Op2 => data_proc_encode cond 14w s Rn Rd Op2
+    | MVN cond s Rd Op2    => data_proc_encode cond 15w s 0w Rd Op2
+    | MUL cond s Rd Rm Rs =>
+         condition_encode cond || (if s then 0x100090w else 0x90w) ||
+         w2w Rd << 16 || w2w Rs << 8 || w2w Rm
+    | MLA cond s Rd Rm Rs Rn =>
+         condition_encode cond || (if s then 0x300090w else 0x200090w) ||
+         w2w Rd << 16 || w2w Rn << 12 || w2w Rs << 8 || w2w Rm
+    | UMULL cond s RdLo RdHi Rm Rs =>
+         condition_encode cond || (if s then 0x900090w else 0x800090w) ||
+         w2w RdHi << 16 || w2w RdLo << 12 || w2w Rs << 8 || w2w Rm
+    | UMLAL cond s RdLo RdHi Rm Rs =>
+         condition_encode cond || (if s then 0xB00090w else 0xA00090w) ||
+         w2w RdHi << 16 || w2w RdLo << 12 || w2w Rs << 8 || w2w Rm
+    | SMULL cond s RdLo RdHi Rm Rs =>
+         condition_encode cond || (if s then 0xD00090w else 0xC00090w) ||
+         w2w RdHi << 16 || w2w RdLo << 12 || w2w Rs << 8 || w2w Rm
+    | SMLAL cond s RdLo RdHi Rm Rs =>
+         condition_encode cond || (if s then 0xF00090w else 0xE00090w) ||
+         w2w RdHi << 16 || w2w RdLo << 12 || w2w Rs << 8 || w2w Rm
+    | LDRH cond s h options Rd Rn mode3 =>
+         condition_encode cond || (if s then 0x1000D0w else 0x100090w) ||
+         options_encode2 (h \/ (~h /\ ~s)) options ||
+         w2w Rn << 16 || w2w Rd << 12 || addr_mode3_encode mode3
+    | STRH cond options Rd Rn mode3 =>
+         condition_encode cond || 0x90w || options_encode2 T options ||
+         w2w Rn << 16 || w2w Rd << 12 || addr_mode3_encode mode3
+    | LDR cond b options Rd Rn offset =>
+         condition_encode cond || 0x4100000w || options_encode b options ||
+         w2w Rn << 16 || w2w Rd << 12 || addr_mode2_encode offset
+    | STR cond b options Rd Rn offset =>
+         condition_encode cond || 0x4000000w || options_encode b options ||
+         w2w Rn << 16 || w2w Rd << 12 || addr_mode2_encode offset
+    | LDM cond s options Rn list =>
+         condition_encode cond || 0x8100000w || options_encode s options ||
+         w2w Rn << 16 || w2w list
+    | STM cond s options Rn list =>
+         condition_encode cond || 0x8000000w || options_encode s options ||
+         w2w Rn << 16 || w2w list
+    | SWP cond b Rd Rm Rn =>
+         condition_encode cond || (if b then 0x1400090w else 0x1000090w) ||
+         w2w Rn << 16 || w2w Rd << 12 || w2w Rm
+    | MRS cond R Rd =>
+         condition_encode cond || (if R then 0x14F0000w else 0x10F0000w) ||
          w2w Rd << 12
-    || MSR cond psrd Op ->
-         condition_encode cond !! 0x120F000w !! msr_psr_encode psrd !!
+    | MSR cond psrd Op =>
+         condition_encode cond || 0x120F000w || msr_psr_encode psrd ||
          (msr_mode_encode Op)
-    || CDP cond CPn Cop1 CRd CRn CRm Cop2 ->
-         condition_encode cond !! 0xE000000w !! w2w Cop1 << 20 !!
-         w2w CRn << 16 !! w2w CRd << 12 !! w2w CPn << 8 !!
-         w2w Cop2 << 5 !! w2w CRm
-    || LDC cond n options CPn CRd Rn offset8 ->
-         condition_encode cond !! 0xC100000w !! options_encode n options !!
-         w2w Rn << 16 !! w2w CRd << 12 !! w2w CPn << 8 !! w2w offset8
-    || STC cond n options CPn CRd Rn offset8 ->
-         condition_encode cond !! 0xC000000w !! options_encode n options !!
-         w2w Rn << 16 !! w2w CRd << 12 !! w2w CPn << 8 !! w2w offset8
-    || MRC cond CPn Cop1b Rd CRn CRm Cop2 ->
-         condition_encode cond !! 0xE100010w !! w2w Cop1b << 21 !!
-         w2w CRn << 16 !! w2w Rd << 12 !! w2w CPn << 8 !!
-         w2w Cop2 << 5 !! w2w CRm
-    || MCR cond CPn Cop1b Rd CRn CRm Cop2 ->
-         condition_encode cond !! 0xE000010w !! w2w Cop1b << 21 !!
-         w2w CRn << 16 !! w2w Rd << 12 !! w2w CPn << 8 !!
-         w2w Cop2 << 5 !! w2w CRm
-    || UND cond -> condition_encode cond !! 0x6000010w`;
+    | CDP cond CPn Cop1 CRd CRn CRm Cop2 =>
+         condition_encode cond || 0xE000000w || w2w Cop1 << 20 ||
+         w2w CRn << 16 || w2w CRd << 12 || w2w CPn << 8 ||
+         w2w Cop2 << 5 || w2w CRm
+    | LDC cond n options CPn CRd Rn offset8 =>
+         condition_encode cond || 0xC100000w || options_encode n options ||
+         w2w Rn << 16 || w2w CRd << 12 || w2w CPn << 8 || w2w offset8
+    | STC cond n options CPn CRd Rn offset8 =>
+         condition_encode cond || 0xC000000w || options_encode n options ||
+         w2w Rn << 16 || w2w CRd << 12 || w2w CPn << 8 || w2w offset8
+    | MRC cond CPn Cop1b Rd CRn CRm Cop2 =>
+         condition_encode cond || 0xE100010w || w2w Cop1b << 21 ||
+         w2w CRn << 16 || w2w Rd << 12 || w2w CPn << 8 ||
+         w2w Cop2 << 5 || w2w CRm
+    | MCR cond CPn Cop1b Rd CRn CRm Cop2 =>
+         condition_encode cond || 0xE000010w || w2w Cop1b << 21 ||
+         w2w CRn << 16 || w2w Rd << 12 || w2w CPn << 8 ||
+         w2w Cop2 << 5 || w2w CRm
+    | UND cond => condition_encode cond || 0x6000010w`;
 
 val _ = overload_on("enc", ``instruction_encode``);
 

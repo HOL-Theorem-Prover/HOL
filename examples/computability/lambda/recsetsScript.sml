@@ -581,8 +581,8 @@ val Rices_Theorem = store_thm(
   ` THEN
   Q.ABBREV_TAC `hi = dBnum (fromTerm h)` THEN
   `∀m n. Phi hi (m ⊗ n) = case Phi m m of
-                             NONE -> NONE
-                          || SOME _ -> Phi a n`
+                            NONE => NONE
+                          | SOME _ => Phi a n`
     by (ASM_SIMP_TAC (bsrw_ss()) [Phi_def, Abbr`hi`, Abbr`h`,
                                   cnsnd_behaviour, cnfst_behaviour,
                                   cnpair_behaviour, cnumdB_behaviour,

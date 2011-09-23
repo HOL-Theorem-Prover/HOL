@@ -41,7 +41,7 @@ val constT_seq_def = Define `
 
 val addT_seq_def = Define `
   (addT_seq: 'a -> 'b ppc_M -> ('a # 'b) ppc_M) x s =
-    \y. case s y of NONE -> NONE || SOME (z,t) -> SOME ((x,z),t)`;
+    \y. case s y of NONE => NONE | SOME (z,t) => SOME ((x,z),t)`;
 
 val lockT_seq_def = Define `
   (lockT_seq: 'a ppc_M -> 'a ppc_M) s = s`;
@@ -51,17 +51,17 @@ val failureT_seq_def = Define `
 
 val seqT_seq_def = Define `
   (seqT_seq: 'a ppc_M -> ('a -> 'b ppc_M) -> 'b ppc_M) s f =
-    \y. case s y of NONE -> NONE || SOME (z,t) -> f z t`;
+    \y. case s y of NONE => NONE | SOME (z,t) => f z t`;
 
 val parT_seq_def = Define `
   (parT_seq: 'a ppc_M -> 'b ppc_M -> ('a # 'b) ppc_M) s t =
-    \y. case s y of NONE -> NONE || SOME (a,z) ->
-        case t z of NONE -> NONE || SOME (b,x) -> SOME ((a,b),x)`;
+    \y. case s y of NONE => NONE | SOME (a,z) =>
+        case t z of NONE => NONE | SOME (b,x) => SOME ((a,b),x)`;
 
 val parT_unit_seq_def = Define `
   (parT_unit_seq: unit ppc_M -> unit ppc_M -> unit ppc_M) s t =
-    \y. case s y of NONE -> NONE || SOME (a,z) ->
-        case t z of NONE -> NONE || SOME (b,x) -> SOME ((),x)`;
+    \y. case s y of NONE => NONE | SOME (a,z) =>
+        case t z of NONE => NONE | SOME (b,x) => SOME ((),x)`;
 
 (* register reads/writes always succeed. *)
 
@@ -77,17 +77,17 @@ val write_status_seq_def = Define `(write_status_seq ii f x):unit ppc_M =
   (\s. SOME ((),PWRITE_S f x s))`;
 
 val read_status_seq_def  = Define `(read_status_seq ii f):bool ppc_M =
-  (\s. case PREAD_S f s of NONE -> NONE || SOME b -> SOME (b,s))`;
+  (\s. case PREAD_S f s of NONE => NONE | SOME b => SOME (b,s))`;
 
 (* memory writes are only allowed to modelled memory, i.e. locations containing SOME ... *)
 
 val write_mem_seq_def   = Define `(write_mem_seq ii a x):unit ppc_M =
-  (\s. case PREAD_M a s of NONE -> NONE || SOME y -> SOME ((),PWRITE_M a (SOME x) s))`;
+  (\s. case PREAD_M a s of NONE => NONE | SOME y => SOME ((),PWRITE_M a (SOME x) s))`;
 
 (* a memory read to an unmodelled memory location causes a failure *)
 
 val read_mem_seq_def  = Define `(read_mem_seq ii a):word8 ppc_M =
-  (\s. case PREAD_M a s of NONE -> NONE || SOME x -> SOME (x,s))`;
+  (\s. case PREAD_M a s of NONE => NONE | SOME x => SOME (x,s))`;
 
 
 (* export *)

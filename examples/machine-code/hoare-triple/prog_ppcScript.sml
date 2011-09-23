@@ -269,7 +269,7 @@ val pMEMORY_WORD_def = Define `
       pMem (a+3w) (SOME ((7 >< 0) w)) }`;
 
 val pMEMORY_SET_def = Define `
-  pMEMORY_SET df f = BIGUNION { pMEMORY_WORD a (f a) | a | a IN df /\ ALIGNED a  }`;
+  pMEMORY_SET df f = BIGUNION { pMEMORY_WORD a (f a) |: a | a IN df /\ ALIGNED a  }`;
 
 val pMEMORY_def = Define `pMEMORY df f = SEP_EQ (pMEMORY_SET df f)`;
 
@@ -357,7 +357,7 @@ val pMEMORY_INTRO = store_thm("pMEMORY_INTRO",
 (* ----------------------------------------------------------------------------- *)
 
 val pBYTE_MEMORY_SET_def = Define `
-  pBYTE_MEMORY_SET df f = { pMem a (SOME (f a)) | a | a IN df }`;
+  pBYTE_MEMORY_SET df f = { pMem a (SOME (f a)) |: a | a IN df }`;
 
 val pBYTE_MEMORY_def = Define `pBYTE_MEMORY df f = SEP_EQ (pBYTE_MEMORY_SET df f)`;
 

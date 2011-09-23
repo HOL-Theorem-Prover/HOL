@@ -78,12 +78,12 @@ val mode_reg2num_def = Define`
     (if (n = 15) \/ USER m \/ (m = fiq) /\ n < 8 \/ ~(m = fiq) /\ n < 13 then
        n
      else case m of
-        fiq -> n + 8
-     || irq -> n + 10
-     || svc -> n + 12
-     || abt -> n + 14
-     || und -> n + 16
-     || _ -> ARB)`;
+       fiq => n + 8
+     | irq => n + 10
+     | svc => n + 12
+     | abt => n + 14
+     | und => n + 16
+     | _ => ARB)`;
 
 val REG_READ_def = Define`
   REG_READ (reg:reg) m n =
@@ -116,13 +116,13 @@ val SET_NZC_def = Define `SET_NZC (N,Z,C) w = SET_NZCV (N,Z,C,w %% 28) w`;
 val mode_num_def = Define`
   mode_num mode =
     case mode of
-       usr -> 16w
-    || fiq -> 17w
-    || irq -> 18w
-    || svc -> 19w
-    || abt -> 23w
-    || und -> 27w
-    || _ -> 0w:word5`;
+      usr => 16w
+    | fiq => 17w
+    | irq => 18w
+    | svc => 19w
+    | abt => 23w
+    | und => 27w
+    | _ => 0w:word5`;
 
 val SET_IFMODE_def = Define`
   SET_IFMODE irq' fiq' mode w:word32 =
@@ -150,13 +150,13 @@ val CARRY_def = Define `CARRY (n,z,c,v) = c`;
 val mode2psr_def = Define`
   mode2psr mode =
     case mode of
-       usr -> CPSR
-    || fiq -> SPSR_fiq
-    || irq -> SPSR_irq
-    || svc -> SPSR_svc
-    || abt -> SPSR_abt
-    || und -> SPSR_und
-    || _   -> CPSR`;
+      usr => CPSR
+    | fiq => SPSR_fiq
+    | irq => SPSR_irq
+    | svc => SPSR_svc
+    | abt => SPSR_abt
+    | und => SPSR_und
+    | _   => CPSR`;
 
 val SPSR_READ_def = Define `SPSR_READ (psr:psr) mode = psr (mode2psr mode)`;
 val CPSR_READ_def = Define `CPSR_READ (psr:psr) = psr CPSR`;
@@ -175,14 +175,14 @@ val SPSR_WRITE_def = Define`
 val exception2mode_def = Define`
   exception2mode e =
     case e of
-       reset     -> svc
-    || undefined -> und
-    || software  -> svc
-    || address   -> svc
-    || pabort    -> abt
-    || dabort    -> abt
-    || interrupt -> irq
-    || fast      -> fiq`;
+      reset     => svc
+    | undefined => und
+    | software  => svc
+    | address   => svc
+    | pabort    => abt
+    | dabort    => abt
+    | interrupt => irq
+    | fast      => fiq`;
 
 val EXCEPTION_def = Define`
   EXCEPTION (ARM reg psr) type =
@@ -310,7 +310,7 @@ val ADD_def = Define`
 val SUB_def = Define`SUB a b c = ADD a (~b) c`;
 val AND_def = Define`AND a b = ALU_logic (a && b)`;
 val EOR_def = Define`EOR a b = ALU_logic (a ?? b)`;
-val ORR_def = Define`ORR a b = ALU_logic (a !! b)`;
+val ORR_def = Define`ORR a b = ALU_logic (a || b)`;
 
 val ALU_def = Define`
  ALU (opc:word4) rn op2 c =
@@ -636,14 +636,14 @@ val LDC_STC_def = Define`
 val CONDITION_PASSED2_def = Define`
   CONDITION_PASSED2 (N,Z,C,V) cond =
     case cond of
-       EQ -> Z
-    || CS -> C
-    || MI -> N
-    || VS -> V
-    || HI -> C /\ ~Z
-    || GE -> N = V
-    || GT -> ~Z /\ (N = V)
-    || AL -> T`;
+      EQ => Z
+    | CS => C
+    | MI => N
+    | VS => V
+    | HI => C /\ ~Z
+    | GE => N = V
+    | GT => ~Z /\ (N = V)
+    | AL => T`;
 
 val CONDITION_PASSED_def = Define`
   CONDITION_PASSED flags (ireg:word32) =
@@ -744,11 +744,11 @@ val EXEC_INST_def = Define`
 
 val IS_Dabort_def = Define`
   IS_Dabort irpt =
-    (case irpt of SOME (Dabort x) -> T || _ -> F)`;
+    (case irpt of SOME (Dabort x) => T | _ => F)`;
 
 val IS_Reset_def = Define`
   IS_Reset irpt =
-    (case irpt of SOME (Reset x) -> T || _ -> F)`;
+    (case irpt of SOME (Reset x) => T | _ => F)`;
 
 val PROJ_Dabort_def = Define `PROJ_Dabort (SOME (Dabort x)) = x`;
 val PROJ_Reset_def  = Define `PROJ_Reset  (SOME (Reset x))  = x`;
@@ -760,22 +760,22 @@ val interrupt2exception_def = Define`
     and ic = DECODE_INST ireg in
     let old_flags = pass /\ (ic = mrs_msr) in
     (case irpt of
-        NONE            -> software
-     || SOME (Reset x)  -> reset
-     || SOME Prefetch   -> pabort
-     || SOME (Dabort t) -> dabort
-     || SOME Undef      -> if pass /\ ic IN {cdp_und; mrc; mcr; stc; ldc} then
-                             undefined
-                           else
-                             software
-     || SOME Fiq        -> if (if old_flags then f else f') then
-                             software
-                           else
-                             fast
-     || SOME Irq        -> if (if old_flags then i else i') then
-                             software
-                           else
-                             interrupt)`;
+       NONE            => software
+     | SOME (Reset x)  => reset
+     | SOME Prefetch   => pabort
+     | SOME (Dabort t) => dabort
+     | SOME Undef      => if pass /\ ic IN {cdp_und; mrc; mcr; stc; ldc} then
+                            undefined
+                          else
+                            software
+     | SOME Fiq        => if (if old_flags then f else f') then
+                            software
+                          else
+                            fast
+     | SOME Irq        => if (if old_flags then i else i') then
+                            software
+                          else
+                            interrupt)`;
 
 val PROJ_IF_FLAGS_def = Define`
   PROJ_IF_FLAGS (ARM reg psr) =

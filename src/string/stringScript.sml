@@ -338,8 +338,8 @@ val IMPLODE_EQ_THM = Q.store_thm
 val EXPLODE_DEST_STRING = Q.store_thm
 ("EXPLODE_DEST_STRING",
  `!s. EXPLODE s = case DEST_STRING s
-                   of NONE -> []
-                   || SOME(c,t) -> c::EXPLODE t`,
+                   of NONE => []
+                    | SOME(c,t) => c::EXPLODE t`,
  Cases THEN SRW_TAC [][])
 
 val IMPLODE_STRING = Q.store_thm
@@ -410,9 +410,9 @@ val isPREFIX_DEF = store_thm(
   ``!s1 s2.
        isPREFIX s1 s2 =
        case (DEST_STRING s1, DEST_STRING s2)
-        of (NONE, _) -> T
-        || (SOME __, NONE) -> F
-        || (SOME(c1,t1),SOME(c2,t2)) -> (c1=c2) /\ isPREFIX t1 t2``,
+        of (NONE, _) => T
+         | (SOME __, NONE) => F
+         | (SOME(c1,t1),SOME(c2,t2)) => (c1=c2) /\ isPREFIX t1 t2``,
   Cases_on `s1` THEN Cases_on `s2` THEN SRW_TAC [][]);
 
 val isPREFIX_IND = Q.store_thm

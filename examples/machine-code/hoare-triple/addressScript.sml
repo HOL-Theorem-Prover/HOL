@@ -445,7 +445,7 @@ val ALIGNED_BITS = store_thm("ALIGNED_BITS",
     \\ FULL_SIMP_TAC bool_ss [GSYM (EVAL ``SUC 1``),MULT_SUC_EQ]]);
 
 val ALIGNED_OR = store_thm("ALIGNED_OR",
-  ``!x y. ALIGNED (x !! y) = ALIGNED x /\ ALIGNED y``,
+  ``!x y. ALIGNED (x || y) = ALIGNED x /\ ALIGNED y``,
   SIMP_TAC (std_ss++SIZES_ss) [ALIGNED_BITS,word_or_def,fcpTheory.FCP_BETA]
   \\ METIS_TAC []);
 

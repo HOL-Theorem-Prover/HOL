@@ -73,8 +73,8 @@ val SUBSET_x64_2set = prove(
   ``!u s. u SUBSET x64_2set s = ?y. u = x64_2set' y s``,
   REPEAT STRIP_TAC \\ EQ_TAC \\ REPEAT STRIP_TAC
   \\ ASM_REWRITE_TAC [x64_2set'_SUBSET_x64_2set]
-  \\ Q.EXISTS_TAC `({ a |a| ?x. zReg a x IN u },{ a |a| ?x. zStatus a x IN u },
-                    (?x. zRIP x IN u),{ a |a| ?x y. zMem a x y IN u })`
+  \\ Q.EXISTS_TAC `({ a |: a| ?x. zReg a x IN u },{ a |: a| ?x. zStatus a x IN u },
+                    (?x. zRIP x IN u),{ a |: a| ?x y. zMem a x y IN u })`
   \\ `?r e t m i. s = (r,e,t,m,i)` by METIS_TAC [PAIR]
   \\ FULL_SIMP_TAC std_ss [x64_2set'_def,x64_2set_def,EXTENSION,SUBSET_DEF,IN_IMAGE,
        IN_UNION,GSPECIFICATION,IN_INSERT,NOT_IN_EMPTY,IN_UNIV]
@@ -577,7 +577,7 @@ val zDATA_PERM_def = Define `
 
 val zBYTE_MEMORY_ANY_SET_def = Define `
   zBYTE_MEMORY_ANY_SET df f exec c =
-    { zMem a (SOME (f a, zDATA_PERM exec)) (c a) | a | a IN df }`;
+    { zMem a (SOME (f a, zDATA_PERM exec)) (c a) |: a | a IN df }`;
 
 val zBYTE_MEMORY_ANY_C_def = Define `
   zBYTE_MEMORY_ANY_C exec df f c = SEP_EQ (zBYTE_MEMORY_ANY_SET df f exec c)`;
@@ -980,11 +980,11 @@ val SPLIT_CODE_SEQ = prove(
 
 val X64_SPEC_EXLPODE_CODE_LEMMA = prove(
   ``!s. SPEC X64_MODEL p ((a,xs,T) INSERT s) q =
-        SPEC X64_MODEL p ({ (a + n2w n, [EL n xs], T) |n| n < LENGTH xs } UNION s) q``,
+        SPEC X64_MODEL p ({ (a + n2w n, [EL n xs], T) |: n| n < LENGTH xs } UNION s) q``,
   Q.SPEC_TAC (`a`,`a`) \\ Q.SPEC_TAC (`xs`,`xs`) \\ REVERSE Induct THEN1
    (ASM_SIMP_TAC std_ss [SPLIT_CODE_SEQ] \\ REPEAT STRIP_TAC
-    \\ `{(a + n2w n,[EL n (h::xs)],T) | n | n < LENGTH (h::xs)} =
-        {(a + 0x1w + n2w n,[EL n xs],T) | n | n < LENGTH xs} UNION {(a,[h],T)}` by ALL_TAC
+    \\ `{(a + n2w n,[EL n (h::xs)],T) |: n | n < LENGTH (h::xs)} =
+        {(a + 0x1w + n2w n,[EL n xs],T) |: n | n < LENGTH xs} UNION {(a,[h],T)}` by ALL_TAC
     \\ ASM_SIMP_TAC std_ss [INSERT_UNION_EQ,UNION_EMPTY,GSYM UNION_ASSOC]
     \\ SIMP_TAC std_ss [EXTENSION,GSPECIFICATION,IN_UNION,IN_INSERT,NOT_IN_EMPTY]
     \\ REPEAT STRIP_TAC \\ EQ_TAC \\ REPEAT STRIP_TAC THENL [
@@ -996,7 +996,7 @@ val X64_SPEC_EXLPODE_CODE_LEMMA = prove(
       \\ ASM_SIMP_TAC std_ss [TL,WORD_ADD_ASSOC,LENGTH] \\ DECIDE_TAC,
       Q.EXISTS_TAC `0` \\ ASM_SIMP_TAC std_ss [WORD_ADD_0,EL,LENGTH,HD]])
   \\ REPEAT STRIP_TAC
-  \\ `{(a + n2w n,[EL n ([]:word8 list)],T) |n| n < LENGTH ([]:word8 list)} = {}` by
+  \\ `{(a + n2w n,[EL n ([]:word8 list)],T) |: n| n < LENGTH ([]:word8 list)} = {}` by
     ASM_SIMP_TAC std_ss [EXTENSION,GSPECIFICATION,NOT_IN_EMPTY,LENGTH]
   \\ ASM_SIMP_TAC std_ss [UNION_EMPTY]
   \\ SIMP_TAC std_ss [progTheory.SPEC_def,X64_MODEL_def]
@@ -1017,8 +1017,8 @@ val X64_SPEC_EXLPODE_CODE = save_thm("X64_SPEC_EXLPODE_CODE",
 (* ----------------------------------------------------------------------------- *)
 
 val LOAD64 = store_thm("LOAD64",
-  ``(w2w (((63 >< 32) w):word32) << 32 !! w2w (((31 >< 0) w):word32) = w:word64) /\
-    (w2w (((31 >< 0) w):word32) !! w2w (((63 >< 32) w):word32) << 32 = w:word64)``,
+  ``(w2w (((63 >< 32) w):word32) << 32 || w2w (((31 >< 0) w):word32) = w:word64) /\
+    (w2w (((31 >< 0) w):word32) || w2w (((63 >< 32) w):word32) << 32 = w:word64)``,
   blastLib.BBLAST_TAC);
 
 val WORD_BITS_BITS_ZERO = store_thm("WORD_BITS_BITS_ZERO",
@@ -1039,8 +1039,8 @@ val WORD_w2w_n2w_OVER_BITWISE = store_thm("WORD_w2w_n2w_OVER_BITWISE",
           (n2w n && w2w w = w2w (n2w n && (w:'b word)) :'a word) /\
           (w2w w ?? n2w n = w2w ((w:'b word) ?? n2w n) :'a word) /\
           (n2w n ?? w2w w = w2w (n2w n ?? (w:'b word)) :'a word) /\
-          (w2w w !! n2w n = w2w ((w:'b word) !! n2w n) :'a word) /\
-          (n2w n !! w2w w = w2w (n2w n !! (w:'b word)) :'a word)``,
+          (w2w w || n2w n = w2w ((w:'b word) || n2w n) :'a word) /\
+          (n2w n || w2w w = w2w (n2w n || (w:'b word)) :'a word)``,
   NTAC 3 STRIP_TAC THEN1
    (REPEAT STRIP_TAC
     \\ `(n2w n):'a word = w2w ((n2w (n MOD dimword (:'b))):'b word)` by

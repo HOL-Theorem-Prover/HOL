@@ -1024,12 +1024,12 @@ val DUR_IC_def = Define`
       1`;
 
 val IFLAGS_def = Define`
-  IFLAGS x = case x of (^arm6state) ->
+  IFLAGS x = case x of (^arm6state) =>
       let (flags,cpsri,cpsrf,m) = DECODE_PSR (CPSR_READ psr) in
         (onfq,ooonfq,oniq,oooniq,cpsrf,cpsri,pipebabt)`;
 
 val DUR_X_def = Define`
-  DUR_X x = case x.state of (^arm6state) ->
+  DUR_X x = case x.state of (^arm6state) =>
     let (flags,cpsri,cpsrf,m) = DECODE_PSR (CPSR_READ psr) in
     let abortinst = ABORTINST iregval onewinst ointstart ireg flags in
     let ic = IC abortinst nxtic
@@ -1078,18 +1078,18 @@ val STRM_ARM6_def = Define`
 val exc2exception_def = Define`
   exc2exception exc a n =
    case exc of
-      reset     -> SOME (Reset a)
-   || dabort    -> SOME (Dabort n)
-   || fast      -> SOME Fiq
-   || interrupt -> SOME Irq
-   || pabort    -> SOME Prefetch
-   || undefined -> SOME Undef
-   || _         -> NONE`;
+     reset     => SOME (Reset a)
+   | dabort    => SOME (Dabort n)
+   | fast      => SOME Fiq
+   | interrupt => SOME Irq
+   | pabort    => SOME Prefetch
+   | undefined => SOME Undef
+   | _         => NONE`;
 
 val SMPL_EXC_ARM6_def = Define`
   SMPL_EXC_ARM6 x t =
     case ABS_ARM6 (STATE_ARM6 (IMM_ARM6 x (t + 1)) x) of
-      ARM_EX state ireg exc ->
+      ARM_EX state ireg exc =>
         (exc2exception exc state
            (LEAST s. IS_ABORT x.inp (IMM_ARM6 x t + (s + 1))),
          let s = IMM_ARM6 x t in

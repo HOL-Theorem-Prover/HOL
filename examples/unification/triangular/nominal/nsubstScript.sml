@@ -5,7 +5,7 @@ val _ = new_theory "nsubst"
 val _ = type_abbrev ("nsubst", ``:(num |-> 'a nterm)``);
 
 val nvR_def = Define`
-  nvR s y x = case FLOOKUP s x of SOME t -> y IN nvars t || _ -> F`;
+  nvR s y x = case FLOOKUP s x of SOME t => y IN nvars t | _ => F`;
 
 val nwfs_def = Define`nwfs s = WF (nvR s)`;
 

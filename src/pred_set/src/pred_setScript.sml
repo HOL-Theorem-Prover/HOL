@@ -142,7 +142,7 @@ val _ = add_rule{term_name = "gspec special", fixity = Closefix,
                  block_style = (AroundEachPhrase, (PP.CONSISTENT, 0))};
 
 val _ = add_rule{term_name = "gspec2 special", fixity = Closefix,
-                 pp_elements = [TOK "{",TM, TOK "|", TM, TOK "|", TM, TOK "}"],
+                 pp_elements = [TOK "{",TM, TOK "|:", TM, TOK "|", TM, TOK "}"],
                  paren_style = OnlyIfNecessary,
                  block_style = (AroundEachPhrase, (PP.CONSISTENT, 0))}
 
