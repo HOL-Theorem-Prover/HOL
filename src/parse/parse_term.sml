@@ -855,333 +855,352 @@ fun parse_term (G : grammar) typeparser = let
          way. *)
       (* NB: terminology: each stack item is either a TM (=term, i.e.,
          nonterminal) or a TOK (=token, i.e., terminal). *)
-      fun stack_item_to_rule_element (Terminal (STD_HOL_TOK s),_) = TOK s
-        | stack_item_to_rule_element (NonTerminal _,_) = TM
-        | stack_item_to_rule_element (_,locn) = FAILloc locn "perform_reduction: gak!"
-      val ((_,rlocn),_) = List.hd rhs
-      val rhs = List.rev rhs
-      val translated_rhs = map (stack_item_to_rule_element o #1) rhs
-      val ((_,llocn),_) = List.hd rhs
-      val lrlocn = locn.between llocn rlocn
-      val top_was_tm = hd translated_rhs = TM
-      val rule = let
-        val errmsg = "No rule for "^ listtoString reltoString translated_rhs
-      in
-        case Polyhash.peek rule_db translated_rhs of
-          NONE => let
-          in
-            if top_was_tm then
-              case Polyhash.peek rule_db (tl translated_rhs) of
-                NONE => (valOf (handle_list_reduction (tl translated_rhs))
-                         handle Option => FAILloc lrlocn errmsg)
-              | SOME r => r
-            else
-              valOf (handle_list_reduction translated_rhs)
-              handle Option => FAILloc lrlocn errmsg
-          end
-        | SOME r => r
-      end
-      val ignore_top_item =
-          case rule of
+        fun stack_item_to_rule_element (Terminal (STD_HOL_TOK s),_) = TOK s
+          | stack_item_to_rule_element (NonTerminal _,_) = TM
+          | stack_item_to_rule_element (_,locn) =
+              FAILloc locn "perform_reduction: gak!"
+        val ((_,rlocn),_) = List.hd rhs
+        val rhs = List.rev rhs
+        val translated_rhs = map (stack_item_to_rule_element o #1) rhs
+        val ((_,llocn),_) = List.hd rhs
+        val lrlocn = locn.between llocn rlocn
+        val top_was_tm = hd translated_rhs = TM
+        val rule = let
+          val errmsg = "No rule for "^ listtoString reltoString translated_rhs
+        in
+          case Polyhash.peek rule_db translated_rhs of
+            NONE => let
+            in
+              if top_was_tm then
+                case Polyhash.peek rule_db (tl translated_rhs) of
+                  NONE => (valOf (handle_list_reduction (tl translated_rhs))
+                           handle Option => FAILloc lrlocn errmsg)
+                | SOME r => r
+              else
+                valOf (handle_list_reduction translated_rhs)
+                handle Option => FAILloc lrlocn errmsg
+            end
+          | SOME r => r
+        end
+        val ignore_top_item =
+            case rule of
               infix_rule   s => false
             | suffix_rule  s => false
             | _              => top_was_tm
-      (* rhs' is the actual stack segment matched by the rule, and llocn' is
-         its left edge, unlike rhs and llocn which may contain a spurious TM
-         on the left *)
-      val rhs' = if ignore_top_item then tl rhs else rhs
-      val ((_,llocn'),_) = List.hd rhs'
-      val lrlocn' = locn.between llocn' rlocn
-      fun seglocs xs als mal =
+        (* rhs' is the actual stack segment matched by the rule, and llocn' is
+           its left edge, unlike rhs and llocn which may contain a spurious TM
+           on the left *)
+        val rhs' = if ignore_top_item then tl rhs else rhs
+        val ((_,llocn'),_) = List.hd rhs'
+        val lrlocn' = locn.between llocn' rlocn
+        fun seglocs xs als mal =
           (* extract TM items, and locations of right edges of
              maximal initial segments containing them *)
-          case (xs,mal) of
-            ((((NonTerminal p,locn),_)::xs), NONE       ) => seglocs xs      als  (SOME((p,locn),locn))
-          | ((((NonTerminal p,locn),_)::xs), SOME al    ) => seglocs xs (al::als) (SOME((p,locn),locn))
-          | ((((_            ,locn),_)::xs), NONE       ) => seglocs xs als mal
-          | ((((_            ,locn),_)::xs), SOME (pl,_)) => seglocs xs als (SOME(pl,locn))
-          | ([]                            , NONE       ) => List.rev als
-          | ([]                            , SOME al    ) => List.rev (al::als)
-      val args_w_seglocs = seglocs rhs' [] NONE
-      fun CCOMB((x,locn),y) = (COMB(y,x),locn.between (#2 y) locn)
-      val newterm =
-        case rule of
-          listfix_rule r => let
-            fun mk_list [] = (VAR (#nilstr r),rlocn)
-              | mk_list ((x,_)::xs) = (COMB((COMB((VAR (#cons r),#2 x), x),
-                                             #2 x),
-                                            mk_list xs),
-                                       locn.between (#2 x) rlocn)
-          in
-            mk_list args_w_seglocs
-          end
-        | _ =>
-          List.foldl CCOMB (VAR (summary_toString rule),llocn') args_w_seglocs
-    in
-      repeatn (length rhs') pop >>
-      push ((NonTerminal (#1 newterm),lrlocn'), XXX)
+            case (xs,mal) of
+              ((((NonTerminal p,locn),_)::xs), NONE       ) => seglocs xs      als  (SOME((p,locn),locn))
+            | ((((NonTerminal p,locn),_)::xs), SOME al    ) => seglocs xs (al::als) (SOME((p,locn),locn))
+            | ((((_            ,locn),_)::xs), NONE       ) => seglocs xs als mal
+            | ((((_            ,locn),_)::xs), SOME (pl,_)) => seglocs xs als (SOME(pl,locn))
+            | ([]                            , NONE       ) => List.rev als
+            | ([]                            , SOME al    ) => List.rev (al::als)
+        val args_w_seglocs = seglocs rhs' [] NONE
+        fun CCOMB((x,locn),y) = (COMB(y,x),locn.between (#2 y) locn)
+        val newterm =
+            case rule of
+              listfix_rule r => let
+                fun mk_list [] = (VAR (#nilstr r),rlocn)
+                  | mk_list ((x,_)::xs) = (COMB((COMB((VAR (#cons r),#2 x), x),
+                                                 #2 x),
+                                                mk_list xs),
+                                           locn.between (#2 x) rlocn)
+              in
+                mk_list args_w_seglocs
+              end
+            | _ =>
+              List.foldl CCOMB (VAR (summary_toString rule),llocn')
+                         args_w_seglocs
+      in
+        repeatn (length rhs') pop >>
+        push ((NonTerminal (#1 newterm),lrlocn'), XXX)
         (* lrlocn: force location to entire RHS, including tokens *)
-    end
-  else
-    case rhs of
-      (((Terminal Id,locn), tt as Token (Antiquote a))::_) => let
-      in
-        pop >> invstructp >-
-        (fn inv =>
-         if #1 (hd inv) = VSRES_VS then
-           push ((NonTermVS [(VS_AQ a,locn)],locn), tt)
-         else
-           push ((NonTerminal (AQ a),locn), tt))
       end
-    | (((Terminal Id,locn), Token tt)::_) => let
-        exception Temp of string
-        val mk_numeral =
-            Literal.gen_mk_numeral
-                {mk_comb  = fn (x,y) => (COMB(x,y),locn),
-                 ZERO     = (QIDENT ("num"       , "0"      ),locn),
-                 ALT_ZERO = (QIDENT ("arithmetic", "ZERO"   ),locn),
-                 NUMERAL  = (QIDENT ("arithmetic", "NUMERAL"),locn),
-                 BIT1     = (QIDENT ("arithmetic", "BIT1")  ,locn),
-                 BIT2     = (QIDENT ("arithmetic", "BIT2")  ,locn)}
-        fun inject_np NONE t = t
-          | inject_np (SOME s) t = (COMB((VAR s,locn), t),locn)
-      in
-        pop >> invstructp >-
-        (fn inv => let
-          val thing_to_push =
-            case (#1 (hd inv), tt) of
-              (VSRES_VS, Numeral _) => let
-              in
-                raise Temp "can't have numerals in binding positions"
-              end
-            | (VSRES_VS, Fraction _) => let
-              in
-                raise Temp "can't have fractions in binding positions"
-              end
-            | (_, Fraction{wholepart,fracpart,places}) => let
-                val _ = not (null num_info) orelse
-                        raise Temp "No fractions/numerals allowed"
-                val ten = Arbnum.fromInt 10
-                val denominator = Arbnum.pow(ten, Arbnum.fromInt places)
-                val numerator = Arbnum.+(Arbnum.*(denominator,wholepart),
-                                         fracpart)
-                val mknum = inject_np (SOME fromNum_str) o mk_numeral
-              in
-                liftlocn NonTerminal
-                         (COMB((COMB((VAR decimal_fraction_special,
-                                      locn.Loc_None),
-                                     mknum numerator), locn.Loc_None),
-                               mknum denominator),
-                          locn)
-              end
-            | (_, Numeral(dp, copt)) => let
-                val numeral_part = mk_numeral dp
-              in
-                case copt of
-                  SOME c => let
-                    val injector = List.find (fn (k,v) => k = c) num_info
-                  in
-                    case injector of
-                      NONE => let
+    else
+      case rhs of
+        (((Terminal Id,locn), tt as Token (Antiquote a))::_) => let
+        in
+          pop >> invstructp >-
+          (fn inv =>
+              if #1 (hd inv) = VSRES_VS then
+                push ((NonTermVS [(VS_AQ a,locn)],locn), tt)
+              else
+                push ((NonTerminal (AQ a),locn), tt))
+        end
+      | (((Terminal Id,locn), Token tt)::_) => let
+          exception Temp of string
+          val mk_numeral =
+              Literal.gen_mk_numeral
+                  {mk_comb  = fn (x,y) => (COMB(x,y),locn),
+                   ZERO     = (QIDENT ("num"       , "0"      ),locn),
+                   ALT_ZERO = (QIDENT ("arithmetic", "ZERO"   ),locn),
+                   NUMERAL  = (QIDENT ("arithmetic", "NUMERAL"),locn),
+                   BIT1     = (QIDENT ("arithmetic", "BIT1")  ,locn),
+                   BIT2     = (QIDENT ("arithmetic", "BIT2")  ,locn)}
+          fun inject_np NONE t = t
+            | inject_np (SOME s) t = (COMB((VAR s,locn), t),locn)
+        in
+          pop >> invstructp >-
+          (fn inv => let
+                val thing_to_push =
+                    case (#1 (hd inv), tt) of
+                      (VSRES_VS, Numeral _) => let
                       in
-                        raise Temp ("Invalid suffix "^str c^ " for numeral")
+                        raise Temp "can't have numerals in binding positions"
                       end
-                    | SOME (_, strop) => liftlocn NonTerminal
-                                                  (inject_np strop numeral_part)
-                  end
-                | NONE =>
-                  if null num_info then
-                    if dp = Arbnum.zero then
-                      (WARN "term_parser"
-                       ("\n   0 treated specially and allowed - "^
-                        "no other numerals permitted");
-                      liftlocn NonTerminal (inject_np NONE numeral_part))
-                    else
-                       raise Temp "No numerals currently allowed"
-                  else let
-                    val fns = fromNum_str
-                  in
-                    if Overload.is_overloaded overload_info fns then
-                      liftlocn NonTerminal (inject_np (SOME fns) numeral_part)
-                    else
-                      raise Temp ("No overloadings exist for "^fns^
-                                  ": use character suffix for numerals")
-                      (* NonTerminal (inject_np (#2 (hd num_info))) *)
-                  end
-              end
-            | (VSRES_VS, _) => (NonTermVS [(SIMPLE (token_string tt),locn)],locn)
-            | (_, QIdent x) => (NonTerminal (QIDENT x),locn)
-            | _ => (NonTerminal (VAR (token_string tt)),locn)
+                    | (VSRES_VS, Fraction _) => let
+                      in
+                        raise Temp "can't have fractions in binding positions"
+                      end
+                    | (_, Fraction{wholepart,fracpart,places}) => let
+                        val _ = not (null num_info) orelse
+                                raise Temp "No fractions/numerals allowed"
+                        val ten = Arbnum.fromInt 10
+                        val denominator = Arbnum.pow(ten, Arbnum.fromInt places)
+                        val numerator =
+                            Arbnum.+(Arbnum.*(denominator,wholepart),
+                                     fracpart)
+                        val mknum = inject_np (SOME fromNum_str) o mk_numeral
+                      in
+                        liftlocn NonTerminal
+                                 (COMB((COMB((VAR decimal_fraction_special,
+                                              locn.Loc_None),
+                                             mknum numerator), locn.Loc_None),
+                                       mknum denominator),
+                                  locn)
+                      end
+                    | (_, Numeral(dp, copt)) => let
+                        val numeral_part = mk_numeral dp
+                      in
+                        case copt of
+                          SOME c => let
+                            val injector =
+                                List.find (fn (k,v) => k = c) num_info
+                          in
+                            case injector of
+                              NONE => let
+                              in
+                                raise Temp ("Invalid suffix " ^ str c ^
+                                            " for numeral")
+                              end
+                            | SOME (_, strop) =>
+                                liftlocn NonTerminal
+                                         (inject_np strop numeral_part)
+                          end
+                        | NONE =>
+                          if null num_info then
+                            if dp = Arbnum.zero then
+                              (WARN "term_parser"
+                                    ("\n   0 treated specially and allowed - "^
+                                     "no other numerals permitted");
+                               liftlocn NonTerminal
+                                        (inject_np NONE numeral_part))
+                            else
+                              raise Temp "No numerals currently allowed"
+                          else let
+                              val fns = fromNum_str
+                            in
+                              if Overload.is_overloaded overload_info fns then
+                                liftlocn NonTerminal
+                                         (inject_np (SOME fns) numeral_part)
+                              else
+                                raise Temp ("No overloadings exist for "^fns^
+                                            ": use character suffix for \
+                                            \numerals")
+                            (* NonTerminal (inject_np (#2 (hd num_info))) *)
+                            end
+                      end
+                    | (VSRES_VS, _) =>
+                        (NonTermVS [(SIMPLE (token_string tt),locn)],locn)
+                    | (_, QIdent x) => (NonTerminal (QIDENT x),locn)
+                    | _ => (NonTerminal (VAR (token_string tt)),locn)
               (* tt is not an antiquote because of the wider context;
                  antiquotes are dealt with in the wider case statement
                  above *)
-        in
-           push (thing_to_push, Token tt)
-        end handle Temp s => (WARNloc "parse_term" locn s;
-                              error (WARNloc_string locn s)))
-      end
-    | (((Terminal TypeTok,rlocn), PreType ty)::((Terminal TypeColon,_), _)::
-       ((NonTerminal t,llocn), _)::rest) => let
-      in
-        repeatn 3 pop >>
-        push ((NonTerminal (TYPED ((t,llocn), (ty,rlocn))),
-               locn.between llocn rlocn),
-              XXX)
-      end
-    | (((Terminal TypeTok,rlocn), PreType ty)::((Terminal TypeColon,_), _)::
-       ((NonTermVS vsl,llocn), _)::rest) => let
-       in
-         repeatn 3 pop >>
-         push ((NonTermVS
-                    (map (fn (v as (_,locn)) => (TYPEDV(v,(ty,rlocn)),locn))
-                         vsl),
-                    locn.between llocn rlocn),
-               XXX)
-       end
-    | [((Terminal TypeTok,rlocn), PreType ty), ((Terminal TypeColon,_), _)] =>
-      let
-        val nonterm0 = (QIDENT("bool", "the_value"), rlocn)
-        val type_annotation =
-            (Pretype.Tyop{Thy="bool", Tyop = "itself", Args = [ty]},
-             rlocn)
-      in
-        pop >> pop >>
-        push ((NonTerminal (TYPED(nonterm0, type_annotation)), rlocn), XXX)
-      end
-    | (((NonTerminal t,rlocn), _)::((Terminal EndBinding,_), _)::
-       ((NonTermVS vsl,_), _)::((Terminal (STD_HOL_TOK binder),llocn), _)::
-       rest) => let
-        exception Urk of string in let
-        fun has_resq (v,_) =
-          case v of
-            VPAIR(v1, v2) => has_resq v1 orelse has_resq v2
-          | TYPEDV(v0, ty) => has_resq v0
-          | RESTYPEDV _ => true
-          | _ => false
-        fun has_tupled_resq (VPAIR(v1, v2),_) = has_resq v1 orelse has_resq v2
-          | has_tupled_resq (TYPEDV(v0, _),_) = has_tupled_resq v0
-          | has_tupled_resq (RESTYPEDV(v0, _),_) = has_tupled_resq v0
-          | has_tupled_resq _ = false
-        fun ERROR s1 s2 = Urk (s1^": "^s2)
-        fun extract_resq (v,_) =
-          case v of
-            TYPEDV (v0, _) => extract_resq v0
-          | RESTYPEDV(v0, t) => let
-              val sub_resq = extract_resq v0
-            in
-              case sub_resq of
-                NONE => SOME(v0, t)
-              | SOME _ =>
-                  raise ERROR "parse_term"
-                    "Can't have double restricted quantification"
-            end
-          | _ => NONE
-        fun comb_abs_fn(v,t) = let
-          val binder = term_name_for_binder binder
-        in
-          if has_tupled_resq v then
-            raise ERROR "parse_term"
-                        "Can't have restricted quantification on nested \
-                        \arguments"
-          else
-            case extract_resq v of
-              NONE => (COMB((VAR binder,llocn),
-                            (ABS(v, t),locn.between (#2 v) (#2 t))),
-                       locn.between llocn rlocn)
-            | SOME (v',P) => let
               in
-                (COMB((COMB((VAR (Lib.assoc (SOME binder) restr_binders),llocn),
-                            P),locn.between llocn (#2 P)),
-                      (ABS(v', t),locn.between (#2 v') (#2 t))),
-                 locn.between llocn rlocn)
-                handle Feedback.HOL_ERR _ =>
-                       raise ERROR "parse_term"
-                                   ("No restricted quantifier associated with "
-                                    ^binder)
-              end
+                push (thing_to_push, Token tt)
+              end handle Temp s => (WARNloc "parse_term" locn s;
+                                    error (WARNloc_string locn s)))
         end
-        fun abs_fn (v,t) =
-          if has_tupled_resq v then
-            raise ERROR "parse_term"
-              "Can't have restricted quantification on nested arguments"
-          else
-            case extract_resq v of
-              NONE => (ABS(v,t),locn.between llocn rlocn)
-            | SOME(v', P) =>
-                (COMB((COMB((VAR (Lib.assoc NONE restr_binders),llocn),
-                            P), locn.between llocn (#2 P)),
-                      (ABS(v', t),locn.between (#2 v') (#2 t))),
-                 locn.between llocn rlocn)
-                handle Feedback.HOL_ERR _ =>
+      | (((Terminal TypeTok,rlocn), PreType ty)::((Terminal TypeColon,_), _)::
+         ((NonTerminal t,llocn), _)::rest) => let
+        in
+          repeatn 3 pop >>
+          push ((NonTerminal (TYPED ((t,llocn), (ty,rlocn))),
+                 locn.between llocn rlocn),
+                XXX)
+        end
+      | (((Terminal TypeTok,rlocn), PreType ty)::((Terminal TypeColon,_), _)::
+         ((NonTermVS vsl,llocn), _)::rest) => let
+        in
+          repeatn 3 pop >>
+          push ((NonTermVS
+                     (map (fn (v as (_,locn)) => (TYPEDV(v,(ty,rlocn)),locn))
+                          vsl),
+                     locn.between llocn rlocn),
+                XXX)
+        end
+      | [((Terminal TypeTok,rlocn), PreType ty), ((Terminal TypeColon,_), _)] =>
+        let
+          val nonterm0 = (QIDENT("bool", "the_value"), rlocn)
+          val type_annotation =
+              (Pretype.Tyop{Thy="bool", Tyop = "itself", Args = [ty]},
+               rlocn)
+        in
+          pop >> pop >>
+          push ((NonTerminal (TYPED(nonterm0, type_annotation)), rlocn), XXX)
+        end
+      | (((NonTerminal t,rlocn), _)::((Terminal EndBinding,_), _)::
+         ((NonTermVS vsl,_), _)::((Terminal (STD_HOL_TOK binder),llocn), _)::
+         rest) => let
+          exception Urk of string
+        in
+          let
+            fun has_resq (v,_) =
+                case v of
+                  VPAIR(v1, v2) => has_resq v1 orelse has_resq v2
+                | TYPEDV(v0, ty) => has_resq v0
+                | RESTYPEDV _ => true
+                | _ => false
+            fun has_tupled_resq (VPAIR(v1, v2),_) =
+                  has_resq v1 orelse has_resq v2
+              | has_tupled_resq (TYPEDV(v0, _),_) = has_tupled_resq v0
+              | has_tupled_resq (RESTYPEDV(v0, _),_) = has_tupled_resq v0
+              | has_tupled_resq _ = false
+            fun ERROR s1 s2 = Urk (s1^": "^s2)
+            fun extract_resq (v,_) =
+                case v of
+                  TYPEDV (v0, _) => extract_resq v0
+                | RESTYPEDV(v0, t) => let
+                    val sub_resq = extract_resq v0
+                  in
+                    case sub_resq of
+                      NONE => SOME(v0, t)
+                    | SOME _ =>
+                      raise ERROR "parse_term"
+                                  "Can't have double restricted quantification"
+                  end
+                | _ => NONE
+            fun comb_abs_fn(v,t) = let
+              val binder = term_name_for_binder binder
+            in
+              if has_tupled_resq v then
+                raise ERROR "parse_term"
+                            "Can't have restricted quantification on nested \
+                            \arguments"
+              else
+                case extract_resq v of
+                  NONE => (COMB((VAR binder,llocn),
+                                (ABS(v, t),locn.between (#2 v) (#2 t))),
+                           locn.between llocn rlocn)
+                | SOME (v',P) => let
+                  in
+                    (COMB((COMB((VAR (Lib.assoc (SOME binder) restr_binders),
+                                 llocn),
+                                P),locn.between llocn (#2 P)),
+                          (ABS(v', t),locn.between (#2 v') (#2 t))),
+                     locn.between llocn rlocn)
+                    handle Feedback.HOL_ERR _ =>
+                           raise ERROR "parse_term"
+                                       ("No restricted quantifier associated \
+                                        \with " ^binder)
+                  end
+            end
+            fun abs_fn (v,t) =
+                if has_tupled_resq v then
                   raise ERROR "parse_term"
-                    "No restricted quantifier associated with lambda"
-        val vsl = List.rev vsl
-        val abs_t =
-          List.foldr (if mem binder lambda then abs_fn else comb_abs_fn)
-                     (t,rlocn) vsl
-      in
-        repeatn 4 pop >> push (liftlocn NonTerminal abs_t, XXX)
-      end handle Urk s => (WARNloc "parse_term" (locn.between llocn rlocn) s;
-                           error (WARNloc_string (locn.between llocn rlocn) s))
-      end
-    | (((Terminal(STD_HOL_TOK ")"),rlocn), _)::(vsl as ((NonTermVS _,_),_))::
-       ((Terminal(STD_HOL_TOK "("),llocn), _)::rest) => let
-      in
-        (* need a rule here because
+                              "Can't have restricted quantification on \
+                              \nested arguments"
+                else
+                  case extract_resq v of
+                    NONE => (ABS(v,t),locn.between llocn rlocn)
+                  | SOME(v', P) =>
+                    (COMB((COMB((VAR (Lib.assoc NONE restr_binders),llocn),
+                                P), locn.between llocn (#2 P)),
+                          (ABS(v', t),locn.between (#2 v') (#2 t))),
+                     locn.between llocn rlocn)
+                    handle Feedback.HOL_ERR _ =>
+                           raise ERROR "parse_term"
+                                       "No restricted quantifier associated \
+                                       \with lambda"
+            val vsl = List.rev vsl
+            val abs_t =
+                List.foldr (if mem binder lambda then abs_fn else comb_abs_fn)
+                           (t,rlocn) vsl
+          in
+            repeatn 4 pop >> push (liftlocn NonTerminal abs_t, XXX)
+          end handle Urk s =>
+                     (WARNloc "parse_term" (locn.between llocn rlocn) s;
+                      error (WARNloc_string (locn.between llocn rlocn) s))
+        end
+      | (((Terminal(STD_HOL_TOK ")"),rlocn), _)::(vsl as ((NonTermVS _,_),_))::
+         ((Terminal(STD_HOL_TOK "("),llocn), _)::rest) => let
+        in
+          (* need a rule here because
              1. a NonTermVS makes this a non-standard rule; and
              2. bracket-removal in the remove_specials code won't see
                 the parentheses in the binding "var-struct" position
-        *)
-        repeatn 3 pop >>
-        push vsl  (* don't bother expanding locn; would add no useful info *)
-      end
-    | (((NonTermVS vsl1,rlocn), _)::((Terminal(STD_HOL_TOK ","),_), _)::
-       ((NonTermVS vsl2,llocn), _)::rest) => let val lrlocn = locn.between llocn rlocn
-       in
-         if length vsl1 <> 1 orelse length vsl2 <> 1 then let
-             val msg = "Can't have lists of atoms as arguments to , in binder"
-           in
-             (WARNloc "parse_term" lrlocn msg;
-              error (WARNloc_string lrlocn msg))
-           end
-         else
-           repeatn 3 pop >>
-           push ((NonTermVS [(VPAIR(hd vsl2, hd vsl1),lrlocn)],lrlocn), XXX)
-       end
-    | (((NonTerminal t,rlocn), _)::((Terminal ResquanOpTok,_), _)::
-       ((NonTermVS vsl,llocn), _)::rest) => let
-      in
-         repeatn 3 pop >>
-         push ((NonTermVS
-                  (map (fn (v as (_,locn))=>
-                           (RESTYPEDV(v,(t,rlocn)),locn)) vsl),
-                  locn.between llocn rlocn),
-               XXX) >>
-         leave_restm
-      end
-    | _ => let
-      fun is_vcons_list [] = false
-        | is_vcons_list [x] = false
-        | is_vcons_list (((NonTermVS _,_), _)::((Terminal VS_cons,_), _)::rest) = let
-          in
-            case rest of
-              [((NonTermVS _,_),_)] => true
-            | _ => is_vcons_list rest
-          end
-        | is_vcons_list _ = false
-      fun get_vsls ((NonTermVS vsl,_), _) = SOME vsl | get_vsls _ = NONE
-      val ((_,rlocn),_) = List.hd rhs
-      val ((_,llocn),_) = List.last rhs
-      val lrlocn = locn.between llocn rlocn
-    in
-      if is_vcons_list rhs then
-        repeatn (length rhs) pop >>
-        push ((NonTermVS(List.concat (List.mapPartial get_vsls rhs)),lrlocn),
-              XXX)
-      else
-        (WARNloc "parse_term" lrlocn "Can't do this sort of reduction";
-         error (WARNloc_string lrlocn "Can't do this sort of reduction"))
-    end
+           *)
+          repeatn 3 pop >>
+          push vsl  (* don't bother expanding locn; would add no useful info *)
+        end
+      | (((NonTermVS vsl1,rlocn), _)::((Terminal(STD_HOL_TOK ","),_), _)::
+         ((NonTermVS vsl2,llocn), _)::rest) => let
+          val lrlocn = locn.between llocn rlocn
+        in
+          if length vsl1 <> 1 orelse length vsl2 <> 1 then let
+              val msg = "Can't have lists of atoms as arguments to , in binder"
+            in
+              (WARNloc "parse_term" lrlocn msg;
+               error (WARNloc_string lrlocn msg))
+            end
+          else
+            repeatn 3 pop >>
+            push ((NonTermVS [(VPAIR(hd vsl2, hd vsl1),lrlocn)],lrlocn), XXX)
+        end
+      | (((NonTerminal t,rlocn), _)::((Terminal ResquanOpTok,_), _)::
+         ((NonTermVS vsl,llocn), _)::rest) => let
+        in
+          repeatn 3 pop >>
+          push ((NonTermVS
+                     (map (fn (v as (_,locn))=>
+                              (RESTYPEDV(v,(t,rlocn)),locn)) vsl),
+                     locn.between llocn rlocn),
+                XXX) >>
+          leave_restm
+        end
+      | _ => let
+          fun is_vcons_list [] = false
+            | is_vcons_list [x] = false
+            | is_vcons_list (((NonTermVS _,_), _)::((Terminal VS_cons,_), _)::rest) = let
+              in
+                case rest of
+                  [((NonTermVS _,_),_)] => true
+                | _ => is_vcons_list rest
+              end
+            | is_vcons_list _ = false
+          fun get_vsls ((NonTermVS vsl,_), _) = SOME vsl | get_vsls _ = NONE
+          val ((_,rlocn),_) = List.hd rhs
+          val ((_,llocn),_) = List.last rhs
+          val lrlocn = locn.between llocn rlocn
+        in
+          if is_vcons_list rhs then
+            repeatn (length rhs) pop >>
+            push ((NonTermVS(List.concat (List.mapPartial get_vsls rhs)),
+                   lrlocn),
+                  XXX)
+          else
+            (WARNloc "parse_term" lrlocn "Can't do this sort of reduction";
+             error (WARNloc_string lrlocn "Can't do this sort of reduction"))
+        end
   end handle Failloc (loc,s) =>
              (if !syntax_error_trace then
                 (print (locn.toString loc);
@@ -1190,7 +1209,6 @@ fun parse_term (G : grammar) typeparser = let
                  print "\n")
               else ();
               error (WARNloc_string loc s))
-
 
   val do_reduction =
     getstack >- (return o find_reduction) >- perform_reduction
