@@ -665,11 +665,35 @@ fun findpos P [] = NONE
   | findpos P (x::xs) = if P x then SOME(0,x)
                         else Option.map (fn (n,x) => (n + 1, x)) (findpos P xs)
 
+fun get_case_info (G : grammar) = let
+  val extract_toks = List.mapPartial (fn RE (TOK s) => SOME s | _ => NONE)
+  fun rr_foldthis ({term_name,elements,...}, acc) =
+      if term_name <> GrammarSpecials.case_special then acc
+      else extract_toks elements :: acc
+  fun foldthis (gr, acc) =
+      case gr of
+        PREFIX (STD_prefix rrs) => List.foldl rr_foldthis acc rrs
+      | _ => acc
+  val candidates = List.foldl foldthis [] (grammar_rules G)
+  val error_case = {casebar = NONE, casecase = NONE, caseof = NONE}
+in
+  case Listsort.sort (flip_cmp (measure_cmp length)) candidates of
+    [] => error_case
+  | toks :: _ => let
+    in
+      if length toks <> 4 orelse last toks <> last (butlast toks) then
+        error_case
+      else {casebar = SOME (last toks), casecase = SOME (hd toks),
+            caseof = SOME (hd (tl toks))}
+    end
+end
+
 fun parse_term (G : grammar) typeparser = let
   val Grules = grammar_rules G
   val {type_intro, lambda, endbinding, restr_binders, res_quanop} = specials G
   val num_info = numeral_info G
   val overload_info = overload_info G
+  val {casebar,caseof,casecase} = get_case_info G
   val closed_lefts = find_prefix_lhses G
   val left_grabbers = List.concat (map left_grabbing_elements Grules)
   val fnapp_closed_lefts = Lib.subtract closed_lefts left_grabbers
@@ -807,39 +831,55 @@ fun parse_term (G : grammar) typeparser = let
       | ok_item ((NonTerminal _,_), _) = true
       | ok_item _ = false
 
-    (* what follows is only called on what will be list RHSes of
-     length greater than two, as smaller lists will have been caught
-     by the insertion of these rules specifically into the DB. *)
+    (* If the RHS is for a list, then what follows is only called on what
+       will be list RHSes of length greater than two, as smaller lists will
+       have been caught by the insertion of these rules specifically into
+       the DB. *)
+    datatype rule_possibility = Normal of rule_summary
+                              | CaseRule
 
-    fun handle_list_reduction rhs = let
-      exception Hah
-      fun possible_list pattern = let
-        val _ = length pattern >= 5 orelse raise Hah
-        val poss_left = case (hd pattern) of TOK x => x | _ => raise Hah
-        val poss_right =
-          case (List.last pattern) of TOK x => x | _ => raise Hah
-        fun butlast [x] = []
-          | butlast [] = raise Fail "butlast: shouldn't happen"
-          | butlast (x::xs) = x::butlast xs
-        val interior = butlast (tl pattern)
-        val poss_sep =
-          case (List.nth(interior, 1)) of TOK x => x | _ => raise Hah
-        fun list_ok [] = raise Fail "list_ok: shouldn't happen"
-          | list_ok [TM] = true
-          | list_ok (TOK _::_) = false
-          | list_ok (TM :: TOK s :: rest) = s = poss_sep andalso list_ok rest
-          | list_ok (TM :: TM :: _) = false
-      in
-        if list_ok interior then
-          term_grammar.compatible_listrule G {separator = poss_sep,
-                                              leftdelim = poss_left,
-                                              rightdelim = poss_right}
-        else
-          NONE
-      end handle Hah => NONE
+    fun handle_listcase_reduction lrlocn pattern = let
+      val errmsg = "No rule for "^ listtoString reltoString pattern
+      fun fail() = FAILloc lrlocn errmsg
+      val _ = length pattern >= 5 orelse fail()
+      fun tokstring x = case x of TOK s => SOME s | _ => NONE
+      val poss_left = case hd pattern of TOK x => x | _ => fail()
     in
-      Option.map listfix_rule (possible_list rhs)
+      if SOME poss_left = casecase then
+        if tokstring (hd (tl pattern)) = caseof andalso
+           List.all (fn s => tokstring s = casebar) (tl (tl pattern))
+        then
+          CaseRule
+        else
+          FAILloc lrlocn "Mal-formed case expression"
+      else let
+          val poss_right =
+              case (List.last pattern) of TOK x => x | _ => fail()
+          val interior = butlast (tl pattern)
+          val poss_sep =
+              case (List.nth(interior, 1)) of TOK x => x | _ => fail()
+          fun list_ok [] = raise Fail "list_ok: shouldn't happen"
+            | list_ok [TM] = true
+            | list_ok (TOK _::_) = false
+            | list_ok (TM :: TOK s :: rest) = s = poss_sep andalso list_ok rest
+            | list_ok (TM :: TM :: _) = false
+          val listrec = {separator = poss_sep, leftdelim = poss_left,
+                         rightdelim = poss_right}
+        in
+          if list_ok interior then
+            case compatible_listrule G listrec of
+              NONE => fail()
+            | SOME r => Normal (listfix_rule r)
+          else
+            fail()
+        end
     end
+    fun checkcase r =
+        case r of
+          prefix_rule s => if s = GrammarSpecials.case_special then CaseRule
+                           else Normal r
+        | _ => Normal r
+
   in
     if List.all ok_item rhs then let
       (* it's important to remember that the left end of the possible
@@ -866,26 +906,26 @@ fun parse_term (G : grammar) typeparser = let
         val lrlocn = locn.between llocn rlocn
         val top_was_tm = hd translated_rhs = TM
         val rule = let
-          val errmsg = "No rule for "^ listtoString reltoString translated_rhs
         in
           case Polyhash.peek rule_db translated_rhs of
             NONE => let
             in
-              if top_was_tm then
-                case Polyhash.peek rule_db (tl translated_rhs) of
-                  NONE => (valOf (handle_list_reduction (tl translated_rhs))
-                           handle Option => FAILloc lrlocn errmsg)
-                | SOME r => r
+              if top_was_tm then let
+                  val drop1 = tl translated_rhs
+                in
+                  case Polyhash.peek rule_db drop1 of
+                    NONE => handle_listcase_reduction lrlocn drop1
+                  | SOME r => checkcase r
+                end
               else
-                valOf (handle_list_reduction translated_rhs)
-                handle Option => FAILloc lrlocn errmsg
+                handle_listcase_reduction lrlocn translated_rhs
             end
-          | SOME r => r
+          | SOME r => checkcase r
         end
         val ignore_top_item =
             case rule of
-              infix_rule   s => false
-            | suffix_rule  s => false
+              Normal (infix_rule s) => false
+            | Normal (suffix_rule s) => false
             | _              => top_was_tm
         (* rhs' is the actual stack segment matched by the rule, and llocn' is
            its left edge, unlike rhs and llocn which may contain a spurious TM
@@ -907,7 +947,7 @@ fun parse_term (G : grammar) typeparser = let
         fun CCOMB((x,locn),y) = (COMB(y,x),locn.between (#2 y) locn)
         val newterm =
             case rule of
-              listfix_rule r => let
+              Normal (listfix_rule r) => let
                 fun mk_list [] = (VAR (#nilstr r),rlocn)
                   | mk_list ((x,_)::xs) = (COMB((COMB((VAR (#cons r),#2 x), x),
                                                  #2 x),
@@ -916,9 +956,25 @@ fun parse_term (G : grammar) typeparser = let
               in
                 mk_list args_w_seglocs
               end
-            | _ =>
+            | Normal rule =>
               List.foldl CCOMB (VAR (summary_toString rule),llocn')
                          args_w_seglocs
+            | CaseRule => let
+                fun mkcase1 ((t,loc),_) =
+                    (COMB((VAR GrammarSpecials.case_special, loc), (t,loc)),
+                     loc)
+                fun mkbar(((t,loc),_),acc) =
+                    (COMB((COMB((VAR GrammarSpecials.case_split_special, loc),
+                                (t,loc)), loc),
+                          acc),
+                     locn.between loc rlocn)
+              in
+                (COMB(mkcase1 (hd args_w_seglocs),
+                      List.foldr mkbar
+                                 (#1 (last (tl args_w_seglocs)))
+                                 (butlast (tl args_w_seglocs))),
+                 lrlocn)
+              end
       in
         repeatn (length rhs') pop >>
         push ((NonTerminal (#1 newterm),lrlocn'), XXX)
