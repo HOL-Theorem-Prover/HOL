@@ -819,7 +819,7 @@ val extend_linear_order = Q.store_thm ("extend_linear_order",
   x NOTIN s /\
   linear_order r s
   ==>
-  linear_order (r UNION {(y, x) |: y | y IN (s UNION {x})}) (s UNION {x})`,
+  linear_order (r UNION {(y, x) | y | y IN (s UNION {x})}) (s UNION {x})`,
 SRW_TAC [] [linear_order_def, domain_def, range_def,
             transitive_def, antisym_def, SUBSET_DEF] THEN
 METIS_TAC []);
@@ -1298,7 +1298,7 @@ METIS_TAC [CHOICE_DEF]);
 
 val all_choices_def = Define `
   all_choices xss =
-    {IMAGE choice xss |: choice | !xs. xs IN xss ==> choice xs IN xs}`;
+    {IMAGE choice xss | choice | !xs. xs IN xss ==> choice xs IN xs}`;
 
 val all_choices_thm = Q.store_thm ("all_choices_thm",
 `!x s y. x IN all_choices s /\ y IN x ==> ?z. z IN s /\ y IN z`,

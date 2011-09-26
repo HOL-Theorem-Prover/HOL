@@ -86,8 +86,8 @@ val SUBSET_arm2set = prove(
   ``!u s. u SUBSET arm2set s = ?y. u = arm2set' y s``,
   REPEAT STRIP_TAC \\ EQ_TAC \\ REPEAT STRIP_TAC
   \\ ASM_REWRITE_TAC [arm2set'_SUBSET_arm2set]
-  \\ Q.EXISTS_TAC `({ a |: a| ?x. aReg a x IN u },
-       { a |: a| ?x. aMem a x IN u },{ a |: a| ?x. aStatus a x IN u },
+  \\ Q.EXISTS_TAC `({ a | a| ?x. aReg a x IN u },
+       { a | a| ?x. aMem a x IN u },{ a | a| ?x. aStatus a x IN u },
        (?y. aCPSR_Reg y IN u),(?y. aUndef y IN u))`
   \\ FULL_SIMP_TAC std_ss [arm2set'_def,arm2set_def,EXTENSION,SUBSET_DEF,IN_IMAGE,
        IN_UNION,GSPECIFICATION,IN_INSERT,NOT_IN_EMPTY,IN_UNIV,PUSH_IN_INTO_IF]
@@ -434,7 +434,7 @@ val aM_INTRO = save_thm("aM_INTRO",
 (* ----------------------------------------------------------------------------- *)
 
 val aBYTE_MEMORY_SET_def = Define `
-  aBYTE_MEMORY_SET df f = { aMem a (f a) |: a | a IN df }`;
+  aBYTE_MEMORY_SET df f = { aMem a (f a) | a | a IN df }`;
 
 val aBYTE_MEMORY_def = Define `aBYTE_MEMORY df f = SEP_EQ (aBYTE_MEMORY_SET df f)`;
 
@@ -526,7 +526,7 @@ val aMEMORY_WORD_def = Define `
       aMem (a+3w) (((7 >< 0) (w >> 24))) }`;
 
 val aMEMORY_SET_def = Define `
-  aMEMORY_SET df f = BIGUNION { aMEMORY_WORD a (f a) |: a | a IN df /\ ALIGNED a  }`;
+  aMEMORY_SET df f = BIGUNION { aMEMORY_WORD a (f a) | a | a IN df /\ ALIGNED a  }`;
 
 val aMEMORY_def = Define `aMEMORY df f = SEP_EQ (aMEMORY_SET df f)`;
 

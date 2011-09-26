@@ -660,6 +660,7 @@ fun pp_term (G : grammar) TyG backend = let
     fun pbegin b = if b then add_string "(" else nothing
     fun pend b = if b then add_string ")" else nothing
     fun spacep b = if b then add_break(1, 0) else nothing
+    fun hardspace n = add_string (string_of_nspaces n)
     fun sizedbreak n = add_break(n, 0)
 
     fun doTy ty =
@@ -680,8 +681,7 @@ fun pp_term (G : grammar) TyG backend = let
             PPBlock(more_els, (sty, ind)) =>
               block sty ind (recurse (more_els,args)) >-
               (fn rest => recurse (es,rest))
-          | HardSpace n => (add_string (string_of_nspaces n) >>
-                            recurse (es, args))
+          | HardSpace n => (hardspace n >> recurse (es, args))
           | BreakSpace (n, m) => (add_break(n,m) >> recurse (es, args))
           | RE (TOK s) => (add_string s >> recurse (es, args))
           | RE TM => (pr_term (hd args) Top Top Top (decdepth depth) >>
@@ -1653,7 +1653,7 @@ fun pp_term (G : grammar) TyG backend = let
                            (add_string "{" >>
                             block CONSISTENT 0
                               (pr_term l Top Top Top (decdepth depth) >>
-                               add_string " |" >> spacep true >>
+                               hardspace 1 >> add_string "|" >> spacep true >>
                                pr_term r Top Top Top (decdepth depth)) >>
                             add_string "}"))
                   else
@@ -1662,9 +1662,9 @@ fun pp_term (G : grammar) TyG backend = let
                          (add_string "{" >>
                           block CONSISTENT 0
                             (pr_term l Top Top Top (decdepth depth) >>
-                             add_string " |:" >> spacep true >>
+                             hardspace 1 >> add_string "|" >> spacep true >>
                              pr_term vs Top Top Top (decdepth depth) >>
-                             add_string " |" >> spacep true >>
+                             hardspace 1 >> add_string "|" >> spacep true >>
                              pr_term r Top Top Top (decdepth depth)) >>
                           add_string "}"))
                 end handle HOL_ERR _ => fail

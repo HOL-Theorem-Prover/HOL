@@ -36,7 +36,7 @@ val _ =
                 "{x | x < 10} y",
                 "{x + y | x < y}",
                 "{x + y | x > 6}",
-                "{x + y |: x | x < y}"]
+                "{x + y | x | x < y}"]
 
 val _ = temp_add_rule {
           fixity = Closefix,
@@ -59,7 +59,7 @@ val gspec_simp_tests =
      (``{x:num | F}``, ``{}:num set``),
      (``{x + y | F}``, ``{}:num set``),
      (``{(x:num,y:bool) | F}``, ``{}:(num#bool) set``),
-     (``{x + y |: x | F}``, ``{}:num set``)]
+     (``{x + y | x | F}``, ``{}:num set``)]
 
 val _ =
     Process.exit
