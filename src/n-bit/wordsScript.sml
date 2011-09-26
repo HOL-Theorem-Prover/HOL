@@ -138,6 +138,7 @@ val _ = add_infix("~||",300,HOLgrammars.RIGHT)
 
 val _ = overload_on ("&&",``words$word_and``)
 val _ = overload_on ("??",``words$word_xor``)
+val _ = overload_on ("!!",``words$word_or``)
 val _ = overload_on ("||",``words$word_or``)
 val _ = overload_on ("~&&",``words$word_nand``)
 val _ = overload_on ("~??",``words$word_xnor``)
