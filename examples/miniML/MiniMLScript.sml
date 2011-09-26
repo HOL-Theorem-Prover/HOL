@@ -512,20 +512,19 @@ val _ = Define `
 
 (* Add the given type definition to the given constructor environment *)
 (*val build_tdefs : 
-  (tvarN list * typeN * (conN * t list) list) list -> envC -> envC*)
+  (tvarN list * typeN * (conN * t list) list) list -> envC*)
 val _ = Define `
- (build_tdefs tds envC =
-  FOLDR 
-    (\ (tvs, tn, condefs) envC .
-       FOLDR 
-         (\ (conN, ts) envC .
-            bind conN (LENGTH ts, 
-                       {cn | cn,ts | ( MEM(cn,ts) condefs) /\ T}) envC) 
-         envC 
-         condefs) 
-    envC 
-    tds)`;
- 
+ (build_tdefs tds =
+  FLAT
+    (MAP 
+      (\ (tvs, tn, condefs) .
+         MAP
+           (\ (conN, ts) .
+              (conN, (LENGTH ts, 
+                         {cn | cn,ts | ( MEM(cn,ts) condefs) /\ T})))
+           condefs)
+      tds))`;
+
 
 (* Checks that no constructor is defined twice *)
 (*val check_dup_ctors : 
@@ -583,7 +582,7 @@ val _ = Define `
                 Dstep (envC, build_rec_env funs env, ds, NONE)
           || (Dtype tds) :: ds ->
               if check_dup_ctors tds envC then
-                Dstep (build_tdefs tds envC, env, ds, NONE)
+                Dstep (merge (build_tdefs tds) envC, env, ds, NONE)
               else 
                 Dtype_error
       )
@@ -972,7 +971,7 @@ evaluate_decs cenv env (Dletrec funs :: ds) (Rerr Rtype_error))
 
 (! cenv env tds ds r.
 check_dup_ctors tds cenv /\
-evaluate_decs (build_tdefs tds cenv) env ds r
+evaluate_decs (merge (build_tdefs tds) cenv) env ds r
 ==>
 evaluate_decs cenv env (Dtype tds :: ds) r)
 

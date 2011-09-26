@@ -20,7 +20,7 @@ val _ = new_theory "typeSound";
 (* Check that the dynamic and static constructor environments are consistent *)
 val consistent_con_env_def = Define `
   (consistent_con_env [] [] = T) ∧
-  (consistent_con_env ((cn, (n, ns))::envC) ((cn', ([], ts, tn))::tenvC) =
+  (consistent_con_env ((cn, (n, ns))::envC) ((cn', (tvs, ts, tn))::tenvC) =
     (cn = cn') ∧
     (LENGTH ts = n) ∧
     cn IN ns ∧
@@ -986,7 +986,15 @@ val check_ctor_tenv_dups = Q.prove (
 rw [check_ctor_tenv_def, check_dup_ctors_def] >>
 metis_tac [check_ctor_tenv_dups_helper2]);
 
-(*
+val e_step_ctor_env_same = Q.prove (
+`!cenv env e c cenv' env' e' c'.
+  (e_step (cenv,env,e,c) = Estep (cenv',env',e',c')) ⇒ (cenv = cenv')`,
+rw [e_step_def] >>
+every_case_tac >>
+fs [push_def, return_def, continue_def] >>
+every_case_tac >>
+fs []);
+
 val type_preservation = Q.prove (
 `!tenvC envC envE ds c envC' envE' ds' c' tenvE tenvC' st' tenvC''.
   (tenvC'' = get_first_tenv ds c) ∧
@@ -1001,8 +1009,8 @@ fs [] >>
 rw [] >-
 (pop_assum (ASSUME_TAC o SIMP_RULE (srw_ss()) [Once type_ds_cases]) >>
      rw [type_state_cases, Once type_ctxts_cases, type_ctxt_cases] >>
-     fs [get_first_tenv_def, merge_def, emp_def] >>
-     metis_tac []) >-
+     fs [get_first_tenv_def, merge_def, emp_def, type_d_cases] >>
+     metis_tac [APPEND]) >-
 (qpat_assum `type_ds a b c d e`
             (ASSUME_TAC o SIMP_RULE (srw_ss()) [Once type_ds_cases]) >>
      fs [type_d_cases] >>
@@ -1021,8 +1029,7 @@ cases_on `r` >>
 cases_on `r'` >>
 rw [] >>
 fs [merge_def, emp_def, get_first_tenv_def] >>
-metis_tac [merge_def,exp_type_preservation]);
-*)
+metis_tac [merge_def,exp_type_preservation,e_step_ctor_env_same]);
 
 val def_final_state_def = Define `
   def_final_state (envC,envE,ds,c) = (c = NONE) ∧ (ds = [])`;
@@ -1064,7 +1071,7 @@ rw [] >|
      RES_TAC >>
      fs [] >>
      metis_tac [consistent_con_env_lem2]]);
-(*
+
 val type_progress = Q.prove (
 `!tenvC envC envE ds c tenvC' tenvE.
   type_d_state tenvC (envC,envE,ds,c) tenvC' tenvE ∧
@@ -1087,7 +1094,98 @@ rw [] >|
      fs [] >-
      (fs [type_state_cases, type_e_val, Once type_ctxts_cases] >>
            metis_tac [pmatch_type_progress, match_result_distinct]) >>
+     metis_tac [exp_type_progress, not_final_state, e_step_result_distinct],
+ every_case_tac >>
+     fs [] >-
+     (fs [type_state_cases, type_e_val, Once type_ctxts_cases] >>
+           metis_tac [pmatch_type_progress, match_result_distinct]) >>
+     metis_tac [exp_type_progress, not_final_state, e_step_result_distinct]]);
 
-metis_tac [exp_type_progress, not_final_state, e_step_result_distinct]
-*)
+val consistent_con_append = Q.prove (
+`!envC tenvC.
+  consistent_con_env envC tenvC ⇒
+    ∀envC' tenvC'.
+      consistent_con_env envC' tenvC'
+      ⇒
+      consistent_con_env (envC++envC') (tenvC++tenvC')`,
+HO_MATCH_MP_TAC (fetch "-" "consistent_con_env_ind") >>
+rw [consistent_con_env_def] >>
+rw []);
+
+val extend_consistent_con = Q.prove (
+`!envC tenvC tds.
+  consistent_con_env envC tenvC
+  ⇒
+  consistent_con_env (build_tdefs tds ++ envC) (build_ctor_tenv tds ++ tenvC)`,
+induct_on `tds` >>
+rw [build_tdefs_def, build_ctor_tenv_def] >>
+cases_on `h` >>
+cases_on `r` >>
+fs [] >>
+`!x. (!cn ts. MEM (cn,ts) r' ⇒ MEM (cn,ts) x) ⇒
+  consistent_con_env 
+  (MAP (λ(conN,ts). (conN,LENGTH ts,{cn | (cn,ts) | MEM (cn,ts) x})) r')
+  (MAP (λ(cn,ts). (cn,q,ts,q')) r')`
+            by (Induct_on `r'` >>
+                rw [consistent_con_env_def] >>
+                cases_on `h` >>
+                cases_on `r` >>
+                fs [] >>
+                rw [consistent_con_env_def, GSPECIFICATION] >|
+                [qexists_tac `(q'',[])` >>
+                     rw [],
+                 qexists_tac `(q'',h::t)` >>
+                     rw []]) >>
+fs [build_ctor_tenv_def, build_tdefs_def] >>
+metis_tac [consistent_con_append, APPEND_ASSOC]);
+
+val lookup_append = Q.prove (
+`!x e1 e2. 
+  lookup x (e1 ++ e2) =
+    if lookup x e1 = NONE then
+      lookup x e2
+    else
+      lookup x e1`,
+induct_on `e1` >>
+rw [lookup_def] >>
+cases_on `h` >>
+fs [lookup_def] >>
+rw [] >>
+fs []);
+
+val check_dup_ctors_disj = Q.prove (
+`!tenvC tds. 
+  check_dup_ctors tds tenvC ⇒ disjoint_env tenvC (build_ctor_tenv tds)`,
+rw [check_dup_ctors_def] >>
+metis_tac [check_ctor_tenv_dups_helper2]);
+
+val consistent_con_preservation = Q.prove (
+`!tenvC envC envE ds c envC' envE' ds' c' tenvE tenvC' st' tenvC''.
+  (tenvC'' = get_first_tenv ds c) ∧
+  consistent_con_env envC tenvC ∧
+  consistent_con_env2 envC tenvC ∧
+  (d_step (envC,envE,ds,c) = Dstep (envC',envE',ds',c'))
+  ⇒
+  consistent_con_env envC' (merge tenvC'' tenvC) ∧
+  consistent_con_env2 envC' (merge tenvC'' tenvC)`,
+rw [d_step_def] >>
+cases_on `c` >>
+fs [] >>
+every_case_tac >>
+fs [] >>
+rw [get_first_tenv_def, merge_def] >-
+metis_tac [extend_consistent_con] >>
+imp_res_tac check_dup_ctors_disj
+
+induct_on `l` >>
+rw [build_tdefs_def, build_ctor_tenv_def] >>
+fs [consistent_con_env2_def] >>
+rw [] >>
+
+fs [lookup_append] >>
+every_case_tac >>
+fs [] >-
+metis_tac []
+
+
 val _ = export_theory ();

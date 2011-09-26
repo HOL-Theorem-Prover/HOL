@@ -1050,9 +1050,9 @@ rw [d_small_eval_def] >|
       cases_on `e`] >>
      fs [d_small_eval_def] >>
      `d_step_reln (cenv,env,Dtype tds::ds,NONE) 
-                  (build_tdefs tds cenv,env,ds,NONE)`
+                  (build_tdefs tds ++ cenv,env,ds,NONE)`
                by rw [d_step_reln_def, d_step_def] >>
-     metis_tac [RTC_SINGLE, transitive_RTC, transitive_def],
+     metis_tac [merge_def,RTC_SINGLE, transitive_RTC, transitive_def],
  `d_step (cenv,env,Dtype tds::ds,NONE) = Dtype_error`
                by rw [d_step_def] >>
      metis_tac [RTC_REFL, transitive_RTC, transitive_def]]);

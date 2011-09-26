@@ -443,18 +443,17 @@ let e_step (envC, env, e, c) =
 
 (* Add the given type definition to the given constructor environment *)
 val build_tdefs : 
-  (tvarN list * typeN * (conN * t list) list) list -> envC -> envC
-let build_tdefs tds envC =
-  List.fold_right
-    (fun (tvs, tn, condefs) envC ->
-       List.fold_right
-         (fun (conN, ts) envC ->
-            bind conN (List.length ts, 
-                       {cn | forall ((cn,ts) MEM condefs) | true}) envC)
-         condefs
-         envC)
-    tds
-    envC 
+  (tvarN list * typeN * (conN * t list) list) list -> envC
+let build_tdefs tds =
+  List.flatten
+    (List.map 
+      (fun (tvs, tn, condefs) ->
+         List.map
+           (fun (conN, ts) ->
+              (conN, (List.length ts, 
+                         {cn | forall ((cn,ts) MEM condefs) | true})))
+           condefs)
+      tds)
 
 (* Checks that no constructor is defined twice *)
 val check_dup_ctors : 
@@ -507,7 +506,7 @@ let d_step (envC, env, ds, st) =
                 Dstep (envC, build_rec_env funs env, ds, None)
           | (Dtype tds) :: ds ->
               if check_dup_ctors tds envC then
-                Dstep (build_tdefs tds envC, env, ds, None)
+                Dstep (merge (build_tdefs tds) envC, env, ds, None)
               else 
                 Dtype_error
       end
@@ -879,7 +878,7 @@ and
 
 forall cenv env tds ds r.
 check_dup_ctors tds cenv &&
-evaluate_decs (build_tdefs tds cenv) env ds r
+evaluate_decs (merge (build_tdefs tds) cenv) env ds r
 ==>
 evaluate_decs cenv env (Dtype tds :: ds) r
 
