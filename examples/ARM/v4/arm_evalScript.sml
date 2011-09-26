@@ -438,23 +438,23 @@ val SPSR_WRITE_n2w = save_thm("SPSR_WRITE_n2w", GEN_ALL
 val decode_opcode_def = with_flag (priming, SOME "") Define`
   decode_opcode i =
     case i of
-       AND cond s Rd Rn Op2 -> 0w:word4
-    || EOR cond s Rd Rn Op2 -> 1w
-    || SUB cond s Rd Rn Op2 -> 2w
-    || RSB cond s Rd Rn Op2 -> 3w
-    || ADD cond s Rd Rn Op2 -> 4w
-    || ADC cond s Rd Rn Op2 -> 5w
-    || SBC cond s Rd Rn Op2 -> 6w
-    || RSC cond s Rd Rn Op2 -> 7w
-    || TST cond Rn Op2      -> 8w
-    || TEQ cond Rn Op2      -> 9w
-    || CMP cond Rn Op2      -> 10w
-    || CMN cond Rn Op2      -> 11w
-    || ORR cond s Rd Rn Op2 -> 12w
-    || MOV cond s Rd Op2    -> 13w
-    || BIC cond s Rd Rn Op2 -> 14w
-    || MVN cond s Rd Op2    -> 15w
-    || _ -> ARB`;
+      AND cond s Rd Rn Op2 => 0w:word4
+    | EOR cond s Rd Rn Op2 => 1w
+    | SUB cond s Rd Rn Op2 => 2w
+    | RSB cond s Rd Rn Op2 => 3w
+    | ADD cond s Rd Rn Op2 => 4w
+    | ADC cond s Rd Rn Op2 => 5w
+    | SBC cond s Rd Rn Op2 => 6w
+    | RSC cond s Rd Rn Op2 => 7w
+    | TST cond Rn Op2      => 8w
+    | TEQ cond Rn Op2      => 9w
+    | CMP cond Rn Op2      => 10w
+    | CMN cond Rn Op2      => 11w
+    | ORR cond s Rd Rn Op2 => 12w
+    | MOV cond s Rd Op2    => 13w
+    | BIC cond s Rd Rn Op2 => 14w
+    | MVN cond s Rd Op2    => 15w
+    | _ => ARB`;
 
 val DECODE_PSRD_def = Define`
   (DECODE_PSRD CPSR_c = (F,F,T)) /\ (DECODE_PSRD CPSR_f = (F,T,F)) /\
@@ -697,77 +697,77 @@ val decode_br_enc = store_thm("decode_br_enc",
 
 val shift_immediate_enc_lem = prove(
   `(!i r. (w2w:word32->word8)
-    ((11 -- 7) (w2w (i:word5) << 7 !! w2w (r:word4))) = w2w i) /\
+    ((11 -- 7) (w2w (i:word5) << 7 || w2w (r:word4))) = w2w i) /\
    (!i r. (w2w:word32->word8)
-    ((11 -- 7) (w2w (i:word5) << 7 !! 32w !! w2w (r:word4))) = w2w i) /\
+    ((11 -- 7) (w2w (i:word5) << 7 || 32w || w2w (r:word4))) = w2w i) /\
    (!i r. (w2w:word32->word8)
-    ((11 -- 7) (w2w (i:word5) << 7 !! 64w !! w2w (r:word4))) = w2w i) /\
+    ((11 -- 7) (w2w (i:word5) << 7 || 64w || w2w (r:word4))) = w2w i) /\
    (!i r. (w2w:word32->word8)
-    ((11 -- 7) (w2w (i:word5) << 7 !! 96w !! w2w (r:word4))) = w2w i) /\
-   (!i r. (w2w:word32->word2) ((6 -- 5) (i << 7 !! w2w (r:word4))) = 0w) /\
-   (!i r. (w2w:word32->word2) ((6 -- 5) (i << 7 !! 32w !! w2w (r:word4))) = 1w) /\
-   (!i r. (w2w:word32->word2) ((6 -- 5) (i << 7 !! 64w !! w2w (r:word4))) = 2w) /\
-   (!i r. (w2w:word32->word2) ((6 -- 5) (i << 7 !! 96w !! w2w (r:word4))) = 3w) /\
-   (!i r. (w2w:word32->word4) ((3 -- 0) (i << 7 !! w2w (r:word4))) = r) /\
-   (!i r. (w2w:word32->word4) ((3 -- 0) (i << 7 !! 32w !! w2w (r:word4))) = r) /\
-   (!i r. (w2w:word32->word4) ((3 -- 0) (i << 7 !! 64w !! w2w (r:word4))) = r) /\
-   (!i r. (w2w:word32->word4) ((3 -- 0) (i << 7 !! 96w !! w2w (r:word4))) = r)`,
+    ((11 -- 7) (w2w (i:word5) << 7 || 96w || w2w (r:word4))) = w2w i) /\
+   (!i r. (w2w:word32->word2) ((6 -- 5) (i << 7 || w2w (r:word4))) = 0w) /\
+   (!i r. (w2w:word32->word2) ((6 -- 5) (i << 7 || 32w || w2w (r:word4))) = 1w) /\
+   (!i r. (w2w:word32->word2) ((6 -- 5) (i << 7 || 64w || w2w (r:word4))) = 2w) /\
+   (!i r. (w2w:word32->word2) ((6 -- 5) (i << 7 || 96w || w2w (r:word4))) = 3w) /\
+   (!i r. (w2w:word32->word4) ((3 -- 0) (i << 7 || w2w (r:word4))) = r) /\
+   (!i r. (w2w:word32->word4) ((3 -- 0) (i << 7 || 32w || w2w (r:word4))) = r) /\
+   (!i r. (w2w:word32->word4) ((3 -- 0) (i << 7 || 64w || w2w (r:word4))) = r) /\
+   (!i r. (w2w:word32->word4) ((3 -- 0) (i << 7 || 96w || w2w (r:word4))) = r)`,
   SRW_TAC word_frags [] \\ FULL_SIMP_TAC std_ss [LESS_THM]
     \\ SRW_TAC word_frags []);
 
 val shift_immediate_enc_lem2 = prove(
   `(!i r. (w2w:word32->word8) ((11 -- 7)
-      (33554432w !! w2w (i:word5) << 7 !! w2w (r:word4))) = w2w i) /\
+      (33554432w || w2w (i:word5) << 7 || w2w (r:word4))) = w2w i) /\
    (!i r. (w2w:word32->word8) ((11 -- 7)
-      (33554432w !! w2w (i:word5) << 7 !! 32w !! w2w (r:word4))) = w2w i) /\
+      (33554432w || w2w (i:word5) << 7 || 32w || w2w (r:word4))) = w2w i) /\
    (!i r. (w2w:word32->word8) ((11 -- 7)
-      (33554432w !! w2w (i:word5) << 7 !! 64w !! w2w (r:word4))) = w2w i) /\
+      (33554432w || w2w (i:word5) << 7 || 64w || w2w (r:word4))) = w2w i) /\
    (!i r. (w2w:word32->word8) ((11 -- 7)
-      (33554432w !! w2w (i:word5) << 7 !! 96w !! w2w (r:word4))) = w2w i) /\
+      (33554432w || w2w (i:word5) << 7 || 96w || w2w (r:word4))) = w2w i) /\
    (!i r. (w2w:word32->word2) ((6 -- 5)
-      (33554432w !! i << 7 !! w2w (r:word4))) = 0w) /\
+      (33554432w || i << 7 || w2w (r:word4))) = 0w) /\
    (!i r. (w2w:word32->word2) ((6 -- 5)
-      (33554432w !! i << 7 !! 32w !! w2w (r:word4))) = 1w) /\
+      (33554432w || i << 7 || 32w || w2w (r:word4))) = 1w) /\
    (!i r. (w2w:word32->word2) ((6 -- 5)
-      (33554432w !! i << 7 !! 64w !! w2w (r:word4))) = 2w) /\
+      (33554432w || i << 7 || 64w || w2w (r:word4))) = 2w) /\
    (!i r. (w2w:word32->word2) ((6 -- 5)
-      (33554432w !! i << 7 !! 96w !! w2w (r:word4))) = 3w) /\
+      (33554432w || i << 7 || 96w || w2w (r:word4))) = 3w) /\
    (!i r. (w2w:word32->word4) ((3 -- 0)
-      (33554432w !! i << 7 !! w2w (r:word4))) = r) /\
+      (33554432w || i << 7 || w2w (r:word4))) = r) /\
    (!i r. (w2w:word32->word4) ((3 -- 0)
-      (33554432w !! i << 7 !! 32w !! w2w (r:word4))) = r) /\
+      (33554432w || i << 7 || 32w || w2w (r:word4))) = r) /\
    (!i r. (w2w:word32->word4) ((3 -- 0)
-      (33554432w !! i << 7 !! 64w !! w2w (r:word4))) = r) /\
+      (33554432w || i << 7 || 64w || w2w (r:word4))) = r) /\
    (!i r. (w2w:word32->word4) ((3 -- 0)
-      (33554432w !! i << 7 !! 96w !! w2w (r:word4))) = r)`,
+      (33554432w || i << 7 || 96w || w2w (r:word4))) = r)`,
   SRW_TAC word_frags [] \\ FULL_SIMP_TAC std_ss [LESS_THM]
     \\ SRW_TAC word_frags []);
 
 val shift_register_enc_lem = prove(
   `(!i r. (w2w:word32->word4) ((11 -- 8)
-      (16w !! w2w (i:word4) << 8 !! w2w (r:word4))) = i) /\
+      (16w || w2w (i:word4) << 8 || w2w (r:word4))) = i) /\
    (!i r. (w2w:word32->word4) ((11 -- 8)
-      (16w !! w2w (i:word4) << 8 !! 32w !! w2w (r:word4))) = i) /\
+      (16w || w2w (i:word4) << 8 || 32w || w2w (r:word4))) = i) /\
    (!i r. (w2w:word32->word4) ((11 -- 8)
-      (16w !! w2w (i:word4) << 8 !! 64w !! w2w (r:word4))) = i) /\
+      (16w || w2w (i:word4) << 8 || 64w || w2w (r:word4))) = i) /\
    (!i r. (w2w:word32->word4) ((11 -- 8)
-      (16w !! w2w (i:word4) << 8 !! 96w !! w2w (r:word4))) = i) /\
+      (16w || w2w (i:word4) << 8 || 96w || w2w (r:word4))) = i) /\
    (!i r. (w2w:word32->word2) ((6 -- 5)
-      (16w !! i << 8 !! w2w (r:word4))) = 0w) /\
+      (16w || i << 8 || w2w (r:word4))) = 0w) /\
    (!i r. (w2w:word32->word2) ((6 -- 5)
-      (16w !! i << 8 !! 32w !! w2w (r:word4))) = 1w) /\
+      (16w || i << 8 || 32w || w2w (r:word4))) = 1w) /\
    (!i r. (w2w:word32->word2) ((6 -- 5)
-      (16w !! i << 8 !! 64w !! w2w (r:word4))) = 2w) /\
+      (16w || i << 8 || 64w || w2w (r:word4))) = 2w) /\
    (!i r. (w2w:word32->word2) ((6 -- 5)
-      (16w !! i << 8 !! 96w !! w2w (r:word4))) = 3w) /\
+      (16w || i << 8 || 96w || w2w (r:word4))) = 3w) /\
    (!i r. (w2w:word32->word4) ((3 -- 0)
-      (16w !! i << 8 !! w2w (r:word4))) = r) /\
+      (16w || i << 8 || w2w (r:word4))) = r) /\
    (!i r. (w2w:word32->word4) ((3 -- 0)
-      (16w !! i << 8 !! 32w !! w2w (r:word4))) = r) /\
+      (16w || i << 8 || 32w || w2w (r:word4))) = r) /\
    (!i r. (w2w:word32->word4) ((3 -- 0)
-      (16w !! i << 8 !! 64w !! w2w (r:word4))) = r) /\
+      (16w || i << 8 || 64w || w2w (r:word4))) = r) /\
    (!i r. (w2w:word32->word4) ((3 -- 0)
-      (16w !! i << 8 !! 96w !! w2w (r:word4))) = r)`,
+      (16w || i << 8 || 96w || w2w (r:word4))) = r)`,
   SRW_TAC word_frags [] \\ FULL_SIMP_TAC std_ss [LESS_THM]
     \\ SRW_TAC word_frags []);
 
@@ -816,16 +816,16 @@ val shift_immediate_enc = store_thm("shift_immediate_enc",
       ((11 >< 0) (addr_mode1_encode (Dp_shift_immediate sh i))) =
       if i = 0w then
         case sh of
-           LSL Rm -> arm$LSL (REG_READ reg m Rm) 0w c
-        || LSR Rm -> arm$LSR (REG_READ reg m Rm) 32w c
-        || ASR Rm -> arm$ASR (REG_READ reg m Rm) 32w c
-        || ROR Rm -> word_rrx(c, REG_READ reg m Rm)
+          LSL Rm => arm$LSL (REG_READ reg m Rm) 0w c
+        | LSR Rm => arm$LSR (REG_READ reg m Rm) 32w c
+        | ASR Rm => arm$ASR (REG_READ reg m Rm) 32w c
+        | ROR Rm => word_rrx(c, REG_READ reg m Rm)
       else
         case sh of
-           LSL Rm -> arm$LSL (REG_READ reg m Rm) (w2w i) c
-        || LSR Rm -> arm$LSR (REG_READ reg m Rm) (w2w i) c
-        || ASR Rm -> arm$ASR (REG_READ reg m Rm) (w2w i) c
-        || ROR Rm -> arm$ROR (REG_READ reg m Rm) (w2w i) c`,
+          LSL Rm => arm$LSL (REG_READ reg m Rm) (w2w i) c
+        | LSR Rm => arm$LSR (REG_READ reg m Rm) (w2w i) c
+        | ASR Rm => arm$ASR (REG_READ reg m Rm) (w2w i) c
+        | ROR Rm => arm$ROR (REG_READ reg m Rm) (w2w i) c`,
   REPEAT STRIP_TAC \\ Cases_on `sh` \\ Cases_on `i = 0w` \\ IMP_RES_TAC lem
     \\ SRW_TAC [boolSimps.LET_ss, WORD_EXTRACT_ss]
          [SHIFT_IMMEDIATE_def,SHIFT_IMMEDIATE2_def,addr_mode1_encode_def,
@@ -836,16 +836,16 @@ val shift_immediate_enc2 = store_thm("shift_immediate_enc2",
       ((11 >< 0) (addr_mode2_encode (Dt_shift_immediate sh i))) =
       if i = 0w then
         case sh of
-           LSL Rm -> arm$LSL (REG_READ reg m Rm) 0w c
-        || LSR Rm -> arm$LSR (REG_READ reg m Rm) 32w c
-        || ASR Rm -> arm$ASR (REG_READ reg m Rm) 32w c
-        || ROR Rm -> word_rrx(c, REG_READ reg m Rm)
+          LSL Rm => arm$LSL (REG_READ reg m Rm) 0w c
+        | LSR Rm => arm$LSR (REG_READ reg m Rm) 32w c
+        | ASR Rm => arm$ASR (REG_READ reg m Rm) 32w c
+        | ROR Rm => word_rrx(c, REG_READ reg m Rm)
       else
         case sh of
-           LSL Rm -> arm$LSL (REG_READ reg m Rm) (w2w i) c
-        || LSR Rm -> arm$LSR (REG_READ reg m Rm) (w2w i) c
-        || ASR Rm -> arm$ASR (REG_READ reg m Rm) (w2w i) c
-        || ROR Rm -> arm$ROR (REG_READ reg m Rm) (w2w i) c`,
+          LSL Rm => arm$LSL (REG_READ reg m Rm) (w2w i) c
+        | LSR Rm => arm$LSR (REG_READ reg m Rm) (w2w i) c
+        | ASR Rm => arm$ASR (REG_READ reg m Rm) (w2w i) c
+        | ROR Rm => arm$ROR (REG_READ reg m Rm) (w2w i) c`,
   REPEAT STRIP_TAC \\ Cases_on `sh` \\ Cases_on `i = 0w` \\ IMP_RES_TAC lem
     \\ SRW_TAC [boolSimps.LET_ss, WORD_EXTRACT_ss]
         [SHIFT_IMMEDIATE_def,SHIFT_IMMEDIATE2_def,addr_mode2_encode_def,
@@ -856,10 +856,10 @@ val shift_register_enc = store_thm("shift_register_enc",
       ((11 >< 0) (addr_mode1_encode (Dp_shift_register sh r))) =
       let rs = (7 >< 0) (REG_READ reg m r) in
         case sh of
-           LSL Rm -> arm$LSL (REG_READ (INC_PC reg) m Rm) rs c
-        || LSR Rm -> arm$LSR (REG_READ (INC_PC reg) m Rm) rs c
-        || ASR Rm -> arm$ASR (REG_READ (INC_PC reg) m Rm) rs c
-        || ROR Rm -> arm$ROR (REG_READ (INC_PC reg) m Rm) rs c`,
+          LSL Rm => arm$LSL (REG_READ (INC_PC reg) m Rm) rs c
+        | LSR Rm => arm$LSR (REG_READ (INC_PC reg) m Rm) rs c
+        | ASR Rm => arm$ASR (REG_READ (INC_PC reg) m Rm) rs c
+        | ROR Rm => arm$ROR (REG_READ (INC_PC reg) m Rm) rs c`,
   REPEAT STRIP_TAC \\ Cases_on `sh`
     \\ SRW_TAC [boolSimps.LET_ss, WORD_EXTRACT_ss]
         [SHIFT_REGISTER_def,SHIFT_REGISTER2_def,addr_mode1_encode_def,
@@ -1095,10 +1095,10 @@ val condition_code_lem2 =
 val condition_code_lem3 = prove(
   `!cond. num2condition (w2n ((31 -- 29) (condition_encode cond))) =
       case cond of
-         EQ -> EQ || NE -> EQ || CS -> CS || CC -> CS
-      || MI -> MI || PL -> MI || VS -> VS || VC -> VS
-      || HI -> HI || LS -> HI || GE -> GE || LT -> GE
-      || GT -> GT || LE -> GT || AL -> AL || NV -> AL`,
+        EQ => EQ | NE => EQ | CS => CS | CC => CS
+      | MI => MI | PL => MI | VS => VS | VC => VS
+      | HI => HI | LS => HI | GE => GE | LT => GE
+      | GT => GT | LE => GT | AL => AL | NV => AL`,
   Cases \\ SRW_TAC [boolSimps.LET_ss]
     [condition_encode_def,condition2num_thm,num2condition_thm,word_bits_n2w,
      word_rol_def,word_ror_n2w,word_lsl_n2w,w2w_n2w,w2n_n2w]

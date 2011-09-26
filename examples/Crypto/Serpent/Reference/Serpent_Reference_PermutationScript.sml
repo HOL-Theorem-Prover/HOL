@@ -62,7 +62,7 @@ val permu_def = Define
                        then (1w:word128) << (SUC i)
                       else (0w:word128)
    in
-   maskedWord !! (permu i permFun  block))`;
+   maskedWord || (permu i permFun  block))`;
 
 (*for evaluation*)
 val permuEval = Q.store_thm(
@@ -81,7 +81,7 @@ val permuEval = Q.store_thm(
                            then (1w:word128) << m
                            else (0w:word128)
            in
-          maskedWord !! (permu (m-1) permFun  block) `,
+          maskedWord || (permu (m-1) permFun  block) `,
  RW_TAC  list_ss [permu_def,LET_THM] THENL [
     Cases_on `m` THEN
     RW_TAC list_ss [permu_def,LET_THM],

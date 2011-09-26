@@ -5,8 +5,8 @@ val _ = new_theory "walkstar"
 val pre_walkstar_def = TotalDefn.xDefineSchema "pre_walkstar"
  `walkstar t =
     case walk s t
-    of Pair t1 t2 -> Pair (walkstar t1) (walkstar t2)
-    || w -> w`;
+    of Pair t1 t2 => Pair (walkstar t1) (walkstar t2)
+     | w => w`;
 
 val _ = overload_on("walk*",``walkstar``)
 
@@ -28,8 +28,8 @@ TermWithCase`
 wfs s ⇒
 (walk* s t =
   case walk s t
-  of Pair t1 t2 -> Pair (walk* s t1) (walk* s t2)
-  || t' -> t')`)
+  of Pair t1 t2 => Pair (walk* s t1) (walk* s t2)
+   | t' => t')`)
 
 val inst_walkstar =  Q.INST [`R` |-> `walkstarR s`]
 
@@ -235,8 +235,8 @@ val apply_ts_thm = Q.store_thm(
 "apply_ts_thm",
 `wfs s ⇒
   (walk* s (Var v) =
-     case FLOOKUP s v of NONE -> (Var v)
-                      || SOME t -> walk* s t) ∧
+     case FLOOKUP s v of NONE => (Var v)
+                       | SOME t => walk* s t) ∧
   (walk* s (Pair t1 t2) = Pair (walk* s t1) (walk* s t2)) ∧
   (walk* s (Const c) = Const c)`,
 SIMP_TAC (srw_ss()) [] THEN STRIP_TAC THEN
@@ -337,9 +337,9 @@ val oc_var1 = Q.prove(
   `!t v. oc s t v ==>
         !u. (t = Var u) /\ wfs s ==>
                case vwalk s u of
-                 Var u -> (v = u)
-              || Pair t1 t2 -> oc s t1 v \/ oc s t2 v
-              || _ -> F`,
+                 Var u => (v = u)
+               | Pair t1 t2 => oc s t1 v \/ oc s t2 v
+               | _ => F`,
   HO_MATCH_MP_TAC oc_strong_ind THEN SRW_TAC [][]
     THEN1 (FULL_SIMP_TAC (srw_ss())[] THEN SRW_TAC [][Once vwalk_def,FLOOKUP_DEF]) THEN
   FULL_SIMP_TAC (srw_ss()) [] THEN SRW_TAC [][] THEN
@@ -353,9 +353,9 @@ val oc2 = CONJUNCT2 (SIMP_RULE bool_ss [FORALL_AND_THM] oc_rules);
 val oc_var2 = Q.prove(
   `wfs s ==> !v u.
             (case vwalk s v of
-                Var u -> (x = u)
-             || Pair t1 t2 -> oc s t1 x \/ oc s t2 x
-             || _ -> F) ==> oc s (Var v) x`,
+                Var u => (x = u)
+              | Pair t1 t2 => oc s t1 x \/ oc s t2 x
+              | _ => F) ==> oc s (Var v) x`,
   DISCH_TAC THEN HO_MATCH_MP_TAC vwalk_ind THEN SRW_TAC [][] THEN
   Cases_on `vwalk s v` THEN
   FULL_SIMP_TAC (srw_ss()) [] THENL [
@@ -369,9 +369,9 @@ val oc_var2 = Q.prove(
 val oc_var = Q.prove(
   `wfs s ==> (oc s (Var v) x =
                  case vwalk s v of
-                    Var u -> (x = u)
-                 || Pair t1 t2 -> oc s t1 x \/ oc s t2 x
-                 || _ -> F)`,
+                    Var u => (x = u)
+                  | Pair t1 t2 => oc s t1 x \/ oc s t2 x
+                  | _ => F)`,
   METIS_TAC [oc_var2, oc_var1]);
 
 val oc_thm = RWsave_thm("oc_thm", LIST_CONJ [oc_var, oc_pair, oc_const]);
@@ -380,9 +380,9 @@ val oc_def_q =
 `wfs s ⇒
  (oc s t v =
   case walk s t of
-     Var u -> (v = u)
-  || Pair t1 t2 -> oc s t1 v ∨ oc s t2 v
-  || _ -> F)`;
+     Var u => (v = u)
+   | Pair t1 t2 => oc s t1 v ∨ oc s t2 v
+   | _ => F)`;
 
 val oc_walking = Q.store_thm(
 "oc_walking", oc_def_q,

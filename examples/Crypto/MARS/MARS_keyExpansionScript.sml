@@ -131,10 +131,10 @@ val gen_mask_def = Define `
     let m = m && (m >> 3) && (m >> 6) in
     let m1 = m in
     let m = m << 1 in
-    let m = m !! (m << 1) in
-    let m = m !! (m << 2) in
-    let m = m !! (m << 4) in
-    let m = m !! (m << 1) && (~x) && 0x80000000w
+    let m = m || (m << 1) in
+    let m = m || (m << 2) in
+    let m = m || (m << 4) in
+    let m = m || (m << 1) && (~x) && 0x80000000w
     in if m1=0w then 0w else m && 0xfffffffcw`;
 
 val mul_rnd_def = Define `
@@ -142,7 +142,7 @@ val mul_rnd_def = Define `
     (* Record the two lowest bits of K[i], by setting j = K[i] & 3, and then
        consider the word with these two bits set to 1, w = K[i] | 3           *)
     let j = w2n (sub(k,i) && 0x3w) in
-    let w = sub(k,i) !! 0x3w in
+    let w = sub(k,i) || 0x3w in
 
     let m = gen_mask(w) in
 

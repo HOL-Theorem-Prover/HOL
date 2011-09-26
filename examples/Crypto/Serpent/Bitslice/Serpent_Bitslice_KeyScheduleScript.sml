@@ -13,7 +13,7 @@ val PHI_def = Define `PHI = 0x9e3779b9w : word32`;
 
 val short2longKey_def = Define
 `short2longKey k kl = let nw256 = n2w (k MOD  (2**kl)) in
-  nw256 !! (1w<<kl) : word256`;
+  nw256 || (1w<<kl) : word256`;
 
 (*used in making preKey*)
 val (makeSubKeyBitSlice_def,makeSubKeyBitSlice_termi) = Defn.tstore_defn(

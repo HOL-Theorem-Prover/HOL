@@ -64,9 +64,9 @@ val Cn0123 = Store_thm(
 
 val Pr_def = Define `
   Pr b r l = case l of
-                [] -> b []
-             || (0::t) -> b t
-             || (SUC n :: t) -> r (n :: Pr b r (n :: t) :: t)`
+               [] => b []
+             | (0::t) => b t
+             | (SUC n :: t) => r (n :: Pr b r (n :: t) :: t)`
 
 val Pr_thm = Store_thm(
   "Pr_thm",

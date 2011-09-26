@@ -48,7 +48,7 @@ val hex2word_def = Define `
 
 val bytes2word_def = Define `
   (bytes2word [] = 0w:'a word) /\
-  (bytes2word (x:word8 ::xs) = w2w x !! (bytes2word xs << 8))`;
+  (bytes2word (x:word8 ::xs) = w2w x || (bytes2word xs << 8))`;
 
 val word2bytes_def = Define `
   word2bytes n (w:'a word) =

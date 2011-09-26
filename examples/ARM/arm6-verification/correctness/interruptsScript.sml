@@ -209,7 +209,7 @@ val AFTER_NRESET2_THM4 = store_thm("AFTER_NRESET2_THM4",
   `!a j k l m. AFTER_NRESET2 a ==>
      (NEXT_ARM (ABS_ARM6 j) ((\(a,b,c) d. (a,b,c,d))
          (case ABS_ARM6 a
-            of ARM_EX v v1 v2 ->
+            of ARM_EX v v1 v2 =>
                (exc2exception v2 v k,l,v1)) m) = ABS_ARM6 a)`,
   Cases_arm6 \\ RW_TAC std_ss [AFTER_NRESET2_def,ABS_ARM6_def,PROJ_Reset_def,
     NEXT_ARM_def,IS_Reset_def,exc2exception_def,num2exception_thm,word_0_n2w]);

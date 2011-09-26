@@ -388,14 +388,14 @@ val bv_posns_at_exists0 =
              `vr` |-> `\s l. {}`,
              `ap` |-> `\rt ru t u l.
                            case l of
-                              Lt::rest -> IMAGE (CONS Lt) (rt rest)
-                           || Rt::rest -> IMAGE (CONS Rt) (ru rest)
-                           || _ -> {}`,
+                             Lt::rest => IMAGE (CONS Lt) (rt rest)
+                           | Rt::rest => IMAGE (CONS Rt) (ru rest)
+                           | _ => {}`,
              `lm` |-> `\rt v t l.
                            case l of
-                              [] -> bv_posns (LAM v t)
-                           || In::rest -> IMAGE (CONS In) (rt rest)
-                           || _ -> {}`]
+                             [] => bv_posns (LAM v t)
+                           | In::rest => IMAGE (CONS In) (rt rest)
+                           | _ => {}`]
         |> SIMP_RULE (srw_ss()) []
         |> CONV_RULE (QUANT_CONV (RAND_CONV (ONCE_REWRITE_CONV [EQ_SYM_EQ])))
 
@@ -404,14 +404,14 @@ val bv_posns_at_exists = prove(
        ((!s l. bv_posns_at l (VAR s) = {}) /\
         (!t u l. bv_posns_at l (t @@ u) =
                    case l of
-                      (Lt::rest) -> IMAGE (CONS Lt) (bv_posns_at rest t)
-                   || (Rt::rest) -> IMAGE (CONS Rt) (bv_posns_at rest u)
-                   || _ -> {}) /\
+                     (Lt::rest) => IMAGE (CONS Lt) (bv_posns_at rest t)
+                   | (Rt::rest) => IMAGE (CONS Rt) (bv_posns_at rest u)
+                   | _ => {}) /\
         (!v t l. bv_posns_at l (LAM v t) =
                    case l of
-                      [] -> bv_posns (LAM v t)
-                   || In::rest -> IMAGE (CONS In) (bv_posns_at rest t)
-                   || _ -> {})) /\
+                     [] => bv_posns (LAM v t)
+                   | In::rest => IMAGE (CONS In) (bv_posns_at rest t)
+                   | _ => {})) /\
        !t l p. bv_posns_at l (tpm p t) = bv_posns_at l t``,
   Q.X_CHOOSE_THEN `f` STRIP_ASSUME_TAC bv_posns_at_exists0 THEN
   Q.EXISTS_TAC `\l t. f t l` THEN SRW_TAC [][]);

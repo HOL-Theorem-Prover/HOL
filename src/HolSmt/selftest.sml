@@ -181,8 +181,8 @@ in
     (``p \/ q ==> p /\ q``, [sat_YO, sat_Z3, sat_Z3p]),
     (``if p then (q ==> p) else (p ==> q)``,
       [thm_AUTO, thm_YO, thm_Z3, thm_Z3p]),
-    (``case p of T -> p || F -> ~ p``, [thm_AUTO, thm_YO, thm_Z3, thm_Z3p]),
-    (``case p of T -> (q ==> p) || F -> (p ==> q)``,
+    (``case p of T => p | F => ~ p``, [thm_AUTO, thm_YO, thm_Z3, thm_Z3p]),
+    (``case p of T => (q ==> p) | F => (p ==> q)``,
       [thm_AUTO, thm_YO, thm_Z3, thm_Z3p]),
 
     (* numerals *)
@@ -693,12 +693,12 @@ in
     (``x:word32 && 0w = 0w``, [thm_AUTO, thm_YO, thm_Z3, thm_Z3p]),
     (``x:word32 && 0w = x``, [sat_YO, sat_Z3, sat_Z3p]),
 
-    (``x:word32 !! x = x``, [thm_AUTO, thm_YO, thm_Z3, thm_Z3p]),
-    (``x:word32 !! y = y !! x``, [thm_AUTO, thm_YO, thm_Z3, thm_Z3p]),
-    (``(x:word32 !! y) !! z = x !! (y !! z)``,
+    (``x:word32 || x = x``, [thm_AUTO, thm_YO, thm_Z3, thm_Z3p]),
+    (``x:word32 || y = y || x``, [thm_AUTO, thm_YO, thm_Z3, thm_Z3p]),
+    (``(x:word32 || y) || z = x || (y || z)``,
       [thm_AUTO, thm_YO, thm_Z3, thm_Z3p]),
-    (``x:word32 !! 0w = 0w``, [sat_YO, sat_Z3, sat_Z3p]),
-    (``x:word32 !! 0w = x``, [thm_AUTO, thm_YO, thm_Z3, thm_Z3p]),
+    (``x:word32 || 0w = 0w``, [sat_YO, sat_Z3, sat_Z3p]),
+    (``x:word32 || 0w = x``, [thm_AUTO, thm_YO, thm_Z3, thm_Z3p]),
 
     (``x:word32 ?? x = 0w``, [thm_AUTO, thm_YO, thm_Z3, thm_Z3p]),
     (``x:word32 ?? y = y ?? x``, [thm_AUTO, thm_YO, thm_Z3, thm_Z3p]),

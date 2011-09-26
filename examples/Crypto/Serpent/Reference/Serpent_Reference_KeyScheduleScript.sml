@@ -18,7 +18,7 @@ val short2longKey_def =
    `short2longKey k kl =
       let nw256 = (n2w:num->word256) (k MOD  (2**kl))
       in
-        nw256 !! (1w << kl)`;
+        nw256 || (1w << kl)`;
 
 (*used in making preKey*)
 

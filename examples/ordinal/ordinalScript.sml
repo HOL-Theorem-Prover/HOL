@@ -779,10 +779,10 @@ val ord_mult_def =
   `ord_mult x y =
     if (x = End 0) \/ (y = End 0) then End 0 else
     case (x,y)
-    of (End m, End n) -> End (m * n)
-    || (End m, Plus e k t) -> Plus (ord_add (End 0) e) k (ord_mult (End m) t)
-    || (Plus e k t, End n) -> Plus e (k*n) t
-    || (Plus e1 k1 t1, Plus e2 k2 t2) -> Plus (ord_add e1 e2) k2
+    of (End m, End n) => End (m * n)
+     | (End m, Plus e k t) => Plus (ord_add (End 0) e) k (ord_mult (End m) t)
+     | (Plus e k t, End n) => Plus e (k*n) t
+     | (Plus e1 k1 t1, Plus e2 k2 t2) => Plus (ord_add e1 e2) k2
                                               (ord_mult (Plus e1 k1 t1) t2)`;
 
 val _ = Count.report (Count.read meter);

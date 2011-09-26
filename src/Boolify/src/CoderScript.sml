@@ -42,7 +42,7 @@ val TOP_CASE_TAC = BasicProvers.TOP_CASE_TAC;
 val decode_def =
   Define
   `decode (p : 'a -> bool) (d : bool list -> ('a # bool list) option) l =
-   case d l of SOME (x, _) -> x || NONE -> @x. p x`;
+   case d l of SOME (x, _) => x | NONE => @x. p x`;
 
 (*---------------------------------------------------------------------------
      Well-formed (predicate,encoder,decoder) triples.
