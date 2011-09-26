@@ -666,7 +666,12 @@ fun findpos P [] = NONE
                         else Option.map (fn (n,x) => (n + 1, x)) (findpos P xs)
 
 fun get_case_info (G : grammar) = let
-  val extract_toks = List.mapPartial (fn RE (TOK s) => SOME s | _ => NONE)
+  fun extract_tok(ppel,acc) =
+      case ppel of
+        RE (TOK s) => s :: acc
+      | PPBlock (ppels, _) => List.foldl extract_tok acc ppels
+      | _ => acc
+  fun extract_toks ppels = List.rev (List.foldl extract_tok [] ppels)
   fun rr_foldthis ({term_name,elements,...}, acc) =
       if term_name <> GrammarSpecials.case_special then acc
       else extract_toks elements :: acc
@@ -841,17 +846,24 @@ fun parse_term (G : grammar) typeparser = let
     fun handle_listcase_reduction lrlocn pattern = let
       val errmsg = "No rule for "^ listtoString reltoString pattern
       fun fail() = FAILloc lrlocn errmsg
+      fun badcase() = FAILloc lrlocn "Mal-formed case expression"
       val _ = length pattern >= 5 orelse fail()
       fun tokstring x = case x of TOK s => SOME s | _ => NONE
       val poss_left = case hd pattern of TOK x => x | _ => fail()
     in
-      if SOME poss_left = casecase then
-        if tokstring (hd (tl pattern)) = caseof andalso
-           List.all (fn s => tokstring s = casebar) (tl (tl pattern))
-        then
-          CaseRule
-        else
-          FAILloc lrlocn "Mal-formed case expression"
+      if SOME poss_left = casecase then let
+          fun bars_ok l =
+              case l of
+                [TM] => true
+              | TM :: TOK s :: rest => SOME s = casebar andalso bars_ok rest
+              | _ => false
+          fun case_ok l =
+              case l of
+                TM :: TOK ofs :: rest => SOME ofs = caseof andalso bars_ok rest
+              | _ => false
+        in
+          if case_ok (tl pattern) then CaseRule else badcase()
+        end
       else let
           val poss_right =
               case (List.last pattern) of TOK x => x | _ => fail()
