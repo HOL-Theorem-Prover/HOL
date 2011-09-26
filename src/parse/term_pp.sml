@@ -43,35 +43,6 @@ val isPrefix = String.isPrefix
 
 fun lose_constrec_ty {Name,Ty,Thy} = {Name = Name, Thy = Thy}
 
-fun mk_casearrow(t1, t2) = let
-  val t1_ty = type_of t1
-  val t2_ty = type_of t2
-  val arrow_t = mk_thy_const{Name = case_arrow_special, Thy = "bool",
-                             Ty = t1_ty --> t2_ty --> t1_ty --> t2_ty}
-in
-  list_mk_comb(arrow_t, [t1, t2])
-end
-
-fun mk_casesplit(t1, t2) = let
-  val t1_ty = type_of t1
-  val split_t = mk_thy_const{Name = case_split_special, Thy = "bool",
-                             Ty = t1_ty --> t1_ty --> t1_ty}
-in
-  list_mk_comb(split_t, [t1, t2])
-end
-
-fun list_mk_split [] = raise PP_ERR "list_mk_split" "Empty list"
-  | list_mk_split [t] = t
-  | list_mk_split (h::t) = mk_casesplit(h, list_mk_split t)
-
-fun mk_case(split_on, cases) = let
-  val (cty as (ty1,ty2)) = dom_rng (type_of cases)
-  val case_t = mk_thy_const{Name = case_special, Thy = "bool",
-                            Ty = ty1 --> (ty1 --> ty2) --> ty2}
-in
-  list_mk_comb(case_t, [split_on, cases])
-end;
-
 (* while f is still of functional type, dest_abs the abs term and apply the
    f to the variable just stripped from the abs *)
 fun apply_absargs f abs =
@@ -103,10 +74,8 @@ fun convert_case tm =
         val (split_on, splits) = f tm
             handle HOL_ERR _ => raise CaseConversionFailed
         val _ = not (null splits) orelse raise CaseConversionFailed
-        val arrows = map mk_casearrow splits
-        val joined_splits = list_mk_split arrows
       in
-        mk_case(split_on, joined_splits)
+        (split_on, splits)
       end
 
 (* ----------------------------------------------------------------------
@@ -1275,18 +1244,12 @@ fun pp_term (G : grammar) TyG backend = let
           val arg_terms = args @ [Rand]
           val pp_elements = block_up_els [] ((FirstTM::elements) @ [LastTM])
           val begblock = block_by_style(addparens, rr, pgrav, fname, fprec)
-          val casearrow_block =
-              if fname = GrammarSpecials.case_arrow_special andalso
-                 length args = 1
-              then record_bvars (free_vars (hd args))
-              else I
         in
           ptype_block
               (pbegin (addparens orelse comb_show_type) >>
                begblock
-                 (casearrow_block
                     (print_ellist (lprec, prec, rprec)
-                                  (pp_elements, arg_terms))) >>
+                                  (pp_elements, arg_terms)) >>
                pend (addparens orelse comb_show_type))
         end
       | INFIX RESQUAN_OP => raise Fail "Res. quans shouldn't arise"
@@ -1824,10 +1787,32 @@ fun pp_term (G : grammar) TyG backend = let
                 case grammar_name G f of
                   SOME "case" =>
                   (let
-                     val newt = convert_case tm
-                     val (t1, t2) = dest_comb newt
+                     val (split_on, splits) = convert_case tm
+                     val parens = (case rgrav of Prec _ => true | _ => false)
+                                  orelse
+                                  combpos = RandCP
+                     fun p body = if parens then
+                                    add_string "(" >> body >> add_string ")"
+                                  else body
+                     fun do_split(l,r) =
+                         record_bvars
+                             (free_vars l)
+                             (block PP.CONSISTENT 0
+                                    (pr_term l Top Top Top (decdepth depth) >>
+                                     hardspace 1 >>
+                                     add_string "=>" >> add_break(1,2) >>
+                                     pr_term r Top Top Top (decdepth depth)))
                    in
-                     pr_term newt pgrav lgrav rgrav depth
+                     p (block PP.CONSISTENT 0
+                          (block PP.CONSISTENT 0
+                            (add_string "case" >> add_break(1,2) >>
+                             pr_term split_on Top Top Top (decdepth depth) >>
+                             add_break(1,0) >> add_string "of") >>
+                           add_break (1,2) >>
+                           pr_list do_split
+                                   (add_break(1,0) >> add_string "|" >>
+                                    hardspace 1)
+                                   splits))
                    end handle CaseConversionFailed => fail)
                 | _ => fail
               else fail) |||
