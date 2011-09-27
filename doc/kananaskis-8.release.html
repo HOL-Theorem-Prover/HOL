@@ -75,6 +75,10 @@
           0 => 1
         | SUC n => n + 1
 </pre>
+<p>The new syntax does not mix well with the vertical bars of the set comprehension syntax.
+If one has a case expression inside a set-comprehension, the parser will likely be confused unless the case expression is enclosed in parentheses.
+The pretty-printer will parenthesise all case-expressions inside set comprehensions.
+
 <p>The pretty-printer’s behaviour cannot be easily changed, but if one wishes to support source files using the old syntax, the following incantation can be used:
 <pre>
         set_mapped_fixity {

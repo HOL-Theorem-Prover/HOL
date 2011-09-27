@@ -114,7 +114,7 @@ open smpp term_pp_types term_pp_utils
 infix || |||
 
 val start_info = {seen_frees = empty_tmset, current_bvars = empty_tmset,
-                  last_string = " "}
+                  last_string = " ", in_gspec = true}
 
 fun getlaststring x =
     (fupdate (fn x => x) >-
@@ -122,9 +122,9 @@ fun getlaststring x =
     x
 
 fun setlaststring s = let
-  fun set {seen_frees,current_bvars,last_string} =
+  fun set {seen_frees,current_bvars,last_string,in_gspec} =
       {seen_frees=seen_frees, current_bvars = current_bvars,
-       last_string = s}
+       last_string = s, in_gspec = in_gspec}
 in
   fupdate set >> return ()
 end
@@ -1613,15 +1613,17 @@ fun pp_term (G : grammar) TyG backend = let
                   then
                     block CONSISTENT 0
                        (record_bvars bvars_seen_here
+                        (set_gspec
                            (add_string "{" >>
                             block CONSISTENT 0
                               (pr_term l Top Top Top (decdepth depth) >>
                                hardspace 1 >> add_string "|" >> spacep true >>
                                pr_term r Top Top Top (decdepth depth)) >>
-                            add_string "}"))
+                            add_string "}")))
                   else
                     block CONSISTENT 0
                       (record_bvars bvars_seen_here
+                       (set_gspec
                          (add_string "{" >>
                           block CONSISTENT 0
                             (pr_term l Top Top Top (decdepth depth) >>
@@ -1629,7 +1631,7 @@ fun pp_term (G : grammar) TyG backend = let
                              pr_term vs Top Top Top (decdepth depth) >>
                              hardspace 1 >> add_string "|" >> spacep true >>
                              pr_term r Top Top Top (decdepth depth)) >>
-                          add_string "}"))
+                          add_string "}")))
                 end handle HOL_ERR _ => fail
               else fail
 
@@ -1791,9 +1793,12 @@ fun pp_term (G : grammar) TyG backend = let
                      val parens = (case rgrav of Prec _ => true | _ => false)
                                   orelse
                                   combpos = RandCP
-                     fun p body = if parens then
+                     fun p body =
+                         get_gspec >-
+                         (fn b => if b orelse parens then
                                     add_string "(" >> body >> add_string ")"
-                                  else body
+                                  else
+                                    body)
                      val casebar = add_break(1,0) >> add_string "|" >> hardspace 1
                      fun do_split rprec (l,r) =
                          record_bvars

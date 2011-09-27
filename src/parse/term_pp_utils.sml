@@ -12,8 +12,9 @@ fun getbvs x =
   x
 
 fun setbvs bvs = let
-  fun set {seen_frees,current_bvars,last_string} =
-      {seen_frees=seen_frees, current_bvars=bvs,last_string=last_string}
+  fun set {seen_frees,current_bvars,last_string,in_gspec} =
+      {seen_frees=seen_frees, current_bvars=bvs,last_string=last_string,
+       in_gspec=in_gspec}
 in
   fupdate set >> return ()
 end
@@ -27,9 +28,10 @@ fun getfvs x =
     x
 
 fun spotfv v = let
-  fun set {seen_frees,current_bvars,last_string} =
+  fun set {seen_frees,current_bvars,last_string,in_gspec} =
       {seen_frees = HOLset.add(seen_frees, v),
-       current_bvars = current_bvars, last_string=last_string}
+       current_bvars = current_bvars, last_string=last_string,
+       in_gspec = in_gspec}
 in
   fupdate set >> return ()
 end
@@ -39,5 +41,18 @@ fun record_bvars newbvs p =
     (fn old => setbvs (HOLset.addList(old,newbvs)) >>
                p >- (fn pres => setbvs old >> return pres))
 
+fun get_gspec x =
+    (fupdate (fn x => x) >-
+     (fn (i : printing_info) => return (#in_gspec i))) x
+
+fun set_gspec p = let
+  fun set b {in_gspec,current_bvars,seen_frees,last_string} =
+      {in_gspec = b, current_bvars = current_bvars, seen_frees = seen_frees,
+       last_string = last_string}
+in
+  get_gspec >-
+  (fn old => fupdate (set true) >> p >-
+   (fn pval => fupdate (set old) >> return pval))
+end
 
 end (* struct *)
