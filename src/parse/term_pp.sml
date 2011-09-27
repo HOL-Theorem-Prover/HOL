@@ -1794,14 +1794,15 @@ fun pp_term (G : grammar) TyG backend = let
                      fun p body = if parens then
                                     add_string "(" >> body >> add_string ")"
                                   else body
-                     fun do_split(l,r) =
+                     val casebar = add_break(1,0) >> add_string "|" >> hardspace 1
+                     fun do_split rprec (l,r) =
                          record_bvars
                              (free_vars l)
                              (block PP.CONSISTENT 0
                                     (pr_term l Top Top Top (decdepth depth) >>
                                      hardspace 1 >>
                                      add_string "=>" >> add_break(1,2) >>
-                                     pr_term r Top Top Top (decdepth depth)))
+                                     pr_term r Top Top rprec (decdepth depth)))
                    in
                      p (block PP.CONSISTENT 0
                           (block PP.CONSISTENT 0
@@ -1809,10 +1810,11 @@ fun pp_term (G : grammar) TyG backend = let
                              pr_term split_on Top Top Top (decdepth depth) >>
                              add_break(1,0) >> add_string "of") >>
                            add_break (1,2) >>
-                           pr_list do_split
-                                   (add_break(1,0) >> add_string "|" >>
-                                    hardspace 1)
-                                   splits))
+                           pr_list (do_split (Prec(0,"casebar")))
+                                   casebar
+                                   (butlast splits) >>
+                           casebar >>
+                           do_split (if parens then Top else rgrav) (last splits)))
                    end handle CaseConversionFailed => fail)
                 | _ => fail
               else fail) |||
