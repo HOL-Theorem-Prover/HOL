@@ -260,7 +260,15 @@ val _ = set_trace "Unicode" 0
 val _ = Parse.current_backend := PPBackEnd.raw_terminal
 fun tppw width s = let
   val t = Parse.Term [QUOTE s]
-  val pretty = String.translate (fn #"\n" => "\\n" | c => str c)
+  val pfxsize = size "Testing printing of `` ..."
+  fun trunc s = if size s + pfxsize > 62 then let
+                    val s' = String.substring(s,0,58 - pfxsize)
+                  in
+                    s' ^ " ..."
+                  end
+                else s
+  fun pretty s = s |> String.translate (fn #"\n" => "\\n" | c => str c)
+                   |> trunc
   val _ = tprint ("Testing printing of `"^pretty s^"`")
   val res = Portable.pp_to_string width Parse.pp_term t
 in
@@ -274,6 +282,8 @@ val _ = app tpp ["let x = T in x /\\ y",
                  "(let x = T in \\y. x /\\ y) p",
                  "f ($/\\ p)",
                  "(((p /\\ q) /\\ r) /\\ s) /\\ t",
+                 "case e1 of T => (case e2 of T => F | F => T) | F => T",
+                 "case e1 of T => F | F => case e2 of T => F | F => T",
                  "(case x of T => (\\x. x) | F => $~) y",
                  "!x. P (x /\\ y)",
                  "P (!x. Q x)",
