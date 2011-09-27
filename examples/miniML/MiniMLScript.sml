@@ -1046,6 +1046,11 @@ val _ = Define `
        EVERY 
          (\ (cn,ts) . (EVERY (check_freevars tvs) ts))
          ctors)
+    tds /\
+  ALL_DISTINCT (MAP ( \x . (case x of (_,tn,_) -> tn)) tds) /\
+  EVERY
+    (\ (tvs,tn,ctors) .
+       EVERY ( \x . (case x of (_,(_,_,tn')) -> tn <> tn')) tenvC)
     tds)`;
 
 

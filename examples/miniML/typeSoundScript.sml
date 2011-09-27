@@ -877,7 +877,7 @@ rw [] >|
 val get_first_tenv_def = Define `
   (get_first_tenv ds NONE = 
      case ds of
-         (Dtype tds::ds) -> build_ctor_tenv tds
+         (Dtype tds::ds) -> tds
       || _ -> []) ∧
   (get_first_tenv _ _ = [])`;
 
@@ -997,7 +997,7 @@ fs []);
 
 val type_preservation = Q.prove (
 `!tenvC envC envE ds c envC' envE' ds' c' tenvE tenvC' st' tenvC''.
-  (tenvC'' = get_first_tenv ds c) ∧
+  (tenvC'' = build_ctor_tenv (get_first_tenv ds c)) ∧
   type_d_state tenvC (envC,envE,ds,c) (merge tenvC'' tenvC') tenvE ∧
   (d_step (envC,envE,ds,c) = Dstep (envC',envE',ds',c'))
   ⇒
@@ -1009,26 +1009,27 @@ fs [] >>
 rw [] >-
 (pop_assum (ASSUME_TAC o SIMP_RULE (srw_ss()) [Once type_ds_cases]) >>
      rw [type_state_cases, Once type_ctxts_cases, type_ctxt_cases] >>
-     fs [get_first_tenv_def, merge_def, emp_def, type_d_cases] >>
+     fs [build_ctor_tenv_def,get_first_tenv_def, merge_def, emp_def, 
+         type_d_cases] >>
      metis_tac [APPEND]) >-
 (qpat_assum `type_ds a b c d e`
             (ASSUME_TAC o SIMP_RULE (srw_ss()) [Once type_ds_cases]) >>
      fs [type_d_cases] >>
      rw [build_rec_env_lem] >>
-     fs [get_first_tenv_def, merge_def, emp_def] >>
+     fs [build_ctor_tenv_def, get_first_tenv_def, merge_def, emp_def] >>
      metis_tac [merge_def, type_recfun_env, type_env_merge_lem]) >-
 (qpat_assum `type_ds a b c d e`
             (ASSUME_TAC o SIMP_RULE (srw_ss()) [Once type_ds_cases]) >>
      fs [type_d_cases, get_first_tenv_def, merge_def] >>
      metis_tac [tenvC_weakening, merge_def, check_ctor_tenv_dups]) >-
 (fs [type_state_cases, Once type_ctxts_cases, type_e_val, merge_def,emp_def,
-     get_first_tenv_def] >>
+     get_first_tenv_def, build_ctor_tenv_def] >>
      metis_tac [pmatch_type_preservation, merge_def]) >>
 cases_on `p'` >>
 cases_on `r` >>
 cases_on `r'` >>
 rw [] >>
-fs [merge_def, emp_def, get_first_tenv_def] >>
+fs [merge_def, emp_def, get_first_tenv_def, build_ctor_tenv_def] >>
 metis_tac [merge_def,exp_type_preservation,e_step_ctor_env_same]);
 
 val def_final_state_def = Define `
@@ -1159,33 +1160,363 @@ val check_dup_ctors_disj = Q.prove (
 rw [check_dup_ctors_def] >>
 metis_tac [check_ctor_tenv_dups_helper2]);
 
+val consistent_con_env_destruct_help = Q.prove (
+`!l x y q q' l'.
+  consistent_con_env 
+    (MAP (λ(conN,ts). (conN,LENGTH ts,{cn | (cn,ts) | MEM (cn,ts) l'})) l ++ x)
+    (MAP (\(cn,ts). (cn,q,ts,q')) l ++ y)
+  ⇒
+  consistent_con_env x y`,
+induct_on `l` >>
+rw [] >>
+cases_on `h` >>
+fs [consistent_con_env_def] >>
+metis_tac []);
+
+val consistent_con_env_destruct = Q.prove (
+`!td tds.
+  consistent_con_env (build_tdefs (td::tds)) (build_ctor_tenv (td::tds))
+  ⇒
+  consistent_con_env (build_tdefs tds) (build_ctor_tenv tds)`,
+rw [consistent_con_env_def, build_tdefs_def, build_ctor_tenv_def] >>
+cases_on `td` >> 
+cases_on `r` >>
+fs [] >>
+metis_tac [consistent_con_env_destruct_help]);
+
+val lookup_none = Q.prove (
+`!tds tenvC envC x.
+  !x. (lookup x (build_ctor_tenv tds) = NONE) = 
+      (lookup x (build_tdefs tds) = NONE)`,
+Induct >>
+rw [] >-
+fs [build_ctor_tenv_def, build_tdefs_def, lookup_def] >>
+RES_TAC >>
+rw [build_ctor_tenv_def, build_tdefs_def, lookup_def] >>
+cases_on `h` >>
+cases_on `r` >>
+rw [lookup_append] >-
+metis_tac [build_ctor_tenv_def, build_tdefs_def] >|
+[cases_on `lookup x (MAP (\(conN,ts). (conN,LENGTH ts,{cn | (cn,ts) | MEM (cn,ts) r'})) r')` >>
+     fs [] >>
+     imp_res_tac lookup_in >> 
+     imp_res_tac lookup_notin >> 
+     fs [MEM_MAP] >>
+     rw [] >>
+     cases_on `y'` >>
+     fs [] >>
+     rw [] >>
+     pop_assum (ASSUME_TAC o Q.SPEC `(q'',q,r,q')`) >>
+     fs [] >>
+     pop_assum (ASSUME_TAC o Q.SPEC `(q'',r)`) >>
+     fs [] >>
+     rw [],
+ cases_on `lookup x (MAP (\(cn,ts). (cn,q,ts,q')) r')` >>
+     fs [] >>
+     imp_res_tac lookup_in >> 
+     imp_res_tac lookup_notin >> 
+     fs [MEM_MAP] >>
+     rw [] >>
+     cases_on `y'` >>
+     fs [] >>
+     rw [] >>
+     pop_assum (ASSUME_TAC o Q.SPEC `(q'',LENGTH (r:'d list), {cn | (cn,ts) |
+     MEM (cn,ts) (r':('c,'d list) env)})`) >>
+     fs [] >>
+     pop_assum (ASSUME_TAC o Q.SPEC `(q'',r)`) >>
+     fs [] >>
+     rw [] >>
+     fs []]);
+
+val build_ctor_tenv_empty = Q.prove (
+`build_ctor_tenv [] = []`,
+rw [build_ctor_tenv_def]);
+
+val build_ctor_tenv_cons = Q.prove (
+`∀tvs tn ctors tds.
+  build_ctor_tenv ((tvs,tn,ctors)::tds) =  
+    MAP (λ(cn,ts). (cn,tvs,ts,tn)) ctors ++ build_ctor_tenv tds`,
+rw [build_ctor_tenv_def]);
+
+val lemma = Q.prove (
+`!f a b c. (\(x,y,z). f x y z) (a,b,c) = f a b c`,
+rw []);
+
+val every_conj_tup3 = Q.prove (
+`!P Q l. 
+  EVERY (\(x,y,z). P x y z ∧ Q x y z) l = 
+  EVERY (\(x,y,z). P x y z) l ∧ 
+  EVERY (\(x,y,z). Q x y z) l`,
+induct_on `l` >>
+rw [] >>
+cases_on `h` >>
+cases_on `r` >>
+rw [] >>
+metis_tac []);
+
+val check_ctor_tenv_different_types = Q.prove (
+`!tenvC tds.
+  EVERY 
+    (λ(tvs,tn,ctors).
+       EVERY (λx. case x of (v,v2,v4,tn') -> tn ≠ tn') tenvC) tds ∧
+  (lookup n1 tenvC = SOME (tvs1,ts1,tn1)) ∧
+  (lookup n2 (build_ctor_tenv tds) = SOME (tvs2,ts2,tn2))
+  ⇒
+  (tn1 ≠ tn2)`,
+induct_on `tenvC` >>
+rw [build_ctor_tenv_empty,lookup_def] >>
+cases_on `h` >>
+fs [lookup_def] >>
+every_case_tac >>
+fs [] >>
+rw [] >|
+[induct_on `tds` >>
+     fs [lookup_def,build_ctor_tenv_empty]  >>
+     rw [] >>
+     cases_on `h` >>
+     cases_on `r'` >>
+     fs [build_ctor_tenv_cons, lookup_append] >>
+     every_case_tac >>
+     fs [] >>
+     induct_on `r''` >>
+     fs [lookup_def] >>
+     rw [] >>
+     cases_on `h` >>
+     fs [lookup_def] >>
+     every_case_tac >>
+     fs [],
+ fs [every_conj_tup3] >>
+     metis_tac []]);
+
+val build_tdefs_cons = Q.prove (
+`!tvs tn ctors tds. 
+  build_tdefs ((tvs,tn,ctors)::tds) =
+    MAP (\(conN,ts). (conN, LENGTH ts, {cn | (cn,ts) | MEM (cn,ts) ctors}))
+        ctors
+    ++
+    build_tdefs tds`,
+rw [build_tdefs_def]);
+
+val lookup_none2 = Q.prove (
+`!ctors n q q' s.
+  (lookup n (MAP (\(cn,ts). (cn,q,ts,q')) ctors) = NONE)
+  =
+  (lookup n (MAP (\(conN,ts). (conN,LENGTH ts,s)) ctors) = NONE)`,
+induct_on `ctors` >>
+rw [lookup_def] >>
+cases_on `h` >>
+fs [lookup_def] >>
+full_case_tac);
+
+val check_dup_ctors_cons = Q.prove (
+`!tvs ts ctors tds tenvC.
+  check_dup_ctors ((tvs,ts,ctors)::tds) tenvC
+  ⇒ 
+  check_dup_ctors tds tenvC`,
+induct_on `tds` >>
+rw [check_dup_ctors_def, LET_THM, RES_FORALL] >-
+metis_tac [] >-
+metis_tac [] >>
+cases_on `h` >>
+fs [] >>
+pop_assum MP_TAC >>
+pop_assum (fn _ => all_tac) >>
+induct_on `ctors` >>
+rw [] >>
+cases_on `h` >>
+fs []);
+
+val check_ctor_tenv_cons = Q.prove (
+`!tvs ts ctors tds tenvC.
+  check_ctor_tenv tenvC ((tvs,ts,ctors)::tds) ⇒
+  check_ctor_tenv tenvC tds`,
+rw [check_ctor_tenv_def] >>
+metis_tac [check_dup_ctors_cons]);
+
+val lookup_type = Q.prove (
+`!x ctors tn tvs ts tn' tvs'. 
+  (lookup x (MAP (λ(cn,ts). (cn,tvs,ts,tn)) ctors) = SOME (tvs',ts,tn'))
+  ⇒
+  (tn = tn')`,
+induct_on `ctors` >>
+rw [lookup_def] >>
+cases_on `h` >>
+fs [lookup_def] >>
+every_case_tac >>
+fs [] >>
+rw [] >>
+metis_tac []);
+
+val lookup_same_ctor_type_help = Q.prove (
+`!tds.
+  (lookup n2 (build_ctor_tenv tds) = SOME (tvs2,ts2,tn))
+  ⇒
+  MEM tn (MAP (λx. case x of (v,tn,v3) -> tn) tds)`,
+Induct >>
+rw [lookup_def,build_ctor_tenv_empty] >>
+cases_on `h` >>
+cases_on `r` >>
+fs [build_ctor_tenv_cons] >>
+induct_on `r'` >>
+rw [] >>
+cases_on `h` >>
+fs [lookup_def] >>
+every_case_tac >>
+fs []);
+
+val lookup_same_ctor_type_help2 = Q.prove (
+`!ctors n1 ns1 r'.
+  (lookup n1 
+    (MAP (λ(conN,ts). (conN,LENGTH ts,{cn | (cn,ts) | MEM (cn,ts) r'})) ctors) =
+   SOME (l1,ns1))
+  ⇒
+  (ns1 = {cn | (cn,ts) | MEM (cn,ts) r'})`,
+Induct >>
+rw [lookup_def] >>
+cases_on `h` >>
+fs [lookup_def] >>
+every_case_tac >>
+fs [] >> 
+rw [] >>
+metis_tac []);
+
+val lookup_same_ctor_type = Q.prove (
+`!tds.
+  check_ctor_tenv tenvC tds ∧
+  (lookup n1 (build_ctor_tenv tds) = SOME (tvs1,ts1,tn)) ∧
+  (lookup n2 (build_ctor_tenv tds) = SOME (tvs2,ts2,tn)) ∧
+  (lookup n1 (build_tdefs tds) = SOME (l1,ns1)) ∧
+  (lookup n2 (build_tdefs tds) = SOME (l2,ns2))
+  ⇒
+  (ns1 = ns2)`,
+Induct >>
+rw [] >-
+fs [build_tdefs_def, lookup_def] >>
+cases_on `h` >>
+cases_on `r` >>
+fs [build_ctor_tenv_cons,build_tdefs_cons, lookup_append] >>
+`check_ctor_tenv tenvC tds` by metis_tac [check_ctor_tenv_cons] >>
+every_case_tac >>
+fs [] >|
+[metis_tac [lookup_none2],
+ metis_tac [lookup_none2],
+ metis_tac [lookup_none2],
+ metis_tac [lookup_none2],
+ `q' = tn` by metis_tac [lookup_type] >>
+     rw [] >>
+     fs [check_ctor_tenv_def] >>
+     metis_tac [lookup_same_ctor_type_help],
+ metis_tac [lookup_none2],
+ metis_tac [lookup_none2],
+ metis_tac [lookup_none2],
+ metis_tac [lookup_none2],
+ `q' = tn` by metis_tac [lookup_type] >>
+     rw [] >>
+     fs [check_ctor_tenv_def] >>
+     metis_tac [lookup_same_ctor_type_help],
+ metis_tac [lookup_none2],
+ metis_tac [lookup_none2],
+ metis_tac [lookup_none2],
+ metis_tac [lookup_none2],
+ metis_tac [lookup_same_ctor_type_help2]]);
+
 val consistent_con_preservation = Q.prove (
-`!tenvC envC envE ds c envC' envE' ds' c' tenvE tenvC' st' tenvC''.
-  (tenvC'' = get_first_tenv ds c) ∧
+`!tenvC envC envE ds c envC' envE' ds' c' tenvE tenvC' st' tds.
+  (tds = get_first_tenv ds c) ∧
+  check_ctor_tenv tenvC tds ∧
   consistent_con_env envC tenvC ∧
   consistent_con_env2 envC tenvC ∧
   (d_step (envC,envE,ds,c) = Dstep (envC',envE',ds',c'))
   ⇒
-  consistent_con_env envC' (merge tenvC'' tenvC) ∧
-  consistent_con_env2 envC' (merge tenvC'' tenvC)`,
+  consistent_con_env envC' (merge (build_ctor_tenv tds) tenvC) ∧
+  consistent_con_env2 envC' (merge (build_ctor_tenv tds) tenvC)`,
 rw [d_step_def] >>
 cases_on `c` >>
 fs [] >>
 every_case_tac >>
 fs [] >>
-rw [get_first_tenv_def, merge_def] >-
+rw [get_first_tenv_def, merge_def, build_ctor_tenv_empty] >-
 metis_tac [extend_consistent_con] >>
-imp_res_tac check_dup_ctors_disj
-
-induct_on `l` >>
-rw [build_tdefs_def, build_ctor_tenv_def] >>
+imp_res_tac check_dup_ctors_disj >>
 fs [consistent_con_env2_def] >>
 rw [] >>
+cases_on `lookup n1 (build_ctor_tenv l) = NONE` >>
+cases_on `lookup n2 (build_ctor_tenv l) = NONE` >>
+fs [get_first_tenv_def] >|
+[`(lookup n1 (build_tdefs l) = NONE) ∧
+  (lookup n2 (build_tdefs l) = NONE)`
+          by metis_tac [lookup_none] >>
+     fs [lookup_append] >>
+     metis_tac [],
+ `(lookup n1 (build_tdefs l) = NONE) ∧
+  (lookup n2 (build_tdefs l) ≠ NONE)`
+          by metis_tac [lookup_none] >>
+     fs [lookup_append] >>
+     metis_tac [check_ctor_tenv_different_types, check_ctor_tenv_def],
+ `(lookup n1 (build_tdefs l) ≠ NONE) ∧
+  (lookup n2 (build_tdefs l) = NONE)`
+          by metis_tac [lookup_none] >>
+     fs [lookup_append] >>
+     metis_tac [check_ctor_tenv_different_types, check_ctor_tenv_def],
+ `(lookup n1 (build_tdefs l) ≠ NONE) ∧
+  (lookup n2 (build_tdefs l) ≠ NONE)`
+          by metis_tac [lookup_none] >>
+     fs [lookup_append] >>
+     metis_tac [lookup_same_ctor_type]]);
 
-fs [lookup_append] >>
-every_case_tac >>
-fs [] >-
-metis_tac []
+     (*
+val type_soundness_help = Q.prove (
+`!st1 st2. d_step_reln^* st1 st2 ⇒
+  ∀tenvC tenvC' tenvE. 
+    type_d_state tenvC st1 tenvC' tenvE
+    ⇒
+    ?tenvC1 tenvC2.
+      (tenvC' = merge tenvC1 tenvC2) ∧
+      type_d_state (merge tenvC1 tenvC) st2 tenvC2 tenvE`,
+HO_MATCH_MP_TAC RTC_INDUCT_RIGHT1 >>
+rw [] >-
+(rw [merge_def] >>
+     metis_tac [APPEND,APPEND_NIL]) >>
+fs [d_step_reln_def] >>
+`?envC envE ds c. st2 = (envC,envE,ds,c)`
+        by (cases_on `st2` >>
+            cases_on `r` >>
+            cases_on `r'` >>
+            metis_tac []) >>
+`?envC' envE' ds' c'. st2' = (envC',envE',ds',c')`
+        by (cases_on `st2'` >>
+            cases_on `r` >>
+            cases_on `r'` >>
+            metis_tac []) >>
+rw [] >>
+RES_TAC >>
+`?tenvC1' tenvC2'. tenvC2 = merge (build_ctor_tenv (get_first_tenv ds c)) tenvC2'`
+         by (cases_on `ds` >>
+             fs [get_first_tenv_def,merge_def,get_first_tenv_def, 
+                 build_ctor_tenv_def, type_d_state_cases] >>
+             cases_on `h` >>
+             fs [Once type_ds_cases, Once type_d_cases, build_ctor_tenv_def] >>
+             rw [] >>
+             metis_tac [merge_def]) >>
+`type_d_state (merge (build_ctor_tenv (get_first_tenv ds c)) (merge tenvC1 tenvC)) (envC',envE',ds',c') tenvC2' tenvE`
+         by metis_tac [type_preservation] >>
+fs [] >>
+qexists_tac `tenvC1'` >>
+qexists_tac `tenvC2'` >>
+fs [merge_def] >>
+rw []
 
+metis_tac [merge_def, APPEND_ASSOC]
+
+
+val type_soundness = Q.store_thm
+`!tenvC tenvE ds tenvC' tenvE' envC envE.
+  type_ds tenvC tenvE ds tenvC' tenvE' ∧
+  type_env [] envE tenvE
+  ⇒
+  diverges envC envE ds ∨ 
+  ?r. (r ≠ Rerr Rtype_error) ∧ d_small_eval envC envE ds NONE r`,
+rw [diverges_def, METIS_PROVE [] ``x ∨ y = ~x ⇒ y``, d_step_reln_def] >>
+*)
 
 val _ = export_theory ();

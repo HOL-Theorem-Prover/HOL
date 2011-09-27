@@ -940,6 +940,9 @@ let type_op op t1 t2 t3 =
     | _ -> false
   end
 
+(* Check that a type definition defines no already defined (or duplicate)
+ * constructors or types, and that the free type variables of each constructor
+ * argument type are included in the type's type parameters. *)
 val check_ctor_tenv : 
   tenvC -> (tvarN list * typeN * (conN * t list) list) list -> bool
 let check_ctor_tenv tenvC tds =
@@ -950,6 +953,11 @@ let check_ctor_tenv tenvC tds =
        List.for_all 
          (fun (cn,ts) -> (List.for_all (check_freevars tvs) ts))
          ctors)
+    tds &&
+  all_distinct (List.map (fun (_,tn,_) -> tn) tds) &&
+  List.for_all
+    (fun (tvs,tn,ctors) ->
+       List.for_all (fun (_,(_,_,tn')) -> tn <> tn') tenvC)
     tds
 
 val build_ctor_tenv : (tvarN list * typeN * (conN * t list) list) list -> tenvC 
