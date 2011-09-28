@@ -374,7 +374,7 @@ fun derive_individual_specs tools (code:string list) = let
       in (n+1,(ys @ [(n,x,y)])) end
   val _ = echo 1 "\nDeriving theorems for individual instructions.\n"
 (*
-  val instruction = el 3 code
+  val instruction = el 1 code
   val ((th,_,_),_) = f instruction
   val th = renamer th
   val prefix = "foo@"
@@ -810,11 +810,22 @@ fun list_dest_sep_exists tm = let
   val vs = list_dest dest_sep_exists tm
   in (butlast vs, last vs) end;
 
-(*
-val guard = ``T``
-val th1 = th
-val th2 = th
-*)
+fun prepare_sep_disj_posts th1 th2 = let
+  val (_,_,_,q1) = dest_spec (concl th1)
+  val (_,_,_,q2) = dest_spec (concl th2)
+  in if can dest_sep_disj q1 orelse can dest_sep_disj q2 then let
+       val th1 = if can dest_sep_disj q2 then 
+                   SPEC (snd (dest_sep_disj q2)) (MATCH_MP SPEC_ADD_DISJ th1) else th1
+       val th2 = if can dest_sep_disj q1 then 
+                   SPEC (snd (dest_sep_disj q1)) (MATCH_MP SPEC_ADD_DISJ th2) else th2
+       val f = RW [SEP_CLAUSES] o
+               CONV_RULE ((RAND_CONV o RAND_CONV) 
+                          (SIMP_CONV std_ss [AC SEP_DISJ_ASSOC SEP_DISJ_COMM])) o            
+               RW [SEP_DISJ_ASSOC]
+       val th1 = f th1
+       val th2 = f th2
+       in (th1,th2) end
+     else (th1,th2) end;
 
 fun MERGE guard th1 th2 = let
   (* fill in preconditions *)
@@ -825,8 +836,9 @@ fun MERGE guard th1 th2 = let
   val (_,p2,_,q2) = dest_spec (concl th2)
   val (qs1,q1) = list_dest_sep_exists q1
   val (qs2,q2) = list_dest_sep_exists q2
-  val xs1 = filter (fn x => not (eq p (get_sep_domain x))) (list_dest dest_star q1)
-  val xs2 = filter (fn x => not (eq p (get_sep_domain x))) (list_dest dest_star q2)
+  fun fst_sep_disj tm = fst (dest_sep_disj tm) handle HOL_ERR _ => tm
+  val xs1 = filter (fn x => not (eq p (get_sep_domain x))) (list_dest dest_star (fst_sep_disj q1))
+  val xs2 = filter (fn x => not (eq p (get_sep_domain x))) (list_dest dest_star (fst_sep_disj q2))
   val xs1 = map remove_tags xs1
   val xs2 = map remove_tags xs2
   val zs1 = map get_sep_domain xs1
@@ -857,8 +869,8 @@ fun MERGE guard th1 th2 = let
   val (_,p2,_,q2) = dest_spec (concl th2)
   val (qs1,q1) = list_dest_sep_exists q1
   val (qs2,q2) = list_dest_sep_exists q2
-  val xs1 = filter (fn x => not (eq p (get_sep_domain x))) (list_dest dest_star q1)
-  val xs2 = filter (fn x => not (eq p (get_sep_domain x))) (list_dest dest_star q2)
+  val xs1 = filter (fn x => not (eq p (get_sep_domain x))) (list_dest dest_star (fst_sep_disj q1))
+  val xs2 = filter (fn x => not (eq p (get_sep_domain x))) (list_dest dest_star (fst_sep_disj q2))
   val ys1 = map dest_sep_hide (filter (can dest_sep_hide) xs1)
   val ys2 = map dest_sep_hide (filter (can dest_sep_hide) xs2)
   val zs1 = map car (filter (not o can dest_sep_hide) xs1)
@@ -875,6 +887,7 @@ fun MERGE guard th1 th2 = let
   val th2 = f (ABBREV_NEW th2)
   (* do the merge *)
   fun g x = PURE_REWRITE_RULE [AND_IMP_INTRO] o DISCH x o DISCH_ALL
+  val (th1,th2) = prepare_sep_disj_posts th1 th2
   val th = MATCH_MP SPEC_COMBINE (g guard th1)
   val th = MATCH_MP th (g (mk_neg guard) th2)
   val th = UNDISCH (RW [UNION_IDEMPOT] th)
@@ -1436,7 +1449,11 @@ fun DEST_NEW_VAR_CONV tm =
 
 fun SEP_EXISTS_CONV c tm = 
   if can dest_sep_exists tm 
-  then RAND_CONV (ABS_CONV (SEP_EXISTS_CONV c)) tm else ALL_CONV tm;
+  then RAND_CONV (ABS_CONV (SEP_EXISTS_CONV c)) tm else ALL_CONV tm; (* is this right? shouldn't it be: c tm *)
+
+fun SEP_DISJ_CONV c tm = 
+  if can dest_sep_disj tm
+  then ((RATOR_CONV o RAND_CONV) c) tm else c tm;
 
 val GEN_TUPLE_LEMMA = GSYM (CONV_RULE ((RATOR_CONV o RAND_CONV o RAND_CONV) 
    (ALPHA_CONV (mk_var("_",``:'a # 'b``)))) FORALL_PROD)
@@ -1624,7 +1641,7 @@ fun extract_function name th entry exit function_in_out = let
     in RW [GSYM step_def] lemma2 end
     handle e => (print "\n\nDecompiler failed to prove 'lemma 2'.\n\n"; raise e)
   val sort_conv = PRE_CONV (SEP_EXISTS_CONV SORT_SEP_CONV) THENC 
-                  POST_CONV (SEP_EXISTS_CONV SORT_SEP_CONV)
+                  POST_CONV (SEP_EXISTS_CONV (SEP_DISJ_CONV SORT_SEP_CONV))
   val lemma1 = CONV_RULE (RAND_CONV sort_conv) lemma1
   val lemma2 = CONV_RULE (RAND_CONV sort_conv) lemma2
   (* simplification for cases of non-recursive functions *)
@@ -1639,6 +1656,11 @@ fun extract_function name th entry exit function_in_out = let
     val simp_lemma = Q.SPEC `x` (GEN_TUPLE x_in simp_lemma)
     val simp_lemma = PURE_REWRITE_RULE [GSYM step_def] simp_lemma
     in GEN_ALL simp_lemma end handle HOL_ERR _ => TRUTH
+  (* deal with SEP_DISJ in post -- move to pre *)
+  val lemma1 = DISCH_ALL (MATCH_MP SPEC_PRE_DISJ_INTRO (UNDISCH lemma1)) 
+               handle HOL_ERR _ => lemma1
+  val lemma2 = DISCH_ALL (MATCH_MP SPEC_PRE_DISJ_INTRO (UNDISCH lemma2)) 
+               handle HOL_ERR _ => lemma2
   (* certificate theorem *)
   fun remove_new_tags tm = let
     val vs = filter is_new_var (free_vars tm)
@@ -1669,6 +1691,8 @@ fun extract_function name th entry exit function_in_out = let
   val th = RW [GSYM SPEC_MOVE_COND] th
   val th = introduce_post_let th
   val th = INST [mk_var("()",``:unit``) |-> ``():unit``] th
+  val th = th |> RW [SPEC_MOVE_COND] |> UNDISCH |> SIMP_RULE std_ss [SPEC_PRE_DISJ]
+              |> CONJUNCTS |> hd |> DISCH_ALL |> RW [GSYM SPEC_MOVE_COND]
   val th = SPEC_ALL (SIMP_RULE bool_ss [SEP_CLAUSES,GSYM SPEC_PRE_EXISTS] th)
   val th = CONV_RULE (DEPTH_CONV DEST_NEW_VAR_CONV) th  
   (* clean up and save function definitions *)
@@ -1733,16 +1757,13 @@ val decompile_arm = decompile arm_tools
 val decompile_ppc = decompile ppc_tools
 val decompile_x86 = decompile x86_tools
 
-(*
-val (entry,exit) = ([entry],[exit])
-*)
-
 fun basic_decompile (tools :decompiler_tools) name function_in_out (qcode :term quotation) = let
   val _ = set_tools tools
   val (thms,loops) = stage_12 name tools qcode
   val (entry,exit) = (fn (x,y) => (hd x, hd y)) (last loops)
-  val (def,pre,result) = decompile_part name thms ([entry],[exit]) function_in_out
-  val _ = add_decompiled (name,result,exit,SOME exit)
+  val (entry,exit) = ([entry],[exit])
+  val (def,pre,result) = decompile_part name thms (entry,exit) function_in_out
+  val _ = add_decompiled (name,result,hd exit,SOME (hd exit))
   val result = if (get_abbreviate_code()) then result else UNABBREV_CODE_RULE result
   in (result,CONJ def pre) end;
 

@@ -8,6 +8,7 @@ sig
   type rank
   type 'a set   = 'a HOLset.set
 
+  val kernelid : string
 
   (* Simple operations on the type of theorems *)
 

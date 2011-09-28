@@ -135,7 +135,7 @@ TextIO.output(TextIO.stdOut,
    "\n---------------------------------------------------------------------\n"
   ^"    HOL-Omega ["
   ^Globals.release^" "^Lib.int_to_string(Globals.version)
-  ^" ("^Theory.kernelid^", "^build_stamp^")"
+  ^" ("^Thm.kernelid^", "^build_stamp^")"
   ^"]\n\n       For introductory HOL help, type: help \"hol\";"
   ^"\n---------------------------------------------------------------------\n\
    \\n")

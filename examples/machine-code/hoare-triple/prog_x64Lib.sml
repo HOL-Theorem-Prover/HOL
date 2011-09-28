@@ -11,7 +11,6 @@ infix \\
 val op \\ = op THEN;
 
 
-
 val x64_status = zS_HIDE;
 val x64_pc = ``zPC``;
 val x64_exec_flag = ref false;
@@ -21,6 +20,8 @@ fun set_x64_exec_flag b = (x64_exec_flag := b);
 fun set_x64_code_write_perm_flag b = (x64_code_write_perm := b);
 fun set_x64_use_stack b = (x64_use_stack := b);
 val Zreg_distinct = x64_decoderTheory.Zreg_distinct;
+
+datatype mpred_type = zMEM_AUTO | zMEM_BYTE_MEMORY;
 
 fun name_for_resource counter tm = let
   val to_lower_drop_two = implode o tl o tl o explode o to_lower
@@ -120,11 +121,6 @@ fun x64_pre_post g s = let
   val pre = if pre_conds = [] then pre else mk_cond_star(pre,mk_comb(``Abbrev``,list_mk_conj pre_conds))
   in (pre,post) end;
 
-(*
-val th1 = th
-val th = th1
-*)
-
 val SING_SUBSET = prove(
   ``!x:'a y. {x} SUBSET y = x IN y``,
   REWRITE_TAC [INSERT_SUBSET,EMPTY_SUBSET]);
@@ -140,7 +136,7 @@ fun introduce_zBYTE_MEMORY_ANY th = if
   val tm = ``~(zM1 a x)``
   val xs = filter (can (match_term tm)) xs
   fun foo tm = (fst o pairSyntax.dest_pair o cdr o cdr o cdr) tm |->
-               mk_comb(mk_var("f",``:word64->word8``),(cdr o car o cdr) tm)
+               mk_comb(mk_var("g",``:word64->word8``),(cdr o car o cdr) tm)
   val th = INST (map foo xs) th
   in if xs = [] then th else let
     val (_,p,_,q) = dest_spec(concl th)
@@ -148,9 +144,9 @@ fun introduce_zBYTE_MEMORY_ANY th = if
     val tm = ``~(zM1 a x)``
     val xs = filter (can (match_term tm)) xs
     val ys = (map (cdr o car o cdr) xs)
-    fun foo [] = mk_var("df",``:word64 set``)
+    fun foo [] = mk_var("dg",``:word64 set``)
       | foo (v::vs) = pred_setSyntax.mk_delete(foo vs,v)
-    val frame = mk_comb(mk_comb(``zBYTE_MEMORY_ANY ex``,foo ys),mk_var("f",``:word64->word8``))
+    val frame = mk_comb(mk_comb(``zBYTE_MEMORY_ANY ex``,foo ys),mk_var("g",``:word64->word8``))
     val th = SPEC frame (MATCH_MP progTheory.SPEC_FRAME th)
     val th = RW [GSYM STAR_ASSOC] th
     val fff = (fst o dest_eq o concl o UNDISCH_ALL o SPEC_ALL o GSYM) zBYTE_MEMORY_ANY_INSERT
@@ -166,7 +162,7 @@ fun introduce_zBYTE_MEMORY_ANY th = if
     val v = hd (filter (is_var) ys @ ys)
     fun ss [] = ``{}:word64 set``
       | ss (v::vs) = pred_setSyntax.mk_insert(v,ss vs)
-    val u1 = pred_setSyntax.mk_subset(ss (rev ys),mk_var("df",``:word64 set``))
+    val u1 = pred_setSyntax.mk_subset(ss (rev ys),mk_var("dg",``:word64 set``))
     val u2 = u1
     val u3 = (fst o dest_imp o concl) th
     val goal = mk_imp(u2,u3)
@@ -290,12 +286,12 @@ fun calculate_length_and_jump th = let
   handle e =>
     (th,l,NONE) end
 
-fun post_process_thm th = let
+fun post_process_thm mpred th = let
   val th = RW [GSYM zR_def] th
   val th = SIMP_RULE (std_ss++sw2sw_ss++w2w_ss) [wordsTheory.word_mul_n2w,SEP_CLAUSES] th
   val th = CONV_RULE FIX_WORD32_ARITH_CONV th
  (* val th = introduce_zSTACK th *)
-  val th = introduce_zMEMORY th
+  val th = if mpred = zMEM_AUTO then introduce_zMEMORY th else th
   val th = introduce_zBYTE_MEMORY_ANY th
   val th = SIMP_RULE (std_ss++sw2sw_ss++w2w_ss) [GSYM wordsTheory.WORD_ADD_ASSOC,
     word_arith_lemma1,word_arith_lemma2,word_arith_lemma3,word_arith_lemma4] th
@@ -383,8 +379,10 @@ fun x64_prove_one_spec th c = let
   val th = INST [``w:bool``|-> (if !x64_code_write_perm then T else F)] th
   in RW [STAR_ASSOC,SEP_CLAUSES,markerTheory.Abbrev_def] th end;
 
-fun x64_prove_specs s = let
+fun x64_prove_specs mpred s = let
   val th = x64_step s
+  val th = if mpred = zMEM_BYTE_MEMORY then 
+             RW [ZWRITE_MEM2_WORD32_def,ZREAD_MEM2_WORD32_def] th else th
   val c = calc_code th
   val th = pre_process_thm th
 (* val th = x64_prove_one_spec th c *)
@@ -399,15 +397,26 @@ fun x64_prove_specs s = let
          val th1 = SIMP_RULE std_ss [SEP_CLAUSES] (DISCH tm1 th1)
          val th1 = RW [CONTAINER_def] th1
          val th1 = RW [RW [GSYM precond_def] (GSYM progTheory.SPEC_MOVE_COND)] th1
-         in post_process_thm th1 end
+         in post_process_thm mpred th1 end
        in (prove_branch CONTAINER_IF_T th, SOME (prove_branch CONTAINER_IF_F th)) end
-     else (post_process_thm (x64_prove_one_spec th c),NONE) end
+     else (post_process_thm mpred (x64_prove_one_spec th c),NONE) end
 
 fun x64_jump (tm1:term) (tm2:term) (jump_length:int) (forward:bool) = ("",0)
 
-val x64_spec_aux = cache x64_prove_specs;
+fun x64_spec_aux mpred = cache (x64_prove_specs mpred);
+
+val x64_spec_aux_auto = cache (x64_prove_specs zMEM_AUTO);
+val x64_spec_aux_byte = cache (x64_prove_specs zMEM_BYTE_MEMORY);
+
 fun x64_spec s = let
-  val ((th,i,j),other) = x64_spec_aux s
+  val ((th,i,j),other) = x64_spec_aux_auto s
+  val b = if !x64_exec_flag then T else F
+  val th = INST [``ex:bool``|->b] th
+  val th = RW [GSYM zBYTE_MEMORY_def,GSYM zBYTE_MEMORY_Z_def] th
+  in ((th,i,j),other) end
+
+fun x64_spec_byte_memory s = let
+  val ((th,i,j),other) = x64_spec_aux_byte s
   val b = if !x64_exec_flag then T else F
   val th = INST [``ex:bool``|->b] th
   val th = RW [GSYM zBYTE_MEMORY_def,GSYM zBYTE_MEMORY_Z_def] th

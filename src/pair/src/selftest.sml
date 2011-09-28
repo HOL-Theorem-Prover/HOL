@@ -51,6 +51,32 @@ val t = Parse.parse_in_context [] `do x <- f y; g x od : 'a -> bool # 'a`
 val _ = if same_const bind_t (#1 (strip_comb t)) then print "OK\n"
         else die()
 
+val _ = Parse.current_backend := PPBackEnd.vt100_terminal
+fun tpp (s,expected) = let
+  val t = Parse.Term [QUOTE s]
+  val _ = tprint ("Testing (coloured-)printing of `"^s^"`")
+  val res = term_to_backend_string t
+in
+  if res = expected then print "OK\n"
+  else die ()
+end
+
+fun bound s = "\^[[0;32m" ^ s ^ "\^[[0m"
+fun free s = "\^[[0;1;34m" ^ s ^ "\^[[0m"
+val concat = String.concat
+
+val bx = bound "x"
+val fy = free "y"
+val fp = free "p"
+val fx = free "x"
+
+val _ = app tpp [
+  ("do x <- f y; g x od",
+   concat ["do ", bx, " <- ", free "f", " ", fy, "; ", free "g", " ",
+           bx, " od"])
+]
+
+
 val _ = print "**** More Inductive Definition tests ****\n"
 open IndDefLib
 fun checkhyps th = if null (hyp th) then ()

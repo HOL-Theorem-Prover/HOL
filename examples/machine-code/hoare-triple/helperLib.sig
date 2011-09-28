@@ -41,9 +41,11 @@ sig
     val mk_cond_star           : term * term -> term
     val mk_sidecond_star       : term * term -> term
     val mk_star                : term * term -> term
+    val mk_sep_disj            : term * term -> term
     val mk_sep_hide            : term -> term
     val mk_sep_exists          : term * term -> term
     val dest_star              : term -> term * term
+    val dest_sep_disj          : term -> term * term
     val dest_sep_hide          : term -> term
     val dest_sep_exists        : term -> term * term
     val dest_spec              : term -> term * term * term * term

@@ -3505,6 +3505,7 @@ val SUM_IMAGE_DEF = new_definition(
   ``SUM_IMAGE f s = ITSET (\e acc. f e + acc) s 0``);
 
 val _ = overload_on ("SIGMA", ``SUM_IMAGE``)
+val _ = Unicode.unicode_version {u = UTF8.chr 0x2211, tmnm = "SIGMA"}
 
 val SUM_IMAGE_THM = store_thm(
   "SUM_IMAGE_THM",
@@ -3697,6 +3698,13 @@ HO_MATCH_MP_TAC FINITE_INDUCT THEN
 SRW_TAC [][SUM_IMAGE_THM,SUM_IMAGE_DELETE])
 val _ = DefnBase.export_cong "SUM_IMAGE_CONG"
 
+val SUM_IMAGE_ZERO = Q.store_thm(
+"SUM_IMAGE_ZERO",
+`!s. FINITE s ==> ((SIGMA f s = 0) <=> (!x. x IN s ==> (f x = 0)))`,
+HO_MATCH_MP_TAC FINITE_INDUCT THEN
+CONJ_TAC THEN1 SIMP_TAC bool_ss [SUM_IMAGE_THM,NOT_IN_EMPTY] THEN
+SIMP_TAC bool_ss [SUM_IMAGE_THM,DELETE_NON_ELEMENT,ADD_EQ_0,IN_INSERT] THEN
+METIS_TAC [])
 
 (*---------------------------------------------------------------------------*)
 (* SUM_SET sums the elements of a set of natural numbers                     *)

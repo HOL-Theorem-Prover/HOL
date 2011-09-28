@@ -126,7 +126,7 @@ val MULT = new_recursive_definition
     rec_axiom = num_Axiom,
     def = --`(0 * n = 0) /\
              (SUC m * n = (m * n) + n)`--};
-
+val _ = TeX_notation {hol = "*", TeX = ("\\HOLTokenProd{}", 1)}
 
 val EXP = new_recursive_definition
    {name = "EXP",
@@ -2399,10 +2399,12 @@ REPEAT GEN_TAC
   THEN STRUCT_CASES_TAC (SPEC (Term`n:num`) num_CASES)
   THEN ASM_REWRITE_TAC[MULT_CLAUSES,ADD_CLAUSES,prim_recTheory.LESS_0]);
 
-val SUC_PRE = prove(Term`!d. 0<d ==> (SUC(PRE d) = d)`,
-REPEAT GEN_TAC
-  THEN STRUCT_CASES_TAC (SPEC (Term`d:num`) num_CASES)
-  THEN ASM_REWRITE_TAC[prim_recTheory.PRE,prim_recTheory.LESS_REFL]);
+local open prim_recTheory in
+val SUC_PRE = store_thm("SUC_PRE",
+Term `0 < m <=> (SUC (PRE m) = m)`,
+   STRUCT_CASES_TAC (SPEC (Term `m:num`) num_CASES) THEN
+   REWRITE_TAC [PRE,NOT_LESS_0,LESS_0,NOT_SUC])
+end
 
 val LESS_MONO_LEM =
 GEN_ALL
@@ -2722,7 +2724,77 @@ val NUMERAL_MULT_EQ_DIV = store_thm(
   CONJ_TAC THEN MATCH_MP_TAC MULT_EQ_DIV THEN
   REWRITE_TAC [NUMERAL_DEF, BIT1, BIT2, ADD_CLAUSES, LESS_0]);
 
+val MOD_SUC = Q.store_thm(
+"MOD_SUC",
+`0 < y /\ (SUC x <> (SUC (x DIV y)) * y) ==> ((SUC x) MOD y = SUC (x MOD y))`,
+STRIP_TAC THEN
+MATCH_MP_TAC MOD_UNIQUE THEN
+Q.EXISTS_TAC `x DIV y` THEN
+`x = x DIV y * y + x MOD y` by PROVE_TAC [DIVISION] THEN
+`x MOD y < y` by PROVE_TAC [MOD_LESS] THEN
+FULL_SIMP_TAC bool_ss [prim_recTheory.INV_SUC_EQ,ADD_CLAUSES,MULT_CLAUSES] THEN
+MATCH_MP_TAC LESS_NOT_SUC THEN
+CONJ_TAC THEN1 FIRST_ASSUM ACCEPT_TAC THEN
+SPOSE_NOT_THEN STRIP_ASSUME_TAC THEN
+`SUC x = SUC (x DIV y * y + x MOD y)` by (
+  AP_TERM_TAC THEN FIRST_ASSUM ACCEPT_TAC ) THEN
+FULL_SIMP_TAC bool_ss [ADD_SUC] THEN
+PROVE_TAC [] )
 
+val MOD_SUC_IFF = Q.store_thm(
+"MOD_SUC_IFF",
+`0 < y ==> ((SUC x MOD y = SUC (x MOD y)) <=> (SUC x <> SUC (x DIV y) * y))`,
+PROVE_TAC [MOD_SUC,SUC_NOT,MOD_EQ_0])
+
+val MOD_LESS_EQ = Q.store_thm(
+"MOD_LESS_EQ",
+`0 < y ==> x MOD y <= x`,
+STRIP_TAC THEN
+Cases_on `x < y` THEN1 (
+  MATCH_MP_TAC (snd (EQ_IMP_RULE (SPEC_ALL LESS_OR_EQ))) THEN
+  DISJ2_TAC THEN
+  MATCH_MP_TAC LESS_MOD THEN
+  POP_ASSUM ACCEPT_TAC ) THEN
+MATCH_MP_TAC LESS_EQ_TRANS THEN
+Q.EXISTS_TAC `y` THEN
+CONJ_TAC THEN1 (
+  MATCH_MP_TAC LESS_IMP_LESS_OR_EQ THEN
+  MATCH_MP_TAC MOD_LESS THEN
+  FIRST_ASSUM ACCEPT_TAC ) THEN
+IMP_RES_TAC NOT_LESS)
+
+val MOD_LIFT_PLUS = Q.store_thm(
+"MOD_LIFT_PLUS",
+`0 < n /\ k < n - x MOD n ==> ((x + k) MOD n = x MOD n + k)`,
+Q.ID_SPEC_TAC `k` THEN INDUCT_TAC THEN1 (
+  SIMP_TAC bool_ss [ADD_0] ) THEN
+STRIP_TAC THEN
+`x + SUC k = SUC (x + k)` by (
+  SIMP_TAC bool_ss [ADD_CLAUSES] ) THEN
+`k < n - x MOD n` by (
+  MATCH_MP_TAC prim_recTheory.SUC_LESS THEN
+  FIRST_ASSUM ACCEPT_TAC ) THEN
+FULL_SIMP_TAC bool_ss [] THEN
+MATCH_MP_TAC EQ_TRANS THEN
+Q.EXISTS_TAC `SUC (x MOD n + k)` THEN
+CONJ_TAC THEN1 (
+  MATCH_MP_TAC EQ_TRANS THEN
+  Q.EXISTS_TAC `SUC ((x + k) MOD n)` THEN
+  CONJ_TAC THEN1 (
+    MATCH_MP_TAC MOD_SUC THEN
+    CONJ_TAC THEN1 FIRST_ASSUM ACCEPT_TAC THEN
+    FULL_SIMP_TAC bool_ss [ADD_SYM,ADD,SUB_LEFT_LESS,MULT_CLAUSES] THEN
+    `SUC ((k + x) MOD n + (k + x) DIV n * n) < n + (k + x) DIV n * n`
+      by PROVE_TAC [LESS_MONO_ADD,ADD_SUC,ADD_SYM] THEN
+    PROVE_TAC [DIVISION,ADD_SYM,prim_recTheory.LESS_REFL]) THEN
+  AP_TERM_TAC THEN
+  FIRST_ASSUM ACCEPT_TAC) THEN
+SIMP_TAC bool_ss [ADD_SUC])
+
+val MOD_LIFT_PLUS_IFF = Q.store_thm(
+"MOD_LIFT_PLUS_IFF",
+`0 < n ==> (((x + k) MOD n = x MOD n + k) = (k < n - x MOD n))`,
+PROVE_TAC [SUB_LEFT_LESS,ADD_SYM,MOD_LESS,MOD_LIFT_PLUS])
 
 (* ----------------------------------------------------------------------
     Some additional theorems (nothing to do with DIV and MOD)
@@ -2933,6 +3005,93 @@ val EXP_BASE_LEQ_MONO_SUC_IMP = save_thm(
   (REWRITE_RULE [LESS_0] o Q.INST [`b` |-> `SUC b`] o SPEC_ALL)
   EXP_BASE_LEQ_MONO_IMP);
 
+val EXP_BASE_LE_IFF = store_thm(
+  "EXP_BASE_LE_IFF",
+  ``b ** m <= b ** n <=>
+      (b = 0) /\ (n = 0) \/ (b = 0) /\ 0 < m \/ (b = 1) \/ 1 < b /\ m <= n``,
+  Q.SPEC_THEN `b` STRUCT_CASES_TAC num_CASES THEN
+  ASM_REWRITE_TAC [NOT_SUC, NOT_LESS_0] THENL [
+    Q.SPEC_THEN `m` STRUCT_CASES_TAC num_CASES THEN
+    ASM_REWRITE_TAC [LESS_REFL, EXP, ONE, SUC_NOT] THENL [
+      Q.SPEC_THEN `n` STRUCT_CASES_TAC num_CASES THEN
+      ASM_REWRITE_TAC [NOT_SUC, EXP, ONE, LESS_EQ_REFL, MULT_CLAUSES,
+                       NOT_SUC_LESS_EQ_0],
+      ASM_REWRITE_TAC [LESS_0, MULT_CLAUSES, ZERO_LESS_EQ]
+    ],
+    EQ_TAC THENL [
+      ASM_CASES_TAC ``1 < SUC n'`` THEN SRW_TAC [][EXP_BASE_LE_MONO] THEN
+      FULL_SIMP_TAC (srw_ss()) [ONE, LESS_MONO_EQ, INV_SUC_EQ,
+                                GSYM NOT_ZERO_LT_ZERO],
+      STRIP_TAC THEN ASM_REWRITE_TAC [EXP_1, LESS_EQ_REFL] THEN
+      MATCH_MP_TAC EXP_BASE_LEQ_MONO_IMP THEN ASM_REWRITE_TAC [LESS_0]
+    ]
+  ]);
+
+val X_LE_X_EXP = store_thm(
+  "X_LE_X_EXP",
+  ``0 < n ==> x <= x ** n``,
+  Q.SPEC_THEN `n` STRUCT_CASES_TAC num_CASES THEN
+  REWRITE_TAC [EXP, LESS_REFL, LESS_0] THEN
+  Q.SPEC_THEN `x` STRUCT_CASES_TAC num_CASES THEN
+  REWRITE_TAC [ZERO_LESS_EQ, LE_MULT_CANCEL_LBARE, NOT_SUC, ZERO_LT_EXP,
+               LESS_0]);
+
+val X_LT_EXP_X = Q.store_thm(
+"X_LT_EXP_X",
+`1 < b ==> x < b ** x`,
+Q.ID_SPEC_TAC `x` THEN INDUCT_TAC THEN1
+  SIMP_TAC bool_ss [LESS_0,EXP,ONE] THEN
+STRIP_TAC THEN
+FULL_SIMP_TAC bool_ss [] THEN
+Cases_on `x = 0` THEN1
+  ASM_SIMP_TAC bool_ss [EXP,MULT_RIGHT_1,SYM ONE] THEN
+MATCH_MP_TAC LESS_EQ_LESS_TRANS THEN
+EXISTS_TAC ``x + x`` THEN
+CONJ_TAC THEN1 (
+  SIMP_TAC bool_ss [ADD1,ADD_MONO_LESS_EQ] THEN
+  SIMP_TAC bool_ss [ONE] THEN
+  MATCH_MP_TAC LESS_OR THEN
+  PROVE_TAC [NOT_ZERO_LT_ZERO] ) THEN
+SIMP_TAC bool_ss [EXP] THEN
+MATCH_MP_TAC LESS_EQ_LESS_TRANS THEN
+EXISTS_TAC ``b * x`` THEN
+CONJ_TAC THEN1 (
+  SIMP_TAC bool_ss [GSYM TIMES2] THEN
+  MATCH_MP_TAC LESS_MONO_MULT THEN
+  SIMP_TAC bool_ss [TWO] THEN
+  MATCH_MP_TAC LESS_OR THEN
+  FIRST_ASSUM ACCEPT_TAC ) THEN
+SIMP_TAC bool_ss [LT_MULT_LCANCEL] THEN
+CONJ_TAC THEN1 (
+  MATCH_MP_TAC LESS_TRANS THEN
+  EXISTS_TAC ``1`` THEN
+  ASM_SIMP_TAC bool_ss [ONE,prim_recTheory.LESS_0_0] ) THEN
+FIRST_ASSUM ACCEPT_TAC)
+
+local fun Cases_on q = Q.SPEC_THEN q STRUCT_CASES_TAC num_CASES in
+
+val ZERO_EXP = Q.store_thm(
+"ZERO_EXP",
+`0 ** x = if x = 0 then 1 else 0`,
+Cases_on `x` THEN
+SIMP_TAC bool_ss [EXP,numTheory.NOT_SUC,MULT])
+
+val X_LT_EXP_X_IFF = Q.store_thm(
+"X_LT_EXP_X_IFF",
+`x < b ** x <=> 1 < b \/ (x = 0)`,
+EQ_TAC THEN1 (
+  Cases_on `b` THEN1 (
+    Cases_on `x` THEN
+    SIMP_TAC bool_ss [ZERO_EXP,SUC_NOT,NOT_LESS_0] ) THEN
+  Q.MATCH_RENAME_TAC `x < SUC b ** x ==> 1 < SUC b \/ (x = 0)` [] THEN
+  Cases_on `b` THEN1 (
+    SIMP_TAC bool_ss [EXP_1,SYM ONE] THEN
+    SIMP_TAC bool_ss [ONE,LESS_THM,NOT_LESS_0] ) THEN
+  SIMP_TAC bool_ss [LESS_MONO_EQ,ONE,LESS_0] ) THEN
+STRIP_TAC THEN1 (
+  POP_ASSUM MP_TAC THEN ACCEPT_TAC X_LT_EXP_X) THEN
+ASM_SIMP_TAC bool_ss [EXP,ONE,LESS_0])
+end
 
 (* theorems about exponentiation where the exponent is held constant *)
 val LT_MULT_IMP = prove(

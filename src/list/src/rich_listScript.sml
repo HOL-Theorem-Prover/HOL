@@ -2632,9 +2632,7 @@ val ZIP_UNZIP = save_thm("ZIP_UNZIP", listTheory.ZIP_UNZIP);
 
 val UNZIP_ZIP = save_thm("UNZIP_ZIP", listTheory.UNZIP_ZIP);
 
-val SUM_APPEND = store_thm("SUM_APPEND",
-    (--`!l1 l2. SUM (APPEND l1 l2) = SUM l1 + SUM l2`--),
-    LIST_INDUCT_TAC THEN ASM_REWRITE_TAC[SUM,APPEND,ADD,ADD_0,ADD_ASSOC]);
+val SUM_APPEND = save_thm("SUM_APPEND", listTheory.SUM_APPEND);
 
 val SUM_REVERSE = store_thm("SUM_REVERSE",
     (--`!l. SUM (REVERSE l) = SUM l`--),
@@ -2689,18 +2687,7 @@ val SUB_SUC_LESS = prove(
         REWRITE_TAC[LESS_MONO_EQ] THEN DISCH_TAC THEN RES_TAC
         THEN IMP_RES_TAC LESS_SUC]);
 
-val EL_REVERSE = store_thm("EL_REVERSE",
-    (--`!n (l:'a list). n < (LENGTH l) ==>
-     (EL n (REVERSE l) = EL (PRE(LENGTH l - n)) l)`--),
-    INDUCT_TAC THEN SNOC_INDUCT_TAC
-    THEN ASM_REWRITE_TAC[LENGTH,LENGTH_SNOC,
-        EL,HD,TL,NOT_LESS_0,LESS_MONO_EQ,SUB_0] THENL[
-        REWRITE_TAC[REVERSE_SNOC,PRE,EL_LENGTH_SNOC,HD],
-        REWRITE_TAC[REVERSE_SNOC,SUB_MONO_EQ,TL]
-        THEN REPEAT STRIP_TAC THEN RES_THEN SUBST1_TAC
-        THEN MATCH_MP_TAC (GSYM EL_SNOC)
-        THEN REWRITE_TAC(PRE_SUB1 :: (map GSYM [SUB_PLUS,ADD1]))
-        THEN IMP_RES_TAC SUB_SUC_LESS]);
+val EL_REVERSE = save_thm("EL_REVERSE", listTheory.EL_REVERSE)
 
 val EL_REVERSE_ELL = store_thm("EL_REVERSE_ELL",
     (--`!n (l:'a list). n < (LENGTH l) ==> (EL n (REVERSE l) = ELL n l)`--),

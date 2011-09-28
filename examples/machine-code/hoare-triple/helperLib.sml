@@ -88,6 +88,9 @@ fun list_dest f tm = let val (x,y) = f tm in list_dest f x @ list_dest f y end h
 fun mk_star (tm1,tm2) = (fst o dest_eq o concl o ISPECL [tm1,tm2]) STAR_COMM
             handle e => (snd o dest_eq o concl o ISPECL [tm2,tm1]) STAR_COMM
 
+fun mk_sep_disj (tm1,tm2) = (fst o dest_eq o concl o ISPECL [tm1,tm2]) SEP_DISJ_COMM
+                            handle e => (snd o dest_eq o concl o ISPECL [tm2,tm1]) SEP_DISJ_COMM
+
 fun mk_cond_star (tm1,tm2) = (fst o dest_comb o fst o dest_eq o snd o
   dest_comb o concl o ISPEC tm1 o Q.SPEC `s` o ISPEC tm2) cond_STAR
 
@@ -598,7 +601,8 @@ fun remove_primes th = let
 fun spec_post_and_pre th1 th2 = let
   val (_,_,_,q) = dest_spec (concl th1)
   val (_,p,_,_) = dest_spec (concl th2)
-  in (list_dest dest_star q, list_dest dest_star p, type_of q) end;
+  fun fst_sep_disj tm = fst (dest_sep_disj tm) handle HOL_ERR _ => tm
+  in (list_dest dest_star (fst_sep_disj q), list_dest dest_star p, type_of q) end;
 
 fun replace_abbrev_vars tm = let
   fun f v = v |-> mk_var((Substring.string o hd o tl o Substring.tokens (fn x => x = #"@") o
@@ -620,20 +624,26 @@ fun match_and_partition q p = let
   in partition q p ([],[],[]) end;  
 
 val AND_CLAUSES2 = CONJ AND_CLAUSES (prove(``(T ==> b) = b``,SIMP_TAC std_ss []))
-
+  
 fun find_composition1 th1 th2 = let
   val (q,p,ty) = spec_post_and_pre th1 th2
   val (xs1,xs2,ys1,ys2) = match_and_partition q p
   val tm1 = mk_star (list_mk_star xs1 ty, list_mk_star xs2 ty)
   val tm2 = mk_star (list_mk_star ys1 ty, list_mk_star ys2 ty)
   val th1 = CONV_RULE (POST_CONV (MOVE_STAR_CONV tm1)) th1
+            handle HOL_ERR _ => (* found a SEP_DISJ *)
+            CONV_RULE (POST_CONV ((RATOR_CONV o RAND_CONV) (MOVE_STAR_CONV tm1))) th1
   val th2 = CONV_RULE (PRE_CONV (MOVE_STAR_CONV tm2)) th2
   val th = MATCH_MP SPEC_FRAME_COMPOSE (DISCH_ALL_AS_SINGLE_IMP th2)
   val th = MATCH_MP th (DISCH_ALL_AS_SINGLE_IMP th1)
+           handle HOL_ERR _ => (* found a SEP_DISJ *) let 
+             val th = MATCH_MP SPEC_FRAME_COMPOSE_DISJ (DISCH_ALL_AS_SINGLE_IMP th2)
+             val th = MATCH_MP th (DISCH_ALL_AS_SINGLE_IMP th1)
+             in th end           
   val th = UNDISCH_ALL (PURE_REWRITE_RULE [GSYM AND_IMP_INTRO,AND_CLAUSES2] th)
   val th = SIMP_RULE std_ss [pred_setTheory.INSERT_UNION_EQ,pred_setTheory.UNION_EMPTY,
              word_arith_lemma1,word_arith_lemma2,word_arith_lemma3,word_arith_lemma4,
-             SEP_CLAUSES,pred_setTheory.UNION_IDEMPOT] th
+             SEP_CLAUSES,pred_setTheory.UNION_IDEMPOT,SEP_DISJ_ASSOC] th
   in remove_primes th end;
 
 fun find_composition2 th1 th2 = let
@@ -650,11 +660,14 @@ fun find_composition2 th1 th2 = let
   in find_composition1 th1 th2 end;
 
 (*
-  val th1o = th1
-  val th2o = th2
+  fun ppinst tm (_,(tha,_,_),_) = SIMP_RULE std_ss [word_arith_lemma1,word_arith_lemma2,word_arith_lemma3,word_arith_lemma4,WORD_ADD_0] 
+                     (INST [mk_var("p",``:word64``)|->tm] tha)
 
-  val th1 = th1o
-  val th2 = th2o
+  val tha = ppinst ``p-10w:word64`` (el 3 thms)
+  val thb = ppinst ``p-0x2Fw:word64`` (el 5 thms)
+
+  val th1 = tha
+  val th2 = thb
 *)
 
 fun find_composition3 th1 th2 = let

@@ -4,15 +4,15 @@ struct
 (* For interactive use:
 
  app load ["bossLib", "Q", "numLib",
-     "gcdTheory", "primeTheory", "dividesTheory", "factorialTheory",
+     "gcdTheory", "dividesTheory",
      "binomialTheory", "congruentTheory", "summationTheory",
      "powerTheory", "fermatTheory"] ;
 
 *)
 open HolKernel Parse boolLib bossLib numLib
      arithmeticTheory prim_recTheory
-     gcdTheory primeTheory dividesTheory factorialTheory
-     binomialTheory congruentTheory summationTheory powerTheory fermatTheory;
+     gcdTheory dividesTheory
+     binomialTheory congruentTheory summationTheory fermatTheory;
 
 val ARW = RW_TAC arith_ss;
 
@@ -65,46 +65,49 @@ val PHI_GT_1 = prove(Term `!p q. prime p /\ prime q /\ ~(p=q)
                      THEN Cases_on `q` THEN ARW[]
                      THEN Cases_on `n'` THEN ARW[MULT_CLAUSES]);
 
+val POWER_POWER = GSYM EXP_EXP_MULT
+val POWER_0 = prove(``0 < n ==> (0 ** n = 0)``,
+                    Cases_on `n` THEN SRW_TAC [][EXP])
 
 val RSA_CORRECT = store_thm("RSA_CORRECT",
   ``!p q e d w. prime p /\ prime q /\ ~(p=q) /\
                 congruent (e*d) 1 ((p-1)*(q-1))
                       ==>
-                congruent (power (power w e) d) w (p*q)``,
+                congruent ((w ** e) ** d) w (p*q)``,
   ARW[POWER_POWER] THEN
-  `1 <= d * e` by PROVE_TAC[POWER_LE,CONGRUENT_LE_1,PHI_GT_1] THEN
+  `1 <= d * e` by PROVE_TAC[X_LE_X_EXP,CONGRUENT_LE_1,PHI_GT_1] THEN
   `0 < d * e` by ARW[] THEN
   `divides ((p-1)*(q-1)) (d*e - 1)` by PROVE_TAC[CONGRUENT_DIVIDES] THEN
   POP_ASSUM MP_TAC THEN REWRITE_TAC[divides_def] THEN STRIP_TAC THEN
   MATCH_MP_TAC CHINESE THEN ARW[] THENL [
-    PROVE_TAC[POWER_LE],
+    PROVE_TAC[X_LE_X_EXP],
     Cases_on `divides p w` THENL [
       PROVE_TAC[CONGRUENT_TRANS,CONGRUENT_SYM,POWER_0,CONGRUENT_POWER,
                 DIVIDES_CONGRUENT],
       ALL_TAC
     ] THEN
-    `congruent (power w (p-1)) 1 p` by PROVE_TAC[FERMAT] THEN
-    `congruent (power (power w (p-1)) (q' * (q-1))) 1 p`
-      by PROVE_TAC[CONGRUENT_POWER,POWER_1] THEN
-    `congruent (power w (d*e-1)) 1 p`
-      by PROVE_TAC[POWER_POWER,MULT_ASSOC,MULT_SYM] THEN
-    `congruent (w * power w (d*e -1)) w p`
-      by PROVE_TAC[CONGRUENT_TIMES,MULT_SYM,MULT_LEFT_1] THEN
-    PROVE_TAC[SUB_ADD,power_def,ADD1]
+    `congruent (w ** (p-1)) 1 p` by PROVE_TAC[FERMAT] THEN
+    `congruent ((w ** (p-1)) ** (q' * (q-1))) 1 p`
+      by PROVE_TAC[CONGRUENT_POWER,EXP_1] THEN
+    `congruent (w ** (d*e-1)) 1 p`
+      by PROVE_TAC[EXP_EXP_MULT,MULT_ASSOC,MULT_COMM] THEN
+    `congruent (w * w ** (d*e -1)) w p`
+      by PROVE_TAC[CONGRUENT_TIMES,MULT_COMM,MULT_LEFT_1] THEN
+    PROVE_TAC[SUB_ADD,EXP,ADD1]
     ,
     Cases_on `divides q w` THENL [
       PROVE_TAC[CONGRUENT_TRANS,CONGRUENT_SYM,POWER_0,CONGRUENT_POWER,
                 DIVIDES_CONGRUENT],
       ALL_TAC
     ] THEN
-    `congruent (power w (q-1)) 1 q` by PROVE_TAC[FERMAT] THEN
-    `congruent (power (power w (q - 1)) (q' * (p - 1))) 1 q`
-       by PROVE_TAC[CONGRUENT_POWER,POWER_1] THEN
-    `congruent (power w (d*e-1)) 1 q`
-       by PROVE_TAC[POWER_POWER,MULT_ASSOC,MULT_SYM] THEN
-    `congruent (w * power w (d * e - 1)) w q`
-       by PROVE_TAC[CONGRUENT_TIMES,MULT_SYM,MULT_LEFT_1] THEN
-    PROVE_TAC[SUB_ADD,power_def,ADD1]
+    `congruent (w ** (q-1)) 1 q` by PROVE_TAC[FERMAT] THEN
+    `congruent ((w ** (q - 1)) ** (q' * (p - 1))) 1 q`
+       by PROVE_TAC[CONGRUENT_POWER,EXP_1] THEN
+    `congruent (w ** (d*e-1)) 1 q`
+       by PROVE_TAC[EXP_EXP_MULT,MULT_ASSOC,MULT_COMM] THEN
+    `congruent (w * w ** (d * e - 1)) w q`
+       by PROVE_TAC[CONGRUENT_TIMES,MULT_COMM,MULT_LEFT_1] THEN
+    PROVE_TAC[SUB_ADD,EXP,ADD1]
   ]);
 
 

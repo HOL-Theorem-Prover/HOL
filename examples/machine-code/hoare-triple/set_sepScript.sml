@@ -147,6 +147,16 @@ val SEP_IMP_SEP_HIDE = store_thm("SEP_IMP_SEP_HIDE",
   ``!p x. SEP_IMP (p x) (~p)``,
   SIMP_TAC std_ss [SEP_IMP_def,SEP_HIDE_def,SEP_EXISTS_THM] THEN METIS_TAC []);
 
+val SEP_DISJ_COMM = store_thm("SEP_DISJ_COMM",
+  ``!p q. p \/ q = SEP_DISJ q p``,
+  SIMP_TAC std_ss [SEP_DISJ_def,FUN_EQ_THM] \\ REPEAT STRIP_TAC 
+  \\ EQ_TAC \\ REPEAT STRIP_TAC \\ ASM_SIMP_TAC std_ss []);
+
+val SEP_DISJ_ASSOC = store_thm("SEP_DISJ_ASSOC",
+  ``!p q r. SEP_DISJ (SEP_DISJ p q) r = p \/ (q \/ r)``,
+  SIMP_TAC std_ss [SEP_DISJ_def,FUN_EQ_THM] \\ REPEAT STRIP_TAC 
+  \\ EQ_TAC \\ REPEAT STRIP_TAC \\ ASM_SIMP_TAC std_ss []);
+ 
 val SPLIT_EQ = store_thm("SPLIT_EQ",
   ``!s u v. SPLIT s (u,v) = (u SUBSET s) /\ (v = s DIFF u)``,
   SIMP_TAC std_ss [SPLIT_def,SUBSET_DEF,EXTENSION,IN_DIFF,IN_UNION,
@@ -172,6 +182,16 @@ val write_fun2set = store_thm("write_fun2set",
   \\ SIMP_TAC std_ss [fun2set_thm,IN_DELETE,IN_DEF]
   \\ Cases_on `q = a` \\ ASM_SIMP_TAC std_ss [combinTheory.APPLY_UPDATE_THM]
   \\ METIS_TAC []);
+
+val one_fun2set = store_thm("one_fun2set",
+  ``!a x p f. (one (a,x) * p) (fun2set (f,d)) = 
+              (f a = x) /\ a IN d /\ p (fun2set (f,d DELETE a))``,
+  SIMP_TAC std_ss [fun2set_def,one_STAR,GSPECIFICATION] \\ REPEAT STRIP_TAC
+  \\ Cases_on `f a = x` \\ ASM_SIMP_TAC std_ss []
+  \\ Cases_on `a IN d` \\ ASM_SIMP_TAC std_ss [] \\ AP_TERM_TAC
+  \\ FULL_SIMP_TAC std_ss [EXTENSION,GSPECIFICATION,IN_DELETE,FORALL_PROD]
+  \\ REPEAT STRIP_TAC \\ EQ_TAC \\ REPEAT STRIP_TAC \\ ASM_SIMP_TAC std_ss []
+  \\ FULL_SIMP_TAC std_ss [] \\ METIS_TAC []);
 
 val fun2set_NEQ = store_thm("fun2set_NEQ",
   ``!a b x y f g p. (one (a,x) * one (b,y) * p) (fun2set (f,g)) ==> ~(a = b)``,
@@ -218,6 +238,10 @@ val SEP_REWRITE_THM = store_thm("SEP_REWRITE_THM",
 val cond_CONJ = store_thm("cond_CONJ",
   ``cond (c /\ d) = (cond c * cond d) : 'a set set``,
   SIMP_TAC std_ss [SEP_CLAUSES]);
+
+val IMP_IMP = store_thm("IMP_IMP",
+  ``!b c d.b /\ (c ==> d) ==> ((b ==> c) ==> d)``,
+  METIS_TAC []);
 
 val _ = export_theory();
 

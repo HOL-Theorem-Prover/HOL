@@ -277,9 +277,42 @@ val _ = app tpp ["let x = T in x /\\ y",
 val _ = new_type ("foo", 2)
 val _ = new_constant ("con", ``:'a -> ('a,'b)foo``)
 val _ = set_trace "types" 1
+val _ = print "** Tests with 'types' trace on.\n"
 val _ = tpp "(con (x :'a) :('a, 'b) foo)"
+val _ = tpp "\\(x :'a) (y :'a). x = y"
 
-
+(* pretty-printing - tests of colouring *)
+val _ = Parse.current_backend := PPBackEnd.vt100_terminal
 val _ = set_trace "types" 0
+val _ = set_trace "Unicode" 0
+fun tpp (s,expected) = let
+  val t = Parse.Term [QUOTE s]
+  val _ = tprint ("Testing (colour-)printing of `"^s^"`")
+  val res = term_to_backend_string t
+in
+  if res = expected then print "OK\n"
+  else (print "FAILED\n"; Process.exit Process.failure)
+end
+
+fun bound s = "\^[[0;32m" ^ s ^ "\^[[0m"
+fun free s = "\^[[0;1;34m" ^ s ^ "\^[[0m"
+val concat = String.concat
+
+val bx = bound "x"
+val fy = free "y"
+val fp = free "p"
+val fx = free "x"
+
+val _ = app tpp [
+  ("\\x. x /\\ y", concat ["\\", bx, ". ", bx, " /\\ ", fy]),
+  ("!x. x /\\ y", concat ["!", bx, ". ", bx, " /\\ ", fy]),
+  ("let x = p in x /\\ y",
+   concat ["let ",bx, " = ", fp, " in ", bx, " /\\ ", fy]),
+  ("let f x = x /\\ p in f x /\\ y",
+   concat ["let ",bound "f", " ", bx, " = ", bx, " /\\ ", fp, " in ",
+           bound "f", " ", fx, " /\\ ", fy])
+]
+
+
 val _ = Process.exit (if List.all substtest tests then Process.success
                       else Process.failure)

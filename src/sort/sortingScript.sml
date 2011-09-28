@@ -790,6 +790,19 @@ MATCH_MP_TAC PERM_INTRO THEN
 REWRITE_TAC [rich_listTheory.COUNT_LIST_GENLIST] THEN
 REWRITE_TAC [MAP_GENLIST,combinTheory.I_o_ID]);
 
+local open arithmeticTheory prim_recTheory pred_setTheory in
+val SUM_IMAGE_count_MULT = Q.store_thm(
+"SUM_IMAGE_count_MULT",
+`(!m. m < n ==> (g m = SIGMA (\x. f (x + k * m)) (count k))) ==>
+ (SIGMA f (count (k * n)) = SIGMA g (count n))`,
+Induct_on `n` THEN1 (
+  SIMP_TAC bool_ss [SUM_IMAGE_THM,MULT_0,COUNT_ZERO] ) THEN
+FULL_SIMP_TAC bool_ss
+[MULT_SUC,SUM_IMAGE_count_SUM_GENLIST,GENLIST_APPEND,
+ SUM_APPEND,GENLIST,SUM_SNOC] THEN
+METIS_TAC [LESS_SUC,LESS_SUC_REFL])
+end
+
 (*Perm theorems for the simplication*)
 
 val PERM_FUN_APPEND = store_thm (
