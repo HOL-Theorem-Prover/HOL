@@ -445,7 +445,7 @@ let e_step (envC, env, e, c) =
 val build_tdefs : 
   (tvarN list * typeN * (conN * t list) list) list -> envC
 let build_tdefs tds =
-  List.flatten
+  List.rev (List.flatten
     (List.map 
       (fun (tvs, tn, condefs) ->
          List.map
@@ -453,7 +453,7 @@ let build_tdefs tds =
               (conN, (List.length ts, 
                          {cn | forall ((cn,ts) MEM condefs) | true})))
            condefs)
-      tds)
+      tds))
 
 (* Checks that no constructor is defined twice *)
 val check_dup_ctors : 
@@ -1236,7 +1236,7 @@ and
 
 forall cenv tenv d ds cenv' tenv' cenv'' tenv''.
 type_d cenv tenv d cenv' tenv' &&
-type_ds (merge cenv' cenv) tenv' ds cenv'' tenv''
+type_ds (merge (List.rev cenv') cenv) tenv' ds cenv'' tenv''
 ==>
 type_ds cenv tenv (d::ds) (merge cenv' cenv'') tenv''
 

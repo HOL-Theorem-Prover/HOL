@@ -515,7 +515,7 @@ val _ = Define `
   (tvarN list * typeN * (conN * t list) list) list -> envC*)
 val _ = Define `
  (build_tdefs tds =
-  FLAT
+  REVERSE (FLAT
     (MAP 
       (\ (tvs, tn, condefs) .
          MAP
@@ -523,7 +523,7 @@ val _ = Define `
               (conN, (LENGTH ts, 
                          {cn | cn,ts | ( MEM(cn,ts) condefs) /\ T})))
            condefs)
-      tds))`;
+      tds)))`;
 
 
 (* Checks that no constructor is defined twice *)
@@ -1035,6 +1035,9 @@ val _ = Define `
   ))`;
 
 
+(* Check that a type definition defines no already defined (or duplicate)
+ * constructors or types, and that the free type variables of each constructor
+ * argument type are included in the type's type parameters. *)
 (*val check_ctor_tenv : 
   tenvC -> (tvarN list * typeN * (conN * t list) list) list -> bool*)
 val _ = Define `
@@ -1332,7 +1335,7 @@ type_ds cenv tenv [] emp tenv)
 
 (! cenv tenv d ds cenv' tenv' cenv'' tenv''.
 type_d cenv tenv d cenv' tenv' /\
-type_ds (merge cenv' cenv) tenv' ds cenv'' tenv''
+type_ds (merge (REVERSE cenv') cenv) tenv' ds cenv'' tenv''
 ==>
 type_ds cenv tenv (d::ds) (merge cenv' cenv'') tenv'')`;
 
