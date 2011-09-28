@@ -13,7 +13,7 @@ DiskFiles.grm.sml DiskFiles.grm-sig.sml: DiskFiles.grm
 DiskFiles.grm-sig.uo: DiskFiles.grm-sig.sml
 	$(HOLMOSMLC) -toplevel -c -I $(MLYACCLIB) $(MLYACCLIB_UIS) $<
 
-DiskFiles.grm.uo: DiskFiles.grm.sml DiskFiles.grm-sig.uo DiskFilesHeader.ui
+DiskFiles.grm.uo DiskFiles.grm.ui: DiskFiles.grm.sml DiskFiles.grm-sig.uo DiskFilesHeader.ui
 	$(HOLMOSMLC) -toplevel -c -I $(MLYACCLIB) $(MLYACCLIB_UIS) DiskFiles.grm-sig.ui $<
 
 DiskFiles.lex.sml: DiskFiles.lex
