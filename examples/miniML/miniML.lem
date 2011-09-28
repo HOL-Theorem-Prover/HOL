@@ -124,8 +124,9 @@ check_freevars tvs Tbool = true
 type pat =
   | Pvar of varN
   | Plit of lit
-  (* Constructor applications *)
-  | Pcon of conN * pat list
+  (* Constructor applications.  If there is no constructor name, this is an 
+   * untyped tuple. *)
+  | Pcon of conN option * pat list
 
 (* Runtime errors *)
 type error = 
@@ -135,8 +136,9 @@ type error =
 type exp = 
   | Raise of error
   | Val of v
-  (* Constructor application *)
-  | Con of conN * exp list
+  (* Constructor application.  If there is no constructor name, this is an 
+   * untyped tuple. *)
+  | Con of conN option * exp list
   | Var of varN
   | Fun of varN * exp
   (* Application of an operator (including function application) *)
@@ -151,12 +153,15 @@ type exp =
    * The first varN is the function's name, and the second varN is its
    * parameter *)
   | Letrec of (varN * varN * exp) list * exp
+  (* Projection from an untyped tuple *)
+  | Proj of exp * num
 
 (* Value forms *)
 and v =
   | Lit of lit
-  (* Constructor application *)
-  | Conv of conN * v list
+  (* Constructor application.  If there is no constructor name, this is an 
+   * untyped tuple.  *)
+  | Conv of conN option * v list
   (* Function closures
      The environment is used for the free variables in the function *)
   | Closure of (varN, v) env * varN * exp
@@ -200,7 +205,8 @@ type ctxt_frame =
   | Clet of varN * unit * exp
   (* Evaluating a constructor's arguments
    * The v list should be in reverse order. *)
-  | Ccon of conN * v list * unit * exp list
+  | Ccon of conN option * v list * unit * exp list
+  | Cproj of unit * num
 type ctxt = ctxt_frame * envE
 
 val lit_same_type : lit -> lit -> bool
@@ -237,7 +243,7 @@ pmatch envC (Plit l) (Lit l') env =
   else
     Match_type_error
 and
-pmatch envC (Pcon n ps) (Conv n' vs) env =
+pmatch envC (Pcon (Some n) ps) (Conv (Some n') vs) env =
   match (lookup n envC, lookup n' envC) with
     | (Some (l, ns), Some (l', ns')) ->
         if n IN ns' && n' IN ns && (List.length ps = l) && (List.length vs = l')
@@ -250,6 +256,12 @@ pmatch envC (Pcon n ps) (Conv n' vs) env =
           Match_type_error
     | (_, _) -> Match_type_error
   end
+and
+pmatch envC (Pcon None ps) (Conv None vs) env =
+  if List.length ps = List.length vs then
+    pmatch_list envC ps vs env
+  else
+    No_match
 and
 pmatch envC _ _ env = Match_type_error
 and
@@ -347,11 +359,26 @@ let do_if v e1 e2 =
     None
 
 (* Check that a constructor is properly applied *)
-val do_con_check : envC -> conN -> num -> bool
+val do_con_check : envC -> conN option -> num -> bool
 let do_con_check envC n l =
-  match lookup n envC with
-    | None -> false
-    | Some (l',ns) -> l = l' 
+  match n with 
+    | None -> true
+    | Some n ->
+        match lookup n envC with
+          | None -> false
+          | Some (l',ns) -> l = l' 
+        end
+  end
+
+val do_proj : v -> num -> v option
+let do_proj v n =
+  match v with
+    | Conv None vs ->
+        if n < List.length vs then
+          Some (List.nth vs n)
+        else
+          None
+    | _ -> None
   end
 
 (* apply a context to a value *)
@@ -396,6 +423,11 @@ let continue envC v cs =
           push envC env e (Ccon n (v::vs) () es) c
         else
           Etype_error
+    | (Cproj () n, env) :: c ->
+        match do_proj v n with
+          | None -> Etype_error
+          | Some v -> return envC env v c
+        end
   end
 
 (* The single step expression evaluator.  Returns None if there is nothing to
@@ -439,6 +471,7 @@ let e_step (envC, env, e, c) =
           Etype_error
         else
           Estep (envC, build_rec_env funs env, e, c)
+    | Proj e n -> push envC env e (Cproj () n) c
   end 
 
 (* Add the given type definition to the given constructor environment *)
@@ -761,6 +794,28 @@ evaluate cenv env (Letrec funs e) (Rerr Rtype_error)
 
 and
 
+forall cenv env e n v v'.
+evaluate cenv env e (Rval v) &&
+do_proj v n = Some v'
+==>
+evaluate cenv env (Proj e n) (Rval v')
+
+and
+
+forall cenv env e n v.
+evaluate cenv env e (Rval v) &&
+do_proj v n = None
+==>
+evaluate cenv env (Proj e n) (Rerr Rtype_error)
+
+and
+
+forall cenv env e n err.
+evaluate cenv env e (Rerr err)
+==>
+evaluate cenv env (Proj e n) (Rerr err)
+
+and
 
 forall cenv env.
 true
@@ -996,7 +1051,7 @@ List.length ts' = List.length tvs &&
 type_ps cenv tenv ps (List.map (type_subst (List.combine tvs ts')) ts) tenv' &&
 lookup cn cenv = Some (tvs, ts, tn)
 ==>
-type_p cenv tenv (Pcon cn ps) (Tapp ts' tn) tenv'
+type_p cenv tenv (Pcon (Some cn) ps) (Tapp ts' tn) tenv'
 
 and
 
@@ -1033,7 +1088,7 @@ List.length tvs = List.length ts' &&
 type_vs cenv vs (List.map (type_subst (List.combine tvs ts')) ts) &&
 lookup cn cenv = Some (tvs, ts, tn)
 ==>
-type_v cenv (Conv cn vs) (Tapp ts' tn)
+type_v cenv (Conv (Some cn) vs) (Tapp ts' tn)
 
 and
 
@@ -1073,7 +1128,7 @@ List.length tvs = List.length ts' &&
 type_es cenv tenv es (List.map (type_subst (List.combine tvs ts')) ts) &&
 lookup cn cenv = Some (tvs, ts, tn)
 ==>
-type_e cenv tenv (Con cn es) (Tapp ts' tn)
+type_e cenv tenv (Con (Some cn) es) (Tapp ts' tn)
 
 and
 
@@ -1304,7 +1359,7 @@ type_es cenv tenv (List.rev (List.map Val vs))
 type_es cenv tenv es (List.map (type_subst (List.combine tvs ts')) ts2) &&
 lookup cn cenv = Some (tvs, ts1@[t]@ts2, tn)
 ==>
-type_ctxt cenv tenv (Ccon cn vs () es) (type_subst (List.combine tvs ts') t) 
+type_ctxt cenv tenv (Ccon (Some cn) vs () es) (type_subst (List.combine tvs ts') t) 
           (Tapp ts' tn)
 
 indreln
@@ -1404,6 +1459,13 @@ forall cenv env n vs es v bv.
 evaluate cenv env (Con n (List.map Val (List.rev vs) @ [Val v] @ es)) bv
 ==>
 evaluate_ctxt cenv env (Ccon n vs () es) v bv
+
+and
+
+forall cenv env n v bv.
+evaluate cenv env (Proj (Val v) n) bv
+==>
+evaluate_ctxt cenv env (Cproj () n) v bv
 
 indreln
 

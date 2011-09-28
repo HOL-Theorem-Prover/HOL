@@ -260,11 +260,33 @@ fs [lit_same_type_def] >|
      metis_tac [type_funs_Tfn, t_distinct],
  fs [Once type_v_cases, Once type_p_cases, lit_same_type_def] >>
      rw [] >>
+     fs [] >>
+     metis_tac [type_funs_Tfn, t_distinct],
+ fs [Once type_v_cases, Once type_p_cases, lit_same_type_def] >>
+     rw [] >>
      fs [],
  fs [Once type_v_cases, Once type_p_cases, lit_same_type_def] >>
      rw [] >>
      fs [],
-  fs [Once type_v_cases, Once type_p_cases, lit_same_type_def] >>
+ fs [Once type_v_cases, Once type_p_cases, lit_same_type_def] >>
+     rw [] >>
+     fs [] >>
+     metis_tac [type_funs_Tfn, t_distinct],
+ fs [Once type_v_cases, Once type_p_cases, lit_same_type_def] >>
+     rw [] >>
+     fs [] >>
+     metis_tac [type_funs_Tfn, t_distinct],
+ fs [Once type_v_cases, Once type_p_cases, lit_same_type_def] >>
+     rw [] >>
+     fs [],
+ fs [Once type_v_cases, Once type_p_cases, lit_same_type_def] >>
+     rw [] >>
+     fs [],
+ fs [Once type_v_cases, Once type_p_cases, lit_same_type_def] >>
+     rw [] >>
+     fs [] >>
+     metis_tac [type_funs_Tfn, t_distinct],
+ fs [Once type_v_cases, Once type_p_cases, lit_same_type_def] >>
      rw [] >>
      fs [] >>
      metis_tac [type_funs_Tfn, t_distinct],
@@ -383,7 +405,8 @@ val not_final_state = Q.prove (
      (?e1 e2 e3. e = If e1 e2 e3) ∨
      (?e' pes. e = Mat e' pes) ∨
      (?n e1 e2. e = Let n e1 e2) ∨
-     (?funs e'. e = Letrec funs e')`,
+     (?funs e'. e = Letrec funs e') ∨
+     (?e1 n. e = Proj e1 n)`,
 rw [] >>
 cases_on `e` >>
 cases_on `c` >>
@@ -549,6 +572,7 @@ rw [pmatch_def] >|
      metis_tac [],
  every_case_tac >>
      fs [],
+ fs [Once type_p_cases],
  fs [Once type_p_cases],
  every_case_tac >>
      fs [] >>
@@ -872,7 +896,9 @@ rw [] >|
      match_mp_tac type_env_merge_lem >>
      rw [] >>
      match_mp_tac type_recfun_env >>
-     metis_tac []]);
+     metis_tac [],
+ pop_assum (ASSUME_TAC o SIMP_RULE (srw_ss()) [Once type_v_cases]) >> 
+     fs []]);
 
 val get_first_tenv_def = Define `
   (get_first_tenv ds NONE = 
