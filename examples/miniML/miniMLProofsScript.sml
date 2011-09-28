@@ -28,7 +28,7 @@ val _ = save_thm ("lookup_ind", lookup_ind);
 val (pmatch_def, pmatch_ind) =
   tprove_no_defn ((pmatch_def, pmatch_ind),
   wf_rel_tac 
-  `inv_image $< (λx. case x of INL (a,p,b,c) -> pat_size p || INR (a,ps,b,c) ->
+  `inv_image $< (λx. case x of INL (a,p,b,c) => pat_size p | INR (a,ps,b,c) =>
   pat1_size ps)`);
 val _ = save_thm ("pmatch_def", pmatch_def);
 val _ = save_thm ("pmatch_ind", pmatch_ind);
@@ -56,11 +56,11 @@ val _ = save_thm ("type_subst_ind", type_subst_ind);
 val (remove_ctors_def,remove_ctors_ind) =
   tprove_no_defn ((remove_ctors_def,remove_ctors_ind),
   WF_REL_TAC
-  `inv_image $< (\x. case x of INL (x,y) -> exp_size y 
-                         || INR (INL (x,y)) -> v_size y
-                         || INR (INR (INL (x,y))) -> exp3_size y
-                         || INR (INR (INR (INL (x,y)))) -> exp1_size y
-                         || INR (INR (INR (INR (x,y)))) -> exp6_size y)` >>
+  `inv_image $< (\x. case x of INL (x,y) => exp_size y 
+                         | INR (INL (x,y)) => v_size y
+                         | INR (INR (INL (x,y))) => exp3_size y
+                         | INR (INR (INR (INL (x,y)))) => exp1_size y
+                         | INR (INR (INR (INR (x,y)))) => exp6_size y)` >>
   rw [] >>
   TRY decide_tac >|
   [induct_on `es` >>

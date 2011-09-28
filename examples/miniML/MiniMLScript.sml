@@ -113,8 +113,8 @@ val _ = Hol_datatype `
 
 (type_subst s (Tvar tv) =
   (case lookup tv s of
-       NONE -> Tvar tv
-    || SOME(t) -> t
+      NONE => Tvar tv
+    | SOME(t) => t
   )) 
 /\
 (type_subst s (Tapp ts tn) =
@@ -251,9 +251,9 @@ val _ = type_abbrev( "ctxt" , ``: ctxt_frame # envE``);
 val _ = Define `
  (lit_same_type l1 l2 =
   (case (l1,l2) of
-       (Num _, Num _) -> T
-    || (Bool _, Bool _) -> T
-    || _ -> F
+      (Num _, Num _) => T
+    | (Bool _, Bool _) => T
+    | _ => F
   ))`;
 
 
@@ -288,7 +288,7 @@ val _ = Hol_datatype `
 /\
 (pmatch envC (Pcon (SOME n) ps) (Conv (SOME n') vs) env =
   (case (lookup n envC, lookup n' envC) of
-       (SOME (l, ns), SOME (l', ns')) ->
+      (SOME (l, ns), SOME (l', ns')) =>
         if n IN ns' /\ n' IN ns /\ (LENGTH ps = l) /\ (LENGTH vs = l')
         then
           if n = n' then
@@ -297,7 +297,7 @@ val _ = Hol_datatype `
             No_match
         else
           Match_type_error
-    || (_, _) -> Match_type_error
+    | (_, _) => Match_type_error
   ))
 /\
 (pmatch envC (Pcon NONE ps) (Conv NONE vs) env =
@@ -312,9 +312,9 @@ val _ = Hol_datatype `
 /\
 (pmatch_list envC (p::ps) (v::vs) env =
   (case pmatch envC p v env of
-       No_match -> No_match
-    || Match_type_error -> Match_type_error
-    || Match env' -> pmatch_list envC ps vs env'
+      No_match => No_match
+    | Match_type_error => Match_type_error
+    | Match env' => pmatch_list envC ps vs env'
   ))
 /\
 (pmatch_list envC _ _ env = Match_type_error)`;
@@ -367,8 +367,8 @@ val _ = Defn.save_defn build_rec_env_defn;
  val find_recfun_defn = Hol_defn "find_recfun" `
  (find_recfun n funs =
   (case funs of
-       [] -> NONE
-    || (f,x,e) :: funs -> 
+      [] => NONE
+    | (f,x,e) :: funs => 
         if f = n then 
           SOME (x,e)
         else 
@@ -382,18 +382,18 @@ val _ = Defn.save_defn find_recfun_defn;
 val _ = Define `
  (do_app env' op v1 v2 =
   (case (op, v1, v2) of
-       (Opapp, Closure env n e, v) ->
+      (Opapp, Closure env n e, v) =>
         SOME (bind n v env, e)
-    || (Opapp, Recclosure env funs n, v) ->
+    | (Opapp, Recclosure env funs n, v) =>
         (case find_recfun n funs of
-             SOME (n,e) -> SOME (bind n v (build_rec_env funs env), e)
-          || NONE -> NONE
+            SOME (n,e) => SOME (bind n v (build_rec_env funs env), e)
+          | NONE => NONE
         )
-    || (Opn op, Lit (Num n1), Lit (Num n2)) -> 
+    | (Opn op, Lit (Num n1), Lit (Num n2)) => 
         SOME (env',Val (Lit (Num (op n1 n2))))
-    || (Opb op, Lit (Num n1), Lit (Num n2)) -> 
+    | (Opb op, Lit (Num n1), Lit (Num n2)) => 
         SOME (env',Val (Lit (Bool (op n1 n2)))) 
-    || _ -> NONE
+    | _ => NONE
   ))`;
 
 
@@ -402,10 +402,10 @@ val _ = Define `
 val _ = Define `
  (do_log l v e =
   (case (l, v) of
-       (And, Lit (Bool T)) -> SOME e
-    || (Or, Lit (Bool F)) -> SOME e
-    || (_, Lit (Bool _)) -> SOME (Val v)
-    || _ -> NONE
+      (And, Lit (Bool T)) => SOME e
+    | (Or, Lit (Bool F)) => SOME e
+    | (_, Lit (Bool _)) => SOME (Val v)
+    | _ => NONE
   ))`;
 
 
@@ -426,11 +426,11 @@ val _ = Define `
 val _ = Define `
  (do_con_check envC n l =
   (case n of 
-       NONE -> T
-    || SOME n ->
+      NONE => T
+    | SOME n =>
         (case lookup n envC of
-             NONE -> F
-          || SOME (l',ns) -> l = l' 
+            NONE => F
+          | SOME (l',ns) => l = l' 
         )
   ))`;
 
@@ -439,12 +439,12 @@ val _ = Define `
 val _ = Define `
  (do_proj v n =
   (case v of
-       Conv NONE vs ->
+      Conv NONE vs =>
         if n < LENGTH vs then
           SOME (EL  n  vs)
         else
           NONE
-    || _ -> NONE
+    | _ => NONE
   ))`;
 
 
@@ -453,48 +453,48 @@ val _ = Define `
 val _ = Define `
  (continue envC v cs =
   (case cs of
-       [] -> Estuck
-    || (Capp1 op () e, env) :: c -> 
+      [] => Estuck
+    | (Capp1 op () e, env) :: c => 
         push envC env e (Capp2 op v ()) c
-    || (Capp2 op v' (), env) :: c ->
+    | (Capp2 op v' (), env) :: c =>
         (case do_app env op v' v of
-             SOME (env,e) -> Estep (envC, env, e, c)
-          || NONE -> Etype_error
+            SOME (env,e) => Estep (envC, env, e, c)
+          | NONE => Etype_error
         )
-    || (Clog l () e, env) :: c ->
+    | (Clog l () e, env) :: c =>
         (case do_log l v e of
-             SOME e -> Estep (envC, env, e, c)
-          || NONE -> Etype_error
+            SOME e => Estep (envC, env, e, c)
+          | NONE => Etype_error
         )
-    || (Cif () e1 e2, env) :: c ->
+    | (Cif () e1 e2, env) :: c =>
         (case do_if v e1 e2 of
-             SOME e -> Estep (envC, env, e, c)
-          || NONE -> Etype_error
+            SOME e => Estep (envC, env, e, c)
+          | NONE => Etype_error
         )
-    || (Cmat () [], env) :: c ->
+    | (Cmat () [], env) :: c =>
         Estep (envC, env, Raise Bind_error, c)
-    || (Cmat () ((p,e)::pes), env) :: c ->
+    | (Cmat () ((p,e)::pes), env) :: c =>
         (case pmatch envC p v env of
-             Match_type_error -> Etype_error
-          || No_match -> push envC env (Val v) (Cmat () pes) c
-          || Match env' -> Estep (envC, env', e, c)
+            Match_type_error => Etype_error
+          | No_match => push envC env (Val v) (Cmat () pes) c
+          | Match env' => Estep (envC, env', e, c)
         )
-    || (Clet n () e, env) :: c ->
+    | (Clet n () e, env) :: c =>
         Estep (envC, bind n v env, e, c) 
-    || (Ccon n vs () [], env) :: c ->
+    | (Ccon n vs () [], env) :: c =>
         if do_con_check envC n (LENGTH vs + 1) then
           return envC env (Conv n (REVERSE (v::vs))) c
         else
           Etype_error
-    || (Ccon n vs () (e::es), env) :: c ->
+    | (Ccon n vs () (e::es), env) :: c =>
         if do_con_check envC n (LENGTH vs + 1 + 1 + LENGTH es) then
           push envC env e (Ccon n (v::vs) () es) c
         else
           Etype_error
-    || (Cproj () n, env) :: c ->
+    | (Cproj () n, env) :: c =>
         (case do_proj v n of
-             NONE -> Etype_error
-          || SOME v -> return envC env v c
+            NONE => Etype_error
+          | SOME v => return envC env v c
         )
   ))`;
 
@@ -509,39 +509,39 @@ val _ = Define `
 val _ = Define `
  (e_step (envC, env, e, c) =
   (case e of
-       Raise e -> 
+      Raise e => 
         (case c of
-             [] -> Estuck
-          || _::c -> Estep (envC,env,Raise e,c)
+            [] => Estuck
+          | _::c => Estep (envC,env,Raise e,c)
         )
-    || Val v  -> 
+    | Val v  => 
 	continue envC v c
-    || Con n es -> 
+    | Con n es => 
         if do_con_check envC n (LENGTH es) then
           (case es of
-               [] -> return envC env (Conv n []) c
-            || e::es ->
+              [] => return envC env (Conv n []) c
+            | e::es =>
                 push envC env e (Ccon n [] () es) c
           )
         else
           Etype_error
-    || Var n ->
+    | Var n =>
         (case lookup n env of
-             NONE -> Etype_error
-          || SOME v -> return envC env v c
+            NONE => Etype_error
+          | SOME v => return envC env v c
         )
-    || Fun n e -> return envC env (Closure env n e) c
-    || App op e1 e2 -> push envC env e1 (Capp1 op () e2) c 
-    || Log l e1 e2 -> push envC env e1 (Clog l () e2) c
-    || If e1 e2 e3 -> push envC env e1 (Cif () e2 e3) c
-    || Mat e pes -> push envC env e (Cmat () pes) c
-    || Let n e1 e2 -> push envC env e1 (Clet n () e2) c
-    || Letrec funs e ->
+    | Fun n e => return envC env (Closure env n e) c
+    | App op e1 e2 => push envC env e1 (Capp1 op () e2) c 
+    | Log l e1 e2 => push envC env e1 (Clog l () e2) c
+    | If e1 e2 e3 => push envC env e1 (Cif () e2 e3) c
+    | Mat e pes => push envC env e (Cmat () pes) c
+    | Let n e1 e2 => push envC env e1 (Clet n () e2) c
+    | Letrec funs e =>
         if ~ (ALL_DISTINCT (MAP (\ (x,y,z) . x) funs)) then
           Etype_error
         else
           Estep (envC, build_rec_env funs env, e, c)
-    || Proj e n -> push envC env e (Cproj () n) c
+    | Proj e n => push envC env e (Cproj () n) c
   ))`;
  
 
@@ -591,31 +591,31 @@ val _ = Hol_datatype `
 val _ = Define `
  (d_step (envC, env, ds, st) =
   (case st of
-       SOME (p, (envC', env', Val v, [])) -> 
+      SOME (p, (envC', env', Val v, [])) => 
         (case pmatch envC p v env of
-             Match env' -> Dstep (envC, env', ds, NONE)
-          || No_match -> Draise Bind_error
-          || Match_type_error -> Dtype_error
+            Match env' => Dstep (envC, env', ds, NONE)
+          | No_match => Draise Bind_error
+          | Match_type_error => Dtype_error
         )
-    || SOME (p, (envC, env', Raise err, [])) ->
+    | SOME (p, (envC, env', Raise err, [])) =>
         Draise err
-    || SOME (p, (envC', env', e, c)) -> 
+    | SOME (p, (envC', env', e, c)) => 
         (case e_step (envC', env', e, c) of
-             Estep st -> Dstep (envC, env, ds, SOME (p, st))
-          || Etype_error -> Dtype_error
-          || Estuck -> Dstuck
+            Estep st => Dstep (envC, env, ds, SOME (p, st))
+          | Etype_error => Dtype_error
+          | Estuck => Dstuck
         )
-    || NONE ->
+    | NONE =>
         (case ds of
-             [] -> Dstuck
-          || (Dlet p e) :: ds ->
+            [] => Dstuck
+          | (Dlet p e) :: ds =>
               Dstep (envC, env, ds, SOME (p, (envC, env, e, [])))
-          || (Dletrec funs) :: ds ->
+          | (Dletrec funs) :: ds =>
               if ~ (ALL_DISTINCT (MAP (\ (x,y,z) . x) funs)) then
                 Dtype_error
               else
                 Dstep (envC, build_rec_env funs env, ds, NONE)
-          || (Dtype tds) :: ds ->
+          | (Dtype tds) :: ds =>
               if check_dup_ctors tds envC then
                 Dstep (merge (build_tdefs tds) envC, env, ds, NONE)
               else 
@@ -1085,10 +1085,10 @@ val _ = type_abbrev( "tenvE" , ``: (varN, t) env``);
 val _ = Define `
  (type_op op t1 t2 t3 =
   (case (op,t1,t2) of
-       (Opapp, Tfn t2' t3', _) -> (t2 = t2') /\ (t3 = t3')
-    || (Opn _, Tnum, Tnum) -> (t3 = Tnum)
-    || (Opb _, Tnum, Tnum) -> (t3 = Tbool)
-    || _ -> F
+      (Opapp, Tfn t2' t3', _) => (t2 = t2') /\ (t3 = t3')
+    | (Opn _, Tnum, Tnum) => (t3 = Tnum)
+    | (Opb _, Tnum, Tnum) => (t3 = Tbool)
+    | _ => F
   ))`;
 
 
@@ -1107,10 +1107,10 @@ val _ = Define `
          (\ (cn,ts) . (EVERY (check_freevars tvs) ts))
          ctors)
     tds /\
-  ALL_DISTINCT (MAP ( \x . (case x of (_,tn,_) -> tn)) tds) /\
+  ALL_DISTINCT (MAP ( \x . (case x of (_,tn,_) => tn)) tds) /\
   EVERY
     (\ (tvs,tn,ctors) .
-       EVERY ( \x . (case x of (_,(_,_,tn')) -> tn <> tn')) tenvC)
+       EVERY ( \x . (case x of (_,(_,_,tn')) => tn <> tn')) tenvC)
     tds)`;
 
 

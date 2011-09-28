@@ -903,8 +903,8 @@ rw [] >|
 val get_first_tenv_def = Define `
   (get_first_tenv ds NONE = 
      case ds of
-         (Dtype tds::ds) -> tds
-      || _ -> []) ∧
+        (Dtype tds::ds) => tds
+      | _ => []) ∧
   (get_first_tenv _ _ = [])`;
 
 val disjoint_env_def = Define `
@@ -1301,7 +1301,7 @@ val check_ctor_tenv_different_types = Q.prove (
 `!tenvC tds.
   EVERY 
     (λ(tvs,tn,ctors).
-       EVERY (λx. case x of (v,v2,v4,tn') -> tn ≠ tn') tenvC) tds ∧
+       EVERY (λx. case x of (v,v2,v4,tn') => tn ≠ tn') tenvC) tds ∧
   (lookup n1 tenvC = SOME (tvs1,ts1,tn1)) ∧
   (lookup n2 (REVERSE (build_ctor_tenv tds)) = SOME (tvs2,ts2,tn2))
   ⇒
@@ -1385,7 +1385,7 @@ val lookup_same_ctor_type_help = Q.prove (
 `!tds.
   (lookup n2 (REVERSE (build_ctor_tenv tds)) = SOME (tvs2,ts2,tn))
   ⇒
-  MEM tn (MAP (λx. case x of (v,tn,v3) -> tn) tds)`,
+  MEM tn (MAP (λx. case x of (v,tn,v3) => tn) tds)`,
 Induct >>
 rw [lookup_def,build_ctor_tenv_empty] >>
 cases_on `h` >>
