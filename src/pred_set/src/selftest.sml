@@ -14,8 +14,8 @@ fun test s (problem, result) = let
   val verdict = if aconv answer result then ("OK", true)
                 else ("FAILED!", false)
 in
-  print (" = " ^ r_s);
-  print (padl 14 (#1 verdict) ^ "\n");
+  print (padr 35 (" = " ^ r_s));
+  print (#1 verdict ^ "\n");
   #2 verdict
 end;
 
