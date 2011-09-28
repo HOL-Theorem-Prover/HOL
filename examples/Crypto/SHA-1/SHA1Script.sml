@@ -204,7 +204,7 @@ val C4_def = Define `C4 = 3395469782w:word32`;
 
 val f1_def = Define `f1(a,b,c) = (c ?? (a && (b ?? c))) + C1 : word32`;
 val f2_def = Define `f2(a,b,c) = (a ?? b ?? c) + C2 : word32`;
-val f3_def = Define `f3(a,b,c) = ((a && b) !! (c && (a !! b))) + C3 : word32`;
+val f3_def = Define `f3(a,b,c) = ((a && b) || (c && (a || b))) + C3 : word32`;
 val f4_def = Define `f4(a,b,c) = (a ?? b ?? c) + C4 : word32`;
 
 
@@ -263,8 +263,8 @@ val (digest_def,digest_ind) = Defn.tprove
   "digest"
   `digest message Hbar =
     case TAKE 64 message []
-     of NONE -> Hbar
-     || SOME(next,rest) -> digest rest (digestBlock next Hbar)`,
+     of NONE => Hbar
+      | SOME(next,rest) => digest rest (digestBlock next Hbar)`,
  WF_REL_TAC `measure (LENGTH o FST)`
   THEN REPEAT PairRules.PGEN_TAC
   THEN RW_TAC list_ss []

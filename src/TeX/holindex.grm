@@ -3,7 +3,7 @@ open holindexData
 %%
 %name Holindex
 %eop EOF
-%term 
+%term
      LBRACE
   |  RBRACE
   |  LBRACKET
@@ -31,7 +31,7 @@ open holindexData
 
 (* entry points *)
 
-%nonterm 
+%nonterm
      top of parse_entry list
   |  entry of parse_entry list
   |  entry_seq of parse_entry list
@@ -68,13 +68,13 @@ entry:
 ident_seq:
     (* empty *)   ([])
   | IDENT         ([IDENT])
-  | IDENT COMMA ident_seq 
+  | IDENT COMMA ident_seq
       (IDENT::ident_seq)
 
 option_seq:
     (* empty *)   (fn x => x)
   | option        (option)
-  | option COMMA option_seq 
+  | option COMMA option_seq
       (fn e => option_seq (option e))
 
 option:

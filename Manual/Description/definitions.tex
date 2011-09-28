@@ -815,10 +815,10 @@ entire case expression.  For example,
 \begin{hol}
 \begin{verbatim}
   case n of
-      0 -> "none"
-   || 1 -> "one"
-   || 2 -> "two"
-   || _ -> "many"
+     0 => "none"
+   | 1 => "one"
+   | 2 => "two"
+   | _ => "many"
 \end{verbatim}
 \end{hol}
 %
@@ -834,8 +834,8 @@ including \ml{num}, \ml{list}, and \ml{option}.
 \begin{hol}
 \begin{verbatim}
   case spouse(employee) of
-      NONE   -> "single"
-   || SOME s -> "married to " ^ name_of s
+     NONE   => "single"
+   | SOME s => "married to " ^ name_of s
 \end{verbatim}
 \end{hol}
 %
@@ -874,10 +874,10 @@ Here is an example of this kind of improper mixture.
 \begin{hol}
 \begin{verbatim}
   case n of
-      0 -> "none"
-   || 1 -> "one"
-   || 2 -> "two"
-   || SUC m -> "many"
+     0 => "none"
+   | 1 => "one"
+   | 2 => "two"
+   | SUC m => "many"
 \end{verbatim}
 \end{hol}
 %
@@ -895,8 +895,8 @@ and/or mother, where each is represented by \ml{NONE} if deceased.
 \begin{hol}
 \begin{verbatim}
   case parents(john) of
-      (NONE,NONE) -> "orphan"
-   || _ -> "not an orphan"
+     (NONE,NONE) => "orphan"
+   | _ => "not an orphan"
 \end{verbatim}
 \end{hol}
 %
@@ -910,19 +910,19 @@ automatically to fill it out, and possibly some new variables or the
 \begin{hol}
 \begin{verbatim}
 - ``case a of
-       (1, y, z) -> y + z
-    || (x, 2, z) -> x - z
-    || (x, y, 3) -> x * y``;
+      (1, y, z) => y + z
+    | (x, 2, z) => x - z
+    | (x, y, 3) => x * y``;
 > val it =
     ``case a of
-         (1,2,3) -> 2 + 3
-      || (1,2,z) -> 2 + z
-      || (1,y,3) -> y + 3
-      || (1,y,z) -> y + z
-      || (x,2,3) -> x - 3
-      || (x,2,z') -> x - z'
-      || (x,y',3) -> x * y'
-      || (x,y',z') -> ARB`` : term
+        (1,2,3) => 2 + 3
+      | (1,2,z) => 2 + z
+      | (1,y,3) => y + 3
+      | (1,y,z) => y + z
+      | (x,2,3) => x - 3
+      | (x,2,z') => x - z'
+      | (x,y',3) => x * y'
+      | (x,y',z') => ARB`` : term
 \end{verbatim}
 \end{hol}
 

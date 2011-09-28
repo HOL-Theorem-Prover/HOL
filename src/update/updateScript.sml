@@ -36,8 +36,8 @@ val LIST_UPDATE_LOOKUP = Q.store_thm("LIST_UPDATE_LOOKUP",
   `!l f i.
      LIST_UPDATE l f i =
        case FIND (\x. FST x = i) l
-       of SOME (_,e) -> e
-       || NONE -> f i`,
+       of SOME (_,e) => e
+        | NONE => f i`,
   Induct
   THEN SRW_TAC [] [LIST_UPDATE_def, FIND_def, combinTheory.UPDATE_def]
   THEN Cases_on `h`

@@ -11,15 +11,15 @@ Simple lexer for PSL/Sugar properties
 
  exception LexicalError of string * int * int (* (message, loc1, loc2) *)
 
- fun lexerError lexbuf s = 
+ fun lexerError lexbuf s =
      raise LexicalError (s, getLexemeStart lexbuf, getLexemeEnd lexbuf);
 
  val commentStart = ref 0;  (* Start of outermost comment being scanned *)
- 
+
  fun commentNotClosed lexbuf =
-     raise LexicalError ("Comment not terminated", 
+     raise LexicalError ("Comment not terminated",
                          !commentStart, getLexemeEnd lexbuf);
-     
+
  val commentDepth = ref 0;  (* Current comment nesting *)
 
  (* Scan keywords as identifiers and use this function to distinguish them. *)
@@ -42,7 +42,7 @@ Simple lexer for PSL/Sugar properties
        | "G"            => G
        | "inf"          => INF
        | "never"        => NEVER
-       | "next"         => NEXT 
+       | "next"         => NEXT
        | "U"            => U
        | "X"            => X
        | "abort"        => ABORT
@@ -54,9 +54,9 @@ Simple lexer for PSL/Sugar properties
 
  }
 
-rule Token = parse 
+rule Token = parse
     "(*"                { commentStart := getLexemeStart lexbuf;
-                          commentDepth := 1; 
+                          commentDepth := 1;
                           SkipComment lexbuf; Token lexbuf }
   | `@`                 { AT }
   | `;`                 { SEMICOLON }
@@ -66,18 +66,18 @@ rule Token = parse
   | "[*]"               { LBRKTSTARRBRKT }
   | "[+]"               { LBRKTPLUSRBRKT }
   | `,`                 { COMMA }
-  | `:`                 { COLON } 
+  | `:`                 { COLON }
   | `|`                 { BAR }
   | "||"                { BARBAR }
-  | `&`                 { AMPERSAND }                     
+  | `&`                 { AMPERSAND }
   | "&&"                { AMPERSANDAMPERSAND }
   | "->"                { LEFTARROW }
   | "<->"               { LEFTRIGHTARROW }
   | "|->"               { BARLEFTARROW }
   | "|=>"               { BAREQLEFTARROW }
   | "|="                { BAREQUAL }
-  | `!`                 { EXCLAIM }                     
-  | `*`                 { STAR }                     
+  | `!`                 { EXCLAIM }
+  | `*`                 { STAR }
   | `(`                 { LPAR }
   | `)`                 { RPAR }
   | `[`                 { LBRKT }
@@ -119,10 +119,10 @@ rule Token = parse
   | _                   { lexerError lexbuf "Illegal symbol in input" }
 
 and SkipComment = parse
-    "*)"                { commentDepth := !commentDepth - 1;  
+    "*)"                { commentDepth := !commentDepth - 1;
                           if !commentDepth = 0 then ()
-                          else SkipComment lexbuf } 
-   | "(*"               { commentDepth := !commentDepth + 1; 
+                          else SkipComment lexbuf }
+   | "(*"               { commentDepth := !commentDepth + 1;
                           SkipComment lexbuf }
    | (eof | `\^Z`)      { commentNotClosed lexbuf }
    | _                  { SkipComment lexbuf }

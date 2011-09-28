@@ -314,19 +314,19 @@ val ppc_exec_instr_def = Define `
       OK_nextinstr ii (reg_update ii rd (\x y. ~(x && y)) (read_ireg ii r1) (read_ireg ii r2))) /\
 
   (ppc_exec_instr ii (Pnor rd r1 r2) =
-      OK_nextinstr ii (reg_update ii rd (\x y. ~(x !! y)) (read_ireg ii r1) (read_ireg ii r2))) /\
+      OK_nextinstr ii (reg_update ii rd (\x y. ~(x || y)) (read_ireg ii r1) (read_ireg ii r2))) /\
 
   (ppc_exec_instr ii (Por rd r1 r2) =
-      OK_nextinstr ii (reg_update ii rd $!! (read_ireg ii r1) (read_ireg ii r2))) /\
+      OK_nextinstr ii (reg_update ii rd $|| (read_ireg ii r1) (read_ireg ii r2))) /\
 
   (ppc_exec_instr ii (Porc rd r1 r2) =
-      OK_nextinstr ii (reg_update ii rd (\x y. x !! ~y) (read_ireg ii r1) (read_ireg ii r2))) /\
+      OK_nextinstr ii (reg_update ii rd (\x y. x || ~y) (read_ireg ii r1) (read_ireg ii r2))) /\
 
   (ppc_exec_instr ii (Pori rd r1 cst) =
-      OK_nextinstr ii (reg_update ii rd $!! (read_ireg ii r1) (const_low cst))) /\
+      OK_nextinstr ii (reg_update ii rd $|| (read_ireg ii r1) (const_low cst))) /\
 
   (ppc_exec_instr ii (Poris rd r1 cst) =
-      OK_nextinstr ii (reg_update ii rd $!! (read_ireg ii r1) (const_high cst))) /\
+      OK_nextinstr ii (reg_update ii rd $|| (read_ireg ii r1) (const_high cst))) /\
 
   (ppc_exec_instr ii (Prlwinm rd r1 sh mb me) = failureT) /\
 

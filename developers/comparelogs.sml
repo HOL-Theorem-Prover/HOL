@@ -77,6 +77,7 @@ fun lookup m fname thy =
 
 val base_theories =
     map #1 (Binarymap.listItems (Binarymap.find(final_map, base)))
+    handle NotFound => die ("No data in base file: "^hd args)
 
 val base_theories =
     if diffsort then let

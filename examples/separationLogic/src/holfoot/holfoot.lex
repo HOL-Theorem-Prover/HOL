@@ -6,11 +6,11 @@ type lexresult  = (svalue,pos) token
 val linestart_pos = ref 0;
 
 fun mkTok f text pos line =
-  (f text, ((pos - !linestart_pos) - String.size text, line), 
+  (f text, ((pos - !linestart_pos) - String.size text, line),
             (pos - !linestart_pos, line));
 
-fun mkMtTok text pos line = 
-  (((pos - !linestart_pos) - String.size text, line), 
+fun mkMtTok text pos line =
+  (((pos - !linestart_pos) - String.size text, line),
     (pos - !linestart_pos, line));
 
 fun I x = x;
@@ -167,6 +167,6 @@ quoted_string = "\"" [^ `\"`]* "\"";
   ( YYBEGIN INITIAL; lex ());
 <Comment>[^*/]+ =>
   ( continue () );
-<Comment>. => 
+<Comment>. =>
   ( continue () );
 

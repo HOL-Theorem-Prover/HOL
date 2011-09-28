@@ -180,12 +180,29 @@ type ppconsumer = {consumer : string -> unit,
 		   linewidth : int,
 		   flush : unit -> unit}
 
+fun safe_consumer ofn = let
+  val output_stack = ref ([]:string list)
+  fun doit s = let
+  in
+    if String.size s = 0 then ()
+    else if String.sub(s,0) = #"\n" then
+      (output_stack := []; ofn ("\n"); doit(String.extract(s,1,NONE)))
+    else if CharVector.all Char.isSpace s then
+      output_stack := s :: !output_stack
+    else (List.app ofn (List.rev (!output_stack));
+          output_stack := [];
+          ofn(s))
+  end
+in
+  doit
+end
+
 fun mk_ppstream {consumer,linewidth,flush} =
     if (linewidth<5)
     then raise Fail "PP-error: linewidth too_small"
     else let val buf_size = 3*linewidth
           in
-             PPS{consumer = consumer,
+             PPS{consumer = safe_consumer consumer,
 		 linewidth = linewidth,
 		 flush = flush,
 		 the_token_buffer = array(buf_size, initial_token_value),
@@ -196,6 +213,8 @@ fun mk_ppstream {consumer,linewidth,flush} =
 		 left_index = ref 0, right_index = ref 0,
 		 left_sum = ref 0, right_sum = ref 0}
 	 end
+
+
 
 fun dest_ppstream(pps : ppstream) =
   let val PPS{consumer,linewidth,flush, ...} = pps

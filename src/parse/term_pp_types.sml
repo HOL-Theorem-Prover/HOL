@@ -4,7 +4,7 @@ structure term_pp_types = struct
   type printing_info =
        {seen_frees : Term.term HOLset.set,
         current_bvars : Term.term HOLset.set,
-        last_string : string}
+        last_string : string, in_gspec : bool}
 
   type 'a printer = (printing_info,'a)smpp.t
   type uprinter = unit printer

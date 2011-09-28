@@ -855,11 +855,11 @@ val trec = ``tmrec (A: string set) (ppm: ρ pmact) ^vf ^lf : (α,β)gterm -> ρ 
 val tmrec_defn = Hol_defn "tmrec" `
   ^trec t = λp.
     case some(s,vv).(t = GVAR s vv) of
-       SOME (s,vv) -> vf s vv p
-    || NONE -> (
+      SOME (s,vv) => vf s vv p
+    | NONE => (
     case some(v,bv,ts,us).(t = GLAM v bv ts us) ∧ v ∉ supp ppm p ∧ v ∉ GFVl us ∧ v ∉ A of
-       SOME (v,bv,ts,us) -> lf v bv (MAP (^trec) ts) (MAP (^trec) us) ts us p
-    || NONE -> ARB)`
+      SOME (v,bv,ts,us) => lf v bv (MAP (^trec) ts) (MAP (^trec) us) ts us p
+    | NONE => ARB)`
 
 val (tmrec_def, tmrec_ind) = Defn.tprove(
   tmrec_defn,

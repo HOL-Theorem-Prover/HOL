@@ -7,7 +7,7 @@ val _ = export_permweakening "dis_set.dis_set_eq_perms"
 
 val fresh_q = `
   (fresh fe a (Nom b) = a ≠ b) ∧
-  (fresh fe a (Sus pi v) = (perm_of (REVERSE pi) a, v) ∈ fe) ∧
+  (fresh fe a (Sus pi v) = (lswapstr (REVERSE pi) a, v) ∈ fe) ∧
   (fresh fe a (Tie b t) = (a = b) ∨ a ≠ b ∧ fresh fe a t) ∧
   (fresh fe a (nPair t1 t2) = fresh fe a t1 ∧ fresh fe a t2) ∧
   (fresh fe a (nConst c) = T)`;
@@ -21,7 +21,7 @@ val fresh_apply_pi = Q.store_thm(
 "fresh_apply_pi",
 `fresh fcs a t ⇒ fresh fcs (lswapstr pi a) (apply_pi pi t)`,
 Induct_on `t` THEN ASM_SIMP_TAC (psrw_ss()) [fresh_def] THEN1 (
-  SRW_TAC [][REVERSE_APPEND,lswapstr_decompose] ) THEN
+  SRW_TAC [][REVERSE_APPEND,pmact_decompose] ) THEN
 SRW_TAC [][] THEN SRW_TAC [][])
 
 val lemma27 = Q.store_thm( (* Lemma 2.7 - just consequences of the above, but good for metis *)
@@ -73,8 +73,8 @@ FULL_SIMP_TAC (psrw_ss()) [fresh_def] THEN1 (
   THEN FULL_SIMP_TAC (srw_ss()) [dis_set_def] THEN
   `lswapstr (REVERSE p1) (lswapstr p1 (lswapstr (REVERSE p2) a)) = lswapstr (REVERSE p1) a`
   by METIS_TAC [] THEN
-  FULL_SIMP_TAC bool_ss [GSYM lswapstr_decompose] THEN
-  FULL_SIMP_TAC (srw_ss()) [lswapstr_decompose]) THEN
+  FULL_SIMP_TAC bool_ss [GSYM pmact_decompose] THEN
+  FULL_SIMP_TAC (srw_ss()) [pmact_decompose]) THEN
 Cases_on `a = a2` THEN
 Q.PAT_ASSUM `a ≠ a1` ASSUME_TAC THEN
 FULL_SIMP_TAC (srw_ss()) [] THEN
@@ -102,9 +102,7 @@ FIRST_X_ASSUM (Q.SPEC_THEN `pi` MP_TAC) THEN
 Q.MATCH_ABBREV_TAC `equiv fe X Y1 ⇒ equiv fe X Y2` THEN
 Q_TAC SUFF_TAC `Y1 = Y2` THEN1 METIS_TAC [] THEN
 MAP_EVERY Q.UNABBREV_TAC [`Y1`,`Y2`] THEN
-SRW_TAC [][GSYM apply_pi_decompose] THEN
-MATCH_MP_TAC apply_pi_eq_perms THEN
-SRW_TAC [][permeq_swap_ends])
+SRW_TAC [][pmact_sing_to_back]);
 
 val equiv_sym = Q.store_thm(
 "equiv_sym",
@@ -120,15 +118,9 @@ THEN1 (
   ASM_SIMP_TAC (srw_ss()) [Once equiv_cases] THEN
   `equiv fe (apply_pi [(a2,a1)] (apply_pi [(a1,a2)] t2)) (apply_pi [(a2,a1)] t1)`
   by (MATCH_MP_TAC equiv_apply_pi THEN SRW_TAC [][] ) THEN
-  FULL_SIMP_TAC (srw_ss()) [GSYM apply_pi_decompose] THEN
-  `[(a2,a1); (a1,a2)] == [(a1,a2); (a1,a2)]`
-  by (SIMP_TAC (psrw_ss()) [permeq_flip_args]) THEN
-  `[(a1,a2); (a1,a2)] == []` by METIS_TAC [permof_dups] THEN
-  `apply_pi [(a2,a1); (a1,a2)] t2 = t2`
-  by METIS_TAC [permeq_trans,apply_pi_eq_perms,apply_pi_nil] THEN
-  FULL_SIMP_TAC (srw_ss()) [] THEN
-  IMP_RES_TAC equiv_fresh THEN
-  FIRST_X_ASSUM MATCH_MP_TAC THEN
+  FULL_SIMP_TAC (srw_ss()) [pmact_flip_args] THEN
+  MATCH_MP_TAC (GEN_ALL equiv_fresh) THEN
+  Q.EXISTS_TAC `[(a1,a2)] · t2` THEN
   IMP_RES_TAC fresh_apply_pi THEN
   POP_ASSUM (Q.SPEC_THEN `[(a1,a2)]` MP_TAC) THEN
   SRW_TAC [][]) THEN
@@ -143,8 +135,8 @@ Induct THEN SRW_TAC [][fresh_def] THEN
 FULL_SIMP_TAC (psrw_ss()) [dis_set_def] THEN
 SRW_TAC [][Once equiv_cases] THEN1 (
   MAP_EVERY Q.EXISTS_TAC [`pi1 ++ l`,`pi2++l`] THEN
-  SRW_TAC [][dis_set_def,lswapstr_decompose] THEN
-  RES_TAC THEN FULL_SIMP_TAC (srw_ss()) [lswapstr_inverse]
+  SRW_TAC [][dis_set_def,pmact_decompose] THEN
+  RES_TAC THEN FULL_SIMP_TAC (srw_ss()) []
 ) THEN
 Cases_on `lswapstr pi2 s = lswapstr pi1 s` THEN SRW_TAC [][] THENL [
   FIRST_ASSUM MATCH_MP_TAC THEN
@@ -153,7 +145,7 @@ Cases_on `lswapstr pi2 s = lswapstr pi1 s` THEN SRW_TAC [][] THENL [
    |> SIMP_RULE (srw_ss()) [] |> MATCH_MP_TAC) THEN
   Q.MATCH_ABBREV_TAC `fresh fcs a t` THEN
   Q_TAC SUFF_TAC `lswapstr pi1 a ≠ lswapstr pi2 a ∧ a ≠ s` THEN1 METIS_TAC [] THEN
-  UNABBREV_ALL_TAC THEN SRW_TAC [][] THEN METIS_TAC [basic_swapTheory.lswapstr_eql],
+  UNABBREV_ALL_TAC THEN SRW_TAC [][] THEN METIS_TAC [pmact_eql],
   SRW_TAC [][GSYM apply_pi_decompose] THEN
   FIRST_X_ASSUM MATCH_MP_TAC THEN SRW_TAC [][] THEN
   Cases_on `a = s` THEN FULL_SIMP_TAC (srw_ss()) [] THEN
@@ -174,19 +166,16 @@ a ∈ dis_set pi1 pi2 ⇒ fresh fe a t` THEN1 METIS_TAC [] THEN
 HO_MATCH_MP_TAC equiv_ind THEN
 STRIP_TAC THEN1 (
   ASM_SIMP_TAC (psrw_ss()) [apply_pi_eql,fresh_def,dis_set_def] THEN
-  METIS_TAC [lswapstr_inverse] ) THEN
+  METIS_TAC [pmact_inverse] ) THEN
 STRIP_TAC THEN1 (
-  ASM_SIMP_TAC (psrw_ss()) [apply_pi_eql,fresh_def] THEN
+  ASM_SIMP_TAC (srw_ss()) [apply_pi_eql,fresh_def] THEN
   SRW_TAC [][dis_set_def] THEN
   FIRST_X_ASSUM MATCH_MP_TAC THEN
-  IMP_RES_TAC permof_REVERSE_monotone THEN
-  FULL_SIMP_TAC (srw_ss()) [REVERSE_APPEND,lswapstr_decompose] THEN
-  ASM_SIMP_TAC (srw_ss()) [GSYM lswapstr_decompose] THEN
-  Q_TAC SUFF_TAC `(REVERSE p1) ++ p1 ++ (REVERSE p2) ++ pi2 == (REVERSE p1) ++ pi1`
-  THEN1 METIS_TAC [lswapstr_eq_perms,app_permeq_left_cancel,permeq_refl,APPEND_ASSOC] THEN
-  Q_TAC SUFF_TAC `(REVERSE p1) ++ p1 ++ (REVERSE p2) ++ pi2 == (REVERSE p2) ++ pi2`
-  THEN1 METIS_TAC [permeq_trans,permeq_sym] THEN
-  METIS_TAC [permof_inverse, APPEND, permeq_refl, permeq_trans, app_permeq_monotone] ) THEN
+  `lswapstr (pi1⁻¹ ++ p1)⁻¹ = lswapstr (pi2⁻¹ ++ p2)⁻¹`
+     by (MATCH_MP_TAC pmact_permeq THEN
+         IMP_RES_TAC permof_REVERSE_monotone) THEN
+  POP_ASSUM (fn th => SIMP_TAC bool_ss [SimpRHS, th]) THEN
+  SRW_TAC [][pmact_decompose]) THEN
 STRIP_TAC THEN1 (
   ASM_SIMP_TAC (psrw_ss()) [apply_pi_eql,fresh_def,dis_set_def] THEN
   SRW_TAC [][] THEN
@@ -199,7 +188,7 @@ STRIP_TAC THEN1 (
   Q_TAC SUFF_TAC `fresh fe (lswapstr pi2 a) t2` THEN1 METIS_TAC [lemma27] THEN
   Cases_on `a1 = lswapstr pi2 a` THEN SRW_TAC [][] THEN
   FIRST_X_ASSUM (Q.SPECL_THEN [`pi1 ++ (REVERSE pi2)`,`[(a1,a2)]`,`lswapstr pi2 a`] MP_TAC) THEN
-  ASM_SIMP_TAC (psrw_ss()) [apply_pi_decompose,lswapstr_decompose] THEN
+  ASM_SIMP_TAC (psrw_ss()) [apply_pi_decompose,pmact_decompose] THEN
   STRIP_TAC THEN POP_ASSUM MATCH_MP_TAC THEN
   Cases_on `a2 = lswapstr pi2 a` THEN1 (
     SRW_TAC [][] THEN FULL_SIMP_TAC (psrw_ss()) [] ) THEN
@@ -226,7 +215,7 @@ STRIP_TAC THEN1 (
   MAP_EVERY Q.EXISTS_TAC [`p1`,`pi++p2`] THEN
   SRW_TAC [][] THEN
   FULL_SIMP_TAC (srw_ss()) [dis_set_def] THEN
-  METIS_TAC [lswapstr_eq_perms] ) THEN
+  METIS_TAC [pmact_permeq] ) THEN
 STRIP_TAC THEN1 (
   REPEAT STRIP_TAC THEN
   SRW_TAC [][Once equiv_cases] THEN
@@ -242,7 +231,7 @@ STRIP_TAC THEN1 (
   SRW_TAC [][] THEN1 (
     Cases_on `lswapstr pi a1 = a1` THEN1 METIS_TAC [fresh_apply_pi] THEN
     Cases_on `lswapstr (REVERSE pi) a1 = a1` THEN1 (
-      FULL_SIMP_TAC (srw_ss()) [basic_swapTheory.lswapstr_eql] ) THEN
+      FULL_SIMP_TAC (srw_ss()) [pmact_eql] ) THEN
     MATCH_MP_TAC (GEN_ALL equiv_ds_fresh) THEN
     MAP_EVERY Q.EXISTS_TAC [`[]`,`REVERSE pi`] THEN
     SRW_TAC [][dis_set_def])
@@ -259,13 +248,7 @@ STRIP_TAC THEN1 (
     by METIS_TAC [equiv_apply_pi] THEN
     FIRST_X_ASSUM (Q.SPEC_THEN `pi ++ (REVERSE [(a1,a2)])` MP_TAC) THEN
     FULL_SIMP_TAC (srw_ss()) [apply_pi_decompose] THEN
-    `(REVERSE [(a1,a2)]) = [(a1,a2)]` by SRW_TAC [][] THEN
-    `[(a2,a1)] == [(a1,a2)]` by METIS_TAC [permeq_flip_args] THEN
-    `apply_pi [(a2,a1)] (apply_pi pi t2) = apply_pi (REVERSE [(a1,a2)]) (apply_pi pi t2)`
-    by METIS_TAC [apply_pi_eq_perms] THEN
-    Q.PAT_ASSUM `REVERSE X = X` (K ALL_TAC) THEN
-    Q.ABBREV_TAC `X = [(a1,a2)]`  THEN
-    FULL_SIMP_TAC (srw_ss()) [] ) THEN
+    FULL_SIMP_TAC (srw_ss()) [pmact_flip_args]) THEN
   `fresh fe a1 (apply_pi [(a2,lswapstr pi a2)] (apply_pi pi t2))`
   by METIS_TAC [equiv_fresh] THEN
   `fresh fe (lswapstr (REVERSE [(a2,lswapstr pi a2)]) a1) (apply_pi pi t2)`
@@ -290,7 +273,7 @@ STRIP_TAC THEN1 (
   Cases_on `a2 = lswapstr pi a` THEN FULL_SIMP_TAC (srw_ss()) [] THEN
   Cases_on `lswapstr pi (lswapstr pi a) = a` THEN FULL_SIMP_TAC (srw_ss()) [] THEN
   Cases_on `lswapstr (REVERSE pi) a = a` THEN
-  FULL_SIMP_TAC (srw_ss()) [basic_swapTheory.lswapstr_eql] THEN
+  FULL_SIMP_TAC (srw_ss()) [pmact_eql] THEN
   `fresh fe (lswapstr (REVERSE pi) (lswapstr pi a)) (apply_pi (REVERSE pi) (apply_pi pi t2))`
   by METIS_TAC [lemma27] THEN
   FULL_SIMP_TAC (srw_ss()) []) THEN
@@ -338,10 +321,9 @@ STRIP_TAC THEN1 (
     SRW_TAC [][] ) THEN
   Cases_on `a2' = a1` THEN ASM_SIMP_TAC (srw_ss()) [] THEN1 (
     FIRST_X_ASSUM MATCH_MP_TAC THEN
-    `equiv fe (apply_pi [(a1,a2)] t2) (apply_pi [(a1,a2)] (apply_pi [(a2,a1)] t2'))`
-    by ( MATCH_MP_TAC equiv_apply_pi THEN SRW_TAC [][]) THEN
-    FULL_SIMP_TAC (srw_ss()) [GSYM apply_pi_decompose] THEN
-    METIS_TAC [permeq_flip_args, permof_dups, apply_pi_eq_perms, apply_pi_nil] ) THEN
+    `equiv fe ([(a1,a2)] · t2) ([(a1,a2)] · ([(a2,a1)] · t2'))`
+      by ( MATCH_MP_TAC equiv_apply_pi THEN SRW_TAC [][]) THEN
+    FULL_SIMP_TAC (srw_ss()) [pmact_flip_args]) THEN
   Q.MATCH_ASSUM_RENAME_TAC `a2 ≠ a3` [] THEN
   Q.MATCH_ASSUM_RENAME_TAC `fresh fe a2 t3` [] THEN
   CONJ1_TAC THEN1 (
@@ -362,14 +344,13 @@ STRIP_TAC THEN1 (
   FULL_SIMP_TAC (srw_ss()) [EXTENSION] THEN
   `equiv fe (apply_pi [(a1,a2);(a2,a3)] t3) (apply_pi [(a1,a3)] t3)`
   by METIS_TAC [fresh_ds_equiv,dis_set_comm] THEN
-  `equiv fe (apply_pi [(a1,a2)] t2) (apply_pi ([(a1,a3)] ++ (REVERSE [(a1,a2);(a2,a3)]))
-                                     (apply_pi [(a1,a2);(a2,a3)] t3))` by
+  `equiv fe (apply_pi [(a1,a2)] t2)
+            (apply_pi ([(a1,a3)] ++ (REVERSE [(a1,a2);(a2,a3)]))
+                      (apply_pi [(a1,a2);(a2,a3)] t3))` by
   (MATCH_MP_TAC equiv_trans_lemma THEN
    CONJ_TAC THEN1 FULL_SIMP_TAC (srw_ss()) [GSYM apply_pi_decompose] THEN
    SRW_TAC [][apply_pi_decompose]) THEN
-  RES_TAC THEN FULL_SIMP_TAC (srw_ss()) [apply_pi_decompose] THEN
-  FIRST_ASSUM (Q.SPECL_THEN [`apply_pi [(a1,a2)] t2`, `apply_pi [(a1,a2);(a2,a3)] t3`, `[(a1,a3)]++REVERSE([(a1,a2);(a2,a3)])`] MP_TAC) THEN
-  ASM_SIMP_TAC (srw_ss()) [equiv_sym]) THEN
+  RES_TAC THEN FULL_SIMP_TAC (srw_ss()) [apply_pi_decompose]) THEN
 STRIP_TAC THEN1 (
   REPEAT STRIP_TAC THEN
   SRW_TAC [][Once equiv_cases] THEN
@@ -548,13 +529,13 @@ val equiv_eq_perms = Q.store_thm(
 SRW_TAC [][Once equiv_cases] THEN
 SRW_TAC [][Once equiv_cases] THEN
 FULL_SIMP_TAC (srw_ss()) [dis_set_def] THEN
-METIS_TAC [lswapstr_eq_perms,permeq_sym])
+METIS_TAC [pmact_permeq,permeq_sym])
 
 val fresh_eq_perms = Q.store_thm(
 "fresh_eq_perms",
 `fresh fcs a (Sus p v) ∧ p == q ⇒ fresh fcs a (Sus q v)`,
 ASM_SIMP_TAC (psrw_ss()) [fresh_def] THEN
-METIS_TAC [basic_swapTheory.lswapstr_eql,lswapstr_eq_perms])
+METIS_TAC [pmact_eql,pmact_permeq])
 
 val unify_eq_vars_equiv = Q.store_thm(
 "unify_eq_vars_equiv",
@@ -960,7 +941,7 @@ Induct_on `t` THEN SRW_TAC [][] THEN1 (
   FULL_SIMP_TAC (srw_ss()) [term_fcs_def] )
 THEN1 (
   FULL_SIMP_TAC (psrw_ss()) [term_fcs_def, REVERSE_APPEND] THEN
-  SRW_TAC [][GSYM lswapstr_decompose] THEN
+  SRW_TAC [][GSYM pmact_decompose] THEN
   SIMP_TAC (psrw_ss()) [] )
 THEN1 (
   SRW_TAC [][Once term_fcs_def] THEN1 (
@@ -1004,7 +985,7 @@ THEN1 (
   RES_TAC THEN FULL_SIMP_TAC (srw_ss()) [] THEN
   (nvwalk_modulo_pi |> Q.SPECL [`s`,`l'`,`n'`] |> GSYM |> MP_TAC) THEN
   ASM_SIMP_TAC (psrw_ss()) [apply_pi_eql] THEN
-  SRW_TAC [][REVERSE_APPEND,lswapstr_decompose] THEN
+  SRW_TAC [][REVERSE_APPEND,pmact_decompose] THEN
   METIS_TAC [] )
 THEN1 (
   Q.PAT_ASSUM `term_fcs X Y = SOME fcs2` MP_TAC THEN
@@ -2457,7 +2438,7 @@ THEN1 (
   SRW_TAC [][] THEN
   (nvwalk_modulo_pi |> Q.SPECL [`s`,`l'`,`n'`] |> GSYM |> MP_TAC) THEN
   ASM_SIMP_TAC (psrw_ss()) [apply_pi_eql] THEN
-  SRW_TAC [][REVERSE_APPEND,lswapstr_decompose] )
+  SRW_TAC [][REVERSE_APPEND,pmact_decompose] )
 THEN1 (
   Q.PAT_ASSUM `X = SOME fcs` MP_TAC THEN
   ASM_SIMP_TAC (srw_ss()) [Once term_fcs_def] THEN
@@ -2810,14 +2791,13 @@ THEN1 (
     SRW_TAC [][nwalkstar_nwalk] ) THEN
   Q.MATCH_ASSUM_RENAME_TAC `nwalk s t1 = Tie (lswapstr q1 a) (apply_pi q1 t)` [] THEN
   `lswapstr (REVERSE q2) (lswapstr q1 a) ∈ dis_set q1 q2` by (
-    ASM_SIMP_TAC (srw_ss()) [dis_set_def,basic_swapTheory.lswapstr_eqr] THEN
-    SPOSE_NOT_THEN STRIP_ASSUME_TAC THEN
-    METIS_TAC [lswapstr_inverse] ) THEN
+    ASM_SIMP_TAC (srw_ss()) [dis_set_def] THEN
+    FULL_SIMP_TAC (srw_ss())[pmact_eql] ) THEN
   Q.PAT_ASSUM `!X.Y` MP_TAC THEN
   SRW_TAC [][Once term_fcs_def] THEN
   `lswapstr (REVERSE q2) (lswapstr q1 a) ≠ a` by (
     SPOSE_NOT_THEN STRIP_ASSUME_TAC THEN
-    METIS_TAC [lswapstr_inverse] ) THEN
+    METIS_TAC [pmact_inverse] ) THEN
   `∃fcs. term_fcs (lswapstr q1 a) (apply_pi q2 (nwalk* s t)) = SOME fcs` by (
     FIRST_X_ASSUM (Q.SPEC_THEN `lswapstr (REVERSE q2) (lswapstr q1 a)` MP_TAC) THEN
     SRW_TAC [][] THEN

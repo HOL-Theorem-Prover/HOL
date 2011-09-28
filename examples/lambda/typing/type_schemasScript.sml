@@ -38,8 +38,6 @@ open pred_setTheory
 
 val _ = new_theory "type_schemas"
 
-val lswapstr_APPEND = basic_swapTheory.lswapstr_APPEND
-
 val _ = Hol_datatype`
   type = tyvar of string
        | tyfun of type => type
@@ -152,7 +150,7 @@ val aeq_example4 = prove(
   SRW_TAC [][Once aeq_cases] THEN SRW_TAC [][Once aeq_cases] THEN
   SRW_TAC [][okpm_def] THEN
   SRW_TAC [DNF_ss][] THEN
-  METIS_TAC [basic_swapTheory.lswapstr_11,stringpm_raw]);
+  METIS_TAC [pmact_injective]);
 
 fun find_small_cond t = let
   fun recurse t k =
@@ -179,7 +177,7 @@ val rtypm_cpmpm = (SIMP_RULE (srw_ss()) []  o
                    INST_TYPE [alpha |-> ``:type``])
                   pm_pm_cpmpm
 
-val lswapstr_lswapstr_cpmpm = REWRITE_RULE [stringpm_raw] stringpm_stringpm_cpmpm
+val lswapstr_lswapstr_cpmpm = stringpm_stringpm_cpmpm
 
 val rtypm_okpm = prove(
   ``okpm (cpmpm pi pi0)
@@ -189,25 +187,22 @@ val rtypm_okpm = prove(
     okpm pi0 bvs avds t``,
   SRW_TAC [][okpm_def, fv_rtypm, pmact_IN, EQ_IMP_THM] THENL [
     FULL_SIMP_TAC (srw_ss()) [Once lswapstr_lswapstr_cpmpm,
-                              pmact_inverse, stringpm_raw] THEN
+                              pmact_inverse] THEN
     FIRST_ASSUM (Q.SPEC_THEN `lswapstr pi s`
                              (MATCH_MP_TAC o SIMP_RULE (srw_ss()) [])) THEN
     SRW_TAC [][],
 
     FIRST_X_ASSUM (Q.SPEC_THEN `lswapstr pi s` MP_TAC) THEN
-    SRW_TAC [][basic_swapTheory.lswapstr_eqr, stringpm_raw] THEN
-    FULL_SIMP_TAC (srw_ss()) [Once lswapstr_lswapstr_cpmpm, pmact_inverse],
+    SRW_TAC [][pmact_eqr] THEN
+    FULL_SIMP_TAC (srw_ss()) [Once lswapstr_lswapstr_cpmpm],
 
-    FULL_SIMP_TAC (srw_ss()) [Once lswapstr_lswapstr_cpmpm,stringpm_raw] THEN
-    SRW_TAC [][pmact_inverse],
+    FULL_SIMP_TAC (srw_ss()) [Once lswapstr_lswapstr_cpmpm],
 
-    FULL_SIMP_TAC (srw_ss()) [stringpm_raw] THEN
     `lswapstr pi0 (lswapstr (REVERSE pi) s) = lswapstr (REVERSE pi) s`
        by SRW_TAC [][] THEN
     POP_ASSUM MP_TAC THEN
-    SIMP_TAC (srw_ss()) [basic_swapTheory.lswapstr_eqr] THEN
-    ONCE_REWRITE_TAC [lswapstr_lswapstr_cpmpm] THEN
-    SRW_TAC [][]
+    SIMP_TAC (srw_ss()) [pmact_eqr] THEN
+    SRW_TAC [][Once lswapstr_lswapstr_cpmpm]
   ]);
 
 val aeq_rtypm = prove(
@@ -242,14 +237,14 @@ val avoid_finite_set0 = prove(
     Q.EXISTS_TAC `(z,e)::pi` THEN SRW_TAC [][] THENL [
       METIS_TAC [],
       SRW_TAC [][basic_swapTheory.swapstr_eq_left, pmact_eql,
-                 listsupp_REVERSE, perm_of_unchanged],
+                 listsupp_REVERSE, lswapstr_unchanged],
 
-      SRW_TAC [][perm_of_unchanged] THEN METIS_TAC [SUBSET_DEF],
+      SRW_TAC [][lswapstr_unchanged] THEN METIS_TAC [SUBSET_DEF],
 
       SRW_TAC [][basic_swapTheory.swapstr_eq_left] THEN
       SPOSE_NOT_THEN STRIP_ASSUME_TAC THEN SRW_TAC [][] THEN
       `lswapstr pi x = x` by (
-        IMP_RES_TAC perm_of_unchanged THEN
+        IMP_RES_TAC lswapstr_unchanged THEN
         FULL_SIMP_TAC (srw_ss()) [] ) THEN
       FULL_SIMP_TAC (srw_ss()) [SUBSET_DEF] THEN
       METIS_TAC [],
@@ -261,7 +256,7 @@ val avoid_finite_set0 = prove(
          by METIS_TAC [lswapstr_lswapstr_cpmpm] THEN
       ` _ = lswapstr (cpmpm [(e,z)] pi) x`
          by METIS_TAC [basic_swapTheory.swapstr_def, SUBSET_DEF,
-                       basic_swapTheory.lswapstr_def, pairTheory.FST,
+                       stringpm_thm, pairTheory.FST,
                        pairTheory.SND] THEN
       ` _ = lswapstr pi x` by SRW_TAC [][supp_fresh] THEN
       METIS_TAC [],
@@ -271,14 +266,14 @@ val avoid_finite_set0 = prove(
       SPOSE_NOT_THEN STRIP_ASSUME_TAC THEN SRW_TAC [][] THEN
       `lswapstr pi x NOTIN patoms (REVERSE pi)` by (
         RES_TAC THEN SRW_TAC [][listsupp_REVERSE] ) THEN
-      IMP_RES_TAC perm_of_unchanged THEN
+      IMP_RES_TAC lswapstr_unchanged THEN
       FULL_SIMP_TAC (srw_ss()) [] THEN POP_ASSUM (ASSUME_TAC o SYM) THEN
       FULL_SIMP_TAC (srw_ss()) [],
-      SRW_TAC [][perm_of_unchanged]
+      SRW_TAC [][lswapstr_unchanged]
     ]
   ]);
 
-val avoid_finite_set = SUBS [GSYM stringpm_raw]
+val avoid_finite_set =
   (SIMP_RULE (srw_ss()) [] (Q.SPEC `ub` avoid_finite_set0))
 
 val aeq_refl = prove(
@@ -352,7 +347,7 @@ val aeq_sym = prove(
   HO_MATCH_MP_TAC aeq_ind THEN SRW_TAC [][aeq_rules] THEN
   MATCH_MP_TAC aeq_forall THEN METIS_TAC [UNION_COMM]);
 
-val strong_aeq_ind = IndDefLib.derive_strong_induction(aeq_rules, aeq_ind)
+val strong_aeq_ind = theorem "aeq_strongind"
 
 val aeq_rtypm_eqn = prove(
   ``aeq (rtypm pi ty1) (rtypm pi ty2) = aeq ty1 ty2``,
@@ -370,7 +365,7 @@ val okpm_exists = store_thm(
         Q.EXISTS_TAC `(z,e) :: pi` THEN SRW_TAC [][] THENL [
           SRW_TAC [][basic_swapTheory.swapstr_eq_left, pmact_eql] THEN
           SPOSE_NOT_THEN STRIP_ASSUME_TAC THEN SRW_TAC [][] THEN
-          METIS_TAC [perm_of_unchanged,listsupp_REVERSE,stringpm_raw],
+          METIS_TAC [lswapstr_unchanged,listsupp_REVERSE],
           SRW_TAC [][basic_swapTheory.swapstr_def],
           `~(z = s')` by METIS_TAC [] THEN
           `~(e = s')` by METIS_TAC [] THEN SRW_TAC [][]
@@ -383,7 +378,7 @@ val okpm_exists = store_thm(
       Q_TAC (NEW_TAC "z") `patoms pi UNION fv ty UNION {e} UNION s` THEN
       Q.EXISTS_TAC `(z,e) :: pi` THEN SRW_TAC [][] THENL [
         SRW_TAC [][basic_swapTheory.swapstr_eq_left, pmact_eql] THEN
-        METIS_TAC [perm_of_unchanged,listsupp_REVERSE,stringpm_raw],
+        METIS_TAC [lswapstr_unchanged,listsupp_REVERSE,stringpm_raw],
         SRW_TAC [][basic_swapTheory.swapstr_def],
         `~(z = s')` by METIS_TAC [] THEN
         `~(e = s')` by METIS_TAC [] THEN SRW_TAC [][]

@@ -154,7 +154,7 @@ functor mkPrintStruct(structure LrTable : LR_TABLE
 	   print (Int.toString rules);
 	   print "\n\
 \val s = ref \"\" and index = ref 0\n\
-\val string_to_int = fn () => \n\
+\val string_to_int = fn () =>\n\
 \let val i = !index\n\
 \in index := i+2; Char.ord(String.sub(!s,i)) + Char.ord(String.sub(!s,i+1)) * 256\n\
 \end\n\

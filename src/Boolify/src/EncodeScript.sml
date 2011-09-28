@@ -200,7 +200,7 @@ val encode_sum_def =
 
 val lift_sum_def = Define
   `lift_sum (p1 : 'a->bool) p2 x =
-   case x of INL x1 -> p1 x1 || INR x2 -> p2 x2`;
+   case x of INL x1 => p1 x1 | INR x2 => p2 x2`;
 
 val wf_encode_sum = store_thm
   ("wf_encode_sum",
@@ -222,7 +222,7 @@ val encode_option_def =
    (encode_option xb (SOME x) = T :: xb x)`;
 
 val lift_option_def = Define
-  `lift_option p x = case x of NONE -> T || SOME y -> p y`;
+  `lift_option p x = case x of NONE => T | SOME y => p y`;
 
 val wf_encode_option = store_thm
   ("wf_encode_option",

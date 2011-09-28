@@ -1,0 +1,106 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01//EN">
+<html>
+<head>
+<meta http-equiv="content-type"
+      content="text/html ; charset=UTF-8">
+<title>Release Notes for Kananaskis-8 version of HOL 4</title>
+<style type="text/css">
+<!--
+  body {color: #333333; background: #FFFFFF;
+        margin-left: 1em; margin-right: 1em }
+  code, pre {color: #660066; font-weight: bold; font-family: "Andale Mono", "Lucida Console", monospace; font-size: smaller}
+-->
+</style>
+
+</head>
+
+<body>
+<h1>Notes on HOL 4, Kananaskis-8 release</h1>
+
+<p>We are pleased to announce the Kananaskis-8 release of HOL 4.</p>
+
+<h2 id="contents">Contents</h2>
+<ul>
+  <li> <a href="#new-features">New features</a> </li>
+  <li> <a href="#bugs-fixed">Bugs fixed</a> </li>
+  <li> <a href="#new-theories">New theories</a> </li>
+  <li> <a href="#new-tools">New tools</a> </li>
+  <li> <a href="#new-examples">New examples</a> </li>
+  <li> <a href="#incompatibilities">Incompatibilities</a> </li>
+</ul>
+
+<h2 id="new-features">New features:</h2>
+
+<ul>
+
+</ul>
+
+<h2 id="bugs-fixed">Bugs fixed:</h2>
+
+<ul>
+
+</ul>
+
+<h2 id="new-theories">New theories:</h2>
+
+<ul>
+</ul>
+
+<h2 id="new-tools">New tools:</h2>
+
+<ul>
+
+
+
+</ul>
+
+<h2 id="new-examples">New examples:</h2>
+
+<ul>
+</ul>
+
+<h2 id="incompatibilities">Incompatibilities:</h2>
+
+<ul>
+
+<li><p>The syntax for <code>case</code> expressions has changed to be the same as in SML. This means that instead of
+<pre>
+        case n of
+           0 -> 1
+        || SUC n -> n + 1
+</pre>
+<p>one should write
+<pre>
+        case n of
+          0 => 1
+        | SUC n => n + 1
+</pre>
+<p>The new syntax does not mix well with the vertical bars of the set comprehension syntax.
+If one has a case expression inside a set-comprehension, the parser will likely be confused unless the case expression is enclosed in parentheses.
+The pretty-printer will parenthesise all case-expressions inside set comprehensions.
+
+<p>The pretty-printer’s behaviour cannot be easily changed, but if one wishes to support source files using the old syntax, the following incantation can be used:
+<pre>
+        set_mapped_fixity {
+          tok = "||", fixity = Infixr 6,
+          term_name = GrammarSpecials.case_split_special
+        };
+        set_mapped_fixity {
+          tok = "-&gt;", fixity = Infixr 10,
+          term_name = GrammarSpecials.case_arrow_special
+        };
+</pre>
+<p>The problem with using this old syntax is that the <code>||</code> token is now also used for the bit-wise or operation on words.
+If <code>wordsLib</code> is loaded, the parser will behave unpredictably unless the new syntax for bitwise or is removed.
+This removal can be done with:
+<pre>
+        remove_termtok {tok = "||", term_name = "||"}
+</pre>
+<p>When this is done, or if <code>wordsLib</code> is not loaded in the first place, old-style case-expressions will be parsed correctly.
+</ul>
+
+<hr>
+
+<p><em><a href="http://hol.sourceforge.net">HOL 4, Kananaskis-7</a></em></p>
+
+</body> </html>

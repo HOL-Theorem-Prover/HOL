@@ -6,13 +6,13 @@ fun printb s = print (s ^ " ");
 %%
 
 %eop EOF
-%term EQUALS | NULL | OPEN | STAR | INCLUDE | ID of string | EOF | 
+%term EQUALS | NULL | OPEN | STAR | INCLUDE | ID of string | EOF |
       QUAL_ID of string
 %name SimpleSML
 
 %pos int
 
-%nonterm MLtext of string list | MLfrag of string list | 
+%nonterm MLtext of string list | MLfrag of string list |
          MLseq of string list | UnitName_seq of string list |
          LongIdent of string list | UnitName of string | Ident of string
 

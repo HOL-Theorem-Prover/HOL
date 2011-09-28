@@ -122,8 +122,8 @@ val permeq_cons_monotone = store_thm(
   ``(p1 == p2) ==> (h::p1 == h::p2)``,
   SRW_TAC [][permeq_def, FUN_EQ_THM]);
 
-val permeq_swap_ends = store_thm(
-  "permeq_swap_ends",
+val permeq_swap_ends0 = store_thm(
+  "permeq_swap_ends0",
   ``!p x y. p ++ [(x,y)] == (perm_of p x, perm_of p y)::p``,
   Induct THEN SRW_TAC [][permeq_refl] THEN
   Q_TAC SUFF_TAC `h::(perm_of p x, perm_of p y)::p ==
@@ -244,6 +244,12 @@ val pmact_eql = store_thm(
   SRW_TAC [][is_pmact_def, EQ_IMP_THM] THEN
   SRW_TAC [][pmact_decompose]);
 
+val pmact_eqr = save_thm(
+  "pmact_eqr",
+  pmact_eql |> Q.INST [`y` |-> `pmact pm p y`,
+                       `x` |-> `pmact pm p⁻¹ x`]
+            |> REWRITE_RULE [pmact_inverse]);
+
 val pmact_injective = Store_thm(
   "pmact_injective",
   ``(pmact pm p x = pmact pm p y) = (x = y)``,
@@ -287,6 +293,16 @@ val stringpm_raw = store_thm(
 "stringpm_raw",
 ``stringpm = perm_of``,
 srw_tac [][GSYM pmact_bijections]);
+
+val permeq_swap_ends = save_thm(
+  "permeq_swap_ends",
+  SUBS [GSYM stringpm_raw] permeq_swap_ends0);
+
+val lswapstr_swapstr = save_thm(
+  "lswapstr_swapstr",
+  ONCE_REWRITE_RULE [GSYM stringpm_raw] perm_of_swapstr);
+
+val _ = remove_ovl_mapping "perm_of" {Thy="basic_swap", Name = "raw_lswapstr"}
 
 (* l1 == l2 <=> !x. lswapstr l1 x = lswapstr l2 x *)
 val permeq_thm = save_thm(
@@ -561,18 +577,20 @@ val pmact_support = store_thm(
     `pmact pm ([(stringpm π a, stringpm π b)] ++ π) x = pmact pm π x`
        by METIS_TAC [pmact_decompose] THEN
     `[(stringpm π a, stringpm π b)] ++ π == π ++ [(a,b)]`
-       by METIS_TAC [stringpm_raw, permeq_swap_ends, permeq_sym, listTheory.APPEND] THEN
+       by METIS_TAC [permeq_swap_ends, permeq_sym, listTheory.APPEND] THEN
     `pmact pm (π ++ [(a,b)]) x = pmact pm π x`
        by METIS_TAC [pmact_permeq] THEN
     METIS_TAC [pmact_injective, pmact_decompose],
-    `pmact pm [(a,b)] (pmact pm π x) = pmact pm ([(a,b)] ++ π) x` by METIS_TAC [pmact_decompose] THEN
+    `pmact pm [(a,b)] (pmact pm π x) = pmact pm ([(a,b)] ++ π) x`
+       by METIS_TAC [pmact_decompose] THEN
     `[(a,b)] ++ π == π ++ [(stringpm π⁻¹ a, stringpm π⁻¹ b)]`
-       by (SRW_TAC [][stringpm_raw] THEN
-           Q.SPECL_THEN [`π`, `perm_of π⁻¹ a`, `perm_of π⁻¹ b`]
-                        (ASSUME_TAC o REWRITE_RULE [permof_inverse_applied])
+       by (SRW_TAC [][] THEN
+           Q.SPECL_THEN [`π`, `lswapstr π⁻¹ a`, `lswapstr π⁻¹ b`]
+                        (ASSUME_TAC o REWRITE_RULE [pmact_inverse])
                         permeq_swap_ends THEN
            METIS_TAC [permeq_sym]) THEN
-    `pmact pm [(a,b)] (pmact pm π x) = pmact pm (π ++ [(stringpm π⁻¹ a, stringpm π⁻¹ b)]) x`
+    `pmact pm [(a,b)] (pmact pm π x) =
+          pmact pm (π ++ [(stringpm π⁻¹ a, stringpm π⁻¹ b)]) x`
        by METIS_TAC [pmact_permeq] THEN
     ` _ = pmact pm π (pmact pm [(stringpm π⁻¹ a, stringpm π⁻¹ b)] x)`
        by METIS_TAC [pmact_decompose] THEN
@@ -822,9 +840,9 @@ val patoms_fresh = Store_thm(
   ``!p. x ∉ patoms p ∧ y ∉ patoms p ⇒ (cpmpm [(x,y)] p = p)``,
   METIS_TAC [supp_supports, support_def]);
 
-val perm_of_unchanged = store_thm(
-  "perm_of_unchanged",
-  ``!p. s ∉ patoms p ⇒ (perm_of p s = s)``,
+val lswapstr_unchanged = store_thm(
+  "lswapstr_unchanged",
+  ``!p. s ∉ patoms p ⇒ (lswapstr p s = s)``,
   Induct THEN SIMP_TAC (srw_ss()) [pairTheory.FORALL_PROD] THEN
   SRW_TAC [][swapstr_def]);
 
@@ -895,7 +913,7 @@ val patoms_cpmpm = store_thm(
 (* support for honest to goodness permutations, not just their
    representations *)
 val perm_supp_SUBSET_plistvars = prove(
-  ``!p. {s | ~(perm_of p s = s)} SUBSET
+  ``!p. {s | ~(lswapstr p s = s)} SUBSET
         FOLDR (\p a. {FST p; SND p} UNION a) {} p``,
   ASM_SIMP_TAC (srw_ss()) [pred_setTheory.SUBSET_DEF] THEN Induct THEN
   SRW_TAC [][] THEN
@@ -910,40 +928,40 @@ val lemma = MATCH_MP pred_setTheory.SUBSET_FINITE FINITE_plistvars
 
 val perm_supp_finite = store_thm(
   "perm_supp_finite",
-  ``FINITE {s | ~(perm_of p s = s)}``,
+  ``FINITE {s | ~(lswapstr p s = s)}``,
   MATCH_MP_TAC lemma THEN SRW_TAC [][perm_supp_SUBSET_plistvars]);
 
 val supp_perm_of = store_thm(
   "supp_perm_of",
-  ``supp (fn_pmact string_pmact string_pmact) (perm_of p) = { s | ~(perm_of p s = s) }``,
+  ``supp (fn_pmact string_pmact string_pmact) (lswapstr p) =
+    { s | ~(lswapstr p s = s) }``,
   HO_MATCH_MP_TAC supp_unique THEN
-  SRW_TAC [][perm_supp_finite] THENL [
-    SRW_TAC [][support_def, FUN_EQ_THM, fnpm_def, perm_of_swapstr],
+  ASM_SIMP_TAC (srw_ss()) [perm_supp_finite] THEN CONJ_TAC THENL [
+    SRW_TAC [][support_def, FUN_EQ_THM, fnpm_def, lswapstr_swapstr],
 
+    Q.X_GEN_TAC `s` THEN
     SRW_TAC [][pred_setTheory.SUBSET_DEF] THEN
     SPOSE_NOT_THEN ASSUME_TAC THEN
-    Q_TAC (NEW_TAC "y") `{x; perm_of (REVERSE p) x} UNION s'` THEN
-    `!a. fnpm string_pmact string_pmact [(x,y)] (perm_of p) a = perm_of p a`
+    Q_TAC (NEW_TAC "y") `{x; lswapstr p⁻¹ x} UNION s` THEN
+    `!a. fnpm string_pmact string_pmact [(x,y)] (lswapstr p) a = lswapstr p a`
        by METIS_TAC [support_def] THEN
     `p ++ [(x,y)] == [(x,y)] ++ p`
        by (POP_ASSUM (ASSUME_TAC o SIMP_RULE (srw_ss()) [fnpm_def]) THEN
-           SRW_TAC [][permeq_def, FUN_EQ_THM, perm_of_decompose,
-                      GSYM swapstr_eq_left]) THEN
-    `(x,y) :: p == (perm_of p x, perm_of p y) :: p`
+           SRW_TAC [][permeq_thm, pmact_decompose, GSYM swapstr_eq_left]) THEN
+    `(x,y) :: p == (lswapstr p x, lswapstr p y) :: p`
        by METIS_TAC [permeq_swap_ends, permeq_trans, permeq_sym,
                      listTheory.APPEND] THEN
-    `(x,y) :: (p ++ REVERSE p) ==
-        (perm_of p x, perm_of p y) :: (p ++ REVERSE p)`
+    `(x,y) :: (p ++ p⁻¹) == (lswapstr p x, lswapstr p y) :: (p ++ p⁻¹)`
        by METIS_TAC [app_permeq_monotone, listTheory.APPEND, permeq_refl] THEN
-    `!h. [h] == h :: (p ++ REVERSE p)`
+    `!h. [h] == h :: (p ++ p⁻¹)`
        by METIS_TAC [permeq_cons_monotone, permof_inverse, permeq_sym] THEN
-    `[(x,y)] == [(perm_of p x, perm_of p y)]`
+    `[(x,y)] == [(lswapstr p x, lswapstr p y)]`
        by METIS_TAC [permeq_trans, permeq_sym] THEN
-    `perm_of [(x,y)] x = perm_of [(perm_of p x, perm_of p y)] x`
-       by METIS_TAC [permeq_def] THEN
+    `lswapstr [(x,y)] x = lswapstr [(lswapstr p x, lswapstr p y)] x`
+       by METIS_TAC [permeq_thm] THEN
     POP_ASSUM MP_TAC THEN
     SIMP_TAC (srw_ss()) [] THEN
-    `~(x = perm_of p y)` by METIS_TAC [permof_inverse_applied] THEN
+    `x ≠ lswapstr p y` by METIS_TAC [pmact_inverse] THEN
     SRW_TAC [][swapstr_def]
   ]);
 
@@ -1225,9 +1243,6 @@ val fresh_equivariant = store_thm(
 val _ = overload_on ("sset_pmact",``set_pmact string_pmact``);
 val _ = overload_on ("ssetpm", ``pmact sset_pmact``)
 
-val cpmsupp_avoids =
-    perm_of_unchanged
-        |> SIMP_RULE bool_ss [SimpR ``(==>)``, Once (GSYM stringpm_raw)]
 (*
    given a finite set of atoms and some other set to avoid, we can
    exhibit a pi that maps the original set away from the avoid set, and
@@ -1251,7 +1266,7 @@ val gen_avoidance_lemma = store_thm(
     (Q.EXISTS_TAC `[]` THEN SRW_TAC [][]) THEN
   FULL_SIMP_TAC (srw_ss () ++ DNF_ss) [] THEN
   `lswapstr π e = e`
-    by (MATCH_MP_TAC cpmsupp_avoids THEN
+    by (MATCH_MP_TAC lswapstr_unchanged THEN
         DISCH_THEN (STRIP_ASSUME_TAC o REWRITE_RULE [IN_patoms_MEM]) THEN1
           METIS_TAC [] THEN
         `lswapstr π⁻¹ e ∈ atoms` by METIS_TAC [] THEN
@@ -1263,7 +1278,7 @@ val gen_avoidance_lemma = store_thm(
   `∀a. a ∈ atoms ⇒ lswapstr π a ≠ e'`
       by (REPEAT STRIP_TAC THEN
           `lswapstr π⁻¹ e' = a` by SRW_TAC [][pmact_eql] THEN
-          METIS_TAC [cpmsupp_avoids, listsupp_REVERSE, SUBSET_DEF]) THEN
+          METIS_TAC [lswapstr_unchanged, listsupp_REVERSE, SUBSET_DEF]) THEN
   Q.EXISTS_TAC `(e,e')::π` THEN SRW_TAC [][] THENL [
     METIS_TAC [],
 

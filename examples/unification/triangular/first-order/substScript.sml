@@ -38,7 +38,7 @@ val FINITE_substvars = RWstore_thm(
 SRW_TAC [][substvars_def]);
 
 val vR_def = Define`
-  vR s y x = case FLOOKUP s x of SOME t -> y IN vars t || _ -> F`;
+  vR s y x = case FLOOKUP s x of SOME t => y IN vars t | _ => F`;
 
 val wfs_def = Define`wfs s = WF (vR s)`;
 
@@ -89,7 +89,7 @@ val wfs_no_cycles = Q.store_thm(
   THEN METIS_TAC []);
 
 val subst_APPLY_def = Define`
-  (subst_APPLY s (Var v) = case FLOOKUP s v of NONE -> Var v || SOME t -> t) /\
+  (subst_APPLY s (Var v) = case FLOOKUP s v of NONE => Var v | SOME t => t) /\
   (subst_APPLY s (Pair t1 t2) = Pair (subst_APPLY s t1) (subst_APPLY s t2)) /\
   (subst_APPLY s (Const c) = Const c)`;
 val _ = set_fixity "''" (Infixr 700);
@@ -777,9 +777,9 @@ val sunify_def = Define`
   (sunify (Var x) t2 = if x IN vars t2 then NONE else SOME (FEMPTY |+ (x,t2))) /\
   (sunify t1 (Var y) = if y IN vars t1 then NONE else SOME (FEMPTY |+ (y,t1))) /\
   (sunify (Pair t1a t1d) (Pair t2a t2d) =
-    case sunify t1a t2a of NONE -> NONE ||
-      SOME sa -> case sunify t1d t2d of NONE -> NONE ||
-                   SOME sd -> SOME (sa oo sd)) /\
+    case sunify t1a t2a of NONE => NONE |
+      SOME sa => case sunify t1d t2d of NONE => NONE |
+                   SOME sd => SOME (sa oo sd)) /\
   (sunify (Const c1) (Const c2) = if c1 = c2 then SOME FEMPTY else NONE) /\
   (sunify _ _ = NONE)`;
 

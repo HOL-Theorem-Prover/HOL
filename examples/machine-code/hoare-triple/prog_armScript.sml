@@ -86,8 +86,8 @@ val SUBSET_arm2set = prove(
   ``!u s. u SUBSET arm2set s = ?y. u = arm2set' y s``,
   REPEAT STRIP_TAC \\ EQ_TAC \\ REPEAT STRIP_TAC
   \\ ASM_REWRITE_TAC [arm2set'_SUBSET_arm2set]
-  \\ Q.EXISTS_TAC `({ a |a| ?x. aReg a x IN u },
-       { a |a| ?x. aMem a x IN u },{ a |a| ?x. aStatus a x IN u },
+  \\ Q.EXISTS_TAC `({ a | a| ?x. aReg a x IN u },
+       { a | a| ?x. aMem a x IN u },{ a | a| ?x. aStatus a x IN u },
        (?y. aCPSR_Reg y IN u),(?y. aUndef y IN u))`
   \\ FULL_SIMP_TAC std_ss [arm2set'_def,arm2set_def,EXTENSION,SUBSET_DEF,IN_IMAGE,
        IN_UNION,GSPECIFICATION,IN_INSERT,NOT_IN_EMPTY,IN_UNIV,PUSH_IN_INTO_IF]

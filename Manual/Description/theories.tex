@@ -1281,8 +1281,8 @@ one to inspect option values in a ``pattern-matching'' style.
 \begin{hol}
 \begin{verbatim}
    case e of
-      NONE -> u
-   || SOME x -> f x
+     NONE => u
+   | SOME x => f x
 \end{verbatim}
 \end{hol}
 %
@@ -2460,10 +2460,10 @@ Type &
 \holtxt{word\_concat} & \holtxt{@@} & \worda\rarr\wordb\rarr\wordc & Concatenate words \\
 \holtxt{concat\_word\_list} & & \worda~\ty{list}\rarr\wordb & Concatenate list of words \\
 \holtxt{word\_replicate} & & \num\rarr\worda\rarr\wordb & Replicate word \\
-\holtxt{word\_or} & \holtxt{!!} & \worda\rarr\worda\rarr\worda & Bitwise disjunction \\
+\holtxt{word\_or} & \holtxt{||} & \worda\rarr\worda\rarr\worda & Bitwise disjunction \\
 \holtxt{word\_xor} & \holtxt{??} & \worda\rarr\worda\rarr\worda & Bitwise exclusive-or \\
 \holtxt{word\_and} & \holtxt{\&\&} & \worda\rarr\worda\rarr\worda & Bitwise conjunction \\
-\holtxt{word\_nor} & \holtxt{\~{}!!} & \worda\rarr\worda\rarr\worda & Bitwise NOR \\
+\holtxt{word\_nor} & \holtxt{\~{}||} & \worda\rarr\worda\rarr\worda & Bitwise NOR \\
 \holtxt{word\_xnor} & \holtxt{\~{}??} & \worda\rarr\worda\rarr\worda & Bitwise XNOR \\
 \holtxt{word\_nand} & \holtxt{\~{}\&\&} & \worda\rarr\worda\rarr\worda & Bitwise NAND \\
 \holtxt{word\_reduce} & & {\setlength{\tabcolsep}{0pt}\begin{tabular}[t]{ll}(\bool\rarr\bool\rarr\bool)\rarr\\\worda\rarr\fcp{\bool}{1}\end{tabular}} & Word reduction \\
@@ -2627,8 +2627,8 @@ ML)
 \begin{hol}
 \begin{verbatim}
    case e1
-    of [] -> e2
-    || (h::t) -> e3
+    of [] => e2
+     | (h::t) => e3
 \end{verbatim}
 \end{hol}
 %
@@ -3015,8 +3015,8 @@ functions that map \emph{into} the \ml{llist} type:
       |- !f. ?g.
            !x. g x =
                case f x
-                of NONE -> LNIL
-                || SOME (x',y) -> LCONS y (g x')
+                of NONE => LNIL
+                 | SOME (x',y) => LCONS y (g x')
 \end{verbatim}
 \end{hol}
 
@@ -3385,8 +3385,8 @@ surface syntax
 \begin{hol}
 \begin{verbatim}
    case s
-    of "" -> e1
-    || STRING c rst -> e2
+    of "" => e1
+     | STRING c rst => e2
 \end{verbatim}
 \end{hol}
 %

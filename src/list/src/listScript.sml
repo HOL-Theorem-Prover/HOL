@@ -1920,8 +1920,8 @@ val strong = IndDefLib.derive_strong_induction (rules,ind)
 
 val isPREFIX = Define`
   (isPREFIX [] l = T) /\
-  (isPREFIX (h::t) l = case l of [] -> F
-                              || h'::t' -> (h = h') /\ isPREFIX t t')
+  (isPREFIX (h::t) l = case l of [] => F
+                               | h'::t' => (h = h') /\ isPREFIX t t')
 `;
 val _ = export_rewrites ["isPREFIX"]
 

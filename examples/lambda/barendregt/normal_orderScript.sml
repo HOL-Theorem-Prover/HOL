@@ -176,8 +176,8 @@ val noposn_def = define_recursive_term_function`
   (noposn (VAR s) = NONE) ∧
   (noposn (M @@ N) = if is_abs M then SOME []
                      else case noposn M of
-                             NONE -> OPTION_MAP (CONS Rt) (noposn N)
-                          || SOME p -> SOME (Lt::p)) ∧
+                            NONE => OPTION_MAP (CONS Rt) (noposn N)
+                          | SOME p => SOME (Lt::p)) ∧
   (noposn (LAM v M) = OPTION_MAP (CONS In) (noposn M))
 `;
 val _ = export_rewrites ["noposn_def"]
@@ -517,8 +517,8 @@ val noredAPP' = store_thm(
   "noredAPP'",
   ``~is_abs M ==> (noreduct (M @@ N) =
                      case noreduct M of
-                       NONE -> OPTION_MAP (APP M) (noreduct N)
-                     || SOME M' -> SOME (M' @@ N))``,
+                       NONE => OPTION_MAP (APP M) (noreduct N)
+                     | SOME M' => SOME (M' @@ N))``,
   SRW_TAC [][noreduct_thm, GSYM noreduct_bnf] THEN
   Cases_on `noreduct M` THEN FULL_SIMP_TAC (srw_ss()) []);
 

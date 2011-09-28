@@ -43,35 +43,6 @@ val isPrefix = String.isPrefix
 
 fun lose_constrec_ty {Name,Ty,Thy} = {Name = Name, Thy = Thy}
 
-fun mk_casearrow(t1, t2) = let
-  val t1_ty = type_of t1
-  val t2_ty = type_of t2
-  val arrow_t = mk_thy_const{Name = case_arrow_special, Thy = "bool",
-                             Ty = t1_ty --> t2_ty --> t1_ty --> t2_ty}
-in
-  list_mk_comb(arrow_t, [t1, t2])
-end
-
-fun mk_casesplit(t1, t2) = let
-  val t1_ty = type_of t1
-  val split_t = mk_thy_const{Name = case_split_special, Thy = "bool",
-                             Ty = t1_ty --> t1_ty --> t1_ty}
-in
-  list_mk_comb(split_t, [t1, t2])
-end
-
-fun list_mk_split [] = raise PP_ERR "list_mk_split" "Empty list"
-  | list_mk_split [t] = t
-  | list_mk_split (h::t) = mk_casesplit(h, list_mk_split t)
-
-fun mk_case(split_on, cases) = let
-  val (cty as (ty1,ty2)) = dom_rng (type_of cases)
-  val case_t = mk_thy_const{Name = case_special, Thy = "bool",
-                            Ty = ty1 --> (ty1 --> ty2) --> ty2}
-in
-  list_mk_comb(case_t, [split_on, cases])
-end;
-
 (* while f is still of functional type, dest_abs the abs term and apply the
    f to the variable just stripped from the abs *)
 fun apply_absargs f abs =
@@ -103,10 +74,8 @@ fun convert_case tm =
         val (split_on, splits) = f tm
             handle HOL_ERR _ => raise CaseConversionFailed
         val _ = not (null splits) orelse raise CaseConversionFailed
-        val arrows = map mk_casearrow splits
-        val joined_splits = list_mk_split arrows
       in
-        mk_case(split_on, joined_splits)
+        (split_on, splits)
       end
 
 (* ----------------------------------------------------------------------
@@ -145,7 +114,7 @@ open smpp term_pp_types term_pp_utils
 infix || |||
 
 val start_info = {seen_frees = empty_tmset, current_bvars = empty_tmset,
-                  last_string = " "}
+                  last_string = " ", in_gspec = false}
 
 fun getlaststring x =
     (fupdate (fn x => x) >-
@@ -153,9 +122,9 @@ fun getlaststring x =
     x
 
 fun setlaststring s = let
-  fun set {seen_frees,current_bvars,last_string} =
+  fun set {seen_frees,current_bvars,last_string,in_gspec} =
       {seen_frees=seen_frees, current_bvars = current_bvars,
-       last_string = s}
+       last_string = s, in_gspec = in_gspec}
 in
   fupdate set >> return ()
 end
@@ -660,6 +629,7 @@ fun pp_term (G : grammar) TyG backend = let
     fun pbegin b = if b then add_string "(" else nothing
     fun pend b = if b then add_string ")" else nothing
     fun spacep b = if b then add_break(1, 0) else nothing
+    fun hardspace n = add_string (string_of_nspaces n)
     fun sizedbreak n = add_break(n, 0)
 
     fun doTy ty =
@@ -680,8 +650,7 @@ fun pp_term (G : grammar) TyG backend = let
             PPBlock(more_els, (sty, ind)) =>
               block sty ind (recurse (more_els,args)) >-
               (fn rest => recurse (es,rest))
-          | HardSpace n => (add_string (string_of_nspaces n) >>
-                            recurse (es, args))
+          | HardSpace n => (hardspace n >> recurse (es, args))
           | BreakSpace (n, m) => (add_break(n,m) >> recurse (es, args))
           | RE (TOK s) => (add_string s >> recurse (es, args))
           | RE TM => (pr_term (hd args) Top Top Top (decdepth depth) >>
@@ -1275,18 +1244,12 @@ fun pp_term (G : grammar) TyG backend = let
           val arg_terms = args @ [Rand]
           val pp_elements = block_up_els [] ((FirstTM::elements) @ [LastTM])
           val begblock = block_by_style(addparens, rr, pgrav, fname, fprec)
-          val casearrow_block =
-              if fname = GrammarSpecials.case_arrow_special andalso
-                 length args = 1
-              then record_bvars (free_vars (hd args))
-              else I
         in
           ptype_block
               (pbegin (addparens orelse comb_show_type) >>
                begblock
-                 (casearrow_block
                     (print_ellist (lprec, prec, rprec)
-                                  (pp_elements, arg_terms))) >>
+                                  (pp_elements, arg_terms)) >>
                pend (addparens orelse comb_show_type))
         end
       | INFIX RESQUAN_OP => raise Fail "Res. quans shouldn't arise"
@@ -1650,23 +1613,25 @@ fun pp_term (G : grammar) TyG backend = let
                   then
                     block CONSISTENT 0
                        (record_bvars bvars_seen_here
+                        (set_gspec
                            (add_string "{" >>
                             block CONSISTENT 0
                               (pr_term l Top Top Top (decdepth depth) >>
-                               add_string " |" >> spacep true >>
+                               hardspace 1 >> add_string "|" >> spacep true >>
                                pr_term r Top Top Top (decdepth depth)) >>
-                            add_string "}"))
+                            add_string "}")))
                   else
                     block CONSISTENT 0
                       (record_bvars bvars_seen_here
+                       (set_gspec
                          (add_string "{" >>
                           block CONSISTENT 0
                             (pr_term l Top Top Top (decdepth depth) >>
-                             add_string " |" >> spacep true >>
+                             hardspace 1 >> add_string "|" >> spacep true >>
                              pr_term vs Top Top Top (decdepth depth) >>
-                             add_string " |" >> spacep true >>
+                             hardspace 1 >> add_string "|" >> spacep true >>
                              pr_term r Top Top Top (decdepth depth)) >>
-                          add_string "}"))
+                          add_string "}")))
                 end handle HOL_ERR _ => fail
               else fail
 
@@ -1824,10 +1789,37 @@ fun pp_term (G : grammar) TyG backend = let
                 case grammar_name G f of
                   SOME "case" =>
                   (let
-                     val newt = convert_case tm
-                     val (t1, t2) = dest_comb newt
+                     val (split_on, splits) = convert_case tm
+                     val parens = (case rgrav of Prec _ => true | _ => false)
+                                  orelse
+                                  combpos = RandCP
+                     fun p body =
+                         get_gspec >-
+                         (fn b => if b orelse parens then
+                                    add_string "(" >> body >> add_string ")"
+                                  else
+                                    body)
+                     val casebar = add_break(1,0) >> add_string "|" >> hardspace 1
+                     fun do_split rprec (l,r) =
+                         record_bvars
+                             (free_vars l)
+                             (block PP.CONSISTENT 0
+                                    (pr_term l Top Top Top (decdepth depth) >>
+                                     hardspace 1 >>
+                                     add_string "=>" >> add_break(1,2) >>
+                                     pr_term r Top Top rprec (decdepth depth)))
                    in
-                     pr_term newt pgrav lgrav rgrav depth
+                     p (block PP.CONSISTENT 0
+                          (block PP.CONSISTENT 0
+                            (add_string "case" >> add_break(1,2) >>
+                             pr_term split_on Top Top Top (decdepth depth) >>
+                             add_break(1,0) >> add_string "of") >>
+                           add_break (1,2) >>
+                           pr_list (do_split (Prec(0,"casebar")))
+                                   casebar
+                                   (butlast splits) >>
+                           casebar >>
+                           do_split (if parens then Top else rgrav) (last splits)))
                    end handle CaseConversionFailed => fail)
                 | _ => fail
               else fail) |||

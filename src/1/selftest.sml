@@ -143,22 +143,22 @@ in
   print "OK\n"
 end
 
-val t = Parse.Term `(case T of T -> (\x. x) || F -> (~)) y`
+val t = Parse.Term `(case T of T => (\x. x) | F => (~)) y`
 val _ = tprint "Testing parsing of case expressions with function type"
 val _ = case Lib.total (find_term (same_const ``bool_case``)) t of
           NONE => die "FAILED"
         | SOME _ => print "OK\n"
 
 val _ = tprint "Testing parsing of _ variables (1)"
-val t = case Lib.total Parse.Term `case b of T -> F || _ -> T` of
+val t = case Lib.total Parse.Term `case b of T => F | _ => T` of
           NONE => die "FAILED"
         | SOME _ => print "OK\n"
 val _ = tprint "Testing parsing of _ variables (2)"
-val t = case Lib.total Parse.Term `case b of T -> F || _1 -> T` of
+val t = case Lib.total Parse.Term `case b of T => F | _1 => T` of
           NONE => die "FAILED"
         | SOME _ => print "OK\n"
 val _ = tprint "Testing independence of case branch vars"
-val t = case Lib.total Parse.Term `v (case b of T -> F || v -> T)` of
+val t = case Lib.total Parse.Term `v (case b of T => F | v => T)` of
           NONE => die "FAILED"
         | SOME _ => print "OK\n"
 
@@ -260,7 +260,15 @@ val _ = set_trace "Unicode" 0
 val _ = Parse.current_backend := PPBackEnd.raw_terminal
 fun tppw width s = let
   val t = Parse.Term [QUOTE s]
-  val pretty = String.translate (fn #"\n" => "\\n" | c => str c)
+  val pfxsize = size "Testing printing of `` ..."
+  fun trunc s = if size s + pfxsize > 62 then let
+                    val s' = String.substring(s,0,58 - pfxsize)
+                  in
+                    s' ^ " ..."
+                  end
+                else s
+  fun pretty s = s |> String.translate (fn #"\n" => "\\n" | c => str c)
+                   |> trunc
   val _ = tprint ("Testing printing of `"^pretty s^"`")
   val res = Portable.pp_to_string width Parse.pp_term t
 in
@@ -274,7 +282,9 @@ val _ = app tpp ["let x = T in x /\\ y",
                  "(let x = T in \\y. x /\\ y) p",
                  "f ($/\\ p)",
                  "(((p /\\ q) /\\ r) /\\ s) /\\ t",
-                 "(case x of T -> (\\x. x) || F -> $~) y",
+                 "case e1 of T => (case e2 of T => F | F => T) | F => T",
+                 "case e1 of T => F | F => case e2 of T => F | F => T",
+                 "(case x of T => (\\x. x) | F => $~) y",
                  "!x. P (x /\\ y)",
                  "P (!x. Q x)",
                  "\\x. ?y. P x y",
