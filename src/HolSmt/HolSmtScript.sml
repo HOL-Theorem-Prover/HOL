@@ -450,7 +450,7 @@ struct
   val _ = s ("r252", W ``(x :'a word) * y = y * x``)
   val _ = s ("r253", W ``(0 >< 0) (x :word1) = x``)
   val _ = s ("r254", W ``(x && y) && z = x && y && z``)
-  val _ = s ("r255", W ``0w !! x = x``)
+  val _ = s ("r255", W ``0w || x = x``)
 
   (* used for Z3's proof rule th_lemma *)
 
@@ -500,7 +500,7 @@ struct
   val _ = s ("t023", S ``~((x :word1) ' 0) ==> (1w = ~x)``)
   val _ = s ("t024", S ``(0w = ~(x :word1)) \/ ~(x ' 0)``)
   val _ = s ("t025", U []
-    ``(1w = ~(x :word1) !! ~y) \/ ~(~(x ' 0) \/ ~(y ' 0))``)
+    ``(1w = ~(x :word1) || ~y) \/ ~(~(x ' 0) \/ ~(y ' 0))``)
   val _ = s ("t026", U []
     ``(0w = (x :word8)) \/ x ' 0 \/ x ' 1 \/ x ' 2 \/ x ' 3 \/ x ' 4 \/ x ' 5 \/ x ' 6 \/ x ' 7``)
   val _ = s ("t027", S

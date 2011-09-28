@@ -98,7 +98,7 @@ Line:
   | LABEL COLON   ( Data.Label LABEL )
   | NUMBER COLON  ( Data.Mark NUMBER )
   | BAR LABEL BAR ( Data.Label LABEL )
-    
+
 Code:
     Inst   ( Inst )
   | Number ( Data.Data (if fst Number then Data.two_comp32 (snd Number)
@@ -313,7 +313,7 @@ AddrMode5:
   | COMMA HASH Number RSQUARE EXCLAIM
                                  ( (true,not(fst Number),true,cptoi Number) )
   | RSQUARE COMMA HASH Number    ( (false,not(fst Number),true,cptoi Number) )
-  
+
 RegListEntry:
     REG            ( Intset.singleton (register2int REG) )
   | REG MINUS REG  ( let val nl = register2int REG1

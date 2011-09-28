@@ -1,10 +1,10 @@
 structure refine =
 struct
 
-(* 
+(*
 app load ["wordsLib", "Normal"];
 *)
-local 
+local
 open HolKernel Parse boolLib bossLib
      wordsSyntax numSyntax pairSyntax NormalTheory
 in

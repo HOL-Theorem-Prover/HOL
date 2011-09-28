@@ -71,8 +71,8 @@ val SUBSET_x86_2set = prove(
   ``!u s. u SUBSET x86_2set s = ?y. u = x86_2set' y s``,
   REPEAT STRIP_TAC \\ EQ_TAC \\ REPEAT STRIP_TAC
   \\ ASM_REWRITE_TAC [x86_2set'_SUBSET_x86_2set]
-  \\ Q.EXISTS_TAC `({ a |a| ?x. xReg a x IN u },{ a |a| ?x. xStatus a x IN u },
-                    (?x. xEIP x IN u),{ a |a| ?x y. xMem a x y IN u })`
+  \\ Q.EXISTS_TAC `({ a | a| ?x. xReg a x IN u },{ a | a| ?x. xStatus a x IN u },
+                    (?x. xEIP x IN u),{ a | a| ?x y. xMem a x y IN u })`
   \\ `?r e t m i. s = (r,e,t,m,i)` by METIS_TAC [PAIR]
   \\ FULL_SIMP_TAC std_ss [x86_2set'_def,x86_2set_def,EXTENSION,SUBSET_DEF,IN_IMAGE,
        IN_UNION,GSPECIFICATION,IN_INSERT,NOT_IN_EMPTY,IN_UNIV]
@@ -982,7 +982,7 @@ val SPLIT_CODE_SEQ = prove(
 
 val X86_SPEC_EXLPODE_CODE_LEMMA = prove(
   ``!s. SPEC X86_MODEL p ((a,xs,T) INSERT s) q =
-        SPEC X86_MODEL p ({ (a + n2w n, [EL n xs], T) |n| n < LENGTH xs } UNION s) q``,
+        SPEC X86_MODEL p ({ (a + n2w n, [EL n xs], T) | n| n < LENGTH xs } UNION s) q``,
   Q.SPEC_TAC (`a`,`a`) \\ Q.SPEC_TAC (`xs`,`xs`) \\ REVERSE Induct THEN1
    (ASM_SIMP_TAC std_ss [SPLIT_CODE_SEQ] \\ REPEAT STRIP_TAC
     \\ `{(a + n2w n,[EL n (h::xs)],T) | n | n < LENGTH (h::xs)} =
@@ -998,7 +998,7 @@ val X86_SPEC_EXLPODE_CODE_LEMMA = prove(
       \\ ASM_SIMP_TAC std_ss [TL,WORD_ADD_ASSOC,LENGTH] \\ DECIDE_TAC,
       Q.EXISTS_TAC `0` \\ ASM_SIMP_TAC std_ss [WORD_ADD_0,EL,LENGTH,HD]])
   \\ REPEAT STRIP_TAC
-  \\ `{(a + n2w n,[EL n ([]:word8 list)],T) |n| n < LENGTH ([]:word8 list)} = {}` by
+  \\ `{(a + n2w n,[EL n ([]:word8 list)],T) | n| n < LENGTH ([]:word8 list)} = {}` by
     ASM_SIMP_TAC std_ss [EXTENSION,GSPECIFICATION,NOT_IN_EMPTY,LENGTH]
   \\ ASM_SIMP_TAC std_ss [UNION_EMPTY]
   \\ SIMP_TAC std_ss [progTheory.SPEC_def,X86_MODEL_def]

@@ -1003,9 +1003,9 @@ fun maketable (fins:(int * (int list)) list,
 		     | MakeString(x::xs, emitter, pos) =
 			MakeString(xs, emitter, emitter(x, pos))
 	        in case !CharFormat of
-		    true => (say " \n\""; MakeString(x,emit8,0); say "\"\n")
+		    true => (say "\n\""; MakeString(x,emit8,0); say "\"\n")
 		  | false => (say (Int.toString(length x));
-		     say ", \n\""; MakeString(x,emit16,0); say "\"\n")
+		     say ",\n\""; MakeString(x,emit16,0); say "\"\n")
 	        end
 
 	    fun makeEntry(nil,rs,t) = rev rs
@@ -1020,20 +1020,20 @@ fun maketable (fins:(int * (int list)) list,
 		         makeEntry(y,(name::rs),(insert ((x,name),t))))
 	   	  end
 
-            val _ = say "val s = [ \n"
+            val _ = say "val s = [\n"
             val res =  makeEntry(trans,nil,empty)
             val _ =
               case !CharFormat
-               of true => (say "(0, \"\")]\n"; say "fun f x = x \n")
+               of true => (say "(0, \"\")]\n"; say "fun f x = x\n")
                 | false => (say "(0, 0, \"\")]\n";
-                    say "fun f(n, i, x) = (n, Vector.tabulate(i, decode x)) \n")
+                    say "fun f(n, i, x) = (n, Vector.tabulate(i, decode x))\n")
 
-            val _ = say "val s = map f (rev (tl (rev s))) \n"
-            val _ = say "exception LexHackingError \n"
-            val _ = say "fun look ((j,x)::r, i) = if i = j then x else look(r, i) \n"
+            val _ = say "val s = map f (rev (tl (rev s)))\n"
+            val _ = say "exception LexHackingError\n"
+            val _ = say "fun look ((j,x)::r, i) = if i = j then x else look(r, i)\n"
             val _ = say "  | look ([], i) = raise LexHackingError\n"
 
-        val _ = say "fun g {fin=x, trans=i} = {fin=x, trans=look(s,i)} \n"
+        val _ = say "fun g {fin=x, trans=i} = {fin=x, trans=look(s,i)}\n"
  	 in res
 	end
 
@@ -1061,7 +1061,7 @@ fun maketable (fins:(int * (int list)) list,
 
 	fun msg x = TextIO.output(TextIO.stdOut, x)
 
-  in (say "in Vector.fromList(map g \n["; makeTable(rs,newfins);
+  in (say "in Vector.fromList(map g\n["; makeTable(rs,newfins);
       say "])\nend\n";
     msg ("\nNumber of states = " ^ (Int.toString (length trans)));
     msg ("\nNumber of distinct rows = " ^ (Int.toString (!count)));
@@ -1076,13 +1076,15 @@ end
 
 fun makeaccept ends =
     let fun startline f = if f then say "  " else say "| "
+        fun stripLWS s =
+            Substring.string (Substring.dropl Char.isSpace (Substring.full s))
 	 fun make(nil,f) = (startline f; say "_ => raise Internal.LexerError\n")
 	  | make((x,a)::y,f) = (startline f; say x; say " => ";
 				if Substring.size(#2 (Substring.position "yytext" (Substring.full a))) = 0
  then
                                      (say "("; say a; say ")")
                                 else (say "let val yytext=yymktext() in ";
-                                      say a; say " end");
+                                      say (stripLWS a); say " end");
                                 say "\n"; make(y,false))
     in make (listofdict(ends),true)
     end
@@ -1237,7 +1239,7 @@ fun lexGen infile =
 	 of NONE => (sayln "fun lex () : Internal.result =";
 		     sayln "let fun continue() = lex() in")
 	  | SOME s => (say "fun lex "; say "(yyarg as ("; say s; sayln ")) =";
-		       sayln "let fun continue() : Internal.result = ");
+		       sayln "let fun continue() : Internal.result =");
 	 say "  let fun scan (s,AcceptingLeaves : Internal.yyfinstate";
 	 sayln " list list,l,i0: int) =";
 	 if !UsesTrailingContext
@@ -1251,7 +1253,7 @@ fun lexGen infile =
 	     then sayln "\t| action (i,(node::acts)::l,rs) ="
 	     else sayln "\t| action (i,(node::acts)::l) =";
 	 sayln "\t\tcase node of";
-	 sayln "\t\t    Internal.N yyk => ";
+	 sayln "\t\t    Internal.N yyk =>";
 	 sayln "\t\t\t(let fun yymktext() = String.substring(!yyb,i0,i-i0)\n\
 	       \\t\t\t     val yypos: int = i0+ !yygone";
 	 if !CountNewLines
@@ -1264,7 +1266,7 @@ fun lexGen infile =
 		       then sayln ",rs)" else sayln ")")
 	     else ();
 	 sayln "\t\t\topen UserDeclarations Internal.StartStates";
-	 sayln " in (yybufpos := i; case yyk of ";
+	 sayln " in (yybufpos := i; case yyk of";
 	 sayln "";
 	 sayln "\t\t\t(* Application actions *)\n";
 	 makeaccept(ends);

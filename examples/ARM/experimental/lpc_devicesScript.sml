@@ -9,15 +9,15 @@ val _ = new_theory "lpc_devices";
 
 (* We define the type of a generic device *)
 
-val _ = type_abbrev ("device",``: 
+val _ = type_abbrev ("device",``:
    (* memory addresses that belong to this device, dependent on internal state of type 'a *)
-   ('a -> word32 set) #     
+   ('a -> word32 set) #
    (* if core executes a memory read, it sees the following data *)
-   ('a -> word32 -> word8) # 
+   ('a -> word32 -> word8) #
    (* the next state relation for the devive  *)
    (num -> memory_access list -> 'a -> 'a -> bool) #
    (* an invariant that mst be true for this devie to make sense *)
-   (num # 'a -> bool)``); 
+   (num # 'a -> bool)``);
 
 
 (* Devices can be composed *)
@@ -35,11 +35,11 @@ val COMPOSE_DEVICES_def = Define `
     ((\(x,y). a1 x UNION a2 y),
      (* memory reads are directed according to address ownership *)
      (\(x,y) addr. if addr IN a1 x then m1 x addr else m2 y addr),
-     (* the combined next state relation filters memory accesses so that 
+     (* the combined next state relation filters memory accesses so that
         respective devices only see relevant memoy accesses *)
-     (\t l (x1,y1) (x2,y2). n1 t (FILTER_ACCESSES (a1 x1) l) x1 x2 /\ 
+     (\t l (x1,y1) (x2,y2). n1 t (FILTER_ACCESSES (a1 x1) l) x1 x2 /\
                             n2 t (FILTER_ACCESSES (a2 y1) l) y1 y2),
-     (* the invariant is the conjunction of part invariants and the condition 
+     (* the invariant is the conjunction of part invariants and the condition
         that the space used by these devices does not overlap. *)
      (\(t,(x,y)). DISJOINT (a1 x) (a2 y) /\ i1 (t,x) /\ i2 (t,y))):('a # 'b) device`
 
@@ -56,7 +56,7 @@ val domain_def = Define `domain r = { a | ~(r a = NONE) }`;
 
 val UPDATE_RAM_def = Define `
   (UPDATE_RAM [] ram = ram) /\
-  (UPDATE_RAM ((MEM_READ w)::xs) ram = UPDATE_RAM xs ram) /\ 
+  (UPDATE_RAM ((MEM_READ w)::xs) ram = UPDATE_RAM xs ram) /\
   (UPDATE_RAM ((MEM_WRITE w v)::xs) ram = UPDATE_RAM xs (\a. if a = w then SOME v else ram a))`;
 
 val RAM_NEXT_def = Define `
@@ -91,34 +91,34 @@ val UART0_DEVICE_def = Define `
 (* The collection of all peripherals *)
 
 val ALL_PERIPHERALS_def = Define `
-  ALL_PERIPHERALS = 
-   (COMPOSE_DEVICES (ROM_DEVICE) 
-   (COMPOSE_DEVICES (RAM_DEVICE) 
-   (COMPOSE_DEVICES (UART0_DEVICE) 
+  ALL_PERIPHERALS =
+   (COMPOSE_DEVICES (ROM_DEVICE)
+   (COMPOSE_DEVICES (RAM_DEVICE)
+   (COMPOSE_DEVICES (UART0_DEVICE)
                     (EMPTY_DEVICE))))`;
 
 val PERIPHERALS_NEXT_def = Define `
-  PERIPHERALS_NEXT = 
-    let (addresses,mem,next,inv) = ALL_PERIPHERALS in 
-      \l (t1,x) (t2,y). 
-        next t1 l x y /\ (t2 = t1 + 1) /\ 
+  PERIPHERALS_NEXT =
+    let (addresses,mem,next,inv) = ALL_PERIPHERALS in
+      \l (t1,x) (t2,y).
+        next t1 l x y /\ (t2 = t1 + 1) /\
         (FILTER_ACCESSES (UNIV DIFF addresses x) l = [])`;
 
 val PERIPHERALS_OK_def = Define `
-  PERIPHERALS_OK = 
+  PERIPHERALS_OK =
     let (addresses,mem,next,inv) = ALL_PERIPHERALS in inv`;
 
 val MEMORY_IMAGE_def = Define `
-  MEMORY_IMAGE (t:num,s) = 
+  MEMORY_IMAGE (t:num,s) =
     let (addresses,mem,next,inv) = ALL_PERIPHERALS in mem s`;
 
 val PENDING_INTERRUPT_def = Define `
   PENDING_INTERRUPT p1 = NoInterrupt`;
 
-val peripherals_type = 
+val peripherals_type =
   ``PERIPHERALS_NEXT`` |> type_of |> dest_type |> snd |> el 2
                                   |> dest_type |> snd |> el 1
-                                   
+
 val _ = type_abbrev ("peripherals", peripherals_type)
 
 val PER_READ_ROM_def = Define `PER_READ_ROM ((t,x,y):peripherals) a = THE (x a)`;
@@ -133,8 +133,8 @@ val LOAD_IMAGE_def = Define `
 
 val LPC_NEXT_def = Define `
   LPC_NEXT (s1,p1) (s2,p2) =
-    (ARM_NEXT (PENDING_INTERRUPT p1) 
-              (LOAD_IMAGE s1 (MEMORY_IMAGE p1)) = SOME s2) /\ 
+    (ARM_NEXT (PENDING_INTERRUPT p1)
+              (LOAD_IMAGE s1 (MEMORY_IMAGE p1)) = SOME s2) /\
     PERIPHERALS_NEXT s2.accesses p1 p2`;
 
 
@@ -148,9 +148,9 @@ val domain_UPDATE_RAM = prove(
   THEN Cases_on `h` THEN SIMP_TAC std_ss [ACCESS_ADDRESS_def]
   THEN REPEAT STRIP_TAC THEN Cases_on `c IN domain p` THEN ASM_SIMP_TAC std_ss []
   THEN ASM_SIMP_TAC std_ss [UPDATE_RAM_def]
-  THEN `domain p = domain (\a. if a = c then SOME c0 else p a)` by 
+  THEN `domain p = domain (\a. if a = c then SOME c0 else p a)` by
    (FULL_SIMP_TAC std_ss [domain_def,GSPECIFICATION,EXTENSION]
-    THEN REPEAT STRIP_TAC THEN Cases_on `x = c` THEN ASM_SIMP_TAC std_ss []) 
+    THEN REPEAT STRIP_TAC THEN Cases_on `x = c` THEN ASM_SIMP_TAC std_ss [])
   THEN ASM_SIMP_TAC std_ss []);
 
 val IMP_PERIPHERALS_OK = store_thm("IMP_PERIPHERALS_OK",

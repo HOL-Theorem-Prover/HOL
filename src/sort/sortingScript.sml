@@ -995,9 +995,9 @@ PROVE_TAC [PERM_EQUIVALENCE_ALT_DEF, PERM_APPEND_IFF]);
 (*---------------------------------------------------------------------------*)
 
 val STABLE_DEF = Define `
-    STABLE sort r = 
-    SORTS sort r /\ 
-    !p. (!x y. p x /\ p y ==> r x y) ==> 
+    STABLE sort r =
+    SORTS sort r /\
+    !p. (!x y. p x /\ p y ==> r x y) ==>
         (!l. FILTER p l = FILTER p (sort r l))`;
 
 (*---------------------------------------------------------------------------*)
@@ -1006,18 +1006,18 @@ val STABLE_DEF = Define `
 
 val PART3_DEF = Define `
     (PART3 R h [] = ([],[],[])) /\
-    (PART3 R h (hd::tl) = 
+    (PART3 R h (hd::tl) =
          if R h hd /\ R hd h
 	    then (I ## CONS hd ## I) (PART3 R h tl)
 	    else if R hd h
                     then (CONS hd ## I ## I) (PART3 R h tl)
 		    else (I ## I ## CONS hd) (PART3 R h tl))`;
 
-val LENGTH_FILTER = 
+val LENGTH_FILTER =
   prove(``!a. LENGTH (FILTER P a) <= LENGTH a``,
     Induct THEN RW_TAC arith_ss [FILTER, LENGTH]);
 
-val length_lem = 
+val length_lem =
   prove(``!a h. LENGTH (FILTER P a) < LENGTH (h::a)``,
     REPEAT STRIP_TAC THEN REWRITE_TAC [LENGTH] THEN
     MATCH_MP_TAC (DECIDE ``!a b. a <= b ==> a < SUC b``) THEN
@@ -1027,7 +1027,7 @@ val length_lem =
 (* PART3_FILTER - Partition is the same as filtering.                        *)
 (*---------------------------------------------------------------------------*)
 
-val PART3_FILTER = 
+val PART3_FILTER =
   store_thm("PART3_FILTER",
     ``!tl hd. PART3 R hd tl = (FILTER (\x. R x hd /\ ~R hd x) tl,
                             FILTER (\x. R x hd /\ R hd x) tl,
@@ -1040,18 +1040,18 @@ val PART3_FILTER =
 (*---------------------------------------------------------------------------*)
 
 val QSORT3_DEF = tDefine "QSORT3" `
-    (QSORT3 R [] = []) /\ 
-    (QSORT3 R (hd::tl) = 
+    (QSORT3 R [] = []) /\
+    (QSORT3 R (hd::tl) =
     	let (lo,eq,hi) = PART3 R hd tl
         in QSORT3 R lo ++ (hd::eq) ++ QSORT3 R hi)`
   (WF_REL_TAC `measure (LENGTH o SND)` THEN
    RW_TAC arith_ss [PART3_FILTER, length_lem]);
 
-val PERM3 = 
+val PERM3 =
   store_thm(
     "PERM3",
-    ``!x a a' b b' c c'. 
-      (PERM a a' /\ PERM b b' /\ PERM c c') /\ PERM x (a ++ b ++ c) 
+    ``!x a a' b b' c c'.
+      (PERM a a' /\ PERM b b' /\ PERM c c') /\ PERM x (a ++ b ++ c)
       ==> PERM x (a' ++ b' ++ c')``,
     RW_TAC std_ss [PERM_DEF, FILTER_APPEND_DISTRIB]);
 
@@ -1060,19 +1060,19 @@ val PULL_RULE = CONV_RULE PULL_CONV;
 
 val IND_STEP_TAC = PAT_ASSUM ``!y. P ==> Q`` (MATCH_MP_TAC o PULL_RULE);
 
-val tospec = 
-    Q.GEN `P` 
+val tospec =
+    Q.GEN `P`
       (MATCH_MP (SPEC_ALL
         (REWRITE_RULE [GSYM AND_IMP_INTRO] PERM_TRANS)) (SPEC_ALL PERM_SPLIT));
 
-val filter_filter = 
+val filter_filter =
   prove(
     ``!l P Q. FILTER P (FILTER Q l) = FILTER (\x. P x /\ Q x) l``,
     Induct THEN NTAC 2 (RW_TAC std_ss [FILTER]) THEN PROVE_TAC []);
 
-val MEM_PERM = 
+val MEM_PERM =
   store_thm(
-    "MEM_PERM", 
+    "MEM_PERM",
     ``!l1 l2. PERM l1 l2 ==> (!a. MEM a l1 = MEM a l2)``,
     METIS_TAC [Q.SPEC `$= a` MEM_FILTER, PERM_DEF]);
 
@@ -1091,7 +1091,7 @@ val PERM3_FILTER =
     MATCH_MP_TAC (PROVE [PERM_APPEND] ``(A = C) /\ (B = D) ==> (PERM (A ++ B) (D ++ C))``) THEN
     REPEAT CONJ_TAC THEN REPEAT (AP_TERM_TAC ORELSE AP_THM_TAC) THEN PROVE_TAC []);
 
-val PERM_QSORT3 = 
+val PERM_QSORT3 =
   store_thm(
     "PERM_QSORT3",
     ``!l R. PERM l (QSORT3 R l)``,
@@ -1102,29 +1102,29 @@ val PERM_QSORT3 =
     RW_TAC std_ss [APPEND_ASSOC, GSYM APPEND] THEN
     MATCH_MP_TAC PERM3 THEN
     MAP_EVERY Q.EXISTS_TAC [
-      `FILTER (\x. R x h /\ ~R h x) t`, 
+      `FILTER (\x. R x h /\ ~R h x) t`,
       `FILTER (\x. R x h /\ R h x) t`,
       `FILTER (\x. ~R x h) t`] THEN
     RW_TAC std_ss [PERM_REFL] THEN TRY IND_STEP_TAC THEN RW_TAC arith_ss [length_lem] THEN
     METIS_TAC [PERM3_FILTER]);
 
-val SORTED_EQ_PART = 
+val SORTED_EQ_PART =
   store_thm(
     "SORTED_EQ_PART",
     ``!l R. transitive R ==> SORTED R (FILTER (\x. R x hd /\ R hd x) l)``,
-    Induct THEN REPEAT STRIP_TAC THEN 
+    Induct THEN REPEAT STRIP_TAC THEN
     RW_TAC std_ss [SORTED_DEF, FILTER, SORTED_EQ, MEM_FILTER] THEN
     PROVE_TAC [relationTheory.transitive_def]);
 
-val QSORT3_SORTS = 
+val QSORT3_SORTS =
   store_thm(
     "QSORT3_SORTS",
     ``!R. transitive R /\ total R ==> SORTS QSORT3 R``,
     RW_TAC std_ss [SORTS_DEF, PERM_QSORT3] THEN
     completeInduct_on `LENGTH l` THEN
-    Cases_on `l` THEN 
+    Cases_on `l` THEN
     RW_TAC std_ss [QSORT3_DEF, SORTED_DEF, PART3_FILTER] THEN
-    REPEAT (MATCH_MP_TAC SORTED_APPEND THEN REPEAT CONJ_TAC) THEN 
+    REPEAT (MATCH_MP_TAC SORTED_APPEND THEN REPEAT CONJ_TAC) THEN
     ASM_REWRITE_TAC [] THEN
     TRY IND_STEP_TAC THEN
     RW_TAC std_ss [length_lem, SORTED_EQ, MEM_FILTER, SORTED_EQ_PART, MEM, MEM_FILTER, MEM_APPEND] THEN
@@ -1139,25 +1139,25 @@ fun SPLIT_APPEND_TAC x =
 
 fun LIND_STEP (a,goal) =
   FIRST_ASSUM
-    (CONV_TAC o LAND_CONV o REWR_CONV o SIMP_RULE std_ss [length_lem,LENGTH_QSORT3] o 
-     SPEC (mk_comb(``LENGTH:'a list -> num``,lhs goal)) o 
+    (CONV_TAC o LAND_CONV o REWR_CONV o SIMP_RULE std_ss [length_lem,LENGTH_QSORT3] o
+     SPEC (mk_comb(``LENGTH:'a list -> num``,lhs goal)) o
      Q.GEN `m` o C (PART_MATCH (lhs o rand)) (lhs goal) o PULL_RULE) (a,goal)
 
-val FILTER_P = 
+val FILTER_P =
   prove(
-    ``!R h. p h /\ transitive R /\ total R /\ (!x y. p x /\ p y ==> R x y) ==> 
-             !l. (FILTER (\x. p x /\ R x h /\ R h x) l = FILTER p l) /\ 
+    ``!R h. p h /\ transitive R /\ total R /\ (!x y. p x /\ p y ==> R x y) ==>
+             !l. (FILTER (\x. p x /\ R x h /\ R h x) l = FILTER p l) /\
                  (FILTER p (FILTER (\x. R x h /\ ~R h x) l) = []) /\
                  (FILTER p (FILTER (\x. ~R x h) l) = [])``,
     NTAC 3 STRIP_TAC THEN Induct THEN RW_TAC std_ss [FILTER] THEN
     PROVE_TAC [relationTheory.transitive_def, relationTheory.total_def]);
 
-val QSORT3_SPLIT = 
+val QSORT3_SPLIT =
   store_thm(
    "QSORT3_SPLIT",
-   ``!R. transitive R /\ total R ==> !l e. 
-         QSORT3 R l = QSORT3 R (FILTER (\x. R x e /\ ~R e x) l) ++ 
-                      FILTER (\x. R x e /\ R e x) l ++ 
+   ``!R. transitive R /\ total R ==> !l e.
+         QSORT3 R l = QSORT3 R (FILTER (\x. R x e /\ ~R e x) l) ++
+                      FILTER (\x. R x e /\ R e x) l ++
                       QSORT3 R (FILTER (\x. ~R x e) l)``,
    NTAC 2 STRIP_TAC THEN completeInduct_on `LENGTH l` THEN Cases THEN
    RW_TAC std_ss [FILTER, QSORT3_DEF, PART3_FILTER, APPEND, APPEND_ASSOC] THEN
@@ -1184,7 +1184,7 @@ val QSORT3_STABLE =
     RW_TAC std_ss [QSORT3_DEF, FILTER, PART3_FILTER] THEN
     RW_TAC std_ss [FILTER_APPEND_DISTRIB, filter_filter, GSYM APPEND, FILTER] THEN1
          METIS_TAC [FILTER_P, APPEND_NIL, length_lem, CONJUNCT1 APPEND] THEN
-    MATCH_MP_TAC EQ_TRANS THEN Q.EXISTS_TAC `FILTER p (QSORT3 R t)` THEN CONJ_TAC THEN1 
+    MATCH_MP_TAC EQ_TRANS THEN Q.EXISTS_TAC `FILTER p (QSORT3 R t)` THEN CONJ_TAC THEN1
          (IND_STEP_TAC THEN RW_TAC arith_ss [LENGTH]) THEN
     METIS_TAC [FILTER_APPEND_DISTRIB, filter_filter, QSORT3_SPLIT]);
 

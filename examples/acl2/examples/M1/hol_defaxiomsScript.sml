@@ -266,9 +266,9 @@ val (cond_clausesp_def,cond_clausesp_ind) =
          (andl
            [consp (car clauses); true_listp (car clauses);
             less (len (car clauses)) (nat 3);
-            ite (eq (caar clauses) t) 
+            ite (eq (caar clauses) t)
                 (eq (cdr clauses) nil)
-                (cond_clausesp (cdr clauses))]) 
+                (cond_clausesp (cdr clauses))])
          (eq clauses nil)`,
    WF_REL_TAC `measure sexp_size`
     THEN ACL2_SIMP_TAC []);
@@ -374,7 +374,7 @@ val acl2_make_character_list =
  store_thm
   ("acl2_make_character_list",
    ``(acl2_make_character_list (cons s s0) =
-       if characterp s = nil 
+       if characterp s = nil
         then cons (code_char (nat 0)) (acl2_make_character_list s0)
         else cons s (acl2_make_character_list s0))
      /\
@@ -402,7 +402,7 @@ val (eqlable_alistp_def,eqlable_alistp_ind) =
  acl2_defn
  "ACL2::EQLABLE-ALISTP"
   (`eqlable_alistp x =
-     ite (atom x) 
+     ite (atom x)
          (equal x nil)
          (andl [consp (car x); eqlablep (caar x); eqlable_alistp (cdr x)])`,
    WF_REL_TAC `measure sexp_size`
@@ -1395,8 +1395,8 @@ val o_first_expt_def =
 val sexp_size_o_first_expt =
  store_thm
   ("sexp_size_o_first_expt",
-   ``!x. ~(consp x = nil) /\ ~(consp(car x) = nil) 
-         ==> 
+   ``!x. ~(consp x = nil) /\ ~(consp(car x) = nil)
+         ==>
          (sexp_size (o_first_expt x) < sexp_size x)``,
    Cases
     THEN ACL2_SIMP_TAC[sexp_size_def]
@@ -1420,8 +1420,8 @@ val o_first_coeff_def =
 val sexp_size_o_first_coeff =
  store_thm
   ("sexp_size_o_first_coeff",
-   ``!x. ~(consp x = nil) /\ ~(consp(car x) = nil) 
-         ==> 
+   ``!x. ~(consp x = nil) /\ ~(consp(car x) = nil)
+         ==>
          (sexp_size (o_first_coeff x) < sexp_size x)``,
    Cases
     THEN ACL2_SIMP_TAC[sexp_size_def]
@@ -1482,7 +1482,7 @@ val _ = add_acl2_simps [sexp_size_o_rst];
               o_less (o_first_expt (o_rst x)) (o_first_expt x)]),
 *)
 
-(* 
+(*
 Need help from a TFL expert for this. I suspect need to add
 something with more oomph than andl_CONG for Defn Base to exploit
 sexp_size_o_first_expt and sexp_size_o_rst
@@ -2278,9 +2278,9 @@ val char_less_def =
 val (string_less_l_def,string_less_l_ind) =
  acl2_defn "ACL2::STRING<-L"
   (`string_less_l l1 l2 i =
-     ite (endp l1) 
+     ite (endp l1)
          (ite (endp l2) nil i)
-         (ite (endp l2) 
+         (ite (endp l2)
               nil
               (ite (eql (car l1) (car l2))
                    (string_less_l (cdr l1) (cdr l2) (add i (cpx 1 1 0 1)))
@@ -4634,7 +4634,7 @@ val bad_atom_def =
   `bad_atom x =
     not
      (itel
-       [(consp x,consp x); 
+       [(consp x,consp x);
         (acl2_numberp x,acl2_numberp x);
         (symbolp x,symbolp x);
         (characterp x,characterp x)]

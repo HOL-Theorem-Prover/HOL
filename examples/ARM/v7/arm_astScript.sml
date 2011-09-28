@@ -177,12 +177,12 @@ val _ = Hol_datatype `ARMinstruction =
 val _ = type_abbrev("CPinstruction",``:cpid # word4 # coprocessor_instruction``)
 
 val is_mode1_immediate_def = Define`
-  is_mode1_immediate x = case x of Mode1_immediate imm12 -> T || _ -> F`;
+  is_mode1_immediate x = case x of Mode1_immediate imm12 => T | _ => F`;
 
 val is_mode2_immediate_def = Define`
-  is_mode2_immediate x = case x of Mode2_immediate imm12 -> T || _ -> F`;
+  is_mode2_immediate x = case x of Mode2_immediate imm12 => T | _ => F`;
 
 val is_mode3_immediate_def = Define`
-  is_mode3_immediate x = case x of Mode3_immediate imm8 -> T || _ -> F`;
+  is_mode3_immediate x = case x of Mode3_immediate imm8 => T | _ => F`;
 
 val _ = export_theory ();

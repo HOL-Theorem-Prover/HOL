@@ -28,7 +28,7 @@ sig
 
 
   datatype guess_type =
-      gty_exists | gty_exists_strong | gty_false  
+      gty_exists | gty_exists_strong | gty_false
     | gty_forall | gty_forall_strong | gty_true
 
   datatype guess =
@@ -53,7 +53,7 @@ sig
   val mk_guess            : guess_type -> term -> term -> term -> term list -> guess
 
   val make_guess___dummy  : guess_type -> term -> term -> term -> term list -> guess
-  val make_guess___assume : guess_type -> term -> term -> term -> term list -> guess 
+  val make_guess___assume : guess_type -> term -> term -> term -> term list -> guess
   val make_guess___simple : guess_type -> term -> term -> term -> term list -> guess
 
   val make_set_guess_thm___dummy  : guess -> guess
@@ -179,9 +179,9 @@ sig
   val ASM_FAST_QUANT_INSTANTIATE_TAC : quant_param list -> tactic;
 
 
-  val EXTENSIBLE_QUANT_INSTANTIATE_STEP_CONSEQ_CONV : 
+  val EXTENSIBLE_QUANT_INSTANTIATE_STEP_CONSEQ_CONV :
       quant_heuristic_cache ref option -> (term -> bool) -> bool -> quant_param list -> ConseqConv.directed_conseq_conv;
-  val EXTENSIBLE_QUANT_INSTANTIATE_CONSEQ_CONV : 
+  val EXTENSIBLE_QUANT_INSTANTIATE_CONSEQ_CONV :
       quant_heuristic_cache ref option -> bool -> (term -> bool) -> bool -> quant_param list -> ConseqConv.directed_conseq_conv;
   val QUANT_INSTANTIATE_CONSEQ_CONV :
       quant_param list -> ConseqConv.directed_conseq_conv;

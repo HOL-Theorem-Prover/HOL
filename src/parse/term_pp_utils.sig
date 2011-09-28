@@ -11,6 +11,10 @@ sig
   val getfvs : (term_pp_types.printing_info,term HOLset.set) smpp.t
   val spotfv : term -> (term_pp_types.printing_info,unit) smpp.t
 
+  val set_gspec : (term_pp_types.printing_info,'a) smpp.t ->
+                  (term_pp_types.printing_info,'a) smpp.t
+  val get_gspec : (term_pp_types.printing_info,bool) smpp.t
+
 end
 
 

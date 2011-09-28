@@ -148,7 +148,7 @@ val ASM_MARKER_DEF =
    ("ASM_MARKER_DEF", Term `ASM_MARKER = (\ (y:bool) x:bool. x)`);
 
 val ASM_MARKER_THM = store_thm ("ASM_MARKER_THM",
-``!y x. ASM_MARKER y x = x``, 
+``!y x. ASM_MARKER y x = x``,
 REWRITE_TAC[ASM_MARKER_DEF] THEN
 BETA_TAC THEN REWRITE_TAC [])
 

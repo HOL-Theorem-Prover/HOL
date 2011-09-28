@@ -2,7 +2,7 @@ open HolKernel boolLib Parse bossLib pred_setTheory termTheory BasicProvers
 
 open arithmeticTheory boolSimps
 
-local open string_numTheory in end
+local open string_numTheory chap2Theory chap3Theory in end
 
 fun Store_thm(trip as (n,t,tac)) = store_thm trip before export_rewrites [n]
 
@@ -136,42 +136,37 @@ val lswapstr_inc_pm = store_thm(
 val inc_pm_permeq = store_thm(
   "inc_pm_permeq",
   ``!p1 p2. (p1 == p2) ==> (inc_pm g p1 == inc_pm g p2)``,
-  SIMP_TAC (srw_ss()) [nomsetTheory.permeq_def, lswapstr_inc_pm,
+  SIMP_TAC (srw_ss()) [nomsetTheory.permeq_thm, lswapstr_inc_pm,
                        FUN_EQ_THM]);
 
 (* definition of permutation over de Bruijn terms *)
-val dpm_def = Define`
-  (dpm pi (dV i) = dV (s2n (lswapstr pi (n2s i)))) /\
-  (dpm pi (dAPP t u) = dAPP (dpm pi t) (dpm pi u)) /\
-  (dpm pi (dABS t) = dABS (dpm (inc_pm 0 pi) t))
+val raw_dpm_def = Define`
+  (raw_dpm pi (dV i) = dV (s2n (lswapstr pi (n2s i)))) /\
+  (raw_dpm pi (dAPP t u) = dAPP (raw_dpm pi t) (raw_dpm pi u)) /\
+  (raw_dpm pi (dABS t) = dABS (raw_dpm (inc_pm 0 pi) t))
 `;
-val _ = export_rewrites ["dpm_def"]
+val _ = export_rewrites ["raw_dpm_def"]
+val _ = overload_on("d_pmact",``mk_pmact raw_dpm``);
+val _ = overload_on("dpm",``pmact d_pmact``);
 
 (* proof that dB terms + dpm form a nominal set *)
-val dpm_is_perm = store_thm(
-  "dpm_is_perm",
-  ``is_perm dpm``,
-  SIMP_TAC (srw_ss()) [nomsetTheory.is_perm_def] THEN REPEAT CONJ_TAC THENL [
+val dpm_raw = store_thm(
+  "dpm_raw",
+  ``dpm = raw_dpm``,
+  SRW_TAC [][GSYM nomsetTheory.pmact_bijections] THEN
+  SIMP_TAC (srw_ss()) [nomsetTheory.is_pmact_def] THEN REPEAT CONJ_TAC THENL [
     Induct_on `x` THEN SRW_TAC [][],
-    Induct_on `x` THEN SRW_TAC [][basic_swapTheory.lswapstr_APPEND,
-                                  inc_pm_APPEND],
+    Induct_on `x` THEN SRW_TAC [][nomsetTheory.pmact_decompose, inc_pm_APPEND],
     SIMP_TAC (srw_ss()) [FUN_EQ_THM, GSYM RIGHT_FORALL_IMP_THM,
-                         nomsetTheory.permeq_def] THEN
+                         nomsetTheory.permeq_thm] THEN
     Induct_on `x` THEN SRW_TAC [][lswapstr_inc_pm]
   ]);
-val _ = export_rewrites ["dpm_is_perm"]
+val dpm_thm = save_thm(
+"dpm_thm",
+raw_dpm_def |> SUBS [GSYM dpm_raw]);
+val _ = export_rewrites ["dpm_thm"]
 
 (* being a nominal set gives us properties of dpm "for free" *)
-val dpm_flip_args = store_thm(
-  "dpm_flip_args",
-  ``dpm ((x,y)::pi) t = dpm ((y,x)::pi) t``,
-  SRW_TAC [][nomsetTheory.is_perm_flip_args]);
-
-val dpm_sing_inv = store_thm(
-  "dpm_sing_inv",
-  ``dpm [h] (dpm [h] t) = t``,
-  SRW_TAC [][nomsetTheory.is_perm_sing_inv]);
-val _ = export_rewrites ["dpm_sing_inv"]
 
 (* dFVs gives the free indices of a dB term as strings *)
 val dFVs_def = Define`dFVs t = IMAGE n2s (dFV t)`
@@ -216,7 +211,7 @@ val dpm_fresh = store_thm(
 
 val dpm_supp = store_thm(
   "dpm_supp",
-  ``supp dpm = dFVs``,
+  ``supp d_pmact = dFVs``,
   ONCE_REWRITE_TAC [FUN_EQ_THM] THEN SRW_TAC [][] THEN
   MATCH_MP_TAC nomsetTheory.supp_unique_apart THEN
   SRW_TAC [][dpm_apart, nomsetTheory.support_def] THEN
@@ -232,9 +227,8 @@ val _ = binderLib.type_db :=
                          binderLib.NTI {
                          nullfv = ``dABS (dV 0)``,
                          pm_rewrites = [],
-                         pm_constant = ``dpm``,
+                         pm_constant = ``d_pmact``,
                          fv_rewrites = [],
-                         fv_constant = ``dFV``,
                          recursion_thm = NONE,
                          binders = []})
 
@@ -462,18 +456,19 @@ val fromTerm_eqlam = prove(
     SRW_TAC [][fromTerm_def, dLAM_def] THEN
     Cases_on `i = s2n v` THENL [
       FULL_SIMP_TAC (srw_ss()) [LAM_eq_thm, fresh_dpm_sub,
-                               nomsetTheory.is_perm_injective, lift_11],
-      `~(i IN dFV (fromTerm t0)) /\ ~(s2n v IN dFV d)`
+                               nomsetTheory.pmact_injective, lift_11],
+      `i ∉ dFV (fromTerm t0) /\ s2n v ∉ dFV d`
          by (FIRST_X_ASSUM (MP_TAC o AP_TERM ``dFV``) THEN
              REWRITE_TAC [EXTENSION] THEN
              DISCH_THEN (fn th => Q.SPEC_THEN `i + 1` MP_TAC th THEN
                                   Q.SPEC_THEN `s2n v + 1` MP_TAC th) THEN
              SRW_TAC [ARITH_ss][IN_dFV, dFVs_sub, dFVs_lift]) THEN
       FIRST_X_ASSUM (MP_TAC o AP_TERM ``dpm [(n2s 0, n2s (i + 1))]``) THEN
-      ASM_SIMP_TAC (srw_ss()) [fresh_dpm_sub] THEN
+      ASM_SIMP_TAC std_ss [fresh_dpm_sub, IN_dFV_lift,
+                           nomsetTheory.pmact_sing_inv] THEN
       ASM_SIMP_TAC (srw_ss()) [GSYM fresh_dpm_sub] THEN
-      ONCE_REWRITE_TAC [dpm_flip_args] THEN
-      `~(i + 1 IN dFV (sub (dV 0) (s2n v + 1) (lift (fromTerm t0) 0)))`
+      ONCE_REWRITE_TAC [nomsetTheory.pmact_flip_args] THEN
+      `i + 1 ∉ dFV (sub (dV 0) (s2n v + 1) (lift (fromTerm t0) 0))`
          by (SRW_TAC [ARITH_ss][dFVs_sub, IN_dFV] THEN
              SRW_TAC [][dFVs_def]) THEN
       ASM_SIMP_TAC (srw_ss())[GSYM fresh_dpm_sub] THEN
@@ -485,7 +480,7 @@ val fromTerm_eqlam = prove(
       SRW_TAC [][] THEN ONCE_REWRITE_TAC [GSYM fromTerm_tpm] THEN
       Q.EXISTS_TAC `tpm [(n2s i,v)] t0` THEN
       SRW_TAC [][LAM_eq_thm, sn_iso_num] THEN
-      FULL_SIMP_TAC (srw_ss()) [IN_dFV, tpm_flip_args]
+      FULL_SIMP_TAC (srw_ss()) [IN_dFV, nomsetTheory.pmact_flip_args]
     ],
     SRW_TAC [][] THEN SRW_TAC [][fromTerm_def]
   ])
@@ -653,7 +648,7 @@ val dbeta'_dpm = prove(
 val dbeta'_dpm_calc = store_thm(
   "dbeta'_dpm_calc",
   ``!M N. dbeta' (dpm pi M) N = dbeta' M (dpm (REVERSE pi) N)``,
-  METIS_TAC [dbeta'_dpm, nomsetTheory.is_perm_inverse, dpm_is_perm])
+  METIS_TAC [dbeta'_dpm, nomsetTheory.pmact_inverse])
 
 (* We can construct a lift permutation.
      inc_as_pm lim n
@@ -691,7 +686,7 @@ val lifting_pm_behaves = store_thm(
         SRW_TAC [ARITH_ss][] THEN
         SRW_TAC [ARITH_ss][basic_swapTheory.swapstr_def],
 
-        ASM_SIMP_TAC (srw_ss()) [basic_swapTheory.lswapstr_APPEND] THEN
+        ASM_SIMP_TAC (srw_ss()) [nomsetTheory.pmact_decompose] THEN
         Cases_on `i < lim` THEN1
           SRW_TAC [ARITH_ss][basic_swapTheory.swapstr_def] THEN
         ASM_SIMP_TAC (srw_ss()) [] THEN
@@ -786,7 +781,7 @@ val dbeta'_lift = store_thm(
      by (CONJ_TAC THEN MATCH_MP_TAC lifts_are_specific_dpms THEN
          REPEAT STRIP_TAC THEN RES_TAC THEN Q.UNABBREV_TAC `k` THEN
          DECIDE_TAC) THEN
-  SRW_TAC [][dbeta'_dpm_calc, nomsetTheory.is_perm_inverse])
+  SRW_TAC [][dbeta'_dpm_calc, nomsetTheory.pmact_inverse])
 
 val dbeta_dbeta' = store_thm(
   "dbeta_dbeta'",
@@ -795,7 +790,7 @@ val dbeta_dbeta' = store_thm(
     SRW_TAC [][alt_dbeta'_rule],
     Q_TAC SUFF_TAC `!p t u. dbeta' (dpm p t) (dpm p u) = dbeta' t u`
           THEN1 METIS_TAC [dABS_rules_are_dLAM_compatible, dbeta'_rules] THEN
-    SRW_TAC [][dbeta'_dpm_calc, nomsetTheory.is_perm_inverse]
+    SRW_TAC [][dbeta'_dpm_calc, nomsetTheory.pmact_inverse]
   ]);
 
 (* nsub must be icky - just look at how it behaves under permutations *)
@@ -850,7 +845,7 @@ val dbeta_lift = store_thm(
      by (CONJ_TAC THEN MATCH_MP_TAC lifts_are_specific_dpms THEN
          REPEAT STRIP_TAC THEN RES_TAC THEN Q.UNABBREV_TAC `k` THEN
          DECIDE_TAC) THEN
-  METIS_TAC [dbeta_dpm, nomsetTheory.is_perm_inverse, dpm_is_perm])
+  METIS_TAC [dbeta_dpm, nomsetTheory.pmact_inverse])
 
 val dbeta'_dbeta = store_thm(
   "dbeta'_dbeta",
@@ -858,7 +853,7 @@ val dbeta'_dbeta = store_thm(
   HO_MATCH_MP_TAC dbeta'_ind THEN
   SRW_TAC [][dbeta_rules, alt_dbeta_rule] THEN
   METIS_TAC [dABS_rules_are_dLAM_compatible, dbeta_rules, dbeta_dpm,
-             nomsetTheory.is_perm_inverse, dpm_is_perm]);
+             nomsetTheory.pmact_inverse]);
 
 val dbeta_dbeta'_eqn = store_thm(
   "dbeta_dbeta'_eqn",
@@ -1112,8 +1107,8 @@ val IN_dFV_dpm = store_thm(
   "IN_dFV_dpm",
   ``!t p i. i IN dFV (dpm p t) = s2n (lswapstr (REVERSE p) (n2s i)) IN dFV t``,
   SRW_TAC [][IN_dFV] THEN REWRITE_TAC [SYM dpm_supp] THEN
-  `supp dpm (dpm p t) = setpm lswapstr p (supp dpm t)`
-     by METIS_TAC [nomsetTheory.perm_supp, dpm_is_perm] THEN
+  `supp d_pmact (dpm p t) = ssetpm p (supp d_pmact t)`
+     by METIS_TAC [nomsetTheory.perm_supp] THEN
   SRW_TAC [][]);
 
 val REVERSE_inc_pm = store_thm(
@@ -1155,7 +1150,7 @@ val eta_neta = store_thm(
   HO_MATCH_MP_TAC eta_ind THEN
   SRW_TAC [][neta_rules, alt_neta_redex] THEN
   METIS_TAC [neta_rules, dABS_rules_are_dLAM_compatible, neta_dpm,
-             nomsetTheory.is_perm_inverse, dpm_is_perm]);
+             nomsetTheory.pmact_inverse]);
 
 val nipkow_free_sub_lemmma = store_thm(
   "nipkow_free_sub_lemmma",
@@ -1180,7 +1175,7 @@ val eta_dpm = store_thm(
 val eta_dpm_eqn = store_thm(
   "eta_dpm_eqn",
   ``eta (dpm p t) (dpm p u) = eta t u``,
-  METIS_TAC [dpm_is_perm, nomsetTheory.is_perm_inverse, eta_dpm]);
+  METIS_TAC [nomsetTheory.pmact_inverse, eta_dpm]);
 
 val alt_eta_redex = prove(
   ``~(0 IN dFV t) ==> eta (dABS (dAPP t (dV 0))) (nsub u 0 t)``,

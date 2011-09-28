@@ -73,8 +73,8 @@ val SUBSET_x64_2set = prove(
   ``!u s. u SUBSET x64_2set s = ?y. u = x64_2set' y s``,
   REPEAT STRIP_TAC \\ EQ_TAC \\ REPEAT STRIP_TAC
   \\ ASM_REWRITE_TAC [x64_2set'_SUBSET_x64_2set]
-  \\ Q.EXISTS_TAC `({ a |a| ?x. zReg a x IN u },{ a |a| ?x. zStatus a x IN u },
-                    (?x. zRIP x IN u),{ a |a| ?x y. zMem a x y IN u })`
+  \\ Q.EXISTS_TAC `({ a | a| ?x. zReg a x IN u },{ a | a| ?x. zStatus a x IN u },
+                    (?x. zRIP x IN u),{ a | a| ?x y. zMem a x y IN u })`
   \\ `?r e t m i. s = (r,e,t,m,i)` by METIS_TAC [PAIR]
   \\ FULL_SIMP_TAC std_ss [x64_2set'_def,x64_2set_def,EXTENSION,SUBSET_DEF,IN_IMAGE,
        IN_UNION,GSPECIFICATION,IN_INSERT,NOT_IN_EMPTY,IN_UNIV]
@@ -684,7 +684,7 @@ val zBYTE_MEMORY_ANY_SET_EQ = prove(
   METIS_TAC [zBYTE_MEMORY_ANY_SET_def]);
 
 val aligned_4_ADD_AND_3 = prove(
-  ``!x. (x && 0x3w = 0x0w) ==> 
+  ``!x. (x && 0x3w = 0x0w) ==>
         (x + 0x0w && 0x3w = 0x0w) /\
         (x + 0x1w && 0x3w = 0x1w) /\
         (x + 0x2w && 0x3w = 0x2w) /\
@@ -692,7 +692,7 @@ val aligned_4_ADD_AND_3 = prove(
   blastLib.BBLAST_TAC);
 
 val not_aligned = prove(
-  ``!x. (x && 0x3w = 0x0w) ==> 
+  ``!x. (x && 0x3w = 0x0w) ==>
         ~((x + 1w) && 0x3w = 0x0w) /\
         ~((x + 2w) && 0x3w = 0x0w) /\
         ~((x + 3w) && 0x3w = 0x0w:word64)``,
@@ -705,14 +705,14 @@ val aligned_ADD_SELF = prove(
 val aligned_cases = prove(
   ``!w. (w && 3w = 0w) \/ (w && 3w = 1w) \/ (w && 3w = 2w) \/ (w && 3w = 3w:word64)``,
   blastLib.BBLAST_TAC);
-  
+
 val zMEMORY_INSERT = store_thm("zMEMORY_INSERT",
   ``a IN df /\ (a && 3w = 0w) ==>
     (zMEMORY df ((a =+ w) f) = zM a w * zMEMORY (df DELETE a) f)``,
   REPEAT STRIP_TAC
   \\ ASM_SIMP_TAC std_ss [zMEMORY_def,zBYTE_MEMORY_def,zM_def,GSYM STAR_ASSOC]
   \\ `zMEMORY_DOMAIN df = a INSERT (a+1w) INSERT (a+2w) INSERT
-      (a+3w) INSERT zMEMORY_DOMAIN (df DELETE a)` by 
+      (a+3w) INSERT zMEMORY_DOMAIN (df DELETE a)` by
    (FULL_SIMP_TAC std_ss [zMEMORY_DOMAIN_def]
     \\ `{{b; b + 1w; b + 2w; b + 3w} | (b && 3w = 0w) /\ b IN df} =
         {a; a + 1w; a + 2w; a + 3w} INSERT
@@ -726,7 +726,7 @@ val zMEMORY_INSERT = store_thm("zMEMORY_INSERT",
   \\ ASM_SIMP_TAC (std_ss++SIZES_ss) [zBYTE_MEMORY_ANY_INSERT_SET,DELETE_INSERT,
        WORD_EQ_ADD_CANCEL,n2w_11]
   \\ SIMP_TAC std_ss [zMEMORY_FUNC_def,LET_DEF]
-  \\ ASM_SIMP_TAC std_ss [aligned_4_ADD_AND_3]  
+  \\ ASM_SIMP_TAC std_ss [aligned_4_ADD_AND_3]
   \\ ASM_SIMP_TAC (std_ss++wordsLib.SIZES_ss) [n2w_11]
   \\ ASM_SIMP_TAC std_ss [WORD_ADD_SUB,WORD_SUB_RZERO]
   \\ ASM_SIMP_TAC std_ss [APPLY_UPDATE_THM,zDATA_PERM_def]
@@ -744,7 +744,7 @@ val zMEMORY_INSERT = store_thm("zMEMORY_INSERT",
     \\ FULL_SIMP_TAC std_ss [WORD_ADD_EQ_SUB,word_arith_lemma4]
     \\ FULL_SIMP_TAC std_ss [word_arith_lemma1,WORD_EQ_ADD_CANCEL]
     \\ FULL_SIMP_TAC std_ss [word_arith_lemma1,aligned_ADD_SELF,
-         word_arith_lemma3,WORD_ADD_0]) 
+         word_arith_lemma3,WORD_ADD_0])
   \\ FULL_SIMP_TAC std_ss [DELETE_NON_ELEMENT]
   \\ FULL_SIMP_TAC std_ss [GSYM DELETE_NON_ELEMENT]
   \\ FULL_SIMP_TAC std_ss [zBYTE_MEMORY_ANY_def]
@@ -980,7 +980,7 @@ val SPLIT_CODE_SEQ = prove(
 
 val X64_SPEC_EXLPODE_CODE_LEMMA = prove(
   ``!s. SPEC X64_MODEL p ((a,xs,T) INSERT s) q =
-        SPEC X64_MODEL p ({ (a + n2w n, [EL n xs], T) |n| n < LENGTH xs } UNION s) q``,
+        SPEC X64_MODEL p ({ (a + n2w n, [EL n xs], T) | n| n < LENGTH xs } UNION s) q``,
   Q.SPEC_TAC (`a`,`a`) \\ Q.SPEC_TAC (`xs`,`xs`) \\ REVERSE Induct THEN1
    (ASM_SIMP_TAC std_ss [SPLIT_CODE_SEQ] \\ REPEAT STRIP_TAC
     \\ `{(a + n2w n,[EL n (h::xs)],T) | n | n < LENGTH (h::xs)} =
@@ -996,7 +996,7 @@ val X64_SPEC_EXLPODE_CODE_LEMMA = prove(
       \\ ASM_SIMP_TAC std_ss [TL,WORD_ADD_ASSOC,LENGTH] \\ DECIDE_TAC,
       Q.EXISTS_TAC `0` \\ ASM_SIMP_TAC std_ss [WORD_ADD_0,EL,LENGTH,HD]])
   \\ REPEAT STRIP_TAC
-  \\ `{(a + n2w n,[EL n ([]:word8 list)],T) |n| n < LENGTH ([]:word8 list)} = {}` by
+  \\ `{(a + n2w n,[EL n ([]:word8 list)],T) | n| n < LENGTH ([]:word8 list)} = {}` by
     ASM_SIMP_TAC std_ss [EXTENSION,GSPECIFICATION,NOT_IN_EMPTY,LENGTH]
   \\ ASM_SIMP_TAC std_ss [UNION_EMPTY]
   \\ SIMP_TAC std_ss [progTheory.SPEC_def,X64_MODEL_def]
@@ -1017,8 +1017,8 @@ val X64_SPEC_EXLPODE_CODE = save_thm("X64_SPEC_EXLPODE_CODE",
 (* ----------------------------------------------------------------------------- *)
 
 val LOAD64 = store_thm("LOAD64",
-  ``(w2w (((63 >< 32) w):word32) << 32 !! w2w (((31 >< 0) w):word32) = w:word64) /\
-    (w2w (((31 >< 0) w):word32) !! w2w (((63 >< 32) w):word32) << 32 = w:word64)``,
+  ``(w2w (((63 >< 32) w):word32) << 32 || w2w (((31 >< 0) w):word32) = w:word64) /\
+    (w2w (((31 >< 0) w):word32) || w2w (((63 >< 32) w):word32) << 32 = w:word64)``,
   blastLib.BBLAST_TAC);
 
 val WORD_BITS_BITS_ZERO = store_thm("WORD_BITS_BITS_ZERO",
@@ -1039,8 +1039,8 @@ val WORD_w2w_n2w_OVER_BITWISE = store_thm("WORD_w2w_n2w_OVER_BITWISE",
           (n2w n && w2w w = w2w (n2w n && (w:'b word)) :'a word) /\
           (w2w w ?? n2w n = w2w ((w:'b word) ?? n2w n) :'a word) /\
           (n2w n ?? w2w w = w2w (n2w n ?? (w:'b word)) :'a word) /\
-          (w2w w !! n2w n = w2w ((w:'b word) !! n2w n) :'a word) /\
-          (n2w n !! w2w w = w2w (n2w n !! (w:'b word)) :'a word)``,
+          (w2w w || n2w n = w2w ((w:'b word) || n2w n) :'a word) /\
+          (n2w n || w2w w = w2w (n2w n || (w:'b word)) :'a word)``,
   NTAC 3 STRIP_TAC THEN1
    (REPEAT STRIP_TAC
     \\ `(n2w n):'a word = w2w ((n2w (n MOD dimword (:'b))):'b word)` by
@@ -1105,7 +1105,7 @@ val w2w_OVER_ARITH_n2w = CONJ w2w_OVER_ARITH_n2w_LEMMA1 w2w_OVER_ARITH_n2w_LEMMA
 val _ = save_thm("w2w_OVER_ARITH_n2w",w2w_OVER_ARITH_n2w);
 
 val ALIGNED64 = store_thm("ALIGNED64",
-  ``!w n. ((0x0w = w && 0x3w) = (w && 0x3w = 0w)) /\ 
+  ``!w n. ((0x0w = w && 0x3w) = (w && 0x3w = 0w)) /\
           ((0x3w && w = 0w) = (w && 0x3w = 0w)) /\
           ((4w + w && 0x3w = 0w) = (w && 0x3w = 0w:word64)) /\
           ((w + 4w && 0x3w = 0w) = (w && 0x3w = 0w:word64)) /\
@@ -1116,7 +1116,7 @@ val ALIGNED64 = store_thm("ALIGNED64",
           ((w - n2w (4 * n) && 0x3w = 0w) = (w && 0x3w = 0w:word64)) /\
           ((n2w (8 * n) + w && 0x3w = 0w) = (w && 0x3w = 0w:word64)) /\
           ((n2w (4 * n) + w && 0x3w = 0w) = (w && 0x3w = 0w:word64))``,
-  NTAC 2 STRIP_TAC \\ SIMP_TAC std_ss [GSYM word_mul_n2w] 
+  NTAC 2 STRIP_TAC \\ SIMP_TAC std_ss [GSYM word_mul_n2w]
   \\ Q.SPEC_TAC (`(n2w n):word64`,`v`) \\ blastLib.BBLAST_TAC);
 
 

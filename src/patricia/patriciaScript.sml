@@ -418,8 +418,8 @@ val _ = export_rewrites ["TRANSFORM_IS_PTREE"];
 val PEEK_TRANSFORM = store_thm("PEEK_TRANSFORM",
   `!f t k. PEEK (TRANSFORM f t) k =
               case PEEK t k of
-                 NONE -> NONE
-              || SOME x -> SOME (f x)`,
+                NONE => NONE
+              | SOME x => SOME (f x)`,
   Induct_on `t` \\ SRW_TAC [] [TRANSFORM_def, PEEK_def]);
 
 val ADD_TRANSFORM = store_thm("ADD_TRANSFORM",

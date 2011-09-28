@@ -33,7 +33,8 @@ val tends_real_real = new_definition(
   (--`(tends_real_real f l)(x0) =
         (f tends l)(mtop(mr1),tendsto(mr1,x0))`--));
 
-val _ = overload_on (GrammarSpecials.case_arrow_special, ``tends_real_real``);
+val _ = add_infix("->", 250, HOLgrammars.RIGHT)
+val _ = overload_on ("->", ``tends_real_real``);
 
 
 val LIM = store_thm("LIM",

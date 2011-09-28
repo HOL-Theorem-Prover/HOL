@@ -236,10 +236,10 @@ val alu_write_pc_def = Define`
 val decode_imm_shift_def = Define`
   decode_imm_shift (type:word2, imm5:word5) =
     case type
-    of 0b00w -> (SRType_LSL, w2n imm5)
-    || 0b01w -> (SRType_LSR, if imm5 = 0w then 32 else w2n imm5)
-    || 0b10w -> (SRType_ASR, if imm5 = 0w then 32 else w2n imm5)
-    || 0b11w -> if imm5 = 0w then
+    of 0b00w => (SRType_LSL, w2n imm5)
+     | 0b01w => (SRType_LSR, if imm5 = 0w then 32 else w2n imm5)
+     | 0b10w => (SRType_ASR, if imm5 = 0w then 32 else w2n imm5)
+     | 0b11w => if imm5 = 0w then
                   (SRType_RRX, 1)
                 else
                   (SRType_ROR, w2n imm5)`;
@@ -247,10 +247,10 @@ val decode_imm_shift_def = Define`
 val decode_reg_shift_def = Define`
   decode_reg_shift (type:word2) =
     case type
-    of 0b00w -> SRType_LSL
-    || 0b01w -> SRType_LSR
-    || 0b10w -> SRType_ASR
-    || 0b11w -> SRType_ROR`;
+    of 0b00w => SRType_LSL
+     | 0b01w => SRType_LSR
+     | 0b10w => SRType_ASR
+     | 0b11w => SRType_ROR`;
 
 val shift_c_def = Define`
   shift_c (value:'a word, type:SRType, amount:num, carry_in:bool) =
@@ -262,11 +262,11 @@ val shift_c_def = Define`
           (value, carry_in)
          else
           (case type
-           of SRType_LSL -> LSL_C (value, amount)
-           || SRType_LSR -> LSR_C (value, amount)
-           || SRType_ASR -> ASR_C (value, amount)
-           || SRType_ROR -> ROR_C (value, amount)
-           || SRType_RRX -> RRX_C (value, carry_in)))`;
+           of SRType_LSL => LSL_C (value, amount)
+            | SRType_LSR => LSR_C (value, amount)
+            | SRType_ASR => ASR_C (value, amount)
+            | SRType_ROR => ROR_C (value, amount)
+            | SRType_RRX => RRX_C (value, carry_in)))`;
 
 val shift_def = Define`
   shift (value:'a word, type:SRType, amount:num, carry_in:bool) =
@@ -291,19 +291,19 @@ val thumb_expand_imm_c_def = Define`
     if (11 -- 10) imm12 = 0b00w then
       let imm8 = (7 >< 0) imm12 : word8 in
         case (9 >< 8) imm12 : word2
-        of 0b00w ->
+        of 0b00w =>
              constT (w2w imm8, carry_in)
-        || 0b01w ->
+         | 0b01w =>
              if imm8 = 0w then
                errorT "thumb_expand_imm_c: unpredictable"
              else
                constT (word32 [imm8; 0b00000000w; imm8; 0b00000000w], carry_in)
-        || 0b10w ->
+         | 0b10w =>
              if imm8 = 0w then
                errorT "thumb_expand_imm_c: unpredictable"
              else
                constT (word32 [0b00000000w; imm8; 0b00000000w; imm8], carry_in)
-        || 0b11w ->
+         | 0b11w =>
              if imm8 = 0w then
                errorT "thumb_expand_imm_c: unpredictable"
              else
@@ -381,81 +381,81 @@ val address_mode5_def = Define`
 val data_processing_alu_def = Define`
   data_processing_alu (opc:word4) (a:word32) b c =
     case opc
-    of 0b0000w -> ( a && b ,  ARB, ARB)     (* AND *)
-    || 0b0001w -> ( a ?? b ,  ARB, ARB)     (* EOR *)
-    || 0b0010w -> add_with_carry( a,~b, T)  (* SUB *)
-    || 0b0011w -> add_with_carry(~a, b, T)  (* RSB *)
-    || 0b0100w -> add_with_carry( a, b, F)  (* ADD *)
-    || 0b0101w -> add_with_carry( a, b, c)  (* ADC *)
-    || 0b0110w -> add_with_carry( a,~b, c)  (* SBC *)
-    || 0b0111w -> add_with_carry(~a, b, c)  (* RSC *)
-    || 0b1000w -> ( a && b ,  ARB , ARB)    (* TST *)
-    || 0b1001w -> ( a ?? b ,  ARB , ARB)    (* TEQ *)
-    || 0b1010w -> add_with_carry( a,~b, T)  (* CMP *)
-    || 0b1011w -> add_with_carry( a, b, F)  (* CMN *)
-    || 0b1100w -> ( a !! b ,  ARB , ARB)    (* ORR *)
-    || 0b1101w -> (      b ,  ARB , ARB)    (* MOV *)
-    || 0b1110w -> ( a && ~b , ARB , ARB)    (* BIC *)
-    || _       -> ( a !! ~b , ARB , ARB)`;  (* MVN/ORN *)
+    of 0b0000w => ( a && b ,  ARB, ARB)     (* AND *)
+     | 0b0001w => ( a ?? b ,  ARB, ARB)     (* EOR *)
+     | 0b0010w => add_with_carry( a,~b, T)  (* SUB *)
+     | 0b0011w => add_with_carry(~a, b, T)  (* RSB *)
+     | 0b0100w => add_with_carry( a, b, F)  (* ADD *)
+     | 0b0101w => add_with_carry( a, b, c)  (* ADC *)
+     | 0b0110w => add_with_carry( a,~b, c)  (* SBC *)
+     | 0b0111w => add_with_carry(~a, b, c)  (* RSC *)
+     | 0b1000w => ( a && b ,  ARB , ARB)    (* TST *)
+     | 0b1001w => ( a ?? b ,  ARB , ARB)    (* TEQ *)
+     | 0b1010w => add_with_carry( a,~b, T)  (* CMP *)
+     | 0b1011w => add_with_carry( a, b, F)  (* CMN *)
+     | 0b1100w => ( a || b ,  ARB , ARB)    (* ORR *)
+     | 0b1101w => (      b ,  ARB , ARB)    (* MOV *)
+     | 0b1110w => ( a && ~b , ARB , ARB)    (* BIC *)
+     | _       => ( a || ~b , ARB , ARB)`;  (* MVN/ORN *)
 
 val data_processing_thumb2_unpredictable_def = Define`
   (data_processing_thumb2_unpredictable
      (Data_Processing opc setflags n d (Mode1_immediate imm12)) =
    case opc
-   of 0b0000w -> (* AND *)
+   of 0b0000w => (* AND *)
                  (d = 13w) \/ (d = 15w) /\ ~setflags \/ BadReg n
-   || 0b0001w -> (* EOR *)
+    | 0b0001w => (* EOR *)
                  (d = 13w) \/ (d = 15w) /\ ~setflags \/ BadReg n
-   || 0b0010w -> (* SUB *)
+    | 0b0010w => (* SUB *)
                  (if n = 13w then
                     (d = 15w) /\ ~setflags
                  else
                     (d = 13w) \/ (d = 15w) /\ ~setflags \/ (n = 15w))
-   || 0b0100w -> (* ADD *)
+    | 0b0100w => (* ADD *)
                  if n = 13w then
                    (d = 15w) /\ ~setflags
                  else
                    (d = 13w) \/ (d = 15w) /\ ~setflags \/ (n = 15w)
-   || 0b0111w -> T                                       (* RSC *)
-   || 0b1000w -> BadReg n                                (* TST *)
-   || 0b1001w -> BadReg n                                (* TEQ *)
-   || 0b1010w -> n = 15w                                 (* CMP *)
-   || 0b1011w -> n = 15w                                 (* CMN *)
-   || 0b1101w -> BadReg d                                (* MOV *)
-   || 0b1111w -> BadReg d \/ (n = 13w)                   (* MVN/ORN *)
-   || _       -> (* RSB,ADC,SBC,ORR,BIC *)
+    | 0b0111w => T                                       (* RSC *)
+    | 0b1000w => BadReg n                                (* TST *)
+    | 0b1001w => BadReg n                                (* TEQ *)
+    | 0b1010w => n = 15w                                 (* CMP *)
+    | 0b1011w => n = 15w                                 (* CMN *)
+    | 0b1101w => BadReg d                                (* MOV *)
+    | 0b1111w => BadReg d \/ (n = 13w)                   (* MVN/ORN *)
+    | _       => (* RSB,ADC,SBC,ORR,BIC *)
                  BadReg d \/ BadReg n) /\
   (data_processing_thumb2_unpredictable
      (Data_Processing opc setflags n d (Mode1_register imm5 typ m)) =
    case opc
-   of 0b0000w -> (* AND *)
+   of 0b0000w => (* AND *)
                  (d = 13w) \/ (d = 15w) /\ ~setflags \/ BadReg n
-   || 0b0001w -> (* EOR *)
+    | 0b0001w => (* EOR *)
                  (d = 13w) \/ (d = 15w) /\ ~setflags \/ BadReg n
-   || 0b0010w -> (* SUB *)
+    | 0b0010w => (* SUB *)
                  if n = 13w then
                    (d = 13w) /\ (typ <> 0w \/ w2n imm5 > 3) \/
                    (d = 15w) \/ BadReg m
                  else
                    (d = 13w) \/ (d = 15w) /\ ~setflags \/ (n = 15w) \/ BadReg m
-   || 0b0100w -> (* ADD *)
+    | 0b0100w => (* ADD *)
                  if n = 13w then
                    (d = 13w) /\ (typ <> 0w \/ w2n imm5 > 3) \/
                    (d = 15w) \/ BadReg m
                  else
                    (d = 13w) \/ (d = 15w) /\ ~setflags \/ (n = 15w) \/ BadReg m
-   || 0b0111w -> T                                       (* RSC *)
-   || 0b1000w -> BadReg n \/ BadReg m                    (* TST *)
-   || 0b1001w -> BadReg n \/ BadReg m                    (* TEQ *)
-   || 0b1010w -> (n = 15w) \/ BadReg m                   (* CMP *)
-   || 0b1011w -> (n = 15w) \/ BadReg m                   (* CMN *)
-   || 0b1101w -> (* MOV *)
+    | 0b0111w => T                                       (* RSC *)
+    | 0b1000w => BadReg n \/ BadReg m                    (* TST *)
+    | 0b1001w => BadReg n \/ BadReg m                    (* TEQ *)
+    | 0b1010w => (n = 15w) \/ BadReg m                   (* CMP *)
+    | 0b1011w => (n = 15w) \/ BadReg m                   (* CMN *)
+    | 0b1101w => (* MOV *)
                  if setflags then
                    BadReg d \/ BadReg m
                  else
                    (d = 15w) \/ (m = 15w) \/ (d = 13w) /\ (m = 13w)
-   || 0b1111w -> BadReg d \/ (n = 13w) \/ BadReg m       (* MVN/ORN *)
-   || _       -> (* RSB,ADC,SBC,ORR,BIC *)
+    | 0b1111w => BadReg d \/ (n = 13w) \/ BadReg m       (* MVN/ORN *)
+    | _       => (* RSB,ADC,SBC,ORR,BIC *)
                  BadReg d \/ BadReg n \/ BadReg m) /\
   (data_processing_thumb2_unpredictable
      (Data_Processing opc setflags n d
@@ -471,10 +471,10 @@ val signed_parallel_add_sub_16_def = Define`
     and tn = SInt (top_half rn) and tm = SInt (top_half rm)
     in
       case op2
-      of Parallel_add_16           -> (bn + bm, tn + tm)
-      || Parallel_add_sub_exchange -> (bn - tm, tn + bm)
-      || Parallel_sub_add_exchange -> (bn + tm, tn - bm)
-      || Parallel_sub_16           -> (bn - bm, tn - tm)`;
+      of Parallel_add_16           => (bn + bm, tn + tm)
+       | Parallel_add_sub_exchange => (bn - tm, tn + bm)
+       | Parallel_sub_add_exchange => (bn + tm, tn - bm)
+       | Parallel_sub_16           => (bn - bm, tn - tm)`;
 
 val signed_normal_add_sub_16_def = Define`
   signed_normal_add_sub_16 op2 rn rm : word32 # word4 option =
@@ -499,8 +499,8 @@ val signed_parallel_add_sub_8_def = Define`
     let n = MAP SInt (bytes (rn,4))
     and m = MAP SInt (bytes (rm,4))
     in
-      case op2 of Parallel_add_8 -> MAP (UNCURRY $+) (ZIP (n,m))
-               || Parallel_sub_8 -> MAP (UNCURRY $-) (ZIP (n,m))`;
+      case op2 of Parallel_add_8 => MAP (UNCURRY $+) (ZIP (n,m))
+                | Parallel_sub_8 => MAP (UNCURRY $-) (ZIP (n,m))`;
 
 val signed_normal_add_sub_8_def = Define`
   signed_normal_add_sub_8 op2 rn rm : word32 # word4 option =
@@ -524,26 +524,26 @@ val unsigned_parallel_add_sub_16_def = Define`
     and tn = UInt (top_half rn) and tm = UInt (top_half rm)
     in
       case op2
-      of Parallel_add_16           -> (bn + bm, tn + tm)
-      || Parallel_add_sub_exchange -> (bn - tm, tn + bm)
-      || Parallel_sub_add_exchange -> (bn + tm, tn - bm)
-      || Parallel_sub_16           -> (bn - bm, tn - tm)`;
+      of Parallel_add_16           => (bn + bm, tn + tm)
+       | Parallel_add_sub_exchange => (bn - tm, tn + bm)
+       | Parallel_sub_add_exchange => (bn + tm, tn - bm)
+       | Parallel_sub_16           => (bn - bm, tn - tm)`;
 
 val unsigned_normal_add_sub_16_def = Define`
   unsigned_normal_add_sub_16 op2 rn rm : word32 # word4 option  =
     let (r1,r2) = unsigned_parallel_add_sub_16 op2 rn rm in
     let (ge1:word2,ge2:word2) =
           case op2
-          of Parallel_add_16 ->
+          of Parallel_add_16 =>
               (if r1 >= 0x10000i then 0b11w else 0b00w,
                if r2 >= 0x10000i then 0b11w else 0b00w)
-          || Parallel_add_sub_exchange ->
+           | Parallel_add_sub_exchange =>
               (if r1 >= 0i       then 0b11w else 0b00w,
                if r2 >= 0x10000i then 0b11w else 0b00w)
-          || Parallel_sub_add_exchange ->
+           | Parallel_sub_add_exchange =>
               (if r1 >= 0x10000i then 0b11w else 0b00w,
                if r2 >= 0i       then 0b11w else 0b00w)
-          || Parallel_sub_16 ->
+           | Parallel_sub_16 =>
               (if r1 >= 0i       then 0b11w else 0b00w,
                if r2 >= 0i       then 0b11w else 0b00w)
     in
@@ -565,14 +565,14 @@ val unsigned_parallel_add_sub_8_def = Define`
     let n = MAP UInt (bytes (rn,4))
     and m = MAP UInt (bytes (rm,4))
     in
-      case op2 of Parallel_add_8 -> MAP (UNCURRY $+) (ZIP (n,m))
-               || Parallel_sub_8 -> MAP (UNCURRY $-) (ZIP (n,m))`;
+      case op2 of Parallel_add_8 => MAP (UNCURRY $+) (ZIP (n,m))
+                | Parallel_sub_8 => MAP (UNCURRY $-) (ZIP (n,m))`;
 
 val unsigned_normal_add_sub_8_def = Define`
   unsigned_normal_add_sub_8 op2 rn rm : word32 # word4 option =
     let r = unsigned_parallel_add_sub_8 op2 rn rm
-    and ge_lim = case op2 of Parallel_add_8 -> 0x100i
-                          || Parallel_sub_8 -> 0i
+    and ge_lim = case op2 of Parallel_add_8 => 0x100i
+                           | Parallel_sub_8 => 0i
     in
     let ge:word4 = FCP i. EL i r >= ge_lim in
       (word32 (MAP i2w r), SOME ge)`;
@@ -591,41 +591,41 @@ val unsigned_halving_add_sub_8_def = Define`
 val parallel_add_sub_def = Define`
   parallel_add_sub u (op1,op2) rn rm =
     case (u,op1,op2)
-    of (F,Parallel_normal,Parallel_add_8) ->
+    of (F,Parallel_normal,Parallel_add_8) =>
          signed_normal_add_sub_8 op2 rn rm
-    || (F,Parallel_normal,Parallel_sub_8) ->
+     | (F,Parallel_normal,Parallel_sub_8) =>
          signed_normal_add_sub_8 op2 rn rm
-    || (F,Parallel_normal,_) ->
+     | (F,Parallel_normal,_) =>
          signed_normal_add_sub_16 op2 rn rm
-    || (F,Parallel_saturating,Parallel_add_8) ->
+     | (F,Parallel_saturating,Parallel_add_8) =>
          signed_saturating_add_sub_8 op2 rn rm
-    || (F,Parallel_saturating,Parallel_sub_8) ->
+     | (F,Parallel_saturating,Parallel_sub_8) =>
          signed_saturating_add_sub_8 op2 rn rm
-    || (F,Parallel_saturating,_) ->
+     | (F,Parallel_saturating,_) =>
          signed_saturating_add_sub_16 op2 rn rm
-    || (F,Parallel_halving,Parallel_add_8) ->
+     | (F,Parallel_halving,Parallel_add_8) =>
          signed_halving_add_sub_8 op2 rn rm
-    || (F,Parallel_halving,Parallel_sub_8) ->
+     | (F,Parallel_halving,Parallel_sub_8) =>
          signed_halving_add_sub_8 op2 rn rm
-    || (F,Parallel_halving,_) ->
+     | (F,Parallel_halving,_) =>
          signed_halving_add_sub_16 op2 rn rm
-    || (T,Parallel_normal,Parallel_add_8) ->
+     | (T,Parallel_normal,Parallel_add_8) =>
          unsigned_normal_add_sub_8 op2 rn rm
-    || (T,Parallel_normal,Parallel_sub_8) ->
+     | (T,Parallel_normal,Parallel_sub_8) =>
          unsigned_normal_add_sub_8 op2 rn rm
-    || (T,Parallel_normal,_) ->
+     | (T,Parallel_normal,_) =>
          unsigned_normal_add_sub_16 op2 rn rm
-    || (T,Parallel_saturating,Parallel_add_8) ->
+     | (T,Parallel_saturating,Parallel_add_8) =>
          unsigned_saturating_add_sub_8 op2 rn rm
-    || (T,Parallel_saturating,Parallel_sub_8) ->
+     | (T,Parallel_saturating,Parallel_sub_8) =>
          unsigned_saturating_add_sub_8 op2 rn rm
-    || (T,Parallel_saturating,_) ->
+     | (T,Parallel_saturating,_) =>
          unsigned_saturating_add_sub_16 op2 rn rm
-    || (T,Parallel_halving,Parallel_add_8) ->
+     | (T,Parallel_halving,Parallel_add_8) =>
          unsigned_halving_add_sub_8 op2 rn rm
-    || (T,Parallel_halving,Parallel_sub_8) ->
+     | (T,Parallel_halving,Parallel_sub_8) =>
          unsigned_halving_add_sub_8 op2 rn rm
-    || (T,Parallel_halving,_) ->
+     | (T,Parallel_halving,_) =>
          unsigned_halving_add_sub_16 op2 rn rm`;
 
 (* ------------------------------------------------------------------------ *)
@@ -633,14 +633,14 @@ val parallel_add_sub_def = Define`
 val barrier_option_def = Define`
   barrier_option (option:word4) =
     case option
-    of 0b0010w -> (MBReqDomain_OuterShareable, MBReqTypes_Writes)
-    || 0b0011w -> (MBReqDomain_OuterShareable, MBReqTypes_All)
-    || 0b0110w -> (MBReqDomain_Nonshareable,   MBReqTypes_Writes)
-    || 0b0111w -> (MBReqDomain_Nonshareable,   MBReqTypes_All)
-    || 0b1010w -> (MBReqDomain_InnerShareable, MBReqTypes_Writes)
-    || 0b1011w -> (MBReqDomain_InnerShareable, MBReqTypes_All)
-    || 0b1110w -> (MBReqDomain_FullSystem,     MBReqTypes_Writes)
-    || _       -> (MBReqDomain_FullSystem,     MBReqTypes_All)`;
+    of 0b0010w => (MBReqDomain_OuterShareable, MBReqTypes_Writes)
+     | 0b0011w => (MBReqDomain_OuterShareable, MBReqTypes_All)
+     | 0b0110w => (MBReqDomain_Nonshareable,   MBReqTypes_Writes)
+     | 0b0111w => (MBReqDomain_Nonshareable,   MBReqTypes_All)
+     | 0b1010w => (MBReqDomain_InnerShareable, MBReqTypes_Writes)
+     | 0b1011w => (MBReqDomain_InnerShareable, MBReqTypes_All)
+     | 0b1110w => (MBReqDomain_FullSystem,     MBReqTypes_Writes)
+     | _       => (MBReqDomain_FullSystem,     MBReqTypes_All)`;
 
 (* ------------------------------------------------------------------------ *)
 
@@ -1248,11 +1248,11 @@ val data_processing_instr_def = iDefine`
                data_processing_thumb2_unpredictable
                  (Data_Processing opc setflags n d mode1) \/
              (case mode1
-              of Mode1_register_shifted_register s type m ->
+              of Mode1_register_shifted_register s type m =>
                    (d = 15w) \/ (n = 15w) \/ (m = 15w) \/ (s = 15w)
-              || Mode1_immediate imm12 ->
+               | Mode1_immediate imm12 =>
                    opc IN {0b0010w; 0b0100w} /\ (n = 15w) /\ ~setflags
-              || _ -> F))
+               | _ => F))
         (((if (opc = 0b1101w) \/
               (opc = 0b1111w) /\ (enc <> Encoding_Thumb2 \/ (n = 15w))
            then
@@ -1413,16 +1413,16 @@ val saturating_add_subtract_instr_def = iDefine`
        (\(rm,rn).
          let (result,sat) =
                 case opc
-                of 0b00w -> signed_sat_q (SInt rm + SInt rn,32)
-                || 0b01w -> signed_sat_q (SInt rm - SInt rn,32)
-                || 0b10w ->
+                of 0b00w => signed_sat_q (SInt rm + SInt rn,32)
+                 | 0b01w => signed_sat_q (SInt rm - SInt rn,32)
+                 | 0b10w =>
                     (let (doubled:word32,sat1) =
                            signed_sat_q (2 * SInt rn,32) in
                      let (result,sat2) =
                            signed_sat_q (SInt rm + SInt doubled,32)
                      in
                        (result,sat1 \/ sat2))
-                || 0b11w ->
+                 | 0b11w =>
                     (let (doubled:word32,sat1) =
                            signed_sat_q (2 * SInt rn,32) in
                      let (result,sat2) =
@@ -2082,12 +2082,12 @@ val preload_data_instr_def = iDefine`
                (is_pldw ==>
                   Extension_Multiprocessing IN e /\ version_number a >= 7)}
       (\v. case mode2
-           of Mode2_register imm5 type m ->
+           of Mode2_register imm5 type m =>
                 if enc = Encoding_Thumb2 then
                   BadReg m
                 else
                   (m = 15w) \/ (n = 15w) /\ is_pldw
-           || Mode2_immediate imm12 -> F)
+            | Mode2_immediate imm12 => F)
       ((if is_mode2_immediate mode2 then
           read_reg_literal ii n
         else
@@ -2115,9 +2115,9 @@ val preload_instruction_instr_def = iDefine`
   preload_instruction_instr ii enc (Preload_Instruction add n mode2) =
     instruction ii "preload_instruction" (ARCH {a | version_number a >= 7})
       (\v. case mode2
-           of Mode2_register imm5 type m ->
+           of Mode2_register imm5 type m =>
                 if enc = Encoding_Thumb2 then BadReg m else m = 15w
-           || Mode2_immediate imm12 -> F)
+            | Mode2_immediate imm12 => F)
       ((if is_mode2_immediate mode2 then
           read_reg_literal ii n
         else
@@ -2165,12 +2165,12 @@ val load_instr_def = iDefine`
                (if enc = Encoding_Thumb2 then BadReg t else t = 15w) \/
             wback /\ ((n = 15w) \/ (n = t)) \/
             (case mode2
-             of Mode2_register imm5 type m ->
+             of Mode2_register imm5 type m =>
                   if enc = Encoding_Thumb2 then
                     BadReg m
                   else
                     (m = 15w) \/ wback /\ version < 6 /\ (m = n)
-             || Mode2_immediate imm12 -> F))
+              | Mode2_immediate imm12 => F))
         ((if is_mode2_immediate mode2 then
             read_reg_literal ii n
           else
@@ -2246,12 +2246,12 @@ val store_instr_def = iDefine`
                store_byte /\ (t = 15w)) \/
             wback /\ ((n = 15w) \/ (n = t)) \/
             (case mode2
-             of Mode2_register imm5 type m ->
+             of Mode2_register imm5 type m =>
                   if enc = Encoding_Thumb2 then
                     BadReg m
                   else
                     (m = 15w) \/ wback /\ version < 6 /\ (m = n)
-             || Mode2_immediate imm12 -> F))
+              | Mode2_immediate imm12 => F))
         ((read_reg ii n |||
          (if t = 15w then pc_store_value ii else read_reg ii t)) >>=
          (\(base,data).
@@ -2326,12 +2326,12 @@ val load_halfword_instr_def = iDefine`
             (if enc = Encoding_Thumb2 then BadReg t else t = 15w) \/
             wback /\ ((n = 15w) \/ (n = t)) \/
             (case mode3
-             of Mode3_register imm2 m ->
+             of Mode3_register imm2 m =>
                   if enc = Encoding_Thumb2 then
                     BadReg m
                   else
                     (m = 15w) \/ wback /\ version < 6 /\ (m = n)
-             || Mode3_immediate imm12 -> F))
+              | Mode3_immediate imm12 => F))
         ((if is_mode3_immediate mode3 then
             read_reg_literal ii n
           else
@@ -2394,12 +2394,12 @@ val store_halfword_instr_def = iDefine`
             (if enc = Encoding_Thumb2 then BadReg t else t = 15w) \/
             wback /\ ((n = 15w) \/ (n = t)) \/
             (case mode3
-             of Mode3_register imm2 m ->
+             of Mode3_register imm2 m =>
                   if enc = Encoding_Thumb2 then
                     BadReg m
                   else
                     (m = 15w) \/ wback /\ version < 6 /\ (m = n)
-             || Mode3_immediate imm12 -> F))
+              | Mode3_immediate imm12 => F))
         ((read_reg ii n ||| read_reg ii t) >>=
          (\(base,rt).
             address_mode3 ii indx add base mode3 >>=
@@ -2572,10 +2572,10 @@ val load_dual_instr_def = iDefine`
             else
               ~indx /\ w \/ t ' 0 \/ t2 <> t + 1w \/ (t2 = 15w)) \/
             (case mode3
-             of Mode3_register imm2 m ->
+             of Mode3_register imm2 m =>
                   (imm2 <> 0w) \/ (m = 15w) \/ (m = t) \/ (m = t2) \/
                   version < 6 /\ wback /\ (m = n)
-             || Mode3_immediate imm12 -> F) \/
+              | Mode3_immediate imm12 => F) \/
             wback /\ ((n = 15w) \/ (n = t) \/ (n = t2)))
         ((if is_mode3_immediate mode3 then
             read_reg_literal ii n
@@ -2613,9 +2613,9 @@ val store_dual_instr_def = iDefine`
             else
               ~indx /\ w \/ t ' 0 \/ t2 <> t + 1w \/ (t2 = 15w)) \/
             (case mode3
-             of Mode3_register imm2 m ->
+             of Mode3_register imm2 m =>
                   (imm2 <> 0w) \/ (m = 15w) \/ version < 6 /\ wback /\ (m = n)
-             || Mode3_immediate imm12 ->
+              | Mode3_immediate imm12 =>
                   F) \/
             wback /\ ((n = 15w) \/ (n = t) \/ (n = t2)))
         ((read_reg ii n ||| read_reg ii t ||| read_reg ii t2) >>=
@@ -3432,14 +3432,14 @@ val condition_passed_def = Define`
     (\(n,z,c,v).
       let result =
         (case (3 >< 1) cond : word3
-         of 0b000w -> z                (* EQ or NE *)
-         || 0b001w -> c                (* CS or CC *)
-         || 0b010w -> n                (* MI or PL *)
-         || 0b011w -> v                (* VS or VC *)
-         || 0b100w -> c /\ ~z          (* HI or LS *)
-         || 0b101w -> n = v            (* GE or LT *)
-         || 0b110w -> (n = v) /\ ~z    (* GT or LE *)
-         || 0b111w -> T)               (* AL       *)
+         of 0b000w => z                (* EQ or NE *)
+          | 0b001w => c                (* CS or CC *)
+          | 0b010w => n                (* MI or PL *)
+          | 0b011w => v                (* VS or VC *)
+          | 0b100w => c /\ ~z          (* HI or LS *)
+          | 0b101w => n = v            (* GE or LT *)
+          | 0b110w => (n = v) /\ ~z    (* GT or LE *)
+          | 0b111w => T)               (* AL       *)
       in
        if cond ' 0 /\ (cond <> 15w) then
          constT (~result)
@@ -3449,209 +3449,209 @@ val condition_passed_def = Define`
 val branch_instruction_def = with_flag (priming, SOME "_") Define`
   branch_instruction ii (enc,inst) =
     case inst
-    of Branch_Target imm24 ->
+    of Branch_Target imm24 =>
          branch_target_instr ii enc inst
-    || Branch_Exchange rm ->
+     | Branch_Exchange rm =>
          branch_exchange_instr ii inst
-    || Branch_Link_Exchange_Immediate H toARM imm24 ->
+     | Branch_Link_Exchange_Immediate H toARM imm24 =>
          branch_link_exchange_imm_instr ii enc inst
-    || Branch_Link_Exchange_Register rm ->
+     | Branch_Link_Exchange_Register rm =>
          branch_link_exchange_reg_instr ii inst
-    || Compare_Branch nonzero imm6 rn ->
+     | Compare_Branch nonzero imm6 rn =>
          compare_branch_instr ii inst
-    || Table_Branch_Byte rn h rm ->
+     | Table_Branch_Byte rn h rm =>
          table_branch_byte_instr ii inst
-    || Check_Array rn rm ->
+     | Check_Array rn rm =>
          check_array_instr ii inst
-    || Handler_Branch_Link l handler ->
+     | Handler_Branch_Link l handler =>
          handler_branch_link_instr ii inst
-    || Handler_Branch_Link_Parameter imm5 handler ->
+     | Handler_Branch_Link_Parameter imm5 handler =>
          handler_branch_link_parameter_instr ii inst
-    || Handler_Branch_Parameter imm3 handler ->
+     | Handler_Branch_Parameter imm3 handler =>
          handler_branch_parameter_instr ii inst`;
 
 val data_processing_instruction_def = with_flag (priming, SOME "_") Define`
   data_processing_instruction ii (enc,inst) =
     case inst
-    of Data_Processing opc s rn rd mode1 ->
+    of Data_Processing opc s rn rd mode1 =>
          data_processing_instr ii enc inst
-    || Move_Halfword high rd imm16 ->
+     | Move_Halfword high rd imm16 =>
          move_halfword_instr ii enc inst
-    || Add_Sub add n d imm12 ->
+     | Add_Sub add n d imm12 =>
          add_sub_instr ii enc inst
-    || Multiply a s rd ra rm rn ->
+     | Multiply a s rd ra rm rn =>
          multiply_instr ii enc inst
-    || Multiply_Subtract rd ra rm rn ->
+     | Multiply_Subtract rd ra rm rn =>
          multiply_subtract_instr ii enc inst
-    || Signed_Halfword_Multiply 0w m n rd ra rm rn ->
+     | Signed_Halfword_Multiply 0w m n rd ra rm rn =>
          signed_16_multiply_32_accumulate_instr ii enc inst
-    || Signed_Halfword_Multiply 1w m F rd ra rm rn ->
+     | Signed_Halfword_Multiply 1w m F rd ra rm rn =>
          signed_16x32_multiply_32_accumulate_instr ii enc inst
-    || Signed_Halfword_Multiply 1w m T rd ra rm rn ->
+     | Signed_Halfword_Multiply 1w m T rd ra rm rn =>
          signed_16x32_multiply_32_result_instr ii enc inst
-    || Signed_Halfword_Multiply 2w m n rd ra rm rn ->
+     | Signed_Halfword_Multiply 2w m n rd ra rm rn =>
          signed_16_multiply_64_accumulate_instr ii enc inst
-    || Signed_Halfword_Multiply opc m n rd ra rm rn ->
+     | Signed_Halfword_Multiply opc m n rd ra rm rn =>
          signed_16_multiply_32_result_instr ii enc inst
-    || Signed_Multiply_Dual rd ra rm sub m_swap rn ->
+     | Signed_Multiply_Dual rd ra rm sub m_swap rn =>
          signed_multiply_dual_instr ii enc inst
-    || Signed_Multiply_Long_Dual rdhi rdlo rm sub m_swap rn ->
+     | Signed_Multiply_Long_Dual rdhi rdlo rm sub m_swap rn =>
          signed_multiply_long_dual_instr ii enc inst
-    || Signed_Most_Significant_Multiply rd ra rm round rn ->
+     | Signed_Most_Significant_Multiply rd ra rm round rn =>
          signed_most_significant_multiply_instr ii enc inst
-    || Signed_Most_Significant_Multiply_Subtract rd ra rm round rn ->
+     | Signed_Most_Significant_Multiply_Subtract rd ra rm round rn =>
          signed_most_significant_multiply_subtract_instr ii enc inst
-    || Multiply_Long u a s rdhi rdlo rm rn ->
+     | Multiply_Long u a s rdhi rdlo rm rn =>
          multiply_long_instr ii enc inst
-    || Multiply_Accumulate_Accumulate rdhi rdlo rm rn ->
+     | Multiply_Accumulate_Accumulate rdhi rdlo rm rn =>
          multiply_accumulate_accumulate_instr ii enc inst
-    || Saturate u sat_imm5 rd imm5 sh rn ->
+     | Saturate u sat_imm5 rd imm5 sh rn =>
          saturate_instr ii enc inst
-    || Saturate_16 u sat_imm4 rd rn ->
+     | Saturate_16 u sat_imm4 rd rn =>
          saturate_16_instr ii enc inst
-    || Saturating_Add_Subtract opc rn rd rm ->
+     | Saturating_Add_Subtract opc rn rd rm =>
          saturating_add_subtract_instr ii enc inst
-    || Pack_Halfword rn rd imm5 tbform rm ->
+     | Pack_Halfword rn rd imm5 tbform rm =>
          pack_halfword_instr ii enc inst
-    || Extend_Byte u rn rd rotate rm ->
+     | Extend_Byte u rn rd rotate rm =>
          extend_byte_instr ii enc inst
-    || Extend_Byte_16 u rn rd rotate rm ->
+     | Extend_Byte_16 u rn rd rotate rm =>
          extend_byte_16_instr ii enc inst
-    || Extend_Halfword u rn rd rotate rm ->
+     | Extend_Halfword u rn rd rotate rm =>
          extend_halfword_instr ii enc inst
-    || Bit_Field_Clear_Insert msb rd lsb rn ->
+     | Bit_Field_Clear_Insert msb rd lsb rn =>
          bit_field_clear_insert_instr ii enc inst
-    || Count_Leading_Zeroes rd rm ->
+     | Count_Leading_Zeroes rd rm =>
          count_leading_zeroes_instr ii enc inst
-    || Reverse_Bits rd rm ->
+     | Reverse_Bits rd rm =>
          reverse_bits_instr ii enc inst
-    || Byte_Reverse_Word rd rm ->
+     | Byte_Reverse_Word rd rm =>
          byte_reverse_word_instr ii enc inst
-    || Byte_Reverse_Packed_Halfword rd rm ->
+     | Byte_Reverse_Packed_Halfword rd rm =>
          byte_reverse_packed_halfword_instr ii enc inst
-    || Byte_Reverse_Signed_Halfword rd rm ->
+     | Byte_Reverse_Signed_Halfword rd rm =>
          byte_reverse_signed_halfword_instr ii enc inst
-    || Bit_Field_Extract u widthm1 rd lsb rn ->
+     | Bit_Field_Extract u widthm1 rd lsb rn =>
          bit_field_extract_instr ii enc inst
-    || Select_Bytes rn rd rm ->
+     | Select_Bytes rn rd rm =>
          select_bytes_instr ii enc inst
-    || Unsigned_Sum_Absolute_Differences rd ra rm rn ->
+     | Unsigned_Sum_Absolute_Differences rd ra rm rn =>
          unsigned_sum_absolute_differences_instr ii enc inst
-    || Parallel_Add_Subtract u op rn rd rm ->
+     | Parallel_Add_Subtract u op rn rd rm =>
          parallel_add_subtract_instr ii enc inst
-    || Divide u rn rd rm ->
+     | Divide u rn rd rm =>
          divide_instr ii inst`;
 
 val status_access_instruction_def = with_flag (priming, SOME "_") Define`
   status_access_instruction ii (enc,inst) =
     case inst
-    of Status_to_Register r rd ->
+    of Status_to_Register r rd =>
          status_to_register_instr ii enc inst
-    || Immediate_to_Status r mask imm12 ->
+     | Immediate_to_Status r mask imm12 =>
          immediate_to_status_instr ii inst
-    || Register_to_Status r mask rn ->
+     | Register_to_Status r mask rn =>
          register_to_status_instr ii enc inst
-    || Change_Processor_State imod affectA affectI affectF mode ->
+     | Change_Processor_State imod affectA affectI affectF mode =>
          change_processor_state_instr ii enc inst
-    || Set_Endianness set_bigend ->
+     | Set_Endianness set_bigend =>
          set_endianness_instr ii enc inst`;
 
 val load_store_instruction_def = with_flag (priming, SOME "_") Define`
   load_store_instruction ii (enc,inst) =
     case inst
-    of Load p u b w unpriv rn rt mode2 ->
+    of Load p u b w unpriv rn rt mode2 =>
          load_instr ii enc inst
-    || Store p u b w unpriv rn rt mode2 ->
+     | Store p u b w unpriv rn rt mode2 =>
          store_instr ii enc inst
-    || Load_Halfword p u w s h unpriv rn rt mode3 ->
+     | Load_Halfword p u w s h unpriv rn rt mode3 =>
          load_halfword_instr ii enc inst
-    || Store_Halfword p u w unpriv rn rt mode3 ->
+     | Store_Halfword p u w unpriv rn rt mode3 =>
          store_halfword_instr ii enc inst
-    || Load_Dual p u w rn rt rt2 mode3 ->
+     | Load_Dual p u w rn rt rt2 mode3 =>
          load_dual_instr ii enc inst
-    || Store_Dual p u w rn rt rt2 mode3 ->
+     | Store_Dual p u w rn rt rt2 mode3 =>
          store_dual_instr ii enc inst
-    || Load_Multiple p u s w rn registers ->
+     | Load_Multiple p u s w rn registers =>
          load_multiple_instr ii enc inst
-    || Store_Multiple p u s w rn registers ->
+     | Store_Multiple p u s w rn registers =>
          store_multiple_instr ii enc inst
-    || Load_Exclusive rn rt imm8 ->
+     | Load_Exclusive rn rt imm8 =>
          load_exclusive_instr ii enc inst
-    || Store_Exclusive rn rd rt imm8 ->
+     | Store_Exclusive rn rd rt imm8 =>
          store_exclusive_instr ii enc inst
-    || Load_Exclusive_Doubleword rn rt rt2 ->
+     | Load_Exclusive_Doubleword rn rt rt2 =>
          load_exclusive_doubleword_instr ii enc inst
-    || Store_Exclusive_Doubleword rn rd rt rt2 ->
+     | Store_Exclusive_Doubleword rn rd rt rt2 =>
          store_exclusive_doubleword_instr ii enc inst
-    || Load_Exclusive_Halfword rn rt ->
+     | Load_Exclusive_Halfword rn rt =>
          load_exclusive_halfword_instr ii enc inst
-    || Store_Exclusive_Halfword rn rd rt ->
+     | Store_Exclusive_Halfword rn rd rt =>
          store_exclusive_halfword_instr ii enc inst
-    || Load_Exclusive_Byte rn rt ->
+     | Load_Exclusive_Byte rn rt =>
          load_exclusive_byte_instr ii enc inst
-    || Store_Exclusive_Byte rn rd rt ->
+     | Store_Exclusive_Byte rn rd rt =>
          store_exclusive_byte_instr ii enc inst
-    || Store_Return_State p u w mode ->
+     | Store_Return_State p u w mode =>
          store_return_state_instr ii enc inst
-    || Return_From_Exception p u w rn ->
+     | Return_From_Exception p u w rn =>
          return_from_exception_instr ii enc inst`;
 
 val miscellaneous_instruction_def = with_flag (priming, SOME "_") Define`
   miscellaneous_instruction ii (enc,inst) =
     case inst
-    of Hint Hint_nop ->
+    of Hint Hint_nop =>
          no_operation_instr ii enc
-    || Hint Hint_yield ->
+     | Hint Hint_yield =>
          yield_instr ii enc
-    || Hint Hint_wait_for_event ->
+     | Hint Hint_wait_for_event =>
          wait_for_event_instr ii enc
-    || Hint Hint_send_event ->
+     | Hint Hint_send_event =>
          send_event_instr ii enc
-    || Hint Hint_wait_for_interrupt ->
+     | Hint Hint_wait_for_interrupt =>
          wait_for_interrupt_instr ii enc
-    || Hint (Hint_debug option) ->
+     | Hint (Hint_debug option) =>
          debug_instr ii enc option
-    || Breakpoint imm16 ->
+     | Breakpoint imm16 =>
          breakpoint_instr ii
-    || Data_Memory_Barrier option ->
+     | Data_Memory_Barrier option =>
          data_memory_barrier_instr ii enc inst
-    || Data_Synchronization_Barrier option ->
+     | Data_Synchronization_Barrier option =>
          data_synchronization_barrier_instr ii enc inst
-    || Instruction_Synchronization_Barrier option ->
+     | Instruction_Synchronization_Barrier option =>
          instruction_synchronization_barrier_instr ii enc inst
-    || Swap b rn rt rt2 ->
+     | Swap b rn rt rt2 =>
          swap_instr ii inst
-    || Preload_Data u r rn mode2 ->
+     | Preload_Data u r rn mode2 =>
          preload_data_instr ii enc inst
-    || Preload_Instruction u rn mode2 ->
+     | Preload_Instruction u rn mode2 =>
          preload_instruction_instr ii enc inst
-    || Supervisor_Call imm24 ->
+     | Supervisor_Call imm24 =>
          take_svc_exception ii
-    || Secure_Monitor_Call imm4 ->
+     | Secure_Monitor_Call imm4 =>
          secure_monitor_call_instr ii
-    || Enterx_Leavex is_enterx ->
+     | Enterx_Leavex is_enterx =>
          enterx_leavex_instr ii is_enterx
-    || Clear_Exclusive ->
+     | Clear_Exclusive =>
          clear_exclusive_instr ii enc
-    || If_Then firstcond mask ->
+     | If_Then firstcond mask =>
          if_then_instr ii inst`;
 
 val coprocessor_instruction_def = with_flag (priming, SOME "_") Define`
   coprocessor_instruction ii (enc,cond,inst) =
     case inst
-    of Coprocessor_Load p u d w rn crd coproc mode5 ->
+    of Coprocessor_Load p u d w rn crd coproc mode5 =>
          coprocessor_load_instr ii enc cond inst
-    || Coprocessor_Store p u d w rn crd coproc mode5 ->
+     | Coprocessor_Store p u d w rn crd coproc mode5 =>
          coprocessor_store_instr ii enc cond inst
-    || Coprocessor_Data_Processing opc1 crn crd coproc opc2 crm ->
+     | Coprocessor_Data_Processing opc1 crn crd coproc opc2 crm =>
          coprocessor_data_processing_instr ii enc cond inst
-    || Coprocessor_Transfer opc1_1 F crn rt coproc opc2 crm ->
+     | Coprocessor_Transfer opc1_1 F crn rt coproc opc2 crm =>
          arm_register_to_coprocessor_instr ii enc cond inst
-    || Coprocessor_Transfer opc1_1 T crn rt coproc opc2 crm ->
+     | Coprocessor_Transfer opc1_1 T crn rt coproc opc2 crm =>
          coprocessor_register_to_arm_instr ii enc cond inst
-    || Coprocessor_Transfer_Two F rt2 rt coproc opc1 crm ->
+     | Coprocessor_Transfer_Two F rt2 rt coproc opc1 crm =>
          arm_register_to_coprocessor_two_instr ii enc cond inst
-    || Coprocessor_Transfer_Two T rt2 rt coproc opc1 crm ->
+     | Coprocessor_Transfer_Two T rt2 rt coproc opc1 crm =>
          coprocessor_register_to_arm_two_instr ii enc cond inst`;
 
 val arm_instr_def = with_flag (priming, SOME "_") Define`
@@ -3660,28 +3660,28 @@ val arm_instr_def = with_flag (priming, SOME "_") Define`
     (\pass.
        if pass then
          case inst
-         of Branch b ->
+         of Branch b =>
               branch_instruction ii (enc,b)
-         || DataProcessing d ->
+          | DataProcessing d =>
               data_processing_instruction ii (enc,d)
-         || StatusAccess s ->
+          | StatusAccess s =>
               status_access_instruction ii (enc,s)
-         || LoadStore l ->
+          | LoadStore l =>
               load_store_instruction ii (enc,l)
-         || Miscellaneous m ->
+          | Miscellaneous m =>
               miscellaneous_instruction ii (enc,m)
-         || Coprocessor c ->
+          | Coprocessor c =>
               coprocessor_instruction ii (enc,cond,c)
-         || Undefined ->
+          | Undefined =>
               take_undef_instr_exception ii
-         || _ ->
+          | _ =>
               errorT "decode: unpredictable"
        else
          increment_pc ii enc)) >>=
     (\u:unit.
        condT (case inst
-                of Miscellaneous (If_Then _ _) -> F
-                || _ -> T)
+                of Miscellaneous (If_Then _ _) => F
+                 | _ => T)
          (IT_advance ii))`;
 
 (* ======================================================================== *)

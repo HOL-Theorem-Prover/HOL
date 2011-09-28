@@ -129,8 +129,8 @@ val tm = ``
   stack_loop (r1:word32,s4:word32,r5:word32) =
     let r3 = s4 in
     let s3 = r1 in
-      if r3 = 30w then (r1,r3,s3) else 
-        let r1 = r1 + r5 in 
+      if r3 = 30w then (r1,r3,s3) else
+        let r1 = r1 + r5 in
           stck_loop (r1,s4,r5)``;
 
 *)

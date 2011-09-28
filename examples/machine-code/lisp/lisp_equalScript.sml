@@ -30,7 +30,7 @@ val (th1,arm_eq_loop_def,arm_eq_loop_pre_def) = compile_all ``
         let r8 = r8 - 0x1w in
           arm_eq_loop (r3,r4,r5,r6,r7,r8,df,f)
    else
-     let r5 = r3 !! r4 in
+     let r5 = r3 || r4 in
        if r5 && 3w = 0x0w then
          let r5 = f (r3 + 0x4w) in
          let r3 = f r3 in
@@ -243,7 +243,7 @@ val arm_eq_loop_spec_lemma = prove(
     FULL_SIMP_TAC std_ss [ALIGNED_INTRO,LET_DEF]
     \\ SIMP_TAC std_ss [GSYM ALIGNED_def,RW1 [WORD_AND_COMM] (GSYM ALIGNED_def)]
     \\ SIMP_TAC std_ss [ALIGNED_CLAUSES,ALIGNED_SUB_4]
-    \\ REVERSE (Cases_on `ALIGNED (r3 !! r4)`) \\ FULL_SIMP_TAC std_ss []
+    \\ REVERSE (Cases_on `ALIGNED (r3 || r4)`) \\ FULL_SIMP_TAC std_ss []
     THEN1 METIS_TAC [ALIGNED_OR,word_tree2_ALIGNED_LEMMA]
     \\ `ALIGNED r7` by METIS_TAC [lisp_stack_LEMMA]
     \\ FULL_SIMP_TAC std_ss [ALIGNED_OR,GSYM WORD_ADD_ASSOC,word_add_n2w]

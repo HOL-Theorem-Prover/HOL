@@ -190,10 +190,10 @@ val SPEC_FRAME_COMPOSE_DISJ = store_thm("SPEC_FRAME_COMPOSE_DISJ",
   REPEAT STRIP_TAC \\ MATCH_MP_TAC SPEC_COMPOSE \\ FULL_SIMP_TAC std_ss []
   \\ Q.EXISTS_TAC `m * p' * q' \/ d * q'` \\ REPEAT STRIP_TAC
   \\ IMP_RES_TAC SPEC_FRAME \\ FULL_SIMP_TAC std_ss [SEP_CLAUSES]
-  \\ MATCH_MP_TAC (RW [SEP_CLAUSES,UNION_IDEMPOT] 
+  \\ MATCH_MP_TAC (RW [SEP_CLAUSES,UNION_IDEMPOT]
        (Q.SPECL [`x`,`p1`,`p2`,`c`,`SEP_F`,`c`] SPEC_MERGE))
   \\ POP_ASSUM (MP_TAC o Q.SPEC `p'`)
-  \\ FULL_SIMP_TAC std_ss [SPEC_REFL, AC STAR_ASSOC STAR_COMM]);    
+  \\ FULL_SIMP_TAC std_ss [SPEC_REFL, AC STAR_ASSOC STAR_COMM]);
 
 val SEP_REFINE_HIDE = prove(
   ``SEP_REFINE (~p * q) less to_set state =
@@ -256,7 +256,7 @@ val SPEC_PRE_DISJ = store_thm("SPEC_PRE_DISJ",
 
 val SPEC_PRE_DISJ_INTRO = store_thm("SPEC_PRE_DISJ_INTRO",
   ``!x p c q r. SPEC x p c (q \/ r) ==> SPEC x (p \/ r) c (q \/ r)``,
-  SIMP_TAC std_ss [SPEC_PRE_DISJ] \\ REPEAT STRIP_TAC  
+  SIMP_TAC std_ss [SPEC_PRE_DISJ] \\ REPEAT STRIP_TAC
   \\ MATCH_MP_TAC (MATCH_MP SPEC_WEAKEN (SPEC_ALL SPEC_REFL))
   \\ FULL_SIMP_TAC std_ss [SEP_IMP_def,SEP_DISJ_def]);
 

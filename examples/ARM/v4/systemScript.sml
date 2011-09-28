@@ -286,21 +286,21 @@ val MEM_WRITE_WORD_def = Define`
 val MEM_WRITE_def = Define`
   MEM_WRITE mem addr d =
     case d of
-       Byte b  -> MEM_WRITE_BYTE mem addr b
-    || Half hw -> MEM_WRITE_HALF mem addr hw
-    || Word w  -> MEM_WRITE_WORD mem addr w`;
+      Byte b  => MEM_WRITE_BYTE mem addr b
+    | Half hw => MEM_WRITE_HALF mem addr hw
+    | Word w  => MEM_WRITE_WORD mem addr w`;
 
 val TRANSFER_def = Define`
   TRANSFER cpi (cp_data,data,mem) t =
     case t of
-       MemRead a ->
+      MemRead a =>
          if cpi then
            let (f, b) = SPLITP IS_SOME cp_data in
              (b, data ++
                 MAP (\addr. mem (addr30 addr)) (ADDRESS_LIST a (LENGTH f)), mem)
          else
            (cp_data, data ++ [mem (addr30 a)], mem)
-    || MemWrite a d ->
+    | MemWrite a d =>
          if cpi then
            let (f, b) = SPLITP IS_NONE cp_data in
              (b, data,
@@ -308,7 +308,7 @@ val TRANSFER_def = Define`
                   mem (ZIP (ADDRESS_LIST a (LENGTH f), f)))
          else
             (cp_data, data, MEM_WRITE mem a d)
-    || CPWrite w ->
+    | CPWrite w =>
          (cp_data, if cpi then data ++ [w] else data, mem)`;
 
 val TRANSFERS_def = Define`

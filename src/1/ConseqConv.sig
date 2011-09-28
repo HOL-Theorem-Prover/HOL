@@ -27,10 +27,10 @@ datatype CONSEQ_CONV_context =
 type conseq_conv = term -> thm;
 type directed_conseq_conv = CONSEQ_CONV_direction -> conseq_conv;
 
-type conseq_conv_congruence_syscall = 
+type conseq_conv_congruence_syscall =
    term list -> thm list -> int -> CONSEQ_CONV_direction -> term -> (int * thm option)
 
-type conseq_conv_congruence = 
+type conseq_conv_congruence =
    thm list -> conseq_conv_congruence_syscall ->
    CONSEQ_CONV_direction -> term -> (int * thm)
 
@@ -80,7 +80,7 @@ val asm_marker_tm         : term
 val dest_asm_marker       : term -> term * term
 val is_asm_marker         : term -> bool
 val mk_asm_marker         : term -> term -> term
-val mk_asm_marker_random  : term -> term 
+val mk_asm_marker_random  : term -> term
 val dest_neg_asm_marker   : term -> term * term
 val is_neg_asm_marker     : term -> bool
 val asm_marker_ELIM_CONV  : conv
@@ -89,19 +89,19 @@ val asm_marker_INTRO_CONV : term -> conv
 (* Cache and congruence options *)
 
 type depth_conseq_conv_cache
-type depth_conseq_conv_cache_opt = 
+type depth_conseq_conv_cache_opt =
    ((unit -> depth_conseq_conv_cache) * ((term * (int * thm option)) -> bool)) option
 
 (* make a new cache *)
 val mk_DEPTH_CONSEQ_CONV_CACHE : unit -> depth_conseq_conv_cache;
 (* the default cache option, a cache option is a pair,
-   first is a function to create a new cache, by default 
+   first is a function to create a new cache, by default
    mk_DEPTH_CONSEQ_CONV_CACHE is used, however often
    (K some_existing_cache) might be useful. The second one is
-   a predicate of (t, (n, result_opt)) that determines whether 
+   a predicate of (t, (n, result_opt)) that determines whether
    the result that t was converted in n steps to result_opt should
    be put into the cache or not (default is (K true)).
-*)   
+*)
 val CONSEQ_CONV_default_cache_opt : depth_conseq_conv_cache_opt
 
 
@@ -128,7 +128,7 @@ val EXT_CONTEXT_CONSEQ_REWRITE_CONV     : CONSEQ_CONV_context -> (thm list -> co
 val EXT_CONTEXT_CONSEQ_HO_REWRITE_CONV  : CONSEQ_CONV_context -> (thm list -> conv) list -> thm list -> (thm list * thm list * thm list) -> directed_conseq_conv;
 
 
-val FULL_EXT_CONSEQ_REWRITE_CONV        : 
+val FULL_EXT_CONSEQ_REWRITE_CONV        :
    conseq_conv_congruence list -> (* congruences *)
    depth_conseq_conv_cache_opt -> (* cache *)
    int option ->                  (* steps *)
@@ -145,12 +145,12 @@ val step_opt_sub          : int option -> int -> int option
 val step_opt_allows_steps : int option -> int -> int option -> bool
 
 (* Depth consequence conversions *)
-val EXT_DEPTH_CONSEQ_CONV  : 
+val EXT_DEPTH_CONSEQ_CONV  :
     conseq_conv_congruence list ->    (*congruence_list*)
     depth_conseq_conv_cache_opt ->    (*use cache*)
     int option ->                     (*no of steps, NONE for unbounded *)
     bool ->                           (*redepth ?*)
-    (bool * int option * (thm list -> directed_conseq_conv)) list -> 
+    (bool * int option * (thm list -> directed_conseq_conv)) list ->
          (*conversion list:
            (1: apply before or after descending in subterms
             2: weight, how many steps are counted, 0 means that it does
@@ -159,13 +159,13 @@ val EXT_DEPTH_CONSEQ_CONV  :
           *)
     thm list ->                       (*context that might be used*)
     directed_conseq_conv
-   
-val EXT_DEPTH_NUM_CONSEQ_CONV  : 
+
+val EXT_DEPTH_NUM_CONSEQ_CONV  :
     conseq_conv_congruence list ->    (*congruence_list*)
     depth_conseq_conv_cache_opt ->    (*use cache*)
     int option ->                     (*no of steps, NONE for unbounded *)
     bool ->                           (*redepth ?*)
-    (bool * int option * (thm list -> directed_conseq_conv)) list -> 
+    (bool * int option * (thm list -> directed_conseq_conv)) list ->
          (*conversion list:
            (1: apply before or after descending in subterms
             2: weight, how many steps are counted, 0 means that it does

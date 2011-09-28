@@ -64,44 +64,44 @@ val swapstr_thm = Store_Thm(
     swapping lists of pairs over strings (a foldr)
    ---------------------------------------------------------------------- *)
 
-val lswapstr_def = Define`
-  (lswapstr [] s = s) /\
-  (lswapstr (h::t) s = swapstr (FST h) (SND h) (lswapstr t s))
+val raw_lswapstr_def = Define`
+  (raw_lswapstr [] s = s) /\
+  (raw_lswapstr (h::t) s = swapstr (FST h) (SND h) (raw_lswapstr t s))
 `;
-val _ = export_rewrites ["lswapstr_def"]
+val _ = export_rewrites ["raw_lswapstr_def"]
 
-val lswapstr_APPEND = store_thm(
-  "lswapstr_APPEND",
-  ``lswapstr (p1 ++ p2) s = lswapstr p1 (lswapstr p2 s)``,
-  Induct_on `p1` THEN SRW_TAC [][lswapstr_def]);
+val raw_lswapstr_APPEND = store_thm(
+  "raw_lswapstr_APPEND",
+  ``raw_lswapstr (p1 ++ p2) s = raw_lswapstr p1 (raw_lswapstr p2 s)``,
+  Induct_on `p1` THEN SRW_TAC [][raw_lswapstr_def]);
 
-val lswapstr_inverse = store_thm(
-  "lswapstr_inverse",
-  ``!p s. (lswapstr (REVERSE p) (lswapstr p s) = s) /\
-          (lswapstr p (lswapstr (REVERSE p) s) = s)``,
-  Induct THEN SRW_TAC [][lswapstr_def, lswapstr_APPEND]);
-val _ = export_rewrites ["lswapstr_inverse"]
+val raw_lswapstr_inverse = store_thm(
+  "raw_lswapstr_inverse",
+  ``!p s. (raw_lswapstr (REVERSE p) (raw_lswapstr p s) = s) /\
+          (raw_lswapstr p (raw_lswapstr (REVERSE p) s) = s)``,
+  Induct THEN SRW_TAC [][raw_lswapstr_def, raw_lswapstr_APPEND]);
+val _ = export_rewrites ["raw_lswapstr_inverse"]
 
-val lswapstr_11 = store_thm(
-  "lswapstr_11",
-  ``(lswapstr p s = lswapstr p t) = (s = t)``,
-  METIS_TAC [lswapstr_inverse]);
-val _ = export_rewrites ["lswapstr_11"]
+val raw_lswapstr_11 = store_thm(
+  "raw_lswapstr_11",
+  ``(raw_lswapstr p s = raw_lswapstr p t) = (s = t)``,
+  METIS_TAC [raw_lswapstr_inverse]);
+val _ = export_rewrites ["raw_lswapstr_11"]
 
-val lswapstr_eql = store_thm(
-  "lswapstr_eql",
-  ``(lswapstr p s = t) = (s = lswapstr (REVERSE p) t)``,
-  METIS_TAC [lswapstr_inverse]);
+val raw_lswapstr_eql = store_thm(
+  "raw_lswapstr_eql",
+  ``(raw_lswapstr p s = t) = (s = raw_lswapstr (REVERSE p) t)``,
+  METIS_TAC [raw_lswapstr_inverse]);
 
-val lswapstr_eqr = store_thm(
-  "lswapstr_eqr",
-  ``(s = lswapstr p t) = (lswapstr (REVERSE p) s =  t)``,
-  METIS_TAC [lswapstr_inverse]);
+val raw_lswapstr_eqr = store_thm(
+  "raw_lswapstr_eqr",
+  ``(s = raw_lswapstr p t) = (raw_lswapstr (REVERSE p) s =  t)``,
+  METIS_TAC [raw_lswapstr_inverse]);
 
-val lswapstr_sing_to_back = store_thm(
-  "lswapstr_sing_to_back",
-  ``!p u v s. swapstr (lswapstr p u) (lswapstr p v) (lswapstr p s) =
-              lswapstr p (swapstr u v s)``,
+val raw_lswapstr_sing_to_back = store_thm(
+  "raw_lswapstr_sing_to_back",
+  ``!p u v s. swapstr (raw_lswapstr p u) (raw_lswapstr p v) (raw_lswapstr p s) =
+              raw_lswapstr p (swapstr u v s)``,
   Induct THEN ASM_SIMP_TAC (srw_ss()) [pairTheory.FORALL_PROD]);
 
 (* ----------------------------------------------------------------------

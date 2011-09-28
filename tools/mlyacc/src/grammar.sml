@@ -106,7 +106,7 @@ structure IntGrammar : INTGRAMMAR =
 				      rulenum=rulenum, precedence=precedence});
 			      print "\n")
 			end
-		 in print "grammar = \n";
+		 in print "grammar =\n";
 		    List.app printRule rules;
 		    print "\n";
 		    print (" terms = " ^ (Int.toString terms) ^

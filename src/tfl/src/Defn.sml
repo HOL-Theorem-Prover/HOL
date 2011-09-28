@@ -1677,7 +1677,7 @@ fun tgoal_no_defn0 (def,ind) =
         in proofManagerLib.add (Manager.new_goalstack g validation)
         end handle HOL_ERR _ => raise ERR "tgoal" "";
 
-fun tgoal_no_defn (def,ind) = 
+fun tgoal_no_defn (def,ind) =
   Lib.with_flag (proofManagerLib.chatting,false) tgoal_no_defn0 (def,ind);
 
 fun tgoal0 defn =

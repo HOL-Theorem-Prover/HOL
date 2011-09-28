@@ -250,7 +250,7 @@ val dec2enc_decode_bool = store_thm
 val decode_bool = store_thm
   ("decode_bool",
    ``decode_bool p l =
-     case l of [] -> NONE || (h :: t) -> if p h then SOME (h, t) else NONE``,
+     case l of [] => NONE | (h :: t) => if p h then SOME (h, t) else NONE``,
    TOP_CASE_TAC ++
    RW_TAC std_ss
    [decode_bool_def, enc2dec_none, enc2dec_some, encode_bool_def,
@@ -306,10 +306,10 @@ val decode_prod = store_thm
   ("decode_prod",
    ``wf_decoder p1 d1 /\ wf_decoder p2 d2 ==>
      (decode_prod (lift_prod p1 p2) d1 d2 l =
-      case d1 l of NONE -> NONE
-      || SOME (x, t) ->
-         (case d2 t of NONE -> NONE
-          || SOME (y, t') -> SOME ((x, y), t')))``,
+      case d1 l of NONE => NONE
+      | SOME (x, t) =>
+         (case d2 t of NONE => NONE
+          | SOME (y, t') => SOME ((x, y), t')))``,
    (REPEAT TOP_CASE_TAC ++
     RW_TAC std_ss
     [decode_prod_def, enc2dec_none, GSYM APPEND_ASSOC, encode_prod_alt]) <<
@@ -417,13 +417,13 @@ val decode_sum = store_thm
   ("decode_sum",
    ``wf_decoder p1 d1 /\ wf_decoder p2 d2 ==>
      (decode_sum (lift_sum p1 p2) d1 d2 l =
-      case l of [] -> NONE
-      || (T :: t) ->
-         (case d1 t of NONE -> NONE
-          || SOME (x, t') -> SOME (INL x, t'))
-      || (F :: t) ->
-         (case d2 t of NONE -> NONE
-          || SOME (x, t') -> SOME (INR x, t')))``,
+      case l of [] => NONE
+      | (T :: t) =>
+         (case d1 t of NONE => NONE
+          | SOME (x, t') => SOME (INL x, t'))
+      | (F :: t) =>
+         (case d2 t of NONE => NONE
+          | SOME (x, t') => SOME (INR x, t')))``,
    (REPEAT TOP_CASE_TAC ++
     RW_TAC std_ss [decode_sum_def, enc2dec_none, GSYM APPEND_ASSOC]) <<
    [Cases_on `x`
@@ -538,11 +538,11 @@ val decode_option = store_thm
   ("decode_option",
    ``wf_decoder p d ==>
      (decode_option (lift_option p) d l =
-      case l of [] -> NONE
-      || (T :: t) ->
-         (case d t of NONE -> NONE
-          || SOME (x, t') -> SOME (SOME x, t'))
-      || (F :: t) -> SOME (NONE, t))``,
+      case l of [] => NONE
+      | (T :: t) =>
+         (case d t of NONE => NONE
+          | SOME (x, t') => SOME (SOME x, t'))
+      | (F :: t) => SOME (NONE, t))``,
    (REPEAT TOP_CASE_TAC ++
     RW_TAC std_ss [decode_option_def, enc2dec_none]) <<
    [Cases_on `x`
@@ -633,13 +633,13 @@ val decode_list = store_thm
   ("decode_list",
    ``wf_decoder p d ==>
      (decode_list (EVERY p) d l =
-      case l of [] -> NONE
-      || (T :: t) ->
-         (case d t of NONE -> NONE
-          || SOME (x, t') ->
-             (case decode_list (EVERY p) d t' of NONE -> NONE
-              || SOME (xs, t'') -> SOME (x :: xs, t'')))
-      || (F :: t) -> SOME ([], t))``,
+      case l of [] => NONE
+      | (T :: t) =>
+         (case d t of NONE => NONE
+          | SOME (x, t') =>
+             (case decode_list (EVERY p) d t' of NONE => NONE
+              | SOME (xs, t'') => SOME (x :: xs, t'')))
+      | (F :: t) => SOME ([], t))``,
    (REPEAT TOP_CASE_TAC ++
     RW_TAC std_ss [decode_list_def, enc2dec_none]) <<
    [Cases_on `x` ++
@@ -767,12 +767,12 @@ val decode_blist = store_thm
   ("decode_blist",
    ``wf_decoder (p : 'a -> bool) d ==>
      (decode_blist (lift_blist m p) m d l =
-      case m of 0 -> SOME ([], l)
-      || SUC n ->
-         (case d l of NONE -> NONE
-          || SOME (x, t) ->
-          (case decode_blist (lift_blist n p) n d t of NONE -> NONE
-           || SOME (xs, t') -> SOME (x :: xs, t'))))``,
+      case m of 0 => SOME ([], l)
+      | SUC n =>
+         (case d l of NONE => NONE
+          | SOME (x, t) =>
+          (case decode_blist (lift_blist n p) n d t of NONE => NONE
+           | SOME (xs, t') => SOME (x :: xs, t'))))``,
    (REPEAT TOP_CASE_TAC ++
     RW_TAC std_ss [decode_blist_def, enc2dec_none, lift_blist_def, LENGTH_NIL])
    << [MP_TAC
@@ -855,14 +855,14 @@ val decode_num_total = store_thm
   ("decode_num_total",
    ``decode_num (K T) l =
      case l of
-        (T :: T :: t) -> SOME (0, t)
-     || (T :: F :: t) ->
-        (case decode_num (K T) t of NONE -> NONE
-         || SOME (v, t') -> SOME (2 * v + 1, t'))
-     || (F :: t) ->
-        (case decode_num (K T) t of NONE -> NONE
-         || SOME (v, t') -> SOME (2 * v + 2, t'))
-     || _ -> NONE``,
+       (T :: T :: t) => SOME (0, t)
+     | (T :: F :: t) =>
+        (case decode_num (K T) t of NONE => NONE
+         | SOME (v, t') => SOME (2 * v + 1, t'))
+     | (F :: t) =>
+        (case decode_num (K T) t of NONE => NONE
+         | SOME (v, t') => SOME (2 * v + 2, t'))
+     | _ => NONE``,
    (REPEAT TOP_CASE_TAC
     ++ REPEAT (POP_ASSUM MP_TAC)
     ++ RW_TAC std_ss
@@ -892,16 +892,16 @@ val decode_num = store_thm
   ("decode_num",
    ``decode_num p l =
      case l of
-        (T :: T :: t) -> if p 0 then SOME (0, t) else NONE
-     || (T :: F :: t) ->
-        (case decode_num (K T) t of NONE -> NONE
-         || SOME (v, t') ->
+       (T :: T :: t) => if p 0 then SOME (0, t) else NONE
+     | (T :: F :: t) =>
+        (case decode_num (K T) t of NONE => NONE
+         | SOME (v, t') =>
             if p (2 * v + 1) then SOME (2 * v + 1, t') else NONE)
-     || (F :: t) ->
-        (case decode_num (K T) t of NONE -> NONE
-         || SOME (v, t') ->
+     | (F :: t) =>
+        (case decode_num (K T) t of NONE => NONE
+         | SOME (v, t') =>
             if p (2 * v + 2) then SOME (2 * v + 2, t') else NONE)
-     || _ -> NONE``,
+     | _ => NONE``,
    (MP_TAC decode_num_total
     ++ STRIP_TAC
     ++ REPEAT TOP_CASE_TAC
@@ -971,10 +971,10 @@ val decode_bnum_def = Q.new_definition
 val dec_bnum_def = Define
   `(dec_bnum 0 l = SOME (0, l)) /\
    (dec_bnum (SUC m) l =
-    case l of [] -> NONE
-    || (h :: t) ->
-       (case dec_bnum m t of NONE -> NONE
-        || SOME (n, t') -> SOME (2 * n + (if h then 1 else 0), t')))`;
+    case l of [] => NONE
+    | (h :: t) =>
+       (case dec_bnum m t of NONE => NONE
+        | SOME (n, t') => SOME (2 * n + (if h then 1 else 0), t')))`;
 
 val dec_bnum_lt = store_thm
   ("dec_bnum_lt",
@@ -1026,8 +1026,8 @@ val decode_bnum = store_thm
   ("decode_bnum",
    ``wf_pred_bnum m p ==>
      (decode_bnum m p l =
-      case dec_bnum m l of NONE -> NONE
-      || SOME (n, t) -> if p n then SOME (n, t) else NONE)``,
+      case dec_bnum m l of NONE => NONE
+      | SOME (n, t) => if p n then SOME (n, t) else NONE)``,
    Q.SPEC_TAC (`l`, `l`)
    ++ Q.SPEC_TAC (`p`, `p`)
    ++ Induct_on `m`
@@ -1130,12 +1130,12 @@ val decode_tree = store_thm
   ("decode_tree",
    ``wf_decoder p d ==>
      (decode_tree (lift_tree p) d l =
-      case d l of NONE -> NONE
-      || SOME (a, t) ->
+      case d l of NONE => NONE
+      | SOME (a, t) =>
          (case decode_list (EVERY (lift_tree p))
                (decode_tree (lift_tree p) d) t
-          of NONE -> NONE
-          || SOME (ts, t') -> SOME (Node a ts, t')))``,
+          of NONE => NONE
+          | SOME (ts, t') => SOME (Node a ts, t')))``,
    STRIP_TAC ++
    Know `wf_decoder (lift_tree p) (decode_tree (lift_tree p) d)` >>
    PROVE_TAC [wf_decode_tree] ++

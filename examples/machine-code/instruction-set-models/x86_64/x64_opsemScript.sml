@@ -88,12 +88,12 @@ val read_dest_ea_def = Define `
 val write_ea_def = Define `
   (write_ea ii (Zea_i s i) x = failureT) /\  (* one cannot store into a constant *)
   (* 32-bit write clears top 32-bits, the others just update a subset of the bits *)
-  (write_ea ii (Zea_r Z8 r) x = seqT (read_reg ii r) 
-                                 (\w. write_reg ii r (((64--8)w) !! ((7--0)x)))) /\ 
-  (write_ea ii (Zea_r Z16 r) x = seqT (read_reg ii r) 
-                                  (\w. write_reg ii r (((64--16)w) !! ((15--0)x)))) /\ 
-  (write_ea ii (Zea_r Z32 r) x = write_reg ii r (w2w ((w2w x):word32))) /\ 
-  (write_ea ii (Zea_r Z64 r) x = write_reg ii r x) /\ 
+  (write_ea ii (Zea_r Z8 r) x = seqT (read_reg ii r)
+                                 (\w. write_reg ii r (((64--8)w) || ((7--0)x)))) /\
+  (write_ea ii (Zea_r Z16 r) x = seqT (read_reg ii r)
+                                  (\w. write_reg ii r (((64--16)w) || ((15--0)x)))) /\
+  (write_ea ii (Zea_r Z32 r) x = write_reg ii r (w2w ((w2w x):word32))) /\
+  (write_ea ii (Zea_r Z64 r) x = write_reg ii r x) /\
   (write_ea ii (Zea_m Z8 a) x = write_m8 ii a (w2w x)) /\
   (write_ea ii (Zea_m Z16 a) x = write_m16 ii a (w2w x)) /\
   (write_ea ii (Zea_m Z32 a) x = write_m32 ii a (w2w x)) /\
@@ -142,9 +142,9 @@ val word_size_msb_def = Define `
 val write_PF_def = Define `write_PF ii w = write_eflag ii Z_PF (SOME (byte_parity ((w2w w):word8)))`;
 val write_SF_def = Define `write_SF ii s w = write_eflag ii Z_SF (SOME (word_size_msb s w))`;
 val write_ZF_def = Define `
-  (write_ZF ii Z8  w = write_eflag ii Z_ZF (SOME (w2w w = 0w:word8))) /\ 
-  (write_ZF ii Z16 w = write_eflag ii Z_ZF (SOME (w2w w = 0w:word16))) /\ 
-  (write_ZF ii Z32 w = write_eflag ii Z_ZF (SOME (w2w w = 0w:word32))) /\ 
+  (write_ZF ii Z8  w = write_eflag ii Z_ZF (SOME (w2w w = 0w:word8))) /\
+  (write_ZF ii Z16 w = write_eflag ii Z_ZF (SOME (w2w w = 0w:word16))) /\
+  (write_ZF ii Z32 w = write_eflag ii Z_ZF (SOME (w2w w = 0w:word32))) /\
   (write_ZF ii Z64 w = write_eflag ii Z_ZF (SOME (w = 0w)))`;
 
 val write_logical_eflags_def = Define `
@@ -181,9 +181,9 @@ val erase_eflags_def = Define `
 (* binops *)
 
 val value_width_def = Define `
-  (value_width Z8  = 2**8) /\ 
-  (value_width Z16 = 2**16) /\ 
-  (value_width Z32 = 2**32) /\ 
+  (value_width Z8  = 2**8) /\
+  (value_width Z16 = 2**16) /\
+  (value_width Z32 = 2**32) /\
   (value_width Z64 = 2**64)`;
 
 val bool2num_def = Define `bool2num b = if b then 1 else 0`;
@@ -230,19 +230,19 @@ val write_binop_def = Define `
   (write_binop ii s Ztest x y ea = (write_logical_result_no_write ii s (x && y))) /\
   (write_binop ii s Zand  x y ea = (write_logical_result ii s (x && y) ea)) /\
   (write_binop ii s Zxor  x y ea = (write_logical_result ii s (x ?? y) ea)) /\
-  (write_binop ii s Zor   x y ea = (write_logical_result ii s (x !! y) ea)) /\
+  (write_binop ii s Zor   x y ea = (write_logical_result ii s (x || y) ea)) /\
   (write_binop ii s Zshl  x y ea = (write_result_erase_eflags ii (x << w2n y) ea)) /\
   (write_binop ii s Zshr  x y ea = (write_result_erase_eflags ii (x >>> w2n y) ea)) /\
   (write_binop ii s Zsar  x y ea = (write_result_erase_eflags ii (x >> w2n y) ea)) /\
   (write_binop ii s _     x y ea = failureT)`;
 
 val write_binop_with_carry_def = Define `
-  (write_binop_with_carry ii s Zadc x y cf ea = 
-       parT_unit (write_eflag ii Z_CF (SOME (value_width s <= w2n x + w2n y + bool2num cf))) 
+  (write_binop_with_carry ii s Zadc x y cf ea =
+       parT_unit (write_eflag ii Z_CF (SOME (value_width s <= w2n x + w2n y + bool2num cf)))
       (parT_unit (write_eflag ii Z_OF NONE)
                  (write_arith_result_no_CF_OF ii s (x + y + n2w (bool2num cf)) ea))) /\
-  (write_binop_with_carry ii s Zsbb x y cf ea = 
-       parT_unit (write_eflag ii Z_CF (SOME (w2n x < w2n y + bool2num cf))) 
+  (write_binop_with_carry ii s Zsbb x y cf ea =
+       parT_unit (write_eflag ii Z_CF (SOME (w2n x < w2n y + bool2num cf)))
       (parT_unit (write_eflag ii Z_OF NONE)
                  (write_arith_result_no_CF_OF ii s (x - (y + n2w (bool2num cf))) ea))) /\
   (write_binop_with_carry ii s _    x y cf ea = failureT)`;
@@ -310,10 +310,10 @@ val x64_exec_def = Define `
   (x64_exec ii (Zbinop binop_name s ds) len = bump_rip ii len
        (if (binop_name = Zadc) \/ (binop_name = Zsbb) then
           seqT
-            (parT (parT (read_src_ea ii s ds) (read_dest_ea ii s ds)) 
+            (parT (parT (read_src_ea ii s ds) (read_dest_ea ii s ds))
                   (read_eflag ii Z_CF))
                (\ (((ea_src,val_src),(ea_dest,val_dest)),val_cf).
-                  write_binop_with_carry ii s binop_name 
+                  write_binop_with_carry ii s binop_name
                     val_dest val_src val_cf ea_dest)
         else
           seqT
@@ -418,7 +418,7 @@ val x64_exec_def = Define `
                           then rip + len + imm else rip + len))))`;
 
 val x64_execute_def = Define `
-  x64_execute ii (Zfull_inst prefixes i) len = 
+  x64_execute ii (Zfull_inst prefixes i) len =
     if MEM Zlock prefixes then lockT (x64_exec ii i len) else x64_exec ii i len`;
 
 

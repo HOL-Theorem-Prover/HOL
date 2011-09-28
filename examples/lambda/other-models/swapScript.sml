@@ -669,11 +669,11 @@ val lswap_def = Define`
 
 val lswap_thm = store_thm(
   "lswap_thm",
-  ``(lswap p (VAR s) = VAR (lswapstr p s)) /\
+  ``(lswap p (VAR s) = VAR (raw_lswapstr p s)) /\
     (lswap p (CON k) = CON k) /\
     (lswap p (M @@ N) = lswap p M @@ lswap p N) /\
-    (lswap p (LAM v M) = LAM (lswapstr p v) (lswap p M))``,
-  Induct_on `p` THEN SRW_TAC [][lswap_def, lswapstr_def, swap_thm]);
+    (lswap p (LAM v M) = LAM (raw_lswapstr p v) (lswap p M))``,
+  Induct_on `p` THEN SRW_TAC [][lswap_def, raw_lswapstr_def, swap_thm]);
 val _ = export_rewrites ["lswap_thm"]
 
 val lswap_inverse = store_thm(

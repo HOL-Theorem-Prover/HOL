@@ -1,4 +1,4 @@
- 
+
 (*****************************************************************************)
 (* Development of set theory on top of the axioms for ``:zfset``             *)
 (* in zfset_axiomsTheory (a port of the 1994 HOL88 file mk_ST.ml to HOL4)    *)
@@ -22,7 +22,7 @@ quietdec := false;
 * Boilerplate needed for compilation
 ******************************************************************************)
 open HolKernel Parse boolLib bossLib lcsymtacs;
-open zfset_axiomsTheory pred_setLib pred_setTheory pairLib 
+open zfset_axiomsTheory pred_setLib pred_setTheory pairLib
      pairTheory combinTheory;
 
 (******************************************************************************
@@ -118,13 +118,13 @@ val SingEq =
    METIS_TAC[Extension_ax,InSing]);
 
 val NotInSelf =
- store_thm 
+ store_thm
   ("NotInSelf",
    ``!x. ~(x In x)``,
    METIS_TAC[SingNotEmpty,InSing,Foundation_ax,Intersect_def,Empty_def]);
 
 val InRefl =
- store_thm 
+ store_thm
   ("InRefl",
    ``!x y. x In y ==> ~(y In x)``,
    METIS_TAC[Foundation_ax,InDouble,DoubleNotEmpty,Intersect_def,Empty_def]);
@@ -195,7 +195,7 @@ val FstLemma =
  prove
   (``!x. (@x'. ?y'. Pair x y = Pair x' y') = x``,
    RW_TAC std_ss [PairEq]);
-   
+
 val Fst =
  store_thm
   ("Fst",
@@ -206,7 +206,7 @@ val SndLemma =
  prove
   (``!y. (@y'. ?x'. Pair x y = Pair x' y') = y``,
    RW_TAC std_ss [PairEq]);
-   
+
 val Snd =
  store_thm
   ("Snd",
@@ -394,7 +394,7 @@ val _ = set_fixity "PROD" (Infixr 400); (* Precedence may need adjusting *)
 val PairPROD =
  store_thm
   ("PairPROD",
-   ``!(rep1:'a->zfset) (rep2:'b->zfset) x1 x2. 
+   ``!(rep1:'a->zfset) (rep2:'b->zfset) x1 x2.
     Pair (rep1 x1) (rep2 x2) = (rep1 PROD rep2)(x1,x2)``,
   RW_TAC std_ss [PROD_def]);
 
@@ -404,9 +404,9 @@ val PairPROD =
 
 val Prod_def =
  Define
-  `$Prod s1 s2 = 
-     Spec 
-      (Pow(Pow(s1 U s2))) 
+  `$Prod s1 s2 =
+     Spec
+      (Pow(Pow(s1 U s2)))
       (\s. ?x1 x2. (s = Pair x1 x2) /\ x1 In s1 /\ x2 In s2)`;
 
 val _ = set_fixity "#" (Infixr 400); (* Precedence may need adjusting *)
@@ -508,21 +508,21 @@ val ABS_THM =
   ("ABS_THM",
    ``!P rep.
       TYPE_DEFINITION P rep
-      ==> 
+      ==>
       (?abs. (!a. abs(rep a) = a) /\ (!r. P r = (rep(abs r) = r)))``,
    METIS_TAC[TYPE_DEFINITION_THM]);
 
 val Abs_def =
  Define
-  `Abs s (rep:'a->zfset) = 
+  `Abs s (rep:'a->zfset) =
     @abs. (!a. abs(rep a) = a) /\ !r. r In s = (rep(abs r) = r)`;
 
 val Abs =
  store_thm
   ("Abs",
-   ``!s (rep:'a->zfset). 
-     SET_TYPE s rep 
-     ==> 
+   ``!s (rep:'a->zfset).
+     SET_TYPE s rep
+     ==>
      (!a. Abs s rep(rep a) = a) /\ !r. r In s = (rep(Abs s rep r) = r)``,
    RW_TAC std_ss [SET_TYPE_def,Abs_def]
     THEN SELECT_ELIM_TAC
@@ -534,10 +534,10 @@ val Abs =
 val AbsOneOne =
  store_thm
   ("AbsOneOne",
-   ``!s (rep:'a->zfset). 
-      SET_TYPE s rep 
-      ==> 
-      !x1 x2. 
+   ``!s (rep:'a->zfset).
+      SET_TYPE s rep
+      ==>
+      !x1 x2.
        x1 In s /\ x2 In s ==> ((Abs s rep x1 = Abs s rep x2) = (x1 = x2))``,
    METIS_TAC[Abs]);
 
@@ -586,8 +586,8 @@ val PROD_REP =
  store_thm
   ("PROD_REP",
    ``!s1 s2 (rep1:'a->zfset) (rep2:'b->zfset).
-      SET_TYPE s1 rep1 /\ SET_TYPE s2 rep2 
-      ==> 
+      SET_TYPE s1 rep1 /\ SET_TYPE s2 rep2
+      ==>
       SET_TYPE (s1 # s2) (rep1 PROD rep2)``,
    SIMP_TAC std_ss [SET_TYPE_def,TYPE_DEFINITION_THM,Prod_def,PROD_def,Spec_def]
     THEN GEN_BETA_TAC
@@ -609,9 +609,9 @@ val PROD_REP =
 (*---------------------------------------------------------------------------*)
 val Pfn_def =
  Define
-  `Pfn X Y = 
-    Spec 
-     (Pow(X # Y)) 
+  `Pfn X Y =
+    Spec
+     (Pow(X # Y))
      (\r. !x y1 y2. Pair x y1 In r /\ Pair x y2 In r ==> (y1=y2))`;
 
 (*---------------------------------------------------------------------------*)
@@ -620,8 +620,8 @@ val Pfn_def =
 val Fn_def =
  Define
   `$Fn X Y =
-    Spec 
-     (Pfn X Y) 
+    Spec
+     (Pfn X Y)
      (\f. !x. x In X ==> ?y. y In Y /\ Pair x y In f)`;
 
 val _ = set_fixity "->" (Infixr 400); (* Precedence may need adjusting *)
@@ -655,7 +655,7 @@ val ApPfn =
   ("ApPfn",
    ``!f X Y x.
       f In Pfn X Y /\ (?y. Pair x y In f)
-      ==> 
+      ==>
       !y. (f ' x = y) = Pair x y In f``,
    RW_TAC std_ss [Pfn_def,Pow_def,InProdEq,PairEq,Spec_def,Apply_def]
     THEN SELECT_ELIM_TAC
@@ -680,7 +680,7 @@ val InFn =
 val ExtFn =
  store_thm
   ("ExtFn",
-   ``!X Y f g. 
+   ``!X Y f g.
       f In (X -> Y) /\ g In (X -> Y)
       ==>
       ((f = g) = (!x. x In X ==> (f ' x = g ' x)))``,
@@ -717,11 +717,11 @@ val RepSetIn =
    ``!s (rep:'a->zfset). SET_TYPE s rep ==> !x. rep x In RepSet rep``,
    RW_TAC std_ss [SET_TYPE_def,TYPE_DEFINITION,RepSet_def,Extension_ax]
     THEN METIS_TAC[]);
-          
+
 val RepSetPROD =
  store_thm
   ("RepSetPROD",
-   ``!(rep1:'a->zfset) (rep2:'b->zfset) s1 s2. 
+   ``!(rep1:'a->zfset) (rep2:'b->zfset) s1 s2.
       SET_TYPE s1 rep1 /\ SET_TYPE s2 rep2
       ==>
       (RepSet(rep1 PROD rep2) = s1 # s2)``,
@@ -732,7 +732,7 @@ val SET_TYPE_PROD =
   ("SET_TYPE_PROD",
    ``!s1 s2 (rep1:'a->zfset) (rep2:'b->zfset).
        SET_TYPE s1 rep1 /\ SET_TYPE s2 rep2
-       ==> 
+       ==>
        !p. (rep1 PROD rep2) p In (s1 # s2)``,
    METIS_TAC[RepSetPROD,RepSetThm,PROD_REP,SET_TYPE_In]);
 
@@ -741,12 +741,12 @@ val SET_TYPE_PROD =
 (*---------------------------------------------------------------------------*)
 val FUN_def =
  Define
-  `$FUN (rep1:'a->zfset) (rep2:'b->zfset) = 
+  `$FUN (rep1:'a->zfset) (rep2:'b->zfset) =
     \f. Spec
          (RepSet rep1 # RepSet rep2)
-         (\s. ?x' y'. 
+         (\s. ?x' y'.
                (s = Pair x' y')
-               /\ 
+               /\
                ?x y. (x' = rep1 x) /\ (y' = rep2 y) /\ (f x = y))`;
 
 val _ = set_fixity "FUN" (Infixr 700); (* Precedence may need adjusting *)
@@ -754,8 +754,8 @@ val _ = set_fixity "FUN" (Infixr 700); (* Precedence may need adjusting *)
 val FUNIn =
  store_thm
   ("FUNIn",
-   ``!s1 s2 (rep1:'a->zfset) (rep2:'b->zfset). 
-      SET_TYPE s1 rep1 /\ SET_TYPE s2 rep2 ==> 
+   ``!s1 s2 (rep1:'a->zfset) (rep2:'b->zfset).
+      SET_TYPE s1 rep1 /\ SET_TYPE s2 rep2 ==>
       !f x. Pair (rep1 x) (rep2(f x)) In (rep1 FUN rep2) f``,
    RW_TAC std_ss [FUN_def,Spec_def,PairEq,InProdEq]
     THEN METIS_TAC[RepSetIn]);
@@ -775,9 +775,9 @@ val SET_TYPE_ONE_ONE =
 val FUNSingleValued =
  store_thm
   ("FUNSingleValued",
-   ``!(rep1:'a->zfset) (rep2:'b->zfset) f x y1 y2. 
+   ``!(rep1:'a->zfset) (rep2:'b->zfset) f x y1 y2.
       ONE_ONE rep1 /\
-      Pair x y1 In (rep1 FUN rep2) f /\ Pair x y2 In (rep1 FUN rep2) f 
+      Pair x y1 In (rep1 FUN rep2) f /\ Pair x y2 In (rep1 FUN rep2) f
       ==>
       (y1 = y2)``,
    RW_TAC std_ss [FUN_def,ONE_ONE_DEF,PairEq,Spec_def,InProdEq]
@@ -786,7 +786,7 @@ val FUNSingleValued =
 val FUN_ONE_ONE =
  store_thm
   ("FUN_ONE_ONE",
-   ``!(rep1:'a->zfset)(rep2:'b->zfset) s1 s2. 
+   ``!(rep1:'a->zfset)(rep2:'b->zfset) s1 s2.
       SET_TYPE s1 rep1 /\ SET_TYPE s2 rep2
       ==>
       !f g. ((rep1 FUN rep2) f = (rep1 FUN rep2) g) = (f = g)``,
@@ -796,8 +796,8 @@ val FUN_REP =
  store_thm
   ("FUN_REP",
    ``!s1 s2 (rep1:'a->zfset) (rep2:'b->zfset).
-      SET_TYPE s1 rep1 /\ SET_TYPE s2 rep2 
-      ==> 
+      SET_TYPE s1 rep1 /\ SET_TYPE s2 rep2
+      ==>
       SET_TYPE (s1 -> s2) (rep1 FUN rep2)``,
    RW_TAC std_ss []
     THEN IMP_RES_TAC RepSetThm
@@ -827,18 +827,18 @@ val FUN_REP =
           THEN RW_TAC std_ss []
           THEN METIS_TAC[InProdEq,Fst,Snd,PairIn,ApFn],
          FULL_SIMP_TAC std_ss [PairEq]
-          THEN RW_TAC std_ss [] 
+          THEN RW_TAC std_ss []
           THEN `x ' rep1 x'' In RepSet rep2` by METIS_TAC[InFn]
           THEN RES_TAC
-          THEN RW_TAC std_ss [] 
+          THEN RW_TAC std_ss []
           THEN METIS_TAC[ApFn]],
       RW_TAC std_ss [FUN_def,Pfn_def,Fn_def,Spec_def,InProdEq,Pow_def,U_def,PairEq]
        THEN METIS_TAC[]]);
-          
+
 val RepSetFUN =
  store_thm
   ("RepSetFUN",
-   ``!(rep1:'a->zfset) (rep2:'b->zfset) s1 s2. 
+   ``!(rep1:'a->zfset) (rep2:'b->zfset) s1 s2.
       SET_TYPE s1 rep1 /\ SET_TYPE s2 rep2
       ==>
       (RepSet(rep1 FUN rep2) = s1 -> s2)``,
@@ -849,14 +849,14 @@ val SET_TYPE_FUN =
   ("SET_TYPE_FUN",
    ``!s1 s2 (rep1:'a->zfset) (rep2:'b->zfset).
        SET_TYPE s1 rep1 /\ SET_TYPE s2 rep2
-       ==> 
+       ==>
        !f. (rep1 FUN rep2)f In (s1 -> s2)``,
    METIS_TAC[RepSetThm,RepSetFUN,FUN_REP,SET_TYPE_In]);
 
 val ApRep =
  store_thm
   ("ApRep",
-   ``!(rep1:'a->zfset) (rep2:'b->zfset) s1 s2 f x. 
+   ``!(rep1:'a->zfset) (rep2:'b->zfset) s1 s2 f x.
       SET_TYPE s1 rep1 /\ SET_TYPE s2 rep2
       ==>
       ((rep1 FUN rep2) f ' (rep1 x) = rep2(f x))``,
@@ -865,7 +865,7 @@ val ApRep =
     THEN `?y. (Pair (rep1 x) y) In ((rep1 FUN rep2)(f:'a->'b))` by METIS_TAC[]
     THEN RW_TAC std_ss [Apply_def]
     THEN METIS_TAC[SET_TYPE_ONE_ONE,FUNSingleValued,FUNIn]);
- 
+
 val IsRep_def =
  Define
   `IsRep(rep:'a->zfset) = ?s. SET_TYPE s rep`;
@@ -912,8 +912,8 @@ val IsRep_FUN =
 val ApRepCor =
  store_thm
   ("ApRepCor",
-   ``!(rep1:'a->zfset) (rep2:'b->zfset). 
-      IsRep rep1 
+   ``!(rep1:'a->zfset) (rep2:'b->zfset).
+      IsRep rep1
       ==>
       IsRep rep2
       ==>
@@ -926,15 +926,15 @@ val ApRepCor =
 
 val ComposeFn_def =
  Define
-  `ComposeFn(X,Y,Z) f g = 
-    Spec 
-     (X # Z) 
-     (\s. 
+  `ComposeFn(X,Y,Z) f g =
+    Spec
+     (X # Z)
+     (\s.
        ?x z. (s = Pair x z) /\ ?y. y In Y /\ Pair x y In g /\ Pair y z In f)`;
 
 val Compose_def =
  Define
-  `Compose(X,Y,Z) = 
+  `Compose(X,Y,Z) =
     Spec
      (((Y -> Z) # (X -> Y)) # (X -> Z))
      (\s. ?f g h. (s = Pair (Pair f g) h) /\  (h = ComposeFn(X,Y,Z) f g))`;
@@ -950,11 +950,11 @@ val ComposeFnType =
 val ApComposeFn =
  store_thm
   ("ApComposeFn",
-   ``!X Y Z f g. 
+   ``!X Y Z f g.
       f In (Y -> Z) /\ g In (X -> Y)
-      ==> 
+      ==>
       !x. x In X ==> (ComposeFn(X,Y,Z) f g ' x = f ' (g ' x))``,
-      RW_TAC std_ss 
+      RW_TAC std_ss
        [Extension_ax,ComposeFn_def,Fn_def,Pfn_def,ComposeFnType,ApFn,InProdEq,
         Spec_def,Apply_def,PairEq,Pow_def]
        THEN EQ_TAC
@@ -964,37 +964,37 @@ val ApComposeFn =
         [SELECT_ELIM_TAC
           THEN RW_TAC std_ss []
           THENL
-           [SELECT_ELIM_TAC 
+           [SELECT_ELIM_TAC
              THEN RW_TAC std_ss []
              THENL
-              [ASSUM_LIST(UNDISCH_TAC o concl o el 1) 
+              [ASSUM_LIST(UNDISCH_TAC o concl o el 1)
                 THEN SELECT_ELIM_TAC
                 THEN METIS_TAC[],
-               ASSUM_LIST(UNDISCH_TAC o concl o el 2) 
+               ASSUM_LIST(UNDISCH_TAC o concl o el 2)
                 THEN SELECT_ELIM_TAC
                 THEN METIS_TAC[]],
-            ASSUM_LIST(UNDISCH_TAC o concl o el 1) 
+            ASSUM_LIST(UNDISCH_TAC o concl o el 1)
              THEN SELECT_ELIM_TAC
              THEN RW_TAC std_ss []
              THENL
               [METIS_TAC[],
-               ASSUM_LIST(UNDISCH_TAC o concl o el 3) 
+               ASSUM_LIST(UNDISCH_TAC o concl o el 3)
                 THEN SELECT_ELIM_TAC
                 THEN RW_TAC std_ss []
                 THEN METIS_TAC[PairEq]]],
          SELECT_ELIM_TAC
           THEN RW_TAC std_ss []
           THENL
-           [ASSUM_LIST(UNDISCH_TAC o concl o el 1) 
+           [ASSUM_LIST(UNDISCH_TAC o concl o el 1)
              THEN SELECT_ELIM_TAC
              THEN RW_TAC std_ss []
              THENL
               [SELECT_ELIM_TAC
                 THEN METIS_TAC[],
-               ASSUM_LIST(UNDISCH_TAC o concl o el 2) 
+               ASSUM_LIST(UNDISCH_TAC o concl o el 2)
                 THEN SELECT_ELIM_TAC
                 THEN METIS_TAC[]],
-            ASSUM_LIST(UNDISCH_TAC o concl o el 6) 
+            ASSUM_LIST(UNDISCH_TAC o concl o el 6)
              THEN SELECT_ELIM_TAC
              THEN FULL_SIMP_TAC std_ss [PairEq]
              THEN RW_TAC std_ss []
@@ -1002,7 +1002,7 @@ val ApComposeFn =
               [SELECT_ELIM_TAC
                 THEN RW_TAC std_ss []
                 THEN METIS_TAC[],
-               ASSUM_LIST(UNDISCH_TAC o concl o el 2) 
+               ASSUM_LIST(UNDISCH_TAC o concl o el 2)
                 THEN SELECT_ELIM_TAC
                 THEN RW_TAC std_ss []
                 THEN METIS_TAC[]]]]);
@@ -1012,7 +1012,7 @@ val ComposeFnAssoc =
   ("ComposeFnAssoc",
    ``!X Y Z W f g.
       f In (X -> Y) /\ g In (Y -> Z) /\ h In (Z -> W)
-      ==> 
+      ==>
       (ComposeFn(X,Z,W) h (ComposeFn(X,Y,Z) g f) =
        ComposeFn(X,Y,W) (ComposeFn(Y,Z,W) h g) f)``,
    RW_TAC std_ss []
@@ -1023,7 +1023,7 @@ val ComposeFnAssoc =
     THEN `(ComposeFn (X,Z,W) h (ComposeFn (X,Y,Z) g f) =
            ComposeFn (X,Y,W) (ComposeFn (Y,Z,W) h g) f) =
           !x. x In X ==> (ComposeFn (X,Z,W) h (ComposeFn (X,Y,Z) g f) ' x =
-                           ComposeFn (X,Y,W) (ComposeFn (Y,Z,W) h g) f ' x)` 
+                           ComposeFn (X,Y,W) (ComposeFn (Y,Z,W) h g) f ' x)`
           by METIS_TAC[ExtFn]
     THEN RW_TAC std_ss []
     THEN `f ' x In Y` by METIS_TAC[InFn]
@@ -1032,9 +1032,9 @@ val ComposeFnAssoc =
 val FnType =
  store_thm
   ("FnType",
-   ``!f X Y. 
+   ``!f X Y.
       (!x. x In X ==> f x In Y)
-      ==> 
+      ==>
       Spec (X # Y) (\s. ?x. s = Pair x (f x)) In (X -> Y)``,
    RW_TAC std_ss [Pfn_def,Fn_def,Pow_def,Spec_def,InProdEq,PairEq]);
 
@@ -1065,16 +1065,16 @@ val PairFn =
  store_thm
   ("PairFn",
    ``!f X Y Z.
-      (!x y. x In X /\ y In Y ==> f x y In Z) = 
+      (!x y. x In X /\ y In Y ==> f x y In Z) =
       (!xy. xy In (X # Y) ==> f(Fst xy)(Snd xy) In Z)``,
    METIS_TAC[FstType,SndType,InProd,Fst,Snd]);
 
 val PairedFnType =
  store_thm
   ("PairedFnType",
-   ``!f X Y Z. 
+   ``!f X Y Z.
       (!x y. x In X /\ y In Y ==> f x y In Z)
-      ==> 
+      ==>
       Spec ((X # Y) # Z) (\s. ?x y. (s = Pair (Pair x y) (f x y))) In ((X # Y) -> Z)``,
    RW_TAC std_ss [Pfn_def,Fn_def,Pow_def,Spec_def,InProdEq,PairEq]
     THEN FULL_SIMP_TAC std_ss [PairEq]);
@@ -1089,15 +1089,15 @@ val ComposeType =
 val ComposeComposeFn =
  store_thm
   ("ComposeComposeFn",
-   ``!X Y Z f g. 
-      g In (X->Y) /\ f In (Y->Z) 
-      ==> 
+   ``!X Y Z f g.
+      g In (X->Y) /\ f In (Y->Z)
+      ==>
       (Compose(X,Y,Z) ' (Pair f g) = ComposeFn(X,Y,Z) f g)``,
    RW_TAC std_ss []
     THEN `ComposeFn(X,Y,Z) f g In (X -> Z)` by METIS_TAC[ComposeFnType]
     THEN `Pair f g In ((Y -> Z) # (X -> Y))` by METIS_TAC[ComposeType,ApFn,InProd]
     THEN `Compose (X,Y,Z) In (((Y -> Z) # X -> Y) -> (X -> Z))` by METIS_TAC[ComposeType]
-    THEN `!y. (Compose (X,Y,Z) ' Pair f g = y) <=> Pair (Pair f g) y In Compose (X,Y,Z)` 
+    THEN `!y. (Compose (X,Y,Z) ' Pair f g = y) <=> Pair (Pair f g) y In Compose (X,Y,Z)`
           by METIS_TAC[ApFn]
     THEN RW_TAC std_ss [Compose_def,Spec_def,InProdEq,PairEq]);
 
@@ -1187,7 +1187,7 @@ val GraphFnType =
  store_thm
   ("GraphFnType",
    ``!f X Y. HasFnType f X Y ==> GraphFn X f In (X -> Y)``,
-   RW_TAC std_ss 
+   RW_TAC std_ss
     [HasFnType_def,Image_def,Subset_def,GraphFn_def,Graph_def,
      Spec_def,InProdEq,Fn_def,Pfn_def,Pow_def,PairEq]
     THEN FULL_SIMP_TAC std_ss [PairEq]
@@ -1197,7 +1197,7 @@ val GraphFnType =
 (* GraphFnTypeCor =                                                          *)
 (* |- !f X Y. (!x. x In X ==> (f x) In Y) ==> (GraphFn X f) In (X -> Y)      *)
 (*---------------------------------------------------------------------------*)
-val GraphFnTypeCor = 
+val GraphFnTypeCor =
  save_thm
   ("GraphFnTypeCor",
    REWRITE_RULE[HasFnType_def]GraphFnType);
@@ -1272,14 +1272,14 @@ val SubType_def =
 val SubType1Lemma =
  store_thm
   ("SubType1Lemma",
-   ``!X f p. 
-      f In (X ->X) 
-      ==> 
-      p In (X -> Bool) 
-      ==> 
+   ``!X f p.
+      f In (X ->X)
+      ==>
+      p In (X -> Bool)
+      ==>
       (!x. x In X ==> (p ' x = True) ==> (p ' (f ' x) = True))
-      ==> 
-      HasFnType 
+      ==>
+      HasFnType
        (Apply f)
        (Spec X (\s. p ' s = True)) (Spec X (\s. p ' s = True))``,
    RW_TAC std_ss [SubType_def,HasFnType_def,Spec_def]
@@ -1288,35 +1288,35 @@ val SubType1Lemma =
 val SubType1 =
  store_thm
   ("SubType1",
-   ``!X f p. 
-      f In (X ->X) 
-      ==> 
-      p In (X -> Bool) 
-      ==> 
+   ``!X f p.
+      f In (X ->X)
+      ==>
+      p In (X -> Bool)
+      ==>
       (!x. x In X ==> (p ' x = True) ==> (p ' (f ' x) = True))
-      ==> 
+      ==>
       Rs f (SubType X p) In (SubType X p -> SubType X p)``,
    METIS_TAC[Rs_def,SubType_def,HasFnType_def,Spec_def,SubType1Lemma,GraphFnType]);
 
 val SubType2Lemma1 =
  store_thm
   ("SubType2Lemma1",
-   ``!X binop p. 
+   ``!X binop p.
       binop In (X -> (X -> X) )
-      ==> 
-      p In (X -> Bool) 
-      ==> 
+      ==>
+      p In (X -> Bool)
+      ==>
       (!x y.
-         x In X ==> 
-         y In X ==> 
-         (p ' x = True) ==> 
-         (p ' y = True) ==> 
+         x In X ==>
+         y In X ==>
+         (p ' x = True) ==>
+         (p ' y = True) ==>
          (p ' ((binop ' x) ' y) = True))
-      ==> 
+      ==>
       x In Spec X (\s. p ' s = True)
       ==>
-      HasFnType 
-       (Apply(binop ' x)) 
+      HasFnType
+       (Apply(binop ' x))
        (Spec X (\s. p ' s = True))
        (Spec X (\s. p ' s = True))``,
    RW_TAC std_ss [SubType_def,HasFnType_def,Spec_def]
@@ -1325,16 +1325,16 @@ val SubType2Lemma1 =
 val SubType2Lemma2 =
  store_thm
   ("SubType2Lemma2",
-   ``!X binop p. 
+   ``!X binop p.
       binop In (X -> (X -> X) )
-      ==> 
-      p In (X -> Bool) 
-      ==> 
-      (!x y. 
-        x In X ==> 
+      ==>
+      p In (X -> Bool)
+      ==>
+      (!x y.
+        x In X ==>
         y In X ==> (p ' x = True) ==> (p ' y = True) ==> (p ' ((binop ' x) ' y) = True))
-      ==> 
-      HasFnType 
+      ==>
+      HasFnType
        (\x. GraphFn (Spec X (\s. p ' s = True)) (Apply(binop ' x)))
        (Spec X (\s. p ' s = True))
        ((Spec X (\s. p ' s = True)) -> (Spec X (\s. p ' s = True)))``,
@@ -1344,15 +1344,15 @@ val SubType2Lemma2 =
 val SubType2 =
  store_thm
   ("SubType2",
-   ``!X binop p. 
+   ``!X binop p.
       binop In (X -> (X -> X) )
-      ==> 
-      p In (X -> Bool) 
-      ==> 
-      (!x y. 
-        x In X ==> 
+      ==>
+      p In (X -> Bool)
+      ==>
+      (!x y.
+        x In X ==>
         y In X ==> (p ' x = True) ==> (p ' y = True) ==> (p ' ((binop ' x) ' y) = True))
-      ==> 
+      ==>
       Rs2 binop (SubType X p) In (SubType X p -> (SubType X p -> SubType X p))``,
    RW_TAC std_ss [Rs2_def,SubType_def,HasFnType_def,Spec_def]
     THEN METIS_TAC[SubType2Lemma2,GraphFnType]);
@@ -1381,79 +1381,79 @@ val ApEq =
 (*---------------------------------------------------------------------------*)
 val Imp_def =
  Define
-  `Imp = GraphFn 
+  `Imp = GraphFn
           Bool
           (\x. GraphFn Bool (\y. bool2Bool((x = True) ==> (y = True))))`;
 
 val ImpAp =
  store_thm
   ("ImpAp",
-   ``!x y. x In Bool 
-           ==> 
-           y In Bool 
-           ==> 
+   ``!x y. x In Bool
+           ==>
+           y In Bool
+           ==>
            (((Imp ' x) ' y) = bool2Bool((x=True) ==> (y=True)))``,
    RW_TAC std_ss [Imp_def,GraphFnAp]);
 
 val ApImp =
  store_thm
   ("ApImp",
-   ``!x y. x In Bool 
-           ==> 
-           y In Bool 
-           ==> 
+   ``!x y. x In Bool
+           ==>
+           y In Bool
+           ==>
            (((x=True) ==> (y=True)) = (((Imp ' x) ' y) = True))``,
    RW_TAC std_ss [Imp_def,GraphFnAp,bool2Bool_def,Bool_CLAUSES]);
 
 val And_def =
  Define
-  `And = GraphFn 
+  `And = GraphFn
           Bool
           (\x. GraphFn Bool (\y. bool2Bool((x = True) /\ (y = True))))`;
 
 val AndAp =
  store_thm
   ("AndAp",
-   ``!x y. x In Bool 
-           ==> 
-           y In Bool 
-           ==> 
+   ``!x y. x In Bool
+           ==>
+           y In Bool
+           ==>
            (((And ' x) ' y) = bool2Bool((x=True) /\ (y=True)))``,
    RW_TAC std_ss [And_def,GraphFnAp]);
 
 val ApAnd =
  store_thm
   ("ApAnd",
-   ``!x y. x In Bool 
-           ==> 
-           y In Bool 
-           ==> 
+   ``!x y. x In Bool
+           ==>
+           y In Bool
+           ==>
            (((x=True) /\ (y=True)) = (((And ' x) ' y) = True))``,
    RW_TAC std_ss [And_def,GraphFnAp,bool2Bool_def,Bool_CLAUSES]);
 
 val Or_def =
  Define
-  `Or = GraphFn 
+  `Or = GraphFn
          Bool
          (\x. GraphFn Bool (\y. bool2Bool((x = True) \/ (y = True))))`;
 
 val OrAp =
  store_thm
   ("OrAp",
-   ``!x y. x In Bool 
-           ==> 
-           y In Bool 
-           ==> 
+   ``!x y. x In Bool
+           ==>
+           y In Bool
+           ==>
            (((Or ' x) ' y) = bool2Bool((x=True) \/ (y=True)))``,
    RW_TAC std_ss [Or_def,GraphFnAp]);
 
 val ApOr =
  store_thm
   ("ApOr",
-   ``!x y. x In Bool 
-           ==> 
-           y In Bool 
-           ==> 
+   ``!x y. x In Bool
+           ==>
+           y In Bool
+           ==>
            (((x=True) \/ (y=True)) = (((Or ' x) ' y) = True))``,
    RW_TAC std_ss [Or_def,GraphFnAp,bool2Bool_def,Bool_CLAUSES]);
 
@@ -1479,43 +1479,43 @@ val ApNot =
 (*---------------------------------------------------------------------------*)
 val Forall_def =
  Define
-  `Forall X = 
+  `Forall X =
     GraphFn (X -> Bool) (\f. bool2Bool(!x. x In X ==> (f ' x = True)))`;
 
 val ForallAp =
  store_thm
   ("ForallAp",
-   ``!f X. f In (X -> Bool) 
-           ==> 
+   ``!f X. f In (X -> Bool)
+           ==>
            ((Forall X ' f) = bool2Bool !x. x In X ==> (f ' x = True))``,
    RW_TAC std_ss [Forall_def,GraphFnAp]);
 
 val ApForall =
  store_thm
   ("ApForall",
-   ``!f X. f In (X -> Bool) 
-           ==> 
+   ``!f X. f In (X -> Bool)
+           ==>
            ((!x. x In X ==> (f ' x = True)) = ((Forall X ' f) = True))``,
    RW_TAC std_ss [Forall_def,GraphFnAp,bool2Bool_def,Bool_CLAUSES]);
 
 val Exists_def =
  Define
-  `Exists X = 
+  `Exists X =
     GraphFn (X -> Bool) (\f. bool2Bool(?x. x In X /\ (f ' x = True)))`;
 
 val ExistsAp =
  store_thm
   ("ExistsAp",
-   ``!f X. f In (X -> Bool) 
-           ==> 
+   ``!f X. f In (X -> Bool)
+           ==>
            ((Exists X ' f) = bool2Bool ?x. x In X /\ (f ' x = True))``,
    RW_TAC std_ss [Exists_def,GraphFnAp]);
 
 val ApExists =
  store_thm
   ("ApExists",
-   ``!f X. f In (X -> Bool) 
-           ==> 
+   ``!f X. f In (X -> Bool)
+           ==>
            ((?x. x In X /\ (f ' x = True)) = ((Exists X ' f) = True))``,
    RW_TAC std_ss [Exists_def,GraphFnAp,bool2Bool_def,Bool_CLAUSES]);
 
@@ -1526,18 +1526,18 @@ val Choose_def =
 val ChooseAp =
  store_thm
   ("ChooseAp",
-   ``!f X. f In (X -> Bool) 
-           ==> 
+   ``!f X. f In (X -> Bool)
+           ==>
            (Choose X ' f = @x. x In X /\ (f ' x = True))``,
    RW_TAC std_ss [Choose_def,GraphFnAp]);
 
 val ApChoose =
- store_thm 
+ store_thm
   ("ApChoose",
-   ``!f X. f In (X -> Bool) 
-           ==> 
+   ``!f X. f In (X -> Bool)
+           ==>
            ((@x. x In X /\ (f ' x = True)) = Choose X ' f)``,
    RW_TAC std_ss [Choose_def,GraphFnAp,bool2Bool_def,Bool_CLAUSES]);
 
-val _ = export_theory();             
+val _ = export_theory();
 

@@ -171,31 +171,44 @@ val var_posns_SUBSET_valid_posns = store_thm(
     positions with a term of a particular free variable (v_posns)
    ---------------------------------------------------------------------- *)
 
-val vp'_var = ``\ (s : string). if v = s then {[]: redpos list} else {}``
-val vp'_lam = ``\rt (w:string) t:term . IMAGE (CONS In) rt``
+val vp'_var = ``\(s : string) v. if v = s then {[]: redpos list} else {}``
+val vp'_lam = ``\rt (w:string) t:term (v:string). IMAGE (CONS In) (rt v)``
+
+val lemma = prove(
+  ``fnpm dact discrete_pmact pi f x = f (pmact dact pi⁻¹ x)``,
+  SRW_TAC [][nomsetTheory.fnpm_def]);
+
+val flip_args = prove(
+  ``(?f: 'a -> 'b -> 'c. P f) <=> (?f : 'b -> 'a -> 'c. P (λa b. f b a))``,
+  SRW_TAC [][EQ_IMP_THM] THEN1 (Q.EXISTS_TAC `λb a. f a b` THEN SRW_TAC [ETA_ss][]) THEN
+  METIS_TAC []);
 
 val v_posns_exists =
-    termTheory.tm_recursion
-        |> INST_TYPE [alpha |-> ``:posn set``]
+    termTheory.parameter_tm_recursion
+        |> INST_TYPE [alpha |-> ``:posn set``, ``:ρ`` |-> ``:string``]
         |> SPEC_ALL
-        |> Q.INST [`apm` |-> `K I`,
-             `A` |-> `{v}`,
+        |> Q.INST [`apm` |-> `discrete_pmact`, `ppm` |-> `string_pmact`,
+             `A` |-> `{}`,
              `vr` |-> `^vp'_var`,
-             `ap` |-> `\rt ru t u. IMAGE (CONS Lt) rt UNION IMAGE (CONS Rt) ru`,
+             `ap` |-> `\rt ru t u v. IMAGE (CONS Lt) (rt v) ∪ IMAGE (CONS Rt) (ru v)`,
              `lm` |-> `^vp'_lam`]
-        |> SIMP_RULE (srw_ss()) [GSYM basic_swapTheory.swapstr_eq_left]
-        |> Q.GEN `v` |> SIMP_RULE (srw_ss()) [SKOLEM_THM, FORALL_AND_THM]
+        |> SIMP_RULE (srw_ss()) [GSYM basic_swapTheory.swapstr_eq_left,
+                                 lemma]
+        |> SIMP_RULE (srw_ss()) [Once flip_args]
 
 val v_posns_def = new_specification("v_posns_def", ["v_posns"],
                                     v_posns_exists);
 
+val lemma = v_posns_def |> CONJUNCT2 |> SPEC_ALL |> Q.INST [`p` |-> `swapstr x y p`]
+                        |> SIMP_RULE (srw_ss()) []
+
 val v_posns_tpm_invariant = Store_Thm(
   "v_posns_tpm_invariant",
-  ``!M. v_posns v (tpm pi M) = v_posns (lswapstr (REVERSE pi) v) M``,
-  HO_MATCH_MP_TAC nc_INDUCTION2 THEN
-  Q.EXISTS_TAC `{v; lswapstr (REVERSE pi) v}` THEN
-  SRW_TAC [][v_posns_def, basic_swapTheory.lswapstr_eql] THEN
-  FULL_SIMP_TAC (srw_ss()) []);
+  ``!M v. v_posns v (tpm pi M) = v_posns (lswapstr (REVERSE pi) v) M``,
+  Induct_on `pi` THEN
+  ASM_SIMP_TAC (srw_ss()) [pairTheory.FORALL_PROD, nomsetTheory.pmact_decompose] THEN
+  POP_ASSUM (fn th => REWRITE_TAC [GSYM th]) THEN
+  SRW_TAC [][lemma, GSYM nomsetTheory.pmact_decompose]);
 
 val v_posns_FV = store_thm(
   "v_posns_FV",
@@ -371,18 +384,18 @@ val bv_posns_at_exists0 =
     tm_recursion_nosideset
         |> SPEC_ALL
         |> INST_TYPE [alpha |-> ``:redpos list -> redpos list set``]
-        |> Q.INST [`apm` |-> `K I`,
+        |> Q.INST [`apm` |-> `discrete_pmact`,
              `vr` |-> `\s l. {}`,
              `ap` |-> `\rt ru t u l.
                            case l of
-                              Lt::rest -> IMAGE (CONS Lt) (rt rest)
-                           || Rt::rest -> IMAGE (CONS Rt) (ru rest)
-                           || _ -> {}`,
+                             Lt::rest => IMAGE (CONS Lt) (rt rest)
+                           | Rt::rest => IMAGE (CONS Rt) (ru rest)
+                           | _ => {}`,
              `lm` |-> `\rt v t l.
                            case l of
-                              [] -> bv_posns (LAM v t)
-                           || In::rest -> IMAGE (CONS In) (rt rest)
-                           || _ -> {}`]
+                             [] => bv_posns (LAM v t)
+                           | In::rest => IMAGE (CONS In) (rt rest)
+                           | _ => {}`]
         |> SIMP_RULE (srw_ss()) []
         |> CONV_RULE (QUANT_CONV (RAND_CONV (ONCE_REWRITE_CONV [EQ_SYM_EQ])))
 
@@ -391,14 +404,14 @@ val bv_posns_at_exists = prove(
        ((!s l. bv_posns_at l (VAR s) = {}) /\
         (!t u l. bv_posns_at l (t @@ u) =
                    case l of
-                      (Lt::rest) -> IMAGE (CONS Lt) (bv_posns_at rest t)
-                   || (Rt::rest) -> IMAGE (CONS Rt) (bv_posns_at rest u)
-                   || _ -> {}) /\
+                     (Lt::rest) => IMAGE (CONS Lt) (bv_posns_at rest t)
+                   | (Rt::rest) => IMAGE (CONS Rt) (bv_posns_at rest u)
+                   | _ => {}) /\
         (!v t l. bv_posns_at l (LAM v t) =
                    case l of
-                      [] -> bv_posns (LAM v t)
-                   || In::rest -> IMAGE (CONS In) (bv_posns_at rest t)
-                   || _ -> {})) /\
+                     [] => bv_posns (LAM v t)
+                   | In::rest => IMAGE (CONS In) (bv_posns_at rest t)
+                   | _ => {})) /\
        !t l p. bv_posns_at l (tpm p t) = bv_posns_at l t``,
   Q.X_CHOOSE_THEN `f` STRIP_ASSUME_TAC bv_posns_at_exists0 THEN
   Q.EXISTS_TAC `\l t. f t l` THEN SRW_TAC [][]);

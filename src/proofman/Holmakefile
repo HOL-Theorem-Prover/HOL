@@ -1,7 +1,9 @@
 TARGET_poly = $(dprot $(HOLDIR)/bin/hol.builder0)
 TARGET_mosml = proofManagerLib.sml
-DEPS_poly = $(BOOLLIB) $(BOOLTHEORY) $(PRIMREC) proofManagerLib.uo History.uo \
-            goalStack.uo goalTree.uo Manager.uo $(dprot $(HOLDIR)/tools-poly/builder0.ML)
+DEPS_poly = $(BOOLLIB) $(BOOLTHEORY) $(PRIMREC) $(TERMPP) \
+            proofManagerLib.uo History.uo \
+            goalStack.uo goalTree.uo Manager.uo \
+            $(dprot $(HOLDIR)/tools-poly/builder0.ML)
 DEPS_mosml =
 
 COMM_poly = cd $(protect $(HOLDIR)/tools-poly) && $(POLY) < builder0.ML && cc -o $@ hol.builder0.o $(POLY_LDFLAGS) && rm hol.builder0.o
@@ -10,6 +12,7 @@ COMM_mosml =
 BOOLTHEORY = $(dprot $(SIGOBJ)/boolTheory.uo)
 BOOLLIB = $(dprot $(SIGOBJ)/boolLib.uo)
 PRIMREC = $(dprot $(SIGOBJ)/Prim_rec.uo)
+TERMPP = $(dprot $(SIGOBJ)/term_pp.uo)
 
 EXTRA_CLEANS = $(if $(findstring poly,$(ML_SYSNAME)),$(TARGET_poly),)
 

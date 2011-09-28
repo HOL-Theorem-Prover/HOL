@@ -17,9 +17,9 @@ val Lfrep_def = Define`Lfrep = \l. NONE`
 
 val Ndrep_def = Define`
    Ndrep a t1 t2 = \l. case l of
-                         [] -> SOME a
-                      || T::xs -> t1 xs
-                      || F::xs -> t2 xs
+                         [] => SOME a
+                       | T::xs => t1 xs
+                       | F::xs => t2 xs
 `;
 
 val is_lbtree_def = Define`
@@ -109,8 +109,8 @@ val path_follow_def = Define`
   (path_follow g x [] = OPTION_MAP FST (g x)) /\
   (path_follow g x (h::t) =
      case g x of
-        NONE -> NONE
-     || SOME (a,y,z) -> path_follow g (if h then y else z) t)
+       NONE => NONE
+     | SOME (a,y,z) => path_follow g (if h then y else z) t)
 `;
 
 
@@ -174,8 +174,8 @@ val lbtree_ue_Axiom = store_thm(
   ``!f : 'a -> ('b # 'a # 'a) option.
        ?!g : 'a -> 'b lbtree.
           !x. g x = case f x of
-                       NONE -> Lf
-                    || SOME(b,y,z) -> Nd b (g y) (g z)``,
+                      NONE => Lf
+                    | SOME(b,y,z) => Nd b (g y) (g z)``,
   GEN_TAC THEN
   SRW_TAC [][EXISTS_UNIQUE_THM] THENL [
     Q.EXISTS_TAC `\x. lbtree_abs (path_follow f x)` THEN
@@ -450,8 +450,8 @@ val bf_flatten_def = new_specification(
               (!a t1 t2 ts. f (Nd a t1 t2::ts) = a:::f (ts ++ [t1; t2]))``,
         Q.ISPEC_THEN
                 `\l. case drop_while ((=) Lf) l of
-                        [] -> NONE
-                     || t::ts -> lbtree_case NONE
+                       [] => NONE
+                     | t::ts => lbtree_case NONE
                                     (\a t1 t2. SOME (ts ++ [t1;t2], a))
                                     t`
                 STRIP_ASSUME_TAC llist_Axiom_1 THEN

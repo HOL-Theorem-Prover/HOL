@@ -93,7 +93,7 @@ val FORALL_LESS_SUC = store_thm ("FORALL_LESS_SUC",
 val MIN_EQ = store_thm ("MIN_EQ",
 ``(!n1 n2. (MIN n1 n2 = n1) = (n1 <= n2)) /\
   (!n1 n2. (MIN n1 n2 = n2) = (n2 <= n1))``,
-SIMP_TAC arith_ss [arithmeticTheory.MIN_DEF, 
+SIMP_TAC arith_ss [arithmeticTheory.MIN_DEF,
    COND_RAND, COND_RATOR]);
 
 (******************************************************************
@@ -170,7 +170,7 @@ SIMP_TAC std_ss [EL_REPLACE_ELEMENT]);
 
 
 val FIRSTN_REPLACE_ELEMENT = store_thm ("FIRSTN_REPLACE_ELEMENT",
-``!n1 n2 e l. FIRSTN n1 (REPLACE_ELEMENT e n2 l) =  
+``!n1 n2 e l. FIRSTN n1 (REPLACE_ELEMENT e n2 l) =
   if (n1 <= n2) then FIRSTN n1 l else
   REPLACE_ELEMENT e n2 (FIRSTN n1 l)``,
 
@@ -182,14 +182,14 @@ ASM_SIMP_TAC list_ss [REPLACE_ELEMENT_DEF,
 
 
 val FIRSTN_REPLACE_ELEMENT___SIMPLE = store_thm ("FIRSTN_REPLACE_ELEMENT___SIMPLE",
-``!n1 n2 e l. FIRSTN n1 (REPLACE_ELEMENT e n2 l) =  
+``!n1 n2 e l. FIRSTN n1 (REPLACE_ELEMENT e n2 l) =
   REPLACE_ELEMENT e n2 (FIRSTN n1 l)``,
 Induct_on `n1` THEN Cases_on `n2` THEN Cases_on `l` THEN
 ASM_SIMP_TAC list_ss [REPLACE_ELEMENT_DEF])
 
 
 val BUTFIRSTN_REPLACE_ELEMENT = store_thm ("BUTFIRSTN_REPLACE_ELEMENT",
-``!n1 n2 e l. BUTFIRSTN n1 (REPLACE_ELEMENT e n2 l) =  
+``!n1 n2 e l. BUTFIRSTN n1 (REPLACE_ELEMENT e n2 l) =
    if (n2 < n1) then BUTFIRSTN n1 l else
   REPLACE_ELEMENT e (n2-n1) (BUTFIRSTN n1 l)``,
 
@@ -288,7 +288,7 @@ val EL_DISJOINT_FILTER = store_thm ("EL_DISJOINT_FILTER",
 
 val BUTFIRSTN_LENGTH_LESS = store_thm ("BUTFIRSTN_LENGTH_LESS",
 ``!l n. (LENGTH l <= n) ==> (BUTFIRSTN n l = [])``,
-Induct_on `n` THEN Induct_on `l` THEN 
+Induct_on `n` THEN Induct_on `l` THEN
 ASM_SIMP_TAC list_ss []);
 
 
@@ -387,7 +387,7 @@ Induct_on `n` THEN1 (
   SIMP_TAC list_ss [EL]
 ) THEN
 REPEAT STRIP_TAC THEN
-Cases_on `l` THEN 
+Cases_on `l` THEN
 FULL_SIMP_TAC list_ss []);
 
 
@@ -922,7 +922,7 @@ val EL_SWAP_ELEMENTS = store_thm ("EL_SWAP_ELEMENTS",
   EL x (SWAP_ELEMENTS n m l) =
   if (x < LENGTH l) then
     (if (x = m) then EL n l else
-     (if (x = n) then EL m l else EL x l)) 
+     (if (x = n) then EL m l else EL x l))
   else EL x l``,
 
 SIMP_TAC std_ss [SWAP_ELEMENTS_def, EL_REPLACE_ELEMENT,

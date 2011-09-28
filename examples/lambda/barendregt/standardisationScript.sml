@@ -11,7 +11,7 @@ open HolKernel Parse boolLib bossLib BasicProvers metisLib
 
 open boolSimps
 
-open binderLib
+open nomsetTheory binderLib
 
 open pred_setTheory
 open finite_developmentsTheory
@@ -89,7 +89,7 @@ val ihr_bvc_ind = store_thm(
           !p M. p is_head_redex M ==> P p M``,
   REPEAT GEN_TAC THEN STRIP_TAC THEN
   Q_TAC SUFF_TAC `!p M. p is_head_redex M ==> !pi. P p (tpm pi M)`
-        THEN1 METIS_TAC [tpm_NIL] THEN
+        THEN1 METIS_TAC [pmact_nil] THEN
   HO_MATCH_MP_TAC is_head_redex_ind THEN
   SRW_TAC [][is_head_redex_rules] THENL [
     Q.MATCH_ABBREV_TAC `P [] (LAM vv MM @@ NN)` THEN
@@ -100,7 +100,7 @@ val ihr_bvc_ind = store_thm(
     Q.MATCH_ABBREV_TAC `P (In::p) (LAM vv MM)` THEN
     Q_TAC (NEW_TAC "z") `FV MM UNION X` THEN
     `LAM vv MM = LAM z (tpm [(z,vv)] MM)` by SRW_TAC [][tpm_ALPHA] THEN
-    SRW_TAC [][GSYM tpm_APPEND, Abbr`MM`]
+    SRW_TAC [][GSYM pmact_decompose, Abbr`MM`]
   ]);
 
 val is_head_redex_subst_invariant = store_thm(
@@ -114,7 +114,7 @@ val is_head_redex_tpm_invariant = Store_Thm(
   "is_head_redex_tpm_invariant",
   ``p is_head_redex (tpm pi t) = p is_head_redex t``,
   Q_TAC SUFF_TAC `!p t. p is_head_redex t ==> !pi. p is_head_redex (tpm pi t)`
-        THEN1 METIS_TAC [tpm_inverse] THEN
+        THEN1 METIS_TAC [pmact_inverse] THEN
   HO_MATCH_MP_TAC is_head_redex_ind THEN SRW_TAC [][is_head_redex_rules]);
 
 val is_head_redex_unique = store_thm(
@@ -309,12 +309,12 @@ val nlabel_eq = store_thm(
     Q.SPEC_THEN `t1` STRUCT_CASES_TAC term_CASES THEN
     SRW_TAC [][nlabel_thm] THEN
     SRW_TAC [][lLAMi_eq_thm, lLAM_eq_thm, EQ_IMP_THM, LAM_eq_thm] THENL [
-      SRW_TAC [][tpm_eqr, nlabel_def, tpm_flip_args],
-      SRW_TAC [][nlabel_def, tpm_flip_args]
+      SRW_TAC [][tpm_eqr, nlabel_def, pmact_flip_args],
+      SRW_TAC [][nlabel_def, pmact_flip_args]
     ],
     SRW_TAC [][LAM_eq_thm, lLAM_eq_thm, EQ_IMP_THM] THENL [
-      SRW_TAC [][tpm_eqr, nlabel_def, tpm_flip_args],
-      SRW_TAC [][nlabel_def, tpm_flip_args]
+      SRW_TAC [][tpm_eqr, nlabel_def, pmact_flip_args],
+      SRW_TAC [][nlabel_def, pmact_flip_args]
     ]
   ]);
 
@@ -1245,7 +1245,7 @@ val i_reduce_to_LAM_underneath = prove(
       FULL_SIMP_TAC (srw_ss()) [LAM_eq_thm] THEN SRW_TAC [][] THEN
       FULL_SIMP_TAC (srw_ss()) [redex_posns_thm, is_head_redex_thm] THENL [
         PROVE_TAC [],
-        SRW_TAC [][tpm_eqr, labelled_redn_beta_tpm_eqn, tpm_flip_args] THEN
+        SRW_TAC [][tpm_eqr, labelled_redn_beta_tpm_eqn, pmact_flip_args] THEN
         PROVE_TAC []
       ]
     ],
