@@ -822,16 +822,27 @@ precedences of the rule and the terminal are equal.
     in  let val result = TextIO.openOut (spec ^ ".sml")
  	    val sigs = TextIO.openOut (spec ^ ".sig")
 	    val pos = ref 0
+            val trailing_space = ref false
 	    val pr = fn s => TextIO.output(result,s)
-	    val say = fn s => let val l = String.size s
-			           val newPos = (!pos) + l
-			      in if newPos > lineLength
-				    then (pr "\n"; pos := l)
-				    else (pos := newPos);
-				   pr s
-			      end
+	    fun say s = let
+              val l = String.size s
+              val sspace = l > 0 andalso Char.isSpace (String.sub(s,l - 1))
+              val s =
+                  if sspace then
+                    Substring.string(Substring.dropr Char.isSpace (Substring.full s))
+                  else s
+	      val newPos = (!pos) + size s
+	    in
+              if 0 < l then
+                (if newPos > lineLength then (pr "\n"; pos := l)
+	         else if !trailing_space then (pr " "; pos := newPos + 1)
+                 else (pos := newPos);
+                 trailing_space := sspace;
+	         pr s)
+              else ()
+	    end
 	    val saydot = fn s => (say (s ^ "."))
-	    val sayln = fn t => (pr t; pr "\n"; pos := 0)
+	    val sayln = fn t => (say t; pr "\n"; pos := 0; trailing_space := false)
 	    val termvoid = makeUniqueId "VOID"
 	    val ntvoid = makeUniqueId "ntVOID"
 	    val hasType = fn s => case symbolType s
