@@ -114,7 +114,7 @@ open smpp term_pp_types term_pp_utils
 infix || |||
 
 val start_info = {seen_frees = empty_tmset, current_bvars = empty_tmset,
-                  last_string = " ", in_gspec = true}
+                  last_string = " ", in_gspec = false}
 
 fun getlaststring x =
     (fupdate (fn x => x) >-
