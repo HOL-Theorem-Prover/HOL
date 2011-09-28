@@ -171,6 +171,7 @@ val TYPE_DEFINITION =
 
 val _ = add_const "TYPE_DEFINITION";
 val _ = OpenTheory_const_name {const={Thy="bool",Name="TYPE_DEFINITION"},name=(["HOL4"],"TYPE_DEFINITION")}
+val _ = OpenTheory_const_name {const={Thy="bool",Name="DATATYPE"},name=(["HOL4"],"DATATYPE")}
 
 
 (*---------------------------------------------------------------------------*
