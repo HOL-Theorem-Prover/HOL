@@ -2,7 +2,7 @@ open bossLib Theory Parse res_quanTheory Defn Tactic boolLib;
 open finite_mapTheory listTheory pairTheory pred_setTheory;
 open set_relationTheory sortingTheory stringTheory wordsTheory;
 open relationTheory;
-open MiniMLTheory;
+open MiniMLTheory CompileTheory;
 
 open lcsymtacs;
 
@@ -52,6 +52,33 @@ val (type_subst_def, type_subst_ind) =
    decide_tac]);
 val _ = save_thm ("type_subst_def", type_subst_def);
 val _ = save_thm ("type_subst_ind", type_subst_ind);
+
+val (remove_ctors_def,remove_ctors_ind) =
+  tprove_no_defn ((remove_ctors_def,remove_ctors_ind),
+  WF_REL_TAC
+  `inv_image $< (\x. case x of INL (x,y) -> exp_size y 
+                         || INR (INL (x,y)) -> v_size y
+                         || INR (INR (INL (x,y))) -> exp3_size y
+                         || INR (INR (INR (INL (x,y)))) -> exp1_size y
+                         || INR (INR (INR (INR (x,y)))) -> exp6_size y)` >>
+  rw [] >>
+  TRY decide_tac >|
+  [induct_on `es` >>
+       rw [exp_size_def] >>
+       res_tac >>
+       decide_tac,
+   induct_on `vs` >>
+       rw [exp_size_def] >>
+       res_tac >>
+       decide_tac,
+   induct_on `es` >>
+       rw [exp_size_def] >>
+       res_tac >>
+       decide_tac]);
+val _ = save_thm ("remove_ctors_def", remove_ctors_def);
+val _ = save_thm ("remove_ctors_ind", remove_ctors_ind);
+
+
 
 (* ------------------------------------------------------------------------- *)
 
