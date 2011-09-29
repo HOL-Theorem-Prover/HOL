@@ -182,7 +182,7 @@ rw [] >|
 val type_funs_Tfn = Q.prove (
 `∀tenvC tenv funs tenv' t n.
   type_funs tenvC tenv funs tenv' ∧
-  (lookup n tenv' = SOME t)
+  (lookup n tenv' = SOME ([],t))
   ⇒
   ∃t1 t2. t = Tfn t1 t2`,
 induct_on `funs` >>
@@ -211,7 +211,7 @@ metis_tac [type_funs_Tfn, t_distinct]);
 (* Well-typed pattern matches either match or not, but don't raise type errors
 * *)
 val pmatch_type_progress = Q.prove (
-`(∀envC p v env t tenv tenv'.
+`(∀envC p v env t (tenv:(varN,(tvarN list # t)) env) tenv'.
   consistent_con_env envC tenvC ∧
   consistent_con_env2 envC tenvC ∧
   type_p tenvC tenv p t tenv' ∧
@@ -219,7 +219,7 @@ val pmatch_type_progress = Q.prove (
   ⇒
   (pmatch envC p v env = No_match) ∨
   (∃env'. pmatch envC p v env = Match env')) ∧
- (∀envC ps vs env ts tenv tenv'.
+ (∀envC ps vs env ts (tenv:(varN,(tvarN list # t)) env) tenv'.
   consistent_con_env envC tenvC ∧
   consistent_con_env2 envC tenvC ∧
   type_ps tenvC tenv ps ts tenv' ∧
@@ -511,7 +511,7 @@ fs [final_state_def] >|
 val type_lookup_lem2 = Q.prove (
 `∀(tenvC:tenvC) env tenv v s t'.
   type_env tenvC env tenv ∧
-  (lookup s tenv = SOME t') ∧
+  (lookup s tenv = SOME ([],t')) ∧
   (lookup s env = SOME v)
   ⇒ 
   type_e tenvC tenv (Val v) t'`,
@@ -627,9 +627,9 @@ val type_recfun_lookup = Q.prove (
 `∀fn funs n e tenvC tenv tenv' t1 t2.
   (find_recfun fn funs = SOME (n,e)) ∧
   type_funs tenvC tenv funs tenv' ∧
-  (lookup fn tenv' = SOME (Tfn t1 t2))
+  (lookup fn tenv' = SOME ([],Tfn t1 t2))
   ⇒
-  type_e tenvC (bind n t1 tenv) e t2`,
+  type_e tenvC (bind n ([],t1) tenv) e t2`,
 induct_on `funs` >>
 rw [Once find_recfun_def] >>
 qpat_assum `type_funs tenvC tenv (h::funs) tenv'` 
@@ -741,7 +741,7 @@ rw [] >|
                     fs [type_op_cases] >>
                     rw [] >>
                     qexists_tac `t2` >>
-                    qexists_tac `bind s t1 tenv''` >>
+                    qexists_tac `bind s ([],t1) tenv''` >>
                     rw [Once type_v_cases, type_e_val] >>
                     metis_tac [],
                 qpat_assum `type_v tenvC (Recclosure l l0 s) t1'`
@@ -753,7 +753,7 @@ rw [] >|
                     qexists_tac `t2` >>
                     rw [build_rec_env_lem] >>
                     imp_res_tac type_recfun_lookup >>
-                    qexists_tac `bind q t1 (merge tenv''' tenv'')` >>
+                    qexists_tac `bind q ([],t1) (merge tenv''' tenv'')` >>
                     rw [bind_def, Once type_v_cases, type_e_val] >>
                     metis_tac [type_env_merge_lem, type_recfun_env]]],
       fs [do_log_def] >>
@@ -775,7 +775,7 @@ rw [] >|
           rw [] >>
           metis_tac [pmatch_type_preservation],
       qexists_tac `t2` >>
-          qexists_tac `bind s t1 tenv'` >>
+          qexists_tac `bind s ([],t1) tenv'` >>
           rw [Once type_v_cases, type_e_val] >>
           metis_tac [],
       rw [Once (hd (CONJUNCTS type_v_cases))] >>
@@ -941,10 +941,10 @@ fs [disjoint_env_def] >>
 metis_tac [DISJOINT_SYM]);
 
 val tenvC_pat_weakening = Q.prove (
-`(!tenvC tenvE p t tenvE'. type_p tenvC tenvE p t tenvE' ⇒ 
+`(!tenvC (tenvE:(varN,(tvarN list # t)) env) p t tenvE'. type_p tenvC tenvE p t tenvE' ⇒ 
     !tenvC'. disjoint_env tenvC tenvC' ⇒ 
              type_p (merge tenvC' tenvC) tenvE p t tenvE') ∧
- (!tenvC tenvE ps ts tenvE'. type_ps tenvC tenvE ps ts tenvE' ⇒ 
+ (!tenvC (tenvE:(varN,(tvarN list # t)) env) ps ts tenvE'. type_ps tenvC tenvE ps ts tenvE' ⇒ 
     !tenvC'. disjoint_env tenvC tenvC' ⇒ 
              type_ps (merge tenvC' tenvC) tenvE ps ts tenvE')`,
 HO_MATCH_MP_TAC type_p_ind >>

@@ -953,7 +953,7 @@ evaluate_decs cenv env (Dtype tds :: ds) (Rerr Rtype_error)
  * forall (tyvarN list). t list -> typeN *)
 type tenvC = (conN, (tvarN list * t list * typeN)) env 
 (* Type environments *)
-type tenvE = (varN, t) env
+type tenvE = (varN, tvarN list * t) env
 
 (* A pattern matches values of a certain type and extends the type environment
  * with the pattern's binders.  The pattern's type does not depend on the input
@@ -1028,7 +1028,7 @@ indreln
 forall cenv tenv n t.
 true
 ==>
-type_p cenv tenv (Pvar n) t (bind n t tenv)
+type_p cenv tenv (Pvar n) t (bind n ([],t) tenv)
 
 and
 
@@ -1094,7 +1094,8 @@ and
 
 forall cenv env tenv n e t1 t2.
 type_env cenv env tenv &&
-type_e cenv (bind n t1 tenv) e t2
+(* TODO: type parameters *)
+type_e cenv (bind n ([],t1) tenv) e t2
 ==>
 type_v cenv (Closure env n e) (Tfn t1 t2)
 
@@ -1103,7 +1104,8 @@ and
 forall cenv env funs n t tenv tenv'.
 type_env cenv env tenv &&
 type_funs cenv (merge tenv' tenv) funs tenv' &&
-lookup n tenv' = Some t
+(* TODO: type parameters *)
+lookup n tenv' = Some (([]:tvarN list),t)
 ==>
 type_v cenv (Recclosure env funs n) t
 
@@ -1133,14 +1135,16 @@ type_e cenv tenv (Con (Some cn) es) (Tapp ts' tn)
 and
 
 forall cenv tenv n t.
-(lookup n tenv = Some t)
+(* TODO: type parameters *)
+(lookup n tenv = Some (([]:tvarN list),t))
 ==>
 type_e cenv tenv (Var n) t
 
 and
 
 forall cenv tenv n e t1 t2.
-type_e cenv (bind n t1 tenv) e t2
+(* TODO: type parameters *)
+type_e cenv (bind n (([]:tvarN list),t1) tenv) e t2
 ==>
 type_e cenv tenv (Fun n e) (Tfn t1 t2)
 
@@ -1184,7 +1188,8 @@ and
 
 forall cenv tenv n e1 e2 t1 t2.
 type_e cenv tenv e1 t1 &&
-type_e cenv (bind n t1 tenv) e2 t2
+(* TODO: type parameters *)
+type_e cenv (bind n (([]:tvarN list),t1) tenv) e2 t2
 ==>
 type_e cenv tenv (Let n e1 e2) t2
 
@@ -1239,7 +1244,8 @@ forall cenv n v env t tenv.
 type_e cenv [] (Val v) t &&
 type_env cenv env tenv
 ==>
-type_env cenv (bind n v env) (bind n t tenv)
+(* TODO: type parameters *)
+type_env cenv (bind n v env) (bind n (([]:tvarN list),t) tenv)
 
 and
 
@@ -1251,12 +1257,13 @@ type_funs cenv env [] emp
 and
 
 forall cenv env fn n e funs env' t1 t2.
-type_e cenv (bind n t1 env) e t2 &&
+(* TODO: type parameters *)
+type_e cenv (bind n (([]:tvarN list),t1) env) e t2 &&
 type_funs cenv env funs env' &&
 lookup fn env' = None
 ==>
-type_funs cenv env ((fn, n, e)::funs) (bind fn (Tfn t1 t2) env')
-
+(* TODO: type parameters *)
+type_funs cenv env ((fn, n, e)::funs) (bind fn (([]:tvarN list),Tfn t1 t2) env')
 
 indreln
 
@@ -1346,7 +1353,8 @@ type_ctxt cenv tenv (Cmat () pes) t1 t2
 and
 
 forall cenv tenv e t1 t2 n.
-type_e cenv (bind n t1 tenv) e t2
+(* TODO: type parameters *)
+type_e cenv (bind n (([]:tvarN list),t1) tenv) e t2
 ==>
 type_ctxt cenv tenv (Clet n () e) t1 t2
 
