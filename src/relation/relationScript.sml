@@ -1787,13 +1787,18 @@ val WeakOrder = new_definition(
 
 val StrongOrder = new_definition(
   "StrongOrder",
-  ``StrongOrder (Z:'g->'g->bool) =
-                     irreflexive Z /\ antisymmetric Z /\ transitive Z``);
+  ``StrongOrder (Z:'g->'g->bool) = irreflexive Z /\ transitive Z``);
+
+val irrefl_trans_implies_antisym = store_thm(
+  "irrefl_trans_implies_antisym",
+  ``!R. irreflexive R /\ transitive R ==> antisymmetric R``,
+  SRW_TAC [][antisymmetric_def, transitive_def, irreflexive_def] THEN
+  METIS_TAC []);
 
 val StrongOrd_Ord = store_thm(
   "StrongOrd_Ord",
   ``!R. StrongOrder R ==> Order R``,
-  SRW_TAC [][StrongOrder, Order]);
+  SRW_TAC [][StrongOrder, Order, irrefl_trans_implies_antisym]);
 
 val WeakOrd_Ord = store_thm(
   "WeakOrd_Ord",
