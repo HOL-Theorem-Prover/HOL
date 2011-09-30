@@ -2,11 +2,6 @@ open HolKernel Parse boolLib
 
 open bossLib simpLib
 
-local open OpenTheoryMap in
-  (* not sure how to deal with this properly: *)
-  val _ = OpenTheory_const_name {const={Thy="arithmetic",Name="ZERO"},name=(["Number","Numeral"],"zero")}
-end
-
 val _ = new_theory "cl";
 
 val _ = Hol_datatype `cl = S | K | # of cl => cl`;

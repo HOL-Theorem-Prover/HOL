@@ -73,6 +73,10 @@ val _ = OpenTheory_const_name
 val NUMERAL_DEF = new_definition("NUMERAL_DEF", --`NUMERAL (x:num) = x`--);
 
 val ALT_ZERO  = new_definition("ALT_ZERO",    --`ZERO = 0`--);
+local open OpenTheoryMap in
+val _ = OpenTheory_const_name {const={Thy="arithmetic",Name="ZERO"},name=(["Number","Numeral"],"zero")}
+val _ = OpenTheory_const_name {const={Thy="num",Name="0"},name=(["Number","Numeral"],"zero")}
+end
 
 val BIT1 =
   new_definition("BIT1",
