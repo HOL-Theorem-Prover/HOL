@@ -128,11 +128,11 @@ val (log_term, log_thm, log_clear) = let
     handle Map.NotFound
     => raise ERR "log_tyop_name" ("No OpenTheory name for type "^(#Thy tyop)^"$"^(#Tyop tyop))
     fun log_const_name {Thy="Logging",Name} =
-      log_name ([],Name)
     |   log_const_name const =
       log_name (Map.find(const_to_ot_map(),const))
     handle Map.NotFound
     => raise ERR "log_const_name" ("No OpenTheory name for constant "^(#Thy const)^"$"^(#Name const))
+      log_raw ("\""^Name^"\"")
   end
 
   fun log_tyop tyop = let
