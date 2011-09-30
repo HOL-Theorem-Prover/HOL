@@ -8,7 +8,7 @@ SRW_TAC [][FUN_EQ_THM] THEN
 SUBST_TAC [GSYM (ISPEC ``P:'a->bool`` ETA_THM)] THEN
 METIS_TAC [])
 val file = "cl.art"
-val ns = ["combinatoryLogicExample"]
+val ns = ["cl"]
 val _ = OpenTheory_const_name{const={Thy="OTcl",Name="confluent"},name=(ns,"confluent")}
 val _ = OpenTheory_tyop_name{tyop={Thy="OTcl",Tyop="cl"},name=(ns,"cl")}
 val _ = OpenTheory_const_name{const={Thy="OTcl",Name="-->"},name=(ns,"-->")}
@@ -19,20 +19,17 @@ val _ = OpenTheory_const_name{const={Thy="OTcl",Name="RTC"},name=(ns,"RTC")}
 val _ = OpenTheory_const_name{const={Thy="OTcl",Name="normform"},name=(ns,"normform")}
 val _ = OpenTheory_const_name{const={Thy="OTcl",Name="diamond"},name=(ns,"diamond")}
 val _ = OpenTheory_const_name{const={Thy="OTcl",Name="-||->"},name=(ns,"-||->")}
-
-val ns = ["combinatoryLogicExample","ind_type"]
 val _ = OpenTheory_const_name{const={Thy="OTcl",Name="mk_cl"},name=(ns,"mk_cl")}
 val _ = OpenTheory_const_name{const={Thy="OTcl",Name="dest_cl"},name=(ns,"dest_cl")}
 val _ = OpenTheory_const_name{const={Thy="OTcl",Name="cl_case"},name=(ns,"cl_case")}
 val _ = OpenTheory_const_name{const={Thy="OTcl",Name="cl_size"},name=(ns,"cl_size")}
-val _ = OpenTheory_const_name{const={Thy="OTcl",Name="junk_cl0"},name=(ns,"cl0")}
-val _ = OpenTheory_const_name{const={Thy="OTcl",Name="junk_cl1"},name=(ns,"cl1")}
-val _ = OpenTheory_const_name{const={Thy="OTcl",Name="junk_cl2"},name=(ns,"cl2")}
-val _ = OpenTheory_const_name{const={Thy="OTcl",Name="junk_cl3"},name=(ns,"cl3")}
-val _ = OpenTheory_const_name{const={Thy="OTcl",Name="junk_cl4"},name=(ns,"cl4")}
-val ns = ["combinatoryLogicExample","cl"]
-val _ = OpenTheory_const_name{const={Thy="OTcl",Name="junk_rep"},name=(ns,"rep")}
-val _ = OpenTheory_const_name{const={Thy="OTcl",Name="junk_abs"},name=(ns,"abs")}
+val _ = OpenTheory_const_name{const={Thy="OTcl",Name="junk_cl0"},name=(ns," @ind_typecl0")}
+val _ = OpenTheory_const_name{const={Thy="OTcl",Name="junk_cl1"},name=(ns," @ind_typecl1")}
+val _ = OpenTheory_const_name{const={Thy="OTcl",Name="junk_cl2"},name=(ns," @ind_typecl2")}
+val _ = OpenTheory_const_name{const={Thy="OTcl",Name="junk_cl3"},name=(ns," @ind_typecl3")}
+val _ = OpenTheory_const_name{const={Thy="OTcl",Name="junk_cl4"},name=(ns," @ind_typecl4")}
+val _ = OpenTheory_const_name{const={Thy="OTcl",Name="junk_rep"},name=(ns@["cl"],"rep")}
+val _ = OpenTheory_const_name{const={Thy="OTcl",Name="junk_abs"},name=(ns@["cl"],"abs")}
 
 fun ML_name "#" = "APP"
   | ML_name "-->" = "redn"

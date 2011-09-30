@@ -90,7 +90,13 @@ in () end
 fun log_redres loga logb {redex,residue} =
   log_pair loga logb (redex,residue)
 
-val (log_term, log_thm, log_clear) = let
+type thy_tyop  = OpenTheoryMap.thy_tyop
+type thy_const = OpenTheoryMap.thy_const
+type otname    = OpenTheoryMap.otname
+
+val (log_term, log_thm, log_clear,
+     set_const_name_handler, reset_const_name_handler,
+     set_tyop_name_handler, reset_tyop_name_handler) = let
   val (reset_key,next_key) = let
     val key = ref 0
     fun reset() = key := 0
@@ -120,19 +126,32 @@ val (log_term, log_thm, log_clear) = let
 
   fun log_type_var ty = log_name (tyvar_to_ot (Type.dest_vartype ty))
 
-  local open OpenTheoryMap in
+  local
+    open OpenTheoryMap
+    fun default_tnh t = raise ERR "log_tyop_name"
+      ("No OpenTheory name for type "^(#Thy t)^"$"^(#Tyop t))
+    fun default_cnh c = raise ERR "log_const_name"
+      ("No OpenTheory name for constant "^(#Thy c)^"$"^(#Name c))
+    val tnh = ref default_tnh
+    val cnh = ref default_cnh
+  in
     fun log_tyop_name tyop = let
       val n = Map.find(tyop_to_ot_map(),tyop)
+              handle Map.NotFound => (!tnh) tyop
       val _ = log_name n
       in n end
-    handle Map.NotFound
-    => raise ERR "log_tyop_name" ("No OpenTheory name for type "^(#Thy tyop)^"$"^(#Tyop tyop))
     fun log_const_name {Thy="Logging",Name} =
-    |   log_const_name const =
-      log_name (Map.find(const_to_ot_map(),const))
-    handle Map.NotFound
-    => raise ERR "log_const_name" ("No OpenTheory name for constant "^(#Thy const)^"$"^(#Name const))
       log_raw ("\""^Name^"\"")
+    |   log_const_name const = let
+      val n = Map.find(const_to_ot_map(),const)
+              handle Map.NotFound => (!cnh) const
+      in log_name n end
+    fun set_const_name_handler h =
+      cnh := (fn c => h c handle _ => default_cnh c)
+    fun reset_const_name_handler() = cnh := default_cnh
+    fun set_tyop_name_handler h =
+      tnh := (fn t => h t handle _ => default_tnh t)
+    fun reset_tyop_name_handler() = tnh := default_tnh
   end
 
   fun log_tyop tyop = let
@@ -675,7 +694,10 @@ val (log_term, log_thm, log_clear) = let
     val _ = save_dict ob
     in () end
   end
-in (log_term, log_thm, reset_dict) end
+in (log_term, log_thm, reset_dict,
+    set_const_name_handler, reset_const_name_handler,
+    set_tyop_name_handler, reset_tyop_name_handler)
+end
 
 fun export_thm th = let
   open Thm Feedback Parse
