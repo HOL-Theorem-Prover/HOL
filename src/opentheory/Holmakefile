@@ -1,0 +1,2 @@
+selftest.exe: selftest.uo Opentheory.uo
+	$(HOLMOSMLC) -o $@ $<
