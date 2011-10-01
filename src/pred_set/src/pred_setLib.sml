@@ -92,9 +92,10 @@ local
              beyond the BMP, it may not be common in installed fonts.
              So we provide a flag specifically to turn just it off. *)
   val univ_t = prim_mk_const {Thy="pred_set", Name = "UNIV"}
-  fun univ_printer (tyg, tmg) printer (ppfns:term_pp_types.ppstream_funs) gravs depth pps tm =
+  fun univ_printer (tyg, tmg) backend printer ppfns gravs depth tm =
       let
-        val {add_string, begin_block, end_block,...} = ppfns
+        val {add_string, ...} = ppfns : term_pp_types.ppstream_funs
+        open smpp infix >>
       in
         if !univ_printing then let
             val (elty, _) = dom_rng (type_of tm)
@@ -104,7 +105,7 @@ local
                       UnicodeChars.universal_set
                     else "univ"
           in
-            add_string U;
+            add_string U >>
             printer gravs depth itself_t
           end
         else

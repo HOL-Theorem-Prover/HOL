@@ -2819,17 +2819,17 @@ fun clean (pty as PT(ty, locn)) =
   | Contype {Thy,Tyop,Kind} => Type.mk_thy_con_type {Thy=Thy, Tyop=Tyop,
                                     Kind=Prekind.toKind Kind}
   | TyApp(ty1,ty2)  => (Type.mk_app_type  (clean ty1, clean ty2)
-                          handle Feedback.HOL_ERR e =>
-                            ((*print ("Applying " ^ type_to_string (clean ty1)
-                                    ^ " to " ^ type_to_string (clean ty2) ^ "\n");*)
-                             raise Feedback.mk_HOL_ERR "Pretype" "clean" (#message e)))
+                          handle e as Feedback.HOL_ERR _ =>
+                            ((**)print ("Applying " ^ pretype_to_string ty1
+                                    ^ " to " ^ pretype_to_string ty2 ^ "\n");(**)
+                             raise e))
   | TyUniv (tyv,ty) => Type.mk_univ_type (clean tyv, clean ty)
   | TyExis (tyv,ty) => Type.mk_exist_type (clean tyv, clean ty)
   | TyAbst (tyv,ty) => Type.mk_abs_type  (clean tyv, clean ty)
   | TyKindConstr {Ty,Kind} => clean Ty
   | TyRankConstr {Ty,Rank} => clean Ty
   | _ => raise Fail "Don't expect to see links remaining at this stage of type inference"
-) handle e => Raise (wrap_exn "Pretype.clean" (pretype_to_string pty) e)
+) handle e => raise (wrap_exn "Pretype" "clean" e)
 
 fun toType ty =
   let val ty = if do_beta_conv_types()

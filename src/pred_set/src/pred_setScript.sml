@@ -243,15 +243,15 @@ val _ = set_fixity "univ" (TruePrefix 2200)
 val _ = overload_on (UnicodeChars.universal_set, ``\x:'a itself. UNIV: 'a set``)
 val _ = set_fixity UnicodeChars.universal_set (TruePrefix 2200)
 
-fun univ_printer (tyg, tmg) printer (ppfns:term_pp_types.ppstream_funs) gravs
-                 depth pps tm =
-let
+fun univ_printer (tyg, tmg) backend printer ppfns gravs depth tm = let
+  open smpp infix >>
+  val ppfns = ppfns : term_pp_types.ppstream_funs
   val (elty, _) = dom_rng (type_of tm)
   val itself_t = Term.inst [alpha |-> elty] boolSyntax.the_value
   val U = if get_tracefn "Unicode" () = 1 then UnicodeChars.universal_set
           else "univ"
 in
-  #add_string ppfns U;
+  #add_string ppfns U >>
   printer gravs depth itself_t
 end
 

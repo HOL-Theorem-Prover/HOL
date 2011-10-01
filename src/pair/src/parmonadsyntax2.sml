@@ -186,11 +186,12 @@ val dest_par = dest_binop monad_par
 val dest_bind = dest_binop monad_bind
 
 
-fun print_monads (tyg, tmg) sysprinter (ppfns:term_pp_types.ppstream_funs) (p,l,r) dpth pps t = let
-  open term_pp_types term_grammar
-  val (strn,brk) = (#add_string ppfns, #add_break ppfns);
-  fun pbegin b = if b then strn "(" else ()
-  fun pend b = if b then strn ")" else ()
+fun print_monads (tyg, tmg) backend sysprinter ppfns (p,l,r) dpth t = let
+  open term_pp_types term_grammar smpp
+  infix >>
+  val {add_string=strn,add_break=brk,ublock,...} = ppfns : ppstream_funs
+  fun pbegin b = if b then strn "(" else nothing
+  fun pend b = if b then strn ")" else nothing
   val (arg1, arg2) = valOf (dest_bind tmg t)
                              handle Option => raise UserPP_Failed
   fun pr_action (p,l,r) (vopt, action) = let
@@ -203,13 +204,11 @@ fun print_monads (tyg, tmg) sysprinter (ppfns:term_pp_types.ppstream_funs) (p,l,
       val prec = Prec(ass_prec, monadassign_special)
       fun topify p = if bracketp then Top else p
     in
-      pbegin bracketp;
-      PP.begin_block pps PP.INCONSISTENT 0;
-      sysprinter (prec, topify l, prec) (dpth - 1) (valOf vopt);
-      strn " <-";
-      brk(1,2);
-      sysprinter (prec,prec,topify r) (dpth - 1) action;
-      PP.end_block pps;
+      pbegin bracketp >>
+      ublock PP.INCONSISTENT 0
+        (sysprinter (prec, topify l, prec) (dpth - 1) (valOf vopt) >>
+         strn " <-" >> brk(1,2) >>
+         sysprinter (prec,prec,topify r) (dpth - 1) action) >>
       pend bracketp
     end
   in
@@ -237,13 +236,11 @@ fun print_monads (tyg, tmg) sysprinter (ppfns:term_pp_types.ppstream_funs) (p,l,
                 fun topify p = if bracketp then Top else p
                 val prec = Prec(par_prec, monad_par)
               in
-                pbegin bracketp;
-                PP.begin_block pps PP.INCONSISTENT 0;
-                pr_action (prec,topify l,prec) (SOME v1, a1);
-                strn " !!";
-                brk(1,2);
-                pr_action (prec,prec,topify r) (SOME v2, a2);
-                PP.end_block pps;
+                pbegin bracketp >>
+                ublock PP.INCONSISTENT 0
+                  (pr_action (prec,topify l,prec) (SOME v1, a1) >>
+                   strn " !!" >> brk(1,2) >>
+                   pr_action (prec,prec,topify r) (SOME v2, a2)) >>
                 pend bracketp
               end
           end
@@ -289,15 +286,10 @@ in
   if length actions' = 1 then sysprinter (p,l,r) dpth (#2 (hd actions'))
   else let
     in
-      PP.begin_block pps PP.CONSISTENT 0;
-        strn "do"; brk(1,2);
-        Portable.pr_list (pr_action(Top,Top,Top))
-                         (fn () => strn ";")
-                         (fn () => brk(1,2))
-                         actions';
-        brk(1,0);
-        strn "od";
-      PP.end_block pps
+      ublock PP.CONSISTENT 0
+        (strn "do" >> brk(1,2) >>
+         pr_list (pr_action(Top,Top,Top)) (strn ";" >> brk(1,2)) actions' >>
+         brk(1,0) >> strn "od")
     end
 end
 

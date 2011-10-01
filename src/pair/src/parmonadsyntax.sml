@@ -166,11 +166,15 @@ end handle HOL_ERR _ => NONE
 val dest_par = dest_binop monad_par
 val dest_bind = dest_binop monad_bind
 
-fun print_monads (tyg, tmg) sysprinter (ppfns:term_pp_types.ppstream_funs) (p,l,r) dpth pps t = let
+fun print_monads (tyg, tmg) backend sysprinter ppfns (p,l,r) dpth t = let
+  open smpp term_pp_utils
+  infix >> >-
+  val ppfns = ppfns : term_pp_types.ppstream_funs
   open term_pp_types term_grammar
-  val (strn,brk) = (#add_string ppfns, #add_break ppfns);
-  fun pbegin b = if b then strn "(" else ()
-  fun pend b = if b then strn ")" else ()
+  val (strn,brk) = (#add_string ppfns, #add_break ppfns)
+  val ublock = #ublock ppfns
+  fun pbegin b = if b then strn "(" else nothing
+  fun pend b = if b then strn ")" else nothing
   val (arg1, arg2) = valOf (dest_bind tmg t)
                              handle Option => raise UserPP_Failed
   fun pr_action (p,l,r) (vopt, action) = let
@@ -181,14 +185,14 @@ fun print_monads (tyg, tmg) sysprinter (ppfns:term_pp_types.ppstream_funs) (p,l,
           | _ => false
       val bracketp = check_grav l orelse check_grav r
       val prec = Prec(ass_prec, monadassign_special)
+      val bvars = free_vars (valOf vopt)
     in
-      pbegin bracketp;
-      PP.begin_block pps PP.INCONSISTENT 0;
-      sysprinter (prec, l, prec) (dpth - 1) (valOf vopt);
-      strn " <-";
-      brk(1,2);
-      sysprinter (prec,prec,r) (dpth - 1) action;
-      PP.end_block pps;
+      addbvs bvars >>
+      pbegin bracketp >>
+      ublock PP.INCONSISTENT 0
+         (sysprinter (prec, l, prec) (dpth - 1) (valOf vopt) >>
+          strn " " >> strn "<-" >> brk(1,2) >>
+          sysprinter (prec,prec,r) (dpth - 1) action) >>
       pend bracketp
     end
   in
@@ -215,13 +219,12 @@ fun print_monads (tyg, tmg) sysprinter (ppfns:term_pp_types.ppstream_funs) (p,l,
                 val bracketp = check_grav RIGHT l orelse check_grav LEFT r
                 val prec = Prec(par_prec, monad_par)
               in
-                pbegin bracketp;
-                PP.begin_block pps PP.CONSISTENT 0;
-                pr_action (prec,l,prec) (SOME v1, a1);
-                strn " |||";
-                brk(1,0);
-                pr_action (prec,prec,r) (SOME v2, a2);
-                PP.end_block pps;
+                pbegin bracketp >>
+                ublock PP.CONSISTENT 0
+                  (pr_action (prec,l,prec) (SOME v1, a1) >>
+                   strn " " >> strn "|||" >>
+                   brk(1,0) >>
+                   pr_action (prec,prec,r) (SOME v2, a2)) >>
                 pend bracketp
               end
           end
@@ -245,15 +248,14 @@ fun print_monads (tyg, tmg) sysprinter (ppfns:term_pp_types.ppstream_funs) (p,l,
   val (arg1',arg2') = brk_bind arg1 arg2
   val actions = strip [arg1'] arg2'
 in
-  PP.begin_block pps PP.CONSISTENT 0;
-    strn "do"; brk(1,2);
-    Portable.pr_list (pr_action(Top,Top,Top))
-                     (fn () => strn ";")
-                     (fn () => brk(1,2))
-                     actions;
-    brk(1,0);
-    strn "od";
-  PP.end_block pps
+  ublock PP.CONSISTENT 0
+    (strn "do" >> brk(1,2) >>
+     getbvs >- (fn oldbvs =>
+     pr_list (pr_action(Top,Top,Top))
+             (strn ";" >> brk(1,2))
+             actions >>
+     brk(1,0) >>
+     strn "od" >> setbvs oldbvs))
 end
 
 val _ = temp_add_user_printer ("parmonadsyntax.print_monads", ``x:'a``,
