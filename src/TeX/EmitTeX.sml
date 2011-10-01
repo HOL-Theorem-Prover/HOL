@@ -298,14 +298,14 @@ local
      | "₀" => subn 0
      | c     => c
 
-  fun string_map s =
+  fun string_map (s,sz) =
       case Binarymap.peek(TexTokenMap.the_map(), s) of
         SOME result => result
-      | NONE => (UTF8.translate char_map s,String.size s)
+      | NONE => (UTF8.translate char_map s,case sz of NONE => String.size s | SOME sz => sz)
 
-  fun smap overrides s =
+  fun smap overrides (s,sz) =
       case overrides s of
-        NONE => string_map s
+        NONE => string_map (s,sz)
       | SOME r => r
   fun varmunge s =
       if String.sub(s,0) = #"_" andalso
@@ -331,21 +331,26 @@ local
           core_s ^ digitstr ^ prime_str
         end
 
-  fun ann_string overrides pps (s,ann) = let
+  fun ann_string overrides pps (s,sz,ann) = let
     open PPBackEnd
     fun addann ty s = "\\" ^ !texPrefix ^ ty ^ "{" ^ varmunge s ^ "}"
     val annotation = case ann of BV _ => addann "BoundVar"
                                | FV _ => addann "FreeVar"
                                | _ => (fn s => s)
-    val (s',sz) = smap overrides s
+    val (s',sz) = smap overrides (s,sz)
   in
     PP.add_stringsz pps (annotation s', sz)
   end
+
+  fun add_string overrides pps (s,sz) = PP.add_stringsz pps (smap overrides (s,sz))
+  fun add_xstring overrides pps {s,sz,ann} =
+    if isSome ann then ann_string overrides pps (s,sz,valOf ann)
+    else add_string overrides pps (s,sz)
 in
   fun emit_latex overrides =
     {add_break = PP.add_break,
-     add_string = (fn pps => fn s => PP.add_stringsz pps (smap overrides s)),
-     add_ann_string = ann_string overrides,
+     add_string = (fn pps => fn s => add_string overrides pps (s,NONE)),
+     add_xstring = add_xstring overrides,
      add_newline = PP.add_newline,
      begin_block = PP.begin_block,
      end_block = PP.end_block,

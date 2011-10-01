@@ -33,9 +33,10 @@ val color_list =
 fun test_terminal test_bg (terminal:t) =
 let
    val pp_out = Portable.stdOut_ppstream ();
-   val {add_string, add_ann_string, add_newline, add_break,
+   val {add_string, add_xstring, add_newline, add_break,
         begin_style, end_style, begin_block, end_block, ...} =
        with_ppstream terminal pp_out
+   fun add_ann_string (s,ann) = add_xstring {s=s,ann=SOME ann,sz=NONE}
 
    val fg_styles =
           ((" -            "^color_name_fw_spaces), [])::
@@ -143,7 +144,7 @@ val _ = test_terminal false (PPBackEnd.vt100_terminal);
 fun test_style_error (terminal:t) =
 let
    val pp_out = Portable.stdOut_ppstream ();
-   val {add_string, add_ann_string, add_newline, add_break,
+   val {add_string, add_xstring, add_newline, add_break,
         begin_style, end_style, begin_block, end_block, ...} =
        with_ppstream terminal pp_out
 in
