@@ -45,36 +45,36 @@ val LESS_THM =
 val parallel_add_sub_op1 = Q.prove(
   `!w. parallel_add_sub_op1 w =
          case w
-         of 0b01w -> Parallel_normal
-         || 0b10w -> Parallel_saturating
-         || 0b11w -> Parallel_halving
-         || _ -> FAIL parallel_add_sub_op1 ^(mk_var("can't decode",bool)) w`,
+         of 0b01w => Parallel_normal
+          | 0b10w => Parallel_saturating
+          | 0b11w => Parallel_halving
+          | _ => FAIL parallel_add_sub_op1 ^(mk_var("can't decode",bool)) w`,
   Cases THEN FULL_SIMP_TAC (srw_ss())
     [parallel_add_sub_op1_def, LESS_THM, combinTheory.FAIL_THM]);
 
 val parallel_add_sub_op2 = Q.prove(
   `!w. parallel_add_sub_op2 w =
          case w
-         of 0b000w -> Parallel_add_16
-         || 0b001w -> Parallel_add_sub_exchange
-         || 0b010w -> Parallel_sub_add_exchange
-         || 0b011w -> Parallel_sub_16
-         || 0b100w -> Parallel_add_8
-         || 0b111w -> Parallel_sub_8
-         || _ -> FAIL parallel_add_sub_op2 ^(mk_var("can't decode",bool)) w`,
+         of 0b000w => Parallel_add_16
+          | 0b001w => Parallel_add_sub_exchange
+          | 0b010w => Parallel_sub_add_exchange
+          | 0b011w => Parallel_sub_16
+          | 0b100w => Parallel_add_8
+          | 0b111w => Parallel_sub_8
+          | _ => FAIL parallel_add_sub_op2 ^(mk_var("can't decode",bool)) w`,
   Cases THEN FULL_SIMP_TAC (srw_ss())
     [parallel_add_sub_op2_def, LESS_THM, combinTheory.FAIL_THM]);
 
 val parallel_add_sub_thumb_op2 = Q.prove(
   `!w. parallel_add_sub_thumb_op2 w =
          case w
-         of 0b001w -> Parallel_add_16
-         || 0b010w -> Parallel_add_sub_exchange
-         || 0b110w -> Parallel_sub_add_exchange
-         || 0b101w -> Parallel_sub_16
-         || 0b000w -> Parallel_add_8
-         || 0b100w -> Parallel_sub_8
-         || _ -> FAIL parallel_add_sub_thumb_op2
+         of 0b001w => Parallel_add_16
+          | 0b010w => Parallel_add_sub_exchange
+          | 0b110w => Parallel_sub_add_exchange
+          | 0b101w => Parallel_sub_16
+          | 0b000w => Parallel_add_8
+          | 0b100w => Parallel_sub_8
+          | _ => FAIL parallel_add_sub_thumb_op2
                    ^(mk_var("can't decode",bool)) w`,
   Cases THEN FULL_SIMP_TAC (srw_ss())
     [parallel_add_sub_thumb_op2_def, LESS_THM, combinTheory.FAIL_THM]);
