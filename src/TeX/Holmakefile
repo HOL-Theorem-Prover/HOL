@@ -14,7 +14,10 @@ poly_MKMUNGE_DEP = mkmunge.o
 mosml_MKMUNGE_COMM = $(HOLMOSMLC) -o $@ $<
 poly_MKMUNGE_COMM = cc -o $@ $< $(POLY_LDFLAGS)
 
-$(TARGET) : mkmunge.exe
+mustbuild: selftest.exe $(EXE)
+.PHONY: mustbuild
+
+$(TARGET) : $(EXE)
 	$(CP) $< $@
 
 $(EXE): $($(ML_SYSNAME)_MKMUNGE_DEP)
@@ -52,5 +55,5 @@ holindex.grm.ui holindex.grm.uo: holindex.grm.sml holindex.grm-sig.uo holindexDa
 AssembleHolindexParser.uo: AssembleHolindexParser.sml holindex.grm.uo holindex.lex.uo holindexData.uo
 	$(HOLMOSMLC) -c -I $(MLYACCLIB) $(MLYACCLIB_UIS) holindex.grm.ui holindex.lex.ui $<
 
-
-
+selftest.exe: selftest.uo EmitTeX.uo
+	$(HOLMOSMLC) -o $@ $<
