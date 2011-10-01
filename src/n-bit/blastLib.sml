@@ -24,12 +24,6 @@ val _ = Feedback.register_btrace ("print blast counterexamples", blast_counter);
 
 val rhsc = boolSyntax.rhs o Thm.concl;
 
-fun dest_strip t = let
-  val (l,r) = boolSyntax.strip_comb t
-in
-  (fst (Term.dest_const l), r)
-end;
-
 val dim_of_word = fcpLib.index_to_num o wordsSyntax.dim_of;
 
 (* ------------------------------------------------------------------------
@@ -47,10 +41,10 @@ local
                      |> Thm.INST_TYPE [Type.alpha |-> Type.bool]
 in
   fun FCP_INDEX_CONV conv tm =
-    case dest_strip tm
-    of ("fcp_index", [w, i]) =>
-        (case Lib.total dest_strip w
-         of SOME ("FCP", [f]) =>
+    case boolSyntax.dest_strip_comb tm
+    of ("fcp$fcp_index", [w, i]) =>
+        (case Lib.total boolSyntax.dest_strip_comb w
+         of SOME ("fcp$FCP", [f]) =>
              let
                val ty = wordsSyntax.dim_of w
                val _ = Arbnum.< (numLib.dest_numeral i, fcpLib.index_to_num ty)
@@ -239,13 +233,14 @@ end;
    -------------------------------------------------------------------- *)
 
 local
-  fun dest_sum tm = case dest_strip tm
-                    of ("FCP", [f]) =>
-                      (case f |> Term.dest_abs |> snd |> dest_strip
-                       of ("BSUM", [i, x, y, c]) =>
+  fun dest_sum tm = case boolSyntax.dest_strip_comb tm
+                    of ("fcp$FCP", [f]) =>
+                      (case f |> Term.dest_abs |> snd
+                              |> boolSyntax.dest_strip_comb
+                       of ("blast$BSUM", [i, x, y, c]) =>
                            (false, (dim_of_word tm, x, y, c))
                         | _ => raise ERR "dest_sum" "")
-                     | ("BCARRY", [n, x, y, c]) =>
+                     | ("blast$BCARRY", [n, x, y, c]) =>
                           (true, (numLib.dest_numeral n, x, y, c))
                      | _ => raise ERR "dest_sum" ""
   val is_sum = Lib.can dest_sum
@@ -543,11 +538,14 @@ let
         [] => acc
       | tm::ts =>
           let
-            val (opp,args) = dest_strip tm handle HOL_ERR _ => ("", [])
+            val (opp,args) = boolSyntax.dest_strip_comb tm
+                             handle HOL_ERR _ => ("", [])
           in
-            if Lib.mem opp ["T","F","~","/\\","\\/","==>"] then
+            if Lib.mem opp ["bool$T","bool$F","bool$~",
+                            "bool$/\\","bool$\\/","min$==>"]
+            then
               non_prop_args acc (args @ ts)
-            else if Lib.mem opp ["=","COND"] andalso
+            else if Lib.mem opp ["min$=","bool$COND"] andalso
                     Lib.all (fn t => Term.type_of t = Type.bool) args
             then
               non_prop_args acc (args @ ts)

@@ -12,7 +12,7 @@ val version_string =
 
 val _ = if version_string = "2.01" then let
             val _ = print "\n\nUsing Basis 2002 update for Moscow ML 2.01\n"
-            val _ = app load ["CharVector", "Math"]
+            val _ = app load ["CharVector", "Math", "ListPair"]
             infix ++ val op++ = OS.Path.concat
           in
             use ("tools" ++ "Holmake" ++ "basis2002.sml")

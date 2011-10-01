@@ -9,7 +9,7 @@ struct
 infix |>
 fun (x |> f) = f x
 
-fun die s = (TextIO.output(TextIO.stdErr, s);
+fun die s = (TextIO.output(TextIO.stdErr, s^"\n");
              TextIO.flushOut TextIO.stdErr;
              OS.Process.exit OS.Process.failure)
 
@@ -71,7 +71,8 @@ fun filter_input instr = let
                   else phase1 (s::lines)
   fun phase2 (lines, dirlines, cnt) =
       case Option.map remove_nulls (TextIO.inputLine instr) of
-        NONE => (List.take(lines, lastlines), false)
+        NONE => (if length lines > lastlines then List.take(lines, lastlines)
+                 else lines, false)
       | SOME s => if s = "Hol built successfully.\n" then
                       (dirlines, true)
                   else let

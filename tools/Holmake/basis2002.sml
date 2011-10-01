@@ -1,3 +1,63 @@
+signature LIST_PAIR =
+sig
+  exception UnequalLengths
+  val zip   : 'a list * 'b list -> ('a * 'b) list
+  val zipEq : 'a list * 'b list -> ('a * 'b) list
+  val unzip : ('a * 'b) list -> 'a list * 'b list
+  val app   : ('a * 'b -> unit) -> 'a list * 'b list -> unit
+  val appEq : ('a * 'b -> unit) -> 'a list * 'b list -> unit
+  val map   : ('a * 'b -> 'c) -> 'a list * 'b list -> 'c list
+  val mapEq : ('a * 'b -> 'c) -> 'a list * 'b list -> 'c list
+  val foldl   : ('a * 'b * 'c -> 'c)
+                  -> 'c -> 'a list * 'b list -> 'c
+  val foldr   : ('a * 'b * 'c -> 'c)
+                  -> 'c -> 'a list * 'b list -> 'c
+  val foldlEq : ('a * 'b * 'c -> 'c)
+                  -> 'c -> 'a list * 'b list -> 'c
+  val foldrEq : ('a * 'b * 'c -> 'c)
+                  -> 'c -> 'a list * 'b list -> 'c
+  val all    : ('a * 'b -> bool) -> 'a list * 'b list -> bool
+  val exists : ('a * 'b -> bool) -> 'a list * 'b list -> bool
+  val allEq : ('a * 'b -> bool) -> 'a list * 'b list -> bool
+end
+
+structure ListPair :> LIST_PAIR =
+struct
+  open ListPair
+  exception UnequalLengths
+  fun zipEq (xs, ys) =
+    let fun h (x::xr) (y::yr) res = h xr yr ((x, y) :: res)
+          | h []      []      res = List.rev res
+          | h _       _       res = raise UnequalLengths
+    in h xs ys [] end
+
+  fun mapEq f (xs, ys) =
+    let fun h (x::xr) (y::yr) res = h xr yr (f(x, y) :: res)
+          | h []      []      res = List.rev res
+          | h _       _       res = raise UnequalLengths
+    in h xs ys [] end
+
+  fun appEq f (xs, ys) =
+    let fun h (x::xr) (y::yr) = (f (x, y); h xr yr)
+          | h []      []      = ()
+          | h _       _       = raise UnequalLengths
+    in h xs ys end
+
+  fun allEq p (xs, ys) =
+    let fun h (x::xr) (y::yr) = p(x, y) andalso h xr yr
+          | h []      []      = true
+          | h _       _       = false
+    in h xs ys end
+
+
+  fun foldlEq f e (xs, ys) =
+    let fun h e (x::xr) (y::yr) = h (f(x, y, e)) xr yr
+          | h e []      []      = e
+          | h e _       _       = raise UnequalLengths
+    in h e xs ys end
+
+  fun foldrEq f e (xs, ys) = foldlEq f e (List.rev xs, List.rev ys)
+end
 
 signature VECTOR =
 sig

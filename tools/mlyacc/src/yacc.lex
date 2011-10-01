@@ -70,11 +70,11 @@ tyvar="'"{idchars}*;
 qualid ={id}".";
 %%
 <INITIAL>"(*"	=> (Add yytext; YYBEGIN COMMENT; commentLevel := 1;
-		    continue() before YYBEGIN INITIAL);
+		    continue(); YYBEGIN INITIAL; continue());
 <A>"(*"		=> (YYBEGIN EMPTYCOMMENT; commentLevel := 1; continue());
 <CODE>"(*"	=> (Add yytext; YYBEGIN COMMENT; commentLevel := 1;
-		    continue() before YYBEGIN CODE);
-<INITIAL>[^%\n]+ => (Add yytext; continue());
+		    continue(); YYBEGIN CODE; continue());
+<INITIAL>[^(%\n]+ => (Add yytext; continue());
 <INITIAL>"%%"	 => (YYBEGIN A; HEADER (concat (rev (!text)),!lineno,!lineno));
 <INITIAL,CODE,COMMENT,F,EMPTYCOMMENT>\n  => (Add yytext; inc lineno; continue());
 <INITIAL>.	 => (Add yytext; continue());

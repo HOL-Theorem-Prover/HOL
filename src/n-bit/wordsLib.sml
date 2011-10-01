@@ -1130,20 +1130,6 @@ val WORD_EXTRACT_ss =
 
 (* ------------------------------------------------------------------------- *)
 
-fun full_dest_strip t =
-let val (l,r) = strip_comb t
-    val {Thy = thy, Name = name, ...} = Term.dest_thy_const l
-in
-  (thy, name, r)
-end;
-
-fun dest_strip t =
-let val (l,r) = strip_comb t in
-  (fst (dest_const l), r)
-end;
-
-(* ------------------------------------------------------------------------- *)
-
 local
   val reduce = rhs o concl o numLib.REDUCE_CONV;
 
@@ -1158,10 +1144,10 @@ local
   val MOD_DIMINDEX2  = REWRITE_RULE [dimword_def] MOD_DIMINDEX
 
   fun BITS_INTRO_CONV tm =
-   (case Lib.total full_dest_strip tm
-    of SOME ("arithmetic", "MOD", [m,n]) =>
-       (case Lib.total full_dest_strip m
-        of SOME ("arithmetic", "DIV", [p,q]) =>
+   (case Lib.total boolSyntax.dest_strip_comb tm
+    of SOME ("arithmetic$MOD", [m,n]) =>
+       (case Lib.total boolSyntax.dest_strip_comb m
+        of SOME ("arithmetic$DIV", [p,q]) =>
               let
                 val _ = not (numSyntax.is_numeral p) orelse
                         raise ERR "BITS_INTRO_CONV" ""
@@ -1185,9 +1171,9 @@ local
                     |> Drule.SPECL [h, m]
                     |> Conv.CONV_RULE (Conv.LHS_CONV numLib.REDUCE_CONV))
               end)
-   | SOME ("arithmetic", "DIV", [m,n]) =>
-       (case Lib.total full_dest_strip m
-        of SOME ("arithmetic", "MOD", [p,q]) =>
+   | SOME ("arithmetic$DIV", [m,n]) =>
+       (case Lib.total boolSyntax.dest_strip_comb m
+        of SOME ("arithmetic$MOD", [p,q]) =>
               let
                 val _ = not (numSyntax.is_numeral p) orelse
                         raise ERR "BITS_INTRO_CONV" ""
@@ -1245,8 +1231,8 @@ local
        wordsTheory.w2w_id])
 
   fun num_lt tm =
-    case Lib.total full_dest_strip tm
-    of SOME ("arithmetic", "MOD", [m,n]) =>
+    case Lib.total boolSyntax.dest_strip_comb tm
+    of SOME ("arithmetic$MOD", [m,n]) =>
         (case Lib.total numSyntax.dest_numeral n
          of SOME i =>
               if Arbnum.<(Arbnum.zero, i) then
@@ -1256,7 +1242,7 @@ local
               else
                 []
           | NONE => [])
-     | SOME ("bit", "BITS", [h,l,n]) =>
+     | SOME ("bit$BITS", [h,l,n]) =>
          if numSyntax.is_numeral h then
            if numSyntax.is_numeral l then
              [Conv.CONV_RULE (Conv.RAND_CONV numLib.REDUCE_CONV)
@@ -1266,16 +1252,16 @@ local
                (Drule.SPECL [h,l,n] BITSLT_THM2)]
          else
            []
-     | SOME ("words", "w2n", [w]) =>
+     | SOME ("words$w2n", [w]) =>
          if Lib.can fcpSyntax.dest_numeric_type (wordsSyntax.dim_of w) then
            [Conv.CONV_RULE (Conv.RAND_CONV SIZES_CONV)
              (Drule.ISPEC w wordsTheory.w2n_lt)]
          else
            []
-     | SOME ("arithmetic", "+", [a,b]) => num_lt a @ num_lt b
-     | SOME ("arithmetic", "-", [a,b]) => num_lt a @ num_lt b
-     | SOME ("arithmetic", "*", [a,b]) => num_lt a @ num_lt b
-     | SOME ("arithmetic", "DIV", [a,b]) => num_lt a
+     | SOME ("arithmetic$+", [a,b]) => num_lt a @ num_lt b
+     | SOME ("arithmetic$-", [a,b]) => num_lt a @ num_lt b
+     | SOME ("arithmetic$*", [a,b]) => num_lt a @ num_lt b
+     | SOME ("arithmetic$DIV", [a,b]) => num_lt a
      | _ => []
 
   fun LT_THMS_TAC tm =
@@ -1302,10 +1288,10 @@ local
     SRW_TAC [] [word_ls_n2w] THEN FULL_SIMP_TAC arith_ss [])
 
   fun get_intro_thm tm =
-        case Lib.total full_dest_strip tm
-        of SOME ("min", "=", [l,r])       => SOME (word_eq_imp_num_eq,l,r)
-         | SOME ("prim_rec", "<", [l,r])  => SOME (word_lt_imp_num_lt,l,r)
-         | SOME ("arithmetic", "<=", [l,r]) => SOME (word_ls_imp_num_ls,l,r)
+        case Lib.total boolSyntax.dest_strip_comb tm
+        of SOME ("min$=", [l,r])         => SOME (word_eq_imp_num_eq,l,r)
+         | SOME ("prim_rec$<", [l,r])    => SOME (word_lt_imp_num_lt,l,r)
+         | SOME ("arithmetic$<=", [l,r]) => SOME (word_ls_imp_num_ls,l,r)
          | _ => NONE
 
   val n2w_INTRO : int -> tactic =
@@ -1593,8 +1579,8 @@ local
           fun sub_bound x = mk_bounds_thm (wordsSyntax.mk_w2n x)
                               handle HOL_ERR _ => arb_thm
         in
-          case Lib.total dest_strip w
-          of SOME ("word_extract", args as [h,l,a]) => let
+          case Lib.total boolSyntax.dest_strip_comb w
+          of SOME ("words$word_extract", args as [h,l,a]) => let
                   val thm2 = WORD_EXTRACT_LT
                                |> Thm.INST_TYPE
                                    [alpha |-> word_type a, beta |-> word_type w]
@@ -1649,7 +1635,7 @@ local
                             thm3_order1 b3
                    | _ => raise ERR "mk_bounds_thm" "can't compute bound"
                 end
-           | SOME ("n2w", [n]) => let
+           | SOME ("words$n2w", [n]) => let
                   val thm2 = if is_known_word_size w then
                                word_n2w_le
                                  |> Thm.SPEC n
@@ -1667,7 +1653,7 @@ local
                         if Arbnum.<=(b1, Arbnum.plus1 b2) then thm1 else thm2
                    | _ => raise ERR "mk_bounds_thm" "can't compute bound"
                 end
-           | SOME ("word_add", [a,b]) => let
+           | SOME ("words$word_add", [a,b]) => let
                   val thm2 = sub_bound a
                   fun f th thm3 = MATCH_MP th (CONJ thm2 thm3)
                                     |> RAND_REDUCE_RULE
@@ -1728,7 +1714,7 @@ local
                         end
                    | _ => raise ERR "mk_bounds_thm" "can't compute bound"
                 end
-           | SOME ("word_mul", [a,b]) => let
+           | SOME ("words$word_mul", [a,b]) => let
                   val thm2 = sub_bound a
                 in
                   case bnd thm2
@@ -1768,7 +1754,7 @@ local
                        end
                    | NO_BOUND => default ()
                 end
-           | SOME ("word_lsl", args as [a,b]) =>
+           | SOME ("words$word_lsl", args as [a,b]) =>
                (case Lib.total numLib.dest_numeral b
                 of SOME v => let
                         val thm2 = sub_bound a
@@ -1792,7 +1778,7 @@ local
                          | _ => raise ERR "mk_bounds_thm" "can't compute bound"
                       end
                  | NONE => default ())
-           | SOME ("word_div", [a,b]) =>
+           | SOME ("words$word_div", [a,b]) =>
                (case Lib.total wordsSyntax.dest_n2w b
                 of SOME (n, ty) =>
                    (case (Lib.total numLib.dest_numeral n,
@@ -2213,29 +2199,29 @@ let open numSyntax
     val ty = word_type t
 in
   if Type.polymorphic ty then
-    case dest_strip t
-    of ("word_extract", [h,l,_]) =>
+    case boolSyntax.dest_strip_comb t
+    of ("words$word_extract", [h,l,_]) =>
           let val nh = dest_numeral h
               val nl = dest_numeral l
               val nt = Arbnum.- (Arbnum.plus1 nh, nl)
           in
             ty |-> fcpLib.index_type nt
           end
-     | ("word_concat", [a,b]) =>
+     | ("words$word_concat", [a,b]) =>
           let val na = fcpLib.index_to_num (word_type a)
               val nb = fcpLib.index_to_num (word_type b)
               val nt = Arbnum.+ (na, nb)
           in
             ty |-> fcpLib.index_type nt
           end
-     | ("word_replicate", [m,a]) =>
+     | ("words$word_replicate", [m,a]) =>
           let val nm = dest_numeral m
               val na = fcpLib.index_to_num (word_type a)
               val nt = Arbnum.* (nm, na)
           in
             ty |-> fcpLib.index_type nt
           end
-     | ("concat_word_list", [l]) =>
+     | ("words$concat_word_list", [l]) =>
           let val (ls,tyl) = listSyntax.dest_list l
               val nl = fcpLib.index_to_num (wordsSyntax.dest_word_type tyl)
               val nt = Arbnum.* (Arbnum.fromInt (length ls), nl)

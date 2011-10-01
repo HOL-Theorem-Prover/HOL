@@ -169,6 +169,7 @@ sig
   val strip_res_exists       : term -> (term * term) list * term
   val strip_fun              : hol_type -> hol_type list * hol_type
 
+  val dest_strip_comb        : term -> string * term list
 
   (* Connecting signature operations with grammar operations. *)
 
