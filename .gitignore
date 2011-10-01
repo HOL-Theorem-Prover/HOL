@@ -11,6 +11,7 @@
 *.grm-sig.sml
 *.grm.desc
 *.exe
+.DS_Store
 
 # LaTeX guff
 *.aux

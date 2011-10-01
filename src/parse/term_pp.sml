@@ -1815,11 +1815,16 @@ fun pp_term (G : grammar) TyG backend = let
                              pr_term split_on Top Top Top (decdepth depth) >>
                              add_break(1,0) >> add_string "of") >>
                            add_break (1,2) >>
-                           pr_list (do_split (Prec(0,"casebar")))
-                                   casebar
-                                   (butlast splits) >>
-                           casebar >>
-                           do_split (if parens then Top else rgrav) (last splits)))
+                           (if length splits > 1 then
+                              pr_list (do_split (Prec(0,"casebar")))
+                                      casebar
+                                      (butlast splits) >>
+                              casebar >>
+                              do_split (if parens then Top else rgrav)
+                                      (last splits)
+                            else
+                              do_split (if parens then Top else rgrav)
+                                       (hd splits))))
                    end handle CaseConversionFailed => fail)
                 | _ => fail
               else fail) |||

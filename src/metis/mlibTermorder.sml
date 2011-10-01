@@ -54,7 +54,11 @@ val uniform : string * int -> int = fn _ => 1;
 
 val arity : (string * int) * (string * int) -> order =
   fn ((f,m),(g,n)) =>
-  if m < n then LESS else if m > n then GREATER else String.compare (f,g);
+  if m < n then LESS else if m > n then GREATER else
+  let val p = String.size f
+      and q = String.size g
+  in if p < q then LESS else if p > q then GREATER else String.compare (f,g)
+  end;
 
 val defaults =
   {weight     = uniform,

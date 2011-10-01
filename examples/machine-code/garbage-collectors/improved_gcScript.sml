@@ -359,9 +359,9 @@ val move_def = Define `
   (move (H_DATA x,j,m) = (H_DATA x,j,m)) /\
   (move (H_ADDR a,j,m) =
      case m a of
-        H_REF i -> (H_ADDR i,j,m)
-     || H_BLOCK (xs,n,d) -> let m = (a =+ H_REF j) m in
-                            let m = (j =+ H_BLOCK (xs,n,d)) m in
+       H_REF i => (H_ADDR i,j,m)
+     | H_BLOCK (xs,n,d) => let m = (a =+ H_REF j) m in
+                           let m = (j =+ H_BLOCK (xs,n,d)) m in
                               (H_ADDR j,j + n + 1,m))`;
 
 val move_list_def = Define `

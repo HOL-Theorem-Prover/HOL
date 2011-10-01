@@ -35,27 +35,27 @@ val ptree_read_word_def = Define`
   ptree_read_word (prog:word8 ptree) (a:word32) : word32 M =
   let pc = w2n a in
    (case prog ' pc
-    of SOME b1 ->
+    of SOME b1 =>
        (case prog ' (pc + 1)
-        of SOME b2 ->
+        of SOME b2 =>
            (case prog ' (pc + 2)
-            of SOME b3 ->
+            of SOME b3 =>
                (case prog ' (pc + 3)
-                of SOME b4 -> constT (word32 [b1; b2; b3; b4])
-                || NONE -> errorT "couldn't fetch an instruction")
-            || NONE -> errorT "couldn't fetch an instruction")
-        || NONE -> errorT "couldn't fetch an instruction")
-    || NONE -> errorT "couldn't fetch an instruction")`;
+                of SOME b4 => constT (word32 [b1; b2; b3; b4])
+                 | NONE => errorT "couldn't fetch an instruction")
+             | NONE => errorT "couldn't fetch an instruction")
+         | NONE => errorT "couldn't fetch an instruction")
+     | NONE => errorT "couldn't fetch an instruction")`;
 
 val ptree_read_halfword_def = Define`
   ptree_read_halfword (prog:word8 ptree) (a:word32) : word16 M =
   let pc = w2n a in
     case prog ' pc
-    of SOME b1 ->
+    of SOME b1 =>
        (case prog ' (pc + 1)
-        of SOME b2 -> constT (word16 [b1; b2])
-        || NONE -> errorT "couldn't fetch an instruction")
-    || NONE -> errorT "couldn't fetch an instruction"`;
+        of SOME b2 => constT (word16 [b1; b2])
+         | NONE => errorT "couldn't fetch an instruction")
+     | NONE => errorT "couldn't fetch an instruction"`;
 
 val ptree_arm_next_def = zDefine
   `ptree_arm_next ii (x:string # Encoding # word4 # ARMinstruction)
@@ -66,8 +66,8 @@ val attempt_def = Define`
   attempt c f g =
   \s:arm_state.
       case f s
-      of Error e -> ValueState (c, e) s
-      || ValueState v s' -> g v s'`;
+      of Error e => ValueState (c, e) s
+       | ValueState v s' => g v s'`;
 
 val ptree_arm_loop_def = Define`
   ptree_arm_loop ii cycle prog t : (num # string) M =
@@ -86,8 +86,8 @@ val ptree_arm_loop_def = Define`
 val ptree_arm_run_def = Define`
   ptree_arm_run prog state t =
     case ptree_arm_loop <| proc := 0 |> 0 prog t state
-    of Error e -> (e, NONE)
-    || ValueState (c,v) s ->
+    of Error e => (e, NONE)
+     | ValueState (c,v) s =>
           ("at cycle " ++ num_to_dec_string c ++ ": " ++ v, SOME s)`;
 
 (* ------------------------------------------------------------------------ *)
@@ -101,8 +101,8 @@ val mk_arm_state_def = Define`
        event_register := (K T);
        interrupt_wait := (K F);
        memory := (\a. case patricia$PEEK mem (w2n a)
-                        of SOME d -> d
-                        || NONE -> md);
+                        of SOME d => d
+                         | NONE => md);
        accesses := [];
        information := <| arch := arch;
                          unaligned_support := T;

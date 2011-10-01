@@ -1201,9 +1201,9 @@ val _ =
 val RUN_BIND_def =
  Define
   `RUN_BIND m f = case m of
-                     TIMEOUT s -> TIMEOUT s
-                  || ERROR s   -> ERROR s
-                  || RESULT s  -> f s`;
+                    TIMEOUT s => TIMEOUT s
+                  | ERROR s   => ERROR s
+                  | RESULT s  => f s`;
 
 val _ = set_fixity ">>=" (Infixl 430);
 val _ = overload_on (">>=", ``RUN_BIND``);
@@ -1234,9 +1234,9 @@ val RUN_BIND_RUN_RETURN =
   ("RUN_BIND_RUN_RETURN",
    ``RUN_BIND_RUN_RETURN m f =
       case m of
-         TIMEOUT s -> TIMEOUT s
-      || ERROR s   -> ERROR s
-      || RESULT s  -> RESULT(f s)``,
+        TIMEOUT s => TIMEOUT s
+      | ERROR s   => ERROR s
+      | RESULT s  => RESULT(f s)``,
    RW_TAC std_ss [RUN_BIND_RUN_RETURN_def,RUN_BIND_def,RUN_RETURN_def]);
 
 (* Add to EVAL compset *)
@@ -1290,20 +1290,20 @@ val RUN_def =
    /\
    (RUN (SUC n) c s =
     case c of
-        Skip            -> RESULT s
-     || GenAssign v e   -> RESULT(Update v e s)
-     || Dispose v       -> RESULT(s \\ v)
-     || Seq c1 c2       -> RUN n c1 s >>= RUN n c2
-     || Cond b c1 c2    -> if beval b s
+       Skip            => RESULT s
+     | GenAssign v e   => RESULT(Update v e s)
+     | Dispose v       => RESULT(s \\ v)
+     | Seq c1 c2       => RUN n c1 s >>= RUN n c2
+     | Cond b c1 c2    => if beval b s
                             then RUN n c1 s
                             else RUN n c2 s
-     || AnWhile b R c   -> if beval b s
+     | AnWhile b R c   => if beval b s
                             then RUN n c s >>= RUN n (AnWhile b R c)
                             else RESULT s
-     || Local v c       -> if v IN FDOM s
+     | Local v c       => if v IN FDOM s
                             then RUN n c s >>= (RESULT o (\s'. s' |+ (v, (s ' v))))
                             else RUN n c s >>= (RESULT o (\s'. s' \\ v))
-     || AnProc P Q xs f -> RESULT(f s)
+     | AnProc P Q xs f => RESULT(f s)
    )`;
 
 (* Lemma needed for EVAL_RUN *)
@@ -1428,20 +1428,20 @@ val RUN =
        then TIMEOUT(s)
        else
         case c of
-            Skip            -> RESULT s
-         || GenAssign v e   -> RESULT(Update v e s)
-         || Dispose v       -> RESULT(s \\ v)
-         || Seq c1 c2       -> RUN (n-1) c1 s >>= RUN (n-1) c2
-         || Cond b c1 c2    -> if beval b s
+           Skip            => RESULT s
+         | GenAssign v e   => RESULT(Update v e s)
+         | Dispose v       => RESULT(s \\ v)
+         | Seq c1 c2       => RUN (n-1) c1 s >>= RUN (n-1) c2
+         | Cond b c1 c2    => if beval b s
                                 then RUN (n-1) c1 s
                                 else RUN (n-1) c2 s
-         || AnWhile b R c   -> if beval b s
+         | AnWhile b R c   => if beval b s
                                 then RUN (n-1) c s >>= RUN (n-1) (AnWhile b R c)
                                 else RESULT s
-         || Local v c       -> if v IN FDOM s
+         | Local v c       => if v IN FDOM s
                                 then RUN (n-1) c s >>= (RESULT o (\s'. s' |+ (v, (s ' v))))
                                 else RUN (n-1) c s >>=  (RESULT o (\s'. s' \\ v))
-         || AnProc P Q xs f -> RESULT(f s)``,
+         | AnProc P Q xs f => RESULT(f s)``,
    Cases_on `n`
     THEN RW_TAC arith_ss [RUN_def,RUN_BIND_def]);
 
@@ -1493,20 +1493,20 @@ val STEP1 =
         then (l, ERROR s)
         else
         case (HD l) of
-            Skip            -> (TL l, RESULT s)
-        ||  GenAssign v e   -> (TL l, RESULT(Update v e s))
-        ||  Dispose v       -> (TL l, RESULT(s \\ v))
-        ||  Seq c1 c2       -> (c1 :: c2 :: TL l, RESULT s)
-        ||  Cond b c1 c2    -> if beval b s
+           Skip            => (TL l, RESULT s)
+        |  GenAssign v e   => (TL l, RESULT(Update v e s))
+        |  Dispose v       => (TL l, RESULT(s \\ v))
+        |  Seq c1 c2       => (c1 :: c2 :: TL l, RESULT s)
+        |  Cond b c1 c2    => if beval b s
                                 then (c1 :: TL l, RESULT s)
                                 else (c2 :: TL l, RESULT s)
-        ||  AnWhile b R c  -> if beval b s
+        |  AnWhile b R c   => if beval b s
                                 then (c :: AnWhile b R c :: TL l, RESULT s)
                                 else (TL l, RESULT s)
-        ||  Local v c       -> if v IN FDOM s
+        |  Local v c       => if v IN FDOM s
                                 then (c :: GenAssign v (Exp(s ' v)) :: TL l, RESULT s)
                                 else (c :: Dispose v :: TL l, RESULT s)
-        ||  AnProc P Q xs f -> (TL l, RESULT(f s))``,
+        |  AnProc P Q xs f => (TL l, RESULT(f s))``,
      Induct
       THEN RW_TAC list_ss [STEP1_def]
       THEN Cases_on `h`
@@ -1660,9 +1660,9 @@ val TC_SMALL_EVAL_TRANS =
 val STEP_BIND_def =
  Define
   `STEP_BIND m f = case m of
-                       (l, TIMEOUT s) -> (l, TIMEOUT s)
-                    || (l, ERROR s)   -> (l, ERROR s)
-                    || (l, RESULT s)  -> f(l, s)`;
+                     (l, TIMEOUT s) => (l, TIMEOUT s)
+                   | (l, ERROR s)   => (l, ERROR s)
+                   | (l, RESULT s)  => f(l, s)`;
 
 val _ = overload_on (">>=", ``STEP_BIND``);
 
@@ -2195,9 +2195,9 @@ val ACC_SMALL_EVAL_THM =
 val ACC_STEP_BIND_def =
  Define
   `ACC_STEP_BIND m f = case m of
-                       ((l, TIMEOUT s), p) -> ((l, TIMEOUT s), p)
-                    || ((l, ERROR s), p)   -> ((l, ERROR s), p)
-                    || ((l, RESULT s), p)  -> f((l, s), p)`;
+                         ((l, TIMEOUT s), p) => ((l, TIMEOUT s), p)
+                       | ((l, ERROR s), p)   => ((l, ERROR s), p)
+                       | ((l, RESULT s), p)  => f((l, s), p)`;
 
 val _ = overload_on (">>=", ``ACC_STEP_BIND``);
 
@@ -2915,8 +2915,8 @@ val STRAIGHT_RUN_CONT =
 val SOME_BIND_def =
  Define
   `SOME_BIND m f = case m of
-                     SOME s -> f s
-                  || NONE   -> NONE`;
+                     SOME s => f s
+                   | NONE   => NONE`;
 
 val _ = overload_on (">>=", ``SOME_BIND``);
 
@@ -2940,8 +2940,8 @@ val SOME_FUNPOW_def =
    /\
    (SOME_FUNPOW g (SUC n) x =
      case g x of
-        SOME y -> SOME_FUNPOW g n y
-     || NONE   -> NONE)`;
+       SOME y => SOME_FUNPOW g n y
+     | NONE   => NONE)`;
 
 val SOME_FUNPOW =
  store_thm
