@@ -16,7 +16,12 @@ type reader =
                  {rep_abs:thm, abs_rep:thm}
 , define_const : thy_const -> term -> thm
 , axiom        : thm Net.net -> (term list * term) -> thm
+, const_name   : otname -> thy_const
+, tyop_name    : otname -> thy_tyop
 }
+
+fun const_name_in_map n = Map.find(const_from_ot_map(),n)
+fun tyop_name_in_map n = Map.find(tyop_from_ot_map(),n)
 
 fun st_(st,{stack,dict,thms,...}) = {stack=st,dict=dict,thms=thms}
 fun push (ob,st) = st_(ob::(#stack st),st)
@@ -25,14 +30,15 @@ local open Substring in
   val trimr  = fn s => string(trimr 1 (full s))
 end
 
-fun raw_read_article {tyop_from_ot,const_from_ot} input {define_tyop,define_const,axiom} = let
+fun raw_read_article input
+  {const_name,tyop_name,define_tyop,define_const,axiom} = let
   val ERR = ERR "read_article"
   fun unOTermls c = List.map (fn OTerm t => t | _ => raise ERR (c^" failed to pop a list of terms"))
   fun unOTypels c = List.map (fn OType t => t | _ => raise ERR (c^" failed to pop a list of types"))
-  fun ot_to_const c s = Map.find(const_from_ot,string_to_otname s)
-  handle Map.NotFound => raise ERR (c^": no map from "^s^" to a constant")
-  fun ot_to_tyop  c s = Map.find(tyop_from_ot ,string_to_otname s)
-  handle Map.NotFound => raise ERR (c^": no map from "^s^" to a type operator")
+  fun ot_to_const c s = const_name (string_to_otname s)
+  handle _ => raise ERR (c^": no map from "^s^" to a constant")
+  fun ot_to_tyop  c s = tyop_name (string_to_otname s)
+  handle _ => raise ERR (c^": no map from "^s^" to a type operator")
   val mk_vartype = mk_vartype o tyvar_from_ot o string_to_otname
   fun f "absTerm"(st as {stack=OTerm b::OVar v::os,...}) = st_(OTerm(mk_abs(v,b))::os,st)
     | f "absThm" (st as {stack=OThm th::OVar v::os,...}) = (st_(OThm(ABS v th)::os,st)
@@ -122,9 +128,5 @@ fun raw_read_article {tyop_from_ot,const_from_ot} input {define_tyop,define_cons
     in loop {stack=stack,dict=dict,thms=thms,line_num=line_num+1} end
 in #thms (loop {stack=[],dict=Map.mkDict(Int.compare),thms=Net.empty,line_num=1}) end
 
-fun read_article s r =
-  raw_read_article
-    {tyop_from_ot=tyop_from_ot_map(),
-     const_from_ot=const_from_ot_map()}
-    (TextIO.openIn s) r
+fun read_article s r = raw_read_article (TextIO.openIn s) r
 end

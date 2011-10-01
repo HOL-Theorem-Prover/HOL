@@ -2,13 +2,16 @@ signature Opentheory = sig
 type term = Term.term type hol_type = Type.hol_type type thm = Thm.thm
 type thy_tyop  = OpenTheoryMap.thy_tyop
 type thy_const = OpenTheoryMap.thy_const
+type otname    = OpenTheoryMap.otname
 
 (* record of data an article reader must provide: *)
 type reader = {
   define_tyop  : {name:thy_tyop, ax:thm, args:hol_type list, rep:thy_const, abs:thy_const} ->
                  {rep_abs:thm, abs_rep:thm},
   define_const : thy_const -> term -> thm,
-  axiom        : thm Net.net -> (term list * term) -> thm}
+  axiom        : thm Net.net -> (term list * term) -> thm,
+  const_name   : otname -> thy_const,
+  tyop_name    : otname -> thy_tyop}
 
 (*
 [define_tyop r] will be called when the article wants to define a type. [r]
@@ -28,12 +31,13 @@ constant with name [name].
 assumption or an axiom. [thms] is the collection of theorems the article has
 already proved, represented by a conclusion-indexed net. The call must return a
 theorem h |- c.
-*)
 
-type 'a to_ot  = 'a OpenTheoryMap.to_ot
-type 'a from_ot= 'a OpenTheoryMap.from_ot
-val raw_read_article : {tyop_from_ot:thy_tyop from_ot,
-                        const_from_ot:thy_const from_ot}
-           -> TextIO.instream -> reader -> thm Net.net
+[const_name n] and [tyop_name n] will be called to translate OpenTheory names
+to HOL4 names. The following functions can be used to simply look the names up in the global OpenTheory map.
+*)
+val const_name_in_map : otname -> thy_const
+val tyop_name_in_map  : otname -> thy_tyop
+
+val raw_read_article : TextIO.instream -> reader -> thm Net.net
 val read_article     : string -> reader -> thm Net.net
 end
