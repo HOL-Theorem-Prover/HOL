@@ -20,7 +20,8 @@ end
 val _ = app tpp ["\\(x,y). x /\\ y",
                  "\\(x,y,z). x /\\ y /\\ z",
                  "\\((x,y),z). x /\\ y /\\ z",
-                 "(\\(x,y,z). x /\\ y /\\ z) p"]
+                 "(\\(x,y,z). x /\\ y /\\ z) p",
+                 "case x of (y,z) => y /\\ z"]
 
 (* check LET_INTRO *)
 
