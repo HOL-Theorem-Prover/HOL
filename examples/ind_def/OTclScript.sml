@@ -16,10 +16,7 @@ fun ML_name "#" = "APP"
 
 val reader = {
   const_name=fn n as (ns,Name) => case ns of
-    ["cl"] => {Thy="OTcl",
-      Name=if String.isSubstring "ind_type" Name
-           then let open Substring in "junk"^(string (taker Char.isDigit (full Name))) end
-           else Name}
+    ["cl"] => {Thy="OTcl",Name=Name}
   | ["cl","cl"] => {Thy="OTcl",Name="cl."^Name}
   | _ => const_name_in_map n,
   tyop_name=fn n as (ns,Tyop) => case ns of
@@ -32,7 +29,6 @@ val reader = {
     val th    = new_type_definition(Tyop,EXISTS(mk_exists(v,mk_comb(P,v)),t) ax)
     val bij   = define_new_type_bijections {name=Tyop^"_bij",ABS=abs,REP=rep,tyax=th}
     val [ar,ra] = CONJUNCTS bij
-    val _ = Feedback.HOL_MESG("Defined tyop "^Tyop)
     in {rep_abs=SPEC_ALL ra,abs_rep=SPEC_ALL ar} end
                | _ => raise Fail "define_tyop",
 
@@ -51,5 +47,10 @@ val reader = {
   in a end
 }
 val thms = read_article file reader
-val _ = save_thm("exports",LIST_CONJ(Net.listItems thms))
+val exports = LIST_CONJ(Net.listItems thms)
+val _ = save_thm("exports",exports)
+val tm = concl exports
+val _ = app (fn c => if can (find_term (equal c)) tm then ()
+                     else delete_const (fst (dest_const c)))
+        (constants "-")
 val _ = export_theory ()
