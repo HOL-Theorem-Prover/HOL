@@ -718,21 +718,13 @@ in th end
 
 fun mk_path name = OS.Path.concat(OS.FileSys.getDir(),OS.Path.joinBaseExt{base=name,ext=SOME"art"})
 
-val defn_thms = ref []
-fun add_defn th = defn_thms := th :: !defn_thms
-
-fun log_definitions() = (
-  app log_thm (rev (!defn_thms));
-  defn_thms := [])
-
 fun start_logging() =
   case !log_state of
     Not_logging => let
       val name = Theory.current_theory()
       val path = mk_path name
       val file = TextIO.openOut path
-      val _    = Thm.set_definition_callback add_defn
-      val _    = defn_thms := []
+      val _    = Thm.set_definition_callback log_thm
     in log_state := Active_logging file end
   | Active_logging _ => ()
 
@@ -742,7 +734,6 @@ fun stop_logging() =
       val _ = log_clear ()
       val _ = TextIO.closeOut h
       val _ = Thm.clear_definition_callback()
-      val _ = defn_thms := []
     in log_state := Not_logging end
   | Not_logging => ()
 
