@@ -74,6 +74,7 @@ val _ = OpenTheory_tyop_name{tyop={Thy="list",Tyop="list"},name=(ns,"list")}
 val _ = OpenTheory_const_name{const={Thy="list",Name="NIL"},name=(ns,"[]")}
 val _ = OpenTheory_const_name{const={Thy="list",Name="CONS"},name=(ns,"::")}
 val _ = OpenTheory_const_name{const={Thy="list",Name="LENGTH"},name=(ns,"length")}
+val _ = OpenTheory_const_name{const={Thy="list",Name="APPEND"},name=(ns,"@")}
 end
 
 (*---------------------------------------------------------------------------*)

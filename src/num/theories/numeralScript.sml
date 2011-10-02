@@ -77,6 +77,13 @@ val iZ = new_definition("iZ", ``iZ (x:num) = x``);
 
 val iiSUC = new_definition("iiSUC", ``iiSUC n = SUC (SUC n)``);
 
+local open OpenTheoryMap in
+val _ = OpenTheory_const_name
+  {const={Thy="numeral",Name="iZ"},name=(["Unwanted"],"id")}
+val _ = OpenTheory_const_name
+  {const={Thy="numeral",Name="iiSUC"},name=(["HOL4","Numeral"],"iiSUC")}
+end
+
 val numeral_distrib = store_thm(
   "numeral_distrib", Term
   `(!n. 0 + n = n) /\ (!n. n + 0 = n) /\

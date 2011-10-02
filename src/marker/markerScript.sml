@@ -86,6 +86,7 @@ val unint_def = new_definition(
    ---------------------------------------------------------------------- *)
 
 val Abbrev_def = new_definition("Abbrev_def", ``Abbrev (x:bool) = x``)
+val _ = OpenTheoryMap.OpenTheory_const_name{const={Thy="marker",Name="Abbrev"},name=(["Unwanted"],"id")}
 
 
 (* ----------------------------------------------------------------------
@@ -102,6 +103,7 @@ val IfCases_def = new_definition("IfCases_def", ``IfCases = T``)
 
 val AC_DEF = new_definition("AC_DEF", ``AC b1 b2 = b1 /\ b2``);
 val Cong_def = new_definition("Cong_def", ``Cong (x:bool) = x``);
+val _ = OpenTheoryMap.OpenTheory_const_name{const={Thy="marker",Name="Cong"},name=(["Unwanted"],"id")}
 
 
 (*---------------------------------------------------------------------------*)

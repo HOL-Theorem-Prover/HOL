@@ -21,7 +21,17 @@ struct
 
 open HolKernel boolLib Parse
      Prim_rec simpLib boolSimps metisLib BasicProvers;
-open OpenTheoryMap
+
+local open OpenTheoryMap
+  val ns = ["Number","Natural"]
+  val nsnum = ["Number","Numeral"]
+in
+  fun ot0 x y = OpenTheory_const_name{const={Thy="arithmetic",Name=x},name=(ns,y)}
+  fun ot x = ot0 x x
+  fun otnum0 x y = OpenTheory_const_name{const={Thy="arithmetic",Name=x},name=(nsnum,y)}
+  fun otnum x = otnum0 x x
+  fun otunwanted x = OpenTheory_const_name{const={Thy="arithmetic",Name=x},name=(["Unwanted"],"id")}
+end
 
 val _ = new_theory "arithmetic";
 
@@ -62,8 +72,7 @@ val ADD = new_recursive_definition
 
 val _ = set_fixity "+" (Infixl 500);
 
-val _ = OpenTheory_const_name
-  {const={Thy="arithmetic",Name="+"},name=(["Number","Natural"],"+")}
+val _ = ot "+"
 
 (*---------------------------------------------------------------------------*
  * Define NUMERAL, a tag put on numeric literals, and the basic constructors *
@@ -89,10 +98,9 @@ val _ = new_definition(
   GrammarSpecials.nat_elim_term,
   --`^(mk_var(GrammarSpecials.nat_elim_term, Type`:num->num`)) n = n`--);
 
-val _ = OpenTheory_const_name
-  {const={Thy="arithmetic",Name="NUMERAL"},name=(["Unwanted"],"id")}
-val _ = OpenTheory_const_name
-  {const={Thy="arithmetic",Name="BIT1"},name=(["Number","Numeral"],"bit1")}
+val _ = otunwanted "NUMERAL"
+val _ = otnum0 "BIT1" "bit1"
+val _ = otnum0 "BIT2" "bit2"
 
 (*---------------------------------------------------------------------------*
  * After this call, numerals parse into `NUMERAL( ... )`                     *
@@ -108,6 +116,7 @@ val SUB = new_recursive_definition
     rec_axiom = num_Axiom,
     def = --`(0 - m = 0) /\
              (SUC m - n = if m < n then 0 else SUC(m - n))`--};
+val _ = ot "-"
 
 (* Also add concrete syntax for unary negation so that future numeric types
    can use it.  We can't do anything useful with it for the natural numbers
@@ -141,6 +150,7 @@ val MULT = new_recursive_definition
     def = --`(0 * n = 0) /\
              (SUC m * n = (m * n) + n)`--};
 val _ = TeX_notation {hol = "*", TeX = ("\\HOLTokenProd{}", 1)}
+val _ = ot "*"
 
 val EXP = new_recursive_definition
    {name = "EXP",
@@ -148,6 +158,7 @@ val EXP = new_recursive_definition
     def = --`($EXP m 0 = 1) /\
              ($EXP m (SUC n) = m * ($EXP m n))`--};
 
+val _ = ot0 "EXP" "exp"
 val _ = set_fixity "EXP" (Infixr 700);
 val _ = add_infix("**", 700, HOLgrammars.RIGHT);
 val _ = overload_on ("**", Term`$EXP`);
@@ -171,12 +182,14 @@ val _ = overload_on (UnicodeChars.sup_3, ``\x. x ** 3``)
 val GREATER_DEF = new_definition("GREATER_DEF", ``$> m n = n < m``)
 val _ = set_fixity ">" (Infix(NONASSOC, 450))
 val _ = TeX_notation {hol = ">", TeX = ("\\HOLTokenGt{}", 1)}
+val _ = ot ">"
 
 val LESS_OR_EQ = new_definition ("LESS_OR_EQ", ``$<= m n = m < n \/ (m = n)``)
 val _ = set_fixity "<=" (Infix(NONASSOC, 450))
 val _ = Unicode.unicode_version { u = Unicode.UChar.leq, tmnm = "<="}
 val _ = TeX_notation {hol = Unicode.UChar.leq, TeX = ("\\HOLTokenLeq{}", 1)}
 val _ = TeX_notation {hol = "<=", TeX = ("\\HOLTokenLeq{}", 1)}
+val _ = ot "<="
 
 val GREATER_OR_EQ =
     new_definition("GREATER_OR_EQ", ``$>= m n = m > n \/ (m = n)``)
@@ -184,18 +197,21 @@ val _ = set_fixity ">=" (Infix(NONASSOC, 450))
 val _ = Unicode.unicode_version { u = Unicode.UChar.geq, tmnm = ">="};
 val _ = TeX_notation {hol = ">=", TeX = ("\\HOLTokenGeq{}", 1)}
 val _ = TeX_notation {hol = Unicode.UChar.geq, TeX = ("\\HOLTokenGeq{}", 1)}
+val _ = ot ">="
 
 val EVEN = new_recursive_definition
    {name = "EVEN",
     rec_axiom = num_Axiom,
     def = --`(EVEN 0 = T) /\
              (EVEN (SUC n) = ~EVEN n)`--};
+val _ = ot0 "EVEN" "even"
 
 val ODD = new_recursive_definition
    {name = "ODD",
     rec_axiom = num_Axiom,
     def = --`(ODD 0 = F) /\
              (ODD (SUC n) = ~ODD n)`--};
+val _ = ot0 "ODD" "odd"
 
 val num_case_def = new_recursive_definition
    {name = "num_case_def",

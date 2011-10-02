@@ -266,6 +266,7 @@ val _ = (add_infix ("IN", 425, Parse.NONASSOC); add_const "IN");
 val _ = unicode_version {u = UChar.setelementof, tmnm = "IN"};
 val _ = TeX_notation {hol = "IN", TeX = ("\\HOLTokenIn{}",1)}
 val _ = TeX_notation {hol = UChar.setelementof, TeX = ("\\HOLTokenIn{}",1)}
+val _ = OpenTheory_const_name {const={Thy="bool",Name="IN"},name=(["Set"],"in")}
 
 val RES_FORALL_DEF =
  Definition.new_definition
@@ -304,7 +305,7 @@ val BOUNDED_DEF =
   Definition.new_definition
     ("BOUNDED_DEF",
      Term `BOUNDED = \(v:bool). T`);
-
+val _ = OpenTheory_const_name {const={Thy="bool",Name="BOUNDED"},name=(["HOL4"],"bounded")}
 
 (*---------------------------------------------------------------------------*)
 (* Support for detecting datatypes in theory files                           *)
