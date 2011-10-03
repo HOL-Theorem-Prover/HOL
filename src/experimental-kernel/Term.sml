@@ -1248,7 +1248,7 @@ end (* local *)
 
 local
   exception NeedToRename of term
-  structure Map = struct open Binarymap (*Redblackmap*) end
+  structure Map = struct open Redblackmap end
   val empty_ctxt = Map.mkDict compare
   fun type_vars ty = Type.type_vars_set raw_empty_tyset raw_empty_tyset [ty]
   fun inst1 theta ctxt t =
