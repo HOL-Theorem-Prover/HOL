@@ -1,5 +1,5 @@
 EXTRA_CLEANS = selftest.exe
-BOOLLIB = $(dprot $(HOLDIR)/src/bool/boolLib.ui)
+BOOLLIB = $(dprot $(HOLDIR)/src/1/boolLib.ui)
 NUMTHY = $(dprot $(HOLDIR)/src/num/theories/numeralTheory.uo)
 
 selftest.exe : selftest.uo numSimps.uo
