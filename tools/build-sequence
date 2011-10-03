@@ -40,6 +40,7 @@ src/prekernel
 src/postkernel
 # these three directories are required to even run hol.bare.unquote
 src/parse
+src/bool
 src/1
 src/proofman
 [poly]bin/hol.bare
