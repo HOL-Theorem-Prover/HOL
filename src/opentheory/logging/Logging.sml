@@ -320,7 +320,6 @@ val (log_term, log_thm, log_clear,
     in UNDISCH (UNDISCH th3) end
     val NOT_ELIM_pth = CONV_RULE (RAND_CONV BETA_CONV) (AP_THM NOT_DEF P)
     val NOT_INTRO_pth = SYM NOT_ELIM_pth
-    val CCONTR_pth = SPEC P (EQ_MP F_DEF (ASSUME F))
     val SEL_CONV = RATOR_CONV (REWR_CONV EXISTS_THM) THENC BETA_CONV
     val SEL_RULE = CONV_RULE SEL_CONV
     fun specify c (th,defs) = let
@@ -641,7 +640,15 @@ val (log_term, log_thm, log_clear,
       val _ = log_thm (EQ_MP (INST [P|->rand(concl th)] NOT_ELIM_pth) th)
       in () end
     | CCONTR_prf (tm,th) => let
-      val _ = log_thm (proveHyp th (INST [P|->tm] CCONTR_pth))
+      open boolTheory
+      val th1 = RIGHT_BETA(AP_THM NOT_DEF tm)
+      val tmF = ASSUME(mk_eq(tm,F))
+      val th2 = EQT_ELIM (ASSUME(mk_eq(tm,T)))
+      val th3 = SUBST [P|->th1] (mk_imp(P,F)) (DISCH (mk_neg tm) th)
+      val th4 = SUBST [P|->(tmF)] (mk_imp(mk_imp(P,F),F)) th3
+      val th5 = MP th4 (SPEC F FALSITY)
+      val th6 = EQ_MP (SYM(tmF)) th5
+      val _ = log_thm (DISJ_CASES (SPEC tm BOOL_CASES_AX) th2 th6)
       in () end
     | Beta_prf th => log_thm (RIGHT_BETA th)
     | Def_spec_prf (cs,th) => let
