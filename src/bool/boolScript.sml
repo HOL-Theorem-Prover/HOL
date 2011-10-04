@@ -259,6 +259,7 @@ val NOT_DEF =
    ("NOT_DEF",        Term `~ = \t. t ==> F`);
 
 val _ = add_const "~";
+val _ = OpenTheory_const_name {const={Thy="bool",Name="~"},name="Data.Bool.~"}
 
 val EXISTS_UNIQUE_DEF =
 Definition.new_definition
@@ -270,6 +271,7 @@ val _ = (set_fixity "?!" Binder; add_const "?!")
 val _ = unicode_version { u = UChar.exists ^ "!", tmnm = "?!"};
 val _ = TeX_notation {hol = "?!", TeX = ("\\HOLTokenUnique{}",2)}
 val _ = TeX_notation {hol = UChar.exists ^ "!", TeX = ("\\HOLTokenUnique{}",2)}
+val _ = OpenTheory_const_name {const={Thy="bool",Name="?!"},name="Data.Bool.?!"}
 
 (* HOL-Omega type universal and existential quantification: *)
 
@@ -328,6 +330,7 @@ val LET_DEF =
    ("LET_DEF",        Term `LET = \(f:'a->'b) x. f x`);
 
 val _ = add_const "LET";
+val _ = OpenTheory_const_name {const={Thy="bool",Name="LET"},name="Data.Bool.let"}
 
 
 val COND_DEF =
@@ -336,6 +339,7 @@ val COND_DEF =
                                       @x:'a. ((t=T) ==> (x=t1)) /\
                                              ((t=F) ==> (x=t2))`);
 val _ = add_const "COND";
+val _ = OpenTheory_const_name {const={Thy="bool",Name="COND"},name="Data.Bool.cond"}
 
 val ONE_ONE_DEF =
  Definition.new_definition

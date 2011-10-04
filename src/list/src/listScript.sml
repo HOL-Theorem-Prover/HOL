@@ -1780,6 +1780,12 @@ val SET_TO_LIST_IND = save_thm("SET_TO_LIST_IND",SET_TO_LIST_IND);
             Some consequences
  ---------------------------------------------------------------------------*)
 
+val SET_TO_LIST_EMPTY = store_thm(
+  "SET_TO_LIST_EMPTY",
+  ``SET_TO_LIST {} = []``,
+  SRW_TAC [][SET_TO_LIST_THM])
+val _ = export_rewrites ["SET_TO_LIST_EMPTY"]
+
 val SET_TO_LIST_INV = Q.store_thm("SET_TO_LIST_INV",
 `!s. FINITE s ==> (LIST_TO_SET(SET_TO_LIST s) = s)`,
  Induction.recInduct SET_TO_LIST_IND

@@ -167,18 +167,6 @@ struct
 (*      not suitable for 't'.                                                *)
 (* ------------------------------------------------------------------------- *)
 
-  local open Tactic Tactical in
-    val REMOVE_ORIG = Q.prove(
-      `(!x:bool. (x = M) ==> P x) ==> (?x. P x)`,
-      DISCH_TAC THEN Q.EXISTS_TAC `M` THEN
-      POP_ASSUM MATCH_MP_TAC THEN REFL_TAC)
-
-    val REMOVE_EXT = Q.prove(
-      `(!x:bool. (x = M) ==> P) ==> P`,
-      DISCH_TAC THEN POP_ASSUM MATCH_MP_TAC
-      THEN Q.EXISTS_TAC `M` THEN REFL_TAC)
-  end
-
   local open Term Redblackset in
     (* h is the hypothesis defining an existential variable.
          for original variables, this is (v = e) for some extension variable e.
@@ -210,31 +198,21 @@ struct
 
     val (var_to_index, index_to_var) = let
       open String Int Option
-      val s = !QDimacs.var_prefix
+      val s = "v"  (*TODO*)
       fun num_to_var n = mk_var(s^(toString n),bool)
+      (* in this case we use the inverse of dict to
+         map indexes to variables, but since dict only
+         binds original variables, we update the inverse map
+         on indexes of extension variables as necessary,
+         (using num_to_var for extensions) *)
+      fun invert_dict d =
+        foldl (fn(v,n,d)=>insert(d,n,v)) (mkDict compare) d
+      val tcid = ref (invert_dict dict)
+      fun update (n,v) = (tcid := insert(!tcid,n,v); v)
     in
-      case dict of
-        NONE => let
-          val z = size(s)
-        in
-          (fn v => valOf(fromString(extract(fst(dest_var v),z,NONE))),
-           num_to_var)
-        end
-      | SOME dict => let
-          (* in this case we use the inverse of dict to
-             map indexes to variables, but since dict only
-             binds original variables, we update the inverse map
-             on indexes of extension variables as necessary,
-             (using num_to_var for extensions) *)
-          fun invert_dict d =
-            foldl (fn(v,n,d)=>insert(d,n,v)) (mkDict compare) d
-          val tcid = ref (invert_dict dict)
-          fun update (n,v) = (tcid := insert(!tcid,n,v); v)
-        in
-          (curry find dict,
-           fn n => find (!tcid,n)
-             handle NotFound => update (n,num_to_var n))
-        end
+      (curry find dict,
+       fn n => find (!tcid,n)
+         handle NotFound => update (n,num_to_var n))
     end
 
     (* Traverse the prefix of the term and
@@ -274,7 +252,7 @@ struct
        (v1 = e1) ==> (v2 = e2) ==> ... ==> mat *)
     fun foldthis (Forall _,t) = t
       | foldthis (Exists {h,...},t) = mk_imp(h,t)
-    val mat = List.foldl foldthis mat vars
+    val mat = Profile.profile "mk_imp" (List.foldl foldthis mat) vars
 
     (* extension_to_term calculates a term corresponding
          to the definition of an extension variable,
@@ -313,12 +291,6 @@ struct
         val v = index_to_var index
         val v = if l < 0 then mk_neg v else v
       in vk (v,s) end end
-      fun non_replacing_lit (l,s) k = let
-        val index = Int.abs l
-        val s = add(s,index)
-        val v = index_to_var index
-        val v = if l < 0 then mk_neg v else v
-      in k (v,s) end
       exception False
       fun afold (l,(t,s)) = lit (l,s)
         (fn true=>(t,s)|false=>raise False)
@@ -360,27 +332,41 @@ struct
       val h = mk_eq(v,tm)
       val var = Exists {h=h,lhs=lhs,rhs=rhs,pos=NONE}
     in (mk_imp(h,t),var::vars) end
-    val (mat,vars) = foldl foldthis (mat,vars) exts
+    val (mat,vars) = Profile.profile "mat_vars" (foldl foldthis (mat,vars)) exts
 
-    val thm = HolSatLib.SAT_PROVE mat
+    val thm = Profile.profile "SAT_PROVE" HolSatLib.SAT_PROVE mat
 
-    val vars = Lib.topsort R vars
+    val vars = Profile.profile "topsort" (Lib.topsort R) vars
 
     (* Discharge the hypotheses of the proved theorem
        in the right order to recover the original term
        as its conclusion.
        This order is calculated in the topsort above.
        Specifically, generalize universal variables,
-       and use the REMOVE_ theorems for existential/extension variables *)
-    fun foldthis ((Forall {v,...}),th) = GEN v th
-      | foldthis ((Exists {h,pos,...}),th) =
-        HO_MATCH_MP (if Option.isSome pos then REMOVE_ORIG else REMOVE_EXT)
-          (GEN (fst(dest_eq h)) (DISCH h th))
-    val thm = DISCH_ALL (List.foldl foldthis (UNDISCH_ALL thm) vars)
-    val _ = t = concl thm orelse raise ERR "check" "proved wrong theorem"
-  in
-    thm
-  end
+       use EXISTS on existential variables, and
+       use INST, REFL, and PROVE_HYP to remove the hypotheses *)
+    fun foldthis ((Forall {v,...}),th) = Profile.profile "Forall" (GEN v) th
+      | foldthis ((Exists {h,pos,...}),th) = Profile.profile "Exists" (fn () => let
+        val (v,w) = dest_eq h
+        val th = if Option.isSome pos then EXISTS (mk_exists(v,concl th),v) th else th
+        val th = INST [v |-> w] th
+        val th = PROVE_HYP (REFL w) th
+      in th end) ()
+    val thm = Profile.profile "DISCH_ALL" DISCH_ALL (List.foldl foldthis (Profile.profile "UNDISCH_ALL" UNDISCH_ALL thm) vars)
+
+      (* sanity checks *)
+      val _ = if !QbfTrace.trace < 1 orelse HOLset.isEmpty (Thm.hypset thm) then
+          ()
+        else
+          Feedback.HOL_WARNING "QbfCertificate" "check" "final theorem has hyps"
+      val _ = if !QbfTrace.trace < 1 orelse Term.aconv (Thm.concl thm) t then
+          ()
+        else
+          Feedback.HOL_WARNING "QbfCertificate" "check"
+            "final theorem proves a different term"
+    in
+      thm
+    end
 (* ------------------------------------------------------------------------- *)
     | check t _ (INVALID (dict, cindex)) =
     let
@@ -455,7 +441,8 @@ struct
           ()
         else
           Feedback.HOL_WARNING "QbfCertificate" "check" "final theorem has hyps"
-      val _ = if !QbfTrace.trace < 1 orelse Thm.concl thm = boolSyntax.F then
+      val _ = if !QbfTrace.trace < 1 orelse
+        Term.aconv (Thm.concl thm) boolSyntax.F then
           ()
         else
           Feedback.HOL_WARNING "QbfCertificate" "check" "final theorem not F"

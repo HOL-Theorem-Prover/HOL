@@ -19,11 +19,10 @@ instantiation of type variables.
     |- 
    t[ty1,...,tyn/vty1,...,vtyn]
 }
-Type substitution is performed throughout the hypotheses
-and the conclusion,. Variables will be renamed if necessary to prevent
-distinct variables becoming identical after the instantiation.
-
-
+Type substitution is performed throughout the hypotheses and
+the conclusion. Variables will be renamed if necessary to
+prevent distinct bound variables becoming identical after
+the instantiation.
 
 \FAILURE
 Never fails.

@@ -47,7 +47,7 @@ val reader = {
 val thms = read_article tmp reader
 (* TODO: check that thms is the same set that opentheory
          says the package should have produced *)
-in thms end else []
+in thms end else Net.empty
 
 val pkg = "list-replicate-1.0"
 (*
@@ -83,8 +83,7 @@ val reader = {
   | s => raise Fail ("wasn't expecting to define "^s),
   axiom=let open List Net Thm
     fun ins th = insert(concl th,th)
-    val n = List.foldl (fn(th,n)=>ins th n) empty bool_thms
-    val n = ins (A listTheory.LENGTH) (ins numTheory.INDUCTION n)
+    val n = ins (A listTheory.LENGTH) (ins numTheory.INDUCTION bool_thms)
     val th = prove(``!e f. ?fn. (fn 0 = e) /\ !n. fn (SUC n) = f (fn n) n``,
                    METIS_TAC [prim_recTheory.PRIM_REC_THM])
     val n = ins (A th) n
@@ -93,4 +92,4 @@ val reader = {
 val thms = read_article tmp reader
 (* TODO: check that thms is the same set that opentheory
          says the package should have produced *)
-in thms end else []
+in thms end else Net.empty

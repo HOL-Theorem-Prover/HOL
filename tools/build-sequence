@@ -158,5 +158,8 @@ src/temporal/src
 !!examples/Crypto/TEA
 !!examples/Crypto/TWOFISH
 
+# ACL2 example
+[poly]!!examples/acl2/ml
+
 [poly]!!!examples/machine-code/garbage-collectors
 [poly]!!!examples/machine-code/lisp
