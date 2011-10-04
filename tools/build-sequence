@@ -108,6 +108,7 @@ src/llist
 src/path
 !src/integer/testing
 src/patricia
+src/update
 src/emit
 !!examples/ARM/v4
 !examples/ARM/v7

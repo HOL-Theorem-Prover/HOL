@@ -667,10 +667,13 @@ fun priv_a2string a =
   | RIGHT => "RIGHT"
   | NONASSOC => "NONASSOC"
 
-fun tokrr_eq (rr1: rule_record) (rr2 : rule_record) =
-    (#term_name rr1 = #term_name rr2 andalso
-     pptoks (#elements rr1) = pptoks (#elements rr2))
-val rrunion = Lib.op_union tokrr_eq
+fun rr_eq (rr1: rule_record) (rr2 : rule_record) =
+    (* ignore timestamp field *)
+    #term_name   rr1 = #term_name   rr2 andalso
+    #elements    rr1 = #elements    rr2 andalso
+    #block_style rr1 = #block_style rr2 andalso
+    #paren_style rr1 = #paren_style rr2
+val rrunion = Lib.op_union rr_eq
 
 fun tokb_eq b1 b2 =
     case (b1,b2) of

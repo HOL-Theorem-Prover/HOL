@@ -765,8 +765,8 @@ fun pp_term (G : grammar) TyG backend = let
               pgrav lgrav rgrav depth apps =
    let
     val full_pr_term = pr_term
-    val pr_term = pr_term binderp showtypes showtypes_v ppfns NoCP
-    fun pr0 tm = pr_term0 binderp showtypes showtypes_v ppfns NoCP tm
+    val pr_term = pr_term binderp showtypes showtypes_v ppfns combpos
+    fun pr0 tm = pr_term0 binderp showtypes showtypes_v ppfns combpos tm
                           pgrav lgrav rgrav
                           depth
    in
