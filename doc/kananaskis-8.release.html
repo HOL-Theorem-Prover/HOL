@@ -75,6 +75,14 @@
           0 => 1
         | SUC n => n + 1
 </pre>
+<p>Additionally, as an aid to uniformity, the first case may be preceded by a bar character.
+This makes the following valid HOL (it is not valid SML):
+<pre>
+        case n of
+        | 0 => 1
+        | SUC n => n + 1
+</pre>
+
 <p>The new syntax does not mix well with the vertical bars of the set comprehension syntax.
 If one has a case expression inside a set-comprehension, the parser will likely be confused unless the case expression is enclosed in parentheses.
 The pretty-printer will parenthesise all case-expressions inside set comprehensions.

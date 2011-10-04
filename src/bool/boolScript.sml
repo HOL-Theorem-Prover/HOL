@@ -4363,6 +4363,16 @@ val _ = add_rule{pp_elements = [PPBlock([TOK "case", BreakSpace(1,2),
 val _ = add_rule{pp_elements = [PPBlock([TOK "case", BreakSpace(1,2),
                                          TM, BreakSpace(1,2), TOK "of"],
                                         (PP.CONSISTENT, 0)),
+                                TOK "|", HardSpace 1],
+                 fixity = Prefix 1,
+                 block_style = (AroundEachPhrase, (PP.CONSISTENT, 0)),
+                 paren_style = Always,
+                 term_name = GrammarSpecials.case_special};
+
+
+val _ = add_rule{pp_elements = [PPBlock([TOK "case", BreakSpace(1,2),
+                                         TM, BreakSpace(1,2), TOK "of"],
+                                        (PP.CONSISTENT, 0)),
                                 BreakSpace(1,2), TM, BreakSpace(1,0),
                                 TOK "|", HardSpace 1, TM, BreakSpace(1,0),
                                 TOK "|", HardSpace 1],
