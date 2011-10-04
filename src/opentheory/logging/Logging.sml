@@ -79,7 +79,7 @@ fun log_list log = let
     | logl (h::t) = (log h; logl t; log_command "cons")
 in logl end
 
-fun log_pair loga logb (a,b) = let
+fun log_pair (loga,logb) (a,b) = let
   val _ = loga a
   val _ = logb b
   val _ = log_nil ()
@@ -88,7 +88,7 @@ fun log_pair loga logb (a,b) = let
 in () end
 
 fun log_redres loga logb {redex,residue} =
-  log_pair loga logb (redex,residue)
+  log_pair (loga,logb) (redex,residue)
 
 type thy_tyop  = OpenTheoryMap.thy_tyop
 type thy_const = OpenTheoryMap.thy_const
@@ -237,8 +237,8 @@ val (log_term, log_thm, log_clear,
 
   val log_subst =
     log_pair
-      (log_list (log_redres log_type_var log_type))
-      (log_list (log_redres log_var log_term))
+      (log_list (log_redres log_type_var log_type),
+       log_list (log_redres log_var log_term))
   fun log_type_subst s = log_subst (s,[])
   fun log_term_subst s = log_subst ([],s)
 
@@ -430,8 +430,6 @@ val (log_term, log_thm, log_clear,
       val _ = log_command "deductAntisym"
       in () end
     | EQ_MP_prf (th1,th2) => let
-      val _ = () (* log_comment (Parse.thm_to_string th1) *)
-      val _ = () (* log_comment (Parse.thm_to_string th2) *)
       val _ = log_thm th1
       val _ = log_thm th2
       val _ = log_command "eqMp"
@@ -610,7 +608,7 @@ val (log_term, log_thm, log_clear,
       in () end
     | EXISTS_prf (fm,tm,th) => let
       val ty = type_of tm
-      val (qf,abs) = dest_comb fm
+      val (_,abs) = dest_comb fm
       val bth = BETA_CONV(mk_comb(abs,tm))
       val cth = INST_TY_TERM ([mk_var("P",ty-->bool)|->abs,mk_var("x",ty)|->tm],[alpha|->ty]) EXISTS_pth
       val _ = log_thm (proveHyp (EQ_MP (SYM bth) th) cth)
