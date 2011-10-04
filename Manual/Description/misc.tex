@@ -893,6 +893,17 @@ The expectation is that $f$ will be the combinator \holtxt{K} from \theoryimp{co
 %
 In this way, large complicated terms that are not themselves theorems (or even of boolean type), can be stored in \HOL{} theories, and then printed in \LaTeX{} documents.
 
+\item[\texttt{nodollarparens}] (For use with \holtm{} and \holthm.) Causes the default escaping of syntactic sugar to be suppressed.
+\index{ escape, in HOL logic parser@\ml{\$} (escape, in \HOL{} logic parser)}%
+\index{tokens!suppressing parsing behaviour of}
+The default behaviour is to use parentheses, so that
+\begin{verbatim}
+   \HOLtm{$/\ p}
+\end{verbatim}
+would get printed as $(\land)\;\,p$.
+Note that this doesn't reflect the default behaviour in the interactive loop, which is to use dollar-signs (as in the input above); see Section~\ref{sec:parser:architecture}.
+However, with the \texttt{nodollarparens} option specified, nothing at all is printed to indicate that the special syntax has been ``escaped''.
+
 \item[\texttt{nosp}] (Only for use with \holthm.)
 %
 By default, arguments to \holthm{} are fully specialised (\ie, they have \ml{SPEC\_ALL} applied to them), removing outermost universal quantifiers.

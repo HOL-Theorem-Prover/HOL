@@ -154,6 +154,7 @@ fun convert_case tm =
       (+) 3
     The parser accepts either form.
    ---------------------------------------------------------------------- *)
+open smpp term_pp_types term_pp_utils
 
 val dollar_escape = ref true
 
@@ -164,8 +165,9 @@ val dollar_escape = ref true
 
    In the dollar-branch, we're happy to have the dollar smashed up
    against what follows it. *)
-fun dollarise pfn s =
-    if !dollar_escape then pfn ("$" ^ s) else (pfn "("; pfn s; pfn ")")
+fun dollarise contentpfn parenpfn s =
+    if !dollar_escape then contentpfn ("$" ^ s)
+    else parenpfn "(" >> contentpfn s >> parenpfn ")"
 
 
 val _ = Feedback.register_btrace ("pp_dollar_escapes", dollar_escape);
@@ -1447,7 +1449,7 @@ fun pp_term (G : grammar) TyG backend = let
           case rules of
             [LISTRULE _] => add n
           | _ =>
-              if HOLset.member(spec_table, n) then dollarise add n
+              if HOLset.member(spec_table, n) then dollarise add add_string n
               else add n
         end
     end
@@ -1888,7 +1890,7 @@ fun pp_term (G : grammar) TyG backend = let
                     pr_sole_name tm vname (map #3 (valOf vrule))
                   else
                     if HOLset.member(spec_table, vname) then
-                      dollarise adds vname
+                      dollarise adds add_string vname
                     else adds vname) >>
                  (if print_type then add_type else nothing) >>
                  pend print_type)))

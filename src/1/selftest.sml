@@ -275,6 +275,11 @@ val _ = app tpp ["let x = T in x /\\ y",
                  "!x. P (x /\\ y)",
                  "(:'a)"]
 
+val _ = print "** Tests with pp_dollar_escapes = 0.\n"
+val _ = set_trace "pp_dollar_escapes" 0
+val _ = app tpp ["(/\\)", "(if)"]
+val _ = set_trace "pp_dollar_escapes" 1
+
 val _ = new_type ("foo", 2)
 val _ = new_constant ("con", ``:'a -> ('a,'b)foo``)
 val _ = set_trace "types" 1

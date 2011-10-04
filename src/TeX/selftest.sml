@@ -33,3 +33,17 @@ val s1 = pp_to_string 5 pp_term_as_tex t1
 val s2 = pp_to_string 5 (raw_pp_term_as_tex(fn"TOK2"=>SOME("TOK1",3)|_=>NONE)) t2
 val _ = if s1 = s2 then print "OK\n" else die()
 
+val _ = tprint "Testing dollarised syntax (/\\)"
+val s = pp_to_string 70 pp_term_as_tex conjunction
+val _ = if s = "(\\HOLTokenConj{})" then print "OK\n" else die()
+
+val _ = tprint "Testing dollarised syntax (if)"
+val s = pp_to_string 70 pp_term_as_tex (mk_var("if", bool))
+val _ = if s = "(\\HOLFreeVar{\\HOLKeyword{if}})" then print "OK\n" else die()
+
+open Feedback
+val _ = tprint "Testing paren-less dollarised syntax /\\"
+val _ = set_trace "EmitTeX: dollar parens" 0
+val s = pp_to_string 70 pp_term_as_tex conjunction
+val _ = if s = "\\HOLTokenConj{}" then print "OK\n" else die()
+val _ = set_trace "EmitTeX: dollar parens" 1

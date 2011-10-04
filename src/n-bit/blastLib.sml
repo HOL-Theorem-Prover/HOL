@@ -663,17 +663,29 @@ in
     end
 end
 
-fun print_counterexample l =
-   if List.null l then
-     print "No counterexample found!\n"
-   else let
-     fun f {redex,residue} = Hol_pp.term_to_string redex ^ " -> " ^
-                             Hol_pp.term_to_string residue ^ "\n\n"
-   in
-     print "Found counterexample:\n\n";
-     List.app (fn c => print (f c ^ "and\n\n")) (Lib.butlast l);
-     print (f (List.last l))
+val arb_num_tm = boolSyntax.mk_arb numSyntax.num
+
+local
+  fun print_subst {redex,residue} =
+    let val s = case Lib.total wordsSyntax.dest_n2w residue
+                of SOME (tm, _) =>
+                     if Term.term_eq tm arb_num_tm then
+                       "ARB (0w)"
+                     else
+                       Hol_pp.term_to_string residue
+                 | NONE => Hol_pp.term_to_string residue
+    in
+     Hol_pp.term_to_string redex ^ " -> " ^ s ^ "\n\n"
     end
+in
+  fun print_counterexample l =
+     if List.null l then
+       print "No counterexample found!\n"
+     else
+      (print "Found counterexample:\n\n";
+       List.app (fn c => print (print_subst c ^ "and\n\n")) (Lib.butlast l);
+       print (print_subst (List.last l)))
+end
 
 (* ------------------------------------------------------------------------
    BIT_BLAST_CONV : convert a bit vector assertion ``a = b``, ``a ' n`` or
@@ -814,14 +826,25 @@ local
     | build_exists ({redex,residue}::l1) (t::l2) cthm =
         build_exists l1 l2 (Thm.EXISTS (t, residue) cthm);
 
-  fun order_counter [] [] a = List.rev a
-    | order_counter [] _ _ = raise ERR "BBLAST_PROVE" "Couldn't prove goal."
-    | order_counter (v::vars) counter a =
+  fun order_ctr [] [] a = List.rev a
+    | order_ctr [] _ _ = raise ERR "BBLAST_PROVE" "Couldn't prove goal."
+    | order_ctr (v::vars) counter a =
         let
           val (c,rest) = Lib.pluck (fn {redex,residue} => (redex = v)) counter
         in
-          order_counter vars rest (c :: a)
+          order_ctr vars rest (c :: a)
         end handle HOL_ERR _ => raise ERR "BBLAST_PROVE" "Couldn't prove goal."
+  fun order_counter v c = order_ctr v c []
+
+  val arb_tm = wordsSyntax.mk_n2w (arb_num_tm, Type.alpha)
+  fun mk_zero_subst v =
+        (v |-> Term.inst [Type.alpha |-> wordsSyntax.dim_of v] arb_tm)
+  fun add_subst (s1 : (term, term) Lib.subst, s2 : (term, term) Lib.subst) =
+        let val reds = List.map (#redex) s2
+            fun okay v = Lib.all (not o term_eq v) reds
+        in
+          s2 @ (List.filter (okay o #redex) s1)
+        end
 in
   fun BBLAST_PROVE tm =
   let
@@ -833,16 +856,19 @@ in
       handle HOL_ERR _ =>
          let
            val body = snd (boolSyntax.strip_forall tm)
-           val counter = counterexample (rhsc thm)
+           val fvars = Term.free_vars body
+           val w_subst = Lib.mapfilter mk_zero_subst fvars
+           val counter = add_subst (w_subst, counterexample (rhsc thm))
          in
            if not (List.null counter) andalso
-              Lib.can (order_counter (Term.free_vars body) counter) []
+              Lib.can (order_counter fvars) counter
            then
              let val _ = if !blast_counter then
                            print_counterexample counter
                          else
                            ()
-                 val ctm = Term.subst counter body
+                 val ctm = Term.subst [arb_num_tm |-> numSyntax.zero_tm]
+                             (Term.subst counter body)
              in
                raise HolSatLib.SAT_cex (wordsLib.WORD_EVAL_CONV ctm)
              end
@@ -856,7 +882,7 @@ in
             REPEATC Conv.EXISTS_SIMP_CONV) tm)
       else let
         val counter = counterexample (boolSyntax.mk_neg ctm)
-        val counter = order_counter vars counter []
+        val counter = order_counter vars counter
         val ctms = counter_terms counter [boolSyntax.list_mk_exists(vars,ctm)]
         val cthm = Drule.EQT_ELIM
                      (wordsLib.WORD_EVAL_CONV (Term.subst counter ctm))

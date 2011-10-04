@@ -244,6 +244,9 @@ local
   fun greek s = "\\ensuremath{\\" ^ s ^ "}"
   fun subn i  = "\\ensuremath{_{" ^ Int.toString i ^ "}}"
 
+  val dollar_parens = ref true
+  val _ = register_btrace ("EmitTeX: dollar parens", dollar_parens)
+
   fun char_map c =
     case c
     of "\\" => token_string "Backslash"
@@ -333,13 +336,19 @@ local
 
   fun ann_string overrides pps (s,sz,ann) = let
     open PPBackEnd
-    fun addann ty s = "\\" ^ !texPrefix ^ ty ^ "{" ^ varmunge s ^ "}"
+    val (dollarpfx,dollarsfx,s,szdelta) =
+        if String.sub(s,0) = #"$" andalso size s > 1 then
+          if !dollar_parens then ("(", ")", String.extract(s,1,NONE),2)
+          else ("", "", String.extract(s,1,NONE),0)
+        else ("", "", s,0)
+    fun addann ty s =
+      "\\" ^ !texPrefix ^ ty ^ "{" ^ varmunge s ^ "}"
     val annotation = case ann of BV _ => addann "BoundVar"
                                | FV _ => addann "FreeVar"
                                | _ => (fn s => s)
     val (s',sz) = smap overrides (s,sz)
   in
-    PP.add_stringsz pps (annotation s', sz)
+    PP.add_stringsz pps (dollarpfx ^ annotation s' ^ dollarsfx, sz + szdelta)
   end
 
   fun add_string overrides pps (s,sz) = PP.add_stringsz pps (smap overrides (s,sz))
@@ -481,8 +490,7 @@ fun raw_pp_term_as_tex overrides ostrm tm =
                     tm
 
 fun pp_term_as_tex ostrm =
-    raw_pp_term_as_tex (K NONE) ostrm
-       |> UnicodeOff |> trace ("pp_dollar_escapes", 0)
+    raw_pp_term_as_tex (K NONE) ostrm |> UnicodeOff
 
 fun raw_pp_type_as_tex overrides ostrm ty =
     type_pp.pp_type (Parse.type_grammar()) (emit_latex overrides) false ostrm ty

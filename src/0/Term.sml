@@ -1377,7 +1377,9 @@ fun list_mk_tybinder opt =
                                                (fn body => k (TyAbs(bv,body)))
           | bindty ty _ k = k ty (* constant *)
       in
-        rev_itlist (fn TyFv a => fn M => f(TAbs(a,M))) rvlist (bind tm varmap I)
+        rev_itlist (fn TyFv a => (fn M => f(TAbs(a,M)))
+                     | _ => raise ERR "list_mk_tybinder" "impossible")
+                   rvlist (bind tm varmap I)
       end
       handle e => raise wrap_exn "Term" "list_mk_tybinder" e
     end
