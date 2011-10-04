@@ -23,6 +23,57 @@ type reader =
 fun const_name_in_map n = Map.find(const_from_ot_map(),n)
 fun tyop_name_in_map n = Map.find(tyop_from_ot_map(),n)
 
+fun define_tyop_in_thy
+  {name={Thy=tthy,Tyop},ax,args,
+   rep={Thy=rthy,Name=rep},abs={Thy=athy,Name=abs}}
+= let
+  open boolLib
+  val (P,t) = dest_comb (concl ax)
+  val v   = variant (free_vars P) (mk_var ("v",type_of t))
+  val _   = if tthy = current_theory() then () else
+            raise ERR "define_tyop_in_thy" "wrong theory"
+  val th  = new_type_definition(Tyop,EXISTS(mk_exists(v,mk_comb(P,v)),t) ax)
+  val _   = if athy = tthy andalso rthy = tthy then () else
+            raise ERR "define_tyop_in_thy" "wrong theory"
+  val bij = define_new_type_bijections {name=Tyop^"_bij",ABS=abs,REP=rep,tyax=th}
+  val [ar,ra] = CONJUNCTS bij
+in {rep_abs=SPEC_ALL ra,abs_rep=SPEC_ALL ar} end
+
+fun define_const_in_thy ML_name {Thy,Name} rhs =
+  if Thy = current_theory() then
+    new_definition ((ML_name Name)^"_def",mk_eq(mk_var(Name,type_of rhs),rhs))
+  else raise ERR "define_const_in_thy" "wrong theory"
+
+local
+  open boolLib bossLib
+  fun ins (th,n) = Net.insert (concl th,th) n
+  val imp_def = METIS_PROVE[]``$==> = (\p q. p /\ q = p)``;
+  val and_def = prove(``$/\ = (\p q. (\f:bool->bool->bool. f p q) = (\f. f T T))``,
+    SRW_TAC [][FUN_EQ_THM,EQ_IMP_THM]);
+  val exists_def = prove(``$? = (λP. ∀q. (∀x. P x ⇒ q) ⇒ q)``,
+    SRW_TAC [][FUN_EQ_THM] THEN
+    SUBST_TAC [GSYM (ISPEC ``P:'a->bool`` ETA_THM)] THEN
+    METIS_TAC [])
+in
+  val base_thms = foldl ins Net.empty [imp_def,and_def,exists_def]
+end
+
+local
+  fun eq (h,c) th =
+    aconv (concl th) c andalso
+    HOLset.equal (HOLset.addList(empty_tmset,h), hypset th)
+  fun from_net n (h,c) = Lib.first (eq (h,c)) (Net.index c n)
+in
+fun axiom_in_db ths (h,c) =
+    from_net base_thms (h,c)
+handle HOL_ERR _ =>
+  fst(snd(Lib.first (fn (_,(th,_)) => eq (h,c) th) (DB.match [] c)))
+handle HOL_ERR _ =>
+  from_net ths (h,c)
+handle HOL_ERR _ =>
+  raise ERR "axiom_from_db" "not found"
+end
+
 fun st_(st,{stack,dict,thms,...}) = {stack=st,dict=dict,thms=thms}
 fun push (ob,st) = st_(ob::(#stack st),st)
 local open Substring in
@@ -129,4 +180,18 @@ fun raw_read_article input
 in #thms (loop {stack=[],dict=Map.mkDict(Int.compare),thms=Net.empty,line_num=1}) end
 
 fun read_article s r = raw_read_article (TextIO.openIn s) r
+
+fun delete_unused_consts thms =
+app (fn c => let
+    val find = find_term (equal c)
+  in
+    if exists
+       (fn th => (can find (concl th)) orelse
+                 (isSome(HOLset.find (can find) (hypset th))))
+       thms
+    then ()
+    else delete_const (fst (dest_const c))
+  end)
+(constants "-")
+
 end

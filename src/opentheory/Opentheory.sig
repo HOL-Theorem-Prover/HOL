@@ -38,6 +38,34 @@ to HOL4 names. The following functions can be used to simply look the names up i
 val const_name_in_map : otname -> thy_const
 val tyop_name_in_map  : otname -> thy_tyop
 
+val axiom_in_db : thm Net.net -> (term list * term) -> thm
+(*
+An axiom function for readers that tries to find the desired theorem in the
+following places (in order): an internal list of theorems that should be in
+the OpenTheory base package, the HOL4 database (via DB.match []), and the
+theorems already proved by the article.
+*)
+
+val define_tyop_in_thy :
+  {name:thy_tyop, ax:thm, args:hol_type list, rep:thy_const, abs:thy_const}
+    -> {rep_abs:thm, abs_rep:thm}
+val define_const_in_thy : (string -> string) -> thy_const -> term -> thm
+(*
+define_tyop and define_const functions for readers that try to produce the
+desired theorems by actually defining a new type or constant in the current
+theory. They fail if the theory of the type or constant desired is not the
+current theory. The first argument to [define_const_in_thy] is a function to
+produce the prefix of the ML name of the constant's definition from the
+constant's name (useful when a constant's name is not a valid ML identifier).
+*)
+
 val raw_read_article : TextIO.instream -> reader -> thm Net.net
 val read_article     : string -> reader -> thm Net.net
+
+val delete_unused_consts : thm list -> unit
+(*
+Given a list (usually by calling [Net.listItems] on the result of
+[read_article]), calls [Theory.delete_const] on any constants in the current
+theory that do not appear in some theorem in the list.
+*)
 end
