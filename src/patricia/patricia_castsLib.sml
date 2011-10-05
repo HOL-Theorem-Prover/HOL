@@ -71,38 +71,18 @@ val CAST_PTREE_CONV = CBV_CONV (cast_ptree_compset());
 
 (* ------------------------------------------------------------------------- *)
 
-local
-  val compset = wordsLib.words_compset()
-  val _ = add_cast_ptree_compset compset
-in
-  val CAST_PTREE = rhs o concl o (CBV_CONV compset)
-  fun CAST_WORD_PTREE tm =
-  let val t = dest_some_ptree tm in
-    if is_branch t orelse is_leaf t orelse is_empty t then
-      t
-    else
-      dest_some_ptree (CAST_PTREE tm)
-  end handle HOL_ERR _ => dest_some_ptree (CAST_PTREE tm)
-end;
-
-fun Define_word_ptree (s1,s2) tm =
-let val typ = type_of tm
-    val _ = is_word_ptree_type typ orelse
-            raise ERR "Define_word_ptree" "Not a word patricia tree"
-    val thm1 = Define_ptree s2 (CAST_WORD_PTREE tm)
-    val ityp = fst (dest_word_ptree_type typ)
-    val thm2 = Definition.new_definition(s1^"_def",
-                 mk_eq(mk_var(s1,typ), mk_some_ptree(ityp, lhs (concl thm1))))
+fun Define_mk_word_ptree (s1,s2) n t =
+let val _ = mk_word_ptree (n,t)
+    val thm1 = Define_mk_ptree s2 t
+    val tree = mk_some_ptree(fcpLib.index_type n, lhs (concl thm1))
+    val thm2 = Definition.new_definition(s1^"_def", mk_eq(mk_var(s1,Term.type_of tree), tree))
     val _ = add_thms [thm2] the_compset
     val _ = add_thms [thm2] the_ptree_compset
 in
   (thm2, thm1)
 end;
 
-fun Define_mk_word_ptree s n t = Define_word_ptree s (mk_word_ptree (n,t));
 fun iDefine_mk_word_ptree s i t = Define_mk_word_ptree s (Arbnum.fromInt i) t;
-
-fun Define_string_ptree s tm = Define_ptree s (CAST_PTREE tm);
 
 (* ------------------------------------------------------------------------- *)
 

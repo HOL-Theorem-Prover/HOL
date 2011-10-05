@@ -3706,6 +3706,18 @@ CONJ_TAC THEN1 SIMP_TAC bool_ss [SUM_IMAGE_THM,NOT_IN_EMPTY] THEN
 SIMP_TAC bool_ss [SUM_IMAGE_THM,DELETE_NON_ELEMENT,ADD_EQ_0,IN_INSERT] THEN
 METIS_TAC [])
 
+val ABS_DIFF_SUM_IMAGE = Q.store_thm(
+"ABS_DIFF_SUM_IMAGE",
+`!s. FINITE s ==> (ABS_DIFF (SIGMA f s) (SIGMA g s) <= SIGMA (\x. ABS_DIFF (f x) (g x)) s)`,
+HO_MATCH_MP_TAC FINITE_INDUCT THEN
+SRW_TAC [][] THEN1 (
+  SRW_TAC [][SUM_IMAGE_THM,ABS_DIFF_EQS] ) THEN
+SRW_TAC [][SUM_IMAGE_THM] THEN
+FULL_SIMP_TAC (srw_ss()) [DELETE_NON_ELEMENT] THEN
+MATCH_MP_TAC LESS_EQ_TRANS THEN
+Q.EXISTS_TAC `ABS_DIFF (f e) (g e) + ABS_DIFF (SIGMA f s) (SIGMA g s)` THEN
+SRW_TAC [][ABS_DIFF_SUMS])
+
 (*---------------------------------------------------------------------------*)
 (* SUM_SET sums the elements of a set of natural numbers                     *)
 (*---------------------------------------------------------------------------*)

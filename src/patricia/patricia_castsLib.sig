@@ -13,10 +13,7 @@ sig
   val cast_ptree_compset     : unit -> computeLib.compset
   val CAST_PTREE_CONV        : conv
 
-  val Define_word_ptree     : string * string -> term -> thm * thm
   val Define_mk_word_ptree  : string * string -> num -> term_ptree -> thm * thm
   val iDefine_mk_word_ptree : string * string -> int -> term_ptree -> thm * thm
-
-  val Define_string_ptree   : string -> term -> thm
 
 end

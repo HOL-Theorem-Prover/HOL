@@ -641,8 +641,12 @@ proved. Many other theorems may be found in \theoryimp{bool} theory.
 The theory \theoryimp{combin}
 \index{combin@\theoryimp{combin}}
 \index{combinators, in HOL logic@combinators, in \HOL{} logic}
-contains the definitions of function composition (infixed \ml{o})
+contains the definitions of function composition (infixed \ml{o}),
 \index{ function composition operator, in HOL logic@\ml{o} (function composition operator), in \HOL{} logic|(}
+a reversed function application operator,
+\index{ function application operator, in HOL logic@\ml{:>} ((reversed) function application operator), in \HOL{} logic}
+function override (infixed \ml{=+}),
+\index{ function override operator, in HOL logic@\ml{=+} (function override opreator), in \HOL{} logic}
 and the combinators
 \ml{S},
 \index{S, the HOL constant@\ml{S}, the \HOL{} constant}
@@ -657,12 +661,14 @@ and \ml{C},
 
 \begin{hol}
 \begin{verbatim}
-   o_DEF |- f o g = (\x. f(g x))
-   K_DEF |- K = (\x y. x)
-   S_DEF |- S = (\f g x. f x(g x))
-   I_DEF |- I = S K K
-   W_DEF |- W = (\f x. f x x)
-   C_DEF |- C = (\f x y. f y x)
+     o_DEF |- f o g = (\x. f(g x))
+   APP_DEF |- x :> f = f x
+UPDATE_DEF |- (k =+ v) = (\f c. if k = c then v else f c)
+     K_DEF |- K = (\x y. x)
+     S_DEF |- S = (\f g x. f x(g x))
+     I_DEF |- I = S K K
+     W_DEF |- W = (\f x. f x x)
+     C_DEF |- C = (\f x y. f y x)
 \end{verbatim}
 \end{hol}
 
@@ -674,6 +680,12 @@ and \ml{C},
    o_THM   |- !f g x. (f o g) x = f(g x)
    o_ASSOC |- !f g h. f o (g o h) = (f o g) o h
 
+   UPDATE_EQ
+           |- !f a b c. (a =+ c) ((a =+ b) f) = (a =+ c) f
+   UPDATE_COMMUTES
+           |- !f a b c d. a <> b ==>
+                          ((a =+ c) ((b =+ d) f) = (b =+ d) ((a =+ c) f))
+
    K_THM   |- !x y. K x y = x
    S_THM   |- !f g x. S f g x = f x (g x)
    I_THM   |- !x. I x = x
@@ -681,6 +693,16 @@ and \ml{C},
    C_THM   |- !f x y. C f x y = f y x
 \end{verbatim}
 \end{hol}
+
+\index{ function application operator, in HOL logic@\ml{:>} ((reversed) function application operator), in \HOL{} logic}
+There are no theorems about \ml{:>}; it use is as a convenient syntax for function applications.
+For example, chains of updates can lose some parentheses if written
+\begin{hol}
+\begin{verbatim}
+   f :> (k1 += v1) :> (k2 += v2) :> (k3 += v3)
+\end{verbatim}
+\end{hol}
+This presentation also makes the order in which functions are applied read from left-to-right.
 
 Having the symbols \ml{o}, \ml{S}, \ml{K}, \ml{I}, \ml{W}, and \ml{C}
 as built-in constants
