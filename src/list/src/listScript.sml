@@ -2113,13 +2113,24 @@ val GENLIST_AUX_compute = save_thm(
 val _ = export_rewrites ["GENLIST_AUX_compute"]
 
 (*---------------------------------------------------------------------------
+       String padding (left and right)
+ ---------------------------------------------------------------------------*)
+
+val PAD_LEFT_def = Define`
+  PAD_LEFT c n s = (GENLIST (K c) (n - LENGTH s)) ++ s`;
+
+val PAD_RIGHT_def = Define`
+  PAD_RIGHT c n s = s ++ (GENLIST (K c) (n - LENGTH s))`;
+
+(*---------------------------------------------------------------------------
    Theorems about genlist. From Anthony Fox's theories. Added by Thomas Tuerk.
    Moved from rich_listTheory.
  ---------------------------------------------------------------------------*)
 
 val MAP_GENLIST = store_thm("MAP_GENLIST",
   ``!f g n. MAP f (GENLIST g n) = GENLIST (f o g) n``,
-  Induct_on `n` THEN ASM_SIMP_TAC arith_ss [GENLIST,MAP_SNOC, MAP,combinTheory.o_THM]);
+  Induct_on `n`
+  THEN ASM_SIMP_TAC arith_ss [GENLIST,MAP_SNOC, MAP,combinTheory.o_THM]);
 
 val EL_GENLIST = store_thm("EL_GENLIST",
   ``!f n x. x < n ==> (EL x (GENLIST f n) = f x)``,
@@ -2146,7 +2157,8 @@ val GENLIST_FUN_EQ = store_thm("GENLIST_FUN_EQ",
 val GENLIST_APPEND = store_thm("GENLIST_APPEND",
   ``!f a b. GENLIST f (a + b) = (GENLIST f b) ++ (GENLIST (\t. f (t + b)) a)``,
   Induct_on `a` THEN
-  ASM_SIMP_TAC arith_ss [GENLIST,APPEND_SNOC,APPEND_NIL,arithmeticTheory.ADD_CLAUSES]
+  ASM_SIMP_TAC arith_ss
+    [GENLIST,APPEND_SNOC,APPEND_NIL,arithmeticTheory.ADD_CLAUSES]
 );
 
 val EVERY_GENLIST = store_thm("EVERY_GENLIST",

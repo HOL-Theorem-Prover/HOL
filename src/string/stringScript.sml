@@ -431,16 +431,6 @@ val isPREFIX_STRCAT = Q.store_thm
  PROVE_TAC []);
 
 (*---------------------------------------------------------------------------
-       String padding (left and right)
- ---------------------------------------------------------------------------*)
-
-val PAD_LEFT_def = Define`
-  PAD_LEFT c n s = STRCAT (GENLIST (K c) (n - STRLEN s)) s`;
-
-val PAD_RIGHT_def = Define`
-  PAD_RIGHT c n s = STRCAT s (GENLIST (K c) (n - STRLEN s))`;
-
-(*---------------------------------------------------------------------------
        Orderings
  ---------------------------------------------------------------------------*)
 

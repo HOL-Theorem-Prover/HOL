@@ -90,7 +90,7 @@ val process_hex_add_def = Define `
                   drop_eq (n2bits 8 (n+7)) >> assign "reg" (n2bits 3 7)]`;
 
 val assign_drop_cond_def = Define `
-  assign_drop_cond name i1 i2 c (g,bits) = 
+  assign_drop_cond name i1 i2 c (g,bits) =
     if c g then assign_drop name i1 (g,bits)
            else assign_drop name i2 (g,bits)`;
 
@@ -119,15 +119,15 @@ val x64_match_step_def = Define `
     else if name = "REX" then
       assert (\g. g "REX.W" = [F])
     else if name = "+" then
-      assert (\g. T)     
+      assert (\g. T)
     else
       option_fail`;
 
 (* syntax classes *)
 
 val x64_binop_def = Define `x64_binop =
-  [("ADC",Zadc); ("ADD",Zadd); ("AND",Zand); ("CMP",Zcmp); 
-   ("OR",Zor); ("SAR",Zsar); ("SHR",Zshr); ("SHL",Zshl); 
+  [("ADC",Zadc); ("ADD",Zadd); ("AND",Zand); ("CMP",Zcmp);
+   ("OR",Zor); ("SAR",Zsar); ("SHR",Zshr); ("SHL",Zshl);
    ("SBB",Zsbb); ("SUB",Zsub); ("TEST",Ztest); ("XOR",Zxor)]`;
 
 val x64_monop_def = Define `x64_monop =
@@ -138,24 +138,24 @@ val x64_monop_def = Define `x64_monop =
 (* x86 - decoder *)
 
 val b2reg_def = Define `
-  b2reg g rex_name name = (EL (bits2num (g name ++ g rex_name)) 
+  b2reg g rex_name name = (EL (bits2num (g name ++ g rex_name))
     [RAX;RCX;RDX;RBX;RSP;RBP;RSI;RDI;zR8;zR9;zR10;zR11;zR12;zR13;zR14;zR15]):Zreg`;
 
 val decode_Zr32_def = Define `
   decode_Zr32 g name =
     if name = "RAX" then RAX else
-      if g "reg" = [] then b2reg g "REX.R" "Reg/Opcode"  (* "Reg/Opcode" comes from ModRM *) 
-                      else b2reg g "REX.B" "reg"`;       (* "reg" comes from opcode byte, e.g. "rd" in B8+rd *) 
+      if g "reg" = [] then b2reg g "REX.R" "Reg/Opcode"  (* "Reg/Opcode" comes from ModRM *)
+                      else b2reg g "REX.B" "reg"`;       (* "reg" comes from opcode byte, e.g. "rd" in B8+rd *)
 
 val decode_SIB_def = Define `
   decode_SIB g =
     let scaled_index = (if b2reg g "REX.X" "Index" = RSP then NONE else SOME (b2w g "Scale",b2reg g "REX.X" "Index")) in
       if b2reg g "REX.B" "Base" = RBP then (* the special case indicated by "[*]" *)
-        if g "Mod" = [F;F] then Zm scaled_index NONE (b2w g "disp32") else
-        if g "Mod" = [T;F] then Zm scaled_index (SOME RBP) (b2w g "disp8") else
-        (* g "Mod" = [F;T] *)   Zm scaled_index (SOME RBP) (b2w g "disp32")
+        if g "Mod" = [F;F] then Zm scaled_index NONE (sw2sw ((b2w g "disp32"):word32)) else
+        if g "Mod" = [T;F] then Zm scaled_index (SOME RBP) (sw2sw ((b2w g "disp8"):word8)) else
+        (* g "Mod" = [F;T] *)   Zm scaled_index (SOME RBP) (sw2sw ((b2w g "disp32"):word32))
       else (* normal cases, just need to read off the correct displacement *)
-        let disp = (if (g "Mod" = [T;F]) then sw2sw ((b2w g "disp8"):word8) else b2w g "disp32") in
+        let disp = (if (g "Mod" = [T;F]) then sw2sw ((b2w g "disp8"):word8) else sw2sw ((b2w g "disp32"):word32)) in
         let disp = (if (g "Mod" = [F;F]) then 0w else disp) in
           Zm scaled_index (SOME (b2reg g "REX.B" "Base")) disp`;
 
@@ -204,11 +204,11 @@ val x64_select_op_def = Define `
   x64_select_op name list = SND (HD (FILTER (\x. FST x = name) list))`;
 
 val x86_size_def = Define `
-  x86_size g name = 
-    if MEM name ["r8";"m8";"r/m8";"AL"] then Z8 else 
-    if MEM name ["r16";"m16";"r/m16";"AX"] then Z16 else 
-    if MEM name ["r64";"m64";"r/m64";"RAX"] then Z64 else 
-    if g "REX.W" = [T] then Z64 else 
+  x86_size g name =
+    if MEM name ["r8";"m8";"r/m8";"AL"] then Z8 else
+    if MEM name ["r16";"m16";"r/m16";"AX"] then Z16 else
+    if MEM name ["r64";"m64";"r/m64";"RAX"] then Z64 else
+    if g "REX.W" = [T] then Z64 else
     if g "16BIT" = [T] then Z16 else Z32`;
 
 val Zsize_tm = ``(x86_size g (EL 1 ts))``
@@ -297,7 +297,7 @@ val x64_syntax_list = `` [
     " 83 /5 ib  | SUB r/m32, imm8   ";
     " 83 /6 ib  | XOR r/m32, imm8   ";
     " 83 /7 ib  | CMP r/m32, imm8   ";
- 
+
     " 81 /0 id  | ADD r/m32, imm32  ";
     " 81 /1 id  | OR r/m32, imm32   ";
     " 81 /2 id  | ADC r/m32, imm32  ";
@@ -344,8 +344,8 @@ val x64_syntax_list = `` [
     " 89 /r            | MOV r/m32,r32     ";
     " 88 /r            | MOV r/m8, r8      ";
 
-    " 0F B6 /r  | MOVZX r32, r/m8   "; 
-    " 0F B7 /r  | MOVZX r32, r/m16  "; 
+    " 0F B6 /r  | MOVZX r32, r/m8   ";
+    " 0F B7 /r  | MOVZX r32, r/m16  ";
 
     " 0F B1 /r  | CMPXCHG r/m32, r32";
     " 0F C1 /r  | XADD r/m32, r32   ";
@@ -412,9 +412,8 @@ val x64_syntax_list = `` [
 
   ]``;
 
-
-val x64_decode_aux_def = Define `
-  x64_decode_aux g = 
+val x64_decode_aux_def = zDefine `
+  x64_decode_aux g =
     (match_list_raw g x64_match_step tokenise (x64_syntax o tokenise) o
     MAP (\s. let x = STR_SPLIT [#"|"] s in (EL 0 x, EL 1 x))) ^x64_syntax_list`;
 
@@ -423,17 +422,17 @@ val x64_decode_prefixes_def = tDefine "x64_decode_prefixes" `
     if LENGTH w < 8 then ([],w) else
       let b = n2w (bits2num (TAKE 8 w)):word8 in
         if ~(MEM b [0x2Ew;0x3Ew;0xF0w;0x66w]) then ([],w) else
-          let (pres,v) = x64_decode_prefixes (DROP 8 w) in 
-          let pre = (if b = 0x2Ew then Zbranch_not_taken else 
-                     if b = 0x3Ew then Zbranch_taken else 
-                     if b = 0xF0w then Zlock else 
+          let (pres,v) = x64_decode_prefixes (DROP 8 w) in
+          let pre = (if b = 0x2Ew then Zbranch_not_taken else
+                     if b = 0x3Ew then Zbranch_taken else
+                     if b = 0xF0w then Zlock else
                      if b = 0x66w then Zoperand_size_override else ARB) in
             (pre :: pres, v)`
  (WF_REL_TAC `measure LENGTH`
   THEN ASM_SIMP_TAC std_ss [LENGTH_DROP] THEN REPEAT STRIP_TAC THEN DECIDE_TAC);
- 
+
 val x64_decode_REX_def = Define `
-  x64_decode_REX w = 
+  x64_decode_REX w =
     let g = (\n. []) in
       if LENGTH w < 8 then (g,w) else
         if ~(TAKE 4 (DROP 4 w) = [F;F;T;F]) then (g,w) else
@@ -441,7 +440,7 @@ val x64_decode_REX_def = Define `
           let g = ("REX.X" =+ [EL 1 w]) g in
           let g = ("REX.R" =+ [EL 2 w]) g in
           let g = ("REX.W" =+ [EL 3 w]) g in
-          let w = DROP 8 w in 
+          let w = DROP 8 w in
             (g,w)`;
 
 val dest_accesses_memory_def = Define `
@@ -476,16 +475,16 @@ val x64_is_jcc_def = Define `
   (x64_is_jcc _ = F)`;
 
 val byte_regs_in_rm_def = Define `
-  (byte_regs_in_rm (Zr r) = [r]) /\ 
+  (byte_regs_in_rm (Zr r) = [r]) /\
   (byte_regs_in_rm (Zm r1 r2 offset) = [])`;
 
 val byte_regs_in_ds_def = Define `
-  (byte_regs_in_ds (Zrm_i rm i) = byte_regs_in_rm rm) /\ 
-  (byte_regs_in_ds (Zrm_r rm r) = r::byte_regs_in_rm rm) /\ 
+  (byte_regs_in_ds (Zrm_i rm i) = byte_regs_in_rm rm) /\
+  (byte_regs_in_ds (Zrm_r rm r) = r::byte_regs_in_rm rm) /\
   (byte_regs_in_ds (Zr_rm r rm) = r::byte_regs_in_rm rm)`;
 
 val has_bad_byte_regs_def = Define `
-  has_bad_byte_regs dsize xs = 
+  has_bad_byte_regs dsize xs =
     (dsize = Z8) /\ ~(FILTER (\x. MEM x [RSP;RBP;RSI;RDI]) xs = [])`;
 
 val instr_accesses_bad_byte_reg_def = Define `
@@ -524,15 +523,69 @@ val x64_decode_def = Define `
           if (g "REX.W" = [T]) /\ (g "16BIT" = [T]) then NONE else
           if Zprefixes_ok pres i then SOME (Zfull_inst pres i, w) else NONE`;
 
+val padbyte_def = Define `
+  (padbyte [] = [F;F;F;F;F;F;F;F]) /\
+  (padbyte [x0] = [x0;F;F;F;F;F;F;F]) /\
+  (padbyte [x0;x1] = [x0;x1;F;F;F;F;F;F]) /\
+  (padbyte [x0;x1;x2] = [x0;x1;x2;F;F;F;F;F]) /\
+  (padbyte [x0;x1;x2;x3] = [x0;x1;x2;x3;F;F;F;F]) /\
+  (padbyte [x0;x1;x2;x3;x4] = [x0;x1;x2;x3;x4;F;F;F]) /\
+  (padbyte [x0;x1;x2;x3;x4;x5] = [x0;x1;x2;x3;x4;x5;F;F]) /\
+  (padbyte [x0;x1;x2;x3;x4;x5;x6] = [x0;x1;x2;x3;x4;x5;x6;F]) /\
+  (padbyte [x0;x1;x2;x3;x4;x5;x6;x7] = [x0;x1;x2;x3;x4;x5;x6;x7])`;
+
+val word2byte_def = Define `
+  word2byte (w:word8) = padbyte (MAP ($= 1) (word_to_bin_list w))`;
+
 val x64_decode_bytes_def = Define `
-  x64_decode_bytes b = x64_decode (FOLDR APPEND [] (MAP w2bits b))`;
+  x64_decode_bytes b = x64_decode (FLAT (MAP word2byte b))`;
 
 
 (* -- partially pre-evaluate x64_decode_aux -- *)
 
 val Zreg_distinct = save_thm("Zreg_distinct",
-  SIMP_RULE std_ss [GSYM CONJ_ASSOC,ALL_DISTINCT,MEM,REVERSE_DEF,APPEND] 
+  SIMP_RULE std_ss [GSYM CONJ_ASSOC,ALL_DISTINCT,MEM,REVERSE_DEF,APPEND]
     (CONJ ALL_DISTINCT_Zreg (ONCE_REWRITE_RULE [GSYM ALL_DISTINCT_REVERSE] ALL_DISTINCT_Zreg)));
+
+val DTF_DTF = prove(
+  ``(DTF p1 p2 ++ DTF q1 q2 = DTF (p1 ++ q1) (p2 ++ q2))``,
+  SIMP_TAC std_ss [FUN_EQ_THM,option_orelse_def,LET_DEF] THEN REPEAT STRIP_TAC
+  THEN Cases_on `x` THEN Cases_on `r` THEN SIMP_TAC std_ss [DTF_def] THEN Cases_on `h`
+  THEN SIMP_TAC std_ss [DTF_def,option_orelse_def,LET_DEF]);
+
+val DTF_INTRO = prove(
+  ``(DF >> f = DTF (\x.NONE) f) /\ (DT >> f = DTF f (\x.NONE))``,
+  SIMP_TAC std_ss [FUN_EQ_THM,option_then_def,LET_DEF] THEN REPEAT STRIP_TAC
+  THEN Cases_on `x` THEN Cases_on `r` THEN SIMP_TAC std_ss [DTF_def,DF_def,DT_def]
+  THEN Cases_on `h` THEN SIMP_TAC std_ss [DTF_def,option_orelse_def,LET_DEF,DF_def,DT_def]);
+
+val ORELSE_NONE = prove(
+  ``((\x.NONE) ++ f = f) /\ (f ++ (\x.NONE) = f) /\
+    ((\x.NONE) >> f = (\x.NONE)) /\ (f >> (\x.NONE) = (\x.NONE))``,
+  SIMP_TAC std_ss [FUN_EQ_THM,option_orelse_def,option_then_def,LET_DEF] THEN METIS_TAC []);
+
+val PUSH_assert_lemma = prove(
+  ``(assert k >> (DTF p q >> t) = DTF (assert k >> p >> t) (assert k >> q >> t))``,
+  SIMP_TAC std_ss [FUN_EQ_THM] THEN Cases THEN Cases_on `r` THEN REPEAT (Cases_on `h`)
+  THEN SIMP_TAC std_ss [assert_def,option_then_def,LET_DEF,DTF_def]
+  THEN SRW_TAC [] [] THEN FULL_SIMP_TAC std_ss []);
+
+val DTF_THEN = prove(
+  ``DTF p q >> t = DTF (p >> t) (q >> t)``,
+  SIMP_TAC std_ss [FUN_EQ_THM] THEN Cases THEN Cases_on `r` THEN REPEAT (Cases_on `h`)
+  THEN SIMP_TAC std_ss [assert_def,option_then_def,LET_DEF,DTF_def]);
+
+val PUSH_assert = prove(
+  ``(assert k >> (DF >> f) = DF >> (assert k >> f)) /\
+    (assert k >> (DT >> f) = DT >> (assert k >> f)) /\
+    (assert k >> (p ++ q) = (assert k >> p ++ assert k >> q)) /\
+    (assert k >> DTF p q = DTF (assert k >> p) (assert k >> q))``,
+  SIMP_TAC std_ss [FUN_EQ_THM,option_then_def,option_orelse_def,LET_DEF,GSYM DTF_THM]
+  THEN REPEAT STRIP_TAC THEN Cases_on `x` THEN Cases_on `r` THEN REPEAT (Cases_on `h`)
+  THEN SIMP_TAC std_ss [assert_def,DF_def,DT_def] THEN METIS_TAC []);
+
+val car = fst o dest_comb;
+val cdr = snd o dest_comb;
 
 val x64_decode_aux_thm = let
   fun eval_term_ss tm_name tm = conv_ss
@@ -550,40 +603,60 @@ val x64_decode_aux_thm = let
     REPEAT STRIP_TAC THEN EVAL_TAC);
   val SOME_LEMMA = prove(``!(f :'a -> 'b option) (g :'c) (h :'d). (SOME >> f = f)``,
     SIMP_TAC std_ss [FUN_EQ_THM,option_then_def,LET_DEF]);
-  fun simp_term tm = let
-    val th1 = REWRITE_CONV [MAP,x64_decode_aux_def,combinTheory.o_DEF] tm
-    val th2 = CONV_RULE (ONCE_DEPTH_CONV (BETA_CONV) THENC (RAND_CONV (RAND_CONV EVAL))) th1
-    val th3 = REWRITE_RULE [match_list_raw_def,MAP] th2
-    val th4 = SIMP_RULE (std_ss++token_ss) [match_def] th3
-    val th5 = SIMP_RULE (bool_ss++if_ss) [MAP,x64_match_step_def] th4
-    val th6 = SIMP_RULE (bool_ss++if_ss++select_op_ss) [x64_syntax_def,EL_LEMMA,HD] th5
-    val th6a = SIMP_RULE (std_ss) [LET_DEF,process_hex_add_def] th6
-    val th7 = SIMP_RULE (bool_ss++if_ss++hex_ss++hex_add_ss++n2bits_3_ss) [decode_Zdest_src_def,decode_Zconst_def] th6a
-    val th8 = REWRITE_RULE [GSYM option_then_assoc,option_do_def,option_try_def,GSYM option_orelse_assoc] th7
-    val th9 = SIMP_RULE std_ss [option_orelse_SOME,GSYM option_orelse_assoc,Z_SOME_def] th8
-    val thA = REWRITE_RULE [GSYM option_then_assoc,EL_LEMMA,drop_eq_thm,SOME_LEMMA,option_do_def] th9
-    val thB = thA |> REWRITE_RULE [assert_option_then_thm,option_then_assoc]
-                  |> REWRITE_RULE [assert_option_then_thm,GSYM option_then_assoc,SOME_LEMMA]
-    val thC = REWRITE_RULE [option_try_def,GSYM option_orelse_assoc] thB
-    val thD = REWRITE_RULE [option_then_OVER_orelse] thC
-    val thE = REWRITE_RULE [option_orelse_assoc] thD
-    val thX = REWRITE_RULE [DT_over_DF,option_then_assoc,option_orelse_assoc,option_then_OVER_orelse] thE
-    val thZ = REWRITE_RULE [DTF_THM] thX
-    in thZ end
-  in simp_term ``x64_decode_aux g`` end;
-  
+  val DT_THEN = prove(
+    ``((DT >> f) (g,T::w) = f (g,w)) /\ ((DF >> f) (g,F::w) = f (g,w))``,
+    SIMP_TAC std_ss [option_then_def,DT_def,DF_def,LET_DEF]);
+  val tm = ``x64_decode_aux g``
+  val th1 = REWRITE_CONV [MAP,x64_decode_aux_def,combinTheory.o_DEF] tm
+  val th2 = CONV_RULE (ONCE_DEPTH_CONV (BETA_CONV) THENC (RAND_CONV (RAND_CONV EVAL))) th1
+  val th3 = REWRITE_RULE [match_list_raw_def,MAP] th2
+  val th4 = SIMP_RULE (std_ss++token_ss) [match_def] th3
+  val th5 = SIMP_RULE (bool_ss++if_ss) [MAP,x64_match_step_def] th4
+  val th6 = SIMP_RULE (bool_ss++if_ss++select_op_ss) [x64_syntax_def,EL_LEMMA,HD] th5
+  val th6a = SIMP_RULE (std_ss) [LET_DEF,process_hex_add_def] th6
+  val th7 = SIMP_RULE (bool_ss++if_ss++hex_ss++hex_add_ss++n2bits_3_ss) [decode_Zdest_src_def,decode_Zconst_def] th6a
+  val th8 = REWRITE_RULE [GSYM option_then_assoc,option_do_def,option_try_def,GSYM option_orelse_assoc] th7
+  val th9 = SIMP_RULE std_ss [option_orelse_SOME,GSYM option_orelse_assoc,Z_SOME_def] th8
+  val thA = REWRITE_RULE [GSYM option_then_assoc,EL_LEMMA,drop_eq_thm,SOME_LEMMA,option_do_def] th9
+  val thB = thA |> REWRITE_RULE [assert_option_then_thm,option_then_assoc]
+                |> REWRITE_RULE [assert_option_then_thm,GSYM option_then_assoc,SOME_LEMMA]
+  val thC = REWRITE_RULE [option_try_def,GSYM option_orelse_assoc] thB
+  val thD = REWRITE_RULE [option_then_OVER_orelse] thC
+  val thE = REWRITE_RULE [option_orelse_assoc] thD
+  val thX = REWRITE_RULE [DT_over_DF,option_then_assoc,option_orelse_assoc,option_then_OVER_orelse] thE
+  val thZ = thX |> REWRITE_RULE [DTF_INTRO,DTF_DTF,DTF_THEN,ORELSE_NONE,PUSH_assert]
+  (* find pre-evaulatable prefixes *)
+  val DTF_tm = ``DTF p (q:'a # bool list -> 'b option)``
+  fun dest_DTF tm = if can (match_term DTF_tm) tm then (cdr (car tm), cdr tm) else fail()
+  val w_var = mk_var("w",``:bool list``)
+  fun rec_dest_DTF tm = let
+    val (x1,x2) = dest_DTF tm
+    val xs1 = rec_dest_DTF x1
+    val xs2 = rec_dest_DTF x2
+    in (map (curry listSyntax.mk_cons T) xs1) @ (map (curry listSyntax.mk_cons F) xs2) end
+    handle HOL_ERR _ => [w_var]
+  val prefixes = thZ |> concl |> dest_eq |> snd |> cdr |> rec_dest_DTF
+  (* evaluate the prefixes *)
+  val LEMMA = prove(
+    ``!g w. ((\w. SOME (g,w)) >> f) w = f (g,w)``,
+    SIMP_TAC std_ss [LET_DEF,option_then_def]);
+  val c = ONCE_REWRITE_CONV [thZ] THENC REWRITE_CONV [LEMMA,DTF_def]
+  val decode_aux_tm = ``x64_decode_aux g``
+  fun eval_for prefix = c (mk_comb(decode_aux_tm,prefix))
+  val pre_evaluated_thm = LIST_CONJ (map eval_for prefixes)
+  in pre_evaluated_thm end;
 
 fun permanently_add_to_compset name thm = let
   val _ = save_thm(name,thm)
-  val _ = computeLib.add_funs [thm]
-  val _ = adjoin_to_theory {sig_ps = NONE, struct_ps = SOME (fn ppstrm =>
-    let val S = (fn s => (PP.add_string ppstrm s; PP.add_newline ppstrm)) in
-            S ("val _ = computeLib.add_funs ["^name^"];")
-    end)}
+  val _ = computeLib.add_persistent_funs [(name,thm)]
   in print ("Permanently added to compset: "^name^"\n") end;
 
 val _ = permanently_add_to_compset "Zreg_distinct" Zreg_distinct;
 val _ = permanently_add_to_compset "x64_decode_aux_thm" x64_decode_aux_thm;
 
-  
+(*
+   EVAL ``x64_decode_bytes [0x48w; 0x01w; 0xD1w]``
+*)
+
+
 val _ = export_theory ();

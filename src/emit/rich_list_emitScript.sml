@@ -27,12 +27,6 @@ val ELL_compute = Q.prove(
    STRIP_TAC THEN Q.SPEC_THEN `n` STRUCT_CASES_TAC num_CASES
      THEN REWRITE_TAC [NOT_SUC, PRE, ELL]);
 
-val GENLIST_compute = Q.prove(
-  `!n l.
-     GENLIST f n = if n = 0 then [] else SNOC (f (PRE n)) (GENLIST f (PRE n))`,
-  STRIP_TAC THEN Q.SPEC_THEN `n` STRUCT_CASES_TAC num_CASES
-    THEN REWRITE_TAC [NOT_SUC, PRE, GENLIST]);
-
 val FIRSTN_compute = Q.prove(
   `!n l. FIRSTN n l =
            if n = 0 then [] else
@@ -69,7 +63,7 @@ val SEG_compute = Q.prove(
                       combinTheory.FAIL_THM]);
 
 val defs =
-  map DEFN [AND_EL_DEF,BUTFIRSTN_compute,ELL_compute,SNOC,GENLIST_compute,
+  map DEFN [AND_EL_DEF,BUTFIRSTN_compute,ELL_compute,
             FIRSTN_compute,IS_PREFIX,IS_SUBLIST,OR_EL_DEF,SPLITP_AUX_def,
             REWRITE_RULE [FUN_EQ_THM] SPLITP_AUX,PREFIX_DEF,REPLICATE_compute,
             SCANL,SCANR,SEG_compute,SUFFIX_DEF,UNZIP_FST_DEF,UNZIP_SND_DEF];

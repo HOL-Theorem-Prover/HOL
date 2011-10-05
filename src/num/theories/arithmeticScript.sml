@@ -16,7 +16,7 @@ struct
 
 (* interactive use:
 
-   app load ["prim_recTheory", "Q", "metisLib", "boolSimps"];
+   app load ["prim_recTheory", "Q", "metisLib", "boolSimps", "SatisfySimps"];
 *)
 
 open HolKernel boolLib Parse
@@ -2732,6 +2732,19 @@ val NUMERAL_MULT_EQ_DIV = store_thm(
   CONJ_TAC THEN MATCH_MP_TAC MULT_EQ_DIV THEN
   REWRITE_TAC [NUMERAL_DEF, BIT1, BIT2, ADD_CLAUSES, LESS_0]);
 
+val MOD_EQ_0_DIVISOR = Q.store_thm(
+"MOD_EQ_0_DIVISOR",
+`0 < n ==> ((k MOD n = 0) = (∃d. k = d * n))`,
+DISCH_TAC THEN
+EQ_TAC THEN1 (
+  DISCH_TAC THEN
+  EXISTS_TAC ``k DIV n`` THEN
+  MATCH_MP_TAC EQ_SYM THEN
+  SRW_TAC [][Once MULT_SYM] THEN
+  MATCH_MP_TAC (MP_CANON (DISCH_ALL (#2(EQ_IMP_RULE (UNDISCH MULT_EQ_DIV))))) THEN
+  SRW_TAC [][] ) THEN
+SRW_TAC [][] THEN SRW_TAC [][MOD_EQ_0])
+
 val MOD_SUC = Q.store_thm(
 "MOD_SUC",
 `0 < y /\ (SUC x <> (SUC (x DIV y)) * y) ==> ((SUC x) MOD y = SUC (x MOD y))`,
@@ -2753,6 +2766,37 @@ val MOD_SUC_IFF = Q.store_thm(
 "MOD_SUC_IFF",
 `0 < y ==> ((SUC x MOD y = SUC (x MOD y)) <=> (SUC x <> SUC (x DIV y) * y))`,
 PROVE_TAC [MOD_SUC,SUC_NOT,MOD_EQ_0])
+
+val ONE_MOD = Q.store_thm(
+"ONE_MOD",
+`1 < n ==> (1 MOD n = 1)`,
+STRIP_TAC THEN
+`0 < n` by (
+  MATCH_MP_TAC LESS_TRANS THEN
+  EXISTS_TAC ``1`` THEN
+  SRW_TAC [][LESS_SUC_REFL,ONE] ) THEN
+SUFF_TAC ``SUC 0 MOD n = SUC (0 MOD n)`` THEN1
+  SRW_TAC [][ZERO_MOD,ONE] THEN
+MATCH_MP_TAC MOD_SUC THEN
+SRW_TAC [][ZERO_DIV,MULT,ADD,LESS_NOT_EQ,GSYM ONE])
+
+val ONE_MOD_IFF = Q.store_thm(
+"ONE_MOD_IFF",
+`1 < n <=> 0 < n /\ (1 MOD n = 1)`,
+EQ_TAC THEN1 (
+  SRW_TAC [][ONE_MOD] THEN
+  MATCH_MP_TAC LESS_TRANS THEN
+  EXISTS_TAC ``1`` THEN
+  SRW_TAC [][LESS_SUC_REFL,ONE] ) THEN
+STRUCT_CASES_TAC (SPEC ``n:num`` num_CASES) THEN1 (
+  SIMP_TAC bool_ss [LESS_REFL] ) THEN
+SIMP_TAC bool_ss [ONE] THEN
+STRIP_TAC THEN
+MATCH_MP_TAC LESS_MONO THEN
+Q.MATCH_RENAME_TAC `0 < m` [] THEN
+FULL_STRUCT_CASES_TAC (SPEC ``m:num`` num_CASES) THEN1 (
+  FULL_SIMP_TAC bool_ss [MOD_ONE,SUC_NOT] ) THEN
+SIMP_TAC bool_ss [LESS_0])
 
 val MOD_LESS_EQ = Q.store_thm(
 "MOD_LESS_EQ",
@@ -2794,7 +2838,7 @@ CONJ_TAC THEN1 (
     FULL_SIMP_TAC bool_ss [ADD_SYM,ADD,SUB_LEFT_LESS,MULT_CLAUSES] THEN
     `SUC ((k + x) MOD n + (k + x) DIV n * n) < n + (k + x) DIV n * n`
       by PROVE_TAC [LESS_MONO_ADD,ADD_SUC,ADD_SYM] THEN
-    PROVE_TAC [DIVISION,ADD_SYM,prim_recTheory.LESS_REFL]) THEN
+    PROVE_TAC [DIVISION,ADD_SYM,LESS_REFL]) THEN
   AP_TERM_TAC THEN
   FIRST_ASSUM ACCEPT_TAC) THEN
 SIMP_TAC bool_ss [ADD_SUC])

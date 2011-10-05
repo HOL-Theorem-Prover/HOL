@@ -25,7 +25,7 @@ val _ = temp_overload_on (parmonadsyntax.monad_bind, ``seqT``);
 val _ = temp_overload_on (parmonadsyntax.monad_par,  ``parT``);
 val _ = temp_overload_on ("return", ``constT``);
 
-val _ = temp_overload_on ("PAD0", ``string$PAD_LEFT #"0"``);
+val _ = temp_overload_on ("PAD0", ``list$PAD_LEFT #"0"``);
 
 (* ------------------------------------------------------------------------ *)
 

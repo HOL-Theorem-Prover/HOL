@@ -126,7 +126,7 @@ src/opentheory
 [mosml]!examples/muddy/muddyC
 [mosml]!examples/muddy
 [mosml]!examples/HolBdd
-[mosml]!!examples/HolCheck
+[mosml]!!!!examples/HolCheck
 src/datatype/inftree
 !examples/lambda/basics
 !examples/lambda/barendregt

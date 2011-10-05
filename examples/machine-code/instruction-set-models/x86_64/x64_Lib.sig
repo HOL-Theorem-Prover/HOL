@@ -5,6 +5,6 @@ sig
     val x64_decode          : string -> thm
     val x64_step            : string -> thm
 
-    val x64_test            : string -> (string * string) list -> (string * string) list -> thm
+    val x64_test            : string -> (string * string * string) list -> unit
 
 end

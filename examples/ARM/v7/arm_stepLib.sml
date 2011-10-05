@@ -47,12 +47,11 @@ val mk_constants =
 
 val restr_terms = mk_constants
   [("words",         ["word_div", "word_sdiv", "add_with_carry",
-                      "bit_field_insert"]),
+                      "bit_field_insert", "word_sign_extend"]),
    ("integer_word",  ["w2i", "i2w"]),
    ("arm_opsem",     ["signed_sat_q", "unsigned_sat_q",
                       "signed_sat", "unsigned_sat"]),
-   ("arm_coretypes", ["encode_psr", "decode_psr", "sign_extend",
-                      "count_leading_zeroes"])];
+   ("arm_coretypes", ["encode_psr", "decode_psr", "count_leading_zeroes"])];
 
 val _ = computeLib.del_consts (mk_constants
   [("arm_opsem",

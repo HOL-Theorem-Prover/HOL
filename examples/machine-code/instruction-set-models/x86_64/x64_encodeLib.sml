@@ -54,14 +54,30 @@ fun parse_address s = let
     | delete_base (SOME b) ((n,x)::xs) = if (1,b) = (n,x) then xs else (n,x) :: delete_base (SOME b) xs
   val index = delete_base base ks
   val index = SOME (hd index) handle e => NONE
+  fun sp_as_scale NONE = false
+    | sp_as_scale (SOME (0,x)) = false
+    | sp_as_scale (SOME (1,x)) = false
+    | sp_as_scale (SOME (_,x)) = (x = "RSP")
+  val _ = not (sp_as_scale index) orelse fail()
+  fun scale_by_2 (SOME (2,x)) = true
+    | scale_by_2 _ = false
+  fun get_scale_reg (SOME (_,r)) = r
+    | get_scale_reg _ = fail()
+  val (index,base) = if base = NONE andalso scale_by_2 index then
+                       (SOME (1,get_scale_reg index), SOME (get_scale_reg index))
+                     else (index,base)
+  fun swap_rsp (SOME (1, "RSP"), SOME r) = (SOME (1, r), SOME "RSP")
+    | swap_rsp (x,y) = (x,y)
+  val (index,base) = swap_rsp (index,base)
+  val _ = not ((index,base) = (SOME (1,"RSP"),SOME "RSP")) orelse fail()
   in (index,base,imm) end;
 
 fun fill n s = if size s < n then fill n ("0" ^ s) else s
 
 fun unsigned_hex n s = let
   val i = fill n (Arbnum.toHexString (Arbnum.fromString s))
-  val i = (substring(i,14,2) ^ substring(i,12,2) ^ substring(i,10,2) ^ substring(i,8,2) ^ 
-           substring(i,6,2) ^ substring(i,4,2) ^ substring(i,2,2) ^ substring(i,0,2)) handle e => 
+  val i = (substring(i,14,2) ^ substring(i,12,2) ^ substring(i,10,2) ^ substring(i,8,2) ^
+           substring(i,6,2) ^ substring(i,4,2) ^ substring(i,2,2) ^ substring(i,0,2)) handle e =>
           (substring(i,6,2) ^ substring(i,4,2) ^ substring(i,2,2) ^ substring(i,0,2)) handle e => i
   in if size i = n then i else fail() end
 
@@ -77,8 +93,8 @@ fun signed_hex n i = let
            substring(i,0,2)) handle e => i
   in i end
 
-local 
-  fun add_reg_type ty xs = map (fn x => (x,ty)) xs 
+local
+  fun add_reg_type ty xs = map (fn x => (x,ty)) xs
   val x64_regs =
     zip ["AL","CL","DL","BL","SPL","BPL","SIL","DIL"] (add_reg_type 8 [0,1,2,3,4,5,6,7]) @
     zip ["AX","CX","DX","BX","SP","BP","SI","DI"] (add_reg_type 16 [0,1,2,3,4,5,6,7]) @
@@ -103,7 +119,16 @@ in
   fun x64_is_reg r = can x64_reg_info r;
 end;
 
-fun x64_address_encode s = let
+(*
+val s = last xs
+*)
+
+fun x64_address_encode s =
+  if mem s ["[R13]","[0+R13]","[R13+0]"] then
+    (* work around suggested by Intel manual for avoiding
+       the encoding of RIP-relative addressing in 64-bit x86 *)
+    [("R/M", "13"), ("Mod", "1"), ("disp", "00")]
+  else let
   val (index,base,disp) = parse_address s
   val rr = int_to_string o x64_reg2int
   fun the (SOME x) = x | the NONE = fail()
@@ -112,14 +137,16 @@ fun x64_address_encode s = let
     | get_scale (SOME (4,i)) = [("Scale","2"),("Index",rr i)]
     | get_scale (SOME (8,i)) = [("Scale","3"),("Index",rr i)]
     | get_scale _ = fail()
-  fun is_SP (SOME s) = (x64_reg2int s = 5) | is_SP _ = false 
-  fun is_BP (SOME s) = (x64_reg2int s = 6) | is_BP _ = false 
+  fun is_SP (SOME s) = (x64_reg2int s = 4) | is_SP _ = false
+  fun is_BP (SOME s) = (x64_reg2int s = 5) | is_BP _ = false
+  fun is_R12 (SOME s) = (x64_reg2int s = 12) | is_R12 _ = false
+  fun is_R13 (SOME s) = (x64_reg2int s = 13) | is_R13 _ = false
   fun f (index,base,disp) =
     if index = NONE then
       if base = NONE then
         [("R/M","5"),("Mod","0"),("disp",signed_hex 8 disp)]
-      else if is_SP base then
-        [("R/M",rr "ESP"),("Base","4"),("Index","4"),("Scale","0")] @
+      else if is_SP base orelse is_R12 base then
+        [("R/M",rr (the base)),("Base","4"),("Index","4"),("Scale","0")] @
         (if disp = Arbint.fromInt 0 then [("Mod","0")]
          else if can (signed_hex 2) disp
          then [("Mod","1"),("disp",signed_hex 2 disp)]
@@ -132,9 +159,9 @@ fun x64_address_encode s = let
         [("R/M",rr (the base)),("Mod","2"),("disp",signed_hex 8 disp)]
     else
       if base = NONE then
-        [("R/M",rr "ESP"),("Mod","2"),("Base","5"),("disp",signed_hex 8 disp)]
+        [("R/M",rr "ESP"),("Mod","0"),("Base","5"),("disp",signed_hex 8 disp)]
         @ get_scale index
-      else if (disp = Arbint.fromInt 0) andalso not (is_BP base) then
+      else if (disp = Arbint.fromInt 0) andalso not (is_BP base) andalso not (is_R13 base) then
         [("R/M",rr "ESP"),("Mod","0"),("Base",rr (the base))] @ get_scale index
       else if can (signed_hex 2) disp then
         [("R/M",rr "ESP"),("Mod","1"),("Base",rr (the base))] @ get_scale index
@@ -155,32 +182,32 @@ fun x64_encode s = let
   val s = String.translate (fn x => implode [Char.toUpper x]) s
   val xs = String.tokens (fn x => mem x [#" ",#","]) s
   val ys = filter (fn (x,y) => ((hd y = hd xs) handle _ => false)) instructions
-  fun token_data_size t = 
+  fun token_data_size t =
     if mem t ["r8","r/m8"] then 8 else
     if mem t ["r16","r/m16"] then 16 else
     if mem t ["r32","r/m32"] then 32 else
-    if mem t ["r64","r/m64"] then 64 else 
+    if mem t ["r64","r/m64"] then 64 else
     if x64_is_reg t then x64_reg_size t else fail();
   fun every p [] = true | every p (x::xs) = p x andalso every p xs
   val use_default_size = every (fn (x,y) => every (fn t => not (can token_data_size t)) y) ys
                          orelse mem (hd xs) ["CALL","JMP"]
-  val zsize = if use_default_size then 64 else 
+  val zsize = if use_default_size then 64 else
               x64_reg_size (hd (filter x64_is_reg xs))
               handle Empty => if mem "BYTE" xs then 8 else
-                              if mem "WORD" xs then 16 else 
+                              if mem "WORD" xs then 16 else
                               if mem "DWORD" xs then 32 else
                               if mem "QWORD" xs then 64 else
                                 (print ("\n\nERROR: Specify data size using BYTE, WORD, DWORD or QWORD in "^s^".\n\n"); fail())
   val ys = if not (hd xs = "MOVZX") then ys else let
              val x = el 3 xs
              val s = if x64_is_reg x then x64_reg_size x else
-                       if x = "WORD" then 16 else 
+                       if x = "WORD" then 16 else
                        if x = "BYTE" then 8 else fail()
              val _ = if mem s [8,16] then () else fail()
              in filter (fn (x,y) => token_data_size (el 3 y) = s) ys end
   val ys = if not ((hd xs = "MOV") andalso (zsize = 64) andalso (can string_to_int (last xs))) then ys else
-             ys |> filter (fn (x,y) => last y = "imm64") 
-                |> map (fn (x,y) => (filter (fn t => not (mem t ["REX.W","+"])) x,y)) 
+             ys |> filter (fn (x,y) => last y = "imm64")
+                |> map (fn (x,y) => (filter (fn t => not (mem t ["REX.W","+"])) x,y))
   val xs = filter (fn x => not (mem x ["BYTE","WORD","DWORD","QWORD"])) xs
   val prefixes = if zsize = 16 then "66" else ""
   fun intro_eax s = (if (x64_reg2int s = 0) then "EAX" else s) handle HOL_ERR _ => s
@@ -191,18 +218,18 @@ fun x64_encode s = let
     | find x ((y,z)::ys) = if x = y then z else find x ys
   fun try_all f [] = []
     | try_all f (x::xs) = f x :: try_all f xs handle e => try_all f xs
-  val ys = if zsize = 8 then filter (fn (x,y) => (token_data_size (el 2 y) = 8) handle HOL_ERR _ => true) ys 
+  val ys = if zsize = 8 then filter (fn (x,y) => (token_data_size (el 2 y) = 8) handle HOL_ERR _ => true) ys
                         else filter (fn (x,y) => not (token_data_size (el 2 y) = 8) handle HOL_ERR _ => true) ys
-  fun simplify_token t = 
+  fun simplify_token t =
     if mem t ["r8","r16","r32","r64"] then "r32" else
-    if mem t ["r/m8","r/m16","r/m32","r/m64"] then "r/m32" else t;  
+    if mem t ["r/m8","r/m16","r/m32","r/m64"] then "r/m32" else t;
   val ys = map (fn (x,y) => (x,map simplify_token y)) ys
 (*
-  val (zs,ys) = el 2 ys 
+  val (zs,ys) = el 3 ys
 *)
   fun use_encoding (zs,ys) = let
     val rex = ref (if zsize = 64 then [#"W"] else [])
-    fun rex_prefix() = 
+    fun rex_prefix() =
       if (!rex) = [] then "" else
         signed_hex 2 (Arbint.fromInt (4 * 16 + (if mem #"W" (!rex) then 8 else 0)
                                              + (if mem #"R" (!rex) then 4 else 0)
@@ -213,7 +240,7 @@ fun x64_encode s = let
       if x = "imm64" then
         [("iq",unsigned_hex 16 y)]
       else if x = "imm32" then
-        [("id",unsigned_hex 8 y)]
+        [("id",signed_hex 8 (Arbint.fromString y))]
       else if x = "imm16" then
         [("iw",signed_hex 4 (Arbint.fromString y))]
       else if x = "imm8" then

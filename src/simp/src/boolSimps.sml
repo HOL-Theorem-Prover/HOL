@@ -374,7 +374,7 @@ val x = mk_var("x", alpha)
 val x' = mk_var("x'", alpha)
 val y = mk_var("y", beta)
 val y' = mk_var("y'", beta)
-val f = mk_var("f", alpha --> beta --> bool)
+val f = mk_var("f", alpha --> beta --> gamma)
 val patternL = DISCH_ALL (AP_THM (AP_TERM f (ASSUME (mk_eq(x,x')))) y)
 val patternR = DISCH_ALL (AP_TERM (mk_comb(f,x)) (ASSUME (mk_eq(y,y'))))
 

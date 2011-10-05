@@ -135,10 +135,6 @@ val _ = disable_tyabbrev_printing "proc";
 
 (* ------------------------------------------------------------------------ *)
 
-val sign_extend_def = Define`
-  sign_extend n (w:'a word) = 
-    n2w (SIGN_EXTEND n (dimindex(:'a)) (w2n w)) : 'a word`;
-
 val align_def = zDefine
   `align (w : 'a word, n : num) : 'a word = n2w (n * (w2n w DIV n))`;
 

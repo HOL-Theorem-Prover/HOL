@@ -497,12 +497,12 @@ local
      [n2w_def, word_xor, word_or_def, word_and_def, word_1comp_def,
       word_nor_def, word_xnor_def, word_nand_def, word_reduce_def,
       reduce_or_def, reduce_and_def, reduce_xor, reduce_xnor_def,
-      reduce_nand_def, word_replicate_def, word_join, word_concat_def,
-      word_reverse_def, word_modify_def, word_lsl_def, word_lsr_def,
-      word_asr_def, word_ror_def, word_rol_def, word_rrx_def, word_msb_def,
-      word_lsb_def, word_extract_def, word_bits_def, word_slice_def,
-      word_bit_def, word_signed_bits_def, bit_field_insert_def, index_cond,
-      SYM WORD_NEG_1, word_L_thm, minus1_thm, w2w_thm, sw2sw_thm,
+      reduce_nand_def, word_compare_def, word_replicate_def, word_join,
+      word_concat_def, word_reverse_def, word_modify_def, word_lsl_def,
+      word_lsr_def, word_asr_def, word_ror_def, word_rol_def, word_rrx_def,
+      word_msb_def, word_lsb_def, word_extract_def, word_bits_def, word_abs,
+      word_slice_def, word_bit_def, word_signed_bits_def, bit_field_insert_def,
+      index_cond, SYM WORD_NEG_1, word_L_thm, minus1_thm, w2w_thm, sw2sw_thm,
       BITWISE_ADD, BITWISE_SUB, BITWISE_LO, fcpTheory.FCP_UPDATE_def,
       listTheory.HD, listTheory.TL, listTheory.SNOC, listTheory.FOLDL,
       listTheory.GENLIST_GENLIST_AUX, SUC_RULE listTheory.GENLIST_AUX,
@@ -708,6 +708,20 @@ in
                (case Lib.total wordsSyntax.dest_word_lo tm
                 of SOME (w,_) => Lib.can dim_of_word w
                  | NONE => false))
+
+  fun full_is_blastable tm =
+         is_blastable tm orelse
+         (case Lib.total boolSyntax.dest_strip_comb tm
+          of SOME (s,[w,_]) =>
+              (Lib.can dim_of_word w andalso
+               Lib.mem s
+                ["words$word_lt", "words$word_le", "words$word_gt",
+                 "words$word_ge", "words$word_hi", "words$word_hs",
+                 "words$word_ls"])
+           | SOME (s,[w]) =>
+              (Lib.can dim_of_word w andalso
+               Lib.mem s ["words$word_msb", "words$word_lsb"])
+           | _ => false)
 end
 
 local
@@ -899,7 +913,8 @@ val BBLAST_TAC  = Tactic.CONV_TAC BBLAST_CONV;
 
 val FULL_BBLAST_TAC =
   REPEAT
-    (Tactical.PRED_ASSUM (Lib.can (HolKernel.find_term is_blastable)) MP_TAC)
+    (Tactical.PRED_ASSUM
+       (Lib.can (HolKernel.find_term full_is_blastable)) MP_TAC)
   THEN BBLAST_TAC;
 
 (* ------------------------------------------------------------------------ *)

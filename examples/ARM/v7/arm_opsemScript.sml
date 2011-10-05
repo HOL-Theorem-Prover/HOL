@@ -1825,7 +1825,7 @@ val saturate_instr_def = iDefine`
                       if unsigned then
                         unsigned_sat_q (SInt operand, w2n sat_imm)
                       else let saturate_to = w2n sat_imm + 1 in
-                        (sign_extend saturate_to ## I)
+                        (word_sign_extend saturate_to ## I)
                           (signed_sat_q (SInt operand, saturate_to))
               in
                 (increment_pc ii enc |||
@@ -1895,9 +1895,9 @@ val saturate_16_instr_def = iDefine`
                unsigned_sat_q (SInt (top_half rn), saturate_to)
            else
              let saturate_to = w2n sat_imm + 1 in
-               (sign_extend saturate_to ## I)
+               (word_sign_extend saturate_to ## I)
                  (signed_sat_q (SInt (bot_half rn), saturate_to)),
-               (sign_extend saturate_to ## I)
+               (word_sign_extend saturate_to ## I)
                  (signed_sat_q (SInt (top_half rn), saturate_to))
          in
            (increment_pc ii enc |||

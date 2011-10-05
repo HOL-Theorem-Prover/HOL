@@ -1136,12 +1136,14 @@ fun add_ptree_convs compset =
   add_conv (is_ptree_tm,     1, PTREE_IS_PTREE_CONV)        compset;
   add_conv (ptree_of_numset_tm, 2, PTREE_OF_NUMSET_CONV)    compset);
 
+val _ = add_funs [PEEK_TRANSFORM];
 val _ = add_ptree_convs the_compset;
 
 fun add_ptree_compset compset =
 let open listTheory pred_setTheory in
-  add_thms [pairTheory.UNCURRY_DEF, optionTheory.THE_DEF,
-            IS_EMPTY_def, FIND_def, ADD_INSERT,
+  add_thms [pairTheory.UNCURRY_DEF,
+            optionTheory.THE_DEF, optionTheory.option_case_def,
+            IS_EMPTY_def, FIND_def, ADD_INSERT, PEEK_TRANSFORM,
             FOLDL, NUMSET_OF_PTREE_def, ADD_LIST_def, LIST_TO_SET_THM,
             PTREE_OF_NUMSET_EMPTY, UNION_PTREE_def, COND_CLAUSES,
             EMPTY_DELETE, DELETE_INSERT, DELETE_UNION] compset;

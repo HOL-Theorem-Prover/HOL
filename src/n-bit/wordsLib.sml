@@ -720,7 +720,9 @@ val WORD_ARITH_EQ_ss =
 
 val WORD_ARITH_ss =
   simpLib.named_merge_ss "word arith"
-    [WORD_MULT_ss, WORD_ADD_ss, WORD_SUBTRACT_ss, WORD_w2n_ss, WORD_CONST_ss];
+    [WORD_MULT_ss, WORD_ADD_ss, WORD_SUBTRACT_ss, WORD_w2n_ss, WORD_CONST_ss,
+     simpLib.rewrites [word_abs_word_abs, word_abs_neg,
+       ONCE_REWRITE_RULE [WORD_NEG_MUL] word_abs_neg]];
 
 local
  val conv = SIMP_CONV (std_ss++WORD_ARITH_EQ_ss++WORD_ARITH_ss) []

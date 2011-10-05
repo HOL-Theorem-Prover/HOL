@@ -2729,9 +2729,9 @@ val SUBSET_ok_data = prove(
   METIS_TAC [ok_data_def,SUBSET_DEF]);
 
 val SEP_EXPS_ok_data = prove(
-  ``!xs sa xi h s x g.
-      SEP_EXPS xs (a,xi) (fun2set (h,g)) /\ x IN g /\ g SUBSET s ==>
-      ok_data (h x) { y | y IN s /\ ALIGNED8 (a - y) }``,
+  ``!xs sa xi hh s x g.
+      SEP_EXPS xs (a,xi) (fun2set (hh,g)) /\ x IN g /\ g SUBSET s ==>
+      ok_data (hh x) { y | y IN s /\ ALIGNED8 (a - y) }``,
   STRIP_TAC \\ completeInduct_on `LENGTH xs + 2 * SUM_LSIZE (MAP SND xs)`
   \\ Cases \\ SIMP_TAC std_ss [SEP_EXPS_def,emp_def,fun2set_EMPTY,SUBSET_EMPTY]
   THEN1 METIS_TAC [NOT_IN_EMPTY]
@@ -2753,7 +2753,7 @@ val SEP_EXPS_ok_data = prove(
     \\ ASM_SIMP_TAC std_ss []
     \\ FULL_SIMP_TAC std_ss [SUBSET_DEF,GSPECIFICATION,IN_DELETE])
   \\ Cases_on `x = q + 4w` THEN1
-   (Q.PAT_ASSUM `bbb (fun2set (h',g DELETE q DELETE (q + 0x4w)))` MP_TAC
+   (Q.PAT_ASSUM `bbb (fun2set (hh,g DELETE q DELETE (q + 0x4w)))` MP_TAC
     \\ ONCE_REWRITE_TAC [STAR_COMM]
     \\ SIMP_TAC std_ss [GSYM STAR_ASSOC]
     \\ REPEAT STRIP_TAC \\ IMP_RES_TAC lisp_exp_ok_data
@@ -2770,7 +2770,7 @@ val SEP_EXPS_ok_data = prove(
   \\ `x IN (g DELETE q DELETE (q + 0x4w))` by ASM_SIMP_TAC std_ss [IN_DELETE]
   \\ IMP_RES_TAC SUBSET_TRANS
   \\ FULL_SIMP_TAC std_ss []
-  \\ Q.ABBREV_TAC `ys = (h' q,a1)::(h' (q + 0x4w),a2)::t`
+  \\ Q.ABBREV_TAC `ys = (hh q,a1)::(hh (q + 0x4w),a2)::t`
   \\ Q.ABBREV_TAC `i = SUC (LENGTH t) +
         2 * (SUC (LSIZE a1 + LSIZE a2) + SUM_LSIZE (MAP SND t))`
   \\ `LENGTH ys + 2 * SUM_LSIZE (MAP SND ys) < i` by
