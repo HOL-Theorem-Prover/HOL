@@ -423,18 +423,39 @@ fun is_refl tm =
  in aconv l r
  end handle HOL_ERR _ => false;
 
-val TOSS_REFL_ASSUM = 
-  TRY (WEAKEN_TAC is_refl) THEN ASM_REWRITE_TAC[]
+fun TRIV_LET_CONV tm = 
+ let val (_,a) = boolSyntax.dest_let tm
+ in if is_var a orelse is_const a 
+        orelse Literal.is_literal a
+    then (REWR_CONV LET_THM THENC BETA_CONV) tm
+    else NO_CONV tm
+ end;
+
+fun SIMP_OLD_ASSUMS (orig as (asl1,_)) (gl as (asl2,_)) =
+ let val new = op_set_diff aconv asl2 asl1
+ in if null new then ALL_TAC
+    else let val thms = map ASSUME new
+          in MAP_EVERY (Lib.C UNDISCH_THEN (K ALL_TAC)) new THEN 
+              RULE_ASSUM_TAC (REWRITE_RULE thms) THEN
+              MAP_EVERY ASSUME_TAC thms
+          end
+ end gl;
+
+fun USE_NEW_ASSUM orig_goal cgoal = 
+ (TRY (WEAKEN_TAC is_refl) THEN 
+  ASM_REWRITE_TAC[] THEN 
+  SIMP_OLD_ASSUMS orig_goal THEN
+  CONV_TAC (DEPTH_CONV TRIV_LET_CONV)) cgoal;
 
 (*---------------------------------------------------------------------------*)
 (* Do a case analysis in the conclusion of the goal, then simplify a bit.    *)
 (*---------------------------------------------------------------------------*)
 
-val CASE_TAC = 
-  PURE_CASE_TAC THEN TOSS_REFL_ASSUM THEN CONV_TAC CASE_SIMP_CONV;
+fun CASE_TAC gl = 
+ (PURE_CASE_TAC THEN USE_NEW_ASSUM gl THEN CONV_TAC CASE_SIMP_CONV) gl;
 
-val TOP_CASE_TAC =
-  PURE_TOP_CASE_TAC THEN TOSS_REFL_ASSUM THEN CONV_TAC CASE_SIMP_CONV;
+fun TOP_CASE_TAC gl = 
+ (PURE_TOP_CASE_TAC THEN USE_NEW_ASSUM gl THEN CONV_TAC CASE_SIMP_CONV) gl;
 
    
 (*---------------------------------------------------------------------------*)
@@ -445,7 +466,7 @@ fun FULL_CASE_TAC goal =
  let val rws = case_rwlist()
      val case_conv = PURE_CASE_SIMP_CONV rws
      val asm_rule = Rewrite.REWRITE_RULE rws
- in PURE_FULL_CASE_TAC THEN TOSS_REFL_ASSUM
+ in PURE_FULL_CASE_TAC THEN USE_NEW_ASSUM goal
     THEN RULE_ASSUM_TAC asm_rule
     THEN CONV_TAC case_conv
  end goal;
@@ -459,10 +480,10 @@ fun FULL_CASE_TAC goal =
 fun EVERY_CASE_TAC goal = 
  let val rws = case_rwlist()
      val case_conv = PURE_CASE_SIMP_CONV rws
-     val asm_rule = Rewrite.REWRITE_RULE rws
-     val tac = PURE_FULL_CASE_TAC THEN TOSS_REFL_ASSUM THEN
-               RULE_ASSUM_TAC asm_rule THEN 
-               CONV_TAC case_conv
+     val asm_rule = BETA_RULE o Rewrite.REWRITE_RULE rws
+     fun tac a = (PURE_FULL_CASE_TAC THEN USE_NEW_ASSUM a THEN
+                  RULE_ASSUM_TAC asm_rule THEN 
+                  CONV_TAC case_conv) a
  in REPEAT tac
  end goal;
  

@@ -1352,7 +1352,8 @@ fun adjoin [] = raise ERR "Hol_datatype" "no tyinfos"
               (S ("      val tyinfo0 = " ^ extra_string ^ "tyinfo0"); NL())
           fun do_string_etc
              ({ax,case_def,case_cong,induction,nchotomy,
-               one_one,distinct,encode,lift,size,fields,accessors,updates},
+               one_one,distinct,encode,lift,size,fields,accessors,updates,
+               recognizers,destructors},
               extra_simpls_string) =
             (S "    let";                                               NL();
              S "      open TypeBasePure";                               NL();
@@ -1369,7 +1370,9 @@ fun adjoin [] = raise ERR "Hol_datatype" "no tyinfos"
              S("         distinct="^distinct^",");                      NL();
              S("         fields="^fields^",");                          NL();
              S("         accessors="^accessors^",");                    NL();
-             S("         updates="^updates^"}");                        NL();
+             S("         updates="^updates^",");                        NL();
+             S("         recognizers="^recognizers^",");                NL();
+             S("         destructors="^destructors^"}");                NL();
              do_extras extra_simpls_string;
              S "      val () = computeLib.write_datatype_info tyinfo0"; NL();
              S "    in";                                                NL();
@@ -1454,6 +1457,19 @@ fun write_tyinfo tyinfo =
            of [] => "[]"
             | other => "Drule.CONJUNCTS "^upd_name
        end
+     val destructors_list =
+       let val dest_name = name"_destructors"
+       in case destructors_of tyinfo
+           of [] => "[]"
+            | other => "Drule.CONJUNCTS "^dest_name
+       end
+     val recognizers_list =
+       let val rec_name = name"_recognizers"
+       in case recognizers_of tyinfo
+           of [] => "[]"
+            | other => "Drule.CONJUNCTS "^rec_name
+       end
+
  in
    {ax        = axiom_name,
     induction = induction_name,
@@ -1467,6 +1483,8 @@ fun write_tyinfo tyinfo =
     fields    = Portable.pp_to_string 60 pp_fields (fields_of tyinfo),
     accessors = accessors_list,
     updates   = updates_list,
+    recognizers = recognizers_list,
+    destructors = destructors_list,
     distinct  = distinct_name}
  end;
 

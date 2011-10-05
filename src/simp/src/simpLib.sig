@@ -52,7 +52,9 @@ sig
                        conv: conv}
 
   type controlled_thm = BoundedRewrites.controlled_thm
+
   type ssfrag
+
   val SSFRAG :
     {name : string option,
      convs: convdata list,
@@ -61,6 +63,7 @@ sig
     filter: (controlled_thm -> controlled_thm list) option,
     dprocs: Traverse.reducer list,
      congs: thm list} -> ssfrag
+
   val frag_rewrites : ssfrag -> thm list
 
   (*------------------------------------------------------------------------*)
@@ -102,6 +105,7 @@ sig
   val ssfrags_of      : simpset -> ssfrag list
   val mk_simpset      : ssfrag list -> simpset
   val remove_ssfrags  : simpset -> string list -> simpset
+  val ssfrag_names_of : simpset -> string list
   val ++              : simpset * ssfrag -> simpset  (* infix *)
   val &&              : simpset * thm list -> simpset  (* infix *)
   val limit           : int -> simpset -> simpset

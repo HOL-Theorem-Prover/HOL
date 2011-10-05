@@ -2134,41 +2134,49 @@ let
                       | _ => nothing
    val (f,x) = strip_comb t
 in
-  case (fst (dest_const f), x)
-    of ("n2w",[a]) =>
+  case (dest_thy_const f, x)
+    of ({Name = "n2w", Thy = "words", Ty = ty},[a]) =>
           let val prec = Prec (2000,"n2w") in
             ublock INCONSISTENT 0
               (delim 200 (str "(") >>
-               trace ("types", 1) (sys (pg,lg,rg) d) f >> brk (1,2) >>
+               str "(n2w " >>
+               liftpp (fn pps => pp_type pps ty) >>
+               str ")" >> brk (1,2) >>
                sys (prec,prec,prec) (d - 1) a >>
                delim 200 (str ")"))
           end
-     | ("w2w",[a]) =>
+     | ({Name = "w2w", Thy = "words", Ty = ty},[a]) =>
           let val prec = Prec (2000,"w2w") in
             ublock INCONSISTENT 0
               (delim 200 (str "(") >>
-               trace ("types", 1) (sys (pg,lg,rg) d) f >> brk (1,2) >>
+               str "(w2w " >>
+               liftpp (fn pps => pp_type pps ty) >>
+               str ")" >> brk (1,2) >>
                sys (prec,prec,prec) (d - 1) a >>
                delim 200 (str ")"))
           end
-     | ("sw2sw",[a]) =>
+     | ({Name = "sw2sw", Thy = "words", Ty = ty},[a]) =>
           let val prec = Prec (2000,"sw2sw") in
             ublock INCONSISTENT 0
               (delim 200 (str "(") >>
-               trace ("types", 1) (sys (pg,lg,rg) d) f >> brk (1,2) >>
+               str "(sw2sw " >>
+               liftpp (fn pps => pp_type pps ty) >>
+               str ")" >> brk (1,2) >>
                sys (prec,prec,prec) (d - 1) a >>
                delim 200 (str ")"))
           end
-     | ("word_concat",[a,b]) =>
+     | ({Name = "word_concat", Thy = "words", Ty = ty},[a,b]) =>
           let val prec = Prec (2000,"word_concat") in
             ublock INCONSISTENT 0
               (delim 200 (str "(") >>
-               trace ("types", 1) (sys (pg,lg,rg) d) f >> brk (1,2) >>
+               str "(word_concat " >>
+               liftpp (fn pps => pp_type pps ty) >>
+               str ")" >> brk (1,2) >>
                sys (prec,prec,prec) (d - 1) a >> brk (1,0) >>
                sys (prec,prec,prec) (d - 1) b >>
                delim 200 (str ")"))
           end
-     | ("word_extract",[h,l,a]) =>
+     | ({Name = "word_extract", Thy = "words", Ty = ty},[h,l,a]) =>
           let val prec = Prec (2000,"word_extract") in
             ublock INCONSISTENT 0
               (delim 200 (str "(") >>

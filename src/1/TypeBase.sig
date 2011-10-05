@@ -21,6 +21,8 @@ sig
    val axiom_rk_of        : hol_type -> int -> thm
    val induction_of       : hol_type -> thm
    val constructors_of    : hol_type -> term list
+   val destructors_of     : hol_type -> thm list
+   val recognizers_of     : hol_type -> thm list
    val case_const_of      : hol_type -> term
    val case_cong_of       : hol_type -> thm
    val case_def_of        : hol_type -> thm
