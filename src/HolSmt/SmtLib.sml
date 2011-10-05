@@ -1,302 +1,496 @@
-(* Copyright (c) 2009-2010 Tjark Weber. All rights reserved. *)
+(* Copyright (c) 2009-2011 Tjark Weber. All rights reserved. *)
 
-(* Translation of HOL terms into SMT-LIB 1.2 format *)
+(* Translation of HOL terms into SMT-LIB 2 format *)
 
 structure SmtLib = struct
 
-  (* So far, only the AUFLIA logic is supported (closed linear formulas over
-     the theory of integer arrays with free sort, function and predicate
-     symbols):
+local
 
-     :sorts (Int Array)
+  (* FIXME: We translate into a fictitious SMT-LIB logic AUFBVNIRA
+     that comprises arrays (A), uninterpreted functions (UF),
+     bit-vectors (BV), non-linear (N) integer (I) and real arithmetic
+     (RA).  Unfortunately, there is no actual SMT-LIB logic at the
+     moment that contains all these features: AUFNIRA is missing
+     bit-vectors, while QF_AUFBV is missing quantifiers and
+     arithmetic.  See SmtLib_{Theories,Logics}.sml for details.  At
+     present, we make no attempt to identify a less expressive SMT-LIB
+     logic based on the constants that actually appear in the goal. *)
 
-     :funs ((0 Int)
-            (1 Int)
-            (~ Int Int)     ; unary minus
-            (- Int Int Int) ; binary minus
-            (+ Int Int Int :assoc :comm :unit {0})
-            ( * Int Int Int :assoc :comm :unit {1})
-            (select Array Int Int)
-            (store Array Int Int Array)
-           )
+  val ERR = Feedback.mk_HOL_ERR "SmtLib"
+  val WARNING = Feedback.HOL_WARNING "SmtLib"
 
-     :preds ((<= Int Int :refl :trans :antisym)
-             (< Int Int :trans :irref)
-             (>= Int Int :refl :trans :antisym)
-             (> Int Int :trans :irref)
-            )
+  (* (HOL type, a function that maps the type to its SMT-LIB sort name) *)
+  val builtin_types = List.foldl
+    (fn ((ty, x), net) => TypeNet.insert (net, ty, x)) TypeNet.empty [
+    (Type.bool, Lib.K "Bool"),
+    (intSyntax.int_ty, Lib.K "Int"),
+    (realSyntax.real_ty, Lib.K "Real"),
+    (* bit-vector types *)
+    (wordsSyntax.mk_word_type Type.alpha, fn ty =>
+      "(_ BitVec " ^ Arbnum.toString
+        (fcpSyntax.dest_numeric_type (wordsSyntax.dest_word_type ty)) ^ ")")
+   ]
 
-     All other types and terms are treated as uninterpreted.  Actually, even
-     arrays are not supported yet.
-  *)
+  val apfst_K = Lib.apfst o Lib.K
 
-  (* Types are called sorts in SMT-LIB.  Note that sorts cannot depend on
-     argument sorts.  Even function types are only supported implicitly.  Also
-     note that 'bool' (when it occurs as the domain of a function, or the type
-     of a bound variable) is treated as an uninterpreted type. *)
-
-  (* (HOL type, SMT-LIB sort name) *)
-  val TypesTable = [
-    (intSyntax.int_ty, "Int")
-  ]
-
-  (* SMT-LIB distinguishes between terms and formulas (and also between
-     functions and predicates). *)
-
-  (* (HOL term, SMT-LIB name, fun_symb_decl, an_formula) *)
-  val OperatorsTable = [
-    (boolSyntax.T, "true", "", ""),
-    (boolSyntax.F, "false", "", ""),
-    (Term.inst [{redex = Type.alpha, residue = Type.bool}] boolSyntax.equality,
-       "iff", "", ""),
-    (boolSyntax.equality, "=", "", ""),
-    (boolSyntax.implication, "implies", "", ""),
-    (boolSyntax.conjunction, "and", "", ""),
-    (boolSyntax.disjunction, "or", "", ""),
-    (* (..., "xor", "", ""), *)
-    (boolSyntax.negation, "not", "", ""),
-    (Term.inst [{redex = Type.alpha, residue = Type.bool}]
-       boolSyntax.conditional, "if_then_else", "", ""),
-    (boolSyntax.conditional, "ite", "", ""),
-    (* integer operations *)
-    (intSyntax.negate_tm, "~", "", ""),
-    (intSyntax.absval_tm, "hol_int_abs", "hol_int_abs Int Int",
-      "forall (?x Int) (= (hol_int_abs ?x) (ite (< ?x 0) (- 0 ?x) ?x))"),
-    (intSyntax.plus_tm, "+", "", ""),
-    (intSyntax.minus_tm, "-", "", ""),
-    (intSyntax.mult_tm, "*", "", ""),
-    (intSyntax.min_tm, "hol_int_min", "hol_int_min Int Int Int",
-      "forall (?x Int) (?y Int) (= (hol_int_min ?x ?y) (ite (< ?x ?y) ?x ?y))"),
-    (intSyntax.max_tm, "hol_int_max", "hol_int_max Int Int Int",
-      "forall (?x Int) (?y Int) (= (hol_int_max ?x ?y) (ite (< ?x ?y) ?y ?x))"),
-    (intSyntax.less_tm, "<", "", ""),
-    (intSyntax.leq_tm, "<=", "", ""),
-    (intSyntax.great_tm, ">", "", ""),
-    (intSyntax.geq_tm, ">=", "", "")
-  ]
-
-  (* Binders need to be treated differently from the operators above. *)
-  val BindersTable = [
-    (boolSyntax.strip_forall, "forall"),
-    (boolSyntax.strip_exists, "exists")
-    (* no lambda abstraction in SMT-LIB syntax *)
-  ]
-
-  (* ty_dict: dictionary that maps types to names
-     fresh: next fresh index to generate a new type name *)
-  fun translate_type (acc, ty) =
-  let fun translate (acc, ty) =
-        (* check table of types *)
-        case List.find (fn (ty', _) => ty' = ty) TypesTable of
-          SOME (_, name) =>
-            (acc, name)
-        | NONE =>
-          (* uninterpreted type *)
-          let val (ty_dict, fresh) = acc
-          in
-            case Redblackmap.peek (ty_dict, ty) of
-              SOME s => (acc, s)
-            | NONE => let val name = "t" ^ Int.toString fresh
-                          val ty_dict = Redblackmap.insert (ty_dict, ty, name)
-                      in
-                        ((ty_dict, fresh + 1), name)
-                      end
-          end
-      val (doms, rng) = boolSyntax.strip_fun ty
-      val types = if rng = Type.bool then doms else doms @ [rng]
-      val (acc, smtlib_types) = Lib.foldl_map translate (acc, types)
-  in
-    (* a (possibly empty!) string giving the argument types and range type of a
-       function, or the argument types of a predicate *)
-    (acc, String.concatWith " " smtlib_types)
-  end
-
-  (* dict: dictionary that maps terms to names
-     fresh: next fresh index to generate a new name
-     ty_dict: cf. translate_type
-     ty_fresh: cf. translate_type
-     funs: list of additional function names
-     defs: list of additional assumptions (i.e., definitions)
-  *)
-  fun translate_term (acc, tm) =
-    (* numerals -- but not 'intSyntax.negate_tm'! *)
-    if intSyntax.is_int_literal tm andalso (not (Term.is_comb tm) orelse
-      Lib.fst (Term.dest_comb tm) <> intSyntax.negate_tm) then
-      let val i = intSyntax.int_of_term tm
+  (* (HOL term, a function that maps a pair (rator, rands) to an
+     SMT-LIB symbol and a list of remaining (still-to-be-encoded)
+     argument terms) *)
+  val builtin_symbols = List.foldl (Lib.uncurry Net.insert) Net.empty [
+    (* Core *)
+    (boolSyntax.T, apfst_K "true"),
+    (boolSyntax.F, apfst_K "false"),
+    (boolSyntax.negation, apfst_K "not"),
+    (boolSyntax.implication, apfst_K "=>"),
+    (boolSyntax.conjunction, apfst_K "and"),
+    (boolSyntax.disjunction, apfst_K "or"),
+    (* (..., "xor"), *)
+    (boolSyntax.equality, apfst_K "="),
+    (* (..., "distinct"), *)
+    (boolSyntax.conditional, apfst_K "ite"),
+    (* Reals_Ints *)
+    (* numerals (excluding 'intSyntax.negate_tm') *)
+    (Term.mk_var ("x", intSyntax.int_ty), Lib.apfst (fn tm =>
+      if intSyntax.is_int_literal tm andalso not (intSyntax.is_negated tm) then
+        let
+          val i = intSyntax.int_of_term tm
           val s = Arbint.toString (Arbint.abs i)
-          val neg = Arbint.< (i, Arbint.zero)
-      in
-        (acc, (if neg then "(~ " else "") ^ String.substring
-          (s, 0, String.size s - 1) ^ (if neg then ")" else ""))
-      end
-    (* bool_case *)
-    (* cannot be defined as a function in SMT-LIB because it is polymorphic *)
-    else if boolSyntax.is_bool_case tm then
-      let val (t1, t2, t3) = boolSyntax.dest_bool_case tm
-          val (acc, s1) = translate_term (acc, t1)
-          val (acc, s2) = translate_term (acc, t2)
-          val (acc, s3) = translate_term (acc, t3)
-          val ite = (if Term.type_of tm = Type.bool then
-                       "if_then_else" else "ite")
-      in
-        (acc, "(" ^ ite ^ " " ^ s3 ^ " " ^ s1 ^ " " ^ s2 ^ ")")
-      end
-    (* binders *)
-    else
-      case Lib.get_first (fn (strip_fn, name) =>
-        case strip_fn tm of
-          ([], _) => NONE (* not this binder *)
-        | (vars, body) =>
-          let val typs = List.map Term.type_of vars
-              (* We must gather SMT-LIB definitions for all types, and for all
-                 terms in the body with the exception of bound vars. Still,
-                 bound vars must not be mapped to names used elsewhere (to
-                 avoid accidental capture). Also note that not all bound vars
-                 need to occur in the body. *)
-              val (dict, fresh, ty_dict, ty_fresh, funs, defs) = acc
-              (* translate types of bound variables separately, because we
-                 don't want to discard their definitions *)
-              val (ty_acc, smtlib_typs) = Lib.foldl_map translate_type
-                ((ty_dict, ty_fresh), typs)
-              val (ty_dict, ty_fresh) = ty_acc
-              (* translate bound variables; make sure they are mapped to fresh
-                 names; their types have just been translated already;
-                 prepend a '?' to each name *)
-              val empty_dict = Redblackmap.mkDict Term.compare
-              val (bound_acc, _) = Lib.foldl_map translate_term
-                ((empty_dict, fresh, ty_dict, ty_fresh, [], []), vars)
-              val (bound_dict, fresh, _, _, _, _) = bound_acc
-              val bound_dict = Redblackmap.transform (fn s => "?" ^ s)
-                bound_dict
-              val smtlib_vars = map (Lib.curry Redblackmap.find bound_dict) vars
-              (* translate the body, with bound variables mapped properly *)
-              fun union dict1 dict2 =
-                Redblackmap.foldl (fn (t, s, d) => Redblackmap.insert (d, t, s))
-                  dict1 dict2
-              val acc = (union dict bound_dict, fresh, ty_dict, ty_fresh,
-                           funs, defs)
-              val (acc, smtlib_body) = translate_term (acc, body)
-              val (body_dict, fresh, ty_dict, ty_fresh, funs, defs) = acc
-              (* discard the mapping of bound variables, but keep other term
-                 mappings that result from translation of the body *)
-              fun diff dict1 dict2 =
-                Redblackmap.foldl (fn (t, _, d) =>
-                  (Lib.fst o Redblackmap.remove) (d, t)) dict1 dict2
-              val dict = union dict (diff body_dict bound_dict)
-              val smtlib_bounds = String.concatWith " "
-                (List.map (fn (v, t) => "(" ^ v ^ " " ^ t ^ ")")
-                  (Lib.zip smtlib_vars smtlib_typs))
-            in
-              SOME ((dict, fresh, ty_dict, ty_fresh, funs, defs),
-                "(" ^ name ^ " " ^ smtlib_bounds ^ " " ^ smtlib_body ^ ")")
-            end) BindersTable of
-        SOME result => result
-      | NONE =>
-        (* let/flet *)
+          val s = String.substring (s, 0, String.size s - 1)
+        in
+          if Arbint.< (i, Arbint.zero) then
+            "(- " ^ s ^ ")"
+          else
+            s
+        end
+      else
+        raise ERR "<builtin_symbols.x:int>" "not a numeral (negated?)")),
+    (intSyntax.negate_tm, apfst_K "-"),
+    (intSyntax.minus_tm, apfst_K "-"),
+    (intSyntax.plus_tm, apfst_K "+"),
+    (intSyntax.mult_tm, apfst_K "*"),
+    (* (..., "div"), *)
+    (* (..., "mod"), *)
+    (intSyntax.absval_tm, apfst_K "abs"),
+    (intSyntax.leq_tm, apfst_K "<="),
+    (intSyntax.less_tm, apfst_K "<"),
+    (intSyntax.geq_tm, apfst_K ">="),
+    (intSyntax.great_tm, apfst_K ">"),
+    (* decimals (excluding 'realSyntax.negate_tm') *)
+    (Term.mk_var ("x", realSyntax.real_ty), Lib.apfst (fn tm =>
+      if realSyntax.is_real_literal tm andalso not (realSyntax.is_negated tm)
+          then
+        let
+          val i = realSyntax.int_of_term tm
+          val s = Arbint.toString (Arbint.abs i)
+          val s = String.substring (s, 0, String.size s - 1)
+          val s = s ^ ".0"
+        in
+          if Arbint.< (i, Arbint.zero) then
+            "(- " ^ s ^ ")"
+          else
+            s
+        end
+      else
+        raise ERR "<builtin_symbols.x:real>" "not a decimal (negated?)")),
+    (realSyntax.negate_tm, apfst_K "-"),
+    (realSyntax.minus_tm, apfst_K "-"),
+    (realSyntax.plus_tm, apfst_K "+"),
+    (realSyntax.mult_tm, apfst_K "*"),
+    (realSyntax.div_tm, apfst_K "/"),
+    (realSyntax.leq_tm, apfst_K "<="),
+    (realSyntax.less_tm, apfst_K "<"),
+    (realSyntax.geq_tm, apfst_K ">="),
+    (realSyntax.great_tm, apfst_K ">"),
+    (intrealSyntax.real_of_int_tm, apfst_K "to_real"),
+    (intrealSyntax.INT_FLOOR_tm, apfst_K "to_int"),
+    (intrealSyntax.is_int_tm, apfst_K "is_int"),
+    (* HOL constants without direct SMT-LIB counterparts *)
+    (boolSyntax.bool_case, Lib.## (Lib.K "ite",
+      SmtLib_Theories.three_args (fn (t1, t2, t3) => [t3, t1, t2]))),
+    (* bit-vector constants *)
+    (Term.mk_var ("x", wordsSyntax.mk_word_type Type.alpha), Lib.apfst (fn tm =>
+      if wordsSyntax.is_word_literal tm then
+        let
+          val value = wordsSyntax.dest_word_literal tm
+          val width = fcpSyntax.dest_numeric_type (wordsSyntax.dim_of tm)
+        in
+          "(_ bv" ^ Arbnum.toString value ^ " " ^ Arbnum.toString width ^ ")"
+        end
+      else
+        raise ERR "<builtin_symbols.x:'a word>" "not a word literal")),
+    (wordsSyntax.word_concat_tm, fn (t, ts) =>
+      SmtLib_Theories.two_args (fn (w1, w2) =>
+        let
+          (* make sure that the result in HOL has the expected width *)
+          val dim1 = fcpSyntax.dest_numeric_type (wordsSyntax.dim_of w1)
+          val dim2 = fcpSyntax.dest_numeric_type (wordsSyntax.dim_of w2)
+          val rngty = Lib.snd (boolSyntax.strip_fun (Term.type_of t))
+          val rngdim = fcpSyntax.dest_numeric_type
+            (wordsSyntax.dest_word_type rngty)
+          val _ = if rngdim = Arbnum.+ (dim1, dim2) then
+              ()
+            else (
+              if !Library.trace > 0 then
+                WARNING "translate_term" "word_concat: wrong result type"
+              else
+                ();
+              raise ERR "<builtin_symbols.word_concat_tm>" "wrong result type"
+            )
+        in
+          ("concat", ts)
+        end) ts),
+    (wordsSyntax.word_extract_tm, fn (t, ts) =>
+      SmtLib_Theories.three_args (fn (i, j, w) =>
+        let
+          (* make sure that j <= i < dim(w) *)
+          val i = numSyntax.dest_numeral i
+          val j = numSyntax.dest_numeral j
+          val dim = fcpSyntax.dest_numeric_type (wordsSyntax.dim_of w)
+          val _ = if Arbnum.<= (j, i) then
+              ()
+            else (
+              if !Library.trace > 0 then
+                WARNING "translate_term"
+                  "word_extract: second index larger than first"
+              else
+                ();
+              raise ERR "<builtin_symbols.word_extract_tm>"
+                "second index larger than first"
+            )
+          val _ = if Arbnum.< (i, dim) then
+              ()
+            else (
+              if !Library.trace > 0 then
+                WARNING "translate_term" "word_extract: first index too large"
+              else
+                ();
+              raise ERR "<builtin_symbols.word_extract_tm>"
+                "first index too large"
+            )
+          (* make sure that the result in HOL has the expected width *)
+          val rngty = Lib.snd (boolSyntax.strip_fun (Term.type_of t))
+          val rngdim = fcpSyntax.dest_numeric_type
+            (wordsSyntax.dest_word_type rngty)
+          val _ = if rngdim = Arbnum.+ (Arbnum.- (i, j), Arbnum.one) then
+              ()
+            else (
+              if !Library.trace > 0 then
+                WARNING "translate_term" "word_extract: wrong result type"
+              else
+                ();
+              raise ERR "<builtin_symbols.word_extract_tm>" "wrong result type"
+            )
+        in
+          ("(_ extract " ^ Arbnum.toString i ^ " " ^ Arbnum.toString j ^ ")",
+            [w])
+        end) ts),
+    (wordsSyntax.word_1comp_tm, apfst_K "bvnot"),
+    (wordsSyntax.word_and_tm, apfst_K "bvand"),
+    (wordsSyntax.word_or_tm, apfst_K "bvor"),
+    (wordsSyntax.word_nand_tm, apfst_K "bvnand"),
+    (wordsSyntax.word_nor_tm, apfst_K "bvnor"),
+    (wordsSyntax.word_xor_tm, apfst_K "bvxor"),
+    (wordsSyntax.word_xnor_tm, apfst_K "bvxnor"),
+    (wordsSyntax.word_2comp_tm, apfst_K "bvneg"),
+    (wordsSyntax.word_compare_tm, apfst_K "bvcomp"),
+    (wordsSyntax.word_sub_tm, apfst_K "bvsub"),
+    (wordsSyntax.word_sdiv_tm, apfst_K "bvsdiv"),
+    (wordsSyntax.word_srem_tm, apfst_K "bvsrem"),
+    (wordsSyntax.word_smod_tm, apfst_K "bvsmod"),
+    (* shift left -- the number of bits to shift is given by the
+       second argument, which must also be a bit-vector *)
+    (wordsSyntax.word_lsl_tm, Lib.## (Lib.K "bvshl",
+      SmtLib_Theories.two_args (fn (w, n) =>
+        let
+          val dim_ty = wordsSyntax.dim_of w
+          (* make sure that 'n' is a numeral that can be represented by
+             a word of width 'dim_ty' *)
+          val num = numSyntax.dest_numeral n
+          val dim = fcpSyntax.dest_numeric_type dim_ty
+          val _ = if Arbnum.< (num, Arbnum.pow (Arbnum.two, dim)) then
+              ()
+            else (
+              if !Library.trace > 0 then
+                WARNING "translate_term" "word_lsl: argument too large"
+              else
+                ();
+              raise ERR "<builtin_symbols.word_lsl_tm>" "argument too large"
+            )
+          val wn = wordsSyntax.mk_n2w (n, dim_ty)
+        in
+          [w, wn]
+        end))),
+    (* shift right -- the number of bits to shift is given by the
+       second argument, which must also be a bit-vector *)
+    (wordsSyntax.word_lsr_tm, Lib.## (Lib.K "bvlshr",
+      SmtLib_Theories.two_args (fn (w, n) =>
+        let
+          val dim_ty = wordsSyntax.dim_of w
+          (* make sure that 'n' is a numeral that can be represented by
+             a word of width 'dim_ty' *)
+          val num = numSyntax.dest_numeral n
+          val dim = fcpSyntax.dest_numeric_type dim_ty
+          val _ = if Arbnum.< (num, Arbnum.pow (Arbnum.two, dim)) then
+              ()
+            else (
+              if !Library.trace > 0 then
+                WARNING "translate_term" "word_lsr: argument too large"
+              else
+                ();
+              raise ERR "<builtin_symbols.word_lsr_tm>" "argument too large"
+            )
+          val wn = wordsSyntax.mk_n2w (n, dim_ty)
+        in
+          [w, wn]
+        end))),
+    (* arithmetic shift right -- the number of bits to shift is given
+       by the second argument, which must also be a bit-vector *)
+    (wordsSyntax.word_asr_tm, Lib.## (Lib.K "bvashr",
+      SmtLib_Theories.two_args (fn (w, n) =>
+        let
+          val dim_ty = wordsSyntax.dim_of w
+          (* make sure that 'n' is a numeral that can be represented by
+             a word of width 'dim_ty' *)
+          val num = numSyntax.dest_numeral n
+          val dim = fcpSyntax.dest_numeric_type dim_ty
+          val _ = if Arbnum.< (num, Arbnum.pow (Arbnum.two, dim)) then
+              ()
+            else (
+              if !Library.trace > 0 then
+                WARNING "translate_term" "word_asr: argument too large"
+              else
+                ();
+              raise ERR "<builtin_symbols.word_asr_tm>" "argument too large"
+            )
+          val wn = wordsSyntax.mk_n2w (n, dim_ty)
+        in
+          [w, wn]
+        end))),
+    (wordsSyntax.word_replicate_tm, fn (t, ts) =>
+      SmtLib_Theories.two_args (fn (n, w) =>
+        let
+          val n = numSyntax.dest_numeral n
+          (* make sure that the result in HOL has the expected width *)
+          val dim = fcpSyntax.dest_numeric_type (wordsSyntax.dim_of w)
+          val rngty = Lib.snd (boolSyntax.strip_fun (Term.type_of t))
+          val rngdim = fcpSyntax.dest_numeric_type
+            (wordsSyntax.dest_word_type rngty)
+          val _ = if rngdim = Arbnum.* (n, dim) then
+              ()
+            else (
+              if !Library.trace > 0 then
+                WARNING "translate_term" "word_replicate: wrong result type"
+              else
+                ();
+              raise ERR "<builtin_symbols.word_replicate_tm>"
+                "wrong result type"
+            )
+        in
+          ("(_ repeat " ^ Arbnum.toString n ^ ")", [w])
+        end) ts),
+(* TODO
+    fcp_index
 
-        (* TODO *)
+    ("zero_extend", K_one_one (fn n => fn t => wordsSyntax.w2w (t,
+      fcpLib.index_type
+        (Arbnum.+ (fcpLib.index_to_num (wordsSyntax.dim_of t), n))))),
 
-        if Term.is_comb tm then
-          (* function application *)
-          let val (rator, rands) = boolSyntax.strip_comb tm
-              val (acc, smtlib_rator) = translate_term (acc, rator)
-              val (acc, smtlib_rands) = Lib.foldl_map translate_term
-                                          (acc, rands)
-          in
-            (acc, "(" ^ smtlib_rator ^ " " ^
-                    String.concatWith " " smtlib_rands ^ ")")
-          end
-        else
-          (* base case: operator or uninterpreted term *)
-          case List.find (fn (t, _, _, _) => Lib.can (Term.match_term t) tm)
-            OperatorsTable of
-            SOME (_, name, extrafun, extradef) =>
-            let
-              val (dict, fresh, ty_dict, ty_fresh, funs, defs) = acc
-              val funs = if extrafun = "" orelse
-                Lib.mem extrafun funs then funs
-                else extrafun :: funs
-              val defs = if extradef = "" orelse
-                Lib.mem extradef defs then defs
-                else extradef :: defs
-              val acc = (dict, fresh, ty_dict, ty_fresh, funs, defs)
-            in
-              (acc, name)
-            end
-          | NONE =>
-            (* replace all other terms with a variable *)
-            (* we even replace variables, to make sure there are no name
-               clashes with either (i) variables generated by us, or (ii)
-               reserved SMT-LIB names *)
-            let val (dict, fresh, ty_dict, ty_fresh, funs, defs) = acc
-            in
-              case Redblackmap.peek (dict, tm) of
-                SOME s => (acc, s)
-              | NONE =>
-                let val name = "v" ^ Int.toString fresh
-                    val dict = Redblackmap.insert (dict, tm, name)
-                    (* update the type dictionary as well *)
-                    val ((ty_dict, ty_fresh), _) =
-                      translate_type ((ty_dict, ty_fresh), Term.type_of tm)
-                    val acc = (dict, fresh + 1, ty_dict, ty_fresh, funs, defs)
-                in
-                  (acc, name)
-                end
-            end (* translate_term *)
+    ("sign_extend", K_one_one (fn n => fn t => wordsSyntax.sw2sw (t,
+      fcpLib.index_type
+        (Arbnum.+ (fcpLib.index_to_num (wordsSyntax.dim_of t), n))))),
 
-  (* Returns a string representation of the input goal in SMT-LIB file format,
-     together with two dictionaries that map types and terms to identifiers
-     used in the SMT-LIB representation.  The goal's conclusion is negated
-     before translation into SMT-LIB format. *)
-  fun goal_to_SmtLib goal : ((Type.hol_type, string) Redblackmap.dict *
-                             (Term.term, string) Redblackmap.dict) *
-                            string list =
+    ("rotate_left", K_one_one
+      (Lib.C (Lib.curry wordsSyntax.word_rol) o numSyntax.numeral)),
+
+    ("rotate_right", K_one_one
+      (Lib.C (Lib.curry wordsSyntax.word_ror) o numSyntax.numeral)),
+*)
+    (wordsSyntax.word_lo_tm, apfst_K "bvult"),
+    (wordsSyntax.word_ls_tm, apfst_K "bvule"),
+    (wordsSyntax.word_hi_tm, apfst_K "bvugt"),
+    (wordsSyntax.word_hs_tm, apfst_K "bvuge"),
+    (wordsSyntax.word_lt_tm, apfst_K "bvslt"),
+    (wordsSyntax.word_le_tm, apfst_K "bvsle"),
+    (wordsSyntax.word_gt_tm, apfst_K "bvsgt"),
+    (wordsSyntax.word_ge_tm, apfst_K "bvsge")
+  ]
+
+  (* SMT-LIB type and function names are uniformly generated as "tN"
+     and "vN", respectively, where N is a number. Prefixes must be
+     distinct. *)
+
+  val ty_prefix = "t"  (* for types *)
+  val tm_prefix = "v"  (* for terms *)
+  val bv_prefix = "b"  (* for bound variables *)
+
+  (* returns an updated accumulator, a (possibly empty) list of
+     SMT-LIB type declarations, and the SMT-LIB representation of the
+     given type *)
+  fun translate_type (tydict, ty) =
   let
-    val (As, g) = goal
-    val g = boolSyntax.mk_neg g
-
-    val empty_ty_dict = Redblackmap.mkDict Type.compare
-    val empty_tm_dict = Redblackmap.mkDict Term.compare
-    val acc = (empty_tm_dict, 0, empty_ty_dict, 0, [], [])
-
-    val ((dict, _, ty_dict, _, funs, defs), smtlib_As_g) = Lib.foldl_map
-      translate_term (acc, As @ [g])
-    val (smtlib_As, smtlib_g) = Lib.front_last smtlib_As_g
-
-    fun is_pred tm =
-      Lib.snd (boolSyntax.strip_fun (Term.type_of tm)) = Type.bool
-
-    val sorts = map Lib.snd (Redblackmap.listItems ty_dict)
-
-    val (preds', funs') = List.partition (is_pred o Lib.fst)
-                            (Redblackmap.listItems dict)
-    val preds = map (fn (tm, name) =>
-      let val (_, smtlib_ty) = translate_type ((ty_dict, 0), Term.type_of tm)
-      in
-        "(" ^ name ^ (if smtlib_ty ="" then "" else " " ^ smtlib_ty) ^ ")"
-      end) preds'
-    val funs' = map (fn (tm, name) =>
-      let val (_, smtlib_ty) = translate_type ((ty_dict, 0), Term.type_of tm)
-      in
-        "(" ^ name ^ " " ^ smtlib_ty ^ ")"
-      end) funs'
-    val funs = map (fn s => "(" ^ s ^ ")") funs @ funs'
-    val defs = List.map (fn s => ":assumption (" ^ s ^ ")\n") defs
-    val smtlib_As = List.map (fn s => ":assumption " ^ s ^ "\n") smtlib_As
+    val name = Lib.tryfind (fn (_, f) => f ty)
+        (TypeNet.match (builtin_types, ty)) (* may fail *)
+      handle Feedback.HOL_ERR _ =>
+        Redblackmap.find (tydict, ty)
   in
-    ((ty_dict, dict),
-     ["(benchmark NAME\n",
-      ":logic AUFLIA\n"]
-     @ (if sorts = [] then []
-        else ":extrasorts (" :: Lib.separate " " sorts @ [")\n"])
-     @ (if funs = [] then []
-        else ":extrafuns (" :: Lib.separate " " funs @ [")\n"])
-     @ (if preds = [] then []
-        else ":extrapreds (" :: Lib.separate " " preds @ [")\n"])
-     @ defs
-     @ smtlib_As @
-     [":formula ", smtlib_g, "\n",
-      ":status unknown)\n"])
+    (tydict, ([], name))
   end
+  handle Redblackmap.NotFound =>
+    (* uninterpreted types *)
+    let
+      val name = ty_prefix ^ Int.toString (Redblackmap.numItems tydict)
+      val decl = "(declare-sort " ^ name ^ " 0)\n"
+    in
+      if !Library.trace > 2 then
+        Feedback.HOL_MESG ("HolSmtLib (SmtLib): inventing name '" ^ name ^
+          "' for HOL type '" ^ Hol_pp.type_to_string ty ^ "'")
+      else
+        ();
+      (Redblackmap.insert (tydict, ty, name), ([decl], name))
+    end
+
+  (* returns an updated accumulator, a (possibly empty) list of
+     SMT-LIB (type and term) declarations, and the SMT-LIB
+     representation of the given term *)
+  fun translate_term (acc as (tydict, tmdict), (bounds, tm)) =
+  let
+    fun sexpr x [] = x
+      | sexpr x xs = "(" ^ x ^ " " ^ String.concatWith " " xs ^ ")"
+    fun builtin_symbol (rator, rands) =
+      let
+        val (name, rands) = Lib.tryfind (fn parsefn => parsefn (rator, rands))
+          (Net.match rator builtin_symbols)  (* may fail *)
+        val (acc, declnames) = Lib.foldl_map
+          (fn (a, t) => translate_term (a, (bounds, t))) (acc, rands)
+        val (declss, names) = Lib.split declnames
+      in
+        (acc, (List.concat declss, sexpr name names))
+      end
+  in
+    (* binders *)
+    let
+      (* perhaps we should use a table of binders instead *)
+      (* TODO: let binders *)
+      val (binder, (vars, body)) = if boolSyntax.is_forall tm then
+          ("forall", boolSyntax.strip_forall tm)
+        else if boolSyntax.is_exists tm then
+          ("exists", boolSyntax.strip_exists tm)
+        else
+          raise ERR "translate_term" "not a binder"  (* handled below *)
+      val (bounds, smtvars) = Lib.foldl_map (fn (dict, v) =>
+        let
+          val name = bv_prefix ^ Int.toString (Redblackmap.numItems dict)
+        in
+          (Redblackmap.insert (dict, v, name), name)
+        end) (bounds, vars)
+      val (tydict, vardecltys) = Lib.foldl_map translate_type
+        (tydict, List.map Term.type_of vars)
+      val (vardeclss, vartys) = Lib.split vardecltys
+      val vardecls = List.concat vardeclss
+      val smtvars = ListPair.mapEq (fn (v, ty) => "(" ^ v ^ " " ^ ty ^ ")")
+        (smtvars, vartys)
+      val (acc, (bodydecls, body)) = translate_term
+        ((tydict, tmdict), (bounds, body))
+    in
+      (acc, (vardecls @ bodydecls, "(" ^ binder ^ " (" ^
+        String.concatWith " " smtvars ^ ") " ^ body ^ ")"))
+    end
+    handle Feedback.HOL_ERR _ =>
+
+    (* bound variables may shadow built-in symbols etc. *)
+    (acc, ([], Redblackmap.find (bounds, tm)))
+    handle Redblackmap.NotFound =>
+
+    (* translate the entire term (e.g., for numerals), using the
+       dictionary of built-in symbols *)
+    builtin_symbol (tm, [])
+    handle Feedback.HOL_ERR _ =>
+
+    (* split the term into rator and rands *)
+    let
+      val (rator, rands) = boolSyntax.strip_comb tm
+    in
+      (* translate the rator as a built-in symbol (applied to its rands) *)
+      builtin_symbol (rator, rands)
+      handle Feedback.HOL_ERR _ =>
+
+      let
+        val (acc, (decls, name)) =
+          (* translate the rator as a previously defined symbol *)
+          (acc, ([], Redblackmap.find (tmdict, rator)))
+          handle Redblackmap.NotFound =>
+
+          (* translate the rator as a new (i.e., uninterpreted) symbol *)
+          let
+            (* translate 'rator' types required for the rator's
+               SMT-LIB declaration *)
+            val (domtys, rngty) = boolSyntax.strip_fun (Term.type_of rator)
+            val (tydict, domdecltys) = Lib.foldl_map translate_type
+              (tydict, domtys)
+            val (domdeclss, domtys) = Lib.split domdecltys
+            val domdecls = List.concat domdeclss
+            val (tydict, (rngdecls, rngty)) = translate_type (tydict, rngty)
+            (* invent new name for 'rator' *)
+            val name = tm_prefix ^ Int.toString (Redblackmap.numItems tmdict)
+            val _ = if !Library.trace > 2 then
+                Feedback.HOL_MESG ("HolSmtLib (SmtLib): inventing name '" ^
+                  name ^ "' for HOL term '" ^ Hol_pp.term_to_string rator ^ "'")
+              else
+                ()
+            val tmdict = Redblackmap.insert (tmdict, rator, name)
+            val decl = "(declare-fun " ^ name ^ " (" ^
+              String.concatWith " " domtys ^ ") " ^ rngty ^ ")\n"
+          in
+            ((tydict, tmdict), (domdecls @ rngdecls @ [decl], name))
+          end
+        (* translate 'rands' *)
+        val (acc, declnames) = Lib.foldl_map
+          (fn (a, t) => translate_term (a, (bounds, t))) (acc, rands)
+        val (declss, names) = Lib.split declnames
+      in
+        (acc, (decls @ List.concat declss, sexpr name names))
+      end
+    end
+  end
+
+  (* Returns a string list representing the input goal in SMT-LIB file
+     format, together with two dictionaries that map types and terms
+     to identifiers used in the SMT-LIB representation.  The goal's
+     conclusion is negated before translation into SMT-LIB format. *)
+  fun goal_to_SmtLib_aux (ts, t)
+    : ((Type.hol_type, string) Redblackmap.dict *
+      (Term.term, string) Redblackmap.dict) * string list =
+  let
+    val tydict = Redblackmap.mkDict Type.compare
+    val tmdict = Redblackmap.mkDict Term.compare
+    val bounds = Redblackmap.mkDict Term.compare
+    val (acc, smtlibs) = Lib.foldl_map
+      (fn (acc, tm) => translate_term (acc, (bounds, tm)))
+      ((tydict, tmdict), ts @ [boolSyntax.mk_neg t])
+    (* we choose to intertwine declarations and assertions (for no
+       particular reason; an alternative would be to emit all
+       declarations before all assertions) *)
+    val smtlibs = List.foldl
+      (fn ((xs, s), acc) => acc @ xs @ ["(assert " ^ s ^ ")\n"]) [] smtlibs
+  in
+    (acc, [
+      "(set-logic AUFBVNIRA)\n",
+      "(set-info :source |Automatically generated from HOL4 by SmtLib.goal_to_SmtLib.\n",
+      "Copyright (c) 2011 Tjark Weber. All rights reserved.|)\n",
+      "(set-info :smt-lib-version 2.0)\n"
+    ] @ smtlibs @ [
+      "(check-sat)\n"
+    ])
+  end
+
+in
+
+  val goal_to_SmtLib =
+    Lib.apsnd (fn xs => xs @ ["(exit)\n"]) o goal_to_SmtLib_aux
+
+  val goal_to_SmtLib_with_get_proof =
+    Lib.apsnd (fn xs => xs @ ["(get-proof)\n", "(exit)\n"]) o goal_to_SmtLib_aux
+
+end  (* local *)
 
 end

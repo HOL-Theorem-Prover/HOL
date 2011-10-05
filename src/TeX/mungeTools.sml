@@ -12,6 +12,7 @@ datatype opt = Turnstile | Case | TT | Def | SpacedDef | TypeOf | TermThm
              | Conj of int
              | Rule | StackedRule
              | NoDollarParens
+             | Merge | NoMerge
 
 val numErrors = ref 0
 type posn = int * int
@@ -34,19 +35,21 @@ fun usage() =
 fun stringOpt pos s =
   case s of
     "|-" => SOME Turnstile
-  | "case" => SOME Case
-  | "tt" => SOME TT
   | "alltt" => SOME AllTT
+  | "case" => SOME Case
   | "def" => SOME Def
-  | "spaceddef" => SOME SpacedDef
-  | "of" => SOME TypeOf
   | "K" => SOME TermThm
+  | "merge" => SOME Merge
+  | "nodollarparens" => SOME NoDollarParens
+  | "nomerge" => SOME NoMerge
   | "nosp" => SOME NoSpec
   | "nostile" => SOME NoTurnstile
-  | "showtypes" => SOME ShowTypes
+  | "of" => SOME TypeOf
   | "rule" => SOME Rule
+  | "showtypes" => SOME ShowTypes
+  | "spaceddef" => SOME SpacedDef
   | "stackedrule" => SOME StackedRule
-  | "nodollarparens" => SOME NoDollarParens
+  | "tt" => SOME TT
   | _ => let
     in
       if String.isPrefix ">>" s then let
@@ -291,6 +294,12 @@ in
                     trace ("EmitTeX: dollar parens", 0)
                   else
                     trace ("EmitTeX: dollar parens", 1))
+              |> (if OptSet.has NoMerge opts then
+                    trace ("pp_avoids_symbol_merges", 0)
+                  else (fn f => f))
+              |> (if OptSet.has Merge opts then
+                    trace ("pp_avoids_symbol_merges", 1)
+                  else (fn f => f))
 
     fun stdtermprint pps t = optprintermod (raw_pp_term_as_tex overrides) pps t
 
@@ -302,7 +311,7 @@ in
     val () =
       case command of
         Theorem => let
-          val thm = do_thminsts pos opts (getThm spec)
+          val thm = getThm spec
           val thm =
               if OptSet.has NoSpec opts then thm
               else
@@ -316,6 +325,7 @@ in
                                " does not have a conjunct #" ^
                                Int.toString i);
                           SPEC_ALL thm)
+          val thm = do_thminsts pos opts thm
           val _ = add_string pps (optset_indent opts)
         in
           if OptSet.has Def opts orelse OptSet.has SpacedDef opts then let

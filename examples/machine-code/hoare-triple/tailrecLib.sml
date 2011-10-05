@@ -117,7 +117,8 @@ fun tailrec_define_from_step func_name step_fun tm_option = let
         val def_body = leaves_inl def_body (fn (tm,_) => mk_comb(new_def_tm,tm)) fst
         val def_goal = mk_eq(mk_comb(new_def_tm,args),def_body) 
         val side_body = leaves_inl body (fn (tm,c) => mk_conj(mk_comb(new_side_tm,tm),c)) snd
-        val side_goal = inst_cond_var (mk_eq(mk_comb(new_side_tm,args),side_body)) 
+        val side_goal = mk_eq(mk_comb(new_side_tm,args),side_body)
+        val side_goal = if side_body = ``T`` then side_goal else inst_cond_var (side_goal) 
         in (def_goal,side_goal) end
   (* prove exported theorems *)
   fun tac finder = 

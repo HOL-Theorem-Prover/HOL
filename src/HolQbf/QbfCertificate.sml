@@ -167,29 +167,10 @@ struct
 (*      not suitable for 't'.                                                *)
 (* ------------------------------------------------------------------------- *)
 
-  local open Term Redblackset in
-    (* h is the hypothesis defining an existential variable.
-         for original variables, this is (v = e) for some extension variable e.
-         for extension variables, this is (e = tm) for some extension term tm.
-       lhs is the index of the variable on the left of an hypothesis
-       rhs is the set of indexes of variables occurring on the right.
-         for a universally quantified variable, lhs is just its index.
-       pos is the number of quantifiers before a variable is bound in the original term.
-         for extension variables, pos is NONE.  *)
-    datatype vtype = Forall of {v:term, lhs:vindex, pos:int}
-                   | Exists of {h:term, lhs:vindex, rhs:vindex set, pos:int option}
-
-    (* R x y means x should be bound in scope of y (i.e. x has more quantifiers before it)
-       This is either because this was the case in the original term,
-       or because we need to remove the hypothesis (x = tx) (and quantify over x)
-       before we can quantify over y, because y occurs in tx *)
-    fun R (Forall {pos=n1,...}) (Forall {pos=n2,...}) = n1 > n2
-      | R (Forall {pos=n1,...}) (Exists {pos=SOME n2,...}) = n1 > n2
-      | R (Exists {pos=SOME n1,...}) (Forall {pos=n2,...}) = n1 > n2
-      | R (Exists {pos=SOME n1,...}) (Exists {pos=SOME n2,...}) = n1 > n2
-      | R (Exists {rhs,...}) (Forall {lhs,...}) = member(rhs,lhs)
-      | R (Exists {rhs,...}) (Exists {lhs,...}) = member(rhs,lhs)
-      | R _ _ = false
+  local open Term in
+    datatype vtype = Forall of term (* var *)
+                   | Exists of (term * term) (* var, extvar *)
+                   | Ext    of (term * term) (* extvar, definition *)
   end
 
   fun check t dict (VALID (exts,lits)) = let
@@ -215,44 +196,48 @@ struct
          handle NotFound => update (n,num_to_var n))
     end
 
-    (* Traverse the prefix of the term and
-       calculate vtypes for all the bound variables.
-       Return a list of vtypes, the matrix, and a new lits map.
-       The new lits map binds any existential variables that were
-         not bound to explicit witness literals to 0,
-         indicating that they should be set to true.
-       The hypotheses for the existential variables are of the form
-         (v = e), where e is the corresponding extension variable,
-         or (v = T) when there is none.
-       The rhs (dependency) sets for the existential variables
-         are either {e} or {}.  *)
-    val (vars,mat,lits) = let
+    (* Strip quantifiers from t and return the matrix mat.
+       Update lits map to map any unmapped variables to 0 (meaning T).
+       Create vars map from a variable index to a vtype.
+       Existential variables without witnesses are given an rhs of T.
+       Create deps map from a variable index to a list of indexes
+       indicating that this variable will appear on the rhs
+       of the hypothesis defining each variable in the list.
+       Deps also has the variable x_{n+1}, bound immediately
+       after (inside) a variable x_n, in the list for x_n.
+       After this pass, deps will map extension variables that are witnesses
+       to singleton lists containing their corresponding existential variables.
+       It will also map existential and universal variables to singleton
+       lists containing the next bound variable (empty list for innermost) *)
+    val (vars,mat,lits,deps,lvi) = let
       val cmp = Int.compare
-      fun enum vars t lits' n = let
+      fun enum vars t lits' deps lvi = let
         val ((v,t), is_forall) = (dest_forall t, true)
           handle Feedback.HOL_ERR _ => (dest_exists t, false)
-        val lhs = var_to_index v
-        val (var,lits') =
-          if is_forall then (Forall {v=v,lhs=lhs,pos=n}, lits') else let
-            val (tm,rhs,lits') = let
-              val ext_lit = find(lits,lhs)
+        val vi = var_to_index v
+        val (var,lits',deps) =
+          if is_forall then (Forall v,lits',deps) else let
+            val (tm,lits',deps) = let
+              val ext_lit = find(lits,vi)
               val ext_index = Int.abs ext_lit
               val tm = index_to_var ext_index
               val tm = if ext_lit < 0 then mk_neg tm else tm
-              val rhs = singleton cmp ext_index
-            in (tm,rhs,lits') end
-            handle NotFound => (T,empty cmp,insert(lits',lhs,0))
-          in (Exists {h=mk_eq(v,tm),lhs=lhs,rhs=rhs,pos=SOME n}, lits') end
-      in enum (var::vars) t lits' (n+1) end
-      handle Feedback.HOL_ERR _ => (vars,t,lits')
-    in enum [] t lits 0 end
+            in (tm,lits',insert(deps,ext_index,[vi])) end
+            handle NotFound => (T,insert(lits',vi,0),deps)
+          in (Exists (v,tm),lits',deps) end
+        val deps = case lvi of NONE => deps | SOME lvi => insert(deps,lvi,[vi])
+      in enum (insert(vars,vi,var)) t lits' deps (SOME vi) end
+      handle Feedback.HOL_ERR _ => (vars,t,lits',deps,lvi)
+    in enum (mkDict Int.compare) t lits (mkDict Int.compare) NONE end
+    val deps = case lvi of NONE => deps | SOME lvi => insert(deps,lvi,[])
 
     (* add all the hypotheses for the original existential variables
        onto the front of the matrix, so we end up with
        (v1 = e1) ==> (v2 = e2) ==> ... ==> mat *)
-    fun foldthis (Forall _,t) = t
-      | foldthis (Exists {h,...},t) = mk_imp(h,t)
-    val mat = Profile.profile "mk_imp" (List.foldl foldthis mat) vars
+    fun foldthis (_,Forall _,t) = t
+      | foldthis (_,Ext    _,t) = t
+      | foldthis (_,Exists (v,tm),t) = mk_imp(mk_eq(v,tm),t)
+    val mat = Profile.profile "mk_imp" (foldl foldthis mat) vars
 
     (* extension_to_term calculates a term corresponding
          to the definition of an extension variable,
@@ -323,36 +308,40 @@ struct
                                     (fn(a,s)=>(mk_cond(t,c,a),s))))
     end
 
-    (* calculate vtypes for the extension variables,
-       add the hypotheses to the matrix,
-       and add the vtypes to the list of vtypes *)
-    fun foldthis (lhs,ext,(t,vars)) = let
-      val v = index_to_var lhs
-      val (tm,rhs) = extension_to_term ext
+    (* Compute the terms for each existential variable
+       and add (e = tm) hypotheses onto the matrix.
+       Fill in the rest of the vars map.
+       Fill in the deps map by adding each extension variable
+       to the list belonging to each variable appearing in its definition term. *)
+    fun foldthis (i,ext,(t,vars,deps)) = let
+      val v = index_to_var i
+      val (tm,ds) = extension_to_term ext
+      val vars = insert(vars,i,Ext(v,tm))
       val h = mk_eq(v,tm)
-      val var = Exists {h=h,lhs=lhs,rhs=rhs,pos=NONE}
-    in (mk_imp(h,t),var::vars) end
-    val (mat,vars) = Profile.profile "mat_vars" (foldl foldthis (mat,vars)) exts
+      fun foldthis (n,d) = update (d,n,fn NONE => [i] | SOME ls => i::ls)
+      val deps = Redblackset.foldl foldthis deps ds
+    in (mk_imp(h,t),vars,deps) end
+    val (mat,vars,deps) = Profile.profile "mat_vars" (foldl foldthis (mat,vars,deps)) exts
 
     val thm = Profile.profile "SAT_PROVE" HolSatLib.SAT_PROVE mat
 
-    val vars = Profile.profile "topsort" (Lib.topsort R) vars
+    val deps = Profile.profile "dict_topsort" Lib.dict_topsort deps
+    val deps = Profile.profile "rev" List.rev deps
+    (* now deps is the list of variable indexes in the order
+       they should be eliminated (quantified and have hypothesis discharged) *)
 
-    (* Discharge the hypotheses of the proved theorem
-       in the right order to recover the original term
-       as its conclusion.
-       This order is calculated in the topsort above.
-       Specifically, generalize universal variables,
-       use EXISTS on existential variables, and
-       use INST, REFL, and PROVE_HYP to remove the hypotheses *)
-    fun foldthis ((Forall {v,...}),th) = Profile.profile "Forall" (GEN v) th
-      | foldthis ((Exists {h,pos,...}),th) = Profile.profile "Exists" (fn () => let
-        val (v,w) = dest_eq h
-        val th = if Option.isSome pos then EXISTS (mk_exists(v,concl th),v) th else th
+    fun foldthis (i,th) = case find(vars,i) of
+      Forall v => Profile.profile "Forall" (fn() => GEN v th) ()
+    | Exists (v,w) => Profile.profile "Exists" (fn () => let
+        val th = EXISTS (mk_exists(v,concl th),v) th
         val th = INST [v |-> w] th
         val th = PROVE_HYP (REFL w) th
-      in th end) ()
-    val thm = Profile.profile "DISCH_ALL" DISCH_ALL (List.foldl foldthis (Profile.profile "UNDISCH_ALL" UNDISCH_ALL thm) vars)
+      in th end ) ()
+    | Ext (v,w) => Profile.profile "Ext" (fn () => let
+        val th = INST [v |-> w] th
+        val th = PROVE_HYP (REFL w) th
+      in th end ) ()
+    val thm = Profile.profile "DISCH_ALL" DISCH_ALL (List.foldl foldthis (Profile.profile "UNDISCH_ALL" UNDISCH_ALL thm) deps)
 
       (* sanity checks *)
       val _ = if !QbfTrace.trace < 1 orelse HOLset.isEmpty (Thm.hypset thm) then

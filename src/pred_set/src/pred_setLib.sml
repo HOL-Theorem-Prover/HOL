@@ -94,8 +94,8 @@ local
   val univ_t = prim_mk_const {Thy="pred_set", Name = "UNIV"}
   fun univ_printer (tyg, tmg) backend printer ppfns gravs depth tm =
       let
-        val {add_string, ...} = ppfns : term_pp_types.ppstream_funs
         open smpp infix >>
+        val {add_string, ...} = ppfns : term_pp_types.ppstream_funs
       in
         if !univ_printing then let
             val (elty, _) = dom_rng (type_of tm)

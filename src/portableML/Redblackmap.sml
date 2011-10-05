@@ -19,16 +19,18 @@ struct
 
   fun isEmpty (_, _, n) = (n = 0)
 
-  fun find ((compare, tree, n), key) =
+  fun findKey ((compare, tree, n), key) =
       let fun loopShared k x left right =
               case compare(key, k) of
-                  EQUAL   => x
+                  EQUAL   => (k, x)
                 | LESS    => loop left
                 | GREATER => loop right
           and loop LEAF                       = raise NotFound
             | loop (RED(k, x, left, right))   = loopShared k x left right
             | loop (BLACK(k, x, left, right)) = loopShared k x left right
       in  loop tree end
+
+  fun find x = #2(findKey x)
 
   fun peek (set, key) = SOME(find(set, key))
                         handle NotFound => NONE
@@ -47,24 +49,28 @@ struct
 
   exception GETOUT
 
-  fun insert (set as (compare, tree, n), key, data) =
+  fun update (set as (compare, tree, n), key, data) =
       let val addone = ref true
-          fun ins LEAF = RED(key,data,LEAF,LEAF)
+          fun ins LEAF = RED(key,data NONE,LEAF,LEAF)
 	    | ins (BLACK(k,x,left,right)) =
               (case compare(key, k) of
                    LESS    => lbalance k x (ins left) right
                  | GREATER => rbalance k x left (ins right)
-                 | EQUAL   => (addone := false; BLACK(key, data, left, right)))
+                 | EQUAL   => (addone := false; BLACK(key, data (SOME x), left, right)))
 	    | ins (RED(k, x,left,right)) =
               (case compare(key, k) of
                    LESS    => RED(k, x, (ins left), right)
                  | GREATER => RED(k, x, left, (ins right))
-                 | EQUAL   => (addone := false; RED(key, data, left, right)))
+                 | EQUAL   => (addone := false; RED(key, data (SOME x), left, right)))
       in  ( compare
           , case ins tree of
                 RED x => BLACK x
               | tree  => tree
           , if !addone then n+1 else n) end
+
+  local fun K x _ = x in
+    fun insert (set, key, data) = update (set, key, K data)
+  end
 
   fun insertList (m, xs) =
     List.foldl (fn ((i, v), m) => insert (m, i, v)) m xs

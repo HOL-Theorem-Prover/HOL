@@ -1,4 +1,4 @@
-(* Copyright (c) 2010 Tjark Weber. All rights reserved. *)
+(* Copyright (c) 2010-2011 Tjark Weber. All rights reserved. *)
 
 (* SMT-LIB 2 theories *)
 
@@ -66,11 +66,26 @@ in
         | _ => raise ERR "chainable" "at least two arguments expected")))
   end
 
-  fun leftassoc f = Lib.K (zero_args (list_args
-    (Lib.S (List.foldl (f o Lib.swap) o List.hd) List.tl)))
+  fun leftassoc f =
+  let
+    fun aux t [] = t
+      | aux t (y::zs) = aux (f (t, y)) zs
+  in
+    Lib.K (zero_args (list_args
+      (fn x::y::zs => aux x (y::zs)
+        | _ => raise ERR "leftassoc" "at least two arguments expected")))
+  end
 
-  fun rightassoc f = Lib.K (zero_args (list_args
-    (Lib.uncurry (List.foldr f) o Lib.swap o Lib.front_last)))
+  fun rightassoc f =
+  let
+    fun aux _ [] = raise Match  (* should never happen *)
+      | aux cont [y] = cont y
+      | aux cont (x::y::zs) = aux (fn t => cont (f (x, t))) (y::zs)
+  in
+    Lib.K (zero_args (list_args
+      (fn x::y::zs => aux Lib.I (x::y::zs)
+        | _ => raise ERR "rightassoc" "at least two arguments expected")))
+  end
 
   fun is_numeral token =
   let
@@ -248,7 +263,6 @@ in
           realSyntax.term_of_int (Arbint.fromString token)
         else
           raise ERR "<Reals.tmdict._>" "not a numeral")),
-      ("_", zero_zero (realSyntax.term_of_int o Arbint.fromString)),
       (* FIXME: add parsing of decimals as real numbers *)
       ("-", K_zero_one realSyntax.mk_negated),
       ("-", leftassoc realSyntax.mk_minus),
@@ -280,7 +294,6 @@ in
           intSyntax.term_of_int (Arbint.fromString token)
         else
           raise ERR "<Reals_Ints.tmdict._>" "not a numeral")),
-      ("_", zero_zero (intSyntax.term_of_int o Arbint.fromString)),
       ("-", K_zero_one intSyntax.mk_negated),
       ("-", leftassoc intSyntax.mk_minus),
       ("+", leftassoc intSyntax.mk_plus),

@@ -9,7 +9,7 @@ val op \\ = op THEN;
 
 
 (* ---- definitions ----- *)
-
+ 
 val TAILREC_PRE_def = Define `
   TAILREC_PRE f1 guard precondition (x:'a) =
     (!k. (!m. m < k ==> guard (FUNPOW f1 m x)) ==> precondition (FUNPOW f1 k x)) /\

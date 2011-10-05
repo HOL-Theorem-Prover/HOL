@@ -268,6 +268,14 @@ val SPEC_TAILREC = store_thm("SPEC_TAILREC",
   NTAC 9 STRIP_TAC THEN HO_MATCH_MP_TAC TAILREC_PRE_INDUCT
   THEN METIS_TAC [TAILREC_THM,UNION_IDEMPOT,SPEC_COMPOSE]);
 
+val SPEC_TAILREC_NEW = store_thm("SPEC_TAILREC_NEW",
+  ``!f1 (f2:'a->'b) g p res res' c m.
+      (!z x y. g x /\ p x /\ (y = f1 x) ==> SPEC m (res z x) c (res z y)) /\
+      (!z x y. ~g x /\ p x /\ (y = f2 x) ==> SPEC m (res z x) c (res' z y)) ==>
+      (!z x. TAILREC_PRE f1 g p x ==> SPEC m (res z x) c (res' z (TAILREC f1 f2 g x)))``,
+  NTAC 10 STRIP_TAC THEN HO_MATCH_MP_TAC TAILREC_PRE_INDUCT
+  THEN METIS_TAC [TAILREC_THM,UNION_IDEMPOT,SPEC_COMPOSE]);
+
 val SPEC_SHORT_TAILREC = store_thm("SPEC_SHORT_TAILREC",
   ``!(f:'a -> ('a + 'b) # bool) res res' c m.
       (!x y. ISL (FST (f x)) /\ SND (f x) /\ (y = OUTL (FST (f x))) ==> SPEC m (res x) c (res y)) /\
@@ -275,6 +283,14 @@ val SPEC_SHORT_TAILREC = store_thm("SPEC_SHORT_TAILREC",
       (!x. SHORT_TAILREC_PRE f x ==> SPEC m (res x) c (res' (SHORT_TAILREC f x)))``,
   SIMP_TAC std_ss [SHORT_TAILREC_PRE_def,SHORT_TAILREC_def] \\ NTAC 6 STRIP_TAC
   \\ MATCH_MP_TAC SPEC_TAILREC \\ ASM_SIMP_TAC std_ss []);
+
+val SPEC_SHORT_TAILREC_NEW = store_thm("SPEC_SHORT_TAILREC_NEW",
+  ``!(f:'a -> ('a + 'b) # bool) res res' c m.
+      (!z x y. ISL (FST (f x)) /\ SND (f x) /\ (y = OUTL (FST (f x))) ==> SPEC m (res z x) c (res z y)) /\
+      (!z x y. ~ISL (FST (f x)) /\ SND (f x) /\ (y = OUTR (FST (f x))) ==> SPEC m (res z x) c (res' z y)) ==>
+      (!z x. SHORT_TAILREC_PRE f x ==> SPEC m (res z x) c (res' z (SHORT_TAILREC f x)))``,
+  SIMP_TAC std_ss [SHORT_TAILREC_PRE_def,SHORT_TAILREC_def] \\ NTAC 6 STRIP_TAC
+  \\ MATCH_MP_TAC SPEC_TAILREC_NEW \\ ASM_SIMP_TAC std_ss []);
 
 
 val _ = export_theory();

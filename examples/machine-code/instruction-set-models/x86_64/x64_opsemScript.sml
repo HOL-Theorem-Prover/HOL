@@ -291,7 +291,7 @@ val x64_exec_push_def = Define `
 
 val x64_exec_pop_rip_def = Define `
   x64_exec_pop_rip ii =
-     seqT (seqT (read_reg ii RSP) (\esp. addT esp (write_reg ii RSP (esp + 4w))))
+     seqT (seqT (read_reg ii RSP) (\esp. addT esp (write_reg ii RSP (esp + 8w))))
           (\(old_esp,x). seqT (read_m64 ii old_esp)
                               (\w. write_rip ii w))`;
 
@@ -299,7 +299,7 @@ val x64_exec_push_rip_def = Define `
   x64_exec_push_rip ii =
      (seqT
         (parT (read_rip ii)
-              (seqT (read_reg ii RSP) (\w. constT (w - 4w))))
+              (seqT (read_reg ii RSP) (\w. constT (w - 8w))))
         (\(w,esp). parT_unit (write_m64 ii esp w) (write_reg ii RSP esp)))`;
 
 (* check whether rm requires a lock, i.e. specifies a memory access *)

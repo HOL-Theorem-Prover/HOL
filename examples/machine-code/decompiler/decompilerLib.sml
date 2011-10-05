@@ -353,11 +353,13 @@ fun derive_individual_specs tools (code:string list) = let
     (map dest_sep_hide o list_dest dest_star o snd o dest_eq o concl) th handle HOL_ERR e => []
   val dont_abbrev_list = pc :: get_model_status_list hide_th
   val delete_spaces = (implode o filter (fn x => not(x = #" ")) o explode)
+  fun list_find name [] = fail ()
+    | list_find name ((x,y)::xs) = if name = x then y else list_find name xs
   fun get_specs (instruction,(n,ys)) = 
-    if (substring(delete_spaces instruction,0,7) = "insert:" handle Subscript => false) then let
+    if String.isPrefix "insert:" (delete_spaces instruction) then let
       val name = delete_spaces instruction
       val name = substring(name,7,length (explode name) - 7)
-      val (name,(th,i,j)) = hd (filter (fn (x,y) => x = name) (!decompiler_memory)) handle _ => fail()
+      val (th,i,j) = list_find name (!decompiler_memory)
       val th = RW [sidecond_def,hide_th,STAR_ASSOC] th
       val th = ABBREV_CALL ("new@") th
       val _ = echo 1 "  (insert command)\n"
@@ -430,7 +432,8 @@ fun abbreviate_code name thms = let
   val cs = map extract_code thms
   val ty = (hd o snd o dest_type o type_of o hd) cs
   val tm = foldr pred_setSyntax.mk_union (pred_setSyntax.mk_empty ty) cs
-  val c = (cdr o concl o QCONV (REWRITE_CONV [INSERT_UNION_EQ,UNION_EMPTY])) tm
+  val cth = QCONV (PURE_REWRITE_CONV [INSERT_UNION_EQ,UNION_EMPTY]) tm
+  val c = (cdr o concl) cth
   val (_,(th,_,_),_) = hd thms
   val (m,_,_,_) = dest_spec (concl th)
   val model_name = (to_lower o implode o take_until (fn x => x = #"_") o explode o fst o dest_const) m
@@ -442,12 +445,16 @@ fun abbreviate_code name thms = let
   fun triple_apply f (y,(th1,x1:int,x2:int option),NONE) = (y,(f th1,x1,x2),NONE)
     | triple_apply f (y,(th1,x1,x2),SOME (th2,y1:int,y2:int option)) =
         (y,(f th1,x1,x2),SOME (f th2,y1,y2))
+  val code_thm = CONV_RULE (RAND_CONV (fn _ => GSYM cth)) (SPEC_ALL code_def)
   fun foo th = let
     val thi = MATCH_MP ABBBREV_CODE_LEMMA (DISCH_ALL_AS_SINGLE_IMP th)
     val thi = SPEC ((fst o dest_eq o concl o SPEC_ALL) code_def) thi
     val goal = (fst o dest_imp o concl) thi
     val lemma = auto_prove "abbreviate_code" (goal,
-        REWRITE_TAC [SUBSET_DEF,IN_INSERT,IN_UNION,NOT_IN_EMPTY,code_def]
+        REPEAT (REWRITE_TAC [code_thm,SUBSET_DEF,IN_UNION] THEN REPEAT STRIP_TAC
+                THEN ASM_REWRITE_TAC [] THEN (fn _ => fail()))
+        THEN REWRITE_TAC [EMPTY_SUBSET]
+        THEN REWRITE_TAC [SUBSET_DEF,IN_INSERT,IN_UNION,NOT_IN_EMPTY,code_def]
         THEN REPEAT STRIP_TAC THEN ASM_SIMP_TAC std_ss [])
     val thi = UNDISCH_ALL (PURE_REWRITE_RULE [GSYM AND_IMP_INTRO] (MP thi lemma))
     in thi end

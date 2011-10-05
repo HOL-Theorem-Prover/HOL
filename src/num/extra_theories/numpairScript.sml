@@ -1,6 +1,6 @@
 open HolKernel boolLib Parse
 
-open arithmeticTheory BasicProvers TotalDefn 
+open arithmeticTheory BasicProvers TotalDefn
      numSimps numLib simpLib metisLib
 
 fun Store_thm(trip as (n,t,tac)) = store_thm trip before export_rewrites [n]
@@ -152,6 +152,9 @@ val npair_def = Define`
 val _ = set_fixity "*," (Infixr 601)
 val _ = Unicode.unicode_version {tmnm = "*,", u = UTF8.chr 0x2297 (* \otimes *)}
 val _ = overload_on ("*,", ``npair``)
+val _ = TeX_notation {TeX = ("\\ensuremath{\\otimes}", 1), hol = "*,"}
+val _ = TeX_notation {TeX = ("\\ensuremath{\\otimes}", 1),
+                      hol = UTF8.chr 0x2297}
 
 
 val nfst_def = Define`

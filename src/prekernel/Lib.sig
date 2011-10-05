@@ -113,6 +113,8 @@ sig
   val sort          : ('a -> 'a -> bool) -> 'a list -> 'a list
   val int_sort      : int list -> int list
   val topsort       : ('a -> 'a -> bool) -> 'a list -> 'a list
+  val dict_topsort  : ('a,'a list) Redblackmap.dict -> 'a list
+  val vector_topsort: int list vector -> int list
 
   val start_time    : unit -> Timer.cpu_timer
   val end_time      : Timer.cpu_timer -> unit

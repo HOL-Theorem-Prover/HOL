@@ -1,4 +1,4 @@
-(* Copyright (c) 2009-2010 Tjark Weber. All rights reserved. *)
+(* Copyright (c) 2009-2011 Tjark Weber. All rights reserved. *)
 
 (* Proof reconstruction for Z3: replaying Z3's proofs in HOL *)
 

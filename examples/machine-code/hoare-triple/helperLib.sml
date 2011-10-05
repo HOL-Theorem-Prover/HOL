@@ -639,6 +639,10 @@ fun find_composition1 th1 th2 = let
            handle HOL_ERR _ => (* found a SEP_DISJ *) let 
              val th = MATCH_MP SPEC_FRAME_COMPOSE_DISJ (DISCH_ALL_AS_SINGLE_IMP th2)
              val th = MATCH_MP th (DISCH_ALL_AS_SINGLE_IMP th1)
+             val th = UNDISCH_ALL th
+             val th = SIMP_RULE (bool_ss++sep_cond_ss) [SPEC_MOVE_COND,SEP_CLAUSES] th
+             val th = RW [GSYM SPEC_MOVE_COND] th
+             val th = DISCH_ALL th
              in th end           
   val th = UNDISCH_ALL (PURE_REWRITE_RULE [GSYM AND_IMP_INTRO,AND_CLAUSES2] th)
   val th = SIMP_RULE std_ss [pred_setTheory.INSERT_UNION_EQ,pred_setTheory.UNION_EMPTY,

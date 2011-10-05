@@ -1,4 +1,4 @@
-(* Copyright (c) 2009-2010 Tjark Weber. All rights reserved. *)
+(* Copyright (c) 2009-2011 Tjark Weber. All rights reserved. *)
 
 (* Common auxiliary functions, tracing *)
 
@@ -274,6 +274,7 @@ struct
   (* A tactic that simplifies certain word expressions. *)
   val WORD_SIMP_TAC =
     simpLib.SIMP_TAC (simpLib.++ (bossLib.pure_ss, wordsLib.WORD_ss))
-      [wordsTheory.LSL_LIMIT, wordsTheory.LSR_LIMIT]
+      [wordsTheory.EXTRACT_ALL_BITS, wordsTheory.WORD_EXTRACT_ZERO,
+      wordsTheory.LSL_LIMIT, wordsTheory.LSR_LIMIT]
 
 end

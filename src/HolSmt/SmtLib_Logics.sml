@@ -1,4 +1,4 @@
-(* Copyright (c) 2010 Tjark Weber. All rights reserved. *)
+(* Copyright (c) 2010-2011 Tjark Weber. All rights reserved. *)
 
 (* SMT-LIB 2 logics *)
 

@@ -1,65 +1,67 @@
-(* Copyright (c) 2009-2010 Tjark Weber. All rights reserved. *)
+(* Copyright (c) 2009-2011 Tjark Weber. All rights reserved. *)
 
 (* Functions to invoke the Z3 SMT solver *)
 
 structure Z3 = struct
 
-  (* returns SAT if Z3 reported 'sat_line', UNSAT if Z3 reported 'unsat_line' *)
-  fun is_sat sat_line unsat_line path =
-    let val instream = TextIO.openIn path
-        (* skip over Z3's other output (e.g., proofs) *)
-        fun last_line () =
-          let val line = TextIO.inputLine instream
-          in
-            if TextIO.endOfStream instream then
-              line
-            else
-              last_line ()
-          end
-        val line = last_line ()
+  (* returns SAT if Z3 reported "sat", UNSAT if Z3 reported "unsat" *)
+  fun is_sat_stream instream =
+    case TextIO.inputLine instream of
+      NONE => SolverSpec.UNKNOWN NONE
+    | SOME "sat\n" => SolverSpec.SAT NONE
+    | SOME "unsat\n" => SolverSpec.UNSAT NONE
+    | _ => is_sat_stream instream
+
+  fun is_sat_file path =
+    let
+      val instream = TextIO.openIn path
     in
-      TextIO.closeIn instream;
-      if line = SOME sat_line then
-        SolverSpec.SAT NONE
-      else if line = SOME unsat_line then
-        SolverSpec.UNSAT NONE
-      else
-        SolverSpec.UNKNOWN NONE
+      is_sat_stream instream
+        before TextIO.closeIn instream
     end
-
-  (* DOS-style CR/LF line breaks *)
-  val is_sat_DOS = is_sat "sat\r\n" "unsat\r\n"
-
-  (* Unix-style line breaks *)
-  val is_sat_Unix = is_sat "sat\n" "unsat\n"
-
-  (* Z3 (via Wine), SMT-LIB file format, no proofs *)
-  val Z3_Wine_SMT_Oracle = SolverSpec.make_solver
-    (Lib.pair () o Lib.snd o SmtLib.goal_to_SmtLib)
-    "wine C:\\\\Z3\\\\bin\\\\z3.exe /smt"
-    (Lib.K is_sat_DOS)
 
   (* Z3 (Linux/Unix), SMT-LIB file format, no proofs *)
   val Z3_SMT_Oracle = SolverSpec.make_solver
-    (Lib.pair () o Lib.snd o SmtLib.goal_to_SmtLib)
-    "z3 -smt"
-    (Lib.K is_sat_Unix)
+    (Lib.apfst (Lib.K ()) o SmtLib.goal_to_SmtLib)
+    "z3 -smt2"
+    (Lib.K is_sat_file)
 
-(*
   (* Z3 (Linux/Unix), SMT-LIB file format, with proofs *)
   val Z3_SMT_Prover = SolverSpec.make_solver
-    (Lib.S (Lib.apfst o Lib.pair) SmtLib.goal_to_SmtLib)
-    "z3 -ini:z3.ini -smt"
+    (Lib.S (Lib.apfst o Lib.pair) SmtLib.goal_to_SmtLib_with_get_proof)
+    "z3 PROOF_MODE=2 -smt2"
     (fn (goal, (ty_dict, tm_dict)) =>
       fn outfile =>
         let
-          val result = is_sat_Unix outfile
+          val instream = TextIO.openIn outfile
+          val result = is_sat_stream instream
         in
           case result of
             SolverSpec.UNSAT NONE =>
             let
-              val thm = Z3_ProofReplay.check_proof
-                (Z3_ProofParser.parse_proof_file outfile)
+              (* invert 'ty_dict' and 'tm_dict', create parsing functions *)
+              val ty_dict = Redblackmap.foldl (fn (ty, s, dict) =>
+                (* types don't take arguments *)
+                Redblackmap.insert (dict, s, [SmtLib_Theories.K_zero_zero ty]))
+                (Redblackmap.mkDict String.compare) ty_dict
+              val tm_dict = Redblackmap.foldl (fn (tm, s, dict) =>
+                Redblackmap.insert (dict, s, [Lib.K (SmtLib_Theories.zero_args
+                  (Lib.curry Term.list_mk_comb tm))]))
+                (Redblackmap.mkDict String.compare) tm_dict
+              (* add relevant SMT-LIB types/terms to dictionaries *)
+              val ty_dict = Library.union_dict (Library.union_dict
+                SmtLib_Logics.AUFNIRA.tydict SmtLib_Logics.QF_ABV.tydict)
+                ty_dict
+              val tm_dict = Library.union_dict (Library.union_dict
+                SmtLib_Logics.AUFNIRA.tmdict SmtLib_Logics.QF_ABV.tmdict)
+                tm_dict
+              (* parse the proof and check it in HOL *)
+              val proof = Z3_ProofParser.parse_stream (ty_dict, tm_dict)
+                instream
+              val _ = TextIO.closeIn instream
+              val thm = Z3_ProofReplay.check_proof proof
+
+(* TODO
               (* specialize the theorem derived by Z3 to the types and terms
                  that were used in the input goal *)
               val ty_subst =
@@ -72,6 +74,8 @@ structure Z3 = struct
                     subst)
                   [] tm_dict
               val thm = Drule.INST_TY_TERM (tm_subst, ty_subst) thm
+*)
+
               (* discharging definitions: INT_MIN, INT_MAX, ABS *)
               val INT_ABS = intLib.ARITH_PROVE
                 ``!x. ABS (x:int) = if x < 0i then 0i - x else x``
@@ -98,8 +102,7 @@ structure Z3 = struct
             in
               SolverSpec.UNSAT (SOME thm)
             end
-          | _ => result
+          | _ => (result before TextIO.closeIn instream)
         end)
-*)
 
 end
