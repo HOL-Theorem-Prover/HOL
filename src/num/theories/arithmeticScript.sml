@@ -3549,6 +3549,104 @@ Q.SPEC_THEN `n` STRIP_ASSUME_TAC num_CASES THEN1
   METIS_TAC [LESS_NOT_EQ] THEN
 METIS_TAC [LESS_ANTISYM,LESS_0])
 
+(* Absolute difference *)
+val ABS_DIFF_def = new_definition ("ABS_DIFF",
+``ABS_DIFF n m = if n < m then m - n else n - m``)
+
+val ABS_DIFF_SYM = Q.store_thm(
+"ABS_DIFF_SYM",
+`!n m. ABS_DIFF n m = ABS_DIFF m n`,
+SRW_TAC [][ABS_DIFF_def] THEN
+METIS_TAC [LESS_ANTISYM,NOT_LESS,LESS_OR_EQ])
+
+val ABS_DIFF_EQS = Q.store_thm(
+"ABS_DIFF_EQS",
+`!n. ABS_DIFF n n = 0`,
+SRW_TAC [][ABS_DIFF_def,SUB_EQUAL_0])
+val _ = export_rewrites ["ABS_DIFF_EQS"]
+
+val ABS_DIFF_EQ_0 = Q.store_thm(
+"ABS_DIFF_EQ_0",
+`!n m. (ABS_DIFF n m = 0) <=> (n = m)`,
+SRW_TAC [][ABS_DIFF_def,LESS_OR_EQ,SUB_EQ_0] THEN
+METIS_TAC [LESS_ANTISYM])
+
+val ABS_DIFF_ZERO = Q.store_thm(
+"ABS_DIFF_ZERO",
+`!n. (ABS_DIFF n 0 = n) /\ (ABS_DIFF 0 n = n)`,
+SRW_TAC [][ABS_DIFF_def,SUB_0] THEN
+METIS_TAC [NOT_LESS_0,NOT_ZERO_LT_ZERO])
+val _ = export_rewrites ["ABS_DIFF_ZERO"]
+
+val ABS_DIFF_TRIANGLE = Q.store_thm(
+"ABS_DIFF_TRIANGLE",
+`!x y z. ABS_DIFF x z <= ABS_DIFF x y + ABS_DIFF y z`,
+NTAC 3 GEN_TAC THEN
+Cases_on `x=z` THEN1 (
+  SRW_TAC [][ABS_DIFF_EQS,ZERO_LESS_EQ] ) THEN
+Cases_on `x=y` THEN1 (
+  SRW_TAC [][ABS_DIFF_EQS,LESS_EQ_REFL,ADD] ) THEN
+Cases_on `y=z` THEN1 (
+  SRW_TAC [][ABS_DIFF_EQS,LESS_EQ_REFL,ADD_0] ) THEN
+Cases_on `ABS_DIFF x z <= ABS_DIFF x y` THEN1 (
+  METIS_TAC [LESS_EQ_TRANS,LESS_EQ_ADD] ) THEN
+Cases_on `ABS_DIFF x z <= ABS_DIFF y z` THEN1 (
+  METIS_TAC [LESS_EQ_TRANS,LESS_EQ_ADD,ADD_SYM] ) THEN
+REPEAT (POP_ASSUM MP_TAC) THEN
+Q.HO_MATCH_ABBREV_TAC `X x z` THEN
+Q_TAC SUFF_TAC `!x z. x < z ==> X x z` THEN1 (
+  METIS_TAC [ABS_DIFF_SYM,ADD_SYM,NOT_LESS,LESS_OR_EQ,LESS_ANTISYM] ) THEN
+SRW_TAC [][Abbr`X`] THEN
+ASSUME_TAC (Q.SPECL [`x`,`z`] ABS_DIFF_def) THEN
+PAT_ASSUM ``x < z`` ASSUME_TAC THEN
+FULL_SIMP_TAC (srw_ss()) [] THEN
+PAT_ASSUM ``ABS_DIFF x z = z - x`` (K ALL_TAC) THEN
+Cases_on `y < x` THEN1 (
+  ASSUME_TAC (Q.SPECL [`x`,`y`] ABS_DIFF_def) THEN
+  `~(x < y)` by METIS_TAC [LESS_ANTISYM] THEN
+  FULL_SIMP_TAC (srw_ss()) [] THEN
+  ASSUME_TAC (Q.SPECL [`y`,`z`] ABS_DIFF_def) THEN
+  `y < z` by METIS_TAC [LESS_TRANS] THEN
+  FULL_SIMP_TAC (srw_ss()) [NOT_LESS_EQUAL] THEN
+  FULL_SIMP_TAC (srw_ss()) [SUB_LEFT_LESS] THEN
+  `~(z <= y)` by METIS_TAC [NOT_LESS_EQUAL] THEN
+  FULL_SIMP_TAC (srw_ss()) [SUB_RIGHT_ADD] THEN
+  `y <= x` by METIS_TAC [LESS_OR_EQ] THEN
+  FULL_SIMP_TAC (srw_ss()) [LESS_EQ_ADD_SUB] THEN
+  `z < z + (x - y)` by (
+    MATCH_MP_TAC LESS_ADD_NONZERO THEN
+    SRW_TAC [][NOT_ZERO_LT_ZERO] THEN
+    METIS_TAC [SUB_LESS_0] ) THEN
+  METIS_TAC [LESS_TRANS,LESS_REFL] ) THEN
+ASSUME_TAC (Q.SPECL [`x`,`y`] ABS_DIFF_def) THEN
+`x < y` by METIS_TAC [LESS_ANTISYM,NOT_LESS,LESS_OR_EQ] THEN
+FULL_SIMP_TAC (srw_ss()) [] THEN
+Cases_on `y < z` THEN1 (
+  SRW_TAC [][ABS_DIFF_def] THEN
+  FULL_SIMP_TAC (srw_ss()) [NOT_LESS_EQUAL,NOT_LESS] THEN
+  SRW_TAC [][LESS_OR_EQ] THEN
+  DISJ2_TAC THEN
+  SRW_TAC [][Once ADD_SYM] THEN
+  `~(z <= y)` by METIS_TAC [NOT_LESS_EQUAL] THEN
+  SRW_TAC [][SUB_RIGHT_ADD] THEN
+  ASSUME_TAC (Q.SPECL [`y`,`y- x`] SUB_SUB) THEN
+  ASSUME_TAC (Q.SPECL [`y`,`x`] SUB_LESS_EQ) THEN
+  FULL_SIMP_TAC (srw_ss()) [] THEN
+  FIRST_X_ASSUM (Q.SPEC_THEN `z` (MP_TAC o SYM)) THEN
+  SRW_TAC [][] THEN
+  `x <= z` by METIS_TAC [LESS_OR_EQ] THEN
+  `(y - (y - x)) <= z` by METIS_TAC [LESS_OR_EQ,LESS_EQ_TRANS,SUB_LESS_EQ] THEN
+  SRW_TAC [][SUB_CANCEL] THEN
+  `~(y <= x)` by METIS_TAC [LESS_EQ_ANTISYM] THEN
+  SRW_TAC [][SUB_LEFT_SUB] THEN
+  SRW_TAC [][ADD_SYM,ADD_SUB] ) THEN
+FULL_SIMP_TAC (srw_ss()) [NOT_LESS_EQUAL,ABS_DIFF_def] THEN
+FULL_SIMP_TAC (srw_ss()) [SUB_RIGHT_LESS] THEN
+`~(z <= x)` by METIS_TAC [NOT_LESS] THEN
+FULL_SIMP_TAC (srw_ss()) [SUB_LEFT_ADD] THEN
+`y < z + x - x` by METIS_TAC [ADD_SYM] THEN
+FULL_SIMP_TAC (srw_ss()) [ADD_SUB])
+
 (* ********************************************************************** *)
 val _ = print "Miscellaneous theorems\n"
 (* ********************************************************************** *)

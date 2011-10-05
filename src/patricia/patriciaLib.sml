@@ -90,6 +90,8 @@ fun peek Empty k = NONE
   | peek (Leaf (j,d)) k = if k = j then SOME d else NONE
   | peek (Branch (p,m,l,r)) k = peek (if bit m k then l else r) k;
 
+fun int_peek t i = peek t (Arbnum.fromInt i);
+
 fun join (p0,t0,p1,t1) =
 let val m = branching_bit p0 p1 in
   if bit m p0 then
@@ -110,7 +112,13 @@ fun add Empty x = Leaf x
       else
         join (k, Leaf x, p, Branch (p,m,l,r));
 
+fun int_add t (i,d) = add t (Arbnum.fromInt i, d);
+
 fun add_list t = foldl (uncurry (C add)) t;
+fun int_add_list t = foldl (uncurry (C int_add)) t;
+
+fun ptree_of_list l = add_list Empty l;
+fun int_ptree_of_list l = int_add_list Empty l;
 
 fun branch (_,_,Empty,t) = t
   | branch (_,_,t,Empty) = t
@@ -127,6 +135,8 @@ fun remove Empty k = Empty
          else
            t;
 
+fun int_remove t i = remove t (Arbnum.fromInt i);
+
 local
   fun traverse_aux Empty f = f
     | traverse_aux (Leaf (j,d)) f = j :: f
@@ -140,8 +150,6 @@ fun keys t = Listsort.sort Arbnum.compare (traverse t);
 fun transform f Empty = Empty
   | transform f (Leaf (j,d)) = Leaf (j, f d)
   | transform f (Branch (p,m,l,r)) = Branch (p,m,transform f l,transform f r);
-
-fun ptree_of_list l = add_list Empty l;
 
 local
   fun list_of_ptree_aux Empty f = f
@@ -176,8 +184,11 @@ infix in_ptree insert_ptree;
 fun op in_ptree (n,t) = isSome (peek t n);
 fun op insert_ptree (n,t) = add t (n,oneSyntax.one_tm);
 
+fun op int_in_ptree (n,t) = isSome (int_peek t n);
+fun op int_insert_ptree (n,t) = int_add t (n,oneSyntax.one_tm);
+
 val ptree_of_nums = foldl (op insert_ptree) Empty;
-fun ptree_of_ints l = foldl (op insert_ptree o (Arbnum.fromInt ## I)) Empty l;
+val ptree_of_ints = foldl (op int_insert_ptree) Empty;
 
 fun custom_pp_term_ptree pp_empty pp_entry i ppstrm t =
 let open Portable
@@ -1192,7 +1203,17 @@ end;
 
 fun Define_mk_ptree s tr = Define_ptree s (mk_ptree tr);
 
-val is_ptree = is_ptree o dest_ptree;
+val dest_ptree_no_test = dest_ptree;
+
+fun dest_ptree tm =
+let val t = dest_ptree_no_test tm in
+  if is_ptree t then
+    t
+  else
+    raise ERR "dest_ptree" "not a valid Patricia tree"
+end
+
+val is_ptree = Lib.can dest_ptree;
 
 (* ------------------------------------------------------------------------- *)
 

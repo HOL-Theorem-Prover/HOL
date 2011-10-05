@@ -37,16 +37,6 @@ val DEFAULT_OVERLAY = "Overlay.ui";
 
 val SYSTEML = Systeml.systeml
 
-fun normPath s = Path.toString(Path.fromString s)
-fun itlist f L base =
-   let fun it [] = base | it (a::rst) = f a (it rst) in it L end;
-fun itstrings f [] = raise Fail "itstrings: empty list"
-  | itstrings f [x] = x
-  | itstrings f (h::t) = f h (itstrings f t);
-fun fullPath slist = normPath
-   (itstrings (fn chunk => fn path => Path.concat (chunk,path)) slist);
-
-
 val spacify = String.concatWith " "
 
 fun nspaces f n = if n <= 0 then () else (f " "; nspaces f (n - 1))
@@ -138,88 +128,6 @@ fun variant str =  (* get an unused file name in the current directory *)
 
 (** Definition of structured file type *)
 
-datatype CodeType
-    = Theory of string
-    | Script of string
-    | Other of string
-
-datatype File
-    = SML of CodeType
-    | SIG of CodeType
-    | UO of CodeType
-    | UI of CodeType
-    | Unhandled of string
-
-fun string_part0 (Theory s) = s
-  | string_part0 (Script s) = s
-  | string_part0 (Other s) = s
-fun string_part (UO c)  = string_part0 c
-  | string_part (UI c)  = string_part0 c
-  | string_part (SML c) = string_part0 c
-  | string_part (SIG c) = string_part0 c
-  | string_part (Unhandled s) = s
-
-fun isProperSuffix s1 s2 = let
-  val sz1 = size s1
-  val sz2 = size s2
-  open Substring
-in
-  if sz1 >= sz2 then NONE
-  else let
-    val (prefix, suffix) = splitAt(full s2, sz2 - sz1)
-  in
-    if string suffix = s1 then SOME (string prefix) else NONE
-  end
-end
-
-fun toCodeType s = let
-  val possprefix = isProperSuffix "Theory" s
-in
-  if (isSome possprefix) then Theory (valOf possprefix)
-  else let
-    val possprefix = isProperSuffix "Script" s
-  in
-    if isSome possprefix then Script (valOf possprefix)
-    else Other s
-  end
-end
-
-fun toFile s0 = let
-  val {base = s, ext} = OS.Path.splitBaseExt s0
-in
-  case ext of
-    SOME "sml" => SML (toCodeType s)
-  | SOME "sig" => SIG (toCodeType s)
-  | SOME "uo"  => UO (toCodeType s)
-  | SOME "ui"  => UI (toCodeType s)
-  |    _       => Unhandled s0
-end
-
-fun codeToString c =
-  case c of
-    Theory s => s ^ "Theory"
-  | Script s => s ^ "Script"
-  | Other s  => s
-
-fun fromFile f =
-  case f of
-    UO c  => codeToString c ^ ".uo"
-  | UI c  => codeToString c ^ ".ui"
-  | SIG c => codeToString c ^ ".sig"
-  | SML c => codeToString c ^ ".sml"
-  | Unhandled s => s
-
-fun file_compare (f1, f2) = String.compare (fromFile f1, fromFile f2)
-
-(*** Construct primary dependencies *)
-(* Next, construct the primary dependency chain, for a given target *)
-fun primary_dependent f =
-    case f of
-      UO c => SOME (SML c)
-    | UI c => SOME (SIG c)
-    | SML (Theory s) => SOME (SML (Script s))
-    | SIG (Theory s) => SOME (SML (Script s))
-    | _ => NONE
 
 (*** Construction of secondary dependencies *)
 
@@ -1199,47 +1107,11 @@ end handle CircularDependency => cache_insert (target, false)
          | x => raise Fail ("Got an "^exnName x^" exception, with message <"^
                             exnMessage x^"> in make_up_to_date")
 
-exception DirNotFound
-
 (** Dealing with the command-line *)
 fun do_target x = let
-  fun read_files ds P action =
-     case FileSys.readDir ds
-      of NONE => FileSys.closeDir ds
-       | SOME nextfile =>
-           (if P nextfile then action nextfile else ();
-            read_files ds P action)
-
-  fun clean_action () = let
-    val cdstream = FileSys.openDir "."
-    fun to_delete f =
-      case (toFile f) of
-        UO _ => true
-      | UI _ => true
-      | SIG (Theory _) => true
-      | SML (Theory _) => true
-      | _ => false
-    fun quiet_remove s = FileSys.remove s handle e => ()
-  in
-    read_files cdstream to_delete quiet_remove;
-    app quiet_remove extra_cleans;
-    true
-  end
-  fun clean_deps() = let
-    val depds = FileSys.openDir DEPDIR handle
-      OS.SysErr _ => raise DirNotFound
-  in
-    read_files depds
-               (fn _ => true)
-               (fn s => FileSys.remove (fullPath [DEPDIR, s]));
-    FileSys.rmDir DEPDIR;
-    true
-  end handle OS.SysErr (mesg, _) => let
-             in
-                print ("make cleanDeps failed with message: "^mesg^"\n");
-                false
-             end
-           | DirNotFound => true
+  fun clean_action () =
+      (Holmake_tools.clean_dir {extra_cleans = extra_cleans}; true)
+  fun clean_deps() = Holmake_tools.clean_depdir {depdirname = DEPDIR}
   val _ = done_some_work := false
 in
   if not (member x dontmakes) then

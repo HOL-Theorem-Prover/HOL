@@ -41,4 +41,8 @@ sig
            (* if boolean is true, renames (/bin/mv) src to dest.  Otherwise
               does update_copy bincopy *)
 
+  val clean : string -> string -> string list
+  val cleanAll : string -> string -> string list
+  val clean_dirs : {HOLDIR:string, action : string -> string -> string list} ->
+                   string list -> unit
 end
