@@ -1104,10 +1104,15 @@ This default width can be overridden on a case-by-case basis with the
 \texttt{width=} option to any of the commands within a \LaTeX{}
 document.
 
+\paragraph{Preventing Merge Analysis}
+By default, the HOL pretty-printer is paranoid about token-merging, and will insert spaces between the tokens it emits to try to ensure that what is output can be read in again without error.
+%
+This behaviour can be frustrating when getting one's \LaTeX{} to look ``just so'', so it can be turned off with the \texttt{--nomergeanalysis} option to the munger.
+%
+(In interactive HOL, the token-merging analysis is controlled by a trace variable called \texttt{"pp\_avoids\_symbol\_merges"}.)
 
-\smallskip \noindent
-The \texttt{-w} and overrides file options can be given in either
-order.
+\smallskip \noindent The \texttt{-w}, \texttt{--nomergeanalysis} and
+overrides file options can be given in any order.
 
 \subsection{Holindex}
 

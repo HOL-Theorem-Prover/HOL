@@ -25,8 +25,11 @@ fun warn ((l,c), s) = (TextIO.output(TextIO.stdErr,
 fun die s = (TextIO.output(TextIO.stdErr, s ^ "\n");
              TextIO.flushOut TextIO.stdErr;
              OS.Process.exit OS.Process.failure)
-fun usage() = die ("Usage:\n  "^CommandLine.name()^" [-w<linewidth>] [overridesfile] or\n"^
-                                CommandLine.name()^" -index filename")
+fun usage() =
+    die ("Usage:\n  "^
+         CommandLine.name()^" [-w<linewidth>] [--nomergeanalysis] " ^
+         "[overridesfile] or\n"^
+         CommandLine.name()^" -index filename")
 
 fun stringOpt pos s =
   case s of
