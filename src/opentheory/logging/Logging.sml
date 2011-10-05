@@ -470,36 +470,6 @@ val (log_term, log_thm, log_clear,
     (* INST_TY_TERM (INST,INST_TYPE) *)
 
     (* 4: recursive calls to proofs <=3 and subproofs only *)
-    | SUBST_prf (map,tm,th) => let
-      val (h,source) = dest_thm th
-      val fvs = FVL (source::h) empty_varset
-      fun f {residue,...} = let val (h,c) = dest_thm residue in FVL (c::h) end
-      val fvs = itlist f map fvs
-      fun log_rconv fvs source template = (* return |- source = template[rhs/vars] *)
-        log_thm(ALPHA source template)
-      handle HOL_ERR _ =>
-        if is_var template
-        then log_thm (valOf(subst_assoc (equal template) map))
-      else let
-        val (sf,sa) = dest_comb source
-        val (tf,ta) = dest_comb template
-        val _ = log_rconv fvs sf tf
-        val _ = log_rconv fvs sa ta
-        val _ = log_command "appThm"
-      in () end handle HOL_ERR _ => let
-        val (sv,sb) = dest_abs source
-        val (tv,tb) = dest_abs template
-        val vv = prim_variant (HOLset.listItems fvs) tv
-        val sb = subst [sv|->vv] sb
-        val tb = subst [tv|->vv] tb
-        val _ = log_var vv
-        val _ = log_rconv (HOLset.add(fvs,vv)) sb tb
-        val _ = log_command "absThm"
-      in () end
-      val _ = log_rconv fvs source tm
-      val _ = log_thm th
-      val _ = log_command "eqMp"
-      in () end
     | SYM_prf th => let
       val tm = concl th
       val (l,r) = boolSyntax.dest_eq tm
@@ -567,6 +537,38 @@ val (log_term, log_thm, log_clear,
       val _ = log_thm th2
       val _ = log_command "deductAntisym"
       val _ = log_command "eqMp"
+      in () end
+    | SUBST_prf (map,tm,sth) => let
+      val (h,source) = dest_thm sth
+      val fvs = FVL (source::h) empty_varset
+      fun f {residue,...} = let val (h,c) = dest_thm residue in FVL (c::h) end
+      val fvs = itlist f map fvs
+      fun rconv fvs source template = (* |- source = template[rhs/vars] *)
+        ALPHA source template
+      handle HOL_ERR _ =>
+        if is_var template
+        then valOf(subst_assoc (equal template) map)
+      else let
+        val (sf,sa) = dest_comb source
+        val (tf,ta) = dest_comb template
+        val f = rconv fvs sf tf
+        val a = rconv fvs sa ta
+      in MK_COMB (f,a) end handle HOL_ERR _ => let
+        val (sv,sb) = dest_abs source
+        val (tv,tb) = dest_abs template
+        val vv = prim_variant (HOLset.listItems fvs) tv
+        val sb = subst [sv|->vv] sb
+        val tb = subst [tv|->vv] tb
+        val b = rconv (HOLset.add(fvs,vv)) sb tb
+      in ABS vv b end
+      val t = EQ_MP (rconv fvs source tm) sth
+      val t = List.foldl (fn ({residue,...},t) =>
+                HOLset.foldl (fn (h,t) =>
+                  if HOLset.member(hypset t,h) then t
+                  else ADD_ASSUM h t)
+                t (hypset residue))
+              t map
+      val _ = log_thm t
       in () end
     (* GEN_pth (ASSUME,AP_THM,SYM,CONV_RULE,RAND_CONV,BETA_CONV,EQ_MP) *)
     | GEN_prf (v,th) => let
