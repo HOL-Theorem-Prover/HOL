@@ -544,16 +544,19 @@ val (log_term, log_thm, log_clear,
     (* 6: etc *)
     (* MP_pth (BETA_RULE,AP_THM,EQ_MP,ASSUME,CONJUNCT2,SYM) *)
     | MP_prf (th1,th2) => let
-      val (ant,con) = dest_imp(concl th1)
-      val _ = log_thm th1
-      val _ = log_thm th2
-      val _ = log_thm (INST [p|->ant, q|->con] MP_pth)
-      val _ = log_command "deductAntisym"
-      val _ = saved (OThm th2)
-      val _ = log_command "eqMp"
-      val _ = log_command "deductAntisym"
-      val _ = saved (OThm th1)
-      val _ = log_command "eqMp"
+      val tm = concl th1
+      val (ant,con) = dest_imp tm
+      val th1 = if is_neg tm
+                then let open boolTheory in
+                       (CONV_RULE BETA_CONV)
+                       (SUBS_OCCS [([1],NOT_DEF)] th1)
+                     end
+                else th1
+      val pth = INST [p|->ant, q|->con] MP_pth
+      val _ = log_thm (EQ_MP (deductAntisym th1
+                               (EQ_MP (deductAntisym th2 pth)
+                                      th2))
+                             th1)
       in () end
     | DISCH_prf (tm,th) => let
       val th1 = CONJ (ASSUME tm) th
