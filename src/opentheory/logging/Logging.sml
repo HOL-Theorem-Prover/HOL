@@ -543,8 +543,19 @@ val (log_term, log_thm, log_clear,
     | SUBST_prf (map,tm,sth) => let
       val (h,source) = dest_thm sth
       val fvs = FVL (source::h) empty_varset
-      fun f {residue,...} = let val (h,c) = dest_thm residue in FVL (c::h) end
-      val fvs = itlist f map fvs
+      fun f (m as {redex,residue},(fvs,allfvs,map,tm)) = let
+        val (h,c) = dest_thm residue
+        val allfvs = FVL (c::h) allfvs
+      in
+        if HOLset.member(fvs,redex) then let
+            val vv = prim_variant (HOLset.listItems fvs) redex
+            val fvs = HOLset.add(fvs,vv)
+            val m = {redex=vv,residue=residue}
+            val tm = subst [redex|->vv] tm
+          in (fvs,allfvs,m::map,tm) end
+        else (fvs,allfvs,m::map,tm)
+      end
+      val (_,fvs,map,tm) = foldl f (fvs,fvs,[],tm) map
       fun rconv fvs source template = (* |- source = template[rhs/vars] *)
         ALPHA source template
       handle HOL_ERR _ =>
