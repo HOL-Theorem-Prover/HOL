@@ -563,14 +563,7 @@ val (log_term, log_thm, log_clear,
         val tb = subst [tv|->vv] tb
         val b = rconv (HOLset.add(fvs,vv)) sb tb
       in ABS vv b end
-      val t = EQ_MP (rconv fvs source tm) sth
-      val t = List.foldl (fn ({residue,...},t) =>
-                HOLset.foldl (fn (h,t) =>
-                  if HOLset.member(hypset t,h) then t
-                  else ADD_ASSUM h t)
-                t (hypset residue))
-              t map
-      val _ = log_thm t
+      val _ = log_thm (EQ_MP (rconv fvs source tm) sth)
       in () end
     (* GEN_pth (ASSUME,AP_THM,SYM,CONV_RULE,RAND_CONV,BETA_CONV,EQ_MP) *)
     | GEN_prf (v,th) => let
