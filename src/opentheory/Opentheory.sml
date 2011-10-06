@@ -130,6 +130,24 @@ fun raw_read_article input
     | f "nil"    st                                          = push(OList [],st)
     | f "opType" (st as {stack=OList ls::OTypeOp {Thy,Tyop}::os,...})
                = st_(OType(mk_thy_type{Thy=Thy,Tyop=Tyop,Args=unOTypels "opType" ls})::os,st)
+(*
+    | f "pop"    (st as {stack=OList[OList hl,OTerm c]::OThm th::os,line_num,...}) = let
+      val hl = unOTermls "pop" hl
+      val h = HOLset.addList(empty_tmset,hl)
+      val _ = if aconv c (concl th) then () else trace
+       ("types",1) (fn () => (
+         Feedback.HOL_MESG(Parse.term_to_backend_string(c));
+         Feedback.HOL_MESG(Parse.term_to_backend_string(concl th));
+         raise ERR ("proved wrong theorem (c) line: "^(Int.toString line_num))
+         )) ()
+     val _ = if HOLset.equal(h,hypset th) then () else trace
+       ("assumptions",1) (fn() => (
+         Feedback.HOL_MESG(Parse.thm_to_backend_string(mk_thm(hl,c)));
+         Feedback.HOL_MESG(Parse.thm_to_backend_string(th));
+         raise ERR ("proved wrong theorem (h) line: "^(Int.toString line_num))
+       )) ()
+     in st_(OThm th::os,st) end
+*)
     | f "pop"    (st as {stack=x::os,...})                   = st_(os,st)
     | f "ref"    (st as {stack=ONum k::os,dict,...})         = st_(Map.find(dict,k)::os,st)
     | f "refl"   (st as {stack=OTerm t::os,...})             = st_(OThm(REFL t)::os,st)
