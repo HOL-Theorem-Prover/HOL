@@ -21,15 +21,21 @@ Evaluating
          t[x1,...,xn]
          (A |- t[t1,...,tn])
 }
-returns the theorem {A1 u ... An |- t[u1,...,un]}.  The term
-argument {t[x1,...,xn]} is a template which should match the conclusion
-of the theorem being substituted into, with the variables {x1}, ... ,
-{xn} marking those places where occurrences of {t1}, ... , {tn} are to
-be replaced by the terms {u1}, ... , {un}, respectively.  The occurrence
-of {ti} at the places marked by {xi} must be free (i.e. {ti} must not
-contain any bound variables).  {SUBST} automatically renames bound
-variables to prevent free variables in {ui} becoming bound after
-substitution.
+returns the theorem {A u A1 u ... u An |- t[u1,...,un]} (perhaps with
+fewer assumptions, see paragraph below). The term argument {t[x1,...,xn]}
+is a template which should match the conclusion of the theorem being
+substituted into, with the variables {x1}, ... , {xn} marking those
+places where occurrences of {t1}, ... , {tn} are to be replaced by the
+terms {u1}, ... , {un}, respectively.  The occurrence of {ti} at the
+places marked by {xi} must be free (i.e. {ti} must not contain any bound
+variables).  {SUBST} automatically renames bound variables to prevent
+free variables in {ui} becoming bound after substitution.
+
+The assumptions of the returned theorem may not contain all the
+assumptions {A1 u ... u An} if some of them are not required. In
+particular, if the theorem {Ak |- tk = uk} is unnecessary because {xk}
+does not appear in the template, then {Ak} is not be added to the
+assumptions of the returned theorem.
 
 \FAILURE
 If the template does not match the conclusion of the hypothesis, or the
