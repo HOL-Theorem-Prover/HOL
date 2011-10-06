@@ -69,13 +69,13 @@ val bx = bound "x"
 val fy = free "y"
 val fp = free "p"
 val fx = free "x"
-(*
+
 val _ = app tpp [
   ("do x <- f y; g x od",
    concat ["do ", bx, " <- ", free "f", " ", fy, "; ", free "g", " ",
            bx, " od"])
 ]
-*)
+
 
 val _ = print "**** More Inductive Definition tests ****\n"
 open IndDefLib

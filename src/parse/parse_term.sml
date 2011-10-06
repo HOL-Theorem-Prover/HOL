@@ -1143,10 +1143,11 @@ fun parse_term (G : grammar) typeparser type_var_parser = let
       let
         val nonterm0 = (QIDENT("bool", "the_value"), rlocn)
         val type_annotation = let
-          open Pretype
+          open Prerank Prekind Pretype
         in
           (PT(TyApp(PT(Contype{Thy="bool", Tyop = "itself",
-                               Kind = Prekind.mk_arity 1}, locn.Loc_None),
+                               Kind = mk_arrow_kind(pkind_of ty, typ Zerorank)},
+                       locn.Loc_None),
                     ty),
               rlocn),
            rlocn)

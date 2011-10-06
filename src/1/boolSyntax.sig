@@ -28,6 +28,7 @@ sig
   val let_tm         : term
   val arb            : term
   val the_value      : term
+  val the_kind_value : term
   val bounded_tm     : term
   val res_forall_tm  : term
   val res_exists_tm  : term

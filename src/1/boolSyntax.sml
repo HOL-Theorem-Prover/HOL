@@ -38,7 +38,8 @@ val negation     = prim_mk_const {Name="~",            Thy="bool"};
 val conditional  = prim_mk_const {Name="COND",         Thy="bool"};
 val let_tm       = prim_mk_const {Name="LET",          Thy="bool"};
 val arb          = prim_mk_const {Name="ARB",          Thy="bool"};
-val the_value    = prim_mk_const {Name="the_value",    Thy="bool"};
+val the_kind_value=prim_mk_const {Name="the_value",    Thy="bool"};
+val the_value    = inst_kind [kappa |-> typ 0] the_kind_value;
 val bool_case    = prim_mk_const {Name="bool_case",    Thy="bool"};
 val literal_case = prim_mk_const {Name="literal_case", Thy="bool"};
 val bounded_tm   = prim_mk_const {Name="BOUNDED",      Thy="bool"};
@@ -102,7 +103,7 @@ fun mk_itself ty =
       val kappa' = mk_var_kind("'k", rk)
       val alpha' = mk_var_type ("'a", kd)
   in
-     inst_rk_kd_ty rk [kappa' |-> kd] [alpha' |-> ty] the_value
+     inst_rk_kd_ty rk [kappa' |-> kd] [alpha' |-> ty] the_kind_value
   end;
 
 fun mk_icomb (t1, t2) =
