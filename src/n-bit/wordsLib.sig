@@ -2,44 +2,45 @@ signature wordsLib =
 sig
     include Abbrev
 
-    val words_compset     : unit -> computeLib.compset
+    val words_compset       : unit -> computeLib.compset
 
-    val SIZES_ss          : simpLib.ssfrag
-    val BIT_ss            : simpLib.ssfrag
-    val BITS_INTRO_ss     : simpLib.ssfrag
+    val SIZES_ss            : simpLib.ssfrag
+    val BIT_ss              : simpLib.ssfrag
+    val BITS_INTRO_ss       : simpLib.ssfrag
 
-    val WORD_ARITH_ss     : simpLib.ssfrag
-    val WORD_LOGIC_ss     : simpLib.ssfrag
-    val WORD_SUB_ss       : simpLib.ssfrag
-    val WORD_SHIFT_ss     : simpLib.ssfrag
-    val WORD_ARITH_EQ_ss  : simpLib.ssfrag
-    val WORD_BIT_EQ_ss    : simpLib.ssfrag
-    val WORD_EXTRACT_ss   : simpLib.ssfrag
-    val WORD_MUL_LSL_ss   : simpLib.ssfrag
+    val WORD_ARITH_ss       : simpLib.ssfrag
+    val WORD_LOGIC_ss       : simpLib.ssfrag
+    val WORD_SUB_ss         : simpLib.ssfrag
+    val WORD_SHIFT_ss       : simpLib.ssfrag
+    val WORD_ARITH_EQ_ss    : simpLib.ssfrag
+    val WORD_BIT_EQ_ss      : simpLib.ssfrag
+    val WORD_EXTRACT_ss     : simpLib.ssfrag
+    val WORD_MUL_LSL_ss     : simpLib.ssfrag
 
-    val WORD_ss           : simpLib.ssfrag
+    val WORD_ss             : simpLib.ssfrag
 
-    val SIZES_CONV        : conv
-    val word_EQ_CONV      : conv
+    val SIZES_CONV          : conv
+    val word_EQ_CONV        : conv
 
-    val BITS_INTRO_CONV   : conv
-    val WORD_ARITH_CONV   : conv
-    val WORD_LOGIC_CONV   : conv
-    val WORD_SUB_CONV     : conv
-    val WORD_MUL_LSL_CONV : conv
-    val WORD_DIV_LSR_CONV : conv
-    val WORD_CONV         : conv
-    val WORD_BIT_EQ_CONV  : conv
+    val BITS_INTRO_CONV     : conv
+    val WORD_ARITH_CONV     : conv
+    val WORD_LOGIC_CONV     : conv
+    val WORD_SUB_CONV       : conv
+    val WORD_MUL_LSL_CONV   : conv
+    val WORD_DIV_LSR_CONV   : conv
+    val WORD_MOD_BITS_CONV  : conv
+    val WORD_CONV           : conv
+    val WORD_BIT_EQ_CONV    : conv
 
-    val n2w_INTRO_TAC     : int -> tactic
+    val n2w_INTRO_TAC       : int -> tactic
 
-    val WORD_DP           : conv -> conv -> conv
-    val WORD_DECIDE       : conv
-    val WORD_DECIDE_TAC   : tactic
+    val WORD_DP             : conv -> conv -> conv
+    val WORD_DECIDE         : conv
+    val WORD_DECIDE_TAC     : tactic
 
-    val WORD_EVAL_CONV    : conv
-    val WORD_EVAL_RULE    : rule
-    val WORD_EVAL_TAC     : tactic
+    val WORD_EVAL_CONV      : conv
+    val WORD_EVAL_RULE      : rule
+    val WORD_EVAL_TAC       : tactic
 
     val Induct_word         : tactic
     val Cases_word          : tactic
@@ -61,8 +62,8 @@ sig
     val output_words_as_dec : unit -> unit
     val remove_word_printer : unit -> unit
 
-    val add_word_cast_printer    : unit -> unit
-    val remove_word_cast_printer : unit -> unit
+    val add_word_cast_printer       : unit -> unit
+    val remove_word_cast_printer    : unit -> unit
 
     val guessing_word_lengths       : bool ref
     val notify_on_word_length_guess : bool ref

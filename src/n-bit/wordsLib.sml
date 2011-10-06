@@ -216,7 +216,8 @@ local
    word_1comp_n2w, word_or_n2w, word_xor_n2w, word_and_n2w,
    word_2comp_compute, word_nor_n2w, word_xnor_n2w, word_nand_n2w,
    word_sub_def, word_div_def, word_sdiv_def, word_mod_def,
-   MOD_WL word_add_n2w, MOD_WL word_mul_n2w,
+   MOD_WL word_add_n2w, MOD_WL word_mul_n2w, word_rol_bv_def,
+   word_lsl_bv_def, word_lsr_bv_def, word_asr_bv_def, word_ror_bv_def,
    word_asr_compute, word_lsr_compute, Q.SPEC `^Na` word_lsl_n2w,
    SHIFT_ZERO, Q.SPEC `^Na` word_ror_n2w,
    Q.SPECL [`w:'a word`,`^Na`] word_rol_def, word_rrx_n2w,
@@ -310,7 +311,8 @@ local
       "w2w","w2n","sw2sw","word_log2","word_reverse","word_msb",
       "word_join","word_concat","word_bit","word_bits","word_signed_bits",
       "word_slice","word_extract","word_asr","word_lsr","word_lsl","word_ror",
-      "word_rol","word_rrx","word_lo","word_ls","word_lt","word_le"]
+      "word_rol","word_rrx","word_lsl_bv","word_lsr_bv","word_asr_bv",
+      "word_ror_bv","word_rol_bv","word_lo","word_ls","word_lt","word_le"]
 
   val l2 =
      ["l2n","n2l","s2n","n2s","HEX","UNHEX","SBIT","BIT","BITS","BITV",
@@ -479,6 +481,68 @@ val WORD_MULT_LEFT_1 = List.nth(word_mult_clauses,2);
 val NEG_EQ_0 = trace("metis",0) (METIS_PROVE [WORD_NEG_MUL, WORD_NEG_EQ_0])
   ``(!w:'a word. (-1w * w = 0w) = (w = 0w)) /\
     (!w:'a word. (0w = -1w * w) = (w = 0w))``;
+
+(* ------------------------------------------------------------------------- *)
+
+local
+  val SYM_WORD_DIV_LSR = GSYM WORD_DIV_LSR
+  val one_tm = numSyntax.term_of_int 1
+  val two_tm = numSyntax.term_of_int 2
+in
+  fun WORD_DIV_LSR_CONV tm =
+    let
+      val (l,r) = wordsSyntax.dest_word_div tm
+      val (v,ty) = wordsSyntax.dest_n2w r
+      val p = fst (wordsSyntax.dest_mod_word_literal r)
+      val n = numSyntax.mk_numeral (Arbnum.log2 p)
+      val lt_thm = numSyntax.mk_less (n, wordsSyntax.mk_dimindex ty)
+                    |> (Conv.RAND_CONV SIZES_CONV THENC numLib.REDUCE_CONV)
+                    |> Drule.EQT_ELIM
+      val exp_thm = boolSyntax.mk_eq
+                       (wordsSyntax.mk_n2w (v,ty),
+                        wordsSyntax.mk_n2w (numSyntax.mk_exp (two_tm, n),ty))
+                    |> WORD_EVAL_CONV
+                    |> Drule.EQT_ELIM
+      val thm1 = Rewrite.PURE_ONCE_REWRITE_CONV [exp_thm] tm
+      val thm2 = Thm.MP (Drule.ISPECL [l,n] SYM_WORD_DIV_LSR) lt_thm
+    in
+      Thm.TRANS thm1 thm2
+    end handle HOL_ERR _ => raise ERR "WORD_DIV_LSR_CONV" ""
+             | Domain => raise ERR "WORD_DIV_LSR_CONV" "Divide by zero"
+
+  fun WORD_MOD_BITS_CONV tm =
+    let
+      val (l,r) = wordsSyntax.dest_word_mod tm
+      val (v,ty) = wordsSyntax.dest_n2w r
+      val p = fst (wordsSyntax.dest_mod_word_literal r)
+    in
+      if p = Arbnum.zero then
+        raise ERR "" ""
+      else if p = Arbnum.one then let
+        val p_tm = wordsSyntax.mk_n2w (one_tm,ty)
+        val p_thm = boolSyntax.mk_eq (r, p_tm) |> WORD_EVAL_CONV |> EQT_ELIM
+      in
+        PURE_REWRITE_CONV [p_thm, WORD_MOD_1] tm
+      end else let
+        val n = numSyntax.mk_numeral (Arbnum.less1 (Arbnum.log2 p))
+        val dim_sub1 = numSyntax.mk_minus (wordsSyntax.mk_dimindex ty, one_tm)
+        val lt_thm = numSyntax.mk_less (n, dim_sub1)
+                      |> (Conv.RAND_CONV (Conv.LAND_CONV SIZES_CONV)
+                          THENC numLib.REDUCE_CONV)
+                      |> Drule.EQT_ELIM
+        val exp_thm = boolSyntax.mk_eq
+                         (wordsSyntax.mk_n2w (v,ty),
+                          wordsSyntax.mk_n2w
+                            (numSyntax.mk_exp (two_tm, numSyntax.mk_suc n),ty))
+                      |> WORD_EVAL_CONV
+                      |> Drule.EQT_ELIM
+        val thm1 = Rewrite.PURE_ONCE_REWRITE_CONV [exp_thm] tm
+        val thm2 = Thm.MP (Drule.ISPECL [l,n] WORD_MOD_POW2) lt_thm
+      in
+        Thm.TRANS thm1 thm2
+      end
+    end handle HOL_ERR _ => raise ERR "WORD_MOD_BITS_CONV" ""
+end
 
 (* ------------------------------------------------------------------------- *)
 
@@ -973,10 +1037,13 @@ val WORD_SHIFT_ss =
       WORD_ADD_LSL, GSYM WORD_2COMP_LSL,
       GSYM LSL_BITWISE, GSYM LSR_BITWISE, GSYM ROR_BITWISE, GSYM ROL_BITWISE,
       LSL_LIMIT, LSR_LIMIT, ASR_LIMIT] @
-    map (REWRITE_RULE [SYM_WORD_NEG_1])
-     [ASR_UINT_MAX, ROR_UINT_MAX,
-      (REWRITE_RULE [ROR_UINT_MAX] o
-         Q.SPEC `words$word_T`) word_rol_def]);
+    List.map (REWRITE_RULE [w2n_n2w] o Q.SPECL [`w`,`n2w n`])
+      [word_lsl_bv_def, word_lsr_bv_def, word_asr_bv_def,
+       word_ror_bv_def, word_rol_bv_def] @
+    List.map (REWRITE_RULE [SYM_WORD_NEG_1])
+      [ASR_UINT_MAX, ROR_UINT_MAX,
+       (REWRITE_RULE [ROR_UINT_MAX] o
+          Q.SPEC `words$word_T`) word_rol_def]);
 
 (* ------------------------------------------------------------------------- *)
 
@@ -1055,34 +1122,6 @@ val WORD_MUL_LSL_ss =
       {conv = WORD_MUL_LSL_CONV,
        name = "WORD_MUL_LSL_CONV",
        pats = [``words$word_mul (^n2w ^Na) w:'a word``]}];
-
-(* ------------------------------------------------------------------------- *)
-
-local
-  val SYM_WORD_DIV_LSR = GSYM WORD_DIV_LSR
-  val two_tm = numSyntax.term_of_int 2
-in
-  fun WORD_DIV_LSR_CONV tm =
-    let
-      val (l,r) = wordsSyntax.dest_word_div tm
-      val (v,ty) = wordsSyntax.dest_n2w r
-      val p = fst (wordsSyntax.dest_mod_word_literal r)
-      val n = numSyntax.mk_numeral (Arbnum.log2 p)
-      val lt_thm = numSyntax.mk_less (n, wordsSyntax.mk_dimindex ty)
-                    |> (Conv.RAND_CONV SIZES_CONV THENC numLib.REDUCE_CONV)
-                    |> Drule.EQT_ELIM
-      val exp_thm = boolSyntax.mk_eq
-                       (wordsSyntax.mk_n2w (v,ty),
-                        wordsSyntax.mk_n2w (numSyntax.mk_exp (two_tm, n),ty))
-                    |> WORD_EVAL_CONV
-                    |> Drule.EQT_ELIM
-      val thm1 = Rewrite.PURE_ONCE_REWRITE_CONV [exp_thm] tm
-      val thm2 = Thm.MP (Drule.ISPECL [l,n] SYM_WORD_DIV_LSR) lt_thm
-    in
-      Thm.TRANS thm1 thm2
-    end handle HOL_ERR _ => raise ERR "WORD_DIV_LSR_CONV" ""
-             | Domain => raise ERR "WORD_DIV_LSR_CONV" "Divide by zero"
-end
 
 (* ------------------------------------------------------------------------- *)
 

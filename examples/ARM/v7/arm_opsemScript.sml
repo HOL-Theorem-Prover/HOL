@@ -467,35 +467,6 @@ val data_processing_thumb2_unpredictable_def = Define`
         (Mode1_register_shifted_register s typ m)) =
      opc <> 0b1101w \/ BadReg d \/ BadReg s \/ BadReg m)`;
 
-val i2bits_def = Define `i2bits (i,N) = n2w (Num (i % 2 ** N))`;
-
-val signed_sat_q_def = Define`
-  signed_sat_q (i:int, N:num) : ('a word # bool) =
-    if dimindex(:'a) < N then
-      ARB
-    else
-      if i > 2 ** (N - 1) - 1 then
-        (i2bits (2 ** (N - 1) - 1, N), T)
-      else if i < ~(2 ** (N - 1)) then
-        (i2bits (~(2 ** (N - 1)), N), T)
-      else
-        (i2bits (i, N), F)`;
-
-val unsigned_sat_q_def = Define`
-  unsigned_sat_q (i:int, N:num) : ('a word # bool) =
-    if dimindex(:'a) < N then
-      ARB
-    else
-      if i > 2 ** N - 1 then
-        (n2w (2 ** N - 1), T)
-      else if i < 0 then
-        (0w, T)
-      else
-        (n2w (Num i), F)`;
-
-val signed_sat_def   = Define `signed_sat   = FST o signed_sat_q`;
-val unsigned_sat_def = Define `unsigned_sat = FST o unsigned_sat_q`;
-
 val _ = temp_overload_on ("top_half", ``( 31 >< 16 ) : word32 -> word16``);
 val _ = temp_overload_on ("bot_half", ``( 15 >< 0  ) : word32 -> word16``);
 

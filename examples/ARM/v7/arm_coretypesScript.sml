@@ -5,9 +5,12 @@
 (* ------------------------------------------------------------------------ *)
 
 open HolKernel boolLib bossLib Parse;
-open arithmeticTheory bitTheory wordsTheory wordsLib;
+open arithmeticTheory bitTheory wordsTheory wordsLib integer_wordTheory;
 
 val _ = new_theory "arm_coretypes";
+
+val _ = numLib.prefer_num();
+val _ = wordsLib.prefer_word();
 
 (* ------------------------------------------------------------------------ *)
 
@@ -182,6 +185,35 @@ val bytes_def = Define`
   (bytes (w, 2) = [(7 >< 0) w; (15 >< 8) w]) /\
   (bytes (w, 1) = [w2w (w:word32)] : word8 list)`;
 
+val i2bits_def = Define `i2bits (i,N) = n2w (Num (i % 2 ** N))`;
+
+val signed_sat_q_def = Define`
+  signed_sat_q (i:int, N:num) : ('a word # bool) =
+    if dimindex(:'a) < N then
+      ARB
+    else
+      if i > 2 ** (N - 1) - 1 then
+        (i2bits (2 ** (N - 1) - 1, N), T)
+      else if i < ~(2 ** (N - 1)) then
+        (i2bits (~(2 ** (N - 1)), N), T)
+      else
+        (i2bits (i, N), F)`;
+
+val unsigned_sat_q_def = Define`
+  unsigned_sat_q (i:int, N:num) : ('a word # bool) =
+    if dimindex(:'a) < N then
+      ARB
+    else
+      if i > 2 ** N - 1 then
+        (n2w (2 ** N - 1), T)
+      else if i < 0 then
+        (0w, T)
+      else
+        (n2w (Num i), F)`;
+
+val signed_sat_def   = Define `signed_sat   = FST o signed_sat_q`;
+val unsigned_sat_def = Define `unsigned_sat = FST o unsigned_sat_q`;
+
 val LSL_C_def = zDefine`
   LSL_C (x: 'a word, shift:num) =
     if shift = 0 then
@@ -223,6 +255,8 @@ val ROR_def = Define `ROR (x: 'a word, shift:num) = x #>> shift`;
 
 val RRX_def = Define`
   RRX (x: 'a word, carry_in:bool) = SND (word_rrx (carry_in,x))`;
+
+(* ------------------------------------------------------------------------ *)
 
 val ITAdvance_def = zDefine`
   ITAdvance (IT:word8) =

@@ -175,6 +175,10 @@ val LOG_RWT = store_thm("LOG_RWT",
 val LOG2_UNIQUE = save_thm("LOG2_UNIQUE",
   (REWRITE_RULE [GSYM LOG2_def] o INST [`a` |-> `2`]) LOG_UNIQUE);
 
+val LOG2_TWOEXP = Q.store_thm("LOG2_TWOEXP",
+  `!n. LOG2 (2 ** n) = n`,
+  STRIP_TAC \\ MATCH_MP_TAC LOG2_UNIQUE \\ SRW_TAC [] []);
+
 val DIVMOD_2EXP = save_thm("DIVMOD_2EXP",
   REWRITE_RULE [GSYM DIV_2EXP_def,GSYM MOD_2EXP_def] DIVMOD_2EXP_def);
 
@@ -747,6 +751,13 @@ val BIT_BITS_THM = store_thm("BIT_BITS_THM",
              (SPECL [`SUC h`,`l`,`a`,`b`] BIT_BITS_LEM)))
         \\ FULL_SIMP_TAC bool_ss []]);
 
+val BITS_ZERO5 = Q.store_thm("BITS_ZERO5",
+  `!n m. (!i. i <= n ==> ~BIT i m) ==> (BITS n 0 m = 0)`,
+  REPEAT STRIP_TAC
+  \\ Q.SPECL_THEN [`n`,`0`]
+       (fn thm => CONV_TAC (RHS_CONV (REWR_CONV (SYM thm)))) BITS_ZERO2
+  \\ SRW_TAC [] [GSYM BIT_BITS_THM, BIT_ZERO]);
+
 (* ------------------------------------------------------------------------- *)
 
 val LSB_ODD = store_thm("LSB_ODD", `LSB = ODD`,
@@ -872,6 +883,10 @@ val BITWISE_BITS = store_thm("BITWISE_BITS",
 val NOT_BIT_GT_TWOEXP = store_thm("NOT_BIT_GT_TWOEXP",
   `!i n.  n < 2 ** i ==> ~BIT i n`,
   SRW_TAC [ARITH_ss] [BIT_def,BITS_THM,LESS_DIV_EQ_ZERO]);
+
+val BIT_IMP_GE_TWOEXP = Q.store_thm("BIT_IMP_GE_TWOEXP",
+  `!i n. BIT i n ==> 2 ** i <= n`,
+  METIS_TAC [NOT_BIT_GT_TWOEXP, NOT_LESS_EQUAL]);
 
 val BITS_SUC2 = prove(
   `!n a. BITS (SUC n) 0 a = SLICE (SUC n) (SUC n) a + BITS n 0 a`,
@@ -1160,6 +1175,9 @@ val MOD_PLUS_RIGHT = store_thm("MOD_PLUS_RIGHT",
    ASM_REWRITE_TAC [SYM(SPEC_ALL ADD_ASSOC)]
    end);
 
+val MOD_PLUS_LEFT = save_thm("MOD_PLUS_LEFT",
+  ONCE_REWRITE_RULE [ADD_COMM] MOD_PLUS_RIGHT);
+
 val MOD_LESS = prove(
   `!n a. 0 < n ==> a MOD n < n`, PROVE_TAC [DIVISION]);
 
@@ -1228,6 +1246,25 @@ val BIT_REVERSE_THM = store_thm("BIT_REVERSE_THM",
         \\ ASM_SIMP_TAC std_ss [ADD1,SUB_SUB,ADD_SUB,SUB_ADD]]);
 
 (* ------------------------------------------------------------------------- *)
+
+(* |- !x y. 0 < x ==> x <= y ==> LOG2 x <= LOG2 y *)
+val LOG2_LE_MONO = save_thm("LOG2_LE_MONO",
+  logrootTheory.LOG_LE_MONO
+  |> Q.SPEC `2`
+  |> SIMP_RULE std_ss [GSYM LOG2_def]);
+
+(* |- (!x y. 2 ** x <= y ==> x <= LOG2 y) /\
+       !y x. 0 < x ==> x <= 2 ** y ==> LOG2 x <= y *)
+val TWOEXP_LE_IMP_LE_LOG2 = save_thm("TWOEXP_LE_IMP_LE_LOG2",
+  CONJ
+   (LOG2_LE_MONO
+    |> Q.SPEC `2 ** x`
+    |> SIMP_RULE std_ss [ZERO_LT_TWOEXP, LOG2_TWOEXP]
+    |> Q.GEN `x`)
+   (LOG2_LE_MONO
+    |> Q.SPECL [`x`, `2 ** y`]
+    |> SIMP_RULE std_ss [ZERO_LT_TWOEXP, LOG2_TWOEXP]
+    |> Q.GEN `x` |> Q.GEN `y`));
 
 val NOT_BIT_GT_LOG2 = store_thm("NOT_BIT_GT_LOG2",
   `!i n. LOG2 n < i ==> ~BIT i n`,
@@ -1369,6 +1406,20 @@ val BIT_LOG2 = store_thm("BIT_LOG2",
     by METIS_TAC []
     \\ POP_ASSUM SUBST1_TAC
     \\ SRW_TAC [] [LOG2_def, DIV_MULT_1]);
+
+val EXISTS_BIT_IN_RANGE = Q.store_thm("EXISTS_BIT_IN_RANGE",
+  `!a b n. n <> 0 /\ 2 ** a <= n /\ n < 2 ** b ==>
+           ?i. a <= i /\ i < b /\ BIT i n`,
+  SRW_TAC [] []
+  \\ Q.EXISTS_TAC `LOG2 n`
+  \\ `0 < n` by DECIDE_TAC
+  \\ SRW_TAC [ARITH_ss] [BIT_LOG2, TWOEXP_LE_IMP_LE_LOG2]
+  \\ FULL_SIMP_TAC arith_ss [LT_TWOEXP]);
+
+val EXISTS_BIT_LT = save_thm("EXISTS_BIT_LT",
+  EXISTS_BIT_IN_RANGE
+  |> Q.SPEC `0`
+  |> SIMP_RULE (arith_ss++boolSimps.CONJ_ss) []);
 
 val LEAST_THM = store_thm("LEAST_THM",
   `!n P. (!m. m < n ==> ~P m) /\ P n ==> ($LEAST P = n)`,

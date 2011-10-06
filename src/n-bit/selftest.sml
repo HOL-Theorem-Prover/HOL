@@ -2,6 +2,7 @@ open HolKernel Parse boolLib bossLib blastLib;
 
 val _ = set_trace "Unicode" 0
 val _ = set_trace "print blast counterexamples" 0
+val _ = set_trace "bit blast" 0
 
 val prs = StringCvt.padRight #" "
 fun trunc w t = let
@@ -91,6 +92,7 @@ end;
 
 val raw_blast_true = test (Drule.EQT_ELIM o blastLib.BIT_BLAST_CONV)
 val blast_true = test blastLib.BBLAST_PROVE
+val eblast_true = test blastLib.EBLAST_PROVE
 val blast_fail = test_fail "BBLAST_PROVE" blastLib.BBLAST_PROVE
 val blast_counter = test_counter blastLib.BBLAST_PROVE
 val srw_true = test (simpLib.SIMP_PROVE (srw_ss()) [])
@@ -124,7 +126,7 @@ val _ = blast_counter ``(8w * a + b && 7w) >> 3 = a && (-1w >> 3) : word8``;
 
 val _ = blast_true ``!x. x >=+ 2w \/ x <+ 2w : word8``;
 val _ = blast_true ``?x. x <+ 2w : word8``;
-val _ = blast_true ``?x. !y:word8. (y <> y + 1w) /\ x <+ 2w : word8``;
+val _ = eblast_true ``?x. !y:word8. (y <> y + 1w) /\ x <+ 2w : word8``;
 val _ = blast_true ``?x y. x + y = 12w : word8``;
 val _ = blast_true ``?x. x + x = x : word8``;
 val _ = blast_true ``?x y. !z. (x + y = 0w : word8) /\ (z \/ ~z)``;
@@ -148,7 +150,7 @@ val _ = blast_true ``?x y. x + y = y + x : word8``;
 val _ = blast_true ``?x:word8 y:word8. T``;
 val _ = blast_true ``?x:word8. !y:word8. T``;
 val _ = blast_true ``!x:word8. ?y:word8. T``;
-val _ = blast_true  ``(((w2w a - w2w b) : 33 word) ' 32) = (a <+ b : word32)``;
+val _ = blast_true ``(((w2w a - w2w b) : 33 word) ' 32) = (a <+ b : word32)``;
 
 val _ = raw_blast_true
   ``(a + b - b : word8) = a``;
@@ -437,6 +439,30 @@ val _ = srw_true
 
 val _ = blast_true
   ``(a:word2) <+ b /\ b <+ c /\ c <+ d ==> (3w * d = 1w)``
+
+val _ = blast_true
+  ``(m:word8) <+ 4w /\ n <+ 4w ==> (((w <<~ m) <<~ n) = w <<~ (m + n))``;
+
+val _ = blast_true
+  ``(w #<<~ m) #>>~ n = w #<<~ (m - n) : word8``;
+
+val _ = blast_true
+  ``w <+ 10w /\ s <+ 3w ==> w <<~ (s + 1w) <+ 73w : word16``;
+
+val _ = blast_true
+  ``w >>>~ v <=+ w : word16``
+
+val _ = blast_true
+  ``~word_msb w ==> w >>~ v <= w : word16``;
+
+val _ = blast_true
+  ``w2w (a * b : word4) = 0xFw && (w2w a * w2w b) : word8``;
+
+val _ = blast_true
+  ``(1w <<~ a) * b = b <<~ a : 6 word``;
+
+val _ = blast_true
+  ``a <+ 10w /\ b <+ 10w ==> (a * b <=+ 81w : word8)``;
 
 val elapsed = Timer.checkRealTimer tt;
 
