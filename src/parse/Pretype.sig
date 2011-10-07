@@ -76,6 +76,9 @@ val uvars_of : pretype -> uvartype ref list
 val ref_occurs_in : uvartype ref * pretype -> bool
 val ref_equiv : uvartype ref * pretype -> bool
 val has_free_uvar : pretype -> bool
+val has_unbound_uvar : pretype -> bool
+val mk_fun_ty : pretype * pretype -> pretype
+
 
 (*val prekind_rank_compare : (prekind * prerank) * (prekind * prerank) -> order*)
 val pretyvar_compare : pretyvar * pretyvar -> order
@@ -216,3 +219,17 @@ val termantiq_constructors : (pretype,Term.term) parse_type.tyconstructors
 val typantiq_constructors : (pretype,Type.hol_type) parse_type.tyconstructors
 
 end
+
+(*
+   [chase pty]  If pty is of the form (dom --> rng), once all necessary
+   uvar references have been followed, returns rng.
+
+   [rename_typvars avds pty]  Avoiding type variables with names from avds,
+   renames Vartypes into uvar references.
+
+   [has_unbound_uvar pty] Returns true if pty includes (after chasing bound
+   uvars), any unbound uvars.
+
+   [mk_fun_ty (dom,rng)] Makes the pretype corresponding to the function space
+   from dom to rng.
+*)

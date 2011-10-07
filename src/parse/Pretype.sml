@@ -797,6 +797,8 @@ fun ((ty1 as PT(_,loc1)) --> (ty2 as PT(_,loc2))) =
        locn.between loc1 loc2)
   end
 
+fun mk_fun_ty (dom,rng) = dom --> rng
+
 fun mk_exist_type(ty1 as PT(_,loc1), ty2 as PT(_,loc2)) =
     PT(TyExis(ty1,ty2), locn.between loc1 loc2)
 
@@ -3236,5 +3238,18 @@ val typantiq_constructors =
      kindcast = do_kindcast, rankcast = do_rankcast,
      tycon = mk_conty, tyapp = mk_app_type,
      tyuniv = mk_univ_type, tyexist = mk_exist_type, tyabs = mk_abs_type}
+
+fun has_unbound_uvar (PT(pty,_)) =
+    case pty of
+      Vartype _ => false
+    | Contype _ => false
+    | UVar (ref (SOMEU pty0)) => has_unbound_uvar pty0
+    | UVar (ref (NONEU pkd)) => true
+    | TyApp(opr,arg) => has_unbound_uvar opr orelse has_unbound_uvar arg
+    | TyUniv(bv,body) => has_unbound_uvar bv orelse has_unbound_uvar body
+    | TyExis(bv,body) => has_unbound_uvar bv orelse has_unbound_uvar body
+    | TyAbst(bv,body) => has_unbound_uvar bv orelse has_unbound_uvar body
+    | TyKindConstr{Ty,Kind} => has_unbound_uvar Ty
+    | TyRankConstr{Ty,Rank} => has_unbound_uvar Ty
 
 end;

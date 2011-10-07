@@ -71,7 +71,7 @@ fun dest_var (Var record) = record
   | dest_var (Constrained {Ptm, ...}) = dest_var Ptm
   | dest_var _ = raise ERR "dest_var" "not a variable"
 
-val op --> = Pretype.-->
+val op--> = Pretype.mk_fun_ty
 
 (*
 fun preterm_to_string (Var{Name,Ty,Locn}) = Name
