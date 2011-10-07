@@ -1032,7 +1032,7 @@ The fact that the assumptions of the top-level goal
 are propagated unchanged to the two subgoals is indicated by the absence
 of assumptions in the notation.
 
-Another example is {\small\verb|numLib.INDUCT_TAC|}, the tactic for
+Another example is \ml{numLib.INDUCT_TAC},\footnote{Later, we will write \ml{INDUCT_TAC} on its own, without first prefixing it with \ml{numLib}.  To allow this we must issue the command \ml{open~numLib}.} the tactic for
 doing mathematical induction on the natural numbers:
 
 \begin{center}
