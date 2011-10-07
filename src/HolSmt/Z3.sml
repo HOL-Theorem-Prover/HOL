@@ -6,10 +6,10 @@ structure Z3 = struct
 
   (* returns SAT if Z3 reported "sat", UNSAT if Z3 reported "unsat" *)
   fun is_sat_stream instream =
-    case TextIO.inputLine instream of
+    case Option.map (String.tokens Char.isSpace) (TextIO.inputLine instream) of
       NONE => SolverSpec.UNKNOWN NONE
-    | SOME "sat\n" => SolverSpec.SAT NONE
-    | SOME "unsat\n" => SolverSpec.UNSAT NONE
+    | SOME ["sat"] => SolverSpec.SAT NONE
+    | SOME ["unsat"] => SolverSpec.UNSAT NONE
     | _ => is_sat_stream instream
 
   fun is_sat_file path =
@@ -29,7 +29,7 @@ structure Z3 = struct
       in
         ((), strings)
       end)
-    "z3 -smt2"
+    "z3 -smt2 -file:"
     (Lib.K is_sat_file)
 
   (* Z3 (Linux/Unix), SMT-LIB file format, with proofs *)
@@ -41,7 +41,7 @@ structure Z3 = struct
       in
         (((goal, validation), ty_tm_dict), strings)
       end)
-    "z3 PROOF_MODE=2 -smt2"
+    "z3 PROOF_MODE=2 -smt2 -file:"
     (fn ((goal, validation), (ty_dict, tm_dict)) =>
       fn outfile =>
         let

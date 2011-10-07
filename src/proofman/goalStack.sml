@@ -187,8 +187,12 @@ val _ = register_btrace ("goalstack fvs", print_fvs)
 val print_goal_at_top = ref true;
 val _ = register_btrace ("goalstack print goal at top", print_goal_at_top)
 
+val reverse_assums = ref false;
+val _ = register_btrace ("goalstack reverse assums", reverse_assums)
+
 val print_number_assums = ref 1000000;
-val _ = register_trace ("goalstack number of assums", print_number_assums, 1000000)
+val _ = register_trace ("goalstack number of assums",
+                        print_number_assums, 1000000)
 
 
 fun ppgoal ppstrm (asl,w) =
@@ -196,32 +200,54 @@ fun ppgoal ppstrm (asl,w) =
        val {add_string, add_break,
             begin_block, end_block, add_newline, ...} = with_ppstream ppstrm
        val pr = Parse.pp_term ppstrm
+       fun max (a,b) = if a < b then a else b
        val length_asl = length asl;
-       fun pr_index (i,tm) = if ((!print_number_assums) >= length_asl - i) then
-            (begin_block CONSISTENT 0;
-             add_string (Int.toString i^".  ");
-             pr tm; (if (i = length_asl - 1) then () else add_newline()); end_block()) else ()
+       val length_assums = max (length_asl, !print_number_assums)
+       val assums = List.rev (List.take (asl, length_assums))
+       fun pr_index last (i,tm) =
+               (begin_block CONSISTENT 0;
+                add_string (Int.toString i^".  ");
+                pr tm;
+                if last then () else add_newline();
+                end_block())
        fun pr_indexes [] = raise ERR "pr_indexes" ""
          | pr_indexes [x] = pr x
-         | pr_indexes L = pr_list pr_index (fn () => ()) (fn () => ())
-                                  (Lib.enumerate 0 (rev asl));
-
-       fun pr_hidden_indexes L = ((if (((!print_number_assums) < length_asl)) then
-                                    (begin_block CONSISTENT 0;
-                                       add_string ("...");
-	                               if (!print_number_assums > 0) then add_newline() else ();
-                                     end_block()) else ());pr_indexes L);
+         | pr_indexes L =
+               let
+                 val l = Lib.enumerate (length_asl - length_assums) L
+                 val l = if !reverse_assums then List.rev l else l
+               in
+                 pr_list
+                   (pr_index false) (fn () => ()) (fn () => ())
+                   (Lib.butlast l);
+                 pr_index
+                   (not (!reverse_assums) orelse
+                    length_asl <= (!print_number_assums))
+                   (List.last l)
+               end
+       fun pr_hidden_indexes L =
+               (if !reverse_assums then pr_indexes L else ();
+                if (!print_number_assums) < length_asl then
+                   (begin_block CONSISTENT 0;
+                    add_string ("...");
+                    if not (!reverse_assums) andalso (!print_number_assums > 0)
+                    then
+                      add_newline()
+                    else ();
+                    end_block())
+                 else ();
+                 if !reverse_assums then () else pr_indexes L);
    in
      begin_block CONSISTENT 0;
-     if (not (!print_goal_at_top)) then () else (
-        pr w;
+     add_newline ();
+     if not (!print_goal_at_top) then () else
+       (pr w;
         add_newline ();
-        (case asl
-           of [] => ()
-           | _  => ( begin_block CONSISTENT 2;
-                     add_string (!Globals.goal_line);
-                     add_newline ();
-                     pr_hidden_indexes asl; end_block ()));
+        if List.null assums then () else
+           (begin_block CONSISTENT 2;
+            add_string (!Globals.goal_line);
+            add_newline ();
+            pr_hidden_indexes assums; end_block ());
         add_newline ());
      if !print_fvs then let
          val fvs = Listsort.sort Term.compare (free_varsl (w::asl))
@@ -245,15 +271,14 @@ fun ppgoal ppstrm (asl,w) =
          else ()
        end
      else ();
-     if (!print_goal_at_top) then () else (
-        (case asl
-           of [] => ()
-           | _  => ( begin_block CONSISTENT 2;
-                     add_string "  ";
-                     pr_hidden_indexes asl;
-                     end_block ();
-                     add_newline ();
-                     add_string (!Globals.goal_line)));
+     if (!print_goal_at_top) then () else
+       (if List.null assums then () else
+          (begin_block CONSISTENT 2;
+           add_string "  ";
+           pr_hidden_indexes assums;
+           end_block ();
+           add_newline ();
+           add_string (!Globals.goal_line));
         add_newline ();
         pr w;
         add_newline ());

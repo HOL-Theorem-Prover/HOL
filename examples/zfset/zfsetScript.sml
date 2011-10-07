@@ -1184,6 +1184,40 @@ val GraphFnAp =
    ``!X f x. x In X ==> (GraphFn X f ' x = f x)``,
    METIS_TAC[GraphGraphFn,HasFnTypeImage,GraphAp]);
 
+val IdFn_eq_GraphFnI = Q.store_thm(
+"IdFn_eq_GraphFnI",
+`∀x. IdFn x = GraphFn x I`,
+srw_tac [][] >> match_mp_tac FnEqThm >>
+map_every qexists_tac [`x`,`x`] >>
+srw_tac [][IdFnType] >- (
+  match_mp_tac GraphFnType >>
+  srw_tac [][HasFnType_def] ) >>
+srw_tac [][IdFnAp,GraphFnAp]);
+
+val GraphFnExt = Q.store_thm(
+"GraphFnExt",
+`∀X f Y g. (X = Y) ∧ (∀x. x In X ⇒ (f x = g x)) ⇒ (GraphFn X f = GraphFn Y g)`,
+srw_tac [][] >>
+match_mp_tac FnEqThm >>
+map_every qexists_tac [`X`,`Image g X`] >>
+srw_tac [][GraphFnAp] >>
+match_mp_tac GraphFnType >>
+srw_tac [][HasFnType_def] >>
+metis_tac [Image_def]);
+
+val ComposeGraphFns = Q.store_thm(
+"ComposeGraphFns",
+`∀X Y Z f g. HasFnType f X Y ∧ HasFnType g Y Z ⇒
+  (ComposeFn (X,Y,Z) (GraphFn Y g) (GraphFn X f) = GraphFn X (g o f))`,
+srw_tac [][] >>
+match_mp_tac FnEqThm >>
+map_every qexists_tac [`X`,`Z`] >>
+srw_tac [][GraphFnType,ComposeFnType,ApComposeFn,GraphFnAp] >- (
+  match_mp_tac GraphFnType >>
+  fsrw_tac [][HasFnType_def] ) >>
+match_mp_tac GraphFnAp >>
+fsrw_tac [][HasFnType_def]);
+
 (*---------------------------------------------------------------------------*)
 (* Restrictions of functions and binary operators to subtypes.               *)
 (*---------------------------------------------------------------------------*)

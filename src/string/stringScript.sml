@@ -11,7 +11,7 @@
 *)
 
 open HolKernel boolLib bossLib Parse;
-open numLib numSyntax listTheory rich_listTheory;
+open numLib numSyntax listTheory rich_listTheory arithmeticTheory;
 
 (* ---------------------------------------------------------------------*)
 (* Create the new theory						*)
@@ -479,7 +479,6 @@ val string_lt_trans = store_thm("string_lt_trans",
   THEN STRIP_TAC THEN1 (REPEAT STRIP_TAC THEN DECIDE_TAC)
   THEN REPEAT STRIP_TAC THEN IMP_RES_TAC arithmeticTheory.LESS_TRANS 
   THEN METIS_TAC []);
-
 
 (*---------------------------------------------------------------------------
     Exportation

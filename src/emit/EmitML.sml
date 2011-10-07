@@ -1472,19 +1472,17 @@ fun mk_file_ppstream file =
 (*---------------------------------------------------------------------------*)
 
 fun emit_adjoin_call thy (consts,pcs) = let
-  fun listify slist = "["^String.concat (commafy slist)^"]"
-  fun paren2 (a,b) = "("^a^","^b^")"
-  fun paren4 (a,{Name,Thy,Ty}) =
-      "(" ^ a ^ "," ^ "{Name =" ^ Name ^ ", Thy = " ^ Thy ^ ", Ty = " ^ Ty ^
-      "})"
   fun extern_pc (c,a) =
       let val {Thy=thy,Name=n,...} = dest_thy_const c
           val n' = mlquote n
           val thy' = mlquote thy
       in ("(prim_mk_const{Name="^n'^",Thy="^thy'^"},"^Int.toString a^")")
      end
-  val (ppty, _) = Parse.print_from_grammars Parse.min_grammars
-  fun safetyprint ty = String.toString (PP.pp_to_string 10000 ppty ty)
+  fun safetyprint ty = String.toString
+                        (trace ("Unicode",0)
+                           (HOLPP.pp_to_string 10000
+                              (type_pp.pp_type (fst Parse.min_grammars)
+                                 PPBackEnd.raw_terminal)) ty)
 
   fun pr3 pps ({Name,Thy,Ty}, (b,s2,ty)) = let
     open PP

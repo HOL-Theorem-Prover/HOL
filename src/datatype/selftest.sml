@@ -197,6 +197,10 @@ fun s t = let open HolKernel boolLib
             rhs (concl (simpLib.SIMP_CONV (BasicProvers.srw_ss()) [] t))
           end
 
+val _ = Hol_datatype`ovlrcd = <| id : num ; opn : num -> num |>`
+val _ = overload_on ("ID", ``f.id``)
+val _ = overload_on ("inv", ``f.opn``)
+
 val _ = List.app pptest
         [("field selection", ``r.fld2``, "r.fld2"),
          ("field sel. for fn type", ``r.fld1 x``, "r.fld1 x"),
@@ -215,7 +219,9 @@ val _ = List.app pptest
           "r with <|fld3 := 6; fld9 := (T,6)|>"),
          ("big multi-update (simped)",
           s ``r with <| fld3 := 6; fld9 := (T,6)|>``,
-          "r with <|fld3 := 6; fld9 := (T,6)|>")
+          "r with <|fld3 := 6; fld9 := (T,6)|>"),
+         ("overloaded bare var.fld", ``ID``, "ID"),
+         ("overloaded var.fld with args", ``inv x``, "inv x")
          ]
 
 val _ = Process.exit Process.success;

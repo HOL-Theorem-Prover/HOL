@@ -34,4 +34,8 @@ structure HolSmtLib :> HolSmtLib = struct
   val Z3_ORACLE_TAC = GENERIC_SMT_TAC Z3.Z3_SMT_Oracle
   val Z3_TAC = GENERIC_SMT_TAC Z3.Z3_SMT_Prover
 
+  fun YICES_PROVE tm = Tactical.prove(tm, YICES_TAC)
+  fun Z3_ORACLE_PROVE tm = Tactical.prove(tm, Z3_ORACLE_TAC)
+  fun Z3_PROVE tm = Tactical.prove(tm, Z3_TAC)
+
 end

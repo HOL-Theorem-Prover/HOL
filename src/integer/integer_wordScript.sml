@@ -312,7 +312,7 @@ val sw2sw_i2w = Q.store_thm("sw2sw_i2w",
              (MATCH_MP arithmeticTheory.LESS_EQUAL_ADD th))
         \\ Q.EXISTS_TAC `p`
         \\ SRW_TAC [] []
-        \\ `2 ** (dimindex (:'b) − 1) + 2 ** (dimindex (:'b) − 1) =
+        \\ `2 ** (dimindex (:'b) - 1) + 2 ** (dimindex (:'b) - 1) =
             dimword (:'b)`
         by (SIMP_TAC std_ss [dimword_def]
             \\ Cases_on `dimindex (:'b)`
@@ -617,7 +617,7 @@ val i2w_DIV = Q.store_thm("i2w_DIV",
     SRW_TAC [ARITH_ss] [BIT_SHIFT_THM4]
     \\ FULL_SIMP_TAC std_ss [INT_MAX_def, wordsTheory.INT_MIN_def,
           intLib.ARITH_PROVE ``i <= &n - 1 = i < &n``]
-    \\ `Num i < 2n ** (dimindex (:α) − 1)` by intLib.ARITH_TAC
+    \\ `Num i < 2n ** (dimindex (:'a) - 1)` by intLib.ARITH_TAC
     \\ `dimindex (:'a) - 1 < i' + n` by DECIDE_TAC
     \\ `Num i < 2n ** (i' + n)` by METIS_TAC [TWOEXP_MONO, LESS_TRANS]
     \\ SRW_TAC [] [bitTheory.NOT_BIT_GT_TWOEXP]

@@ -757,6 +757,7 @@ local
 in
   val BLAST_CONV =
         Conv.DEPTH_CONV SMART_MUL_LSL_CONV
+        THENC Conv.DEPTH_CONV WORD_DIV_LSR_CONV
         THENC PURE_REWRITE_CONV [GSYM word_sub_def, WORD_SUB]
         THENC computeLib.CBV_CONV cmp
         THENC WORD_LIT_CONV

@@ -34,7 +34,9 @@ val tests = [(``~~3r``, ``3r``),
              (``0 + 3r``, ``3r``),
              (``3r * 0``, ``0r``),
              (``~0r``, ``0r``),
-             (``1r - 0``, ``1r``)]
+             (``1r - 0``, ``1r``),
+             (``1 / 10 + 0r``, ``1r/10``),
+             (``0r + 1 / 10``, ``1r/10``)]
 
 val _ = Process.exit (if List.all test tests then Process.success
                       else Process.failure)

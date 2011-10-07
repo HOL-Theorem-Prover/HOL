@@ -176,6 +176,14 @@ local
             if x = 0 then 0w else n2w (dimword (:'a) - x)``,
     SRW_TAC [boolSimps.LET_ss] [word_2comp_n2w])
 
+  val word_lsl_compute = Q.prove(
+    `!n m. (n2w m : 'a word) << n =
+             if dimindex(:'a) - 1 < n then
+               0w
+             else
+               n2w ((m * 2 ** n) MOD dimword(:'a))`,
+    REWRITE_TAC [word_lsl_n2w, n2w_mod])
+
   val word_lsr_compute =
     (REWRITE_RULE [word_bits_n2w, arithmeticTheory.MIN_IDEM] o
      Q.SPECL [`^n2w n`,`^Na`]) word_lsr_n2w
@@ -191,8 +199,8 @@ local
                                   (Q.SPECL [`^Na`, `T`,`^n2w n`] th))
 
   val thms =
-  [numeralTheory.numeral_funpow, pairTheory.UNCURRY_DEF,
-   SUC_RULE rich_listTheory.GENLIST, rich_listTheory.SNOC, combinTheory.K_THM,
+  [pairTheory.UNCURRY_DEF, combinTheory.K_THM,
+   listTheory.GENLIST_AUX_compute, listTheory.GENLIST_GENLIST_AUX,
    iBITWISE, NUMERAL_BITWISE, LSB_def, BITV_def, SBIT_def,
    NUM_RULE [BIT_ZERO] `n:num` SIGN_EXTEND_def,
    DIVMOD_2EXP, NUMERAL_DIV_2EXP, NUMERAL_TIMES_2EXP, NUMERAL_iDIV2,
@@ -218,7 +226,7 @@ local
    word_sub_def, word_div_def, word_sdiv_def, word_mod_def,
    MOD_WL word_add_n2w, MOD_WL word_mul_n2w, word_rol_bv_def,
    word_lsl_bv_def, word_lsr_bv_def, word_asr_bv_def, word_ror_bv_def,
-   word_asr_compute, word_lsr_compute, Q.SPEC `^Na` word_lsl_n2w,
+   word_asr_compute, word_lsr_compute, Q.SPEC `^Na` word_lsl_compute,
    SHIFT_ZERO, Q.SPEC `^Na` word_ror_n2w,
    Q.SPECL [`w:'a word`,`^Na`] word_rol_def, word_rrx_n2w,
    word_lsb_n2w, word_msb_n2w, word_bit_n2w, fcp_n2w, fcpTheory.L2V_def,
