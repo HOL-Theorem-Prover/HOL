@@ -76,4 +76,31 @@ structure SolverSpec = struct
     result
   end
 
+  (* simplifies the goal to eliminate (some) terms that are not supported by
+     the respective SMT solver; simp_tac must produce at most one subgoal *)
+  fun simplify simp_tac goal =
+  let
+    val (new_goal, validation) = case simp_tac goal of
+        ([], validation) =>
+        (* apply the SMT solver anyway, but to the trivial goal ``T`` *)
+        (([], boolSyntax.T), fn _ => validation [])
+      | ([new_goal], validation) =>
+        (new_goal, validation)
+      | _ =>
+        raise (Feedback.mk_HOL_ERR "SolverSpec" "simplify"
+          "simplification produced more than one subgoal")
+  in
+    if !Library.trace > 2 then
+      let
+        fun goal_to_string (asl, g) =
+          "[" ^ String.concatWith ", " (List.map Hol_pp.term_to_string asl) ^
+            "] |- " ^ Hol_pp.term_to_string g
+      in
+        Feedback.HOL_MESG
+          ("HolSmtLib: simplified goal is " ^ goal_to_string new_goal)
+      end
+    else ();
+    (new_goal, validation)
+  end
+
 end

@@ -168,14 +168,8 @@ in
          regardless of how division by 0w is defined in HOL. *)
       ("bvudiv", K_zero_two wordsSyntax.mk_word_div),
       ("bvurem", K_zero_two wordsSyntax.mk_word_mod),
-      (* (logical) shift left -- the number of bits to shift is given
-         by the second argument, which must also be a bit-vector *)
-      ("bvshl", K_zero_two
-        (wordsSyntax.mk_word_lsl o Lib.apsnd wordsSyntax.mk_w2n)),
-      (* logical shift right -- the number of bits to shift is given
-         by the second argument, which must also be a bit-vector *)
-      ("bvlshr", K_zero_two
-        (wordsSyntax.mk_word_lsr o Lib.apsnd wordsSyntax.mk_w2n)),
+      ("bvshl", K_zero_two wordsSyntax.mk_word_lsl_bv),
+      ("bvlshr", K_zero_two wordsSyntax.mk_word_lsr_bv),
       ("bvult", K_zero_two wordsSyntax.mk_word_lo)
     ]
 

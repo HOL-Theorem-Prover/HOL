@@ -33,17 +33,35 @@
 
 <ul>
 
-<li><p><code>wordsSyntax.mk_word_replicate</code> now computes the
-width of the resulting word when applied to a numeral and a
-fixed-width word. Minor incompatibility.</p></li>
+<li><p><code>HolSmtLib</code>
+supports <a href="http://research.microsoft.com/en-us/um/redmond/projects/z3/">Z3</a>
+proof reconstruction also for goals that involve fixed-width words,
+based on bit-blasting (cf. <code>blastLib</code>) and other word
+decision procedures.<p></li>
 
-<li><p><code>HolQbfLib</code> now supports checking both validity and
+<li><p><code>HolSmtLib</code> provides a translation from HOL into
+<a href="http://combination.cs.uiowa.edu/smtlib/">SMT-LIB</a>&nbsp;2
+format.  (Support for SMT-LIB&nbsp;1.2 has been
+discontinued. Incompatibility.)<p></li>
+
+<li><p><code>HolQbfLib</code> supports checking both validity and
 invalidity certificates for Squolem 2.02. (Support for Squolem 1.x has
 been discontinued. Incompatibility.)</p></li>
+
+<li><p><code>wordsSyntax.mk_word_replicate</code> computes the width
+of the resulting word when applied to a numeral and a fixed-width
+word. Minor incompatibility.</p></li>
 
 </ul>
 
 <h2 id="bugs-fixed">Bugs fixed:</h2>
+
+<ul>
+
+<li><p><code>numSimps.REDUCE_ss</code> no longer diverges on certain
+terms.</p></li>
+
+</ul>
 
 <h2 id="new-theories">New theories:</h2>
 

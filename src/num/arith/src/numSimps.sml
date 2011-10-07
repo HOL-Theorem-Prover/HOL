@@ -41,7 +41,10 @@ local
       fun reducible t =
         is_numeral t orelse (is_suc t andalso reducible (snd (dest_comb t)))
   in
-   if List.all reducible args then reduceLib.REDUCE_CONV t else NO_CONV t
+    if List.all reducible args then
+      CHANGED_CONV reduceLib.REDUCE_CONV t
+    else
+      NO_CONV t
   end
  fun mk_redconv0 pat =
    {name = "REDUCE_CONV (arithmetic reduction)",

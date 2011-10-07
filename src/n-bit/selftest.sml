@@ -437,6 +437,9 @@ val _ = blast_true
 val _ = srw_true
   ``0x20000000w !! 0w !! w : word32 = w !! 0x20000000w``;
 
+val _ = srw_true
+  ``32w && w && 0w = 0w : word32``;
+
 val _ = blast_true
   ``(a:word2) <+ b /\ b <+ c /\ c <+ d ==> (3w * d = 1w)``
 

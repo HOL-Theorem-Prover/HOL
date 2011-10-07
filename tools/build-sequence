@@ -117,6 +117,7 @@ src/hol88
 !src/quotient/examples/sigma
 src/rational
 src/real
+src/complex
 !!examples/separationLogic/src/
 src/HolQbf
 src/HolSmt

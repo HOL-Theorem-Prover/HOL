@@ -9,7 +9,7 @@ val _ = Globals.show_types := true
 val _ = wordsLib.add_word_cast_printer ()
 *)
 
-val _ = Feedback.set_trace "HolSmtLib" 0
+val _ = Feedback.set_trace "HolSmtLib" 1
 (*
 val _ = Feedback.set_trace "HolSmtLib" 4
 *)
@@ -27,9 +27,9 @@ fun die s =
   )
 
 (* provable terms: theorem expected *)
-fun expect_thm name solver t =
+fun expect_thm name smt_tac t =
   let
-    val thm = Tactical.TAC_PROOF (([], t), HolSmtLib.GENERIC_SMT_TAC solver)
+    val thm = Tactical.TAC_PROOF (([], t), smt_tac)
       handle Feedback.HOL_ERR {origin_structure, origin_function, message} =>
         die ("Test of solver '" ^ name ^ "' failed on term '" ^
           Hol_pp.term_to_string t ^ "': exception HOL_ERR (in " ^
@@ -44,9 +44,9 @@ fun expect_thm name solver t =
   end
 
 (* unprovable terms: satisfiability expected *)
-fun expect_sat name solver t =
+fun expect_sat name smt_tac t =
   let
-    val _ = Tactical.TAC_PROOF (([], t), HolSmtLib.GENERIC_SMT_TAC solver)
+    val _ = Tactical.TAC_PROOF (([], t), smt_tac)
   in
     die ("Test of solver '" ^ name ^ "' failed on term '" ^
       Hol_pp.term_to_string t ^ "': exception expected")
@@ -70,22 +70,19 @@ fun expect_sat name solver t =
 
 val _ = print "Testing HolSmtLib "
 
-val yices_installed = Lib.can (HolSmtLib.GENERIC_SMT_TAC Yices.Yices_Oracle)
-  ([], ``T``)
+val yices_installed = Lib.can HolSmtLib.YICES_TAC ([], ``T``)
 
 val _ = if not yices_installed then
           print "(Yices not installed? Some tests will be skipped.) "
         else ()
 
-val z3_installed = Lib.can (HolSmtLib.GENERIC_SMT_TAC Z3.Z3_SMT_Oracle)
-  ([], ``T``)
+val z3_installed = Lib.can HolSmtLib.Z3_ORACLE_TAC ([], ``T``)
 
 val _ = if not z3_installed then
           print "(Z3 not installed? Some tests will be skipped.) "
         else ()
 
-val z3_proofs_installed = Lib.can (HolSmtLib.GENERIC_SMT_TAC Z3.Z3_SMT_Prover)
-  ([], ``T``)
+val z3_proofs_installed = Lib.can HolSmtLib.Z3_TAC ([], ``T``)
 
 val _ = if not z3_proofs_installed then
           print "(Z3 (proofs) not installed? Some tests will be skipped.) "
@@ -99,14 +96,14 @@ local
 
 (*****************************************************************************)
 (* a built-in automated semi-decision procedure that *very* loosely          *)
-(* resembles SMT solvers (in terms of reasoning power)                       *)
+(* resembles SMT solvers (in terms of coverage; not so much in terms of      *)
+(* performance)                                                              *)
 (*****************************************************************************)
 
   val thm_AUTO = let
-    fun internal_solver (_, t) =
+    fun auto_tac (_, t) =
     let
-      val simpset = bossLib.++ (bossLib.++ (bossLib.srw_ss (),
-        wordsLib.WORD_ss), wordsLib.WORD_EXTRACT_ss)
+      val simpset = bossLib.++ (bossLib.srw_ss (), wordsLib.WORD_ss)
       val t_eq_t' = simpLib.SIMP_CONV simpset [integerTheory.INT_ABS,
         integerTheory.INT_MAX, integerTheory.INT_MIN, boolTheory.bool_case_DEF]
         t
@@ -126,33 +123,35 @@ local
           Tactical.prove (t', blastLib.BBLAST_TAC)
       val thm = Thm.EQ_MP (Thm.SYM t_eq_t') t'_thm
     in
-      SolverSpec.UNSAT (SOME thm)
+      ([], fn _ => thm)
     end
   in
-    fn t => (expect_thm "AUTO" internal_solver t; print ".")
+    fn g => (expect_thm "AUTO" (Tactical.THEN (Library.SET_SIMP_TAC, auto_tac))
+      g; print ".")
   end
 
   val thm_YO = if yices_installed then
-                 (fn t => (expect_thm "Yices" Yices.Yices_Oracle t; print "."))
+                 (fn g => (expect_thm "Yices" HolSmtLib.YICES_TAC g; print "."))
                else Lib.K ()
   val sat_YO = if yices_installed then
-                 (fn t => (expect_sat "Yices" Yices.Yices_Oracle t; print "."))
+                 (fn g => (expect_sat "Yices" HolSmtLib.YICES_TAC g; print "."))
                else Lib.K ()
 
   val thm_Z3 = if z3_installed then
-                 (fn t => (expect_thm "Z3" Z3.Z3_SMT_Oracle t; print "."))
+                 (fn g => (expect_thm "Z3" HolSmtLib.Z3_ORACLE_TAC g;
+                           print "."))
                else Lib.K ()
   val sat_Z3 = if z3_installed then
-                 (fn t => (expect_sat "Z3" Z3.Z3_SMT_Oracle t; print "."))
+                 (fn g => (expect_sat "Z3" HolSmtLib.Z3_ORACLE_TAC g;
+                           print "."))
                else Lib.K ()
 
   val thm_Z3p = if z3_proofs_installed then
-                  (fn t => (expect_thm "Z3 (proofs)" Z3.Z3_SMT_Prover t;
+                  (fn g => (expect_thm "Z3 (proofs)" HolSmtLib.Z3_TAC g;
                             print "."))
                 else Lib.K ()
-
   val sat_Z3p = if z3_proofs_installed then
-                  (fn t => (expect_sat "Z3 (proofs)" Z3.Z3_SMT_Prover t;
+                  (fn g => (expect_sat "Z3 (proofs)" HolSmtLib.Z3_TAC g;
                             print "."))
                 else Lib.K ()
 
@@ -188,6 +187,11 @@ in
 
     (* numerals *)
 
+    (* FIXME: SMT-LIB 2 does not provide a theory of natural numbers, but only
+              integers and reals.  We should add support for naturals (via an
+              embedding into integers), but for now, they are treated as
+              uninterpreted. *)
+
     (* num *)
 
     (``0n = 0n``, [thm_AUTO, thm_YO, thm_Z3, thm_Z3p]),
@@ -211,14 +215,16 @@ in
     (* FIXME: Z3 2.16 prints reals as integers in its proofs; I see no
               way to reliably distinguish between them. *)
 
-    (``0r = 0r``, [thm_AUTO, thm_YO, thm_Z3(*TODO:, thm_Z3p*)]),
-    (``1r = 1r``, [thm_AUTO, thm_YO, thm_Z3(*TODO:, thm_Z3p*)]),
+    (``0r = 0r``, [thm_AUTO, thm_YO, thm_Z3(*, thm_Z3p*)]),
+    (``1r = 1r``, [thm_AUTO, thm_YO, thm_Z3(*, thm_Z3p*)]),
     (``0r = 1r``, [sat_YO, sat_Z3, sat_Z3p]),
-    (``42r = 42r``, [thm_AUTO, thm_YO, thm_Z3(*TODO:, thm_Z3p*)]),
-    (``0r = ~0r``, [thm_AUTO, thm_YO, thm_Z3(*TODO:, thm_Z3p*)]),
-    (``~0r = 0r``, [thm_AUTO, thm_YO, thm_Z3(*TODO:, thm_Z3p*)]),
-    (``~0r = ~0r``, [thm_AUTO, thm_YO, thm_Z3(*TODO:, thm_Z3p*)]),
-    (``~42r = ~42r``, [thm_AUTO, thm_YO, thm_Z3(*TODO:, thm_Z3p*)]),
+    (``42r = 42r``, [thm_AUTO, thm_YO, thm_Z3(*, thm_Z3p*)]),
+    (``0r = ~0r``, [thm_AUTO, thm_YO, thm_Z3(*, thm_Z3p*)]),
+    (``~0r = 0r``, [thm_AUTO, thm_YO, thm_Z3(*, thm_Z3p*)]),
+    (``~0r = ~0r``, [thm_AUTO, thm_YO, thm_Z3(*, thm_Z3p*)]),
+    (``~42r = ~42r``, [thm_AUTO, thm_YO, thm_Z3(*, thm_Z3p*)]),
+    (``~42r = 42r``, [sat_YO, sat_Z3, sat_Z3p]),
+    (``42r = ~42r``, [sat_YO, sat_Z3, sat_Z3p]),
 
     (* arithmetic operators: SUC, +, -, *, /, DIV, MOD, ABS, MIN, MAX *)
 
@@ -289,9 +295,9 @@ in
     (``MIN (x:num) y < x``, [sat_YO, sat_Z3, sat_Z3p]),
     (``MIN (x:num) 0 = 0``, [thm_AUTO, thm_YO]),
 
-    (``MAX (x:num) y >= x``, [(*TODO: thm_AUTO,*) thm_YO]),
-    (``MAX (x:num) y >= y``, [(*TODO: thm_AUTO,*) thm_YO]),
-    (``(z:num) > x /\ z > y ==> z > MAX x y``, [(*TODO: thm_AUTO,*) thm_YO]),
+    (``MAX (x:num) y >= x``, [(*thm_AUTO,*) thm_YO]),
+    (``MAX (x:num) y >= y``, [(*thm_AUTO,*) thm_YO]),
+    (``(z:num) > x /\ z > y ==> z > MAX x y``, [(*thm_AUTO,*) thm_YO]),
     (``MAX (x:num) y > x``, [sat_YO, sat_Z3, sat_Z3p]),
     (``MAX (x:num) 0 = x``, [thm_AUTO, thm_YO]),
 
@@ -360,7 +366,7 @@ in
     (``(x:int) / 1 = x``, [thm_AUTO, thm_YO]),
     (``(x:int) / ~1 = ~x``, [thm_AUTO, thm_YO]),
     (``(x:int) / 42 <= x``, [sat_YO, sat_Z3, sat_Z3p]),
-    (``(x:int) / 42 <= ABS x``, [thm_AUTO, thm_YO (*TODO:, thm_Z3, thm_Z3p*)]),
+    (``(x:int) / 42 <= ABS x``, [thm_AUTO, thm_YO (*, thm_Z3, thm_Z3p*)]),
     (``((x:int) / 42 = x) = (x = 0)``,
       [sat_YO, sat_Z3, sat_Z3p]),
     (``((x:int) / 42 = x) = (x = 0) \/ (x = ~1)``, [thm_AUTO, thm_YO]),
@@ -421,7 +427,7 @@ in
     (``(x:int) % 1 = x - x / 1 * 1``, [thm_AUTO, thm_YO]),
     (``(x:int) % 42 = x - x / 42 * 42``, [thm_AUTO, thm_YO]),
 
-    (``ABS (x:int) >= 0``, [thm_AUTO, thm_YO (*TODO:, thm_Z3, thm_Z3p*)]),
+    (``ABS (x:int) >= 0``, [thm_AUTO, thm_YO (*, thm_Z3, thm_Z3p*)]),
     (``(ABS (x:int) = 0) = (x = 0)``, [thm_AUTO, thm_YO(*, thm_Z3, thm_Z3p*)]),
     (``(x:int) >= 0 ==> (ABS x = x)``, [thm_AUTO, thm_YO(*, thm_Z3, thm_Z3p*)]),
     (``(x:int) <= 0 ==> (ABS x = ~x)``, [thm_AUTO, thm_YO(*, thm_Z3, thm_Z3p*)]),
@@ -443,12 +449,12 @@ in
 
     (* real *)
 
-    (``(x:real) + 0 = x``, [thm_AUTO, thm_YO, thm_Z3(*TODO:, thm_Z3p*)]),
-    (``0 + (x:real) = x``, [thm_AUTO, thm_YO, thm_Z3(*TODO:, thm_Z3p*)]),
-    (``(x:real) + y = y + x``, [thm_AUTO, thm_YO, thm_Z3(*TODO:, thm_Z3p*)]),
-    (``(x:real) + (y + z) = (x + y) + z``, [thm_AUTO, thm_YO, thm_Z3(*TODO:, thm_Z3p*)]),
+    (``(x:real) + 0 = x``, [thm_AUTO, thm_YO, thm_Z3(*, thm_Z3p*)]),
+    (``0 + (x:real) = x``, [thm_AUTO, thm_YO, thm_Z3(*, thm_Z3p*)]),
+    (``(x:real) + y = y + x``, [thm_AUTO, thm_YO, thm_Z3(*, thm_Z3p*)]),
+    (``(x:real) + (y + z) = (x + y) + z``, [thm_AUTO, thm_YO, thm_Z3(*, thm_Z3p*)]),
     (``((x:real) + y = 0) = (x = 0) /\ (y = 0)``, [sat_YO, sat_Z3, sat_Z3p]),
-    (``((x:real) + y = 0) = (x = ~y)``, [thm_AUTO, thm_YO, thm_Z3(*TODO:, thm_Z3p*)]),
+    (``((x:real) + y = 0) = (x = ~y)``, [thm_AUTO, thm_YO, thm_Z3(*, thm_Z3p*)]),
 
     (``(x:real) - 0 = x``, [thm_AUTO, thm_YO]),
     (``(x:real) - y = y - x``, [sat_YO, sat_Z3, sat_Z3p]),
@@ -466,8 +472,8 @@ in
     (``(x:real) * 42 = 42 * x``, [thm_AUTO, thm_YO]),
 
     (``(x:real) / 1 = x``, [thm_AUTO, thm_YO]),
-    (``x > 0 ==> (x:real) / 42 < x``, [(*TODO: thm_AUTO,*) thm_YO]),
-    (``x < 0 ==> (x:real) / 42 > x``, [(*TODO: thm_AUTO,*) thm_YO]),
+    (``x > 0 ==> (x:real) / 42 < x``, [(*thm_AUTO,*) thm_YO]),
+    (``x < 0 ==> (x:real) / 42 > x``, [(*thm_AUTO,*) thm_YO]),
 
     (``abs (x:real) >= 0``, [thm_AUTO, thm_YO]),
     (``(abs (x:real) = 0) = (x = 0)``, [thm_AUTO, thm_YO]),
@@ -476,18 +482,18 @@ in
     (``abs (abs (x:real)) = abs x``, [thm_AUTO, thm_YO]),
     (``abs (x:real) = x``, [sat_YO, sat_Z3, sat_Z3p]),
 
-    (``min (x:real) y <= x``, [(*TODO: thm_AUTO,*) thm_YO]),
-    (``min (x:real) y <= y``, [(*TODO: thm_AUTO,*) thm_YO]),
-    (``(z:real) < x /\ z < y ==> z < min x y``, [(*TODO: thm_AUTO,*) thm_YO]),
+    (``min (x:real) y <= x``, [(*thm_AUTO,*) thm_YO]),
+    (``min (x:real) y <= y``, [(*thm_AUTO,*) thm_YO]),
+    (``(z:real) < x /\ z < y ==> z < min x y``, [(*thm_AUTO,*) thm_YO]),
     (``min (x:real) y < x``, [sat_YO, sat_Z3, sat_Z3p]),
     (``min (x:real) 0 = 0``, [sat_YO, sat_Z3, sat_Z3p]),
-    (``(x:real) >= 0 ==> (min x 0 = 0)``, [(*TODO: thm_AUTO,*) thm_YO]),
+    (``(x:real) >= 0 ==> (min x 0 = 0)``, [(*thm_AUTO,*) thm_YO]),
 
-    (``max (x:real) y >= x``, [(*TODO: thm_AUTO,*) thm_YO]),
-    (``max (x:real) y >= y``, [(*TODO: thm_AUTO,*) thm_YO]),
-    (``(z:real) > x /\ z > y ==> z > max x y``, [(*TODO: thm_AUTO,*) thm_YO]),
+    (``max (x:real) y >= x``, [(*thm_AUTO,*) thm_YO]),
+    (``max (x:real) y >= y``, [(*thm_AUTO,*) thm_YO]),
+    (``(z:real) > x /\ z > y ==> z > max x y``, [(*thm_AUTO,*) thm_YO]),
     (``max (x:real) y > x``, [sat_YO, sat_Z3, sat_Z3p]),
-    (``(x:real) >= 0 ==> (max x 0 = x)``, [(*TODO: thm_AUTO,*) thm_YO]),
+    (``(x:real) >= 0 ==> (max x 0 = x)``, [(*thm_AUTO,*) thm_YO]),
 
     (* arithmetic inequalities: <, <=, >, >= *)
 
@@ -554,17 +560,17 @@ in
     (``((x:int) <= y) = (y >= x)``,
       [thm_AUTO, thm_YO, thm_Z3, thm_Z3p]),
     (``(x:int) < y /\ y <= z ==> x < z``,
-      [thm_AUTO, thm_YO, thm_Z3(*TODO:, thm_Z3p*)]),
+      [thm_AUTO, thm_YO, thm_Z3(*, thm_Z3p*)]),
     (``(x:int) <= y /\ y <= z ==> x <= z``,
-      [thm_AUTO, thm_YO, thm_Z3(*TODO:, thm_Z3p*)]),
+      [thm_AUTO, thm_YO, thm_Z3(*, thm_Z3p*)]),
     (``(x:int) > y /\ y >= z ==> x > z``,
-      [thm_AUTO, thm_YO, thm_Z3(*TODO:, thm_Z3p*)]),
+      [thm_AUTO, thm_YO, thm_Z3(*, thm_Z3p*)]),
     (``(x:int) >= y /\ y >= z ==> x >= z``,
-      [thm_AUTO, thm_YO, thm_Z3(*TODO:, thm_Z3p*)]),
+      [thm_AUTO, thm_YO, thm_Z3(*, thm_Z3p*)]),
 
     (``(x:int) >= 0``, [sat_YO, sat_Z3, sat_Z3p]),
     (``0 < (x:int) /\ x <= 1 ==> (x = 1)``,
-      [thm_AUTO, thm_YO, thm_Z3(*TODO:, thm_Z3p*)]),
+      [thm_AUTO, thm_YO, thm_Z3(*, thm_Z3p*)]),
 
     (* real *)
 
@@ -606,7 +612,7 @@ in
     (``(x = y) ==> (f x y = f y x)``,
       [thm_AUTO, thm_YO, thm_Z3, thm_Z3p]),
     (``(f (f x) = x) /\ (f (f (f (f (f x)))) = x) ==> (f x = x)``,
-      [(*TODO: thm_AUTO,*) thm_YO, thm_Z3, thm_Z3p]),
+      [(*thm_AUTO,*) thm_YO, thm_Z3, thm_Z3p]),
     (``(f x = f y) ==> (x = y)``, [sat_YO, sat_Z3, sat_Z3p]),
 
     (* predicates *)
@@ -624,7 +630,7 @@ in
     (* Yices 1.0.28 reports `unknown' for the next goal, while Z3 2.13
        (somewhat surprisingly, as SMT-LIB does not seem to require
        non-empty sorts) can prove it *)
-    (``?x. x = x``, [thm_AUTO, thm_Z3(*TODO:, thm_Z3p*)]),
+    (``?x. x = x``, [thm_AUTO, thm_Z3(*, thm_Z3p*)]),
     (* Z3 2.13 reports `unknown' for the next goal *)
     (``(?y. !x. P x y) ==> (!x. ?y. P x y)``, [thm_AUTO, thm_YO]),
     (* Yices 1.0.28 and Z3 2.13 report `unknown' for the next goal *)
@@ -634,32 +640,41 @@ in
     (* Z3 2.13 reports `unknown' for the next goal *)
     (``?x. P x ==> !x. P x``, [thm_AUTO, thm_YO]),
 
+    (* let binders *)
+
+    (``let x = y in let x = x /\ z in x = y /\ z``,
+      [thm_AUTO, thm_YO, thm_Z3, thm_Z3p]),
+
     (* lambda abstractions *)
 
-    (* TODO: the SMT-LIB translation currently does not properly abstract away
-             function types, thereby leading to illegal higher-order goals *)
-    (``(\x. x) = (\y. y)``,
-      [thm_AUTO, thm_YO (*TODO:, thm_Z3*)]),
+    (``(\x. x) = (\y. y)``, [thm_AUTO, thm_YO, thm_Z3, thm_Z3p]),
     (``(\x. \x. x) x x = (\y. \y. y) y x``,
-      [thm_AUTO, thm_YO (*TODO:, thm_Z3, thm_Z3p*)]),
+      [thm_AUTO, thm_YO, thm_Z3, thm_Z3p]),
     (``(\x. x (\x. x)) = (\y. y (\x. x))``,
-      [thm_AUTO, thm_YO (*TODO:, thm_Z3*)]),
-    (* Yices 1.0.18 fails to decide this one
-    ``(\x. x (\x. x)) = (\y. y x)``
-    *)
-    (``f x = (\x. f x) x``,
-      [thm_AUTO, thm_YO (*TODO:, thm_Z3, thm_Z3p*)]),
-    (``f x = (\y. f y) x``,
-      [thm_AUTO, thm_YO (*TODO:, thm_Z3, thm_Z3p*)]),
+      [thm_AUTO, thm_YO, thm_Z3, thm_Z3p]),
+    (* Yices 1.0.29 fails to decide this one *)
+    (``(\x. x (\x. x)) = (\y. y x)``, [(*sat_YO,*) sat_Z3, sat_Z3p]),
+    (``f x = (\x. f x) x``, [thm_AUTO, thm_YO, thm_Z3, thm_Z3p]),
+    (``f x = (\y. f y) x``, [thm_AUTO, thm_YO, thm_Z3, thm_Z3p]),
+
+    (* higher-order logic *)
+
+    (* FIXME: Z3 2.19 unexpectedly replaces certain implications by
+              conjunctions in its proof *)
+
+    (``(P (f x) ==> Q f) ==> P (f x) ==> Q f``,
+      [thm_AUTO, thm_YO, thm_Z3(*, thm_Z3p*)]),
+    (``(Q f ==> P (f x)) ==> Q f ==> P (f x)``,
+      [thm_AUTO, thm_YO, thm_Z3(*, thm_Z3p*)]),
 
     (* tuples, FST, SND *)
 
     (``(x, y) = (x, z)``, [sat_YO, sat_Z3, sat_Z3p]),
     (``(x, y) = (z, y)``, [sat_YO, sat_Z3, sat_Z3p]),
     (``(x, y) = (y, x)``, [sat_YO, sat_Z3, sat_Z3p]),
-    (``((x, y) = (y, x)) = (x = y)``, [(*TODO: thm_AUTO,*) thm_YO]),
+    (``((x, y) = (y, x)) = (x = y)``, [(*thm_AUTO,*) thm_YO]),
     (``((x, y, z) = (y, z, x)) = (x = y) /\ (y = z)``,
-      [(*TODO: thm_AUTO,*) thm_YO]),
+      [(*thm_AUTO,*) thm_YO]),
     (``((x, y) = (u, v)) = (x = u) /\ (y = v)``, [thm_AUTO, thm_YO]),
 
     (``y = FST (x, y)``, [sat_YO, sat_Z3, sat_Z3p]),
@@ -678,27 +693,27 @@ in
       [thm_AUTO, thm_YO]),
 
     (``(FST (x, y) = SND (x, y)) = (x = y)``, [thm_AUTO, thm_YO]),
-    (``(FST p = SND p) = (p = (SND p, FST p))``, [(*TODO: thm_AUTO,*) thm_YO]),
+    (``(FST p = SND p) = (p = (SND p, FST p))``, [(*thm_AUTO,*) thm_YO]),
     (``((\p. FST p) (x, y)= (\p. SND p) (x, y)) = (x = y)``,
       [thm_AUTO, thm_YO]),
 
     (* words (i.e., bit vectors) *)
 
-    (``!x. x:word2 = x``, [thm_AUTO, thm_YO, thm_Z3, thm_Z3p]),
-    (``!x. x:word3 = x``, [thm_AUTO, thm_YO, thm_Z3, thm_Z3p]),
-    (``!x. x:word4 = x``, [thm_AUTO, thm_YO, thm_Z3, thm_Z3p]),
-    (``!x. x:word5 = x``, [thm_AUTO, thm_YO, thm_Z3, thm_Z3p]),
-    (``!x. x:word6 = x``, [thm_AUTO, thm_YO, thm_Z3, thm_Z3p]),
-    (``!x. x:word7 = x``, [thm_AUTO, thm_YO, thm_Z3, thm_Z3p]),
-    (``!x. x:word8 = x``, [thm_AUTO, thm_YO, thm_Z3, thm_Z3p]),
-    (``!x. x:word12 = x``, [thm_AUTO, thm_YO, thm_Z3, thm_Z3p]),
-    (``!x. x:word16 = x``, [thm_AUTO, thm_YO, thm_Z3, thm_Z3p]),
-    (``!x. x:word20 = x``, [thm_AUTO, thm_YO, thm_Z3, thm_Z3p]),
-    (``!x. x:word24 = x``, [thm_AUTO, thm_YO, thm_Z3, thm_Z3p]),
-    (``!x. x:word28 = x``, [thm_AUTO, thm_YO, thm_Z3, thm_Z3p]),
-    (``!x. x:word30 = x``, [thm_AUTO, thm_YO, thm_Z3, thm_Z3p]),
-    (``!x. x:word32 = x``, [thm_AUTO, thm_YO, thm_Z3, thm_Z3p]),
-    (``!x. x:word64 = x``, [thm_AUTO, thm_YO, thm_Z3, thm_Z3p]),
+    (``x:word2 = x``, [thm_AUTO, thm_YO, thm_Z3, thm_Z3p]),
+    (``x:word3 = x``, [thm_AUTO, thm_YO, thm_Z3, thm_Z3p]),
+    (``x:word4 = x``, [thm_AUTO, thm_YO, thm_Z3, thm_Z3p]),
+    (``x:word5 = x``, [thm_AUTO, thm_YO, thm_Z3, thm_Z3p]),
+    (``x:word6 = x``, [thm_AUTO, thm_YO, thm_Z3, thm_Z3p]),
+    (``x:word7 = x``, [thm_AUTO, thm_YO, thm_Z3, thm_Z3p]),
+    (``x:word8 = x``, [thm_AUTO, thm_YO, thm_Z3, thm_Z3p]),
+    (``x:word12 = x``, [thm_AUTO, thm_YO, thm_Z3, thm_Z3p]),
+    (``x:word16 = x``, [thm_AUTO, thm_YO, thm_Z3, thm_Z3p]),
+    (``x:word20 = x``, [thm_AUTO, thm_YO, thm_Z3, thm_Z3p]),
+    (``x:word24 = x``, [thm_AUTO, thm_YO, thm_Z3, thm_Z3p]),
+    (``x:word28 = x``, [thm_AUTO, thm_YO, thm_Z3, thm_Z3p]),
+    (``x:word30 = x``, [thm_AUTO, thm_YO, thm_Z3, thm_Z3p]),
+    (``x:word32 = x``, [thm_AUTO, thm_YO, thm_Z3, thm_Z3p]),
+    (``x:word64 = x``, [thm_AUTO, thm_YO, thm_Z3, thm_Z3p]),
 
     (``x:word32 && x = x``, [thm_AUTO, thm_YO, thm_Z3, thm_Z3p]),
     (``x:word32 && y = y && x``, [thm_AUTO, thm_YO, thm_Z3, thm_Z3p]),
@@ -724,24 +739,84 @@ in
     (``~ ~ x:word32 = x``, [thm_AUTO, thm_YO, thm_Z3, thm_Z3p]),
     (``~ 0w = 0w:word32``, [sat_YO, sat_Z3, sat_Z3p]),
 
+    (* FIXME: Z3 2.19 prints "extract" wrongly in its proofs *)
+
     (``x:word32 << 0 = x``, [thm_AUTO, thm_YO, thm_Z3, thm_Z3p]),
     (``x:word32 << 31 = 0w``, [sat_YO, sat_Z3, sat_Z3p]),
     (``(x:word32 << 31 = 0w) \/ (x << 31 = 1w << 31)``,
-      [thm_AUTO, thm_YO, thm_Z3(*TODO:, thm_Z3p*)]),
+      [thm_AUTO, thm_YO, thm_Z3(*, thm_Z3p*)]),
 
-    (* shift index greater than bit width: not allowed by Yices, and not
-       handled by the translation yet
-    ``x:word32 << 42 = x``
-    *)
-    (* shift index not a number: not allowed by Yices; we should test for this
-       when translating
-    ``x:word32 << n = x``
-    *)
+    (* Yices does not support shifting by more than the word length *)
+
+    (``x:word32 << 99 = 0w``, [thm_AUTO, (*thm_YO,*) thm_Z3, thm_Z3p]),
+
+    (* Yices does not support shifting by a non-constant *)
+
+    (``x:word32 << n = x``, [(*sat_YO,*) sat_Z3, sat_Z3p]),
+
+    (``x:word32 <<~ 0w = x``, [thm_AUTO, thm_YO, thm_Z3, thm_Z3p]),
+    (``x:word32 <<~ 31w = 0w``, [sat_YO, sat_Z3, sat_Z3p]),
+    (``(x:word32 <<~ 31w = 0w) \/ (x <<~ 31w = 1w <<~ 31w)``,
+      [thm_AUTO, thm_YO, thm_Z3(*, thm_Z3p*)]),
+    (``(x:word32 <<~ x) && 1w = 0w``,
+      [thm_AUTO, thm_YO, thm_Z3(*, thm_Z3p*)]),
+    (``x:word32 <<~ y = y <<~ x``, [sat_YO, sat_Z3, sat_Z3p]),
+    (``(x:word32 <<~ y) <<~ z = x <<~ (y <<~ z)``, [sat_YO, sat_Z3, sat_Z3p]),
 
     (``x:word32 >>> 0 = x``, [thm_AUTO, thm_YO, thm_Z3, thm_Z3p]),
     (``x:word32 >>> 31 = 0w``, [sat_YO, sat_Z3, sat_Z3p]),
     (``(x:word32 >>> 31 = 0w) \/ (x >>> 31 = 1w)``,
-      [thm_AUTO, thm_YO, thm_Z3(*TODO:, thm_Z3p*)]),
+      [thm_AUTO, thm_YO, thm_Z3(*, thm_Z3p*)]),
+
+    (* Yices does not support right-shift by a (non-constant) bit-vector
+       amount *)
+
+    (``x:word32 >>>~ 0w = x``, [thm_AUTO, thm_YO, thm_Z3, thm_Z3p]),
+    (``x:word32 >>>~ 31w = 0w``, [sat_YO, sat_Z3, sat_Z3p]),
+    (``(x:word32 >>>~ 31w = 0w) \/ (x >>>~ 31w = 1w)``,
+      [thm_AUTO, thm_YO, thm_Z3(*, thm_Z3p*)]),
+    (``(x:word32 >>>~ x) = 0w``, [thm_AUTO, (*thm_YO,*) thm_Z3(*, thm_Z3p*)]),
+    (``x:word32 >>>~ y = y >>>~ x``, [(*sat_YO,*) sat_Z3, sat_Z3p]),
+    (``(x:word32 >>>~ y) >>>~ z = x >>>~ (y >>>~ z)``,
+      [(*sat_YO,*) sat_Z3, sat_Z3p]),
+
+    (* Yices does not support arithmetical shift-right *)
+
+    (``x:word32 >> 0 = x``, [thm_AUTO, (*thm_YO,*) thm_Z3, thm_Z3p]),
+    (``x:word32 >> 31 = 0w``, [sat_YO, sat_Z3, sat_Z3p]),
+    (``(x:word32 >> 31 = 0w) \/ (x >> 31 = 0xFFFFFFFFw)``,
+      [thm_AUTO, (*thm_YO,*) thm_Z3(*, thm_Z3p*)]),
+
+    (``x:word32 >>~ 0w = x``, [thm_AUTO, (*thm_YO,*) thm_Z3, thm_Z3p]),
+    (``x:word32 >>~ 31w = 0w``, [sat_YO, sat_Z3, sat_Z3p]),
+    (``(x:word32 >>~ 31w = 0w) \/ (x >>~ 31w = 0xFFFFFFFFw)``,
+      [thm_AUTO, (*thm_YO,*) thm_Z3(*, thm_Z3p*)]),
+    (``(x:word32 >>~ x = 0w)  \/ (x >>~ x = 0xFFFFFFFFw)``,
+      [thm_AUTO, (*thm_YO,*) thm_Z3(*, thm_Z3p*)]),
+    (``x:word32 >>~ y = y >>~ x``, [sat_YO, sat_Z3, sat_Z3p]),
+    (``(x:word32 >>~ y) >>~ z = x >>~ (y >>~ z)``, [sat_YO, sat_Z3, sat_Z3p]),
+
+    (* Yices does not support bit-vector rotation *)
+
+    (``x:word32 #<< 0 = x``, [thm_AUTO, (*thm_YO,*) thm_Z3(*, thm_Z3p*)]),
+    (``x:word32 #<< 32 = x``, [thm_AUTO, (*thm_YO,*) thm_Z3(*, thm_Z3p*)]),
+    (``x:word32 #<< 64 = x``, [thm_AUTO, (*thm_YO,*) thm_Z3(*, thm_Z3p*)]),
+    (``x:word32 #<< 1 <> x``, [sat_YO, sat_Z3, sat_Z3p]),
+
+    (``x:word32 #<<~ 0w = x``, [thm_AUTO, (*thm_YO,*) thm_Z3(*, thm_Z3p*)]),
+    (``x:word32 #<<~ 32w = x``, [thm_AUTO, (*thm_YO,*) thm_Z3(*, thm_Z3p*)]),
+    (``x:word32 #<<~ 64w = x``, [thm_AUTO, (*thm_YO,*) thm_Z3(*, thm_Z3p*)]),
+    (``x:word32 #<<~ 1w = x``, [sat_YO, sat_Z3, sat_Z3p]),
+
+    (``x:word32 #>> 0 = x``, [thm_AUTO, (*thm_YO,*) thm_Z3(*, thm_Z3p*)]),
+    (``x:word32 #>> 32 = x``, [thm_AUTO, (*thm_YO,*) thm_Z3(*, thm_Z3p*)]),
+    (``x:word32 #>> 64 = x``, [thm_AUTO, (*thm_YO,*) thm_Z3(*, thm_Z3p*)]),
+    (``x:word32 #>> 1 <> x``, [sat_YO, sat_Z3, sat_Z3p]),
+
+    (``x:word32 #>>~ 0w = x``, [thm_AUTO, (*thm_YO,*) thm_Z3(*, thm_Z3p*)]),
+    (``x:word32 #>>~ 32w = x``, [thm_AUTO, (*thm_YO,*) thm_Z3(*, thm_Z3p*)]),
+    (``x:word32 #>>~ 64w = x``, [thm_AUTO, (*thm_YO,*) thm_Z3(*, thm_Z3p*)]),
+    (``x:word32 #>>~ 1w = x``, [sat_YO, sat_Z3, sat_Z3p]),
 
     (``1w:word2 @@ 1w:word2 = 5w:word4``, [thm_AUTO, thm_YO, thm_Z3, thm_Z3p]),
     (``((x @@ y):word32 = y @@ x) = (x:word16 = y)``,
@@ -750,17 +825,17 @@ in
     (``(31 >< 0) x:word32 = x``, [thm_AUTO, thm_YO, thm_Z3, thm_Z3p]),
     (``(1 >< 0) (0w:word32) = 0w:word2``, [thm_AUTO, thm_YO, thm_Z3, thm_Z3p]),
     (``(32 >< 0) (x:word32) :bool[33] = w2w x``,
-      [thm_AUTO, thm_YO(*TODO:, thm_Z3, thm_Z3p*)]),
+      [thm_AUTO, thm_YO(*, thm_Z3, thm_Z3p*)]),
     (``(0 >< 1) (x:word32) = 0w:word32``,
-      [thm_AUTO, thm_YO(*TODO:, thm_Z3, thm_Z3p*)]),
+      [thm_AUTO, thm_YO(*, thm_Z3, thm_Z3p*)]),
 
     (``(x:word2 = y) = (x ' 0 = y ' 0) /\ (x ' 1 = y ' 1)``,
-      [thm_AUTO, thm_YO(*TODO:, thm_Z3, thm_Z3p*)]),
+      [thm_AUTO, thm_YO(*, thm_Z3, thm_Z3p*)]),
 
-    (``0w:word32 = w2w (0w:word16)``, [thm_AUTO, thm_YO, thm_Z3, thm_Z3p]),
-    (``0w:word32 = w2w (0w:word32)``, [thm_AUTO, thm_YO, thm_Z3, thm_Z3p]),
-    (``0w:word32 = w2w (0w:word64)``, [thm_AUTO, thm_YO, thm_Z3, thm_Z3p]),
-    (``x:word32 = w2w x``, [thm_AUTO, thm_YO(*TODO:, thm_Z3, thm_Z3p*)]),
+    (``0w:word32 = w2w (0w:word16)``, [thm_AUTO, thm_YO(*, thm_Z3, thm_Z3p*)]),
+    (``0w:word32 = w2w (0w:word32)``, [thm_AUTO, thm_YO(*, thm_Z3, thm_Z3p*)]),
+    (``0w:word32 = w2w (0w:word64)``, [thm_AUTO, thm_YO(*, thm_Z3, thm_Z3p*)]),
+    (``x:word32 = w2w x``, [thm_AUTO, thm_YO(*, thm_Z3, thm_Z3p*)]),
 
     (``(x:word32) + x = x``, [sat_YO, sat_Z3, sat_Z3p]),
     (``(x:word32) + y = y + x``, [thm_AUTO, thm_YO, thm_Z3, thm_Z3p]),
@@ -793,14 +868,14 @@ in
     (``~ 0w < 0w:word32``, [thm_AUTO, thm_YO, thm_Z3, thm_Z3p]),
 
     (``0w <= 1w:word32``, [thm_AUTO, thm_YO, thm_Z3, thm_Z3p]),
-    (``x <= y:word32 = x < y \/ (x = y)``, [thm_AUTO, thm_YO, thm_Z3(*TODO:, thm_Z3p*)]),
+    (``x <= y:word32 = x < y \/ (x = y)``, [thm_AUTO, thm_YO, thm_Z3(*, thm_Z3p*)]),
     (``~ 0w <= 0w:word32``, [thm_AUTO, thm_YO, thm_Z3, thm_Z3p]),
 
     (``1w > 0w:word32``, [thm_AUTO, thm_YO, thm_Z3, thm_Z3p]),
     (``0w > ~ 0w:word32``, [thm_AUTO, thm_YO, thm_Z3, thm_Z3p]),
 
     (``1w >= 0w:word32``, [thm_AUTO, thm_YO, thm_Z3, thm_Z3p]),
-    (``x >= y:word32 = x > y \/ (x = y)``, [thm_AUTO, thm_YO, thm_Z3(*TODO:, thm_Z3p*)]),
+    (``x >= y:word32 = x > y \/ (x = y)``, [thm_AUTO, thm_YO, thm_Z3(*, thm_Z3p*)]),
     (``0w >= ~ 0w:word32``, [thm_AUTO, thm_YO, thm_Z3, thm_Z3p]),
 
     (``0w <+ 1w:word32``, [thm_AUTO, thm_YO, thm_Z3, thm_Z3p]),
@@ -808,7 +883,7 @@ in
 
     (``0w <=+ 1w:word32``, [thm_AUTO, thm_YO, thm_Z3, thm_Z3p]),
     (``x <=+ y:word32 = x <+ y \/ (x = y)``,
-      [thm_AUTO, thm_YO, thm_Z3(*TODO:, thm_Z3p*)]),
+      [thm_AUTO, thm_YO, thm_Z3(*, thm_Z3p*)]),
     (``0w <=+ ~ 0w:word32``, [thm_AUTO, thm_YO, thm_Z3, thm_Z3p]),
 
     (``1w >+ 0w:word32``, [thm_AUTO, thm_YO, thm_Z3, thm_Z3p]),
@@ -816,7 +891,7 @@ in
 
     (``1w >=+ 0w:word32``, [thm_AUTO, thm_YO, thm_Z3, thm_Z3p]),
     (``x >=+ y:word32 = x >+ y \/ (x = y)``,
-      [thm_AUTO, thm_YO, thm_Z3(*TODO:, thm_Z3p*)]),
+      [thm_AUTO, thm_YO, thm_Z3(*, thm_Z3p*)]),
     (``~ 0w >=+ 0w:word32``, [thm_AUTO, thm_YO, thm_Z3, thm_Z3p]),
 
     (* from Magnus Myreen *)
@@ -877,12 +952,18 @@ in
      (b <=+ a /\ a <> b <=> b <+ a) /\ (a <> b /\ b <=+ a <=> b <+ a) /\
      (b <= a /\ a <> b <=> b < a) /\ (a <> b /\ b <= a <=> b < a) /\
      (((v:word32) - w = 0w) <=> (v = w)) /\ (w - 0w = w)``,
-      [(*TODO: thm_AUTO,*) thm_YO(*TODO:, thm_Z3, thm_Z3p*)]),
+      [(*thm_AUTO,*) thm_YO(*, thm_Z3, thm_Z3p*)]),
 
     (* from Yogesh Mahajan *)
     (``!(w: 18 word). (sw2sw w): 32 word = w2w ((16 >< 0) w: 17 word) +
      0xfffe0000w + ((0 >< 0) (~(17 >< 17) w: bool[unit]) << 17): 32 word``,
-      [(*TODO: thm_AUTO,*) thm_YO(*TODO:, thm_Z3, thm_Z3p*)]),
+      [thm_AUTO, thm_YO(*, thm_Z3, thm_Z3p*)]),
+
+    (* The Yices translation currently rejects polymorphic-width bit
+       vectors; the SMT-LIB translation treats their type - and
+       operations on them - as uninterpreted. *)
+
+    (``x <=+ x``, [thm_AUTO, (*sat_YO,*) sat_Z3, sat_Z3p]),
 
     (* data types: constructors *)
 
@@ -898,14 +979,14 @@ in
     (``dt1_case f b z foo = f``, [thm_AUTO, thm_YO]),
     (``dt1_case f b z bar = b``, [thm_AUTO, thm_YO]),
     (``dt1_case f b z baz = z``, [thm_AUTO, thm_YO]),
-    (``dt1_case c c c x = c``, [(*TODO: thm_AUTO,*) thm_YO]),
+    (``dt1_case c c c x = c``, [(*thm_AUTO,*) thm_YO]),
     (``list_case n c [] = n``, [thm_AUTO, thm_YO]),
     (``list_case n c (x::xs) = c x xs``, [thm_AUTO, thm_YO]),
 
     (* records: field selectors *)
 
     (``(x = y) = (x.employed = y.employed) /\ (x.age = y.age)``,
-      [(*TODO: thm_AUTO,*) thm_YO]),
+      [(*thm_AUTO,*) thm_YO]),
 
     (* records: field updates *)
 

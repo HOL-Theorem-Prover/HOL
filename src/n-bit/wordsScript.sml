@@ -3012,6 +3012,21 @@ val EXTRACT_JOIN_ADD_LSL = store_thm("EXTRACT_JOIN_ADD_LSL",
     \\ ABBREV_TAC `s' = m' - l`
     \\ ASM_SIMP_TAC std_ss [EXTRACT_JOIN_ADD]);
 
+val word_shift_bv = Q.store_thm("word_shift_bv",
+  `(!w:'a word n. n < dimword (:'a) ==> (w << n = w <<~ n2w n)) /\
+   (!w:'a word n. n < dimword (:'a) ==> (w >> n = w >>~ n2w n)) /\
+   (!w:'a word n. n < dimword (:'a) ==> (w >>> n = w >>>~ n2w n)) /\
+   (!w:'a word n. (w #>> n = w #>>~ n2w (n MOD dimindex(:'a)))) /\
+   (!w:'a word n. (w #<< n = w #<<~ n2w (n MOD dimindex(:'a))))`,
+  SRW_TAC []
+      [word_lsl_bv_def, word_lsr_bv_def, word_asr_bv_def,
+       word_ror_bv_def, word_rol_bv_def]
+  \\ `n MOD dimindex(:'a) < dimword(:'a)`
+  by METIS_TAC [DIMINDEX_GT_0, arithmeticTheory.MOD_LESS,
+                arithmeticTheory.LESS_TRANS, dimindex_lt_dimword]
+  \\ SRW_TAC [ARITH_ss] [ROR_MOD, ROL_MOD]
+  );
+
 (* ------------------------------------------------------------------------- *)
 (*  Orderings : theorems                                                     *)
 (* ------------------------------------------------------------------------- *)

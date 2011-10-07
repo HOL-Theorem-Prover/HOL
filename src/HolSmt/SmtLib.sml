@@ -16,6 +16,10 @@ local
      present, we make no attempt to identify a less expressive SMT-LIB
      logic based on the constants that actually appear in the goal. *)
 
+  (* For successful proof reconstruction, it is important that the
+     translation implemented in SmtLib_{Theories,Logics}.sml is an
+     inverse of the translation implemented in this file. *)
+
   val ERR = Feedback.mk_HOL_ERR "SmtLib"
   val WARNING = Feedback.HOL_WARNING "SmtLib"
 
@@ -32,6 +36,24 @@ local
    ]
 
   val apfst_K = Lib.apfst o Lib.K
+
+  (* returns true iff 'ty' is a word type that is not fixed-width *)
+  fun is_non_numeric_word_type ty =
+    not (fcpSyntax.is_numeric_type (wordsSyntax.dest_word_type ty))
+      handle Feedback.HOL_ERR _ => false
+
+  (* make sure that all word types in 't' are of fixed width; return 's' *)
+  fun apfst_fixed_width s =
+    Lib.apfst (fn t =>
+      let
+        val (domtys, rngty) = boolSyntax.strip_fun (Term.type_of t)
+      in
+        if List.exists is_non_numeric_word_type (rngty :: domtys) then
+          raise ERR ("<builtin_symbols." ^ s ^ ">")
+            "not a fixed-width word type"
+        else
+          s
+      end)
 
   (* (HOL term, a function that maps a pair (rator, rands) to an
      SMT-LIB symbol and a list of remaining (still-to-be-encoded)
@@ -104,9 +126,6 @@ local
     (intrealSyntax.real_of_int_tm, apfst_K "to_real"),
     (intrealSyntax.INT_FLOOR_tm, apfst_K "to_int"),
     (intrealSyntax.is_int_tm, apfst_K "is_int"),
-    (* HOL constants without direct SMT-LIB counterparts *)
-    (boolSyntax.bool_case, Lib.## (Lib.K "ite",
-      SmtLib_Theories.three_args (fn (t1, t2, t3) => [t3, t1, t2]))),
     (* bit-vector constants *)
     (Term.mk_var ("x", wordsSyntax.mk_word_type Type.alpha), Lib.apfst (fn tm =>
       if wordsSyntax.is_word_literal tm then
@@ -184,88 +203,27 @@ local
           ("(_ extract " ^ Arbnum.toString i ^ " " ^ Arbnum.toString j ^ ")",
             [w])
         end) ts),
-    (wordsSyntax.word_1comp_tm, apfst_K "bvnot"),
-    (wordsSyntax.word_and_tm, apfst_K "bvand"),
-    (wordsSyntax.word_or_tm, apfst_K "bvor"),
-    (wordsSyntax.word_nand_tm, apfst_K "bvnand"),
-    (wordsSyntax.word_nor_tm, apfst_K "bvnor"),
-    (wordsSyntax.word_xor_tm, apfst_K "bvxor"),
-    (wordsSyntax.word_xnor_tm, apfst_K "bvxnor"),
-    (wordsSyntax.word_2comp_tm, apfst_K "bvneg"),
-    (wordsSyntax.word_compare_tm, apfst_K "bvcomp"),
-    (wordsSyntax.word_sub_tm, apfst_K "bvsub"),
-    (wordsSyntax.word_sdiv_tm, apfst_K "bvsdiv"),
-    (wordsSyntax.word_srem_tm, apfst_K "bvsrem"),
-    (wordsSyntax.word_smod_tm, apfst_K "bvsmod"),
-    (* shift left -- the number of bits to shift is given by the
-       second argument, which must also be a bit-vector *)
-    (wordsSyntax.word_lsl_tm, Lib.## (Lib.K "bvshl",
-      SmtLib_Theories.two_args (fn (w, n) =>
-        let
-          val dim_ty = wordsSyntax.dim_of w
-          (* make sure that 'n' is a numeral that can be represented by
-             a word of width 'dim_ty' *)
-          val num = numSyntax.dest_numeral n
-          val dim = fcpSyntax.dest_numeric_type dim_ty
-          val _ = if Arbnum.< (num, Arbnum.pow (Arbnum.two, dim)) then
-              ()
-            else (
-              if !Library.trace > 0 then
-                WARNING "translate_term" "word_lsl: argument too large"
-              else
-                ();
-              raise ERR "<builtin_symbols.word_lsl_tm>" "argument too large"
-            )
-          val wn = wordsSyntax.mk_n2w (n, dim_ty)
-        in
-          [w, wn]
-        end))),
-    (* shift right -- the number of bits to shift is given by the
-       second argument, which must also be a bit-vector *)
-    (wordsSyntax.word_lsr_tm, Lib.## (Lib.K "bvlshr",
-      SmtLib_Theories.two_args (fn (w, n) =>
-        let
-          val dim_ty = wordsSyntax.dim_of w
-          (* make sure that 'n' is a numeral that can be represented by
-             a word of width 'dim_ty' *)
-          val num = numSyntax.dest_numeral n
-          val dim = fcpSyntax.dest_numeric_type dim_ty
-          val _ = if Arbnum.< (num, Arbnum.pow (Arbnum.two, dim)) then
-              ()
-            else (
-              if !Library.trace > 0 then
-                WARNING "translate_term" "word_lsr: argument too large"
-              else
-                ();
-              raise ERR "<builtin_symbols.word_lsr_tm>" "argument too large"
-            )
-          val wn = wordsSyntax.mk_n2w (n, dim_ty)
-        in
-          [w, wn]
-        end))),
-    (* arithmetic shift right -- the number of bits to shift is given
-       by the second argument, which must also be a bit-vector *)
-    (wordsSyntax.word_asr_tm, Lib.## (Lib.K "bvashr",
-      SmtLib_Theories.two_args (fn (w, n) =>
-        let
-          val dim_ty = wordsSyntax.dim_of w
-          (* make sure that 'n' is a numeral that can be represented by
-             a word of width 'dim_ty' *)
-          val num = numSyntax.dest_numeral n
-          val dim = fcpSyntax.dest_numeric_type dim_ty
-          val _ = if Arbnum.< (num, Arbnum.pow (Arbnum.two, dim)) then
-              ()
-            else (
-              if !Library.trace > 0 then
-                WARNING "translate_term" "word_asr: argument too large"
-              else
-                ();
-              raise ERR "<builtin_symbols.word_asr_tm>" "argument too large"
-            )
-          val wn = wordsSyntax.mk_n2w (n, dim_ty)
-        in
-          [w, wn]
-        end))),
+    (wordsSyntax.word_1comp_tm, apfst_fixed_width "bvnot"),
+    (wordsSyntax.word_and_tm, apfst_fixed_width "bvand"),
+    (wordsSyntax.word_or_tm, apfst_fixed_width "bvor"),
+    (wordsSyntax.word_nand_tm, apfst_fixed_width "bvnand"),
+    (wordsSyntax.word_nor_tm, apfst_fixed_width "bvnor"),
+    (wordsSyntax.word_xor_tm, apfst_fixed_width "bvxor"),
+    (wordsSyntax.word_xnor_tm, apfst_fixed_width "bvxnor"),
+    (wordsSyntax.word_2comp_tm, apfst_fixed_width "bvneg"),
+    (wordsSyntax.word_compare_tm, apfst_fixed_width "bvcomp"),
+    (wordsSyntax.word_add_tm, apfst_fixed_width "bvadd"),
+    (wordsSyntax.word_sub_tm, apfst_fixed_width "bvsub"),
+    (wordsSyntax.word_mul_tm, apfst_fixed_width "bvmul"),
+    (wordsSyntax.word_sdiv_tm, apfst_fixed_width "bvsdiv"),
+    (wordsSyntax.word_srem_tm, apfst_fixed_width "bvsrem"),
+    (wordsSyntax.word_smod_tm, apfst_fixed_width "bvsmod"),
+    (* shift operations with two bit-vector arguments; the corresponding HOL
+       shift operations that take a numeral as their second argument are not
+       supported in SMT-LIB *)
+    (wordsSyntax.word_lsl_bv_tm, apfst_fixed_width "bvshl"),
+    (wordsSyntax.word_lsr_bv_tm, apfst_fixed_width "bvlshr"),
+    (wordsSyntax.word_asr_bv_tm, apfst_fixed_width "bvashr"),
     (wordsSyntax.word_replicate_tm, fn (t, ts) =>
       SmtLib_Theories.two_args (fn (n, w) =>
         let
@@ -298,21 +256,31 @@ local
     ("sign_extend", K_one_one (fn n => fn t => wordsSyntax.sw2sw (t,
       fcpLib.index_type
         (Arbnum.+ (fcpLib.index_to_num (wordsSyntax.dim_of t), n))))),
-
-    ("rotate_left", K_one_one
-      (Lib.C (Lib.curry wordsSyntax.word_rol) o numSyntax.numeral)),
-
-    ("rotate_right", K_one_one
-      (Lib.C (Lib.curry wordsSyntax.word_ror) o numSyntax.numeral)),
 *)
-    (wordsSyntax.word_lo_tm, apfst_K "bvult"),
-    (wordsSyntax.word_ls_tm, apfst_K "bvule"),
-    (wordsSyntax.word_hi_tm, apfst_K "bvugt"),
-    (wordsSyntax.word_hs_tm, apfst_K "bvuge"),
-    (wordsSyntax.word_lt_tm, apfst_K "bvslt"),
-    (wordsSyntax.word_le_tm, apfst_K "bvsle"),
-    (wordsSyntax.word_gt_tm, apfst_K "bvsgt"),
-    (wordsSyntax.word_ge_tm, apfst_K "bvsge")
+    (* rotation by a numeral; the corresponding HOL rotation operations that
+       take two bit-vector arguments are not supported in SMT-LIB *)
+    (wordsSyntax.word_rol_tm, fn (t, ts) =>
+      (
+        apfst_fixed_width "rotate_left" (t, ());
+        SmtLib_Theories.two_args (fn (w, n) =>
+          ("(_ rotate_left " ^ Arbnum.toString (numSyntax.dest_numeral n)
+            ^ ")", [w])) ts
+      )),
+    (wordsSyntax.word_ror_tm, fn (t, ts) =>
+      (
+        apfst_fixed_width "rotate_right" (t, ());
+        SmtLib_Theories.two_args (fn (w, n) =>
+          ("(_ rotate_right " ^ Arbnum.toString (numSyntax.dest_numeral n)
+            ^ ")", [w])) ts
+      )),
+    (wordsSyntax.word_lo_tm, apfst_fixed_width "bvult"),
+    (wordsSyntax.word_ls_tm, apfst_fixed_width "bvule"),
+    (wordsSyntax.word_hi_tm, apfst_fixed_width "bvugt"),
+    (wordsSyntax.word_hs_tm, apfst_fixed_width "bvuge"),
+    (wordsSyntax.word_lt_tm, apfst_fixed_width "bvslt"),
+    (wordsSyntax.word_le_tm, apfst_fixed_width "bvsle"),
+    (wordsSyntax.word_gt_tm, apfst_fixed_width "bvsgt"),
+    (wordsSyntax.word_ge_tm, apfst_fixed_width "bvsge")
   ]
 
   (* SMT-LIB type and function names are uniformly generated as "tN"
@@ -349,6 +317,19 @@ local
       (Redblackmap.insert (tydict, ty, name), ([decl], name))
     end
 
+  (* SMT-LIB is first-order.  Thus, functions can only be applied to
+     arguments of base type, but not to arguments of function type;
+     all completely applied terms must be of base type.
+
+     Thus, higher-order arguments must be abstracted so that they are
+     of (uninterpreted) base type.  We achieve this by abstracting the
+     offending function type to a fresh base type, and by abstracting
+     the argument's rator to an uninterpreted term that returns the
+     correct (abstracted) type.  Note that the same function/operator
+     may appear both with and without arguments in a HOL formula.
+     'tmdict' maps terms along with the number of their actual
+     arguments to an SMT-LIB representation. *)
+
   (* returns an updated accumulator, a (possibly empty) list of
      SMT-LIB (type and term) declarations, and the SMT-LIB
      representation of the given term *)
@@ -366,11 +347,11 @@ local
       in
         (acc, (List.concat declss, sexpr name names))
       end
+    val tm_has_base_type = not (Lib.can Type.dom_rng (Term.type_of tm))
   in
     (* binders *)
     let
       (* perhaps we should use a table of binders instead *)
-      (* TODO: let binders *)
       val (binder, (vars, body)) = if boolSyntax.is_forall tm then
           ("forall", boolSyntax.strip_forall tm)
         else if boolSyntax.is_exists tm then
@@ -397,34 +378,68 @@ local
     end
     handle Feedback.HOL_ERR _ =>
 
+    (* let binder - somewhat similar to quantifiers, but we only
+       translate one let at a time (so we don't have to worry about
+       semantic differences caused by parallel vs. sequential let) *)
+    let
+      val (M, N) = boolSyntax.dest_let tm
+      val (var, body) = Term.dest_abs M
+      val (acc, (Ndecls, N)) = translate_term (acc, (bounds, N))
+      val name = bv_prefix ^ Int.toString (Redblackmap.numItems bounds)
+      val bounds = Redblackmap.insert (bounds, var, name)
+      val (acc, (bodydecls, body)) = translate_term (acc, (bounds, body))
+    in
+      (acc, (Ndecls @ bodydecls,
+        "(let ((" ^ name ^ " " ^ N ^ ")) " ^ body ^ ")"))
+    end
+    handle Feedback.HOL_ERR _ =>
+
     (* bound variables may shadow built-in symbols etc. *)
     (acc, ([], Redblackmap.find (bounds, tm)))
     handle Redblackmap.NotFound =>
 
-    (* translate the entire term (e.g., for numerals), using the
-       dictionary of built-in symbols *)
-    builtin_symbol (tm, [])
+    (* translate the entire term (e.g., for numerals), using the dictionary of
+       built-in symbols; however, only do this if 'tm' has base type *)
+    (if tm_has_base_type then
+      builtin_symbol (tm, [])
+    else
+      raise ERR "translate_term" "not first-order")  (* handled below *)
     handle Feedback.HOL_ERR _ =>
 
     (* split the term into rator and rands *)
     let
       val (rator, rands) = boolSyntax.strip_comb tm
     in
-      (* translate the rator as a built-in symbol (applied to its rands) *)
-      builtin_symbol (rator, rands)
+      (* translate the rator as a built-in symbol (applied to its rands); only
+         do this if 'tm' has base type *)
+      (if tm_has_base_type then
+        builtin_symbol (rator, rands)
+      else
+        raise ERR "translate_term" "not first-order")  (* handled below *)
       handle Feedback.HOL_ERR _ =>
 
       let
+        val rands_count = List.length rands
         val (acc, (decls, name)) =
           (* translate the rator as a previously defined symbol *)
-          (acc, ([], Redblackmap.find (tmdict, rator)))
+          (acc, ([], Redblackmap.find (tmdict, (rator, rands_count))))
           handle Redblackmap.NotFound =>
 
           (* translate the rator as a new (i.e., uninterpreted) symbol *)
           let
             (* translate 'rator' types required for the rator's
                SMT-LIB declaration *)
-            val (domtys, rngty) = boolSyntax.strip_fun (Term.type_of rator)
+            fun doms_rng acc 0 ty =
+              (List.rev acc, ty)
+              | doms_rng acc n ty =
+              let
+                val (dom, rng) = Type.dom_rng ty
+              in
+                doms_rng (dom :: acc) (n - 1) rng
+              end
+            (* strip only 'rands_count' many 'domtys', leaving the remaining
+               argument types in 'rngty' *)
+            val (domtys, rngty) = doms_rng [] rands_count (Term.type_of rator)
             val (tydict, domdecltys) = Lib.foldl_map translate_type
               (tydict, domtys)
             val (domdeclss, domtys) = Lib.split domdecltys
@@ -434,10 +449,11 @@ local
             val name = tm_prefix ^ Int.toString (Redblackmap.numItems tmdict)
             val _ = if !Library.trace > 2 then
                 Feedback.HOL_MESG ("HolSmtLib (SmtLib): inventing name '" ^
-                  name ^ "' for HOL term '" ^ Hol_pp.term_to_string rator ^ "'")
+                  name ^ "' for HOL term '" ^ Hol_pp.term_to_string rator ^
+                  "' (applied to " ^ Int.toString rands_count ^ " argument(s))")
               else
                 ()
-            val tmdict = Redblackmap.insert (tmdict, rator, name)
+            val tmdict = Redblackmap.insert (tmdict, (rator, rands_count), name)
             val decl = "(declare-fun " ^ name ^ " (" ^
               String.concatWith " " domtys ^ ") " ^ rngty ^ ")\n"
           in
@@ -456,13 +472,18 @@ local
   (* Returns a string list representing the input goal in SMT-LIB file
      format, together with two dictionaries that map types and terms
      to identifiers used in the SMT-LIB representation.  The goal's
-     conclusion is negated before translation into SMT-LIB format. *)
+     conclusion is negated before translation into SMT-LIB format.
+     The integer in the term dictionary gives the number of actual
+     arguments to the term.  (Because SMT-LIB is first-order,
+     partially applied functions are mapped to different SMT-LIB
+     identifiers, depending on the number of actual arguments.) *)
   fun goal_to_SmtLib_aux (ts, t)
     : ((Type.hol_type, string) Redblackmap.dict *
-      (Term.term, string) Redblackmap.dict) * string list =
+      (Term.term * int, string) Redblackmap.dict) * string list =
   let
     val tydict = Redblackmap.mkDict Type.compare
-    val tmdict = Redblackmap.mkDict Term.compare
+    val tmdict = Redblackmap.mkDict
+      (Lib.pair_compare (Term.compare, Int.compare))
     val bounds = Redblackmap.mkDict Term.compare
     val (acc, smtlibs) = Lib.foldl_map
       (fn (acc, tm) => translate_term (acc, (bounds, tm)))
@@ -490,6 +511,31 @@ in
 
   val goal_to_SmtLib_with_get_proof =
     Lib.apsnd (fn xs => xs @ ["(get-proof)\n", "(exit)\n"]) o goal_to_SmtLib_aux
+
+  (* eliminates some HOL terms that are not supported by the SMT-LIB
+     translation *)
+  fun SIMP_TAC simp_let =
+    let
+      open Tactical simpLib
+      val INT_ABS = intLib.ARITH_PROVE
+        ``!x. ABS (x:int) = if x < 0i then 0i - x else x``
+      val WORD_SHIFT_BV = SIMP_PROVE bossLib.bool_ss
+          [wordsTheory.word_shift_bv]
+        ``(!w:'a word n. n < dimword (:'a) ==> (w << n = w <<~ n2w n)) /\
+          (!w:'a word n. n < dimword (:'a) ==> (w >> n = w >>~ n2w n)) /\
+          (!w:'a word n. n < dimword (:'a) ==> (w >>> n = w >>>~ n2w n))``
+    in
+      REPEAT Tactic.GEN_TAC THEN
+      (if simp_let then Library.LET_SIMP_TAC else ALL_TAC) THEN
+      SIMP_TAC pureSimps.pure_ss
+        [boolTheory.bool_case_DEF, integerTheory.INT_MIN,
+          integerTheory.INT_MAX, INT_ABS, wordsTheory.word_rol_bv_def,
+          wordsTheory.word_ror_bv_def, wordsTheory.w2n_n2w] THEN
+      SIMP_TAC (pureSimps.pure_ss ++ numSimps.REDUCE_ss ++ wordsLib.SIZES_ss)
+        [WORD_SHIFT_BV] THEN
+      Library.SET_SIMP_TAC THEN
+      Tactic.BETA_TAC
+    end
 
 end  (* local *)
 
