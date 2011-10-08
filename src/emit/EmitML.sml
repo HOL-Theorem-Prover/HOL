@@ -1482,7 +1482,7 @@ fun emit_adjoin_call thy (consts,pcs) = let
                         (trace ("Unicode",0)
                            (HOLPP.pp_to_string 10000
                               (type_pp.pp_type (fst Parse.min_grammars)
-                                 PPBackEnd.raw_terminal)) ty)
+                                 PPBackEnd.raw_terminal false)) ty)
 
   fun pr3 pps ({Name,Thy,Ty}, (b,s2,ty)) = let
     open PP
