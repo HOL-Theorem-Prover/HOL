@@ -1,4 +1,3 @@
-
 (*****************************************************************************)
 (* ZF-like axiomatic formalization of set theory in HOL following a mixture  *)
 (* of Johnstone's book "Notes on logic and set theory" and Paulson's report  *)
@@ -56,7 +55,7 @@ val _ = new_constant("In", ``:zfset->zfset->bool``);
 
 (*****************************************************************************)
 (* The axioms                                                                *)
-(*****************************************************************************)  
+(*****************************************************************************)
 
 (*****************************************************************************)
 (* Axiom of extensionality.                                                  *)
@@ -73,8 +72,8 @@ val EmptySet_ax =
 (*****************************************************************************)
 (* Definition of the empty set: |- !x. ~x In Empty                           *)
 (*****************************************************************************)
-val Empty_def = 
- new_specification("Empty_def", ["Empty"], EmptySet_ax); 
+val Empty_def =
+ new_specification("Empty_def", ["Empty"], EmptySet_ax);
 
 val EmptyEq =
  store_thm
@@ -99,7 +98,7 @@ val Union_ax =
 (*                                                                           *)
 (* UU = |- !x t. t In (UU x) = (?z. t In z /\ z In x)                        *)
 (*****************************************************************************)
-val UU_def = 
+val UU_def =
  new_specification("UU_def", ["UU"] , CONV_RULE SKOLEM_CONV Union_ax);
 
 (*****************************************************************************)
@@ -120,9 +119,9 @@ val PowerSet_ax =
 (*                                                                           *)
 (*    |- !s x. x In (Pow s) = (!y. y In x ==> y In s)                        *)
 (*****************************************************************************)
-val Pow_def = 
+val Pow_def =
  new_specification
-  ("Pow_def", 
+  ("Pow_def",
    ["Pow"] ,
    prove
     (``?f. !s x. x In f s = !y. y In x ==> y In s``,
@@ -152,37 +151,19 @@ val PowPowEmpty =
   ``!x. x In Pow(Pow Empty) = (x = Empty) \/ (x = Pow Empty)``,
   METIS_TAC[Pow_def,EmptyEq,PowEmptyEq]);
 
-
-(*****************************************************************************)
-(* Axiom of separation.                                                      *)
-(*****************************************************************************)
-val Separation_ax =
- new_axiom("Separation_ax", ``!p s. ?t. !x. x In t = x In s /\ p x``);
-
-(*****************************************************************************)
-(* Definition of Spec s p = set of x in s satisfying predicate p.            *)
-(*****************************************************************************)
-val Spec_def = 
- new_specification 
-  ("Spec_def",
-   ["Spec"],
-   (prove
-    (``?f. !s p. !x. x In (f s p) = x In s /\ p x``,
-     METIS_TAC[CONV_RULE SKOLEM_CONV (SPEC_ALL Separation_ax)])));
-
 (*****************************************************************************)
 (* Axiom of replacement.                                                     *)
 (*****************************************************************************)
 val Replacement_ax =
  new_axiom
-   ("Replacement_ax", 
+   ("Replacement_ax",
     ``!f s. ?t. !y. y In t = ?x. x In s /\ (y = f x)``);
 
 (*****************************************************************************)
 (* Image = |- !f t y. y In (Image f t) = (?x. x In t /\ (y = f x))           *)
 (*****************************************************************************)
-val Image_def = 
- new_specification 
+val Image_def =
+ new_specification
   ("Image_def",
    ["Image"],
    (CONV_RULE SKOLEM_CONV Replacement_ax));
@@ -190,8 +171,8 @@ val Image_def =
 (*****************************************************************************)
 (* Definition of singleton set: |- !x y. y In (Singleton x) = (y = x)        *)
 (*****************************************************************************)
-val Singleton_def = 
- new_specification 
+val Singleton_def =
+ new_specification
   ("Singleton_def",
    ["Singleton"],
    (CONV_RULE
@@ -203,13 +184,35 @@ val Singleton_def =
          THEN RW_TAC std_ss [Image_def,PowEmpty]))));
 
 (*****************************************************************************)
+(* Axiom of separation.                                                      *)
+(*****************************************************************************)
+val Separation_ax = store_thm("Separation_ax",
+  ``!p s. ?t. !x. x In t = x In s /\ p x``,
+NTAC 2 GEN_TAC THEN
+EXISTS_TAC ``if (!x. x In s ==> ~(p x)) then Empty
+             else Image (\x. if p x then x else (@x. x In s /\ p x)) s`` THEN
+SRW_TAC [][Empty_def,Image_def] THEN
+METIS_TAC []);
+
+(*****************************************************************************)
+(* Definition of Spec s p = set of x in s satisfying predicate p.            *)
+(*****************************************************************************)
+val Spec_def =
+ new_specification
+  ("Spec_def",
+   ["Spec"],
+   (prove
+    (``?f. !s p. !x. x In (f s p) = x In s /\ p x``,
+     METIS_TAC[CONV_RULE SKOLEM_CONV (SPEC_ALL Separation_ax)])));
+
+(*****************************************************************************)
 (* Definition of set intersection.                                           *)
 (*                                                                           *)
 (* Intersect = |- !s t x. x In (s Intersect t) = x In s /\ x In t            *)
 (*                                                                           *)
 (*****************************************************************************)
 val _ = set_fixity "Intersect" (Infix(RIGHT, 300));
-val Intersect_def = 
+val Intersect_def =
  new_specification
   ("Intersect_def",
    ["Intersect"],
@@ -223,7 +226,7 @@ val Intersect_def =
 (*****************************************************************************)
 val Foundation_ax =
  new_axiom
-  ("Foundation_ax", 
+  ("Foundation_ax",
    ``!s. ~(s = Empty) ==> ?x. x In s /\ (x Intersect s = Empty)``);
 
 (*****************************************************************************)
@@ -231,10 +234,10 @@ val Foundation_ax =
 (*****************************************************************************)
 val Pairing =
  store_thm
-  ("Pairing", 
+  ("Pairing",
    ``!x y. ?u. x In u /\ y In u``,
    REPEAT GEN_TAC
-    THEN EXISTS_TAC 
+    THEN EXISTS_TAC
           ``Image
             (\a. if (a = Empty)     then x else
                  if (a = Pow Empty) then y else ARB)
@@ -245,8 +248,8 @@ val Pairing =
 (*****************************************************************************)
 (* PairingFun_def = |- !x y. x In (PairingFun x y) /\ y In (PairingFun x y)  *)
 (*****************************************************************************)
-val PairingFun_def = 
- new_specification 
+val PairingFun_def =
+ new_specification
   ("PairingFun_def",
    ["PairingFun"] ,
    (CONV_RULE SKOLEM_CONV Pairing));
@@ -255,7 +258,7 @@ val Upair_def =
  Define `Upair x y = Spec (PairingFun x y) (\z. (z = x) \/ (z = y))`;
 
 val InUpair =
- store_thm 
+ store_thm
   ("InUpair",
    ``!x y z. z In (Upair x y) = (z = x) \/ (z = y)``,
    RW_TAC std_ss [Upair_def,Spec_def]
@@ -295,9 +298,3 @@ val InfiniteSet_def =
 (*****************************************************************************)
 
 val _ = export_theory();
-
-
-
-
-
-

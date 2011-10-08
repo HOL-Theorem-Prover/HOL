@@ -73,9 +73,10 @@ hexdigit = [A-Fa-f] | {numeric};
 hexdigitseq = ({hexdigit} | _)* {hexdigit} ({hexdigit} | _)*;
 symbol = [-`|!#%&)=+[{};:@~\\,.<>?/^$\128-\255] | ];
 nonparen = {symbol} | \* | {alpha} | {numeric};
-nonstar = {symbol} | \(;
+nonstar_nonparen = {symbol} | {alpha} | {numeric};
 ident = {alpha} ({alpha} | {numeric})*;
-anysymb = {ident} | {nonparen} * \( | ({nonparen} | \( {nonstar}) +;
+lparen = \(;
+anysymb = ({nonparen} | {lparen}+ {nonstar_nonparen}) + {lparen} ? | {lparen};
 space = [\ \t];
 linefeed = \n;
 creturn = \013;
@@ -111,6 +112,10 @@ locpragma = "(*#loc" {space}+ {numeric}* {space}+ {numeric}* {space}* "*)";
                        i := yypos + size yytext;
                        continue()
                      end);
+<INITIAL>\$ ? {anysymb} "(*" => (YYBEGIN comment;
+                                 incommentp := 1;
+                                 (BT0_Ident(String.substring(yytext,0,size yytext - 2)),
+                                  getLoc yyarg yypos yytext));
 <INITIAL>\$ ? {anysymb} \" => (let
   val s = LocP(nf,!r,yypos - !(#i yyarg))
 in
