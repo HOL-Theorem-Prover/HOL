@@ -156,6 +156,13 @@ variable names except for the last:
    'a   'b   'cat   'A11   'g_a_p   'f'oo
 \end{verbatim}
 \end{hol}
+
+\paragraph{User tokens}
+In general, a \HOL{} user has a great deal of freedom to create their own syntax, involving special tokens quite apart from variables and names for constants.
+For example, the if-then-else syntax for the conditional operator %
+\index{conditionals, in HOL logic@conditionals, in \HOL{} logic!printing of}%
+has special tokens (the ``if'', ``then'' and ``else'') that are not names for variables, nor constants (the underlying constant is actually called \holtxt{COND}).
+In order to make sure that the operations of printing and parsing tokens are suitably inverse to each other, users should not create tokens that include whitespace, or the comment strings (\ml{(*} and \ml{*)}).
 \index{tokens|)}
 
 \section{Types}\index{types, in HOL logic@types, in \HOL{} logic}

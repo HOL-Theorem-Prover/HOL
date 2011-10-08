@@ -31,27 +31,37 @@ struct
     (* take s and return a s hopefully as much like it as possible, but
        if s should include a symbol character followed by the left-comment
        delimiter  that is '(' '*', then return the same string but with
-       a space between the leading symbol and the comment delimiter. *)
-    val ss = Substring.full s
-    fun recurse A ss = let
-      val (ss1, ss2) = Substring.position "(*" ss
-      val sz1 = Substring.size ss1
-      val sz2 = Substring.size ss2
-    in
-      if sz2 > 0 then let
-          val (cchars, ss2') = Substring.splitAt(ss2, 2)
-        in
-          if sz1 > 0 then
-            if Char.isPunct (Substring.sub(ss1, sz1 - 1)) then
-              recurse (cchars ::Substring.full " " :: ss1 :: A) ss2'
-            else recurse (cchars :: ss1 :: A) ss2'
-          else recurse (cchars :: A) ss2'
-        end
-      else
-        Substring.concat (List.rev (ss::A))
-    end
+       a space between the leading symbol and the comment delimiter.  Further,
+       don't perform this substitution if the ( * pair appears inside unescaped
+       double quotes.*)
+    val limit = size s
+    fun sub i = String.sub(s,i)
+    fun recurse A instringp esc lparen start i =
+        if i >= limit then String.concat (List.rev (String.extract(s,start,NONE)::A))
+        else let
+            val c = sub i
+          in
+            case (c,instringp,esc, lparen) of
+              (#"\"", false, _, _) =>     recurse A true  false false start (i + 1)
+            | (#"\"", true, false, _) =>  recurse A false false false start (i + 1)
+            | (#"\"", true, true, _) =>   recurse A true  false false start (i + 1)
+            | (#"\\", true, false, _) =>  recurse A true  true  false start (i + 1)
+            | (#"\\", true, true, _) =>   recurse A true  false false start (i + 1)
+            | (#"(", false, _, _) =>      recurse A false false true  start (i + 1)
+            | (#"*", false, _, true) => let
+                val predpos = i - 2
+              in
+                if predpos >= 0 andalso Char.isPunct (sub predpos) then let
+                    val p = String.substring(s,start, i - start - 1) ^ " "
+                  in
+                    recurse (p :: A) false false false (i - 1) (i + 1)
+                  end
+                else recurse A false false false start (i + 1)
+              end
+            | (c, _, _, _) => recurse A instringp false false start (i + 1)
+          end
   in
-    recurse [] ss
+    recurse [] false false false 0 0
   end
 
   fun read_from_string s = let
@@ -91,8 +101,7 @@ struct
           val (s, nf_rest, rest) = leading_quotes [] nf q
           val st = base_lexer.UserDeclarations.newstate nf
           val lexer = (lift_tok ## I) o
-                      (base_lexer.makeLexer
-                         (read_from_string (separate_out_comments s)) st)
+                      (base_lexer.makeLexer (read_from_string s) st)
           val (t,locn) = lexer ()
         in
           buffer_from_tok lexer (t,locn) nf_rest rest

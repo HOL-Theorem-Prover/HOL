@@ -1950,9 +1950,9 @@ in
 end
 
 val _ = let
-  fun rawpp_thm pps th =
-      Lib.with_flag (current_backend, PPBackEnd.raw_terminal)
-                    (pp_thm pps) th
+  fun rawpp_thm pps =
+      pp_thm pps |> Lib.with_flag (current_backend, PPBackEnd.raw_terminal)
+                 |> trace ("paranoid string literal printing", 1)
 in
   Theory.pp_thm := rawpp_thm
 end

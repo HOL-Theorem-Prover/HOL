@@ -2099,17 +2099,12 @@ fun pp_term (G : grammar) TyG backend = let
                 val first_nonlist = List.find (not o is_lrule o #3) crules
                 val lrules = List.filter (is_lrule o #3) crules
               in
-                if not (null lrules) then
-                  pr_comb_with_rule (#3 (hd lrules))
-                                    {fprec = #1 (hd lrules),
-                                     fname=fname, f=f}
-                                    args Rand
-                else
-                  case first_nonlist of
-                    SOME (p,_,r) =>
-                    pr_comb_with_rule r {fprec=p, fname=fname, f=f}
-                                      args Rand
-                  | NONE => pr_comb tm Rator Rand
+                case (lrules, first_nonlist) of
+                  ((prec,_,rule) :: _, _) =>
+                    pr_comb_with_rule rule {fprec = prec, fname=fname, f=f} args Rand
+                | ([], SOME (p, _, r)) =>
+                    pr_comb_with_rule r {fprec=p, fname=fname, f=f} args Rand
+                | ([], NONE) => pr_comb tm Rator Rand
               end
           end (* pr_atomf *)
           fun maybe_pr_atomf () =
@@ -2131,7 +2126,7 @@ fun pp_term (G : grammar) TyG backend = let
           (* strings *)
           (case total Literal.dest_string_lit tm of
              NONE => fail
-           | SOME s => add_string (Lib.mlquote s)) |||
+           | SOME s => add_string (Literal.string_literalpp s)) |||
 
           (* characters *)
           (fn _ => case total Literal.dest_char_lit tm of
