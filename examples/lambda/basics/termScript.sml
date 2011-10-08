@@ -5,12 +5,28 @@ open BasicProvers
 open bossLib binderLib
 open pretermTheory basic_swapTheory nomsetTheory
 open pred_setTheory
+open lcsymtacs
+open boolSimps
 
 fun Store_Thm(s, t, tac) = (store_thm(s,t,tac) before export_rewrites [s])
 fun Save_Thm(s, th) = (save_thm(s, th) before export_rewrites [s])
 
 val _ = new_theory "term"
 (* perform quotient *)
+
+val psize_def = Define`
+  (psize (var s) = 1) ∧
+  (psize (app t1 t2) = psize t1 + psize t2 + 1) ∧
+  (psize (lam v t) = psize t + 1)
+`
+
+val psize_ptpm = prove(
+  ``psize (ptpm [(x,y)] t) = psize t``,
+  Induct_on `t` THEN SRW_TAC [][psize_def]);
+
+val aeq_psize = prove(
+  ``∀t1 t2. aeq t1 t2 ==> (psize t1 = psize t2)``,
+  Induct_on `aeq` THEN SRW_TAC [][psize_def, psize_ptpm]);
 
 fun mk_def(s,t) =
     {def_name = s ^ "_def", fixity = Prefix, fname = s, func = t};
@@ -23,15 +39,17 @@ val ptpm_fv' = (CONV_RULE (BINDER_CONV
 val [FV_thm, FV_tpm, simple_induction, tpm_thm, term_distinct, term_11,
      LAM_eq_thm, FRESH_swap0,
      FINITE_FV,
-     tpm_sing_inv, tpm_NIL, tpm_inverse, tpm_flip_args, tpm_id_front] =
+     tpm_sing_inv, tpm_NIL, tpm_inverse, tpm_flip_args, tpm_id_front,
+     tmsize_def, tpm_tmsize] =
     quotient.define_equivalence_type
     {
      name = "term", equiv = aeq_equiv,
      defs = map mk_def [("LAM", ``lam``), ("@@", ``app``),
                         ("VAR", ``var``), ("FV", ``fv``),
-                        ("tpm", ``ptpm``)],
+                        ("tpm", ``ptpm``), ("tmsize", ``psize``)],
      welldefs = [lam_respects_aeq, app_respects_aeq, var_respects_aeq, aeq_fv,
-                 SIMP_RULE bool_ss [GSYM RIGHT_FORALL_IMP_THM] aeq_ptpm_lemma
+                 SIMP_RULE bool_ss [GSYM RIGHT_FORALL_IMP_THM] aeq_ptpm_lemma,
+                 aeq_psize
                  ],
      old_thms = [fv_def, ptpm_fv',
                  TypeBase.induction_of ``:preterm$preterm``, ptpm_def,
@@ -39,13 +57,15 @@ val [FV_thm, FV_tpm, simple_induction, tpm_thm, term_distinct, term_11,
                  lam_aeq_thm, fresh_swap, (* ptpm_is_perm,*)
                  finite_fv,
                  ptpm_sing_inv, ptpm_NIL, ptpm_INVERSE, ptpm_flip_args,
-                 ptpm_id_front]}
+                 ptpm_id_front, psize_def, psize_ptpm]}
 val _ = set_fixity "@@" (Infixl 901);
 val _ = set_MLname "@@_def" "APP_def"
 
 (* hide all of preterm's constants *)
 val _ = List.app (fn s => remove_ovl_mapping s {Name = s, Thy = "preterm"})
                  ["fv", "var", "app", "lam", "ptpm", "aeq"]
+
+val _ = remove_ovl_mapping "psize" {Name = "psize", Thy = "term"}
 
 val _ = Save_Thm("FINITE_FV", FINITE_FV);
 val _ = Save_Thm("FV_thm", FV_thm);
@@ -57,6 +77,8 @@ val _ = Save_Thm("tpm_id_front", tpm_id_front)
 val _ = Save_Thm("tpm_inverse", tpm_inverse);
 val _ = Save_Thm("tpm_sing_inv", tpm_sing_inv);
 val _ = Save_Thm("tpm_thm", tpm_thm);
+
+val _ = augment_srw_ss [rewrites [tmsize_def, tpm_tmsize]]
 
 val tpm_fresh = save_thm("tpm_fresh", GSYM FRESH_swap0)
 
@@ -159,62 +181,276 @@ val APP_acyclic = store_thm(
   ``!t1 t2. t1 <> t1 @@ t2 /\ t1 <> t2 @@ t1``,
   HO_MATCH_MP_TAC simple_induction THEN SRW_TAC [][]);
 
-val (tmrecrel_rules, tmrecrel_ind, tmrecrel_cases) = Hol_reln`
-  (∀s. tmrecrel A vf af lf (VAR s) (vf s)) /\
-  (∀t1 t2 r1 r2. tmrecrel A vf af lf t1 r1 /\ tmrecrel A vf af lf t2 r2 ==>
-   tmrecrel A vf af lf (t1 @@ t2) (af r1 r2 t1 t2)) /\
-  (∀v r t. v ∉ A ∧ tmrecrel A vf af lf t r ==>
-   tmrecrel A vf af lf (LAM v t) (lf v r t))
-`;
+val FORALL_TERM = store_thm(
+  "FORALL_TERM",
+  ``(∀t. P t) <=>
+      (∀s. P (VAR s)) ∧ (∀t1 t2. P (t1 @@ t2)) ∧ (∀v t. P (LAM v t))``,
+  EQ_TAC THEN SRW_TAC [][] THEN
+  Q.SPEC_THEN `t` STRUCT_CASES_TAC term_CASES THEN SRW_TAC [][]);
 
-open lcsymtacs
-val tmrecrel_total = prove(
-  ``FINITE A ==> ∀t. ∃r. tmrecrel A vf af lf t r``,
-  strip_tac >> ho_match_mp_tac nc_INDUCTION2 >> qexists_tac `A` >>
-  metis_tac [tmrecrel_rules]);
+val some_F = store_thm(
+  "some_F",
+  ``(some x. F) = NONE``,
+  DEEP_INTRO_TAC optionTheory.some_intro THEN SRW_TAC [][]);
+val _ = export_rewrites ["some_F"]
+
+val some_EQ = store_thm(
+  "some_EQ",
+  ``((some x. x = y) = SOME y) ∧ ((some x. y = x) = SOME y)``,
+  CONJ_TAC THEN DEEP_INTRO_TAC optionTheory.some_intro THEN SRW_TAC [][]);
+val _ = export_rewrites ["some_EQ"]
+
+val some_PAIR_EQ = prove(
+  ``(some (x,y). (x' = x) /\ (y' = y)) = SOME(x',y')``,
+  DEEP_INTRO_TAC optionTheory.some_intro THEN
+  SIMP_TAC (srw_ss()) [pairTheory.FORALL_PROD, pairTheory.EXISTS_PROD]);
+
+val some_PAIR_F = prove(
+  ``(some (x,y). F) = NONE``,
+  DEEP_INTRO_TAC optionTheory.some_intro THEN
+  SIMP_TAC (srw_ss()) [pairTheory.FORALL_PROD, pairTheory.EXISTS_PROD]);
+
+val _ = set_fixity "=" (Infix(NONASSOC, 450))
+val trec = ``tmrec (A:string set) (ppm: 'p pm) (vf : string -> 'p -> α)
+                   (af : ('p -> α) -> ('p -> α) -> term -> term -> 'p -> α)
+                   (lf : string -> ('p -> α) -> term -> 'p -> α) : term -> 'p -> α``
+
+val tmrec_defn = Hol_defn "tmrec" `
+  ^trec t p =
+      case some s. t = VAR s of
+        SOME s -> vf s p :α
+     || NONE -> (case some (t1,t2). t = t1 @@ t2 of
+                    SOME (t1,t2) -> af (^trec t1) (^trec t2) t1 t2 p
+                 || NONE ->
+                   (case some (v,t0). t = LAM v t0 ∧ v ∉ supp ppm p ∧ v ∉ A of
+                       NONE -> ARB
+                    || SOME(v,t0) -> lf v (^trec t0) t0 p))
+`
+
+val (tmrec_def, tmrec_ind) = Defn.tprove(
+  tmrec_defn,
+  WF_REL_TAC `measure (tmsize o FST o SND o SND o SND o SND o SND)` THEN
+  SRW_TAC [][] THENL [
+    Q.SPEC_THEN `t` FULL_STRUCT_CASES_TAC term_CASES THEN
+    FULL_SIMP_TAC (srw_ss() ++ ARITH_ss)
+                  [some_F, some_PAIR_EQ, some_PAIR_F],
+    Q.SPEC_THEN `t` FULL_STRUCT_CASES_TAC term_CASES THEN
+    FULL_SIMP_TAC (srw_ss() ++ ARITH_ss)
+                  [some_F, some_PAIR_EQ, some_PAIR_F],
+    Q.SPEC_THEN `t` FULL_STRUCT_CASES_TAC term_CASES THEN
+    FULL_SIMP_TAC (srw_ss() ++ ARITH_ss)
+                  [some_PAIR_EQ, some_PAIR_F, LAM_eq_thm] THEN
+    POP_ASSUM MP_TAC THEN DEEP_INTRO_TAC optionTheory.some_intro THEN
+    SIMP_TAC (srw_ss()) [pairTheory.EXISTS_PROD, pairTheory.FORALL_PROD] THEN
+    SRW_TAC [][] THEN SRW_TAC [ARITH_ss][]
+  ]);
+
+val _ = temp_overload_on ("→", ``fnpm``)
+val _ = temp_set_fixity "→" (Infixr 700)
 
 val eqv_helpers =
-``(∀x y s. x ∉ A ∧ y ∉ A ==> (apm [(x,y)] (vf s : 'a) = vf (swapstr x y s))) ∧
-  (∀x y t1 t2 r1 r2.
+``(∀x y s p:'p. x ∉ A ∧ y ∉ A ==>
+             apm [(x,y)] (vf s p: 'a) = vf (swapstr x y s) (ppm [(x,y)] p)) ∧
+  (∀x y t1 t2 r1 r2 p.
      x ∉ A ∧ y ∉ A ∧
-     (∀x. x ∉ A ∧ x ∉ FV t1 ==> x ∉ supp apm r1) ∧
-     (∀x. x ∉ A ∧ x ∉ FV t2 ==> x ∉ supp apm r2) ==>
-      (apm [(x,y)] (af r1 r2 t1 t2) =
-       af (apm [(x,y)] r1) (apm [(x,y)] r2) (tpm [(x,y)] t1) (tpm [(x,y)] t2)))
+     (∀x p. x ∉ A ∧ x ∉ FV t1 ∧ x ∉ supp ppm p ==> x ∉ supp apm (r1 p)) ∧
+     (∀x p. x ∉ A ∧ x ∉ FV t2 ∧ x ∉ supp ppm p ==> x ∉ supp apm (r2 p)) ==>
+     apm [(x,y)] (af r1 r2 t1 t2 p) =
+       af ((ppm → apm) [(x,y)] r1) ((ppm→apm) [(x,y)] r2)
+          (tpm [(x,y)] t1) (tpm [(x,y)] t2)
+          (ppm [(x,y)] p))
      ∧
-  (∀x y v t r.
-     x ∉ A ∧ y ∉ A ∧ v ∉ A ∧
-     (∀x. x ∉ A ∧ x ∉ FV t ==> x ∉ supp apm r) ==>
-     (apm [(x,y)] (lf v r t) =
-      lf (swapstr x y v) (apm [(x,y)] r) (tpm [(x,y)] t)))``
+  (∀x y v t r p.
+     x ∉ A ∧ y ∉ A ∧ v ∉ A ∧ v ∉ supp ppm p ∧
+     (∀x p. x ∉ A ∧ x ∉ FV t ∧ x ∉ supp ppm p ==> x ∉ supp apm (r p)) ==>
+     apm [(x,y)] (lf v r t p) =
+       lf (swapstr x y v) ((ppm→apm) [(x,y)] r) (tpm [(x,y)] t) (ppm [(x,y)] p))``
 
 val FCB =
-  ``∀a r:α t:term. a ∉ A ∧ (∀x. x ∉ A ∧ x ∉ FV t ==> x ∉ supp apm r) ==>
-                   a ∉ supp apm (lf a r t:α)``
+  ``∀a r t:term p:'p.
+      a ∉ A ∧ (∀x p:'p. x ∉ A ∧ x ∉ FV t ∧ x ∉ supp ppm p ==> x ∉ supp apm (r p)) ==>
+      a ∉ supp apm (lf a r t p:α)``
 
 val notinsupp_I = prove(
   ``∀A apm e x.
        is_perm apm ∧ FINITE A ∧ support apm x A ∧ e ∉ A ==> e ∉ supp apm x``,
   metis_tac [supp_smallest, SUBSET_DEF]);
 
-val tmrecrel_eqvfresh = prove(
-  ``FINITE A ∧ is_perm apm ∧ ^eqv_helpers ∧ ^FCB ==>
-    ∀t r. tmrecrel A vf af lf t r ==>
-          (∀x y. x ∉ A ∧ y ∉ A ==>
-                 tmrecrel A vf af lf (tpm [(x,y)] t) (apm [(x,y)] r)) ∧
-          (∀x. x ∉ A ∧ x ∉ FV t ==> x ∉ supp apm r)``,
-  strip_tac >> Induct_on `tmrecrel A vf af lf` >> srw_tac [][] >| [
-    srw_tac [][tmrecrel_rules],
-    match_mp_tac notinsupp_I >> qexists_tac `s INSERT A` >>
-    srw_tac [][support_def],
-    metis_tac [tmrecrel_rules],
-    match_mp_tac notinsupp_I >> qexists_tac `FV t ∪ FV t' ∪ A` >>
-    srw_tac [][support_def, supp_fresh, tpm_fresh],
-    `swapstr x y v ∉ A` by srw_tac [][swapstr_def] >>
-    metis_tac [tmrecrel_rules],
-    Cases_on `x = v` >> srw_tac [][] >>
-    match_mp_tac notinsupp_I >> qexists_tac `A ∪ FV t ∪ {v}` >>
-    srw_tac [][support_def, supp_fresh, tpm_fresh]
+
+val tmrec_VAR = tmrec_def |> Q.INST [`t` |-> `VAR s`]
+                          |> SIMP_RULE (srw_ss()) []
+val tmrec_APP = tmrec_def |> Q.INST [`t` |-> `t1 @@ t2`]
+                          |> SIMP_RULE (srw_ss() ++ ETA_ss) [some_PAIR_EQ]
+
+val tmrec_LAM = tmrec_def |> Q.INST [`t` |-> `LAM v t`]
+                          |> SIMP_RULE (srw_ss()) [some_PAIR_EQ, some_PAIR_F]
+
+val trec_fnpm = prove(
+  ``(ppm → apm) π (tmrec A ppm vf af lf t) =
+    λp. apm π (tmrec A ppm vf af lf t (ppm π⁻¹ p))``,
+  srw_tac [][FUN_EQ_THM, fnpm_def]);
+
+val tmrec_eqvfresh = prove(
+  ``FINITE A ∧ is_perm apm ∧ is_perm ppm ∧ (∀p. FINITE (supp ppm p)) ∧
+    ^eqv_helpers ∧ ^FCB ==>
+    ∀t.
+       (∀p x y. x ∉ A ∧ y ∉ A ==>
+                apm [(x,y)] (tmrec A ppm vf af lf t p) =
+                 tmrec A ppm vf af lf (tpm [(x,y)] t) (ppm [(x,y)] p)) ∧
+       (∀p x. x ∉ A ∧ x ∉ FV t ∧ x ∉ supp ppm p ==>
+              x ∉ supp apm (tmrec A ppm vf af lf t p))``,
+  strip_tac >> gen_tac >> completeInduct_on `tmsize t` >>
+  qabbrev_tac `m = v` >> markerLib.RM_ALL_ABBREVS_TAC >>
+  pop_assum (strip_assume_tac o SIMP_RULE (srw_ss() ++ DNF_ss) []) >>
+  simp_tac (srw_ss()) [Once FORALL_TERM] >> srw_tac [][tmrec_VAR, tmrec_APP] >| [
+    match_mp_tac notinsupp_I >> qexists_tac `A ∪ {s} ∪ supp ppm p` >>
+    srw_tac [][support_def, supp_fresh],
+    srw_tac [ARITH_ss, ETA_ss][trec_fnpm, is_perm_sing_inv],
+    match_mp_tac notinsupp_I >> qexists_tac `FV t1 ∪ FV t2 ∪ A ∪ supp ppm p` >>
+    srw_tac [ARITH_ss, ETA_ss][support_def, trec_fnpm, is_perm_sing_inv, supp_fresh,
+                               tpm_fresh],
+    srw_tac [][tmrec_LAM, SimpLHS] >> DEEP_INTRO_TAC optionTheory.some_intro >>
+    simp_tac (srw_ss()) [pairTheory.FORALL_PROD, pairTheory.EXISTS_PROD] >>
+    REVERSE conj_tac >-
+      (srw_tac [][LAM_eq_thm] >>
+       Q_TAC (NEW_TAC "z") `A ∪ supp ppm p ∪ {v} ∪ FV t` >>
+       first_x_assum (qspec_then `z` mp_tac) >>
+       asm_simp_tac (srw_ss()) [tpm_eqr]) >>
+    asm_simp_tac (srw_ss() ++ DNF_ss ++ ETA_ss)
+                 [LAM_eq_thm, trec_fnpm, is_perm_sing_inv] >>
+    asm_simp_tac (srw_ss()) [tpm_eqr] >> conj_tac >-
+      (srw_tac [][tmrec_LAM] >> DEEP_INTRO_TAC optionTheory.some_intro >>
+       simp_tac (srw_ss()) [pairTheory.EXISTS_PROD, pairTheory.FORALL_PROD] >>
+       REVERSE conj_tac >-
+         (srw_tac [][LAM_eq_thm]>>
+          Q_TAC (NEW_TAC "z")
+            `A ∪ supp ppm (ppm [(x,y)] p) ∪ {swapstr x y v} ∪ FV (tpm [(x,y)] t)` >>
+          first_x_assum (qspec_then `z` mp_tac) >>
+          asm_simp_tac (srw_ss()) [tpm_eqr] >> full_simp_tac (srw_ss()) []) >>
+       asm_simp_tac (srw_ss() ++ DNF_ss ++ ETA_ss)
+                    [LAM_eq_thm, tpm_eqr] >>
+       qx_gen_tac `u` >> qabbrev_tac `w = swapstr x y v` >>
+       `w ∉ A ∧ swapstr x y w = v ∧ w ∉ supp ppm (ppm [(x,y)] p)`
+         by (srw_tac [][Abbr`w`, perm_supp] >> srw_tac [][swapstr_def]) >>
+       `∀p x y. x ∉ A ∧ y ∉ A ==>
+                apm [(x,y)] (tmrec A ppm vf af lf t p) =
+                  tmrec A ppm vf af lf (tpm [(x,y)] t) (ppm [(x,y)] p)`
+          by srw_tac [ARITH_ss][] >>
+       `∀a p. a ∉ A ==> a ∉ supp apm (lf a (tmrec A ppm vf af lf t) t p)`
+          by srw_tac [][] >>
+       strip_tac >>
+       `u ∉ supp apm (lf w (tmrec A ppm vf af lf (tpm [(x,y)] t)) (tpm [(x,y)] t)
+                         (ppm [(x,y)] p))`
+         by (match_mp_tac notinsupp_I >>
+             qexists_tac `A ∪ supp ppm (ppm [(x,y)] p) ∪ {w} ∪ FV (tpm [(x,y)] t)` >>
+             asm_simp_tac (srw_ss() ++ ETA_ss)
+                [support_def, perm_supp, trec_fnpm, tpm_fresh,
+                 supp_fresh, is_perm_sing_inv]) >>
+       qmatch_abbrev_tac `LHS = RHS` >>
+       `RHS = apm [(w,u)] LHS`
+          by asm_simp_tac (srw_ss() ++ ETA_ss)
+                [Abbr`LHS`, Abbr`RHS`, trec_fnpm, is_perm_sing_inv, tpm_fresh,
+                 supp_fresh] >>
+       `_ = LHS`
+         by (match_mp_tac supp_fresh >>
+             asm_simp_tac (srw_ss()) [Abbr`LHS`, Abbr`RHS`]) >>
+       srw_tac [][]) >>
+    qx_gen_tac `u` >> strip_tac >>
+    asm_simp_tac (srw_ss()) [tmrec_LAM] >>
+    DEEP_INTRO_TAC optionTheory.some_intro >>
+    asm_simp_tac (srw_ss()) [pairTheory.FORALL_PROD, pairTheory.EXISTS_PROD] >>
+    REVERSE conj_tac >-
+      (asm_simp_tac (srw_ss()) [LAM_eq_thm] >>
+       Q_TAC (NEW_TAC "z")
+         `{swapstr x y v} ∪ A ∪ supp ppm (ppm [(x,y)] p) ∪ FV (tpm [(x,y)] t)` >>
+       disch_then (qspec_then `z` mp_tac) >>
+       asm_simp_tac (srw_ss()) [tpm_eqr] >> full_simp_tac (srw_ss()) []) >>
+    asm_simp_tac (srw_ss() ++ DNF_ss ++ ETA_ss) [LAM_eq_thm, tpm_eqr, perm_supp] >>
+    conj_tac >-
+      (strip_tac >> qmatch_abbrev_tac `LHS = RHS` >>
+       `v ∉ A` by (full_simp_tac (srw_ss()) [swapstr_def] >> metis_tac []) >>
+       `RHS = apm [(x,y)] (lf v (tmrec A ppm vf af lf t) t p)`
+          by asm_simp_tac (srw_ss() ++ ARITH_ss ++ ETA_ss)
+                          [Abbr`RHS`, trec_fnpm, is_perm_sing_inv] >>
+       `LHS =
+         apm [(x,y)] (lf u (tmrec A ppm vf af lf (tpm [(v,u)] t)) (tpm [(v,u)] t) p)`
+          by asm_simp_tac (srw_ss() ++ ARITH_ss ++ ETA_ss)
+                          [Abbr`RHS`, trec_fnpm, is_perm_sing_inv] >>
+       NTAC 2 (pop_assum SUBST1_TAC) >>
+       asm_simp_tac (srw_ss()) [is_perm_injective] >>
+       markerLib.RM_ALL_ABBREVS_TAC >>
+       qmatch_abbrev_tac `LHS = RHS` >>
+       `LHS = apm [(v,u)] RHS`
+         by asm_simp_tac (srw_ss() ++ ETA_ss) [Abbr`LHS`, Abbr`RHS`, trec_fnpm,
+                                               is_perm_sing_inv, supp_fresh] >>
+       pop_assum SUBST1_TAC >>
+       match_mp_tac supp_fresh >> qunabbrev_tac `RHS` >>
+       markerLib.RM_ALL_ABBREVS_TAC >> srw_tac [][] >>
+       match_mp_tac notinsupp_I >> qexists_tac `A ∪ supp ppm p ∪ FV t ∪ {v}` >>
+       srw_tac [ETA_ss][support_def, trec_fnpm, is_perm_sing_inv, supp_fresh,
+                        tpm_fresh]) >>
+   qx_gen_tac `w` >> strip_tac >>
+   qmatch_abbrev_tac `LHS = RHS` >>
+   `swapstr x y w ∉ A` by srw_tac [][swapstr_def] >>
+   `LHS = apm [(x,y)] (lf u (tmrec A ppm vf af lf (tpm [(v,u)] t)) (tpm [(v,u)] t) p)`
+      by asm_simp_tac (srw_ss() ++ ARITH_ss ++ ETA_ss)
+                      [trec_fnpm, is_perm_sing_inv] >>
+   `RHS = apm [(x,y)] (lf (swapstr x y w)
+                          (tmrec A ppm vf af lf (tpm [(v, swapstr x y w)] t))
+                          (tpm [(v, swapstr x y w)] t) p)`
+      by (asm_simp_tac (srw_ss() ++ ARITH_ss ++ ETA_ss)
+                       [trec_fnpm, is_perm_sing_inv] >>
+          ONCE_REWRITE_TAC [GSYM tpm_sing_to_back] >>
+          asm_simp_tac (srw_ss()) []) >>
+   NTAC 2 (POP_ASSUM SUBST1_TAC) >>
+   asm_simp_tac (srw_ss()) [is_perm_injective] >>
+   markerLib.RM_ALL_ABBREVS_TAC >>
+   qmatch_abbrev_tac `LHS = RHS` >>
+   `swapstr x y w ≠ v` by srw_tac [][swapstr_eq_left] >>
+   `LHS = apm [(swapstr x y w, u)] RHS`
+     by (asm_simp_tac (srw_ss() ++ ARITH_ss ++ ETA_ss)
+                      [Abbr`RHS`, trec_fnpm, is_perm_sing_inv, supp_fresh] >>
+         ONCE_REWRITE_TAC [GSYM tpm_sing_to_back] >>
+         asm_simp_tac (srw_ss()) [tpm_fresh]) >>
+   pop_assum SUBST1_TAC >>
+   Cases_on `u = swapstr x y w` >- srw_tac [][is_perm_id, is_perm_nil] >>
+   match_mp_tac supp_fresh >>
+   srw_tac [ARITH_ss][Abbr`LHS`, Abbr`RHS`] >>
+   match_mp_tac notinsupp_I >>
+   qexists_tac `A ∪ {v; swapstr x y w} ∪ FV t ∪ supp ppm p` >>
+   srw_tac [ETA_ss][support_def, trec_fnpm, tpm_fresh, is_perm_sing_inv, supp_fresh],
+
+
+   asm_simp_tac (srw_ss()) [tmrec_LAM] >> DEEP_INTRO_TAC optionTheory.some_intro >>
+   asm_simp_tac (srw_ss()) [pairTheory.EXISTS_PROD, pairTheory.FORALL_PROD] >>
+   REVERSE conj_tac >-
+     (asm_simp_tac (srw_ss()) [LAM_eq_thm] >>
+      Q_TAC (NEW_TAC "z") `supp ppm p ∪ A ∪ FV t ∪ {v}` >>
+      disch_then (qspec_then `z` mp_tac) >> srw_tac [][tpm_eqr]) >>
+   asm_simp_tac (srw_ss() ++ DNF_ss ++ ETA_ss) [LAM_eq_thm] >>
+   conj_tac >-
+     (strip_tac >> Cases_on `x = v` >- srw_tac [ARITH_ss][] >>
+      `x ∉ FV t` by srw_tac [][] >>
+      match_mp_tac notinsupp_I >> qexists_tac `A ∪ {v} ∪ FV t ∪ supp ppm p` >>
+      srw_tac [ETA_ss][support_def, trec_fnpm, supp_fresh, is_perm_sing_inv,
+                       tpm_fresh]) >>
+   asm_simp_tac (srw_ss()) [tpm_eqr] >>
+   qx_gen_tac `u` >> strip_tac >>
+   Cases_on `x = u` >- srw_tac [ARITH_ss][] >>
+   Cases_on `x = v` >| [
+     srw_tac [][] >> qmatch_abbrev_tac `v ∉ supp apm LFT` >>
+     `LFT = apm [(v,u)] (lf v (tmrec A ppm vf af lf t) t p)`
+        by srw_tac [ETA_ss][trec_fnpm, supp_fresh, is_perm_sing_inv] >>
+     pop_assum SUBST1_TAC >>
+     srw_tac [][perm_supp] >>
+     match_mp_tac notinsupp_I >>
+     qexists_tac `A ∪ supp ppm p ∪ {v} ∪ FV t` >>
+     srw_tac [ETA_ss][support_def, supp_fresh, trec_fnpm, is_perm_sing_inv, tpm_fresh],
+     `x ∉ FV t` by srw_tac [][] >>
+     match_mp_tac notinsupp_I >>
+     qexists_tac `A ∪ supp ppm p ∪ {u;v} ∪ FV t` >>
+     srw_tac [ETA_ss][support_def, supp_fresh, trec_fnpm, is_perm_sing_inv, tpm_fresh]
+   ]
   ]);
 
 fun udplus th =
@@ -222,83 +458,76 @@ fun udplus th =
        |> repeat (UNDISCH o CONV_RULE (REWR_CONV (GSYM AND_IMP_INTRO)))
        |> UNDISCH
 
-val eqvfresh_I = udplus tmrecrel_eqvfresh
+val eqvfresh_I = tmrec_eqvfresh |> udplus
+                                |> SIMP_RULE (srw_ss()) [FORALL_AND_THM]
 
-val uniqueness = prove(
-  ``FINITE A ∧ is_perm apm ∧ ^eqv_helpers ∧ ^FCB ==>
-    ∀t r. tmrecrel A vf af lf t r ==>
-          ∀r'. tmrecrel A vf af lf t r' ==> (r = r')``,
-  strip_tac >> Induct_on `tmrecrel` >> rpt conj_tac
-    >- (srw_tac [][Once tmrecrel_cases])
-    >- (rpt gen_tac >> strip_tac >> srw_tac [][Once tmrecrel_cases] >>
-        metis_tac []) >>
-  map_every qx_gen_tac [`v`, `r`, `t`] >>
-  strip_tac >> simp_tac (srw_ss()) [Once tmrecrel_cases] >>
-  qx_gen_tac `r'` >> simp_tac (srw_ss() ++ boolSimps.DNF_ss)[] >>
-  map_every qx_gen_tac [`u`, `r2`, `t2`] >> srw_tac [][] >>
-  Cases_on `v = u` >- (fsrw_tac [][] >> metis_tac []) >>
-  `t2 = tpm [(u,v)] t` by fsrw_tac [][LAM_eq_thm, tpm_flip_args] >>
-  `tmrecrel A vf af lf t (apm [(u,v)] r2)`
-     by metis_tac [tpm_sing_inv, eqvfresh_I] >>
-  `r = apm [(u,v)] r2` by metis_tac [] >>
-  fsrw_tac [][tpm_eqr] >> srw_tac [][] >>
-  `∀a. a ∉ A ∧ a ∉ FV t2 ==> a ∉ supp apm r2` by metis_tac [eqvfresh_I] >>
-  `v ∉ FV t2`
-    by (first_x_assum (MP_TAC o AP_TERM ``λt. (v:string) ∈ FV t``) >>
-        srw_tac [][]) >>
-  `v ∉ supp apm r2` by metis_tac [eqvfresh_I] >>
-  `v ∉ supp apm (lf u r2 t2)`
-     by (match_mp_tac notinsupp_I >>
-         qexists_tac `A ∪ {u} ∪ supp apm r2 ∪ FV t2` >>
-         srw_tac [][tpm_fresh, supp_fresh, support_def] >>
-         match_mp_tac (GEN_ALL supp_absence_FINITE) >> metis_tac[]) >>
-  `u ∉ supp apm (lf u r2 t2)` by metis_tac [] >>
-  Q.MATCH_ABBREV_TAC `X = Y` >> qsuff_tac `apm [(u,v)] X = apm [(u,v)] Y`
-    >- srw_tac [][is_perm_injective] >>
-  markerLib.UNABBREV_ALL_TAC >>
-  `∀x. x ∉ A ∧ x ∉ FV (tpm [(u,v)] t2) ==> x ∉ supp apm (apm [(u,v)] r2)`
-     by metis_tac [eqvfresh_I] >>
-  srw_tac [][SimpLHS, is_perm_sing_inv] >> metis_tac [supp_fresh]);
+val parameter_tm_recursion = store_thm(
+  "parameter_tm_recursion",
+  ``FINITE A ∧ is_perm apm ∧ ^eqv_helpers ∧ ^FCB ∧ is_perm ppm ∧
+    (∀p. FINITE (supp ppm p)) ==>
+    ∃f. ((∀s p. f (VAR s) p = vf s p) ∧
+         (∀t1 t2 p. f (t1 @@ t2) p = af (f t1) (f t2) t1 t2 p) ∧
+         (∀v t p. v ∉ A ∧ v ∉ supp ppm p ==>
+                    f (LAM v t) p = lf v (f t) t p)) ∧
+        ∀x y t p. x ∉ A ∧ y ∉ A ==>
+                   apm [(x,y)] (f t p) = f (tpm [(x,y)] t) (ppm [(x,y)] p)``,
+  strip_tac >> qexists_tac `tmrec A ppm vf af lf` >>
+  srw_tac [][tmrec_VAR, tmrec_APP] >| [
+    srw_tac [][tmrec_LAM] >>
+    DEEP_INTRO_TAC optionTheory.some_intro >>
+    asm_simp_tac (srw_ss()) [pairTheory.FORALL_PROD, pairTheory.EXISTS_PROD] >>
+    REVERSE conj_tac
+      >- (asm_simp_tac (srw_ss()) [LAM_eq_thm] >>
+          Q_TAC (NEW_TAC "z") `A ∪ supp ppm p ∪ FV t ∪ {v}` >>
+          disch_then (qspec_then `z` mp_tac) >>
+          srw_tac [][tpm_eqr]) >>
+    asm_simp_tac (srw_ss() ++ DNF_ss ++ ETA_ss) [LAM_eq_thm, tpm_eqr] >>
+    qx_gen_tac `u` >> rpt strip_tac >>
+    qmatch_abbrev_tac `LHS = RHS` >>
+    `LHS = apm [(v,u)] RHS`
+      by asm_simp_tac (srw_ss() ++ ETA_ss)
+                      [Abbr`RHS`, eqvfresh_I, trec_fnpm, is_perm_sing_inv,
+                       supp_fresh] >>
+    pop_assum SUBST1_TAC >>
+    match_mp_tac supp_fresh >>
+    srw_tac [][Abbr`LHS`, Abbr`RHS`, eqvfresh_I] >>
+    match_mp_tac notinsupp_I >>
+    qexists_tac `A ∪ FV t ∪ {v} ∪ supp ppm p` >>
+    srw_tac [ETA_ss][eqvfresh_I, support_def, trec_fnpm, is_perm_sing_inv, supp_fresh,
+                     tpm_fresh],
+    srw_tac [][eqvfresh_I]
+  ]);
 
-val tm_recursion0 = prove(
-  ``FINITE A ∧ is_perm apm ∧ ^eqv_helpers ∧ ^FCB ==>
-    ∃f. ((∀s. f (VAR s) = vf s) ∧
-         (∀t1 t2. f (t1 @@ t2) = af (f t1) (f t2) t1 t2) ∧
-         (∀v t. v ∉ A ==> (f (LAM v t) = lf v (f t) t))) ∧
-        ∀x y t. x ∉ A ∧ y ∉ A ==>
-                 (f (tpm [(x,y)] t) = apm [(x,y)] (f t))``,
-  strip_tac >> qexists_tac `λt. @r. tmrecrel A vf af lf t r` >>
-  srw_tac [][] >| [
-    srw_tac [][Once tmrecrel_cases],
-    assume_tac (udplus uniqueness) >>
-    REWRITE_TAC [Once tmrecrel_cases] >> simp_tac (srw_ss()) [] >>
-    `∃r1 r2. tmrecrel A vf af lf t1 r1 ∧ tmrecrel A vf af lf t2 r2`
-      by metis_tac [udplus tmrecrel_total] >>
-    `(∀r. tmrecrel A vf af lf t1 r = (r = r1)) ∧
-     ∀r. tmrecrel A vf af lf t2 r = (r = r2)` by metis_tac [] >>
-    srw_tac [][],
+val FORALL_ONE = prove(
+  ``(!u:one. P u) = P ()``,
+  SRW_TAC [][EQ_IMP_THM, oneTheory.one_induction]);
+val FORALL_ONE_FN = prove(
+  ``(!uf : one -> 'a. P uf) = !a. P (\u. a)``,
+  SRW_TAC [][EQ_IMP_THM] THEN
+  POP_ASSUM (Q.SPEC_THEN `uf ()` MP_TAC) THEN
+  Q_TAC SUFF_TAC `(\y. uf()) = uf` THEN1 SRW_TAC [][] THEN
+  SRW_TAC [][FUN_EQ_THM, oneTheory.one]);
 
-    `∃r. tmrecrel A vf af lf t r` by metis_tac [udplus tmrecrel_total] >>
-    `tmrecrel A vf af lf (LAM v t) (lf v r t)` by metis_tac [tmrecrel_rules] >>
-    `(∀r'. tmrecrel A vf af lf t r' = (r' = r)) ∧
-     ∀r'. tmrecrel A vf af lf (LAM v t) r' = (r' = lf v r t)`
-      by metis_tac [udplus uniqueness] >>
-    srw_tac [][],
-
-    `∃r. tmrecrel A vf af lf t r` by metis_tac [udplus tmrecrel_total] >>
-    `tmrecrel A vf af lf (tpm [(x,y)] t) (apm [(x,y)] r)`
-      by metis_tac [eqvfresh_I] >>
-    `(∀r'. tmrecrel A vf af lf t r' = (r' = r)) ∧
-     ∀r'. tmrecrel A vf af lf (tpm [(x,y)] t) r' = (r' = apm [(x,y)] r)`
-      by metis_tac [udplus uniqueness] >>
-    srw_tac [][]
+val EXISTS_ONE_FN = prove(
+  ``(?f : 'a -> one -> 'b. P f) = (?f : 'a -> 'b. P (\x u. f x))``,
+  SRW_TAC [][EQ_IMP_THM] THENL [
+    Q.EXISTS_TAC `\a. f a ()` THEN SRW_TAC [][] THEN
+    Q_TAC SUFF_TAC `(\x u. f x ()) = f` THEN1 SRW_TAC [][] THEN
+    SRW_TAC [][FUN_EQ_THM, oneTheory.one],
+    Q.EXISTS_TAC `\a u. f a` THEN SRW_TAC [][]
   ]);
 
 val tm_recursion = save_thm(
   "tm_recursion",
-  tm_recursion0
-      |> Q.INST [`vf` |-> `vr`, `af` |-> `ap`, `lf` |-> `λv r t. lm r v t`]
-      |> BETA_RULE)
+  parameter_tm_recursion
+      |> INST_TYPE [``:'p`` |-> ``:unit``]
+      |> Q.INST [`vf` |-> `λs u. vr s`,
+                 `af` |-> `λr1 r2 t1 t2 u. ap (r1 ()) (r2 ()) t1 t2`,
+                 `lf` |-> `λv r t u. lm (r()) v t`,
+                 `ppm` |-> `K I : unit pm`]
+      |> SIMP_RULE (srw_ss()) [FORALL_ONE, FORALL_ONE_FN, fnpm_def, EXISTS_ONE_FN])
+
+val _ = app delete_const ["tmsize", "tmrec"]
 
 (* ----------------------------------------------------------------------
     Establish substitution function
@@ -569,7 +798,7 @@ val single_ssub = store_thm(
 
 val in_fmap_supp = store_thm(
   "in_fmap_supp",
-  ``x ∈ supp (fmpm lswapstr tpm) fm =
+  ``x ∈ supp (fmpm lswapstr tpm) fm <=>
       x ∈ FDOM fm ∨
       ∃y. y ∈ FDOM fm ∧ x ∈ FV (fm ' y)``,
   SRW_TAC [][strterm_fmap_supp, nomsetTheory.supp_setpm] THEN
@@ -577,8 +806,8 @@ val in_fmap_supp = store_thm(
 
 val not_in_fmap_supp = store_thm(
   "not_in_fmap_supp",
-  ``~(x ∈ supp (fmpm lswapstr tpm) fm) =
-      ~(x ∈ FDOM fm) ∧ ∀y. y ∈ FDOM fm ==> ~(x ∈ FV (fm ' y))``,
+  ``x ∉ supp (fmpm lswapstr tpm) fm <=>
+      x ∉ FDOM fm ∧ ∀y. y ∈ FDOM fm ==> x ∉ FV (fm ' y)``,
   METIS_TAC [in_fmap_supp]);
 val _ = export_rewrites ["not_in_fmap_supp"]
 
@@ -607,10 +836,10 @@ val _ = export_rewrites ["ssub_FEMPTY"]
 
 val lemma = prove(
   ``is_perm apm ==>
-    ((∀x y t. h (tpm [(x,y)] t) = apm [(x,y)] (h t)) =
-     ∀pi t. h (tpm pi t) = apm pi (h t))``,
-  strip_tac >> simp_tac (srw_ss()) [EQ_IMP_THM] >> strip_tac >>
-  Induct_on `pi` >>
+    ((∀x y t. apm [(x,y)] (h t) = h (tpm [(x,y)] t)) <=>
+     ∀pi t. apm pi (h t) = h (tpm pi t))``,
+  strip_tac >> simp_tac (srw_ss()) [EQ_IMP_THM] >> ONCE_REWRITE_TAC [EQ_SYM_EQ] >>
+  strip_tac >> Induct_on `pi` >>
   asm_simp_tac (srw_ss()) [is_perm_nil, pairTheory.FORALL_PROD] >>
   srw_tac [][Once tpm_CONS] >> srw_tac [][GSYM is_perm_decompose]);
 

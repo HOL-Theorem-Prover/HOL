@@ -19,7 +19,7 @@ val _ = type_abbrev ("posn", ``:redpos list``)
 val APPEND_CASES = store_thm(
   "APPEND_CASES",
   ``!l1 l2 m1 m2.
-        (APPEND l1 l2 = APPEND m1 m2) =
+        (APPEND l1 l2 = APPEND m1 m2) <=>
         (l1 = m1) /\ (l2 = m2) \/
         (?n. (m1 = APPEND l1 n) /\ (l2 = APPEND n m2) /\ ~(n = [])) \/
         (?n. (l1 = APPEND m1 n) /\ (m2 = APPEND n l2) /\ ~(n = []))``,
@@ -54,7 +54,7 @@ val _ = overload_on ("<", ``posn_lt``);
 
 val posn_lt_inj = Store_Thm(
   "posn_lt_inj",
-  ``!h p1 p2. (h::p1) < (h::p2) = p1 < p2``,
+  ``!h p1 p2. (h::p1) < (h::p2) <=> p1 < p2``,
   Cases THEN SRW_TAC [][]);
 
 val posn_lt_nil = Store_Thm(
@@ -87,20 +87,20 @@ val posn_lt_antisym = store_thm(
 
 val posn_lt_Lt = Store_Thm(
   "posn_lt_Lt",
-  ``!h p1 p2. ((h::p1) < (Lt::p2) = (h = Lt) /\ p1 < p2) /\
-              ((Lt::p1) < (h::p2) = (h = Rt) \/ (h = Lt) /\ p1 < p2)``,
+  ``!h p1 p2. ((h::p1) < (Lt::p2) <=> (h = Lt) /\ p1 < p2) /\
+              ((Lt::p1) < (h::p2) <=> (h = Rt) \/ (h = Lt) /\ p1 < p2)``,
   Cases THEN SRW_TAC [][]);
 
 val posn_lt_In = Store_Thm(
   "posn_lt_In",
-  ``!h p1 p2. ((h::p1) < (In::p2) = (h = In) /\ p1 < p2) /\
-              ((In::p1) < (h::p2) = (h = In) /\ p1 < p2)``,
+  ``!h p1 p2. ((h::p1) < (In::p2) <=> (h = In) /\ p1 < p2) /\
+              ((In::p1) < (h::p2) <=> (h = In) /\ p1 < p2)``,
   Cases THEN SRW_TAC [][]);
 
 val posn_lt_Rt = Store_Thm(
   "posn_lt_Rt",
-  ``!h p1 p2. ((h::p1) < (Rt::p2) = (h = Lt) \/ (h = Rt) /\ p1 < p2) /\
-              ((Rt::p1) < (h::p2) = (h = Rt) /\ p1 < p2)``,
+  ``!h p1 p2. ((h::p1) < (Rt::p2) <=> (h = Lt) \/ (h = Rt) /\ p1 < p2) /\
+              ((Rt::p1) < (h::p2) <=> (h = Rt) /\ p1 < p2)``,
   Cases THEN SRW_TAC [][]);
 
 (* ----------------------------------------------------------------------
@@ -174,10 +174,6 @@ val var_posns_SUBSET_valid_posns = store_thm(
 val vp'_var = ``\ (s : string). if v = s then {[]: redpos list} else {}``
 val vp'_lam = ``\rt (w:string) t:term . IMAGE (CONS In) rt``
 
-val silly_lemma = prove(
-  ``(?a:string. ~(a = v))``,
-  Q_TAC (NEW_TAC "z") `{v}` THEN
-  Q.EXISTS_TAC `z` THEN SRW_TAC [][]);
 val v_posns_exists =
     termTheory.tm_recursion
         |> INST_TYPE [alpha |-> ``:posn set``]
@@ -388,6 +384,7 @@ val bv_posns_at_exists0 =
                            || In::rest -> IMAGE (CONS In) (rt rest)
                            || _ -> {}`]
         |> SIMP_RULE (srw_ss()) []
+        |> CONV_RULE (QUANT_CONV (RAND_CONV (ONCE_REWRITE_CONV [EQ_SYM_EQ])))
 
 val bv_posns_at_exists = prove(
   ``?bv_posns_at.
@@ -516,7 +513,7 @@ val bv_posns_at_prefix_posn = store_thm(
 
 val v_posns_injective = store_thm(
   "v_posns_injective",
-  ``!t v1 p. p IN v_posns v1 t ==> (p IN v_posns v2 t = (v1 = v2))``,
+  ``!t v1 p. p IN v_posns v1 t ==> (p IN v_posns v2 t <=> (v1 = v2))``,
   SIMP_TAC (srw_ss() ++ DNF_ss) [EQ_IMP_THM] THEN
   REPEAT GEN_TAC THEN MAP_EVERY Q.ID_SPEC_TAC [`p`, `t`] THEN
   HO_MATCH_MP_TAC nc_INDUCTION2 THEN Q.EXISTS_TAC `{v1;v2}` THEN
@@ -550,7 +547,7 @@ val APPEND_var_posns = store_thm(
   "APPEND_var_posns",
   ``!vp1 vp2 t.
         vp1 IN var_posns t /\ vp2 IN var_posns t ==>
-        !x y. (APPEND vp1 x = APPEND vp2 y) = (vp1 = vp2) /\ (x = y)``,
+        !x y. (APPEND vp1 x = APPEND vp2 y) <=> (vp1 = vp2) /\ (x = y)``,
   SRW_TAC [][APPEND_CASES, EQ_IMP_THM] THEN
   PROVE_TAC [no_var_posns_in_var_posn_prefix]);
 
@@ -584,7 +581,7 @@ val cant_be_deeper_than_var_posns = store_thm(
 
 val NIL_IN_v_posns = store_thm(
   "NIL_IN_v_posns",
-  ``!t v. [] IN v_posns v t = (t = VAR v)``,
+  ``!t v. [] IN v_posns v t <=> (t = VAR v)``,
   GEN_TAC THEN
   Q.SPEC_THEN `t` STRUCT_CASES_TAC term_CASES THEN
   SRW_TAC [][v_posns_thm, v_posns_LAM_COND]);

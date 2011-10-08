@@ -17,8 +17,5 @@ FinalKind-sig.uo: FinalKind-sig.sml
 FinalRank-sig.uo: FinalRank-sig.sml
 	$(HOLMOSMLC) -c -toplevel $<
 
-FinalTheory-sig.uo: FinalTheory-sig.sml Lib.uo $(PORTABLED)
-	$(HOLMOSMLC) -c -toplevel $<
-
 FinalThm-sig.uo: FinalThm-sig.sml Nonce.ui Lib.uo $(PORTABLED)
 	$(HOLMOSMLC) -c -toplevel $<

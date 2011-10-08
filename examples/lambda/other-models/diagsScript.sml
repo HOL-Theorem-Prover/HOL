@@ -142,9 +142,9 @@ val _ = Hol_datatype`
 `
 
 val evalform_def = Define`
-  (evalform (Lf fa ex) R = eval fa ex R) /\
-  (evalform (f1 /\ f2) R = evalform f1 R /\ evalform f2 R) /\
-  (evalform (~f) R = ~evalform f R)
+  (evalform (Lf fa ex) R <=> eval fa ex R) /\
+  (evalform (f1 /\ f2) R <=> evalform f1 R /\ evalform f2 R) /\
+  (evalform (~f) R <=> ~evalform f R)
 `;
 
 val R0_refl_def = Define`
@@ -186,15 +186,15 @@ val R0_trans_thm = store_thm(
 
 
 val R0_cong_def = Define`
-  R0_cong n = Lf {(0,0,1,T,Atomic); (n,0,2,T,Atomic)}
-                 {(n,INL 1,INL 2,T,Atomic)} /\
-              Lf {(0,1,2,T,Atomic); (n,0,1,T,Atomic)}
-                 {(n,INL 0, INL 2,T,Atomic)}
+  R0_cong n <=> Lf {(0,0,1,T,Atomic); (n,0,2,T,Atomic)}
+                   {(n,INL 1,INL 2,T,Atomic)} /\
+                Lf {(0,1,2,T,Atomic); (n,0,1,T,Atomic)}
+                   {(n,INL 0, INL 2,T,Atomic)}
 `
 val R0_cong_thm = store_thm(
   "R0_cong_thm",
-  ``evalform (R0_cong n) R = (!x y z. R 0 x y /\ R n x z ==> R n y z) /\
-                             (!x y z. R n x y /\ R 0 y z ==> R n x z)``,
+  ``evalform (R0_cong n) R <=> (!x y z. R 0 x y /\ R n x z ==> R n y z) /\
+                               (!x y z. R n x y /\ R 0 y z ==> R n x z)``,
   SRW_TAC [][evalform_def, eval_def, R0_cong_def, liftrel_def,
              EQ_IMP_THM, DISJ_IMP_THM, FORALL_AND_THM]
   THENL [
@@ -211,11 +211,11 @@ val R0_cong_thm = store_thm(
   ]);
 
 val imp_def = xDefine "imp" `
-  (f1:('a,'b,'c)diaform) ==> f2 = ~(f1 /\ ~f2)
+  (f1:('a,'b,'c)diaform) ==> f2 <=> ~(f1 /\ ~f2)
 `
 val imp_thm = store_thm(
   "imp_thm",
-  ``evalform (f ==> g) R = evalform f R ==> evalform g R``,
+  ``evalform (f ==> g) R <=> evalform f R ==> evalform g R``,
   SRW_TAC [][imp_def, evalform_def] THEN METIS_TAC []);
 
 
@@ -354,7 +354,7 @@ val Refl_is_someany_with_structure = store_thm(
     `?a1 a2. (b1 = f a1) /\ (b2 = f a2)` by METIS_TAC [] THEN
     SRW_TAC [][] THEN RES_TAC THEN
     FULL_SIMP_TAC (srw_ss()) [O_DEF] THEN
-    Q_TAC SUFF_TAC `!x y. equiv_closure s x y ==> (f x = f y)`
+    Q_TAC SUFF_TAC `!x y. EQC s x y ==> (f x = f y)`
           THEN1 METIS_TAC [] THEN
     HO_MATCH_MP_TAC EQC_INDUCTION THEN METIS_TAC []
   ]);
@@ -363,7 +363,7 @@ val Pres_ok_with_structure = store_thm(
   "Pres_ok_with_structure",
   ``kSound s f /\ Pres f R1 R2 ==> Pres f (EQC s O R1 O EQC s) R2``,
   SRW_TAC [][Pres_def, kSound_def, O_DEF] THEN
-  Q_TAC SUFF_TAC `!x y. equiv_closure s x y ==> (f x = f y)` THEN1
+  Q_TAC SUFF_TAC `!x y. EQC s x y ==> (f x = f y)` THEN1
         METIS_TAC [] THEN
   HO_MATCH_MP_TAC EQC_INDUCTION THEN METIS_TAC []);
 

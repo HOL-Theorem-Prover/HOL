@@ -248,17 +248,48 @@ local
         in
           ("(_ repeat " ^ Arbnum.toString n ^ ")", [w])
         end) ts),
-(* TODO
-    fcp_index
-
-    ("zero_extend", K_one_one (fn n => fn t => wordsSyntax.w2w (t,
-      fcpLib.index_type
-        (Arbnum.+ (fcpLib.index_to_num (wordsSyntax.dim_of t), n))))),
-
-    ("sign_extend", K_one_one (fn n => fn t => wordsSyntax.sw2sw (t,
-      fcpLib.index_type
-        (Arbnum.+ (fcpLib.index_to_num (wordsSyntax.dim_of t), n))))),
-*)
+    (wordsSyntax.w2w_tm, fn (t, ts) =>
+      SmtLib_Theories.one_arg (fn w =>
+        let
+          (* make sure that the result in HOL is at least as long as 'w' *)
+          val dim = fcpSyntax.dest_numeric_type (wordsSyntax.dim_of w)
+          val rngty = Lib.snd (boolSyntax.strip_fun (Term.type_of t))
+          val rngdim = fcpSyntax.dest_numeric_type
+            (wordsSyntax.dest_word_type rngty)
+          val _ = if Arbnum.>= (rngdim, dim) then
+              ()
+            else (
+              if !Library.trace > 0 then
+                WARNING "translate_term" "w2w: result type too short"
+              else
+                ();
+              raise ERR "<builtin_symbols.w2w_tm>" "result type too short"
+            )
+          val n = Arbnum.- (rngdim, dim)
+        in
+          ("(_ zero_extend " ^ Arbnum.toString n ^ ")", [w])
+        end) ts),
+    (wordsSyntax.sw2sw_tm, fn (t, ts) =>
+      SmtLib_Theories.one_arg (fn w =>
+        let
+          (* make sure that the result in HOL is at least as long as 'w' *)
+          val dim = fcpSyntax.dest_numeric_type (wordsSyntax.dim_of w)
+          val rngty = Lib.snd (boolSyntax.strip_fun (Term.type_of t))
+          val rngdim = fcpSyntax.dest_numeric_type
+            (wordsSyntax.dest_word_type rngty)
+          val _ = if Arbnum.>= (rngdim, dim) then
+              ()
+            else (
+              if !Library.trace > 0 then
+                WARNING "translate_term" "sw2sw: result type too short"
+              else
+                ();
+              raise ERR "<builtin_symbols.sw2sw_tm>" "result type too short"
+            )
+          val n = Arbnum.- (rngdim, dim)
+        in
+          ("(_ sign_extend " ^ Arbnum.toString n ^ ")", [w])
+        end) ts),
     (* rotation by a numeral; the corresponding HOL rotation operations that
        take two bit-vector arguments are not supported in SMT-LIB *)
     (wordsSyntax.word_rol_tm, fn (t, ts) =>
@@ -534,21 +565,14 @@ in
     let
       open Tactical simpLib
       val INT_ABS = intLib.ARITH_PROVE
-        ``!x. ABS (x:int) = if x < 0i then 0i - x else x``
-      val WORD_SHIFT_BV = SIMP_PROVE bossLib.bool_ss
-          [wordsTheory.word_shift_bv]
-        ``(!w:'a word n. n < dimword (:'a) ==> (w << n = w <<~ n2w n)) /\
-          (!w:'a word n. n < dimword (:'a) ==> (w >> n = w >>~ n2w n)) /\
-          (!w:'a word n. n < dimword (:'a) ==> (w >>> n = w >>>~ n2w n))``
+                      ``!x. ABS (x:int) = if x < 0i then 0i - x else x``
     in
       REPEAT Tactic.GEN_TAC THEN
       (if simp_let then Library.LET_SIMP_TAC else ALL_TAC) THEN
       SIMP_TAC pureSimps.pure_ss
         [boolTheory.bool_case_DEF, integerTheory.INT_MIN,
-          integerTheory.INT_MAX, INT_ABS, wordsTheory.word_rol_bv_def,
-          wordsTheory.word_ror_bv_def, wordsTheory.w2n_n2w] THEN
-      SIMP_TAC (pureSimps.pure_ss ++ numSimps.REDUCE_ss ++ wordsLib.SIZES_ss)
-        [WORD_SHIFT_BV] THEN
+          integerTheory.INT_MAX, INT_ABS] THEN
+      Library.WORD_SIMP_TAC THEN
       Library.SET_SIMP_TAC THEN
       Tactic.BETA_TAC
     end

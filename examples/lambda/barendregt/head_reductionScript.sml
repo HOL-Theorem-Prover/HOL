@@ -5,6 +5,8 @@ open binderLib
 
 val _ = new_theory "head_reduction"
 
+val _ = temp_set_fixity "=" (Infix(NONASSOC, 100))
+
 fun Store_thm(trip as (n,t,tac)) = store_thm trip before export_rewrites [n]
 
 val _ = set_trace "Unicode" 1

@@ -467,6 +467,42 @@ val PairIn =
    RW_TAC std_ss [Prod_def,Spec_def,Pow_def,U_def,PairEq]
     THEN RW_TAC std_ss [PairEq,Fst,Snd]);
 
+val EmptyProd = Q.store_thm(
+"EmptyProd",
+`∀x. ({} # x = {}) ∧ (x # {} = {})`,
+srw_tac [][Extension_ax,Empty_def,InProdEq]);
+val _ = export_rewrites["EmptyProd"];
+
+val ProdEmpty = Q.store_thm(
+"ProdEmpty",
+`∀x y. (x # y = {}) = ((x = {}) \/ (y = {}))`,
+srw_tac [][EQ_IMP_THM] >> srw_tac [][] >>
+spose_not_then strip_assume_tac >>
+fsrw_tac [][GSYM NotEmpty] >>
+metis_tac [InProd,Empty_def]);
+
+val ProdEq = Q.store_thm(
+"ProdEq",
+`!x1 x2 y1 y2. (x1 # y1 = x2 # y2) = ((x1 # y1 = {}) /\ (x2 # y2 = {})) \/ ((x1 = x2) /\ (y1 = y2))`,
+rpt gen_tac >>
+reverse EQ_TAC >- (
+  srw_tac [][] >> srw_tac [][] ) >>
+strip_tac >>
+srw_tac [][ProdEmpty] >>
+Cases_on `x1 = {}` >- (
+  fsrw_tac [][] >> fsrw_tac [][ProdEmpty] ) >>
+Cases_on `y1 = {}` >- (
+  fsrw_tac [][] >> fsrw_tac [][ProdEmpty] ) >>
+Cases_on `x2 = {}` >- (
+  fsrw_tac [][] >> fsrw_tac [][ProdEmpty] ) >>
+Cases_on `y2 = {}` >- (
+  fsrw_tac [][] >> fsrw_tac [][ProdEmpty] ) >>
+srw_tac [][] >>
+fsrw_tac [][GSYM NotEmpty] >>
+fsrw_tac [][Extension_ax] >>
+fsrw_tac [][InProdEq] >>
+PROVE_TAC [PairEq]);
+
 val ABS_THM =
  store_thm
   ("ABS_THM",

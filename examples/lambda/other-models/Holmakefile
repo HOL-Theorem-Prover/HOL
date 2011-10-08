@@ -1,1 +1,2 @@
 INCLUDES = ../basics ../barendregt
+OPTIONS = QUIT_ON_FAILURE

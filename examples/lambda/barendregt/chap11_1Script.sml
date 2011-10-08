@@ -175,7 +175,7 @@ val strip_label_eq_lam = store_thm(
 
 val strip_label_eq_redex = store_thm(
   "strip_label_eq_redex",
-  ``(strip_label M = LAM v t @@ u) =
+  ``(strip_label M = LAM v t @@ u) <=>
          (?t' u'. (M = LAM v t' @@ u') /\ (strip_label t' = t) /\
                   (strip_label u' = u)) \/
          (?n t' u'. (M = LAMi n v t' u') /\

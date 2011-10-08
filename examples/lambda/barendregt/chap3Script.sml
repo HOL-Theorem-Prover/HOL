@@ -16,10 +16,10 @@ val compatible_def =
     Define`compatible R = !x y c. R x y /\ one_hole_context c ==>
                                   R (c x) (c y)`;
 
-val congruence_def = Define`congruence R = equivalence R /\ compatible R`;
+val congruence_def = Define`congruence R <=> equivalence R /\ compatible R`;
 
 val is_reduction_def =
-    Define`is_reduction R = compatible R /\ transitive R /\ reflexive R`;
+    Define`is_reduction R <=> compatible R /\ transitive R /\ reflexive R`;
 
 val (compat_closure_rules, compat_closure_ind, compat_closure_cases) =
     Hol_reln`(!x y. R x y ==> compat_closure R x y) /\
@@ -402,17 +402,17 @@ val cc_beta_tpm = store_thm(
 
 val cc_beta_tpm_eqn = store_thm(
   "cc_beta_tpm_eqn",
-  ``tpm pi M -b-> N = M -b-> tpm (REVERSE pi) N``,
+  ``tpm pi M -b-> N <=> M -b-> tpm (REVERSE pi) N``,
   METIS_TAC [tpm_inverse, cc_beta_tpm]);
 
 val cc_beta_thm = store_thm(
   "cc_beta_thm",
-  ``(!s t. VAR s -b-> t = F) /\
-    (!M N P. M @@ N -b-> P =
+  ``(!s t. VAR s -b-> t <=> F) /\
+    (!M N P. M @@ N -b-> P <=>
                (?v M0. (M = LAM v M0) /\ (P = [N/v]M0)) \/
                (?M'. (P = M' @@ N) /\ M -b-> M') \/
                (?N'. (P = M @@ N') /\ N -b-> N')) /\
-    (!v M N. LAM v M -b-> N = ?N0. (N = LAM v N0) /\ M -b-> N0)``,
+    (!v M N. LAM v M -b-> N <=> ?N0. (N = LAM v N0) /\ M -b-> N0)``,
   REPEAT CONJ_TAC THEN
   SIMP_TAC (srw_ss()) [beta_def, SimpLHS, Once compat_closure_cases] THEN
   REPEAT STRIP_TAC THEN EQ_TAC THEN
@@ -475,7 +475,7 @@ val beta_normal_form_bnf = store_thm(
     SRW_TAC [][]
   ]);
 
-val nf_of_def = Define`nf_of R M N = normal_form R N /\ conversion R M N`;
+val nf_of_def = Define`nf_of R M N <=> normal_form R N /\ conversion R M N`;
 
 val prop3_10 = store_thm(
   "prop3_10",
@@ -658,7 +658,7 @@ val exercise3_3_1 = store_thm(
 
 val app_grandbeta = store_thm(  (* property 3 on p. 37 *)
   "app_grandbeta",
-  ``!M N L. M @@ N =b=> L =
+  ``!M N L. M @@ N =b=> L <=>
                (?M' N'. M =b=> M' /\ N =b=> N' /\ (L = M' @@ N')) \/
                (?x P P' N'. (M = LAM x P) /\ P =b=> P' /\
                             N =b=> N' /\ (L = [N'/x]P'))``,
@@ -698,7 +698,7 @@ val grandbeta_FV = store_thm(
 
 val abs_grandbeta = store_thm(
   "abs_grandbeta",
-  ``!M N v. LAM v M =b=> N = ?N0. (N = LAM v N0) /\ M =b=> N0``,
+  ``!M N v. LAM v M =b=> N <=> ∃N0. N = LAM v N0 /\ M =b=> N0``,
   REPEAT GEN_TAC THEN EQ_TAC THENL [
     SIMP_TAC (srw_ss()) [Once grandbeta_cases, SimpL ``(==>)``] THEN
     SIMP_TAC (srw_ss()) [DISJ_IMP_THM, grandbeta_rules] THEN
@@ -714,10 +714,10 @@ val lemma3_15 = save_thm("lemma3_15", abs_grandbeta);
 
 val redex_grandbeta = store_thm(
   "redex_grandbeta",
-  ``LAM v M @@ N =b=> L =
-        (?M' N'. M =b=> M' /\ N =b=> N' /\
+  ``LAM v M @@ N =b=> L <=>
+        (∃M' N'. M =b=> M' /\ N =b=> N' /\
                  (L = LAM v M' @@ N')) \/
-        (?M' N'. M =b=> M' /\ N =b=> N' /\ (L = [N'/v]M'))``,
+        (∃M' N'. M =b=> M' /\ N =b=> N' /\ (L = [N'/v]M'))``,
   SRW_TAC [][app_grandbeta, EQ_IMP_THM] THENL [
     PROVE_TAC [abs_grandbeta],
     FULL_SIMP_TAC (srw_ss()) [LAM_eq_thm] THEN DISJ2_TAC THENL [
@@ -735,7 +735,7 @@ val redex_grandbeta = store_thm(
 
 val var_grandbeta = store_thm(
   "var_grandbeta",
-  ``!v N. VAR v =b=> N = (N = VAR v)``,
+  ``!v N. VAR v =b=> N <=> (N = VAR v)``,
   REPEAT GEN_TAC THEN ONCE_REWRITE_TAC [grandbeta_cases] THEN
   SRW_TAC [][]);
 
@@ -870,7 +870,7 @@ val Omega_starloops = Store_thm(
 
 val lameq_betaconversion = store_thm(
   "lameq_betaconversion",
-  ``!M N. M == N = conversion beta M N``,
+  ``!M N. M == N <=> conversion beta M N``,
   SIMP_TAC (srw_ss()) [EQ_IMP_THM, FORALL_AND_THM] THEN CONJ_TAC THENL [
     HO_MATCH_MP_TAC lameq_ind THEN REPEAT STRIP_TAC THENL [
       Q_TAC SUFF_TAC `beta (LAM x M @@ N) ([N/x] M)` THEN1
@@ -1059,7 +1059,7 @@ val hindley_rosen_lemma = store_thm( (* p43 *)
   ]);
 
 val eta_def =
-    Define`eta M N = ?v. (M = LAM v (N @@ VAR v)) /\ ~(v IN FV N)`;
+    Define`eta M N <=> ∃v. M = LAM v (N @@ VAR v) ∧ v ∉ FV N`;
 
 val _ = Unicode.unicode_version {u = UnicodeChars.eta, tmnm = "eta"}
 
@@ -1095,8 +1095,8 @@ val no_eta_thm = store_thm(
 
 val cc_eta_thm = store_thm(
   "cc_eta_thm",
-  ``(!s t. compat_closure eta (VAR s) t = F) /\
-    (!t u v. compat_closure eta (t @@ u) v =
+  ``(!s t. compat_closure eta (VAR s) t <=> F) /\
+    (!t u v. compat_closure eta (t @@ u) v <=>
              (?t'. (v = t' @@ u) /\ compat_closure eta t t') \/
              (?u'. (v = t @@ u') /\ compat_closure eta u u'))``,
   REPEAT CONJ_TAC THEN
@@ -1151,7 +1151,7 @@ val cc_eta_FV_SUBSET = store_thm(
 
 val cc_eta_LAM = store_thm(
   "cc_eta_LAM",
-  ``!t v u. compat_closure eta (LAM v t) u =
+  ``!t v u. compat_closure eta (LAM v t) u <=>
             (?t'. (u = LAM v t') /\ compat_closure eta t t') \/
             eta (LAM v t) u``,
   SIMP_TAC (srw_ss()) [Once compat_closure_cases, SimpLHS] THEN
@@ -1163,7 +1163,7 @@ val cc_eta_LAM = store_thm(
 
 val eta_LAM = store_thm(
   "eta_LAM",
-  ``!v t u. eta (LAM v t) u = (t = u @@ VAR v) /\ ~(v IN FV u)``,
+  ``!v t u. eta (LAM v t) u <=> t = u @@ VAR v ∧ v ∉ FV u``,
   SRW_TAC [][eta_def, LAM_eq_thm, EQ_IMP_THM] THEN SRW_TAC [][tpm_fresh] THEN
   SRW_TAC [boolSimps.DNF_ss][]);
 
@@ -1470,7 +1470,7 @@ val beta_betastar = store_thm(
 
 val betastar_eq_cong = store_thm(
   "betastar_eq_cong",
-  ``bnf N ==> M -b->* M' ==> (M -b->* N  = M' -b->* N)``,
+  ``bnf N ==> M -b->* M' ==> (M -b->* N  <=> M' -b->* N)``,
   METIS_TAC [bnf_triangle, RTC_CASES_RTC_TWICE]);
 
 val _ = export_theory();

@@ -536,11 +536,11 @@ val is_redex_occurrence_def =
 val is_redex_occurrence_thm = store_thm(
   "is_redex_occurrence_thm",
   ``(!s p. is_redex_occurrence p (VAR s) = F) /\
-    (!t u p. is_redex_occurrence p (t @@ u) =
+    (!t u p. is_redex_occurrence p (t @@ u) <=>
                 is_abs t /\ (p = []) \/
                 (p = Lt :: TL p) /\ is_redex_occurrence (TL p) t \/
                 (p = Rt :: TL p) /\ is_redex_occurrence (TL p) u) /\
-    (!v t p. is_redex_occurrence p (LAM v t) =
+    (!v t p. is_redex_occurrence p (LAM v t) <=>
                 (p = In :: TL p) /\ is_redex_occurrence (TL p) t)``,
   SIMP_TAC pureSimps.pure_ss [is_redex_occurrence_def] THEN
   REPEAT CONJ_TAC THEN
@@ -574,7 +574,7 @@ val redex_posns_redex_occurrence = store_thm(
 
 val IN_term_IN_redex_posns = store_thm(
   "IN_term_IN_redex_posns",
-  ``!x M. x IN M = x IN redex_posns M``,
+  ``!x M. x IN M <=> x IN redex_posns M``,
   SRW_TAC [][redex_posns_redex_occurrence]);
 
 val supp_discrete_fun = prove(
@@ -1014,7 +1014,7 @@ val rpos_UNION_11 = store_thm(
   "rpos_UNION_11",
   ``!s1 s2 t1 t2.
         (IMAGE (CONS Lt) s1 UNION IMAGE (CONS Rt) s2 =
-         IMAGE (CONS Lt) t1 UNION IMAGE (CONS Rt) t2) =
+         IMAGE (CONS Lt) t1 UNION IMAGE (CONS Rt) t2) <=>
         (s1 = t1) /\ (s2 = t2)``,
   SIMP_TAC (srw_ss()) [EQ_IMP_THM, EXTENSION,
                        DISJ_IMP_THM, FORALL_AND_THM,
@@ -1034,7 +1034,7 @@ val IMAGE_APPEND = prove(
                        GSYM LEFT_FORALL_IMP_THM]);
 
 val LAMI_partly_11 = prove(
-  ``!x y z w a b. (LAMi x y z w = LAMi x y a b) = (z = a) /\ (w = b)``,
+  ``!x y z w a b. (LAMi x y z w = LAMi x y a b) <=> (z = a) /\ (w = b)``,
   SRW_TAC [][lLAMi_eq_thm])
 
 
@@ -1115,8 +1115,8 @@ val nlabel_n_posns = store_thm(
 
 val labelled_term_component_equality = store_thm(
   "labelled_term_component_equality",
-  ``!M' N'. (M' = N') = (strip_label M' = strip_label N') /\
-                        (!n. n_posns n M' = n_posns n N')``,
+  ``!M' N'. (M' = N') <=> (strip_label M' = strip_label N') /\
+                          (!n. n_posns n M' = n_posns n N')``,
   SRW_TAC [][EQ_IMP_THM] THEN SPOSE_NOT_THEN ASSUME_TAC THEN
   PROVE_TAC [stripped_equal]);
 
@@ -1582,7 +1582,7 @@ val development_f_monotone = store_thm(
              development_f_def]);
 
 val development0_def = Define`
-  development0 sigma ps = (sigma, ps) IN gfp development_f
+  development0 sigma ps <=> (sigma, ps) IN gfp development_f
 `;
 
 val development0_coinduction = store_thm(
@@ -1620,7 +1620,7 @@ val development0_cases = save_thm(
               (SPEC_ALL development_f_monotone)));
 
 val term_posset_development_def = Define`
-  term_posset_development M posset sigma =
+  term_posset_development M posset sigma <=>
       (first sigma = M) /\ posset SUBSET M /\ development0 sigma posset
 `;
 
@@ -1628,13 +1628,13 @@ val _ = overload_on ("development", ``term_posset_development``);
 
 val development_thm = store_thm(
   "development_thm",
-  ``(stopped_at x IN development M ps = (M = x) /\ ps SUBSET M) /\
-    (pcons x r p IN development M ps  =
+  ``(stopped_at x IN development M ps <=> (M = x) /\ ps SUBSET M) /\
+    (pcons x r p IN development M ps  <=>
              (M = x) /\ ps SUBSET M /\
              labelled_redn beta x r (first p) /\ r IN ps /\
              p IN development (first p) (residual1 x r (first p) ps))``,
   REPEAT STRIP_TAC THEN
-  `!sigma M ps. sigma IN development M ps = development M ps sigma`
+  `!sigma M ps. sigma IN development M ps <=> development M ps sigma`
      by SRW_TAC [][SPECIFICATION] THEN
   SRW_TAC [][term_posset_development_def] THEN
   CONV_TAC (LAND_CONV (ONCE_REWRITE_CONV [development0_cases])) THEN
@@ -1644,7 +1644,7 @@ val development_thm = store_thm(
 val development_cases = store_thm(
   "development_cases",
   ``!M ps sigma.
-       sigma IN development M ps =
+       sigma IN development M ps <=>
            (sigma = stopped_at M) /\ ps SUBSET M \/
            (?r p. (sigma = pcons M r p) /\ ps SUBSET M /\ r IN ps /\
                   labelled_redn beta M r (first p) /\
@@ -1664,13 +1664,13 @@ val developments_ok = store_thm(
   METIS_TAC [development_cases, pcons_11, stopped_at_not_pcons]);
 
 val complete_development_def = Define`
-  complete_development M ps sigma =
+  complete_development M ps sigma <=>
     finite sigma /\ sigma IN development M ps /\ (residuals sigma ps = {})
 `;
 
 val complete_development_thm = store_thm(
   "complete_development_thm",
-  ``sigma IN complete_development M ps =
+  ``sigma IN complete_development M ps <=>
       finite sigma /\ sigma IN development M ps /\ (residuals sigma ps = {})``,
   SRW_TAC [][SPECIFICATION, complete_development_def]);
 
@@ -1682,7 +1682,7 @@ val _ = overload_on ("development", ``term_development``);
 
 val term_development_thm = store_thm(
   "term_development_thm",
-  ``sigma IN development M = sigma IN development M (redex_posns M)``,
+  ``sigma IN development M <=> sigma IN development M (redex_posns M)``,
   SRW_TAC [][SPECIFICATION, term_development_def]);
 
 val first_lift_path = store_thm(
@@ -1698,7 +1698,7 @@ val lrcc_RUNION = store_thm(
 
 val pick_a_beta = store_thm(
   "pick_a_beta",
-  ``!M r N. lrcc (beta0 RUNION beta1) M r N =
+  ``!M r N. lrcc (beta0 RUNION beta1) M r N <=>
             (?n. r IN n_posns n M) /\ lrcc beta0 M r N \/
             (!n. ~(r IN n_posns n M)) /\ lrcc beta1 M r N``,
   SIMP_TAC (srw_ss()) [EQ_IMP_THM, FORALL_AND_THM] THEN CONJ_TAC THENL [
@@ -1780,7 +1780,7 @@ val labelled_redn_det = store_thm(
 val lemma11_2_12 = store_thm(
   "lemma11_2_12",
   ``!M sigma ps.
-       sigma IN development M ps =
+       sigma IN development M ps <=>
        (M = first sigma) /\ ps SUBSET M /\
        okpath (labelled_redn beta) sigma /\
        okpath (lrcc beta0) (lift_path (nlabel 0 (first sigma) ps) sigma)``,
@@ -1993,7 +1993,8 @@ val lterm_term_weight = store_thm(
   SRW_TAC [][lterm_weight_thm, term_weight_thm, strip_label_thm]);
 
 val w_at_exists =
-  (SIMP_RULE (srw_ss()) [term_weight_thm] o
+  (CONV_RULE (QUANT_CONV (RAND_CONV (ONCE_REWRITE_CONV [EQ_SYM_EQ]))) o
+   SIMP_RULE (srw_ss()) [term_weight_thm] o
    Q.INST [`lm` |-> `\rt v t p w. if p = [] then term_weight (LAM v t) w
                                   else rt (TL p) (\p. w (In::p))`,
            `ap` |-> `\rt ru t u p w.
@@ -2042,7 +2043,7 @@ val weight_at_thm = save_thm(
   LIST_CONJ (butlast (CONJUNCTS weight_at_def)));
 
 val decreasing_def = Define`
-  decreasing t w =
+  decreasing t w <=>
     !n p1 p2. p1 IN n_posns n t /\
               p2 IN bv_posns_at (APPEND p1 [Lt]) (strip_label t) ==>
               weight_at (APPEND p1 [Rt]) w (strip_label t) <
@@ -2070,12 +2071,12 @@ val n_posn_valid_posns = store_thm(
 
 val decreasing_thm = store_thm(
   "decreasing_thm",
-  ``(!s. decreasing (VAR s : lterm) w = T) /\
-    (!t u. decreasing (t @@ u : lterm) w =
+  ``(!s. decreasing (VAR s : lterm) w <=> T) /\
+    (!t u. decreasing (t @@ u : lterm) w <=>
                 decreasing t (\p. w (Lt::p)) /\
                 decreasing u (\p. w (Rt::p))) /\
     (!v t. decreasing (LAM v t : lterm) w = decreasing t (\p. w (In::p))) /\
-    (!n v t u. decreasing (LAMi n v t u : lterm) w =
+    (!n v t u. decreasing (LAMi n v t u : lterm) w <=>
                  decreasing t (\p. w (Lt::In::p)) /\
                  decreasing u (\p. w (Rt::p)) /\
                  !p. p IN lv_posns v t ==>
@@ -2109,12 +2110,12 @@ val nonzero_def = Define`
 
 val nonzero_thm = store_thm(
   "nonzero_thm",
-  ``(!s w. nonzero (VAR s : lterm) w = 0 < w []) /\
-    (!t u w. nonzero (t @@ u : lterm) w =
+  ``(!s w. nonzero (VAR s : lterm) w <=> 0 < w []) /\
+    (!t u w. nonzero (t @@ u : lterm) w <=>
                 nonzero t (\p. w (Lt::p)) /\
                 nonzero u (\p. w (Rt::p))) /\
-   (!v t w. nonzero (LAM v t : lterm) w = nonzero t (\p. w (In::p))) /\
-   (!n v t u. nonzero (LAMi n v t u : lterm) w =
+   (!v t w. nonzero (LAM v t : lterm) w <=> nonzero t (\p. w (In::p))) /\
+   (!n v t u. nonzero (LAMi n v t u : lterm) w <=>
                 nonzero t (\p. w (Lt::In::p)) /\
                 nonzero u (\p. w (Rt::p)))``,
   SRW_TAC [][nonzero_def, lvar_posns_def, var_posns_thm, strip_label_thm,
@@ -2205,7 +2206,7 @@ val decreasing_weights_exist = store_thm(
   ]);
 
 val weighted_reduction_def = Define`
-  weighted_reduction (M', w0) r (N', w) =
+  weighted_reduction (M', w0) r (N', w) <=>
     lrcc beta0 M' r N' /\ (w = update_weighing (strip_label M') r w0)
 `;
 
@@ -2281,7 +2282,7 @@ val weighted_reduction_preserves_nonzero_weighing = store_thm(
   ]);
 
 val wterm_ordering_def = Define`
-  wterm_ordering (N, w) (M, w0) = lterm_weight N w < lterm_weight M w0
+  wterm_ordering (N, w) (M, w0) <=> lterm_weight N w < lterm_weight M w0
 `;
 
 val WF_wterm_ordering = store_thm(
@@ -2294,11 +2295,6 @@ val WF_wterm_ordering = store_thm(
   SRW_TAC [][prim_recTheory.WF_measure]);
 
 val weighing_at_def = Define`weighing_at l w = w o APPEND l`;
-
-val GSPEC_EQ = prove(
-  ``!e. ({x | x = e} = {e}) /\ ({x | e = x} = {e})``,
-  SRW_TAC [][EXTENSION] THEN PROVE_TAC []);
-
 
 val CARD_IMAGE = prove(
   ``!f s. (!x y. (f x = f y) = (x = y)) /\ FINITE s ==>
@@ -2706,7 +2702,7 @@ val FV_weights_update_weighing = store_thm(
       ASM_SIMP_TAC (srw_ss() ++ DNF_ss) [weight_at_thm,
                                          weight_at_var_posn] THEN
       `!vp l.
-          vp IN v_posns v body /\ (APPEND vp l = APPEND p1 p2) =
+          vp IN v_posns v body /\ (APPEND vp l = APPEND p1 p2) <=>
           (vp = p1) /\ (l = p2)`
          by (ASM_SIMP_TAC (srw_ss()) [EQ_IMP_THM] THEN STRIP_TAC THEN
              PROVE_TAC [APPEND_var_posns, v_posns_SUBSET_var_posns]) THEN
@@ -2737,7 +2733,7 @@ val FV_weights_update_weighing = store_thm(
         ASM_SIMP_TAC (srw_ss()) [weight_at_var_posn] THEN
         ASM_SIMP_TAC (srw_ss() ++ DNF_ss)
                      [update_weighing_def, bv_posns_thm] THEN
-        `!vp l. vp IN v_posns x' body /\ (APPEND vp l = APPEND p1 p2) =
+        `!vp l. vp IN v_posns x' body /\ (APPEND vp l = APPEND p1 p2) <=>
                 (vp = p1) /\ (l = p2)`
             by (ASM_SIMP_TAC (srw_ss()) [EQ_IMP_THM] THEN
                 REPEAT GEN_TAC THEN STRIP_TAC THEN
@@ -2912,7 +2908,7 @@ val weighted_reduction_reduces_ordering = store_thm(
                           PROVE_TAC [listTheory.NOT_NIL_CONS,
                                      no_var_posns_in_var_posn_prefix,
                                      v_posns_SUBSET_var_posns],
-                          `!x y z. ([x : redpos] = APPEND y z) =
+                          `!x y z. ([x : redpos] = APPEND y z) <=>
                                    (y = [x]) /\ (z = []) \/
                                    (y = []) /\ (z = [x])`
                               by (REPEAT GEN_TAC THEN
@@ -3064,7 +3060,7 @@ val weighted_reduction_reduces_ordering = store_thm(
          p2 IN valid_posns ([strip_label u/v] (strip_label t))`
            by PROVE_TAC [var_posns_SUBSET_valid_posns] THEN
         ASM_SIMP_TAC (srw_ss()) [weight_at_subst] THEN
-        `!vp l. vp IN v_posns v (strip_label t) /\ (APPEND vp l = p2) = F`
+        `!vp l. vp IN v_posns v (strip_label t) /\ (APPEND vp l = p2) <=> F`
             by (REPEAT GEN_TAC THEN
                 REWRITE_TAC [] THEN STRIP_TAC THEN
                 `l = []` by PROVE_TAC [no_var_posns_in_var_posn_prefix,
@@ -3196,7 +3192,7 @@ val weighted_reduction_reduces_ordering = store_thm(
     Q.EXISTS_TAC `term_weight (strip_label M) (\p. w0 (Rt::p))` THEN
     ASM_SIMP_TAC (srw_ss() ++ SatisfySimps.SATISFY_ss) [] THEN
     Q.ABBREV_TAC `wf = \p. w0 (Rt::p)` THEN
-    PROVE_TAC [DECIDE ``x <= y = x < y \/ (x = y)``],
+    PROVE_TAC [DECIDE ``x <= y <=> x < y \/ (x = y)``],
 
     (* beta reduction within LHS of marked redex *)
     SIMP_TAC (srw_ss() ++ ETA_ss)
@@ -3568,7 +3564,7 @@ val lcc_b0_tpm_imp = store_thm(
 
 val lcc_beta0_LAMi = store_thm(
   "lcc_beta0_LAMi",
-  ``lcompat_closure beta0 (LAMi n v M N) P =
+  ``lcompat_closure beta0 (LAMi n v M N) P <=>
       (P = [N/v] M) \/
       (?P0. lcompat_closure beta0 M P0 /\ (P = LAMi n v P0 N)) \/
       (?P0. lcompat_closure beta0 N P0 /\ (P = LAMi n v M P0))``,
@@ -3587,7 +3583,7 @@ val lcc_beta0_LAMi = store_thm(
 
 val lcc_beta0_app = store_thm(
   "lcc_beta0_app",
-  ``!M N P. lcompat_closure beta0 (M @@ N) P =
+  ``!M N P. lcompat_closure beta0 (M @@ N) P <=>
             (?P0. lcompat_closure beta0 M P0 /\ (P = P0 @@ N)) \/
             (?P0. lcompat_closure beta0 N P0 /\ (P = M @@ P0))``,
   REPEAT GEN_TAC THEN
@@ -3596,7 +3592,7 @@ val lcc_beta0_app = store_thm(
 
 val lcc_beta0_LAM = store_thm(
   "lcc_beta0_LAM",
-  ``!v M P. lcompat_closure beta0 (LAM v M) P =
+  ``!v M P. lcompat_closure beta0 (LAM v M) P <=>
             ?P0. lcompat_closure beta0 M P0 /\ (P = LAM v P0)``,
   REPEAT GEN_TAC THEN
   CONV_TAC (LAND_CONV (ONCE_REWRITE_CONV [lcompat_closure_cases])) THEN
@@ -4011,7 +4007,7 @@ val development_SUBSET = store_thm(
 
 val redex_occurrences_SUBSET = store_thm(
   "redex_occurrences_SUBSET",
-  ``!s M. s SUBSET M = s SUBSET (redex_posns M)``,
+  ``!s M. s SUBSET M <=> s SUBSET (redex_posns M)``,
   SRW_TAC [][redexes_all_occur_def, IN_term_IN_redex_posns, SUBSET_DEF]);
 
 val linking_developments = store_thm(

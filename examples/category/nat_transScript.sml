@@ -3,13 +3,13 @@ open HolKernel Parse boolLib bossLib lcsymtacs categoryTheory functorTheory;
 val _ = new_theory "nat_trans";
 
 val _ = type_abbrev("nat_trans",
-``:(('a1,'b1,'a2,'b2) functor,('a1,'b1,'a2,'b2) functor,
-    'a1 -> ('a2,'b2) mor) morphism``);
+``:((α,β,γ,δ) functor,(α,β,γ,δ) functor,
+    α -> (γ,δ) mor) morphism``);
 
 val _ = overload_on("ntdom", ``λn. n.dom.dom``);
 val _ = overload_on("ntcod", ``λn. n.cod.cod``);
 val _ = set_fixity "@+" (Infixl 2000);
-val _ = overload_on("@+", ``λ(n:('a,'b,'c,'d) nat_trans) x. n.map x``);
+val _ = overload_on("@+", ``λ(n:(α,β,γ,δ) nat_trans) x. n.map x``);
 
 val extensional_nat_trans_def = Define`
   extensional_nat_trans n = extensional n.map (ntdom n).obj`;
@@ -494,6 +494,357 @@ EQ_TAC >> strip_tac >- (
     conj_tac >- metis_tac [] >>
     metis_tac []
 *)
+
+val pre_functor_nt_def = Define`
+  pre_functor_nt f n = <|
+    dom := f ◎ n.dom;
+    cod := f ◎ n.cod;
+    map := λx. f##(n@+x) |>`;
+
+val pre_functor_nt_components = Q.store_thm(
+"pre_functor_nt_components",
+`∀f n. ((pre_functor_nt f n).dom = f ◎ n.dom) ∧
+       ((pre_functor_nt f n).cod = f ◎ n.cod) ∧
+       (∀x. (pre_functor_nt f n)@+x = f##(n@+x))`,
+srw_tac [][pre_functor_nt_def]);
+val _ = export_rewrites["pre_functor_nt_components"];
+
+val functor_nt_def = Define`
+  functor_nt f n = mk_nt (pre_functor_nt f n)`;
+
+val is_nat_trans_functor_nt = Q.store_thm(
+"is_nat_trans_functor_nt",
+`∀f n. is_functor f ∧ is_nat_trans n ∧ (f.dom = ntcod n) ⇒ is_nat_trans (functor_nt f n)`,
+srw_tac [][functor_nt_def] >>
+fsrw_tac [][nat_trans_axioms_def] >>
+`is_functor n.dom ∧ is_functor n.cod` by srw_tac [][is_nat_trans_is_functor] >>
+`(n.dom.dom = n.cod.dom) ∧ (n.dom.cod = n.cod.cod)` by
+  fsrw_tac [][is_nat_trans_def,nat_trans_axioms_def] >>
+fsrw_tac [][] >>
+conj_asm1_tac >- (
+  qx_gen_tac `x` >> strip_tac >>
+  metis_tac [morf_maps_to,nt_at_maps_to,maps_to_def] ) >>
+map_every qx_gen_tac [`h`,`x`,`y`] >> strip_tac >>
+`(f ◎ n.dom)##h = f##(n.dom##h)` by (
+  match_mp_tac functor_comp_morf >>
+  fsrw_tac [][maps_to_in_def] ) >>
+`(f ◎ n.cod)##h = f##(n.cod##h)` by (
+  match_mp_tac functor_comp_morf >>
+  fsrw_tac [][maps_to_in_def] ) >>
+fsrw_tac [][] >>
+`(f##(n@+y)) o (f##(n.dom##h)) -:f.cod = f##((n@+y) o (n.dom##h) -:f.dom)` by (
+  match_mp_tac (GSYM morf_comp) >> srw_tac [][] >>
+  match_mp_tac maps_to_composable >>
+  metis_tac [morf_maps_to,nt_at_maps_to,maps_to_def,maps_to_in_def,is_functor_is_category,maps_to_obj] ) >>
+`(f##(n.cod##h)) o f##(n@+x) -:f.cod = f##((n.cod##h) o n@+x -:f.dom)` by (
+  match_mp_tac (GSYM morf_comp) >> srw_tac [][] >>
+  match_mp_tac maps_to_composable >>
+  metis_tac [morf_maps_to,nt_at_maps_to,maps_to_def,maps_to_in_def,is_functor_is_category,maps_to_obj] ) >>
+fsrw_tac [][] >>
+AP_TERM_TAC >>
+match_mp_tac naturality >>
+srw_tac [][]);
+val _ = export_rewrites["is_nat_trans_functor_nt"];
+
+val functor_nt_dom_cod = Q.store_thm(
+"functor_nt_dom_cod",
+`∀f n. ((functor_nt f n).dom = f ◎ n.dom) ∧
+       ((functor_nt f n).cod = f ◎ n.cod)`,
+srw_tac [][functor_nt_def]);
+val _ = export_rewrites["functor_nt_dom_cod"];
+
+val functor_nt_at = Q.store_thm(
+"functor_nt_at",
+`∀f n x. is_functor f ∧ (f.dom = n.dom.cod) ∧ x ∈ (ntdom n).obj
+  ⇒ ((functor_nt f n)@+x = f##(n@+x))`,
+srw_tac [][functor_nt_def] >>
+srw_tac [][mk_nt_def,restrict_def]);
+val _ = export_rewrites["functor_nt_at"];
+
+val functor_nt_id_nt = Q.store_thm(
+"functor_nt_id_nt",
+`∀f g. is_functor f ∧ is_functor g ∧ (g ≈> f) ⇒ (functor_nt f (id_nt g) = id_nt (f ◎ g))`,
+rpt strip_tac >>
+match_mp_tac nt_eq_thm >>
+fsrw_tac [][] >>
+qx_gen_tac `x` >> strip_tac >>
+match_mp_tac morf_id >>
+srw_tac [][] >>
+metis_tac [objf_in_obj]);
+val _ = export_rewrites["functor_nt_id_nt"];
+
+val functor_nt_nt_comp = Q.store_thm(
+"functor_nt_nt_comp",
+`∀f n1 n2. is_functor f ∧ composable_nts n1 n2 ∧ (f.dom = ntcod n1) ⇒
+  (functor_nt f (n2 ◎ n1) = functor_nt f n2 ◎ functor_nt f n1)`,
+srw_tac [][] >>
+match_mp_tac nt_eq_thm >>
+fsrw_tac [][composable_nts_def] >>
+`n1.dom ≈> f` by (
+  fsrw_tac [][is_nat_trans_def,nat_trans_axioms_def] ) >>
+fsrw_tac [][] >>
+conj_tac >- (
+  match_mp_tac is_nat_trans_nt_comp >>
+  fsrw_tac [][composable_nts_def]  ) >>
+qx_gen_tac `x` >> strip_tac >>
+match_mp_tac morf_comp >>
+srw_tac [][] >>
+match_mp_tac maps_to_composable >>
+metis_tac [nt_at_maps_to,maps_to_def]);
+val _ = export_rewrites["functor_nt_nt_comp"];
+
+val functor_nt_id_functor = Q.store_thm(
+"functor_nt_id_functor",
+`∀c n. is_nat_trans n ∧ (c = ntcod n) ⇒ (functor_nt (id_functor c) n = n)`,
+srw_tac [][] >>
+match_mp_tac nt_eq_thm >>
+imp_res_tac is_nat_trans_is_category >>
+imp_res_tac is_nat_trans_is_functor >>
+`n.dom.cod = n.cod.cod` by fsrw_tac [][is_nat_trans_def,nat_trans_axioms_def] >>
+fsrw_tac [][] >>
+srw_tac [][] >>
+match_mp_tac id_functor_morf >>
+metis_tac [nt_at_maps_to,maps_to_in_def,maps_to_def]);
+val _ = export_rewrites["functor_nt_id_functor"];
+
+val functor_nt_functor_comp = Q.store_thm(
+"functor_nt_functor_comp",
+`∀f1 f2 n. is_nat_trans n ∧ is_functor f1 ∧ is_functor f2 ∧ (f1 ≈> f2) ∧ (f1.dom = ntcod n) ⇒
+  (functor_nt (f2 ◎ f1) n = functor_nt f2 (functor_nt f1 n))`,
+srw_tac [][] >>
+match_mp_tac nt_eq_thm >>
+imp_res_tac is_nat_trans_is_functor >>
+`n.dom.cod = n.cod.cod` by fsrw_tac [][is_nat_trans_def,nat_trans_axioms_def] >>
+fsrw_tac [][functor_comp_assoc] >>
+qx_gen_tac `x` >> strip_tac >>
+match_mp_tac functor_comp_morf >>
+srw_tac [][] >>
+metis_tac [nt_at_maps_to,maps_to_in_def,maps_to_def]);
+
+(* would be a morphism in cat_cat if we had a proper cat_cat *)
+(* or could use the fact that [c→d] is an exponential object *)
+val pre_postcomp_functor_def = Define`
+  pre_postcomp_functor b f = <|
+    dom := [b→f.dom];
+    cod := [b→f.cod];
+    map := functor_nt f |>`;
+
+val pre_postcomp_functor_components = Q.store_thm(
+"pre_postcomp_functor_components",
+`∀b f. ((pre_postcomp_functor b f).dom = [b→f.dom]) ∧
+       ((pre_postcomp_functor b f).cod = [b→f.cod]) ∧
+       (∀g. (pre_postcomp_functor b f)##g = functor_nt f g)`,
+srw_tac [][pre_postcomp_functor_def,morf_def]);
+val _ = export_rewrites["pre_postcomp_functor_components"];
+
+val pre_postcomp_functor_objf = Q.store_thm(
+"pre_postcomp_functor_objf",
+`∀b f g. is_functor f ∧ g ∈ [b→f.dom].obj ⇒ ((pre_postcomp_functor b f)@@g = f ◎ g)`,
+srw_tac [][objf_def] >>
+SELECT_ELIM_TAC >>
+conj_tac >- (
+  qexists_tac `f◎g` >> srw_tac [][] ) >>
+srw_tac [][] >>
+Q.ISPECL_THEN [`[x.dom→x.cod]`,`x`,`f◎g`] mp_tac id_inj >>
+fsrw_tac [][is_functor_is_category]);
+val _ = export_rewrites["pre_postcomp_functor_objf"];
+
+val postcomp_functor_def = Define`
+  postcomp_functor b f = mk_functor (pre_postcomp_functor b f)`;
+
+val is_functor_postcomp_functor = Q.store_thm(
+"is_functor_postcomp_functor",
+`∀b f. is_category b ∧ is_functor f ⇒ is_functor (postcomp_functor b f)`,
+srw_tac [][postcomp_functor_def] >>
+imp_res_tac is_functor_is_category >>
+fsrw_tac [][functor_axioms_def] >>
+conj_tac >- (
+  qx_gen_tac `n` >> strip_tac >>
+  `n.dom ≈> f` by (
+    fsrw_tac [][is_nat_trans_def,nat_trans_axioms_def] ) >>
+  fsrw_tac [][] ) >>
+conj_tac >- (
+  qx_gen_tac `g` >> strip_tac >>
+  qexists_tac `f◎g` >>
+  fsrw_tac [][] ) >>
+srw_tac [][composable_nts_def] >>
+match_mp_tac (GSYM functor_cat_compose_in) >>
+fsrw_tac [][composable_nts_def] >>
+fsrw_tac [][is_nat_trans_def,nat_trans_axioms_def]);
+val _ = export_rewrites["is_functor_postcomp_functor"];
+
+val postcomp_functor_dom_cod = Q.store_thm(
+"postcomp_functor_dom_cod",
+`∀b f. ((postcomp_functor b f).dom = [b→f.dom]) ∧
+       ((postcomp_functor b f).cod = [b→f.cod])`,
+srw_tac [][postcomp_functor_def]);
+val _ = export_rewrites["postcomp_functor_dom_cod"];
+
+val postcomp_functor_morf = Q.store_thm(
+"postcomp_functor_morf",
+`∀b f n. is_nat_trans n ∧ n ∈ [b→f.dom].mor ⇒ ((postcomp_functor b f)##n = functor_nt f n)`,
+srw_tac [][postcomp_functor_def]);
+
+val postcomp_functor_objf = Q.store_thm(
+"postcomp_functor_objf",
+`∀b f g. is_category b ∧ is_functor f ∧ g ∈ [b→f.dom].obj ⇒ ((postcomp_functor b f)@@g = f ◎ g)`,
+srw_tac [][is_functor_is_category,postcomp_functor_def]);
+
+val _ = export_rewrites["postcomp_functor_morf","postcomp_functor_objf"];
+
+val cat_iso_functor_cats = Q.store_thm(
+"cat_iso_functor_cats",
+`∀f b. is_category b ∧ cat_iso f ⇒ cat_iso (postcomp_functor b f)`,
+srw_tac [][cat_iso_def] >>
+imp_res_tac cat_iso_pair_sym >>
+qexists_tac `postcomp_functor b g` >>
+fsrw_tac [][cat_iso_pair_def] >>
+imp_res_tac is_functor_is_category >>
+conj_tac >> match_mp_tac functor_eq_thm >>
+fsrw_tac [][] >>
+qx_gen_tac `n` >> strip_tac >>
+qmatch_rename_tac `postcomp_functor b j##(functor_nt k n) = n` [] >>
+`n.dom ≈> k` by (
+  fsrw_tac [][is_nat_trans_def,nat_trans_axioms_def] ) >>
+srw_tac [][GSYM functor_nt_functor_comp]);
+
+val iso_cats_functor_cats = Q.store_thm(
+"iso_cats_functor_cats",
+`∀b c1 c2. is_category b ∧ iso_cats c1 c2 ⇒ iso_cats [b→c1] [b→c2]`,
+srw_tac [][iso_cats_def,iso_pair_between_cats_def] >>
+metis_tac [cat_iso_def,cat_iso_functor_cats,postcomp_functor_dom_cod]);
+
+val embedding_functor_cats = Q.store_thm(
+"embedding_functor_cats",
+`∀g c. is_category c ∧ is_functor g ∧ embedding g ⇒ embedding (postcomp_functor c g)`,
+map_every qx_gen_tac [`g`,`c`] >>
+fsrw_tac [][embedding_def] >>
+strip_tac >>
+conj_tac >- (
+  fsrw_tac [][full_def,faithful_def] >>
+  map_every qx_gen_tac [`h`,`a`,`b`] >>
+  strip_tac >>
+  qpat_assum `h.dom = postcomp_functor c g@@a` mp_tac >>
+  qpat_assum `h.cod = postcomp_functor c g@@b` mp_tac >>
+  fsrw_tac [][] >> ntac 2 strip_tac >>
+  fsrw_tac [][GSYM RIGHT_EXISTS_IMP_THM,SKOLEM_THM] >>
+  qexists_tac `mk_nt <| dom := a; cod := b; map := λx. f (h@+x) (a@@x) (b@@x) |>` >>
+  fsrw_tac [][] >>
+  conj_asm1_tac >- (
+    fsrw_tac [][nat_trans_axioms_def] >>
+    conj_asm1_tac >- (
+      qx_gen_tac `x` >> strip_tac >>
+      `a@@x ∈ g.dom.obj` by metis_tac [objf_in_obj] >>
+      `b@@x ∈ g.dom.obj` by metis_tac [objf_in_obj] >>
+      `(h@+x) :- (g@@(a@@x)) → (g@@(b@@x)) -:g.cod` by (
+        match_mp_tac nt_at_maps_to >>
+        map_every qexists_tac [`h.dom`,`h.cod`] >>
+        fsrw_tac [][] ) >>
+      metis_tac [] ) >>
+    map_every qx_gen_tac [`k`,`x`,`y`] >> strip_tac >>
+    first_x_assum match_mp_tac >>
+    map_every qexists_tac [`a@@x`,`b@@y`] >>
+    `(a@@y) ∈ g.dom.obj` by metis_tac [objf_in_obj,maps_to_obj] >>
+    `(b@@y) ∈ g.dom.obj` by metis_tac [objf_in_obj,maps_to_obj] >>
+    `(h@+y) :- g@@(a@@y) → g@@(b@@y) -:g.cod` by (
+      match_mp_tac nt_at_maps_to >>
+      map_every qexists_tac [`h.dom`,`h.cod`] >>
+      imp_res_tac maps_to_obj >> fsrw_tac [][] ) >>
+    `f (h@+y) (a@@y) (b@@y) :- (a@@y) → (b@@y) -:g.dom` by metis_tac [] >>
+    `a##k :- a@@x → a@@y -:g.dom` by (
+      match_mp_tac morf_maps_to >> metis_tac [maps_to_def] ) >>
+    `(a@@x) ∈ g.dom.obj` by metis_tac [objf_in_obj,maps_to_obj] >>
+    `(b@@x) ∈ g.dom.obj` by metis_tac [objf_in_obj,maps_to_obj] >>
+    `(h@+x) :- g@@(a@@x) → g@@(b@@x) -:g.cod` by (
+      match_mp_tac nt_at_maps_to >>
+      map_every qexists_tac [`h.dom`,`h.cod`] >>
+      imp_res_tac maps_to_obj >> fsrw_tac [][] ) >>
+    `f (h@+x) (a@@x) (b@@x) :- (a@@x) → (b@@x) -:g.dom` by metis_tac [] >>
+    `b##k :- b@@x → b@@y -:g.dom` by (
+      match_mp_tac morf_maps_to >> metis_tac [maps_to_def] ) >>
+    conj_asm1_tac >- (
+      match_mp_tac composable_maps_to >>
+      fsrw_tac [][is_functor_is_category] >>
+      fsrw_tac [][maps_to_in_def,composable_in_def] ) >>
+    conj_asm1_tac >- (
+      match_mp_tac composable_maps_to >>
+      fsrw_tac [][is_functor_is_category] >>
+      fsrw_tac [][maps_to_in_def,composable_in_def] ) >>
+    qmatch_abbrev_tac `g##(g1 o f1 -:g.dom) = g##(g2 o f2 -:g.dom)` >>
+    `f1 ≈> g1 -:g.dom` by (
+      match_mp_tac maps_to_composable >>
+      srw_tac [][Abbr`f1`,Abbr`g1`] >>
+      map_every qexists_tac [`a@@x`,`a@@y`,`b@@y`] >>
+      srw_tac [][] ) >>
+    `f2 ≈> g2 -:g.dom` by (
+      match_mp_tac maps_to_composable >>
+      srw_tac [][Abbr`f2`,Abbr`g2`] >>
+      map_every qexists_tac [`a@@x`,`b@@x`,`b@@y`] >>
+      srw_tac [][] ) >>
+    qspecl_then [`g`,`g.dom`,`g.cod`,`f1`,`g1`] mp_tac morf_comp >>
+    qspecl_then [`g`,`g.dom`,`g.cod`,`f2`,`g2`] mp_tac morf_comp >>
+    srw_tac [][] >>
+    `g##g1 = h@+y` by metis_tac [] >>
+    `g##f2 = h@+x` by metis_tac [] >>
+    `g##f1 = h.dom##k` by (
+      qpat_assum `k :- x → y -:(g ◎ a).dom` mp_tac >>
+      unabbrev_all_tac >> fsrw_tac [][maps_to_in_def]  ) >>
+    `g##g2 = h.cod##k` by (
+      qpat_assum `k :- x → y -:(g ◎ a).dom` mp_tac >>
+      unabbrev_all_tac >> fsrw_tac [][maps_to_in_def]  ) >>
+    fsrw_tac [][] >>
+    match_mp_tac naturality >>
+    qpat_assum `k :- x → y -:(g ◎ a).dom` mp_tac >>
+    fsrw_tac [][] ) >>
+  fsrw_tac [][] >>
+  match_mp_tac nt_eq_thm >>
+  fsrw_tac [][] >>
+  qx_gen_tac `x` >> strip_tac >>
+  fsrw_tac [][mk_nt_def,restrict_def] >>
+  `(a@@x) ∈ g.dom.obj` by metis_tac [objf_in_obj,maps_to_obj] >>
+  `(b@@x) ∈ g.dom.obj` by metis_tac [objf_in_obj,maps_to_obj] >>
+  `(h@+x) :- g@@(a@@x) → g@@(b@@x) -:g.cod` by (
+    match_mp_tac nt_at_maps_to >>
+    map_every qexists_tac [`h.dom`,`h.cod`] >>
+    imp_res_tac maps_to_obj >> fsrw_tac [][] ) >>
+  metis_tac []) >>
+fsrw_tac [][full_def,faithful_def] >>
+map_every qx_gen_tac [`n1`,`n2`] >>
+strip_tac >>
+match_mp_tac nt_eq_thm >>
+fsrw_tac [][] >>
+qx_gen_tac `x` >> strip_tac >>
+first_x_assum match_mp_tac >>
+map_every qexists_tac [`n1.dom@@x`,`n1.cod@@x`] >>
+fsrw_tac [][nt_at_maps_to] >>
+qpat_assum `postcomp_functor c g##n1 = Y` mp_tac >>
+fsrw_tac [][] >> strip_tac >>
+metis_tac [functor_nt_at,is_nat_trans_def,nat_trans_axioms_def]);
+
+val inj_obj_functor_cats = Q.store_thm(
+"inj_obj_functor_cats",
+`∀g c. is_category c ∧ is_functor g ∧ faithful g ∧ inj_obj g ⇒ inj_obj (postcomp_functor c g)`,
+srw_tac [][inj_obj_def] >>
+pop_assum mp_tac >> srw_tac [][] >>
+match_mp_tac functor_eq_thm >>
+fsrw_tac [][faithful_def] >>
+qx_gen_tac `h` >> strip_tac >>
+first_x_assum match_mp_tac >>
+map_every qexists_tac [`a@@h.dom`,`a@@h.cod`] >>
+conj_tac >- (
+  match_mp_tac morf_maps_to >>
+  srw_tac [][maps_to_in_def] ) >>
+conj_tac >- (
+  match_mp_tac morf_maps_to >>
+  srw_tac [][] >>
+  `∀x. x ∈ a.dom.obj ⇒ (a@@x = b@@x)` by (
+    srw_tac [][] >>
+    first_x_assum match_mp_tac >>
+    conj_tac >- metis_tac [objf_in_obj] >>
+    conj_tac >- metis_tac [objf_in_obj] >>
+    metis_tac [functor_comp_objf,composable_def] ) >>
+  metis_tac [mor_obj,maps_to_in_def,maps_to_def] ) >>
+metis_tac [composable_def,functor_comp_morf]);
 
 val pre_eval_functor_def = Define`
   pre_eval_functor c v p = <|

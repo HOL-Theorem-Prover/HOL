@@ -66,6 +66,7 @@ sig
   val dest_tyexists : absyn -> pretype * absyn
   val dest_binder   : string -> absyn -> vstruct * absyn
   val dest_tybinder : string -> absyn -> pretype * absyn
+  val dest_binop    : string -> absyn -> absyn * absyn
 
   val list_mk_app      : absyn * absyn list -> absyn
   val list_mk_tyapp    : absyn * pretype list -> absyn

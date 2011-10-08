@@ -26,3 +26,11 @@ val thms = define_equivalence_type {
              old_thms = [],
              welldefs = []}
 
+val _ = set_fixity "=" (Infix(NONASSOC, 450))
+
+val thms = define_equivalence_type {
+             defs = map mk_def [``C1``, ``C2``],
+             equiv = identity_equiv ``:foo``,
+             name = "lfoo2",
+             old_thms = [],
+             welldefs = []}

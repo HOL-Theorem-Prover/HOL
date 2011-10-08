@@ -15,7 +15,7 @@ structure SMLParser =
               structure Lex=SMLLex
               structure LrParser=LrParser);
 
-fun parseSpec is = let
+fun parseSpec filename is = let
   val lexer = SMLParser.makeLexer (fn n => TextIO.inputN (is, n)) 0
   (* fun print_error (s,(bc:int,bl:int),(ec:int,el:int)) =
         if bc = ~1 andalso bl = ~1 then () else
@@ -24,7 +24,7 @@ fun parseSpec is = let
                                 " and line " ^ (Int.toString (el + 1)) ^ ":\n   "
                            ^ s) *)
   fun print_error (s,(_, i:int),_) =
-      TextIO.output(TextIO.stdErr, Int.toString (i+1) ^ ": " ^ s ^ "\n")
+      TextIO.output(TextIO.stdErr, filename^":"^Int.toString (i+1) ^ ": " ^ s ^ "\n")
 in
   #1 (SMLParser.parse(15, lexer, print_error, ()))
 end
@@ -75,7 +75,7 @@ fun parseAndProcess dir str res =
 	(* val _ = print("Parsing " ^ basefile ^ " ... ") *)
 	val resLength = length res
 	val is        = TextIO.openIn filename
-	val specs     = case parseSpec is
+	val specs     = case parseSpec filename is
                          of Asynt.NamedSig {specs, ...} => specs
 			  | Asynt.AnonSig specs         => specs;
 	val initialbase = {comp = Database.Str, file = str, line = 0} :: res

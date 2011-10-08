@@ -185,18 +185,18 @@ val aeq_fv = store_thm(
     ],
     Cases_on `x = u` THEN SRW_TAC [][] THENL [
       Cases_on `u = v` THEN SRW_TAC [][] THEN
-      Q.PAT_ASSUM `!x. swapstr u z x IN fv t1 = Z`
+      Q.PAT_ASSUM `!x. swapstr u z x IN fv t1 <=> Z`
                   (Q.SPEC_THEN `swapstr v z u` (MP_TAC o SYM)) THEN
       SRW_TAC [][] THEN SRW_TAC [][swapstr_def] THEN
       METIS_TAC [fv_SUBSET_allatoms, SUBSET_DEF],
       Cases_on `x = v` THEN SRW_TAC [][] THENL [
-        Q.PAT_ASSUM `!x. swapstr u z x IN fv t1 = Z`
+        Q.PAT_ASSUM `!x. swapstr u z x IN fv t1 <=> Z`
                     (Q.SPEC_THEN `swapstr u z v` MP_TAC) THEN
         SRW_TAC [][] THEN SRW_TAC [][swapstr_def] THEN
         METIS_TAC [fv_SUBSET_allatoms, SUBSET_DEF],
         Cases_on `z = x` THEN SRW_TAC [][] THENL [
           METIS_TAC [fv_SUBSET_allatoms, SUBSET_DEF],
-          Q.PAT_ASSUM `!x. swapstr u z x IN fv t1 = Z`
+          Q.PAT_ASSUM `!x. swapstr u z x IN fv t1 <=> Z`
                       (Q.SPEC_THEN `x` MP_TAC) THEN
           SRW_TAC [][swapstr_def]
         ]
@@ -439,9 +439,8 @@ val fresh_swap = store_thm(
 
 val lam_aeq_thm = store_thm(
   "lam_aeq_thm",
-  ``aeq (lam u t1) (lam v t2) =
-       (u = v) /\ aeq t1 t2 \/
-       ~(u = v) /\ ~(u IN fv t2) /\ aeq t1 (ptpm [(u,v)] t2)``,
+  ``aeq (lam u t1) (lam v t2) <=>
+       u = v ∧ aeq t1 t2 ∨ u ≠ v ∧ u ∉ fv t2 ∧ aeq t1 (ptpm [(u,v)] t2)``,
   SIMP_TAC (srw_ss()) [EQ_IMP_THM, DISJ_IMP_THM] THEN REPEAT CONJ_TAC THENL [
     SRW_TAC [][aeq_lam_inversion] THEN
     `~(z IN fv t1) /\ ~(z IN fv t2)`
@@ -479,7 +478,7 @@ val lami_nfixed = store_thm(
 
 val lami_aeq_thm = store_thm(
   "lami_aeq_thm",
-  ``aeq (lami m u M1 N1) (lami n v M2 N2) =
+  ``aeq (lami m u M1 N1) (lami n v M2 N2) <=>
         (u = v) /\ (m = n) /\ aeq M1 M2 /\ aeq N1 N2 \/
         ~(u = v) /\ (m = n) /\ ~(u IN fv M2) /\ aeq M1 (ptpm [(u,v)] M2) /\
         aeq N1 N2``,
