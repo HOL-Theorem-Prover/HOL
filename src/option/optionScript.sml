@@ -432,6 +432,38 @@ val OPTREL_MONO = store_thm(
   BasicProvers.SRW_TAC [][OPTREL_def] THEN BasicProvers.SRW_TAC [][SOME_11]);
 val _ = IndDefLib.export_mono "OPTREL_MONO"
 
+(* ----------------------------------------------------------------------
+    some (Hilbert choice "lifted" to the option type)
+
+    some P = NONE, when P is everywhere false.
+      otherwise
+    some P = SOME x ensuring P x.
+
+    This constant saves pain when confronted with the possibility of
+    writing
+      if ?x. P x then f (@x. P x) else ...
+
+    Instead one can write
+      case (some x. P x) of SOME x -> f x || NONE -> ...
+    and avoid having to duplicate the P formula.
+   ---------------------------------------------------------------------- *)
+
+val some_def = new_definition(
+  "some_def",
+  ``some P = if ?x. P x then SOME (@x. P x) else NONE``);
+
+val some_intro = store_thm(
+  "some_intro",
+  ``(!x. P x ==> Q (SOME x)) /\ ((!x. ~P x) ==> Q NONE) ==> Q (some P)``,
+  SRW_TAC [][some_def] THEN METIS_TAC []);
+
+val some_elim = store_thm(
+  "some_elim",
+  ``Q (some P) ==> (?x. P x /\ Q (SOME x)) \/ ((!x. ~P x) /\ Q NONE)``,
+  SRW_TAC [][some_def] THEN METIS_TAC []);
+val _ = set_fixity "some" Binder
+
+
 val option_case_cong =
   save_thm("option_case_cong",
       Prim_rec.case_cong_thm option_nchotomy option_case_def);

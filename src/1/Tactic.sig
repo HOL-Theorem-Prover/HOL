@@ -79,5 +79,9 @@ sig
   val BETA_ETA_TY_TAC       : tactic
   val KNOW_TAC              : term -> tactic
   val SUFF_TAC              : term -> tactic
+
+  val DEEP_INTROk_TAC       : thm -> tactic -> tactic
+  val DEEP_INTRO_TAC        : thm -> tactic
+
   val SELECT_ELIM_TAC       : tactic
 end;

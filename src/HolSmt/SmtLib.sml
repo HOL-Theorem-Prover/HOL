@@ -217,8 +217,7 @@ local
     (wordsSyntax.word_mul_tm, apfst_fixed_width "bvmul"),
     (wordsSyntax.word_sdiv_tm, apfst_fixed_width "bvsdiv"),
     (wordsSyntax.word_srem_tm, apfst_fixed_width "bvsrem"),
-    (* semantic mismatch:
-    (wordsSyntax.word_smod_tm, apfst_fixed_width "bvsmod"),*)
+    (wordsSyntax.word_smod_tm, apfst_fixed_width "bvsmod"),
     (wordsSyntax.word_div_tm, apfst_fixed_width "bvudiv"),
     (wordsSyntax.word_mod_tm, apfst_fixed_width "bvurem"),
     (* shift operations with two bit-vector arguments; the corresponding HOL
@@ -312,6 +311,11 @@ local
       val name = ty_prefix ^ Int.toString (Redblackmap.numItems tydict)
       val decl = "(declare-sort " ^ name ^ " 0)\n"
     in
+      if !Library.trace > 0 andalso Type.is_type ty then
+        WARNING "translate_type"
+          ("uninterpreted type " ^ Hol_pp.type_to_string ty)
+      else
+        ();
       if !Library.trace > 2 then
         Feedback.HOL_MESG ("HolSmtLib (SmtLib): inventing name '" ^ name ^
           "' for HOL type '" ^ Hol_pp.type_to_string ty ^ "'")
@@ -454,6 +458,11 @@ local
             val (tydict, (rngdecls, rngty)) = translate_type (tydict, rngty)
             (* invent new name for 'rator' *)
             val name = tm_prefix ^ Int.toString (Redblackmap.numItems tmdict)
+            val _ = if !Library.trace > 0 andalso Term.is_const rator then
+              WARNING "translate_term"
+                ("uninterpreted constant " ^ Hol_pp.term_to_string rator)
+              else
+                ();
             val _ = if !Library.trace > 2 then
                 Feedback.HOL_MESG ("HolSmtLib (SmtLib): inventing name '" ^
                   name ^ "' for HOL term '" ^ Hol_pp.term_to_string rator ^

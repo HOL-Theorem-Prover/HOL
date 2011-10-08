@@ -38,4 +38,22 @@ structure HolSmtLib :> HolSmtLib = struct
   fun Z3_ORACLE_PROVE tm = Tactical.prove(tm, Z3_ORACLE_TAC)
   fun Z3_PROVE tm = Tactical.prove(tm, Z3_TAC)
 
+  (* report whether solvers are available *)
+  val _ = (
+    Feedback.set_trace "HolSmtLib" 0;
+    List.map (fn (f, name) =>
+      (
+        f boolSyntax.T;  (* try to prove ``T`` *)
+        Feedback.HOL_MESG ("HolSmtLib: solver " ^ name ^ " is available.")
+      )
+      handle Feedback.HOL_ERR _ =>
+        Feedback.HOL_MESG ("HolSmtLib: solver " ^ name ^ " not found."))
+      [
+        (YICES_PROVE, "Yices"),
+        (Z3_ORACLE_PROVE, "Z3 (oracle)"),
+        (Z3_PROVE, "Z3 (with proofs)")
+      ];
+    Feedback.reset_trace "HolSmtLib"
+  )
+
 end

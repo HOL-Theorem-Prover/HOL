@@ -177,6 +177,11 @@ structure Yices = struct
                       val ty_dict' = Redblackmap.insert (ty_dict, ty, name)
                       val defs' = "(define-type " ^ name ^ ")" :: defs
                   in
+                    if !Library.trace > 0 andalso Type.is_type ty then
+                      Feedback.HOL_WARNING "Yices" "translate_type"
+                        ("uninterpreted type " ^ Hol_pp.type_to_string ty)
+                    else
+                      ();
                     if !Library.trace > 2 then
                       Feedback.HOL_MESG
                         ("HolSmtLib (Yices): inventing name '" ^ name ^
@@ -684,6 +689,11 @@ structure Yices = struct
                       ((ty_dict, ty_fresh, defs), Term.type_of tm)
                     val defs = "(define " ^ name ^ "::" ^ ty_name ^ ")" :: defs
                 in
+                  if !Library.trace > 0 andalso Term.is_const rator then
+                    Feedback.HOL_WARNING "Yices" "translate_term"
+                      ("uninterpreted constant " ^ Hol_pp.term_to_string tm)
+                  else
+                    ();
                   if !Library.trace > 2 then
                     Feedback.HOL_MESG
                       ("HolSmtLib (Yices): inventing name '" ^ name ^

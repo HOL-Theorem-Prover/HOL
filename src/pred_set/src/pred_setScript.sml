@@ -1146,6 +1146,28 @@ val SING =
      (--`!x:'a. SING {x}`--),
      PURE_ONCE_REWRITE_TAC [SING_DEF] THEN
      GEN_TAC THEN EXISTS_TAC (--`x:'a`--) THEN REFL_TAC);
+val _ = export_rewrites ["SING"]
+
+val SING_EMPTY = store_thm(
+  "SING_EMPTY",
+  ``SING {} = F``,
+  SRW_TAC [][SING_DEF]);
+val _ = export_rewrites ["SING_EMPTY"]
+
+val SING_INSERT = store_thm(
+  "SING_INSERT",
+  ``SING (x INSERT s) = (s = {}) \/ (s = {x})``,
+  SRW_TAC [][SimpLHS, SING_DEF, EXTENSION] THEN
+  SRW_TAC [][EQ_IMP_THM, DISJ_IMP_THM, FORALL_AND_THM, EXTENSION] THEN
+  METIS_TAC []);
+val _ = export_rewrites ["SING_INSERT"]
+
+val SING_UNION = store_thm(
+  "SING_UNION",
+  ``SING (s UNION t) = SING s /\ (t = {}) \/ SING t /\ (s = {}) \/
+                       SING s /\ SING t /\ (s = t)``,
+  SRW_TAC [][SING_DEF, EXTENSION, EQ_IMP_THM, FORALL_AND_THM,
+             DISJ_IMP_THM] THEN METIS_TAC []);
 
 val IN_SING =
     store_thm
@@ -1177,6 +1199,7 @@ val EQUAL_SING =
      REPEAT GEN_TAC THEN EQ_TAC THENL
      [DISCH_THEN (fn th => REWRITE_TAC [SYM(SPEC_ALL th)]),
       DISCH_THEN SUBST1_TAC THEN GEN_TAC THEN REFL_TAC]);
+val _ = export_rewrites ["EQUAL_SING"]
 
 val DISJOINT_SING_EMPTY =
     store_thm
@@ -1242,6 +1265,7 @@ val SING_IFF_EMPTY_REST =
       EXISTS_TAC (--`CHOICE s:'a`--) THEN
       IMP_RES_THEN (SUBST1_TAC o SYM) CHOICE_INSERT_REST THEN
       ASM_REWRITE_TAC [EXTENSION,IN_SING,CHOICE_SING]]);
+
 
 
 (* ===================================================================== *)
@@ -1812,6 +1836,7 @@ val SING_FINITE =
      PURE_ONCE_REWRITE_TAC [SING_DEF] THEN
      GEN_TAC THEN DISCH_THEN (STRIP_THM_THEN SUBST1_TAC) THEN
      MATCH_ACCEPT_TAC FINITE_SING);
+val _ = export_rewrites ["SING_FINITE"]
 
 val IMAGE_FINITE =
     store_thm
@@ -4768,8 +4793,6 @@ val _ = export_rewrites
      "PSUBSET_IRREFL",
      (* "REST" *)
      "REST_PSUBSET", "REST_SUBSET", "FINITE_REST",
-     (* "SING" *)
-     "SING", "SING_FINITE",
      (* "SUBSET" *)
      "SUBSET_INSERT", "SUBSET_REFL",
      (* "UNION" *)

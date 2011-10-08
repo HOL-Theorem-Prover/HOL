@@ -87,6 +87,8 @@ in
         | _ => raise ERR "rightassoc" "at least two arguments expected")))
   end
 
+  (* A <numeral> is the digit 0 or a non-empty sequence of digits not
+     starting with 0. *)
   fun is_numeral token =
   let
     val cs = String.explode token
@@ -95,6 +97,35 @@ in
       (not (List.null cs) andalso List.all Char.isDigit cs andalso
         List.hd cs <> #"0")
   end
+
+  (* A <decimal> is a token of the form <numeral>.0*<numeral>. *)
+  fun real_of_decimal token =
+  let
+    val (left, right) = Lib.pair_of_list (String.fields (Lib.equal #".") token)
+    val _ = is_numeral left orelse
+      raise ERR "real_of_decimal" "not a decimal"
+    val right = String.explode right
+    fun is_zerostar_numeral (#"0" :: c :: cs) = is_zerostar_numeral (c :: cs)
+      | is_zerostar_numeral cs                = is_numeral (String.implode cs)
+    val _ = is_zerostar_numeral right orelse
+      raise ERR "real_of_decimal" "not a decimal"
+    (* drop trailing 0's *)
+    fun drop_zeros (#"0" :: cs) = drop_zeros cs
+      | drop_zeros cs           = cs
+    val right = String.implode (List.rev (drop_zeros (List.rev right)))
+    val numerator = Arbint.fromString (left ^ right)
+    val ten = Arbint.fromInt 10
+    val denominator = Lib.funpow (String.size right)
+      (fn i => Arbint.* (ten, i)) Arbint.one
+  in
+    if denominator = Arbint.one then
+      realSyntax.term_of_int numerator
+    else
+      realSyntax.mk_div (realSyntax.term_of_int numerator,
+        realSyntax.term_of_int denominator)
+  end
+  handle Feedback.HOL_ERR _ =>
+    raise ERR "real_of_decimal" "not a decimal"
 
   (* ArraysEx *)
 
@@ -257,7 +288,8 @@ in
           realSyntax.term_of_int (Arbint.fromString token)
         else
           raise ERR "<Reals.tmdict._>" "not a numeral")),
-      (* FIXME: add parsing of decimals as real numbers *)
+      (* decimals *)
+      ("_", zero_zero real_of_decimal),
       ("-", K_zero_one realSyntax.mk_negated),
       ("-", leftassoc realSyntax.mk_minus),
       ("+", leftassoc realSyntax.mk_plus),
@@ -298,7 +330,8 @@ in
       ("<", chainable intSyntax.mk_less),
       (">=", chainable intSyntax.mk_geq),
       (">", chainable intSyntax.mk_great),
-      (* FIXME: add parsing of decimals as real numbers *)
+      (* decimals *)
+      ("_", zero_zero real_of_decimal),
       ("-", K_zero_one realSyntax.mk_negated),
       ("-", leftassoc realSyntax.mk_minus),
       ("+", leftassoc realSyntax.mk_plus),

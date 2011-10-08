@@ -1010,16 +1010,80 @@ fun SUFF_TAC tm (al, c) =
 fun KNOW_TAC tm = REVERSE (SUFF_TAC tm);
 
 (* ----------------------------------------------------------------------
+    DEEP_INTROk_TAC : thm -> tactic -> tactic
+
+
+   ---------------------------------------------------------------------- *)
+
+fun gvarify th = let
+  val th = TY_TM_SPEC_ALL th
+  val fvs = FVL [concl th] empty_tmset
+  val hfvs = hyp_frees th
+  val true_frees = HOLset.difference(fvs,hfvs)
+  fun foldthis (fv, acc) = (fv |-> genvar (type_of fv)) :: acc
+in
+  INST (HOLset.foldl foldthis [] true_frees) th
+end
+
+fun IMP2AND_CONV t =
+    if is_imp t then
+      (RAND_CONV IMP2AND_CONV THENC
+       TRY_CONV (REWR_CONV AND_IMP_INTRO)) t
+    else ALL_CONV t
+
+fun DEEP_INTROk_TAC th tac (asl, g) = let
+  val th = th |> CONV_RULE (TOP_DEPTH_CONV RIGHT_IMP_FORALL_CONV THENC
+                            STRIP_QUANT_CONV IMP2AND_CONV)
+              |> GEN_ALL
+  val hyfrees = hyp_frees th
+  val hytyvars = HOLset.listItems (hyp_tyvars th)
+  val hykdvars = HOLset.listItems (hyp_kdvars th)
+  val hyrkvars = has_var_rankl (hyp th)
+  val (_,Ppattern) = th |> concl |> strip_forall |> #2 |> dest_imp
+  val (Pvar, pattern) = dest_comb Ppattern
+  val _ = is_var Pvar orelse raise ERR "DEEP_INTROk_TAC"
+                                   "Conclusion not of form ``var (pattern)``"
+  fun test(bvs,t) = let
+    val ((theta_tms, tmids),(theta_tys, tyids),_,_) =
+        raw_kind_match hyrkvars hykdvars hytyvars hyfrees pattern t ([],[],[],0)
+    val (btvs,bvs) = List.foldr (fn (inL tyv,(tys,tms)) => (tyv::tys,tms)
+                                  | (inR tmv,(tys,tms)) => (tys,tmv::tms))
+                                ([],[]) bvs
+    val bv_set = HOLset.fromList Term.compare bvs
+    val btv_set = HOLset.fromList Type.compare btvs
+    val tyid_set = HOLset.fromList Type.compare tyids
+    fun testtheta {redex,residue} = let
+      val rfrees = FVL [residue] empty_tmset
+    in
+      HOLset.isEmpty(HOLset.intersection(rfrees,bv_set))
+    end
+    fun testtheta_ty {redex,residue} = let
+      val rfrees = HOLset.fromList Type.compare (type_vars residue)
+    in
+      HOLset.isEmpty(HOLset.intersection(rfrees,btv_set))
+    end
+  in
+    List.all testtheta_ty theta_tys andalso
+    HOLset.isEmpty(HOLset.intersection(btv_set, tyid_set)) andalso
+    List.all testtheta theta_tms andalso
+    HOLset.isEmpty(HOLset.intersection(bv_set, tmids))
+  end handle HOL_ERR _ (* if match fails *) => false
+  fun continuation subt =
+      (CONV_TAC (UNBETA_CONV subt) THEN
+       MATCH_MP_TAC th THEN BETA_TAC THEN tac) (asl, g)
+in
+  case abvk_find_term test continuation g of
+    SOME result => result
+  | NONE => raise ERR "DEEP_INTROk_TAC" "No matching sub-terms"
+end
+
+fun DEEP_INTRO_TAC th = DEEP_INTROk_TAC th ALL_TAC
+
+(* ----------------------------------------------------------------------
     SELECT_ELIM_TAC
       eliminates a select term from the goal.
    ---------------------------------------------------------------------- *)
 
-fun SELECT_ELIM_TAC (g as (asl, w)) = let
-  val t = find_term is_select w
-in
-  CONV_TAC (UNBETA_CONV t) THEN
-  MATCH_MP_TAC SELECT_ELIM_THM THEN BETA_TAC
-end g
-
+val SELECT_ELIM_TAC = DEEP_INTRO_TAC SELECT_ELIM_THM
 
 end; (* Tactic *)

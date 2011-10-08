@@ -53,7 +53,7 @@ local
     ("bvsub", K_zero_two wordsSyntax.mk_word_sub),
     ("bvsdiv", K_zero_two wordsSyntax.mk_word_sdiv),
     ("bvsrem", K_zero_two wordsSyntax.mk_word_srem),
-    (* semantic mismatch: ("bvsmod", K_zero_two wordsSyntax.mk_word_smod),*)
+    ("bvsmod", K_zero_two wordsSyntax.mk_word_smod),
     ("bvashr", K_zero_two wordsSyntax.mk_word_asr_bv),
     ("repeat", K_one_one
       (Lib.curry wordsSyntax.mk_word_replicate o numSyntax.mk_numeral)),
@@ -78,10 +78,11 @@ local
 
 in
 
-  (* FIXME: In general, parsing is too liberal -- for instance, we do
-            not check that the input satisfies the linearity
-            constraints that are defined by various logics. Our aim is
-            merely to produce meaningful results for valid inputs. *)
+  (* In general, parsing is too liberal -- for instance, we do not
+     check that the input satisfies the linearity constraints that are
+     defined by various logics. Our aim is not to validate the SMT-LIB
+     input, but merely to produce meaningful results for valid
+     inputs. *)
 
   structure AUFLIA =
   struct
@@ -101,10 +102,17 @@ in
          - (op t t1) is syntactic sugar for (op t (to_real t1))
          - (/ t1 t2) is syntactic sugar for (/ (to_real t1) (to_real t2))"
 
-         FIXME: We only implement this for the operators in
-                {Core,Reals_Ints,ArraysEx}.tmdict. Implementing it in
-                general, also for user-defined operators, would
-                require a change to our parser architecture. *)
+         We only implement this for the operators in
+         {Core,Reals_Ints,ArraysEx}.tmdict. Implementing it in
+         general, also for user-defined operators, would require a
+         change to our parser architecture.
+
+         A discussion on the SMT-LIB mailing list in October 2010
+         (http://www.cs.nyu.edu/pipermail/smt-lib/2010/000403.html)
+         was in favor of removing implicit conversions from the
+         SMT-LIB language altogether, but this is not reflected in the
+         SMT-LIB standard yet. *)
+
       Library.dict_from_list [
         ("=", chainable (boolSyntax.mk_eq o one_int_to_real)),
         ("-", leftassoc (realSyntax.mk_minus o one_int_to_real)),

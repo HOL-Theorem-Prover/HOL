@@ -228,27 +228,7 @@ val OWHILE_def = new_definition(
                      SOME (FUNPOW f (LEAST n. ~ G (FUNPOW f n s)) s)
                    else NONE``)
 
-fun LEAST_ELIM_TAC (asl, w) = let
-  val least_terms = find_terms (fn t => option_cmp eq (total rator t) (SOME ``(LEAST)``)) w
-  val tbc = TRY_CONV BETA_CONV
-  fun doit t =
-    if free_in t w then
-      CONV_TAC (UNBETA_CONV t) THEN
-      MATCH_MP_TAC LEAST_ELIM THEN
-      CONV_TAC
-        (FORK_CONV
-           (BINDER_CONV tbc, (* ?n. P n *)
-            BINDER_CONV      (* !n. (!m. m < n ==> ~P m) /\ P n ==> Q n *)
-              (FORK_CONV
-                 (FORK_CONV
-                    (BINDER_CONV (RAND_CONV (RAND_CONV tbc)), (* !m.... *)
-                     tbc), (* P n *)
-                    tbc))))
-    else NO_TAC
-in
-  FIRST (map doit least_terms)
-end (asl, w)
-
+val LEAST_ELIM_TAC = DEEP_INTRO_TAC LEAST_ELIM
 
 val OWHILE_THM = store_thm(
   "OWHILE_THM",
@@ -268,8 +248,9 @@ val OWHILE_THM = store_thm(
         (Q.EXISTS_TAC `m` THEN FULL_SIMP_TAC (srw_ss()) [FUNPOW]) THEN
       POP_ASSUM (fn th => REWRITE_TAC [th]) THEN
       SRW_TAC [][] THEN
-      LEAST_ELIM_TAC THEN FULL_SIMP_TAC (srw_ss()) [FUNPOW] THEN CONJ_TAC THEN1
-        (Q.EXISTS_TAC `SUC m` THEN SRW_TAC [][FUNPOW]) THEN
+      DEEP_INTROk_TAC LEAST_ELIM
+        (FULL_SIMP_TAC (srw_ss()) [FUNPOW] THEN CONJ_TAC THEN1
+          (Q.EXISTS_TAC `SUC m` THEN SRW_TAC [][FUNPOW])) THEN
       Q.X_GEN_TAC `N` THEN STRIP_TAC THEN
       LEAST_ELIM_TAC THEN CONJ_TAC THEN1 METIS_TAC [] THEN
       REWRITE_TAC [] THEN
