@@ -685,14 +685,20 @@ in th end
 
 fun mk_path name = OS.Path.concat(OS.FileSys.getDir(),OS.Path.joinBaseExt{base=name,ext=SOME"art"})
 
+fun raw_start_logging out =
+  case !log_state of
+    Not_logging => let
+      val _    = Thm.set_definition_callback log_thm
+    in log_state := Active_logging out end
+  | Active_logging _ => ()
+
 fun start_logging() =
   case !log_state of
     Not_logging => let
       val name = Theory.current_theory()
       val path = mk_path name
       val file = TextIO.openOut path
-      val _    = Thm.set_definition_callback log_thm
-    in log_state := Active_logging file end
+    in raw_start_logging file end
   | Active_logging _ => ()
 
 fun stop_logging() =
