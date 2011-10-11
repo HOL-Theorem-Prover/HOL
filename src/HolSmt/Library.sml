@@ -288,7 +288,7 @@ struct
 
   val WORD_BIT_EXTRACT = simpLib.SIMP_PROVE
         (simpLib.++(bossLib.std_ss, wordsLib.WORD_BIT_EQ_ss))
-        [wordsLib.WORD_DECIDE ``1w :word1 ' 0``]
+        [wordsLib.WORD_DECIDE ``(1w :word1) ' 0``]
       ``!w:'a word i. i < dimindex (:'a) ==> (w ' i = ((i >< i) w = 1w:word1))``
 
   val WORD_SHIFT_BV = simpLib.SIMP_PROVE bossLib.bool_ss
