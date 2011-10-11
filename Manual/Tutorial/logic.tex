@@ -151,7 +151,7 @@ type {\small\verb|bool|} are constructed.  These are used later.
 \end{session}
 
 The constructors {\small\verb|mk_conj|} and {\small\verb|mk_imp|} construct
-conjunctions and implications respectively. A large collection of 
+conjunctions and implications respectively. A large collection of
 term constructors and destructors is available for the core theories
 in \HOL.
 
@@ -228,7 +228,7 @@ types by using the notation \ml{``$term$:$type$``}, as illustrated below.
 
 \paragraph{Function application types}
 
-An application $(t_1\ t_2)$ is well-typed if $t_1$ is a function 
+An application $(t_1\ t_2)$ is well-typed if $t_1$ is a function
 with type $\tau_1 \to \tau_2$ and $t_2$ has type $\tau_1$. Contrarily,
 an application $(t_1\ t_2)$ is badly typed if $t_1$ is not a function:
 
@@ -262,7 +262,7 @@ to
 
 unification failure message: unify failed
 ! Uncaught exception:
-! HOL_ERR 
+! HOL_ERR
 \end{verbatim}\end{session}
 
 The dollar symbol in front of {\small\verb|~|} indicates that the
@@ -564,14 +564,14 @@ logic type checker with enough information.
 - val Th5 = ASSUME ``t1``;
 <<HOL message: inventing new type variable names: 'a.>>
 ! Uncaught exception:
-! HOL_ERR 
+! HOL_ERR
 - val Th5 = ASSUME ``t1`` handle e => Raise e;
 <<HOL message: inventing new type variable names: 'a.>>
 
 Exception raised at Thm.ASSUME:
 not a proposition
 ! Uncaught exception:
-! HOL_ERR 
+! HOL_ERR
 
 - val Th5 = ASSUME ``t1:bool``;
 > val Th5 =  [.] |- t1 : thm
@@ -1032,7 +1032,7 @@ The fact that the assumptions of the top-level goal
 are propagated unchanged to the two subgoals is indicated by the absence
 of assumptions in the notation.
 
-Another example is {\small\verb|numLib.INDUCT_TAC|}, the tactic for
+Another example is \ml{numLib.INDUCT_TAC},\footnote{Later, we will write \ml{INDUCT_TAC} on its own, without first prefixing it with \ml{numLib}.  To allow this we must issue the command \ml{open~numLib}.} the tactic for
 doing mathematical induction on the natural numbers:
 
 \begin{center}
