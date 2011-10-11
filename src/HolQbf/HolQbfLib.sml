@@ -9,7 +9,7 @@ structure HolQbfLib :> HolQbfLib = struct
     val path = FileSys.tmpName ()
     val dict = QDimacs.write_qdimacs_file path t
     (* the actual system call to Squolem *)
-    val cmd = "squolem2 -c " ^ path ^ " >& /dev/null"
+    val cmd = "squolem2 -c " ^ path ^ " >/dev/null 2>&1"
     val _ = if !QbfTrace.trace > 1 then
         Feedback.HOL_MESG ("HolQbfLib: calling external command '" ^ cmd ^ "'")
       else ()
