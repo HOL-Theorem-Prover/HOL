@@ -38,25 +38,14 @@ constructing fixity values:
    val RIGHT      : HOLgrammars.associativity
    val NONASSOC   : HOLgrammars.associativity
 
-   val Prefix     : fixity
    val Binder     : fixity
    val Closefix   : fixity
    val Infixl     : int -> fixity
    val Infixr     : int -> fixity
    val Infix      : HOLgrammars.associativity * int -> fixity
-   val TruePrefix : int -> fixity
+   val Prefix     : int -> fixity
    val Suffix     : int -> fixity
 }
-The {Prefix} fixity has an unfortunate name, as it is a fixity
-corresponding to no special treatment.  In fact, when a {Prefix}
-fixity is specified, the {add_rule} function performs no action.
-When an element list is meant to form a genuine prefix, the
-{TruePrefix} fixity must be used instead, as is done below in the
-conditional expression example and as is also done with {~} (logical
-negation).  The {Prefix} fixity is useful elsewhere, in situations
-where standard interfaces require fixities to be provided, but where
-the user may wish to leave an identifier as a normal symbol.
-
 The {Binder} fixity is for binders such as universal and existential
 quantifiers ({!} and {?}).  Binders can actually be seen as (true)
 prefixes (should {`!x. p /\ q`} be parsed as {`(!x. p) /\ q`} or as
@@ -84,7 +73,7 @@ grammar.  The ``kernel'' of a rule is extended (or not) by additional
 sub-terms depending on the fixity type, thus:
 {
    Closefix    :      [Kernel]     (* no external arguments *)
-   TruePrefix  :      [Kernel] _   (* an argument to the right *)
+   Prefix      :      [Kernel] _   (* an argument to the right *)
    Suffix      :    _ [Kernel]     (* an argument to the left *)
    Infix       :    _ [Kernel] _   (* arguments on both sides *)
 }
@@ -208,13 +197,13 @@ an infix (and one of very weak precedence at that).
 }
 The second rule added uses the more familiar {if-then-else}
 syntax.  Here there is only a ``dangling'' term to the right of the
-construction, so this rule's fixity is of type {TruePrefix}. (If the
+construction, so this rule's fixity is of type {Prefix}. (If the
 rule was made a {Closefix}, strings such as {`if P then Q else R`}
 would still parse, but so too would {`if P then Q else`}.)  This
 example also illustrates the use of blocks within rules to improve
 pretty-printing.
 {
-   val _ = add_rule{term_name = "COND", fixity = TruePrefix 70,
+   val _ = add_rule{term_name = "COND", fixity = Prefix 70,
                     pp_elements = [PPBlock([TOK "if", BreakSpace(1,2),
                                             TM, BreakSpace(1,0),
                                             TOK "then"], (PP.CONSISTENT, 0)),
@@ -253,12 +242,6 @@ As with other functions in the {Parse} structure, there is a companion
 {temp_add_rule} function, which has the same effect on the global
 grammar, but which does not cause this effect to persist when the
 current theory is exported.
-
-The {Prefix}/{TruePrefix} situation may be transitory.  It has the
-advantage of maintaining a deal of backwards compatibility, but at the
-cost of confusing the terminology.  Where the {Prefix} value is
-acceptable, the {fixity} type should be replaced by a {fixity option}
-type to better reflect the semantics of what is really happening.
 
 An Isabelle-style concrete syntax for specifying rules would probably
 be desirable as it would conceal the complexity of the above from most

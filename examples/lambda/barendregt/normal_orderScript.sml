@@ -419,7 +419,7 @@ val noreduct_thm = store_thm(
   ``(noreduct (LAM v M) = OPTION_MAP (LAM v) (noreduct M)) ∧
     (noreduct (LAM v M @@ N) = SOME ([N/v]M)) ∧
     (¬is_abs M ⇒ (noreduct (M @@ N) =
-                  if bnf M then OPTION_MAP ((@@) M) (noreduct N)
+                  if bnf M then OPTION_MAP (APP M) (noreduct N)
                   else OPTION_MAP (λM'. M' @@ N) (noreduct M))) ∧
     (noreduct (VAR s) = NONE)``,
   SRW_TAC [][noreduct_def] THENL [
@@ -517,7 +517,7 @@ val noredAPP' = store_thm(
   "noredAPP'",
   ``~is_abs M ==> (noreduct (M @@ N) =
                      case noreduct M of
-                       NONE -> OPTION_MAP ((@@) M) (noreduct N)
+                       NONE -> OPTION_MAP (APP M) (noreduct N)
                      || SOME M' -> SOME (M' @@ N))``,
   SRW_TAC [][noreduct_thm, GSYM noreduct_bnf] THEN
   Cases_on `noreduct M` THEN FULL_SIMP_TAC (srw_ss()) []);

@@ -769,16 +769,16 @@ val zero_thm = store_thm(
     (zero n (LAMi m v t u) =
           if m = n then LAMi 0 v (zero n t) (zero n u)
           else LAM v (zero n t) @@ zero n u)``,
-  SRW_TAC [][zero_def, nlabel_thm, n_posns_def, strip_label_thm,
-             nlabel_app_no_nil] THEN
-  FULL_SIMP_TAC (srw_ss()) []);
+  ASM_SIMP_TAC (srw_ss())[zero_def, nlabel_thm, n_posns_def, strip_label_thm,
+                          nlabel_app_no_nil] THEN
+  Cases_on `n = m` THEN SRW_TAC [][]);
 
 val n_posns_zero = store_thm(
   "n_posns_zero",
   ``!M n. n_posns 0 (zero n M) = n_posns n M``,
   HO_MATCH_MP_TAC simple_lterm_induction THEN
   SRW_TAC [][n_posns_def, zero_thm] THEN
-  SRW_TAC [][n_posns_def] THEN
+  Cases_on `n = y` THEN SRW_TAC [][n_posns_def] THEN
   SRW_TAC [][EXTENSION, EQ_IMP_THM]);
 
 val zero_vsubst = store_thm(
@@ -1407,7 +1407,7 @@ val _ = export_rewrites ["is_comb_LAMl"]
 val strange_cases = prove(
   ``!M : term. (?vs M'. (M = LAMl vs M') /\ (size M' = 1)) \/
                 (?vs args t.
-                         (M = LAMl vs (FOLDL (@@) t args)) /\
+                         (M = LAMl vs (FOLDL APP t args)) /\
                          ~(args = []) /\ ~is_comb t)``,
   HO_MATCH_MP_TAC simple_induction THEN REPEAT CONJ_TAC THENL [
     (* VAR *) GEN_TAC THEN DISJ1_TAC THEN
@@ -1418,7 +1418,7 @@ val strange_cases = prove(
               SIMP_TAC (srw_ss()) [] THEN
               `(?vs M'. (M = LAMl vs M') /\ (size M' = 1)) \/
                (?vs args t.
-                        (M = LAMl vs (FOLDL (@@) t args)) /\ ~(args = []) /\
+                        (M = LAMl vs (FOLDL APP t args)) /\ ~(args = []) /\
                         ~is_comb t)` by PROVE_TAC []
               THENL [
                 MAP_EVERY Q.EXISTS_TAC [`[N]`, `M`] THEN
@@ -1554,7 +1554,8 @@ val cant_ireduce_to_lam_atom = prove(
   DISCH_THEN (Q.X_CHOOSE_THEN `vs'` STRIP_ASSUME_TAC) THEN
   `LAMl vs N = LAMl vs' (N ISUB REVERSE (ZIP (MAP VAR vs', vs)))`
      by SRW_TAC [][LAMl_ALPHA] THEN
-  SRW_TAC [][i1_reduce_to_LAMl, DISJOINT_SYM, cant_ireduce_to_atom]);
+  FULL_SIMP_TAC (srw_ss()) [DISJOINT_SYM] THEN
+  SRW_TAC [][i1_reduce_to_LAMl, cant_ireduce_to_atom]);
 
 val noncomb_nonabs_doesnt_reduce = store_thm(
   "noncomb_nonabs_doesnt_reduce",
@@ -1596,12 +1597,12 @@ val i_reduce1_to_app = store_thm(
 val i_reduce1_to_fold_app = store_thm(
   "i_reduce1_to_fold_app",
   ``!args t M.
-      M i_reduce1 FOLDL (@@) t args  =
-        (?t0 r. (M = FOLDL (@@) t0 args) /\ labelled_redn beta t0 r t /\
+      M i_reduce1 FOLDL APP t args  =
+        (?t0 r. (M = FOLDL APP t0 args) /\ labelled_redn beta t0 r t /\
                 ~is_comb t0 /\ ~(args = [])) \/
-        (?t0. (M = FOLDL (@@) t0 args) /\ t0 i_reduce1 t) \/
+        (?t0. (M = FOLDL APP t0 args) /\ t0 i_reduce1 t) \/
         (?pfx a0 a sfx r.
-                (M = FOLDL (@@) t (APPEND pfx (a0 :: sfx))) /\
+                (M = FOLDL APP t (APPEND pfx (a0 :: sfx))) /\
                 (args = (APPEND pfx (a :: sfx))) /\
                 labelled_redn beta a0 r a)``,
   Induct THEN SRW_TAC [][] THEN
@@ -1657,17 +1658,17 @@ val EL_APPEND2 = prove(
 
 val ireduces_to_fold_app = store_thm(
   "ireduces_to_fold_app",
-  ``M i_reduces FOLDL (@@) t args ⇒
+  ``M i_reduces FOLDL APP t args ⇒
     ∃t0 args0.
-        (M = FOLDL (@@) t0 args0) ∧ (LENGTH args0 = LENGTH args) ∧
+        (M = FOLDL APP t0 args0) ∧ (LENGTH args0 = LENGTH args) ∧
         reduction beta t0 t ∧
         EVERY (λp. reduction beta (FST p) (SND p)) (ZIP (args0, args))``,
   SIMP_TAC (srw_ss()) [i_reduces_RTC_i_reduce1] THEN
   Q_TAC SUFF_TAC
      `∀M N. RTC (i_reduce1) M N ⇒
-            ∀t args. (N = FOLDL (@@) t args) ⇒
+            ∀t args. (N = FOLDL APP t args) ⇒
                      ∃t0 args0.
-                        (M = FOLDL (@@) t0 args0) ∧
+                        (M = FOLDL APP t0 args0) ∧
                         (LENGTH args0 = LENGTH args) ∧
                         reduction beta t0 t ∧
                         EVERY (λp. reduction beta (FST p) (SND p))
@@ -1976,21 +1977,21 @@ val standard_reductions_join_over_comb = prove(
       standard_reduction s1 /\ standard_reduction s2 /\
       finite s1 /\ finite s2 ==>
       standard_reduction (plink (pmap (\t. t @@ first s2) (CONS Lt) s1)
-                                (pmap ((@@) (last s1)) (CONS Rt) s2))``,
+                                (pmap (APP (last s1)) (CONS Rt) s2))``,
   Q_TAC SUFF_TAC
     `!s1.
         okpath (labelled_redn beta) s1 /\ finite s1 ==>
         standard_reduction s1 ==>
         !s2. standard_reduction s2 /\ finite s2 ==>
              standard_reduction (plink (pmap (\t. t @@ first s2) (CONS Lt) s1)
-                                       (pmap ((@@) (last s1)) (CONS Rt) s2))`
+                                       (pmap (APP (last s1)) (CONS Rt) s2))`
      THEN1 METIS_TAC [standard_reductions_ok] THEN
   HO_MATCH_MP_TAC finite_okpath_ind THEN
   SIMP_TAC (srw_ss()) [standard_reduction_thm] THEN CONJ_TAC THENL [
     Q_TAC SUFF_TAC
           `!s. okpath (labelled_redn beta) s /\ finite s ==>
                !x. standard_reduction s ==>
-                   standard_reduction (pmap ((@@) x) (CONS Rt) s)` THEN1
+                   standard_reduction (pmap (APP x) (CONS Rt) s)` THEN1
           METIS_TAC [standard_reductions_ok] THEN
     HO_MATCH_MP_TAC finite_okpath_ind THEN
     SRW_TAC [][standard_reduction_thm, labelled_redn_rules] THEN
@@ -2001,7 +2002,7 @@ val standard_reductions_join_over_comb = prove(
     ],
     MAP_EVERY Q.X_GEN_TAC [`x`,`r`,`p`] THEN REPEAT STRIP_TAC THEN
     Q.ABBREV_TAC `p' = pmap (\t. t @@ first s2) (CONS Lt) p` THEN
-    Q.ABBREV_TAC `s2' = pmap ((@@) (last p)) (CONS Rt) s2` THEN
+    Q.ABBREV_TAC `s2' = pmap (APP (last p)) (CONS Rt) s2` THEN
     `last p' = first s2'` by SRW_TAC [][] THENL [
        SRW_TAC [][first_plink, labelled_redn_rules],
 
@@ -2036,7 +2037,7 @@ val standard_reductions_join_over_comb = store_thm(
                 (last s = last s1 @@ last s2)``,
   REPEAT STRIP_TAC THEN
   Q.ABBREV_TAC `s1' = pmap (\t. t @@ first s2) (CONS Lt) s1` THEN
-  Q.ABBREV_TAC `s2' = pmap ((@@) (last s1)) (CONS Rt) s2` THEN
+  Q.ABBREV_TAC `s2' = pmap (APP (last s1)) (CONS Rt) s2` THEN
   Q.EXISTS_TAC `plink s1' s2'` THEN
   `last s1' = first s2'` by SRW_TAC [][] THEN
   SRW_TAC [][] THEN
@@ -2049,13 +2050,13 @@ val ISUB_APP = prove(
 
 val FOLDL_APP_ISUB = prove(
   ``!args (t:term) sub.
-         FOLDL (@@) t args ISUB sub =
-         FOLDL (@@) (t ISUB sub) (MAP (\t. t ISUB sub) args)``,
+         FOLDL APP t args ISUB sub =
+         FOLDL APP (t ISUB sub) (MAP (\t. t ISUB sub) args)``,
   Induct THEN SRW_TAC [][ISUB_APP]);
 
 val size_foldl_app = prove(
   ``!args t : term.
-       size (FOLDL (@@) t args) = FOLDL (\n t. n + size t + 1) (size t) args``,
+       size (FOLDL APP t args) = FOLDL (\n t. n + size t + 1) (size t) args``,
   Induct THEN SRW_TAC [][size_thm]);
 
 val size_foldl_app_lt = prove(
@@ -2067,7 +2068,7 @@ val size_foldl_app_lt = prove(
 
 val size_args_foldl_app = prove(
   ``!args n (t : term) x. n < LENGTH args ==>
-                size (EL n args) < x + size (FOLDL (@@) t args)``,
+                size (EL n args) < x + size (FOLDL APP t args)``,
   Induct THEN SRW_TAC [][] THEN
   Cases_on `n` THEN SRW_TAC [][] THENL [
     SRW_TAC [][size_foldl_app, size_thm] THEN
@@ -2103,8 +2104,8 @@ val collect_standard_reductions = prove(
                           (last arg_s = SND p) /\
                           standard_reduction arg_s) (ZIP (args0, args)) ==>
        ?s'. standard_reduction s' /\ finite s' /\
-            (first s' = FOLDL (@@) (first s) args0) /\
-            (last s' = FOLDL (@@) (last s) args)``,
+            (first s' = FOLDL APP (first s) args0) /\
+            (last s' = FOLDL APP (last s) args)``,
   Induct THEN SRW_TAC [][] THENL [
     `args = []` by FULL_SIMP_TAC (srw_ss()) [listTheory.LENGTH_NIL] THEN
     FULL_SIMP_TAC (srw_ss()) [] THEN METIS_TAC [],
@@ -2163,21 +2164,21 @@ val standardisation_theorem = store_thm(
         PROVE_TAC [cant_ireduce_to_lam_atom]) THEN
     PROVE_TAC [head_reduces_def, head_reduction_standard],
     Q.SPECL_THEN [`LENGTH vs`,
-                   `LIST_TO_SET vs UNION FV (FOLDL (@@) t args) UNION FV Z`]
+                   `LIST_TO_SET vs UNION FV (FOLDL APP t args) UNION FV Z`]
                  MP_TAC FRESH_lists THEN
     SIMP_TAC (srw_ss()) [FINITE_FV] THEN
     DISCH_THEN (Q.X_CHOOSE_THEN `vs'` STRIP_ASSUME_TAC) THEN
     Q.ABBREV_TAC `sub = REVERSE (ZIP (MAP VAR vs' : term list, vs))` THEN
-    `LAMl vs (FOLDL (@@) t args) = LAMl vs' (FOLDL (@@) t args ISUB sub)`
+    `LAMl vs (FOLDL APP t args) = LAMl vs' (FOLDL APP t args ISUB sub)`
        by SRW_TAC [][LAMl_ALPHA] THEN
-    Q.ABBREV_TAC `N0 = FOLDL (@@) t args ISUB sub` THEN
+    Q.ABBREV_TAC `N0 = FOLDL APP t args ISUB sub` THEN
     `?Z0. (Z = LAMl vs' Z0) /\ Z0 i_reduces N0`
        by METIS_TAC [i_reduces_to_LAMl, DISJOINT_SYM] THEN
-    `N0 = FOLDL (@@) (t ISUB sub) (MAP (\t. t ISUB sub) args)`
+    `N0 = FOLDL APP (t ISUB sub) (MAP (\t. t ISUB sub) args)`
        by SRW_TAC [][FOLDL_APP_ISUB] THEN
     Q.ABBREV_TAC `args' = MAP (\t. t ISUB sub) args` THEN
     `?t0 args0.
-        (Z0 = FOLDL (@@) t0 args0) /\ (LENGTH args0 = LENGTH args') /\
+        (Z0 = FOLDL APP t0 args0) /\ (LENGTH args0 = LENGTH args') /\
         reduction beta t0 (t ISUB sub) /\
         EVERY (\p. reduction beta (FST p) (SND p)) (ZIP (args0, args'))`
        by METIS_TAC [ireduces_to_fold_app] THEN
@@ -2205,8 +2206,8 @@ val standardisation_theorem = store_thm(
            FULL_SIMP_TAC (srw_ss()) [listTheory.MEM_ZIP,
                                      GSYM LEFT_FORALL_IMP_THM]) THEN
     `?sr. standard_reduction sr /\ finite sr /\
-          (first sr = FOLDL (@@) (first ts) args0) /\
-          (last sr = FOLDL (@@) (last ts) args')`
+          (first sr = FOLDL APP (first ts) args0) /\
+          (last sr = FOLDL APP (last ts) args')`
        by (MATCH_MP_TAC collect_standard_reductions THEN
            ASM_REWRITE_TAC []) THEN
     `?hr. is_head_reduction hr /\ finite hr /\ (first hr = M) /\

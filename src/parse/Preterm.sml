@@ -1763,20 +1763,47 @@ fun TC printers = let
               val Rator_tm = Term.beta_eta_conv_ty_in_term (to_term (overloading_resolution0 Rator'))
                        handle e => (Globals.show_types := tmp0; Feedback.set_trace "kinds" tmp1;
                                     Feedback.set_trace "ranks" tmp2; Raise e)
+              val Rator_ty = Term.type_of Rator_tm
+              val Rator_btyv = fst (Type.dest_univ_type Rator_ty)
+              val (name,kind) = Type.dest_var_type Rator_btyv
               val Pretype.PT(_,rand_locn) = Rand
               val Rand_ty = Type.deep_beta_eta_ty (Pretype.toType Rand)
                        handle e => (Globals.show_types := tmp0; Feedback.set_trace "kinds" tmp1;
                                     Feedback.set_trace "ranks" tmp2; Raise e)
               val message =
+                if Kind.rank_of kind < Type.rank_of_type Rand_ty then
                   String.concat
                       [
-                       "\nKind inference failure: unable to infer a type \
+                       "\nRank inference failure: unable to infer a rank \
                        \for the application of the term\n\n",
                        ptm Rator_tm,
                        "\n\n"^locn.toString (locn Rator')^"\n\n",
-                       if (is_atom Rator') then ""
-                       else ("which has type\n\n" ^
-                             pty(Term.type_of Rator_tm) ^ "\n\n"),
+                       (* if (is_atom Rator') then ""
+                       else ("with type\n\n" ^
+                             pty(Term.type_of Rator_tm) ^ "\n\n"), *)
+                       "which expects a type of rank ",
+                       prk (Kind.rank_of kind),"\n\n",
+
+                       "to the type\n\n",
+                       pty Rand_ty,
+                       "\n\n"^locn.toString rand_locn^"\n\n",
+
+                       "which has rank ",
+                             prk(Type.rank_of_type Rand_ty), "\n\n",
+
+                       "rank unification failure message: ", message, "\n"]
+                else
+                  String.concat
+                      [
+                       "\nKind inference failure: unable to infer a kind \
+                       \for the application of the term\n\n",
+                       ptm Rator_tm,
+                       "\n\n"^locn.toString (locn Rator')^"\n\n",
+                       (* if (is_atom Rator') then ""
+                       else ("with type\n\n" ^
+                             pty(Term.type_of Rator_tm) ^ "\n\n"), *)
+                       "which expects a type of kind\n\n",
+                       pkd kind,"\n\n",
 
                        "to the type\n\n",
                        pty Rand_ty,
@@ -1816,7 +1843,7 @@ fun TC printers = let
               val message =
                   String.concat
                       [
-                       "\nRank inference failure: unable to infer a type \
+                       "\nRank inference failure: unable to infer a rank \
                        \for the application of the term\n\n",
                        ptm Rator_tm,
                        "\n\n"^locn.toString (locn Rator')^"\n\n",

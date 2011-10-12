@@ -68,9 +68,8 @@ fun new_specification {name,sat_thm,consts} = let
   open Parse
   val cnames = map #const_name consts
   val res = Definition.new_specification(name, cnames, sat_thm)
-  fun modify_grammar {const_name,fixity} = if fixity <> Prefix then
-                                             set_fixity const_name fixity
-                                           else ()
+  fun modify_grammar {const_name,fixity=SOME fxty} = set_fixity const_name fxty
+    | modify_grammar _ = ()
 in
   app modify_grammar consts;
   res

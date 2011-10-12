@@ -525,7 +525,7 @@ val write_mem_def = Define`
        (\l. constT ())`;
 
 val read_memA_with_priv_def = Define`
-  read_memA_with_priv (ii:iiid) (address:word32, size:num, priveledged:bool) =
+  read_memA_with_priv (ii:iiid) (address:word32, size:num, privileged:bool) =
     seqT
       (if aligned(address,size) then
          constT address
@@ -537,7 +537,7 @@ val read_memA_with_priv_def = Define`
             else
               constT (align(address,size))))
       (\VA.
-        seqT (translate_address(VA, priveledged, F))
+        seqT (translate_address(VA, privileged, F))
         (\memaddrdesc.
           seqT (read_mem ii (memaddrdesc, size))
           (\value.
@@ -547,7 +547,7 @@ val read_memA_with_priv_def = Define`
 
 val write_memA_with_priv_def = Define`
   write_memA_with_priv (ii:iiid)
-     (address:word32, size:num, priveledged:bool) (value:word8 list) =
+     (address:word32, size:num, privileged:bool) (value:word8 list) =
     seqT
       (if aligned(address,size) then
          constT address
@@ -559,7 +559,7 @@ val write_memA_with_priv_def = Define`
             else
               constT (align(address,size))))
       (\VA.
-        seqT (translate_address(VA, priveledged, T))
+        seqT (translate_address(VA, privileged, T))
         (\memaddrdesc.
            seqT
            (if memaddrdesc.memattrs.shareable then
@@ -579,7 +579,7 @@ val write_memA_with_priv_def = Define`
                (\value. write_mem ii (memaddrdesc,size) value))))`;
 
 val read_memU_with_priv_def = Define`
-  read_memU_with_priv (ii:iiid) (address:word32, size:num, priveledged:bool) =
+  read_memU_with_priv (ii:iiid) (address:word32, size:num, privileged:bool) =
     seqT (read_sctlr ii)
     (\sctlr.
        seqT
@@ -589,13 +589,13 @@ val read_memU_with_priv_def = Define`
             constT (address))
        (\address.
           if aligned(address,size) then
-            read_memA_with_priv ii (address,size,priveledged)
+            read_memA_with_priv ii (address,size,privileged)
           else if sctlr.A then
             errorT "read_memU_with_priv: DAbort_Alignment"
           else
             seqT
               (forT 0 (size - 1)
-                 (\i. read_memA_with_priv ii (address + n2w i,1,priveledged)))
+                 (\i. read_memA_with_priv ii (address + n2w i,1,privileged)))
               (\values. let value = FLAT values in
                 seqT
                   (big_endian ii)
@@ -603,7 +603,7 @@ val read_memU_with_priv_def = Define`
 
 val write_memU_with_priv_def = Define`
   write_memU_with_priv (ii:iiid)
-    (address:word32, size:num, priveledged:bool) (value:word8 list) =
+    (address:word32, size:num, privileged:bool) (value:word8 list) =
     seqT (read_sctlr ii)
     (\sctlr.
        seqT
@@ -613,7 +613,7 @@ val write_memU_with_priv_def = Define`
             constT (address))
        (\address.
           if aligned(address,size) then
-            write_memA_with_priv ii (address,size,priveledged) value
+            write_memA_with_priv ii (address,size,privileged) value
           else if sctlr.A then
             errorT "write_memU_with_priv: DAbort_Alignment"
           else
@@ -624,7 +624,7 @@ val write_memU_with_priv_def = Define`
                  seqT
                    (forT 0 (size - 1)
                       (\i. write_memA_with_priv ii
-                             (address + n2w i,1,priveledged) [EL i value]))
+                             (address + n2w i,1,privileged) [EL i value]))
                    (\u. constT ()))))`;
 
 val read_memA_def = Define`

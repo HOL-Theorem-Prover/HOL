@@ -25,6 +25,8 @@ open HolKernel boolLib Parse
 
 val _ = new_theory "arithmetic";
 
+val _ = if !Globals.interactive then () else Feedback.emit_WARNING := false;
+
 val NOT_SUC     = numTheory.NOT_SUC
 and INV_SUC     = numTheory.INV_SUC
 and INDUCTION   = numTheory.INDUCTION;
@@ -103,7 +105,7 @@ val SUB = new_recursive_definition
      integer, real, words, rat
 *)
 val _ = add_rule { term_name = "numeric_negate",
-                   fixity = TruePrefix 900,
+                   fixity = Prefix 900,
                    pp_elements = [TOK "-"],
                    paren_style = OnlyIfNecessary,
                    block_style = (AroundEachPhrase, (PP.CONSISTENT,0))};
@@ -111,7 +113,7 @@ val _ = add_rule { term_name = "numeric_negate",
 (* Similarly, add syntax for the injection from nats symbol (&).  This isn't
    required in this theory, but will be used by descendents. *)
 val _ = add_rule {term_name = GrammarSpecials.num_injection,
-                  fixity = TruePrefix 900,
+                  fixity = Prefix 900,
                   pp_elements = [TOK GrammarSpecials.num_injection],
                   paren_style = OnlyIfNecessary,
                   block_style = (AroundEachPhrase, (PP.CONSISTENT,0))};
@@ -4310,74 +4312,101 @@ val DIVMOD_CALC = Q.store_thm
     Support for using congruential rewriting and MOD
    ---------------------------------------------------------------------- *)
 
-(* a special marker constant *)
-val Sb_DEF = new_definition(
-  "Sb_DEF",
-  ``Sb n = n - 1``);
-
 val MODEQ_DEF = new_definition(
   "MODEQ_DEF",
-  ``MODEQ n m1 m2 = (m1 MOD (n + 1) = m2 MOD (n + 1))``);
+  ``MODEQ n m1 m2 = ?a b. a * n + m1 = b * n + m2``);
+
+val MODEQ_0_CONG = store_thm(
+  "MODEQ_0_CONG",
+  ``MODEQ 0 m1 m2 <=> (m1 = m2)``,
+  SRW_TAC [][MODEQ_DEF, MULT_CLAUSES, ADD_CLAUSES]);
+
+val MODEQ_NONZERO_MODEQUALITY = store_thm(
+  "MODEQ_NONZERO_MODEQUALITY",
+  ``0 < n ==> (MODEQ n m1 m2 <=> (m1 MOD n = m2 MOD n))``,
+  SRW_TAC [][MODEQ_DEF] THEN
+  Q.SPEC_THEN `n` (fn th => th |> UNDISCH |> ASSUME_TAC) DIVISION THEN
+  POP_ASSUM (fn th => Q.SPEC_THEN `m1` STRIP_ASSUME_TAC th THEN
+                      Q.SPEC_THEN `m2` STRIP_ASSUME_TAC th) THEN
+  MAP_EVERY Q.ABBREV_TAC [`q1 = m1 DIV n`, `r1 = m1 MOD n`,
+                          `q2 = m2 DIV n`, `r2 = m2 MOD n`] THEN
+  markerLib.RM_ALL_ABBREVS_TAC THEN SRW_TAC [][EQ_IMP_THM] THENL [
+    `(a * n + (q1 * n + r1)) MOD n = r1`
+       by (MATCH_MP_TAC MOD_UNIQUE THEN Q.EXISTS_TAC `a + q1` THEN
+           SIMP_TAC (srw_ss()) [MULT_ASSOC, RIGHT_ADD_DISTRIB, ADD_ASSOC] THEN
+           SRW_TAC [][]) THEN
+    POP_ASSUM (SUBST1_TAC o SYM) THEN
+    MATCH_MP_TAC MOD_UNIQUE THEN Q.EXISTS_TAC `b + q2` THEN
+    SRW_TAC [][ADD_ASSOC, RIGHT_ADD_DISTRIB],
+    MAP_EVERY Q.EXISTS_TAC [`q2`, `q1`] THEN
+    SRW_TAC [][AC ADD_ASSOC ADD_COMM]
+  ]);
+
+val MODEQ_THM = store_thm(
+  "MODEQ_THM",
+  ``MODEQ n m1 m2 <=> (n = 0) /\ (m1 = m2) \/ 0 < n /\ (m1 MOD n = m2 MOD n)``,
+  METIS_TAC [MODEQ_0_CONG, MODEQ_NONZERO_MODEQUALITY, NOT_ZERO_LT_ZERO]);
+
 
 val MODEQ_INTRO_CONG = store_thm(
   "MODEQ_INTRO_CONG",
-  ``0 < n ==> MODEQ (Sb n) e0 e1 ==> (e0 MOD n = e1 MOD n)``,
-  SIMP_TAC (srw_ss()) [MODEQ_DEF, Sb_DEF, LESS_EQ, GSYM ONE, SUB_ADD]);
+  ``0 < n ==> MODEQ n e0 e1 ==> (e0 MOD n = e1 MOD n)``,
+  METIS_TAC [MODEQ_NONZERO_MODEQUALITY]);
 
 val MODEQ_PLUS_CONG = store_thm(
   "MODEQ_PLUS_CONG",
   ``MODEQ n x0 x1 ==> MODEQ n y0 y1 ==> MODEQ n (x0 + y0) (x1 + y1)``,
-  SRW_TAC [][MODEQ_DEF, Once (GSYM MOD_PLUS), LESS_0, GSYM ADD1] THEN
-  SRW_TAC [][LESS_0, MOD_PLUS]);
+  Q.ID_SPEC_TAC `n` THEN SIMP_TAC (srw_ss() ++ DNF_ss)[MODEQ_THM, LESS_REFL] THEN
+  SRW_TAC [][Once (GSYM MOD_PLUS)] THEN SRW_TAC [][MOD_PLUS]);
 
 val MODEQ_MULT_CONG = store_thm(
   "MODEQ_MULT_CONG",
   ``MODEQ n x0 x1 ==> MODEQ n y0 y1 ==> MODEQ n (x0 * y0) (x1 * y1)``,
-  SRW_TAC [][MODEQ_DEF, Once (GSYM MOD_TIMES2), LESS_0, GSYM ADD1] THEN
-  SRW_TAC [][LESS_0, MOD_TIMES2]);
+  Q.ID_SPEC_TAC `n` THEN SIMP_TAC (srw_ss() ++ DNF_ss)[MODEQ_THM, LESS_REFL] THEN
+  SRW_TAC [][Once (GSYM MOD_TIMES2)] THEN SRW_TAC [][MOD_TIMES2]);
 
 val MODEQ_REFL = store_thm(
   "MODEQ_REFL",
   ``!x. MODEQ n x x``,
-  REWRITE_TAC [MODEQ_DEF]);
+  SRW_TAC [][MODEQ_THM, GSYM NOT_ZERO_LT_ZERO]);
+
+val MODEQ_SYM = store_thm(
+  "MODEQ_SYM",
+  ``MODEQ n x y <=> MODEQ n y x``,
+  SRW_TAC [][MODEQ_THM] THEN METIS_TAC []);
 
 val MODEQ_TRANS = store_thm(
   "MODEQ_TRANS",
   ``!x y z. MODEQ n x y /\ MODEQ n y z ==> MODEQ n x z``,
-  SIMP_TAC (srw_ss()) [MODEQ_DEF]);
+  Q.ID_SPEC_TAC `n` THEN SIMP_TAC (srw_ss() ++ DNF_ss) [MODEQ_THM, LESS_REFL]);
 
 val MODEQ_NUMERAL = store_thm(
   "MODEQ_NUMERAL",
   ``(NUMERAL n <= NUMERAL m ==>
-     MODEQ (Sb (NUMERAL (BIT1 n))) (NUMERAL (BIT1 m))
+     MODEQ (NUMERAL (BIT1 n)) (NUMERAL (BIT1 m))
            (NUMERAL (BIT1 m) MOD NUMERAL (BIT1 n))) /\
     (NUMERAL n <= NUMERAL m ==>
-     MODEQ (Sb (NUMERAL (BIT1 n))) (NUMERAL (BIT2 m))
+     MODEQ (NUMERAL (BIT1 n)) (NUMERAL (BIT2 m))
            (NUMERAL (BIT2 m) MOD NUMERAL (BIT1 n))) /\
     (NUMERAL n <= NUMERAL m ==>
-     MODEQ (Sb (NUMERAL (BIT2 n))) (NUMERAL (BIT2 m))
+     MODEQ (NUMERAL (BIT2 n)) (NUMERAL (BIT2 m))
            (NUMERAL (BIT2 m) MOD NUMERAL (BIT2 n))) /\
     (NUMERAL n < NUMERAL m ==>
-     MODEQ (Sb (NUMERAL (BIT2 n))) (NUMERAL (BIT1 m))
+     MODEQ (NUMERAL (BIT2 n)) (NUMERAL (BIT1 m))
            (NUMERAL (BIT1 m) MOD NUMERAL (BIT2 n)))``,
   SIMP_TAC (srw_ss())
-           [MODEQ_DEF, Sb_DEF, BIT1, BIT2, ADD_CLAUSES, ALT_ZERO,
-            NUMERAL_DEF, SUB_0, SUB_MONO_EQ, MOD_MOD, LESS_0])
+           [MODEQ_NONZERO_MODEQUALITY, BIT1, BIT2, ADD_CLAUSES, ALT_ZERO,
+            NUMERAL_DEF, MOD_MOD, LESS_0])
 
 val MODEQ_MOD = store_thm(
   "MODEQ_MOD",
-  ``0 < n ==> MODEQ (Sb n) (x MOD n) x``,
-  SIMP_TAC (srw_ss()) [MODEQ_DEF, Sb_DEF, GSYM ADD1, ONE] THEN
-  Q.SPEC_THEN `n` STRUCT_CASES_TAC num_CASES THEN
-  SIMP_TAC (srw_ss()) [LESS_REFL, SUB_MONO_EQ, SUB_0, MOD_MOD, LESS_0]);
+  ``0 < n ==> MODEQ n (x MOD n) x``,
+  SIMP_TAC (srw_ss()) [MODEQ_NONZERO_MODEQUALITY, MOD_MOD]);
 
 val MODEQ_0 = store_thm(
   "MODEQ_0",
-  ``0 < n ==> MODEQ (Sb n) n 0``,
-  SIMP_TAC (srw_ss()) [MODEQ_DEF, Sb_DEF, GSYM ADD1, ONE] THEN
-  Q.SPEC_THEN `n` STRUCT_CASES_TAC num_CASES THEN
-  SIMP_TAC (srw_ss()) [LESS_REFL, SUB_MONO_EQ, SUB_0, DIVMOD_ID, LESS_0,
-                       ZERO_MOD]);
+  ``0 < n ==> MODEQ n n 0``,
+  SIMP_TAC (srw_ss()) [MODEQ_NONZERO_MODEQUALITY, DIVMOD_ID, ZERO_MOD]);
 
 val modss = simpLib.add_relsimp {refl = MODEQ_REFL, trans = MODEQ_TRANS,
                                  weakenings = [MODEQ_INTRO_CONG],

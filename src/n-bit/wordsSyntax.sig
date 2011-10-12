@@ -22,6 +22,9 @@ sig
   val word_L_tm           : term
   val word_H_tm           : term
   val word_L2_tm          : term
+  val uint_max_tm         : term
+  val int_min_tm          : term
+  val int_max_tm          : term
   val word_modify_tm      : term
   val word_reverse_tm     : term
   val word_compare_tm     : term
@@ -84,6 +87,11 @@ sig
   val n2w_tm              : term
   val w2n_tm              : term
   val sw2sw_tm            : term
+  val saturate_n2w_tm     : term
+  val saturate_w2w_tm     : term
+  val saturate_add_tm     : term
+  val saturate_sub_tm     : term
+  val saturate_mul_tm     : term
 
   val mk_index            : term * term -> term
   val mk_dimindex         : hol_type -> term
@@ -92,6 +100,9 @@ sig
   val mk_word_L           : hol_type -> term
   val mk_word_H           : hol_type -> term
   val mk_word_L2          : hol_type -> term
+  val mk_uint_max         : hol_type -> term
+  val mk_int_min          : hol_type -> term
+  val mk_int_max          : hol_type -> term
   val mk_word_modify      : term * term -> term
   val mk_word_reverse     : term -> term
   val mk_word_compare     : term * term -> term
@@ -154,6 +165,11 @@ sig
   val mk_n2w              : term * hol_type -> term
   val mk_w2n              : term -> term
   val mk_sw2sw            : term * hol_type -> term
+  val mk_saturate_n2w     : term * hol_type -> term
+  val mk_saturate_w2w     : term * hol_type -> term
+  val mk_saturate_add     : term * term -> term
+  val mk_saturate_sub     : term * term -> term
+  val mk_saturate_mul     : term * term -> term
 
   val dest_index            : term -> term * term
   val dest_dimindex         : term -> hol_type
@@ -162,6 +178,9 @@ sig
   val dest_word_L           : term -> hol_type
   val dest_word_H           : term -> hol_type
   val dest_word_L2          : term -> hol_type
+  val dest_uint_max         : term -> hol_type
+  val dest_int_min          : term -> hol_type
+  val dest_int_max          : term -> hol_type
   val dest_word_modify      : term -> term * term
   val dest_word_reverse     : term -> term
   val dest_word_compare     : term -> term * term
@@ -224,6 +243,11 @@ sig
   val dest_n2w              : term -> term * hol_type
   val dest_sw2sw            : term -> term * hol_type
   val dest_w2n              : term -> term
+  val dest_saturate_n2w     : term -> term * hol_type
+  val dest_saturate_w2w     : term -> term * hol_type
+  val dest_saturate_add     : term -> term * term
+  val dest_saturate_sub     : term -> term * term
+  val dest_saturate_mul     : term -> term * term
 
   val is_index            : term -> bool
   val is_dimindex         : term -> bool
@@ -232,6 +256,9 @@ sig
   val is_word_L           : term -> bool
   val is_word_H           : term -> bool
   val is_word_L2          : term -> bool
+  val is_uint_max         : term -> bool
+  val is_int_min          : term -> bool
+  val is_int_max          : term -> bool
   val is_word_modify      : term -> bool
   val is_word_reverse     : term -> bool
   val is_word_compare     : term -> bool
@@ -293,6 +320,11 @@ sig
   val is_n2w              : term -> bool
   val is_w2n              : term -> bool
   val is_sw2sw            : term -> bool
+  val is_saturate_n2w     : term -> bool
+  val is_saturate_w2w     : term -> bool
+  val is_saturate_add     : term -> bool
+  val is_saturate_sub     : term -> bool
+  val is_saturate_mul     : term -> bool
 
   val dest_mod_word_literal : term -> Arbnum.num * Arbnum.num
   val dest_word_literal     : term -> Arbnum.num

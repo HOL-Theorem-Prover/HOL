@@ -3,6 +3,8 @@ struct
 
   open Abbrev HolKernel boolLib simpLib BasicProvers
 
+  val all_tac : tactic = ALL_TAC
+  fun kall_tac (_: 'a) : tactic = ALL_TAC
   val strip_tac : tactic = STRIP_TAC
   val conj_tac : tactic = CONJ_TAC
   val conj_asm1_tac : tactic = CONJ_ASM1_TAC
@@ -17,6 +19,7 @@ struct
   val ntac = NTAC
 
   val rewrite_tac : thm list -> tactic = REWRITE_TAC
+  val once_rewrite_tac : thm list -> tactic = ONCE_REWRITE_TAC
   val asm_rewrite_tac : thm list -> tactic = ASM_REWRITE_TAC
   val ho_match_mp_tac : thm_tactic = HO_MATCH_MP_TAC
   val match_mp_tac : thm_tactic = MATCH_MP_TAC
@@ -40,6 +43,7 @@ struct
   val qmatch_assum_abbrev_tac : term quotation -> tactic = Q.MATCH_ASSUM_ABBREV_TAC
   val qmatch_assum_rename_tac : term quotation -> string list -> tactic = Q.MATCH_ASSUM_RENAME_TAC
 
+  val rule_assum_tac : (thm -> thm) -> tactic = RULE_ASSUM_TAC
   val assume_tac : thm_tactic = ASSUME_TAC
   val strip_assume_tac : thm_tactic = STRIP_ASSUME_TAC
   val spose_not_then : thm_tactic -> tactic = SPOSE_NOT_THEN
@@ -53,12 +57,14 @@ struct
 
   val map_every : ('a -> tactic) -> 'a list -> tactic = MAP_EVERY
 
+  val decide_tac : tactic = numLib.DECIDE_TAC
   val metis_tac : thm list -> tactic = metisLib.METIS_TAC
   val prove_tac : thm list -> tactic = PROVE_TAC
 
   val simp_tac = SIMP_TAC
   val asm_simp_tac = ASM_SIMP_TAC
   val full_simp_tac = FULL_SIMP_TAC
+  val rw_tac = RW_TAC
   val srw_tac = SRW_TAC
   fun fsrw_tac ssfl thms = let
     val ss = foldl (fn (ssf, ss) => ss ++ ssf) (srw_ss()) ssfl

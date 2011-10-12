@@ -17,8 +17,6 @@ val WARN  = HOL_WARNING "Parse"
 val post_process_term = Preterm.post_process_term
 val quote = Lib.mlquote
 
-datatype fixity = RF of term_grammar.rule_fixity | Prefix | Binder | TypeBinder
-
 fun acc_strip_comb M rands =
   let val (Rator,Rand) = dest_comb M
   in acc_strip_comb Rator (Rand::rands)
@@ -49,21 +47,20 @@ fun lose_constrec_ty {Name,Thy,Ty} = {Name = Name, Thy = Thy}
 
 datatype fixity
     = RF of rule_fixity
-    | Prefix
     | Binder
     | TypeBinder
 
 fun Infix x = x;  (* namespace hackery *)
 fun Suffix x = x;
 fun Closefix x = x;
-fun TruePrefix x = x;
+fun Prefix x = x;
 
 val Infix        = fn (a,i) => RF (term_grammar.Infix (a,i))
 val Infixl       = fn i => Infix(LEFT, i)
 val Infixr       = fn i => Infix(RIGHT, i)
 val Suffix       = fn n => RF (term_grammar.Suffix n)
 val Closefix     = RF term_grammar.Closefix
-val TruePrefix   = fn n => RF (term_grammar.TruePrefix n)
+val Prefix       = fn n => RF (term_grammar.Prefix n)
 
 
 (*---------------------------------------------------------------------------
@@ -125,12 +122,12 @@ fun current_lgrms() = (!the_lty_grm, !the_ltm_grm);
 
 fun fixity s =
   case term_grammar.get_precedence (term_grammar()) s
-   of SOME rf => RF rf
+   of SOME rf => SOME (RF rf)
     | NONE => if Lib.mem s (term_grammar.term_binders (term_grammar()))
-                 then Binder
+                 then SOME Binder
               else if Lib.mem s (term_grammar.type_binders (term_grammar()))
-                 then TypeBinder
-                 else Prefix
+                 then SOME TypeBinder
+                 else NONE
 
 (*---------------------------------------------------------------------------
        Mysterious stuff
@@ -869,7 +866,7 @@ fun standard_mapped_spacing {term_name,tok,fixity}  = let
   val ppels =
       case fixity of
         Infix _ => [HardSpace 1, RE (TOK tok), BreakSpace(1,0)]
-      | TruePrefix _ => [RE(TOK tok), HardSpace 1]
+      | Prefix _ => [RE(TOK tok), HardSpace 1]
       | Suffix _     => [HardSpace 1, RE(TOK tok)]
       | Closefix  => [RE(TOK tok)]
 in
@@ -902,26 +899,22 @@ struct
     case f of
       RF (Infix(_, p)) => SOME p
     | RF (Suffix p) => SOME p
-    | RF (TruePrefix p) => SOME p
+    | RF (Prefix p) => SOME p
     | RF Closefix => NONE
-    | Prefix => NONE
     | Binder => SOME std_binder_precedence
     | TypeBinder => SOME std_binder_precedence
   end
 
-  exception foo
   fun uset_fixity0 setter s fxty = let
     open term_grammar
     val rule =
       case fxty of
-        Prefix => (HOL_MESG "Fixities of Prefix do not affect the grammar";
-                   raise foo)
-      | Binder => BRULE {tok = s, term_name = s}
+        Binder => BRULE {tok = s, term_name = s}
       | TypeBinder => TBRULE {tok = s, term_name = s}
       | RF rf => GRULE (standard_spacing s rf)
   in
     lift setter {u = [s], term_name = s, newrule = rule, oldtok = NONE}
-  end handle foo => ()
+  end
 
   val temp_uset_fixity = uset_fixity0 ProvideUnicode.temp_uadd_rule
   val uset_fixity = uset_fixity0 ProvideUnicode.uadd_rule
@@ -1202,8 +1195,7 @@ fun add_infix (s, prec, associativity) = let in
 
 local open term_grammar
 in
-fun fixityToString Prefix  = "Prefix"
-  | fixityToString Binder  = "Binder"
+fun fixityToString Binder  = "Binder"
   | fixityToString TypeBinder  = "TypeBinder"
   | fixityToString (RF rf) = term_grammar.rule_fixityToString rf
 
@@ -1305,8 +1297,7 @@ fun prule_to_grule {term_name,fixity,pp_elements,paren_style,block_style} = let
   open term_grammar
 in
   case fixity of
-    Prefix => Error "Fixities of Prefix do not affect the grammar"
-  | Binder => let
+    Binder => let
     in
       case rule_elements pp_elements of
         [TOK s] => Some (BRULE {term_name = term_name, tok = s})
@@ -1494,8 +1485,7 @@ fun temp_set_mapped_fixity {fixity,term_name,tok} = let
 in
   temp_remove_termtok nmtok;
   case fixity of
-    Prefix => ()
-  | RF rf => temp_add_grule
+    RF rf => temp_add_grule
                  (GRULE (standard_mapped_spacing {fixity = rf, tok = tok,
                                                   term_name = term_name}))
   | Binder => if term_name <> tok then

@@ -4,7 +4,7 @@ local open stringTheory in end;
 
 open pred_setTheory
 
-open basic_swapTheory NEWLib
+open basic_swapTheory NEWLib lcsymtacs
 
 val _ = new_theory "nomset";
 
@@ -417,6 +417,29 @@ val listpm_nil = store_thm(
   ``is_perm pm ⇒ (listpm pm [] x = x)``,
   SRW_TAC [ETA_ss][is_perm_nil])
 
+val LENGTH_listpm = store_thm(
+  "LENGTH_listpm",
+  ``LENGTH (listpm pm pi l) = LENGTH l``,
+  Induct_on `l` >> srw_tac [][])
+val _ = export_rewrites ["LENGTH_listpm"]
+
+val EL_listpm = store_thm(
+  "EL_listpm",
+  ``∀l n. n < LENGTH l ==> (EL n (listpm pm pi l) = pm pi (EL n l))``,
+  Induct >> srw_tac [][] >> Cases_on `n` >> srw_tac [][] >>
+  fsrw_tac [][]);
+val _ = export_rewrites ["EL_listpm"]
+
+val MEM_listpm = store_thm(
+  "MEM_listpm",
+  ``is_perm pm ==> (MEM x (listpm pm pi l) ⇔ MEM (pm pi⁻¹ x) l)``,
+  Induct_on `l` >> srw_tac [][is_perm_eql]);
+
+val MEM_listpm_EXISTS = store_thm(
+  "MEM_listpm_EXISTS",
+  ``MEM x (listpm pm pi l) ⇔ ∃y. MEM y l ∧ (x = pm pi y)``,
+  Induct_on `l` >> srw_tac [][] >> metis_tac []);
+
 (* lists of pairs of strings, (concrete rep for permutations) *)
 val _ = overload_on ("cpmpm", ``listpm (pairpm lswapstr lswapstr)``);
 
@@ -596,6 +619,12 @@ val supp_smallest = store_thm(
   `FINITE {b | ~(pm [(a,b)] x = x)}` by METIS_TAC [SUBSET_FINITE] THEN
   FULL_SIMP_TAC (srw_ss()) [supp_def, INFINITE_DEF]);
 
+val notinsupp_I = store_thm(
+  "notinsupp_I",
+  ``∀A apm e x.
+       is_perm apm ∧ FINITE A ∧ support apm x A ∧ e ∉ A ==> e ∉ supp apm x``,
+  metis_tac [supp_smallest, SUBSET_DEF]);
+
 val lemma0 = prove(
   ``COMPL (e INSERT s) = COMPL s DELETE e``,
   SRW_TAC [][EXTENSION] THEN METIS_TAC []);
@@ -640,6 +669,21 @@ val supp_discrete = Store_thm(
   ``supp (K I) x = {}``,
   SRW_TAC [][supp_def, INFINITE_DEF]);
 
+val supp_unitfn = store_thm(
+  "supp_unitfn",
+  ``is_perm apm ==> (supp (fnpm (K I) apm) (λu:unit. a) = supp apm a)``,
+  strip_tac >>
+  Cases_on `∃x. x ∉ supp apm a` >| [
+    fsrw_tac [][] >>
+    match_mp_tac (GEN_ALL supp_unique_apart) >>
+    srw_tac [][support_def, FUN_EQ_THM, fnpm_def, supp_fresh] >-
+      metis_tac [supp_absence_FINITE] >>
+    metis_tac [supp_apart],
+    fsrw_tac [][] >>
+    `supp apm a = univ(:string)` by srw_tac [][EXTENSION] >>
+    fsrw_tac [][EXTENSION, supp_def, FUN_EQ_THM, fnpm_def]
+  ])
+
 (* options *)
 val supp_optpm = store_thm(
   "supp_optpm",
@@ -670,6 +714,17 @@ val listsupp_REVERSE = Store_thm(
   "listsupp_REVERSE",
   ``supp (listpm p) (REVERSE l) = supp (listpm p) l``,
   Induct_on `l` THEN SRW_TAC [][UNION_COMM]);
+
+val IN_supp_listpm = store_thm(
+  "IN_supp_listpm",
+  ``a ∈ supp (listpm pm) l ⇔ ∃e. MEM e l ∧ a ∈ supp pm e``,
+  Induct_on `l` >> srw_tac [DNF_ss][]);
+
+val NOT_IN_supp_listpm = store_thm(
+  "NOT_IN_supp_listpm",
+  ``a ∉ supp (listpm pm) l ⇔ ∀e. MEM e l ⇒ a ∉ supp pm e``,
+  metis_tac [IN_supp_listpm])
+
 
 (* concrete permutations, which get their own overload for calculating their
    support *)
@@ -848,11 +903,17 @@ val support_fnapp = store_thm(
 
 val supp_fnapp = store_thm(
   "supp_fnapp",
-  ``is_perm dpm /\ is_perm rpm /\ FINITE (supp (fnpm dpm rpm) f) /\
-    FINITE (supp dpm x) ==>
+  ``is_perm dpm /\ is_perm rpm ==>
     supp rpm (f x) SUBSET supp (fnpm dpm rpm) f UNION supp dpm x``,
   METIS_TAC [supp_smallest, FINITE_UNION, supp_supports, fnpm_is_perm,
-             support_fnapp]);
+             support_fnapp, supp_finite_or_UNIV, SUBSET_UNIV,
+             UNION_UNIV]);
+
+val notinsupp_fnapp = store_thm(
+  "notinsupp_fnapp",
+  ``is_perm dpm ∧ is_perm rpm ∧ v ∉ supp (fnpm dpm rpm) f ∧ v ∉ supp dpm x ==>
+    v ∉ supp rpm (f x)``,
+  prove_tac [supp_fnapp, SUBSET_DEF, IN_UNION]);
 
 open finite_mapTheory
 val fmpm_def = Define`

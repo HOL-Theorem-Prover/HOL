@@ -1248,7 +1248,7 @@ val intern_in_package_of_symbol_def =
 (*****************************************************************************)
 (* |= t, where t:sexp, means t is a theorem of ACL2                          *)
 (*****************************************************************************)
-val _ = set_fixity "|=" (TruePrefix 11);        (* Give "|=" weak precedence *)
+val _ = set_fixity "|=" (Prefix 11);        (* Give "|=" weak precedence *)
 
 val ACL2_TRUE_def =
  xDefine "ACL2_TRUE"

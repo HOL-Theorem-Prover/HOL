@@ -727,15 +727,21 @@ val strip_comb =
  end;
 
 (*---------------------------------------------------------------------------*
- *        Making type application terms                                           *
+ *        Making type application terms                                      *
  *---------------------------------------------------------------------------*)
 
 local open Kind
       infix :>=:
       val err  = Lib.C ERR "term applied to type does not have universal type"
       fun check_kind_rank caller (TyFv (_,kind)) ty =
-          if kind :>=: Type.kind_of ty then ()
-          else raise ERR caller "universal type bound variable has different kind or insufficient rank"
+          let val kd = Type.kind_of ty
+          in
+            if Kind.rank_of kind < Kind.rank_of kd
+            then raise ERR caller "type application argument has rank exceeding that expected"
+            else if not (kind :>=: kd)
+            then raise ERR caller "type application argument has different kind than expected"
+            else ()
+          end
         | check_kind_rank caller _ _ = raise ERR caller "not a type variable"
       fun lmk_tycomb caller =
         let val err = err caller

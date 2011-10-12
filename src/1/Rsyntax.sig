@@ -53,7 +53,7 @@ sig
   val new_specification : {name    : string,
                            sat_thm : thm,
                            consts  : {const_name : string,
-                                      fixity : Parse.fixity} list} -> thm
+                                      fixity : Parse.fixity option} list} -> thm
   datatype lambda
      = VAR    of {Name:string, Ty:hol_type}
      | CONST  of {Name:string, Thy:string, Ty:hol_type}

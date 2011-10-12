@@ -167,6 +167,17 @@ val num_to_hex_string_def = Define `num_to_hex_string = n2s 16 HEX`;
 
 (* ------------------------------------------------------------------------- *)
 
+val TRANS_THMS = Theory.save_thm("TRANS_THMS",
+  Drule.LIST_CONJ 
+    [arithmeticTheory.LESS_TRANS,
+     arithmeticTheory.LESS_EQ_LESS_TRANS,
+     arithmeticTheory.LESS_LESS_EQ_TRANS,
+     arithmeticTheory.LESS_EQ_TRANS]);
+
+val LESS_MULT_MONO2 = Q.store_thm("LESS_MULT_MONO2",
+  `!a b x y:num. a < x /\ b < y ==> a * b < x * y`,
+  REPEAT STRIP_TAC \\ IMP_RES_TAC LESS_ADD_1 \\ SRW_TAC [ARITH_ss] []);
+
 val LOG_RWT = store_thm("LOG_RWT",
   `!m n. 1 < m /\ 0 < n ==>
      (LOG m n = if n < m then 0 else SUC (LOG m (n DIV m)))`,

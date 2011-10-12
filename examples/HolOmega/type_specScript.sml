@@ -147,10 +147,10 @@ val three_type_def = new_type_specification("three_type",["three"],three_type_ex
 val rock_paper_scissors_spec =
   Rsyntax.new_specification
              { name    = "rock_paper_scissors_spec",
-               consts  = [ {const_name="rock",      fixity=Closefix},
-                           {const_name="scissors",  fixity=Closefix},
-                           {const_name="paper",     fixity=Closefix},
-                           {const_name="beats",     fixity=Infix (NONASSOC,450)} ],
+               consts  = [ {const_name="rock",      fixity=SOME Closefix},
+                           {const_name="scissors",  fixity=SOME Closefix},
+                           {const_name="paper",     fixity=SOME Closefix},
+                           {const_name="beats",     fixity=SOME (Infix (NONASSOC,450))} ],
                sat_thm = three_type_def };
 
 
@@ -369,15 +369,15 @@ val [concat_assoc,vect_exists_unique_fun] =
       defs  = [{def_name = "vT_def",
                 fname    = "vT",
                 func     = ``vT0``,
-                fixity   = Parse.Closefix },
+                fixity   = SOME Parse.Closefix },
                {def_name = "vF_def",
                 fname    = "vF",
                 func     = ``vF0``,
-                fixity   = Parse.Closefix },
+                fixity   = SOME Parse.Closefix },
                {def_name = "concat_def",
                 fname    = "concat",
                 func     = ``APPEND : bool list -> bool list -> bool list``,
-                fixity   = Infixl 480 } ],
+                fixity   = SOME (Infixl 480) } ],
       tyop_equivs    = [],
       tyop_quotients = [FUN_QUOTIENT],
       tyop_simps     = [FUN_MAP_I, FUN_REL_EQ],
@@ -422,9 +422,9 @@ val vect_constants_spec =
 val vect_constants_spec =
   Rsyntax.new_specification
              { name    = "vect_consts_spec",
-               consts  = [ {const_name="VT",      fixity=Parse.Closefix},
-                           {const_name="VF",      fixity=Parse.Closefix},
-                           {const_name="vconcat", fixity=Infixl 480} ],
+               consts  = [ {const_name="VT",      fixity=SOME Parse.Closefix},
+                           {const_name="VF",      fixity=SOME Parse.Closefix},
+                           {const_name="vconcat", fixity=SOME (Infixl 480)} ],
                sat_thm = vect_def };
 
 

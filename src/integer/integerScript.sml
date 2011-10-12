@@ -475,13 +475,13 @@ in
          int_of_num, INT_INJ, NUM_POSINT_EX] =
 	define_equivalence_type
 	{name = "int", equiv = TINT_EQ_EQUIV,
-	 defs = [mk_def ("int_0", Term `tint_0`,     "int_0", Prefix),
-		 mk_def ("int_1", Term `tint_1`,     "int_1", Prefix),
-		 mk_def ("int_neg",Term `tint_neg`,  "int_neg",   Prefix),
-		 mk_def ("int_add",Term `$tint_add`, "int_add",   Prefix),
-		 mk_def ("int_mul",Term `$tint_mul`, "int_mul",   Prefix),
-		 mk_def ("int_lt",Term `$tint_lt`,   "int_lt",    Prefix),
-                 mk_def ("int_of_num",Term `tint_of_num`,"int_of_num",Prefix)],
+	 defs = [mk_def ("int_0", Term `tint_0`,     "int_0", NONE),
+		 mk_def ("int_1", Term `tint_1`,     "int_1", NONE),
+		 mk_def ("int_neg",Term `tint_neg`,  "int_neg",   NONE),
+		 mk_def ("int_add",Term `$tint_add`, "int_add",   NONE),
+		 mk_def ("int_mul",Term `$tint_mul`, "int_mul",   NONE),
+		 mk_def ("int_lt",Term `$tint_lt`,   "int_lt",    NONE),
+                 mk_def ("int_of_num",Term `tint_of_num`,"int_of_num",NONE)],
 
 	 welldefs = [TINT_NEG_WELLDEF, TINT_LT_WELLDEF,
 		     TINT_ADD_WELLDEF, TINT_MUL_WELLDEF],

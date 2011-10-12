@@ -393,14 +393,16 @@ fun mk_abs(v, body) =
 
 (* constructors - type applications *)
 local val INCOMPAT_TYPES  = Lib.C ERR "term applied to type does not have universal type"
-      val INCOMPAT_KINDS  = Lib.C ERR "universal type bound variable has different kind"
-      val INCOMPAT_RANKS  = Lib.C ERR "universal type bound variable has insufficient rank"
+      val INCOMPAT_KINDS  = Lib.C ERR "type application argument has different kind than expected"
+      val INCOMPAT_RANKS  = Lib.C ERR "type application argument has rank exceeding that expected"
       fun lmk_tycomb err errK errR =
         let fun loop (A,_) [] = A
               | loop (A,typ) (ty::rst) =
                  let val (btyv,ty2) = with_exn Type.dest_univ_type typ err
-                 in if rank_of_type ty > rank_of_type btyv then raise errR
-                    else if not (kind_of btyv :>=: kind_of ty) then raise errK
+                     val kd = kind_of ty
+                     val bkd = kind_of btyv
+                 in if rank_of kd > rank_of bkd then raise errR
+                    else if not (bkd :>=: kd) then raise errK
                     else let val tm = TApp(A,ty)
                          in loop(tm, type_of tm) rst
                          end
@@ -417,8 +419,8 @@ fun mk_tycomb(r as (TAbs(a,_), Rand)) =
     let val (_,Kd) = dest_var_type a
         val Rand_Kd = kind_of Rand
     in
-      if rank_of_type Rand > rank_of Kd then raise INCOMPAT_RANKS "mk_tycomb"
-      else if not (Kd :>=: kind_of Rand) then raise INCOMPAT_KINDS "mk_tycomb"
+      if rank_of Rand_Kd > rank_of Kd then raise INCOMPAT_RANKS "mk_tycomb"
+      else if not (Kd :>=: Rand_Kd) then raise INCOMPAT_KINDS "mk_tycomb"
       else TApp r
     end
   | mk_tycomb(Rator,Rand) = mk_tycomb0 (Rator,[Rand])

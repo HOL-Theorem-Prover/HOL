@@ -65,6 +65,8 @@ type thm = Thm.thm
 
 val _ = new_theory "prim_rec";
 
+val _ = if !Globals.interactive then () else Feedback.emit_WARNING := false;
+
 (* Added TFM 88.04.02						*)
 
 val NOT_SUC     = numTheory.NOT_SUC

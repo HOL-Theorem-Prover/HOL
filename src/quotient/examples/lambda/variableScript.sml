@@ -366,7 +366,7 @@ val variant =
     let val th1 = CONV_RULE SKOLEM_CONV variant_EXISTS in
        new_specification
          {name    = "variant",
-          consts  = [{const_name = "variant", fixity = Prefix (*700*)}],
+          consts  = [{const_name = "variant", fixity = NONE (*700*)}],
           sat_thm = th1}
     end
 end;

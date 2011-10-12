@@ -686,19 +686,11 @@ integers.
 \subsubsection{Fixities}
 \label{sec:parseprint:fixities}
 
-In order to provide some notational flexibility, constants come in
-various flavours or {\it fixities}: besides being an ordinary constant
-(with a fixity of {\sf Prefix}), constants can also be {\it binders},
-{\it true prefixes}\footnote{The use of the term ``true prefix'' is
-forced upon us by the history of the system, which reserved the
-classification ``prefix'' for terms without any special syntactic
-features.}, {\it suffixes}, {\it infixes}, or {\it closefixes}.  More
-generally, terms can also be represented using reasonably arbitrary
-{\it mixfix} specifications.  The degree to which terms bind their
-associated arguments is known as precedence.  The higher this number,
-the tighter the binding.  For example, when introduced, \verb-+- has a
-precedence of 500, while the tighter binding multiplication (\verb+*+)
-has a precedence of 600.
+In order to provide some notational flexibility, constants come in various flavours or {\it fixities}: besides being an ordinary constant (with no fixity), constants can also be {\it binders}, {\it prefixes}, {\it suffixes}, {\it infixes}, or {\it closefixes}.
+More generally, terms can also be represented using reasonably arbitrary {\it mixfix} specifications.
+The degree to which terms bind their associated arguments is known as precedence.
+The higher this number, the tighter the binding.
+For example, when introduced, \verb-+- has a precedence of 500, while the tighter binding multiplication (\verb+*+) has a precedence of 600.
 
 \paragraph{Binders}
 
@@ -755,15 +747,16 @@ is internally represented as
 ((\holtxt{<infix>}\; \term)\; \term)
 \]
 
-\paragraph{True prefixes}
+\paragraph{Prefixes}
 
-Where infixes appear between their arguments, true prefixes appear
-before theirs.  This might initially appear to be the same thing as
-happens with normal function application (is $f$ in $f(x)$ not acting
-as a prefix?), but in fact, it is useful to allow for prefixes to have
-binding power less than that associated with function application.  An
-example of this is \verb+~+, logical negation.  This is a prefix with
-lower precedence than function application.  Normally
+Where infixes appear between their arguments, prefixes appear before theirs.
+This might initially appear to be the same thing as happens with normal function application where the symbol on the left simply has no fixity: is $f$ in $f(x)$ not acting as a prefix?
+Actually though, in a term such as $f(x)$, where $f$ and $x$ do not have fixities, the syntax is treated as if there is an invisible infix function application between the two tokens: $f\cdot{}x$.
+This infix operator binds tightly, so that when one writes $f\,x + y$, the parse is $(f\cdot{}x) + y$.\footnote{There are tighter infix operators: the dot in field selection causes $f\,x.fld$ to parse as $f\cdot(x.fld)$.\index{record types!field selection notation}}
+It is then useful to allow for genuine prefixes so that operators can live at different precedence levels than function application.
+An example of this is \verb+~+, logical negation.
+This is a prefix with lower precedence than function application.
+Normally
 \[
    f\;x\; y\qquad \mbox{is parsed as}\qquad (f\; x)\; y
 \] but \[
@@ -775,13 +768,16 @@ defined as a true prefix, if only to allow one to write \[ {\it
   negop}\,{\it negop}\,3
 \] (whatever {\it negop} happened to be) without needing extra parentheses.
 
+On the other hand, the \holtxt{univ} syntax for the universal set (see Section~\ref{sec:theory-of-sets}\index{universal set}) is an example of a prefix operator that binds more tightly than application.
+This means that \holtxt{f\,univ(:'a)} is parsed as \holtxt{f(univ(:'a))}, not \holtxt{(f univ)(:'a)} (which parse would fail to type-check).
+
 \paragraph{Suffixes}
 
 Suffixes appear after their arguments.  There are no suffixes
 introduced into the standard theories available in \HOL{}, but users
 are always able to introduce their own if they choose.  Suffixes are
-associated with a precedence just as infixes and true prefixes are.
-If \holtxt{p} is a true prefix, \holtxt{i} an infix, and \holtxt{s} a
+associated with a precedence just as infixes and prefixes are.
+If \holtxt{p} is a prefix, \holtxt{i} an infix, and \holtxt{s} a
 suffix, then there are six possible orderings for the three different
 operators based on their precedences, giving five parses for
 $\holtxt{p}\; t_1\; \holtxt{i}\; t_2\; \holtxt{s}$ depending on the
@@ -865,12 +861,12 @@ of expressions of this form.  In this case, it will be:
   \]
 %
  Because there needs to be a ``dangling'' term to the right, the
-  appropriate fixity is \ml{TruePrefix}.  Knowing that the underlying
+  appropriate fixity is \ml{Prefix}.  Knowing that the underlying
   term constant is called \holtxt{COND}, the simplest way to achieve
   the desired syntax is:
 \begin{verbatim}
 val _ = add_rule
-   {term_name = "COND", fixity = TruePrefix 70,
+   {term_name = "COND", fixity = Prefix 70,
     pp_elements = [TOK "if", BreakSpace(1,0), TM, BreakSpace(1,0),
                    TOK "then", BreakSpace(1,0), TM, BreakSpace(1,0),
                    TOK "else", BreakSpace(1,0)],
@@ -888,7 +884,7 @@ Here the desire is to be able to write something like:
 \]
 denoting the substitution of $t_1$ for $t_2$ in $t_3$, perhaps
 translating to \holtxt{SUB $t_1$ $t_2$ $t_3$}.  This looks
-like it should be another \ml{TruePrefix}, but the choice of the
+like it should be another \ml{Prefix}, but the choice of the
 square brackets (\holtxt{[} and \holtxt{]}) as delimiters would
 conflict with the concrete syntax for list literals if this was done.
 Given that list literals are effectively of the \ml{CloseFix}

@@ -7,6 +7,8 @@ infix THEN THENL;
 
 val _ = new_theory "num";
 
+val _ = if !Globals.interactive then () else Feedback.emit_WARNING := false;
+
 (*---------------------------------------------------------------------------
  * Define successor `SUC_REP:ind->ind` on ind.
  *---------------------------------------------------------------------------*)

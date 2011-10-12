@@ -11,7 +11,7 @@ val _ = set_trace "Unicode" 1
 
 val _ = set_fixity "@*" (Infixl 901)
 val _ = Unicode.unicode_version { u = "··", tmnm = "@*"}
-val _ = overload_on ("@*", ``λf (args:term list). FOLDL (@@) f args``)
+val _ = overload_on ("@*", ``λf (args:term list). FOLDL APP f args``)
 
 val var_eq_appstar = store_thm(
   "var_eq_appstar",

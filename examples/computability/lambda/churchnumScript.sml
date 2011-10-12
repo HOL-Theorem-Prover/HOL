@@ -17,14 +17,14 @@ val _ = new_theory "churchnum"
 val _ = set_trace "Unicode" 1
 
 val church_def = Define`
-  church n = LAM "z" (LAM "s" (FUNPOW ((@@) (VAR "s")) n (VAR "z")))
+  church n = LAM "z" (LAM "s" (FUNPOW (APP (VAR "s")) n (VAR "z")))
 `
 
 val FUNPOW_SUC = arithmeticTheory.FUNPOW_SUC
 
 val size_funpow = store_thm(
   "size_funpow",
-  ``size (FUNPOW ((@@) f) n x) = (size f + 1) * n + size x``,
+  ``size (FUNPOW (APP f) n x) = (size f + 1) * n + size x``,
   Induct_on `n` THEN
   SRW_TAC [ARITH_ss][FUNPOW_SUC, arithmeticTheory.LEFT_ADD_DISTRIB,
                      arithmeticTheory.MULT_CLAUSES]);
@@ -69,7 +69,7 @@ val FV_church = store_thm(
   SRW_TAC [][] THENL [
     SRW_TAC [CONJ_ss] [EXTENSION],
     Q_TAC SUFF_TAC
-          `FV (FUNPOW ((@@) (VAR "s")) (SUC m) (VAR "z")) = {"s"; "z"}`
+          `FV (FUNPOW (APP (VAR "s")) (SUC m) (VAR "z")) = {"s"; "z"}`
           THEN1 SRW_TAC [CONJ_ss][pred_setTheory.EXTENSION] THEN
     Induct_on `m` THEN SRW_TAC [][] THENL [
       SRW_TAC [][EXTENSION],
@@ -81,7 +81,7 @@ val _ = export_rewrites ["FV_church"]
 
 val is_church_def = Define`
   is_church t =
-    ∃f z n. f ≠ z ∧ (t = LAM z (LAM f (FUNPOW ((@@) (VAR f)) n (VAR z))))
+    ∃f z n. f ≠ z ∧ (t = LAM z (LAM f (FUNPOW (APP (VAR f)) n (VAR z))))
 `;
 
 
@@ -108,28 +108,28 @@ val force_num_church_composed = Store_thm(
 
 val tpm_funpow_app = store_thm(
   "tpm_funpow_app",
-  ``tpm pi (FUNPOW ($@@ f) n x) = FUNPOW ($@@ (tpm pi f)) n (tpm pi x)``,
+  ``tpm pi (FUNPOW (APP f) n x) = FUNPOW (APP (tpm pi f)) n (tpm pi x)``,
   Induct_on `n` THEN SRW_TAC [][FUNPOW_SUC]);
 val _  = export_rewrites ["tpm_funpow_app"]
 
 val FV_funpow_app = store_thm(
   "FV_funpow_app",
-  ``FV (FUNPOW ($@@ f) n x) ⊆ FV f ∪ FV x``,
+  ``FV (FUNPOW (APP f) n x) ⊆ FV f ∪ FV x``,
   Induct_on `n` THEN SRW_TAC [][FUNPOW_SUC]);
 
 val FV_funpow_app_I = store_thm(
   "FV_funpow_app_I",
-  ``v ∈ FV x ⇒ v ∈ FV (FUNPOW ((@@) f) n x)``,
+  ``v ∈ FV x ⇒ v ∈ FV (FUNPOW (APP f) n x)``,
   Induct_on `n` THEN SRW_TAC [][FUNPOW_SUC]);
 
 val FV_funpow_app_E = store_thm(
   "FV_funpow_app_E",
-  ``v ∈ FV (FUNPOW ((@@) f) n x) ⇒ v ∈ FV f ∨ v ∈ FV x``,
+  ``v ∈ FV (FUNPOW (APP f) n x) ⇒ v ∈ FV f ∨ v ∈ FV x``,
   MATCH_ACCEPT_TAC (REWRITE_RULE [IN_UNION, SUBSET_DEF] FV_funpow_app));
 
 val fresh_funpow_app_I = store_thm(
   "fresh_funpow_app_I",
-  ``v ∉ FV f ∧ v ∉ FV x ⇒ v ∉ FV (FUNPOW ((@@) f) n x)``,
+  ``v ∉ FV f ∧ v ∉ FV x ⇒ v ∉ FV (FUNPOW (APP f) n x)``,
   METIS_TAC [FV_funpow_app_E]);
 val _ = export_rewrites ["fresh_funpow_app_I"]
 
@@ -156,7 +156,7 @@ val force_num_size = store_thm(
 
 val SUB_funpow_app = store_thm(
   "SUB_funpow_app",
-  ``[M/v] (FUNPOW ($@@ f) n x) = FUNPOW ($@@ ([M/v]f)) n ([M/v]x)``,
+  ``[M:term/v] (FUNPOW (APP f) n x) = FUNPOW (APP ([M/v]f)) n ([M/v]x)``,
   Induct_on `n` THEN SRW_TAC [][FUNPOW_SUC]);
 val _ = export_rewrites ["SUB_funpow_app"]
 

@@ -160,6 +160,11 @@ fun rank_of_type ty = rnk_of ty Lib.I
 fun rk_of ty E = rank_of_type ty
 end
 
+(* Note: these should be the same as
+fun rk_of ty E = rank_of (kd_of ty E)
+fun rank_of_type ty = rank_of (kind_of ty)
+*)
+
 fun rank_of_univ_dom (TyAll((_,kd),_)) = rank_of kd
   | rank_of_univ_dom _ = raise ERR "rank_of_univ_dom" "not a universal type"
 

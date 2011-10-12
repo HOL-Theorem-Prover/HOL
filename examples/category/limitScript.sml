@@ -531,7 +531,7 @@ val _ = add_rule {
 
 val _ = add_rule {
   term_name = "binary_product_proj1_syntax",
-  fixity = TruePrefix 625,
+  fixity = Prefix 625,
   pp_elements = [TOK "\207\1281", HS, TM, TOK"\195\151", TM, HS, TOK "-:"],
   paren_style = OnlyIfNecessary,
   block_style = (AroundSameName, (PP.INCONSISTENT, 0))
@@ -539,7 +539,7 @@ val _ = add_rule {
 
 val _ = add_rule {
   term_name = "binary_product_proj2_syntax",
-  fixity = TruePrefix 625,
+  fixity = Prefix 625,
   pp_elements = [TOK "\207\1282", HS, TM, TOK"\195\151", TM, HS, TOK "-:"],
   paren_style = OnlyIfNecessary,
   block_style = (AroundSameName, (PP.INCONSISTENT, 0))
@@ -547,7 +547,7 @@ val _ = add_rule {
 
 val _ = add_rule {
   term_name = "pair_morphism_syntax",
-  fixity = TruePrefix 625,
+  fixity = Prefix 625,
   pp_elements = [TOK "\226\159\168", TM, TOK ",", TM, TOK "\226\159\169-:"],
   paren_style = OnlyIfNecessary,
   block_style = (AroundSameName, (PP.INCONSISTENT, 0))

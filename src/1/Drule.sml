@@ -2564,8 +2564,8 @@ fun define_new_type_bijections{name,ABS,REP,tyax} =
   in Rsyntax.new_specification
       {name=name,
        sat_thm=MP(SPEC P (INST_TYPE[beta |-> a, alpha |-> r]ABS_REP_THM)) tyax,
-       consts = [{const_name=REP, fixity=Prefix},
-                 {const_name=ABS, fixity=Prefix}]}
+       consts = [{const_name=REP, fixity=NONE},
+                 {const_name=ABS, fixity=NONE}]}
   end
   handle e => raise (wrap_exn "Drule" "define_new_type_bijections" e)
 

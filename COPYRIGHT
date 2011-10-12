@@ -1,7 +1,7 @@
 HOL COPYRIGHT NOTICE, LICENSE AND DISCLAIMER.
 
 Copyright 1998, 1999 by Konrad Slind.
-Copyright 2000--2009 by Michael Norrish and Konrad Slind.
+Copyright 2000--2011 by Michael Norrish and Konrad Slind.
 
 All rights reserved.
 
@@ -42,6 +42,5 @@ above.  In particular, the following sub-directories are governed by
 different copyright notices:
 
   examples/muddy
-  src/temporal/smv.2.4.3
 
 ----------------------------------------------------------------------

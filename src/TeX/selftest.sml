@@ -19,12 +19,12 @@ val _ = if s1 = s2 then print "OK\n" else die()
 val _ = tprint "Testing syntactic-sugar overriding"
 val _ = temp_remove_rules_for_term "~"
 val _ = temp_add_rule {term_name   = "~",
-                       fixity      = TruePrefix 900,
+                       fixity      = Prefix 900,
                        pp_elements = [TOK "TOK1"],
                        paren_style = OnlyIfNecessary,
                        block_style = (AroundEachPhrase, (CONSISTENT, 0))}
 val _ = temp_add_rule {term_name   = "I",
-                       fixity      = TruePrefix 900,
+                       fixity      = Prefix 900,
                        pp_elements = [TOK "TOK2"],
                        paren_style = OnlyIfNecessary,
                        block_style = (AroundEachPhrase, (CONSISTENT, 0))}

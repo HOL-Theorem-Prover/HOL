@@ -517,7 +517,7 @@ fun define_wrapper worker q = let
   val tm = Parse.absyn_to_term (Parse.term_grammar()) a
            handle e => (restore(); raise e)
   val _ = restore()
-  val f_thm0 = worker tm
+  val f_thm0 = BETA_RULE (worker tm)
   val (f_t0, th_body0) = dest_exists (concl f_thm0)
   val f_t = mk_var(fstr, type_of f_t0)
   val th_body = subst [f_t0 |-> f_t] th_body0
@@ -541,7 +541,7 @@ fun define_wrapper worker q = let
     CHOOSE (f_t, f_thm0)
            (EXISTS(mk_exists(f_t, defining_term), f_t)
                   (UNDISCH definition_ok0))
-  end
+  end handle HOL_ERR _ => f_thm0
   (* feel that having the equation the other way (non-GSYMed) 'round may be
      better in many theorem-proving circumstances.  But for the moment,
      this way round provides backwards compatibility. *)
@@ -555,7 +555,8 @@ fun define_wrapper worker q = let
   val f_const = prim_mk_const {Name = fstr, Thy = current_theory()}
   val f_thm = save_thm(fstr^"_thm",
                        default_prover(subst [f_t |-> f_const] tm,
-                                      SIMP_TAC bool_ss [f_def]))
+                                      SIMP_TAC bool_ss [f_def])
+                       handle HOL_ERR _ => CONJUNCT1 f_def)
   val f_invariants = let
     val interesting_bit =
         f_def |> CONJUNCT2
@@ -584,5 +585,9 @@ fun define_recursive_term_function' fin q =
 
 val recursive_term_function_existence =
     prove_recursive_term_function_exists0 ALL_CONV
+
+
+
+
 
 end (* struct *)

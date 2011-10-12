@@ -16,7 +16,7 @@ val _ = Hol_datatype `foo = C1 | C2`
 fun mk_def t = let
   val s = "l" ^ term_to_string t
 in
-  {def_name = s ^ "_def", fixity = Prefix, fname = s, func = t}
+  {def_name = s ^ "_def", fixity = NONE, fname = s, func = t}
 end
 
 val thms = define_equivalence_type {

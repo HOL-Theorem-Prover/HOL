@@ -805,7 +805,7 @@ val FUNPOW_SUC = arithmeticTheory.FUNPOW_SUC
 
 val cichurch_behaviour = store_thm(
   "cichurch_behaviour",
-  ``cichurch @@ church n -n->* cDB (fromTerm (FUNPOW ((@@) (VAR (n2s 0))) n
+  ``cichurch @@ church n -n->* cDB (fromTerm (FUNPOW (APP (VAR (n2s 0))) n
                                                      (VAR (n2s 1))))``,
   SIMP_TAC (bsrw_ss()) [cichurch_def, cdV_behaviour] THEN
   Induct_on `n` THEN
@@ -830,7 +830,7 @@ val FV_cchurch = Store_thm(
 
 val fromTerm_funpow_app = store_thm(
   "fromTerm_funpow_app",
-  ``fromTerm (FUNPOW ((@@) f) n x) =
+  ``fromTerm (FUNPOW (APP f) n x) =
       FUNPOW (dAPP (fromTerm f)) n (fromTerm x)``,
   Induct_on `n` THEN SRW_TAC [][FUNPOW_SUC]);
 

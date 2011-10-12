@@ -52,7 +52,7 @@ val mu_size_def = snd (TypeBase.size_of ``:'prop mu``)
 val mu_size2_def = Define `mu_size2 (f: 'prop mu) = mu_size (\(a:('prop)).0) f`
 
 val _ = add_rule
-    {term_name = "AP", fixity = TruePrefix 950, (* 950 is tighter than ~ *)
+    {term_name = "AP", fixity = Prefix 950, (* 950 is tighter than ~ *)
      pp_elements = [TOK "AP", HardSpace 1],
      paren_style = OnlyIfNecessary,
      block_style = (AroundSamePrec, (PP.INCONSISTENT, 0))}
@@ -73,20 +73,20 @@ val _ = overload_on ("F",F) val _ = overload_on ("F",``FL``) val _ = overload_on
 (* Need to use << and >> because of precedence conflicts with < and > *)
 
 (* prec 2501 is higher fixity than any thing in default term grammar WIP: does this make sense...not really, should be lower *)
-val _ = add_rule {term_name = "DIAMOND", fixity = TruePrefix 2501,
+val _ = add_rule {term_name = "DIAMOND", fixity = Prefix 2501,
      pp_elements = [TOK "<<", TM, TOK ">>", HardSpace 1],
      paren_style = OnlyIfNecessary,
      block_style = (AroundSamePrec, (PP.INCONSISTENT, 0))}
 (* Could actually use [ and ] here by declaring CloseFix fixity. But this is for consistency with lfp *)
-val _ = add_rule {term_name = "BOX", fixity = TruePrefix 2501,
+val _ = add_rule {term_name = "BOX", fixity = Prefix 2501,
      pp_elements = [TOK "[[", TM, TOK "]]",HardSpace 1],
      paren_style = OnlyIfNecessary,
      block_style = (AroundSamePrec, (PP.INCONSISTENT, 0))}
-val _ = add_rule {term_name = "mu", fixity = TruePrefix 2,
+val _ = add_rule {term_name = "mu", fixity = Prefix 2,
      pp_elements = [TOK "mu",HardSpace 1, TM, TOK "..",HardSpace 1],
      paren_style = OnlyIfNecessary,
      block_style = (AroundSamePrec, (PP.INCONSISTENT, 0))}
-val _ = add_rule {term_name = "nu", fixity = TruePrefix 2,
+val _ = add_rule {term_name = "nu", fixity = Prefix 2,
      pp_elements = [TOK "nu", HardSpace 1, TM, TOK "..",HardSpace 1],
      paren_style = OnlyIfNecessary,
      block_style = (AroundSamePrec, (PP.INCONSISTENT, 0))}

@@ -137,6 +137,11 @@ val one_induction = Q.store_thm
  `!P:one->bool. P one ==> !x. P x`,
  REPEAT STRIP_TAC THEN ONCE_REWRITE_TAC [one] THEN ASM_REWRITE_TAC[]);
 
+val FORALL_ONE = store_thm(
+  "FORALL_ONE",
+  ``(!x:unit. P x) <=> P ()``,
+  simpLib.SIMP_TAC boolSimps.bool_ss [EQ_IMP_THM, one_induction]);
+val _ = BasicProvers.export_rewrites ["FORALL_ONE"]
 
 (*---------------------------------------------------------------------------
     Define the case constant

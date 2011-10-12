@@ -2,6 +2,9 @@ structure integer_wordLib :> integer_wordLib =
 struct
 
 open HolKernel boolLib bossLib;
+open intLib wordsLib integer_wordSyntax;
+
+val ERR = mk_HOL_ERR "integer_wordLib";
 
 val WORD_DECIDE = wordsLib.WORD_DP wordsLib.WORD_CONV intLib.COOPER_PROVE
 
@@ -9,17 +12,18 @@ fun Cases_on_i2w t =
   Tactic.FULL_STRUCT_CASES_TAC
     (Q.ISPEC t integer_wordTheory.ranged_int_word_nchotomy);
 
-local
-  val int_min = SIMP_RULE (srw_ss()) [integer_wordTheory.INT_MAX_def]
-                  integer_wordTheory.INT_MIN_def
-in
-  val INT_SIZES_CONV =
-    (REWR_CONV int_min ORELSEC
-     REWR_CONV integer_wordTheory.INT_MAX_def ORELSEC
-     REWR_CONV integer_wordTheory.UINT_MAX_def)
-    THENC Conv.DEPTH_CONV wordsLib.SIZES_CONV
-    THENC intLib.REDUCE_CONV
-end
+fun INT_SIZES_CONV tm =
+  if integer_wordSyntax.is_uint_max tm then
+    (Conv.REWR_CONV integer_wordTheory.UINT_MAX
+     THENC Conv.RAND_CONV wordsLib.SIZES_CONV) tm
+  else if integer_wordSyntax.is_int_max tm then
+    (Conv.REWR_CONV integer_wordTheory.INT_MAX
+     THENC Conv.RAND_CONV wordsLib.SIZES_CONV) tm
+  else if integer_wordSyntax.is_int_min tm then
+    (Conv.REWR_CONV integer_wordTheory.INT_MIN
+     THENC Conv.RAND_CONV (Conv.RAND_CONV wordsLib.SIZES_CONV)) tm
+  else
+    raise ERR "INT_SIZES_CONV" ""
 
 val INT_SIZES_ss = simpLib.name_ss "int sizes"
  (simpLib.std_conv_ss

@@ -418,7 +418,7 @@ val SEG =
     in
     Rsyntax.new_specification{name = "SEG",
                       sat_thm = SEG_exists,
-                      consts =  [{const_name = "SEG", fixity = Prefix}]
+                      consts =  [{const_name = "SEG", fixity = NONE}]
                      }
     end;
 
@@ -448,7 +448,7 @@ val LASTN =
    in
     Rsyntax.new_specification{name = "LASTN",
                       sat_thm = thm,
-                      consts =  [{const_name = "LASTN", fixity = Prefix}]
+                      consts =  [{const_name = "LASTN", fixity = NONE}]
                      }
    end;
 
@@ -464,7 +464,7 @@ val BUTLASTN =
     in
     Rsyntax.new_specification{name = "BUTLASTN",
                       sat_thm = thm,
-                      consts =  [{const_name = "BUTLASTN", fixity = Prefix}]
+                      consts =  [{const_name = "BUTLASTN", fixity = NONE}]
                      }
     end;
 
@@ -561,7 +561,7 @@ val IS_SUFFIX = let
     end)
   in
     Rsyntax.new_specification
-        {consts = [{const_name = "IS_SUFFIX", fixity = Prefix}],
+        {consts = [{const_name = "IS_SUFFIX", fixity = NONE}],
          name = "IS_SUFFIX",
          sat_thm = lemma
         }
@@ -585,7 +585,7 @@ val IS_SUBLIST =
         end)
     in
     Rsyntax.new_specification
-        {consts = [{const_name = "IS_SUBLIST", fixity = Prefix}],
+        {consts = [{const_name = "IS_SUBLIST", fixity = NONE}],
          name = "IS_SUBLIST",
          sat_thm = lemma
         }
@@ -3321,7 +3321,7 @@ in
 
    val REPLACE_ELEMENT_DEF = Rsyntax.new_specification{name = "REPLACE_ELEMENT_DEF",
                       sat_thm = REPLACE_ELEMENT_exists,
-                      consts =  [{const_name = "REPLACE_ELEMENT", fixity = Prefix}]
+                      consts =  [{const_name = "REPLACE_ELEMENT", fixity = NONE}]
                      };
 end;
 

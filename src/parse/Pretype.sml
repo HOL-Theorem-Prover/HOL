@@ -2948,7 +2948,27 @@ fun KC printers = let
                 handle e => (Feedback.set_trace "ranks" tmp; raise e)
               val arg' = toType arg
                 handle e => (Feedback.set_trace "ranks" tmp; raise e)
+              val dom = fst (Kind.dest_arrow_kind (Type.kind_of opr'))
               val message =
+                if Kind.rank_of dom < Type.rank_of_type arg' then
+                  String.concat
+                      [
+                       "\nRank inference failure: unable to infer a rank \
+                       \for the application of\n\n",
+                       pty opr',
+                       "\n\n"^locn.toString (Locn opr)^"\n\n",
+                       "which expects a type of rank ",
+                             prk(Kind.rank_of dom), "\n\n",
+
+                       "to\n\n",
+                       pty arg',
+                       "\n\n"^locn.toString (Locn arg)^"\n\n",
+
+                       "which has rank ",
+                             prk(Type.rank_of_type arg'), "\n\n",
+
+                       "rank unification failure message: ", message, "\n"]
+                else
                   String.concat
                       [
                        "\nKind inference failure: unable to infer a kind \

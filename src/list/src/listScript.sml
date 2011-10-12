@@ -245,7 +245,7 @@ val MAP2 =
   in
       Rsyntax.new_specification{
         name = "MAP2", sat_thm = lemma,
-        consts = [{const_name="MAP2", fixity=Prefix}]
+        consts = [{const_name="MAP2", fixity=NONE}]
       }
   end
 
@@ -1018,6 +1018,23 @@ val LIST_REL_mono = store_thm(
   SRW_TAC [][LIST_REL_EL_EQN]);
 val _ = IndDefLib.export_mono "LIST_REL_mono"
 
+val LIST_REL_NIL = store_thm(
+  "LIST_REL_NIL",
+  ``(LIST_REL R [] x <=> (x = [])) /\ (LIST_REL R [] y <=> (y = []))``,
+  Cases_on `x` THEN Cases_on `y` THEN SRW_TAC [][]);
+val _ = export_rewrites ["LIST_REL_NIL"]
+
+val LIST_REL_CONS1 = store_thm(
+  "LIST_REL_CONS1",
+  ``LIST_REL R (h::t) xs <=> ?h' t'. (xs = h'::t') /\ R h h' /\ LIST_REL R t t'``,
+  Cases_on `xs` THEN SRW_TAC [][]);
+
+val LIST_REL_CONS2 = store_thm(
+  "LIST_REL_CONS2",
+  ``LIST_REL R xs (h::t) <=> ?h' t'. (xs = h'::t') /\ R h' h /\ LIST_REL R t' t``,
+  Cases_on `xs` THEN SRW_TAC [][]);
+
+
 (*---------------------------------------------------------------------------
      Congruence rules for higher-order functions. Used when making
      recursive definitions by so-called higher-order recursion.
@@ -1174,7 +1191,7 @@ val ZIP =
      end)
     in
     Rsyntax.new_specification
-        {consts = [{const_name = "ZIP", fixity = Prefix}],
+        {consts = [{const_name = "ZIP", fixity = NONE}],
          name = "ZIP",
          sat_thm = lemma
         }

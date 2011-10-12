@@ -87,7 +87,7 @@ sig
      = Infix of associativity * int
      | Closefix
      | Suffix of int
-     | TruePrefix of int
+     | Prefix of int
 
   datatype user_delta =
            GRULE of {term_name : string,

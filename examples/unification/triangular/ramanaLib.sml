@@ -17,11 +17,13 @@ fun SIMP_TERM ss thms t = (* use ASSUME to get a theorem to simplify instead? *)
 val simp_term = SIMP_TERM
 
 fun TermWithCase q = let
+  val pfns = SOME (term_to_string, type_to_string, kind_to_string)
   val ptm0 = Preterm q
-  val () = Preterm.typecheck_phase1 NONE ptm0
-  val ptm = Preterm.overloading_resolution ptm0
+  val ptm1 = Preterm.typecheck_phase1 pfns ptm0
+  val ptm2 = Preterm.overloading_resolution ptm1
+  val ptm  = Preterm.typecheck_phase1 pfns ptm2
 in
-  Preterm.to_term ptm
+  Preterm.to_term pfns ptm
 end
 
 fun RWstore_thm (s,q,t) = Q.store_thm(s,q,t) before export_rewrites [s]

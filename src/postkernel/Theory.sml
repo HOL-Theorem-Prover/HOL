@@ -466,10 +466,13 @@ fun save_thm (name,th) =
        ; if uptodate_thm th then add_thmCT(name,th)
          else raise DATED_ERR "save_thm" name
        ; if !save_thm_reporting = 0 then ()
-         else if not (!Globals.interactive) orelse !save_thm_reporting > 1
-         then
-           mesg ("Saved theorem " ^ name ^ "\n")
-         else ()
+         else if !Globals.interactive then
+           if !save_thm_reporting > 1 then
+             mesg ("Saved theorem " ^ Lib.quote name ^ "\n")
+           else
+             ()
+         else
+           mesg ("Saved theorem _____ " ^ Lib.quote name ^ "\n")
        ; th)
 
 fun new_axiom (name,tm) =

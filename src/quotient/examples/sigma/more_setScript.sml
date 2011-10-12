@@ -520,7 +520,7 @@ in
 val IN_UNION_SET =
     let val th1 = CONV_RULE SKOLEM_CONV UNION_SET_EXISTS in
     new_specification{name="IN_UNION_SET",
-                      consts=[{const_name="UNION_SET",fixity=Prefix}],
+                      consts=[{const_name="UNION_SET",fixity=NONE}],
                       sat_thm=th1}
     end
 end;
