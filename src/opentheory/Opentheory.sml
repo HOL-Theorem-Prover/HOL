@@ -184,11 +184,11 @@ fun raw_read_article input
     | f "var"     (st as {stack=OType t::OName n::os,...}) = st_(OVar(mk_var(n,t))::os,st)
     | f "varTerm" (st as {stack=OVar t::os,...})           = st_(OTerm t::os,st)
     | f "varType" (st as {stack=OName n::os,...})          = st_(OType(mk_vartype n)::os,st)
-    | f s (st as {stack,dict,thms,...}) = let val c = String.sub(s,0) open Char Option Int
+    | f s (st as {stack,dict,thms,line_num,...}) = let val c = String.sub(s,0) open Char Option Int
       in if c = #"\"" then push(OName(trimlr s),st) else
          if isDigit c then push(ONum(valOf(fromString s)),st) else
          if c = #"#" then {stack=stack,dict=dict,thms=thms} else
-         raise ERR ("Unknown command (or bad arguments): "^s)
+         raise ERR ("Unknown command (or bad arguments) on line "^(Int.toString line_num)^": <<"^s^">>")
       end
   fun loop (x as {line_num,...}) = case TextIO.inputLine input of
     NONE => x before TextIO.closeIn(input)
