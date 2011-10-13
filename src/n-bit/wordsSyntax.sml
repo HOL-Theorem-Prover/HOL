@@ -26,6 +26,8 @@ val is_word_type = Lib.can dest_word_type;
 
 val dim_of = dest_word_type o type_of;
 
+val size_of = fcpLib.index_to_num o dim_of;
+
 (*---------------------------------------------------------------------------*)
 (* Constants for word operations                                             *)
 (*---------------------------------------------------------------------------*)

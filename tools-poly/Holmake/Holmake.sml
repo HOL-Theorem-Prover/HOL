@@ -390,7 +390,6 @@ val _ = OS.Process.atExit (fn () => ignore (finish_logging false))
 *)
 val HOLDIR    = case cmdl_HOLDIR of NONE => HOLDIR0 | SOME s => s
 val POLYMLLIBDIR =  case cmdl_POLYMLLIBDIR of NONE => POLYMLLIBDIR0 | SOME s => s
-val POLY =  case cmdl_POLY of NONE => fullPath [HOLDIR, "bin", "hol.builder"] | SOME s => s
 (*val MOSMLCOMP = fullPath [HOLDIR, "tools-poly/polymlc"]*)
 val SIGOBJ    = normPath(OS.Path.concat(HOLDIR, "sigobj"));
 
@@ -496,6 +495,30 @@ val hmake_qof = member "QUIT_ON_FAILURE" hmake_options
 val hmake_noprereqs = member "NO_PREREQS" hmake_options
 val extra_cleans = envlist "EXTRA_CLEANS"
 
+val POLY =
+    case cmdl_POLY of
+      NONE => let
+        val default = fullPath [HOLDIR, "bin", "hol.builder"]
+      in
+        case envlist "HOLHEAP" of
+          [] => default
+        | [x] => x
+        | xs => (warn ("Can't interpret "^String.concatWith " " xs ^
+                       " as a HOL HEAP spec; using default hol.builder.");
+                 default)
+      end
+    | SOME s => s
+
+val (poly_localp, EXE_POLY) =
+    if Path.isRelative POLY then let
+        val d = Path.dir POLY
+      in
+        if d = "" then (true, Path.concat(".", POLY)) else
+        if d = "." then (true, POLY)
+        else (false, POLY)
+      end
+    else (false, POLY)
+
 val quit_on_failure = quit_on_failure orelse hmake_qof
 val no_prereqs = no_prereqs orelse hmake_noprereqs
 val _ =
@@ -555,19 +578,21 @@ fun (s in_target t) = case extra_deps t of NONE => false | SOME l => member s l
 fun addPath I file =
   if OS.Path.isAbsolute file then
     file
-  else
-    let val p = List.find (fn p =>
-                            OS.FileSys.access (OS.Path.concat (p, file ^ ".ui"), []))
-                          (OS.FileSys.getDir() :: I)
+  else let
+      val p = List.find (fn p =>
+                            FileSys.access (Path.concat (p, file ^ ".ui"), []))
+                        (FileSys.getDir() :: I)
     in
       case p of
            NONE => OS.Path.concat (OS.FileSys.getDir(), file)
          | SOME p => OS.Path.concat (p, file)
     end;
 
-fun poly_compile file I deps =
-let val modName = fromFileNoSuf file
-    val depMods = List.map (addPath I o fromFileNoSuf) deps
+fun poly_compile file I deps = let
+  val modName = fromFileNoSuf file
+  fun mapthis (Unhandled _) = NONE
+    | mapthis f = SOME (fromFileNoSuf f)
+  val depMods = List.map (addPath I) (List.mapPartial mapthis deps)
 in
 case file of
   SIG _ =>
@@ -606,7 +631,7 @@ let val out = TextIO.openOut result
       (TextIO.output (out, s); TextIO.output (out, "\n"))
 in
   p "#!/bin/sh";
-  p (POLY ^ "<<'__end-of-file__'");
+  p (EXE_POLY ^ "<<'__end-of-file__'");
   p "val _ = PolyML.Compiler.prompt1:=\"\";";
   p "val _ = PolyML.Compiler.prompt2:=\"\";";
   p "val _ = PolyML.print_depth 0;";
@@ -922,7 +947,9 @@ in
       val tcdeps = collect_all_dependencies [] [f]
       val uo_deps =
           List.mapPartial (fn (UI x) => SOME (UO x) | _ => NONE) tcdeps
-      val alldeps = set_union (set_union tcdeps uo_deps) file_dependencies
+      val heap_deps = if poly_localp then [Unhandled POLY] else []
+      val alldeps = set_union (set_union tcdeps uo_deps)
+                              (set_union file_dependencies heap_deps)
     in
       case f of
         SML x => let
@@ -1329,19 +1356,18 @@ in
   case targets of
     [] => let
       val targets = generate_all_plausible_targets ()
+      val targets = map fromFile targets
       val _ =
         if debug then let
-            val tgtstrings0 = map fromFile targets
             val tgtstrings =
                 map (fn s => if OS.FileSys.access(s, []) then s else s ^ "(*)")
-                    tgtstrings0
+                    targets
           in
             print("Generated targets are: "^print_list tgtstrings ^ "\n")
           end
         else ()
     in
-      maybe_recurse
-          (fn () => finish_logging (strategy  (map (fromFile) targets)))
+      maybe_recurse (fn () => finish_logging (strategy  targets))
     end
   | xs => let
       fun isPhony x = member x ["clean", "cleanDeps", "cleanAll"] orelse
@@ -1349,7 +1375,8 @@ in
     in
       if List.all isPhony xs then
         if finish_logging (strategy xs) then SOME visiteddirs else NONE
-      else maybe_recurse (fn () => finish_logging (strategy xs))
+      else
+        maybe_recurse (fn () => finish_logging (strategy xs))
     end
 end
 

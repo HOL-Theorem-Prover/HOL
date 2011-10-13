@@ -1,7 +1,7 @@
 TARGET_poly = $(dprot $(HOLDIR)/bin/hol.builder0)
 TARGET_mosml = proofManagerLib.sml
 DEPS_poly = $(BOOLLIB) $(BOOLTHEORY) $(PRIMREC) proofManagerLib.uo History.uo \
-            goalStack.uo goalTree.uo Manager.uo
+            goalStack.uo goalTree.uo Manager.uo $(dprot $(HOLDIR)/tools-poly/builder0.ML)
 DEPS_mosml =
 
 COMM_poly = cd $(protect $(HOLDIR)/tools-poly) && $(POLY) < builder0.ML && cc -o $@ hol.builder0.o $(POLY_LDFLAGS) && rm hol.builder0.o

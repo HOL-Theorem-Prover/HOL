@@ -64,15 +64,14 @@ fi
 case $kernel in -expk | -stdknl ) : ;; * ) die "Bad kernel spec \"$kernel\"."
 esac
 
-if git svn fetch > svn-update 2>&1
+if git pull > update-log 2>&1
 then
     updated_ok=ok
 else
     updated_ok=
 fi
-git svn rebase --local >> svn-update 2>&1
 
-rev=$(git svn find-rev HEAD)
+rev=$(git log --oneline -n1 HEAD | awk '{print $1}')
 cd developers
 mlsys=$($ML < mlsysinfo.sml | grep MLSYSTEM | awk '{print $3}')
 cd ..
@@ -120,11 +119,13 @@ esac
  echo "ML Implementation: $mlsys" &&
  echo "Started: "$(date +"%a, %d %b %Y %H:%M:%S %z") &&
  echo "Extra commandline arguments: $@" &&
+ echo -n "Revision: " &&
+ git log -n1 --oneline HEAD &&
  if [ "$updated_ok" ]
  then
-     cat svn-update
+     cat update-log
  else
-     echo "svn update failed - continuing anyway."
+     echo "git pull failed - continuing anyway."
  fi &&
  echo "-- Configuration Description Ends --" &&
  echo &&

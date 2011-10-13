@@ -72,7 +72,7 @@ fun compile systeml exe obj =
           END user-settable parameters
  ---------------------------------------------------------------------------*)
 
-val version_number = 7
+val version_number = 8
 val release_string = "Kananaskis"
 
 (*
@@ -396,8 +396,22 @@ val _ =
    FileSys.chDir cdir)
    handle _ => die "Failed to build build.";
 
+(* ----------------------------------------------------------------------
+    Generate heapname executable
+   ---------------------------------------------------------------------- *)
 
-end;
+val _ = let
+in
+  echo "Making bin/heapname utility";
+  FileSys.chDir toolsdir;
+  system_ps (POLY ^ " < heapname.ML");
+  compile systeml (fullPath [HOLDIR,"bin","heapname"]) "heapname.o";
+  FileSys.chDir cdir
+end handle _ => die "Failed to build heapname."
+
+
+
+end (* local *)
 
 (*---------------------------------------------------------------------------
     Instantiate tools/hol-mode.src, and put it in tools/hol-mode.el
@@ -460,76 +474,27 @@ val _ =
     closeOut tar4
   end;
 
+
+
+
+
 (*---------------------------------------------------------------------------
       Generate shell scripts for running HOL.
  ---------------------------------------------------------------------------*)
 
-val _ =
- let val _ = echo "Generating bin/hol."
-     val target      = fullPath [holdir, "bin", "hol.bare"]
-     val target_boss = fullPath [holdir, "bin", "hol"]
+val _ = let
+  val _ = echo "Generating bin/hol."
+  val target      = fullPath [holdir, "bin", "hol.bare"]
+  val target_boss = fullPath [holdir, "bin", "hol"]
+  val hol0_heap   = fullPath[HOLDIR,"bin", "hol.builder0"]
+  val hol_heapcalc= "$(" ^ fullPath[HOLDIR,"bin","heapname"] ^ ")"
  in
    (* "unquote" scripts use the unquote executable to provide nice
       handling of double-backquote characters *)
-   emit_hol_unquote_script target "hol.builder0"
-     ["prelude.ML"];
-   emit_hol_unquote_script target_boss "hol.builder"
-     ["prelude.ML", "prelude2.ML"];
-   emit_hol_script (target ^ ".noquote") "hol.builder0"
-     ["prelude.ML"];
-   emit_hol_script (target_boss ^ ".noquote") "hol.builder"
-     ["prelude.ML", "prelude2.ML"]
+   emit_hol_unquote_script target hol0_heap ["prelude.ML"];
+   emit_hol_unquote_script target_boss hol_heapcalc ["prelude.ML", "prelude2.ML"];
+   emit_hol_script (target ^ ".noquote") hol0_heap ["prelude.ML"];
+   emit_hol_script (target_boss ^ ".noquote") hol_heapcalc ["prelude.ML", "prelude2.ML"]
  end;
-
- (*
-
-(*---------------------------------------------------------------------------
-    Configure the muddy library.
- ---------------------------------------------------------------------------*)
-
-local val CFLAGS =
-        case OS
-         of "linux"   => SOME " -Dunix -O3 -fPIC $(CINCLUDE)"
-          | "solaris" => SOME " -Dunix -O3 $(CINCLUDE)"
-          | "macosx"  => SOME " -Dunix -O3 $(CINCLUDE)"
-          |     _     => NONE
-      val DLLIBCOMP =
-        case OS
-         of "linux"   => SOME "ld -shared -o $@ $(COBJS) $(LIBS)"
-          | "solaris" => SOME "ld -G -B dynamic -o $@ $(COBJS) $(LIBS)"
-          | "macosx"  => SOME "gcc -bundle -flat_namespace -undefined suppress\
-                              \ -o $@ $(COBJS) $(LIBS)"
-          |    _      => NONE
-      val ALL =
-        if OS="linux" orelse OS="solaris" orelse OS="macosx"
-        then SOME " muddy.so"
-        else NONE
-in
-val _ =
- let open TextIO
-     val _ = echo "Setting up the muddy library Makefile."
-     val src    = fullPath [holdir, "tools-poly/makefile.muddy.src"]
-     val target = fullPath [holdir, "examples/muddy/muddyC/Makefile"]
-     val mosmlhome = Path.getParent polymldir
- in
-   case (CFLAGS, DLLIBCOMP, ALL) of
-     (SOME s1, SOME s2, SOME s3) => let
-       val (cflags, dllibcomp, all) = (s1, s2, s3)
-     in
-       fill_holes (src,target)
-       ["MOSMLHOME=\n"  -->  String.concat["MOSMLHOME=", mosmlhome,"\n"],
-        "CC=\n"         -->  String.concat["CC=", CC, "\n"],
-        "CFLAGS="       -->  String.concat["CFLAGS=",cflags,"\n"],
-        "all:\n"        -->  String.concat["all: ",all,"\n"],
-        "DLLIBCOMP"     -->  String.concat["\t", dllibcomp, "\n"]]
-     end
-   | _ =>  print (String.concat
-                  ["   Warning! (non-fatal):\n    The muddy package is not ",
-                   "expected to build in OS flavour ", quote OS, ".\n",
-                   "   On winNT, muddy will be installed from binaries.\n",
-                   "   End Warning.\n"])
- end
-end; (* local *)
-*)
 
 val _ = print "\nFinished configuration!\n";
