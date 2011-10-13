@@ -87,6 +87,14 @@ val real_ge = new_definition("real_ge", ``real_ge x y = (real_lte y x)``);
 
 val real_div = new_definition("real_div", ``$/ x y = x * inv y``);
 val _ = set_fixity "/" (Infixl 600);
+val _ = overload_on(GrammarSpecials.decimal_fraction_special, ``$/``)
+val _ = overload_on("/", ``$/``)
+val _ = add_user_printer
+            ("(DecimalFractionPP.fraction{Thy=\"real\",Division=\"/\",\
+             \fromNum=\"real_of_num\"})",
+             ``&(NUMERAL x) / &(NUMERAL y)``,
+             DecimalFractionPP.fraction{Thy="real",Division="/",
+                                        fromNum="real_of_num"})
 
 val natsub = Term`$-`;
 val natlte = Term`$<=`;

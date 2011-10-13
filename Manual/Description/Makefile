@@ -21,8 +21,9 @@ clean:
 
 description.pdf: description.tex $(CHAPTERS) $(OTHER)
 	${PDFLATEX}  description
-	${MAKEINDEX} description
 	${BIBTEX}    description
+	${PDFLATEX}  description
+	${MAKEINDEX} description
 	${PDFLATEX}  description
 	${PDFLATEX}  description
 

@@ -323,12 +323,13 @@ val GEN_TAC:tactic = fn (asl,w) =>
 fun X_TY_GEN_TAC x1 : tactic = fn (asl,w) =>
  if is_vartype x1
  then (let val (Bvar,Body) = dest_tyforall w
-       in if Bvar=x1 then ([(asl,Body)], fn [th] => TY_GEN x1 th)
+       in if Bvar=x1 then ([(asl,Body)], fn [th] => TY_GEN x1 th | _ => raise Match)
           else ([(asl,inst [Bvar |-> x1] Body)],
                 fn [th] =>
                    let val th' = TY_GEN x1 th
                    in EQ_MP (GEN_TY_ALPHA_CONV Bvar (concl th')) th'
-                   end)
+                   end
+                 | _ => raise Match)
        end
        handle HOL_ERR _ => raise ERR "X_TY_GEN_TAC" "")
  else raise ERR "X_TY_GEN_TAC"  "need a type variable";
@@ -365,12 +366,12 @@ fun ID_SPEC_TAC x :tactic = fn (asl,w) =>
    subst_type (in place of inst) is invalid. *)
 fun TY_SPEC_TAC (ty,a) :tactic = fn (asl,w) =>
     ([(asl, mk_tyforall(a, inst[ty |-> a] w))],
-     fn [th] => TY_SPEC ty th)
+     fn [th] => TY_SPEC ty th | _ => raise Match)
     handle HOL_ERR _ => raise ERR "TY_SPEC_TAC" "";
 
 fun ID_TY_SPEC_TAC a :tactic = fn (asl,w) =>
     ([(asl, mk_tyforall(a, w))],
-     fn [th] => TY_SPEC a th)
+     fn [th] => TY_SPEC a th | _ => raise Match)
     handle HOL_ERR _ => raise ERR "ID_TY_SPEC_TAC" "";
 
 
@@ -400,7 +401,7 @@ fun EXISTS_TAC t :tactic = fn (asl,w) =>
 fun TY_EXISTS_TAC ty :tactic = fn (asl,w) =>
  let val (Bvar,Body) = dest_tyexists w
  in ([(asl, inst [Bvar |-> ty] Body)],
-     fn [th] => TY_EXISTS (w,ty) th)
+     fn [th] => TY_EXISTS (w,ty) th | _ => raise Match)
  end
   handle HOL_ERR _ => raise ERR "TY_EXISTS_TAC" "";
 

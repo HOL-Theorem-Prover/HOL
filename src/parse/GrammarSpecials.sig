@@ -9,6 +9,7 @@ sig
   val and_special : string
   val pack_special : string
   val fakeconst_special : string
+  val decimal_fraction_special : string
 
   (* special strings for records *)
   val recsel_special : string

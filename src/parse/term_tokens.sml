@@ -9,6 +9,8 @@ struct
     Ident of string
   | Antiquote of 'a
   | Numeral of (Arbnum.num * char option)
+  | Fraction of {wholepart : Arbnum.num, fracpart : Arbnum.num,
+                 places : int}
   | QIdent of (string * string)
 
 
@@ -38,13 +40,13 @@ in
   #"a" <= c andalso c <= #"f"
 end
 fun numberp s = Char.isDigit (String.sub(s,0)) orelse s = "_" orelse
-                s = "x" orelse
-                ishexdigit s
+                s = "x" orelse s = "." orelse ishexdigit s orelse
+                Char.isLower (String.sub(s,0))
 
 fun categorise c =
     if s_has_nonagg_char c orelse c = UnicodeChars.neg then s_has_nonagg_char
-    else if term_identp c then term_identp
     else if Char.isDigit (String.sub(c,0)) then numberp
+    else if term_identp c then term_identp
     else term_symbolp
 
 fun constid_categorise c =
@@ -93,21 +95,37 @@ in
   recurse (Substring.full s)
 end
 
-fun MkID (s, loc) = let
+fun MkID qb (s, loc) = let
+  val {advance, pushstring} = qb
   val c = String.sub(s,0)
 in
   if Char.isDigit c then
-    Numeral (base_tokens.parse_numeric_literal (s, loc))
+    case CharVector.findi (fn (i,c) => c = #".") s of
+      NONE => (advance(); Numeral (base_tokens.parse_numeric_literal (s, loc)))
+    | SOME (j, _) => let
+      in
+        if j = size s - 1 then let
+            val (locn1, locn2) = locn.split_at (size s - 1) loc
+          in
+            pushstring (".", locn2);
+            Numeral (base_tokens.parse_numeric_literal
+                         (String.substring(s,0,size s - 1), locn1))
+          end
+        else
+          (advance(); Fraction (base_tokens.parse_fraction (s,loc)))
+      end
   else if c = #"'" then
-    if str_all (fn c => c = #"'") s then Ident s
+    if str_all (fn c => c = #"'") s then (advance(); Ident s)
     else raise LEX_ERR ("Term idents can't begin with prime characters",loc)
-  else Ident s
+  else (advance(); Ident s)
 end
 
 open qbuf
 
 fun split_ident mixedset s locn qb = let
   val {advance,replace_current} = qb
+  val qb' = {advance = advance,
+             pushstring = (fn (s,loc) => replace_current (BT_Ident s, loc))}
   val s0 = String.sub(s, 0)
   val is_char = s0 = #"#" andalso size s > 1 andalso String.sub(s,1) = #"\""
   fun prefix2 c0 c1 = s0 = c0 andalso size s > 1 andalso String.sub(s,1) = c1
@@ -144,7 +162,7 @@ in
               (replace_current (BT_Ident (String.extract(s, 1, NONE)),locn'');
                (ID (String.extract (s, 0, SOME 1)),locn')) end
   else if not (mixed s) andalso not (s_has_nonagg_char s) then
-    (advance (); (MkID (s, locn), locn))
+    (MkID qb' (s, locn), locn)
   else
     case UTF8Set.longest_pfx_member(mixedset, s) of
       NONE => (* identifier blob doesn't occur in list of known keywords *) let
@@ -161,43 +179,54 @@ in
                     if test s then grab test (s::acc) rest
                     else (String.concat (List.rev acc), s^rest)
                   end
-            val (tok,sfx) =
-                if s_has_nonagg_char c then (ID c, rest)
-                else let
-                    val (pfx0, sfx0) = grab (categorise c) [c] rest
-                  in
-                    if size sfx0 <> 0 andalso String.sub(sfx0,0) = #"$" then
-                      if size sfx0 > 1 then let
-                          val sfx0_1 = String.extract(sfx0, 1, NONE)
-	                  val c0 = String.sub(sfx0_1, 0)
-                          val rest = String.extract(sfx0_1, 1, NONE)
-                        in
-                          if c0 = #"0" then
-                            (* special case - "0" can be a constant name *)
-                            if rest = "" then (QIdent(pfx0,"0"), "")
-                            else raise LEX_ERR (sfx0_1 ^ " cannot be the name\
-                                                         \ of a constant",
-                                                locn)
-                          else let
-	                      val (qid2, sfx) =
-                                  grab (constid_categorise (str c0))
-                                       [str c0]
-                                       rest
-                                       handle Fail s => raise LEX_ERR (s, locn)
-	                    in
-	                      (QIdent(pfx0,qid2), sfx)
-                            end
-                        end
-                      else
-                        raise LEX_ERR ("Malformed qualified ident", locn)
-                    else (MkID (pfx0,locn), sfx0)
-                  end
-            val (locn1, locn2) = locn.split_at (size s - size sfx) locn
+            fun stdfinish (tok, sfx) = let
+              val (locn1, locn2) = locn.split_at (size s - size sfx) locn
+            in
+              if size sfx <> 0 then (replace_current (BT_Ident sfx, locn2);
+                                     (tok, locn1))
+              else (advance(); (tok, locn))
+            end
           in
-            if size sfx <> 0 then
-              (replace_current (BT_Ident sfx,locn2); (tok, locn1))
-            else
-              (advance (); (tok, locn))
+            if s_has_nonagg_char c then stdfinish (ID c, rest)
+            else let
+                val (pfx0, sfx0) = grab (categorise c) [c] rest
+              in
+                if size sfx0 <> 0 andalso String.sub(sfx0,0) = #"$" then
+                  if size sfx0 > 1 then let
+                      val sfx0_1 = String.extract(sfx0, 1, NONE)
+	              val c0 = String.sub(sfx0_1, 0)
+                      val rest = String.extract(sfx0_1, 1, NONE)
+                    in
+                      if c0 = #"0" then
+                        (* special case - "0" can be a constant name *)
+                        if rest = "" then stdfinish (QIdent(pfx0,"0"), "")
+                        else raise LEX_ERR (sfx0_1 ^ " cannot be the name\
+                                                     \ of a constant",
+                                            locn)
+                      else let
+	                  val (qid2, sfx) =
+                              grab (constid_categorise (str c0))
+                                   [str c0]
+                                   rest
+                                   handle Fail s => raise LEX_ERR (s, locn)
+	                in
+	                  stdfinish (QIdent(pfx0,qid2), sfx)
+                        end
+                    end
+                  else
+                    raise LEX_ERR ("Malformed qualified ident", locn)
+                else if size sfx0 = 0 then (MkID qb' (pfx0,locn), locn)
+                else let
+                    val (locn1,locn2) = locn.split_at (size pfx0) locn
+                    fun adv() = replace_current (BT_Ident sfx0, locn2)
+                    fun push (s,loc) =
+                        replace_current (BT_Ident (s ^ sfx0),
+                                         locn.between loc locn2)
+                  in
+                    (MkID {advance = adv, pushstring = push} (pfx0, locn),
+                     locn)
+                  end
+              end
           end
       end
     | SOME {pfx,rest} => let
@@ -221,10 +250,11 @@ fn qb => let
    val (bt,locn) = current qb
    in
      case bt of
-         BT_Numeral p   => (advance qb; SOME (Numeral p,locn))
-       | BT_AQ x        => (advance qb; SOME (Antiquote x,locn))
-       | BT_EOI         => NONE
-       | BT_Ident s     => let
+         BT_Numeral p         => (advance qb; SOME (Numeral p,locn))
+       | BT_DecimalFraction r => (advance qb; SOME (Fraction r, locn))
+       | BT_AQ x              => (advance qb; SOME (Antiquote x,locn))
+       | BT_EOI               => NONE
+       | BT_Ident s           => let
            val qbfns = {advance = (fn () => advance qb),
                         replace_current = (fn p => replace_current p qb)}
            val (tok,locn') = split s locn qbfns
@@ -264,6 +294,16 @@ fun is_ident (Ident _) = true
   | is_ident _ = false
 fun is_aq (Antiquote _) = true
   | is_aq _ = false
+
+fun lextest toks s = let
+  val qb = qbuf.new_buffer [QUOTE s]
+  fun recurse acc =
+      case lex toks qb of
+        NONE => List.rev acc
+      | SOME (t,_) => recurse (t::acc)
+in
+  recurse []
+end
 
 end (* struct *)
 

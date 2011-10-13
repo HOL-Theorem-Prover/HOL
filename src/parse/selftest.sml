@@ -165,8 +165,6 @@ end;
 
 val _ = print "** Testing basic lexing functionality\n\n"
 open base_tokens
-fun dest (BT_Ident s, _) = s
-  | dest _ = raise Fail "Couldn't dest a base token."
 fun die s = (print (s^"\n"); OS.Process.exit OS.Process.failure)
 
 fun quoteToString [QUOTE s] = "`"^s^"`"
@@ -180,12 +178,20 @@ end
 fun test (q, slist) = let
   val _ = print (tprint q)
 in
-  if map dest (qbuf.lex_to_toklist q) <> slist then die "FAILED!"
+  if map (base_tokens.toString o #1) (qbuf.lex_to_toklist q) <> slist then
+    die "FAILED!"
   else print "OK\n"
 end handle LEX_ERR (s,_) => die ("FAILED!\n  [LEX_ERR "^s^"]")
          | e => die ("FAILED\n ["^exnMessage e^"]")
 
 val _ = app test [(`abc`, ["abc"]),
+                  (`12`, ["12"]),
+                  (`3.0`, ["3.0"]),
+                  (`3.00`, ["3.00"]),
+                  (`0xab`, ["171"]),
+                  (`12.1`, ["12.1"]),
+                  (`12.01`, ["12.01"]),
+                  (`12.010`, ["12.010"]),
                   (`(`, ["("]),
                   (`a(a`, ["a(a"]),
                   (`x+y`, ["x+y"]),
@@ -198,6 +204,44 @@ val _ = app test [(`abc`, ["abc"]),
                   (`+(%*%((*"*)-*foo`,["+(%*%(", "-*foo"]),
                   (`"(*"`, ["\"(*\""])
                  ]
+
+(* tests of the term lexer *)
+fun test (s, toklist : unit term_tokens.term_token list) = let
+  val _ = print (StringCvt.padRight #" " 65
+                                    ("Term token testing " ^ Lib.quote s))
+in
+  if term_tokens.lextest [] s = toklist then print "OK\n"
+  else die "FAILED!"
+end handle LEX_ERR (s,_) => die ("FAILED!\n  [LEX_ERR "^s^"]")
+         | e => die ("FAILED\n ["^exnMessage e^"]")
+
+open term_tokens
+val ai = Arbnum.fromInt
+val _ = app test [("abc", [Ident "abc"]),
+                  ("12", [Numeral (ai 12, NONE)]),
+                  ("-12", [Ident "-", Numeral (ai 12, NONE)]),
+                  ("((-12", [Ident "(", Ident "(", Ident "-",
+                             Numeral (ai 12, NONE)]),
+                  ("1.2", [Fraction{wholepart = ai 1, fracpart = ai 2,
+                                    places = 1}]),
+                  ("-1.2", [Ident "-",
+                            Fraction{wholepart = ai 1, fracpart = ai 2,
+                                     places = 1}]),
+                  ("~1.2", [Ident "~",
+                            Fraction{wholepart = ai 1, fracpart = ai 2,
+                                     places = 1}]),
+                  ("(2n*e", [Ident "(", Numeral (ai 2, SOME #"n"),
+                             Ident "*", Ident "e"]),
+                  ("2_001", [Numeral (ai 2001, NONE)]),
+                  ("2.000_023", [Fraction{wholepart = ai 2, places = 6,
+                                          fracpart = ai 23}]),
+                  ("0.", [Numeral (ai 0, NONE), Ident "."]),
+                  ("a0.", [Ident "a0", Ident "."]),
+                  ("-0.", [Ident "-", Numeral (ai 0, NONE), Ident "."]),
+                  ("{2.3", [Ident "{", Fraction{wholepart = ai 2, places = 1,
+                                                fracpart = ai 3}])
+                  ]
+
 
 (*
 

@@ -151,7 +151,17 @@ val complex_div = new_definition
  ``complex_div (z:complex) (w:complex) = z * inv w``);
 
 val _ = overload_on ("-",  Term`$complex_sub`);
-val _ = overload_on ("/",  Term`$complex_div`);
+val _ = overload_on (GrammarSpecials.decimal_fraction_special, ``complex_div``)
+val _ = overload_on ("/",  Term`complex_div`);
+
+val _ =
+    add_user_printer
+       ("(DecimalFractionPP.fraction{Thy=\"complex\",Division=\"complex_div\",\
+        \fromNum=\"complex_of_num\"})",
+        ``&(NUMERAL x) / &(NUMERAL y)``,
+        DecimalFractionPP.fraction{Thy="complex",Division="complex_div",
+                                   fromNum="complex_of_num"})
+
 
 (*--------------------------------------------------------------------*)
 (* Prove lots of field theorems                                       *)

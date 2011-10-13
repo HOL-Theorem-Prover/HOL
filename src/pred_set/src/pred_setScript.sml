@@ -23,7 +23,9 @@ open HolKernel Parse boolLib Prim_rec pairLib numLib
      BasicProvers metisLib mesonLib simpLib boolSimps;
 
 val AP = numLib.ARITH_PROVE
-val arith_ss = bool_ss ++ numSimps.ARITH_ss
+val ARITH_ss = numSimps.ARITH_ss
+val arith_ss = bool_ss ++ ARITH_ss
+
 
 (* ---------------------------------------------------------------------*)
 (* Create the new theory.						*)
@@ -2868,7 +2870,7 @@ val FINITE_WEAK_ENUMERATE = Q.store_thm
 
     SIMP_TAC bool_ss [GSYM LEFT_FORALL_IMP_THM] THEN REPEAT GEN_TAC THEN
     MAP_EVERY Q.ID_SPEC_TAC [`f`, `s`, `b`] THEN numLib.INDUCT_TAC THENL [
-      SIMP_TAC (bool_ss ++ numSimps.ARITH_ss) [] THEN
+      SIMP_TAC (bool_ss ++ ARITH_ss) [] THEN
       GEN_TAC THEN
       STRIP_ASSUME_TAC (Q.SPEC `s` SET_CASES) THEN
       ASM_SIMP_TAC bool_ss [IN_INSERT, FINITE_EMPTY] THEN
@@ -3566,7 +3568,7 @@ val SUM_IMAGE_THM = store_thm(
                     g e (ITSET g (s DELETE e) 0)` THEN1
        SRW_TAC [][Abbr`g`] THEN
     MATCH_MP_TAC COMMUTING_ITSET_RECURSES THEN
-    SRW_TAC [numSimps.ARITH_ss][Abbr`g`]
+    SRW_TAC [ARITH_ss][Abbr`g`]
   ]);
 
 val SUM_IMAGE_SING = store_thm(
@@ -3631,7 +3633,7 @@ val SUM_IMAGE_UNION = store_thm(
               SUM_IMAGE f s + SUM_IMAGE f t - SUM_IMAGE f (s INTER t))` THEN1
     PROVE_TAC [] THEN
   HO_MATCH_MP_TAC FINITE_INDUCT THEN CONJ_TAC THEN1
-    SRW_TAC [numSimps.ARITH_ss][SUM_IMAGE_THM] THEN
+    SRW_TAC [ARITH_ss][SUM_IMAGE_THM] THEN
   SIMP_TAC (srw_ss()) [INSERT_UNION_EQ, SUM_IMAGE_THM, INSERT_INTER] THEN
   REPEAT STRIP_TAC THEN
   Cases_on `e IN t` THEN
@@ -3724,7 +3726,7 @@ val SUM_SAME_IMAGE = Q.store_thm
     `(f e = f x) /\ (f p = f x)`
         by (FULL_SIMP_TAC (srw_ss()) [] THEN METIS_TAC []) THEN
     Q_TAC SUFF_TAC `SIGMA f s = CARD s * f x`
-          THEN1 SRW_TAC [numSimps.ARITH_ss][] THEN
+          THEN1 SRW_TAC [ARITH_ss][] THEN
     FULL_SIMP_TAC (srw_ss() ++ DNF_ss) []
   ]);
 
@@ -3834,6 +3836,68 @@ val SUM_SET_UNION = store_thm(
           (SUM_SET (s UNION t) =
              SUM_SET s + SUM_SET t - SUM_SET (s INTER t))``,
   SRW_TAC [][SUM_SET_DEF, SUM_IMAGE_UNION]);
+
+(* ----------------------------------------------------------------------
+    PROD_IMAGE
+
+    This construct is the same as standard mathematics \Pi operator:
+
+     \Pi_{x\in P}{f(x)} = PROD_IMAGE f P
+
+    Where f's range is the natural numbers and P is finite.
+   ---------------------------------------------------------------------- *)
+
+(* Define PROD_IMAGE similar to SUM_IMAGE *)
+val PROD_IMAGE_DEF = new_definition(
+  "PROD_IMAGE_DEF",
+  ``PROD_IMAGE f s = ITSET (\e acc. f e * acc) s 1``);
+
+(* Theorem: property of PROD_IMAGE *)
+val PROD_IMAGE_THM = store_thm(
+  "PROD_IMAGE_THM",
+  ``!f. (PROD_IMAGE f {} = 1) /\
+        (!e s. FINITE s ==>
+          (PROD_IMAGE f (e INSERT s) = f e * PROD_IMAGE f (s DELETE e)))``,
+  REPEAT STRIP_TAC THEN1
+    SIMP_TAC (srw_ss()) [ITSET_THM, PROD_IMAGE_DEF] THEN
+  SIMP_TAC (srw_ss()) [PROD_IMAGE_DEF] THEN
+  Q.ABBREV_TAC `g = \e acc. f e * acc` THEN
+  Q_TAC SUFF_TAC `ITSET g (e INSERT s) 1 =
+                  g e (ITSET g (s DELETE e) 1)` THEN1 SRW_TAC [][Abbr`g`] THEN
+  MATCH_MP_TAC COMMUTING_ITSET_RECURSES THEN
+  SRW_TAC [ARITH_ss][Abbr`g`]);
+(*WAIT*)
+
+(*---------------------------------------------------------------------------*)
+(* PROD_SET multiplies the elements of a set of natural numbers              *)
+(*---------------------------------------------------------------------------*)
+
+(* Define PROD_SET similar to SUM_SET *)
+(* val PROD_SET_DEF = new_definition("PROD_SET_DEF", ``PROD_SET = PROD_IMAGE I``); *)
+val PROD_SET_DEF = new_definition("PROD_SET_DEF", ``PROD_SET = PROD_IMAGE I``);
+
+(* Theorem: Product Set property *)
+val PROD_SET_THM = store_thm(
+  "PROD_SET_THM",
+  ``(PROD_SET {} = 1) /\
+    (!x s. FINITE s ==> (PROD_SET (x INSERT s) = x * PROD_SET (s DELETE x)))``,
+  SRW_TAC [][PROD_SET_DEF, PROD_IMAGE_THM]);
+
+val PROD_SET_EMPTY = save_thm("PROD_SET_EMPTY", CONJUNCT1 PROD_SET_THM);
+
+(* Theorem: PROD_SET (IMAGE f (x INSERT s)) = (f x) * PROD_SET (IMAGE f s) *)
+(* Proof:
+     PROD_SET (IMAGE f (x INSERT s))
+   = PROD_SET (f x INSERT IMAGE f s)          by IMAGE_INSERT
+   = f x * PROD_SET (IMAGE f s) DELETE (f x)  by PROD_SET_THM, assume FINITE (IMAGE f s)
+   = f x * PROD_SET (IMAGE f s)               by (f x) not in (IMAGE f s)
+*)
+val PROD_SET_IMAGE_REDUCTION = store_thm(
+  "PROD_SET_IMAGE_REDUCTION",
+  ``!f s x. FINITE (IMAGE f s) /\ f x NOTIN IMAGE f s ==>
+     (PROD_SET (IMAGE f (x INSERT s)) = (f x) * PROD_SET (IMAGE f s))``,
+  METIS_TAC [DELETE_NON_ELEMENT, IMAGE_INSERT, PROD_SET_THM]);
+
 
 (* every finite, non-empty set of natural numbers has a maximum element *)
 

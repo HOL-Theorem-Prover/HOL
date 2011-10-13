@@ -111,6 +111,7 @@ examples/HolOmega/interim
 !!examples/ARM/arm6-verification/correctness
 src/ring/src
 src/integer
+!examples/rings
 src/llist
 src/path
 !src/integer/testing
@@ -152,6 +153,8 @@ src/temporal/src
 # Examples only from here on
 #
 !examples/MLsyntax
+!examples/zfset
+!!examples/category
 !!examples/miller/ho_prover
 !!examples/miller/miller
 !examples/ordinal

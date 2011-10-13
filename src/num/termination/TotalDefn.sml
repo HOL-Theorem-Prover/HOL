@@ -8,6 +8,12 @@ struct
 open HolKernel Parse boolLib pairLib basicSize DefnBase numSyntax
      arithmeticTheory;
 
+structure Parse = struct
+  open Parse
+  val (Type,Term) = parse_from_grammars arithmeticTheory.arithmetic_grammars
+end
+open Parse
+
 val ERR    = mk_HOL_ERR "TotalDefn";
 val ERRloc = mk_HOL_ERRloc "TotalDefn";
 val WARN   = HOL_WARNING "TotalDefn";
@@ -113,16 +119,16 @@ fun proper_subterm tm1 tm2 =
 (* Adjustable set of rewrites for doing termination proof.                   *)
 (*---------------------------------------------------------------------------*)
 
-val DIV_LESS_I = Q.prove
-(`!n d. 0n < n /\ 1 < d ==> I(n DIV d) < I(n)`,
+val DIV_LESS_I = prove
+(``!n d. 0n < n /\ 1 < d ==> I(n DIV d) < I(n)``,
  REWRITE_TAC[DIV_LESS,combinTheory.I_THM]);
 
-val MOD_LESS_I = Q.prove
-(`!m n. 0n < n ==> I(k MOD n) < I(n)`,
+val MOD_LESS_I = prove
+(``!m n. 0n < n ==> I(m MOD n) < I(n)``,
  REWRITE_TAC [MOD_LESS,combinTheory.I_THM]);
 
-val SUB_LESS_I = Q.prove
-(`!m n. 0n < n /\ n <= m ==> I(m - n) < I(m)`,
+val SUB_LESS_I = prove
+(``!m n. 0n < n /\ n <= m ==> I(m - n) < I(m)``,
  REWRITE_TAC[SUB_LESS,combinTheory.I_THM]);
 
 val termination_simps =

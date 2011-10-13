@@ -42,7 +42,7 @@
         rcopt := SOME (valOf (Int.fromString(Substring.string sr)) - 1,
                        valOf (Int.fromString(Substring.string sc)) - 1)
       end
-   type lexresult = base_token0 * locn
+   type lexresult = unit base_token * locn
    fun eof (st:extrastate) = let
      val lend = Loc(LocPEnd (#nf st), LocPEnd (#nf st))
    in
@@ -51,12 +51,12 @@
      else if not (null (#2 (! (#stracc st)))) then
          raise LEX_ERR ("eof/antiquote inside quote-delimited string", lend)
      else
-       (BT0_EOI, lend)
+       (BT_EOI, lend)
    end
 
    fun check_char (tl as (tok, loc)) =
        case tok of
-         BT0_Ident s => if size s = 3 then (BT0_Ident ("#"^s), loc)
+         BT_Ident s => if size s = 3 then (BT_Ident ("#"^s), loc)
                         else raise LEX_ERR ("bad character constant", loc)
        | _ => raise LEX_ERR ("Very bad character constant", loc)
 
@@ -74,9 +74,10 @@ hexdigitseq = ({hexdigit} | _)* {hexdigit} ({hexdigit} | _)*;
 symbol = [-`|!#%&)=+[{};:@~\\,.<>?/^$\128-\255] | ];
 nonparen = {symbol} | \* | {alpha} | {numeric};
 nonstar_nonparen = {symbol} | {alpha} | {numeric};
+nonparen_nondigit = {symbol} | {alpha} | \*;
 ident = {alpha} ({alpha} | {numeric})*;
 lparen = \(;
-anysymb = ({nonparen} | {lparen}+ {nonstar_nonparen}) + {lparen} ? | {lparen};
+anysymb = (({nonparen_nondigit} | ({lparen}+ {nonstar_nonparen})) ({nonparen} | {lparen}+ {nonstar_nonparen}) * {lparen} ?) | {lparen};
 space = [\ \t];
 linefeed = \n;
 creturn = \013;
@@ -86,11 +87,16 @@ locpragma = "(*#loc" {space}+ {numeric}* {space}+ {numeric}* {space}* "*)";
 %%
 <INITIAL>{locpragma} => (dolocpragma yyarg yypos yytext; continue());
 <INITIAL>"(*" => (YYBEGIN comment; incommentp := 1; continue());
+<INITIAL>{numeric} ({numeric}| "_")* "." {digitseq} =>
+  (let val loc = getLoc yyarg yypos yytext
+   in
+     (BT_DecimalFraction (parse_fraction (yytext, loc)), loc)
+   end);
 <INITIAL>("0b" {digitseq} | "0x" {hexdigitseq} | {numeric} ({numeric} | _)* )
          {alpha}? =>
     (let val loc = getLoc yyarg yypos yytext
      in
-       (BT0_Numeral(parse_numeric_literal(yytext,loc)), loc)
+       (BT_Numeral(parse_numeric_literal(yytext,loc)), loc)
      end);
 <INITIAL>\" => (let
                   val s = LocP(nf,!r,yypos - !(#i yyarg))
@@ -114,7 +120,7 @@ locpragma = "(*#loc" {space}+ {numeric}* {space}+ {numeric}* {space}* "*)";
                      end);
 <INITIAL>\$ ? {anysymb} "(*" => (YYBEGIN comment;
                                  incommentp := 1;
-                                 (BT0_Ident(String.substring(yytext,0,size yytext - 2)),
+                                 (BT_Ident(String.substring(yytext,0,size yytext - 2)),
                                   getLoc yyarg yypos yytext));
 <INITIAL>\$ ? {anysymb} \" => (let
   val s = LocP(nf,!r,yypos - !(#i yyarg))
@@ -123,7 +129,7 @@ in
   YYBEGIN string;
   continue()
 end);
-<INITIAL>\$ ? {anysymb} => ((BT0_Ident yytext, getLoc yyarg yypos yytext));
+<INITIAL>\$ ? {anysymb} => ((BT_Ident yytext, getLoc yyarg yypos yytext));
 <INITIAL>. => (raise LEX_ERR("Character \""^yytext^"\" is a lexical error",
                              getLoc yyarg yypos yytext));
 
@@ -142,7 +148,7 @@ end);
                in
                  stracc := ("", [], LocP(0,0,0));
                  YYBEGIN INITIAL;
-                 (BT0_Ident (pfx^str), Loc(start,e))
+                 (BT_Ident (pfx^str), Loc(start,e))
                end );
 <string>"\\\"" => (let val (pfx, clist, start) = !stracc
                    in

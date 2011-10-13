@@ -2,19 +2,20 @@
 
 homesvn=https://hol.svn.sourceforge.net/svnroot/hol
 
-# typical usage: ./releasing-hol -f branches/HOL-Omega Kananaskis-5 `which poly`
+# typical usage: ./releasing-hol -f branches/HOL-Omega Kananaskis-7 `which poly`
 
 usage () {
-        echo "Usage: releasing-hol [-f] [--svn URL] <release-path> <verson> <ML>" >&2
+        echo "Usage: releasing-hol [-f] [--svn URL] (-Lpath)* <release-path> <version> <ML>" >&2
         echo "  <release-path> is a path wrt $homesvn" >&2
-        echo "  <version> is a version name, e.g. kananaskis-5" >&2
+        echo "  <version> is a version name, e.g. kananaskis-7" >&2
         echo "  <ML> is a path to mosml or poly" >&2
         echo "  Use the -f option to force fresh svn call (ignoring cache)" >&2
         echo "  Use --svn <repo-URL> to specify alternative svn repo" >&2
+        echo "  Use -Lpath to add library paths for Poly" >&2
         exit 1
 }
 
-TEMP=$(getopt -n releasing-hol -of -l svn: -- "$@")
+TEMP=$(getopt -n releasing-hol -ofL: -l svn: -- "$@")
 eval set -- "$TEMP"
 
 force=false
@@ -24,6 +25,7 @@ do
     case "$1" in
         -f ) force=true ; echo "Forcing a fresh svn export call" >&2; shift ;;
         --svn ) homesvn=$2 ; shift 2 ;;
+        -L ) Lpaths+=(-L$2) ; shift 2 ;;
         -- ) shift ; break ;;
         * ) echo "Internal error!" >&2 ; exit 1 ;;
     esac
@@ -144,7 +146,7 @@ done
 echo
 
 echo "Copying theory graph from local installation"
-# see the file help/src/DOT for instructions on how to generate the
+# see the file help/src-sml/DOT for instructions on how to generate the
 # theorygraph files
 /bin/cp $localholdir/help/theorygraph/*.html $localholdir/help/theorygraph/theories.* /tmp/svn-export-result/help/theorygraph ||
   (echo "Couldn't copy theory graph." >&2 ; exit 1)
@@ -168,7 +170,7 @@ then
     ../../bin/Holmake Doc2Tex.exe
 else
     $ML < poly-Doc2Tex.ML
-    gcc -o Doc2Tex.exe Doc2Tex.o -L/usr/lib -lpolymain -lpolyml
+    gcc -o Doc2Tex.exe Doc2Tex.o "${Lpaths[@]}" -lpolymain -lpolyml
 fi
 
 echo Now building documentation

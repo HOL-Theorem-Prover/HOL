@@ -158,6 +158,7 @@ in
   | BT_AQ x => ((fn () => advance fb), (AQ x,locn))
   | BT_EOI => ((fn () => ()), (Error bt,locn))
   | BT_Ident s => split_and_check fb s locn
+  | BT_DecimalFraction r => ((fn () => ()), (Error bt, locn))
 end
 
 fun token_string (KindIdent s) = s
