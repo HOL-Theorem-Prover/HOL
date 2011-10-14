@@ -15,6 +15,8 @@ sig
  val SUC_TO_NUMERAL_DEFN_CONV : conv
  val num_CONV                 : conv
 
+ val SUC_RULE                 : rule
+
  val INDUCT_TAC               : tactic
  val completeInduct_on        : term quotation -> tactic
  val measureInduct_on         : term quotation -> tactic

@@ -203,7 +203,7 @@ fun guess_collection2list (gc:guess_collection) =
             #exists gc, #forall_strong gc, #exists_strong gc]);
 
 
-fun qh_mk_const n = 
+fun qh_mk_const n =
    prim_mk_const {Name = n, Thy = "quantHeuristics"}
 
 val GUESS_FALSE_tm = qh_mk_const "GUESS_FALSE";
@@ -268,7 +268,7 @@ fun make_set_guess_thm (guess_term(ty, i, fvL, tm)) proofConv =
 
 fun guess_remove_thm v t (guess_thm(ty, i, fvL, thm)) =
     mk_guess ty v t i fvL
-  | guess_remove_thm v t (guess_term(ty, i, fvL, tm)) = 
+  | guess_remove_thm v t (guess_term(ty, i, fvL, tm)) =
     mk_guess ty v t i fvL
   | guess_remove_thm _ _ guess =  guess;
 
@@ -293,7 +293,7 @@ fun make_guess___assume gty v t i fvL =
 
 
 fun make_set_guess_thm___simple guess =
-     make_set_guess_thm guess (fn x => EQT_ELIM 
+     make_set_guess_thm guess (fn x => EQT_ELIM
         (SIMP_CONV std_ss [GUESS_REWRITES] x))
 
 fun make_guess___simple gty v t i fvL =
@@ -342,7 +342,7 @@ let
     val (i, fvL) = if isSome ifvL_opt then valOf ifvL_opt else
         let
            val qi_t = el 1 args
-           val (_, qi_t) = if is_abs qi_t then (NONE,qi_t) else 
+           val (_, qi_t) = if is_abs qi_t then (NONE,qi_t) else
                let
                    val fvTy = hd (snd (dest_type (type_of qi_t)));
                    val fv = genvar fvTy;
@@ -396,21 +396,21 @@ fun GUESS_THM_list2collection inference_thmL =
 let
     val L0 = flatten (map BODY_CONJUNCTS inference_thmL)
     val L1 = map (SIMP_RULE std_ss [combinTheory.K_DEF]) L0;
-    fun sort_fun (thm, (l1,l2,l3,l4,l5,l6)) = 
+    fun sort_fun (thm, (l1,l2,l3,l4,l5,l6)) =
     let
        val gtm = (fst o strip_comb o snd o dest_imp o concl) thm
     in
-       if (same_const gtm GUESS_FALSE_tm)then 
+       if (same_const gtm GUESS_FALSE_tm)then
           (thm::l1, l2, l3, l4, l5, l6) else
        if (same_const gtm GUESS_TRUE_tm) then
           (l1, thm::l2, l3, l4, l5, l6) else
-       if (same_const gtm GUESS_EXISTS_tm) then 
+       if (same_const gtm GUESS_EXISTS_tm) then
           (l1, l2, thm::l3, l4, l5, l6) else
-       if (same_const gtm GUESS_FORALL_tm) then 
+       if (same_const gtm GUESS_FORALL_tm) then
           (l1, l2, l3, thm::l4, l5, l6) else
-       if (same_const gtm GUESS_EXISTS_STRONG_tm) then 
+       if (same_const gtm GUESS_EXISTS_STRONG_tm) then
           (l1, l2, l3, l4, thm::l5, l6) else
-       if (same_const gtm GUESS_FORALL_STRONG_tm) then 
+       if (same_const gtm GUESS_FORALL_STRONG_tm) then
           (l1, l2, l3, l4, l5, thm::l6) else
           (l1, l2, l3, l4, l5, l6)
     end handle HOL_ERR _ => (l1,l2,l3,l4,l5,l6)
@@ -449,10 +449,10 @@ correct_guess fv v t (guess_rewrite_thm_opt v t rew_thm guess)
 
 fun guess_rewrite rew_thm (guess_general (i, fvL)) = guess_general (i,fvL)
   | guess_rewrite rew_thm (guess_thm (gty, i, fvL, thm)) =
-      guess_thm (gty, i, fvL, 
+      guess_thm (gty, i, fvL,
          CONV_RULE (RAND_CONV (ABS_CONV (K (GSYM rew_thm)))) thm)
   | guess_rewrite rew_thm (guess_term (gty, i, fvL, tm)) =
-      guess_term (gty, i, fvL, 
+      guess_term (gty, i, fvL,
          (rhs o concl) (RAND_CONV (ABS_CONV (K (GSYM rew_thm))) tm))
 
 
@@ -579,7 +579,7 @@ in
 fun guess_weaken (guess_general (i, fvL)) = guess_general (i,fvL)
   | guess_weaken (guess_term (gty, i, fvL, tm)) =
     if (gty = gty_exists) orelse (gty = gty_forall) then
-       (guess_term (gty, i, fvL, tm)) 
+       (guess_term (gty, i, fvL, tm))
     else
     let
        val gty' = guess_type_weaken gty;
@@ -587,11 +587,11 @@ fun guess_weaken (guess_general (i, fvL)) = guess_general (i,fvL)
        val (_, args) = strip_comb tm;
        val tm' = list_mk_icomb (b', args);
     in
-       (guess_term (gty', i, fvL, tm'))       
+       (guess_term (gty', i, fvL, tm'))
     end
   | guess_weaken (guess_thm (gty, i, fvL, thm)) =
     if (gty = gty_exists) orelse (gty = gty_forall) then
-       (guess_thm (gty, i, fvL, thm)) 
+       (guess_thm (gty, i, fvL, thm))
     else
     let
        val gty' = guess_type_weaken gty;
@@ -617,7 +617,7 @@ fun guess_collection___get_forall_weaken (c:guess_collection) =
 local
 
 fun elim_double_guesses_int r [] = r
-  | elim_double_guesses_int r ([]::gLL) = 
+  | elim_double_guesses_int r ([]::gLL) =
     elim_double_guesses_int r gLL
   | elim_double_guesses_int r ((((i, fvL),g)::gL)::gLL) =
 let
@@ -651,7 +651,7 @@ let
       end
 in
    guess_thm (gty, i, fvL, thm')
-end 
+end
 | clean_guess (guess_term (gty, i, fvL, tm)) =
   let
      val (b, args) = strip_comb tm;
@@ -666,9 +666,9 @@ end
      val tm' = list_mk_comb (b, [i', el 2 args])
   in
      guess_term (gty, i, fvL, tm')
-  end 
+  end
 | clean_guess guess = guess;
-    
+
 
 fun elim_clean_guesses gL =
    map clean_guess (elim_double_guesses gL);
@@ -738,7 +738,7 @@ let
 		      (false, false, match_term_var v l r, r) handle HOL_ERR _ =>
 		      (true,  false, match_term_var v r l, l) handle HOL_ERR _ =>
 		      raise QUANT_INSTANTIATE_HEURISTIC___no_guess_exp;
-   
+
    val _ = if (free_in v i) then Feedback.fail () else ();
    val u_genvar = genvar unit_ty;
 
@@ -747,7 +747,7 @@ let
       val v_r = mk_abs (v, r);
       val g_true_thm  = ISPECL [i, v_l, v_r] GUESS_RULES_EQUATION_TRUE
       val g_true_thm2 = CONV_RULE (
-         RATOR_CONV (RAND_CONV (BINOP_CONV BETA_CONV)) THENC 
+         RATOR_CONV (RAND_CONV (BINOP_CONV BETA_CONV)) THENC
          RAND_CONV (RAND_CONV (ALPHA_CONV v THENC (ABS_CONV ((BINOP_CONV BETA_CONV)))))) g_true_thm
       val pre = (lhs o fst o dest_imp o concl) g_true_thm2;
       val g_true_thm3 = MP g_true_thm2 (REFL pre)
@@ -786,7 +786,7 @@ let
 		      (false, false, match_term_var v l r, r) handle HOL_ERR _ =>
 		      (true,  false, match_term_var v r l, l) handle HOL_ERR _ =>
 		      raise QUANT_INSTANTIATE_HEURISTIC___no_guess_exp;
-   
+
    val g_trueL = [make_guess___simple gty_true v t i []]
    val g_exists_strongL = if not top then [] else
 	    [make_set_guess_thm_opt___simple v t (guess_exists_strong (i, [], NONE))]
@@ -869,9 +869,9 @@ let
    val v_name = (fst o dest_var) v
    val (fvL', ni') = prefix_free_vars (v_name, fvL, ni);
 
-   val thm3 = GEN v (CONV_RULE (RAND_CONV (INTRO_TUPLED_QUANT_CONV THENC 
+   val thm3 = GEN v (CONV_RULE (RAND_CONV (INTRO_TUPLED_QUANT_CONV THENC
                                     RAND_CONV PABS_ELIM_CONV)) thm2)
-   val g_thm0 = HO_MATCH_MP GUESS_RULES_TWO_CASES thm3 
+   val g_thm0 = HO_MATCH_MP GUESS_RULES_TWO_CASES thm3
    val g_thm = if not turn then g_thm0 else
                  CONV_RULE (RAND_CONV (ABS_CONV SYM_CONV)) g_thm0
 
@@ -903,7 +903,7 @@ let
    val v_name = (fst o dest_var) v
    val (vars', i') = prefix_free_vars (v_name, vars, i);
 
-   val thm2 = CONV_RULE (QUANT_CONV ((INTRO_TUPLED_QUANT_CONV THENC 
+   val thm2 = CONV_RULE (QUANT_CONV ((INTRO_TUPLED_QUANT_CONV THENC
                          RAND_CONV PABS_ELIM_CONV))) thm
 
    val g_thm0 = ISPEC (mk_abs (v, t))
@@ -913,7 +913,7 @@ let
 
    val g0 = guess_thm (gty_forall_strong, i',vars', g_thm0);
    val g1 = guess_thm (gty_exists_strong, i',vars', g_thm1);
-   
+
 in
   {rewrites            = [],
    general             = [],
@@ -936,7 +936,7 @@ local
         val (l, r) = dest_eq eq;
      in
         (vars, l, r)
-     end;     
+     end;
 
    fun is_sing_case_thm thm =
      let
@@ -959,15 +959,15 @@ local
         true
      end handle HOL_ERR _ => false;
 in
-   fun QUANT_INSTANTIATE_HEURISTIC___cases thm = 
+   fun QUANT_INSTANTIATE_HEURISTIC___cases thm =
    let
    in
-      if is_sing_case_thm thm then 
+      if is_sing_case_thm thm then
          QUANT_INSTANTIATE_HEURISTIC___one_case thm
       else if is_double_case_thm thm then
          QUANT_INSTANTIATE_HEURISTIC___EQUATION_cases thm
       else
-         QUANT_INSTANTIATE_HEURISTIC___FAIL         
+         QUANT_INSTANTIATE_HEURISTIC___FAIL
    end;
 
 
@@ -1031,18 +1031,18 @@ let
    val (fvL, ni) = prefix_free_vars (v_name, fvL_org, ni);
    val fvL_org = if null fvL_org then [genvar unit_ty] else fvL_org;
    val ni_thm2 = GENL fvL_org  ni_thm
-   val ni_thm3 = CONV_RULE (INTRO_TUPLED_QUANT_CONV THENC 
+   val ni_thm3 = CONV_RULE (INTRO_TUPLED_QUANT_CONV THENC
                             RAND_CONV PABS_ELIM_CONV) ni_thm2
 
 
    val g_thm = let
         val (i_v, i_b) = dest_forall (concl ni_thm3);
         val i = mk_abs (i_v, ihs (dest_neg i_b))
-        val g_thm0 = ISPECL [i, mk_abs(v,l), mk_abs(v,r)] GUESS_RULES_EQUATION_FALSE 
+        val g_thm0 = ISPECL [i, mk_abs(v,l), mk_abs(v,r)] GUESS_RULES_EQUATION_FALSE
         val g_thm1 = BETA_RULE g_thm0
         val g_thm2 = HO_MATCH_MP g_thm1 ni_thm3;
 
-        val g_thm3 = CONV_RULE (RAND_CONV 
+        val g_thm3 = CONV_RULE (RAND_CONV
                         (ALPHA_CONV v THENC
                          (if (turn) then
                             (ABS_CONV SYM_CONV)
@@ -1132,7 +1132,7 @@ in
 
 fun QUANT_INSTANTIATE_HEURISTIC___QUANT sys (v:term) t =
 let
-   val ((ic, ic_fv, ic_fv_1), (v2, b)) = 
+   val ((ic, ic_fv, ic_fv_1), (v2, b)) =
        (f_icL, dest_forall t) handle HOL_ERR _ =>
        (e_icL, dest_exists t) handle HOL_ERR _ =>
        (u_icL, dest_exists1 t) handle HOL_ERR _ => raise QUANT_INSTANTIATE_HEURISTIC___no_guess_exp;
@@ -1145,7 +1145,7 @@ let
        val gthm = GEN_ASSUM v2 gthm0;
        val new_fv = free_in v2 i
        val use_ic = if new_fv then (if null fvL then ic_fv_1 else ic_fv) else ic;
-       val inf_thm = hd (inf use_ic) handle Empty => Feedback.fail();    
+       val inf_thm = hd (inf use_ic) handle Empty => Feedback.fail();
        val xthm2 = HO_MATCH_MP inf_thm gthm
    in
        SOME (guess_thm_to_guess was_thm (SOME (i, if new_fv then v2::fvL else fvL)) xthm2)
@@ -1170,15 +1170,15 @@ end
 (******************************************************************************)
 
 val inference_thmL = [GUESS_RULES_DISJ, GUESS_RULES_CONJ,
-                      GUESS_RULES_IMP, GUESS_RULES_EQUIV, 
+                      GUESS_RULES_IMP, GUESS_RULES_EQUIV,
                       GUESS_RULES_COND, GUESS_RULES_NEG];
 
 fun process_simple_guess_thm thm =
 let
     val (pre, ant) = dest_imp (concl thm);
     val (gty, i, v, t) = dest_guess_tm ant;
-    
-    val i_ok = is_var i orelse 
+
+    val i_ok = is_var i orelse
                let
                   val (i_v, i_b) = dest_abs i
                in (type_of i_v = unit_ty) andalso (is_var i_b) end
@@ -1187,7 +1187,7 @@ let
     val tL_simple = all (fn tx => is_var tx orelse
                let val (tx_b, tx_v) = dest_comb tx
                in (tx_v = v) andalso (is_var tx_b) end) tL
-                         
+
     val preL = strip_conj pre
     fun check_internal pre_tm =
     let
@@ -1210,8 +1210,8 @@ end handle HOL_ERR _ => NONE;
 fun process_simple_guess_thm_warn thm =
 let
    val r_opt = process_simple_guess_thm thm;
-   val _ = if isSome r_opt then () else 
-       say_HOL_WARNING "process_simple_guess_thm" 
+   val _ = if isSome r_opt then () else
+       say_HOL_WARNING "process_simple_guess_thm"
          ("Inference theorem not well formed:\n"^(thm_to_string thm))
 in
    r_opt
@@ -1237,7 +1237,7 @@ let
         in
            group_thmL ((P_t', thm::thmL)::L') thmPL
         end
-    val guess_net_complex = 
+    val guess_net_complex =
        foldr (fn ((P_t, thmL), n) => Ho_Net.enter ([],[],P_t, (P_t, thmL)) n) Ho_Net.empty_net
           (group_thmL [] cL)
 
@@ -1257,7 +1257,7 @@ let
        val remove_varsL = filter remove_free_var ntL;
 
        fun remove_vars_combins [] = [[]]
-         | remove_vars_combins (x::xs) = 
+         | remove_vars_combins (x::xs) =
               let
                  val L = remove_vars_combins xs
               in
@@ -1276,7 +1276,7 @@ let
                    let
                       val (tx_b, tx_v) = dest_comb tx;
                       val tx' = genvar (type_of tx);
-                      
+
                    in
                       ((tx_b |-> mk_abs(tx_v, tx'))::sub, tx'::tL')
                    end;
@@ -1335,7 +1335,7 @@ sys v t
 
 
 val v = ``x:'a list``
-val t = ``Q ==> (~((x:'a list) = []) /\ P x)`` 
+val t = ``Q ==> (~((x:'a list) = []) /\ P x)``
 
 sys v t
 GUESS_RULES_IMP
@@ -1389,14 +1389,14 @@ fun local_cache_sys sys =
   let
    val lc_ref = ref []
   in fn v => fn t =>
-  let  
-    val gc_opt = assoc t (!lc_ref) 
-  in 
+  let
+    val gc_opt = assoc t (!lc_ref)
+  in
     if (isSome gc_opt) then valOf gc_opt else raise QUANT_INSTANTIATE_HEURISTIC___no_guess_exp
   end handle HOL_ERR _ =>
   let
      val gc_opt = SOME (sys v t) handle QUANT_INSTANTIATE_HEURISTIC___no_guess_exp => NONE;
-     val _ = lc_ref := (t,gc_opt)::(!lc_ref);          
+     val _ = lc_ref := (t,gc_opt)::(!lc_ref);
   in
      if (isSome gc_opt) then valOf gc_opt else raise QUANT_INSTANTIATE_HEURISTIC___no_guess_exp
 
@@ -1406,12 +1406,12 @@ end;
 
 
 local
-   fun exists_forall_CONV t = 
+   fun exists_forall_CONV t =
       HO_REWR_CONV GUESS_RULES_CONSTANT_FORALL t handle HOL_ERR _ =>
       HO_REWR_CONV GUESS_RULES_CONSTANT_EXISTS t
 
    fun guess_rule_elim_constant_RULE v xthm0 =
-   let 
+   let
       val (_, t') = dest_abs (rand (rhs (concl xthm0)));
    in
       if (free_in v t') then xthm0 else
@@ -1430,7 +1430,7 @@ local
        val t''' = subst [v'' |-> v] t'';
        val (term_sub, ty_sub) = ho_match_term [] tvset t''' t
        val _ = map (fn xx => if (free_in v (#residue xx)) then Feedback.fail() else ())
-                    (term_sub) 
+                    (term_sub)
 
        val P_t'' = subst term_sub (inst ty_sub P_t');
        val eq_thm0 = ((ALPHA_CONV v) THENC (DEPTH_CONV BETA_CONV)) P_t'';
@@ -1523,7 +1523,7 @@ local
        if (is_imp_only (concl (#3 ithm))) then
           elim_preconds sys v doneL (append (elim_precond sys v ithm) thmL)
        else
-          if (isSome (#1 ithm)) then 
+          if (isSome (#1 ithm)) then
              elim_preconds sys v (ithm::doneL) thmL
           else
              elim_preconds sys v doneL thmL
@@ -1575,7 +1575,7 @@ sys v t
 
 
 val v = ``x:'a list``
-val t = ``Q ==> (~((x:'a list) = []) /\ P x)`` 
+val t = ``Q ==> (~((x:'a list) = []) /\ P x)``
 
 sys v t
 GUESS_RULES_IMP
@@ -1613,10 +1613,10 @@ QUANT_INSTANTIATE_HEURISTIC___print_term_length := 2000
 
 local
    fun fL_BETA_CONV [] = ALL_CONV
-     | fL_BETA_CONV (true::fL) = 
+     | fL_BETA_CONV (true::fL) =
           RAND_CONV BETA_CONV THENC
           RATOR_CONV (fL_BETA_CONV fL)
-     | fL_BETA_CONV (false::fL) = 
+     | fL_BETA_CONV (false::fL) =
           RATOR_CONV (fL_BETA_CONV fL)
 in
 
@@ -1637,12 +1637,12 @@ let
       val pre_checkL_tl = tl pre_checkL;
       val gL = (guess_collection_guess_type gty1) (el (arg_n1+1) gcL);
 
-      fun process_guess guess = 
+      fun process_guess guess =
       (let
          val (i, fvL) = guess_extract guess;
          val _ = if not i_f andalso not (null fvL) then Feedback.fail() else ();
 
-         val gL' = map (fn (gty, n) => 
+         val gL' = map (fn (gty, n) =>
                first (fn g => guess_extract g = (i, fvL)) ((guess_collection_guess_type gty) (el (n+1) gcL))) pre_checkL_tl;
 
          val final_gL = guess::gL';
@@ -1909,7 +1909,7 @@ fun QUANT_INSTANTIATE_HEURISTIC___PURE_COMBINE
              QUANT_INSTANTIATE_HEURISTIC___THM_GENERAL_SIMPLE guesses_net_simple2,
              QUANT_INSTANTIATE_HEURISTIC___THM_GENERAL_COMPLEX guesses_net_complex,
              QUANT_INSTANTIATE_HEURISTIC___THM_GENERAL_COMPLEX guesses_net_complex2,
-             QUANT_INSTANTIATE_HEURISTIC___QUANT] (append hcL2 
+             QUANT_INSTANTIATE_HEURISTIC___QUANT] (append hcL2
     (append (map QUANT_INSTANTIATE_HEURISTIC___CONV (
        (TOP_ONCE_REWRITE_CONV rewrite_thmL)::(markerLib.DEST_LABEL_CONV)::
             asm_marker_ELIM_CONV::convL))
@@ -1990,7 +1990,7 @@ let
 in
   (if not (free_in v b) then
      ((if is_exists t then EXISTS_SIMP_CONV else
-         if is_forall t then FORALL_SIMP_CONV else 
+         if is_forall t then FORALL_SIMP_CONV else
             (HO_PART_MATCH lhs UEXISTS_SIMP)) t)
    else
    if is_exists t then
@@ -1998,7 +1998,7 @@ in
       val (v,qb) = dest_exists t;
       val (qvL, b0) = strip_exists qb;
 
-      val b_thm = if min_var_occs then 
+      val b_thm = if min_var_occs then
                       min_var_occur_CONV v b0 handle UNCHANGED => REFL b0
                   else REFL b0;
       val b = rhs (concl b_thm);

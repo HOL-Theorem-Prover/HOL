@@ -1,6 +1,8 @@
 signature ReadHMF =
 sig
 
-  val read : string -> Holmake_types.token list
+  type env = Holmake_types.env
+  type ruledb = Holmake_types.ruledb
+  val read : string -> env -> env * ruledb * string option
 
 end;

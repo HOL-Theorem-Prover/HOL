@@ -69,6 +69,7 @@ struct
   val _ = s ("IMP_DISJ_2", T ``!p q. (~p ==> q) ==> p \/ q``)
   val _ = s ("IMP_FALSE", T ``!p. (~p ==> F) ==> p``)
   val _ = s ("AND_IMP_INTRO_SYM", T ``!p q r. p /\ q ==> r <=> p ==> q ==> r``)
+  val _ = s ("VALID_IFF_TRUE", T ``!p. p ==> (p <=> T)``)
 
   (* used for Z3's proof rule def-axiom *)
 

@@ -120,7 +120,10 @@ fun read_buildsequence {kernelpath} bseq_fname = let
               else read_file acc fstr
             end
         end
-  val bseq_file = TextIO.openIn bseq_fname
+  val bseq_file =
+      TextIO.openIn bseq_fname
+      handle IO.Io _ => die ("Fatal error: couldn't open sequence file: "^
+                             bseq_fname)
 in
   read_file [] bseq_file before TextIO.closeIn bseq_file
 end
@@ -363,8 +366,7 @@ fun hmakefile_data HOLDIR =
             | _ => (case OS.Process.getEnv s of
                       NONE => [LIT ""]
                     | SOME v => [LIT v])
-        val toks = ReadHMF.read "Holmakefile"
-        val env = extend_env toks base_env
+        val (env, _, _) = ReadHMF.read "Holmakefile" base_environment
         fun envlist id =
             map dequote (tokenize (perform_substitution env [VREF id]))
       in

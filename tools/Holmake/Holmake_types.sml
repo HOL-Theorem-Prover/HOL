@@ -7,11 +7,14 @@ datatype pretoken = DEFN of string | RULE of string | EOF
 
 datatype frag = LIT of string | VREF of string
 type quotation = frag list
-type env = string -> quotation
+type env = (string, quotation)Binarymap.dict
 type rule_info = {dependencies : string list, commands : string list}
+type raw_rule_info = { targets : quotation, dependencies : quotation,
+                       commands : quotation list }
+type ruledb =
+     (string, {dependencies: string list, commands: quotation list}) Binarymap.dict
 datatype token = HM_defn of string * quotation
-               | HM_rule of { targets : quotation, dependencies : quotation,
-                              commands : quotation list }
+               | HM_rule of raw_rule_info
 
 
 fun normquote acc [] = List.rev acc
@@ -204,10 +207,7 @@ fun to_token pt =
       end
     | EOF => raise Fail "No EOF-equivalent"
 
-fun commafy0 [] = []
-  | commafy0 [x] = [x]
-  | commafy0 (h::t) = h :: ", " :: commafy0 t
-val commafy = String.concat o commafy0
+val commafy = String.concatWith ", "
 
 fun argtokenize ss = let
   open Substring
@@ -236,6 +236,12 @@ end
 
 fun perform_substitution env q = let
   open Substring
+  fun envfn s =
+      case Binarymap.peek(env, s) of
+        NONE => (case OS.Process.getEnv s of
+                   NONE => [LIT ""]
+                 | SOME s => [LIT s])
+      | SOME q => q
   fun finisher q =
       case normquote [] q of
         [LIT s] => s
@@ -264,7 +270,7 @@ fun perform_substitution env q = let
                   val _ = not (mem varname visited) orelse
                           raise Fail ("Variable loop through: "^
                                       commafy visited)
-                  val s_expanded0 = env varname
+                  val s_expanded0 = envfn varname
                 in
                   recurse (s :: visited) s_expanded0
                 end
@@ -274,15 +280,6 @@ fun perform_substitution env q = let
 in
   finisher (recurse [] q)
 end
-
-fun extend_env toks e s =
-    case toks of
-      []  => e s
-    | HM_defn(s', q) :: t => if s = s' then q else extend_env t e s
-    | _ :: t => extend_env t e s
-
-fun empty_env s = []
-
 
 fun dequote s = let
   open Substring
@@ -308,79 +305,70 @@ end
 
 fun is_pseudo_target s = s = ".PHONY"
 
-fun mk_rules warn toks env = let
-  fun recurse (p as (tgt1, deponly_rules, fullrules)) toklist =
-      case toklist of
-        [] => let
-          fun foldthis (k, deps, result) =
-              case Binarymap.peek(result, k) of
-                NONE => Binarymap.insert(result, k, {dependencies = deps,
-                                                     commands = []})
-              | SOME {dependencies, commands} =>
-                Binarymap.insert(result, k,
-                                 {dependencies = dependencies @ deps,
-                                  commands = commands})
-        in
-          (tgt1, Binarymap.foldl foldthis fullrules deponly_rules)
-        end
-      | (HM_rule {targets, dependencies, commands} :: rest) => let
-          val tgts = map dequote (tokenize (perform_substitution env targets))
-          val deps =
-              map dequote (tokenize (perform_substitution env dependencies))
-          fun mk_rule t = let
-            fun newenv s = if s = "<" then
-                             [LIT (hd deps)] handle Empty => [LIT ""]
-                           else if s = "@" then [LIT t]
-                           else env s
-          in
-            { dependencies = deps,
-              commands = map (perform_substitution newenv) commands }
-          end
-          val tgt1 = case tgt1 of
-                       NONE => List.find (not o is_pseudo_target) tgts
-                     | SOME _ => tgt1
-        in
-          if null commands then
-            recurse (tgt1,
-                     foldl (fn (t, dict) => Binarymap.insert(dict, t, deps))
-                           deponly_rules tgts,
-                     fullrules) rest
-          else let
-              fun foldthis (t, dict) =
-                  case Binarymap.peek(dict, t) of
-                    NONE => Binarymap.insert(dict, t, mk_rule t)
-                  | SOME _ => let
-                    in
-                      warn ("Later rule for `"^t^
-                            "' takes precedence over earlier one.");
-                      Binarymap.insert(dict, t, mk_rule t)
-                    end
-            in
-              recurse (tgt1, deponly_rules, foldl foldthis fullrules tgts) rest
-            end
-        end
-      | _ :: rest => recurse p rest
-  (* need two declarations because of value polymorphism restriction *)
-  val dict1 = Binarymap.mkDict String.compare
-  val dict2 = Binarymap.mkDict String.compare
+val empty_ruledb = Binarymap.mkDict String.compare
+type depdb = (string,string list) Binarymap.dict
+
+fun app_insert (ddb, s, slist) =
+    case Binarymap.peek(ddb, s) of
+      NONE => Binarymap.insert(ddb, s, slist)
+    | SOME existing => Binarymap.insert(ddb, s, existing @ slist)
+
+fun extend_ruledb warn env {targets,dependencies,commands} (rdb,ddb) = let
+  val tgts = map dequote (tokenize (perform_substitution env targets))
+  val deps = map dequote (tokenize (perform_substitution env dependencies))
 in
-  recurse (NONE, dict1, dict2) toks
+  if null commands then
+    (rdb, List.foldl (fn (tgt, ddb) => app_insert(ddb, tgt, deps)) ddb tgts, tgts)
+  else let
+      val info = {dependencies = deps, commands = commands}
+      fun foldthis (t, dict) =
+          case Binarymap.peek(dict, t) of
+            NONE => Binarymap.insert(dict, t, info)
+          | SOME _ => let
+            in
+              warn ("Later rule for `"^t^
+                    "' takes precedence over earlier one.");
+              Binarymap.insert(dict, t, info)
+            end
+    in
+      (List.foldl foldthis rdb tgts, ddb, tgts)
+    end
 end
 
-fun base_environment s = let
+fun ins (k,v) env = Binarymap.insert(env,k,v)
+infix |>
+fun x |> f = f x
+
+fun get_rule_info rdb env tgt =
+    case Binarymap.peek(rdb, tgt) of
+      NONE => NONE
+    | SOME {dependencies, commands} => let
+        val dep1 = [LIT (hd dependencies)] handle Empty => [LIT ""]
+        val env = env |> ins("<", dep1) |> ins("@", [LIT tgt])
+      in
+        SOME {dependencies = dependencies,
+              commands = map (perform_substitution env) commands}
+      end
+
+
+val base_environment = let
   open Systeml
+  val alist =
+      [("CP", if OS = "winNT" then [LIT "copy /b"] else [LIT "/bin/cp"]),
+       ("HOLDIR", [LIT HOLDIR]),
+       ("MLLEX", [VREF "protect $(HOLDIR)/tools/mllex/mllex.exe"]),
+       ("MLYACC", [VREF "protect $(HOLDIR)/tools/mlyacc/src/mlyacc.exe"]),
+       ("ML_SYSNAME", [LIT ML_SYSNAME]),
+       ("MV", if OS = "winNT" then [LIT "move", LIT "/y"] else [LIT "/bin/mv"]),
+       ("OS", [LIT OS]),
+       ("SIGOBJ", [VREF "HOLDIR", LIT "/sigobj"]),
+       ("UNQUOTE", [VREF ("protect $(HOLDIR)/" ^ xable_string "/bin/unquote")])]
 in
-  case s of
-    "CP" => if OS = "winNT" then [LIT "copy /b"] else [LIT "/bin/cp"]
-  | "HOLDIR" => [LIT HOLDIR]
-  | "MLLEX" => [VREF "protect $(HOLDIR)/tools/mllex/mllex.exe"]
-  | "MLYACC" => [VREF "protect $(HOLDIR)/tools/mlyacc/src/mlyacc.exe"]
-  | "ML_SYSNAME" => [LIT ML_SYSNAME]
-  | "MV" => if OS = "winNT" then [LIT "move", LIT "/y"] else [LIT "/bin/mv"]
-  | "OS" => [LIT OS]
-  | "SIGOBJ" => [VREF "HOLDIR", LIT "/sigobj"]
-  | "UNQUOTE" => [VREF ("protect $(HOLDIR)/" ^ xable_string "/bin/unquote")]
-  | _ => (case OS.Process.getEnv s of NONE => [LIT ""] | SOME v => [LIT v])
+  List.foldl (fn ((k,v), a) => Binarymap.insert(a, k, v))
+             (Binarymap.mkDict String.compare)
+             alist
 end
+
+fun env_extend (k, v) e = Binarymap.insert(e,k,v)
 
 end (* struct *)

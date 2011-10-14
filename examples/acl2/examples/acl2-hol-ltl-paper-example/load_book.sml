@@ -3,7 +3,7 @@
 quietdec := true;
 loadPath := (Globals.HOLDIR ^ "/examples/acl2/ml") :: !loadPath;
 map load ["sexp","sexpTheory","hol_defaxiomsTheory"];
-open fracTheory ratTheory complex_rationalTheory 
+open fracTheory ratTheory complex_rationalTheory
      sexp sexpTheory hol_defaxiomsTheory;
 
 printDepth := 10000;
@@ -23,7 +23,7 @@ struct
 
 open HolKernel Parse boolLib bossLib pred_setTheory pred_setLib;
 
-open fracTheory ratTheory sexp complex_rationalTheory sexpTheory 
+open fracTheory ratTheory sexp complex_rationalTheory sexpTheory
      hol_defaxiomsTheory;
 
 (*****************************************************************************)
@@ -49,15 +49,15 @@ fun load_book (load_fn:string->unit) (simp_fn:thm->thm) book_name =
       val acl2_list = !acl2_list_ref
       val install_fn = (I ## simp_fn) o install o mk_acl2def
   in
-   if is_mlinclude(hd acl2_list) 
-    then let val thll = 
+   if is_mlinclude(hd acl2_list)
+    then let val thll =
               load_book load_fn simp_fn (dest_mlinclude(hd acl2_list))
-             val thl = 
+             val thl =
               map install_fn (accumulate_discard_events(tl acl2_list))
          in
           thll @ [thl]
          end
-    else [map install_fn (accumulate_discard_events acl2_list) 
+    else [map install_fn (accumulate_discard_events acl2_list)
           handle e => Raise e]
   end;
 

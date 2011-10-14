@@ -30,7 +30,7 @@ sig
    val data_entry___add_page          : string        -> data_entry -> data_entry
    val data_entry_is_used : data_entry -> bool
 
-   val update_data_store : 
+   val update_data_store :
         (bool * (string -> unit)) ->
         data_store_ty -> string -> string ->
         (data_entry -> data_entry) ->
@@ -52,8 +52,8 @@ sig
    val mk_theorem_parse_entries  : string list -> (parse_entry -> parse_entry) -> parse_entry list
    val parse_entry___set_label   : string -> parse_entry -> parse_entry
    val parse_entry___set_options : string -> parse_entry -> parse_entry
-   val parse_entry___set_content : string -> parse_entry -> parse_entry 
-   val parse_entry___set_latex   : string -> parse_entry -> parse_entry 
+   val parse_entry___set_content : string -> parse_entry -> parse_entry
+   val parse_entry___set_latex   : string -> parse_entry -> parse_entry
    val parse_entry___set_comment : string -> parse_entry -> parse_entry
    val parse_entry___force_index : parse_entry -> parse_entry
    val parse_entry___full_index  : bool -> parse_entry -> parse_entry

@@ -38,6 +38,7 @@ local
   val IMP_DISJ_2 = HolSmtTheory.IMP_DISJ_2
   val IMP_FALSE = HolSmtTheory.IMP_FALSE
   val AND_IMP_INTRO_SYM = HolSmtTheory.AND_IMP_INTRO_SYM
+  val VALID_IFF_TRUE = HolSmtTheory.VALID_IFF_TRUE
 
   (* a simplification prover that deals with function (i.e., array)
      updates when the indices are integer or word literals *)
@@ -589,6 +590,12 @@ local
   fun z3_hypothesis (state, t) =
     (state, Thm.ASSUME t)
 
+  (*   ... |- p
+     ------------
+     ... |- p = T *)
+  fun z3_iff_true (state, thm, _) =
+    (state, Thm.MP (Thm.SPEC (Thm.concl thm) VALID_IFF_TRUE) thm)
+
   (*  [l1, ..., ln] |- F
      --------------------
      |- ~l1 \/ ... \/ ~ln
@@ -1009,6 +1016,8 @@ local
         zero_prems state_proof "elim_unused" z3_elim_unused x continuation
     | thm_of_proofterm (state_proof, HYPOTHESIS x) continuation =
         zero_prems state_proof "hypothesis" z3_hypothesis x continuation
+    | thm_of_proofterm (state_proof, IFF_TRUE x) continuation =
+        one_prem state_proof "iff_true" z3_iff_true x continuation
     | thm_of_proofterm (state_proof, LEMMA x) continuation =
         one_prem state_proof "lemma" z3_lemma x continuation
     | thm_of_proofterm (state_proof, MONOTONICITY x) continuation =

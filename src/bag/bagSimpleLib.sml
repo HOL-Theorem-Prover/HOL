@@ -5,7 +5,7 @@ open HolKernel boolLib bossLib
 
 local open bagTheory in end
 
-open bagSyntax 
+open bagSyntax
 
 
 
@@ -17,7 +17,7 @@ open bagSyntax
 (*                                                                            *)
 (* {|x1;x2;x3;x4|}, {||}, {|x1|} are simple bags                              *)
 (*                                                                            *)
-(* BAG_UNION {|x1;x2|} {|x3;x4|}, BAG_INSERT e b are not                      *)                                        
+(* BAG_UNION {|x1;x2|} {|x3;x4|}, BAG_INSERT e b are not                      *)
 (*                                                                            *)
 (******************************************************************************)
 
@@ -46,9 +46,9 @@ local
    fun BAG_RESORT___BRING_TO_FRONT_CONV 0 b = REFL b
      | BAG_RESORT___BRING_TO_FRONT_CONV n b =
     let
-        (*remove frist element and 
+        (*remove frist element and
           bring to front in rest of the bag*)
-	val (e1,b') = bagSyntax.dest_insert b;                      
+	val (e1,b') = bagSyntax.dest_insert b;
         val thm0 = BAG_RESORT___BRING_TO_FRONT_CONV (n-1) b';
 
         (*add first element again*)
@@ -65,7 +65,7 @@ local
 in
    fun BAG_RESORT_CONV [] b = REFL b (*nothing to do*)
    |   BAG_RESORT_CONV [n] b = BAG_RESORT___BRING_TO_FRONT_CONV n b (*that's simple :-)*)
-   |   BAG_RESORT_CONV (n::n2::ns) b = 
+   |   BAG_RESORT_CONV (n::n2::ns) b =
    let
       (*first bring the first element, i.e. n, to the front*)
       val thm0 = BAG_RESORT___BRING_TO_FRONT_CONV n b;
@@ -74,7 +74,7 @@ in
       val (insert_e1,b') = dest_comb (rhs (concl thm0));
 
       (*resort the rest of the bag
-        elements that occur before the one just moved to the front have the 
+        elements that occur before the one just moved to the front have the
         some position in b' as they had in b. The others moved one position to
         the front *)
       val ns' = map (fn m => if (n < m) then (m - 1) else m) (n2::ns);
@@ -120,7 +120,7 @@ fun BAG_IMAGE_CONV___FINITE t =
          val t2 = mk_image (f, b2)
          val (finite_thm1, bag_thm1) = BAG_IMAGE_CONV___FINITE t1;
          val (finite_thm2, bag_thm2) = BAG_IMAGE_CONV___FINITE t2;
-         val finite_thm12 = CONJ finite_thm1 finite_thm2    
+         val finite_thm12 = CONJ finite_thm1 finite_thm2
 
 	 val finite_thm = EQ_MP (GSYM (ISPECL [b1,b2] bagTheory.FINITE_BAG_UNION))
                               finite_thm12
@@ -130,8 +130,8 @@ fun BAG_IMAGE_CONV___FINITE t =
               ((RAND_CONV) (K bag_thm2)))) bag_thm'
       in
 	 (finite_thm, bag_thm'')
-      end   
-   else 
+      end
+   else
       let
          val (e,b') = dest_insert b;
          val t' = mk_image (f, b')
@@ -139,7 +139,7 @@ fun BAG_IMAGE_CONV___FINITE t =
 	 val finite_thm2 = SPEC e (MP (ISPEC b' bagTheory.FINITE_BAG_INSERT) finite_thm);
 	 val bag_thm' = MP (ISPECL [b',f,e]
 	       (bagTheory.BAG_IMAGE_FINITE_INSERT)) finite_thm
-         val bag_thm2 =  CONV_RULE (RHS_CONV (RAND_CONV 
+         val bag_thm2 =  CONV_RULE (RHS_CONV (RAND_CONV
                    (K bag_thm))) bag_thm'
       in
          (finite_thm2, bag_thm2)
@@ -176,13 +176,13 @@ local
 	 val card_thm = INST_TYPE [alpha |-> bag_type] card_empty_thm;
       in
 	 (finite_thm, card_thm)
-      end   
+      end
    else if (is_union b) then
       let
          val (b1,b2) = dest_union b;
          val (finite_thm1, card_thm1) = BAG_CARD_CONV___FINITE b1;
          val (finite_thm2, card_thm2) = BAG_CARD_CONV___FINITE b2;
-         val finite_thm12 = CONJ finite_thm1 finite_thm2    
+         val finite_thm12 = CONJ finite_thm1 finite_thm2
 
 	 val finite_thm = EQ_MP (GSYM (ISPECL [b1,b2] bagTheory.FINITE_BAG_UNION))
                               finite_thm12
@@ -192,8 +192,8 @@ local
               ((RAND_CONV) (K card_thm2)))) card_thm'
       in
 	 (finite_thm, eval_num_RULE card_thm'')
-      end   
-   else 
+      end
+   else
       let
          val (e,b') = dest_insert b;
          val (finite_thm, card_thm) = BAG_CARD_CONV___FINITE b';
@@ -207,7 +207,7 @@ local
       end
    ) handle HOL_ERR _ => raise UNCHANGED;
 in
-   fun BAG_CARD_CONV tm = 
+   fun BAG_CARD_CONV tm =
    let
       val b = dest_card tm
       val (_, thm) = BAG_CARD_CONV___FINITE b
@@ -359,9 +359,9 @@ fun SUB_BAG_INSERT_CANCEL_CONV tm =
       val (n1L,n2L) = get_resort_lists___pred_pair aconv b1 b2
       val _ = if null n1L then raise UNCHANGED else ();
 
-      val conv1 = ((RATOR_CONV o RAND_CONV) 
+      val conv1 = ((RATOR_CONV o RAND_CONV)
                       (BAG_RESORT_CONV n1L)) THENC
-                  (RAND_CONV 
+                  (RAND_CONV
                       (BAG_RESORT_CONV n2L))
    in
       (conv1 THENC REPEATC conv2 THENC conv3 THENC conv4 THENC conv5) tm
@@ -403,14 +403,14 @@ fun BAG_DIFF_INSERT_CANCEL_CONV tm =
       val _ = if null n1L andalso not (bagSyntax.is_empty b1)
                  andalso not (bagSyntax.is_empty b2) then raise UNCHANGED else ();
 
-      val conv1 = ((RATOR_CONV o RAND_CONV) 
+      val conv1 = ((RATOR_CONV o RAND_CONV)
                       (BAG_RESORT_CONV n1L)) THENC
-                  (RAND_CONV 
+                  (RAND_CONV
                       (BAG_RESORT_CONV n2L))
       val conv2 = PART_MATCH lhs bagTheory.BAG_DIFF_INSERT_same
       val conv3 = TRY_CONV (PART_MATCH lhs empty_thm1)
       val conv4 = TRY_CONV (PART_MATCH lhs empty_thm2)
- 
+
    in
       (conv1 THENC REPEATC conv2 THENC conv3 THENC conv4) tm
    end handle HOL_ERR _ => raise UNCHANGED;
@@ -444,7 +444,7 @@ local
   val bag_union_thm2a = el 2 bag_union_insert_thmL
   val bag_union_thm2b = el 1 bag_union_empty_thmL
 
-  val bag_union_conv_step = 
+  val bag_union_conv_step =
      FIRST_CONV [
         PART_MATCH lhs bag_union_thm2b,
         PART_MATCH lhs bag_union_thm1a,
@@ -513,7 +513,7 @@ fun BAG_EQ_INSERT_CANCEL_CONV tm =
       end else let
          val (n1L,n2L) = get_resort_lists___pred_pair aconv b1' b2'
          val _ = if null n1L then raise UNCHANGED else ();
-         val conv1 = ((RATOR_CONV o RAND_CONV) 
+         val conv1 = ((RATOR_CONV o RAND_CONV)
                          (BAG_RESORT_CONV n1L)) THENC
                       (RAND_CONV (BAG_RESORT_CONV n2L))
          val conv2 = PART_MATCH lhs bagTheory.BAG_INSERT_ONE_ONE

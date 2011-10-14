@@ -1585,13 +1585,13 @@ val update_lem = prove(``!n x y a b.
 	REPEAT (PAT_ASSUM ``!(x:num).P`` (MP_TAC o Q.SPEC `0`)),
 	ALL_TAC] THEN
      RW_TAC arith_ss [EL,TL,HD] THEN
-     MAP_FIRST (fn t => 
-        t by 
+     MAP_FIRST (fn t =>
+        t by
              (REPEAT (PAT_ASSUM ``!(x:num).P`` (MP_TAC o Q.SPEC `SUC n`)) THEN
 	 RW_TAC arith_ss [EL,TL]) THEN
      	 POP_ASSUM SUBST_ALL_TAC THEN
      	 CONV_TAC SYM_CONV THEN MATCH_MP_TAC el_update2 THEN
-     	 RW_TAC arith_ss []) 
+     	 RW_TAC arith_ss [])
      [`(m:'a ** 'b) ' (SUC n) = EL n t''`,`(m:'a ** 'b) ' (SUC n) = EL n t'`]);
 in
 val UPDATE_V2L = store_thm("UPDATE_V2L",

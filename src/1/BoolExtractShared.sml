@@ -129,7 +129,7 @@ quietdec := false;
       if is_imp t then
 	  (let val (t1,t2)=dest_imp_only t;
                val (l11',l12')= get_impl_terms___multiple t1;
-               val (l11, l12) = (map (fn (t,b) => (mk_neg___idempot t, b)) l12', 
+               val (l11, l12) = (map (fn (t,b) => (mk_neg___idempot t, b)) l12',
                                  map (fn (t,b) => (mk_neg___idempot t, b)) l11')
                val (l21,l22)= get_impl_terms___multiple t2;
 	   in

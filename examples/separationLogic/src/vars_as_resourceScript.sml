@@ -102,10 +102,10 @@ val IS_SPLIT_PERMISSION_STRUCTURE_THM2 = store_thm ("IS_SPLIT_PERMISSION_STRUCTU
   REPEAT STRIP_TAC THEN EQ_TAC THEN ASM_SIMP_TAC std_ss [GSYM LEFT_FORALL_IMP_THM] THEN
   REPEAT STRIP_TAC THENL [
      Q.ABBREV_TAC `perm_split12 = \c. @p12. (f (SOME (FST p12)) (SOME (SND p12)) = SOME c)` THEN
-     Q.EXISTS_TAC `\c. FST (perm_split12 c)` THEN 
+     Q.EXISTS_TAC `\c. FST (perm_split12 c)` THEN
      Q.EXISTS_TAC `\c. SND (perm_split12 c)` THEN
      Q.UNABBREV_TAC `perm_split12` THEN
-     SIMP_TAC std_ss [] THEN GEN_TAC THEN     
+     SIMP_TAC std_ss [] THEN GEN_TAC THEN
      SELECT_ELIM_TAC THEN
      SIMP_TAC std_ss [PAIR_EXISTS_THM] THEN
      METIS_TAC[],
@@ -1072,7 +1072,7 @@ val VAR_RES_STACK_SPLIT1_def = Define `
         VAR_RES_STACK_SPLIT1 wp rp st =
         FUN_FMAP (\var. let (v,p) = st ' var in
                         if (var IN wp) then (v, p) else
-                        (v, var_res_permission_split1 p)) 
+                        (v, var_res_permission_split1 p))
                         (FDOM st INTER (wp UNION rp))`
 
 
@@ -1080,7 +1080,7 @@ val VAR_RES_STACK_SPLIT2_def = Define `
         VAR_RES_STACK_SPLIT2 wp rp st =
         FUN_FMAP (\var. let (v,p) = st ' var in
                         if ~(var IN rp) then (v, p) else
-                        (v, var_res_permission_split2 p)) 
+                        (v, var_res_permission_split2 p))
                         (FDOM st DIFF wp)`
 
 
@@ -1095,12 +1095,12 @@ val VAR_RES_STACK_SPLIT12___REWRITES = store_thm ("VAR_RES_STACK_SPLIT12___REWRI
                     (var_res_permission_split1 (SND (st ' v))))))) /\
   (!wp rp st v. (v IN FDOM st DIFF wp) ==>
          ((VAR_RES_STACK_SPLIT2 wp rp st) ' v =  (FST (st ' v),
-                                              if (v IN rp) then 
+                                              if (v IN rp) then
                                               (var_res_permission_split2 (SND (st ' v)))
                                               else (SND (st ' v)))))``,
 
-SIMP_TAC std_ss [VAR_RES_STACK_SPLIT1_def, VAR_RES_STACK_SPLIT2_def, 
-   FUN_FMAP_DEF, FDOM_FINITE, FINITE_DIFF, 
+SIMP_TAC std_ss [VAR_RES_STACK_SPLIT1_def, VAR_RES_STACK_SPLIT2_def,
+   FUN_FMAP_DEF, FDOM_FINITE, FINITE_DIFF,
    FINITE_INTER, LET_THM, GSYM PAIR_BETA_THM, COND_RATOR, COND_RAND]);
 
 
@@ -1171,7 +1171,7 @@ val VAR_RES_STACK_SPLIT12___read_writes = store_thm (
 SIMP_TAC (std_ss++CONJ_ss) [var_res_sl___has_write_permission_def,
        var_res_sl___has_read_permission_def,
        VAR_RES_STACK_SPLIT12___REWRITES, IN_DIFF,
-       var_res_sl___read_def, 
+       var_res_sl___read_def,
        var_res_sl___read_val_def] THEN
 SIMP_TAC (std_ss++LIFT_COND_ss++EQUIV_EXTRACT_ss) [IN_UNION, IN_INTER,
    var_res_permission_THM2]);
@@ -1180,13 +1180,13 @@ SIMP_TAC (std_ss++LIFT_COND_ss++EQUIV_EXTRACT_ss) [IN_UNION, IN_INTER,
 val VAR_RES_STACK___IS_SUBSTATE_UPTO_PERMISSIONS_def = Define `
     VAR_RES_STACK___IS_SUBSTATE_UPTO_PERMISSIONS st1 st2 =
 
-    ((FDOM st1) SUBSET (FDOM st2)) /\ 
+    ((FDOM st1) SUBSET (FDOM st2)) /\
     (!v. v IN FDOM st1 ==> (FST (st1 ' v) = FST (st2 ' v)))`;
 
 
 val VAR_RES_STACK___IS_EQUAL_UPTO_PERMISSIONS_def = Define `
     VAR_RES_STACK___IS_EQUAL_UPTO_PERMISSIONS (st1:('a, 'b) var_res_state) st2 =
-    (FDOM st1 = FDOM st2) /\ 
+    (FDOM st1 = FDOM st2) /\
     (!v. v IN FDOM st1 ==> (FST (st1 ' v) = FST (st2 ' v)))`;
 
 
@@ -1304,7 +1304,7 @@ SIMP_TAC std_ss [SOME___VAR_RES_STACK_COMBINE,
        FMERGE_DEF, SUBSET_DEF, VAR_RES_STACK_IS_SEPARATE_def] THEN
 REPEAT STRIP_TAC THEN
 Q.EXISTS_TAC `VAR_RES_STACK___UPDATE_PERMISSION_ALL (\v. SOME (var_res_permission_split1  (SND (st' ' v)))) st1` THEN
-Q.EXISTS_TAC `VAR_RES_STACK___UPDATE_PERMISSION_ALL (\v. 
+Q.EXISTS_TAC `VAR_RES_STACK___UPDATE_PERMISSION_ALL (\v.
    SOME (if (v IN FDOM st1) then  var_res_permission_split2  (SND (st' ' v))
                             else SND (st' ' v))) st'` THEN
 FULL_SIMP_TAC std_ss [VAR_RES_STACK___UPDATE_PERMISSION_ALL_def,
@@ -1372,11 +1372,11 @@ SIMP_TAC std_ss [SOME___VAR_RES_STACK_COMBINE,
        VAR_RES_STACK___IS_EQUAL_UPTO_PERMISSIONS_def,
        FMERGE_DEF, SUBSET_DEF, VAR_RES_STACK_IS_SEPARATE_def] THEN
 REPEAT STRIP_TAC THEN
-Q.EXISTS_TAC `VAR_RES_STACK___UPDATE_PERMISSION_ALL (\v. 
+Q.EXISTS_TAC `VAR_RES_STACK___UPDATE_PERMISSION_ALL (\v.
                       SOME (if (v IN FDOM st2) then
                                  var_res_permission_split1  (SND (st' ' v))
                             else SND (st' ' v))) st1` THEN
-Q.EXISTS_TAC `VAR_RES_STACK___UPDATE_PERMISSION_ALL (\v. 
+Q.EXISTS_TAC `VAR_RES_STACK___UPDATE_PERMISSION_ALL (\v.
                       SOME (if (v IN FDOM st1) then
                                  var_res_permission_split2  (SND (st' ' v))
                             else SND (st' ' v))) st2` THEN
@@ -1787,7 +1787,7 @@ val var_res_exp_binop_REWRITE = store_thm ("var_res_exp_binop_REWRITE",
 
 
 val var_res_exp_binop_const___ALTERNATIVE_DEF = store_thm ("var_res_exp_binop_const___ALTERNATIVE_DEF",
-``var_res_exp_binop_const bop e n = 
+``var_res_exp_binop_const bop e n =
   var_res_exp_op (\l. bop (EL 0 l) n) [e]``,
 SIMP_TAC list_ss [var_res_exp_op_def, var_res_exp_binop_def,
    var_res_exp_binop_const_def, LET_THM, var_res_exp_const_EVAL]);
@@ -1796,7 +1796,7 @@ SIMP_TAC list_ss [var_res_exp_op_def, var_res_exp_binop_def,
 val var_res_exp_binop_const_REWRITE = store_thm ("var_res_exp_binop_const_REWRITE",
 ``var_res_exp_binop_const bop e n = \s. if (IS_SOME (e s)) then
    SOME (bop (THE (e s)) n) else NONE``,
-  SIMP_TAC list_ss [var_res_exp_binop_const___ALTERNATIVE_DEF, 
+  SIMP_TAC list_ss [var_res_exp_binop_const___ALTERNATIVE_DEF,
                     var_res_exp_const_def,
                     var_res_exp_op_def, LET_THM, combinTheory.K_DEF]);
 
@@ -1925,7 +1925,7 @@ val var_res_exp_prop_def = Define `
 
 val var_res_exp_prop___CONST = store_thm ("var_res_exp_prop___CONST",
 ``var_res_exp_prop (var_res_exp_const c) P = P c``,
-SIMP_TAC std_ss [var_res_exp_prop_def, LET_THM, var_res_exp_const_EVAL, 
+SIMP_TAC std_ss [var_res_exp_prop_def, LET_THM, var_res_exp_const_EVAL,
   FUN_EQ_THM])
 
 
@@ -2369,7 +2369,7 @@ val VAR_RES_IS_PURE_PROPOSITION___asl_emp = store_thm (
       VAR_RES_IS_PURE_PROPOSITION f (asl_emp (VAR_RES_COMBINATOR f))``,
 SIMP_TAC std_ss [
    VAR_RES_IS_PURE_PROPOSITION_def,
-   VAR_RES_COMBINATOR_def, 
+   VAR_RES_COMBINATOR_def,
    PRODUCT_SEPARATION_COMBINATOR___asl_emp,
    IN_ABS]);
 
@@ -4118,7 +4118,7 @@ SIMP_TAC std_ss [VAR_RES_IS_STACK_IMPRECISE___ALTERNATIVE_DEF,
 
 val VAR_RES_IS_STACK_IMPRECISE___USED_VARS___var_res_exp_prop =
 store_thm ("VAR_RES_IS_STACK_IMPRECISE___USED_VARS___var_res_exp_prop",
-``!e P vs. 
+``!e P vs.
 (VAR_RES_IS_STACK_IMPRECISE_EXPRESSION___USED_VARS_SUBSET vs e /\
 !c. VAR_RES_IS_STACK_IMPRECISE___USED_VARS vs (P c)) ==>
 VAR_RES_IS_STACK_IMPRECISE___USED_VARS vs (var_res_exp_prop e P)``,
@@ -4152,7 +4152,7 @@ SIMP_TAC std_ss [VAR_RES_IS_STACK_IMPRECISE___ALTERNATIVE_DEF,
 
 val VAR_RES_IS_STACK_IMPRECISE___USED_VARS___var_res_exp_full_prop =
 store_thm ("VAR_RES_IS_STACK_IMPRECISE___USED_VARS___var_res_exp_full_prop",
-``!eL P vs. 
+``!eL P vs.
 EVERY (VAR_RES_IS_STACK_IMPRECISE_EXPRESSION___USED_VARS_SUBSET vs) eL ==>
 VAR_RES_IS_STACK_IMPRECISE___USED_VARS vs (var_res_exp_full_prop P eL)``,
 
@@ -4164,7 +4164,7 @@ Tactical.REVERSE (`(MAP (\e. e x1') eL) = (MAP (\e. e x1) eL)` by ALL_TAC) THEN 
 ) THEN
 Q.PAT_ASSUM `P X x2` (K ALL_TAC) THEN
 Induct_on `eL` THEN (
-   ASM_SIMP_TAC list_ss [] 
+   ASM_SIMP_TAC list_ss []
 ) THEN
 REPEAT STRIP_TAC THEN
 FULL_SIMP_TAC std_ss [] THEN
@@ -4863,7 +4863,7 @@ REPEAT STRIP_TAC THENL [
       ASM_REWRITE_TAC[]
    ) THEN
    FULL_SIMP_TAC std_ss [VAR_RES_STACK_IS_SEPARATE_def,
-     VAR_RES_STACK_COMBINE___MERGE_FUNC_def]  
+     VAR_RES_STACK_COMBINE___MERGE_FUNC_def]
 ]);
 
 
@@ -7386,7 +7386,7 @@ val VAR_RES_COND_INFERENCE___FRAME = store_thm (
 SIMP_TAC std_ss [VAR_RES_COND_HOARE_TRIPLE_def, var_res_prop___REWRITE,
    var_res_prop___COND_INSERT] THEN
 REPEAT STRIP_TAC THEN
-`!wpb sfb.  var_res_prop___COND f (wpb,rpb) sfb ==> 
+`!wpb sfb.  var_res_prop___COND f (wpb,rpb) sfb ==>
   (var_res_prop___PROP f (wpb,rpb) (BAG_INSERT P sfb) =
     asl_star (VAR_RES_COMBINATOR f) (var_res_prop___PROP f (wpb,rpb) sfb) P)` by ALL_TAC THEN1 (
    REPEAT STRIP_TAC THEN
@@ -7434,7 +7434,7 @@ DISCH_TAC THEN POP_ASSUM (K ALL_TAC) THEN
 CONSEQ_CONV_TAC (K FORALL_EQ___CONSEQ_CONV) THEN
 REPEAT STRIP_TAC THEN EQ_TAC THEN Tactical.REVERSE (REPEAT STRIP_TAC) THENL [
    IMP_RES_TAC VAR_RES_COND_INFERENCE___FRAME THEN
-   Q.PAT_ASSUM `!P. X P` (MP_TAC o Q.SPEC 
+   Q.PAT_ASSUM `!P. X P` (MP_TAC o Q.SPEC
        `var_res_prop_equal f e (var_res_exp_const c)`) THEN
    FULL_SIMP_TAC std_ss [VAR_RES_COND_HOARE_TRIPLE_def,
       var_res_prop___REWRITE, var_res_prop___COND_INSERT] THEN
@@ -11975,7 +11975,7 @@ SIMP_TAC list_ss [var_res_prog_eval_expressions_def,
 val VAR_RES_COND_INFERENCE___eval_expressions___ONE =
 store_thm ("VAR_RES_COND_INFERENCE___eval_expressions___ONE",
 ``!f wpb rpb sfb e L c prog progL Q.
-((e = var_res_exp_const c) \/ 
+((e = var_res_exp_const c) \/
  BAG_IN (var_res_prop_equal f e (var_res_exp_const c)) sfb)  ==>
 
 (VAR_RES_COND_HOARE_TRIPLE f (var_res_prop f (wpb,rpb) sfb)
@@ -12949,13 +12949,13 @@ SIMP_TAC std_ss [VAR_RES_COND_INFERENCE___while_unroll,
 
 val VAR_RES_COND_INFERENCE___while_unroll___loop_spec =
 store_thm ("VAR_RES_COND_INFERENCE___while_unroll___loop_spec",
-``!f c (p :('a, 'b, 'c, ('d, 'e, 'f) var_res_ext_state) asl_program) 
+``!f c (p :('a, 'b, 'c, ('d, 'e, 'f) var_res_ext_state) asl_program)
    sp prog1 prog2 P Q.
 
 VAR_RES_COND_HOARE_TRIPLE f P
    (asl_prog_block ((asl_prog_assume (asl_pred_neg c))::(prog1 ++ prog2))) Q /\
 VAR_RES_COND_HOARE_TRIPLE f P
-   (asl_prog_block ((asl_prog_assume c)::p::(asl_comment_loop_spec sp 
+   (asl_prog_block ((asl_prog_assume c)::p::(asl_comment_loop_spec sp
        (asl_prog_block ((asl_prog_while c p)::prog1)))::prog2)) Q ==>
 
 VAR_RES_COND_HOARE_TRIPLE f P
@@ -13291,7 +13291,7 @@ SIMP_TAC std_ss [var_res_pred_bin_def, var_res_pred_def,
 val asl_predicate_IS_DECIDED___var_res_pred = store_thm (
 "asl_predicate_IS_DECIDED___var_res_pred",
 ``
-!f P vs p el. 
+!f P vs p el.
 (IS_SEPARATION_COMBINATOR f /\
 EVERY (VAR_RES_IS_STACK_IMPRECISE_EXPRESSION___USED_VARS_SUBSET vs) el /\
 (!s. s IN P ==> vs SUBSET FDOM (FST s))) ==>
@@ -13314,7 +13314,7 @@ REPEAT STRIP_TAC THEN
    METIS_TAC[VAR_RES_IS_STACK_IMPRECISE_EXPRESSION___USED_VARS_SUBSET___SUBSET]
 ) THEN
 ASM_SIMP_TAC std_ss [ASL_INTUITIONISTIC_NEGATION___weak_prop_expression, IN_DEF] THEN
-SIMP_TAC std_ss [var_res_prop_weak_expression_def, 
+SIMP_TAC std_ss [var_res_prop_weak_expression_def,
    var_res_prop_expression_def, var_res_stack_proposition_def, LET_THM] THEN
 Tactical.REVERSE (`EVERY IS_SOME (MAP (\e. e (FST s)) el)` by ALL_TAC) THEN1 (
    ASM_SIMP_TAC std_ss []
@@ -13412,7 +13412,7 @@ store_thm ("VAR_RES_COND_INFERENCE___prog_assert_pred",
 EVERY (VAR_RES_IS_STACK_IMPRECISE_EXPRESSION___USED_VARS_SUBSET
    (SET_OF_BAG (BAG_UNION wpb rpb))) el ==>
 
-((VAR_RES_FRAME_SPLIT f sr (wpb,rpb) EMPTY_BAG EMPTY_BAG sfb 
+((VAR_RES_FRAME_SPLIT f sr (wpb,rpb) EMPTY_BAG EMPTY_BAG sfb
   {|var_res_prop_expression f T p el|}) (K T) /\
 (VAR_RES_COND_HOARE_TRIPLE f (var_res_prop f (wpb, rpb)
    (BAG_INSERT (var_res_prop_expression f T p el) sfb))
@@ -13484,7 +13484,7 @@ store_thm ("VAR_RES_COND_INFERENCE___comment_assert",
 
 (?x. VAR_RES_COND_HOARE_TRIPLE f (var_res_prop f (wpb, rpb) sfb)
    (asl_prog_block (
-       (var_res_prog_cond_best_local_action 
+       (var_res_prog_cond_best_local_action
           (var_res_prop_internal f (EMPTY_BAG, BAG_UNION wpb rpb) (EMPTY, EMPTY) T EMPTY_BAG (qP x))
           (var_res_prop_internal f (EMPTY_BAG, BAG_UNION wpb rpb) (EMPTY, EMPTY) T EMPTY_BAG (qP x)))::
        progL)) Q) ==>
@@ -13650,9 +13650,9 @@ store_thm ("VAR_RES_COND_INFERENCE___prog_assume_and___NO_EQUIV_COUNTER_EXAMPLE"
   ~(VAR_RES_COND_HOARE_TRIPLE f (T, asl_true)
    (asl_prog_seq
          (asl_prog_assume (var_res_pred (\vl. HD vl = 0) [var_res_exp_var v]))
-         (asl_prog_assume asl_pred_false)) 
+         (asl_prog_assume asl_pred_false))
    (T, asl_true))) /\
-  
+
    (VAR_RES_COND_HOARE_TRIPLE f (T, asl_true)
    (asl_prog_assume (asl_pred_and (var_res_pred (\vl. HD vl = 0) [var_res_exp_var v])
                                   asl_pred_false)) (T, asl_true))``,
@@ -13852,7 +13852,7 @@ val VAR_RES_IS_STACK_IMPRECISE___USED_VARS___VAR_RES_REWRITES =
      VAR_RES_IS_STACK_IMPRECISE___USED_VARS___asl_and,
      VAR_RES_IS_STACK_IMPRECISE___USED_VARS___asl_false,
      VAR_RES_IS_STACK_IMPRECISE___USED_VARS___asl_trivial_cond,
-     VAR_RES_IS_STACK_IMPRECISE___USED_VARS___asl_exists_direct, 
+     VAR_RES_IS_STACK_IMPRECISE___USED_VARS___asl_exists_direct,
      VAR_RES_IS_STACK_IMPRECISE___USED_VARS___asl_forall,
      VAR_RES_IS_STACK_IMPRECISE___USED_VARS___cond,
      VAR_RES_IS_STACK_IMPRECISE___USED_VARS___asl_star,

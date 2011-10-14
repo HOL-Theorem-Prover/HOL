@@ -46,6 +46,9 @@ bin/unquote
 bin/hol.builder
 bin/hol.builder0
 bin/heapname
+bin/buildheap
+
+developers/docfiles/*.txt
 
 tools*/Holmake/Systeml.sml
 tools/Holmake/Lexer.sml

@@ -171,33 +171,33 @@ fu! HOLSelect(l,r)
   call search(a:r,"ce")
 endf
 
-vn <silent> hl :call YankThenHOLCall(function("HOLLoadSendQuiet"),[])<CR>
-vn <silent> hL :call YankThenHOLCall(function("HOLLoad"),[])<CR>
-vn <silent> hs :call YankThenHOLCall(function("HOLSend"),[])<CR>
-vn <silent> hu :call YankThenHOLCall(function("HOLSendQuiet"),[])<CR>
-vn <silent> hg :call YankThenHOLCall(function("HOLGoal"),[])<CR>
-vn <silent> he :call YankThenHOLCall(function("HOLExpand"),[])<CR>
-vn <silent> hS :call YankThenHOLCall(function("HOLSubgoal"),[])<CR>
-nm <silent> hl Vhl
-nm <silent> hL VhL
-nm <silent> hs Vhs
-nm <silent> hu Vhu
-nm <silent> hg Vhg
-nm <silent> he Vhe
-nm <silent> hS VhS
-nn <silent> hR :<C-U>call HOLRotate()<CR>
-nn <silent> hb :<C-U>call HOLRepeat("proofManagerLib.backup();")<CR>
-nn <silent> hB :<C-U>call HOLRepeat("proofManagerLib.restore();")<CR>
-nn <silent> hv :call HOLCall(function("HOLF"),["proofManagerLib.save()"])<CR>
-nn <silent> hd :<C-U>call HOLRepeat("proofManagerLib.drop();")<CR>
-nn <silent> hp :call HOLCall(function("HOLF"),["proofManagerLib.p()"])<CR>
-nn <silent> hr :call HOLCall(function("HOLF"),["proofManagerLib.restart()"])<CR>
-nn <silent> hc :call HOLINT()<CR>
-nn <silent> ht :call HOLSelect("`","`")<CR>
-nn <silent> hT :call HOLSelect("``","``")<CR>
-nn <silent> hj :call HOLCall(function("HOLF"),["Globals.show_types:=not(!Globals.show_types)"])<CR>
-nn <silent> hn :call HOLCall(function("HOLF"),["Feedback.set_trace \"Unicode\" (1 - Feedback.current_trace \"Unicode\")"])<CR>
-no hh h
+vn <silent> <LocalLeader>l :call YankThenHOLCall(function("HOLLoadSendQuiet"),[])<CR>
+vn <silent> <LocalLeader>L :call YankThenHOLCall(function("HOLLoad"),[])<CR>
+vn <silent> <LocalLeader>s :call YankThenHOLCall(function("HOLSend"),[])<CR>
+vn <silent> <LocalLeader>u :call YankThenHOLCall(function("HOLSendQuiet"),[])<CR>
+vn <silent> <LocalLeader>g :call YankThenHOLCall(function("HOLGoal"),[])<CR>
+vn <silent> <LocalLeader>e :call YankThenHOLCall(function("HOLExpand"),[])<CR>
+vn <silent> <LocalLeader>S :call YankThenHOLCall(function("HOLSubgoal"),[])<CR>
+nm <silent> <LocalLeader>l Vhl
+nm <silent> <LocalLeader>L VhL
+nm <silent> <LocalLeader>s Vhs
+nm <silent> <LocalLeader>u Vhu
+nm <silent> <LocalLeader>g Vhg
+nm <silent> <LocalLeader>e Vhe
+nm <silent> <LocalLeader>S VhS
+nn <silent> <LocalLeader>R :<C-U>call HOLRotate()<CR>
+nn <silent> <LocalLeader>b :<C-U>call HOLRepeat("proofManagerLib.backup();")<CR>
+nn <silent> <LocalLeader>B :<C-U>call HOLRepeat("proofManagerLib.restore();")<CR>
+nn <silent> <LocalLeader>v :call HOLCall(function("HOLF"),["proofManagerLib.save()"])<CR>
+nn <silent> <LocalLeader>d :<C-U>call HOLRepeat("proofManagerLib.drop();")<CR>
+nn <silent> <LocalLeader>p :call HOLCall(function("HOLF"),["proofManagerLib.p()"])<CR>
+nn <silent> <LocalLeader>r :call HOLCall(function("HOLF"),["proofManagerLib.restart()"])<CR>
+nn <silent> <LocalLeader>c :call HOLINT()<CR>
+nn <silent> <LocalLeader>t :call HOLSelect("`","`")<CR>
+nn <silent> <LocalLeader>T :call HOLSelect("``","``")<CR>
+nn <silent> <LocalLeader>j :call HOLCall(function("HOLF"),["Globals.show_types:=not(!Globals.show_types)"])<CR>
+nn <silent> <LocalLeader>n :call HOLCall(function("HOLF"),["Feedback.set_trace \"Unicode\" (1 - Feedback.current_trace \"Unicode\")"])<CR>
+no <LocalLeader>h h
 
 let b:did_hol = 1
 " vim: ft=vim

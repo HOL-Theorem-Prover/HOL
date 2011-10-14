@@ -59,13 +59,13 @@ local
 in
 
 
-fun fupdate_NORMALISE_CONV t = 
+fun fupdate_NORMALISE_CONV t =
 let
    val (base, kvL) = strip_fupdate t
    val (kL,vL) = unzip (map pairSyntax.dest_pair kvL)
 
 
-   val typed_empty_tm = 
+   val typed_empty_tm =
         Term.inst [alpha |-> fst (finite_mapSyntax.dest_fmap_ty (type_of base))] pred_setSyntax.empty_tm
 
 

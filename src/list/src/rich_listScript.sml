@@ -3110,7 +3110,7 @@ SIMP_TAC std_ss [COUNT_LIST_GENLIST, EL_GENLIST]);
 
 val MEM_COUNT_LIST = store_thm ("MEM_COUNT_LIST",
 ``!m n. MEM m (COUNT_LIST n) = (m < n)``,
-SIMP_TAC (std_ss++boolSimps.CONJ_ss) [listTheory.MEM_EL, EL_COUNT_LIST, 
+SIMP_TAC (std_ss++boolSimps.CONJ_ss) [listTheory.MEM_EL, EL_COUNT_LIST,
    LENGTH_COUNT_LIST, EL_COUNT_LIST]);
 
 val COUNT_LIST_SNOC = store_thm ("COUNT_LIST_SNOC",
@@ -3124,7 +3124,7 @@ Induct_on `n` THENL [
    SIMP_TAC std_ss [pred_setTheory.COUNT_ZERO, COUNT_LIST, listTheory.LIST_TO_SET_THM],
    ASM_SIMP_TAC std_ss [COUNT_LIST_SNOC, pred_setTheory.COUNT_SUC,
       listTheory.LIST_TO_SET_APPEND, listTheory.SNOC_APPEND, listTheory.LIST_TO_SET_THM] THEN
-   SIMP_TAC std_ss [pred_setTheory.IN_UNION, pred_setTheory.IN_SING, 
+   SIMP_TAC std_ss [pred_setTheory.IN_UNION, pred_setTheory.IN_SING,
        pred_setTheory.EXTENSION, pred_setTheory.IN_INSERT] THEN
    PROVE_TAC[]
 ]);

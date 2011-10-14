@@ -284,7 +284,7 @@ val _ = set_fixity ";;" (Infixr 180);
 (* inductively by the set of rules shown below.                              *)
 (*---------------------------------------------------------------------------*)
 
-val (rules,induction,ecases) = 
+val (rules,induction,ecases) =
  Hol_reln
    `(!s.      EVAL Skip s s)
  /\ (!s v e.   EVAL (GenAssign v e) s (Update v e s))
@@ -3311,7 +3311,7 @@ val Least_AnWhile_LEMMA =
        THEN `IS_SOME (SOME_FUNPOW f n x)` by METIS_TAC[option_CLAUSES]
        THEN `~beval b (THE (SOME_FUNPOW f n x))` by METIS_TAC[option_CLAUSES]
        THEN `(!m. IS_SOME (SOME_FUNPOW f m x) /\
-                  ~beval b (THE (SOME_FUNPOW f m x)) ==> n <= m) 
+                  ~beval b (THE (SOME_FUNPOW f m x)) ==> n <= m)
                    ==> EVAL (AnWhile b R c) x s2`
              by METIS_TAC[SOME_11]
        THEN `!m. IS_SOME (SOME_FUNPOW f (SUC m) s1) /\

@@ -285,6 +285,6 @@ sig
 
     val ONEONE_DECENC_THM : hol_type -> thm
     val ONEONE_ENC_THM    : hol_type -> thm
- 
+
     val Raise : exn -> 'a
 end

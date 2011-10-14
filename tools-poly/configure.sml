@@ -409,6 +409,17 @@ in
   FileSys.chDir cdir
 end handle _ => die "Failed to build heapname."
 
+(* ----------------------------------------------------------------------
+    Generate buildheap executable
+   ---------------------------------------------------------------------- *)
+val _ = let
+in
+  echo "Making bin/buildheap utility";
+  FileSys.chDir toolsdir;
+  system_ps (POLY ^ " < buildheap.ML");
+  compile systeml (fullPath [HOLDIR, "bin", "buildheap"]) "buildheap.o";
+  FileSys.chDir cdir
+end handle _ => die "Failed to build buildheap."
 
 
 end (* local *)
@@ -467,7 +478,7 @@ val _ =
     output(tar3, "use "^(qstr tar2));
     closeOut tar3;
     output(tar4,"augroup filetypedetect\n");
-    output(tar4,"  au BufRead,BufNewFile *?Script.sml source "^tar1^"\n");
+    output(tar4,"  au BufRead,BufNewFile *?Script.sml let maplocalleader = \"h\" | source "^tar1^"\n");
     output(tar4,"  \"Uncomment the line below to automatically load Unicode\n");
     output(tar4,"  \"au BufRead,BufNewFile *?Script.sml source "^fullPath [pref, "holabs.vim"]^"\n");
     output(tar4,"augroup END\n");

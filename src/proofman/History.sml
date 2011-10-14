@@ -43,10 +43,10 @@ fun restore (HISTORY{obj,past,orig,limit,save_points}) =
              (if null (tl save_points) then ([], orig) else
                  (tl save_points, hd (tl (save_points)))));
   in
-     HISTORY{obj=obj', past=[], orig=orig, limit=limit, save_points=save_points'}     
+     HISTORY{obj=obj', past=[], orig=orig, limit=limit, save_points=save_points'}
   end;
 
 fun save (HISTORY{obj,past,orig,limit,save_points}) =
-     HISTORY{obj=obj, past=[], orig=orig, limit=limit, save_points=obj::save_points}     
+     HISTORY{obj=obj, past=[], orig=orig, limit=limit, save_points=obj::save_points}
 
 end

@@ -3,24 +3,31 @@ open DiskFilesHeader HolKernel
 fun warn s = TextIO.output(TextIO.stdErr, s ^ "\n")
 
 type result = (id array *
+               prekind array *
                pretype array *
                pre_vc array *
                (string * prethm) list)
 
 %%
 %name DiskFiles
-%keyword IDS TYPES TERMS THEOREMS
+%keyword IDS KINDS TYPES TERMS THEOREMS
 
 %nonterm theoryfile of result
        | ids_section of (int,id)Binarymap.dict
        | idpair_list of (int,id)Binarymap.dict
        | idpair of id
+       | rank of int
+       | kinds_section of (int,prekind)Binarymap.dict
        | types_section of (int,pretype)Binarymap.dict
+       | kdsize_spec
        | tysize_spec
        | tmsize_spec
        | idsize_spec
+       | kinddecl_list of (int,prekind)Binarymap.dict
+       | kinddecl of prekind
        | typedecl_list of (int,pretype)Binarymap.dict
        | typedecl of pretype
+       | type_n of int
        | intlist_ne of int list
        | terms_section of (int,pre_vc)Binarymap.dict
        | termdecl_list of (int,pre_vc)Binarymap.dict
@@ -38,9 +45,10 @@ type result = (id array *
 
 
 
-%term EOF | ID of string | DOLLAR | FULLSTOP | LPAREN | RPAREN | BACKSLASH |
-      IDS | TYPES | TERMS | THEOREMS | LBRACKET | RBRACKET | NUMBER of int |
-      TYV | TYOP | TMV | TMC
+%term EOF | ID of string | DOLLAR | FULLSTOP | COMMA | LPAREN | RPAREN |
+      BACKSLASH | COLON | SLASH | LBRACKET | RBRACKET | NUMBER of int |
+      IDS | KINDS | TYPES | TERMS | THEOREMS |
+      KDTY | KDV | KDARR | TYV | TYC | TYAp | TYAbs | TYUni | TYExi | TMV | TMC
 
 %eop EOF
 %pos int
@@ -51,8 +59,8 @@ type result = (id array *
 %start theoryfile
 
 %%
-theoryfile : ids_section types_section terms_section theorems
-                (ids_section, types_section, terms_section, theorems)
+theoryfile : ids_section kinds_section types_section terms_section theorems
+                (ids_section, kinds_section, types_section, terms_section, theorems)
 
 ids_section : IDS idsize_spec idpair_list (idpair_list)
 
@@ -65,6 +73,22 @@ idpair_list : (Binarymap.mkDict Int.compare)
 
 idpair : ID DOLLAR ID ( {Thy = ID1, Name = ID2 }  )
 
+kinds_section : KINDS kdsize_spec kinddecl_list (kinddecl_list)
+
+kdsize_spec : NUMBER ()
+
+kinddecl_list : (Binarymap.mkDict Int.compare)
+              | kinddecl_list kinddecl
+                  (Binarymap.insert(kinddecl_list,
+                                    Binarymap.numItems kinddecl_list,
+                                    kinddecl))
+
+rank : NUMBER (NUMBER)
+
+kinddecl : KDTY LPAREN rank RPAREN (pkty rank)
+         | KDV LPAREN ID COMMA rank RPAREN (pkv(ID,rank))
+         | KDARR LPAREN NUMBER COMMA NUMBER RPAREN (pkarr(NUMBER1, NUMBER2))
+
 types_section : TYPES tysize_spec typedecl_list (typedecl_list)
 
 tysize_spec : NUMBER ()
@@ -75,9 +99,14 @@ typedecl_list : (Binarymap.mkDict Int.compare)
                                     Binarymap.numItems typedecl_list,
                                     typedecl))
 
-typedecl : TYV ID (ptv ID)
-         | TYOP LBRACKET intlist_ne RBRACKET
-              (ptop (hd intlist_ne, tl intlist_ne))
+typedecl : TYV LPAREN ID COMMA NUMBER RPAREN (ptv(ID,NUMBER))
+         | TYC LPAREN NUMBER COMMA NUMBER RPAREN (ptc(NUMBER1,NUMBER2))
+         | TYAp LPAREN NUMBER COMMA NUMBER RPAREN (ptapp(NUMBER1,NUMBER2))
+         | TYAbs LPAREN NUMBER COMMA NUMBER RPAREN (ptabs(NUMBER1,NUMBER2))
+         | TYUni LPAREN NUMBER COMMA NUMBER RPAREN (ptuni(NUMBER1,NUMBER2))
+         | TYExi LPAREN NUMBER COMMA NUMBER RPAREN (ptexi(NUMBER1,NUMBER2))
+
+type_n : NUMBER (NUMBER)
 
 intlist_ne : NUMBER ([NUMBER])
            | NUMBER intlist_ne (NUMBER::intlist_ne)
@@ -109,6 +138,8 @@ term : LPAREN term_a RPAREN (term_a)
 
 term_a :
    BACKSLASH tmid FULLSTOP term_a (abs(tmid, term_a))
+ | COLON base_term type_n (tyapp(base_term, type_n))
+ | SLASH type_n FULLSTOP term_a (tyabs(type_n, term_a))
  | term_c (term_c)
 
 term_c : term_c base_term (app(term_c, base_term))

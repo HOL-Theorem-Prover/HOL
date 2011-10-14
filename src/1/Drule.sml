@@ -1203,26 +1203,26 @@ fun IMP_CANON th =
  *
  *       |- !x. t1 ==> !y. t2 ==> ... ==> tm ==>  t
  *
- * into canonical form for applying MATCH_MP_TAC by moving quantifiers to 
+ * into canonical form for applying MATCH_MP_TAC by moving quantifiers to
  * the outmost level and combining implications
- * 
+ *
  *      t1 ==> !x. t2     --->  !x. t1 ==> t2
  *      t1 ==> t2 ==> t3  --->  t1 /\ t2 ==> t3
- * 
- * It might be useful to replace equivalences with implications while 
- * normalising. MP_GENEQ_CANON gets a list of boolean values as an extra 
- * argument to configure such replacements. The occuring equations are split 
+ *
+ * It might be useful to replace equivalences with implications while
+ * normalising. MP_GENEQ_CANON gets a list of boolean values as an extra
+ * argument to configure such replacements. The occuring equations are split
  * according to the elements of this list. true focuses on the left hand side,
  * i.e. the right-hand side is put into the antecedent. false focuses on the
  * right hand side. If the list is empty, the equation is not splitted.
- * 
+ *
  * MP_GENEQ_CANON [true]  |- !x. A x ==> (!y. (B1 x y):bool = B2 y) --->
  *                           !x y. A x /\ B2 y ===> B1 x y
  * MP_GENEQ_CANON [false] |- !x. A x ==> (!y. (B1 x y):bool = B2 y) --->
  *                           !x y. A x /\ B1 x y ===> B2 y
- * 
- * For convinience the most common cases of this parameter are introduced 
- * own functions 
+ *
+ * For convinience the most common cases of this parameter are introduced
+ * own functions
  *
  * val MP_CANON     = MP_GENEQ_CANON []
  * val MP_LEQ_CANON = MP_GENEQ_CANON [true]
@@ -1233,8 +1233,8 @@ local
 fun RIGHT_IMP_IMP_FORALL_RULE th =
   let val w = concl th
   in if is_imp_only w
-     then let val (ant,conc) = dest_imp w 
-          in if is_forall conc 
+     then let val (ant,conc) = dest_imp w
+          in if is_forall conc
              then let val (Bvar,Body) = dest_forall conc;
                       val bv' = variant (thm_frees th) Bvar
                       val th1 = MP th (ASSUME ant);
@@ -1242,10 +1242,10 @@ fun RIGHT_IMP_IMP_FORALL_RULE th =
                       val th3 = DISCH ant th2;
                       val th4 = RIGHT_IMP_IMP_FORALL_RULE th3;
                       val th5 = GEN bv' th4
-                  in th5 
+                  in th5
                   end
              else
-             if is_imp_only conc                
+             if is_imp_only conc
              then let val (ant2,conc2) = dest_imp conc
                       val conc_t = mk_conj (ant, ant2);
                       val conc_thm = ASSUME conc_t;
@@ -1256,13 +1256,13 @@ fun RIGHT_IMP_IMP_FORALL_RULE th =
                   end
              else th
           end
-     else th 
+     else th
   end
 
 in
-fun MP_GENEQ_CANON eqL th = 
+fun MP_GENEQ_CANON eqL th =
   let val w = concl th
-  in if is_forall w 
+  in if is_forall w
      then let val (Bvar,Body) = dest_forall w
              val bv' = variant (thm_frees th) Bvar
              val th1 = MP_GENEQ_CANON eqL (SPEC bv' th);
@@ -1271,15 +1271,15 @@ fun MP_GENEQ_CANON eqL th =
           end
      else
      if is_imp_only w
-     then let val (ant,conc) = dest_imp w 
+     then let val (ant,conc) = dest_imp w
               val th1 = MP th  (ASSUME ant)
               val th2 = MP_GENEQ_CANON eqL th1
               val th3 = DISCH ant th2
               val th4 = RIGHT_IMP_IMP_FORALL_RULE th3
           in th4
           end
-     else 
-     if not (null eqL) andalso is_eq w 
+     else
+     if not (null eqL) andalso is_eq w
      then
        (MP_GENEQ_CANON (tl eqL) (((if hd eqL then snd else fst)) (EQ_IMP_RULE th)) handle HOL_ERR _ => th)
      else th

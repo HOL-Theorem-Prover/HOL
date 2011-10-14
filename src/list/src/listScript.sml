@@ -2406,9 +2406,9 @@ val _ = adjoin_to_theory
    S "              LENGTH, MAP, MAP2, NULL_DEF, MEM, EXISTS_DEF,";
    S "              EVERY_DEF, ZIP, UNZIP, FILTER, FOLDL, FOLDR,";
    S "              FOLDL, REVERSE_DEF, ALL_DISTINCT, GENLIST_AUX,";
-   S "              Conv.CONV_RULE numLib.SUC_TO_NUMERAL_DEFN_CONV EL,";
+   S "              EL_restricted, EL_simp_restricted,";
    S "              GENLIST_NUMERALS, computeLib.lazyfy_thm list_case_compute,";
-   S "              list_size_def,FRONT_DEF,LAST_DEF,isPREFIX]";
+   S "              list_size_def, FRONT_DEF, LAST_DEF, isPREFIX]";
    S "        end;";
    NL(); NL();
    S "val _ =";

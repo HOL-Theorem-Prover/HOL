@@ -50,7 +50,7 @@ sig
  val primHol_datatype : typeBase
                          -> AST list
                            -> typeBase * (tyinfo * string) list
- 
+
  val astHol_datatype  : AST list -> unit
  val Hol_datatype  : hol_type quotation -> unit
 

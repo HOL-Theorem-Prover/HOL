@@ -6,7 +6,7 @@ val _ = new_theory "chap3";
 local open pred_setLib in end;
 
 open binderLib BasicProvers
-open termTheory chap2Theory
+open nomsetTheory termTheory chap2Theory
 
 fun Store_thm (trip as (n,t,tac)) = store_thm trip before export_rewrites [n]
 
@@ -52,14 +52,14 @@ val cc_gen_ind = store_thm(
   REPEAT GEN_TAC THEN STRIP_TAC THEN
   Q_TAC SUFF_TAC `!M N. compat_closure R M N ==>
                         !x p. P (tpm p M) (tpm p N) x`
-        THEN1 METIS_TAC [tpm_NIL] THEN
+        THEN1 METIS_TAC [pmact_nil] THEN
   HO_MATCH_MP_TAC compat_closure_ind THEN SRW_TAC [][] THEN
   Q_TAC (NEW_TAC "z") `fv x UNION {lswapstr p v} UNION FV (tpm p M) UNION
                        FV (tpm p N)` THEN
   `LAM (lswapstr p v) (tpm p M) = LAM z (tpm ([(z,lswapstr p v)] ++ p) M)`
-     by SRW_TAC [][tpm_ALPHA, tpm_APPEND] THEN
+     by SRW_TAC [][tpm_ALPHA, pmact_decompose] THEN
   `LAM (lswapstr p v) (tpm p N) = LAM z (tpm ([(z,lswapstr p v)] ++ p) N)`
-     by SRW_TAC [][tpm_ALPHA, tpm_APPEND] THEN
+     by SRW_TAC [][tpm_ALPHA, pmact_decompose] THEN
   SRW_TAC [][]);
 
 val cc_ind = save_thm(
@@ -99,10 +99,10 @@ val swap_eq_3substs = store_thm(
   SRW_TAC [][GSYM fresh_tpm_subst] THEN
   `tpm [(x,y)] (tpm [(z,x)] M) =
        tpm [(swapstr x y z, swapstr x y x)] (tpm [(x,y)] M)`
-     by (SRW_TAC [][Once (GSYM tpm_sing_to_back), SimpLHS] THEN
+     by (SRW_TAC [][Once (GSYM pmact_sing_to_back), SimpLHS] THEN
          SRW_TAC [][]) THEN
   POP_ASSUM SUBST_ALL_TAC THEN
-  SRW_TAC [][tpm_flip_args]);
+  SRW_TAC [][pmact_flip_args]);
 
 val substitutive_implies_permutative = store_thm(
   "substitutive_implies_permutative",
@@ -285,7 +285,7 @@ val beta_alt = store_thm(
     SRW_TAC [][] THEN
     Q_TAC SUFF_TAC `tpm [(x,z)] body = [VAR z/x]body`
           THEN1 SRW_TAC [][lemma15a] THEN
-    SRW_TAC [][GSYM fresh_tpm_subst, tpm_flip_args],
+    SRW_TAC [][GSYM fresh_tpm_subst, pmact_flip_args],
     METIS_TAC []
   ]);
 
@@ -297,14 +297,14 @@ val strong_bvc_term_ind = store_thm(
            (!x. FINITE (fv x)) ==>
            !t x. P t x``,
   REPEAT GEN_TAC THEN STRIP_TAC THEN
-  Q_TAC SUFF_TAC `!t p x. P (tpm p t) x` THEN1 METIS_TAC [tpm_NIL] THEN
+  Q_TAC SUFF_TAC `!t p x. P (tpm p t) x` THEN1 METIS_TAC [pmact_nil] THEN
   HO_MATCH_MP_TAC simple_induction THEN SRW_TAC [][] THEN
   Q.ABBREV_TAC `u = lswapstr p v` THEN
   Q.ABBREV_TAC `M = tpm p t` THEN
   Q_TAC (NEW_TAC "z") `u INSERT FV M UNION fv x` THEN
   `LAM u M = LAM z (tpm [(z, u)] M)` by SRW_TAC [][tpm_ALPHA] THEN
   `tpm [(z,u)] M = tpm ((z,u)::p) t`
-     by SRW_TAC [][Abbr`M`, GSYM tpm_APPEND] THEN
+     by SRW_TAC [][Abbr`M`, GSYM pmact_decompose] THEN
   SRW_TAC [][])
 
 val _ = set_fixity "-b->" (Infix(NONASSOC, 450))
@@ -329,7 +329,7 @@ val ccbeta_gen_ind = store_thm(
   STRIP_TAC THEN
   Q_TAC SUFF_TAC `!M N. M -b-> N ==>
                         !X p. P (tpm p M) (tpm p N) X`
-        THEN1 METIS_TAC [tpm_NIL] THEN
+        THEN1 METIS_TAC [pmact_nil] THEN
   HO_MATCH_MP_TAC compat_closure_ind THEN REPEAT STRIP_TAC THENL [
     FULL_SIMP_TAC (srw_ss()) [beta_def, tpm_subst] THEN
     Q.ABBREV_TAC `v = lswapstr p x` THEN
@@ -352,7 +352,7 @@ val ccbeta_gen_ind = store_thm(
     FIRST_X_ASSUM MATCH_MP_TAC THEN SRW_TAC [][] THEN
     `(tpm [(z,x)] M' = tpm ((z,x)::p) M) /\
      (tpm [(z,x)] N' = tpm ((z,x)::p) N)`
-       by SRW_TAC [][Abbr`M'`, Abbr`N'`, GSYM tpm_APPEND] THEN
+       by SRW_TAC [][Abbr`M'`, Abbr`N'`, GSYM pmact_decompose] THEN
     SRW_TAC [][]
   ]);
 
@@ -403,7 +403,7 @@ val cc_beta_tpm = store_thm(
 val cc_beta_tpm_eqn = store_thm(
   "cc_beta_tpm_eqn",
   ``tpm pi M -b-> N <=> M -b-> tpm (REVERSE pi) N``,
-  METIS_TAC [tpm_inverse, cc_beta_tpm]);
+  METIS_TAC [pmact_inverse, cc_beta_tpm]);
 
 val cc_beta_thm = store_thm(
   "cc_beta_thm",
@@ -427,7 +427,7 @@ val cc_beta_thm = store_thm(
                  ?M0. (LAM w P = LAM v M0) /\
                       compat_closure beta M M0` THEN1 PROVE_TAC [] THEN
     SRW_TAC [][LAM_eq_thm] THEN Q.EXISTS_TAC `tpm [(v,w)] P` THEN
-    SRW_TAC [][tpm_flip_args, cc_beta_tpm_eqn] THEN
+    SRW_TAC [][pmact_flip_args, cc_beta_tpm_eqn] THEN
     METIS_TAC [cc_beta_FV_SUBSET, SUBSET_DEF],
     PROVE_TAC []
   ]);
@@ -609,7 +609,7 @@ val grandbeta_bvc_gen_ind = store_thm(
         !M N. M =b=> N ==> !x. P M N x``,
   REPEAT GEN_TAC THEN STRIP_TAC THEN
   Q_TAC SUFF_TAC `!M N. grandbeta M N ==> !p x. P (tpm p M) (tpm p N) x`
-        THEN1 METIS_TAC [tpm_NIL] THEN
+        THEN1 METIS_TAC [pmact_nil] THEN
   HO_MATCH_MP_TAC grandbeta_ind THEN SRW_TAC [][] THENL [
     Q.ABBREV_TAC `M' = tpm p M` THEN
     Q.ABBREV_TAC `N' = tpm p N` THEN
@@ -639,7 +639,7 @@ val grandbeta_bvc_gen_ind = store_thm(
     SRW_TAC [][Abbr`N1`,Abbr`N2`] THEN
     `(tpm [(z,v)] M1 = tpm ((z,v)::p) ML) /\
      (tpm [(z,v)] M2 = tpm ((z,v)::p) NL)`
-        by SRW_TAC [][GSYM tpm_APPEND, Abbr`M1`,Abbr`M2`] THEN
+        by SRW_TAC [][GSYM pmact_decompose, Abbr`M1`,Abbr`M2`] THEN
     SRW_TAC [][]
   ]);
 
@@ -678,7 +678,7 @@ val grandbeta_permutative = store_thm(
 val grandbeta_permutative_eqn = store_thm(
   "grandbeta_permutative_eqn",
   ``tpm pi M =b=> tpm pi N  <=>  M =b=> N``,
-  METIS_TAC [tpm_inverse, grandbeta_permutative]);
+  METIS_TAC [pmact_inverse, grandbeta_permutative]);
 val _ = export_rewrites ["grandbeta_permutative_eqn"]
 
 val grandbeta_substitutive = store_thm(
@@ -704,7 +704,7 @@ val abs_grandbeta = store_thm(
     SIMP_TAC (srw_ss()) [DISJ_IMP_THM, grandbeta_rules] THEN
     SRW_TAC [][LAM_eq_thm] THENL [
       PROVE_TAC [],
-      SRW_TAC [][LAM_eq_thm, tpm_eqr, tpm_flip_args] THEN
+      SRW_TAC [][LAM_eq_thm, tpm_eqr, pmact_flip_args] THEN
       PROVE_TAC [SUBSET_DEF, grandbeta_FV]
     ],
     PROVE_TAC [grandbeta_rules]
@@ -1133,7 +1133,7 @@ val cc_eta_tpm_eqn = store_thm(
   "cc_eta_tpm_eqn",
   ``compat_closure eta (tpm pi M) N =
     compat_closure eta M (tpm (REVERSE pi) N)``,
-  METIS_TAC [cc_eta_tpm, tpm_inverse]);
+  METIS_TAC [cc_eta_tpm, pmact_inverse]);
 
 val eta_deterministic = store_thm(
   "eta_deterministic",
@@ -1156,7 +1156,7 @@ val cc_eta_LAM = store_thm(
             eta (LAM v t) u``,
   SIMP_TAC (srw_ss()) [Once compat_closure_cases, SimpLHS] THEN
   SIMP_TAC (srw_ss() ++ boolSimps.DNF_ss)[LAM_eq_thm, EQ_IMP_THM, tpm_eqr,
-                                          cc_eta_tpm_eqn, tpm_flip_args] THEN
+                                          cc_eta_tpm_eqn, pmact_flip_args] THEN
   REPEAT STRIP_TAC THEN DISJ1_TAC THEN
   Q_TAC SUFF_TAC `~(v' IN FV (tpm [(v,v')] y))` THEN1 SRW_TAC [][] THEN
   METIS_TAC [cc_eta_FV_SUBSET, SUBSET_DEF]);

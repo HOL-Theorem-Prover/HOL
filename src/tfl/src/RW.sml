@@ -62,7 +62,7 @@ fun gvterm tm =
 fun GENVAR_THM th =
  let val M = concl th
      val M' = gvterm M
- in 
+ in
   EQ_MP (ALPHA M M') th
  end;
 
@@ -85,7 +85,7 @@ fun GENVAR_THM th =
   *   end;
   *--------------------------------------------------------------------------*)
 
- fun alike head tm1 tm2 = 
+ fun alike head tm1 tm2 =
   eq (#1 (strip_comb tm2)) head
   andalso
   can (match_term tm1) tm2;
@@ -618,7 +618,7 @@ fun do_cong cnv cps th0 = let
                     (fn () => String.concatWith "\n"
                                ("ants: " :: map term_to_backend_string ants)))
   fun loop [] = []    (* loop proves each antecedent in turn. *)
-    | loop (ant::rst) = 
+    | loop (ant::rst) =
       let val (outcome,rst') =
            if is_forall ant
              then complex cnv cps (ant,rst)
@@ -630,7 +630,7 @@ fun do_cong cnv cps th0 = let
   fun mk_ant (NO_CHANGE (L,tm)) = itlist DISCH L (REFL tm)
     | mk_ant (CHANGE th) = th
 in
-  if Lib.all unchanged outcomes 
+  if Lib.all unchanged outcomes
     then raise UNCHANGED
     else MATCH_MP th (LIST_CONJ (map mk_ant outcomes))
 end;
@@ -1020,22 +1020,22 @@ end (* structure RW *)
 (*
 (*
 val bar_defn = Hol_defn "bar"
-`bar s = STATE_OPTION_BIND 
+`bar s = STATE_OPTION_BIND
             STATE_OPTION_GET
-            (\s1. STATE_OPTION_BIND 
+            (\s1. STATE_OPTION_BIND
                     STATE_OPTION_GET
-                    (\s2. STATE_OPTION_IGNORE_BIND 
+                    (\s2. STATE_OPTION_IGNORE_BIND
                             (if s1=s2 then STATE_OPTION_UNIT () else (\b. bar b))
                             (STATE_OPTION_UNIT ())))
             s`;
 *)
 val stem = "bar";
-val q = 
-`bar s = STATE_OPTION_BIND 
+val q =
+`bar s = STATE_OPTION_BIND
             STATE_OPTION_GET
-            (\s1. STATE_OPTION_BIND 
+            (\s1. STATE_OPTION_BIND
                     STATE_OPTION_GET
-                    (\s2. STATE_OPTION_IGNORE_BIND 
+                    (\s2. STATE_OPTION_IGNORE_BIND
                             (if s1=s2 then STATE_OPTION_UNIT () else (\b. bar b))
                             (STATE_OPTION_UNIT ())))
             s`;

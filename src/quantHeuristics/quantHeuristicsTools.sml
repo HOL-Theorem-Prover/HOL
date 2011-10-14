@@ -99,7 +99,7 @@ val TRUE_IMP_ELIM_CONV  =
  *---------------------------------------------------------*)
 
 val AND_IMP_ELIM_CONV = TRY_CONV (REWR_CONV (GSYM AND_IMP_INTRO))
-fun LIST_AND_IMP_ELIM_CONV t = 
+fun LIST_AND_IMP_ELIM_CONV t =
 let
    val (p, a) = dest_imp_only t;
 in
@@ -312,7 +312,7 @@ end;
 
 (*----------------------------------------------------------
  * A tiny wrapper around REWR_CONV. This version allows
- * multiple theorems and considers the BODY_CONJUNCTS of 
+ * multiple theorems and considers the BODY_CONJUNCTS of
  * these theorems.
  *---------------------------------------------------------*)
 fun TOP_ONCE_REWRITE_CONV thmL =
@@ -324,7 +324,7 @@ fun TOP_ONCE_REWRITE_CONV thmL =
 
 
 (*----------------------------------------------------------
- * VARIANT_CONV fvL renames all bound variables in a term 
+ * VARIANT_CONV fvL renames all bound variables in a term
  * to ensure that they are distinct to each other and the
  * variables in fvL. Similar VARIANT_TAC does the same for
  * goals.
@@ -426,7 +426,7 @@ in
              in
                 ((t'::tL),(thm::thmL))
              end
-       val (t',asm', t_thm,asm_thms) = 
+       val (t',asm', t_thm,asm_thms) =
            let
               val (xx,yy) = vc_asms fvL0 (t::(rev asm))
            in
@@ -597,7 +597,7 @@ end
 
 
 (*******************************************************
- * match_term_var v t1 t2 
+ * match_term_var v t1 t2
  * searches for an instantiation i, such that
  * replacing v with i in t1 leads to t2, i.e. such that
  * t1 [v/i] = t2.
@@ -623,17 +623,17 @@ end;
 
 
 (*******************************************************
- * avoid_vL and rename_vL are supposed to be lists of 
- * variables. 
- * 
- * list_variant avoid_vL rename_vL 
+ * avoid_vL and rename_vL are supposed to be lists of
+ * variables.
  *
- * returns a list of variants of the variable in rename_vL 
+ * list_variant avoid_vL rename_vL
+ *
+ * returns a list of variants of the variable in rename_vL
  * such that they are all distinct to the variables in avoid_vL
  * and each other. The resulting substitution is returned as well.
  *
  *
- * EXAMPLE: 
+ * EXAMPLE:
  *    list_variant [``x``] [``x``, ``x'``, ``y``]  -->
  *    ([``x'``, ``x''``, ``y``], [``x`` |-> ``x'``, ``x'`` |-> ``x''``])
  *

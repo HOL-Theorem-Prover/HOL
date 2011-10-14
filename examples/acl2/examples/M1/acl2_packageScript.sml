@@ -142,11 +142,11 @@ val ACL2_KNOWN_PACKAGES_def =
 (*****************************************************************************)
 val LOOKUP_def =
  Define
-  `(LOOKUP pkg_name [] _ = pkg_name) 
+  `(LOOKUP pkg_name [] _ = pkg_name)
    /\
-   (LOOKUP pkg_name ((x1,y1,z1)::a) sym_name = 
-     if (sym_name=x1) /\ (pkg_name=y1) 
-       then z1 
+   (LOOKUP pkg_name ((x1,y1,z1)::a) sym_name =
+     if (sym_name=x1) /\ (pkg_name=y1)
+       then z1
        else LOOKUP pkg_name a sym_name)`;
 
 (*****************************************************************************)
@@ -186,7 +186,7 @@ val VALID_PKG_TRIPLES_def =
 
 (*
 
-val VALID_ACL2_PACKAGE_ALIST = 
+val VALID_ACL2_PACKAGE_ALIST =
  save_thm
   ("VALID_ACL2_PACKAGE_ALIST",
    Count.apply (time EVAL) ``VALID_PKG_TRIPLES ACL2_PACKAGE_ALIST``);

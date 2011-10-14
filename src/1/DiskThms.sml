@@ -93,7 +93,7 @@ struct
     val _ = out (Int.toString (#tysize tytable))
     val _ = PP.end_block pps                   (* end type title block *)
     val _ = PP.add_break pps (1,0)
-    fun ipair_string (x,y) = "("^Int.toString x^", "^Int.toString y^")"
+    fun ipair_string (x,y) = "("^Int.toString x^","^Int.toString y^")"
     val _ = PP.begin_block pps PP.INCONSISTENT 0
     fun pr_sty sty =
         case sty of
@@ -179,11 +179,11 @@ struct
             end
           | TYCOMB(tm, ty) => let
             in
-              if newcomb then PP.add_string pps "(:" else ();
-              recurse false tm;
+              PP.add_string pps "(:";
+              recurse true tm;
               PP.add_break pps (1,0);
               pr_type ty;
-              if newcomb then PP.add_string pps ")" else ()
+              PP.add_string pps ")"
             end
           | TYLAMB(a,tm) => let
             in

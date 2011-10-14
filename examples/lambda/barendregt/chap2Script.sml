@@ -6,7 +6,7 @@ open HolKernel Parse boolLib
 open bossLib binderLib
 
 open pred_setTheory pred_setLib
-open termTheory BasicProvers
+open termTheory BasicProvers nomsetTheory
 
 val _ = augment_srw_ss [rewrites [LET_THM]]
 val std_ss = std_ss ++ rewrites [LET_THM]
@@ -356,7 +356,7 @@ val YYf = store_thm(
   ONCE_REWRITE_TAC [lameq_cases] THEN DISJ1_TAC THEN
   SRW_TAC [boolSimps.DNF_ss][Yf_def, Y_def, LAM_eq_thm] THEN
   DISJ1_TAC THEN NEW_ELIM_TAC THEN SRW_TAC [][SUB_LAM_RWT] THEN
-  NEW_ELIM_TAC THEN SRW_TAC [][LAM_eq_thm, tpm_fresh]);
+  NEW_ELIM_TAC THEN SRW_TAC [][LAM_eq_thm, supp_fresh]);
 
 val YffYf = store_thm(
   "YffYf",
@@ -375,7 +375,7 @@ val Yf_fresh = store_thm(
   ``v ∉ FV f ⇒
     (Yf f = LAM v (f @@ (VAR v @@ VAR v)) @@ LAM v (f @@ (VAR v @@ VAR v)))``,
   SRW_TAC [][Yf_def, LET_THM] THEN
-  binderLib.NEW_ELIM_TAC THEN SRW_TAC [][LAM_eq_thm, tpm_fresh]);
+  binderLib.NEW_ELIM_TAC THEN SRW_TAC [][LAM_eq_thm, supp_fresh]);
 
 val Yf_SUB = Store_thm(
   "Yf_SUB",
@@ -393,8 +393,8 @@ val Yf_11 = Store_thm(
   ``(Yf f = Yf g) = (f = g)``,
   SRW_TAC [][Yf_def, LET_THM] THEN
   NTAC 2 (binderLib.NEW_ELIM_TAC THEN REPEAT STRIP_TAC) THEN
-  SRW_TAC [][termTheory.LAM_eq_thm, EQ_IMP_THM] THEN
-  SRW_TAC [][termTheory.tpm_fresh]);
+  SRW_TAC [][LAM_eq_thm, EQ_IMP_THM] THEN
+  SRW_TAC [][supp_fresh]);
 
 val FV_Yf = Store_thm(
   "FV_Yf",
@@ -595,7 +595,7 @@ val _ = export_rewrites ["extra_LAM_DISJOINT"]
 
 val tpm_eq_var = prove(
   ``(tpm pi t = VAR s) <=> (t = VAR (lswapstr pi⁻¹ s))``,
-  SRW_TAC [][tpm_eql]);
+  SRW_TAC [][pmact_eql]);
 val _ = augment_srw_ss [rewrites [tpm_eq_var]]
 
 val (enf_thm, _) = define_recursive_term_function

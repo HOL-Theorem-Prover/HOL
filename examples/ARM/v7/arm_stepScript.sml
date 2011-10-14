@@ -3368,7 +3368,7 @@ val REG_MODE_OF_UPDATES = Q.store_thm("REG_MODE_OF_UPDATES",
                 ARM_READ_REG_MODE (n,m) s) /\
    (!n m a s. ARM_READ_REG_MODE (n,m) (ARM_WRITE_MEM_READ a s) =
               ARM_READ_REG_MODE (n,m) s) /\
-   (!n m x y s. ARM_READ_REG_MODE (n,m) (CLEAR_EXCLUSIVE_BY_ADDRESS (x,y) s) = 
+   (!n m x y s. ARM_READ_REG_MODE (n,m) (CLEAR_EXCLUSIVE_BY_ADDRESS (x,y) s) =
                 ARM_READ_REG_MODE (n,m) s) /\
    (!n m it s. ARM_READ_REG_MODE (n,m) (ARM_WRITE_IT it s) =
                ARM_READ_REG_MODE (n,m) s) /\
@@ -3399,7 +3399,7 @@ val REG_OF_UPDATES = Q.prove(
    (!n a d s. ARM_READ_REG n (ARM_WRITE_MEM a d s) = ARM_READ_REG n s) /\
    (!n a d s. ARM_READ_REG n (ARM_WRITE_MEM_WRITE a d s) = ARM_READ_REG n s) /\
    (!n a s. ARM_READ_REG n (ARM_WRITE_MEM_READ a s) = ARM_READ_REG n s) /\
-   (!n x y s. ARM_READ_REG n (CLEAR_EXCLUSIVE_BY_ADDRESS (x,y) s) = 
+   (!n x y s. ARM_READ_REG n (CLEAR_EXCLUSIVE_BY_ADDRESS (x,y) s) =
               ARM_READ_REG n s) /\
    (!n it s. ARM_READ_REG n (ARM_WRITE_IT it s) = ARM_READ_REG n s) /\
    (!n ge s. ARM_READ_REG n (ARM_WRITE_GE ge s) = ARM_READ_REG n s) /\
@@ -3407,7 +3407,7 @@ val REG_OF_UPDATES = Q.prove(
    (!n f b s. ARM_READ_REG n (ARM_WRITE_STATUS f b s) = ARM_READ_REG n s) /\
    (!n d s.  ARM_READ_REG n (ARM_WRITE_SPSR d s) = ARM_READ_REG n s)`,
   SRW_TAC []
-    [ARM_READ_REG_def, ARM_WRITE_REG_def, REG_MODE_OF_UPDATES, 
+    [ARM_READ_REG_def, ARM_WRITE_REG_def, REG_MODE_OF_UPDATES,
      CPSR_COMPONENTS_OF_UPDATES, ARM_MODE_def, PSR_OF_UPDATES]);
 
 val REG_OF_UPDATES = save_thm("REG_OF_UPDATES",

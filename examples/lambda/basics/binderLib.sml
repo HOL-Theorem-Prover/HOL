@@ -4,12 +4,12 @@ struct
 open HolKernel Parse boolLib
 open BasicProvers simpLib
 
-local open pred_setTheory in end
+open nomsetTheory
 
 open NEWLib
 structure Parse = struct
   open Parse
-  val (Type,Term) = parse_from_grammars stringTheory.string_grammars
+  val (Type,Term) = parse_from_grammars nomsetTheory.nomset_grammars
 end
 open Parse
 
@@ -31,13 +31,11 @@ datatype nominaltype_info =
                   nullfv : term,
                   pm_constant : term,
                   pm_rewrites : thm list,
-                  fv_constant : term,
                   fv_rewrites : thm list,
                   binders : (term * int * thm) list }
 
 fun nti_null_fv (NTI{nullfv, ...}) = nullfv
 fun nti_perm_t (NTI{pm_constant,...}) = pm_constant
-fun nti_fv_t (NTI{fv_constant,...}) = fv_constant
 fun nti_recursion (NTI{recursion_thm,...}) = recursion_thm
 
 
@@ -151,6 +149,7 @@ in
   recurse [] [t]
 end
 
+val supp_t = prim_mk_const{Name = "supp", Thy = "nomset"}
 fun find_avoids (t, (strs, sets)) = let
   open stringSyntax
   fun isdbty t = let
@@ -160,7 +159,8 @@ fun find_avoids (t, (strs, sets)) = let
     if is_var t then
       case Binarymap.peek(!type_db, {Thy=Thy,Name=Tyop}) of
         NONE => NONE
-      | SOME (NTI data) => SOME (mk_icomb(#fv_constant data, t))
+      | SOME (NTI data) => SOME (mk_icomb(mk_icomb(supp_t, #pm_constant data),
+                                          t))
     else NONE
   end handle HOL_ERR _ => NONE
   fun eqty ty t = type_of t = ty
@@ -324,16 +324,15 @@ in
   (f, conjs)
 end
 
-val null_fv = ``combin$K pred_set$EMPTY : 'a -> string -> bool``
-val null_swap = ``\x:string y:string z:'a. z``
-val null_apm = ``combin$K combin$I : (string # string)list -> 'a -> 'a``
-val nameless_nti = NTI { nullfv = mk_arb alpha,
-                         pm_constant = null_apm,
-                         pm_rewrites = [combinTheory.K_THM, combinTheory.I_THM],
-                         fv_constant = null_fv,
-                         fv_rewrites = [combinTheory.K_THM],
-                         recursion_thm = NONE,
-                         binders = []}
+val null_apm = ``nomset$mk_pmact (combin$K combin$I) : 'a nomset$pmact``
+val nameless_nti =
+    NTI { nullfv = mk_arb alpha,
+          pm_constant = null_apm,
+          pm_rewrites = [nomsetTheory.discretepm_raw, combinTheory.K_THM,
+                         combinTheory.I_THM],
+          fv_rewrites = [],
+          recursion_thm = NONE,
+          binders = []}
 
 
 val range_database = ref (Binarymap.mkDict String.compare)
@@ -349,7 +348,7 @@ val cpm_ty = let val sty = stringSyntax.string_ty
                listSyntax.mk_list_type (pairSyntax.mk_prod (sty, sty))
              end
 
-fun mk_perm_ty ty = cpm_ty --> ty --> ty
+fun mk_perm_ty ty = mk_thy_type {Tyop = "pmact", Thy = "nomset", Args = [ty]}
 
 exception InfoProofFailed of term
 fun with_info_prove_recn_exists f finisher dom_ty rng_ty lookup info = let
@@ -450,7 +449,7 @@ in
     SOME {Tyop, Thy, ...} => let
     in
       case Binarymap.peek(!type_db, {Name=Tyop,Thy=Thy}) of
-        NONE => callthis nameless_nti
+        NONE => callthis nameless_nti |> REWRITE_RULE [discretepm_thm]
       | SOME i => callthis i
         handle InfoProofFailed tm =>
                (HOL_WARNING
@@ -459,9 +458,9 @@ in
                   ("Couldn't prove function with swap over range - \n\
                    \goal was "^tmToString tm^"\n\
                    \trying null range assumption");
-                callthis nameless_nti)
+                callthis nameless_nti |> REWRITE_RULE [discretepm_thm])
     end
-  | NONE => callthis nameless_nti
+  | NONE => callthis nameless_nti |> REWRITE_RULE [discretepm_thm]
 end handle InfoProofFailed tm =>
            raise ERR "prove_recursive_term_function_exists"
                      ("Couldn't prove function with swap over range - \n\

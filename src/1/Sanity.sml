@@ -17,12 +17,12 @@ fun report_sanity_problem___plain thy thm_name warning =
      warning;
 
 val report_last_thm = ref "";
-fun report_sanity_problem___verbose thy thm_name warning =  
+fun report_sanity_problem___verbose thy thm_name warning =
   let
      open PPBackEnd
      val thm_s = thy^"Theory."^thm_name;
      val _ = if not (thm_s = (!report_last_thm)) then
-        let 
+        let
           val _ = report_last_thm := thm_s;
           val _ = print "\n\n";
           val _ = print_with_style [Bold] thm_s;
@@ -50,8 +50,8 @@ val _ = Feedback.register_btrace ("Sanity Check Verbose", report_verbose);
 
 
 fun report_sanity_problem thy thm_name warning =
-  (if (!report_verbose) then 
-      report_sanity_problem___verbose thy thm_name warning 
+  (if (!report_verbose) then
+      report_sanity_problem___verbose thy thm_name warning
    else
       report_sanity_problem___plain thy thm_name warning);
 
@@ -75,7 +75,7 @@ let
   val hL = hyp thm
 in
   if null hL then false else
-  (report_sanity_problem thy name "Theorem has assumptions";true)  
+  (report_sanity_problem thy name "Theorem has assumptions";true)
 end;
 
 
@@ -96,12 +96,12 @@ let
   val orac_s = if (null oL') then "" else
        ("Oracles used: "^(concat (commafy oL')));
   val axiom_s = if (null aL') then "" else
-       ("Axioms used: "^(concat (commafy aL')));           
+       ("Axioms used: "^(concat (commafy aL')));
   val s = if (null oL') then axiom_s else
           if (null aL') then orac_s else
           (orac_s ^ "; "^axiom_s)
 in
-  if (null oL' andalso null aL') then false else  
+  if (null oL' andalso null aL') then false else
   ((report_sanity_problem thy name s);true)
 end;
 
@@ -117,11 +117,11 @@ fun check_thm_name ((thy, name), (thm, cl)) =
 if (!check_thm_name_flag) then
 let
   val dL = DB.listDB ();
-  val dL' = filter (fn ((thy',name'), _) => 
+  val dL' = filter (fn ((thy',name'), _) =>
       ((name = name') andalso (not (thy = thy')))) dL
   val dL'' = map (fn ((s,_), _) => "'"^s^"'") dL';
 in
-  if (null dL') then false else  
+  if (null dL') then false else
   (report_sanity_problem thy name ("Name-clash with theorems in theories "^
      (concat (commafy dL''))); true)
 end else false;
@@ -137,7 +137,7 @@ let
   val vL' = filter (fn v => not (Lexis.ok_identifier (fst (dest_var v)))) vL
   val vnL = map  (fn v => ("'"^(fst (dest_var v))^"'")) vL'
 in
-  if (null vnL) then false else  
+  if (null vnL) then false else
   ((report_sanity_problem thy name ("Dodgy variables names: "^
      (concat (commafy vnL))));true)
 end;
@@ -153,7 +153,7 @@ let
   val vL' = filter (fn v => Parse.is_constname (fst (dest_var v))) vL
   val vnL = map  (fn v => ("'"^(fst (dest_var v))^"'")) vL'
 in
-  if (null vnL) then false else  
+  if (null vnL) then false else
   ((report_sanity_problem thy name ("Variables names clash with constants: "^
      (concat (commafy vnL))));true)
 end else false;
@@ -200,7 +200,7 @@ let
    fun check_term t =
       let
         val (v, b) = dest_abs (rand t)
-      in 
+      in
         if (free_in v b) then false else
           (report_sanity_problem thy name ("Redundant quantor: '" ^
           (term_to_backend_string v) ^ "'!");true)
@@ -221,10 +221,10 @@ val sanity_checks = [
    check_thm_name,
    check_var_names___no_ident,
    check_var_names___const,
-   check_free_vars, 
+   check_free_vars,
    check_redundant_quantors]:(DB.data -> bool) list
 
-fun sanity_check_data (data:DB.data) = 
+fun sanity_check_data (data:DB.data) =
    (map_fail false (fn ff => ff data) sanity_checks)
 
 fun sanity_check_theory thy =
@@ -257,7 +257,7 @@ fun sanity_check_exn_thm (name, thm) =
 
 fun sanity_prove (t, tac) = sanity_check_exn_thm ("-", Tactical.prove (t, tac));
 fun save_thm (name, thm) = Theory.save_thm (name, sanity_check_exn_thm (name, thm));
-fun store_thm (name, t, tac) = 
+fun store_thm (name, t, tac) =
    sanity_check_exn_thm (name, Tactical.store_thm (name, t, tac));
 
 end

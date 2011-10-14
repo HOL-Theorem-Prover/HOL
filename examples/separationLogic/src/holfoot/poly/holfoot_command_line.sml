@@ -15,7 +15,7 @@ let
   val _ = print_with_style [Bold] "Modes:\n";
   val s =   "  -q      quiet mode, verify specifications automatically and just print end results\n";
   val s = s^"  -i      interactive mode, verify specifications step by step\n";
-  val s = s^(if full then 
+  val s = s^(if full then
             "  -f      file mode, load files with interactive proofs\n\n" else "\n");
   val _ = print s;
   val _ = print_with_style [Bold] "Printing switches:\n";
@@ -82,7 +82,7 @@ fun apply_solve () =
 fun apply_strip () = proofManagerLib.e (REPEAT STRIP_TAC)
 val apply_restart = proofManagerLib.restart
 val apply_backup = proofManagerLib.b
-fun apply_solve_till sp = proofManagerLib.e 
+fun apply_solve_till sp = proofManagerLib.e
        (xHF_SOLVE_TAC [generate_vcs, sp])
 val apply_restart = proofManagerLib.restart
 val apply_backup = proofManagerLib.b
@@ -107,7 +107,7 @@ let
        val _ = print "\n";
        in () end;
    val _ = print_goals ();
-   
+
    fun print_error c = if (c = #"\n") then () else
       let
          open PPBackEnd Parse
@@ -119,8 +119,8 @@ let
       end;
 
    fun loop () = let
-      val c_opt = TextIO.input1 TextIO.stdIn   
-      val _ = if isSome c_opt then () else loop();   
+      val c_opt = TextIO.input1 TextIO.stdIn
+      val _ = if isSome c_opt then () else loop();
       val c = valOf c_opt;
    in
       (((case c of
@@ -143,7 +143,7 @@ let
         | #"q" => (Portable.exit ())
         | #"?" => (print_interactive_help ())
         | _ => (print_error c)
-      ) handle Interrupt => raise Interrupt 
+      ) handle Interrupt => raise Interrupt
              | _ => ());loop())
    end;
 in
@@ -180,9 +180,9 @@ fun holfoot_web_interface () = let
    val _ = Feedback.set_trace "Unicode" 1
    val _ = Feedback.set_trace "goalstack chatting" 0
    val args = CommandLine.arguments ();
-   val (unicode, args) = (false, Lib.snd (Lib.pluck (fn x => x = "-nu") args)) 
+   val (unicode, args) = (false, Lib.snd (Lib.pluck (fn x => x = "-nu") args))
       handle _ => (true, args);
-   val (yices, args) = (true, Lib.snd (Lib.pluck (fn x => x = "--yices") args)) 
+   val (yices, args) = (true, Lib.snd (Lib.pluck (fn x => x = "--yices") args))
       handle _ => (false, args);
    val _ = Feedback.set_trace "Unicode" (if unicode then 1 else 0)
    val _ = Feedback.set_trace "holfoot use Yices" (if yices then 1 else 0)
@@ -192,7 +192,7 @@ in
       val spec_t = parse_holfoot_file (hd args);
       val _ = web_interface_print_goals [SOME ([], spec_t)]
    in () end else let
-      val gL = map (fn (_,thm) => (hyp thm, concl thm)) 
+      val gL = map (fn (_,thm) => (hyp thm, concl thm))
            (DiskThms.read_stream Portable.stdin);
       val pos = valOf (Int.fromString (el 1 args))
       val command = String.sub ((el 2 args), 0)
@@ -223,7 +223,7 @@ end
 
 fun holfoot_run (full, filemode_command) = let
    val _ = Feedback.set_trace "PPBackEnd use annotations" 0
-   val _ = Feedback.set_trace "HolSmtLib" 0   
+   val _ = Feedback.set_trace "HolSmtLib" 0
    val _ = Feedback.set_trace "meson" 0
    val _ = Feedback.set_trace "metis" 0
    val _ = Globals.interactive := false;
@@ -238,21 +238,21 @@ fun holfoot_run (full, filemode_command) = let
 
    val orgargs = CommandLine.arguments ();
    val args = orgargs;
-   val (quiet, args) = (true, Lib.snd (Lib.pluck (fn x => x = "-q") args)) 
+   val (quiet, args) = (true, Lib.snd (Lib.pluck (fn x => x = "-q") args))
       handle _ => (false, args);
-   val (intera, args) = (true, Lib.snd (Lib.pluck (fn x => x = "-i") args)) 
+   val (intera, args) = (true, Lib.snd (Lib.pluck (fn x => x = "-i") args))
       handle _ => (false, args);
-   val (file_mode, args) = (true, Lib.snd (Lib.pluck (fn x => x = "-f") args)) 
+   val (file_mode, args) = (true, Lib.snd (Lib.pluck (fn x => x = "-f") args))
       handle _ => (false, args);
-   val (unicode, args) = (false, Lib.snd (Lib.pluck (fn x => x = "-nu") args)) 
+   val (unicode, args) = (false, Lib.snd (Lib.pluck (fn x => x = "-nu") args))
       handle _ => (true, args);
-   val (yices, args) = (true, Lib.snd (Lib.pluck (fn x => x = "--yices") args)) 
+   val (yices, args) = (true, Lib.snd (Lib.pluck (fn x => x = "--yices") args))
       handle _ => (false, args);
-   val (raw_output, args) = (true, Lib.snd (Lib.pluck (fn x => x = "-r") args)) 
+   val (raw_output, args) = (true, Lib.snd (Lib.pluck (fn x => x = "-r") args))
       handle _ => (false, args);
-   val (html_output, args) = (true, Lib.snd (Lib.pluck (fn x => x = "--html") args)) 
+   val (html_output, args) = (true, Lib.snd (Lib.pluck (fn x => x = "--html") args))
       handle _ => (false, args);
-   val (do_profile, args) = (true, Lib.snd (Lib.pluck (fn x => x = "-p") args)) 
+   val (do_profile, args) = (true, Lib.snd (Lib.pluck (fn x => x = "-p") args))
       handle _ => (false, args);
    fun print_profile () = if not do_profile then () else
       (print "\n\n";Profile.print_profile_results (Profile.results ()))
@@ -260,7 +260,7 @@ fun holfoot_run (full, filemode_command) = let
    val (vl, args) = pluck_num_arg "-v" args handle _ => (0, args);
    val (vlt, args) = pluck_num_arg "-vt" args handle _ => (0, args);
 
-   val _ = Parse.current_backend := (if (raw_output) then PPBackEnd.raw_terminal else 
+   val _ = Parse.current_backend := (if (raw_output) then PPBackEnd.raw_terminal else
                                     (if (html_output) then PPBackEnd.html_terminal else PPBackEnd.vt100_terminal));
    val _ = Feedback.set_trace "Unicode" (if unicode then 1 else 0)
    val _ = Feedback.set_trace "holfoot print file" (if html_output then 0 else 1);

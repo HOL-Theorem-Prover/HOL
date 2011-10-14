@@ -235,7 +235,7 @@ val lcc_beta_bvc_ind = store_thm(
   REPEAT GEN_TAC THEN STRIP_TAC THEN
   Q_TAC SUFF_TAC `!M N. lcompat_closure(beta0 RUNION beta1) M N ==>
                         !p. P (ltpm p M) (ltpm p N)`
-        THEN1 METIS_TAC [ltpm_NIL] THEN
+        THEN1 METIS_TAC [pmact_nil] THEN
   HO_MATCH_MP_TAC lcompat_closure_ind THEN
   SRW_TAC [][relationTheory.RUNION, beta0_def, beta1_def] THENL [
     (* beta0 reduction *)
@@ -264,7 +264,7 @@ val lcc_beta_bvc_ind = store_thm(
                          LAM z (ltpm [(z,lswapstr p v)] (ltpm p M))) /\
                     (LAM (lswapstr p v) (ltpm p N) =
                          LAM z (ltpm [(z,lswapstr p v)] (ltpm p N)))`
-          THEN1 SRW_TAC [][GSYM ltpm_APPEND] THEN
+          THEN1 SRW_TAC [][GSYM pmact_decompose] THEN
     SRW_TAC [][ltpm_ALPHA],
 
     Q_TAC (NEW_TAC "w")
@@ -274,14 +274,14 @@ val lcc_beta_bvc_ind = store_thm(
      (LAMi n (lswapstr p v) (ltpm p N) (ltpm p z) =
         LAMi n w (ltpm [(w,lswapstr p v)] (ltpm p N)) (ltpm p z))`
       by SRW_TAC [][ltpm_ALPHAi] THEN
-    SRW_TAC [][GSYM ltpm_APPEND],
+    SRW_TAC [][GSYM pmact_decompose],
 
     Q_TAC (NEW_TAC "w")
           `X UNION FV (ltpm p z) UNION FV (ltpm p M) UNION FV (ltpm p N)` THEN
     `!N. LAMi n (lswapstr p v) (ltpm p z) N =
          LAMi n w (ltpm [(w,lswapstr p v)] (ltpm p z)) N`
       by SRW_TAC [][ltpm_ALPHAi] THEN
-    SRW_TAC [][GSYM ltpm_APPEND]
+    SRW_TAC [][GSYM pmact_decompose]
   ]);
 
 open boolSimps
@@ -346,7 +346,7 @@ val lcc_beta_ltpm_eqn = store_thm(
   "lcc_beta_ltpm_eqn",
   ``lcompat_closure (beta0 RUNION beta1) (ltpm pi M) N =
     lcompat_closure (beta0 RUNION beta1) M (ltpm (REVERSE pi) N)``,
-  METIS_TAC [lcc_beta_ltpm_imp, ltpm_inverse]);
+  METIS_TAC [lcc_beta_ltpm_imp, pmact_inverse]);
 
 val lcc_beta_LAM = store_thm(
   "lcc_beta_LAM",
@@ -358,7 +358,7 @@ val lcc_beta_LAM = store_thm(
   SRW_TAC [][beta0_def, beta1_def, relationTheory.RUNION] THEN EQ_TAC THEN
   STRIP_TAC THENL [
     FULL_SIMP_TAC (srw_ss()) [lLAM_eq_thm] THEN
-    SRW_TAC [][ltpm_eqr, lcc_beta_ltpm_eqn, ltpm_flip_args] THEN
+    SRW_TAC [][ltpm_eqr, lcc_beta_ltpm_eqn, pmact_flip_args] THEN
     METIS_TAC [lcc_beta_FV],
     METIS_TAC []
   ]);

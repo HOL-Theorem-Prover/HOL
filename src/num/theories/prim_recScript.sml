@@ -59,7 +59,6 @@ structure prim_recScript =
 struct
 
 open HolKernel boolLib Prim_rec Parse
-infix THEN THENL;
 
 type thm = Thm.thm
 
@@ -615,6 +614,7 @@ Q.store_thm("WF_measure", `!m. WF (measure m)`,
 REWRITE_TAC[measure_def]
  THEN MATCH_MP_TAC relationTheory.WF_inv_image
  THEN ACCEPT_TAC WF_LESS);
+val _ = BasicProvers.export_rewrites ["WF_measure"]
 
 val measure_thm = Q.store_thm
 ("measure_thm",
@@ -622,6 +622,7 @@ val measure_thm = Q.store_thm
  REWRITE_TAC [measure_def,relationTheory.inv_image_def]
    THEN BETA_TAC
    THEN REWRITE_TAC []);
+val _ = BasicProvers.export_rewrites ["measure_thm"]
 
 val _ = export_theory() ;
 

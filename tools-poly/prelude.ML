@@ -163,19 +163,11 @@ in
 end;
 
 val _ = if FileSys.access ("Holmakefile", [FileSys.A_READ]) then let
-            open Holmake_types;
-            fun base_env s =
-                case s of
-                  "HOLDIR" => [LIT HOLDIR]
-                | "SIGOBJ" => [VREF "HOLDIR", LIT "/sigobj"]
-                | _ => (case Process.getEnv s of
-                          NONE => [LIT ""]
-                        | SOME v => [LIT v]);
-            val toks = ReadHMF.read "Holmakefile";
-            val env = extend_env toks base_env;
+            open Holmake_types
+            val (env, _, _) = ReadHMF.read "Holmakefile" base_environment
             fun envlist id =
-                map dequote (tokenize (perform_substitution env [VREF id]));
-            val hmake_includes = envlist "INCLUDES";
+                map dequote (tokenize (perform_substitution env [VREF id]))
+            val hmake_includes = envlist "INCLUDES"
           in
             case hmake_includes of
               [] => ()

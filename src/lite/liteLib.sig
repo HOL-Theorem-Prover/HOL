@@ -109,7 +109,6 @@ sig
 
     val RIGHT_BETAS : term list -> thm -> thm
     val BINDER_CONV : conv -> conv
-    val BINOP_CONV : term -> conv -> conv
     val BODY_CONV : conv -> conv
     val COMB2_CONV : conv -> conv -> conv
     val COMB2_QCONV : conv -> conv -> conv

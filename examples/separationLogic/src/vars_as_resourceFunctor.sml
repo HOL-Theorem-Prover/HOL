@@ -88,15 +88,15 @@ sig
 end) :
 sig
    type var_res_inference_group =
-     (* group name (used for debug) *) 
-     string * 
+     (* group name (used for debug) *)
+     string *
      (* group guard, inferences are just applied to
         terms that satisfy this guard *)
-     (Abbrev.term -> bool) * 
-     (* apply before working on subterms *) 
-     bool * 
+     (Abbrev.term -> bool) *
+     (* apply before working on subterms *)
+     bool *
      (* use this inference group to clean up after a "bigger" step *)
-     bool * 
+     bool *
      (* the members of the group, each with a name for debugging *)
      (string * var_res_param.var_res_base.var_res_inference) list;
 
@@ -957,7 +957,7 @@ local
 
    val intro_hoare_triples =
        ANTE_CONV_RULE (
-         (QUANT_CONV (STRIP_CONJ_CONV 
+         (QUANT_CONV (STRIP_CONJ_CONV
             ASL_PROGRAM_IS_ABSTRACTION___forall_comment_var_res_prog_quant_bla_CONV)) THENC
          (TRY_CONV FORALL_SIMP_CONV)
        )
@@ -1116,8 +1116,8 @@ val tt = find_term is_VAR_RES_COND_HOARE_TRIPLE (snd (top_goal ()))
 fun VAR_RES_COND_INFERENCE___cond___CONSEQ_CONV tt =
 let
    val (p1,c_opt,_,_,_,thm0_fun) = dest_VAR_RES_COND_HOARE_TRIPLE___FIRST_COMMAND_location tt;
-   val cond_t_opt = 
-      let 
+   val cond_t_opt =
+      let
          val (cond_t, _, _) = dest_asl_prog_cond p1
       in SOME cond_t end handle HOL_ERR _ =>
       let
@@ -1186,7 +1186,7 @@ let
    val thm0 = if not (isSome c_opt) then REFL tt else
               VAR_RES_COND_HOARE_TRIPLE___FIRST_COMMAND___CONV
                    (K (ISPECL [c, p1] asl_comment_location_def)) tt;
-      
+
    val thm1a =
       HO_PART_MATCH I VAR_RES_COND_INFERENCE___prog_block_diverge
       (rhs (concl thm0));
@@ -1430,11 +1430,11 @@ in
 end;
 
 
-(* while preparing for the introduction of a "VAR_RES_FRAME_SPLIT" 
+(* while preparing for the introduction of a "VAR_RES_FRAME_SPLIT"
    predicate, existential quantifiers are moved to the outer level.
    This may cause trouble, because the choices for these variables have to
    hold under all other (later) case-splits. Therefore, obvious case splits
-   are done first, like ones acoording to if-then-else. Moreover, 
+   are done first, like ones acoording to if-then-else. Moreover,
    concrete values for variables are introduced as well before the existential
    quantifiers. *)
 
@@ -1765,11 +1765,11 @@ let
 
 
     (* apply inference *)
-    val inf_thm = if (is_asl_comment_loop_invariant p1) then 
+    val inf_thm = if (is_asl_comment_loop_invariant p1) then
                      VAR_RES_COND_INFERENCE___while_unroll___invariant
                   else if (is_asl_comment_loop_spec p1) then
                      VAR_RES_COND_INFERENCE___while_unroll___loop_spec
-                  else VAR_RES_COND_INFERENCE___while_unroll  
+                  else VAR_RES_COND_INFERENCE___while_unroll
     val thm1a = PART_MATCH (snd o dest_imp) inf_thm (rhs (concl thm0))
     fun unroll_comment_intro t =
        let
@@ -1780,7 +1780,7 @@ let
        end;
 
     val thm1b = CONV_RULE ((RATOR_CONV o RAND_CONV o RAND_CONV o RATOR_CONV o RAND_CONV o
-                   RAND_CONV o RAND_CONV o RAND_CONV o RATOR_CONV o RAND_CONV) unroll_comment_intro) thm1a   
+                   RAND_CONV o RAND_CONV o RAND_CONV o RATOR_CONV o RAND_CONV) unroll_comment_intro) thm1a
 
     val thm1c = CONV_RULE ((RATOR_CONV o RAND_CONV) (REWRITE_CONV [
          VAR_RES_COND_INFERENCE___prog_block3, APPEND])) thm1b
@@ -1801,10 +1801,10 @@ let
          if is_asl_prog_block t then RAND_CONV (block_list_CONV conv) t else
             conv t
 
-    val thm2a = CONV_RULE ((RATOR_CONV o RAND_CONV o RATOR_CONV o RAND_CONV o RATOR_CONV o RAND_CONV) 
+    val thm2a = CONV_RULE ((RATOR_CONV o RAND_CONV o RATOR_CONV o RAND_CONV o RATOR_CONV o RAND_CONV)
                      (block_second_CONV (asl_comment_location_INTRO_CONV new_c2))) thm1
 
-    val thm2 = CONV_RULE ((RATOR_CONV o RAND_CONV o RAND_CONV o RATOR_CONV o RAND_CONV) 
+    val thm2 = CONV_RULE ((RATOR_CONV o RAND_CONV o RAND_CONV o RATOR_CONV o RAND_CONV)
                      (block_second_CONV (asl_comment_location_INTRO_CONV new_c3))) thm2a
 
 in
@@ -2359,7 +2359,7 @@ let
        let
           val vc1 = if isSome vc1_opt then (valOf vc1_opt) else (genvar (Type `:unit`));
           val vc2 = if isSome vc2_opt then (valOf vc2_opt) else (genvar (Type `:unit`));
-          val (_,sub) = quantHeuristicsTools.list_variant (free_vars vc1) (free_vars vc2) 
+          val (_,sub) = quantHeuristicsTools.list_variant (free_vars vc1) (free_vars vc2)
           val vc2' = subst sub vc2;
        in
           SOME (pairSyntax.mk_pair(vc1, vc2'))
@@ -2417,8 +2417,8 @@ let
                         var_res_prop_internal___ELIM_CONV THENC
                         COND_PROP___STRONG_EXISTS_NORMALISE_CONV) a_prop;
 
-    val thm1 = CONV_RULE ((RATOR_CONV o RAND_CONV o QUANT_CONV o 
-                           VAR_RES_COND_HOARE_TRIPLE___FIRST_COMMAND___CONV) 
+    val thm1 = CONV_RULE ((RATOR_CONV o RAND_CONV o QUANT_CONV o
+                           VAR_RES_COND_HOARE_TRIPLE___FIRST_COMMAND___CONV)
                           (DEPTH_CONV (REWR_CONV a_prop_thm))) thm0
 
     (*reintroduce orginal variable names*)
@@ -2429,7 +2429,7 @@ let
 
     (*introduce comment*)
     val new_c1 = asl_comment_modify_APPEND ("assertion") c
-    val thm3 = CONV_RULE ((RATOR_CONV o RAND_CONV o 
+    val thm3 = CONV_RULE ((RATOR_CONV o RAND_CONV o
                    STRIP_QUANT_CONV o
                    RATOR_CONV o RAND_CONV o RAND_CONV o RATOR_CONV o RAND_CONV)
                   ((asl_comment_location2_INTRO_CONV new_c1))) thm2
@@ -2809,7 +2809,7 @@ let
           (imp_sfb, VAR_RES_FRAME_SPLIT___imp_CONV, VAR_RES_FRAME_SPLIT___trivial_cond___imp, true),
           (split_sfb, VAR_RES_FRAME_SPLIT___split_CONV, VAR_RES_FRAME_SPLIT___trivial_cond___split, false)]
 
-   val dest_fun = if (has_precond) then (snd o dest_imp) else I  
+   val dest_fun = if (has_precond) then (snd o dest_imp) else I
    val thm1 = PART_MATCH (lhs o dest_fun) thm (rhs (concl resort_thm));
    val thm2 = if has_precond then var_res_precondition_prove thm1 else thm1
    val thm3 = TRANS resort_thm thm2
@@ -3049,7 +3049,7 @@ let
        tt;
 
    fun split_thm_inst thm =
-       let 
+       let
           val ttt = (fst o strip_comb o split o concl) thm
           val thm2 = INST_TYPE (snd (match_term ttt split_term)) thm
        in
@@ -3061,20 +3061,20 @@ let
    val (solve_thm0,has_bool) = if bagSyntax.is_empty imp_sfb then
                       (split_thm_inst (if preserve_fallback then VAR_RES_FRAME_SPLIT___SOLVE else
                             VAR_RES_FRAME_SPLIT___SOLVE_WEAK), false)
-                   else 
+                   else
                      let
                         val _ = if not (do_bool) then Feedback.fail() else ();
                         val (bp, rb) = bagSyntax.dest_insert imp_sfb handle HOL_ERR _ => raise UNCHANGED;
                         val _ = if bagSyntax.is_empty rb then () else raise UNCHANGED
                         val (_, b) = dest_var_res_bool_proposition bp handle HOL_ERR _ => raise UNCHANGED
-                        val b_thm_opt = SOME (var_res_param.final_decision_procedure context b) handle HOL_ERR _ => NONE;                      
+                        val b_thm_opt = SOME (var_res_param.final_decision_procedure context b) handle HOL_ERR _ => NONE;
                      in
                         if (isSome b_thm_opt) then let
                            val inf_thm =  SPEC b (split_thm_inst (if preserve_fallback then VAR_RES_FRAME_SPLIT___SOLVE___bool_prop___MP else VAR_RES_FRAME_SPLIT___SOLVE_WEAK___bool_prop___MP))
                            val xthm0 = MP inf_thm (valOf b_thm_opt)
                         in
                            (xthm0, false)
-                        end else                         
+                        end else
                            (SPEC b (split_thm_inst (if preserve_fallback then VAR_RES_FRAME_SPLIT___SOLVE___bool_prop else VAR_RES_FRAME_SPLIT___SOLVE_WEAK___bool_prop)), true)
                      end;
 
@@ -3379,15 +3379,15 @@ thm
 (* ========================================================================== *)
 
 type var_res_inference_group =
-  (* group name (used for debug) *) 
-  string * 
+  (* group name (used for debug) *)
+  string *
   (* group guard, inferences are just applied to
      terms that satisfy this guard *)
-  (term -> bool) * 
-  (* apply before working on subterms *) 
-  bool * 
+  (term -> bool) *
+  (* apply before working on subterms *)
+  bool *
   (* use this inference group to clean up after a "bigger" step *)
-  bool * 
+  bool *
   (* the members of the group, each with a name for debugging *)
   (string * var_res_inference) list;
 
@@ -3484,7 +3484,7 @@ val VAR_RES_INFERENCES_LIST___entailment_solve = ("entailment",
    (K true), false, true,
    [("entailment_solve",
        fn p => (fn context => (K
-       (VAR_RES_FRAME_SPLIT_INFERENCE___SOLVE___CONSEQ_CONV 
+       (VAR_RES_FRAME_SPLIT_INFERENCE___SOLVE___CONSEQ_CONV
           false (not (#fast p)) context))))]):var_res_inference_group;
 
 
@@ -3855,7 +3855,7 @@ val CONSEQ_CONV_CONGRUENCE___var_res_list =
 fun vc_conv vc step_opt =
    if not vc then (K (0, NONE)) else
    EXT_DEPTH_NUM_CONSEQ_CONV CONSEQ_CONV_CONGRUENCE___var_res_list NONE step_opt true
-     [(true, SOME 1, fn context => 
+     [(true, SOME 1, fn context =>
          (K (VAR_RES_FRAME_SPLIT_INFERENCE___SOLVE___CONSEQ_CONV true false context)))] []
    CONSEQ_CONV_STRENGTHEN_direction;
 
@@ -3870,7 +3870,7 @@ fun VAR_RES_GEN_STEP_CONSEQ_CONV (p:gen_step_param) ssp step_opt n context  =
       val stops = if null (#stop_evals p) then K false else
                       (fn t => (exists (fn pp => (pp t) handle Interrupt => raise Interrupt
                                                             | _ => false) (#stop_evals p)))
-      
+
       val ssp0 = not (#prop_simp_level p = 0);
       val ssp1 = simpLib.merge_ss [var_res_param.predicate_ssfrag (#prop_simp_level p),
                 (mk_ssfrag ssp)];
@@ -3896,8 +3896,8 @@ fun VAR_RES_GEN_STEP_CONSEQ_CONV (p:gen_step_param) ssp step_opt n context  =
 
            fun apply_second_step s f (n2, thm2_opt) =
                if (isSome thm2_opt) then (n2, thm2_opt) else
-               ((gen_step_conv_map_fun 1 ("toplevel - "^s) 
-                  (fn x => let 
+               ((gen_step_conv_map_fun 1 ("toplevel - "^s)
+                  (fn x => let
                       val (n, thm_opt) = f x;
                       val _ = if isSome thm_opt then () else Feedback.fail()
                       in (n, thm_opt) end) t')

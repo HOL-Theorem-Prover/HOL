@@ -168,7 +168,7 @@ val num_to_hex_string_def = Define `num_to_hex_string = n2s 16 HEX`;
 (* ------------------------------------------------------------------------- *)
 
 val TRANS_THMS = Theory.save_thm("TRANS_THMS",
-  Drule.LIST_CONJ 
+  Drule.LIST_CONJ
     [arithmeticTheory.LESS_TRANS,
      arithmeticTheory.LESS_EQ_LESS_TRANS,
      arithmeticTheory.LESS_LESS_EQ_TRANS,

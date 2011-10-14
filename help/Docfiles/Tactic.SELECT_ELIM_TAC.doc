@@ -46,7 +46,7 @@ Note also that the choice of select term to eliminate is made in an
 unspecified manner.
 
 \SEEALSO
-Drule.SELECT_ELIM, Drule.SELECT_INTRO, Drule.SELECT_RULE,
+Tactic.DEEP_INTRO_TAC, Drule.SELECT_ELIM, Drule.SELECT_INTRO, Drule.SELECT_RULE,
 Tactic.SPEC_TAC.
 
 \ENDDOC

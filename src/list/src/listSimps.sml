@@ -327,15 +327,13 @@ val list_rws = computeLib.add_thms
                       version of this *)
       FILTER, FOLDL, FOLDR, FOLDL, EL_restricted, EL_simp_restricted,
       computeLib.lazyfy_thm list_case_compute,
-      list_size_def];
+      list_size_def, ALL_DISTINCT, FRONT_DEF, LAST_DEF,
+      GENLIST_AUX_compute, GENLIST_NUMERALS];
 
 fun list_compset () = let
-  open computeLib reduceLib
-  val base = num_compset()
-  val _ = list_rws base;
-  val _ = computeLib.add_thms [ALL_DISTINCT,FRONT_DEF,LAST_DEF] base;
+  val base = reduceLib.num_compset()
 in
-  base
+  list_rws base; base
 end
 
 end (* struct *)

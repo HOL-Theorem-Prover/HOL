@@ -1122,7 +1122,7 @@ fun is_case1 tybase M =
       val (tynames as (_,tyop)) = type_names (type_of (last args))
   in case prim_get tybase tynames
       of NONE => raise ERR "is_case" ("unknown type operator: "^Lib.quote tyop)
-       | SOME tyinfo => 
+       | SOME tyinfo =>
           let val gconst = case_const_of tyinfo
               val gty = type_of gconst
               val argtys = fst(strip_fun gty)
@@ -1201,7 +1201,7 @@ fun dest_record_type tybase ty =
   case Lib.total (fields_of o valOf o prim_get tybase o type_names) ty
     of SOME (fields as (_::_)) => fields
      | otherwise => raise ERR "dest_record_type" "not a record type";
-    
+
 fun is_record_type tybase ty = Lib.can (dest_record_type tybase) ty;
 
 fun has_record_type tybase M = is_record_type tybase (type_of M);

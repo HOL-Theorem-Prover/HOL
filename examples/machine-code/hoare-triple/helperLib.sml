@@ -33,7 +33,7 @@ fun cache (f:string->'a) = let
   in (fn x => let val y = Binarymap.find(!dd,x)
                   val _ = echo 1 " [cache]"
               in y end
-      handle NotFound => 
+      handle NotFound =>
         let val v = f x
             val _ = dd := Binarymap.insert(!dd,x,v) in v end) end
 
@@ -129,8 +129,8 @@ fun dest_sep_hide tm = let
 
 fun dest_sep_exists tm = let
   val (x,z) = dest_comb tm
-  in if fst (dest_const x) = "SEP_EXISTS" then dest_abs z else fail() end  
-  
+  in if fst (dest_const x) = "SEP_EXISTS" then dest_abs z else fail() end
+
 fun dest_spec tm = let
   val (tm,q) = dest_comb tm
   val (tm,c) = dest_comb tm
@@ -270,16 +270,16 @@ fun EVAL_ANY_MATCH_CONV patterns tm = let
 fun SEP_EXISTS_AC_CONV tm = let
   val vs = list_dest dest_sep_exists tm
   val (vs,p) = (butlast vs, last vs)
-  val ws = sort (fn x => fn y => term_to_string x <= term_to_string y) vs   
+  val ws = sort (fn x => fn y => term_to_string x <= term_to_string y) vs
   val tm2 = foldr mk_sep_exists p ws
   val goal = mk_eq(tm,tm2)
   fun AUTO_EXISTS_TAC (gs,goal) = EXISTS_TAC (fst (dest_exists goal)) (gs,goal)
   val th = prove(goal,
-    REWRITE_TAC [CONV_RULE ((QUANT_CONV o QUANT_CONV o RAND_CONV o RAND_CONV) 
+    REWRITE_TAC [CONV_RULE ((QUANT_CONV o QUANT_CONV o RAND_CONV o RAND_CONV)
       (ALPHA_CONV (genvar(``:'a``)))) FUN_EQ_THM]
     THEN SIMP_TAC bool_ss [SEP_EXISTS_THM]
     THEN REPEAT STRIP_TAC THEN EQ_TAC THEN REPEAT STRIP_TAC
-    THEN REPEAT AUTO_EXISTS_TAC THEN ASM_SIMP_TAC std_ss [] 
+    THEN REPEAT AUTO_EXISTS_TAC THEN ASM_SIMP_TAC std_ss []
     THEN (fn x => hd []))
   in th end handle Empty => fail();
 
@@ -334,7 +334,7 @@ fun MATCH_INST th tm = let
 (* rewriting for separation logic *)
 
 fun generic_star_match fixed_vars tm1 tm2 = let
-  val xs = list_dest dest_star tm1 
+  val xs = list_dest dest_star tm1
   val ys = list_dest dest_star tm2
   fun list_mk_set [] = empty_varset
     | list_mk_set (x::xs) = HOLset.add(list_mk_set xs,x)
@@ -342,28 +342,28 @@ fun generic_star_match fixed_vars tm1 tm2 = let
   fun app [] = [] | app (x::xs) = x @ app xs
   fun find_matches x [] zs = []
     | find_matches x (y::ys) zs =
-        if can (match x) y 
-        then (y,ys @ zs) :: find_matches x ys (y::zs) 
-        else find_matches x ys (y::zs) 
+        if can (match x) y
+        then (y,ys @ zs) :: find_matches x ys (y::zs)
+        else find_matches x ys (y::zs)
   fun alternatives [] ys = [([],ys)]
     | alternatives (x::xs) ys = let
-        val al = find_matches x ys []        
-        in app (map (fn (z,zs) => map (fn (r,rs) => ((x,z)::r,rs)) (alternatives xs zs)) al) end       
+        val al = find_matches x ys []
+        in app (map (fn (z,zs) => map (fn (r,rs) => ((x,z)::r,rs)) (alternatives xs zs)) al) end
   fun frame_var tm = is_var tm andalso not (mem tm fixed_vars)
   val ts = alternatives (filter (not o frame_var) xs) ys
   val ts = map (fn (x,y) => (x,list_mk_star y (type_of (fst (hd x))))) ts
   fun terms ([],x) = ((hd (filter frame_var xs),x) handle Empty => (list_mk_star [] (type_of (car tm1)),x))
     | terms (((y,z)::ys),x) = let
         val (y2,z2) = terms (ys,x)
-        in (mk_star(y,y2),mk_star(z,z2)) end 
+        in (mk_star(y,y2),mk_star(z,z2)) end
   fun try_each f [] = fail()
     | try_each f (x::xs) = f x handle HOL_ERR _ => try_each f xs
   fun g (x,y) = (x,y,fst (match x y))
   val (x,y,s) = try_each (g o terms) ts
-  fun redexes xs = map (fn {redex = x,residue = y} => x) xs  
+  fun redexes xs = map (fn {redex = x,residue = y} => x) xs
   val result = s @ map (fn x => x |-> x) (filter (fn y => not (mem y (redexes s))) (free_vars x))
   val rs = redexes result
-  val result = result @ map (fn y => y |-> list_mk_star [] (type_of y)) 
+  val result = result @ map (fn y => y |-> list_mk_star [] (type_of y))
                     (filter (fn x => not (mem x rs)) (filter frame_var xs))
   in result end handle Empty => fail();
 
@@ -375,13 +375,13 @@ fun BASIC_SEP_REWRITE_RULE rw th = let
   fun foo th = let
     val t = find_term (can (generic_star_match [] lhs)) (concl th)
     val s = generic_star_match [] lhs t
-    val lm = (SIMP_CONV (bool_ss++sep_cond_ss) [] THENC 
-              SIMP_CONV (bool_ss++star_ss) [SEP_CLAUSES,AC CONJ_ASSOC CONJ_COMM]) 
+    val lm = (SIMP_CONV (bool_ss++sep_cond_ss) [] THENC
+              SIMP_CONV (bool_ss++star_ss) [SEP_CLAUSES,AC CONJ_ASSOC CONJ_COMM])
                (mk_eq(t,subst s lhs))
     val _ = if can (match_term ``x = T``) (concl lm) then () else fail()
     val lm = CONV_RULE (POST_CONV (PURE_ONCE_REWRITE_CONV [rw])) (RW [] lm)
-    in foo (RW [STAR_ASSOC] (RW [lm] th)) end handle HOL_ERR _ => th   
-  in foo th end;   
+    in foo (RW [STAR_ASSOC] (RW [lm] th)) end handle HOL_ERR _ => th
+  in foo th end;
 
 fun EXISTS_SEP_REWRITE_RULE rw th = let (* possibly fragile *)
   val (p,q) = dest_eq (concl (SPEC_ALL rw))
@@ -403,13 +403,13 @@ fun EXISTS_SEP_REWRITE_RULE rw th = let (* possibly fragile *)
     val ys = filter (fn y => not (mem y (map (subst s) z))) xs
     val t3 = foldr mk_sep_exists (subst s (list_mk_star z (type_of frame))) (map (subst s) zs)
     val goal = foldr mk_sep_exists (list_mk_star (t3::ys) (type_of frame)) ws
-    val goal = mk_eq(foldr mk_sep_exists tm ws,goal)    
+    val goal = mk_eq(foldr mk_sep_exists tm ws,goal)
     val lemma = prove(goal,
       SIMP_TAC std_ss [GSYM rw]
       THEN SIMP_TAC (std_ss++sep_cond_ss) [SEP_CLAUSES]
       THEN CONV_TAC (BINOP_CONV SEP_EXISTS_AC_CONV)
       THEN SIMP_TAC (std_ss++star_ss) [AC CONJ_ASSOC CONJ_COMM])
-    val lemma = CONV_RULE (RAND_CONV (ONCE_REWRITE_CONV [rw] 
+    val lemma = CONV_RULE (RAND_CONV (ONCE_REWRITE_CONV [rw]
                   THENC SIMP_CONV std_ss [SEP_CLAUSES])) lemma
     in foo (RW1 [lemma] th) end handle HOL_ERR _ => th
   in foo th end;
@@ -432,13 +432,13 @@ fun SEP_EXISTS_POST_RULE tm th = let
 
 fun SEP_EXISTS_PRE_RULE tm th = let
   val (_,p,_,q) = dest_spec (concl th)
-  val thi = if mem tm (free_vars q) then SEP_EXISTS_POST_RULE tm th else th 
+  val thi = if mem tm (free_vars q) then SEP_EXISTS_POST_RULE tm th else th
   val thi = CONV_RULE (PRE_CONV (UNBETA_CONV tm)) thi
   val thi = SIMP_RULE bool_ss [SPEC_PRE_EXISTS] (GEN tm thi)
   in thi end;
 
 fun SEP_EXISTS_ELIM_CONV tm = let
-  val tm2 = (snd o dest_eq o concl o QCONV (SIMP_CONV bool_ss [SEP_CLAUSES])) tm  
+  val tm2 = (snd o dest_eq o concl o QCONV (SIMP_CONV bool_ss [SEP_CLAUSES])) tm
   val _ = dest_sep_exists tm2
   val vs = list_dest dest_sep_exists tm2
   val (v,vs,p) = (hd vs,tl (butlast vs), last vs)
@@ -458,9 +458,9 @@ fun SEP_EXISTS_ELIM_CONV tm = let
     THEN CONV_TAC ((RATOR_CONV o RAND_CONV) SEP_EXISTS_AC_CONV)
     THEN ASM_SIMP_TAC std_ss []
     THEN (fn x => hd []))
-  in (SIMP_CONV bool_ss [SEP_CLAUSES] THENC (fn _ => th)) tm end 
+  in (SIMP_CONV bool_ss [SEP_CLAUSES] THENC (fn _ => th)) tm end
   handle Empty => fail();
-    
+
 fun SEP_EXISTS_ELIM_RULE th = let
   val th = SIMP_RULE bool_ss [SEP_CLAUSES] th
   in CONV_RULE (DEPTH_CONV SEP_EXISTS_ELIM_CONV) th end;
@@ -472,27 +472,27 @@ fun SEP_EXISTS_ELIM_RULE th = let
 fun SEP_IMP_WEAKEN c tm = let
   val (p,q) = dest_star tm
   in MATCH_MP SEP_IMP_STAR (CONJ (SEP_IMP_WEAKEN c p) (SEP_IMP_WEAKEN c q)) end
-  handle HOL_ERR _ => let 
+  handle HOL_ERR _ => let
   val (p,q) = dest_sep_disj tm
   in MATCH_MP SEP_IMP_DISJ (CONJ (SEP_IMP_WEAKEN c p) (SEP_IMP_WEAKEN c q)) end
-  handle HOL_ERR _ => let 
+  handle HOL_ERR _ => let
   val (v,x) = dest_sep_exists tm
   val imp = SEP_IMP_WEAKEN c x
   val imp = GEN v (CONV_RULE (BINOP_CONV (UNBETA_CONV v)) imp)
   in MATCH_MP SEP_IMP_EXISTS_EXISTS imp end
-  handle HOL_ERR _ => c tm handle HOL_ERR _ => ISPEC tm SEP_IMP_REFL; 
+  handle HOL_ERR _ => c tm handle HOL_ERR _ => ISPEC tm SEP_IMP_REFL;
 
-val LIST_HIDE_POST_LEMMA = 
-  (RW [AND_IMP_INTRO] o DISCH_ALL o SPEC_ALL o UNDISCH o SPEC_ALL) SPEC_WEAKEN  
+val LIST_HIDE_POST_LEMMA =
+  (RW [AND_IMP_INTRO] o DISCH_ALL o SPEC_ALL o UNDISCH o SPEC_ALL) SPEC_WEAKEN
 fun LIST_HIDE_POST_RULE tms th = let
   fun HIDE_INTRO format_list tm = let
     val (x,y) = dest_comb tm
-    in if mem x format_list 
+    in if mem x format_list
        then ISPEC y (ISPEC x SEP_IMP_SEP_HIDE) else fail() end
   val (_,_,_,q) = dest_spec (concl th)
   val imp = SEP_IMP_WEAKEN (HIDE_INTRO tms) q
   in MATCH_MP LIST_HIDE_POST_LEMMA (CONJ th imp) end
-  
+
 fun HIDE_POST_RULE tm th = LIST_HIDE_POST_RULE [tm] th
 
 val EQ_IMP_IMP = Q.SPECL [`p`,`q`] quotientTheory.EQ_IMPLIES;
@@ -516,7 +516,7 @@ fun HIDE_PRE_RULE tm th = let
   val (_,p,_,_) = dest_spec (concl th)
   val finder = find_term (fn x => fst (dest_comb x) = tm handle HOL_ERR _ => false)
   in SEP_EXISTS_ELIM_RULE (SEP_EXISTS_PRE_RULE (cdr (finder p)) th) end
-      
+
 fun LIST_HIDE_PRE_RULE [] th = th
   | LIST_HIDE_PRE_RULE (x::xs) th = LIST_HIDE_PRE_RULE xs (HIDE_PRE_RULE x th handle HOL_ERR _ => th)
 
@@ -540,11 +540,11 @@ fun HIDE_STATUS_RULE in_post hide_th th = let
   val th = RW [hide_th,STAR_ASSOC] th
   val (_,p,_,_) = dest_spec (concl th)
   val ys = filter (fn x => not (can (find_term (fn y => x = y)) p)) xs
-  val ys = if ys = xs then [] else ys 
+  val ys = if ys = xs then [] else ys
   val ys = if can (find_term (fn x => s = x)) p then [] else map mk_sep_hide ys
   val th = SPEC_FRAME_RULE th (list_mk_star ys (type_of s))
   val th = SIMP_RULE std_ss [SEP_CLAUSES,STAR_ASSOC] th
-  val th = if in_post then LIST_HIDE_POST_RULE xs th else th handle HOL_ERR _ => th 
+  val th = if in_post then LIST_HIDE_POST_RULE xs th else th handle HOL_ERR _ => th
   val th = LIST_HIDE_PRE_RULE xs th
   val th = BASIC_SEP_REWRITE_RULE (GSYM hide_th) th
   (* check result *)
@@ -552,7 +552,7 @@ fun HIDE_STATUS_RULE in_post hide_th th = let
   val ps = (list_dest dest_star o last o list_dest dest_sep_exists) p
   val error = 1 < (length o filter (fn t => t = s)) ps
               orelse not (intersect xs (map get_sep_domain ps) = [])
-  val _ = if error then (print "\n\nHIDE_STATUS_RULE failed on theorem:\n\n"; 
+  val _ = if error then (print "\n\nHIDE_STATUS_RULE failed on theorem:\n\n";
                          print_thm th; print "\n\n"; fail()) else ()
   in th end;
 
@@ -577,10 +577,10 @@ fun SPEC_BOOL_FRAME_RULE th frame = let
   val th = INST [mk_var("boolean_variable_name",``:bool``) |-> frame] th
   in th end
 
-fun SEP_REWRITE_RULE rws th = let 
+fun SEP_REWRITE_RULE rws th = let
   val rws = map (MATCH_MP SEP_REWRITE_THM) rws
-  val th = SIMP_RULE std_ss (GSYM STAR_ASSOC::rws) th 
-  val th = SIMP_RULE std_ss (STAR_ASSOC::rws) th 
+  val th = SIMP_RULE std_ss (GSYM STAR_ASSOC::rws) th
+  val th = SIMP_RULE std_ss (STAR_ASSOC::rws) th
   in th end;
 
 (* a rule for composing a list of SPEC theorems *)
@@ -621,10 +621,10 @@ fun match_and_partition q p = let
           partition xs zs (x::xs1, xs2, y::ys1)
         end handle e =>
           partition xs ys (xs1, x::xs2, ys1)
-  in partition q p ([],[],[]) end;  
+  in partition q p ([],[],[]) end;
 
 val AND_CLAUSES2 = CONJ AND_CLAUSES (prove(``(T ==> b) = b``,SIMP_TAC std_ss []))
-  
+
 fun find_composition1 th1 th2 = let
   val (q,p,ty) = spec_post_and_pre th1 th2
   val (xs1,xs2,ys1,ys2) = match_and_partition q p
@@ -636,14 +636,14 @@ fun find_composition1 th1 th2 = let
   val th2 = CONV_RULE (PRE_CONV (MOVE_STAR_CONV tm2)) th2
   val th = MATCH_MP SPEC_FRAME_COMPOSE (DISCH_ALL_AS_SINGLE_IMP th2)
   val th = MATCH_MP th (DISCH_ALL_AS_SINGLE_IMP th1)
-           handle HOL_ERR _ => (* found a SEP_DISJ *) let 
+           handle HOL_ERR _ => (* found a SEP_DISJ *) let
              val th = MATCH_MP SPEC_FRAME_COMPOSE_DISJ (DISCH_ALL_AS_SINGLE_IMP th2)
              val th = MATCH_MP th (DISCH_ALL_AS_SINGLE_IMP th1)
              val th = UNDISCH_ALL th
              val th = SIMP_RULE (bool_ss++sep_cond_ss) [SPEC_MOVE_COND,SEP_CLAUSES] th
              val th = RW [GSYM SPEC_MOVE_COND] th
              val th = DISCH_ALL th
-             in th end           
+             in th end
   val th = UNDISCH_ALL (PURE_REWRITE_RULE [GSYM AND_IMP_INTRO,AND_CLAUSES2] th)
   val th = SIMP_RULE std_ss [pred_setTheory.INSERT_UNION_EQ,pred_setTheory.UNION_EMPTY,
              word_arith_lemma1,word_arith_lemma2,word_arith_lemma3,word_arith_lemma4,
@@ -664,7 +664,7 @@ fun find_composition2 th1 th2 = let
   in find_composition1 th1 th2 end;
 
 (*
-  fun ppinst tm (_,(tha,_,_),_) = SIMP_RULE std_ss [word_arith_lemma1,word_arith_lemma2,word_arith_lemma3,word_arith_lemma4,WORD_ADD_0] 
+  fun ppinst tm (_,(tha,_,_),_) = SIMP_RULE std_ss [word_arith_lemma1,word_arith_lemma2,word_arith_lemma3,word_arith_lemma4,WORD_ADD_0]
                      (INST [mk_var("p",``:word64``)|->tm] tha)
 
   val tha = ppinst ``p-10w:word64`` (el 3 thms)
@@ -687,7 +687,7 @@ fun find_composition3 th1 th2 = let
      val (_,_,_,q) = dest_spec (concl th1)
      val (_,p,_,_) = dest_spec (concl th2)
      val vs = list_dest dest_sep_exists q
-     val (vs,q) = (butlast vs,last vs)    
+     val (vs,q) = (butlast vs,last vs)
      val (xs1,xs2,ys1,ys2) = match_and_partition (list_dest dest_star q) (list_dest dest_star p)
      val ty = type_of q
      val (m,i) = match_term (list_mk_star ys1 ty) (list_mk_star xs1 ty)
@@ -696,17 +696,17 @@ fun find_composition3 th1 th2 = let
      val (_,_,_,q) = dest_spec (concl th1)
      val (_,p,_,_) = dest_spec (concl th2)
      val vs = list_dest dest_sep_exists q
-     val (vs,q) = (butlast vs,last vs)    
+     val (vs,q) = (butlast vs,last vs)
      val (xs1,xs2,ys1,ys2) = match_and_partition (list_dest dest_star q) (list_dest dest_star p)
      val ty = type_of q
      val (m,i) = match_term (list_mk_star ys1 ty) (list_mk_star xs1 ty)
      val th2 = INST m (INST_TYPE i th2)
      (* do rest *)
-     val th2 = SPEC (list_mk_star xs2 ty) (MATCH_MP SPEC_FRAME th2) 
-     val th1 = SPEC (subst m (inst i (list_mk_star ys2 ty))) (MATCH_MP SPEC_FRAME th1) 
+     val th2 = SPEC (list_mk_star xs2 ty) (MATCH_MP SPEC_FRAME th2)
+     val th1 = SPEC (subst m (inst i (list_mk_star ys2 ty))) (MATCH_MP SPEC_FRAME th1)
      val th1 = CONV_RULE (POST_CONV f) th1
      val th2 = CONV_RULE (PRE_CONV f) th2
-     val th2 = foldr (uncurry SEP_EXISTS_PRE_RULE) th2 vs     
+     val th2 = foldr (uncurry SEP_EXISTS_PRE_RULE) th2 vs
      val lemma = RW [SEP_CLAUSES] (Q.INST [`q'`|->`emp`,`p'`|->`emp`] (SPEC_ALL SPEC_FRAME_COMPOSE))
      fun g c = DISCH_ALL_AS_SINGLE_IMP o CONV_RULE (c (SIMP_CONV (bool_ss++star_ss) []))
      val thi = MATCH_MP lemma (g PRE_CONV th2)
@@ -731,13 +731,13 @@ fun SPEC_COMPOSE_RULE [] = fail()
 (* a rule which sorts the code in a SPEC theorem *)
 
 fun SPEC_SORT_CODE_RULE th = let
-  val (_,_,c,_) = dest_spec (concl th)  
+  val (_,_,c,_) = dest_spec (concl th)
   val xs = list_dest (pred_setSyntax.dest_insert) c
   val _ = if pred_setSyntax.is_empty (last xs) then () else fail()
   val xs = butlast xs
-  fun get_offset tm = let 
+  fun get_offset tm = let
     val x = tm |> dest_pair |> fst
-    in if is_var x then 0 
+    in if is_var x then 0
        else if can (match_term ``p + n2w n:'a word``) x then
          numSyntax.int_of_term(cdr (cdr x))
        else if can (match_term ``p - n2w n:'a word``) x then
@@ -862,38 +862,38 @@ fun SEP_NEQ_TAC (hs,gs) = let
   val thi = ISPECL [a1,a2,z1,z2,f,df,zs] fun2set_NEQ
   in (MATCH_MP_TAC thi THEN FULL_SIMP_TAC (std_ss++star_ss) []) (hs,gs) end
 
-fun dest_update_term tm = 
-  if is_comb tm andalso combinSyntax.is_update (car tm) 
-  then let val (x,y) = dest_update_term (cdr tm) 
+fun dest_update_term tm =
+  if is_comb tm andalso combinSyntax.is_update (car tm)
+  then let val (x,y) = dest_update_term (cdr tm)
        in (combinSyntax.dest_update (car tm) :: x, y) end else ([],tm)
 fun is_update_term f tm = let
   val (xs,y) = dest_update_term tm
   in y = f end;
-fun dest_fun2set tm = 
+fun dest_fun2set tm =
   if not (can (match_term ``(p (fun2set (f:'a->'b,df))):bool``) tm) then fail () else let
     val (f,df) = (dest_pair o cdr o cdr) tm
     in (list_dest dest_star (car tm),f,df) end
 fun mk_fun2set (f,df) = (fst o dest_eq o concl o ISPECL [f,df]) fun2set_def
 val is_one_pair = can (match_term ``one(x:'a,y:'b)``)
-fun dest_one_pair tm = if is_one_pair tm then dest_pair (cdr tm) else fail() 
+fun dest_one_pair tm = if is_one_pair tm then dest_pair (cdr tm) else fail()
 fun mk_one x = (fst o dest_eq o concl o ISPEC x) one_def
 
-fun STRIP_FORALL_TAC (hs,goal) = 
-  if is_forall goal then STRIP_TAC (hs,goal) else NO_TAC (hs,goal);  
+fun STRIP_FORALL_TAC (hs,goal) =
+  if is_forall goal then STRIP_TAC (hs,goal) else NO_TAC (hs,goal);
 
 fun VERBOSE_TAC (hs,goal) = let
   val tm = hd (filter (fn tm => is_eq tm andalso is_var(cdr tm)) hs)
-  in Q.PAT_ASSUM [ANTIQUOTE tm] (fn th => FULL_SIMP_TAC pure_ss [GSYM th]) (hs,goal) end 
+  in Q.PAT_ASSUM [ANTIQUOTE tm] (fn th => FULL_SIMP_TAC pure_ss [GSYM th]) (hs,goal) end
   handle Empty => let
   val tm = hd (filter (fn tm => is_eq tm andalso is_var((cdr o car) tm) andalso (free_vars (cdr tm) = [])) hs)
-  in Q.PAT_ASSUM [ANTIQUOTE tm] (fn th => FULL_SIMP_TAC pure_ss [th]) (hs,goal) end 
+  in Q.PAT_ASSUM [ANTIQUOTE tm] (fn th => FULL_SIMP_TAC pure_ss [th]) (hs,goal) end
   handle Empty => NO_TAC (hs,goal);
 
 val CLEAN_TAC = REPEAT (Q.PAT_ASSUM `T` (K ALL_TAC))
 val EXPAND_TAC = REPEAT VERBOSE_TAC THEN CLEAN_TAC
 
 fun star_match fixed_vars tm1 tm2 = let
-  val (xs,f1,df1) = dest_fun2set tm1 
+  val (xs,f1,df1) = dest_fun2set tm1
   val (ys,f2,df2) = dest_fun2set tm2
   fun list_mk_set [] = empty_varset
     | list_mk_set (x::xs) = HOLset.add(list_mk_set xs,x)
@@ -901,27 +901,27 @@ fun star_match fixed_vars tm1 tm2 = let
   fun app [] = [] | app (x::xs) = x @ app xs
   fun find_matches x [] zs = []
     | find_matches x (y::ys) zs =
-        if can (match x) y 
-        then (y,ys @ zs) :: find_matches x ys (y::zs) 
-        else find_matches x ys (y::zs) 
+        if can (match x) y
+        then (y,ys @ zs) :: find_matches x ys (y::zs)
+        else find_matches x ys (y::zs)
   fun alternatives [] ys = [([],ys)]
     | alternatives (x::xs) ys = let
-        val al = find_matches x ys []        
-        in app (map (fn (z,zs) => map (fn (r,rs) => ((x,z)::r,rs)) (alternatives xs zs)) al) end       
+        val al = find_matches x ys []
+        in app (map (fn (z,zs) => map (fn (r,rs) => ((x,z)::r,rs)) (alternatives xs zs)) al) end
   fun frame_var tm = is_var tm andalso not (mem tm fixed_vars)
   val ts = alternatives (filter (not o frame_var) xs) ys
   val ts = map (fn (x,y) => (x,list_mk_star y (type_of (fst (hd x))))) ts
   fun terms ([],x) = ((hd (filter frame_var xs),x) handle Empty => (list_mk_star [] (type_of (car tm1)),x))
     | terms (((y,z)::ys),x) = let
         val (y2,z2) = terms (ys,x)
-        in (mk_star(y,y2),mk_star(z,z2)) end 
+        in (mk_star(y,y2),mk_star(z,z2)) end
   fun term_full (tm1,tm2) = (mk_comb(tm1,mk_fun2set(f1,df1)),mk_comb(tm2,mk_fun2set(f2,df2)))
   val (x,y) = (term_full o terms) (hd ts)
-  fun redexes xs = map (fn {redex = x,residue = y} => x) xs  
-  val s = fst (match x y) 
+  fun redexes xs = map (fn {redex = x,residue = y} => x) xs
+  val s = fst (match x y)
   val result = s @ map (fn x => x |-> x) (filter (fn y => not (mem y (redexes s))) (free_vars x))
   val rs = redexes result
-  val result = result @ map (fn y => y |-> list_mk_star [] (type_of y)) 
+  val result = result @ map (fn y => y |-> list_mk_star [] (type_of y))
                     (filter (fn x => not (mem x rs)) (filter frame_var xs))
   (* verify result *)
   val th = SIMP_CONV (std_ss++star_ss) [SEP_CLAUSES] (mk_eq(subst result tm1,tm2))
@@ -938,18 +938,18 @@ fun star_match fixed_vars tm1 tm2 = let
   in result end handle Empty => fail();
 
 fun SUBST_INST s th = let
-  fun redexes xs = map (fn {redex = x,residue = y} => x) xs  
+  fun redexes xs = map (fn {redex = x,residue = y} => x) xs
   val xs = butlast (list_dest dest_forall (concl th))
   val tt = map (fn x => (x,genvar (type_of x), mem x (redexes s))) xs
-  fun alpha_c [] = ALL_CONV 
-    | alpha_c ((x,true)::xs) = RAND_CONV (ALPHA_CONV x THENC ABS_CONV (alpha_c xs))  
-    | alpha_c ((x,false)::xs) = RAND_CONV (ABS_CONV (alpha_c xs))  
+  fun alpha_c [] = ALL_CONV
+    | alpha_c ((x,true)::xs) = RAND_CONV (ALPHA_CONV x THENC ABS_CONV (alpha_c xs))
+    | alpha_c ((x,false)::xs) = RAND_CONV (ABS_CONV (alpha_c xs))
   val th1 = CONV_RULE (alpha_c (map (fn (x,y,z) => (y,z)) tt)) th
   val g = subst (map (fn (x,y,z) => y |-> x) tt)
-  fun aux s vs th = 
+  fun aux s vs th =
     if not (is_forall (concl th)) then GENL vs th else let
       val (v,x) = dest_forall (concl th)
-      in aux s (if mem (g v) (redexes s) then vs else vs @ [v]) (SPEC (subst s (g v)) th) end          
+      in aux s (if mem (g v) (redexes s) then vs else vs @ [v]) (SPEC (subst s (g v)) th) end
   val th2 = aux s [] th1
   in th2 end;
 
@@ -965,7 +965,7 @@ fun SEP_F_TAC (hs,goal) = let
     fun first_filter [] = fail()
       | first_filter (q::qs) = (q,star_match vs q fs) handle HOL_ERR _ => first_filter qs
     val (q,ss) = first_filter qs
-    val goal1 = subst ss q 
+    val goal1 = subst ss q
     in Q.PAT_ASSUM [ANTIQUOTE i] (MP_TAC o RW1 [GSYM markerTheory.Abbrev_def] o SUBST_INST ss)
        THEN [ANTIQUOTE goal1] by ALL_TAC THEN1
          (Q.PAT_ASSUM [ANTIQUOTE fs] MP_TAC THEN SIMP_TAC (std_ss++star_ss) [SEP_CLAUSES])
@@ -980,25 +980,25 @@ fun SEP_I_TAC func_name (hs,goal) = let
   fun finder tm = ((fst o dest_const o car) tm = func_name) handle HOL_ERR _ => false
   val ys = find_terms finder goal
   val tm = hd (sort (fn x => fn y => term_size x >= term_size y) ys)
-  fun redexes xs = map (fn {redex = x,residue = y} => x) xs  
+  fun redexes xs = map (fn {redex = x,residue = y} => x) xs
   fun get_tac i = let
     val xs = list_dest dest_forall i
     val (xs,t) = (butlast xs, last xs)
-    val t1 = find_term (fn t1 => can (match_term t1) tm) t 
+    val t1 = find_term (fn t1 => can (match_term t1) tm) t
     val s = fst (match_term t1 tm)
     val rs = redexes s
     val fs = filter (fn x => not (mem x rs) andalso mem x xs) (free_vars t1)
     val s = s @ map (fn x => x |-> x) fs
     val _ = if filter (fn {redex = x,residue = y} => not (mem x xs)) s = [] then () else fail()
-    in Q.PAT_ASSUM [ANTIQUOTE i] (STRIP_ASSUME_TAC o SUBST_INST s) end 
-    handle HOL_ERR _ => ALL_TAC 
+    in Q.PAT_ASSUM [ANTIQUOTE i] (STRIP_ASSUME_TAC o SUBST_INST s) end
+    handle HOL_ERR _ => ALL_TAC
   in EVERY (map get_tac inds) (hs,goal) end;
 
 fun SEP_W_TAC (hs,goal) = let
   val xs = filter (can dest_fun2set) hs
-  fun get_tac x = let   
+  fun get_tac x = let
     val f = (fst o dest_pair o cdr o cdr) x
-    val ys = find_terms (is_update_term f) goal 
+    val ys = find_terms (is_update_term f) goal
     val up = hd (sort (fn x => fn y => term_size x >= term_size y) ys)
     val zs = fst (dest_update_term up)
     val (qs,f,df) = dest_fun2set x
@@ -1006,18 +1006,18 @@ fun SEP_W_TAC (hs,goal) = let
       val (x,y) = dest_one_pair tm
       in if x = z then mk_one(mk_pair(x,q)) else fail() end
     fun replace_in_list (x,[]) = fail ()
-      | replace_in_list (x,y::ys) = 
+      | replace_in_list (x,y::ys) =
           replace x y :: ys handle HOL_ERR _ => y :: replace_in_list (x,ys)
     val goal = list_mk_star (foldr replace_in_list qs zs) (type_of (hd qs))
     val goal = mk_comb(goal,subst [f|->up] (cdr x))
-    in ([ANTIQUOTE goal] by ALL_TAC THEN1 SEP_WRITE_TAC) end handle Empty => ALL_TAC 
+    in ([ANTIQUOTE goal] by ALL_TAC THEN1 SEP_WRITE_TAC) end handle Empty => ALL_TAC
   in EVERY (map get_tac xs) (hs,goal) end;
 
 fun SEP_R_TAC (hs,goal) = let
   val xs = filter (can dest_fun2set) hs
   val is_one_pair = can (match_term ``one(x:'a,y:'b)``)
   fun app [] = [] | app (x::xs) = x @ app xs
-  val xs = app (map (fn x => (map (fn y => (dest_pair(cdr y),dest_pair(cdr (cdr x)))) o 
+  val xs = app (map (fn x => (map (fn y => (dest_pair(cdr y),dest_pair(cdr (cdr x)))) o
                               filter is_one_pair o list_dest dest_star o car) x) xs)
   fun get_tac ((a,x),(f,df)) = let
     val goal = mk_conj(mk_eq(mk_comb(f,a),x),pred_setSyntax.mk_in(a,df))
@@ -1031,7 +1031,7 @@ fun INST_MATCH name th [] = fail()
     val ys = find_terms finder tm
     val tm = hd (sort (fn x => fn y => term_size x >= term_size y) ys) handle Empty => fail()
     val vs = free_vars (concl th)
-    fun redexes xs = map (fn {redex = x,residue = y} => x) xs  
+    fun redexes xs = map (fn {redex = x,residue = y} => x) xs
     val t1 = find_term (fn t1 => can (match_term t1) tm) (concl (SPEC_ALL th))
     val (s,r) = match_term t1 tm
     val rs = redexes s
@@ -1070,7 +1070,7 @@ fun SEP_S_TAC names th (hs,goal) = let
   in MP_TAC th (hs,goal) end;
 
 fun dest_sep_imp tm = let
-  val format = (fst o dest_eq o concl o SPEC_ALL) SEP_IMP_def  
+  val format = (fst o dest_eq o concl o SPEC_ALL) SEP_IMP_def
   in if can (match_term format) tm then (cdr (car tm), cdr tm) else fail() end;
 
 fun SEP_IMP_TAC (hs,goal) = let

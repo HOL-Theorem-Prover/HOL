@@ -3,9 +3,9 @@ struct
 
 (*
 quietdec := true;
-loadPath := 
-            (Globals.HOLDIR ^ "/examples/separationLogic/src") :: 
-            (Globals.HOLDIR ^ "/examples/separationLogic/src/holfoot") :: 
+loadPath :=
+            (Globals.HOLDIR ^ "/examples/separationLogic/src") ::
+            (Globals.HOLDIR ^ "/examples/separationLogic/src/holfoot") ::
             !loadPath;
 show_assums := true;
 *)
@@ -27,18 +27,18 @@ quietdec := false;
 
 (*Aplies functional equality (FUN_EQ_THM
  |- (f = g) <=> !x. f x = g x) to
- replace allquantified variables in 
+ replace allquantified variables in
  equations with lambda abstractions.
  For example
-  
+
 val t = ``!a b c. f a b c = g a b c``
- 
+
  is converted to
 
 ``f = (\a b c. g a b c)``
 
  This conversion can be used to preprocess
- rewrite rules, allowing the rewriter to 
+ rewrite rules, allowing the rewriter to
  use these rules, even if not all parameters are
  present, yet.*)
 
@@ -50,7 +50,7 @@ let
    fun split_vars [] acc = ([], acc)
      | split_vars (t::ts) acc =
        if op_mem eq t vars then
-	   split_vars ts (t::acc) 
+	   split_vars ts (t::acc)
        else
 	   (rev (t::ts), acc)
    val (rest_args, elim_args) = split_vars (rev l_args) [];
@@ -73,7 +73,7 @@ end
 
 (*Given a theorem of the form |- l = r it returns a theorem
   r |- l. If r is T, then |- l is returned *)
-fun EQ_ELIM thm = 
+fun EQ_ELIM thm =
    let
       val (l,r) = dest_eq (concl thm);
    in
@@ -82,7 +82,7 @@ fun EQ_ELIM thm =
    end
 
 (*Applies a conversion to the rhs of an equational theorem*)
-fun RHS_CONV_RULE conv thm = 
+fun RHS_CONV_RULE conv thm =
 ((CONV_RULE (RHS_CONV conv)) thm) handle UNCHANGED => thm;
 
 (*Applies a conversion to the antecedent of an implication*)
@@ -105,10 +105,10 @@ fun ANTE_CONV_RULE conv thm = ((CONV_RULE o ANTE_CONV) conv) thm
  *
  * |- ASL_PROGRAM_IS_ABSTRACTION xenv penv prog prog'
  *
- * The parameter sys is a call to the system to ask it to abstract 
+ * The parameter sys is a call to the system to ask it to abstract
  * subprograms. It has the signature sys xenv penv prog.
  * Calls to system never may fail, i.e. no useful abstraction can be found.
- * In this case NONE is returned. Notice that 
+ * In this case NONE is returned. Notice that
  * prove_ASL_PROGRAM_ABSTRACTION_REFL may be used to produce
  * |- ASL_PROGRAM_IS_ABSTRACTION xenv penv prog prog.
  *
@@ -120,13 +120,13 @@ fun ANTE_CONV_RULE conv thm = ((CONV_RULE o ANTE_CONV) conv) thm
  * These abstraction functions are combined by
  * search_ASL_PROGRAM_ABSTRACTION fL abstL xenv penv prog
  *
- * - fL 
+ * - fL
  *     a list of abst_functions
- * - abstL 
- *     a list of already know abstraction, i.e. theorems of the form 
+ * - abstL
+ *     a list of already know abstraction, i.e. theorems of the form
  *     something? |- ASL_PROGRAM_IS_ABSTRACTION xnev penv prog1 prog2
  ****************************************************************)
- 
+
 
 fun prove_ASL_PROGRAM_ABSTRACTION_REFL xenv penv p =
     (ISPECL [xenv,penv,p] ASL_PROGRAM_IS_ABSTRACTION___REFL);
@@ -136,20 +136,20 @@ type simple_asl_program_abstraction =  term -> term -> term -> thm option;
 type asl_program_abstraction =  (term -> term) -> thm list -> simple_asl_program_abstraction -> simple_asl_program_abstraction;
 
 
-local 
+local
 (*
   fun check_thm_opt xenv penv p NONE = NONE
-    | check_thm_opt xenv penv p (SOME thm) = 
+    | check_thm_opt xenv penv p (SOME thm) =
       let
           val (xenv', penv', p', _) = dest_ASL_PROGRAM_IS_ABSTRACTION (concl thm);
       in
           if (xenv = xenv') andalso
-             (penv = penv') andalso (p = p') then SOME thm else 
+             (penv = penv') andalso (p = p') then SOME thm else
           let
              val ps = (term_to_string p);
              val xenvs = term_to_string xenv;
              val penvs = term_to_string penv;
-             val thms = thm_to_string thm; 
+             val thms = thm_to_string thm;
              val s = "Abstraction of "^ps^
                      " in ("^xenvs^","^penvs^") resulted in "^
                      thms^"!";
@@ -164,7 +164,7 @@ local
   fun search_ASL_PROGRAM_ABSTRACTION_int (pf:term->term) true fL orgfL cref abstL xenv penv p =
        let
           val p_thm_opt_opt = Redblackmap.peek (!cref, p);
-          val thm_opt = 
+          val thm_opt =
              if (isSome p_thm_opt_opt) then (
                (valOf p_thm_opt_opt)
              ) else (
@@ -175,22 +175,22 @@ local
                in
                   thm1_opt
                end
-             )                                 
+             )
        in
-           check_thm_opt xenv penv p thm_opt 
-       end      
-     | search_ASL_PROGRAM_ABSTRACTION_int pf false [] orgfL cref abstL xenv penv p = NONE     
+           check_thm_opt xenv penv p thm_opt
+       end
+     | search_ASL_PROGRAM_ABSTRACTION_int pf false [] orgfL cref abstL xenv penv p = NONE
      | search_ASL_PROGRAM_ABSTRACTION_int pf false (f1::fL) orgfL cref abstL xenv penv p =
        let
-          val sys = search_ASL_PROGRAM_ABSTRACTION_int pf true orgfL orgfL cref abstL; 
+          val sys = search_ASL_PROGRAM_ABSTRACTION_int pf true orgfL orgfL cref abstL;
           val thm1_opt = ((f1 pf abstL sys xenv penv p)
                             handle HOL_ERR _ => NONE)
-                            handle UNCHANGED => NONE;           
+                            handle UNCHANGED => NONE;
        in
           if not (isSome thm1_opt) then
              search_ASL_PROGRAM_ABSTRACTION_int pf false fL orgfL cref abstL xenv penv p
           else
-             check_thm_opt xenv penv p thm1_opt          
+             check_thm_opt xenv penv p thm1_opt
        end;
 in
   fun search_ASL_PROGRAM_ABSTRACTION pf (fL:asl_program_abstraction list) abstL (xenv:term) (penv:term) =
@@ -199,9 +199,9 @@ in
        val abstL' = (flatten (map BODY_CONJUNCTS abstL));
        val sys = search_ASL_PROGRAM_ABSTRACTION_int pf true fL fL cref abstL' xenv penv;
 
-       fun search p = 
+       fun search p =
           let
-             val thm_opt = sys p;    
+             val thm_opt = sys p;
           in
              if not (isSome thm_opt) then NONE else
              let
@@ -210,13 +210,13 @@ in
                 val thm2_opt = search p';
              in
                 if not(isSome thm2_opt) then thm_opt else
-                SOME (MATCH_MP (MATCH_MP 
+                SOME (MATCH_MP (MATCH_MP
                        ASL_PROGRAM_IS_ABSTRACTION___TRANSITIVE thm1)
                        (valOf thm2_opt))
              end
           end
     in
-       search 
+       search
     end
 end;
 
@@ -227,18 +227,18 @@ val thmL = BODY_CONJUNCTS (ASSUME proc_abst_t)
 val t = ``asl_prog_procedure_call "merge" ([],[]):holfoot_program``
 *)
 
-fun ASL_PROGRAM_ABSTRACTION___match thmL sys xenv penv t = 
+fun ASL_PROGRAM_ABSTRACTION___match thmL sys xenv penv t =
   let
      val part = list_mk_icomb (ASL_PROGRAM_IS_ABSTRACTION_term, [xenv, penv, t]);
   in
-     (tryfind (fn thm => SOME (PART_MATCH rator thm part)) thmL) 
+     (tryfind (fn thm => SOME (PART_MATCH rator thm part)) thmL)
         handle HOL_ERR _ => raise UNCHANGED
   end;
 
 (*
-fun ASL_PROGRAM_ABSTRACTION___match thmL sys xenv penv t = 
+fun ASL_PROGRAM_ABSTRACTION___match thmL sys xenv penv t =
   let
-     fun check_thm thm = 
+     fun check_thm thm =
          let
             val (xenv', penv', p, p') = dest_ASL_PROGRAM_IS_ABSTRACTION t;
             val m = match_term p t;
@@ -248,13 +248,13 @@ fun ASL_PROGRAM_ABSTRACTION___match thmL sys xenv penv t =
             INST_TY_TERM m thm
          end;
   in
-     (tryfind check_thm thmL) 
+     (tryfind check_thm thmL)
         handle HOL_ERR _ => raise UNCHANGED
   end;
 *)
 
 
-(* 
+(*
 fun sys xenv penv t = NONE:thm option;
 val xenv = ``xenv :'a bin_option_function # ('b -> 'a -> bool)``
 val penv = ``penv :'c |-> ('d -> ('d, 'b, 'c, 'a) asl_program)``
@@ -262,11 +262,11 @@ val p = ``(asl_prog_block (p1::pL)):('d, 'b, 'c, 'a) asl_program``
 *)
 
 fun ASL_PROGRAM_ABSTRACTION___block pf abstL sys xenv penv p =
-   let      
+   let
       (*destruct block*)
       val bodyL = dest_asl_prog_block p;
       val (h,restBodyL) = listSyntax.dest_cons bodyL handle HOL_ERR _ => raise UNCHANGED;
-  
+
       (*Abstract parts*)
       val thm_h_opt = sys xenv penv h;
       val rest = mk_asl_prog_block restBodyL;
@@ -276,12 +276,12 @@ fun ASL_PROGRAM_ABSTRACTION___block pf abstL sys xenv penv p =
       val _ = if (not (isSome thm_h_opt) andalso not (isSome thm_rest_opt)) then raise UNCHANGED else ();
 
       (*create dummy abstractions if needed*)
-      val thm_h = if (isSome thm_h_opt) then valOf thm_h_opt else 
+      val thm_h = if (isSome thm_h_opt) then valOf thm_h_opt else
           prove_ASL_PROGRAM_ABSTRACTION_REFL xenv penv h;
-      val thm_rest = if (isSome thm_rest_opt) then valOf thm_rest_opt else 
+      val thm_rest = if (isSome thm_rest_opt) then valOf thm_rest_opt else
           prove_ASL_PROGRAM_ABSTRACTION_REFL xenv penv rest;
 
-      (*make sure the second abstraction is again a block, 
+      (*make sure the second abstraction is again a block,
         if necessary create one*)
       val (_, _, _, p1) = dest_ASL_PROGRAM_IS_ABSTRACTION (concl thm_h);
       val (_, _, _, p2) = dest_ASL_PROGRAM_IS_ABSTRACTION (concl thm_rest);
@@ -289,13 +289,13 @@ fun ASL_PROGRAM_ABSTRACTION___block pf abstL sys xenv penv p =
       val (thm_rest', pL) = if (is_asl_prog_block p2) then (thm_rest, dest_asl_prog_block p2) else
                             let
                                val pL = listSyntax.mk_list ([p2], type_of p2);
-                               val thm_rest' = ONCE_REWRITE_RULE [GSYM ASL_PROGRAM_IS_ABSTRACTION___block_intro] thm_rest; 
+                               val thm_rest' = ONCE_REWRITE_RULE [GSYM ASL_PROGRAM_IS_ABSTRACTION___block_intro] thm_rest;
 		            in
                                (thm_rest', pL)
                             end;
 
       (* instantiate everything*)
-      val thm = ISPECL [xenv, penv, h, restBodyL,p1,pL] ASL_PROGRAM_IS_ABSTRACTION___block; 
+      val thm = ISPECL [xenv, penv, h, restBodyL,p1,pL] ASL_PROGRAM_IS_ABSTRACTION___block;
       val thm1 = MP thm thm_h
       val thm2 = MP thm1 thm_rest'
    in
@@ -303,7 +303,7 @@ fun ASL_PROGRAM_ABSTRACTION___block pf abstL sys xenv penv p =
    end;
 
 
-(* 
+(*
 fun sys xenv penv t = NONE:thm option;
 val xenv = ``xenv :'a bin_option_function # ('b -> 'a -> bool)``
 val penv = ``penv :'c |-> ('d -> ('d, 'b, 'c, 'a) asl_program)``
@@ -324,15 +324,15 @@ fun list_append_norm_CONV tt =
 let
    val (l1,l2) = listSyntax.dest_append tt;
 in
-   if ((listSyntax.is_append l1) orelse (listSyntax.is_append l2)) then 
+   if ((listSyntax.is_append l1) orelse (listSyntax.is_append l2)) then
       (((RATOR_CONV o RAND_CONV) list_append_norm_CONV)  THENC
        ((RAND_CONV) list_append_norm_CONV) THENC
        list_append_norm_CONV) tt
-   else if (listSyntax.is_nil l1) then 
+   else if (listSyntax.is_nil l1) then
       ISPEC l2 append_thm_nil1
-   else if (listSyntax.is_nil l2) then 
+   else if (listSyntax.is_nil l2) then
       ISPEC l1 append_thm_nil2
-   else if (is_comment_nil l1) then 
+   else if (is_comment_nil l1) then
       REWR_CONV append_thm_comment_nil1 tt
    else let
         val (h, l1') = listSyntax.dest_cons l1;
@@ -346,14 +346,14 @@ end handle HOL_ERR _ => raise UNCHANGED;
 
 
 fun ASL_PROGRAM_ABSTRACTION___block_flatten pf abstL sys xenv penv p =
-   let      
+   let
       (* destruct input *)
       val bodyL = dest_asl_prog_block p;
       val (body_termL,body_term_rest) = listSyntax.strip_cons bodyL handle HOL_ERR _ => raise UNCHANGED;
       val body_term_type = listSyntax.dest_list_type (type_of body_term_rest)
 
       (* find another block *)
-      val pos = index is_asl_prog_block body_termL 
+      val pos = index is_asl_prog_block body_termL
                    handle HOL_ERR _ => raise UNCHANGED;
 
       (* split into the list before and after the found block *)
@@ -375,7 +375,7 @@ fun ASL_PROGRAM_ABSTRACTION___block_flatten pf abstL sys xenv penv p =
       val orgL_thm =  (RAND_CONV list_append_norm_CONV) orgL;
       val newL_thm =  (RAND_CONV list_append_norm_CONV) newL;
 
-      val thm1 = CONV_RULE 
+      val thm1 = CONV_RULE
                    (((RATOR_CONV o RAND_CONV) (K orgL_thm)) THENC
                     (RAND_CONV (K newL_thm))) thm0
    in
@@ -386,26 +386,26 @@ fun ASL_PROGRAM_ABSTRACTION___block_flatten pf abstL sys xenv penv p =
 val ASL_PROGRAM_ABSTRACTION___block_flatten___no_rec =
    ASL_PROGRAM_ABSTRACTION___block_flatten I [] (fn x => NONE)
 
-(* 
+(*
 fun sys xenv penv t = NONE:thm option;
 val xenv = ``xenv :'a bin_option_function # ('b -> 'a -> bool)``
 val penv = ``penv :'c |-> ('d -> ('d, 'b, 'c, 'a) asl_program)``
 val p = ``(asl_prog_cond c p1 p2):('d, 'b, 'c, 'a) asl_program``
 *)
 fun ASL_PROGRAM_ABSTRACTION___cond pf abstL sys xenv penv p =
-   let      
+   let
       (*destruct*)
       val (c,p1,p2) = dest_asl_prog_cond p;
 
       (*search abstractions*)
       val p1_thm_opt = sys xenv penv p1;
       val p2_thm_opt = sys xenv penv p2;
-      
+
       (*found something?*)
       val _ = if (not (isSome p1_thm_opt) andalso not (isSome p2_thm_opt)) then raise UNCHANGED else ();
-      val p1_thm = if (isSome p1_thm_opt) then valOf p1_thm_opt else 
+      val p1_thm = if (isSome p1_thm_opt) then valOf p1_thm_opt else
           prove_ASL_PROGRAM_ABSTRACTION_REFL xenv penv p1;
-      val p2_thm = if (isSome p2_thm_opt) then valOf p2_thm_opt else 
+      val p2_thm = if (isSome p2_thm_opt) then valOf p2_thm_opt else
           prove_ASL_PROGRAM_ABSTRACTION_REFL xenv penv p2;
 
 
@@ -413,7 +413,7 @@ fun ASL_PROGRAM_ABSTRACTION___cond pf abstL sys xenv penv p =
       val (_,_,_,p1') = dest_ASL_PROGRAM_IS_ABSTRACTION (concl p1_thm);
       val (_,_,_,p2') = dest_ASL_PROGRAM_IS_ABSTRACTION (concl p2_thm);
 
-      val thm = ISPECL [xenv, penv, c, p1,p1',p2,p2'] ASL_PROGRAM_IS_ABSTRACTION___cond; 
+      val thm = ISPECL [xenv, penv, c, p1,p1',p2,p2'] ASL_PROGRAM_IS_ABSTRACTION___cond;
       val thm1 = MP thm p1_thm
       val thm2 = MP thm1 p2_thm
    in
@@ -421,7 +421,7 @@ fun ASL_PROGRAM_ABSTRACTION___cond pf abstL sys xenv penv p =
    end;
 
 
-(* 
+(*
 fun sys xenv penv t = SOME (prove_ASL_PROGRAM_ABSTRACTION_REFL xenv penv t)
 fun sys xenv penv t = NONE:thm option;
 val xenv = ``xenv :'a bin_option_function # ('b -> 'a -> bool)``
@@ -429,7 +429,7 @@ val penv = ``penv :'c |-> ('d -> ('d, 'b, 'c, 'a) asl_program)``
 val p = ``(asl_prog_while c p):('d, 'b, 'c, 'a) asl_program``
 *)
 fun ASL_PROGRAM_ABSTRACTION___while pf abstL sys xenv penv p =
-   let      
+   let
       val (c,p) = dest_asl_prog_while p;
 
       (*search abstraction*)
@@ -437,14 +437,14 @@ fun ASL_PROGRAM_ABSTRACTION___while pf abstL sys xenv penv p =
       val p_thm = if (isSome p_thm_opt) then valOf p_thm_opt else raise UNCHANGED;
       val (_,_,_,p') = dest_ASL_PROGRAM_IS_ABSTRACTION (concl p_thm);
 
-      val thm = ISPECL [xenv, penv, c, p,p'] ASL_PROGRAM_IS_ABSTRACTION___while; 
+      val thm = ISPECL [xenv, penv, c, p,p'] ASL_PROGRAM_IS_ABSTRACTION___while;
       val thm1 = MP thm p_thm;
    in
       SOME thm1
    end;
 
 fun ASL_PROGRAM_ABSTRACTION___comment pf abstL sys xenv penv p =
-   let      
+   let
       val (_, c, p', def_thm) = dest_asl_comment p;
 
       (*search abstraction*)
@@ -482,7 +482,7 @@ val abstL = [ASSUME proc_abst_t]
 
 *)
 
-fun ASL_PROGRAM_HOARE_TRIPLE___ABSTRACTION___CONSEQ_CONV fL abstL t =   
+fun ASL_PROGRAM_HOARE_TRIPLE___ABSTRACTION___CONSEQ_CONV fL abstL t =
    let
      val _ = if (is_ASL_PROGRAM_HOARE_TRIPLE t) then () else raise UNCHANGED;
      val (xenv, penv, pre, body, post) = dest_ASL_PROGRAM_HOARE_TRIPLE t;
@@ -504,7 +504,7 @@ fun ASL_PROGRAM_HOARE_TRIPLE___ABSTRACTION___CONSEQ_CONV fL abstL t =
 
 *)
 
-fun ASL_PROGRAM_IS_ABSTRACTION___ABSTRACTION___CONSEQ_CONV fL abstL t =   
+fun ASL_PROGRAM_IS_ABSTRACTION___ABSTRACTION___CONSEQ_CONV fL abstL t =
    let
      val (xenv, penv, p1, p3) = dest_ASL_PROGRAM_IS_ABSTRACTION t handle HOL_ERR _ => raise UNCHANGED
 
@@ -523,7 +523,7 @@ fun ASL_PROGRAM_IS_ABSTRACTION___ABSTRACTION___CONSEQ_CONV fL abstL t =
            end;
          val l1 = mk_list_term x1 a1;
          val l2 = mk_list_term x2 a2
-         val su = subst [x1 |-> l1, x2 |-> l2]                   
+         val su = subst [x1 |-> l1, x2 |-> l2]
      in
          fn p1 => (rhs (concl (SIMP_CONV list_ss [] (su p1)))) handle UNCHANGED => su p1
      end handle UNCHANGED => I
@@ -579,7 +579,7 @@ val abstrL = append basic_asl_program_abstractions [
    ASL_PROGRAM_ABSTRACTION___call_by_value_arg,
    ASL_PROGRAM_ABSTRACTION___eval_expressions]
 
-   val thm_strengthen_specs = 
+   val thm_strengthen_specs =
       DEPTH_CONSEQ_CONV (ASL_PROGRAM_IS_ABSTRACTION___ABSTRACTION___CONSEQ_CONV abstrL [ASSUME proc_abst_t])
                         specs_t
 
@@ -605,7 +605,7 @@ val _ = computeLib.add_conv (pairSyntax.uncurry_tm, 2, pairLib.GEN_BETA_CONV) pr
 val _ = computeLib.add_conv (asl_comment_location_string_term, 2, asl_comment_location_string_ELIM_CONV) precond1_cs;
 
 
-val precond1_conv = 
+val precond1_conv =
    (QUANT_INSTANTIATE_CONV [pair_default_qp]) THENC
    DEPTH_CONV (pairLib.GEN_BETA_CONV)
 
@@ -638,7 +638,7 @@ let
 
 
    (*Simplify*)
-   fun simplify_precond thm = 
+   fun simplify_precond thm =
       let
          val thm1 = CONV_RULE (RATOR_CONV (RAND_CONV (computeLib.CBV_CONV precond1_cs))) thm;
          val thm2 = CONV_RULE (RATOR_CONV (RAND_CONV (Conv.QUANT_CONV (RAND_CONV precond1_conv)))) thm1;
@@ -656,10 +656,10 @@ let
       val (penv_var, body) = dest_forall precond;
       val (proc_abst_t, specs_t) = dest_imp body;
 
-      val thm_strengthen_specs = 
+      val thm_strengthen_specs =
          DEPTH_STRENGTHEN_CONSEQ_CONV (ASL_PROGRAM_IS_ABSTRACTION___ABSTRACTION___CONSEQ_CONV abstrL [ASSUME proc_abst_t])
                            specs_t handle UNCHANGED => REFL_CONSEQ_CONV specs_t;
-  
+
 
       val thm2 = let
          val precond' = fst (dest_imp (concl thm_strengthen_specs));
@@ -669,7 +669,7 @@ let
          val x_thm3 = GEN_IMP penv_var x_thm2
          val precond'' = fst (dest_imp (concl x_thm3));
          val x_thm4 = UNDISCH x_thm3
-         val x_thm5 = MP thm x_thm4 
+         val x_thm5 = MP thm x_thm4
          val x_thm6 = DISCH precond'' x_thm5
          in x_thm6 end;
    in
@@ -685,7 +685,7 @@ in
    current_thm3
 end;
 
-    
+
 
 (******************************************************************************)
 (* Remove procedure_call_preserve_names_wrapper                               *)
@@ -698,7 +698,7 @@ val tt = ``asl_procedure_call_preserve_names_wrapper ["r"]
 
 fun asl_procedure_call_preserve_names_wrapper_ELIM_CONV tt =
 let
-   val thm0 = PART_MATCH (lhs o snd o dest_imp_only) 
+   val thm0 = PART_MATCH (lhs o snd o dest_imp_only)
       asl_procedure_call_preserve_names_wrapper_ELIM tt;
    val precond = (fst o dest_imp o concl) thm0
    val precond_thm = EQT_ELIM (REWRITE_CONV [LENGTH,
@@ -769,7 +769,7 @@ let
    val l = mk_var (s, markerSyntax.label_ty)
    val c' = listSyntax.mk_cons (l, c)
 in
-   c'   
+   c'
 end;
 
 
@@ -777,12 +777,12 @@ fun asl_comment_modify_APPEND_INC s c =
 let
    val (n, s', c',_) = get_last_num_token c
 
-   val c'' = listSyntax.mk_cons (mk_var 
+   val c'' = listSyntax.mk_cons (mk_var
                 (s', markerSyntax.label_ty), c')
 
    val ns = Int.toString (n + 1)
    val s'' = s ^ " " ^ ns;
-   val c''' = listSyntax.mk_cons (mk_var 
+   val c''' = listSyntax.mk_cons (mk_var
                 (s'', markerSyntax.label_ty), c'')
 in
    c'''
@@ -793,12 +793,12 @@ fun asl_comment_modify_APPEND_DEC s c =
 let
    val (n, s', c',_) = get_last_num_token c
 
-   val c'' = listSyntax.mk_cons (mk_var 
+   val c'' = listSyntax.mk_cons (mk_var
                 (s', markerSyntax.label_ty), c')
 
    val ns = Int.toString (n - 1)
    val s'' = s ^ " " ^ ns;
-   val c''' = listSyntax.mk_cons (mk_var 
+   val c''' = listSyntax.mk_cons (mk_var
                 (s'', markerSyntax.label_ty), c'')
 in
    c'''
@@ -808,7 +808,7 @@ end;
 fun asl_comment_block_CONV conv t =
    if (not (is_asl_prog_block t)) then conv t else
    let
-      val pL = dest_asl_prog_block t;    
+      val pL = dest_asl_prog_block t;
       val rec_call = asl_comment_block_CONV conv
    in
       if listSyntax.is_cons pL then
@@ -833,7 +833,7 @@ fun asl_comment_abstraction_INTRO_CONV s t =
    in
       ISPECL [l, t] (GSYM asl_comment_abstraction_def)
    end;
-         
+
 
 fun asl_comment_location_CONSEQ_RULE c thm =
 let
@@ -865,14 +865,14 @@ end;
 fun CONSEQ_CONV_CONGRUENCE___location_comment context sys dir t =
   let
      val (c, body) = dest_asl_comment_location t
-     val (n1, thm0_opt) = sys [] context 0  dir body; 
+     val (n1, thm0_opt) = sys [] context 0  dir body;
      val _ = if (isSome thm0_opt) then () else raise UNCHANGED;
 
      val thm1 = asl_comment_location_CONSEQ_RULE c (valOf thm0_opt)
   in
      (n1, thm1)
   end
- 
+
 
 (******************************************************************************)
 (* Remove asl_exists_list                                                     *)
@@ -889,7 +889,7 @@ val t2s = holfoot_term_to_string
 local
    val conv_nil = REWR_CONV (CONJUNCT1 asl_exists_list___REWRITE)
    val conv_cons = REWR_CONV (CONJUNCT2 asl_exists_list___REWRITE)
-   fun asl_exists_list_CONV_int [] = 
+   fun asl_exists_list_CONV_int [] =
        conv_nil THENC (TRY_CONV BETA_CONV)
      | asl_exists_list_CONV_int (n::ns) =
        conv_cons THENC (RAND_CONV (RENAME_VARS_CONV [n])) THENC
@@ -930,8 +930,8 @@ end
 open holfootParser
 open holfoot_pp_print
 val examplesDir = concat [Globals.HOLDIR, "/examples/separationLogic/src/holfoot/EXAMPLES/"]
-val file = concat [examplesDir, "mergesort.sf"]; 
-val file = concat [examplesDir, "mergesort.dsf"]; 
+val file = concat [examplesDir, "mergesort.sf"];
+val file = concat [examplesDir, "mergesort.dsf"];
 val t = parse_holfoot_file file
 val t = parse_holfoot_file_restrict ["mergesort"] file
 

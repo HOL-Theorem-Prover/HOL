@@ -125,9 +125,9 @@ val tpm_def = Define`tpm pi t = to_term (lswap pi (from_term t))`
 
 val tpm_thm = store_thm(
   "tpm_thm",
-  ``(tpm pi (VAR s) = VAR (lswapstr pi s)) /\
+  ``(tpm pi (VAR s) = VAR (raw_lswapstr pi s)) /\
     (tpm pi (M @@ N) = tpm pi M @@ tpm pi N) /\
-    (tpm pi (LAM v M) = LAM (lswapstr pi v) (tpm pi M))``,
+    (tpm pi (LAM v M) = LAM (raw_lswapstr pi v) (tpm pi M))``,
   SRW_TAC [][tpm_def, LAM_def, APP_def, VAR_def, fromto_inverse]);
 val _ = export_rewrites ["tpm_thm"]
 
@@ -194,9 +194,9 @@ val LAM_eq_thm = store_thm(
 
 val FV_tpm = store_thm(
   "FV_tpm",
-  ``!t pi v. v IN FV (tpm pi t) = lswapstr (REVERSE pi) v IN FV t``,
+  ``!t pi v. v IN FV (tpm pi t) = raw_lswapstr (REVERSE pi) v IN FV t``,
   HO_MATCH_MP_TAC simple_induction THEN
-  SRW_TAC [][basic_swapTheory.lswapstr_eql]);
+  SRW_TAC [][basic_swapTheory.raw_lswapstr_eql]);
 val _ = export_rewrites ["FV_tpm"]
 
 val tpm_inverse = store_thm(
@@ -225,7 +225,7 @@ val tpm_APPEND = store_thm(
   "tpm_APPEND",
   ``!t. tpm (p1 ++ p2) t = tpm p1 (tpm p2 t)``,
   HO_MATCH_MP_TAC simple_induction THEN
-  SRW_TAC [][basic_swapTheory.lswapstr_APPEND]);
+  SRW_TAC [][basic_swapTheory.raw_lswapstr_APPEND]);
 
 val tpm_CONS = store_thm(
   "tpm_CONS",
@@ -249,24 +249,24 @@ val nc_INDUCTION2 = store_thm(
   Q_TAC SUFF_TAC `!u pi. P (tpm pi u)` THEN1 METIS_TAC [tpm_NIL] THEN
   HO_MATCH_MP_TAC simple_induction THEN
   SRW_TAC [][] THEN
-  Q_TAC (NEW_TAC "z") `lswapstr pi v INSERT FV (tpm pi u) UNION X` THEN
-  Q_TAC SUFF_TAC `LAM (lswapstr pi v) (tpm pi u) =
-                  LAM z (tpm ((z,lswapstr pi v)::pi) u)`
+  Q_TAC (NEW_TAC "z") `raw_lswapstr pi v INSERT FV (tpm pi u) UNION X` THEN
+  Q_TAC SUFF_TAC `LAM (raw_lswapstr pi v) (tpm pi u) =
+                  LAM z (tpm ((z,raw_lswapstr pi v)::pi) u)`
         THEN1 SRW_TAC [][] THEN
-  SRW_TAC [][LAM_eq_thm, basic_swapTheory.lswapstr_APPEND] THENL [
+  SRW_TAC [][LAM_eq_thm, basic_swapTheory.raw_lswapstr_APPEND] THENL [
     FULL_SIMP_TAC (srw_ss()) [],
     SRW_TAC [][tpm_eqr, tpm_flip_args, tpm_APPEND]
   ]);
 
 val tpm_sing_to_back = store_thm(
   "tpm_sing_to_back",
-  ``!t. tpm [(lswapstr p u, lswapstr p v)] (tpm p t) = tpm p (tpm [(u,v)] t)``,
+  ``!t. tpm [(raw_lswapstr p u, raw_lswapstr p v)] (tpm p t) = tpm p (tpm [(u,v)] t)``,
   HO_MATCH_MP_TAC simple_induction THEN
-  SRW_TAC [][basic_swapTheory.lswapstr_sing_to_back]);
+  SRW_TAC [][basic_swapTheory.raw_lswapstr_sing_to_back]);
 
 val tpm_subst = store_thm(
   "tpm_subst",
-  ``!N. tpm pi ([M/v] N) = [tpm pi M/lswapstr pi v] (tpm pi N)``,
+  ``!N. tpm pi ([M/v] N) = [tpm pi M/raw_lswapstr pi v] (tpm pi N)``,
   HO_MATCH_MP_TAC nc_INDUCTION2 THEN
   Q.EXISTS_TAC `v INSERT FV M` THEN
   SRW_TAC [][SUB_THM, SUB_VAR]);
@@ -274,7 +274,7 @@ val tpm_subst = store_thm(
 val tpm_subst_out = store_thm(
   "tpm_subst_out",
   ``[M/v] (tpm pi N) =
-       tpm pi ([tpm (REVERSE pi) M/lswapstr (REVERSE pi) v] N)``,
+       tpm pi ([tpm (REVERSE pi) M/raw_lswapstr (REVERSE pi) v] N)``,
   SRW_TAC [][tpm_subst])
 
 val tpm_idfront = store_thm(

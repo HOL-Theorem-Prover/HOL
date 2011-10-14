@@ -2,7 +2,7 @@ open HolKernel Parse boolLib bossLib
 
 open boolSimps pred_setTheory pathTheory binderLib
 open chap3Theory standardisationTheory term_posnsTheory termTheory
-     finite_developmentsTheory appFOLDLTheory
+     finite_developmentsTheory appFOLDLTheory nomsetTheory
 
 val _ = new_theory "normal_order"
 
@@ -46,7 +46,7 @@ val tpm_normorder_I = store_thm(
 val tpm_normorder_eqn = store_thm(
   "tpm_normorder_eqn",
   ``tpm pi M -n-> tpm pi N ⇔ M -n-> N``,
-  METIS_TAC [tpm_inverse, tpm_normorder_I]);
+  METIS_TAC [pmact_inverse, tpm_normorder_I]);
 val _ = export_rewrites ["tpm_normorder_eqn"]
 
 val normorder_bvc_gen_ind = store_thm(
@@ -63,7 +63,7 @@ val normorder_bvc_gen_ind = store_thm(
   REPEAT GEN_TAC THEN STRIP_TAC THEN
   Q_TAC SUFF_TAC
         `∀M N. M -n-> N ⇒ ∀π x. P (tpm π M) (tpm π N) x`
-        THEN1 METIS_TAC [tpm_NIL] THEN
+        THEN1 METIS_TAC [pmact_nil] THEN
   HO_MATCH_MP_TAC normorder_ind THEN SRW_TAC [][] THENL [
     SRW_TAC [][tpm_subst] THEN
     Q_TAC (NEW_TAC "z")
@@ -84,7 +84,7 @@ val normorder_bvc_gen_ind = store_thm(
      (LAM (lswapstr π v) (tpm π N) = LAM z (tpm [(z, lswapstr π v)] (tpm π N)))`
         by SRW_TAC [][tpm_ALPHA] THEN
     NTAC 2 (POP_ASSUM SUBST_ALL_TAC) THEN
-    SRW_TAC [][GSYM tpm_APPEND]
+    SRW_TAC [][GSYM pmact_decompose]
   ]);
 
 infix |> fun x |> f = f x
@@ -129,13 +129,13 @@ val normorder_rwts = store_thm(
     Q.EXISTS_TAC `tpm [(v,v')] M2` THEN
     `v ∉ FV (tpm [(v,v')] M)` by SRW_TAC [][] THEN
     `v ∉ FV M2` by METIS_TAC [normorder_FV] THEN
-    SRW_TAC [][LAM_eq_thm, tpm_flip_args] THEN
-    METIS_TAC [tpm_sing_inv, tpm_normorder_I],
+    SRW_TAC [][LAM_eq_thm, pmact_flip_args] THEN
+    METIS_TAC [pmact_sing_inv, tpm_normorder_I],
 
     CONV_TAC (LAND_CONV (ONCE_REWRITE_CONV [normorder_cases])) THEN
     SIMP_TAC (srw_ss() ++ DNF_ss) [LAM_eq_thm, tpm_eqr] THEN
     SRW_TAC [][EQ_IMP_THM] THEN
-    METIS_TAC [fresh_tpm_subst, lemma15a, tpm_flip_args],
+    METIS_TAC [fresh_tpm_subst, lemma15a, pmact_flip_args],
 
     CONV_TAC (LAND_CONV (ONCE_REWRITE_CONV [normorder_cases])) THEN
     SRW_TAC [][EQ_IMP_THM] THEN SRW_TAC [][] THEN

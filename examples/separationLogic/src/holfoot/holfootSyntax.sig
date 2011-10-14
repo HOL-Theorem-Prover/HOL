@@ -64,17 +64,17 @@ val holfoot_exp_one_term : term
 val holfoot_exp_op_term : term;
 val holfoot_exp_sub_term : term
 val holfoot_exp_var_term : term
-val holfoot_implies_in_heap_or_null_term : term 
-val holfoot_implies_in_heap_term : term 
+val holfoot_implies_in_heap_or_null_term : term
+val holfoot_implies_in_heap_term : term
 val holfoot_lock_invariant_term : term;
 val holfoot_pred_and_term : term
 val holfoot_pred_bin_term : term
 val holfoot_pred_eq_term : term
 val holfoot_pred_false_term : term
 val holfoot_pred_ge_term : term
-val holfoot_pred_gt_term : term 
+val holfoot_pred_gt_term : term
 val holfoot_pred_le_term : term
-val holfoot_pred_lt_term : term 
+val holfoot_pred_lt_term : term
 val holfoot_pred_neg_term : term
 val holfoot_pred_neq_term : term
 val holfoot_pred_or_term : term
@@ -137,7 +137,7 @@ val is_holfoot_exp_null : term -> bool
 val is_holfoot_exp_one : term -> bool
 val is_holfoot_implies_in_heap   : term -> bool
 val is_holfoot_implies_in_heap_or_null   : term -> bool
-val is_holfoot_prog_dispose : term -> bool 
+val is_holfoot_prog_dispose : term -> bool
 val is_holfoot_prog_field_assign : term -> bool
 val is_holfoot_prog_field_lookup : term -> bool
 val is_holfoot_prog_new : term -> bool

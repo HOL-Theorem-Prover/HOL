@@ -72,12 +72,6 @@ local
     if n = 1 then APP_CONV tm
     else (RATOR_CONV (APP_N_CONV (n - 1)) THENC APP_CONV) tm
 
-  fun BINOP_CONV conv tm =
-    let val (lop,r) = dest_comb tm
-        val (opn,l) = dest_comb lop
-    in MK_COMB(AP_TERM opn (conv l),conv r)
-    end
-
   fun FOL_CONV hddata tm =
     if is_forall tm then
       BINDER_CONV (FOL_CONV hddata) tm

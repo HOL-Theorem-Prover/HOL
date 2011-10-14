@@ -31,12 +31,12 @@ let
     val _ = print ((Time.toString d_time)^ " s");
     val _ = if quiet then () else print ("\n   ");
 
-    val _ = if quiet then () else 
+    val _ = if quiet then () else
        let
           val _ = print "---> ";
           val _ = if isSome thm_opt then (print_thm (valOf thm_opt);print "\n")
                   else print "-\n"
-          val _ = if (not ok) then 
+          val _ = if (not ok) then
                      (print "   EXPECTED ";
                       if isSome r_opt then (print "``";print_term (valOf r_opt);print "``\n")
                       else print "-\n")
@@ -88,7 +88,7 @@ in
 end
 
 
-val qh_testCases = 
+val qh_testCases =
   [(``?x. x = 2``, SOME ``T``),
    (``?x. f x = f 2``, SOME ``T``),
    (``?x. f x = 2``, NONE),
@@ -107,7 +107,7 @@ val qh_testCases =
    (``?x:'a. (!y:'b. (x = f y)) /\ P x``, SOME ``?y:'b. (!y'. f y = f y') /\ P ((f y):'a)``),
    (``?x:'a. (!y2:'b y:'b y3:'b. (x = f y y2 y3)) /\ P x``, SOME ``?y2:'b y:'b y3:'b. (!y2' y' y3'. f y y2 y3 = f y' y2' y3') /\ P ((f y y2 y3):'a)``),
    (``?x:'a. Q x /\ (?y:'b. (x = f y)) /\ P x``, SOME ``?y:'b. Q (f y) /\ P ((f y):'a)``),
-   (``?x. if b x then ((x = 2) /\ Q x) else (Q2 x /\ (x = 2))``, 
+   (``?x. if b x then ((x = 2) /\ Q x) else (Q2 x /\ (x = 2))``,
     SOME ``if b 2 then (Q 2):bool else Q2 2``),
    (``?!x. (x = 2) /\ P x``, SOME ``(P 2):bool``),
    (mk_eq_disj_ex 40, SOME T)];
@@ -141,7 +141,7 @@ QUANT_INSTANTIATE_CONV [] ``?x. if b x then ((x = 2) /\ Q x) else (Q2 x /\ (x = 
 open PolyML
 stackTrace ()
 PolyML.debug = 1
-time conv t 
+time conv t
 PolyML.profiling 2
 val t = (mk_eq_disj_ex 40)
 val t = (mk_eq_disj_ex2 40)
@@ -153,7 +153,7 @@ QUANT_INSTANTIATE_HEURISTIC___debug := 3;
 conv ``?y:num. (z = 40)``
 t
 
-time (QUANT_INSTANTIATE_CONV []) ``?x. 
+time (QUANT_INSTANTIATE_CONV []) ``?x.
 quantHeuristicsArgsLib
 QUANT_INSTANTIATE_HEURISTIC___debug := 0
 
@@ -166,11 +166,11 @@ QUANT_INSTANTIATE_HEURISTIC___debug := 0
 
 val qh_test_pair = test_conv "QUANT_INSTANTIATE_CONV [pair_default_qp]" (QUANT_INSTANTIATE_CONV [pair_default_qp])
 
-val qh_testCases_pair = 
+val qh_testCases_pair =
   [(``?p:('a # 'b). (x = FST p) /\ Q p``, SOME ``?p_2:'b. Q(x:'a,p_2)``),
    (``?p:('a # 'b). (x = SND p) /\ Q p``, SOME ``?p_1:'a. Q(p_1,x:'b)``),
    (``?v:'a. (v,X:'b) = Z``, SOME ``X = SND (Z:('a # 'b))``),
-   (``!x. a /\ (\ (a1:'a, t3:'b, a2:'c). P a1 a2 t3) x /\ b x``, 
+   (``!x. a /\ (\ (a1:'a, t3:'b, a2:'c). P a1 a2 t3) x /\ b x``,
     SOME ``!a1:'a t3:'b a2:'c. a /\ (\ (a1:'a, t3:'b, a2:'c). P a1 a2 t3) (a1,t3,a2) /\ b (a1,t3,a2)``),
    (``?v:'a. (v,X:'b) = (a,b)``, SOME ``X:'b = b``)];
 
@@ -184,7 +184,7 @@ val _ = map (qh_test_pair hard_fail quiet) qh_testCases_pair;
 
 val qh_test_option = test_conv "QUANT_INSTANTIATE_CONV [option_qp]" (QUANT_INSTANTIATE_CONV [option_qp])
 
-val qh_testCases_option = 
+val qh_testCases_option =
   [(``!x:'a option. IS_SOME x ==> P x``, SOME ``!x_x':'a. P (SOME x_x')``),
    (``?x:'a option. IS_SOME x ==> P x``, SOME T),
    (``!x:'a option. ~(IS_SOME x) ==> P x``, SOME ``(P (NONE:'a option)):bool``),
@@ -194,7 +194,7 @@ val qh_testCases_option =
    (``!x. IS_NONE x``, SOME F)];
 
 val _ = map (qh_test_option hard_fail quiet) qh_testCases_option;
- 
+
 
 (******************************************************************************)
 (* Num tests                                                               *)
@@ -202,13 +202,13 @@ val _ = map (qh_test_option hard_fail quiet) qh_testCases_option;
 
 val qh_test_num = test_conv "QUANT_INSTANTIATE_CONV [num_qp]" (QUANT_INSTANTIATE_CONV [num_qp])
 
-val qh_testCases_num = 
+val qh_testCases_num =
   [(``!x:num. (x + 7 = 2 + 7)``, SOME F),
    (``!x:num. ~(x = 0) ==> P x``, SOME ``!x_n. P (SUC x_n)``),
    (``!x:num. x = y``, SOME F)];
 
 val _ = map (qh_test_num hard_fail quiet) qh_testCases_num;
- 
+
 
 (******************************************************************************)
 (* LIST tests                                                                 *)
@@ -216,13 +216,13 @@ val _ = map (qh_test_num hard_fail quiet) qh_testCases_num;
 
 val qh_test_list = test_conv "QUANT_INSTANTIATE_CONV [list_qp]" (QUANT_INSTANTIATE_CONV [list_qp])
 
-val qh_testCases_list = 
+val qh_testCases_list =
   [(``!l:'a list. ~(NULL l) ==> P l``, SOME ``!l_t l_h. P (l_h::l_t)``),
    (``!x. x = y::ys``, SOME F),
    (``!x. x = []``, SOME F),
    (``?l. ~(NULL l)``, SOME T),
    (``?x:'a xs. QQ /\ (x::xs = y::ys) /\ P /\ Q xs``, SOME ``QQ /\ P /\ Q (ys:'a list)``),
-   (``?x. PP ==> ~(x = []) /\ P x``, 
+   (``?x. PP ==> ~(x = []) /\ P x``,
     SOME ``?x_t:'a list x_h. PP ==> P (x_h::x_t)``)];
 val _ = map (qh_test_list hard_fail quiet) qh_testCases_list;
 
@@ -233,7 +233,7 @@ val _ = map (qh_test_list hard_fail quiet) qh_testCases_list;
 
 val qh_test_option = test_conv "QUANT_INSTANTIATE_CONV [option_qp]" (QUANT_INSTANTIATE_CONV [option_qp])
 
-val qh_testCases_option = 
+val qh_testCases_option =
   [(``!x:'a option. IS_SOME x ==> P x``, SOME ``!x_x':'a. P (SOME x_x')``),
    (``?x:'a option. IS_SOME x ==> P x``, SOME T),
    (``!x:'a option. ~(IS_SOME x) ==> P x``, SOME ``(P (NONE:'a option)):bool``),
@@ -243,7 +243,7 @@ val qh_testCases_option =
    (``!x. IS_NONE x``, SOME F)];
 
 val _ = map (qh_test_option hard_fail quiet) qh_testCases_option;
- 
+
 
 val _ = Process.exit Process.success;
 

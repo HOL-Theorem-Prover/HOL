@@ -144,71 +144,22 @@ srw_tac [][] >>
 match_mp_tac WFP_RULES >>
 srw_tac [][])
 
-(*
 val WF_uR = Q.store_thm(
 "WF_uR",
 `WF uR`,
-match_mp_tac WF_SUBSET >>
-qexists_tac `uR_lex` >>
-conj_tac >- (
-  srw_tac [][uR_lex_def] >>
-  match_mp_tac WF_inv_image >>
-  match_mp_tac WF_LEX >>
-  conj_tac >- (
-    ??? ) >>
-  match_mp_tac WF_LEX >>
-  conj_tac >- srw_tac [][WF_FINITE_PSUBSET]
-  srw_tac [][WF_measure] ) >>
-metis_tac [uR_RSUBSET_uR_lex,RSUBSET])
-
-val uR_lex1_def = Define`
-  uR_lex1 (sx,c1,c2) (s,t1,t2) =
-  (s SUBMAP sx ∧ s ≠ sx ∨ (
-    (s = sx) ∧ 
-    allvars sx c1 c2 PSUBSET allvars s t1 t2 ∨ (
-      (allvars sx c1 c2 = allvars s t1 t2) ∧
-      pair_count (walk* sx c1) < pair_count (walk* s t1))))`
-
-val uR_imp_uR_lex1 = Q.store_thm(
-"uR_imp_uR_lex1",
-`uR RSUBSET uR_lex1`,
-srw_tac [][RSUBSET] >>
-PairCases_on`x` >>
-PairCases_on`y` >>
-Q.MATCH_RENAME_TAC `uR_lex1 (sx,c1,c2) (s,t1,t2)` [] >>
-FULL_SIMP_TAC (srw_ss()) [uR_def,uR_lex1_def,measure_thm] >>
-Cases_on `s = sx` >> srw_tac [][] >>
-Cases_on `allvars s c1 c2 = allvars s t1 t2` >> srw_tac [][PSUBSET_DEF])
-
-val uR_lex1_imp_uR = Q.store_thm(
-"uR_lex1_imp_uR",
-`uR_lex1 RSUBSET uR`,
-srw_tac [][RSUBSET] >>
-PairCases_on`x` >>
-PairCases_on`y` >>
-Q.MATCH_RENAME_TAC `uR (sx,c1,c2) (s,t1,t2)` [] >>
-FULL_SIMP_TAC (srw_ss()) [uR_def,uR_lex1_def,measure_thm] >>
-
-val uR_lex1_uR = Q.store_thm(
-"uR_lex1_uR",
-`uR_lex1 = uR`,
-srw_tac [][FUN_EQ_THM] >>
-Q.MATCH_RENAME_TAC `uR_lex1 c p ⇔ uR c p` [] >>
-PairCases_on `c` >> PairCases_on `p` >>
-Q.MATCH_RENAME_TAC `uR_lex1 (sx,c1,c2) (s,t1,t2) ⇔ X` ["X"] >>
-srw_tac [][uR_def,uR_lex1_def,measure_thm] >>
-Cases_on `wfs sx` >> srw_tac [][] >>
-Cases_on `s SUBMAP sx` >> srw_tac [][] >- (
-  Cases_on `s = sx` >> srw_tac [][]
-*)
-
-val WF_uR = Q.store_thm(
-"WF_uR",
-`WF uR`,
-SRW_TAC [][WF_IFF_WELLFOUNDED,wellfounded_def,uR_lambda,UNCURRY,EXISTS_OR_THM] THEN
+SRW_TAC [][WF_IFF_WELLFOUNDED,wellfounded_def,uR_lambda,UNCURRY,
+           EXISTS_OR_THM] THEN
 SPOSE_NOT_THEN STRIP_ASSUME_TAC THEN
+Q.ABBREV_TAC `f1 = \n. FST (f n)` THEN
+`!n. FST (f n) = f1 n` by SRW_TAC [][Abbr`f1`] THEN
+Q.ABBREV_TAC `f2 = \n. FST (SND (f n))` THEN
+`!n. FST (SND (f n)) = f2 n` by SRW_TAC [][Abbr`f2`] THEN
+Q.ABBREV_TAC `f3 = \n. SND (SND (f n))` THEN
+`!n. SND (SND (f n)) = f3 n` by SRW_TAC [][Abbr`f3`] THEN
+FULL_SIMP_TAC (srw_ss()) [] THEN
+REPEAT (Q.PAT_ASSUM `Abbrev B` (K ALL_TAC)) THEN
 Q.ISPECL_THEN [`λx y. y:num set SUBSET x`,
-               `λn. allvars (FST (f n)) (FST (SND (f n))) (SND (SND (f n)))`]
+               `λn. allvars (f1 n) (f2 n) (f3 n)`]
               MP_TAC
               transitive_monotone THEN
 DISCH_THEN
@@ -217,7 +168,7 @@ DISCH_THEN
                  |> (fn th => PROVE_HYP (prove(hd(hyp th),
                                                METIS_TAC [SUBSET_TRANS])) th)
                  |> MP_TAC) THEN
-`∀m n. m < n ⇒ FST (f m) ⊑ FST (f n)`
+`∀m n. m < n ⇒ f1 m ⊑ f1 n`
    by (CONV_TAC (STRIP_QUANT_CONV
                      (RAND_CONV (RAND_CONV (UNBETA_CONV ``n:num``) THENC
                                  LAND_CONV (UNBETA_CONV ``m:num``)))) THEN
@@ -225,47 +176,44 @@ DISCH_THEN
        SRW_TAC [][transitive_def] THEN METIS_TAC [SUBMAP_TRANS]) THEN
 SRW_TAC [][] THEN
 SPOSE_NOT_THEN STRIP_ASSUME_TAC THEN
-`?m.!n. m < n ==> (allvars (FST(f n)) (FST(SND(f n))) (SND(SND(f n))) =
-                   allvars (FST(f m)) (FST(SND(f m))) (SND(SND(f m))))`
+`?m.!n. m < n ==>
+        (allvars (f1 n) (f2 n) (f3 n) = allvars (f1 m) (f2 m) (f3 m))`
   by (SPOSE_NOT_THEN STRIP_ASSUME_TAC THEN
       FULL_SIMP_TAC (srw_ss()) [SKOLEM_THM] THEN
       `!m. m < f' m /\
-           allvars (FST(f(f' m))) (FST(SND(f(f' m)))) (SND(SND(f(f' m))))
+           allvars (f1 (f' m)) (f2 (f' m)) (f3 (f' m))
            PSUBSET
-           allvars (FST(f m)) (FST(SND(f m))) (SND(SND(f m)))`
-        by (METIS_TAC [PSUBSET_DEF]) THEN
-      `!m.measure CARD
-            (allvars (FST(f(f' m))) (FST(SND(f(f' m)))) (SND(SND(f(f' m)))))
-            (allvars (FST(f m)) (FST(SND(f m))) (SND(SND(f m))))`
-        by (METIS_TAC [measure_thm,FINITE_allvars,CARD_PSUBSET])
-        THEN
-      `WF (measure (CARD:((num -> bool) -> num)))` by METIS_TAC [WF_measure] THEN
-      FULL_SIMP_TAC (srw_ss()) [WF_IFF_WELLFOUNDED,wellfounded_def] THEN
+           allvars (f1 m) (f2 m) (f3 m)`
+        by METIS_TAC [PSUBSET_DEF] THEN
+      `!m. measure CARD
+             (allvars (f1 (f' m)) (f2 (f' m)) (f3 (f' m)))
+             (allvars (f1 m) (f2 m) (f3 m))`
+        by METIS_TAC [measure_thm,FINITE_allvars,CARD_PSUBSET] THEN
+      `WF (measure (CARD:((num -> bool) -> num)))` by SRW_TAC [][] THEN
+      FULL_SIMP_TAC bool_ss [WF_IFF_WELLFOUNDED,wellfounded_def] THEN
       POP_ASSUM (Q.SPEC_THEN
-                   `\n.LET (\t.allvars (FST t) (FST(SND t)) (SND(SND t)))
-                           (f (FUNPOW f' n 0))`
+                   `\n. let t = FUNPOW f' n 0
+                        in allvars (f1 t) (f2 t) (f3 t)`
                  MP_TAC) THEN
-      SRW_TAC [][LET_THM,FUNPOW_SUC]) THEN
-`?m.!n.m < n ==> ((FST(f m)) = (FST(f n)))`
+      FULL_SIMP_TAC (srw_ss()) [LET_THM,FUNPOW_SUC]) THEN
+`?m.!n.m < n ==> (f1 m = f1 n)`
 by (Q.ISPECL_THEN
-    [`FST o f`,
-     `\n.allvars (FST(f n)) (FST(SND(f n))) (SND(SND(f n))) DIFF
-         (FDOM(FST(f n)))`,`m`] (MATCH_MP_TAC o GSYM o SIMP_RULE (srw_ss()) [])
+    [`f1`,
+     `\n. allvars (f1 n) (f2 n) (f3 n) DIFF (FDOM(f1 n))`, `m`]
+    (MATCH_MP_TAC o GSYM o SIMP_RULE (srw_ss()) [])
     commonUnifTheory.extension_chain THEN
     SRW_TAC [][DISJOINT_DEF] THENL [
       SRW_TAC [][EXTENSION] THEN METIS_TAC [],
       METIS_TAC [UNION_DIFF,allvars_def,substvars_def,SUBSET_UNION,SUBSET_TRANS]
     ]) THEN
 Q.ABBREV_TAC `z = MAX m m'` THEN
-`!n. z < n ==> (FST(f n) = FST(f m'))`
-  by (METIS_TAC [MAX_LT]) THEN
-`!n.z < n ==> measure (pair_count o (walkstar (FST(f m'))))
-               (FST(SND(f(SUC n)))) (FST(SND(f n)))`
-  by (METIS_TAC [LESS_SUC]) THEN
-`WF (measure (pair_count o (walkstar (FST(f m')))))`
-  by (METIS_TAC [WF_measure]) THEN
-FULL_SIMP_TAC (srw_ss()) [WF_IFF_WELLFOUNDED,wellfounded_def] THEN
-POP_ASSUM (Q.SPEC_THEN `\n.(FST(SND(f(z+n+1))))` MP_TAC) THEN
+`!n. z < n ==> (f1 n = f1 m')` by METIS_TAC [MAX_LT] THEN
+`!n. z < n ==> measure (pair_count o (walkstar (f1 m')))
+                       (f2 (SUC n)) (f2 n)`
+  by (SRW_TAC [][] THEN METIS_TAC [LESS_SUC]) THEN
+`WF (measure (pair_count o (walkstar (f1 m'))))` by SRW_TAC [][] THEN
+FULL_SIMP_TAC bool_ss [WF_IFF_WELLFOUNDED,wellfounded_def] THEN
+POP_ASSUM (Q.SPEC_THEN `\n. f2 (z+n+1)` MP_TAC) THEN
 SRW_TAC [][] THEN
 Q.PAT_ASSUM `!n.z < n ==> measure X Y Z` (Q.SPEC_THEN `z+n+1` MP_TAC) THEN
 SRW_TAC [ARITH_ss][ADD1]);
@@ -318,11 +266,11 @@ METIS_TAC [vwalk_to_Pair_SUBSET_rangevars,substvars_def,SUBSET_TRANS,SUBSET_UNIO
 val walkstar_subterm_smaller = Q.store_thm(
 "walkstar_subterm_smaller",
 `wfs s /\ (walk s t1 = Pair t1a t1d) ==>
-  measure (pair_count o walkstar s) t1a t1 /\
-  measure (pair_count o walkstar s) t1d t1`,
+  pair_count (walkstar s t1a) < pair_count (walkstar s t1) /\
+  pair_count (walkstar s t1d) < pair_count (walkstar s t1)`,
 SRW_TAC [][walk_def] THEN
 Cases_on `t1` THEN FULL_SIMP_TAC (srw_ss()) [] THEN
-FULL_SIMP_TAC (srw_ss() ++ ARITH_ss) [measure_thm]);
+FULL_SIMP_TAC (srw_ss() ++ ARITH_ss) []);
 
 val tca_thm = Q.store_thm(
 "tca_thm",
@@ -387,7 +335,8 @@ val walkstar_subterm_FUPDATE = Q.store_thm(
 "walkstar_subterm_FUPDATE",
 `wfs s /\ v NOTIN FDOM s /\ v NOTIN vars (walkstar s t) /\
  (walk s t1 = Pair t1a t1d) ==>
- measure (pair_count o walkstar (s |+ (v,t))) t1d t1`,
+  pair_count (walkstar (s |+ (v,t)) t1d) <
+  pair_count (walkstar (s |+ (v,t)) t1)`,
 SRW_TAC [][] THEN
 `wfs (s |+ (v,t))` by METIS_TAC [wfs_extend] THEN
 `s SUBMAP (s |+ (v,t))` by METIS_TAC [SUBMAP_FUPDATE_EQN] THEN

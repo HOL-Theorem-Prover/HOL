@@ -15,10 +15,10 @@
 
 val _ = load "Sanity";
 
-local 
+local
    fun repeat_print s n = if (n <= 0) then () else (print s; repeat_print s (n-1));
    val print_space = repeat_print " ";
-   fun print_width n s = (print s; (print_space (n - (size s))));      
+   fun print_width n s = (print s; (print_space (n - (size s))));
    fun print_header c s =
       (print s;print "\n";repeat_print c (if (size s) < 70 then size s else 70);print "\n");
 
@@ -30,16 +30,16 @@ let
    let
       val (vsubst, _) = match_term t1 t2
    in
-      null vsubst      
+      null vsubst
    end handle HOL_ERR _ => false
 
 
    (*no context*)
-   val term_no_context_term = 
+   val term_no_context_term =
       Parse.parse_in_context [] [QUOTE term_string]
 
    (*user context*)
-   val context_term_opt = 
+   val context_term_opt =
       if isSome context_string_opt then
          total (Parse.parse_in_context []) [QUOTE (valOf context_string_opt)]
       else NONE;
@@ -60,12 +60,12 @@ let
                     (flatten (map (fn (ts,t) => t::ts) (proofManagerLib.top_goals())))
                  else []) handle Interrupt => raise Interrupt | _ => [];
 
-   val term_goalstack_context_term = 
+   val term_goalstack_context_term =
       Parse.parse_in_context (free_varsl goalstack_context) [QUOTE term_string]
 
    val goalstack_matchesL = HOLset.listItems (
       HOLset.addList (empty_tmset,
-         flatten (map (find_terms (term_does_type_match (term_no_context_term))) 
+         flatten (map (find_terms (term_does_type_match (term_no_context_term)))
          goalstack_context)))
 in
    (term_no_context_term, term_user_context_term, term_goalstack_context_term,
@@ -88,7 +88,7 @@ let
    val list_max = foldl (fn (a,b) => if a > b then a else b) 0
 
    fun print_term_width w (t,s) =
-      (print_width w s; 
+      (print_width w s;
        print " ";
        print (type_to_string (type_of t));print "\n")
    val print_term = print_term_width 0;
@@ -98,7 +98,7 @@ let
        let
           val max_width = list_max (map (size o snd) l)
        in
-          map (print_term_width max_width) l;()          
+          map (print_term_width max_width) l;()
        end;
 
 in

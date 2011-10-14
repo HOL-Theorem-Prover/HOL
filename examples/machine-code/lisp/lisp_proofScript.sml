@@ -183,8 +183,8 @@ val (iR_ev_rules,iR_ev_ind,iR_ev_cases) =
     iR_ap (OUTR(LIST_LOOKUP fv a),args,a) s ==> iR_ap (FunVar fv,args,a) s)
   /\
   (!xl e args s a.
-    (LENGTH args = LENGTH xl) /\ 
-    (!a2. (FILTER (\x. ~(MEM (FST x) xl)) a = FILTER (\x. ~(MEM (FST x) xl)) a2) ==> 
+    (LENGTH args = LENGTH xl) /\
+    (!a2. (FILTER (\x. ~(MEM (FST x) xl)) a = FILTER (\x. ~(MEM (FST x) xl)) a2) ==>
           iR_ev (e,iVarBind a2 xl args) s)
     ==> iR_ap (Lambda xl e,args,a) s)
   /\
@@ -344,11 +344,11 @@ val iVarBind_EXISTS = prove(
   THEN1 (STRIP_TAC THEN Q.EXISTS_TAC `[]` THEN SIMP_TAC std_ss [APPEND,LENGTH])
   THEN REPEAT STRIP_TAC THEN1
     (POP_ASSUM (STRIP_ASSUME_TAC o Q.SPECL [`(h,INL (A Nil))::a`,`[]`])
-     THEN Q.EXISTS_TAC `SNOC (h,INL (A Nil)) xs` 
+     THEN Q.EXISTS_TAC `SNOC (h,INL (A Nil)) xs`
      THEN ASM_SIMP_TAC std_ss [LENGTH_SNOC,LENGTH]
      THEN ASM_SIMP_TAC std_ss [SNOC_APPEND,GSYM APPEND_ASSOC,APPEND])
   THEN POP_ASSUM (STRIP_ASSUME_TAC o Q.SPECL [`(h',INL h)::a`,`t`])
-     THEN Q.EXISTS_TAC `SNOC (h',INL h) xs` 
+     THEN Q.EXISTS_TAC `SNOC (h',INL h) xs`
      THEN ASM_SIMP_TAC std_ss [LENGTH_SNOC,LENGTH]
      THEN ASM_SIMP_TAC std_ss [SNOC_APPEND,GSYM APPEND_ASSOC,APPEND]);
 
@@ -401,41 +401,41 @@ val lisp_mult_lemma = prove(
 val LISP_REDUCE_AUX_def = Define `
   (LISP_REDUCE_AUX 0 xs alist = ((alist:(string # (sexpression + func)) list),Val 0)) /\
   (LISP_REDUCE_AUX n xs [] = ([],Val n)) /\
-  (LISP_REDUCE_AUX (SUC n) xs ((y,z)::ys) = 
+  (LISP_REDUCE_AUX (SUC n) xs ((y,z)::ys) =
     if MEM (Sym y) xs then LISP_REDUCE_AUX n xs ys
                 else ((y,z)::ys,Val (SUC n)))`;
 
 val LISP_REDUCE_A_def = Define `
-  LISP_REDUCE_A (stack,xs,alist) = 
-    if isDot stack /\ isVal (CAR stack) 
+  LISP_REDUCE_A (stack,xs,alist) =
+    if isDot stack /\ isVal (CAR stack)
     then FST (LISP_REDUCE_AUX (getVal (CAR stack)) xs alist) else alist`;
 
 val LISP_REDUCE_S_def = Define `
-  LISP_REDUCE_S (stack,xs,alist) = 
-    if isDot stack /\ isVal (CAR stack)  
+  LISP_REDUCE_S (stack,xs,alist) =
+    if isDot stack /\ isVal (CAR stack)
     then let s = (SND (LISP_REDUCE_AUX (getVal (CAR stack)) xs alist)) in
       if s = Val 0 then CDR stack else Dot s (CDR stack)
     else stack`;
 
 val lisp_find_in_list_thm = prove(
-  ``!xs x. 
-      ?exp2 x2 y2. 
+  ``!xs x.
+      ?exp2 x2 y2.
       (lisp_find_in_list (CAR (pair2sexp (q,r)),x,list2sexp xs,z,stack,alist,l) =
          (exp2,x2,y2,z,stack,alist,l)) /\
       ((exp2 = Sym "nil") = ~MEM (Sym q) xs)``,
   Induct THEN ONCE_REWRITE_TAC [lisp_find_in_list_def]
   THEN ASM_SIMP_TAC std_ss [MEM,list2sexp_def,isDot_def,CAR_def,CDR_def,LET_DEF]
   THEN Cases_on `r` THEN FULL_SIMP_TAC std_ss [pair2sexp_def,CAR_def]
-  THEN REPEAT STRIP_TAC THEN Cases_on `Sym q = h` 
+  THEN REPEAT STRIP_TAC THEN Cases_on `Sym q = h`
   THEN ASM_SIMP_TAC std_ss [EVAL ``Sym "t" = Sym "nil"``]);
 
 val lisp_reduce_alist_aux_EQ = prove(
   ``!xs alist exp x y.
-      ?exp2 x2 y2. 
+      ?exp2 x2 y2.
         lisp_reduce_alist_aux (exp,x,y,Val n,Dot (list2sexp xs) stack,alist2sexp alist,l) =
           let (alist,z) = LISP_REDUCE_AUX n xs alist in
             (exp2,x2,y2,z,Dot (list2sexp xs) stack,alist2sexp alist,l)``,
-  Induct_on `n` THEN Cases_on `alist` 
+  Induct_on `n` THEN Cases_on `alist`
   THEN SIMP_TAC std_ss [alist2sexp_def,list2sexp_def,MAP,LISP_REDUCE_AUX_def,LET_DEF]
   THEN ONCE_REWRITE_TAC [lisp_reduce_alist_aux_def]
   THEN SIMP_TAC std_ss [SExp_11,isDot_def,DECIDE ``~(SUC n = 0)``,CAR_def,CDR_def,LET_DEF]
@@ -449,9 +449,9 @@ val lisp_reduce_alist_aux_EQ = prove(
 
 val lisp_reduce_alist_EQ = prove(
   ``!stack exp xs x y z l alist.
-      ?x2 z2. 
-        lisp_reduce_alist (exp,x,Dot (list2sexp xs) y,z,stack,alist2sexp alist,l) = 
-         (exp,x2,Dot (list2sexp xs) y,z2, LISP_REDUCE_S (stack,xs,alist), 
+      ?x2 z2.
+        lisp_reduce_alist (exp,x,Dot (list2sexp xs) y,z,stack,alist2sexp alist,l) =
+         (exp,x2,Dot (list2sexp xs) y,z2, LISP_REDUCE_S (stack,xs,alist),
           alist2sexp (LISP_REDUCE_A (stack,xs,alist)),l)``,
   STRIP_TAC
   THEN `?n s x1 x2. (stack = Sym s) \/ (stack = Dot x1 x2) \/ (stack = Val n)` by
@@ -460,7 +460,7 @@ val lisp_reduce_alist_EQ = prove(
          LISP_REDUCE_A_def,LISP_REDUCE_S_def,isDot_def,LET_DEF,CAR_def,CDR_def]
   THEN `?n1 s1 x3 x4. (x1 = Sym s1) \/ (x1 = Dot x3 x4) \/ (x1 = Val n1)` by
          (Cases_on `x1` THEN ASM_SIMP_TAC std_ss [SExp_11,SExp_distinct] THEN METIS_TAC [])
-  THEN FULL_SIMP_TAC std_ss [isDot_def,isSym_def,isVal_def] 
+  THEN FULL_SIMP_TAC std_ss [isDot_def,isSym_def,isVal_def]
   THEN REPEAT STRIP_TAC
   THEN STRIP_ASSUME_TAC (helperLib.MATCH_INST (SPEC_ALL lisp_reduce_alist_aux_EQ)
          ``lisp_reduce_alist_aux
@@ -468,19 +468,19 @@ val lisp_reduce_alist_EQ = prove(
         Dot (Dot exp x2) (Dot (list2sexp xs) y),list2sexp xs,Val n1,
         Dot (list2sexp xs) (Dot (Dot exp x2) (Dot (list2sexp xs) y)),
         alist2sexp alist,l)``)
-  THEN ASM_SIMP_TAC std_ss [getVal_def,CDR_def,LET_DEF]  
+  THEN ASM_SIMP_TAC std_ss [getVal_def,CDR_def,LET_DEF]
   THEN Cases_on `LISP_REDUCE_AUX n1 xs alist` THEN ASM_SIMP_TAC std_ss []
-  THEN REPEAT STRIP_TAC THEN Cases_on `r = Val 0` 
+  THEN REPEAT STRIP_TAC THEN Cases_on `r = Val 0`
   THEN ASM_SIMP_TAC std_ss [CAR_def,CDR_def]);
 
 val FILTER_LISP_REDUCE_A = prove(
   ``!a stack xl.
-      FILTER (\x. ~MEM (FST x) xl) (LISP_REDUCE_A (stack,MAP Sym xl,a)) = 
+      FILTER (\x. ~MEM (FST x) xl) (LISP_REDUCE_A (stack,MAP Sym xl,a)) =
       FILTER (\x. ~MEM (FST x) xl) a``,
   SIMP_TAC std_ss [LISP_REDUCE_A_def]
   THEN Cases_on `stack` THEN ASM_SIMP_TAC std_ss [isDot_def,CAR_def]
   THEN Cases_on `S'` THEN ASM_SIMP_TAC std_ss [isVal_def,CAR_def,getVal_def]
-  THEN Q.SPEC_TAC (`n`,`n`) THEN Induct_on `a` 
+  THEN Q.SPEC_TAC (`n`,`n`) THEN Induct_on `a`
   THEN Cases_on `n` THEN ASM_SIMP_TAC std_ss [FILTER,LISP_REDUCE_AUX_def]
   THEN Cases THEN ASM_SIMP_TAC std_ss [FILTER,LISP_REDUCE_AUX_def,MEM_MAP,SExp_11]
   THEN REPEAT STRIP_TAC THEN Cases_on `MEM q xl` THEN ASM_SIMP_TAC std_ss [FILTER]);
@@ -488,37 +488,37 @@ val FILTER_LISP_REDUCE_A = prove(
 val repeat_cdr_thm = prove(
   ``!n exp y z stack a l.
       (repeat_cdr (exp,Val n,y,z,stack,a,l) =
-                  (exp,Val 0,y,z,stack,FUNPOW CDR n a,l))``, 
+                  (exp,Val 0,y,z,stack,FUNPOW CDR n a,l))``,
   Induct THEN ONCE_REWRITE_TAC [repeat_cdr_def]
   THEN REWRITE_TAC [iVarBind_def,APPEND]
   THEN SIMP_TAC std_ss [SExp_11,DECIDE ``~(SUC n = 0)``,LET_DEF,arithmeticTheory.FUNPOW]
   THEN ASM_SIMP_TAC std_ss [LISP_SUB_def]);
-  
+
 val FUNPOW_CDR_iVarBind = prove(
   ``!a xs ys. FUNPOW CDR (LENGTH xs) (alist2sexp (iVarBind a xs ys)) = alist2sexp a``,
   REPEAT STRIP_TAC THEN STRIP_ASSUME_TAC (Q.SPECL [`a`,`xs`,`ys`] iVarBind_EXISTS)
   THEN POP_ASSUM (ASSUME_TAC o GSYM) THEN ASM_SIMP_TAC std_ss []
   THEN Q.SPEC_TAC (`xs'`,`ts`) THEN REPEAT (POP_ASSUM (K ALL_TAC))
-  THEN Induct THEN SIMP_TAC std_ss [arithmeticTheory.FUNPOW,LENGTH,APPEND] 
+  THEN Induct THEN SIMP_TAC std_ss [arithmeticTheory.FUNPOW,LENGTH,APPEND]
   THEN Cases_on `h` THEN Cases_on `r`
   THEN FULL_SIMP_TAC std_ss [MAP,pair2sexp_def,list2sexp_def,CDR_def,alist2sexp_def]);
 
 val LISP_REDUCE_AUX_IMP = prove(
   ``!n a x alist m.
-      (LISP_REDUCE_AUX n x a = (alist,m)) ==> 
+      (LISP_REDUCE_AUX n x a = (alist,m)) ==>
       getVal m <= n /\ isVal m /\
       (alist2sexp alist = FUNPOW CDR (n - getVal m) (alist2sexp a))``,
   Induct THEN Cases_on `a`
   THEN SIMP_TAC std_ss [LISP_REDUCE_AUX_def,getVal_def,arithmeticTheory.FUNPOW,isVal_def]
-  THEN Cases_on `h`    
+  THEN Cases_on `h`
   THEN SIMP_TAC std_ss [LISP_REDUCE_AUX_def,getVal_def,arithmeticTheory.FUNPOW]
-  THEN REVERSE (Cases_on `MEM (Sym q) x`) 
+  THEN REVERSE (Cases_on `MEM (Sym q) x`)
   THEN ASM_SIMP_TAC std_ss [getVal_def,arithmeticTheory.FUNPOW,isVal_def]
   THEN REPEAT STRIP_TAC THEN RES_TAC THEN1 DECIDE_TAC
-  THEN `SUC n - getVal m = SUC (n - getVal m)` by DECIDE_TAC 
+  THEN `SUC n - getVal m = SUC (n - getVal m)` by DECIDE_TAC
   THEN ASM_SIMP_TAC std_ss [arithmeticTheory.FUNPOW]
   THEN ASM_SIMP_TAC std_ss [alist2sexp_def,MAP,list2sexp_def,CDR_def]);
- 
+
 val iR_ev_LEMMA = let
   val th = iR_ev_ind
   val th = Q.SPECL [`lisp_eval_ok`,`lisp_func_ok`,
@@ -701,14 +701,14 @@ val iR_ev_LEMMA = let
     THEN REWRITE_TAC [alist2sexp_def,LISP_LENGTH_THM,LENGTH_MAP]
     THEN Q.PAT_ASSUM `LENGTH args = LENGTH xl` (ASSUME_TAC o GSYM)
     THEN SIMP_TAC std_ss [CAR_def,CDR_def,isDot_def,isSym_def,list2sexp_def,SExp_11]
-    THEN ASSUME_TAC (GEN_ALL zip_yz_lemma) THEN helperLib.SEP_I_TAC "zip_yz" 
+    THEN ASSUME_TAC (GEN_ALL zip_yz_lemma) THEN helperLib.SEP_I_TAC "zip_yz"
     THEN POP_ASSUM MP_TAC THEN ASM_SIMP_TAC std_ss [LENGTH_MAP]
     THEN REPEAT STRIP_TAC THEN ASM_SIMP_TAC std_ss [CAR_def,CDR_def]
     THEN POP_ASSUM (K ALL_TAC)
     THEN `!zs. list2sexp (REVERSE
           (MAP (\(x,y). Dot x y)
              (ZIP (MAP Sym xl,MAP sexpression2sexp args))) ++
-           MAP pair2sexp zs) = 
+           MAP pair2sexp zs) =
           alist2sexp (iVarBind zs xl args)` by
      (Q.PAT_ASSUM `LENGTH xl = LENGTH args` MP_TAC
       THEN Q.SPEC_TAC (`xl`,`xs`)
@@ -724,11 +724,11 @@ val iR_ev_LEMMA = let
     THEN POP_ASSUM MP_TAC
     THEN POP_ASSUM (K ALL_TAC)
     THEN STRIP_TAC
-    THEN Q.PAT_ASSUM `!a2.bbb` (ASSUME_TAC o 
+    THEN Q.PAT_ASSUM `!a2.bbb` (ASSUME_TAC o
             Q.SPEC `LISP_REDUCE_A (stack,MAP Sym xl,a)`)
     THEN FULL_SIMP_TAC std_ss [FILTER_LISP_REDUCE_A]
     THEN Q.PAT_ASSUM `!x.bbb` (STRIP_ASSUME_TAC o Q.SPECL
-          [`x'`,`list2sexp []`,`Dot (Val (LENGTH (args:sexpression list))) 
+          [`x'`,`list2sexp []`,`Dot (Val (LENGTH (args:sexpression list)))
                                     (LISP_REDUCE_S (stack,MAP Sym xl,a))`,`l`])
     THEN ASM_REWRITE_TAC [] THEN POP_ASSUM (K ALL_TAC)
     THEN ONCE_REWRITE_TAC [lisp_eval_def]
@@ -747,19 +747,19 @@ val iR_ev_LEMMA = let
     THEN ONCE_REWRITE_TAC [ONCE_REWRITE_RULE [GSYM lisp_eval_hide_def] lisp_eval_def]
     THEN REWRITE_TAC [EVAL ``TASK_CONT = TASK_EVAL``]
     THEN REWRITE_TAC [EVAL ``TASK_CONT = TASK_FUNC``,isDot_def]
-    THEN SIMP_TAC std_ss [lisp_cont_def,LET_DEF,CAR_def,CDR_def,isDot_def,repeat_cdr_thm]  
-    THEN `?alist m. LISP_REDUCE_AUX n (MAP Sym xl) a = (alist,m)` by METIS_TAC [pairTheory.PAIR]    
+    THEN SIMP_TAC std_ss [lisp_cont_def,LET_DEF,CAR_def,CDR_def,isDot_def,repeat_cdr_thm]
+    THEN `?alist m. LISP_REDUCE_AUX n (MAP Sym xl) a = (alist,m)` by METIS_TAC [pairTheory.PAIR]
     THEN ASM_SIMP_TAC std_ss []
     THEN IMP_RES_TAC LISP_REDUCE_AUX_IMP
-    THEN Cases_on `m = Val 0` THEN ASM_SIMP_TAC std_ss [getVal_def]    
+    THEN Cases_on `m = Val 0` THEN ASM_SIMP_TAC std_ss [getVal_def]
     THEN1 METIS_TAC [lisp_eval_hide_def]
     THEN ONCE_REWRITE_TAC [lisp_eval_def]
     THEN REWRITE_TAC [EVAL ``TASK_CONT = TASK_EVAL``]
     THEN REWRITE_TAC [EVAL ``TASK_CONT = TASK_FUNC``,isDot_def]
-    THEN SIMP_TAC std_ss [lisp_cont_def,LET_DEF,CAR_def,CDR_def,isDot_def,repeat_cdr_thm]  
+    THEN SIMP_TAC std_ss [lisp_cont_def,LET_DEF,CAR_def,CDR_def,isDot_def,repeat_cdr_thm]
     THEN `?i. m = Val i` by METIS_TAC [isVal_thm]
     THEN FULL_SIMP_TAC std_ss [SExp_11,isDot_def,repeat_cdr_thm,getVal_def]
-    THEN `i + (n - i) = n` by DECIDE_TAC 
+    THEN `i + (n - i) = n` by DECIDE_TAC
     THEN FULL_SIMP_TAC std_ss [GSYM arithmeticTheory.FUNPOW_ADD,lisp_eval_hide_def]
     THEN METIS_TAC []))
   in th end;
@@ -842,8 +842,8 @@ val list2fmap_iVarBind = prove(
   THEN Cases_on `zs` THEN ASM_SIMP_TAC std_ss [iVarBind_def,VarBind_def,list2fmap_def]);
 
 val VarBind_EQ = prove(
-  ``!xs ys f1 f2. 
-      (DRESTRICT f1 (COMPL (LIST_TO_SET xs)) = 
+  ``!xs ys f1 f2.
+      (DRESTRICT f1 (COMPL (LIST_TO_SET xs)) =
        DRESTRICT f2 (COMPL (LIST_TO_SET xs))) ==>
       (VarBind f1 xs ys = VarBind f2 xs ys)``,
   Induct THEN SIMP_TAC std_ss [VarBind_def,MEM,LIST_TO_SET_THM]

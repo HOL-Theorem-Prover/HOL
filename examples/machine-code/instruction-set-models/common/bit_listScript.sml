@@ -86,7 +86,7 @@ val bytes2word_lemma = prove(
   THEN ASM_SIMP_TAC (std_ss++wordsLib.SIZES_ss) [word_bits_def,bytes2word_lem]);
 
 val _ = wordsLib.guess_lengths();
-val bytes2word_INTRO = store_thm("bytes2word_INTRO", 
+val bytes2word_INTRO = store_thm("bytes2word_INTRO",
   ``!x1 x2 x3 x4.
       (($@@ :word8 -> word24 -> word32)
                   (x1 :word8)
@@ -178,7 +178,7 @@ val bits2num_MOD = store_thm("bits2num_MOD",
   THEN DECIDE_TAC);
 
 val COLLECT_BYTES_n2w_bits2num = store_thm("COLLECT_BYTES_n2w_bits2num",
-  ``!imm32:word32 imm8:word8. 
+  ``!imm32:word32 imm8:word8.
       ((b2w I
             [w2n imm32 MOD 2 = 1; (w2n imm32 DIV 2) MOD 2 = 1;
              (w2n imm32 DIV 4) MOD 2 = 1; (w2n imm32 DIV 8) MOD 2 = 1;

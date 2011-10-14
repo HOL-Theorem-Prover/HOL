@@ -90,15 +90,15 @@ sig
 
   structure holfoot_tactics : sig
    type var_res_inference_group =
-     (* group name (used for debug) *) 
-     string * 
+     (* group name (used for debug) *)
+     string *
      (* group guard, inferences are just applied to
         terms that satisfy this guard *)
-     (Abbrev.term -> bool) * 
-     (* apply before working on subterms *) 
-     bool * 
+     (Abbrev.term -> bool) *
+     (* apply before working on subterms *)
+     bool *
      (* use this inference group to clean up after a "bigger" step *)
-     bool * 
+     bool *
      (* the members of the group, each with a name for debugging *)
      (string * holfoot_param.var_res_base.var_res_inference) list;
 

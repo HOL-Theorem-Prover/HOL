@@ -373,6 +373,8 @@ end
 
 val _ = Defn.SUC_TO_NUMERAL_DEFN_CONV_hook := SUC_TO_NUMERAL_DEFN_CONV;
 
+val SUC_RULE = Conv.CONV_RULE SUC_TO_NUMERAL_DEFN_CONV;
+
 (* ----------------------------------------------------------------------
     Parsing adjustments
    ---------------------------------------------------------------------- *)

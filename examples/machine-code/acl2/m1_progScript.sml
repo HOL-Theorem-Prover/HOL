@@ -1,6 +1,6 @@
 
 open HolKernel boolLib bossLib Parse;
-open pred_setTheory set_sepTheory progTheory listTheory pairTheory 
+open pred_setTheory set_sepTheory progTheory listTheory pairTheory
 open combinTheory addressTheory sexpTheory imported_acl2Theory;
 open complex_rationalTheory hol_defaxiomsTheory arithmeticTheory;
 
@@ -97,20 +97,20 @@ val SPLIT_m1_2set_EXISTS = prove(
 val IN_m1_2set = (SIMP_RULE std_ss [oneTheory.one] o prove)(``
   (!a x s. tPC x IN (m1_2set s) = (x = pc s)) /\
   (!a x s. tPC x IN (m1_2set' (ps,ls,ss,is,os) s) = (x = pc s) /\ a IN ps) /\
-  (!a x s. tPC x IN (m1_2set'' (ps,ls,ss,is,os) s) = (x = pc s) /\ ~(a IN ps)) /\ 
+  (!a x s. tPC x IN (m1_2set'' (ps,ls,ss,is,os) s) = (x = pc s) /\ ~(a IN ps)) /\
   (!a x s. tLocal a x IN (m1_2set s) = (x = nth_local a s)) /\
   (!a x s. tLocal a x IN (m1_2set' (ps,ls,ss,is,os) s) = (x = nth_local a s) /\ a IN ls) /\
-  (!a x s. tLocal a x IN (m1_2set'' (ps,ls,ss,is,os) s) = (x = nth_local a s) /\ ~(a IN ls)) /\ 
+  (!a x s. tLocal a x IN (m1_2set'' (ps,ls,ss,is,os) s) = (x = nth_local a s) /\ ~(a IN ls)) /\
   (!a x s. tStack x IN (m1_2set s) = (x = stack s)) /\
   (!a x s. tStack x IN (m1_2set' (ps,ls,ss,is,os) s) = (x = stack s) /\ a IN ss) /\
-  (!a x s. tStack x IN (m1_2set'' (ps,ls,ss,is,os) s) = (x = stack s) /\ ~(a IN ss)) /\ 
+  (!a x s. tStack x IN (m1_2set'' (ps,ls,ss,is,os) s) = (x = stack s) /\ ~(a IN ss)) /\
   (!a x s. tInstr a x IN (m1_2set s) = (x = instr a s)) /\
   (!a x s. tInstr a x IN (m1_2set' (ps,ls,ss,is,os) s) = (x = instr a s) /\ a IN is) /\
-  (!a x s. tInstr a x IN (m1_2set'' (ps,ls,ss,is,os) s) = (x = instr a s) /\ ~(a IN is)) /\ 
+  (!a x s. tInstr a x IN (m1_2set'' (ps,ls,ss,is,os) s) = (x = instr a s) /\ ~(a IN is)) /\
   (!a x s. tOK x IN (m1_2set s) = (x = m1_ok s)) /\
   (!a x s. tOK x IN (m1_2set' (ps,ls,ss,is,os) s) = (x = m1_ok s) /\ a IN os) /\
   (!a x s. tOK x IN (m1_2set'' (ps,ls,ss,is,os) s) = (x = m1_ok s) /\ ~(a IN os))``,
-  SRW_TAC [] [m1_2set'_def,m1_2set''_def,m1_2set_def,IN_UNION,IN_DIFF,oneTheory.one] 
+  SRW_TAC [] [m1_2set'_def,m1_2set''_def,m1_2set_def,IN_UNION,IN_DIFF,oneTheory.one]
   \\ METIS_TAC []);
 
 val SET_NOT_EQ = prove(
@@ -124,39 +124,39 @@ val m1_2set''_11 = prove(
   \\ `?ps2 ls2 ss2 is2 os2. y' = (ps2,ls2,ss2,is2,os2)` by METIS_TAC [PAIR]
   \\ FULL_SIMP_TAC std_ss [] \\ CCONTR_TAC
   \\ FULL_SIMP_TAC std_ss [EXTENSION]
-  THEN1 (`~((?y. tPC y IN m1_2set'' (ps,ls,ss,is,os) s) = 
-            (?y. tPC y IN m1_2set'' (ps2,ls2,ss2,is2,os2) s'))` by 
+  THEN1 (`~((?y. tPC y IN m1_2set'' (ps,ls,ss,is,os) s) =
+            (?y. tPC y IN m1_2set'' (ps2,ls2,ss2,is2,os2) s'))` by
          FULL_SIMP_TAC std_ss [IN_m1_2set,oneTheory.one] THEN1 METIS_TAC [])
-  THEN1 (`~((?y. tLocal x y IN m1_2set'' (ps,ls,ss,is,os) s) = 
-            (?y. tLocal x y IN m1_2set'' (ps2,ls2,ss2,is2,os2) s'))` by 
+  THEN1 (`~((?y. tLocal x y IN m1_2set'' (ps,ls,ss,is,os) s) =
+            (?y. tLocal x y IN m1_2set'' (ps2,ls2,ss2,is2,os2) s'))` by
          FULL_SIMP_TAC std_ss [IN_m1_2set,oneTheory.one] THEN1 METIS_TAC [])
-  THEN1 (`~((?y. tStack y IN m1_2set'' (ps,ls,ss,is,os) s) = 
+  THEN1 (`~((?y. tStack y IN m1_2set'' (ps,ls,ss,is,os) s) =
             (?y. tStack y IN m1_2set'' (ps2,ls2,ss2,is2,os2) s'))` by
          FULL_SIMP_TAC std_ss [IN_m1_2set,oneTheory.one] THEN1 METIS_TAC [])
-  THEN1 (`~((?y. tInstr x y IN m1_2set'' (ps,ls,ss,is,os) s) = 
+  THEN1 (`~((?y. tInstr x y IN m1_2set'' (ps,ls,ss,is,os) s) =
             (?y. tInstr x y IN m1_2set'' (ps2,ls2,ss2,is2,os2) s'))` by
          FULL_SIMP_TAC std_ss [IN_m1_2set,oneTheory.one] THEN1 METIS_TAC [])
-  THEN1 (`~((?y. tOK y IN m1_2set'' (ps,ls,ss,is,os) s) = 
+  THEN1 (`~((?y. tOK y IN m1_2set'' (ps,ls,ss,is,os) s) =
             (?y. tOK y IN m1_2set'' (ps2,ls2,ss2,is2,os2) s'))` by
          FULL_SIMP_TAC std_ss [IN_m1_2set,oneTheory.one] THEN1 METIS_TAC []));
 
 val DELETE_m1_2set = (SIMP_RULE std_ss [oneTheory.one] o prove)(``
   (!a s. (m1_2set' (ps,ls,ss,is,os) s) DELETE tPC (pc s) =
-         (m1_2set' (ps DELETE a,ls,ss,is,os) s)) /\ 
+         (m1_2set' (ps DELETE a,ls,ss,is,os) s)) /\
   (!a s. (m1_2set' (ps,ls,ss,is,os) s) DELETE tLocal a (nth_local a s) =
-         (m1_2set' (ps,ls DELETE a,ss,is,os) s)) /\ 
+         (m1_2set' (ps,ls DELETE a,ss,is,os) s)) /\
   (!a s. (m1_2set' (ps,ls,ss,is,os) s) DELETE tStack (stack s) =
-         (m1_2set' (ps,ls,ss DELETE a,is,os) s)) /\ 
+         (m1_2set' (ps,ls,ss DELETE a,is,os) s)) /\
   (!a s. (m1_2set' (ps,ls,ss,is,os) s) DELETE tInstr a (instr a s) =
          (m1_2set' (ps,ls,ss,is DELETE a,os) s)) /\
   (!a s. (m1_2set' (ps,ls,ss,is,os) s) DELETE tOK (m1_ok s) =
-         (m1_2set' (ps,ls,ss,is,os DELETE a) s))``, 
+         (m1_2set' (ps,ls,ss,is,os DELETE a) s))``,
   SRW_TAC [] [m1_2set'_def,EXTENSION,IN_UNION,GSPECIFICATION,LEFT_AND_OVER_OR,
     EXISTS_OR_THM,IN_DELETE,IN_INSERT,NOT_IN_EMPTY,oneTheory.one]
   \\ Cases_on `x` \\ SRW_TAC [] [] \\ METIS_TAC []);
 
 val EMPTY_m1_2set = prove(``
-  (m1_2set' (ps,ls,ss,is,os) s = {}) = 
+  (m1_2set' (ps,ls,ss,is,os) s = {}) =
   (ps = {}) /\ (ls = {}) /\ (ss = {}) /\ (is = {}) /\ (os = {})``,
   SRW_TAC [] [m1_2set'_def,EXTENSION,IN_UNION,GSPECIFICATION,LEFT_AND_OVER_OR,EXISTS_OR_THM]
   \\ METIS_TAC []);
@@ -205,18 +205,18 @@ val M1_SPEC_SEMANTICS = prove(
 (* ----------------------------------------------------------------------------- *)
 
 val SEP_EQ_STAR_LEMMA = prove(
-  ``!p s t. (SEP_EQ t * p) s <=> t SUBSET s /\ (t SUBSET s ==> p (s DIFF t))``,  
+  ``!p s t. (SEP_EQ t * p) s <=> t SUBSET s /\ (t SUBSET s ==> p (s DIFF t))``,
   METIS_TAC [EQ_STAR]);
 
 val FLIP_CONJ = prove(``!b c. b /\ (b ==> c) = b /\ c``,METIS_TAC []);
 
-val EXPAND_STAR =  
+val EXPAND_STAR =
   GEN_ALL o (SIMP_CONV std_ss [tP_def, tS_def, tL_def, tO_def, tI_def,
     SEP_EQ_STAR_LEMMA,INSERT_SUBSET,IN_m1_2set,DELETE_m1_2set,
     DIFF_INSERT,DIFF_EMPTY,EMPTY_SUBSET] THENC SIMP_CONV std_ss [FLIP_CONJ]
    THENC REWRITE_CONV [GSYM CONJ_ASSOC])
 
-val STAR_m1_2set = LIST_CONJ (map EXPAND_STAR 
+val STAR_m1_2set = LIST_CONJ (map EXPAND_STAR
   [``(tP x * p) (m1_2set' (ps,ls,ss,is,os) s)``,
    ``(tL a x * p) (m1_2set' (ps,ls,ss,is,os) s)``,
    ``(tS x * p) (m1_2set' (ps,ls,ss,is,os) s)``,
@@ -237,7 +237,7 @@ val CODE_POOL_m1_2set = prove(
   \\ REPEAT STRIP_TAC \\ EQ_TAC \\ ASM_SIMP_TAC std_ss []
   \\ ASM_SIMP_TAC std_ss [DELETE_m1_2set,EMPTY_m1_2set,DIFF_INSERT]
   \\ ASM_SIMP_TAC std_ss [GSYM AND_IMP_INTRO,DELETE_m1_2set,EMPTY_m1_2set,DIFF_EMPTY]
-  \\ ONCE_REWRITE_TAC [EQ_SYM_EQ] 
+  \\ ONCE_REWRITE_TAC [EQ_SYM_EQ]
   \\ ASM_SIMP_TAC std_ss [DELETE_m1_2set,EMPTY_m1_2set]);
 
 val M1_SPEC_CODE = (RW [GSYM M1_MODEL_def] o SIMP_RULE std_ss [M1_MODEL_def] o prove)
@@ -257,7 +257,7 @@ val IMP_M1_SPEC_LEMMA = prove(
   \\ FULL_SIMP_TAC bool_ss [rel_sequence_def]
   \\ Q.EXISTS_TAC `SUC 0` \\ METIS_TAC []);
 
-val IMP_M1_SPEC = 
+val IMP_M1_SPEC =
   (RW1 [STAR_COMM] o RW [M1_SPEC_CODE] o
    SPECL [``CODE_POOL M1_INSTR {(p,c)} * p1``,
           ``CODE_POOL M1_INSTR {(p,c)} * q1``]) IMP_M1_SPEC_LEMMA;
@@ -338,7 +338,7 @@ val defs2 = map acl2_simp [actual_defun, app_defun, arg1_defun,
 val CODE_POOL_THM = prove(
   ``!p x. CODE_POOL M1_INSTR {(p,x)} = tI p x``,
   SIMP_TAC std_ss [CODE_POOL_def,IMAGE_INSERT,IMAGE_EMPTY,SEP_EQ_def,
-    BIGUNION_INSERT,BIGUNION_EMPTY,UNION_EMPTY,M1_INSTR_def,tI_def]);  
+    BIGUNION_INSERT,BIGUNION_EMPTY,UNION_EMPTY,M1_INSTR_def,tI_def]);
 
 val UNIT_IN_SET = prove(
   ``!x. () IN x = (x = {()})``,
@@ -356,18 +356,18 @@ val add_COMM = store_thm("add_COMM",
 
 val add_ASSOC = store_thm("add_ASSOC",
   ``!x y z. add (add x y) z = add x (add y z)``,
-  Cases \\ Cases \\ Cases \\ SIMP_TAC std_ss [add_def,int_def,cpx_def] 
+  Cases \\ Cases \\ Cases \\ SIMP_TAC std_ss [add_def,int_def,cpx_def]
   \\ Q.SPEC_TAC (`c`,`c`) \\ Q.SPEC_TAC (`c'`,`c2`)
   \\ SIMP_TAC std_ss [] \\ REPEAT Cases
   \\ Q.SPEC_TAC (`r`,`m`) \\ Q.SPEC_TAC (`r0`,`n`) \\ Q.SPEC_TAC (`c''`,`d`)
-  \\ SIMP_TAC std_ss [complex_rationalTheory.COMPLEX_ADD_def,rat_def] 
+  \\ SIMP_TAC std_ss [complex_rationalTheory.COMPLEX_ADD_def,rat_def]
   \\ REPEAT Cases \\ SIMP_TAC std_ss [GSYM (EVAL ``0:rat``),ratTheory.RAT_ADD_LID,
        RW1[ratTheory.RAT_ADD_COMM]ratTheory.RAT_ADD_LID,
        complex_rationalTheory.COMPLEX_ADD_def,ratTheory.RAT_ADD_ASSOC]);
 
 val add_nat = store_thm("add_nat",
   ``!m n. add (nat m) (nat n) = nat (m + n)``,
-  SIMP_TAC (srw_ss()) [add_def,int_def,nat_def,cpx_def, 
+  SIMP_TAC (srw_ss()) [add_def,int_def,nat_def,cpx_def,
     complex_rationalTheory.COMPLEX_ADD_def,rat_def,
     ratTheory.RAT_ADD_CALCULATE,fracTheory.FRAC_ADD_CALCULATE]
   \\ `!m n. &(m + n) = &m + (&(n:num)):int` by intLib.COOPER_TAC
@@ -375,7 +375,7 @@ val add_nat = store_thm("add_nat",
 
 val less_nat = store_thm("less_nat",
   ``!m n. (|= (less (nat m) (nat n))) = m < n``,
-  SIMP_TAC (srw_ss()) [less_def,int_def,nat_def,cpx_def, 
+  SIMP_TAC (srw_ss()) [less_def,int_def,nat_def,cpx_def,
     complex_rationalTheory.COMPLEX_LT_def,rat_def,
     ratTheory.RAT_LES_CALCULATE,fracTheory.NMR,fracTheory.DNM]
   \\ SRW_TAC [] [] \\ EVAL_TAC);
@@ -387,23 +387,23 @@ val sexp_not = store_thm("sexp_not",
 
 val mult_nat = store_thm("mult_nat",
   ``!m n. mult (nat m) (nat n) = nat (m * n)``,
-  SIMP_TAC (srw_ss()) [mult_def,int_def,nat_def,cpx_def, 
+  SIMP_TAC (srw_ss()) [mult_def,int_def,nat_def,cpx_def,
     complex_rationalTheory.COMPLEX_MULT_def,rat_def,
-    ratTheory.RAT_MUL_CALCULATE,fracTheory.FRAC_MULT_CALCULATE, 
+    ratTheory.RAT_MUL_CALCULATE,fracTheory.FRAC_MULT_CALCULATE,
     complex_rationalTheory.COMPLEX_ADD_def,rat_def,
     ratTheory.RAT_ADD_CALCULATE,fracTheory.FRAC_ADD_CALCULATE,
     ratTheory.RAT_SUB_CALCULATE,fracTheory.FRAC_SUB_CALCULATE]);
 
 val add_nat_int = store_thm("add_nat_int",
   ``!m n. n <= m ==> (add (nat m) (int (-&n)) = nat (m - n))``,
-  SIMP_TAC (srw_ss()) [add_def,int_def,nat_def,cpx_def, 
+  SIMP_TAC (srw_ss()) [add_def,int_def,nat_def,cpx_def,
     complex_rationalTheory.COMPLEX_ADD_def,rat_def,
     ratTheory.RAT_ADD_CALCULATE,fracTheory.FRAC_ADD_CALCULATE,
     integerTheory.INT_SUB,GSYM integerTheory.int_sub]);
 
 val unary_minus_int = store_thm("unary_minus_int",
   ``!i. unary_minus (int i) = int (-i)``,
-  SIMP_TAC (srw_ss()) [unary_minus_def,int_def,nat_def,cpx_def, 
+  SIMP_TAC (srw_ss()) [unary_minus_def,int_def,nat_def,cpx_def,
     complex_rationalTheory.COMPLEX_SUB_def,rat_def,
     complex_rationalTheory.com_0_def,ratTheory.rat_0_def,fracTheory.frac_0_def,
     ratTheory.RAT_SUB_CALCULATE,fracTheory.FRAC_SUB_CALCULATE,
@@ -417,7 +417,7 @@ val rat_lemma = prove(
 val DIVIDES_lemma = prove(
   ``!n m. 0 < n ==> DIVIDES n (m * n)``,
   EVAL_TAC \\ SIMP_TAC std_ss [GSYM integerTheory.INT_ABS_MUL] \\ REPEAT STRIP_TAC
-  \\ `?nn mm. (ABS n = &nn) /\ (ABS m = &mm)` by 
+  \\ `?nn mm. (ABS n = &nn) /\ (ABS m = &mm)` by
         METIS_TAC [integerTheory.INT_ABS_POS,integerTheory.NUM_POSINT_EXISTS]
   \\ ASM_SIMP_TAC std_ss [integerTheory.INT_MUL,integerTheory.NUM_OF_INT]
   \\ REPEAT STRIP_TAC \\ `0 < nn` by intLib.COOPER_TAC
@@ -426,15 +426,15 @@ val DIVIDES_lemma = prove(
 val INTEGERP_INT = prove(
   ``integerp (int n) = t``,
   SIMP_TAC std_ss [int_def,integerp_def,cpx_def,IS_INT_def,
-       EVAL ``rat 0 1 = rat_0``] 
+       EVAL ``rat 0 1 = rat_0``]
   \\ SIMP_TAC std_ss [ratTheory.rat_dnm_def,ratTheory.rat_nmr_def,rat_def]
-  \\ STRIP_ASSUME_TAC (Q.SPEC `abs_frac (n,1)` rat_lemma)  
+  \\ STRIP_ASSUME_TAC (Q.SPEC `abs_frac (n,1)` rat_lemma)
   \\ ASM_SIMP_TAC std_ss [] \\ FULL_SIMP_TAC std_ss [ratTheory.rat_equiv_def]
-  \\ FULL_SIMP_TAC (srw_ss()) [fracTheory.NMR,fracTheory.DNM]  
-  \\ POP_ASSUM (ASSUME_TAC o GSYM) 
+  \\ FULL_SIMP_TAC (srw_ss()) [fracTheory.NMR,fracTheory.DNM]
+  \\ POP_ASSUM (ASSUME_TAC o GSYM)
   \\ Cases_on `DIVIDES (frac_dnm y) (n * frac_dnm y)`
   \\ ASM_SIMP_TAC std_ss [] \\ EVAL_TAC \\ POP_ASSUM MP_TAC
-  \\ METIS_TAC [fracTheory.FRAC_DNMPOS,DIVIDES_lemma]); 
+  \\ METIS_TAC [fracTheory.FRAC_DNMPOS,DIVIDES_lemma]);
 
 val nth_lemma = store_thm("nth_lemma",
   ``(nth (nat 0) x = car x) /\
@@ -484,7 +484,7 @@ val not_eq_nil = store_thm("not_eq_nil",
 val sexp_reduce_SUC = store_thm("sexp_reduce_SUC",
   ``!n. add (nat (SUC n)) (unary_minus (nat 1)) = nat n``,
   SIMP_TAC std_ss [ADD1,GSYM add_nat,add_ASSOC]
-  \\ `add (nat 1) (unary_minus (nat 1)) = nat 0` by ALL_TAC 
+  \\ `add (nat 1) (unary_minus (nat 1)) = nat 0` by ALL_TAC
   \\ ASM_SIMP_TAC std_ss [add_nat] \\ SIMP_TAC std_ss [nat_def,unary_minus_int]
   \\ SIMP_TAC std_ss [GSYM nat_def,add_nat_int]);
 
@@ -505,14 +505,14 @@ val m1_ok_step = prove(
   ``!s. m1_ok s ==> m1_ok (step s)``,
   NTAC 2 (ONCE_REWRITE_TAC defs) \\ SIMP_TAC std_ss [ite_def]
   \\ SRW_TAC [] [] \\ ONCE_REWRITE_TAC defs
-  \\ SIMP_TAC std_ss [m1_ok_def] \\ METIS_TAC []);  
+  \\ SIMP_TAC std_ss [m1_ok_def] \\ METIS_TAC []);
 
 val IMP_SPEC_M1_MODEL = prove(
   ``(!cs l1. (nth p1 cs = c) ==>
              (step (make_state p1 l1 s1 cs) = make_state p2 l1 s2 cs)) ==>
     SPEC M1_MODEL (tS s1 * PC p1)
          {(p1,c)} (tS s2 * PC p2)``,
-  REPEAT STRIP_TAC  
+  REPEAT STRIP_TAC
   \\ MATCH_MP_TAC IMP_M1_SPEC \\ SIMP_TAC std_ss [M1_NEXT_def]
   \\ SIMP_TAC std_ss [PC_def,GSYM STAR_ASSOC]
   \\ SIMP_TAC std_ss [pairTheory.FORALL_PROD,STAR_m1_2set,CODE_POOL_m1_2set,
@@ -528,7 +528,7 @@ val IMP_SPEC_M1_MODEL_2 = prove(
              (step (make_state p1 l1 s1 cs) = make_state p2 l1 s2 cs)) ==>
     SPEC M1_MODEL (tS s1 * tL n v * PC p1)
          {(p1,c)} (tS s2 * tL n v * PC p2)``,
-  REPEAT STRIP_TAC  
+  REPEAT STRIP_TAC
   \\ MATCH_MP_TAC IMP_M1_SPEC \\ SIMP_TAC std_ss [M1_NEXT_def]
   \\ SIMP_TAC std_ss [PC_def,GSYM STAR_ASSOC]
   \\ SIMP_TAC std_ss [pairTheory.FORALL_PROD,STAR_m1_2set,CODE_POOL_m1_2set,
@@ -551,11 +551,11 @@ val nth_update_nth_NEQ = prove(
 
 val IMP_SPEC_M1_MODEL_3 = prove(
   ``(!cs l1. (nth p1 cs = c) /\ (v = nth (nat n) l1)  ==>
-             (step (make_state p1 l1 s1 cs) = 
+             (step (make_state p1 l1 s1 cs) =
               make_state p2 (update_nth (nat n) w l1) s2 cs)) ==>
     SPEC M1_MODEL (tS s1 * tL n v * PC p1)
          {(p1,c)} (tS s2 * tL n w * PC p2)``,
-  REPEAT STRIP_TAC  
+  REPEAT STRIP_TAC
   \\ MATCH_MP_TAC IMP_M1_SPEC \\ SIMP_TAC std_ss [M1_NEXT_def]
   \\ SIMP_TAC std_ss [PC_def,GSYM STAR_ASSOC]
   \\ SIMP_TAC std_ss [pairTheory.FORALL_PROD,STAR_m1_2set,CODE_POOL_m1_2set,
@@ -565,22 +565,22 @@ val IMP_SPEC_M1_MODEL_3 = prove(
   \\ STRIP_TAC \\ STRIP_TAC \\ RES_TAC \\ POP_ASSUM MP_TAC
   \\ Q.PAT_ASSUM `!cs.bb` (K ALL_TAC)
   \\ ASM_SIMP_TAC std_ss [make_state_thm,nth_local_def,nth_update_nth]
-  \\ REPEAT STRIP_TAC \\ Cases_on `a = n` 
+  \\ REPEAT STRIP_TAC \\ Cases_on `a = n`
   \\ FULL_SIMP_TAC std_ss [nth_update_nth_NEQ]);
 
 val acl2_ss = std_ss ++ rewrites [hol_defaxiomsTheory.ACL2_SIMPS,
-  make_state_thm,nth_thm,CONS_11,NOT_CONS_NIL,stringTheory.CHR_11]  
+  make_state_thm,nth_thm,CONS_11,NOT_CONS_NIL,stringTheory.CHR_11]
 
-fun M1_TAC thm = 
-  SIMP_TAC std_ss [SPEC_MOVE_COND,precond_def] \\ SIMP_TAC std_ss [ACL2_TRUE] 
+fun M1_TAC thm =
+  SIMP_TAC std_ss [SPEC_MOVE_COND,precond_def] \\ SIMP_TAC std_ss [ACL2_TRUE]
   \\ REPEAT STRIP_TAC
   \\ MATCH_MP_TAC thm \\ ONCE_REWRITE_TAC defs2
   \\ ASM_SIMP_TAC std_ss [make_state_thm,next_inst_defun]
   \\ REPEAT STRIP_TAC \\ POP_ASSUM (K ALL_TAC) \\ REPEAT (POP_ASSUM MP_TAC)
-  \\ ONCE_REWRITE_TAC defs2 \\ SIMP_TAC acl2_ss [op_code_defun,List_def]  
-  \\ ONCE_REWRITE_TAC defs2 \\ SIMP_TAC acl2_ss [op_code_defun,List_def]  
-  \\ ONCE_REWRITE_TAC defs2 \\ SIMP_TAC acl2_ss [op_code_defun,List_def]  
-  \\ ONCE_REWRITE_TAC defs2 \\ SIMP_TAC acl2_ss [op_code_defun,List_def]  
+  \\ ONCE_REWRITE_TAC defs2 \\ SIMP_TAC acl2_ss [op_code_defun,List_def]
+  \\ ONCE_REWRITE_TAC defs2 \\ SIMP_TAC acl2_ss [op_code_defun,List_def]
+  \\ ONCE_REWRITE_TAC defs2 \\ SIMP_TAC acl2_ss [op_code_defun,List_def]
+  \\ ONCE_REWRITE_TAC defs2 \\ SIMP_TAC acl2_ss [op_code_defun,List_def]
   \\ ONCE_REWRITE_TAC defs2 \\ SIMP_TAC acl2_ss [op_code_defun,List_def]
   \\ METIS_TAC [add_COMM]
 
@@ -648,5 +648,5 @@ val M1_ISTORE = store_thm("M1_ISTORE",
        (tS (pop s) * tL n (top s) * PC (add p (nat 1)))``,
   M1_TAC IMP_SPEC_M1_MODEL_3);
 
-    
+
 val _ = export_theory();

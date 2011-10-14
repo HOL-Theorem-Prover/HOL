@@ -11,7 +11,7 @@ val zero = 0
 val one = 1
 val two = 2
 
-fun toString x = 
+fun toString x =
   (if x < 0 then
     "-" ^ (IntInf.toString (~x))
   else
@@ -32,7 +32,7 @@ end
 fun fromInt x = x
 fun fromNat x = Arbnumcore.toInt x
 fun toInt x = x
-fun toNat x = 
+fun toNat x =
   if x < 0 then
     raise Fail "Attempt to make negative integer a nat"
   else

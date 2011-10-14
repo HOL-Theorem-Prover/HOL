@@ -14,7 +14,7 @@ datatype a_expression =
 datatype a_genpredarg =
     Aspred_arg_exp of a_expression
   | Aspred_arg_string_list of string list
-  | Aspred_arg_comma 
+  | Aspred_arg_comma
   | Aspred_arg_colon
   | Aspred_arg_semi
 
@@ -48,7 +48,7 @@ datatype a_proposition =
 datatype p_condition =
     Pcond_true
   | Pcond_false
-  | Pcond_neg of p_condition 
+  | Pcond_neg of p_condition
   | Pcond_and of p_condition * p_condition
   | Pcond_or of p_condition * p_condition
   | Pcond_compare of string * a_expression * a_expression
@@ -72,13 +72,13 @@ datatype p_statement =
   | Pstm_fcall of string * actual_params
   | Pstm_parallel_fcall of string * actual_params * string * actual_params
   | Pstm_assert of a_proposition
-  | Pstm_diverge 
-  | Pstm_fail 
+  | Pstm_diverge
+  | Pstm_fail
   | Pstm_ndet of p_statement * p_statement
 
 
 datatype p_item =
-    Pfundecl of bool * string * (string list * string list) * 
+    Pfundecl of bool * string * (string list * string list) *
       read_write_decl * a_invariant *
       string list * p_statement list * a_invariant
   | Presource of string * string list * a_proposition
@@ -95,5 +95,5 @@ type fun_item =
 datatype p_top =
     Pprogram of a_component list * a_component list * p_item list
   | Pentailments of (string * a_proposition * a_proposition) list
- 
+
 end;
