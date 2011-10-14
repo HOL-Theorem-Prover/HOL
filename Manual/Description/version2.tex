@@ -71,16 +71,16 @@ the form
 \con{Q} is a quantifier and
 if $x:\alpha$ then $p$ can be any term of type $\alpha\fun\bool$; this
 denotes the quantification of $x$ over those values
-satisfying $p$.  The qualifier {\small\verb%::%} can be used with 
+satisfying $p$.  The qualifier {\small\verb%::%} can be used with
 {\small\verb%\%} and any
 binder, including user defined ones; the appropriate meanings are
-predefined for {\small\verb%\%} and the built-in binders 
+predefined for {\small\verb%\%} and the built-in binders
 {\small\verb%!%}, {\small\verb%?%} and {\small\verb%@%}.  This provides a method of
 simulating subtypes and dependent types; the qualifying predicate $p$ can be
 an arbitrary term containing parameters. For example:
 {\small\verb%!%}$w${\small\verb%::%}$\con{Word}(n)${\small\verb%. %}$t[w]$,
 for a suitable constant \con{Word}, simulates a quantification over the
-`type' of $n$-bit words. Experiments are needed to establish how satisfactory 
+`type' of $n$-bit words. Experiments are needed to establish how satisfactory
 this approach is. The syntactic mechanism,
 although implemented initially to support restricted quantification, can
 also be used to support better approximations to notations like
@@ -148,9 +148,9 @@ The initial search path is now:
 \end{alltt}\end{hol}
 
 \noindent where $directory$ is the site-specific absolute pathname in which
-the \HOL\ distribution directory (`\ml{hol}') resides. 
-   
-The \ML\ functions \ml{add\_to\_search\_path} and 
+the \HOL\ distribution directory (`\ml{hol}') resides.
+
+The \ML\ functions \ml{add\_to\_search\_path} and
 \ml{append\_to\_search\_path} are
 no longer built-in.  Users may define them, if required, by:
 
@@ -170,7 +170,7 @@ The \ml{install} function now sets the search path to:
 
 \section{Location of libraries}
 
-The function 
+The function
 
 \begin{holboxed}\index{library_pathname@\ml{library\_pathname}}
 \begin{verbatim}
@@ -179,16 +179,16 @@ The function
 
 \noindent returns the internal pathname used by \HOL\ to
 load libraries.  This pathname, which is site-specific and is given an initial
-value when the system is built, should be the absolute pathname of the \HOL\ 
+value when the system is built, should be the absolute pathname of the \HOL\
 system library directory.  This pathname will typically have the form:
 
 \begin{hol}\begin{alltt}
    `\(directory\)/hol/Library`
 \end{alltt}\end{hol}
 
-\noindent where $directory$ is the site-specific absolute pathname in which the \HOL\ 
-distribution directory (`\ml{hol}') resides. The value returned by 
-\ml{library\_pathname} can be changed by users only via the \ml{install} function.  
+\noindent where $directory$ is the site-specific absolute pathname in which the \HOL\
+distribution directory (`\ml{hol}') resides. The value returned by
+\ml{library\_pathname} can be changed by users only via the \ml{install} function.
 
 The string returned by \ml{library\_pathname} is primarily used in
 library load-files to update the \HOL\ search path and help search
@@ -198,12 +198,12 @@ library.  The load-file {\small\verb%lib.ml%} can then update the help
 search path as follows:
 
 \begin{hol}\begin{verbatim}
-   let path = library_pathname() ^ `/lib/help/` 
+   let path = library_pathname() ^ `/lib/help/`
    in
    set_help_search_path (path . help_search_path())
 \end{verbatim}\end{hol}
 
-\noindent This will make the help files of the library \ml{lib} 
+\noindent This will make the help files of the library \ml{lib}
 available for online help
 whenever the library is loaded.
 
@@ -255,10 +255,10 @@ Two new functions:
   help_search_path     : void -> string list
 \end{verbatim}\end{holboxed}
 
-\noindent have been added to the system for accessing the 
+\noindent have been added to the system for accessing the
 internal search path used by \HOL\ to find online help files.  The help
 search path has precisely the same format as the regular search path,
-and these two function are analogous to the \ML\ functions 
+and these two function are analogous to the \ML\ functions
 \ml{search\_path} and \ml{set\_search\_path}.\index{help system|)}
 
 
@@ -270,7 +270,7 @@ and these two function are analogous to the \ML\ functions
 Syntactic support for restricted quantification and abstraction is now
 provided. This follows a suggestion discussed at the Second \HOL\ Users
 Meeting and implements a method of simulating subtypes and dependent
-types with predicates. 
+types with predicates.
 
 Currently no derived rules are provided to support this notation, so
 any inferences will need to work on the underlying semantic
@@ -289,12 +289,12 @@ Anything can be written between the binder and `\ml{::}' that could be
 written between the binder and `\ml{.}` in the old notation. See the
 examples below.
 
-The flag \ml{print\_restrict} has default \ml{true}, but if set to 
+The flag \ml{print\_restrict} has default \ml{true}, but if set to
 \ml{false} will
 disable the pretty printing. This is useful for seeing what the
 semantics of particular restricted abstractions are.
 
-The constants \ml{RES\_ABSTRACT}, \ml{RES\_FORALL}, \ml{RES\_EXISTS} and 
+The constants \ml{RES\_ABSTRACT}, \ml{RES\_FORALL}, \ml{RES\_EXISTS} and
 \ml{RES\_SELECT} are
 defined in the theory \ml{bool} by:
 
@@ -422,7 +422,7 @@ Here is an example of a user-defined restriction:
 
 #"DURING x::(m,n). p x";;
 no restriction constant associated with DURING
-skipping: x " ;; parse failed  
+skipping: x " ;; parse failed
 
 #new_definition
 # (`RES_DURING`, "RES_DURING(m,n)p = !x. m<=x /\ x<=n ==> p x");;
@@ -444,10 +444,10 @@ true : bool
 
 \section{Syntax for sets}\index{set theory notation}
 
-The special purpose set-theoretic notations 
+The special purpose set-theoretic notations
 {\small\verb%"{%}$t_1,t_2,\ldots,t_n${\small\verb%}"%} and
 {\small\verb%"{%}$t${\small\verb%|%}$p${\small\verb%}"%} are now available.
-The normal interpretation of the former is the finite set containing 
+The normal interpretation of the former is the finite set containing
 $t_1,t_2,\ldots, t_n$ and the normal interpretation of the latter
 is the set of all $t$s such that $p$. These interpretations are predefined for
 the library \ml{sets}, but the user can use the syntax for other purposes if
@@ -474,7 +474,7 @@ to parse to:
    "\(c\sb{2}\) \(t\sb{1}\) (\(c\sb{2}\) \(t\sb{2}\) \(\cdots\) (\(c\sb{2}\) \(t\sb{n}\) \(c\sb{2}\)) \(\cdots\) ))"
 \end{alltt}\end{hol}
 
-\noindent with failure if either $c_1$ or $c_2$ 
+\noindent with failure if either $c_1$ or $c_2$
 is not the name of a constant.
 
 In the library \ml{sets}, the empty set is \ml{EMPTY} and
@@ -558,7 +558,7 @@ Other examples are:
 \noindent will parse to:
 
 \begin{hol}\begin{verbatim}
-   "GSPEC(\(x,y,z). (x+(y+z), (x < y /\ y < z)))" 
+   "GSPEC(\(x,y,z). (x+(y+z), (x < y /\ y < z)))"
 \end{verbatim}\end{hol}
 
 \noindent and
@@ -574,22 +574,22 @@ Other examples are:
 \end{verbatim}\end{hol}
 
 
-Note that the precedence of comma is increased in the contexts 
-``{\small\verb%{%}$\cdots${\small\verb%}%}'' and 
+Note that the precedence of comma is increased in the contexts
+``{\small\verb%{%}$\cdots${\small\verb%}%}'' and
 ``{\small\verb%{%}$\cdots${\small\verb%|%}''.
 Terms will be printed in set notation if the flag \ml{print\_set} is
 \ml{true}.
-Note that 
+Note that
 
 \medskip
 
-\ml{"}$c${\small\verb%(\(%}$x_1$\ml{,}$\ldots$\ml{,}$x_n$\ml{).(}$t$\ml{,}$p$\ml{))"} 
+\ml{"}$c${\small\verb%(\(%}$x_1$\ml{,}$\ldots$\ml{,}$x_n$\ml{).(}$t$\ml{,}$p$\ml{))"}
 
 \medskip
 
-\noindent will only print as 
-{\small\verb%"{%}$t${\small\verb%|%}$p${\small\verb%}"%} 
-if the variables $x_1$, $\ldots$ , 
+\noindent will only print as
+{\small\verb%"{%}$t${\small\verb%|%}$p${\small\verb%}"%}
+if the variables $x_1$, $\ldots$ ,
 $x_n$ occur free in both $t$ and $p$ (and \ml{print\_set} is \ml{true}) .
 
 \section{Revised set theory libraries}\label{LIBRARY}
@@ -621,10 +621,10 @@ theorems are available.  Parser and pretty-printer support for the notation:
 \begin{itemize}
 \item \ml{\{$x_1,\ldots,x_n$\}}     denotes a finite set.
 
-\item  \ml{\{$x$|$P[x]$\}}      denotes the set of all \ml{$x$} such that 
+\item  \ml{\{$x$|$P[x]$\}}      denotes the set of all \ml{$x$} such that
 \ml{$P[x]$}.
 
-\item \ml{\{$t[x]$|$P[x]$\}}   denotes the set of all \ml{$t[x]$} 
+\item \ml{\{$t[x]$|$P[x]$\}}   denotes the set of all \ml{$t[x]$}
 such that \ml{$P[x]$}.
 \end{itemize}
 
@@ -638,7 +638,7 @@ Proof support is supplied for this notation in the form of a conversion
 \end{verbatim}\end{holboxed}
 
 \noindent which implements the axiom of specification for generalized set
-specifications. 
+specifications.
 
 \ml{SET\_SPEC\_CONV} accepts two types of input.
 
@@ -752,7 +752,7 @@ foo = - : (string -> void)
 
 #new_syntax_block(`<<`,`>>`, `foo`);;
 () : void
- 
+
 #<< Mike >>;;
 Hello: Mike
 () : void
@@ -768,8 +768,8 @@ backslash ({\small\verb%\%}) to be included in strings.
 \end{verbatim}\end{holboxed}
 
 \noindent This changes the escape character in strings to be the character with the
-supplied ascii code (initially this is {\small\verb%92%}, 
-viz. `{\small\verb%\%}`). 
+supplied ascii code (initially this is {\small\verb%92%},
+viz. `{\small\verb%\%}`).
 The old escape character is returned.\index{syntax blocks|)}
 
 \section{User-programmable quotation typechecker}
@@ -782,28 +782,28 @@ that enables the user to write his or her own one and then to install
 it in the system.
 
 \index{preterms|(}
-The \ML\ abstract type {\small\verb%preterm%} represents the parse trees of \HOL\ 
+The \ML\ abstract type {\small\verb%preterm%} represents the parse trees of \HOL\
 terms. A typechecker is a function of type {\small\verb%preterm->term%}. If the flag
 \ml{preterm} is set to \ml{true} (the default is \ml{false}), then \HOL\ will use
-whatever \ML\ function is currently bound to the name 
+whatever \ML\ function is currently bound to the name
 \ml{preterm\_handler} as
 the quotation typechecker. The way this works is that when
 \ml{preterm} is true the parser produces a preterm rather than a term,
-and then wraps a call of \ml{preterm\_handler} 
-around the quotation.\index{type checking, in HOL logic@type checking, 
+and then wraps a call of \ml{preterm\_handler}
+around the quotation.\index{type checking, in HOL logic@type checking,
 in \HOL\ logic!user programmed} Other uses of preterms are possible, for example
-as patterns for describing terms. 
+as patterns for describing terms.
 
 The definition of the \ML\ type {\small\verb%preterm%} is:
 
 \begin{hol}\index{preterm@\ml{preterm}}\begin{alltt}
-   rectype preterm = 
-     preterm_var      of string                        \({\it Variables}\) 
-   | preterm_const    of string                        \({\it Constants}\) 
-   | preterm_comb     of preterm # preterm             \({\it Combinations}\) 
-   | preterm_abs      of preterm # preterm             \({\it Abstractions}\) 
-   | preterm_typed    of preterm # type                \({\it Explicit typing}\) 
-   | preterm_antiquot of term                          \({\it Antiquotation}\) 
+   rectype preterm =
+     preterm_var      of string                        \({\it Variables}\)
+   | preterm_const    of string                        \({\it Constants}\)
+   | preterm_comb     of preterm # preterm             \({\it Combinations}\)
+   | preterm_abs      of preterm # preterm             \({\it Abstractions}\)
+   | preterm_typed    of preterm # type                \({\it Explicit typing}\)
+   | preterm_antiquot of term                          \({\it Antiquotation}\)
 \end{alltt}\end{hol}
 
 The function:
@@ -826,7 +826,7 @@ The following is a rather contrived example:
 #letref p_reg = preterm_var `x`;;
 p_reg = preterm_var `x` : preterm
 
-#let preterm_handler p = p_reg:=p; 
+#let preterm_handler p = p_reg:=p;
                          print_string `Typechecking ... `;
                          print_newline();
                          preterm_to_term p;;
@@ -882,7 +882,7 @@ Given the term:
 \begin{hol}
 {\small\verb%   "(\(%}$x_1, \ldots ,x_n${\small\verb%).%}$t${\small\verb%) (%}$t_1, \ldots ,t_n${\small\verb%)"%}
 \end{hol}
-                                                                       
+
 \noindent \ml{PAIRED\_BETA\_CONV} proves that:
 
 \begin{hol}
@@ -907,7 +907,7 @@ The conversion:
 \end{verbatim}\end{holboxed}
 
 \noindent does addition by formal proof.
-If $n$ and $m$ are numerals then 
+If $n$ and $m$ are numerals then
 {\small\verb%ADD_CONV "%}$n\ $\ml{+}$\ m$\ml{"}
 returns the theorem {\small\verb%|- %}$n\ $\ml{+}$\ m\ $\ml{=}$\  s$,
 where $s$ is the numeral denoting the sum of $n$ and $m$.  For example:
@@ -927,14 +927,14 @@ where $s$ is the numeral denoting the sum of $n$ and $m$.  For example:
 
 
 A new conversion has been added for deciding equality of natural number
-constants.  
+constants.
 
 \begin{holboxed}\index{num_EQ_CONV@\ml{num\_EQ\_CONV}}
 \begin{verbatim}
    num_EQ_CONV : conv
 \end{verbatim}\end{holboxed}
 
-\noindent If $n$ and $m$ are terms constructed from numeral constants 
+\noindent If $n$ and $m$ are terms constructed from numeral constants
 and the successor function \ml{SUC}, then:
 {\small\verb%num_EQ_CONV "%}$n$\ml{=}$m$\ml{"}
 returns:
@@ -972,30 +972,30 @@ A call to:
    |- LENGTH [\(t\sb{1}\);\(\ldots\);\(t\sb{n}\)] = n
 \end{alltt}\end{hol}
 
-The other conversion, \ml{list\_EQ\_CONV}, proves or disproves the 
-equality of two lists, given  
-a conversion for deciding the equality of elements.                   
+The other conversion, \ml{list\_EQ\_CONV}, proves or disproves the
+equality of two lists, given
+a conversion for deciding the equality of elements.
 A call to:
 
-\begin{hol}\begin{alltt}                                              
-   list_EQ_CONV \(conv\) "[\(u\sb{1}\);\(\ldots\);\(u\sb{n}\)] = [\(v\sb{1}\);\(\ldots\);\(v\sb{m}\)]"                      
+\begin{hol}\begin{alltt}
+   list_EQ_CONV \(conv\) "[\(u\sb{1}\);\(\ldots\);\(u\sb{n}\)] = [\(v\sb{1}\);\(\ldots\);\(v\sb{m}\)]"
 \end{alltt}\end{hol}
 
-\noindent returns: {\small\verb%|- ([%}$u_1$\m{;}$\ldots$\ml{;}$u_n$\ml{]\ =\ [}$v_1$\ml{;}$\ldots$\ml{;}$v_m$\ml{])\ =\ F} if:                       
+\noindent returns: {\small\verb%|- ([%}$u_1$\m{;}$\ldots$\ml{;}$u_n$\ml{]\ =\ [}$v_1$\ml{;}$\ldots$\ml{;}$v_m$\ml{])\ =\ F} if:
 
 \begin{myenumerate}
 \item \ml{~($n$=$m$)}  or
-\item \ml{$conv$} proves {\small\verb%|- (%}$u_i\ $\ml{=}$\ v_i$\ml{)\ =\ F} 
+\item \ml{$conv$} proves {\small\verb%|- (%}$u_i\ $\ml{=}$\ v_i$\ml{)\ =\ F}
 for any $1\leq i \leq m$.
 \end{myenumerate}
-                                                                         
+
 \noindent {\small\verb%|- ([%}$u_1$\m{;}$\ldots$\ml{;}$u_n$\ml{]\ =\ [}$v_1$\ml{;}$\ldots$\ml{;}$v_m$\ml{])\ =\ T} is returned if:
 
 \begin{myenumerate}
 
-\item \ml{($n$=$m$)} and \ml{$u_i$} is syntactically identical to 
+\item \ml{($n$=$m$)} and \ml{$u_i$} is syntactically identical to
 \ml{$v_i$} for $1\leq i \leq m$, or
-\item \ml{($n$=$m$)} and \ml{$conv$} proves  
+\item \ml{($n$=$m$)} and \ml{$conv$} proves
 {\small\verb%|- (%}$u_i$\ml{=}$v_i$\ml{)=T} for $1\leq i \leq n$.
 \end{myenumerate}
 
@@ -1020,7 +1020,7 @@ A conversion for reducing {\tt let}-terms is now provided.
 \begin{hol}\begin{alltt}
    |- let \(v\sb{1}\) = \(t\sb{1}\) and \(\cdots\) and \(v\sb{n}\) = \(t\sb{n}\) in \(t[v\sb{1},\ldots,v\sb{n}]\)  =  \(t[t\sb{1},\ldots,t\sb{n}]\)
 \end{alltt}\end{hol}
-                                                                       
+
 \noindent The \ml{$v_i$}'s can take any one of the following forms:
 
 \begin{myenumerate}
@@ -1052,7 +1052,7 @@ rewritten in the body of the {\tt let}-term.
 |- (let f x = x + 1 and g x = x + 2 in f(g(f(g 0)))) = 6
 
 #let_CONV "let f x y = x+y in f 1";;  % NB: partial application %
-|- (let f x y = x + y in f 1) = (\y. 1 + y)  
+|- (let f x y = x + y in f 1) = (\y. 1 + y)
 \end{verbatim}\end{session}
 
 \subsection{Skolemization}\index{Skolemization}
@@ -1061,7 +1061,7 @@ Two conversions are provided for a higher-order version of
 Skolemization (using existentially quantified function variables
 rather than first-order Skolem constants).
 
-The conversion 
+The conversion
 
 \begin{holboxed}\index{X_SKOLEM_CONV@\ml{X\_SKOLEM\_CONV}}
 \begin{verbatim}
@@ -1075,8 +1075,8 @@ proves:
    |- (!\(x\sb{1}\) \(\ldots\) \(x\sb{n}\). ?\(y\). \(t[x\sb{1},\ldots,x\sb{n},y]\)  =  (?\(f\). !\(x\sb{1}\) \(\ldots\) \(x\sb{n}\). \(t[x\sb{1},\ldots,x\sb{n},f x\sb{1}\ldots x\sb{n}]\)
 \end{alltt}\end{hol}
 
-\noindent for any input term 
-\ml{!$x_1\ \ldots\ x_n$.\ ?$y$. $t[x_1,\ldots,x_n,y]$}.  
+\noindent for any input term
+\ml{!$x_1\ \ldots\ x_n$.\ ?$y$. $t[x_1,\ldots,x_n,y]$}.
 Note that when $n=\ml{0}$, this
 is equivalent to alpha-conversion:
 
@@ -1084,14 +1084,14 @@ is equivalent to alpha-conversion:
   |- (?\(y\). \(t[y]\)) = (?\(f\). \(t[f]\))
 \end{alltt}\end{hol}
 
-\noindent and that the conversion fails if there is already a free 
+\noindent and that the conversion fails if there is already a free
 variable \ml{$f$} of the appropriate type in the input term. For example:
 
 \begin{hol}\begin{alltt}
   X_SKOLEM_CONV "f:num->*" "!n:num. ?x:*. x = (f n)"
 \end{alltt}\end{hol}
 
-\noindent will fail.  The conversion \ml{SKOLEM\_CONV} is 
+\noindent will fail.  The conversion \ml{SKOLEM\_CONV} is
 like \ml{X\_SKOLEM\_CONV}, except that it
 uses a primed variant of the name of the existentially quantified variable
 as the name of the skolem function it introduces.  For example:
@@ -1112,7 +1112,7 @@ as the name of the skolem function it introduces.  For example:
 \index{conversions!quantifier movement}
 
 A complete and systematically-named set of conversions for moving quantifiers
-inwards and outwards through the logical connectives {\small\verb%~%}, 
+inwards and outwards through the logical connectives {\small\verb%~%},
 {\small\verb%/\%}, {\small\verb%\/%}, and {\small\verb%==>%} has
 been added to the system.  The naming scheme is based on the following
 atoms:
@@ -1127,20 +1127,20 @@ atoms:
 
 The conversions for moving quantifiers inwards are called:
 
-\begin{hol}\begin{alltt}        
+\begin{hol}\begin{alltt}
    <\(quant\)>_<\(conn\)>_CONV
 \end{alltt}\end{hol}
 
-\noindent where the quantifier \ml{<$quant$>} is to be moved inwards 
+\noindent where the quantifier \ml{<$quant$>} is to be moved inwards
 through \ml{<$conn$>}.
 
 The conversions for moving quantifiers outwards are called:
-   
-\begin{hol}\begin{alltt}        
+
+\begin{hol}\begin{alltt}
    [\(dir\)]_<\(conn\)>_<\(quant\)>_CONV
 \end{alltt}\end{hol}
-      
-\noindent where \ml{<$quant$>} is to be moved outwards 
+
+\noindent where \ml{<$quant$>} is to be moved outwards
 through \ml{<$conn$>}, and the optional
 \ml{[$dir$]} identifies which operand (left or right) contains the quantifier.
 The complete set is:
@@ -1167,14 +1167,14 @@ The complete set is:
 \end{verbatim}\end{hol}
 
 \begin{hol}\begin{verbatim}
-   FORALL_OR_CONV 
+   FORALL_OR_CONV
      |- (!x.P \/ Q) = P \/ !x.Q            [x not free in P]
      |- (!x.P \/ Q) = (!x.P) \/ Q          [x not free in Q]
      |- (!x.P \/ Q) = (!x.P) \/ (!x.Q)     [x not free in P or Q]
 \end{verbatim}\end{hol}
 
 \begin{hol}\begin{verbatim}
-   OR_FORALL_CONV  
+   OR_FORALL_CONV
      |- (!x.P) \/ (!x.Q) = (!x.P \/ Q)     [x not free in P or Q]
 \end{verbatim}\end{hol}
 
@@ -1184,14 +1184,14 @@ The complete set is:
 \end{verbatim}\end{hol}
 
 \begin{hol}\begin{verbatim}
-   EXISTS_AND_CONV 
+   EXISTS_AND_CONV
      |- (?x.P /\ Q) = P /\ ?x.Q            [x not free in P]
      |- (?x.P /\ Q) = (?x.P) /\ Q          [x not free in Q]
      |- (?x.P /\ Q) = (?x.P) /\ (?x.Q)     [x not free in P or Q]
 \end{verbatim}\end{hol}
 
 \begin{hol}\begin{verbatim}
-   AND_EXISTS_CONV  
+   AND_EXISTS_CONV
      |- (?x.P) /\ (?x.Q) = (?x.P /\ Q)     [x not free in P or Q]
 \end{verbatim}\end{hol}
 
@@ -1201,7 +1201,7 @@ The complete set is:
 \end{verbatim}\end{hol}
 
 \begin{hol}\begin{verbatim}
-   FORALL_IMP_CONV   
+   FORALL_IMP_CONV
      |- (!x.P ==> Q) = P ==> !x.Q          [x not free in P]
      |- (!x.P ==> Q) = (?x.P) ==> Q        [x not free in Q]
      |- (!x.P ==> Q) = (?x.P) ==> (!x.Q)   [x not free in P or Q]
@@ -1213,7 +1213,7 @@ The complete set is:
 \end{verbatim}\end{hol}
 
 \begin{hol}\begin{verbatim}
-   EXISTS_IMP_CONV   
+   EXISTS_IMP_CONV
      |- (?x.P ==> Q) = P ==> ?x.Q          [x not free in P]
      |- (?x.P ==> Q) = (!x.P) ==> Q        [x not free in Q]
      |- (?x.P ==> Q) = (!x.P) ==> (?x.Q)   [x not free in P or Q]
@@ -1243,7 +1243,7 @@ the functions \ml{MOD} and \ml{DIV} on the natural numbers.  The old definitions
 \noindent have been deleted, and replaced by the constant specification:
 
 \begin{hol}\begin{verbatim}
-   DIVISION    |- !n. 0 < n ==> 
+   DIVISION    |- !n. 0 < n ==>
                    (!k. (k = ((k DIV n) * n) + (k MOD n)) /\ (k MOD n) < n)
 \end{verbatim}\end{hol}
 
@@ -1266,13 +1266,13 @@ The following theorems are also available:
    ZERO_MOD     |- !n. 0 < n ==> (0 MOD n = 0)
    MOD_MULT     |- !n r. r < n ==> (!q. ((q * n) + r) MOD n = r)
    MOD_TIMES    |- !n. 0 < n ==> (!q r. ((q * n) + r) MOD n = r MOD n)
-   MOD_PLUS     |- !n. 0 < n ==> 
+   MOD_PLUS     |- !n. 0 < n ==>
                        (!j k. ((j MOD n) + (k MOD n)) MOD n = (j + k) MOD n)
    MOD_MOD      |- !n. 0 < n ==> (!k. (k MOD n) MOD n = k MOD n)
 \end{verbatim}\end{hol}
- 
- 
-  
+
+
+
 The following miscellaneous arithmetical theorems
 are now pre-proved.
 
@@ -1304,13 +1304,13 @@ are now pre-proved.
 \end{verbatim}\end{hol}
 \begin{hol}\begin{verbatim}
    SUB_LESS_EQ_ADD      |- !m p. m <= p ==> (!n. (p - m) <= n = p <= (m + n))
-   SUB_CANCEL           |- !p n m. n <= p /\ m <= p ==> 
+   SUB_CANCEL           |- !p n m. n <= p /\ m <= p ==>
                                    ((p - n = p - m) = (n = m))
-   CANCEL_SUB           |- !p n m. p <= n /\ p <= m ==> 
+   CANCEL_SUB           |- !p n m. p <= n /\ p <= m ==>
                                    ((n - p = m - p) = (n = m))
    NOT_EXP_0            |- !m n. ~((SUC n) EXP m = 0)
    ZERO_LESS_EXP        |- !m n. 0 < ((SUC n) EXP m)
-   ODD_OR_EVEN          |- !n. ?m. (n = (SUC(SUC 0)) * m) \/ 
+   ODD_OR_EVEN          |- !n. ?m. (n = (SUC(SUC 0)) * m) \/
                                    (n = ((SUC(SUC 0)) * m) + 1)
    LESS_EXP_SUC_MONO    |- !n m.
                             ((SUC(SUC m)) EXP n)<((SUC(SUC m)) EXP (SUC n))
@@ -1325,7 +1325,7 @@ are now pre-proved.
 \begin{hol}\begin{verbatim}
    LIST_NOT_EQ: |- !l1 l2. ~(l1 = l2) ==> (!h1 h2. ~(CONS h1 l1 = CONS h2 l2))
    NOT_EQ_LIST: |- !h1 h2. ~(h1 = h2) ==> (!l1 l2. ~(CONS h1 l1 = CONS h2 l2))
-   EQ_LIST      |- !h1 h2. (h1 = h2) ==>  
+   EQ_LIST      |- !h1 h2. (h1 = h2) ==>
                            (!l1 l2. (l1 = l2) ==> (CONS h1 l1 = CONS h2 l2))
 \end{verbatim}\end{hol}
 
@@ -1341,7 +1341,7 @@ are now pre-proved.
    OR_IMP_THM         |- !t1 t2. (t1 = t2 \/ t1) = t2 ==> t1
    NOT_IMP            |- !t1 t2. ~(t1 ==> t2) = t1 /\ ~t2
    COND_ID            |- !b t. (b => t | t) = t
-   DISJ_ASSOC         |- !t1 t2 t3. t1 \/ t2 \/ t3 = (t1 \/ t2) \/ t3 
+   DISJ_ASSOC         |- !t1 t2 t3. t1 \/ t2 \/ t3 = (t1 \/ t2) \/ t3
 \end{verbatim}\end{hol}
 
 
@@ -1356,7 +1356,7 @@ are listed here. The reasons for the changes are given in the files:
    hol/Versions/Versions.pre.1.12
 \end{verbatim}\end{hol}
 
-\noindent The file \ml{Version.$m$.$n$} (in the sources) documents \HOL\ 
+\noindent The file \ml{Version.$m$.$n$} (in the sources) documents \HOL\
 Version \ml{$m$.$n$} and may contain details not in \DESCRIPTION\ or
 \REFERENCE.
 
@@ -1369,7 +1369,7 @@ documented in \REFERENCE.
 \begin{hol}\begin{verbatim}
    get_const_type            parity                    is_type
    mk_let                    dest_let                  is_let
-   bndvar                    body                      is_axiom   
+   bndvar                    body                      is_axiom
 \end{verbatim}\end{hol}
 \begin{hol}\begin{verbatim}
    mk_cons                   dest_cons                 is_cons
@@ -1380,29 +1380,29 @@ documented in \REFERENCE.
    ancestors                 ancestry
 \end{verbatim}\end{hol}
 \begin{hol}\begin{verbatim}
-   prove_rep_fn_one_one      prove_rep_fn_onto       
-   prove_abs_fn_one_one      prove_abs_fn_onto 
+   prove_rep_fn_one_one      prove_rep_fn_onto
+   prove_abs_fn_one_one      prove_abs_fn_onto
 \end{verbatim}\end{hol}
 \begin{hol}\begin{verbatim}
    define_finite_set_syntax  define_set_abstraction_syntax
    associate_restriction
 \end{verbatim}\end{hol}
 \begin{hol}\begin{verbatim}
-   X_FUN_EQ_CONV             COND_CONV                 PAIRED_BETA_CONV   
-   BOOL_EQ_CONV              ADD_CONV                  LENGTH_CONV           
-   list_EQ_CONV              num_EQ_CONV               let_CONV              
+   X_FUN_EQ_CONV             COND_CONV                 PAIRED_BETA_CONV
+   BOOL_EQ_CONV              ADD_CONV                  LENGTH_CONV
+   list_EQ_CONV              num_EQ_CONV               let_CONV
    EXISTS_LEAST_CONV         X_SKOLEM_CONV             SKOLEM_CONV
-   NOT_FORALL_CONV           NOT_EXISTS_CONV    
+   NOT_FORALL_CONV           NOT_EXISTS_CONV
    EXISTS_NOT_CONV           FORALL_NOT_CONV
-   FORALL_AND_CONV           AND_FORALL_CONV    
+   FORALL_AND_CONV           AND_FORALL_CONV
    LEFT_AND_FORALL_CONV      RIGHT_AND_FORALL_CONV
-   EXISTS_OR_CONV            OR_EXISTS_CONV     
+   EXISTS_OR_CONV            OR_EXISTS_CONV
    LEFT_OR_EXISTS_CONV       RIGHT_OR_EXISTS_CONV
-   FORALL_OR_CONV            OR_FORALL_CONV     
+   FORALL_OR_CONV            OR_FORALL_CONV
    LEFT_OR_FORALL_CONV       RIGHT_OR_FORALL_CONV
-   EXISTS_AND_CONV           AND_EXISTS_CONV    
+   EXISTS_AND_CONV           AND_EXISTS_CONV
    LEFT_AND_EXISTS_CONV      RIGHT_AND_EXISTS_CONV
-   FORALL_IMP_CONV           EXISTS_IMP_CONV   
+   FORALL_IMP_CONV           EXISTS_IMP_CONV
    LEFT_IMP_FORALL_CONV      RIGHT_IMP_FORALL_CONV
    LEFT_IMP_EXISTS_CONV      RIGHT_IMP_EXISTS_CONV
 \end{verbatim}\end{hol}
@@ -1414,9 +1414,9 @@ documented in \REFERENCE.
    set_help_search_path      help_search_path
 \end{verbatim}\end{hol}
 \begin{hol}\begin{verbatim}
-   EQF_INTRO                 ISPEC                     ISPECL 
-   EQF_ELIM                  EXISTENCE                 IMP_CONJ           
-   EXIST_IMP             
+   EQF_INTRO                 ISPEC                     ISPECL
+   EQF_ELIM                  EXISTENCE                 IMP_CONJ
+   EXIST_IMP
 \end{verbatim}\end{hol}
 \begin{hol}\begin{verbatim}
    REPEAT_GTCL               AP_THM_TAC
@@ -1435,21 +1435,21 @@ deleted by mistake---please let us know if you want anything back.
    pp_delete_theorem         pp_theorems
    new_pp_theory             close_pp_theory
    load_pp_theory            extend_pp_theory          new_pp_predicate
-   mk_quant                  mk_bool_comb space        ascii_ize 
-   dest_quant                dest_bool_comb            truth 
-   mk_iff                     dest_iff                 is_iff 
+   mk_quant                  mk_bool_comb space        ascii_ize
+   dest_quant                dest_bool_comb            truth
+   mk_iff                     dest_iff                 is_iff
 \end{verbatim}\end{hol}
 \begin{hol}\begin{verbatim}
-   TOTALLY_AD_HOC_LEMMA 
+   TOTALLY_AD_HOC_LEMMA
 \end{verbatim}\end{hol}
 \begin{hol}\begin{verbatim}
-   AND_CLAUSE1               AND_CLAUSE2               AND_CLAUSE3    
+   AND_CLAUSE1               AND_CLAUSE2               AND_CLAUSE3
    AND_CLAUSE4               AND_CLAUSE5
-   OR_CLAUSE1                OR_CLAUSE2                OR_CLAUSE3     
+   OR_CLAUSE1                OR_CLAUSE2                OR_CLAUSE3
    OR_CLAUSE4                OR_CLAUSE5
-   IMP_CLAUSE1               IMP_CLAUSE2               IMP_CLAUSE3    
+   IMP_CLAUSE1               IMP_CLAUSE2               IMP_CLAUSE3
    IMP_CLAUSE4               IMP_CLAUSE5
-   EQ_CLAUSE1                EQ_CLAUSE2                EQ_CLAUSE3     
+   EQ_CLAUSE1                EQ_CLAUSE2                EQ_CLAUSE3
    EQ_CLAUSE4
    COND_CLAUSE1              COND_CLAUSE2
 \end{verbatim}\end{hol}
@@ -1462,9 +1462,9 @@ deleted by mistake---please let us know if you want anything back.
    paired_type_in_type       paired_set_left           paired_axiom
    paired_inst_type          paired_set_right          paired_inst_term
    paired_cons               paired_variant            paired_eq
-   paired_form_match         paired_aconv_form         paired_subst_form 
+   paired_form_match         paired_aconv_form         paired_subst_form
    paired_subst_occs_form    paired_term_freein_form   paired_term_freein_form
-   paired_type_in_form       paired_inst_form    
+   paired_type_in_form       paired_inst_form
 \end{verbatim}\end{hol}
 \begin{hol}\begin{verbatim}
    new_curried_infix         curried_infixes           paired_infixes
@@ -1497,7 +1497,7 @@ deleted by mistake---please let us know if you want anything back.
    term_frees                (equivalent to frees)
    term_vars                 (equivalent to vars)
    term_tyvars               (equivalent to tyvars)
-   term_class            
+   term_class
 \end{verbatim}\end{hol}
 \begin{hol}\begin{verbatim}
    seg                       (now in library `eval`)
@@ -1557,7 +1557,7 @@ deleted by mistake---please let us know if you want anything back.
    HD_TL_SIMP                list_gen_alpha            ty_case
    variant_tyvar             rotate_left               rotate_right
    derive_existence_thm      instantiate_existence_thm
-   mk_fn                     closeup   
+   mk_fn                     closeup
 \end{verbatim}\end{hol}
 \begin{hol}\begin{verbatim}
    CLOSE_UP                  save_open_thm
@@ -1566,9 +1566,9 @@ deleted by mistake---please let us know if you want anything back.
    loadx                     theories_dir_pathname
 \end{verbatim}\end{hol}
 \begin{hol}\begin{verbatim}
-   IFF_DEF  I                FF_EQ_THM1                IFF_EQ_THM2  
+   IFF_DEF  I                FF_EQ_THM1                IFF_EQ_THM2
    IFF_EQ                    IFF_EQ_RULE               CONJ_IFF
-   IFF_CONJ                  IFF_THEN2                 IFF_THEN  
+   IFF_CONJ                  IFF_THEN2                 IFF_THEN
    IFF_TAC                   EXISTS_REFL_TAC
 \end{verbatim}\end{hol}
 \begin{hol}\begin{verbatim}
