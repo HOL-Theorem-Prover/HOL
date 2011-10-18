@@ -176,9 +176,9 @@ fun tprint s = print (StringCvt.padRight #" " 70 s)
 
 val _ = tprint "Testing independence of case variables"
 val t = Lib.total Parse.Term `case (x:valbind) of
-                                 bind p e -> 3
-                              || bindl p' e p -> 4
-                              || p -> 5`
+                                bind p e => 3
+                              | bindl p' e p => 4
+                              | p => 5`
 val _ = case t of NONE => (print "FAILED!\n"; Process.exit Process.failure)
                 | SOME _ => print "OK\n"
 

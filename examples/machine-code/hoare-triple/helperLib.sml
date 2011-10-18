@@ -253,7 +253,7 @@ fun EXISTS_PRE var th = let
   in BETA_RULE th end;
 
 val word_patterns = [
-  ``(n2w n ?? n2w m):('a word)``,``(n2w n !! n2w m):('a word)``,``(n2w n && n2w m):('a word)``,
+  ``(n2w n ?? n2w m):('a word)``,``(n2w n || n2w m):('a word)``,``(n2w n && n2w m):('a word)``,
   ``(n2w n + n2w m):('a word)``, ``(n2w n - n2w m):('a word)``, ``(n2w n * n2w m):('a word)``,
   ``n2w n < (n2w m):('a word)``, ``n2w n <= (n2w m):('a word)``, ``n2w n > (n2w m):('a word)``, ``n2w n >= (n2w m):('a word)``,
   ``n2w n <+ (n2w m):('a word)``, ``n2w n <=+ (n2w m):('a word)``, ``n2w n >+ (n2w m):('a word)``, ``n2w n >=+ (n2w m):('a word)``,

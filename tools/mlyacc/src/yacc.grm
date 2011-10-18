@@ -12,7 +12,7 @@ open Hdr
 %left  ASTERISK
 %pos int
 
-%term	ARROW | ASTERISK | BLOCK | BAR | CHANGE | COLON | 
+%term	ARROW | ASTERISK | BLOCK | BAR | CHANGE | COLON |
 	COMMA | DELIMITER | EOF | FOR |
 	HEADER of string | ID of string*int | IDDOT of string |
 	PERCENT_HEADER | INT of string | KEYWORD | LBRACE | LPAREN |
@@ -222,7 +222,7 @@ RECORD_LIST : RECORD_LIST COMMA LABEL COLON TY
 
 QUAL_ID : ID	((fn (a,_) => a) ID)
        | IDDOT QUAL_ID (IDDOT^QUAL_ID)
-	 
+
 LABEL : ID  ((fn (a,_) => a) ID)
       | INT (INT)
 

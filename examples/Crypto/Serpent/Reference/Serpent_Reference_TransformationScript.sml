@@ -587,7 +587,7 @@ val transform_def = Define
                   then ((1w:word128)<<(SUC i))
           else (0w:word128)
    in
-   newWord !! transform transFun i w)`;
+   newWord || transform transFun i w)`;
 
 val transformEval = Q.store_thm(
  "transformEval",
@@ -605,7 +605,7 @@ val transformEval = Q.store_thm(
                            then ((1w:word128)<<n)
                             else (0w:word128)
                in
-             newWord !! transform transFun (n-1) w`,
+             newWord || transform transFun (n-1) w`,
   RW_TAC std_ss [transform_def,LET_THM] THEN
   (Cases_on `n` THENL [
      METIS_TAC [],

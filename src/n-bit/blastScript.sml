@@ -538,7 +538,7 @@ val word_asr_bv_expand = Q.prove(
   `!w m. word_asr_bv (w:'a word) m =
          (FCP k.
            FOLDL (\a j. a \/ (m = n2w j) /\ (w >> j) ' k) F
-                 (COUNT_LIST (dimindex(:'a)))) !!
+                 (COUNT_LIST (dimindex(:'a)))) ||
          ($FCP (K (n2w (dimindex(:'a) - 1) <+ m /\ word_msb w)))`,
   `dimindex(:'a) - 1 < dimword(:'a)` by SRW_TAC [ARITH_ss] [dimindex_lt_dimword]
   \\ Cases_on `m`
@@ -560,7 +560,7 @@ val word_asr_bv_expand = Q.prove(
   ]);
 
 val fcp_or = Q.prove(
-  `!b g. $FCP f !! $FCP g = $FCP (\i. f i \/ g i)`,
+  `!b g. $FCP f || $FCP g = $FCP (\i. f i \/ g i)`,
   SRW_TAC [fcpLib.FCP_ss] [word_or_def]);
 
 val word_asr_bv_expand = Q.prove(
@@ -572,7 +572,7 @@ val word_asr_bv_expand = Q.prove(
           (FCP k.
              FOLDL (\a j. a \/ ((LOG2 (dimindex(:'a) - 1) -- 0) m = n2w j) /\
                           (w >> j) ' k) F (COUNT_LIST (dimindex(:'a))) /\
-             ((dimindex(:'a) - 1 -- LOG2 (dimindex(:'a) - 1) + 1) m = 0w)) !!
+             ((dimindex(:'a) - 1 -- LOG2 (dimindex(:'a) - 1) + 1) m = 0w)) ||
            ($FCP (K (n2w (dimindex(:'a) - 1) <+ m /\ word_msb w)))`,
   SRW_TAC [] [word_asr_bv_expand, fcp_or]
   THENL [

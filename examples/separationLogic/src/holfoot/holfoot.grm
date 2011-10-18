@@ -41,7 +41,7 @@ val tree_link_tags = ("l", "r")
 %%
 %name Holfoot
 %eop EOF
-%term AMPERAMPER 
+%term AMPERAMPER
   |  BARBAR
   |  COLON
   |  COMMA
@@ -92,7 +92,7 @@ val tree_link_tags = ("l", "r")
   |  LOOP_SPEC
   |  WITH
   |  XOR
-  |  ASSUME 
+  |  ASSUME
   |  ASSERT
   |  WRITEREAD
   |  BANGWRITEREAD
@@ -120,7 +120,7 @@ val tree_link_tags = ("l", "r")
 
 (* entry points *)
 
-%nonterm 
+%nonterm
      top of Parsetree.p_top
   |  program of Parsetree.p_top
   |  entailments of Parsetree.p_top
@@ -140,7 +140,7 @@ val tree_link_tags = ("l", "r")
   |  formal_params of string list * string list
   |  actual_params of string list * Parsetree.a_expression list
   |  invariant of Parsetree.a_proposition option
-  |  spec of Parsetree.a_proposition 
+  |  spec of Parsetree.a_proposition
   |  statement_star of Parsetree.p_statement list
   |  statement of Parsetree.p_statement
   |  condition of Parsetree.p_condition
@@ -166,7 +166,7 @@ top:
   | entailments ( entailments )
 
 entailments:
-   entailment_seq 
+   entailment_seq
    ( Pentailments entailment_seq )
 
 entailment_seq :
@@ -319,11 +319,11 @@ condition:
           ( (Pcond_false) )
   | LPAREN condition RPAREN
 	  ( condition )
-  | NOT condition 
+  | NOT condition
 	  ( Pcond_neg condition )
-  | condition AND condition 
+  | condition AND condition
 	  ( Pcond_and(condition1,condition2) )
-  | condition OR condition 
+  | condition OR condition
 	  ( Pcond_and(condition1,condition2) )
   | simple_expression EQUALEQUAL expression
 	  ( (Pcond_compare("==", simple_expression, expression)) )
@@ -410,13 +410,13 @@ genpredarg:
 genpredargs:
     (* empty *)
           ( [] )
-  | genpredarg 
+  | genpredarg
           ( [genpredarg] )
   | genpredarg SEMI genpredargs
           ( genpredarg::Aspred_arg_semi::genpredargs )
-  | genpredarg COMMA genpredargs 
+  | genpredarg COMMA genpredargs
           ( genpredarg::Aspred_arg_comma::genpredargs )
-  | genpredarg COLON genpredargs 
+  | genpredarg COLON genpredargs
           ( genpredarg::Aspred_arg_colon::genpredargs )
 
 a_space_pred:
@@ -426,16 +426,16 @@ a_space_pred:
           ( Aspred_hol HOL_FULL_TERM )
   | EMPTY
           ( Aspred_empty )
-  | simple_expression POINTSTO a_component_expression_seq 
+  | simple_expression POINTSTO a_component_expression_seq
           ( Aspred_pointsto(simple_expression,a_component_expression_seq) )
-  | simple_expression POINTSTO expression 
+  | simple_expression POINTSTO expression
           ( Aspred_pointsto(simple_expression,[(list_link_tag, expression)]) )
-  | simple_expression POINTSTO expression COMMA expression 
+  | simple_expression POINTSTO expression COMMA expression
           ( Aspred_pointsto(simple_expression,[(#1 tree_link_tags, expression1),
 				(#2 tree_link_tags, expression2)]) )
   | POINTSTOS LPAREN expression COMMA a_component_expression_seq RPAREN
           ( Aspred_pointsto(expression,a_component_expression_seq) )
-  | POINTSTOS LPAREN expression COMMA expression RPAREN 
+  | POINTSTOS LPAREN expression COMMA expression RPAREN
           ( Aspred_pointsto(expression1,[(list_link_tag, expression2)]) )
   | IDENT LPAREN genpredargs RPAREN
 	  ( Aspred_genpred (IDENT, genpredargs, IDENTleft) )
@@ -448,19 +448,19 @@ a_proposition:
           ( Aprop_spred a_space_pred )
   | simple_expression EQUALEQUAL expression
 	  ( Aprop_infix("==",simple_expression,expression) )
-  | simple_expression BANGEQUAL expression 
+  | simple_expression BANGEQUAL expression
 	  ( Aprop_infix("!=",simple_expression,expression) )
-  | simple_expression INFIXOP1 expression 
+  | simple_expression INFIXOP1 expression
 	  ( (Aprop_infix(INFIXOP1, simple_expression, expression)) )
   | FF
 	  ( Aprop_false )
   | a_proposition STAR a_proposition
           ( Aprop_star(a_proposition1,a_proposition2) )
   | IF a_proposition IFTHEN a_proposition %prec below_ELSE
-      ( Aprop_ifthenelse(a_proposition1,a_proposition2,Aprop_spred Aspred_empty) )  
+      ( Aprop_ifthenelse(a_proposition1,a_proposition2,Aprop_spred Aspred_empty) )
   | IF a_proposition IFTHEN a_proposition ELSE a_proposition
-      ( Aprop_ifthenelse(a_proposition1,a_proposition2,a_proposition3) )  
-  | MAP LPAREN LAM ident_notempty_seq_no_comma DOT a_proposition RPAREN ident_or_hol 
+      ( Aprop_ifthenelse(a_proposition1,a_proposition2,a_proposition3) )
+  | MAP LPAREN LAM ident_notempty_seq_no_comma DOT a_proposition RPAREN ident_or_hol
 	  ( Aprop_map (ident_notempty_seq_no_comma,a_proposition,ident_or_hol) )
 
 ident_or_hol:

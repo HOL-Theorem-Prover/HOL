@@ -1,7 +1,7 @@
 MLYACCLIB = $(protect $(HOLDIR)/tools/mlyacc/mlyacclib/)
 MLYACCLIB_UIS = $(patsubst %,MLY_%.ui,base-sig join lrtable parser2 stream)
 
-Extra_CLEANS = DiskFiles.grm-sig.sml DiskFiles.grm.sml
+EXTRA_CLEANS = DiskFiles.grm-sig.sml DiskFiles.grm.sml DiskFiles.lex.sml
 
 mustbuild: selftest.exe
 .PHONY: mustbuild
@@ -13,7 +13,7 @@ DiskFiles.grm.sml DiskFiles.grm-sig.sml: DiskFiles.grm
 DiskFiles.grm-sig.uo: DiskFiles.grm-sig.sml
 	$(HOLMOSMLC) -toplevel -c -I $(MLYACCLIB) $(MLYACCLIB_UIS) $<
 
-DiskFiles.grm.uo: DiskFiles.grm.sml DiskFiles.grm-sig.uo DiskFilesHeader.ui
+DiskFiles.grm.uo DiskFiles.grm.ui: DiskFiles.grm.sml DiskFiles.grm-sig.uo DiskFilesHeader.ui
 	$(HOLMOSMLC) -toplevel -c -I $(MLYACCLIB) $(MLYACCLIB_UIS) DiskFiles.grm-sig.ui $<
 
 DiskFiles.lex.sml: DiskFiles.lex

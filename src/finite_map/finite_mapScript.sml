@@ -1007,8 +1007,8 @@ val FLOOKUP_FUNION = Q.store_thm(
 "FLOOKUP_FUNION",
 `FLOOKUP (FUNION f1 f2) k =
  case FLOOKUP f1 k of
-    NONE -> FLOOKUP f2 k
- || SOME v -> SOME v`,
+   NONE => FLOOKUP f2 k
+ | SOME v => SOME v`,
 SRW_TAC [][FLOOKUP_DEF,FUNION_DEF] THEN FULL_SIMP_TAC (srw_ss()) []);
 
 val FLOOKUP_EXT = store_thm
@@ -1134,7 +1134,7 @@ val _ = export_rewrites ["o_f_o_f"]
 
 val FLOOKUP_o_f = Q.store_thm(
 "FLOOKUP_o_f",
-`FLOOKUP (f o_f fm) k = case FLOOKUP fm k of NONE -> NONE || SOME v -> SOME (f v)`,
+`FLOOKUP (f o_f fm) k = case FLOOKUP fm k of NONE => NONE | SOME v => SOME (f v)`,
 SRW_TAC [][FLOOKUP_DEF,o_f_FAPPLY]);
 
 (*---------------------------------------------------------------------------

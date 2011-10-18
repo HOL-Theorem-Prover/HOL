@@ -292,7 +292,7 @@ val identity_monad = store_thm
 val option_monad = store_thm
   ("option_monad",
    ``monad ((\:'a. SOME) : option unit,
-            \:'a 'b. \(x:'a option) (f:'a -> 'b option). case x of NONE -> NONE || SOME (y:'a) -> f y)``,
+            \:'a 'b. \(x:'a option) (f:'a -> 'b option). case x of NONE => NONE | SOME (y:'a) => f y)``,
    REWRITE_TAC[monad_def]
    THEN TY_BETA_TAC
    THEN REPEAT STRIP_TAC
@@ -339,8 +339,8 @@ val error_monad = store_thm
   ("error_monad",
    ``monad ((\:'a. OK) : error unit,
             \:'a 'b. \(e:'a error) (f:'a -> 'b error).
-                         case e of OK x -> f x
-                                || FAIL s -> FAIL s)``,
+                         case e of OK x => f x
+                                 | FAIL s => FAIL s)``,
    SRW_TAC[][monad_def]
    THEN CASE_TAC
   );
@@ -358,7 +358,7 @@ val writer_monad = store_thm
   ("writer_monad",
    ``monad ((\:'a. \x:'a. RESULT "" x) : writer unit,
             \:'a 'b. \(w:'a writer) (f:'a -> 'b writer).
-                         case w of RESULT s x -> case f x of RESULT s' y -> RESULT (STRCAT s s') y)``,
+                         case w of RESULT s x => case f x of RESULT s' y => RESULT (STRCAT s s') y)``,
    SRW_TAC[][monad_def]
    THEN REPEAT CASE_TAC
    THEN REWRITE_TAC[stringTheory.STRCAT_ASSOC]
@@ -380,7 +380,7 @@ val reader_monad = store_thm
 
 val pair_case_id = store_thm
   ("pair_case_id",
-   ``!x:'a # 'b. (case x of (a,b) -> (a,b)) = x``,
+   ``!x:'a # 'b. (case x of (a,b) => (a,b)) = x``,
    Cases
    THEN SRW_TAC[][]
   );

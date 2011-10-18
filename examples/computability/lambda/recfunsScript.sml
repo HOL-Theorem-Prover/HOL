@@ -252,7 +252,7 @@ val recursion_thm = store_thm(
                        @@ (cnumdB @@ (cnfst @@ VAR "xy"))
                        @@ (cchurch @@ (cnfst @@ VAR "xy"))))` THEN
   Q.ABBREV_TAC `gi = dBnum (fromTerm g)` THEN
-  `∀x y. Phi gi (x ⊗ y) = case Phi x x of NONE -> NONE || SOME e -> Phi e y`
+  `∀x y. Phi gi (x ⊗ y) = case Phi x x of NONE => NONE | SOME e => Phi e y`
      by (REPEAT GEN_TAC THEN SRW_TAC [][Phi_def] THEN
          SIMP_TAC (bsrw_ss()) [Abbr`gi`, Abbr`g`] THEN
          SIMP_TAC (bsrw_ss()) [cnfst_behaviour, cnsnd_behaviour,

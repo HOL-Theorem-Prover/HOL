@@ -97,8 +97,8 @@ val LHD = new_definition("LHD", ``LHD ll = llist_rep ll 0``);
 val LTL = new_definition(
   "LTL",
   ``LTL ll = case LHD ll of
-                NONE -> NONE
-             || SOME _ -> SOME (llist_abs (\n. llist_rep ll (n + 1)))``
+               NONE => NONE
+             | SOME _ => SOME (llist_abs (\n. llist_rep ll (n + 1)))``
 );
 
 val LHD_LCONS = store_thm(
@@ -328,8 +328,8 @@ val llist_Axiom_1 = Q.store_thm
      ?g:'a -> 'b llist.
        !x. g x =
             case f x
-             of NONE -> LNIL
-             || SOME (a,b) -> LCONS b (g a)`,
+             of NONE => LNIL
+              | SOME (a,b) => LCONS b (g a)`,
  GEN_TAC THEN
  STRIP_ASSUME_TAC (SPEC_ALL llist_Axiom) THEN
  Q.EXISTS_TAC `g` THEN
@@ -341,8 +341,8 @@ val llist_Axiom_1 = Q.store_thm
 val llist_Axiom_1ue = store_thm(
   "llist_Axiom_1ue",
   ``!f. ?!g. !x. g x = case f x
-                       of NONE -> LNIL
-                       || SOME (a,b) -> b ::: g a``,
+                       of NONE => LNIL
+                        | SOME (a,b) => b ::: g a``,
   GEN_TAC THEN
   STRIP_ASSUME_TAC
     (SIMP_RULE bool_ss [EXISTS_UNIQUE_THM] (SPEC_ALL llist_ue_Axiom)) THEN
@@ -365,8 +365,8 @@ val llist_Axiom_1ue = store_thm(
 (* LUNFOLD                                                                   *)
 (*    |- !f x. LUNFOLD f x =                                                 *)
 (*              case f x                                                     *)
-(*               of NONE -> [||]                                             *)
-(*               || SOME (v1,v2) -> v2:::LUNFOLD f v1                        *)
+(*               of NONE => [||]                                             *)
+(*                | SOME (v1,v2) => v2:::LUNFOLD f v1                        *)
 (*---------------------------------------------------------------------------*)
 
 val LUNFOLD = new_specification
@@ -375,8 +375,8 @@ val LUNFOLD = new_specification
     `?LUNFOLD.
       !f x. LUNFOLD f x =
              case f x
-              of NONE -> [||]
-              || SOME (v1,v2) -> v2:::LUNFOLD f v1`,
+              of NONE => [||]
+               | SOME (v1,v2) => v2:::LUNFOLD f v1`,
    METIS_TAC [llist_Axiom_1]));
 
 (* ----------------------------------------------------------------------
@@ -399,8 +399,8 @@ val LLIST_BISIMULATION0 = store_thm(
     SRW_TAC [][] THEN
     Q.ISPEC_THEN `\ (l1,l2). if R l1 l2 then
                                case LHD l1 of
-                                  NONE -> NONE
-                               || SOME h -> SOME ((THE (LTL l1), THE (LTL l2)),
+                                 NONE => NONE
+                               | SOME h => SOME ((THE (LTL l1), THE (LTL l2)),
                                                   h)
                              else NONE`
                  (ASSUME_TAC o
@@ -522,10 +522,10 @@ val LTAKE_SNOC_LNTH = store_thm(
   "LTAKE_SNOC_LNTH",
   ``!n ll. LTAKE (SUC n) ll =
              case LTAKE n ll of
-                NONE -> NONE
-             || SOME l -> (case LNTH n ll of
-                              NONE -> NONE
-                           || SOME e -> SOME (l ++ [e]))``,
+               NONE => NONE
+             | SOME l => (case LNTH n ll of
+                             NONE => NONE
+                           | SOME e => SOME (l ++ [e]))``,
   Induct THENL [
     SRW_TAC [][LTAKE,LNTH],
     GEN_TAC THEN

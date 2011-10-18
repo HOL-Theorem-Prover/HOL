@@ -50,11 +50,11 @@ val _ = type_abbrev("pkg", ``:('a nsubst # fe)``);
 val term_fcs_def = tDefine "term_fcs" `
   term_fcs a t =
   case t
-  of Nom b -> if a = b then NONE else SOME {}
-  || Sus p v -> SOME {(lswapstr (REVERSE p) a, v)}
-  || Tie b tt -> if a = b then SOME {} else term_fcs a tt
-  || nPair t1 t2 -> OPTION_MAP2 $UNION (term_fcs a t1) (term_fcs a t2)
-  || nConst _ -> SOME {}`
+  of Nom b => if a = b then NONE else SOME {}
+   | Sus p v => SOME {(lswapstr (REVERSE p) a, v)}
+   | Tie b tt => if a = b then SOME {} else term_fcs a tt
+   | nPair t1 t2 => OPTION_MAP2 $UNION (term_fcs a t1) (term_fcs a t2)
+   | nConst _ => SOME {}`
 (WF_REL_TAC `measure (npair_count o SND)` THEN SRW_TAC [ARITH_ss][]);
 
 val _ = overload_on("monad_bind",``OPTION_BIND``);
@@ -62,11 +62,11 @@ val _ = overload_on("monad_bind",``OPTION_BIND``);
 val term_fcs_monadic_thm = Q.store_thm("term_fcs_monadic_thm",
 ` term_fcs a t =
   case t
-  of Nom b -> if a = b then NONE else SOME {}
-  || Sus p v -> SOME {(lswapstr (REVERSE p) a, v)}
-  || Tie b tt -> if a = b then SOME {} else term_fcs a tt
-  || nPair t1 t2 -> do fe1 <- term_fcs a t1; fe2 <- term_fcs a t2; SOME (fe1 ∪ fe2) od
-  || nConst _ -> SOME {}`,
+  of Nom b => if a = b then NONE else SOME {}
+   | Sus p v => SOME {(lswapstr (REVERSE p) a, v)}
+   | Tie b tt => if a = b then SOME {} else term_fcs a tt
+   | nPair t1 t2 => do fe1 <- term_fcs a t1; fe2 <- term_fcs a t2; SOME (fe1 ∪ fe2) od
+   | nConst _ => SOME {}`,
 Cases_on `t` THEN SRW_TAC [][Once term_fcs_def] THEN
 Q.MATCH_ABBREV_TAC `OPTION_MAP2 $UNION x1 x2 = y` THEN
 Cases_on `x1` THEN SRW_TAC [][] THEN
@@ -90,24 +90,24 @@ val ntunify_defn_q = `
   ntunify (s,fe) t1 t2 =
   if nwfs s then
     case (nwalk s t1, nwalk s t2)
-    of (Nom a1, Nom a2) -> if a1 = a2 then SOME (s,fe) else NONE
-    || (Sus pi1 v1, Sus pi2 v2) ->
+    of (Nom a1, Nom a2) => if a1 = a2 then SOME (s,fe) else NONE
+     | (Sus pi1 v1, Sus pi2 v2) =>
          if v1 = v2
          then unify_eq_vars (dis_set pi1 pi2) v1 (s,fe)
          else add_bdg pi1 v1 (Sus pi2 v2) (s,fe)
-    || (Sus pi1 v1, t2) -> add_bdg pi1 v1 t2 (s,fe)
-    || (t1, Sus pi2 v2) -> add_bdg pi2 v2 t1 (s,fe)
-    || (Tie a1 t1, Tie a2 t2) ->
+     | (Sus pi1 v1, t2) => add_bdg pi1 v1 t2 (s,fe)
+     | (t1, Sus pi2 v2) => add_bdg pi2 v2 t1 (s,fe)
+     | (Tie a1 t1, Tie a2 t2) =>
          if a1 = a2 then ntunify (s,fe) t1 t2
          else do fcs <- term_fcs a1 (nwalk* s t2);
                  ntunify (s, fe UNION fcs) t1 (apply_pi [(a1,a2)] t2)
               od
-    || (nPair t1a t1d, nPair t2a t2d) ->
+     | (nPair t1a t1d, nPair t2a t2d) =>
          do (sx,fex) <- ntunify (s,fe) t1a t2a;
             ntunify (sx,fex) t1d t2d
          od
-    || (nConst c1, nConst c2) -> if c1 = c2 then SOME (s,fe) else NONE
-    || _ -> NONE
+     | (nConst c1, nConst c2) => if c1 = c2 then SOME (s,fe) else NONE
+     | _ => NONE
   else ARB`
 
 val ntunify_defn = Hol_defn "ntunify" ntunify_defn_q
@@ -855,24 +855,24 @@ SRW_TAC [][] THENL [
 val nunify_exists = prove(
 ``∃nunify.∀s fe t1 t2. nwfs s ⇒ (nunify (s,fe) t1 t2 =
     case (nwalk s t1, nwalk s t2)
-    of (Nom a1, Nom a2) -> if a1 = a2 then SOME (s,fe) else NONE
-    || (Sus pi1 v1, Sus pi2 v2) ->
+    of (Nom a1, Nom a2) => if a1 = a2 then SOME (s,fe) else NONE
+     | (Sus pi1 v1, Sus pi2 v2) =>
          if v1 = v2
          then unify_eq_vars (dis_set pi1 pi2) v1 (s,fe)
          else add_bdg pi1 v1 (Sus pi2 v2) (s,fe)
-    || (Sus pi1 v1, t2) -> add_bdg pi1 v1 t2 (s,fe)
-    || (t1, Sus pi2 v2) -> add_bdg pi2 v2 t1 (s,fe)
-    || (Tie a1 t1, Tie a2 t2) ->
+     | (Sus pi1 v1, t2) => add_bdg pi1 v1 t2 (s,fe)
+     | (t1, Sus pi2 v2) => add_bdg pi2 v2 t1 (s,fe)
+     | (Tie a1 t1, Tie a2 t2) =>
          if a1 = a2 then nunify (s,fe) t1 t2
          else do fcs <- term_fcs a1 (nwalk* s t2);
                  nunify (s, fe UNION fcs) t1 (apply_pi [(a1,a2)] t2)
               od
-    || (nPair t1a t1d, nPair t2a t2d) ->
+     | (nPair t1a t1d, nPair t2a t2d) =>
          do (sx,fex) <- nunify (s,fe) t1a t2a;
             nunify (sx,fex) t1d t2d
          od
-    || (nConst c1, nConst c2) -> if c1 = c2 then SOME (s,fe) else NONE
-    || _ -> NONE)``,
+     | (nConst c1, nConst c2) => if c1 = c2 then SOME (s,fe) else NONE
+     | _ => NONE)``,
 Q.EXISTS_TAC `ntunify` THEN
 SRW_TAC [][Once ntunify_def,SimpLHS] THEN
 Cases_on `nwalk s t1` THEN Cases_on `nwalk s t2` THEN

@@ -11,7 +11,7 @@ val _ = Hol_datatype `reltype = Atomic | TC`
 
 val liftrel_def = Define`
   liftrel b ty R x y = (if b then I else (~))
-                         ((case ty of Atomic -> I || TC -> TC)
+                         ((case ty of Atomic => I | TC => TC)
                           R x y)
 `;
 

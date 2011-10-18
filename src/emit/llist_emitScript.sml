@@ -51,8 +51,8 @@ val LTAKE_thm = prove(
   ``!ll. LTAKE n ll =
                 if n = 0 then SOME []
                 else case LHD ll of
-                       NONE -> NONE
-                    || SOME h -> OPTION_MAP (\t. h::t)
+                       NONE => NONE
+                     | SOME h => OPTION_MAP (\t. h::t)
                                             (LTAKE (n - 1) (THE (LTL ll)))``,
   Induct_on `n` THEN SRW_TAC [boolSimps.ETA_ss][LTAKE] THEN
   Q.ISPEC_THEN `ll` STRUCT_CASES_TAC llist_CASES THEN

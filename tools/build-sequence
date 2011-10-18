@@ -162,7 +162,8 @@ src/temporal/src
 # Crypto examples
 !!examples/Crypto/AES
 !!examples/Crypto/IDEA
-!!examples/Crypto/MARS
+# Moscow ML has insufficient memory for MARS
+[poly]!!examples/Crypto/MARS
 !!examples/Crypto/RC6
 # the Crypto/Serpent/Reference example causes Poly/ML to crash
 [mosml]!!examples/Crypto/Serpent/Reference

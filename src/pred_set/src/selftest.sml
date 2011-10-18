@@ -14,15 +14,15 @@ fun test s (problem, result) = let
   val verdict = if aconv answer result then ("OK", true)
                 else ("FAILED!", false)
 in
-  print (" = " ^ r_s);
-  print (padl 14 (#1 verdict) ^ "\n");
+  print (padr 35 (" = " ^ r_s));
+  print (#1 verdict ^ "\n");
   #2 verdict
 end;
 
 
 fun testpp desired = let
   val t = Parse.Term [QUOTE desired]
-  val _ = print (padr 60 ("Testing pretty-printing of "^desired))
+  val _ = print (padr 65 ("Pretty-printing of "^desired))
   val s = term_to_string t
 in
   if s = desired then print "OK\n"
@@ -36,7 +36,9 @@ val _ =
                 "{x | x < 10} y",
                 "{x + y | x < y}",
                 "{x + y | x > 6}",
-                "{x + y | x | x < y}"]
+                "{x + y | x | x < y}",
+                "{(case x of T => y | F => y + 1) | y > 3}",
+                "{x | x < (case y of T => 3 | F => 2)}"]
 
 val _ = temp_add_rule {
           fixity = Closefix,

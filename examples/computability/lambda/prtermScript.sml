@@ -12,8 +12,8 @@ val _ = new_theory "prterm"
 val prtermrec_def = tDefine "prtermrec" `
   prtermrec v c a list =
     case list of
-       [] -> v []
-    || n::t ->
+      [] => v []
+    | n::t =>
         if n MOD 3 = 0 then v (n DIV 3 :: t) : num
         else if n MOD 3 = 1 then
           let t1 = nfst (n DIV 3) in
@@ -1742,16 +1742,16 @@ val crecPr_consSUC = store_thm(
                      @@ church b
                      @@ church s
                      @@ church (nlist_of (n::t))) of
-         NONE -> NONE
-      || SOME tm -> OPTION_MAP church
+        NONE => NONE
+      | SOME tm => OPTION_MAP church
                                (Phi s (nlist_of (n :: force_num tm :: t)))``,
   SIMP_TAC (bsrw_ss()) [crecPr_equiv, cis_zero_behaviour, cB_behaviour,
                         cntl_behaviour, cnhd_behaviour] THEN
   Q.HO_MATCH_ABBREV_TAC `
     bnf_of (natrec @@ ZZ @@ SS @@ church n @@ k) =
     case bnf_of (natrec @@ ZZ @@ SS @@ church n @@ I) of
-       NONE -> NONE
-    || SOME tm -> result_of tm
+      NONE => NONE
+    | SOME tm => result_of tm
   ` >>
   `∀M R kk. SS @@ church M @@ R @@ kk ==
             R @@ (PrSstep

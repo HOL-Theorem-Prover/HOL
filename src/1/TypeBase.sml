@@ -193,6 +193,9 @@ fun mk_record x   = TypeBasePure.mk_record (theTypeBase()) x
 fun dest_record x = TypeBasePure.dest_record (theTypeBase()) x
 fun is_record x   = TypeBasePure.is_record (theTypeBase()) x;
 
+fun dest_record_type x = TypeBasePure.dest_record_type (theTypeBase()) x;
+fun is_record_type x = TypeBasePure.is_record_type (theTypeBase()) x;
+
 (* ----------------------------------------------------------------------
     Initialise the case-split munger in the pretty-printer
    ---------------------------------------------------------------------- *)

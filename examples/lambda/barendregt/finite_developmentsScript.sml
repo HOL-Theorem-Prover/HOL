@@ -1853,17 +1853,17 @@ val (update_weighing_def, update_weighing_swap) =
       (update_weighing (t @@ u:term) =
          \rp w p.
             case rp of
-               [] -> (let vps = IMAGE TL (bv_posns t)
-                      in
-                        if ?vp l. vp IN vps /\ (APPEND vp l = p) then
-                          w (Rt :: @l. ?vp. vp IN vps /\ (APPEND vp l = p))
-                        else w (Lt :: In :: p))
-            || Lt::rp0 -> if HD p = Lt then
-                            update_weighing t rp0 (\p. w(Lt::p)) (TL p)
-                          else w p
-            || Rt::rp0 -> if HD p = Rt then
-                            update_weighing u rp0 (\p. w(Rt::p)) (TL p)
-                          else w p) /\
+              [] => (let vps = IMAGE TL (bv_posns t)
+                     in
+                       if ?vp l. vp IN vps /\ (APPEND vp l = p) then
+                         w (Rt :: @l. ?vp. vp IN vps /\ (APPEND vp l = p))
+                       else w (Lt :: In :: p))
+            | Lt::rp0 => if HD p = Lt then
+                           update_weighing t rp0 (\p. w(Lt::p)) (TL p)
+                         else w p
+            | Rt::rp0 => if HD p = Rt then
+                           update_weighing u rp0 (\p. w(Rt::p)) (TL p)
+                         else w p) /\
       (update_weighing (LAM v t) =
         \rp w p. update_weighing t (TL rp) (\p. w (In::p)) (TL p))
 `;
@@ -1991,9 +1991,9 @@ val w_at_exists =
                                   else rt (TL p) (\p. w (In::p))`,
            `ap` |-> `\rt ru t u p w.
                          case p of
-                            (Lt::p0) -> rt p0 (\p. w (Lt::p))
-                         || (Rt::p0) -> ru p0 (\p. w (Rt::p))
-                         || _ -> term_weight (t @@ u) w`,
+                           (Lt::p0) => rt p0 (\p. w (Lt::p))
+                         | (Rt::p0) => ru p0 (\p. w (Rt::p))
+                         | _ => term_weight (t @@ u) w`,
            `vr` |-> `\s p w. term_weight (VAR s) w`,
            `apm` |-> `discrete_pmact`] o SPEC_ALL o
    INST_TYPE [alpha |-> ``:redpos list -> (redpos list -> num) -> num``])

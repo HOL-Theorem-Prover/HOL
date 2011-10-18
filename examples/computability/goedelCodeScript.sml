@@ -162,11 +162,11 @@ val GDECODE_def =
    if gn = 0 then NONE else
    if gn = 1 then SOME [] else
    case PRIME_FACTORS gn (PRIMES i)
-     of 0 -> NONE
-     || SUC n ->
+     of 0 => NONE
+      | SUC n =>
           case GDECODE (i+1) (gn DIV (PRIMES i ** (n+1)))
-           of NONE -> NONE
-           || SOME l -> SOME (n::l)`
+           of NONE => NONE
+            | SOME l => SOME (n::l)`
 (WF_REL_TAC `measure SND` THEN
  RW_TAC arith_ss [DECIDE ``x <> 0 = 0 < x``] THEN
  MATCH_MP_TAC DIV_LESS THEN

@@ -266,7 +266,7 @@ val ITAdvance_def = zDefine`
     if (2 >< 0) IT = 0b000w:word3 then
       0b00000000w
     else
-      ((7 '' 5) IT !! w2w (((4 >< 0) IT) : word5 << 1))`;
+      ((7 '' 5) IT || w2w (((4 >< 0) IT) : word5 << 1))`;
 
 val ITAdvance_n2w = save_thm("ITAdvance_n2w",
    ITAdvance_def

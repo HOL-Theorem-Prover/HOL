@@ -53,4 +53,6 @@ sig
    val dest_record        : term -> hol_type * (string * term) list
    val is_record          : term -> bool
 
+   val dest_record_type   : hol_type -> (string * hol_type) list
+   val is_record_type     : hol_type -> bool
 end

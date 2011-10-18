@@ -316,7 +316,7 @@ val _ = blast_true
   ``(x && 3w = 0w:word32) = ~(x ' 0) /\ ~(x ' 1)``;
 
 val _ = blast_true
-  ``((x !! y) && 3w = 0w:word32) = (x && 3w = 0w) /\ (y && 3w = 0w)``;
+  ``((x || y) && 3w = 0w:word32) = (x && 3w = 0w) /\ (y && 3w = 0w)``;
 
 val _ = blast_true
   ``(w2w (x:word30) << 2) :word32 <=+ (w2w (y:word30) << 2) = x <=+ y``;
@@ -388,7 +388,7 @@ val _ = blast_true
   ``!w:word16. word_reverse (word_reverse w) = w``;
 
 val _ = blast_true
-  ``!a b:word8. word_reverse a !! word_reverse b = word_reverse (a !! b)``;
+  ``!a b:word8. word_reverse a || word_reverse b = word_reverse (a || b)``;
 
 val _ = blast_true
   ``(4 >< 1) (bit_field_insert 4 1 (a:word4) (b:word32) + w2w (-a) << 1) =
@@ -419,7 +419,7 @@ val _ = blast_true
 
 val _ = blast_true
   ``(reduce_or (w:word8) && reduce_or (v:word8)) =
-    ~(reduce_and (~w) !! reduce_and (~v))``;
+    ~(reduce_and (~w) || reduce_and (~v))``;
 
 val _ = blast_true
   ``(0w:word32 = 0xFFFFFFFFw * sw2sw (x :word8)) ==>
@@ -442,10 +442,10 @@ val _ = blast_true
       ((1w :bool[unit]) = ~(0w :bool[unit]))``;
 
 val _ = blast_true
-  ``SND (word_rrx (T,v:word32)) = v >>> 1 !! 0x80000000w``;
+  ``SND (word_rrx (T,v:word32)) = v >>> 1 || 0x80000000w``;
 
 val _ = srw_true
-  ``0x20000000w !! 0w !! w : word32 = w !! 0x20000000w``;
+  ``0x20000000w || 0w || w : word32 = w || 0x20000000w``;
 
 val _ = srw_true
   ``32w && w && 0w = 0w : word32``;

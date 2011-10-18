@@ -2,17 +2,17 @@
 
 (* Copied from Moscow ML source *)
 structure Mosml = struct
-datatype runresult = 
+datatype runresult =
     Success of string
   | Failure of string
 fun run cmd args inp =
-    let fun catenate xs = 
+    let fun catenate xs =
 	    String.concat (List.foldr (fn (s, res) => s :: " " :: res) [] xs)
-	fun write filename s = 
+	fun write filename s =
 	    let open BinIO
 		val os = openOut filename
 	    in output(os, s); closeOut os end
-	fun read filename = 
+	fun read filename =
 	    let open BinIO
 		val is  = openIn filename
 		val res = inputAll is
@@ -21,19 +21,19 @@ fun run cmd args inp =
 	val outfile = OS.FileSys.tmpName ()
     in let
 	val _ = write infile (Byte.stringToBytes inp)
-	val cmdline = 
+	val cmdline =
 	    (* This should work for Bourne sh, POSIX sh, ksh, bash: *)
-	    catenate (cmd :: List.@(args, ["<", infile, "1>", outfile, 
+	    catenate (cmd :: List.@(args, ["<", infile, "1>", outfile,
 					   "2>&1"]))
 	    (* This works for bash, csh and tcsh: *)
 	    (* catenate (cmd :: List.@(args, ["<", infile, "&>", outfile])) *)
 	val status = OS.Process.system cmdline
-	val result = if OS.Process.isSuccess status then 
+	val result = if OS.Process.isSuccess status then
 			 Success (Byte.bytesToString (read outfile))
-		     else 
+		     else
 			 ((Failure (Byte.bytesToString (read outfile)))
 			  handle IO.Io _ => Failure (cmd ^ ": command failed"))
-    in 
+    in
 	(OS.FileSys.remove infile)  handle OS.SysErr _ => ();
 	(OS.FileSys.remove outfile) handle OS.SysErr _ => ();
 	result

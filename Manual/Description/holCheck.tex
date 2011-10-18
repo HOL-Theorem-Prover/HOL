@@ -10,9 +10,9 @@
 \usepackage{graphicx}
 \usepackage{url}
 
-% ---------------------------------------------------------------------                                                                                     
-% Input defined macros and commands                                                                                                                         
-% ---------------------------------------------------------------------                                                                                     
+% ---------------------------------------------------------------------
+% Input defined macros and commands
+% ---------------------------------------------------------------------
 \input{../LaTeX/commands}
 
 \newcommand{\tsu}[1]{\textsf{\textup{#1}}}
@@ -62,7 +62,7 @@ See \S\ref{sec:models} for details. The user is required to supply only \( S_0 \
 
 This section provides a quick look at a typical use of \hc{}. We choose a simple mod-8 counter as our example, which starts at 0 and counts up to 7, and then loops from 0 again. We wish to show that the most significant bit eventually goes high.
 
-First we load the \hc{} library: 
+First we load the \hc{} library:
 \begin{session}\begin{verbatim}
 - load "holCheckLib"; open holCheckLib;
   (* we don't show the output from the "open" here *)
@@ -72,7 +72,7 @@ Now we specify the labelled transition system as a list of
 (string, term) pairs, where each string is a transition label and
 each term represents a transition relation (three booleans
 required to encode numbers 0-7; next-state variable values
-indicated by priming; note we expand the xor, since \hc{} 
+indicated by priming; note we expand the xor, since \hc{}
 currently requires purely propositional terms) :
 \begin{session}\begin{verbatim}
 - val xor_def = Define `xor x y = (x \/ y) /\ ~(x=y)`;

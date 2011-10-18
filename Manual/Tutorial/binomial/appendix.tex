@@ -18,10 +18,10 @@ CHOOSE_SAME = |- !n. CHOOSE n n = 1
 Algebraic laws:
 \begin{session}
 \begin{verbatim}
-RIGHT_CANCELLATION = 
+RIGHT_CANCELLATION =
 |- !plus. Group plus ==> (!a b c. (plus b a = plus c a) ==> (b = c))
 
-RING_0 = 
+RING_0 =
 |- !plus times.
     RING(plus,times) ==>
     (!a. times(Id plus)a = Id plus) /\ (!a. times a(Id plus) = Id plus)
@@ -34,12 +34,12 @@ Scalar powers:
 \begin{verbatim}
 POWER_1 = |- !plus. MONOID plus ==> (POWER plus 1 a = a)
 
-POWER_DISTRIB = 
+POWER_DISTRIB =
 |- !plus times.
     RING(plus,times) ==>
     (!a b n. times a(POWER plus n b) = POWER plus n(times a b))
 
-POWER_ADD = 
+POWER_ADD =
 |- !plus.
     MONOID plus ==>
     (!m n a. POWER plus(m + n)a = plus(POWER plus m a)(POWER plus n a))
@@ -49,18 +49,18 @@ POWER_ADD =
 Reduction of lists:
 \begin{session}
 \begin{verbatim}
-REDUCE_APPEND = 
+REDUCE_APPEND =
 |- !plus.
     MONOID plus ==>
     (!as bs.
       REDUCE plus(APPEND as bs) = plus(REDUCE plus as)(REDUCE plus bs))
 
-REDUCE_MAP_MULT = 
+REDUCE_MAP_MULT =
 |- !plus times.
     RING(plus,times) ==>
     (!a bs. REDUCE plus(MAP(times a)bs) = times a(REDUCE plus bs))
 
-REDUCE_MAP = 
+REDUCE_MAP =
 |- !plus.
     MONOID plus /\ COMMUTATIVE plus ==>
     (!f g as.
@@ -84,31 +84,31 @@ $\Sigma$-notation:
 \begin{verbatim}
 SIGMA_ID = |- !plus m f. SIGMA(plus,m,0)f = Id plus
 
-SIGMA_LEFT_SPLIT = 
+SIGMA_LEFT_SPLIT =
 |- !plus m n f. SIGMA(plus,m,SUC n)f = plus(f m)(SIGMA(plus,SUC m,n)f)
 
-SIGMA_RIGHT_SPLIT = 
+SIGMA_RIGHT_SPLIT =
 |- !plus.
     MONOID plus ==>
     (!m n f. SIGMA(plus,m,SUC n)f = plus(SIGMA(plus,m,n)f)(f(m + n)))
 
-SIGMA_SHIFT = 
+SIGMA_SHIFT =
 |- !plus m n f. SIGMA(plus,SUC m,n)f = SIGMA(plus,m,n)(f o SUC)
 
-SIGMA_MULT_COMM = 
+SIGMA_MULT_COMM =
 |- !plus times.
     RING(plus,times) ==>
     (!m n a f.
       times a(SIGMA(plus,m,n)f) = SIGMA(plus,m,n)((times a) o f))
 
-SIGMA_PLUS_COMM = 
+SIGMA_PLUS_COMM =
 |- !plus.
     MONOID plus /\ COMMUTATIVE plus ==>
     (!f g m n.
       plus(SIGMA(plus,m,n)f)(SIGMA(plus,m,n)g) =
       SIGMA(plus,m,n)(\k. plus(f k)(g k)))
 
-SIGMA_EXT = 
+SIGMA_EXT =
 |- !plus.
     MONOID plus ==>
     (!f g m n.
@@ -120,12 +120,12 @@ SIGMA_EXT =
 Terms from the Binomial Theorem:
 \begin{session}
 \begin{verbatim}
-BINTERM_0 = 
+BINTERM_0 =
 |- !plus times.
     RING(plus,times) ==>
     (!a b n. BINTERM plus times a b n 0 = POWER times n a)
 
-BINTERM_n = 
+BINTERM_n =
 |- !plus times.
     RING(plus,times) ==>
     (!a b n. BINTERM plus times a b n n = POWER times n b)

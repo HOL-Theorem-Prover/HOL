@@ -87,10 +87,10 @@ val _ = wordsLib.guess_lengths();
 val GET_BYTE_def = Define`
   GET_BYTE (oareg:word2) (data:word32) =
     case oareg of
-       0w -> (7 >< 0) data
-    || 1w -> (15 >< 8) data
-    || 2w -> (23 >< 16) data
-    || _  -> (31 >< 24) data`;
+      0w => (7 >< 0) data
+    | 1w => (15 >< 8) data
+    | 2w => (23 >< 16) data
+    | _  => (31 >< 24) data`;
 
 val GET_HALF_def = Define`
   GET_HALF (oareg:word2) (data:word32) =
@@ -102,11 +102,11 @@ val GET_HALF_def = Define`
 val FORMAT_def = Define`
   FORMAT fmt oareg data =
     case fmt of
-       SignedByte       -> sw2sw (GET_BYTE oareg data)
-    || UnsignedByte     -> w2w (GET_BYTE oareg data)
-    || SignedHalfWord   -> sw2sw (GET_HALF oareg data)
-    || UnsignedHalfWord -> w2w (GET_HALF oareg data)
-    || UnsignedWord     -> data #>> (8 * w2n oareg)`;
+      SignedByte       => sw2sw (GET_BYTE oareg data)
+    | UnsignedByte     => w2w (GET_BYTE oareg data)
+    | SignedHalfWord   => sw2sw (GET_HALF oareg data)
+    | UnsignedHalfWord => w2w (GET_HALF oareg data)
+    | UnsignedWord     => data #>> (8 * w2n oareg)`;
 
 (* ------------------------------------------------------------------------- *)
 (*  General Purpose Register operations                                      *)
@@ -119,12 +119,12 @@ val mode_reg2num_def = Define`
     (if (n = 15) \/ USER m \/ (m = fiq) /\ n < 8 \/ ~(m = fiq) /\ n < 13 then
        n
      else case m of
-        fiq -> n + 8
-     || irq -> n + 10
-     || svc -> n + 12
-     || abt -> n + 14
-     || und -> n + 16
-     || _ -> ARB)`;
+       fiq => n + 8
+     | irq => n + 10
+     | svc => n + 12
+     | abt => n + 14
+     | und => n + 16
+     | _ => ARB)`;
 
 val REG_READ_def = Define`
   REG_READ (reg:registers) m n =
@@ -158,14 +158,14 @@ val SET_NZ_def  = Define `SET_NZ (N,Z) w = SET_NZC (N,Z,w ' 29) w`;
 val mode_num_def = Define`
   mode_num mode =
     case mode of
-       usr -> 16w
-    || fiq -> 17w
-    || irq -> 18w
-    || svc -> 19w
-    || abt -> 23w
-    || und -> 27w
-    || sys -> 31w
-    || _ -> 0w:word5`;
+      usr => 16w
+    | fiq => 17w
+    | irq => 18w
+    | svc => 19w
+    | abt => 23w
+    | und => 27w
+    | sys => 31w
+    | _ => 0w:word5`;
 
 val SET_IFMODE_def = Define`
   SET_IFMODE irq' fiq' mode w:word32 =
@@ -176,14 +176,14 @@ val SET_IFMODE_def = Define`
 val DECODE_MODE_def = Define`
   DECODE_MODE (m:word5) =
     case m of
-       16w -> usr
-    || 17w -> fiq
-    || 18w -> irq
-    || 19w -> svc
-    || 23w -> abt
-    || 27w -> und
-    || 31w -> sys
-    || _ -> safe`;
+      16w => usr
+    | 17w => fiq
+    | 18w => irq
+    | 19w => svc
+    | 23w => abt
+    | 27w => und
+    | 31w => sys
+    | _ => safe`;
 
 val NZCV_def = Define `NZCV (w:word32) = (w ' 31, w ' 30, w ' 29, w ' 28)`;
 
@@ -195,13 +195,13 @@ val CARRY_def = Define `CARRY (n,z,c,v) = c`;
 val mode2psr_def = Define`
   mode2psr mode =
     case mode of
-       usr -> CPSR
-    || fiq -> SPSR_fiq
-    || irq -> SPSR_irq
-    || svc -> SPSR_svc
-    || abt -> SPSR_abt
-    || und -> SPSR_und
-    || _   -> CPSR`;
+      usr => CPSR
+    | fiq => SPSR_fiq
+    | irq => SPSR_irq
+    | svc => SPSR_svc
+    | abt => SPSR_abt
+    | und => SPSR_und
+    | _   => CPSR`;
 
 val SPSR_READ_def = Define `SPSR_READ (psr:psrs) mode = psr (mode2psr mode)`;
 val CPSR_READ_def = Define `CPSR_READ (psr:psrs) = psr CPSR`;
@@ -220,14 +220,14 @@ val SPSR_WRITE_def = Define`
 val exception2mode_def = Define`
   exception2mode e =
     case e of
-       reset     -> svc
-    || undefined -> und
-    || software  -> svc
-    || address   -> svc
-    || pabort    -> abt
-    || dabort    -> abt
-    || interrupt -> irq
-    || fast      -> fiq`;
+      reset     => svc
+    | undefined => und
+    | software  => svc
+    | address   => svc
+    | pabort    => abt
+    | dabort    => abt
+    | interrupt => irq
+    | fast      => fiq`;
 
 val EXCEPTION_def = Define`
   EXCEPTION r type =
@@ -293,18 +293,18 @@ val IMMEDIATE_def = Define`
 val SHIFT_IMMEDIATE2_def = Define`
   SHIFT_IMMEDIATE2 shift (sh:word2) rm c =
     case sh of
-       0w -> LSL rm shift c
-    || 1w -> LSR rm (if shift = 0w then 32w else shift) c
-    || 2w -> ASR rm (if shift = 0w then 32w else shift) c
-    || _  -> if shift = 0w then word_rrx (c,rm) else ROR rm shift c`;
+      0w => LSL rm shift c
+    | 1w => LSR rm (if shift = 0w then 32w else shift) c
+    | 2w => ASR rm (if shift = 0w then 32w else shift) c
+    | _  => if shift = 0w then word_rrx (c,rm) else ROR rm shift c`;
 
 val SHIFT_REGISTER2_def = Define`
   SHIFT_REGISTER2 shift (sh:word2) rm c =
     case sh of
-       0w -> LSL rm shift c
-    || 1w -> LSR rm shift c
-    || 2w -> ASR rm shift c
-    || _  -> ROR rm shift c`;
+      0w => LSL rm shift c
+    | 1w => LSR rm shift c
+    | 2w => ASR rm shift c
+    | _  => ROR rm shift c`;
 
 val SHIFT_IMMEDIATE_def = Define`
   SHIFT_IMMEDIATE reg mode C (opnd2:word12) =
@@ -352,27 +352,27 @@ val ADD_def = Define`
 val SUB_def = Define`SUB a b c = ADD a (~b) c`;
 val AND_def = Define`AND a b = ALU_logic (a && b)`;
 val EOR_def = Define`EOR a b = ALU_logic (a ?? b)`;
-val ORR_def = Define`ORR a b = ALU_logic (a !! b)`;
+val ORR_def = Define`ORR a b = ALU_logic (a || b)`;
 
 val ALU_def = Define`
   ALU (opc:word4) rn op2 c =
     case opc of
-       0w  -> AND rn op2
-    || 1w  -> EOR rn op2
-    || 2w  -> SUB rn op2 T
-    || 4w  -> ADD rn op2 F
-    || 3w  -> SUB op2 rn T
-    || 5w  -> ADD rn op2 c
-    || 6w  -> SUB rn op2 c
-    || 7w  -> SUB op2 rn c
-    || 8w  -> AND rn op2
-    || 9w  -> EOR rn op2
-    || 10w -> SUB rn op2 T
-    || 11w -> ADD rn op2 F
-    || 12w -> ORR rn op2
-    || 13w -> ALU_logic op2
-    || 14w -> AND rn (~op2)
-    || _   -> ALU_logic (~op2)`;
+      0w  => AND rn op2
+    | 1w  => EOR rn op2
+    | 2w  => SUB rn op2 T
+    | 4w  => ADD rn op2 F
+    | 3w  => SUB op2 rn T
+    | 5w  => ADD rn op2 c
+    | 6w  => SUB rn op2 c
+    | 7w  => SUB op2 rn c
+    | 8w  => AND rn op2
+    | 9w  => EOR rn op2
+    | 10w => SUB rn op2 T
+    | 11w => ADD rn op2 F
+    | 12w => ORR rn op2
+    | 13w => ALU_logic op2
+    | 14w => AND rn (~op2)
+    | _   => ALU_logic (~op2)`;
 
 (* ......................................................................... *)
 
@@ -514,13 +514,13 @@ val LDR_STR_def = Define`
     let (addr,wb_addr) = ADDR_MODE2 r.reg mode C I P U Rn offset in
     let pc_reg = INC_PC r.reg in
       case input of
-         NONE -> INL
+        NONE => INL
            [if L then
               MemRead addr
             else
               let w = REG_READ pc_reg mode Rd in
                 MemWrite addr (if B then Byte ((7 >< 0) w) else Word w)]
-      || SOME (isdabort, data) ->
+      | SOME (isdabort, data) =>
            let wb_reg = if P ==> W then
                           REG_WRITE pc_reg mode Rn wb_addr
                         else
@@ -557,12 +557,12 @@ val LDRH_STRH_def = Define`
     let (addr,wb_addr) = ADDR_MODE3 r.reg mode I P U Rn offsetH offsetL in
     let pc_reg = INC_PC r.reg in
       case input of
-         NONE -> INL
+        NONE => INL
            [if L then
               MemRead addr
             else
               MemWrite addr (Half ((15 >< 0) (REG_READ pc_reg mode Rd)))]
-      || SOME (isdabort, data) ->
+      | SOME (isdabort, data) =>
            let wb_reg = if P ==> W then
                           REG_WRITE pc_reg mode Rn wb_addr
                         else
@@ -573,10 +573,10 @@ val LDRH_STRH_def = Define`
                    wb_reg
                  else
                    let fmt = case (S, H) of
-                                (F,T) -> UnsignedHalfWord
-                             || (T,F) -> SignedByte
-                             || (T,T) -> SignedHalfWord
-                             || _ -> ARB
+                               (F,T) => UnsignedHalfWord
+                             | (T,F) => SignedByte
+                             | (T,T) => SignedHalfWord
+                             | _ => ARB
                    in
                      REG_WRITE wb_reg mode Rd
                        (FORMAT fmt ((1 >< 0) addr) (HD data));
@@ -635,13 +635,13 @@ val LDM_STM_def = Define`
                    pc_reg
     in
       case input of
-         NONE -> INL
+        NONE => INL
           (if L then
              MAP MemRead addr_list
            else
              STM_LIST (if HD rp_list = Rn then pc_reg else wb_reg) mode'
                (ZIP (rp_list,addr_list)))
-      || SOME (dabort_t, data) -> INR
+      | SOME (dabort_t, data) => INR
           (if L then
              <| reg :=
                   let t = if IS_SOME dabort_t then
@@ -672,10 +672,10 @@ val SWP_def = Define`
     and pc_reg = INC_PC r.reg in
     let rm = REG_READ pc_reg mode Rm in
       case input of
-         NONE -> INL
+        NONE => INL
            [MemRead rn;
             MemWrite rn (if B then Byte ((7 >< 0) rm) else Word rm)]
-      || SOME (isdabort, data) -> INR
+      | SOME (isdabort, data) => INR
           <| reg :=
                 if isdabort then
                   pc_reg
@@ -745,22 +745,22 @@ val LDC_STC_def = Define`
 val CONDITION_PASSED2_def = Define`
   CONDITION_PASSED2 (N,Z,C,V) cond =
     case cond of
-       EQ -> Z
-    || NE -> ~Z
-    || CS -> C
-    || CC -> ~C
-    || MI -> N
-    || PL -> ~N
-    || VS -> V
-    || VC -> ~V
-    || HI -> C /\ ~Z
-    || LS -> ~C \/ Z
-    || GE -> N = V
-    || LT -> ~(N = V)
-    || GT -> ~Z /\ (N = V)
-    || LE -> Z \/ ~(N = V)
-    || AL -> T
-    || NV -> F`;
+      EQ => Z
+    | NE => ~Z
+    | CS => C
+    | CC => ~C
+    | MI => N
+    | PL => ~N
+    | VS => V
+    | VC => ~V
+    | HI => C /\ ~Z
+    | LS => ~C \/ Z
+    | GE => N = V
+    | LT => ~(N = V)
+    | GT => ~Z /\ (N = V)
+    | LE => Z \/ ~(N = V)
+    | AL => T
+    | NV => F`;
 
 val CONDITION_PASSED_def = Define`
   CONDITION_PASSED flags (ireg:word32) =
@@ -776,27 +776,27 @@ val DECODE_ARM_def = Define`
   DECODE_ARM (ireg : word32) =
     let b n = ireg ' n in
       case (b 27,b 26,b 25,b 24,b 23,b 22,b 21,b 20,b 7,b 6,b 5,b 4) of
-         (F,F,F,T,F,_,F,F,F,F,F,F) -> mrs
-      || (F,F,F,T,F,_,T,F,F,F,F,F) -> msr
-      || (F,F,F,_,_,_,_,_,_,_,_,F) -> data_proc
-      || (F,F,F,_,_,_,_,_,F,_,_,T) -> data_proc
-      || (F,F,F,F,F,F,_,_,T,F,F,T) -> mla_mul
-      || (F,F,F,F,T,_,_,_,T,F,F,T) -> mla_mul
-      || (F,F,F,T,F,_,F,F,T,F,F,T) -> swp
-      || (F,F,F,_,_,_,_,_,T,F,T,T) -> ldrh_strh
-      || (F,F,F,_,_,_,_,T,T,T,_,T) -> ldrh_strh
-      || (F,F,T,T,F,_,F,F,_,_,_,_) -> cdp_und
-      || (F,F,T,T,F,_,T,F,_,_,_,_) -> msr
-      || (F,F,T,_,_,_,_,_,_,_,_,_) -> data_proc
-      || (F,T,F,_,_,_,_,_,_,_,_,_) -> ldr_str
-      || (F,T,T,_,_,_,_,_,_,_,_,F) -> ldr_str
-      || (T,F,F,_,_,_,_,_,_,_,_,_) -> ldm_stm
-      || (T,F,T,_,_,_,_,_,_,_,_,_) -> br
-      || (T,T,F,_,_,_,_,_,_,_,_,_) -> ldc_stc
-      || (T,T,T,F,_,_,_,T,_,_,_,T) -> mrc
-      || (T,T,T,F,_,_,_,F,_,_,_,T) -> mcr
-      || (T,T,T,T,_,_,_,_,_,_,_,_) -> swi_ex
-      || _ -> cdp_und`;
+        (F,F,F,T,F,_,F,F,F,F,F,F) => mrs
+      | (F,F,F,T,F,_,T,F,F,F,F,F) => msr
+      | (F,F,F,_,_,_,_,_,_,_,_,F) => data_proc
+      | (F,F,F,_,_,_,_,_,F,_,_,T) => data_proc
+      | (F,F,F,F,F,F,_,_,T,F,F,T) => mla_mul
+      | (F,F,F,F,T,_,_,_,T,F,F,T) => mla_mul
+      | (F,F,F,T,F,_,F,F,T,F,F,T) => swp
+      | (F,F,F,_,_,_,_,_,T,F,T,T) => ldrh_strh
+      | (F,F,F,_,_,_,_,T,T,T,_,T) => ldrh_strh
+      | (F,F,T,T,F,_,F,F,_,_,_,_) => cdp_und
+      | (F,F,T,T,F,_,T,F,_,_,_,_) => msr
+      | (F,F,T,_,_,_,_,_,_,_,_,_) => data_proc
+      | (F,T,F,_,_,_,_,_,_,_,_,_) => ldr_str
+      | (F,T,T,_,_,_,_,_,_,_,_,F) => ldr_str
+      | (T,F,F,_,_,_,_,_,_,_,_,_) => ldm_stm
+      | (T,F,T,_,_,_,_,_,_,_,_,_) => br
+      | (T,T,F,_,_,_,_,_,_,_,_,_) => ldc_stc
+      | (T,T,T,F,_,_,_,T,_,_,_,T) => mrc
+      | (T,T,T,F,_,_,_,F,_,_,_,T) => mcr
+      | (T,T,T,T,_,_,_,_,_,_,_,_) => swi_ex
+      | _ => cdp_und`;
 
 val RUN_ARM_def = Define`
   RUN_ARM state (dabt:num option) data no_cp =
@@ -812,23 +812,23 @@ val RUN_ARM_def = Define`
              and coproc f = if no_cp then r else f r
         in
           case DECODE_ARM ireg of
-             data_proc -> DATA_PROCESSING r (CARRY nzcv) mode ireg
-          || mla_mul   -> MLA_MUL r mode ireg
-          || swi_ex    -> EXCEPTION r software
-          || br        -> BRANCH r mode ireg
-          || msr       -> MSR r mode ireg
-          || mrs       -> MRS r mode ireg
-          || swp       -> OUTR (SWP r mode ireg (SOME (IS_SOME dabt, data)))
-          || ldm_stm   -> OUTR (LDM_STM r mode ireg (SOME (dabt, data)))
-          || ldr_str   -> OUTR
+            data_proc => DATA_PROCESSING r (CARRY nzcv) mode ireg
+          | mla_mul   => MLA_MUL r mode ireg
+          | swi_ex    => EXCEPTION r software
+          | br        => BRANCH r mode ireg
+          | msr       => MSR r mode ireg
+          | mrs       => MRS r mode ireg
+          | swp       => OUTR (SWP r mode ireg (SOME (IS_SOME dabt, data)))
+          | ldm_stm   => OUTR (LDM_STM r mode ireg (SOME (dabt, data)))
+          | ldr_str   => OUTR
                (LDR_STR r (CARRY nzcv) mode ireg (SOME (IS_SOME dabt, data)))
-          || ldrh_strh -> OUTR
+          | ldrh_strh => OUTR
                (LDRH_STRH r mode ireg (SOME (IS_SOME dabt, data)))
-          || ldc_stc   -> coproc (\x. (OUTR (LDC_STC x mode ireg T)))
-          || mrc       -> coproc (\x. MRC x mode (ELL 1 data) ireg)
-          || mcr       -> coproc inc_pc
-          || cdp_und   -> coproc inc_pc
-          || _ -> r`;
+          | ldc_stc   => coproc (\x. (OUTR (LDC_STC x mode ireg T)))
+          | mrc       => coproc (\x. MRC x mode (ELL 1 data) ireg)
+          | mcr       => coproc inc_pc
+          | cdp_und   => coproc inc_pc
+          | _ => r`;
 
 (* ------------------------------------------------------------------------- *)
 (* Exception operations                                                      *)
@@ -852,19 +852,19 @@ val interrupt2exception_def = Define`
     and ic = DECODE_ARM ireg in
     let old_flags = pass /\ ((ic = mrs) \/ (ic = msr)) in
     (case irpt of
-        NONE            -> software
-     || SOME (Reset x)  -> reset
-     || SOME Prefetch   -> pabort
-     || SOME (Dabort t) -> dabort
-     || SOME Undef      -> if pass /\ ic IN {cdp_und; mrc; mcr; ldc_stc} then
+       NONE            => software
+     | SOME (Reset x)  => reset
+     | SOME Prefetch   => pabort
+     | SOME (Dabort t) => dabort
+     | SOME Undef      => if pass /\ ic IN {cdp_und; mrc; mcr; ldc_stc} then
                              undefined
                            else
                              software
-     || SOME Fiq        -> if (if old_flags then f else f') then
+     | SOME Fiq        => if (if old_flags then f else f') then
                              software
                            else
                              fast
-     || SOME Irq        -> if (if old_flags then i else i') then
+     | SOME Irq        => if (if old_flags then i else i') then
                              software
                            else
                              interrupt)`;
@@ -897,13 +897,13 @@ val OUT_ARM_def = Define`
         let ic = DECODE_ARM ireg in
            <| transfers :=
                (case ic of
-                   ldr_str   -> OUTL (LDR_STR r (CARRY nzcv) mode ireg NONE)
-                || ldrh_strh -> OUTL (LDRH_STRH r mode ireg NONE)
-                || ldm_stm   -> OUTL (LDM_STM r mode ireg NONE)
-                || swp       -> OUTL (SWP r mode ireg NONE)
-                || ldc_stc   -> OUTL (LDC_STC r mode ireg F)
-                || mcr       -> MCR_OUT r.reg mode ireg
-                || _         -> []);
+                  ldr_str   => OUTL (LDR_STR r (CARRY nzcv) mode ireg NONE)
+                | ldrh_strh => OUTL (LDRH_STRH r mode ireg NONE)
+                | ldm_stm   => OUTL (LDM_STM r mode ireg NONE)
+                | swp       => OUTL (SWP r mode ireg NONE)
+                | ldc_stc   => OUTL (LDC_STC r mode ireg F)
+                | mcr       => MCR_OUT r.reg mode ireg
+                | _         => []);
               cpi := (ic IN {cdp_und; mcr; mrc; ldc_stc});
               user := USER mode
            |>

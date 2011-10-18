@@ -95,15 +95,15 @@ id=[A-Za-z][A-Za-z0-9_']* | [-!%&$#+/:<=>?@~^|*`\\]+;
 
 %%
 
-<INITIAL>[\ \n\013\t] => 
+<INITIAL>[\ \n\013\t] =>
   ( lex () );
 <INITIAL>"(*" =>
   ( (comment_depth := 1; YYBEGIN Comment; lex ()) );
 <INITIAL>"*)" =>
   ( lexError "unmatched comment bracket" yytext yypos );
-<INITIAL>'[A-Za-z0-9_']+ => 
+<INITIAL>'[A-Za-z0-9_']+ =>
   ( NULL(yypos,yypos) );
-<INITIAL>~?[0-9]+(\.[0-9]+)?(E~?[0-9]+)? => 
+<INITIAL>~?[0-9]+(\.[0-9]+)?(E~?[0-9]+)? =>
   ( NULL(yypos,yypos) );
 <INITIAL>["] | #["] =>
   ( (YYBEGIN String; lex ()) );
@@ -120,50 +120,50 @@ id=[A-Za-z][A-Za-z0-9_']* | [-!%&$#+/:<=>?@~^|*`\\]+;
 <INITIAL>[\000-\255] =>
   ( lexError "ill-formed token" yytext yypos );
 
-<Comment> "(*" => 
+<Comment> "(*" =>
   ( (incr comment_depth; lex ()) );
 <Comment>"*)" =>
   ( (decr comment_depth;
      if !comment_depth > 0 then lex () else (YYBEGIN INITIAL; lex ())) );
-<Comment>[\000-\255] => 
+<Comment>[\000-\255] =>
   ( lex () );
 
-<String>\" => 
+<String>\" =>
   ( YYBEGIN INITIAL; NULL(yypos,yypos) );
-<String>\\["nt\\] => 
+<String>\\["nt\\] =>
   ( lex () );
-<String>\\[\ \t\n\013]+\\ => 
+<String>\\[\ \t\n\013]+\\ =>
   ( lex () );
-<String>\\\^[@-_] => 
+<String>\\\^[@-_] =>
   ( lex () );
-<String>\\[0-9][0-9][0-9]=> 
+<String>\\[0-9][0-9][0-9]=>
   ( lex ());
-<String>\\ => 
+<String>\\ =>
   ( (YYBEGIN SkipString; lex ()) );
-<String>[\001-\026\127] => 
+<String>[\001-\026\127] =>
   ( (YYBEGIN SkipString; lex ()) );
-<String>[\000-\255] => 
+<String>[\000-\255] =>
   ( lex () );
 
-<SkipString>\" => 
+<SkipString>\" =>
   ( YYBEGIN INITIAL; NULL(yypos,yypos) );
-<SkipString>\\["nt\\] => 
+<SkipString>\\["nt\\] =>
   ( lex () );
-<SkipString>\\[\ \t\n\013]+\\ => 
+<SkipString>\\[\ \t\n\013]+\\ =>
   ( lex () );
-<SkipString>[\000-\255] => 
+<SkipString>[\000-\255] =>
   ( lex () );
 
-<Quotation>` => 
+<Quotation>` =>
   ( YYBEGIN INITIAL; NULL(yypos,yypos) );
-<Quotation>\^` => 
+<Quotation>\^` =>
   ( lex () );
-<Quotation>[\000-\255] => 
+<Quotation>[\000-\255] =>
   ( lex () );
 
-<DQuotation>`` => 
+<DQuotation>`` =>
   ( YYBEGIN INITIAL; NULL(yypos,yypos) );
-<DQuotation>\^` => 
+<DQuotation>\^` =>
   ( YYBEGIN Quotation; lex () );
-<DQuotation>[\000-\255] => 
+<DQuotation>[\000-\255] =>
   ( lex () );

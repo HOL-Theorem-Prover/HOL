@@ -7,18 +7,18 @@ val _ = new_theory "nwalk"
 val pre_nvwalk_def = TotalDefn.xDefineSchema "pre_nvwalk"
  `nvwalk pi v =
     case FLOOKUP s v
-    of SOME (Sus p u) -> nvwalk (pi ++ p) u
-    || SOME t -> apply_pi pi t
-    || NONE -> Sus pi v`
+    of SOME (Sus p u) => nvwalk (pi ++ p) u
+     | SOME t => apply_pi pi t
+     | NONE => Sus pi v`
 
 val _ = store_term_thm("nvwalk_def_print",
 TermWithCase`
 nwfs s ⇒
   (nvwalk s pi v =
    case FLOOKUP s v
-   of SOME (Sus p u) -> nvwalk s (pi ++ p) u
-   || SOME t -> apply_pi pi t
-   || NONE -> Sus pi v)`)
+   of SOME (Sus p u) => nvwalk s (pi ++ p) u
+    | SOME t => apply_pi pi t
+    | NONE => Sus pi v)`)
 
 fun nvwalk_nwfs_hyp th =
 let val th =
@@ -116,7 +116,7 @@ Cases_on `t` THENL [
   FULL_SIMP_TAC (srw_ss()) []
 ]);
 
-val nwalk_def_q = `nwalk s t = case t of Sus p v -> nvwalk s p v || _ -> t`
+val nwalk_def_q = `nwalk s t = case t of Sus p v => nvwalk s p v | _ => t`
 
 val nwalk_def = Define nwalk_def_q
 

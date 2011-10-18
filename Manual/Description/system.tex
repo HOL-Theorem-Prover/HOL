@@ -141,7 +141,7 @@ not be used as the name of a variable or a constant unless the user is
 very confident of their ability to mess with grammars.
 %
 \begin{verbatim}
-   let  in  and  \  .  ;  =>  |  ||   :  :=  with  updated_by   case   of
+   let  in  and  \  .  ;  =>  |    :  :=  with  updated_by   case   of
 \end{verbatim}
 
 \paragraph {Type variable names}\label{tyvars}
@@ -642,9 +642,9 @@ which bind very tightly.
     (4)    TM  ::=  TM "::" TM (restricted quantification operator)
     (5)    TM  ::=  TM TM  (binder argument concatenation)
     (7)    TM  ::=  "case" TM "of" TM  [case__magic]
-    (8)    TM  ::=  TM "||" TM  [case_split__magic]   (R-associative)
+    (8)    TM  ::=  TM "|" TM  [case_split__magic]   (R-associative)
     (9)    TM  ::=  TM "and" TM   (L-associative)
-    (10)   TM  ::=  TM "->" TM  [case_arrow__magic]   (R-associative)
+    (10)   TM  ::=  TM "=>" TM  [case_arrow__magic]   (R-associative)
     (50)   TM  ::=  TM "##" TM | TM "," TM   (R-associative)
     (70)   TM  ::=  "if" TM "then" TM "else" TM  [COND]
     (80)   TM  ::=  TM ":-" TM   (non-associative)

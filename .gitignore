@@ -13,6 +13,7 @@
 *.exe
 *.sig[0-9]
 *.sml[0-9]
+.DS_Store
 
 # LaTeX guff
 *.aux
