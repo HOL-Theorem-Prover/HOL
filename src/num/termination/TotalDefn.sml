@@ -113,18 +113,18 @@ fun mk_lex_reln argvars sizedlist arrangement =
 (* x.fld is a proper subterm of x.                                           *)
 (*---------------------------------------------------------------------------*)
 
-fun is_recd_proj tm1 tm2 = 
+fun is_recd_proj tm1 tm2 =
   let val (proj,a) = dest_comb tm1
       val aty = type_of a
-      val projlist = mapfilter 
+      val projlist = mapfilter
          (fst o dest_comb o boolSyntax.lhs o snd o strip_forall o concl)
          (TypeBase.accessors_of aty)
   in TypeBase.is_record_type aty andalso mem proj projlist
   end
   handle HOL_ERR _ => false;
- 
+
 fun proper_subterm tm1 tm2 =
-   not(aconv tm1 tm2) 
+   not(aconv tm1 tm2)
    andalso (Lib.can (find_term (aconv tm1)) tm2
             orelse
             is_recd_proj tm1 tm2);
