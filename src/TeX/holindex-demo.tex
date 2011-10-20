@@ -16,7 +16,7 @@ Similar usage as bibtex, makeindex etc.
 \begin{verbatim}
 \usepackage{holindex}
 \setHOLlinewidth{80}   %optional default is 80
-\setHOLoverrides{file} %optional 
+\setHOLoverrides{file} %optional
 \end{verbatim}
 \item make sure that \texttt{holindex} is loaded after packages like
   \texttt{natbib}, since it loads \texttt{underscore} and this will
@@ -32,7 +32,7 @@ Similar usage as bibtex, makeindex etc.
 \begin{alltt}
 (eval-after-load "tex"
   '(add-to-list 'TeX-command-list
-    '("Holindex" "munge.exe -index %s" 
+    '("Holindex" "munge.exe -index %s"
        TeX-run-background t t :help "Run Holindex") t))
 \end{alltt}
 \end{enumerate}
@@ -110,7 +110,7 @@ Printout of \texttt{holindex-demo.hdf}:
    label = "a short description of the type from external file",
    force_index,
    short-index,
-   content = ``:bool``   
+   content = ``:bool``
 }
 
 
@@ -208,22 +208,22 @@ Printout of \texttt{holindex-demo.hdf}:
    \citeHOLty{id}
    \citeHOLthm{id}
 
-   Multiple citations 
+   Multiple citations
    \mciteHOLtm{id,id,...}
    \mciteHOLty{id,id,...}
    \mciteHOLthm{id,id,...}
 
-   Hidden citations (adds page to index, 
+   Hidden citations (adds page to index,
       but does not print anything)
    \citeHiddenHOLtm{id}
    \citeHiddenHOLty{id}
    \citeHiddenHOLthm{id}
 
 
-   Printing Index 
+   Printing Index
    \printHOLIndex
-   \printShortHOLIndex 
-   \printLongHOLIndex 
+   \printShortHOLIndex
+   \printLongHOLIndex
 
    Sort the index by occurence in the text, not by names
    \sortHOLIndexOccurence
@@ -256,7 +256,7 @@ definitions are printed. Just copy them to the header of your file
 and modify them to your taste:
 
 \begin{verbatim}
-The environment for printing something as a 
+The environment for printing something as a
 block and the inline command (found in holtexbasic.sty):
 \renewcommand{\HOLinline}[1]{\mbox{\textup{\texttt{#1}}}}
 \renewenvironment{HOLblock}{\begin{alltt}}{\end{alltt}}
@@ -294,7 +294,7 @@ Much more complicated: Index entries themselves
 % Arg 6 : is the pages argument non-empty?
 % Arg 7 : comment
 % Arg 8 : latex printed version of theorem/type/term
-\renewcommand{\HOLIndexEntryFormat}[8]{% 
+\renewcommand{\HOLIndexEntryFormat}[8]{%
    \makebox[0.1\textwidth][r]{(#1)\ }%number
    \begin{minipage}[t]{0.9\textwidth}%everything else in minibox
       \begin{flushright}#3 \ldots$\!$\dotfill #4\end{flushright}{%first line
@@ -308,7 +308,7 @@ Much more complicated: Index entries themselves
 
 And index entries for the theorems, types and terms using this definition
 
-% Arg 1 : unique ID 
+% Arg 1 : unique ID
 % Arg 2 : Label
 % Arg 3 : Pages
 % Arg 4 : Long index?
