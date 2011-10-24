@@ -6,10 +6,6 @@ open HolKernel Parse boolLib numLib pairLib
      numTheory prim_recTheory arithmeticTheory pairTheory
      Rsyntax schneiderUtils;
 
-infixr 3 -->;
-infix ## |-> THEN THENL THENC ORELSE ORELSEC THEN_TCL ORELSE_TCL;
-
-
 val _ = new_theory "Temporal_Logic";
 
 fun TAC_PROOF(g,t) = Tactical.TAC_PROOF(g,t) handle e => Raise e;
