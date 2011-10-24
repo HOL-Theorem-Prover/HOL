@@ -3,6 +3,9 @@ struct
 
 open Holmake_types
 
+datatype cond_position = GrabbingText | NoTrueCondYet | SkippingElses
+val empty_condstate = [] : cond_position list
+
 fun readline lnum strm = let
   fun recurse (lnum, acc) latest =
       case latest of
@@ -75,30 +78,98 @@ in
   recurse 0
 end
 
-fun read_commands b head =
-    case currentline b of
-      NONE => (b, RULE head)
-    | SOME s => let
+fun evaluate_cond env s =
+    if String.isPrefix "ifdef" s orelse String.isPrefix "ifndef" s then let
+        val (sense, sz, nm) =
+            if String.sub(s,2) = #"n" then (false, 6, "ifndef")
+            else (true, 5, "ifdef")
+        val s' = strip_leading_wspace (String.extract(s, sz, NONE))
+        val q = extract_normal_quotation (Substring.full s')
+        val s2 = perform_substitution env q
+      in
+        case String.tokens Char.isSpace s2 of
+          [s] => (case lookup env s of
+                    [LIT ""] => SOME (not sense)
+                  | _ => SOME sense)
+        | _ => raise Fail ("ReadHMF: "^nm^" not followed by a variable name.")
+      end
+    else
+      NONE
+
+fun getline env (condstate, b) =
+    case (currentline b, condstate) of
+      (NONE, []) => (b, NONE, condstate)
+    | (NONE, _ :: _) => raise Fail "ReadHMF: unterminated conditional"
+    | (SOME s, SkippingElses :: rest) => let
+        val s = strip_leading_wspace s
+      in
+        if String.isPrefix "endif" s then getline env (rest, advance b)
+        else if String.isPrefix "ifdef" s orelse String.isPrefix "ifndef" s orelse
+                String.isPrefix "ifeq" s
+        then
+          getline env (SkippingElses::SkippingElses::rest, advance b)
+        else
+          getline env (SkippingElses::rest, advance b)
+      end
+    | (SOME s, NoTrueCondYet::rest) => let
+        val s = strip_leading_wspace s
+      in
+        if String.isPrefix "endif" s then getline env (rest, advance b)
+        else if String.isPrefix "else" s then let
+            val s = strip_leading_wspace (String.extract(s, 4, NONE))
+          in
+            if String.isPrefix "if" s then
+              case evaluate_cond env s of
+                NONE => raise Fail "ReadHMF: bogus string following else"
+              | SOME false => getline env (NoTrueCondYet::rest, advance b)
+              | SOME true => getline env (GrabbingText::rest, advance b)
+            else if s = "" then getline env (GrabbingText::rest, advance b)
+            else raise Fail "ReadHMF: bogus string following else"
+          end
+        else getline env (condstate, advance b)
+      end
+    | (SOME s0, _) => let
+        val s = strip_leading_wspace s0
+      in
+        if String.isPrefix "endif" s then
+          if null condstate then raise Fail "ReadHMF: unpaired endif"
+          else getline env (tl condstate, advance b)
+        else if String.isPrefix "else" s then
+          if null condstate then raise Fail "ReadHMF: unpaired else"
+          else getline env (SkippingElses::tl condstate, advance b)
+        else if String.isPrefix "if" s then
+          case evaluate_cond env s of
+            NONE => (b, SOME s0, condstate)
+          | SOME false => getline env (NoTrueCondYet::condstate, advance b)
+          | SOME true => getline env (GrabbingText::condstate, advance b)
+        else (b, SOME s0, condstate)
+      end
+
+fun read_commands env (cs,b) head =
+    case getline env (cs, b) of
+      (b, NONE, cs) => ((cs, b), RULE head)
+    | (b, SOME s, cs) => let
         val s' = strip_leading_wspace s
       in
         if s' = "" orelse String.sub(s',0) = #"#" then
-          read_commands (advance b) head
+          read_commands env (cs, advance b) head
         else
           case String.sub(s',0) of
-            #"\t" => read_commands (advance b) (head ^ s' ^ "\n")
-          | c => (b, RULE head)
+            #"\t" => read_commands env (cs, advance b) (head ^ s' ^ "\n")
+          | c => ((cs, b), RULE head)
       end
 
 
-fun process_line b = let
+fun process_line env (condstate, b) = let
+  val (b, line_opt, condstate) = getline env (condstate, b)
 in
-  case currentline b of
-    NONE => (b, EOF)
+  case line_opt of
+    NONE => ((condstate, b), EOF)
   | SOME s => let
       val s' = strip_leading_wspace s
     in
       if s' = "" orelse String.sub(s',0) = #"#" then
-        process_line (advance b)
+        process_line env (condstate, advance b)
       else let
           val c1 = String.sub(s',0)
         in
@@ -107,19 +178,20 @@ in
             case first_special s' of
                 NONE => error b ("Unrecognised character: \""^
                                  String.toString (str c1) ^ "\"")
-              | SOME #"=" => (advance b, DEFN (strip_trailing_comment s))
+              | SOME #"=" => ((condstate, advance b), DEFN (strip_trailing_comment s))
               | SOME #":" => read_commands
-                               (advance b)
-                               (strip_trailing_comment s' ^ "\n")
+                                 env
+                                 (condstate, advance b)
+                                 (strip_trailing_comment s' ^ "\n")
               | SOME _ => raise Fail "ReadHMF: can't happen"
         end
     end
 end
 
-fun readall (acc as (tgt1,env,ruledb,depdb)) b =
-    case process_line b of
-      (b', EOF) => let
-        val _ = close_buf b'
+fun readall (acc as (tgt1,env,ruledb,depdb)) csb =
+    case process_line env csb of
+      (csb as (cs, b), EOF) => let
+        val _ = close_buf b
         fun foldthis (tgt,deps,acc) =
             case Binarymap.peek(acc,tgt) of
               NONE => Binarymap.insert(acc,tgt,
@@ -130,11 +202,11 @@ fun readall (acc as (tgt1,env,ruledb,depdb)) b =
       in
         (env,Binarymap.foldl foldthis ruledb depdb,tgt1)
       end
-    | (b', x) => let
+    | (csb, x) => let
         fun warn s = TextIO.output(TextIO.stdErr, s ^ "\n")
       in
         case to_token x of
-          HM_defn def => readall (tgt1,env_extend def env, ruledb, depdb) b'
+          HM_defn def => readall (tgt1,env_extend def env, ruledb, depdb) csb
         | HM_rule rinfo => let
             val (rdb',depdb',tgts) = extend_ruledb warn env rinfo (ruledb,depdb)
             val tgt1' =
@@ -142,13 +214,13 @@ fun readall (acc as (tgt1,env,ruledb,depdb)) b =
                   NONE => List.find (fn s => s <> ".PHONY") tgts
                 | _ => tgt1
           in
-            readall (tgt1',env,rdb',depdb') b'
+            readall (tgt1',env,rdb',depdb') csb
           end
       end
 
 fun read fname env =
     readall (NONE, env, empty_ruledb,
              Binarymap.mkDict String.compare)
-            (init_buf fname)
+            (empty_condstate, init_buf fname)
 
 end (* struct *)

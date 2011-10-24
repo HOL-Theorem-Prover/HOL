@@ -369,6 +369,12 @@ in
              alist
 end
 
+fun lookup e k =
+    case Binarymap.peek(e, k) of
+      NONE => [LIT ""]
+    | SOME q => normquote [] q
+
+
 fun env_extend (k, v) e = Binarymap.insert(e,k,v)
 
 end (* struct *)

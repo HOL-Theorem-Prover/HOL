@@ -15,6 +15,7 @@ datatype token = HM_defn of string * quotation
 type env
 
 val base_environment : env
+val lookup : env -> string -> quotation
 
 val env_extend : string * quotation -> env -> env
 
