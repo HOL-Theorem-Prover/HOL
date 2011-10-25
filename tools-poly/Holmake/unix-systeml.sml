@@ -83,20 +83,22 @@ fun fullPath slist =
 
 
 (* these values are filled in by configure.sml *)
-val HOLDIR =
-val POLYMLLIBDIR =
-val POLY =
-val POLY_LDFLAGS =
-val POLY_LDFLAGS_STATIC =
-val CC =
-val OS =
+val HOLDIR = ""
+val MOSMLDIR = ""
+val HAVE_BASIS2002 = false
+val POLYMLLIBDIR = ""
+val POLY = ""
+val POLY_LDFLAGS = []
+val POLY_LDFLAGS_STATIC = []
+val CC = ""
+val OS = ""
 
-val DEPDIR =
-val GNUMAKE =
-val DYNLIB =
-val version =
-val ML_SYSNAME =
-val release =
+val DEPDIR = ""
+val GNUMAKE = ""
+val DYNLIB = ""
+val version = ""
+val ML_SYSNAME = ""
+val release = ""
 
 val isUnix = true
 
