@@ -2,7 +2,7 @@ val _ = PolyML.Compiler.prompt1:="";
 val _ = PolyML.Compiler.prompt2:="";
 val _ = PolyML.print_depth 0;
 val _ = use "poly/poly-init.ML";
-val _ = use "Holmake/Systeml.sig";
+val _ = use "../tools/Holmake/Systeml.sig";
 val _ = use "Holmake/Systeml.sml";
 val _ = use "../tools/Holmake/Holmake_tools.sig"
 val _ = use "../tools/Holmake/Holmake_tools.sml"

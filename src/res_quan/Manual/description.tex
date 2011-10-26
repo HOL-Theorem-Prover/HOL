@@ -28,8 +28,8 @@ if $x:\alpha$ then $P$ can be any term of type $\alpha\fun\bool$; this
 denotes the quantification of $x$ over those values satisfying $P$.
 The qualifier {\small\verb|::|} can be used with {\small\verb|\|} and any
 binder, including user defined ones. The appropriate meanings are
-predefined for {\small\verb|\|} and the built-in binders 
-{\small\verb|!|}, {\small\verb|?|} and {\small\verb|@|}. 
+predefined for {\small\verb|\|} and the built-in binders
+{\small\verb|!|}, {\small\verb|?|} and {\small\verb|@|}.
 This syntax automatically translates as follows:
 
 \begin{hol}
@@ -39,7 +39,7 @@ This syntax automatically translates as follows:
 {\small\verb%   @%}$v${\small\verb%::%}$P${\small\verb%.%}$tm${\small\verb%    <---->   %}\con{RES\_SELECT}\ \ \ $P${\small\verb% (\%}$v${\small\verb%.%}$tm${\small\verb%)%}
 \end{hol}
 
-The constants \con{RES\_ABSTRACT}, \con{RES\_FORALL}, \con{RES\_EXISTS} and 
+The constants \con{RES\_ABSTRACT}, \con{RES\_FORALL}, \con{RES\_EXISTS} and
 \con{RES\_SELECT} are defined in the theory \ml{bool} to provide
 semantics for these restricted quantifiers as follows:
 
@@ -86,7 +86,7 @@ must be explicitly defined), then executing:
 restrictions are not stored in theory files, so they have to be set up
 for each \HOL\ session (e.g. with a {\small\verb%hol-init.ml%} initialization file).
 
-The flag \ml{print\_restrict} has default \ml{true}, but if set to 
+The flag \ml{print\_restrict} has default \ml{true}, but if set to
 \ml{false} will
 disable the pretty printing. This is useful for seeing what the
 semantics of particular restricted abstractions are.
@@ -130,7 +130,7 @@ The following four theorems state the distributivity property of these
 quantifiers across conjunction and disjunction.
 \begin{verbatim}
  RESQ_FORALL_CONJ_DIST
-  |- !P Q R. 
+  |- !P Q R.
      (!(i:*) :: P. (Q i /\ R i)) = (!i :: P. Q i) /\ (!i :: P. R i)
 
  RESQ_FORALL_DISJ_DIST
@@ -171,14 +171,14 @@ quantifier.
 The ML functions available when this library is loaded can be divided
 into six groups: conditional rewriting tools, syntax functions,
 derived rules, conversions, tactics, and constant definitions. They
-will be described in separate subsections. 
+will be described in separate subsections.
 
 \subsection{Conditional rewriting tools}
 
 The conditional rewriting tools are not specific for restricted
 quantifiers. They are available as a separate part of the library
 which can be loaded into \HOL\ without loading other functions in this
-library. This is done by the command 
+library. This is done by the command
 \begin{verbatim}
  load_library `res_quan:cond_rewrite`;;
 \end{verbatim}
@@ -199,8 +199,8 @@ consequence is an equation, i.e., it should be of the following form:
 where $x_1, \ldots, x_n$ are the only variables that occur free in the
 left-hand side of the conclusion of the theorem but do not occur free
 in the assumptions. Futhermore, none of the antecedents
-$P_1,\ldots,P_n$ should be 
-conjunctions. The idea of  conditional rewriting is that the 
+$P_1,\ldots,P_n$ should be
+conjunctions. The idea of  conditional rewriting is that the
 antecedents of this input theorem are treated as conditions which have
 to be satisfied before the equation $Q[x_1,\ldots,x_n] = R[x_1,\ldots,x_n]$
 can be used to rewrite a term.
@@ -409,7 +409,7 @@ where $tm'$ is obtained by replacing all instances of $u$ by
 corresponding instances of $v$ and $\Gamma$ contains instances of $P$
 which cannot be eliminated by the theorems in the list {\tt ths}. This
 conversion is implemented using the conditional rewriting conversion
-\ml{COND\_REWRITE1\_CONV}. 
+\ml{COND\_REWRITE1\_CONV}.
 
 \subsection{Tactics}
 
@@ -421,7 +421,7 @@ to \ml{GEN\_TAC} and \ml{EXISTS\_TAC}.
 
 The resolution tactics and tactical listed below are in analogy to
 \ml{RES\_TAC}, \ml{IMP\_RES\_TAC}, \ml{RES\_THEN} and
-\ml{IMP\_RES\_THEN}. 
+\ml{IMP\_RES\_THEN}.
 \begin{holboxed}
 \begin{verbatim}
 RESQ_RES_THEN : (thm_tactic -> tactic)

@@ -183,6 +183,26 @@ val _ = test "print_arm_assemble_from_quote" (print_arm_assemble_from_quote "0")
         `;
 
 (*
+val go = step "v6";
+*)
+val _ = test "validate_arm_step" (fn l => List.map (validate_arm_step "v6") l)
+  [("ldr pc,[pc,r2,lsl #2]",
+    [(psrT,
+       ``(^mem (r15 + 8w + r2 << 2 + 3w) @@ mem (r15 + 8w + r2 << 2 + 2w) @@
+           mem (r15 + 8w + r2 << 2 + 1w) @@ mem (r15 + 8w + r2 << 2)) ' 0``),
+     (r15,
+       ``if
+           (^mem (r15 + 8w + r2 << 2 + 3w) @@ mem (r15 + 8w + r2 << 2 + 2w) @@
+             mem (r15 + 8w + r2 << 2 + 1w) @@ mem (r15 + 8w + r2 << 2)) ' 0
+         then
+           align
+             (mem (r15 + 8w + r2 << 2 + 3w) @@ mem (r15 + 8w + r2 << 2 + 2w) @@
+              mem (r15 + 8w + r2 << 2 + 1w) @@ mem (r15 + 8w + r2 << 2),2)
+         else
+              mem (r15 + 8w + r2 << 2 + 3w) @@ mem (r15 + 8w + r2 << 2 + 2w) @@
+              mem (r15 + 8w + r2 << 2 + 1w) @@ mem (r15 + 8w + r2 << 2)``)])];
+
+(*
 val go = step "v4";
 *)
 val _ = test "validate_arm_step" (fn l => List.map (validate_arm_step "v4") l)
