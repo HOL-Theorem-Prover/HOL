@@ -413,7 +413,7 @@ in
      warn ("WARNING! WARNING!");
      ignore (TextIO.inputLine TextIO.stdIn))
   else ()
-end;
+end handle OS.SysErr _ => die ("File "^s^" has disappeared.");
 
 val _ = check_against "tools/smart-configure.sml"
 val _ = check_against "tools/configure.sml"

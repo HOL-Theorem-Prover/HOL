@@ -77,7 +77,7 @@ predicate as the set of all values that satisfy it, the \ml{pred\_sets} library
 also provides a general way of constructing sets by describing or specifying
 their elements.  Roughly speaking, there are two components to a generalized
 set specification: an expression \ml{E[x]} and a predicate \ml{P[x]}. For any
-such expression and predicate, there is a corresponding set 
+such expression and predicate, there is a corresponding set
 {\small\verb!{E[x] | P[x]}!}, the set of all values {\small\verb!E[x]!} for
 which {\small\verb!P[x]!} holds.
 
@@ -107,7 +107,7 @@ following constant specification:
 of specification!for generalized set specifications} for \ml{IN}.
 This states that a value \ml{v} is an element of the set specified by
 \ml{f} exactly when \ml{v} is one of the values of \ml{FST(f x)} for which
-\ml{SND(f x)} is true.  
+\ml{SND(f x)} is true.
 
 To see how this supports the notion of generalized set specification described
 above, let \ml{f} in this definition be the function
@@ -127,7 +127,7 @@ which \ml{P[x]} holds.
 
 To facilitate the use of sets constructed by generalized set specification, the
 \ml{pred\_sets}\linebreak[3] library provides parser and pretty-printer support
-for set abstractions expressed by the notation 
+for set abstractions expressed by the notation
 {\small\verb!"{!$E$\verb! | !$P$\verb!}"!}.  The built-in \ML\ function
 \ml{define\_set\_abstraction\_syntax}%
 \index{define\_set\_abstraction\_syntax@{\ptt
@@ -242,7 +242,7 @@ specification.
 The \ml{pred\_sets} library provides proof support for the set abstraction
 notation in the form of a conversion called \ml{SET\_SPEC\_CONV}.  This
 conversion implements the axiom of specification for set abstractions.%
-\index{axiom of specification!for set abstractions} 
+\index{axiom of specification!for set abstractions}
 When $v$ is a variable, evaluating:
 
 \begin{hol}\def\m#1{\mbox{\small$#1$}}\begin{alltt}
@@ -266,7 +266,7 @@ be a variable. The following session illustrates this use of
 |- 12 IN {n | n > N} = 12 > N
 \end{verbatim}\end{session}}
 
-\pagebreak[3] 
+\pagebreak[3]
 
 The conversion \ml{SET\_SPEC\_CONV} behaves differently when applied to terms
 of the form {\small\verb!"!$t$\verb! IN {!$E$\verb! | !$P$\verb!}"!} where
@@ -337,10 +337,10 @@ of type \ml{*}.{\samepage  These constants are defined formally as follows:
 \noindent The\index{naming conventions!for definitions|(} theorems
 \ml{EMPTY\_DEF} and \ml{UNIV\_DEF} shown above are named according
 to the general convention that all definitions in the \ml{pred\_sets} library
-are given names ending 
+are given names ending
 in `{\small\verb!_DEF!}'.\index{naming conventions!for definitions|)}}
 
-\pagebreak[3] 
+\pagebreak[3]
 
 Note that because of the restriction on free variables discussed above, the set
 abstractions {\small\verb!"{x | T}"!} and {\small\verb!"{x | F}"!} cannot be
@@ -409,10 +409,10 @@ are the following facts about set inclusion and the empty and universal sets:
 \index{NOT\_PSUBSET\_EMPTY@{\ptt NOT\_PSUBSET\_EMPTY}}
 \index{NOT\_UNIV\_PSUBSET@{\ptt NOT\_UNIV\_PSUBSET}}
 \begin{verbatim}
-  EMPTY_SUBSET       |- !s. {} SUBSET s     
-  SUBSET_UNIV        |- !s. s SUBSET UNIV   
+  EMPTY_SUBSET       |- !s. {} SUBSET s
+  SUBSET_UNIV        |- !s. s SUBSET UNIV
   NOT_PSUBSET_EMPTY  |- !s. ~s PSUBSET {}
-  NOT_UNIV_PSUBSET   |- !s. ~UNIV PSUBSET s  
+  NOT_UNIV_PSUBSET   |- !s. ~UNIV PSUBSET s
 \end{verbatim}\end{hol}
 
 \noindent As\index{naming conventions!for theorems generally|(} these examples
@@ -462,7 +462,7 @@ set in question.\index{naming conventions!for membership conditions|)}
 \begin{verbatim}
    IN_UNION  |- !s t x. x IN (s UNION t) = x IN s \/ x IN t
    IN_INTER  |- !s t x. x IN (s INTER t) = x IN s /\ x IN t
-   IN_DIFF   |- !s t x. x IN (s DIFF t) = x IN s /\ ~x IN t 
+   IN_DIFF   |- !s t x. x IN (s DIFF t) = x IN s /\ ~x IN t
 \end{verbatim}\end{hol}
 
 \noindent These theorems, which are saved in the library under the names
@@ -481,7 +481,7 @@ definition of which is:
 \index{definition!of DISJOINT@of {\ptt DISJOINT}}
 \index{DISJOINT\_DEF@{\ptt DISJOINT\_DEF}}
 \begin{verbatim}
-   DISJOINT_DEF  |- !s t. DISJOINT s t = (s INTER t = {}) 
+   DISJOINT_DEF  |- !s t. DISJOINT s t = (s INTER t = {})
 \end{verbatim}\end{hol}
 
 \noindent At present, there are relatively few pre-proved theorems about the
@@ -675,7 +675,7 @@ appropriate result.\index{IN\_CONV@{\ptt IN\_CONV}|)}%
 
 The\index{UNION\_CONV@{\ptt UNION\_CONV}|(}%
 \index{conversions!UNION\_CONV@{\ptt UNION\_CONV}|(}
-\ml{pred\_sets} library contains a conversion 
+\ml{pred\_sets} library contains a conversion
 
 \begin{hol}\begin{verbatim}
    UNION_CONV : conv -> conv
@@ -765,7 +765,7 @@ is the set {\small\verb!"{3,2,SUC 0}"!}, rather than
 
 The\index{INSERT\_CONV@{\ptt INSERT\_CONV}|(}%
 \index{conversions!INSERT\_CONV@{\ptt INSERT\_CONV}|(}
-conversion \ml{INSERT\_CONV} performs the following reduction 
+conversion \ml{INSERT\_CONV} performs the following reduction
 on finite sets:
 
 \begin{hol}\begin{alltt}
@@ -826,9 +826,9 @@ The\index{DELETE\_CONV@{\ptt DELETE\_CONV}|(}%
 conversion \ml{DELETE\_CONV} reduces terms of the form
 {\small\verb!"{!\tt$t_1$,\dots,$t_n$\verb!} DELETE !$t$\verb!"!}
 by deleting all elements provably equal to {\small$t$} from the set
-{\small\verb!{!\tt$t_1$,\dots,$t_n$\verb!}!}. 
+{\small\verb!{!\tt$t_1$,\dots,$t_n$\verb!}!}.
 Like \ml{IN\_CONV} and \ml{INSERT\_CONV}, the function \ml{DELETE\_CONV} takes
-a conversion for deciding equality of set elements as an argument. 
+a conversion for deciding equality of set elements as an argument.
 If \ml{conv}
 is such a conversion, the call:
 
@@ -846,7 +846,7 @@ is such a conversion, the call:
  {\small\verb!{!\tt$t_i$,\dots,$t_j$\verb!}!} is the set of all
 values {\small$t_k$} in the original set
  {\small\verb!{!\tt$t_1$,\dots,$t_n$\verb!}!} for which \ml{conv} proves
-{\tt |- ($t_k$ = $t$) = F}, and where for all {\small$t_k$} in 
+{\tt |- ($t_k$ = $t$) = F}, and where for all {\small$t_k$} in
 {\small\verb!{!\tt$t_1$,\dots,$t_n$\verb!}!} but not in
  {\small\verb!{!\tt$t_i$,\dots,$t_j$\verb!}!}, either  {\small$t_k$}
 is alpha-equivalent to  {\small$t$} or \ml{conv} proves
@@ -990,7 +990,7 @@ removing redundant occurrences of its elements.
 
 The following session shows a simple example of the use of \ml{IMAGE\_CONV} on
 terms of the form
-{\small\tt\verb!"IMAGE (\x.x+2) {!$t_1$,\dots,$t_n$\verb!}"!}.  
+{\small\tt\verb!"IMAGE (\x.x+2) {!$t_1$,\dots,$t_n$\verb!}"!}.
 We first define a conversion that evaluates the
 result of applying the function {\small\verb!(\x.x+2)!} to a term {\small$t$}.
 
@@ -1022,7 +1022,7 @@ redundant by virtue of being alpha-equivalent to some other element (as in the
 second example above).
 
 The following session illustrates the use of the second parameter to
-\ml{IMAGE\_CONV}.  
+\ml{IMAGE\_CONV}.
 
 \begin{session}\begin{verbatim}
 #IMAGE_CONV BETA_CONV NO_CONV "IMAGE (\x. SUC x) {1,SUC 0,2,0}";;
@@ -1053,7 +1053,7 @@ distinct element of the set \ml{t}:
 \index{definition!of INJ@of {\ptt INJ}}
 \index{INJ\_DEF@{\ptt INJ\_DEF}}
 \begin{verbatim}
-   INJ_DEF = 
+   INJ_DEF =
    |- !f s t.
        INJ f s t =
        (!x. x IN s ==> (f x) IN t) /\
@@ -1068,7 +1068,7 @@ some element \ml{y} of \ml{s} for which {\small\verb!f y = x!}:
 \index{definition!of SURJ@of {\ptt SURJ}}
 \index{SURJ\_DEF@{\ptt SURJ\_DEF}}
 \begin{verbatim}
-   SURJ_DEF = 
+   SURJ_DEF =
    |- !f s t.
        SURJ f s t =
        (!x. x IN s ==> (f x) IN t) /\

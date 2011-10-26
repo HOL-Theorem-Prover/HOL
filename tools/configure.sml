@@ -466,8 +466,8 @@ val _ =
  in
    (* "unquote" scripts use the unquote executable to provide nice
       handling of double-backquote characters *)
-   emit_hol_unquote_script target qend;
-   emit_hol_unquote_script target_boss qend_boss
+   emit_hol_unquote_script target qend [];
+   emit_hol_unquote_script target_boss qend_boss []
  end;
 
 val _ =
@@ -477,8 +477,8 @@ val _ =
      val qend        = fullPath [holdir,   "tools/end-init.sml"]
      val qend_boss   = fullPath [holdir,   "tools/end-init-boss.sml"]
  in
-  emit_hol_script target qend;
-  emit_hol_script target_boss qend_boss
+  emit_hol_script target qend [];
+  emit_hol_script target_boss qend_boss []
  end;
 
 (* Remove Poly/HOL executables from bin, if they're there *)

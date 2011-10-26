@@ -151,7 +151,7 @@ val _ = computeLib.add_funs
    aligned_con_plus4_thm, aligned_con_plus4_thm2,
    aligned_con_shift_thms, aligned_con_shift_thms2,
    aligned_con_rrx_thms, aligned_con_rrx_thms2,
-   align_bx_bit, aligned_bx_branch,
+   align_bx_bit, aligned_bx_branch, align_ldr_lsl,
    aligned_bx_1comp, aligned_bx_2comp,
    aligned_bx_and, aligned_bx_eor, aligned_bx_orr,
    aligned_bx_add_with_carry, aligned_bx_add_sub,
@@ -866,8 +866,7 @@ fun prove_comp_thm the_state P H G X = Q.prove(
     \\ computeLib.RESTR_EVAL_TAC restr_terms
     \\ ASM_SIMP_TAC (srw_ss()++boolSimps.CONJ_ss)
          [UPD11_SAME_KEY_AND_BASE, UPDATE_EQ, UPDATE_ID_o2, APPLY_UPDATE_THM,
-          WORD_EQ_ADD_LCANCEL_0, align_aligned]
-          );
+          WORD_EQ_ADD_LCANCEL_0, align_aligned, align_aligned3]);
 
 local
   val lem1 = trace ("metis",0) (METIS_PROVE [WORD_EQ_ADD_RCANCEL])

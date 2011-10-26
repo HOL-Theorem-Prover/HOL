@@ -486,12 +486,12 @@ in
      warn ("WARNING! WARNING!");
      ignore (TextIO.inputLine TextIO.stdIn))
   else ()
-end;
+end handle OS.SysErr _ => die ("File "^s^" has disappeared.");
 
 val _ = check_against "tools-poly/smart-configure.sml"
 val _ = check_against "tools-poly/configure.sml"
 val _ = check_against "tools-poly/build.sml"
-val _ = check_against "tools-poly/Holmake/Systeml.sig"
+val _ = check_against "tools/Holmake/Systeml.sig"
 
 fun symlink_check() =
     if OS = "winNT" then

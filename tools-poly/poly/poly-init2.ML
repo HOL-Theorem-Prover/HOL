@@ -1,7 +1,7 @@
 (* this is an -*- sml -*- file *)
 val _ = use "poly/poly-init.ML";
 
-val _ = use "Holmake/Systeml.sig";
+val _ = use "../tools/Holmake/Systeml.sig";
 val _ = use "Holmake/Systeml.sml";
 
 local
