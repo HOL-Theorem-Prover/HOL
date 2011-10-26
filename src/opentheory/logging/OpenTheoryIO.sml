@@ -2,19 +2,39 @@ structure OpenTheoryIO :> OpenTheoryIO = struct
 
 open Opentheory Logging
 
-fun term_to_article out t = let
+val ERR = Feedback.mk_HOL_ERR "OpenTheoryIO"
+
+fun thm_to_article out th = let
   val _ = raw_start_logging out
-  val _ = export_thm (mk_thm([],t))
+  val th = th()
+  val _ = export_thm th
   val _ = stop_logging()
 in () end
 
-fun article_to_thm inp = let
+fun term_to_article out t = thm_to_article out (fn()=>mk_thm([],t))
+
+val article_to_thm = let
+  val ERR = ERR "article_to_thm"
+in fn inp => let
   val thms = raw_read_article inp {
-    define_const = fn _ => raise Fail "define_const",
-    define_tyop = fn _ => raise Fail "define_tyop",
+    define_tyop = fn _ => raise ERR "define_tyop",
+    define_const = fn _ => raise ERR "define_const",
     axiom = axiom_in_db,
     const_name = const_name_in_map,
     tyop_name = tyop_name_in_map}
-in hd (Net.listItems thms) end
+in hd (Net.listItems thms) end end
+
+val article_to_term = let
+  exception E of term
+  val ERR = ERR "article_to_term"
+in fn inp =>
+  ( raw_read_article inp {
+    define_tyop = fn _ => raise ERR "define_tyop",
+    define_const = fn _ => raise ERR "define_const",
+    axiom = fn _ => fn (_,c) => raise (E c),
+    const_name = const_name_in_map,
+    tyop_name = tyop_name_in_map } ; raise ERR "no theorem" )
+  handle E t => t
+end
 
 end
