@@ -37,4 +37,10 @@ in fn inp =>
   handle E t => t
 end
 
+fun url_conv url tm = let
+  val t = OS.FileSys.tmpName()
+  val _ = term_to_article (TextIO.openOut t) tm
+  val t = Curl.submitFile {url=url,field="article",file=t}
+in article_to_thm t end
+
 end
