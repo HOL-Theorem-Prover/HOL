@@ -11,7 +11,8 @@ fun thm_to_article out th = let
   val _ = stop_logging()
 in () end
 
-fun term_to_article out t = thm_to_article out (fn()=>mk_thm([],t))
+fun term_to_article out t = thm_to_article out
+  (fn()=>mk_thm([],list_mk_comb(inst[alpha|->bool,beta|->type_of t]``combin$K``,[F,t])))
 
 val article_to_thm = let
   val ERR = ERR "article_to_thm"
@@ -31,7 +32,7 @@ in fn inp =>
   ( raw_read_article inp {
     define_tyop = fn _ => raise ERR "define_tyop",
     define_const = fn _ => raise ERR "define_const",
-    axiom = fn _ => fn (_,c) => raise (E c),
+    axiom = fn _ => fn (_,c) => raise (E (rand c)),
     const_name = const_name_in_map,
     tyop_name = tyop_name_in_map } ; raise ERR "no theorem" )
   handle E t => t
