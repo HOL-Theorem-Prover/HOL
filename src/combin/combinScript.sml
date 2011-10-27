@@ -41,6 +41,7 @@ local open OpenTheoryMap in
   val _ = OpenTheory_const_name {const={Thy="combin",Name="o"},name=(["Function"],"o")}
   val _ = OpenTheory_const_name {const={Thy="combin",Name="C"},name=(["Function","Combinator"],"c")}
   val _ = OpenTheory_const_name {const={Thy="combin",Name="S"},name=(["Function","Combinator"],"s")}
+  val _ = OpenTheory_const_name {const={Thy="combin",Name="K"},name=(["Function","Combinator"],"k")}
 end
 (*---------------------------------------------------------------------------*
  * In I_DEF, the type constraint is necessary in order to meet one of        *
