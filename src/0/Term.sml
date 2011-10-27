@@ -876,7 +876,7 @@ fun ty_beta_conv (TComb(TAbs(_,Body), Rand)) =
      in
        subs (Body,0)
      end
-  | ty_beta_conv (Comb(x as Clos _, Rand)) = ty_beta_conv (Comb(push_clos x, Rand))
+  | ty_beta_conv (TComb(x as Clos _, Rand)) = ty_beta_conv (TComb(push_clos x, Rand))
   | ty_beta_conv (x as Clos _) = ty_beta_conv (push_clos x)
   | ty_beta_conv _ = raise ERR "ty_beta_conv" "not a type beta-redex";
 

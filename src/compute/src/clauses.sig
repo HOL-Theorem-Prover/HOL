@@ -8,7 +8,7 @@ sig
 
   datatype 'a fterm = (* order of Args: outermost ahead *)
       CST of { Head : term,
-               Args : (term * 'a fterm) list,
+               Args : ((hol_type, term * 'a fterm)Lib.sum) list,
                Rws  : 'a,
                Skip : int option }
     | NEUTR
@@ -21,6 +21,9 @@ sig
     | Abs of 'a dterm
     | TyApp of 'a dterm * hol_type list (* perhaps types not needed *)
     | TyAbs of hol_type * 'a dterm (* perhaps bound type var not needed *)
+
+  val pp_fterm : PP.ppstream -> 'a fterm -> unit
+  val pp_dterm : PP.ppstream -> 'a dterm -> unit
 
   val is_skip : 'a * 'b fterm -> bool
   val inst_type_dterm : (hol_type,hol_type) subst * 'a dterm -> 'a dterm

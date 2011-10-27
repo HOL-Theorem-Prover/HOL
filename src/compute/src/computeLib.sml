@@ -9,21 +9,99 @@ val auto_import_definitions = ref true;
 
 type compset = comp_rws;
 
+type db_fterm = db fterm
+type db_dterm = db dterm
+
 val new_compset = from_list;
 
 type cbv_stack =
   ((thm->thm->thm) * (thm * db fterm),
    (thm->thm->thm) * bool * (thm * db fterm),
    (thm->thm),
-   (thm->thm),
+   (thm->thm) * hol_type,
    (thm->thm)
   ) stack;
+
+fun pp_thm_fterm pps (th:thm, ftm:db fterm) =
+  let open Portable
+     val {add_string,add_break,begin_block,end_block,...} = with_ppstream pps
+     val pp_thm = Parse.pp_thm pps
+     val pp_fterm = pp_fterm pps
+ in
+   add_string "(";
+   begin_block INCONSISTENT 0;
+   pp_thm th;
+   add_string ","; add_break(1,0);
+   pp_fterm ftm;
+   end_block();
+   add_string ")"
+ end
+
+fun pp_b_thm_fterm pps (b:bool, th_ftm:thm * db fterm) =
+  let open Portable
+     val {add_string,add_break,begin_block,end_block,...} = with_ppstream pps
+     val pp_thm_fterm = pp_thm_fterm pps
+ in
+   add_string "(";
+   begin_block INCONSISTENT 0;
+   if b then add_string "true" else add_string "false";
+   add_string ","; add_break(1,0);
+   pp_thm_fterm th_ftm;
+   end_block();
+   add_string ")"
+ end
+
+val pp_cbv_stack : ppstream -> cbv_stack -> unit
+  = pp_stack ( (fn pps => fn (_,th_ftm) => pp_thm_fterm pps th_ftm),
+               (fn pps => fn (_,b,th_ftm) => pp_b_thm_fterm pps (b,th_ftm)),
+               (fn pps => fn (_) => ()),
+               (fn pps => fn (_,ty) => Parse.pp_type pps ty),
+               (fn pps => fn (_) => ()) )
+
+fun pp_cfg pps ((th,v),stk:cbv_stack) =
+  let open Portable
+     val {add_string,add_break,begin_block,end_block,...} = with_ppstream pps
+     val pp_thm = Parse.pp_thm pps
+     val pp_dterm = pp_dterm pps
+     val pp_fterm = pp_fterm pps
+     val pp_cbv_stack = pp_cbv_stack pps
+  in
+    begin_block CONSISTENT 0;
+    add_string "Thm ="; add_break(1,2);
+    begin_block INCONSISTENT 0;
+      pp_thm th;
+    end_block();
+    add_string "\n";
+    add_string "Ftm ="; add_break(1,2);
+    begin_block INCONSISTENT 0;
+      pp_fterm v;
+    end_block();
+    add_string "\n";
+    add_string "Ctx ="; add_break(1,2);
+    begin_block INCONSISTENT 0;
+      pp_cbv_stack stk;
+    end_block();
+    end_block();
+    add_string "\n\n"
+  end;
+
+fun make_to_backend_string ppf x = Portable.pp_to_string (!Globals.linewidth) ppf x
+fun lazy_make_to_string ppf = Lib.with_flag (Parse.current_backend, PPBackEnd.raw_terminal) (fn x => make_to_backend_string (ppf()) x)
+fun make_to_string ppf = lazy_make_to_string (fn()=>ppf)
+fun make_print to_string t = Portable.output(Portable.std_out, to_string t)
+
+val type_to_string = Parse.type_to_string
+val term_to_string = Parse.term_to_string
+val  thm_to_string = Parse.thm_to_string
+
+val cfg_to_string = make_to_string (pp_cfg : ppstream -> (thm * db fterm) * cbv_stack -> unit);
+val print_cfg = make_print cfg_to_string;
 
 fun stack_out(th, Ztop) = th
   | stack_out(th, Zrator{Rand=(mka,(thb,_)), Ctx}) = stack_out(mka th thb,Ctx)
   | stack_out(th,Zrand{Rator=(mka,_,(tha,_)),Ctx}) = stack_out(mka tha th, Ctx)
   | stack_out(th, Zabs{Bvar=mkl, Ctx})             = stack_out(mkl th, Ctx)
-  | stack_out(th, Ztyrator{Rand=mk1, Ctx})         = stack_out(mk1 th, Ctx)
+  | stack_out(th, Ztyrator{Rand=(mk1,_), Ctx})     = stack_out(mk1 th, Ctx)
   | stack_out(th, Ztyabs{Bvar=mkl, Ctx})           = stack_out(mkl th, Ctx)
 ;
 
@@ -31,6 +109,126 @@ fun stack_out(th, Ztop) = th
 fun initial_state rws t =
   ((refl_thm t, mk_clos([],from_term (rws,[],t))), Ztop : cbv_stack);
 
+
+val trace_steps = ref true;
+
+datatype direction = wk | up | done;
+
+fun cbv (wk, ((th,CLOS{Env, Term=App(a,args)}), stk)) =
+      let val (tha,stka) =
+            foldl (push_in_stk (curry mk_clos Env)) (th,stk) args
+      in
+      if !trace_steps
+        then print "Push term arguments on stack, and focus on operator.\n\n"
+        else ();
+      (wk, ((tha, mk_clos(Env,a)), stka))
+      end
+  | cbv (wk, ((th,CLOS{Env, Term=Abs body}),
+	    Zrator{Rand=(mka,(thb,cl)), Ctx=s'})) =
+     (if !trace_steps
+        then print ("Beta reduce this abs with the first term argument above,\n" ^
+                    (term_to_string (rhs_concl thb)) ^
+                    ", on the theorem\n" ^
+                    (thm_to_string (mka th thb)) ^ ".\n\n")
+        else ();
+      (wk, ((beta_thm(mka th thb), mk_clos(cl :: Env, body)), s')))
+  | cbv (wk, ((th,CLOS{Env, Term=TyApp(a,args)}), stk)) =
+      let val (tha,stka) =
+            foldl push_tycomb_in_stk (th,stk) args in
+      if !trace_steps
+        then print "Push type arguments on stack, and focus on operator.\n\n"
+        else ();
+      (wk, ((tha, mk_clos(Env,a)), stka))
+      end
+  | cbv (wk, ((th,CLOS{Env, Term=TyAbs(tyv,body)}),
+	    Ztyrator{Rand=(mkl,ty), Ctx=s'})) =
+      let val body' = inst_type_dterm([tyv |-> ty], body) in
+      if !trace_steps
+        then print ("Type-beta reduce this tyabs with the first type argument above, " ^
+                    (type_to_string ty) ^
+                    ", on the theorem\n" ^
+                    (thm_to_string (mkl th)) ^ ".\n\n")
+        else ();
+      (wk, ((tybeta_thm(mkl th), mk_clos(Env, body')), s'))
+      end
+  | cbv (wk, ((th,CST cargs), stk)) =
+      let val (reduced,clos) = reduce_cst (th,cargs) in
+      if !trace_steps
+        then print ((if reduced then "Successfully" else "Failed to")
+                      ^ " reduce (replace) this constant.\n\n")
+        else ();
+      if reduced then (wk, (clos,stk)) else (up, (clos,stk))
+      end
+  | cbv (wk, (clos, stk)) =
+     (if !trace_steps
+        then print "Can't go down any more, start going up.\n\n"
+        else ();
+      (up, (clos,stk)))
+
+  | cbv (up, (hcl, Zrator{Rand=(mka,clos), Ctx}))  =
+      let val new_state = (clos, Zrand{Rator=(mka,false,hcl), Ctx=Ctx}) in
+      if !trace_steps
+        then print ("Store " ^ term_to_string (rhs_concl (fst hcl)) ^
+                    " on stack, and shift to " ^ term_to_string (rhs_concl (fst clos)) ^
+                    "; going " ^
+                    (if is_skip hcl then "up " else "down")
+                      ^ ".\n\n")
+        else ();
+      if is_skip hcl then (up, new_state) else (wk, new_state)
+      end
+  | cbv (up, ((thb,v), Zrand{Rator=(mka,false,(th,CST cargs)), Ctx=stk})) =
+     (if !trace_steps
+        then print ("Finished " ^ term_to_string (rhs_concl thb) ^
+                    "; combining with constant Rator and going down on\n" ^
+                    (term_to_string (rhs_concl (mka th thb)))
+                      ^ " .\n\n")
+        else ();
+      (wk, ((mka th thb, comb_ct cargs (inR(rhs_concl thb, v))), stk)))
+  | cbv (up, ((thb,NEUTR), Zrand{Rator=(mka,false,(th,NEUTR)), Ctx=stk})) =
+     (if !trace_steps
+        then print ("Finished " ^ term_to_string (rhs_concl thb) ^
+                    "; combining with neutral Rator and going up on\n" ^
+                    (term_to_string (rhs_concl (mka th thb)))
+                      ^ " .\n\n")
+        else ();
+      (up, ((mka th thb, NEUTR), stk)))
+  | cbv (up, ((th,CST cargs), Ztyrator{Rand=(mkl,ty), Ctx=stk})) =
+     (if !trace_steps
+        then print ("Finished " ^ term_to_string (rhs_concl th) ^ " as tyrator" ^
+                    "; combining with constant Rator (type) and going down on\n" ^
+                    (term_to_string (rhs_concl (mkl th)))
+                      ^ " .\n\n")
+        else ();
+      (wk, ((mkl th, comb_ct cargs (inL ty)), stk)))
+  | cbv (up, ((th,v), Ztyrator{Rand=(mkl,ty), Ctx=stk})) =
+     (if !trace_steps
+        then print ("Finished " ^ term_to_string (rhs_concl th) ^ " as tyrator" ^
+                    "; combining with non-constant Rator and going down on\n" ^
+                    (term_to_string (rhs_concl (mkl th)))
+                      ^ " .\n\n")
+        else ();
+      (wk, ((mkl th, v), stk)))
+  | cbv (up, (clos, stk)) = (done, (clos,stk))
+
+  | cbv (done, (clos, stk)) = raise DEAD_CODE "cbv(done)"
+;
+
+fun print_trace s (dir,cfg) =
+  if !trace_steps then (if s=0 then print "\n" else ();
+                        print ("Step " ^ Int.toString s ^ ", going ");
+                        print (case dir of wk => "down" | _ => "up");
+                        print (":\n");
+                        print_cfg cfg) else ();
+
+fun steps m (x as (dir,_)) = 
+       if dir=done
+       then (print ("Done! (Took " ^ Int.toString m ^ " steps)\n"); x)
+       else let val z = cbv x
+            in
+              print "Weak ";
+              print_trace (m+1) z;
+              steps (m+1) z
+            end;
 
 (*---------------------------------------------------------------------------
  * [cbv_wk (rws,(th,cl),stk)] puts the closure cl (useful information about
@@ -59,6 +257,16 @@ fun cbv_wk ((th,CLOS{Env, Term=App(a,args)}), stk) =
   | cbv_wk ((th,CLOS{Env, Term=Abs body}),
 	    Zrator{Rand=(mka,(thb,cl)), Ctx=s'}) =
       cbv_wk ((beta_thm(mka th thb), mk_clos(cl :: Env, body)), s')
+  | cbv_wk ((th,CLOS{Env, Term=TyApp(a,args)}), stk) =
+      let val (tha,stka) =
+            foldl push_tycomb_in_stk (th,stk) args in
+      cbv_wk ((tha, mk_clos(Env,a)), stka)
+      end
+  | cbv_wk ((th,CLOS{Env, Term=TyAbs(tyv,body)}),
+	    Ztyrator{Rand=(mkl,ty), Ctx=s'}) =
+      let val body' = inst_type_dterm([tyv |-> ty], body) in
+      cbv_wk ((tybeta_thm(mkl th), mk_clos(Env, body')), s')
+      end
   | cbv_wk ((th,CST cargs), stk) =
       let val (reduced,clos) = reduce_cst (th,cargs) in
       if reduced then cbv_wk (clos,stk) else cbv_up (clos,stk)
@@ -82,11 +290,67 @@ and cbv_up (hcl, Zrator{Rand=(mka,clos), Ctx})  =
       if is_skip hcl then cbv_up new_state else cbv_wk new_state
       end
   | cbv_up ((thb,v), Zrand{Rator=(mka,false,(th,CST cargs)), Ctx=stk}) =
-      cbv_wk ((mka th thb, comb_ct cargs (rhs_concl thb, v)), stk)
+      cbv_wk ((mka th thb, comb_ct cargs (inR(rhs_concl thb, v))), stk)
   | cbv_up ((thb,NEUTR), Zrand{Rator=(mka,false,(th,NEUTR)), Ctx=stk}) =
       cbv_up ((mka th thb, NEUTR), stk)
+  | cbv_up ((th,CST cargs), Ztyrator{Rand=(mkl,ty), Ctx=stk}) =
+      cbv_wk ((mkl th, comb_ct cargs (inL ty)), stk)
+  | cbv_up ((th,v), Ztyrator{Rand=(mkl,ty), Ctx=stk}) =
+      cbv_wk ((mkl th, v), stk)
   | cbv_up (clos, stk) = (clos,stk)
 ;
+
+local
+val cbv_wk = fn cfg =>
+  (print "Beginning weak reduction.\n";
+   print_trace 0 (wk,cfg);
+   let val (dir,res) = steps 0 (wk,cfg)
+   in print "\nEnding weak reduction.\n\n";
+      res
+   end)
+in
+fun str (wk, ((th, CLOS{Env,Term=Abs t}), stk)) =
+      let val (thb,stk') = push_lam_in_stk(th,stk) in
+      (wk, (cbv_wk((thb, mk_clos(NEUTR :: Env, t)), stk')))
+      end
+  | str (wk, ((th, CLOS{Env,Term=TyAbs(tyv,body)}), stk)) =
+      let val (thb,stk') = push_tylam_in_stk(th,stk) in
+      (wk, (cbv_wk((thb, mk_clos(Env, body)), stk')))
+      end
+  | str (wk, (clos as (_,CLOS _), stk)) = raise DEAD_CODE "str"
+  | str (wk, (hcl as (th,CST {Args,...}), stk)) =
+      let val (th',stk') =
+ 	if is_skip hcl then (th,stk)
+ 	else foldl push_arg_in_stk (th,stk) Args in
+      (up, ((th',NEUTR),stk'))
+      end
+  | str (wk, ((th, NEUTR), stk)) = (up, ((th,NEUTR),stk))
+
+  | str (up, ((th,_), Ztop)) = (done, ((th,NEUTR), Ztop))
+  | str (up, ((th,_), Zrand{Rator=(mka,false,(tha,NEUTR)), Ctx})) =
+      (wk, (cbv_wk((mka tha th,NEUTR), Ctx)))
+  | str (up, ((th,_), Zrand{Rator=(mka,false,clos), Ctx})) =
+      raise DEAD_CODE "str (up)"
+  | str (up, ((th,_), Zrator{Rand=(mka,clos), Ctx})) =
+      (wk, (cbv_wk(clos, Zrand{Rator=(mka,true,(th,NEUTR)), Ctx=Ctx})))
+  | str (up, ((th,_), Zrand{Rator=(mka,true,(tha,_)), Ctx})) =
+      (up, ((mka tha th,NEUTR), Ctx))
+  | str (up, ((th,_), Zabs{Bvar=mkl, Ctx})) = (up, ((mkl th,NEUTR), Ctx))
+  | str (up, ((th,_), Ztyrator{Rand=(mk1,ty), Ctx})) = (up, ((mk1 th,NEUTR), Ctx))
+  | str (up, ((th,_), Ztyabs{Bvar=mkl, Ctx})) = (up, ((mkl th,NEUTR), Ctx))
+
+  | str (done, (th,_)) = raise DEAD_CODE "str done"
+end;
+
+fun steps_str m (x as (dir,_)) = 
+       if dir=done
+       then (print ("Done! (Took " ^ Int.toString m ^ " steps)\n"); x)
+       else let val z = str x
+            in
+              print "Strong ";
+              print_trace (m+1) z;
+              steps_str (m+1) z
+            end;
 
 (*---------------------------------------------------------------------------
  * [strong] continues the reduction of a term in head normal form under
@@ -98,11 +362,15 @@ fun strong ((th, CLOS{Env,Term=Abs t}), stk) =
       let val (thb,stk') = push_lam_in_stk(th,stk) in
       strong (cbv_wk((thb, mk_clos(NEUTR :: Env, t)), stk'))
       end
+  | strong ((th, CLOS{Env,Term=TyAbs(tyv,body)}), stk) =
+      let val (thb,stk') = push_tylam_in_stk(th,stk) in
+      strong (cbv_wk((thb, mk_clos(Env, body)), stk'))
+      end
   | strong (clos as (_,CLOS _), stk) = raise DEAD_CODE "strong"
   | strong (hcl as (th,CST {Args,...}), stk) =
       let val (th',stk') =
  	if is_skip hcl then (th,stk)
- 	else foldl (push_in_stk snd) (th,stk) Args in
+ 	else foldl push_arg_in_stk (th,stk) Args in
       strong_up (th',stk')
       end
   | strong ((th, NEUTR), stk) = strong_up (th,stk)
@@ -117,6 +385,8 @@ and strong_up (th, Ztop) = th
   | strong_up (th, Zrand{Rator=(mka,true,(tha,_)), Ctx}) =
       strong_up (mka tha th, Ctx)
   | strong_up (th, Zabs{Bvar=mkl, Ctx}) = strong_up (mkl th, Ctx)
+  | strong_up (th, Ztyrator{Rand=(mk1,ty), Ctx}) = strong_up (mk1 th, Ctx)
+  | strong_up (th, Ztyabs{Bvar=mkl, Ctx}) = strong_up (mkl th, Ctx)
 ;
 
 
@@ -179,6 +449,22 @@ in
 end
 
 val the_compset = bool_compset();
+
+fun trace_weak tm =
+  let val x = initial_state the_compset tm
+  in
+    print_trace 0 (wk, x);
+    fst (fst (snd (steps 0 (wk, x))))
+  end;
+
+fun trace_strong tm =
+  let val x = initial_state the_compset tm
+      val _ = print_trace 0 (wk, x)
+      val (_,y) = steps 0 (wk, x)
+  in
+    print_trace 0 (wk, y);
+    fst (fst (snd (steps_str 0 (wk, y))))
+  end;
 
 val add_funs = Lib.C add_thms the_compset;
 val add_convs = List.app (Lib.C add_conv the_compset);

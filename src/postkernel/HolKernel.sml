@@ -8,7 +8,7 @@ struct
      Miscellaneous other stuff that builds on top of kernel facilities.
  ---------------------------------------------------------------------------*)
 
-infixr ==>;  infixr -->;  infix |->;
+infixr ==>;  infixr -->;  infix |->;  infix :>=: :=:;
 
 val ERR = mk_HOL_ERR "HolKernel";
 

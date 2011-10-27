@@ -484,7 +484,7 @@ end
 
 fun prim_mk_con_type Tyop = TyCon (first_decl "mk_con_type" Tyop)
 
-fun mk_con_type {Tyop,Kind} = let
+fun mk_con_type (Tyop,Kind) = let
   open KernelSig
   val c = prim_mk_con_type Tyop
   val (id,Kind0) = case c of TyCon p => p

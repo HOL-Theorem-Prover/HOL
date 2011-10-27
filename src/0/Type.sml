@@ -904,7 +904,7 @@ in
 
 fun prim_mk_con_type Tyop = TyCon (first_decl Tyop);
 
-fun mk_con_type {Tyop,Kind} = let
+fun mk_con_type (Tyop,Kind) = let
   open KernelSig
   val c = prim_mk_con_type Tyop
   val (id,Kind0) = case c of TyCon p => p
@@ -941,7 +941,7 @@ end
 
 (*
 prim_mk_con_type "fun";
-mk_con_type {Tyop="fun", Kind=mk_arity 2};
+mk_con_type ("fun", mk_arity 2);
 mk_type("fun",[alpha,beta]);
 mk_type("bool",[]);
 mk_app_type(prim_mk_con_type "fun", prim_mk_con_type "bool");

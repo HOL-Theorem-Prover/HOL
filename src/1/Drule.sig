@@ -7,6 +7,7 @@ sig
   val ETA_CONV         : term -> thm
   val TY_ETA_CONV      : term -> thm
   val RIGHT_ETA        : thm -> thm
+  val RIGHT_TY_ETA     : thm -> thm
   val EXT              : thm -> thm
   val TY_EXT           : thm -> thm
   val MK_ABS           : thm -> thm

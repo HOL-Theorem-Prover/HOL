@@ -10,6 +10,13 @@ datatype ('a,'b,'c,'d,'e) stack =
   | Ztyrator of { Rand  : 'd, Ctx : ('a,'b,'c,'d,'e) stack }
   | Ztyabs   of { Bvar  : 'e, Ctx : ('a,'b,'c,'d,'e) stack }
 
+val pp_stack : ( (ppstream -> 'a -> unit) *
+                 (ppstream -> 'b -> unit) *
+                 (ppstream -> 'c -> unit) *
+                 (ppstream -> 'd -> unit) *
+                 (ppstream -> 'e -> unit) ) ->
+                  ppstream -> ('a,'b,'c,'d,'e) stack -> unit
+
 exception DEAD_CODE of string
 
 (* An abstraction of the Thm.thm type, only for testing purposes *)
@@ -24,10 +31,21 @@ val push_in_stk :  ('a -> 'b) ->
 val push_lam_in_stk :
       thm * ('a, 'b, thm->thm, 'c, 'd) stack ->
       thm * ('a, 'b, thm->thm, 'c, 'd) stack
+val push_tycomb_in_stk :
+      'd * (thm * ('a, 'b, 'c, (thm->thm) * 'd, 'e) stack) ->
+            thm * ('a, 'b, 'c, (thm->thm) * 'd, 'e) stack
+val push_tylam_in_stk :
+      thm * ('a, 'b, 'c, 'd, thm->thm) stack ->
+      thm * ('a, 'b, 'c, 'd, thm->thm) stack
+val push_arg_in_stk :
+      ('e,'a * 'b)Lib.sum *
+         (thm * ((thm->thm->thm) * (thm * 'b), 'c, 'd, (thm->thm) * 'e, 'f) stack) ->
+          thm * ((thm->thm->thm) * (thm * 'b), 'c, 'd, (thm->thm) * 'e, 'f) stack
 
 val refl_thm  : Term.term -> thm
 val trans_thm : thm -> Thm.thm -> thm
 val beta_thm  : thm -> thm
+val tybeta_thm: thm -> thm
 
 
 val lazyfy_thm    : Thm.thm -> Thm.thm

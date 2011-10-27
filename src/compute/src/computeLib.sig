@@ -45,4 +45,7 @@ sig
   val del_persistent_consts : term list -> unit
   val pp_compset : PP.ppstream -> compset -> unit
 
+  (* for debugging: *)
+  val trace_weak   : term -> thm
+  val trace_strong : term -> thm
 end

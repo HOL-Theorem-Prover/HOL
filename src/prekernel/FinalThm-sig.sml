@@ -112,11 +112,13 @@ sig
   (* Computing with explicit substitutions *)
 
   val Beta          : thm -> thm
+  val TyBeta        : thm -> thm                                 (* new for HOL-Omega *)
   val Mk_comb       : thm -> thm * thm * (thm -> thm -> thm)
   val Mk_abs        : thm -> term * thm * (thm -> thm)
   val Mk_tycomb     : thm -> thm * hol_type * (thm -> thm)       (* new for HOL-Omega *)
   val Mk_tyabs      : thm -> hol_type * thm * (thm -> thm)       (* new for HOL-Omega *)
   val Specialize    : term -> thm -> thm
+  val TySpecialize  : hol_type -> thm -> thm                     (* new for HOL-Omega *)
 
   (* Multiple binders *)
 

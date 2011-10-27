@@ -23,16 +23,18 @@ fun match_const (bds,tbds) pc c =
 ;
 
 (*---------------------------------------------------------------------------
- * Match pattern variable number var with term arg.
+ * Match pattern variable number var with (term or type) arg.
  * We do not need to match types, because pattern variables appear as argument
  * of a constant which has already been matched succesfully.
  *---------------------------------------------------------------------------*)
 
 fun match_var (bds,tbds) var arg =
  let val _ =
-    case Array.sub(bds,var)
-     of SOME(tm,_) => if aconv tm (fst arg) then () else raise No_match
-      | NONE => Array.update(bds,var,SOME arg)
+    case (Array.sub(bds,var), arg)
+     of (SOME(inL ty   ), inL aty) => if eq_ty ty      aty  then () else raise No_match
+      | (SOME(inR(tm,_)), inR atm) => if aconv tm (fst atm) then () else raise No_match
+      | (SOME _, _) => raise No_match
+      | (NONE,_) => Array.update(bds,var,SOME arg)
  in
     (bds, tbds)
  end;
@@ -52,7 +54,7 @@ fun match_list bds (pat :: pats) (arg :: args) =
   | match_list _   _           _           = raise DEAD_CODE "match_list"
 
 and match_solve bds (Pvar var)           arg = match_var bds var arg
-  | match_solve bds (Papp{Head=phead,Args=pargs}) (_,CST{Head,Args,...}) =
+  | match_solve bds (Papp{Head=phead,Args=pargs}) (inR(_,CST{Head,Args,...})) =
       if length pargs = length Args
       then match_list (match_const bds phead Head) pargs Args
       else raise No_match
@@ -98,7 +100,8 @@ fun mk_clos(env,t) =
  * It is probably this code that can be improved the most
  *---------------------------------------------------------------------------*)
 
-local fun inst_one_var (SOME(tm,v),(thm,lv)) = (Specialize tm thm, v :: lv)
+local fun inst_one_var (SOME(inL ty   ),(thm,lv)) = (TySpecialize ty thm, NEUTR :: lv)
+        | inst_one_var (SOME(inR(tm,v)),(thm,lv)) = (Specialize tm thm, v :: lv)
         | inst_one_var (NONE,_) = raise DEAD_CODE "inst_rw"
 in
 fun inst_rw (th,monitoring,{Rule=RW{thm,rhs,...}, Inst=(bds,tysub)}) =

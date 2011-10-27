@@ -182,12 +182,14 @@ sig
   val new_constant          : string * hol_type -> unit
   val new_infix             : string * hol_type * int -> unit
   val new_binder            : string * hol_type -> unit
+  val new_type_binder       : string * hol_type -> unit
   val delete_const          : string -> unit
   val new_type_definition   : string * thm -> thm
   val new_type_specification: string * string list * thm -> thm
   val new_infixl_definition : string * term * int -> thm
   val new_infixr_definition : string * term * int -> thm
   val new_binder_definition : string * term -> thm
+  val new_type_binder_definition : string * term -> thm
 
 
   (* Lifter from ML bool to HOL bool *)

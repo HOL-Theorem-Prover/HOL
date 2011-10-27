@@ -29,7 +29,7 @@ sig
 
  val prim_mk_con_type : string -> hol_type
  val prim_mk_thy_con_type : {Thy:string, Tyop:string} -> hol_type
- val mk_con_type   : {Tyop:string, Kind:kind} -> hol_type
+ val mk_con_type   : string * kind -> hol_type
  val mk_thy_con_type : {Thy:string, Tyop:string, Kind:kind} -> hol_type
  val dest_con_type : hol_type -> string * kind
  val dest_thy_con_type : hol_type -> {Thy:string, Tyop:string, Kind:kind}

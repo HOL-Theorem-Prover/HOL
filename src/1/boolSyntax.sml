@@ -443,6 +443,11 @@ fun new_binder_definition (s, t) =
     before
   Parse.set_fixity (defname t) Binder
 
+fun new_type_binder_definition (s, t) =
+  Definition.new_definition(s, t)
+    before
+  Parse.set_fixity (defname t) TypeBinder
+
 fun new_type_definition (name, inhab_thm) =
   Definition.new_type_definition (name,inhab_thm)
      before
@@ -467,6 +472,11 @@ fun new_binder (p as (Name,_)) =
   Theory.new_constant p
      before
   (add_const Name; set_fixity Name Binder)
+
+fun new_type_binder (p as (Name,_)) =
+  Theory.new_constant p
+     before
+  (add_const Name; set_fixity Name TypeBinder)
 
 fun new_type (p as (Name,_)) =
   Theory.new_type p

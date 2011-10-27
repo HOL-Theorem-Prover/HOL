@@ -64,7 +64,7 @@ fun check_arg_form trm =
 datatype 'a fterm
     = (* order of Args: outermost ahead *)
       CST of { Head : term,
-               Args : (term * 'a fterm) list,
+               Args : ((hol_type, term * 'a fterm)Lib.sum) list,
                Rws  : 'a,
                Skip : int option }
     | NEUTR
@@ -93,6 +93,116 @@ and 'a dterm
     | TyAbs of hol_type * 'a dterm (* perhaps bound type var not needed *)
 ;
 
+fun pp_dterm pps dtm =
+  let open Portable
+     val {add_string,add_break,begin_block,end_block,...} = with_ppstream pps
+     val pp_type = Parse.pp_type pps
+     val pp_term = Parse.pp_term pps
+     fun pp_s (ppf :'a -> unit) (xs :'a list) =
+          ( add_string "[";
+            begin_block INCONSISTENT 0;
+            pp_s1 ppf xs;
+            end_block();
+            add_string "]" )
+     and pp_s1 ppf [] = ()
+       | pp_s1 ppf [x] = ppf x
+       | pp_s1 ppf (x :: xs) =
+          (ppf x; add_string ","; add_break(1,0); pp_s1 ppf xs)
+     val dot = "."
+     fun pp (Bv i) =
+          ( add_string "Bv ";
+            add_string (Int.toString i) )
+       | pp (Fv) =
+          ( add_string "Fv" )
+       | pp (Cst(tm, ref(db,iopt))) =
+          ( add_string "Cst ";
+            pp_term tm )
+       | pp (App(dtm, dtms)) =
+          ( add_string "App ";
+            begin_block INCONSISTENT 0;
+            pp dtm; add_break(1,0);
+            pp_s pp dtms;
+            end_block() )
+       | pp (Abs Body) =
+          ( add_string "(";
+            begin_block INCONSISTENT 0;
+            add_string "\\";
+            add_string dot; add_break(1,0);
+            pp Body;
+            end_block();
+            add_string ")" )
+       | pp (TyApp(dtm, tys)) =
+          ( add_string "TyApp ";
+            pp dtm; add_break(1,0);
+            pp_s pp_type tys )
+       | pp (TyAbs(Btyv,Body)) =
+          ( add_string "(";
+            begin_block INCONSISTENT 0;
+            add_string "\\";
+            pp_type Btyv;
+            add_string dot; add_break(1,0);
+            pp Body;
+            end_block();
+            add_string ")" )
+ in
+   begin_block INCONSISTENT 0;
+   pp dtm;
+   end_block()
+ end
+
+fun pp_fterm pps ftm =
+  let open Portable
+     val {add_string,add_break,begin_block,end_block,...} = with_ppstream pps
+     val pp_type = Parse.pp_type pps
+     val pp_term = Parse.pp_term pps
+     val pp_dterm = pp_dterm pps
+     fun pp_s (ppf :'a -> unit) (xs :'a list) =
+          ( add_string "[";
+            begin_block INCONSISTENT 0;
+            pp_s1 ppf xs;
+            end_block();
+            add_string "]" )
+     and pp_s1 ppf [] = ()
+       | pp_s1 ppf [x] = ppf x
+       | pp_s1 ppf (x :: xs) =
+          (ppf x; add_string ","; add_break(1,0); pp_s1 ppf xs)
+     val dot = "."
+     fun pp_option_int (NONE) = add_string "NONE"
+       | pp_option_int (SOME i) = add_string ("SOME " ^ Int.toString i)
+     fun pp_fterm_aux (inL ty) = pp_type ty
+       | pp_fterm_aux (inR (tm,ftm)) =
+          ( add_string "(";
+            begin_block INCONSISTENT 0;
+            pp_term tm; add_string ","; add_break(1,0);
+            pp ftm;
+            end_block();
+            add_string ")" )
+     and pp (CST{Head,Args,Rws,Skip}) =
+          ( add_string "CST{";
+            begin_block CONSISTENT 0;
+            add_string "Head = "; pp_term Head;
+            add_string ","; add_break(1,0);
+            add_string "Args = "; pp_s pp_fterm_aux Args;
+            add_string ","; add_break(1,0);
+            add_string "Skip = "; pp_option_int Skip;
+            end_block();
+            add_string "}" )
+       | pp (NEUTR) =
+          ( add_string "NEUTR" )
+       | pp (CLOS{Env,Term}) =
+          ( add_string "CLOS{";
+            begin_block INCONSISTENT 0;
+            add_string "Env  = "; pp_s pp Env;
+            add_string ","; add_break(1,0);
+            add_string "Term = "; pp_dterm Term;
+            end_block();
+            add_string "}" )
+ in
+   begin_block INCONSISTENT 0;
+   pp ftm;
+   end_block()
+ end
+
 (* Invariant: the first arg of App never is an App. *)
 
 fun appl(App(a,l1),arg) = App(a,arg::l1)
@@ -107,15 +217,29 @@ fun tyappl(TyApp(a,l1),arg) = TyApp(a,arg::l1)
  * Type variable instantiation in dterm. Make it tail-recursive ?
  *---------------------------------------------------------------------------*)
 
+fun FTV (Cst(c,dbsk)) = type_vars_in_term c
+  | FTV (App(h,l))    = U (FTV h :: map FTV l)
+  | FTV (Abs v)       = FTV v
+  | FTV (TyApp(h,tl)) = U (FTV h :: map type_vars tl)
+  | FTV (TyAbs(ty,v)) = subtract (FTV v) [ty]
+  | FTV _ = []
+
 fun inst_type_dterm ([],v) = v
   | inst_type_dterm (tysub,v) =
       let fun tyi_dt S (Cst(c,dbsk)) = Cst(Term.inst S c, dbsk)
             | tyi_dt S (App(h,l))    = App(tyi_dt S h, map (tyi_dt S) l)
   	    | tyi_dt S (Abs v)       = Abs(tyi_dt S v)
-  	    | tyi_dt S (TyApp(h,tl)) = TyApp(tyi_dt S h, map (type_subst tysub) tl)
-  	    | tyi_dt S (TyAbs(ty,v)) = let val S' = filter (fn {redex,...} => redex <> ty) S
-                                       in TyAbs(ty,tyi_dt S' v)
-                                       end
+  	    | tyi_dt S (TyApp(h,tl)) = TyApp(tyi_dt S h, map (type_subst S) tl)
+  	    | tyi_dt S (t as TyAbs(ty,v)) =
+                (* may have to avoid capture of free type vars in S by TyAbs *)
+                let val S' = filter (fn {redex,...} => redex <> ty) S
+                    val rng_S' = U (map (type_vars o #residue) S')
+                    val chng = mem ty rng_S'
+                    val ty' = if chng then variant_type (rng_S' @ FTV t) ty
+                                      else ty
+                    val S'' = if chng then (ty |-> ty') :: S' else S'
+                in TyAbs(ty',tyi_dt S'' v)
+                end
   	    | tyi_dt S v             = v
       in tyi_dt tysub v end
 ;
@@ -204,23 +328,34 @@ fun scrub_const (RWS htbl) c =
   end;
 
 fun from_term (rws,env,t) =
-  let fun down (env,t,c) =
+  (* down: precondition: type_vars_in_term t SUBSET ftyvs *)
+  let fun down (ftyvs,env,t,c) =
         case dest_term t of
 	  VAR _ => up((Bv (index (eq t) env) handle HOL_ERR _ => Fv), c)
   	| CONST{Name,Thy,...} => up(Cst (t,assoc_clause rws (Name,Thy)),c)
-  	| COMB(Rator,Rand) => down(env,Rator,Zrator{Rand=(env,Rand),Ctx=c})
-  	| LAMB(Bvar,Body) => down(Bvar :: env, Body, Zabs{Bvar=(), Ctx=c})
-  	| TYCOMB(Rator,Rand) => down(env,Rator,Ztyrator{Rand=Rand,Ctx=c})
-  	| TYLAMB(Bvar,Body) => down(env, Body, Ztyabs{Bvar=Bvar, Ctx=c})
+  	| COMB(Rator,Rand) => down(ftyvs,env,Rator,Zrator{Rand=(ftyvs,env,Rand),Ctx=c})
+  	| LAMB(Bvar,Body) => down(ftyvs,Bvar :: env, Body, Zabs{Bvar=(), Ctx=c})
+  	| TYCOMB(Rator,Rand) => down(ftyvs,env,Rator,Ztyrator{Rand=Rand,Ctx=c})
+  	| TYLAMB(Bvar,Body) =>
+            (* ensure Bvar is not the same as a free type var of t *)
+            let val Bvar' = variant_type ftyvs Bvar
+                val Body' = if Bvar = Bvar' then Body
+                            else pure_inst [Bvar |-> Bvar'] Body
+                val ftyvs' = Bvar' :: ftyvs
+            in
+              down(ftyvs', env, Body', Ztyabs{Bvar=Bvar', Ctx=c})
+            end
 
       and up (dt, Ztop) = dt
-	| up (dt, Zrator{Rand=(env,arg), Ctx=c}) =
-	    down (env,arg,Zrand{Rator=dt, Ctx=c})
+	| up (dt, Zrator{Rand=(ftyvs,env,arg), Ctx=c}) =
+	    down (ftyvs,env,arg,Zrand{Rator=dt, Ctx=c})
 	| up (dt, Zrand{Rator=dr, Ctx=c}) = up (appl(dr,dt), c)
 	| up (dt, Zabs{Ctx=c,...}) = up(Abs dt, c)
 	| up (dt, Ztyrator{Rand=arg, Ctx=c}) = up(tyappl(dt,arg), c)
-	| up (dt, Ztyabs{Bvar=ty, Ctx=c}) = up(TyAbs(ty,dt), c)
-  in down (env,t,Ztop)
+	| up (dt, Ztyabs{Bvar=tyv, Ctx=c}) = up(TyAbs(tyv,dt), c)
+
+      val ftyvs = type_vars_in_term t
+  in down (ftyvs,env,t,Ztop)
   end
 ;
 

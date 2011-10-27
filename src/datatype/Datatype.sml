@@ -401,7 +401,7 @@ fun to_tyspecs ASTs =
               else
               (case Thy of
                   SOME Thy' => mk_thy_con_type{Thy=Thy', Tyop=s, Kind=Kind'}
-                | NONE      => mk_con_type{Tyop=s, Kind=Kind'})
+                | NONE      => mk_con_type(s, Kind'))
             end
 (*
        | mk_hol_ty (dTyop{Tyop=s, Args, Thy}) =

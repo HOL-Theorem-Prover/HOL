@@ -1386,6 +1386,23 @@ fun Beta th =
 
 
 (*---------------------------------------------------------------------------*
+ *   A |- t = (\:'a.m) [:ty:]                                                *
+ *  -------------------------- TyBeta                                        *
+ *      A |- t = m{'a\ty}                                                    *
+ *                                                                           *
+ * Other implementation (less efficient not using explicit subst.):          *
+ *   val TyBeta = Drule.RIGHT_TY_BETA                                        *
+ *---------------------------------------------------------------------------*)
+
+fun TyBeta th =
+   let val (lhs, rhs, ty) = Term.dest_eq_ty (concl th)
+   in make_thm Count.TyBeta
+        (tag th, hypset th, mk_eq_nocheck ty lhs (Term.ty_beta_conv rhs))
+   end
+   handle HOL_ERR {message,...} => ERR "TyBeta" message;
+
+
+(*---------------------------------------------------------------------------*
  * This rule behaves like a tactic: given a goal (reducing the rhs of thm),  *
  * it returns two subgoals (reducing the rhs of th1 and th2), together       *
  * with a validation (mkthm), that builds the normal form of t from the      *
@@ -1419,13 +1436,15 @@ fun Mk_comb thm =
          in make_thm Count.MkComb
 	   (ocls, hyps, mk_eq_nocheck ty lhs (mk_comb(rhs1,rhs2)))
          end
-	 handle HOL_ERR _ => ERR "Mk_comb" "";
+	 (*handle HOL_ERR _ => ERR "Mk_comb" "";*)
+	 handle e as HOL_ERR _ => raise (wrap_exn "Thm" "Mk_comb(1)" e);
        val aty = type_of Rand    (* typing! *)
        val th1 = refl_nocheck (aty --> ty) Rator
        val th2 = refl_nocheck aty Rand
    in (th1,th2,mkthm)
    end
-   handle HOL_ERR _ => ERR "Mk_comb" "";
+   (*handle HOL_ERR _ => ERR "Mk_comb" "";*)
+   handle e as HOL_ERR _ => raise (wrap_exn "Thm" "Mk_comb(2)" e);
 
 (*---------------------------------------------------------------------------*
  *                      |- u = u    (th1)                                    *
@@ -1476,8 +1495,8 @@ fun Mk_abs thm =
  * Could be implemented outside Thm as:                                      *
  *   fun Mk_tycomb th =                                                      *
  *     let val {Rator,Rand} = dest_tycomb(rhs (concl th))                    *
- *         fun mka th1 th2 = TRANS th (MK_COMB(th1,th2)) in                  *
- *     (REFL Rator, REFL Rand, mka)                                          *
+ *         fun mkl th1 = TRANS th (TY_COMB(th1,Rand)) in                     *
+ *     (REFL Rator, Rand, mkl)                                               *
  *     end                                                                   *
  *---------------------------------------------------------------------------*)
 
@@ -1543,6 +1562,21 @@ fun Specialize t th =
         (tag th, hypset th, Term.lazy_beta_conv(mk_comb(Rand,t)))
    end
    handle HOL_ERR _ => ERR "Specialize" "";
+
+(*---------------------------------------------------------------------------*
+ * Same as TY_SPEC, but without propagating the substitution.                *
+ * TySpec = TY_SPEC.                                                         *
+ *---------------------------------------------------------------------------*)
+
+fun TySpecialize ty th =
+   let val (Rator,Rand) = dest_comb(concl th)
+       val {Name,Thy,...} = dest_thy_const Rator
+   in
+     Assert (Thy="bool" andalso Name="!:") "" "";
+     make_thm Count.TySpec
+        (tag th, hypset th, Term.ty_beta_conv(mk_tycomb(Rand,ty)))
+   end
+   handle HOL_ERR _ => ERR "TySpecialize" "";
 
 (*---------------------------------------------------------------------------*
  * Construct a theorem directly and attach the given tag to it.              *

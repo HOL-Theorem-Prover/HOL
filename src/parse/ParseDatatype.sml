@@ -388,8 +388,8 @@ let val pkinds = map #2 params
           val cty = (case Thy of
                         SOME Thy' => Type.mk_thy_con_type {Thy=Thy', Tyop=Tyop,
                                            Kind=Prekind.toKind Kind'}
-                      | NONE      => Type.mk_con_type {Tyop=Tyop,
-                                           Kind=Prekind.toKind Kind'})
+                      | NONE      => Type.mk_con_type (Tyop,
+                                           Prekind.toKind Kind'))
                      handle HOL_ERR _ => (* This can happen during error messages from kind inference *)
                       Feedback.trace ("Vartype Format Complaint",0)
                          Type.mk_var_type(Tyop, Prekind.toKind Kind')
