@@ -483,6 +483,12 @@ val aligned_thm = save_thm("aligned_thm",
   Drule.LIST_CONJ [aligned_thm2, aligned_thm1,
     aligned_def |> Drule.SPEC_ALL |> EQ_IMP_RULE |> fst |> GSYM |> GEN_ALL]);
 
+val align_aligned3 = Q.store_thm("align_aligned3",
+  `!pc x: word32.
+      aligned (pc + 8w + x, 4) /\ aligned (pc, 4) ==>
+      aligned (x + align (pc, 4) + 8w, 4)`,
+  METIS_TAC [aligned_thm, WORD_ADD_COMM, WORD_ADD_ASSOC]);
+
 val aligned_align = Q.store_thm("aligned_align",
   `(!a:word32. aligned(a,1)) /\
    (!a:word32. aligned(align(a,2),2)) /\
@@ -1679,6 +1685,21 @@ val aligned_bx_and_aligned_rrx = Q.prove(
 
 val aligned_bx_and_aligned_rrx = save_thm("aligned_bx_and_aligned_rrx",
   REWRITE_RULE [minus8] aligned_bx_and_aligned_rrx);
+
+val align_ldr_lsl = Q.store_thm("align_ldr_lsl",
+  `!pc rm: word32.
+     align (pc,4) <>
+     align (pc,4) + 8w +
+     FST
+       (LSL_C
+          (if
+             aligned (align (pc,4) + 8w +
+             FST (LSL_C (if rm << 2 <> 0xFFFFFFF8w then rm else 0w,2)), 4)
+           then
+             (if rm << 2 <> 0xFFFFFFF8w then rm else 0w)
+           else
+             0w,2))`,
+  SRW_TAC [boolSimps.LET_ss, wordsLib.WORD_CANCEL_ss] [LSL_C_def]);
 
 (* ------------------------------------------------------------------------- *)
 
@@ -3826,24 +3847,34 @@ val ARM_ALIGN_BX_def = Define`
            align_pc >>=
            (\u:unit.
              if ~load_byte /\ (t = 15w) then
-               arch_version ii >>=
-               (\version.
-                  condT ((if version >= 5 then
-                            ~aligned_bx opc \/
-                            (enc = Encoding_Thumb2) /\
-                            ~aligned_bx ((23 >< 16) opc)
-                          else
-                            ~aligned (opc,4)) /\ n <> 15w)
-                    ((read__reg ii RName_PC ||| read_reg ii n) >>=
-                     (\(pc,rn).
-                        address_mode2 ii indx add rn mode2 >>=
-                        (\(offset_addr,address).
-                          write___reg n
-                            (if pc <> align (address,4) /\
-                               (enc <> Encoding_Thumb2 \/
-                                pc + 2w <> align (address,4))
-                             then rn else rn + 4w)))) >>=
-                    (\u:unit. constT (SOME T)))
+               if n = 15w then
+                 (case mode2 of
+                    Mode2_register 2w 0w m =>
+                     ((read_reg ii m >>=
+                       (\rm.
+                          write___reg m
+                          (if rm << 2 <> 0xFFFFFFF8w then rm else 0w))) >>=
+                       (\u:unit. constT (SOME T)))
+                  | _ => constT (SOME T))
+               else
+                  arch_version ii >>=
+                  (\version.
+                     condT (if version >= 5 then
+                               ~aligned_bx opc \/
+                               (enc = Encoding_Thumb2) /\
+                               ~aligned_bx ((23 >< 16) opc)
+                            else
+                               ~aligned (opc,4))
+                       ((read__reg ii RName_PC ||| read_reg ii n) >>=
+                        (\(pc,rn).
+                           address_mode2 ii indx add rn mode2 >>=
+                           (\(offset_addr,address).
+                             write___reg n
+                               (if pc <> align (address,4) /\
+                                  (enc <> Encoding_Thumb2 \/
+                                   pc + 2w <> align (address,4))
+                                then rn else rn + 4w)))) >>=
+                       (\u:unit. constT (SOME T)))
              else
                constT NONE)
        | LoadStore (Load_Multiple indx add system _ n registers) =>

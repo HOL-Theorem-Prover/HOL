@@ -49,6 +49,8 @@ bin/hol.builder0
 bin/heapname
 bin/buildheap
 
+scratch/
+
 developers/docfiles/*.txt
 
 tools*/Holmake/Systeml.sml
@@ -106,6 +108,9 @@ src/TeX/holindex-demo.ps
 Manual/*/*.pdf
 Manual/*/*.ps
 Manual/Reference/entries.tex
+Manual/Tutorialw/
+
+examples/HolOmega/tests/
 
 examples/machine-code/lisp/*.s
 
@@ -119,4 +124,3 @@ examples/HolOmega/*.html
 examples/HolOmega/interim/*.html
 
 examples/computability/lambda/computability-heap
-

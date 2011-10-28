@@ -186,7 +186,7 @@ val _ = let
   (* copy system-specific implementation of Systeml into place *)
   val srcfile = fullPath [holmakedir, OSkind ^"-systeml.sml"]
   val destfile = fullPath [holmakedir, "Systeml.sml"]
-  val sigfile = fullPath [holmakedir, "Systeml.sig"]
+  val sigfile = fullPath [holdir, "tools", "Holmake", "Systeml.sig"]
 in
   print "\nLoading system specific functions\n";
   use sigfile;
@@ -233,32 +233,24 @@ open Systeml;
 
 let
   val _ = print "Compiling system specific functions ("
-  (*val modTime = FileSys.modTime*)
-  val dir_0 = FileSys.getDir()
-  val sigfile = fullPath [holmakedir, "Systeml.sig"]
-  val sigfile_newer = true
-  val uifile = fullPath [holmakedir, "Systeml.ui"]
-  fun die () = (print ")\nFailed to compile system-specific code\n";
-                Process.exit Process.failure)
-  val systeml = fn l => if not (Process.isSuccess (systeml l)) then die() else ()
-  fun to_sigobj s = bincopy s (fullPath [holdir, "sigobj", s])
+  val sigfile = fullPath [holdir, "tools", "Holmake", "Systeml.sig"]
+  val uifile = fullPath [holdir, "sigobj", "Systeml.ui"]
+  fun to_sigobj s = bincopy s (fullPath [holdir, "sigobj", Path.file s])
 in
-  FileSys.chDir holmakedir;
   let val oo = TextIO.openOut uifile
   in
     TextIO.output (oo, fullPath [holdir, "sigobj", "Systeml.sig"] ^ "\n");
     TextIO.closeOut oo
   end;
-  app to_sigobj ["Systeml.sig", "Systeml.ui"];
+  to_sigobj sigfile;
   print "sig ";
-  let val oo = TextIO.openOut (fullPath [holmakedir, "Systeml.uo"])
+  let val oo = TextIO.openOut (fullPath [holdir, "sigobj", "Systeml.uo"])
   in
     TextIO.output (oo, fullPath [holdir, "sigobj", "Systeml.sml"] ^ "\n");
     TextIO.closeOut oo
   end;
-  app to_sigobj ["Systeml.sml", "Systeml.uo"];
-  print "sml)\n";
-  FileSys.chDir dir_0
+  to_sigobj (fullPath [holmakedir, "Systeml.sml"]);
+  print "sml)\n"
 end;
 
 

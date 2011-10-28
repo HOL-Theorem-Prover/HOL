@@ -79,16 +79,21 @@ fun fullPath slist =
   end
 
 
-val HOLDIR =
-val MOSMLDIR =
-val HAVE_BASIS2002 =
-val OS =
-val DEPDIR =
-val GNUMAKE =
-val DYNLIB =
-val version =
-val ML_SYSNAME =
-val release =
+val HOLDIR = ""
+val MOSMLDIR = ""
+val HAVE_BASIS2002 = ""
+val OS = ""
+val POLY = ""
+val POLYMLLIBDIR = ""
+val POLY_LDFLAGS = []
+val POLY_LDFLAGS_STATIC = []
+val CC = ""
+val DEPDIR = ""
+val GNUMAKE = ""
+val DYNLIB = ""
+val version = ""
+val ML_SYSNAME = ""
+val release = ""
 
 val isUnix = false
 

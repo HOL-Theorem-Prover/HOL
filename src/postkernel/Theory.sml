@@ -901,8 +901,7 @@ fun new_theory str =
    ---------------------------------------------------------------------- *)
 
 fun try_theory_extension f x =
-  let infix ?>
-      open Term
+  let open Term
       val tnames1 = map #1 (types"-")
       val cnames1 = map (fst o dest_const) (constants"-")
       fun revert _ =

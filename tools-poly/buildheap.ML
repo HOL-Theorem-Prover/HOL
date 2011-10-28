@@ -9,7 +9,7 @@ fun die s = (warn s; OS.Process.exit OS.Process.failure)
 
 fun fullPath ps = List.foldl (fn (p,acc) => OS.Path.concat(acc,p))
                              (hd ps) (tl ps);
-use "Holmake/Systeml.sig";
+use "../tools/Holmake/Systeml.sig";
 use "Holmake/Systeml.sml";
 open Systeml;
 
