@@ -105,7 +105,7 @@ fun getline env (condstate, b) =
       in
         if String.isPrefix "endif" s then getline env (rest, advance b)
         else if String.isPrefix "ifdef" s orelse String.isPrefix "ifndef" s orelse
-                String.isPrefix "ifeq" s
+                String.isPrefix "ifeq" s orelse String.isPrefix "ifneq" s
         then
           getline env (SkippingElses::SkippingElses::rest, advance b)
         else
