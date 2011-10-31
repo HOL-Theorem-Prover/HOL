@@ -78,7 +78,7 @@ in
   recurse 0
 end
 
-fun evaluate_cond env s =
+fun evaluate_cond b env s =
     if String.isPrefix "ifdef" s orelse String.isPrefix "ifndef" s then let
         val (sense, sz, nm) =
             if String.sub(s,2) = #"n" then (false, 6, "ifndef")
@@ -91,7 +91,7 @@ fun evaluate_cond env s =
           [s] => (case lookup env s of
                     [LIT ""] => SOME (not sense)
                   | _ => SOME sense)
-        | _ => raise Fail ("ReadHMF: "^nm^" not followed by a variable name.")
+        | _ => error b ("ReadHMF: "^nm^" not followed by a variable name.")
       end
     else
       NONE
@@ -99,7 +99,7 @@ fun evaluate_cond env s =
 fun getline env (condstate, b) =
     case (currentline b, condstate) of
       (NONE, []) => (b, NONE, condstate)
-    | (NONE, _ :: _) => raise Fail "ReadHMF: unterminated conditional"
+    | (NONE, _ :: _) => error b "ReadHMF: unterminated conditional"
     | (SOME s, SkippingElses :: rest) => let
         val s = strip_leading_wspace s
       in
@@ -119,12 +119,12 @@ fun getline env (condstate, b) =
             val s = strip_leading_wspace (String.extract(s, 4, NONE))
           in
             if String.isPrefix "if" s then
-              case evaluate_cond env s of
-                NONE => raise Fail "ReadHMF: bogus string following else"
+              case evaluate_cond b env s of
+                NONE => error b "ReadHMF: bogus string following else"
               | SOME false => getline env (NoTrueCondYet::rest, advance b)
               | SOME true => getline env (GrabbingText::rest, advance b)
             else if s = "" then getline env (GrabbingText::rest, advance b)
-            else raise Fail "ReadHMF: bogus string following else"
+            else error b "ReadHMF: bogus string following else"
           end
         else getline env (condstate, advance b)
       end
@@ -132,13 +132,13 @@ fun getline env (condstate, b) =
         val s = strip_leading_wspace s0
       in
         if String.isPrefix "endif" s then
-          if null condstate then raise Fail "ReadHMF: unpaired endif"
+          if null condstate then error b "ReadHMF: unpaired endif"
           else getline env (tl condstate, advance b)
         else if String.isPrefix "else" s then
-          if null condstate then raise Fail "ReadHMF: unpaired else"
+          if null condstate then error b "ReadHMF: unpaired else"
           else getline env (SkippingElses::tl condstate, advance b)
         else if String.isPrefix "if" s then
-          case evaluate_cond env s of
+          case evaluate_cond b env s of
             NONE => (b, SOME s0, condstate)
           | SOME false => getline env (NoTrueCondYet::condstate, advance b)
           | SOME true => getline env (GrabbingText::condstate, advance b)
@@ -183,7 +183,7 @@ in
                                  env
                                  (condstate, advance b)
                                  (strip_trailing_comment s' ^ "\n")
-              | SOME _ => raise Fail "ReadHMF: can't happen"
+              | SOME _ => error b "ReadHMF: can't happen"
         end
     end
 end
