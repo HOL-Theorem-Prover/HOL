@@ -134,6 +134,7 @@ fun evaluate_cond b env s =
         case String.tokens Char.isSpace s2 of
           [s] => (case lookup env s of
                     [LIT ""] => SOME (not sense)
+                  | [] => SOME (not sense)
                   | _ => SOME sense)
         | _ => error b ("ReadHMF: "^nm^" not followed by a variable name.")
       end
