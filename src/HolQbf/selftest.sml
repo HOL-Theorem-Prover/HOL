@@ -62,6 +62,15 @@ fun disprove t =
         ", message: " ^ message ^ ")")
   else ()
 
+fun decide_any t =
+  if squolem_installed then
+    (HolQbfLib.decide_any t; print ".")
+    handle Feedback.HOL_ERR {origin_structure, origin_function, message} =>
+      die ("Decide_any failed on term '" ^ Hol_pp.term_to_string t ^
+        "': exception HOL_ERR (in " ^ origin_structure ^ "." ^ origin_function ^
+        ", message: " ^ message ^ ")")
+  else ()
+
 (*****************************************************************************)
 (* Test cases                                                                *)
 (*****************************************************************************)
@@ -91,6 +100,16 @@ val _ = List.app prove
     ``!x. ?y. x \/ y``,
     ``!x. ?y. (x \/ y) /\ (~x \/ y)``
   ]
+
+    (*
+val _ = List.app decide_any
+  [
+    ``!y. (?x. x /\ y) \/ (!x. y ==> x)``,
+    ``!x y. (x /\ (!y. y ==> x)) \/ (~x /\ (?y. y ==> x))``,
+    ``x \/ ~x``,
+    ``(x /\ x) \/ !y. x ==> y``
+  ]
+    *)
 
 (*****************************************************************************)
 

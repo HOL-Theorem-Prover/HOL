@@ -4,6 +4,15 @@
 
 structure HolQbfLib :> HolQbfLib = struct
 
+  (* convert an arbitrary QBF into the prenex form
+   * required by get_certificate and QbfCertificate.check *)
+  local open Canon Conv in
+    val qbf_prenex_conv =
+      PRENEX_CONV THENC
+      (STRIP_QUANT_CONV
+        (NNF_CONV NO_CONV true THENC PROP_CNF_CONV))
+  end
+
   fun get_certificate t =
   let
     val path = FileSys.tmpName ()
@@ -64,6 +73,20 @@ structure HolQbfLib :> HolQbfLib = struct
     val (dict, cert) = get_certificate t
   in
     QbfCertificate.check t dict cert
+  end
+
+  fun decide_any t =
+  let
+    open Thm Drule
+    val tt = qbf_prenex_conv t
+    val t' = boolSyntax.rhs (concl tt)
+    val (dict, cert) = get_certificate t'
+    val th = QbfCertificate.check t' dict cert
+  in case cert of
+    QbfCertificate.INVALID _ =>
+      UNDISCH (SUBS_OCCS [([1],SYM tt)] (DISCH t' th))
+  | QbfCertificate.VALID _ =>
+      EQ_MP (SYM tt) th
   end
 
 end
