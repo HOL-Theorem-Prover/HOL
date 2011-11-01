@@ -55,7 +55,8 @@ local
     SUBST_TAC [GSYM (ISPEC ``P:'a->bool`` ETA_THM)] THEN
     METIS_TAC [])
 in
-  val base_thms = foldl ins Net.empty [imp_def,and_def,exists_def]
+  val base_thms = foldl ins Net.empty [imp_def,and_def,exists_def,CONJUNCT2
+  NOT_CLAUSES]
 end
 
 local
