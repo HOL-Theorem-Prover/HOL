@@ -9,10 +9,13 @@ sig
   val zeta : string
   val eta : string
   val theta : string
+  val kappa : string
   val lambda : string
   val mu : string
   val nu : string
   val xi : string
+  val pi : string
+  val rho : string
   val sigma : string
   val tau : string
   val phi : string
@@ -25,6 +28,7 @@ sig
   val Lambda : string
   val Xi : string
   val Sigma : string
+  val Pi : string
   val Phi : string
   val Psi : string
   val Omega : string
@@ -56,6 +60,9 @@ sig
   val sup_x : string
   val sup_y : string
   val sup_gamma : string
+
+  (* subscripts *)
+  val sub_plus : string
 
   (* arrows *)
   val rightarrow : string
@@ -96,6 +103,7 @@ sig
   (* arithmeticTheory *)
   val leq : string
   val geq : string
+  val minus : string
   val nats : string
   val ints : string
   val rats : string
