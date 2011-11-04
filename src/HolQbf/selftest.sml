@@ -101,15 +101,18 @@ val _ = List.app prove
     ``!x. ?y. (x \/ y) /\ (~x \/ y)``
   ]
 
-    (*
 val _ = List.app decide_any
   [
     ``!y. (?x. x /\ y) \/ (!x. y ==> x)``,
-    ``!x y. (x /\ (!y. y ==> x)) \/ (~x /\ (?y. y ==> x))``,
+    ``!x. x \/ ~x``,
+    ``?p. (!q. (p \/ ~q)) /\ !q:bool. ?r. r`` (*,
+    TODO: deal with free and extra/unused variables, to allow the following:
+    ``!x (y:bool). (x /\ (!y. y ==> x)) \/ (~x /\ (?y. y ==> x))``,
+    ``!x (y:'a). (x /\ (!y. y ==> x)) \/ (~x /\ (?y. y ==> x))``,
     ``x \/ ~x``,
     ``(x /\ x) \/ !y. x ==> y``
+   *)
   ]
-    *)
 
 (*****************************************************************************)
 

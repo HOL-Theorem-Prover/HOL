@@ -4,16 +4,7 @@
 
 structure HolQbfLib :> HolQbfLib = struct
 
-  (* convert an arbitrary QBF into the prenex form
-   * required by get_certificate and QbfCertificate.check *)
-  local open Canon Conv in
-    val qbf_prenex_conv =
-      PRENEX_CONV THENC
-      (STRIP_QUANT_CONV
-        (NNF_CONV NO_CONV true THENC PROP_CNF_CONV))
-  end
-
-  fun get_certificate t =
+ fun get_certificate t =
   let
     val path = FileSys.tmpName ()
     val dict = QDimacs.write_qdimacs_file path t
@@ -77,16 +68,20 @@ structure HolQbfLib :> HolQbfLib = struct
 
   fun decide_any t =
   let
-    open Thm Drule
-    val tt = qbf_prenex_conv t
-    val t' = boolSyntax.rhs (concl tt)
+    open Thm Drule boolSyntax
+    (* should first quantify and remember free variables in t *)
+    val tt = QbfConv.qbf_prenex_conv t
+    val t' = rhs (concl tt)
+    in if t' = T then EQ_MP (SYM tt) boolTheory.TRUTH else
+       if t' = F then EQ_MP tt (ASSUME t) else let
     val (dict, cert) = get_certificate t'
     val th = QbfCertificate.check t' dict cert
+    (* specialize remembered free vars *)
   in case cert of
     QbfCertificate.INVALID _ =>
       UNDISCH (SUBS_OCCS [([1],SYM tt)] (DISCH t' th))
   | QbfCertificate.VALID _ =>
       EQ_MP (SYM tt) th
-  end
+  end end
 
 end
