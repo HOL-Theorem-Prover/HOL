@@ -799,7 +799,7 @@ fun TY_SPEC ty th =
        (tag th, hypset th, ty_beta_conv(mk_tycomb(Rand, ty)))
        handle HOL_ERR _ =>
               raise thm_err "TY_SPEC"
-                    "Type argument not equal to bound variable"
+                    "Type argument not of same kind as bound type variable"
  end;
 
 

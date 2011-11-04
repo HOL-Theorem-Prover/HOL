@@ -2078,10 +2078,17 @@ fun TC printers = let
                                         Comb_error_report (Rator',Rand'));
               if Pretype.is_fun_type Rator_ty (* optimize; cut out unnecessary unifications *)
               then Pretype.unify_le Rand_ty (* :<=: *) (fst (Pretype.dom_rng Rator_ty))
-              else Pretype.unify_le (Rand_ty --> Pretype.all_new_uvar())
+              else
+                let in
+                   Pretype.begin_homs();
+                   Pretype.unify_le (Rand_ty --> Pretype.all_new_uvar())
                                                   (* Pretype.new_uvar(Prekind.new_uvar(
                                                        Pretype.prank_of_type Rator_ty)) *)
                               (* :<=: *) Rator_ty;
+                   Pretype.resolve_ho_matches();
+                   Pretype.end_homs();
+                   ()
+                end;
               if not (is_debug()) then () else
                 print ("\n)Checked application:\n" ^ preterm_to_string Rator ^ "\napplied to\n"
                         ^ preterm_to_string Rand ^ "\n"

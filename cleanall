@@ -1,5 +1,8 @@
 #!/bin/bash
 HOLDIR=`pwd`
+echo Cleaning mlyacc library code
+cd ${HOLDIR}/tools/mlyacc/mlyacclib
+${HOLDIR}/bin/Holmake cleanAll
 echo Cleaning examples/machine-code
 cd ${HOLDIR}/examples/machine-code
 ./cleanall
