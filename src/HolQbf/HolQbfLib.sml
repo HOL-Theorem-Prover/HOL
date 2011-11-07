@@ -66,22 +66,25 @@ structure HolQbfLib :> HolQbfLib = struct
     QbfCertificate.check t dict cert
   end
 
+  (* Similar to 'decide' but accepts QBFs with fewer form restrictions.
+     In case of free variables in an invalid formula, they will be universally
+       quantified in the resulting theorem's assumptions. *)
   fun decide_any t =
   let
     open Thm Drule boolSyntax
-    (* should first quantify and remember free variables in t *)
+    val fvs = Term.free_vars t
+    val t = list_mk_forall (fvs,t)
     val tt = QbfConv.qbf_prenex_conv t
     val t' = rhs (concl tt)
-    in if t' = T then EQ_MP (SYM tt) boolTheory.TRUTH else
+    in if t' = T then SPECL fvs (EQ_MP (SYM tt) boolTheory.TRUTH) else
        if t' = F then EQ_MP tt (ASSUME t) else let
     val (dict, cert) = get_certificate t'
     val th = QbfCertificate.check t' dict cert
-    (* specialize remembered free vars *)
   in case cert of
     QbfCertificate.INVALID _ =>
       UNDISCH (SUBS_OCCS [([1],SYM tt)] (DISCH t' th))
   | QbfCertificate.VALID _ =>
-      EQ_MP (SYM tt) th
+      SPECL fvs (EQ_MP (SYM tt) th)
   end end
 
 end
