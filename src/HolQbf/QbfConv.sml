@@ -13,18 +13,20 @@ structure QbfConv :> QbfConv = struct
     val simp_clauses = SIMP_CONV bool_ss [th1,th2,th3,th4,th5,th6]
   end
 
-  val remove_forall =
-    Ho_Rewrite.PURE_REWRITE_CONV [boolTheory.FORALL_AND_THM] THENC
-    EVERY_CONJ_CONV (fn t =>
-      let val (x,_) = boolSyntax.dest_forall t in
-        Rewrite.PURE_REWRITE_CONV [boolTheory.FORALL_SIMP] t
-        handle UNCHANGED => (
-          QUANT_CONV (
-            markerLib.move_disj_left
-             (fn t => t = x orelse boolSyntax.dest_neg t = x handle HOL_ERR _ => false)
-          )) t
-      end) THENC
-    simp_clauses
+  local
+    open boolSyntax boolTheory markerLib
+    fun literal x t = t = x orelse dest_neg t = x handle HOL_ERR _ => false
+  in
+    val remove_forall =
+      Ho_Rewrite.PURE_REWRITE_CONV [FORALL_AND_THM] THENC
+      EVERY_CONJ_CONV (fn t =>
+        let val (x,_) = dest_forall t in
+          CHANGED_CONV (Rewrite.PURE_REWRITE_CONV [FORALL_SIMP])
+            ORELSEC
+          QUANT_CONV (move_disj_left (literal x))
+        end t) THENC
+      simp_clauses
+  end
 
   fun last_quant_conv c = let
     exception Innermost
