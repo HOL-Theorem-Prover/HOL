@@ -62,6 +62,23 @@ fun disprove t =
         ", message: " ^ message ^ ")")
   else ()
 
+fun decide_any t =
+  if squolem_installed then let
+    val th = HolQbfLib.decide_any t
+    val _ = if let open Thm Term boolSyntax in
+                 concl th = t orelse
+                 dest_thm th = ([list_mk_forall(free_vars t,t)],F)
+               end
+            then ()
+            else die ("Decide_any proved bad theorem on term '" ^
+              Hol_pp.term_to_string t ^ "'")
+    in print "." end
+    handle Feedback.HOL_ERR {origin_structure, origin_function, message} =>
+      die ("Decide_any failed on term '" ^ Hol_pp.term_to_string t ^
+        "': exception HOL_ERR (in " ^ origin_structure ^ "." ^ origin_function ^
+        ", message: " ^ message ^ ")")
+  else ()
+
 (*****************************************************************************)
 (* Test cases                                                                *)
 (*****************************************************************************)
@@ -90,6 +107,21 @@ val _ = List.app prove
     ``?x. x``,
     ``!x. ?y. x \/ y``,
     ``!x. ?y. (x \/ y) /\ (~x \/ y)``
+  ]
+
+val _ = List.app decide_any
+  [
+    ``!y. (?x. x /\ y) \/ (!x. y ==> x)``,
+    ``!x. x \/ ~x``,
+    ``?p. (!q. (p \/ ~q)) /\ !q:bool. ?r. r``,
+    ``!x y z. (x \/ y) /\ (x \/ z)``,
+    ``x \/ ~x``,
+    ``x /\ ~x``,
+    ``(x /\ x) \/ !y. x ==> y`` (*,
+    TODO: remove and replace unused variables
+    ``!x (y:bool). (x /\ (!y. y ==> x)) \/ (~x /\ (?y. y ==> x))``,
+    ``!x (y:'a). (x /\ (!y. y ==> x)) \/ (~x /\ (?y. y ==> x))``
+    *)
   ]
 
 (*****************************************************************************)

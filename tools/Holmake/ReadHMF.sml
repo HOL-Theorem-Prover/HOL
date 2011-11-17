@@ -6,6 +6,9 @@ open Holmake_types
 datatype cond_position = GrabbingText | NoTrueCondYet | SkippingElses
 val empty_condstate = [] : cond_position list
 
+infix |>
+fun x |> f = f x
+
 fun readline lnum strm = let
   fun recurse (lnum, acc) latest =
       case latest of
@@ -59,6 +62,14 @@ in
   string (dropl (fn c => c = #" " orelse c = #"\r") ss)
 end
 
+fun drop_twspace s = let
+  open Substring
+  val ss = full s
+in
+  string (dropr Char.isSpace ss)
+end
+
+
 fun first_special s = let
   fun recurse i = if i = size s then NONE
                   else if String.sub(s,i) = #"=" then SOME #"="
@@ -78,7 +89,40 @@ in
   recurse 0
 end
 
-fun evaluate_cond env s =
+val ss = Substring.full
+
+fun read_delimited_string b dchar s = let
+  (* assume s begins with dchar *)
+  val s' = String.extract(s,1,NONE)
+  open Substring
+  val (result, rest) = position (str dchar) (ss s')
+  val _ = size rest <> 0 orelse error b ("No matching "^str dchar)
+in
+  (string result, string rest
+                         |> (fn s => String.extract(s, 1, NONE))
+                         |> strip_leading_wspace)
+end
+
+fun read_quoted_string b s = let
+  val c = String.sub(s, 0)
+in
+  case c of
+    #"'" => read_delimited_string b c s
+  | #"\"" => read_delimited_string b c s
+  | _ => error b ("Bad argument delimiter: "^str c)
+end
+
+fun split_at_rightmost_rparen ss = let
+  open Substring
+  fun recurse i =
+      if i < 0 then (ss, full "")
+      else if sub(ss,i) = #")" then (slice(ss,0,SOME i), slice(ss,i,NONE))
+      else recurse (i - 1)
+in
+  recurse (size ss - 1)
+end
+
+fun evaluate_cond b env s =
     if String.isPrefix "ifdef" s orelse String.isPrefix "ifndef" s then let
         val (sense, sz, nm) =
             if String.sub(s,2) = #"n" then (false, 6, "ifndef")
@@ -90,22 +134,57 @@ fun evaluate_cond env s =
         case String.tokens Char.isSpace s2 of
           [s] => (case lookup env s of
                     [LIT ""] => SOME (not sense)
+                  | [] => SOME (not sense)
                   | _ => SOME sense)
-        | _ => raise Fail ("ReadHMF: "^nm^" not followed by a variable name.")
+        | _ => error b ("ReadHMF: "^nm^" not followed by a variable name.")
       end
-    else
-      NONE
+    else if String.isPrefix "ifeq" s orelse String.isPrefix "ifneq" s then let
+        val (sense, sz, nm) =
+            if String.sub(s,2) = #"n" then (false, 5, "ifneq")
+            else (true, 4, "ifeq")
+        val s = String.extract(s,sz,NONE) |> strip_leading_wspace |> drop_twspace
+        val (arg1, arg2) =
+            case String.sub(s,0) of
+              #"(" => let
+                open Substring
+                val (arg1s, blob2s) = position "," (full (String.extract(s,1,NONE)))
+                val _ = size blob2s <> 0 orelse
+                        error b (nm ^ " with parens requires args separated by \
+                                        \commas")
+                val (arg2s, parenblob) =
+                    split_at_rightmost_rparen (slice(blob2s,1,NONE))
+                val _ = size parenblob <> 0 orelse
+                        error b ("No right-paren in "^nm^" line")
+              in
+                (arg1s |> string |> drop_twspace |> strip_leading_wspace,
+                 arg2s |> string |> drop_twspace |> strip_leading_wspace)
+              end
+            | _ => let
+                val (arg1, s) = read_quoted_string b s
+                val (arg2, s) = read_quoted_string b s
+                val _ = size (drop_twspace s) = 0 orelse
+                        error b ("Extraneous junk after complete "^nm^" directive")
+              in
+                (arg1, arg2)
+              end
+        val (q1, q2) = (extract_normal_quotation (ss arg1),
+                        extract_normal_quotation (ss arg2))
+        val (s1, s2) = (perform_substitution env q1, perform_substitution env q2)
+      in
+        SOME ((s1 = s2) = sense)
+      end
+    else NONE
 
 fun getline env (condstate, b) =
     case (currentline b, condstate) of
       (NONE, []) => (b, NONE, condstate)
-    | (NONE, _ :: _) => raise Fail "ReadHMF: unterminated conditional"
+    | (NONE, _ :: _) => error b "ReadHMF: unterminated conditional"
     | (SOME s, SkippingElses :: rest) => let
         val s = strip_leading_wspace s
       in
         if String.isPrefix "endif" s then getline env (rest, advance b)
         else if String.isPrefix "ifdef" s orelse String.isPrefix "ifndef" s orelse
-                String.isPrefix "ifeq" s
+                String.isPrefix "ifeq" s orelse String.isPrefix "ifneq" s
         then
           getline env (SkippingElses::SkippingElses::rest, advance b)
         else
@@ -119,12 +198,12 @@ fun getline env (condstate, b) =
             val s = strip_leading_wspace (String.extract(s, 4, NONE))
           in
             if String.isPrefix "if" s then
-              case evaluate_cond env s of
-                NONE => raise Fail "ReadHMF: bogus string following else"
+              case evaluate_cond b env s of
+                NONE => error b "ReadHMF: bogus string following else"
               | SOME false => getline env (NoTrueCondYet::rest, advance b)
               | SOME true => getline env (GrabbingText::rest, advance b)
             else if s = "" then getline env (GrabbingText::rest, advance b)
-            else raise Fail "ReadHMF: bogus string following else"
+            else error b "ReadHMF: bogus string following else"
           end
         else getline env (condstate, advance b)
       end
@@ -132,13 +211,13 @@ fun getline env (condstate, b) =
         val s = strip_leading_wspace s0
       in
         if String.isPrefix "endif" s then
-          if null condstate then raise Fail "ReadHMF: unpaired endif"
+          if null condstate then error b "ReadHMF: unpaired endif"
           else getline env (tl condstate, advance b)
         else if String.isPrefix "else" s then
-          if null condstate then raise Fail "ReadHMF: unpaired else"
+          if null condstate then error b "ReadHMF: unpaired else"
           else getline env (SkippingElses::tl condstate, advance b)
         else if String.isPrefix "if" s then
-          case evaluate_cond env s of
+          case evaluate_cond b env s of
             NONE => (b, SOME s0, condstate)
           | SOME false => getline env (NoTrueCondYet::condstate, advance b)
           | SOME true => getline env (GrabbingText::condstate, advance b)
@@ -183,7 +262,7 @@ in
                                  env
                                  (condstate, advance b)
                                  (strip_trailing_comment s' ^ "\n")
-              | SOME _ => raise Fail "ReadHMF: can't happen"
+              | SOME _ => error b "ReadHMF: can't happen"
         end
     end
 end

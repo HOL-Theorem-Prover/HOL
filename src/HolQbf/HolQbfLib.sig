@@ -5,5 +5,6 @@ signature HolQbfLib = sig
   val prove    : Term.term -> Thm.thm
   val disprove : Term.term -> Thm.thm
   val decide   : Term.term -> Thm.thm
+  val decide_any : Term.term -> Thm.thm
 
 end

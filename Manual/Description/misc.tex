@@ -636,6 +636,71 @@ treated as a reference to an environment variable.  If there is no
 such variable in the environment, then the variable is silently given
 the empty string as its value.
 
+\paragraph{Conditional Parts of Makefiles}
+\index{Holmake@\holmake!conditional inclusion of sections}
+As in GNU~\textsf{make}, parts of a \texttt{Holmakefile} can be included or excluded dynamically, depending on tests that can be performed on strings including variables.
+%
+This is similar to the way directives such as \texttt{\#ifdef} can be used to control the C~preprocessor.
+
+There are four possible directives in a \texttt{Holmakefile}: \texttt{ifdef}, \texttt{ifndef}, \texttt{ifeq} and \texttt{ifneq}.
+%
+The versions including the extra `n' character reverse the boolean sense of the test.
+%
+Conditional directives can be chained together with \texttt{else} directives, and must be terminated by the \texttt{endif} command.
+%
+The following example is a file that only has any content if the \texttt{POLY} variable is defined, which happens when Poly/ML is the underlying \ML{} system.
+\begin{hol}
+\begin{verbatim}
+ifdef POLY
+TARGETS = target1 target2
+
+target1: dependency1
+      build_command -o target1 dependency1
+endif
+\end{verbatim}
+\end{hol}
+The next example includes chained \texttt{else} commands:
+\begin{hol}
+\begin{verbatim}
+ifeq "$(HOLDIR)" "foo"
+VAR = X
+else ifneq "$(HOLDIR)" "bar"
+VAR = Y
+else
+VAR = Z
+endif
+\end{verbatim}
+\end{hol}
+\index{ifeq (Holmake directive)@\texttt{ifeq} (Holmake directive)}
+\index{ifneq (Holmake directive)@\texttt{ifneq} (Holmake directive)}
+The \texttt{ifneq} and \texttt{ifeq} forms test for string equality.
+%
+They can be passed their arguments as in the example, or delimited with apostrophes, or in parentheses with no delimiters, as in:
+\begin{hol}
+\begin{verbatim}
+ifeq ($(HOLDIR),$(OTHERDIR))
+VAR = value
+endif
+\end{verbatim}
+\end{hol}
+
+\index{ifdef (Holmake directive)@\texttt{ifdef} (Holmake directive)}
+\index{ifndef (Holmake directive)@\texttt{ifndef} (Holmake directive)}
+The definedness tests \texttt{ifdef} and \texttt{ifndef} test if a name has a non-null expansion in the current environment.
+%
+This test is just of one level of expansion.
+%
+In the following example, \texttt{VAR} is defined even though it ultimately expands to the emptry string, but \texttt{NULL} is not.
+%
+The variable \texttt{FOOBAR} is also not defined.
+\begin{hol}
+\begin{verbatim}
+NULL =
+VAR = $(NULL)
+\end{verbatim}
+\end{hol}
+Note that environment variables with non-empty values are also considered to be defined.
+
 \index{Holmake@\holmake|)}
 
 
