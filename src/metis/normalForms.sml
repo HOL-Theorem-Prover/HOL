@@ -165,7 +165,7 @@ local
     | ren avoid dealt (INR (sub, tysub, tm) :: rest) =
     (case dest_term tm of
        CONST _ => ren avoid (tm :: dealt) rest
-     | VAR _ => ren avoid (subst sub (inst tysub tm) :: dealt) rest
+     | VAR _ => ren avoid (subst sub (pure_inst tysub tm) :: dealt) rest
      | COMB (a, b) =>
        ren avoid dealt (INR (sub, tysub, a) :: INR (sub, tysub, b) :: INL (INL NONE) :: rest)
      | TYCOMB (a, b) =>

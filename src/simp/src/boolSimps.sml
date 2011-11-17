@@ -264,7 +264,7 @@ fun COND_ABS_CONV tm = let
   val b = assert (not o Lib.op_mem eq v o free_vars) cond
   val xf = mk_abs{Bvar=v,Body=x}
   val yf = mk_abs{Bvar=v,Body=y}
-  val th1 = INST_TYPE [alpha |-> type_of v, beta |-> type_of x] COND_ABS
+  val th1 = ALIGN_INST_TYPE [alpha |-> type_of v, beta |-> type_of x] COND_ABS
   val th2 = SPECL [b,xf,yf] th1
 in
   CONV_RULE (RATOR_CONV (RAND_CONV
@@ -281,7 +281,7 @@ fun COND_TY_ABS_CONV tm = let
   val b = assert (not o Lib.mem v o type_vars_in_term) cond
   val xf = mk_tyabs{Bvar=v,Body=x}
   val yf = mk_tyabs{Bvar=v,Body=y}
-  val th1 = INST_TYPE [alpha |-> v, beta |-> type_of x] COND_TY_ABS
+  val th1 = ALIGN_INST_TYPE [alpha |-> v, beta |-> type_of x] COND_TY_ABS
   val th2 = SPECL [b,xf,yf] th1
 in
   CONV_RULE (RATOR_CONV (RAND_CONV

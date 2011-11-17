@@ -70,7 +70,7 @@ val mk_forall = Susp.delay (fn () =>
 val mk_tyforall = Susp.delay (fn () =>
  let val tyforallc = prim_mk_const{Name="!:", Thy="bool"}
  in fn a => fn tm =>
-      mk_comb(inst_kind[Kind.kappa |-> Type.kind_of a] tyforallc, mk_tyabs(a,tm))
+      mk_comb(align_inst_kind[Kind.kappa |-> Type.kind_of a] tyforallc, mk_tyabs(a,tm))
  end);
 
 val mk_conj = Susp.delay (fn () =>
@@ -356,20 +356,6 @@ fun INST_RANK 0 th = th
 
 (*---------------------------------------------------------------------------
  *         A |- M
- *  --------------------  PURE_INST_KIND theta
- *  theta(A) |- theta(M)
- *
- *---------------------------------------------------------------------------*)
-
-fun PURE_INST_KIND [] th = th
-  | PURE_INST_KIND theta (THM(ocl,asl,c)) =
-    let val instfn = Term.pure_inst_kind theta
-    in make_thm Count.PureInstKind(ocl, hypset_map instfn asl, instfn c)
-    end
-    handle HOL_ERR {message,...} => ERR "PURE_INST_KIND" message
-
-(*---------------------------------------------------------------------------
- *         A |- M
  *  --------------------  INST_KIND theta
  *  theta(A) |- theta(M)
  *
@@ -377,43 +363,55 @@ fun PURE_INST_KIND [] th = th
 
 fun INST_KIND [] th = th
   | INST_KIND theta (THM(ocl,asl,c)) =
-    let val (rkS,kdS) = Kind.align_kinds theta
-        val instfn = Term.inst_rank_kind rkS kdS
+    let val instfn = inst_kind theta
     in make_thm Count.InstKind(ocl, hypset_map instfn asl, instfn c)
     end
     handle HOL_ERR {message,...} => ERR "INST_KIND" message
 
 (*---------------------------------------------------------------------------
  *         A |- M
- *  --------------------  PURE_INST_TYPE theta
+ *  --------------------  ALIGN_INST_KIND theta
  *  theta(A) |- theta(M)
  *
  *---------------------------------------------------------------------------*)
 
-fun PURE_INST_TYPE [] th = th
-  | PURE_INST_TYPE theta (THM(ocl,asl,c)) =
+fun ALIGN_INST_KIND [] th = th
+  | ALIGN_INST_KIND theta (THM(ocl,asl,c)) =
+    let val instfn = align_inst_kind theta
+    in make_thm Count.AlignInstKind(ocl, hypset_map instfn asl, instfn c)
+    end
+    handle HOL_ERR {message,...} => ERR "ALIGN_INST_KIND" message
+
+(*---------------------------------------------------------------------------
+ *         A |- M
+ *  --------------------  INST_TYPE theta
+ *  theta(A) |- theta(M)
+ *
+ *---------------------------------------------------------------------------*)
+
+fun INST_TYPE [] th = th
+  | INST_TYPE theta (THM(ocl,asl,c)) =
     let val instfn = pure_inst theta
     in
-      make_thm Count.PureInstType(ocl, hypset_map instfn asl, instfn c)
+      make_thm Count.InstType(ocl, hypset_map instfn asl, instfn c)
     end
-    handle HOL_ERR {message,...} => ERR "PURE_INST_TYPE" message
+    handle HOL_ERR {message,...} => ERR "INST_TYPE" message
 
 (*---------------------------------------------------------------------------
  *                 A |- M
- *  ------------------------------------  INST_TYPE theta
+ *  ------------------------------------  ALIGN_INST_TYPE theta
  *  tyS(kdS(rkS(A))) |- tyS(kdS(rkS(M)))
  *
  *  where theta aligns to the rank,kind,type substitutions rkS,kdS,tyS
  *---------------------------------------------------------------------------*)
 
-fun INST_TYPE [] th = th
-  | INST_TYPE theta (THM(ocl,asl,c)) =
-    let val (rkS,kdS,tyS) = Type.align_types theta
-        val instfn = inst_rk_kd_ty rkS kdS tyS
+fun ALIGN_INST_TYPE [] th = th
+  | ALIGN_INST_TYPE theta (THM(ocl,asl,c)) =
+    let val instfn = inst theta
     in
-      make_thm Count.InstType(ocl, hypset_map instfn asl, instfn c)
+      make_thm Count.AlignInstType(ocl, hypset_map instfn asl, instfn c)
     end
-    handle HOL_ERR {message,...} => ERR "INST_TYPE" message
+    handle HOL_ERR {message,...} => ERR "ALIGN_INST_TYPE" message
 
 (*---------------------------------------------------------------------------
  *          A |- M
@@ -1071,7 +1069,7 @@ fun TY_CHOOSE (v,xth) bth =
   let val (x_asl, x_c) = sdest_thm xth
       val (b_asl, b_c) = sdest_thm bth
       val (Bvar,Body)  = dest_tyexists x_c
-      val A2_hyps = disch (inst [Bvar |-> v] Body, b_asl)
+      val A2_hyps = disch (pure_inst [Bvar |-> v] Body, b_asl)
       val newhyps = union_hyp x_asl A2_hyps
       val occursv = type_var_occurs v
       val _ = Assert (not(occursv x_c) andalso
@@ -1792,7 +1790,7 @@ fun prim_type_specification thyname tnames th = let
   val kds       = map (snd o Type.dest_var_type) V
   val newtys    = map2 newty tnames kds
 in
-  mk_defn_thm (tag th, inst (map (op |->) (zip V newtys)) body)
+  mk_defn_thm (tag th, pure_inst (map (op |->) (zip V newtys)) body)
 end
 
 fun prim_constant_definition Thy M = let

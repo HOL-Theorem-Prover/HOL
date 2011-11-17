@@ -622,7 +622,7 @@ fun INST_RK_KD_TY(Srk,Skd,Sty) = INST_ALL([],Sty,Skd,Srk)
 fun ETA_CONV t =
   let val (var, cmb) = dest_abs t
       val tysubst = [alpha |-> type_of var, beta |-> type_of cmb]
-      val th = SPEC (rator cmb) (INST_TYPE tysubst ETA_AX)
+      val th = SPEC (rator cmb) (ALIGN_INST_TYPE tysubst ETA_AX)
   in
     TRANS (ALPHA t (lhs (concl th))) th
   end;
@@ -645,7 +645,7 @@ fun TY_ETA_CONV t =
 *)
       val th = SPEC (tyrator tycmb)
                  (INST_RK_KD_TY (rksubst,kdsubst,tysubst) TY_ETA_AX)
-              (* (PURE_INST_TYPE tysubst (PURE_INST_KIND kdsubst (INST_RANK rksubst TY_ETA_AX))) *)
+              (* (INST_TYPE tysubst (INST_KIND kdsubst (INST_RANK rksubst TY_ETA_AX))) *)
   in
     TRANS (ALPHA t (lhs (concl th))) th
   end;
@@ -909,7 +909,7 @@ fun SELECT_RULE th =
   let val (tm as (Bvar, Body)) = dest_exists(concl th)
       val v = genvar(type_of Bvar)
       val P = mk_abs tm
-      val SELECT_AX' = INST_TYPE[alpha |-> type_of Bvar] SELECT_AX
+      val SELECT_AX' = ALIGN_INST_TYPE[alpha |-> type_of Bvar] SELECT_AX
       val th1 = SPEC v (SPEC P SELECT_AX')
       val (ant,conseq) = dest_imp(concl th1)
       val th2 = BETA_CONV ant
@@ -1934,7 +1934,7 @@ val _ = save_thm("COND_CLAUSES", COND_CLAUSES);
 val COND_ID =
    let val b = --`b:bool`--
        and t = --`t:'a`--
-       val def = PURE_INST_TYPE [==`:'b`==  |->  ==`:'a`==] COND_DEF
+       val def = INST_TYPE [==`:'b`==  |->  ==`:'a`==] COND_DEF
        val th1 = itlist (fn x => RIGHT_BETA o (C AP_THM x))
                         [t,t,b] def
        val p = genvar (==`:bool`==)
@@ -3523,10 +3523,10 @@ let val f = --`f: 'a -> 'b`--
     val theta2 = [Type`:'a` |-> Type`:'b`]
     val (COND_T,COND_F) = (GENL[t1,t2]##GENL[t1,t2])
                           (CONJ_PAIR(SPEC_ALL COND_CLAUSES))
-    val thTl = AP_THM (SPECL [f,g] (PURE_INST_TYPE theta1 COND_T)) x
-    and thFl = AP_THM (SPECL [f,g] (PURE_INST_TYPE theta1 COND_F)) x
-    val thTr = SPECL [fx,gx] (PURE_INST_TYPE theta2 COND_T)
-    and thFr = SPECL [fx,gx] (PURE_INST_TYPE theta2 COND_F)
+    val thTl = AP_THM (SPECL [f,g] (INST_TYPE theta1 COND_T)) x
+    and thFl = AP_THM (SPECL [f,g] (INST_TYPE theta1 COND_F)) x
+    val thTr = SPECL [fx,gx] (INST_TYPE theta2 COND_T)
+    and thFr = SPECL [fx,gx] (INST_TYPE theta2 COND_F)
     val thT1 = TRANS thTl (SYM thTr)
     and thF1 = TRANS thFl (SYM thFr)
     val tm = (--`(if b then (f:'a->'b ) else g) x = (if b then f x else g x)`--)
@@ -3561,8 +3561,8 @@ let val f = --`f: 'a -> 'b`--
                           (CONJ_PAIR (SPEC_ALL COND_CLAUSES))
     val thTl = AP_TERM f (SPECL [x,y] COND_T)
     and thFl = AP_TERM f (SPECL [x,y] COND_F)
-    val thTr = SPECL [fx,fy] (PURE_INST_TYPE theta COND_T)
-    and thFr = SPECL [fx,fy] (PURE_INST_TYPE theta COND_F)
+    val thTr = SPECL [fx,fy] (INST_TYPE theta COND_T)
+    and thFr = SPECL [fx,fy] (INST_TYPE theta COND_F)
     val thT1 = TRANS thTl (SYM thTr)
     and thF1 = TRANS thFl (SYM thFr)
     val tm = (--`(f:'a->'b ) (if b then x else y) = (if b then f x else f y)`--)
@@ -3599,10 +3599,10 @@ let
     val (COND_T,COND_F) = (GENL[t1,t2]##GENL[t1,t2])
                           (CONJ_PAIR(SPEC_ALL COND_CLAUSES))
     val rkS = 1
-    val thTl = TY_COMB (SPECL [f,g] (PURE_INST_TYPE theta1 (INST_RANK rkS COND_T))) a
-    and thFl = TY_COMB (SPECL [f,g] (PURE_INST_TYPE theta1 (INST_RANK rkS COND_F))) a
-    val thTr = SPECL [fa,ga] (PURE_INST_TYPE theta2 COND_T)
-    and thFr = SPECL [fa,ga] (PURE_INST_TYPE theta2 COND_F)
+    val thTl = TY_COMB (SPECL [f,g] (INST_TYPE theta1 (INST_RANK rkS COND_T))) a
+    and thFl = TY_COMB (SPECL [f,g] (INST_TYPE theta1 (INST_RANK rkS COND_F))) a
+    val thTr = SPECL [fa,ga] (INST_TYPE theta2 COND_T)
+    and thFr = SPECL [fa,ga] (INST_TYPE theta2 COND_F)
     val thT1 = TRANS thTl (SYM thTr)
     and thF1 = TRANS thFl (SYM thFr)
     val tm = (--`(if b then (f: !'a:'k.'a ('b:<=0)) else g) [:'a:] = (if b then f [:'a:] else g [:'a:])`--)
@@ -3680,8 +3680,8 @@ let val b    = --`b:bool`--
     and [NOT1,NOT2] = tl (CONJUNCTS NOT_CLAUSES)
     and [OR1,OR2,OR3,OR4,_] = map GEN_ALL (CONJUNCTS (SPEC_ALL OR_CLAUSES))
     and [AND1,AND2,AND3,AND4,_] = map GEN_ALL (CONJUNCTS(SPEC_ALL AND_CLAUSES))
-    val thTl = SPECL [t1,t2] (PURE_INST_TYPE theta COND_T)
-    and thFl = SPECL [t1,t2] (PURE_INST_TYPE theta COND_F)
+    val thTl = SPECL [t1,t2] (INST_TYPE theta COND_T)
+    and thFl = SPECL [t1,t2] (INST_TYPE theta COND_F)
     val thTr =
       let val th1 = TRANS (AP_THM (AP_TERM disj NOT1) t1) (SPEC t1 OR3)
           and th2 = SPEC t2 OR1
@@ -3767,8 +3767,8 @@ let val b    = --`b:bool`--
     and [NOT1,NOT2] = tl (CONJUNCTS NOT_CLAUSES)
     and [OR1,OR2,OR3,OR4,_] = map GEN_ALL (CONJUNCTS (SPEC_ALL OR_CLAUSES))
     and [AND1,AND2,AND3,AND4,_] = map GEN_ALL (CONJUNCTS(SPEC_ALL AND_CLAUSES))
-    val thTl = SPECL [t1,t2] (PURE_INST_TYPE theta COND_T)
-    and thFl = SPECL [t1,t2] (PURE_INST_TYPE theta COND_F)
+    val thTl = SPECL [t1,t2] (INST_TYPE theta COND_T)
+    and thFl = SPECL [t1,t2] (INST_TYPE theta COND_F)
     val thTr =
       let val th2 = TRANS (AP_THM (AP_TERM conj NOT1) t2) (SPEC t2 AND3)
           and th1 = SPEC t1 AND1
@@ -3885,7 +3885,7 @@ val LET_RAND = save_thm("LET_RAND",
      val tm3 = Term`\x:'a. N x:'b`
      val P   = Term`P:'b -> bool`
      val LET_THM1 = RIGHT_BETA (SPEC tm2 (SPEC tm1
-                    (Thm.PURE_INST_TYPE [beta |-> bool] LET_THM)))
+                    (Thm.INST_TYPE [beta |-> bool] LET_THM)))
      val LET_THM2 = AP_TERM P (RIGHT_BETA (SPEC tm2 (SPEC tm3 LET_THM)))
  in TRANS LET_THM2 (SYM LET_THM1)
  end);
@@ -3901,9 +3901,9 @@ val LET_RATOR = save_thm("LET_RATOR",
      val tm1 = Term`\x:'a. N x:'b->'c`
      val tm2 = Term`\x:'a. N x ^b:'c`
      val LET_THM1 = AP_THM (RIGHT_BETA (SPEC M (SPEC tm1
-                   (Thm.PURE_INST_TYPE [beta |-> (beta --> gamma)] LET_THM)))) b
+                   (Thm.INST_TYPE [beta |-> (beta --> gamma)] LET_THM)))) b
      val LET_THM2 = RIGHT_BETA (SPEC M (SPEC tm2
-                      (Thm.PURE_INST_TYPE [beta |-> gamma] LET_THM)))
+                      (Thm.INST_TYPE [beta |-> gamma] LET_THM)))
  in TRANS LET_THM1 (SYM LET_THM2)
  end);
 
@@ -4615,7 +4615,7 @@ val MONO_COND = save_thm("MONO_COND",
      val th1 = ASSUME tm1
      val th2 = ASSUME tm2
      val th3 = ASSUME tm3
-     val th4 = SPEC tm6 (SPEC tm5 (PURE_INST_TYPE [alpha |-> bool] COND_CLAUSES))
+     val th4 = SPEC tm6 (SPEC tm5 (INST_TYPE [alpha |-> bool] COND_CLAUSES))
      val th5 = CONJUNCT1 th4
      val th6 = CONJUNCT2 th4
      val th7 = SPEC tm4 BOOL_CASES_AX
@@ -4808,7 +4808,7 @@ val SKOLEM_THM = save_thm("SKOLEM_THM",
      val th1 = ASSUME tm1
      val th2 = ASSUME tm2
      val th3 = SPEC x th1
-     val th4 = PURE_INST_TYPE [alpha |-> beta] SELECT_AX
+     val th4 = INST_TYPE [alpha |-> beta] SELECT_AX
      val th5 = SPEC y (SPEC (Term`\y. ^P x y`) th4)
      val th6 = BETA_CONV (fst(dest_imp(concl th5)))
      val th7 = BETA_CONV (snd(dest_imp(concl th5)))
@@ -5092,7 +5092,7 @@ val RES_ABSTRACT_EXISTS =
     val A3 = TRANS A2 (BETA_CONV (RHS A2))
     val A4 = EQT_INTRO (ASSUME (Term `^x IN ^p`))
     val A5 = RATOR_CONV (RATOR_CONV (RAND_CONV (K A4))) (RHS A3)
-    val A6 = PURE_INST_TYPE [alpha |-> beta] COND_CLAUSE1
+    val A6 = INST_TYPE [alpha |-> beta] COND_CLAUSE1
     val A7 = SPECL [Term `^m ^x`, Term `ARB ^x : 'b`] A6
     val A8 = DISCH (Term `^x IN ^p`) (TRANS (TRANS A3 A5) A7)
     val A9 = GENL [Term `^p`, Term `^m`, Term `^x`] A8
@@ -5107,7 +5107,7 @@ val RES_ABSTRACT_EXISTS =
     val B8 = INST [m |-> m2] A3
     val B9 = SYM (SPEC (Term `^x IN ^p`) EQ_CLAUSE4)
     val B10 = EQ_MP B9 (ASSUME (Term `~(^x IN ^p)`))
-    val B11 = PURE_INST_TYPE [alpha |-> beta] COND_CLAUSE2
+    val B11 = INST_TYPE [alpha |-> beta] COND_CLAUSE2
     val B12 = RATOR_CONV (RATOR_CONV (RAND_CONV (K B10))) (RHS B7)
     val B13 = TRANS B12 (SPECL [Term `^m1 ^x`, Term `ARB ^x : 'b`] B11)
     val B14 = RATOR_CONV (RATOR_CONV (RAND_CONV (K B10))) (RHS B8)
@@ -5343,7 +5343,7 @@ val literal_case_RAND = save_thm("literal_case_RAND",
      val tm3 = Term`\x:'a. N x:'b`
      val P   = Term`P:'b -> bool`
      val literal_case_THM1 = RIGHT_BETA (SPEC tm2 (SPEC tm1
-                    (Thm.PURE_INST_TYPE [beta |-> bool] literal_case_THM)))
+                    (Thm.INST_TYPE [beta |-> bool] literal_case_THM)))
      val literal_case_THM2 = AP_TERM P (RIGHT_BETA (SPEC tm2 (SPEC tm3 literal_case_THM)))
  in TRANS literal_case_THM2 (SYM literal_case_THM1)
  end);
@@ -5360,9 +5360,9 @@ val literal_case_RATOR = save_thm("literal_case_RATOR",
      val tm1 = Term`\x:'a. N x:'b->'c`
      val tm2 = Term`\x:'a. N x ^b:'c`
      val literal_case_THM1 = AP_THM (RIGHT_BETA (SPEC M (SPEC tm1
-                   (Thm.PURE_INST_TYPE [beta |-> (beta --> gamma)] literal_case_THM)))) b
+                   (Thm.INST_TYPE [beta |-> (beta --> gamma)] literal_case_THM)))) b
      val literal_case_THM2 = RIGHT_BETA (SPEC M (SPEC tm2
-                      (Thm.PURE_INST_TYPE [beta |-> gamma] literal_case_THM)))
+                      (Thm.INST_TYPE [beta |-> gamma] literal_case_THM)))
  in TRANS literal_case_THM1 (SYM literal_case_THM2)
  end);
 
@@ -5412,13 +5412,13 @@ val literal_case_id = save_thm
     val u = mk_var("u",beta)
     val eq = mk_eq(x,a)
     val bcase = pure_inst [alpha |-> beta]
-                     (prim_mk_const{Name = "bool_case",Thy="bool"})
+                          (prim_mk_const{Name = "bool_case",Thy="bool"})
     val g = mk_abs(x,list_mk_comb(bcase,[t, u, eq]))
     val lit_thm = RIGHT_BETA(SPEC a (SPEC g literal_case_THM))
     val bool_case_th = SPECL [mk_eq(a,a),t,u]
-                         (PURE_INST_TYPE [alpha |-> beta] bool_case_EQ_COND)
+                         (INST_TYPE [alpha |-> beta] bool_case_EQ_COND)
     val Teq = SYM (EQT_INTRO(REFL a))
-    val ifT = CONJUNCT1(SPECL[t,u] (PURE_INST_TYPE[alpha |-> beta] COND_CLAUSES))
+    val ifT = CONJUNCT1(SPECL[t,u] (INST_TYPE[alpha |-> beta] COND_CLAUSES))
     val ifeq = SUBS [Teq] ifT
  in
     TRANS lit_thm (TRANS bool_case_th ifeq)
@@ -5531,7 +5531,7 @@ val DATATYPE_TAG_THM = save_thm("DATATYPE_TAG_THM",
 
 
 val DATATYPE_BOOL = save_thm("DATATYPE_BOOL",
- let val thm1 = PURE_INST_TYPE [alpha |-> bool] DATATYPE_TAG_THM
+ let val thm1 = INST_TYPE [alpha |-> bool] DATATYPE_TAG_THM
      val bvar = mk_var("bool",bool--> bool-->bool)
  in
     SPEC (list_mk_comb(bvar,[T,F])) thm1
@@ -5573,7 +5573,7 @@ val _ = add_const "the_value"
 val ITSELF_UNIQUE = let
   val typedef_asm = ASSUME (#2 (dest_exists (concl ITSELF_TYPE_DEF)))
   val typedef_eq0 =
-      AP_THM (PURE_INST_TYPE [alpha |-> ==`:'a:'k kind_itself`==,
+      AP_THM (INST_TYPE [alpha |-> ==`:'a:'k kind_itself`==,
                               beta  |-> ==`:'a:'k itself`==] TYPE_DEFINITION)
              (--`$= (ARB:'a:'k kind_itself)`--)
   val typedef_eq0 = RIGHT_BETA typedef_eq0
@@ -5670,7 +5670,7 @@ val JRH_INDUCT_UTIL = let
   val P = (--`P : 'a -> bool`--)
   val Pt = MP (SPEC t asm) (REFL t)
   val ExPx = EXISTS ((--`?x:'a. P x`--), t) Pt
-  val P_eta = SPEC P (PURE_INST_TYPE [beta |-> bool] ETA_AX)
+  val P_eta = SPEC P (INST_TYPE [beta |-> bool] ETA_AX)
   val ExP_eta = AP_TERM (--`(?) : ('a -> bool) -> bool`--) P_eta
 in
   save_thm("JRH_INDUCT_UTIL", GENL [P, t] (DISCH asm_t (EQ_MP ExP_eta ExPx)))

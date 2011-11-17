@@ -151,7 +151,7 @@ fun mk_binder c f (p as (Bvar,_)) =
    handle HOL_ERR {message,...} => raise ERR f message;
 
 fun mk_tybinder c f (p as (Bvar,_)) =
-   mk_comb(Term.inst_kind[kappa |-> kind_of Bvar] c, mk_tyabs p)
+   mk_comb(Term.align_inst_kind[kappa |-> kind_of Bvar] c, mk_tyabs p)
    handle HOL_ERR {message,...} => raise ERR f message;
 
 fun list_mk_fun (dtys, rty) = List.foldr op--> rty dtys

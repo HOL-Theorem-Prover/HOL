@@ -65,10 +65,10 @@ val encInr   = Term `[F]`
         Sums
  ---------------------------------------------------------------------------*)
 
-val cons_bool = inst [alpha |-> bool] listSyntax.cons_tm;
+val cons_bool = pure_inst [alpha |-> bool] listSyntax.cons_tm;
 
   val sum_info = Option.valOf(TypeBase.read "sum");
-  val sum_case_into_Bool = inst [alpha |-> bit_list] sumSyntax.sum_case_tm
+  val sum_case_into_Bool = pure_inst [alpha |-> bit_list] sumSyntax.sum_case_tm
   val f = mk_var("f",beta --> bit_list)
   val g = mk_var("g",gamma --> bit_list)
   val s = mk_var("s",mk_thy_type{Tyop="sum",Thy="sum",Args=[beta, gamma]})
@@ -86,7 +86,7 @@ val cons_bool = inst [alpha |-> bool] listSyntax.cons_tm;
   val option_boolify_info =
        (let val f = mk_var("f",alpha --> bit_list)
             val t1 = mk_o(mk_comb(cons_bool,T),f)
-        in mk_abs(f,list_mk_comb(inst [beta |-> bit_list] 
+        in mk_abs(f,list_mk_comb(pure_inst [beta |-> bit_list] 
                                    optionSyntax.option_case_tm,
                     [listSyntax.mk_list([F],bool),t1]))
         end,

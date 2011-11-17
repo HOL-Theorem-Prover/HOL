@@ -414,9 +414,9 @@ datatype simpset =
    fun mk_icomb(f, x) = let
      val (f_domty, _) = dom_rng (type_of f)
      val xty = type_of x
-     val theta = match_type f_domty xty
+     val (theta,kdtheta,rk) = kind_match_type f_domty xty
    in
-     mk_comb(Term.inst theta f, x)
+     mk_comb(Term.inst_rk_kd_ty rk kdtheta theta f, x)
    end
 
    fun apply {solver,context,stack,relation = (relation,_)} t = let

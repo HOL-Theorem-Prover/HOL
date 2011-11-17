@@ -1808,6 +1808,19 @@ fun inst_rank_kind1 rkS kdS ctxt = (* requires context; may throw Unchanged, Nee
     (* vacuum o *) prim_rk_kd_subst
   end
 
+fun inst_rk_kd_ty1 rkS kdS tyS ctxt = (* requires context; may throw Unchanged, NeedToRename *)
+  let
+    fun prim_rk_kd_ty_subst ty =
+      let
+        val fvi = calculate_fvinfo ty
+        val tyS' = filtertheta_rkt rkS kdS tyS (current fvi)
+      in
+        augvsubst_rkt rkS kdS tyS' ctxt fvi ty
+      end
+  in
+    (* vacuum o *) prim_rk_kd_ty_subst
+  end
+
 fun qapp s f x = f x handle Unchanged => x
                           | HOL_ERR {message, ...} => raise ERR s message
 
@@ -1848,6 +1861,8 @@ val vsubst = vsubst
 val vsubst_rkt = vsubst_rkt
 (* expose ssubst for use in Term.inst  *)
 val ssubst = ssubst
+(* expose vsub_insert for use in Term.inst_rk_kd_ty  *)
+val vsub_insert = vsub_insert
 
 end (* local *)
 

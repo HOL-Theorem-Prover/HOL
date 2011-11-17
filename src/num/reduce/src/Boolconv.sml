@@ -29,7 +29,7 @@ val ambient_grammars = Parse.current_grammars();
 val _ = Parse.temp_set_grammars boolTheory.bool_grammars
 
 val zv    = mk_var("z",bool)
-and beqop = inst [alpha |->bool] equality;
+and beqop = pure_inst [alpha |->bool] equality;
 
 (*-----------------------------------------------------------------------*)
 (* NOT_CONV "~F"  = |-  ~F = T                                           *)

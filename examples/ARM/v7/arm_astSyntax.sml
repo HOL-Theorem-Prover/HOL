@@ -12,7 +12,7 @@ open Abbrev HolKernel arm_astTheory;
 val ERR = Feedback.mk_HOL_ERR "arm_astSyntax";
 
 fun inst_word_alpha ty tm =
-  Term.inst [Type.alpha |->
+  Term.pure_inst [Type.alpha |->
    (if wordsSyntax.is_word_type (Term.type_of tm) then
       ty
     else
@@ -28,7 +28,7 @@ fun inst_list x y =
          (if in_numeral_type ty then
             inst_word_alpha ty
           else
-            Term.inst [Type.alpha |-> ty]) v) (Lib.zip x y);
+            Term.pure_inst [Type.alpha |-> ty]) v) (Lib.zip x y);
 
 (* ------------------------------------------------------------------------- *)
 
@@ -217,7 +217,7 @@ fun mk_Hint_debug t =
 (* .. *)
 
 fun mk_Branch t =
-  Term.mk_comb(Branch_tm, inst [alpha |-> ``:branch_instruction``] t)
+  Term.mk_comb(Branch_tm, pure_inst [alpha |-> ``:branch_instruction``] t)
   handle HOL_ERR _ => raise ERR "mk_Branch" "";
 
 fun mk_Branch_Target t =
@@ -275,7 +275,7 @@ fun mk_Handler_Branch_Parameter(r,s) =
 
 fun mk_DataProcessing t =
   Term.mk_comb(DataProcessing_tm,
-    inst [alpha |-> ``:data_processing_instruction``] t)
+    pure_inst [alpha |-> ``:data_processing_instruction``] t)
   handle HOL_ERR _ => raise ERR "mk_DataProcessing" "";
 
 fun mk_Data_Processing(r,s,t,u,v) =
@@ -457,7 +457,7 @@ fun mk_Unsigned_Sum_Absolute_Differences(r,s,t,u) =
 (* .. *)
 
 fun mk_StatusAccess t =
-  Term.mk_comb(StatusAccess_tm, inst [alpha |-> ``:status_access_instruction``] t)
+  Term.mk_comb(StatusAccess_tm, pure_inst [alpha |-> ``:status_access_instruction``] t)
   handle HOL_ERR _ => raise ERR "mk_StatusAccess" "";
 
 fun mk_Status_to_Register(r,s) =
@@ -484,14 +484,14 @@ fun mk_Change_Processor_State(r,s,t,u,v) =
   handle HOL_ERR _ => raise ERR "mk_Change_Processor_State" "";
 
 fun mk_Set_Endianness t =
-  Term.mk_comb(Set_Endianness_tm, inst [alpha |-> bool] t)
+  Term.mk_comb(Set_Endianness_tm, pure_inst [alpha |-> bool] t)
     |> mk_StatusAccess
   handle HOL_ERR _ => raise ERR "mk_Set_Endianness" "";
 
 (* .. *)
 
 fun mk_LoadStore t =
-  Term.mk_comb(LoadStore_tm, inst [alpha |-> ``:load_store_instruction``] t)
+  Term.mk_comb(LoadStore_tm, pure_inst [alpha |-> ``:load_store_instruction``] t)
   handle HOL_ERR _ => raise ERR "mk_LoadStore" "";
 
 fun mk_Load(r,s,t,u,v,w,x,y) =
@@ -607,11 +607,11 @@ fun mk_Return_From_Exception(r,s,t,u) =
 
 fun mk_Miscellaneous t =
   Term.mk_comb
-       (Miscellaneous_tm, inst [alpha |-> ``:load_store_instruction``] t)
+       (Miscellaneous_tm, pure_inst [alpha |-> ``:load_store_instruction``] t)
   handle HOL_ERR _ => raise ERR "mk_Miscellaneous" "";
 
 fun mk_Hint t =
-  Term.mk_comb(Hint_tm, inst [alpha |-> ``:hint``] t)
+  Term.mk_comb(Hint_tm, pure_inst [alpha |-> ``:hint``] t)
     |> mk_Miscellaneous
   handle HOL_ERR _ => raise ERR "mk_Hint" "";
 
@@ -675,7 +675,7 @@ fun mk_Instruction_Synchronization_Barrier t =
 (* .. *)
 
 fun mk_Coprocessor t =
-  Term.mk_comb(Coprocessor_tm, inst [alpha |-> ``:coprocessor_instruction``] t)
+  Term.mk_comb(Coprocessor_tm, pure_inst [alpha |-> ``:coprocessor_instruction``] t)
   handle HOL_ERR _ => raise ERR "mk_Coprocessor" "";
 
 fun mk_Coprocessor_Load (r,s,t,u,v,w,x,y) =

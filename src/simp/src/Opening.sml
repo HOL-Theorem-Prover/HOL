@@ -147,8 +147,8 @@ in fn {relation,solver,depther,freevars} =>
     failwith "not applicable"
   else fn tm =>
   let
-    val theta = match_type (#1 (dom_rng (type_of relation))) (type_of tm)
-    val relation' = Term.inst theta relation
+    val (theta,kdtheta,rk) = kind_match_type (#1 (dom_rng (type_of relation))) (type_of tm)
+    val relation' = Term.inst_rk_kd_ty rk kdtheta theta relation
     val match_thm = matcher (mk_comb(relation',tm))
     val _ = trace(3,OPENING(tm,match_thm))
     val (_,conc) = strip_n_imp nconds (concl match_thm)

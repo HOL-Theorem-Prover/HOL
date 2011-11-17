@@ -30,7 +30,7 @@ end;
 val INDEX_CONV = Conv.CHANGED_CONV (computeLib.CBV_CONV (index_compset()));
 
 local
-  fun conv n = INDEX_CONV o Term.inst [Type.alpha |-> index_type n];
+  fun conv n = INDEX_CONV o Term.pure_inst [Type.alpha |-> index_type n];
 in
   fun DIMINDEX n = conv n (fcpSyntax.mk_dimindex Type.alpha);
 
@@ -98,7 +98,7 @@ in
                       else
                         ()
           in
-            inst_fcp_lengths (Term.inst [theinst] tm)
+            inst_fcp_lengths (Term.pure_inst [theinst] tm)
           end
 end;
 

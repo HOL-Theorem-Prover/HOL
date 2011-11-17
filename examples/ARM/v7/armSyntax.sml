@@ -28,7 +28,7 @@ in
 end;
 
 fun inst_word_alpha ty tm =
-  Term.inst [Type.alpha |->
+  Term.pure_inst [Type.alpha |->
    (if wordsSyntax.is_word_type (Term.type_of tm) then
       ty
     else
@@ -91,40 +91,40 @@ val thumb2_decode_tm    = mk_decode_const "thumb2_decode";
 
 fun mk_error s =
   HolKernel.mk_comb(error_tm,
-    Term.inst [Type.alpha |-> stringSyntax.string_ty] s)
+    Term.pure_inst [Type.alpha |-> stringSyntax.string_ty] s)
   handle HOL_ERR _ => raise ERR "mk_error" "";
 
 fun mk_valuestate (v,s) =
-  HolKernel.list_mk_comb(Term.inst
+  HolKernel.list_mk_comb(Term.pure_inst
     [Type.alpha |-> Term.type_of v,
      Type.beta |-> Term.type_of s] valuestate_tm, [v,s])
   handle HOL_ERR _ => raise ERR "mk_valuestate" "";
 
 fun mk_constT t =
-  HolKernel.mk_comb(Term.inst[Type.alpha |-> Term.type_of t] constT_tm,t)
+  HolKernel.mk_comb(Term.pure_inst[Type.alpha |-> Term.type_of t] constT_tm,t)
   handle HOL_ERR _ => raise ERR "mk_constT" "";
 
 fun mk_seqT (f,g) =
-  HolKernel.list_mk_comb(Term.inst
+  HolKernel.list_mk_comb(Term.pure_inst
     [Type.alpha |-> dest_monad_type (Term.type_of f),
      Type.beta  |-> (dest_monad_type o snd o Type.dom_rng o Term.type_of) g]
      seqT_tm, [f,g])
   handle HOL_ERR _ => raise ERR "mk_seqT" "";
 
 fun mk_parT (f,g) =
-  HolKernel.list_mk_comb(Term.inst
+  HolKernel.list_mk_comb(Term.pure_inst
     [Type.alpha |-> dest_monad_type (Term.type_of f),
      Type.beta  |-> dest_monad_type (Term.type_of g)] parT_tm,[f,g])
   handle HOL_ERR _ => raise ERR "mk_parT" "";
 
 fun mk_forT (l,h,f) =
-  HolKernel.list_mk_comb(Term.inst
+  HolKernel.list_mk_comb(Term.pure_inst
     [Type.alpha |-> (dest_monad_type o snd o Type.dom_rng o Term.type_of) f]
     forT_tm,[l,h,f])
   handle HOL_ERR _ => raise ERR "mk_forT" "";
 
 fun mk_readT f =
-  HolKernel.mk_comb(Term.inst
+  HolKernel.mk_comb(Term.pure_inst
     [Type.alpha |-> snd (dom_rng (Term.type_of f))] readT_tm, f)
   handle HOL_ERR _ => raise ERR "mk_readT" "";
 
@@ -134,112 +134,112 @@ fun mk_writeT f =
 
 fun mk_read__reg (ii,r) =
   HolKernel.list_mk_comb(read__reg_tm,
-    [Term.inst [Type.alpha |-> ``:iiid``] ii,
-     Term.inst [Type.alpha |-> ``:RName``] r])
+    [Term.pure_inst [Type.alpha |-> ``:iiid``] ii,
+     Term.pure_inst [Type.alpha |-> ``:RName``] r])
   handle HOL_ERR _ => raise ERR "mk_read__reg" "";
 
 fun mk_write__reg (ii,r,v) =
   HolKernel.list_mk_comb(write__reg_tm,
-    [Term.inst [Type.alpha |-> ``:iiid``] ii,
-     Term.inst [Type.alpha |-> ``:RName``] r,
+    [Term.pure_inst [Type.alpha |-> ``:iiid``] ii,
+     Term.pure_inst [Type.alpha |-> ``:RName``] r,
      inst_word_alpha ``:32`` v])
   handle HOL_ERR _ => raise ERR "mk_write__reg" "";
 
 fun mk_read__psr (ii,r) =
   HolKernel.list_mk_comb(read__psr_tm,
-    [Term.inst [Type.alpha |-> ``:iiid``] ii,
-     Term.inst [Type.alpha |-> ``:PSRName``] r])
+    [Term.pure_inst [Type.alpha |-> ``:iiid``] ii,
+     Term.pure_inst [Type.alpha |-> ``:PSRName``] r])
   handle HOL_ERR _ => raise ERR "mk_read__psr" "";
 
 fun mk_write__psr (ii,r,v) =
   HolKernel.list_mk_comb(write__psr_tm,
-    [Term.inst [Type.alpha |-> ``:iiid``] ii,
-     Term.inst [Type.alpha |-> ``:PSRName``] r,
-     Term.inst [Type.alpha |-> ``:ARMpsr``] v])
+    [Term.pure_inst [Type.alpha |-> ``:iiid``] ii,
+     Term.pure_inst [Type.alpha |-> ``:PSRName``] r,
+     Term.pure_inst [Type.alpha |-> ``:ARMpsr``] v])
   handle HOL_ERR _ => raise ERR "mk_write__psr" "";
 
 fun mk_read_reg (ii,n) =
   HolKernel.list_mk_comb(read_reg_tm,
-    [Term.inst [Type.alpha |-> ``:iiid``] ii,
+    [Term.pure_inst [Type.alpha |-> ``:iiid``] ii,
      inst_word_alpha ``:4`` n])
   handle HOL_ERR _ => raise ERR "mk_read_reg" "";
 
 fun mk_write_reg (ii,n,v) =
   HolKernel.list_mk_comb(write_reg_tm,
-    [Term.inst [Type.alpha |-> ``:iiid``] ii,
+    [Term.pure_inst [Type.alpha |-> ``:iiid``] ii,
      inst_word_alpha ``:4`` n,
      inst_word_alpha ``:32`` v])
   handle HOL_ERR _ => raise ERR "mk_write_reg" "";
 
 fun mk_read_reg_mode (ii,n,m) =
   HolKernel.list_mk_comb(read_reg_mode_tm,
-    [Term.inst [Type.alpha |-> ``:iiid``] ii,
+    [Term.pure_inst [Type.alpha |-> ``:iiid``] ii,
      pairSyntax.mk_pair
        (inst_word_alpha ``:4`` n, inst_word_alpha ``:5`` m)])
   handle HOL_ERR _ => raise ERR "mk_read_reg_mode" "";
 
 fun mk_write_reg_mode (ii,n,m,v) =
   HolKernel.list_mk_comb(write_reg_mode_tm,
-    [Term.inst [Type.alpha |-> ``:iiid``] ii,
+    [Term.pure_inst [Type.alpha |-> ``:iiid``] ii,
      pairSyntax.mk_pair
        (inst_word_alpha ``:4`` n, inst_word_alpha ``:5`` m),
      inst_word_alpha ``:32`` v])
   handle HOL_ERR _ => raise ERR "mk_write_reg_mode" "";
 
 fun mk_read_cpsr ii =
-  HolKernel.mk_comb(read_cpsr_tm, Term.inst [Type.alpha |-> ``:iiid``] ii)
+  HolKernel.mk_comb(read_cpsr_tm, Term.pure_inst [Type.alpha |-> ``:iiid``] ii)
   handle HOL_ERR _ => raise ERR "mk_read_cpsr" "";
 
 fun mk_write_cpsr (ii,v) =
   HolKernel.list_mk_comb(write_cpsr_tm,
-    [Term.inst [Type.alpha |-> ``:iiid``] ii,
-     Term.inst [Type.alpha |-> ``:ARMpsr``] v])
+    [Term.pure_inst [Type.alpha |-> ``:iiid``] ii,
+     Term.pure_inst [Type.alpha |-> ``:ARMpsr``] v])
   handle HOL_ERR _ => raise ERR "mk_write_cpsr" "";
 
 fun mk_read_spsr ii =
-  HolKernel.mk_comb(read_spsr_tm, Term.inst [Type.alpha |-> ``:iiid``] ii)
+  HolKernel.mk_comb(read_spsr_tm, Term.pure_inst [Type.alpha |-> ``:iiid``] ii)
   handle HOL_ERR _ => raise ERR "mk_read_spsr" "";
 
 fun mk_write_spsr (ii,v) =
   HolKernel.list_mk_comb(write_spsr_tm,
-    [Term.inst [Type.alpha |-> ``:iiid``] ii,
-     Term.inst [Type.alpha |-> ``:ARMpsr``] v])
+    [Term.pure_inst [Type.alpha |-> ``:iiid``] ii,
+     Term.pure_inst [Type.alpha |-> ``:ARMpsr``] v])
   handle HOL_ERR _ => raise ERR "mk_write_spsr" "";
 
 fun mk_read_memA (ii,a,s) =
   HolKernel.list_mk_comb(read_memA_tm,
-    [Term.inst [Type.alpha |-> ``:iiid``] ii,
+    [Term.pure_inst [Type.alpha |-> ``:iiid``] ii,
      pairSyntax.mk_pair
        (inst_word_alpha ``:32`` a,
-        Term.inst [Type.alpha |-> ``:num``] s)])
+        Term.pure_inst [Type.alpha |-> ``:num``] s)])
   handle HOL_ERR _ => raise ERR "mk_read_memA" "";
 
 fun mk_write_memA (ii,a,s,v) =
   HolKernel.list_mk_comb(write_memA_tm,
-    [Term.inst [Type.alpha |-> ``:iiid``] ii,
+    [Term.pure_inst [Type.alpha |-> ``:iiid``] ii,
      pairSyntax.mk_pair
        (inst_word_alpha ``:32`` a,
-        Term.inst [Type.alpha |-> ``:num``] s),
+        Term.pure_inst [Type.alpha |-> ``:num``] s),
      v])
   handle HOL_ERR _ => raise ERR "mk_write_memA" "";
 
 fun mk_clear_event_register ii =
   HolKernel.mk_comb(clear_event_register_tm,
-    Term.inst [Type.alpha |-> ``:iiid``] ii)
+    Term.pure_inst [Type.alpha |-> ``:iiid``] ii)
   handle HOL_ERR _ => raise ERR "mk_clear_event_register" "";
 
 fun mk_send_event ii =
-  HolKernel.mk_comb(send_event_tm, Term.inst [Type.alpha |-> ``:iiid``] ii)
+  HolKernel.mk_comb(send_event_tm, Term.pure_inst [Type.alpha |-> ``:iiid``] ii)
   handle HOL_ERR _ => raise ERR "mk_send_event" "";
 
 fun mk_wait_for_interrupt ii =
   HolKernel.mk_comb(wait_for_interrupt_tm,
-    Term.inst [Type.alpha |-> ``:iiid``] ii)
+    Term.pure_inst [Type.alpha |-> ``:iiid``] ii)
   handle HOL_ERR _ => raise ERR "mk_wait_for_interrupt" "";
 
 fun mk_clear_wait_for_interrupt ii =
   HolKernel.mk_comb(clear_wait_for_interrupt_tm,
-    Term.inst [Type.alpha |-> ``:iiid``] ii)
+    Term.pure_inst [Type.alpha |-> ``:iiid``] ii)
   handle HOL_ERR _ => raise ERR "mk_clear_wait_for_interrupt" "";
 
 fun mk_decode_psr w =
@@ -251,24 +251,24 @@ fun mk_bytes (w,n) =
   handle HOL_ERR _ => raise ERR "mk_bytes" "";
 
 fun mk_align (w,n) =
-  HolKernel.mk_comb(Term.inst
+  HolKernel.mk_comb(Term.pure_inst
     [Type.alpha |-> wordsSyntax.dest_word_type (Term.type_of w)] align_tm,
     pairSyntax.mk_pair(w, n))
   handle HOL_ERR _ => raise ERR "mk_align" "";
 
 fun mk_aligned (w,n) =
-  HolKernel.mk_comb(Term.inst
+  HolKernel.mk_comb(Term.pure_inst
     [Type.alpha |-> wordsSyntax.dest_word_type (Term.type_of w)] aligned_tm,
     pairSyntax.mk_pair(w, n))
   handle HOL_ERR _ => raise ERR "mk_aligned" "";
 
 fun mk_bit_count w =
-  HolKernel.mk_comb(Term.inst
+  HolKernel.mk_comb(Term.pure_inst
   [Type.alpha |-> wordsSyntax.dest_word_type (Term.type_of w)] bit_count_tm, w)
   handle HOL_ERR _ => raise ERR "mk_bit_count" "";
 
 fun mk_ITAdvance w =
-  HolKernel.mk_comb(Term.inst
+  HolKernel.mk_comb(Term.pure_inst
   [Type.alpha |-> wordsSyntax.dest_word_type (Term.type_of w)] ITAdvance_tm, w)
   handle HOL_ERR _ => raise ERR "mk_ITAdvance" "";
 

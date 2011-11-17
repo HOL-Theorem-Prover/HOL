@@ -117,97 +117,97 @@ val saturate_mul_tm     = mk_word_tm "saturate_mul"
 (*---------------------------------------------------------------------------*)
 
 fun mk_index (w, n) =
-  list_mk_comb (inst [alpha |-> bool, beta |-> dim_of w] fcp_index_tm, [w, n])
+  list_mk_comb (pure_inst [alpha |-> bool, beta |-> dim_of w] fcp_index_tm, [w, n])
     handle HOL_ERR _ => raise ERR "mk_index" "";
 
 val mk_dimindex = fcpSyntax.mk_dimindex;
 
 fun mk_dimword ty =
-  mk_comb (inst [alpha |-> ty] dimword_tm, boolSyntax.mk_itself ty)
+  mk_comb (pure_inst [alpha |-> ty] dimword_tm, boolSyntax.mk_itself ty)
   handle HOL_ERR _ => raise ERR "mk_dimword" "";
 
 fun mk_word_T ty =
-  inst [alpha |-> ty] word_T_tm
+  pure_inst [alpha |-> ty] word_T_tm
   handle HOL_ERR _ => raise ERR "mk_word_T" "";
 
 fun mk_word_L ty =
-  inst [alpha |-> ty] word_L_tm
+  pure_inst [alpha |-> ty] word_L_tm
   handle HOL_ERR _ => raise ERR "mk_word_L" "";
 
 fun mk_word_H ty =
-  inst [alpha |-> ty] word_H_tm
+  pure_inst [alpha |-> ty] word_H_tm
   handle HOL_ERR _ => raise ERR "mk_word_H" "";
 
 fun mk_word_L2 ty =
-  inst [alpha |-> ty] word_L2_tm
+  pure_inst [alpha |-> ty] word_L2_tm
   handle HOL_ERR _ => raise ERR "mk_word_L2" "";
 
 fun mk_uint_max ty =
   Term.mk_comb
-    (Term.inst [Type.alpha |-> ty] uint_max_tm, boolSyntax.mk_itself ty)
+    (Term.pure_inst [Type.alpha |-> ty] uint_max_tm, boolSyntax.mk_itself ty)
   handle HOL_ERR _ => raise ERR "mk_uint_max" "";
 
 fun mk_int_min ty =
   Term.mk_comb
-    (Term.inst [Type.alpha |-> ty] int_min_tm, boolSyntax.mk_itself ty)
+    (Term.pure_inst [Type.alpha |-> ty] int_min_tm, boolSyntax.mk_itself ty)
   handle HOL_ERR _ => raise ERR "mk_int_min" "";
 
 fun mk_int_max ty =
   Term.mk_comb
-    (Term.inst [Type.alpha |-> ty] int_max_tm, boolSyntax.mk_itself ty)
+    (Term.pure_inst [Type.alpha |-> ty] int_max_tm, boolSyntax.mk_itself ty)
   handle HOL_ERR _ => raise ERR "mk_int_max" "";
 
 fun mk_word_modify (f, w) =
-  list_mk_comb (inst [alpha |-> dim_of w] word_modify_tm, [f, w])
+  list_mk_comb (pure_inst [alpha |-> dim_of w] word_modify_tm, [f, w])
   handle HOL_ERR _ => raise ERR "mk_word_modify" "";
 
 fun mk_word_reverse w =
-  mk_comb (inst [alpha |-> dim_of w] word_reverse_tm, w)
+  mk_comb (pure_inst [alpha |-> dim_of w] word_reverse_tm, w)
   handle HOL_ERR _ => raise ERR "mk_word_reverse" "";
 
 fun mk_word_compare (w1, w2) =
-  list_mk_comb (inst [alpha |-> dim_of w1] word_compare_tm, [w1, w2])
+  list_mk_comb (pure_inst [alpha |-> dim_of w1] word_compare_tm, [w1, w2])
   handle HOL_ERR _ => raise ERR "mk_word_compare" "";
 
 fun mk_nzcv (w1, w2) =
-  list_mk_comb (inst [alpha |-> dim_of w1] nzcv_tm, [w1, w2])
+  list_mk_comb (pure_inst [alpha |-> dim_of w1] nzcv_tm, [w1, w2])
   handle HOL_ERR _ => raise ERR "mk_nzcv" "";
 
 fun mk_word_lt (w1, w2) =
-  list_mk_comb (inst [alpha |-> dim_of w1] word_lt_tm, [w1, w2])
+  list_mk_comb (pure_inst [alpha |-> dim_of w1] word_lt_tm, [w1, w2])
   handle HOL_ERR _ => raise ERR "mk_word_lt" "";
 
 fun mk_word_le (w1, w2) =
-  list_mk_comb (inst [alpha |-> dim_of w1] word_le_tm, [w1, w2])
+  list_mk_comb (pure_inst [alpha |-> dim_of w1] word_le_tm, [w1, w2])
   handle HOL_ERR _ => raise ERR "mk_word_le" "";
 
 fun mk_word_gt (w1, w2) =
-  list_mk_comb (inst [alpha |-> dim_of w1] word_gt_tm, [w1, w2])
+  list_mk_comb (pure_inst [alpha |-> dim_of w1] word_gt_tm, [w1, w2])
   handle HOL_ERR _ => raise ERR "mk_word_gt" "";
 
 fun mk_word_ge (w1, w2) =
-  list_mk_comb (inst [alpha |-> dim_of w1] word_ge_tm, [w1, w2])
+  list_mk_comb (pure_inst [alpha |-> dim_of w1] word_ge_tm, [w1, w2])
   handle HOL_ERR _ => raise ERR "mk_word_ge" "";
 
 fun mk_word_add (w1, w2) =
-  list_mk_comb (inst [alpha |-> dim_of w1] word_add_tm, [w1, w2])
+  list_mk_comb (pure_inst [alpha |-> dim_of w1] word_add_tm, [w1, w2])
   handle HOL_ERR _ => raise ERR "mk_word_add" "";
 
 fun mk_word_sub (w1, w2) =
-  list_mk_comb (inst [alpha |-> dim_of w1] word_sub_tm, [w1, w2])
+  list_mk_comb (pure_inst [alpha |-> dim_of w1] word_sub_tm, [w1, w2])
   handle HOL_ERR _ => raise ERR "mk_word_sub" "";
 
 fun mk_word_mul (w1, w2) =
-  list_mk_comb (inst [alpha |-> dim_of w1] word_mul_tm, [w1, w2])
+  list_mk_comb (pure_inst [alpha |-> dim_of w1] word_mul_tm, [w1, w2])
   handle HOL_ERR _ => raise ERR "mk_word_mul" "";
 
 fun mk_word_rrx (b, w) =
-  mk_comb (inst [alpha |-> dim_of w] word_rrx_tm, pairSyntax.mk_pair (b, w))
+  mk_comb (pure_inst [alpha |-> dim_of w] word_rrx_tm, pairSyntax.mk_pair (b, w))
   handle HOL_ERR _ => raise ERR "mk_word_rrx" "";
 
 fun mk_word_join (w1, w2) =
   list_mk_comb
-    (inst [alpha |-> dim_of w1, beta |-> dim_of w2] word_join_tm, [w1, w2])
+    (pure_inst [alpha |-> dim_of w1, beta |-> dim_of w2] word_join_tm, [w1, w2])
   handle HOL_ERR _ => raise ERR "mk_word_join" "";
 
 fun mk_word_concat (w1, w2) =
@@ -217,183 +217,183 @@ let
               handle HOL_ERR _ => gamma
 in
   list_mk_comb
-    (inst [alpha |-> dim_of w1,
+    (pure_inst [alpha |-> dim_of w1,
            beta  |-> dim_of w2,
            gamma |-> ty] word_concat_tm, [w1, w2])
   handle HOL_ERR _ => raise ERR "mk_word_concat" ""
 end;
 
 fun mk_word_div (w1, w2) =
-  list_mk_comb (inst [alpha |-> dim_of w1] word_div_tm, [w1, w2])
+  list_mk_comb (pure_inst [alpha |-> dim_of w1] word_div_tm, [w1, w2])
   handle HOL_ERR _ => raise ERR "mk_word_div" "";
 
 fun mk_word_sdiv (w1, w2) =
-  list_mk_comb (inst [alpha |-> dim_of w1] word_sdiv_tm, [w1, w2])
+  list_mk_comb (pure_inst [alpha |-> dim_of w1] word_sdiv_tm, [w1, w2])
   handle HOL_ERR _ => raise ERR "mk_word_sdiv" "";
 
 fun mk_word_mod (w1, w2) =
-  list_mk_comb (inst [alpha |-> dim_of w1] word_mod_tm, [w1, w2])
+  list_mk_comb (pure_inst [alpha |-> dim_of w1] word_mod_tm, [w1, w2])
   handle HOL_ERR _ => raise ERR "mk_word_mod" "";
 
 fun mk_word_srem (w1, w2) =
-  list_mk_comb (inst [alpha |-> dim_of w1] word_srem_tm, [w1, w2])
+  list_mk_comb (pure_inst [alpha |-> dim_of w1] word_srem_tm, [w1, w2])
   handle HOL_ERR _ => raise ERR "mk_word_srem" "";
 
 fun mk_word_smod (w1, w2) =
-  list_mk_comb (inst [alpha |-> dim_of w1] word_smod_tm, [w1, w2])
+  list_mk_comb (pure_inst [alpha |-> dim_of w1] word_smod_tm, [w1, w2])
   handle HOL_ERR _ => raise ERR "mk_word_smod" "";
 
 fun mk_word_log2 w =
-  mk_comb (inst [alpha |-> dim_of w] word_log2_tm, w)
+  mk_comb (pure_inst [alpha |-> dim_of w] word_log2_tm, w)
   handle HOL_ERR _ => raise ERR "mk_word_log2" "";
 
 fun mk_word_msb w =
-  mk_comb (inst [alpha |-> dim_of w] word_msb_tm, w)
+  mk_comb (pure_inst [alpha |-> dim_of w] word_msb_tm, w)
   handle HOL_ERR _ => raise ERR "mk_word_msb" "";
 
 fun mk_word_lsb w =
-  mk_comb (inst [alpha |-> dim_of w] word_lsb_tm, w)
+  mk_comb (pure_inst [alpha |-> dim_of w] word_lsb_tm, w)
   handle HOL_ERR _ => raise ERR "mk_word_lsb" "";
 
 fun mk_word_slice (n1, n2, w) =
-  list_mk_comb (inst [alpha |-> dim_of w] word_slice_tm, [n1, n2, w])
+  list_mk_comb (pure_inst [alpha |-> dim_of w] word_slice_tm, [n1, n2, w])
   handle HOL_ERR _ => raise ERR "mk_word_slice" "";
 
 fun mk_word_bits (n1, n2, w) =
-  list_mk_comb (inst [alpha |-> dim_of w] word_bits_tm, [n1, n2, w])
+  list_mk_comb (pure_inst [alpha |-> dim_of w] word_bits_tm, [n1, n2, w])
   handle HOL_ERR _ => raise ERR "mk_word_bits" "";
 
 fun mk_word_bit (n, w) =
-  list_mk_comb (inst [alpha |-> dim_of w] word_bit_tm, [n, w])
+  list_mk_comb (pure_inst [alpha |-> dim_of w] word_bit_tm, [n, w])
   handle HOL_ERR _ => raise ERR "mk_word_bit" "";
 
 fun mk_word_extract (n1, n2, w, ty) =
   list_mk_comb
-    (inst [alpha |-> dim_of w, beta |-> ty] word_extract_tm, [n1, n2, w])
+    (pure_inst [alpha |-> dim_of w, beta |-> ty] word_extract_tm, [n1, n2, w])
   handle HOL_ERR _ => raise ERR "mk_word_extract" "";
 
 fun mk_word_lsl (w, n) =
-  list_mk_comb (inst [alpha |-> dim_of w] word_lsl_tm, [w, n])
+  list_mk_comb (pure_inst [alpha |-> dim_of w] word_lsl_tm, [w, n])
   handle HOL_ERR _ => raise ERR "mk_word_lsl" "";
 
 fun mk_word_lsr (w, n) =
-  list_mk_comb (inst [alpha |-> dim_of w] word_lsr_tm, [w, n])
+  list_mk_comb (pure_inst [alpha |-> dim_of w] word_lsr_tm, [w, n])
   handle HOL_ERR _ => raise ERR "mk_word_lsr" "";
 
 fun mk_word_asr (w, n) =
-  list_mk_comb (inst [alpha |-> dim_of w] word_asr_tm, [w, n])
+  list_mk_comb (pure_inst [alpha |-> dim_of w] word_asr_tm, [w, n])
   handle HOL_ERR _ => raise ERR "mk_word_asr" "";
 
 fun mk_word_ror (w, n) =
-  list_mk_comb (inst [alpha |-> dim_of w] word_ror_tm, [w, n])
+  list_mk_comb (pure_inst [alpha |-> dim_of w] word_ror_tm, [w, n])
   handle HOL_ERR _ => raise ERR "mk_word_ror" "";
 
 fun mk_word_rol (w, n) =
-  list_mk_comb (inst [alpha |-> dim_of w] word_rol_tm, [w, n])
+  list_mk_comb (pure_inst [alpha |-> dim_of w] word_rol_tm, [w, n])
   handle HOL_ERR _ => raise ERR "mk_word_rol" "";
 
 fun mk_word_lsl_bv (w, n) =
-  list_mk_comb (inst [alpha |-> dim_of w] word_lsl_bv_tm, [w, n])
+  list_mk_comb (pure_inst [alpha |-> dim_of w] word_lsl_bv_tm, [w, n])
   handle HOL_ERR _ => raise ERR "mk_word_lsl_bv" "";
 
 fun mk_word_lsr_bv (w, n) =
-  list_mk_comb (inst [alpha |-> dim_of w] word_lsr_bv_tm, [w, n])
+  list_mk_comb (pure_inst [alpha |-> dim_of w] word_lsr_bv_tm, [w, n])
   handle HOL_ERR _ => raise ERR "mk_word_lsr_bv" "";
 
 fun mk_word_asr_bv (w, n) =
-  list_mk_comb (inst [alpha |-> dim_of w] word_asr_bv_tm, [w, n])
+  list_mk_comb (pure_inst [alpha |-> dim_of w] word_asr_bv_tm, [w, n])
   handle HOL_ERR _ => raise ERR "mk_word_asr_bv" "";
 
 fun mk_word_ror_bv (w, n) =
-  list_mk_comb (inst [alpha |-> dim_of w] word_ror_bv_tm, [w, n])
+  list_mk_comb (pure_inst [alpha |-> dim_of w] word_ror_bv_tm, [w, n])
   handle HOL_ERR _ => raise ERR "mk_word_ror_bv" "";
 
 fun mk_word_rol_bv (w, n) =
-  list_mk_comb (inst [alpha |-> dim_of w] word_rol_bv_tm, [w, n])
+  list_mk_comb (pure_inst [alpha |-> dim_of w] word_rol_bv_tm, [w, n])
   handle HOL_ERR _ => raise ERR "mk_word_rol_bv" "";
 
 fun mk_word_hi (w1, w2) =
-  list_mk_comb (inst [alpha |-> dim_of w1] word_hi_tm, [w1, w2])
+  list_mk_comb (pure_inst [alpha |-> dim_of w1] word_hi_tm, [w1, w2])
   handle HOL_ERR _ => raise ERR "mk_word_hi" "";
 
 fun mk_word_lo (w1, w2) =
-  list_mk_comb (inst [alpha |-> dim_of w1] word_lo_tm, [w1, w2])
+  list_mk_comb (pure_inst [alpha |-> dim_of w1] word_lo_tm, [w1, w2])
   handle HOL_ERR _ => raise ERR "mk_word_lo" "";
 
 fun mk_word_hs (w1, w2) =
-  list_mk_comb (inst [alpha |-> dim_of w1] word_hs_tm, [w1, w2])
+  list_mk_comb (pure_inst [alpha |-> dim_of w1] word_hs_tm, [w1, w2])
   handle HOL_ERR _ => raise ERR "mk_word_hs" "";
 
 fun mk_word_ls (w1, w2) =
-  list_mk_comb (inst [alpha |-> dim_of w1] word_ls_tm, [w1, w2])
+  list_mk_comb (pure_inst [alpha |-> dim_of w1] word_ls_tm, [w1, w2])
   handle HOL_ERR _ => raise ERR "mk_word_ls" "";
 
 fun mk_word_and (w1, w2) =
-  list_mk_comb (inst [alpha |-> dim_of w1] word_and_tm, [w1, w2])
+  list_mk_comb (pure_inst [alpha |-> dim_of w1] word_and_tm, [w1, w2])
   handle HOL_ERR _ => raise ERR "mk_word_and" "";
 
 fun mk_word_or (w1, w2) =
-  list_mk_comb (inst [alpha |-> dim_of w1] word_or_tm, [w1, w2])
+  list_mk_comb (pure_inst [alpha |-> dim_of w1] word_or_tm, [w1, w2])
   handle HOL_ERR _ => raise ERR "mk_word_or" "";
 
 fun mk_word_xor (w1, w2) =
-  list_mk_comb (inst [alpha |-> dim_of w1] word_xor_tm, [w1, w2])
+  list_mk_comb (pure_inst [alpha |-> dim_of w1] word_xor_tm, [w1, w2])
   handle HOL_ERR _ => raise ERR "mk_word_xor" "";
 
 fun mk_word_nand (w1, w2) =
-  list_mk_comb (inst [alpha |-> dim_of w1] word_nand_tm, [w1, w2])
+  list_mk_comb (pure_inst [alpha |-> dim_of w1] word_nand_tm, [w1, w2])
   handle HOL_ERR _ => raise ERR "mk_word_nand" "";
 
 fun mk_word_nor (w1, w2) =
-  list_mk_comb (inst [alpha |-> dim_of w1] word_nor_tm, [w1, w2])
+  list_mk_comb (pure_inst [alpha |-> dim_of w1] word_nor_tm, [w1, w2])
   handle HOL_ERR _ => raise ERR "mk_word_nor" "";
 
 fun mk_word_xnor (w1, w2) =
-  list_mk_comb (inst [alpha |-> dim_of w1] word_xnor_tm, [w1, w2])
+  list_mk_comb (pure_inst [alpha |-> dim_of w1] word_xnor_tm, [w1, w2])
   handle HOL_ERR _ => raise ERR "mk_word_xnor" "";
 
 fun mk_word_1comp w =
-  mk_comb (inst [alpha |-> dim_of w] word_1comp_tm, w)
+  mk_comb (pure_inst [alpha |-> dim_of w] word_1comp_tm, w)
   handle HOL_ERR _ => raise ERR "mk_word_1comp" "";
 
 fun mk_word_2comp w =
-  mk_comb (inst [alpha |-> dim_of w] word_2comp_tm, w)
+  mk_comb (pure_inst [alpha |-> dim_of w] word_2comp_tm, w)
   handle HOL_ERR _ => raise ERR "mk_word_2comp" "";
 
 fun mk_w2w (w, ty) =
-  mk_comb (inst [alpha |-> dim_of w, beta |-> ty] w2w_tm, w)
+  mk_comb (pure_inst [alpha |-> dim_of w, beta |-> ty] w2w_tm, w)
   handle HOL_ERR _ => raise ERR "mk_w2w" "";
 
 fun mk_n2w (n, ty) =
-  mk_comb (inst [alpha |-> ty] n2w_tm, n)
+  mk_comb (pure_inst [alpha |-> ty] n2w_tm, n)
   handle HOL_ERR _ => raise ERR "mk_n2w" "";
 
 fun mk_w2n w =
-  mk_comb (inst [alpha |-> dim_of w] w2n_tm, w)
+  mk_comb (pure_inst [alpha |-> dim_of w] w2n_tm, w)
   handle HOL_ERR _ => raise ERR "mk_w2n" "";
 
 fun mk_sw2sw (w, ty) =
-  mk_comb (inst [alpha |-> dim_of w, beta |-> ty] sw2sw_tm, w)
+  mk_comb (pure_inst [alpha |-> dim_of w, beta |-> ty] sw2sw_tm, w)
   handle HOL_ERR _ => raise ERR "mk_sw2sw" "";
 
 fun mk_saturate_n2w (n, ty) =
-  mk_comb (inst [alpha |-> ty] saturate_n2w_tm, n)
+  mk_comb (pure_inst [alpha |-> ty] saturate_n2w_tm, n)
   handle HOL_ERR _ => raise ERR "mk_saturate_n2w" "";
 
 fun mk_saturate_w2w (w, ty) =
-  mk_comb (inst [alpha |-> dim_of w, beta |-> ty] saturate_w2w_tm, w)
+  mk_comb (pure_inst [alpha |-> dim_of w, beta |-> ty] saturate_w2w_tm, w)
   handle HOL_ERR _ => raise ERR "mk_saturate_w2w" "";
 
 fun mk_saturate_add (w1, w2) =
-  list_mk_comb (inst [alpha |-> dim_of w1] saturate_add_tm, [w1, w2])
+  list_mk_comb (pure_inst [alpha |-> dim_of w1] saturate_add_tm, [w1, w2])
   handle HOL_ERR _ => raise ERR "mk_saturate_add" "";
 
 fun mk_saturate_sub (w1, w2) =
-  list_mk_comb (inst [alpha |-> dim_of w1] saturate_sub_tm, [w1, w2])
+  list_mk_comb (pure_inst [alpha |-> dim_of w1] saturate_sub_tm, [w1, w2])
   handle HOL_ERR _ => raise ERR "mk_saturate_sub" "";
 
 fun mk_saturate_mul (w1, w2) =
-  list_mk_comb (inst [alpha |-> dim_of w1] saturate_mul_tm, [w1, w2])
+  list_mk_comb (pure_inst [alpha |-> dim_of w1] saturate_mul_tm, [w1, w2])
   handle HOL_ERR _ => raise ERR "mk_saturate_mul" "";
 
 fun mk_word   (v, n) = mk_n2w (numSyntax.mk_numeral v, fcpLib.index_type n);
@@ -401,31 +401,31 @@ fun mk_wordi  (v, i) = mk_word (v, Arbnum.fromInt i);
 fun mk_wordii (v, i) = mk_wordi (Arbnum.fromInt v, i);
 
 fun mk_word_reduce (f, w) =
-  list_mk_comb (inst [alpha |-> dim_of w] word_reduce_tm, [f, w])
+  list_mk_comb (pure_inst [alpha |-> dim_of w] word_reduce_tm, [f, w])
   handle HOL_ERR _ => raise ERR "mk_word_reduce" "";
 
 fun mk_reduce_and w =
-  mk_comb (inst [alpha |-> dim_of w] reduce_and_tm, w)
+  mk_comb (pure_inst [alpha |-> dim_of w] reduce_and_tm, w)
   handle HOL_ERR _ => raise ERR "mk_reduce_and" "";
 
 fun mk_reduce_or w =
-  mk_comb (inst [alpha |-> dim_of w] reduce_or_tm, w)
+  mk_comb (pure_inst [alpha |-> dim_of w] reduce_or_tm, w)
   handle HOL_ERR _ => raise ERR "mk_reduce_or" "";
 
 fun mk_reduce_xor w =
-  mk_comb (inst [alpha |-> dim_of w] reduce_xor_tm, w)
+  mk_comb (pure_inst [alpha |-> dim_of w] reduce_xor_tm, w)
   handle HOL_ERR _ => raise ERR "mk_reduce_xor" "";
 
 fun mk_reduce_nand w =
-  mk_comb (inst [alpha |-> dim_of w] reduce_nand_tm, w)
+  mk_comb (pure_inst [alpha |-> dim_of w] reduce_nand_tm, w)
   handle HOL_ERR _ => raise ERR "mk_reduce_nand" "";
 
 fun mk_reduce_nor w =
-  mk_comb (inst [alpha |-> dim_of w] reduce_nor_tm, w)
+  mk_comb (pure_inst [alpha |-> dim_of w] reduce_nor_tm, w)
   handle HOL_ERR _ => raise ERR "mk_reduce_nor" "";
 
 fun mk_reduce_xnor w =
-  mk_comb (inst [alpha |-> dim_of w] reduce_xnor_tm, w)
+  mk_comb (pure_inst [alpha |-> dim_of w] reduce_xnor_tm, w)
   handle HOL_ERR _ => raise ERR "mk_reduce_xnor" "";
 
 fun mk_word_replicate (n, w) =
@@ -435,19 +435,19 @@ let
            handle HOL_ERR _ => beta
 in
   list_mk_comb
-    (inst [alpha |-> dim_of w, beta |-> ty] word_replicate_tm, [n, w])
+    (pure_inst [alpha |-> dim_of w, beta |-> ty] word_replicate_tm, [n, w])
   handle HOL_ERR _ => raise ERR "mk_word_replicate" ""
 end;
 
 fun mk_concat_word_list l =
-  mk_comb (inst [alpha |-> (l |> type_of
+  mk_comb (pure_inst [alpha |-> (l |> type_of
                               |> listSyntax.dest_list_type
                               |> dest_word_type)] concat_word_list_tm, l)
   handle HOL_ERR _ => raise ERR "mk_concat_word_list" "";
 
 fun mk_bit_field_insert (h, l, w1, w2) =
   list_mk_comb
-   (inst [alpha |-> dim_of w2, beta |-> dim_of w1] bit_field_insert_tm,
+   (pure_inst [alpha |-> dim_of w2, beta |-> dim_of w1] bit_field_insert_tm,
     [h, l, w1, w2])
   handle HOL_ERR _ => raise ERR "mk_bit_field_insert" "";
 

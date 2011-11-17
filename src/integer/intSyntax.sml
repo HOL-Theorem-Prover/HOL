@@ -31,7 +31,7 @@ val LEAST_INT_tm = Const "LEAST_INT"
 val int_injection = Const "int_of_num"
 val Num_tm = Const "Num"
 
-val int_eq_tm = inst [alpha |-> int_ty] boolSyntax.equality
+val int_eq_tm = pure_inst [alpha |-> int_ty] boolSyntax.equality
 
 fun dest_binop t (srcf,msg) tm = let
   val (farg1, arg2) = dest_comb tm

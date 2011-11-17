@@ -159,7 +159,7 @@ in
     in
       SORT_UPDATES_MAPTO_CONV
         ``FST : ^(ty_antiq ty) word # 'a -> ^(ty_antiq ty) word``
-        (Term.inst [Type.alpha |-> ty] wordsSyntax.word_lo_tm)
+        (Term.pure_inst [Type.alpha |-> ty] wordsSyntax.word_lo_tm)
         [word_lo, word_eq, dimindex,
          SUC_RULE numeral_bitTheory.MOD_2EXP_EQ,
          SUC_RULE numeral_bitTheory.MOD_2EXP_MAX]

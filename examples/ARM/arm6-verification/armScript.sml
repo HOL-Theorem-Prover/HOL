@@ -69,7 +69,7 @@ val _ = Hol_datatype`
 (*  General Purpose Register operations                                      *)
 (* ------------------------------------------------------------------------- *)
 
-val Rg = inst [alpha |-> ``:32``, beta |-> ``:4``] word_extract_tm;
+val Rg = pure_inst [alpha |-> ``:32``, beta |-> ``:4``] word_extract_tm;
 
 val USER_def = Define `USER mode = (mode = usr) \/ (mode = safe)`;
 

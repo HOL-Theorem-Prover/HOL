@@ -51,7 +51,7 @@ val bounded_tm   = prim_mk_const {Name="BOUNDED",      Thy="bool"};
 fun mk_eq (lhs,rhs) =
  let val (tyS,kdS,rkS) = kind_match_type alpha (type_of lhs)
  in (*list_mk_comb(inst[alpha |-> type_of lhs] equality, [lhs,rhs])*)
-   list_mk_comb(inst tyS (inst_rank_kind rkS kdS equality), [lhs,rhs])
+   list_mk_comb(inst_rk_kd_ty rkS kdS tyS equality, [lhs,rhs])
  end
  handle HOL_ERR _ => raise ERR "mk_eq" "lhs and rhs have different types";
 
@@ -246,7 +246,7 @@ fun avoid_dest_tyabs (tyvs,tmvs) tm =
   let val (btyv,body) = dest_tyabs tm
   in if mem btyv tyvs then
        let val btyv' = variant_type tyvs btyv
-           val body' = inst [btyv |-> btyv'] body
+           val body' = pure_inst [btyv |-> btyv'] body
        in (btyv',body')
        end
      else (btyv,body)

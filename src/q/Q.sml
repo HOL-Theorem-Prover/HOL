@@ -258,7 +258,7 @@ fun AP_TERM q th =
      val (lhs,rhs) = dest_eq(concl th)
      val theta = match_type ty (type_of lhs)
  in
-   Thm.AP_TERM (Term.inst theta tm) th
+   Thm.AP_TERM (Term.pure_inst theta tm) th
  end;
 
 fun AP_THM th q =

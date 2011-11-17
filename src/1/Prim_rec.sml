@@ -114,7 +114,7 @@ fun mymatch_and_instantiate axth pattern instance = let
                  message = "Number of conjuncts not even the same"}
   val tmsubst = match_eqns [] 1 (strip_conj new_patbody) (strip_conj instbody)
 (*
-  val axth1 = Thm.PURE_INST_TYPE tyinst (Thm.INST_KIND kdinst (Thm.INST_RANK rkinst axth))
+  val axth1 = Thm.INST_TYPE tyinst (Thm.INST_KIND kdinst (Thm.INST_RANK rkinst axth))
   val axth2 = Thm.INST tmsubst axth1
 *)
   val axth2 = INST_ALL (tmsubst,tyinst,kdinst,rkinst) axth
@@ -746,7 +746,7 @@ fun UNIQUENESS th =
   let val _ = assert boolSyntax.is_exists1 (concl th)
       val (Rator,Rand) = dest_comb(concl th)
       val theta = [alpha |-> type_of (bvar Rand)]
-      val uniq = MP (SPEC Rand (INST_TYPE theta imp)) th
+      val uniq = MP (SPEC Rand (ALIGN_INST_TYPE theta imp)) th
       val red = conv (fst(dest_imp(concl uniq)))
       val (V1,V2) = let val i = Term.inst theta in (i v1,i v2) end
   in
@@ -854,7 +854,7 @@ end;
 (* ---------------------------------------------------------------------*)
 
 local val v = genvar Type.bool
-      val eq = inst [alpha |-> bool] boolSyntax.equality
+      val eq = pure_inst [alpha |-> bool] boolSyntax.equality
       val T_EQ_T = EQT_INTRO(REFL T)
       val T_OR = GEN v (CONJUNCT1 (SPEC v OR_CLAUSES))
       fun DISJ_SIMP tm =
@@ -897,7 +897,7 @@ end;
 (* ---------------------------------------------------------------------*)
 
 local val v = genvar Type.bool
-      val equ = inst [alpha |-> bool] boolSyntax.equality
+      val equ = pure_inst [alpha |-> bool] boolSyntax.equality
       val EQ_T = GEN v (CONJUNCT1 (CONJUNCT2 (SPEC v EQ_CLAUSES)))
       fun R_SIMP tm =
          let val (lhs,rhs) = dest_eq tm
@@ -993,7 +993,7 @@ fun prove_induction_thm th =
        val (ty,rty) = case strip_app_type (type_of Bvar)
                       of (_,[ty, rty]) => (ty,rty)
                        | _ => raise Match
-       val inst = INST_TYPE [rty |-> B] th
+       val inst = ALIGN_INST_TYPE [rty |-> B] th
        val P = mk_primed_var("P", ty --> B)
        and v = genvar ty
        and cases = strip_conj Body

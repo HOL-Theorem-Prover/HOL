@@ -232,7 +232,7 @@ fun mk_test (c,l,v) = boolSyntax.mk_eq (Term.list_mk_comb (c,l),v)
 fun mk_arm_const s = Term.prim_mk_const {Name = s, Thy = "arm_step"}
 
 local
-  val I_flags_fupd = Term.inst [Type.alpha |-> ``:ARMpsr``] combinSyntax.I_tm
+  val I_flags_fupd = Term.pure_inst [Type.alpha |-> ``:ARMpsr``] combinSyntax.I_tm
   val read_status_tm = mk_arm_const "ARM_READ_STATUS"
   fun mk_read_status (t,s) =
         Term.list_mk_comb (read_status_tm,[t,s])
@@ -512,7 +512,7 @@ val aligned_bx_tm = Term.prim_mk_const {Name = "aligned_bx", Thy = "arm_step"}
 
 fun mk_aligned_bx (w,n:term) =
   Term.mk_comb
-    (Term.inst [Type.alpha |-> wordsSyntax.dest_word_type (Term.type_of w)]
+    (Term.pure_inst [Type.alpha |-> wordsSyntax.dest_word_type (Term.type_of w)]
        aligned_bx_tm, w)
   handle HOL_ERR _ => raise ERR "mk_aligned_bx" "";
 

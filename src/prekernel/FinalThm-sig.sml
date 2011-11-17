@@ -33,10 +33,10 @@ sig
   val MP            : thm -> thm -> thm
   val SUBST         : (term,thm)Lib.subst -> term -> thm -> thm
   val INST_RANK     : rank -> thm -> thm                         (* new for HOL-Omega *)
-  val PURE_INST_KIND: (kind,kind)Lib.subst -> thm -> thm         (* new for HOL-Omega *)
   val INST_KIND     : (kind,kind)Lib.subst -> thm -> thm         (* new for HOL-Omega *)
-  val PURE_INST_TYPE: (hol_type,hol_type)Lib.subst -> thm -> thm (* new for HOL-Omega *)
-  val INST_TYPE     : (hol_type,hol_type)Lib.subst -> thm -> thm (* augmented for HOL-Omega *)
+  val ALIGN_INST_KIND:(kind,kind)Lib.subst -> thm -> thm         (* new for HOL-Omega *)
+  val INST_TYPE     : (hol_type,hol_type)Lib.subst -> thm -> thm
+  val ALIGN_INST_TYPE:(hol_type,hol_type)Lib.subst -> thm -> thm (* new for HOL-Omega *)
   val TY_ABS        : hol_type -> thm -> thm                     (* new for HOL-Omega *)
   val TY_BETA_CONV  : term -> thm                                (* new for HOL-Omega *)
 

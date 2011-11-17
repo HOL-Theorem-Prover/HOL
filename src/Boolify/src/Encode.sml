@@ -24,9 +24,9 @@ val head = Lib.repeat rator;
 fun pair_string(s1,s2) = s1^"$"^s2;
 
 val bool_list = mk_list_type bool;
-val bool_nil = inst [alpha |-> bool] listSyntax.nil_tm;
-val bool_cons = inst [alpha |-> bool] listSyntax.cons_tm;
-val bool_append = inst [alpha |-> bool] listSyntax.append_tm;
+val bool_nil = pure_inst [alpha |-> bool] listSyntax.nil_tm;
+val bool_cons = pure_inst [alpha |-> bool] listSyntax.cons_tm;
+val bool_append = pure_inst [alpha |-> bool] listSyntax.append_tm;
 
 fun mk_bool_cons (x,y) = list_mk_comb (bool_cons, [x,y]);
 fun mk_bool_append (x,y) = list_mk_comb (bool_append, [x,y]);
@@ -102,7 +102,7 @@ fun tyencode (theta,omega,gamma) clause ty =
                of SOME f =>
                    let val vty = drop Args (type_of f)
                        val sigma = Type.match_type vty ty
-                    in list_mk_comb(inst sigma f,
+                    in list_mk_comb(pure_inst sigma f,
                             map (tyencode (theta,omega,gamma) clause) Args)
                     end
                 | NONE => undef ty

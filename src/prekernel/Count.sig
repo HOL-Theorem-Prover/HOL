@@ -11,7 +11,7 @@ signature Count =
 sig
 
   datatype rule = Assume | Refl | Beta | Subst | Abs | Disch | Mp
-                | InstRank | PureInstKind | InstKind | PureInstType | InstType
+                | InstRank | InstKind | AlignInstKind | InstType | AlignInstType
                 | MkComb | ApTerm | ApThm | Alpha
                 | Sym | Trans | EqMp | EqImpRule | Inst | InstAll
                 | Spec | Gen
@@ -33,8 +33,8 @@ sig
     BETA_CONV : int, SUBST : int,
     ABS : int, DISCH : int,
     MP : int, INST_RANK : int,
-    PURE_INST_KIND : int, INST_KIND : int,
-    PURE_INST_TYPE : int, INST_TYPE : int,
+    INST_KIND : int, ALIGN_INST_KIND : int,
+    INST_TYPE : int, ALIGN_INST_TYPE : int,
     MK_COMB : int, AP_TERM : int,
     AP_THM : int, ALPHA : int,
     SYM : int, TRANS : int,

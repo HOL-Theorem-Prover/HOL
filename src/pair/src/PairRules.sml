@@ -780,7 +780,7 @@ fun PEXISTS_AND_CONV tm =
 	if (oP andalso oQ) then
 	    failwith "bound pair occurs in both conjuncts"
 	else if ((not oP) andalso (not oQ)) then
-	    let	val th1 = INST_TYPE[alpha |-> type_of x ] BOTH_EXISTS_AND_THM
+	    let	val th1 = ALIGN_INST_TYPE[alpha |-> type_of x ] BOTH_EXISTS_AND_THM
 		val th2 = SPECL [P,Q] th1
 		val th3 =
 		    CONV_RULE
@@ -930,7 +930,7 @@ fun PFORALL_OR_CONV tm =
 		failwith "bound pair occurs in both conjuncts"
 	else if ((not oP) andalso (not oQ)) then
 	    let	val th1 =
-		INST_TYPE [alpha |-> type_of x] BOTH_FORALL_OR_THM
+		ALIGN_INST_TYPE [alpha |-> type_of x] BOTH_FORALL_OR_THM
 		val th2 = SPECL [P,Q] th1
 		val th3 =
 		    CONV_RULE
@@ -1096,7 +1096,7 @@ fun PFORALL_IMP_CONV tm =
 	if (oP andalso oQ) then
 	    failwith "bound pair occurs in both sides of `==>`"
 	else if ((not oP) andalso (not oQ)) then
-	    let val th1 = INST_TYPE[alpha |-> type_of x] BOTH_FORALL_IMP_THM
+	    let val th1 = ALIGN_INST_TYPE[alpha |-> type_of x] BOTH_FORALL_IMP_THM
 		val th2 = SPECL [P,Q] th1
 		val th3 =
 		    CONV_RULE
@@ -1235,7 +1235,7 @@ fun  PEXISTS_IMP_CONV tm =
 	if (oP andalso oQ) then
 		failwith "bound pair occurs in both sides of `==>`"
 	else if ((not oP) andalso (not oQ)) then
-	    let	val th1 = INST_TYPE[alpha |-> type_of x] BOTH_EXISTS_IMP_THM
+	    let	val th1 = ALIGN_INST_TYPE[alpha |-> type_of x] BOTH_EXISTS_IMP_THM
 		val th2 = SPECL [P,Q] th1
 		val th3 =
 		    CONV_RULE
@@ -1534,11 +1534,11 @@ fun PSPECL xl th = rev_itlist PSPEC xl th;
 fun IPSPEC x th =
     let val (p,tm) = with_exn dest_pforall(concl th)
                     (ERR"IPSPEC" "input theorem not universally quantified")
-	val (_,inst) = match_term p x
+	val (_,inst,kdinst,rk) = kind_match_term p x
 	    handle HOL_ERR _ => raise (ERR "IPSPEC"
 			        "can't type-instantiate input theorem")
     in
-	PSPEC x (INST_TYPE inst th) handle HOL_ERR _ =>
+	PSPEC x (INST_RK_KD_TY (rk,kdinst,inst) th) handle HOL_ERR _ =>
         raise (ERR "IPSPEC" "type variable free in assumptions")
     end;
 
@@ -1557,11 +1557,11 @@ val IPSPECL =
 	  let val pl = with_exn striper (concl th)
                        (ERR "IPSPECL"
                             "list of terms too long for theorem")
-	       val (_,inst) = match_term (tup pl) tupxl handle HOL_ERR _ =>
+	       val (_,inst,kdinst,rk) = kind_match_term (tup pl) tupxl handle HOL_ERR _ =>
                   raise (ERR "IPSPECL"
                              "can't type-instantiate input theorem")
 	  in
-             PSPECL xl (INST_TYPE inst th) handle HOL_ERR _ =>
+             PSPECL xl (INST_RK_KD_TY (rk,kdinst,inst) th) handle HOL_ERR _ =>
               raise (ERR "IPSPECL" "type variable free in assumptions")
           end
          end
@@ -1814,7 +1814,7 @@ fun PEXISTS (fm,tm) th =
 	val th1 = PBETA_CONV (mk_comb(mk_pabs(p,b),tm))
 	val th2 = EQ_MP (SYM th1) th
 	val th3 = PSELECT_INTRO th2
-	val th4 = AP_THM(INST_TYPE [alpha |-> type_of p] EXISTS_DEF)
+	val th4 = AP_THM(ALIGN_INST_TYPE [alpha |-> type_of p] EXISTS_DEF)
                         (mk_pabs(p, b))
 	val th5 = TRANS th4 (BETA_CONV(rhs(concl th4)))
     in
@@ -1913,7 +1913,7 @@ fun PEXISTENCE th =
     let val (p,b) = dest_pabs (rand (concl th))
 	val th1 =
 	    AP_THM
-	    (INST_TYPE [alpha |-> type_of p] EXISTS_UNIQUE_DEF) (mk_pabs(p,b))
+	    (ALIGN_INST_TYPE [alpha |-> type_of p] EXISTS_UNIQUE_DEF) (mk_pabs(p,b))
 	val th2 = EQ_MP th1 th
 	val th3 = CONV_RULE BETA_CONV th2
     in
@@ -1931,7 +1931,7 @@ fun PEXISTS_UNIQUE_CONV tm =
 	val p' = pvariant (p::(free_vars tm)) p
 	val th1 =
 	    AP_THM
-	    (INST_TYPE [alpha |-> type_of p] EXISTS_UNIQUE_DEF) (mk_pabs(p,b))
+	    (ALIGN_INST_TYPE [alpha |-> type_of p] EXISTS_UNIQUE_DEF) (mk_pabs(p,b))
 	val th2 = CONV_RULE (RAND_CONV BETA_CONV) th1
 	val th3 = CONV_RULE (RAND_CONV (RAND_CONV (RAND_CONV (ABS_CONV
 				       (GEN_PALPHA_CONV p'))))) th2
@@ -2373,9 +2373,9 @@ handle HOL_ERR _ => failwith "SWAP_PEXISTS_CONV";
 fun PART_PMATCH partfn th =
     let val pth = GPSPEC (GSPEC (GEN_ALL th))
 	val pat = partfn (concl pth)
-	val matchfn = match_term pat
+	val matchfn = kind_match_term pat
     in
-	fn tm => INST_TY_TERM (matchfn tm) pth
+	fn tm => INST_ALL (matchfn tm) pth
     end;
 
 
@@ -2405,10 +2405,10 @@ val PMATCH_MP_TAC : thm_tactic =
 	in
 	    fn (A,g) => let
                  val (gps,gl) = strip_pforall g
-		 val ins = match_term con gl
+		 val ins = kind_match_term con gl
                      handle HOL_ERR _ =>
                             raise ERR "PMATCH_MP_TAC" "no match"
-		 val ith = INST_TY_TERM ins th2
+		 val ith = INST_ALL ins th2
 		 val newg = fst(dest_imp(concl ith))
 		 val gth = PGENL gps (UNDISCH ith)
                      handle HOL_ERR _ =>
@@ -2453,8 +2453,8 @@ val PMATCH_MP =
 	in
 	    fn th =>
 	    let val (B,t') = dest_thm th
-		val ty_inst = snd (match_term t t')
-		val ith_ = INST_TYPE ty_inst ith
+		val (_,ty_inst,kd_inst,rk_inst) = kind_match_term t t'
+		val ith_ = INST_RK_KD_TY (rk_inst,kd_inst,ty_inst) ith
 		val (A_, forall_ps_t_imp_u_) = dest_thm ith_
 		val (ps_,t_imp_u_) = strip_pforall forall_ps_t_imp_u_
 		val (t_,u_) = dest_imp (t_imp_u_)

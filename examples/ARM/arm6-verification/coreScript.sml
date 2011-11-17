@@ -41,7 +41,7 @@ val arm6state = ``ARM6 (DP reg psr areg din alua alub dout)
 
 (* ......................................................................... *)
 
-val Rg = inst [alpha |-> ``:32``, beta |-> ``:4``] ``$><``;
+val Rg = pure_inst [alpha |-> ``:32``, beta |-> ``:4``] ``$><``;
 
 val CLEARBIT_def = Define `CLEARBIT x = word_modify (\i b. ~(i = x) /\ b)`;
 val LEASTBIT_def = Define `LEASTBIT n = LEAST b. n %% b`;

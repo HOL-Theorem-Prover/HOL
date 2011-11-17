@@ -70,7 +70,7 @@ fun mk_icomb(tm1,tm2) =
    let val (ty, _) = Type.dom_rng (type_of tm1)
        val (tyins,kdins,rkin) = Type.kind_match_type ty (type_of tm2)
    in
-      mk_comb(Term.inst tyins (Term.inst_rank_kind rkin kdins tm1), tm2)
+      mk_comb(Term.inst_rk_kd_ty rkin kdins tyins tm1, tm2)
    end;
 
 fun list_mk_icomb (thy,cname) =
@@ -875,7 +875,7 @@ in
       val inls = mk_inls sty
       and outls = mk_outls sty
       val zty = type_of(rand(snd(strip_forall(hd(conjuncts bod)))))
-      val ith = INST_TYPE [zty |-> sty] th
+      val ith = ALIGN_INST_TYPE [zty |-> sty] th
       val (avs,ebod) = strip_forall(concl ith)
       val (evs,bod) = strip_exists ebod
       val fns' = map2 mk_newfun evs outls
@@ -1055,7 +1055,7 @@ fun lift_type_bijections iths cty =
  in assoc cty (zip itys iths)
     handle HOL_ERR _ =>
      if not (List.exists (C occurs_in cty) itys)
-     then Thm.INST_TYPE [Type.alpha |-> cty] ISO_REFL
+     then Thm.ALIGN_INST_TYPE [Type.alpha |-> cty] ISO_REFL
      else let val (tyc,isotys) = strip_app_type cty
               val (tycon,_) = dest_con_type tyc
           in if tycon = "fun"
@@ -1138,8 +1138,8 @@ fun prove_inductive_types_isomorphic n k (ith0,rth0) (ith1,rth1) = let
                 let val (domty,ranty) = dest_fun_ty (type_of f)
                 in ranty |-> tysubst tyal1 domty
                 end) pevs1
-  val tth0 = Thm.INST_TYPE tyins0 sth0
-  and tth1 = Thm.INST_TYPE tyins1 sth1
+  val tth0 = Thm.ALIGN_INST_TYPE tyins0 sth0 (* ALIGN? *)
+  and tth1 = Thm.ALIGN_INST_TYPE tyins1 sth1 (* ALIGN? *)
   val (evs0,bod0) = strip_exists(concl tth0)
   and (evs1,bod1) = strip_exists(concl tth1)
   val (lcjs0,rcjs0) = chop_list k (map (snd o strip_forall) (conjuncts bod0))
@@ -1515,14 +1515,14 @@ local
                ("Can't find definition for nested type: "^ tycon)
     val rth0_tvs = (*map dest_vartype*) (Term.type_vars_in_term (concl rth0))
     val avoid_tyal = mk_thm_avoid rth0_tvs avoids
-    val rth = Thm.INST_TYPE avoid_tyal rth0
-    val ith = Thm.INST_TYPE avoid_tyal ith0
+    val rth = Thm.ALIGN_INST_TYPE avoid_tyal rth0 (* ALIGN? *)
+    val ith = Thm.ALIGN_INST_TYPE avoid_tyal ith0 (* ALIGN? *)
 
     val (evs,bod) = strip_exists(snd(strip_forall(concl rth)))
     val cjs = map (lhand o snd o strip_forall) (conjuncts bod)
     val rtys = map (hd o snd o strip_app_type o type_of) evs
     val (tyins,kdins,rkin) = tryfind (fn vty => Type.kind_match_type vty nty) rtys
-    val cjs' = map (Term.inst tyins o Term.inst_rank_kind rkin kdins o rand) (fst(chop_list k cjs))
+    val cjs' = map (Term.inst_rk_kd_ty rkin kdins tyins o rand) (fst(chop_list k cjs))
     val mtys = itlist (insert o type_of) cjs' []
     val pcons = map (fn ty => filter (fn t => type_of t = ty) cjs') mtys
     val cls' = zip mtys (map (map (recover_clause id)) pcons)
@@ -1582,8 +1582,8 @@ local
         in
           map (mapthis o fst) cls
         end
-        val ith0 = Thm.INST_TYPE xtyal ith
-        and rth0 = Thm.INST_TYPE xtyal rth
+        val ith0 = Thm.ALIGN_INST_TYPE xtyal ith (* ALIGN? *)
+        and rth0 = Thm.ALIGN_INST_TYPE xtyal rth (* ALIGN? *)
         val (isoth,rclauses) =
             prove_inductive_types_isomorphic n k (ith0,rth0) (ith1,rth1)
         val irth3 = CONJ ith1 rth1

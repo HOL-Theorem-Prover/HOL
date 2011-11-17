@@ -17,7 +17,7 @@ fun mk_K(x,y) =
                      beta |-> type_of y]K_tm, [x,y]);
 
 fun mk_K_1 (tm,ty) = mk_comb(inst [alpha |-> type_of tm,
-                                   beta  |-> ty] K_tm,tm)
+                                         beta  |-> ty] K_tm,tm)
 
 fun mk_S(f,g,x) =
  let val (fdom,frng) = dom_rng(type_of f)

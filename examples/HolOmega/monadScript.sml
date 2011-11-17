@@ -6,10 +6,14 @@
 structure monadScript =
 struct
 
+(*
+app load ["stringTheory","functorTheory"];
+*)
+
 open HolKernel Parse boolLib
      bossLib
 
-open combinTheory functorTheory
+open combinTheory functorTheory;
 
 val _ = set_trace "Unicode" 1;
 val _ = set_trace "kinds" 0;

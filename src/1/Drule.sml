@@ -42,7 +42,7 @@ fun INST_RK_KD_TY(Srk,Skd,Sty) = INST_ALL([],Sty,Skd,Srk)
 fun ETA_CONV t =
   let val (var, cmb) = dest_abs t
       val tysubst = [alpha |-> type_of var, beta |-> type_of cmb]
-      val th = SPEC (rator cmb) (INST_TYPE tysubst ETA_AX)
+      val th = SPEC (rator cmb) (ALIGN_INST_TYPE tysubst ETA_AX)
   in
     TRANS (ALPHA t (lhs (concl th))) th
   end
@@ -78,7 +78,7 @@ fun TY_ETA_CONV t =
 *)
       val th = SPEC (tyrator tycmb)
                  (INST_RK_KD_TY (rksubst,kdsubst,tysubst)  TY_ETA_AX)
-              (* (PURE_INST_TYPE tysubst (INST_KIND kdsubst (INST_RANK rksubst TY_ETA_AX))) *)
+              (* (INST_TYPE tysubst (INST_KIND kdsubst (INST_RANK rksubst TY_ETA_AX))) *)
   in
     TRANS (ALPHA t (lhs (concl th))) th
   end
@@ -497,7 +497,7 @@ fun TY_TM_GENL tyl th =
 
 fun SELECT_INTRO th =
  let val (Rator, Rand) = dest_comb(concl th)
-     val SELECT_AX' = INST_TYPE [alpha |-> type_of Rand] SELECT_AX
+     val SELECT_AX' = ALIGN_INST_TYPE [alpha |-> type_of Rand] SELECT_AX
  in
    MP (SPEC Rand (SPEC Rator SELECT_AX')) th
  end
@@ -537,7 +537,7 @@ fun SELECT_RULE th =
    let val (tm as (Bvar,Body)) = dest_exists(concl th)
        val v = genvar(type_of Bvar)
        val P = mk_abs (Bvar,Body)
-       val SELECT_AX' = INST_TYPE [alpha |-> type_of Bvar] SELECT_AX
+       val SELECT_AX' = ALIGN_INST_TYPE [alpha |-> type_of Bvar] SELECT_AX
        val th1 = SPEC v (SPEC P SELECT_AX')
        val (ant,conseq) = dest_imp(concl th1)
        val th2 = BETA_CONV ant
@@ -1028,7 +1028,7 @@ fun ISPEC t th =
        val (_,inst) = match_term Bvar t handle HOL_ERR e
                       => raise ERR "ISPEC"
                            "can't type-instantiate input theorem"
-       val ith = PURE_INST_TYPE inst th
+       val ith = INST_TYPE inst th
                     handle HOL_ERR {message,...}
                       => raise ERR "ISPEC"
                            ("failed to type-instantiate input theorem:\n" ^ message)
@@ -1063,7 +1063,7 @@ fun ISPEC t th =
                     handle HOL_ERR {message,...}
                       => raise ERR "ISPEC"
                            ("failed to kind-instantiate input theorem:\n" ^ message)
-       val ith = PURE_INST_TYPE inst kth
+       val ith = INST_TYPE inst kth
                     handle HOL_ERR {message,...}
                       => raise ERR "ISPEC"
                            ("failed to type-instantiate input theorem:\n" ^ message)
@@ -1587,7 +1587,7 @@ fun PURE_INST_TY_TERM(Stm,Sty) th = INST_ALL (Stm,Sty,[],0) th
  * the kinds and ranks according to the type substitution.                   *
  *---------------------------------------------------------------------------*)
 
-fun INST_TY_TERM(Stm,Sty) th = INST Stm (INST_TYPE Sty th)
+fun INST_TY_TERM(Stm,Sty) th = INST Stm (ALIGN_INST_TYPE Sty th)
 
 (*---------------------------------------------------------------------------*
  *   |- !x y z. w   --->  |- w[g1/x][g2/y][g3/z]                             *
@@ -1728,19 +1728,19 @@ fun MATCH_MP ith =
        val ctyvs = type_varsl (map (C rassoc_total1 tyin) rtyvs)
        val vftyvs = map (op |->) (zip aftyvs (variant_types (ctyvs@tyhy1@tyhy2, aftyvs)))
        val atyin = (filter neq1 vftyvs)@tyin
-       val atmvs' = map (inst atyin) atmvs
-       val fvs' = map (inst atyin) fvs
+       val atmvs' = map (pure_inst atyin) atmvs
+       val fvs' = map (pure_inst atyin) fvs
        val afvs = Lib.op_set_diff eq fvs' (Lib.op_set_diff eq hy1 atmvs')
-       val cvs = free_varsl (map (C rassoc_total tmin o inst tyin(*or atyin*)) rvs)
+       val cvs = free_varsl (map (C rassoc_total tmin o pure_inst tyin(*or atyin*)) rvs)
        val vfvs = map (op |->) (zip afvs (variants (cvs@hy1@hy2, afvs)))
        val atmin = (filter neq vfvs)@tmin
        val (sptyl,iltyl) = partition (C mem atyvs o #redex) atyin
        val (spl,ill) = partition (C (op_mem eq) atmvs' o #redex) atmin
-       val fspl = map (C rassoc_total1 sptyl +++ (C rassoc_total spl o inst atyin)) avs
-       val mth = MP (TY_TM_SPECL fspl (INST ill (PURE_INST_TYPE iltyl tth))) th
+       val fspl = map (C rassoc_total1 sptyl +++ (C rassoc_total spl o pure_inst atyin)) avs
+       val mth = MP (TY_TM_SPECL fspl (INST ill (INST_TYPE iltyl tth))) th
        fun loop [] = []
          | loop (inR tm::rst) =
-             (case subst_assoc (eq (inst atyin tm)) vfvs
+             (case subst_assoc (eq (pure_inst atyin tm)) vfvs
                 of NONE => loop rst
                  | SOME x => inR x::loop rst)
          | loop (inL ty::rst) =
@@ -1777,7 +1777,7 @@ fun trytyalpha a tm =
  let val (Bvar,Body) = dest_tyabs tm
  in if a = Bvar then tm else
     if type_var_occurs a Body then trytyalpha (variant_type (type_vars_in_term tm) a) tm
-    else mk_tyabs(a, inst[Bvar |-> a] Body)
+    else mk_tyabs(a, pure_inst[Bvar |-> a] Body)
  end
 
 
@@ -2260,7 +2260,7 @@ fun HO_PART_MATCH partfn th =
      fun finish_fn rkin kdin tyin ivs =
        let val npossbetas =
             if rkin=0 andalso null kdin andalso null tyin then possbetas
-            else map ((inst tyin o inst_rank_kind rkin kdin) ## I) possbetas
+            else map ((inst_rk_kd_ty rkin kdin tyin) ## I) possbetas
        in if null npossbetas then Lib.I
           else CONV_RULE (EVERY_CONV (mapfilter
                                         (TRY_CONV o C (op_assoc eq) npossbetas)
@@ -2291,10 +2291,10 @@ fun HO_PART_MATCH partfn th =
                 val tyin' = HOLset.foldl g [] tyavoids
                 fun f (v, acc) = (v |-> genvar (type_of v)) :: acc
                 val newinst = HOLset.foldl f [] avoids
-                val newthm = INST newinst (PURE_INST_TYPE tyin' sth0)
+                val newthm = INST newinst (INST_TYPE tyin' sth0)
                 val tmin' = map (fn {residue, redex} =>
                                     {residue = residue,
-                                     redex = Term.subst newinst (Term.inst tyin' redex)}) tmin
+                                     redex = Term.subst newinst (Term.pure_inst tyin' redex)}) tmin
                 val thmc = concl newthm
               in
                 (EQ_MP (ALPHA thmc (deep_alpha bvms thmc)) newthm, tyin', tmin')
@@ -2303,7 +2303,7 @@ fun HO_PART_MATCH partfn th =
             if Map.numItems bound_to_abs = 0 then sth1
             else
               CONV_RULE (EVERY_CONV (#3 (munge_bvars bound_to_abs sth1))) sth1
-        val th0 = INST tmin' (PURE_INST_TYPE tyin' sth2)
+        val th0 = INST tmin' (INST_TYPE tyin' sth2)
         val th1 = finish_fn rkin kdin tyin (map #redex tmin) th0
     in
       th1
@@ -2471,7 +2471,7 @@ fun canon (fl,th) =
         then let val (Bvar,Body) = dest_tyexists ant
                  val ftvs = HOLset.listItems (HOLset.addList (hyp_tyvars th, type_vars_in_term(concl th)))
                  val newv = variant_type ftvs Bvar
-                 val newa = inst [Bvar |-> newv] Body
+                 val newa = pure_inst [Bvar |-> newv] Body
                  val th1  = MP th (TY_EXISTS (ant,newv) (ASSUME newa))
              in
                canon(true,DISCH newa th1)
@@ -2573,7 +2573,7 @@ fun define_new_type_bijections{name,ABS,REP,tyax} =
       val (a,r) = Type.dom_rng (type_of rep)
   in Rsyntax.new_specification
       {name=name,
-       sat_thm=MP(SPEC P (INST_TYPE[beta |-> a, alpha |-> r]ABS_REP_THM)) tyax,
+       sat_thm=MP(SPEC P (ALIGN_INST_TYPE[beta |-> a, alpha |-> r]ABS_REP_THM)) tyax,
        consts = [{const_name=REP, fixity=NONE},
                  {const_name=ABS, fixity=NONE}]}
   end

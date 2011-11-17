@@ -130,7 +130,7 @@ fun GEN_QUOT_TYVARS th =
        to avoid clashes with type vars external to "th" *)
     let val ants = get_ants (concl th)
         val vs = mk_set (flatten (map type_vars_in_term ants))
-        val sub = map (fn v => (v |-> Type.gen_tyvar())) vs
+        val sub = map (fn v => (v |-> Type.gen_var_type(kind_of v))) vs
     in INST_TYPE sub th
     end
 
@@ -145,9 +145,9 @@ fun CAREFUL_INST_TYPE sub th =
        val (asl,con) = dest_thm th
        val th_tyvars = U (map type_vars_in_term (con::asl))
        val old = subtract (intersect tyvars th_tyvars) redexs
-       val newsub = map (fn v => (v |-> gen_tyvar())) old
+       val newsub = map (fn v => (v |-> gen_var_type(kind_of v))) old
    in
-       INST_TYPE (sub @ newsub) th
+       ALIGN_INST_TYPE (sub @ newsub) th
    end;
 
 
@@ -155,8 +155,8 @@ fun C_MATCH_MP imp th =
     let val imp1 = GEN_QUOT_TYVARS imp
         val ant = (#ant o dest_imp o snd o strip_forall o concl) imp1
         val subj = (snd o strip_forall o concl) th
-        val (_, ty_sub) = match_term ant subj
-        val imp' = (*CAREFUL_*)INST_TYPE ty_sub imp1
+        val (_, ty_sub, kd_sub, rk_sub) = kind_match_term ant subj
+        val imp' = (*CAREFUL_*)INST_RK_KD_TY (rk_sub,kd_sub,ty_sub) imp1
     in
         MATCH_MP imp' th
     end;
@@ -169,7 +169,7 @@ fun C_MATCH_MP2 imp th1 th2 =
         val subj2 = (snd o strip_forall o concl) th2
         val (_, ty_sub1) = match_term ant1 subj1
         val (_, ty_sub2) = match_term ant2 subj2
-        val imp' = (*CAREFUL_*)INST_TYPE (ty_sub1 @ ty_sub2) imp1
+        val imp' = (*CAREFUL_*)ALIGN_INST_TYPE (ty_sub1 @ ty_sub2) imp1
     in
         MATCH_MP (MATCH_MP imp' th1) th2
     end;
@@ -1032,7 +1032,7 @@ fun mkRELty ty = ty --> ty --> bool;
 
 
 fun identity_equiv ty =
-    INST_TYPE [{redex=alpha, residue=ty}] IDENTITY_EQUIV;
+    ALIGN_INST_TYPE [{redex=alpha, residue=ty}] IDENTITY_EQUIV;
 
 fun pair_equiv left_EQUIV right_EQUIV =
     MATCH_MP (MATCH_MP PAIR_EQUIV left_EQUIV) right_EQUIV;
@@ -1088,7 +1088,7 @@ fun make_equiv equivs tyop_equivs ty =
                             to avoid clashes with type vars in "ths" *)
                    val vs = (map type_vars_in_term o get_ants o concl) tyop
                    val vs = mk_set (flatten vs)
-                   val gs = map (fn v => Type.gen_tyvar()) vs
+                   val gs = map (fn v => Type.gen_var_type(kind_of v)) vs
                    val sub = map2 (fn v => fn g => {redex=v,residue=g})
                                         vs gs
                    val tyop' = INST_TYPE sub tyop
@@ -1111,7 +1111,7 @@ fun make_equiv equivs tyop_equivs ty =
 
 
 fun identity_quotient ty =
-    INST_TYPE [{redex=alpha, residue=ty}] IDENTITY_QUOTIENT;
+    ALIGN_INST_TYPE [{redex=alpha, residue=ty}] IDENTITY_QUOTIENT;
 
 
 fun pair_quotient left_QUOTIENT right_QUOTIENT =
@@ -1191,7 +1191,7 @@ fun make_hyp_quotient hyp_quots quots tyop_quots ty =
                          val vs = (map type_vars_in_term o get_ants o concl)
                                    tyop
                          val vs = mk_set (flatten vs)
-                         val gs = map (fn v => Type.gen_tyvar()) vs
+                         val gs = map (fn v => Type.gen_var_type(kind_of v)) vs
                          val sub = map2 (fn v => fn g => {redex=v,residue=g})
                                         vs gs
                          val tyop' = INST_TYPE sub tyop
@@ -2530,7 +2530,7 @@ would include
             let val th' = GEN_QUOT_TYVARS th
                 val base = get_higher_wf_base th'
                 val types = snd (match_term (rand base) (rand gl))
-                val ith = (*CAREFUL_*)INST_TYPE types th'
+                val ith = (*CAREFUL_*)ALIGN_INST_TYPE types th'
                 val wf = repeat resolve_quotient ith
             in  REWRITE_RULE tyop_simps wf
             end

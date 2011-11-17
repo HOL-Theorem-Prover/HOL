@@ -156,7 +156,7 @@ fun const_scheme_n n f =
         val _ = is_vartype r orelse raise ERR "const_scheme_n" "inflexible"
         val xs = variant_tys (type_varsl (r :: ds)) diff
       in
-        inst [r |-> foldl op--> r xs] c
+        pure_inst [r |-> foldl op--> r xs] c
       end
   end;
 
@@ -334,7 +334,7 @@ local
 
   fun boolify (tm, len) =
     let val (_, ty) = strip_dom_rng_n len (type_of tm)
-    in (if ty = bool then tm else inst [ty |-> bool] tm, len)
+    in (if ty = bool then tm else pure_inst [ty |-> bool] tm, len)
     end;
 
   val raw_relations = (map boolify ## I) o foldl (uncurry break) ([], []);

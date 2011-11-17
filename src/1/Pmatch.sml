@@ -69,7 +69,7 @@ fun fresh_constr ty_match (colty:hol_type) gv c =
   let val Ty = type_of c
       val (L,ty) = strip_fun Ty
       val (ty_theta,kd_theta,rk) = ty_match ty colty
-      val inst_all = inst ty_theta o inst_kind kd_theta o inst_rank rk
+      val inst_all = inst_rk_kd_ty rk kd_theta ty_theta
       val c' = inst_all c
       val gvars = map (inst_all o gv) L
   in (c', gvars)
@@ -494,7 +494,7 @@ fun mk_case1 tybase (exp, plist) =
            val ty' = list_mk_fun (map type_of fns@[type_of exp],
                                   type_of (snd (hd plist)))
            val (ty_theta,kd_theta,rk) = Type.kind_match_type (type_of c) ty'
-       in list_mk_comb(inst ty_theta (inst_rank_kind rk kd_theta c),fns@[exp])
+       in list_mk_comb(inst_rk_kd_ty rk kd_theta ty_theta c,fns@[exp])
        end;
 
 fun mk_case2 v (exp, plist) =
@@ -533,7 +533,7 @@ local fun build_case_clause((ty,constr),rhs) =
      val (V,rhs') = peel args rhs
      val (ty_theta,kd_theta,rk) = Type.kind_match_type (type_of constr)
                       (list_mk_fun (map type_of V, ty))
-     val constr' = inst ty_theta (inst_rank_kind rk kd_theta constr)
+     val constr' = inst_rk_kd_ty rk kd_theta ty_theta constr
  in
    (list_mk_comb(constr',V), rhs')
   end

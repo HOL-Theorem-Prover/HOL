@@ -381,13 +381,13 @@ fun RULE_INDUCT_THEN th =
  in
  fn ttac1 => fn ttac2 => fn (A,g) =>
    let val (gvs,body) = strip_forall g
-       val (theta as (slis,ilis)) = match_term (rator cncl) (rator body)
-       val sith = INST_TY_TERM theta sthm
+       val (theta as (slis,ilis,klis,rlis)) = kind_match_term (rator cncl) (rator body)
+       val sith = INST_ALL theta sthm
        val largs = snd(strip_comb (rand(rator body)))
-       val icvs = map (inst ilis) cvs
+       val icvs = map (inst_rk_kd_ty rlis klis ilis) cvs
        val params = filter (is_param icvs slis) largs
        val lam = list_mk_abs(params,rand body)
-       val spth = INST [inst ilis pvar |-> lam] sith
+       val spth = INST [inst_rk_kd_ty rlis klis ilis pvar |-> lam] sith
        val spec = GENL gvs (UNDISCH (CONV_RULE RED spth))
        val subgls = map (pair A) (strip_conj (hd(hyp spec)))
        fun tactc g = (subgls,fn ths => PROVE_HYP (LIST_CONJ ths) spec)
@@ -403,8 +403,8 @@ end;
 
 fun axiom_tac th :tactic = fn (A,g) =>
  let val (vs,body) = strip_forall g
-     val instl = match_term (concl th) body
- in ([], K (itlist ADD_ASSUM A (GENL vs (INST_TY_TERM instl th))))
+     val instl = kind_match_term (concl th) body
+ in ([], K (itlist ADD_ASSUM A (GENL vs (INST_ALL instl th))))
  end
  handle HOL_ERR _ => raise ERR "axiom_tac" "axiom does not match goal";
 
@@ -439,9 +439,9 @@ fun RULE_TAC th =
         val ith = DISCH ant (SPECL cvs (UNDISCH (SPECL vs th)))
     in fn (A,g) =>
         let val (gvs,body) = strip_forall g
-            val (slis,ilis) = match_term cncl body
-            val th1 = INST_TY_TERM (slis,ilis) ith
-            val svs = rev (free_varsl (map (subst slis o inst ilis) vs))
+            val theta as (slis,ilis,klis,rlis) = kind_match_term cncl body
+            val th1 = INST_ALL theta ith
+            val svs = rev (free_varsl (map (subst slis o inst_rk_kd_ty rlis klis ilis) vs))
             val nvs = op_intersect eq gvs svs
             val ante = fst(dest_imp(concl th1))
             val newgs = map (mkg A nvs) (strip_conj ante)

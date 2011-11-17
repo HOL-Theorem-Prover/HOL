@@ -65,7 +65,7 @@ val inst_type_test = let
   val th0 = EQ_MP Pxx'_eq_Pxx (EQ_MP nonempty_Px_th nonempty_Px)
   val th1 = INST_TYPE [alpha |-> bool] th0
   val uvneg = ``\u v. v = ~u``
-  val th2 = INST [inst [alpha |-> bool] P |-> uvneg] th1
+  val th2 = INST [pure_inst [alpha |-> bool] P |-> uvneg] th1
   val uvneg_x = mk_comb(uvneg, x_b)
   val uvneg_nonempty =
       EQT_ELIM
@@ -223,7 +223,7 @@ val goal = list_mk_forall([m,n],
                                               [mk_comb(FST, mk_comb(f',m)),
                                                mk_comb(FST, mk_comb(f',n))])))
 val expected = let
-  val ant' = Term.inst [alpha |-> fmap_ty] ant
+  val ant' = Term.pure_inst [alpha |-> fmap_ty] ant
   val abs = mk_abs(n, mk_comb(FST, mk_comb(f',n)))
 in
   list_mk_comb(ant', [submap, abs])

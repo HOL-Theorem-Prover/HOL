@@ -48,8 +48,8 @@ fun FINITE_CONV tm =
        val els = strip_set s
        val (ty,_) = dom_rng(type_of s)
        val theta = [alpha |-> ty]
-       val eth = INST_TYPE theta pred_setTheory.FINITE_EMPTY
-       val ith = INST_TYPE theta finI
+       val eth = ALIGN_INST_TYPE theta pred_setTheory.FINITE_EMPTY
+       val ith = ALIGN_INST_TYPE theta finI
    in EQT_INTRO (itlist (itfn ith) els eth)
    end
    handle e => raise wrap_exn "PFset_conv" "FINITE_CONV" e
@@ -225,8 +225,8 @@ fun UNION_CONV conv tm =
  let val (S1,S2) = dest_union tm
      val els = strip_set S1
      val (ty,_) = dom_rng(type_of S1)
-     val ith = INST_TYPE [alpha |-> ty] pred_setTheory.INSERT_UNION
-     val iith = INST_TYPE [alpha |-> ty] pred_setTheory.INSERT_UNION_EQ
+     val ith = ALIGN_INST_TYPE [alpha |-> ty] pred_setTheory.INSERT_UNION
+     val iith = ALIGN_INST_TYPE [alpha |-> ty] pred_setTheory.INSERT_UNION_EQ
  in
    itlist (itfn conv (ith,iith)) els (ISPEC S2 Eu)
  end
@@ -326,10 +326,10 @@ fun CARD_CONV tm =
  let val s = dest_card tm
      val ty = eltype s
      val items = strip_set s
-     val CARD_EMPTY' = INST_TYPE [alpha |-> ty] CARD_EMPTY
-     val CARD_INSERT' = INST_TYPE [alpha |-> ty] CARD_INSERT
-     val FINITE_EMPTY' = INST_TYPE [alpha |-> ty] FINITE_EMPTY
-     val FINITE_INSERT' = INST_TYPE [alpha |-> ty] FINITE_INSERT
+     val CARD_EMPTY' = ALIGN_INST_TYPE [alpha |-> ty] CARD_EMPTY
+     val CARD_INSERT' = ALIGN_INST_TYPE [alpha |-> ty] CARD_INSERT
+     val FINITE_EMPTY' = ALIGN_INST_TYPE [alpha |-> ty] FINITE_EMPTY
+     val FINITE_INSERT' = ALIGN_INST_TYPE [alpha |-> ty] FINITE_INSERT
      fun step x (finthm,cardthm) =
       let val s = dest_finite (concl finthm)
           val finthm' = EQ_MP (SYM (SPEC s (SPEC x FINITE_INSERT'))) finthm
@@ -354,8 +354,8 @@ fun CARD_CONV tm =
 local open numSyntax
       val MAX_SET_SING = CONJUNCT1 MAX_SET_THM
       val MAX_SET_THM' = CONJUNCT2 MAX_SET_THM
-      val FINITE_EMPTY' = INST_TYPE [alpha |-> num] FINITE_EMPTY
-      val FINITE_INSERT' = INST_TYPE [alpha |-> num] FINITE_INSERT
+      val FINITE_EMPTY' = ALIGN_INST_TYPE [alpha |-> num] FINITE_EMPTY
+      val FINITE_INSERT' = ALIGN_INST_TYPE [alpha |-> num] FINITE_INSERT
 in
 fun MAX_SET_CONV tm  =
  let open numSyntax
@@ -363,7 +363,7 @@ fun MAX_SET_CONV tm  =
      val items = strip_set s
      val (front,b) = front_last items
      val FINITE_SING = EQ_MP(SYM(SPEC (mk_empty num) (SPEC b FINITE_INSERT')))
-                            (INST_TYPE [alpha |-> num] FINITE_EMPTY)
+                            (ALIGN_INST_TYPE [alpha |-> num] FINITE_EMPTY)
      fun step x (finthm,maxthm) =
       let val ys = dest_max_set (lhs (concl maxthm))
           val (y,s) = dest_insert ys
@@ -403,9 +403,9 @@ fun SUM_IMAGE_CONV tm =
      val (f,s) = dest_sum_image tm
      val ty = eltype s
      val items = strip_set s
-     val FINITE_EMPTY' = INST_TYPE [alpha |-> ty] FINITE_EMPTY
-     val FINITE_INSERT' = INST_TYPE [alpha |-> ty] FINITE_INSERT
-     val SIGMA_EMPTY' = INST_TYPE [alpha |-> ty] SIGMA_EMPTY
+     val FINITE_EMPTY' = ALIGN_INST_TYPE [alpha |-> ty] FINITE_EMPTY
+     val FINITE_INSERT' = ALIGN_INST_TYPE [alpha |-> ty] FINITE_INSERT
+     val SIGMA_EMPTY' = ALIGN_INST_TYPE [alpha |-> ty] SIGMA_EMPTY
      val SIGMA_INSERT' = ISPEC f SIGMA_INSERT
      fun step x (finthm,sumthm) =
       let val s = dest_finite (concl finthm)

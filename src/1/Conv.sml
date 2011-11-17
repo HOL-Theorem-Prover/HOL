@@ -606,7 +606,7 @@ in
          to (\:v. t[v/arg_t]) [:arg_t:]
          v can be a genvar because we expect to get rid of it later. *)
       val gv = gen_var_type (kind_of arg_t)
-      val newbody = Term.inst [arg_t |-> gv] t
+      val newbody = Term.pure_inst [arg_t |-> gv] t
         (* probably wrong; inst cannot handle type expressions as redexes *)
         (* need to build a new Term.subst_type function for this *)
     in
@@ -879,7 +879,7 @@ in
 fun EXISTS_OR_CONV tm =
   let val {Bvar,Body} = dest_exists tm
       val thm = CONV_RULE (RAND_CONV (BINOP_CONV (GEN_ALPHA_CONV Bvar)))
-                          (INST_TYPE [alpha |-> type_of Bvar] thm0)
+                          (ALIGN_INST_TYPE [alpha |-> type_of Bvar] thm0)
       val ty = type_of Bvar --> Type.bool
       val P = mk_var{Name=Pname, Ty=ty}
       val Q = mk_var{Name=Qname, Ty=ty}
@@ -1216,7 +1216,7 @@ fun LEFT_OR_TY_EXISTS_CONV tm =
    let val {disj1,disj2} = dest_disj tm
        val {Bvar,Body} = dest_tyexists disj1
        val x' = variant_type (type_vars_in_term tm) Bvar
-       val newp = inst[Bvar |-> x'] Body
+       val newp = pure_inst[Bvar |-> x'] Body
        val newp_thm = ASSUME newp
        val new_disj = mk_disj {disj1=newp, disj2=disj2}
        val otm = mk_tyexists {Bvar=x', Body=new_disj}
@@ -1278,7 +1278,7 @@ fun RIGHT_OR_TY_EXISTS_CONV tm =
    let val {disj1,disj2} = dest_disj tm
        val {Bvar,Body} = dest_tyexists disj2
        val x' = variant_type (type_vars_in_term tm) Bvar
-       val newq = inst[Bvar |-> x'] Body
+       val newq = pure_inst[Bvar |-> x'] Body
        val newq_thm = ASSUME newq
        and Pth = ASSUME disj1
        val P_or_newq = mk_disj{disj1 = disj1, disj2 = newq}
@@ -1481,7 +1481,7 @@ fun LEFT_AND_TY_EXISTS_CONV tm =
    let val {conj1,conj2} = dest_conj tm
        val {Bvar,Body} = dest_tyexists conj1
        val x' = variant_type (type_vars_in_term tm) Bvar
-       val newp = inst[Bvar |-> x'] Body
+       val newp = pure_inst[Bvar |-> x'] Body
        val new_conj = mk_conj {conj1 = newp, conj2 = conj2}
        val otm = mk_tyexists{Bvar = x', Body = new_conj}
        val (EP,Qth) = CONJ_PAIR(ASSUME tm)
@@ -1534,7 +1534,7 @@ fun RIGHT_AND_TY_EXISTS_CONV tm =
    let val {conj1,conj2} = dest_conj tm
        val {Bvar,Body} = dest_tyexists conj2
        val x' = variant_type (type_vars_in_term tm) Bvar
-       val newq = inst[Bvar |-> x'] Body
+       val newq = pure_inst[Bvar |-> x'] Body
        val new_conj = mk_conj{conj1 = conj1,conj2 = newq}
        val otm = mk_tyexists{Bvar = x',Body = new_conj}
        val (Pth,EQ) = CONJ_PAIR(ASSUME tm)
@@ -1766,7 +1766,7 @@ fun LEFT_OR_TY_FORALL_CONV tm =
    let val {disj1,disj2} = dest_disj tm
        val {Bvar,Body} = dest_tyforall disj1
        val x' = variant_type (type_vars_in_term tm) Bvar
-       val newp = inst[Bvar |-> x'] Body
+       val newp = pure_inst[Bvar |-> x'] Body
        val aQ = ASSUME disj2
        val Pth = DISJ1 (TY_SPEC x' (ASSUME disj1)) disj2
        val Qth = DISJ2 newp aQ
@@ -1825,7 +1825,7 @@ fun RIGHT_OR_TY_FORALL_CONV tm =
    let val {disj1,disj2} = dest_disj tm
        val {Bvar,Body} = dest_tyforall disj2
        val x' = variant_type (type_vars_in_term tm) Bvar
-       val newq = inst[Bvar |-> x'] Body
+       val newq = pure_inst[Bvar |-> x'] Body
        val Qth = DISJ2 disj1 (TY_SPEC x' (ASSUME disj2))
        val Pthm = ASSUME disj1
        val Pth = DISJ1 Pthm newq
@@ -1989,7 +1989,7 @@ fun LEFT_IMP_TY_EXISTS_CONV tm =
    let val {ant, ...} = dest_imp tm
        val {Bvar,Body} = dest_tyexists ant
        val x' = variant_type (type_vars_in_term tm) Bvar
-       val t' = inst [Bvar |-> x'] Body
+       val t' = pure_inst [Bvar |-> x'] Body
        val th1 = TY_GEN x' (DISCH t'(MP(ASSUME tm)(TY_EXISTS(ant,x')(ASSUME t'))))
        val rtm = concl th1
        val th2 = TY_CHOOSE (x',ASSUME ant) (UNDISCH(TY_SPEC x'(ASSUME rtm)))
@@ -2031,7 +2031,7 @@ fun RIGHT_IMP_TY_FORALL_CONV tm =
    let val {ant,conseq} = dest_imp tm
        val {Bvar,Body} = dest_tyforall conseq
        val x' = variant_type (type_vars_in_term tm) Bvar
-       val t' = inst [Bvar |-> x'] Body
+       val t' = pure_inst [Bvar |-> x'] Body
        val imp1 = DISCH tm (TY_GEN x' (DISCH ant(TY_SPEC x'(UNDISCH(ASSUME tm)))))
        val ctm = rand(concl imp1)
        val alph = GEN_TY_ALPHA_CONV Bvar (mk_tyforall{Bvar = x', Body = t'})
@@ -2225,7 +2225,7 @@ fun LEFT_IMP_TY_FORALL_CONV tm =
    let val {ant,conseq} = dest_imp tm
        val {Bvar,Body} = dest_tyforall ant
        val x' = variant_type (type_vars_in_term tm) Bvar
-       val t1' = inst [Bvar |-> x'] Body
+       val t1' = pure_inst [Bvar |-> x'] Body
        val not_t1'_thm = ASSUME (mk_neg t1')
        val th1 = TY_SPEC x' (ASSUME ant)
        val new_imp = mk_imp{ant = t1', conseq = conseq}
@@ -2283,7 +2283,7 @@ fun RIGHT_IMP_TY_EXISTS_CONV tm =
    let val {ant,conseq} = dest_imp tm
        val {Bvar,Body} = dest_tyexists conseq
        val x' = variant_type (type_vars_in_term tm) Bvar
-       val t2' = inst [Bvar |-> x'] Body
+       val t2' = pure_inst [Bvar |-> x'] Body
        val new_imp = mk_imp{ant = ant, conseq = t2'}
        val otm = mk_tyexists{Bvar = x', Body = new_imp}
        val thm1 = TY_EXISTS(conseq,x')(UNDISCH(ASSUME new_imp))
@@ -2371,7 +2371,7 @@ end;
 
 fun SYM_CONV tm =
    let val {lhs,rhs} = dest_eq tm
-       val th = INST_TYPE [Type.alpha |-> type_of lhs] EQ_SYM_EQ
+       val th = ALIGN_INST_TYPE [Type.alpha |-> type_of lhs] EQ_SYM_EQ
    in
      SPECL [lhs,rhs] th
    end
@@ -2525,8 +2525,8 @@ local val f = mk_var{Name="f",Ty=alpha-->bool}
       val tyv = Type.mk_vartype "'a"
       fun EXISTS_CONV{Bvar,Body} =
         let val ty = type_of Bvar
-            val ins = INST_TYPE [tyv |-> ty] th2
-            val theta = [inst [tyv |-> ty] f |-> mk_abs{Bvar=Bvar,Body=Body}]
+            val ins = ALIGN_INST_TYPE [tyv |-> ty] th2
+            val theta = [inst [tyv |-> ty] f |-> mk_abs{Bvar=Bvar,Body=Body}] (* align *)
             val th = INST theta ins
         in
           CONV_RULE (RAND_CONV BETA_CONV) th
@@ -3477,7 +3477,7 @@ fun EXISTS_UNIQUE_CONV tm =
    let val _ = check tm
        val {Rator,Rand} = dest_comb tm
        val (ab as {Bvar,Body}) = dest_abs Rand
-       val def = INST_TYPE [alpha |-> type_of Bvar] EXISTS_UNIQUE_DEF
+       val def = ALIGN_INST_TYPE [alpha |-> type_of Bvar] EXISTS_UNIQUE_DEF
        val exp = RIGHT_BETA(AP_THM def Rand)
        and y = variant (all_vars Body) Bvar
    in
@@ -3515,7 +3515,7 @@ local val vt = genvar alpha
 in
 fun COND_CONV tm =
  let val {cond,larm,rarm} = dest_cond tm
-     val INST_TYPE' = INST_TYPE [alpha |-> type_of larm]
+     val INST_TYPE' = ALIGN_INST_TYPE [alpha |-> type_of larm]
  in
    if (eq cond T) then SPEC rarm (SPEC larm (INST_TYPE' CT)) else
    if (eq cond F) then SPEC rarm (SPEC larm (INST_TYPE' CF)) else
@@ -3557,7 +3557,7 @@ fun EXISTENCE th =
        val {Rator,Rand} = dest_comb(concl th)
        val {Bvar,...} = dest_abs Rand
    in
-     MP (SPEC Rand (INST_TYPE [alpha |-> type_of Bvar]
+     MP (SPEC Rand (ALIGN_INST_TYPE [alpha |-> type_of Bvar]
                       (GEN P (DISCH ex1P th2)))) th
    end
    handle HOL_ERR _ => raise ERR "EXISTENCE" ""

@@ -43,7 +43,7 @@ fun MK_PAIR vs v =
        val alist = snd(dest_type vty)
        val (ty1,ty2) = (case alist of [a,b] => (a,b)
                         | otherwise => raise ERR "MK_PAIR" "")
-       val inst = SYM(SPEC v (INST_TYPE [alpha |-> ty1, beta |-> ty2] PAIR))
+       val inst = SYM(SPEC v (ALIGN_INST_TYPE [alpha |-> ty1, beta |-> ty2] PAIR))
        val (fst,snd) = dest_pair(rhs(concl inst))
        val gv = genvar ty2
    in SUBST [gv |-> MK_PAIR (tl vs) snd] (mk_eq(v,mk_pair(fst,gv))) inst
@@ -107,7 +107,7 @@ fun PAIR_EQ_CONV tm =
        val (lhs,rhs) = dest_eq body
        val (a,T) = dest_pair lhs
        val (b,c) = dest_pair rhs
-       val th = SPECL [a,b,c] (INST_TYPE [alpha |-> type_of a] PEQ)
+       val th = SPECL [a,b,c] (ALIGN_INST_TYPE [alpha |-> type_of a] PEQ)
    in itlist EXISTS_EQ vs th
    end
 end;
@@ -222,7 +222,7 @@ fun SET_SPEC_CONV th =
       val _ = checkGSPEC Rator
       val vty = type_of v
       val uty = fst(dom_rng(type_of f))
-      val inst = SPEC v (INST_TYPE [alpha |-> vty, beta |-> uty] GSPEC)
+      val inst = SPEC v (ALIGN_INST_TYPE [alpha |-> vty, beta |-> uty] GSPEC)
       val (vs,res) = mktup f
   in
   if all (not o (C free_in res)) vs

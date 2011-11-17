@@ -263,7 +263,7 @@ val CHOOSE_THEN :thm_tactical = fn ttac => fn xth =>
 fun X_TY_CHOOSE_THEN y (ttac:thm_tactic) : thm_tactic = fn xth =>
    let val (Bvar,Body) = dest_tyexists (Thm.concl xth)
    in fn (asl,w) =>
-      let val th = foo xth (inst[Bvar |-> y] Body)
+      let val th = foo xth (pure_inst[Bvar |-> y] Body)
 (* itlist ADD_ASSUM (hyp xth)
                           (ASSUME (subst[Bvar |-> y] Body)) *)
         val (gl,prf) = ttac th (asl,w)

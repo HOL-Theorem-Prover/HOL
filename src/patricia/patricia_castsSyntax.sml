@@ -74,7 +74,7 @@ end handle HOL_ERR _ => raise ERR "mk_the_ptree" "";
 
 fun mk_some_ptree(ty,t) =
   mk_comb(inst[alpha |-> ty,
-                beta |-> dest_ptree_type (type_of t)] some_ptree_tm,t)
+               beta |-> dest_ptree_type (type_of t)] some_ptree_tm,t)
   handle HOL_ERR _ => raise ERR "mk_some_ptree" "";
 
 fun mk_peekw(t,k) =

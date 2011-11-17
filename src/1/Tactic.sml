@@ -324,7 +324,7 @@ fun X_TY_GEN_TAC x1 : tactic = fn (asl,w) =>
  if is_vartype x1
  then (let val (Bvar,Body) = dest_tyforall w
        in if Bvar=x1 then ([(asl,Body)], fn [th] => TY_GEN x1 th | _ => raise Match)
-          else ([(asl,inst [Bvar |-> x1] Body)],
+          else ([(asl,pure_inst [Bvar |-> x1] Body)],
                 fn [th] =>
                    let val th' = TY_GEN x1 th
                    in EQ_MP (GEN_TY_ALPHA_CONV Bvar (concl th')) th'
@@ -365,7 +365,7 @@ fun ID_SPEC_TAC x :tactic = fn (asl,w) =>
 (* Impossible tactic if ty is not a type var,
    subst_type (in place of inst) is invalid. *)
 fun TY_SPEC_TAC (ty,a) :tactic = fn (asl,w) =>
-    ([(asl, mk_tyforall(a, inst[ty |-> a] w))],
+    ([(asl, mk_tyforall(a, pure_inst[ty |-> a] w))],
      fn [th] => TY_SPEC ty th | _ => raise Match)
     handle HOL_ERR _ => raise ERR "TY_SPEC_TAC" "";
 
@@ -400,7 +400,7 @@ fun EXISTS_TAC t :tactic = fn (asl,w) =>
 
 fun TY_EXISTS_TAC ty :tactic = fn (asl,w) =>
  let val (Bvar,Body) = dest_tyexists w
- in ([(asl, inst [Bvar |-> ty] Body)],
+ in ([(asl, pure_inst [Bvar |-> ty] Body)],
      fn [th] => TY_EXISTS (w,ty) th | _ => raise Match)
  end
   handle HOL_ERR _ => raise ERR "TY_EXISTS_TAC" "";
@@ -525,7 +525,7 @@ fun GEN_COND_CASES_TAC P (asl,w) =
  let val cond = find_term (fn tm => P tm andalso free_in tm w) w
                 handle HOL_ERR _ => raise ERR "GEN_COND_CASES_TAC" ""
      val (cond,larm,rarm) = dest_cond cond
-     val inst = INST_TYPE[Type.alpha |-> type_of larm] COND_CLAUSES
+     val inst = ALIGN_INST_TYPE[Type.alpha |-> type_of larm] COND_CLAUSES
      val (ct,cf) = CONJ_PAIR (SPEC rarm (SPEC larm inst))
  in
    DISJ_CASES_THEN2

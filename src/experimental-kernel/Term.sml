@@ -1251,7 +1251,7 @@ end (* local *)
 local
   exception NeedToRename of term
   structure Map = struct open Redblackmap end
-  val empty_ctxt = Map.mkDict compare
+  val empty_ctxt = Map.mkDict compare : (term, hol_type) Map.dict
   fun type_vars ty = Type.type_vars_set raw_empty_tyset raw_empty_tyset [ty]
   fun inst1 theta ctxt t =
       case t of
@@ -1376,9 +1376,9 @@ local
                 TAbs(a, sinst newtheta body)
               end
 
-(* pure_inst properly ingores redexes which are not variables, for backwards compatibility. *)
-fun pure_inst1 [] = I
-  | pure_inst1 theta = inst2 (filter (is_var_type o #redex) theta)
+(* inst properly ingores redexes which are not variables, for backwards compatibility. *)
+fun inst1 [] = I
+  | inst1 theta = inst2 (filter (is_var_type o #redex) theta)
 (*
        if List.all (is_var_type o #redex) theta
        then inst2 theta
@@ -1410,7 +1410,7 @@ in
 
 val pure_inst : (hol_type, hol_type) Lib.subst -> term -> term =
   (fn theta => (check_subst theta;
-                pure_inst1 theta))
+                inst1 theta))
 end
 
 
@@ -1441,7 +1441,7 @@ local
   open Map
   exception NeedToRename of term
 
-  (* inst_rank_kind1 may throw Unchanged, NeedToRename, or Type.NeedToRename *)
+  (* inst_rank_kind1 may throw Unchanged(=Type.Unchanged), NeedToRename, or Type.NeedToRename *)
 
   fun inst_rank_kind1 (rk:int) theta tyctxt ctxt =
     let val inst_ty = Type.inst_rank_kind1 rk theta tyctxt
@@ -1467,7 +1467,8 @@ local
                                        else (true, Var(Name,nTy))
                                     end handle Unchanged => (false, v)
               in let
-                   val Body' = SOME (inst_rank_kind1 rk theta tyctxt (Map.insert(ctxt, v', Ty)) Body)
+                   val Body' = SOME (inst_rank_kind1 rk theta tyctxt
+                                                     (Map.insert(ctxt, v', Ty)) Body)
                                handle Unchanged => NONE
                  in
                    case (Body', changed) of
@@ -1551,42 +1552,173 @@ fun inst_rank_kind rk  []   = (inst_rank rk
 
 end (* local *);
 
-val pure_inst_kind = inst_rank_kind 0
+(*---------------------------------------------------------------------------*
+ * Applying a rank, kind, and type substitution to all types in a term.      *
+ *---------------------------------------------------------------------------*)
 
-fun inst_kind []  = I
-  | inst_kind kdS =
+local
+  open Map
+  exception NeedToRename of term
+
+  (* inst_rk_kd_ty1 may throw Unchanged(=Type.Unchanged), NeedToRename, or Type.NeedToRename *)
+
+  fun inst_rk_kd_ty1 (rk:int) kdtheta tytheta tyctxt ctxt =
+    let val inst_ty = Type.inst_rk_kd_ty1 rk kdtheta tytheta tyctxt
+                      (* may throw Type.Unchanged, Type.NeedToRename *)
+        val inst_kd = Kind.vsubst_rk_kd rk kdtheta
+                      (* may throw Kind.Unchanged=Type.Unchanged *)
+        val kdinst_ty = Type.inst_rank_kind rk kdtheta
+        fun inst (v as Var(Name,Ty)) = let
+                val (changed, nv) = let val nTy = inst_ty Ty
+                                    in if eq_ty nTy Ty then raise Unchanged
+                                       else (true, Var(Name,nTy))
+                                    end handle Unchanged => (false, v)
+              in
+                case peek (ctxt, nv) of
+                  SOME oldty => if eq_ty oldty Ty then ()
+                                else raise NeedToRename nv
+                | NONE => ();
+                if changed then nv
+                else raise Unchanged
+              end
+          | inst (Const(r,Ty))      = Const(r, inst_ty Ty)
+          | inst (App(Rator,Rand))  = qcomb App inst (Rator,Rand)
+          | inst (tm as Abs(v as Var(Name,Ty), Body)) = let
+                val (changed, v') = let val nTy = inst_ty Ty
+                                    in if eq_ty nTy Ty then raise Unchanged
+                                       else (true, Var(Name,nTy))
+                                    end handle Unchanged => (false, v)
+              in let
+                   val Body' = SOME (inst_rk_kd_ty1 rk kdtheta tytheta tyctxt
+                                                    (Map.insert(ctxt, v', Ty)) Body)
+                               handle Unchanged => NONE
+                 in
+                   case (Body', changed) of
+                     (SOME t, _) => Abs(v', t)
+                   | (NONE, true) => Abs(v', Body)
+                   | (NONE, false) => raise Unchanged
+                 end handle e as NeedToRename v'' =>
+                     if eq v' v'' then let
+                         val free_names = free_names tm
+                         val new_name = set_name_variant free_names Name
+                         val newv = Var(new_name, Ty)
+                       in
+                         inst (Abs(newv, subst [v |-> newv] Body))
+                       end
+                     else raise e
+              end
+          | inst (TApp(Rator,Ty))   = let
+              in let
+                val Rator' = inst Rator
+              in
+                let val Ty' = inst_ty Ty
+                in
+                  TApp(Rator', Ty')
+                end handle Unchanged => TApp(Rator', Ty)
+              end handle Unchanged => let val Ty' = inst_ty Ty
+                                      in
+                                        TApp(Rator, Ty')
+                                      end
+              end
+          | inst (tm as TAbs(v, Body)) = let
+                val tyv as (Name,Kind) = dest_var_type v
+                val (changed, tyv') = (true, (Name, inst_kd Kind))
+                                      handle Unchanged => (false, tyv)
+                val v' = mk_var_type tyv'
+                val tytheta = #1 (remove(tytheta, v)) handle NotFound => tytheta
+                val currentfvs = HOLset.addList(empty_tyset, List.map kdinst_ty (type_vars_in_term tm))
+                (* first calculate the new names we are about to introduce into
+                   the type *)
+                fun foldthis (k,v,acc) =
+                    if HOLset.member(currentfvs, k) then
+                      HOLset.union(acc, Susp.force (#1 v))
+                    else acc
+                val newnames = foldl foldthis empty_stringset tytheta
+              in 
+                 let
+                   val _ = if HOLset.member(newnames, Name)
+                           then raise Type.NeedToRename tyv'
+                           else ()
+                   val new_tyctxt = insert(tyctxt, tyv', Kind)
+                   val Body' = SOME (inst_rk_kd_ty1 rk kdtheta tytheta
+                                       new_tyctxt ctxt Body) (* may throw Type.NeedToRename *)
+                               handle Unchanged => NONE
+                 in
+                   case (Body', changed) of
+                     (SOME t, _) => TAbs(v', t)
+                   | (NONE, true) => TAbs(v', Body)
+                   | (NONE, false) => raise Unchanged
+                 end handle e as Type.NeedToRename tyv'' =>
+                     (* now need to vary v, avoiding both newnames, and also the
+                        existing free-type-names of the whole term. *)
+                     if tyv' = tyv'' then let
+                         fun foldthis (fv, acc) = HOLset.add(acc, #1 (dest_var_type fv))
+                         val allfreenames = HOLset.foldl foldthis newnames currentfvs
+                         val new_name = set_type_name_variant allfreenames Name
+                         val newv = mk_var_type(new_name, Kind)
+                       in
+                         inst (TAbs(newv, pure_inst [v |-> newv] Body))
+                       end
+                     else raise e
+              end
+          | inst _ = raise ERR "inst_rk_kd_ty1" "catastrophic failure"
+    in
+      inst
+    end
+
+in
+
+fun inst_rk_kd_ty rk kdtheta [] = (inst_rank_kind rk kdtheta
+                                   handle HOL_ERR {message=m, ...}
+                                     => raise ERR "inst_rk_kd_ty" m)
+  | inst_rk_kd_ty rk kdtheta tytheta =
+      if rk < 0 then raise ERR "inst_rk_kd_ty" "increment is negative"
+      else let
+        fun foldthis1  (r as {redex,residue}, acc) = let
+          val _ = rank_of redex >= rank_of residue
+                  orelse raise ERR "inst_rk_kd_ty" "Bad kind substitution list"
+        in
+          if redex = residue then acc
+          else r::acc
+        end
+        val akdtheta = List.foldr foldthis1 [] kdtheta
+        fun foldthis2  (r as {redex,residue}, acc) = let
+          val _ = kind_of redex :>=: kind_of residue
+                  orelse raise ERR "inst_rk_kd_ty" "Bad type substitution list"
+        in
+          if eq_ty redex residue then acc
+          else Type.vsub_insert(acc, redex, residue)
+        end
+        val atytheta = List.foldr foldthis2 Type.emptyvsubst (filter (is_var_type o #redex) tytheta)
+      in
+        fn tm =>
+        inst_rk_kd_ty1 rk akdtheta atytheta (Map.mkDict tyvar_compare) (Map.mkDict compare) tm
+                    handle Unchanged => tm
+                         | HOL_ERR {message=m, ...} => raise ERR "inst_rk_kd_ty" m
+      end
+
+end (* local *);
+
+val inst_kind = inst_rank_kind 0
+
+fun align_inst_kind []  = I
+  | align_inst_kind kdS =
   let val (rktheta,kdtheta) = align_kinds kdS
   in inst_rank_kind rktheta kdtheta
   end
-  handle HOL_ERR {message, ...} => raise ERR "inst_kind" message
+  handle HOL_ERR {message, ...} => raise ERR "align_inst_kind" message
 
 (*---------------------------------------------------------------------------*
  * Applying rank, kind, and type substitutions to all types in a term.       *
  *---------------------------------------------------------------------------*)
 
-fun inst_rk_kd_ty rk kd_theta ty_theta = let
-in
-  if rk = 0 then
-    if null kd_theta then
-      if null ty_theta then I
-                       else pure_inst ty_theta
-    else
-      if null ty_theta then inst_kind kd_theta
-                       else pure_inst ty_theta o inst_kind kd_theta
-  else
-    if null kd_theta then
-      if null ty_theta then inst_rank rk
-                       else pure_inst ty_theta o inst_rank rk
-    else
-      if null ty_theta then inst_rank_kind rk kd_theta
-                       else pure_inst ty_theta o inst_rank_kind rk kd_theta
-end handle HOL_ERR {message, ...} => raise ERR "inst_rk_kd_ty" message;
-
-fun inst [] = I
-  | inst theta =
+fun align_inst [] = I
+  | align_inst theta =
   let val (rktheta,kdtheta,tytheta) = align_types theta
   in inst_rk_kd_ty rktheta kdtheta tytheta
   end
+
+val inst = align_inst
 
 fun inst_all rkS kdS tyS tmS = (subst tmS o inst_rk_kd_ty rkS kdS tyS)
                                handle HOL_ERR{message=m,...} => raise ERR "inst_all" m;
@@ -1628,7 +1760,7 @@ local
              NONE => raise FORMAT
            | SOME ty => (fn abs =>
                          (* let val dom = fst(Type.dom_rng(type_of abs))
-                            in mk_comb (inst[ty |-> dom] c, abs)
+                            in mk_comb (align_inst[ty |-> dom] c, abs)
                             end *)
                             let val (tytheta,kdtheta,rk) = kind_match_type ty (type_of abs)
                             in mk_comb (inst_rk_kd_ty rk kdtheta tytheta c, abs)
@@ -1660,7 +1792,7 @@ local
            | SOME ty => (fn univ =>
                          (* let val dom = kind_of(fst(Type.dest_univ_type(type_of univ)))
                                 val kdv = kind_of ty
-                            in mk_comb (inst_kind [kdv |-> dom] c, univ)
+                            in mk_comb (align_inst_kind [kdv |-> dom] c, univ)
                             end *) 
                             let val (tytheta,kdtheta,rk) = kind_match_type ty (type_of univ)
                             in mk_comb (inst_rk_kd_ty rk kdtheta tytheta c, univ)
@@ -1698,7 +1830,7 @@ fun eta_conv (Abs (x, App (f, x'))) =
 
 
 fun ty_beta_conv (TApp (TAbs (a, body), ty)) =
-  if ty = a then body else inst [a |-> ty] body
+  if ty = a then body else pure_inst [a |-> ty] body
   | ty_beta_conv (TApp _) =
   raise ERR "ty_beta_conv" "LHS not a type abstraction"
   | ty_beta_conv _ =
@@ -1821,7 +1953,7 @@ fun rename_btyvar newname t =
         val newvar0 = mk_var_type(newname, kd)
         val newvar = variant_type (type_vars_in_term t) newvar0
       in
-        TAbs(newvar, inst [v |-> newvar] body)
+        TAbs(newvar, pure_inst [v |-> newvar] body)
       end
     | _ => raise ERR "rename_btyvar" "Term not a type abstraction"
 
@@ -1982,7 +2114,7 @@ fun raw_match tyf tmf pat ob =
     Profile.profile "raw_match" (raw_match0 tyf tmf pat ob) *)
 
 fun norm_subst ((tmS,_),(tyS,_)) =
- let val Theta = inst tyS
+ let val Theta = align_inst tyS
      fun del A [] = A
        | del A ({redex,residue}::rst) =
          del (let val redex' = Theta(redex)
@@ -2715,7 +2847,7 @@ in
                                                   (if is_var p then p
                                                    else genvar(type_of p))))
                                       pats
-                   val ctm' = inst gtyinsts (subst ginsts ctm)
+                   val ctm' = pure_inst gtyinsts (subst ginsts ctm)
                    val gtyvs = map #residue gtyinsts
                    val gvs = map #residue ginsts
                    val abstm = list_mk_tyabs(gtyvs,list_mk_abs(gvs,ctm'))
@@ -2779,7 +2911,7 @@ in
                                                   (if is_vartype p then p
                                                    else gen_var_type(kind_of p))))
                                       typats
-                   val ctm' = inst gtyinsts ctm
+                   val ctm' = pure_inst gtyinsts ctm
                    val gtyvs = map #residue gtyinsts
                    val tyabstm = list_mk_tyabs(gtyvs,ctm')
                    val vinsts = safe_inserta (vhop |-> tyabstm) insts

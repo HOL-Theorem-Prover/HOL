@@ -226,7 +226,7 @@ fun FTV (Cst(c,dbsk)) = type_vars_in_term c
 
 fun inst_type_dterm ([],v) = v
   | inst_type_dterm (tysub,v) =
-      let fun tyi_dt S (Cst(c,dbsk)) = Cst(Term.inst S c, dbsk)
+      let fun tyi_dt S (Cst(c,dbsk)) = Cst(Term.pure_inst S c, dbsk)
             | tyi_dt S (App(h,l))    = App(tyi_dt S h, map (tyi_dt S) l)
   	    | tyi_dt S (Abs v)       = Abs(tyi_dt S v)
   	    | tyi_dt S (TyApp(h,tl)) = TyApp(tyi_dt S h, map (type_subst S) tl)

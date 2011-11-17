@@ -1024,11 +1024,19 @@ open Kind
 infix :>=:
 fun check_subst [] = ()
   | check_subst ({redex,residue} :: s) =
-        if not (kind_of redex :>=: kind_of residue) handle HOL_ERR _ => false
+      (let val kdx = kind_of redex and kdu = kind_of residue
            (* if "kind_of" fails because of open bound variables,
               assume the kind check was done earlier and proceed. *)
-        then raise ERR "pure_inst" "kind of residue is not contained in kind of redex, or does not respect rank"
-        else check_subst s
+       in
+         if not (rank_of kdx >= rank_of kdu)
+         then raise ERR "inst" "rank of residue is not contained in rank of redex"
+         else if not (kdx :>=: kdu)
+         then raise ERR "inst" "kind of residue is not contained in kind of redex"
+         else check_subst s
+       end handle HOL_ERR {origin_structure="Type",
+                           origin_function ="kind_of",
+                           message="lookup"}
+           => check_subst s)
 val all_var_redexes = all (fn {redex,residue} => is_var_type redex)
 fun mapsb f = map (fn {redex,residue} => {redex=f redex, residue=residue})
 fun inst1 [] = I
@@ -1071,8 +1079,8 @@ fun check_kd_subst caller =
   end;
 *)
 
-fun pure_inst_kind [] = I
-  | pure_inst_kind theta =
+fun inst_kind [] = I
+  | inst_kind theta =
     let val kd_inst = Kind.inst_kind theta
         val ty_inst = Type.inst_kind theta
         fun inst (bv as Bv i) = bv
@@ -1088,11 +1096,11 @@ fun pure_inst_kind [] = I
       (*check_kd_subst "inst_kind" theta;*)
       inst
     end
-    handle HOL_ERR{message=m,...} => raise ERR "pure_inst_kind" m;
+    handle HOL_ERR{message=m,...} => raise ERR "inst_kind" m;
 
 fun inst_rank_kind rk []    = (inst_rank rk
                                handle HOL_ERR{message=m,...} => raise ERR "inst_rank_kind" m)
-  | inst_rank_kind 0  theta = (pure_inst_kind theta
+  | inst_rank_kind 0  theta = (inst_kind theta
                                handle HOL_ERR{message=m,...} => raise ERR "inst_rank_kind" m)
   | inst_rank_kind rk theta =
     let val ty_inst = Type.inst_rank_kind rk theta
@@ -1203,19 +1211,21 @@ end
 
 (* fun inst_all rkS kdS tyS tmS tm = subst tmS (inst_rk_kd_ty rkS kdS tyS tm); *)
 
-fun inst_kind [] = I
-  | inst_kind theta =
+fun align_inst_kind [] = I
+  | align_inst_kind theta =
   let val (rktheta,kdtheta) = Kind.align_kinds theta
   in inst_rank_kind rktheta kdtheta
   end
-  handle e as HOL_ERR _ => raise (wrap_exn "Term" "inst_kind" e)
+  handle e as HOL_ERR _ => raise (wrap_exn "Term" "align_inst_kind" e)
 
-fun inst [] = I
-  | inst theta =
+fun align_inst [] = I
+  | align_inst theta =
   let val (rktheta,kdtheta,tytheta) = align_types theta
   in inst_rk_kd_ty rktheta kdtheta tytheta
   end
-  handle e as HOL_ERR _ => raise (wrap_exn "Term" "inst" e)
+  handle e as HOL_ERR _ => raise (wrap_exn "Term" "align_inst" e)
+
+val inst = align_inst
 
 local
 fun align_terms0 (rkS,kdS,tyS) [] = (rkS,kdS,tyS)
@@ -1259,7 +1269,7 @@ local val FORMAT = ERR "list_mk_binder"
               of NONE => raise FORMAT
                | SOME ty => (fn abs =>
                    let val dom = fst(Type.dom_rng(type_of abs))
-                   in mk_comb (inst[ty |-> dom] c, abs)
+                   in mk_comb (align_inst[ty |-> dom] c, abs)
                    end)
 in
 fun list_mk_binder opt =
@@ -1892,7 +1902,7 @@ fun raw_match tyfixed tmfixed pat ob (tmS,tyS)
      end;
 
 fun norm_subst ((tmS,_),(tyS,_)) =
- let val Theta = inst tyS
+ let val Theta = align_inst tyS
      fun del A [] = A
        | del A ({redex,residue}::rst) =
          del (let val redex' = Theta(redex)
@@ -1985,7 +1995,7 @@ end
 
 (*
 fun prim_mk_eq ty tm1 tm2 =
-  Comb(Comb(inst [alpha |-> ty] eqc, tm1), tm2)
+  Comb(Comb(align_inst [alpha |-> ty] eqc, tm1), tm2)
 *)
 
 fun prim_mk_eq ty tm1 tm2 =

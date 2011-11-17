@@ -377,7 +377,7 @@ fun inst [] tm = tm
                  else TyAbs{Bvar=Bvar, Body=inst theta' Body, Locn=Locn}
               end
           | inst0 (Antiq{Tm,Locn}) =
-              Antiq{Tm=Term.inst (toTypeSubst theta) Tm, Locn=Locn}
+              Antiq{Tm=Term.pure_inst (toTypeSubst theta) Tm, Locn=Locn}
           | inst0 (Constrained{Ptm,Ty,Locn}) =
               Constrained{Ptm=inst0 Ptm, Ty=type_subst theta Ty, Locn=Locn}
           | inst0 (Pattern{Ptm,Locn}) =

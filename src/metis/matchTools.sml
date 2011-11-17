@@ -58,9 +58,9 @@ fun residue_map f = map (fn {redex, residue} => redex |-> f residue);
 (* Public health warning: don't use cyclic substitutions!                    *)
 (* ------------------------------------------------------------------------- *)
 
-fun inst_ty (_, tyS) tm = inst tyS tm;
+fun inst_ty (_, tyS) tm = pure_inst tyS tm;
 
-fun pinst (tmS, tyS) tm = subst tmS (inst tyS tm);
+fun pinst (tmS, tyS) tm = subst tmS (pure_inst tyS tm);
 
 local
   fun fake_asm_op r th =
@@ -80,7 +80,7 @@ fun type_refine_subst [] tyS' : (hol_type, hol_type) subst = tyS'
 fun refine_subst ([], []) sub' = sub'
   | refine_subst sub ([], []) = sub
   | refine_subst (tmS, tyS) (tmS', tyS') =
-  let fun f {redex, residue} = inst tyS' redex |-> pinst (tmS', tyS') residue
+  let fun f {redex, residue} = pure_inst tyS' redex |-> pinst (tmS', tyS') residue
   in (tmS' @ map f tmS, type_refine_subst tyS tyS')
   end;
 
@@ -208,7 +208,7 @@ fun vunifyl (tmvarP, tyvarP) =
     fun unify_type sub tyL = refine_subst sub ([], pure_unify_type tyL)
     fun unify_var_type sub v tm =
       let val s = pure_unify_type [type_of v, type_of tm]
-      in refine_subst sub ([inst s v |-> inst s tm], s)
+      in refine_subst sub ([pure_inst s v |-> pure_inst s tm], s)
       end
     fun unify sub [] = sub
       | unify sub ((tm, tm') :: work) =

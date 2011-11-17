@@ -36,7 +36,7 @@ val fromHOLchar =
         Strings
  ---------------------------------------------------------------------------*)
 
-val stri = inst [alpha |-> char_ty]
+val stri = pure_inst [alpha |-> char_ty]
 
 val string_ty = mk_thy_type {Tyop="list", Thy="list", Args=[char_ty]}
 
@@ -45,8 +45,8 @@ val explode_tm     = prim_mk_const{Name="EXPLODE",     Thy="string"}
 val emptystring_tm = mk_thy_const{Name="NIL", Thy="list", Ty = string_ty}
 val string_tm      = mk_thy_const{Name="CONS", Thy="list",
                                   Ty = char_ty --> string_ty --> string_ty}
-val string_case_tm = inst [beta |-> alpha]
-                          (stri (prim_mk_const{Name="list_case", Thy="list"}))
+val string_case_tm = pure_inst [beta |-> alpha]
+                               (stri (prim_mk_const{Name="list_case", Thy="list"}))
 val strlen_tm      = stri (prim_mk_const{Name="LENGTH",    Thy="list"})
 val strcat_tm      = stri (prim_mk_const{Name="APPEND",    Thy="list"})
 val isprefix_tm    = stri (prim_mk_const{Name="isPREFIX",  Thy="list"});

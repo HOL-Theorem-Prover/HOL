@@ -13,7 +13,7 @@ val inc = Portable.inc
 
 
 datatype rule = Assume | Refl | Beta | Subst | Abs | Disch | Mp
-              | InstRank | PureInstKind | InstKind | PureInstType | InstType
+              | InstRank | InstKind | AlignInstKind | InstType | AlignInstType
               | MkComb | ApTerm | ApThm | Alpha
               | Sym | Trans | EqMp | EqImpRule | Inst | InstAll
               | Spec | Gen | Exists | Choose
@@ -28,8 +28,8 @@ val count = {ASSUME     = ref 0, REFL = ref 0,
              BETA_CONV  = ref 0, SUBST = ref 0,
              ABS        = ref 0, DISCH = ref 0,
              MP         = ref 0, INST_RANK = ref 0,
-             PURE_INST_KIND  = ref 0, INST_KIND  = ref 0,
-             PURE_INST_TYPE  = ref 0, INST_TYPE  = ref 0,
+             INST_KIND  = ref 0, ALIGN_INST_KIND = ref 0,
+             INST_TYPE  = ref 0, ALIGN_INST_TYPE = ref 0,
              MK_COMB    = ref 0, AP_TERM = ref 0,
              AP_THM     = ref 0, ALPHA = ref 0,
              SYM        = ref 0,
@@ -64,10 +64,10 @@ fun inc_count R =
        | Disch      => inc (#DISCH count)
        | Mp         => inc (#MP count)
        | InstRank   => inc (#INST_RANK count)
-       | PureInstKind => inc (#PURE_INST_KIND count)
        | InstKind   => inc (#INST_KIND count)
-       | PureInstType => inc (#PURE_INST_TYPE count)
+       | AlignInstKind => inc (#ALIGN_INST_KIND count)
        | InstType   => inc (#INST_TYPE count)
+       | AlignInstType => inc (#ALIGN_INST_TYPE count)
        | MkComb     => inc (#MK_COMB count)
        | ApTerm     => inc (#AP_TERM count)
        | ApThm      => inc (#AP_THM count)
@@ -118,10 +118,10 @@ fun reset_thm_count() =
      zero (#DISCH count);
      zero (#MP count);
      zero (#INST_RANK count);
-     zero (#PURE_INST_KIND count);
      zero (#INST_KIND count);
-     zero (#PURE_INST_TYPE count);
+     zero (#ALIGN_INST_KIND count);
      zero (#INST_TYPE count);
+     zero (#ALIGN_INST_TYPE count);
      zero (#MK_COMB count);
      zero (#AP_TERM count);
      zero (#AP_THM count);
@@ -165,7 +165,7 @@ fun prims() =
    !(#ASSUME count) + !(#REFL count) + !(#BETA_CONV count) +
    !(#SUBST count) + !(#ABS count) + !(#DISCH count) +
    !(#MP count) + !(#INST_RANK count) +
-   !(#PURE_INST_KIND count) + !(#INST_KIND count) + !(#PURE_INST_TYPE count) + !(#INST_TYPE count) +
+   !(#INST_KIND count) + !(#ALIGN_INST_KIND count) + !(#INST_TYPE count) + !(#ALIGN_INST_TYPE count) +
    !(#MK_COMB count) +
    !(#AP_TERM count) + !(#AP_THM count) + !(#ALPHA count) +
    !(#SYM count) + !(#TRANS count) +
@@ -195,8 +195,8 @@ fun thm_count() =
   BETA_CONV  = !(#BETA_CONV count), SUBST       = !(#SUBST count),
   ABS        = !(#ABS count),       DISCH       = !(#DISCH count),
   MP         = !(#MP count),        INST_RANK   = !(#INST_RANK count),
-  PURE_INST_KIND = !(#PURE_INST_KIND count), INST_KIND = !(#INST_KIND count),
-  PURE_INST_TYPE = !(#PURE_INST_TYPE count), INST_TYPE = !(#INST_TYPE count),
+  INST_KIND  = !(#INST_KIND count), ALIGN_INST_KIND = !(#ALIGN_INST_KIND count),
+  INST_TYPE  = !(#INST_TYPE count), ALIGN_INST_TYPE = !(#ALIGN_INST_TYPE count),
   MK_COMB = !(#MK_COMB count),      AP_TERM     = !(#AP_TERM count),
   AP_THM = !(#AP_THM count),        ALPHA       = !(#ALPHA count),
   SYM = !(#SYM count),              TRANS       = !(#TRANS count),

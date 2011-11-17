@@ -28,7 +28,7 @@ fun subst_of s = map pair2recd s
 
 fun match_type ty     = hol88subst_of o Type.match_type ty
 val subst             = Term.subst o subst_of
-val inst              = Term.inst o subst_of
+val inst              = Term.pure_inst o subst_of
 fun match_term pat ob = (hol88subst_of ## hol88subst_of)
                           (Term.match_term pat ob)
 

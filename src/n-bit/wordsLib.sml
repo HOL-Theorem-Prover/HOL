@@ -1812,7 +1812,7 @@ local
     THEN ASM_SIMP_TAC std_ss [word_div_le2])
 
   val word_type = wordsSyntax.dest_word_type o type_of
-  val arb_thm = boolSyntax.arb |> Term.inst [alpha |-> bool] |> ASSUME
+  val arb_thm = boolSyntax.arb |> Term.pure_inst [alpha |-> bool] |> ASSUME
   val SIZE_RULE = CONV_RULE (DEPTH_CONV SIZES_CONV)
   val RAND_REDUCE_RULE = CONV_RULE (RAND_CONV numLib.REDUCE_CONV)
 
@@ -2548,7 +2548,7 @@ fun inst_word_lengths tm =
                    else
                      ()
        in
-         inst_word_lengths (Term.inst [theinst] tm)
+         inst_word_lengths (Term.pure_inst [theinst] tm)
        end
 
 fun word_post_process_term t =

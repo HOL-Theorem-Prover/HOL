@@ -435,7 +435,7 @@ fun IMP_CANON acc thl =
                 val (Bvar,Body) = dest_tyexists ant
                 val bv' = variant_type (type_vars_in_term (concl th) @
                                         type_vars_in_terml (hyp th)   ) Bvar
-                val body' = inst [Bvar |-> bv'] Body
+                val body' = pure_inst [Bvar |-> bv'] Body
                 val newth =
                     DISCH body' (MP th (TY_EXISTS(ant, bv') (ASSUME body')))
               in

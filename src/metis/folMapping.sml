@@ -115,7 +115,7 @@ fun change_vars (tmG, tyG) (tmV, tyV) =
   let
     fun tyF v = let val g = tyG v in (g, v |-> g) end
     val (tyV', tyS) = unzip (map tyF tyV)
-    fun tmF v = let val v' = inst tyS v val g = tmG v' in (g, v' |-> g) end
+    fun tmF v = let val v' = pure_inst tyS v val g = tmG v' in (g, v' |-> g) end
     val (tmV', tmS) = unzip (map tmF tmV)
   in
     ((tmV', tyV'), (tmS, tyS))
@@ -168,8 +168,8 @@ val fresh_tyvars =
   in List.mapPartial f o type_vars_in_terms
   end;
 
-fun freshen_tyvars  tm  = inst (fresh_tyvars [tm]) tm;
-fun freshenl_tyvars tms = map (inst (fresh_tyvars tms)) tms;
+fun freshen_tyvars  tm  = pure_inst (fresh_tyvars [tm]) tm;
+fun freshenl_tyvars tms = map (pure_inst (fresh_tyvars tms)) tms;
 
 val new_match_type  = matchTools.vmatch_type  is_new_tyvar;
 val new_unify_type  = matchTools.vunify_type  is_new_tyvar;
@@ -214,10 +214,10 @@ in
 end;
 
 fun unify_mk_comb (a, b) =
-  let val i = inst (prepare_mk_comb (a, b)) in mk_comb (i a, i b) end;
+  let val i = pure_inst (prepare_mk_comb (a, b)) in mk_comb (i a, i b) end;
 
 fun unify_list_mk_comb (f, a) =
-  let val i = inst (prepare_list_mk_comb (f, a))
+  let val i = pure_inst (prepare_list_mk_comb (f, a))
   in list_mk_comb (i f, map i a)
   end;
 
@@ -228,7 +228,7 @@ end;
 val freshen_mk_comb      = freshen_tyvars o unify_mk_comb;
 val freshen_list_mk_comb = freshen_tyvars o unify_list_mk_comb;
 
-fun cast_to ty tm = inst (new_match_type (type_of tm) ty) tm;
+fun cast_to ty tm = pure_inst (new_match_type (type_of tm) ty) tm;
 
 (* Quick testing
 val a = mk_varconst "list.LENGTH"; type_of a;
@@ -696,7 +696,7 @@ fun proof_step parm prev =
       if #with_types parm then (lits, th)
       else
         let val sub = fresh_tyvars lits
-        in (map (inst sub) lits, INST_TY sub th)
+        in (map (pure_inst sub) lits, INST_TY sub th)
         end
 
     fun match_lits l l' =
@@ -781,17 +781,17 @@ fun proof_step parm prev =
           | SOME n => List.nth (hol_lits, n)
         val hol_r = fol_term_to_hol parm fol_r
         val sub = sync_vars [hol_lit, hol_r]
-        val hol_lits = map (inst sub) hol_lits
+        val hol_lits = map (pure_inst sub) hol_lits
         val hol_th = INST_TY sub hol_th
-        val hol_lit = inst sub hol_lit
-        val hol_r = inst sub hol_r
+        val hol_lit = pure_inst sub hol_lit
+        val hol_r = pure_inst sub hol_r
         val (PATH, hol_l) = fol_path_to_hol parm fol_p hol_lit
         val sub = (new_unify_type o map type_of) [hol_l, hol_r]
-        val hol_lits = map (inst sub) hol_lits
+        val hol_lits = map (pure_inst sub) hol_lits
         val hol_th = INST_TY sub hol_th
-        val hol_lit = inst sub hol_lit
-        val hol_r = inst sub hol_r
-        val hol_l = inst sub hol_l
+        val hol_lit = pure_inst sub hol_lit
+        val hol_r = pure_inst sub hol_r
+        val hol_l = pure_inst sub hol_l
         val eq = boolSyntax.mk_eq (if lr then (hol_l,hol_r) else (hol_r,hol_l))
         val hol_eq_th = (if lr then I else Thm.SYM) (Thm.ASSUME eq)
         val hol_lit_th = (PATH (K hol_eq_th)) hol_lit

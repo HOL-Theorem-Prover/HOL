@@ -131,7 +131,7 @@ fun HO_MATCH_ABBREV_TAC fv_set pattern (gl as (asl,w)) =
  let val ctxt = HOLset.listItems fv_set
      val (tminst, tyinst) = ho_match_term (fixed_tyvars ctxt pattern) fv_set pattern w
      val unbeta_goal =
-        Tactical.default_prover(mk_eq(w, subst tminst (inst tyinst pattern)),
+        Tactical.default_prover(mk_eq(w, subst tminst (pure_inst tyinst pattern)),
                                 BETA_TAC THEN REFL_TAC)
 in
   CONV_TAC (K unbeta_goal) THEN MAP_EVERY ABB' tminst

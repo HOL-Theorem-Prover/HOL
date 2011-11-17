@@ -68,7 +68,7 @@ fun ty_tm_subst [] tm = tm
       let val (tyS,S1) = firsttys S
           val (tmS,S2) = firsttms S1
           val tm' = ty_tm_subst S2 tm
-      in inst tyS (subst tmS tm')
+      in pure_inst tyS (subst tmS tm')
       end
 end
 
@@ -93,7 +93,7 @@ fun satisfy1 (consts,facts) gl =
       val tyvars = mapfilter outL vars
       val gtyvars = mapfilter (outL o #residue) S
       val tyS = map (op |->) (zip tyvars gtyvars)
-      val gvars = mapfilter (inst tyS o outR o #residue) S
+      val gvars = mapfilter (pure_inst tyS o outR o #residue) S
       val goals = strip_conj g'
       fun get_body t = snd (dest_forall t) handle HOL_ERR _ => snd (dest_tyforall t)
       val facts' = map (repeat get_body) facts

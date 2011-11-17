@@ -200,7 +200,7 @@ fun measureInduct_on q (g as (asl,w)) =
      val st = BasicProvers.prim_find_subterm FVs arg g
      val st_type = BasicProvers.tmkind_tyof st
      val meas' = inst (match_type d st_type) meas
-     val ind_thm1 = INST_TYPE [Type.alpha |-> st_type] ind_thm0
+     val ind_thm1 = ALIGN_INST_TYPE [Type.alpha |-> st_type] ind_thm0
      val ind_thm2 = pairLib.GEN_BETA_RULE (SPEC meas' ind_thm1)
      val ind_tac = Prim_rec.INDUCT_THEN ind_thm2 ASSUME_TAC
  in

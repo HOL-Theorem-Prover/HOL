@@ -68,8 +68,9 @@ fun fresh_constr ty_match (colty:hol_type) gv c =
   let val Ty = type_of c
       val (L,ty) = strip_fun_type Ty
       val (ty_theta,kd_theta,rk_theta) = ty_match ty colty
-      val c' = inst ty_theta (inst_rank_kind rk_theta kd_theta c)
-      val gvars = map (inst ty_theta o inst_rank_kind rk_theta kd_theta o gv) L
+      val instfn = inst_rk_kd_ty rk_theta kd_theta ty_theta
+      val c' = instfn c
+      val gvars = map (instfn o gv) L
   in (c', gvars)
   end;
 
@@ -432,7 +433,7 @@ fun no_repeat_vars thy pat =
  ---------------------------------------------------------------------------*)
 
 fun subst_inst (term_sub,type_sub) tm =
-    Term.subst term_sub (Term.inst type_sub tm);
+    Term.subst term_sub (Term.pure_inst type_sub tm);
 
 fun pat_match1 (pat,exp) given_pat =
  let val sub = Term.match_term pat given_pat

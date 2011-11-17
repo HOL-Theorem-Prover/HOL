@@ -1411,7 +1411,7 @@ fun munge_def_type def =
      val tainted = U (map term_eqtyvars R)
      val theta = map (fn tyv => tyv |-> tyvar_to_eqtyvar tyv) tainted
  in
-   map (inst theta) clist
+   map (pure_inst theta) clist
  end
  handle e => raise wrap_exn "EmitML" "munge_def_type" e;
 

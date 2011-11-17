@@ -30,7 +30,7 @@ fun op_remove_list cmp [] l2 = l2
   | op_remove_list cmp (x::xs) l2 = op_remove_list cmp xs (op_remove cmp x l2)
 
 fun buac_prover ty = let
-  fun type_inst ty = INST_TYPE [alpha |-> ty]
+  fun type_inst ty = ALIGN_INST_TYPE [alpha |-> ty]
 in
   AC_CONV (type_inst ty ASSOC_BAG_UNION, type_inst ty COMM_BAG_UNION)
 end

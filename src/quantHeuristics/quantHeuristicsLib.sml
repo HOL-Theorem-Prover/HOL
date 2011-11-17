@@ -57,7 +57,7 @@ let
    val s = map (fn v => (v |-> genvar (type_of v))) fvL
 
    val type_vL = type_vars_in_term (concl thm)
-   val ts = map (fn v => (v |-> gen_tyvar ())) type_vL
+   val ts = map (fn v => (v |-> gen_var_type (kind_of v))) type_vL
 in
    INST_TYPE ts (INST s thm)
 end;
@@ -1424,8 +1424,8 @@ local
 
    fun test_thmL v_t_type tvset v t (P_t, thmL) =
    let
-       val ty_m = match_type (type_of P_t) v_t_type
-       val P_t' = inst ty_m P_t;
+       val (ty_m,kd_m,rk_m) = kind_match_type (type_of P_t) v_t_type
+       val P_t' = inst_rk_kd_ty rk_m kd_m ty_m P_t;
        val (v'', t'') = dest_abs P_t';
        val t''' = subst [v'' |-> v] t'';
        val (term_sub, ty_sub) = ho_match_term [] tvset t''' t
@@ -1465,7 +1465,7 @@ local
            val i_ty =  (hd o snd o dest_type o type_of) i
            val gi_ty = (hd o snd o dest_type o type_of) gi
            val ty_sub = [i_ty |-> gi_ty];
-           val i' = inst ty_sub i;
+           val i' = pure_inst ty_sub i;
 
            val xthm0 = INST_TY_TERM ([i' |-> gi], ty_sub) thm
            val xthm1 = MP xthm0 gthm

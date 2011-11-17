@@ -28,7 +28,7 @@ struct
         if same_const pred boolSyntax.T then IN_UNIV'
         else if same_const pred boolSyntax.F then NOT_IN_EMPTY'
         else raise ERR "Inapplicable: gspec body not T or F"
-    val basethm = INST_TYPE [alpha |-> elty] basethm0
+    val basethm = ALIGN_INST_TYPE [alpha |-> elty] basethm0
     val v = genvar elty
     val v_IN_t = mk_in(v,t)
     val v_IN_t_th = (PGspec.SET_SPEC_CONV GSPECIFICATION THENC

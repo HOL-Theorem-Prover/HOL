@@ -24,6 +24,10 @@ sig
   val vsubst        : (hol_type, (string HOLset.set)Susp.susp * hol_type)Binarymap.dict
                       -> hol_type -> hol_type
   val ssubst        : (hol_type, hol_type)Binarymap.dict -> hol_type -> hol_type
+  val emptyvsubst   : (hol_type, (string HOLset.set)Susp.susp * hol_type)Binarymap.dict
+  val vsub_insert   : (hol_type, (string HOLset.set)Susp.susp * hol_type)Binarymap.dict *
+                      hol_type * hol_type ->
+                      (hol_type, (string HOLset.set)Susp.susp * hol_type)Binarymap.dict
 
   val compare0      : int -> (hol_type,int)Binarymap.dict * (hol_type,int)Binarymap.dict
                           -> hol_type * hol_type -> order
@@ -32,6 +36,10 @@ sig
   val type_vars_set : hol_type HOLset.set -> hol_type HOLset.set -> hol_type list -> hol_type HOLset.set
   val free_names    : hol_type -> string HOLset.set
   val inst_rank_kind1 : rank -> (kind, kind)Lib.subst -> (tyvar, kind)Binarymap.dict
+                        -> hol_type -> hol_type
+  val inst_rk_kd_ty1 : rank -> (kind, kind)Lib.subst
+                        -> (hol_type, (string HOLset.set)Susp.susp * hol_type)Binarymap.dict
+                        -> (tyvar, kind)Binarymap.dict
                         -> hol_type -> hol_type
 
   val type_pmatch : hol_type HOLset.set -> {redex : hol_type, residue : hol_type} list ->

@@ -239,9 +239,9 @@ val lhand = Term.rand o Term.rator;;
 
 fun mk_icomb(tm1,tm2) =
   let val ty = Lib.fst(Type.dom_rng(Term.type_of tm1))
-      val tyins = Type.match_type ty (Term.type_of tm2)
+      val (tyins,kdins,rk) = Type.kind_match_type ty (Term.type_of tm2)
   in
-    Term.mk_comb(Term.inst tyins tm1, tm2)
+    Term.mk_comb(Term.inst_rk_kd_ty rk kdins tyins tm1, tm2)
   end;;
 
 (* ------------------------------------------------------------------------- *)
@@ -260,7 +260,7 @@ fun PINST tyin tmin =
       val tmin' = map (fn {redex,residue} =>
                           {redex=inst_fn redex, residue=residue}) tmin
       val iterm_fn = Thm.INST tmin'
-      val itype_fn = Thm.INST_TYPE tyin
+      val itype_fn = Thm.ALIGN_INST_TYPE tyin
   in
       fn th => iterm_fn (itype_fn th) handle HOL_ERR _ => failwith "PINST"
   end;
