@@ -1,0 +1,423 @@
+(*---------------------------------------------------------------------------*)
+(* Nested reverse via step-indexing.                                         *)
+(*---------------------------------------------------------------------------*)
+
+set_trace "Unicode" 0;
+set_trace "pp_annotations" 0;
+
+use (HOLDIR^"/src/pfl/defchoose");
+use (HOLDIR^"/src/pfl/tactics.sml");
+
+quietdec := true;
+open arithmeticTheory optionTheory listTheory;
+quietdec := false;
+
+(*---------------------------------------------------------------------------*)
+(* General purpose support.                                                  *)
+(*---------------------------------------------------------------------------*)
+
+val MAX_LE_THM = Q.prove
+(`!m n. m <= MAX m n /\ n <= MAX m n`,
+ RW_TAC arith_ss [MAX_DEF]);
+
+val IS_SOME_EXISTS = Q.prove
+(`!x. IS_SOME x = ?y. x = SOME y`,
+ Cases THEN METIS_TAC [optionTheory.IS_SOME_DEF]);
+
+(*---------------------------------------------------------------------------*)
+(* Indexed function definition                                               *)
+(*---------------------------------------------------------------------------*)
+
+val rev_orig_tm = 
+   ``(rev [] = []) /\
+     (rev (x::xs) =
+        case rev xs
+         of [] -> [x]
+         || y::ys -> y :: rev (x::rev ys))``;
+
+val irev_def = 
+ Define
+  `irev d list = 
+     if d=0 then NONE else
+     case list 
+      of [] -> SOME []
+      || (x::xs) ->
+        case irev (d-1) xs 
+         of NONE -> NONE
+         || SOME [] -> SOME [x]
+         || SOME (y::ys) ->
+             case irev (d-1) ys 
+              of NONE -> NONE
+              || SOME v ->
+                  case irev (d-1) (x::v) 
+                   of NONE -> NONE
+                   || SOME v -> SOME (y::v)`;
+
+(*---------------------------------------------------------------------------*)
+(* Domain of the function.                                                   *)
+(*---------------------------------------------------------------------------*)
+
+val dom_def = Define `dom list = ?d. IS_SOME(irev d list)`;
+
+(*---------------------------------------------------------------------------*)
+(* Create measure function rdepth                                            *)
+(*---------------------------------------------------------------------------*)
+
+val rev_rdepth = 
+   MINCHOOSE ("rev_rdepth", "rev_rdepth", ``!list. ?d. IS_SOME(irev d list)``);
+
+(*---------------------------------------------------------------------------*)
+(* Define rev                                                                *)
+(*---------------------------------------------------------------------------*)
+
+val rev_def = Define `rev list = THE (irev (rev_rdepth list) list)`;
+
+(*---------------------------------------------------------------------------*)
+(* Lemmas about definedness                                                  *)
+(*---------------------------------------------------------------------------*)
+
+val IS_SOME_IREV = Q.prove
+(`!d list. IS_SOME (irev d list) ==> d <> 0`,
+ Cases THEN RW_TAC std_ss [Once irev_def]);
+
+val IREV_SOME = Q.prove
+(`!d l a. (irev d l = SOME a) ==> d <> 0`,
+ METIS_TAC[IS_SOME_IREV,IS_SOME_EXISTS]);
+
+val irev_dlem = Q.prove
+(`!d l. IS_SOME (irev d l) ==> (irev d l = irev (SUC d) l)`,
+ DLEM_TAC irev_def IREV_SOME);
+
+val irev_monotone = Q.prove
+(`!d1 d2 l. IS_SOME(irev d1 l) /\ d1 <= d2 ==> (irev d1 l = irev d2 l)`,
+ RW_TAC arith_ss [LESS_EQ_EXISTS] THEN 
+ Induct_on `p` THEN METIS_TAC [ADD_CLAUSES,irev_dlem]);
+
+val irev_norm = Q.prove
+(`!d l. IS_SOME(irev d l) ==> (irev d l = irev (rev_rdepth l) l)`,
+ METIS_TAC [irev_monotone,rev_rdepth]);
+
+val irev_determ = Q.prove
+(`!d1 d2 l. IS_SOME(irev d1 l) /\ IS_SOME(irev d2 l) 
+            ==> (irev d1 l = irev d2 l)`,
+ METIS_TAC [irev_norm]);
+
+
+(*---------------------------------------------------------------------------*)
+(* Constrained recursion equations                                           *)
+(*---------------------------------------------------------------------------*)
+
+val rev_base = Q.prove
+(`!list. dom list /\ (list = []) ==> (rev list = [])`,
+ RW_TAC std_ss [rev_def,dom_def] THEN 
+ IMP_RES_TAC rev_rdepth THEN 
+ `rev_rdepth [] <> 0` by METIS_TAC [IS_SOME_IREV] THEN 
+ RW_TAC arith_ss [Once irev_def]);
+
+val rev_step = Q.prove
+(`!list x xs. dom list /\ (list=x::xs) ==> 
+             (rev list = case rev xs
+                   of [] -> [x]
+                   || y::ys -> y :: rev (x::rev ys))`,
+ RW_TAC std_ss [rev_def,dom_def] THEN 
+ `d<>0` by METIS_TAC [IS_SOME_IREV] THEN 
+ `irev d (x::xs) = 
+   case irev (d - 1) xs 
+    of NONE -> NONE
+    || SOME [] -> SOME [x]
+    || SOME (y::ys) ->
+         case irev (d - 1) ys
+          of NONE -> NONE
+          || SOME v'' ->
+               case irev (d - 1) (x::v'') 
+                of NONE -> NONE
+                || SOME v -> SOME (y::v)` 
+     by (GEN_REWRITE_TAC LHS_CONV bool_rewrites [irev_def] THEN 
+         ASM_SIMP_TAC std_ss [list_case_def]) THEN 
+ POP_ASSUM MP_TAC THEN REPEAT CASE_TAC THEN 
+ METIS_TAC [rev_rdepth,irev_norm,
+            NOT_SOME_NONE,IS_SOME_EXISTS,THE_DEF,NOT_CONS_NIL,CONS_11]);
+
+(*---------------------------------------------------------------------------*)
+(* Equational characterization of rev.                                       *)
+(*---------------------------------------------------------------------------*)
+
+val rev_eqns = Q.prove
+(`!list. dom list ==>
+         (rev list =
+            case list 
+             of [] -> []
+             || x::xs -> case rev xs 
+                         of [] -> [x] 
+                         || h::t -> h::rev (x::rev t))`,
+ Cases THEN RW_TAC std_ss [] THEN METIS_TAC [rev_base, rev_step]);
+
+
+(*---------------------------------------------------------------------------*)
+(* Now derive eqns for dom                                                   *)
+(*---------------------------------------------------------------------------*)
+
+val lem = Q.prove
+(`IS_SOME (irev 1 [])`,
+ RW_TAC arith_ss [Once irev_def]);
+
+val dom_base_case = Q.prove
+(`dom []`, 
+ METIS_TAC [dom_def, lem]);
+
+val lem1a = Q.prove
+(`!x xs. dom (x::xs) ==> dom xs`,
+ RW_TAC std_ss [dom_def] THEN 
+ `d<>0` by METIS_TAC [IS_SOME_IREV] THEN
+ Q.EXISTS_TAC `d-1` THEN 
+ Q.PAT_ASSUM `IS_SOME arg` (MP_TAC o ONCE_REWRITE_RULE [irev_def]) THEN 
+ CASE_TAC THEN RW_TAC arith_ss []);
+
+val lem2a = Q.prove
+(`!x xs h t.  dom (x::xs) /\ (rev xs = h::t) ==> dom t`,
+ RW_TAC std_ss [dom_def,rev_def] THEN 
+ `d<>0` by METIS_TAC [IS_SOME_IREV] THEN
+ Q.EXISTS_TAC `d-1` THEN 
+ Q.PAT_ASSUM `IS_SOME arg` (MP_TAC o ONCE_REWRITE_RULE [irev_def]) THEN 
+ CASE_TAC THEN RW_TAC arith_ss [] THEN 
+ POP_ASSUM MP_TAC THEN CASE_TAC THEN RW_TAC arith_ss [] THEN 
+ `x = h::t` by METIS_TAC [IS_SOME_EXISTS,irev_norm,SOME_11,THE_DEF] THEN 
+ RW_TAC arith_ss [] THEN POP_ASSUM MP_TAC THEN CASE_TAC THEN 
+ RW_TAC arith_ss [] THEN POP_ASSUM MP_TAC THEN CASE_TAC THEN RW_TAC arith_ss []);
+
+val lem2b = Q.prove
+(`!x xs h t. dom (x::xs) /\ (rev xs = h::t) ==> dom (x::rev t)`,
+RW_TAC std_ss [dom_def,rev_def] THEN 
+ `d<>0` by METIS_TAC [IS_SOME_IREV] THEN
+ Q.EXISTS_TAC `d-1` THEN 
+ Q.PAT_ASSUM `IS_SOME arg` (MP_TAC o ONCE_REWRITE_RULE [irev_def]) THEN 
+ CASE_TAC THEN RW_TAC arith_ss [] THEN 
+ POP_ASSUM MP_TAC THEN CASE_TAC THEN RW_TAC arith_ss [] THEN 
+ `x = h::t` by METIS_TAC [IS_SOME_EXISTS,irev_norm,SOME_11,THE_DEF] THEN 
+ RW_TAC arith_ss [] THEN POP_ASSUM MP_TAC THEN CASE_TAC THEN 
+ RW_TAC arith_ss [] THEN POP_ASSUM MP_TAC THEN CASE_TAC THEN 
+ RW_TAC arith_ss [] THEN POP_ASSUM MP_TAC THEN CASE_TAC THEN 
+ METIS_TAC [irev_norm,IS_SOME_EXISTS,SOME_11,THE_DEF]);
+
+val lem3a = Q.prove
+(`!x xs. dom xs /\ (rev xs = []) ==> dom (x::xs)`,
+ RW_TAC std_ss [dom_def,rev_def] THEN 
+ `d<>0` by METIS_TAC [IS_SOME_IREV] THEN
+ Q.EXISTS_TAC `SUC d` THEN 
+ RW_TAC arith_ss [Once irev_def] THEN 
+ REPEAT CASE_TAC THEN RW_TAC std_ss [] THEN
+ METIS_TAC [IS_SOME_EXISTS,irev_norm,THE_DEF,NOT_NIL_CONS]);
+
+val lem3b = Q.prove (* METIS_TAC takes ages on two goals ... *)
+(`!x xs h t. dom xs /\ (rev xs = h::t) /\ dom t /\ dom (x::rev t) ==> dom(x::xs)`,
+ RW_TAC std_ss [dom_def,rev_def] THEN 
+ Q.EXISTS_TAC `SUC (MAX d (MAX d' d''))` THEN 
+ RW_TAC arith_ss [Once irev_def] THEN 
+ REPEAT CASE_TAC THEN RW_TAC std_ss [] THEN
+ METIS_TAC [IS_SOME_EXISTS,irev_norm,irev_monotone,MAX_LE_THM,
+            THE_DEF,NOT_SOME_NONE,CONS_11]);
+
+(*---------------------------------------------------------------------------*)
+(* Equational characterization of dom.                                       *)
+(*---------------------------------------------------------------------------*)
+
+val dom_eqns = Q.prove
+(`(dom [] = T) /\
+  (dom (x::xs) = dom (xs:'a list) /\ 
+                 (case rev xs
+                   of [] -> T
+                   || h::t -> dom t /\ dom (x::rev t)))`,
+ CONJ_TAC THENL [ALL_TAC, CASE_TAC] THEN 
+ METIS_TAC [dom_base_case,lem1a,lem3a,lem1a,lem2a,lem2b,lem3b]);
+
+(*---------------------------------------------------------------------------*)
+(* So have derived a mutually recursive presentation of the partial function *)
+(* and its domain. Now prove induction.                                      *)
+(*---------------------------------------------------------------------------*)
+
+val step2_lt = Q.prove
+(`!x xs. dom (x::xs) ==> rev_rdepth xs < rev_rdepth (x::xs)`,
+ RW_TAC std_ss [dom_def] THEN 
+   `rev_rdepth (x::xs) <> 0` by METIS_TAC [IS_SOME_IREV,rev_rdepth] THEN 
+   `rev_rdepth (x::xs) - 1 < rev_rdepth (x::xs)` by DECIDE_TAC THEN 
+   `IS_SOME (irev (rev_rdepth (x::xs)) (x::xs))` by METIS_TAC [rev_rdepth] THEN 
+   `IS_SOME(irev (rev_rdepth (x::xs) - 1) xs)` 
+     by (POP_ASSUM MP_TAC THEN ASM_SIMP_TAC arith_ss [Once irev_def] THEN 
+         REPEAT CASE_TAC THEN RW_TAC std_ss [] THEN
+         METIS_TAC[IS_SOME_EXISTS]) THEN 
+    `rev_rdepth xs <= rev_rdepth (x::xs) - 1` by METIS_TAC [rev_rdepth]
+ THEN DECIDE_TAC);
+
+val step3_lt = Q.prove
+(`!x xs y ys. dom (x::xs) /\ (y::ys = rev xs) ==> rev_rdepth ys < rev_rdepth (x::xs)`,
+ RW_TAC std_ss [dom_def,rev_def] THEN 
+   `rev_rdepth (x::xs) <> 0` by METIS_TAC [IS_SOME_IREV,rev_rdepth] THEN 
+   `rev_rdepth (x::xs) - 1 < rev_rdepth (x::xs)` by DECIDE_TAC THEN 
+   `IS_SOME (irev (rev_rdepth (x::xs)) (x::xs))` by METIS_TAC [rev_rdepth] THEN 
+   `IS_SOME(irev (rev_rdepth (x::xs) - 1) ys)` 
+     by (POP_ASSUM MP_TAC THEN ASM_SIMP_TAC arith_ss [Once irev_def] THEN 
+         REPEAT CASE_TAC THEN RW_TAC std_ss [] THEN
+         METIS_TAC [IS_SOME_EXISTS,THE_DEF,NOT_CONS_NIL,irev_norm,CONS_11,NOT_SOME_NONE])
+    THEN
+    `rev_rdepth ys <= rev_rdepth (x::xs) - 1` by METIS_TAC [rev_rdepth]
+ THEN DECIDE_TAC);
+
+val step4_lt = Q.prove
+(`!x xs y ys. dom (x::xs) /\ (y::ys = rev xs) ==> rev_rdepth (x::rev ys) < rev_rdepth (x::xs)`,
+ RW_TAC std_ss [dom_def,rev_def] THEN 
+   `rev_rdepth (x::xs) <> 0` by METIS_TAC [IS_SOME_IREV,rev_rdepth] THEN 
+   `rev_rdepth (x::xs) - 1 < rev_rdepth (x::xs)` by DECIDE_TAC THEN 
+   `IS_SOME (irev (rev_rdepth (x::xs)) (x::xs))` by METIS_TAC [rev_rdepth] THEN 
+   `IS_SOME(irev (rev_rdepth (x::xs) - 1) (x::rev ys))` 
+     by (POP_ASSUM MP_TAC THEN ASM_SIMP_TAC arith_ss [Once irev_def] THEN 
+         REPEAT CASE_TAC THEN RW_TAC std_ss [] THEN
+         METIS_TAC [IS_SOME_EXISTS,THE_DEF,NOT_CONS_NIL,irev_norm,CONS_11,NOT_SOME_NONE,rev_def])
+    THEN `rev_rdepth (x::rev ys) <= rev_rdepth (x::xs) - 1` by METIS_TAC [rev_rdepth]
+ THEN RW_TAC arith_ss [GSYM rev_def]);
+
+(*---------------------------------------------------------------------------*)
+(* Induction for rev is a consequence of well-founded induction.             *)
+(*---------------------------------------------------------------------------*)
+
+val ind0 = MATCH_MP relationTheory.WF_INDUCTION_THM 
+                    (Q.ISPEC `rev_rdepth` prim_recTheory.WF_measure);
+val ind1 = SIMP_RULE std_ss [prim_recTheory.measure_thm] ind0;
+val ind2 = SIMP_RULE std_ss [pairTheory.FORALL_PROD] 
+                    (Q.ISPEC `\list. dom list ==> P list` ind1);
+
+val rev_ind = Q.prove
+(`!P. P [] /\
+     (!x xs. dom (x::xs) /\
+             P xs /\ (!y ys. (y::ys = rev xs) ==> P ys /\ P (x::rev ys))
+      ==> P (x::xs))
+  ==> !list. dom list ==> P list`,
+ GEN_TAC THEN STRIP_TAC THEN HO_MATCH_MP_TAC ind2 THEN 
+ Cases THENL [METIS_TAC [], ALL_TAC] THEN 
+ DISCH_THEN (fn th => 
+ DISCH_THEN (fn th1 => POP_ASSUM MATCH_MP_TAC THEN POP_ASSUM (K ALL_TAC)
+                THEN ASSUME_TAC (REWRITE_RULE [AND_IMP_INTRO] th) 
+                THEN MP_TAC th1)) THEN 
+ SIMP_TAC std_ss [] THEN 
+ POP_ASSUM (fn th => RW_TAC std_ss [] THEN MATCH_MP_TAC th) THENL
+ [METIS_TAC [step2_lt,dom_eqns], IMP_RES_TAC step3_lt, IMP_RES_TAC step4_lt] THEN
+ ASM_REWRITE_TAC [] THEN Q.PAT_ASSUM `dom (h::t)` MP_TAC THEN 
+ RULE_ASSUM_TAC GSYM THEN RW_TAC std_ss [Once dom_eqns]);
+
+
+(*---------------------------------------------------------------------------*)
+(* Property: rev = REVERSE                                                   *)
+(*---------------------------------------------------------------------------*)
+
+val rev_is_REVERSE = Q.prove
+(`!list. dom list ==> (rev list = REVERSE list)`,
+ HO_MATCH_MP_TAC rev_ind THEN RW_TAC list_ss [REVERSE_DEF] THENL
+ [METIS_TAC [dom_eqns,list_case_def,rev_eqns],
+  RW_TAC std_ss [Once rev_eqns] THEN CASE_TAC THEN 
+  RW_TAC list_ss []]);
+
+
+(*---------------------------------------------------------------------------*)
+(* Efficient executable version of rev                                        *)
+(*---------------------------------------------------------------------------*)
+
+val exec_def = 
+ Define 
+ `exec d list = 
+    if d=0 then (if dom list then rev list else ARB) else
+    case list 
+     of [] -> [] 
+     || x::xs ->
+         case exec (d-1) xs
+          of [] -> [x]
+          || y::ys -> y :: exec (d-1) (x::exec (d-1) ys)`;
+
+val exec_equals_rev = Q.prove
+(`!d list. dom list ==> (exec d list = rev list)`,
+ Induct THEN RW_TAC std_ss [Once exec_def] THEN
+ IMP_RES_TAC rev_eqns THEN POP_ASSUM SUBST_ALL_TAC THEN 
+ REPEAT CASE_TAC THENL
+ [METIS_TAC [dom_eqns,CONS_11,NOT_CONS_NIL],
+  METIS_TAC [dom_eqns,CONS_11,NOT_CONS_NIL],
+  FULL_SIMP_TAC list_ss [Once dom_eqns] THEN METIS_TAC [CONS_11,NOT_CONS_NIL]]);
+  
+val BIG_def = Define `BIG = 1073741823`;
+
+val Rev_def = 
+ Define 
+   `Rev list = if dom list then rev list else exec BIG list`;
+
+(*---------------------------------------------------------------------------*)
+(* Theorem showing that exec BIG = Rev in the domain of the function.        *)
+(*---------------------------------------------------------------------------*)
+
+val Rev_exec = Q.prove
+(`Rev list = exec BIG list`,
+ RW_TAC std_ss [Rev_def,exec_equals_rev]);
+
+val Rev_dom_eqns = Q.prove
+(`(dom [] <=> T) /\
+  (dom (x::xs) <=> 
+     dom xs /\ 
+     case Rev xs 
+      of [] -> T 
+      || h::t -> dom t /\ dom (x::Rev t))`,
+ CONJ_TAC THENL 
+ [METIS_TAC [dom_eqns],
+  RW_TAC list_ss [Once dom_eqns,Rev_def] THEN 
+  CASE_TAC THEN METIS_TAC [dom_eqns]]);
+
+val Rev_eqns = Q.prove
+(`dom list ==> 
+   (Rev list = 
+      case list of
+         [] -> []
+      || x::xs -> case Rev xs of 
+                     [] -> [x] 
+                  || h::t -> h::Rev (x::Rev t))`,
+ SIMP_TAC std_ss [Rev_def] THEN CASE_TAC THENL
+ [RW_TAC list_ss [rev_eqns],
+  STRIP_TAC THEN IMP_RES_TAC rev_eqns THEN POP_ASSUM SUBST_ALL_TAC THEN 
+  NTAC 2 (CASE_TAC THEN RW_TAC list_ss []) THEN
+  METIS_TAC[lem1a,lem2a,lem2b]]);
+
+val Rev_ind = Q.prove
+(`!P. P [] /\
+     (!x xs. dom (x::xs) /\
+             P xs /\ (!y ys. (y::ys = Rev xs) ==> P ys /\ P (x::Rev ys))
+      ==> P (x::xs))
+  ==> !list. dom list ==> P list`,
+ GEN_TAC THEN STRIP_TAC THEN HO_MATCH_MP_TAC rev_ind THEN
+ ASM_REWRITE_TAC [] THEN 
+ POP_ASSUM (fn th => REPEAT STRIP_TAC THEN MATCH_MP_TAC th) THEN
+ RW_TAC std_ss [Rev_def] THEN METIS_TAC [lem1a,lem2a,lem2b]);
+
+
+(*---------------------------------------------------------------------------*)
+(* Show totality directly                                                    *)
+(*---------------------------------------------------------------------------*)
+
+val LENGTH_REVERSE = Q.prove
+(`!list. LENGTH(REVERSE list) = LENGTH list`,
+ Induct THEN RW_TAC list_ss []);
+
+val total_dom = Q.prove
+(`!list. dom list`,
+ measureInduct_on `LENGTH list` THEN Cases_on `list` THENL
+ [METIS_TAC [dom_eqns],
+  RW_TAC list_ss [Once dom_eqns] THEN CASE_TAC THEN
+    `LENGTH t < LENGTH (h::t)` by RW_TAC list_ss [] THEN 
+    `dom t` by METIS_TAC[] THEN 
+    `LENGTH t = LENGTH (h'::t')` by METIS_TAC [rev_is_REVERSE,LENGTH_REVERSE] THEN
+    `LENGTH t' < LENGTH (h::t)` by RW_TAC list_ss [] THEN
+    CONJ_TAC THENL
+      [METIS_TAC[],
+       FIRST_ASSUM MATCH_MP_TAC THEN RW_TAC list_ss [] THEN 
+         `dom t'` by METIS_TAC [] THEN 
+         METIS_TAC [rev_is_REVERSE,LENGTH_REVERSE,DECIDE ``x < SUC x``]]]);
+
+(*---------------------------------------------------------------------------*)
+(* Finally, use the totality of dom to remove restrictions.                  *)
+(*---------------------------------------------------------------------------*)
+
+val Rev_thm = SIMP_RULE std_ss [total_dom] Rev_eqns;
+val Rev_ind_thm = SIMP_RULE std_ss [total_dom] Rev_ind;

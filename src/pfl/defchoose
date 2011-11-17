@@ -1,0 +1,65 @@
+(*---------------------------------------------------------------------------*)
+(*  DEFCHOOSE (sname, cname,``!x1 ... xn. ?z. M[x1,...,xn,z]``)              *)
+(*   returns                                                                 *)
+(*                                                                           *)
+(*    |- !x1...xn z. M[x1,...,xn,z] ==> M[x1,...,xn,cname x1...xn]           *)
+(*                                                                           *)
+(* where cname on the rhs of the implication is a constant. This theorem is  *)
+(* stored in the current theory under sname. So this rule is just            *)
+(* Skolemization exactly as done in FOL, where the Skolem fn. can't be       *)
+(* expressed as a first class citizen, as it can be in HOL.                  *)
+(*---------------------------------------------------------------------------*)
+
+fun DEFCHOOSE (store_name,const_name,tm) = 
+ let val (V,body) = strip_forall tm
+     val (z,M) = dest_exists body
+     val zname = fst(dest_var z)
+     val tm1 = mk_exists (z,M)
+     val th0 = GSYM RIGHT_EXISTS_IMP_THM
+     val th1 = SPEC tm1 th0
+     val th2 = BETA_RULE (ISPEC (mk_abs(z,M)) th1)
+     val th3 = EQ_MP th2 (DISCH_ALL (ASSUME tm1))
+     val th4 = GENL V th3
+     val th5 = Ho_Rewrite.REWRITE_RULE[SKOLEM_THM] th4
+     val th6 = Ho_Rewrite.REWRITE_RULE[GSYM LEFT_FORALL_IMP_THM] th5
+     val fvar = mk_var(const_name,snd(dest_var(fst(dest_exists(concl th6)))))
+     val th7a = GEN_ALPHA_CONV fvar (concl th6)
+     val th7 = EQ_MP th7a th6
+ in
+   new_specification(store_name, [const_name], th6)
+ end
+ handle e => raise wrap_exn "" "DEFCHOOSE" e;
+
+
+(*---------------------------------------------------------------------------*)
+(*  MINCHOOSE (sname, cname,``!x1 ... xn. ?z. M[x1,...,xn,z]``)              *)
+(*   returns                                                                 *)
+(*                                                                           *)
+(*    |- !x1...xn z. M[x1,...,xn,z] ==>                                      *)
+(*                   M[x1,...,xn,cname x1...xn] /\                           *)
+(*                   !m. M[x1,...,xn,m] ==> cname x1...xn <= m               *)
+(*                                                                           *)
+(* where cname in the theorem is a constant. This theorem is stored in the   *)
+(* current theory under sname. Thus this rule is a form of the               *)
+(* well-ordering property.                                                   *)
+(*---------------------------------------------------------------------------*)
+
+val WOP_THM = Q.prove
+(`!P. (?n. P n) ==> ?min. P min /\ !k. P k ==> min <= k`,
+ METIS_TAC [arithmeticTheory.WOP,DECIDE ``~(m<n) ==> n<=m``]);
+
+fun MINCHOOSE (store_name,const_name,tm) = 
+ let val (V,body) = strip_forall tm
+     val P = snd(dest_comb body)
+     val wop_thm = BETA_RULE(SPEC P WOP_THM)
+     val min_term = snd(dest_imp (concl wop_thm))
+     val min_term_pred = snd(dest_comb min_term)
+     val th1 = BETA_RULE(GSYM (ISPECL [body,min_term_pred] RIGHT_EXISTS_IMP_THM))
+     val th2 = EQ_MP th1 wop_thm
+     val th3 = GENL V th2
+     val th4 = Ho_Rewrite.REWRITE_RULE[SKOLEM_THM] th3
+     val th5 = Ho_Rewrite.REWRITE_RULE[GSYM LEFT_FORALL_IMP_THM] th4
+ in
+  new_specification(store_name, [const_name], th5)
+ end
+ handle e => raise wrap_exn "" "MINCHOOSE" e;

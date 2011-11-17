@@ -1,0 +1,396 @@
+(*---------------------------------------------------------------------------*)
+(* Kaufmannian (monadic) version of ackermann                                *)
+(* Original: Matt Kaufmann  in ack.matt.lisp                                 *)
+(* Other ideas from David Greve.                                             *)
+(* Hacked up further by : Konrad Slind                                       *)
+(*---------------------------------------------------------------------------*)
+
+set_trace "Unicode" 0;
+set_trace "pp_annotations" 0;
+
+quietdec := true;
+open arithmeticTheory optionTheory BasicProvers;
+quietdec := false;
+
+use (HOLDIR^"/src/pfl/defchoose");
+use (HOLDIR^"/src/pfl/pflLib.sml");
+
+(*---------------------------------------------------------------------------*)
+(* General purpose support.                                                  *)
+(*---------------------------------------------------------------------------*)
+
+val MAX_LE_THM = Q.prove
+(`!m n. m <= MAX m n /\ n <= MAX m n`,
+ RW_TAC arith_ss [MAX_DEF]);
+
+val IS_SOME_EXISTS = Q.prove
+(`!x. IS_SOME x = ?y. x = SOME y`,
+ Cases THEN METIS_TAC [optionTheory.IS_SOME_DEF]);
+
+val IS_SOME_INTRO = Q.prove
+(`!a b. (a = SOME b) ==> IS_SOME a`,
+ METIS_TAC [IS_SOME_EXISTS]);
+
+val SOME_THE = Q.prove
+(`!x a. (x = SOME a) ==> (a = THE x)`,
+ Cases THEN RW_TAC std_ss []);
+
+
+(*---------------------------------------------------------------------------*)
+(* Indexed function definition                                               *)
+(*---------------------------------------------------------------------------*)
+
+val iack_def = 
+ tDefine 
+  "iack"
+  `iack d x y =
+    if d=0 then NONE else
+    if x=0 then SOME (y+1) else
+    if y=0 then iack (d-1) (x-1) 1
+    else case iack (d-1) x (y-1)
+          of NONE -> NONE
+          || SOME val -> iack (d-1) (x-1) val`
+   (WF_REL_TAC `measure FST`);
+
+(*---------------------------------------------------------------------------*)
+(* Create the measure function rdepth by Skolemization and taking the least  *)
+(* index at which arguments become defined.                                  *)
+(*                                                                           *)
+(* ack_rdepth_thm =                                                          *)
+(*    |- !x y d.                                                             *)
+(*         IS_SOME (iack d x y) ==>                                          *)
+(*         IS_SOME (iack (ack_rdepth x y) x y) /\                            *)
+(*         !k. IS_SOME (iack k x y) ==> ack_rdepth x y <= k : thm            *)
+(*---------------------------------------------------------------------------*)
+
+val ack_rdepth = 
+ MINCHOOSE ("ack_rdepth", "ack_rdepth",
+            ``!x y. ?d. IS_SOME (iack d x y)``);
+
+(*---------------------------------------------------------------------------*)
+(* Define ack                                                                *)
+(*---------------------------------------------------------------------------*)
+
+val ack_0_def = 
+ Define 
+   `ack_0 x y = THE (iack (ack_rdepth x y) x y)`;
+
+(*---------------------------------------------------------------------------*)
+(* Domain of the function.                                                   *)
+(*---------------------------------------------------------------------------*)
+
+val dom_def = Define `dom x y = ?d. IS_SOME(iack d x y)`;
+
+(*---------------------------------------------------------------------------*)
+(* Now some lemmas about iack and definedness                                *)
+(*                                                                           
+   val IS_SOME_IACK = 
+     |- !d x y. IS_SOME (iack d x y) ==> ~(d = 0)
+   val iack_monotone =
+     |- !d d1 x y.
+          IS_SOME (iack d x y) /\ d <= d1 ==> (iack d x y = iack d1 x y)
+   val iack_norm =
+     |- !d x y.
+          IS_SOME (iack d x y) ==> (iack d x y = iack (ack_rdepth x y) x y)
+   val iack_determ =
+     |- !d d1 x y.
+          IS_SOME (iack d x y) /\ IS_SOME (iack d1 x y) ==>
+          (iack d x y = iack d1 x y) : thm
+  ---------------------------------------------------------------------------*)
+
+val (IS_SOME_IACK, _, _, 
+     iack_monotone, iack_norm, iack_determ) = pflLib.basic_lemmas iack_def ack_rdepth;
+
+STOP;
+
+(*---------------------------------------------------------------------------*)
+(* Now derive eqns for dom                                                   *)
+(*---------------------------------------------------------------------------*)
+
+val lem = Q.prove
+(`IS_SOME (iack 1 0 y)`,
+ RW_TAC arith_ss [Once iack_def]);
+
+val dom_base_case = Q.prove
+(`!y. dom 0 y`, 
+ METIS_TAC [dom_def, lem]);
+
+val step1_lem1 = Q.prove
+(`!x. x<>0 /\ dom x 0 ==> dom (x-1) 1`,
+ RW_TAC std_ss [dom_def] THEN 
+ `d<>0` by METIS_TAC [IS_SOME_IACK] THEN
+ Q.EXISTS_TAC `d-1` THEN 
+ Q.PAT_ASSUM `IS_SOME arg` (MP_TAC o ONCE_REWRITE_RULE [iack_def]) THEN 
+ RW_TAC arith_ss []);
+
+val step1_lem2 = Q.prove
+(`!x. x<>0 /\ dom (x-1) 1 ==> dom x 0`,
+ RW_TAC std_ss [dom_def] THEN 
+ Q.EXISTS_TAC `SUC d` THEN 
+ RW_TAC arith_ss [Once iack_def]);
+
+val step2_lem1a = Q.prove
+(`!x y. x<>0 /\ y<>0 /\ dom x y ==> dom x (y-1)`,
+ RW_TAC std_ss [dom_def] THEN 
+ `d<>0` by METIS_TAC [IS_SOME_IACK] THEN
+ Q.EXISTS_TAC `d-1` THEN 
+ Q.PAT_ASSUM `IS_SOME arg` (MP_TAC o ONCE_REWRITE_RULE [iack_def]) THEN 
+ CASE_TAC THEN RW_TAC arith_ss []);
+
+val step2_lem1b = Q.prove
+(`!x y. x<>0 /\ y<>0 /\ dom x y ==> dom (x-1) (ack_0 x (y-1))`,
+ RW_TAC std_ss [dom_def,ack_0_def] THEN 
+ `d<>0` by METIS_TAC [IS_SOME_IACK] THEN
+ Q.EXISTS_TAC `d-1` THEN 
+ Q.PAT_ASSUM `IS_SOME arg` (MP_TAC o ONCE_REWRITE_RULE [iack_def]) THEN 
+ CASE_TAC THEN RW_TAC arith_ss [] THEN
+ METIS_TAC [iack_norm,IS_SOME_EXISTS,THE_DEF]);
+
+val step2_lem2 = Q.prove
+(`!x y. x<>0 /\ y<>0 /\ dom x (y-1) /\ dom (x-1) (ack_0 x (y-1)) ==> dom x y`,
+ RW_TAC std_ss [dom_def,ack_0_def] THEN 
+ Q.EXISTS_TAC `SUC (MAX d d')` THEN 
+ RW_TAC arith_ss [Once iack_def] THEN 
+ CASE_TAC THENL
+ [METIS_TAC [iack_monotone,MAX_LE_THM,NOT_SOME_NONE],
+  METIS_TAC [iack_monotone,IS_SOME_EXISTS,MAX_LE_THM,iack_norm,THE_DEF]]);
+
+(*---------------------------------------------------------------------------*)
+(* Recursive characterization of dom.                                        *)
+(*---------------------------------------------------------------------------*)
+
+val dom_eqns = Q.prove
+(`dom x y = 
+    if x=0 then T else
+    if y=0 then dom (x-1) 1
+    else dom x (y-1) /\
+         dom (x-1) (ack_0 x (y-1))`,
+ METIS_TAC [dom_base_case, step1_lem1, step1_lem2, 
+            step2_lem1a,step2_lem1b,step2_lem2]);
+
+val iack_norm' = 
+ Ho_Rewrite.REWRITE_RULE [GSYM LEFT_FORALL_IMP_THM,IS_SOME_EXISTS] (GSYM iack_norm);
+
+(* In first side, the METIS_TAC can be replaced by 
+FULL_SIMP_TAC std_ss [ack_0_def,IS_SOME_EXISTS]
+   THEN Q.EXISTS_TAC `y'` 
+   THEN POP_ASSUM (SUBST_ALL_TAC o SYM)
+   THEN IMP_RES_THEN SUBST_ALL_TAC iack_norm'
+   THEN IMP_RES_TAC SOME_THE
+   THEN RW_TAC std_ss []
+*)
+val dom_via_tactic = Q.prove
+(`dom x y = 
+    if x=0 then T else
+    if y=0 then dom (x-1) 1
+    else dom x (y-1) /\
+         dom (x-1) (ack_0 x (y-1))`,
+ ONCE_REWRITE_TAC [dom_def] THEN EQ_TAC THENL
+ [BasicProvers.NORM_TAC std_ss [SimpL boolSyntax.implication, Once iack_def]
+    THEN Q.EXISTS_TAC `d-1` 
+    THEN METIS_TAC [iack_norm,IS_SOME_EXISTS,THE_DEF,ack_0_def],
+  BasicProvers.NORM_TAC std_ss [ack_0_def] THENL
+    [METIS_TAC [lem],
+     Q.EXISTS_TAC `SUC d` THEN RW_TAC arith_ss [Once iack_def],
+     METIS_TAC[lem],
+     Q.EXISTS_TAC `SUC (MAX d d')` 
+       THEN BasicProvers.NORM_TAC arith_ss [Once iack_def] THENL
+       [METIS_TAC [iack_monotone,IS_SOME_EXISTS,MAX_LE_THM,NOT_SOME_NONE],
+        METIS_TAC [iack_monotone,IS_SOME_EXISTS,MAX_LE_THM,iack_norm,THE_DEF]]]]);
+
+
+(*---------------------------------------------------------------------------*)
+(* Recursion equations for ack_0. General idea in the proof is to show that, *)
+(* if unrolling eqn holds for d, then it holds for ack_rdepth.               *) 
+(*---------------------------------------------------------------------------*)
+
+val ack_0_base = Q.prove
+(`!x y. dom x y /\ (x=0) ==> (ack_0 x y = y+1)`,
+ RW_TAC std_ss [ack_0_def,dom_def] THEN 
+ IMP_RES_TAC iack_norm THEN 
+ `ack_rdepth 0 y <> 0` by METIS_TAC [IS_SOME_IACK] THEN 
+ RW_TAC arith_ss [Once iack_def]);
+
+val ack_0_step_1 = Q.prove
+(`!x y. dom x y /\ x<>0 /\ (y=0) ==> (ack_0 x y = ack_0 (x-1) 1)`,
+ RW_TAC std_ss [ack_0_def,dom_def] THEN 
+ `d <> 0` by METIS_TAC [IS_SOME_IACK] THEN
+ `iack d x 0 = iack (d-1) (x-1) 1` by METIS_TAC [iack_def] THEN
+ METIS_TAC[iack_norm]);
+
+val ack_0_step_2 = Q.prove
+(`!x y. dom x y /\ x<>0 /\ y<>0 ==> (ack_0 x y = ack_0 (x-1) (ack_0 x (y-1)))`,
+ RW_TAC std_ss [ack_0_def,dom_def] THEN 
+ `d <> 0` by METIS_TAC [IS_SOME_IACK] THEN
+ `iack d x y = 
+     case iack (d - 1) x (y - 1) 
+      of NONE -> NONE
+      || SOME val -> iack (d - 1) (x - 1) val` by METIS_TAC [iack_def] THEN 
+ POP_ASSUM MP_TAC THEN CASE_TAC THEN
+ METIS_TAC [IS_SOME_EXISTS,NOT_SOME_NONE,THE_DEF,iack_norm]);
+
+(*---------------------------------------------------------------------------*)
+(* Equational characterization of ack_0.                                     *)
+(*---------------------------------------------------------------------------*)
+
+val ack_0_eqns = Q.prove
+(`!x y. dom x y ==> 
+    (ack_0 x y =
+      if x=0 then y+1 else
+      if y=0 then ack_0 (x-1) 1
+      else ack_0 (x-1) (ack_0 x (y-1)))`,
+ METIS_TAC [ack_0_base, ack_0_step_1,ack_0_step_2]);
+
+g `!x y. dom x y ==> 
+    (ack_0 x y =
+      if x=0 then y+1 else
+      if y=0 then ack_0 (x-1) 1
+      else ack_0 (x-1) (ack_0 x (y-1)))`;
+e (NORM_TAC std_ss [dom_def,ack_0_def,IS_SOME_EXISTS]);
+(*1*)
+e (METIS_TAC [iack_norm',iack_def,THE_DEF]);e (METIS_TAC [iack_norm',iack_def,THE_DEF]);
+
+(*---------------------------------------------------------------------------*)
+(* Now prove induction theorem. This is based on using ack_rdepth as a measure   *)
+(* on the recursion. Thus we first have some lemmas about how ack_rdepth         *)
+(* decreases in recursive calls.                                             *)
+(*---------------------------------------------------------------------------*)
+
+val step2_lt = Q.prove
+(`!x. dom x 0 /\ x<>0 ==> ack_rdepth (x-1) 1 < ack_rdepth x 0`,
+RW_TAC std_ss [dom_def] THEN
+   `ack_rdepth x 0 <> 0 /\ 
+    IS_SOME (iack (ack_rdepth x 0) x 0)` by METIS_TAC[IS_SOME_IACK,ack_rdepth] THEN 
+   `IS_SOME (iack (ack_rdepth x 0 - 1) (x-1) 1)` 
+         by (POP_ASSUM MP_TAC THEN RW_TAC arith_ss [Once iack_def]) THEN 
+   `ack_rdepth (x - 1) 1 <= ack_rdepth x 0 - 1` by METIS_TAC [ack_rdepth] THEN
+ DECIDE_TAC);
+
+val step3a_lt = Q.prove
+(`!x y. dom x y /\ x<>0 /\ y<>0 ==> ack_rdepth x (y-1) < ack_rdepth x y`,
+ RW_TAC std_ss [dom_def] 
+   THEN `ack_rdepth x y <> 0 /\ IS_SOME (iack (ack_rdepth x y) x y)` 
+            by METIS_TAC [IS_SOME_IACK,ack_rdepth] 
+   THEN `IS_SOME (iack (ack_rdepth x y - 1) x (y-1))` 
+            by (POP_ASSUM MP_TAC THEN SIMP_TAC arith_ss [Once iack_def] THEN 
+                CASE_TAC THEN SIMP_TAC std_ss [IS_SOME_DEF]) 
+   THEN `ack_rdepth x (y-1) <= ack_rdepth x y - 1` by METIS_TAC [ack_rdepth] 
+   THEN DECIDE_TAC);
+
+val step3b_lt = Q.prove
+(`!x y. dom x y /\ x<>0 /\ y<>0 ==> ack_rdepth (x-1) (ack_0 x (y-1)) < ack_rdepth x y`,
+ RW_TAC std_ss [dom_def] THEN 
+   `ack_rdepth x y <> 0 /\ IS_SOME (iack (ack_rdepth x y) x y)` 
+         by METIS_TAC [IS_SOME_IACK,ack_rdepth] THEN 
+  `IS_SOME (iack (ack_rdepth x y - 1) (x-1) (ack_0 x (y-1)))` 
+      by (POP_ASSUM MP_TAC THEN SIMP_TAC arith_ss [Once iack_def] THEN 
+          CASE_TAC THEN RW_TAC std_ss [ack_0_def] THEN 
+          `IS_SOME (iack (ack_rdepth x y - 1) x (y - 1))` by METIS_TAC [IS_SOME_EXISTS] THEN
+          `IS_SOME (iack (ack_rdepth x (y-1)) x (y - 1))` by METIS_TAC [ack_rdepth] THEN
+        METIS_TAC [iack_determ,THE_DEF]) THEN
+   `ack_rdepth (x-1) (ack_0 x (y-1)) <= ack_rdepth x y - 1` by METIS_TAC [ack_rdepth] THEN
+ DECIDE_TAC);
+
+(*---------------------------------------------------------------------------*)
+(* Induction for ack_0 is a consequence of well-founded induction.           *)
+(*---------------------------------------------------------------------------*)
+
+val ind0 = MATCH_MP relationTheory.WF_INDUCTION_THM 
+                    (Q.ISPEC `UNCURRY ack_rdepth` prim_recTheory.WF_measure);
+val ind1 = SIMP_RULE std_ss [prim_recTheory.measure_thm] ind0;
+val ind2 = SIMP_RULE std_ss [pairTheory.FORALL_PROD] 
+                    (Q.ISPEC `\(x,y). dom x y ==> P x y` ind1);
+
+val ack_0_ind = Q.prove
+(`!P. 
+   (!x y. dom x y /\
+          (x<>0 /\ (y=0) ==> P (x-1) 1) /\
+          (x<>0 /\ y<>0 ==> P x (y-1))  /\
+          (x<>0 /\ y<>0 ==> P (x-1) (ack_0 x (y-1)))
+         ==> P x y)
+  ==> !x y. dom x y ==> P x y`,
+ GEN_TAC THEN DISCH_TAC THEN HO_MATCH_MP_TAC ind2 THEN 
+ POP_ASSUM (fn th => REPEAT STRIP_TAC THEN MATCH_MP_TAC th) THEN 
+ RULE_ASSUM_TAC (REWRITE_RULE [AND_IMP_INTRO]) THEN 
+ METIS_TAC [step2_lt,step3a_lt,step3b_lt,dom_eqns]);
+
+(*---------------------------------------------------------------------------*)
+(* Trivial example                                                           *)
+(*---------------------------------------------------------------------------*)
+
+val ind_example = Q.prove
+(`!x y. dom x y ==> 0 < ack_0 x y`,
+ HO_MATCH_MP_TAC ack_0_ind THEN 
+  REPEAT STRIP_TAC THEN 
+  RW_TAC arith_ss [Once ack_0_eqns]);
+
+(*---------------------------------------------------------------------------*)
+(* Now we have a mutually recursive presentation, and can execute it. But    *)
+(* with a little more work we can execute more efficiently. The following    *)
+(* function behaves like iack up until the bound d is exhausted, then it     *)
+(* behaves like ack_0. Thus all the slow computation due to the mutual       *)
+(* recursion is deferred until the bound is exceeded.                        *)
+(*---------------------------------------------------------------------------*)
+
+val exec_def = 
+ tDefine 
+ "ack_exec"
+ `exec d x y = 
+    if d=0 then (if dom x y then ack_0 x y else ARB) else
+    if x=0 then y+1 else
+    if y=0 then exec (d-1) (x-1) 1 
+    else exec (d-1) (x-1) (exec (d-1) x (y-1))`
+  (WF_REL_TAC `measure FST`);
+
+val exec_equals_ack_0 = Q.prove
+(`!d x y. dom x y ==> (exec d x y = ack_0 x y)`,
+ Induct THEN RW_TAC std_ss [Once exec_def] 
+ THEN METIS_TAC [ack_0_eqns,dom_eqns]);
+
+val BIG_def = Define `BIG = 1073741823`;
+
+val ack_def = 
+ Define 
+   `ack x y = if dom x y then ack_0 x y else exec BIG x y`;
+
+val ack_exec = Q.prove
+(`ack x y = exec BIG x y`,
+ RW_TAC std_ss [ack_def,exec_equals_ack_0]);
+
+val tdom_eqns = Q.prove
+(`dom x y <=>
+    if x = 0 then T else
+    if y = 0 then dom (x - 1) 1
+    else dom x (y - 1) /\ 
+         dom (x - 1) (ack x (y - 1))`,
+ METIS_TAC [dom_eqns,ack_def]);
+
+val ack_eqns = Q.prove
+(`dom x y ==> 
+   (ack x y =
+      if x=0 then y+1 else
+      if y=0 then ack (x-1) 1
+      else ack (x-1) (ack x (y-1)))`,
+ RW_TAC std_ss [ack_def] THEN METIS_TAC [ack_0_eqns,dom_eqns]);
+
+val ack_ind = Q.prove
+(`!P. 
+   (!x y. dom x y /\
+          (x<>0 /\ (y=0) ==> P (x-1) 1) /\
+          (x<>0 /\ y<>0 ==> P x (y-1))  /\
+          (x<>0 /\ y<>0 ==> P (x-1) (ack x (y-1)))
+         ==> P x y)
+   ==> !x y. dom x y ==> P x y`,
+ GEN_TAC THEN STRIP_TAC THEN HO_MATCH_MP_TAC ack_0_ind THEN
+ POP_ASSUM (fn th => REPEAT STRIP_TAC THEN MATCH_MP_TAC th) THEN
+ RW_TAC std_ss [ack_def] THEN METIS_TAC [tdom_eqns]);
+
+(*---------------------------------------------------------------------------*)
+(* Trivial example again.                                                    *)
+(*---------------------------------------------------------------------------*)
+
+val ind_example = Q.prove
+(`!x y. dom x y ==> 0 < ack x y`,
+ HO_MATCH_MP_TAC ack_ind THEN 
+  REPEAT STRIP_TAC THEN 
+  RW_TAC arith_ss [Once ack_eqns]);

@@ -1,0 +1,299 @@
+(*---------------------------------------------------------------------------*)
+(* Kaufmannian (monadic) version of McCarthy's 91 function                   *)
+(*---------------------------------------------------------------------------*)
+
+set_trace "Unicode" 0;
+set_trace "pp_annotations" 0;
+
+(*
+use (HOLDIR^"/src/pfl/defchoose");
+use (HOLDIR^"/src/pfl/pflLib.sml");
+*)
+
+quietdec := true;
+use ("../defchoose");
+open arithmeticTheory optionTheory;
+use ("../pflLib.sml");
+open pflLib;
+quietdec := false;
+
+(*---------------------------------------------------------------------------*)
+(* General purpose support.                                                  *)
+(*---------------------------------------------------------------------------*)
+
+val MAX_LE_THM = Q.prove
+(`!m n. m <= MAX m n /\ n <= MAX m n`,
+ RW_TAC arith_ss [MAX_DEF]);
+
+val IS_SOME_EXISTS = Q.prove
+(`!x. IS_SOME x = ?y. x = SOME y`,
+ Cases THEN METIS_TAC [optionTheory.IS_SOME_DEF]);
+
+(*---------------------------------------------------------------------------*)
+(* Indexed function definition                                               *)
+(*---------------------------------------------------------------------------*)
+
+val i91_def =
+ Define
+  `i91 d n =
+     if d=0 then NONE
+     else if 100 < n then SOME (n-10)
+          else case i91 (d-1) (n+11)
+                of NONE => NONE
+                 | SOME r => i91 (d-1) r`;
+
+(*---------------------------------------------------------------------------*)
+(* Domain of the function.                                                   *)
+(*---------------------------------------------------------------------------*)
+
+val dom_def = Define `dom n = ?d. IS_SOME(i91 d n)`;
+
+(*---------------------------------------------------------------------------*)
+(* Create measure function rdepth                                            *)
+(*---------------------------------------------------------------------------*)
+
+val rdepth_thm = 
+   MINCHOOSE ("rdepth_thm", "rdepth", ``!n. ?d. IS_SOME(i91 d n)``);
+
+(*---------------------------------------------------------------------------*)
+(* Define 91                                                                 *)
+(*---------------------------------------------------------------------------*)
+
+val f91_def = Define `f91 n = THE (i91 (rdepth n) n)`;
+
+(*---------------------------------------------------------------------------*)
+(* Lemmas about i91 and definedness                                          *)
+(*---------------------------------------------------------------------------*)
+
+val IS_SOME_I91 = Q.prove
+(`!d n. IS_SOME (i91 d n) ==> d <> 0`,
+ Cases THEN RW_TAC std_ss [Once i91_def]);
+
+val I91_SOME = Q.prove
+(`!d n a. (i91 d n = SOME a) ==> d <> 0`,
+ METIS_TAC [IS_SOME_I91,IS_SOME_EXISTS]);
+
+val i91_dlem = Q.prove
+(`!d n a. IS_SOME (i91 d n) ==> (i91 d n = i91 (SUC d) n)`,
+ DLEM_TAC i91_def I91_SOME);
+
+val i91_monotone = Q.prove
+(`!d1 d2 n. IS_SOME(i91 d1 n) /\ d1 <= d2 ==> (i91 d1 n = i91 d2 n)`,
+ RW_TAC arith_ss [LESS_EQ_EXISTS] THEN 
+ Induct_on `p` THEN METIS_TAC [ADD_CLAUSES,i91_dlem]);
+
+val i91_norm = Q.prove
+(`!d n. IS_SOME(i91 d n) ==> (i91 d n = i91 (rdepth n) n)`,
+  METIS_TAC [i91_monotone,rdepth_thm]);
+
+val i91_determ = Q.prove
+(`!d1 d2 n. IS_SOME(i91 d1 n) /\ IS_SOME(i91 d2 n) ==> (i91 d1 n = i91 d2 n)`,
+  METIS_TAC [i91_norm]);
+
+
+(*---------------------------------------------------------------------------*)
+(* Derive eqns for dom                                                       *)
+(*---------------------------------------------------------------------------*)
+
+val lem = Q.prove
+(`!n. 100<n ==> IS_SOME (i91 1 n)`,
+ RW_TAC arith_ss [Once i91_def]);
+
+val dom_base_case = Q.prove
+(`!n. 100<n ==> dom n`, 
+ METIS_TAC [dom_def, lem]);
+
+val step2_lem1a = Q.prove
+(`!n. ~(100<n) /\ dom n ==> dom (n+11)`,
+ RW_TAC std_ss [dom_def] THEN 
+ `d<>0` by METIS_TAC [IS_SOME_I91] THEN
+ Q.EXISTS_TAC `d-1` THEN 
+ Q.PAT_ASSUM `IS_SOME arg` (MP_TAC o ONCE_REWRITE_RULE [i91_def]) THEN 
+ CASE_TAC THEN RW_TAC arith_ss []);
+
+val step2_lem1b = Q.prove
+(`!n. ~(100<n) /\ dom n ==> dom (f91(n+11))`,
+ RW_TAC std_ss [dom_def,f91_def] THEN 
+ `d<>0` by METIS_TAC [IS_SOME_I91] THEN
+ Q.EXISTS_TAC `d-1` THEN 
+ Q.PAT_ASSUM `IS_SOME arg` (MP_TAC o ONCE_REWRITE_RULE [i91_def]) THEN 
+ CASE_TAC THEN RW_TAC arith_ss [] THEN
+ METIS_TAC [i91_norm,IS_SOME_EXISTS,THE_DEF]);
+
+val step2_lem2 = Q.prove
+(`!n. ~(100<n) /\ dom (n+11) /\ dom (f91(n+11)) ==> dom n`,
+ RW_TAC std_ss [dom_def,f91_def] THEN 
+ Q.EXISTS_TAC `SUC (MAX d d')` THEN 
+ RW_TAC arith_ss [Once i91_def] THEN 
+ CASE_TAC THENL
+ [METIS_TAC [i91_monotone,MAX_LE_THM,NOT_SOME_NONE],
+  METIS_TAC [i91_monotone,IS_SOME_EXISTS,MAX_LE_THM,i91_norm,THE_DEF]]);
+
+(*---------------------------------------------------------------------------*)
+(* Equational characterization of dom.                                       *)
+(*---------------------------------------------------------------------------*)
+
+val dom_eqns = Q.prove
+(`dom n = 
+    if 100<n then T 
+    else dom (n+11) /\ dom (f91(n+11))`,
+ METIS_TAC [dom_base_case, step2_lem1a,step2_lem1b,step2_lem2]);
+
+
+(*---------------------------------------------------------------------------*)
+(* Recursion equations for f91                                               *)
+(*---------------------------------------------------------------------------*)
+
+val f91_base = Q.prove
+(`!n. dom n /\ 100<n ==> (f91 n = n-10)`,
+ RW_TAC std_ss [f91_def,dom_def] THEN 
+ `rdepth n <> 0` by METIS_TAC [IS_SOME_I91,rdepth_thm] THEN 
+ RW_TAC arith_ss [Once i91_def]);
+
+val f91_step = Q.prove
+(`!n. dom n /\ ~(100<n) ==> (f91 n = f91 (f91 (n+11)))`,
+ RW_TAC std_ss [f91_def,dom_def] THEN 
+ `d <> 0` by METIS_TAC [IS_SOME_I91] THEN
+ `i91 d n = case i91 (d - 1) (n + 11) of
+                NONE => NONE
+              | SOME r => i91 (d - 1) r` by METIS_TAC [i91_def] THEN 
+ POP_ASSUM MP_TAC THEN CASE_TAC THEN
+ METIS_TAC [IS_SOME_EXISTS,NOT_SOME_NONE,THE_DEF,i91_norm]);
+
+(*---------------------------------------------------------------------------*)
+(* Equational characterization of f91.                                       *)
+(*---------------------------------------------------------------------------*)
+
+val f91_eqns = Q.prove
+(`!n. dom n ==> (f91 n = if 100 < n then n-10 else f91(f91(n+11)))`,
+ METIS_TAC [f91_base, f91_step]);
+
+(*---------------------------------------------------------------------------*)
+(* Now prove induction theorem. This is based on using rdepth as a measure   *)
+(* on the recursion. Thus we first have some lemmas about how rdepth         *)
+(* decreases in recursive calls.                                             *)
+(*---------------------------------------------------------------------------*)
+
+val step3a_lt = Q.prove
+(`!n. dom n /\ ~(100<n) ==> rdepth (n+11) < rdepth n`,
+ RW_TAC std_ss [dom_def] THEN IMP_RES_TAC rdepth_thm THEN 
+   `rdepth n <> 0` by METIS_TAC [IS_SOME_I91] THEN 
+   `rdepth n - 1 < rdepth n` by DECIDE_TAC THEN 
+   `IS_SOME (i91 (rdepth n - 1) (n+11))` 
+     by (Q.PAT_ASSUM `IS_SOME (i91 (rdepth n) n)` MP_TAC THEN 
+         SIMP_TAC arith_ss [Once i91_def] THEN CASE_TAC THEN 
+         SIMP_TAC std_ss [IS_SOME_DEF]) THEN 
+   `rdepth (n+11) <= rdepth n - 1` by METIS_TAC [rdepth_thm] THEN
+ DECIDE_TAC);
+
+val step3b_lt = Q.prove
+(`!n. dom n /\ ~(100<n) ==> rdepth (f91(n+11)) < rdepth n`,
+ RW_TAC std_ss [dom_def] THEN IMP_RES_TAC rdepth_thm THEN 
+   `rdepth n <> 0` by METIS_TAC [IS_SOME_I91] THEN 
+   `rdepth n - 1 < rdepth n` by DECIDE_TAC THEN 
+   `IS_SOME (i91 (rdepth n - 1) (f91 (n+11)))` 
+     by (Q.PAT_ASSUM `IS_SOME (i91 (rdepth n) n)` MP_TAC THEN 
+         SIMP_TAC arith_ss [Once i91_def] THEN CASE_TAC THEN 
+         RW_TAC std_ss [f91_def] THEN 
+        `IS_SOME (i91 (rdepth n - 1) (n+11))` by METIS_TAC [IS_SOME_EXISTS] THEN
+        `IS_SOME (i91 (rdepth (n+11)) (n+11))` by METIS_TAC [rdepth_thm] THEN
+        METIS_TAC [i91_determ,THE_DEF]) THEN
+   `rdepth (f91(n+11)) <= rdepth n - 1` by METIS_TAC [rdepth_thm] THEN
+ DECIDE_TAC);
+
+(*---------------------------------------------------------------------------*)
+(* Induction for f91 is obtained by instantiating the well-founded induction *)
+(* theorem with the rdepth measure and then simplifying.                     *)
+(*---------------------------------------------------------------------------*)
+
+val ind0 = MATCH_MP relationTheory.WF_INDUCTION_THM 
+                    (Q.ISPEC `rdepth` prim_recTheory.WF_measure);
+val ind1 = SIMP_RULE std_ss [prim_recTheory.measure_thm] ind0;
+val ind2 = SIMP_RULE std_ss [pairTheory.FORALL_PROD] 
+                    (Q.ISPEC `\n. dom n ==> P n` ind1);
+
+val f91_ind = Q.prove
+(`!P. 
+   (!n. dom n /\
+          (~(100<n) ==> P (n+11))  /\
+          (~(100<n) ==> P (f91 (n+11)))
+         ==> P n)
+  ==> !n. dom n ==> P n`,
+ GEN_TAC THEN DISCH_TAC THEN HO_MATCH_MP_TAC ind2 THEN 
+ METIS_TAC [step3a_lt,step3b_lt,dom_eqns]);
+
+(*---------------------------------------------------------------------------*)
+(* Trivial examples                                                          *)
+(*---------------------------------------------------------------------------*)
+
+val lem = Q.prove
+(`!n. dom n ==> n < f91 n + 11`,
+  HO_MATCH_MP_TAC f91_ind 
+    THEN REPEAT STRIP_TAC 
+    THEN RW_TAC arith_ss [Once f91_eqns]);
+
+val closed_form = Count.apply Q.prove
+(`!n. dom n ==> (f91 n = if 100 < n then n-10 else 91)`,
+ HO_MATCH_MP_TAC f91_ind THEN REPEAT STRIP_TAC THEN 
+  BasicProvers.NORM_TAC bool_ss [Once f91_eqns] THEN
+  RW_TAC arith_ss []);
+
+
+(*---------------------------------------------------------------------------*)
+(* Efficient executable version of 91                                        *)
+(*---------------------------------------------------------------------------*)
+
+val exec_def = 
+ Define 
+ `exec d n = 
+    if d=0 then (if dom n then f91 n else ARB) else
+    if 100 < n then n-10 
+       else exec (d-1) (exec (d-1) (n+11))`;
+
+val exec_equals_f91 = Q.prove
+(`!d n. dom n ==> (exec d n = f91 n)`,
+ Induct THEN RW_TAC std_ss [Once exec_def] 
+ THEN METIS_TAC [f91_eqns,dom_eqns]);
+
+val BIG_def = Define `BIG = 1073741823`;
+
+val F91_def = 
+ Define 
+   `F91 n = if dom n then f91 n else exec BIG n`;
+
+(*---------------------------------------------------------------------------*)
+(* Theorem showing that exec BIG = f91 in the domain of the function.        *)
+(*---------------------------------------------------------------------------*)
+
+val F91_exec = Q.prove
+(`F91 n = exec BIG n`,
+ RW_TAC std_ss [F91_def,exec_equals_f91]);
+
+val F91_dom_eqns = Q.prove
+(`dom n <=> if 100<n then T else dom (n+11) /\ dom (F91(n+11))`,
+ METIS_TAC [dom_eqns,F91_def]);
+
+val F91_eqns = Q.prove
+(`dom n ==> 
+   (F91 n = if 100 < n then n-10 else F91 (F91 (n+11)))`,
+ RW_TAC std_ss [F91_def] THEN METIS_TAC [f91_eqns,dom_eqns]);
+
+val F91_ind = Q.prove
+(`!P. 
+   (!n. dom n /\
+          (~(100<n) ==> P (n+11))  /\
+          (~(100<n) ==> P (F91 (n+11)))
+         ==> P n)
+  ==> !n. dom n ==> P n`,
+ GEN_TAC THEN STRIP_TAC THEN HO_MATCH_MP_TAC f91_ind THEN
+ POP_ASSUM (fn th => REPEAT STRIP_TAC THEN MATCH_MP_TAC th) THEN
+ RW_TAC std_ss [F91_def] THEN METIS_TAC [F91_dom_eqns]);
+
+val f91_total = Q.prove
+(`!n. dom n`,
+ measureInduct_on `(\n. 101-n) n` 
+  THEN PURE_ONCE_REWRITE_TAC [dom_eqns]
+  THEN COND_CASES_TAC THEN RW_TAC std_ss []
+  THENL [FIRST_ASSUM MATCH_MP_TAC THEN DECIDE_TAC,
+         `dom (n+11)` by (FIRST_ASSUM MATCH_MP_TAC THEN DECIDE_TAC)
+            THEN RW_TAC arith_ss [closed_form]]);

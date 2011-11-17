@@ -1,0 +1,14 @@
+(*---------------------------------------------------------------------------*)
+(* Tail recursive version of Ackermann's function.                           *)
+(*---------------------------------------------------------------------------*)
+
+val ackTail = 
+  ``(Ack [] y = y) /\
+    (Ack (0::t) y = Ack t (y+1)) /\
+    (Ack (n::t) 0 = Ack ((n-1)::t) 1) /\
+    (Ack (n::t) y = Ack (n::n-1::t) y)``;
+
+Fact: ack x y = Ack [x] y
+
+Termination of ackTail ... multiset order probably.
+
