@@ -171,12 +171,11 @@ Dealing with failure
       . version of Moscow ML or Poly/ML being used
       . version of HOL being built
 
-* Alternatively, use the Support tracker web-page at
+* Alternatively, use the github issues web-page at
 
-      http://sourceforge.net/tracker/?func=add&group_id=31790&atid=403398
+      http://github.com/mn200/HOL/issues
 
-  and submit a request for support.  You can also use the Bugs forum
-  on SourceForge.
+  and submit a description of the problem.
 
 * If a build attempt fails for some reason, you should attempt to invoke
 
