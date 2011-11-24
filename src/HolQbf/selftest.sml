@@ -1,4 +1,4 @@
-(* Copyright (c) 2010 Tjark Weber. All rights reserved. *)
+(* Copyright (c) 2010-2011 Tjark Weber. All rights reserved. *)
 
 (* Unit tests for HolQbfLib *)
 
@@ -62,19 +62,19 @@ fun disprove t =
         ", message: " ^ message ^ ")")
   else ()
 
-fun decide_any t =
+fun decide t =
   if squolem_installed then let
-    val th = HolQbfLib.decide_any t
+    val th = HolQbfLib.decide t
     val _ = if let open Thm Term boolSyntax in
                  concl th = t orelse
                  dest_thm th = ([list_mk_forall(free_vars t,t)],F)
                end
             then ()
-            else die ("Decide_any proved bad theorem on term '" ^
+            else die ("Decide proved bad theorem on term '" ^
               Hol_pp.term_to_string t ^ "'")
     in print "." end
     handle Feedback.HOL_ERR {origin_structure, origin_function, message} =>
-      die ("Decide_any failed on term '" ^ Hol_pp.term_to_string t ^
+      die ("Decide failed on term '" ^ Hol_pp.term_to_string t ^
         "': exception HOL_ERR (in " ^ origin_structure ^ "." ^ origin_function ^
         ", message: " ^ message ^ ")")
   else ()
@@ -109,7 +109,7 @@ val _ = List.app prove
     ``!x. ?y. (x \/ y) /\ (~x \/ y)``
   ]
 
-val _ = List.app decide_any
+val _ = List.app decide
   [
     ``!y. (?x. x /\ y) \/ (!x. y ==> x)``,
     ``!x. x \/ ~x``,
