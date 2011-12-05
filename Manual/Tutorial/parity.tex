@@ -36,7 +36,7 @@ specification that the $n$th output on {\small\verb|out|} is
 {\small\verb|T|}'s input on {\small\verb|in|}. A theory named
 {\small\verb|PARITY|} is constructed; this contains the specification
 and verification of the device. All the \ML{} input in the boxes below
-can be found in the file {\small\verb|examples/parity/PARITY.sml|}. It
+can be found in the file {\small\verb|examples/parity/PARITYScript.sml|}. It
 is suggested that the reader interactively input this to get a `hands
 on' feel for the example. The goal of the case study is to illustrate
 detailed `proof hacking' on a small and fairly simple example.
@@ -696,7 +696,7 @@ beginner several days to solve.
 Using {\it only\/} the devices {\small\verb|ONE|}, {\small\verb|NOT|},
 {\small\verb|MUX|} and {\small\verb|REG|} defined in
 Section~\ref{implementation}, design and verify a register
-{\small\verb|RESET_REG|} with an input {\small\verb|in|}, reset line
+{\small\verb|RESET_REG|} with an input {\small\verb|inp|}, reset line
 {\small\verb|reset|}, output {\small\verb|out|} and behaviour
 specified as follows.
 \begin{itemize}
@@ -714,7 +714,7 @@ This is formalized in \HOL{} by the definition:
 {\small\begin{verbatim}
    RESET_REG(reset,inp,out) =
     (!t. reset t ==> (out t = T)) /\
-    (!t. out(t+1) = ((reset t  \/ reset(t+1)) => T | inp t))
+    (!t. out(t+1) = if reset t \/ reset(t+1) then T else inp t)
 \end{verbatim}}
 
 \noindent Note that this specification is only partial; it doesn't specify the
