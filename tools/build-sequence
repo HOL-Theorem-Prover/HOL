@@ -150,6 +150,7 @@ src/temporal/src
 #
 # Examples only from here on
 #
+!examples/parity
 !examples/MLsyntax
 !examples/zfset
 !!examples/category
