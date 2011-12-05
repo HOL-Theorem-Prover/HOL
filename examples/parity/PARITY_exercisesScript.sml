@@ -40,11 +40,12 @@ val EX1_CORRECTNESS = store_thm(
      reset.
 *)
 val RESET_PARITY_def = Define`
-  (out 0 = T) /\
-  (out(SUC t) =
-     if reset (t + 1) then T
-     else if inp(t + 1) then ~out t
-     else out t)
+  RESET_PARITY (reset,inp,out) =
+    (out 0 = T) /\
+    !t. out(SUC t) =
+       if reset (t + 1) then T
+       else if inp(t + 1) then ~out t
+       else out t
 `
 
 val _ = export_theory()
