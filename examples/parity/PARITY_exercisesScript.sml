@@ -31,4 +31,20 @@ val EX1_CORRECTNESS = store_thm(
   SRW_TAC [][RESET_REG_IMP_def, RESET_REG_def, MUX_def, REG_def] THEN
   SRW_TAC [][] THEN PROVE_TAC []);
 
+(* Exercise 2 *)
+
+(* Specification first:
+
+     The value at out is T if and only if there have been an even
+     number of Ts input at inp since the last time that T was input at
+     reset.
+*)
+val RESET_PARITY_def = Define`
+  (out 0 = T) /\
+  (out(SUC t) =
+     if reset (t + 1) then T
+     else if inp(t + 1) then ~out t
+     else out t)
+`
+
 val _ = export_theory()
