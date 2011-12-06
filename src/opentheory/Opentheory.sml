@@ -30,19 +30,23 @@ fun define_tyop_in_thy
   open boolLib
   val (P,t) = dest_comb (concl ax)
   val v   = variant (free_vars P) (mk_var ("v",type_of t))
-  val _   = if tthy = current_theory() then () else
-            raise ERR "define_tyop_in_thy" "wrong theory"
+  val ct  = current_theory()
+  val _   = if tthy = ct then () else
+            raise ERR "define_tyop_in_thy" ("wrong theory: "^ct^" (wanted "^tthy^" for "^Tyop^")")
   val th  = new_type_definition(Tyop,EXISTS(mk_exists(v,mk_comb(P,v)),t) ax)
   val _   = if athy = tthy andalso rthy = tthy then () else
-            raise ERR "define_tyop_in_thy" "wrong theory"
+            raise ERR "define_tyop_in_thy" ("wrong theory: "^ct^" (given "^athy^" for "^abs^" and "^rthy^" for "^rep^")")
   val bij = define_new_type_bijections {name=Tyop^"_bij",ABS=abs,REP=rep,tyax=th}
   val [ar,ra] = CONJUNCTS bij
 in {rep_abs=SPEC_ALL ra,abs_rep=SPEC_ALL ar} end
 
-fun define_const_in_thy ML_name {Thy,Name} rhs =
-  if Thy = current_theory() then
+fun define_const_in_thy ML_name {Thy,Name} rhs = let
+  val ct = current_theory()
+in
+  if Thy = ct then
     new_definition ((ML_name Name)^"_def",mk_eq(mk_var(Name,type_of rhs),rhs))
-  else raise ERR "define_const_in_thy" "wrong theory"
+  else raise ERR "define_const_in_thy" ("wrong theory: "^ct^" (wanted "^Thy^" for "^Name^")")
+end
 
 local
   open boolLib bossLib
