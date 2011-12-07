@@ -40,12 +40,49 @@ val EX1_CORRECTNESS = store_thm(
      reset.
 *)
 val RESET_PARITY_def = Define`
-  RESET_PARITY (reset,inp,out) =
-    (out 0 = T) /\
-    !t. out(SUC t) =
-       if reset (t + 1) then T
-       else if inp(t + 1) then ~out t
-       else out t
+  RESET_PARITY (reset,inp,out) <=>
+    (out 0 <=> T) /\
+    !t. out(t + 1) <=>
+          if reset (t + 1) then T
+          else if inp(t + 1) then ~out t
+          else out t
 `
+
+val RESET_PARITY_IMP_def = Define`
+  RESET_PARITY_IMP (reset,inp,out) <=>
+    ?mo1 mo2 no oo ro1 ro2.
+       MUX(inp,no,ro1,mo1) /\
+       NOT(ro1,no) /\
+       MUX(reset,reset,mo1,mo2) /\
+       ONE(oo) /\
+       REG(oo,ro2) /\
+       MUX(ro2,mo2,oo,out) /\
+       REG(out,ro1)
+`
+
+(* express out(t + 1) in terms of mo2, and then remove the rewrite for
+   out(t) entirely.  This breaks the rewriting loop allowing for easy
+   rewriting *)
+val RESET_PARITY_CORRECTNESS = store_thm(
+  "RESET_PARITY_CORRECTNESS",
+  ``RESET_PARITY_IMP(reset,inp,out) ==> RESET_PARITY(reset,inp,out)``,
+  SRW_TAC [][RESET_PARITY_IMP_def, RESET_PARITY_def, MUX_def, NOT_def,
+             REG_def, ONE_def]
+  THENL [
+    Q.PAT_ASSUM `!t. ro2 t = P` (Q.SPEC_THEN `0` MP_TAC) THEN
+    SIMP_TAC (srw_ss()) [] THEN STRIP_TAC THEN
+    Q.PAT_ASSUM `!t. out t = P` (Q.SPEC_THEN `0` MP_TAC) THEN
+    SRW_TAC [][],
+    `out (t + 1) = mo2 (t + 1)`
+       by (Q.PAT_ASSUM `!t. ro2 t = P` (Q.SPEC_THEN `t + 1` MP_TAC) THEN
+           SIMP_TAC (srw_ss()) [] THEN
+           Q.PAT_ASSUM `!t. oo t` (fn th => REWRITE_TAC [th]) THEN
+           Q.PAT_ASSUM `!t. out t = P` (Q.SPEC_THEN `t + 1` MP_TAC) THEN
+           SRW_TAC [][]) THEN
+    POP_ASSUM SUBST1_TAC THEN
+    Q.PAT_ASSUM `!t. out t = P` (K ALL_TAC) THEN
+    SRW_TAC [][]
+  ]);
+
 
 val _ = export_theory()
