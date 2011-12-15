@@ -29,9 +29,7 @@ val _ = Hol_datatype `config = <| pc : num; regs : num |-> num |>`
 val _ = hide "config"
 
 val saferead_def = Define`
-  saferead f i = case FLOOKUP f i of
-                    NONE -> 0
-                 || SOME v -> v
+  saferead f i = case FLOOKUP f i of NONE => 0 | SOME v => v
 `;
 val _ = set_fixity "''" (Infixl 2000)
 val _ = overload_on ("''", ``saferead``)
@@ -49,12 +47,12 @@ val reg0_def = Define `reg0 config = config.regs '' 0`;
 val Step_def = Define `
   Step prog cfg =
      case FLOOKUP prog cfg.pc of
-         NONE -> cfg
-      || SOME(INC r j) ->  cfg with <|
+       NONE => cfg
+     | SOME(INC r j) => cfg with <|
                               regs updated_by (\R. R |+ (r, R '' r + 1));
                               pc := j
-                           |>
-      || SOME(TST r a b) ->
+                        |>
+     | SOME(TST r a b) =>
            if cfg.regs '' r = 0 then cfg with pc := a
            else cfg with <| regs updated_by (\R. R |+ (r, R '' r - 1));
                             pc := b |>`;
@@ -182,9 +180,9 @@ val funOf_def =
  Define
   `funOf prog args =
      let seq = execOf prog 1 args
-     in case haltsAt prog seq
-         of SOME m -> SOME (reg0 (seq m))
-         || NONE -> NONE`;
+     in case haltsAt prog seq of
+          SOME m => SOME (reg0 (seq m))
+        | NONE => NONE`;
 
 (*---------------------------------------------------------------------------*)
 (* Accept/reject inputs.                                                     *)
