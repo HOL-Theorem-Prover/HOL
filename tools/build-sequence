@@ -142,6 +142,7 @@ src/datatype/inftree
 !!examples/lambda/other-models
 !!examples/lambda/typing
 !!examples/computability/lambda
+!!examples/computability/register
 src/Boolify/src
 src/float
 src/prob
