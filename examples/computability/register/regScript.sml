@@ -485,6 +485,107 @@ val HOARE_sequence = store_thm(
                 FUNION_DEF] >>
   srw_tac [ARITH_ss][] >> metis_tac [haltedConfig_bigger_prog]);
 
+val RPWhile_def = Define`
+  RPWhile reg bi ei pbi p =
+    FUNION (FEMPTY |+ (bi, TST reg ei pbi)) p
+`
+
+val IN_FDOM_RPWhile = store_thm(
+  "IN_FDOM_RPWhile",
+  ``x ∈ FDOM (RPWhile reg bi ei pbi p) ⇔ (x = bi) ∨ x ∈ FDOM p``,
+  srw_tac [][RPWhile_def, FUNION_DEF]);
+val _ = export_rewrites ["IN_FDOM_RPWhile"]
+
+val rP_def = Define`
+  rP r P pc reg = P (reg r)
+`;
+
+val PCeq_def = Define`
+  PCeq n pc reg = (pc = n)
+`;
+
+val PCsub_def = Define`
+  PCsub P v pc reg = P v reg
+`
+
+val REGfsub_def = Define`
+  REGfsub P r f pc reg = P pc ((r =+ f (reg r)) reg)
+`
+
+val RPWhile_rule = store_thm(
+  "RPWhile_rule",
+  ``ei ≠ bi ∧ bi ∉ FDOM p ∧ ei ∉ FDOM p ∧
+    (∀n. HOARE (rP reg ($= n) && REGfsub (PCsub Inv ei) reg ((+) 1)  &&
+                PCeq pbi)
+               p
+               (rP reg (λx. x <= n) && PCsub Inv ei && PCeq bi)) ==>
+    HOARE (PCsub Inv ei && PCeq bi)
+              (RPWhile reg bi ei pbi p)
+          (Inv && rP reg ($= 0) && PCeq ei)``,
+  srw_tac [][HOARE_def] >>
+  pop_assum mp_tac >> qabbrev_tac `v = s0.regs '' reg` >>
+  pop_assum (mp_tac o SYM o REWRITE_RULE [markerTheory.Abbrev_def]) >>
+  map_every qid_spec_tac [`s0`, `v`] >>
+  completeInduct_on `v` >> fsrw_tac [][GSYM RIGHT_FORALL_IMP_THM] >>
+  srw_tac [][] >>
+  pop_assum (mp_tac o
+             SIMP_RULE (srw_ss()) [predOf_def, predOf_AND_thm, PCeq_def,
+                                   PCsub_def]) >>
+  qabbrev_tac `N = s0.regs '' reg` >>
+  Cases_on `N = 0` >-
+    (strip_tac >> qexists_tac `1` >>
+     `Step (RPWhile reg bi ei pbi p) s0 = s0 with pc := ei`
+        by srw_tac [][RPWhile_def, Step_def, FLOOKUP_UPDATE,
+                      FLOOKUP_FUNION] >>
+     asm_simp_tac (srw_ss()) [RPWhile_def, firstHaltsAt_def, predOf_def,
+                              predOf_AND_thm, DECIDE ``m < 1 ⇔ (m = 0)``,
+                              PCeq_def, rP_def, haltedConfig_def,
+                              FUNION_DEF]) >>
+  strip_tac >>
+  qabbrev_tac
+    `s1 = s0 with <| pc := pbi; regs := s0.regs |+ (reg, N - 1) |>` >>
+  `Step (RPWhile reg bi ei pbi p) s0 = s1`
+     by (srw_tac [][RPWhile_def, Step_def, FLOOKUP_UPDATE, FLOOKUP_FUNION,
+                    Abbr`s1`] >>
+         srw_tac [][theorem "config_component_equality"]) >>
+  first_x_assum
+    (qspecl_then [`N - 1`, `s1`]
+                 (mp_tac o SIMP_RULE (srw_ss())
+                                     [predOf_def, predOf_AND_thm, rP_def,
+                                      PCsub_def, PCeq_def, REGfsub_def])) >>
+  `(s1.pc = pbi) ∧ (s1.regs = s0.regs |+ (reg,N-1))`
+     by srw_tac [][Abbr`s1`] >>
+  asm_simp_tac (srw_ss() ++ ARITH_ss) [saferead_update]>>
+  qmatch_abbrev_tac `(Inv ei f ==> Q) ==> R` >>
+  `f = (saferead s0.regs)`
+     by (srw_tac [][Abbr`f`, FUN_EQ_THM, combinTheory.APPLY_UPDATE_THM,
+                    saferead_update] >> srw_tac [][] >> srw_tac [][]) >>
+  pop_assum SUBST1_TAC >> asm_simp_tac (srw_ss()) [] >>
+  map_every qunabbrev_tac [`Q`, `R`] >>
+  disch_then (Q.X_CHOOSE_THEN `c` strip_assume_tac) >>
+  qabbrev_tac `s2 = RM* p c s1` >>
+  `RM* (RPWhile reg bi ei pbi p) c s1 = s2`
+     by (srw_tac [][RPWhile_def, Abbr`s2`] >>
+         qmatch_abbrev_tac `RM* (FUNION gp p) c s1 = RM* p c s1` >>
+         `DISJOINT (FDOM gp) (FDOM p)`
+            by srw_tac [][Abbr`gp`, DISJOINT_DEF, EXTENSION] >>
+         srw_tac [][Once FUNION_COMM] >>
+         match_mp_tac unused_instructions >>
+         metis_tac [DECIDE ``x ≤ x``, DISJOINT_SYM]) >>
+  first_x_assum (qspec_then `s2` mp_tac) >>
+  asm_simp_tac (srw_ss() ++ ARITH_ss) [] >>
+  `predOf (PCsub Inv ei && PCeq bi) s2`
+     by srw_tac [][PCsub_def, PCeq_def, predOf_AND_thm, predOf_def] >>
+  asm_simp_tac (srw_ss()) [] >>
+  disch_then (Q.X_CHOOSE_THEN `M` STRIP_ASSUME_TAC) >>
+  qexists_tac `SUC (M + c)` >>
+  asm_simp_tac (srw_ss()) [firstHaltsAt_SUC, haltedConfig_def] >>
+  asm_simp_tac (srw_ss()) [FUNPOW] >>
+  Cases_on `M = 0` >- fsrw_tac [][haltedConfig_def] >>
+  `0 < M` by decide_tac >>
+  asm_simp_tac (srw_ss()) [FUNPOW_ADD, firstHaltsAt_ADD]);
+
+
 (*
 (* Halt immediately *)
 val prog1 = ``FEMPTY |++ [(1,TST 0 0 0)]``;
@@ -530,43 +631,64 @@ SIMP_CONV (srw_ss()) [Run_def, FUNION_DEF, numeralTheory.numeral_funpow, Step_de
 
 *)
 
+val RPimp_def = Define`
+  RPimp P Q pc reg ⇔ (P pc reg ⇒ Q pc reg)
+`
+
+val _ = set_mapped_fixity {tok = "=R=>", fixity = Infixr 200,
+                           term_name = "RPimp"}
+
+val RPimp_thm = store_thm(
+  "RPimp_thm",
+  ``predOf (P =R=> Q) s ⇔ (predOf P s ==> predOf Q s)``,
+  srw_tac [][RPimp_def, predOf_def])
+
+val prepost_munge = store_thm(
+  "prepost_munge",
+  ``∀P Q P' Q'.
+       HOARE P' c Q' ∧
+       (∀s. predOf (P =R=> P') s) ∧ (∀s. predOf (Q' =R=> Q) s) ⇒
+       HOARE P c Q``,
+  srw_tac [][HOARE_def, RPimp_def, predOf_def] >> metis_tac []);
+
+(* adjust while rule to have generic conclusion *)
+val RPWhile = save_thm(
+  "RPWhile",
+  RPWhile_rule |> UNDISCH
+               |> MATCH_MP (prepost_munge
+                                |> REWRITE_RULE [Once (GSYM AND_IMP_INTRO)])
+               |> SPEC_ALL |> DISCH_ALL
+               |> REWRITE_RULE [AND_IMP_INTRO]
+               |> (fn th => foldl (fn (v, th) => Q.GEN v th) th
+                            [`pbi`, `ei`, `bi`, `p`, `reg`,
+                             `Inv`, `Q`, `P`]))
+
 (* Implementations of the recursive functions *)
 (* results put into register 0; arguments in registers 1 .. n *)
 
 val zeroRP_def = Define`
-  zeroRP zr bi ei = FEMPTY |+ (bi,TST zr ei bi)
+  zeroRP zr bi ei = RPWhile zr bi ei bi FEMPTY
 `;
 
-(* val zeroRP_correct = store_thm(
+val zeroRP_correct = store_thm(
   "zeroRP_correct",
-  ``bi ≠ ei ∧ (∀pc r. P pc r ⇒ (pc = bi) ∧ Q ei ((zr =+ 0) r)) ⇒
+  ``bi ≠ ei ∧
+    (∀s. predOf (P =R=> PCeq bi && REGfsub (PCsub Q ei) zr (K 0)) s) ⇒
     HOARE P (zeroRP zr bi ei) Q``,
-  srw_tac [][HOARE_def] >>
-  qexists_tac `s0.regs '' zr + 1` >>
-  fsrw_tac [][predOf_def] >> res_tac >>
-  ntac 2 (pop_assum mp_tac) >>
-  qabbrev_tac `n = s0.regs '' zr` >>
-  pop_assum (mp_tac o REWRITE_RULE [markerTheory.Abbrev_def]) >>
-  pop_assum (K ALL_TAC) >>
-  map_every qid_spec_tac [`s0`, `n`] >> Induct >| [
-    gen_tac >> disch_then (assume_tac o SYM) >>
-    srw_tac [][firstHaltsAt_def, Step_def, zeroRP_def, FLOOKUP_UPDATE,
-               haltedConfig_def, DECIDE ``x < 1 ⇔ (x = 0)``] >>
-    pop_assum mp_tac >>
-    qmatch_abbrev_tac `Q ei f1 ==> Q ei f2` >>
-    `f1 = f2`
-       by (srw_tac [][FUN_EQ_THM, combinTheory.APPLY_UPDATE_THM, Abbr`f1`,
-                      Abbr`f2`] >>
-           srw_tac [][] >> srw_tac [][]) >>
-    srw_tac [][],
-    gen_tac >> disch_then (assume_tac o SYM) >>
-    asm_simp_tac (srw_ss()) [ADD_CLAUSES, firstHaltsAt_SUC, FUNPOW] >>
-    rpt (disch_then strip_assume_tac) >>
-    `¬haltedConfig (zeroRP zr bi ei) s0`
-       by srw_tac [][haltedConfig_def, zeroRP_def] >>
-    asm_simp_tac (srw_ss()) [] >>
-    RULE_ASSUM_TAC (PURE_REWRITE_RULE [AND_IMP_INTRO]) >>
-    first_x_assum match_mp_tac >>
-    `Step (zeroRP zr bi ei) s0 = <| pc := bi; regs := s0.regs |+ (zr, s0.regs '' zr - 1)|>`
-*)
+  srw_tac [][zeroRP_def] >>
+  match_mp_tac RPWhile >>
+  qexists_tac `REGfsub (PCsub Q ei) zr (K 0)` >>
+  srw_tac [][] >| [
+    srw_tac [][HOARE_def, predOf_AND_def, predOf_def, PCeq_def, rP_def,
+               REGfsub_def, PCsub_def] >> qexists_tac `0` >>
+    fsrw_tac [][haltedConfig_def, combinTheory.UPDATE_EQ],
+    fsrw_tac [][RPimp_thm, predOf_AND_def, predOf_def, PCsub_def,
+                PCeq_def] >>
+    srw_tac [][predOf_def, PCsub_def, predOf_AND_def] >>
+    fsrw_tac [][REGfsub_def, PCsub_def],
+    srw_tac [][predOf_def, REGfsub_def, PCsub_def, predOf_AND_def,
+               RPimp_def, PCeq_def, rP_def] >>
+    metis_tac [combinTheory.APPLY_UPDATE_ID]
+  ])
+
 val _ = export_theory();
