@@ -481,6 +481,12 @@ val PCsub_PCeq = store_thm(
   srw_tac [][PCsub_def, PCeq_def, FUN_EQ_THM]);
 val _ = augment_srw_ss [rewrites [PCsub_PCeq]]
 
+val PCsub_PCNOTIN = store_thm(
+  "PCsub_PCNOTIN",
+  ``PCsub (PC∉ s) v = K (K (v ∉ s))``,
+  srw_tac [][PCsub_def, PCNOTIN_def, FUN_EQ_THM]);
+val _ = augment_srw_ss [rewrites [PCsub_PCNOTIN]]
+
 val PCsub_ABS = store_thm(
   "PCsub_ABS",
   ``PCsub (λp:num. f p) v = (λp:num. f v)``,
@@ -521,6 +527,12 @@ val REGfRsub_PCeq = store_thm(
   ``REGfRsub (PCeq v) r f = PCeq v``,
   srw_tac [][FUN_EQ_THM, PCeq_def, REGfRsub_def]);
 val _ = augment_srw_ss [rewrites [REGfRsub_PCeq]]
+
+val REGfRsub_PCNOTIN = store_thm(
+  "REGfRsub_PCNOTIN",
+  ``REGfRsub (PC∉ s) r f = PC∉ s``,
+  srw_tac [][REGfRsub_def, PCNOTIN_def, FUN_EQ_THM]);
+val _ = augment_srw_ss [rewrites [REGfRsub_PCNOTIN]]
 
 val RPWhile_rule = store_thm(
   "RPWhile_rule",
@@ -789,5 +801,53 @@ val move_correct = store_thm(
   qpat_assum `0 = s.regs '' src` (assume_tac o SYM) >>
   asm_simp_tac (srw_ss()) [] >>
   asm_simp_tac (srw_ss()) [combinTheory.UPDATE_APPLY_IMP_ID]);
+
+val RPcopy_def = Define`
+  RPcopy src dest tmp bi ei =
+   FUNION
+     (RPWhile src bi (bi + 3) (bi + 1)
+       (FUNION
+          (FEMPTY |+ (bi + 1, INC dest (bi + 2)))
+          (FEMPTY |+ (bi + 2, INC tmp bi))))
+     (RPmove tmp src (bi + 3) ei)
+`
+
+val FDOM_RPWhile = store_thm(
+  "FDOM_RPWhile",
+  ``FDOM (RPWhile src bi ei pbi p) = bi INSERT FDOM p``,
+  srw_tac [][RPWhile_def, FUNION_DEF, EXTENSION]);
+
+val FDOM_RPmove = store_thm(
+  "FDOM_RPmove",
+  ``FDOM (RPmove src dest bi ei) = {bi; bi + 1}``,
+  srw_tac [][RPmove_def, FUNION_DEF, FDOM_RPWhile]);
+
+(*
+val RPcopy_correct = store_thm(
+  "RPcopy_correct",
+  ``ALL_DISTINCT [src; dest; tmp] ∧
+    ei ∉ { bi; bi + 1; bi + 2; bi + 3; bi + 4 } ∧
+    (∀s. predOf
+          (P =R=>
+           PCeq bi && rP tmp ((=) 0) &&
+           REGfRsub (PCsub Q ei) dest (λr. r dest + r src)) s) ⇒
+    P ⊢ RPcopy src dest tmp bi ei ⊣ Q``,
+  srw_tac [][RPcopy_def] >>
+  match_mp_tac (GEN_ALL HOARE_sequence) >>
+  asm_simp_tac (srw_ss() ++ ARITH_ss)
+               [FDOM_RPWhile, FUNION_DEF, FDOM_RPmove] >>
+  qexists_tac `PCeq (bi + 3) &&
+               REGfRsub (REGfRsub
+                             (PCsub (Q && PC∉ {bi; bi + 1; bi + 2}) ei)
+                             tmp
+                             (K 0))
+                        src
+                        (λr. r src + r tmp)` >>
+  reverse conj_tac
+    >- (match_mp_tac move_correct >>
+        asm_simp_tac (srw_ss() ++ ARITH_ss) [RPimp_thm, predOf_AND_thm]) >>
+  ...)
+*)
+
 
 val _ = export_theory();
