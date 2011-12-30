@@ -137,7 +137,7 @@ val _ = computeLib.add_funs [execOf_recn,FLOOKUP_DEF];
 (*---------------------------------------------------------------------------*)
 
 val haltedConfig_def = Define `
-   haltedConfig prog cnfg = cnfg.pc ∉ FDOM prog
+   haltedConfig (prog : num |-> instr) cnfg = cnfg.pc ∉ FDOM prog
 `
 
 val haltsAt_def =
@@ -841,6 +841,12 @@ val FDOM_RPmove = store_thm(
   ``FDOM (RPmove src dest bi ei) = {bi; bi + 1}``,
   srw_tac [][RPmove_def, FUNION_DEF, FDOM_RPWhile]);
 
+val HOARE_skip = store_thm(
+  "HOARE_skip",
+  ``(∀s. predOf (P =R=> Q) s) ==> P ⊢ FEMPTY ⊣ Q``,
+  srw_tac [][HOARE_def, predOf_def, RPimp_def] >>
+  qexists_tac `0` >> srw_tac [][haltedConfig_def]);
+
 
 val RPcopy_correct = store_thm(
   "RPcopy_correct",
@@ -926,5 +932,28 @@ val RPcopy_correct = store_thm(
     srw_tac [][Abbr`f1`, Abbr`f2`, combinTheory.APPLY_UPDATE_THM,
                combinTheory.UPDATE_APPLY_IMP_ID]
   ])
+
+val implements_def = Define`
+  implements rm f i =
+    ∀l r.
+     (LENGTH l = i) ∧ (f l = SOME r) ==>
+     (λpc r. (∀j. j < i ==> (r (j + 1) = EL j l)) ∧ (pc = 1) ∧ (r 0 = 0)) ⊢
+        rm
+     ⊣ ((λpc r. (∀j. j < i ==> (r (j + 1) = EL j l))) && rP 0 ((=) r))
+`;
+
+
+val implements_zero = store_thm(
+  "implements_zero",
+  ``implements FEMPTY (SOME o K 0) 1``,
+  srw_tac [][implements_def] >>
+  match_mp_tac HOARE_skip >>
+  srw_tac [][predOf_def, RPimp_def, predOf_AND_def, rP_def]);
+
+
+(* val implements_SUC = store_thm(
+  "implements_SUC",
+  ``implements (
+*)
 
 val _ = export_theory();
