@@ -497,6 +497,11 @@ val REGfRsub_def = Define`
   REGfRsub P r f pc reg = P pc ((r =+ f reg) reg)
 `
 
+val REGfRsub_ABS = store_thm(
+  "REGfRsub_ABS",
+  ``REGfRsub (λp r. f1 p r) rg f = (λp r. f1 p ((rg =+ f r) r))``,
+  srw_tac [][FUN_EQ_THM, REGfRsub_def]);
+
 val REGfRsub_AND = store_thm(
   "REGfRsub_AND",
   ``REGfRsub (P && Q) r f = REGfRsub P r f && REGfRsub Q r f``,
@@ -507,7 +512,7 @@ val REGfRsub_PCsub = store_thm(
   "REGfRsub_PCsub",
   ``REGfRsub (PCsub P v) r f = PCsub (REGfRsub P r f) v``,
   srw_tac [][REGfRsub_def, PCsub_def, FUN_EQ_THM])
-val _ = augment_srw_ss [rewrites [REGfRsub_PCsub]]
+val _ = augment_srw_ss [rewrites [SYM REGfRsub_PCsub]]
 
 val REGfRsub_rP1 = store_thm(
   "REGfRsub_rP1",
@@ -665,6 +670,26 @@ val RPimp_thm = store_thm(
   ``predOf (P =R=> Q) s ⇔ (predOf P s ==> predOf Q s)``,
   srw_tac [][RPimp_def, predOf_def])
 
+val _ = overload_on ("TT", ``K (K T) : num -> (num -> num) -> bool``)
+val RPimp_rwt = store_thm(
+  "RPimp_rwt",
+  ``(P =R=> P) = TT``,
+  srw_tac [][FUN_EQ_THM, RPimp_def]);
+val predOf_KK = store_thm(
+  "predOf_KK",
+  ``predOf (K (K v)) s = v``,
+  srw_tac [][predOf_def]);
+val REGfRsub_KK = store_thm(
+  "REGfRsub_KK",
+  ``REGfRsub (K (K v)) r f = K (K v)``,
+  srw_tac [][REGfRsub_def, FUN_EQ_THM]);
+val pAND_rwt = store_thm(
+  "pAND_rwt",
+  ``(TT && P = P) ∧ (P && TT = P)``,
+  srw_tac [][FUN_EQ_THM, predOf_AND_def]);
+val _ = augment_srw_ss [rewrites [RPimp_rwt, predOf_KK, REGfRsub_KK, pAND_rwt]]
+
+
 val prepost_munge = store_thm(
   "prepost_munge",
   ``∀P Q P' Q'.
@@ -773,25 +798,19 @@ val move_correct = store_thm(
                         (λr. r dest + r src)` >>
   rpt strip_tac
     >- (match_mp_tac INC_correct >>
-        srw_tac [ARITH_ss][RPimp_thm, predOf_AND_thm] >| [
-          fsrw_tac [][predOf_def, PCsub_def, REGfRsub_def,
-                      combinTheory.APPLY_UPDATE_THM] >>
-          decide_tac,
-
-          fsrw_tac [][predOf_def, PCsub_def, REGfRsub_def,
-                      combinTheory.APPLY_UPDATE_THM] >>
-          qpat_assum `Q exiti f` mp_tac >>
-          asm_simp_tac (srw_ss()) [combinTheory.UPDATE_EQ] >>
-          qpat_assum `x + y = z` mp_tac >>
-          asm_simp_tac (srw_ss()) [] >>
-          strip_tac >>
-          asm_simp_tac (srw_ss()) [Once combinTheory.UPDATE_COMMUTES,
-                                   SimpL ``(==>)``,
-                                   combinTheory.UPDATE_EQ] >>
-          srw_tac [ARITH_ss][Once combinTheory.UPDATE_COMMUTES],
-
-          srw_tac [][predOf_def]
-        ])
+        srw_tac [ARITH_ss][RPimp_thm, predOf_AND_thm, REGfRsub_ABS,
+                           combinTheory.APPLY_UPDATE_THM] >>
+        fsrw_tac [][predOf_def, PCsub_def, REGfRsub_def,
+                    combinTheory.APPLY_UPDATE_THM] >>
+        qpat_assum `Q exiti f` mp_tac >>
+        asm_simp_tac (srw_ss()) [combinTheory.UPDATE_EQ] >>
+        qpat_assum `x + y = z` mp_tac >>
+        asm_simp_tac (srw_ss()) [] >>
+        strip_tac >>
+        asm_simp_tac (srw_ss()) [Once combinTheory.UPDATE_COMMUTES,
+                                 SimpL ``(==>)``,
+                                 combinTheory.UPDATE_EQ] >>
+        srw_tac [ARITH_ss][Once combinTheory.UPDATE_COMMUTES])
     >- (srw_tac [ARITH_ss][RPimp_thm, predOf_AND_thm] >>
         fsrw_tac [][predOf_def, RPimp_def] >> res_tac >>
         fsrw_tac [][predOf_AND_def, PCeq_def]) >>
@@ -822,7 +841,7 @@ val FDOM_RPmove = store_thm(
   ``FDOM (RPmove src dest bi ei) = {bi; bi + 1}``,
   srw_tac [][RPmove_def, FUNION_DEF, FDOM_RPWhile]);
 
-(*
+
 val RPcopy_correct = store_thm(
   "RPcopy_correct",
   ``ALL_DISTINCT [src; dest; tmp] ∧
@@ -846,8 +865,66 @@ val RPcopy_correct = store_thm(
   reverse conj_tac
     >- (match_mp_tac move_correct >>
         asm_simp_tac (srw_ss() ++ ARITH_ss) [RPimp_thm, predOf_AND_thm]) >>
-  ...)
-*)
+  qmatch_abbrev_tac `P ⊢ prog ⊣ (PCeq (bi + 3) && QQ)` >>
+  match_mp_tac (INST_TYPE [alpha |-> ``:num # num``] SchirmerConseqAux) >>
+  map_every qexists_tac [
+    `λ(S0,D0). rP src ((=) S0) && rP dest ((=)D0) && P`,
+    `λSD. PCeq (bi + 3) && QQ`
+  ] >>
+  simp_tac (srw_ss()) [pairTheory.EXISTS_PROD, pairTheory.FORALL_PROD] >>
+  reverse conj_tac
+    >- srw_tac [][rP_def, predOf_AND_def, predOf_def, RPimp_def] >>
+  map_every qx_gen_tac [`S0`, `D0`] >>
+  qunabbrev_tac `prog` >> match_mp_tac RPWhile >>
+  asm_simp_tac (srw_ss() ++ ARITH_ss) [FUNION_DEF] >>
+  qexists_tac `
+    REGfRsub QQ dest (λr. r dest + r src) &&
+    (λpc reg. (reg tmp + reg src = S0) ∧ (reg dest + reg src = S0 + D0))
+  ` >> srw_tac [][] >| [
+    (* invariant preserved by body *)
+    match_mp_tac (GEN_ALL HOARE_sequence) >>
+    asm_simp_tac (srw_ss()) [] >>
+    qmatch_abbrev_tac `∃R. Pre ⊢ c1 ⊣ R ∧ R ⊢ c2 ⊣ Post` >>
+    qexists_tac `
+      PCeq (bi + 2) && REGfRsub (PCsub Post bi) tmp (λr. r tmp + 1)
+    ` >>
+    reverse conj_tac
+      >- (qunabbrev_tac `c2` >> match_mp_tac INC_correct >>
+          srw_tac [ARITH_ss][]) >>
+    qunabbrev_tac `c1` >> match_mp_tac INC_correct >>
+    srw_tac [ARITH_ss][Abbr`Pre`, Abbr`Post`, Abbr`QQ`, RPimp_thm,
+                       predOf_AND_thm, REGfRsub_ABS,
+                       combinTheory.APPLY_UPDATE_THM] >>
+    qpat_assum `predOf (REGfRsub QQQ rrr fff) s` mp_tac >>
+    asm_simp_tac (srw_ss()) [predOf_def, REGfRsub_def, PCsub_def,
+                             combinTheory.APPLY_UPDATE_THM] >>
+    qmatch_abbrev_tac `Q ei f1 ==> Q ei f2` >>
+    qsuff_tac `f1 = f2` >- srw_tac [][] >>
+    srw_tac [ARITH_ss][Abbr`f1`, Abbr`f2`, FUN_EQ_THM,
+                       combinTheory.APPLY_UPDATE_THM],
 
+    (* invariant true initially *)
+    fsrw_tac [][RPimp_thm, predOf_AND_thm, Abbr`QQ`] >> strip_tac >>
+    res_tac >>
+    fsrw_tac [ARITH_ss][predOf_def, REGfRsub_def, PCsub_def,
+                        combinTheory.APPLY_UPDATE_THM] >>
+    pop_assum mp_tac >>
+    qpat_assum `P pccc rrrr` (K ALL_TAC) >>
+    qpat_assum `0 = s.regs '' tmp` (assume_tac o SYM) >>
+    asm_simp_tac (srw_ss()) [combinTheory.UPDATE_APPLY_IMP_ID,
+                             combinTheory.APPLY_UPDATE_THM],
+
+    (* post-condition established *)
+    asm_simp_tac (srw_ss()) [RPimp_thm, predOf_AND_thm] >>
+    srw_tac [][REGfRsub_def, predOf_def] >>
+    fsrw_tac [][] >>
+    qpat_assum `0 = s.regs '' src` (assume_tac o SYM) >>
+    fsrw_tac [][] >>
+    qpat_assum `QQ (bi + 3) f2` mp_tac >>
+    qmatch_abbrev_tac `QQ (bi + 3) f1 ==> QQ (bi + 3) f2` >>
+    qsuff_tac `f1 = f2` >- srw_tac [][] >>
+    srw_tac [][Abbr`f1`, Abbr`f2`, combinTheory.APPLY_UPDATE_THM,
+               combinTheory.UPDATE_APPLY_IMP_ID]
+  ])
 
 val _ = export_theory();
