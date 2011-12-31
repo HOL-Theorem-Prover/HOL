@@ -385,9 +385,10 @@ val predOf_PCNOTIN = store_thm(
 
 val HOARE_sequence = store_thm(
   "HOARE_sequence",
-  ``HOARE P prog1 R ∧ HOARE R prog2 (Q && PC∉ (FDOM prog1)) ∧
-    DISJOINT (FDOM prog1) (FDOM prog2) ⇒
-    HOARE P (FUNION prog1 prog2) Q``,
+  ``∀P Q R.
+       HOARE P prog1 R ∧ HOARE R prog2 (Q && PC∉ (FDOM prog1)) ∧
+       DISJOINT (FDOM prog1) (FDOM prog2) ⇒
+       HOARE P (FUNION prog1 prog2) Q``,
   SRW_TAC [][HOARE_def] THEN
   `∃n₁. firstHaltsAt prog1 n₁ s0 ∧ predOf R (RM* prog1 n₁ s0)`
     by METIS_TAC [] THEN
@@ -841,6 +842,12 @@ val FDOM_RPmove = store_thm(
   ``FDOM (RPmove src dest bi ei) = {bi; bi + 1}``,
   srw_tac [][RPmove_def, FUNION_DEF, FDOM_RPWhile]);
 
+val FDOM_RPcopy = store_thm(
+  "FDOM_RPcopy",
+  ``FDOM (RPcopy src dest tmp bi ei) = {bi; bi + 1; bi + 2; bi + 3; bi + 4}``,
+  srw_tac [][RPcopy_def, FUNION_DEF, FDOM_RPmove, FDOM_RPWhile] >>
+  srw_tac [ARITH_ss][EXTENSION]);
+
 val HOARE_skip = store_thm(
   "HOARE_skip",
   ``(∀s. predOf (P =R=> Q) s) ==> P ⊢ FEMPTY ⊣ Q``,
@@ -934,26 +941,55 @@ val RPcopy_correct = store_thm(
   ])
 
 val implements_def = Define`
-  implements rm f i =
-    ∀l r.
-     (LENGTH l = i) ∧ (f l = SOME r) ==>
-     (λpc r. (∀j. j < i ==> (r (j + 1) = EL j l)) ∧ (pc = 1) ∧ (r 0 = 0)) ⊢
-        rm
-     ⊣ ((λpc r. (∀j. j < i ==> (r (j + 1) = EL j l))) && rP 0 ((=) r))
+  implements rm bi ei f i =
+    ∀l.
+     (LENGTH l = i) ==>
+      (∀r. (f l = SOME r) ==>
+           ((λpc r. (∀j. j < i ==> (r (j + 1) = EL j l))) && rP 0 ((=) 0) &&
+            PCeq bi)
+           ⊢
+              rm
+           ⊣ ((λpc r. (∀j. j < i ==> (r (j + 1) = EL j l))) && PCeq ei &&
+              rP 0 ((=) r))) ∧
+      ((f l = NONE) ==>
+      ¬(((λpc r. (∀j. j < i ==> (r (j + 1) = EL j l))) && PCeq bi &&
+                rP 0 ((=)0)) ⊢ rm ⊣ K (K T)))
 `;
 
+open recursivefnsTheory
 
 val implements_zero = store_thm(
   "implements_zero",
-  ``implements FEMPTY (SOME o K 0) 1``,
+  ``implements FEMPTY i i (SOME o K 0) 1``,
   srw_tac [][implements_def] >>
   match_mp_tac HOARE_skip >>
   srw_tac [][predOf_def, RPimp_def, predOf_AND_def, rP_def]);
 
-
-(* val implements_SUC = store_thm(
+(*
+val implements_SUC = store_thm(
   "implements_SUC",
-  ``implements (
-*)
+  ``FINITE A ∧ i ∉ A ∪ {0;1} ==>
+    implements (FUNION (RPcopy 1 0 i 1 6) (FEMPTY |+ (6, INC 0 7))) 1 7
+               (SOME o succ) 1``,
+  srw_tac [][implements_def] >>
+  Cases_on `l` >>
+  fsrw_tac [][listTheory.LENGTH_NIL, DECIDE ``x < 1 ⇔ (x = 0)``] >>
+  srw_tac [][] >>
+  match_mp_tac HOARE_sequence >>
+  srw_tac [][FDOM_RPcopy] >>
+  qmatch_abbrev_tac `∃R. P ⊢ c1 ⊣ R ∧ R ⊢ c2 ⊣ Q` >>
+  qexists_tac `REGfRsub (PCsub Q 6) 0 (λr. r 0 + 1)` >>
+  reverse conj_tac
+    >- (srw_tac [][Abbr`c2`] >>
+        match_mp_tac INC_correct >>
+        srw_tac [][Abbr`Q`]
 
+
+
+
+val implements_proj = store_thm(
+  "implements_proj",
+
+
+*)
 val _ = export_theory();
