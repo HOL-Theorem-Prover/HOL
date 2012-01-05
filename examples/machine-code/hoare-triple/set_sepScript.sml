@@ -147,6 +147,14 @@ val SEP_IMP_SEP_HIDE = store_thm("SEP_IMP_SEP_HIDE",
   ``!p x. SEP_IMP (p x) (~p)``,
   SIMP_TAC std_ss [SEP_IMP_def,SEP_HIDE_def,SEP_EXISTS_THM] THEN METIS_TAC []);
 
+val SEP_IMP_PRE_DISJ = store_thm("SEP_IMP_PRE_DISJ",
+  ``!p1 p2 q. SEP_IMP (p1 \/ p2) q = SEP_IMP p1 q /\ SEP_IMP p2 q``,
+  SIMP_TAC std_ss [SEP_IMP_def,SEP_DISJ_def] \\ METIS_TAC []);
+
+val SEP_IMP_PRE_EXISTS = store_thm("SEP_IMP_PRE_EXISTS",
+  ``!p q. SEP_IMP (SEP_EXISTS x. p x) q = !x. SEP_IMP (p x) q``,
+  SIMP_TAC std_ss [SEP_IMP_def,SEP_EXISTS_THM] \\ METIS_TAC []);
+
 val SEP_DISJ_COMM = store_thm("SEP_DISJ_COMM",
   ``!p q. p \/ q = SEP_DISJ q p``,
   SIMP_TAC std_ss [SEP_DISJ_def,FUN_EQ_THM] \\ REPEAT STRIP_TAC

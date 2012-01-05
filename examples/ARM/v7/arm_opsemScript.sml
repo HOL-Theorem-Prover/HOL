@@ -885,7 +885,7 @@ val branch_target_instr_def = iDefine`
    ```````````````````````````````````````````````````````````````````````` *)
 val branch_exchange_instr_def = iDefine`
   branch_exchange_instr ii (Branch_Exchange m) =
-    instruction ii "branch_exchange" ALL {}
+    instruction ii "branch_exchange" (ARCH {a | a <> ARMv4}) {}
       (read_reg ii m >>= (\rm. bx_write_pc ii rm))`;
 
 (* ........................................................................
@@ -1592,8 +1592,8 @@ val signed_multiply_dual_instr_def = iDefine`
              condT (result <> SInt result32) (set_q ii)) >>= unit3))`;
 
 (* ........................................................................
-   T2,A: SMLALD{X}<x> <RdLo>,<RdHi>,<Rn>,<Rm>
-   T2,A: SMLSLD{X}<x> <RdLo>,<RdHi>,<Rn>,<Rm>
+   T2,A: SMLALD{X}<c> <RdLo>,<RdHi>,<Rn>,<Rm>
+   T2,A: SMLSLD{X}<c> <RdLo>,<RdHi>,<Rn>,<Rm>
    ```````````````````````````````````````````````````````````````````````` *)
 val signed_multiply_long_dual_instr_def = iDefine`
   signed_multiply_long_dual_instr ii enc
@@ -2065,11 +2065,11 @@ val bit_field_clear_insert_instr_def = iDefine`
 (* ........................................................................
    T2: PLD{W}<c> [<Rn>,#<imm12>]
    T2: PLD{W}<c> [<Rn>,#-<imm8>]
-   A:  PLD{W}<c> [<Rn>,#+/-<imm12>]
-   T2: PLD<c> <label>
-   A:  PLD <label>
+   A:  PLD{W}    [<Rn>,#+/-<imm12>]
+   T2: PLD<c>    <label>
+   A:  PLD       <label>
    T2: PLD{W}<c> [<Rn>,<Rm>{,LSL #<imm2>}]
-   A:  PLD{W}<c> [<Rn>,+/-<Rm>{,<shift>}]
+   A:  PLD{W}    [<Rn>,+/-<Rm>{,<shift>}]
    ```````````````````````````````````````````````````````````````````````` *)
 (* Unpredictable for ARMv4*. *)
 val preload_data_instr_def = iDefine`
@@ -2104,11 +2104,11 @@ val preload_data_instr_def = iDefine`
 (* ........................................................................
    T2: PLI<c> [<Rn>,#<imm12>]
    T2: PLI<c> [<Rn>,#-<imm8>]
-   A:  PLI<c> [<Rn>,#+/-<imm12>]
+   A:  PLI    [<Rn>,#+/-<imm12>]
    T2: PLI<c> <label>
-   A:  PLI <label>
+   A:  PLI    <label>
    T2: PLI<c> [<Rn>,<Rm>{,LSL #<imm2>}]
-   A:  PLI<c> [<Rn>,+/-<Rm>{,<shift>}]
+   A:  PLI    [<Rn>,+/-<Rm>{,<shift>}]
    ```````````````````````````````````````````````````````````````````````` *)
 (* Unpredictable for ARMv4*. *)
 val preload_instruction_instr_def = iDefine`
@@ -2871,9 +2871,9 @@ val swap_instr_def = iDefine`
                unit2))))`;
 
 (* ........................................................................
-   T2: SRSDB<c>        SP{!},#<mode>
-   T2: SRS{IA}<c>      SP{!},#<mode>
-   A:  SRS{<amode>}<c> SP{!},#<mode>
+   T2: SRSDB<c>     SP{!},#<mode>
+   T2: SRS{IA}<c>   SP{!},#<mode>
+   A:  SRS{<amode>} SP{!},#<mode>
    where <amode> is DA, DB, IA or IB.
    ```````````````````````````````````````````````````````````````````````` *)
 (* Unpredictable for ARMv4*. *)
@@ -2906,9 +2906,9 @@ val store_return_state_instr_def = iDefine`
                        (if inc then base + 8w else base - 8w))) >>= unit4))))`;
 
 (* ........................................................................
-   T2: RFEDB<c>        <Rn>{!}
-   T2: RFE{IA}<c>      <Rn>{!}
-   A:  RFE{<amode>}<c> <Rn>{!}
+   T2: RFEDB<c>     <Rn>{!}
+   T2: RFE{IA}<c>   <Rn>{!}
+   A:  RFE{<amode>} <Rn>{!}
    where <amode> is DA, DB, IA or IB.
    ```````````````````````````````````````````````````````````````````````` *)
 (* Unpredictable for ARMv4*. *)

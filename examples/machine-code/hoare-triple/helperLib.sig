@@ -90,6 +90,11 @@ sig
     val SEP_REWRITE_RULE       : thm list -> thm -> thm
     val BASIC_SEP_REWRITE_RULE : thm -> thm -> thm
     val EXISTS_SEP_REWRITE_RULE : thm -> thm -> thm
+    val LIST_HIDE_POST_RULE    : term list -> thm -> thm
+
+    val HIDE_SEP_IMP_POST_RULE      : term -> thm -> thm
+    val LIST_HIDE_SEP_IMP_POST_RULE : term list -> thm -> thm
+    val SEP_EXISTS_SEP_IMP          : term -> term -> thm
 
     val SPEC_STRENGTHEN_RULE   : thm -> term -> thm * term
     val SPEC_WEAKEN_RULE       : thm -> term -> thm * term

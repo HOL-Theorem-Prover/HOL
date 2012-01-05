@@ -587,9 +587,13 @@ fun define q =
     handle e => raise (wrap_exn_loc "TotalDefn" "Define" locn e)
  end
 
+(* use of Raise means that typecheck error exceptions will get printed
+   anyway; no need to also have the code in Preterm etc print them out
+   as well. *)
 fun Define q =
- Parse.try_grammar_extension
-    (Theory.try_theory_extension define) q
+ trace ("show_typecheck_errors", 0)
+       (Parse.try_grammar_extension (Theory.try_theory_extension define))
+       q
  handle e => Raise e
 end;
 

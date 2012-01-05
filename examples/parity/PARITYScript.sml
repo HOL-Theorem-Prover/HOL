@@ -1,10 +1,16 @@
 (*---------------------------------------------------------------------------
-     This file needs to be processed with hol:
-       hol < PARITY.sml
+     This file needs to be processed with Holmake
+
+     Simply typing Holmake in this directory will build the files
+
+       PARITYTheory.{sig,sml,uo,ui}
+
  ---------------------------------------------------------------------------*)
 
-open HolKernel Parse boolLib bossLib;
+open HolKernel boolLib Parse bossLib
 
+
+val _ = new_theory "PARITY"
 
 val PARITY_def =
  Define
@@ -12,7 +18,8 @@ val PARITY_def =
    /\ (PARITY (SUC n) f = if f (SUC n) then ~PARITY n f else PARITY n f)`;
 
 
-val UNIQUENESS_LEMMA = prove(
+val UNIQUENESS_LEMMA = store_thm(
+  "UNIQUENESS_LEMMA",
   ``!inp out.
       (out 0 = T) /\
       (!t. out (SUC t) = if inp (SUC t) then ~out t else out t)
@@ -60,10 +67,13 @@ val PARITY_LEMMA = prove(
   ]);
 
 
-val PARITY_CORRECT = prove(
+val PARITY_CORRECT = store_thm(
+  "PARITY_CORRECT",
     ``!inp out. PARITY_IMP(inp,out)
                    ==>
                 !t. out t = PARITY t inp``,
     RW_TAC std_ss []
       THEN MATCH_MP_TAC UNIQUENESS_LEMMA
       THEN PROVE_TAC [PARITY_LEMMA]);
+
+val _ = export_theory()

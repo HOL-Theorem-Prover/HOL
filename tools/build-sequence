@@ -144,6 +144,7 @@ src/datatype/inftree
 !!examples/lambda/other-models
 !!examples/lambda/typing
 !!examples/computability/lambda
+!!examples/computability/register
 src/Boolify/src
 src/float
 src/prob
@@ -152,6 +153,7 @@ src/temporal/src
 #
 # Examples only from here on
 #
+!examples/parity
 !examples/MLsyntax
 !examples/zfset
 !!examples/category

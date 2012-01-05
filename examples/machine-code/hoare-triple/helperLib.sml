@@ -422,11 +422,15 @@ val SEP_IMP_EXISTS = prove(
   SIMP_TAC std_ss [SEP_IMP_def,SEP_EXISTS]
   THEN REPEAT STRIP_TAC THEN Q.EXISTS_TAC `x` THEN ASM_REWRITE_TAC []);
 
-fun SEP_EXISTS_POST_RULE tm th = let
-  val (_,_,_,q) = dest_spec (concl th)
+fun SEP_EXISTS_SEP_IMP tm q = let
   val thj = SPEC tm (ISPEC (mk_abs(tm,q)) SEP_IMP_EXISTS)
   val thj = CONV_RULE ((RAND_CONV o RAND_CONV) (ALPHA_CONV tm)) thj
   val thj = CONV_RULE (DEPTH_CONV BETA_CONV) thj
+  in thj end;
+
+fun SEP_EXISTS_POST_RULE tm th = let
+  val (_,_,_,q) = dest_spec (concl th)
+  val thj = SEP_EXISTS_SEP_IMP tm q
   val thi = SPEC ((cdr o concl) thj) (MATCH_MP SPEC_WEAKEN th)
   in MP thi thj end;
 
@@ -494,6 +498,17 @@ fun LIST_HIDE_POST_RULE tms th = let
   in MATCH_MP LIST_HIDE_POST_LEMMA (CONJ th imp) end
 
 fun HIDE_POST_RULE tm th = LIST_HIDE_POST_RULE [tm] th
+
+fun LIST_HIDE_SEP_IMP_POST_RULE tms th = let
+  fun HIDE_INTRO format_list tm = let
+    val (x,y) = dest_comb tm
+    in if mem x format_list
+       then ISPEC y (ISPEC x SEP_IMP_SEP_HIDE) else fail() end
+  val q = cdr (concl th)
+  val imp = SEP_IMP_WEAKEN (HIDE_INTRO tms) q
+  in MATCH_MP SEP_IMP_TRANS (CONJ th imp) end
+
+fun HIDE_SEP_IMP_POST_RULE tm th = LIST_HIDE_SEP_IMP_POST_RULE [tm] th
 
 val EQ_IMP_IMP = Q.SPECL [`p`,`q`] quotientTheory.EQ_IMPLIES;
 
@@ -674,12 +689,24 @@ fun find_composition2 th1 th2 = let
   val th2 = thb
 *)
 
+local
+  val var_index = ref 0
+  fun next_var_name() = (var_index:=1+(!var_index); "["^int_to_string (!var_index-1)^"]")
+  fun AUX_CONV tm = let
+    val ty = hd (snd (dest_type (type_of (dest_sep_hide tm))))
+    in (REWR_CONV SEP_HIDE_def THENC 
+        RAND_CONV (ALPHA_CONV (mk_var(next_var_name(),ty)))) tm end
+in
+  val EXPAND_SEP_HIDE_CONV = DEPTH_CONV AUX_CONV
+end
+
 fun find_composition3 th1 th2 = let
   val (_,_,_,q) = dest_spec (concl th1)
   val (_,p,_,_) = dest_spec (concl th2)
   in if not (can (find_term (can dest_sep_exists)) (mk_star(p,q)))
      then find_composition2 th1 th2 else let
-     val f = SIMP_CONV bool_ss [SEP_CLAUSES,SEP_HIDE_def] THENC REWRITE_CONV [STAR_ASSOC]
+     val f = EXPAND_SEP_HIDE_CONV THENC
+             SIMP_CONV bool_ss [SEP_CLAUSES,SEP_HIDE_def] THENC REWRITE_CONV [STAR_ASSOC]
      val th1 = CONV_RULE (POST_CONV f) th1
      val th2 = CONV_RULE (PRE_CONV f) th2
      val th2 = SPEC_ALL (SIMP_RULE bool_ss [GSYM SPEC_PRE_EXISTS] th2)

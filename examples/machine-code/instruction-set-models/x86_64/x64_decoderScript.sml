@@ -258,6 +258,7 @@ val x64_syntax_def = Define `
     if HD ts = "MUL"     then Z_SOME (\g. Zmul ^Zsize_tm (decode_Zrm32 g (EL 1 ts))) else
     if HD ts = "DIV"     then Z_SOME (\g. Zdiv ^Zsize_tm (decode_Zrm32 g (EL 1 ts))) else
     if HD ts = "CALL"    then Z_SOME (\g. Zcall (decode_Zimm_rm ts g)) else
+    if HD ts = "CPUID"   then Z_SOME (\g. Zcpuid) else
     if HD ts = "RET"     then Z_SOME (\g. Zret (decode_Zconst_or_zero ts g)) else option_fail`;
 
 
@@ -400,6 +401,8 @@ val x64_syntax_list = `` [
     " 0F 46 /r  | CMOVNA r32, r/m32 ";
     " 0F 42 /r  | CMOVB r32, r/m32  ";
     " 0F 43 /r  | CMOVNB r32, r/m32 ";
+
+    " 0F A2     | CPUID             ";
 
     " C3        | RET               "; (* short for "RET 0" *)
     " C2 iw     | RET imm16         ";

@@ -60,6 +60,7 @@ val _ = Hol_datatype `
                | Zpush      of Zimm_rm
                | Zcall      of Zimm_rm
                | Zret       of word64
+               | Zcpuid
                | Zmov       of Zcond => Zsize => Zdest_src
                | Zmovzx     of Zsize => Zdest_src => Zsize
                | Zjcc       of Zcond => word64    (* jcc includes jmp rel, i.e. unconditional relative jumps. *)
