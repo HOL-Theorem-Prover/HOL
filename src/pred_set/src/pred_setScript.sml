@@ -3866,7 +3866,9 @@ val PROD_IMAGE_THM = store_thm(
                   g e (ITSET g (s DELETE e) 1)` THEN1 SRW_TAC [][Abbr`g`] THEN
   MATCH_MP_TAC COMMUTING_ITSET_RECURSES THEN
   SRW_TAC [ARITH_ss][Abbr`g`]);
-(*WAIT*)
+
+val _ = overload_on ("PI", ``PROD_IMAGE``)
+val _ = Unicode.unicode_version {tmnm = "PROD_IMAGE", u = UnicodeChars.Pi}
 
 (*---------------------------------------------------------------------------*)
 (* PROD_SET multiplies the elements of a set of natural numbers              *)
