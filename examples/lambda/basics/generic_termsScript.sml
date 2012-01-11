@@ -420,7 +420,7 @@ val lam_aeq_thm = store_thm(
             `v1 ∈ fvl (ptpml [(v1,z)] t1)` by metis_tac [aeq_fv] THEN
             fsrw_tac [][ptpm_fv, pmact_IN, ptpml_listpm]) >>
     fsrw_tac [][aeql_ptpm_eqn] >>
-    Q.PAT_ASSUM `aeql X (ptpml PI Y)` MP_TAC THEN
+    Q.PAT_ASSUM `aeql X (ptpml PPI Y)` MP_TAC THEN
     SRW_TAC [][swapstr_def, Once ptpml_sing_to_back'] THEN
     MATCH_MP_TAC (MP_CANON (CONJUNCT2 aeq_trans)) THEN
     Q.EXISTS_TAC `ptpml [(v1,v2)] (ptpml [(v1,z)] t2)`  THEN
