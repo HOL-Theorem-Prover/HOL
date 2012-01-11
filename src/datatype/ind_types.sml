@@ -70,7 +70,7 @@ fun mk_icomb(tm1,tm2) =
    let val (ty, _) = Type.dom_rng (type_of tm1)
        val (tyins,kdins,rkin) = Type.kind_match_type ty (type_of tm2)
    in
-      mk_comb(Term.inst_rk_kd_ty rkin kdins tyins tm1, tm2)
+      mk_comb(Term.inst_rk_kd_ty (tyins,kdins,rkin) tm1, tm2)
    end;
 
 fun list_mk_icomb (thy,cname) =
@@ -1521,14 +1521,14 @@ local
     val (evs,bod) = strip_exists(snd(strip_forall(concl rth)))
     val cjs = map (lhand o snd o strip_forall) (conjuncts bod)
     val rtys = map (hd o snd o strip_app_type o type_of) evs
-    val (tyins,kdins,rkin) = tryfind (fn vty => Type.kind_match_type vty nty) rtys
-    val cjs' = map (Term.inst_rk_kd_ty rkin kdins tyins o rand) (fst(chop_list k cjs))
+    val Theta = tryfind (fn vty => Type.kind_match_type vty nty) rtys
+    val cjs' = map (Term.inst_rk_kd_ty Theta o rand) (fst(chop_list k cjs))
     val mtys = itlist (insert o type_of) cjs' []
     val pcons = map (fn ty => filter (fn t => type_of t = ty) cjs') mtys
     val cls' = zip mtys (map (map (recover_clause id)) pcons)
     val tyal = map (fn ty => ty |-> mk_var_type("'"^fst(dest_type ty)^id, kind_of ty)) mtys
     val cls'' = map (modify_type tyal ## map (modify_item tyal)) cls'
-    val INSTFN = INST_RK_KD_TY (rkin, kdins, tyins)
+    val INSTFN = INST_RK_KD_TY Theta
   in
     (k,tyal,cls'', INSTFN ith, INSTFN rth)
   end

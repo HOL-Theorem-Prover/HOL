@@ -62,8 +62,8 @@ sig
                           ((kind,kind)Lib.subst * kind list) * (rank * bool)
   val get_rank_kind_insts : kind list -> {redex : hol_type, residue : hol_type} list ->
                             {redex : hol_type, residue : hol_type} list ->
-                            (rank * bool) * ({redex : kind, residue : kind} list * kind list) ->
-                            (rank * bool) * ({redex : kind, residue : kind} list * kind list)
+                            ({redex : kind, residue : kind} list * kind list) * (rank * bool) ->
+                            ({redex : kind, residue : kind} list * kind list) * (rank * bool)
 
   val type_to_string: hol_type -> string
 

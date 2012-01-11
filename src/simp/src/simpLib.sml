@@ -416,7 +416,7 @@ datatype simpset =
      val xty = type_of x
      val (theta,kdtheta,rk) = kind_match_type f_domty xty
    in
-     mk_comb(Term.inst_rk_kd_ty rk kdtheta theta f, x)
+     mk_comb(Term.inst_rk_kd_ty (theta,kdtheta,rk) f, x)
    end
 
    fun apply {solver,context,stack,relation = (relation,_)} t = let

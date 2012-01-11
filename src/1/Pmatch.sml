@@ -68,8 +68,7 @@ val givens = mapfilter not_omitted;
 fun fresh_constr ty_match (colty:hol_type) gv c =
   let val Ty = type_of c
       val (L,ty) = strip_fun Ty
-      val (ty_theta,kd_theta,rk) = ty_match ty colty
-      val inst_all = inst_rk_kd_ty rk kd_theta ty_theta
+      val inst_all = inst_rk_kd_ty (ty_match ty colty)
       val c' = inst_all c
       val gvars = map (inst_all o gv) L
   in (c', gvars)
@@ -437,7 +436,7 @@ fun no_repeat_vars pat =
  ---------------------------------------------------------------------------*)
 
 fun subst_inst (term_sub,type_sub,kind_sub,rank_sub) tm =
-    Term.subst term_sub (Term.inst_rk_kd_ty rank_sub kind_sub type_sub tm);
+    Term.inst_all (term_sub, type_sub, kind_sub, rank_sub) tm;
 
 fun pat_match1 (pat,exp) given_pat =
  let val sub = Term.kind_match_term pat given_pat
@@ -494,7 +493,7 @@ fun mk_case1 tybase (exp, plist) =
            val ty' = list_mk_fun (map type_of fns@[type_of exp],
                                   type_of (snd (hd plist)))
            val (ty_theta,kd_theta,rk) = Type.kind_match_type (type_of c) ty'
-       in list_mk_comb(inst_rk_kd_ty rk kd_theta ty_theta c,fns@[exp])
+       in list_mk_comb(inst_rk_kd_ty (ty_theta,kd_theta,rk) c, fns@[exp])
        end;
 
 fun mk_case2 v (exp, plist) =
@@ -531,9 +530,10 @@ local fun build_case_clause((ty,constr),rhs) =
            in (v::V,M')
            end
      val (V,rhs') = peel args rhs
-     val (ty_theta,kd_theta,rk) = Type.kind_match_type (type_of constr)
+     val (ty_theta,kd_theta,rk) =
+           Type.kind_match_type (type_of constr)
                       (list_mk_fun (map type_of V, ty))
-     val constr' = inst_rk_kd_ty rk kd_theta ty_theta constr
+     val constr' = inst_rk_kd_ty (ty_theta,kd_theta,rk) constr
  in
    (list_mk_comb(constr',V), rhs')
   end

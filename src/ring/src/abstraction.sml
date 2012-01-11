@@ -122,10 +122,10 @@ fun under_forall f th =
     SOME (ivars,ti,ki,ri) =>
       let val (rsub,thm) =
 	foldr (fn (x,(sub,th)) =>
-	  let val (v,nsub) = except_assoc (inst_rk_kd_ty ri ki ti x) sub in
-	  (nsub,SPEC v (GEN (inst_rk_kd_ty ri ki ti x) th))
+	  let val (v,nsub) = except_assoc (inst_rk_kd_ty (ti,ki,ri) x) sub in
+	  (nsub,SPEC v (GEN (inst_rk_kd_ty (ti,ki,ri) x) th))
 	  end
-	  handle HOL_ERR _ => (sub,GEN (inst_rk_kd_ty ri ki ti x) th)) (ivars,rthm) qvars
+	  handle HOL_ERR _ => (sub,GEN (inst_rk_kd_ty (ti,ki,ri) x) th)) (ivars,rthm) qvars
       in (SOME (rsub,ti,ki,ri), thm)
       end
   | NONE => (NONE,th)

@@ -34,28 +34,28 @@ fun mk_inr(tm,ty) = mk_comb(inst[beta|-> type_of tm, alpha |-> ty] inr_tm, tm);
 val mk_isl =
   let val (ty,_) = dom_rng(type_of isl_tm)
   in fn tm => let val (tyS,kdS,rkS) = kind_match_type ty (type_of tm) in
-                mk_comb (inst_rk_kd_ty rkS kdS tyS isl_tm, tm)
+                mk_comb (inst_rk_kd_ty (tyS,kdS,rkS) isl_tm, tm)
               end
   end
 
 val mk_isr =
   let val (ty,_) = dom_rng(type_of isr_tm)
   in fn tm => let val (tyS,kdS,rkS) = kind_match_type ty (type_of tm) in
-                mk_comb (inst_rk_kd_ty rkS kdS tyS isr_tm, tm)
+                mk_comb (inst_rk_kd_ty (tyS,kdS,rkS) isr_tm, tm)
               end
   end
 
 val mk_outl =
   let val (ty,_) = dom_rng(type_of outl_tm)
   in fn tm => let val (tyS,kdS,rkS) = kind_match_type ty (type_of tm) in
-                mk_comb (inst_rk_kd_ty rkS kdS tyS outl_tm, tm)
+                mk_comb (inst_rk_kd_ty (tyS,kdS,rkS) outl_tm, tm)
               end
   end
 
 val mk_outr =
   let val (ty,_) = dom_rng(type_of outr_tm)
   in fn tm => let val (tyS,kdS,rkS) = kind_match_type ty (type_of tm) in
-                mk_comb (inst_rk_kd_ty rkS kdS tyS outr_tm, tm)
+                mk_comb (inst_rk_kd_ty (tyS,kdS,rkS) outr_tm, tm)
               end
   end
 

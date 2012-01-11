@@ -236,7 +236,7 @@ fun INST_THM theta th =
    nUNDISCH (length asl) th2
   end;
 
-fun isubst (tmtheta,tytheta,kdtheta,rktheta) tm = subst tmtheta (inst_rk_kd_ty rktheta kdtheta tytheta tm);
+fun isubst theta (*(tmtheta,tytheta,kdtheta,rktheta)*) tm = inst_all theta tm;
 
 fun inst_defn (STDREC{eqs,ind,R,SV,stem}) theta =
       STDREC {eqs=map (INST_THM theta) eqs,

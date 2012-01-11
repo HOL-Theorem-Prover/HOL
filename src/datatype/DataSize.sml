@@ -104,7 +104,7 @@ local fun drop [] ty = fst(dom_rng ty)
              val aty = type_of arg
          in if eq_ty dom aty then mk_comb(opr,arg)
             else let val (tyS,kdS,rkS) = Type.kind_match_type aty dom'
-                     val arg' = inst_rk_kd_ty rkS kdS tyS arg
+                     val arg' = inst_rk_kd_ty (tyS,kdS,rkS) arg
                      val arg'' = list_mk_tyabs(uvs, arg')
                  in mk_comb(opr,arg'')
                  end
@@ -131,7 +131,7 @@ fun tysize (theta,omega,gamma) clause ty =
                    let val vty0 = drop kind_args (*Args*) (type_of f)
                        val vty = lose (length kind_args - length Args) vty0
                        val (tyS,kdS,rkS) = Type.kind_match_type vty ty
-                    in list_mk_comb(inst_rk_kd_ty rkS kdS tyS f,
+                    in list_mk_comb(inst_rk_kd_ty (tyS,kdS,rkS) f,
                                     map (tysize (theta,omega,gamma) clause) Args)
                     end
                 | NONE => Kzero ty
@@ -145,9 +145,9 @@ fun tysize (theta,omega,gamma) clause ty =
                         val (ubtys,oprty1) = strip_univ_type (type_of opr_tm)
                         val oprty0 = drop kind_args oprty1
                         val oprty = lose (length kind_args - length args) oprty0
-                        val (tyS,kdS,rkS) = Type.kind_match_type oprty ty
-                        val ubtys' = map (Type.inst_rk_kd_ty rkS kdS tyS) ubtys (* or type_subst tyS? *)
-                        val opr_tm' = inst_rk_kd_ty rkS kdS tyS opr_tm
+                        val Thetas = Type.kind_match_type oprty ty
+                        val ubtys' = map (Type.inst_rk_kd_ty Thetas) ubtys
+                        val opr_tm' = inst_rk_kd_ty Thetas opr_tm
                         val opr_tm'' = list_mk_tycomb (opr_tm', ubtys')
                         val arg_tms = map (tysize (theta,omega,gamma) clause) args
                     in list_match_mk_comb(opr_tm'', arg_tms)

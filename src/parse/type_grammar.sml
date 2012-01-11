@@ -49,20 +49,20 @@ fun strip_abs_st (TYABST (bvar,body)) =
   end
   | strip_abs_st ty = ([],ty)
 
-fun inst_rank_kind rkS kdS (TYVAR (str,kd)) =
-       TYVAR (str,Kind.inst_rank_kind rkS kdS kd)
-  | inst_rank_kind rkS kdS (TYCON {Thy, Tyop, Kind}) =
-       TYCON {Thy=Thy, Tyop=Tyop, Kind=Kind.inst_rank_kind rkS kdS Kind}
-  | inst_rank_kind rkS kdS (TYAPP (opr,arg)) =
-       TYAPP (inst_rank_kind rkS kdS opr, inst_rank_kind rkS kdS arg)
-  | inst_rank_kind rkS kdS (TYABST (bvar,body)) =
-       TYABST (inst_rank_kind rkS kdS bvar, inst_rank_kind rkS kdS body)
-  | inst_rank_kind rkS kdS (TYUNIV (bvar,body)) =
-       TYUNIV (inst_rank_kind rkS kdS bvar, inst_rank_kind rkS kdS body)
-  | inst_rank_kind rkS kdS (TYEXIS (bvar,body)) =
-       TYEXIS (inst_rank_kind rkS kdS bvar, inst_rank_kind rkS kdS body)
-  | inst_rank_kind rkS kdS (PARAM (n,kd)) =
-       PARAM (n, Kind.inst_rank_kind rkS kdS kd)
+fun inst_rank_kind (kdS,rkS) (TYVAR (str,kd)) =
+       TYVAR (str,Kind.inst_rank_kind (kdS,rkS) kd)
+  | inst_rank_kind (kdS,rkS) (TYCON {Thy, Tyop, Kind}) =
+       TYCON {Thy=Thy, Tyop=Tyop, Kind=Kind.inst_rank_kind (kdS,rkS) Kind}
+  | inst_rank_kind (kdS,rkS) (TYAPP (opr,arg)) =
+       TYAPP (inst_rank_kind (kdS,rkS) opr, inst_rank_kind (kdS,rkS) arg)
+  | inst_rank_kind (kdS,rkS) (TYABST (bvar,body)) =
+       TYABST (inst_rank_kind (kdS,rkS) bvar, inst_rank_kind (kdS,rkS) body)
+  | inst_rank_kind (kdS,rkS) (TYUNIV (bvar,body)) =
+       TYUNIV (inst_rank_kind (kdS,rkS) bvar, inst_rank_kind (kdS,rkS) body)
+  | inst_rank_kind (kdS,rkS) (TYEXIS (bvar,body)) =
+       TYEXIS (inst_rank_kind (kdS,rkS) bvar, inst_rank_kind (kdS,rkS) body)
+  | inst_rank_kind (kdS,rkS) (PARAM (n,kd)) =
+       PARAM (n, Kind.inst_rank_kind (kdS,rkS) kd)
 
 
 
@@ -248,7 +248,7 @@ fun conform_structure_to_type G s st ty =
       val body_ty = structure_to_type body
       val (tyS,kdS,rk) = Type.kind_match_type body_ty ty
   in
-    inst_rank_kind rk kdS st
+    inst_rank_kind (kdS,rk) st
   end
 
 fun new_tyop (TYG(G,abbrevs,specials,pmap)) name =
@@ -627,7 +627,7 @@ in
                 then raise Match else ()
       (*val inst' = Listsort.sort instcmp (#1 inst) *)
       val (tyinst,kdinst,rkinst) = inst
-      val tyvs' = map (Type.inst_rank_kind rkinst kdinst) tyvs
+      val tyvs' = map (Type.inst_rank_kind (kdinst,rkinst)) tyvs
       val inst' = if null tyvs then Listsort.sort instcmp tyinst
                   else map (fn tyv => tyv |-> type_subst tyinst tyv) tyvs'
       val args = map #residue inst'

@@ -259,7 +259,7 @@ fun align_kinds theta = let
                 else (redex' |-> residue) :: inst_redex s
               end
       in
-        (rkS, if rkS=0 then theta else inst_redex theta)
+        (if rkS=0 then theta else inst_redex theta, rkS)
       end
       handle HOL_ERR{message=m,...} => raise ERR "align_kinds" m
 
@@ -293,7 +293,7 @@ fun kd_sub1 theta kd =
 fun kind_subst theta =
     if null theta then I
     else
-    let val (rk,theta') = align_kinds theta
+    let val (theta',rk) = align_kinds theta
     in if rk = 0 then
          if List.all (is_var_kind o #redex) theta
          then delta_apply (kd_sub theta)
@@ -322,14 +322,14 @@ fun pure_inst_kind []    = Lib.I
   in inst
   end
 
-(* fun inst_rank_kind rank theta = kind_subst theta o inst_rank rank *)
+(* fun inst_rank_kind (theta,rank) = kind_subst theta o inst_rank rank *)
 
-fun inst_rank_kind 0  []    = Lib.I
-  | inst_rank_kind rk []    = (inst_rank rk
-                                handle HOL_ERR{message=m,...} => raise ERR "inst_rank_kind" m)
-  | inst_rank_kind 0  theta = (pure_inst_kind theta
-                                handle HOL_ERR{message=m,...} => raise ERR "inst_rank_kind" m)
-  | inst_rank_kind rank theta =
+fun inst_rank_kind (   [],   0) = Lib.I
+  | inst_rank_kind (   [],rank) = (inst_rank rank
+                                   handle HOL_ERR{message=m,...} => raise ERR "inst_rank_kind" m)
+  | inst_rank_kind (theta,   0) = (pure_inst_kind theta
+                                   handle HOL_ERR{message=m,...} => raise ERR "inst_rank_kind" m)
+  | inst_rank_kind (theta,rank) =
   let val rk_inst = Rank.promote rank
       val fmap = add theta emptysubst
       fun inst (Type rk)        = Type (rk_inst rk)
@@ -347,8 +347,8 @@ end; (* local *)
 
 (* inst_kind aligns the ranks of its substitution *)
 fun inst_kind theta =
-  let val (rktheta,kdtheta) = align_kinds theta
-  in inst_rank_kind rktheta kdtheta
+  let val Theta = align_kinds theta
+  in inst_rank_kind Theta
   end
   handle e as HOL_ERR _ => raise (wrap_exn "Kind" "inst_kind" e)
 
@@ -367,14 +367,14 @@ local
    in look end
 in   
 fun kdmatch _ [] [] rSids = rSids
-  | kdmatch incty (Type r1::ps) (Type r2::obs) ((rkS,rkfixed),Sids) =
-     kdmatch incty ps obs ((if incty then rkS else raw_match_rank rkfixed r1 r2 rkS,rkfixed),Sids)
-  | kdmatch incty ((v as KdVar(name,rk))::ps) (kd::obs) (rSids as ((rkS,rkfixed),Sids as (S,ids))) =
+  | kdmatch incty (Type r1::ps) (Type r2::obs) (Sids,(rkS,rkfixed)) =
+     kdmatch incty ps obs (Sids,(if incty then rkS else raw_match_rank rkfixed r1 r2 rkS,rkfixed))
+  | kdmatch incty ((v as KdVar(name,rk))::ps) (kd::obs) (rSids as (Sids as (S,ids),(rkS,rkfixed))) =
      kdmatch incty ps obs
        (case lookup v ids S
-         of NONE => if v=kd then ((raw_match_rank rkfixed rk rk rkS,rkfixed),(S,v::ids))
-                    else ((raw_match_rank rkfixed rk (rank_of kd) rkS,rkfixed),
-                          ((v |-> kd)::S,ids))
+         of NONE => if v=kd then ((S,v::ids),(raw_match_rank rkfixed rk rk rkS,rkfixed))
+                    else (((v |-> kd)::S,ids),
+                          (raw_match_rank rkfixed rk (rank_of kd) rkS,rkfixed))
           | SOME kd1 => if kd1=kd then rSids else
                         MERR ("double bind on kind variable "^name))
   | kdmatch incty (Oper(p1,p2)::ps) (Oper(obs1,obs2)::obs) rSids =
@@ -382,7 +382,7 @@ fun kdmatch _ [] [] rSids = rSids
   | kdmatch _ any other thing = MERR "different kind constructors"
 end
 
-fun norm_subst (rk as (rkS,rkfixed),(kdS,kdI)) =
+fun norm_subst ((kdS,kdI),rk as (rkS,rkfixed)) =
  let val Theta = inst_rank rkS
      val mapTheta = case rkS of
                       0 => I
@@ -393,7 +393,7 @@ fun norm_subst (rk as (rkS,rkfixed),(kdS,kdI)) =
               in if residue = redex' then (kdS,redex'::kdI)
                                      else ((redex' |-> residue)::kdS,kdI)
               end) rst
- in (rk, del ([],mapTheta kdI) kdS)
+ in (del ([], mapTheta kdI) kdS, rk)
  end
 
 fun prim_match_kind inconty pat ob rSids = kdmatch inconty [pat] [ob] rSids
@@ -401,20 +401,20 @@ fun prim_match_kind inconty pat ob rSids = kdmatch inconty [pat] [ob] rSids
 val raw_match_kind = prim_match_kind false
 
 fun match_kind_restr rkfixed fixed pat ob =
-    let val ((rkS,rkfixed),(kdS,ids)) = norm_subst (raw_match_kind pat ob ((0,rkfixed),([],fixed)))
-    in (rkS,kdS)
+    let val ((kdS,ids),(rkS,rkfixed)) = norm_subst (raw_match_kind pat ob (([],fixed),(0,rkfixed)))
+    in (kdS,rkS)
     end
-fun match_kind_in_context pat ob (rk,S) =
-    let val ((rkS,rkfixed),(kdS,ids)) = norm_subst (raw_match_kind pat ob ((rk,false),(S,[])))
-    in (rkS,kdS)
+fun match_kind_in_context pat ob (S,rk) =
+    let val ((kdS,ids),(rkS,rkfixed)) = norm_subst (raw_match_kind pat ob ((S,[]),(rk,false)))
+    in (kdS,rkS)
     end
 
-fun match_kind pat ob = match_kind_in_context pat ob (0,[])
+fun match_kind pat ob = match_kind_in_context pat ob ([],0)
 
 fun match_kinds theta =
  let fun match ({redex,residue},matches) = raw_match_kind redex residue matches
-     val ((rkS,rkfixed),(kdS,ids)) = norm_subst (List.foldr match ((0,false),([],[])) theta)
- in (rkS,kdS)
+     val ((kdS,ids),(rkS,rkfixed)) = norm_subst (List.foldr match (([],[]),(0,false)) theta)
+ in (kdS,rkS)
  end
 
 

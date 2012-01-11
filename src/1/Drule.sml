@@ -25,8 +25,8 @@ val ERR = mk_HOL_ERR "Drule";
  * INST_ALL does the instantiations in one pass through the term.            *
  *---------------------------------------------------------------------------*)
 
-fun INST_RK_KD(Srk,Skd) = INST_ALL([],[],Skd,Srk)
-fun INST_RK_KD_TY(Srk,Skd,Sty) = INST_ALL([],Sty,Skd,Srk)
+fun INST_RK_KD(Skd,Srk) = INST_ALL([],[],Skd,Srk)
+fun INST_RK_KD_TY(Sty,Skd,Srk) = INST_ALL([],Sty,Skd,Srk)
 
 (*---------------------------------------------------------------------------*
  * Eta-conversion                                                            *
@@ -77,7 +77,7 @@ fun TY_ETA_CONV t =
       val tysubst = [mk_var_type("'b", kd ==> typ, rk+1) |-> mk_abs_type(tyvar, ty)]
 *)
       val th = SPEC (tyrator tycmb)
-                 (INST_RK_KD_TY (rksubst,kdsubst,tysubst)  TY_ETA_AX)
+                 (INST_RK_KD_TY (tysubst,kdsubst,rksubst)  TY_ETA_AX)
               (* (INST_TYPE tysubst (INST_KIND kdsubst (INST_RANK rksubst TY_ETA_AX))) *)
   in
     TRANS (ALPHA t (lhs (concl th))) th
@@ -1104,7 +1104,7 @@ fun ISPECL [] = TY_SPEC_ALL (*I*)
              Type.kind_match_type (funty pats) (funty obs)
                       handle HOL_ERR _ => raise ERR "ISPECL"
                               "can't type-instantiate input theorem"
-     in SPECL tms (INST_RK_KD_TY (rk,kd_theta,ty_theta) th) handle HOL_ERR _
+     in SPECL tms (INST_RK_KD_TY (ty_theta,kd_theta,rk) th) handle HOL_ERR _
         => raise ERR "ISPECL" "type variable or kind variable free in assumptions"
      end
 end
@@ -1712,7 +1712,7 @@ fun MATCH_MP ith =
    let val mfn = C (Term.kind_match_terml hyprkvars hypkdvars hyptyvars lconsts) (concl th)
        val (_,tyS,kdS,rkS) = mfn bod
        val (atyS,tyS) = partition (fn {redex,residue} => mem redex ityl) tyS
-       val tth = INST_RK_KD_TY (rkS,kdS,tyS) ith
+       val tth = INST_RK_KD_TY (tyS,kdS,rkS) ith
        val (avs,tbody) = strip_all_forall (concl tth)
        val (ant,conseq) = dest_imp tbody
        val (tmin,tyin,_,_) = mfn ant
@@ -2260,7 +2260,7 @@ fun HO_PART_MATCH partfn th =
      fun finish_fn rkin kdin tyin ivs =
        let val npossbetas =
             if rkin=0 andalso null kdin andalso null tyin then possbetas
-            else map ((inst_rk_kd_ty rkin kdin tyin) ## I) possbetas
+            else map ((inst_rk_kd_ty (tyin,kdin,rkin)) ## I) possbetas
        in if null npossbetas then Lib.I
           else CONV_RULE (EVERY_CONV (mapfilter
                                         (TRY_CONV o C (op_assoc eq) npossbetas)
@@ -2280,7 +2280,7 @@ fun HO_PART_MATCH partfn th =
             then Map.insert(acc, redex, residue)
             else acc
         val bound_to_abs = List.foldl foldthis (Map.mkDict Term.compare) tmin
-        val sth0 = INST_RK_KD_TY (rkin,kdin,tyin) sth
+        val sth0 = INST_RK_KD_TY (tyin,kdin,rkin) sth
         val sth0c = concl sth0
         val (sth1, tyin', tmin') =
             case match_bvs tm (partfn sth0c) ([],[]) of

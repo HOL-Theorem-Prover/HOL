@@ -241,7 +241,7 @@ fun mk_icomb(tm1,tm2) =
   let val ty = Lib.fst(Type.dom_rng(Term.type_of tm1))
       val (tyins,kdins,rk) = Type.kind_match_type ty (Term.type_of tm2)
   in
-    Term.mk_comb(Term.inst_rk_kd_ty rk kdins tyins tm1, tm2)
+    Term.mk_comb(Term.inst_rk_kd_ty (tyins,kdins,rk) tm1, tm2)
   end;;
 
 (* ------------------------------------------------------------------------- *)

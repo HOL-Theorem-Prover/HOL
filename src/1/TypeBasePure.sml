@@ -764,7 +764,7 @@ fun typeValue (theta,gamma,undef) =
               of SOME f =>
                   let val vty = drop Args (type_of f)
                       val (sigma,ksigma,rk) = kind_match_type vty ty
-                      val inst_it = inst_rk_kd_ty rk ksigma sigma
+                      val inst_it = inst_rk_kd_ty (sigma,ksigma,rk)
                   in list_mk_comb(inst_it f, map tyValue Args)
                   end
                | NONE => undef ty
@@ -786,7 +786,7 @@ local fun drop [] ty = fst(dom_rng ty)
              val aty = type_of arg
          in if eq_ty dom aty then mk_comb(opr,arg)
             else let val (tyS,kdS,rkS) = Type.kind_match_type aty dom'
-                     val arg' = inst_rk_kd_ty rkS kdS tyS arg
+                     val arg' = inst_rk_kd_ty (tyS,kdS,rkS) arg
                      val arg'' = list_mk_tyabs(uvs, arg')
                  in mk_comb(opr,arg'')
                  end
@@ -806,7 +806,7 @@ fun typeValue (theta,gamma,undef) =
                       val vty = last tys
                       val (sigma,ksigma,rk) = kind_match_type vty ty
                                                 handle HOL_ERR _ => ([],[],0)
-                      val inst_it = inst_rk_kd_ty rk ksigma sigma
+                      val inst_it = inst_rk_kd_ty (sigma,ksigma,rk)
                       val f' = inst_it f
                       val tys' = fst (strip_fun (type_of f'))
                       val args = snd(strip_app_type ty)
@@ -814,7 +814,7 @@ fun typeValue (theta,gamma,undef) =
                       (* Do a second match to handle type variables generated from kind variables *)
                       val tycomps = map2 (curry op |->) (butlast tys') (map type_of args')
                       val (sigma,ksigma,rk) = kind_match_types tycomps
-                      val inst_it = inst_rk_kd_ty rk ksigma sigma
+                      val inst_it = inst_rk_kd_ty (sigma,ksigma,rk)
                   in list_mk_comb(inst_it f', args')
                   end
                | NONE => undef ty
@@ -828,9 +828,9 @@ fun typeValue (theta,gamma,undef) =
                         val (ubtys,oprty1) = strip_univ_type (type_of opr_tm)
                         val oprty0 = drop kind_args oprty1
                         val oprty = lose (length kind_args - length args) oprty0
-                        val (tyS,kdS,rkS) = Type.kind_match_type oprty ty
-                        val ubtys' = map (type_subst tyS o Type.inst_rank_kind rkS kdS) ubtys
-                        val opr_tm' = inst_rk_kd_ty rkS kdS tyS opr_tm
+                        val Theta = Type.kind_match_type oprty ty
+                        val ubtys' = map (Type.inst_rk_kd_ty Theta) ubtys
+                        val opr_tm' = inst_rk_kd_ty Theta opr_tm
                         val opr_tm'' = list_mk_tycomb (opr_tm', ubtys')
                         val arg_tms = map tyValue args
                     in list_match_mk_comb(opr_tm'', arg_tms)
@@ -962,8 +962,7 @@ fun tyValue (theta,gamma,undef) =
           in case gamma ty
               of SOME f =>
                   let val vty = drop (alpha::Args) (type_of f)
-                      val (sigma,ksigma,rk) = kind_match_type vty ty
-                      val inst_it = inst_rk_kd_ty rk ksigma sigma
+                      val inst_it = inst_rk_kd_ty (kind_match_type vty ty)
                   in list_mk_comb(inst_it f,
                                   enc_type ty::map tyVal Args)
                   end
@@ -1005,8 +1004,7 @@ end;
 
 fun cinst ty c =
   let val cty = snd(strip_fun(type_of c))
-      val (sigma,ksigma,rk) = kind_match_type cty ty
-      val inst_it = inst_rk_kd_ty rk ksigma sigma
+      val inst_it = inst_rk_kd_ty (kind_match_type cty ty)
   in inst_it c
   end
 
@@ -1039,8 +1037,7 @@ fun mk_case1 tybase (exp, plist) =
            val fns = map (fn (p,R) => list_mk_abs(snd(strip_comb p),R)) plist
            val ty' = list_mk_fun (map type_of fns@[type_of exp],
                                   type_of (snd (hd plist)))
-           val (sigma,ksigma,rk) = kind_match_type (type_of c) ty'
-           val inst_it = inst_rk_kd_ty rk ksigma sigma
+           val inst_it = inst_rk_kd_ty (kind_match_type (type_of c) ty')
        in list_mk_comb(inst_it c,fns@[exp])
        end;
 
@@ -1079,9 +1076,8 @@ local fun build_case_clause((ty,constr),rhs) =
            in (v::V,M')
            end
      val (V,rhs') = peel args rhs
-     val (sigma,ksigma,rk) = kind_match_type (type_of constr)
-                                             (list_mk_fun (map type_of V, ty))
-     val inst_it = inst_rk_kd_ty rk ksigma sigma
+     val inst_it = inst_rk_kd_ty (kind_match_type (type_of constr)
+                                             (list_mk_fun (map type_of V, ty)))
      val constr' = inst_it constr
  in
    (list_mk_comb(constr',V), rhs')
@@ -1275,8 +1271,7 @@ fun mk_record tybase (ty,fields) =
         val fupds = map (fn p => String.concat[Tyop,"_",fst p,"_fupd"]) fields
         val updfns = map (fn n => prim_mk_const{Name=n,Thy=Thy}) fupds
         fun ifn c = let val (_,ty') = strip_fun (type_of c)
-                        val (sigma,ksigma,rk) = kind_match_type ty' ty
-                        val inst_it = inst_rk_kd_ty rk ksigma sigma
+                        val inst_it = inst_rk_kd_ty (kind_match_type ty' ty)
                     in inst_it c
                     end
         val updfns' = map ifn updfns

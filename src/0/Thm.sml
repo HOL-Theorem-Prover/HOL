@@ -1347,10 +1347,10 @@ fun INST [] th = th
  * Instantiate free term, type, kind, and rank variables in a theorem        *
  *---------------------------------------------------------------------------*)
 
-fun INST_ALL (tmS, tyS, kdS, rkS) th =
+fun INST_ALL (S as (tmS, tyS, kdS, rkS)) th =
       if List.all (is_var o #redex) tmS then
         let
-          val substf = inst_all rkS kdS tyS tmS
+          val substf = inst_all S
         in
           make_thm Count.InstAll
             (tag th, hypset_map substf (hypset th), substf (concl th))

@@ -69,8 +69,8 @@ sig
  val kind_varsl    : hol_type list -> kind list
  val inst_rank     : rank -> hol_type -> hol_type
  val inst_kind     : (kind,kind)Lib.subst -> hol_type -> hol_type
- val inst_rank_kind: rank -> (kind,kind)Lib.subst -> hol_type -> hol_type
- val inst_rk_kd_ty : rank -> (kind,kind)Lib.subst -> (hol_type,hol_type)Lib.subst
+ val inst_rank_kind: (kind,kind)Lib.subst * rank -> hol_type -> hol_type
+ val inst_rk_kd_ty : (hol_type,hol_type)Lib.subst * (kind,kind)Lib.subst * rank
                         -> hol_type -> hol_type
  val aconv_ty      : hol_type -> hol_type -> bool
  val beta_conv_ty  : hol_type -> hol_type
@@ -144,7 +144,7 @@ sig
                       -> ( (hol_type,hol_type) Lib.subst * hol_type list ) *
                          ( (kind,kind) Lib.subst * kind list ) * (rank * bool)
  val align_types : (hol_type,hol_type) Lib.subst ->
-                   rank * (kind,kind) Lib.subst * (hol_type,hol_type) Lib.subst
+                   (hol_type,hol_type) Lib.subst * (kind,kind) Lib.subst * rank
 
 (* val type_to_string : hol_type -> string *) (* for low-level error messages only; superceeded *)
 

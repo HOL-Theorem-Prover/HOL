@@ -103,9 +103,9 @@ sig
   val inst_kind     : (kind,kind) subst -> term -> term   (* expects ranks match *)
   val align_inst_kind : (kind,kind) subst -> term -> term (* general: aligns ranks *)
   val inst_rank     : rank -> term -> term
-  val inst_rank_kind : rank -> (kind,kind)subst -> term -> term
-  val inst_rk_kd_ty : rank -> (kind,kind)subst -> (hol_type,hol_type)subst -> term -> term
-  val inst_all      : rank -> (kind,kind)subst -> (hol_type,hol_type)subst -> (term,term)subst
+  val inst_rank_kind : (kind,kind)subst * rank -> term -> term
+  val inst_rk_kd_ty : (hol_type,hol_type)subst * (kind,kind)subst * rank -> term -> term
+  val inst_all      : (term,term)subst * (hol_type,hol_type)subst * (kind,kind)subst * rank
                         -> term -> term
 
   val has_var_rankl : term list -> bool

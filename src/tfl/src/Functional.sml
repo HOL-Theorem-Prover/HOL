@@ -68,7 +68,7 @@ fun fresh_constr ty_match (colty:hol_type) gv c =
   let val Ty = type_of c
       val (L,ty) = strip_fun_type Ty
       val (ty_theta,kd_theta,rk_theta) = ty_match ty colty
-      val instfn = inst_rk_kd_ty rk_theta kd_theta ty_theta
+      val instfn = inst_rk_kd_ty (ty_theta,kd_theta,rk_theta)
       val c' = instfn c
       val gvars = map (instfn o gv) L
   in (c', gvars)

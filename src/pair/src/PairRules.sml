@@ -1538,7 +1538,7 @@ fun IPSPEC x th =
 	    handle HOL_ERR _ => raise (ERR "IPSPEC"
 			        "can't type-instantiate input theorem")
     in
-	PSPEC x (INST_RK_KD_TY (rk,kdinst,inst) th) handle HOL_ERR _ =>
+	PSPEC x (INST_RK_KD_TY (inst,kdinst,rk) th) handle HOL_ERR _ =>
         raise (ERR "IPSPEC" "type variable free in assumptions")
     end;
 
@@ -1561,7 +1561,7 @@ val IPSPECL =
                   raise (ERR "IPSPECL"
                              "can't type-instantiate input theorem")
 	  in
-             PSPECL xl (INST_RK_KD_TY (rk,kdinst,inst) th) handle HOL_ERR _ =>
+             PSPECL xl (INST_RK_KD_TY (inst,kdinst,rk) th) handle HOL_ERR _ =>
               raise (ERR "IPSPECL" "type variable free in assumptions")
           end
          end
@@ -2454,7 +2454,7 @@ val PMATCH_MP =
 	    fn th =>
 	    let val (B,t') = dest_thm th
 		val (_,ty_inst,kd_inst,rk_inst) = kind_match_term t t'
-		val ith_ = INST_RK_KD_TY (rk_inst,kd_inst,ty_inst) ith
+		val ith_ = INST_RK_KD_TY (ty_inst,kd_inst,rk_inst) ith
 		val (A_, forall_ps_t_imp_u_) = dest_thm ith_
 		val (ps_,t_imp_u_) = strip_pforall forall_ps_t_imp_u_
 		val (t_,u_) = dest_imp (t_imp_u_)

@@ -73,8 +73,9 @@ fun mymatch_and_instantiate axth pattern instance = let
   val pat_type = List.foldr tmlist_type Type.bool patvars
   val inst_type = List.foldr tmlist_type Type.bool instvars
   val (tyinst,kdinst,rkinst) = Type.kind_match_type pat_type inst_type
-  val new_patbody0 = Term.inst_rk_kd_ty rkinst kdinst tyinst patbody
-  val new_patvars = map (Term.inst_rk_kd_ty rkinst kdinst tyinst) patvars
+  val instfn = Term.inst_rk_kd_ty (tyinst,kdinst,rkinst)
+  val new_patbody0 = instfn patbody
+  val new_patvars = map instfn patvars
   val initial_env = ListPair.map op|-> (new_patvars, instvars)
   val new_patbody = Term.subst initial_env new_patbody0
   fun match_eqn cnum pat inst = let
@@ -679,7 +680,7 @@ fun INDUCT_THEN th =
  in fn ttac => fn (A,t) =>
      let val lam = snd(dest_comb t)
          val (_,tyS,kdS,rkS) = Term.kind_match_term v lam
-         val spec = SPEC lam (INST_RK_KD_TY (rkS,kdS,tyS) ind)
+         val spec = SPEC lam (INST_RK_KD_TY (tyS,kdS,rkS) ind)
          val (ant,conseq) = dest_imp(concl spec)
          val beta = SUBST [boolvar |-> bconv ant]
                           (mk_imp(boolvar, conseq)) spec
