@@ -3409,6 +3409,15 @@ val CARD_COUNT = store_thm
     THEN CONV_TAC Arith.ARITH_CONV]);
 val _ = export_rewrites ["CARD_COUNT"]
 
+val COUNT_11 = store_thm(
+  "COUNT_11",
+  ``(count n1 = count n2) <=> (n1 = n2)``,
+  SRW_TAC [][EQ_IMP_THM, EXTENSION] THEN
+  METIS_TAC [numLib.ARITH_PROVE ``x:num < y <=> ~(y <= x)``,
+             arithmeticTheory.LESS_EQ_REFL,
+             arithmeticTheory.LESS_EQUAL_ANTISYM]);
+val _ = export_rewrites ["COUNT_11"]
+
 (*---------------------------------------------------------------------------
     A "fold"-like operation for sets.
  ---------------------------------------------------------------------------*)
