@@ -76,6 +76,10 @@ src/num/reduce/src
 src/num/arith/src
 src/num
 src/num/termination
+
+# A Poly/ML heap, numheap, is deposited in src/num/termination to
+# speed up the last few theories (sets, extra numbers, and lists) before
+# bossLib
 src/num/extra_theories
 src/pred_set/src
 src/datatype/equiv

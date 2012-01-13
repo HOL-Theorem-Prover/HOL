@@ -1,2 +1,6 @@
-selftest.exe: selftest.uo 
+ifdef POLY
+HOLHEAP = ../num/termination/numheap
+endif
+
+selftest.exe: selftest.uo
 	$(HOLMOSMLC) -o $@ $<
