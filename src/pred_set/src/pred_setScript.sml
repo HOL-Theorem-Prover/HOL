@@ -1285,6 +1285,7 @@ val IN_IMAGE =
       PURE_ONCE_REWRITE_TAC [IMAGE_DEF] THEN
       CONV_TAC (ONCE_DEPTH_CONV SET_SPEC_CONV) THEN
       REPEAT GEN_TAC THEN REFL_TAC);
+val _ = export_rewrites ["IN_IMAGE"]
 
 val IMAGE_IN =
     store_thm
@@ -1374,6 +1375,12 @@ val IMAGE_INTER = store_thm ("IMAGE_INTER",
      EXISTS_TAC (--`x':'a`--) THEN
      CONJ_TAC THEN FIRST_ASSUM ACCEPT_TAC);
 
+val IMAGE_11 = store_thm(
+  "IMAGE_11",
+  ``(!x y. (f x = f y) <=> (x = y)) ==>
+    ((IMAGE f s1 = IMAGE f s2) <=> (s1 = s2))``,
+  STRIP_TAC THEN SIMP_TAC (srw_ss()) [EQ_IMP_THM] THEN
+  SRW_TAC [boolSimps.DNF_ss][EXTENSION, EQ_IMP_THM]);
 
 (* ===================================================================== *)
 (* Injective functions on a set.					 *)
@@ -4860,7 +4867,7 @@ val _ = export_rewrites
      "DISJOINT_EMPTY_REFL_RWT",
      (* "IMAGE" theorems *)
      "IMAGE_EMPTY", "IMAGE_DELETE", "IMAGE_FINITE", "IMAGE_ID", "IMAGE_IN",
-     "IMAGE_INSERT", "IMAGE_SUBSET", "IMAGE_UNION", "IN_IMAGE",
+     "IMAGE_INSERT", "IMAGE_SUBSET", "IMAGE_UNION",
      (* "INSERT" theorems *)
      "INSERT_DELETE", "INSERT_DIFF", "INSERT_INSERT", "INSERT_SUBSET",
      (* "INTER" theorems *)
