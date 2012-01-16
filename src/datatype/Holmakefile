@@ -1,3 +1,7 @@
+ifdef POLY
+HOLHEAP = ../num/termination/numheap
+endif
+
 EXTRA_CLEANS = selftest.exe
 
 selftest.exe: selftest.uo ind_types.uo Datatype.uo $(dprot $(SIGOBJ)/ParseDatatype.uo) $(dprot $(SIGOBJ)/RecordType.uo)

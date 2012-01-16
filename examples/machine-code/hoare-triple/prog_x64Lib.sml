@@ -13,7 +13,7 @@ val op \\ = op THEN;
 
 val x64_status = zS_HIDE;
 val x64_pc = ``zPC``;
-val x64_exec_flag = ref false;
+val x64_exec_flag = ref true;
 val x64_code_write_perm = ref false;
 val x64_use_stack = ref false;
 fun set_x64_exec_flag b = (x64_exec_flag := b);
@@ -40,6 +40,10 @@ fun name_for_resource counter tm = let
 val word2bytes_lemma = CONJ (EVAL ``word2bytes 2 (w:'a word)``)
                             (EVAL ``word2bytes 4 (w:'a word)``)
 
+val w2n_MOD = prove(
+  ``!imm32. w2n (imm32:word32) MOD 4294967296 = w2n imm32``,
+  Cases THEN FULL_SIMP_TAC (std_ss++SIZES_ss) [w2n_n2w]);
+
 fun pre_process_thm th = let
   val th = RW [ZREAD_MEM2_WORD64_THM,ZWRITE_MEM2_WORD64_THM,wordsTheory.WORD_ADD_0,
                ZREAD_MEM2_WORD16_def,ZWRITE_MEM2_WORD16_def,bit_listTheory.bytes2word_def,
@@ -65,7 +69,7 @@ fun pre_process_thm th = let
   val result = rs2 @ fs2 @ ws2 @ bs2 @ [``ZREAD_RIP s = rip``]
   val th = foldr (uncurry DISCH) th result
   val th = RW [AND_IMP_INTRO,GSYM CONJ_ASSOC,wordsTheory.WORD_XOR_CLAUSES,
-             wordsTheory.WORD_AND_CLAUSES] (SIMP_RULE std_ss [] th)
+             wordsTheory.WORD_AND_CLAUSES,w2n_MOD] (SIMP_RULE std_ss [] th)
   in th end;
 
 fun x64_pre_post g s = let
@@ -265,7 +269,7 @@ fun introduce_zSTACK th =
 
 fun calculate_length_and_jump th = let
   val (_,_,c,q) = dest_spec (concl th)
-  val l = (length o fst o listSyntax.dest_list o cdr o car o cdr o cdr o car) c
+  val l = c |> car |> cdr |> cdr |> listSyntax.dest_list |> fst |> length
   in
     let val v = find_term (can (match_term ``zPC (p + n2w n)``)) q
     in (th,l,SOME (0 + (numSyntax.int_of_term o cdr o cdr o cdr) v)) end
@@ -315,7 +319,7 @@ fun x64_prove_one_spec th c = let
   val s = find_term (can (match_term ``X64_NEXT x = SOME y``)) g
   val s = (snd o dest_comb o snd o dest_comb) s
   val (pre,post) = x64_pre_post g s
-  val tm = ``SPEC X64_MODEL pre {(rip,(c,w))} post``
+  val tm = ``SPEC X64_MODEL pre {(rip,c)} post``
   val tm = subst [mk_var("pre",type_of pre) |-> pre,
                   mk_var("post",type_of post) |-> post,
                   mk_var("c",type_of c) |-> c] tm
@@ -356,7 +360,7 @@ fun x64_prove_one_spec th c = let
     \\ SIMP_TAC std_ss [bit_listTheory.bytes2word_thm,IN_zDATA_PERM]
     THEN1 (SIMP_TAC std_ss [markerTheory.Abbrev_def]
            \\ REPEAT STRIP_TAC \\ FLIP_TAC \\ MATCH_MP_TAC ZREAD_INSTR_IMP
-           \\ Q.EXISTS_TAC `w` \\ ASM_SIMP_TAC std_ss []
+           \\ Q.EXISTS_TAC `T` \\ ASM_SIMP_TAC std_ss []
            \\ FULL_SIMP_TAC std_ss [wordsTheory.word_add_n2w,GSYM wordsTheory.WORD_ADD_ASSOC])
     \\ SIMP_TAC std_ss [word2bytes_thm,EL_thm,INSERT_SUBSET,IN_INSERT,EMPTY_SUBSET]
     \\ FULL_SIMP_TAC std_ss [UPDATE_x64_2set'',word_arith_lemma1,
@@ -374,6 +378,7 @@ fun x64_prove_specs mpred s = let
              RW [ZWRITE_MEM2_WORD32_def,ZREAD_MEM2_WORD32_def] th else th
   val c = calc_code th
   val th = pre_process_thm th
+  val th = RW [w2n_MOD] th
 (* val th = x64_prove_one_spec th c *)
   in if (is_cond o cdr o cdr o snd o dest_imp o concl) th then let
        val (x,y,z) = dest_cond (find_term is_cond (concl th))
@@ -414,6 +419,7 @@ fun x64_spec_byte_memory s = let
 val x64_tools = (x64_spec, x64_jump, x64_status, x64_pc)
 val x64_tools_no_status = (x64_spec, x64_jump, TRUTH, x64_pc);
 
+
 (*
 
   val mpred = zMEM_AUTO
@@ -433,6 +439,16 @@ val x64_tools_no_status = (x64_spec, x64_jump, TRUTH, x64_pc);
   val th = x64_spec (x64_encode "add [rax], rax");
   val th = x64_spec (x64_encode "call r2");
   val th = x64_spec (x64_encode "ret");
+
+  val s = "mov r8d, [r7+4*r3+6000]"
+  val s = x64_encode s
+  val (spec,_,sts,_) = x64_tools
+  val ((th,_,_),_) = spec (String.substring(s,0,size(s)-8))
+
+  val s = "mov [r7+4*r3+6000], r8d"
+  val s = x64_encode s
+  val (spec,_,sts,_) = x64_tools
+  val ((th,_,_),_) = spec (String.substring(s,0,size(s)-8))
 
 *)
 

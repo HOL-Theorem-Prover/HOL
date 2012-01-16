@@ -23,7 +23,7 @@ Readers who are not interested in hardware verification should be able
 to learn something about the \HOL{} system even if they do not wish to
 penetrate the details of the parity-checking example used here.  The
 specification and verification of a slightly more complex parity
-checker is set as an exercise (a solution is provided).
+checker is set as an exercise (a solution is provided in the directory {\small\verb|examples/parity|}).
 
 \section{Introduction}
 
@@ -36,7 +36,7 @@ specification that the $n$th output on {\small\verb|out|} is
 {\small\verb|T|}'s input on {\small\verb|in|}. A theory named
 {\small\verb|PARITY|} is constructed; this contains the specification
 and verification of the device. All the \ML{} input in the boxes below
-can be found in the file {\small\verb|examples/parity/PARITY.sml|}. It
+can be found in the file {\small\verb|examples/parity/PARITYScript.sml|}. It
 is suggested that the reader interactively input this to get a `hands
 on' feel for the example. The goal of the case study is to illustrate
 detailed `proof hacking' on a small and fairly simple example.
@@ -91,9 +91,11 @@ file.
 
 The specification of the parity checking device can now be given as:
 
-{\small\begin{verbatim}
+\begin{hol}
+\begin{verbatim}
    !t. out t = PARITY t inp
-\end{verbatim}}
+\end{verbatim}
+\end{hol}
 
 \noindent
 It is {\it intuitively\/} clear that this specification will be
@@ -103,25 +105,32 @@ satisfied if the signal\footnote{Signals are modelled as functions
   to use \ml{in} as one of our variable names, but this is a reserved
   word for \ml{let}-expressions.}:
 
-{\small\begin{verbatim}
+\begin{hol}
+\begin{verbatim}
    out(0) = T
-\end{verbatim}}
+\end{verbatim}
+\end{hol}
 
 \noindent and
 
-{\small\begin{verbatim}
+\begin{hol}
+\begin{verbatim}
    !t. out(t+1)  =  (if inp(t+1) then ~(out t) else out t)
-\end{verbatim}}
+\end{verbatim}
+\end{hol}
 
 \noindent This can be verified formally in \HOL{} by proving the
 following lemma:
 
-{\small\begin{verbatim}
+\begin{hol}
+\begin{verbatim}
    !inp out.
-    (out 0 = T) /\ (!t. out(SUC t) = (if inp(SUC t) then ~(out t) else out t))
+      (out 0 = T) /\
+      (!t. out(SUC t) = if inp(SUC t) then ~out t else out t)
     ==>
-    (!t. out t = PARITY t inp)
-\end{verbatim}}
+      (!t. out t = PARITY t inp)
+\end{verbatim}
+\end{hol}
 
 \noindent The proof of this is done by Mathematical Induction and, although
 trivial, is a good illustration of how such proofs are done.  The
@@ -249,10 +258,11 @@ they are generated (note that assumptions of theorems are printed as
 dots).
 
 The \ML{} function
-
-{\small\begin{verbatim}
+\begin{hol}
+\begin{verbatim}
    top_thm : unit -> thm
-\end{verbatim}}
+\end{verbatim}
+\end{hol}
 
 \noindent
 returns the theorem just proved (\ie\ on the top of the theorem stack)
@@ -452,9 +462,11 @@ Definition stored under "PARITY_IMP_def".
 \section{Verification}
 
 The following theorem will eventually be proved:
-{\small\begin{verbatim}
+\begin{hol}
+\begin{verbatim}
    |- !inp out. PARITY_IMP(inp,out) ==> (!t. out t = PARITY t inp)
-\end{verbatim}}
+\end{verbatim}
+\end{hol}
 This states that {\it if\/} {\small\verb|inp|} and {\small\verb|out|}
 are related as in the schematic
 diagram (\ie\ as in the definition of {\small\verb|PARITY_IMP|}),
@@ -554,9 +566,12 @@ The first of the two subgoals is proved.  Inspecting the remaining
 goal it can be seen that it will be solved if its left hand side,
 {\small\verb|out(SUC t)|}, is expanded using the assumption:
 
-{\small\begin{verbatim}
+\begin{hol}
+\begin{verbatim}
    !t. out t = if l5 t then l3 t else l4 t
-\end{verbatim}}
+\end{verbatim}
+\end{hol}
+
 
     However, if this assumption is used for rewriting, then all the
     subterms of the form {\small\verb|out t|} will also be expanded.
@@ -696,7 +711,7 @@ beginner several days to solve.
 Using {\it only\/} the devices {\small\verb|ONE|}, {\small\verb|NOT|},
 {\small\verb|MUX|} and {\small\verb|REG|} defined in
 Section~\ref{implementation}, design and verify a register
-{\small\verb|RESET_REG|} with an input {\small\verb|in|}, reset line
+{\small\verb|RESET_REG|} with an input {\small\verb|inp|}, reset line
 {\small\verb|reset|}, output {\small\verb|out|} and behaviour
 specified as follows.
 \begin{itemize}
@@ -711,11 +726,13 @@ specified as follows.
 \end{itemize}
 This is formalized in \HOL{} by the definition:
 
-{\small\begin{verbatim}
+\begin{hol}
+\begin{verbatim}
    RESET_REG(reset,inp,out) =
     (!t. reset t ==> (out t = T)) /\
-    (!t. out(t+1) = ((reset t  \/ reset(t+1)) => T | inp t))
-\end{verbatim}}
+    (!t. out(t+1) = if reset t \/ reset(t+1) then T else inp t)
+\end{verbatim}
+\end{hol}
 
 \noindent Note that this specification is only partial; it doesn't specify the
 output at time {\small\verb|0|} in the case that there is no reset.
@@ -732,9 +749,11 @@ on page~\pageref{parity-imp}.
 %HEVEA in section~\ref{parity-imp}
 } together with a proof of:
 
-{\small\begin{verbatim}
+\begin{hol}
+\begin{verbatim}
    RESET_REG_IMP(reset,inp,out) ==> RESET_REG(reset,inp,out)
-\end{verbatim}}
+\end{verbatim}
+\end{hol}
 
 
 \subsection{Exercise 2}

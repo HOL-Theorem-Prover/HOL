@@ -90,6 +90,8 @@ src/HolSat/sat_solvers/zc2hs/*.h
 src/HolSat/sat_solvers/zc2hs/zc2hs
 src/HolSat/sat_solvers/minisat/minisat
 src/HolSat/sat_solvers/minisat/depend.mak
+src/num/termination/numheap
+src/num/termination/numheap.o
 src/pair/help
 src/parse/base_lexer.sml
 src/quotient/examples/*/*.html
