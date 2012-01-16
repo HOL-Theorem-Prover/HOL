@@ -1301,6 +1301,7 @@ val IMAGE_EMPTY =
      ("IMAGE_EMPTY",
       (--`!f:'a->'b. IMAGE f EMPTY = EMPTY`--),
       REWRITE_TAC[EXTENSION,IN_IMAGE,NOT_IN_EMPTY]);
+val _ = export_rewrites ["IMAGE_EMPTY"]
 
 val IMAGE_ID =
     store_thm
@@ -1334,6 +1335,7 @@ val IMAGE_INSERT =
      [ALL_TAC,DISJ2_TAC THEN EXISTS_TAC (--`x'':'a`--),
       EXISTS_TAC (--`x:'a`--),EXISTS_TAC (--`x'':'a`--)] THEN
      ASM_REWRITE_TAC[]);
+val _ = export_rewrites ["IMAGE_INSERT"]
 
 val IMAGE_EQ_EMPTY =
     store_thm
@@ -2081,6 +2083,7 @@ val CARD_EMPTY = save_thm("CARD_EMPTY",CONJUNCT1 CARD_DEF);
 val _ = export_rewrites ["CARD_EMPTY"]
 
 val CARD_INSERT = save_thm("CARD_INSERT",CONJUNCT2 CARD_DEF);
+val _ = export_rewrites ["CARD_INSERT"]
 
 val CARD_EQ_0 =
     store_thm
@@ -2320,6 +2323,13 @@ RW_TAC arith_ss [CARD_DELETE] THEN
 `~(CARD t = 0)` by METIS_TAC [EMPTY_DEF, IN_DEF, CARD_EQ_0] THEN
 RW_TAC arith_ss []);
 
+val CARD_INJ_IMAGE = store_thm(
+  "CARD_INJ_IMAGE",
+  ``!f s. (!x y. (f x = f y) <=> (x = y)) /\ FINITE s ==>
+          (CARD (IMAGE f s) = CARD s)``,
+  REWRITE_TAC [GSYM AND_IMP_INTRO] THEN NTAC 3 STRIP_TAC THEN
+  Q.ID_SPEC_TAC `s` THEN HO_MATCH_MP_TAC FINITE_INDUCT THEN
+  SRW_TAC [][]);
 
 val FINITE_COMPLETE_INDUCTION = Q.store_thm(
   "FINITE_COMPLETE_INDUCTION",
@@ -4853,7 +4863,7 @@ val _ = export_rewrites
      "BIGUNION_INSERT", "BIGUNION_UNION", "BIGINTER_UNION",
      "DISJOINT_BIGUNION", "BIGINTER_EMPTY", "BIGINTER_INSERT",
      (* cardinality theorems *)
-     "CARD_DIFF", "CARD_EQ_0", "CARD_INSERT",
+     "CARD_DIFF", "CARD_EQ_0",
      "CARD_INTER_LESS_EQ", "CARD_DELETE", "CARD_DIFF",
      (* complement theorems *)
      "COMPL_CLAUSES", "COMPL_COMPL", "COMPL_EMPTY", "IN_COMPL",
@@ -4866,8 +4876,8 @@ val _ = export_rewrites
      "DISJOINT_EMPTY", "DISJOINT_INSERT", "DISJOINT_UNION_BOTH",
      "DISJOINT_EMPTY_REFL_RWT",
      (* "IMAGE" theorems *)
-     "IMAGE_EMPTY", "IMAGE_DELETE", "IMAGE_FINITE", "IMAGE_ID", "IMAGE_IN",
-     "IMAGE_INSERT", "IMAGE_SUBSET", "IMAGE_UNION",
+     "IMAGE_DELETE", "IMAGE_FINITE", "IMAGE_ID", "IMAGE_IN",
+     "IMAGE_SUBSET", "IMAGE_UNION",
      (* "INSERT" theorems *)
      "INSERT_DELETE", "INSERT_DIFF", "INSERT_INSERT", "INSERT_SUBSET",
      (* "INTER" theorems *)
