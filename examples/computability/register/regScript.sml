@@ -941,11 +941,12 @@ val RPcopy_correct = store_thm(
   ])
 
 val implements_def = Define`
-  implements rm bi ei f i =
+  implements rm temps bi ei f i =
     ∀l.
-     (LENGTH l = i) ==>
+     (LENGTH l = i) ∧ (∀j. j ∈ temps ==> j > i) ==>
       (∀r. (f l = SOME r) ==>
-           ((λpc r. (∀j. j < i ==> (r (j + 1) = EL j l))) && rP 0 ((=) 0) &&
+           ((λpc r. (∀j. j < i ==> (r (j + 1) = EL j l)) ∧
+                    (∀j. j ∈ temps ⇒ (r j = 0))) && rP 0 ((=) 0) &&
             PCeq bi)
            ⊢
               rm
@@ -960,16 +961,14 @@ open recursivefnsTheory
 
 val implements_zero = store_thm(
   "implements_zero",
-  ``implements FEMPTY i i (SOME o K 0) 1``,
+  ``implements FEMPTY {} i i (SOME o K 0) 1``,
   srw_tac [][implements_def] >>
   match_mp_tac HOARE_skip >>
   srw_tac [][predOf_def, RPimp_def, predOf_AND_def, rP_def]);
 
-(*
 val implements_SUC = store_thm(
   "implements_SUC",
-  ``FINITE A ∧ i ∉ A ∪ {0;1} ==>
-    implements (FUNION (RPcopy 1 0 i 1 6) (FEMPTY |+ (6, INC 0 7))) 1 7
+  ``implements (FUNION (RPcopy 1 0 i 1 6) (FEMPTY |+ (6, INC 0 7))) {i} 1 7
                (SOME o succ) 1``,
   srw_tac [][implements_def] >>
   Cases_on `l` >>
@@ -978,18 +977,28 @@ val implements_SUC = store_thm(
   match_mp_tac HOARE_sequence >>
   srw_tac [][FDOM_RPcopy] >>
   qmatch_abbrev_tac `∃R. P ⊢ c1 ⊣ R ∧ R ⊢ c2 ⊣ Q` >>
-  qexists_tac `REGfRsub (PCsub Q 6) 0 (λr. r 0 + 1)` >>
+  qexists_tac
+    `REGfRsub (PCsub Q 7) 0 (λr. r 0 + 1) && PCeq 6` >>
   reverse conj_tac
     >- (srw_tac [][Abbr`c2`] >>
         match_mp_tac INC_correct >>
-        srw_tac [][Abbr`Q`]
-
-
-
+        srw_tac [][Abbr`Q`, predOf_def, predOf_AND_def, RPimp_def,
+                   PCsub_def, REGfRsub_def, PCeq_def, PCNOTIN_def,
+                   rP_def]) >>
+  qunabbrev_tac `c1` >>
+  match_mp_tac RPcopy_correct >>
+  srw_tac [ARITH_ss][] >>
+  srw_tac [ARITH_ss][Abbr`P`, Abbr`Q`, predOf_def, predOf_AND_def, RPimp_def,
+                     PCeq_def, rP_def, REGfRsub_def,
+                     combinTheory.APPLY_UPDATE_THM]);
 
 val implements_proj = store_thm(
   "implements_proj",
+  ``i < n ⇒ implements (RPcopy (i + 1) 0 j 1 6) {j} 1 6 (SOME o proj i) n``,
+  srw_tac [][implements_def] >>
+  match_mp_tac RPcopy_correct >>
+  srw_tac [ARITH_ss][predOf_def, REGfRsub_def, RPimp_def, predOf_AND_def,
+                     PCeq_def, rP_def, combinTheory.APPLY_UPDATE_THM,
+                     primrecfnsTheory.proj_def]);
 
-
-*)
 val _ = export_theory();
