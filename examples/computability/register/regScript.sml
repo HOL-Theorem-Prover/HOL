@@ -1001,4 +1001,54 @@ val implements_proj = store_thm(
                      PCeq_def, rP_def, combinTheory.APPLY_UPDATE_THM,
                      primrecfnsTheory.proj_def]);
 
+val usedregs_def = Define`
+  usedregs rmp = IMAGE (λa. case a of INC r p => r | TST r p1 p2 => r)
+                       (FRANGE rmp)
+`;
+
+val usedregs_thm = store_thm(
+  "usedregs_thm",
+  ``(usedregs FEMPTY = {}) ∧
+    (usedregs (fm |+ (p1, INC r p2)) = r INSERT usedregs (fm \\ p1))  ∧
+    (usedregs (fm |+ (p1, TST r p2 p3)) = r INSERT usedregs (fm \\ p1)) ∧
+    (DISJOINT (FDOM fm1) (FDOM fm2) ==>
+       (usedregs (FUNION fm1 fm2) = usedregs fm1 UNION usedregs fm2))``,
+  srw_tac [][usedregs_def, FRANGE_FUNION]);
+val _ = export_rewrites ["usedregs_thm"]
+
+val FINITE_usedregs = store_thm(
+  "FINITE_usedregs",
+  ``FINITE (usedregs rmp)``,
+  srw_tac [][usedregs_def]);
+val _ = export_rewrites ["FINITE_usedregs"]
+
+val unusedregs_RMstar = store_thm(
+  "unusedregs_RMstar",
+  ``r ∉ usedregs rmp ⇒ ((RM* rmp n s).regs '' r = s.regs '' r)``,
+  strip_tac >> qid_spec_tac `s` >>
+  Induct_on `n` >> srw_tac [][FUNPOW, Step_def] >>
+  `(FLOOKUP rmp s.pc = NONE) ∨ (∃r' p. FLOOKUP rmp s.pc = SOME (INC r' p)) ∨
+   (∃r' p1 p2. FLOOKUP rmp s.pc = SOME (TST r' p1 p2))`
+     by metis_tac [TypeBase.nchotomy_of ``:'a option``,
+                   TypeBase.nchotomy_of ``:instr``] >>
+  srw_tac [][] >>
+  qsuff_tac `r ≠ r'` >> srw_tac [][saferead_update] >| [
+    `INC r' p ∈ FRANGE rmp` by METIS_TAC [FRANGE_FLOOKUP] >>
+    fsrw_tac [][usedregs_def] >>
+    first_x_assum (qspec_then `INC r' p` mp_tac) >> srw_tac [][],
+
+    `TST r' p1 p2 ∈ FRANGE rmp` by METIS_TAC [FRANGE_FLOOKUP] >>
+    fsrw_tac [][usedregs_def] >>
+    first_x_assum (qspec_then `TST r' p1 p2` mp_tac) >> srw_tac [][]
+  ]);
+
+val unusedregs_dont_change = store_thm(
+  "unusedregs_dont_change",
+  ``∀n r. P ⊢ c ⊣ Q ∧ r ∉ usedregs c ⇒
+    (P && rP r ((=) n)) ⊢ c ⊣ (Q && rP r ((=) n))``,
+  srw_tac [][HOARE_def, predOf_def, predOf_AND_def, rP_def] >>
+  first_x_assum (qspec_then `s0` mp_tac) >> asm_simp_tac (srw_ss()) [] >>
+  disch_then (Q.X_CHOOSE_THEN `m` strip_assume_tac) >>
+  qexists_tac `m` >> srw_tac [][unusedregs_RMstar]);
+
 val _ = export_theory();
