@@ -1186,6 +1186,17 @@ val FRANGE_FLOOKUP = store_thm(
   ``v IN FRANGE f <=> ?k. FLOOKUP f k = SOME v``,
   SRW_TAC [][FLOOKUP_DEF,FRANGE_DEF]);
 
+val FRANGE_FUNION = store_thm(
+  "FRANGE_FUNION",
+  ``DISJOINT (FDOM fm1) (FDOM fm2) ==>
+    (FRANGE (FUNION fm1 fm2) = FRANGE fm1 UNION FRANGE fm2)``,
+  STRIP_TAC THEN
+  `∀x. x IN FDOM fm2 ==> x NOTIN FDOM fm1`
+     by (FULL_SIMP_TAC (srw_ss()) [DISJOINT_DEF, EXTENSION] THEN
+         METIS_TAC []) THEN
+  ASM_SIMP_TAC (srw_ss() ++ boolSimps.DNF_ss ++ boolSimps.CONJ_ss)
+               [FRANGE_DEF, FUNION_DEF, EXTENSION]);
+
 (*---------------------------------------------------------------------------
         Range restriction
  ---------------------------------------------------------------------------*)
