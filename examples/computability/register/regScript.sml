@@ -1087,17 +1087,40 @@ val unusedregs_dont_change = store_thm(
     (* zerof *)
     srw_tac [][] >> map_every qexists_tac [`bi`, `{}`, `FEMPTY`] >>
     srw_tac [][implements_zero],
+
     (* succ *)
     srw_tac [][] >>
-    map_every qexists_tac [`bi + 6`, `{MAX_SET (3 INSERT A) + 1}`,
-                           `FUNION (RPcopy 1 0 i bi (bi + 5))
+    qabbrev_tac `tmp = MAX_SET (3 INSERT A) + 1` >>
+    `tmp ∉ A ∧ 3 < tmp`
+       by (qunabbrev_tac `tmp` >> DEEP_INTRO_TAC MAX_SET_ELIM >>
+           srw_tac [][DISJ_IMP_THM, FORALL_AND_THM] >>
+           fsrw_tac [ARITH_ss][Once MONO_NOT_EQ]) >>
+    `0 ∉ A ∧ 1 ∉ A`
+       by (conj_tac >> spose_not_then assume_tac >>
+           fsrw_tac [][IN_DISJOINT, GSYM IMP_DISJ_THM] >>
+           res_tac >> fsrw_tac [][]) >>
+    map_every qexists_tac [`bi + 6`, `{tmp}`,
+                           `FUNION (RPcopy 1 0 tmp bi (bi + 5))
                                    (FEMPTY |+ (bi + 5, INC 0 (bi + 6)))`] >>
-    srw_tac [][]
-      >- (DEEP_INTRO_TAC MAX_SET_ELIM >>
-          srw_tac [][DISJ_IMP_THM, FORALL_AND_THM] >>
-          fsrw_tac [ARITH_ss][Once MONO_NOT_EQ])
-          srw_tac [][] >>
-  implements_SUC
+    srw_tac [ARITH_ss][implements_SUC],
+
+    (* proj *)
+    map_every qx_gen_tac [`i`, `n`] >> srw_tac [][] >>
+    qabbrev_tac `tmp = MAX_SET (n INSERT A) + 1` >>
+    `tmp ∉ A ∧ n < tmp`
+       by (qunabbrev_tac `tmp` >> DEEP_INTRO_TAC MAX_SET_ELIM >>
+           srw_tac [][DISJ_IMP_THM, FORALL_AND_THM] >>
+           fsrw_tac [ARITH_ss][Once MONO_NOT_EQ]) >>
+    `∀i. i ∈ A ⇒ n < i`
+       by fsrw_tac [][IN_DISJOINT, GSYM IMP_DISJ_THM,
+                      DECIDE ``~(x < y + 1) <=> y < x``] >>
+    map_every qexists_tac [`bi + 5`, `{tmp}`,
+                           `RPcopy (i + 1) 0 tmp bi (bi + 5)`] >>
+    srw_tac [ARITH_ss][implements_proj] >>
+    strip_tac >> res_tac >> fsrw_tac [ARITH_ss][],
+
+    (* composition *)
+
 *)
 
 val _ = export_theory();
