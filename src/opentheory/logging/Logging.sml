@@ -367,6 +367,42 @@ val (log_term, log_thm, log_clear,
       in EXISTS (mk_exists(rep,w),rep) (EQ_MP (SYM th1) (CONJ th3 th8)) end
   end
 
+  val special_needs_proof = let
+    open Thm boolLib combinTheory
+    val literal_case_FORALL_ELIM =
+      ``literal_case f v = (!) (S ((==>) o Abbrev o (combin$C (=) v)) f)``
+    val LET_FORALL_ELIM =
+      ``LET f v = (!) (S ((==>) o Abbrev o (combin$C (=) v)) f)``
+    val literal_case_FORALL_ELIM_th =
+      prove(literal_case_FORALL_ELIM,
+            REWRITE_TAC [S_DEF, literal_case_THM, C_DEF] THEN BETA_TAC THEN
+            REWRITE_TAC [o_THM, markerTheory.Abbrev_def] THEN BETA_TAC THEN
+            EQ_TAC THEN REPEAT STRIP_TAC THENL [
+              ASM_REWRITE_TAC [],
+              FIRST_X_ASSUM MATCH_MP_TAC THEN REFL_TAC
+            ])
+    val LET_FORALL_ELIM_th =
+      prove(LET_FORALL_ELIM,
+            REWRITE_TAC [S_DEF, LET_THM, C_DEF] THEN BETA_TAC THEN
+            REWRITE_TAC [o_THM, markerTheory.Abbrev_def] THEN BETA_TAC THEN
+            EQ_TAC THEN REPEAT STRIP_TAC THENL [
+              ASM_REWRITE_TAC [],
+              FIRST_X_ASSUM MATCH_MP_TAC THEN REFL_TAC
+            ])
+  in fn th =>
+    case proof th of Axiom_prf =>
+      if concl th = literal_case_FORALL_ELIM
+      then (
+        Feedback.HOL_MESG("Adding proof for literal_case_FORALL_ELIM");
+        literal_case_FORALL_ELIM_th) else
+      if concl th = LET_FORALL_ELIM
+      then (
+        Feedback.HOL_MESG("Adding proof for LET_FORALL_ELIM");
+        LET_FORALL_ELIM_th) else
+      th
+    | _ => th
+  end
+
   fun log_thm th = let
     open Thm Term Type Lib Drule Conv boolSyntax Feedback
     val ob = OThm th
@@ -379,6 +415,7 @@ val (log_term, log_thm, log_clear,
     (*
     val _ = log_comment ("("^pt)
     *)
+    val th = special_needs_proof th
     val _ = case proof th of
 
       Axiom_prf => let
