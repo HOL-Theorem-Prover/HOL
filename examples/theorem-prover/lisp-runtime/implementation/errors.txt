@@ -1,0 +1,16 @@
+
+0: out of memory
+1: out of stack space
+2: arith overflow
+3: out of space in code heap
+4: runtime error, e.g. caused by ERROR function
+5: syntax error
+6: too long symbol
+7: symtable too small
+8: illformed abbreviation
+9: too large number
+10: unexpected end of input stream
+11: dynamic call to non existent function
+12: too many constants
+
+
