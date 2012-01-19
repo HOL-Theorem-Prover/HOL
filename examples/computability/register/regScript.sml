@@ -836,17 +836,20 @@ val FDOM_RPWhile = store_thm(
   "FDOM_RPWhile",
   ``FDOM (RPWhile src bi ei pbi p) = bi INSERT FDOM p``,
   srw_tac [][RPWhile_def, FUNION_DEF, EXTENSION]);
+val _ = export_rewrites ["FDOM_RPWhile"]
 
 val FDOM_RPmove = store_thm(
   "FDOM_RPmove",
   ``FDOM (RPmove src dest bi ei) = {bi; bi + 1}``,
   srw_tac [][RPmove_def, FUNION_DEF, FDOM_RPWhile]);
+val _ = export_rewrites ["FDOM_RPmove"]
 
 val FDOM_RPcopy = store_thm(
   "FDOM_RPcopy",
   ``FDOM (RPcopy src dest tmp bi ei) = {bi; bi + 1; bi + 2; bi + 3; bi + 4}``,
   srw_tac [][RPcopy_def, FUNION_DEF, FDOM_RPmove, FDOM_RPWhile] >>
   srw_tac [ARITH_ss][EXTENSION]);
+val _ = export_rewrites ["FDOM_RPcopy"]
 
 val HOARE_skip = store_thm(
   "HOARE_skip",
@@ -953,7 +956,8 @@ val implements_def = Define`
            ⊣ ((λpc r. (∀j. j < i ==> (r (j + 1) = EL j l))) && PCeq ei &&
               rP 0 ((=) r))) ∧
       ((f l = NONE) ==>
-      ¬(((λpc r. (∀j. j < i ==> (r (j + 1) = EL j l))) && PCeq bi &&
+      ¬(((λpc r. (∀j. j < i ==> (r (j + 1) = EL j l)) ∧
+                 (∀j. j ∈ temps ⇒ (r j = 0))) && PCeq bi &&
                 rP 0 ((=)0)) ⊢ rm ⊣ K (K T)))
 `;
 
@@ -961,24 +965,25 @@ open recursivefnsTheory
 
 val implements_zero = store_thm(
   "implements_zero",
-  ``implements FEMPTY {} i i (SOME o K 0) 1``,
+  ``implements FEMPTY {} i i (K (SOME 0)) 1``,
   srw_tac [][implements_def] >>
   match_mp_tac HOARE_skip >>
   srw_tac [][predOf_def, RPimp_def, predOf_AND_def, rP_def]);
 
 val implements_SUC = store_thm(
   "implements_SUC",
-  ``implements (FUNION (RPcopy 1 0 i 1 6) (FEMPTY |+ (6, INC 0 7))) {i} 1 7
+  ``implements (FUNION (RPcopy 1 0 i bi (bi + 5))
+                       (FEMPTY |+ (bi + 5, INC 0 (bi + 6)))) {i} bi (bi + 6)
                (SOME o succ) 1``,
   srw_tac [][implements_def] >>
   Cases_on `l` >>
   fsrw_tac [][listTheory.LENGTH_NIL, DECIDE ``x < 1 ⇔ (x = 0)``] >>
   srw_tac [][] >>
   match_mp_tac HOARE_sequence >>
-  srw_tac [][FDOM_RPcopy] >>
+  srw_tac [ARITH_ss][FDOM_RPcopy] >>
   qmatch_abbrev_tac `∃R. P ⊢ c1 ⊣ R ∧ R ⊢ c2 ⊣ Q` >>
   qexists_tac
-    `REGfRsub (PCsub Q 7) 0 (λr. r 0 + 1) && PCeq 6` >>
+    `REGfRsub (PCsub Q (bi + 6)) 0 (λr. r 0 + 1) && PCeq (bi + 5)` >>
   reverse conj_tac
     >- (srw_tac [][Abbr`c2`] >>
         match_mp_tac INC_correct >>
@@ -994,7 +999,8 @@ val implements_SUC = store_thm(
 
 val implements_proj = store_thm(
   "implements_proj",
-  ``i < n ⇒ implements (RPcopy (i + 1) 0 j 1 6) {j} 1 6 (SOME o proj i) n``,
+  ``i < n ⇒ implements (RPcopy (i + 1) 0 j bi (bi + 5)) {j}
+                       bi (bi + 5) (SOME o proj i) n``,
   srw_tac [][implements_def] >>
   match_mp_tac RPcopy_correct >>
   srw_tac [ARITH_ss][predOf_def, REGfRsub_def, RPimp_def, predOf_AND_def,
@@ -1021,6 +1027,24 @@ val FINITE_usedregs = store_thm(
   ``FINITE (usedregs rmp)``,
   srw_tac [][usedregs_def]);
 val _ = export_rewrites ["FINITE_usedregs"]
+
+val usedregs_RPwhile = store_thm(
+  "usedregs_RPwhile",
+  ``i ∉ FDOM p ⇒ (usedregs (RPWhile tst i j k p) = tst INSERT usedregs p)``,
+  srw_tac [][RPWhile_def, GSYM INSERT_SING_UNION]);
+val _ = export_rewrites ["usedregs_RPwhile"]
+
+val usedregs_RPmove = store_thm(
+  "usedregs_RPmove",
+  ``usedregs (RPmove src dest bi ei) = {src;dest}``,
+  srw_tac [ARITH_ss][RPmove_def]);
+val _ = export_rewrites ["usedregs_RPmove"]
+
+val usedregs_RPcopy = store_thm(
+  "usedregs_RPcopy",
+  ``usedregs (RPcopy src dest tmp bi ei) = {src;dest;tmp}``,
+  srw_tac [ARITH_ss][RPcopy_def] >> srw_tac [][EXTENSION] >> metis_tac []);
+val _ = export_rewrites ["usedregs_RPcopy"]
 
 val unusedregs_RMstar = store_thm(
   "unusedregs_RMstar",
@@ -1050,5 +1074,30 @@ val unusedregs_dont_change = store_thm(
   first_x_assum (qspec_then `s0` mp_tac) >> asm_simp_tac (srw_ss()) [] >>
   disch_then (Q.X_CHOOSE_THEN `m` strip_assume_tac) >>
   qexists_tac `m` >> srw_tac [][unusedregs_RMstar]);
+
+(* val theorem1 = store_thm(
+  "theorem1",
+  ``∀f i. recfn f i ⇒
+          ∀bi A. FINITE A ∧ DISJOINT A { x | x < i + 1 } ⇒
+                 ∃ei temps rm.
+                    DISJOINT temps A ∧ DISJOINT (usedregs rm) A ∧
+                    usedregs rm ⊆ temps ∪ { x | x < i + 1 } ∧
+                    implements rm temps bi ei f i``,
+  ho_match_mp_tac recfn_strongind >> rpt conj_tac >| [
+    (* zerof *)
+    srw_tac [][] >> map_every qexists_tac [`bi`, `{}`, `FEMPTY`] >>
+    srw_tac [][implements_zero],
+    (* succ *)
+    srw_tac [][] >>
+    map_every qexists_tac [`bi + 6`, `{MAX_SET (3 INSERT A) + 1}`,
+                           `FUNION (RPcopy 1 0 i bi (bi + 5))
+                                   (FEMPTY |+ (bi + 5, INC 0 (bi + 6)))`] >>
+    srw_tac [][]
+      >- (DEEP_INTRO_TAC MAX_SET_ELIM >>
+          srw_tac [][DISJ_IMP_THM, FORALL_AND_THM] >>
+          fsrw_tac [ARITH_ss][Once MONO_NOT_EQ])
+          srw_tac [][] >>
+  implements_SUC
+*)
 
 val _ = export_theory();
