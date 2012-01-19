@@ -762,6 +762,9 @@ val funion_symbol = UTF8.chr 0x228C
 val _ = Unicode.uset_fixity funion_symbol (Infixl 500)
 val _ = Unicode.uoverload_on (funion_symbol, ``FUNION``)
 
+val FDOM_FUNION = save_thm("FDOM_FUNION", FUNION_DEF |> SPEC_ALL |> CONJUNCT1)
+val _ = export_rewrites ["FDOM_FUNION"]
+
 val FUNION_FEMPTY_1 = Q.store_thm
 ("FUNION_FEMPTY_1",
  `!g. FUNION FEMPTY g = g`,
