@@ -12,7 +12,8 @@ val reader = {
   const_name=fn n as (ns,Name) => case ns of
     ["llist"] => {Thy="OTllist",Name=Name}
   | ["llist","llist"] => {Thy="OTllist",Name="llist_"^Name}
-  | _ => const_name_in_map n,
+  | _ => if ns = ["Unwanted"] andalso Name = "id" then {Thy="OTllist",Name="id"}
+  else const_name_in_map n,
   tyop_name=fn n as (ns,Tyop) => case ns of
     ["llist"] => {Thy="OTllist",Tyop=Tyop}
   | _ => tyop_name_in_map n,
