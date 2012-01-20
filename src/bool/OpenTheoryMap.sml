@@ -36,6 +36,7 @@ struct
     handle _ => raise ERR "string_to_otname" (s^" does not represent an OpenTheory name")
   end
   val ots = otname_to_string val sto = string_to_otname
+  val unwanted = fn (["Unwanted"],_) => true | _ => false (* hack for making the map one-way for the Unwanted namespace *)
   type deltas = ({name:otname,tyop : thy_tyop }list*
                  {name:otname,const: thy_const}list)
   val read_deltas = let
@@ -78,7 +79,7 @@ struct
                  " (was \""^(ots oldn)^"\"; now \""^(ots name)^"\"")
   in
     the_const_to_ot   := Map.insert(!the_const_to_ot  ,const,name);
-    the_const_from_ot := Map.insert(!the_const_from_ot,name,const)
+    if unwanted name then () else the_const_from_ot := Map.insert(!the_const_from_ot,name,const)
   end
   val temp_OpenTheory_const_name = temp_OpenTheory_const_name0 "OpenTheory_const_name call"
   fun OpenTheory_tyop_name r = let in

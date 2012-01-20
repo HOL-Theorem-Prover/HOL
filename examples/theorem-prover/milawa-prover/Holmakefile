@@ -1,0 +1,5 @@
+INCLUDES = ../lisp-runtime/parse ../lisp-runtime/spec $(HOLDIR)/examples/ordinal
+OPTIONS=QUIT_ON_FAILURE
+
+milawa_coreTheory.ou: core.lisp
+	sed 's/;.*//' < core.lisp > core.lisp-without-comments

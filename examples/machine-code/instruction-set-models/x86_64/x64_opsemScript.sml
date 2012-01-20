@@ -89,9 +89,9 @@ val write_ea_def = Define `
   (write_ea ii (Zea_i s i) x = failureT) /\  (* one cannot store into a constant *)
   (* 32-bit write clears top 32-bits, the others just update a subset of the bits *)
   (write_ea ii (Zea_r Z8 r) x = seqT (read_reg ii r)
-                                 (\w. write_reg ii r (((64--8)w) || ((7--0)x)))) /\
+                                 (\w. write_reg ii r (((64--8)w) !! ((7--0)x)))) /\
   (write_ea ii (Zea_r Z16 r) x = seqT (read_reg ii r)
-                                  (\w. write_reg ii r (((64--16)w) || ((15--0)x)))) /\
+                                  (\w. write_reg ii r (((64--16)w) !! ((15--0)x)))) /\
   (write_ea ii (Zea_r Z32 r) x = write_reg ii r (w2w ((w2w x):word32))) /\
   (write_ea ii (Zea_r Z64 r) x = write_reg ii r x) /\
   (write_ea ii (Zea_m Z8 a) x = write_m8 ii a (w2w x)) /\
@@ -230,7 +230,7 @@ val write_binop_def = Define `
   (write_binop ii s Ztest x y ea = (write_logical_result_no_write ii s (x && y))) /\
   (write_binop ii s Zand  x y ea = (write_logical_result ii s (x && y) ea)) /\
   (write_binop ii s Zxor  x y ea = (write_logical_result ii s (x ?? y) ea)) /\
-  (write_binop ii s Zor   x y ea = (write_logical_result ii s (x || y) ea)) /\
+  (write_binop ii s Zor   x y ea = (write_logical_result ii s (x !! y) ea)) /\
   (write_binop ii s Zshl  x y ea = (write_result_erase_eflags ii (x << w2n y) ea)) /\
   (write_binop ii s Zshr  x y ea = (write_result_erase_eflags ii (x >>> w2n y) ea)) /\
   (write_binop ii s Zsar  x y ea = (write_result_erase_eflags ii (x >> w2n y) ea)) /\
@@ -378,6 +378,13 @@ val x64_exec_def = Define `
      seqT (parT (x64_exec_push_rip ii)
                 (read_rip ii)) (\ (x,rip).
      jump_to_ea ii rip ea))) /\
+  (x64_exec ii (Zcpuid) len = bump_rip ii len
+     (parT_unit (seqT (read_reg ii RAX) (\rax. assertT (rax = 0w)))
+     (parT_unit (write_reg ii RAX ARB)
+     (parT_unit (write_reg ii RBX ARB)
+     (parT_unit (write_reg ii RCX ARB)
+     (parT_unit (write_reg ii RDX ARB)
+                (clear_icache ii))))))) /\
   (x64_exec ii (Zret imm) len =
      seqT (x64_exec_pop_rip ii ) (\x.
      seqT (read_reg ii RSP) (\esp. (write_reg ii RSP (esp + imm))))) /\

@@ -76,6 +76,10 @@ src/num/reduce/src
 src/num/arith/src
 src/num
 src/num/termination
+
+# A Poly/ML heap, numheap, is deposited in src/num/termination to
+# speed up the last few theories (sets, extra numbers, and lists) before
+# bossLib
 src/num/extra_theories
 src/pred_set/src
 src/datatype/equiv
@@ -142,6 +146,7 @@ src/datatype/inftree
 !!examples/lambda/other-models
 !!examples/lambda/typing
 !!examples/computability/lambda
+!!examples/computability/register
 src/Boolify/src
 src/float
 src/prob
@@ -150,6 +155,7 @@ src/temporal/src
 #
 # Examples only from here on
 #
+!examples/parity
 !examples/MLsyntax
 !examples/zfset
 !!examples/category

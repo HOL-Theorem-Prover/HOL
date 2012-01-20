@@ -516,29 +516,29 @@ val hmake_qof = member "QUIT_ON_FAILURE" hmake_options
 val hmake_noprereqs = member "NO_PREREQS" hmake_options
 val extra_cleans = envlist "EXTRA_CLEANS"
 
-val POLY =
-    case cmdl_POLY of
-      NONE => let
-        val default = fullPath [HOLDIR, "bin", "hol.builder"]
-      in
-        case envlist "HOLHEAP" of
-          [] => default
-        | [x] => x
-        | xs => (warn ("Can't interpret "^String.concatWith " " xs ^
-                       " as a HOL HEAP spec; using default hol.builder.");
-                 default)
-      end
-    | SOME s => s
+val POLY = let
+  val default =
+      case cmdl_POLY of
+        NONE => fullPath [HOLDIR, "bin", "hol.builder"]
+      | SOME s => s
+in
+  case envlist "HOLHEAP" of
+    [] => default
+  | [x] => x
+  | xs => (warn ("Can't interpret "^String.concatWith " " xs ^
+                 " as a HOL HEAP spec; using default hol.builder.");
+           default)
+end
 
-val (poly_localp, EXE_POLY) =
+val EXE_POLY =
     if Path.isRelative POLY then let
         val d = Path.dir POLY
       in
-        if d = "" then (true, Path.concat(".", POLY)) else
-        if d = "." then (true, POLY)
-        else (false, POLY)
+        if d = "" then Path.concat(".", POLY)
+        else if d = "." then POLY
+        else POLY
       end
-    else (false, POLY)
+    else POLY
 
 val quit_on_failure = quit_on_failure orelse hmake_qof
 val no_prereqs = no_prereqs orelse hmake_noprereqs
@@ -956,7 +956,7 @@ in
       val tcdeps = collect_all_dependencies [] [f]
       val uo_deps =
           List.mapPartial (fn (UI x) => SOME (UO x) | _ => NONE) tcdeps
-      val heap_deps = if poly_localp then [Unhandled POLY] else []
+      val heap_deps = [Unhandled POLY]
       val alldeps = set_union (set_union tcdeps uo_deps)
                               (set_union file_dependencies heap_deps)
     in
@@ -1142,6 +1142,7 @@ in
     valOf cached_result
   else
     if OS.Path.dir (string_part target) <> "" andalso
+       OS.Path.dir (string_part target) <> "." andalso
        no_full_extra_rule target
     then (* path outside of currDir *)
       if exists_readable (fromFile target) then

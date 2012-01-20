@@ -307,13 +307,7 @@ val is_secure_def = Define`
          constT (~have_security_ext \/ ~scr.NS \/ (cpsr.M = 0b10110w)))`;
 
 val read_vbar_def = Define`
-  read_vbar ii =
-    seqT (is_secure ii)
-    (\is_secure.
-       if is_secure then
-         readT (\s. s.coprocessors.state.cp15.VBAR.secure)
-       else
-         readT (\s. s.coprocessors.state.cp15.VBAR.non_secure))`;
+  read_vbar ii = readT (\s. s.coprocessors.state.cp15.VBAR)`;
 
 val read_mvbar_def = Define`
   read_mvbar (ii:iiid) = readT (\s. s.coprocessors.state.cp15.MVBAR)`;

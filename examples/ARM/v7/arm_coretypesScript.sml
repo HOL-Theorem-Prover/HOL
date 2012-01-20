@@ -50,14 +50,11 @@ val _ = Hol_datatype `CP15scr =
 val _ = Hol_datatype `CP15nsacr =
   <| RFR : bool; NSASEDIS : bool; NSD32DIS : bool; cp : 14 word |>`;
 
-val _ = Hol_datatype `CP15vbar =
-  <| secure : word32; non_secure : word32 |>`;
-
 val _ = Hol_datatype `CP15reg =
    <| SCTLR : CP15sctlr;
       SCR   : CP15scr;
       NSACR : CP15nsacr;
-      VBAR  : CP15vbar;
+      VBAR  : word32;
       MVBAR : word32 |>`;
 
 val _ = Hol_datatype `CP14reg =

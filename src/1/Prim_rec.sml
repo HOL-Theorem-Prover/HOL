@@ -1566,7 +1566,7 @@ in
 
    When function f is defined, it is then easy to distinguish any
    two constructors Ci and Cj.
-       Assume           (Ci xn) = (Cj = yn)
+       Assume           (Ci xn) = (Cj yn)
        then           f (Ci xn) = f (Cj yn)            (Leibnitz)
        so     f (Ci xn) [| i |] = f (Cj yn) [| i |]      (ditto)
    But f is constructed in such a way that the term on the left will be

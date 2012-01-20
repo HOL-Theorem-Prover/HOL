@@ -257,6 +257,7 @@ val literal_case_DEF =
 
 val _ = List.app add_const ["ARB", "bool_case", "literal_case"];
 val _ = overload_on ("case", ``bool$literal_case``);
+val _ = OpenTheory_const_name {const={Thy="bool",Name="literal_case"},name=(["HOL4"],"literal_case")}
 
 val IN_DEF =
  Definition.new_definition
