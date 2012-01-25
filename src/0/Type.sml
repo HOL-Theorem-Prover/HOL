@@ -1933,20 +1933,49 @@ fun beta_conv_ty (TyApp(M as TyAbs _, N))
          end
   | beta_conv_ty _ = raise ERR "beta_conv_ty" "not a type beta redex"
 
-fun eta_conv_ty (ty as TyAbs (tyv, TyApp(M, TyBv 0)))
+local
+  fun pop (ty as TyBv i, k) =
+       if i=k then raise ERR "eta_conv_ty" "not a type eta redex"
+       else if i>k then TyBv (i-1) else ty
+    | pop (TyApp(Opr, Arg ), k) = TyApp(pop(Opr,k), pop(Arg,k))
+    | pop (TyAbs(Bvar,Body), k) = TyAbs(Bvar, pop(Body, k+1))
+    | pop (TyAll(Bvar,Body), k) = TyAll(Bvar, pop(Body, k+1))
+    | pop (TyExi(Bvar,Body), k) = TyExi(Bvar, pop(Body, k+1))
+    | pop (ty,k) = ty
+in
+fun eta_conv_Ety E (ty as TyAbs (tyv, TyApp(M, TyBv 0)))
        = let val a = TyFv tyv
+             val (_,kd) = tyv
+(*
              val M' = fst (dest_app_type (beta_conv_ty (TyApp(ty, a))))
                       handle HOL_ERR _ => raise ERR "eta_conv_ty" "not a type eta redex"
-         in if mem a (type_vars M') then raise ERR "eta_conv_ty" "not a type eta redex"
+         in if not (fst (kind_dom_rng (kind_of M)) = kind_of a)
+               orelse mem a (type_vars M') then raise ERR "eta_conv_ty" "not a type eta redex"
             else M'
+*)
+         in if not (fst (kind_dom_rng (kd_of M (kd::E))) = kd)
+                   (* kd_of may fail if M contains "free" bound variables not in E *)
+                   handle HOL_ERR{message = "lookup", ...} =>
+                          raise ERR "eta_conv_ty" "not a type eta redex"
+               then raise ERR "eta_conv_ty" "not a type eta redex"
+            else pop(M,0)
          end
-  | eta_conv_ty _ = raise ERR "eta_conv_ty" "not a type eta redex"
+  | eta_conv_Ety _ _ = raise ERR "eta_conv_Ety" "not a type eta redex"
+end
+
+val eta_conv_ty = eta_conv_Ety []
 
 fun qconv_ty c ty = c ty handle UNCHANGEDTY => ty
+
+fun qconv_Ety c E ty = c E ty handle UNCHANGEDTY => ty
 
 fun ifnotvarcon_ty c (TyFv  _) = raise UNCHANGEDTY
   | ifnotvarcon_ty c (TyCon _) = raise UNCHANGEDTY
   | ifnotvarcon_ty c ty = c ty
+
+fun ifnotvarcon_Ety c E (TyFv  _) = raise UNCHANGEDTY
+  | ifnotvarcon_Ety c E (TyCon _) = raise UNCHANGEDTY
+  | ifnotvarcon_Ety c E ty = c E ty
 
 (* ---------------------------------------------------------------------*)
 (* rand_conv_ty conv ``:t2 t1`` applies conv to t2                      *)
@@ -1968,6 +1997,23 @@ in
   TyApp(Rator, Newrand)
 end
   | rand_conv_ty _ _ = raise ERR "rand_conv_ty" "not a type app"
+
+fun rand_conv_Ety conv E (TyApp(Rator,Rand)) = let
+  val Newrand = conv E Rand
+(*
+    handle HOL_ERR {origin_function, message, origin_structure} =>
+      if Lib.mem origin_function
+           ["rand_conv_ty", "rator_conv_ty", "abs_conv_ty", "univ_conv_ty", "exist_conv_ty"]
+         andalso origin_structure = "Type"
+      then
+        raise ERR "rand_conv_ty" message
+      else
+        raise ERR "rand_conv_ty" (origin_function ^ ": " ^ message)
+*)
+in
+  TyApp(Rator, Newrand)
+end
+  | rand_conv_Ety _ _ _ = raise ERR "rand_conv_Ety" "not a type app"
 
 (* ---------------------------------------------------------------------*)
 (* rator_conv_ty conv ``:t2 t1`` applies conv to t1                     *)
@@ -2003,9 +2049,37 @@ fun app_conv_ty conv (TyApp(Rator, Rand)) = let in
   end
   | app_conv_ty _ _ = raise ERR "app_conv_ty" "Not a type app"
 
+fun app_conv_Ety conv E (TyApp(Rator, Rand)) = let in
+  let
+    val Rator' = conv E Rator
+  in
+    TyApp(Rator', conv E Rand) handle UNCHANGEDTY => TyApp(Rator', Rand)
+  end handle UNCHANGEDTY => TyApp(Rator, conv E Rand)
+  end
+  | app_conv_Ety _ _ _ = raise ERR "app_conv_Ety" "Not a type app"
+
 (* ----------------------------------------------------------------------
     abs_conv_ty conv ``: \'a. t['a]`` applies conv to t['a]
    ---------------------------------------------------------------------- *)
+
+fun abs_conv_Ety conv E (TyAbs(Bvar,Body)) = let
+  val (_,kd) = Bvar
+  val E' = kd :: E
+  val Newbody = conv E' Body
+(*
+    handle HOL_ERR {origin_function, message, origin_structure} =>
+      if Lib.mem origin_function
+           ["rand_conv_ty", "rator_conv_ty", "abs_conv_ty", "univ_conv_ty", "exist_conv_ty"]
+         andalso origin_structure = "Type"
+      then
+        raise ERR "abs_conv_ty" message
+      else
+        raise ERR "abs_conv_ty" (origin_function ^ ": " ^ message)
+*)
+in
+  TyAbs(Bvar, Newbody)
+end
+  | abs_conv_Ety _ _ _ = raise ERR "abs_conv_ty" "not a type abstraction"
 
 fun abs_conv_ty conv (TyAbs(Bvar,Body)) = let
   val Newbody = conv Body
@@ -2024,9 +2098,30 @@ in
 end
   | abs_conv_ty _ _ = raise ERR "abs_conv_ty" "not a type abstraction"
 
+(* fun abs_conv_ty conv = abs_conv_Ety (fn _ => conv) [] *)
+
 (* ----------------------------------------------------------------------
     univ_conv_ty conv ``: !'a. t['a]`` applies conv to t['a]
    ---------------------------------------------------------------------- *)
+
+fun univ_conv_Ety conv E (TyAll(Bvar,Body)) = let
+  val (_,kd) = Bvar
+  val E' = kd :: E
+  val Newbody = conv E' Body
+(*
+    handle HOL_ERR {origin_function, message, origin_structure} =>
+      if Lib.mem origin_function
+           ["rand_conv_ty", "rator_conv_ty", "abs_conv_ty", "univ_conv_ty", "exist_conv_ty"]
+         andalso origin_structure = "Type"
+      then
+        raise ERR "univ_conv_ty" message
+      else
+        raise ERR "univ_conv_ty" (origin_function ^ ": " ^ message)
+*)
+in
+  TyAll(Bvar, Newbody)
+end
+  | univ_conv_Ety _ _ _ = raise ERR "univ_conv_ty" "not a universal type"
 
 fun univ_conv_ty conv (TyAll(Bvar,Body)) = let
   val Newbody = conv Body
@@ -2046,8 +2141,27 @@ end
   | univ_conv_ty _ _ = raise ERR "univ_conv_ty" "not a universal type"
 
 (* ----------------------------------------------------------------------
-    univ_conv_ty conv ``: !'a. t['a]`` applies conv to t['a]
+    exist_conv_ty conv ``: ?'a. t['a]`` applies conv to t['a]
    ---------------------------------------------------------------------- *)
+
+fun exist_conv_Ety conv E (TyExi(Bvar,Body)) = let
+  val (_,kd) = Bvar
+  val E' = kd :: E
+  val Newbody = conv E' Body
+(*
+    handle HOL_ERR {origin_function, message, origin_structure} =>
+      if Lib.mem origin_function
+           ["rand_conv_ty", "rator_conv_ty", "abs_conv_ty", "univ_conv_ty", "exist_conv_ty"]
+         andalso origin_structure = "Type"
+      then
+        raise ERR "exist_conv_ty" message
+      else
+        raise ERR "exist_conv_ty" (origin_function ^ ": " ^ message)
+*)
+in
+  TyExi(Bvar, Newbody)
+end
+  | exist_conv_Ety _ _ _ = raise ERR "exist_conv_Ety" "not an existential type"
 
 fun exist_conv_ty conv (TyExi(Bvar,Body)) = let
   val Newbody = conv Body
@@ -2079,18 +2193,26 @@ fun no_conv_ty _ = raise ERR "no_conv_ty" "";
 
 fun all_conv_ty _ = raise UNCHANGEDTY;
 
+fun all_conv_Ety _ _ = raise UNCHANGEDTY;
+
 (* ----------------------------------------------------------------------
     Apply two conversions in succession;  fail if either does.  Handle
     UNCHANGED appropriately.
    ---------------------------------------------------------------------- *)
 
-infix then_ty orelse_ty;
+infix then_ty orelse_ty then_Ety orelse_Ety;
 
 fun (conv1 then_ty conv2) ty = let
   val ty1 = conv1 ty
 in
   conv2 ty1 handle UNCHANGEDTY => ty1
 end handle UNCHANGEDTY => conv2 ty
+
+fun (conv1 then_Ety conv2) E ty = let
+  val ty1 = conv1 E ty
+in
+  conv2 E ty1 handle UNCHANGEDTY => ty1
+end handle UNCHANGEDTY => conv2 E ty
 
 (* ----------------------------------------------------------------------
     Apply conv1;  if it raises a HOL_ERR then apply conv2. Note that
@@ -2100,6 +2222,8 @@ end handle UNCHANGEDTY => conv2 ty
 
 fun (conv1 orelse_ty conv2) ty = conv1 ty handle HOL_ERR _ => conv2 ty;
 
+fun (conv1 orelse_Ety conv2) E ty = conv1 E ty handle HOL_ERR _ => conv2 E ty;
+
 
 (*---------------------------------------------------------------------------*
  * Perform the first successful conversion of those in the list.             *
@@ -2108,6 +2232,9 @@ fun (conv1 orelse_ty conv2) ty = conv1 ty handle HOL_ERR _ => conv2 ty;
 fun first_conv_ty [] ty = no_conv_ty ty
   | first_conv_ty (a::rst) ty = a ty handle HOL_ERR _ => first_conv_ty rst ty;
 
+fun first_conv_Ety [] _ ty = no_conv_ty ty
+  | first_conv_Ety (a::rst) E ty = a E ty handle HOL_ERR _ => first_conv_Ety rst E ty;
+
 (*---------------------------------------------------------------------------
  * Perform every conversion in the list.
  *---------------------------------------------------------------------------*)
@@ -2115,6 +2242,10 @@ fun first_conv_ty [] ty = no_conv_ty ty
 fun every_conv_ty convl ty =
    itlist (curry (op then_ty)) convl all_conv_ty ty
    handle HOL_ERR _ => raise ERR "every_conv_ty" "";
+
+fun every_conv_Ety convl E ty =
+   itlist (curry (op then_ty)) (map (fn c => c E) convl) all_conv_ty ty
+   handle HOL_ERR _ => raise ERR "every_conv_Ety" "";
 
 
 (*---------------------------------------------------------------------------
@@ -2128,6 +2259,13 @@ fun changed_conv_ty conv ty =
       else ty1
    end;
 
+fun changed_conv_Ety conv E ty =
+   let val ty1 = conv E ty
+           handle UNCHANGEDTY => raise ERR "changed_conv_Ety" "Input type unchanged"
+   in if aconv_ty ty ty1 then raise ERR "changed_conv_Ety" "Input type unchanged"
+      else ty1
+   end;
+
 (* ----------------------------------------------------------------------
     Cause a failure if the conversion causes the UNCHANGED exception to
     be raised.  Doesn't "waste time" doing an equality check.  Mnemonic:
@@ -2138,6 +2276,10 @@ fun qchanged_conv_ty conv ty =
     conv ty
     handle UNCHANGEDTY => raise ERR "qchanged_conv_ty" "Input type unchanged"
 
+fun qchanged_conv_Ety conv E ty =
+    conv E ty
+    handle UNCHANGEDTY => raise ERR "qchanged_conv_Ety" "Input type unchanged"
+
 (*---------------------------------------------------------------------------
  * Apply a conversion zero or more times.
  *---------------------------------------------------------------------------*)
@@ -2145,11 +2287,20 @@ fun qchanged_conv_ty conv ty =
 fun repeat_ty conv ty =
     ((qchanged_conv_ty conv then_ty (repeat_ty conv)) orelse_ty all_conv_ty) ty;
 
+fun repeat_Ety conv E ty =
+    ((qchanged_conv_Ety conv then_Ety (repeat_Ety conv)) orelse_Ety all_conv_Ety) E ty;
+
 fun try_conv_ty conv = conv orelse_ty all_conv_ty;
+
+fun try_conv_Ety conv = conv orelse_Ety all_conv_Ety;
 
 fun sub_conv_ty conv =
     try_conv_ty (app_conv_ty conv orelse_ty abs_conv_ty conv
                  orelse_ty univ_conv_ty conv orelse_ty exist_conv_ty conv)
+
+fun sub_conv_Ety conv =
+    try_conv_Ety (app_conv_Ety conv orelse_Ety abs_conv_Ety conv
+                  orelse_Ety univ_conv_Ety conv orelse_Ety exist_conv_Ety conv)
 
 fun head_betan_ty (TyApp(M as TyAbs _, N))
        = let val (btyv,body) = dest_abs_type M
@@ -2178,6 +2329,22 @@ fun head_beta_etan_ty (TyApp(M as TyAbs _, N))
           try_conv_ty (abs_conv_ty (rand_conv_ty head_beta_etan_ty) then_ty
                        eta_conv_ty then_ty head_beta_etan_ty)) ty
   | head_beta_etan_ty _ = raise UNCHANGEDTY
+
+fun beta_conv_Ety E = beta_conv_ty
+
+fun head_beta_etan_Ety E (TyApp(M as TyAbs _, N))
+       = let val (btyv,body) = dest_abs_type M
+         in qconv_Ety head_beta_etan_Ety E (pure_type_subst [btyv |-> N] body)
+         end
+  | head_beta_etan_Ety E (ty as TyApp(ty1 as TyApp _, ty2))
+       = let val ty' = TyApp(head_beta_etan_Ety E ty1,ty2) (* may throw UNCHANGEDTY *)
+         in qconv_Ety (try_conv_Ety (beta_conv_Ety then_Ety head_beta_etan_Ety)) E ty' (* cannot throw UNCHANGEDTY *)
+         end
+  | head_beta_etan_Ety E (ty as TyAbs (tyv, body))
+       = (abs_conv_Ety head_beta_etan_Ety then_Ety
+          try_conv_Ety (abs_conv_Ety (rand_conv_Ety head_beta_etan_Ety) then_Ety
+                        eta_conv_Ety then_Ety head_beta_etan_Ety)) E ty
+  | head_beta_etan_Ety _ _ = raise UNCHANGEDTY
 
 (* ----------------------------------------------------------------------
     traversal conversionals.
@@ -2210,26 +2377,50 @@ fun head_beta_etan_ty (TyApp(M as TyAbs _, N))
 fun depth_conv_ty conv ty =
     (sub_conv_ty (depth_conv_ty conv) then_ty repeat_ty conv) ty
 
+fun depth_conv_Ety conv E ty =
+    (sub_conv_Ety (depth_conv_Ety conv) then_Ety repeat_Ety conv) E ty
+
 fun redepth_conv_ty conv ty =
     (sub_conv_ty (redepth_conv_ty conv) then_ty
      try_conv_ty (conv then_ty redepth_conv_ty conv)) ty
+
+fun redepth_conv_Ety conv E ty =
+    (sub_conv_Ety (redepth_conv_Ety conv) then_Ety
+     try_conv_Ety (conv then_Ety redepth_conv_Ety conv)) E ty
 
 fun top_depth_conv_ty conv ty =
     (repeat_ty conv then_ty
      try_conv_ty (changed_conv_ty (sub_conv_ty (top_depth_conv_ty conv)) then_ty
                   try_conv_ty (conv then_ty top_depth_conv_ty conv))) ty
 
+fun top_depth_conv_Ety conv E ty =
+    (repeat_Ety conv then_Ety
+     try_conv_Ety (changed_conv_Ety (sub_conv_Ety (top_depth_conv_Ety conv)) then_Ety
+                   try_conv_Ety (conv then_Ety top_depth_conv_Ety conv))) E ty
+
 fun once_depth_conv_ty conv ty =
     try_conv_ty (conv orelse_ty sub_conv_ty (once_depth_conv_ty conv)) ty
 
+fun once_depth_conv_Ety conv E ty =
+    try_conv_Ety (conv orelse_Ety sub_conv_Ety (once_depth_conv_Ety conv)) E ty
+
 fun top_sweep_conv_ty conv ty =
     (repeat_ty conv then_ty sub_conv_ty (top_sweep_conv_ty conv)) ty
+
+fun top_sweep_conv_Ety conv E ty =
+    (repeat_Ety conv then_Ety sub_conv_Ety (top_sweep_conv_Ety conv)) E ty
 
 val deep_beta_ty = (* vacuum o *) qconv_ty (ifnotvarcon_ty (top_depth_conv_ty beta_conv_ty))
 
 val deep_eta_ty = (* vacuum o *) qconv_ty (ifnotvarcon_ty (top_depth_conv_ty eta_conv_ty))
 
+val deep_eta_Ety = (* vacuum o *) qconv_Ety (ifnotvarcon_Ety (top_depth_conv_Ety eta_conv_Ety))
+val deep_eta_ty = deep_eta_Ety []
+
 val deep_beta_eta_ty = (* vacuum o *) qconv_ty (ifnotvarcon_ty (top_depth_conv_ty (beta_conv_ty orelse_ty eta_conv_ty)))
+
+val deep_beta_eta_Ety = (* vacuum o *) qconv_Ety (ifnotvarcon_Ety (top_depth_conv_Ety (beta_conv_Ety orelse_Ety eta_conv_Ety)))
+val deep_beta_eta_ty = deep_beta_eta_Ety []
 
 fun strip_app_beta_eta_type ty = strip_app_type (deep_beta_eta_ty ty)
 
@@ -2241,6 +2432,7 @@ fun head_beta1_ty ty = (rator_conv_ty head_beta1_ty orelse_ty beta_conv_ty) ty
 (* val head_beta_ty = qconv_ty (repeat_ty head_beta1_ty) *)
 val head_beta_ty = qconv_ty head_betan_ty
 val head_beta_eta_ty = qconv_ty head_beta_etan_ty
+val head_beta_eta_Ety = qconv_Ety head_beta_etan_Ety
 
 
 local val EQ = Portable.pointer_eq
@@ -2277,6 +2469,24 @@ and abeconv1_ty t1 t2 =
           TyAbs((_,k2),t2)) => k1 = k2 andalso abeconv1_ty t1 t2
        | (M,N) => (M=N)
 
+fun abeconv_Ety E t1 t2 = EQ(t1,t2) orelse
+                  (*   aconv_ty (deep_beta_eta_ty t1) (deep_beta_eta_ty t2)  *)
+                       abeconv1_Ety E (head_beta_eta_Ety E t1) (head_beta_eta_Ety E t2)
+and abeconv1_Ety E t1 t2 =
+     case(t1,t2)
+      of (u as TyFv _, v as TyFv _ ) => type_var_compare(u,v) = EQUAL
+       | (u as TyCon _,v as TyCon _) => type_con_compare(u,v) = EQUAL
+       | (TyApp(p,t1),TyApp(q,t2)) => abeconv1_Ety E p q andalso abeconv_Ety E t1 t2
+       | (TyAll((_,k1),t1),
+          TyAll((_,k2),t2)) => k1 = k2 andalso abeconv_Ety (k1::E) t1 t2
+       | (TyExi((_,k1),t1),
+          TyExi((_,k2),t2)) => k1 = k2 andalso abeconv_Ety (k1::E) t1 t2
+       | (TyAbs((_,k1),t1),
+          TyAbs((_,k2),t2)) => k1 = k2 andalso abeconv1_Ety (k1::E) t1 t2
+       | (M,N) => (M=N)
+
+val abeconv_ty = abeconv_Ety []
+
 fun ge_ty t1 t2 = EQ(t1,t2) orelse
                   (*   aconv_ge_ty (deep_beta_eta_ty t1) (deep_beta_eta_ty t2)  *)
                        ge1_ty (head_beta_eta_ty t1) (head_beta_eta_ty t2)
@@ -2295,6 +2505,28 @@ and ge1_ty t1 t2 =
           TyAbs((_,k2),t2)) => k1 = k2 andalso ge1_ty t1 t2
        (* TyAbs((_,k2),t2)) => k1 :>=: k2 andalso ge1_ty t1 t2 *)
        | (M,N) => (M=N)
+
+fun ge_Ety E t1 t2 = EQ(t1,t2) orelse
+                  (*   aconv_ge_ty (deep_beta_eta_ty t1) (deep_beta_eta_ty t2)  *)
+                       ge1_Ety E (head_beta_eta_Ety E t1) (head_beta_eta_Ety E t2)
+and ge1_Ety E t1 t2 =
+     case(t1,t2)
+      of (u as TyFv _, v as TyFv _ ) => type_var_ge(u,v)
+       | (u as TyCon _,v as TyCon _) => type_con_ge(u,v)
+       | (TyApp(p,t1),TyApp(q,t2)) => ge1_Ety E p q andalso ge_Ety E t1 t2
+       | (TyAll((_,k1),t1),
+          TyAll((_,k2),t2)) => k1 = k2 andalso ge_Ety (k1::E) t1 t2
+       (* TyAll((_,k2),t2)) => k1 :>=: k2 andalso ge_Ety E t1 t2 *)
+       | (TyExi((_,k1),t1),
+          TyExi((_,k2),t2)) => k1 = k2 andalso ge_Ety (k1::E) t1 t2
+       (* TyExi((_,k2),t2)) => k1 :>=: k2 andalso ge_Ety E t1 t2 *)
+       | (TyAbs((_,k1),t1),
+          TyAbs((_,k2),t2)) => k1 = k2 andalso ge1_Ety (k1::E) t1 t2
+       (* TyAbs((_,k2),t2)) => k1 :>=: k2 andalso ge1_Ety E t1 t2 *)
+       | (M,N) => (M=N)
+
+val ge_ty = ge_Ety []
+
 end
 
 val eq_ty = abeconv_ty

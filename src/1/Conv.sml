@@ -2422,7 +2422,7 @@ fun FUN_EQ_CONV tm =
 (* TY_FUN_EQ_CONV "f = g"  returns:					*)
 (* 		   |- (f = g) = !:a. (f [:a:] = g [:a:]).		*)
 (*									*)
-(* Notes: f and g must have universal types. The conversion choses	*)
+(* Notes: f and g must have universal types. The conversion chooses     *)
 (* an "'a" not free in f or g. This conversion just states that		*)
 (* type abstractions are equal IFF the results of applying them		*)
 (* to an arbitrary type are equal.	       	  	   		*)

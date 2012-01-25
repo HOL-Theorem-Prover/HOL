@@ -835,7 +835,8 @@ fun lazy_beta_conv (Comb(Abs(_,Body),Rand)) =
  *---------------------------------------------------------------------------*)
 
 local fun pop (tm as Bv i, k) =
-           if i=k then raise ERR "eta_conv" "not an eta-redex" else tm
+           if i=k then raise ERR "eta_conv" "not an eta-redex"
+           else if i>k then Bv (i-1) else tm
         | pop (Comb(Rator,Rand),k) = Comb(pop(Rator,k), pop(Rand,k))
         | pop (TComb(Rator,Ty),k)  = TComb(pop(Rator,k), Ty)
         | pop (Abs(v,Body), k)     = Abs(v,pop(Body, k+1))
@@ -846,7 +847,11 @@ local fun pop (tm as Bv i, k) =
         | eta_body (tm as Clos _)     = eta_body (push_clos tm)
         | eta_body _ = raise ERR "eta_conv" "not an eta-redex"
 in
-fun eta_conv (Abs(_,Body))  = eta_body Body
+fun eta_conv (Abs(v,Body))  =
+      if not (rank_of_term v =
+              rank_of_type (fst (dom_rng (type_of (fst (dest_comb Body))))))
+      then raise ERR "eta_conv" "not an eta-redex"
+      else eta_body Body
   | eta_conv (tm as Clos _) = eta_conv (push_clos tm)
   | eta_conv _ = raise ERR "eta_conv" "not an eta-redex"
 end;
@@ -904,18 +909,18 @@ val beta_conv_ty_in_term =
  *---------------------------------------------------------------------------*)
 
 val eta_conv_ty_in_term =
-     let fun econv(Fv(s,ty))         = Fv(s,deep_eta_ty ty)
-           | econv(Const(Name,Ty))   = Const(Name,econv_pty Ty)
-           | econv(Comb(Rator,Rand)) = Comb(econv Rator,econv Rand)
-           | econv(TComb(Rator,Ty))  = TComb(econv Rator,deep_eta_ty Ty)
-           | econv(Abs(v,Body))      = Abs(econv v,econv Body)
-           | econv(TAbs(a,Body))     = TAbs(a,econv Body)
-           | econv(tm as Clos _)     = econv(push_clos tm)
-           | econv tm = tm (* e.g., bound variables *)
-         and econv_pty (GRND ty)     = GRND (deep_eta_ty ty)
-           | econv_pty (POLY ty)     = POLY (deep_eta_ty ty)
+     let fun econv E (Fv(s,ty))         = Fv(s,deep_eta_Ety E ty)
+           | econv E (Const(Name,Ty))   = Const(Name,econv_pty E Ty)
+           | econv E (Comb(Rator,Rand)) = Comb(econv E Rator,econv E Rand)
+           | econv E (TComb(Rator,Ty))  = TComb(econv E Rator,deep_eta_Ety E Ty)
+           | econv E (Abs(v,Body))      = Abs(econv E v,econv E Body)
+           | econv E (TAbs(a as (_,kd),Body)) = TAbs(a,econv (kd::E) Body)
+           | econv E (tm as Clos _)     = econv E (push_clos tm)
+           | econv E tm = tm (* e.g., bound variables *)
+         and econv_pty E (GRND ty)     = GRND (deep_eta_Ety E ty)
+           | econv_pty E (POLY ty)     = POLY (deep_eta_Ety E ty)
      in
-       econv
+       econv []
      end;
 
 (*---------------------------------------------------------------------------*
@@ -923,18 +928,18 @@ val eta_conv_ty_in_term =
  *---------------------------------------------------------------------------*)
 
 val beta_eta_conv_ty_in_term =
-     let fun beconv(Fv(s,ty))         = Fv(s,deep_beta_eta_ty ty)
-           | beconv(Const(Name,Ty))   = Const(Name,beconv_pty Ty)
-           | beconv(Comb(Rator,Rand)) = Comb(beconv Rator,beconv Rand)
-           | beconv(TComb(Rator,Ty))  = TComb(beconv Rator,deep_beta_eta_ty Ty)
-           | beconv(Abs(v,Body))      = Abs(beconv v,beconv Body)
-           | beconv(TAbs(a,Body))     = TAbs(a,beconv Body)
-           | beconv(tm as Clos _)     = beconv(push_clos tm)
-           | beconv tm = tm (* e.g., bound variables *)
-         and beconv_pty (GRND ty)     = GRND (deep_beta_eta_ty ty)
-           | beconv_pty (POLY ty)     = POLY (deep_beta_eta_ty ty)
+     let fun beconv E (Fv(s,ty))         = Fv(s,deep_beta_eta_Ety E ty)
+           | beconv E (Const(Name,Ty))   = Const(Name,beconv_pty E Ty)
+           | beconv E (Comb(Rator,Rand)) = Comb(beconv E Rator,beconv E Rand)
+           | beconv E (TComb(Rator,Ty))  = TComb(beconv E Rator,deep_beta_eta_Ety E Ty)
+           | beconv E (Abs(v,Body))      = Abs(beconv E v,beconv E Body)
+           | beconv E (TAbs(a as (_,kd),Body)) = TAbs(a,beconv (kd::E) Body)
+           | beconv E (tm as Clos _)     = beconv E (push_clos tm)
+           | beconv E tm = tm (* e.g., bound variables *)
+         and beconv_pty E (GRND ty)     = GRND (deep_beta_eta_Ety E ty)
+           | beconv_pty E (POLY ty)     = POLY (deep_beta_eta_Ety E ty)
      in
-       beconv
+       beconv []
      end;
 
 
@@ -953,7 +958,8 @@ local fun pop (tm as Fv(s,ty),k)    = Fv(s,pop_ty(ty,k))
       and pop_pty (GRND ty,k)       = GRND (pop_ty(ty,k))
         | pop_pty (POLY ty,k)       = POLY (pop_ty(ty,k))
       and pop_ty (v as TyBv i,k)    =
-           if i=k then raise ERR "ty_eta_conv" "not a type eta-redex" else v
+           if i=k then raise ERR "ty_eta_conv" "not a type eta-redex"
+           else if i>k then TyBv (i-1) else v
         | pop_ty (TyApp(opr,arg),k) = TyApp(pop_ty(opr,k), pop_ty(arg,k))
         | pop_ty (TyAll(bv,Body),k) = TyAll(bv, pop_ty(Body,k+1))
         | pop_ty (TyExi(bv,Body),k) = TyExi(bv, pop_ty(Body,k+1))
@@ -963,7 +969,10 @@ local fun pop (tm as Fv(s,ty),k)    = Fv(s,pop_ty(ty,k))
         | ty_eta_body (tm as Clos _)        = ty_eta_body (push_clos tm)
         | ty_eta_body _ = raise ERR "ty_eta_conv" "not a type eta-redex"
 in
-fun ty_eta_conv (TAbs(_,Body)) = ty_eta_body Body
+fun ty_eta_conv (TAbs((_,kd),Body)) =
+      if not (kd = kind_of (fst (dest_univ_type (type_of (fst (dest_tycomb Body))))))
+      then raise ERR "ty_eta_conv" "not a type eta-redex"
+      else ty_eta_body Body
   | ty_eta_conv (tm as Clos _) = ty_eta_conv (push_clos tm)
   | ty_eta_conv _ = raise ERR "ty_eta_conv" "not a type eta-redex"
 end;

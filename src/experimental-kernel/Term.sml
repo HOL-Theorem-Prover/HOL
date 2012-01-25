@@ -1822,8 +1822,9 @@ fun beta_conv (App (Abs (v, body), x)) =
 val lazy_beta_conv = beta_conv
 
 fun eta_conv (Abs (x, App (f, x'))) =
-  if eq x x' andalso not (free_in x f) then
-    f
+  if eq x x' andalso not (free_in x f)
+     andalso rank_of_term x = rank_of_type (fst (dom_rng (type_of f)))
+  then f
   else raise ERR "eta_conv" "Term not an eta-redex"
   | eta_conv _ =
   raise ERR "eta_conv" "Term not an eta-redex"
@@ -1837,8 +1838,9 @@ fun ty_beta_conv (TApp (TAbs (a, body), ty)) =
   raise ERR "ty_beta_conv" "Term not a type application"
 
 fun ty_eta_conv (TAbs(a, TApp(f, a'))) =
-  if a = a' andalso not (mem a (type_vars_in_term f)) then
-    f
+  if a = a' andalso not (mem a (type_vars_in_term f))
+     andalso kind_of a = kind_of (fst (dest_univ_type (type_of f)))
+  then f
   else raise ERR "ty_eta_conv" "Term not a type eta-redex"
   | ty_eta_conv (TAbs _) =
   raise ERR "ty_eta_conv" "Term not a type eta-redex"

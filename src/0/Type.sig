@@ -20,6 +20,10 @@ sig
   val mk_fun_type   : hol_type * hol_type -> kind list -> hol_type
   val raw_dom_rng   : hol_type -> hol_type * hol_type  (* inverts -->  *)
 
+  val eta_conv_Ety   : kind list -> hol_type -> hol_type
+  val deep_eta_Ety   : kind list -> hol_type -> hol_type
+  val deep_beta_eta_Ety : kind list -> hol_type -> hol_type
+
   val prim_kind_match_type : hol_type -> hol_type
                       -> ( (hol_type,hol_type) Lib.subst * hol_type list ) *
                          ( (kind,kind) Lib.subst * kind list ) * (rank * bool)

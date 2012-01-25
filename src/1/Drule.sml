@@ -280,9 +280,9 @@ fun SIMPLE_CHOOSE v th =
     SOME h => CHOOSE(v, ASSUME (boolSyntax.mk_exists(v,h))) th
   | NONE => raise ERR "SIMPLE_CHOOSE" ""
 
-fun SIMPLE_TY_CHOOSE v th =
+fun SIMPLE_TY_CHOOSE a th =
   case HOLset.find (fn _ => true) (Thm.hypset th) of
-    SOME h => TY_CHOOSE(v, ASSUME (boolSyntax.mk_tyexists(v,h))) th
+    SOME h => TY_CHOOSE(a, ASSUME (boolSyntax.mk_tyexists(a,h))) th
   | NONE => raise ERR "SIMPLE_TY_CHOOSE" "";
 
 fun SIMPLE_TY_TM_CHOOSE (inL a) th = SIMPLE_TY_CHOOSE a th

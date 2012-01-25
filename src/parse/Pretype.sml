@@ -1054,7 +1054,12 @@ fun eta_conv_ty (PT(TyAbst(Bvar, M), _))
              val _ = if eq Bvar0 Argv then () else raise EERR
 (*
              val _ = if not (is_debug()) then () else
-                     print ("eta_conv_ty: bound var and arg are same; about to check bound var not in Opr\n");
+                     print ("eta_conv_ty: bound var and arg are same; about to check ranks of opr/bvar\n");
+*)
+             val _ = if Prekind.eq (fst (Prekind.dom_rng (pkind_of Opr))) (pkind_of Bvar) then () else raise EERR
+(*
+             val _ = if not (is_debug()) then () else
+                     print ("eta_conv_ty: bound var and opr match ranks; about to check bound var not in Opr\n");
 *)
              val _ = if Lib.op_mem eq Bvar0 (type_vars Opr) then raise EERR else ()
 (*

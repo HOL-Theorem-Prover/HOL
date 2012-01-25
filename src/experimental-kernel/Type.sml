@@ -2110,10 +2110,16 @@ fun beta_conv_ty (TyApp (TyAbs (btyv,body), N))
 fun eta_conv_ty (ty as TyAbs (tyv, TyApp(M, Tyv tyv')))
      = if tyv = tyv' then
          let val a = Tyv tyv
+(*
              val M' = fst (dest_app_type (beta_conv_ty (TyApp(ty, a))))
                       handle HOL_ERR _ => raise ERR "eta_conv_ty" "not a type eta redex"
-         in if type_var_in a M' then raise ERR "eta_conv_ty" "not a type eta redex"
+         in if not (fst (kind_dom_rng (kind_of M)) = kind_of a)
+               orelse type_var_in a M' then raise ERR "eta_conv_ty" "not a type eta redex"
             else M'
+*)
+         in if not (fst (kind_dom_rng (kind_of M)) = kind_of a)
+               orelse type_var_in a M then raise ERR "eta_conv_ty" "not a type eta redex"
+            else M
          end
        else raise ERR "eta_conv_ty" "not a type eta redex"
   | eta_conv_ty _ = raise ERR "eta_conv_ty" "not a type eta redex"
