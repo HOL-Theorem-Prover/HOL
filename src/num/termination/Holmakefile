@@ -1,0 +1,11 @@
+ifdef POLY
+HOLHEAP = numheap
+EXTRA_CLEANS = $(HOLHEAP) $(HOLHEAP).o
+
+BARE_DEPS = ../theories/numeralTheory ../numLib
+DEPS = $(patsubst %,%.uo,$(BARE_DEPS))
+
+$(HOLHEAP): $(DEPS) $(dprot $(HOLDIR)/bin/hol.builder0)
+	$(protect $(HOLDIR)/bin/buildheap) -o $@ -b $(protect $(HOLDIR)/bin/hol.builder0) $(BARE_DEPS)
+
+endif
