@@ -58,9 +58,10 @@ local
     SRW_TAC [][FUN_EQ_THM] THEN
     SUBST_TAC [GSYM (ISPEC ``P:'a->bool`` ETA_THM)] THEN
     METIS_TAC [])
+  val imp1 = METIS_PROVE[]``!t. t ==> t``
+  val split = (map GEN_ALL) o CONJUNCTS o SPEC_ALL
 in
-  val base_thms = foldl ins Net.empty [imp_def,and_def,exists_def,CONJUNCT2
-  NOT_CLAUSES]
+  val base_thms = foldl ins Net.empty ((CONJUNCTS NOT_CLAUSES)@(split EQ_CLAUSES)@(split IMP_CLAUSES)@(split AND_CLAUSES)@[imp_def,and_def,exists_def,imp1])
 end
 
 local
@@ -75,8 +76,10 @@ handle HOL_ERR _ =>
   fst(snd(Lib.first (fn (_,(th,_)) => eq (h,c) th) (DB.match [] c)))
 handle HOL_ERR _ =>
   from_net ths (h,c)
-handle HOL_ERR _ =>
+handle HOL_ERR _ => (
+  Feedback.HOL_MESG(Parse.term_to_string c);
   raise ERR "axiom_from_db" "not found"
+  )
 end
 
 fun st_(st,{stack,dict,thms,...}) = {stack=st,dict=dict,thms=thms}
