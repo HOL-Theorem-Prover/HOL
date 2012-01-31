@@ -125,10 +125,8 @@ val _ = List.app decide
     ``!x y z. (x \/ y) /\ (x \/ z)``,
     ``x \/ ~x``,
     ``x /\ ~x``,
-    ``(x /\ x) \/ !y. x ==> y``
-    (*,
-    TODO: fix looping bug in Canon.PRENEX_CONV
-    tm0,
+    ``(x /\ x) \/ !y. x ==> y``,
+    tm0(*,
     TODO: remove and replace unused variables
     ``!x (y:bool). (x /\ (!y. y ==> x)) \/ (~x /\ (?y. y ==> x))``,
     ``!x (y:'a). (x /\ (!y. y ==> x)) \/ (~x /\ (?y. y ==> x))``
