@@ -79,6 +79,13 @@ fun decide t =
         ", message: " ^ message ^ ")")
   else ()
 
+local
+  fun f n = Term.mk_var("v"^(Int.toString n),Type.bool)
+  val r = QDimacs.read_qdimacs_file f
+in
+  val tm0 = r "tests/z4ml.blif_0.10_0.20_0_1_out_exact.qdimacs"
+end
+
 (*****************************************************************************)
 (* Test cases                                                                *)
 (*****************************************************************************)
@@ -106,7 +113,8 @@ val _ = List.app prove
   [
     ``?x. x``,
     ``!x. ?y. x \/ y``,
-    ``!x. ?y. (x \/ y) /\ (~x \/ y)``
+    ``!x. ?y. (x \/ y) /\ (~x \/ y)``,
+    tm0
   ]
 
 val _ = List.app decide
@@ -117,7 +125,10 @@ val _ = List.app decide
     ``!x y z. (x \/ y) /\ (x \/ z)``,
     ``x \/ ~x``,
     ``x /\ ~x``,
-    ``(x /\ x) \/ !y. x ==> y`` (*,
+    ``(x /\ x) \/ !y. x ==> y``
+    (*,
+    TODO: fix looping bug in Canon.PRENEX_CONV
+    tm0,
     TODO: remove and replace unused variables
     ``!x (y:bool). (x /\ (!y. y ==> x)) \/ (~x /\ (?y. y ==> x))``,
     ``!x (y:'a). (x /\ (!y. y ==> x)) \/ (~x /\ (?y. y ==> x))``
