@@ -39,7 +39,7 @@ val (recfn_rules, recfn_ind, recfn_cases) = Hol_reln`
   (∀f gs m. recfn f (LENGTH gs) ∧ EVERY (λg. recfn g m) gs ⇒
             recfn (recCn f gs) m) ∧
   (∀zf sf n. recfn zf (n - 1) ∧ recfn sf (n + 1) ⇒ recfn (recPr zf sf) n) ∧
-  (∀f n. recfn f (n + 1) ⇒ recfn (minimise f) n)
+  (∀f n. 0 < n ∧ recfn f (n + 1) ⇒ recfn (minimise f) n)
 `;
 
 val recfn_rulesl = CONJUNCTS recfn_rules
