@@ -4354,17 +4354,19 @@ val partition_elements_interrelate = store_thm(
 
 val partition_SUBSET = Q.store_thm
 ("partition_SUBSET",
- `!R s t. R equiv_on s /\ t IN (partition R s) ==> t SUBSET s`,
-RW_TAC bool_ss [partition_def, GSPECIFICATION, SUBSET_DEF] THEN
-FULL_SIMP_TAC bool_ss [GSPECIFICATION,pairTheory.PAIR_EQ]);
+ `!R s t. t IN partition R s ==> t SUBSET s`,
+  SRW_TAC [][partition_def, EXTENSION, EQ_IMP_THM] THEN
+  METIS_TAC [SUBSET_DEF]);
 
-val FINITE_partition = Q.store_thm
-("FINITE_partition",
- `!R s. R equiv_on s /\ FINITE s
-       ==> FINITE (partition R s) /\
-           !t. t IN (partition R s) ==> FINITE t`,
-METIS_TAC [FINITE_BIGUNION_EQ, partition_SUBSET,
-           SUBSET_FINITE, BIGUNION_partition]);
+val FINITE_partition = Q.store_thm (
+  "FINITE_partition",
+  `!R s. FINITE s ==>
+         FINITE (partition R s) /\
+         !t. t IN partition R s ==> FINITE t`,
+  REPEAT GEN_TAC THEN STRIP_TAC THEN
+  `!t. t IN partition R s ==> t SUBSET s` by METIS_TAC [partition_SUBSET] THEN
+  `!t. t IN partition R s ==> t IN POW s` by SRW_TAC [][POW_DEF] THEN
+  METIS_TAC [FINITE_POW, SUBSET_FINITE, SUBSET_DEF]);
 
 val partition_CARD = Q.store_thm
 ("partition_CARD",
