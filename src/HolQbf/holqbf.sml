@@ -5,7 +5,7 @@ fun main() = let
   val _ = Feedback.emit_MESG := false
   val _ = thm_to_article TextIO.stdOut (fn () => HolQbfLib.decide t)
 in () end
-handle HOL_ERR e => (print (format_ERR e); raise D)
+handle Feedback.HOL_ERR e => (print (Feedback.format_ERR e); raise D)
      | Io {name,function,cause=SysErr(s,_)} => (print ("IO error: name="^name^", function="^function^"SysErr="^s); raise D)
      | Io {name,function,cause} => (print ("IO error: name="^name^", function="^function); raise D)
      | e => (print "other error: "; PolyML.print e; raise D)

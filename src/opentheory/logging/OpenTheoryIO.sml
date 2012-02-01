@@ -1,6 +1,6 @@
 structure OpenTheoryIO :> OpenTheoryIO = struct
 
-open Opentheory Logging
+open Opentheory Logging HolKernel
 
 val ERR = Feedback.mk_HOL_ERR "OpenTheoryIO"
 
@@ -12,7 +12,7 @@ fun thm_to_article out th = let
 in () end
 
 fun term_to_article out t = thm_to_article out
-  (fn()=>mk_thm([],list_mk_comb(inst[alpha|->bool,beta|->type_of t]``combin$K``,[F,t])))
+  (fn()=>mk_thm([],list_mk_comb(inst[alpha|->bool,beta|->type_of t]``combin$K``,[boolSyntax.F,t])))
 
 val article_to_thm = let
   val ERR = ERR "article_to_thm"
