@@ -4,6 +4,7 @@
 
 open HolKernel bossLib boolLib Parse
 open finite_mapTheory arithmeticTheory pred_setTheory;
+open boolSimps
 
 val _ = new_theory "reg"
 
@@ -438,6 +439,12 @@ val rP_thm = store_thm(
   srw_tac [][predOf_def, rP_def]);
 val _ = augment_srw_ss [rewrites [rP_thm]]
 
+val rP_eq_thm = store_thm(
+  "rP_eq_thm",
+  ``predOf (rP r ((=) v)) s ⇔ (s.regs '' r = v)``,
+  srw_tac [][] >> metis_tac [])
+val _ = augment_srw_ss [rewrites [rP_eq_thm]]
+
 val PCeq_def = Define`
   PCeq n pc reg = (pc = n)
 `;
@@ -818,8 +825,6 @@ val move_correct = store_thm(
   asm_simp_tac (srw_ss() ++ ARITH_ss) [RPimp_thm, predOf_AND_thm] >>
   srw_tac [] [predOf_def, PCsub_def, REGfRsub_def] >>
   qpat_assum `Q s.pc f` mp_tac >>
-  qpat_assum `0 = s.regs '' src` (assume_tac o SYM) >>
-  asm_simp_tac (srw_ss()) [] >>
   asm_simp_tac (srw_ss()) [combinTheory.UPDATE_APPLY_IMP_ID]);
 
 val RPcopy_def = Define`
@@ -926,15 +931,12 @@ val RPcopy_correct = store_thm(
                         combinTheory.APPLY_UPDATE_THM] >>
     pop_assum mp_tac >>
     qpat_assum `P pccc rrrr` (K ALL_TAC) >>
-    qpat_assum `0 = s.regs '' tmp` (assume_tac o SYM) >>
     asm_simp_tac (srw_ss()) [combinTheory.UPDATE_APPLY_IMP_ID,
                              combinTheory.APPLY_UPDATE_THM],
 
     (* post-condition established *)
     asm_simp_tac (srw_ss()) [RPimp_thm, predOf_AND_thm] >>
     srw_tac [][REGfRsub_def, predOf_def] >>
-    fsrw_tac [][] >>
-    qpat_assum `0 = s.regs '' src` (assume_tac o SYM) >>
     fsrw_tac [][] >>
     qpat_assum `QQ (bi + 3) f2` mp_tac >>
     qmatch_abbrev_tac `QQ (bi + 3) f1 ==> QQ (bi + 3) f2` >>
@@ -943,22 +945,83 @@ val RPcopy_correct = store_thm(
                combinTheory.UPDATE_APPLY_IMP_ID]
   ])
 
+val listpresent_def = Define`
+  listpresent base l pc r ⇔
+    ∀j. j < LENGTH l ⇒ (r (j + base) = EL j l)
+`;
+
+val _ = overload_on ("initvec", ``listpresent 1``)
+
+val zeroset_def = Define`
+  zeroset s pc r ⇔ ∀j. j ∈ s ⇒ (r j = 0)
+`;
+
+val PCsub_listpresent = store_thm(
+  "PCsub_listpresent",
+  ``PCsub (listpresent b vec) pcval = listpresent b vec``,
+  srw_tac [][listpresent_def, FUN_EQ_THM, PCsub_def]);
+val _ = augment_srw_ss [rewrites [PCsub_listpresent]]
+
+val PCsub_zeroset = store_thm(
+  "PCsub_zeroset",
+  ``PCsub (zeroset tmps) pcval = zeroset tmps``,
+  srw_tac [][zeroset_def, PCsub_def, FUN_EQ_THM]);
+val _ = augment_srw_ss [rewrites [PCsub_zeroset]]
+
+val zeroset_concrete = store_thm(
+  "zeroset_concrete",
+  ``(zeroset {} = K (K T)) ∧
+    (zeroset (x INSERT s) = rP x ((=) 0) && zeroset s)``,
+  srw_tac [DNF_ss][zeroset_def, FUN_EQ_THM, rP_def, predOf_AND_def] >>
+  metis_tac []);
+val _ = augment_srw_ss [rewrites [zeroset_concrete]]
+
+val EL_LENGTH_LAST = store_thm(
+  "EL_LENGTH_LAST",
+  ``EL (LENGTH t) (h::t) = LAST (h::t)``,
+  qid_spec_tac `h` >> Induct_on `t` >> srw_tac [][]);
+
+val listpresent_concrete = store_thm(
+  "listpresent_concrete",
+  ``(listpresent b [] = K (K T))∧
+    (listpresent b (h::t) = rP b ((=) h) && listpresent (b + 1) t)``,
+  srw_tac [][listpresent_def, FUN_EQ_THM, predOf_AND_def, rP_def,
+             EQ_IMP_THM] >|
+  [
+    pop_assum (qspec_then `0` mp_tac) >> srw_tac [][],
+    first_x_assum (qspec_then `SUC j` mp_tac) >> srw_tac [ARITH_ss][ADD1],
+    Cases_on `j` >> fsrw_tac [][] >> res_tac >> fsrw_tac [ARITH_ss][ADD1]
+  ]);
+
+val REGfRsub_listpresent = store_thm(
+  "REGfRsub_listpresent",
+  ``r < b ∨ b + LENGTH l < r ⇒
+    (REGfRsub (listpresent b l) r rf = listpresent b l)``,
+  srw_tac [ARITH_ss][listpresent_def, FUN_EQ_THM, REGfRsub_def,
+                     combinTheory.APPLY_UPDATE_THM]);
+val _ = augment_srw_ss [rewrites [REGfRsub_listpresent]]
+
+val REGfRsub_zeroset = store_thm(
+  "REGfRsub_zeroset",
+  ``i ∉ s ⇒ (REGfRsub (zeroset s) i rf = zeroset s)``,
+  srw_tac [COND_elim_ss, DNF_ss]
+          [zeroset_def, REGfRsub_def, FUN_EQ_THM,
+           combinTheory.APPLY_UPDATE_THM] >> metis_tac []);
+val _ = augment_srw_ss [rewrites [REGfRsub_zeroset]]
+
 val implements_def = Define`
   implements rm temps bi ei f i =
     ∀l.
      (LENGTH l = i) ∧ (∀j. j ∈ temps ==> j > i) ==>
       (∀r. (f l = SOME r) ==>
-           ((λpc r. (∀j. j < i ==> (r (j + 1) = EL j l)) ∧
-                    (∀j. j ∈ temps ⇒ (r j = 0))) && rP 0 ((=) 0) &&
-            PCeq bi)
+           (initvec l && zeroset temps && rP 0 ((=) 0) && PCeq bi)
            ⊢
               rm
-           ⊣ ((λpc r. (∀j. j < i ==> (r (j + 1) = EL j l))) && PCeq ei &&
-              rP 0 ((=) r))) ∧
+           ⊣ (initvec l && PCeq ei && rP 0 ((=) r))) ∧
       ((f l = NONE) ==>
-      ¬(((λpc r. (∀j. j < i ==> (r (j + 1) = EL j l)) ∧
-                 (∀j. j ∈ temps ⇒ (r j = 0))) && PCeq bi &&
-                rP 0 ((=)0)) ⊢ rm ⊣ K (K T)))
+      ¬((initvec l && zeroset temps && rP 0 ((=) 0) && PCeq bi) ⊢
+           rm
+         ⊣ K (K T)))
 `;
 
 open recursivefnsTheory
@@ -968,7 +1031,7 @@ val implements_zero = store_thm(
   ``implements FEMPTY {} i i (K (SOME 0)) 1``,
   srw_tac [][implements_def] >>
   match_mp_tac HOARE_skip >>
-  srw_tac [][predOf_def, RPimp_def, predOf_AND_def, rP_def]);
+  srw_tac [][predOf_def, RPimp_def, predOf_AND_def]);
 
 val implements_SUC = store_thm(
   "implements_SUC",
@@ -977,7 +1040,7 @@ val implements_SUC = store_thm(
                (SOME o succ) 1``,
   srw_tac [][implements_def] >>
   Cases_on `l` >>
-  fsrw_tac [][listTheory.LENGTH_NIL, DECIDE ``x < 1 ⇔ (x = 0)``] >>
+  fsrw_tac [][listpresent_concrete, listTheory.LENGTH_NIL] >>
   srw_tac [][] >>
   match_mp_tac HOARE_sequence >>
   srw_tac [ARITH_ss][FDOM_RPcopy] >>
@@ -993,9 +1056,9 @@ val implements_SUC = store_thm(
   qunabbrev_tac `c1` >>
   match_mp_tac RPcopy_correct >>
   srw_tac [ARITH_ss][] >>
-  srw_tac [ARITH_ss][Abbr`P`, Abbr`Q`, predOf_def, predOf_AND_def, RPimp_def,
-                     PCeq_def, rP_def, REGfRsub_def,
-                     combinTheory.APPLY_UPDATE_THM]);
+  srw_tac [ARITH_ss][Abbr`P`, Abbr`Q`] >>
+  srw_tac [ARITH_ss][predOf_def, predOf_AND_thm, RPimp_thm] >>
+  fsrw_tac [ARITH_ss][REGfRsub_def, combinTheory.APPLY_UPDATE_THM]);
 
 val implements_proj = store_thm(
   "implements_proj",
@@ -1003,9 +1066,10 @@ val implements_proj = store_thm(
                        bi (bi + 5) (SOME o proj i) n``,
   srw_tac [][implements_def] >>
   match_mp_tac RPcopy_correct >>
-  srw_tac [ARITH_ss][predOf_def, REGfRsub_def, RPimp_def, predOf_AND_def,
-                     PCeq_def, rP_def, combinTheory.APPLY_UPDATE_THM,
-                     primrecfnsTheory.proj_def]);
+  srw_tac [ARITH_ss][REGfRsub_def, RPimp_thm, predOf_AND_thm,
+                     combinTheory.APPLY_UPDATE_THM,
+                     primrecfnsTheory.proj_def] >>
+  fsrw_tac [][predOf_def, listpresent_def]);
 
 val usedregs_def = Define`
   usedregs rmp = IMAGE (λa. case a of INC r p => r | TST r p1 p2 => r)
@@ -1069,11 +1133,17 @@ val unusedregs_RMstar = store_thm(
 val unusedregs_dont_change = store_thm(
   "unusedregs_dont_change",
   ``∀n r. P ⊢ c ⊣ Q ∧ r ∉ usedregs c ⇒
-    (P && rP r ((=) n)) ⊢ c ⊣ (Q && rP r ((=) n))``,
+          (P && rP r ((=) n)) ⊢ c ⊣ (Q && rP r ((=) n))``,
   srw_tac [][HOARE_def, predOf_def, predOf_AND_def, rP_def] >>
   first_x_assum (qspec_then `s0` mp_tac) >> asm_simp_tac (srw_ss()) [] >>
   disch_then (Q.X_CHOOSE_THEN `m` strip_assume_tac) >>
   qexists_tac `m` >> srw_tac [][unusedregs_RMstar]);
+
+val recfn_arity_nonzero = store_thm(
+  "recfn_arity_nonzero",
+  ``∀f i. recfn f i ⇒ 0 < i``,
+  ho_match_mp_tac recfn_ind >> srw_tac [ARITH_ss][] >>
+  fsrw_tac [][]);
 
 (* val theorem1 = store_thm(
   "theorem1",
@@ -1087,17 +1157,42 @@ val unusedregs_dont_change = store_thm(
     (* zerof *)
     srw_tac [][] >> map_every qexists_tac [`bi`, `{}`, `FEMPTY`] >>
     srw_tac [][implements_zero],
+
     (* succ *)
     srw_tac [][] >>
-    map_every qexists_tac [`bi + 6`, `{MAX_SET (3 INSERT A) + 1}`,
-                           `FUNION (RPcopy 1 0 i bi (bi + 5))
+    qabbrev_tac `tmp = MAX_SET (3 INSERT A) + 1` >>
+    `tmp ∉ A ∧ 3 < tmp`
+       by (qunabbrev_tac `tmp` >> DEEP_INTRO_TAC MAX_SET_ELIM >>
+           srw_tac [][DISJ_IMP_THM, FORALL_AND_THM] >>
+           fsrw_tac [ARITH_ss][Once MONO_NOT_EQ]) >>
+    `0 ∉ A ∧ 1 ∉ A`
+       by (conj_tac >> spose_not_then assume_tac >>
+           fsrw_tac [][IN_DISJOINT, GSYM IMP_DISJ_THM] >>
+           res_tac >> fsrw_tac [][]) >>
+    map_every qexists_tac [`bi + 6`, `{tmp}`,
+                           `FUNION (RPcopy 1 0 tmp bi (bi + 5))
                                    (FEMPTY |+ (bi + 5, INC 0 (bi + 6)))`] >>
-    srw_tac [][]
-      >- (DEEP_INTRO_TAC MAX_SET_ELIM >>
-          srw_tac [][DISJ_IMP_THM, FORALL_AND_THM] >>
-          fsrw_tac [ARITH_ss][Once MONO_NOT_EQ])
-          srw_tac [][] >>
-  implements_SUC
+    srw_tac [ARITH_ss][implements_SUC],
+
+    (* proj *)
+    map_every qx_gen_tac [`i`, `n`] >> srw_tac [][] >>
+    qabbrev_tac `tmp = MAX_SET (n INSERT A) + 1` >>
+    `tmp ∉ A ∧ n < tmp`
+       by (qunabbrev_tac `tmp` >> DEEP_INTRO_TAC MAX_SET_ELIM >>
+           srw_tac [][DISJ_IMP_THM, FORALL_AND_THM] >>
+           fsrw_tac [ARITH_ss][Once MONO_NOT_EQ]) >>
+    `∀i. i ∈ A ⇒ n < i`
+       by fsrw_tac [][IN_DISJOINT, GSYM IMP_DISJ_THM,
+                      DECIDE ``~(x < y + 1) <=> y < x``] >>
+    map_every qexists_tac [`bi + 5`, `{tmp}`,
+                           `RPcopy (i + 1) 0 tmp bi (bi + 5)`] >>
+    srw_tac [ARITH_ss][implements_proj] >>
+    strip_tac >> res_tac >> fsrw_tac [ARITH_ss][],
+
+    (* composition *)
+    srw_tac [][listTheory.EVERY_CONJ] >>
+    `
+
 *)
 
 val _ = export_theory();
