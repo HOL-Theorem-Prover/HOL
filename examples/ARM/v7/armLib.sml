@@ -256,10 +256,15 @@ fun arm_assemble_to_file_from_string s f =
 fun arm_assemble_to_file_from_file s f =
   arm_assemble_to_file_parse s f o fst o arm_parse_from_file;
 
-fun join (a,b) = case b of "" => a | _ => String.concat [a, " ", b];
+fun join s (a,b) =
+   if a = "WORD" orelse a = "SHORT"
+      then "UDF; (" ^ s ^ ")"
+   else case b of "" => a | _ => String.concat [a, " ", b];
 
-val arm_disassemble_decode       = join o arm_disassemble o arm_decode;
-fun thumb_disassemble_decode i   = join o arm_disassemble o (thumb_decode i);
-fun thumbee_disassemble_decode i = join o arm_disassemble o (thumbee_decode i);
+fun arm_disassemble_decode s     = join s (arm_disassemble (arm_decode s))
+fun thumb_disassemble_decode i s = join s (arm_disassemble (thumb_decode i s))
+
+fun thumbee_disassemble_decode i s =
+   join s (arm_disassemble (thumbee_decode i s))
 
 end

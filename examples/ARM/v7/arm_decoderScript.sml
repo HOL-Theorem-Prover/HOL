@@ -650,7 +650,7 @@ val thumbee_decode_def = zDefine`
 
 (* ------------------------------------------------------------------------ *)
 
-(* Load/store multiple, dual and exclusive, target branch *)
+(* Load/store multiple, dual and exclusive, table branch *)
 val thumb2_decode_aux1_def = with_flag (priming, SOME "_") Define`
   thumb2_decode_aux1 IT (ireg1 : word16, ireg2 : word16) =
     let a n = ireg1 ' n
@@ -944,14 +944,8 @@ val thumb2_decode_aux6_def = with_flag (priming, SOME "_") Define`
     in
       case (a 10,a 9,a 8,a 7,a 6,a 5,a 4,
             b 14,b 13,b 12,b 11,b 10,b 9,b 8,b 7,b 6,b 5,b 4)
-      of (F , T, T, T, F, F, F,  F ,b13, F ,b11,b10, F, F,b7,b6,b5,b4) =>
-           StatusAccess (Register_to_Status F (rb 8) (ra 0))
-       | (F , T, T, T, F, F, F,  F ,b13, F ,b11,b10, F, T,b7,b6,b5,b4) =>
-           StatusAccess (Register_to_Status F (rb 8) (ra 0))
-       | (F , T, T, T, F, F, F,  F ,b13, F ,b11,b10, T,b8,b7,b6,b5,b4) =>
-           StatusAccess (Register_to_Status F (rb 8) (ra 0))
-       | (F , T, T, T, F, F, T,  F ,b13, F ,b11,b10,b9,b8,b7,b6,b5,b4) =>
-           StatusAccess (Register_to_Status F (rb 8) (ra 0))
+      of (F , T, T, T, F, F, a4,  F ,b13, F ,b11,b10,b9,b8,b7,b6,b5,b4) =>
+           StatusAccess (Register_to_Status a4 (rb 8) (ra 0))
        | (F , T, T, T, F, T, F,  F ,b13, F ,b11, F , F, F,b7,b6,b5,b4) =>
            Miscellaneous (Hint (hint_decode (ib8 0)))
        | (F , T, T, T, F, T, F,  F ,b13, F ,b11,b10,b9,b8,b7,b6,b5,b4) =>
