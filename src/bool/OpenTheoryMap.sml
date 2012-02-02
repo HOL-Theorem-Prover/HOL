@@ -62,7 +62,7 @@ struct
   fun constToString {Thy,Name} = "(Thy="^Thy^",Name="^Name^")"
   fun temp_OpenTheory_tyop_name0 src {tyop,name} = let
     val _ = case Map.peek(!the_tyop_to_ot,tyop) of NONE => ()
-            | SOME oldn =>
+            | SOME oldn => if oldn = name then () else
               Feedback.HOL_WARNING "OpenTheoryMap" "OpenTheory_tyop_name"
                 (src^" overrides "^tyopToString tyop^
                  " (was \""^(ots oldn)^"\"; now \""^(ots name)^"\"")
