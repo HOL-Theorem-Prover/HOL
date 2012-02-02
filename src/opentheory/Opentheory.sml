@@ -75,7 +75,15 @@ handle HOL_ERR _ =>
   fst(snd(Lib.first (fn (_,(th,_)) => eq (h,c) th) (DB.match [] c)))
 handle HOL_ERR _ =>
   from_net ths (h,c)
-handle HOL_ERR _ =>
+handle HOL_ERR e => let
+  val _ = if h = [] then () else raise HOL_ERR e
+  val l = !metisTools.limit
+  val _ = metisTools.limit := {time=SOME 10.0,infs=NONE}
+  val th = metisTools.METIS_PROVE [] c
+  val _ = metisTools.limit := l
+in th end
+handle HOL_ERR _ => (
+  Feedback.HOL_MESG(Parse.term_to_string c);
   raise ERR "axiom_from_db" "not found"
 end
 
