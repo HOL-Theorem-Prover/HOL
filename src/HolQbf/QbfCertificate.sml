@@ -173,6 +173,8 @@ struct
                    | Ext    of (term * term) (* extvar, definition *)
   end
 
+  val sat_prove = ref HolSatLib.SAT_PROVE
+
   fun check t dict (VALID (exts,lits)) = let
     open Lib Thm Drule Term Type boolSyntax
     open Redblackset Redblackmap
@@ -323,7 +325,7 @@ struct
     in (mk_imp(h,t),vars,deps) end
     val (mat,vars,deps) = (foldl foldthis (mat,vars,deps)) exts
 
-    val thm = HolSatLib.SAT_PROVE mat
+    val thm = (!sat_prove) mat
 
     val deps = Lib.dict_topsort deps
     val deps = List.rev deps
