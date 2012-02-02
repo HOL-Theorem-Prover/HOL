@@ -88,4 +88,6 @@ structure HolQbfLib :> HolQbfLib = struct
       SPECL fvs (EQ_MP (SYM tt) th)
   end end
 
+  fun set_sat_prove s = QbfCertificate.sat_prove := s
+
 end
