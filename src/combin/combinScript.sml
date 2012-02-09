@@ -54,6 +54,11 @@ val o_ASSOC = store_thm("o_ASSOC",
    THEN CONV_TAC (REDEPTH_CONV BETA_CONV)
    THEN REFL_TAC);
 
+val o_ABS_L = store_thm(
+  "o_ABS_L",
+  ``(\x:'a. f x:'c) o (g:'b -> 'a) = (\x. f (g x))``,
+  REWRITE_TAC [FUN_EQ_THM, o_THM] THEN BETA_TAC THEN REWRITE_TAC []);
+
 val o_ABS_R = store_thm(
   "o_ABS_R",
   ``f o (\x. g x) = (\x. f (g x))``,
