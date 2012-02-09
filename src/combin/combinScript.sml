@@ -10,9 +10,6 @@
 (* AUGMENTED     : (kxs) added C and W combinators                       *)
 (* ===================================================================== *)
 
-structure combinScript =
-struct
-
 open HolKernel Parse boolLib;
 
 val _ = new_theory "combin";
@@ -295,4 +292,3 @@ val _ = adjoin_to_theory
 
 val _ = export_theory();
 
-end;
