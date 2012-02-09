@@ -842,15 +842,17 @@ fun prim_compare0 n E (u as Tyv _, v as Tyv _)     = map_type_var_compare E (u,v
 fun prim_compare p = if Portable.pointer_eq p then EQUAL
                      else prim_compare0 0 (empty_env, empty_env) p
 
-fun compare0 n E (u as Tyv _, v as Tyv _)     = map_type_var_compare E (u,v)
+fun compare0 n E (p as (TyApp _, _))          = app_type_compare n E p
+  | compare0 n E (p as (_, TyApp _))          = app_type_compare n E p
+  | compare0 n E (u as Tyv _, v as Tyv _)     = map_type_var_compare E (u,v)
   | compare0 n E (Tyv _, _)                   = LESS
   | compare0 n E (TyCon _, Tyv _)             = GREATER
   | compare0 n E (u as TyCon _, v as TyCon _) = type_con_compare (u,v)
   | compare0 n E (TyCon _, _)                 = LESS
-  | compare0 n E (TyApp _, Tyv _)             = GREATER
+(* For pure backwards compatibility, the following is not consistent with HOL4:
   | compare0 n E (TyApp _, TyCon _)           = GREATER
   | compare0 n E (TyApp p1, TyApp p2)         = Lib.pair_compare(compare0 n E,compare0 n E)(p1,p2)
-  | compare0 n E (TyApp _, _)                 = LESS
+*)
   | compare0 n E (TyAll _, TyAbs _)           = LESS
   | compare0 n E (TyAll _, TyExi _)           = LESS
   | compare0 n (E as (env1, env2))
@@ -875,6 +877,14 @@ fun compare0 n E (u as Tyv _, v as Tyv _)     = map_type_var_compare E (u,v)
                          compare0 (n + 1) (insert(env1, Tyv x1, n), insert(env2, Tyv x2, n)))
                         ((k1,ty1), (k2,ty2))
   | compare0 n E (TyAbs _, _)                 = GREATER
+
+and app_type_compare n E (t1,t2) =
+  let val (h1,a1) = strip_app_type t1
+      val (h2,a2) = strip_app_type t2
+  in case compare0 n E (h1,h2)
+      of EQUAL => Lib.list_compare (compare0 n E) (a1,a2)
+       |   x   => x
+  end
 
 fun compare p = if Portable.pointer_eq p then EQUAL
                 else compare0 0 (empty_env, empty_env) p
@@ -2568,15 +2578,19 @@ val raw_compare0 = compare0
 fun compare0 n E (t1,t2) = compare1 n E (head_beta_eta_ty t1, head_beta_eta_ty t2)
 and compare1 n (E as (env1,env2)) p =
      case p
-      of (u as Tyv _, v as Tyv _)    => map_type_var_compare E (u,v)
+      of (TyApp _, _)                => app_type_compare n E p
+       | (_, TyApp _)                => app_type_compare n E p
+       | (u as Tyv _, v as Tyv _)    => map_type_var_compare E (u,v)
        | (Tyv _, _)                  => LESS
        | (TyCon _, Tyv _)            => GREATER
        | (u as TyCon _,v as TyCon _) => type_con_compare (u,v)
        | (TyCon _, _)                => LESS
+(*
        | (TyApp _, Tyv _)            => GREATER
        | (TyApp _, TyCon _)          => GREATER
        | (TyApp p1,TyApp p2)         => Lib.pair_compare(compare0 n E,compare0 n E)(p1,p2)
        | (TyApp _, _)                => LESS
+*)
        | (TyAll _, TyAbs _)          => LESS
        | (TyAll _, TyExi _)          => LESS
        | (TyAll(x1 as (_,k1),ty1),
@@ -2598,6 +2612,14 @@ and compare1 n (E as (env1,env2)) p =
                                compare0 (n+1) (insert(env1, Tyv x1, n), insert(env2, Tyv x2, n)))
                               ((k1,ty1),(k2,ty2))
        | (TyAbs _, _)                => GREATER
+
+and app_type_compare n E (t1,t2) =
+  let val (h1,a1) = strip_app_type t1
+      val (h2,a2) = strip_app_type t2
+  in case compare0 n E (h1,h2)
+      of EQUAL => Lib.list_compare (compare0 n E) (a1,a2)
+       |   x   => x
+  end
 end (* local *)
 
 val raw_compare = compare

@@ -565,12 +565,23 @@ fun prim_type_con_compare (TyCon(c1,k1), TyCon(c2,k2)) =
 (* ----------------------------------------------------------------------
     A total ordering on types that respects alpha equivalence.
     TyFv < TyBv < TyCon < TyApp < TyAll < TyExi < TyAbs
+    except that when comparing types where some are type applications,
+    for backwards compatibility with HOL4, the heads of the application trees
+    are compared first, and then the arguments, in order.
    ---------------------------------------------------------------------- *)
+
+fun strip_app_type ty =
+   let fun strip (TyApp (Opr,Ty)) A = strip Opr (Ty::A)
+         | strip ty A = (ty,A)
+   in strip ty []
+   end
 
 fun compare p =
     if Portable.pointer_eq p then EQUAL else
     case p of
-      (u as TyFv _, v as TyFv _)   => type_var_compare (u,v)
+      (_, TyApp _)                 => app_type_compare p
+    | (TyApp _, _)                 => app_type_compare p
+    | (u as TyFv _, v as TyFv _)   => type_var_compare (u,v)
     | (TyFv _, _)                  => LESS
     | (TyBv _, TyFv _)             => GREATER
     | (TyBv i, TyBv j)             => Int.compare (i,j)
@@ -579,11 +590,6 @@ fun compare p =
     | (TyCon _, TyBv _)            => GREATER
     | (u as TyCon _, v as TyCon _) => type_con_compare (u,v)
     | (TyCon _, _)                 => LESS
-    | (TyApp _, TyFv _)            => GREATER
-    | (TyApp _, TyBv _)            => GREATER
-    | (TyApp _, TyCon _)           => GREATER
-    | (TyApp p1, TyApp p2)         => Lib.pair_compare(compare,compare)(p1,p2)
-    | (TyApp _, _)                 => LESS
     | (TyAll _, TyAbs _)           => LESS
     | (TyAll _, TyExi _)           => LESS
     | (TyAll((_,k1),ty1),
@@ -602,6 +608,14 @@ fun compare p =
                                  Lib.pair_compare(kind_compare,compare)
                                                  ((k1,ty1),(k2,ty2))
     | (TyAbs _, _)                 => GREATER
+
+and app_type_compare (t1,t2) =
+  let val (h1,a1) = strip_app_type t1
+      val (h2,a2) = strip_app_type t2
+  in case compare (h1,h2)
+      of EQUAL => Lib.list_compare compare (a1,a2)
+       |   x   => x
+  end
 ;
 
 fun prim_compare p =
@@ -1016,12 +1030,6 @@ val is_bool = can dest_bool
 
 fun dest_app_type (TyApp (Opr,Ty)) = (Opr,Ty)
   | dest_app_type _ = raise ERR "dest_app_type" "not a type application";
-
-fun strip_app_type ty =
-   let fun strip (TyApp (Opr,Ty)) A = strip Opr (Ty::A)
-         | strip ty A = (ty,A)
-   in strip ty []
-   end
 
 (*
 dest_thy_type_opr ty12;
