@@ -68,4 +68,7 @@ Given a list (usually by calling [Net.listItems] on the result of
 [read_article]), calls [Theory.delete_const] on any constants in the current
 theory that do not appear in some theorem in the list.
 *)
+
+val NUMERAL_conv : Conv.conv
+
 end

@@ -64,6 +64,35 @@ in
   val base_thms = foldl ins Net.empty ((CONJUNCTS NOT_CLAUSES)@(split EQ_CLAUSES)@(split IMP_CLAUSES)@(split AND_CLAUSES)@[imp_def,and_def,exists_def,imp1])
 end
 
+(* useful elsewhere? *)
+val NUMERAL_conv = let (* wrap numeric literals in NUMERAL tag *)
+  open Conv numSyntax arithmeticTheory
+  exception Nonlit
+  fun lit_conv tm = let (* detect literals, and replace 0 by ZERO *)
+    val (f,_) = dest_comb tm in
+      if f = bit1_tm orelse f = bit2_tm then
+        RAND_CONV lit_conv tm
+      else raise Nonlit
+  end handle HOL_ERR _ =>
+    if tm = zero_tm then SYM ALT_ZERO else
+    if tm = alt_zero_tm then raise UNCHANGED else
+    raise Nonlit
+  fun add_tag_conv tm = SYM (SPEC tm NUMERAL_DEF)
+  fun conv tm = let
+    val (f,_) = dest_comb tm in
+      if f = bit1_tm orelse f = bit2_tm then
+        (RAND_CONV lit_conv THENC add_tag_conv) tm
+      handle Nonlit => RAND_CONV conv tm
+      else if f = numeral_tm then
+        raise UNCHANGED (* nb: assuming incoming NUMERAL tags are good *)
+        (* alternative: check if it's actually a literal with lit_conv, and
+        strip the tag if Nonlit is raised *)
+      else COMB_CONV conv tm
+  end handle HOL_ERR _ => ABS_CONV conv tm
+      handle HOL_ERR _ =>
+      if tm = alt_zero_tm then ALT_ZERO else raise UNCHANGED
+in conv end
+
 local
   fun eq (h,c) th =
     aconv (concl th) c andalso
@@ -210,7 +239,10 @@ fun raw_read_article input
   | SOME line => let
       val {stack,dict,thms} = f (trimr line) x
     in loop {stack=stack,dict=dict,thms=thms,line_num=line_num+1} end
-in #thms (loop {stack=[],dict=Map.mkDict(Int.compare),thms=Net.empty,line_num=1}) end
+in
+  Net.map (Conv.CONV_RULE NUMERAL_conv)
+    (#thms (loop {stack=[],dict=Map.mkDict(Int.compare),thms=Net.empty,line_num=1}))
+end
 
 fun read_article s r = raw_read_article (TextIO.openIn s) r
 
