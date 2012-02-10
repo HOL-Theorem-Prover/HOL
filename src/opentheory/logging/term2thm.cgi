@@ -4,7 +4,8 @@ case $REQUEST_METHOD in
 export PATH="$HOME/bin:$PATH"
 echo "Content-type: text/plain"
 echo
-cat | sed '0,/^\s*$/d' | tr -d '\r' | $(basename $0 .cgi)
+cat | sed '0,/^\s*$/d
+/^--.*$/d' | tr -d '\r' | $(basename $0 .cgi)
 ;;
 'GET')
 echo "Content-type: text/html"
