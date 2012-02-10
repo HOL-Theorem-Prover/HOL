@@ -35,7 +35,7 @@ in fn inp =>
     axiom = fn _ => fn (_,c) => raise (E (rand c)),
     const_name = const_name_in_map,
     tyop_name = tyop_name_in_map } ; raise ERR "no theorem" )
-  handle E t => t
+  handle E t => boolSyntax.rhs(concl(NUMERAL_conv t)) handle UNCHANGED => t
 end
 
 fun url_conv url tm = let
