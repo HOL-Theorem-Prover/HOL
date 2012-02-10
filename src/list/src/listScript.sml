@@ -1036,6 +1036,22 @@ val LIST_REL_CONS2 = store_thm(
   ``LIST_REL R xs (h::t) <=> ?h' t'. (xs = h'::t') /\ R h' h /\ LIST_REL R t' t``,
   Cases_on `xs` THEN SRW_TAC [][]);
 
+val LIST_REL_CONJ = store_thm(
+  "LIST_REL_CONJ",
+  ``LIST_REL (\a b. P a b /\ Q a b) l1 l2 <=>
+      LIST_REL (\a b. P a b) l1 l2 /\ LIST_REL (\a b. Q a b) l1 l2``,
+  SRW_TAC [][LIST_REL_EL_EQN] THEN METIS_TAC []);
+
+val LIST_REL_MAP1 = store_thm(
+  "LIST_REL_MAP1",
+  ``LIST_REL R (MAP f l1) l2 <=> LIST_REL (R o f) l1 l2``,
+  SRW_TAC [][LIST_REL_EL_EQN, EL_MAP, LENGTH_MAP]);
+
+val LIST_REL_MAP2 = store_thm(
+  "LIST_REL_MAP2",
+  ``LIST_REL (\a b. R a b) l1 (MAP f l2) <=>
+      LIST_REL (\a b. R a (f b)) l1 l2``,
+  SRW_TAC [CONJ_ss][LIST_REL_EL_EQN, EL_MAP, LENGTH_MAP]);
 
 (*---------------------------------------------------------------------------
      Congruence rules for higher-order functions. Used when making

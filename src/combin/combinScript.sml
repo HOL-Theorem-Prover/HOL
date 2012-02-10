@@ -10,9 +10,6 @@
 (* AUGMENTED     : (kxs) added C and W combinators                       *)
 (* ===================================================================== *)
 
-structure combinScript =
-struct
-
 open HolKernel Parse boolLib;
 
 val _ = new_theory "combin";
@@ -63,6 +60,11 @@ val o_ASSOC = store_thm("o_ASSOC",
    THEN REWRITE_TAC [ o_DEF ]
    THEN CONV_TAC (REDEPTH_CONV BETA_CONV)
    THEN REFL_TAC);
+
+val o_ABS_L = store_thm(
+  "o_ABS_L",
+  ``(\x:'a. f x:'c) o (g:'b -> 'a) = (\x. f (g x))``,
+  REWRITE_TAC [FUN_EQ_THM, o_THM] THEN BETA_TAC THEN REWRITE_TAC []);
 
 val o_ABS_R = store_thm(
   "o_ABS_R",
@@ -302,4 +304,3 @@ val _ = adjoin_to_theory
 
 val _ = export_theory();
 
-end;
