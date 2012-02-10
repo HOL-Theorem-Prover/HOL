@@ -85,6 +85,7 @@ in th end
 handle HOL_ERR _ => (
   Feedback.HOL_MESG(Parse.term_to_string c);
   raise ERR "axiom_from_db" "not found"
+  )
 end
 
 fun st_(st,{stack,dict,thms,...}) = {stack=st,dict=dict,thms=thms}
