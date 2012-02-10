@@ -313,4 +313,10 @@ fun pp_gstk ppstrm  =
  in pr
  end
 
+fun print_tac pfx g = let
+in
+  print (pfx ^ PP.pp_to_string (!Globals.linewidth) pp_goal g);
+  Tactical.ALL_TAC g
+end
+
 end (* goalStack *)

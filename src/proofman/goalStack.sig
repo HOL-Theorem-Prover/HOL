@@ -8,6 +8,7 @@ sig
 
    val expand       : tactic -> gstk -> gstk
    val expandf      : tactic -> gstk -> gstk
+   val print_tac    : string -> tactic
    val extract_thm  : gstk -> thm
    val initial_goal : gstk -> goal
    val finalizer    : gstk -> thm -> thm
