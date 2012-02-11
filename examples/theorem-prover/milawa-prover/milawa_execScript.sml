@@ -232,6 +232,40 @@ local
 
 val lemma = MR_ev_ind
   |> Q.SPEC `\x y.
+        !f args a ctxt fns ok res ok1 res2 ok2 ok3.
+           (x = (f,args,a,ctxt,fns,ok)) /\ (y = (res,ok1)) /\
+           MR_ap (f,args,a,ctxt,fns,ok) (res2,ok2) ==> (res = res2) /\ (ok1 = ok2)`
+  |> Q.SPEC `\x y.
+        !xs a ctxt fns ok res ok1 res2 ok2 ok3.
+           (x = (xs,a,ctxt,fns,ok)) /\ (y = (res,ok1)) /\
+           MR_evl (xs,a,ctxt,fns,ok) (res2,ok2) ==> (res = res2) /\ (ok1 = ok2)`
+  |> Q.SPEC `\x y.
+        !x1 a ctxt fns ok res ok1 res2 ok2 ok3.
+           (x = (x1,a,ctxt,fns,ok)) /\ (y = (res,ok1)) /\
+           MR_ev (x1,a,ctxt,fns,ok) (res2,ok2) ==> (res = res2) /\ (ok1 = ok2)`
+  |> CONV_RULE (RAND_CONV (SIMP_CONV std_ss [PULL_IMP]))
+
+in
+
+val MR_ev_11_ALL = store_thm("MR_ev_11_ALL",
+  lemma |> concl |> dest_comb |> snd,
+  MATCH_MP_TAC lemma \\ REPEAT STRIP_TAC
+  \\ SIMP_TAC std_ss [] \\ REPEAT STRIP_TAC
+  \\ FULL_SIMP_TAC std_ss []
+  \\ POP_ASSUM MP_TAC \\ ONCE_REWRITE_TAC [MR_ev_cases]
+  \\ ASM_SIMP_TAC (srw_ss()) []
+  \\ REPEAT STRIP_TAC \\ RES_TAC \\ FULL_SIMP_TAC std_ss []
+  \\ FULL_SIMP_TAC std_ss [] \\ RES_TAC \\ FULL_SIMP_TAC std_ss [MEM]
+  \\ NTAC 2 (POP_ASSUM MP_TAC)
+  \\ ONCE_REWRITE_TAC [MR_ev_cases]
+  \\ ASM_SIMP_TAC (srw_ss()) []);
+
+end
+
+local
+
+val lemma = MR_ev_ind
+  |> Q.SPEC `\x y.
         !f args a ctxt fns ok res ok1.
            (x = (f,args,a,ctxt \\ name,fns,ok)) /\ (y = (res,ok1)) ==>
            MR_ap (f,args,a,ctxt,fns,ok) (res,ok1)`

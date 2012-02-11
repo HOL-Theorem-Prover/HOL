@@ -2883,6 +2883,90 @@ val term2sexp_def = tDefine "term2sexp" `
   THEN1 (Induct_on `zs` \\ NTAC 2 (SRW_TAC [] [MEM,term_size_def]) \\ RES_TAC \\ DECIDE_TAC)
   \\ DECIDE_TAC);
 
+val fun_name_ok_def = Define `
+  (fun_name_ok (Fun f) = ~MEM f reserved_names) /\
+  (fun_name_ok _ = T)`;
+
+val no_bad_names_def = tDefine "no_bad_names" `
+  (no_bad_names (Const s) = T) /\
+  (no_bad_names (Var v) = ~(v = "T") /\ ~(v = "NIL")) /\
+  (no_bad_names (App fc vs) = fun_name_ok fc /\ EVERY no_bad_names vs) /\
+  (no_bad_names (If x y z) = no_bad_names x /\ no_bad_names y /\ no_bad_names z) /\
+  (no_bad_names (LamApp xs z ys) = no_bad_names z /\ EVERY no_bad_names ys) /\
+  (no_bad_names (Let zs x) = EVERY (\x. no_bad_names (SND x)) zs /\ no_bad_names x) /\
+  (no_bad_names (LetStar zs x) = EVERY (\x. no_bad_names (SND x)) zs /\ no_bad_names x) /\
+  (no_bad_names (Cond qs) = EVERY (\x. no_bad_names (FST x) /\ no_bad_names (SND x)) qs) /\
+  (no_bad_names (Or ts) = EVERY no_bad_names ts) /\
+  (no_bad_names (And ts) = EVERY no_bad_names ts) /\
+  (no_bad_names (List ts) = EVERY no_bad_names ts) /\
+  (no_bad_names (First x) = no_bad_names x) /\
+  (no_bad_names (Second x) = no_bad_names x) /\
+  (no_bad_names (Third x) = no_bad_names x) /\
+  (no_bad_names (Fourth x) = no_bad_names x) /\
+  (no_bad_names (Fifth x) = no_bad_names x) /\
+  (no_bad_names (Defun fname ps s) = T)`
+ (WF_REL_TAC `measure (term_size)` \\ SRW_TAC [] []
+  THEN1 (Induct_on `vs` \\ SRW_TAC [] [MEM,term_size_def] \\ RES_TAC \\ DECIDE_TAC)
+  THEN1 DECIDE_TAC
+  THEN1 DECIDE_TAC
+  THEN1 (Induct_on `qs` \\ NTAC 2 (SRW_TAC [] [MEM,term_size_def]) \\ RES_TAC \\ DECIDE_TAC)
+  THEN1 (Induct_on `qs` \\ NTAC 2 (SRW_TAC [] [MEM,term_size_def]) \\ RES_TAC \\ DECIDE_TAC)
+  THEN1 DECIDE_TAC
+  THEN1 (Induct_on `ts` \\ SRW_TAC [] [MEM,term_size_def] \\ RES_TAC \\ DECIDE_TAC)
+  THEN1 (Induct_on `ts` \\ SRW_TAC [] [MEM,term_size_def] \\ RES_TAC \\ DECIDE_TAC)
+  THEN1 (Induct_on `ts` \\ SRW_TAC [] [MEM,term_size_def] \\ RES_TAC \\ DECIDE_TAC)
+  THEN1 (Induct_on `ys` \\ SRW_TAC [] [MEM,term_size_def] \\ RES_TAC \\ DECIDE_TAC)
+  THEN1 (Induct_on `zs` \\ NTAC 2 (SRW_TAC [] [MEM,term_size_def]) \\ RES_TAC \\ DECIDE_TAC)
+  THEN1 (Induct_on `zs` \\ NTAC 2 (SRW_TAC [] [MEM,term_size_def]) \\ RES_TAC \\ DECIDE_TAC)
+  \\ DECIDE_TAC);
+
+val sexp2list_list2sexp = prove(
+  ``!x. sexp2list (list2sexp x) = x``,
+  Induct \\ EVAL_TAC \\ ASM_SIMP_TAC std_ss []);
+
+val MAP_EQ_IMP = prove(
+  ``!xs f. (!x. MEM x xs ==> (f x = x)) ==> (MAP f xs = xs)``,
+  Induct \\ SIMP_TAC (srw_ss()) [] \\ REPEAT STRIP_TAC \\ METIS_TAC []);
+
+val sexp2term_term2sexp = store_thm("sexp2term_term2sexp",
+  ``!t. no_bad_names t ==> (sexp2term (term2sexp t) = t)``,
+  HO_MATCH_MP_TAC (fetch "-" "term2sexp_ind") \\ REPEAT STRIP_TAC
+  \\ FULL_SIMP_TAC std_ss [no_bad_names_def]
+  THEN1 (EVAL_TAC \\ FULL_SIMP_TAC std_ss [])
+  THEN1 (EVAL_TAC \\ FULL_SIMP_TAC std_ss [])
+  THEN1
+   (SIMP_TAC (srw_ss()) [term2sexp_def,LET_DEF]
+    \\ Cases_on `fc` THEN TRY
+     (ASM_SIMP_TAC (srw_ss()) [func2sexp_def,list2sexp_def,CAR_def,CDR_def,isVal_def,isSym_def]
+      \\ SIMP_TAC (srw_ss()) [Once sexp2term_def,LET_DEF] \\ TRY (Cases_on `l`)
+      \\ ASM_SIMP_TAC (srw_ss()) [list2sexp_def,CAR_def,CDR_def,isVal_def,isSym_def,
+           getSym_def,prim2sym_def,sym2prim_def,sexp2list_list2sexp,
+           MAP_MAP_o,combinTheory.o_DEF,fun_name_ok_def]
+      \\ MATCH_MP_TAC MAP_EQ_IMP \\ FULL_SIMP_TAC std_ss [EVERY_MEM] \\ NO_TAC)
+    \\ FULL_SIMP_TAC (srw_ss()) [func2sexp_def,fun_name_ok_def]
+    \\ FULL_SIMP_TAC (srw_ss()) [reserved_names_def,MEM,APPEND,macro_names_def]
+    \\ SIMP_TAC (srw_ss()) [Once sexp2term_def,LET_DEF]
+    \\ ASM_SIMP_TAC (srw_ss()) [list2sexp_def,CAR_def,CDR_def,isVal_def,isSym_def,
+           getSym_def,prim2sym_def,sym2prim_def,sexp2list_list2sexp,
+           MAP_MAP_o,combinTheory.o_DEF]
+    \\ MATCH_MP_TAC MAP_EQ_IMP \\ FULL_SIMP_TAC std_ss [EVERY_MEM])
+  THEN1
+   (SIMP_TAC (srw_ss()) [term2sexp_def,Once sexp2term_def,LET_DEF]
+    \\ ASM_SIMP_TAC (srw_ss()) [list2sexp_def,CAR_def,CDR_def,isVal_def,isSym_def])
+  THEN
+   (SIMP_TAC (srw_ss()) [term2sexp_def,Once sexp2term_def,LET_DEF]
+    \\ ASM_SIMP_TAC (srw_ss()) [list2sexp_def,CAR_def,CDR_def,isVal_def,isSym_def,
+        getSym_def,sym2prim_def,sexp2list_list2sexp,MAP_MAP_o,combinTheory.o_DEF]
+    \\ MATCH_MP_TAC MAP_EQ_IMP \\ FULL_SIMP_TAC std_ss [EVERY_MEM]));
+
+val verified_string_def = Define `
+  verified_string xs =
+    if ~ALL_DISTINCT (MAP FST xs) then NONE else
+    if ~EVERY (\(name,params,body). no_bad_names body) xs then NONE else
+      SOME (FLAT (MAP ( \ (name,params,body). sexp2string
+        (list2sexp [Sym "DEFUN"; Sym name;
+           list2sexp (MAP Sym params); term2sexp body]) ++ "\n") xs))`
+
 
 (* translation sexp2sexp *)
 

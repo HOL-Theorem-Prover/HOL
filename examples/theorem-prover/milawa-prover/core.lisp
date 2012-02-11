@@ -1664,6 +1664,51 @@
                                (cons new-axiom axioms))))
                 (|CORE.STATE| axioms thms atbl checker ftbl)))))))
 
+       (|CORE.EVAL-FUNCTION| (x)
+        (let* ((fn        (|LOGIC.FUNCTION-NAME| x))
+               (vals      (|LOGIC.UNQUOTE-LIST| (|LOGIC.FUNCTION-ARGS| x)))
+               (n   (len vals))
+               (x1  (first vals))
+               (x2  (second vals))
+               (x3  (third vals))
+               (x4  (fourth vals))
+               (x5  (fifth vals)))
+            (list 'quote
+                 (cond ((equal n 0) (funcall fn))
+                       ((equal n 1) (funcall fn x1))
+                       ((equal n 2) (funcall fn x1 x2))
+                       ((equal n 3) (funcall fn x1 x2 x3))
+                       ((equal n 4) (funcall fn x1 x2 x3 x4))
+                       ((equal n 5) (funcall fn x1 x2 x3 x4 x5))
+                       (t (error (list 'core-eval-function 'too-many-parameters)))))))
+
+       (|CORE.ADMIT-EVAL|
+        (cmd state)
+        ;; Performs evaluation in the runtime
+        ;; CMD should be (EVAL (fn 'arg1 'arg2 ... 'argN))
+        (let* ((axioms    (|CORE.AXIOMS| state))
+               (thms      (|CORE.THMS| state))
+               (atbl      (|CORE.ATBL| state))
+               (checker   (|CORE.CHECKER| state))
+               (ftbl      (|CORE.FTBL| state))
+               (lhs       (second cmd)))
+            (cond
+              ((not (|LOGIC.TERMP| lhs))
+               (error (list 'admit-eval 'bad-term-on-lhs lhs)))
+              ((not (|LOGIC.FUNCTIONP| lhs))
+               (error (list 'admit-eval 'not-function-on-lhs lhs)))
+              ((not (|LOGIC.CONSTANT-LISTP| (|LOGIC.FUNCTION-ARGS| lhs)))
+               (error (list 'admit-eval 'not-const-list-on-lhs lhs)))
+              ((not (|LOGIC.TERM-ATBLP| lhs atbl))
+               (error (list 'admit-eval 'bad-arity-on-lhs lhs)))
+              ((lookup (|LOGIC.FUNCTION-NAME| lhs) (|CORE.INITIAL-ATBL|))
+               (error (list 'admit-eval 'not-user-defined-function lhs)))
+              (t
+               (let* ((rhs      (|CORE.EVAL-FUNCTION| lhs))
+                      (new-thm  (|LOGIC.PEQUAL| lhs rhs))
+                      (thms     (cons new-thm thms)))
+                  (|CORE.STATE| axioms thms atbl checker ftbl))))))
+
        (|CORE.ADMIT-PRINT|
         (cmd state)
         ;; Prints a theorem and returns original state, or calls error
@@ -1689,6 +1734,7 @@
               ((equal (car cmd) 'skolem) (|CORE.ADMIT-WITNESS| cmd state))
               ((equal (car cmd) 'switch) (|CORE.ADMIT-SWITCH| cmd state))
               ((equal (car cmd) 'print)  (|CORE.ADMIT-PRINT| cmd state))
+              ((equal (car cmd) 'eval)   (|CORE.ADMIT-EVAL| cmd state))
               (t
                (error (list 'accept-cmd 'invalid-command cmd)))))
 
