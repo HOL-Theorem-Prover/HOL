@@ -18,11 +18,17 @@ fun TY_BETA_CONVS tm = (TY_COMB_CONV TY_BETA_CONVS THENQC TY_BETA_CONV) tm
     ETA_ss
       Implemented in a slightly cack-handed way so as to avoid simplifying
       things like `!x. P x` to `$! P`
+      or things like `!:'a. P [:'a:]` to `$!: P`
    ---------------------------------------------------------------------- *)
 
 fun comb_ETA_CONV t =
     (if not (is_exists t orelse is_forall t orelse is_select t)
        then RAND_CONV ETA_CONV
+       else NO_CONV) t
+
+fun comb_TY_ETA_CONV t =
+    (if not (is_tyexists t orelse is_tyforall t)
+       then RAND_CONV TY_ETA_CONV
        else NO_CONV) t
 
 val ETA_ss = SSFRAG {name = SOME "ETA",
@@ -33,22 +39,8 @@ val ETA_ss = SSFRAG {name = SOME "ETA",
            {name = "ETA_CONV (eta reduction)",
             trace = 2,
             key = SOME ([], ``\x:'a. \y:'b. (f:'a->'b->'c) x y``),
-            conv = K (K (ABS_CONV ETA_CONV))}],
-  rewrs = [], congs = [], filter = NONE, ac = [], dprocs = []}
-
-(* ----------------------------------------------------------------------
-    TY_ETA_ss
-      Implemented in a slightly cack-handed way so as to avoid simplifying
-      things like `!:'a. P [:'a:]` to `$!: P`
-   ---------------------------------------------------------------------- *)
-
-fun comb_TY_ETA_CONV t =
-    (if not (is_tyexists t orelse is_tyforall t)
-       then RAND_CONV TY_ETA_CONV
-       else NO_CONV) t
-
-val TY_ETA_ss = SSFRAG {name = SOME "TY_ETA",
-  convs = [{name = "TY_ETA_CONV (type eta reduction)",
+            conv = K (K (ABS_CONV ETA_CONV))},
+           {name = "TY_ETA_CONV (type eta reduction)",
             trace = 2,
             key = SOME ([],``(f:(!'a.'b)->'c) (\:'a. (g: !'a.'b) [:'a:])``),
             conv = K (K comb_TY_ETA_CONV)},

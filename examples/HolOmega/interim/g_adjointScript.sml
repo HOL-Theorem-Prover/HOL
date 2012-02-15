@@ -377,7 +377,7 @@ val sharp_flatt_inv_defs = store_thm ("sharp_flatt_inv_defs",
       ((eps : ('D, 'G o 'F, I) g_nattransf) = EPS (idC,compC) (SHARP (idD,compD) F' eps))) /\ 
     (category (idC,compC) /\ g_functor [:'D,'C,'G:] (idD,compD) (idC,compC) G ==> 
       ((eta : ('C, I, 'F o 'G) g_nattransf) = ETA (idD,compD) (FLATT (idC,compC) G eta)))``,
-  SIMP_TAC (bool_ss ++ TY_ETA_ss)
+  SIMP_TAC (bool_ss ++ ETA_ss)
            [SHARP_def, FLATT_def, EPS_thm, ETA_thm, 
             g_functor_def, category_def, UNCURRY_DEF] ) ;
 

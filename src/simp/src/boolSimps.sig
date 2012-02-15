@@ -20,9 +20,7 @@ sig
                                            opposing guards *)
      val UNWIND_ss : simpLib.ssfrag     (* "pointwise" elimination for
                                             ? and !, included in bool_ss *)
-     val ETA_ss : simpLib.ssfrag        (* eta conversion;
-                                           not included in bool_ss *)
-     val TY_ETA_ss : simpLib.ssfrag     (* type eta conversion;
+     val ETA_ss : simpLib.ssfrag        (* eta and type eta conversion;
                                            not included in bool_ss *)
 
      val LET_ss : simpLib.ssfrag        (* writes out let terms, using a
