@@ -1,4 +1,4 @@
-INCLUDES = ../lisp-runtime/parse ../lisp-runtime/spec $(HOLDIR)/examples/ordinal
+INCLUDES = ../lisp-runtime/parse ../lisp-runtime/spec ../lisp-runtime/extract $(HOLDIR)/examples/ordinal
 OPTIONS=QUIT_ON_FAILURE
 
 milawa_coreTheory.ou: core.lisp

@@ -301,50 +301,62 @@ val (NNF_CONV,NNF_SKOLEM_CONV) =
  *  PRENEX_CONV (--`(?x. P x) ==> (!y. P y /\ Q)`--) handle e => Raise e;    *
  * ------------------------------------------------------------------------- *)
 
-val PRENEX_CONV =
-  let val PRENEX1_QCONV =
-      GEN_REWRITE_CONV I
-      [NOT_FORALL_THM, NOT_EXISTS_THM,
-       AND_FORALL_THM, LEFT_AND_FORALL_THM, RIGHT_AND_FORALL_THM,
-       LEFT_OR_FORALL_THM, RIGHT_OR_FORALL_THM,
-       LEFT_IMP_FORALL_THM, RIGHT_IMP_FORALL_THM,
-       LEFT_AND_EXISTS_THM, RIGHT_AND_EXISTS_THM,
-       OR_EXISTS_THM, LEFT_OR_EXISTS_THM, RIGHT_OR_EXISTS_THM,
-       LEFT_IMP_EXISTS_THM, RIGHT_IMP_EXISTS_THM]
-      fun PRENEX2_QCONV tm =
-	  (PRENEX1_QCONV THENCQC (BINDER_CONV PRENEX2_QCONV)) tm
-      fun PRENEX_QCONV tm =
-	  let val (lop,r) = dest_comb tm
-	      exception DEST_CONST
-	  in let val cname = name_of_const lop
-                  handle HOL_ERR _ => raise DEST_CONST
-	     in if cname = ("!","bool") orelse cname = ("?","bool")
-                then AP_TERM lop (ABS_CONV PRENEX_QCONV r)
-		else if cname = ("~","bool")
-                     then (RAND_CONV PRENEX_QCONV THENQC PRENEX2_QCONV) tm
-		     else failwith "unchanged"
-	     end
-	     handle DEST_CONST =>
-	     let val (oper,l) = dest_comb lop
-		 val cname = name_of_const oper
-	     in if cname = ("/\\","bool") orelse
-                   cname = ("\\/","bool") orelse cname = ("==>","min")
-                then let val th =
-		           let val lth = PRENEX_QCONV l
-		           in let val rth = PRENEX_QCONV r
-			      in MK_COMB(AP_TERM oper lth,rth)
-			      end
-                              handle HOL_ERR _ => AP_THM (AP_TERM oper lth) r
-		           end
-                           handle HOL_ERR _ => AP_TERM lop (PRENEX_QCONV r)
-		         val tm' = rand(concl th)
-		         val th' = PRENEX2_QCONV tm'
-		     in TRANS th th'
-		     end
-	             handle HOL_ERR _ => PRENEX2_QCONV tm
-		else failwith "unchanged"
-	     end
-	  end
+val PRENEX_CONV = let
+  val PRENEX1_QCONV =
+    GEN_REWRITE_CONV I
+    [NOT_FORALL_THM, NOT_EXISTS_THM,
+     AND_FORALL_THM, LEFT_AND_FORALL_THM, RIGHT_AND_FORALL_THM,
+     LEFT_OR_FORALL_THM, RIGHT_OR_FORALL_THM,
+     LEFT_IMP_FORALL_THM, RIGHT_IMP_FORALL_THM,
+     LEFT_AND_EXISTS_THM, RIGHT_AND_EXISTS_THM,
+     OR_EXISTS_THM, LEFT_OR_EXISTS_THM, RIGHT_OR_EXISTS_THM,
+     LEFT_IMP_EXISTS_THM, RIGHT_IMP_EXISTS_THM]
+  fun PRENEX2_QCONV tm =
+    (PRENEX1_QCONV THENCQC (BINDER_CONV PRENEX2_QCONV)) tm
+  fun PRENEX_QCONV tm = let
+    val (lop,r) = dest_comb tm
+	  exception DEST_CONST
+  in
+    let
+      val cname = name_of_const lop
+                handle HOL_ERR _ => raise DEST_CONST
+    in
+      if cname = ("!","bool") orelse cname = ("?","bool")
+        then AP_TERM lop (Conv.ABS_CONV PRENEX_QCONV r)
+      else if cname = ("~","bool")
+             then (RAND_CONV PRENEX_QCONV THENQC PRENEX2_QCONV) tm
+           else failwith "unchanged"
+    end
+    handle DEST_CONST => let
+      val (oper,l) = dest_comb lop
+      val cname = name_of_const oper
+    in
+      if cname = ("/\\","bool") orelse
+         cname = ("\\/","bool") orelse
+         cname = ("==>","min")
+        then
+          let
+            val th =
+              let
+                val lth = PRENEX_QCONV l
+              in
+                let
+                  val rth = PRENEX_QCONV r
+                in
+                  MK_COMB(AP_TERM oper lth,rth)
+                end
+                handle HOL_ERR _ => AP_THM (AP_TERM oper lth) r
+              end
+              handle HOL_ERR _ => AP_TERM lop (PRENEX_QCONV r)
+            val tm' = rand(concl th)
+            val th' = PRENEX2_QCONV tm'
+          in
+            TRANS th th'
+          end
+          handle HOL_ERR _ => PRENEX2_QCONV tm
+		  else failwith "unchanged"
+    end
+	end
   in
      fn tm => TRY_CONV PRENEX_QCONV tm
   end;

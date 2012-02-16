@@ -232,6 +232,40 @@ local
 
 val lemma = MR_ev_ind
   |> Q.SPEC `\x y.
+        !f args a ctxt fns ok res ok1 res2 ok2 ok3.
+           (x = (f,args,a,ctxt,fns,ok)) /\ (y = (res,ok1)) /\
+           MR_ap (f,args,a,ctxt,fns,ok) (res2,ok2) ==> (res = res2) /\ (ok1 = ok2)`
+  |> Q.SPEC `\x y.
+        !xs a ctxt fns ok res ok1 res2 ok2 ok3.
+           (x = (xs,a,ctxt,fns,ok)) /\ (y = (res,ok1)) /\
+           MR_evl (xs,a,ctxt,fns,ok) (res2,ok2) ==> (res = res2) /\ (ok1 = ok2)`
+  |> Q.SPEC `\x y.
+        !x1 a ctxt fns ok res ok1 res2 ok2 ok3.
+           (x = (x1,a,ctxt,fns,ok)) /\ (y = (res,ok1)) /\
+           MR_ev (x1,a,ctxt,fns,ok) (res2,ok2) ==> (res = res2) /\ (ok1 = ok2)`
+  |> CONV_RULE (RAND_CONV (SIMP_CONV std_ss [PULL_IMP]))
+
+in
+
+val MR_ev_11_ALL = store_thm("MR_ev_11_ALL",
+  lemma |> concl |> dest_comb |> snd,
+  MATCH_MP_TAC lemma \\ REPEAT STRIP_TAC
+  \\ SIMP_TAC std_ss [] \\ REPEAT STRIP_TAC
+  \\ FULL_SIMP_TAC std_ss []
+  \\ POP_ASSUM MP_TAC \\ ONCE_REWRITE_TAC [MR_ev_cases]
+  \\ ASM_SIMP_TAC (srw_ss()) []
+  \\ REPEAT STRIP_TAC \\ RES_TAC \\ FULL_SIMP_TAC std_ss []
+  \\ FULL_SIMP_TAC std_ss [] \\ RES_TAC \\ FULL_SIMP_TAC std_ss [MEM]
+  \\ NTAC 2 (POP_ASSUM MP_TAC)
+  \\ ONCE_REWRITE_TAC [MR_ev_cases]
+  \\ ASM_SIMP_TAC (srw_ss()) []);
+
+end
+
+local
+
+val lemma = MR_ev_ind
+  |> Q.SPEC `\x y.
         !f args a ctxt fns ok res ok1.
            (x = (f,args,a,ctxt \\ name,fns,ok)) /\ (y = (res,ok1)) ==>
            MR_ap (f,args,a,ctxt,fns,ok) (res,ok1)`
@@ -1480,13 +1514,15 @@ val MR_ap_CTXT = prove(
 (* M_IMP_MilawaTrue *)
 
 val MilawaTrue_MP = prove(
-  ``MilawaTrue ctxt a /\ MilawaTrue ctxt (Or (Not a) b) ==>
+  ``context_ok ctxt /\
+    MilawaTrue ctxt a /\ MilawaTrue ctxt (Or (Not a) b) ==>
     MilawaTrue ctxt b``,
   REPEAT STRIP_TAC \\ IMP_RES_TAC MilawaTrue_IMP_formula_ok
   \\ FULL_SIMP_TAC std_ss [formula_ok_def] \\ METIS_TAC [MilawaTrue_rules]);
 
 val MilawaTrue_MP2 = prove(
-  ``MilawaTrue ctxt (Not a) /\ MilawaTrue ctxt (Or a b) ==>
+  ``context_ok ctxt /\
+    MilawaTrue ctxt (Not a) /\ MilawaTrue ctxt (Or a b) ==>
     MilawaTrue ctxt b``,
   REPEAT STRIP_TAC \\ IMP_RES_TAC MilawaTrue_IMP_formula_ok
   \\ FULL_SIMP_TAC std_ss [formula_ok_def]
@@ -1504,7 +1540,8 @@ val MilawaTrue_REFL = prove(
   \\ FULL_SIMP_TAC std_ss [] \\ EVAL_TAC \\ FULL_SIMP_TAC std_ss []);
 
 val MilawaTrue_Sym = prove(
-  ``MilawaTrue ctxt (Equal x y) ==> MilawaTrue ctxt (Equal y x)``,
+  ``context_ok ctxt /\
+    MilawaTrue ctxt (Equal x y) ==> MilawaTrue ctxt (Equal y x)``,
   REPEAT STRIP_TAC \\ IMP_RES_TAC MilawaTrue_IMP_formula_ok
   \\ FULL_SIMP_TAC std_ss [formula_ok_def]
   \\ IMP_RES_TAC MilawaTrue_REFL
@@ -1522,7 +1559,8 @@ val MilawaTrue_Sym = prove(
   \\ METIS_TAC [MilawaTrue_MP]);
 
 val MilawaTrue_TRANS = store_thm("MilawaTrue_TRANS",
-  ``MilawaTrue ctxt (Equal x y) /\ MilawaTrue ctxt (Equal y z) ==>
+  ``context_ok ctxt /\
+    MilawaTrue ctxt (Equal x y) /\ MilawaTrue ctxt (Equal y z) ==>
     MilawaTrue ctxt (Equal x z)``,
   REPEAT STRIP_TAC \\ IMP_RES_TAC MilawaTrue_IMP_formula_ok
   \\ FULL_SIMP_TAC std_ss [formula_ok_def]
@@ -1541,7 +1579,8 @@ val MilawaTrue_TRANS = store_thm("MilawaTrue_TRANS",
   \\ METIS_TAC [MilawaTrue_MP,MilawaTrue_Sym]) |> GEN_ALL;
 
 val MilawaTrue_IF1 = prove(
-  ``MilawaTrue ctxt (Equal e1 (mConst s1)) /\ ~isTrue s1 /\
+  ``context_ok ctxt /\
+    MilawaTrue ctxt (Equal e1 (mConst s1)) /\ ~isTrue s1 /\
     MilawaTrue ctxt (Equal e3 (mConst s)) /\ term_ok ctxt e2 ==>
     MilawaTrue ctxt (Equal (mApp (mPrimitiveFun logic_IF) [e1;e2;e3]) (mConst s))``,
   REPEAT STRIP_TAC \\ IMP_RES_TAC MilawaTrue_IMP_formula_ok
@@ -1563,25 +1602,30 @@ val MilawaTrue_IF1 = prove(
   \\ METIS_TAC [MilawaTrue_MP]);
 
 val MilawaTrue_Or_Sym = prove(
-  ``MilawaTrue ctxt (Or x y) ==> MilawaTrue ctxt (Or y x)``,
+  ``context_ok ctxt /\
+    MilawaTrue ctxt (Or x y) ==> MilawaTrue ctxt (Or y x)``,
   REPEAT STRIP_TAC \\ IMP_RES_TAC MilawaTrue_IMP_formula_ok
   \\ FULL_SIMP_TAC std_ss [formula_ok_def] \\ METIS_TAC [MilawaTrue_rules]);
 
 val MilawaTrue_Or_Sym_RW = prove(
-  ``MilawaTrue ctxt (Or x y) = MilawaTrue ctxt (Or y x)``,
+  ``context_ok ctxt ==>
+    (MilawaTrue ctxt (Or x y) = MilawaTrue ctxt (Or y x))``,
   METIS_TAC [MilawaTrue_Or_Sym]);
 
 val MilawaTrue_Or_ASSOC = prove(
-  ``MilawaTrue ctxt (Or x (Or y z)) ==> MilawaTrue ctxt (Or (Or x y) z)``,
+  ``context_ok ctxt /\
+    MilawaTrue ctxt (Or x (Or y z)) ==> MilawaTrue ctxt (Or (Or x y) z)``,
   REPEAT STRIP_TAC \\ IMP_RES_TAC MilawaTrue_IMP_formula_ok
   \\ FULL_SIMP_TAC std_ss [formula_ok_def] \\ METIS_TAC [MilawaTrue_rules]);
 
 val MilawaTrue_Or_ASSOC_COMM = prove(
-  ``MilawaTrue ctxt (Or x (Or y z)) ==> MilawaTrue ctxt (Or z (Or x y))``,
+  ``context_ok ctxt /\
+    MilawaTrue ctxt (Or x (Or y z)) ==> MilawaTrue ctxt (Or z (Or x y))``,
   METIS_TAC [MilawaTrue_Or_ASSOC,MilawaTrue_Or_Sym]);
 
 val MilawaTrue_Not_Equal = prove(
-  ``MilawaTrue ctxt (Equal x y) /\ MilawaTrue ctxt (Not (Equal y z)) ==>
+  ``context_ok ctxt /\
+    MilawaTrue ctxt (Equal x y) /\ MilawaTrue ctxt (Not (Equal y z)) ==>
     MilawaTrue ctxt (Not (Equal x z))``,
   REPEAT STRIP_TAC \\ IMP_RES_TAC MilawaTrue_IMP_formula_ok
   \\ FULL_SIMP_TAC std_ss [formula_ok_def]
@@ -1607,7 +1651,8 @@ val MilawaTrue_Not_Equal = prove(
   \\ METIS_TAC [MilawaTrue_MP,MilawaTrue_Or_Sym]) |> GEN_ALL;
 
 val MilawaTrue_Not_Equal_COMM = prove(
-  ``MilawaTrue ctxt (Not (Equal y x)) ==> MilawaTrue ctxt (Not (Equal x y))``,
+  ``context_ok ctxt /\
+    MilawaTrue ctxt (Not (Equal y x)) ==> MilawaTrue ctxt (Not (Equal x y))``,
   REPEAT STRIP_TAC \\ IMP_RES_TAC MilawaTrue_IMP_formula_ok
   \\ FULL_SIMP_TAC std_ss [formula_ok_def]
   \\ IMP_RES_TAC MilawaTrue_REFL
@@ -1629,7 +1674,8 @@ val MilawaTrue_Not_Equal_COMM = prove(
   \\ METIS_TAC [MilawaTrue_MP,MilawaTrue_Or_Sym]) |> GEN_ALL;
 
 val MilawaTrue_AX2 = prove(
-  ``MilawaTrue ctxt (Equal x1 y1) ==>
+  ``context_ok ctxt ==>
+    MilawaTrue ctxt (Equal x1 y1) ==>
     MilawaTrue ctxt (Equal x2 y2) ==>
     MilawaTrue ctxt (Equal x1 x2) ==>
     MilawaTrue ctxt (Equal y1 y2)``,
@@ -1650,7 +1696,8 @@ val MilawaTrue_AX2 = prove(
   \\ METIS_TAC [MilawaTrue_MP,MilawaTrue_Or_Sym]) |> GEN_ALL;
 
 val MilawaTrue_AX4 = prove(
-  ``term_ok ctxt x /\ term_ok ctxt y ==>
+  ``context_ok ctxt /\
+    term_ok ctxt x /\ term_ok ctxt y ==>
     MilawaTrue ctxt (Or (Not (Equal x y))
                         (Equal (mApp (mPrimitiveFun logic_EQUAL) [x; y])
                                (mConst (Sym "T"))))``,
@@ -1670,7 +1717,8 @@ val MilawaTrue_AX4 = prove(
   \\ SIMP_TAC (srw_ss()) [formula_sub_def,term_sub_def,LOOKUP_def]);
 
 val MilawaTrue_AX5 = prove(
-  ``term_ok ctxt x /\ term_ok ctxt y ==>
+  ``context_ok ctxt /\
+    term_ok ctxt x /\ term_ok ctxt y ==>
     MilawaTrue ctxt (Or (Equal x y)
                         (Equal (mApp (mPrimitiveFun logic_EQUAL) [x; y])
                                (mConst (Sym "NIL"))))``,
@@ -1690,7 +1738,8 @@ val MilawaTrue_AX5 = prove(
   \\ SIMP_TAC (srw_ss()) [formula_sub_def,term_sub_def,LOOKUP_def]);
 
 val MilawaTrue_AX5 = prove(
-  ``term_ok ctxt x /\ term_ok ctxt y ==>
+  ``context_ok ctxt /\
+    term_ok ctxt x /\ term_ok ctxt y ==>
     MilawaTrue ctxt (Or (Equal x y)
                         (Equal (mApp (mPrimitiveFun logic_EQUAL) [x; y])
                                (mConst (Sym "NIL"))))``,
@@ -1710,15 +1759,18 @@ val MilawaTrue_AX5 = prove(
   \\ SIMP_TAC (srw_ss()) [formula_sub_def,term_sub_def,LOOKUP_def]);
 
 val NOT_NIL_EQ_T = prove(
-  ``MilawaTrue ctxt (Not (Equal (mConst (Sym "NIL")) (mConst (Sym "T"))))``,
-  MATCH_MP_TAC MilawaTrue_Not_Equal_COMM
+  ``context_ok ctxt ==>
+    MilawaTrue ctxt (Not (Equal (mConst (Sym "NIL")) (mConst (Sym "T"))))``,
+  STRIP_TAC
+  \\ MATCH_MP_TAC MilawaTrue_Not_Equal_COMM
   \\ `MEM (EL 2 MILAWA_AXIOMS) MILAWA_AXIOMS` by EVAL_TAC
   \\ FULL_SIMP_TAC std_ss [EVAL ``EL 2 MILAWA_AXIOMS``]
   \\ IMP_RES_TAC (MilawaTrue_rules |> CONJUNCTS |> el 10)
   \\ FULL_SIMP_TAC std_ss []);
 
 val MilawaTrue_IF_LEMMA = prove(
-  ``MilawaTrue ctxt (Equal e1 (mConst s1)) /\ s1 <> Sym "NIL" ==>
+  ``context_ok ctxt /\
+    MilawaTrue ctxt (Equal e1 (mConst s1)) /\ s1 <> Sym "NIL" ==>
     MilawaTrue ctxt (Not (Equal e1 (mConst (Sym "NIL"))))``,
   REPEAT STRIP_TAC \\ MATCH_MP_TAC MilawaTrue_Not_Equal
   \\ Q.EXISTS_TAC `mConst s1` \\ ASM_SIMP_TAC std_ss []
@@ -1745,7 +1797,8 @@ val MilawaTrue_IF_LEMMA = prove(
   \\ EVAL_TAC \\ ASM_SIMP_TAC std_ss []);
 
 val MilawaTrue_IF2 = prove(
-  ``MilawaTrue ctxt (Equal e1 (mConst s1)) /\ isTrue s1 /\
+  ``context_ok ctxt /\
+    MilawaTrue ctxt (Equal e1 (mConst s1)) /\ isTrue s1 /\
     MilawaTrue ctxt (Equal e2 (mConst s)) /\ term_ok ctxt e3 ==>
     MilawaTrue ctxt (Equal (mApp (mPrimitiveFun logic_IF) [e1;e2;e3]) (mConst s))``,
   REPEAT STRIP_TAC \\ IMP_RES_TAC MilawaTrue_IMP_formula_ok
@@ -1769,6 +1822,7 @@ val MilawaTrue_IF2 = prove(
 
 val MilawaTrue_or_not_equal_list = prove(
   ``!ts_list x.
+      context_ok ctxt /\
       (!x1 x2. MEM (x1,x2) ts_list ==> MilawaTrue ctxt (Equal x1 x2)) /\
       MilawaTrue ctxt (or_not_equal_list ts_list x) ==>
       MilawaTrue ctxt x``,
@@ -1952,6 +2006,7 @@ val MEM_ZIP_ID = prove(
 
 val Equal_term_sub = prove(
   ``!vs xs ys.
+      context_ok ctxt /\
       term_ok ctxt x /\ (LENGTH vs = LENGTH ys) /\ (LENGTH vs = LENGTH xs) /\
       (!x y. MEM (x,y) (ZIP(xs,ys)) ==> MilawaTrue ctxt (Equal x y)) ==>
       MilawaTrue ctxt (Equal (term_sub (ZIP (vs,xs)) x) (term_sub (ZIP(vs,ys)) x))``,
@@ -1971,6 +2026,7 @@ val Equal_term_sub = prove(
     \\ MATCH_MP_TAC MilawaTrue_or_not_equal_list
     \\ Q.LIST_EXISTS_TAC [`ZIP (MAP (\a. term_sub (ZIP (vs,xs)) a) l,
                                 MAP (\a. term_sub (ZIP (vs,ys)) a) l)`]
+    \\ ASM_SIMP_TAC std_ss []
     \\ STRIP_TAC THEN1
      (SIMP_TAC std_ss [ZIP_MAP,MEM_MAP,pairTheory.EXISTS_PROD,PULL_IMP]
       \\ REPEAT STRIP_TAC
@@ -2000,8 +2056,9 @@ val Equal_term_sub = prove(
     \\ Q.ABBREV_TAC `xs1 = MAP (\a. term_sub (ZIP (vs,xs)) a) l0`
     \\ Q.ABBREV_TAC `ys1 = MAP (\a. term_sub (ZIP (vs,ys)) a) l0`
     \\ Q.LIST_EXISTS_TAC [`term_sub (ZIP(l1,ys1)) l`,`term_sub (ZIP(l1,xs1)) l`]
+    \\ ASM_SIMP_TAC std_ss []
     \\ REPEAT STRIP_TAC THEN1
-     (MATCH_MP_TAC MilawaTrue_Sym
+     (MATCH_MP_TAC MilawaTrue_Sym \\ ASM_SIMP_TAC std_ss []
       \\ MATCH_MP_TAC (MilawaTrue_rules |> CONJUNCTS |> el 8)
       \\ FULL_SIMP_TAC std_ss [formula_ok_def,term_ok_def]
       \\ Q.UNABBREV_TAC `xs1` \\ Q.UNABBREV_TAC `ys1`
@@ -2028,7 +2085,7 @@ val Equal_term_sub = prove(
       \\ RES_TAC \\ IMP_RES_TAC MilawaTrue_IMP_formula_ok
       \\ FULL_SIMP_TAC std_ss [formula_ok_def,term_ok_def,LENGTH_MAP])
     THEN1
-     (MATCH_MP_TAC MilawaTrue_Sym
+     (MATCH_MP_TAC MilawaTrue_Sym \\ ASM_SIMP_TAC std_ss []
       \\ MATCH_MP_TAC (MilawaTrue_rules |> CONJUNCTS |> el 8)
       \\ FULL_SIMP_TAC std_ss [formula_ok_def,term_ok_def]
       \\ Q.UNABBREV_TAC `xs1` \\ Q.UNABBREV_TAC `ys1`
@@ -2078,7 +2135,7 @@ val MEM_ZIP_MAP_EQ = prove(
 val term_funs_def = Define `
   term_funs ctxt =
     !name params body sem.
-      name IN FDOM ctxt /\ (ctxt ' name = (params,TERM_FUN body,sem)) ==>
+      name IN FDOM ctxt /\ (ctxt ' name = (params,BODY_FUN body,sem)) ==>
       MilawaTrue ctxt (Equal (mApp (mFun name) (MAP mVar params)) body)`;
 
 val proof_in_full_ctxt_def = Define `
@@ -2090,7 +2147,7 @@ val ind =
   |> Q.SPEC `name`
   |> Q.SPEC `\(exp,a,ctxt) result. !ok env.
       (!params exp sem.
-         (ctxt ' name = (params,TERM_FUN exp,sem)) /\
+         (ctxt ' name = (params,BODY_FUN exp,sem)) /\
          name IN FDOM ctxt ==>
          ?r. (k ' name = (params,r)) /\ name IN FDOM k /\
              term_ok ctxt exp /\ (term2t r = exp) /\ funcs_ok r) /\
@@ -2104,7 +2161,7 @@ val ind =
              (ok2 ==> MilawaTrue ctxt (Equal (inst_term a exp) (mConst result)))`
   |> Q.SPEC `\(f,args,ctxt) result. !ok env.
       (!params exp sem.
-         (ctxt ' name = (params,TERM_FUN exp,sem)) /\
+         (ctxt ' name = (params,BODY_FUN exp,sem)) /\
          name IN FDOM ctxt ==>
          ?r. (k ' name = (params,r)) /\ name IN FDOM k /\
              term_ok ctxt exp /\ (term2t r = exp) /\ funcs_ok r) /\
@@ -2118,7 +2175,7 @@ val ind =
              (ok2 ==> MilawaTrue ctxt (Equal (mApp f (MAP mConst args)) (mConst result)))`
   |> Q.SPEC `\(exp,a,ctxt) result. !ok env.
       (!params exp sem.
-         (ctxt ' name = (params,TERM_FUN exp,sem)) /\
+         (ctxt ' name = (params,BODY_FUN exp,sem)) /\
          name IN FDOM ctxt ==>
          ?r. (k ' name = (params,r)) /\ name IN FDOM k /\
              term_ok ctxt exp /\ (term2t r = exp) /\ funcs_ok r) /\
@@ -2193,9 +2250,9 @@ val M_ev_IMP_R_ev_lemma = prove(goal,
     \\ Q.EXISTS_TAC `ok2'` \\ STRIP_TAC THEN1 METIS_TAC []
     \\ REPEAT STRIP_TAC \\ FULL_SIMP_TAC std_ss []
     \\ IMP_RES_TAC MR_ev_OK \\ FULL_SIMP_TAC std_ss [inst_term_thm]
-    \\ MATCH_MP_TAC MilawaTrue_TRANS
+    \\ MATCH_MP_TAC MilawaTrue_TRANS \\ ASM_SIMP_TAC std_ss []
     \\ Q.EXISTS_TAC `(inst_term (FunVarBind xs sl) e)` \\ ASM_SIMP_TAC std_ss []
-    \\ MATCH_MP_TAC MilawaTrue_TRANS
+    \\ MATCH_MP_TAC MilawaTrue_TRANS \\ ASM_SIMP_TAC std_ss []
     \\ Q.EXISTS_TAC `term_sub (ZIP (xs,(MAP (inst_term a) ys))) e`
     \\ STRIP_TAC THEN1
      (FULL_SIMP_TAC std_ss []
@@ -2232,7 +2289,7 @@ val M_ev_IMP_R_ev_lemma = prove(goal,
     \\ Q.EXISTS_TAC `mApp fc (MAP mConst args)` \\ ASM_SIMP_TAC std_ss []
     \\ IMP_RES_TAC MilawaTrue_IMP_formula_ok
     \\ FULL_SIMP_TAC std_ss [formula_ok_def,term_ok_def,LENGTH_MAP]
-    \\ MATCH_MP_TAC MilawaTrue_or_not_equal_list
+    \\ MATCH_MP_TAC MilawaTrue_or_not_equal_list \\ ASM_SIMP_TAC std_ss []
     \\ Q.LIST_EXISTS_TAC [`ZIP (MAP (inst_term a) el,MAP mConst args)`]
     \\ STRIP_TAC THEN1
      (ASM_SIMP_TAC std_ss [ZIP_MAP,MEM_MAP,pairTheory.EXISTS_PROD,PULL_IMP])

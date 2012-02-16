@@ -2037,14 +2037,18 @@ val recfns_in_Phi = store_thm(
 
     Q.EXISTS_TAC `dBnum (fromTerm (cminimise @@ church i))` >>
     POP_ASSUM (ASSUME_TAC o GSYM) >>
-    srw_tac [][Once Phi_def, minimise_def]
-      >- (Q.EXISTS_TAC `church n` >>
+    asm_simp_tac (srw_ss())[Once Phi_def, minimise_def] >>
+    gen_tac >> COND_CASES_TAC
+      >- (pop_assum (Q.X_CHOOSE_THEN `m` strip_assume_tac) >>
+          srw_tac [][] >>
+          Q.EXISTS_TAC `church m` >>
           conj_tac
             >- (MATCH_MP_TAC cminimise_succeeds >> metis_tac []) >>
           SELECT_ELIM_TAC >> srw_tac [][] >- metis_tac [] >>
-          `n < x ∨ (x = n) ∨ x < n` by DECIDE_TAC >>
+          `m < x ∨ (x = m) ∨ x < m` by DECIDE_TAC >>
           res_tac >> full_simp_tac (srw_ss() ++ ARITH_ss) []) >>
     full_simp_tac (srw_ss()) [DECIDE ``¬(0 < j) ⇔ (j = 0)``] >>
+    qpat_assum `0 < n` (K ALL_TAC) >>
     `∀n. (Phi i (ncons n (nlist_of l)) = SOME 0) ⇒
          ∃m. m < n ∧ (Phi i (ncons m (nlist_of l)) = NONE) ∧
              ∀p. p < m ⇒ ∃r. (Phi i (ncons p (nlist_of l)) = SOME r) ∧ 0 < r`

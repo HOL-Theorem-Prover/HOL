@@ -525,4 +525,37 @@ val FST_SND_IF = store_thm("FST_SND_IF",
 
 val isTrue_T = save_thm("isTrue_T",EVAL ``isTrue (Sym "T")``);
 
+val isTrue_INTRO = store_thm("isTrue_INTRO",
+  ``((x = y) = isTrue (LISP_EQUAL x y)) /\
+    (isTrue x /\ isTrue y = isTrue (if isTrue x then y else Sym "NIL")) /\
+    (isTrue x \/ isTrue y = isTrue (if isTrue x then Sym "T" else y)) /\
+    (LISP_CONS = Dot) /\
+    (~isTrue x = isTrue (if isTrue x then Sym "NIL" else Sym "T")) /\
+    (getVal x < getVal y = isTrue (LISP_LESS x y)) /\
+    (getVal x > getVal y = isTrue (LISP_LESS y x)) /\
+    (getVal x <= getVal y = ~(getVal x > getVal y)) /\
+    (getVal x >= getVal y = ~(getVal x < getVal y)) /\
+    (getSym x < getSym y = isTrue (LISP_SYMBOL_LESS x y)) /\
+    (isDot x = isTrue (LISP_CONSP x)) /\
+    (isVal x = isTrue (LISP_NUMBERP x)) /\
+    (isSym x = isTrue (LISP_SYMBOLP x))``,
+  SIMP_TAC std_ss [FUN_EQ_THM] \\ EVAL_TAC \\ SRW_TAC [] [] \\ DECIDE_TAC);
+
+val PAIR_LEMMA = prove(
+  ``!x. (x = (FST x,x2)) = (SND x = x2)``,
+  Cases \\ SRW_TAC [] []);
+
+val SND_SND_SND_funcall_IMP = store_thm("SND_SND_SND_funcall_IMP",
+  ``R_ap (Funcall,(Sym f)::xs,ARB,k,io,ok) (x1,x2,x3,ok2) /\
+    SND (SND (SND (funcall ((Sym f)::xs) k io ok))) ==> ok2``,
+  SIMP_TAC std_ss [funcall_def] \\ REPEAT STRIP_TAC
+  \\ `funcall_ok (Sym f::xs) k io ok` by METIS_TAC [funcall_ok_def]
+  \\ FULL_SIMP_TAC std_ss [] \\ Cases_on `ok2` \\ SIMP_TAC std_ss []
+  \\ `!res. R_ap (Funcall,Sym f::xs,ARB,k,io,ok) res =
+            (res = (FST res, FST (SND res), FST (SND (SND res)),F))` by METIS_TAC [R_ap_F_11,pairTheory.PAIR]
+  \\ FULL_SIMP_TAC std_ss [PAIR_LEMMA]
+  \\ `?result:SExp # (string |-> string list # term) # string # bool. ~SND (SND (SND result))` by ALL_TAC
+  THEN1 (Q.EXISTS_TAC `(ARB,ARB,ARB,F)` \\ EVAL_TAC)
+  \\ METIS_TAC []);
+
 val _ = export_theory();

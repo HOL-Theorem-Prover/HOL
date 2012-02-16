@@ -91,11 +91,13 @@ fun expandv (s,tac) (GOALTREE t) =
      GOALTREE (apply (goalTree.expand (s,tac)) t)
    | expandv _ _ = raise ERR "expandv" "not implemented for goal stacks";
 
+(*
 fun expandlf tac (GOALSTACK s) = GOALSTACK (apply (goalStack.expandlf tac) s)
   | expandlf _ _ = raise ERR "expandlf" "not implemented for goal trees";
 
 fun expandl tac (GOALSTACK s) = GOALSTACK (apply (goalStack.expandl tac) s)
   | expandl _ _ = raise ERR "expandl" "not implemented for goal trees";
+*)
 
 fun top_thm (GOALSTACK s) = project goalStack.extract_thm s
   | top_thm (GOALTREE _) = raise ERR "top_thm" "not implemented for goal trees";

@@ -33,8 +33,10 @@ sig
     val e             : tactic -> proof
     val et            : string * tactic -> proof
     val apply 	      : (proof -> proof) -> proof 
+(*
     val expandl       : list_tactic -> proof
     val expandlf      : list_tactic -> proof
+*)
     val expand        : tactic -> proof
     val expandf       : tactic -> proof
     val expandv       : string * tactic -> proof

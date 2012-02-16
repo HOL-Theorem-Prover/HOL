@@ -14,7 +14,7 @@ type list_tactic = goal list -> goal list * list_validation ;
 fun REVERSE_LTAC goals = (rev goals, rev) ;
 fun INVALID_REVERSE_LTAC goals = (rev goals, Lib.I) ;
  
-val el = proofManagerLib.expandl ;
+(* val el = proofManagerLib.expandl ; *)
 
 (* DROP_N_LTAC : int -> list_tactic -> list_tactic *)
 fun DROP_N_LTAC n ltac goals = 

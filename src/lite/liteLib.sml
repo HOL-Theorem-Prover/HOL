@@ -296,22 +296,7 @@ fun alpha v tm =
   end;
 
 
-fun ABS_CONV conv tm =
-   let val (v,bod) = Term.dest_abs tm
-   in
-     ABS v (conv bod)
-       handle HOL_ERR _ =>
-	   let val gv = Term.genvar(Term.type_of v)
-	       val gbod = Term.subst[{redex=v,residue=gv}] bod
-	       val th1 = ABS gv (conv gbod)
-	       val tm1 = concl th1
-	       val v' = Term.variant (Term.free_vars tm1) v
-	       val (l,r) = boolSyntax.dest_eq tm1
-	       val l' = alpha v' l and r' = alpha v' r
-	       val th2 = ALPHA tm1 (boolSyntax.mk_eq(l',r'))
-	   in EQ_MP th2 th1
-	   end
-   end;;
+val ABS_CONV = Conv.ABS_CONV
 
 val BODY_CONV =
  let fun dest_quant tm =

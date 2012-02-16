@@ -78,7 +78,6 @@ fun dest_primitive_op tm =
   if tm = ``opSYMBOL_LESS`` then op_SYMBOL_LESS else
   if tm = ``opADD`` then op_ADD else
   if tm = ``opSUB`` then op_SUB else
-  if tm = ``opATOMP`` then op_ATOMP else
   if tm = ``opCONSP`` then op_CONSP else
   if tm = ``opSYMBOLP`` then op_SYMBOLP else
   if tm = ``opNATP`` then op_NATP else
@@ -128,6 +127,85 @@ fun dest_term tm = let
        map stringSyntax.fromHOLstring (fst (listSyntax.dest_list (el 3 xs))),
        el 4 xs) else fail()
   end
+
+
+(* mapping from shallow embeddings to deep embeddings *)
+
+infix $$
+val op $$ = mk_comb
+
+val string_uppercase = let
+  fun uppercase_char c =
+    if #"a" <= c andalso c <= #"z" then chr (ord c - (ord #"a" - ord #"A")) else c
+  in String.translate (fn c => implode [uppercase_char c]) end
+
+fun shallow_to_deep tm = let
+  fun fromHOLstring s = string_uppercase (stringSyntax.fromHOLstring s)
+  fun fromMLstring s = stringSyntax.fromMLstring (string_uppercase s)
+  fun is_const tm =
+    (if rator tm = ``Sym`` then can fromHOLstring (rand tm) else
+     if rator tm = ``Val`` then can numSyntax.int_of_term (rand tm) else
+     if rator (rator tm) = ``Dot`` then is_const (rand (rator tm)) andalso
+                                        is_const (rand tm)
+     else false) handle HOL_ERR _ => false
+  val lisp_primitives =
+    [(``Dot``,``opCONS``),
+     (``LISP_CONS``,``opCONS``),
+     (``LISP_EQUAL:SExp->SExp->SExp``,``opEQUAL``),
+     (``LISP_LESS``,``opLESS``),
+     (``LISP_SYMBOL_LESS``,``opSYMBOL_LESS``),
+     (``LISP_ADD``,``opADD``),
+     (``LISP_SUB``,``opSUB``),
+     (``LISP_CONSP``,``opCONSP``),
+     (``LISP_SYMBOLP``,``opSYMBOLP``),
+     (``LISP_NUMBERP``,``opNATP``),
+     (``CAR``,``opCAR``),
+     (``CDR``,``opCDR``)]
+  fun aux_fail tm =
+    failwith("Unable to translate: \n\n" ^ term_to_string tm ^ "\n\n")
+  fun aux tm =
+    if is_const tm then ``Const`` $$ tm else
+    if can (match_term ``Val n``) tm then aux_fail tm else
+    if can (match_term ``Sym s``) tm then aux_fail tm else
+    if is_var tm then let
+      val (s,ty) = dest_var tm
+      val _ = ty = ``:SExp`` orelse failwith("Variable of wrong type: " ^ s)
+      in ``Var`` $$ fromMLstring s end
+    else if is_cond tm then let
+      val (x1,x2,x3) = dest_cond tm
+      val _ = if rator x1 = ``isTrue`` then () else aux_fail x1
+      in ``If`` $$ aux (rand x1) $$ aux x2 $$ aux x3 end
+    else if can pairSyntax.dest_anylet tm then let
+      val (xs,x) = pairSyntax.dest_anylet tm
+      val ys = map (fn (x,y) => pairSyntax.mk_pair(x |> dest_var |> fst |> fromMLstring, aux y)) xs
+      val y = listSyntax.mk_list(ys,``:string # term``)
+      in ``Let`` $$ y $$ (aux x) end
+    else (* general function application *) let
+      fun list_dest f tm = let val (x,y) = f tm in list_dest f x @ [y] end
+                           handle HOL_ERR _ => [tm];
+      val xs = list_dest dest_comb tm
+      val (x,xs) = (hd xs, tl xs)
+      fun lookup x [] = fail()
+        | lookup x ((y,z)::zs) = if x = y then z else lookup x zs
+      val f = ``PrimitiveFun`` $$ lookup x lisp_primitives handle HOL_ERR _ =>
+              ``Fun`` $$ fromMLstring (fst (dest_const x))
+              handle HOL_ERR _ => aux_fail x
+      val ys = map aux xs
+      in ``App`` $$ f $$ listSyntax.mk_list(ys,``:term``) end
+  fun preprocess tm = QCONV (REWRITE_CONV [isTrue_INTRO]) tm
+  val th = preprocess tm
+  val tm2 = rand (concl th)
+  in (aux tm2, th) end
+
+(*
+val tm = ``let x = LISP_ADD x y in let z = y in LISP_SUB x y``
+dest_term (fst (shallow_to_deep tm))
+
+ plan: provide a method which, given a list of definition and
+ induction thm pairs, produces deep embeddings and correspondence
+ proofs.
+
+*)
 
 
 (* state of extraction function *)
@@ -774,5 +852,93 @@ fun impure_extract name term_tac =
 
 fun impure_extract_cut name term_tac =
   impure_extract_aux name term_tac true
+
+
+(* generator *)
+
+fun deep_embeddings base_name defs_inds = let
+  (* generate deep embeddings *)
+  fun fromMLstring s = stringSyntax.fromMLstring (string_uppercase s)
+  fun parts (def,ind) = let
+    val (x,y) = dest_eq (concl (SPEC_ALL def))
+    val (body,rw) = shallow_to_deep y
+    fun list_dest f tm = let val (x,y) = f tm in list_dest f x @ [y] end
+                         handle HOL_ERR _ => [tm];
+    val xs = list_dest dest_comb x
+    val params = xs |> tl |> map (fst o dest_var)
+    val name = xs |> hd |> dest_const |> fst
+    val strs = listSyntax.mk_list(map fromMLstring params,``:string``)
+    val x1 = pairSyntax.mk_pair(strs,body)
+    val x1 = pairSyntax.mk_pair(fromMLstring name,x1)
+    in (name,params,def,ind,body,rw,x1) end;
+  val ps = map parts defs_inds
+  val xs = ps |> map (fn (name,params,def,ind,body,rw,x1) => x1)
+  val xs = listSyntax.mk_list(xs,type_of (hd xs))
+  val x = SPEC xs (Q.SPEC `k` fns_assum_def) |> concl |> dest_eq |> fst
+  val tm = ``v k = ^x``
+  val v = tm |> dest_eq |> fst |> repeat rator
+  val vv = mk_var(base_name,type_of v)
+  val fns_assum = new_definition(base_name^"_def",subst [v|->vv] tm) |> SPEC_ALL
+  (* prove correspondence *)
+  val _ = install_assum_eq fns_assum
+(*
+    val (name,params,def,ind,body,rw,x1) = el 1 ps
+*)
+  fun prove_corr (name,params,def,ind,body,rw,x1) = let
+    val name_tm = fromMLstring name
+    val (ps,t) = ``(k:string |-> string list # term) ' ^name_tm``
+                  |> REWRITE_CONV [get_lookup_thm()]
+                  |> concl |> rand |> pairSyntax.dest_pair
+    val args = ps |> listSyntax.dest_list |> fst |> map stringSyntax.fromHOLstring
+                  |> map (fn s => mk_var(simplify_name s,``:SExp``))
+                  |> (fn xs => listSyntax.mk_list(xs,``:SExp``))
+    val v = mk_var("__result__",``:SExp list -> SExp``)
+    val lemma = DISCH_ALL (ASSUME ``R_ap (Fun ^name_tm,args,e,fns,io,ok) (^v args,fns,io,ok)``)
+    val _ = atbl_install (string_uppercase name) lemma
+    fun FORCE_UNDISCH th = UNDISCH th handle HOL_ERR _ => th
+    val mt = dest_term t
+    val th1 = FORCE_UNDISCH (SIMP_RULE std_ss [] (R_ev mt)) |> remove_primes
+    val th2 = CS [R_ap_Fun] ``R_ap (Fun ^name_tm,^args,e,k,io,ok) (ans,k2,io2,ok2)``
+              |> SIMP_RULE std_ss [get_lookup_thm(),LENGTH]
+    val tm2 = th2 |> concl |> rator |> rand
+    val tm1 = th1 |> concl
+    val s = fst (match_term (rator tm1) (rator tm2))
+    val c = DEPTH_CONV eval_fappy_conv
+    val th4 = MATCH_MP th2 (INST s th1) |> DISCH_ALL |> RW [AND_IMP_INTRO]
+              |> CONV_RULE (BINOP_CONV c)
+    (* connect function *)
+    val good_name = simplify_name name
+    val params = listSyntax.dest_list args |> fst
+    val ty = foldr (fn (x,y) => mk_sexp_fun_ty y) ``:SExp`` params
+    val new_fun = def |> concl |> dest_eq |> fst |> repeat rator
+    val lhs = foldl (fn (x,y) => mk_comb(y,x)) new_fun params
+    fun mk_els [] access = []
+      | mk_els (x::xs) access = ((x:term) |-> ``HD ^access``) :: mk_els xs ``TL ^access``
+    val args_var = ``args:SExp list``
+    val tm = mk_abs(args_var,subst (mk_els params args_var) lhs)
+    val th5 = INST [v|->tm] th4 |> SIMP_RULE std_ss [HD,TL,isTrue_if]
+    val def1 = def |> ONCE_REWRITE_RULE [rw]
+    val th6 = th5 |> REWRITE_RULE [lisp_sexpTheory.LISP_CONS_def]
+              |> CONV_RULE ((RAND_CONV o RAND_CONV) (ONCE_REWRITE_CONV [GSYM def1]))
+    (* prove certificate theorem *)
+    val goal = mk_imp(hd (hyp (get_lookup_thm())),th6 |> concl |> rand)
+    val f = foldr mk_abs goal params
+    val forall_goal = foldr mk_forall goal params
+    val result = if concl ind = T then RW [] th6 else let
+          val i = ISPEC f ind |> CONV_RULE (DEPTH_CONV BETA_CONV)
+          val i = REWRITE_RULE [isTrue_INTRO] i
+          val result = prove(i |> concl |> rand,
+            PURE_ONCE_REWRITE_TAC [R_ap_SET_ENV]
+            \\ MATCH_MP_TAC (RW1 [R_ap_SET_ENV] i) \\ REPEAT STRIP_TAC
+            \\ MATCH_MP_TAC (RW1 [R_ap_SET_ENV] th6) \\ ASM_REWRITE_TAC []
+            \\ REPEAT STRIP_TAC \\ METIS_TAC [isTrue_INTRO]) |> SPECL params
+          in result end
+    (* install for future use *)
+    val _ = atbl_install (string_uppercase name) result
+    val _ = save_thm("R_ap_" ^ name,result)
+    in result end;
+  val thms = map prove_corr ps
+  in (fns_assum,thms) end;
+
 
 end;

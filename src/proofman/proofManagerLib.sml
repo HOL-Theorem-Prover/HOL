@@ -100,8 +100,10 @@ fun apply f =
     top_proof())
   handle e => Raise e;
 
+(*
 fun expandlf ltac = apply (Manager.expandlf ltac) ;
 fun expandl ltac = apply (Manager.expandl ltac) ;
+*)
 
 val top_thm      = Manager.hd_proj Manager.top_thm o proofs;
 val initial_goal = Manager.hd_proj Manager.initial_goal o proofs;
