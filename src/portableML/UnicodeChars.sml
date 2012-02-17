@@ -72,6 +72,17 @@ val longmapsfrom         = U 0x27FB
 val hookleftarrow        = U 0x21A9
 val hookrightarrow       = U 0x21AA
 
+(* brackets, braces and parentheses *)
+val double_bracel = U 0x2983
+val double_bracer = U 0x2984
+val langle = U 0x27E8
+val rangle = U 0x27E9
+val double_langle = U 0x27EA
+val double_rangle = U 0x27EB
+val lensel = U 0x2987
+val lenser = U 0x2988
+
+
 (*stars*)
 val blackstar            = U 0x2605
 val whitestar            = U 0x2606
