@@ -11,6 +11,7 @@ val _ = new_theory "marker";
    ---------------------------------------------------------------------- *)
 
 val stmarker_def = new_definition("stmarker_def", ``stmarker (x:'a) = x``);
+val _ = OpenTheoryMap.OpenTheory_const_name{const={Thy="marker",Name="stmarker"},name=(["Unwanted"],"id")}
 
 (* the following move_<dir>_<op> theorems will loop if more than one term
    is marked at the same level *)
