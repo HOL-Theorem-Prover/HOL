@@ -19,8 +19,8 @@ Two subdirectories:
 
 The top-level result is in milawa-prover/soundness-thm where a theorem
 states: when Milawa is run on top of the verified runtime it will only
-ever prove statements that can be derived from the (sound!) inference
-rules -- no matter how reflection or any other feature is used.
+ever prove statements that are true w.r.t. the semantics of Milawa's
+formulas -- no matter how reflection or any other feature is used.
 
 
 Copyright Magnus O. Myreen 2012
