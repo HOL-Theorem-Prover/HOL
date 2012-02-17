@@ -24,12 +24,9 @@ open HolKernel boolLib Parse
 
 local open OpenTheoryMap
   val ns = ["Number","Natural"]
-  val nsnum = ["Number","Numeral"]
 in
   fun ot0 x y = OpenTheory_const_name{const={Thy="arithmetic",Name=x},name=(ns,y)}
   fun ot x = ot0 x x
-  fun otnum0 x y = OpenTheory_const_name{const={Thy="arithmetic",Name=x},name=(nsnum,y)}
-  fun otnum x = otnum0 x x
   fun otunwanted x = OpenTheory_const_name{const={Thy="arithmetic",Name=x},name=(["Unwanted"],"id")}
 end
 
@@ -83,8 +80,8 @@ val NUMERAL_DEF = new_definition("NUMERAL_DEF", --`NUMERAL (x:num) = x`--);
 
 val ALT_ZERO  = new_definition("ALT_ZERO",    --`ZERO = 0`--);
 local open OpenTheoryMap in
-val _ = OpenTheory_const_name {const={Thy="arithmetic",Name="ZERO"},name=(["Number","Numeral"],"zero")}
-val _ = OpenTheory_const_name {const={Thy="num",Name="0"},name=(["Number","Numeral"],"zero")}
+val _ = OpenTheory_const_name {const={Thy="arithmetic",Name="ZERO"},name=(["Number","Natural"],"zero")}
+val _ = OpenTheory_const_name {const={Thy="num",Name="0"},name=(["Number","Natural"],"zero")}
 end
 
 val BIT1 =
@@ -99,8 +96,8 @@ val _ = new_definition(
   --`^(mk_var(GrammarSpecials.nat_elim_term, Type`:num->num`)) n = n`--);
 
 val _ = otunwanted "NUMERAL"
-val _ = otnum0 "BIT1" "bit1"
-val _ = otnum0 "BIT2" "bit2"
+val _ = ot0 "BIT1" "bit1"
+val _ = ot0 "BIT2" "bit2"
 
 (*---------------------------------------------------------------------------*
  * After this call, numerals parse into `NUMERAL( ... )`                     *
