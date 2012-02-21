@@ -10,10 +10,6 @@
 (* DATE:    January 1992						*)
 (* =====================================================================*)
 
-structure pred_setScript =
-struct
-
-
 (* interactive use
 app load ["pairLib", "numLib", "PGspec", "PSet_ind", "Q",
           "Defn", "TotalDefn", "metisLib"];
@@ -4931,5 +4927,4 @@ val _ = adjoin_to_theory {sig_ps = SOME sigps,
 
 val _ = export_theory();
 
-end
 
