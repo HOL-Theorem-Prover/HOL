@@ -892,6 +892,13 @@ val INSERT_DIFF =
       REPEAT (STRIP_TAC ORELSE EQ_TAC) THEN ASM_REWRITE_TAC [] THEN
       FIRST_ASSUM (fn th => fn g => SUBST_ALL_TAC th g) THEN RES_TAC]);
 
+(* with INSERT to hand, it's easy to talk about concrete sets *)
+val UNIV_BOOL = store_thm(
+  "UNIV_BOOL",
+  ``univ(:bool) = {T; F}``,
+  SRW_TAC [][EXTENSION]);
+val _ = export_rewrites ["UNIV_BOOL"]
+
 (* ===================================================================== *)
 (* Removal of an element						 *)
 (* ===================================================================== *)
