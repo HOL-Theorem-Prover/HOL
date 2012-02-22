@@ -900,6 +900,63 @@ rw [] >|
  pop_assum (ASSUME_TAC o SIMP_RULE (srw_ss()) [Once type_v_cases]) >> 
      fs []]);
 
+val e_step_ctor_env_same = Q.prove (
+`!cenv env e c cenv' env' e' c'.
+  (e_step (cenv,env,e,c) = Estep (cenv',env',e',c')) ⇒ (cenv = cenv')`,
+rw [e_step_def] >>
+every_case_tac >>
+fs [push_def, return_def, continue_def] >>
+every_case_tac >>
+fs []);
+
+val exp_type_soundness_help = Q.prove (
+`!st1 st2. e_step_reln^* st1 st2 ⇒
+  ∀tenvC tenvE envC envE e c envC' envE' e' c' t.
+    (st1 = (envC,envE,e,c)) ∧
+    (st2 = (envC',envE',e',c')) ∧
+    consistent_con_env envC tenvC ∧
+    consistent_con_env2 envC tenvC ∧
+    type_state tenvC st1 t
+    ⇒
+    (envC = envC') ∧
+    type_state tenvC st2 t`,
+HO_MATCH_MP_TAC RTC_INDUCT >>
+rw [e_step_reln_def] >>
+`?envC' envE' e' c'. st1' = (envC',envE',e',c')`
+        by (cases_on `st1'` >>
+            cases_on `r` >>
+            cases_on `r'` >>
+            metis_tac []) >>
+rw [] >>
+metis_tac [e_step_ctor_env_same, exp_type_preservation]);
+
+val exp_type_soundness = Q.store_thm ("exp_type_soundness",
+`!tenvC tenvE e t envC envE.
+  consistent_con_env envC tenvC ∧
+  consistent_con_env2 envC tenvC ∧
+  type_env tenvC envE tenvE ∧
+  type_e tenvC tenvE e t
+  ⇒
+  e_diverges envC envE e ∨ 
+  ?r. (r ≠ Rerr Rtype_error) ∧ small_eval envC envE e [] r`,
+rw [e_diverges_def, METIS_PROVE [] ``x ∨ y = ~x ⇒ y``, d_step_reln_def] >>
+`type_state tenvC (envC,envE,e,[]) t` 
+         by (rw [type_state_cases] >>
+             metis_tac [type_ctxts_rules]) >>
+imp_res_tac exp_type_soundness_help >>
+fs [] >>
+rw [] >>
+fs [e_step_reln_def] >>
+`final_state (cenv',env',e',c')` 
+           by metis_tac [exp_type_progress] >>
+Cases_on `e'` >>
+Cases_on `c'` >>
+fs [final_state_def] >|
+[qexists_tac `Rerr (Rraise e'')`,
+ qexists_tac `Rval v`] >>
+rw [small_eval_def] >>
+metis_tac []);
+
 val get_first_tenv_def = Define `
   (get_first_tenv ds NONE = 
      case ds of
@@ -1018,15 +1075,6 @@ induct_on `tenvC'` >>
 rw [disjoint_env_def] >>
 fs [Once DISJOINT_SYM] >>
 metis_tac [disjoint_env_def, DISJOINT_SYM]);
-
-val e_step_ctor_env_same = Q.prove (
-`!cenv env e c cenv' env' e' c'.
-  (e_step (cenv,env,e,c) = Estep (cenv',env',e',c')) ⇒ (cenv = cenv')`,
-rw [e_step_def] >>
-every_case_tac >>
-fs [push_def, return_def, continue_def] >>
-every_case_tac >>
-fs []);
 
 val type_preservation = Q.prove (
 `!tenvC envC envE ds c envC' envE' ds' c' tenvE tenvC' st' tenvC''.

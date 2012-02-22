@@ -575,6 +575,14 @@ small_eval cenv env e c (Rerr Rtype_error) =
     (rtc e_step_reln) (cenv,env,e,c) (cenv,env',e',c') &&
     (e_step (cenv,env',e',c') = Etype_error)
 
+val e_diverges : envC -> envE -> exp -> bool
+let e_diverges cenv env e =
+  forall cenv' env' e' c'.
+    (rtc e_step_reln) (cenv,env,e,[]) (cenv',env',e',c')
+    -->
+    exist cenv'' env'' e'' c''.
+      e_step_reln (cenv',env',e',c') (cenv'',env'',e'',c'')
+
 let d_step_reln st st' = 
   (d_step st = Dstep st')
 
@@ -1511,3 +1519,310 @@ forall cenv env e c err.
 evaluate cenv env e (Rerr err)
 ==>
 evaluate_state (cenv, env, e, c) (Rerr err)
+
+
+(* ------------------------------------------------------------------------- *) 
+
+(* A version of the big-step expression semantics that doesn't use the
+ * constructor environment to know if a value is ok or not.  Is equivalent to
+ * the normal one for well-typed programs. *)
+
+val pmatch' : pat -> v -> envE -> match_result
+let rec 
+pmatch' (Pvar n) v' env = Match (bind n v' env)
+and
+pmatch' (Plit l) (Lit l') env =
+  if l = l' then
+    Match env
+  else if lit_same_type l l' then
+    No_match
+  else
+    Match_type_error
+and
+pmatch' (Pcon (Some n) ps) (Conv (Some n') vs) env =
+  if List.length ps = List.length vs && n = n' then
+    pmatch_list' ps vs env
+  else
+    No_match
+and
+pmatch' (Pcon None ps) (Conv None vs) env =
+  if List.length ps = List.length vs then
+    pmatch_list' ps vs env
+  else
+    No_match
+and
+pmatch' _ _ env = Match_type_error
+and
+pmatch_list' [] [] env = Match env
+and
+pmatch_list' (p::ps) (v::vs) env =
+  match pmatch' p v env with
+    | No_match -> No_match
+    | Match_type_error -> Match_type_error
+    | Match env' -> pmatch_list' ps vs env'
+  end
+and
+pmatch_list' _ _ env = Match_type_error
+
+
+indreln
+
+forall env err.
+true
+==>
+evaluate' env (Raise err) (Rerr (Rraise err))
+
+and
+
+forall env v.
+true
+==>
+evaluate' env (Val v) (Rval v)
+
+and
+
+forall env cn es vs.
+evaluate_list' env es (Rval vs)
+==>
+evaluate' env (Con cn es) (Rval (Conv cn vs))
+
+and
+
+forall env cn es err.
+evaluate_list' env es (Rerr err)
+==>
+evaluate' env (Con cn es) (Rerr err)
+
+and
+
+forall env n v.
+(lookup n env = Some v)
+==>
+evaluate' env (Var n) (Rval v)
+
+and
+
+forall env n.
+(lookup n env = None)
+==>
+evaluate' env (Var n) (Rerr Rtype_error)
+
+and
+
+forall env n e.
+true
+==>
+evaluate' env (Fun n e) (Rval (Closure env n e))
+
+and
+
+forall env op e1 e2 v1 v2 env' e3 bv.
+evaluate' env e1 (Rval v1) &&
+evaluate' env e2 (Rval v2) &&
+do_app env op v1 v2 = Some (env', e3) &&
+evaluate' env' e3 bv
+==>
+evaluate' env (App op e1 e2) bv
+
+and
+
+forall env op e1 e2 v1 v2.
+evaluate' env e1 (Rval v1) &&
+evaluate' env e2 (Rval v2) &&
+do_app env op v1 v2 = None
+==>
+evaluate' env (App op e1 e2) (Rerr Rtype_error)
+
+and
+
+forall env op e1 e2 v1 err.
+evaluate' env e1 (Rval v1) &&
+evaluate' env e2 (Rerr err)
+==>
+evaluate' env (App op e1 e2) (Rerr err)
+
+and
+
+forall env op e1 e2 err.
+evaluate' env e1 (Rerr err)
+==>
+evaluate' env (App op e1 e2) (Rerr err)
+
+and
+
+forall env op e1 e2 v e' bv.
+evaluate' env e1 (Rval v) &&
+do_log op v e2 = Some e' &&
+evaluate' env e' bv
+==>
+evaluate' env (Log op e1 e2) bv
+
+and
+
+forall env op e1 e2 v.
+evaluate' env e1 (Rval v) &&
+do_log op v e2 = None
+==>
+evaluate' env (Log op e1 e2) (Rerr Rtype_error)
+
+and
+
+forall env op e1 e2 err.
+evaluate' env e1 (Rerr err)
+==>
+evaluate' env (Log op e1 e2) (Rerr err)
+
+and
+
+forall env e1 e2 e3 v e' bv.
+evaluate' env e1 (Rval v) &&
+do_if v e2 e3 = Some e' &&
+evaluate' env e' bv
+==>
+evaluate' env (If e1 e2 e3) bv
+
+and
+
+forall env e1 e2 e3 v.
+evaluate' env e1 (Rval v) &&
+do_if v e2 e3 = None
+==>
+evaluate' env (If e1 e2 e3) (Rerr Rtype_error)
+
+and
+
+
+forall env e1 e2 e3 err.
+evaluate' env e1 (Rerr err)
+==>
+evaluate' env (If e1 e2 e3) (Rerr err)
+
+and
+
+forall env e pes v bv.
+evaluate' env e (Rval v) &&
+evaluate_match' env v pes bv
+==>
+evaluate' env (Mat e pes) bv
+
+and
+
+forall env e pes err.
+evaluate' env e (Rerr err)
+==>
+evaluate' env (Mat e pes) (Rerr err)
+
+and
+
+forall env n e1 e2 v bv.
+evaluate' env e1 (Rval v) &&
+evaluate' (bind n v env) e2 bv
+==>
+evaluate' env (Let n e1 e2) bv
+
+and
+
+forall env n e1 e2 err.
+evaluate' env e1 (Rerr err)
+==>
+evaluate' env (Let n e1 e2) (Rerr err)
+
+and
+
+forall env funs e bv.
+all_distinct (List.map (fun (x,y,z) -> x) funs) &&
+evaluate' (build_rec_env funs env) e bv
+==>
+evaluate' env (Letrec funs e) bv
+
+and
+
+forall env funs e.
+not (all_distinct (List.map (fun (x,y,z) -> x) funs))
+==>
+evaluate' env (Letrec funs e) (Rerr Rtype_error)
+
+and
+
+forall env e n v v'.
+evaluate' env e (Rval v) &&
+do_proj v n = Some v'
+==>
+evaluate' env (Proj e n) (Rval v')
+
+and
+
+forall env e n v.
+evaluate' env e (Rval v) &&
+do_proj v n = None
+==>
+evaluate' env (Proj e n) (Rerr Rtype_error)
+
+and
+
+forall env e n err.
+evaluate' env e (Rerr err)
+==>
+evaluate' env (Proj e n) (Rerr err)
+
+and
+
+forall env.
+true
+==>
+evaluate_list' env [] (Rval [])
+
+and
+
+forall env e es v vs.
+evaluate' env e (Rval v) &&
+evaluate_list' env es (Rval vs)
+==>
+evaluate_list' env (e::es) (Rval (v::vs))
+
+and
+
+forall env e es err.
+evaluate' env e (Rerr err)
+==>
+evaluate_list' env (e::es) (Rerr err)
+
+and
+
+forall env e es v err.
+evaluate' env e (Rval v) &&
+evaluate_list' env es (Rerr err)
+==>
+evaluate_list' env (e::es) (Rerr err)
+
+and
+
+forall env v.
+true
+==>
+evaluate_match' env v [] (Rerr (Rraise Bind_error))
+
+and
+
+forall env v p e pes env' bv.
+(pmatch' p v env = Match env') &&
+evaluate' env' e bv
+==>
+evaluate_match' env v ((p,e)::pes) bv
+
+and
+
+forall env v p e pes bv.
+(pmatch' p v env = No_match) &&
+evaluate_match' env v pes bv
+==>
+evaluate_match' env v ((p,e)::pes) bv
+
+and
+
+forall env v p e pes.
+(pmatch' p v env = Match_type_error)
+==>
+evaluate_match' env v ((p,e)::pes) (Rerr Rtype_error)
+
+

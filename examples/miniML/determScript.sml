@@ -18,7 +18,7 @@ val _ = new_theory "determ";
 
 (* ------------------------- Big step determinacy ----------------------- *)
 
-val big_exp_determ = Q.prove (
+val big_exp_determ = Q.store_thm ("big_exp_determ",
 `(∀ cenv env e r1.
    evaluate cenv env e r1 ⇒
    ∀ r2. evaluate cenv env e r2 ⇒
@@ -62,6 +62,30 @@ metis_tac [big_exp_determ, result_11, result_distinct,
 
 (* ---------------------- Small step determinacy ------------------------- *)
 
+val small_exp_determ1 = Q.store_thm ("small_exp_determ1",
+`!cenv env e r1 r2.
+  small_eval cenv env e [] r1 ∧ small_eval cenv env e [] r2
+  ⇒
+  (r1 = r2)`,
+metis_tac [big_exp_determ, small_big_exp_equiv]);
+
+val small_exp_determ2 = Q.store_thm ("small_exp_determ2",
+`!cenv env e r.
+  ¬(e_diverges cenv env e ∧ ?r. small_eval cenv env e [] r)`,
+rw [e_diverges_def, METIS_PROVE [] ``~x ∨ ~y = y ⇒ ~x``] >>
+cases_on `r` >>
+(TRY (Cases_on `e'`)) >>
+fs [small_eval_def, e_step_reln_def] >|
+[`∀cenv'' env'' e'' c''. 
+    e_step (cenv,env',Val a,[]) ≠ Estep (cenv'',env'',e'',c'')`
+         by rw [e_step_def, continue_def] >>
+     metis_tac [],
+ metis_tac [e_step_result_distinct],
+ `∀cenv'' env'' e''' c''. 
+    e_step (cenv,env',Raise e'',[]) ≠ Estep (cenv'',env'',e''',c'')`
+         by rw [e_step_def, continue_def] >>
+     metis_tac []]);
+
 val small_determ1 = Q.store_thm ("small_determ1",
 `!cenv env ds r1 r2.
   d_small_eval cenv env ds NONE r1 ∧ d_small_eval cenv env ds NONE r2
@@ -82,6 +106,7 @@ fs [d_small_eval_def, d_step_reln_def] >|
      metis_tac [],
  metis_tac [d_step_result_distinct],
  metis_tac [d_step_result_distinct]]);
+
 
 val _ = export_theory ();
 

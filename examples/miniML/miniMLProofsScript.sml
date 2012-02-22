@@ -33,6 +33,14 @@ val (pmatch_def, pmatch_ind) =
 val _ = save_thm ("pmatch_def", pmatch_def);
 val _ = save_thm ("pmatch_ind", pmatch_ind);
 
+val (pmatch'_def, pmatch'_ind) =
+  tprove_no_defn ((pmatch'_def, pmatch'_ind),
+  wf_rel_tac 
+  `inv_image $< (λx. case x of INL (p,b,c) => pat_size p | INR (ps,b,c) =>
+  pat1_size ps)`);
+val _ = save_thm ("pmatch'_def", pmatch'_def);
+val _ = save_thm ("pmatch'_ind", pmatch'_ind);
+
 val (find_recfun_def, find_recfun_ind) =
   tprove_no_defn ((find_recfun_def, find_recfun_ind),
   WF_REL_TAC `measure (λ(x,y). LENGTH y)` >>

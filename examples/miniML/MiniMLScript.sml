@@ -663,6 +663,16 @@ val _ = Define `
 
 val _ = Defn.save_defn small_eval_defn;
 
+(*val e_diverges : envC -> envE -> exp -> bool*)
+val _ = Define `
+ (e_diverges cenv env e =
+  ! cenv' env' e' c'.
+    (RTC e_step_reln) (cenv,env,e,[]) (cenv',env',e',c')
+    ==>
+    (? cenv'' env'' e'' c''.
+      e_step_reln (cenv',env',e',c') (cenv'',env'',e'',c'')))`;
+
+
 val _ = Define `
  (d_step_reln st st' = 
   (d_step st = Dstep st'))`;
@@ -1612,5 +1622,315 @@ evaluate_state (cenv, env, e, c) bv)
 evaluate cenv env e (Rerr err)
 ==>
 evaluate_state (cenv, env, e, c) (Rerr err))`;
+
+
+(* ------------------------------------------------------------------------- *) 
+
+(* A version of the big-step expression semantics that doesn't use the
+ * constructor environment to know if a value is ok or not.  Is equivalent to
+ * the normal one for well-typed programs. *)
+
+(*val pmatch' : pat -> v -> envE -> match_result*)
+ val pmatch'_defn = Hol_defn "pmatch'" `
+ 
+(pmatch' (Pvar n) v' env = Match (bind n v' env))
+/\
+(pmatch' (Plit l) (Lit l') env =
+  if l = l' then
+    Match env
+  else if lit_same_type l l' then
+    No_match
+  else
+    Match_type_error)
+/\
+(pmatch' (Pcon (SOME n) ps) (Conv (SOME n') vs) env =
+  if (LENGTH ps = LENGTH vs) /\ (n = n') then
+    pmatch_list' ps vs env
+  else
+    No_match)
+/\
+(pmatch' (Pcon NONE ps) (Conv NONE vs) env =
+  if LENGTH ps = LENGTH vs then
+    pmatch_list' ps vs env
+  else
+    No_match)
+/\
+(pmatch' _ _ env = Match_type_error)
+/\
+(pmatch_list' [] [] env = Match env)
+/\
+(pmatch_list' (p::ps) (v::vs) env =
+  (case pmatch' p v env of
+      No_match => No_match
+    | Match_type_error => Match_type_error
+    | Match env' => pmatch_list' ps vs env'
+  ))
+/\
+(pmatch_list' _ _ env = Match_type_error)`;
+
+val _ = Defn.save_defn pmatch'_defn;
+
+
+val _ = Hol_reln `
+
+(! env err.
+T
+==>
+evaluate' env (Raise err) (Rerr (Rraise err)))
+
+/\
+
+(! env v.
+T
+==>
+evaluate' env (Val v) (Rval v))
+
+/\
+
+(! env cn es vs.
+evaluate_list' env es (Rval vs)
+==>
+evaluate' env (Con cn es) (Rval (Conv cn vs)))
+
+/\
+
+(! env cn es err.
+evaluate_list' env es (Rerr err)
+==>
+evaluate' env (Con cn es) (Rerr err))
+
+/\
+
+(! env n v.
+(lookup n env = SOME v)
+==>
+evaluate' env (Var n) (Rval v))
+
+/\
+
+(! env n.
+(lookup n env = NONE)
+==>
+evaluate' env (Var n) (Rerr Rtype_error))
+
+/\
+
+(! env n e.
+T
+==>
+evaluate' env (Fun n e) (Rval (Closure env n e)))
+
+/\
+
+(! env op e1 e2 v1 v2 env' e3 bv.
+evaluate' env e1 (Rval v1) /\
+evaluate' env e2 (Rval v2) /\
+(do_app env op v1 v2 = SOME (env', e3)) /\
+evaluate' env' e3 bv
+==>
+evaluate' env (App op e1 e2) bv)
+
+/\
+
+(! env op e1 e2 v1 v2.
+evaluate' env e1 (Rval v1) /\
+evaluate' env e2 (Rval v2) /\
+(do_app env op v1 v2 = NONE)
+==>
+evaluate' env (App op e1 e2) (Rerr Rtype_error))
+
+/\
+
+(! env op e1 e2 v1 err.
+evaluate' env e1 (Rval v1) /\
+evaluate' env e2 (Rerr err)
+==>
+evaluate' env (App op e1 e2) (Rerr err))
+
+/\
+
+(! env op e1 e2 err.
+evaluate' env e1 (Rerr err)
+==>
+evaluate' env (App op e1 e2) (Rerr err))
+
+/\
+
+(! env op e1 e2 v e' bv.
+evaluate' env e1 (Rval v) /\
+(do_log op v e2 = SOME e') /\
+evaluate' env e' bv
+==>
+evaluate' env (Log op e1 e2) bv)
+
+/\
+
+(! env op e1 e2 v.
+evaluate' env e1 (Rval v) /\
+(do_log op v e2 = NONE)
+==>
+evaluate' env (Log op e1 e2) (Rerr Rtype_error))
+
+/\
+
+(! env op e1 e2 err.
+evaluate' env e1 (Rerr err)
+==>
+evaluate' env (Log op e1 e2) (Rerr err))
+
+/\
+
+(! env e1 e2 e3 v e' bv.
+evaluate' env e1 (Rval v) /\
+(do_if v e2 e3 = SOME e') /\
+evaluate' env e' bv
+==>
+evaluate' env (If e1 e2 e3) bv)
+
+/\
+
+(! env e1 e2 e3 v.
+evaluate' env e1 (Rval v) /\
+(do_if v e2 e3 = NONE)
+==>
+evaluate' env (If e1 e2 e3) (Rerr Rtype_error))
+
+/\
+
+
+(! env e1 e2 e3 err.
+evaluate' env e1 (Rerr err)
+==>
+evaluate' env (If e1 e2 e3) (Rerr err))
+
+/\
+
+(! env e pes v bv.
+evaluate' env e (Rval v) /\
+evaluate_match' env v pes bv
+==>
+evaluate' env (Mat e pes) bv)
+
+/\
+
+(! env e pes err.
+evaluate' env e (Rerr err)
+==>
+evaluate' env (Mat e pes) (Rerr err))
+
+/\
+
+(! env n e1 e2 v bv.
+evaluate' env e1 (Rval v) /\
+evaluate' (bind n v env) e2 bv
+==>
+evaluate' env (Let n e1 e2) bv)
+
+/\
+
+(! env n e1 e2 err.
+evaluate' env e1 (Rerr err)
+==>
+evaluate' env (Let n e1 e2) (Rerr err))
+
+/\
+
+(! env funs e bv.
+ALL_DISTINCT (MAP (\ (x,y,z) . x) funs) /\
+evaluate' (build_rec_env funs env) e bv
+==>
+evaluate' env (Letrec funs e) bv)
+
+/\
+
+(! env funs e.
+~ (ALL_DISTINCT (MAP (\ (x,y,z) . x) funs))
+==>
+evaluate' env (Letrec funs e) (Rerr Rtype_error))
+
+/\
+
+(! env e n v v'.
+evaluate' env e (Rval v) /\
+(do_proj v n = SOME v')
+==>
+evaluate' env (Proj e n) (Rval v'))
+
+/\
+
+(! env e n v.
+evaluate' env e (Rval v) /\
+(do_proj v n = NONE)
+==>
+evaluate' env (Proj e n) (Rerr Rtype_error))
+
+/\
+
+(! env e n err.
+evaluate' env e (Rerr err)
+==>
+evaluate' env (Proj e n) (Rerr err))
+
+/\
+
+(! env.
+T
+==>
+evaluate_list' env [] (Rval []))
+
+/\
+
+(! env e es v vs.
+evaluate' env e (Rval v) /\
+evaluate_list' env es (Rval vs)
+==>
+evaluate_list' env (e::es) (Rval (v::vs)))
+
+/\
+
+(! env e es err.
+evaluate' env e (Rerr err)
+==>
+evaluate_list' env (e::es) (Rerr err))
+
+/\
+
+(! env e es v err.
+evaluate' env e (Rval v) /\
+evaluate_list' env es (Rerr err)
+==>
+evaluate_list' env (e::es) (Rerr err))
+
+/\
+
+(! env v.
+T
+==>
+evaluate_match' env v [] (Rerr (Rraise Bind_error)))
+
+/\
+
+(! env v p e pes env' bv.
+(pmatch' p v env = Match env') /\
+evaluate' env' e bv
+==>
+evaluate_match' env v ((p,e)::pes) bv)
+
+/\
+
+(! env v p e pes bv.
+(pmatch' p v env = No_match) /\
+evaluate_match' env v pes bv
+==>
+evaluate_match' env v ((p,e)::pes) bv)
+
+/\
+
+(! env v p e pes.
+(pmatch' p v env = Match_type_error)
+==>
+evaluate_match' env v ((p,e)::pes) (Rerr Rtype_error))`;
+
+
 val _ = export_theory()
 
