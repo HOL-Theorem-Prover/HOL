@@ -1,0 +1,2 @@
+INCLUDES = ../parse ../spec
+OPTIONS=QUIT_ON_FAILURE

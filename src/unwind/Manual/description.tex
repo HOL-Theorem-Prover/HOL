@@ -90,7 +90,7 @@ NOT_DEF = |- !in out. NOT(in,out) = (!t. out t = ~in t)
 #  (`MUX_DEF`,
 #   "MUX(sw,in1,in2,out:num->bool) =
 #     !t. out t = (sw t => in1 t | in2 t)");;
-MUX_DEF = 
+MUX_DEF =
 |- !sw in1 in2 out.
     MUX(sw,in1,in2,out) = (!t. out t = (sw t => in1 t | in2 t))
 \end{verbatim}\end{session}
@@ -102,7 +102,7 @@ MUX_DEF =
 # new_definition
 # (`REG_DEF`, "REG(in,out:num->bool) =
 #              !t. out t = ((t=0) => F | in(t-1))");;
-REG_DEF = 
+REG_DEF =
 |- !in out. REG(in,out) = (!t. out t = ((t = 0) => F | in(t - 1)))
 \end{verbatim}\end{session}
 
@@ -119,7 +119,7 @@ Now we define the parity-checker implementation:
 #    ?l1 l2 l3 l4 l5.
 #     NOT(l2,l1) /\ MUX(in,l1,l2,l3) /\ REG(out,l2) /\
 #     ONE l4     /\ REG(l4,l5)       /\ MUX(l5,l3,l4,out)");;
-PARITY_IMP_DEF = 
+PARITY_IMP_DEF =
 |- !in out.
     PARITY_IMP(in,out) =
     (?l1 l2 l3 l4 l5.
@@ -141,10 +141,10 @@ prune the body of this definition:
     PARITY_IMP(in,out) =
     (!t.
       out t =
-      (((t = 0) => F | T) => 
-       (in t => 
-        ~((t = 0) => F | out(t - 1)) | 
-        ((t = 0) => F | out(t - 1))) | 
+      (((t = 0) => F | T) =>
+       (in t =>
+        ~((t = 0) => F | out(t - 1)) |
+        ((t = 0) => F | out(t - 1))) |
        T))
 \end{verbatim}\end{session}
 

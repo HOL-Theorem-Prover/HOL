@@ -109,11 +109,26 @@ fun mk_lex_reln argvars sizedlist arrangement =
 
 
 (*---------------------------------------------------------------------------*)
-(* proper_subterm t1 t2 iff t1 is a proper subterm of t2                     *)
+(* proper_subterm t1 t2 iff t1 is a proper subterm of t2. A recod projection *)
+(* x.fld is a proper subterm of x.                                           *)
 (*---------------------------------------------------------------------------*)
 
+fun is_recd_proj tm1 tm2 =
+  let val (proj,a) = dest_comb tm1
+      val aty = type_of a
+      val projlist = mapfilter
+         (fst o dest_comb o boolSyntax.lhs o snd o strip_forall o concl)
+         (TypeBase.accessors_of aty)
+  in TypeBase.is_record_type aty andalso mem proj projlist
+  end
+  handle HOL_ERR _ => false;
+
 fun proper_subterm tm1 tm2 =
-  not(aconv tm1 tm2) andalso Lib.can (find_term (aconv tm1)) tm2;
+   not(aconv tm1 tm2)
+   andalso (Lib.can (find_term (aconv tm1)) tm2
+            orelse
+            is_recd_proj tm1 tm2);
+
 
 (*---------------------------------------------------------------------------*)
 (* Adjustable set of rewrites for doing termination proof.                   *)
@@ -572,9 +587,13 @@ fun define q =
     handle e => raise (wrap_exn_loc "TotalDefn" "Define" locn e)
  end
 
+(* use of Raise means that typecheck error exceptions will get printed
+   anyway; no need to also have the code in Preterm etc print them out
+   as well. *)
 fun Define q =
- Parse.try_grammar_extension
-    (Theory.try_theory_extension define) q
+ trace ("show_typecheck_errors", 0)
+       (Parse.try_grammar_extension (Theory.try_theory_extension define))
+       q
  handle e => Raise e
 end;
 

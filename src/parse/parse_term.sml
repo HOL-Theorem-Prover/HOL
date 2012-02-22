@@ -859,7 +859,12 @@ fun parse_term (G : grammar) typeparser = let
               | _ => false
           fun case_ok l =
               case l of
-                TM :: TOK ofs :: rest => SOME ofs = caseof andalso bars_ok rest
+                TM :: TOK ofs :: TOK s :: rest => let
+                in
+                  SOME ofs = caseof andalso SOME s = casebar andalso
+                  bars_ok rest
+                end
+              | TM :: TOK ofs :: rest => SOME ofs = caseof andalso bars_ok rest
               | _ => false
         in
           if case_ok (tl pattern) then CaseRule else badcase()

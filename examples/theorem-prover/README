@@ -1,0 +1,27 @@
+
+This directory contains a soundness proof of Jared Davis' Milawa
+theorem prover. Milawa is a theorem prover styled after systems such
+as Nqthm and ACL2, but differs from these in that it has a small
+logical kernel and support for reflection. Its main proof checker can
+at runtime be swapped for a different user-supplied proof checker.
+
+Two subdirectories:
+
+  lisp-runtime
+   -- constructs and proves the correctness of a Lisp runtime which is
+      able to run through Milawa's lengthy bootstrapping process.
+      (This involves processing a 4-gigabyte input.)
+
+  milawa-prover
+   -- formalises the logic Milawa uses, proves the logic sound and
+      proves that Jared Davis' Milawa implementation is sound when run
+      on top of the lisp runtime mentioned above.
+
+The top-level result is in milawa-prover/soundness-thm where a theorem
+states: when Milawa is run on top of the verified runtime it will only
+ever prove statements that are true w.r.t. the semantics of Milawa's
+formulas -- no matter how reflection or any other feature is used.
+
+
+Copyright Magnus O. Myreen 2012
+

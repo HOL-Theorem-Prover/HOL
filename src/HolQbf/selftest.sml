@@ -1,4 +1,4 @@
-(* Copyright (c) 2010 Tjark Weber. All rights reserved. *)
+(* Copyright (c) 2010-2011 Tjark Weber. All rights reserved. *)
 
 (* Unit tests for HolQbfLib *)
 
@@ -62,6 +62,30 @@ fun disprove t =
         ", message: " ^ message ^ ")")
   else ()
 
+fun decide t =
+  if squolem_installed then let
+    val th = HolQbfLib.decide t
+    val _ = if let open Thm Term boolSyntax in
+                 concl th = t orelse
+                 dest_thm th = ([list_mk_forall(free_vars t,t)],F)
+               end
+            then ()
+            else die ("Decide proved bad theorem on term '" ^
+              Hol_pp.term_to_string t ^ "'")
+    in print "." end
+    handle Feedback.HOL_ERR {origin_structure, origin_function, message} =>
+      die ("Decide failed on term '" ^ Hol_pp.term_to_string t ^
+        "': exception HOL_ERR (in " ^ origin_structure ^ "." ^ origin_function ^
+        ", message: " ^ message ^ ")")
+  else ()
+
+local
+  fun f n = Term.mk_var("v"^(Int.toString n),Type.bool)
+  val r = QDimacs.read_qdimacs_file f
+in
+  val tm0 = r "tests/z4ml.blif_0.10_0.20_0_1_out_exact.qdimacs"
+end
+
 (*****************************************************************************)
 (* Test cases                                                                *)
 (*****************************************************************************)
@@ -89,7 +113,24 @@ val _ = List.app prove
   [
     ``?x. x``,
     ``!x. ?y. x \/ y``,
-    ``!x. ?y. (x \/ y) /\ (~x \/ y)``
+    ``!x. ?y. (x \/ y) /\ (~x \/ y)``,
+    tm0
+  ]
+
+val _ = List.app decide
+  [
+    ``!y. (?x. x /\ y) \/ (!x. y ==> x)``,
+    ``!x. x \/ ~x``,
+    ``?p. (!q. (p \/ ~q)) /\ !q:bool. ?r. r``,
+    ``!x y z. (x \/ y) /\ (x \/ z)``,
+    ``x \/ ~x``,
+    ``x /\ ~x``,
+    ``(x /\ x) \/ !y. x ==> y``,
+    tm0(*,
+    TODO: remove and replace unused variables
+    ``!x (y:bool). (x /\ (!y. y ==> x)) \/ (~x /\ (?y. y ==> x))``,
+    ``!x (y:'a). (x /\ (!y. y ==> x)) \/ (~x /\ (?y. y ==> x))``
+    *)
   ]
 
 (*****************************************************************************)

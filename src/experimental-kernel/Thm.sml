@@ -202,16 +202,18 @@ fun BETA_CONV tm =
  *---------------------------------------------------------------------------*)
 
 fun SUBST replacements template (th as THM(O,asl,c)) =
- let val (ltheta, rtheta, hyps, oracles) =
+ let val fvs = Term.FVL [template] Term.empty_varset
+     val (ltheta, rtheta, hyps, oracles) =
          itlist (fn {redex, residue = THM(ocls,h,c)} =>
-                 fn (ltheta,rtheta,hyps,Ocls) =>
-                      let val _ = Lib.assert Term.is_var redex
-                          val (lhs,rhs,_) = Term.dest_eq_ty c
-                      in ((redex |-> lhs)::ltheta,
-                          (redex |-> rhs)::rtheta,
-                          union_hyp h hyps,
-                          Tag.merge ocls Ocls)
-                      end)
+                 fn (tuple as (ltheta,rtheta,hyps,Ocls)) =>
+                    if HOLset.member(fvs,redex)
+                     then let val (lhs,rhs,_) = Term.dest_eq_ty c
+                          in ((redex |-> lhs)::ltheta,
+                              (redex |-> rhs)::rtheta,
+                              union_hyp h hyps,
+                             Tag.merge ocls Ocls)
+                          end
+                     else tuple)
                 replacements ([],[],asl,O)
  in
    if aconv (subst ltheta template) c

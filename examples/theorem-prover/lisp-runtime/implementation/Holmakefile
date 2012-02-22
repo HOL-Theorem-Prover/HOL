@@ -1,0 +1,2 @@
+INCLUDES = ../parse ../spec ../garbage-collector ../bytecode $(HOLDIR)/examples/machine-code/compiler $(HOLDIR)/examples/machine-code/decompiler $(HOLDIR)/examples/machine-code/hoare-triple $(HOLDIR)/examples/machine-code/instruction-set-models/common $(HOLDIR)/examples/machine-code/instruction-set-models/x86_64
+OPTIONS=QUIT_ON_FAILURE

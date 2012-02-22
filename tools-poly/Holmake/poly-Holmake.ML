@@ -13,8 +13,8 @@ fun useC f =
     (use ("../tools/Holmake/" ^ f ^ ".sig");
      use ("../tools/Holmake/" ^ f ^ ".sml"))
 
-
-val _ = useH "Systeml";
+val _ = use "../tools/Holmake/Systeml.sig"
+val _ = use "Holmake/Systeml.sml";
 val _ = useC "internal_functions";
 val _ = useC "Holmake_types";
 val _ = useC "Holmake_tools";

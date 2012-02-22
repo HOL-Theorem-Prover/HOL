@@ -149,6 +149,16 @@ val _ = case Lib.total (find_term (same_const ``bool_case``)) t of
           NONE => die "FAILED"
         | SOME _ => print "OK\n"
 
+val _ = tprint "Testing parsing of case expressions with leading bar"
+val t_opt = SOME (trace ("syntax_error", 0) Parse.Term
+                        `case T of | T => F | F => T`)
+    handle HOL_ERR _ => NONE
+val _ = case t_opt of
+          SOME t => if Lib.can (find_term (same_const ``bool_case``)) t then
+                      print "OK\n"
+                    else die "FAILED"
+        | NONE => die "FAILED"
+
 val _ = tprint "Testing parsing of _ variables (1)"
 val t = case Lib.total Parse.Term `case b of T => F | _ => T` of
           NONE => die "FAILED"

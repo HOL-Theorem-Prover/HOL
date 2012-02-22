@@ -1,21 +1,18 @@
-EXTRA_CLEANS = $(if $(findstring poly,$(ML_SYSNAME)),$(dprot $(HOLDIR)/bin/hol.builder),)
+ifdef POLY
+EXTRA_CLEANS = $(TARGET)
 
-TARGET_poly = $(dprot $(HOLDIR)/bin/hol.builder)
-TARGET_mosml = bossLib.sml
+TARGET = $(dprot $(HOLDIR)/bin/hol.builder)
 
-builder0 = $(HOLDIR)/bin/hol.builder0
+builder0 = $(HOLDIR)/src/num/termination/numheap
 
 boss_deps = listTheory pred_setTheory arithmeticTheory numLib \
             pred_setLib pred_setSimps numSimps optionTheory
-DEPS_poly = bossLib.uo $(patsubst %,$(dprot $(SIGOBJ)/%.uo),$(boss_deps)) \
-            $(dprot $(builder0)) $(dprot $(HOLDIR)/tools-poly/builder.ML)
-DEPS_mosml =
+DEPS = bossLib.uo $(patsubst %,$(dprot $(SIGOBJ)/%.uo),$(boss_deps)) \
+       $(dprot $(builder0))
 
-COMM_poly = cd $(protect $(HOLDIR)/tools-poly) && \
-            $(protect $(builder0)) < builder.ML && \
-            cc -o $@ hol.builder.o $(POLY_LDFLAGS) && \
-            rm hol.builder.o
-COMM_mosml =
+$(TARGET): $(DEPS)
+	$(protect $(HOLDIR)/bin/buildheap) -o hol.builder -b $(builder0) $(boss_deps) bossLib && \
+	rm hol.builder.o && \
+	$(MV) hol.builder $(TARGET)
 
-$(TARGET_$(ML_SYSNAME)): $(DEPS_$(ML_SYSNAME))
-	$(COMM_$(ML_SYSNAME))
+endif

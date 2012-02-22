@@ -126,17 +126,17 @@ val dpll_defn = Hol_defn "dpll" `
     else if MEM [] cset then NONE
     else
       case find_uprop cset of
-        NONE -> (let splitv = choose cset
+        NONE => (let splitv = choose cset
                  in
                    case dpll (rewrite splitv T cset) of
-                      NONE -> (case dpll (rewrite splitv F cset) of
-                                  NONE -> NONE
-                               || SOME fm -> SOME (fm |+ (splitv,F)))
-                   || SOME fm -> SOME (fm |+ (splitv,T)))
-     || SOME (v,b) ->
+                     NONE => (case dpll (rewrite splitv F cset) of
+                                NONE => NONE
+                              | SOME fm => SOME (fm |+ (splitv,F)))
+                   | SOME fm => SOME (fm |+ (splitv,T)))
+      | SOME (v,b) =>
           case dpll (rewrite v b cset) of
-             NONE -> NONE
-          || SOME fm -> SOME (fm |+ (v,b))
+            NONE => NONE
+          | SOME fm => SOME (fm |+ (v,b))
 `;
 
 

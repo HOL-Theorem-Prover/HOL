@@ -362,12 +362,22 @@ val base_environment = let
        ("MV", if OS = "winNT" then [LIT "move", LIT "/y"] else [LIT "/bin/mv"]),
        ("OS", [LIT OS]),
        ("SIGOBJ", [VREF "HOLDIR", LIT "/sigobj"]),
-       ("UNQUOTE", [VREF ("protect $(HOLDIR)/" ^ xable_string "/bin/unquote")])]
+       ("UNQUOTE", [VREF ("protect $(HOLDIR)/" ^ xable_string "/bin/unquote")])] @
+      (if Systeml.ML_SYSNAME = "poly" then
+         [("POLY", [LIT (Systeml.protect Systeml.POLY)]),
+          ("POLYMLLIBDIR", [LIT (Systeml.protect Systeml.POLYMLLIBDIR)])]
+       else [])
 in
   List.foldl (fn ((k,v), a) => Binarymap.insert(a, k, v))
              (Binarymap.mkDict String.compare)
              alist
 end
+
+fun lookup e k =
+    case Binarymap.peek(e, k) of
+      NONE => [LIT ""]
+    | SOME q => normquote [] q
+
 
 fun env_extend (k, v) e = Binarymap.insert(e,k,v)
 

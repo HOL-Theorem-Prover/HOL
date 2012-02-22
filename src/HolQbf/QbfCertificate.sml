@@ -173,6 +173,8 @@ struct
                    | Ext    of (term * term) (* extvar, definition *)
   end
 
+  val sat_prove = ref HolSatLib.SAT_PROVE
+
   fun check t dict (VALID (exts,lits)) = let
     open Lib Thm Drule Term Type boolSyntax
     open Redblackset Redblackmap
@@ -237,7 +239,7 @@ struct
     fun foldthis (_,Forall _,t) = t
       | foldthis (_,Ext    _,t) = t
       | foldthis (_,Exists (v,tm),t) = mk_imp(mk_eq(v,tm),t)
-    val mat = Profile.profile "mk_imp" (foldl foldthis mat) vars
+    val mat = (foldl foldthis mat) vars
 
     (* extension_to_term calculates a term corresponding
          to the definition of an extension variable,
@@ -321,27 +323,27 @@ struct
       fun foldthis (n,d) = update (d,n,fn NONE => [i] | SOME ls => i::ls)
       val deps = Redblackset.foldl foldthis deps ds
     in (mk_imp(h,t),vars,deps) end
-    val (mat,vars,deps) = Profile.profile "mat_vars" (foldl foldthis (mat,vars,deps)) exts
+    val (mat,vars,deps) = (foldl foldthis (mat,vars,deps)) exts
 
-    val thm = Profile.profile "SAT_PROVE" HolSatLib.SAT_PROVE mat
+    val thm = (!sat_prove) mat
 
-    val deps = Profile.profile "dict_topsort" Lib.dict_topsort deps
-    val deps = Profile.profile "rev" List.rev deps
+    val deps = Lib.dict_topsort deps
+    val deps = List.rev deps
     (* now deps is the list of variable indexes in the order
        they should be eliminated (quantified and have hypothesis discharged) *)
 
     fun foldthis (i,th) = case find(vars,i) of
-      Forall v => Profile.profile "Forall" (fn() => GEN v th) ()
-    | Exists (v,w) => Profile.profile "Exists" (fn () => let
+      Forall v => (fn() => GEN v th) ()
+    | Exists (v,w) => (fn () => let
         val th = EXISTS (mk_exists(v,concl th),v) th
         val ex = EXISTS (mk_exists(v,mk_eq(v,w)),w) (REFL w)
         val th = CHOOSE (v,ex) th
       in th end ) ()
-    | Ext (v,w) => Profile.profile "Ext" (fn () => let
+    | Ext (v,w) => (fn () => let
         val ex = EXISTS (mk_exists(v,mk_eq(v,w)),w) (REFL w)
         val th = CHOOSE (v,ex) th
       in th end ) ()
-    val thm = Profile.profile "DISCH_ALL" DISCH_ALL (List.foldl foldthis (Profile.profile "UNDISCH_ALL" UNDISCH_ALL thm) deps)
+    val thm = DISCH_ALL (List.foldl foldthis (UNDISCH_ALL thm) deps)
 
       (* sanity checks *)
       val _ = if !QbfTrace.trace < 1 orelse HOLset.isEmpty (Thm.hypset thm) then
