@@ -47,7 +47,6 @@ val NOT_LESS_0   = prim_recTheory.NOT_LESS_0;
 val PRE          = prim_recTheory.PRE;
 val LESS_MONO    = prim_recTheory.LESS_MONO;
 val INV_SUC_EQ   = prim_recTheory.INV_SUC_EQ;
-val PRIM_REC_THM = prim_recTheory.PRIM_REC_THM;
 val num_Axiom    = prim_recTheory.num_Axiom;
 
 val ADD_CLAUSES  = arithmeticTheory.ADD_CLAUSES;
