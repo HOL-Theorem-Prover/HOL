@@ -1,4 +1,4 @@
-structure ml_translatorLib :> ml_translatorLib =
+structure ml_translatorLib = (* :> ml_translatorLib = *)
 struct
 
 open HolKernel boolLib bossLib;
@@ -65,9 +65,6 @@ fun remove_primes th = let
         in foo xs (new_var::ys) ((x |-> new_var) :: i) end end
   val i = foo (free_varsl (concl th :: hyp th)) [] []
   in INST i th end
-
-fun append_lists [] = []
-  | append_lists (x::xs) = x @ append_lists xs
 
 fun get_nchotomy_of ty = let (* ensures that good variables names are used *)
   val case_th = TypeBase.nchotomy_of ty
@@ -192,7 +189,7 @@ fun derive_thms_for_type ty = let
     val result = mk_comb(ret_inv,exp)
     val result = ``Eval env (Mat exp ^patterns) ^result``
     (* assums *)
-    val vs = map (fn (n,f,fxs,pxs,tm,exp,xs) => map (fn (x,_,_) => x) xs) ts |> append_lists
+    val vs = map (fn (n,f,fxs,pxs,tm,exp,xs) => map (fn (x,_,_) => x) xs) ts |> flatten
     val b0 = mk_var("b0",``:bool``)
     fun mk_container tm = mk_comb(``CONTAINER:bool->bool``,tm)
     val tm = b0::map (fn (n,f,fxs,pxs,tm,exp,xs) => mk_imp(mk_container(mk_eq(input_var,tm)),pxs)) ts
@@ -321,6 +318,10 @@ register_type ``:num option``;
 register_type ``:unit``;
 *)
 
+fun D th = let
+  val th = th |> DISCH_ALL |> PURE_REWRITE_RULE [AND_IMP_INTRO]
+  in if is_imp (concl th) then th else DISCH T th end
+
 fun inst_cons_thm tm hol2deep = let
   val th = cons_for tm |> UNDISCH_ALL
   val res = th |> concl |> rand |> rand
@@ -348,7 +349,7 @@ fun inst_case_thm_for tm = let
   val ns = map (fn n => (n,args n)) names
   val ns = map (fn (n,f,fxs,pxs,tm,exp,xs) => let
       val aa = snd (first (fn (pat,_) => can (match_term tm) pat) ns)
-      in zip aa xs end) ts |> append_lists
+      in zip aa xs end) ts |> flatten
   val ms = map (fn (b,(x,n,v)) => n |-> stringSyntax.fromMLstring (fst (dest_var b))) ns
   val th = INST ms th
   val ks = map (fn (b,(x,n,v)) => (fst (dest_var x), fst (dest_var b))) ns @
@@ -473,10 +474,6 @@ fun preprocess_def def = let
 
 
 (* definition of the main work horse: hol2deep: term -> thm *)
-
-fun D th = let
-  val th = th |> DISCH_ALL |> PURE_REWRITE_RULE [AND_IMP_INTRO]
-  in if is_imp (concl th) then th else DISCH T th end
 
 fun dest_builtin_binop tm = let
   val (px,y) = dest_comb tm
