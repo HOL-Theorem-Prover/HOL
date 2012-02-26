@@ -41,8 +41,31 @@ res_tac >>
 fs [] >>
 rw []);
 
+val big_exp_determ' = Q.store_thm ("big_exp_determ'",
+`(∀ env e r1.
+   evaluate' env e r1 ⇒
+   ∀ r2. evaluate' env e r2 ⇒
+   (r1 = r2)) ∧
+ (∀ env es r1.
+   evaluate_list' env es r1 ⇒
+   ∀ r2. evaluate_list' env es r2 ⇒
+   (r1 = r2)) ∧
+ (∀ env v pes r1.
+   evaluate_match' env v pes r1 ⇒
+   ∀ r2. evaluate_match' env v pes r2 ⇒
+   (r1 = r2))`,
+HO_MATCH_MP_TAC evaluate'_ind >>
+rw [] >>
+pop_assum (ASSUME_TAC o SIMP_RULE (srw_ss ()) [Once evaluate'_cases]) >>
+fs [] >>
+rw [] >>
+fs [] >>
+res_tac >>
+fs [] >>
+rw []);
+
 val big_determ = Q.store_thm ("big_determ",
-`!cenv env ds r1. 
+`!cenv env ds r1.
   evaluate_decs cenv env ds r1 ⇒
   !r2.
     evaluate_decs cenv env ds r2
@@ -76,12 +99,12 @@ rw [e_diverges_def, METIS_PROVE [] ``~x ∨ ~y = y ⇒ ~x``] >>
 cases_on `r` >>
 (TRY (Cases_on `e'`)) >>
 fs [small_eval_def, e_step_reln_def] >|
-[`∀cenv'' env'' e'' c''. 
+[`∀cenv'' env'' e'' c''.
     e_step (cenv,env',Val a,[]) ≠ Estep (cenv'',env'',e'',c'')`
          by rw [e_step_def, continue_def] >>
      metis_tac [],
  metis_tac [e_step_result_distinct],
- `∀cenv'' env'' e''' c''. 
+ `∀cenv'' env'' e''' c''.
     e_step (cenv,env',Raise e'',[]) ≠ Estep (cenv'',env'',e''',c'')`
          by rw [e_step_def, continue_def] >>
      metis_tac []]);
@@ -100,7 +123,7 @@ rw [diverges_def, METIS_PROVE [] ``~x ∨ ~y = y ⇒ ~x``] >>
 cases_on `r` >>
 TRY (cases_on `e`) >>
 fs [d_small_eval_def, d_step_reln_def] >|
-[`∀cenv'' env'' ds'' c''. 
+[`∀cenv'' env'' ds'' c''.
     d_step (cenv',a,[],NONE) ≠ Dstep (cenv'',env'',ds'',c'')`
          by rw [d_step_def] >>
      metis_tac [],
