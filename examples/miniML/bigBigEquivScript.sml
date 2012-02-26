@@ -19,9 +19,9 @@ val full_case_tac = BasicProvers.FULL_CASE_TAC;
 val _ = new_theory "bigBigEquiv"
 
 val pmatch_pmatch' = Q.prove (
-`(!envc p v env. (pmatch envc p v env ≠ Match_type_error) ⇒ 
+`(!envc p v env. (pmatch envc p v env ≠ Match_type_error) ⇒
    (pmatch envc p v env = pmatch' p v env)) ∧
- (!envc ps vs env. (pmatch_list envc ps vs env ≠ Match_type_error) ⇒ 
+ (!envc ps vs env. (pmatch_list envc ps vs env ≠ Match_type_error) ⇒
    (pmatch_list envc ps vs env = pmatch_list' ps vs env))`,
 HO_MATCH_MP_TAC pmatch_ind >>
 rw [pmatch_def, pmatch'_def] >|
@@ -53,11 +53,11 @@ rw [pmatch_def, pmatch'_def] >|
      fs []]);
 
 val evaluate_to_evaluate' = Q.prove (
-`(!envc env e r. evaluate envc env e r ⇒ 
+`(!envc env e r. evaluate envc env e r ⇒
    (r ≠ Rerr Rtype_error) ⇒ evaluate' env e r) ∧
- (!envc env es r. evaluate_list envc env es r ⇒ 
+ (!envc env es r. evaluate_list envc env es r ⇒
    (r ≠ Rerr Rtype_error) ⇒ evaluate_list' env es r) ∧
- (!envc env v p r. evaluate_match envc env v p r ⇒ 
+ (!envc env v p r. evaluate_match envc env v p r ⇒
    (r ≠ Rerr Rtype_error) ⇒ evaluate_match' env v p r)`,
 HO_MATCH_MP_TAC evaluate_ind >>
 rw [] >>
@@ -66,12 +66,12 @@ fs [] >>
 metis_tac [pmatch_pmatch', match_result_distinct]);
 
 val evaluate'_to_evaluate = Q.prove (
-`(!env e r. evaluate' env e r ⇒ 
+`(!env e r. evaluate' env e r ⇒
    !envc. ¬evaluate envc env e (Rerr Rtype_error) ⇒ evaluate envc env e r) ∧
- (!env es r. evaluate_list' env es r ⇒ 
-   !envc. ¬evaluate_list envc env es (Rerr Rtype_error) ⇒ 
+ (!env es r. evaluate_list' env es r ⇒
+   !envc. ¬evaluate_list envc env es (Rerr Rtype_error) ⇒
    evaluate_list envc env es r) ∧
- (!env v p r. evaluate_match' env v p r ⇒ 
+ (!env v p r. evaluate_match' env v p r ⇒
    !envc. ¬evaluate_match envc env v p (Rerr Rtype_error) ⇒
    evaluate_match envc env v p r)`,
 HO_MATCH_MP_TAC evaluate'_ind >>
@@ -82,7 +82,7 @@ pop_assum (assume_tac o SIMP_RULE (srw_ss()) [Once evaluate_cases]) >>
 metis_tac [pmatch_pmatch', match_result_distinct]);
 
 val type_no_error = Q.prove (
-`!tenvC tenv e t envC env r. 
+`!tenvC tenv e t envC env r.
   consistent_con_env envC tenvC ∧
   consistent_con_env2 envC tenvC ∧
   type_env tenvC env tenv ∧
@@ -93,7 +93,7 @@ rw [GSYM small_big_exp_equiv] >>
 metis_tac [small_exp_determ2, small_exp_determ1, exp_type_soundness]);
 
 val evaluate_evaluate'_thm = Q.store_thm ("evaluate_evaluate'_thm",
-`!tenvC envC tenv e t cenv env r. 
+`!tenvC envC tenv e t cenv env r.
   consistent_con_env envC tenvC ∧
   consistent_con_env2 envC tenvC ∧
   type_env tenvC env tenv ∧

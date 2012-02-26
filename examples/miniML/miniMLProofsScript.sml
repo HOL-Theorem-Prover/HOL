@@ -19,7 +19,7 @@ val _ = new_theory "miniMLProofs";
 (* --------------------- Termination proofs -------------------------------- *)
 
 val (lookup_def, lookup_ind) =
-  tprove_no_defn ((lookup_def, lookup_ind), 
+  tprove_no_defn ((lookup_def, lookup_ind),
   WF_REL_TAC `measure (λ(x,y). LENGTH y)` >>
   rw []);
 val _ = save_thm ("lookup_def", lookup_def);
@@ -27,7 +27,7 @@ val _ = save_thm ("lookup_ind", lookup_ind);
 
 val (pmatch_def, pmatch_ind) =
   tprove_no_defn ((pmatch_def, pmatch_ind),
-  wf_rel_tac 
+  wf_rel_tac
   `inv_image $< (λx. case x of INL (a,p,b,c) => pat_size p | INR (a,ps,b,c) =>
   pat1_size ps)`);
 val _ = save_thm ("pmatch_def", pmatch_def);
@@ -35,7 +35,7 @@ val _ = save_thm ("pmatch_ind", pmatch_ind);
 
 val (pmatch'_def, pmatch'_ind) =
   tprove_no_defn ((pmatch'_def, pmatch'_ind),
-  wf_rel_tac 
+  wf_rel_tac
   `inv_image $< (λx. case x of INL (p,b,c) => pat_size p | INR (ps,b,c) =>
   pat1_size ps)`);
 val _ = save_thm ("pmatch'_def", pmatch'_def);
@@ -64,7 +64,7 @@ val _ = save_thm ("type_subst_ind", type_subst_ind);
 val (remove_ctors_def,remove_ctors_ind) =
   tprove_no_defn ((remove_ctors_def,remove_ctors_ind),
   WF_REL_TAC
-  `inv_image $< (\x. case x of INL (x,y) => exp_size y 
+  `inv_image $< (\x. case x of INL (x,y) => exp_size y
                          | INR (INL (x,y)) => v_size y
                          | INR (INR (INL (x,y))) => exp3_size y
                          | INR (INR (INR (INL (x,y)))) => exp1_size y
@@ -91,11 +91,11 @@ val _ = save_thm ("remove_ctors_ind", remove_ctors_ind);
 (* ------------------------------------------------------------------------- *)
 
 (* Prove that the small step semantics never gets stuck if there is still work
- * to do (i.e., it must detect all type errors).  Thus, it either diverges or 
+ * to do (i.e., it must detect all type errors).  Thus, it either diverges or
  * gives a result. *)
 
 val untyped_safety_step = Q.prove (
-`∀envC env ds st. 
+`∀envC env ds st.
   (d_step (envC, env, ds, st) = Dstuck) = (ds = []) ∧ (st = NONE)`,
 rw [d_step_def, e_step_def, continue_def, push_def, return_def] >>
 every_case_tac >>
@@ -110,8 +110,8 @@ rw [diverges_def, METIS_PROVE [] ``x ∨ y = ~x ⇒ y``, d_step_reln_def] >>
 cases_on `d_step (cenv',env',ds',c')` >>
 fs [untyped_safety_step] >|
 [cases_on `p` >>
-     cases_on `r` >> 
-     cases_on `r'` >> 
+     cases_on `r` >>
+     cases_on `r'` >>
      fs [],
  qexists_tac `Rerr (Rraise e)` >>
      rw [d_small_eval_def] >>

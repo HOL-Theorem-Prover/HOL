@@ -185,7 +185,7 @@ val Eval_Bool_Not = store_thm("Eval_Bool_Not",
 val Eval_Bool_Equal = store_thm("Eval_Bool_Equal",
   ``Eval env x1 (BOOL b1) ==>
     Eval env x2 (BOOL b2) ==>
-    Eval env (If x1 x2 (If x2 (Val (Lit (Bool F))) (Val (Lit (Bool T))))) 
+    Eval env (If x1 x2 (If x2 (Val (Lit (Bool F))) (Val (Lit (Bool T)))))
      (BOOL (b1 = b2))``,
   SIMP_TAC std_ss [Eval_def,NUM_def,BOOL_def] \\ SIMP_TAC std_ss []
   \\ REPEAT STRIP_TAC \\ FULL_SIMP_TAC std_ss []
