@@ -74,7 +74,7 @@ val Eval_Fun = store_thm("Eval_Fun",
 
 val Eval_Let = store_thm("Eval_Let",
   ``Eval env exp (a res) /\
-    (!v x. a x v ==> Eval ((name,v)::env) body (b (f x))) ==>
+    (!v. a res v ==> Eval ((name,v)::env) body (b (f res))) ==>
     Eval env (Let name exp body) (b (LET f res))``,
   SIMP_TAC std_ss [Eval_def,Arrow_def] \\ REPEAT STRIP_TAC
   \\ ONCE_REWRITE_TAC [evaluate_cases] \\ SIMP_TAC (srw_ss()) []
@@ -162,7 +162,7 @@ val Eval_If = store_thm("Eval_If",
     (a2 ==> Eval env x2 (a b2)) /\
     (a3 ==> Eval env x3 (a b3)) ==>
     (a1 /\ (CONTAINER b1 ==> a2) /\ (~CONTAINER b1 ==> a3) ==>
-     Eval env (If x1 x2 x3) (a (if CONTAINER b1 then b2 else b3)))``,
+     Eval env (If x1 x2 x3) (a (if b1 then b2 else b3)))``,
   SIMP_TAC std_ss [Eval_def,NUM_def,BOOL_def] \\ SIMP_TAC std_ss [CONTAINER_def]
   \\ REPEAT STRIP_TAC \\ FULL_SIMP_TAC std_ss []
   \\ ONCE_REWRITE_TAC [evaluate_cases] \\ SIMP_TAC (srw_ss()) []
@@ -325,8 +325,17 @@ val UNCURRY2 = prove(
   ``!x y f. pair_case f x y = pair_case (\z1 z2. f z1 z2 y) x``,
   Cases \\ EVAL_TAC \\ SIMP_TAC std_ss []);
 
-val UNCURRY_SIMP = save_thm("UNCURRY_SIMP",CONJ UNCURRY1 UNCURRY2);
+val UNCURRY3 = prove(
+  ``pair_case f (x,y) = f x y``,
+  EVAL_TAC) |> GEN_ALL;
 
+val UNCURRY_SIMP = save_thm("UNCURRY_SIMP",
+  LIST_CONJ [UNCURRY1,UNCURRY2,UNCURRY3]);
+
+val num_case_thm = store_thm("num_case_thm",
+  ``num_case = \b f n. if n = 0 then b else f (n-1)``,
+  SIMP_TAC std_ss [FUN_EQ_THM,num_case_def] \\ Cases_on `n`
+  \\ EVAL_TAC \\ SIMP_TAC std_ss []);
 
 val _ = export_theory();
 
