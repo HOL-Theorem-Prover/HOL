@@ -59,6 +59,7 @@ type op =
   | Opn of (num -> num -> num)
     (* e.g.  < > <= >= *)
   | Opb of (num -> num -> bool)
+  | Equality
   | Opapp
 
 (* Built-in logical operations *)
@@ -335,6 +336,10 @@ let do_app env' op v1 v2 =
         Some (env',Val (Lit (Num (op n1 n2))))
     | (Opb op, Lit (Num n1), Lit (Num n2)) -> 
         Some (env',Val (Lit (Bool (op n1 n2)))) 
+    | (Equality, v1, v2) -> 
+        (* TODO: Check for closures in v1 and v2, and possibly check that they
+         * have the same type *)
+        Some (env', Val (Lit (Bool (v1 = v2))))
     | _ -> None
   end
 
@@ -1000,6 +1005,7 @@ let type_op op t1 t2 t3 =
     | (Opapp, Tfn t2' t3', _) -> (t2 = t2') && (t3 = t3')
     | (Opn _, Tnum, Tnum) -> (t3 = Tnum)
     | (Opb _, Tnum, Tnum) -> (t3 = Tbool)
+    | (Equality, t1, t2) -> (t1 = t2)
     | _ -> false
   end
 
