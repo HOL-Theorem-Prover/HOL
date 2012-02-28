@@ -19,6 +19,7 @@ fun dest_fun_type ty = let
 
 local
   val other_types = ref (fn (ty:hol_type) => (fail()):term)
+  val user_supplied_types = ref ([]:hol_type list)
 in
   fun get_type_inv ty =
     if is_vartype ty then let
@@ -34,6 +35,12 @@ in
   fun new_type_inv f = let
     val old = (!other_types)
     in (other_types := (fn y => (f y handle HOL_ERR _ => old y))) end
+  fun add_type_inv tm = let
+    val ty = fst (dest_fun_type (type_of tm))
+    val _ = user_supplied_types := ty::(!user_supplied_types)
+    val f = (fn x => if x = ty then tm else fail())
+    in new_type_inv f end
+  fun get_user_supplied_types () = !user_supplied_types
 end
 
 
@@ -92,6 +99,12 @@ fun get_nchotomy_of ty = let (* ensures that good variables names are used *)
 
 (*
 val ty = ``:'a list``
+val ty = ``:'a # 'b``
+val ty = ``:unit``
+val _ = Hol_datatype `TREE = LEAF of 'a | BRANCH of TREE => TREE`;
+register_type ``:'a TREE``
+val _ = Hol_datatype `BTREE = BLEAF of ('a TREE) | BBRANCH of BTREE => BTREE`;
+val ty = ``:'a BTREE``
 *)
 
 fun derive_thms_for_type ty = let
@@ -138,6 +151,37 @@ fun derive_thms_for_type ty = let
   val inv_def = define_abs name ty case_th
   val inv_lhs = inv_def |> CONJUNCTS |> hd |> SPEC_ALL |> concl
                         |> dest_eq |> fst
+  (* prove EqualityType lemma, e.g. !a. EqualityType a ==> EqualityType (list a) *)
+  val eq_lemma = let
+    val tm = rator (rator inv_lhs)
+    fun list_dest f tm = let val (x,y) = f tm 
+                         in list_dest f x @ list_dest f y end handle HOL_ERR _ => [tm]
+    val xs = 
+      inv_def |> RW [GSYM CONJ_ASSOC] |> SPEC_ALL |> CONJUNCTS 
+              |> map (snd o dest_eq o concl o SPEC_ALL)
+              |> map (last o list_dest dest_exists)
+              |> map (tl o list_dest dest_conj) |> Lib.flatten
+              |> map (rator o rator) |> filter (fn t => t <> tm)
+    val ys = map (fn tm => ``EqualityType ^tm``) xs
+    val tm1 = ``EqualityType ^tm``
+    val tm2 = if ys = [] then T else list_mk_conj ys
+    val goal = mk_imp(tm2,tm1)
+    val eq_lemma = prove(goal,
+      REPEAT STRIP_TAC
+      \\ FULL_SIMP_TAC std_ss [EqualityType_def]
+      \\ STRIP_TAC THEN1
+       (REPEAT (Q.PAT_ASSUM `!x1 x2 x3 x4. bbb` (K ALL_TAC))
+        \\ (Induct ORELSE Cases)
+        \\ SIMP_TAC (srw_ss()) [inv_def,no_closures_def,PULL_EXISTS]
+        \\ REPEAT STRIP_TAC \\ RES_TAC)
+      THEN1    
+       (REPEAT (Q.PAT_ASSUM `!x1 x2. bbb ==> bbbb` (K ALL_TAC))
+        \\ (Induct ORELSE Cases)
+        \\ SIMP_TAC (srw_ss()) [inv_def,no_closures_def,PULL_EXISTS]
+        \\ Cases_on `x2` \\ SIMP_TAC (srw_ss()) [inv_def,no_closures_def,PULL_EXISTS]
+        \\ REPEAT STRIP_TAC \\ METIS_TAC []))
+    in eq_lemma end handle HOL_ERR _ => TRUTH        
+
   (* make new inv_def part of get_type_inv *)
   val inv = rator (rator inv_lhs)
   fun extension_to_get_inv_type ty0 = let
@@ -266,10 +310,11 @@ fun derive_thms_for_type ty = let
       \\ EXISTS_TAC witness \\ ASM_SIMP_TAC (srw_ss()) [inv_def,evaluate_list_SIMP])
     in (pat,lemma) end;
   val conses = map derive_cons ts
-  in (ty,ret_ty,inv_def,conses,case_lemma,ts) end
+  in (ty,eq_lemma,inv_def,conses,case_lemma,ts) end
 
 local
   val memory = ref []
+  val user_defined_eq_lemmas = ref []
   fun add_type ty = let
     val res = derive_thms_for_type ty
     val _ = (memory := res :: (!memory))
@@ -277,8 +322,11 @@ local
   fun lookup ty = first (fn (ty1,_,_,_,_,_) => can (match_type ty1) ty) (!memory)
   fun lookup_type ty = lookup ty handle HOL_ERR _ => add_type ty
   fun conses_of ty = let
-    val (ty,ret_ty,inv_def,conses,case_lemma,ts) = lookup ty
+    val (ty,eq_lemma,inv_def,conses,case_lemma,ts) = lookup ty
     in conses end
+  fun stored_eq_lemmas () = 
+    map (fn (ty,eq_lemma,inv_def,conses,case_lemma,ts) => eq_lemma) (!memory)
+  val init_eq_lemmas = map (DISCH T) (CONJUNCTS EqualityType_NUM_BOOL)
 in
   fun register_type ty = (lookup_type ty; ())
   fun cons_for tm = let
@@ -291,17 +339,21 @@ in
     in INST ss (INST_TYPE i th) end
     handle HOL_ERR _ => failwith("Not a constructor for a registered type.")
   fun case_of ty = let
-    val (ty,ret_ty,inv_def,conses,case_lemma,ts) = lookup ty
+    val (ty,eq_lemma,inv_def,conses,case_lemma,ts) = lookup ty
     in (case_lemma,ts) end
+  fun eq_lemmas () =
+    init_eq_lemmas @ filter (fn th => concl th <> T) (stored_eq_lemmas())
+                   @ (!user_defined_eq_lemmas)
+  fun store_eq_thm th = ((user_defined_eq_lemmas := th::(!user_defined_eq_lemmas));th)
 end
 
 fun register_term_types tm = let
   fun every_term f tm = (f tm ;
     if is_abs tm then every_term f (snd (dest_abs tm)) else
     if is_comb tm then (every_term f (rand tm); every_term f (rator tm)) else ())
-  val special_types = [``:num``,``:bool``]
+  val special_types = [``:num``,``:bool``] @ get_user_supplied_types ()
   fun ignore_type ty =
-    if mem ty special_types then true else
+    if can (first (fn ty1 => can (match_type ty1) ty)) special_types then true else
     if not (can dest_type ty) then true else
     if can (dest_fun_type) ty then true else false
   fun register_term_type tm = let
@@ -414,6 +466,22 @@ fun inst_case_thm tm hol2deep = let
                                   REWRITE_CONV [])) th
   in th end;
 
+fun SIMP_EqualityType_ASSUMS th = let
+  val lemmas = eq_lemmas () |> map (UNDISCH_ALL o RW [GSYM AND_IMP_INTRO])
+  val th = th |> DISCH_ALL |> PURE_REWRITE_RULE [GSYM AND_IMP_INTRO] |> UNDISCH_ALL
+  val xs = map (fn th => (concl th,th)) lemmas
+  fun find_match [] tm = fail()
+    | find_match ((pat,th1)::xs) tm = let
+        val (ss,i) = match_term pat tm
+        in INST ss (INST_TYPE i th1) end
+        handle HOL_ERR _ => find_match xs tm
+  fun remove_one th = let
+    val hs = hyp th
+    val tm = first (can (find_match xs)) hs
+    val lemma = find_match xs tm
+    val th = MP (DISCH tm th) lemma
+    in remove_one th end handle HOL_ERR _ => th
+  in remove_one th end;
 
 (* The preprocessor -- returns (def,ind). Here def is the original
    definition stated as a single line:
@@ -430,6 +498,7 @@ fun single_line_def def = let
   val lhs = def |> SPEC_ALL |> CONJUNCTS |> hd |> SPEC_ALL
                 |> concl |> dest_eq |> fst
   val const = lhs |> repeat rator
+  fun mk_container tm = ``CONTAINER ^tm``
   in if filter (not o is_var) (args lhs) = [] then (def,NONE) else let
   val name = const |> dest_const |> fst
   val thy = #Thy (dest_thy_const const)
@@ -449,13 +518,15 @@ fun single_line_def def = let
            handle HOL_ERR _ =>
            fetch thy (name ^ "_primitive_DEF")
   val (v,tm) = tp |> concl |> rand |> rand |> dest_abs
-  val goal = mk_eq(tpc,subst [v|->tpc] tm)
+  val goal = mk_eq(tpc,(subst [v|->tpc] tm))
   val lemma = prove(goal,
     SIMP_TAC std_ss [FUN_EQ_THM,FORALL_PROD,GSYM rw]
-    THEN SRW_TAC [] []
-    THEN REPEAT BasicProvers.FULL_CASE_TAC
-    THEN CONV_TAC (RATOR_CONV (ONCE_REWRITE_CONV [def]))
-    THEN SRW_TAC [] [])
+    \\ REPEAT STRIP_TAC 
+    \\ CONV_TAC (BINOP_CONV (REWR_CONV (GSYM CONTAINER_def)))
+    \\ SRW_TAC [] []
+    \\ REPEAT BasicProvers.FULL_CASE_TAC
+    \\ CONV_TAC (RATOR_CONV (ONCE_REWRITE_CONV [def]))
+    \\ SRW_TAC [] [])
   val new_def =
     rw |> SPEC_ALL |> CONV_RULE (RAND_CONV (ONCE_REWRITE_CONV [lemma]))
        |> CONV_RULE (RAND_CONV BETA_CONV)
@@ -482,17 +553,16 @@ fun single_line_def def = let
   val tm = SIMP_CONV std_ss [Once pair_case_def,GSYM curried] (subst [a|->c,v|->cc] tm)
            |> concl |> rand |> rator |> rand
   val vs = free_vars tm
-  val goal = mk_eq(c2,tm)
+  val goal = mk_eq(mk_container c2, mk_container tm)
   val vs = filter (fn x => not (mem x vs)) (free_vars goal)
   val goal = subst (map (fn v => v |-> ``():unit``) vs) goal
   val goal = subst [mk_comb(c1,``():unit``)|->const] goal
   val _ = not (can (find_term is_arb) goal) orelse failwith("Definition contains ARB.")
   val lemma = prove(goal,
-    SIMP_TAC std_ss [FUN_EQ_THM,FORALL_PROD]
-    THEN SRW_TAC [] []
-    THEN REPEAT BasicProvers.FULL_CASE_TAC
-    THEN CONV_TAC (RATOR_CONV (ONCE_REWRITE_CONV [def]))
-    THEN SRW_TAC [] [])
+    SIMP_TAC std_ss [FUN_EQ_THM,FORALL_PROD] \\ SRW_TAC [] []
+    \\ REPEAT BasicProvers.FULL_CASE_TAC
+    \\ CONV_TAC (RATOR_CONV (ONCE_REWRITE_CONV [def]))
+    \\ SRW_TAC [] []) |> CONV_RULE (BINOP_CONV (REWR_CONV CONTAINER_def))
   in (lemma,SOME ind) end end
 
 fun remove_pair_abs def = let
@@ -555,7 +625,6 @@ fun dest_builtin_binop tm = let
             if p = ``($*):num->num->num`` then SPEC p Eval_Opn else
             if p = ``($DIV):num->num->num`` then SPEC p Eval_Opn else
             if p = ``($MOD):num->num->num`` then SPEC p Eval_Opn else
-            if p = ``($=):num->num->bool`` then SPEC p Eval_Opb else
             if p = ``($<):num->num->bool`` then SPEC p Eval_Opb else
             if p = ``($<=):num->num->bool`` then SPEC p Eval_Opb else
             if p = ``($>):num->num->bool`` then SPEC p Eval_Opb else
@@ -563,7 +632,6 @@ fun dest_builtin_binop tm = let
             if p = ``($/\):bool->bool->bool`` then Eval_And else
             if p = ``($\/):bool->bool->bool`` then Eval_Or else
             if p = ``($==>):bool->bool->bool`` then Eval_Implies else
-            if p = ``($=):bool->bool->bool`` then Eval_Bool_Equal else
               failwith("Not a builtin operator"))
   end
 
@@ -592,10 +660,6 @@ fun apply_Eval_Fun v th fix = let
   val th2 = if fix then MATCH_MP Eval_Fun_Fix (GEN ``v:v`` th1)
                    else MATCH_MP Eval_Fun (GEN ``v:v`` (GEN v th1))
   in th2 end;
-
-(*
-val v = (last rev_params)
-*)
 
 fun apply_Eval_Recclosure fname v th = let
   val vname = fst (dest_var v)
@@ -628,11 +692,15 @@ fun apply_Eval_Recclosure fname v th = let
   val th4 = CONV_RULE (QCONV (DEPTH_CONV replace_conv)) th3
   (* lift cl_env assumptions out *)
   val cl_env = mk_var("cl_env",type_of old_env)
-  val pattern = ``Eval env (Var name) (Eq x)``
+  val pattern = ``Eval env (Var name) ($= x)``
   val cl_assums = find_terms (fn tm => can (match_term pattern) tm andalso
                       ((tm |> rator  |> rator |> rand) = cl_env)) (concl th4)
   val th5 = REWRITE_RULE (map ASSUME cl_assums) th4
-  in th5 end
+  (* lift EqualityType assumptions out *)
+  val pattern = ``EqualityType (a:'a->v->bool)``
+  val eq_assums = find_terms (can (match_term pattern)) (concl th5)
+  val th6 = REWRITE_RULE (map ASSUME eq_assums) th5
+  in th6 end
 
 local
   val memory = ref (tl [(T,TRUTH)])
@@ -642,6 +710,12 @@ in
   fun delete_cert const = (memory := filter (fn (c,_) => c <> const) (!memory))
   fun get_mem () = !memory
 end
+
+fun store_eval_thm th = let
+  val th1 = UNDISCH_ALL th 
+  val pat = th1 |> concl |> rand |> rand
+  val _ = store_cert pat th1
+  in th end
 
 local
   val rec_pattern = ref T;
@@ -668,12 +742,12 @@ fun hol2deep tm =
     val (name,ty) = dest_var tm
     val inv = get_type_inv ty
     val str = stringSyntax.fromMLstring name
-    val result = ASSUME ``Eval env (Var ^str) (^inv ^tm)``
+    val result = ASSUME (mk_comb(``Eval env (Var ^str)``,mk_comb(inv,tm)))
     in check_inv "var" tm result end else
   (* constants *)
   if numSyntax.is_numeral tm then SPEC tm Eval_Val_NUM else
   if (tm = T) orelse (tm = F) then SPEC tm Eval_Val_BOOL else
-  if is_const tm andalso can lookup_cert tm then let
+  if (* is_const tm andalso *) can lookup_cert tm then let
     val th = lookup_cert tm
     val res = th |> UNDISCH_ALL |> concl |> rand
     val inv = get_type_inv (type_of tm)
@@ -718,6 +792,13 @@ fun hol2deep tm =
     val th1 = hol2deep x1
     val result = MATCH_MP Eval_Bool_Not th1
     in check_inv "not" tm result end else
+  (* equality *)
+  if is_eq tm then let
+    val (x1,x2) = dest_eq tm
+    val th1 = hol2deep x1
+    val th2 = hol2deep x2
+    val result = MATCH_MP Eval_Equality (CONJ th1 th2) |> UNDISCH
+    in check_inv "equal" tm result end else
   (* if statements *)
   if is_cond tm then let
     val (x1,x2,x3) = dest_cond tm
@@ -777,8 +858,9 @@ fun translate def = let
   val fname = repeat rator lhs |> dest_const |> fst
   val fname_str = stringLib.fromMLstring fname
   val th = foldr (fn (v,th) => apply_Eval_Fun v th true) th (rev (butlast rev_params))
-  val th = if is_rec then apply_Eval_Recclosure fname (last rev_params) th
-                     else apply_Eval_Fun (last rev_params) th true
+  val v = last rev_params
+  val th = if is_rec then apply_Eval_Recclosure fname v th
+                     else apply_Eval_Fun v th true
                             |> MATCH_MP Eval_Eq_Fun
                             |> Q.INST [`env`|->`cl_env`] |> Q.SPEC `env` |> UNDISCH_ALL
                             |> Q.INST [`name`|->`^fname_str`]
@@ -815,6 +897,8 @@ fun translate def = let
   val code_abbrev = new_definition(code_name ^ "_def",
     mk_eq(mk_var(code_name,type_of code_tm),code_tm))
   val th = REWRITE_RULE [GSYM code_abbrev] th |> UNDISCH_ALL
+  (* simpliy EqualityType *)
+  val th = SIMP_EqualityType_ASSUMS th
   (* store certificate for later use *)
   val _ = store_cert (repeat rator lhs) th
   in th end
