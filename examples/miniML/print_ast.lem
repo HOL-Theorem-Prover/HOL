@@ -1,6 +1,30 @@
 open MiniML
 
+
+(* TODO: use a built-in MOD, or even better a built-in num_to_string *)
+
+let rec mymod x y = 
+  if x < y then (x:num) else mymod (x - y) y
+
+let rec pos_num_to_string n =
+  if n > 0 then
+    let n' = mymod n 10 in
+      pos_num_to_string (n / 10) ^ 
+      (if n' = 0 then "0"
+       else if n' = 1 then "1"
+       else if n' = 2 then "2"
+       else if n' = 3 then "3"
+       else if n' = 4 then "4"
+       else if n' = 5 then "5"
+       else if n' = 6 then "6"
+       else if n' = 7 then "7"
+       else if n' = 8 then "8"
+       else "9")
+  else
+    ""
+
 val num_to_string : num -> string
+let num_to_string n = if n = 0 then "0" else pos_num_to_string n
 
 let infixes = []
 
@@ -22,7 +46,7 @@ let lit_to_string l = match l with
 end
 
 let var_to_string v =
-  if List.assoc v infixes then
+  if List.mem v infixes then
     "op " ^ v
   else
     v
@@ -81,7 +105,7 @@ exp_to_string (App (Opn o) e1 e2) =
     "(" ^ o " " ^ exp_to_string e1 ^ " " exp_to_string e2 ^ ")"
    *)
 and
-exp_to_string (App (Opb o) e1 e2) =
+exp_to_string (App (Opb o') e1 e2) =
   ""
   (* TODO: Make the op not a function 
   if List.assoc o infixes then
@@ -90,8 +114,8 @@ exp_to_string (App (Opb o) e1 e2) =
     "(" ^ o " " ^ exp_to_string e1 ^ " " exp_to_string e2 ^ ")"
    *)
 and
-exp_to_string (Log l e1 e2) =
-  "(" ^ exp_to_string e1 ^ (if l = And then " andalso " else " orelse ") ^
+exp_to_string (Log lop e1 e2) =
+  "(" ^ exp_to_string e1 ^ (if lop = And then " andalso " else " orelse ") ^
   exp_to_string e2 ^ ")"
 and
 exp_to_string (If e1 e2 e3) =
@@ -116,10 +140,31 @@ and
 fun_to_string (v1,v2,e) = 
   var_to_string v1 ^ " " ^ var_to_string v2 ^ " = " ^ exp_to_string e
 
-let variant_to_string (c,ts) =
-  var_to_string c ^ (if ts = [] then "" else " of " (* TODO *))
+let rec
+type_to_string (Tvar tn) = 
+  tn
+and
+type_to_string (Tapp ts tn) = 
+  if ts = [] then
+    tn
+  else
+    "(" ^ list_to_string type_to_string "," ts ^ ")" ^ tn
+and
+type_to_string (Tfn t1 t2) =
+  "(" ^ type_to_string t1 ^ " -> " ^ type_to_string t2 ^ ")"
+and
+type_to_string Tnum =
+  (* TODO: Get the numeric types sorted *)
+  "int"
+and
+type_to_string Tbool =
+  "bool"
 
-let type_to_string (tvs, name, variants) =
+let variant_to_string (c,ts) =
+  var_to_string c ^ (if ts = [] then "" else " of " ^ 
+  list_to_string type_to_string " * " ts)
+
+let typedef_to_string (tvs, name, variants) =
   (if tvs = [] then "" else "(" ^ list_to_string (fun x -> x) "," tvs ^ ")") ^
   name ^ " = " ^ list_to_string variant_to_string "|" variants
 
@@ -131,4 +176,4 @@ dec_to_string (Dletrec funs) =
   "fun " ^ list_to_string fun_to_string " and " funs
 and
 dec_to_string (Dtype types) =
-  "datatype " ^ list_to_string type_to_string " and " types
+  "datatype " ^ list_to_string typedef_to_string " and " types
