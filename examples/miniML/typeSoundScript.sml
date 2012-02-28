@@ -365,7 +365,8 @@ val type_op_cases = Q.prove (
   type_op op t1 t2 t3 =
   ((∃op'. op = Opn op') ∧ (t1 = Tnum) ∧ (t2 = Tnum) ∧ (t3 = Tnum)) ∨
   ((∃op'. op = Opb op') ∧ (t1 = Tnum) ∧ (t2 = Tnum) ∧ (t3 = Tbool)) ∨
-  ((op = Opapp) ∧ (t1 = Tfn t2 t3))`,
+  ((op = Opapp) ∧ (t1 = Tfn t2 t3)) ∨
+  ((op = Equality) ∧ (t1 = t2) ∧ (t3 = Tbool))`,
 rw [type_op_def] >>
 every_case_tac >>
 fs [] >>
@@ -716,6 +717,14 @@ rw [] >|
           cases_on `o'` >>
           fs [] >|
           [every_case_tac >>
+               fs [] >>
+               rw [type_e_val] >>
+               fs [hd (CONJUNCTS type_v_cases)] >>
+               rw [] >>
+               fs [type_op_cases] >>
+               rw [] >>
+               metis_tac [],
+           every_case_tac >>
                fs [] >>
                rw [type_e_val] >>
                fs [hd (CONJUNCTS type_v_cases)] >>

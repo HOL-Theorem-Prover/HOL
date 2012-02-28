@@ -1103,7 +1103,7 @@ val _ = Define `
       (Opapp, Tfn t2' t3', _) => (t2 = t2') /\ (t3 = t3')
     | (Opn _, Tnum, Tnum) => (t3 = Tnum)
     | (Opb _, Tnum, Tnum) => (t3 = Tbool)
-    | (Equality, t1, t2) => (t1 = t2)
+    | (Equality, t1, t2) => (t1 = t2) /\ (t3 = Tbool)
     | _ => F
   ))`;
 
