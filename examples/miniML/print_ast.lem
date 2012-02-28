@@ -1,0 +1,134 @@
+open MiniML
+
+val num_to_string : num -> string
+
+let infixes = []
+
+let rec 
+list_to_string printer sep [] = 
+  ""
+and
+list_to_string printer sep [x] = 
+  printer x
+and
+list_to_string printer sep (x::y::l) = 
+  printer x ^ sep ^ printer y ^ list_to_string printer sep l
+
+let lit_to_string l = match l with
+  (* Rely on the fact that true and false cannot be rebound in SML *)
+  | Bool true -> "true"
+  | Bool false -> "false"
+  | Num n -> num_to_string n
+end
+
+let var_to_string v =
+  if List.assoc v infixes then
+    "op " ^ v
+  else
+    v
+
+let rec 
+pat_to_string (Pvar v) = var_to_string v
+and 
+pat_to_string (Plit l) = lit_to_string l
+and 
+pat_to_string (Pcon None ps) = "(" ^ list_to_string pat_to_string "," ps ^ ")"
+and 
+pat_to_string (Pcon (Some c) []) = 
+  var_to_string c
+and
+pat_to_string (Pcon (Some c) ps) = 
+  "(" ^ var_to_string c ^ "(" ^ list_to_string pat_to_string "," ps ^ ")" ^ ")"
+
+let rec 
+exp_to_string (Raise r) = 
+  "(raise Bind)"
+and
+exp_to_string (Val (Lit l)) = 
+  lit_to_string l
+and
+exp_to_string (Val _) =
+  (* TODO: this shouldn't happen in source *)
+  ""
+and
+exp_to_string (Con None es) = "(" ^ list_to_string exp_to_string "," es ^ ")"
+and
+exp_to_string (Con (Some c) []) = 
+  var_to_string c
+and
+exp_to_string (Con (Some c) es) = 
+  "(" ^ var_to_string c ^ "(" ^ list_to_string exp_to_string "," es ^ ")" ^ ")"
+and
+exp_to_string (Var v) = 
+  var_to_string v
+and
+exp_to_string (Fun v e) =
+  "(fn " ^ var_to_string v ^ " => " ^ exp_to_string e ^ ")"
+and
+exp_to_string (App Opapp e1 e2) =
+  "(" ^ exp_to_string e1 ^ " " ^ exp_to_string e2 ^ ")"
+and
+exp_to_string (App Equality e1 e2) =
+  (* Rely on the fact (?) that = cannot be rebound in SML *)
+  "(" ^ exp_to_string e1 ^ " = " ^ exp_to_string e2 ^ ")"
+and
+exp_to_string (App (Opn o) e1 e2) =
+  ""
+  (* TODO: Make the op not a function
+  if List.assoc o infixes then
+    "(" ^ exp_to_string e1 ^ " " ^ o ^ " " ^ exp_to_string e2 ^ ")"
+  else
+    "(" ^ o " " ^ exp_to_string e1 ^ " " exp_to_string e2 ^ ")"
+   *)
+and
+exp_to_string (App (Opb o) e1 e2) =
+  ""
+  (* TODO: Make the op not a function 
+  if List.assoc o infixes then
+    "(" ^ exp_to_string e1 ^ " " ^ o ^ " " ^ exp_to_string e2 ^ ")"
+  else
+    "(" ^ o " " ^ exp_to_string e1 ^ " " exp_to_string e2 ^ ")"
+   *)
+and
+exp_to_string (Log l e1 e2) =
+  "(" ^ exp_to_string e1 ^ (if l = And then " andalso " else " orelse ") ^
+  exp_to_string e2 ^ ")"
+and
+exp_to_string (If e1 e2 e3) =
+  "(if " ^ exp_to_string e1 ^ " then " ^ exp_to_string e2 ^ " else " ^ 
+  exp_to_string e3 ^ ")"
+and
+exp_to_string (Mat e pes) =
+  "(case " ^ exp_to_string e ^ " of " ^ 
+  list_to_string pat_exp_to_string "|" pes ^ ")"
+and
+exp_to_string (Let v e1 e2) =
+  "(let val " ^ var_to_string v ^ " = " ^ exp_to_string e1 ^ " in " ^ 
+  exp_to_string e2 ^ " end)"
+and
+exp_to_string (Letrec funs e) =
+  "(let fun " ^ list_to_string fun_to_string " and " funs ^ " in " ^ 
+  exp_to_string e ^ " end)"
+and
+pat_exp_to_string (p,e) = 
+  pat_to_string p ^ " => " ^ exp_to_string e
+and
+fun_to_string (v1,v2,e) = 
+  var_to_string v1 ^ " " ^ var_to_string v2 ^ " = " ^ exp_to_string e
+
+let variant_to_string (c,ts) =
+  var_to_string c ^ (if ts = [] then "" else " of " (* TODO *))
+
+let type_to_string (tvs, name, variants) =
+  (if tvs = [] then "" else "(" ^ list_to_string (fun x -> x) "," tvs ^ ")") ^
+  name ^ " = " ^ list_to_string variant_to_string "|" variants
+
+let rec
+dec_to_string (Dlet p e) =
+  "val " ^ pat_to_string p ^ " = " ^ exp_to_string e
+and
+dec_to_string (Dletrec funs) =
+  "fun " ^ list_to_string fun_to_string " and " funs
+and
+dec_to_string (Dtype types) =
+  "datatype " ^ list_to_string type_to_string " and " types
