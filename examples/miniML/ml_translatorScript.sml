@@ -34,8 +34,11 @@ val Fix_def = Define `
   Fix (abs:'a->v->bool) x =
     (\y v. (x = y) /\ abs y v)`;
 
-val Eq_def = Define `
-  Eq x (v:v) = (v = x)`;
+val NUM_def = Define `
+  NUM n = \v. (v = Lit (Num n))`;
+
+val BOOL_def = Define `
+  BOOL b = \v. (v = Lit (Bool b))`;
 
 val CONTAINER_def = Define `CONTAINER x = x`;
 
@@ -80,12 +83,6 @@ val Eval_Let = store_thm("Eval_Let",
   \\ ONCE_REWRITE_TAC [evaluate_cases] \\ SIMP_TAC (srw_ss()) []
   \\ RES_TAC \\ Q.EXISTS_TAC `res''` \\ FULL_SIMP_TAC std_ss [LET_DEF,bind_def]
   \\ Q.EXISTS_TAC `res'` \\ FULL_SIMP_TAC std_ss []);
-
-val NUM_def = Define `
-  NUM n = \v. (v = Lit (Num n))`;
-
-val BOOL_def = Define `
-  BOOL b = \v. (v = Lit (Bool b))`;
 
 val Eval_Val = store_thm("Eval_Val",
   ``!x. Eval env (Val x) (\v. v = x)``,
@@ -174,27 +171,13 @@ val Eval_If = store_thm("Eval_If",
 
 val Eval_Bool_Not = store_thm("Eval_Bool_Not",
   ``Eval env x1 (BOOL b1) ==>
-    Eval env (If x1 (Val (Lit (Bool F))) (Val (Lit (Bool T)))) (BOOL (~b1))``,
+    Eval env (App Equality x1 (Val (Lit (Bool F)))) (BOOL (~b1))``,
   SIMP_TAC std_ss [Eval_def,NUM_def,BOOL_def] \\ SIMP_TAC std_ss []
   \\ REPEAT STRIP_TAC \\ FULL_SIMP_TAC std_ss []
   \\ ONCE_REWRITE_TAC [evaluate_cases] \\ SIMP_TAC (srw_ss()) []
-  \\ Q.EXISTS_TAC `(Lit (Bool b1))` \\ Cases_on `b1`
-  \\ FULL_SIMP_TAC (srw_ss()) [do_if_def]
-  \\ ONCE_REWRITE_TAC [evaluate_cases] \\ SIMP_TAC (srw_ss()) []);
-
-val Eval_Bool_Equal = store_thm("Eval_Bool_Equal",
-  ``Eval env x1 (BOOL b1) ==>
-    Eval env x2 (BOOL b2) ==>
-    Eval env (If x1 x2 (If x2 (Val (Lit (Bool F))) (Val (Lit (Bool T)))))
-     (BOOL (b1 = b2))``,
-  SIMP_TAC std_ss [Eval_def,NUM_def,BOOL_def] \\ SIMP_TAC std_ss []
-  \\ REPEAT STRIP_TAC \\ FULL_SIMP_TAC std_ss []
-  \\ ONCE_REWRITE_TAC [evaluate_cases] \\ SIMP_TAC (srw_ss()) []
-  \\ Q.EXISTS_TAC `(Lit (Bool b1))` \\ Cases_on `b1`
-  \\ FULL_SIMP_TAC (srw_ss()) [do_if_def]
-  \\ ONCE_REWRITE_TAC [evaluate_cases] \\ SIMP_TAC (srw_ss()) []
-  \\ Q.EXISTS_TAC `(Lit (Bool b2))` \\ Cases_on `b2`
-  \\ FULL_SIMP_TAC (srw_ss()) [do_if_def]
+  \\ Q.EXISTS_TAC `(Lit (Bool b1))`
+  \\ Q.EXISTS_TAC `(Lit (Bool F))`
+  \\ FULL_SIMP_TAC (srw_ss()) [do_app_def]
   \\ ONCE_REWRITE_TAC [evaluate_cases] \\ SIMP_TAC (srw_ss()) []);
 
 val Eval_Implies = store_thm("Eval_Implies",
@@ -274,9 +257,9 @@ val FUN_QUANT_SIMP = save_thm("FUN_QUANT_SIMP",
 val Eval_Recclosure = store_thm("Eval_Recclosure",
   ``(!v. a n v ==>
   Eval ((name,v)::(fname,Recclosure env2 [(fname,name,body)] fname)::env2) body (b (f n))) ==>
-    Eval env (Var fname) (Eq (Recclosure env2 [(fname,name,body)] fname)) ==>
+    Eval env (Var fname) ($= (Recclosure env2 [(fname,name,body)] fname)) ==>
     Eval env (Var fname) ((Fix a n --> b) f)``,
-  FULL_SIMP_TAC std_ss [Eval_def,Arrow_def,Eq_def] \\ REPEAT STRIP_TAC
+  FULL_SIMP_TAC std_ss [Eval_def,Arrow_def] \\ REPEAT STRIP_TAC
   \\ POP_ASSUM MP_TAC \\ ONCE_REWRITE_TAC [evaluate_cases]
   \\ FULL_SIMP_TAC (srw_ss()) [AppReturns_def,Fix_def,
        do_app_def,evaluate_closure_def]
@@ -286,28 +269,74 @@ val Eval_Recclosure = store_thm("Eval_Recclosure",
 val SafeVar_def = Define `SafeVar = Var`;
 
 val Eval_Eq_Recclosure = store_thm("Eval_Eq_Recclosure",
-  ``Eval env (Var name) (Eq (Recclosure x1 x2 x3)) ==>
+  ``Eval env (Var name) ($= (Recclosure x1 x2 x3)) ==>
     (P f (Recclosure x1 x2 x3) =
      Eval env (Var name) (P f))``,
-  SIMP_TAC std_ss [Eval_Var_SIMP,Eval_def,Eq_def]
+  SIMP_TAC std_ss [Eval_Var_SIMP,Eval_def]
   \\ SIMP_TAC (srw_ss()) [Once evaluate_cases]
   \\ SIMP_TAC (srw_ss()) [Once evaluate_cases]);
 
 val Eval_Eq_Fun = store_thm("Eval_Eq_Fun",
   ``Eval env (Fun v x) p ==>
-    !env2. Eval env2 (Var name) (Eq (Closure env v x)) ==>
+    !env2. Eval env2 (Var name) ($= (Closure env v x)) ==>
            Eval env2 (Var name) p``,
-  SIMP_TAC std_ss [Eval_Var_SIMP,Eval_def,Eq_def]
+  SIMP_TAC std_ss [Eval_Var_SIMP,Eval_def]
   \\ SIMP_TAC (srw_ss()) [Once evaluate_cases]
   \\ SIMP_TAC (srw_ss()) [Once evaluate_cases]
   \\ SIMP_TAC (srw_ss()) [Once evaluate_cases]);
+
+val Eval_WEAKEN = store_thm("Eval_WEAKEN",
+  ``Eval env exp P ==> (!v. P v ==> Q v) ==> Eval env exp Q``,
+  SIMP_TAC std_ss [Eval_def] \\ METIS_TAC []);
+
+
+(* Equality *)
+
+val no_closures_def = tDefine "no_closures" `
+  (no_closures (Lit l) = T) /\
+  (no_closures (Conv name vs) = EVERY no_closures vs) /\
+  (no_closures _ = F)`
+ (WF_REL_TAC `measure v_size` \\ REPEAT STRIP_TAC
+  \\ Induct_on `vs` \\ FULL_SIMP_TAC (srw_ss()) [MEM]
+  \\ REPEAT STRIP_TAC \\ FULL_SIMP_TAC (srw_ss()) [MEM,exp_size_def]
+  \\ DECIDE_TAC)    
+
+val EqualityType_def = Define `
+  EqualityType (abs:'a->v->bool) =
+    (!x1 v1. abs x1 v1 ==> no_closures v1) /\
+    !x1 v1 x2 v2. 
+      abs x1 v1 /\ abs x2 v2 ==> ((v1 = v2) = (x1 = x2))`;
+
+val Eq_def = Define `
+  ((Eq abs):'a->v->bool) = \a v. EqualityType abs /\ abs a v`; 
+
+val EqualityType_Eq = store_thm("EqualityType_Eq",
+  ``!a. EqualityType (Eq a)``,
+  SIMP_TAC std_ss [Eq_def,EqualityType_def] \\ METIS_TAC []);
+
+val EqualityType_NUM_BOOL = store_thm("EqualityType_NUM_BOOL",
+  ``EqualityType NUM /\ EqualityType BOOL``,
+  EVAL_TAC \\ FULL_SIMP_TAC (srw_ss()) [no_closures_def]);
+
+val Eval_Equality = store_thm("Eval_Equality",
+  ``Eval env x1 (a y1) /\ Eval env x2 (a y2) ==>
+    EqualityType a ==>
+    Eval env (App Equality x1 x2) (BOOL (y1 = y2))``,
+  SIMP_TAC std_ss [Eval_def,BOOL_def] \\ SIMP_TAC std_ss []
+  \\ REPEAT STRIP_TAC \\ FULL_SIMP_TAC std_ss []
+  \\ ONCE_REWRITE_TAC [evaluate_cases] \\ SIMP_TAC (srw_ss()) []
+  \\ Q.LIST_EXISTS_TAC [`res`,`res'`]
+  \\ FULL_SIMP_TAC (srw_ss()) [do_app_def]
+  \\ ONCE_REWRITE_TAC [evaluate_cases] 
+  \\ FULL_SIMP_TAC (srw_ss()) [EqualityType_def]);
 
 
 (* a few misc. lemmas that help the automation *)
 
 val PULL_EXISTS = save_thm("PULL_EXISTS",
   METIS_PROVE [] ``(((?x. P x) ==> Q) = !x. P x ==> Q) /\
-                   (((?x. P x) /\ Q) = ?x. P x /\ Q)``);
+                   (((?x. P x) /\ Q) = ?x. P x /\ Q) /\
+                   ((Q /\ (?x. P x)) = ?x. Q /\ P x)``);
 
 val evaluate_list_SIMP = store_thm("evaluate_list_SIMP",
   ``(evaluate_list' env [] (Rval []) = T) /\

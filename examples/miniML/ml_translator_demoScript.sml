@@ -1,9 +1,11 @@
 open HolKernel Parse boolLib bossLib; val _ = new_theory "ml_translator_demo";
 
-open ml_translatorLib;
+open ml_translatorLib ml_translatorTheory;
 
 open arithmeticTheory listTheory combinTheory pairTheory;
+open stringTheory;
 
+infix \\ val op \\ = op THEN;
 
 
 (* ************************************************************************** *
@@ -11,14 +13,6 @@ open arithmeticTheory listTheory combinTheory pairTheory;
    Notes
 
    Partial definitions, e.g. HD, TL and ZIP, cannot be translated.
-
-   MiniML only allows equality tests over num and bool, e.g. this
-   means that functions such as MEM can only be translated for
-   specific types, num and bool. Should equality types be implemented
-   in MiniML?
-
-   Shuold words and string, i.e. lists of characters, be supported by
-   default?
 
  * ************************************************************************** *)
 
@@ -55,9 +49,9 @@ val res = translate I_DEF;
 val res = translate FAIL_DEF;
 val res = translate PAD_RIGHT;
 val res = translate PAD_LEFT;
-val res = translate (MEM |> INST_TYPE [alpha|->``:num``]);
-val res = translate (ALL_DISTINCT |> INST_TYPE [alpha|->``:num``]);
-val res = translate (isPREFIX |> INST_TYPE [alpha|->``:num``]);
+val res = translate MEM;
+val res = translate ALL_DISTINCT;
+val res = translate isPREFIX;
 
 
 (* some locally defined examples *)
@@ -95,21 +89,70 @@ val (def,res) = mlDefine `
   (silly (x,INR y) = x + y:num)`;
 
 val (def,res) = mlDefine `
-  (ODDS [] = []) /\
-  (ODDS [x] = [x]) /\
-  (ODDS (x::y::xs) = x :: ODDS xs)`;
+  (list_test1 [] = []) /\
+  (list_test1 [x] = [x]) /\
+  (list_test1 (x::y::xs) = x :: list_test1 xs)`;
 
 val (def,res) = mlDefine `
-  (EVENS [] ys = []) /\
-  (EVENS [x] ys = [x]) /\
-  (EVENS (x::y::xs) (z1::z2::ys) = x :: EVENS xs ys) /\
-  (EVENS _ _ = [])`;
+  (list_test2 [] ys = []) /\
+  (list_test2 [x] ys = [(x,x)]) /\
+  (list_test2 (x::y::xs) (z1::z2::ys) = (x,z1) :: list_test2 xs ys) /\
+  (list_test2 _ _ = [])`;
 
 val (def,res) = mlDefine `
-  (LIT_TEST [] ys = 0) /\
-  (LIT_TEST (1::xs) ys = 1) /\
-  (LIT_TEST (2::xs) ys = 2 + LIT_TEST xs ys) /\
-  (LIT_TEST _ ys = LENGTH ys)`;
+  (list_test3 [] ys = 0) /\
+  (list_test3 (1::xs) ys = 1) /\
+  (list_test3 (2::xs) ys = 2 + list_test3 xs ys) /\
+  (list_test3 _ ys = LENGTH ys)`;
+
+
+(* chars, finite_maps, sets and lazy lists... *)
+
+(* teaching the translator about characters (represented as num) *)
+
+val CHAR_def = Define `
+  CHAR (c:char) = NUM (ORD c)`;
+
+val _ = add_type_inv ``CHAR``
+
+val EqualityType_CHAR = prove(
+  ``EqualityType CHAR``,
+  EVAL_TAC \\ SRW_TAC [] [] \\ EVAL_TAC)
+  |> store_eq_thm;
+
+val Eval_Val_CHAR = prove(
+  ``n < 256 ==> Eval env (Val (Lit (Num n))) (CHAR (CHR n))``,
+  SIMP_TAC (srw_ss()) [Eval_Val_NUM,CHAR_def])
+  |> store_eval_thm;
+  
+val Eval_ORD = prove(
+  ``!v. ((NUM --> NUM) (\x.x)) v ==> ((CHAR --> NUM) ORD) v``,
+  SIMP_TAC std_ss [Arrow_def,AppReturns_def,CHAR_def])
+  |> MATCH_MP (MATCH_MP Eval_WEAKEN (hol2deep ``\x.x:num``))
+  |> store_eval_thm;
+
+val Eval_CHR = prove(
+  ``!v. ((NUM --> NUM) (\n. n MOD 256)) v ==> 
+        ((NUM --> CHAR) (\n. CHR (n MOD 256))) v``,
+  SIMP_TAC (srw_ss()) [Arrow_def,AppReturns_def,CHAR_def])
+  |> MATCH_MP (MATCH_MP Eval_WEAKEN (hol2deep ``\n. n MOD 256``))
+  |> store_eval_thm;
+
+val Eval_CHAR_LT = prove(
+  ``!v. ((NUM --> NUM --> BOOL) (\m n. m < n)) v ==>
+        ((CHAR --> CHAR --> BOOL) char_lt) v``,
+  SIMP_TAC (srw_ss()) [Arrow_def,AppReturns_def,CHAR_def,char_lt_def]  
+  \\ METIS_TAC [])
+  |> MATCH_MP (MATCH_MP Eval_WEAKEN (hol2deep ``\m n. m < n:num``))
+  |> store_eval_thm;
+
+(* now we can translate e.g. less-than over strings *)
+
+val res = translate string_lt_def
+
+val (def,res) = mlDefine `
+  hi n = if n = 0 then "!" else "hello " ++ hi (n-1)`
+
 
 val _ = export_theory();
 
