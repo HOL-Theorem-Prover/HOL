@@ -210,6 +210,53 @@ type ctxt_frame =
   | Cproj of unit * num
 type ctxt = ctxt_frame * envE
 
+
+(* Expressions and declarations that correspond to miniML source programs.
+ * i.e., without any extra intermediate stuff that the semantics needs *)
+
+val is_source_exp : exp -> bool
+let rec 
+is_source_exp (Raise _) = true
+and
+is_source_exp (Val (Lit _)) = true
+and
+is_source_exp (Val _) = false
+and
+is_source_exp (Con (Some _) es) = List.for_all is_source_exp es
+and
+is_source_exp (Con None es) = false
+and
+is_source_exp (Var _) = true
+and
+is_source_exp (Fun _ e) = is_source_exp e
+and
+is_source_exp (App _ e1 e2) = is_source_exp e1 && is_source_exp e2
+and
+is_source_exp (Log _ e1 e2) = is_source_exp e1 && is_source_exp e2
+and
+is_source_exp (If e1 e2 e3) =
+  is_source_exp e1 && is_source_exp e2 && is_source_exp e3
+and
+is_source_exp (Mat e pes) = 
+  is_source_exp e && List.for_all (fun (p,e) -> is_source_exp e) pes
+and
+is_source_exp (Let _ e1 e2) = is_source_exp e1 && is_source_exp e2
+and
+is_source_exp (Letrec funs e) =
+  List.for_all (fun (v1,v2,e) -> is_source_exp e) funs && is_source_exp e
+and
+is_source_exp (Proj _ _) = false
+
+val is_source_dec : dec -> bool
+let rec 
+is_source_dec (Dlet p e) = is_source_exp e
+and
+is_source_dec (Dletrec funs) = 
+  List.for_all (fun (v1,v2,e) -> is_source_exp e) funs
+and
+is_source_dec (Dtype _) = true
+                             
+
 val lit_same_type : lit -> lit -> bool
 let lit_same_type l1 l2 =
   match (l1,l2) with

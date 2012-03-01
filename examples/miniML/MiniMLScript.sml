@@ -248,6 +248,55 @@ val _ = Hol_datatype `
 
 val _ = type_abbrev( "ctxt" , ``: ctxt_frame # envE``);
 
+(*val is_source_exp : exp -> bool*)
+ val is_source_exp_defn = Hol_defn "is_source_exp" `
+ 
+(is_source_exp (Raise _) = T)
+/\
+(is_source_exp (Val (Lit _)) = T)
+/\
+(is_source_exp (Val _) = F)
+/\
+(is_source_exp (Con (SOME _) es) = EVERY is_source_exp es)
+/\
+(is_source_exp (Con NONE es) = F)
+/\
+(is_source_exp (Var _) = T)
+/\
+(is_source_exp (Fun _ e) = is_source_exp e)
+/\
+(is_source_exp (App _ e1 e2) = is_source_exp e1 /\ is_source_exp e2)
+/\
+(is_source_exp (Log _ e1 e2) = is_source_exp e1 /\ is_source_exp e2)
+/\
+(is_source_exp (If e1 e2 e3) =
+  is_source_exp e1 /\ is_source_exp e2 /\ is_source_exp e3)
+/\
+(is_source_exp (Mat e pes) = 
+  is_source_exp e /\ EVERY (\ (p,e) . is_source_exp e) pes)
+/\
+(is_source_exp (Let _ e1 e2) = is_source_exp e1 /\ is_source_exp e2)
+/\
+(is_source_exp (Letrec funs e) =
+  EVERY (\ (v1,v2,e) . is_source_exp e) funs /\ is_source_exp e)
+/\
+(is_source_exp (Proj _ _) = F)`;
+
+val _ = Defn.save_defn is_source_exp_defn;
+
+(*val is_source_dec : dec -> bool*)
+ val is_source_dec_defn = Hol_defn "is_source_dec" `
+ 
+(is_source_dec (Dlet p e) = is_source_exp e)
+/\
+(is_source_dec (Dletrec funs) = 
+  EVERY (\ (v1,v2,e) . is_source_exp e) funs)
+/\
+(is_source_dec (Dtype _) = T)`;
+
+val _ = Defn.save_defn is_source_dec_defn;
+                             
+
 (*val lit_same_type : lit -> lit -> bool*)
 val _ = Define `
  (lit_same_type l1 l2 =
