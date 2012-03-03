@@ -26,6 +26,9 @@ sub [hol] all_distinct = ALL_DISTINCT
 val rtc : forall 'a. ('a -> 'a -> bool) -> ('a -> 'a -> bool)
 sub [hol] rtc = RTC
 
+val mod : num -> num -> num
+sub [hol] mod = MOD
+
 (* Environments *)
 type ('a,'b) env = ('a*'b) list
 
@@ -54,11 +57,28 @@ type lit =
   | Bool of bool
 
 (* Built-in binary operations (including function application) *)
+
+type opn = Plus | Minus | Times | Divide | Modulo
+type opb = Lt | Gt | Leq | Geq
+
+let opn_lookup n = match n with
+  | Plus -> (+)
+  | Minus -> (-)
+  | Times -> ( *)
+  | Divide -> (/)
+  | Modulo -> (mod)
+end
+
+let opb_lookup n : num -> num -> bool = match n with
+  | Lt -> (<)
+  | Gt -> (>)
+  | Leq -> (<=)
+  | Geq -> (>=)
+end
+
 type op =
-    (* e.g. + - * / *)
-  | Opn of (num -> num -> num)
-    (* e.g.  < > <= >= *)
-  | Opb of (num -> num -> bool)
+  | Opn of opn
+  | Opb of opb
   | Equality
   | Opapp
 
@@ -380,9 +400,9 @@ let do_app env' op v1 v2 =
           | None -> None
         end
     | (Opn op, Lit (Num n1), Lit (Num n2)) -> 
-        Some (env',Val (Lit (Num (op n1 n2))))
+        Some (env',Val (Lit (Num (opn_lookup op n1 n2))))
     | (Opb op, Lit (Num n1), Lit (Num n2)) -> 
-        Some (env',Val (Lit (Bool (op n1 n2)))) 
+        Some (env',Val (Lit (Bool (opb_lookup op n1 n2)))) 
     | (Equality, v1, v2) -> 
         (* TODO: Check for closures in v1 and v2, and possibly check that they
          * have the same type *)

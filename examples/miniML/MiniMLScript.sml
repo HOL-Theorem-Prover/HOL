@@ -31,6 +31,8 @@ val _ = new_theory "MiniML"
 
 (*val rtc : forall 'a. ('a -> 'a -> bool) -> ('a -> 'a -> bool)*)
 
+(*val mod : num -> num -> num*)
+
 (* Environments *)
 val _ = type_abbrev((*  ('a,'b) *) "env" , ``: ('a#'b) list``);
 
@@ -70,12 +72,37 @@ val _ = Hol_datatype `
 
 
 (* Built-in binary operations (including function application) *)
+
+val _ = Hol_datatype `
+ opn = Plus | Minus | Times | Divide | Modulo`;
+
+val _ = Hol_datatype `
+ opb = Lt | Gt | Leq | Geq`;
+
+
+val _ = Define `
+ (opn_lookup n = (case n of
+    Plus =>(+)
+  | Minus =>(-)
+  | Times => ( * )
+  | Divide =>(DIV)
+  | Modulo => ((MOD))
+))`;
+
+
+val _ = Define `
+ (opb_lookup n : num -> num -> bool = (case n of
+    Lt =>(<)
+  | Gt =>(>)
+  | Leq =>(<=)
+  | Geq =>(>=)
+))`;
+
+
 val _ = Hol_datatype `
  op =
-    (* e.g. + - * / *)
-    Opn of (num -> num -> num)
-    (* e.g.  < > <= >= *)
-  | Opb of (num -> num -> bool)
+    Opn of opn
+  | Opb of opb
   | Equality
   | Opapp`;
 
@@ -247,6 +274,10 @@ val _ = Hol_datatype `
   | Cproj of unit => num`;
 
 val _ = type_abbrev( "ctxt" , ``: ctxt_frame # envE``);
+
+
+(* Expressions and declarations that correspond to miniML source programs.
+ * i.e., without any extra intermediate stuff that the semantics needs *)
 
 (*val is_source_exp : exp -> bool*)
  val is_source_exp_defn = Hol_defn "is_source_exp" `
@@ -440,9 +471,9 @@ val _ = Define `
           | NONE => NONE
         )
     | (Opn op, Lit (Num n1), Lit (Num n2)) => 
-        SOME (env',Val (Lit (Num (op n1 n2))))
+        SOME (env',Val (Lit (Num (opn_lookup op n1 n2))))
     | (Opb op, Lit (Num n1), Lit (Num n2)) => 
-        SOME (env',Val (Lit (Bool (op n1 n2)))) 
+        SOME (env',Val (Lit (Bool (opb_lookup op n1 n2)))) 
     | (Equality, v1, v2) => 
         (* TODO: Check for closures in v1 and v2, and possibly check that they
          * have the same type *)

@@ -1,14 +1,11 @@
 open MiniML
 
 
-(* TODO: use a built-in MOD, or even better a built-in num_to_string *)
-
-let rec mymod x y = 
-  if x < y then (x:num) else mymod (x - y) y
+(* TODO: use a built-in num_to_string *)
 
 let rec pos_num_to_string n =
   if n > 0 then
-    let n' = mymod n 10 in
+    let n' = mod n 10 in
       pos_num_to_string (n / 10) ^ 
       (if n' = 0 then "0"
        else if n' = 1 then "1"
@@ -26,7 +23,7 @@ let rec pos_num_to_string n =
 val num_to_string : num -> string
 let num_to_string n = if n = 0 then "0" else pos_num_to_string n
 
-let infixes = []
+let infixes = ["+"; "-"; "*"; "/"; "mod"; "<"; ">"; "<="; ">="]
 
 let rec 
 list_to_string printer sep [] = 
@@ -97,22 +94,31 @@ exp_to_string (App Equality e1 e2) =
   "(" ^ exp_to_string e1 ^ " = " ^ exp_to_string e2 ^ ")"
 and
 exp_to_string (App (Opn o) e1 e2) =
-  ""
-  (* TODO: Make the op not a function
-  if List.assoc o infixes then
-    "(" ^ exp_to_string e1 ^ " " ^ o ^ " " ^ exp_to_string e2 ^ ")"
-  else
-    "(" ^ o " " ^ exp_to_string e1 ^ " " exp_to_string e2 ^ ")"
-   *)
+  let s = match o with
+    | Plus -> "+"
+    | Minus -> "-"
+    | Times -> "*"
+    | Divide -> "/"
+    | Modulo -> "mod"
+  end 
+  in
+    if List.mem s infixes then
+      "(" ^ exp_to_string e1 ^ " " ^ s ^ " " ^ exp_to_string e2 ^ ")"
+    else
+      "(" ^ s ^ " " ^ exp_to_string e1 ^ " " ^ exp_to_string e2 ^ ")"
 and
 exp_to_string (App (Opb o') e1 e2) =
-  ""
-  (* TODO: Make the op not a function 
-  if List.assoc o infixes then
-    "(" ^ exp_to_string e1 ^ " " ^ o ^ " " ^ exp_to_string e2 ^ ")"
-  else
-    "(" ^ o " " ^ exp_to_string e1 ^ " " exp_to_string e2 ^ ")"
-   *)
+  let s = match o' with
+    | Lt -> "<"
+    | Gt -> ">"
+    | Leq -> "<="
+    | Geq -> ">"
+  end 
+  in
+    if List.mem s infixes then
+      "(" ^ exp_to_string e1 ^ " " ^ s ^ " " ^ exp_to_string e2 ^ ")"
+    else
+      "(" ^ s ^ " " ^ exp_to_string e1 ^ " " ^ exp_to_string e2 ^ ")"
 and
 exp_to_string (Log lop e1 e2) =
   "(" ^ exp_to_string e1 ^ (if lop = And then " andalso " else " orelse ") ^

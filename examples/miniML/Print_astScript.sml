@@ -10,18 +10,12 @@ open MiniMLTheory
 (*open MiniML*)
 
 
-(* TODO: use a built-in MOD, or even better a built-in num_to_string *)
-
- val mymod_defn = Hol_defn "mymod" `
- (mymod x y = 
-  if x < y then (x:num) else mymod (x - y) y)`;
-
-val _ = Defn.save_defn mymod_defn;
+(* TODO: use a built-in num_to_string *)
 
  val pos_num_to_string_defn = Hol_defn "pos_num_to_string" `
  (pos_num_to_string n =
   if n > 0 then
-    let n' = mymod n 10 in STRCAT 
+    let n' = (MOD) n 10 in STRCAT 
       (pos_num_to_string (n DIV 10))  
       (if n' = 0 then "0"
        else if n' = 1 then "1"
@@ -44,7 +38,7 @@ val _ = Define `
 
 
 val _ = Define `
- infixes = []`;
+ infixes = ["+"; "-"; "*"; "/"; "mod"; "<"; ">"; "<="; ">="]`;
 
 
  val list_to_string_defn = Hol_defn "list_to_string" `
@@ -127,22 +121,31 @@ val _ = Defn.save_defn pat_to_string_defn;
   "(" (STRCAT   (exp_to_string e1) (STRCAT   " = " (STRCAT   (exp_to_string e2)  ")"))))
 /\
 (exp_to_string (App (Opn o0) e1 e2) =
-  "")
-  (* TODO: Make the op not a function
-  if List.assoc o infixes then
-    "(" ^ exp_to_string e1 ^ " " ^ o ^ " " ^ exp_to_string e2 ^ ")"
-  else
-    "(" ^ o " " ^ exp_to_string e1 ^ " " exp_to_string e2 ^ ")"
-   *)
+  let s = (case o0 of
+      Plus => "+"
+    | Minus => "-"
+    | Times => "*"
+    | Divide => "/"
+    | Modulo => "mod"
+  ) 
+  in
+    if MEM s infixes then STRCAT 
+      "(" (STRCAT   (exp_to_string e1) (STRCAT   " " (STRCAT   s (STRCAT   " " (STRCAT   (exp_to_string e2)  ")")))))
+    else STRCAT 
+      "(" (STRCAT   s (STRCAT   " " (STRCAT   (exp_to_string e1) (STRCAT   " " (STRCAT   (exp_to_string e2)  ")"))))))
 /\
 (exp_to_string (App (Opb o') e1 e2) =
-  "")
-  (* TODO: Make the op not a function 
-  if List.assoc o infixes then
-    "(" ^ exp_to_string e1 ^ " " ^ o ^ " " ^ exp_to_string e2 ^ ")"
-  else
-    "(" ^ o " " ^ exp_to_string e1 ^ " " exp_to_string e2 ^ ")"
-   *)
+  let s = (case o' of
+      Lt => "<"
+    | Gt => ">"
+    | Leq => "<="
+    | Geq => ">"
+  ) 
+  in
+    if MEM s infixes then STRCAT 
+      "(" (STRCAT   (exp_to_string e1) (STRCAT   " " (STRCAT   s (STRCAT   " " (STRCAT   (exp_to_string e2)  ")")))))
+    else STRCAT 
+      "(" (STRCAT   s (STRCAT   " " (STRCAT   (exp_to_string e1) (STRCAT   " " (STRCAT   (exp_to_string e2)  ")"))))))
 /\
 (exp_to_string (Log lop e1 e2) = STRCAT 
   "(" (STRCAT   (exp_to_string e1) (STRCAT   (if lop = And then " andalso " else " orelse ") (STRCAT  
