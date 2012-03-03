@@ -299,16 +299,16 @@ val no_closures_def = tDefine "no_closures" `
  (WF_REL_TAC `measure v_size` \\ REPEAT STRIP_TAC
   \\ Induct_on `vs` \\ FULL_SIMP_TAC (srw_ss()) [MEM]
   \\ REPEAT STRIP_TAC \\ FULL_SIMP_TAC (srw_ss()) [MEM,exp_size_def]
-  \\ DECIDE_TAC)    
+  \\ DECIDE_TAC)
 
 val EqualityType_def = Define `
   EqualityType (abs:'a->v->bool) =
     (!x1 v1. abs x1 v1 ==> no_closures v1) /\
-    !x1 v1 x2 v2. 
+    !x1 v1 x2 v2.
       abs x1 v1 /\ abs x2 v2 ==> ((v1 = v2) = (x1 = x2))`;
 
 val Eq_def = Define `
-  ((Eq abs):'a->v->bool) = \a v. EqualityType abs /\ abs a v`; 
+  ((Eq abs):'a->v->bool) = \a v. EqualityType abs /\ abs a v`;
 
 val EqualityType_Eq = store_thm("EqualityType_Eq",
   ``!a. EqualityType (Eq a)``,
@@ -327,7 +327,7 @@ val Eval_Equality = store_thm("Eval_Equality",
   \\ ONCE_REWRITE_TAC [evaluate_cases] \\ SIMP_TAC (srw_ss()) []
   \\ Q.LIST_EXISTS_TAC [`res`,`res'`]
   \\ FULL_SIMP_TAC (srw_ss()) [do_app_def]
-  \\ ONCE_REWRITE_TAC [evaluate_cases] 
+  \\ ONCE_REWRITE_TAC [evaluate_cases]
   \\ FULL_SIMP_TAC (srw_ss()) [EqualityType_def]);
 
 
