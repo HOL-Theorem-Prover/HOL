@@ -76,6 +76,7 @@ val _ = Hol_datatype `
     Opn of (num -> num -> num)
     (* e.g.  < > <= >= *)
   | Opb of (num -> num -> bool)
+  | Equality
   | Opapp`;
 
 
@@ -247,6 +248,55 @@ val _ = Hol_datatype `
 
 val _ = type_abbrev( "ctxt" , ``: ctxt_frame # envE``);
 
+(*val is_source_exp : exp -> bool*)
+ val is_source_exp_defn = Hol_defn "is_source_exp" `
+ 
+(is_source_exp (Raise _) = T)
+/\
+(is_source_exp (Val (Lit _)) = T)
+/\
+(is_source_exp (Val _) = F)
+/\
+(is_source_exp (Con (SOME _) es) = EVERY is_source_exp es)
+/\
+(is_source_exp (Con NONE es) = F)
+/\
+(is_source_exp (Var _) = T)
+/\
+(is_source_exp (Fun _ e) = is_source_exp e)
+/\
+(is_source_exp (App _ e1 e2) = is_source_exp e1 /\ is_source_exp e2)
+/\
+(is_source_exp (Log _ e1 e2) = is_source_exp e1 /\ is_source_exp e2)
+/\
+(is_source_exp (If e1 e2 e3) =
+  is_source_exp e1 /\ is_source_exp e2 /\ is_source_exp e3)
+/\
+(is_source_exp (Mat e pes) = 
+  is_source_exp e /\ EVERY (\ (p,e) . is_source_exp e) pes)
+/\
+(is_source_exp (Let _ e1 e2) = is_source_exp e1 /\ is_source_exp e2)
+/\
+(is_source_exp (Letrec funs e) =
+  EVERY (\ (v1,v2,e) . is_source_exp e) funs /\ is_source_exp e)
+/\
+(is_source_exp (Proj _ _) = F)`;
+
+val _ = Defn.save_defn is_source_exp_defn;
+
+(*val is_source_dec : dec -> bool*)
+ val is_source_dec_defn = Hol_defn "is_source_dec" `
+ 
+(is_source_dec (Dlet p e) = is_source_exp e)
+/\
+(is_source_dec (Dletrec funs) = 
+  EVERY (\ (v1,v2,e) . is_source_exp e) funs)
+/\
+(is_source_dec (Dtype _) = T)`;
+
+val _ = Defn.save_defn is_source_dec_defn;
+                             
+
 (*val lit_same_type : lit -> lit -> bool*)
 val _ = Define `
  (lit_same_type l1 l2 =
@@ -393,6 +443,10 @@ val _ = Define `
         SOME (env',Val (Lit (Num (op n1 n2))))
     | (Opb op, Lit (Num n1), Lit (Num n2)) => 
         SOME (env',Val (Lit (Bool (op n1 n2)))) 
+    | (Equality, v1, v2) => 
+        (* TODO: Check for closures in v1 and v2, and possibly check that they
+         * have the same type *)
+        SOME (env', Val (Lit (Bool (v1 = v2))))
     | _ => NONE
   ))`;
 
@@ -662,6 +716,16 @@ val _ = Define `
     (e_step (cenv,env',e',c') = Etype_error))`;
 
 val _ = Defn.save_defn small_eval_defn;
+
+(*val e_diverges : envC -> envE -> exp -> bool*)
+val _ = Define `
+ (e_diverges cenv env e =
+  ! cenv' env' e' c'.
+    (RTC e_step_reln) (cenv,env,e,[]) (cenv',env',e',c')
+    ==>
+    (? cenv'' env'' e'' c''.
+      e_step_reln (cenv',env',e',c') (cenv'',env'',e'',c'')))`;
+
 
 val _ = Define `
  (d_step_reln st st' = 
@@ -1048,7 +1112,7 @@ evaluate_decs cenv env (Dtype tds :: ds) (Rerr Rtype_error))`;
  * forall (tyvarN list). t list -> typeN *)
 val _ = type_abbrev( "tenvC" , ``: (conN, (tvarN list # t list # typeN)) env``); 
 (* Type environments *)
-val _ = type_abbrev( "tenvE" , ``: (varN, t) env``);
+val _ = type_abbrev( "tenvE" , ``: (varN, tvarN list # t) env``);
 
 (* A pattern matches values of a certain type and extends the type environment
  * with the pattern's binders.  The pattern's type does not depend on the input
@@ -1088,6 +1152,7 @@ val _ = Define `
       (Opapp, Tfn t2' t3', _) => (t2 = t2') /\ (t3 = t3')
     | (Opn _, Tnum, Tnum) => (t3 = Tnum)
     | (Opb _, Tnum, Tnum) => (t3 = Tbool)
+    | (Equality, t1, t2) => (t1 = t2) /\ (t3 = Tbool)
     | _ => F
   ))`;
 
@@ -1129,7 +1194,7 @@ val _ = Hol_reln `
 (! cenv tenv n t.
 T
 ==>
-type_p cenv tenv (Pvar n) t (bind n t tenv))
+type_p cenv tenv (Pvar n) t (bind n ([],t) tenv))
 
 /\
 
@@ -1195,7 +1260,8 @@ type_v cenv (Conv (SOME cn) vs) (Tapp ts' tn))
 
 (! cenv env tenv n e t1 t2.
 type_env cenv env tenv /\
-type_e cenv (bind n t1 tenv) e t2
+(* TODO: type parameters *)
+type_e cenv (bind n ([],t1) tenv) e t2
 ==>
 type_v cenv (Closure env n e) (Tfn t1 t2))
 
@@ -1204,7 +1270,8 @@ type_v cenv (Closure env n e) (Tfn t1 t2))
 (! cenv env funs n t tenv tenv'.
 type_env cenv env tenv /\
 type_funs cenv (merge tenv' tenv) funs tenv' /\
-(lookup n tenv' = SOME t)
+(* TODO: type parameters *)
+(lookup n tenv' = SOME (([]:tvarN list),t))
 ==>
 type_v cenv (Recclosure env funs n) t)
 
@@ -1234,14 +1301,16 @@ type_e cenv tenv (Con (SOME cn) es) (Tapp ts' tn))
 /\
 
 (! cenv tenv n t.
-(lookup n tenv = SOME t)
+(* TODO: type parameters *)
+(lookup n tenv = SOME (([]:tvarN list),t))
 ==>
 type_e cenv tenv (Var n) t)
 
 /\
 
 (! cenv tenv n e t1 t2.
-type_e cenv (bind n t1 tenv) e t2
+(* TODO: type parameters *)
+type_e cenv (bind n (([]:tvarN list),t1) tenv) e t2
 ==>
 type_e cenv tenv (Fun n e) (Tfn t1 t2))
 
@@ -1285,7 +1354,8 @@ type_e cenv tenv (Mat e pes) t2)
 
 (! cenv tenv n e1 e2 t1 t2.
 type_e cenv tenv e1 t1 /\
-type_e cenv (bind n t1 tenv) e2 t2
+(* TODO: type parameters *)
+type_e cenv (bind n (([]:tvarN list),t1) tenv) e2 t2
 ==>
 type_e cenv tenv (Let n e1 e2) t2)
 
@@ -1340,7 +1410,8 @@ type_env cenv [] [])
 type_e cenv [] (Val v) t /\
 type_env cenv env tenv
 ==>
-type_env cenv (bind n v env) (bind n t tenv))
+(* TODO: type parameters *)
+type_env cenv (bind n v env) (bind n (([]:tvarN list),t) tenv))
 
 /\
 
@@ -1352,12 +1423,13 @@ type_funs cenv env [] emp)
 /\
 
 (! cenv env fn n e funs env' t1 t2.
-type_e cenv (bind n t1 env) e t2 /\
+(* TODO: type parameters *)
+type_e cenv (bind n (([]:tvarN list),t1) env) e t2 /\
 type_funs cenv env funs env' /\
 (lookup fn env' = NONE)
 ==>
-type_funs cenv env ((fn, n, e)::funs) (bind fn (Tfn t1 t2) env'))`;
-
+(* TODO: type parameters *)
+type_funs cenv env ((fn, n, e)::funs) (bind fn (([]:tvarN list),Tfn t1 t2) env'))`;
 
 val _ = Hol_reln `
 
@@ -1447,7 +1519,8 @@ type_ctxt cenv tenv (Cmat () pes) t1 t2)
 /\
 
 (! cenv tenv e t1 t2 n.
-type_e cenv (bind n t1 tenv) e t2
+(* TODO: type parameters *)
+type_e cenv (bind n (([]:tvarN list),t1) tenv) e t2
 ==>
 type_ctxt cenv tenv (Clet n () e) t1 t2)
 
@@ -1604,5 +1677,315 @@ evaluate_state (cenv, env, e, c) bv)
 evaluate cenv env e (Rerr err)
 ==>
 evaluate_state (cenv, env, e, c) (Rerr err))`;
+
+
+(* ------------------------------------------------------------------------- *) 
+
+(* A version of the big-step expression semantics that doesn't use the
+ * constructor environment to know if a value is ok or not.  Is equivalent to
+ * the normal one for well-typed programs. *)
+
+(*val pmatch' : pat -> v -> envE -> match_result*)
+ val pmatch'_defn = Hol_defn "pmatch'" `
+ 
+(pmatch' (Pvar n) v' env = Match (bind n v' env))
+/\
+(pmatch' (Plit l) (Lit l') env =
+  if l = l' then
+    Match env
+  else if lit_same_type l l' then
+    No_match
+  else
+    Match_type_error)
+/\
+(pmatch' (Pcon (SOME n) ps) (Conv (SOME n') vs) env =
+  if (LENGTH ps = LENGTH vs) /\ (n = n') then
+    pmatch_list' ps vs env
+  else
+    No_match)
+/\
+(pmatch' (Pcon NONE ps) (Conv NONE vs) env =
+  if LENGTH ps = LENGTH vs then
+    pmatch_list' ps vs env
+  else
+    No_match)
+/\
+(pmatch' _ _ env = Match_type_error)
+/\
+(pmatch_list' [] [] env = Match env)
+/\
+(pmatch_list' (p::ps) (v::vs) env =
+  (case pmatch' p v env of
+      No_match => No_match
+    | Match_type_error => Match_type_error
+    | Match env' => pmatch_list' ps vs env'
+  ))
+/\
+(pmatch_list' _ _ env = Match_type_error)`;
+
+val _ = Defn.save_defn pmatch'_defn;
+
+
+val _ = Hol_reln `
+
+(! env err.
+T
+==>
+evaluate' env (Raise err) (Rerr (Rraise err)))
+
+/\
+
+(! env v.
+T
+==>
+evaluate' env (Val v) (Rval v))
+
+/\
+
+(! env cn es vs.
+evaluate_list' env es (Rval vs)
+==>
+evaluate' env (Con cn es) (Rval (Conv cn vs)))
+
+/\
+
+(! env cn es err.
+evaluate_list' env es (Rerr err)
+==>
+evaluate' env (Con cn es) (Rerr err))
+
+/\
+
+(! env n v.
+(lookup n env = SOME v)
+==>
+evaluate' env (Var n) (Rval v))
+
+/\
+
+(! env n.
+(lookup n env = NONE)
+==>
+evaluate' env (Var n) (Rerr Rtype_error))
+
+/\
+
+(! env n e.
+T
+==>
+evaluate' env (Fun n e) (Rval (Closure env n e)))
+
+/\
+
+(! env op e1 e2 v1 v2 env' e3 bv.
+evaluate' env e1 (Rval v1) /\
+evaluate' env e2 (Rval v2) /\
+(do_app env op v1 v2 = SOME (env', e3)) /\
+evaluate' env' e3 bv
+==>
+evaluate' env (App op e1 e2) bv)
+
+/\
+
+(! env op e1 e2 v1 v2.
+evaluate' env e1 (Rval v1) /\
+evaluate' env e2 (Rval v2) /\
+(do_app env op v1 v2 = NONE)
+==>
+evaluate' env (App op e1 e2) (Rerr Rtype_error))
+
+/\
+
+(! env op e1 e2 v1 err.
+evaluate' env e1 (Rval v1) /\
+evaluate' env e2 (Rerr err)
+==>
+evaluate' env (App op e1 e2) (Rerr err))
+
+/\
+
+(! env op e1 e2 err.
+evaluate' env e1 (Rerr err)
+==>
+evaluate' env (App op e1 e2) (Rerr err))
+
+/\
+
+(! env op e1 e2 v e' bv.
+evaluate' env e1 (Rval v) /\
+(do_log op v e2 = SOME e') /\
+evaluate' env e' bv
+==>
+evaluate' env (Log op e1 e2) bv)
+
+/\
+
+(! env op e1 e2 v.
+evaluate' env e1 (Rval v) /\
+(do_log op v e2 = NONE)
+==>
+evaluate' env (Log op e1 e2) (Rerr Rtype_error))
+
+/\
+
+(! env op e1 e2 err.
+evaluate' env e1 (Rerr err)
+==>
+evaluate' env (Log op e1 e2) (Rerr err))
+
+/\
+
+(! env e1 e2 e3 v e' bv.
+evaluate' env e1 (Rval v) /\
+(do_if v e2 e3 = SOME e') /\
+evaluate' env e' bv
+==>
+evaluate' env (If e1 e2 e3) bv)
+
+/\
+
+(! env e1 e2 e3 v.
+evaluate' env e1 (Rval v) /\
+(do_if v e2 e3 = NONE)
+==>
+evaluate' env (If e1 e2 e3) (Rerr Rtype_error))
+
+/\
+
+
+(! env e1 e2 e3 err.
+evaluate' env e1 (Rerr err)
+==>
+evaluate' env (If e1 e2 e3) (Rerr err))
+
+/\
+
+(! env e pes v bv.
+evaluate' env e (Rval v) /\
+evaluate_match' env v pes bv
+==>
+evaluate' env (Mat e pes) bv)
+
+/\
+
+(! env e pes err.
+evaluate' env e (Rerr err)
+==>
+evaluate' env (Mat e pes) (Rerr err))
+
+/\
+
+(! env n e1 e2 v bv.
+evaluate' env e1 (Rval v) /\
+evaluate' (bind n v env) e2 bv
+==>
+evaluate' env (Let n e1 e2) bv)
+
+/\
+
+(! env n e1 e2 err.
+evaluate' env e1 (Rerr err)
+==>
+evaluate' env (Let n e1 e2) (Rerr err))
+
+/\
+
+(! env funs e bv.
+ALL_DISTINCT (MAP (\ (x,y,z) . x) funs) /\
+evaluate' (build_rec_env funs env) e bv
+==>
+evaluate' env (Letrec funs e) bv)
+
+/\
+
+(! env funs e.
+~ (ALL_DISTINCT (MAP (\ (x,y,z) . x) funs))
+==>
+evaluate' env (Letrec funs e) (Rerr Rtype_error))
+
+/\
+
+(! env e n v v'.
+evaluate' env e (Rval v) /\
+(do_proj v n = SOME v')
+==>
+evaluate' env (Proj e n) (Rval v'))
+
+/\
+
+(! env e n v.
+evaluate' env e (Rval v) /\
+(do_proj v n = NONE)
+==>
+evaluate' env (Proj e n) (Rerr Rtype_error))
+
+/\
+
+(! env e n err.
+evaluate' env e (Rerr err)
+==>
+evaluate' env (Proj e n) (Rerr err))
+
+/\
+
+(! env.
+T
+==>
+evaluate_list' env [] (Rval []))
+
+/\
+
+(! env e es v vs.
+evaluate' env e (Rval v) /\
+evaluate_list' env es (Rval vs)
+==>
+evaluate_list' env (e::es) (Rval (v::vs)))
+
+/\
+
+(! env e es err.
+evaluate' env e (Rerr err)
+==>
+evaluate_list' env (e::es) (Rerr err))
+
+/\
+
+(! env e es v err.
+evaluate' env e (Rval v) /\
+evaluate_list' env es (Rerr err)
+==>
+evaluate_list' env (e::es) (Rerr err))
+
+/\
+
+(! env v.
+T
+==>
+evaluate_match' env v [] (Rerr (Rraise Bind_error)))
+
+/\
+
+(! env v p e pes env' bv.
+(pmatch' p v env = Match env') /\
+evaluate' env' e bv
+==>
+evaluate_match' env v ((p,e)::pes) bv)
+
+/\
+
+(! env v p e pes bv.
+(pmatch' p v env = No_match) /\
+evaluate_match' env v pes bv
+==>
+evaluate_match' env v ((p,e)::pes) bv)
+
+/\
+
+(! env v p e pes.
+(pmatch' p v env = Match_type_error)
+==>
+evaluate_match' env v ((p,e)::pes) (Rerr Rtype_error))`;
+
+
 val _ = export_theory()
 

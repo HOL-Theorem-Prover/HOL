@@ -1089,6 +1089,8 @@ This will rename both free and bound variables, wherever they occur throughout a
 Because it uses instantiation, free variables in theorem hypotheses will get renamed, but bound variables in hypotheses are not affected.
 %
 (Hypotheses are not printed by default anyway of course.)
+
+If $\mathit{nm}_1$ and $\mathit{nm}_2$ both begin with the colon character then they are parsed as types, and type instantiation is performed on the term or theorem argument instead of variable substitution.
 \end{description}
 
 

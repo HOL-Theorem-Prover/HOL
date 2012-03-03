@@ -14,15 +14,15 @@ open MiniMLTheory
 (*val remove_ctors : (conN -> num) -> exp -> exp*)
 
  val pat_remove_ctors_defn = Hol_defn "pat_remove_ctors" `
- 
+
 (pat_remove_ctors cnmap (Pvar vn) = Pvar vn)
 /\
 (pat_remove_ctors cnmap (Plit l) = Plit l)
 /\
-(pat_remove_ctors cnmap (Pcon NONE ps) = 
+(pat_remove_ctors cnmap (Pcon NONE ps) =
   Pcon NONE (MAP (pat_remove_ctors cnmap) ps))
 /\
-(pat_remove_ctors cnmap (Pcon (SOME cn) ps) = 
+(pat_remove_ctors cnmap (Pcon (SOME cn) ps) =
   Pcon NONE ((Plit (Num (cnmap cn))) :: MAP (pat_remove_ctors cnmap) ps))`;
 
 val _ = Defn.save_defn pat_remove_ctors_defn;
@@ -35,26 +35,26 @@ val _ = Defn.save_defn pat_remove_ctors_defn;
 /\
 (remove_ctors cnmap (Con NONE es) = Con NONE (MAP (remove_ctors cnmap) es))
 /\
-(remove_ctors cnmap (Con (SOME cn) es) = 
+(remove_ctors cnmap (Con (SOME cn) es) =
   Con NONE (Val (Lit (Num (cnmap cn))) :: MAP (remove_ctors cnmap) es))
 /\
 (remove_ctors cnmap (Var vn) = Var vn)
 /\
 (remove_ctors cnmap (Fun vn e) = Fun vn (remove_ctors cnmap e))
-/\ 
-(remove_ctors cnmap (App op e1 e2) = 
+/\
+(remove_ctors cnmap (App op e1 e2) =
   App op (remove_ctors cnmap e1) (remove_ctors cnmap e2))
 /\
-(remove_ctors cnmap (Log op' e1 e2) = 
+(remove_ctors cnmap (Log op' e1 e2) =
   Log op' (remove_ctors cnmap e1) (remove_ctors cnmap e2))
 /\
-(remove_ctors cnmap (If e1 e2 e3) = 
+(remove_ctors cnmap (If e1 e2 e3) =
   If (remove_ctors cnmap e1) (remove_ctors cnmap e2) (remove_ctors cnmap e3))
 /\
-(remove_ctors cnmap (Mat e pes) = 
+(remove_ctors cnmap (Mat e pes) =
   Mat (remove_ctors cnmap e) (match_remove_ctors cnmap pes))
 /\
-(remove_ctors cnmap (Let vn e1 e2) = 
+(remove_ctors cnmap (Let vn e1 e2) =
   Let vn (remove_ctors cnmap e1) (remove_ctors cnmap e2))
 /\
 (remove_ctors cnmap (Letrec funs e) =
@@ -64,9 +64,9 @@ val _ = Defn.save_defn pat_remove_ctors_defn;
 /\
 (v_remove_ctors cnmap (Lit l) = Lit l)
 /\
-(v_remove_ctors cnmap (Conv NONE vs) = 
+(v_remove_ctors cnmap (Conv NONE vs) =
   Conv NONE (MAP (v_remove_ctors cnmap) vs))
-/\ 
+/\
 (v_remove_ctors cnmap (Closure envE vn e) =
   Closure (env_remove_ctors cnmap envE) vn (remove_ctors cnmap e))
 /\
@@ -75,12 +75,12 @@ val _ = Defn.save_defn pat_remove_ctors_defn;
 /\
 (env_remove_ctors cnmap [] = [])
 /\
-(env_remove_ctors cnmap ((vn,v)::env) = 
+(env_remove_ctors cnmap ((vn,v)::env) =
   ((vn, v_remove_ctors cnmap v)::env_remove_ctors cnmap env))
 /\
 (funs_remove_ctors cnmap [] = [])
 /\
-(funs_remove_ctors cnmap ((vn1,vn2,e)::funs) = 
+(funs_remove_ctors cnmap ((vn1,vn2,e)::funs) =
   ((vn1,vn2,remove_ctors cnmap e)::funs_remove_ctors cnmap funs))
 /\
 (match_remove_ctors cnmap [] = [])
@@ -88,6 +88,6 @@ val _ = Defn.save_defn pat_remove_ctors_defn;
 (match_remove_ctors cnmap ((p,e)::pes) =
   (pat_remove_ctors cnmap p, remove_ctors cnmap e)::match_remove_ctors cnmap pes)`;
 
-val _ = Defn.save_defn remove_ctors_defn; 
+val _ = Defn.save_defn remove_ctors_defn;
 val _ = export_theory()
 

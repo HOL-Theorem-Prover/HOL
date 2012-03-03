@@ -47,7 +47,6 @@ val NOT_LESS_0   = prim_recTheory.NOT_LESS_0;
 val PRE          = prim_recTheory.PRE;
 val LESS_MONO    = prim_recTheory.LESS_MONO;
 val INV_SUC_EQ   = prim_recTheory.INV_SUC_EQ;
-val PRIM_REC_THM = prim_recTheory.PRIM_REC_THM;
 val num_Axiom    = prim_recTheory.num_Axiom;
 
 val ADD_CLAUSES  = arithmeticTheory.ADD_CLAUSES;
@@ -349,6 +348,7 @@ val CONS = store_thm   ("CONS",
 val APPEND_NIL = store_thm("APPEND_NIL",
 --`!(l:'a list). APPEND l [] = l`--,
  LIST_INDUCT_TAC THEN ASM_REWRITE_TAC [APPEND]);
+val _ = export_rewrites ["APPEND_NIL"]
 
 
 val APPEND_ASSOC = store_thm ("APPEND_ASSOC",
@@ -2052,6 +2052,16 @@ val MEM_SNOC = store_thm("MEM_SNOC",
     THEN PURE_ONCE_REWRITE_TAC[DISJ_ASSOC]
     THEN CONV_TAC ((RAND_CONV o RATOR_CONV o ONCE_DEPTH_CONV)
      (REWR_CONV DISJ_SYM)) THEN REFL_TAC);
+val _ = export_rewrites ["MEM_SNOC"]
+
+val SNOC_11 = store_thm(
+  "SNOC_11",
+  ``(SNOC x y = SNOC a b) <=> (x = a) /\ (y = b)``,
+  SRW_TAC [][EQ_IMP_THM] THENL [
+    POP_ASSUM (MP_TAC o Q.AP_TERM `LAST`) THEN SRW_TAC [][LAST_SNOC],
+    POP_ASSUM (MP_TAC o Q.AP_TERM `FRONT`) THEN SRW_TAC [][FRONT_SNOC]
+  ]);
+val _ = export_rewrites ["SNOC_11"]
 
 val REVERSE_SNOC_DEF = store_thm (
   "REVERSE_SNOC_DEF",
@@ -2406,6 +2416,82 @@ val REVERSE_REV = Q.store_thm
  `!L. REVERSE L = REV L []`,
  PROVE_TAC [REV_REVERSE_LEM,APPEND_NIL]);
 
+(* ----------------------------------------------------------------------
+    List "splitting" results
+   ---------------------------------------------------------------------- *)
+
+(* These loop! Use with care *)
+val EXISTS_LIST = store_thm(
+  "EXISTS_LIST",
+  ``(?l. P l) <=> P [] \/ ?h t. P (h::t)``,
+  METIS_TAC [list_CASES]);
+
+val FORALL_LIST = store_thm(
+  "FORALL_LIST",
+  ``(!l. P l) <=> P [] /\ !h t. P (h::t)``,
+  METIS_TAC [list_CASES]);
+
+(* now on with the show *)
+val MEM_SPLIT_APPEND_first = store_thm(
+  "MEM_SPLIT_APPEND_first",
+  ``MEM e l <=> ?pfx sfx. (l = pfx ++ [e] ++ sfx) /\ ~MEM e pfx``,
+  Induct_on `l` THEN SRW_TAC [][] THEN Cases_on `e = a` THEN
+  SRW_TAC [][] THENL[
+    MAP_EVERY Q.EXISTS_TAC [`[]`, `l`] THEN SRW_TAC [][],
+    SRW_TAC [][SimpRHS, Once EXISTS_LIST]
+  ]);
+
+val MEM_SPLIT_APPEND_last = store_thm(
+  "MEM_SPLIT_APPEND_last",
+  ``MEM e l <=> ?pfx sfx. (l = pfx ++ [e] ++ sfx) /\ ~MEM e sfx``,
+  Q.ID_SPEC_TAC `l` THEN SNOC_INDUCT_TAC THEN SRW_TAC [][] THEN
+  Cases_on `e = x` THEN SRW_TAC [][] THENL [
+    MAP_EVERY Q.EXISTS_TAC [`l`, `[]`] THEN SRW_TAC [][SNOC_APPEND],
+    SRW_TAC [][EQ_IMP_THM] THENL [
+      MAP_EVERY Q.EXISTS_TAC [`pfx`, `SNOC x sfx`] THEN
+      SRW_TAC [][APPEND_ASSOC, APPEND_SNOC],
+      Q.SPEC_THEN `sfx` STRIP_ASSUME_TAC SNOC_CASES THEN
+      SRW_TAC [][] THEN FULL_SIMP_TAC (srw_ss()) [] THEN1
+        FULL_SIMP_TAC (srw_ss()) [GSYM SNOC_APPEND] THEN
+      FULL_SIMP_TAC (srw_ss()) [APPEND_SNOC] THEN SRW_TAC [][] THEN
+      METIS_TAC []
+    ]
+  ]);
+
+val APPEND_EQ_APPEND = store_thm(
+  "APPEND_EQ_APPEND",
+  ``(l1 ++ l2 = m1 ++ m2) <=>
+      (?l. (l1 = m1 ++ l) /\ (m2 = l ++ l2)) \/
+      (?l. (m1 = l1 ++ l) /\ (l2 = l ++ m2))``,
+  MAP_EVERY Q.ID_SPEC_TAC [`m2`, `m1`, `l2`, `l1`] THEN Induct_on `l1` THEN
+  SRW_TAC [][] THEN
+  Cases_on `m1` THEN SRW_TAC [][] THEN METIS_TAC []);
+
+val APPEND_EQ_CONS = store_thm(
+  "APPEND_EQ_CONS",
+  ``(l1 ++ l2 = h::t) <=>
+       ((l1 = []) /\ (l2 = h::t)) \/
+       ?lt. (l1 = h::lt) /\ (t = lt ++ l2)``,
+  MAP_EVERY Q.ID_SPEC_TAC [`t`, `h`, `l2`, `l1`] THEN Induct_on `l1` THEN
+  SRW_TAC [][] THEN METIS_TAC []);
+
+(* could just use APPEND_EQ_APPEND and APPEND_EQ_SING, but this gives you
+   four possibilities
+      |- (x ++ [e] ++ y = a ++ b) ⇔
+           (∃l'. (x = a ++ l') ∧ (b = l' ++ [e] ++ y)) ∨
+           (a = x ++ [e]) ∧ (b = y) ∨
+           (a = x) ∧ (b = e::y) ∨
+           ∃l. (a = x ++ [e] ++ l) ∧ (y = l ++ b)
+   Note that the middle two are instances of the outer two with the
+   existentially quantified l set to []
+*)
+val APPEND_EQ_APPEND_MID = store_thm(
+  "APPEND_EQ_APPEND_MID",
+  ``(l1 ++ [e] ++ l2 = m1 ++ m2) <=>
+       (?l. (m1 = l1 ++ [e] ++ l) /\ (l2 = l ++ m2)) \/
+       (?l. (l1 = m1 ++ l) /\ (m2 = l ++ [e] ++ l2))``,
+  MAP_EVERY Q.ID_SPEC_TAC [`m2`, `m1`, `l2`, `e`, `l1`] THEN Induct THEN
+  Cases_on `m1` THEN SRW_TAC [][] THEN METIS_TAC []);
 
 (* --------------------------------------------------------------------- *)
 
@@ -2442,7 +2528,7 @@ val _ = export_rewrites
            "MAP", "MAP2", "NULL_DEF",
            "SUM", "APPEND_ASSOC", "CONS", "CONS_11",
            "LENGTH_MAP", "MAP_APPEND",
-           "NOT_CONS_NIL", "NOT_NIL_CONS", "MAP_EQ_NIL", "APPEND_NIL",
+           "NOT_CONS_NIL", "NOT_NIL_CONS", "MAP_EQ_NIL",
            "CONS_ACYCLIC", "list_case_def", "ZIP",
            "UNZIP", "EVERY_APPEND", "EXISTS_APPEND", "EVERY_SIMP",
            "EXISTS_SIMP", "NOT_EVERY", "NOT_EXISTS",

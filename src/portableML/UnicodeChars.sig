@@ -80,6 +80,16 @@ sig
   val hookleftarrow  : string
   val hookrightarrow : string
 
+  (* brackets, braces and parentheses *)
+  val double_bracel : string
+  val double_bracer : string
+  val langle : string
+  val rangle : string
+  val double_langle : string
+  val double_rangle : string
+  val lensel : string
+  val lenser : string
+
   (*stars*)
   val blackstar      : string
   val whitestar      : string

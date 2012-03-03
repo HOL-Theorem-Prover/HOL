@@ -10,10 +10,6 @@
 (* DATE:    January 1992						*)
 (* =====================================================================*)
 
-structure pred_setScript =
-struct
-
-
 (* interactive use
 app load ["pairLib", "numLib", "PGspec", "PSet_ind", "Q",
           "Defn", "TotalDefn", "metisLib"];
@@ -904,6 +900,13 @@ val INSERT_DIFF =
       ASM_REWRITE_TAC [EXTENSION,IN_DIFF,IN_INSERT] THEN
       REPEAT (STRIP_TAC ORELSE EQ_TAC) THEN ASM_REWRITE_TAC [] THEN
       FIRST_ASSUM (fn th => fn g => SUBST_ALL_TAC th g) THEN RES_TAC]);
+
+(* with INSERT to hand, it's easy to talk about concrete sets *)
+val UNIV_BOOL = store_thm(
+  "UNIV_BOOL",
+  ``univ(:bool) = {T; F}``,
+  SRW_TAC [][EXTENSION]);
+val _ = export_rewrites ["UNIV_BOOL"]
 
 (* ===================================================================== *)
 (* Removal of an element						 *)
@@ -4940,5 +4943,4 @@ val _ = adjoin_to_theory {sig_ps = SOME sigps,
 
 val _ = export_theory();
 
-end
 
