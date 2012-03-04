@@ -620,15 +620,15 @@ fun preprocess_def def = let
 fun dest_builtin_binop tm = let
   val (px,y) = dest_comb tm
   val (p,x) = dest_comb px
-  in (p,x,y,if p = ``($+):num->num->num`` then SPEC p Eval_Opn else
-            if p = ``($-):num->num->num`` then SPEC p Eval_Opn else
-            if p = ``($*):num->num->num`` then SPEC p Eval_Opn else
-            if p = ``($DIV):num->num->num`` then SPEC p Eval_Opn else
-            if p = ``($MOD):num->num->num`` then SPEC p Eval_Opn else
-            if p = ``($<):num->num->bool`` then SPEC p Eval_Opb else
-            if p = ``($<=):num->num->bool`` then SPEC p Eval_Opb else
-            if p = ``($>):num->num->bool`` then SPEC p Eval_Opb else
-            if p = ``($>=):num->num->bool`` then SPEC p Eval_Opb else
+  in (p,x,y,if p = ``($+):num->num->num`` then Eval_ADD else
+            if p = ``($-):num->num->num`` then Eval_SUB else
+            if p = ``($*):num->num->num`` then Eval_MULT else
+            if p = ``($DIV):num->num->num`` then Eval_DIV else
+            if p = ``($MOD):num->num->num`` then Eval_MOD else
+            if p = ``($<):num->num->bool`` then Eval_LESS else
+            if p = ``($<=):num->num->bool`` then Eval_LESS_EQ else
+            if p = ``($>):num->num->bool`` then Eval_GREATER else
+            if p = ``($>=):num->num->bool`` then Eval_GREATER_EQ else
             if p = ``($/\):bool->bool->bool`` then Eval_And else
             if p = ``($\/):bool->bool->bool`` then Eval_Or else
             if p = ``($==>):bool->bool->bool`` then Eval_Implies else

@@ -110,10 +110,10 @@ val Eval_Var_BOOL = store_thm("Eval_Var_BOOL",
        (lookup name env = SOME (Lit (Bool x))) ==> Eval env (Var name) (BOOL x)``,
   SIMP_TAC (srw_ss()) [Once evaluate_cases,BOOL_def,Eval_def]);
 
-val Eval_Opn = store_thm("Eval_Opn",
+val Eval_Opn = prove(
   ``!f. Eval env x1 (NUM n1) ==>
         Eval env x2 (NUM n2) ==>
-        Eval env (App (Opn f) x1 x2) (NUM (f n1 n2))``,
+        Eval env (App (Opn f) x1 x2) (NUM (opn_lookup f n1 n2))``,
   SIMP_TAC std_ss [Eval_def,NUM_def] \\ SIMP_TAC std_ss []
   \\ REPEAT STRIP_TAC \\ FULL_SIMP_TAC std_ss []
   \\ ONCE_REWRITE_TAC [evaluate_cases] \\ SIMP_TAC (srw_ss()) []
@@ -121,16 +121,37 @@ val Eval_Opn = store_thm("Eval_Opn",
   \\ FULL_SIMP_TAC (srw_ss()) [do_app_def]
   \\ ONCE_REWRITE_TAC [evaluate_cases] \\ SIMP_TAC (srw_ss()) []);
 
-val Eval_Opb = store_thm("Eval_Opb",
+local
+  fun f name q = 
+    save_thm("Eval_" ^ name,SIMP_RULE (srw_ss()) [opn_lookup_def] (Q.SPEC q Eval_Opn))
+in
+  val Eval_ADD  = f "ADD" `Plus`
+  val Eval_SUB  = f "SUB" `Minus`
+  val Eval_MULT = f "MULT" `Times`
+  val Eval_DIV  = f "DIV" `Divide`
+  val Eval_MOD  = f "MOD" `Modulo`
+end
+
+val Eval_Opb = prove(
   ``!f. Eval env x1 (NUM n1) ==>
         Eval env x2 (NUM n2) ==>
-        Eval env (App (Opb f) x1 x2) (BOOL (f n1 n2))``,
+        Eval env (App (Opb f) x1 x2) (BOOL (opb_lookup f n1 n2))``,
   SIMP_TAC std_ss [Eval_def,NUM_def,BOOL_def] \\ SIMP_TAC std_ss []
   \\ REPEAT STRIP_TAC \\ FULL_SIMP_TAC std_ss []
   \\ ONCE_REWRITE_TAC [evaluate_cases] \\ SIMP_TAC (srw_ss()) []
   \\ Q.LIST_EXISTS_TAC [`Lit (Num n1)`,`Lit (Num n2)`]
   \\ FULL_SIMP_TAC (srw_ss()) [do_app_def]
   \\ ONCE_REWRITE_TAC [evaluate_cases] \\ SIMP_TAC (srw_ss()) []);
+
+local
+  fun f name q = 
+    save_thm("Eval_" ^ name,SIMP_RULE (srw_ss()) [opb_lookup_def] (Q.SPEC q Eval_Opb))
+in
+  val Eval_LESS = f "LESS" `Lt`
+  val Eval_LESS_EQ = f "LESS_EQ" `Leq`
+  val Eval_GREATER = f "GREATER" `Gt`
+  val Eval_GREATER_EQ = f "GREATER_EQ" `Geq`
+end
 
 val Eval_Or = store_thm("Eval_Or",
   ``Eval env x1 (BOOL b1) ==>
