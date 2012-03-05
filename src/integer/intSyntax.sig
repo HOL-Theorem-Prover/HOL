@@ -74,6 +74,14 @@ sig
   val dest_mod       : term -> (term * term)
   val mk_mod         : (term * term) -> term
 
+  val is_quot        : term -> bool
+  val dest_quot      : term -> (term * term)
+  val mk_quot        : (term * term) -> term
+
+  val is_rem         : term -> bool
+  val dest_rem       : term -> (term * term)
+  val mk_rem         : (term * term) -> term
+
   val is_absval      : term -> bool
   val mk_absval      : term -> term
   val dest_absval    : term -> term
