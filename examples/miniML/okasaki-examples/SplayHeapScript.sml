@@ -1,5 +1,5 @@
 open bossLib Theory Parse boolTheory pairTheory Defn Tactic boolLib bagTheory
-open lcsymtacs;
+open relationTheory lcsymtacs;
 
 val fs = full_simp_tac (srw_ss ())
 val rw = srw_tac []
@@ -23,8 +23,10 @@ val splay_heap_to_bag_def = Define `
 val splay_heap_ok_def = Define `
 (splay_heap_ok leq Empty = T) ∧
 (splay_heap_ok leq (Node h1 x h2) = 
-  (!y. BAG_IN y (splay_heap_to_bag h1) ⇒ leq y x) ∧
-  (!y. BAG_IN y (splay_heap_to_bag h2) ⇒ ¬leq y x))`;
+  splay_heap_ok leq h1 ∧
+  splay_heap_ok leq h2 ∧
+  BAG_EVERY (\y. leq y x) (splay_heap_to_bag h1) ∧
+  BAG_EVERY (\y. ¬leq y x) (splay_heap_to_bag h2))`;
 
 val _ = Define `
 empty = Empty`;
@@ -60,38 +62,88 @@ val partition_def = Define `
 val partition_ind = fetch "-" "partition_ind" 
 val heaps_size_def = fetch "-" "heaps_size_def" 
 
-val partition_thm = Q.prove (
+val partition_size = Q.prove (
 `!leq p h1 h2 h3.
   ((h2,h3) = partition leq p h1)
   ⇒
-  (splay_heap_to_bag h1 = 
-   BAG_UNION (splay_heap_to_bag h2) (splay_heap_to_bag h3)) ∧
   heaps_size f h2 ≤ heaps_size f h1 ∧
   heaps_size f h3 ≤ heaps_size f h1`,
 recInduct partition_ind >>
-rw [heaps_size_def, partition_def, splay_heap_to_bag_def] >>
-full_case_tac >>
-fs [] >>
-rw [heaps_size_def, splay_heap_to_bag_def] >>
-full_case_tac >>
+rw [heaps_size_def, partition_def] >>
+every_case_tac >>
 fs [] >>
 rw [heaps_size_def] >>
 cases_on `partition leq pivot h0` >>
 cases_on `partition leq pivot h` >>
 fs [LET_THM] >>
-rw [heaps_size_def, splay_heap_to_bag_def, BAG_UNION_INSERT] >|
-[metis_tac [ASSOC_BAG_UNION, COMM_BAG_UNION, BAG_INSERT_commutes],
- metis_tac [ASSOC_BAG_UNION, COMM_BAG_UNION, BAG_INSERT_commutes],
- decide_tac,
- decide_tac,
- decide_tac,
- decide_tac,
- metis_tac [ASSOC_BAG_UNION, COMM_BAG_UNION, BAG_INSERT_commutes],
- metis_tac [ASSOC_BAG_UNION, COMM_BAG_UNION, BAG_INSERT_commutes],
- decide_tac,
- decide_tac,
- decide_tac,
- decide_tac]);
+rw [heaps_size_def] >>
+decide_tac);
+
+val partition_bags = Q.prove (
+`!leq p h1 h2 h3.
+  ((h2,h3) = partition leq p h1)
+  ⇒
+  (splay_heap_to_bag h1 = 
+   BAG_UNION (splay_heap_to_bag h2) (splay_heap_to_bag h3))`,
+recInduct partition_ind >>
+rw [partition_def, splay_heap_to_bag_def] >>
+every_case_tac >>
+fs [] >>
+rw [splay_heap_to_bag_def] >>
+cases_on `partition leq pivot h0` >>
+cases_on `partition leq pivot h` >>
+fs [LET_THM] >>
+rw [splay_heap_to_bag_def, BAG_UNION_INSERT] >>
+metis_tac [ASSOC_BAG_UNION, COMM_BAG_UNION, BAG_INSERT_commutes]);
+
+val partition_split = Q.prove (
+`!leq p h1 h2 h3.
+  transitive leq ∧ 
+  trichotomous leq ∧
+  ((h2,h3) = partition leq p h1) ∧ 
+  splay_heap_ok leq h1
+  ⇒
+  BAG_EVERY (\y. leq y p) (splay_heap_to_bag h2) ∧
+  BAG_EVERY (\y. ¬leq y p) (splay_heap_to_bag h3)`,
+recInduct partition_ind >>
+rw [partition_def, splay_heap_to_bag_def, splay_heap_ok_def] >>
+every_case_tac >>
+fs [] >>
+rw [] >>
+fs [splay_heap_ok_def, splay_heap_to_bag_def] >>
+cases_on `partition leq pivot h0` >>
+cases_on `partition leq pivot h` >>
+fs [LET_THM, splay_heap_to_bag_def] >>
+rw [] >>
+fs [BAG_EVERY, transitive_def, trichotomous] >>
+metis_tac []);
+
+(*
+val partition_ok = Q.prove (
+`!leq p h1 h2 h3.
+  transitive leq ∧ 
+  trichotomous leq ∧
+  ((h2,h3) = partition leq p h1) ∧
+  splay_heap_ok leq h1
+  ⇒
+  splay_heap_ok leq h2 ∧
+  splay_heap_ok leq h3`,
+recInduct partition_ind >>
+rw [partition_def, splay_heap_ok_def] >>
+
+every_case_tac >>
+fs [] >>
+rw [] >>
+cases_on `partition leq pivot h0` >>
+cases_on `partition leq pivot h` >>
+fs [LET_THM, splay_heap_ok_def] >>
+metis_tac [partition_split]
+rw []
+
+, splay_heap_ok_def, splay_heap_to_bag_def] >>
+rw [splay_heap_ok_def]
+metis_tac [ASSOC_BAG_UNION, COMM_BAG_UNION, BAG_INSERT_commutes]);
+*)
 
 val insert_def = Define `
 insert leq x t = 
@@ -135,6 +187,12 @@ rw [splay_heap_to_bag_def] >>
 fs [insert_def] >>
 imp_res_tac (GSYM partition_thm) >>
 fs [splay_heap_to_bag_def]);
+
+val insert_ok = Q.store_thm ("insert_ok",
+`!leq x h. splay_heap_ok leq h ⇒ splay_heap_ok leq (insert leq x h)`,
+induct_on `h` >>
+rw [splay_heap_ok_def, insert_def] >>
+rw [splay_heap_ok_def] >>
 
 val merge_thm = Q.store_thm ("merge_thm",
 `!leq h1 h2.
