@@ -66,8 +66,6 @@ val partition_size = Q.prove (
 `!leq p h1 h2 h3.
   ((h2,h3) = partition leq p h1)
   ⇒
-  (splay_heap_to_bag h1 =
-   BAG_UNION (splay_heap_to_bag h2) (splay_heap_to_bag h3)) ∧
   heaps_size f h2 ≤ heaps_size f h1 ∧
   heaps_size f h3 ≤ heaps_size f h1`,
 recInduct partition_ind >>
