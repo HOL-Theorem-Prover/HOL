@@ -103,7 +103,7 @@ val keepers =
      "numSimps.sig", "reduceLib.sig", "dividesTheory.sig", "gcdTheory.sig",
 
      (* one *)
-     "oneTheory.sig",
+     "oneTheory.sig", "oneSyntax.sig",
 
      (* option *)
      "optionLib.sig", "optionTheory.sig", "optionSyntax.sig",
