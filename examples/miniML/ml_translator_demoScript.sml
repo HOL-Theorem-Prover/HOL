@@ -124,7 +124,7 @@ val Eval_Val_CHAR = prove(
   ``n < 256 ==> Eval env (Val (Lit (Num n))) (CHAR (CHR n))``,
   SIMP_TAC (srw_ss()) [Eval_Val_NUM,CHAR_def])
   |> store_eval_thm;
-  
+
 val Eval_ORD = prove(
   ``!v. ((NUM --> NUM) (\x.x)) v ==> ((CHAR --> NUM) ORD) v``,
   SIMP_TAC std_ss [Arrow_def,AppReturns_def,CHAR_def])
@@ -132,7 +132,7 @@ val Eval_ORD = prove(
   |> store_eval_thm;
 
 val Eval_CHR = prove(
-  ``!v. ((NUM --> NUM) (\n. n MOD 256)) v ==> 
+  ``!v. ((NUM --> NUM) (\n. n MOD 256)) v ==>
         ((NUM --> CHAR) (\n. CHR (n MOD 256))) v``,
   SIMP_TAC (srw_ss()) [Arrow_def,AppReturns_def,CHAR_def])
   |> MATCH_MP (MATCH_MP Eval_WEAKEN (hol2deep ``\n. n MOD 256``))
@@ -141,7 +141,7 @@ val Eval_CHR = prove(
 val Eval_CHAR_LT = prove(
   ``!v. ((NUM --> NUM --> BOOL) (\m n. m < n)) v ==>
         ((CHAR --> CHAR --> BOOL) char_lt) v``,
-  SIMP_TAC (srw_ss()) [Arrow_def,AppReturns_def,CHAR_def,char_lt_def]  
+  SIMP_TAC (srw_ss()) [Arrow_def,AppReturns_def,CHAR_def,char_lt_def]
   \\ METIS_TAC [])
   |> MATCH_MP (MATCH_MP Eval_WEAKEN (hol2deep ``\m n. m < n:num``))
   |> store_eval_thm;
