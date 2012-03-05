@@ -27,7 +27,6 @@ sig
   val int_min_tm          : term
   val int_max_tm          : term
   val word_modify_tm      : term
-  val word_reverse_tm     : term
   val word_compare_tm     : term
   val nzcv_tm             : term
   val word_lt_tm          : term
@@ -74,6 +73,9 @@ sig
   val word_xnor_tm        : term
   val word_1comp_tm       : term
   val word_2comp_tm       : term
+  val word_abs_tm         : term
+  val word_len_tm         : term
+  val word_reverse_tm     : term
   val word_replicate_tm   : term
   val word_reduce_tm      : term
   val reduce_and_tm       : term
@@ -105,7 +107,6 @@ sig
   val mk_int_min          : hol_type -> term
   val mk_int_max          : hol_type -> term
   val mk_word_modify      : term * term -> term
-  val mk_word_reverse     : term -> term
   val mk_word_compare     : term * term -> term
   val mk_nzcv             : term * term -> term
   val mk_word_lt          : term * term -> term
@@ -123,9 +124,6 @@ sig
   val mk_word_mod         : term * term -> term
   val mk_word_srem        : term * term -> term
   val mk_word_smod        : term * term -> term
-  val mk_word_log2        : term -> term
-  val mk_word_msb         : term -> term
-  val mk_word_lsb         : term -> term
   val mk_word_slice       : term * term * term -> term
   val mk_word_bits        : term * term * term -> term
   val mk_word_bit         : term * term -> term
@@ -161,6 +159,12 @@ sig
   val mk_word_1comp       : term -> term
   val mk_word_2comp       : term -> term
   val mk_concat_word_list : term -> term
+  val mk_word_abs         : term -> term
+  val mk_word_len         : term -> term
+  val mk_word_reverse     : term -> term
+  val mk_word_log2        : term -> term
+  val mk_word_msb         : term -> term
+  val mk_word_lsb         : term -> term
   val mk_bit_field_insert : term * term * term * term -> term
   val mk_w2w              : term * hol_type -> term
   val mk_n2w              : term * hol_type -> term
@@ -183,7 +187,6 @@ sig
   val dest_int_min          : term -> hol_type
   val dest_int_max          : term -> hol_type
   val dest_word_modify      : term -> term * term
-  val dest_word_reverse     : term -> term
   val dest_word_compare     : term -> term * term
   val dest_nzcv             : term -> term * term
   val dest_word_lt          : term -> term * term
@@ -201,9 +204,6 @@ sig
   val dest_word_mod         : term -> term * term
   val dest_word_srem        : term -> term * term
   val dest_word_smod        : term -> term * term
-  val dest_word_log2        : term -> term
-  val dest_word_msb         : term -> term
-  val dest_word_lsb         : term -> term
   val dest_word_slice       : term -> term * term * term
   val dest_word_bits        : term -> term * term * term
   val dest_word_bit         : term -> term * term
@@ -239,6 +239,12 @@ sig
   val dest_word_1comp       : term -> term
   val dest_word_2comp       : term -> term
   val dest_concat_word_list : term -> term
+  val dest_word_abs         : term -> term
+  val dest_word_len         : term -> term
+  val dest_word_reverse     : term -> term
+  val dest_word_log2        : term -> term
+  val dest_word_msb         : term -> term
+  val dest_word_lsb         : term -> term
   val dest_bit_field_insert : term -> term * term * term * term
   val dest_w2w              : term -> term * hol_type
   val dest_n2w              : term -> term * hol_type
@@ -261,7 +267,6 @@ sig
   val is_int_min          : term -> bool
   val is_int_max          : term -> bool
   val is_word_modify      : term -> bool
-  val is_word_reverse     : term -> bool
   val is_word_compare     : term -> bool
   val is_nzcv             : term -> bool
   val is_word_lt          : term -> bool
@@ -278,6 +283,8 @@ sig
   val is_word_mod         : term -> bool
   val is_word_srem        : term -> bool
   val is_word_smod        : term -> bool
+  val is_word_abs         : term -> bool
+  val is_word_reverse     : term -> bool
   val is_word_log2        : term -> bool
   val is_word_msb         : term -> bool
   val is_word_lsb         : term -> bool

@@ -122,7 +122,7 @@ val Eval_Opn = prove(
   \\ ONCE_REWRITE_TAC [evaluate_cases] \\ SIMP_TAC (srw_ss()) []);
 
 local
-  fun f name q = 
+  fun f name q =
     save_thm("Eval_" ^ name,SIMP_RULE (srw_ss()) [opn_lookup_def] (Q.SPEC q Eval_Opn))
 in
   val Eval_ADD  = f "ADD" `Plus`
@@ -144,7 +144,7 @@ val Eval_Opb = prove(
   \\ ONCE_REWRITE_TAC [evaluate_cases] \\ SIMP_TAC (srw_ss()) []);
 
 local
-  fun f name q = 
+  fun f name q =
     save_thm("Eval_" ^ name,SIMP_RULE (srw_ss()) [opb_lookup_def] (Q.SPEC q Eval_Opb))
 in
   val Eval_LESS = f "LESS" `Lt`

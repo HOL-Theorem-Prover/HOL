@@ -154,10 +154,10 @@ fun derive_thms_for_type ty = let
   (* prove EqualityType lemma, e.g. !a. EqualityType a ==> EqualityType (list a) *)
   val eq_lemma = let
     val tm = rator (rator inv_lhs)
-    fun list_dest f tm = let val (x,y) = f tm 
+    fun list_dest f tm = let val (x,y) = f tm
                          in list_dest f x @ list_dest f y end handle HOL_ERR _ => [tm]
-    val xs = 
-      inv_def |> RW [GSYM CONJ_ASSOC] |> SPEC_ALL |> CONJUNCTS 
+    val xs =
+      inv_def |> RW [GSYM CONJ_ASSOC] |> SPEC_ALL |> CONJUNCTS
               |> map (snd o dest_eq o concl o SPEC_ALL)
               |> map (last o list_dest dest_exists)
               |> map (tl o list_dest dest_conj) |> Lib.flatten
@@ -174,13 +174,13 @@ fun derive_thms_for_type ty = let
         \\ (Induct ORELSE Cases)
         \\ SIMP_TAC (srw_ss()) [inv_def,no_closures_def,PULL_EXISTS]
         \\ REPEAT STRIP_TAC \\ RES_TAC)
-      THEN1    
+      THEN1
        (REPEAT (Q.PAT_ASSUM `!x1 x2. bbb ==> bbbb` (K ALL_TAC))
         \\ (Induct ORELSE Cases)
         \\ SIMP_TAC (srw_ss()) [inv_def,no_closures_def,PULL_EXISTS]
         \\ Cases_on `x2` \\ SIMP_TAC (srw_ss()) [inv_def,no_closures_def,PULL_EXISTS]
         \\ REPEAT STRIP_TAC \\ METIS_TAC []))
-    in eq_lemma end handle HOL_ERR _ => TRUTH        
+    in eq_lemma end handle HOL_ERR _ => TRUTH
 
   (* make new inv_def part of get_type_inv *)
   val inv = rator (rator inv_lhs)
@@ -324,7 +324,7 @@ local
   fun conses_of ty = let
     val (ty,eq_lemma,inv_def,conses,case_lemma,ts) = lookup ty
     in conses end
-  fun stored_eq_lemmas () = 
+  fun stored_eq_lemmas () =
     map (fn (ty,eq_lemma,inv_def,conses,case_lemma,ts) => eq_lemma) (!memory)
   val init_eq_lemmas = map (DISCH T) (CONJUNCTS EqualityType_NUM_BOOL)
 in
@@ -521,7 +521,7 @@ fun single_line_def def = let
   val goal = mk_eq(tpc,(subst [v|->tpc] tm))
   val lemma = prove(goal,
     SIMP_TAC std_ss [FUN_EQ_THM,FORALL_PROD,GSYM rw]
-    \\ REPEAT STRIP_TAC 
+    \\ REPEAT STRIP_TAC
     \\ CONV_TAC (BINOP_CONV (REWR_CONV (GSYM CONTAINER_def)))
     \\ SRW_TAC [] []
     \\ REPEAT BasicProvers.FULL_CASE_TAC
@@ -712,7 +712,7 @@ in
 end
 
 fun store_eval_thm th = let
-  val th1 = UNDISCH_ALL th 
+  val th1 = UNDISCH_ALL th
   val pat = th1 |> concl |> rand |> rand
   val _ = store_cert pat th1
   in th end

@@ -15,8 +15,8 @@ open MiniMLTheory
  val pos_num_to_string_defn = Hol_defn "pos_num_to_string" `
  (pos_num_to_string n =
   if n > 0 then
-    let n' = (MOD) n 10 in STRCAT 
-      (pos_num_to_string (n DIV 10))  
+    let n' = (MOD) n 10 in STRCAT
+      (pos_num_to_string (n DIV 10))
       (if n' = 0 then "0"
        else if n' = 1 then "1"
        else if n' = 2 then "2"
@@ -42,14 +42,14 @@ val _ = Define `
 
 
  val list_to_string_defn = Hol_defn "list_to_string" `
- 
-(list_to_string printer sep [] = 
+
+(list_to_string printer sep [] =
   "")
 /\
-(list_to_string printer sep [x] = 
+(list_to_string printer sep [x] =
   printer x)
 /\
-(list_to_string printer sep (x::y::l) = STRCAT  
+(list_to_string printer sep (x::y::l) = STRCAT
   (printer x) (STRCAT   sep (STRCAT   (printer y)  (list_to_string printer sep l))))`;
 
 val _ = Defn.save_defn list_to_string_defn;
@@ -65,34 +65,34 @@ val _ = Define `
 
 val _ = Define `
  (var_to_string v =
-  if MEM v infixes then STRCAT 
+  if MEM v infixes then STRCAT
     "op "  v
   else
     v)`;
 
 
  val pat_to_string_defn = Hol_defn "pat_to_string" `
- 
+
 (pat_to_string (Pvar v) = var_to_string v)
-/\ 
+/\
 (pat_to_string (Plit l) = lit_to_string l)
-/\ 
+/\
 (pat_to_string (Pcon NONE ps) = STRCAT  "(" (STRCAT   (list_to_string pat_to_string "," ps)  ")"))
-/\ 
-(pat_to_string (Pcon (SOME c) []) = 
+/\
+(pat_to_string (Pcon (SOME c) []) =
   var_to_string c)
 /\
-(pat_to_string (Pcon (SOME c) ps) = STRCAT  
+(pat_to_string (Pcon (SOME c) ps) = STRCAT
   "(" (STRCAT   (var_to_string c) (STRCAT   "(" (STRCAT   (list_to_string pat_to_string "," ps) (STRCAT   ")"  ")")))))`;
 
 val _ = Defn.save_defn pat_to_string_defn;
 
  val exp_to_string_defn = Hol_defn "exp_to_string" `
- 
-(exp_to_string (Raise r) = 
+
+(exp_to_string (Raise r) =
   "(raise Bind)")
 /\
-(exp_to_string (Val (Lit l)) = 
+(exp_to_string (Val (Lit l)) =
   lit_to_string l)
 /\
 (exp_to_string (Val _) =
@@ -101,22 +101,22 @@ val _ = Defn.save_defn pat_to_string_defn;
 /\
 (exp_to_string (Con NONE es) = STRCAT  "(" (STRCAT   (list_to_string exp_to_string "," es)  ")"))
 /\
-(exp_to_string (Con (SOME c) []) = 
+(exp_to_string (Con (SOME c) []) =
   var_to_string c)
 /\
-(exp_to_string (Con (SOME c) es) = STRCAT  
+(exp_to_string (Con (SOME c) es) = STRCAT
   "(" (STRCAT   (var_to_string c) (STRCAT   "(" (STRCAT   (list_to_string exp_to_string "," es) (STRCAT   ")"  ")")))))
 /\
-(exp_to_string (Var v) = 
+(exp_to_string (Var v) =
   var_to_string v)
 /\
-(exp_to_string (Fun v e) = STRCAT 
+(exp_to_string (Fun v e) = STRCAT
   "(fn " (STRCAT   (var_to_string v) (STRCAT   " => " (STRCAT   (exp_to_string e)  ")"))))
 /\
-(exp_to_string (App Opapp e1 e2) = STRCAT 
+(exp_to_string (App Opapp e1 e2) = STRCAT
   "(" (STRCAT   (exp_to_string e1) (STRCAT   " " (STRCAT   (exp_to_string e2)  ")"))))
 /\
-(exp_to_string (App Equality e1 e2) = STRCAT 
+(exp_to_string (App Equality e1 e2) = STRCAT
   (* Rely on the fact (?) that = cannot be rebound in SML *)
   "(" (STRCAT   (exp_to_string e1) (STRCAT   " = " (STRCAT   (exp_to_string e2)  ")"))))
 /\
@@ -127,11 +127,11 @@ val _ = Defn.save_defn pat_to_string_defn;
     | Times => "*"
     | Divide => "/"
     | Modulo => "mod"
-  ) 
+  )
   in
-    if MEM s infixes then STRCAT 
+    if MEM s infixes then STRCAT
       "(" (STRCAT   (exp_to_string e1) (STRCAT   " " (STRCAT   s (STRCAT   " " (STRCAT   (exp_to_string e2)  ")")))))
-    else STRCAT 
+    else STRCAT
       "(" (STRCAT   s (STRCAT   " " (STRCAT   (exp_to_string e1) (STRCAT   " " (STRCAT   (exp_to_string e2)  ")"))))))
 /\
 (exp_to_string (App (Opb o') e1 e2) =
@@ -140,53 +140,53 @@ val _ = Defn.save_defn pat_to_string_defn;
     | Gt => ">"
     | Leq => "<="
     | Geq => ">"
-  ) 
+  )
   in
-    if MEM s infixes then STRCAT 
+    if MEM s infixes then STRCAT
       "(" (STRCAT   (exp_to_string e1) (STRCAT   " " (STRCAT   s (STRCAT   " " (STRCAT   (exp_to_string e2)  ")")))))
-    else STRCAT 
+    else STRCAT
       "(" (STRCAT   s (STRCAT   " " (STRCAT   (exp_to_string e1) (STRCAT   " " (STRCAT   (exp_to_string e2)  ")"))))))
 /\
-(exp_to_string (Log lop e1 e2) = STRCAT 
-  "(" (STRCAT   (exp_to_string e1) (STRCAT   (if lop = And then " andalso " else " orelse ") (STRCAT  
+(exp_to_string (Log lop e1 e2) = STRCAT
+  "(" (STRCAT   (exp_to_string e1) (STRCAT   (if lop = And then " andalso " else " orelse ") (STRCAT
   (exp_to_string e2)  ")"))))
 /\
-(exp_to_string (If e1 e2 e3) = STRCAT 
-  "(if " (STRCAT   (exp_to_string e1) (STRCAT   " then " (STRCAT   (exp_to_string e2) (STRCAT   " else " (STRCAT   
+(exp_to_string (If e1 e2 e3) = STRCAT
+  "(if " (STRCAT   (exp_to_string e1) (STRCAT   " then " (STRCAT   (exp_to_string e2) (STRCAT   " else " (STRCAT
   (exp_to_string e3)  ")"))))))
 /\
-(exp_to_string (Mat e pes) = STRCAT 
-  "(case " (STRCAT   (exp_to_string e) (STRCAT   " of " (STRCAT   
+(exp_to_string (Mat e pes) = STRCAT
+  "(case " (STRCAT   (exp_to_string e) (STRCAT   " of " (STRCAT
   (list_to_string pat_exp_to_string "|" pes)  ")"))))
 /\
-(exp_to_string (Let v e1 e2) = STRCAT 
-  "(let val " (STRCAT   (var_to_string v) (STRCAT   " = " (STRCAT   (exp_to_string e1) (STRCAT   " in " (STRCAT   
+(exp_to_string (Let v e1 e2) = STRCAT
+  "(let val " (STRCAT   (var_to_string v) (STRCAT   " = " (STRCAT   (exp_to_string e1) (STRCAT   " in " (STRCAT
   (exp_to_string e2)  " end)"))))))
 /\
-(exp_to_string (Letrec funs e) = STRCAT 
-  "(let fun " (STRCAT   (list_to_string fun_to_string " and " funs) (STRCAT   " in " (STRCAT   
+(exp_to_string (Letrec funs e) = STRCAT
+  "(let fun " (STRCAT   (list_to_string fun_to_string " and " funs) (STRCAT   " in " (STRCAT
   (exp_to_string e)  " end)"))))
 /\
-(pat_exp_to_string (p,e) = STRCAT  
+(pat_exp_to_string (p,e) = STRCAT
   (pat_to_string p) (STRCAT   " => "  (exp_to_string e)))
 /\
-(fun_to_string (v1,v2,e) = STRCAT  
+(fun_to_string (v1,v2,e) = STRCAT
   (var_to_string v1) (STRCAT   " " (STRCAT   (var_to_string v2) (STRCAT   " = "  (exp_to_string e)))))`;
 
 val _ = Defn.save_defn exp_to_string_defn;
 
  val type_to_string_defn = Hol_defn "type_to_string" `
 
-(type_to_string (Tvar tn) = 
+(type_to_string (Tvar tn) =
   tn)
 /\
-(type_to_string (Tapp ts tn) = 
+(type_to_string (Tapp ts tn) =
   if ts = [] then
     tn
-  else STRCAT 
+  else STRCAT
     "(" (STRCAT   (list_to_string type_to_string "," ts) (STRCAT   ")"  tn)))
 /\
-(type_to_string (Tfn t1 t2) = STRCAT 
+(type_to_string (Tfn t1 t2) = STRCAT
   "(" (STRCAT   (type_to_string t1) (STRCAT   " -> " (STRCAT   (type_to_string t2)  ")"))))
 /\
 (type_to_string Tnum =
@@ -199,26 +199,26 @@ val _ = Defn.save_defn exp_to_string_defn;
 val _ = Defn.save_defn type_to_string_defn;
 
 val _ = Define `
- (variant_to_string (c,ts) = STRCAT 
-  (var_to_string c)  (if ts = [] then "" else STRCAT  " of "  
+ (variant_to_string (c,ts) = STRCAT
+  (var_to_string c)  (if ts = [] then "" else STRCAT  " of "
   (list_to_string type_to_string " * " ts)))`;
 
 
 val _ = Define `
- (typedef_to_string (tvs, name, variants) = STRCAT 
-  (if tvs = [] then "" else STRCAT  "(" (STRCAT   (list_to_string (\ x . x) "," tvs)  ")")) (STRCAT  
+ (typedef_to_string (tvs, name, variants) = STRCAT
+  (if tvs = [] then "" else STRCAT  "(" (STRCAT   (list_to_string (\ x . x) "," tvs)  ")")) (STRCAT
   name (STRCAT   " = "  (list_to_string variant_to_string "|" variants))))`;
 
 
  val dec_to_string_defn = Hol_defn "dec_to_string" `
 
-(dec_to_string (Dlet p e) = STRCAT 
+(dec_to_string (Dlet p e) = STRCAT
   "val " (STRCAT   (pat_to_string p) (STRCAT   " = "  (exp_to_string e))))
 /\
-(dec_to_string (Dletrec funs) = STRCAT 
+(dec_to_string (Dletrec funs) = STRCAT
   "fun "  (list_to_string fun_to_string " and " funs))
 /\
-(dec_to_string (Dtype types) = STRCAT 
+(dec_to_string (Dtype types) = STRCAT
   "datatype "  (list_to_string typedef_to_string " and " types))`;
 
 val _ = Defn.save_defn dec_to_string_defn;
