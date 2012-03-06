@@ -4,6 +4,7 @@ open set_relationTheory sortingTheory stringTheory wordsTheory;
 open relationTheory;
 open MiniMLTheory CompileTheory;
 
+open pairLib;
 open lcsymtacs;
 
 val fs = full_simp_tac (srw_ss ())
@@ -87,7 +88,6 @@ val _ = save_thm ("remove_ctors_def", remove_ctors_def);
 val _ = save_thm ("remove_ctors_ind", remove_ctors_ind);
 
 
-
 (* ------------------------------------------------------------------------- *)
 
 (* Prove that the small step semantics never gets stuck if there is still work
@@ -98,10 +98,7 @@ val untyped_safety_step = Q.prove (
 `∀envC env ds st.
   (d_step (envC, env, ds, st) = Dstuck) = (ds = []) ∧ (st = NONE)`,
 rw [d_step_def, e_step_def, continue_def, push_def, return_def] >>
-every_case_tac >>
-fs [LET_THM, do_app_def] >>
-every_case_tac >>
-fs []);
+every_case_tac);
 
 val untyped_safety_thm = Q.store_thm ("untyped_safety_thm",
 `!cenv env ds.
@@ -109,10 +106,7 @@ val untyped_safety_thm = Q.store_thm ("untyped_safety_thm",
 rw [diverges_def, METIS_PROVE [] ``x ∨ y = ~x ⇒ y``, d_step_reln_def] >>
 cases_on `d_step (cenv',env',ds',c')` >>
 fs [untyped_safety_step] >|
-[cases_on `p` >>
-     cases_on `r` >>
-     cases_on `r'` >>
-     fs [],
+[PairCases_on `p` >> fs [],
  qexists_tac `Rerr (Rraise e)` >>
      rw [d_small_eval_def] >>
      metis_tac [],
