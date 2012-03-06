@@ -117,4 +117,65 @@ fs [untyped_safety_step] >|
      rw [d_small_eval_def] >>
      metis_tac []]);
 
+(* ------------------------------------------------------------------------- *)
+
+(* TODO: Where should this go? *)
+
+val map_result_def = Define`
+  (map_result f (Rval v) = Rval (f v)) ∧
+  (map_result f (Rerr e) = Rerr e)`;
+val _ = export_rewrites["map_result_def"];
+
+(* ------------------------------------------------------------------------- *)
+
+val evaluate_raise = Q.store_thm (
+"evaluate_raise",
+`!cenv env err bv.
+  (evaluate cenv env (Raise err) bv = (bv = Rerr (Rraise err)))`,
+rw [Once evaluate_cases]);
+
+val evaluate_val = Q.store_thm(
+"evaluate_val",
+`!cenv env v r.
+  (evaluate cenv env (Val v) r = (r = Rval v))`,
+rw [Once evaluate_cases]);
+
+val evaluate_con = Q.store_thm(
+"evaluate_con",
+`!cenv env cn es r.
+  (evaluate cenv env (Con cn es) r =
+   if do_con_check cenv cn (LENGTH es) then
+     (∃err. evaluate_list cenv env es (Rerr err) ∧
+            (r = Rerr err)) ∨
+     (∃vs. evaluate_list cenv env es (Rval vs) ∧
+           (r = Rval (Conv cn vs)))
+   else (r = Rerr Rtype_error))`,
+rw [Once evaluate_cases] >>
+metis_tac []);
+
+(* ------------------------------------------------------------------------- *)
+
+(* Prove compiler phases preserve semantics *)
+
+(*
+val remove_ctors_thm = store_thm(
+"remove_ctors_thm",
+``∀cnmap envc env exp r.
+  (∀x y. (v_remove_ctors cnmap x = v_remove_ctors cnmap y) ⇒ (x = y)) ⇒
+  (evaluate envc env (remove_ctors cnmap exp) (map_result (v_remove_ctors cnmap) r) =
+   evaluate envc env exp r)``,
+rw [] >>
+qid_spec_tac `exp` >>
+Induct >- (
+  rw [evaluate_raise,remove_ctors_def] >>
+  Cases_on `r` >> rw [] )
+>- (
+  rw [evaluate_val,remove_ctors_def] >>
+  Cases_on `r` >> rw [] >> metis_tac [])
+>- (
+  Cases >- (
+    rw [evaluate_con,remove_ctors_def,do_con_check_def] >>
+    Cases_on `r` >> rw []
+*)
+
 val _ = export_theory ();

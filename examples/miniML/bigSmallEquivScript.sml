@@ -663,11 +663,6 @@ induct_on `vs` >>
 rw [] >>
 rw [Once evaluate_cases, evaluate_val]);
 
-val evaluate_raise = Q.prove (
-`!cenv env err bv.
-  (evaluate cenv env (Raise err) bv = (bv = Rerr (Rraise err)))`,
-rw [Once evaluate_cases]);
-
 val evaluate_ctxts_cons = Q.prove (
 `!cenv f cs v bv.
   evaluate_ctxts cenv (f::cs) v bv =
