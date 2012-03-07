@@ -336,12 +336,15 @@ srw_tac [bagLib.BAG_ss]
      metis_tac [WeakLinearOrder, WeakOrder, transitive_def],
  res_tac >>
      srw_tac [BAG_AC_ss] [] >>
-     (* EL_BAG (find_min (Node v6 v7 v8)) is a subbag of 
-        EL_BAG v7 ⊎ (splay_heap_to_bag v6 ⊎ splay_heap_to_bag v8)
-        by splay_heap_find_min_thm, and so by BAG_UNION_DIFF the difference
-        can be lifted out to the top.  I don't feel like bashing this through
-        HOL at the moment. *)
-     all_tac]);
+     `splay_heap_ok leq (Node v6 v7 v8)` by rw [splay_heap_ok_def] >>
+     `BAG_IN (find_min (Node v6 v7 v8)) (splay_heap_to_bag (Node v6 v7 v8))`
+          by metis_tac [splay_heap_find_min_thm, fetch "-" "heaps_distinct"] >>
+     fs [splay_heap_to_bag_def] >>
+     `SUB_BAG (EL_BAG (find_min (Node v6 v7 v8)))
+              (EL_BAG v7 ⊎ (splay_heap_to_bag v6 ⊎ splay_heap_to_bag v8))`
+                by rw [SUB_BAG_EL_BAG] >> 
+     rw [BAG_UNION_DIFF, SUB_BAG_UNION] >>
+     srw_tac [BAG_AC_ss] []]);
 
 val _ = export_theory()
 
