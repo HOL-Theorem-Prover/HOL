@@ -1,5 +1,5 @@
 open bossLib Theory Parse boolTheory pairTheory Defn Tactic boolLib bagTheory
-open relationTheory bagLib lcsymtacs;
+open relationTheory bagLib miscTheory lcsymtacs;
 
 val fs = full_simp_tac (srw_ss ())
 val rw = srw_tac []
@@ -8,17 +8,6 @@ val induct_on = Induct_on
 val cases_on = Cases_on;
 val every_case_tac = BasicProvers.EVERY_CASE_TAC;
 val full_case_tac = BasicProvers.FULL_CASE_TAC;
-
-val WeakLinearOrder_neg = Q.prove (
-`!leq x y. WeakLinearOrder leq ⇒ (~leq x y = leq y x ∧ x ≠ y)`,
-metis_tac [WeakLinearOrder, WeakOrder, trichotomous, reflexive_def,
-           antisymmetric_def]);
-
-val BAG_DIFF_INSERT2 = Q.prove (
-`!x b. BAG_DIFF (BAG_INSERT x b) (EL_BAG x) = b`,
-rw [BAG_DIFF, BAG_INSERT, EL_BAG, FUN_EQ_THM, EMPTY_BAG] >>
-cases_on `x' = x` >>
-rw []);
 
 val _ = new_theory "LeftistHeap"
 

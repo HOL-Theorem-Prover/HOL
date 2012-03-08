@@ -1,5 +1,5 @@
 open bossLib Theory Parse boolTheory pairTheory Defn Tactic boolLib bagTheory
-open relationTheory bagLib lcsymtacs;
+open relationTheory bagLib miscTheory lcsymtacs;
 
 val fs = full_simp_tac (srw_ss ())
 val rw = srw_tac []
@@ -11,36 +11,6 @@ val full_case_tac = BasicProvers.FULL_CASE_TAC;
 
 
 val _ = new_theory "SplayHeap"
-
-val WeakLinearOrder_neg = Q.prove (
-`!leq x y. WeakLinearOrder leq ⇒ (~leq x y = leq y x ∧ x ≠ y)`,
-metis_tac [WeakLinearOrder, WeakOrder, trichotomous, reflexive_def,
-           antisymmetric_def]);
-
-val BAG_EVERY_DIFF = Q.prove (
-`!P b1 b2. BAG_EVERY P b1 ⇒ BAG_EVERY P (BAG_DIFF b1 b2)`,
-rw [BAG_EVERY] >>
-metis_tac [BAG_IN_DIFF_E]);
-
-val BAG_EVERY_EL = Q.prove (
-`!P x. BAG_EVERY P (EL_BAG x) = P x`,
-rw [BAG_EVERY, EL_BAG]);
-
-val BAG_INN_BAG_DIFF = Q.prove (
-`!x m b1 b2. 
-  BAG_INN x m (BAG_DIFF b1 b2) = 
-  ∃n1 n2. (m = n1 - n2) ∧ 
-          BAG_INN x n1 b1 ∧ BAG_INN x n2 b2 ∧ ~BAG_INN x (n2 + 1) b2`,
-rw [BAG_INN, BAG_DIFF] >>
-EQ_TAC >>
-rw [] >|
-[qexists_tac `b2 x + m` >>
-     qexists_tac `b2 x` >>
-     decide_tac,
- qexists_tac `0` >>
-     qexists_tac `b2 x` >>
-     decide_tac,
- decide_tac]);
 
 val _ = Hol_datatype `
 heaps = Empty | Node of heaps => 'a => heaps`;
