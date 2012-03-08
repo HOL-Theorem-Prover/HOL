@@ -14,6 +14,12 @@ val WeakLinearOrder_neg = Q.prove (
 metis_tac [WeakLinearOrder, WeakOrder, trichotomous, reflexive_def,
            antisymmetric_def]);
 
+val BAG_DIFF_INSERT2 = Q.prove (
+`!x b. BAG_DIFF (BAG_INSERT x b) (EL_BAG x) = b`,
+rw [BAG_DIFF, BAG_INSERT, EL_BAG, FUN_EQ_THM, EMPTY_BAG] >>
+cases_on `x' = x` >>
+rw []);
+
 val _ = new_theory "LeftistHeap"
 
 val _ = Hol_datatype `
@@ -69,7 +75,7 @@ val find_min_def = Define `
 find_min (Node _ x _ _) = x`;
   
 val delete_min_def = Define `
-delete_min leq _ x a b = merge leq a b`;
+delete_min leq (Node _ x a b) = merge leq a b`;
 
 val leftist_heap_merge_bag = Q.store_thm ("leftist_heap_merge_bag",
 `!leq h1 h2.
@@ -81,9 +87,7 @@ srw_tac [BAG_ss]
 
 val leftist_heap_merge_ok = Q.store_thm ("leftist_heap_merge_ok",
 `!leq h1 h2. 
-  WeakLinearOrder leq ∧
-  leftist_heap_ok leq h1 ∧ 
-  leftist_heap_ok leq h2 
+  WeakLinearOrder leq ∧ leftist_heap_ok leq h1 ∧ leftist_heap_ok leq h2 
   ⇒ 
   leftist_heap_ok leq (merge leq h1 h2)`,
 HO_MATCH_MP_TAC merge_ind >>
@@ -107,5 +111,30 @@ rw [leftist_heap_to_bag_def] >|
  metis_tac [BAG_EVERY, WeakLinearOrder, WeakOrder, transitive_def,
             WeakLinearOrder_neg],
  decide_tac]);
+
+val leftist_heap_find_min_thm = Q.store_thm ("leftist_heap_find_min_thm",
+`!h leq. WeakLinearOrder leq ∧ (h ≠ Empty) ∧ leftist_heap_ok leq h ⇒
+  BAG_IN (find_min h) (leftist_heap_to_bag h) ∧
+  (!y. BAG_IN y (leftist_heap_to_bag h) ⇒ leq (find_min h) y)`,
+rw [] >>
+cases_on `h` >>
+fs [find_min_def, leftist_heap_to_bag_def, leftist_heap_ok_def] >>
+fs [BAG_EVERY] >>
+metis_tac [WeakLinearOrder, WeakOrder, reflexive_def]);
+
+val leftist_heap_delete_min_thm = Q.store_thm ("leftist_heap_delete_min_thm",
+`!h leq. 
+  WeakLinearOrder leq ∧
+  (h ≠ Empty) ∧ 
+  leftist_heap_ok leq h 
+  ⇒ 
+  leftist_heap_ok leq (delete_min leq h) ∧
+  (leftist_heap_to_bag (delete_min leq h) = 
+   BAG_DIFF (leftist_heap_to_bag h) (EL_BAG (find_min h)))`,
+rw [] >>
+cases_on `h` >>
+fs [delete_min_def, leftist_heap_ok_def, leftist_heap_merge_bag] >-
+metis_tac [leftist_heap_merge_ok] >>
+rw [leftist_heap_to_bag_def, find_min_def, BAG_DIFF_INSERT2]);
 
 val _ = export_theory ();
