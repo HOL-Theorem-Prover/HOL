@@ -10,8 +10,8 @@ sig
 
     (* wrapper functions *)
 
-    val mlDefine   : term quotation -> thm * thm
-    val mltDefine  : string -> term quotation -> tactic -> thm * thm
+    val mlDefine   : term quotation -> thm
+    val mltDefine  : string -> term quotation -> tactic -> thm
 
     (* interface for teaching the translator about new types *)
 

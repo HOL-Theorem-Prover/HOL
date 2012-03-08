@@ -8,15 +8,6 @@ open stringTheory;
 infix \\ val op \\ = op THEN;
 
 
-(* ************************************************************************** *
-
-   Notes
-
-   Partial definitions, e.g. HD, TL and ZIP, cannot be translated.
-
- * ************************************************************************** *)
-
-
 (* examples from library *)
 
 val res = translate MAP;
@@ -52,54 +43,57 @@ val res = translate PAD_LEFT;
 val res = translate MEM;
 val res = translate ALL_DISTINCT;
 val res = translate isPREFIX;
+val res = translate HD;
+val res = translate TL;
+val res = translate ZIP;
 
 
 (* some locally defined examples *)
 
-val (def,res) = mlDefine `
+val def = mlDefine `
   (fac 0 = 1) /\
   (fac (SUC n) = SUC n * fac n)`;
 
-val (def,res) = mlDefine `
+val def = mlDefine `
   gcd m n = if n = 0 then m else gcd n (m MOD n)`
 
-val (def,res) = mlDefine `
+val def = mlDefine `
   foo f x = f (f x (\x. x))`
 
-val (def,res) = mlDefine `
+val def = mlDefine `
   n_times n f x = if n = 0 then x else n_times (n-1) f (f x)`
 
-val (def,res) = mlDefine `
+val def = mlDefine `
   fac_gcd k m n = if k = 0 then k else fac_gcd (k-1) (fac (gcd m n)) n`
 
-val (def,res) = mlDefine `
+val def = mlDefine `
   nlist n = if n = 0 then [] else n :: nlist (n-1)`;
 
-val (def,res) = mlDefine `
+val def = mlDefine `
   rhs n = if n = 0 then INR n else INL n`;
 
-val (def,res) = mlDefine `
+val def = mlDefine `
   rhs_option n = if n = 0 then INL NONE else INR (SOME n)`;
 
-val (def,res) = mlDefine `
+val def = mlDefine `
   add ((x1,x2),(y1,y2)) = x1+x2+y1+y2:num`;
 
-val (def,res) = mlDefine `
+val def = mlDefine `
   (silly (x,INL y) = x + y) /\
   (silly (x,INR y) = x + y:num)`;
 
-val (def,res) = mlDefine `
+val def = mlDefine `
   (list_test1 [] = []) /\
   (list_test1 [x] = [x]) /\
   (list_test1 (x::y::xs) = x :: list_test1 xs)`;
 
-val (def,res) = mlDefine `
+val def = mlDefine `
   (list_test2 [] ys = []) /\
   (list_test2 [x] ys = [(x,x)]) /\
   (list_test2 (x::y::xs) (z1::z2::ys) = (x,z1) :: list_test2 xs ys) /\
   (list_test2 _ _ = [])`;
 
-val (def,res) = mlDefine `
+val def = mlDefine `
   (list_test3 [] ys = 0) /\
   (list_test3 (1::xs) ys = 1) /\
   (list_test3 (2::xs) ys = 2 + list_test3 xs ys) /\
@@ -150,8 +144,8 @@ val Eval_CHAR_LT = prove(
 
 val res = translate string_lt_def
 
-val (def,res) = mlDefine `
-  hi n = if n = 0 then "!" else "hello " ++ hi (n-1)`
+val def = mlDefine `
+  hi n = if n = 0 then "!" else "hello " ++ hi (n-1:num)`
 
 
 val _ = export_theory();
