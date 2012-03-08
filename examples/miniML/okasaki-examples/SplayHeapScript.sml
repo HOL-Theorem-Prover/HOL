@@ -22,7 +22,7 @@ val splay_heap_to_bag_def = Define `
 
 val splay_heap_ok_def = Define `
 (splay_heap_ok leq Empty = T) ∧
-(splay_heap_ok leq (Node h1 x h2) = 
+(splay_heap_ok leq (Node h1 x h2) =
   splay_heap_ok leq h1 ∧
   splay_heap_ok leq h2 ∧
   BAG_EVERY (\y. leq y x) (splay_heap_to_bag h1) ∧
@@ -83,7 +83,7 @@ val partition_bags = Q.prove (
 `!leq p h1 h2 h3.
   ((h2,h3) = partition leq p h1)
   ⇒
-  (splay_heap_to_bag h1 = 
+  (splay_heap_to_bag h1 =
    BAG_UNION (splay_heap_to_bag h2) (splay_heap_to_bag h3))`,
 recInduct partition_ind >>
 rw [partition_def, splay_heap_to_bag_def] >>
@@ -98,9 +98,9 @@ metis_tac [ASSOC_BAG_UNION, COMM_BAG_UNION, BAG_INSERT_commutes]);
 
 val partition_split = Q.prove (
 `!leq p h1 h2 h3.
-  transitive leq ∧ 
+  transitive leq ∧
   trichotomous leq ∧
-  ((h2,h3) = partition leq p h1) ∧ 
+  ((h2,h3) = partition leq p h1) ∧
   splay_heap_ok leq h1
   ⇒
   BAG_EVERY (\y. leq y p) (splay_heap_to_bag h2) ∧
@@ -120,12 +120,12 @@ metis_tac []);
 
 val partition_ok_lem = Q.prove (
 `!leq p h1 h2 h3.
-  (partition leq p h1 = (h2, h3)) ⇒ 
+  (partition leq p h1 = (h2, h3)) ⇒
   BAG_EVERY P (splay_heap_to_bag h1) ⇒
   BAG_EVERY P (splay_heap_to_bag h2) ∧
   BAG_EVERY P (splay_heap_to_bag h3)`,
 rw [] >>
-`splay_heap_to_bag h1 = 
+`splay_heap_to_bag h1 =
  BAG_UNION (splay_heap_to_bag h2) (splay_heap_to_bag h3)`
           by metis_tac [partition_bags] >>
 rw [] >>
@@ -141,7 +141,7 @@ val partition_ok = Q.prove (
   splay_heap_ok leq h2 ∧
   splay_heap_ok leq h3`,
 recInduct partition_ind >>
-RW_TAC pure_ss [] >> 
+RW_TAC pure_ss [] >>
 cases_on `leq x pivot` >>
 fs [partition_def, splay_heap_ok_def] >>
 every_case_tac >>
@@ -208,16 +208,16 @@ imp_res_tac (GSYM partition_bags) >>
 fs [splay_heap_to_bag_def]);
 
 val splay_heap_insert_ok = Q.store_thm ("splay_heap_insert_ok",
-`!leq x h. 
-  WeakLinearOrder leq ∧ splay_heap_ok leq h 
-  ⇒ 
+`!leq x h.
+  WeakLinearOrder leq ∧ splay_heap_ok leq h
+  ⇒
   splay_heap_ok leq (insert leq x h)`,
 rw [insert_def, splay_heap_ok_def] >>
 rw [splay_heap_ok_def] >-
 metis_tac [partition_ok] >-
 metis_tac [partition_ok] >-
 metis_tac [WeakLinearOrder, WeakOrder, partition_split] >-
-(`BAG_EVERY (\y. ¬leq y x) (splay_heap_to_bag b)` 
+(`BAG_EVERY (\y. ¬leq y x) (splay_heap_to_bag b)`
            by metis_tac [partition_split, WeakLinearOrder, WeakOrder] >>
  fs [BAG_EVERY] >>
  metis_tac [WeakLinearOrder_neg]));
@@ -236,8 +236,8 @@ metis_tac [ASSOC_BAG_UNION, COMM_BAG_UNION, BAG_INSERT_commutes]);
 
 val splay_heap_merge_ok = Q.store_thm ("splay_heap_merge_ok",
 `!leq h1 h2.
-  WeakLinearOrder leq ∧ splay_heap_ok leq h1 ∧ splay_heap_ok leq h2 
-  ⇒ 
+  WeakLinearOrder leq ∧ splay_heap_ok leq h1 ∧ splay_heap_ok leq h2
+  ⇒
   splay_heap_ok leq (merge leq h1 h2)`,
 recInduct merge_ind >>
 rw [merge_def, splay_heap_ok_def] >>
@@ -245,7 +245,7 @@ rw [splay_heap_ok_def, splay_heap_merge_bag] >-
 metis_tac [partition_ok] >-
 metis_tac [partition_ok] >-
 metis_tac [partition_split, WeakLinearOrder, WeakOrder] >-
-(`BAG_EVERY (\y. ¬leq y x) (splay_heap_to_bag tb)` 
+(`BAG_EVERY (\y. ¬leq y x) (splay_heap_to_bag tb)`
            by metis_tac [partition_split, WeakLinearOrder, WeakOrder] >>
  fs [BAG_EVERY] >>
  metis_tac [WeakLinearOrder_neg]));
@@ -257,7 +257,7 @@ val splay_heap_find_min = Q.prove (
     (!y. BAG_IN y (splay_heap_to_bag h) ⇒ leq x y)))`,
 recInduct find_min_ind >>
 rw [splay_heap_to_bag_def, splay_heap_ok_def, find_min_def] >-
-metis_tac [BAG_EVERY, WeakLinearOrder_neg, WeakLinearOrder, WeakOrder, 
+metis_tac [BAG_EVERY, WeakLinearOrder_neg, WeakLinearOrder, WeakOrder,
            reflexive_def] >>
 EQ_TAC >>
 rw [] >-
@@ -269,12 +269,12 @@ metis_tac [] >-
 metis_tac [] >-
 (fs [BAG_EVERY] >>
  metis_tac [WeakLinearOrder, WeakOrder, transitive_def]) >-
-metis_tac [BAG_EVERY, WeakLinearOrder_neg, WeakLinearOrder, WeakOrder, 
+metis_tac [BAG_EVERY, WeakLinearOrder_neg, WeakLinearOrder, WeakOrder,
            reflexive_def] >-
 metis_tac [] >-
 metis_tac [] >-
 metis_tac [] >-
-metis_tac [BAG_EVERY, WeakLinearOrder_neg, WeakLinearOrder, WeakOrder, 
+metis_tac [BAG_EVERY, WeakLinearOrder_neg, WeakLinearOrder, WeakOrder,
            reflexive_def]);
 
 val splay_heap_find_min_thm = Q.store_thm ("splay_heap_find_min_thm",
@@ -284,16 +284,16 @@ val splay_heap_find_min_thm = Q.store_thm ("splay_heap_find_min_thm",
 metis_tac [splay_heap_find_min]);
 
 val splay_heap_delete_min_thm = Q.store_thm ("splay_heap_delete_min_thm",
-`!h leq. 
+`!h leq.
   WeakLinearOrder leq ∧
-  (h ≠ Empty) ∧ 
-  splay_heap_ok leq h 
-  ⇒ 
+  (h ≠ Empty) ∧
+  splay_heap_ok leq h
+  ⇒
   splay_heap_ok leq (delete_min h) ∧
-  (splay_heap_to_bag (delete_min h) = 
+  (splay_heap_to_bag (delete_min h) =
    BAG_DIFF (splay_heap_to_bag h) (EL_BAG (find_min h)))`,
 HO_MATCH_MP_TAC delete_min_ind >>
-srw_tac [bagLib.BAG_ss] 
+srw_tac [bagLib.BAG_ss]
         [delete_min_def, splay_heap_ok_def, splay_heap_to_bag_def,
          find_min_def, BAG_INSERT_UNION] >|
 [res_tac >>
@@ -312,7 +312,7 @@ srw_tac [bagLib.BAG_ss]
      fs [splay_heap_to_bag_def] >>
      `SUB_BAG (EL_BAG (find_min (Node v6 v7 v8)))
               (EL_BAG v7 ⊎ (splay_heap_to_bag v6 ⊎ splay_heap_to_bag v8))`
-                by rw [SUB_BAG_EL_BAG] >> 
+                by rw [SUB_BAG_EL_BAG] >>
      rw [BAG_UNION_DIFF, SUB_BAG_UNION] >>
      srw_tac [BAG_AC_ss] []]);
 

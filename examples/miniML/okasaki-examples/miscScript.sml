@@ -26,9 +26,9 @@ val BAG_EVERY_EL = Q.store_thm ("BAG_EVERY_EL",
 rw [BAG_EVERY, EL_BAG]);
 
 val BAG_INN_BAG_DIFF = Q.store_thm ("BAG_INN_BAG_DIFF",
-`!x m b1 b2. 
-  BAG_INN x m (BAG_DIFF b1 b2) = 
-  ∃n1 n2. (m = n1 - n2) ∧ 
+`!x m b1 b2.
+  BAG_INN x m (BAG_DIFF b1 b2) =
+  ∃n1 n2. (m = n1 - n2) ∧
           BAG_INN x n1 b1 ∧ BAG_INN x n2 b2 ∧ ~BAG_INN x (n2 + 1) b2`,
 rw [BAG_INN, BAG_DIFF] >>
 EQ_TAC >>
