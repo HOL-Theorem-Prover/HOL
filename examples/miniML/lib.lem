@@ -1,0 +1,19 @@
+val RTC : forall 'a. ('a -> 'a -> bool) -> ('a -> 'a -> bool)
+val MOD : num -> num -> num
+
+type int
+val (+) : int -> int -> int
+val (-) : int -> int -> int
+val ( *) : int -> int -> int
+val (/) : int -> int -> int
+val (%) : int -> int -> int
+val (<) : int -> int -> bool
+val (<=) : int -> int -> bool
+val (>) : int -> int -> bool
+val (>=) : int -> int -> bool
+val (&) : num -> int
+
+type word32
+type word16
+type word8
+

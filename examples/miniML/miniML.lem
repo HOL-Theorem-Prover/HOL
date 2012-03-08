@@ -26,8 +26,36 @@ sub [hol] all_distinct = ALL_DISTINCT
 val rtc : forall 'a. ('a -> 'a -> bool) -> ('a -> 'a -> bool)
 sub [hol] rtc = RTC
 
-val mod : num -> num -> num
-sub [hol] mod = MOD
+val (%) : num -> num -> num
+sub [hol] (%) = MOD
+
+val (+.) : Hol.int -> Hol.int -> Hol.int
+sub [hol] (+.) = (+)
+
+val (-.) : Hol.int -> Hol.int -> Hol.int
+sub [hol] (-.) = (-)
+
+val ( *.) : Hol.int -> Hol.int -> Hol.int
+sub [hol] ( *.) = ( *)
+
+val (/.) : Hol.int -> Hol.int -> Hol.int
+sub [hol] (/.) = (/)
+
+val (%.) : Hol.int -> Hol.int -> Hol.int
+sub [hol] (%.) = (%)
+
+val (<.) : Hol.int -> Hol.int -> bool
+sub [hol] (<.) = (<)
+
+val (<=.) : Hol.int -> Hol.int -> bool
+sub [hol] (<=.) = (<=)
+
+val (>.) : Hol.int -> Hol.int -> bool
+sub [hol] (>.) = (>)
+
+val (>=.) : Hol.int -> Hol.int ->bool
+sub [hol] (>=.) = (>=)
+
 
 (* Environments *)
 type ('a,'b) env = ('a*'b) list
@@ -53,7 +81,7 @@ let merge e1 e2 = e1 @ e2
 
 (* Literal constants *)
 type lit =
-  | Num of num
+  | Int of Hol.int
   | Bool of bool
 
 (* Built-in binary operations (including function application) *)
@@ -62,18 +90,18 @@ type opn = Plus | Minus | Times | Divide | Modulo
 type opb = Lt | Gt | Leq | Geq
 
 let opn_lookup n = match n with
-  | Plus -> (+)
-  | Minus -> (-)
-  | Times -> ( *)
-  | Divide -> (/)
-  | Modulo -> (mod)
+  | Plus -> (+.)
+  | Minus -> (-.)
+  | Times -> ( *.)
+  | Divide -> (/.)
+  | Modulo -> (%.)
 end
 
-let opb_lookup n : num -> num -> bool = match n with
-  | Lt -> (<)
-  | Gt -> (>)
-  | Leq -> (<=)
-  | Geq -> (>=)
+let opb_lookup n : Hol.int -> Hol.int -> bool = match n with
+  | Lt -> (<.)
+  | Gt -> (>.)
+  | Leq -> (<=.)
+  | Geq -> (>=.)
 end
 
 type op =
@@ -280,7 +308,7 @@ is_source_dec (Dtype _) = true
 val lit_same_type : lit -> lit -> bool
 let lit_same_type l1 l2 =
   match (l1,l2) with
-    | (Num _, Num _) -> true
+    | (Int _, Int _) -> true
     | (Bool _, Bool _) -> true
     | _ -> false
   end
@@ -399,9 +427,9 @@ let do_app env' op v1 v2 =
           | Some (n,e) -> Some (bind n v (build_rec_env funs env), e)
           | None -> None
         end
-    | (Opn op, Lit (Num n1), Lit (Num n2)) ->
-        Some (env',Val (Lit (Num (opn_lookup op n1 n2))))
-    | (Opb op, Lit (Num n1), Lit (Num n2)) ->
+    | (Opn op, Lit (Int n1), Lit (Int n2)) ->
+        Some (env',Val (Lit (Int (opn_lookup op n1 n2))))
+    | (Opb op, Lit (Int n1), Lit (Int n2)) ->
         Some (env',Val (Lit (Bool (opb_lookup op n1 n2))))
     | (Equality, v1, v2) ->
         (* TODO: Check for closures in v1 and v2, and possibly check that they
@@ -1123,7 +1151,7 @@ and
 forall cenv tenv n.
 true
 ==>
-type_p cenv tenv (Plit (Num n)) Tnum tenv
+type_p cenv tenv (Plit (Int n)) Tnum tenv
 
 and
 
@@ -1160,7 +1188,7 @@ and
 forall cenv n.
 true
 ==>
-type_v cenv (Lit (Num n)) Tnum
+type_v cenv (Lit (Int n)) Tnum
 
 and
 
