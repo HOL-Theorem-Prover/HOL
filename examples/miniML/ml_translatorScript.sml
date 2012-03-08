@@ -44,6 +44,11 @@ val CONTAINER_def = Define `CONTAINER x = x`;
 
 val TAG_def = Define `TAG n x = x`;
 
+val PRECONDITION_def = Define `PRECONDITION b = (b:bool)`;
+
+val PreImp_def = Define `
+  PreImp b1 b2 = (PRECONDITION b1 ==> b2)`;
+
 
 (* Theorems *)
 
@@ -246,8 +251,15 @@ val Eval_FUN_FORALL = store_thm("Eval_FUN_FORALL",
   \\ REPEAT STRIP_TAC \\ Q.PAT_ASSUM `!x.bbb` (STRIP_ASSUME_TAC o Q.SPEC `y`)
   \\ IMP_RES_TAC evaluate_11_Rval \\ FULL_SIMP_TAC (srw_ss()) []);
 
-val PULL_FORALL = METIS_PROVE [] ``((p ==> !x. q x) = (!x. p ==> q x)) /\
-                                   ((p /\ !x. q x) = (!x. p /\ q x))``
+val Eval_FUN_FORALL_EQ = store_thm("Eval_FUN_FORALL_EQ",
+  ``(!x. Eval env exp ((p x) f)) =
+    Eval env exp ((FUN_FORALL x. p x) f)``,
+  REPEAT STRIP_TAC \\ EQ_TAC \\ FULL_SIMP_TAC std_ss [Eval_FUN_FORALL]
+  \\ EVAL_TAC \\ FULL_SIMP_TAC std_ss [FUN_FORALL] \\ METIS_TAC []);
+
+val PULL_FORALL = save_thm("PULL_FORALL",
+  METIS_PROVE [] ``((p ==> !x. q x) = (!x. p ==> q x)) /\
+                   ((p /\ !x. q x) = (!x. p /\ q x))``)
 
 val FUN_FORALL_PUSH1 = prove(
   ``(FUN_FORALL x. a --> (b x)) = (a --> FUN_FORALL x. b x)``,
@@ -310,6 +322,11 @@ val Eval_WEAKEN = store_thm("Eval_WEAKEN",
   ``Eval env exp P ==> (!v. P v ==> Q v) ==> Eval env exp Q``,
   SIMP_TAC std_ss [Eval_def] \\ METIS_TAC []);
 
+val Eval_CONST = store_thm("Eval_CONST",
+  ``(!v. P v = (v = x)) ==>
+    Eval env (Var name) ($= x) ==> Eval env (Var name) P``,
+  SIMP_TAC std_ss [Eval_def])
+
 
 (* Equality *)
 
@@ -353,6 +370,10 @@ val Eval_Equality = store_thm("Eval_Equality",
 
 
 (* a few misc. lemmas that help the automation *)
+
+val IMP_PreImp = store_thm("IMP_PreImp",
+  ``!b1 b2 b3. (b1 /\ b2 ==> b3) ==> b1 ==> PreImp b2 b3``,
+  REPEAT Cases \\ EVAL_TAC);
 
 val PULL_EXISTS = save_thm("PULL_EXISTS",
   METIS_PROVE [] ``(((?x. P x) ==> Q) = !x. P x ==> Q) /\

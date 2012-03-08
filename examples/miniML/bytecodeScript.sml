@@ -86,10 +86,10 @@ val (bc_stack_op_rules,bc_stack_op_ind,bc_stack_op_cases) = Hol_reln `
   bc_stack_op (Pops (LENGTH ys)) (x::ys++xs) (x::xs) /\
   bc_stack_op (PushNum n) (xs) (Number n::xs) /\
   bc_stack_op (Cons tag (LENGTH ys)) (ys ++ xs) (Block tag (REVERSE ys)::xs) /\
-  (n < LENGTH ys ==> bc_stack_op (Load n) xs (EL n xs :: xs)) /\
+  (n < LENGTH xs ==> bc_stack_op (Load n) xs (EL n xs :: xs)) /\
   bc_stack_op (Store (LENGTH ys)) (y::ys ++ x::xs) (ys ++ y::xs) /\
   (n < LENGTH ys ==> bc_stack_op (El n) ((Block tag ys)::xs) (EL n ys::xs)) /\
-  bc_stack_op Tag ((Block tag ys)::xs) (Number n::xs) /\
+  bc_stack_op Tag ((Block tag ys)::xs) (Number tag::xs) /\
   bc_stack_op IsNum (x::xs) (Number (bool2num (?n. x = Number n)) :: xs) /\
   bc_stack_op Equal (x2::x1::xs) (Number (bool2num (x1 = x2)) :: xs) /\
   bc_stack_op Less (Number n :: Number m :: xs) (Number (bool2num (m < n))::xs) /\
