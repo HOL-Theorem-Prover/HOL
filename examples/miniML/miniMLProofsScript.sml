@@ -2,7 +2,7 @@ open bossLib Theory Parse res_quanTheory Defn Tactic boolLib;
 open finite_mapTheory listTheory pairTheory pred_setTheory;
 open set_relationTheory sortingTheory stringTheory wordsTheory;
 open relationTheory;
-open MiniMLTheory CompileTheory;
+open MiniMLTheory (*CompileTheory*);
 
 open pairLib;
 open lcsymtacs;
@@ -62,6 +62,7 @@ val (type_subst_def, type_subst_ind) =
 val _ = save_thm ("type_subst_def", type_subst_def);
 val _ = save_thm ("type_subst_ind", type_subst_ind);
 
+(*
 val (remove_ctors_def,remove_ctors_ind) =
   tprove_no_defn ((remove_ctors_def,remove_ctors_ind),
   WF_REL_TAC
@@ -86,7 +87,7 @@ val (remove_ctors_def,remove_ctors_ind) =
        decide_tac]);
 val _ = save_thm ("remove_ctors_def", remove_ctors_def);
 val _ = save_thm ("remove_ctors_ind", remove_ctors_ind);
-
+*)
 
 (* ------------------------------------------------------------------------- *)
 

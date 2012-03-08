@@ -3,13 +3,13 @@ open MiniML
 
 (* TODO: use a built-in int_to_string *)
 
-val i : num -> Hol.int
+val i : num -> Int.int
 sub [hol] i = (&)
 
 let rec pos_int_to_string n =
-  if n >. i 0 then
-    let n' = n %. i 10 in
-      pos_int_to_string (n /. i 10) ^
+  if Int.(>) n (i 0) then
+    let n' = Int.(%) n (i 10) in
+      pos_int_to_string (Int.(/) n (i 10)) ^
       (if n' = i 0 then "0"
        else if n' = i 1 then "1"
        else if n' = i 2 then "2"
@@ -23,14 +23,14 @@ let rec pos_int_to_string n =
   else
     ""
 
-val int_to_string : Hol.int -> string
+val int_to_string : Int.int -> string
 let int_to_string n = 
   if n = i 0 then 
     "0" 
-  else if n >. i 0 then
+  else if Int.(>) n (i 0) then
     pos_int_to_string n
   else
-    "~" ^ pos_int_to_string (i 0 -. n)
+    "~" ^ pos_int_to_string (Int.(-) (i 0) n)
 
 let infixes = ["+"; "-"; "*"; "/"; "mod"; "<"; ">"; "<="; ">="]
 
@@ -48,7 +48,7 @@ let lit_to_string l = match l with
   (* Rely on the fact that true and false cannot be rebound in SML *)
   | Bool true -> "true"
   | Bool false -> "false"
-  | Int n -> int_to_string n
+  | IntLit n -> int_to_string n
 end
 
 let var_to_string v =

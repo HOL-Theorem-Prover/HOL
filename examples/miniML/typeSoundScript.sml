@@ -198,7 +198,7 @@ metis_tac []);
 (* Classifying values of basic types *)
 val canonical_values_thm = Q.prove (
 `∀tenvC v t1 t2.
-  (type_v tenvC v Tnum ⇒ (∃n. v = Lit (Num n))) ∧
+  (type_v tenvC v Tnum ⇒ (∃n. v = Lit (IntLit n))) ∧
   (type_v tenvC v Tbool ⇒ (∃n. v = Lit (Bool n))) ∧
   (type_v tenvC v (Tfn t1 t2) ⇒
     (∃env n e. v = Closure env n e) ∨
@@ -669,7 +669,7 @@ val type_recfun_env = Q.prove (
 metis_tac [type_recfun_env_help]);
 
 val type_v_lit = Q.prove (
-`(!tenvC n t. type_v tenvC (Lit (Num n)) t = (t = Tnum)) ∧
+`(!tenvC n t. type_v tenvC (Lit (IntLit n)) t = (t = Tnum)) ∧
  (!tenvC b t. type_v tenvC (Lit (Bool b)) t = (t = Tbool))`,
 rw [Once type_v_cases] >>
 rw [Once type_v_cases]);
