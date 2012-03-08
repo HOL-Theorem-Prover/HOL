@@ -24,12 +24,12 @@ val rank_def = Define `
 (rank (Node r _ _ _) = r)`;
 
 val leftist_heap_ok_def = Define `
-(leftist_heap_ok leq Empty = T) ∧
-(leftist_heap_ok leq (Node _ x h1 h2) =
-  leftist_heap_ok leq h1 ∧
-  leftist_heap_ok leq h2 ∧
-  BAG_EVERY (\y. leq x y) (leftist_heap_to_bag h1) ∧
-  BAG_EVERY (\y. leq x y) (leftist_heap_to_bag h2) ∧
+(leftist_heap_ok get_key leq Empty = T) ∧
+(leftist_heap_ok get_key leq (Node _ x h1 h2) =
+  leftist_heap_ok get_key leq h1 ∧
+  leftist_heap_ok get_key leq h2 ∧
+  BAG_EVERY (\y. leq (get_key x) (get_key y)) (leftist_heap_to_bag h1) ∧
+  BAG_EVERY (\y. leq (get_key x) (get_key y)) (leftist_heap_to_bag h2) ∧
   rank h1 ≥ rank h2)`;
 
 val make_node_def = Define `
@@ -47,81 +47,81 @@ val is_empty = Define `
 (is_empty _ = F)`;
 
 val merge_def = Define `
-(merge leq h Empty = h) ∧
-(merge leq Empty h = h) ∧
-(merge leq (Node n1 x a1 b1) (Node n2 y a2 b2) =
-  if leq x y then
-    make_node x a1 (merge leq b1 (Node n2 y a2 b2))
+(merge get_key leq h Empty = h) ∧
+(merge get_key leq Empty h = h) ∧
+(merge get_key leq (Node n1 x a1 b1) (Node n2 y a2 b2) =
+  if leq (get_key x) (get_key y) then
+    make_node x a1 (merge get_key leq b1 (Node n2 y a2 b2))
   else
-    make_node y a2 (merge leq (Node n1 x a1 b1) b2))`;
+    make_node y a2 (merge get_key leq (Node n1 x a1 b1) b2))`;
 
 val merge_ind = fetch "-" "merge_ind"
 
 val insert_def = Define `
-insert leq x h = merge leq (Node 1 x Empty Empty) h`;
+insert get_key leq x h = merge get_key leq (Node 1 x Empty Empty) h`;
 
 val find_min_def = Define `
 find_min (Node _ x _ _) = x`;
 
 val delete_min_def = Define `
-delete_min leq (Node _ x a b) = merge leq a b`;
+delete_min get_key leq (Node _ x a b) = merge get_key leq a b`;
 
 val leftist_heap_merge_bag = Q.store_thm ("leftist_heap_merge_bag",
-`!leq h1 h2.
-  leftist_heap_to_bag (merge leq h1 h2) =
+`!get_key leq h1 h2.
+  leftist_heap_to_bag (merge get_key leq h1 h2) =
   BAG_UNION (leftist_heap_to_bag h1) (leftist_heap_to_bag h2)`,
 HO_MATCH_MP_TAC merge_ind >>
 srw_tac [BAG_ss]
         [merge_def, leftist_heap_to_bag_def, make_node_def, BAG_INSERT_UNION]);
 
 val leftist_heap_merge_ok = Q.store_thm ("leftist_heap_merge_ok",
-`!leq h1 h2.
-  WeakLinearOrder leq ∧ leftist_heap_ok leq h1 ∧ leftist_heap_ok leq h2
+`!get_key leq h1 h2.
+  WeakLinearOrder leq ∧ 
+  leftist_heap_ok get_key leq h1 ∧ 
+  leftist_heap_ok get_key leq h2
   ⇒
-  leftist_heap_ok leq (merge leq h1 h2)`,
+  leftist_heap_ok get_key leq (merge get_key leq h1 h2)`,
 HO_MATCH_MP_TAC merge_ind >>
 rw [merge_def, leftist_heap_ok_def, make_node_def, leftist_heap_merge_bag] >>
-rw [leftist_heap_to_bag_def] >|
-[metis_tac [BAG_EVERY, WeakLinearOrder, WeakOrder, transitive_def],
- metis_tac [BAG_EVERY, WeakLinearOrder, WeakOrder, transitive_def],
- metis_tac [BAG_EVERY, WeakLinearOrder, WeakOrder, transitive_def],
- metis_tac [BAG_EVERY, WeakLinearOrder, WeakOrder, transitive_def],
+rw [leftist_heap_to_bag_def] >>
+fs [BAG_EVERY] >|
+[metis_tac [WeakLinearOrder, WeakOrder, transitive_def],
+ metis_tac [WeakLinearOrder, WeakOrder, transitive_def],
+ metis_tac [WeakLinearOrder, WeakOrder, transitive_def],
+ metis_tac [WeakLinearOrder, WeakOrder, transitive_def],
  decide_tac,
- metis_tac [BAG_EVERY, WeakLinearOrder, WeakOrder, transitive_def,
-            WeakLinearOrder_neg],
- metis_tac [BAG_EVERY, WeakLinearOrder, WeakOrder, transitive_def,
-            WeakLinearOrder_neg],
- metis_tac [BAG_EVERY, WeakLinearOrder, WeakOrder, transitive_def,
-            WeakLinearOrder_neg],
- metis_tac [BAG_EVERY, WeakLinearOrder, WeakOrder, transitive_def,
-            WeakLinearOrder_neg],
- metis_tac [BAG_EVERY, WeakLinearOrder, WeakOrder, transitive_def,
-            WeakLinearOrder_neg],
- metis_tac [BAG_EVERY, WeakLinearOrder, WeakOrder, transitive_def,
-            WeakLinearOrder_neg],
+ metis_tac [WeakLinearOrder, WeakOrder, transitive_def, WeakLinearOrder_neg],
+ metis_tac [WeakLinearOrder, WeakOrder, transitive_def, WeakLinearOrder_neg],
+ metis_tac [WeakLinearOrder, WeakOrder, transitive_def, WeakLinearOrder_neg],
+ metis_tac [WeakLinearOrder, WeakOrder, transitive_def, WeakLinearOrder_neg],
+ metis_tac [WeakLinearOrder, WeakOrder, transitive_def, WeakLinearOrder_neg],
+ metis_tac [WeakLinearOrder, WeakOrder, transitive_def, WeakLinearOrder_neg],
  decide_tac]);
 
 val leftist_heap_insert_bag = Q.store_thm ("leftist_heap_insert_bag",
-`!h leq x.
-  leftist_heap_to_bag (insert leq x h) =
+`!h get_key leq x.
+  leftist_heap_to_bag (insert get_key leq x h) =
   BAG_INSERT x (leftist_heap_to_bag h)`,
 rw [insert_def, leftist_heap_merge_bag, leftist_heap_to_bag_def,
     BAG_INSERT_UNION]);
 
 val leftist_heap_insert_ok = Q.store_thm ("leftist_heap_insert_ok",
-`!leq x h. 
-  WeakLinearOrder leq ∧ leftist_heap_ok leq h 
+`!get_key leq x h. 
+  WeakLinearOrder leq ∧ leftist_heap_ok get_key leq h 
   ⇒ 
-  leftist_heap_ok leq (insert leq x h)`,
+  leftist_heap_ok get_key leq (insert get_key leq x h)`,
 rw [insert_def] >>
-`leftist_heap_ok leq (Node 1 x Empty Empty)` 
+`leftist_heap_ok get_key leq (Node 1 x Empty Empty)` 
          by rw [leftist_heap_ok_def, leftist_heap_to_bag_def] >>
 metis_tac [leftist_heap_merge_ok]);
 
 val leftist_heap_find_min_thm = Q.store_thm ("leftist_heap_find_min_thm",
-`!h leq. WeakLinearOrder leq ∧ (h ≠ Empty) ∧ leftist_heap_ok leq h ⇒
+`!h get_key leq. 
+  WeakLinearOrder leq ∧ (h ≠ Empty) ∧ leftist_heap_ok get_key leq h 
+  ⇒
   BAG_IN (find_min h) (leftist_heap_to_bag h) ∧
-  (!y. BAG_IN y (leftist_heap_to_bag h) ⇒ leq (find_min h) y)`,
+  (!y. BAG_IN y (leftist_heap_to_bag h) ⇒ 
+       leq (get_key (find_min h)) (get_key y))`,
 rw [] >>
 cases_on `h` >>
 fs [find_min_def, leftist_heap_to_bag_def, leftist_heap_ok_def] >>
@@ -129,13 +129,13 @@ fs [BAG_EVERY] >>
 metis_tac [WeakLinearOrder, WeakOrder, reflexive_def]);
 
 val leftist_heap_delete_min_thm = Q.store_thm ("leftist_heap_delete_min_thm",
-`!h leq.
+`!h get_key leq.
   WeakLinearOrder leq ∧
   (h ≠ Empty) ∧
-  leftist_heap_ok leq h
+  leftist_heap_ok get_key leq h
   ⇒
-  leftist_heap_ok leq (delete_min leq h) ∧
-  (leftist_heap_to_bag (delete_min leq h) =
+  leftist_heap_ok get_key leq (delete_min get_key leq h) ∧
+  (leftist_heap_to_bag (delete_min get_key leq h) =
    BAG_DIFF (leftist_heap_to_bag h) (EL_BAG (find_min h)))`,
 rw [] >>
 cases_on `h` >>
