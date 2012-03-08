@@ -14,7 +14,7 @@
  * horizontal lines).  Here in Lem, everything looks like abstract syntax;
  * however, unlike Ott, we get good support for functions, and not just
  * relations.
- * 
+ *
  * The small-step operational semantics is based on the CEK machine.  The type
  * system is typical, but it doesn't yet support polymorphism.  The big step
  * semantics is also typical.  The small-step and big-step semantics agree even
@@ -36,14 +36,14 @@ val emp : forall 'a 'b. ('a,'b) env
 let emp = []
 
 val lookup : forall 'a 'b. 'a -> ('a,'b) env -> 'b option
-let rec 
+let rec
 lookup n [] = None
 and
 lookup n ((n',v)::e) =
   if n' = n then
     Some v
   else
-    lookup n e 
+    lookup n e
 
 val bind : forall 'a 'b. 'a -> 'b -> ('a,'b) env -> ('a,'b) env
 let bind n v e = (n,v)::e
@@ -52,7 +52,7 @@ val merge : forall 'a 'b. ('a,'b) env -> ('a,'b) env -> ('a,'b) env
 let merge e1 e2 = e1 @ e2
 
 (* Literal constants *)
-type lit = 
+type lit =
   | Num of num
   | Bool of bool
 
@@ -83,9 +83,9 @@ type op =
   | Opapp
 
 (* Built-in logical operations *)
-type log = 
+type log =
   | And
-  | Or 
+  | Or
 
 (* Variable names *)
 type varN = string
@@ -99,7 +99,7 @@ type tvarN = string
 (* Types
  * 0-ary type applications represent unparameterised types (e.g., num or string)
  *)
-type t = 
+type t =
   | Tvar of tvarN
   | Tapp of t list * typeN
   | Tfn of t * t
@@ -113,7 +113,7 @@ type_subst s (Tvar tv) =
   match lookup tv s with
     | None -> Tvar tv
     | Some(t) -> t
-  end 
+  end
 and
 type_subst s (Tapp ts tn) =
   Tapp (List.map (type_subst s) ts) tn
@@ -145,19 +145,19 @@ check_freevars tvs Tbool = true
 type pat =
   | Pvar of varN
   | Plit of lit
-  (* Constructor applications.  If there is no constructor name, this is an 
+  (* Constructor applications.  If there is no constructor name, this is an
    * untyped tuple. *)
   | Pcon of conN option * pat list
 
 (* Runtime errors *)
-type error = 
+type error =
   | Bind_error
 
 (* Expressions *)
-type exp = 
+type exp =
   | Raise of error
   | Val of v
-  (* Constructor application.  If there is no constructor name, this is an 
+  (* Constructor application.  If there is no constructor name, this is an
    * untyped tuple. *)
   | Con of conN option * exp list
   | Var of varN
@@ -170,7 +170,7 @@ type exp =
   (* Pattern matching *)
   | Mat of exp * (pat * exp) list
   | Let of varN * exp * exp
-  (* Local definition of (potentially) mutually recursive functions 
+  (* Local definition of (potentially) mutually recursive functions
    * The first varN is the function's name, and the second varN is its
    * parameter *)
   | Letrec of (varN * varN * exp) list * exp
@@ -180,28 +180,28 @@ type exp =
 (* Value forms *)
 and v =
   | Lit of lit
-  (* Constructor application.  If there is no constructor name, this is an 
+  (* Constructor application.  If there is no constructor name, this is an
    * untyped tuple.  *)
   | Conv of conN option * v list
   (* Function closures
      The environment is used for the free variables in the function *)
   | Closure of (varN, v) env * varN * exp
-  (* Function closure for recursive functions 
+  (* Function closure for recursive functions
    * See Closure and Letrec above
    * The last variable name indicates which function from the mutually
-   * recursive bundle this closure value represents *) 
+   * recursive bundle this closure value represents *)
   | Recclosure of (varN, v) env * (varN * varN * exp) list * varN
 
 (* Environments *)
 type envE = (varN, v) env
 
 (* Declarations *)
-type dec = 
+type dec =
   (* Top-level bindings
      The pattern allows several names to be bound at once *)
   | Dlet of pat * exp
   (* Mutually recursive function definition *)
-  | Dletrec of (varN * varN * exp) list  
+  | Dletrec of (varN * varN * exp) list
   (* Type definition
      Defines several types, each of which has several named variants, which can
      in turn have several arguments *)
@@ -210,14 +210,14 @@ type dec =
 type decs = dec list
 
 (* Maps each constructor to its arity and the set of all constructors of that
- * type *) 
+ * type *)
 type envC = (conN, num * conN set) env
 
-(* Evaluation contexts 
- * The hole is denoted by the unit type 
+(* Evaluation contexts
+ * The hole is denoted by the unit type
  * The env argument contins bindings for the free variables of expressions in
      the context *)
-type ctxt_frame = 
+type ctxt_frame =
   | Capp1 of op * unit * exp
   | Capp2 of op * v * unit
   | Clog of log * unit * exp
@@ -235,7 +235,7 @@ type ctxt = ctxt_frame * envE
  * i.e., without any extra intermediate stuff that the semantics needs *)
 
 val is_source_exp : exp -> bool
-let rec 
+let rec
 is_source_exp (Raise _) = true
 and
 is_source_exp (Val (Lit _)) = true
@@ -257,7 +257,7 @@ and
 is_source_exp (If e1 e2 e3) =
   is_source_exp e1 && is_source_exp e2 && is_source_exp e3
 and
-is_source_exp (Mat e pes) = 
+is_source_exp (Mat e pes) =
   is_source_exp e && List.for_all (fun (p,e) -> is_source_exp e) pes
 and
 is_source_exp (Let _ e1 e2) = is_source_exp e1 && is_source_exp e2
@@ -268,14 +268,14 @@ and
 is_source_exp (Proj _ _) = false
 
 val is_source_dec : dec -> bool
-let rec 
+let rec
 is_source_dec (Dlet p e) = is_source_exp e
 and
-is_source_dec (Dletrec funs) = 
+is_source_dec (Dletrec funs) =
   List.for_all (fun (v1,v2,e) -> is_source_exp e) funs
 and
 is_source_dec (Dtype _) = true
-                             
+
 
 val lit_same_type : lit -> lit -> bool
 let lit_same_type l1 l2 =
@@ -300,7 +300,7 @@ type match_result =
  * Match_type_error is returned when one of these conditions is violated *)
 
 val pmatch : envC -> pat -> v -> envE -> match_result
-let rec 
+let rec
 pmatch envC (Pvar n) v' env = Match (bind n v' env)
 and
 pmatch envC (Plit l) (Lit l') env =
@@ -346,7 +346,7 @@ pmatch_list envC _ _ env = Match_type_error
 
 (* State for CEK-style expression evaluation
  * - constructor data
- * - the environment for the free variables of the current expression 
+ * - the environment for the free variables of the current expression
  * - the current expression to evaluate
  * - the context stack (continuation) of what to do once the current expression
  *   is finished.  Each entry has an environment for it's free variables *)
@@ -381,10 +381,10 @@ val find_recfun : varN -> (varN * varN * exp) list -> (varN * exp) option
 let rec find_recfun n funs =
   match funs with
     | [] -> None
-    | (f,x,e) :: funs -> 
-        if f = n then 
+    | (f,x,e) :: funs ->
+        if f = n then
           Some (x,e)
-        else 
+        else
           find_recfun n funs
   end
 
@@ -399,11 +399,11 @@ let do_app env' op v1 v2 =
           | Some (n,e) -> Some (bind n v (build_rec_env funs env), e)
           | None -> None
         end
-    | (Opn op, Lit (Num n1), Lit (Num n2)) -> 
+    | (Opn op, Lit (Num n1), Lit (Num n2)) ->
         Some (env',Val (Lit (Num (opn_lookup op n1 n2))))
-    | (Opb op, Lit (Num n1), Lit (Num n2)) -> 
-        Some (env',Val (Lit (Bool (opb_lookup op n1 n2)))) 
-    | (Equality, v1, v2) -> 
+    | (Opb op, Lit (Num n1), Lit (Num n2)) ->
+        Some (env',Val (Lit (Bool (opb_lookup op n1 n2))))
+    | (Equality, v1, v2) ->
         (* TODO: Check for closures in v1 and v2, and possibly check that they
          * have the same type *)
         Some (env', Val (Lit (Bool (v1 = v2))))
@@ -433,12 +433,12 @@ let do_if v e1 e2 =
 (* Check that a constructor is properly applied *)
 val do_con_check : envC -> conN option -> num -> bool
 let do_con_check envC n l =
-  match n with 
+  match n with
     | None -> true
     | Some n ->
         match lookup n envC with
           | None -> false
-          | Some (l',ns) -> l = l' 
+          | Some (l',ns) -> l = l'
         end
   end
 
@@ -458,7 +458,7 @@ val continue : envC -> v -> ctxt list -> e_step_result
 let continue envC v cs =
   match cs with
     | [] -> Estuck
-    | (Capp1 op () e, env) :: c -> 
+    | (Capp1 op () e, env) :: c ->
         push envC env e (Capp2 op v ()) c
     | (Capp2 op v' (), env) :: c ->
         match do_app env op v' v with
@@ -484,7 +484,7 @@ let continue envC v cs =
           | Match env' -> Estep (envC, env', e, c)
         end
     | (Clet n () e, env) :: c ->
-        Estep (envC, bind n v env, e, c) 
+        Estep (envC, bind n v env, e, c)
     | (Ccon n vs () [], env) :: c ->
         if do_con_check envC n (List.length vs + 1) then
           return envC env (Conv n (List.rev (v::vs))) c
@@ -511,14 +511,14 @@ let continue envC v cs =
 val e_step : state -> e_step_result
 let e_step (envC, env, e, c) =
   match e with
-    | Raise e -> 
+    | Raise e ->
         match c with
           | [] -> Estuck
           | _::c -> Estep (envC,env,Raise e,c)
         end
-    | Val v  -> 
+    | Val v  ->
 	continue envC v c
-    | Con n es -> 
+    | Con n es ->
         if do_con_check envC n (List.length es) then
           match es with
             | [] -> return envC env (Conv n []) c
@@ -533,7 +533,7 @@ let e_step (envC, env, e, c) =
           | Some v -> return envC env v c
         end
     | Fun n e -> return envC env (Closure env n e) c
-    | App op e1 e2 -> push envC env e1 (Capp1 op () e2) c 
+    | App op e1 e2 -> push envC env e1 (Capp1 op () e2) c
     | Log l e1 e2 -> push envC env e1 (Clog l () e2) c
     | If e1 e2 e3 -> push envC env e1 (Cif () e2 e3) c
     | Mat e pes -> push envC env e (Cmat () pes) c
@@ -544,29 +544,29 @@ let e_step (envC, env, e, c) =
         else
           Estep (envC, build_rec_env funs env, e, c)
     | Proj e n -> push envC env e (Cproj () n) c
-  end 
+  end
 
 (* Add the given type definition to the given constructor environment *)
-val build_tdefs : 
+val build_tdefs :
   (tvarN list * typeN * (conN * t list) list) list -> envC
 let build_tdefs tds =
   List.rev (List.flatten
-    (List.map 
+    (List.map
       (fun (tvs, tn, condefs) ->
          List.map
            (fun (conN, ts) ->
-              (conN, (List.length ts, 
+              (conN, (List.length ts,
                          {cn | forall ((cn,ts) MEM condefs) | true})))
            condefs)
       tds))
 
 (* Checks that no constructor is defined twice *)
-val check_dup_ctors : 
+val check_dup_ctors :
     forall 'a. (tvarN list * typeN * (conN * t list) list) list -> (conN,'a) env -> bool
 let check_dup_ctors tds envC =
   (forall ((tvs, tn, condefs) MEM tds) ((n, ts) MEM condefs).
    lookup n envC = None) &&
-  all_distinct 
+  all_distinct
     [ n | forall ((tvs, tn, condefs) MEM tds) ((n, ts) MEM condefs) | true ]
 
 (* Whole program state
@@ -585,7 +585,7 @@ type d_step_result =
 val d_step : d_state -> d_step_result
 let d_step (envC, env, ds, st) =
   match st with
-    | Some (p, (envC', env', Val v, [])) -> 
+    | Some (p, (envC', env', Val v, [])) ->
         match pmatch envC p v env with
           | Match env' -> Dstep (envC, env', ds, None)
           | No_match -> Draise Bind_error
@@ -593,7 +593,7 @@ let d_step (envC, env, ds, st) =
         end
     | Some (p, (envC, env', Raise err, [])) ->
         Draise err
-    | Some (p, (envC', env', e, c)) -> 
+    | Some (p, (envC', env', e, c)) ->
         match e_step (envC', env', e, c) with
           | Estep st -> Dstep (envC, env, ds, Some (p, st))
           | Etype_error -> Dtype_error
@@ -612,14 +612,14 @@ let d_step (envC, env, ds, st) =
           | (Dtype tds) :: ds ->
               if check_dup_ctors tds envC then
                 Dstep (merge (build_tdefs tds) envC, env, ds, None)
-              else 
+              else
                 Dtype_error
       end
   end
 
 (* Define a semantic function using the steps *)
 
-type error_result = 
+type error_result =
   | Rtype_error
   | Rraise of error
 
@@ -632,10 +632,10 @@ val small_eval : envC -> envE -> exp -> ctxt list -> v result -> bool
 val d_step_reln : d_state -> d_state -> bool
 val d_small_eval : envC -> envE -> dec list -> (pat * state) option -> envE result -> bool
 
-let e_step_reln st1 st2 = 
+let e_step_reln st1 st2 =
   (e_step st1 = Estep st2)
 
-let rec 
+let rec
 small_eval cenv env e c (Rval v) =
   exist env'. (rtc e_step_reln) (cenv,env,e,c) (cenv,env',Val v,[])
 and
@@ -643,7 +643,7 @@ small_eval cenv env e c (Rerr (Rraise err)) =
   exist env'. (rtc e_step_reln) (cenv,env,e,c) (cenv,env',Raise err,[])
 and
 small_eval cenv env e c (Rerr Rtype_error) =
-  exist env' e' c'. 
+  exist env' e' c'.
     (rtc e_step_reln) (cenv,env,e,c) (cenv,env',e',c') &&
     (e_step (cenv,env',e',c') = Etype_error)
 
@@ -655,7 +655,7 @@ let e_diverges cenv env e =
     exist cenv'' env'' e'' c''.
       e_step_reln (cenv',env',e',c') (cenv'',env'',e'',c'')
 
-let d_step_reln st st' = 
+let d_step_reln st st' =
   (d_step st = Dstep st')
 
 let rec
@@ -663,12 +663,12 @@ d_small_eval cenv env ds c (Rval env') =
   exist cenv'. (rtc d_step_reln) (cenv,env,ds,c) (cenv',env',[],None)
 and
 d_small_eval cenv env ds c (Rerr Rtype_error) =
-  exist cenv' env' ds' c'. 
+  exist cenv' env' ds' c'.
     (rtc d_step_reln) (cenv,env,ds,c) (cenv',env',ds',c') &&
     (d_step (cenv',env',ds',c') = Dtype_error)
 and
 d_small_eval cenv env ds c (Rerr (Rraise err)) =
-  exist cenv' env' ds' c'. 
+  exist cenv' env' ds' c'.
     (rtc d_step_reln) (cenv,env,ds,c) (cenv',env',ds',c') &&
     (d_step (cenv',env',ds',c') = Draise err)
 
@@ -975,7 +975,7 @@ and
 
 forall cenv env p e ds v.
 evaluate cenv env e (Rval v) &&
-pmatch cenv p v env = No_match 
+pmatch cenv p v env = No_match
 ==>
 evaluate_decs cenv env (Dlet p e :: ds) (Rerr (Rraise Bind_error))
 
@@ -983,7 +983,7 @@ and
 
 forall cenv env p e ds v.
 evaluate cenv env e (Rval v) &&
-pmatch cenv p v env = Match_type_error 
+pmatch cenv p v env = Match_type_error
 ==>
 evaluate_decs cenv env (Dlet p e :: ds) (Rerr (Rtype_error))
 
@@ -1026,12 +1026,12 @@ evaluate_decs cenv env (Dtype tds :: ds) (Rerr Rtype_error)
 
 (* ------------------------ Type system --------------------------------- *)
 
-(* The type system does not currently support let polymorphism, but does 
+(* The type system does not currently support let polymorphism, but does
 * support polymorphic datatypes *)
 
-(* constructor type environments: each constructor has a type 
+(* constructor type environments: each constructor has a type
  * forall (tyvarN list). t list -> typeN *)
-type tenvC = (conN, (tvarN list * t list * typeN)) env 
+type tenvC = (conN, (tvarN list * t list * typeN)) env
 (* Type environments *)
 type tenvE = (varN, tvarN list * t) env
 
@@ -1079,14 +1079,14 @@ let type_op op t1 t2 t3 =
 (* Check that a type definition defines no already defined (or duplicate)
  * constructors or types, and that the free type variables of each constructor
  * argument type are included in the type's type parameters. *)
-val check_ctor_tenv : 
+val check_ctor_tenv :
   tenvC -> (tvarN list * typeN * (conN * t list) list) list -> bool
 let check_ctor_tenv tenvC tds =
   check_dup_ctors tds tenvC &&
   List.for_all
     (fun (tvs,tn,ctors) ->
        all_distinct tvs &&
-       List.for_all 
+       List.for_all
          (fun (cn,ts) -> (List.for_all (check_freevars tvs) ts))
          ctors)
     tds &&
@@ -1096,8 +1096,8 @@ let check_ctor_tenv tenvC tds =
        List.for_all (fun (_,(_,_,tn')) -> tn <> tn') tenvC)
     tds
 
-val build_ctor_tenv : (tvarN list * typeN * (conN * t list) list) list -> tenvC 
-let build_ctor_tenv tds = 
+val build_ctor_tenv : (tvarN list * typeN * (conN * t list) list) list -> tenvC
+let build_ctor_tenv tds =
   List.flatten
     (List.map
        (fun (tvs,tn,ctors) ->
@@ -1443,12 +1443,12 @@ and
 
 forall cenv tenv cn vs es ts1 ts2 t tn ts' tvs.
 List.length tvs = List.length ts' &&
-type_es cenv tenv (List.rev (List.map Val vs)) 
+type_es cenv tenv (List.rev (List.map Val vs))
         (List.map (type_subst (List.combine tvs ts')) ts1) &&
 type_es cenv tenv es (List.map (type_subst (List.combine tvs ts')) ts2) &&
 lookup cn cenv = Some (tvs, ts1@[t]@ts2, tn)
 ==>
-type_ctxt cenv tenv (Ccon (Some cn) vs () es) (type_subst (List.combine tvs ts') t) 
+type_ctxt cenv tenv (Ccon (Some cn) vs () es) (type_subst (List.combine tvs ts') t)
           (Tapp ts' tn)
 
 indreln
@@ -1567,7 +1567,7 @@ and
 
 forall cenv c cs env v v' bv.
 evaluate_ctxt cenv env c v (Rval v') &&
-evaluate_ctxts cenv cs v' bv 
+evaluate_ctxts cenv cs v' bv
 ==>
 evaluate_ctxts cenv ((c,env)::cs) v bv
 
@@ -1594,14 +1594,14 @@ evaluate cenv env e (Rerr err)
 evaluate_state (cenv, env, e, c) (Rerr err)
 
 
-(* ------------------------------------------------------------------------- *) 
+(* ------------------------------------------------------------------------- *)
 
 (* A version of the big-step expression semantics that doesn't use the
  * constructor environment to know if a value is ok or not.  Is equivalent to
  * the normal one for well-typed programs. *)
 
 val pmatch' : pat -> v -> envE -> match_result
-let rec 
+let rec
 pmatch' (Pvar n) v' env = Match (bind n v' env)
 and
 pmatch' (Plit l) (Lit l') env =
