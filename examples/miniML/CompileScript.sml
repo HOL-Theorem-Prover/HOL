@@ -7,6 +7,8 @@ val _ = new_theory "Compile"
 
 open MiniMLTheory
 
+(*
+
 (*open MiniML*)
 
 (* Remove all ML data constructors and replace them with untyped tuples with
@@ -89,5 +91,8 @@ val _ = Defn.save_defn pat_remove_ctors_defn;
   (pat_remove_ctors cnmap p, remove_ctors cnmap e)::match_remove_ctors cnmap pes)`;
 
 val _ = Defn.save_defn remove_ctors_defn;
+
+*)
+
 val _ = export_theory()
 

@@ -2,6 +2,8 @@ open HolKernel bossLib MiniMLTheory listTheory bytecodeTheory lcsymtacs
 
 val _ = new_theory "compiler"
 
+(*
+
 val _ = Hol_datatype`
   compiler_state =
   <|
@@ -119,5 +121,7 @@ val compile_def = Define`
     let (e3,s) = compile (e3,s) in
     let n3     = s.next_label in
     (e1++(f n1 n2)++e2++[Jump n3]++e3, s))`
+
+*)
 
 val _ = export_theory ()
