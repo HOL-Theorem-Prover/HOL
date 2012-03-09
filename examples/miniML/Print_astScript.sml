@@ -44,7 +44,7 @@ val _ = Define `
 
 
 val _ = Define `
- infixes = ["+"; "-"; "*"; "/"; "mod"; "<"; ">"; "<="; ">="]`;
+ infixes = ["="; "+"; "-"; "*"; "div"; "mod"; "<"; ">"; "<="; ">="]`;
 
 
  val list_to_string_defn = Hol_defn "list_to_string" `
@@ -131,7 +131,7 @@ val _ = Defn.save_defn pat_to_string_defn;
       Plus => "+"
     | Minus => "-"
     | Times => "*"
-    | Divide => "/"
+    | Divide => "div"
     | Modulo => "mod"
   )
   in
