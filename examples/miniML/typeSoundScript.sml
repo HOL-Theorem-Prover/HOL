@@ -444,6 +444,8 @@ fs [final_state_def] >|
      rw [] >>
      fs [do_app_def, do_if_def, do_log_def] >|
      [every_case_tac >>
+          fs [],
+      every_case_tac >>
           fs [] >>
           qpat_assum `type_v tenvC (Recclosure x1 x2 x3) tpat`
                 (ASSUME_TAC o SIMP_RULE (srw_ss()) [Once type_v_cases]) >>
@@ -722,8 +724,13 @@ rw [] >|
                fs [hd (CONJUNCTS type_v_cases)] >>
                rw [] >>
                fs [type_op_cases] >>
-               rw [] >>
-               metis_tac [],
+               rw [] >| 
+               [rw [Once (hd (tl (CONJUNCTS type_v_cases)))] >>
+                    metis_tac [],
+                rw [Once (hd (tl (CONJUNCTS type_v_cases)))] >>
+                    metis_tac [],
+                metis_tac [],
+                metis_tac []],
            every_case_tac >>
                fs [] >>
                rw [type_e_val] >>

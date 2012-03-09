@@ -12,8 +12,6 @@ open MiniMLTheory
 
 (* TODO: use a built-in int_to_string *)
 
-(*val i : num -> Int.int*)
-
  val pos_int_to_string_defn = Hol_defn "pos_int_to_string" `
  (pos_int_to_string n =
   if int_gt n (& 0) then

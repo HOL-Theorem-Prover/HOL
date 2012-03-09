@@ -3,9 +3,6 @@ open MiniML
 
 (* TODO: use a built-in int_to_string *)
 
-val i : num -> Int.int
-sub [hol] i = (&)
-
 let rec pos_int_to_string n =
   if Int.(>) n (i 0) then
     let n' = Int.(%) n (i 10) in

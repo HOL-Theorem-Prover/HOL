@@ -20,6 +20,9 @@
  * semantics is also typical.  The small-step and big-step semantics agree even
  * on untyped programs. *)
 
+val i : num -> Int.int
+sub [hol] i = (&)
+
 val all_distinct : forall 'a. 'a list -> bool
 sub [hol] all_distinct = ALL_DISTINCT
 
@@ -152,6 +155,7 @@ type pat =
 (* Runtime errors *)
 type error =
   | Bind_error
+  | Div_error
 
 (* Expressions *)
 type exp =
@@ -399,6 +403,11 @@ let do_app env' op v1 v2 =
           | Some (n,e) -> Some (bind n v (build_rec_env funs env), e)
           | None -> None
         end
+    | (Opn op, Lit (IntLit n1), Lit (IntLit n2)) ->
+        if (op = Divide || op = Modulo) && n2 = i 0 then
+          Some (env',Raise Div_error)
+        else
+          Some (env',Val (Lit (IntLit (opn_lookup op n1 n2))))
     | (Opn op, Lit (IntLit n1), Lit (IntLit n2)) ->
         Some (env',Val (Lit (IntLit (opn_lookup op n1 n2))))
     | (Opb op, Lit (IntLit n1), Lit (IntLit n2)) ->

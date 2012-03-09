@@ -27,6 +27,8 @@ val _ = new_theory "MiniML"
  * semantics is also typical.  The small-step and big-step semantics agree even
  * on untyped programs. *)
 
+(*val i : num -> Int.int*)
+
 (*val all_distinct : forall 'a. 'a list -> bool*)
 
 (*val rtc : forall 'a. ('a -> 'a -> bool) -> ('a -> 'a -> bool)*)
@@ -189,7 +191,8 @@ val _ = Hol_datatype `
 (* Runtime errors *)
 val _ = Hol_datatype `
  error =
-    Bind_error`;
+    Bind_error
+  | Div_error`;
 
 
 (* Expressions *)
@@ -470,6 +473,11 @@ val _ = Define `
             SOME (n,e) => SOME (bind n v (build_rec_env funs env), e)
           | NONE => NONE
         )
+    | (Opn op, Lit (IntLit n1), Lit (IntLit n2)) =>
+        if ((op = Divide) \/ (op = Modulo)) /\ (n2 = & 0) then
+          SOME (env',Raise Div_error)
+        else
+          SOME (env',Val (Lit (IntLit (opn_lookup op n1 n2))))
     | (Opn op, Lit (IntLit n1), Lit (IntLit n2)) =>
         SOME (env',Val (Lit (IntLit (opn_lookup op n1 n2))))
     | (Opb op, Lit (IntLit n1), Lit (IntLit n2)) =>
