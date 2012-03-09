@@ -148,5 +148,24 @@ val def = mlDefine `
   hi n = if n = 0 then "!" else "hello " ++ hi (n-1:num)`
 
 
+(* qsort expanded *)
+
+val Eval_Var_lemma = prove(
+  ``Eval env (Var name) P = ?x. (lookup name env = SOME x) /\ P x``,
+  SIMP_TAC (srw_ss()) [Eval_def,Once MiniMLTheory.evaluate'_cases]);
+
+val Eval_QSORT_EXPANDED = save_thm("Eval_QSORT_EXPANDED",let
+  val qsort_eval = translate sortingTheory.QSORT_DEF;
+  val th = MATCH_MP Eval_Arrow qsort_eval
+  val th1 = ASSUME ``Eval env (Var "R") ((a --> a --> BOOL) R)``
+  val th = MATCH_MP th th1
+  val th = MATCH_MP Eval_Arrow th
+  val th1 = ASSUME ``Eval env (Var "xs") ((list a) xs)``
+  val th = MATCH_MP th th1
+  val th = REWRITE_RULE [Eval_def] th
+  val th = DISCH_ALL th
+  val th = SIMP_RULE std_ss [Eval_Var_lemma] th
+  in th end)
+
 val _ = export_theory();
 
