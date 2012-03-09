@@ -5,6 +5,7 @@ open HolKernel boolLib bossLib;
 
 open MiniMLTheory miniMLProofsTheory determTheory ml_translatorTheory;
 open arithmeticTheory listTheory combinTheory pairTheory;
+open integerTheory;
 
 infix \\ val op \\ = op THEN;
 
@@ -33,6 +34,7 @@ in
       in ``Arrow (^(get_type_inv t1)) (^(get_type_inv t2))`` end else
     if ty = ``:bool`` then ``BOOL`` else
     if ty = ``:num`` then ``NUM`` else
+    if ty = ``:int`` then ``INT`` else
       (!other_types) ty handle HOL_ERR _ => raise UnsupportedType ty
   fun new_type_inv f = let
     val old = (!other_types)
@@ -361,7 +363,7 @@ fun register_term_types tm = let
   fun every_term f tm =
     ((if is_abs tm then every_term f (snd (dest_abs tm)) else
       if is_comb tm then (every_term f (rand tm); every_term f (rator tm)) else ()); f tm)
-  val special_types = [``:num``,``:bool``] @ get_user_supplied_types ()
+  val special_types = [``:num``,``:int``,``:bool``] @ get_user_supplied_types ()
   fun ignore_type ty =
     if can (first (fn ty1 => can (match_type ty1) ty)) special_types then true else
     if not (can dest_type ty) then true else
@@ -683,18 +685,27 @@ fun collect_pres th = let
 fun dest_builtin_binop tm = let
   val (px,y) = dest_comb tm
   val (p,x) = dest_comb px
-  in (p,x,y,if p = ``($+):num->num->num`` then Eval_ADD else
-            if p = ``($-):num->num->num`` then Eval_SUB else
-            if p = ``($*):num->num->num`` then Eval_MULT else
-            if p = ``($DIV):num->num->num`` then Eval_DIV else
-            if p = ``($MOD):num->num->num`` then Eval_MOD else
-            if p = ``($<):num->num->bool`` then Eval_LESS else
-            if p = ``($<=):num->num->bool`` then Eval_LESS_EQ else
-            if p = ``($>):num->num->bool`` then Eval_GREATER else
-            if p = ``($>=):num->num->bool`` then Eval_GREATER_EQ else
-            if p = ``($/\):bool->bool->bool`` then Eval_And else
-            if p = ``($\/):bool->bool->bool`` then Eval_Or else
-            if p = ``($==>):bool->bool->bool`` then Eval_Implies else
+  in (p,x,y,if p = ``($+):num->num->num`` then SPEC_ALL Eval_NUM_ADD else
+            if p = ``($-):num->num->num`` then SPEC_ALL Eval_NUM_SUB else
+            if p = ``($*):num->num->num`` then SPEC_ALL Eval_NUM_MULT else
+            if p = ``($DIV):num->num->num`` then SPEC_ALL Eval_NUM_DIV else
+            if p = ``($MOD):num->num->num`` then SPEC_ALL Eval_NUM_MOD else
+            if p = ``($<):num->num->bool`` then SPEC_ALL Eval_NUM_LESS else
+            if p = ``($<=):num->num->bool`` then SPEC_ALL Eval_NUM_LESS_EQ else
+            if p = ``($>):num->num->bool`` then SPEC_ALL Eval_NUM_GREATER else
+            if p = ``($>=):num->num->bool`` then SPEC_ALL Eval_NUM_GREATER_EQ else
+            if p = ``($+):int->int->int`` then SPEC_ALL Eval_INT_ADD else
+            if p = ``($-):int->int->int`` then SPEC_ALL Eval_INT_SUB else
+            if p = ``($*):int->int->int`` then SPEC_ALL Eval_INT_MULT else
+            if p = ``($/):int->int->int`` then SPEC_ALL Eval_INT_DIV else
+            if p = ``($%):int->int->int`` then SPEC_ALL Eval_INT_MOD else
+            if p = ``($<):int->int->bool`` then SPEC_ALL Eval_INT_LESS else
+            if p = ``($<=):int->int->bool`` then SPEC_ALL Eval_INT_LESS_EQ else
+            if p = ``($>):int->int->bool`` then SPEC_ALL Eval_INT_GREATER else
+            if p = ``($>=):int->int->bool`` then SPEC_ALL Eval_INT_GREATER_EQ else
+            if p = ``($/\):bool->bool->bool`` then SPEC_ALL Eval_And else
+            if p = ``($\/):bool->bool->bool`` then SPEC_ALL Eval_Or else
+            if p = ``($==>):bool->bool->bool`` then SPEC_ALL Eval_Implies else
               failwith("Not a builtin operator"))
   end
 
@@ -826,6 +837,7 @@ fun hol2deep tm =
     in check_inv "var" tm result end else
   (* constants *)
   if numSyntax.is_numeral tm then SPEC tm Eval_Val_NUM else
+  if intSyntax.is_int_literal tm then SPEC tm Eval_Val_INT else
   if (tm = T) orelse (tm = F) then SPEC tm Eval_Val_BOOL else
   if (* is_const tm andalso *) can lookup_cert tm then let
     val th = lookup_cert tm
@@ -867,7 +879,7 @@ fun hol2deep tm =
     val (p,x1,x2,lemma) = dest_builtin_binop tm
     val th1 = hol2deep x1
     val th2 = hol2deep x2
-    val result = MATCH_MP (MATCH_MP lemma th1) th2
+    val result = MATCH_MP (MATCH_MP lemma th1) th2 |> UNDISCH_ALL
     in check_inv "binop" tm result end else
   (* boolean not *)
   if can (match_term ``~(b:bool)``) tm then let
@@ -926,6 +938,11 @@ fun hol2deep tm =
 
 (* collect precondition *)
 
+val PRECONDITION_EQ_CONTAINER = prove(
+  ``(PRECONDITION p = CONTAINER p) /\
+    (CONTAINER ~p = ~CONTAINER p) /\ CONTAINER T``,
+  EVAL_TAC);
+
 fun extract_precondition th pre_var is_rec =
   if not is_rec then if is_imp (concl th) then let
     val c = (REWRITE_CONV [CONTAINER_def,PRECONDITION_def] THENC
@@ -963,8 +980,9 @@ fun extract_precondition th pre_var is_rec =
     val pre_v = repeat rator pre_var
     val true_pre = list_mk_abs ((dest_args pre_var), T)
     val tm3 = subst [pre_v |-> true_pre] tm2
-    val res = QCONV (REWRITE_CONV [rw2,PreImp_def,PRECONDITION_def]) tm3 |> concl |> rand
+    val res = QCONV (REWRITE_CONV [rw2,PreImp_def,PRECONDITION_def,CONTAINER_def]) tm3 |> concl |> rand
     val th5 = INST [pre_v |-> true_pre] th
+                |> SIMP_RULE bool_ss [PRECONDITION_EQ_CONTAINER]
                 |> PURE_REWRITE_RULE [PreImp_def,PRECONDITION_def]
                 |> CONV_RULE (DEPTH_CONV BETA_CONV THENC
                               (RATOR_CONV o RAND_CONV) (REWRITE_CONV []))

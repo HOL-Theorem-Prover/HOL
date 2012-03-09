@@ -61,16 +61,16 @@ val def = mlDefine `
   foo f x = f (f x (\x. x))`
 
 val def = mlDefine `
-  n_times n f x = if n = 0 then x else n_times (n-1) f (f x)`
+  n_times n f x = if n = 0:num then x else n_times (n-1) f (f x)`
 
 val def = mlDefine `
-  fac_gcd k m n = if k = 0 then k else fac_gcd (k-1) (fac (gcd m n)) n`
+  fac_gcd k m n = if k = 0:num then k else fac_gcd (k-1) (fac (gcd m n)) n`
 
 val def = mlDefine `
-  nlist n = if n = 0 then [] else n :: nlist (n-1)`;
+  nlist n = if n = 0:num then [] else n :: nlist (n-1)`;
 
 val def = mlDefine `
-  rhs n = if n = 0 then INR n else INL n`;
+  rhs n = if n = 0:num then INR n else INL n`;
 
 val def = mlDefine `
   rhs_option n = if n = 0 then INL NONE else INR (SOME n)`;
@@ -95,7 +95,7 @@ val def = mlDefine `
 
 val def = mlDefine `
   (list_test3 [] ys = 0) /\
-  (list_test3 (1::xs) ys = 1) /\
+  (list_test3 ((1:num)::xs) ys = 1) /\
   (list_test3 (2::xs) ys = 2 + list_test3 xs ys) /\
   (list_test3 _ ys = LENGTH ys)`;
 
@@ -115,7 +115,7 @@ val EqualityType_CHAR = prove(
   |> store_eq_thm;
 
 val Eval_Val_CHAR = prove(
-  ``n < 256 ==> Eval env (Val (Lit (Num n))) (CHAR (CHR n))``,
+  ``n < 256 ==> Eval env (Val (Lit (IntLit (&n)))) (CHAR (CHR n))``,
   SIMP_TAC (srw_ss()) [Eval_Val_NUM,CHAR_def])
   |> store_eval_thm;
 
