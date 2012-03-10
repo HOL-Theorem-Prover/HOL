@@ -167,5 +167,29 @@ val Eval_QSORT_EXPANDED = save_thm("Eval_QSORT_EXPANDED",let
   val th = SIMP_RULE std_ss [Eval_Var_lemma] th
   in th end)
 
+  (*
+val ML_QSORT_CORRECT = Q.store_thm ("ML_QSORT_CORRECT",
+`!env a ord R l xs.
+  (lookup "QSORT" env = SOME (Recclosure QSORT_env QSORT_ml "QSORT")) ∧
+  (lookup "PARTITION" QSORT_env =
+   SOME (Closure PARTITION_env "P" PARTITION_ml)) ∧
+  (lookup "APPEND" QSORT_env =
+   SOME (Recclosure APPEND_env APPEND_ml "APPEND")) ∧
+  (lookup "PART" PARTITION_env =
+   SOME (Recclosure PART_env PART_ml "PART")) ∧
+  list a l xs ∧
+  (a --> a --> BOOL) ord R ∧ 
+  transitive ord ∧ total ord
+  ⇒
+  ?l' xs'. 
+  evaluate' env 
+            (App Opapp (App Opapp (Var "QSORT") (Val R)) (Val xs))
+            (Rval xs') ∧
+  (list a l' xs') ∧ PERM l l' ∧ SORTED ord l'`,
+ALL_TAC);
+*)
+
+
+
 val _ = export_theory();
 
