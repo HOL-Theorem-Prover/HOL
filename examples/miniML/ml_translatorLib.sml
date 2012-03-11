@@ -647,6 +647,8 @@ fun find_ind_thm def = let
   val ind = fetch (#Thy r) ((#Name r) ^ "_ind")
             handle HOL_ERR _ =>
             fetch (#Thy r) ((#Name r) ^ "_IND")
+            handle HOL_ERR _ =>
+            fetch (#Thy r) ("ConstMult_ind")
   in ind end
 
 fun rename_bound_vars_rule prefix th = let
@@ -808,7 +810,7 @@ local
   val memory = ref (tl [(T,TRUTH)])
 in
   fun store_cert const th =
-    ((if is_const const then save_thm("Eval_" ^ fst (dest_const const) ^ "_thm", th) else TRUTH);
+    (((if is_const const then save_thm("Eval_" ^ fst (dest_const const) ^ "_thm", th) else TRUTH) handle HOL_ERR _ => TRUTH);
      memory := (const,th)::(!memory))
   fun lookup_cert const = snd (first (fn (c,_) => can (match_term c) const) (!memory))
   fun delete_cert const = (memory := filter (fn (c,_) => c <> const) (!memory))
@@ -979,6 +981,7 @@ fun hol2deep tm =
 (*
 val tm = f
 val tm = rhs
+val tm = z
 *)
 
 (* collect precondition *)
