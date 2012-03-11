@@ -76,8 +76,8 @@ srw_tac [BAG_ss]
 
 val leftist_heap_merge_ok = Q.store_thm ("leftist_heap_merge_ok",
 `!get_key leq h1 h2.
-  WeakLinearOrder leq ∧ 
-  leftist_heap_ok get_key leq h1 ∧ 
+  WeakLinearOrder leq ∧
+  leftist_heap_ok get_key leq h1 ∧
   leftist_heap_ok get_key leq h2
   ⇒
   leftist_heap_ok get_key leq (merge get_key leq h1 h2)`,
@@ -106,21 +106,21 @@ rw [insert_def, leftist_heap_merge_bag, leftist_heap_to_bag_def,
     BAG_INSERT_UNION]);
 
 val leftist_heap_insert_ok = Q.store_thm ("leftist_heap_insert_ok",
-`!get_key leq x h. 
-  WeakLinearOrder leq ∧ leftist_heap_ok get_key leq h 
-  ⇒ 
+`!get_key leq x h.
+  WeakLinearOrder leq ∧ leftist_heap_ok get_key leq h
+  ⇒
   leftist_heap_ok get_key leq (insert get_key leq x h)`,
 rw [insert_def] >>
-`leftist_heap_ok get_key leq (Node 1 x Empty Empty)` 
+`leftist_heap_ok get_key leq (Node 1 x Empty Empty)`
          by rw [leftist_heap_ok_def, leftist_heap_to_bag_def] >>
 metis_tac [leftist_heap_merge_ok]);
 
 val leftist_heap_find_min_thm = Q.store_thm ("leftist_heap_find_min_thm",
-`!h get_key leq. 
-  WeakLinearOrder leq ∧ (h ≠ Empty) ∧ leftist_heap_ok get_key leq h 
+`!h get_key leq.
+  WeakLinearOrder leq ∧ (h ≠ Empty) ∧ leftist_heap_ok get_key leq h
   ⇒
   BAG_IN (find_min h) (leftist_heap_to_bag h) ∧
-  (!y. BAG_IN y (leftist_heap_to_bag h) ⇒ 
+  (!y. BAG_IN y (leftist_heap_to_bag h) ⇒
        leq (get_key (find_min h)) (get_key y))`,
 rw [] >>
 cases_on `h` >>

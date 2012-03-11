@@ -1,29 +1,35 @@
 
 open HolKernel Parse boolLib bossLib; val _ = new_theory "BankersQueue";
 
-open listTheory arithmeticTheory;
+open listTheory arithmeticTheory ml_translatorLib;
+
+(* setting up the translator *)
+
+val res = translate listTheory.REV_DEF;
+val res = translate listTheory.REVERSE_REV;
+val res = translate listTheory.APPEND;
 
 (* implementation *)
 
 val _ = Hol_datatype `queue = QUEUE of num => 'a list => num => 'a list`;
 
-val empty_def = Define `empty = QUEUE 0 [] 0 []`;
+val empty_def = mlDefine `empty = QUEUE 0 [] 0 []`;
 
-val is_empty_def = Define `
+val is_empty_def = mlDefine `
   is_empty (QUEUE lenf _ _ _) = (lenf = 0)`;
 
-val checkf_def = Define `
+val checkf_def = mlDefine `
   checkf (QUEUE lenf f lenr r) =
     if lenr <= lenf then QUEUE lenf f lenr r
                     else QUEUE (lenf + lenr) (f ++ REVERSE r) 0 []`;
 
-val snoc_def = Define `
+val snoc_def = mlDefine `
   snoc (QUEUE lenf f lenr r) x = checkf (QUEUE lenf f (lenr+1) (x::r))`;
 
-val head_def = Define `
+val head_def = mlDefine `
   head (QUEUE lenf (x::xs) lenr r) = x`;
 
-val tail_def = Define `
+val tail_def = mlDefine `
   tail (QUEUE lenf (x::xs) lenr r) = checkf (QUEUE (lenf-1) xs lenr r)`;
 
 (* verification proof *)

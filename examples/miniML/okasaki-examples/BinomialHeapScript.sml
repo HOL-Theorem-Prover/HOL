@@ -55,7 +55,7 @@ val merge_def = Define `
     t1 :: merge get_key leq ts1 (t2::ts2)
   else if rank t2 < rank t1 then
     t2 :: merge get_key leq (t1::ts1) ts2
-  else 
+  else
     ins_tree get_key leq (link get_key leq t1 t2) (merge get_key leq ts1 ts2))`;
 
 val remove_min_tree_def = Define `

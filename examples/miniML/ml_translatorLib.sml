@@ -241,7 +241,8 @@ fun derive_thms_for_type ty = let
     val patterns = listSyntax.mk_list(patterns,``:pat # exp``)
     val ret_inv = get_type_inv ret_ty
     val result = mk_comb(ret_inv,exp)
-    val result = ``Eval env (Mat exp ^patterns) ^result``
+    val exp_var = mk_var("exp", ``:exp``)
+    val result = ``Eval env (Mat ^exp_var ^patterns) ^result``
     (* assums *)
     val vs = map (fn (n,f,fxs,pxs,tm,exp,xs) => map (fn (x,_,_) => x) xs) ts |> flatten
     val b0 = mk_var("b0",``:bool``)
@@ -268,7 +269,7 @@ fun derive_thms_for_type ty = let
       in tm end;
     val hyps = map mk_hyp ts
     val x = mk_comb(rator (rator inv_lhs),input_var)
-    val hyp0 = ``TAG 0 (b0 ==> Eval env exp ^x)``
+    val hyp0 = ``TAG 0 (b0 ==> Eval env ^exp_var ^x)``
     val hyps = list_mk_conj(hyp0::hyps)
     val goal = mk_imp(hyps,result)
     val init_tac =
@@ -434,8 +435,6 @@ val last_fail = ref T;
   val tm = !last_fail
 *)
 
-val tm = rhs
-
 fun inst_case_thm tm hol2deep = let
   val th = inst_case_thm_for tm
   val th = CONV_RULE (RATOR_CONV (PURE_REWRITE_CONV [CONJ_ASSOC])) th
@@ -582,10 +581,10 @@ fun single_line_def def = let
   val c1 = curried |> SPEC_ALL |> concl |> dest_eq |> fst |> repeat rator
   val tupled = fetch "-" "generated_definition_tupled_primitive_def"
   val ind = fetch "-" "generated_definition_ind"
-            |> Q.SPEC `\x. P`
+            |> Q.SPEC `\x. very_unlikely_name`
             |> CONV_RULE (DEPTH_CONV BETA_CONV)
             |> CONV_RULE (RAND_CONV (SIMP_CONV std_ss []))
-            |> Q.GEN `P`
+            |> Q.GEN `very_unlikely_name`
   val cc = tupled |> concl |> dest_eq |> fst
   val (v,tm) = tupled |> concl |> rand |> rand |> dest_abs
   val (a,tm) = dest_abs tm
@@ -606,7 +605,7 @@ fun single_line_def def = let
     SIMP_TAC std_ss [FUN_EQ_THM,FORALL_PROD] \\ SRW_TAC [] []
     \\ REPEAT BasicProvers.FULL_CASE_TAC
     \\ CONV_TAC (RATOR_CONV (ONCE_REWRITE_CONV [def]))
-    \\ SRW_TAC [] []
+    \\ SRW_TAC [] [] \\ CONV_TAC (DEPTH_CONV ETA_CONV)
     \\ POP_ASSUM MP_TAC \\ REWRITE_TAC [PRECONDITION_def])
     |> REWRITE_RULE [EVAL ``PRECONDITION T``]
     |> UNDISCH_ALL |> CONV_RULE (BINOP_CONV (REWR_CONV CONTAINER_def))
@@ -628,7 +627,9 @@ fun remove_pair_abs def = let
       \\ SIMP_TAC std_ss [Once def]);
     in delete_pair_arg lemma end handle HOL_ERR _ => def
   val def = delete_pair_arg def
-  val def = SIMP_RULE std_ss [UNCURRY_SIMP] def
+  val def = (* if can (find_term (can (match_term ``UNCURRY``))) (concl def) then *)
+              SIMP_RULE std_ss [UNCURRY_SIMP] def
+            (* else def *)
   in def end
 
 fun is_rec_def def = let
@@ -648,10 +649,22 @@ fun find_ind_thm def = let
             fetch (#Thy r) ((#Name r) ^ "_IND")
   in ind end
 
+fun rename_bound_vars_rule prefix th = let
+  val i = ref 0
+  fun next_name () = (i:= !i+1; prefix ^ int_to_string (!i))
+  fun next_var v = mk_var(next_name (), type_of v)
+  fun next_alpha_conv tm = let
+    val (v,_) = dest_abs tm
+    val _ = not (String.isPrefix prefix (fst (dest_var v))) orelse fail()
+    in ALPHA_CONV (next_var v) tm end handle HOL_ERR _ => NO_CONV tm
+  in CONV_RULE (DEPTH_CONV next_alpha_conv) th end
+
 fun preprocess_def def = let
   val is_rec = is_rec_def def
   val (def,ind) = single_line_def def
+  val def = RW1 [GSYM TRUE_def, GSYM FALSE_def] def
   val def = remove_pair_abs def |> SPEC_ALL
+  val def = rename_bound_vars_rule "bound_" def
   val ind = if is_rec andalso is_NONE ind then SOME (find_ind_thm def) else ind
   val def = if def |> SPEC_ALL |> concl |> dest_eq |> fst |> is_const
             then SPEC_ALL (RW1 [FUN_EQ_THM] def) else def
@@ -729,10 +742,22 @@ fun inst_Eval_env v th = let
                |> DISCH new_assum
   in th1 end;
 
+val PUSH_FORALL_INTO_IMP =
+  METIS_PROVE [] ``!P Q. (!x. P x ==> Q x) ==> (!x. P x) ==> (!x. Q x)``
+
+fun FORCE_GEN v th1 = GEN v th1 handle HOL_ERR _ => let
+  val hs = hyp th1
+  val xs = filter (fn tm => mem v (free_vars tm)) hs
+  val th2 =  DISCH T th1
+  val th3 = foldr (fn (tm,th) => ONCE_REWRITE_RULE [AND_IMP_INTRO] (DISCH tm th)) th2 xs
+  val th4 = GEN v th3
+  val th4 = HO_MATCH_MP PUSH_FORALL_INTO_IMP th4
+  in UNDISCH th4 end
+
 fun apply_Eval_Fun v th fix = let
   val th1 = inst_Eval_env v th
   val th2 = if fix then MATCH_MP Eval_Fun_Fix (GEN ``v:v`` th1)
-                   else MATCH_MP Eval_Fun (GEN ``v:v`` (GEN v th1))
+                   else MATCH_MP Eval_Fun (GEN ``v:v`` (FORCE_GEN v th1))
   in th2 end;
 
 fun apply_Eval_Recclosure fname v th = let
@@ -827,6 +852,19 @@ fun check_inv name tm result = let
     val _ = print "\n\n\n"
     in failwith("checkinv") end end
 
+fun MY_MATCH_MP th1 th2 = let
+  val tm1 = fst (dest_imp (concl th1))
+  val tm2 = concl th2
+  val (s,i) = match_term tm1 tm2
+  in MP (INST s (INST_TYPE i th1)) th2 end;
+
+fun force_remove_fix thx = let
+  val pat = Fix_def |> SPEC_ALL |> concl |> dest_eq |> fst
+  val xs = map rand (find_terms (can (match_term pat)) (concl thx))
+  val s = SIMP_RULE std_ss [Eval_FUN_FORALL_EQ,FUN_QUANT_SIMP]
+  val thx = foldr (fn (x,th) => s (FORCE_GEN x th)) thx xs
+  in thx end;
+
 fun hol2deep tm =
   (* variables *)
   if is_var tm then let
@@ -839,12 +877,13 @@ fun hol2deep tm =
   if numSyntax.is_numeral tm then SPEC tm Eval_Val_NUM else
   if intSyntax.is_int_literal tm then SPEC tm Eval_Val_INT else
   if (tm = T) orelse (tm = F) then SPEC tm Eval_Val_BOOL else
+  if (tm = ``TRUE``) orelse (tm = ``FALSE``) then SPEC tm Eval_Val_BOOL else
   if (* is_const tm andalso *) can lookup_cert tm then let
     val th = lookup_cert tm
     val res = th |> UNDISCH_ALL |> concl |> rand
     val inv = get_type_inv (type_of tm)
     val target = mk_comb(inv,tm)
-    val (ss,ii) = match_term res target
+    val (ss,ii) = match_term res target handle HOL_ERR _ => ([],[])
     val result = INST ss (INST_TYPE ii th)
     in check_inv "lookup_cert" tm result end else
   (* data-type constructor *)
@@ -920,7 +959,9 @@ fun hol2deep tm =
     val (f,x) = dest_comb tm
     val thf = hol2deep f
     val thx = hol2deep x
-    val result = MATCH_MP (MATCH_MP Eval_Arrow thf) thx
+    val thx = force_remove_fix thx
+    val result = MATCH_MP (MATCH_MP Eval_Arrow thf) thx handle HOL_ERR _ =>
+                 MY_MATCH_MP (MATCH_MP Eval_Arrow thf) (MATCH_MP Eval_Fix thx)
     in check_inv "comb" tm result end else
   (* lambda applications *)
   if is_abs tm then let
@@ -935,6 +976,10 @@ fun hol2deep tm =
     in check_inv "arb" tm result end
   else failwith("Cannor translate: " ^ term_to_string tm)
 
+(*
+val tm = f
+val tm = rhs
+*)
 
 (* collect precondition *)
 
@@ -943,6 +988,12 @@ val PRECONDITION_EQ_CONTAINER = prove(
     (CONTAINER ~p = ~CONTAINER p) /\ CONTAINER T``,
   EVAL_TAC);
 
+val CONTAINER_NOT_ZERO = prove(
+  ``!P. (~(CONTAINER (b = 0)) ==> P b) =
+        !n. (CONTAINER (b = SUC n)) ==> P (SUC n:num)``,
+  REPEAT STRIP_TAC THEN Cases_on `b`
+  THEN EVAL_TAC THEN SRW_TAC [] [ADD1]);
+
 fun extract_precondition th pre_var is_rec =
   if not is_rec then if is_imp (concl th) then let
     val c = (REWRITE_CONV [CONTAINER_def,PRECONDITION_def] THENC
@@ -950,12 +1001,15 @@ fun extract_precondition th pre_var is_rec =
     val c = (RATOR_CONV o RAND_CONV) c
     val th = CONV_RULE c th
     val rhs = th |> concl |> dest_imp |> fst |> rand
+    in if free_vars rhs = [] then
+      UNDISCH_ALL (SIMP_RULE std_ss [EVAL ``PRECONDITION T``] th)
+    else let
     val def_tm = mk_eq(pre_var,rhs)
     val pre_def = Define [ANTIQUOTE def_tm]
     val c = REWR_CONV (GSYM pre_def)
     val c = (RATOR_CONV o RAND_CONV o RAND_CONV) c
     val th = CONV_RULE c th |> UNDISCH_ALL
-    in th end else th
+    in th end end else th
   else let
   fun rename_bound_vars_rule th = let
     val i = ref 0
@@ -966,14 +1020,17 @@ fun extract_precondition th pre_var is_rec =
       val _ = not (String.isPrefix "v__" (fst (dest_var v))) orelse fail()
       in ALPHA_CONV (next_var v) tm end handle HOL_ERR _ => NO_CONV tm
     in CONV_RULE (DEPTH_CONV next_alpha_conv) th end
+  val th = SIMP_RULE bool_ss [CONTAINER_NOT_ZERO] th
   val th = rename_bound_vars_rule th
+  val th = CONV_RULE ((RATOR_CONV o RAND_CONV) (REWRITE_CONV [GSYM AND_IMP_INTRO])) th
   val tm = concl th |> dest_imp |> fst
   fun replace_any_match pat tm = let
     val xs = find_terms (can (match_term pat)) tm
     in subst (map (fn x => x |-> T) xs) tm end
   val rw1 = mk_thm([],``PRECONDITION b = T``)
   val tm1 = QCONV (REWRITE_CONV [rw1]) tm |> concl |> rand
-  val rw2 = mk_thm([],``Eval env exp P``)
+  val pat = Eval_def |> SPEC_ALL |> concl |> dest_eq |> fst
+  val rw2 = mk_thm([],pat)
   val tm2 = QCONV (REWRITE_CONV [rw2,PreImp_def]) tm |> concl |> rand
   (* check whether the precondition is T *)
   val (no_pre,th5) = let
@@ -993,12 +1050,14 @@ fun extract_precondition th pre_var is_rec =
     val (v,tm) = dest_forall tm
     val (vs,tm) = list_dest_forall tm
     in (v::vs,tm) end handle HOL_ERR _ => ([],tm)
+  fun my_list_mk_conj [] = T
+    | my_list_mk_conj xs = list_mk_conj xs
   fun list_dest f tm = let val (x,y) = f tm
                        in list_dest f x @ list_dest f y end handle HOL_ERR _ => [tm]
   val list_dest_conj = list_dest dest_conj
   val tms = list_dest_conj tm2
-  val tm = first is_forall tms
-  val others = list_mk_conj (filter (fn x => x <> tm) tms)
+  val tm = first is_forall tms handle HOL_ERR _ => first is_imp tms
+  val others = my_list_mk_conj (filter (fn x => x <> tm) tms)
   val pat = ``CONTAINER (x = y:'a) ==> z``
   fun dest_container_eq_imp tm = let
     val _ = match_term pat tm
@@ -1090,7 +1149,7 @@ fun translate def = let
   (* collect precondition *)
   val th = CONV_RULE ((RATOR_CONV o RAND_CONV)
                       (SIMP_CONV std_ss [])) th
-  val th = extract_precondition th pre_var is_rec
+  val th = if no_params then th else extract_precondition th pre_var is_rec
   (* apply induction *)
   val th = if not is_rec then th else let
     val th = REWRITE_RULE [CONTAINER_def] th
@@ -1106,7 +1165,10 @@ fun translate def = let
       \\ SIMP_TAC std_ss [FORALL_PROD]
       \\ MATCH_MP_TAC (SPEC hyp_tm (the ind) |> CONV_RULE (DEPTH_CONV BETA_CONV))
       \\ REPEAT STRIP_TAC \\ MATCH_MP_TAC th
-      \\ FULL_SIMP_TAC (srw_ss()) [] \\ METIS_TAC []);
+      \\ FULL_SIMP_TAC (srw_ss()) [ADD1]
+      \\ REPEAT STRIP_TAC
+      \\ FULL_SIMP_TAC (srw_ss()) [ADD1]
+      \\ METIS_TAC []);
     val th = UNDISCH lemma |> SPECL (rev rev_params)
     val th = RW [PreImp_def] th |> UNDISCH_ALL
     in th end
@@ -1118,10 +1180,10 @@ fun translate def = let
   val code_name = fname ^ "_ml"
   val th = DISCH_ALL th
   val code_tm = if no_params then th |> concl |> dest_imp |> fst |> rand |> rand else
-                (find_term (can (match_term ``Recclosure env (f::fns) name``)) (concl th))
+                (find_term (can (match_term ``Recclosure i (f::fns) n``)) (concl th))
                 |> rator |> rand
                 handle HOL_ERR _ =>
-                rand (find_term (can (match_term ``Closure env name exp``)) (concl th))
+                rand (find_term (can (match_term ``Closure i n (f x)``)) (concl th))
   val code_abbrev = new_definition(code_name ^ "_def",
     mk_eq(mk_var(code_name,type_of code_tm),code_tm))
   val th = REWRITE_RULE [GSYM code_abbrev] th |> UNDISCH_ALL

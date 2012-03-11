@@ -1,35 +1,43 @@
 
 open HolKernel Parse boolLib bossLib; val _ = new_theory "PhysicistsQueue";
 
-open listTheory arithmeticTheory;
+open listTheory arithmeticTheory ml_translatorLib;
+
+(* setting up the translator *)
+
+val res = translate listTheory.REV_DEF;
+val res = translate listTheory.REVERSE_REV;
+val res = translate listTheory.APPEND;
+val res = translate listTheory.TL;
 
 (* implementation *)
 
 val _ = Hol_datatype `queue = QUEUE of 'a list => num => 'a list => num => 'a list`;
 
-val empty_def = Define `empty = QUEUE [] 0 [] 0 []`;
+val empty_def = mlDefine `
+  empty = QUEUE [] 0 [] 0 []`;
 
-val is_empty_def = Define `
+val is_empty_def = mlDefine `
   is_empty (QUEUE _ lenf _ _ _) = (lenf = 0)`;
 
-val checkw_def = Define `
+val checkw_def = mlDefine `
   (checkw (QUEUE [] lenf f lenr r) = QUEUE f lenf f lenr r) /\
   (checkw q = q)`;
 
-val check_def = Define `
+val check_def = mlDefine `
   check (QUEUE w lenf f lenr r) =
     if lenr <= lenf
       then checkw (QUEUE w lenf f lenr r)
       else checkw (QUEUE f (lenf + lenr) (f ++ REVERSE r) 0 [])`;
 
-val snoc_def = Define `
+val snoc_def = mlDefine `
   snoc (QUEUE w lenf f lenr r) x =
     check (QUEUE w lenf f (lenr+1) (x::r))`;
 
-val head_def = Define `
+val head_def = mlDefine `
   head (QUEUE (x::xs) lenf f lenr r) = x`;
 
-val tail_def = Define `
+val tail_def = mlDefine `
   tail (QUEUE (x::xs) lenf f lenr r) = check (QUEUE xs (lenf-1) (TL f) lenr r)`;
 
 (* verification proof *)

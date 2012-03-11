@@ -1,33 +1,38 @@
 
 open HolKernel Parse boolLib bossLib; val _ = new_theory "RealTimeQueue";
 
-open listTheory arithmeticTheory;
+open listTheory arithmeticTheory ml_translatorLib;
+
+(* setting up the translator *)
+
+val res = translate listTheory.APPEND;
 
 (* implementation *)
 
 val _ = Hol_datatype `queue = QUEUE of 'a list => 'a list => 'a list`;
 
-val empty_def = Define `empty = QUEUE [] [] []`;
+val empty_def = mlDefine `
+  empty = QUEUE [] [] []`;
 
-val is_empty_def = Define `
+val is_empty_def = mlDefine `
   (is_empty (QUEUE [] _ _) = T) /\
   (is_empty _ = F)`;
 
-val rotate_def = Define `
+val rotate_def = mlDefine `
   (rotate (QUEUE [] (y::_) a) = y::a) /\
   (rotate (QUEUE (x::xs) (y::ys) a) = x::rotate (QUEUE xs ys (y::a)))`
 
-val exec_def = Define `
+val exec_def = mlDefine `
   (exec (QUEUE f r (x::s)) = QUEUE f r s) /\
   (exec (QUEUE f r []) = let f = rotate (QUEUE f r []) in QUEUE f [] f)`
 
-val snoc_def = Define `
+val snoc_def = mlDefine `
   snoc (QUEUE f r s) x = exec (QUEUE f (x::r) s)`;
 
-val head_def = Define `
+val head_def = mlDefine `
   head (QUEUE (x::f) r s) = x`;
 
-val tail_def = Define `
+val tail_def = mlDefine `
   tail (QUEUE (x::f) r s) = exec (QUEUE f r s)`;
 
 (* verification proof *)

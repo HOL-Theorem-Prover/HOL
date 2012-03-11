@@ -500,5 +500,8 @@ val num_case_thm = store_thm("num_case_thm",
   SIMP_TAC std_ss [FUN_EQ_THM,num_case_def] \\ Cases_on `n`
   \\ EVAL_TAC \\ SIMP_TAC std_ss []);
 
+val FALSE_def = Define `FALSE = F`;
+val TRUE_def = Define `TRUE = T`;
+
 val _ = export_theory();
 

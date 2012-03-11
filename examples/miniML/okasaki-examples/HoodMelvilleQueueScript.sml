@@ -1,7 +1,11 @@
 
 open HolKernel Parse boolLib bossLib; val _ = new_theory "HoodMelvilleQueue";
 
-open listTheory arithmeticTheory;
+open listTheory arithmeticTheory ml_translatorLib;
+
+(* setting up the translator *)
+
+val res = translate listTheory.APPEND;
 
 (* implementation *)
 
@@ -15,7 +19,7 @@ val _ = Hol_datatype `
 val _ = Hol_datatype `
   queue = QUEUE of num => 'a list => 'a status => num => 'a list`;
 
-val exec_def = Define `
+val exec_def = mlDefine `
   exec s = case s of
     Reversing ok (x::f) f' (y::r) r' => Reversing (ok+1) f (x::f') r (y::r')
   | Reversing ok [] f' [y] r' => Appending ok f' (y::r')
@@ -23,40 +27,40 @@ val exec_def = Define `
   | Appending ok (x::f') r' => Appending (ok-1) f' (x::r')
   | s => s`
 
-val invalidate_def = Define `
+val invalidate_def = mlDefine `
   invalidate s = case s of
     Reversing ok f f' r r' => Reversing (ok-1) f f' r r'
   | Appending 0 f' (x::r') => Finished r'
   | Appending ok f' r' => Appending (ok-1) f' r'
   | s => s`;
 
-val exec2_def = Define `
+val exec2_def = mlDefine `
   exec2 (QUEUE lenf f state lenr r) =
     case exec (exec state) of
       Finished newf => QUEUE lenf newf Idle lenr r
     | newstate => QUEUE lenf f newstate lenr r`;
 
-val check_def = Define `
+val check_def = mlDefine `
   check (QUEUE lenf f state lenr r) =
     if lenr <= lenf
        then exec2 (QUEUE lenf f state lenr r)
        else let newstate = Reversing 0 f [] r [] in
             exec2 (QUEUE (lenf+lenr) f newstate 0 [])`
 
-val empty_def = Define `
+val empty_def = mlDefine `
   empty = QUEUE 0 [] Idle 0 []`
 
-val is_empty_def = Define `
+val is_empty_def = mlDefine `
   is_empty lenf _ _ _ _ = (lenf = 0)`;
 
-val snoc_def = Define `
+val snoc_def = mlDefine `
   snoc (QUEUE lenf f state lenr r) x =
     check (QUEUE lenf f state (lenr+1) (x::r))`;
 
-val head_def = Define `
+val head_def = mlDefine `
   head (QUEUE _ (x::_) _ _ _) = x`;
 
-val tail_def = Define `
+val tail_def = mlDefine `
   tail (QUEUE lenf (x::f) state lenr r) =
     check (QUEUE (lenf-1) f (invalidate state) lenr r)`;
 

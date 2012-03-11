@@ -1,30 +1,35 @@
 
 open HolKernel Parse boolLib bossLib; val _ = new_theory "BatchedQueue";
 
-open listTheory;
+open listTheory arithmeticTheory ml_translatorLib;
+
+(* setting up the translator *)
+
+val res = translate listTheory.REV_DEF;
+val res = translate listTheory.REVERSE_REV;
 
 (* implementation *)
 
 val _ = Hol_datatype `queue = QUEUE of 'a list => 'a list`;
 
-val empty_def = Define `
+val empty_def = mlDefine `
   empty = QUEUE [] []`;
 
-val is_empty_def = Define `
+val is_empty_def = mlDefine `
   (is_empty (QUEUE [] xs) = T) /\
   (is_empty _ = F)`;
 
-val checkf_def = Define `
+val checkf_def = mlDefine `
   (checkf (QUEUE [] xs) = QUEUE (REVERSE xs) []) /\
   (checkf q = q)`;
 
-val snoc_def = Define `
+val snoc_def = mlDefine `
   snoc (QUEUE f r) x = checkf (QUEUE f (x::r))`;
 
-val head_def = Define `
+val head_def = mlDefine `
   head (QUEUE (x::f) r) = x`;
 
-val tail_def = Define `
+val tail_def = mlDefine `
   tail (QUEUE (x::f) r) = checkf (QUEUE f r)`;
 
 (* verification proof *)
