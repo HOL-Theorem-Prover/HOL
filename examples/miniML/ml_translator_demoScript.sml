@@ -185,7 +185,8 @@ val ML_QSORT_CORRECT = store_thm ("ML_QSORT_CORRECT",
         (list a l' xs') /\ PERM l l' /\ SORTED ord l'``,
   REPEAT STRIP_TAC \\ IMP_RES_TAC Eval_QSORT_EXPANDED
   \\ Q.LIST_EXISTS_TAC [`QSORT ord l`,`res'''`]
-  \\ FULL_SIMP_TAC std_ss [QSORT_PERM,QSORT_SORTED]);
+  \\ FULL_SIMP_TAC std_ss
+       [sortingTheory.QSORT_PERM,sortingTheory.QSORT_SORTED]);
 
 
 val _ = export_theory();
