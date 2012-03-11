@@ -13,6 +13,9 @@ val RW = REWRITE_RULE;
 val RW1 = ONCE_REWRITE_RULE;
 
 
+exception UnableToTranslate of term;
+
+
 (* mapping HOL types into corresponding invariants *)
 
 exception UnsupportedType of hol_type;
@@ -974,7 +977,7 @@ fun hol2deep tm =
     val goal = ``PRECONDITION F ==> Eval env (Raise Bind_error) (^inv ^tm)``
     val result = prove(goal,SIMP_TAC std_ss [PRECONDITION_def]) |> UNDISCH
     in check_inv "arb" tm result end
-  else failwith("Cannor translate: " ^ term_to_string tm)
+  else raise (UnableToTranslate tm)
 
 (*
 val tm = f
@@ -1191,7 +1194,11 @@ fun translate def = let
   val th = SIMP_EqualityType_ASSUMS th
   (* store certificate for later use *)
   val _ = store_cert (repeat rator lhs) th
-  in th end
+  in th end handle UnableToTranslate tm => let
+    val _ = print "\n\nCannot translate term:  "
+    val _ = print_term tm
+    val _ = print "\n\n"
+    in raise UnableToTranslate tm end
 
 fun mlDefine q = let
   val def = Define q
