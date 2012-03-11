@@ -24,6 +24,7 @@ val is_empty = Define `
 (is_empty Empty = T) ∧
 (is_empty _ = F)`;
 
+(*
 val merge_def = Define `
 (merge get_key leq a Empty = a) ∧
 (merge get_key leq Empty b = b) ∧
@@ -37,6 +38,20 @@ val merge_def = Define `
 (link get_key leq (Node x b m) a = 
   Node x Empty (merge get_key leq (merge get_key leq a b) m))`;
 
+(* Without mutual recursion *)
+val merge_def = Define `
+(merge get_key leq a Empty = a) ∧
+(merge get_key leq Empty b = b) ∧
+(merge get_key leq (Node x h1 h2) (Node y h1' h2') =
+  if leq (get_key x) (get_key y) then
+    case h1 of
+       | Empty => Node x (Node y h1' h2') h2
+       | _ => Node x Empty (merge get_key leq (merge get_key leq (Node y h1' h2') h1) h2)
+  else
+    case h1' of
+       | Empty => Node y (Node x h1 h2) h2'
+       | _ => Node y Empty (merge get_key leq (merge get_key leq (Node x h1 h2) h1') h2'))`;
+
 val insert_def = Define `
 insert x a = merge (Node x Empty Empty) a;
 
@@ -46,4 +61,5 @@ find_min (Node x _ _) = x`;
 val delete_min_def = Define `
 delete_min (Node _ a b) = merge a b`;
 
+*)
 val _ = export_theory ();
