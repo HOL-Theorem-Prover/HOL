@@ -47,18 +47,16 @@ val _ = Define `
  infixes = ["="; "+"; "-"; "*"; "div"; "mod"; "<"; ">"; "<="; ">="]`;
 
 
- val list_to_string_defn = Hol_defn "list_to_string" `
-
-(list_to_string printer sep [] =
-  "")
+ val join_strings_defn = Hol_defn "join_strings" `
+ 
+(join_strings sep [] = "")
 /\
-(list_to_string printer sep [x] =
-  printer x)
+(join_strings sep [x] = x)
 /\
-(list_to_string printer sep (x::y::l) = STRCAT 
-  (printer x) (STRCAT   sep (STRCAT   (printer y)  (list_to_string printer sep l))))`;
+(join_strings sep (x::y::l) = STRCAT 
+  x (STRCAT   sep (STRCAT   y  (join_strings sep l))))`;
 
-val _ = Defn.save_defn list_to_string_defn;
+val _ = Defn.save_defn join_strings_defn;
 
 val _ = Define `
  (lit_to_string l = (case l of
@@ -83,13 +81,13 @@ val _ = Define `
 /\
 (pat_to_string (Plit l) = lit_to_string l)
 /\
-(pat_to_string (Pcon NONE ps) = STRCAT  "(" (STRCAT   (list_to_string pat_to_string "," ps)  ")"))
+(pat_to_string (Pcon NONE ps) = STRCAT  "(" (STRCAT   (join_strings "," (MAP pat_to_string ps))  ")"))
 /\
 (pat_to_string (Pcon (SOME c) []) =
   var_to_string c)
 /\
 (pat_to_string (Pcon (SOME c) ps) = STRCAT 
-  "(" (STRCAT   (var_to_string c) (STRCAT   "(" (STRCAT   (list_to_string pat_to_string "," ps) (STRCAT   ")"  ")")))))`;
+  "(" (STRCAT   (var_to_string c) (STRCAT   "(" (STRCAT   (join_strings "," (MAP pat_to_string ps)) (STRCAT   ")"  ")")))))`;
 
 val _ = Defn.save_defn pat_to_string_defn;
 
@@ -105,13 +103,13 @@ val _ = Defn.save_defn pat_to_string_defn;
   (* TODO: this shouldn't happen in source *)
   "")
 /\
-(exp_to_string (Con NONE es) = STRCAT  "(" (STRCAT   (list_to_string exp_to_string "," es)  ")"))
+(exp_to_string (Con NONE es) = STRCAT  "(" (STRCAT   (join_strings "," (MAP exp_to_string es))  ")"))
 /\
 (exp_to_string (Con (SOME c) []) =
   var_to_string c)
 /\
 (exp_to_string (Con (SOME c) es) = STRCAT 
-  "(" (STRCAT   (var_to_string c) (STRCAT   "(" (STRCAT   (list_to_string exp_to_string "," es) (STRCAT   ")"  ")")))))
+  "(" (STRCAT   (var_to_string c) (STRCAT   "(" (STRCAT   (join_strings "," (MAP exp_to_string es)) (STRCAT   ")"  ")")))))
 /\
 (exp_to_string (Var v) =
   var_to_string v)
@@ -163,15 +161,15 @@ val _ = Defn.save_defn pat_to_string_defn;
 /\
 (exp_to_string (Mat e pes) = STRCAT 
   "(case " (STRCAT   (exp_to_string e) (STRCAT   " of " (STRCAT  
-  (list_to_string pat_exp_to_string "|" pes)  ")"))))
+  (join_strings "|" (MAP pat_exp_to_string pes))  ")"))))
 /\
 (exp_to_string (Let v e1 e2) = STRCAT 
-  "(let val " (STRCAT   (var_to_string v) (STRCAT   " = " (STRCAT   (exp_to_string e1) (STRCAT   " in " (STRCAT  
-  (exp_to_string e2)  " end)"))))))
+  "let val " (STRCAT   (var_to_string v) (STRCAT   " = " (STRCAT   (exp_to_string e1) (STRCAT   " in " (STRCAT  
+  (exp_to_string e2)  " end"))))))
 /\
 (exp_to_string (Letrec funs e) = STRCAT 
-  "(let fun " (STRCAT   (list_to_string fun_to_string " and " funs) (STRCAT   " in " (STRCAT  
-  (exp_to_string e)  " end)"))))
+  "let fun " (STRCAT   (join_strings " and " (MAP fun_to_string funs)) (STRCAT   " in " (STRCAT  
+  (exp_to_string e)  " end"))))
 /\
 (pat_exp_to_string (p,e) = STRCAT 
   (pat_to_string p) (STRCAT   " => "  (exp_to_string e)))
@@ -190,7 +188,7 @@ val _ = Defn.save_defn exp_to_string_defn;
   if ts = [] then
     tn
   else STRCAT 
-    "(" (STRCAT   (list_to_string type_to_string "," ts) (STRCAT   ")"  tn)))
+    "(" (STRCAT   (join_strings "," (MAP type_to_string ts)) (STRCAT   ")"  tn)))
 /\
 (type_to_string (Tfn t1 t2) = STRCAT 
   "(" (STRCAT   (type_to_string t1) (STRCAT   " -> " (STRCAT   (type_to_string t2)  ")"))))
@@ -206,27 +204,26 @@ val _ = Defn.save_defn type_to_string_defn;
 
 val _ = Define `
  (variant_to_string (c,ts) = STRCAT 
-  (var_to_string c)  (if ts = [] then "" else STRCAT  " of " 
-  (list_to_string type_to_string " * " ts)))`;
+  (var_to_string c) (STRCAT   (if ts = [] then "" else " of ") 
+  (join_strings " * " (MAP type_to_string ts))))`;
 
 
 val _ = Define `
  (typedef_to_string (tvs, name, variants) = STRCAT 
-  (if tvs = [] then "" else STRCAT  "(" (STRCAT   (list_to_string (\ x . x) "," tvs)  ")")) (STRCAT  
-  name (STRCAT   " = "  (list_to_string variant_to_string "|" variants))))`;
+  (if tvs = [] then "" else STRCAT  "(" (STRCAT   (join_strings "," tvs)  ")")) (STRCAT  
+  name (STRCAT   " = "  (join_strings "|" (MAP variant_to_string variants)))))`;
 
 
- val dec_to_string_defn = Hol_defn "dec_to_string" `
+val _ = Define `
+ (dec_to_string d = 
+  (case d of
+      Dlet p e => STRCAT 
+        "val " (STRCAT   (pat_to_string p) (STRCAT   " = "  (exp_to_string e)))
+    | Dletrec funs => STRCAT 
+        "fun "  (join_strings " and " (MAP fun_to_string funs))
+    | Dtype types => STRCAT 
+        "datatype "  (join_strings " and " (MAP typedef_to_string types))
+  ))`;
 
-(dec_to_string (Dlet p e) = STRCAT 
-  "val " (STRCAT   (pat_to_string p) (STRCAT   " = "  (exp_to_string e))))
-/\
-(dec_to_string (Dletrec funs) = STRCAT 
-  "fun "  (list_to_string fun_to_string " and " funs))
-/\
-(dec_to_string (Dtype types) = STRCAT 
-  "datatype "  (list_to_string typedef_to_string " and " types))`;
-
-val _ = Defn.save_defn dec_to_string_defn;
 val _ = export_theory()
 
