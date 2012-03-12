@@ -91,6 +91,8 @@ sig
    val word_lsr_bv_tm : term
    val word_lsr_tm : term
    val word_lt_tm : term
+   val word_max_tm : term
+   val word_min_tm : term
    val word_mod_tm : term
    val word_modify_tm : term
    val word_msb_tm : term
@@ -109,6 +111,8 @@ sig
    val word_sdiv_tm : term
    val word_sign_extend_tm : term
    val word_slice_tm : term
+   val word_smax_tm : term
+   val word_smin_tm : term
    val word_smod_tm : term
    val word_srem_tm : term
    val word_sub_tm : term
@@ -193,6 +197,8 @@ sig
    val dest_word_lsr : term -> term * term
    val dest_word_lsr_bv : term -> term * term
    val dest_word_lt : term -> term * term
+   val dest_word_max : term -> term * term
+   val dest_word_min : term -> term * term
    val dest_word_mod : term -> term * term
    val dest_word_modify : term -> term * term
    val dest_word_msb : term -> term
@@ -211,6 +217,8 @@ sig
    val dest_word_sdiv : term -> term * term
    val dest_word_sign_extend : term -> term * term
    val dest_word_slice : term -> term * term * term
+   val dest_word_smax : term -> term * term
+   val dest_word_smin : term -> term * term
    val dest_word_smod : term -> term * term
    val dest_word_srem : term -> term * term
    val dest_word_sub : term -> term * term
@@ -295,6 +303,8 @@ sig
    val is_word_lsr : term -> bool
    val is_word_lsr_bv : term -> bool
    val is_word_lt : term -> bool
+   val is_word_max : term -> bool
+   val is_word_min : term -> bool
    val is_word_mod : term -> bool
    val is_word_modify : term -> bool
    val is_word_msb : term -> bool
@@ -313,6 +323,8 @@ sig
    val is_word_sdiv : term -> bool
    val is_word_sign_extend : term -> bool
    val is_word_slice : term -> bool
+   val is_word_smax : term -> bool
+   val is_word_smin : term -> bool
    val is_word_smod : term -> bool
    val is_word_srem : term -> bool
    val is_word_sub : term -> bool
@@ -397,6 +409,8 @@ sig
    val mk_word_lsr : term * term -> term
    val mk_word_lsr_bv : term * term -> term
    val mk_word_lt : term * term -> term
+   val mk_word_max : term * term -> term
+   val mk_word_min : term * term -> term
    val mk_word_mod : term * term -> term
    val mk_word_modify : term * term -> term
    val mk_word_msb : term -> term
@@ -415,6 +429,8 @@ sig
    val mk_word_sdiv : term * term -> term
    val mk_word_sign_extend : term * term -> term
    val mk_word_slice : term * term * term -> term
+   val mk_word_smax : term * term -> term
+   val mk_word_smin : term * term -> term
    val mk_word_smod : term * term -> term
    val mk_word_srem : term * term -> term
    val mk_word_sub : term * term -> term

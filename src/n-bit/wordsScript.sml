@@ -384,7 +384,19 @@ val word_lo_def = zDefine`
 val word_hs_def = zDefine`
   word_hs a b = let (n,z,c,v) = nzcv a b in c`;
 
-val word_abs_def = zDefine`
+val word_min_def = Define`
+  word_min a b = if word_lo a b then a else b`;
+
+val word_max_def = Define`
+  word_max a b = if word_lo a b then b else a`;
+
+val word_smin_def = Define`
+  word_smin a b = if word_lt a b then a else b`;
+
+val word_smax_def = Define`
+  word_smax a b = if word_lt a b then b else a`;
+
+val word_abs_def = Define`
   word_abs w = if word_lt w (n2w 0) then word_2comp w else w`;
 
 val _ = add_infix("<+", 450,HOLgrammars.NONASSOC)
