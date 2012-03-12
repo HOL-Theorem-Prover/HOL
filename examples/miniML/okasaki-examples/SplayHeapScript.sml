@@ -1,5 +1,5 @@
 open bossLib Theory Parse boolTheory pairTheory Defn Tactic boolLib bagTheory
-open relationTheory bagLib miscTheory lcsymtacs;
+open relationTheory bagLib miscTheory lcsymtacs ml_translatorLib;
 
 val fs = full_simp_tac (srw_ss ())
 val rw = srw_tac []
@@ -30,7 +30,7 @@ val splay_heap_ok_def = Define `
 val _ = Define `
 empty = Empty`;
 
-val _ = Define `
+val is_empty_def = Define `
 (is_empty Empty = T) ∧
 (is_empty _ = F)`;
 
@@ -293,6 +293,13 @@ srw_tac [bagLib.BAG_ss]
                 by rw [SUB_BAG_EL_BAG] >>
      rw [BAG_UNION_DIFF, SUB_BAG_UNION] >>
      srw_tac [BAG_AC_ss] []]);
+
+val res = translate is_empty_def;
+val res = translate partition_def;
+val res = translate insert_def;
+val res = translate merge_def;
+val res = translate find_min_def;
+val res = translate delete_min_def;
 
 val _ = export_theory()
 

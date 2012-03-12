@@ -1,5 +1,5 @@
 open bossLib Theory Parse boolTheory pairTheory Defn Tactic boolLib bagTheory
-open relationTheory bagLib miscTheory lcsymtacs;
+open relationTheory bagLib miscTheory lcsymtacs ml_translatorLib;
 
 val fs = full_simp_tac (srw_ss ())
 val rw = srw_tac []
@@ -42,7 +42,7 @@ make_node x a b =
 val _ = Define `
 empty = Empty`;
 
-val is_empty = Define `
+val is_empty_def = Define `
 (is_empty Empty = T) ∧
 (is_empty _ = F)`;
 
@@ -143,4 +143,13 @@ fs [delete_min_def, leftist_heap_ok_def, leftist_heap_merge_bag] >-
 metis_tac [leftist_heap_merge_ok] >>
 rw [leftist_heap_to_bag_def, find_min_def, BAG_DIFF_INSERT2]);
 
+val res = translate is_empty_def;
+val res = translate rank_def;
+(* Type inference failure 
+val res = translate make_node_def;
+val res = translate merge_def;
+val res = translate insert_def;
+val res = translate find_min_def;
+val res = translate delete_min_def;
+*)
 val _ = export_theory ();

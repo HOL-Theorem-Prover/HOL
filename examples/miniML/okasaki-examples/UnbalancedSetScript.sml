@@ -1,5 +1,6 @@
 open bossLib Theory Parse boolTheory pairTheory Defn Tactic boolLib 
 open relationTheory miscTheory pred_setTheory pred_setSimps lcsymtacs;
+open ml_translatorLib;
 
 val fs = full_simp_tac (srw_ss ())
 val rw = srw_tac []
@@ -82,5 +83,10 @@ val insert_ok = Q.store_thm ("insert_ok",
 induct_on `t` >>
 rw [unbalanced_set_ok_def, insert_def, unbalanced_set_to_set_def, insert_set] >>
 metis_tac []);
+
+val res = translate insert_def;
+(* translating member fails for some reason in METIS_TAC 
+val res = translate member_def;
+*)
 
 val _ = export_theory ();

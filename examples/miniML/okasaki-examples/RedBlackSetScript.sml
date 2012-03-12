@@ -1,5 +1,6 @@
 open bossLib Theory Parse boolTheory pairTheory Defn Tactic boolLib 
 open relationTheory miscTheory pred_setTheory pred_setSimps lcsymtacs;
+open ml_translatorLib
 
 val fs = full_simp_tac (srw_ss ())
 val rw = srw_tac []
@@ -58,6 +59,7 @@ fs [StrongLinearOrder, StrongOrder, irreflexive_def, transitive_def,
     trichotomous] >>
 metis_tac []);
 
+
 val balance_def = Define `
 (balance Black (Node Red (Node Red a x b) y c) z d =
   Node Red (Node Black a x b) y (Node Black c z d)) ∧
@@ -73,7 +75,27 @@ val balance_def = Define `
 
 (balance col a x b = Node col a x b)`;
 
-val balance_ind = fetch "-" "balance_ind";
+val balance_ind = fetch "-" "balance_ind"
+
+(*
+val balance_left_def = Define `
+(balance_left Black (Node Red (Node Red a x b) y c) z d =
+  SOME (Node Red (Node Black a x b) y (Node Black c z d))) ∧
+
+(balance_left Black (Node Red a x (Node Red b y c)) z d =
+  SOME (Node Red (Node Black a x b) y (Node Black c z d))) ∧
+
+(balance_left col a x b = NONE)`;
+
+val balance_right_def = Define `
+(balance_right Black a x (Node Red (Node Red b y c) z d) =
+  SOME (Node Red (Node Black a x b) y (Node Black c z d))) ∧
+
+(balance_right Black a x (Node Red b y (Node Red c z d)) =
+  SOME (Node Red (Node Black a x b) y (Node Black c z d))) ∧
+
+(balance_right col a x b = NONE)`;
+*)
 
 val balance_node = Q.prove (
 `!c t1 x t2. ∃c' t1' x' t2'. (balance c t1 x t2 = Node c' t1' x' t2')`,
@@ -167,5 +189,17 @@ rw [insert_def] >>
 rw [] >>
 `redblack_set_ok lt (Node c t1 y t2)` by metis_tac [ins_ok] >>
 fs [redblack_set_ok_def]);
+
+(* TOO SLOW
+val _ = translate balance_left_def;
+val _ = translate balance_right_def;
+val _ = translate balance_def;
+val _ = translate ins_def;
+val _ = translate insert_def;
+*)
+
+(* Fails in metis_Tac
+val _ = translate member_def;
+*)
 
 val _ = export_theory ();
