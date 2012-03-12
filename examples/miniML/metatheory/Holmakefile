@@ -1,1 +1,1 @@
-INCLUDES=../semantics
+INCLUDES=.. ../semantics

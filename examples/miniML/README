@@ -1,7 +1,7 @@
 Directory structure:
 
 - semantics
-    The definition on MiniML, including
+    The definition of MiniML, including
     - its abstract syntax
     - small step semantics
     - big step semantics

@@ -1,19 +1,6 @@
-open bossLib Theory Parse res_quanTheory Defn Tactic boolLib;
-open finite_mapTheory listTheory pairTheory pred_setTheory;
-open set_relationTheory sortingTheory stringTheory wordsTheory;
-open relationTheory;
+open preamble;
 open MiniMLTheory Print_astTheory (*CompileTheory*);
-
-open pairLib intSimps;
-open lcsymtacs;
-
-val fs = full_simp_tac (srw_ss ())
-val rw = srw_tac []
-val wf_rel_tac = WF_REL_TAC
-val induct_on = Induct_on
-val cases_on = Cases_on;
-val every_case_tac = BasicProvers.EVERY_CASE_TAC;
-val full_case_tac = BasicProvers.FULL_CASE_TAC;
+open intSimps;
 
 val _ = new_theory "terminationProofs";
 
@@ -68,7 +55,7 @@ val (pos_int_to_string_def, pos_int_to_string_ind) =
   rw [integerTheory.INT_ABS, integerTheory.int_gt] >-
   metis_tac [integerTheory.INT_LT_ANTISYM] >>
   fs [integerTheory.INT_NOT_LT] >>
-  `?n'. n = &n'` 
+  `?n'. n = &n'`
             by metis_tac [integerTheory.NUM_POSINT, integerTheory.INT_LT_IMP_LE]  >>
   rw [] >>
   fs []);
@@ -100,7 +87,7 @@ val _ = save_thm ("pat_to_string_ind", pat_to_string_ind);
 
 val (exp_to_string_def, exp_to_string_ind) =
   tprove_no_defn ((exp_to_string_def, exp_to_string_ind),
-  wf_rel_tac `measure (\x. case x of INL e => exp_size e 
+  wf_rel_tac `measure (\x. case x of INL e => exp_size e
                                    | INR (INL (p,e)) => exp_size e + 1
                                    | INR (INR (v1,v2,e)) => exp_size e + 1)` >>
   rw [] >>

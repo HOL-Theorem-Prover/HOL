@@ -1,18 +1,4 @@
-open bossLib Theory Parse res_quanTheory Defn Tactic boolLib;
-open finite_mapTheory listTheory pairTheory pred_setTheory;
-open set_relationTheory sortingTheory stringTheory wordsTheory;
-open relationTheory;
-open MiniMLTheory terminationProofsTheory;
-
-open lcsymtacs;
-
-val fs = full_simp_tac (srw_ss ())
-val rw = srw_tac []
-val wf_rel_tac = WF_REL_TAC
-val induct_on = Induct_on
-val cases_on = Cases_on;
-val every_case_tac = BasicProvers.EVERY_CASE_TAC;
-val full_case_tac = BasicProvers.FULL_CASE_TAC;
+open preamble MiniMLTheory terminationProofsTheory;
 
 val _ = new_theory "typeSound";
 

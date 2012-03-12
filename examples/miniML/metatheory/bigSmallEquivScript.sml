@@ -1,18 +1,6 @@
-open bossLib Theory Parse res_quanTheory Defn Tactic boolLib;
-open finite_mapTheory listTheory pairTheory pred_setTheory;
-open set_relationTheory sortingTheory stringTheory wordsTheory;
-open relationTheory;
-open MiniMLTheory terminationProofsTheory;
-
-open lcsymtacs;
-
-val fs = full_simp_tac (srw_ss ())
-val rw = srw_tac []
-val wf_rel_tac = WF_REL_TAC
-val induct_on = Induct_on
-val cases_on = Cases_on;
-val every_case_tac = BasicProvers.EVERY_CASE_TAC;
-val full_case_tac = BasicProvers.FULL_CASE_TAC;
+open preamble;
+open MiniMLTheory;
+open evaluateEquationsTheory;
 
 val _ = new_theory "bigSmallEquiv";
 
@@ -620,14 +608,6 @@ rw [small_eval_app, small_eval_log, small_eval_if, small_eval_match,
  metis_tac [small_eval_match_rules],
  metis_tac [small_eval_match_rules]]);
 
-val evaluate_val = Q.prove (
-`!cenv env v v' err.
-  (evaluate cenv env (Val v) (Rval v') = (v = v')) ∧
-  ¬(evaluate cenv env (Val v) (Rerr err))`,
-rw [Once evaluate_cases] >>
-rw [Once evaluate_cases] >>
-metis_tac []);
-
 val evaluate_list_val = Q.prove (
 `!cenv env vs vs'.
   evaluate_list cenv env (MAP Val vs) (Rval vs') = (vs = vs')`,
@@ -881,7 +861,7 @@ rw [] >|
      metis_tac [optionTheory.NOT_SOME_NONE, optionTheory.SOME_11],
  fs [evaluate_state_cases] >>
      ONCE_REWRITE_TAC [evaluate_cases] >>
-     fs [evaluate_val],
+     fs [evaluate_val] >> rw[],
  fs [evaluate_state_cases] >>
      fs [Once evaluate_cases] >>
      metis_tac [],
