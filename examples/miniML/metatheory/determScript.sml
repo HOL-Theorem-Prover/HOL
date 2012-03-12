@@ -2,7 +2,7 @@ open bossLib Theory Parse res_quanTheory Defn Tactic boolLib;
 open finite_mapTheory listTheory pairTheory pred_setTheory;
 open set_relationTheory sortingTheory stringTheory wordsTheory;
 open relationTheory;
-open MiniMLTheory miniMLProofsTheory bigSmallEquivTheory;
+open MiniMLTheory terminationProofsTheory bigSmallEquivTheory;
 
 open lcsymtacs;
 
@@ -85,51 +85,19 @@ metis_tac [big_exp_determ, result_11, result_distinct,
 
 (* ---------------------- Small step determinacy ------------------------- *)
 
-val small_exp_determ1 = Q.store_thm ("small_exp_determ1",
+val small_exp_determ = Q.store_thm ("small_exp_determ",
 `!cenv env e r1 r2.
   small_eval cenv env e [] r1 ∧ small_eval cenv env e [] r2
   ⇒
   (r1 = r2)`,
 metis_tac [big_exp_determ, small_big_exp_equiv]);
 
-val small_exp_determ2 = Q.store_thm ("small_exp_determ2",
-`!cenv env e r.
-  ¬(e_diverges cenv env e ∧ ?r. small_eval cenv env e [] r)`,
-rw [e_diverges_def, METIS_PROVE [] ``~x ∨ ~y = y ⇒ ~x``] >>
-cases_on `r` >>
-(TRY (Cases_on `e'`)) >>
-fs [small_eval_def, e_step_reln_def] >|
-[`∀cenv'' env'' e'' c''.
-    e_step (cenv,env',Val a,[]) ≠ Estep (cenv'',env'',e'',c'')`
-         by rw [e_step_def, continue_def] >>
-     metis_tac [],
- metis_tac [e_step_result_distinct],
- `∀cenv'' env'' e''' c''.
-    e_step (cenv,env',Raise e'',[]) ≠ Estep (cenv'',env'',e''',c'')`
-         by rw [e_step_def, continue_def] >>
-     metis_tac []]);
-
-val small_determ1 = Q.store_thm ("small_determ1",
+val small_determ = Q.store_thm ("small_determ",
 `!cenv env ds r1 r2.
   d_small_eval cenv env ds NONE r1 ∧ d_small_eval cenv env ds NONE r2
   ⇒
   (r1 = r2)`,
 metis_tac [big_determ, small_big_equiv]);
-
-val small_determ2 = Q.store_thm ("small_determ2",
-`!cenv env ds r.
-  ¬(diverges cenv env ds ∧ ?r. d_small_eval cenv env ds NONE r)`,
-rw [diverges_def, METIS_PROVE [] ``~x ∨ ~y = y ⇒ ~x``] >>
-cases_on `r` >>
-TRY (cases_on `e`) >>
-fs [d_small_eval_def, d_step_reln_def] >|
-[`∀cenv'' env'' ds'' c''.
-    d_step (cenv',a,[],NONE) ≠ Dstep (cenv'',env'',ds'',c'')`
-         by rw [d_step_def] >>
-     metis_tac [],
- metis_tac [d_step_result_distinct],
- metis_tac [d_step_result_distinct]]);
-
 
 val _ = export_theory ();
 

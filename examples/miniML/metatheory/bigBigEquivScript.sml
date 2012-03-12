@@ -2,9 +2,8 @@ open bossLib Theory Parse res_quanTheory Defn Tactic boolLib;
 open finite_mapTheory listTheory pairTheory pred_setTheory;
 open set_relationTheory sortingTheory stringTheory wordsTheory;
 open relationTheory;
-open MiniMLTheory;
-open miniMLProofsTheory;
-open typeSoundTheory bigSmallEquivTheory determTheory;
+open MiniMLTheory terminationProofsTheory;
+open typeSoundTheory bigSmallEquivTheory determTheory untypedSafetyTheory;
 
 open lcsymtacs;
 
@@ -90,7 +89,7 @@ val type_no_error = Q.prove (
   ⇒
   ¬evaluate envC env e (Rerr Rtype_error)`,
 rw [GSYM small_big_exp_equiv] >>
-metis_tac [small_exp_determ2, small_exp_determ1, exp_type_soundness]);
+metis_tac [untyped_safety_exp, small_exp_determ, exp_type_soundness]);
 
 val evaluate_evaluate'_thm = Q.store_thm ("evaluate_evaluate'_thm",
 `!tenvC envC tenv e t cenv env r.

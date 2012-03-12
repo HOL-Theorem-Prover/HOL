@@ -2,8 +2,7 @@ open bossLib Theory Parse res_quanTheory Defn Tactic boolLib;
 open finite_mapTheory listTheory pairTheory pred_setTheory;
 open set_relationTheory sortingTheory stringTheory wordsTheory;
 open relationTheory;
-open MiniMLTheory;
-open miniMLProofsTheory;
+open MiniMLTheory terminationProofsTheory;
 
 open lcsymtacs;
 
@@ -679,6 +678,11 @@ rw [Once evaluate_ctxts_cases] >>
 EQ_TAC >>
 rw [] >>
 metis_tac []);
+
+val evaluate_raise = Q.prove (
+`!cenv env err bv.
+  (evaluate cenv env (Raise err) bv = (bv = Rerr (Rraise err)))`,
+rw [Once evaluate_cases]);
 
 fun TAC q =
 fs [evaluate_state_cases] >>

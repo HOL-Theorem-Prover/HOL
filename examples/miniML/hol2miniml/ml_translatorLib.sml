@@ -3,7 +3,7 @@ struct
 
 open HolKernel boolLib bossLib;
 
-open MiniMLTheory miniMLProofsTheory determTheory ml_translatorTheory;
+open MiniMLTheory terminationProofsTheory determTheory ml_translatorTheory;
 open arithmeticTheory listTheory combinTheory pairTheory;
 open integerTheory;
 
