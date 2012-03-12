@@ -1,5 +1,5 @@
 open bossLib Theory Parse boolTheory pairTheory Defn Tactic boolLib bagTheory
-open relationTheory bagLib miscTheory lcsymtacs;
+open relationTheory bagLib miscTheory lcsymtacs ml_translatorLib;
 
 val fs = full_simp_tac (srw_ss ())
 val rw = srw_tac []
@@ -49,5 +49,26 @@ val mrg_all_def = Define `
 val sort_def = Define `
 sort leq size segs = mrg_all leq [] segs`;
 
+val res = translate listTheory.TL
+val res = translate listTheory.HD
+val res = translate mrg_def
+val res = translate empty_def
+val res = translate mrg_all_def
+val res = translate sort_def
+
+(* Fails with
+hol2deep failed at 'lookup_cert'
+
+target:
+
+TL
+
+but derived:
+
+TL
+* 
+val res = translate add_seg_def
+val res = translate add_def
+*)
 val _ = export_theory();
 
