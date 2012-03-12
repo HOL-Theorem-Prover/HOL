@@ -1,4 +1,4 @@
-open bossLib Theory Parse boolTheory pairTheory Defn Tactic boolLib 
+open bossLib Theory Parse boolTheory pairTheory Defn Tactic boolLib
 open relationTheory miscTheory pred_setTheory pred_setSimps lcsymtacs;
 open ml_translatorLib;
 
@@ -22,7 +22,7 @@ val unbalanced_set_to_set_def = Define `
 
 val unbalanced_set_ok_def = Define `
 (unbalanced_set_ok lt Empty = T) ∧
-(unbalanced_set_ok lt (Node t1 x t2) = 
+(unbalanced_set_ok lt (Node t1 x t2) =
   unbalanced_set_ok lt t1 ∧
   unbalanced_set_ok lt t2 ∧
   (!y. y ∈ unbalanced_set_to_set t1 ⇒ lt y x) ∧
@@ -42,10 +42,10 @@ val member_def = Define `
     T)`;
 
 val member_thm = Q.store_thm ("member_thm",
-`!lt t x. 
+`!lt t x.
   StrongLinearOrder lt ∧
-  unbalanced_set_ok lt t 
-  ⇒ 
+  unbalanced_set_ok lt t
+  ⇒
   (member lt x t = x ∈ unbalanced_set_to_set t)`,
 induct_on `t` >>
 rw [member_def, unbalanced_set_ok_def, unbalanced_set_to_set_def] >>
@@ -69,7 +69,7 @@ val insert_set = Q.store_thm ("insert_set",
   (unbalanced_set_to_set (insert lt x t) = {x} ∪ unbalanced_set_to_set t)`,
 induct_on `t` >>
 srw_tac [PRED_SET_AC_ss] [insert_def, unbalanced_set_to_set_def] >>
-`x = a` by (fs [StrongLinearOrder, StrongOrder, irreflexive_def, 
+`x = a` by (fs [StrongLinearOrder, StrongOrder, irreflexive_def,
                 transitive_def, trichotomous] >>
             metis_tac []) >>
 rw []);
@@ -77,16 +77,16 @@ rw []);
 val insert_ok = Q.store_thm ("insert_ok",
 `!lt x t.
   StrongLinearOrder lt ∧
-  unbalanced_set_ok lt t 
-  ⇒ 
+  unbalanced_set_ok lt t
+  ⇒
   unbalanced_set_ok lt (insert lt x t)`,
 induct_on `t` >>
 rw [unbalanced_set_ok_def, insert_def, unbalanced_set_to_set_def, insert_set] >>
 metis_tac []);
 
+
 val res = translate insert_def;
-(* translating member fails for some reason in METIS_TAC 
 val res = translate member_def;
-*)
+val res = translate empty_def;
 
 val _ = export_theory ();

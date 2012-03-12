@@ -1,4 +1,4 @@
-open bossLib Theory Parse boolTheory pairTheory Defn Tactic boolLib 
+open bossLib Theory Parse boolTheory pairTheory Defn Tactic boolLib
 open relationTheory miscTheory pred_setTheory pred_setSimps lcsymtacs;
 open ml_translatorLib
 
@@ -28,7 +28,7 @@ val redblack_set_to_set_def = Define `
 
 val redblack_set_ok_def = Define `
 (redblack_set_ok lt Empty = T) ∧
-(redblack_set_ok lt (Node _ t1 x t2) = 
+(redblack_set_ok lt (Node _ t1 x t2) =
   redblack_set_ok lt t1 ∧
   redblack_set_ok lt t2 ∧
   (!y. y ∈ redblack_set_to_set t1 ⇒ lt y x) ∧
@@ -48,10 +48,10 @@ val member_def = Define `
     T)`;
 
 val member_thm = Q.store_thm ("member_thm",
-`!lt t x. 
+`!lt t x.
   StrongLinearOrder lt ∧
-  redblack_set_ok lt t 
-  ⇒ 
+  redblack_set_ok lt t
+  ⇒
   (member lt x t = x ∈ redblack_set_to_set t)`,
 induct_on `t` >>
 rw [member_def, redblack_set_ok_def, redblack_set_to_set_def] >>
@@ -104,7 +104,7 @@ srw_tac [PRED_SET_AC_ss] [balance_def]);
 
 val balance_set = Q.prove (
 `!c t1 x t2.
-  redblack_set_to_set (balance c t1 x t2) = 
+  redblack_set_to_set (balance c t1 x t2) =
   redblack_set_to_set (Node c t1 x t2)`,
 recInduct balance_ind >>
 srw_tac [PRED_SET_AC_ss] [balance_def, redblack_set_to_set_def]);
@@ -142,7 +142,7 @@ induct_on `t` >>
 rw [redblack_set_to_set_def, ins_def, balance_set] >>
 fs [] >>
 srw_tac [PRED_SET_AC_ss] [] >>
-`x = a` by (fs [StrongLinearOrder, StrongOrder, irreflexive_def, 
+`x = a` by (fs [StrongLinearOrder, StrongOrder, irreflexive_def,
                 transitive_def, trichotomous] >>
             metis_tac []) >>
 rw []);
@@ -150,8 +150,8 @@ rw []);
 val ins_ok = Q.prove (
 `!lt x t.
   StrongLinearOrder lt ∧
-  redblack_set_ok lt t 
-  ⇒ 
+  redblack_set_ok lt t
+  ⇒
   redblack_set_ok lt (ins lt x t)`,
 induct_on `t` >>
 rw [redblack_set_ok_def, ins_def, redblack_set_to_set_def] >>
@@ -172,7 +172,7 @@ val insert_set = Q.store_thm ("insert_set",
 rw [insert_def] >>
 `?c t1 y t2. ins lt x t = Node c t1 y t2` by metis_tac [ins_node] >>
 rw [redblack_set_to_set_def] >>
-`redblack_set_to_set (ins lt x t) = redblack_set_to_set (Node c t1 y t2)` 
+`redblack_set_to_set (ins lt x t) = redblack_set_to_set (Node c t1 y t2)`
          by metis_tac [] >>
 fs [] >>
 imp_res_tac ins_set >>
@@ -181,8 +181,8 @@ fs [redblack_set_to_set_def]);
 val insert_ok = Q.store_thm ("insert_ok",
 `!lt x t.
   StrongLinearOrder lt ∧
-  redblack_set_ok lt t 
-  ⇒ 
+  redblack_set_ok lt t
+  ⇒
   redblack_set_ok lt (insert lt x t)`,
 rw [insert_def] >>
 `?c t1 y t2. ins lt x t = Node c t1 y t2` by metis_tac [ins_node] >>
@@ -190,16 +190,33 @@ rw [] >>
 `redblack_set_ok lt (Node c t1 y t2)` by metis_tac [ins_ok] >>
 fs [redblack_set_ok_def]);
 
-(* TOO SLOW
-val _ = translate balance_left_def;
-val _ = translate balance_right_def;
+
+(* translating balance *)
+
+val balance_def = Define `
+  balance col a x b =
+    if col = Black then
+      case (a,x,b) of
+      | ((Node Red (Node Red a x b) y c),z,d) =>
+        Node Red (Node Black a x b) y (Node Black c z d)
+      | ((Node Red a x (Node Red b y c)),z,d) =>
+        Node Red (Node Black a x b) y (Node Black c z d)
+      | (a,x,(Node Red (Node Red b y c) z d)) =>
+        Node Red (Node Black a x b) y (Node Black c z d)
+      | (a,x,(Node Red b y (Node Red c z d))) =>
+        Node Red (Node Black a x b) y (Node Black c z d)
+      | _ =>
+        Node col a x b
+    else Node col a x b`
+
 val _ = translate balance_def;
+
+(*
+
+val _ = translate member_def;
 val _ = translate ins_def;
 val _ = translate insert_def;
-*)
 
-(* Fails in metis_Tac
-val _ = translate member_def;
 *)
 
 val _ = export_theory ();

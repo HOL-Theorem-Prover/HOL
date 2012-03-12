@@ -12,8 +12,40 @@ infix \\ val op \\ = op THEN;
 val RW = REWRITE_RULE;
 val RW1 = ONCE_REWRITE_RULE;
 
+local
+  val base_filename = ref "";
+  fun clear_file suffix = let
+    val t = TextIO.openOut(!base_filename ^ suffix)
+    val _ = TextIO.closeOut(t)
+    in () end
+  fun append_to_file suffix strs = let
+    val t = TextIO.openAppend(!base_filename ^ suffix)
+    val _ = map (fn s => TextIO.output(t,s)) strs
+    val _ = TextIO.closeOut(t)
+    in () end
+in
+  fun print_results fname original_def th code_tm = if !base_filename = "" then () else let
+    val filename = !base_filename
+    val _ = set_trace "Unicode" 0;
+    val def_str = thm_to_string original_def
+    val th_str = thm_to_string th
+    val ml_str = term_to_string code_tm
+    val _ = set_trace "Unicode" 1;
+    val _ = append_to_file "_ml.txt" ["\n" ^ fname ^ ":\n\n",ml_str,"\n"]
+    val _ = append_to_file "_hol.txt" ["\n",def_str,"\n"]
+    val _ = append_to_file "_th.txt" ["\n",th_str,"\n"]
+    in () end;
+  fun print_inv_def inv_def = let
+    val th_str = thm_to_string inv_def
+    val _ = append_to_file "_th.txt" ["\n",th_str,"\n"]
+    in () end;
+  fun clear_filename () = (base_filename := "")
+  fun set_filename name = (base_filename := name;
+    clear_file "_ml.txt"; clear_file "_hol.txt"; clear_file "_th.txt")
+end
 
 exception UnableToTranslate of term;
+exception UnableToDefine of term;
 
 
 (* mapping HOL types into corresponding invariants *)
@@ -121,6 +153,16 @@ fun tag_name type_name const_name = let
   val y = String.translate f const_name
   in if y = "" then x else y end
 
+
+local
+  val inv_defs = ref (tl [(alpha,TRUTH)])
+in
+  fun get_inv_def ty = snd (first (fn (t,_) => t = ty) (!inv_defs))
+  fun set_inv_def (ty,inv_def) = (inv_defs := (ty,inv_def) :: (!inv_defs))
+end
+
+val last_def_fail = ref T
+
 fun derive_thms_for_type ty = let
   val (ty,ret_ty) = dest_fun_type (type_of_cases_const ty)
   val case_of_th = TypeBase.case_def_of ty
@@ -148,8 +190,11 @@ fun derive_thms_for_type ty = let
                                        int_to_string (length xs + 1)
                            in (x,mk_var("v" ^ n,``:v``)) end :: rename xs
       val vars = rev (rename (free_vars x))
+      val ty_list = mk_type("list",[ty])
+      val list_ty = ``:(^ty -> v -> bool) -> ^ty list -> v -> bool``
       fun find_inv tm =
         if type_of tm = ty then (subst [input|->tm] (rator lhs)) else
+        if type_of tm = ty_list then mk_comb(mk_comb(mk_const("list",list_ty),rator (rator lhs)),tm) else
           (mk_comb(get_type_inv (type_of tm),tm))
       val ys = map (fn (y,z) => mk_comb(find_inv y,z)) vars
       val tm = if ys = [] then T else list_mk_conj ys
@@ -161,12 +206,18 @@ fun derive_thms_for_type ty = let
       val vs = filter (fn x => x <> def_name) (free_vars tm)
       in tm :: mk_lines xs end
     val inv_def = Define [ANTIQUOTE (list_mk_conj (rev (mk_lines xs)))]
+                  handle HOL_ERR _ =>
+                  get_inv_def ty
+                  handle HOL_ERR _ =>
+                  ((last_def_fail := (list_mk_conj (rev (mk_lines xs))));
+                   raise UnableToDefine (list_mk_conj (rev (mk_lines xs))))
     in inv_def end
   val inv_def = define_abs name ty case_th
+  val _ = print_inv_def inv_def
   val inv_lhs = inv_def |> CONJUNCTS |> hd |> SPEC_ALL |> concl
                         |> dest_eq |> fst
   (* prove EqualityType lemma, e.g. !a. EqualityType a ==> EqualityType (list a) *)
-  val eq_lemma = let
+  val eq_lemma = if can get_inv_def ty then TRUTH else let
     val tm = rator (rator inv_lhs)
     fun list_dest f tm = let val (x,y) = f tm
                          in list_dest f x @ list_dest f y end handle HOL_ERR _ => [tm]
@@ -591,7 +642,8 @@ fun single_line_def def = let
   val cc = tupled |> concl |> dest_eq |> fst
   val (v,tm) = tupled |> concl |> rand |> rand |> dest_abs
   val (a,tm) = dest_abs tm
-  val tm = SIMP_CONV std_ss [Once pair_case_def,GSYM curried] (subst [a|->c,v|->cc] tm)
+  val tm = (REWRITE_CONV [GSYM FALSE_def,GSYM TRUE_def] THENC
+            SIMP_CONV std_ss [Once pair_case_def,GSYM curried]) (subst [a|->c,v|->cc] tm)
            |> concl |> rand |> rator |> rand
   val vs = free_vars tm
   val goal = mk_eq(mk_container c2, mk_container tm)
@@ -605,7 +657,7 @@ fun single_line_def def = let
   val goal = subst [mk_comb(c1,``():unit``)|->const] goal
   val goal = mk_imp(pre_tm,goal)
   val lemma = prove(goal,
-    SIMP_TAC std_ss [FUN_EQ_THM,FORALL_PROD] \\ SRW_TAC [] []
+    SIMP_TAC std_ss [FUN_EQ_THM,FORALL_PROD,TRUE_def,FALSE_def] \\ SRW_TAC [] []
     \\ REPEAT BasicProvers.FULL_CASE_TAC
     \\ CONV_TAC (RATOR_CONV (ONCE_REWRITE_CONV [def]))
     \\ SRW_TAC [] [] \\ CONV_TAC (DEPTH_CONV ETA_CONV)
@@ -669,7 +721,7 @@ fun preprocess_def def = let
   val (def,ind) = single_line_def def
   val def = RW1 [GSYM TRUE_def, GSYM FALSE_def] def
   val def = remove_pair_abs def |> SPEC_ALL
-  val def = rename_bound_vars_rule "bound_" def
+  val def = rename_bound_vars_rule "bound_" (GEN_ALL def) |> SPEC_ALL
   val ind = if is_rec andalso is_NONE ind then SOME (find_ind_thm def) else ind
   val def = if def |> SPEC_ALL |> concl |> dest_eq |> fst |> is_const
             then SPEC_ALL (RW1 [FUN_EQ_THM] def) else def
@@ -870,6 +922,11 @@ fun force_remove_fix thx = let
   val thx = foldr (fn (x,th) => s (FORCE_GEN x th)) thx xs
   in thx end;
 
+fun rm_fix res = let
+  val lemma = mk_thm([],``Fix b x = b``)
+  val tm2 = QCONV (REWRITE_CONV [lemma]) res |> concl |> dest_eq |> snd
+  in tm2 end
+
 fun hol2deep tm =
   (* variables *)
   if is_var tm then let
@@ -888,7 +945,8 @@ fun hol2deep tm =
     val res = th |> UNDISCH_ALL |> concl |> rand
     val inv = get_type_inv (type_of tm)
     val target = mk_comb(inv,tm)
-    val (ss,ii) = match_term res target handle HOL_ERR _ => ([],[])
+    val (ss,ii) = match_term res target handle HOL_ERR _ =>
+                  match_term (rm_fix res) (rm_fix target) handle HOL_ERR _ => ([],[])
     val result = INST ss (INST_TYPE ii th)
     in check_inv "lookup_cert" tm result end else
   (* data-type constructor *)
@@ -1069,6 +1127,7 @@ fun extract_precondition th pre_var is_rec =
     val _ = match_term pat tm
     val (xy,z) = dest_imp tm
     val (x,y) = dest_eq (rand xy)
+    val _ = dest_var x
     in (x,y,z) end
   fun cons_fst x (y,z) = (x::y,z)
   fun dest_forall_match tm = let
@@ -1084,7 +1143,18 @@ fun extract_precondition th pre_var is_rec =
     fun simp tm = QCONV (SIMP_CONV (srw_ss()) [PRECONDITION_def]) tm |> concl |> rand
     in mk_eq(x1,simp(mk_conj(y,x2))) end
   val def_tm = list_mk_conj (map process_line xs)
+  fun alternative_definition_of_pre pre_var tm2 = let
+    val rw = QCONV (REWRITE_CONV [PRECONDITION_def,CONTAINER_def]) tm2
+    val gg = rw |> concl |> dest_eq |> snd
+    val gg = (mk_imp(gg,pre_var))
+    val (_,_,pre_def) = Hol_reln [ANTIQUOTE gg]
+    val const = pre_def |> SPEC_ALL |> concl |> dest_eq |> fst |> repeat rator
+    val v = repeat rator pre_var
+    in subst [v|->const] tm2 |> (REWR_CONV rw THENC REWR_CONV (GSYM pre_def))
+       |> GSYM end
   val pre_def = Define [ANTIQUOTE def_tm]
+                handle HOL_ERR _ =>
+                alternative_definition_of_pre pre_var tm2
   val pre_def = fst (single_line_def pre_def)
   val pre_const = pre_def |> SPEC_ALL |> concl |> dest_eq |> fst |> repeat rator
   val pre_v = pre_var |> repeat rator
@@ -1112,6 +1182,7 @@ fun extract_precondition th pre_var is_rec =
 (* main translation routines *)
 
 fun translate def = let
+  val original_def = def
   fun the (SOME x) = x | the _ = failwith("the of NONE")
   (* perform preprocessing -- reformulate def *)
   val (is_rec,def,ind) = preprocess_def def
@@ -1154,7 +1225,8 @@ fun translate def = let
   val th = th |> INST [mk_var("cl_env",``:envE``)|->mk_var(fname^"_env",``:envE``)]
   (* collect precondition *)
   val th = CONV_RULE ((RATOR_CONV o RAND_CONV)
-                      (SIMP_CONV std_ss [])) th
+                      (SIMP_CONV std_ss [EVAL ``CONTAINER TRUE``,
+                                         EVAL ``CONTAINER FALSE``])) th
   val th = if no_params then th else extract_precondition th pre_var is_rec
   (* apply induction *)
   val th = if not is_rec then th else let
@@ -1197,6 +1269,8 @@ fun translate def = let
   val th = SIMP_EqualityType_ASSUMS th
   (* store certificate for later use *)
   val _ = store_cert (repeat rator lhs) th
+  (* print result into files *)
+  val _ = print_results fname original_def th code_tm
   in th end handle UnableToTranslate tm => let
     val _ = print "\n\nCannot translate term:  "
     val _ = print_term tm

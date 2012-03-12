@@ -1,5 +1,6 @@
 open bossLib Theory Parse boolTheory pairTheory Defn Tactic boolLib bagTheory
-open relationTheory bagLib miscTheory lcsymtacs ml_translatorLib;
+open relationTheory bagLib miscTheory lcsymtacs;
+open ml_translatorLib;
 
 val fs = full_simp_tac (srw_ss ())
 val rw = srw_tac []
@@ -77,12 +78,61 @@ delete_min get_key leq ts =
   case remove_min_tree get_key leq ts of
     | (Node _ x ts1, ts2) => merge get_key leq (REVERSE ts1) ts2`;
 
+
+(* translation *)
+
+val _ = set_filename (current_theory())
+
+val _ = register_type ``:'a list``
+
+(* register tree -- begin *)
+
+(* val _ = register_type ``:'a tree`` *)
+
+val ty = ``:'a tree``
+
+val _ = delete_const "tree" handle _ => ()
+
+val tm =
+``tree a (Node x1_1 x1_2 x1_3) v ⇔
+  ∃v1_1 v1_2 v1_3.
+    (v = Conv (SOME "NODE") [v1_1; v1_2; v1_3]) ∧ NUM x1_1 v1_1 ∧
+    a x1_2 v1_2 ∧ list (\x v. if MEM x x1_3 then tree a x v else ARB) x1_3 v1_3``
+
+val inv_def = tDefine "tree_def" [ANTIQUOTE tm]
+ (WF_REL_TAC `measure (tree_size (\x.0) o FST o SND)`
+  \\ STRIP_TAC \\ Induct
+  \\ EVAL_TAC \\ SIMP_TAC std_ss []
+  \\ REPEAT STRIP_TAC \\ RES_TAC
+  \\ FULL_SIMP_TAC std_ss [] \\ DECIDE_TAC)
+
+val list_SIMP = prove(
+  ``!xs b. list (\x v. if b x \/ MEM x xs then p x v else q) xs = list p xs``,
+  Induct
+  \\ FULL_SIMP_TAC std_ss [FUN_EQ_THM,fetch "-" "list_def",MEM,DISJ_ASSOC])
+  |> Q.SPECL [`xs`,`\x.F`] |> SIMP_RULE std_ss [];
+
+val inv_def = inv_def |> SIMP_RULE std_ss [list_SIMP]
+                      |> CONV_RULE (DEPTH_CONV ETA_CONV)
+
+val _ = set_inv_def (ty,inv_def)
+
+val _ = register_type ty
+
+(* register tree -- end *)
+
+val res = translate APPEND;
+val res = translate REV_DEF;
+val res = translate REVERSE_REV;
 val res = translate is_empty_def;
-(* translator diverges
-val res = translate merge_def;
+val res = translate rank_def;
+val res = translate link_def;
+val res = translate ins_tree_def;
 val res = translate insert_def;
+val res = translate root_def;
+val res = translate remove_min_tree_def;
 val res = translate find_min_def;
+val res = translate merge_def;
 val res = translate delete_min_def;
-*)
 
 val _ = export_theory ();

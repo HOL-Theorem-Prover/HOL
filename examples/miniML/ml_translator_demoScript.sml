@@ -8,18 +8,28 @@ open stringTheory;
 infix \\ val op \\ = op THEN;
 
 
+(* qsort example *)
+
+val _ = set_filename "Quicksort"
+
+val res = translate APPEND;
+val res = translate sortingTheory.PART_DEF;
+val res = translate sortingTheory.PARTITION_DEF;
+val res = translate sortingTheory.QSORT_DEF;
+
+val _ = clear_filename ()
+
+
 (* examples from library *)
 
 val res = translate MAP;
 val res = translate FILTER;
 val res = translate APPEND;
-val res = translate REVERSE_DEF;
+val res = translate REV_DEF;
+val res = translate REVERSE_REV;
 val res = translate LENGTH;
 val res = translate FOLDR;
 val res = translate FOLDL;
-val res = translate sortingTheory.PART_DEF;
-val res = translate sortingTheory.PARTITION_DEF;
-val res = translate sortingTheory.QSORT_DEF;
 val res = translate SUM;
 val res = translate FST;
 val res = translate SND;
@@ -27,7 +37,6 @@ val res = translate UNZIP;
 val res = translate FLAT;
 val res = translate TAKE_def;
 val res = translate SNOC;
-val res = translate REV_DEF;
 val res = translate EVERY_DEF;
 val res = translate EXISTS_DEF;
 val res = translate GENLIST;
@@ -62,9 +71,6 @@ val def = mlDefine `
 
 val def = mlDefine `
   n_times n f x = if n = 0:num then x else n_times (n-1) f (f x)`
-
-val def = mlDefine `
-  fac_gcd k m n = if k = 0:num then k else fac_gcd (k-1) (fac (gcd m n)) n`
 
 val def = mlDefine `
   nlist n = if n = 0:num then [] else n :: nlist (n-1)`;
@@ -171,7 +177,7 @@ val Eval_QSORT_EXPANDED = save_thm("Eval_QSORT_EXPANDED",let
 val ML_QSORT_CORRECT = store_thm ("ML_QSORT_CORRECT",
   ``!env a ord R l xs.
       (lookup "QSORT" env = SOME (Recclosure QSORT_env QSORT_ml "QSORT")) /\
-      (lookup "PARTITION" QSORT_env = SOME (Closure PARTITION_env "P" PARTITION_ml)) /\
+      (lookup "PARTITION" QSORT_env = SOME (Closure PARTITION_env "bound_1" PARTITION_ml)) /\
       (lookup "APPEND" QSORT_env = SOME (Recclosure APPEND_env APPEND_ml "APPEND")) /\
       (lookup "PART" PARTITION_env = SOME (Recclosure PART_env PART_ml "PART")) /\
       list a l xs /\ (lookup "xs" env = SOME xs) /\
@@ -184,9 +190,7 @@ val ML_QSORT_CORRECT = store_thm ("ML_QSORT_CORRECT",
             (Rval xs') /\
         (list a l' xs') /\ PERM l l' /\ SORTED ord l'``,
   REPEAT STRIP_TAC \\ IMP_RES_TAC Eval_QSORT_EXPANDED
-  \\ Q.LIST_EXISTS_TAC [`QSORT ord l`,`res'''`]
-  \\ FULL_SIMP_TAC std_ss
-       [sortingTheory.QSORT_PERM,sortingTheory.QSORT_SORTED]);
+  \\ METIS_TAC [sortingTheory.QSORT_PERM,sortingTheory.QSORT_SORTED]);
 
 
 val _ = export_theory();
