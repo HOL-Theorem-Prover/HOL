@@ -2,9 +2,9 @@ open bossLib Theory Parse res_quanTheory Defn Tactic boolLib;
 open finite_mapTheory listTheory pairTheory pred_setTheory;
 open set_relationTheory sortingTheory stringTheory wordsTheory;
 open relationTheory;
-open MiniMLTheory (*CompileTheory*);
+open MiniMLTheory Print_astTheory (*CompileTheory*);
 
-open pairLib;
+open pairLib intSimps;
 open lcsymtacs;
 
 val fs = full_simp_tac (srw_ss ())
@@ -61,6 +61,72 @@ val (type_subst_def, type_subst_ind) =
    decide_tac]);
 val _ = save_thm ("type_subst_def", type_subst_def);
 val _ = save_thm ("type_subst_ind", type_subst_ind);
+
+val (pos_int_to_string_def, pos_int_to_string_ind) =
+  tprove_no_defn ((pos_int_to_string_def, pos_int_to_string_ind),
+  wf_rel_tac `measure (\x.Num(ABS x))` >>
+  rw [integerTheory.INT_ABS, integerTheory.int_gt] >-
+  metis_tac [integerTheory.INT_LT_ANTISYM] >>
+  fs [integerTheory.INT_NOT_LT] >>
+  `?n'. n = &n'` 
+            by metis_tac [integerTheory.NUM_POSINT, integerTheory.INT_LT_IMP_LE]  >>
+  rw [] >>
+  fs []);
+val _ = save_thm ("pos_int_to_string_def", pos_int_to_string_def);
+val _ = save_thm ("pos_int_to_string_ind", pos_int_to_string_ind);
+
+val (join_strings_def, join_strings_ind) =
+  tprove_no_defn ((join_strings_def, join_strings_ind),
+  wf_rel_tac `measure (\(_,x).LENGTH x)` >>
+  srw_tac [ARITH_ss] []);
+val _ = save_thm ("join_strings_def", join_strings_def);
+val _ = save_thm ("join_strings_ind", join_strings_ind);
+
+val (pat_to_string_def, pat_to_string_ind) =
+  tprove_no_defn ((pat_to_string_def, pat_to_string_ind),
+  wf_rel_tac `measure pat_size` >>
+  rw [] >|
+  [decide_tac,
+   induct_on `v7` >>
+       rw [] >>
+       fs [pat_size_def] >>
+       decide_tac,
+   induct_on `ps` >>
+       rw [] >>
+       fs [pat_size_def] >>
+       decide_tac]);
+val _ = save_thm ("pat_to_string_def", pat_to_string_def);
+val _ = save_thm ("pat_to_string_ind", pat_to_string_ind);
+
+val (exp_to_string_def, exp_to_string_ind) =
+  tprove_no_defn ((exp_to_string_def, exp_to_string_ind),
+  wf_rel_tac `measure (\x. case x of INL e => exp_size e 
+                                   | INR (INL (p,e)) => exp_size e + 1
+                                   | INR (INR (v1,v2,e)) => exp_size e + 1)` >>
+  rw [] >>
+  TRY (induct_on `funs`) >>
+  TRY (induct_on `pes`) >>
+  TRY (induct_on `es`) >>
+  TRY (induct_on `v52`) >>
+  rw [exp_size_def] >>
+  fs [exp_size_def] >>
+  rw [exp_size_def] >>
+  decide_tac);
+val _ = save_thm ("exp_to_string_def", exp_to_string_def);
+val _ = save_thm ("exp_to_string_ind", exp_to_string_ind);
+
+val (type_to_string_def, type_to_string_ind) =
+  tprove_no_defn ((type_to_string_def, type_to_string_ind),
+  wf_rel_tac `measure t_size` >>
+  srw_tac [ARITH_ss] [] >>
+  cases_on `ts` >>
+  fs [] >>
+  induct_on `t` >>
+  rw [] >>
+  fs [t_size_def] >>
+  decide_tac);
+val _ = save_thm ("type_to_string_def", type_to_string_def);
+val _ = save_thm ("type_to_string_ind", type_to_string_ind);
 
 (*
 val (remove_ctors_def,remove_ctors_ind) =

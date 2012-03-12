@@ -1,5 +1,5 @@
 open bossLib Theory Parse boolTheory pairTheory Defn Tactic boolLib bagTheory
-open relationTheory bagLib miscTheory lcsymtacs;
+open relationTheory bagLib miscTheory lcsymtacs ml_translatorLib;
 
 val fs = full_simp_tac (srw_ss ())
 val rw = srw_tac []
@@ -19,7 +19,7 @@ val _ = type_abbrev ("heap", ``:'a tree list``);
 val _ = Define `
 empty = []`;
 
-val is_empty = Define `
+val is_empty_def = Define `
 (is_empty [] = T) ∧
 (is_empty _ = F)`;
 
@@ -76,5 +76,13 @@ val delete_min_def = Define `
 delete_min get_key leq ts =
   case remove_min_tree get_key leq ts of
     | (Node _ x ts1, ts2) => merge get_key leq (REVERSE ts1) ts2`;
+
+val res = translate is_empty_def;
+(* translator diverges
+val res = translate merge_def;
+val res = translate insert_def;
+val res = translate find_min_def;
+val res = translate delete_min_def;
+*)
 
 val _ = export_theory ();

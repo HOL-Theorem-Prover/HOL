@@ -1,5 +1,5 @@
 open bossLib Theory Parse boolTheory pairTheory Defn Tactic boolLib 
-open relationTheory miscTheory pred_setTheory lcsymtacs;
+open relationTheory miscTheory pred_setTheory lcsymtacs ml_translatorLib;
 
 val fs = full_simp_tac (srw_ss ())
 val rw = srw_tac []
@@ -87,5 +87,17 @@ val update_def = Define `
     One (update_tree i y t) :: ts
   else
     One t :: update (i - size t) y ts)`;
+
+val res = translate is_empty_def
+val res = translate size_def
+val res = translate link_def
+val res = translate cons_tree_def
+val res = translate uncons_tree_def
+val res = translate head_def
+val res = translate tail_def
+val res = translate lookup_tree_def
+val res = translate update_tree_def
+val res = translate lookup_def
+val res = translate update_def
 
 val _ = export_theory ();

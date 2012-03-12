@@ -31,15 +31,13 @@ let int_to_string n =
 
 let infixes = ["="; "+"; "-"; "*"; "div"; "mod"; "<"; ">"; "<="; ">="]
 
-let rec
-list_to_string printer sep [] =
-  ""
+let rec 
+join_strings sep [] = ""
 and
-list_to_string printer sep [x] =
-  printer x
+join_strings sep [x] = x
 and
-list_to_string printer sep (x::y::l) =
-  printer x ^ sep ^ printer y ^ list_to_string printer sep l
+join_strings sep (x::y::l) =
+  x ^ sep ^ y ^ join_strings sep l
 
 let lit_to_string l = match l with
   (* Rely on the fact that true and false cannot be rebound in SML *)
@@ -59,13 +57,13 @@ pat_to_string (Pvar v) = var_to_string v
 and
 pat_to_string (Plit l) = lit_to_string l
 and
-pat_to_string (Pcon None ps) = "(" ^ list_to_string pat_to_string "," ps ^ ")"
+pat_to_string (Pcon None ps) = "(" ^ join_strings "," (List.map pat_to_string ps) ^ ")"
 and
 pat_to_string (Pcon (Some c) []) =
   var_to_string c
 and
 pat_to_string (Pcon (Some c) ps) =
-  "(" ^ var_to_string c ^ "(" ^ list_to_string pat_to_string "," ps ^ ")" ^ ")"
+  "(" ^ var_to_string c ^ "(" ^ join_strings "," (List.map pat_to_string ps) ^ ")" ^ ")"
 
 let rec
 exp_to_string (Raise r) =
@@ -78,13 +76,13 @@ exp_to_string (Val _) =
   (* TODO: this shouldn't happen in source *)
   ""
 and
-exp_to_string (Con None es) = "(" ^ list_to_string exp_to_string "," es ^ ")"
+exp_to_string (Con None es) = "(" ^ join_strings "," (List.map exp_to_string es) ^ ")"
 and
 exp_to_string (Con (Some c) []) =
   var_to_string c
 and
 exp_to_string (Con (Some c) es) =
-  "(" ^ var_to_string c ^ "(" ^ list_to_string exp_to_string "," es ^ ")" ^ ")"
+  "(" ^ var_to_string c ^ "(" ^ join_strings "," (List.map exp_to_string es) ^ ")" ^ ")"
 and
 exp_to_string (Var v) =
   var_to_string v
@@ -136,15 +134,15 @@ exp_to_string (If e1 e2 e3) =
 and
 exp_to_string (Mat e pes) =
   "(case " ^ exp_to_string e ^ " of " ^
-  list_to_string pat_exp_to_string "|" pes ^ ")"
+  join_strings "|" (List.map pat_exp_to_string pes) ^ ")"
 and
 exp_to_string (Let v e1 e2) =
-  "(let val " ^ var_to_string v ^ " = " ^ exp_to_string e1 ^ " in " ^
-  exp_to_string e2 ^ " end)"
+  "let val " ^ var_to_string v ^ " = " ^ exp_to_string e1 ^ " in " ^
+  exp_to_string e2 ^ " end"
 and
 exp_to_string (Letrec funs e) =
-  "(let fun " ^ list_to_string fun_to_string " and " funs ^ " in " ^
-  exp_to_string e ^ " end)"
+  "let fun " ^ join_strings " and " (List.map fun_to_string funs) ^ " in " ^
+  exp_to_string e ^ " end"
 and
 pat_exp_to_string (p,e) =
   pat_to_string p ^ " => " ^ exp_to_string e
@@ -160,7 +158,7 @@ type_to_string (Tapp ts tn) =
   if ts = [] then
     tn
   else
-    "(" ^ list_to_string type_to_string "," ts ^ ")" ^ tn
+    "(" ^ join_strings "," (List.map type_to_string ts) ^ ")" ^ tn
 and
 type_to_string (Tfn t1 t2) =
   "(" ^ type_to_string t1 ^ " -> " ^ type_to_string t2 ^ ")"
@@ -173,19 +171,19 @@ type_to_string Tbool =
   "bool"
 
 let variant_to_string (c,ts) =
-  var_to_string c ^ (if ts = [] then "" else " of " ^
-  list_to_string type_to_string " * " ts)
+  var_to_string c ^ (if ts = [] then "" else " of ") ^
+  join_strings " * " (List.map type_to_string ts)
 
 let typedef_to_string (tvs, name, variants) =
-  (if tvs = [] then "" else "(" ^ list_to_string (fun x -> x) "," tvs ^ ")") ^
-  name ^ " = " ^ list_to_string variant_to_string "|" variants
+  (if tvs = [] then "" else "(" ^ join_strings "," tvs ^ ")") ^
+  name ^ " = " ^ join_strings "|" (List.map variant_to_string variants)
 
-let rec
-dec_to_string (Dlet p e) =
-  "val " ^ pat_to_string p ^ " = " ^ exp_to_string e
-and
-dec_to_string (Dletrec funs) =
-  "fun " ^ list_to_string fun_to_string " and " funs
-and
-dec_to_string (Dtype types) =
-  "datatype " ^ list_to_string typedef_to_string " and " types
+let dec_to_string d = 
+  match d with
+    | Dlet p e ->
+        "val " ^ pat_to_string p ^ " = " ^ exp_to_string e
+    | Dletrec funs ->
+        "fun " ^ join_strings " and " (List.map fun_to_string funs)
+    | Dtype types ->
+        "datatype " ^ join_strings " and " (List.map typedef_to_string types)
+  end
