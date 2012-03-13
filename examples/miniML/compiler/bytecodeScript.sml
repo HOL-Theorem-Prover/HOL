@@ -1,6 +1,6 @@
 open HolKernel boolLib bossLib Parse; val _ = new_theory "bytecode";
 
-open arithmeticTheory listTheory finite_mapTheory;
+open arithmeticTheory listTheory finite_mapTheory integerTheory;
 
 infix \\ val op \\ = op THEN;
 
@@ -11,7 +11,7 @@ val _ = Hol_datatype `
   bc_stack_op =
     Pop                     (* pop top of stack *)
   | Pops of num             (* pop n elements under stack top *)
-  | PushNum of num          (* push num onto stack *)
+  | PushInt of int          (* push num onto stack *)
   | Cons of num => num      (* push new cons with tag m and n elements *)
   | Load of num             (* push stack[n+1] *)
   | Store of num            (* pop and store in stack[n+1] *)
@@ -40,7 +40,7 @@ val _ = Hol_datatype `
 
 val _ = Hol_datatype `
   bc_value =
-    Number of num                  (* natural *)
+    Number of int                  (* integer *)
   | Block of num => bc_value list  (* cons block: tag and payload *)
   | CodePtr of num                 (* code pointer *)
   | RefPtr of num                  (* pointer to ref cell *)`;
@@ -61,7 +61,7 @@ val _ = Hol_datatype `
 val bc_fetch_aux_def = Define `
   (bc_fetch_aux [] len n = NONE) /\
   (bc_fetch_aux (x::xs) len n =
-     if n = 0 then SOME x else
+     if n = 0:num then SOME x else
      if n < len x + 1 then NONE else
        bc_fetch_aux xs len (n - (len x + 1)))`;
 
@@ -79,25 +79,25 @@ val bump_pc_def = Define `
 (* next state relation *)
 
 val bool2num_def = Define `
-  (bool2num T = 1) /\ (bool2num F = 0)`;
+  (bool2num T = 1) /\ (bool2num F = 0:int)`;
 
 val (bc_stack_op_rules,bc_stack_op_ind,bc_stack_op_cases) = Hol_reln `
   bc_stack_op Pop (x::xs) (xs) /\
   bc_stack_op (Pops (LENGTH ys)) (x::ys++xs) (x::xs) /\
-  bc_stack_op (PushNum n) (xs) (Number n::xs) /\
+  bc_stack_op (PushInt n) (xs) (Number n::xs) /\
   bc_stack_op (Cons tag (LENGTH ys)) (ys ++ xs) (Block tag (REVERSE ys)::xs) /\
-  (n < LENGTH xs ==> bc_stack_op (Load n) xs (EL n xs :: xs)) /\
+  (k < LENGTH xs ==> bc_stack_op (Load k) xs (EL k xs :: xs)) /\
   bc_stack_op (Store (LENGTH ys)) (y::ys ++ x::xs) (ys ++ y::xs) /\
-  (n < LENGTH ys ==> bc_stack_op (El n) ((Block tag ys)::xs) (EL n ys::xs)) /\
-  bc_stack_op Tag ((Block tag ys)::xs) (Number tag::xs) /\
+  (k < LENGTH ys ==> bc_stack_op (El k) ((Block tag ys)::xs) (EL k ys::xs)) /\
+  bc_stack_op Tag ((Block tag ys)::xs) (Number (&tag)::xs) /\
   bc_stack_op IsNum (x::xs) (Number (bool2num (?n. x = Number n)) :: xs) /\
   bc_stack_op Equal (x2::x1::xs) (Number (bool2num (x1 = x2)) :: xs) /\
   bc_stack_op Less (Number n :: Number m :: xs) (Number (bool2num (m < n))::xs) /\
   bc_stack_op Add (Number n :: Number m :: xs) (Number (m + n)::xs) /\
   bc_stack_op Sub (Number n :: Number m :: xs) (Number (m - n)::xs) /\
   bc_stack_op Mult (Number n :: Number m :: xs) (Number (m * n)::xs) /\
-  bc_stack_op Div2 (Number m :: xs) (Number (m DIV 2)::xs) /\
-  bc_stack_op Mod2 (Number m :: xs) (Number (m MOD 2)::xs)`
+  bc_stack_op Div2 (Number m :: xs) (Number (m / 2)::xs) /\
+  bc_stack_op Mod2 (Number m :: xs) (Number (m % 2)::xs)`
 
 val (bc_next_rules,bc_next_ind,bc_next_cases) = Hol_reln `
   (!s b ys.
