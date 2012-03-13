@@ -37,9 +37,11 @@ val merge_def = Define `
 (link get_key leq (Node x Empty m) a = Node x a m) ∧
 (link get_key leq (Node x b m) a = 
   Node x Empty (merge get_key leq (merge get_key leq a b) m))`;
+*)
 
 (* Without mutual recursion *)
-val merge_def = Define `
+
+val merge_defn = Hol_defn "merge" `
 (merge get_key leq a Empty = a) ∧
 (merge get_key leq Empty b = b) ∧
 (merge get_key leq (Node x h1 h2) (Node y h1' h2') =
@@ -52,14 +54,15 @@ val merge_def = Define `
        | Empty => Node y (Node x h1 h2) h2'
        | _ => Node y Empty (merge get_key leq (merge get_key leq (Node x h1 h2) h1') h2'))`;
 
+val _ = Defn.save_defn merge_defn;
+
 val insert_def = Define `
-insert x a = merge (Node x Empty Empty) a;
+insert get_key leq x a = merge get_key leq (Node x Empty Empty) a`;
 
 val find_min_def = Define `
 find_min (Node x _ _) = x`;
 
 val delete_min_def = Define `
-delete_min (Node _ a b) = merge a b`;
+delete_min get_key leq (Node _ a b) = merge get_key leq a b`;
 
-*)
 val _ = export_theory ();
