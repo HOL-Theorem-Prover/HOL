@@ -35,7 +35,7 @@ in
     val _ = append_to_file "_hol.txt" ["\n",def_str,"\n"]
     val _ = append_to_file "_th.txt" ["\n",th_str,"\n"]
     in () end;
-  fun print_inv_def inv_def = let
+  fun print_inv_def inv_def = if !base_filename = "" then () else let
     val th_str = thm_to_string inv_def
     val _ = append_to_file "_th.txt" ["\n",th_str,"\n"]
     in () end;

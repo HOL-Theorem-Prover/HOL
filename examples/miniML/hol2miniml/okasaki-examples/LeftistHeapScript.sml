@@ -148,7 +148,7 @@ rw [leftist_heap_to_bag_def, find_min_def, BAG_DIFF_INSERT2]);
 val res = translate is_empty_def;
 val res = translate rank_def;
 val res = translate make_node_def;
-val res = translate APPEND;
+val res = translate listTheory.APPEND;
 val res = translate merge_def;
 val res = translate insert_def;
 val res = translate find_min_def;

@@ -1,5 +1,6 @@
+open HolKernel Parse;
 open bossLib Theory Parse boolTheory pairTheory Defn Tactic boolLib bagTheory
-open relationTheory bagLib miscTheory lcsymtacs ml_translatorLib;
+open relationTheory bagLib miscTheory lcsymtacs ml_translatorLib listTheory;
 
 val fs = full_simp_tac (srw_ss ())
 val rw = srw_tac []
@@ -167,15 +168,15 @@ val tm =
 
 val inv_def = tDefine "heap_def" [ANTIQUOTE tm]
  (WF_REL_TAC `measure (heap_size (\x.0) o FST o SND)`
-  \\ Induct
-  \\ EVAL_TAC \\ SIMP_TAC std_ss []
-  \\ REPEAT STRIP_TAC \\ RES_TAC
-  \\ FULL_SIMP_TAC std_ss [] \\ DECIDE_TAC)
+  THEN Induct
+  THEN EVAL_TAC THEN SIMP_TAC std_ss []
+  THEN REPEAT STRIP_TAC THEN RES_TAC
+  THEN FULL_SIMP_TAC std_ss [] THEN DECIDE_TAC)
 
 val list_SIMP = prove(
   ``!xs b. list (\x v. if b x \/ MEM x xs then p x v else q) xs = list p xs``,
   Induct
-  \\ FULL_SIMP_TAC std_ss [FUN_EQ_THM,fetch "-" "list_def",MEM,DISJ_ASSOC])
+  THEN FULL_SIMP_TAC std_ss [FUN_EQ_THM,fetch "-" "list_def",MEM,DISJ_ASSOC])
   |> Q.SPECL [`xs`,`\x.F`] |> SIMP_RULE std_ss [];
 
 val inv_def = inv_def |> SIMP_RULE std_ss [list_SIMP]
