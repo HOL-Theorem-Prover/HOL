@@ -2,7 +2,7 @@ open MiniML
 
 (* Remove all ML data constructors and replace them with untyped tuples with
  * numeric indices *)
-val remove_ctors : (conN -> num) -> exp -> exp
+val remove_ctors : (conN -> int) -> exp -> exp
 
 let rec
 pat_remove_ctors cnmap (Pvar vn) = Pvar vn
@@ -13,7 +13,7 @@ pat_remove_ctors cnmap (Pcon None ps) =
   Pcon None (List.map (pat_remove_ctors cnmap) ps)
 and
 pat_remove_ctors cnmap (Pcon (Some cn) ps) =
-  Pcon None ((Plit (Num (cnmap cn))) :: List.map (pat_remove_ctors cnmap) ps)
+  Pcon None ((Plit (IntLit (cnmap cn))) :: List.map (pat_remove_ctors cnmap) ps)
 
 let rec
 remove_ctors cnmap (Raise err) = Raise err
@@ -23,7 +23,7 @@ and
 remove_ctors cnmap (Con None es) = Con None (List.map (remove_ctors cnmap) es)
 and
 remove_ctors cnmap (Con (Some cn) es) =
-  Con None (Val (Lit (Num (cnmap cn))) :: List.map (remove_ctors cnmap) es)
+  Con None (Val (Lit (IntLit (cnmap cn))) :: List.map (remove_ctors cnmap) es)
 and
 remove_ctors cnmap (Var vn) = Var vn
 and
@@ -89,13 +89,13 @@ fold_consts (Var vn) = Var vn
 and
 fold_consts (Fun vn e) = Fun vn (fold_consts e)
 and
-fold_consts (App (Opn op) (Val (Lit (Num n1))) (Val (Lit (Num n2)))) =
-  Val (Lit (Num (opn_lookup op n1 n2)))
+fold_consts (App (Opn opn) (Val (Lit (IntLit n1))) (Val (Lit (IntLit n2)))) =
+  Val (Lit (IntLit (opn_lookup opn n1 n2)))
 and
-fold_consts (App (Opb op) (Val (Lit (Num n1))) (Val (Lit (Num n2)))) =
-  Val (Lit (Bool (opb_lookup op n1 n2)))
+fold_consts (App (Opb opb) (Val (Lit (IntLit n1))) (Val (Lit (IntLit n2)))) =
+  Val (Lit (Bool (opb_lookup opb n1 n2)))
 and
-fold_consts (App Equality (Val (Lit (Num n1))) (Val (Lit (Num n2)))) =
+fold_consts (App Equality (Val (Lit (IntLit n1))) (Val (Lit (IntLit n2)))) =
   Val (Lit (Bool (n1 = n2)))
 and
 fold_consts (App Equality (Val (Lit (Bool b1))) (Val (Lit (Bool b2)))) =
@@ -113,11 +113,11 @@ and
 fold_consts (Log Or (Val (Lit (Bool false))) e2) =
   fold_consts e2
 and
-fold_consts (Log op (Val (Lit (Bool _))) as v _) =
-  v
+fold_consts (Log _ (Val (Lit (Bool b))) _) =
+  Val (Lit (Bool b))
 and
-fold_consts (Log op e1 e2) =
-  Log op (fold_consts e1) (fold_consts e2)
+fold_consts (Log log e1 e2) =
+  Log log (fold_consts e1) (fold_consts e2)
 and
 fold_consts (If (Val (Lit (Bool b))) e2 e3) =
   if b then fold_consts e2 else fold_consts e3
@@ -137,7 +137,7 @@ and
 fold_consts (Letrec funs e) =
   Letrec (funs_fold_consts funs) (fold_consts e)
 and
-fold_consts (Proj (Val (Lit (Conv None vs))) n) =
+fold_consts (Proj (Val (Conv None vs)) n) =
   Val (List.nth vs n)
 and
 fold_consts (Proj e n) = Proj (fold_consts e) n
@@ -170,11 +170,11 @@ match_fold_consts ((p,e)::pes) =
 and
 fold_match v [] = Raise Bind_error
 and
-fold_match (Lit l) as v ((Plit l',e)::pes) =
+fold_match (Lit l) ((Plit l',e)::pes) =
   if l = l' then
     fold_consts e
   else
-    fold_match v pes
+    fold_match (Lit l) pes
 and
 (* TODO: fold more pattern matching (e.g. to Let)? Need envC? *)
 fold_match v pes =

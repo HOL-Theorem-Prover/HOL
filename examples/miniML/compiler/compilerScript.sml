@@ -2,8 +2,6 @@ open HolKernel bossLib MiniMLTheory listTheory bytecodeTheory lcsymtacs
 
 val _ = new_theory "compiler"
 
-(*
-
 val _ = Hol_datatype`
   compiler_state =
   <|
@@ -13,19 +11,18 @@ val _ = Hol_datatype`
   |>`
 
 val compile_lit_def = Define`
-  (compile_lit (Num  n) = PushNum n)
-∧ (compile_lit (Bool b) = PushNum (bool2num b))`;
+  (compile_lit (IntLit  n) = PushInt n)
+∧ (compile_lit (Bool b) = PushInt (bool2num b))`;
 
 val compile_val_def = tDefine "compile_val"`
   (compile_val (Lit l) = [Stack (compile_lit l)])
-∧ (compile_val (Conv NONE ((Lit (Num c))::vs)) =
+∧ (compile_val (Conv NONE ((Lit (IntLit c))::vs)) =
    let n  = LENGTH vs in
-   if n = 0 then [Stack (PushNum c)] else
+   if n = 0 then [Stack (PushInt c)] else
    let vs = FLAT (MAP compile_val vs) in
-   SNOC (Stack (Cons c n)) vs)
+   SNOC (Stack (Cons (Num c) n)) vs)
 (* literals and desugared constructors only *)`
 (WF_REL_TAC `measure v_size` >>
- gen_tac >>
  Induct >>
  srw_tac [][] >>
  fsrw_tac [ARITH_ss][exp_size_def,LENGTH_NIL] >>
@@ -88,12 +85,12 @@ val compile_def = Define`
     let (e1,s) = compile (e1,s) in
     emit s (e2++e1) [Stack Less])
 ∧ (compile (App (Opb Gt) e1 e2, s)
-  = let (e0,s) = emit s [] [Stack (PushNum 0)] in
+  = let (e0,s) = emit s [] [Stack (PushInt 0)] in
     let (e1,s) = compile (e1,s) in
     let (e2,s) = compile (e2,s) in
     emit s (e0++e1++e2) [Stack Sub;Stack Less])
 ∧ (compile (App (Opb Leq) e1 e2, s)
-  = let (e0,s) = emit s [] [Stack (PushNum 0)] in
+  = let (e0,s) = emit s [] [Stack (PushInt 0)] in
     let (e2,s) = compile (e2,s) in
     let (e1,s) = compile (e1,s) in
     emit s (e0++e2++e1) [Stack Sub;Stack Less])
@@ -104,7 +101,7 @@ val compile_def = Define`
     (e1++[JumpNil s.next_label]++e2, s))
 ∧ (compile (Log Or e1 e2, s)
   = let (e1,s) = compile (e1,s) in
-    let f n1 n2 = [JumpNil n1;Stack (PushNum (bool2num T));Jump n2] in
+    let f n1 n2 = [JumpNil n1;Stack (PushInt (bool2num T));Jump n2] in
     let (aa,s) = emit s ARB (f ARB ARB) in
     let n1     = s.next_label in
     let (e2,s) = compile (e2,s) in
@@ -121,7 +118,5 @@ val compile_def = Define`
     let (e3,s) = compile (e3,s) in
     let n3     = s.next_label in
     (e1++(f n1 n2)++e2++[Jump n3]++e3, s))`
-
-*)
 
 val _ = export_theory ()
