@@ -1,5 +1,7 @@
+open preamble MiniMLTheory CompileTheory evaluateEquationsTheory
 
-(*
+val _ = new_theory "compileProofs"
+
 val (remove_ctors_def,remove_ctors_ind) =
   tprove_no_defn ((remove_ctors_def,remove_ctors_ind),
   WF_REL_TAC
@@ -24,10 +26,21 @@ val (remove_ctors_def,remove_ctors_ind) =
        decide_tac]);
 val _ = save_thm ("remove_ctors_def", remove_ctors_def);
 val _ = save_thm ("remove_ctors_ind", remove_ctors_ind);
+
+(*
+This is too awful! Try a simpler definition of fold_consts.
+val (fold_consts_def,fold_consts_ind) =
+  tprove_no_defn ((fold_consts_def,fold_consts_ind),
+  WF_REL_TAC
+  `inv_image $< (λx. case x of
+                     | INL x => exp_size x
+                     | INR (INL x) => v_size x
+                     | INR (INR (INL x)) => exp3_size x
+                     | INR (INR (INR (INL x))) => exp1_size x
+                     | INR (INR (INR (INR (INL x)))) => 1 + exp6_size x
+                     | INR (INR (INR (INR (INR (_,x))))) => exp6_size x)` >>
+  fs [Once fold_consts_UNION_AUX_def]
 *)
-
-(* ------------------------------------------------------------------------- *)
-
 
 (* ------------------------------------------------------------------------- *)
 
@@ -37,9 +50,6 @@ val map_result_def = Define`
   (map_result f (Rval v) = Rval (f v)) ∧
   (map_result f (Rerr e) = Rerr e)`;
 val _ = export_rewrites["map_result_def"];
-
-(* ------------------------------------------------------------------------- *)
-
 
 (* ------------------------------------------------------------------------- *)
 
@@ -66,3 +76,4 @@ Induct >- (
     Cases_on `r` >> rw []
 *)
 
+val _ = export_theory ()
