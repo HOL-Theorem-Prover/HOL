@@ -4,6 +4,8 @@ open HolKernel Parse boolLib bossLib; val _ = new_theory "ImplicitQueue";
 open listTheory arithmeticTheory;
 open ml_translatorLib;
 
+(* Okasaki page 174 *)
+
 (* implementation *)
 
 val _ = Hol_datatype `times = Once of 'a | Twice of times => times`;

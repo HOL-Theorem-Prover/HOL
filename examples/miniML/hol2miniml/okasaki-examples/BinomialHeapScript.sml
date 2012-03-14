@@ -1,24 +1,19 @@
-open HolKernel Parse;
-open bossLib Theory Parse boolTheory pairTheory Defn Tactic boolLib bagTheory
-open relationTheory bagLib miscTheory lcsymtacs listTheory;
-open ml_translatorLib;
+open preamble
+open bagTheory bagLib miscTheory ml_translatorLib;
 
 val fs = full_simp_tac (srw_ss ())
 val rw = srw_tac []
-val wf_rel_tac = WF_REL_TAC
-val induct_on = Induct_on
-val cases_on = Cases_on;
-val every_case_tac = BasicProvers.EVERY_CASE_TAC;
-val full_case_tac = BasicProvers.FULL_CASE_TAC;
 
 val _ = new_theory "BinomialHeap"
+
+(* Okasaki page 24 *)
 
 val _ = Hol_datatype `
 tree = Node of num => 'a => tree list`;
 
 val _ = type_abbrev ("heap", ``:'a tree list``);
 
-val _ = Define `
+val empty_def = Define `
 empty = []`;
 
 val is_empty_def = Define `

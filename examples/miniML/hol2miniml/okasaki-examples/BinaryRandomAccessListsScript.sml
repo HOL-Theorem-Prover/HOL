@@ -1,15 +1,9 @@
-open bossLib Theory Parse boolTheory pairTheory Defn Tactic boolLib 
-open relationTheory miscTheory pred_setTheory lcsymtacs ml_translatorLib;
-
-val fs = full_simp_tac (srw_ss ())
-val rw = srw_tac []
-val wf_rel_tac = WF_REL_TAC
-val induct_on = Induct_on
-val cases_on = Cases_on;
-val every_case_tac = BasicProvers.EVERY_CASE_TAC;
-val full_case_tac = BasicProvers.FULL_CASE_TAC;
+open preamble
+open miscTheory ml_translatorLib;
 
 val _ = new_theory "BinaryRandomAccessLists"
+
+(* Okasaki page 123 *)
 
 val _ = Hol_datatype `
 tree = Leaf of 'a | Node of num => tree => tree`;
@@ -19,44 +13,44 @@ digit = Zero | One of 'a tree`;
 
 val _ = type_abbrev ("rlist", ``:'a digit list``);
 
-val empty_def = Define `
+val empty_def = mlDefine `
 empty = []`;
 
-val is_empty_def = Define `
+val is_empty_def = mlDefine `
 (is_empty [] = T) ∧
 (is_empty _ = F)`;
 
-val size_def = Define `
+val size_def = mlDefine `
 (size (Leaf _) = 1) ∧
 (size (Node w _ _) = w)`;
 
-val link_def = Define `
+val link_def = mlDefine `
 (link t1 t2 = Node (size t1 + size t2) t1 t2)`;
 
-val cons_tree_def = Define `
+val cons_tree_def = mlDefine `
 (cons_tree t [] = [One t]) ∧
 (cons_tree t (Zero :: ts) = One t :: ts) ∧
-(cons_tree t (One t' :: ts) = Zero :: cons_tree (link t t') ts)`;
+(cons_tree t1 (One t2 :: ts) = Zero :: cons_tree (link t1 t2) ts)`;
 
-val uncons_tree_def = Define `
+val uncons_tree_def = mlDefine `
 (uncons_tree [One t] = (t, [])) ∧
 (uncons_tree (One t::ts) = (t, Zero :: ts)) ∧
 (uncons_tree (Zero :: ts) = 
   case uncons_tree ts of
     | (Node _ t1 t2, ts') => (t1, One t2 :: ts'))`;
 
-val cons_def = Define `
+val cons_def = mlDefine `
 cons x ts = cons_tree (Leaf x) ts`;
 
-val head_def = Define `
+val head_def = mlDefine `
 head ts =
   case uncons_tree ts of
     | (Leaf x, _) => x`;
 
-val tail_def = Define `
+val tail_def = mlDefine `
 tail ts = let (x,ts') = uncons_tree ts in ts'`;
 
-val lookup_tree_def = Define `
+val lookup_tree_def = mlDefine `
 (lookup_tree i (Leaf x) = if i = 0 then x else ARB) ∧
 (lookup_tree i (Node w t1 t2) =
   if i < w DIV 2  then 
@@ -64,7 +58,7 @@ val lookup_tree_def = Define `
   else 
     lookup_tree (i - w DIV 2) t2)`;
 
-val update_tree_def = Define `
+val update_tree_def = mlDefine `
 (update_tree i y (Leaf x) = if i = 0 then Leaf y else ARB) ∧
 (update_tree i y (Node w t1 t2) =
   if i < w DIV 2 then 
@@ -72,7 +66,7 @@ val update_tree_def = Define `
   else 
     Node w t1 (update_tree (i - w DIV 2) y t2))`;
 
-val lookup_def = Define `
+val lookup_def = mlDefine `
 (lookup i (Zero::ts) = lookup i ts) ∧
 (lookup i (One t::ts) =
   if i < size t then 
@@ -80,24 +74,12 @@ val lookup_def = Define `
   else 
     lookup (i - size t) ts)`;
 
-val update_def = Define `
+val update_def = mlDefine `
 (update i y (Zero::ts) = Zero::update i y ts) ∧
 (update i y (One t::ts) =
   if i < size t then
     One (update_tree i y t) :: ts
   else
     One t :: update (i - size t) y ts)`;
-
-val res = translate is_empty_def
-val res = translate size_def
-val res = translate link_def
-val res = translate cons_tree_def
-val res = translate uncons_tree_def
-val res = translate head_def
-val res = translate tail_def
-val res = translate lookup_tree_def
-val res = translate update_tree_def
-val res = translate lookup_def
-val res = translate update_def
 
 val _ = export_theory ();

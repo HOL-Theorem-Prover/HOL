@@ -1,23 +1,16 @@
-open bossLib Theory Parse boolTheory pairTheory Defn Tactic boolLib bagTheory
-open relationTheory bagLib miscTheory lcsymtacs;
-open ml_translatorLib;
-
-val fs = full_simp_tac (srw_ss ())
-val rw = srw_tac []
-val wf_rel_tac = WF_REL_TAC
-val induct_on = Induct_on
-val cases_on = Cases_on;
-val every_case_tac = BasicProvers.EVERY_CASE_TAC;
-val full_case_tac = BasicProvers.FULL_CASE_TAC;
+open preamble
+open miscTheory ml_translatorLib;
 
 val _ = new_theory "BottomUpMergeSort"
 
-(* Note, we're just cutting out the laziness since it shouldn't affect
- * functional correctness *)
+(* Okasaki page 77 *)
+
+(* Note, we're following Chargueraud and just cutting out the laziness since it
+ * shouldn't affect functional correctness *)
 
 val _ = type_abbrev ("sortable", ``:num # 'a list list``);
 
-val mrg_def = Define `
+val mrg_def = mlDefine `
 (mrg leq [] ys = ys) ∧
 (mrg leq xs [] = xs) ∧
 (mrg leq (x::xs) (y::ys) =
@@ -26,8 +19,11 @@ val mrg_def = Define `
   else
     y :: mrg leq (x::xs) ys)`;
 
-val empty_def = Define `
+val empty_def = mlDefine `
 empty = (0, [])`;
+
+val _ = translate listTheory.TL
+val _ = translate listTheory.HD
 
 val add_seg_def = tDefine "add_seg" `
 add_seg leq seg segs size =
@@ -40,29 +36,22 @@ add_seg leq seg segs size =
  Cases_on `size = 0` >>
  full_simp_tac (srw_ss()++ARITH_ss) []);
 
-val add_def = Define `
+val _ = translate add_seg_def;
+
+val add_def = mlDefine `
 add leq x (size,segs) = (size+1, add_seg leq [x] segs size)`;
 
-val mrg_all_def = Define `
+val mrg_all_def = mlDefine `
 (mrg_all leq xs [] = xs) ∧
 (mrg_all leq xs (seg::segs) = mrg_all leq (mrg leq xs seg) segs)`;
 
-val sort_def = Define `
+val sort_def = mlDefine `
 sort leq size segs = mrg_all leq [] segs`;
 
 
 (* translation *)
 
-val _ = set_filename (current_theory())
-
-val res = translate listTheory.TL
-val res = translate listTheory.HD
-val res = translate mrg_def
-val res = translate empty_def
-val res = translate mrg_all_def
-val res = translate sort_def
-val res = translate add_seg_def
-val res = translate add_def
+(*val _ = set_filename (current_theory())*)
 
 val _ = export_theory();
 

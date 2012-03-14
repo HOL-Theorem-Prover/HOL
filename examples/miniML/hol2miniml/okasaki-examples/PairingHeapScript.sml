@@ -1,34 +1,30 @@
-open HolKernel Parse;
-open bossLib Theory Parse boolTheory pairTheory Defn Tactic boolLib bagTheory
-open relationTheory bagLib miscTheory lcsymtacs ml_translatorLib listTheory;
+open preamble
+open bagTheory bagLib miscTheory ml_translatorLib
 
 val fs = full_simp_tac (srw_ss ())
 val rw = srw_tac []
-val wf_rel_tac = WF_REL_TAC
-val induct_on = Induct_on
-val cases_on = Cases_on;
-val every_case_tac = BasicProvers.EVERY_CASE_TAC;
-val full_case_tac = BasicProvers.FULL_CASE_TAC;
 
 val _ = new_theory "PairingHeap"
 
+(* Okasaki page 54 *)
+
 val _ = Hol_datatype `
-heap = Empty | Node of 'a => heap list`;
+heap = Empty | Tree of 'a => heap list`;
 
-val pairing_heap_to_bag_def = Define `
-(pairing_heap_to_bag Empty = {||}) ∧
-(pairing_heap_to_bag (Node x hs) =
-  BAG_INSERT x (pairing_heaps_to_bag hs)) ∧
+val heap_to_bag_def = Define `
+(heap_to_bag Empty = {||}) ∧
+(heap_to_bag (Tree x hs) =
+  BAG_INSERT x (heaps_to_bag hs)) ∧
 
-(pairing_heaps_to_bag [] = {||}) ∧
-(pairing_heaps_to_bag (h::hs) =
-  BAG_UNION (pairing_heap_to_bag h) (pairing_heaps_to_bag hs))`;
+(heaps_to_bag [] = {||}) ∧
+(heaps_to_bag (h::hs) =
+  BAG_UNION (heap_to_bag h) (heaps_to_bag hs))`;
 
-val pairing_heap_ok_def = tDefine "pairing_heap_ok" `
-(pairing_heap_ok get_key leq Empty = T) ∧
-(pairing_heap_ok get_key leq (Node x hs) =
-  EVERY (pairing_heap_ok get_key leq) hs ∧
-  BAG_EVERY (\y. leq (get_key x) (get_key y)) (pairing_heaps_to_bag hs))`
+val is_heap_ordered_def = tDefine "is_heap_ordered" `
+(is_heap_ordered get_key leq Empty = T) ∧
+(is_heap_ordered get_key leq (Tree x hs) =
+  EVERY (is_heap_ordered get_key leq) hs ∧
+  BAG_EVERY (\y. leq (get_key x) (get_key y)) (heaps_to_bag hs))`
 (wf_rel_tac `measure (\(_,_,h). (heap_size (\x.1) h))` >>
 rw [] >>
 induct_on `hs` >>
@@ -36,7 +32,7 @@ rw [fetch "-" "heap_size_def"] >>
 fs [] >>
 decide_tac);
 
-val _ = Define `
+val empty_def = Define `
 empty = Empty`;
 
 val is_empty_def = Define `
@@ -46,16 +42,16 @@ val is_empty_def = Define `
 val merge_def = Define `
 (merge get_key leq h Empty = h) ∧
 (merge get_key leq Empty h = h) ∧
-(merge get_key leq (Node x hs1) (Node y hs2) =
+(merge get_key leq (Tree x hs1) (Tree y hs2) =
   if leq (get_key x) (get_key y) then
-    Node x (Node y hs2 :: hs1)
+    Tree x (Tree y hs2 :: hs1)
   else
-    Node y (Node x hs1 :: hs2))`;
+    Tree y (Tree x hs1 :: hs2))`;
 
 val merge_ind = fetch "-" "merge_ind"
 
 val insert_def = Define `
-insert get_key leq x h = merge get_key leq (Node x []) h`;
+insert get_key leq x h = merge get_key leq (Tree x []) h`;
 
 val merge_pairs_def = Define `
 (merge_pairs get_key leq [] = Empty) ∧
@@ -66,88 +62,88 @@ val merge_pairs_def = Define `
 val merge_pairs_ind = fetch "-" "merge_pairs_ind"
 
 val find_min_def = Define `
-find_min (Node x _) = x`;
+find_min (Tree x _) = x`;
 
 val delete_min_def = Define `
-delete_min get_key leq (Node x hs) = merge_pairs get_key leq hs`;
+delete_min get_key leq (Tree x hs) = merge_pairs get_key leq hs`;
 
-val pairing_heap_merge_bag = Q.store_thm ("pairing_heap_merge_bag",
+
+(* Functional correctness proof *)
+
+val merge_bag = Q.store_thm ("merge_bag",
 `!get_key leq h1 h2.
-  pairing_heap_to_bag (merge get_key leq h1 h2) =
-  BAG_UNION (pairing_heap_to_bag h1) (pairing_heap_to_bag h2)`,
+  heap_to_bag (merge get_key leq h1 h2) =
+  BAG_UNION (heap_to_bag h1) (heap_to_bag h2)`,
 HO_MATCH_MP_TAC merge_ind >>
-srw_tac [BAG_AC_ss] [merge_def, pairing_heap_to_bag_def, BAG_INSERT_UNION]);
+srw_tac [BAG_AC_ss] [merge_def, heap_to_bag_def, BAG_INSERT_UNION]);
 
-val pairing_heap_merge_ok = Q.store_thm ("pairing_heap_merge_ok",
+val merge_heap_ordered = Q.store_thm ("merge_heap_ordered",
 `!get_key leq h1 h2.
   WeakLinearOrder leq ∧
-  pairing_heap_ok get_key leq h1 ∧
-  pairing_heap_ok get_key leq h2
+  is_heap_ordered get_key leq h1 ∧
+  is_heap_ordered get_key leq h2
   ⇒
-  pairing_heap_ok get_key leq (merge get_key leq h1 h2)`,
+  is_heap_ordered get_key leq (merge get_key leq h1 h2)`,
 HO_MATCH_MP_TAC merge_ind >>
-rw [merge_def, pairing_heap_ok_def, pairing_heap_to_bag_def] >>
+rw [merge_def, is_heap_ordered_def, heap_to_bag_def] >>
 fs [BAG_EVERY] >>
 metis_tac [WeakLinearOrder, WeakOrder, transitive_def, WeakLinearOrder_neg]);
 
-val pairing_heap_insert_bag = Q.store_thm ("pairing_heap_insert_bag",
+val insert_bag = Q.store_thm ("insert_bag",
 `!h get_key leq x.
-  pairing_heap_to_bag (insert get_key leq x h) =
-  BAG_INSERT x (pairing_heap_to_bag h)`,
-rw [insert_def, pairing_heap_merge_bag, pairing_heap_to_bag_def,
-    BAG_INSERT_UNION]);
+  heap_to_bag (insert get_key leq x h) = BAG_INSERT x (heap_to_bag h)`,
+rw [insert_def, merge_bag, heap_to_bag_def, BAG_INSERT_UNION]);
 
-val pairing_heap_insert_ok = Q.store_thm ("pairing_heap_insert_ok",
+val insert_heap_ordered = Q.store_thm ("insert_heap_ordered",
 `!get_key leq x h.
-  WeakLinearOrder leq ∧ pairing_heap_ok get_key leq h
+  WeakLinearOrder leq ∧ is_heap_ordered get_key leq h
   ⇒
-  pairing_heap_ok get_key leq (insert get_key leq x h)`,
+  is_heap_ordered get_key leq (insert get_key leq x h)`,
 rw [insert_def] >>
-`pairing_heap_ok get_key leq (Node x [])`
-         by rw [pairing_heap_ok_def, pairing_heap_to_bag_def] >>
-metis_tac [pairing_heap_merge_ok]);
+`is_heap_ordered get_key leq (Tree x [])`
+         by rw [is_heap_ordered_def, heap_to_bag_def] >>
+metis_tac [merge_heap_ordered]);
 
-val pairing_heap_find_min_thm = Q.store_thm ("pairing_heap_find_min_thm",
-`!h get_key leq. WeakLinearOrder leq ∧ (h ≠ Empty) ∧ pairing_heap_ok get_key leq h ⇒
-  BAG_IN (find_min h) (pairing_heap_to_bag h) ∧
-  (!y. BAG_IN y (pairing_heap_to_bag h) ⇒
-       leq (get_key (find_min h)) (get_key y))`,
+val find_min_correct = Q.store_thm ("find_min_correct",
+`!h get_key leq. 
+  WeakLinearOrder leq ∧ (h ≠ Empty) ∧ is_heap_ordered get_key leq h 
+  ⇒
+  BAG_IN (find_min h) (heap_to_bag h) ∧
+  (!y. BAG_IN y (heap_to_bag h) ⇒ leq (get_key (find_min h)) (get_key y))`,
 rw [] >>
 cases_on `h` >>
-fs [find_min_def, pairing_heap_to_bag_def, pairing_heap_ok_def] >>
+fs [find_min_def, heap_to_bag_def, is_heap_ordered_def] >>
 fs [BAG_EVERY] >>
 metis_tac [WeakLinearOrder, WeakOrder, reflexive_def]);
 
-val pairing_heap_merge_pairs_bag = Q.prove (
-`!get_key leq hs. pairing_heap_to_bag (merge_pairs get_key leq hs) = pairing_heaps_to_bag hs`,
+val merge_pairs_bag = Q.prove (
+`!get_key leq hs. heap_to_bag (merge_pairs get_key leq hs) = heaps_to_bag hs`,
 recInduct merge_pairs_ind >>
-srw_tac [BAG_ss]
-        [merge_pairs_def, pairing_heap_to_bag_def, pairing_heap_merge_bag]);
+srw_tac [BAG_ss] [merge_pairs_def, heap_to_bag_def, merge_bag]);
 
-val pairing_heap_merge_pairs_ok = Q.prove (
+val merge_pairs_heap_ordered = Q.prove (
 `!get_key leq hs.
-  WeakLinearOrder leq ∧ EVERY (pairing_heap_ok get_key leq) hs
+  WeakLinearOrder leq ∧ EVERY (is_heap_ordered get_key leq) hs
   ⇒
-  pairing_heap_ok get_key leq (merge_pairs get_key leq hs)`,
+  is_heap_ordered get_key leq (merge_pairs get_key leq hs)`,
 recInduct merge_pairs_ind >>
-rw [merge_pairs_def, pairing_heap_ok_def, pairing_heap_merge_ok]);
+rw [merge_pairs_def, is_heap_ordered_def, merge_heap_ordered]);
 
-val pairing_heap_delete_min_thm = Q.store_thm ("pairing_heap_delete_min_thm",
+val delete_min_correct = Q.store_thm ("delete_min_correct",
 `!h get_key leq.
-  WeakLinearOrder leq ∧
-  (h ≠ Empty) ∧
-  pairing_heap_ok get_key leq h
+  WeakLinearOrder leq ∧ (h ≠ Empty) ∧ is_heap_ordered get_key leq h
   ⇒
-  pairing_heap_ok get_key leq (delete_min get_key leq h) ∧
-  (pairing_heap_to_bag (delete_min get_key leq h) =
-   BAG_DIFF (pairing_heap_to_bag h) (EL_BAG (find_min h)))`,
+  is_heap_ordered get_key leq (delete_min get_key leq h) ∧
+  (heap_to_bag (delete_min get_key leq h) =
+   BAG_DIFF (heap_to_bag h) (EL_BAG (find_min h)))`,
 rw [] >>
 cases_on `h` >>
-fs [delete_min_def, pairing_heap_ok_def, pairing_heap_merge_pairs_bag] >-
-metis_tac [pairing_heap_merge_pairs_ok] >>
-rw [pairing_heap_to_bag_def, find_min_def, BAG_DIFF_INSERT2]);
+fs [delete_min_def, is_heap_ordered_def, merge_pairs_bag] >-
+metis_tac [merge_pairs_heap_ordered] >>
+rw [heap_to_bag_def, find_min_def, BAG_DIFF_INSERT2]);
 
 
+(* Translate to MiniML *)
 
 val res = translate APPEND (* teaching the translator about lists... *)
 
@@ -161,9 +157,9 @@ val _ = delete_const "heap" handle _ => ()
 
 val tm =
 ``(heap a Empty v ⇔ (v = Conv (SOME "EMPTY") []) ∧ T) ∧
-  (heap a (Node x2_1 x2_2) v ⇔
+  (heap a (Tree x2_1 x2_2) v ⇔
    ∃v2_1 v2_2.
-     (v = Conv (SOME "NODE") [v2_1; v2_2]) ∧ a x2_1 v2_1 ∧
+     (v = Conv (SOME "TREE") [v2_1; v2_2]) ∧ a x2_1 v2_1 ∧
      list (\x v. if MEM x x2_2 then heap a x v else ARB) x2_2 v2_2)``
 
 val inv_def = tDefine "heap_def" [ANTIQUOTE tm]
@@ -188,6 +184,7 @@ val _ = register_type ``:'a heap``
 
 (* register heap -- end *)
 
+val res = translate empty_def;
 val res = translate is_empty_def;
 val res = translate merge_def;
 val res = translate insert_def;

@@ -220,7 +220,7 @@ fs [] >>
 imp_res_tac ins_set >>
 fs [tree_to_set_def]);
 
-val insert_ok = Q.store_thm ("insert_bst",
+val insert_bst = Q.store_thm ("insert_bst",
 `!lt x t.
   StrongLinearOrder lt ∧ is_bst lt t
   ⇒

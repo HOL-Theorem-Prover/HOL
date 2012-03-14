@@ -1,23 +1,22 @@
-open bossLib Theory Parse boolTheory pairTheory Defn Tactic boolLib bagTheory
-open relationTheory bagLib miscTheory lcsymtacs;
+open preamble
+open bagTheory bagLib miscTheory ml_translatorLib
 
 val fs = full_simp_tac (srw_ss ())
 val rw = srw_tac []
-val wf_rel_tac = WF_REL_TAC
-val induct_on = Induct_on
-val cases_on = Cases_on;
-val every_case_tac = BasicProvers.EVERY_CASE_TAC;
-val full_case_tac = BasicProvers.FULL_CASE_TAC;
 
 val _ = new_theory "LazyPairingHeap"
 
-(* Note, we're just cutting out the laziness since it shouldn't affect
- * functional correctness *)
+(* Okasaki page 80 *)
+
+(* Note, we're following Chargueraud and just cutting out the laziness since it
+ * shouldn't affect functional correctness *)
 
 val _ = Hol_datatype `
 heap = Empty | Node of 'a => heap => heap`;
 
-val _ = Define `
+val heap_size_def = fetch "-" "heap_size_def"
+
+val empty_def = Define `
 empty = Empty`;
 
 val is_empty = Define `
@@ -48,13 +47,15 @@ val merge_defn = Hol_defn "merge" `
   if leq (get_key x) (get_key y) then
     case h1 of
        | Empty => Node x (Node y h1' h2') h2
-       | _ => Node x Empty (merge get_key leq (merge get_key leq (Node y h1' h2') h1) h2)
+       | _ => Node x Empty (merge get_key leq 
+                                  (merge get_key leq (Node y h1' h2') h1) 
+                                  h2)
   else
     case h1' of
        | Empty => Node y (Node x h1 h2) h2'
-       | _ => Node y Empty (merge get_key leq (merge get_key leq (Node x h1 h2) h1') h2'))`;
-
-val _ = Defn.save_defn merge_defn;
+       | _ => Node y Empty (merge get_key leq 
+                                  (merge get_key leq (Node x h1 h2) h1') 
+                                  h2'))`;
 
 val insert_def = Define `
 insert get_key leq x a = merge get_key leq (Node x Empty Empty) a`;
