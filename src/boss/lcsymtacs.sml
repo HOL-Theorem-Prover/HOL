@@ -71,6 +71,8 @@ struct
   in
     full_simp_tac ss thms
   end
+  val rw = srw_tac []
+  val fs = fsrw_tac []
 
   val op>> = op THEN
   val op>- = op THEN1
