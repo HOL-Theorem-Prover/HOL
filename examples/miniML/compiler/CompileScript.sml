@@ -67,6 +67,9 @@ val _ = Defn.save_defn pat_remove_ctors_defn;
 (v_remove_ctors cnmap (Conv NONE vs) =
   Conv NONE (MAP (v_remove_ctors cnmap) vs))
 /\
+(v_remove_ctors cnmap (Conv (SOME cn) vs) =
+  Conv NONE (Lit (IntLit (cnmap cn)) :: MAP (v_remove_ctors cnmap) vs))
+/\
 (v_remove_ctors cnmap (Closure envE vn e) =
   Closure (env_remove_ctors cnmap envE) vn (remove_ctors cnmap e))
 /\

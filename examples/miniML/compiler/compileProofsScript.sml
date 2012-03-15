@@ -23,6 +23,10 @@ val (remove_ctors_def,remove_ctors_ind) =
    induct_on `es` >>
        rw [exp_size_def] >>
        res_tac >>
+       decide_tac,
+   induct_on `vs` >>
+       rw [exp_size_def] >>
+       res_tac >>
        decide_tac]);
 val _ = save_thm ("remove_ctors_def", remove_ctors_def);
 val _ = save_thm ("remove_ctors_ind", remove_ctors_ind);

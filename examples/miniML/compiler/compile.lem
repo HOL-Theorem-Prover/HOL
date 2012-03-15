@@ -54,6 +54,9 @@ and
 v_remove_ctors cnmap (Conv None vs) =
   Conv None (List.map (v_remove_ctors cnmap) vs)
 and
+v_remove_ctors cnmap (Conv (Some cn) vs) =
+  Conv None (Lit (IntLit (cnmap cn)) :: List.map (v_remove_ctors cnmap) vs)
+and
 v_remove_ctors cnmap (Closure envE vn e) =
   Closure (env_remove_ctors cnmap envE) vn (remove_ctors cnmap e)
 and
