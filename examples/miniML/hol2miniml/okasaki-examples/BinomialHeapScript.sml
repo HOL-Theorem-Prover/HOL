@@ -175,23 +175,127 @@ rw [link_def, is_heap_ordered_def, BAG_EVERY] >>
 fs [is_heap_ordered_def, BAG_EVERY, heap_to_bag_def] >>
 metis_tac [WeakLinearOrder, WeakOrder, transitive_def, WeakLinearOrder_neg]);
 
-(* TODO
+val remove_min_tree = Q.prove (
+`∀get_key leq h t h'.
+  WeakLinearOrder leq ∧
+  (h ≠ []) ∧
+  is_heap_ordered get_key leq h ∧
+  ((t,h') = remove_min_tree get_key leq h) 
+  ⇒
+  is_heap_ordered get_key leq h' ∧
+  is_heap_ordered_tree get_key leq t ∧
+  (heap_to_bag h = BAG_UNION (heap_to_bag h') (tree_to_bag t)) ∧
+  (!y. BAG_IN y (heap_to_bag h') ⇒ leq (get_key (root t)) (get_key y))`,
+induct_on `h` >>
+rw [heap_to_bag_def] >>
+cases_on `h` >>
+cases_on `t` >>
+full_simp_tac (srw_ss()++BAG_ss) 
+              [root_def, remove_min_tree_def, heap_to_bag_def] >>
+rw [is_heap_ordered_def] >>
+fs [LET_THM, is_heap_ordered_def] >>
+cases_on `remove_min_tree get_key leq (h'''::t')` >>
+fs [] >>
+every_case_tac >>
+fs [] >>
+rw [] >>
+full_simp_tac (srw_ss()++BAG_ss) 
+              [root_def, is_heap_ordered_def, heap_to_bag_def, 
+               BAG_INSERT_UNION] >|
+[metis_tac [is_heap_ordered_def],
+ metis_tac [is_heap_ordered_def],
+ `tree_to_bag h''' ⊎ heap_to_bag t' = heap_to_bag r ⊎ tree_to_bag (Node n a l)`
+              by metis_tac [] >>
+     srw_tac [BAG_ss] [heap_to_bag_def, BAG_INSERT_UNION],
+ `BAG_IN y (tree_to_bag q) ∨ BAG_IN y (heap_to_bag r)`
+        by metis_tac [BAG_IN_BAG_UNION] >|
+     [`is_heap_ordered_tree get_key leq q` by metis_tac [] >>
+          `leq (get_key (root q)) (get_key y)`
+                  by (cases_on `q` >>
+                      fs [BAG_EVERY, is_heap_ordered_def, root_def,
+                          heap_to_bag_def] >>
+                      metis_tac [WeakLinearOrder, WeakOrder, reflexive_def]) >>
+          metis_tac [WeakLinearOrder, WeakOrder, transitive_def],
+      fs [BAG_EVERY] >>
+          metis_tac [WeakLinearOrder, WeakOrder, transitive_def]],
+ `BAG_IN y (tree_to_bag q) ∨ BAG_IN y (heap_to_bag r)`
+        by metis_tac [BAG_IN_BAG_UNION] >|
+     [`is_heap_ordered_tree get_key leq q` by metis_tac [] >>
+          `leq (get_key (root q)) (get_key y)`
+                  by (cases_on `q` >>
+                      fs [BAG_EVERY, is_heap_ordered_def, root_def,
+                          heap_to_bag_def] >>
+                      metis_tac [WeakLinearOrder, WeakOrder, reflexive_def]) >>
+          metis_tac [WeakLinearOrder, WeakOrder, transitive_def],
+      fs [BAG_EVERY] >>
+          metis_tac [WeakLinearOrder, WeakOrder, transitive_def]],
+ cases_on `h'` >>
+     fs [root_def, is_heap_ordered_def, heap_to_bag_def, BAG_EVERY] >>
+     metis_tac [WeakLinearOrder, WeakOrder, WeakLinearOrder_neg,
+                transitive_def],
+ metis_tac [WeakLinearOrder, WeakOrder, WeakLinearOrder_neg, root_def,
+            transitive_def]]);
+
 val find_min_correct = Q.store_thm ("find_min_correct",
 `!h get_key leq. 
-  WeakLinearOrder leq ∧ (h ≠ Empty) ∧ is_heap_ordered get_key leq h 
+  WeakLinearOrder leq ∧ (h ≠ []) ∧ is_heap_ordered get_key leq h 
   ⇒
-  BAG_IN (find_min h) (heap_to_bag h) ∧
-  (!y. BAG_IN y (heap_to_bag h) ⇒ leq (get_key (find_min h)) (get_key y))`,
+  BAG_IN (find_min get_key leq h) (heap_to_bag h) ∧
+  (!y. BAG_IN y (heap_to_bag h) 
+       ⇒ 
+       leq (get_key (find_min get_key leq h)) (get_key y))`,
+rw [find_min_def] >>
+`(heap_to_bag h = BAG_UNION (heap_to_bag ts') (tree_to_bag t)) ∧
+ (∀y. y ⋲ heap_to_bag ts' ⇒ leq (get_key (root t)) (get_key y)) ∧
+ (is_heap_ordered_tree get_key leq t)`
+        by metis_tac [remove_min_tree] >>
+cases_on `t` >>
+fs [BAG_EVERY, heap_to_bag_def, root_def, is_heap_ordered_def] >>
+metis_tac [WeakLinearOrder, WeakOrder, reflexive_def]);
+
+val reverse_heap_ordered = Q.prove (
+`!get_key leq l. 
+  is_heap_ordered get_key leq l ⇒ is_heap_ordered get_key leq (REVERSE l)`,
+induct_on `l` >>
+rw [is_heap_ordered_def] >>
+res_tac >>
+POP_ASSUM MP_TAC >>
+Q.SPEC_TAC (`REVERSE l`, `l'`) >>
+rw [] >>
+induct_on `l'` >>
+rw [is_heap_ordered_def]);
+
+val append_bag = Q.prove (
+`!h1 h2. heap_to_bag (h1++h2) = BAG_UNION (heap_to_bag h1) (heap_to_bag h2)`,
+induct_on `h1` >>
+srw_tac [BAG_ss] [heap_to_bag_def]);
+
+val reverse_bag = Q.prove (
+`!l. heap_to_bag (REVERSE l) = heap_to_bag l`,
+induct_on `l` >>
+srw_tac [BAG_ss] [append_bag, heap_to_bag_def]);
 
 val delete_min_correct = Q.store_thm ("delete_min_correct",
 `!h get_key leq.
-  WeakLinearOrder leq ∧ (h ≠ Empty) ∧ is_heap_ordered get_key leq h
+  WeakLinearOrder leq ∧ (h ≠ []) ∧ is_heap_ordered get_key leq h
   ⇒
   is_heap_ordered get_key leq (delete_min get_key leq h) ∧
   (heap_to_bag (delete_min get_key leq h) =
-   BAG_DIFF (heap_to_bag h) (EL_BAG (find_min h)))`,
+   BAG_DIFF (heap_to_bag h) (EL_BAG (find_min get_key leq h)))`,
+rw [delete_min_def] >>
+every_case_tac >>
+rw [merge_bag, reverse_bag] >-
+metis_tac [reverse_heap_ordered, merge_heap_ordered, remove_min_tree,
+           is_heap_ordered_def] >>
+rw [find_min_def, root_def] >>
+rw [root_def] >>
+`(heap_to_bag h = BAG_UNION (heap_to_bag r) (tree_to_bag (Node n a l)))`
+           by metis_tac [remove_min_tree] >>
+rw [heap_to_bag_def, BAG_DIFF, BAG_INSERT, EL_BAG, FUN_EQ_THM, EMPTY_BAG,
+    BAG_UNION] >>
+cases_on `x = a` >>
+srw_tac [ARITH_ss] []);
 
-   *)
 (* translation *)
 
 val _ = set_filename (current_theory())
