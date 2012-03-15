@@ -66,6 +66,8 @@ sig
   val rw_tac : simpLib.simpset -> thm list -> tactic
   val srw_tac : simpLib.ssfrag list -> thm list -> tactic
   val fsrw_tac : simpLib.ssfrag list -> thm list -> tactic
+  val rw : thm list -> tactic
+  val fs : thm list -> tactic
 
   val >> : tactic * tactic -> tactic
   val >| : tactic * tactic list -> tactic
