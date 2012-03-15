@@ -13,6 +13,31 @@ tree = Node of num => 'a => tree list`;
 
 val _ = type_abbrev ("heap", ``:'a tree list``);
 
+val tree_size_def = fetch "-" "tree_size_def";
+
+val heap_to_bag_def = tDefine "heap_to_bag" `
+(heap_to_bag [] = {||}) ∧
+(heap_to_bag (h::hs) =
+  BAG_UNION (tree_to_bag h) (heap_to_bag hs)) ∧
+
+(tree_to_bag (Node _ x hs) =
+  BAG_INSERT x (heap_to_bag hs))`
+(wf_rel_tac `measure (\x. case x of INL x => tree1_size (\x.0) x 
+                                  | INR x => tree_size (\x.0) x)` >>
+ rw [tree_size_def]);
+
+val is_heap_ordered_def = tDefine "is_heap_ordered" `
+(is_heap_ordered get_key leq [] = T) ∧
+(is_heap_ordered get_key leq (t::ts) = 
+  is_heap_ordered_tree get_key leq t ∧ is_heap_ordered get_key leq ts) ∧
+
+(is_heap_ordered_tree get_key leq (Node _ x hs) =
+  is_heap_ordered get_key leq hs ∧
+  BAG_EVERY (\y. leq (get_key x) (get_key y)) (heap_to_bag hs))`
+(wf_rel_tac `measure (\x. case x of INL (_,_,x) => tree1_size (\x.0) x 
+                                  | INR (_,_,x) => tree_size (\x.0) x)` >>
+ rw [tree_size_def]);
+
 val empty_def = Define `
 empty = []`;
 
@@ -55,6 +80,8 @@ val merge_def = Define `
   else
     ins_tree get_key leq (link get_key leq t1 t2) (merge get_key leq ts1 ts2))`;
 
+val merge_ind = fetch "-" "merge_ind";
+
 val remove_min_tree_def = Define `
 (remove_min_tree get_key leq [t] = (t,[])) ∧
 (remove_min_tree get_key leq (t::ts) =
@@ -75,6 +102,96 @@ delete_min get_key leq ts =
     | (Node _ x ts1, ts2) => merge get_key leq (REVERSE ts1) ts2`;
 
 
+(* Functional correctness proof *)
+
+val ins_bag = Q.prove (
+`!get_key leq t h.
+  heap_to_bag (ins_tree get_key leq t h) =
+  BAG_UNION (tree_to_bag t) (heap_to_bag h)`,
+induct_on `h` >>
+rw [heap_to_bag_def, ins_tree_def, link_def] >>
+cases_on `t` >>
+cases_on `h'` >>
+srw_tac [BAG_ss] [heap_to_bag_def, ins_tree_def, link_def, BAG_INSERT_UNION]);
+
+val ins_heap_ordered = Q.prove (
+`!get_key leq t h.
+  WeakLinearOrder leq ∧ 
+  is_heap_ordered_tree get_key leq t ∧
+  is_heap_ordered get_key leq h
+  ⇒
+  is_heap_ordered get_key leq (ins_tree get_key leq t h)`,
+induct_on `h` >>
+rw [is_heap_ordered_def, ins_bag, ins_tree_def] >>
+cases_on `t` >>
+cases_on `h'` >>
+rw [link_def] >>
+fs [] >>
+Q.PAT_ASSUM `!get_key leq t. P get_key leq t` match_mp_tac >>
+rw [is_heap_ordered_def] >>
+fs [is_heap_ordered_def, BAG_EVERY, heap_to_bag_def] >>
+metis_tac [WeakLinearOrder, WeakOrder, transitive_def, WeakLinearOrder_neg]);
+
+val insert_bag = Q.store_thm ("insert_bag",
+`!get_key leq s h.
+  heap_to_bag (insert get_key leq s h) = BAG_INSERT s (heap_to_bag h)`,
+rw [insert_def, ins_bag, heap_to_bag_def, BAG_INSERT_UNION]);
+
+val insert_heap_ordered = Q.store_thm ("insert_heap_ordered",
+`!get_key leq x h.
+  WeakLinearOrder leq ∧ 
+  is_heap_ordered get_key leq h
+  ⇒
+  is_heap_ordered get_key leq (insert get_key leq x h)`,
+rw [insert_def, is_heap_ordered_def] >>
+match_mp_tac ins_heap_ordered >>
+rw [is_heap_ordered_def, BAG_EVERY, heap_to_bag_def]);
+
+val merge_bag = Q.store_thm ("merge_bag",
+`!get_key leq h1 h2.
+  heap_to_bag (merge get_key leq h1 h2) =
+  BAG_UNION (heap_to_bag h1) (heap_to_bag h2)`,
+HO_MATCH_MP_TAC merge_ind >>
+srw_tac [BAG_ss] [merge_def, heap_to_bag_def, BAG_INSERT_UNION, ins_bag] >>
+cases_on `t1` >>
+cases_on `t2` >>
+srw_tac [BAG_ss] [link_def, heap_to_bag_def, BAG_INSERT_UNION]);
+
+val merge_heap_ordered = Q.store_thm ("merge_heap_ordered",
+`!get_key leq h1 h2.
+  WeakLinearOrder leq ∧
+  is_heap_ordered get_key leq h1 ∧
+  is_heap_ordered get_key leq h2
+  ⇒
+  is_heap_ordered get_key leq (merge get_key leq h1 h2)`,
+HO_MATCH_MP_TAC merge_ind >>
+rw [merge_def, is_heap_ordered_def, heap_to_bag_def] >>
+fs [] >>
+match_mp_tac ins_heap_ordered >>
+rw [] >>
+cases_on `t1` >>
+cases_on `t2` >>
+rw [link_def, is_heap_ordered_def, BAG_EVERY] >>
+fs [is_heap_ordered_def, BAG_EVERY, heap_to_bag_def] >>
+metis_tac [WeakLinearOrder, WeakOrder, transitive_def, WeakLinearOrder_neg]);
+
+(* TODO
+val find_min_correct = Q.store_thm ("find_min_correct",
+`!h get_key leq. 
+  WeakLinearOrder leq ∧ (h ≠ Empty) ∧ is_heap_ordered get_key leq h 
+  ⇒
+  BAG_IN (find_min h) (heap_to_bag h) ∧
+  (!y. BAG_IN y (heap_to_bag h) ⇒ leq (get_key (find_min h)) (get_key y))`,
+
+val delete_min_correct = Q.store_thm ("delete_min_correct",
+`!h get_key leq.
+  WeakLinearOrder leq ∧ (h ≠ Empty) ∧ is_heap_ordered get_key leq h
+  ⇒
+  is_heap_ordered get_key leq (delete_min get_key leq h) ∧
+  (heap_to_bag (delete_min get_key leq h) =
+   BAG_DIFF (heap_to_bag h) (EL_BAG (find_min h)))`,
+
+   *)
 (* translation *)
 
 val _ = set_filename (current_theory())
