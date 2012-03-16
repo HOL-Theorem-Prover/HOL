@@ -1,1 +1,1 @@
-INCLUDES=../../computability/lambda ../semantics
+INCLUDES=../../computability/lambda ../semantics ../hol2miniml
