@@ -2507,7 +2507,7 @@ val _ = adjoin_to_theory
    S "        in add_funs [APPEND,APPEND_NIL, FLAT, HD, TL,";
    S "              LENGTH, MAP, MAP2, NULL_DEF, MEM, EXISTS_DEF,";
    S "              EVERY_DEF, ZIP, UNZIP, FILTER, FOLDL, FOLDR,";
-   S "              FOLDL, REVERSE_DEF, ALL_DISTINCT, GENLIST_AUX,";
+   S "              FOLDL, REVERSE_REV, ALL_DISTINCT, GENLIST_AUX,";
    S "              EL_restricted, EL_simp_restricted,";
    S "              GENLIST_NUMERALS, computeLib.lazyfy_thm list_case_compute,";
    S "              list_size_def, FRONT_DEF, LAST_DEF, isPREFIX]";
