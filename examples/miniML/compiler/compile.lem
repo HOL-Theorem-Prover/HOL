@@ -78,7 +78,7 @@ and
 match_remove_ctors cnmap ((p,e)::pes) =
   (pat_remove_ctors cnmap p, remove_ctors cnmap e)::match_remove_ctors cnmap pes
 
-(* Constant folding *)
+(* Constant folding
 val fold_consts : exp -> exp
 
 let rec
@@ -182,3 +182,4 @@ and
 (* TODO: fold more pattern matching (e.g. to Let)? Need envC? *)
 fold_match v pes =
   Mat (Val v) (match_fold_consts pes)
+*)

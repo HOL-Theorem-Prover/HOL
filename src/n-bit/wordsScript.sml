@@ -1009,8 +1009,8 @@ val w2s_s2w = store_thm("w2s_s2w",
      n2s b n2c (s2n b c2n s MOD dimword(:'a))`,
   SRW_TAC [] [s2w_def, w2s_def]);
 
-val LESS_THM =
-  CONV_RULE numLib.SUC_TO_NUMERAL_DEFN_CONV prim_recTheory.LESS_THM;
+val NUMERAL_LESS_THM = Theory.save_thm("NUMERAL_LESS_THM",
+  CONV_RULE numLib.SUC_TO_NUMERAL_DEFN_CONV prim_recTheory.LESS_THM);
 
 val rwts = [FUN_EQ_THM, UNHEX_HEX, l2n_n2l, s2n_n2s, l2w_w2l, s2w_w2s,
   word_from_bin_list_def,word_from_oct_list_def,word_from_dec_list_def,
