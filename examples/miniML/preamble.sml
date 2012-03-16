@@ -5,8 +5,6 @@ open Parse Defn Tactic res_quanTheory
 open finite_mapTheory listTheory pairTheory pred_setTheory
 open set_relationTheory sortingTheory stringTheory wordsTheory
 open relationTheory
-val fs = full_simp_tac (srw_ss ())
-val rw = srw_tac []
 val wf_rel_tac = WF_REL_TAC
 val induct_on = Induct_on
 val cases_on = Cases_on;
