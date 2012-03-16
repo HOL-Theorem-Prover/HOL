@@ -5,7 +5,10 @@ val _ = new_theory "compiler"
 val _ = Hol_datatype`
   compiler_state =
   <|
-    env: (varN,num) env
+   (* inl is stack variable
+      inr is environment (heap) variables:
+        (location of block on stack, location of variable in block) *)
+    env: (varN,num+(num # num)) env
   ; next_label: num
   ; inst_length: bc_inst -> num
   |>`
@@ -55,17 +58,49 @@ val compile_def = Define`
 ∧ (compile (Let x e b, s) =
    let (e,s) = compile (e,s) in
    let n = LENGTH s.env in
-   let s' = s with env := bind x n s.env in  (* TODO: track size separately? *)
+   let s' = s with env := bind x (INL n) s.env in  (* TODO: track size separately? *)
    let (b,s') = compile (b,s') in
-   let (r,s') = emit s' (e++b) [Stack Pop] in
+   let (r,s') = emit s' (e++b) [Stack (Store 0)] in (* replace value of bound var with value of body *)
    (r, s' with env := s.env))
 ∧ (compile (Letrec defs b, s) = ARB) (* TODO *)
 ∧ (compile (Var x, s) =
    case lookup x s.env of
      NONE => ARB (* should not happen *)
-   | SOME n => emit s [] [Stack (Load (LENGTH s.env - n))])
-∧ (compile (Fun x b, s) = ARB) (* TODO *)
-∧ (compile (App Opapp e1 e2, s) = ARB) (* TODO *)
+   | SOME (INL n) => emit s [] [Stack (Load (LENGTH s.env - n))]
+   | SOME (INR (n,m)) => emit s [] [Stack (Load (LENGTH s.env - n)); Stack (El m)])
+∧ (compile (Fun x b, s) =
+   (*  Load ?                               stack:
+       ...      (* set up environment *)
+       Cons 0 ?                             Cons 0 Env, rest
+       Call L                               Cons 0 Env, CodePtr f, rest
+       ?
+       ...      (* function body *)
+       Store 0  (* replace argument with
+                   return value *)
+       Return
+    L: Cons 0 2 (* create closure *)        Cons 0 [CodePtr f, Cons 0 Env], rest
+  *)
+   let (r,s) = emit s [] [Stack (Cons 0 0) ] in (* TODO: find free variables in b,
+                                                         copy values into a block *)
+   let s' = s with env := ARB (* TODO: create inr bindings for each, with the environment at position 0
+                                       create a dummy binding for the return pointer,
+                                       create an inl binding for the argument at position 2 *)
+                              in
+   let (aa,s) = emit s [] [Call ARB] in
+   let (b,s') = compile (b,s') in
+   let (b,s') = emit s' b [Stack (Store 0);Return] in
+   let s = s' with env := s.env in
+   let l = s.next_label in
+   let (b,s) = emit s b [Stack (Cons 0 2)] in
+     (r++[Call l]++b,s))
+∧ (compile (App Opapp e1 e2, s) =
+   let (e1,s) = compile (e1,s) in  (* A closure looks like Cons 0 [CodePtr code; Cons 0 Env] *)
+   let (e2,s) = compile (e2,s) in
+   let (r,s) = emit s (e1++e2) [Stack (Load 1); Stack (El 1)] in (* stack after: env, arg, closure, rest *)
+   let (r,s) = emit s r [Stack (Load 2); Stack (El 0)] in (* stack after: codeptr, env, arg, closure, rest *)
+   let (r,s) = emit s r [Stack (Load 1); Stack (Store 3); Stack (Pops 1)] in (* stack after: codeptr, arg, env, rest *)
+   let (r,s) = emit s r [CallPtr] in (* stack after: arg, return ptr, env, rest *)
+     (r,s))
 ∧ (compile (App Equality e1 e2, s) =
  (* want type info? *)
  (* TODO: currently this is pointer equality, but want structural? *)
