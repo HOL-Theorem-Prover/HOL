@@ -12,4 +12,11 @@ rw[count_num2_def] >>
 SELECT_ELIM_TAC >> rw[] >>
 metis_tac [cross_countable,num_countable,countable_def])
 
+val count_num2_inj_rwt = store_thm(
+"count_num2_inj_rwt",
+``(count_num2 x = count_num2 y) = (x = y)``,
+ASSUME_TAC INJ_count_num2 >>
+fs[INJ_DEF,EQ_IMP_THM])
+val _ = export_rewrites["count_num2_inj_rwt"]
+
 val _ = export_theory ()
