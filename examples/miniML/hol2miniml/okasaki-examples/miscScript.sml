@@ -1,13 +1,8 @@
-open bossLib Theory Parse boolTheory pairTheory Defn Tactic boolLib bagTheory
-open relationTheory bagLib lcsymtacs;
+open preamble
+open relationTheory bagLib bagTheory;
 
 val fs = full_simp_tac (srw_ss ())
 val rw = srw_tac []
-val wf_rel_tac = WF_REL_TAC
-val induct_on = Induct_on
-val cases_on = Cases_on;
-val every_case_tac = BasicProvers.EVERY_CASE_TAC;
-val full_case_tac = BasicProvers.FULL_CASE_TAC;
 
 val _ = new_theory "misc"
 
@@ -46,5 +41,44 @@ val BAG_DIFF_INSERT2 = Q.store_thm ("BAG_DIFF_INSERT2",
 rw [BAG_DIFF, BAG_INSERT, EL_BAG, FUN_EQ_THM, EMPTY_BAG] >>
 cases_on `x' = x` >>
 rw []);
+
+val list_to_bag_def = Define `
+(list_to_bag [] = {||}) ∧
+(list_to_bag (h::t) = BAG_INSERT h (list_to_bag t))`;
+
+val list_to_bag_filter = Q.store_thm ("list_to_bag_filter",
+`∀P l. list_to_bag (FILTER P l) = BAG_FILTER P (list_to_bag l)`,
+Induct_on `l` >>
+rw [list_to_bag_def]);
+
+val list_to_bag_append = Q.store_thm ("list_to_bag_append",
+`∀l1 l2. list_to_bag (l1 ++ l2) = BAG_UNION (list_to_bag l1) (list_to_bag l2)`,
+Induct_on `l1` >>
+srw_tac [BAG_ss] [list_to_bag_def, BAG_INSERT_UNION]);
+
+val list_to_bag_to_perm = Q.prove (
+`!l1 l2. PERM l1 l2 ⇒ (list_to_bag l1 = list_to_bag l2)`,
+HO_MATCH_MP_TAC PERM_IND >>
+srw_tac [BAG_ss] [list_to_bag_def, BAG_INSERT_UNION]);
+
+val perm_to_list_to_bag_lem = Q.prove (
+`!l1 l2 x. 
+  (list_to_bag (FILTER ($= x) l1) = list_to_bag (FILTER ($= x) l2))
+  ⇒
+  (FILTER ($= x) l1 = FILTER ($= x) l2)`,
+induct_on `l1` >>
+rw [] >>
+induct_on `l2` >>
+rw [] >>
+fs [list_to_bag_def]);
+
+val perm_to_list_to_bag = Q.prove (
+`!l1 l2. (list_to_bag l1 = list_to_bag l2) ⇒ PERM l1 l2`,
+rw [PERM_DEF] >>
+metis_tac [perm_to_list_to_bag_lem, list_to_bag_filter]);
+
+val list_to_bag_perm = Q.store_thm ("list_to_bag_perm",
+`!l1 l2. (list_to_bag l1 = list_to_bag l2) = PERM l1 l2`,
+metis_tac [perm_to_list_to_bag, list_to_bag_to_perm]);
 
 val _ = export_theory ();
