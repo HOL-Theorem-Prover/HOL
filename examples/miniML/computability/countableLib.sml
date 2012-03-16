@@ -1,6 +1,23 @@
 open HolKernel pred_setTheory countableTheory lcsymtacs
 open boolSyntax numSyntax pairSyntax pred_setSyntax
 
+fun prove_inj_rwt inj = let
+  val (hyps,c) = strip_imp (concl inj)
+  val tm = rand(rator(rator c))
+  val (ty,_) = dom_rng(type_of tm)
+  val x = mk_var("x",ty)
+  val y = mk_var("y",ty)
+in
+  prove(list_mk_imp(hyps,
+    list_mk_forall([x,y],(mk_eq(
+      mk_eq(mk_comb(tm,x),mk_comb(tm,y)),
+      mk_eq(x,y))))),
+    assume_tac inj >>
+    fs[INJ_DEF] >>
+    rpt strip_tac >> EQ_TAC >>
+    fs[])
+end
+
 val count_datatype = let
   val count_num2 = ``count_num2``
   fun mk_countable a = ``countable ^(mk_univ a)``
@@ -15,7 +32,12 @@ val count_datatype = let
     val rhs = mk_comb(count_num2,mk_pair(term_of_int n,count_args ctr ars))
     val eq = mk_eq (lhs, rhs)
   in (n+1,eq::eqs) end
-  fun counter0 t = raise Fail "no memocache"
+  (*
+  val cache = ref Redblackmap.mkDict Type.compare
+  fun counter0 t = Redblackmap.find (!cache, t)
+  fun add_counter t c = cache := Redblackmap.insert(!cache,t,c)
+  *)
+  fun counter0 t = mk_const("count_"^(fst(dest_type t)),t --> num)
 in fn ty => let
   val axiom = TypeBase.axiom_of ty
   val (name,args) = dest_type ty
@@ -23,19 +45,20 @@ in fn ty => let
   val count_ty_var = mk_var(count_name,ty --> num)
   val nchotomy = SPEC_ALL (TypeBase.nchotomy_of ty)
   val constructors = map (rhs o snd o strip_exists) (strip_disj (concl nchotomy))
-in
+  val (hyps,count_ty_tm,count_ty_inj) =
   if args = [] then let
     val lhs0 = count_ty_var
     fun counter t = if t = ty then lhs0 else counter0 t
     val (_,eqs) = foldl (mk_eqn counter lhs0) (0,[]) constructors
     val count_ty_def = new_recursive_definition
-                       {name=count_name, rec_axiom=axiom,
+                       {name=count_name^"_def", rec_axiom=axiom,
                         def=list_mk_conj eqs}
     val count_ty_tm = mk_const(count_name,ty --> num)
     val count_ty_inj = prove(mk_inj(count_ty_tm,mk_univ ty,mk_univ num),
-      fs[INJ_DEF] >> Induct >> Cases >> fs[count_ty_def])
-    val countable_ty = prove(mk_countable ty,PROVE_TAC[count_ty_inj,countable_def])
-  in (count_ty_inj,countable_ty) end
+      fs[INJ_DEF] >> Induct >> rw[] >>
+      qmatch_assum_rename_tac `X = ^count_ty_tm y` ["X"] >>
+      Cases_on `y` >> fs[count_ty_def])
+  in ([],count_ty_tm,count_ty_inj) end
   else let
     val helpers = map (fn a => genvar(a --> num)) args
     val count_name_aux = count_name^"_aux"
@@ -47,7 +70,7 @@ in
       handle HOL_ERR _ => counter0 t
     val (_,eqs) = foldl (mk_eqn counter lhs0) (0,[]) constructors
     val count_ty_aux_def = new_recursive_definition
-                           {name=count_name_aux, rec_axiom=axiom,
+                           {name=count_name_aux^"_def", rec_axiom=axiom,
                             def=list_mk_conj eqs}
     val count_ty_aux_tm = mk_const(count_name_aux, type_of count_ty_aux_var)
     val count_ty_def = new_definition (count_name, mk_eq(count_ty_var,
@@ -64,19 +87,32 @@ in
       Induct >> rw[count_ty_aux_def] >>
       qmatch_assum_rename_tac `X = (^count_ty_aux_tm Y) y` ["X","Y"] >>
       Cases_on `y` >> fs[count_ty_aux_def])
-    val countable_ty = prove(list_mk_imp(hyps,mk_countable ty),
-                             PROVE_TAC[count_ty_inj,countable_def])
-  in (count_ty_inj,countable_ty) end
+  in (hyps,count_ty_tm,count_ty_inj) end
+  val countable_ty = prove(list_mk_imp(hyps,mk_countable ty),
+                           PROVE_TAC[count_ty_inj,countable_def])
+  val count_ty_inj_rwt = prove_inj_rwt count_ty_inj
+in
+  save_thm(count_name^"_inj",count_ty_inj);
+  save_thm("countable_"^name,countable_ty);
+  save_thm(count_name^"_inj_rwt",count_ty_inj_rwt);
+  export_rewrites[count_name^"_inj_rwt"]
 end
 end
 
-val (count_list_inj, countable_list) = count_datatype ``:α list``
-
+val _ = count_datatype ``:α list``
 open MiniMLTheory
-val (count_error_inj, countable_error) = count_datatype ``:error``
+val _ = count_datatype ``:error``
 
+val count_int_inj_rwt = prove_inj_rwt count_int_inj
+val _ = save_thm("count_int_inj_rwt",count_int_inj_rwt)
+val _ = export_rewrites["count_int_inj_rwt"]
+
+val _ = count_datatype ``:bool``
+val _ = count_datatype ``:lit``
+val _ = count_datatype ``:error_result``
+val _ = count_datatype ``:α result``
+val _ = count_datatype ``:α option``
 (*
-val (count_lit_inj, countable_lit) = count_datatype ``:lit``
-val (count_result_inj, countable_result) = count_datatype ``:α result``
-val (count_exp_inj, countable_exp) = count_datatype ``:exp``
+val _ = count_datatype ``:v``
+val _ = count_datatype ``:exp``
 *)

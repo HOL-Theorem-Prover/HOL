@@ -19,4 +19,22 @@ ASSUME_TAC INJ_count_num2 >>
 fs[INJ_DEF,EQ_IMP_THM])
 val _ = export_rewrites["count_num2_inj_rwt"]
 
+open integerTheory arithmeticTheory
+
+val count_int_def = Define`
+  count_int i = if 0 ≤ i then 2 * (Num i) else SUC (2 * (Num (-i)))`
+val count_int_inj = store_thm(
+"count_int_inj",
+``INJ count_int UNIV UNIV``,
+fs[INJ_DEF,count_int_def] >>
+srw_tac[][EQ_MULT_LCANCEL] >>
+metis_tac [
+INT_LE_NEGTOTAL,
+NUM_OF_INT,
+NUM_POSINT_EXISTS,
+INT_EQ_NEG,
+EVEN_ODD,
+ODD_DOUBLE,
+EVEN_DOUBLE])
+
 val _ = export_theory ()
