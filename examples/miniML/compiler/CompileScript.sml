@@ -93,112 +93,110 @@ val _ = Defn.save_defn pat_remove_ctors_defn;
 
 val _ = Defn.save_defn remove_ctors_defn;
 
-(* Constant folding *)
-(*val fold_consts : exp -> exp*)
+(* Constant folding
+val fold_consts : exp -> exp
 
- val fold_consts_defn = Hol_defn "fold_consts" `
-
-(fold_consts (Raise err) = Raise err)
-/\
-(fold_consts (Val v) = Val (v_fold_consts v))
-/\
-(fold_consts (Con c es) = Con c (MAP fold_consts es))
-/\
-(fold_consts (Var vn) = Var vn)
-/\
-(fold_consts (Fun vn e) = Fun vn (fold_consts e))
-/\
-(fold_consts (App (Opn opn) (Val (Lit (IntLit n1))) (Val (Lit (IntLit n2)))) =
-  Val (Lit (IntLit (opn_lookup opn n1 n2))))
-/\
-(fold_consts (App (Opb opb) (Val (Lit (IntLit n1))) (Val (Lit (IntLit n2)))) =
-  Val (Lit (Bool (opb_lookup opb n1 n2))))
-/\
-(fold_consts (App Equality (Val (Lit (IntLit n1))) (Val (Lit (IntLit n2)))) =
-  Val (Lit (Bool (n1 = n2))))
-/\
-(fold_consts (App Equality (Val (Lit (Bool b1))) (Val (Lit (Bool b2)))) =
-  Val (Lit (Bool (b1 = b2))))
-/\
-(fold_consts (App op e1 e2) =
+let rec
+fold_consts (Raise err) = Raise err
+and
+fold_consts (Val v) = Val (v_fold_consts v)
+and
+fold_consts (Con c es) = Con c (List.map fold_consts es)
+and
+fold_consts (Var vn) = Var vn
+and
+fold_consts (Fun vn e) = Fun vn (fold_consts e)
+and
+fold_consts (App (Opn opn) (Val (Lit (IntLit n1))) (Val (Lit (IntLit n2)))) =
+  Val (Lit (IntLit (opn_lookup opn n1 n2)))
+and
+fold_consts (App (Opb opb) (Val (Lit (IntLit n1))) (Val (Lit (IntLit n2)))) =
+  Val (Lit (Bool (opb_lookup opb n1 n2)))
+and
+fold_consts (App Equality (Val (Lit (IntLit n1))) (Val (Lit (IntLit n2)))) =
+  Val (Lit (Bool (n1 = n2)))
+and
+fold_consts (App Equality (Val (Lit (Bool b1))) (Val (Lit (Bool b2)))) =
+  Val (Lit (Bool (b1 = b2)))
+and
+fold_consts (App op e1 e2) =
   let e1' = fold_consts e1 in
   let e2' = fold_consts e2 in
-  if (e1 = e1') /\ (e2 = e2') then (App op e1 e2) else
-  fold_consts (App op e1' e2'))
-/\
-(fold_consts (Log And (Val (Lit (Bool T))) e2) =
-  fold_consts e2)
-/\
-(fold_consts (Log Or (Val (Lit (Bool F))) e2) =
-  fold_consts e2)
-/\
-(fold_consts (Log _ (Val (Lit (Bool b))) _) =
-  Val (Lit (Bool b)))
-/\
-(fold_consts (Log log e1 e2) =
-  Log log (fold_consts e1) (fold_consts e2))
-/\
-(fold_consts (If (Val (Lit (Bool b))) e2 e3) =
-  if b then fold_consts e2 else fold_consts e3)
-/\
-(fold_consts (If e1 e2 e3) =
-  If (fold_consts e1) (fold_consts e2) (fold_consts e3))
-/\
-(fold_consts (Mat (Val v) pes) =
-  fold_match v pes)
-/\
-(fold_consts (Mat e pes) =
-  Mat (fold_consts e) (match_fold_consts pes))
-/\
-(fold_consts (Let vn e1 e2) =
-  Let vn (fold_consts e1) (fold_consts e2))
-/\
-(fold_consts (Letrec funs e) =
-  Letrec (funs_fold_consts funs) (fold_consts e))
-/\
-(fold_consts (Proj (Val (Conv NONE vs)) n) =
-  Val (EL  n  vs))
-/\
-(fold_consts (Proj e n) = Proj (fold_consts e) n)
-/\
-(v_fold_consts (Lit l) = Lit l)
-/\
-(v_fold_consts (Conv NONE vs) =
-  Conv NONE (MAP v_fold_consts vs))
-/\
-(v_fold_consts (Closure envE vn e) =
-  Closure (env_fold_consts envE) vn (fold_consts e))
-/\
-(v_fold_consts (Recclosure envE funs vn) =
-  Recclosure (env_fold_consts envE) (funs_fold_consts funs) vn)
-/\
-(env_fold_consts [] = [])
-/\
-(env_fold_consts ((vn,v)::env) =
-  ((vn, v_fold_consts v)::env_fold_consts env))
-/\
-(funs_fold_consts [] = [])
-/\
-(funs_fold_consts ((vn1,vn2,e)::funs) =
-  ((vn1,vn2,fold_consts e)::funs_fold_consts funs))
-/\
-(match_fold_consts [] = [])
-/\
-(match_fold_consts ((p,e)::pes) =
-  (p, fold_consts e)::match_fold_consts pes)
-/\
-(fold_match v [] = Raise Bind_error)
-/\
-(fold_match (Lit l) ((Plit l',e)::pes) =
+  if e1 = e1' && e2 = e2' then (App op e1 e2) else
+  fold_consts (App op e1' e2')
+and
+fold_consts (Log And (Val (Lit (Bool true))) e2) =
+  fold_consts e2
+and
+fold_consts (Log Or (Val (Lit (Bool false))) e2) =
+  fold_consts e2
+and
+fold_consts (Log _ (Val (Lit (Bool b))) _) =
+  Val (Lit (Bool b))
+and
+fold_consts (Log log e1 e2) =
+  Log log (fold_consts e1) (fold_consts e2)
+and
+fold_consts (If (Val (Lit (Bool b))) e2 e3) =
+  if b then fold_consts e2 else fold_consts e3
+and
+fold_consts (If e1 e2 e3) =
+  If (fold_consts e1) (fold_consts e2) (fold_consts e3)
+and
+fold_consts (Mat (Val v) pes) =
+  fold_match v pes
+and
+fold_consts (Mat e pes) =
+  Mat (fold_consts e) (match_fold_consts pes)
+and
+fold_consts (Let vn e1 e2) =
+  Let vn (fold_consts e1) (fold_consts e2)
+and
+fold_consts (Letrec funs e) =
+  Letrec (funs_fold_consts funs) (fold_consts e)
+and
+fold_consts (Proj (Val (Conv None vs)) n) =
+  Val (List.nth vs n)
+and
+fold_consts (Proj e n) = Proj (fold_consts e) n
+and
+v_fold_consts (Lit l) = Lit l
+and
+v_fold_consts (Conv None vs) =
+  Conv None (List.map v_fold_consts vs)
+and
+v_fold_consts (Closure envE vn e) =
+  Closure (env_fold_consts envE) vn (fold_consts e)
+and
+v_fold_consts (Recclosure envE funs vn) =
+  Recclosure (env_fold_consts envE) (funs_fold_consts funs) vn
+and
+env_fold_consts [] = []
+and
+env_fold_consts ((vn,v)::env) =
+  ((vn, v_fold_consts v)::env_fold_consts env)
+and
+funs_fold_consts [] = []
+and
+funs_fold_consts ((vn1,vn2,e)::funs) =
+  ((vn1,vn2,fold_consts e)::funs_fold_consts funs)
+and
+match_fold_consts [] = []
+and
+match_fold_consts ((p,e)::pes) =
+  (p, fold_consts e)::match_fold_consts pes
+and
+fold_match v [] = Raise Bind_error
+and
+fold_match (Lit l) ((Plit l',e)::pes) =
   if l = l' then
     fold_consts e
   else
-    fold_match (Lit l) pes)
-/\
+    fold_match (Lit l) pes
+and
 (* TODO: fold more pattern matching (e.g. to Let)? Need envC? *)
-(fold_match v pes =
-  Mat (Val v) (match_fold_consts pes))`;
-
-val _ = Defn.save_defn fold_consts_defn;
+fold_match v pes =
+  Mat (Val v) (match_fold_consts pes)
+*)
 val _ = export_theory()
 

@@ -1,4 +1,4 @@
-open HolKernel bossLib MiniMLTheory listTheory bytecodeTheory lcsymtacs
+open HolKernel bossLib pairLib MiniMLTheory listTheory bytecodeTheory lcsymtacs
 
 val _ = new_theory "compiler"
 
@@ -45,6 +45,57 @@ val offset_def = Define`
 
 val emit_def = Define`
   emit s ac is = (ac++is, s with next_label := s.next_label + offset s.inst_length is)`;
+
+(* move elsewhere? *)
+val exp1_size_thm = store_thm(
+"exp1_size_thm",
+``∀ls. exp1_size ls = SUM (MAP exp2_size ls) + LENGTH ls``,
+Induct >- rw[exp_size_def] >>
+qx_gen_tac `p` >>
+PairCases_on `p` >>
+srw_tac [ARITH_ss][exp_size_def])
+
+val exp6_size_thm = store_thm(
+"exp6_size_thm",
+``∀ls. exp6_size ls = SUM (MAP exp7_size ls) + LENGTH ls``,
+Induct >- rw[exp_size_def] >>
+Cases >> srw_tac [ARITH_ss][exp_size_def])
+
+val exp8_size_thm = store_thm(
+"exp8_size_thm",
+``∀ls. exp8_size ls = SUM (MAP exp_size ls) + LENGTH ls``,
+Induct >- rw[exp_size_def] >>
+srw_tac [ARITH_ss][exp_size_def])
+
+(* move to listTheory? *)
+val SUM_MAP_MEM_bound = store_thm(
+"SUM_MAP_MEM_bound",
+``∀f x ls. MEM x ls ⇒ f x ≤ SUM (MAP f ls)``,
+ntac 2 gen_tac >> Induct >> rw[] >>
+fsrw_tac [ARITH_ss][])
+
+(* move elsewhere? *)
+val fvs_def = tDefine "fvs"`
+  (fvs (Var x) = {x})
+∧ (fvs (Let x _ b) = fvs b DELETE x)
+∧ (fvs (Letrec ls b) = FOLDL (λs (n,x,b). s ∪ (fvs b DELETE x))
+                             (fvs b DIFF (FOLDL (combin$C ($INSERT o FST)) {} ls))
+                             ls)
+∧ (fvs (Fun x b) = fvs b DELETE x)
+∧ (fvs (App _ e1 e2) = fvs e1 ∪ fvs e2)
+∧ (fvs (Log _ e1 e2) = fvs e1 ∪ fvs e2)
+∧ (fvs (If e1 e2 e3) = fvs e1 ∪ fvs e2 ∪ fvs e3)
+∧ (fvs (Mat e pes) = fvs e ∪ FOLDL (λs (p,e). s ∪ fvs e) {} pes)
+∧ (fvs (Proj e _) = fvs e)
+∧ (fvs (Raise _) = {})
+∧ (fvs (Val _) = {})
+∧ (fvs (Con _ es) = FOLDL (λs e. s ∪ fvs e) {} es)`
+(WF_REL_TAC `measure exp_size` >>
+srw_tac [ARITH_ss][exp1_size_thm,exp6_size_thm,exp8_size_thm] >>
+imp_res_tac SUM_MAP_MEM_bound >|
+  map (fn q => pop_assum (qspec_then q mp_tac))
+  [`exp2_size`,`exp7_size`,`exp_size`] >>
+srw_tac[ARITH_ss][exp_size_def])
 
 (* compile : exp * compiler_state → bc_inst list * compiler_state *)
 val compile_def = Define`
