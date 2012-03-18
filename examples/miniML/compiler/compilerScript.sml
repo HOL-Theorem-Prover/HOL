@@ -1,4 +1,4 @@
-open HolKernel bossLib pairLib MiniMLTheory listTheory bytecodeTheory lcsymtacs
+open HolKernel bossLib boolLib pairLib MiniMLTheory listTheory bytecodeTheory lcsymtacs
 
 val _ = new_theory "compiler"
 
@@ -97,14 +97,22 @@ imp_res_tac SUM_MAP_MEM_bound >|
 srw_tac[ARITH_ss][exp_size_def])
 
 (* compile : exp * compiler_state → bc_inst list * compiler_state *)
-val compile_def = Define`
+val compile_defn = Hol_defn "compile"` (* tDefine fails *)
   (compile (Raise err, s) = ARB) (* TODO *)
 ∧ (compile (Val v, s) = emit s [] (compile_val v))
-∧ (compile (Mat e pes, s) = ARB) (* TODO *)
-∧ (compile (Con NONE [c], s) = ARB) (* TODO *)
-∧ (compile (Con NONE (c::es), s) = ARB) (* TODO *)
-∧ (compile (Con (SOME _) _, s) = ARB) (* Disallowed; use remove_ctors *)
-∧ (compile (Proj e n, s) = ARB) (* TODO *)
+∧ (compile (Mat e pes, s) = ARB) (* TODO; maybe disallow and use some remove_mat? *)
+∧ (compile (Con NONE [(Val (Lit (IntLit i)))], s) =
+   emit s [] [Stack (PushInt i)])
+∧ (compile (Con NONE ((Val (Lit (IntLit i)))::es), s) =
+   let n = LENGTH es in
+   let (es,s) = FOLDR (λe (es,s). let (e,s) = compile (e,s) in (es++e,s)) ([],s) es in
+   let (r,s) = emit s es [Stack (Cons (Num i) n)] in
+   (r,s))
+∧ (compile (Con _ _, s) = ARB) (* Disallowed; use remove_ctors *)
+∧ (compile (Proj e n, s) =
+   let (e,s) = compile (e,s) in
+   let (r,s) = emit s e [Stack (El n)] in
+   (r,s))
 ∧ (compile (Let x e b, s) =
    let (e,s) = compile (e,s) in
    let n = LENGTH s.env in
@@ -212,5 +220,11 @@ val compile_def = Define`
     let (e3,s) = compile (e3,s) in
     let n3     = s.next_label in
     (e1++(f n1 n2)++e2++[Jump n3]++e3, s))`
+
+val (compile_def,compile_ind) = Defn.tprove (compile_defn,
+  WF_REL_TAC `measure (exp_size o FST)` >>
+  srw_tac[ARITH_ss][exp8_size_thm] >>
+  Q.ISPEC_THEN `exp_size` imp_res_tac SUM_MAP_MEM_bound >>
+  DECIDE_TAC)
 
 val _ = export_theory ()
