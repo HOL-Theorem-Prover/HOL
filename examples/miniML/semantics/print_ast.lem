@@ -21,9 +21,9 @@ let rec pos_int_to_string n =
     ""
 
 val int_to_string : Int.int -> string
-let int_to_string n = 
-  if n = i 0 then 
-    "0" 
+let int_to_string n =
+  if n = i 0 then
+    "0"
   else if Int.(>) n (i 0) then
     pos_int_to_string n
   else
@@ -31,7 +31,7 @@ let int_to_string n =
 
 let infixes = ["="; "+"; "-"; "*"; "div"; "mod"; "<"; ">"; "<="; ">="]
 
-let rec 
+let rec
 join_strings sep [] = ""
 and
 join_strings sep [x] = x
@@ -134,7 +134,7 @@ exp_to_string (If e1 e2 e3) =
 and
 exp_to_string (Mat e pes) =
   "(case " ^ exp_to_string e ^ " of " ^
-  join_strings "|" (List.map pat_exp_to_string pes) ^ ")"
+  join_strings " | " (List.map pat_exp_to_string pes) ^ ")"
 and
 exp_to_string (Let v e1 e2) =
   "let val " ^ var_to_string v ^ " = " ^ exp_to_string e1 ^ " in " ^
@@ -176,9 +176,9 @@ let variant_to_string (c,ts) =
 
 let typedef_to_string (tvs, name, variants) =
   (if tvs = [] then "" else "(" ^ join_strings "," tvs ^ ")") ^
-  name ^ " = " ^ join_strings "|" (List.map variant_to_string variants)
+  name ^ " = " ^ join_strings " | " (List.map variant_to_string variants)
 
-let dec_to_string d = 
+let dec_to_string d =
   match d with
     | Dlet p e ->
         "val " ^ pat_to_string p ^ " = " ^ exp_to_string e
