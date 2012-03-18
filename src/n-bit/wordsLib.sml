@@ -2282,8 +2282,7 @@ val Cases_on_word = Cases_on;
 
 val LESS_CONV =
 let val compset = reduceLib.num_compset ()
-    val thm = SUC_RULE prim_recTheory.LESS_THM
-    val _ = computeLib.add_thms [thm] compset
+    val () = computeLib.add_thms [wordsTheory.NUMERAL_LESS_THM] compset
 in
  computeLib.CBV_CONV compset
 end;

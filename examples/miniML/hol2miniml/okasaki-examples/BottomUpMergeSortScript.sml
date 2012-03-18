@@ -1,5 +1,5 @@
 open preamble
-open miscTheory sortingTheory ml_translatorLib;
+open miscTheory bagLib bagTheory sortingTheory ml_translatorLib;
 
 val _ = new_theory "BottomUpMergeSort"
 
@@ -27,6 +27,11 @@ val sortable_inv_def = tDefine "sortable_inv" `
  full_simp_tac (srw_ss()++ARITH_ss) []);
 
 val sortable_inv_ind = fetch "-" "sortable_inv_ind"
+
+val sortable_to_bag_def = Define `
+(sortable_to_bag (size,[]) = {||}) ∧
+(sortable_to_bag (size,seg::segs) = 
+  BAG_UNION (list_to_bag seg) (sortable_to_bag (size-LENGTH seg,segs)))`;
 
 val mrg_def = mlDefine `
 (mrg leq [] ys = ys) ∧
@@ -72,7 +77,20 @@ sort leq (size, segs) = mrg_all leq [] segs`;
 
 
 
-(* Functional correctness *)
+(* Functional correctness, and the structural invariant on the size of the lists
+ * in the sortable collection.  That is, the nth list has length equal to 2^m,
+ * where m is the position of the nth 1 bit in the size of the collection, from
+ * least-to-most significant. E.g., if the size is 9, there should be 2 lists,
+ * the first of length 1, and the second of length 8.*)
+
+val sortable_inv_sorted = Q.prove (
+`!leq size segs m. sortable_inv leq (size,segs) m ⇒ EVERY (SORTED leq) segs`,
+recInduct sortable_inv_ind >>
+rw [] >>
+POP_ASSUM (ASSUME_TAC o SIMP_RULE (srw_ss()) [Once sortable_inv_def]) >>
+fs [] >>
+every_case_tac >>
+fs []);
 
 val mrg_sorted = Q.prove (
 `!leq xs ys. 
@@ -99,8 +117,46 @@ val mrg_length = Q.prove (
 recInduct mrg_ind >>
 srw_tac [ARITH_ss] [mrg_def]);
 
-val odd_div_add1 = mk_thm ([],
-``!n:num. ~EVEN n ⇒ (n DIV 2 + 1 = (n + 1) DIV 2)``);
+val mrg_bag = Q.prove (
+`!leq xs ys. 
+  list_to_bag (mrg leq xs ys) = BAG_UNION (list_to_bag xs) (list_to_bag ys)`,
+recInduct mrg_ind >>
+srw_tac [BAG_ss] [list_to_bag_def, mrg_def, BAG_INSERT_UNION]);
+
+val div_lem1 = Q.prove (
+`!x. (x + 2) DIV 2 = x DIV 2 + 1`,
+rw [] >>
+`0 < 2:num` by decide_tac >>
+`x + 2 = 1 * 2 + x` by decide_tac >>
+imp_res_tac arithmeticTheory.ADD_DIV_ADD_DIV >>
+POP_ASSUM (ASSUME_TAC o Q.SPECL [`1`, `x`]) >>
+full_simp_tac (srw_ss()++ARITH_ss) []);
+
+val div_lem2 = Q.prove (
+`!x. (x + 3) DIV 2 = (x + 1) DIV 2 + 1`,
+rw [] >>
+`0 < 2:num` by decide_tac >>
+`x + 3 = 1 * 2 + (x + 1)` by decide_tac >>
+imp_res_tac arithmeticTheory.ADD_DIV_ADD_DIV >>
+POP_ASSUM (ASSUME_TAC o Q.SPECL [`1`, `x+1`]) >>
+full_simp_tac (srw_ss()++ARITH_ss) []);
+
+val odd_div_add1 = Q.prove (
+`!n:num. ~EVEN n ⇒ (n DIV 2 + 1 = (n + 1) DIV 2)`,
+completeInduct_on `n` >>
+rw [] >>
+cases_on `n = 0` >>
+fs [] >>
+cases_on `n = 1` >>
+fs [] >>
+`?n'. n = n' + 2` 
+         by (qexists_tac `n - 2` >>
+             rw [] >>
+             decide_tac) >>
+rw [] >>
+full_simp_tac (srw_ss()++ARITH_ss) [arithmeticTheory.EVEN_ADD] >>
+Q.PAT_ASSUM `!m. P m` (MP_TAC o Q.SPEC `n'`) >>
+rw [div_lem1, div_lem2]);
 
 val add_seg_sub_inv = Q.prove (
 `!leq size segs n seg. 
@@ -145,6 +201,33 @@ rw [] >|
           fs [arithmeticTheory.EVEN_ADD] >>
           metis_tac [odd_div_add1]]]);
 
+val add_seg_bag = Q.prove (
+`!leq size segs n seg SIZE. 
+  sortable_inv leq (size,segs) n
+  ⇒ 
+  (sortable_to_bag (SIZE, add_seg leq seg segs size) =
+   BAG_UNION (list_to_bag seg) (sortable_to_bag (SIZE-LENGTH seg,segs)))`,
+recInduct sortable_inv_ind >>
+rw [] >|
+[fs [Once sortable_inv_def] >>
+     rw [Once add_seg_def, sortable_to_bag_def],
+ POP_ASSUM (ASSUME_TAC o SIMP_RULE (srw_ss()) [Once sortable_inv_def]) >>
+     cases_on `n MOD 2 = 0` >>
+     fs [] >>
+     srw_tac [BAG_AC_ss]
+             [Once add_seg_def, sortable_to_bag_def, mrg_bag, mrg_length,
+              arithmeticTheory.SUB_PLUS]]);
+
+val add_bag = Q.store_thm ("add_bag",
+`!leq x size segs.
+  sortable_inv leq (size,segs) 1
+  ⇒
+  (sortable_to_bag (add leq x (size, segs)) =
+   BAG_INSERT x (sortable_to_bag (size, segs)))`,
+rw [add_def] >>
+ASSUME_TAC (Q.SPECL [`leq`, `size`, `segs`, `1`, `[x]`] add_seg_bag) >>
+fs [list_to_bag_def, BAG_INSERT_UNION]);
+
 val add_correct = Q.store_thm ("add_correct",
 `!leq x size segs. 
   WeakLinearOrder leq ∧ sortable_inv leq (size,segs) 1
@@ -154,10 +237,40 @@ rw [add_def] >>
 match_mp_tac add_seg_sub_inv >>
 rw [SORTED_DEF]);
 
+val mrg_all_sorted = Q.prove (
+`!leq xs segs. 
+  WeakLinearOrder leq ∧
+  EVERY (SORTED leq) segs ∧ SORTED leq xs
+  ⇒ 
+  SORTED leq (mrg_all leq xs segs)`,
+induct_on `segs` >>
+rw [mrg_all_def] >>
+metis_tac [mrg_sorted]);
 
-(* translation *)
+val mrg_all_perm = Q.prove (
+`!leq xs segs. PERM (mrg_all leq xs segs) (xs++FLAT segs)`,
+induct_on `segs` >>
+rw [mrg_all_def] >>
+metis_tac [mrg_perm, PERM_CONG, PERM_REFL, PERM_TRANS]);
 
-(*val _ = set_filename (current_theory())*)
+val sort_sorted = Q.store_thm ("sort_sorted",
+`!leq size segs. 
+  WeakLinearOrder leq ∧ sortable_inv leq (size,segs) 1 
+  ⇒ 
+  SORTED leq (sort leq (size,segs))`,
+rw [sort_def] >>
+metis_tac [sortable_inv_sorted, SORTED_DEF, mrg_all_sorted]);
+
+val sortable_to_bag_lem = Q.prove (
+`!size segs. sortable_to_bag (size,segs) = list_to_bag (FLAT segs)`,
+induct_on `segs` >>
+rw [sortable_to_bag_def, list_to_bag_def, list_to_bag_append]);
+
+val sort_bag = Q.store_thm ("sort_bag",
+`!leq x size segs. 
+  list_to_bag (sort leq (size,segs)) = sortable_to_bag (size,segs)`,
+rw [sort_def, sortable_to_bag_lem, list_to_bag_perm] >>
+metis_tac [mrg_all_perm, APPEND]);
 
 val _ = export_theory();
 

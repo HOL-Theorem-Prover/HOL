@@ -6,9 +6,8 @@ val _ = Hol_datatype`
   compiler_state =
   <|
    (* inl is stack variable
-      inr is environment (heap) variables:
-        (location of block on stack, location of variable in block) *)
-    env: (varN,num+(num # num)) env
+      inr is environment (heap) variables: *)
+    env: (varN,num+num) env
   ; next_label: num
   ; inst_length: bc_inst -> num
   |>`
@@ -75,21 +74,21 @@ ntac 2 gen_tac >> Induct >> rw[] >>
 fsrw_tac [ARITH_ss][])
 
 (* move elsewhere? *)
-val fvs_def = tDefine "fvs"`
-  (fvs (Var x) = {x})
-∧ (fvs (Let x _ b) = fvs b DELETE x)
-∧ (fvs (Letrec ls b) = FOLDL (λs (n,x,b). s ∪ (fvs b DELETE x))
-                             (fvs b DIFF (FOLDL (combin$C ($INSERT o FST)) {} ls))
+val free_vars_def = tDefine "free_vars"`
+  (free_vars (Var x) = {x})
+∧ (free_vars (Let x _ b) = free_vars b DELETE x)
+∧ (free_vars (Letrec ls b) = FOLDL (λs (n,x,b). s ∪ (free_vars b DELETE x))
+                             (free_vars b DIFF (FOLDL (combin$C ($INSERT o FST)) {} ls))
                              ls)
-∧ (fvs (Fun x b) = fvs b DELETE x)
-∧ (fvs (App _ e1 e2) = fvs e1 ∪ fvs e2)
-∧ (fvs (Log _ e1 e2) = fvs e1 ∪ fvs e2)
-∧ (fvs (If e1 e2 e3) = fvs e1 ∪ fvs e2 ∪ fvs e3)
-∧ (fvs (Mat e pes) = fvs e ∪ FOLDL (λs (p,e). s ∪ fvs e) {} pes)
-∧ (fvs (Proj e _) = fvs e)
-∧ (fvs (Raise _) = {})
-∧ (fvs (Val _) = {})
-∧ (fvs (Con _ es) = FOLDL (λs e. s ∪ fvs e) {} es)`
+∧ (free_vars (Fun x b) = free_vars b DELETE x)
+∧ (free_vars (App _ e1 e2) = free_vars e1 ∪ free_vars e2)
+∧ (free_vars (Log _ e1 e2) = free_vars e1 ∪ free_vars e2)
+∧ (free_vars (If e1 e2 e3) = free_vars e1 ∪ free_vars e2 ∪ free_vars e3)
+∧ (free_vars (Mat e pes) = free_vars e ∪ FOLDL (λs (p,e). s ∪ free_vars e) {} pes)
+∧ (free_vars (Proj e _) = free_vars e)
+∧ (free_vars (Raise _) = {})
+∧ (free_vars (Val _) = {})
+∧ (free_vars (Con _ es) = FOLDL (λs e. s ∪ free_vars e) {} es)`
 (WF_REL_TAC `measure exp_size` >>
 srw_tac [ARITH_ss][exp1_size_thm,exp6_size_thm,exp8_size_thm] >>
 imp_res_tac SUM_MAP_MEM_bound >|
@@ -118,7 +117,7 @@ val compile_def = Define`
    case lookup x s.env of
      NONE => ARB (* should not happen *)
    | SOME (INL n) => emit s [] [Stack (Load (LENGTH s.env - n))]
-   | SOME (INR (n,m)) => emit s [] [Stack (Load (LENGTH s.env - n)); Stack (El m)])
+   | SOME (INR n) => emit s [] [Stack (Load (LENGTH s.env)); Stack (El n)])
 ∧ (compile (Fun x b, s) =
    (*  Load ?                               stack:
        ...      (* set up environment *)
@@ -131,13 +130,22 @@ val compile_def = Define`
        Return
     L: Cons 0 2 (* create closure *)        Cons 0 [CodePtr f, Cons 0 Env], rest
   *)
-   let (r,s) = emit s [] [Stack (Cons 0 0) ] in (* TODO: find free variables in b,
-                                                         copy values into a block *)
-   let s' = s with env := ARB (* TODO: create inr bindings for each, with the environment at position 0
-                                       create a dummy binding for the return pointer,
-                                       create an inl binding for the argument at position 2 *)
-                              in
-   let (aa,s) = emit s [] [Call ARB] in
+   let fvs = free_vars (Fun x b) in
+   let z = LENGTH s.env in
+   let (e,i,ls) =
+     FOLDL (λ(e,i,ls) (v,n).
+             if v IN fvs
+             then (bind v (INR i) e, i + 1,
+                   case n of
+                   | INL n => Stack (Load (z - n)) :: ls
+                   | INR n => Stack (Load z) :: Stack (El n) :: ls)
+             else (e,i,ls))
+      ([],0,[]) s.env in
+   let (r,s) = emit s [] ls in
+   let (r,s) = emit s r [Stack (Cons 0 i) ] in
+   let s' = s with env := bind x (INL 2) (bind "" (INL 1) (bind "" (INL 0) e)) in
+     (* first "" is the environment, second is return ptr *)
+   let (aa,s) = emit s ARB [Call ARB] in
    let (b,s') = compile (b,s') in
    let (b,s') = emit s' b [Stack (Store 0);Return] in
    let s = s' with env := s.env in
