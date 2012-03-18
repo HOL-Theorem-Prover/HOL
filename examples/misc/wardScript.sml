@@ -54,21 +54,6 @@ val (thmrwt_rules, thmrwt_ind, thmrwt_cases) = Hol_reln`
 fun thm i = List.nth(CONJUNCTS thmrwt_rules, i)
 
 val alphanil_t = ``[] : alphabet list``
-fun rep t =
-    if aconv t ``[I:alphabet]`` then SOME (alphanil_t, thm 0)
-    else if aconv t ``[a;a;a]`` then SOME (``[I:alphabet]``, thm 1)
-    else if aconv t ``[b;b;b]`` then SOME (``[I:alphabet]``, thm 2)
-    else if aconv t ``[a;b;a;b]`` then SOME (``[b;b;a;a]``, thm 3)
-    else if aconv t ``[b;b;a;a;b;b]`` then SOME (``[a;b;a]``, thm 4)
-    else if aconv t ``[a;a;b;b;a;a]`` then SOME (``[b;a;b]``, thm 5)
-    else NONE
-
-fun replace pfxr [] = []
-  | replace pfxr (h::t) =
-    case rep h of
-      NONE => replace (h::pfxr) t
-    | SOME (h', th) => (List.rev pfxr, h', t, th) :: replace (h::pfxr) t
-
 
 fun lmkapp l = listSyntax.list_mk_append l handle HOL_ERR _ => alphanil_t
 
@@ -112,10 +97,92 @@ fun stripapp worklist acc =
           end
       end
 
+datatype ('key, 'a) cons_trie =
+         Node of 'a option * ('key,('key,'a) cons_trie) Binarymap.dict
+
+fun find_trie_matches key trie = let
+  fun recurse pfxr acc key (Node (valopt, d)) = let
+    val newacc =
+        case valopt of
+          NONE => acc
+        | SOME r => (List.rev pfxr, r) :: acc
+  in
+    case key of
+      [] => newacc
+    | e::es => let
+      in
+        case Binarymap.peek (d, e) of
+          NONE => newacc
+        | SOME trie' => recurse (e::pfxr) newacc es trie'
+      end
+  end
+in
+  recurse [] [] key trie
+end
+
+fun empty cmp = Node(NONE, Binarymap.mkDict cmp)
+
+fun insert cmp (k,v) (Node(valopt,d)) =
+    case k of
+      [] => Node(SOME v, d)
+    | e::es => let
+      in
+        case Binarymap.peek (d, e) of
+          NONE => let
+            val temp' = insert cmp (es,v) (empty cmp)
+          in
+            Node(valopt, Binarymap.insert(d,e,temp'))
+          end
+        | SOME t' => Node(valopt, Binarymap.insert(d,e,insert cmp(es,v) t'))
+      end
+
+val db = let
+  fun foldthis ((t,v), acc) = let
+    val (els, _) = listSyntax.dest_list t
+  in
+    insert Term.compare (els,v) acc
+  end
+in
+  List.foldl foldthis (empty Term.compare)
+             [(``[I:alphabet]``, (alphanil_t, thm 0)),
+              (``[a;a;a]``,  (``[I:alphabet]``, thm 1)),
+              (``[b;b;b]``, (``[I:alphabet]``, thm 2)),
+              (``[a;b;a;b]``, (``[b;b;a;a]``, thm 3)),
+              (``[b;b;a;a;b;b]``, (``[a;b;a]``, thm 4)),
+              (``[a;a;b;b;a;a]``, (``[b;a;b]``, thm 5))]
+end
+
+fun find_cons_matches db els =
+    case els of
+      [] => let
+        val res = find_trie_matches els db
+      in
+        map (fn v => ([],v,[])) res
+      end
+    | t::ts => let
+        val hdres = find_trie_matches els db
+        val hdres' = map (fn v => ([], v, List.drop(els, length els))) hdres
+        val tlres = find_cons_matches db ts
+      in
+        (hdres' @ map (fn (p,v,s) => (t::p,v,s)) tlres)
+      end
+
+fun find_app_matches db app_list = let
+  fun recurse acc apps =
+    case apps of
+      [] => acc
+    | t::ts => let
+        val els = #1 (listSyntax.dest_list t) handle HOL_ERR _ => []
+      in
+        recurse (acc @ find_cons_matches db els) ts
+      end
+in
+  recurse [] app_list
+end
 
 open listTheory
 
-fun solver (asl, t) = let
+(* fun solver (asl, t) = let
   val nonnil_asms = map ASSUME (filter is_neg asl)
   fun munge extras p s th =
       th |> SPECL [lmkapp p, lmkapp s]
@@ -173,7 +240,7 @@ in
 end (asl,t) handle Empty => raise mk_HOL_ERR "wardScript" "solver" "Empty list"
 
 val _ = metisTools.limit :=  { time = NONE, infs = SOME 1 }
-
+*)
 
 (*
 
