@@ -5,43 +5,105 @@ open HolKernel boolLib bossLib;
 
 open MiniMLTheory terminationProofsTheory determTheory ml_translatorTheory;
 open arithmeticTheory listTheory combinTheory pairTheory;
-open integerTheory;
+open integerTheory intLib;
 
 infix \\ val op \\ = op THEN;
 
 val RW = REWRITE_RULE;
 val RW1 = ONCE_REWRITE_RULE;
+val auto_print = true
+
+
+local
+  val names = ref [""]
+in
+  fun get_name str =
+    if mem str (!names) then get_name (str ^ "'")
+    else (names := str :: (!names); str)
+end
+
+
+(* collecting declarations *)
+
+local
+  val decls = ref (tl [(T,"")])
+  fun dec2str d = ""(*if not auto_print then "" else let
+    val _ = print "\nStarting dec_to_string.\n"
+    val _ = print ("Input:  " ^ term_to_string d ^ "\n")
+    val result =
+      ``dec_to_string ^d``
+      |> EVAL |> concl |> rand |> stringSyntax.fromHOLstring
+      handle HOL_ERR _ => "(* unable translate *)"
+    val _ = print ("Output: " ^ result ^ "\n")
+    in result end;*)
+in
+  fun add_decl d = (decls := (d,dec2str d)::(!decls))
+  fun get_decls () = rev (!decls)
+end
+
+
+(* printing output *)
+
+val string2ident = let
+  fun g c = if #"0" <= c andalso c <= #"9" then implode [c] else
+            if #"a" <= c andalso c <= #"z" then implode [c] else
+            if #"A" <= c andalso c <= #"Z" then implode [c] else
+            if mem c [#"_"] then implode [c] else "C" ^ int_to_string (ord c)
+  in String.translate g end
+
+fun D th = let
+  val th = th |> DISCH_ALL |> PURE_REWRITE_RULE [AND_IMP_INTRO]
+  in if is_imp (concl th) then th else DISCH T th end
+
 
 local
   val base_filename = ref "";
   fun clear_file suffix = let
-    val t = TextIO.openOut(!base_filename ^ suffix)
+    val t = TextIO.openOut((!base_filename) ^ suffix)
     val _ = TextIO.closeOut(t)
     in () end
+  fun get_filename () =
+    if not auto_print then !base_filename else
+    if !base_filename = "" then let
+      val name = current_theory()
+      val _ = (base_filename := name)
+      val _ = clear_file "_ml.txt"
+      val _ = clear_file "_hol.txt"
+      val _ = clear_file "_thm.txt"
+      in name end
+    else !base_filename
   fun append_to_file suffix strs = let
-    val t = TextIO.openAppend(!base_filename ^ suffix)
+    val t = TextIO.openAppend(get_filename() ^ suffix)
     val _ = map (fn s => TextIO.output(t,s)) strs
     val _ = TextIO.closeOut(t)
     in () end
+  fun print_ml_file () = let
+   (* val _ = clear_file "_ast.txt" *)
+    val _ = clear_file "_ml.txt"
+    fun print_decl (tm,s) = let
+      val _ = append_to_file "_ml.txt" ["\n",term_to_string tm,"\n"]
+     (* val _ = append_to_file "_ml.txt" ["\n",s,"\n"] *)
+      in () end
+    val _ = map print_decl (get_decls())
+    in () end
 in
-  fun print_results fname original_def th code_tm = if !base_filename = "" then () else let
-    val filename = !base_filename
-    val _ = set_trace "Unicode" 0;
+  fun print_results fname original_def th code_tm = if get_filename() = "" then () else let
+    val filename = get_filename()
     val def_str = thm_to_string original_def
-    val th_str = thm_to_string th
+    val th_str = thm_to_string (D th |> REWRITE_RULE [GSYM CONJ_ASSOC,Eval_Var_EQ,PRECONDITION_def])
     val ml_str = term_to_string code_tm
-    val _ = set_trace "Unicode" 1;
-    val _ = append_to_file "_ml.txt" ["\n" ^ fname ^ ":\n\n",ml_str,"\n"]
+   (* val _ = append_to_file "_ml.txt" ["\n" ^ fname ^ ":\n\n",ml_str,"\n"] *)
     val _ = append_to_file "_hol.txt" ["\n",def_str,"\n"]
-    val _ = append_to_file "_th.txt" ["\n",th_str,"\n"]
+    val _ = append_to_file "_thm.txt" ["\nCertificate theorem for "^fname^":\n\n",th_str,"\n"]
+    val _ = print_ml_file ()
     in () end;
-  fun print_inv_def inv_def = if !base_filename = "" then () else let
+  fun print_inv_def inv_def = if get_filename() = "" then () else let
     val th_str = thm_to_string inv_def
-    val _ = append_to_file "_th.txt" ["\n",th_str,"\n"]
+    val _ = append_to_file "_thm.txt" ["\nDefinition of refinement invariant:\n\n",th_str,"\n"]
     in () end;
   fun clear_filename () = (base_filename := "")
   fun set_filename name = (base_filename := name;
-    clear_file "_ml.txt"; clear_file "_hol.txt"; clear_file "_th.txt")
+    clear_file "_ml.txt"; clear_file "_hol.txt"; clear_file "_thm.txt")
 end
 
 exception UnableToTranslate of term;
@@ -146,13 +208,24 @@ val _ = Hol_datatype `BTREE = BLEAF of ('a TREE) | BBRANCH of BTREE => BTREE`;
 val ty = ``:'a BTREE``
 *)
 
-fun tag_name type_name const_name = let
-  fun f c = if #"a" <= c andalso c <= #"z" then implode [chr (ord c - 32)] else
-            if #"A" <= c andalso c <= #"Z" then implode [c] else ""
-  val x = String.translate f type_name
-  val y = String.translate f const_name
-  in if y = "" then x else y end
+fun clean_lowercase s = let
+  fun f c = if #"a" <= c andalso c <= #"z" then implode [c] else
+            if #"A" <= c andalso c <= #"Z" then implode [chr (ord c + 32)] else
+            if mem c [#"_",#"'"] then implode [c] else ""
+  in String.translate f s end;
 
+fun clean_uppercase s = let
+  fun f c = if #"a" <= c andalso c <= #"z" then implode [chr (ord c - 32)] else
+            if #"A" <= c andalso c <= #"Z" then implode [c] else
+            if mem c [#"_",#"'"] then implode [c] else ""
+  in String.translate f s end;
+
+fun tag_name type_name const_name = let
+  val x = clean_lowercase type_name
+  val y = clean_lowercase const_name
+  fun upper_case_hd s =
+    clean_uppercase (implode [hd (explode s)]) ^ implode (tl (explode s))
+  in if y = "" then upper_case_hd x else upper_case_hd y end
 
 local
   val inv_defs = ref (tl [(alpha,TRUTH)])
@@ -163,6 +236,24 @@ end
 
 val last_def_fail = ref T
 
+fun type2t ty =
+  if ty = ``:bool`` then ``Tbool`` else
+  if ty = ``:int`` then ``Tnum`` else
+  if ty = ``:num`` then ``Tnum`` else
+  if can dest_vartype ty then
+    mk_comb(``Tvar``,stringSyntax.fromMLstring (dest_vartype ty))
+  else let
+    val (name,tt) = dest_type ty
+    val tt = map type2t tt
+    val name_tm = stringSyntax.fromMLstring name
+    val tt_list = listSyntax.mk_list(tt,type_of ``Tbool``)
+    in if name = "fun" then ``Tfn ^(el 1 tt) ^(el 2 tt)`` else
+         ``Tapp ^tt_list ^name_tm`` end
+
+fun dest_args tm =
+  let val (x,y) = dest_comb tm in dest_args x @ [y] end
+  handle HOL_ERR _ => []
+
 fun derive_thms_for_type ty = let
   val (ty,ret_ty) = dest_fun_type (type_of_cases_const ty)
   val case_of_th = TypeBase.case_def_of ty
@@ -170,6 +261,23 @@ fun derive_thms_for_type ty = let
   val _ = print ("Adding type " ^ type_to_string ty ^ "\n")
   (* derive case theorem *)
   val case_th = get_nchotomy_of ty
+  (* define a MiniML datatype declaration *)
+  val dtype = let
+    val xs = map rand (find_terms is_eq (concl case_th))
+    val y = hd (map (fst o dest_eq) (find_terms is_eq (concl case_th)))
+    fun mk_line x = let
+      val tag = tag_name name (repeat rator x |> dest_const |> fst)
+      val ts = map (type2t o type_of) (dest_args x)
+      val tm = pairSyntax.mk_pair(stringSyntax.fromMLstring tag,
+                 listSyntax.mk_list(ts,type_of ``Tbool``))
+      in tm end
+    val lines = listSyntax.mk_list(map mk_line xs,``:tvarN # t list``)
+    val (name,ts) = dest_type (type_of y)
+    val ts = map (stringSyntax.fromMLstring o dest_vartype) ts
+    val ts_tm = listSyntax.mk_list(ts,``:string``)
+    val name_tm = stringSyntax.fromMLstring name
+    val dtype = ``Dtype [(^ts_tm,^name_tm,^lines)]``
+    in dtype end
   (* define coupling invariant for data refinement *)
   fun list_mk_type [] ret_ty = ret_ty
     | list_mk_type (x::xs) ret_ty = mk_type("fun",[type_of x,list_mk_type xs ret_ty])
@@ -375,6 +483,7 @@ fun derive_thms_for_type ty = let
       \\ EXISTS_TAC witness \\ ASM_SIMP_TAC (srw_ss()) [inv_def,evaluate_list_SIMP])
     in (pat,lemma) end;
   val conses = map derive_cons ts
+  val _ = add_decl dtype
   in (ty,eq_lemma,inv_def,conses,case_lemma,ts) end
 
 local
@@ -435,10 +544,6 @@ register_type ``:'a + num``;
 register_type ``:num option``;
 register_type ``:unit``;
 *)
-
-fun D th = let
-  val th = th |> DISCH_ALL |> PURE_REWRITE_RULE [AND_IMP_INTRO]
-  in if is_imp (concl th) then th else DISCH T th end
 
 fun inst_cons_thm tm hol2deep = let
   val th = cons_for tm |> UNDISCH_ALL
@@ -557,10 +662,6 @@ fun SIMP_EqualityType_ASSUMS th = let
    where vi are variables. The second return value is an option type:
    if NONE then foo is not recursive, if SOME th then th is an
    induction theorem that matches the structure of foo. *)
-
-fun dest_args tm =
-  let val (x,y) = dest_comb tm in dest_args x @ [y] end
-  handle HOL_ERR _ => []
 
 fun pattern_complete def vs = let
   val lines = def |> SPEC_ALL |> CONJUNCTS |> map SPEC_ALL
@@ -682,10 +783,10 @@ fun remove_pair_abs def = let
       \\ SIMP_TAC std_ss [Once def]);
     in delete_pair_arg lemma end handle HOL_ERR _ => def
   val def = delete_pair_arg def
-  val def = (* if can (find_term (can (match_term ``UNCURRY``))) (concl def) then *)
+  val def' = (* if can (find_term (can (match_term ``UNCURRY``))) (concl def) then *)
               SIMP_RULE std_ss [UNCURRY_SIMP] def
             (* else def *)
-  in def end
+  in if concl def' = T then def else def' end
 
 fun is_rec_def def = let
   val thms = def |> SPEC_ALL |> CONJUNCTS |> map SPEC_ALL
@@ -721,7 +822,7 @@ fun preprocess_def def = let
   val (def,ind) = single_line_def def
   val def = RW1 [GSYM TRUE_def, GSYM FALSE_def] def
   val def = remove_pair_abs def |> SPEC_ALL
-  val def = rename_bound_vars_rule "bound_" (GEN_ALL def) |> SPEC_ALL
+  val def = rename_bound_vars_rule "v" (GEN_ALL def) |> SPEC_ALL
   val ind = if is_rec andalso is_NONE ind then SOME (find_ind_thm def) else ind
   val def = if def |> SPEC_ALL |> concl |> dest_eq |> fst |> is_const
             then SPEC_ALL (RW1 [FUN_EQ_THM] def) else def
@@ -813,7 +914,7 @@ fun FORCE_GEN v th1 = GEN v th1 handle HOL_ERR _ => let
 
 fun apply_Eval_Fun v th fix = let
   val th1 = inst_Eval_env v th
-  val th2 = if fix then MATCH_MP Eval_Fun_Fix (GEN ``v:v`` th1)
+  val th2 = if fix then MATCH_MP Eval_Fun_Eq (GEN ``v:v`` th1)
                    else MATCH_MP Eval_Fun (GEN ``v:v`` (FORCE_GEN v th1))
   in th2 end;
 
@@ -865,7 +966,7 @@ local
   val memory = ref (tl [(T,TRUTH)])
 in
   fun store_cert const th =
-    (((if is_const const then save_thm("Eval_" ^ fst (dest_const const) ^ "_thm", th) else TRUTH) handle HOL_ERR _ => TRUTH);
+    (((if is_const const then save_thm("Eval_" ^ string2ident (fst (dest_const const)) ^ "_thm", th) else TRUTH) handle HOL_ERR _ => TRUTH);
      memory := (const,th)::(!memory))
   fun lookup_cert const = snd (first (fn (c,_) => can (match_term c) const) (!memory))
   fun delete_cert const = (memory := filter (fn (c,_) => c <> const) (!memory))
@@ -896,6 +997,7 @@ in
   fun uninstall_rec_pattern () = (rec_pattern := ``ARB:bool``)
   fun rec_fun () = repeat rator (!rec_pattern)
   fun rec_term () = (!rec_pattern)
+  fun rec_name () = (!rec_fname)
   fun rec_pre_var () = get_pre_var (!rec_pattern) (!rec_fname)
 end
 
@@ -916,14 +1018,14 @@ fun MY_MATCH_MP th1 th2 = let
   in MP (INST s (INST_TYPE i th1)) th2 end;
 
 fun force_remove_fix thx = let
-  val pat = Fix_def |> SPEC_ALL |> concl |> dest_eq |> fst
+  val pat = Eq_def |> SPEC_ALL |> concl |> dest_eq |> fst
   val xs = map rand (find_terms (can (match_term pat)) (concl thx))
   val s = SIMP_RULE std_ss [Eval_FUN_FORALL_EQ,FUN_QUANT_SIMP]
   val thx = foldr (fn (x,th) => s (FORCE_GEN x th)) thx xs
   in thx end;
 
 fun rm_fix res = let
-  val lemma = mk_thm([],``Fix b x = b``)
+  val lemma = mk_thm([],``Eq b x = b``)
   val tm2 = QCONV (REWRITE_CONV [lemma]) res |> concl |> dest_eq |> snd
   in tm2 end
 
@@ -942,6 +1044,10 @@ fun hol2deep tm =
   if (tm = ``TRUE``) orelse (tm = ``FALSE``) then SPEC tm Eval_Val_BOOL else
   if (* is_const tm andalso *) can lookup_cert tm then let
     val th = lookup_cert tm
+    val pat = Eq_def |> SPEC_ALL |> concl |> dest_eq |> fst
+    val xs = find_terms (can (match_term pat)) (concl th) |> map rand
+    val ss = map (fn v => v |-> genvar(type_of v)) xs
+    val th = INST ss th
     val res = th |> UNDISCH_ALL |> concl |> rand
     val inv = get_type_inv (type_of tm)
     val target = mk_comb(inv,tm)
@@ -958,10 +1064,10 @@ fun hol2deep tm =
     fun dest_args tm = rand tm :: dest_args (rator tm) handle HOL_ERR _ => []
     val xs = dest_args tm
     val f = rec_fun ()
-    val str = stringLib.fromMLstring (fst (dest_const f))
+    val str = stringLib.fromMLstring (rec_name())
     fun mk_fix tm = let
       val inv = get_type_inv (type_of tm)
-      in ``Fix ^inv ^tm`` end
+      in ``Eq ^inv ^tm`` end
     fun mk_arrow x y = ``Arrow ^x ^y``
     fun mk_inv [] res = res
       | mk_inv (x::xs) res = mk_inv xs (mk_arrow (mk_fix x) res)
@@ -970,7 +1076,7 @@ fun hol2deep tm =
     val pre = subst ss (rec_pre_var ())
     val h = ASSUME ``PreImp ^pre (Eval env (Var ^str) (^inv ^f))``
             |> RW [PreImp_def] |> UNDISCH
-    val ys = map (fn tm => MATCH_MP Eval_Fix (hol2deep tm)) xs
+    val ys = map (fn tm => MATCH_MP Eval_Eq (hol2deep tm)) xs
     fun apply_arrow hyp [] = hyp
       | apply_arrow hyp (x::xs) =
           MATCH_MP (MATCH_MP Eval_Arrow (apply_arrow hyp xs)) x
@@ -1024,7 +1130,7 @@ fun hol2deep tm =
     val thx = hol2deep x
     val thx = force_remove_fix thx
     val result = MATCH_MP (MATCH_MP Eval_Arrow thf) thx handle HOL_ERR _ =>
-                 MY_MATCH_MP (MATCH_MP Eval_Arrow thf) (MATCH_MP Eval_Fix thx)
+                 MY_MATCH_MP (MATCH_MP Eval_Arrow thf) (MATCH_MP Eval_Eq thx)
     in check_inv "comb" tm result end else
   (* lambda applications *)
   if is_abs tm then let
@@ -1187,7 +1293,7 @@ fun translate def = let
   (* perform preprocessing -- reformulate def *)
   val (is_rec,def,ind) = preprocess_def def
   val (lhs,rhs) = dest_eq (concl def)
-  val fname = repeat rator lhs |> dest_const |> fst
+  val fname = get_name (repeat rator lhs |> dest_const |> fst |> clean_lowercase)
   val fname_str = stringLib.fromMLstring fname
   (* read off information *)
   val _ = register_term_types (concl def)
@@ -1197,15 +1303,16 @@ fun translate def = let
   (* derive deep embedding *)
   val _ = delete_cert (repeat rator lhs)
   val pre_var = install_rec_pattern lhs fname
-  val th = hol2deep rhs
+  val th_rhs = hol2deep rhs
   val _ = uninstall_rec_pattern ()
   (* deal with constant functions *)
-  val th = if not no_params then th else
-             mk_comb(rand (concl th),mk_var("v",``:v``))
+  val th = if not no_params then th_rhs else
+             mk_comb(rand (concl th_rhs),mk_var("v",``:v``))
              |> EVAL |> SIMP_RULE std_ss [] |> Q.GEN `v`
              |> MATCH_MP Eval_CONST |> UNDISCH
   (* replace rhs with lhs in th *)
-  val th = CONV_RULE ((RAND_CONV o RAND_CONV) (REWRITE_CONV [GSYM def,CONTAINER_def])) th
+  val th = CONV_RULE ((RAND_CONV o RAND_CONV)
+             (REWRITE_CONV [CONTAINER_def] THENC ONCE_REWRITE_CONV [GSYM def])) th
   val th = D th
   (* abstract parameters *)
   val (th,v) = if no_params then (th,T) else
@@ -1235,13 +1342,16 @@ fun translate def = let
     val hyp_tm = list_mk_abs(rev rev_params, th |> UNDISCH_ALL |> concl)
     val goal = list_mk_forall(rev rev_params, th |> UNDISCH_ALL |> concl)
     val goal = mk_imp(list_mk_conj hs,goal)
+    val ind_thm = (the ind)
+    val ind_thm = rename_bound_vars_rule "i" ind_thm
+                  |> SIMP_RULE std_ss []
 (*
     set_goal([],goal)
 *)
     val lemma = prove(goal,
       STRIP_TAC
       \\ SIMP_TAC std_ss [FORALL_PROD]
-      \\ MATCH_MP_TAC (SPEC hyp_tm (the ind) |> CONV_RULE (DEPTH_CONV BETA_CONV))
+      \\ MATCH_MP_TAC (SPEC hyp_tm ind_thm |> CONV_RULE (DEPTH_CONV BETA_CONV))
       \\ REPEAT STRIP_TAC \\ MATCH_MP_TAC th
       \\ FULL_SIMP_TAC (srw_ss()) [ADD1]
       \\ REPEAT STRIP_TAC
@@ -1250,18 +1360,25 @@ fun translate def = let
     val th = UNDISCH lemma |> SPECL (rev rev_params)
     val th = RW [PreImp_def] th |> UNDISCH_ALL
     in th end
-  (* remove Fix *)
+  (* remove Eq *)
   fun f (v,th) =
     HO_MATCH_MP Eval_FUN_FORALL (GEN v th) |> SIMP_RULE std_ss [FUN_QUANT_SIMP]
   val th = foldr f th rev_params handle HOL_ERR _ => th
   (* abbreviate code *)
-  val code_name = fname ^ "_ml"
+  val code_name = string2ident fname ^ "_ml"
+  val fname_tm = stringSyntax.fromMLstring (string2ident fname)
   val th = DISCH_ALL th
-  val code_tm = if no_params then th |> concl |> dest_imp |> fst |> rand |> rand else
+  val raw_code_tm = if no_params then th |> concl |> dest_imp |> fst |> rand else
                 (find_term (can (match_term ``Recclosure i (f::fns) n``)) (concl th))
-                |> rator |> rand
+                |> rator
                 handle HOL_ERR _ =>
-                rand (find_term (can (match_term ``Closure i n (f x)``)) (concl th))
+                (find_term (can (match_term ``Closure i n (f x)``)) (concl th))
+  val code_tm = rand raw_code_tm
+  val dlet =
+    if is_rec then ``Dletrec ^code_tm`` else
+    if no_params then ``Dlet (Pvar ^fname_tm) ^(th_rhs |> concl |> rator |> rand)``
+    else ``Dlet (Pvar ^fname_tm) (Fun ^(raw_code_tm |> rator |> rand) ^code_tm)``
+  val _ = add_decl dlet
   val code_abbrev = new_definition(code_name ^ "_def",
     mk_eq(mk_var(code_name,type_of code_tm),code_tm))
   val th = REWRITE_RULE [GSYM code_abbrev] th |> UNDISCH_ALL

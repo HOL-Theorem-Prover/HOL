@@ -19,20 +19,18 @@ val evaluate_closure_def = Define `
               evaluate' env exp (Rval output)`;
 
 val AppReturns_def = Define ` (* think of this as a Hoare triple {P} cl {Q} *)
-  AppReturns P Q cl =
-    !a x.
-      P a x ==>
-      ?y. evaluate_closure x cl y /\ Q a y`;
+  AppReturns P cl Q =
+    !v. P v ==> ?u. evaluate_closure v cl u /\ Q u`;
 
 val Arrow_def = Define `
-  Arrow abs1 abs2 f closure =
-    AppReturns (\x. abs1 x) (\x. abs2 (f x)) closure`;
+  Arrow a b f =
+    \v. !x. AppReturns (a x) v (b (f x))`;
 
 val _ = add_infix("-->",400,HOLgrammars.RIGHT)
 val _ = overload_on ("-->",``Arrow``)
 
-val Fix_def = Define `
-  Fix (abs:'a->v->bool) x =
+val Eq_def = Define `
+  Eq (abs:'a->v->bool) x =
     (\y v. (x = y) /\ abs y v)`;
 
 val INT_def = Define `
@@ -72,7 +70,7 @@ val Eval_Arrow = store_thm("Eval_Arrow",
   \\ ONCE_REWRITE_TAC [evaluate_cases] \\ SIMP_TAC (srw_ss()) []
   \\ FULL_SIMP_TAC std_ss [AppReturns_def] \\ RES_TAC
   \\ FULL_SIMP_TAC std_ss [evaluate_closure_def]
-  \\ Q.EXISTS_TAC `y` \\ FULL_SIMP_TAC std_ss []
+  \\ Q.EXISTS_TAC `u` \\ FULL_SIMP_TAC std_ss []
   \\ Q.LIST_EXISTS_TAC [`res`,`res'`,`env'`]
   \\ FULL_SIMP_TAC (srw_ss()) [do_app_def]);
 
@@ -83,6 +81,14 @@ val Eval_Fun = store_thm("Eval_Fun",
   \\ ONCE_REWRITE_TAC [evaluate_cases] \\ SIMP_TAC (srw_ss()) []
   \\ ASM_SIMP_TAC (srw_ss()) [AppReturns_def,Eval_def,do_app_def,
        bind_def,evaluate_closure_def]);
+
+val Eval_Fun_Eq = store_thm("Eval_Fun_Eq",
+  ``(!v. a x v ==> Eval ((name,v)::env) body (b (f x))) ==>
+    Eval env (Fun name body) ((Eq a x --> b) f)``,
+  SIMP_TAC std_ss [Eval_def,Arrow_def] \\ REPEAT STRIP_TAC
+  \\ ONCE_REWRITE_TAC [evaluate_cases] \\ SIMP_TAC (srw_ss()) []
+  \\ ASM_SIMP_TAC (srw_ss()) [AppReturns_def,evaluate_closure_def,
+       do_app_def,bind_def,Eq_def]);
 
 val Eval_Let = store_thm("Eval_Let",
   ``Eval env exp (a res) /\
@@ -99,6 +105,10 @@ val Eval_Val = store_thm("Eval_Val",
 
 val Eval_Var = store_thm("Eval_Var",
   ``!name x. Eval env (Var name) (\v. v = x) = (lookup name env = SOME x)``,
+  SIMP_TAC (srw_ss()) [Once evaluate_cases,Eval_def]);
+
+val Eval_Var_EQ = store_thm("Eval_Var_EQ",
+  ``Eval env (Var name) ($= x) = (lookup name env = SOME x)``,
   SIMP_TAC (srw_ss()) [Once evaluate_cases,Eval_def]);
 
 val Eval_Val_INT = store_thm("Eval_Val_INT",
@@ -178,17 +188,9 @@ val Eval_Var_SIMP = store_thm("Eval_Var_SIMP",
   SIMP_TAC (srw_ss()) [Eval_def,Once evaluate_cases,lookup_def]
   \\ SRW_TAC [] [] \\ SIMP_TAC (srw_ss()) [Eval_def,Once evaluate_cases,lookup_def]);
 
-val Eval_Fun_Fix = store_thm("Eval_Fun_Fix",
-  ``(!v. a x v ==> Eval ((name,v)::env) body (b (f x))) ==>
-    Eval env (Fun name body) ((Fix a x --> b) f)``,
-  SIMP_TAC std_ss [Eval_def,Arrow_def] \\ REPEAT STRIP_TAC
-  \\ ONCE_REWRITE_TAC [evaluate_cases] \\ SIMP_TAC (srw_ss()) []
-  \\ ASM_SIMP_TAC (srw_ss()) [AppReturns_def,evaluate_closure_def,
-       do_app_def,bind_def,Fix_def]);
-
-val Eval_Fix = store_thm("Eval_Fix",
-  ``Eval env exp (a x) ==> Eval env exp ((Fix a x) x)``,
-  SIMP_TAC std_ss [Eval_def,Fix_def]);
+val Eval_Eq = store_thm("Eval_Eq",
+  ``Eval env exp (a x) ==> Eval env exp ((Eq a x) x)``,
+  SIMP_TAC std_ss [Eval_def,Eq_def]);
 
 val FUN_FORALL = new_binder_definition("FUN_FORALL",
   ``($FUN_FORALL) = \(abs:'a->'b->v->bool) a v. !y. abs y a v``);
@@ -199,7 +201,7 @@ val FUN_EXISTS = new_binder_definition("FUN_EXISTS",
 val Eval_FUN_FORALL = store_thm("Eval_FUN_FORALL",
   ``(!x. Eval env exp ((p x) f)) ==>
     Eval env exp ((FUN_FORALL x. p x) f)``,
-  SIMP_TAC std_ss [Eval_def,Arrow_def,Fix_def] \\ REPEAT STRIP_TAC
+  SIMP_TAC std_ss [Eval_def,Arrow_def,Eq_def] \\ REPEAT STRIP_TAC
   \\ FULL_SIMP_TAC std_ss [AppReturns_def,FUN_FORALL]
   \\ `?res. evaluate' env exp (Rval res)` by METIS_TAC []
   \\ Q.EXISTS_TAC `res` \\ FULL_SIMP_TAC std_ss []
@@ -225,9 +227,9 @@ val FUN_FORALL_PUSH1 = prove(
   \\ FULL_SIMP_TAC std_ss [PULL_FORALL] \\ RES_TAC
   \\ POP_ASSUM (fn th => STRIP_ASSUME_TAC (Q.SPEC `ARB` th) THEN ASSUME_TAC th)
   \\ FULL_SIMP_TAC std_ss []
-  \\ Q.EXISTS_TAC `y'` \\ FULL_SIMP_TAC std_ss []
+  \\ Q.EXISTS_TAC `u` \\ FULL_SIMP_TAC std_ss []
   \\ REPEAT STRIP_TAC
-  \\ POP_ASSUM (MP_TAC o Q.SPEC `y''`) \\ REPEAT STRIP_TAC
+  \\ POP_ASSUM (MP_TAC o Q.SPEC `y`) \\ REPEAT STRIP_TAC
   \\ FULL_SIMP_TAC std_ss [] \\ METIS_TAC [evaluate_11_Rval]) |> GEN_ALL;
 
 val FUN_FORALL_PUSH2 = prove(
@@ -235,21 +237,21 @@ val FUN_FORALL_PUSH2 = prove(
   FULL_SIMP_TAC std_ss [Arrow_def,FUN_EQ_THM,AppReturns_def,FUN_FORALL,FUN_EXISTS,
     Eval_def] \\ METIS_TAC []) |> GEN_ALL;
 
-val FUN_EXISTS_Fix = prove(
-  ``(FUN_EXISTS x. Fix a x) = a``,
-  SIMP_TAC std_ss [FUN_EQ_THM,FUN_EXISTS,Fix_def]) |> GEN_ALL;
+val FUN_EXISTS_Eq = prove(
+  ``(FUN_EXISTS x. Eq a x) = a``,
+  SIMP_TAC std_ss [FUN_EQ_THM,FUN_EXISTS,Eq_def]) |> GEN_ALL;
 
 val FUN_QUANT_SIMP = save_thm("FUN_QUANT_SIMP",
-  LIST_CONJ [FUN_EXISTS_Fix,FUN_FORALL_PUSH1,FUN_FORALL_PUSH2]);
+  LIST_CONJ [FUN_EXISTS_Eq,FUN_FORALL_PUSH1,FUN_FORALL_PUSH2]);
 
 val Eval_Recclosure = store_thm("Eval_Recclosure",
   ``(!v. a n v ==>
   Eval ((name,v)::(fname,Recclosure env2 [(fname,name,body)] fname)::env2) body (b (f n))) ==>
     Eval env (Var fname) ($= (Recclosure env2 [(fname,name,body)] fname)) ==>
-    Eval env (Var fname) ((Fix a n --> b) f)``,
+    Eval env (Var fname) ((Eq a n --> b) f)``,
   FULL_SIMP_TAC std_ss [Eval_def,Arrow_def] \\ REPEAT STRIP_TAC
   \\ POP_ASSUM MP_TAC \\ ONCE_REWRITE_TAC [evaluate_cases]
-  \\ FULL_SIMP_TAC (srw_ss()) [AppReturns_def,Fix_def,
+  \\ FULL_SIMP_TAC (srw_ss()) [AppReturns_def,Eq_def,
        do_app_def,evaluate_closure_def]
   \\ SIMP_TAC (srw_ss()) [Once find_recfun_def,Eval_def]
   \\ FULL_SIMP_TAC std_ss [bind_def,build_rec_env_def,FOLDR]);
@@ -436,13 +438,6 @@ val EqualityType_def = Define `
     (!x1 v1. abs x1 v1 ==> no_closures v1) /\
     !x1 v1 x2 v2.
       abs x1 v1 /\ abs x2 v2 ==> ((v1 = v2) = (x1 = x2))`;
-
-val Eq_def = Define `
-  ((Eq abs):'a->v->bool) = \a v. EqualityType abs /\ abs a v`;
-
-val EqualityType_Eq = store_thm("EqualityType_Eq",
-  ``!a. EqualityType (Eq a)``,
-  SIMP_TAC std_ss [Eq_def,EqualityType_def] \\ METIS_TAC []);
 
 val EqualityType_NUM_BOOL = store_thm("EqualityType_NUM_BOOL",
   ``EqualityType NUM /\ EqualityType INT /\ EqualityType BOOL``,

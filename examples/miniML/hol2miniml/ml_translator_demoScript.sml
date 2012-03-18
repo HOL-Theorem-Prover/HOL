@@ -10,21 +10,16 @@ infix \\ val op \\ = op THEN;
 
 (* qsort example *)
 
-val _ = set_filename "Quicksort"
-
 val res = translate APPEND;
 val res = translate sortingTheory.PART_DEF;
 val res = translate sortingTheory.PARTITION_DEF;
-val res = translate sortingTheory.QSORT_DEF;
-
-val _ = clear_filename ()
+val qsort_eval = translate sortingTheory.QSORT_DEF;
 
 
 (* examples from library *)
 
 val res = translate MAP;
 val res = translate FILTER;
-val res = translate APPEND;
 val res = translate REV_DEF;
 val res = translate REVERSE_REV;
 val res = translate LENGTH;
@@ -161,7 +156,6 @@ val Eval_Var_lemma = prove(
   SIMP_TAC (srw_ss()) [Eval_def,Once MiniMLTheory.evaluate'_cases]);
 
 val Eval_QSORT_EXPANDED = save_thm("Eval_QSORT_EXPANDED",let
-  val qsort_eval = translate sortingTheory.QSORT_DEF;
   val th = MATCH_MP Eval_Arrow qsort_eval
   val th1 = ASSUME ``Eval env (Var "R") ((a --> a --> BOOL) R)``
   val th = MATCH_MP th th1
@@ -176,17 +170,17 @@ val Eval_QSORT_EXPANDED = save_thm("Eval_QSORT_EXPANDED",let
 
 val ML_QSORT_CORRECT = store_thm ("ML_QSORT_CORRECT",
   ``!env a ord R l xs.
-      (lookup "QSORT" env = SOME (Recclosure QSORT_env QSORT_ml "QSORT")) /\
-      (lookup "PARTITION" QSORT_env = SOME (Closure PARTITION_env "bound_1" PARTITION_ml)) /\
-      (lookup "APPEND" QSORT_env = SOME (Recclosure APPEND_env APPEND_ml "APPEND")) /\
-      (lookup "PART" PARTITION_env = SOME (Recclosure PART_env PART_ml "PART")) /\
+      (lookup "qsort" env = SOME (Recclosure qsort_env qsort_ml "qsort")) /\
+      (lookup "partition" qsort_env = SOME (Closure partition_env "v1" partition_ml)) /\
+      (lookup "append" qsort_env = SOME (Recclosure append_env append_ml "append")) /\
+      (lookup "part" partition_env = SOME (Recclosure part_env part_ml "part")) /\
       list a l xs /\ (lookup "xs" env = SOME xs) /\
       (a --> a --> BOOL) ord R /\ (lookup "R" env = SOME R) /\
       transitive ord /\ total ord
       ==>
       ?l' xs'.
         evaluate' env
-            (App Opapp (App Opapp (Var "QSORT") (Var "R")) (Var "xs"))
+            (App Opapp (App Opapp (Var "qsort") (Var "R")) (Var "xs"))
             (Rval xs') /\
         (list a l' xs') /\ PERM l l' /\ SORTED ord l'``,
   REPEAT STRIP_TAC \\ IMP_RES_TAC Eval_QSORT_EXPANDED
