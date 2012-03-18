@@ -217,64 +217,38 @@ val FOLDR_MAP = store_thm("FOLDR_MAP",
     THEN ASM_REWRITE_TAC[FOLDL,MAP,FOLDR] THEN BETA_TAC
     THEN REWRITE_TAC[]);
 
-(*
+val gen_build_rec_env_def = Define`
+  gen_build_rec_env funs env funs1 env1 =
+    FOLDR (λ(f,x,e) env'. bind f (Recclosure env1 funs1 f) env') env funs`
+
+val gen_build_rec_env_remove_ctors = store_thm(
+"gen_build_rec_env_remove_ctors",
+``∀cnmap funs env funs1 env1.
+  gen_build_rec_env
+    (funs_remove_ctors cnmap funs)
+    (env_remove_ctors cnmap env)
+    (funs_remove_ctors cnmap funs1)
+    (env_remove_ctors cnmap env1)
+  = env_remove_ctors cnmap (gen_build_rec_env funs env funs1 env1)``,
+gen_tac >>
+Induct >-
+  fs[gen_build_rec_env_def,funs_remove_ctors_maps] >>
+fs[gen_build_rec_env_def,funs_remove_ctors_maps,env_remove_ctors_maps] >>
+qx_gen_tac `p` >> PairCases_on `p` >>
+rw[bind_def,remove_ctors_def,env_remove_ctors_maps,funs_remove_ctors_maps])
+
+val gen_build_rec_env_specialises = store_thm(
+"gen_build_rec_env_specialises",
+``build_rec_env = λfuns env. gen_build_rec_env funs env funs env``,
+rw[FUN_EQ_THM,gen_build_rec_env_def,build_rec_env_def])
+
 val build_rec_env_remove_ctors = store_thm(
 "build_rec_env_remove_ctors",
-``∀cnmap funs env. build_rec_env (funs_remove_ctors cnmap funs) (env_remove_ctors cnmap env) = env_remove_ctors cnmap (build_rec_env funs env)``,
-gen_tac >>
-qho_match_abbrev_tac `∀funs. P funs` >>
-qsuff_tac `∀funs. P (REVERSE funs)` >-
-  metis_tac [REVERSE_REVERSE] >>
-qunabbrev_tac `P` >> fs[] >>
-fs[env_remove_ctors_maps,funs_remove_ctors_maps,build_rec_env_def] >>
-fs[rich_listTheory.FOLDR_REVERSE,rich_listTheory.MAP_REVERSE] >>
-qho_match_abbrev_tac `∀funs env. FOLDL (f funs env) (MAP q env) (MAP h funs) = MAP q (FOLDL (r env funs) env funs)` >>
-Induct >- rw[] >>
-rw []
-qx_gen_tac `p` >>
-PairCases_on `p` >>
-rw []
-rw[MAP_APPEND,REVERSE_APPEND]
-rw[FOLDR_MAP] >>
-Induct_on `funs` >>
-rw[]
-rw[rich_listTheory.MAP_FOLDR,SimpRHS]
-qmatch_abbrev_tac `FOLDR f (MAP h env) (MAP g funs) = MAP h (FOLDR q env funs)`
-Q.ISPECL_THEN [`f`,`MAP h env`,`g`,`funs`] mp_tac rich_listTheory.FOLDR_MAP
-type_of ``FOLDR``
-rw[SimpLHS]
-(*
-gen_tac >>
-Induct >-
-  rw[build_rec_env_def,remove_ctors_def] >>
-qx_gen_tac `p` >>
-PairCases_on `p` >>
-fs [funs_remove_ctors_maps] >>
-fs [build_rec_env_def,remove_ctors_def,funs_remove_ctors_maps]
-*)
-gen_tac >>
-qho_match_abbrev_tac `∀funs. P funs` >>
-qsuff_tac `∀funs. P (REVERSE funs)` >-
-  metis_tac [REVERSE_REVERSE] >>
-qunabbrev_tac `P` >> fs[] >>
-Induct >-
-  rw[build_rec_env_def,remove_ctors_def] >>
-qx_gen_tac `p` >>
-PairCases_on `p` >>
-fs [build_rec_env_def,funs_remove_ctors_maps] >>
-rw [MAP_APPEND]
-rw[rich_listTheory.FOLDR_APPEND]
-FOLDR_FOLDL
-DB.find"foldr"
-  rw [remove_ctors_def] >>
-  rw [bind_def]
-build_rec_env_ind
-build_rec_env_def
-FOLDR_DEF
-FOLDR
-*)
+``∀cnmap funs env.
+  (build_rec_env (funs_remove_ctors cnmap funs) (env_remove_ctors cnmap env) =
+   env_remove_ctors cnmap (build_rec_env funs env))``,
+rw[gen_build_rec_env_specialises,gen_build_rec_env_remove_ctors])
 
-(*
 (* Ignore Equality case here, because we would need to know the original expression was well-typed *)
 val do_app_remove_ctors = store_thm(
 "do_app_remove_ctors",
@@ -290,8 +264,7 @@ ntac 2 gen_tac >>
 Cases >> Cases >> Cases >>
 rw[do_app_def,remove_ctors_def] >>
 BasicProvers.EVERY_CASE_TAC >>
-fs[] >> rw[remove_ctors_def]
-*)
+fs[] >> rw[remove_ctors_def,build_rec_env_remove_ctors])
 
 (*
 val remove_ctors_thm1 = store_thm(
