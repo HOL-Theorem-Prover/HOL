@@ -47,43 +47,46 @@ val merge_def = Define `
     link get_key leq (Tree y h1' h2') (Tree x h1 h2)) ∧
 
 (link get_key leq (Tree x Empty m) a = Tree x a m) ∧
-(link get_key leq (Tree x b m) a = 
+(link get_key leq (Tree x b m) a =
   Tree x Empty (merge get_key leq (merge get_key leq a b) m))`;
 *)
 
 (* Without mutual recursion, and with size constraints to handle the nested
  * recursion *)
 
+val res = translate (fetch "-" "heap_size_def")
+
 val merge_def = Define `
-(merge get_key leq a Empty = a) ∧
-(merge get_key leq Empty b = b) ∧
-(merge get_key leq (Tree x h1 h2) (Tree y h1' h2') =
-  if leq (get_key x) (get_key y) then
-    case h1 of
-       | Empty => Tree x (Tree y h1' h2') h2
-       | _ => 
-           (let h3 = merge get_key leq (Tree y h1' h2') h1 in
-              if heap_size (\x.0) h3 < 
-                 heap_size (\x.0) h1' + heap_size (\x.0) h2' +
-                 heap_size (\x.0) h1 + 2 then
-                Tree x Empty (merge get_key leq h3 h2)
-              else
-                ARB)
-  else
-    case h1' of
-       | Empty => Tree y (Tree x h1 h2) h2'
-       | _ => 
-           (let h3 = merge get_key leq (Tree x h1 h2) h1' in
-              if heap_size (\x.0) h3 < 
-                 heap_size (\x.0) h1 + heap_size (\x.0) h2 + 
-                 heap_size (\x.0) h1' + 2 then
-                Tree y Empty (merge get_key leq h3 h2')
-              else
-                ARB))`;
+ (merge get_key leq Empty Empty = Empty) /\
+ (merge get_key leq a Empty = a) /\
+ (merge get_key leq Empty b = b) /\
+ (merge get_key leq (Tree x h1 h2) (Tree y h1' h2') =
+        if leq (get_key x) (get_key y) then
+          case h1 of
+          | Empty => Tree x (Tree y h1' h2') h2
+          | _ =>
+            (let h3 = merge get_key leq (Tree y h1' h2') h1 in
+               if heap_size (\x.0) h3 <
+                  heap_size (\x.0) h1' + heap_size (\x.0) h2' +
+                  heap_size (\x.0) h1 + 2 then
+                 Tree x Empty (merge get_key leq h3 h2)
+               else
+                 Empty)
+        else
+          case h1' of
+          | Empty => Tree y (Tree x h1 h2) h2'
+          | _ =>
+            (let h3 = merge get_key leq (Tree x h1 h2) h1' in
+               if heap_size (\x.0) h3 <
+                  heap_size (\x.0) h1 + heap_size (\x.0) h2 +
+                  heap_size (\x.0) h1' + 2 then
+                 Tree y Empty (merge get_key leq h3 h2')
+               else
+                 Empty))`;
 
 val merge_size = Q.prove (
 `!get_key leq h1 h2.
-  heap_size (\x.0) (merge get_key leq h1 h2) = 
+  heap_size (\x.0) (merge get_key leq h1 h2) =
   heap_size (\x.0) h1 + heap_size (\x.0) h2`,
 recInduct (fetch "-" "merge_ind") >>
 srw_tac [ARITH_ss] [merge_def, heap_size_def] >|
@@ -109,7 +112,7 @@ decide_tac);
 val merge_def = SIMP_RULE (srw_ss()) [merge_size_lem, LET_THM] merge_def;
 val _ = save_thm ("merge_def",merge_def);
 
-val merge_ind = 
+val merge_ind =
   SIMP_RULE (srw_ss()) [merge_size_lem, LET_THM] (fetch "-" "merge_ind");
 val _ = save_thm ("merge_ind",merge_ind);
 
@@ -155,7 +158,7 @@ fs [BAG_EVERY, is_heap_ordered_def, merge_bag, heap_to_bag_def] >|
      fs [heap_to_bag_def, merge_bag] >>
      metis_tac [WeakLinearOrder, WeakOrder, transitive_def],
  cases_on `leq (get_key y) (get_key a)` >>
-     fs [], 
+     fs [],
  cases_on `h` >>
      fs [heap_to_bag_def, merge_bag] >>
      metis_tac [WeakLinearOrder, WeakOrder, transitive_def],

@@ -170,17 +170,17 @@ val Eval_QSORT_EXPANDED = save_thm("Eval_QSORT_EXPANDED",let
 
 val ML_QSORT_CORRECT = store_thm ("ML_QSORT_CORRECT",
   ``!env a ord R l xs.
-      (lookup "qsort" env = SOME (Recclosure qsort_env qsort_ml "qsort")) /\
-      (lookup "partition" qsort_env = SOME (Closure partition_env "v1" partition_ml)) /\
-      (lookup "append" qsort_env = SOME (Recclosure append_env append_ml "append")) /\
-      (lookup "part" partition_env = SOME (Recclosure part_env part_ml "part")) /\
+      (lookup "QSORT" env = SOME (Recclosure QSORT_env QSORT_ml "QSORT")) /\
+      (lookup "PARTITION" QSORT_env = SOME (Closure PARTITION_env "v1" PARTITION_ml)) /\
+      (lookup "APPEND" QSORT_env = SOME (Recclosure APPEND_env APPEND_ml "APPEND")) /\
+      (lookup "PART" PARTITION_env = SOME (Recclosure PART_env PART_ml "PART")) /\
       list a l xs /\ (lookup "xs" env = SOME xs) /\
       (a --> a --> BOOL) ord R /\ (lookup "R" env = SOME R) /\
       transitive ord /\ total ord
       ==>
       ?l' xs'.
         evaluate' env
-            (App Opapp (App Opapp (Var "qsort") (Var "R")) (Var "xs"))
+            (App Opapp (App Opapp (Var "QSORT") (Var "R")) (Var "xs"))
             (Rval xs') /\
         (list a l' xs') /\ PERM l l' /\ SORTED ord l'``,
   REPEAT STRIP_TAC \\ IMP_RES_TAC Eval_QSORT_EXPANDED

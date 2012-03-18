@@ -16,10 +16,16 @@ val auto_print = true
 
 local
   val names = ref [""]
+  fun find_name str n = let
+    val new_name = str ^ "_" ^ (int_to_string n)
+    in if mem new_name (!names) then find_name str (n+1) else new_name end
+  fun find_new_name str =
+    if mem str (!names) then find_name str 1 else str
 in
-  fun get_name str =
-    if mem str (!names) then get_name (str ^ "'")
-    else (names := str :: (!names); str)
+  fun get_name str = let
+    val new_name = find_new_name str
+    val _ = (names := new_name :: (!names))
+    in new_name end
 end
 
 
@@ -1293,7 +1299,7 @@ fun translate def = let
   (* perform preprocessing -- reformulate def *)
   val (is_rec,def,ind) = preprocess_def def
   val (lhs,rhs) = dest_eq (concl def)
-  val fname = get_name (repeat rator lhs |> dest_const |> fst |> clean_lowercase)
+  val fname = repeat rator lhs |> dest_const |> fst |> get_name
   val fname_str = stringLib.fromMLstring fname
   (* read off information *)
   val _ = register_term_types (concl def)
