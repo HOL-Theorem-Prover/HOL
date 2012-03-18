@@ -22,12 +22,11 @@ local
   fun find_new_name str =
     if mem str (!names) then find_name str 1 else str
 in
-  fun get_name str = let
+  fun get_unique_name str = let
     val new_name = find_new_name str
     val _ = (names := new_name :: (!names))
     in new_name end
 end
-
 
 (* collecting declarations *)
 
@@ -260,10 +259,58 @@ fun dest_args tm =
   let val (x,y) = dest_comb tm in dest_args x @ [y] end
   handle HOL_ERR _ => []
 
+fun derive_record_specific_thms ty = let
+  val ty_name = name_of_type ty
+  val access_funs =
+    TypeBase.accessors_of ty
+    |> map (rator o fst o dest_eq o concl o SPEC_ALL)
+  val update_funs =
+    TypeBase.updates_of ty
+    |> map (rator o rator o fst o dest_eq o concl o SPEC_ALL)
+  val tm =
+    DB.fetch "-" (ty_name ^ "_11")
+    |> SPEC_ALL |> concl |> dest_eq |> fst |> dest_eq |> fst
+  val xs = dest_args tm
+  val c = repeat rator tm
+  val case_tm =
+    DB.fetch "-" (ty_name ^ "_case_cong")
+    |> SPEC_ALL |> UNDISCH_ALL |> concl |> dest_eq |> fst |> repeat rator
+  fun prove_accessor_eq (a,x) = let
+     val v = mk_var("v",type_of tm)
+     val f = foldr (fn (v,tm) => mk_abs(v,tm)) x xs
+     val ty1 = case_tm |> type_of |> dest_type  |> snd |> hd
+     val i = match_type ty1 (type_of f)
+     val rhs = mk_comb(mk_comb(inst i case_tm,f),v)
+     val lhs = mk_comb(a,v)
+     val goal = mk_forall(v,mk_eq(lhs,rhs))
+     val lemma = prove(goal,Cases THEN SRW_TAC [] [])
+     in lemma end
+  val a_lemmas = map prove_accessor_eq (zip access_funs xs)
+  fun prove_updates_eq (a,x) = let
+     val v = mk_var("v",type_of tm)
+     val t = type_of x
+     val g = mk_var("g",mk_type("fun",[t,t]))
+     val f = foldr mk_abs (subst [x|->mk_comb(g,x)] tm) xs
+     val ty1 = case_tm |> type_of |> dest_type  |> snd |> hd
+     val i = match_type ty1 (type_of f)
+     val rhs = mk_comb(mk_comb(inst i case_tm,f),v)
+     val lhs = mk_comb(mk_comb(a,g),v)
+     val goal = mk_forall(v,mk_forall(g,mk_eq(lhs,rhs)))
+     val tac = Cases THEN SRW_TAC [] [DB.fetch "-" (ty_name ^ "_fn_updates")]
+     in prove(goal,tac) end
+  val b_lemmas = map prove_updates_eq (zip update_funs xs)
+  val arb = mk_arb(type_of tm)
+  val tm2 = foldr (fn ((a,x),y) => mk_comb(``^a (K ^x)``,y)) arb (zip update_funs xs)
+  val goal = mk_eq(tm2,tm)
+  val rw_lemma = prove(goal,SRW_TAC [] [DB.fetch "-" (ty_name ^ "_component_equality")])
+  val rw_lemmas = CONJ (DB.fetch "-" (ty_name ^ "_fupdcanon")) rw_lemma
+  in (a_lemmas @ b_lemmas, [rw_lemmas]) end
+
 fun derive_thms_for_type ty = let
   val (ty,ret_ty) = dest_fun_type (type_of_cases_const ty)
   val case_of_th = TypeBase.case_def_of ty
-  val name = name_of_type ty
+  val is_record = 0 < length(TypeBase.fields_of ty)
+  val name = if is_record then name_of_type ty ^ "_record" else name_of_type ty
   val _ = print ("Adding type " ^ type_to_string ty ^ "\n")
   (* derive case theorem *)
   val case_th = get_nchotomy_of ty
@@ -490,14 +537,20 @@ fun derive_thms_for_type ty = let
     in (pat,lemma) end;
   val conses = map derive_cons ts
   val _ = add_decl dtype
-  in (ty,eq_lemma,inv_def,conses,case_lemma,ts) end
+  val (rws1,rws2) = if not is_record then ([],[]) else derive_record_specific_thms ty
+  in (rws1,rws2,(ty,eq_lemma,inv_def,conses,case_lemma,ts)) end
 
 local
+  val translator = ref (fn th => I (th:thm))
+  fun do_translate th = (!translator) th
+  val preprocessor_rws = ref ([]:thm list)
   val memory = ref []
   val user_defined_eq_lemmas = ref []
   fun add_type ty = let
-    val res = derive_thms_for_type ty
+    val (rws1,rws2,res) = derive_thms_for_type ty
     val _ = (memory := res :: (!memory))
+    val _ = (preprocessor_rws := rws2 @ (!preprocessor_rws))
+    val _ = map do_translate rws1
     in res end
   fun lookup ty = first (fn (ty1,_,_,_,_,_) => can (match_type ty1) ty) (!memory)
   fun lookup_type ty = lookup ty handle HOL_ERR _ => add_type ty
@@ -508,6 +561,8 @@ local
     map (fn (ty,eq_lemma,inv_def,conses,case_lemma,ts) => eq_lemma) (!memory)
   val init_eq_lemmas = map (DISCH T) (CONJUNCTS EqualityType_NUM_BOOL)
 in
+  fun get_preprocessor_rws () = !preprocessor_rws
+  fun set_translator t = (translator := t)
   fun register_type ty =
     (lookup_type ty; ())
     handle UnsupportedType ty1 => (register_type ty1; register_type ty)
@@ -832,8 +887,8 @@ fun preprocess_def def = let
   val ind = if is_rec andalso is_NONE ind then SOME (find_ind_thm def) else ind
   val def = if def |> SPEC_ALL |> concl |> dest_eq |> fst |> is_const
             then SPEC_ALL (RW1 [FUN_EQ_THM] def) else def
-  val def = PURE_REWRITE_RULE [ADD1,boolTheory.literal_case_DEF,
-              boolTheory.bool_case_DEF,num_case_thm] def
+  val def = PURE_REWRITE_RULE ([ADD1,boolTheory.literal_case_DEF,
+              boolTheory.bool_case_DEF,num_case_thm] @ get_preprocessor_rws()) def
   val def = CONV_RULE (REDEPTH_CONV BETA_CONV) def
   in (is_rec,def,ind) end;
 
@@ -1299,7 +1354,7 @@ fun translate def = let
   (* perform preprocessing -- reformulate def *)
   val (is_rec,def,ind) = preprocess_def def
   val (lhs,rhs) = dest_eq (concl def)
-  val fname = repeat rator lhs |> dest_const |> fst |> get_name
+  val fname = repeat rator lhs |> dest_const |> fst |> get_unique_name
   val fname_str = stringLib.fromMLstring fname
   (* read off information *)
   val _ = register_term_types (concl def)
@@ -1398,7 +1453,9 @@ fun translate def = let
     val _ = print "\n\nCannot translate term:  "
     val _ = print_term tm
     val _ = print "\n\n"
-    in raise UnableToTranslate tm end
+    in raise UnableToTranslate tm end;
+
+val _ = set_translator translate;
 
 fun mlDefine q = let
   val def = Define q
@@ -1406,7 +1463,7 @@ fun mlDefine q = let
   val _ = print "\n"
   val _ = print_thm th
   val _ = print "\n\n"
-  in def end
+  in def end;
 
 fun mltDefine name q tac = let
   val def = tDefine name q tac
@@ -1414,6 +1471,6 @@ fun mltDefine name q tac = let
   val _ = print "\n"
   val _ = print_thm th
   val _ = print "\n\n"
-  in def end
+  in def end;
 
 end

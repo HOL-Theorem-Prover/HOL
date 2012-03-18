@@ -40,7 +40,7 @@ val res = translate K_DEF;
 val res = translate W_DEF;
 val res = translate C_DEF;
 val res = translate S_DEF;
-val res = translate I_DEF;
+val res = translate I_THM;
 val res = translate FAIL_DEF;
 val res = translate PAD_RIGHT;
 val res = translate PAD_LEFT;
@@ -99,6 +99,15 @@ val def = mlDefine `
   (list_test3 ((1:num)::xs) ys = 1) /\
   (list_test3 (2::xs) ys = 2 + list_test3 xs ys) /\
   (list_test3 _ ys = LENGTH ys)`;
+
+val _ = Hol_datatype `
+  sample_record =
+   <| n : num ; f : num -> num ; b : bool |>`;
+
+val rec_example_def = mlDefine `
+  rec_example r i =
+    if r.n = i then r with b := F
+               else <| n := i; f := I ; b := T |>`;
 
 
 (* chars, finite_maps, sets and lazy lists... *)
