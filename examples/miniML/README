@@ -22,7 +22,17 @@ Directory structure:
 
 - hol2miniml/okasaki-examples
     15 data structures/algorithms from Chris Okasaki's Purely Functional Data
-    Structures
+    Structures.  The translator is applied to them, and 12 of the 15 are
+    verified.
+
+- hol2miniml/other-examples
+    Example applications of the translator to existing examples, including AES,
+    TEA, and RC6 from HOL/examples/Crypto; the probabilistic primality checker
+    from examples/miller; and some examples in auxiliary.
+
+- hol2miniml/other-examples/auxiliary
+    A copying GC, 91 function, regular expression matched and SLR parser
+    generator taken from other places, and ollected here for the translator.
 
 - compiler
     The sketchy beginnings of a verified compiler from MiniML to ???
