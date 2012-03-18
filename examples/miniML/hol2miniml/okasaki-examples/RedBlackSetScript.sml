@@ -48,7 +48,7 @@ val red_black_invariant2_def = Define `
   case red_black_invariant2 t1 of
      | NONE => NONE
      | SOME n =>
-         case red_black_invariant2 t1 of
+         case red_black_invariant2 t2 of
             | NONE => NONE
             | SOME n' =>
                 if n = n' then
@@ -243,6 +243,113 @@ fs [StrongLinearOrder, StrongOrder, irreflexive_def, transitive_def,
     trichotomous] >>
 metis_tac []);
 
-(* TODO: verify that insert perserves the red-black invariants *)
+
+(* Prove the two red-black invariants that no red node has a red child, and that
+ * the number of black nodes is the same on each path from the root to the
+ * leaves. *)
+
+val case_opt_lem = Q.prove (
+`!x f z.
+  ((case x of NONE => NONE | SOME y => f y) = SOME z) =
+  (?y. (x = SOME y) ∧ (f y = SOME z))`,
+cases_on `x` >>
+rw []);
+
+val balance_inv2_black = Q.prove (
+`!c t1 a t2 n. 
+  (red_black_invariant2 t1 = SOME n) ∧
+  (red_black_invariant2 t2 = SOME n) ∧
+  (c = Black)
+  ⇒
+  (red_black_invariant2 (balance c t1 a t2) = SOME (n+1))`,
+recInduct balance_ind >>
+rw [balance_def, red_black_invariant2_def, case_opt_lem] >>
+metis_tac []);
+
+val ins_inv2 = Q.prove (
+`!leq x t n. 
+  (red_black_invariant2 t = SOME n) 
+  ⇒ 
+  (red_black_invariant2 (ins leq x t) = SOME n)`,
+induct_on `t` >>
+rw [red_black_invariant2_def, ins_def, case_opt_lem] >>
+every_case_tac >>
+cases_on `c` >>
+fs [] >>
+rw [] >|
+[metis_tac [balance_inv2_black, balance'_correct],
+ rw [balance'_def, red_black_invariant2_def, case_opt_lem],
+ metis_tac [balance_inv2_black, balance'_correct],
+ rw [balance'_def, red_black_invariant2_def, case_opt_lem]]);
+
+val insert_invariant2 = Q.store_thm ("insert_invariant2",
+`!leq x t n. 
+  (red_black_invariant2 t = SOME n) 
+  ⇒ 
+  (red_black_invariant2 (insert leq x t) = SOME n) ∨
+  (red_black_invariant2 (insert leq x t) = SOME (n + 1))`,
+rw [insert_def] >>
+cases_on `ins leq x t` >>
+rw [] >-
+metis_tac [ins_tree, tree_distinct] >>
+`red_black_invariant2 (ins leq x t) = SOME n` by metis_tac [ins_inv2] >>
+POP_ASSUM MP_TAC >>
+rw [red_black_invariant2_def, case_opt_lem] >>
+cases_on `n = n''` >>
+cases_on `c` >>
+fs []);
+
+(* Invariant one hold everywhere except for the root node, where it may or may
+ * not. *)
+val rbinv1_root_def = Define `
+(rbinv1_root Empty = T) ∧
+(rbinv1_root (Tree c t1 x t2) =
+  red_black_invariant1 t1 ∧ red_black_invariant1 t2)`;
+
+val balance_inv1_black = Q.prove (
+`!c t1 a t2 n. 
+  red_black_invariant1 t1 ∧ rbinv1_root t2 ∧ (c = Black)
+  ⇒
+  red_black_invariant1 (balance c t1 a t2) ∧ 
+  red_black_invariant1 (balance c t2 a t1)`,
+recInduct balance_ind >>
+rw [balance_def, red_black_invariant1_def, rbinv1_root_def, not_red_def]);
+
+val inv1_lemma = Q.prove (
+`!t. red_black_invariant1 t ⇒ rbinv1_root t`,
+cases_on `t` >>
+rw [red_black_invariant1_def, rbinv1_root_def] >>
+cases_on `c` >>
+fs [red_black_invariant1_def]);
+
+val ins_inv1 = Q.prove (
+`!leq x t.
+  red_black_invariant1 t 
+  ⇒
+  (not_red t ⇒ red_black_invariant1 (ins leq x t)) ∧
+  (¬not_red t ⇒ rbinv1_root (ins leq x t))`,
+induct_on `t` >>
+rw [red_black_invariant1_def, rbinv1_root_def, ins_def, not_red_def] >>
+cases_on `c` >>
+fs [red_black_invariant1_def, not_red_def] >|
+[metis_tac [balance_inv1_black, balance'_correct, inv1_lemma],
+ rw [balance'_def, rbinv1_root_def],
+ metis_tac [balance_inv1_black, balance'_correct, inv1_lemma],
+ rw [balance'_def, rbinv1_root_def]]);
+
+val insert_invariant1 = Q.store_thm ("insert_invariant1",
+`!leq x t. red_black_invariant1 t ⇒ red_black_invariant1 (insert leq x t)`,
+rw [insert_def] >>
+cases_on `ins leq x t` >>
+rw [] >-
+metis_tac [ins_tree, tree_distinct] >>
+`not_red t ⇒ red_black_invariant1 (ins leq x t)` by metis_tac [ins_inv1] >>
+`¬not_red t ⇒ rbinv1_root (ins leq x t)` by metis_tac [ins_inv1] >>
+POP_ASSUM MP_TAC >>
+POP_ASSUM MP_TAC >>
+cases_on `not_red t` >>
+rw [] >>
+cases_on `c` >>
+fs [red_black_invariant1_def, rbinv1_root_def]);
 
 val _ = export_theory ();
