@@ -50,7 +50,7 @@ val emit_def = Define`
 val compile_defn = Hol_defn "compile"` (* tDefine fails *)
   (compile (Raise err, s) = ARB) (* TODO *)
 ∧ (compile (Val v, s) = emit s [] (compile_val v))
-∧ (compile (Mat e pes, s) = ARB) (* TODO; maybe disallow and use some remove_mat? *)
+∧ (compile (Mat e pes, s) = ARB) (* Disallowed: use remove_mat *)
 ∧ (compile (Con NONE [(Val (Lit (IntLit i)))], s) =
    emit s [] [Stack (PushInt i)])
 ∧ (compile (Con NONE ((Val (Lit (IntLit i)))::es), s) =
@@ -58,7 +58,7 @@ val compile_defn = Hol_defn "compile"` (* tDefine fails *)
    let (es,s) = FOLDR (λe (es,s). let (e,s) = compile (e,s) in (es++e,s)) ([],s) es in
    let (r,s) = emit s es [Stack (Cons (Num i) n)] in
    (r,s))
-∧ (compile (Con _ _, s) = ARB) (* Disallowed; use remove_ctors *)
+∧ (compile (Con _ _, s) = ARB) (* Disallowed: use remove_ctors *)
 ∧ (compile (Proj e n, s) =
    let (e,s) = compile (e,s) in
    let (r,s) = emit s e [Stack (El n)] in
@@ -119,8 +119,6 @@ val compile_defn = Hol_defn "compile"` (* tDefine fails *)
    let (r,s) = emit s r [CallPtr] in (* stack after: arg, return ptr, env, rest *)
      (r,s))
 ∧ (compile (App Equality e1 e2, s) =
- (* want type info? *)
- (* TODO: currently this is pointer equality, but want structural? *)
    let (e1,s) = compile (e1,s) in
    let (e2,s) = compile (e2,s) in
    emit s (e1++e2) [Stack Equal])
