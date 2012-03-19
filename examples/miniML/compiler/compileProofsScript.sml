@@ -33,7 +33,7 @@ val _ = save_thm ("remove_ctors_def", remove_ctors_def);
 val _ = save_thm ("remove_ctors_ind", remove_ctors_ind);
 
 (*
-This is too awful! Try a simpler definition of fold_consts.
+This is too awful! TODO: Try a simpler definition of fold_consts.
 val (fold_consts_def,fold_consts_ind) =
   tprove_no_defn ((fold_consts_def,fold_consts_ind),
   WF_REL_TAC
@@ -49,12 +49,77 @@ val (fold_consts_def,fold_consts_ind) =
 
 (* ------------------------------------------------------------------------- *)
 
+(* TODO: move where? *)
+
+val type_es_every_map = store_thm(
+"type_es_every_map",
+``∀tenvC tenv es ts. type_es tenvC tenv es ts = (LENGTH es = LENGTH ts) ∧ EVERY (UNCURRY (type_e tenvC tenv)) (ZIP (es,ts))``,
+ntac 2 gen_tac >>
+Induct >- (
+  rw[Once type_v_cases] >>
+  Cases_on `ts` >> rw[] ) >>
+rw[Once type_v_cases] >>
+Cases_on `ts` >> rw[] >>
+metis_tac[])
+
+val type_vs_every_map = store_thm(
+"type_vs_every_map",
+``∀tenvC vs ts. type_vs tenvC vs ts = (LENGTH vs = LENGTH ts) ∧ EVERY (UNCURRY (type_v tenvC)) (ZIP (vs,ts))``,
+gen_tac >>
+Induct >- (
+  rw[Once type_v_cases] >>
+  Cases_on `ts` >> rw[] ) >>
+rw[Once type_v_cases] >>
+Cases_on `ts` >> rw[] >>
+metis_tac[])
+
 (* TODO: Where should these go? *)
 
 val well_typed_def = Define`
   well_typed env exp = ∃tenvC tenv t.
     type_env tenvC env tenv ∧
     type_e tenvC tenv exp t`;
+
+val (subexp_rules,subexp_ind,subexp_cases) = Hol_reln`
+  (MEM e es ⇒ subexp e (Con cn es)) ∧
+  (subexp e1 (App op e1 e2)) ∧
+  (subexp e2 (App op e1 e2))`
+
+val well_typed_subexp_lem = store_thm(
+"well_typed_subexp_lem",
+``∀env e1 e2. subexp e1 e2 ⇒ well_typed env e2 ⇒ well_typed env e1``,
+gen_tac >>
+ho_match_mp_tac subexp_ind >>
+fs[well_typed_def] >>
+strip_tac >- (
+  rw[Once (List.nth (CONJUNCTS type_v_cases, 1))] >>
+  fs[type_es_every_map] >>
+  qmatch_assum_rename_tac `EVERY X (ZIP (es,MAP f ts))` ["X"] >>
+  fs[MEM_EL] >> rw[] >>
+  `MEM (EL n es, f (EL n ts)) (ZIP (es, MAP f ts))` by (
+    rw[MEM_ZIP] >> qexists_tac `n` >> rw[EL_MAP] ) >>
+  fs[EVERY_MEM] >> res_tac >>
+  fs[] >> metis_tac []) >>
+strip_tac >- (
+  rw[Once (List.nth (CONJUNCTS type_v_cases, 1))] >>
+  metis_tac [] ) >>
+strip_tac >- (
+  rw[Once (List.nth (CONJUNCTS type_v_cases, 1))] >>
+  metis_tac [] ))
+
+val well_typed_Con_subexp = store_thm(
+"well_typed_Con_subexp",
+``∀env cn es. well_typed env (Con cn es) ⇒ EVERY (well_typed env) es``,
+rw[EVERY_MEM] >>
+match_mp_tac (MP_CANON well_typed_subexp_lem) >>
+qexists_tac `Con cn es` >>
+rw[subexp_rules])
+
+val well_typed_App_subexp = store_thm(
+"well_typed_App_subexp",
+``∀env op e1 e2. well_typed env (App op e1 e2) ⇒ well_typed env e1 ∧ well_typed env e2``,
+rw[] >> match_mp_tac (MP_CANON well_typed_subexp_lem) >>
+metis_tac [subexp_rules])
 
 val map_result_def = Define`
   (map_result f (Rval v) = Rval (f v)) ∧
@@ -63,7 +128,7 @@ val _ = export_rewrites["map_result_def"];
 
 (* ------------------------------------------------------------------------- *)
 
-(* move to evaluateEquations *)
+(* TODO: move to evaluateEquations *)
 val evaluate'_raise = store_thm(
 "evaluate'_raise",
 ``∀env err r. evaluate' env (Raise err) r = (r = Rerr (Rraise err))``,
@@ -138,7 +203,7 @@ metis_tac []);
 val _ = augment_srw_ss[rewrites[evaluate_raise,evaluate_val,evaluate_list_val]]
 *)
 
-(* add to terminationProofsTheory? *)
+(* TODO: add to terminationProofsTheory? *)
 val _ = augment_srw_ss[rewrites[lookup_def]]
 
 (* Prove compiler phases preserve semantics *)
@@ -209,7 +274,7 @@ Induct >- rw [remove_ctors_def] >>
 Cases >>
 rw[remove_ctors_def]);
 
-(* move to listTheory (and rich_listTheory) *)
+(* TODO: move to listTheory (and rich_listTheory) *)
 val FOLDR_MAP = store_thm("FOLDR_MAP",
     (--`!f e g l.
        FOLDR f e (MAP g l) = FOLDR (\x y. f (g x) y) e l`--),
@@ -272,12 +337,15 @@ val remove_ctors_thm1 = store_thm(
 ``∀cnmap.
   (∀env exp r.
    evaluate' env exp r ⇒
+   well_typed env exp ⇒
    evaluate' (env_remove_ctors cnmap env) (remove_ctors cnmap exp) (map_result (v_remove_ctors cnmap) r)) ∧
   (∀env expl rl.
    evaluate_list' env expl rl ⇒
+   EVERY (well_typed env) expl ⇒
    evaluate_list' (env_remove_ctors cnmap env) (MAP (remove_ctors cnmap) expl) (map_result (MAP (v_remove_ctors cnmap)) rl)) ∧
   (∀env v pes r.
    evaluate_match' env v pes r ⇒
+   EVERY (well_typed env o SND) pes ⇒
    evaluate_match' (env_remove_ctors cnmap env) (v_remove_ctors cnmap v) (match_remove_ctors cnmap pes) (map_result (v_remove_ctors cnmap) r))``,
 gen_tac >>
 ho_match_mp_tac evaluate'_ind >>
@@ -289,19 +357,18 @@ strip_tac >- (
   gen_tac >>
   Cases >- (
     rw [evaluate'_con,remove_ctors_def,do_con_check_def] >>
-    metis_tac [] ) >>
+    metis_tac [well_typed_Con_subexp ] ) >>
   rpt gen_tac >>
   rw [evaluate'_con,remove_ctors_def] >>
   rw [Once evaluate'_cases] >>
-  metis_tac []) >>
+  metis_tac [well_typed_Con_subexp]) >>
 strip_tac >- (
   gen_tac >>
   Cases >> rw [remove_ctors_def] >>
   rw [Once evaluate'_cases] >-
-    metis_tac [] >>
-  rw [evaluate'_con] >>
+    metis_tac [well_typed_Con_subexp] >>
   rw [Once evaluate_list'_thm] >>
-  metis_tac [] ) >>
+  metis_tac [well_typed_Con_subexp] ) >>
 strip_tac >-
   rw [remove_ctors_def,evaluate'_var,lookup_remove_ctors] >>
 strip_tac >-
@@ -310,13 +377,18 @@ strip_tac >-
   rw [remove_ctors_def] >>
 strip_tac >- (
   rw [remove_ctors_def] >>
+  imp_res_tac well_typed_App_subexp >>
+  fs[] >>
   rw [evaluate'_app] >>
   disj1_tac >>
   qexists_tac `v_remove_ctors cnmap v1` >>
   rw [] >>
   qexists_tac `v_remove_ctors cnmap v2` >>
   rw [] >>
-  qexists_tac `v_remove_ctors cnmap v2` >>
+  (* need do_app preserves well_typed *)
+  Cases_on `op = Equality` >- (
+    ... ) >>
+  rw[do_app_remove_ctors]
 *)
 
 val _ = export_theory ()
