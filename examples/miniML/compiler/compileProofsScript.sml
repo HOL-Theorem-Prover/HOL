@@ -77,6 +77,22 @@ val (remove_ctors_def,remove_ctors_ind) =
 val _ = save_thm ("remove_ctors_def", remove_ctors_def);
 val _ = save_thm ("remove_ctors_ind", remove_ctors_ind);
 
+val (remove_mat_vp_def,remove_mat_vp_ind) =
+  tprove_no_defn ((remove_mat_vp_def,remove_mat_vp_ind),
+  WF_REL_TAC
+  `inv_image $<
+    (λx. case x of
+         | INL (v,p) => pat_size p
+         | INR (v,n,ps) => pat1_size ps)`)
+
+val (remove_mat_def,remove_mat_ind) =
+  tprove_no_defn ((remove_mat_def,remove_mat_ind),
+  WF_REL_TAC
+  `inv_image $<
+    (λx. case x of
+         | INL e => exp_size e
+         | INR (v,pes) => exp6_size pes)`)
+
 (*
 This is too awful! TODO: Try a simpler definition of fold_consts.
 val (fold_consts_def,fold_consts_ind) =

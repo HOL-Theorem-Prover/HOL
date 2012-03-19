@@ -9,6 +9,48 @@ open MiniMLTheory
 
 (*open MiniML*)
 
+(* Remove pattern-matching using continuations *)
+(* TODO: more efficient method *)
+(*val remove_mat : exp -> exp*)
+
+ val remove_mat_vp_defn = Hol_defn "remove_mat_vp" `
+
+(remove_mat_vp v (Pvar pv) =
+  Let pv (Var v) (App Opapp (Var "_sk") (Val (Lit (Bool T)))))
+/\
+(remove_mat_vp v (Plit l) =
+  If (App Equality (Var v) (Val (Lit l)))
+    (App Opapp (Var "_sk") (Val (Lit (Bool T))))
+    (App Opapp (Var "_fk") (Val (Lit (Bool T)))))
+/\
+(remove_mat_vp v (Pcon NONE ps) = remove_mat_con v 0 ps)
+/\
+(remove_mat_con v n [] = App Opapp (Var "_sk") (Val (Lit (Bool T))))
+/\
+(remove_mat_con v n (p::ps) =
+  Let "_sk" (Fun "_" (remove_mat_con v (n+1) ps)) (
+    Let "_mat" (Proj (Var v) n) (
+      remove_mat_vp "_mat" p)))`;
+
+val _ = Defn.save_defn remove_mat_vp_defn;
+
+ val remove_mat_defn = Hol_defn "remove_mat" `
+
+(remove_mat (Mat (Var v) pes) = remove_mat_var v pes)
+/\
+(remove_mat (Mat e pes) = Let "_mat" e (remove_mat_var "_mat" pes))
+/\
+(remove_mat e = e)
+/\
+(remove_mat_var v [] = Raise Bind_error)
+/\
+(remove_mat_var v ((p,e)::pes) =
+  Let "_sk" (Fun "_" (remove_mat e)) (
+    Let "_fk" (Fun "_" (remove_mat_var v pes)) (
+      remove_mat_vp v p)))`;
+
+val _ = Defn.save_defn remove_mat_defn;
+
 (* Remove all ML data constructors and replace them with untyped tuples with
  * numeric indices *)
 (*val remove_ctors : (conN -> int) -> exp -> exp*)
