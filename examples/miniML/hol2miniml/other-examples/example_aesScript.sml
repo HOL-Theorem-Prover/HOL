@@ -197,43 +197,43 @@ val res = translate (ff32 wordsTheory.word_rol_def)
 val Sbox_def = find_def ``Sbox``
 val InvSbox_def = find_def ``InvSbox``
 
-(*
-
 val res = translate HD;
 val res = translate TL;
 val res = translate EL;
+val Sbox_thm = translate Sbox_def;
+val InvSbox_thm = translate InvSbox_def;
 
-val res = translate Sbox_def
+val HD_side = (fetch "-" "HD_side_def")
+val TL_side = (fetch "-" "TL_side_def")
+val EL_side = REWRITE_RULE [CONTAINER_def,HD_side,TL_side] (fetch "-" "EL_side_def")
 
-  val def = Define `Sbox_list (n:num) = ^(find_term listSyntax.is_cons (concl Sbox_def))`
+val IMP_EL_side = prove(
+  ``!xs n. n < LENGTH xs ==> EL_side n xs``,
+  Induct THEN Cases_on `n` THEN FULL_SIMP_TAC (srw_ss()) []
+  THEN EVAL_TAC THEN FULL_SIMP_TAC (srw_ss()) []);
 
-translate def
+val Sbox_side = prove(
+  ``!x. PRECONDITION (Sbox_side x)``,
+  Cases THEN EVAL_TAC THEN FULL_SIMP_TAC (srw_ss()) [Sbox_def]
+  THEN MATCH_MP_TAC IMP_EL_side THEN EVAL_TAC THEN ASM_SIMP_TAC std_ss []);
 
-*)
+val InvSbox_side = prove(
+  ``!x. PRECONDITION (InvSbox_side x)``,
+  Cases THEN EVAL_TAC THEN FULL_SIMP_TAC (srw_ss()) [InvSbox_def]
+  THEN MATCH_MP_TAC IMP_EL_side THEN EVAL_TAC THEN ASM_SIMP_TAC std_ss []);
 
-val EL_CONS = prove(
-  ``!n xs. EL n (x::xs) = if n = 0 then x else EL (n-1) xs``,
-  Cases THEN FULL_SIMP_TAC std_ss [EL,HD,TL,ADD1]);
+val res =
+  DISCH_ALL Sbox_thm |> REWRITE_RULE [Sbox_side] |> UNDISCH_ALL
+    |> GEN (hd (free_vars (rand (concl Sbox_thm))))
+    |> SIMP_RULE std_ss [Eval_FUN_FORALL_EQ,FUN_QUANT_SIMP]
+    |> store_eval_thm;
 
-val w2n_LE_255 = prove(
-  ``w2n (x:word8) <= 255``,
-  FULL_SIMP_TAC std_ss [DECIDE ``n<=255 = n < 256:num``,f8 w2n_lt]);
+val res =
+  DISCH_ALL InvSbox_thm |> REWRITE_RULE [InvSbox_side] |> UNDISCH_ALL
+    |> GEN (hd (free_vars (rand (concl InvSbox_thm))))
+    |> SIMP_RULE std_ss [Eval_FUN_FORALL_EQ,FUN_QUANT_SIMP]
+    |> store_eval_thm;
 
-val Sbox_thm =
-  Sbox_def
-  |> REWRITE_RULE [EL_CONS]
-  |> REWRITE_RULE [GSYM SUB_PLUS]
-  |> CONV_RULE EVAL
-  |> SIMP_RULE std_ss [w2n_LE_255]
-
-val InvSbox_thm =
-  InvSbox_def
-  |> REWRITE_RULE [EL_CONS]
-  |> REWRITE_RULE [GSYM SUB_PLUS]
-  |> CONV_RULE EVAL
-  |> SIMP_RULE std_ss [w2n_LE_255]
-
-val res = translate Sbox_thm
 val res = translate (find_def ``genSubBytes``)
 val res = translate (find_def ``SubBytes``)
 val res = translate (find_def ``ShiftRows``)
@@ -255,7 +255,6 @@ val res = translate (find_def ``to_state``)
 val res = translate (find_def ``InvMultCol``)
 val res = translate (find_def ``InvMixColumns``)
 val res = translate (find_def ``InvShiftRows``)
-val res = translate InvSbox_thm
 val res = translate (find_def ``InvSubBytes``)
 val res = translate aesTheory.InvRoundTuple_def
 val res = translate aesTheory.InvRound_def
