@@ -105,8 +105,8 @@ rw [insert_def] >>
 metis_tac [merge_heap_ordered]);
 
 val find_min_correct = Q.store_thm ("find_min_correct",
-`!h get_key leq. 
-  WeakLinearOrder leq ∧ (h ≠ Empty) ∧ is_heap_ordered get_key leq h 
+`!h get_key leq.
+  WeakLinearOrder leq ∧ (h ≠ Empty) ∧ is_heap_ordered get_key leq h
   ⇒
   BAG_IN (find_min h) (heap_to_bag h) ∧
   (!y. BAG_IN y (heap_to_bag h) ⇒ leq (get_key (find_min h)) (get_key y))`,
@@ -156,10 +156,10 @@ val ty = ``:'a heap``
 val _ = delete_const "heap" handle _ => ()
 
 val tm =
-``(heap a Empty v ⇔ (v = Conv (SOME "EMPTY") []) ∧ T) ∧
+``(heap a Empty v ⇔ (v = Conv (SOME "Empty") []) ∧ T) ∧
   (heap a (Tree x2_1 x2_2) v ⇔
    ∃v2_1 v2_2.
-     (v = Conv (SOME "TREE") [v2_1; v2_2]) ∧ a x2_1 v2_1 ∧
+     (v = Conv (SOME "Tree") [v2_1; v2_2]) ∧ a x2_1 v2_1 ∧
      list (\x v. if MEM x x2_2 then heap a x v else ARB) x2_2 v2_2)``
 
 val inv_def = tDefine "heap_def" [ANTIQUOTE tm]

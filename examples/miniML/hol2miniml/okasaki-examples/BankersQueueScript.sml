@@ -1,7 +1,7 @@
 
 open HolKernel Parse boolLib bossLib; val _ = new_theory "BankersQueue";
 
-open listTheory arithmeticTheory ml_translatorLib;
+open listTheory arithmeticTheory ml_translatorLib listLib;
 
 (* setting up the translator *)
 
@@ -45,22 +45,29 @@ val empty_thm = prove(
 val is_empty_thm = prove(
   ``!q xs. queue_inv xs q ==> (is_empty q = (xs = []))``,
   Cases THEN Cases_on `l` THEN EVAL_TAC THEN SRW_TAC [] []
-  THEN FULL_SIMP_TAC std_ss [REVERSE_DEF,LENGTH_NIL]);
+  THEN FULL_SIMP_TAC std_ss [REVERSE_DEF,LENGTH_NIL,REV_DEF]);
 
 val snoc_thm = prove(
   ``!q xs x. queue_inv xs q ==> queue_inv (xs ++ [x]) (snoc q x)``,
-  Cases THEN Cases_on `l` THEN EVAL_TAC
-  THEN SRW_TAC [] [ADD1,queue_inv_def] THEN DECIDE_TAC);
+  Cases THEN Cases_on `l` THEN1
+   (EVAL_TAC THEN SRW_TAC [] []
+    THEN FULL_SIMP_TAC std_ss [LENGTH_NIL,REV_DEF,APPEND,LENGTH] THEN EVAL_TAC)
+  THEN FULL_SIMP_TAC std_ss [queue_inv_def,snoc_def,checkf_def]
+  THEN SRW_TAC [] [queue_inv_def] THEN DECIDE_TAC);
 
 val head_thm = prove(
   ``!q x xs. queue_inv (x::xs) q ==> (head q = x)``,
   Cases THEN Cases_on `l` THEN EVAL_TAC THEN SRW_TAC [] []
-  THEN FULL_SIMP_TAC (srw_ss()) [REVERSE_DEF,LENGTH_NIL]);
+  THEN FULL_SIMP_TAC (srw_ss()) [REVERSE_DEF,LENGTH_NIL,REV_DEF]);
 
 val tail_thm = prove(
   ``!q x xs. queue_inv (x::xs) q ==> queue_inv xs (tail q)``,
-  Cases THEN Cases_on `l` THEN EVAL_TAC THEN SRW_TAC [] []
-  THEN TRY (Cases_on `t`) THEN EVAL_TAC
-  THEN FULL_SIMP_TAC (srw_ss()) [REVERSE_DEF,LENGTH_NIL] THEN DECIDE_TAC);
+  Cases THEN Cases_on `l` THEN1
+   (FULL_SIMP_TAC std_ss [queue_inv_def,APPEND,tail_def]
+    THEN Cases_on `l0` THEN FULL_SIMP_TAC (srw_ss()) []
+    THEN REPEAT STRIP_TAC THEN `F` by DECIDE_TAC)
+  THEN FULL_SIMP_TAC std_ss [queue_inv_def,APPEND,tail_def]
+  THEN Cases_on `l0` THEN FULL_SIMP_TAC (srw_ss()) [queue_inv_def,checkf_def]
+  THEN SRW_TAC [] [queue_inv_def] THEN DECIDE_TAC);
 
 val _ = export_theory();

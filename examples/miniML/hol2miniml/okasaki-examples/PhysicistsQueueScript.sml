@@ -66,9 +66,12 @@ val isPREFIX_REFL = prove(
 
 val snoc_thm = prove(
   ``!q xs x. queue_inv xs q ==> queue_inv (xs ++ [x]) (snoc q x)``,
-  Cases THEN Cases_on `l` THEN EVAL_TAC THEN SRW_TAC [] [] THEN EVAL_TAC
-  THEN FULL_SIMP_TAC (srw_ss()) [APPEND_eq_NIL,LENGTH_NIL]
-  THEN Cases_on `l0` THEN EVAL_TAC THEN FULL_SIMP_TAC (srw_ss()) []
+  Cases THEN Cases_on `l`
+  THEN FULL_SIMP_TAC (srw_ss()) [queue_inv_def,snoc_def,check_def,checkw_def]
+  THEN SRW_TAC [] [] THEN FULL_SIMP_TAC (srw_ss())
+    [queue_inv_def,snoc_def,check_def,checkw_def,ADD1]
+  THEN Cases_on `l0` THEN FULL_SIMP_TAC (srw_ss())
+    [queue_inv_def,snoc_def,check_def,checkw_def,ADD1]
   THEN FULL_SIMP_TAC std_ss [isPREFIX_APPEND,GSYM APPEND_ASSOC]
   THEN DECIDE_TAC);
 
@@ -79,11 +82,18 @@ val head_thm = prove(
 
 val tail_thm = prove(
   ``!q x xs. queue_inv (x::xs) q ==> queue_inv xs (tail q)``,
-  Cases THEN Cases_on `l` THEN EVAL_TAC THEN SRW_TAC [] []
-  THEN Cases_on `l0` THEN TRY (Cases_on `t`) THEN EVAL_TAC
-  THEN FULL_SIMP_TAC (srw_ss()) [REVERSE_DEF,LENGTH_NIL,isPREFIX_REFL]
-  THEN Cases_on `t'` THEN FULL_SIMP_TAC (srw_ss()) [LENGTH_NIL]
-  THEN EVAL_TAC THEN FULL_SIMP_TAC (srw_ss()) [REVERSE_DEF,LENGTH_NIL,
-          isPREFIX_REFL,isPREFIX_APPEND] THEN DECIDE_TAC);
+  Cases THEN Cases_on `l`
+  THEN FULL_SIMP_TAC (srw_ss()) [queue_inv_def,tail_def,check_def,checkw_def]
+  THEN SRW_TAC [] [] THEN FULL_SIMP_TAC (srw_ss())
+    [queue_inv_def,tail_def,check_def,checkw_def,ADD1] THEN Cases_on `l0`
+  THEN FULL_SIMP_TAC (srw_ss()) [REVERSE_DEF,LENGTH_NIL,isPREFIX_REFL,checkw_def]
+  THEN1 (Cases_on `t` THEN FULL_SIMP_TAC (srw_ss()) [LENGTH_NIL,checkw_def,queue_inv_def]
+    THEN FULL_SIMP_TAC std_ss [queue_inv_def]
+    THEN REPEAT STRIP_TAC THEN FULL_SIMP_TAC (srw_ss())
+      [LENGTH_NIL,checkw_def,isPREFIX_REFL,isPREFIX_APPEND])
+  THEN1 (Cases_on `t'` THEN FULL_SIMP_TAC (srw_ss()) [LENGTH_NIL,checkw_def,queue_inv_def]
+    THEN FULL_SIMP_TAC std_ss [queue_inv_def]
+    THEN REPEAT STRIP_TAC THEN FULL_SIMP_TAC (srw_ss())
+      [LENGTH_NIL,checkw_def,isPREFIX_REFL,isPREFIX_APPEND] THEN DECIDE_TAC));
 
 val _ = export_theory();

@@ -54,14 +54,10 @@ val merge_def = Define `
 (* Without mutual recursion, and with size constraints to handle the nested
  * recursion *)
 
-val res = translate (fetch "-" "heap_size_def")
-
-val merge_def = mlDefine `
- (merge get_key leq a b =
-   case (a,b) of
-   | (a,Empty) => a
-   | (Empty,b) => b
-   | ((Tree x h1 h2),(Tree y h1' h2')) =>
+val merge_def = Define `
+ (merge get_key leq a Empty = a) /\
+ (merge get_key leq Empty b = b) /\
+ (merge get_key leq (Tree x h1 h2) (Tree y h1' h2') =
         if leq (get_key x) (get_key y) then
           case h1 of
           | Empty => Tree x (Tree y h1' h2') h2
@@ -85,7 +81,6 @@ val merge_def = mlDefine `
                else
                  Empty))`;
 
-(*
 val merge_size = Q.prove (
 `!get_key leq h1 h2.
   heap_size (\x.0) (merge get_key leq h1 h2) =
@@ -108,18 +103,37 @@ val merge_size_lem = Q.prove (
   heap_size (\x.0) h1 + heap_size (\x.0) h2 + heap_size (\x.0) h1' + 2 = T`,
 rw [merge_size, heap_size_def] >>
 decide_tac);
-*)
 
 (* Remove the size constraints *)
 
-(*
 val merge_def = SIMP_RULE (srw_ss()) [merge_size_lem, LET_THM] merge_def;
 val _ = save_thm ("merge_def",merge_def);
 
 val merge_ind =
   SIMP_RULE (srw_ss()) [merge_size_lem, LET_THM] (fetch "-" "merge_ind");
 val _ = save_thm ("merge_ind",merge_ind);
-*)
+
+val merge_thm = prove(``
+  merge get_key leq a b =
+    case (a,b) of
+    | (a,Empty) => a
+    | (Empty,b) => b
+    | (Tree x h1 h2, Tree y h1' h2') =>
+        if leq (get_key x) (get_key y) then
+          case h1 of
+          | Empty => Tree x (Tree y h1' h2') h2
+          | _ =>
+            Tree x Empty (merge get_key leq
+                         (merge get_key leq (Tree y h1' h2') h1) h2)
+        else
+          case h1' of
+          | Empty => Tree y (Tree x h1 h2) h2'
+          | _ =>
+            Tree y Empty (merge get_key leq
+                         (merge get_key leq (Tree x h1 h2) h1') h2')``,
+  Cases_on `a` THEN Cases_on `b` THEN SIMP_TAC (srw_ss()) [merge_def]);
+
+val _ = translate merge_thm;
 
 val insert_def = mlDefine `
 insert get_key leq x a = merge get_key leq (Tree x Empty Empty) a`;
@@ -130,7 +144,6 @@ find_min (Tree x _ _) = x`;
 val delete_min_def = mlDefine `
 delete_min get_key leq (Tree _ a b) = merge get_key leq a b`;
 
-(*
 (* Functional correctness *)
 
 val merge_bag = Q.store_thm ("merge_bag",
@@ -223,6 +236,5 @@ cases_on `h` >>
 fs [delete_min_def, is_heap_ordered_def, merge_bag] >-
 metis_tac [merge_heap_ordered] >>
 rw [heap_to_bag_def, find_min_def, BAG_DIFF_INSERT2]);
-*)
 
 val _ = export_theory ();
