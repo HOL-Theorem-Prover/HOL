@@ -4,6 +4,7 @@ $(HOLDIR)/examples/Crypto/AES\
 $(HOLDIR)/examples/Crypto/RC6\
 $(HOLDIR)/examples/Crypto/TEA\
 $(HOLDIR)/examples/miller/miller
+OPTIONS = QUIT_ON_FAILURE
 
 ifdef POLY
 HOLHEAP = miniml-heap
