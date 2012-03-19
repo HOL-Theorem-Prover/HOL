@@ -69,7 +69,7 @@ val _ = Define `
 (join_strings sep [x] = x)
 /\
 (join_strings sep (x::y::l) = A 
-  x (A   (S sep) (A   y  (join_strings sep l))))`;
+  x (A   (S sep)  (join_strings sep (y::l))))`;
 
 val _ = Defn.save_defn join_strings_defn;
 

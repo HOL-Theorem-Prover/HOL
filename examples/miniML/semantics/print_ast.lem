@@ -49,7 +49,7 @@ and
 join_strings sep [x] = x
 and
 join_strings sep (x::y::l) =
-  x ^^ S sep ^^ y ^^ join_strings sep l
+  x ^^ S sep ^^ join_strings sep (y::l)
 
 let lit_to_sml l = match l with
   (* Rely on the fact that true and false cannot be rebound in SML *)
