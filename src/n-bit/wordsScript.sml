@@ -2077,6 +2077,19 @@ val bit_field_insert = Q.store_thm("bit_field_insert",
          WORD_NEG_1_T]
   \\ SRW_TAC [ARITH_ss] []);
 
+val word_join_index = Q.store_thm("word_join_index",
+  `!i (a:'a word) (b:'b word).
+        FINITE univ(:'a) /\ FINITE univ(:'b) /\ i < dimindex(:'a + 'b) ==>
+        ((word_join a b) ' i =
+           if i < dimindex(:'b) then
+              b ' i
+           else
+              a ' (i - dimindex (:'b)))`,
+  SRW_TAC [fcpLib.FCP_ss, boolSimps.LET_ss, ARITH_ss]
+      [word_join_def, word_or_def, word_lsl_def, w2w, fcpTheory.index_sum]
+  \\ `i = 0` by DECIDE_TAC
+  \\ FULL_SIMP_TAC (srw_ss()) []);
+
 (* ------------------------------------------------------------------------- *)
 (* Reduce operations : theorems                                              *)
 (* ------------------------------------------------------------------------- *)

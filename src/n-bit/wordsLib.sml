@@ -275,6 +275,7 @@ fun add_word_convs cmp =
      (wordsSyntax.uint_max_tm, 1, SIZES_CONV),
      (wordsSyntax.int_min_tm,  1, SIZES_CONV),
      (wordsSyntax.int_max_tm,  1, SIZES_CONV),
+     (pred_setSyntax.finite_tm,1, SIZES_CONV),
      (``min$= : 'a word -> 'a word -> bool``, 2, word_EQ_CONV)];
 
 val _ = computeLib.add_funs thms;
