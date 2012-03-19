@@ -68,8 +68,13 @@ val _ = Define `
     (if sml then S"~" else S"-")  (pos_int_to_string ((int_sub) (& 0) n)))`;
 
 
+(* Should inculde "^", but I don't know how to get that into HOL, since
+ * antiquote seem stronger than strings. *)
 val _ = Define `
- sml_infixes = ["="; "+"; "-"; "*"; "div"; "mod"; "<"; ">"; "<="; ">="]`;
+ sml_infixes = 
+  ["mod"; "<>"; ">="; "<="; ":="; "::"; "before"; "div"; "o"; "@"; ">";
+   "="; "<"; "/"; "-"; "+"; "*"]`;
+
 
 val _ = Define `
  ocaml_infixes = ["="; "+"; "-"; "*"; "/"; "mod"; "<"; ">"; "<="; ">="]`;
@@ -239,7 +244,7 @@ val _ = Defn.save_defn pat_to_stree_defn;
 (exp_to_stree sml indent (Mat e pes) = A 
   (if sml then S"(case " else S"(match ") (A   
   (exp_to_stree sml indent e) (A   
-  (if sml then S" of" else S" with") (A  
+  (if sml then S" of\n" else S" with\n") (A  
   (spaces (indent + 2)) (A  
   (join_strings ( A (S"\n") (A   (spaces (indent + 2))  (S"| "))) 
                (MAP (pat_exp_to_stree sml (indent + 2)) pes)) (A   

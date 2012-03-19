@@ -48,7 +48,12 @@ let int_to_stree sml n =
   else
     (if sml then S"~" else S"-") ^^ pos_int_to_string (Int.(-) (i 0) n)
 
-let sml_infixes = ["="; "+"; "-"; "*"; "div"; "mod"; "<"; ">"; "<="; ">="]
+(* Should inculde "^", but I don't know how to get that into HOL, since
+ * antiquote seem stronger than strings. *)
+let sml_infixes = 
+  ["mod"; "<>"; ">="; "<="; ":="; "::"; "before"; "div"; "o"; "@"; ">";
+   "="; "<"; "/"; "-"; "+"; "*"]
+
 let ocaml_infixes = ["="; "+"; "-"; "*"; "/"; "mod"; "<"; ">"; "<="; ">="]
 
 val join_strings : stree -> stree list -> stree
@@ -204,7 +209,7 @@ and
 exp_to_stree sml indent (Mat e pes) =
   (if sml then S"(case " else S"(match ") ^^ 
   exp_to_stree sml indent e ^^ 
-  (if sml then S" of" else S" with") ^^
+  (if sml then S" of\n" else S" with\n") ^^
   spaces (indent + 2) ^^
   join_strings (S"\n" ^^ spaces (indent + 2) ^^ S"| ") 
                (List.map (pat_exp_to_stree sml (indent + 2)) pes) ^^ 
