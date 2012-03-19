@@ -1,4 +1,5 @@
-open HolKernel bossLib boolLib pairLib MiniMLTheory listTheory bytecodeTheory lcsymtacs
+open HolKernel bossLib boolLib pairLib listTheory bytecodeTheory lcsymtacs
+open MiniMLTheory compileProofsTheory
 
 val _ = new_theory "compiler"
 
@@ -44,57 +45,6 @@ val offset_def = Define`
 
 val emit_def = Define`
   emit s ac is = (ac++is, s with next_label := s.next_label + offset s.inst_length is)`;
-
-(* move elsewhere? *)
-val exp1_size_thm = store_thm(
-"exp1_size_thm",
-``∀ls. exp1_size ls = SUM (MAP exp2_size ls) + LENGTH ls``,
-Induct >- rw[exp_size_def] >>
-qx_gen_tac `p` >>
-PairCases_on `p` >>
-srw_tac [ARITH_ss][exp_size_def])
-
-val exp6_size_thm = store_thm(
-"exp6_size_thm",
-``∀ls. exp6_size ls = SUM (MAP exp7_size ls) + LENGTH ls``,
-Induct >- rw[exp_size_def] >>
-Cases >> srw_tac [ARITH_ss][exp_size_def])
-
-val exp8_size_thm = store_thm(
-"exp8_size_thm",
-``∀ls. exp8_size ls = SUM (MAP exp_size ls) + LENGTH ls``,
-Induct >- rw[exp_size_def] >>
-srw_tac [ARITH_ss][exp_size_def])
-
-(* move to listTheory? *)
-val SUM_MAP_MEM_bound = store_thm(
-"SUM_MAP_MEM_bound",
-``∀f x ls. MEM x ls ⇒ f x ≤ SUM (MAP f ls)``,
-ntac 2 gen_tac >> Induct >> rw[] >>
-fsrw_tac [ARITH_ss][])
-
-(* move elsewhere? *)
-val free_vars_def = tDefine "free_vars"`
-  (free_vars (Var x) = {x})
-∧ (free_vars (Let x _ b) = free_vars b DELETE x)
-∧ (free_vars (Letrec ls b) = FOLDL (λs (n,x,b). s ∪ (free_vars b DELETE x))
-                             (free_vars b DIFF (FOLDL (combin$C ($INSERT o FST)) {} ls))
-                             ls)
-∧ (free_vars (Fun x b) = free_vars b DELETE x)
-∧ (free_vars (App _ e1 e2) = free_vars e1 ∪ free_vars e2)
-∧ (free_vars (Log _ e1 e2) = free_vars e1 ∪ free_vars e2)
-∧ (free_vars (If e1 e2 e3) = free_vars e1 ∪ free_vars e2 ∪ free_vars e3)
-∧ (free_vars (Mat e pes) = free_vars e ∪ FOLDL (λs (p,e). s ∪ free_vars e) {} pes)
-∧ (free_vars (Proj e _) = free_vars e)
-∧ (free_vars (Raise _) = {})
-∧ (free_vars (Val _) = {})
-∧ (free_vars (Con _ es) = FOLDL (λs e. s ∪ free_vars e) {} es)`
-(WF_REL_TAC `measure exp_size` >>
-srw_tac [ARITH_ss][exp1_size_thm,exp6_size_thm,exp8_size_thm] >>
-imp_res_tac SUM_MAP_MEM_bound >|
-  map (fn q => pop_assum (qspec_then q mp_tac))
-  [`exp2_size`,`exp7_size`,`exp_size`] >>
-srw_tac[ARITH_ss][exp_size_def])
 
 (* compile : exp * compiler_state → bc_inst list * compiler_state *)
 val compile_defn = Hol_defn "compile"` (* tDefine fails *)

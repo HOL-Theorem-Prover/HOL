@@ -3,6 +3,62 @@ open CompileTheory evaluateEquationsTheory
 
 val _ = new_theory "compileProofs"
 
+(* move elsewhere? *)
+val exp1_size_thm = store_thm(
+"exp1_size_thm",
+``∀ls. exp1_size ls = SUM (MAP exp2_size ls) + LENGTH ls``,
+Induct >- rw[exp_size_def] >>
+qx_gen_tac `p` >>
+PairCases_on `p` >>
+srw_tac [ARITH_ss][exp_size_def])
+
+val exp6_size_thm = store_thm(
+"exp6_size_thm",
+``∀ls. exp6_size ls = SUM (MAP exp7_size ls) + LENGTH ls``,
+Induct >- rw[exp_size_def] >>
+Cases >> srw_tac [ARITH_ss][exp_size_def])
+
+val exp8_size_thm = store_thm(
+"exp8_size_thm",
+``∀ls. exp8_size ls = SUM (MAP exp_size ls) + LENGTH ls``,
+Induct >- rw[exp_size_def] >>
+srw_tac [ARITH_ss][exp_size_def])
+
+val exp9_size_thm = store_thm(
+"exp9_size_thm",
+``∀ls. exp9_size ls = SUM (MAP v_size ls) + LENGTH ls``,
+Induct >- rw[exp_size_def] >>
+srw_tac [ARITH_ss][exp_size_def])
+
+val pat1_size_thm = store_thm(
+"pat1_size_thm",
+``∀ls. pat1_size ls = SUM (MAP pat_size ls) + LENGTH ls``,
+Induct >- rw[pat_size_def] >>
+srw_tac [ARITH_ss][pat_size_def])
+
+(* move elsewhere? *)
+val free_vars_def = tDefine "free_vars"`
+  (free_vars (Var x) = {x})
+∧ (free_vars (Let x _ b) = free_vars b DELETE x)
+∧ (free_vars (Letrec ls b) = FOLDL (λs (n,x,b). s ∪ (free_vars b DELETE x))
+                             (free_vars b DIFF (FOLDL (combin$C ($INSERT o FST)) {} ls))
+                             ls)
+∧ (free_vars (Fun x b) = free_vars b DELETE x)
+∧ (free_vars (App _ e1 e2) = free_vars e1 ∪ free_vars e2)
+∧ (free_vars (Log _ e1 e2) = free_vars e1 ∪ free_vars e2)
+∧ (free_vars (If e1 e2 e3) = free_vars e1 ∪ free_vars e2 ∪ free_vars e3)
+∧ (free_vars (Mat e pes) = free_vars e ∪ FOLDL (λs (p,e). s ∪ free_vars e) {} pes)
+∧ (free_vars (Proj e _) = free_vars e)
+∧ (free_vars (Raise _) = {})
+∧ (free_vars (Val _) = {})
+∧ (free_vars (Con _ es) = FOLDL (λs e. s ∪ free_vars e) {} es)`
+(WF_REL_TAC `measure exp_size` >>
+srw_tac [ARITH_ss][exp1_size_thm,exp6_size_thm,exp8_size_thm] >>
+imp_res_tac SUM_MAP_MEM_bound >|
+  map (fn q => pop_assum (qspec_then q mp_tac))
+  [`exp2_size`,`exp7_size`,`exp_size`] >>
+srw_tac[ARITH_ss][exp_size_def])
+
 val (remove_ctors_def,remove_ctors_ind) =
   tprove_no_defn ((remove_ctors_def,remove_ctors_ind),
   WF_REL_TAC
@@ -12,23 +68,12 @@ val (remove_ctors_def,remove_ctors_ind) =
                          | INR (INR (INR (INL (x,y)))) => exp1_size y
                          | INR (INR (INR (INR (x,y)))) => exp6_size y)` >>
   rw [] >>
-  TRY decide_tac >|
-  [induct_on `es` >>
-       rw [exp_size_def] >>
-       res_tac >>
-       decide_tac,
-   induct_on `vs` >>
-       rw [exp_size_def] >>
-       res_tac >>
-       decide_tac,
-   induct_on `es` >>
-       rw [exp_size_def] >>
-       res_tac >>
-       decide_tac,
-   induct_on `vs` >>
-       rw [exp_size_def] >>
-       res_tac >>
-       decide_tac]);
+  TRY decide_tac >>
+  rw[exp8_size_thm,exp9_size_thm] >>
+  qmatch_rename_tac `f a < (X:num)` ["X"] >>
+  Q.ISPECL_THEN [`f`,`a`] mp_tac SUM_MAP_MEM_bound >>
+  disch_then imp_res_tac >>
+  DECIDE_TAC)
 val _ = save_thm ("remove_ctors_def", remove_ctors_def);
 val _ = save_thm ("remove_ctors_ind", remove_ctors_ind);
 
