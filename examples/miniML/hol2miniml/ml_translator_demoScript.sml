@@ -117,7 +117,7 @@ val rec_example_def = mlDefine `
 val CHAR_def = Define `
   CHAR (c:char) = NUM (ORD c)`;
 
-val _ = add_type_inv ``CHAR``
+val _ = add_type_inv ``CHAR`` ``:num``
 
 val EqualityType_CHAR = prove(
   ``EqualityType CHAR``,

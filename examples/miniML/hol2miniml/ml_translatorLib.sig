@@ -15,7 +15,7 @@ sig
 
     (* interface for teaching the translator about new types *)
 
-    val add_type_inv   : term -> unit
+    val add_type_inv   : term -> hol_type -> unit
     val store_eval_thm : thm -> thm
     val store_eq_thm   : thm -> thm
     val register_type  : hol_type -> unit

@@ -13,41 +13,30 @@ val _ = Hol_datatype `digit = Zero | One of 'a times | Two of 'a times => 'a tim
 val _ = Hol_datatype `queue = Shallow of 'a digit
                             | Deep of 'a digit => queue => 'a digit`;
 
-val empty_def = Define `
+val empty_def = mlDefine `
   empty = Shallow Zero`;
 
-val is_empty_def = Define `
+val is_empty_def = mlDefine `
   (is_empty (Shallow Zero) = T) /\
   (is_empty _ = F)`;
 
-val snoc_def = Define `
+val snoc_def = mlDefine `
   (snoc (Shallow Zero) y = Shallow (One y)) /\
   (snoc (Shallow (One x)) y = Deep (Two x y) empty Zero) /\
   (snoc (Deep f m Zero) y = Deep f m (One y)) /\
   (snoc (Deep f m (One x)) y = Deep f (snoc m (Twice x y)) Zero)`
 
-val head_def = Define `
+val head_def = mlDefine `
   (head (Shallow (One x)) = x) /\
   (head (Deep (One x) m r) = x) /\
   (head (Deep (Two x y) m r) = x)`;
 
-val tail_def = Define `
+val tail_def = mlDefine `
   (tail (Shallow (One x)) = empty) /\
   (tail (Deep (Two x y) m r) = Deep (One y) m r) /\
   (tail (Deep (One x) q r) =
      if is_empty q then Shallow r else
        case head q of Twice y z => Deep (Two y z) (tail q) r)`
-
-
-(* translation *)
-
-val _ = set_filename (current_theory())
-
-val res = translate empty_def
-val res = translate is_empty_def
-val res = translate snoc_def
-val res = translate head_def
-val res = translate tail_def
 
 (*
 (* verification *)

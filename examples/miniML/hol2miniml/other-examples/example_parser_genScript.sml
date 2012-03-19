@@ -8,13 +8,11 @@ open stringTheory listTheory;
 val CHAR_def = Define `
   CHAR (c:char) = NUM (ORD c)`;
 
-val _ = add_type_inv ``CHAR``
+val _ = add_type_inv ``CHAR`` ``:num``
 
 val EqualityType_CHAR = prove(
   ``EqualityType CHAR``,
   EVAL_TAC THEN SRW_TAC [] [] THEN EVAL_TAC) |> store_eq_thm;
-
-
 
 
 (* register ptree -- begin *)
@@ -80,7 +78,6 @@ val res = translate pairTheory.FST;
 val res = translate pairTheory.SND;
 val res = translate combinTheory.o_DEF;
 val res = translate optionTheory.THE_DEF;
-val res = translate LET_DEF;
 
 val res = translate push_def;
 val res = translate pop_def;

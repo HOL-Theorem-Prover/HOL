@@ -26,9 +26,9 @@ fun find_def tm = let
 
 val WORD_def = Define `WORD w = NUM (w2n w)`;
 
-val _ = add_type_inv (inst [alpha|->``:32``] ``WORD``)
-val _ = add_type_inv (inst [alpha|->``:16``] ``WORD``)
-val _ = add_type_inv (inst [alpha|->``:8``] ``WORD``)
+val _ = add_type_inv (inst [alpha|->``:32``] ``WORD``) ``:num``
+val _ = add_type_inv (inst [alpha|->``:16``] ``WORD``) ``:num``
+val _ = add_type_inv (inst [alpha|->``:8``] ``WORD``) ``:num``
 
 val EqualityType_WORD = prove(
   ``EqualityType WORD``,
