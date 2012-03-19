@@ -123,41 +123,6 @@ val mrg_bag = Q.prove (
 recInduct mrg_ind >>
 srw_tac [BAG_ss] [list_to_bag_def, mrg_def, BAG_INSERT_UNION]);
 
-val div_lem1 = Q.prove (
-`!x. (x + 2) DIV 2 = x DIV 2 + 1`,
-rw [] >>
-`0 < 2:num` by decide_tac >>
-`x + 2 = 1 * 2 + x` by decide_tac >>
-imp_res_tac arithmeticTheory.ADD_DIV_ADD_DIV >>
-POP_ASSUM (ASSUME_TAC o Q.SPECL [`1`, `x`]) >>
-full_simp_tac (srw_ss()++ARITH_ss) []);
-
-val div_lem2 = Q.prove (
-`!x. (x + 3) DIV 2 = (x + 1) DIV 2 + 1`,
-rw [] >>
-`0 < 2:num` by decide_tac >>
-`x + 3 = 1 * 2 + (x + 1)` by decide_tac >>
-imp_res_tac arithmeticTheory.ADD_DIV_ADD_DIV >>
-POP_ASSUM (ASSUME_TAC o Q.SPECL [`1`, `x+1`]) >>
-full_simp_tac (srw_ss()++ARITH_ss) []);
-
-val odd_div_add1 = Q.prove (
-`!n:num. ~EVEN n ⇒ (n DIV 2 + 1 = (n + 1) DIV 2)`,
-completeInduct_on `n` >>
-rw [] >>
-cases_on `n = 0` >>
-fs [] >>
-cases_on `n = 1` >>
-fs [] >>
-`?n'. n = n' + 2` 
-         by (qexists_tac `n - 2` >>
-             rw [] >>
-             decide_tac) >>
-rw [] >>
-full_simp_tac (srw_ss()++ARITH_ss) [arithmeticTheory.EVEN_ADD] >>
-Q.PAT_ASSUM `!m. P m` (MP_TAC o Q.SPEC `n'`) >>
-rw [div_lem1, div_lem2]);
-
 val add_seg_sub_inv = Q.prove (
 `!leq size segs n seg. 
   WeakLinearOrder leq ∧
@@ -199,7 +164,8 @@ rw [] >|
           fs [arithmeticTheory.MOD_2] >>
           every_case_tac >>
           fs [arithmeticTheory.EVEN_ADD] >>
-          metis_tac [odd_div_add1]]]);
+          metis_tac [intLib.ARITH_PROVE 
+                     ``!n:num. ~EVEN n ⇒ (n DIV 2 + 1 = (n + 1) DIV 2)``]]]);
 
 val add_seg_bag = Q.prove (
 `!leq size segs n seg SIZE. 
