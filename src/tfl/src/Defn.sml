@@ -433,8 +433,7 @@ fun been_stored (s,thm) =
             else
               "Saved definition __ ") ^Lib.quote s^"\n")
    else ()
-   );
-end
+   )
 
 fun store(stem,eqs,ind) =
   let val eqs_bind = defSuffix stem
@@ -445,14 +444,17 @@ fun store(stem,eqs,ind) =
       val _ = add_persistent_funs [(eqs_bind,eqs)]
          handle e => HOL_MESG ("Unable to add "^eqs_bind^" to global compset")
   in
-    mesg (String.concat
-            (if !Globals.interactive then
-               [   "Equations stored under ", Lib.quote eqs_bind,
-                ".\nInduction stored under ", Lib.quote ind_bind, ".\n"]
-             else
-               [  "Saved definition __ ", Lib.quote eqs_bind,
-                "\nSaved induction ___ ", Lib.quote ind_bind, "\n"]))
-  end;
+    if !chatting then
+       mesg (String.concat
+               (if !Globals.interactive then
+                  [   "Equations stored under ", Lib.quote eqs_bind,
+                   ".\nInduction stored under ", Lib.quote ind_bind, ".\n"]
+                else
+                  [  "Saved definition __ ", Lib.quote eqs_bind,
+                   "\nSaved induction ___ ", Lib.quote ind_bind, "\n"]))
+    else ()
+  end
+end
 
 local
   val LIST_CONJ_GEN = LIST_CONJ o map GEN_ALL
