@@ -1,103 +1,119 @@
 open MiniML
 
+type stree = S of string | A of stree * stree
+
+val (^^) : stree -> stree -> stree
+sub [hol] (^^) x y = A x y
+sub [ocaml] (^^) x y = A x y
+
+val stree_to_string : stree -> string -> string
+let rec
+stree_to_string (S s) acc = s ^ acc
+and
+stree_to_string (A s1 s2) acc = stree_to_string s1 (stree_to_string s2 acc)
 
 (* TODO: use a built-in int_to_string *)
 
 let rec pos_int_to_string n =
   if Int.(>) n (i 0) then
     let n' = Int.(%) n (i 10) in
-      pos_int_to_string (Int.(/) n (i 10)) ^
-      (if n' = i 0 then "0"
-       else if n' = i 1 then "1"
-       else if n' = i 2 then "2"
-       else if n' = i 3 then "3"
-       else if n' = i 4 then "4"
-       else if n' = i 5 then "5"
-       else if n' = i 6 then "6"
-       else if n' = i 7 then "7"
-       else if n' = i 8 then "8"
-       else "9")
+      pos_int_to_string (Int.(/) n (i 10)) ^^
+      (if n' = i 0 then S"0"
+       else if n' = i 1 then S"1"
+       else if n' = i 2 then S"2"
+       else if n' = i 3 then S"3"
+       else if n' = i 4 then S"4"
+       else if n' = i 5 then S"5"
+       else if n' = i 6 then S"6"
+       else if n' = i 7 then S"7"
+       else if n' = i 8 then S"8"
+       else S"9")
   else
-    ""
+    S""
 
-val int_to_string : Int.int -> string
-let int_to_string n =
+val int_to_sml : Int.int -> stree
+let int_to_sml n =
   if n = i 0 then
-    "0"
+    S"0"
   else if Int.(>) n (i 0) then
     pos_int_to_string n
   else
-    "~" ^ pos_int_to_string (Int.(-) (i 0) n)
+    S"~" ^^ pos_int_to_string (Int.(-) (i 0) n)
 
-let infixes = ["="; "+"; "-"; "*"; "div"; "mod"; "<"; ">"; "<="; ">="]
+let sml_infixes = ["="; "+"; "-"; "*"; "div"; "mod"; "<"; ">"; "<="; ">="]
 
+val join_strings : string -> stree list -> stree
 let rec
-join_strings sep [] = ""
+join_strings sep [] = S""
 and
 join_strings sep [x] = x
 and
 join_strings sep (x::y::l) =
-  x ^ sep ^ y ^ join_strings sep l
+  x ^^ S sep ^^ y ^^ join_strings sep l
 
-let lit_to_string l = match l with
+let lit_to_sml l = match l with
   (* Rely on the fact that true and false cannot be rebound in SML *)
-  | Bool true -> "true"
-  | Bool false -> "false"
-  | IntLit n -> int_to_string n
+  | Bool true -> S"true"
+  | Bool false -> S"false"
+  | IntLit n -> int_to_sml n
 end
 
-let var_to_string v =
-  if List.mem v infixes then
-    "op " ^ v
+let var_to_sml v =
+  if List.mem v sml_infixes then
+    S"op " ^^ S v
   else
-    v
+    S v
 
 let rec
-pat_to_string (Pvar v) = var_to_string v
+pat_to_sml (Pvar v) = var_to_sml v
 and
-pat_to_string (Plit l) = lit_to_string l
+pat_to_sml (Plit l) = lit_to_sml l
 and
-pat_to_string (Pcon None ps) = "(" ^ join_strings "," (List.map pat_to_string ps) ^ ")"
+pat_to_sml (Pcon None ps) = 
+  S"(" ^^ join_strings "," (List.map pat_to_sml ps) ^^ S")"
 and
-pat_to_string (Pcon (Some c) []) =
-  var_to_string c
+pat_to_sml (Pcon (Some c) []) =
+  var_to_sml c
 and
-pat_to_string (Pcon (Some c) ps) =
-  "(" ^ var_to_string c ^ "(" ^ join_strings "," (List.map pat_to_string ps) ^ ")" ^ ")"
+pat_to_sml (Pcon (Some c) ps) =
+  S"(" ^^ var_to_sml c ^^ 
+    S"(" ^^ join_strings "," (List.map pat_to_sml ps) ^^ S")" ^^ S")"
 
 let rec
-exp_to_string (Raise r) =
-  "(raise Bind)"
+exp_to_sml (Raise r) =
+  S"(raise Bind)"
 and
-exp_to_string (Val (Lit l)) =
-  lit_to_string l
+exp_to_sml (Val (Lit l)) =
+  lit_to_sml l
 and
-exp_to_string (Val _) =
+exp_to_sml (Val _) =
   (* TODO: this shouldn't happen in source *)
-  ""
+  S""
 and
-exp_to_string (Con None es) = "(" ^ join_strings "," (List.map exp_to_string es) ^ ")"
+exp_to_sml (Con None es) = 
+  S"(" ^^ join_strings "," (List.map exp_to_sml es) ^^ S")"
 and
-exp_to_string (Con (Some c) []) =
-  var_to_string c
+exp_to_sml (Con (Some c) []) =
+  var_to_sml c
 and
-exp_to_string (Con (Some c) es) =
-  "(" ^ var_to_string c ^ "(" ^ join_strings "," (List.map exp_to_string es) ^ ")" ^ ")"
+exp_to_sml (Con (Some c) es) =
+  S"(" ^^ var_to_sml c ^^ 
+    S"(" ^^ join_strings "," (List.map exp_to_sml es) ^^ S")" ^^ S")"
 and
-exp_to_string (Var v) =
-  var_to_string v
+exp_to_sml (Var v) =
+  var_to_sml v
 and
-exp_to_string (Fun v e) =
-  "(fn " ^ var_to_string v ^ " => " ^ exp_to_string e ^ ")"
+exp_to_sml (Fun v e) =
+  S"(fn " ^^ var_to_sml v ^^ S" => " ^^ exp_to_sml e ^^ S")"
 and
-exp_to_string (App Opapp e1 e2) =
-  "(" ^ exp_to_string e1 ^ " " ^ exp_to_string e2 ^ ")"
+exp_to_sml (App Opapp e1 e2) =
+  S"(" ^^ exp_to_sml e1 ^^ S" " ^^ exp_to_sml e2 ^^ S")"
 and
-exp_to_string (App Equality e1 e2) =
+exp_to_sml (App Equality e1 e2) =
   (* Rely on the fact (?) that = cannot be rebound in SML *)
-  "(" ^ exp_to_string e1 ^ " = " ^ exp_to_string e2 ^ ")"
+  S"(" ^^ exp_to_sml e1 ^^ S" = " ^^ exp_to_sml e2 ^^ S")"
 and
-exp_to_string (App (Opn o) e1 e2) =
+exp_to_sml (App (Opn o) e1 e2) =
   let s = match o with
     | Plus -> "+"
     | Minus -> "-"
@@ -106,12 +122,12 @@ exp_to_string (App (Opn o) e1 e2) =
     | Modulo -> "mod"
   end
   in
-    if List.mem s infixes then
-      "(" ^ exp_to_string e1 ^ " " ^ s ^ " " ^ exp_to_string e2 ^ ")"
+    if List.mem s sml_infixes then
+      S"(" ^^ exp_to_sml e1 ^^ S" " ^^ S s ^^ S" " ^^ exp_to_sml e2 ^^ S")"
     else
-      "(" ^ s ^ " " ^ exp_to_string e1 ^ " " ^ exp_to_string e2 ^ ")"
+      S"(" ^^ S s ^^ S" " ^^ exp_to_sml e1 ^^ S" " ^^ exp_to_sml e2 ^^ S")"
 and
-exp_to_string (App (Opb o') e1 e2) =
+exp_to_sml (App (Opb o') e1 e2) =
   let s = match o' with
     | Lt -> "<"
     | Gt -> ">"
@@ -119,71 +135,74 @@ exp_to_string (App (Opb o') e1 e2) =
     | Geq -> ">"
   end
   in
-    if List.mem s infixes then
-      "(" ^ exp_to_string e1 ^ " " ^ s ^ " " ^ exp_to_string e2 ^ ")"
+    if List.mem s sml_infixes then
+      S"(" ^^ exp_to_sml e1 ^^ S" " ^^ S s ^^ S" " ^^ exp_to_sml e2 ^^ S")"
     else
-      "(" ^ s ^ " " ^ exp_to_string e1 ^ " " ^ exp_to_string e2 ^ ")"
+      S"(" ^^ S s ^^ S" " ^^ exp_to_sml e1 ^^ S" " ^^ exp_to_sml e2 ^^ S")"
 and
-exp_to_string (Log lop e1 e2) =
-  "(" ^ exp_to_string e1 ^ (if lop = And then " andalso " else " orelse ") ^
-  exp_to_string e2 ^ ")"
+exp_to_sml (Log lop e1 e2) =
+  S"(" ^^ exp_to_sml e1 ^^ (if lop = And then S" andalso " else S" orelse ") ^^
+  exp_to_sml e2 ^^ S")"
 and
-exp_to_string (If e1 e2 e3) =
-  "(if " ^ exp_to_string e1 ^ " then " ^ exp_to_string e2 ^ " else " ^
-  exp_to_string e3 ^ ")"
+exp_to_sml (If e1 e2 e3) =
+  S"(if " ^^ exp_to_sml e1 ^^ S" then " ^^ exp_to_sml e2 ^^ S" else " ^^
+  exp_to_sml e3 ^^ S")"
 and
-exp_to_string (Mat e pes) =
-  "(case " ^ exp_to_string e ^ " of " ^
-  join_strings " | " (List.map pat_exp_to_string pes) ^ ")"
+exp_to_sml (Mat e pes) =
+  S"(case " ^^ exp_to_sml e ^^ S" of " ^^
+  join_strings " | " (List.map pat_exp_to_sml pes) ^^ S")"
 and
-exp_to_string (Let v e1 e2) =
-  "let val " ^ var_to_string v ^ " = " ^ exp_to_string e1 ^ " in " ^
-  exp_to_string e2 ^ " end"
+exp_to_sml (Let v e1 e2) =
+  S"let val " ^^ var_to_sml v ^^ S" = " ^^ exp_to_sml e1 ^^ S" in " ^^
+  exp_to_sml e2 ^^ S" end"
 and
-exp_to_string (Letrec funs e) =
-  "let fun " ^ join_strings " and " (List.map fun_to_string funs) ^ " in " ^
-  exp_to_string e ^ " end"
+exp_to_sml (Letrec funs e) =
+  S"let fun " ^^ join_strings " and " (List.map fun_to_sml funs) ^^ S" in " ^^
+  exp_to_sml e ^^ S" end"
 and
-pat_exp_to_string (p,e) =
-  pat_to_string p ^ " => " ^ exp_to_string e
+pat_exp_to_sml (p,e) =
+  pat_to_sml p ^^ S" => " ^^ exp_to_sml e
 and
-fun_to_string (v1,v2,e) =
-  var_to_string v1 ^ " " ^ var_to_string v2 ^ " = " ^ exp_to_string e
+fun_to_sml (v1,v2,e) =
+  var_to_sml v1 ^^ S" " ^^ var_to_sml v2 ^^ S" = " ^^ exp_to_sml e
 
 let rec
-type_to_string (Tvar tn) =
-  tn
+type_to_sml (Tvar tn) =
+  S tn
 and
-type_to_string (Tapp ts tn) =
+type_to_sml (Tapp ts tn) =
   if ts = [] then
-    tn
+    S tn
   else
-    "(" ^ join_strings "," (List.map type_to_string ts) ^ ")" ^ tn
+    S"(" ^^ join_strings "," (List.map type_to_sml ts) ^^ S")" ^^ S tn
 and
-type_to_string (Tfn t1 t2) =
-  "(" ^ type_to_string t1 ^ " -> " ^ type_to_string t2 ^ ")"
+type_to_sml (Tfn t1 t2) =
+  S"(" ^^ type_to_sml t1 ^^ S" -> " ^^ type_to_sml t2 ^^ S")"
 and
-type_to_string Tnum =
+type_to_sml Tnum =
   (* TODO: Get the numeric types sorted *)
-  "int"
+  S"int"
 and
-type_to_string Tbool =
-  "bool"
+type_to_sml Tbool =
+  S"bool"
 
-let variant_to_string (c,ts) =
-  var_to_string c ^ (if ts = [] then "" else " of ") ^
-  join_strings " * " (List.map type_to_string ts)
+let variant_to_sml (c,ts) =
+  var_to_sml c ^^ (if ts = [] then S"" else S" of ") ^^
+  join_strings " * " (List.map type_to_sml ts)
 
-let typedef_to_string (tvs, name, variants) =
-  (if tvs = [] then "" else "(" ^ join_strings "," tvs ^ ")") ^
-  name ^ " = " ^ join_strings " | " (List.map variant_to_string variants)
+val typedef_to_sml : tvarN list * typeN * (conN * t list) list -> stree
+let typedef_to_sml (tvs, name, variants) =
+  (if tvs = [] then S"" else S"(" ^^ join_strings "," (List.map S tvs) ^^ S")") ^^
+  S name ^^ S" = " ^^ join_strings " | " (List.map variant_to_sml variants)
 
-let dec_to_string d =
+let dec_to_sml d =
   match d with
     | Dlet p e ->
-        "val " ^ pat_to_string p ^ " = " ^ exp_to_string e
+        S"val " ^^ pat_to_sml p ^^ S" = " ^^ exp_to_sml e
     | Dletrec funs ->
-        "fun " ^ join_strings " and " (List.map fun_to_string funs)
+        S"fun " ^^ join_strings " and " (List.map fun_to_sml funs)
     | Dtype types ->
-        "datatype " ^ join_strings " and " (List.map typedef_to_string types)
+        S"datatype " ^^ join_strings " and " (List.map typedef_to_sml types)
   end
+
+let dec_to_sml_string d = stree_to_string (dec_to_sml d) ""
