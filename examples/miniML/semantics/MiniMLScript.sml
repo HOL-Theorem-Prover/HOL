@@ -478,8 +478,6 @@ val _ = Define `
           SOME (env',Raise Div_error)
         else
           SOME (env',Val (Lit (IntLit (opn_lookup op n1 n2))))
-    | (Opn op, Lit (IntLit n1), Lit (IntLit n2)) =>
-        SOME (env',Val (Lit (IntLit (opn_lookup op n1 n2))))
     | (Opb op, Lit (IntLit n1), Lit (IntLit n2)) =>
         SOME (env',Val (Lit (Bool (opb_lookup op n1 n2))))
     | (Equality, v1, v2) =>

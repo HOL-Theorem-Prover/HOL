@@ -408,8 +408,6 @@ let do_app env' op v1 v2 =
           Some (env',Raise Div_error)
         else
           Some (env',Val (Lit (IntLit (opn_lookup op n1 n2))))
-    | (Opn op, Lit (IntLit n1), Lit (IntLit n2)) ->
-        Some (env',Val (Lit (IntLit (opn_lookup op n1 n2))))
     | (Opb op, Lit (IntLit n1), Lit (IntLit n2)) ->
         Some (env',Val (Lit (Bool (opb_lookup op n1 n2))))
     | (Equality, v1, v2) ->
