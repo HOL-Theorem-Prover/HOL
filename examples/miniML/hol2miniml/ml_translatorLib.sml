@@ -37,15 +37,15 @@ end
 (* collecting declarations *)
 
 local
-  val decls = ref (tl [(T,"")])
-  fun dec2str d = if not auto_print then "" else let
+  val decls = ref (tl [(T,"","")])
+  fun dec2str sml d = if not auto_print then "" else let
     val result =
-      ``dec_to_sml_string ^d``
+      (if sml then ``dec_to_sml_string ^d`` else ``dec_to_ocaml_string ^d``)
       |> EVAL |> concl |> rand |> stringSyntax.fromHOLstring
       handle HOL_ERR _ => failwith("\nUnable to print "^(term_to_string d)^"\n\n")
     in result end;
 in
-  fun add_decl d = (decls := (d,dec2str d)::(!decls))
+  fun add_decl d = (decls := (d,dec2str true d, dec2str false d)::(!decls))
   fun get_decls () = rev (!decls)
 end
 
@@ -75,6 +75,7 @@ local
       val name = current_theory()
       val _ = (base_filename := name)
       val _ = clear_file "_ml.txt"
+      val _ = clear_file "_ocaml.txt"
       val _ = clear_file "_hol.txt"
       val _ = clear_file "_thm.txt"
       in name end
@@ -87,9 +88,11 @@ local
   fun print_ml_file () = let
     val _ = clear_file "_ast.txt"
     val _ = clear_file "_ml.txt"
-    fun print_decl (tm,s) = let
+    val _ = clear_file "_ocaml.txt"
+    fun print_decl (tm,s,s') = let
       val _ = append_to_file "_ast.txt" ["\n",term_to_string tm,"\n"]
       val _ = append_to_file "_ml.txt" ["\n",s,"\n"]
+      val _ = append_to_file "_ocaml.txt" ["\n",s',"\n"]
       in () end
     val _ = map print_decl (get_decls())
     in () end
@@ -113,7 +116,7 @@ in
     in () end;
   fun clear_filename () = (base_filename := "")
   fun set_filename name = (base_filename := name;
-    clear_file "_ml.txt"; clear_file "_hol.txt"; clear_file "_thm.txt")
+    clear_file "_ocaml.txt"; clear_file "_ml.txt"; clear_file "_hol.txt"; clear_file "_thm.txt")
 end
 
 exception UnableToTranslate of term;
