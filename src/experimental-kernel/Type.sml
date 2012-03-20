@@ -1400,10 +1400,14 @@ local
         Tyv _ => (case peek(theta, ty) of NONE => raise Unchanged
                                         | SOME (_, t) => t)
       | TyCon _ => raise Unchanged
-      | TyApp p  => qcomb TyApp (vsubst theta) p
+      | TyApp p => qcomb TyApp (vsubst theta) p
       | TyAbs _ => augment_vsubst theta ty
       | TyAll _ => augment_vsubst theta ty
       | TyExi _ => augment_vsubst theta ty
+
+  val vsubst = fn theta =>
+                 if numItems theta = 0 then (fn ty => raise Unchanged)
+                 else vsubst theta            
 
 
   fun vsub_insert(fm, k, v) =

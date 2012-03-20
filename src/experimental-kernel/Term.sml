@@ -16,7 +16,7 @@ app load ["Feedback","Lib","Type","KernelSig","Lexis",
           "Redblackmap","Binarymap","Profile"];
 *)
 
-open Feedback Lib Type Kind Rank
+open Feedback Lib Rank Kind Type
 
 infixr --> |->
 infix :>=:
@@ -235,7 +235,9 @@ fun free_vars_lr tm = let
   fun FV (v as Var _) A = Lib.op_insert eq v A
     | FV (Const _) A = A
     | FV (App(f, x)) A = FV x (FV f A)
-    | FV (Abs(v, body)) A = Lib.op_set_diff eq (FV body A) [v]
+    | FV (Abs(v, body)) A = if Lib.op_mem eq v A
+                            then FV body A
+                            else Lib.op_set_diff eq (FV body A) [v]
     | FV (TApp(f, _)) A = FV f A
     | FV (TAbs(_, body)) A = FV body A
 in
@@ -1567,7 +1569,6 @@ local
                       (* may throw Type.Unchanged, Type.NeedToRename *)
         val inst_kd = Kind.vsubst_rk_kd rk kdtheta
                       (* may throw Kind.Unchanged=Type.Unchanged *)
-        val kdinst_ty = Type.inst_rank_kind (kdtheta,rk)
         fun inst (v as Var(Name,Ty)) = let
                 val (changed, nv) = let val nTy = inst_ty Ty
                                     in if eq_ty nTy Ty then raise Unchanged
@@ -1626,6 +1627,7 @@ local
                                       handle Unchanged => (false, tyv)
                 val v' = mk_var_type tyv'
                 val tytheta = #1 (remove(tytheta, v)) handle NotFound => tytheta
+                val kdinst_ty = Type.inst_rank_kind (kdtheta,rk)
                 val currentfvs = HOLset.addList(empty_tyset, List.map kdinst_ty (type_vars_in_term tm))
                 (* first calculate the new names we are about to introduce into
                    the type *)
@@ -1666,6 +1668,11 @@ local
       inst
     end
 
+  fun inst_careful inst_fn tm =
+     (inst_fn tm
+        handle Unchanged => tm
+             | HOL_ERR {message=m, ...} => raise ERR "inst_rk_kd_ty" m)
+
 in
 
 fun inst_rk_kd_ty ([],kdtheta,rk) = (inst_rank_kind (kdtheta,rk)
@@ -1691,13 +1698,404 @@ fun inst_rk_kd_ty ([],kdtheta,rk) = (inst_rank_kind (kdtheta,rk)
         end
         val atytheta = List.foldr foldthis2 Type.emptyvsubst (filter (is_var_type o #redex) tytheta)
       in
+        inst_careful (inst_rk_kd_ty1 (atytheta,akdtheta,rk)
+                                     (Map.mkDict tyvar_compare) (Map.mkDict compare))
+(*
         fn tm =>
         inst_rk_kd_ty1 (atytheta,akdtheta,rk) (Map.mkDict tyvar_compare) (Map.mkDict compare) tm
                     handle Unchanged => tm
                          | HOL_ERR {message=m, ...} => raise ERR "inst_rk_kd_ty" m
+*)
       end
 
 end (* local *);
+
+
+(* -------------------------------------- *)
+(* Proper substitution of terms for vars  *)
+(* along with types, kinds, & ranks, fast *)
+(* -------------------------------------- *)
+
+local
+  open Map
+
+  exception NeedToRename of term
+  val empty_tyvsubst = mkDict Type.raw_compare
+  val empty_ctxt = mkDict compare
+  fun type_vars ty = Type.type_vars_set raw_empty_tyset raw_empty_tyset [ty]
+  fun inst_type_vars (inst : hol_type -> hol_type) tyset =
+    let fun merge_type_vars (a,s) =
+              HOLset.union(s, type_vars (inst a handle Unchanged => a))
+    in
+      HOLset.foldl merge_type_vars raw_empty_tyset tyset
+    end
+
+  datatype fvinfo = FVI of { currentty : hol_type HOLset.set,
+                             current : term HOLset.set,
+                             is_full : bool,
+                             left : fvinfo option, (* also used for Abs (inabs) *)
+                             right : fvinfo option } (* also used for (absv) *)
+  fun leaf (tys,tms,b) =
+    FVI {currentty = tys, current = tms, is_full = b, left = NONE, right = NONE}
+  fun current (FVI r) = #current r
+  fun currentty (FVI r) = #currentty r
+  fun is_full (FVI r) = #is_full r
+  fun left (FVI r) = valOf (#left r)
+  fun right (FVI r) = valOf (#right r)
+  fun pureleft (FVI r) = #left r
+  fun pureright (FVI r) = #right r
+
+  (* computes a tree with information about the set of free variables in tm',
+     where tm' is tm with all type, kind, & rank substitutions applied;
+     returns early when all redexes in theta have become bound *)
+  fun calculate_fvinfo_ty ty =
+      leaf (type_vars ty, empty_tmset, true)
+  fun calculate_fvinfo tm =
+      case tm of
+        Var (_,ty) => leaf (type_vars ty, HOLset.singleton var_compare tm, true)
+      | Const (_,ty) => leaf (type_vars ty, empty_varset, true)
+      | App (f, x) =>
+        let
+          val fvs = calculate_fvinfo f
+          val xvs = calculate_fvinfo x
+        in
+          FVI {currentty = HOLset.union (currentty fvs, currentty xvs),
+               current = HOLset.union (current fvs, current xvs),
+               is_full = is_full fvs andalso is_full xvs,
+               left = SOME fvs, right = SOME xvs}
+        end
+      | Abs (v, body) =>
+        let
+          val vvs = calculate_fvinfo v
+          val bodyvs = calculate_fvinfo body
+        in
+          FVI {currentty = HOLset.union(currentty vvs, currentty bodyvs),
+               current = safe_delete(current bodyvs, v),
+               is_full = is_full bodyvs andalso is_full vvs,
+               left = SOME bodyvs, right = SOME vvs}
+        end
+      | TApp (f, t) =>
+        let
+          val fvs = calculate_fvinfo f
+          val tvs = leaf (type_vars t, empty_varset, true)
+        in
+          FVI {currentty = HOLset.union(currentty fvs, currentty tvs),
+               current = current fvs,
+               is_full = is_full fvs andalso is_full tvs,
+               left = SOME fvs, right = SOME tvs}
+        end
+      | TAbs (a, body) =>
+        let
+          val avs = leaf (HOLset.singleton Type.raw_compare a, empty_tmset, true)
+          val bodyvs = calculate_fvinfo body
+        in
+          FVI {currentty = safe_delete(currentty bodyvs, a),
+               current = current bodyvs,
+               is_full = is_full bodyvs andalso is_full avs,
+               left = SOME bodyvs, right = SOME avs}
+        end
+
+  fun ty_vsubst rk kdS tytheta ty = Type.vsubst_rkt rk kdS tytheta ty
+
+  fun filtertmS tmS fvset = let
+    (* Removes entries in tmS for things not in fvset.  tmS likely to
+       be much smaller than fvset, so fold over that rather than the
+       other *)
+    fun foldthis (k,v,acc) = if HOLset.member(fvset, k) then insert(acc, k, v)
+                             else acc
+  in
+    foldl foldthis emptyvsubst tmS
+  end
+
+  fun filtertyS tyS fvset = let
+    (* Removes entries in tyS for things not in fvset.  tyS likely to
+       be much smaller than fvset, so fold over that rather than the
+       other *)
+    fun foldthis (k,v,acc) = if HOLset.member(fvset, k) then insert(acc, k, v)
+                             else acc
+  in
+    foldl foldthis empty_tyvsubst tyS
+  end
+
+  fun tyset_vsubst rk kdS tytheta inst_ty tyset =
+    if numItems tytheta = 0 andalso null kdS andalso rk=0 then tyset
+    else
+      let val inst_fn = inst_ty (* Type.vsubst_rkt rk kdS tytheta *)
+      in
+        HOLset.foldl (fn (ftyv,acc) =>
+                         HOLset.add(acc, inst_fn ftyv
+                                         handle Unchanged => ftyv))
+                      empty_tyvarset tyset
+      end
+
+  fun varset_vsubst rk kdS tytheta inst_ty varset =
+    if numItems tytheta = 0 andalso null kdS andalso rk=0 then varset
+    else
+      let val inst_fn = inst_ty (* Type.vsubst_rkt rk kdS tytheta *)
+      in
+         HOLset.foldl (fn (v,acc) =>
+                         let val (n,ty) = dest_var v
+                         in HOLset.add(acc, Var(n, inst_fn ty)
+                                            handle Unchanged => v)
+                         end)
+                      empty_tmset varset
+      end
+
+  fun augvsubst rk kdS tytheta theta inst_ty fvi tm =
+      case tm of
+        (v as Var (s,ty)) => let
+          val (tychanged, ty') = (true, (*ty_vsubst rk kdS tytheta*) inst_ty ty)
+                                 handle Unchanged => (false, ty)
+          val v' = if tychanged then Var (s,ty') else v
+          val (changed, nv) = case peek (theta, v') of
+                                NONE => (tychanged, v')
+                              | SOME (_, _, t) => (true, t)
+        in
+          if changed then nv
+          else raise Unchanged
+        end
+      | Const (id,ty) => Const (id, (*ty_vsubst rk kdS tytheta*) inst_ty ty)
+      | App p => qcomb2 App
+          (augvsubst rk kdS tytheta theta inst_ty (left fvi), augvsubst rk kdS tytheta theta inst_ty (right fvi)) p
+      | Abs (v, body) => let
+          val (vname, vty) = dest_var v
+          val (changed, vty') = (true, (*ty_vsubst rk kdS tytheta*) inst_ty vty)
+                                handle Unchanged => (false, vty)
+          val v' = if changed then mk_var (vname, vty') else v
+          val theta' = #1 (remove (theta, v')) handle NotFound => theta
+          val _ = if numItems theta' = 0 andalso numItems tytheta = 0
+                     andalso null kdS andalso rk=0 then raise Unchanged else ()
+          val currentfvs = varset_vsubst rk kdS tytheta inst_ty (current fvi)
+          val v_fvi = right fvi
+          val body_fvi = left fvi
+          (* first calculate the new names we are about to introduce into
+             the term *)
+          fun foldthis (k, v, acc) =
+              if HOLset.member (currentfvs, k) then
+                HOLset.union (acc, Susp.force (#2 v))
+              else acc
+          val newnames = foldl foldthis empty_stringset theta'
+        in
+          (* The bound variable must be renamed if either
+               a. its name is the same as a new name being introduced into the term, or
+               b. its image under tytheta is the same as the image of a free variable of the term *)
+          if HOLset.member(newnames, vname) orelse HOLset.member(currentfvs, v') then
+            let
+              (* now need to vary v, avoiding both newnames, and also the
+                 existing free-names of the whole term. *)
+              val bodyfvs = current body_fvi
+              fun foldthis (fv, acc) = HOLset.add (acc, #1 (dest_var fv))
+              fun addtyname (ftyv, acc) = HOLset.add(acc, #1 (dest_var_type ftyv))
+              val allfreenames = HOLset.foldl foldthis newnames bodyfvs
+              val new_vname = set_name_variant allfreenames vname
+              val new_v = mk_var (new_vname, vty')
+              val new_theta =
+                  if HOLset.member(varset_vsubst rk kdS tytheta inst_ty bodyfvs, v')
+                  (* NOT the same as HOLset.member(bodyfvs, v) *)
+                  then let
+                      val tynameset = HOLset.foldl addtyname empty_stringset
+                                                   (inst_type_vars inst_ty (currentty v_fvi))
+                                      (*Type.free_names vty'*)
+                      val singleton = HOLset.singleton String.compare new_vname
+                    in
+                      insert(theta', v', (Susp.delay (fn () => tynameset),
+                                          Susp.delay (fn () => singleton),
+                                          new_v))
+                    end
+                  else theta'
+            in
+              Abs (new_v, augvsubst rk kdS tytheta new_theta inst_ty body_fvi body
+                          handle Unchanged => body)
+            end
+          else
+            Abs (v', augvsubst rk kdS tytheta theta' inst_ty body_fvi body
+                     handle Unchanged => if changed then body else raise Unchanged)
+        end
+      | TApp p => qcomb2 TApp
+          (augvsubst rk kdS tytheta theta inst_ty (left fvi), (*ty_vsubst rk kdS tytheta*) inst_ty) p
+(*
+      | TApp (f, a) => let
+          val afvi = right fvi
+        in
+          let
+            val ffvi = left fvi
+            val f' = augvsubst rk kdS tytheta theta inst_ty ffvi f
+          in
+            let val a' = (*ty_vsubst rk kdS tytheta*) inst_ty a
+            in
+              TApp (f', a')
+            end handle Unchanged => TApp (f', a)
+          end handle Unchanged => let val a' = (*ty_vsubst rk kdS tytheta*) inst_ty a
+                                  in
+                                    TApp (f, a')
+                                  end
+        end
+*)
+      | TAbs (a, body) => let
+          val a' = Type.inst_rank_kind (kdS,rk) a (* might be renamed *)
+          val (chgd,tytheta') = (true, #1 (remove(tytheta, a')))
+                                handle NotFound => (false, tytheta)
+          val inst_ty' = if chgd then Type.vsubst_rkt rk kdS tytheta' else inst_ty
+          val _ = if numItems theta = 0 andalso numItems tytheta' = 0
+                     andalso null kdS andalso rk=0 then raise Unchanged else ()
+          val (aname, akd) = dest_var_type a'
+          val currentftyvs = inst_type_vars inst_ty' (currentty fvi)
+          val currentfvs = varset_vsubst rk kdS tytheta' inst_ty' (current fvi)
+          val a_fvi = right fvi
+          val body_fvi = left fvi
+          (* first calculate the new type names we are about to introduce into
+             the term *)
+          fun foldthisty (k,v,acc) =
+              if HOLset.member(currentftyvs, k) then
+                HOLset.union(acc, Susp.force (#1 v))
+              else acc
+          val newnames0 = foldl foldthisty empty_stringset tytheta'
+          fun foldthis (k,v,acc) =
+              if HOLset.member(currentfvs, k) then
+                HOLset.union(acc, Susp.force (#1 v))
+              else acc
+          val newnames = foldl foldthis newnames0 theta
+        in
+          if HOLset.member(newnames, aname) then let
+              (* now need to vary a, avoiding both newnames, and also the
+                 existing free-type-names of the whole term. *)
+              val bodyftyvs = currentty body_fvi
+              fun foldthis (fv, acc) = HOLset.add(acc, #1 (dest_var_type fv))
+              val allfreenames = HOLset.foldl foldthis newnames currentftyvs
+              val new_aname = set_type_name_variant allfreenames aname
+              val new_a = mk_var_type(new_aname, akd)
+              val (chgd,new_tytheta) =
+                  if HOLset.member(tyset_vsubst rk kdS tytheta' inst_ty' bodyftyvs, a')
+                  (* NOT the same as HOLset.member(bodyftyvs, a) *)
+                  (* Note that a' is unchanged by tytheta' because of remove above *)
+                  then let
+                      val singleton = HOLset.singleton String.compare new_aname
+                    in
+                      (true,
+                       insert(tytheta', a', (Susp.delay (fn () => singleton),
+                                             new_a)))
+                    end
+                  else (false, tytheta')
+              val new_inst_ty = if chgd then Type.vsubst_rkt rk kdS new_tytheta
+                                        else inst_ty'
+            in
+              TAbs (new_a, augvsubst rk kdS new_tytheta theta new_inst_ty body_fvi body
+                           handle Unchanged => body)
+            end
+          else
+            let
+              fun removewitha (k,v,acc) =
+                  if HOLset.member(type_vars (type_of k), a') then acc
+                  else insert(acc, k, v)
+              val theta' = foldl removewitha emptyvsubst theta
+            in
+              TAbs (a', augvsubst rk kdS tytheta' theta' inst_ty' body_fvi body)
+            end
+        end
+
+  fun vinst_all (tmS,tyS,kdS,rk) =
+  let
+    (* Note that Unchanged=Type.Unchanged=Kind.Unchanged *)
+    val inst_ty = Type.inst_rk_kd_ty1 rk kdS tyS (mkDict tyvar_compare)
+                  (* may throw Type.Unchanged, but not Type.NeedToRename
+                     since tyvar dict is empty *)
+
+    fun vinst1 tm =
+      case tm of
+        Var (s,ty) => let val (chgd,tm') = (true, Var (s, inst_ty ty))
+                                           handle Unchanged => (false,tm)
+                      in case peek(tmS, tm') of NONE => if chgd then tm'
+                                                        else raise Unchanged
+                                              | SOME (_, _, t) => t
+                      end
+      | Const (c,ty) => Const (c, inst_ty ty)
+      | App p  => qcomb App vinst1 p
+      | TApp (t,a) => let
+        in
+          let 
+            val t' = vinst1 t
+          in
+            let val a' = inst_ty a
+            in
+              TApp (t', a')
+            end handle Unchanged => TApp (t', a)
+          end handle Unchanged => let val a' = inst_ty a
+                                  in
+                                    TApp(t, a')
+                                  end
+        end
+      | _ => (* either Abs or TAbs *)
+        let
+          val fvi = calculate_fvinfo tm
+          val inst_kd = Type.inst_rank_kind1 rk kdS (mkDict tyvar_compare)
+          val tyS' = filtertyS tyS (tyset_vsubst rk kdS tyS inst_kd (currentty fvi))
+          val tmS' = filtertmS tmS (varset_vsubst rk kdS tyS' inst_ty (current fvi))
+        in
+          if numItems tmS' = 0 andalso numItems tyS' = 0
+             andalso null kdS andalso rk = 0 then raise Unchanged
+          else augvsubst rk kdS tyS' tmS' (Type.vsubst_rkt rk kdS tyS') fvi tm
+        end
+
+  in
+    vinst1
+  end (* vinst_all *)
+
+  fun vinst_all_insert (map, k, v) =
+      insert (map, k, (Susp.delay (fn () => free_type_names v),
+                       Susp.delay (fn () => free_names v),
+                       v))
+
+  fun vinst_all_insert_ty (map, k, v) =
+      insert (map, k, (Susp.delay (fn () => Type.free_names v),
+                       v))
+
+  fun fix_errors f x = f x handle HOL_ERR {message=m,...}
+                               => raise ERR "inst_all" m
+
+in
+
+(* All calls to inst_all that occur in Thm must ensure that
+   all redexes in tmS are variables. *)
+
+fun inst_all (tmS,tyS,kdS,rk:int) =
+    if null tmS
+         then fix_errors (fix_errors inst_rk_kd_ty (tyS,kdS,rk))
+    else if null tyS andalso null kdS andalso rk = 0
+         then fix_errors (fix_errors subst tmS)
+    else if List.all (is_var o #redex) tmS then let
+        fun foldthis ({redex, residue}, acc) = let
+          val _ = ge_ty (type_of redex) (type_of residue)
+                  orelse raise ERR "inst_all" "Bad substitution list"
+        in
+          if eq redex residue then acc
+          else vinst_all_insert (acc, redex, residue)
+        end
+        val atmS = List.foldl foldthis emptyvsubst tmS
+        fun foldthis2 ({redex, residue}, acc) = let
+          open Kind
+          infix :>=:
+          val _ = (is_var_type redex andalso (kind_of redex :>=: kind_of residue))
+                  orelse raise ERR "inst_all" "Bad type substitution list"
+        in
+          if eq_ty redex residue then acc
+          else vinst_all_insert_ty (acc, redex, residue)
+        end
+        val atyS = List.foldl foldthis2 empty_tyvsubst tyS
+        val _ = List.map (fn {redex, residue} =>
+                             (is_var_kind redex andalso rank_of redex >= rank_of residue)
+                             orelse raise ERR "inst_all" "Bad kind substitution list"
+                         ) kdS
+        val _ = rk >= 0 orelse raise ERR "inst_all" "Negative rank substitution"
+      in
+        if numItems atmS = 0
+        then fix_errors (fix_errors inst_rk_kd_ty (tyS,kdS,rk))
+        else (fn tm => vinst_all (atmS,atyS,kdS,rk) tm
+                       handle Unchanged => tm)
+      end
+    else raise ERR "inst_all" "Bad substitution list"
+
+end (* local *)
+
 
 val inst_kind = fn theta => inst_rank_kind (theta,0)
 
@@ -1720,8 +2118,9 @@ fun align_inst [] = I
 
 val inst = align_inst
 
-fun inst_all (tmS,tyS,kdS,rkS) = (subst tmS o inst_rk_kd_ty (tyS,kdS,rkS))
+fun slow_inst_all (tmS,tyS,kdS,rkS) = (subst tmS o inst_rk_kd_ty (tyS,kdS,rkS))
                                  handle HOL_ERR{message=m,...} => raise ERR "inst_all" m;
+
 
 local
 fun align_terms0 (tyS,kdS,rkS) [] = (tyS,kdS,rkS)

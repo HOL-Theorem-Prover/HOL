@@ -282,6 +282,7 @@ val _ = (set_fixity "!:" TypeBinder; add_const "!:");
 val _ = unicode_version { u = UChar.forall ^ ":", tmnm = "!:" };
 val _ = TeX_notation {hol = "!:", TeX = ("\\HOLTokenTyForall{}",2)};
 val _ = TeX_notation {hol = UChar.forall ^ ":", TeX = ("\\HOLTokenTyForall{}",2)};
+val _ = OpenTheory_const_name {const={Thy="bool",Name="!:"},name="Data.Bool.!:"}
 
 val TY_EXISTS_DEF =
  Definition.new_definition
@@ -291,6 +292,7 @@ val _ = (set_fixity "?:" TypeBinder; add_const "?:");
 val _ = unicode_version { u = UChar.exists ^ ":", tmnm = "?:" };
 val _ = TeX_notation {hol = "?:", TeX = ("\\HOLTokenTyExists{}",2)};
 val _ = TeX_notation {hol = UChar.exists ^ ":", TeX = ("\\HOLTokenTyExists{}",2)};
+val _ = OpenTheory_const_name {const={Thy="bool",Name="?:"},name="Data.Bool.?:"}
 
 (* Test of HOL-Omega definitions; uncomment to test:
 

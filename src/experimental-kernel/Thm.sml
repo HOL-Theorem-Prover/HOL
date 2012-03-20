@@ -1342,7 +1342,7 @@ fun INST_ALL (S as (tmS, tyS, kdS, rkS)) th =
         in
           make_thm Count.InstAll
             (tag th, hypset_map substf (hypset th), substf (concl th))
-          handle HOL_ERR _ => ERR "INST_ALL" ""
+          handle HOL_ERR {message=m,...} => ERR "INST_ALL" m
         end
       else
         raise ERR "INST_ALL" "can only instantiate variables"
