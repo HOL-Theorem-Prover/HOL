@@ -1,1 +1,2 @@
 INCLUDES=.. ../semantics ../metatheory
+OPTIONS = QUIT_ON_FAILURE
