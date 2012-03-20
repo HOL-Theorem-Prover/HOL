@@ -1285,11 +1285,11 @@ rw [] >-
 fs [build_ctor_tenv_def, build_tdefs_def, lookup_def] >>
 RES_TAC >>
 rw [build_ctor_tenv_def, build_tdefs_def, lookup_def] >>
-cases_on `h` >>
-cases_on `r` >>
+PairCases_on `h` >>
 rw [lookup_append, REVERSE_APPEND, lookup_reverse_none] >-
 metis_tac [build_ctor_tenv_def, build_tdefs_def, lookup_reverse_none] >|
-[cases_on `lookup x (MAP (\(conN,ts). (conN,LENGTH ts,{cn | (cn,ts) | MEM (cn,ts) r'})) r')` >>
+[qmatch_assum_rename_tac `lookup x (MAP (\(conN,ts). (conN,LENGTH ts,{cn | (cn,ts) | MEM (cn,ts) r'})) r') <> NONE` [] >>
+     cases_on `lookup x (MAP (\(conN,ts). (conN,LENGTH ts,{cn | (cn,ts) | MEM (cn,ts) r'})) r')` >>
      fs [] >>
      imp_res_tac lookup_in >>
      imp_res_tac lookup_notin >>
@@ -1298,12 +1298,14 @@ metis_tac [build_ctor_tenv_def, build_tdefs_def, lookup_reverse_none] >|
      cases_on `y'` >>
      fs [] >>
      rw [] >>
-     pop_assum (ASSUME_TAC o Q.SPEC `(q'',q,r,q')`) >>
+     qmatch_assum_rename_tac `!y. q <> FST y \/ !y'. y <> (\(cn,ts). (cn,h0,ts,h1)) y' \/ ~MEM y' r'` [] >>
+     pop_assum (ASSUME_TAC o Q.SPEC `(q,h0,r,h1)`) >>
      fs [] >>
-     pop_assum (ASSUME_TAC o Q.SPEC `(q'',r)`) >>
-     fs [] >>
-     rw [],
- cases_on `lookup x (MAP (\(cn,ts). (cn,q,ts,q')) r')` >>
+     qmatch_assum_rename_tac `MEM (q,r) r'` [] >>
+     pop_assum (ASSUME_TAC o Q.SPEC `(q,r)`) >>
+     fs [],
+ qmatch_assum_rename_tac `lookup x (MAP (\(cn,ts). (cn,q,ts,q')) r') <> NONE` [] >>
+     cases_on `lookup x (MAP (\(cn,ts). (cn,q,ts,q')) r')` >>
      fs [] >>
      imp_res_tac lookup_in >>
      imp_res_tac lookup_notin >>
@@ -1312,12 +1314,11 @@ metis_tac [build_ctor_tenv_def, build_tdefs_def, lookup_reverse_none] >|
      cases_on `y'` >>
      fs [] >>
      rw [] >>
+     qmatch_assum_rename_tac `MEM (q'',r) r'` [] >>
      pop_assum (ASSUME_TAC o Q.SPEC `(q'',LENGTH (r:'d list), {cn | (cn,ts) |
      MEM (cn,ts) (r':('c,'d list) env)})`) >>
      fs [] >>
      pop_assum (ASSUME_TAC o Q.SPEC `(q'',r)`) >>
-     fs [] >>
-     rw [] >>
      fs []]);
 
 val build_ctor_tenv_empty = Q.prove (
