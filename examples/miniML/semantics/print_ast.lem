@@ -6,6 +6,12 @@ val (^^) : stree -> stree -> stree
 sub [hol] (^^) x y = A x y
 sub [ocaml] (^^) x y = A x y
 
+val string_first : string -> string
+sub [hol] string_first s = STRING (SUB (s,0)) ""
+
+val string_last : string -> string
+sub [hol] string_last s = STRING (SUB (s,STRLEN s - 1)) ""
+
 val stree_to_string : stree -> string -> string
 let rec
 stree_to_string (S s) acc = s ^ acc
@@ -72,13 +78,25 @@ let lit_to_stree sml l = match l with
   | IntLit n -> int_to_stree sml n
 end
 
+let pad_start v =
+  if string_first v = "*" then
+    " " ^ v
+  else
+    v
+
+let pad_end v =
+  if string_last v = "*" then
+    v ^ " "
+  else
+    v
+
 let var_to_stree sml v =
   if sml && List.mem v sml_infixes then
-    S"op " ^^ S v
+    S"op " ^^ S (pad_end v)
   else if not sml && List.mem v ocaml_infixes then
-    S"(" ^^ S v ^^ S")"
+    S"(" ^^ S (pad_end (pad_start v)) ^^ S")"
   else
-    S v
+    S (pad_end (pad_start v))
 
 let rec
 pat_to_stree sml (Pvar v) = var_to_stree sml v
@@ -94,6 +112,15 @@ and
 pat_to_stree sml (Pcon (Some c) ps) =
   S"(" ^^ var_to_stree sml c ^^ 
     S"(" ^^ join_strings (S",") (List.map (pat_to_stree sml) ps) ^^ S")" ^^ S")"
+
+let inc_indent i = 
+  if i < 30 then
+    i + 2
+  else
+    i
+
+let newline indent = 
+  S"\n" ^^ spaces indent
 
 let rec
 exp_to_stree sml indent (Raise r) =
@@ -126,14 +153,12 @@ exp_to_stree sml indent (Var v) =
   var_to_stree sml v
 and
 exp_to_stree sml indent (Fun v e) =
+  newline indent ^^
   (if sml then S"(fn " else S"(fun ") ^^
   var_to_stree sml v ^^ 
-  (if sml then S" =>" else S" ->") ^^ 
-  S"\n" ^^
-  spaces (indent + 2) ^^
-  exp_to_stree sml (indent + 2) e ^^ 
-  S")\n" ^^
-  spaces indent
+  (if sml then S" => " else S" -> ") ^^ 
+  exp_to_stree sml (inc_indent indent) e ^^ 
+  S")"
 and
 exp_to_stree sml indent (App Opapp e1 e2) =
   S"(" ^^ 
@@ -193,70 +218,59 @@ exp_to_stree sml indent (Log lop e1 e2) =
   S")"
 and
 exp_to_stree sml indent (If e1 e2 e3) =
+  newline indent ^^
   S"(if " ^^ 
   exp_to_stree sml indent e1 ^^ 
-  S" then\n" ^^ 
-  spaces (indent+2) ^^
-  exp_to_stree sml (indent+2) e2 ^^
-  S"\n" ^^
-  spaces indent ^^
-  S"else\n" ^^
-  spaces (indent+2) ^^
-  exp_to_stree sml (indent+2) e3 ^^ 
-  S")\n" ^^
-  spaces indent
+  newline indent ^^
+  S"then " ^^ 
+  exp_to_stree sml (inc_indent indent) e2 ^^
+  newline indent ^^
+  S"else " ^^
+  exp_to_stree sml (inc_indent indent) e3 ^^ 
+  S")"
 and
 exp_to_stree sml indent (Mat e pes) =
+  newline indent ^^
   (if sml then S"(case " else S"(match ") ^^ 
   exp_to_stree sml indent e ^^ 
-  (if sml then S" of\n" else S" with\n") ^^
-  spaces (indent + 2) ^^
-  join_strings (S"\n" ^^ spaces (indent + 2) ^^ S"| ") 
-               (List.map (pat_exp_to_stree sml (indent + 2)) pes) ^^ 
-  S")\n" ^^
-  spaces indent
+  (if sml then S" of" else S" with") ^^
+  newline (inc_indent (inc_indent indent)) ^^
+  join_strings (newline (inc_indent indent) ^^ S"| ") 
+               (List.map (pat_exp_to_stree sml (inc_indent indent)) pes) ^^ 
+  S")"
 and
 exp_to_stree sml indent (Let v e1 e2) =
-  (if sml then S"let val " else S"let ") ^^ 
+  newline indent ^^
+  (if sml then S"let val " else S"(let ") ^^ 
   var_to_stree sml v ^^ 
-  S" =\n" ^^ 
-  spaces (indent + 2) ^^
+  S" = " ^^ 
   exp_to_stree sml indent e1 ^^ 
-  S"\n" ^^
-  spaces indent ^^
-  S"in\n" ^^
-  spaces (indent+2) ^^
-  exp_to_stree sml indent e2 ^^ 
-  S"\n" ^^
-  spaces indent ^^
-  (if sml then S" end\n" ^^ spaces indent else S"")
+  newline indent ^^
+  S"in " ^^
+  exp_to_stree sml (inc_indent indent) e2 ^^ 
+  (if sml then newline indent ^^ S"end" else S")")
 and
 exp_to_stree sml indent (Letrec funs e) =
-  (if sml then S"let fun " else S"let rec") ^^ 
-  join_strings (S"\n" ^^ spaces indent ^^ S"and ") 
+  newline indent ^^
+  (if sml then S"let fun " else S"(let rec") ^^ 
+  join_strings (newline indent ^^ S"and ") 
                (List.map (fun_to_stree sml indent) funs) ^^ 
-  S"\n" ^^
-  spaces indent ^^
-  S"in\n" ^^
-  spaces (indent+2) ^^
+  newline indent ^^
+  S"in " ^^
   exp_to_stree sml indent e ^^ 
-  S"\n" ^^
-  spaces indent ^^
-  (if sml then S" end\n" ^^ spaces indent else S"")
+  (if sml then newline indent ^^ S"end" else S")")
 and
 pat_exp_to_stree sml indent (p,e) =
   pat_to_stree sml p ^^ 
-  (if sml then S" =>\n" else S" ->\n") ^^
-  spaces (indent + 2) ^^
-  exp_to_stree sml (indent + 2) e
+  (if sml then S" => " else S" -> ") ^^
+  exp_to_stree sml (inc_indent (inc_indent indent)) e
 and
 fun_to_stree sml indent (v1,v2,e) =
   var_to_stree sml v1 ^^
   S" " ^^ 
   var_to_stree sml v2 ^^ 
-  S" =\n" ^^ 
-  spaces (indent + 2) ^^
-  exp_to_stree sml (indent + 2) e
+  S" = " ^^ 
+  exp_to_stree sml (inc_indent indent) e
 
 let rec
 type_to_stree (Tvar tn) =
@@ -266,7 +280,7 @@ type_to_stree (Tapp ts tn) =
   if ts = [] then
     S tn
   else
-    S"(" ^^ join_strings (S",") (List.map type_to_stree ts) ^^ S")" ^^ S tn
+    S"(" ^^ join_strings (S",") (List.map type_to_stree ts) ^^ S") " ^^ S tn
 and
 type_to_stree (Tfn t1 t2) =
   S"(" ^^ type_to_stree t1 ^^ S" -> " ^^ type_to_stree t2 ^^ S")"
@@ -286,11 +300,11 @@ let typedef_to_stree sml indent (tvs, name, variants) =
   (if tvs = [] then 
      S"" 
    else 
-     S"(" ^^ join_strings (S",") (List.map S tvs) ^^ S")") ^^
+     S"(" ^^ join_strings (S",") (List.map S tvs) ^^ S") ") ^^
   S name ^^ 
-  S "=\n" ^^
-  spaces (indent + 2) ^^
-  join_strings (S"\n" ^^ spaces (indent + 2) ^^ S"| ") 
+  S " =" ^^
+  newline (inc_indent (inc_indent indent)) ^^
+  join_strings (newline (inc_indent indent) ^^ S"| ") 
                (List.map (variant_to_stree sml) variants)
 
 let dec_to_stree sml indent d =
@@ -298,16 +312,15 @@ let dec_to_stree sml indent d =
     | Dlet p e ->
         (if sml then S"val " else S"let ") ^^
         pat_to_stree sml p ^^ 
-        S" =\n" ^^ 
-        spaces (indent + 2) ^^
-        exp_to_stree sml (indent + 2) e
+        S" = " ^^ 
+        exp_to_stree sml (inc_indent indent) e
     | Dletrec funs ->
         (if sml then S"fun " else S"let rec ") ^^ 
-        join_strings (S"\n" ^^ spaces indent ^^ S"and ") 
+        join_strings (newline indent ^^ S"and ") 
                      (List.map (fun_to_stree sml indent) funs)
     | Dtype types ->
         (if sml then S"datatype " else S"type ") ^^ 
-        join_strings (S"\n" ^^ spaces indent ^^ S"and ") 
+        join_strings (newline indent ^^ S"and ") 
                      (List.map (typedef_to_stree sml indent) types)
   end
 

@@ -15,6 +15,10 @@ val _ = Hol_datatype `
 
 (*val (^^) : stree -> stree -> stree*)
 
+(*val string_first : string -> string*)
+
+(*val string_last : string -> string*)
+
 (*val stree_to_string : stree -> string -> string*)
  val stree_to_string_defn = Hol_defn "stree_to_string" `
 
@@ -102,13 +106,29 @@ val _ = Define `
 
 
 val _ = Define `
+ (pad_start v =
+  if STRING (SUB ( v,0)) "" = "*" then STRCAT 
+    " "  v
+  else
+    v)`;
+
+
+val _ = Define `
+ (pad_end v =
+  if STRING (SUB ( v,STRLEN  v - 1)) "" = "*" then STRCAT 
+    v  " "
+  else
+    v)`;
+
+
+val _ = Define `
  (var_to_stree sml v =
   if sml /\ MEM v sml_infixes then A 
-    (S"op ")  (S v)
+    (S"op ")  (S (pad_end v))
   else if ~ sml /\ MEM v ocaml_infixes then A 
-    (S"(") (A   (S v)  (S")"))
+    (S"(") (A   (S (pad_end (pad_start v)))  (S")"))
   else
-    S v)`;
+    S (pad_end (pad_start v)))`;
 
 
  val pat_to_stree_defn = Hol_defn "pat_to_stree" `
@@ -128,6 +148,19 @@ val _ = Define `
     (S"(") (A   (join_strings (S",") (MAP (pat_to_stree sml) ps)) (A   (S")")  (S")"))))))`;
 
 val _ = Defn.save_defn pat_to_stree_defn;
+
+val _ = Define `
+ (inc_indent i = 
+  if i < 30 then
+    i + 2
+  else
+    i)`;
+
+
+val _ = Define `
+ (newline indent = A  
+  (S"\n")  (spaces indent))`;
+
 
  val exp_to_stree_defn = Hol_defn "exp_to_stree" `
 
@@ -161,14 +194,12 @@ val _ = Defn.save_defn pat_to_stree_defn;
   var_to_stree sml v)
 /\
 (exp_to_stree sml indent (Fun v e) = A 
+  (newline indent) (A  
   (if sml then S"(fn " else S"(fun ") (A  
   (var_to_stree sml v) (A   
-  (if sml then S" =>" else S" ->") (A   
-  (S"\n") (A  
-  (spaces (indent + 2)) (A  
-  (exp_to_stree sml (indent + 2) e) (A   
-  (S")\n") 
-  (spaces indent))))))))
+  (if sml then S" => " else S" -> ") (A   
+  (exp_to_stree sml (inc_indent indent) e)  
+  (S")"))))))
 /\
 (exp_to_stree sml indent (App Opapp e1 e2) = A 
   (S"(") (A   
@@ -228,70 +259,59 @@ val _ = Defn.save_defn pat_to_stree_defn;
   (S")")))))
 /\
 (exp_to_stree sml indent (If e1 e2 e3) = A 
+  (newline indent) (A  
   (S"(if ") (A   
   (exp_to_stree sml indent e1) (A   
-  (S" then\n") (A   
-  (spaces (indent+2)) (A  
-  (exp_to_stree sml (indent+2) e2) (A  
-  (S"\n") (A  
-  (spaces indent) (A  
-  (S"else\n") (A  
-  (spaces (indent+2)) (A  
-  (exp_to_stree sml (indent+2) e3) (A   
-  (S")\n") 
-  (spaces indent))))))))))))
+  (newline indent) (A  
+  (S"then ") (A   
+  (exp_to_stree sml (inc_indent indent) e2) (A  
+  (newline indent) (A  
+  (S"else ") (A  
+  (exp_to_stree sml (inc_indent indent) e3)  
+  (S")"))))))))))
 /\
 (exp_to_stree sml indent (Mat e pes) = A 
+  (newline indent) (A  
   (if sml then S"(case " else S"(match ") (A   
   (exp_to_stree sml indent e) (A   
-  (if sml then S" of\n" else S" with\n") (A  
-  (spaces (indent + 2)) (A  
-  (join_strings ( A (S"\n") (A   (spaces (indent + 2))  (S"| "))) 
-               (MAP (pat_exp_to_stree sml (indent + 2)) pes)) (A   
-  (S")\n") 
-  (spaces indent)))))))
+  (if sml then S" of" else S" with") (A  
+  (newline (inc_indent (inc_indent indent))) (A  
+  (join_strings ( A (newline (inc_indent indent))  (S"| ")) 
+               (MAP (pat_exp_to_stree sml (inc_indent indent)) pes))  
+  (S")")))))))
 /\
 (exp_to_stree sml indent (Let v e1 e2) = A 
-  (if sml then S"let val " else S"let ") (A   
+  (newline indent) (A  
+  (if sml then S"let val " else S"(let ") (A   
   (var_to_stree sml v) (A   
-  (S" =\n") (A   
-  (spaces (indent + 2)) (A  
+  (S" = ") (A   
   (exp_to_stree sml indent e1) (A   
-  (S"\n") (A  
-  (spaces indent) (A  
-  (S"in\n") (A  
-  (spaces (indent+2)) (A  
-  (exp_to_stree sml indent e2) (A   
-  (S"\n") (A  
-  (spaces indent) 
-  (if sml then A  (S" end\n")  (spaces indent) else S"")))))))))))))
+  (newline indent) (A  
+  (S"in ") (A  
+  (exp_to_stree sml (inc_indent indent) e2)  
+  (if sml then A  (newline indent)  (S"end") else S")")))))))))
 /\
 (exp_to_stree sml indent (Letrec funs e) = A 
-  (if sml then S"let fun " else S"let rec") (A   
-  (join_strings ( A (S"\n") (A   (spaces indent)  (S"and "))) 
+  (newline indent) (A  
+  (if sml then S"let fun " else S"(let rec") (A   
+  (join_strings ( A (newline indent)  (S"and ")) 
                (MAP (fun_to_stree sml indent) funs)) (A   
-  (S"\n") (A  
-  (spaces indent) (A  
-  (S"in\n") (A  
-  (spaces (indent+2)) (A  
-  (exp_to_stree sml indent e) (A   
-  (S"\n") (A  
-  (spaces indent) 
-  (if sml then A  (S" end\n")  (spaces indent) else S""))))))))))
+  (newline indent) (A  
+  (S"in ") (A  
+  (exp_to_stree sml indent e)  
+  (if sml then A  (newline indent)  (S"end") else S")")))))))
 /\
 (pat_exp_to_stree sml indent (p,e) = A 
   (pat_to_stree sml p) (A   
-  (if sml then S" =>\n" else S" ->\n") (A  
-  (spaces (indent + 2)) 
-  (exp_to_stree sml (indent + 2) e))))
+  (if sml then S" => " else S" -> ") 
+  (exp_to_stree sml (inc_indent (inc_indent indent)) e)))
 /\
 (fun_to_stree sml indent (v1,v2,e) = A 
   (var_to_stree sml v1) (A  
   (S" ") (A   
   (var_to_stree sml v2) (A   
-  (S" =\n") (A   
-  (spaces (indent + 2)) 
-  (exp_to_stree sml (indent + 2) e))))))`;
+  (S" = ")  
+  (exp_to_stree sml (inc_indent indent) e)))))`;
 
 val _ = Defn.save_defn exp_to_stree_defn;
 
@@ -304,7 +324,7 @@ val _ = Defn.save_defn exp_to_stree_defn;
   if ts = [] then
     S tn
   else A 
-    (S"(") (A   (join_strings (S",") (MAP type_to_stree ts)) (A   (S")")  (S tn))))
+    (S"(") (A   (join_strings (S",") (MAP type_to_stree ts)) (A   (S") ")  (S tn))))
 /\
 (type_to_stree (Tfn t1 t2) = A 
   (S"(") (A   (type_to_stree t1) (A   (S" -> ") (A   (type_to_stree t2)  (S")")))))
@@ -329,11 +349,11 @@ val _ = Define `
   (if tvs = [] then 
      S"" 
    else A  
-     (S"(") (A   (join_strings (S",") (MAP S tvs))  (S")"))) (A  
+     (S"(") (A   (join_strings (S",") (MAP S tvs))  (S") "))) (A  
   (S name) (A   
-  (S "=\n") (A  
-  (spaces (indent + 2)) 
-  (join_strings ( A (S"\n") (A   (spaces (indent + 2))  (S"| "))) 
+  (S " =") (A  
+  (newline (inc_indent (inc_indent indent))) 
+  (join_strings ( A (newline (inc_indent indent))  (S"| ")) 
                (MAP (variant_to_stree sml) variants))))))`;
 
 
@@ -343,16 +363,15 @@ val _ = Define `
       Dlet p e => A 
         (if sml then S"val " else S"let ") (A  
         (pat_to_stree sml p) (A   
-        (S" =\n") (A   
-        (spaces (indent + 2)) 
-        (exp_to_stree sml (indent + 2) e))))
+        (S" = ")  
+        (exp_to_stree sml (inc_indent indent) e)))
     | Dletrec funs => A 
         (if sml then S"fun " else S"let rec ")  
-        (join_strings ( A (S"\n") (A   (spaces indent)  (S"and "))) 
+        (join_strings ( A (newline indent)  (S"and ")) 
                      (MAP (fun_to_stree sml indent) funs))
     | Dtype types => A 
         (if sml then S"datatype " else S"type ")  
-        (join_strings ( A (S"\n") (A   (spaces indent)  (S"and "))) 
+        (join_strings ( A (newline indent)  (S"and ")) 
                      (MAP (typedef_to_stree sml indent) types))
   ))`;
 
