@@ -1,5 +1,5 @@
 name: lazy-list
-version: 0.3
+version: 0.4
 description: Lazy lists/colists/streams
 author: Ramana Kumar <ramana.kumar@gmail.com>
 license: MIT
