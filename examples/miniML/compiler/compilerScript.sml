@@ -59,8 +59,7 @@ val compile_varref_def = tDefine "compile_varref" `
 (WF_REL_TAC `measure (λ(a,b,x). case x of CTEnv x => 0 | CTCode x => 1)`)
 
 (* compile : exp * compiler_state → bc_inst list * compiler_state *)
-val compile_defn = Hol_defn "compile"
-` (* tDefine fails *)
+val compile_def = tDefine "compile" `
   (compile (Raise err, s) = ARB) (* TODO *)
 ∧ (compile (Val v, s) = emit s [] (compile_val v))
 ∧ (compile (Mat e pes, s) = ARB) (* Disallowed: use remove_mat *)
@@ -253,27 +252,7 @@ val compile_defn = Hol_defn "compile"
              Stack (Load (k+1));
              Stack (Cons 0 2);
              Stack (Store (k+1))])`
-
-(* TODO: move these 2 elsewhere *)
-
-val SUM_MAP_exp2_size_thm = store_thm(
-"SUM_MAP_exp2_size_thm",
-``∀defs. SUM (MAP exp2_size defs) = SUM (MAP (list_size char_size) (MAP FST defs)) +
-                                    SUM (MAP exp4_size (MAP SND defs)) +
-                                    LENGTH defs``,
-Induct >- rw[exp_size_def] >>
-qx_gen_tac `p` >>
-PairCases_on `p` >>
-srw_tac[ARITH_ss][exp_size_def])
-
-val exp_size_positive = store_thm(
-"exp_size_positive",
-``∀e. 0 < exp_size e``,
-Induct >> srw_tac[ARITH_ss][exp_size_def])
-val _ = export_rewrites["exp_size_positive"]
-
-val (compile_def,compile_ind) = Defn.tprove (compile_defn,
-  WF_REL_TAC `inv_image ($< LEX $<) (λx. case x of
+( WF_REL_TAC `inv_image ($< LEX $<) (λx. case x of
        | INL (e,s) => (exp_size e, 3:num)
        | INR (INL (env,e,n,s,[])) => (exp_size e, 4)
        | INR (INL (env,e,n,s,ns)) =>
