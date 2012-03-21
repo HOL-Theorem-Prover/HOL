@@ -363,16 +363,19 @@ val _ = Define `
       Dlet p e => A 
         (if sml then S"val " else S"let ") (A  
         (pat_to_stree sml p) (A   
-        (S" = ")  
-        (exp_to_stree sml (inc_indent indent) e)))
+        (S" = ") (A   
+        (exp_to_stree sml (inc_indent indent) e) 
+        (if sml then S";" else S";;"))))
     | Dletrec funs => A 
-        (if sml then S"fun " else S"let rec ")  
+        (if sml then S"fun " else S"let rec ") (A   
         (join_strings ( A (newline indent)  (S"and ")) 
-                     (MAP (fun_to_stree sml indent) funs))
+                     (MAP (fun_to_stree sml indent) funs)) 
+        (if sml then S";" else S";;"))
     | Dtype types => A 
-        (if sml then S"datatype " else S"type ")  
+        (if sml then S"datatype " else S"type ") (A   
         (join_strings ( A (newline indent)  (S"and ")) 
-                     (MAP (typedef_to_stree sml indent) types))
+                     (MAP (typedef_to_stree sml indent) types)) 
+        (if sml then S";" else S";;"))
   ))`;
 
 

@@ -313,15 +313,18 @@ let dec_to_stree sml indent d =
         (if sml then S"val " else S"let ") ^^
         pat_to_stree sml p ^^ 
         S" = " ^^ 
-        exp_to_stree sml (inc_indent indent) e
+        exp_to_stree sml (inc_indent indent) e ^^
+        (if sml then S";" else S";;")
     | Dletrec funs ->
         (if sml then S"fun " else S"let rec ") ^^ 
         join_strings (newline indent ^^ S"and ") 
-                     (List.map (fun_to_stree sml indent) funs)
+                     (List.map (fun_to_stree sml indent) funs) ^^
+        (if sml then S";" else S";;")
     | Dtype types ->
         (if sml then S"datatype " else S"type ") ^^ 
         join_strings (newline indent ^^ S"and ") 
-                     (List.map (typedef_to_stree sml indent) types)
+                     (List.map (typedef_to_stree sml indent) types) ^^
+        (if sml then S";" else S";;")
   end
 
 let dec_to_sml_string d = stree_to_string (dec_to_stree true 0 d) ""
