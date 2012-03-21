@@ -88,7 +88,7 @@ val SUC_DEF = new_definition("SUC_DEF",
 local open OpenTheoryMap in
 val ns = ["Number","Natural"]
 val _ = OpenTheory_tyop_name{tyop={Thy="num",Tyop="num"},name=(ns,"natural")}
-val _ = OpenTheory_const_name{const={Thy="num",Name="0"},name=(["Number","Numeral"],"zero")}
+val _ = OpenTheory_const_name{const={Thy="num",Name="0"},name=(ns,"zero")}
 val _ = OpenTheory_const_name{const={Thy="num",Name="SUC"},name=(ns,"suc")}
 end
 
