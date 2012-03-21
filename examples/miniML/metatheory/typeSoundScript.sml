@@ -1086,6 +1086,8 @@ val type_preservation = Q.prove (
   type_d_state (merge (REVERSE tenvC'') tenvC) (envC',envE',ds',c') tenvC' tenvE`,
 rw [type_d_state_cases] >>
 fs [d_step_def] >>
+TRY (Q.PAT_ASSUM `ALL_DISTINCT (pat_bindings p [])` ASSUME_TAC) >>
+fs [] >>
 every_case_tac >>
 fs [] >>
 rw [] >-

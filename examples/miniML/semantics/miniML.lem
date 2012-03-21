@@ -348,6 +348,24 @@ pmatch_list envC (p::ps) (v::vs) env =
 and
 pmatch_list envC _ _ env = Match_type_error
 
+(* Accumulates the bindings of a patterns *)
+val pat_bindings : pat -> varN list -> varN list
+let rec
+pat_bindings (Pvar n) already_bound =
+  n::already_bound
+and
+pat_bindings (Plit l) already_bound = 
+  already_bound
+and
+pat_bindings (Pcon _ ps) already_bound =
+  pats_bindings ps already_bound
+and
+pats_bindings [] already_bound =
+  already_bound
+and
+pats_bindings (p::ps) already_bound =
+  pats_bindings ps (pat_bindings p already_bound)
+
 (* State for CEK-style expression evaluation
  * - constructor data
  * - the environment for the free variables of the current expression
@@ -485,11 +503,14 @@ let continue envC v cs =
     | (Cmat () [], env) :: c ->
         Estep (envC, env, Raise Bind_error, c)
     | (Cmat () ((p,e)::pes), env) :: c ->
-        match pmatch envC p v env with
-          | Match_type_error -> Etype_error
-          | No_match -> push envC env (Val v) (Cmat () pes) c
-          | Match env' -> Estep (envC, env', e, c)
-        end
+        if all_distinct (pat_bindings p []) then
+          match pmatch envC p v env with
+            | Match_type_error -> Etype_error
+            | No_match -> push envC env (Val v) (Cmat () pes) c
+            | Match env' -> Estep (envC, env', e, c)
+          end
+        else
+          Etype_error
     | (Clet n () e, env) :: c ->
         Estep (envC, bind n v env, e, c)
     | (Ccon n vs () [], env) :: c ->
@@ -593,11 +614,14 @@ val d_step : d_state -> d_step_result
 let d_step (envC, env, ds, st) =
   match st with
     | Some (p, (envC', env', Val v, [])) ->
-        match pmatch envC p v env with
-          | Match env' -> Dstep (envC, env', ds, None)
-          | No_match -> Draise Bind_error
-          | Match_type_error -> Dtype_error
-        end
+        if all_distinct (pat_bindings p []) then
+          match pmatch envC p v env with
+            | Match env' -> Dstep (envC, env', ds, None)
+            | No_match -> Draise Bind_error
+            | Match_type_error -> Dtype_error
+          end
+        else
+          Dtype_error
     | Some (p, (envC, env', Raise err, [])) ->
         Draise err
     | Some (p, (envC', env', e, c)) ->
@@ -942,6 +966,7 @@ evaluate_match cenv env v [] (Rerr (Rraise Bind_error))
 and
 
 forall cenv env v p e pes env' bv.
+all_distinct (pat_bindings p []) &&
 (pmatch cenv p v env = Match env') &&
 evaluate cenv env' e bv
 ==>
@@ -950,6 +975,7 @@ evaluate_match cenv env v ((p,e)::pes) bv
 and
 
 forall cenv env v p e pes bv.
+all_distinct (pat_bindings p []) &&
 (pmatch cenv p v env = No_match) &&
 evaluate_match cenv env v pes bv
 ==>
@@ -959,6 +985,13 @@ and
 
 forall cenv env v p e pes.
 (pmatch cenv p v env = Match_type_error)
+==>
+evaluate_match cenv env v ((p,e)::pes) (Rerr Rtype_error)
+
+and
+
+forall cenv env v p e pes.
+not (all_distinct (pat_bindings p []))
 ==>
 evaluate_match cenv env v ((p,e)::pes) (Rerr Rtype_error)
 
@@ -973,7 +1006,8 @@ and
 
 forall cenv env p e ds v env' r.
 evaluate cenv env e (Rval v) &&
-pmatch cenv p v env = Match env' &&
+all_distinct (pat_bindings p []) &&
+(pmatch cenv p v env = Match env') &&
 evaluate_decs cenv env' ds r
 ==>
 evaluate_decs cenv env (Dlet p e :: ds) r
@@ -982,7 +1016,8 @@ and
 
 forall cenv env p e ds v.
 evaluate cenv env e (Rval v) &&
-pmatch cenv p v env = No_match
+all_distinct (pat_bindings p []) &&
+(pmatch cenv p v env = No_match)
 ==>
 evaluate_decs cenv env (Dlet p e :: ds) (Rerr (Rraise Bind_error))
 
@@ -990,7 +1025,15 @@ and
 
 forall cenv env p e ds v.
 evaluate cenv env e (Rval v) &&
-pmatch cenv p v env = Match_type_error
+(pmatch cenv p v env = Match_type_error)
+==>
+evaluate_decs cenv env (Dlet p e :: ds) (Rerr (Rtype_error))
+
+and
+
+forall cenv env p e ds v.
+evaluate cenv env e (Rval v) &&
+not (all_distinct (pat_bindings p []))
 ==>
 evaluate_decs cenv env (Dlet p e :: ds) (Rerr (Rtype_error))
 
@@ -1267,6 +1310,7 @@ and
 forall cenv tenv e pes t1 t2.
 type_e cenv tenv e t1 &&
 (forall ((p,e) MEM pes) tenv'.
+   all_distinct (pat_bindings p []) &&
    type_p cenv tenv p t1 tenv' &&
    type_e cenv tenv' e t2)
 ==>
@@ -1356,6 +1400,7 @@ type_funs cenv env ((fn, n, e)::funs) (bind fn (([]:tvarN list),Tfn t1 t2) env')
 indreln
 
 forall cenv tenv p e t tenv'.
+all_distinct (pat_bindings p []) &&
 type_p cenv tenv p t tenv' &&
 type_e cenv tenv e t
 ==>
@@ -1433,6 +1478,7 @@ and
 
 forall cenv tenv t1 t2 pes.
 (forall ((p,e) MEM pes) tenv'.
+   all_distinct (pat_bindings p []) &&
    type_p cenv tenv p t1 tenv' &&
    type_e cenv tenv' e t2)
 ==>
@@ -1496,6 +1542,7 @@ and
 forall tenvC envC env ds tenvC' tenv tenv' p env' e c t tenv''.
 type_env tenvC env tenv &&
 type_state tenvC (envC,env',e,c) t &&
+all_distinct (pat_bindings p []) &&
 type_p tenvC tenv p t tenv' &&
 type_ds tenvC tenv' ds tenvC' tenv''
 ==>
@@ -1885,6 +1932,7 @@ evaluate_match' env v [] (Rerr (Rraise Bind_error))
 and
 
 forall env v p e pes env' bv.
+all_distinct (pat_bindings p []) &&
 (pmatch' p v env = Match env') &&
 evaluate' env' e bv
 ==>
@@ -1893,6 +1941,7 @@ evaluate_match' env v ((p,e)::pes) bv
 and
 
 forall env v p e pes bv.
+all_distinct (pat_bindings p []) &&
 (pmatch' p v env = No_match) &&
 evaluate_match' env v pes bv
 ==>
@@ -1905,4 +1954,9 @@ forall env v p e pes.
 ==>
 evaluate_match' env v ((p,e)::pes) (Rerr Rtype_error)
 
+and
 
+forall env v p e pes.
+not (all_distinct (pat_bindings p []))
+==>
+evaluate_match' env v ((p,e)::pes) (Rerr Rtype_error)
