@@ -421,6 +421,14 @@ val Eval_NUM_GREATER_EQ = save_thm("Eval_NUM_GREATER_EQ",
   |> REWRITE_RULE [GSYM NUM_def,INT_LT,INT_LE,int_ge,int_gt]
   |> REWRITE_RULE [GSYM GREATER_DEF, GSYM GREATER_EQ]);
 
+val Eval_NUM_EQ_0 = store_thm("Eval_NUM_EQ_0",
+  ``!n. Eval env x (NUM n) ==>
+        Eval env (App (Opb Leq) x (Val (Lit (IntLit 0)))) (BOOL (n = 0))``,
+  REPEAT STRIP_TAC \\ ASSUME_TAC (Q.SPEC `0` Eval_Val_NUM)
+  \\ FULL_SIMP_TAC std_ss [NUM_def]
+  \\ `(n = 0) = &n <= 0` by intLib.COOPER_TAC
+  \\ FULL_SIMP_TAC std_ss [Eval_INT_LESS_EQ]);
+
 
 (* Equality *)
 

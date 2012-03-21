@@ -5,7 +5,7 @@ open HolKernel boolLib bossLib;
 
 open MiniMLTheory terminationProofsTheory determTheory ml_translatorTheory;
 open arithmeticTheory listTheory combinTheory pairTheory;
-open integerTheory intLib;
+open integerTheory intLib ml_optimiseTheory;
 
 infix \\ val op \\ = op THEN;
 
@@ -38,6 +38,7 @@ end
 
 local
   val decls = ref (tl [(T,"","")])
+  fun print_str str = (print "\n"; print str; print "\n\n"; str)
   fun dec2str sml d = if not auto_print then "" else let
     val result =
       (if sml then ``dec_to_sml_string ^d`` else ``dec_to_ocaml_string ^d``)
@@ -45,7 +46,7 @@ local
       handle HOL_ERR _ => failwith("\nUnable to print "^(term_to_string d)^"\n\n")
     in result end;
 in
-  fun add_decl d = (decls := (d,dec2str true d, dec2str false d)::(!decls))
+  fun add_decl d = (decls := (d,print_str (dec2str true d), dec2str false d)::(!decls))
   fun get_decls () = rev (!decls)
 end
 
@@ -1200,6 +1201,18 @@ fun hol2deep tm =
     val th1 = hol2deep x1
     val result = MATCH_MP Eval_Bool_Not th1
     in check_inv "not" tm result end else
+  (* equality: n = 0 *)
+  if can (match_term ``(n = (0:num))``) tm then let
+    val x1 = fst (dest_eq tm)
+    val th1 = hol2deep x1
+    val result = MATCH_MP Eval_NUM_EQ_0 th1
+    in check_inv "num_eq_0" tm result end else
+  (* equality: 0 = n *)
+  if can (match_term ``(0 = (n:num))``) tm then let
+    val x1 = snd (dest_eq tm)
+    val th1 = hol2deep x1
+    val result = MATCH_MP (GSYM Eval_NUM_EQ_0) th1
+    in check_inv "0_eq_num" tm result end else
   (* equality *)
   if is_eq tm then let
     val (x1,x2) = dest_eq tm
@@ -1426,6 +1439,9 @@ fun translate def = let
   (* replace rhs with lhs in th *)
   val th = CONV_RULE ((RAND_CONV o RAND_CONV)
              (REWRITE_CONV [CONTAINER_def] THENC ONCE_REWRITE_CONV [GSYM def])) th
+  (* optimise generated code *)
+  val th = MATCH_MP Eval_OPTIMISE (UNDISCH_ALL th)
+  val th = CONV_RULE ((RATOR_CONV o RAND_CONV) EVAL) th
   val th = D th
   (* abstract parameters *)
   val (th,v) = if no_params then (th,T) else
