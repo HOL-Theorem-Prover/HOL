@@ -1745,6 +1745,12 @@ val SUM_IMAGE_LIST_TO_SET_upper_bound = store_thm(
   SRW_TAC [][MAP,SUM,SUM_IMAGE_THM,SUM_IMAGE_DELETE] THEN
   numLib.DECIDE_TAC);
 
+val SUM_MAP_MEM_bound = store_thm(
+"SUM_MAP_MEM_bound",
+``!f x ls. MEM x ls ==> f x <= SUM (MAP f ls)``,
+NTAC 2 GEN_TAC THEN Induct THEN SRW_TAC[][] THEN
+FULL_SIMP_TAC(srw_ss()++numSimps.ARITH_ss)[MEM,MAP,SUM])
+
 local open numLib in
 val CARD_LIST_TO_SET = Q.store_thm(
 "CARD_LIST_TO_SET",
@@ -2509,7 +2515,7 @@ val _ = adjoin_to_theory
    S "        in add_funs [APPEND,APPEND_NIL, FLAT, HD, TL,";
    S "              LENGTH, MAP, MAP2, NULL_DEF, MEM, EXISTS_DEF,";
    S "              EVERY_DEF, ZIP, UNZIP, FILTER, FOLDL, FOLDR,";
-   S "              FOLDL, REVERSE_DEF, ALL_DISTINCT, GENLIST_AUX,";
+   S "              FOLDL, REVERSE_REV, ALL_DISTINCT, GENLIST_AUX,";
    S "              EL_restricted, EL_simp_restricted,";
    S "              GENLIST_NUMERALS, computeLib.lazyfy_thm list_case_compute,";
    S "              list_size_def, FRONT_DEF, LAST_DEF, isPREFIX]";

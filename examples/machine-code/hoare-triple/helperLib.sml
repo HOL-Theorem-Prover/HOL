@@ -685,7 +685,7 @@ local
   fun next_var_name() = (var_index:=1+(!var_index); "["^int_to_string (!var_index-1)^"]")
   fun AUX_CONV tm = let
     val ty = hd (snd (dest_type (type_of (dest_sep_hide tm))))
-    in (REWR_CONV SEP_HIDE_def THENC 
+    in (REWR_CONV SEP_HIDE_def THENC
         RAND_CONV (ALPHA_CONV (mk_var(next_var_name(),ty)))) tm end
 in
   val EXPAND_SEP_HIDE_CONV = DEPTH_CONV AUX_CONV

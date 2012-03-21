@@ -119,6 +119,11 @@ val FORALL_OPTION = Q.store_thm
   `(!opt. P opt) = P NONE /\ !x. P (SOME x)`,
   METIS_TAC [option_induction]);
 
+val EXISTS_OPTION = store_thm(
+  "EXISTS_OPTION",
+  ``(?opt. P opt) = P NONE \/ ?x. P (SOME x)``,
+  METIS_TAC [option_CASES_orig]);
+
 val SOME_11 = store_thm("SOME_11",
   Term`!x y :'a. (SOME x = SOME y) = (x=y)`,
   REWRITE_TAC [SOME_DEF,option_ABS_ONE_ONE,sumTheory.INR_INL_11]);

@@ -1,0 +1,328 @@
+open MiniML
+
+type stree = S of string | A of stree * stree
+
+val (^^) : stree -> stree -> stree
+sub [hol] (^^) x y = A x y
+sub [ocaml] (^^) x y = A x y
+
+val string_first : string -> string
+sub [hol] string_first s = STRING (SUB (s,0)) ""
+
+val string_last : string -> string
+sub [hol] string_last s = STRING (SUB (s,STRLEN s - 1)) ""
+
+val stree_to_string : stree -> string -> string
+let rec
+stree_to_string (S s) acc = s ^ acc
+and
+stree_to_string (A s1 s2) acc = stree_to_string s1 (stree_to_string s2 acc)
+
+val spaces : num -> stree
+let rec 
+spaces n =
+  if n = 0 then
+    S""
+  else
+    S" " ^^ spaces (n - 1)
+
+(* TODO: use a built-in int_to_string *)
+
+let rec pos_int_to_string n =
+  if Int.(>) n (i 0) then
+    let n' = Int.(%) n (i 10) in
+      pos_int_to_string (Int.(/) n (i 10)) ^^
+      (if n' = i 0 then S"0"
+       else if n' = i 1 then S"1"
+       else if n' = i 2 then S"2"
+       else if n' = i 3 then S"3"
+       else if n' = i 4 then S"4"
+       else if n' = i 5 then S"5"
+       else if n' = i 6 then S"6"
+       else if n' = i 7 then S"7"
+       else if n' = i 8 then S"8"
+       else S"9")
+  else
+    S""
+
+val int_to_stree : bool -> Int.int -> stree
+let int_to_stree sml n =
+  if n = i 0 then
+    S"0"
+  else if Int.(>) n (i 0) then
+    pos_int_to_string n
+  else
+    (if sml then S"~" else S"-") ^^ pos_int_to_string (Int.(-) (i 0) n)
+
+(* Should inculde "^", but I don't know how to get that into HOL, since
+ * antiquote seem stronger than strings. *)
+let sml_infixes = 
+  ["mod"; "<>"; ">="; "<="; ":="; "::"; "before"; "div"; "o"; "@"; ">";
+   "="; "<"; "/"; "-"; "+"; "*"]
+
+let ocaml_infixes = ["="; "+"; "-"; "*"; "/"; "mod"; "<"; ">"; "<="; ">="]
+
+val join_strings : stree -> stree list -> stree
+let rec
+join_strings sep [] = S""
+and
+join_strings sep [x] = x
+and
+join_strings sep (x::y::l) =
+  x ^^ sep ^^ join_strings sep (y::l)
+
+let lit_to_stree sml l = match l with
+  (* Rely on the fact that true and false cannot be rebound in SML *)
+  | Bool true -> S"true"
+  | Bool false -> S"false"
+  | IntLit n -> int_to_stree sml n
+end
+
+let pad_start v =
+  if string_first v = "*" then
+    " " ^ v
+  else
+    v
+
+let pad_end v =
+  if string_last v = "*" then
+    v ^ " "
+  else
+    v
+
+let var_to_stree sml v =
+  if sml && List.mem v sml_infixes then
+    S"op " ^^ S (pad_end v)
+  else if not sml && List.mem v ocaml_infixes then
+    S"(" ^^ S (pad_end (pad_start v)) ^^ S")"
+  else
+    S (pad_end (pad_start v))
+
+let rec
+pat_to_stree sml (Pvar v) = var_to_stree sml v
+and
+pat_to_stree sml (Plit l) = lit_to_stree sml l
+and
+pat_to_stree sml (Pcon None ps) = 
+  S"(" ^^ join_strings (S",") (List.map (pat_to_stree sml) ps) ^^ S")"
+and
+pat_to_stree sml (Pcon (Some c) []) =
+  var_to_stree sml c
+and
+pat_to_stree sml (Pcon (Some c) ps) =
+  S"(" ^^ var_to_stree sml c ^^ 
+    S"(" ^^ join_strings (S",") (List.map (pat_to_stree sml) ps) ^^ S")" ^^ S")"
+
+let inc_indent i = 
+  if i < 30 then
+    i + 2
+  else
+    i
+
+let newline indent = 
+  S"\n" ^^ spaces indent
+
+let rec
+exp_to_stree sml indent (Raise r) =
+  if sml then
+    S"(raise Bind)"
+  else
+    S"(raise (Match_failure (string_of_bool true,0,0)))"
+and
+exp_to_stree sml indent (Val (Lit l)) =
+  lit_to_stree sml l
+and
+exp_to_stree sml indent (Val _) =
+  (* This shouldn't happen in source *)
+  S""
+and
+exp_to_stree sml indent (Con None es) = 
+  S"(" ^^ join_strings (S",") (List.map (exp_to_stree sml indent) es) ^^ S")"
+and
+exp_to_stree sml indent (Con (Some c) []) =
+  var_to_stree sml c
+and
+exp_to_stree sml indent (Con (Some c) es) =
+  S"(" ^^ 
+  var_to_stree sml c ^^ 
+  S"(" ^^ 
+  join_strings (S",") (List.map (exp_to_stree sml indent) es) ^^ 
+  S"))"
+and
+exp_to_stree sml indent (Var v) =
+  var_to_stree sml v
+and
+exp_to_stree sml indent (Fun v e) =
+  newline indent ^^
+  (if sml then S"(fn " else S"(fun ") ^^
+  var_to_stree sml v ^^ 
+  (if sml then S" => " else S" -> ") ^^ 
+  exp_to_stree sml (inc_indent indent) e ^^ 
+  S")"
+and
+exp_to_stree sml indent (App Opapp e1 e2) =
+  S"(" ^^ 
+  exp_to_stree sml indent e1 ^^ 
+  S" " ^^ 
+  exp_to_stree sml indent e2 ^^ 
+  S")"
+and
+exp_to_stree sml indent (App Equality e1 e2) =
+  S"(" ^^ 
+  exp_to_stree sml indent e1 ^^ 
+  S" = " ^^ 
+  exp_to_stree sml indent e2 ^^ 
+  S")"
+and
+exp_to_stree sml indent (App (Opn o) e1 e2) =
+  let s = match o with
+    | Plus -> "+"
+    | Minus -> "-"
+    | Times -> "*"
+    | Divide -> if sml then "div" else "/"
+    | Modulo -> "mod"
+  end
+  in
+    S"(" ^^ 
+    exp_to_stree sml indent e1 ^^ 
+    S" " ^^ 
+    S s ^^ 
+    S" " ^^ 
+    exp_to_stree sml indent e2 ^^ 
+    S")"
+and
+exp_to_stree sml indent (App (Opb o') e1 e2) =
+  let s = match o' with
+    | Lt -> "<"
+    | Gt -> ">"
+    | Leq -> "<="
+    | Geq -> ">"
+  end
+  in
+    S"(" ^^ 
+    exp_to_stree sml indent e1 ^^ 
+    S" " ^^ 
+    S s ^^ 
+    S" " ^^ 
+    exp_to_stree sml indent e2 ^^ 
+    S")"
+and
+exp_to_stree sml indent (Log lop e1 e2) =
+  S"(" ^^ 
+  exp_to_stree sml indent e1 ^^ 
+  (if lop = And then 
+     if sml then S" andalso " else S" && " 
+   else 
+     if sml then S" orelse " else S" || ") ^^
+  exp_to_stree sml indent e2 ^^ 
+  S")"
+and
+exp_to_stree sml indent (If e1 e2 e3) =
+  newline indent ^^
+  S"(if " ^^ 
+  exp_to_stree sml indent e1 ^^ 
+  newline indent ^^
+  S"then " ^^ 
+  exp_to_stree sml (inc_indent indent) e2 ^^
+  newline indent ^^
+  S"else " ^^
+  exp_to_stree sml (inc_indent indent) e3 ^^ 
+  S")"
+and
+exp_to_stree sml indent (Mat e pes) =
+  newline indent ^^
+  (if sml then S"(case " else S"(match ") ^^ 
+  exp_to_stree sml indent e ^^ 
+  (if sml then S" of" else S" with") ^^
+  newline (inc_indent (inc_indent indent)) ^^
+  join_strings (newline (inc_indent indent) ^^ S"| ") 
+               (List.map (pat_exp_to_stree sml (inc_indent indent)) pes) ^^ 
+  S")"
+and
+exp_to_stree sml indent (Let v e1 e2) =
+  newline indent ^^
+  (if sml then S"let val " else S"(let ") ^^ 
+  var_to_stree sml v ^^ 
+  S" = " ^^ 
+  exp_to_stree sml indent e1 ^^ 
+  newline indent ^^
+  S"in " ^^
+  exp_to_stree sml (inc_indent indent) e2 ^^ 
+  (if sml then newline indent ^^ S"end" else S")")
+and
+exp_to_stree sml indent (Letrec funs e) =
+  newline indent ^^
+  (if sml then S"let fun " else S"(let rec") ^^ 
+  join_strings (newline indent ^^ S"and ") 
+               (List.map (fun_to_stree sml indent) funs) ^^ 
+  newline indent ^^
+  S"in " ^^
+  exp_to_stree sml indent e ^^ 
+  (if sml then newline indent ^^ S"end" else S")")
+and
+pat_exp_to_stree sml indent (p,e) =
+  pat_to_stree sml p ^^ 
+  (if sml then S" => " else S" -> ") ^^
+  exp_to_stree sml (inc_indent (inc_indent indent)) e
+and
+fun_to_stree sml indent (v1,v2,e) =
+  var_to_stree sml v1 ^^
+  S" " ^^ 
+  var_to_stree sml v2 ^^ 
+  S" = " ^^ 
+  exp_to_stree sml (inc_indent indent) e
+
+let rec
+type_to_stree (Tvar tn) =
+  S tn
+and
+type_to_stree (Tapp ts tn) =
+  if ts = [] then
+    S tn
+  else
+    S"(" ^^ join_strings (S",") (List.map type_to_stree ts) ^^ S") " ^^ S tn
+and
+type_to_stree (Tfn t1 t2) =
+  S"(" ^^ type_to_stree t1 ^^ S" -> " ^^ type_to_stree t2 ^^ S")"
+and
+type_to_stree Tnum =
+  S"int"
+and
+type_to_stree Tbool =
+  S"bool"
+
+let variant_to_stree sml (c,ts) =
+  var_to_stree sml c ^^ (if ts = [] then S"" else S" of ") ^^
+  join_strings (S" * ") (List.map type_to_stree ts)
+
+val typedef_to_stree : bool -> num -> tvarN list * typeN * (conN * t list) list -> stree
+let typedef_to_stree sml indent (tvs, name, variants) =
+  (if tvs = [] then 
+     S"" 
+   else 
+     S"(" ^^ join_strings (S",") (List.map S tvs) ^^ S") ") ^^
+  S name ^^ 
+  S " =" ^^
+  newline (inc_indent (inc_indent indent)) ^^
+  join_strings (newline (inc_indent indent) ^^ S"| ") 
+               (List.map (variant_to_stree sml) variants)
+
+let dec_to_stree sml indent d =
+  match d with
+    | Dlet p e ->
+        (if sml then S"val " else S"let ") ^^
+        pat_to_stree sml p ^^ 
+        S" = " ^^ 
+        exp_to_stree sml (inc_indent indent) e
+    | Dletrec funs ->
+        (if sml then S"fun " else S"let rec ") ^^ 
+        join_strings (newline indent ^^ S"and ") 
+                     (List.map (fun_to_stree sml indent) funs)
+    | Dtype types ->
+        (if sml then S"datatype " else S"type ") ^^ 
+        join_strings (newline indent ^^ S"and ") 
+                     (List.map (typedef_to_stree sml indent) types)
+  end
+
+let dec_to_sml_string d = stree_to_string (dec_to_stree true 0 d) ""
+let dec_to_ocaml_string d = stree_to_string (dec_to_stree false 0 d) ""

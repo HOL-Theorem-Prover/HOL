@@ -1,9 +1,9 @@
 \documentclass{scrartcl}
 
-\usepackage{amssymb} 
-\usepackage{amsmath} 
-\usepackage{hyperref} 
-\usepackage{stmaryrd} 
+\usepackage{amssymb}
+\usepackage{amsmath}
+\usepackage{hyperref}
+\usepackage{stmaryrd}
 \usepackage{amsthm}
 \usepackage{mathpartir}
 
@@ -63,7 +63,7 @@
   \smallfoot\ is a tool to automatically check separation logic specifications
   of sequential programs. It uses a decidable fragment of separation logic. In
   this paper, a deep embedding of a slightly different decidable fragment of
-  separation logic inspired by \smallfoot\ is presented. Moreover, a \HOL\ 
+  separation logic inspired by \smallfoot\ is presented. Moreover, a \HOL\
   implementation of a decision procedure for entailments in this logic is
   described.
 
@@ -74,7 +74,7 @@
 \end{abstract}
 
 
-\tableofcontents 
+\tableofcontents
 
 
 \section{Motivation}
@@ -92,7 +92,7 @@ short proofs are possible in separation logic.
 
 \smallfoot~\cite{BerdineCO05} is a tool that uses a decidable fragment of
 separation logic to automatically reason about specifications of programs
-written in a simple, imperative language.  This work aims at formalising 
+written in a simple, imperative language.  This work aims at formalising
 separation logic in the interactive theorem prover \HOL~\cite{GoMe93}.
 Additionally, a decision procedure for entailments in the logic used has been
 implemented. As this decision procedure is a major part of \smallfoot, the
@@ -107,7 +107,7 @@ The definitions of the fragment of separation logic used here follow mainly the 
 sake of the embedding.
 
 \begin{definition}[Values]
-  For a given set of values $\values$ let $\valuesnil$ 
+  For a given set of values $\values$ let $\valuesnil$
   denote the extension of $\values$ with a special value $\nil$.
 
   As \nil\ is used to denote the null-pointer, it's often important that a set
@@ -182,22 +182,22 @@ with $i \in \mathbb N_0$, which are assumed to be pairwise distinct.
 
 \begin{definition}[Heaps]
   A \emph{heap} $h$ over a set of values $\values$ and a set of fields
-  $\fields$ is a finite map 
+  $\fields$ is a finite map
   $h: \values \tofin (\fields \tofin \valuesnil)$.
 \end{definition}
 
-As heaps are finite maps, a list notation can be used: 
+As heaps are finite maps, a list notation can be used:
 Let $f := [x_1 \to y_1, \ldots, x_n \to y_n]$ denote the finite map $f : X
 \tofin Y$ with $\dom(f) = \{x_1, \ldots, x_n\}$ and
 $f(x_i) = y_i$ for $1 \leq i \leq n$.
-Furthermore, let $h_1 \cup h_2$ denote the union of two heaps, i.\,e.\ 
+Furthermore, let $h_1 \cup h_2$ denote the union of two heaps, i.\,e.\
 \begin{eqnarray*}
 \dom(h_1 \cup h_2) & := & \dom(h_1) \cup \dom(h_2) \\
 (h_1 \cup h_2)(x) & := & \left\{
 \begin{array}{ll}
   h_1(x) & \text{iff}\ x \in \dom(h_1)\\
   h_2(x) & \text{otherwise}
-\end{array}\right. 
+\end{array}\right.
 \end{eqnarray*}
 
 Using this definition of heaps and these notations, spatial formulae and their
@@ -208,7 +208,7 @@ semantics can be defined:
   \values\ is recursively defined as the smallest set with
 \begin{itemize}
 \item $\sfemp \in \sfset(\vars,\values)$
-\item $\sfpointsto{e}{t_1:e_1, \ldots, t_k:e_k} \in \sfset(\vars,\values)$ for 
+\item $\sfpointsto{e}{t_1:e_1, \ldots, t_k:e_k} \in \sfset(\vars,\values)$ for
   $e, e_1, \ldots, e_k \in  \expr(\vars,\values)$ and $t_1, \ldots, t_k \in \fields$
 \item $\sftree\left((t_1, \ldots, t_k),\textit{es},e\right) \in \sfset(\vars,\values)$
   for $\textit{es}, e \in \expr(\vars,\values)$ and\\$t_1, \ldots, t_k \in \fields$
@@ -222,7 +222,7 @@ For a stack $s$ and a heap $h$ the semantics of a spatial formula is given by
 \item $s, h\ \modelssf \sfemp$ iff $h = []$
 \item $s, h\ \modelssf \textit{sf}_1 * \textit{sf}_2$ iff $\exists h_1, h_2.$
   \begin{itemize}
-  \item $h = h_1 \cup h_2$ and 
+  \item $h = h_1 \cup h_2$ and
   \item $\dom(h_1) \cap \dom(h_2) = \emptyset$ and
   \item $s, h_1\ \modelssf \textit{sf}_1$ and
   \item $s, h_2\ \modelssf \textit{sf}_2$
@@ -234,13 +234,13 @@ For a stack $s$ and a heap $h$ the semantics of a spatial formula is given by
   \item $\forall\ 1 \leq i \leq k.\ t_i \in \dom(r)$ and
   \item $\forall\ 1 \leq i \leq k.\ r(t_i) = \llbracket e_i \rrbracket s$
   \end{itemize}
-\item $s, h\ \modelssf \sftree\left((t_1, \ldots, t_k),\textit{es},e\right)$ iff 
+\item $s, h\ \modelssf \sftree\left((t_1, \ldots, t_k),\textit{es},e\right)$ iff
 \begin{itemize}
   \item $s \modelspf \pfequal{e}{es}$ and $h = []$ or
   \item $s \modelspf \pfunequal{e}{es}$ and $\exists
   e_1, \ldots, e_k.\ s, h\ \modelssf \sfpointsto{e}{t_1:e_1, \ldots, t_k:e_k}
   *$\\$\sftree\left((t_1, \ldots, t_k),\textit{es},e_1\right) * \ldots * \sftree\left((t_1,
-  \ldots, t_k),\textit{es},e_k\right)$ 
+  \ldots, t_k),\textit{es},e_k\right)$
 \end{itemize}
 \end{itemize}
 \end{definition}
@@ -267,16 +267,16 @@ help to explain the intended semantics:
 \item $\sfbintree(t_1,t_2,e) := \sftree((t_1,t_2),\nil,e)$
 \end{itemize}
 
-Intuitively, $s, h\ \modelssf \sfbintree(l,r,e)$ means that $h$ contains a 
+Intuitively, $s, h\ \modelssf \sfbintree(l,r,e)$ means that $h$ contains a
 binary tree with root $e$. The left child is pointed to by the field
 index $l$, the right child is addressed by $r$. If $e$ evaluates to $\nil$,
 i.\,e.\ if $s \modelspf \pfequal e \nil$ holds, the binary tree is empty and
 the stack should be empty as well. Otherwise, one has to check
-that the root node $e$ points to a left child $e_l$ and a right child $e_r$ such that 
+that the root node $e$ points to a left child $e_l$ and a right child $e_r$ such that
 binary trees exists with these childs as roots. Formally, the expression evaluates to
 $\exists e_l,e_r.\ s, h \modelssf \sfpointsto{e}{l:e_l, r:e_r} *
 \sfbintree(l,r,e_l) * \sfbintree(l,r,e_r)$. This means, that the heap can be
-split into three disjoint parts $h_e$, $h_1$ and $h_2$ with 
+split into three disjoint parts $h_e$, $h_1$ and $h_2$ with
 \begin{itemize}
   \item $s, h_e \modelssf \sfpointsto{e}{l:e_l, r:e_r}$,
   \item $s, h_l \modelssf \sfbintree(l,r,e_l)$ and
@@ -289,7 +289,7 @@ s$ hold. This example illustrates the usage of $\fields$. They are used
 as indexes for different branches of a tree. Notice further, that $\dom(h_e) =
 \{\llbracket e \rrbracket s\}$ holds and that the domains of $h_e$, $h_l$ and $h_r$
 are disjoint. Thus, whole $h$ is used to model the tree and -- except for the
-leaves -- each node occurs just once in the tree. 
+leaves -- each node occurs just once in the tree.
 
 Similarly, $\sflist (tl, e_1, e_2)$ describes a single linked, acyclic list
 from $e_1$ to $e_2$ following the pointers indexed by $tl$. Formally, it is
@@ -346,7 +346,7 @@ $\pftrue$ and $\sfemp$ do not occur in the lists. Otherwise they can be easily
 eliminated, since they are the identity.
 
 \noindent
-As a writing convention let in the following 
+As a writing convention let in the following
 \begin{itemize}
   \item $\varpf {}$ denote a pure formula,
   \item $\varsf {}$ denote a spatial formula,
@@ -360,7 +360,7 @@ These are the semantics of the subset of separation logic that will be
 considered here. We are mainly interested in checking the validity of
 entailments in this logic, i.\,e. we are interested in deciding whether
 statements of the form $\forall s,h.\ \left(s\ \modelspf\ \Pi\right) \wedge
-\left(s,h\ \modelssf\ \Sigma\right) \Rightarrow 
+\left(s,h\ \modelssf\ \Sigma\right) \Rightarrow
 \left(s\ \modelspf\ \Pi'\right) \wedge \left(s,h\ \modelssf\ \Sigma'\right)$ hold.
 
 However, to keep track of some information during calculations a slightly
@@ -396,7 +396,7 @@ for this purpose leads to the following definition:
       = \llbracket e'_j \rrbracket s\right)$ and
     \item $1 \leq i \leq n \wedge 1 \leq j \leq m \wedge \left(s\ \modelspf\ \pfunequal {e'_j}
       {e''_j}\right) \Longrightarrow \\\neg \left(\llbracket e_i \rrbracket s = \llbracket e'_j \rrbracket s\right)$
-    \end{itemize}  
+    \end{itemize}
   \end{itemize}
 
   This definition of $\heapdistinct$ is quite technical. It is intended to
@@ -411,7 +411,7 @@ for this purpose leads to the following definition:
 \begin{array}{ll}
   \entailment{\varel, \varepl, \Pi, \Sigma}{\Pi', \Sigma'} := \forall s, h.&
   \heapdistinct(s, h, \varel, \varepl)\ \wedge \\
-  &\left(s\ \modelspf\ \Pi\right)\ \wedge\ 
+  &\left(s\ \modelspf\ \Pi\right)\ \wedge\
 \left(s,h\ \modelssf\ \Sigma\right)\ \Longrightarrow \\
 &\left(s\ \modelspf\ \Pi'\right)\ \wedge\ \left(s,h\ \modelssf\ \Sigma'\right)
 \end{array}
@@ -430,7 +430,7 @@ generalisation of the predicates for lists and binary trees and helps to keep
 some proofs more succinct. The predicate $\heapdistinct$ is not used
 in \cite{berdine05symbolic}. Otherwise, the logics are identical.
 
-However, \smallfoot\ uses an additional predicate 
+However, \smallfoot\ uses an additional predicate
 for double linked lists and one for xor linked lists \cite{BerdineCO05}. These
 could be easily added to the logic presented here. For sake of time and
 simplicity they have been omitted. Notice however, that these additions were
@@ -459,7 +459,7 @@ The sets $\values$, $\fields$ and $\vars$ are modelled as free type variables.
 This leaves the problem that a constraint that the set $\values$ is infinite
 has to be added to the precondition of some theorems. However, it is
 straightforward to define $\valuesnil$ and expressions using these free type
-variables. $\valuesnil$ is modelled by the $\HOL$ datatype 
+variables. $\valuesnil$ is modelled by the $\HOL$ datatype
 \texttt{ds\_value}, expressions by the $\HOL$ datatype
 \texttt{ds\_expression}. Using these basic datatypes, the datatypes \texttt{ds\_pure\_formula} and
 \texttt{ds\_spatial\_formula} are defined for pure and spatial formulae,
@@ -467,8 +467,8 @@ respectively:
 
 \begin{verbatim}
 val _ = Hol_datatype `ds_value =
-     dsv_nil 
-   | dsv_const of 'value` 
+     dsv_nil
+   | dsv_const of 'value`
 
 val _ = Hol_datatype `ds_expression =
      dse_const of 'value ds_value
@@ -478,23 +478,23 @@ val dse_nil_def = Define `dse_nil = dse_const dsv_nil`
 
 val _ = Hol_datatype `ds_pure_formula =
      pf_true
-   | pf_equal of ('vars, 'value) ds_expression => 
+   | pf_equal of ('vars, 'value) ds_expression =>
                  ('vars, 'value) ds_expression
-   | pf_unequal of ('vars, 'value) ds_expression => 
-                   ('vars, 'value) ds_expression 
+   | pf_unequal of ('vars, 'value) ds_expression =>
+                   ('vars, 'value) ds_expression
    | pf_and of ds_pure_formula => ds_pure_formula`;
 
 val _ = Hol_datatype `ds_spatial_formula =
      sf_emp
-   | sf_points_to of ('vars, 'value) ds_expression => 
+   | sf_points_to of ('vars, 'value) ds_expression =>
                      ('field # ('vars, 'value) ds_expression) list
-   | sf_tree of 'field list => ('vars, 'value) ds_expression => 
-                ('vars, 'value) ds_expression 
+   | sf_tree of 'field list => ('vars, 'value) ds_expression =>
+                ('vars, 'value) ds_expression
    | sf_star of ds_spatial_formula => ds_spatial_formula`;
 
 val sf_ls_def = Define `sf_ls f e1 e2 = sf_tree [f] e2 e1`;
 
-val sf_bin_tree_def = Define 
+val sf_bin_tree_def = Define
    `sf_bin_tree (f1, f2) e = sf_tree [f1;f2] dse_nil e`;
 \end{verbatim}
 
@@ -598,7 +598,7 @@ which obviously have the same semantics. So, $\pfequal {e_1} e_2$ and
 $\pfequal {e_2} e_1$ are not distinguished. The same holds for $\pfunequal
 {e_1} e_2$. Additionally, the order, in which fields occur in $\sftree$ and
 $\mapsto$ formulae is not important. Thus, we do for example not
-distinguish between $\sfbintree(l,r,e)$ and $\sfbintree(r,l,e)$ or between 
+distinguish between $\sfbintree(l,r,e)$ and $\sfbintree(r,l,e)$ or between
 $\sfpointsto e {t_1: e_1, t_2:e_2, t_3:e_3}$ and $\sfpointsto e {t_2: e_2,
   t_3:e_3, t_1:e_1}$.
 \bigskip
@@ -735,7 +735,7 @@ value of $e$ is not in the remaining heap and that it is distinct to the
 values of everything else in $\eta$. These two properties capture the
 properties of the $*$-operation. Additionally, it is stored that $e$ does
 not equal to $\nil$, which captures the properties of the $\mapsto$-operator
-itself. 
+itself.
 
 For trees, it's very similar. However, the tree may be empty. Therefore,
 $(e,es)$ is added to $\pi$, which has the same effect as adding $e$ to $\pi$
@@ -788,13 +788,13 @@ the left hand side is inconsistent, then the whole entailment holds.
 \end{array}
 \]
 These inference are implemented by
-\texttt{ds\_inference\_INCONSISTENT\_\_\_CONV}. 
+\texttt{ds\_inference\_INCONSISTENT\_\_\_CONV}.
 
 
 \subsubsection{\texttt{ds\_inference\_NIL\_NOT\_LVAL}}
 
 According to the semantics of $\mapsto$, $\nil$ cannot point to
-anything. The following inferences make this fact explicit. 
+anything. The following inferences make this fact explicit.
 \[\begin{array}{l}
 \eqinferstyle
 \inferrule[NIL-NOT-LVAL-pointsto]
@@ -940,7 +940,7 @@ This inference is implemented by \texttt{ds\_inference\_PRECONDITION\_CASES\_\_\
 \]
 This inference does a case analysis on the length of lists. Its interesting to
 note that just two cases are sufficient to cover everything. Thus, it is not necessary
-to do induction for lists. 
+to do induction for lists.
 
 The general idea behind the correctness proof of this inference is that the
 logic can just access the two endpoints $e_1$ and $e_2$ of the list. It can
@@ -1049,7 +1049,7 @@ predicate, but just the instantiations $\sflist$ and $\sfbintree$:
   normal form, i.\,e.\:
   \begin{itemize}
   \item remove all occurrences of $\nil$, $*$, $\pftrue$ and $\wedge$ from
-    $\Pi, \Sigma, \Pi', \Sigma'$ 
+    $\Pi, \Sigma, \Pi', \Sigma'$
   \item remove multiple occurrences of the same field index from $\Sigma$ and $\Sigma'$
   \end{itemize}
 \item apply all the equality inferences (all except \textsc{Frame-base}) in an
@@ -1077,8 +1077,8 @@ following expression folds:
 
 Thus, if the list of entailments
 ${\eta_i,\pi_i,\Pi_i,\Sigma_i}\vdash{\Pi_i',\Sigma_i'}$ is empty, the original
-entailment really holds. If it is not empty, it remains to show that 
-the original entailment does not hold. Let 
+entailment really holds. If it is not empty, it remains to show that
+the original entailment does not hold. Let
 ${\eta_x,\pi_x,\Pi_x,\Sigma_x}\vdash{\Pi'_x,\Sigma'_x}$ be an element of the
 list. Then it is sufficient to show, that this element does not hold.
 
@@ -1107,14 +1107,14 @@ The following entailment is proofed  by \smallfoot\ while the example
 specification \texttt{list.sf} is checked:
 %
 \begin{verbatim}
-0!=z_3 * 0!=x * 0!=z * z_3!=y * z_3!=z * a!=e * x!=y * x!=z * y!=z * 
-z |-> hd:e,tl:y * listseg(tl; y, 0) * listseg(tl; x, z_3) * z_3 |-> tl:z 
+0!=z_3 * 0!=x * 0!=z * z_3!=y * z_3!=z * a!=e * x!=y * x!=z * y!=z *
+z |-> hd:e,tl:y * listseg(tl; y, 0) * listseg(tl; x, z_3) * z_3 |-> tl:z
 |-
 listseg(tl; x, z) * z |-> tl:y * listseg(tl; y, 0)
 \end{verbatim}
 %
 Using the variable renaming $z_3 \to x_0$, $x \to x_1$, $z \to x_2$, $y
-\to x_3$, $a \to x_4$, $e \to x_5$, this can be written as 
+\to x_3$, $a \to x_4$, $e \to x_5$, this can be written as
 \[\begin{array}{lr}
 \pfunequal {x_0} \nil,\pfunequal {x_1} \nil, \pfunequal {x_2} \nil,
 \pfunequal {x_0} {x_3}, \pfunequal {x_0} {x_2}, \pfunequal {x_4} {x_5},
@@ -1166,7 +1166,7 @@ Do do the same proof in \HOL, one can either apply single inference rules manual
 call the decision procedure:
 \begin{verbatim}
 val t = ``LIST_DS_ENTAILS ([],[])
-  ([pf_unequal (dse_var 0) dse_nil; 
+  ([pf_unequal (dse_var 0) dse_nil;
     pf_unequal (dse_var 1) dse_nil;
     pf_unequal (dse_var 2) dse_nil;
     pf_unequal (dse_var 0) (dse_var 3);
@@ -1185,7 +1185,7 @@ val t = ``LIST_DS_ENTAILS ([],[])
      sf_points_to (dse_var 2) [("tl", dse_var 3)];
      sf_ls "tl" (dse_var 3) dse_nil])``;
 
-val thm1 = 
+val thm1 =
 (ds_inference_FRAME___CONV THENC
  ds_inference_APPEND_LIST___CONV THENC
  ds_inference_SIMPLE_UNROLL___CONV THENC
@@ -1208,7 +1208,7 @@ Lets now consider an entailment that does not hold:
   \sflist(\textit{tl},x,y)\ \ \wedge  \\
 \pfequal x y,\sfpointsto {x} {\textit{tl}:y} & \vdash &
   \sflist(\textit{tl},x,y) & {\Longleftrightarrow}
-\\ 
+\\
 & \vdots \\
 \pfequal x y,\sfpointsto {x} {\textit{tl}:y} & \vdash &
   \sflist(\textit{tl},x,y) & {\stackrel{\sf
@@ -1223,7 +1223,7 @@ Lets now consider an entailment that does not hold:
 Now, no more inferences are applicable. However, one can easily see, that the
 entailment does not hold.
 
-Inferences to detect false entailments are not implemented in \HOL. 
+Inferences to detect false entailments are not implemented in \HOL.
 Thus, the above reasoning looks in \HOL\ as follows:
 \begin{verbatim}
 > val t = ``LIST_DS_ENTAILS ([],[])

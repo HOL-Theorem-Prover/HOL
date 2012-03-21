@@ -384,7 +384,19 @@ val word_lo_def = zDefine`
 val word_hs_def = zDefine`
   word_hs a b = let (n,z,c,v) = nzcv a b in c`;
 
-val word_abs_def = zDefine`
+val word_min_def = Define`
+  word_min a b = if word_lo a b then a else b`;
+
+val word_max_def = Define`
+  word_max a b = if word_lo a b then b else a`;
+
+val word_smin_def = Define`
+  word_smin a b = if word_lt a b then a else b`;
+
+val word_smax_def = Define`
+  word_smax a b = if word_lt a b then b else a`;
+
+val word_abs_def = Define`
   word_abs w = if word_lt w (n2w 0) then word_2comp w else w`;
 
 val _ = add_infix("<+", 450,HOLgrammars.NONASSOC)
@@ -997,8 +1009,8 @@ val w2s_s2w = store_thm("w2s_s2w",
      n2s b n2c (s2n b c2n s MOD dimword(:'a))`,
   SRW_TAC [] [s2w_def, w2s_def]);
 
-val LESS_THM =
-  CONV_RULE numLib.SUC_TO_NUMERAL_DEFN_CONV prim_recTheory.LESS_THM;
+val NUMERAL_LESS_THM = Theory.save_thm("NUMERAL_LESS_THM",
+  CONV_RULE numLib.SUC_TO_NUMERAL_DEFN_CONV prim_recTheory.LESS_THM);
 
 val rwts = [FUN_EQ_THM, UNHEX_HEX, l2n_n2l, s2n_n2s, l2w_w2l, s2w_w2s,
   word_from_bin_list_def,word_from_oct_list_def,word_from_dec_list_def,
@@ -2064,6 +2076,19 @@ val bit_field_insert = Q.store_thm("bit_field_insert",
          word_slice_def, word_and_def, word_or_def, word_1comp_def,
          WORD_NEG_1_T]
   \\ SRW_TAC [ARITH_ss] []);
+
+val word_join_index = Q.store_thm("word_join_index",
+  `!i (a:'a word) (b:'b word).
+        FINITE univ(:'a) /\ FINITE univ(:'b) /\ i < dimindex(:'a + 'b) ==>
+        ((word_join a b) ' i =
+           if i < dimindex(:'b) then
+              b ' i
+           else
+              a ' (i - dimindex (:'b)))`,
+  SRW_TAC [fcpLib.FCP_ss, boolSimps.LET_ss, ARITH_ss]
+      [word_join_def, word_or_def, word_lsl_def, w2w, fcpTheory.index_sum]
+  \\ `i = 0` by DECIDE_TAC
+  \\ FULL_SIMP_TAC (srw_ss()) []);
 
 (* ------------------------------------------------------------------------- *)
 (* Reduce operations : theorems                                              *)

@@ -280,7 +280,9 @@ end
 fun free_vars_lr tm = let
   fun FV (v as Var _) A = Lib.insert v A
     | FV (App(f, x)) A = FV x (FV f A)
-    | FV (Abs(v, body)) A = Lib.set_diff (FV body A) [v]
+    | FV (Abs(v, body)) A = if Lib.mem v A
+                            then FV body A
+                            else Lib.set_diff (FV body A) [v]
     | FV _ A = A
 in
   List.rev (FV tm [])

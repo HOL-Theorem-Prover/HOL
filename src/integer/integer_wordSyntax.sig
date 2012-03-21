@@ -14,6 +14,8 @@ signature integer_wordSyntax = sig
   val saturate_w2sw_tm       : term
   val signed_saturate_add_tm : term
   val signed_saturate_sub_tm : term
+  val toString_tm            : term
+  val fromString_tm          : term
 
   val mk_i2w                 : term * hol_type -> term
   val mk_w2i                 : term -> term
@@ -27,8 +29,10 @@ signature integer_wordSyntax = sig
   val mk_saturate_w2sw       : term * hol_type -> term
   val mk_signed_saturate_add : term * term -> term
   val mk_signed_saturate_sub : term * term -> term
+  val mk_toString            : term -> term
+  val mk_fromString          : term -> term
 
-  val dest_i2w                 : term -> term
+  val dest_i2w                 : term -> term * hol_type
   val dest_w2i                 : term -> term
   val dest_int_min             : term -> hol_type
   val dest_int_max             : term -> hol_type
@@ -40,6 +44,8 @@ signature integer_wordSyntax = sig
   val dest_saturate_w2sw       : term -> term * hol_type
   val dest_signed_saturate_add : term -> term * term
   val dest_signed_saturate_sub : term -> term * term
+  val dest_toString            : term -> term
+  val dest_fromString          : term -> term
 
   val is_i2w                 : term -> bool
   val is_w2i                 : term -> bool
@@ -53,5 +59,7 @@ signature integer_wordSyntax = sig
   val is_saturate_w2sw       : term -> bool
   val is_signed_saturate_add : term -> bool
   val is_signed_saturate_sub : term -> bool
+  val is_toString            : term -> bool
+  val is_fromString          : term -> bool
 
 end

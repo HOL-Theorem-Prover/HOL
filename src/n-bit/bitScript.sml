@@ -375,6 +375,12 @@ val BITS_ZEROL = store_thm("BITS_ZEROL",
   `!h a. a < 2 ** SUC h ==> (BITS h 0 a = a)`,
   RW_TAC bool_ss [BITS_ZERO3,LESS_MOD]);
 
+val BITS_LOG2_ZERO_ID = Q.store_thm("BITS_LOG2_ZERO_ID",
+  `!n. 0 < n ==> (BITS (LOG2 n) 0 n = n)`,
+  REPEAT STRIP_TAC
+  \\ MATCH_MP_TAC BITS_ZEROL
+  \\ SRW_TAC [] [logrootTheory.LOG, LOG2_def]);
+
 val BITS_LT_LOW = store_thm("BITS_LT_LOW",
   `!h l n. n < 2 ** l ==> (BITS h l n = 0)`,
   REPEAT STRIP_TAC
@@ -1460,6 +1466,17 @@ val l2n_n2l = store_thm("l2n_n2l",
     \\ SRW_TAC [ARITH_ss] [Once n2l_def, l2n_def]
     \\ `LOG b (n DIV b) < LOG b n` by SRW_TAC [ARITH_ss] [LOG_DIV_LESS]
     \\ SRW_TAC [ARITH_ss] [(GSYM o ONCE_REWRITE_RULE [MULT_COMM]) DIVISION]);
+
+val l2n_lt = Q.store_thm("l2n_lt",
+  `!l b. 0 < b ==> l2n b l < b ** LENGTH l`,
+  Induct \\ SRW_TAC [] [l2n_def, arithmeticTheory.EXP]
+  \\ RES_TAC
+  \\ IMP_RES_TAC arithmeticTheory.LESS_ADD_1
+  \\ POP_ASSUM (K ALL_TAC)
+  \\ POP_ASSUM SUBST1_TAC
+  \\ SRW_TAC [] [arithmeticTheory.LEFT_ADD_DISTRIB]
+  \\ SRW_TAC [ARITH_ss]
+       [arithmeticTheory.MOD_LESS, DECIDE ``a < b:num ==> (a < b + c)``])
 
 (* ......................................................................... *)
 

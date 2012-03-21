@@ -14,6 +14,20 @@ val _ = new_theory "integer_word"
 
 (* ------------------------------------------------------------------------- *)
 
+val toString_def = Define`
+   toString (i : int) =
+      if i < 0 then
+        "~" ++ bit$num_to_dec_string (Num ~i)
+      else
+        bit$num_to_dec_string (Num i)`;
+
+val fromString_def = Define`
+   fromString s =
+     if HD s = #"~" then
+        ~&(bit$num_from_dec_string (TL s))
+     else
+        &(bit$num_from_dec_string s)`;
+
 val i2w_def = Define`
   i2w (i : int) : 'a word =
     if i < 0 then -(n2w (Num(-i))) else n2w (Num i)`;

@@ -100,6 +100,14 @@ val dest_mod = dest_binop mod_tm ("dest_mod", "Term not a modulo")
 val is_mod = can dest_mod
 fun mk_mod (t1, t2) = list_mk_comb(mod_tm, [t1, t2])
 
+val dest_quot = dest_binop quot_tm ("dest_quot", "Term not a quotient")
+val is_quot = can dest_quot
+fun mk_quot (t1, t2) = list_mk_comb(quot_tm, [t1, t2])
+
+val dest_rem = dest_binop rem_tm ("dest_rem", "Term not a remainder")
+val is_rem = can dest_rem
+fun mk_rem (t1, t2) = list_mk_comb(rem_tm, [t1, t2])
+
 fun mk_absval tm = mk_comb(absval_tm, tm)
 fun dest_absval tm = let
   val (f,x) = dest_comb tm

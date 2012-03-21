@@ -3,6 +3,12 @@ sig
 
   include Abbrev
 
+  val syntax_fns :
+     string -> int -> (term -> exn -> 'a -> 'b) -> (term * 'c -> 'd) ->
+       string -> term * ('c -> 'd) * ('a -> 'b) * ('a -> bool)
+
+  val dest_quadop : term -> exn -> term -> term * term * term * term
+
   val lsb_tm         : term
   val log2_tm        : term
   val hex_tm         : term
