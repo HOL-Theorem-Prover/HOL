@@ -96,7 +96,9 @@ val compile_def = tDefine "compile" `
          v1,...,vm = values of free variables (the environment)
          c1,...,cn = code of all functions sharing the environment
          ck = this function's code (thus ck appears twice)
-       Non-recursive closures omit the initial list of CodePtrs *)
+       Non-recursive closures omit the initial list of CodePtrs.
+       If they additionally don't have any free variables, the
+       entire environment block is replaced by Number 0. *)
    let (e1,s) = compile (e1,s) in
    let (e2,s) = compile (e2,s) in
    (* stack = arg :: Block 0 [CodePtr ck; env] :: rest *)
@@ -262,7 +264,9 @@ val compile_def = tDefine "compile" `
    let (r,s) = emit s r (Stack Pop :: ldenv) in
    case names of
    | NONE =>
-   let (r,s) = emit s r [Stack (Cons 0 i); Stack (Cons 0 2)] in
+   let (r,s) = emit s r [Stack (if i = 0 then (PushInt 0)
+                                else (Cons 0 i));
+                         Stack (Cons 0 2)] in
      (r, s with sz := s.sz + 1)
    | SOME names =>
    let (r,s) = emit s r [Stack (Cons 0 (i+j))] in
