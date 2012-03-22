@@ -15,6 +15,10 @@ val _ = Hol_datatype `
 
 (*val (^^) : stree -> stree -> stree*)
 
+(*val Num : Int.int -> num*)
+
+(*val CHR : num -> string*)
+
 (*val string_first : string -> string*)
 
 (*val string_last : string -> string*)
@@ -41,25 +45,14 @@ val _ = Defn.save_defn spaces_defn;
 
 (* TODO: use a built-in int_to_string *)
 
- val pos_int_to_string_defn = Hol_defn "pos_int_to_string" `
- (pos_int_to_string n =
-  if int_gt n (& 0) then
-    let n' = int_mod n (& 10) in A 
-      (pos_int_to_string (int_div n (& 10))) 
-      (if n' = & 0 then S"0"
-       else if n' = & 1 then S"1"
-       else if n' = & 2 then S"2"
-       else if n' = & 3 then S"3"
-       else if n' = & 4 then S"4"
-       else if n' = & 5 then S"5"
-       else if n' = & 6 then S"6"
-       else if n' = & 7 then S"7"
-       else if n' = & 8 then S"8"
-       else S"9")
+ val num_to_string_defn = Hol_defn "num_to_string" `
+ (num_to_string n =
+  if n > 0 then A 
+    (num_to_string (n DIV 10))  (S (STRING (CHR  (n MOD 10 + 48)) ""))
   else
     S"")`;
 
-val _ = Defn.save_defn pos_int_to_string_defn;
+val _ = Defn.save_defn num_to_string_defn;
 
 (*val int_to_stree : bool -> Int.int -> stree*)
 val _ = Define `
@@ -67,9 +60,9 @@ val _ = Define `
   if n = & 0 then
     S"0"
   else if int_gt n (& 0) then
-    pos_int_to_string n
+    num_to_string (Num n)
   else A 
-    (if sml then S"~" else S"-")  (pos_int_to_string ((int_sub) (& 0) n)))`;
+    (if sml then S"~" else S"-")  (num_to_string (Num ((int_sub) (& 0) n))))`;
 
 
 (* Should inculde "^", but I don't know how to get that into HOL, since

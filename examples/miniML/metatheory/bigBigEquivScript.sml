@@ -1,4 +1,4 @@
-open preamble MiniMLTheory terminationProofsTheory;
+open preamble MiniMLTheory MiniMLTerminationTheory;
 open typeSoundTheory bigSmallEquivTheory determTheory untypedSafetyTheory;
 
 val _ = new_theory "bigBigEquiv"

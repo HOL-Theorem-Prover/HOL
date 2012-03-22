@@ -1,4 +1,4 @@
-open preamble MiniMLTheory terminationProofsTheory;
+open preamble MiniMLTheory MiniMLTerminationTheory;
 
 val _ = new_theory "typeSound";
 

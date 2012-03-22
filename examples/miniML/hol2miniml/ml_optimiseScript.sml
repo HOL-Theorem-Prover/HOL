@@ -1,6 +1,6 @@
 open HolKernel Parse boolLib bossLib; val _ = new_theory "ml_optimise";
 
-open MiniMLTheory terminationProofsTheory determTheory;
+open MiniMLTheory MiniMLTerminationTheory determTheory;
 open arithmeticTheory listTheory combinTheory pairTheory;
 open integerTheory ml_translatorTheory;
 

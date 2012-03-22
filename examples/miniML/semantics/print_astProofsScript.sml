@@ -1,6 +1,5 @@
 open preamble;
-open MiniMLTheory Print_astTheory;
-open terminationProofsTheory;
+open Print_astTheory Print_astTerminationTheory;
 
 val _ = new_theory "print_astProofs"
 

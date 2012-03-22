@@ -1,4 +1,4 @@
-open preamble MiniMLTheory terminationProofsTheory
+open preamble MiniMLTheory MiniMLTerminationTheory
 open CompileTheory evaluateEquationsTheory
 
 val _ = new_theory "compileProofs"
@@ -100,6 +100,8 @@ val (remove_mat_vp_def,remove_mat_vp_ind) =
     (λx. case x of
          | INL (v,p) => pat_size p
          | INR (v,n,ps) => pat1_size ps)`)
+val _ = save_thm ("remove_mat_vp_def", remove_mat_vp_def);
+val _ = save_thm ("remove_mat_vp_ind", remove_mat_vp_ind);
 
 val (remove_mat_def,remove_mat_ind) =
   tprove_no_defn ((remove_mat_def,remove_mat_ind),
@@ -108,6 +110,19 @@ val (remove_mat_def,remove_mat_ind) =
     (λx. case x of
          | INL e => exp_size e
          | INR (v,pes) => exp6_size pes)`)
+val _ = save_thm ("remove_mat_def", remove_mat_def);
+val _ = save_thm ("remove_mat_ind", remove_mat_ind);
+
+val (remove_Gt_Leq_def,remove_Gt_Leq_ind) =
+  tprove_no_defn ((remove_Gt_Leq_def,remove_Gt_Leq_ind),
+  WF_REL_TAC `measure exp_size` >>
+  srw_tac[ARITH_ss][exp1_size_thm,exp6_size_thm,exp8_size_thm] >>
+  imp_res_tac SUM_MAP_MEM_bound >|
+    map (fn q => pop_assum (qspec_then q mp_tac))
+    [`exp2_size`,`exp7_size`,`exp_size`] >>
+  srw_tac[ARITH_ss][exp_size_def])
+val _ = save_thm ("remove_Gt_Leq_def", remove_Gt_Leq_def);
+val _ = save_thm ("remove_Gt_Leq_ind", remove_Gt_Leq_ind);
 
 (*
 This is too awful! TODO: Try a simpler definition of fold_consts.
