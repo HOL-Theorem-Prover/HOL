@@ -9,6 +9,15 @@ val _ = computeLib.add_thms
 , REPLACE_ELEMENT_compute
 ] computeLib.the_compset
 
+(*  move to compileProofs? *)
+val _ = computeLib.del_consts [``remove_mat``,``remove_mat_vp``]
+val _ = computeLib.del_consts [``remove_Gt_Geq``]
+val _ = computeLib.add_funs
+[ compileProofsTheory.remove_mat_def,
+  compileProofsTheory.remove_mat_vp_def,
+  compileProofsTheory.remove_Gt_Geq_def
+]
+
 val d = !Globals.emitMLDir
 val _ = map (fn s => (use (d^s^"ML.sig"); use (d^s^"ML.sml")))
 ["combin","pair","num","option","list","set",
@@ -58,7 +67,8 @@ end handle HOL_ERR _ =>
   | "CallPtr" => CallPtr
   | s => raise Fail s
 val term_to_bc_list = (map term_to_bc) o fst o listSyntax.dest_list
-fun f1 e = EVAL ``FST (compile (remove_Gt_Geq ^e,^s))``
+fun f0 e = ``remove_mat (remove_Gt_Geq ^e)``
+fun f1 e = EVAL ``FST (compile (^(f0 e),^s))``
 fun f2 e = rhs (concl (f1 e))
 fun f e = term_to_bc_list (f2 e)
 fun g1 c = bc_eval (init_state c)
@@ -143,4 +153,13 @@ Let "x" (Val (Lit (IntLit 0)))
       (Var "x") (Val (Lit (IntLit 4)))))``
 val c14 = f e14
 val [Number i] = g c14
-val SOME 0 = intML.toInt i
+val SOME 0 = intML.toInt i;
+val e15 = ``
+Let "x" (Val (Lit (Bool T)))
+(App Equality
+  (Mat (Var "x")
+    [(Plit (Bool F), (Val (Lit (IntLit 1))));
+     (Pvar "y", (Var "y"))])
+  (Var "x"))``
+val c15 = f e15
+val [Number i] = g c15 (* TODO: Exception- bind raised *)
