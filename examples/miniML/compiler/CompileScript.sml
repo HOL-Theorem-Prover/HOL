@@ -75,7 +75,27 @@ val _ = Defn.save_defn remove_mat_vp_defn;
 /\
 (remove_mat (Mat e pes) = Let "_mat" e (remove_mat_var "_mat" pes))
 /\
-(remove_mat e = e)
+(remove_mat (Raise err) = Raise err)
+/\
+(remove_mat (Val va) = Val va)
+/\
+(remove_mat (Con cn es) = Con cn (MAP remove_mat es))
+/\
+(remove_mat (Var vn) = Var vn)
+/\
+(remove_mat (Fun vn e) = Fun vn (remove_mat e))
+/\
+(remove_mat (App op e1 e2) = App op (remove_mat e1) (remove_mat e2))
+/\
+(remove_mat (Log lg e1 e2) = Log lg (remove_mat e1) (remove_mat e2))
+/\
+(remove_mat (If e1 e2 e3) = If (remove_mat e1) (remove_mat e2) (remove_mat e3))
+/\
+(remove_mat (Let vn e1 e2) = Let vn (remove_mat e1) (remove_mat e2))
+/\
+(remove_mat (Letrec defs e) = Letrec (MAP (\ (v1,v2,e) . (v1,v2,remove_mat e)) defs) (remove_mat e))
+/\
+(remove_mat (Proj e n) = Proj (remove_mat e) n)
 /\
 (remove_mat_var v [] = Raise Bind_error)
 /\

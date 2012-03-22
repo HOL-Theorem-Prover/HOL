@@ -109,7 +109,12 @@ val (remove_mat_def,remove_mat_ind) =
   `inv_image $<
     (λx. case x of
          | INL e => exp_size e
-         | INR (v,pes) => exp6_size pes)`)
+         | INR (v,pes) => exp6_size pes)` >>
+  srw_tac[ARITH_ss][exp1_size_thm,exp8_size_thm] >>
+  imp_res_tac SUM_MAP_MEM_bound >|
+    map (fn q => pop_assum (qspec_then q mp_tac))
+    [`exp2_size`,`exp_size`] >>
+  srw_tac[ARITH_ss][exp_size_def])
 val _ = save_thm ("remove_mat_def", remove_mat_def);
 val _ = save_thm ("remove_mat_ind", remove_mat_ind);
 
