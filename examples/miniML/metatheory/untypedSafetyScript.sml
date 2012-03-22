@@ -1,5 +1,5 @@
 open preamble;
-open MiniMLTheory terminationProofsTheory;
+open MiniMLTheory MiniMLTerminationTheory;
 
 val _ = new_theory "untypedSafety";
 
