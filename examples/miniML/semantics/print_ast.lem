@@ -6,6 +6,12 @@ val (^^) : stree -> stree -> stree
 sub [hol] (^^) x y = A x y
 sub [ocaml] (^^) x y = A x y
 
+val Num : Int.int -> num
+sub [hol] Num = Num
+
+val CHR : num -> string
+sub [hol] CHR n = STRING (CHR n) ""
+
 val string_first : string -> string
 sub [hol] string_first s = STRING (SUB (s,0)) ""
 
@@ -28,20 +34,9 @@ spaces n =
 
 (* TODO: use a built-in int_to_string *)
 
-let rec pos_int_to_string n =
-  if Int.(>) n (i 0) then
-    let n' = Int.(%) n (i 10) in
-      pos_int_to_string (Int.(/) n (i 10)) ^^
-      (if n' = i 0 then S"0"
-       else if n' = i 1 then S"1"
-       else if n' = i 2 then S"2"
-       else if n' = i 3 then S"3"
-       else if n' = i 4 then S"4"
-       else if n' = i 5 then S"5"
-       else if n' = i 6 then S"6"
-       else if n' = i 7 then S"7"
-       else if n' = i 8 then S"8"
-       else S"9")
+let rec num_to_string n =
+  if n > 0 then
+    num_to_string (n / 10) ^^ S (CHR (n % 10 + 48))
   else
     S""
 
@@ -50,9 +45,9 @@ let int_to_stree sml n =
   if n = i 0 then
     S"0"
   else if Int.(>) n (i 0) then
-    pos_int_to_string n
+    num_to_string (Num n)
   else
-    (if sml then S"~" else S"-") ^^ pos_int_to_string (Int.(-) (i 0) n)
+    (if sml then S"~" else S"-") ^^ num_to_string (Num (Int.(-) (i 0) n))
 
 (* Should inculde "^", but I don't know how to get that into HOL, since
  * antiquote seem stronger than strings. *)

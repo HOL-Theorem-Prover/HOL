@@ -14,17 +14,11 @@ fun register name def ind =
   end
 
 
-val (pos_int_to_string_def, pos_int_to_string_ind) =
-  tprove_no_defn ((pos_int_to_string_def, pos_int_to_string_ind),
-  wf_rel_tac `measure (\x.Num(ABS x))` >>
-  rw [integerTheory.INT_ABS, integerTheory.int_gt] >-
-  metis_tac [integerTheory.INT_LT_ANTISYM] >>
-  fs [integerTheory.INT_NOT_LT] >>
-  `?n'. n = &n'`
-            by metis_tac [integerTheory.NUM_POSINT, integerTheory.INT_LT_IMP_LE]  >>
-  rw [] >>
-  fs []);
-val _ = register "pos_int_to_string" pos_int_to_string_def pos_int_to_string_ind;
+val (num_to_string_def, num_to_string_ind) =
+  tprove_no_defn ((num_to_string_def, num_to_string_ind),
+  wf_rel_tac `measure (\x.x)` >>
+  srw_tac [ARITH_ss] []);
+val _ = register "num_to_string" num_to_string_def num_to_string_ind;
 
 val (join_strings_def, join_strings_ind) =
   tprove_no_defn ((join_strings_def, join_strings_ind),

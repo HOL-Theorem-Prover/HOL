@@ -1,5 +1,5 @@
 open preamble intSimps;
-open MiniMLTheory Print_astTheory;
+open MiniMLTheory;
 
 val _ = new_theory "MiniMLTermination";
 
