@@ -4,8 +4,8 @@ open MiniMLTheory compileProofsTheory
 val _ = new_theory "compiler"
 
 (* values in compile-time environment *)
-(* CTStack n means stack[frame_size - n]
-   CTEnv n means El n of the environment (which should be at stack[frame_size])
+(* CTStack n means stack[sz - n]
+   CTEnv n means El n of the environment (which should be at stack[sz])
    CTCode n means El n of the environment, but it's a code pointer,
    so needs to be wrapped up as a closure (using the same environment) *)
 val _ = Hol_datatype`
@@ -15,6 +15,7 @@ val _ = Hol_datatype`
   compiler_state =
   <|
     env: (varN,ctbind) env
+  ; sz: num
   ; next_label: num
   ; inst_length: bc_inst -> num
   |>`
@@ -52,24 +53,27 @@ val emit_def = Define`
   emit s ac is = (ac++is, s with next_label := s.next_label + offset s.inst_length is)`;
 
 val compile_varref_def = tDefine "compile_varref" `
-  (compile_varref z ls (CTStack n) = Stack (Load (z - n)) :: ls)
-∧ (compile_varref z ls (CTEnv n) = Stack (Load z) :: Stack (El n) :: ls)
-∧ (compile_varref z ls (CTCode n) =
-   compile_varref z (Stack (Load z) :: Stack (Cons 0 2) :: ls) (CTEnv n))`
+  (compile_varref sz ls (CTStack n) = Stack (Load (sz - n)) :: ls)
+∧ (compile_varref sz ls (CTEnv n) = Stack (Load sz) :: Stack (El n) :: ls)
+∧ (compile_varref sz ls (CTCode n) =
+   compile_varref sz (Stack (Load sz) :: Stack (Cons 0 2) :: ls) (CTEnv n))`
 (WF_REL_TAC `measure (λ(a,b,x). case x of CTEnv x => 0 | CTCode x => 1)`)
 
 (* compile : exp * compiler_state → bc_inst list * compiler_state *)
 val compile_def = tDefine "compile" `
   (compile (Raise err, s) = ARB) (* TODO *)
-∧ (compile (Val v, s) = emit s [] (compile_val v))
+∧ (compile (Val v, s) =
+   let (r,s) = emit s [] (compile_val v) in
+     (r, s with sz := s.sz + 1))
 ∧ (compile (Mat e pes, s) = ARB) (* Disallowed: use remove_mat *)
 ∧ (compile (Con NONE [(Val (Lit (IntLit i)))], s) =
-   emit s [] [Stack (PushInt i)])
+   let (r,s) = emit s [] [Stack (PushInt i)] in
+     (r, s with sz := s.sz + 1))
 ∧ (compile (Con NONE ((Val (Lit (IntLit i)))::es), s) =
    let n = LENGTH es in
    let (es,s) = FOLDR (λe (es,s). let (e,s) = compile (e,s) in (es++e,s)) ([],s) es in
    let (r,s) = emit s es [Stack (Cons (Num i) n)] in
-   (r,s))
+   (r,s with sz := s.sz + 1 - n))
 ∧ (compile (Con _ _, s) = ARB) (* Disallowed: use remove_ctors *)
 ∧ (compile (Proj e n, s) =
    let (e,s) = compile (e,s) in
@@ -77,12 +81,14 @@ val compile_def = tDefine "compile" `
    (r,s))
 ∧ (compile (Let x e b, s) =
    let (e,s) = compile (e,s) in
-   let (r,s) = compile_bindings s.env b (LENGTH s.env - 0) s [x] in
+   let (r,s) = compile_bindings s.env b 0 s [x] in
      (e++r,s)) (* TODO: avoid calls to LENGTH? *)
 ∧ (compile (Var x, s) =
    case lookup x s.env of
      NONE => ARB (* should not happen *)
-   | SOME ct => emit s [] (compile_varref (LENGTH s.env) [] ct))
+   | SOME ct =>
+     let (r,s) = emit s [] (compile_varref s.sz [] ct) in
+     (r, s with sz := s.sz + 1))
 ∧ (compile (App Opapp e1 e2, s) =
   (* A closure looks like:
        Block 0 [CodePtr ck; Block 0 [CodePtr c1; ...; CodePtr cn; v1; ...; vm]]
@@ -99,42 +105,52 @@ val compile_def = tDefine "compile" `
    let (r,s) = emit s r [Stack (Load 2); Stack (El 1); Stack (Store 2)] in
    (* stack = CodePtr ck :: arg :: env :: rest *)
    let (r,s) = emit s r [CallPtr] in
-   (* stack = arg :: CodePtr ret :: env :: rest *)
-     (r,s))
+   (* before call stack = arg :: CodePtr ret :: env :: rest
+      after call stack = retval :: env :: rest *)
+   let (r,s) = emit s r [Stack (Pops 1)] in
+   (* stack = retval :: rest *)
+     (r,s with sz := s.sz + 1))
 ∧ (compile (Letrec defs b, s) = (* TODO: more efficient than LENGTH and MAP? *)
    let (r1,s) = compile_closures (SOME (MAP FST defs)) s (MAP SND defs) in
-   let (r2,s) = compile_bindings s.env b (LENGTH s.env + 1 - LENGTH defs) s (MAP FST defs) in
+   let (r2,s) = compile_bindings s.env b 0 s (MAP FST defs) in
      (r1++r2,s))
 ∧ (compile (Fun x b, s) = compile_closures NONE s [(x,b)])
 ∧ (compile (App Equality e1 e2, s) =
    let (e1,s) = compile (e1,s) in
    let (e2,s) = compile (e2,s) in
-   emit s (e1++e2) [Stack Equal])
+   let (r,s) = emit s (e1++e2) [Stack Equal] in
+     (r, s with sz := s.sz - 1))
 ∧ (compile (App (Opn op) e1 e2, s)
   = let (e1,s) = compile (e1,s) in
     let (e2,s) = compile (e2,s) in
-    emit s (e1++e2) (compile_opn op))
+    let (r,s) = emit s (e1++e2) (compile_opn op) in
+      (r, s with sz := s.sz - 1))
 ∧ (compile (App (Opb Lt) e1 e2, s)
   = let (e1,s) = compile (e1,s) in
     let (e2,s) = compile (e2,s) in
-    emit s (e1++e2) [Stack Less])
+    let (r,s) = emit s (e1++e2) [Stack Less] in
+      (r, s with sz := s.sz - 1))
 ∧ (compile (App (Opb Geq) e1 e2, s)
   = let (e2,s) = compile (e2,s) in
     let (e1,s) = compile (e1,s) in
-    emit s (e2++e1) [Stack Less])
+    let (r,s) = emit s (e2++e1) [Stack Less] in
+      (r, s with sz := s.sz - 1))
 ∧ (compile (App (Opb Gt) e1 e2, s)
   = let (e0,s) = emit s [] [Stack (PushInt 0)] in
+    let s = s with sz := s.sz + 1 in
     let (e1,s) = compile (e1,s) in
     let (e2,s) = compile (e2,s) in
     emit s (e0++e1++e2) [Stack Sub;Stack Less])
 ∧ (compile (App (Opb Leq) e1 e2, s)
   = let (e0,s) = emit s [] [Stack (PushInt 0)] in
+    let s = s with sz := s.sz + 1 in
     let (e2,s) = compile (e2,s) in
     let (e1,s) = compile (e1,s) in
     emit s (e0++e2++e1) [Stack Sub;Stack Less])
 ∧ (compile (Log And e1 e2, s)
   = let (e1,s) = compile (e1,s) in
     let (aa,s) = emit s ARB [JumpNil ARB] in
+    let s = s with sz := s.sz - 1 in
     let (e2,s) = compile (e2,s) in
     (e1++[JumpNil s.next_label]++e2, s))
 ∧ (compile (Log Or e1 e2, s)
@@ -142,6 +158,7 @@ val compile_def = tDefine "compile" `
     let f n1 n2 = [JumpNil n1;Stack (PushInt (bool2num T));Jump n2] in
     let (aa,s) = emit s ARB (f ARB ARB) in
     let n1     = s.next_label in
+    let s = s with sz := s.sz - 1 in
     let (e2,s) = compile (e2,s) in
     let n2     = s.next_label in
     (e1++(f n1 n2)++e2, s))
@@ -150,20 +167,23 @@ val compile_def = tDefine "compile" `
     let f n1 n2 = [JumpNil n1;Jump n2] in
     let (aa,s) = emit s ARB (f ARB ARB) in
     let n1     = s.next_label in
+    let s = s with sz := s.sz - 1 in
     let (e2,s) = compile (e2,s) in
     let (aa,s) = emit s ARB [Jump ARB] in
     let n2     = s.next_label in
+    let s = s with sz := s.sz - 1 in
     let (e3,s) = compile (e3,s) in
     let n3     = s.next_label in
     (e1++(f n1 n2)++e2++[Jump n3]++e3, s))
-∧ (compile_bindings env0 b m s [] =
+∧ (compile_bindings env0 b n s [] =
    let (b,s) = compile (b,s) in
-   let (r,s) = emit s b [Stack (Store 0);Stack (Pops (m - (LENGTH env0)))] in
-     (r, s with env := env0))
-∧ (compile_bindings env0 b m s (x::xs) =
+   let (r,s) = emit s b [Stack (Pops n)] in
+     (r, s with <| env := env0 ;
+                   sz  := s.sz - n |>))
+∧ (compile_bindings env0 b n s (x::xs) =
      compile_bindings env0 b
-       (m + 1)
-       (s with env := bind x (CTStack m) s.env)
+       (n + 1)
+       (s with env := bind x (CTStack (s.sz - n)) s.env)
        xs)
 ∧ (compile_closures names s xbs =
    (*  PushInt 0                            0, rest
@@ -212,11 +232,10 @@ val compile_def = tDefine "compile" `
   *)
    let fvs = FOLDL (λfvs (x,b). free_vars (Fun x b)) {} xbs in
    let fvs = case names of NONE => fvs | SOME names => fvs DIFF (set names) in
-   let z = LENGTH s.env in
    let (e,i,ldenv) =
      FOLDL (λ(e,i,ls) (v,n).
              if v IN fvs
-             then (bind v (CTEnv i) e, i + 1, compile_varref z ls n)
+             then (bind v (CTEnv i) e, i + 1, compile_varref s.sz ls n)
              else (e,i,ls))
       ([],0,[]) s.env in
    let (e,j) = case names of NONE => (e,0)
@@ -228,16 +247,23 @@ val compile_def = tDefine "compile" `
    let (r,s,ls) = FOLDR (λ(x,b) (r,s,ls).
                        let i = LENGTH r in
                        let (r,s) = emit s r [Call ARB] in
-                       let s' = s with env := bind x (CTStack 2) e in
+                       let s' = s with <|
+                         env := bind x (CTStack 2) e ;
+                         sz  := 2 |> in
                        let (b,s') = compile (b,s') in
-                       let s = s' with env := s.env in
+                       let s = s' with <|
+                         env := s.env ;
+                         sz  := s.sz |> in
                        let (r,s) = emit s (r++b) [Stack (Store 0);Return] in
                          (r,s,(i,s.next_label)::ls))
                    (r,s,[])
                    xbs in
    let r = FOLDR (λ(i,n) r. REPLACE_ELEMENT (Call n) i r) r ls in
    let (r,s) = emit s r (Stack Pop :: ldenv) in
-   case names of NONE => emit s r [Stack (Cons 0 i); Stack (Cons 0 2)]
+   case names of
+   | NONE =>
+   let (r,s) = emit s r [Stack (Cons 0 i); Stack (Cons 0 2)] in
+     (r, s with sz := s.sz + 1)
    | SOME names =>
    let (r,s) = emit s r [Stack (Cons 0 (i+j))] in
    let (r,s,n) = FOLDR (λa (r,s,n).
@@ -247,11 +273,13 @@ val compile_def = tDefine "compile" `
                            Stack (Cons 0 2)]
      in (r,s,n+1)) (r,s,0) (TL names) in
    let k = LENGTH (TL names) in
+   let (r,s) =
    emit s r [Stack (Load k);
              Stack (El 0);
              Stack (Load (k+1));
              Stack (Cons 0 2);
-             Stack (Store (k+1))])`
+             Stack (Store (k+1))] in
+   (r, s with sz := s.sz + k + 1))`
 ( WF_REL_TAC `inv_image ($< LEX $<) (λx. case x of
        | INL (e,s) => (exp_size e, 3:num)
        | INR (INL (env,e,n,s,[])) => (exp_size e, 4)

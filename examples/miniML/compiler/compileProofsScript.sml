@@ -1,4 +1,4 @@
-open preamble MiniMLTheory terminationProofsTheory
+open preamble MiniMLTheory MiniMLTerminationTheory
 open CompileTheory evaluateEquationsTheory
 
 val _ = new_theory "compileProofs"
