@@ -113,16 +113,16 @@ val (remove_mat_def,remove_mat_ind) =
 val _ = save_thm ("remove_mat_def", remove_mat_def);
 val _ = save_thm ("remove_mat_ind", remove_mat_ind);
 
-val (remove_Gt_Leq_def,remove_Gt_Leq_ind) =
-  tprove_no_defn ((remove_Gt_Leq_def,remove_Gt_Leq_ind),
+val (remove_Gt_Geq_def,remove_Gt_Geq_ind) =
+  tprove_no_defn ((remove_Gt_Geq_def,remove_Gt_Geq_ind),
   WF_REL_TAC `measure exp_size` >>
   srw_tac[ARITH_ss][exp1_size_thm,exp6_size_thm,exp8_size_thm] >>
   imp_res_tac SUM_MAP_MEM_bound >|
     map (fn q => pop_assum (qspec_then q mp_tac))
     [`exp2_size`,`exp7_size`,`exp_size`] >>
   srw_tac[ARITH_ss][exp_size_def])
-val _ = save_thm ("remove_Gt_Leq_def", remove_Gt_Leq_def);
-val _ = save_thm ("remove_Gt_Leq_ind", remove_Gt_Leq_ind);
+val _ = save_thm ("remove_Gt_Geq_def", remove_Gt_Geq_def);
+val _ = save_thm ("remove_Gt_Geq_ind", remove_Gt_Geq_ind);
 
 (*
 This is too awful! TODO: Try a simpler definition of fold_consts.

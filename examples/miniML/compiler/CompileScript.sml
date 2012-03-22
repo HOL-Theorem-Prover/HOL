@@ -9,40 +9,40 @@ open MiniMLTheory
 
 (*open MiniML*)
 
-(* Remove Gt and Leq *)
-(*val remove_Gt_Leq : exp -> exp*)
- val remove_Gt_Leq_defn = Hol_defn "remove_Gt_Leq" `
+(* Remove Gt and Geq *)
+(*val remove_Gt_Geq : exp -> exp*)
+ val remove_Gt_Geq_defn = Hol_defn "remove_Gt_Geq" `
 
-(remove_Gt_Leq (Raise err) = Raise err)
+(remove_Gt_Geq (Raise err) = Raise err)
 /\
-(remove_Gt_Leq (Val v) = Val v)
+(remove_Gt_Geq (Val v) = Val v)
 /\
-(remove_Gt_Leq (Con cn es) = Con cn (MAP remove_Gt_Leq es))
+(remove_Gt_Geq (Con cn es) = Con cn (MAP remove_Gt_Geq es))
 /\
-(remove_Gt_Leq (Var vn) = Var vn)
+(remove_Gt_Geq (Var vn) = Var vn)
 /\
-(remove_Gt_Leq (Fun vn e) = Fun vn (remove_Gt_Leq e))
+(remove_Gt_Geq (Fun vn e) = Fun vn (remove_Gt_Geq e))
 /\
-(remove_Gt_Leq (App (Opb Gt) e1 e2) = App (Opb Lt) (remove_Gt_Leq e2) (remove_Gt_Leq e1))
+(remove_Gt_Geq (App (Opb Gt) e1 e2) = App (Opb Lt) (remove_Gt_Geq e2) (remove_Gt_Geq e1))
 /\
-(remove_Gt_Leq (App (Opb Leq) e1 e2) = App (Opb Geq) (remove_Gt_Leq e2) (remove_Gt_Leq e1))
+(remove_Gt_Geq (App (Opb Geq) e1 e2) = App (Opb Leq) (remove_Gt_Geq e2) (remove_Gt_Geq e1))
 /\
-(remove_Gt_Leq (App op e1 e2) = App op (remove_Gt_Leq e1) (remove_Gt_Leq e2))
+(remove_Gt_Geq (App op e1 e2) = App op (remove_Gt_Geq e1) (remove_Gt_Geq e2))
 /\
-(remove_Gt_Leq (Log lg e1 e2) = Log lg (remove_Gt_Leq e1) (remove_Gt_Leq e2))
+(remove_Gt_Geq (Log lg e1 e2) = Log lg (remove_Gt_Geq e1) (remove_Gt_Geq e2))
 /\
-(remove_Gt_Leq (If e1 e2 e3) = If (remove_Gt_Leq e1) (remove_Gt_Leq e2) (remove_Gt_Leq e3))
+(remove_Gt_Geq (If e1 e2 e3) = If (remove_Gt_Geq e1) (remove_Gt_Geq e2) (remove_Gt_Geq e3))
 /\
-(remove_Gt_Leq (Mat e pes) = Mat (remove_Gt_Leq e) (MAP (\ (p,e) . (p,remove_Gt_Leq e)) pes))
+(remove_Gt_Geq (Mat e pes) = Mat (remove_Gt_Geq e) (MAP (\ (p,e) . (p,remove_Gt_Geq e)) pes))
 /\
-(remove_Gt_Leq (Let vn e b) = Let vn (remove_Gt_Leq e) (remove_Gt_Leq b))
+(remove_Gt_Geq (Let vn e b) = Let vn (remove_Gt_Geq e) (remove_Gt_Geq b))
 /\
-(remove_Gt_Leq (Letrec defs e) = Letrec (MAP (\ (fn,vn,e) .
-  (fn,vn,remove_Gt_Leq e)) defs) (remove_Gt_Leq e))
+(remove_Gt_Geq (Letrec defs e) = Letrec (MAP (\ (fn,vn,e) .
+  (fn,vn,remove_Gt_Geq e)) defs) (remove_Gt_Geq e))
 /\
-(remove_Gt_Leq (Proj e n) = Proj (remove_Gt_Leq e) n)`;
+(remove_Gt_Geq (Proj e n) = Proj (remove_Gt_Geq e) n)`;
 
-val _ = Defn.save_defn remove_Gt_Leq_defn;
+val _ = Defn.save_defn remove_Gt_Geq_defn;
 
 (* Remove pattern-matching using continuations *)
 (* TODO: more efficient method *)
