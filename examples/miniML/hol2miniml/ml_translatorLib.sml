@@ -936,14 +936,15 @@ fun preprocess_def def = let
   val (def,ind) = single_line_def def
   val def = RW1 [GSYM TRUE_def, GSYM FALSE_def] def
   val def = remove_pair_abs def |> SPEC_ALL
+  val def = rename_bound_vars_rule " variable " (GEN_ALL def) |> SPEC_ALL
   val def = CONV_RULE (DEPTH_CONV split_let_and_conv) def
-  val def = rename_bound_vars_rule "v" (GEN_ALL def) |> SPEC_ALL
   val ind = if is_rec andalso is_NONE ind then SOME (find_ind_thm def) else ind
   val def = if def |> SPEC_ALL |> concl |> dest_eq |> fst |> is_const
             then SPEC_ALL (RW1 [FUN_EQ_THM] def) else def
   val def = PURE_REWRITE_RULE ([ADD1,boolTheory.literal_case_DEF,
               boolTheory.bool_case_DEF,num_case_thm] @ get_preprocessor_rws()) def
   val def = CONV_RULE (REDEPTH_CONV BETA_CONV) def
+  val def = rename_bound_vars_rule "v" (GEN_ALL def) |> SPEC_ALL
   in (is_rec,def,ind) end;
 
 (*
@@ -1421,6 +1422,10 @@ fun extract_precondition th pre_var is_rec =
 
 
 (* main translation routines *)
+
+(*
+val def = delete_min_def
+*)
 
 fun translate def = let
   val original_def = def
