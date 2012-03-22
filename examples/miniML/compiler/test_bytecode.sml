@@ -1,5 +1,6 @@
 val _ = map load ["rich_listTheory","compilerTheory"]
 
+(* TODO: move to rich_list  (or somewhere) *)
 val REPLACE_ELEMENT_compute =
   CONV_RULE numLib.SUC_TO_NUMERAL_DEFN_CONV rich_listTheory.REPLACE_ELEMENT_DEF
 
@@ -11,12 +12,10 @@ val _ = map (fn s => (use (d^s^"ML.sig"); use (d^s^"ML.sml")))
 
 open bytecodeML
 
-open compilerTheory
-
 val s = ``<| env := []; next_label := 0; inst_length := λi. 0 |>``
 
-val _ = computeLib.add_thms
-[ listTheory.SUM
+val _ = computeLib.add_thms 
+[ listTheory.SUM (* TODO: put in list_rws? similarly the other one *)
 , REPLACE_ELEMENT_compute
 ] computeLib.the_compset
 
