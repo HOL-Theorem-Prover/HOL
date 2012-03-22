@@ -132,23 +132,15 @@ val compile_def = tDefine "compile" `
     let (e2,s) = compile (e2,s) in
     let (r,s) = emit s (e1++e2) [Stack Less] in
       (r, s with sz := s.sz - 1))
-∧ (compile (App (Opb Geq) e1 e2, s)
-  = let (e2,s) = compile (e2,s) in
+∧ (compile (App (Opb Gt) e1 e2, s) = ARB) (* Disallowed: use remove_Gt_Leq *)
+∧ (compile (App (Opb Geq) e1 e2, s) (* TODO: more efficiently? *)
+  = let (e0,s) = emit s [] [Stack (PushInt 1); Stack (PushInt 0)] in
+    let s = s with sz := s.sz + 2 in
     let (e1,s) = compile (e1,s) in
-    let (r,s) = emit s (e2++e1) [Stack Less] in
+    let (e2,s) = compile (e2,s) in
+    let (r,s) = emit s (e0++e1++e2) [Stack Sub;Stack Less;Stack Sub] in
       (r, s with sz := s.sz - 1))
-∧ (compile (App (Opb Gt) e1 e2, s)
-  = let (e0,s) = emit s [] [Stack (PushInt 0)] in
-    let s = s with sz := s.sz + 1 in
-    let (e1,s) = compile (e1,s) in
-    let (e2,s) = compile (e2,s) in
-    emit s (e0++e1++e2) [Stack Sub;Stack Less])
-∧ (compile (App (Opb Leq) e1 e2, s)
-  = let (e0,s) = emit s [] [Stack (PushInt 0)] in
-    let s = s with sz := s.sz + 1 in
-    let (e2,s) = compile (e2,s) in
-    let (e1,s) = compile (e1,s) in
-    emit s (e0++e2++e1) [Stack Sub;Stack Less])
+∧ (compile (App (Opb Leq) e1 e2, s) = ARB) (* Disallowed: use remove_Gt_Leq *)
 ∧ (compile (Log And e1 e2, s)
   = let (e1,s) = compile (e1,s) in
     let (aa,s) = emit s ARB [JumpNil ARB] in

@@ -1,5 +1,37 @@
 open MiniML
 
+(* Remove Gt and Leq *)
+val remove_Gt_Leq : exp -> exp
+let rec
+remove_Gt_Leq (Raise err) = Raise err
+and
+remove_Gt_Leq (Val v) = Val v
+and
+remove_Gt_Leq (Con cn es) = Con cn (List.map remove_Gt_Leq es)
+and
+remove_Gt_Leq (Var vn) = Var vn
+and
+remove_Gt_Leq (Fun vn e) = Fun vn (remove_Gt_Leq e)
+and
+remove_Gt_Leq (App (Opb Gt) e1 e2) = App (Opb Lt) (remove_Gt_Leq e2) (remove_Gt_Leq e1)
+and
+remove_Gt_Leq (App (Opb Leq) e1 e2) = App (Opb Geq) (remove_Gt_Leq e2) (remove_Gt_Leq e1)
+and
+remove_Gt_Leq (App op e1 e2) = App op (remove_Gt_Leq e1) (remove_Gt_Leq e2)
+and
+remove_Gt_Leq (Log lg e1 e2) = Log lg (remove_Gt_Leq e1) (remove_Gt_Leq e2)
+and
+remove_Gt_Leq (If e1 e2 e3) = If (remove_Gt_Leq e1) (remove_Gt_Leq e2) (remove_Gt_Leq e3)
+and
+remove_Gt_Leq (Mat e pes) = Mat (remove_Gt_Leq e) (List.map (fun (p,e) -> (p,remove_Gt_Leq e)) pes)
+and
+remove_Gt_Leq (Let vn e b) = Let vn (remove_Gt_Leq e) (remove_Gt_Leq b)
+and
+remove_Gt_Leq (Letrec defs e) = Letrec (List.map (fun (fn,vn,e) ->
+  (fn,vn,remove_Gt_Leq e)) defs) (remove_Gt_Leq e)
+and
+remove_Gt_Leq (Proj e n) = Proj (remove_Gt_Leq e) n
+
 (* Remove pattern-matching using continuations *)
 (* TODO: more efficient method *)
 val remove_mat : exp -> exp

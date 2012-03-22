@@ -42,6 +42,7 @@ end end handle HOL_ERR _ =>
   | "Pop" => Pop
   | "Add" => Add
   | "Sub" => Sub
+  | "Less" => Less
   | s => raise Fail s
 fun term_to_bc tm = let
   val (f,x) = dest_comb tm
@@ -57,7 +58,7 @@ end handle HOL_ERR _ =>
   | "CallPtr" => CallPtr
   | s => raise Fail s
 val term_to_bc_list = (map term_to_bc) o fst o listSyntax.dest_list
-fun f1 e = EVAL ``FST (compile (^e,^s))``
+fun f1 e = EVAL ``FST (compile (remove_Gt_Leq ^e,^s))``
 fun f2 e = rhs (concl (f1 e))
 fun f e = term_to_bc_list (f2 e)
 fun g1 c = bc_eval (init_state c)
@@ -109,3 +110,17 @@ Let "1?" (Fun "x" (App Equality (Var "x") (Val (Lit (IntLit 1)))))
 val c9 = f e9
 val [Number i] = g c9
 val SOME 0 = intML.toInt i
+val e10 = ``
+Let "x" (Val (Lit (IntLit 3)))
+(If (App (Opb Gt) (Var "x") (App (Opn Plus) (Var "x") (Var "x")))
+  (Var "x") (Val (Lit (IntLit 4))))``
+val c10 = f e10
+val [Number i] = g c10
+val SOME 4 = intML.toInt i
+val e11 = ``
+Let "x" (Val (Lit (IntLit 3)))
+(If (App (Opb Geq) (Var "x") (Var "x"))
+  (Var "x") (Val (Lit (IntLit 4))))``
+val c11 = f e11
+val [Number i] = g c11
+val SOME 3 = intML.toInt i
