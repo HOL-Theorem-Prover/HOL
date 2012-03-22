@@ -46,12 +46,20 @@ val data = map DATATYPE [`
       inst_length : bc_inst -> num
    |>`]
 
+val init_state_def =  Define`
+  init_state ls = <|
+    stack := [];
+    code := ls;
+    pc := 0;
+    refs := FEMPTY;
+    inst_length := λi. 0 |>`
 
 val defs = map DEFN [
 optionTheory.OPTION_BIND_def,
 bc_fetch_aux_def,bc_fetch_def,bump_pc_def,
 bool2num_def,isNumber_def,
-bc_eval_stack_def,bc_eval1_def,bc_eval_def]
+bc_eval_stack_def,bc_eval1_def,bc_eval_def,
+init_state_def]
 
 val _ = eSML "bytecode" (
   (OPEN ["num","int","fmap"])
