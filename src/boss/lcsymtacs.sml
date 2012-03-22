@@ -73,12 +73,11 @@ struct
   val rw_tac = BasicProvers.RW_TAC
   val srw_tac = BasicProvers.SRW_TAC
 
-  fun stateful f ssfl : thm list -> tactic =
+  fun stateful f ssfl thm : tactic =
      let
-        val ss = Lib.with_flag (Feedback.emit_MESG, false) BasicProvers.srw_ss()
-        val ss = List.foldl (simpLib.++ o Lib.swap) ss ssfl
+        val ss = List.foldl (simpLib.++ o Lib.swap) (BasicProvers.srw_ss()) ssfl
      in
-        f ss
+        f ss thm
      end
 
   val fsrw_tac = stateful full_simp_tac
