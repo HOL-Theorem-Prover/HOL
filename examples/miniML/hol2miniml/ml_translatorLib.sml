@@ -253,7 +253,7 @@ val ty = ``:'a list``
 val ty = ``:'a # 'b``
 val ty = ``:unit``
 val _ = Hol_datatype `TREE = LEAF of 'a | BRANCH of TREE => TREE`;
-register_type ``:'a TREE``
+register_type ty
 val _ = Hol_datatype `BTREE = BLEAF of ('a TREE) | BBRANCH of BTREE => BTREE`;
 val ty = ``:'a BTREE``
 *)
@@ -513,11 +513,18 @@ fun derive_thms_for_type ty = let
       val n = numSyntax.term_of_int n
       val tm = ``TAG ^n ^tm``
       in tm end;
+    (* all_distincts *)
+    fun mk_alld (n,f,fxs,pxs,tm,exp,xs) = let
+      val tt = listSyntax.mk_list(map (fn (_,x,_) => x) xs,``:string``)
+      val tt = mk_comb(``ALL_DISTINCT:string list -> bool``,tt)
+      in tt end
+    val tt = list_mk_conj(map mk_alld ts) handle HOL_ERR _ => T
+    (* goal *)
     val hyps = map mk_hyp ts
     val x = mk_comb(rator (rator inv_lhs),input_var)
     val hyp0 = ``TAG 0 (b0 ==> Eval env ^exp_var ^x)``
     val hyps = list_mk_conj(hyp0::hyps)
-    val goal = mk_imp(hyps,result)
+    val goal = mk_imp(tt,mk_imp(hyps,result))
     val init_tac =
           PURE_REWRITE_TAC [CONTAINER_def]
           \\ REPEAT STRIP_TAC \\ STRIP_ASSUME_TAC (Q.SPEC `x` case_th)
@@ -526,7 +533,7 @@ fun derive_thms_for_type ty = let
           \\ FULL_SIMP_TAC (srw_ss()) [] \\ REPEAT STRIP_TAC
           \\ Q.PAT_ASSUM `TAG () bbb` (STRIP_ASSUME_TAC o remove_primes o
                SPEC_ALL o REWRITE_RULE [TAG_def,inv_def,Eval_def])
-          \\ FULL_SIMP_TAC std_ss [] \\ FULL_SIMP_TAC std_ss [inv_def]
+          \\ FULL_SIMP_TAC std_ss [ALL_DISTINCT] \\ FULL_SIMP_TAC std_ss [inv_def]
           \\ Q.PAT_ASSUM `TAG ^(numSyntax.term_of_int n) bbb`
                (STRIP_ASSUME_TAC o REWRITE_RULE [TAG_def])
           \\ REPEAT (Q.PAT_ASSUM `TAG xxx yyy` (K ALL_TAC))
@@ -537,10 +544,10 @@ fun derive_thms_for_type ty = let
           \\ ONCE_REWRITE_TAC [evaluate'_cases] \\ SIMP_TAC (srw_ss()) []
           \\ Q.EXISTS_TAC `res` \\ FULL_SIMP_TAC std_ss []
           \\ NTAC 10 (ASM_SIMP_TAC (srw_ss())
-               [Once evaluate'_cases,pmatch'_def,bind_def])
+               [Once evaluate'_cases,pmatch'_def,bind_def,pat_bindings_def])
     val tac = init_tac THENL (map (fn (n,f,fxs,pxs,tm,exp,xs) => case_tac n) ts)
     val case_lemma = prove(goal,tac)
-    val case_lemma = case_lemma |> REWRITE_RULE [TAG_def]
+    val case_lemma = case_lemma |> PURE_REWRITE_RULE [TAG_def]
     in (case_lemma,ts) end;
   (* prove lemmas for constructors *)
   fun derive_cons (n,f,fxs,pxs,tm,exp,xs) = let
@@ -675,6 +682,8 @@ fun inst_case_thm_for tm = let
     val new_s = snd (first (fn (z,_) => z = s) ks)
     in ALPHA_CONV (mk_var(new_s,ty)) tm end handle HOL_ERR _ => NO_CONV tm
   val th = CONV_RULE (DEPTH_CONV rename_bound_conv) th
+  val th = CONV_RULE ((RATOR_CONV o RAND_CONV) EVAL) th
+  val th = MP th TRUTH
   in th end;
 
 val sat_hyp_lemma = prove(
@@ -1503,6 +1512,7 @@ fun translate def = let
                 handle HOL_ERR _ =>
                 (find_term (can (match_term ``Closure i n (f x)``)) (concl th))
   val code_tm = rand raw_code_tm
+  val fname_tm = stringSyntax.fromMLstring fname
   val dlet =
     if is_rec then ``Dletrec ^code_tm`` else
     if no_params then ``Dlet (Pvar ^fname_tm) ^(th_rhs |> concl |> rator |> rand)``
