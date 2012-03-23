@@ -28,6 +28,7 @@ val _ = Hol_datatype `
   | JumpPtr                 (* jump based on code pointer *)
   | CallPtr                 (* call based on code pointer *)
   | Return                  (* pop return address, jump *)
+  | Exception               (* restore stack, jump *)
   | Ref                     (* create a new ref cell *)
   | Deref                   (* dereference a ref cell *)
   | Update                  (* update a ref cell *)`;
@@ -51,6 +52,7 @@ val _ = Hol_datatype `
       code : bc_inst list ;
       pc : num ;
       refs : num |-> bc_value ;
+      exstack : (num # num) list ;
       (* artificial state components *)
       inst_length : bc_inst -> num
    |>`;
@@ -127,6 +129,11 @@ val (bc_next_rules,bc_next_ind,bc_next_cases) = Hol_reln `
   (!s n x xs.
      (bc_fetch s = SOME Return) /\ (s.stack = x :: CodePtr n :: xs) ==>
      bc_next s (s with <| pc := n; stack := x::xs |>))
+  /\
+  (!s p m es x xs.
+     (s.exstack = (p,m)::es) /\ (m <= LENGTH xs) /\
+     (bc_fetch s = SOME Exception) /\ (s.stack = x :: xs) ==>
+     bc_next s (s with <| pc := p; stack := x :: DROP (LENGTH xs - m) xs |>))
   /\
   (!s x xs ptr.
      (bc_fetch s = SOME Ref) /\ (s.stack = x::xs) /\
@@ -288,6 +295,10 @@ val bc_eval1_def = Define`
      SOME (s with <| pc := ptr; stack := xs |>)
   | (Return, x :: CodePtr n :: xs) =>
      SOME (s with <| pc := n; stack := x::xs |>)
+  | (Exception, x :: xs) =>
+     (case s.exstack of
+      | (p,m)::es => if m ≤ LENGTH xs then
+        SOME (s with <| pc := p; stack := x :: DROP (LENGTH xs - m) xs |>) else NONE | _ => NONE)
   | (Ref, x::xs) =>
      let ptr = LEAST n. n ∉ (FDOM s.refs) in
      SOME (bump_pc s with <| stack := (RefPtr ptr)::xs;
@@ -334,6 +345,12 @@ Cases_on `inst` >> fs[GSYM bc_eval_stack_thm]
   qmatch_assum_rename_tac `s1.stack = x::y::t` [] >>
   Cases_on `y` >> fs [] >>
   rw[bc_next_cases] )
+>- (
+  Cases_on `s1.stack` >> fs[LET_THM] >>
+  Cases_on `s1.exstack` >> fs[LET_THM] >>
+  qmatch_assum_rename_tac `s1.exstack = p::z` [] >>
+  Cases_on `p` >> fs[] >>
+  rw[bc_next_cases])
 >- (
   Cases_on `s1.stack` >> fs[LET_THM] >>
   rw[bc_next_cases] >>
@@ -386,6 +403,14 @@ Cases_on `inst` >> fs[bc_eval_stack_NONE]
   Cases_on `t` >> fs[] >>
   qmatch_assum_rename_tac `s1.stack = x::y::t` [] >>
   Cases_on `y` >> fs[] )
+>-(
+  Cases_on `s1.stack` >> fs[LET_THM] >>
+  rw[bc_next_cases] >>
+  Cases_on `s1.exstack` >> fs[LET_THM] >>
+  qmatch_assum_rename_tac `s1.exstack = q::z` [] >>
+  Cases_on `q` >> fs[] >>
+  qmatch_assum_rename_tac `¬(r ≤ LENGTH t)` [] >>
+  Cases_on `r = m` >> fs[] )
 >- (
   Cases_on `s1.stack` >> fs[LET_THM] >>
   rw[bc_next_cases] )

@@ -48,9 +48,13 @@ val compile_varref_def = tDefine "compile_varref" `
    compile_varref sz (Stack (Load sz) :: Stack (Cons 0 2) :: ls) (CTEnv n))`
 (WF_REL_TAC `measure (λ(a,b,x). case x of CTEnv x => 0 | CTCode x => 1)`)
 
+val error_to_int_def = Define`
+  (error_to_int Bind_error = 0:int)
+∧ (error_to_int Div_error = 1)`
+
 (* compile : exp * compiler_state → bc_inst list * compiler_state *)
 val compile_def = tDefine "compile" `
-  (compile (Raise err, s) = emit s [] [Jump 1000]) (* TODO *)
+  (compile (Raise err, s) = emit s [] [Stack (PushInt (error_to_int err)); Exception])
 ∧ (compile (Val v, s) =
    let (r,s) = emit s [] (compile_val v) in
      (r, s with sz := s.sz + 1))

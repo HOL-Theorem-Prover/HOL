@@ -36,7 +36,7 @@ fun bc_evaln 0 s = s
       bc_evaln (n-1) s
     end handle Bind => (print "Fail\n"; s)
 
-val s = ``<| env := []; next_label := 0; sz := 0; inst_length := λi. 0 |>``
+val s = ``<| env := []; next_label := 1; sz := 0; inst_length := λi. 0 |>``
 fun term_to_num x = (numML.fromString (Parse.term_to_string x))
 fun term_to_int x = (intML.fromString ((Parse.term_to_string x)^"i"))
 
@@ -77,6 +77,7 @@ end handle HOL_ERR _ =>
   case fst (dest_const tm) of
     "Return" => Return
   | "CallPtr" => CallPtr
+  | "Exception" => Exception
   | s => raise Fail s
 val term_to_bc_list = (map term_to_bc) o fst o listSyntax.dest_list
 fun f0 e = ``remove_mat (remove_ctors test_cnmap (remove_Gt_Geq ^e))``

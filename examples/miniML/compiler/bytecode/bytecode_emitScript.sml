@@ -12,9 +12,10 @@ val data = map
 val init_state_def =  Define`
   init_state ls = <|
     stack := [];
-    code := ls;
-    pc := 0;
+    code := (Stack (Pops 1))::ls;
+    pc := 1;
     refs := FEMPTY;
+    exstack := [(0,0)];
     inst_length := λi. 0 |>`
 
 val defs = map DEFN [
