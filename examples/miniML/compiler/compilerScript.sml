@@ -66,8 +66,12 @@ val compile_def = tDefine "compile" `
 ∧ (compile (Con _ _, s) = emit s [] [Jump 1002]) (* Disallowed: use remove_ctors *)
 ∧ (compile (Proj e n, s) =
    let (e,s) = compile (e,s) in
-   let (r,s) = emit s e [Stack (El n)] in
-   (r,s))
+   case n of 0 =>
+   let (r,s) = emit s [] [Stack (Load 0); Stack IsNum; JumpNil ARB;
+                          Stack Tag; Stack (Pops 1)] in
+   let r = REPLACE_ELEMENT (JumpNil s.next_label) 2 r in
+     (e++r,s)
+   | SUC n => emit s e [Stack (El n)])
 ∧ (compile (Let x e b, s) =
    let (e,s) = compile (e,s) in
    let (r,s) = compile_bindings s.env b 0 s [x] in

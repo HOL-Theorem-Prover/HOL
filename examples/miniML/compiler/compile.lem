@@ -32,31 +32,32 @@ remove_Gt_Geq (Letrec defs e) = Letrec (List.map (fun (fn,vn,e) ->
 and
 remove_Gt_Geq (Proj e n) = Proj (remove_Gt_Geq e) n
 
+(* TODO: removal of redundant expressions *)
+
 (* Remove pattern-matching using continuations *)
 (* TODO: more efficient method *)
 val remove_mat : exp -> exp
 
 let rec
-remove_mat_vp sk v (Pvar pv) =
-  Let pv (Var v) sk
+remove_mat_vp sk ve (Pvar pv) =
+  Let pv ve sk
 and
-remove_mat_vp sk v (Plit l) =
-  If (App Equality (Var v) (Val (Lit l)))
+remove_mat_vp sk ve (Plit l) =
+  If (App Equality ve (Val (Lit l)))
     sk
     (App Opapp (Var "_fk") (Val (Lit (Bool true))))
 and
-remove_mat_vp sk v (Pcon None ps) = remove_mat_con sk v 0 ps
+remove_mat_vp sk ve (Pcon None ps) = remove_mat_con sk ve 0 ps
 and
-remove_mat_con sk v n [] = sk
+remove_mat_con sk ve n [] = sk
 and
-remove_mat_con sk v n (p::ps) =
-  Let "_mat" (Proj (Var v) n) (
-    remove_mat_vp (remove_mat_con sk v (n+1) ps) "_mat" p)
+remove_mat_con sk ve n (p::ps) =
+  remove_mat_vp (remove_mat_con sk ve (n+1) ps) (Proj ve n) p
 
 let rec
-remove_mat (Mat (Var v) pes) = remove_mat_var v pes
+remove_mat (Mat (Var v) pes) = remove_mat_var (Var v) pes
 and
-remove_mat (Mat e pes) = Let "_mat" e (remove_mat_var "_mat" pes)
+remove_mat (Mat e pes) = Let "_mv" e (remove_mat_var (Var "_mv") pes)
 and
 remove_mat (Raise err) = Raise err
 and
@@ -80,11 +81,11 @@ remove_mat (Letrec defs e) = Letrec (List.map (fun (v1,v2,e) -> (v1,v2,remove_ma
 and
 remove_mat (Proj e n) = Proj (remove_mat e) n
 and
-remove_mat_var v [] = Raise Bind_error
+remove_mat_var ve [] = Raise Bind_error
 and
-remove_mat_var v ((p,e)::pes) =
-  Let "_fk" (Fun "_" (remove_mat_var v pes)) (
-    remove_mat_vp (remove_mat e) v p)
+remove_mat_var ve ((p,e)::pes) =
+  Let "_fk" (Fun "_" (remove_mat_var ve pes)) (
+    remove_mat_vp (remove_mat e) ve p)
 
 (* Remove all ML data constructors and replace them with untyped tuples with
  * numeric indices *)

@@ -24,6 +24,10 @@ val _ = map (fn s => (use (d^s^"ML.sig"); use (d^s^"ML.sml")))
  "fmap","sum","fcp","string","bit","words","int",
  "rich_list","bytecode"]
 
+val test_cnmap_def = Define`
+  (test_cnmap "Nil" = 0) ∧
+  (test_cnmap "Cons" = 1)`
+
 open bytecodeML
 
 fun bc_evaln 0 s = s
@@ -58,6 +62,8 @@ end end handle HOL_ERR _ =>
   | "Add" => Add
   | "Sub" => Sub
   | "Less" => Less
+  | "IsNum" => IsNum
+  | "Tag" => Tag
   | s => raise Fail s
 fun term_to_bc tm = let
   val (f,x) = dest_comb tm
@@ -73,7 +79,7 @@ end handle HOL_ERR _ =>
   | "CallPtr" => CallPtr
   | s => raise Fail s
 val term_to_bc_list = (map term_to_bc) o fst o listSyntax.dest_list
-fun f0 e = ``remove_mat (remove_Gt_Geq ^e)``
+fun f0 e = ``remove_mat (remove_ctors test_cnmap (remove_Gt_Geq ^e))``
 fun f1 e = EVAL ``FST (compile (^(f0 e),^s))``
 fun f2 e = rhs (concl (f1 e))
 fun f e = term_to_bc_list (f2 e)
@@ -210,3 +216,39 @@ val e21 = ``Let "x" (Val (Lit (Bool T)))
 val c21 = f e21
 val [Number i] = g c21
 val SOME 1 = intML.toInt i;
+val e22 = ``Con (SOME "Cons") [Val (Lit (Bool T)); Con (SOME "Nil") []]``
+val c22 = f e22
+val [Block (t1,[Number i,Number t2])] = g c22
+val SOME 1 = numML.toInt t1
+val SOME 1 = intML.toInt i
+val SOME 0 = intML.toInt t2;
+val e23 = ``Mat (Con (SOME "Cons") [Val (Lit (IntLit 2));
+                 Con (SOME "Cons") [Val (Lit (IntLit 3));
+                 Con (SOME "Nil") []]])
+            [(Pcon (SOME "Cons") [Pvar "x"; Pvar "xs"],
+              Var "x");
+             (Pcon (SOME "Nil") [],
+              Val (Lit (IntLit 1)))]``
+val c23 = f e23
+val [Number i] = g c23 (* TODO: Exception- Bind raised *)
+val SOME 2 = intML.toInt i;
+val e24 = ``Mat (Con (SOME "Nil") [])
+            [(Pcon (SOME "Nil") [], Val (Lit (Bool F)))]``
+val c24 = f e24
+val [Number i] = g c24
+val SOME 0 = intML.toInt i;
+val e25 = ``Mat (Con (SOME "Cons") [Val (Lit (IntLit 2));
+                 Con (SOME "Nil") []])
+            [(Pcon (SOME "Cons") [Pvar "x"; Pvar "xs"],
+              Var "x")]``
+val c25 = f e25
+val [Number i] = g c25
+val SOME 2 = intML.toInt i;
+val e26 = ``Mat (Con (SOME "Cons") [Val (Lit (IntLit 2));
+                 Con (SOME "Nil") []])
+            [(Pcon (SOME "Cons") [Plit (IntLit 2);
+              Pcon (SOME "Nil") []],
+              Val (Lit (IntLit 5)))]``
+val c26 = f e26
+val [Number i] = g c26 (* TODO: Exception- Bind raised *)
+val SOME 5 = intML.toInt i;

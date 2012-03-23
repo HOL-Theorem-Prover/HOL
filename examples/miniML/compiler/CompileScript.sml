@@ -50,29 +50,28 @@ val _ = Defn.save_defn remove_Gt_Geq_defn;
 
  val remove_mat_vp_defn = Hol_defn "remove_mat_vp" `
 
-(remove_mat_vp sk v (Pvar pv) =
-  Let pv (Var v) sk)
+(remove_mat_vp sk ve (Pvar pv) =
+  Let pv ve sk)
 /\
-(remove_mat_vp sk v (Plit l) =
-  If (App Equality (Var v) (Val (Lit l)))
+(remove_mat_vp sk ve (Plit l) =
+  If (App Equality ve (Val (Lit l)))
     sk
     (App Opapp (Var "_fk") (Val (Lit (Bool T)))))
 /\
-(remove_mat_vp sk v (Pcon NONE ps) = remove_mat_con sk v 0 ps)
+(remove_mat_vp sk ve (Pcon NONE ps) = remove_mat_con sk ve 0 ps)
 /\
-(remove_mat_con sk v n [] = sk)
+(remove_mat_con sk ve n [] = sk)
 /\
-(remove_mat_con sk v n (p::ps) =
-  Let "_mat" (Proj (Var v) n) (
-    remove_mat_vp (remove_mat_con sk v (n+1) ps) "_mat" p))`;
+(remove_mat_con sk ve n (p::ps) =
+  remove_mat_vp (remove_mat_con sk ve (n+1) ps) (Proj ve n) p)`;
 
 val _ = Defn.save_defn remove_mat_vp_defn;
 
  val remove_mat_defn = Hol_defn "remove_mat" `
 
-(remove_mat (Mat (Var v) pes) = remove_mat_var v pes)
+(remove_mat (Mat (Var v) pes) = remove_mat_var (Var v) pes)
 /\
-(remove_mat (Mat e pes) = Let "_mat" e (remove_mat_var "_mat" pes))
+(remove_mat (Mat e pes) = Let "_mv" e (remove_mat_var (Var "_mv") pes))
 /\
 (remove_mat (Raise err) = Raise err)
 /\
@@ -96,11 +95,11 @@ val _ = Defn.save_defn remove_mat_vp_defn;
 /\
 (remove_mat (Proj e n) = Proj (remove_mat e) n)
 /\
-(remove_mat_var v [] = Raise Bind_error)
+(remove_mat_var ve [] = Raise Bind_error)
 /\
-(remove_mat_var v ((p,e)::pes) =
-  Let "_fk" (Fun "_" (remove_mat_var v pes)) (
-    remove_mat_vp (remove_mat e) v p))`;
+(remove_mat_var ve ((p,e)::pes) =
+  Let "_fk" (Fun "_" (remove_mat_var ve pes)) (
+    remove_mat_vp (remove_mat e) ve p))`;
 
 val _ = Defn.save_defn remove_mat_defn;
 
