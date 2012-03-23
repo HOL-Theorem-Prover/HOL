@@ -98,8 +98,8 @@ val (remove_mat_vp_def,remove_mat_vp_ind) =
   WF_REL_TAC
   `inv_image $<
     (λx. case x of
-         | INL (v,p) => pat_size p
-         | INR (v,n,ps) => pat1_size ps)`)
+         | INL (e,v,p) => pat_size p
+         | INR (e,v,n,ps) => pat1_size ps)`)
 val _ = save_thm ("remove_mat_vp_def", remove_mat_vp_def);
 val _ = save_thm ("remove_mat_vp_ind", remove_mat_vp_ind);
 

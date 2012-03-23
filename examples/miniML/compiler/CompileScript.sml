@@ -50,22 +50,21 @@ val _ = Defn.save_defn remove_Gt_Geq_defn;
 
  val remove_mat_vp_defn = Hol_defn "remove_mat_vp" `
 
-(remove_mat_vp v (Pvar pv) =
-  Let pv (Var v) (App Opapp (Var "_sk") (Val (Lit (Bool T)))))
+(remove_mat_vp sk v (Pvar pv) =
+  Let pv (Var v) sk)
 /\
-(remove_mat_vp v (Plit l) =
+(remove_mat_vp sk v (Plit l) =
   If (App Equality (Var v) (Val (Lit l)))
-    (App Opapp (Var "_sk") (Val (Lit (Bool T))))
+    sk
     (App Opapp (Var "_fk") (Val (Lit (Bool T)))))
 /\
-(remove_mat_vp v (Pcon NONE ps) = remove_mat_con v 0 ps)
+(remove_mat_vp sk v (Pcon NONE ps) = remove_mat_con sk v 0 ps)
 /\
-(remove_mat_con v n [] = App Opapp (Var "_sk") (Val (Lit (Bool T))))
+(remove_mat_con sk v n [] = sk)
 /\
-(remove_mat_con v n (p::ps) =
-  Let "_sk" (Fun "_" (remove_mat_con v (n+1) ps)) (
-    Let "_mat" (Proj (Var v) n) (
-      remove_mat_vp "_mat" p)))`;
+(remove_mat_con sk v n (p::ps) =
+  Let "_mat" (Proj (Var v) n) (
+    remove_mat_vp (remove_mat_con sk v (n+1) ps) "_mat" p))`;
 
 val _ = Defn.save_defn remove_mat_vp_defn;
 
@@ -100,9 +99,8 @@ val _ = Defn.save_defn remove_mat_vp_defn;
 (remove_mat_var v [] = Raise Bind_error)
 /\
 (remove_mat_var v ((p,e)::pes) =
-  Let "_sk" (Fun "_" (remove_mat e)) (
-    Let "_fk" (Fun "_" (remove_mat_var v pes)) (
-      remove_mat_vp v p)))`;
+  Let "_fk" (Fun "_" (remove_mat_var v pes)) (
+    remove_mat_vp (remove_mat e) v p))`;
 
 val _ = Defn.save_defn remove_mat_defn;
 

@@ -82,7 +82,7 @@ val compile_def = tDefine "compile" `
 ∧ (compile (Let x e b, s) =
    let (e,s) = compile (e,s) in
    let (r,s) = compile_bindings s.env b 0 s [x] in
-     (e++r,s)) (* TODO: avoid calls to LENGTH? *)
+     (e++r,s)) (* TODO: detect nested Lets? *)
 ∧ (compile (Var x, s) =
    case lookup x s.env of
      NONE => emit s [] [Jump 42] (* should not happen *)
@@ -104,14 +104,16 @@ val compile_def = tDefine "compile" `
    (* stack = arg :: Block 0 [CodePtr ck; env] :: rest *)
    let (r,s) = emit s (e1++e2) [Stack (Load 1); Stack (El 0)] in
    (* stack = CodePtr ck :: arg :: Block 0 [CodePtr ck; env] :: rest *)
-   let (r,s) = emit s r [Stack (Load 2); Stack (El 1); Stack (Store 2)] in
+   let (r,s) = emit s r [Stack (Load 2); Stack (El 1)] in
+   (* stack = env :: CodePtr ck :: arg :: Block 0 [CodePtr ck; env] :: rest *)
+   let (r,s) = emit s r [Stack (Store 2)] in
    (* stack = CodePtr ck :: arg :: env :: rest *)
    let (r,s) = emit s r [CallPtr] in
    (* before call stack = arg :: CodePtr ret :: env :: rest
       after call stack = retval :: env :: rest *)
    let (r,s) = emit s r [Stack (Pops 1)] in
    (* stack = retval :: rest *)
-     (r,s with sz := s.sz + 1))
+     (r,s with sz := s.sz - 1))
 ∧ (compile (Letrec defs b, s) = (* TODO: more efficient than LENGTH and MAP? *)
    let (r1,s) = compile_closures (SOME (MAP FST defs)) s (MAP SND defs) in
    let (r2,s) = compile_bindings s.env b 0 s (MAP FST defs) in
@@ -226,10 +228,11 @@ val compile_def = tDefine "compile" `
   *)
    let fvs = FOLDL (λfvs (x,b). free_vars (Fun x b)) {} xbs in
    let fvs = case names of NONE => fvs | SOME names => fvs DIFF (set names) in
+   let k = case names of NONE => 1 | SOME names => LENGTH names in
    let (e,i,ldenv) =
      FOLDL (λ(e,i,ls) (v,n).
-             if v IN fvs
-             then (bind v (CTEnv i) e, i + 1, compile_varref s.sz ls n)
+             if v IN fvs     (* s.sz + k because of CodePtrs produced by Calls *)
+             then (bind v (CTEnv i) e, i + 1, compile_varref (s.sz + k) ls n)
              else (e,i,ls))
       ([],0,[]) s.env in
    let (e,j) = case names of NONE => (e,0)
@@ -253,14 +256,15 @@ val compile_def = tDefine "compile" `
                    (r,s,[])
                    xbs in
    let r = FOLDR (λ(i,n) r. REPLACE_ELEMENT (Call n) i r) r ls in
-   let (r,s) = emit s r (Stack Pop :: ldenv) in
    case names of
    | NONE =>
-   let (r,s) = emit s r [Stack (if i = 0 then (PushInt 0)
-                                else (Cons 0 i));
-                         Stack (Cons 0 2)] in
+   let (r,s) = if i = 0 then (r,s) else
+     let (r,s) = emit s r (Stack Pop :: ldenv) in
+     emit s r [Stack (Cons 0 i)] in
+   let (r,s) = emit s r [Stack (Cons 0 2)] in
      (r, s with sz := s.sz + 1)
    | SOME names =>
+   let (r,s) = emit s r (Stack Pop :: ldenv) in
    let (r,s) = emit s r [Stack (Cons 0 (i+j))] in
    let (r,s,n) = FOLDR (λa (r,s,n).
      let (r,s) = emit s r [Stack (Load n);
@@ -268,14 +272,13 @@ val compile_def = tDefine "compile" `
                            Stack (Load (n+1));
                            Stack (Cons 0 2)]
      in (r,s,n+1)) (r,s,0) (TL names) in
-   let k = LENGTH (TL names) in
    let (r,s) =
-   emit s r [Stack (Load k);
+   emit s r [Stack (Load (k-1));
              Stack (El 0);
-             Stack (Load (k+1));
+             Stack (Load k);
              Stack (Cons 0 2);
-             Stack (Store (k+1))] in
-   (r, s with sz := s.sz + k + 1))`
+             Stack (Store k)] in
+   (r, s with sz := s.sz + k))`
 ( WF_REL_TAC `inv_image ($< LEX $<) (λx. case x of
        | INL (e,s) => (exp_size e, 3:num)
        | INR (INL (env,e,n,s,[])) => (exp_size e, 4)
