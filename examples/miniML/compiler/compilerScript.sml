@@ -24,20 +24,9 @@ val compile_lit_def = Define`
   (compile_lit (IntLit  n) = PushInt n)
 ∧ (compile_lit (Bool b) = PushInt (bool2num b))`;
 
-val compile_val_def = tDefine "compile_val"`
-  (compile_val (Lit l) = [Stack (compile_lit l)])
-∧ (compile_val (Conv NONE ((Lit (IntLit c))::vs)) =
-   let n  = LENGTH vs in
-   if n = 0 then [Stack (PushInt c)] else
-   let vs = FLAT (MAP compile_val vs) in
-   SNOC (Stack (Cons (Num c) n)) vs)
-(* literals and desugared constructors only *)`
-(WF_REL_TAC `measure v_size` >>
- Induct >>
- srw_tac [][] >>
- fsrw_tac [ARITH_ss][exp_size_def,LENGTH_NIL] >>
- res_tac >> Cases_on `vs=[]` >> fsrw_tac [][] >>
- DECIDE_TAC)
+val compile_val_def = Define `
+  (compile_val (Lit l) = [Stack (compile_lit l)]) ∧
+  (compile_val _ = [Jump 1006])` (* Disallowed *)
 
 val compile_opn_def = Define`
   (compile_opn Plus   = [Stack Add])
@@ -71,7 +60,7 @@ val compile_def = tDefine "compile" `
      (r, s with sz := s.sz + 1))
 ∧ (compile (Con NONE ((Val (Lit (IntLit i)))::es), s) =
    let n = LENGTH es in
-   let (es,s) = FOLDR (λe (es,s). let (e,s) = compile (e,s) in (es++e,s)) ([],s) es in
+   let (es,s) = FOLDL (λ(es,s) e. let (e,s) = compile (e,s) in (es++e,s)) ([],s) es in
    let (r,s) = emit s es [Stack (Cons (Num i) n)] in
    (r,s with sz := s.sz + 1 - n))
 ∧ (compile (Con _ _, s) = emit s [] [Jump 1002]) (* Disallowed: use remove_ctors *)
