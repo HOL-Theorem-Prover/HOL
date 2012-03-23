@@ -26,6 +26,12 @@ val _ = map (fn s => (use (d^s^"ML.sig"); use (d^s^"ML.sml")))
 
 open bytecodeML
 
+fun bc_evaln 0 s = s
+  | bc_evaln n s = let
+    val SOME s = bc_eval1 s in
+      bc_evaln (n-1) s
+    end handle Bind => (print "Fail\n"; s)
+
 val s = ``<| env := []; next_label := 0; sz := 0; inst_length := λi. 0 |>``
 fun term_to_num x = (numML.fromString (Parse.term_to_string x))
 fun term_to_int x = (intML.fromString ((Parse.term_to_string x)^"i"))
@@ -162,4 +168,45 @@ Let "x" (Val (Lit (Bool T)))
      (Pvar "y", (Var "y"))])
   (Var "x"))``
 val c15 = f e15
-val [Number i] = g c15 (* TODO: Exception- bind raised *)
+val [Number i] = g c15
+val SOME 1 = intML.toInt i;
+val e16 = ``App Equality (Let "x" (Val (Lit (Bool T))) (Var "x")) (Val (Lit (Bool F)))``
+val c16 = f e16
+val [Number i] = g c16
+val SOME 0 = intML.toInt i;
+val e17 = ``App Equality
+  (Let "f" (Fun "_" (Val (Lit (Bool T)))) (App Opapp (Var "f") (Val (Lit (Bool T)))))
+  (Val (Lit (Bool F)))``
+val c17 = f e17
+val [Number i] = g c17
+val SOME 0 = intML.toInt i;
+val e18 = ``
+Let "x" (Val (Lit (Bool T)))
+  (App Equality
+    (Let "f" (Fun "_" (Var "x")) (App Opapp (Var "f") (Var "x")))
+    (Var "x"))``
+val c18 = f e18
+val [Number i] = g c18
+val SOME 1 = intML.toInt i;
+val e19 = ``
+Let "x" (Val (Lit (Bool T)))
+  (App Opapp (Fun "_" (Var "x")) (Val (Lit (Bool F))))``
+val c19 = f e19
+val [Number i] = g c19
+val SOME 1 = intML.toInt i;
+val e20 = ``
+Let "f" (Fun "_" (Val (Lit (Bool T))))
+(App Equality
+  (App Opapp (Var "f") (Val (Lit (Bool T))))
+  (Val (Lit (Bool F))))``
+val c20 = f e20
+val [Number i] = g c20
+val SOME 0 = intML.toInt i;
+val e21 = ``Let "x" (Val (Lit (Bool T)))
+(App Equality
+  (Let "f" (Fun "_" (Var "x"))
+    (App Opapp (Var "f") (Var "x")))
+  (Var "x"))``
+val c21 = f e21
+val [Number i] = g c21
+val SOME 1 = intML.toInt i;

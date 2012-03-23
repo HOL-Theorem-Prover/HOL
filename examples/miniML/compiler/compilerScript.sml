@@ -61,11 +61,11 @@ val compile_varref_def = tDefine "compile_varref" `
 
 (* compile : exp * compiler_state → bc_inst list * compiler_state *)
 val compile_def = tDefine "compile" `
-  (compile (Raise err, s) = emit s [] [Jump 42]) (* TODO *)
+  (compile (Raise err, s) = emit s [] [Jump 1000]) (* TODO *)
 ∧ (compile (Val v, s) =
    let (r,s) = emit s [] (compile_val v) in
      (r, s with sz := s.sz + 1))
-∧ (compile (Mat e pes, s) = emit s [] [Jump 42]) (* Disallowed: use remove_mat *)
+∧ (compile (Mat e pes, s) = emit s [] [Jump 1001]) (* Disallowed: use remove_mat *)
 ∧ (compile (Con NONE [(Val (Lit (IntLit i)))], s) =
    let (r,s) = emit s [] [Stack (PushInt i)] in
      (r, s with sz := s.sz + 1))
@@ -74,7 +74,7 @@ val compile_def = tDefine "compile" `
    let (es,s) = FOLDR (λe (es,s). let (e,s) = compile (e,s) in (es++e,s)) ([],s) es in
    let (r,s) = emit s es [Stack (Cons (Num i) n)] in
    (r,s with sz := s.sz + 1 - n))
-∧ (compile (Con _ _, s) = emit s [] [Jump 42]) (* Disallowed: use remove_ctors *)
+∧ (compile (Con _ _, s) = emit s [] [Jump 1002]) (* Disallowed: use remove_ctors *)
 ∧ (compile (Proj e n, s) =
    let (e,s) = compile (e,s) in
    let (r,s) = emit s e [Stack (El n)] in
@@ -85,7 +85,7 @@ val compile_def = tDefine "compile" `
      (e++r,s)) (* TODO: detect nested Lets? *)
 ∧ (compile (Var x, s) =
    case lookup x s.env of
-     NONE => emit s [] [Jump 42] (* should not happen *)
+     NONE => emit s [] [Jump 1003] (* should not happen *)
    | SOME ct =>
      let (r,s) = emit s [] (compile_varref s.sz [] ct) in
      (r, s with sz := s.sz + 1))
@@ -141,8 +141,8 @@ val compile_def = tDefine "compile" `
     let (e2,s) = compile (e2,s) in
     let (r,s) = emit s (e0++e1++e2) [Stack Sub;Stack Less;Stack Sub] in
       (r, s with sz := s.sz - 3))
-∧ (compile (App (Opb Gt) e1 e2, s) = emit s [] [Jump 42]) (* Disallowed: use remove_Gt_Geq *)
-∧ (compile (App (Opb Geq) e1 e2, s) = emit s [] [Jump 42]) (* Disallowed: use remove_Gt_Geq *)
+∧ (compile (App (Opb Gt) e1 e2, s) = emit s [] [Jump 1004]) (* Disallowed: use remove_Gt_Geq *)
+∧ (compile (App (Opb Geq) e1 e2, s) = emit s [] [Jump 1005]) (* Disallowed: use remove_Gt_Geq *)
 ∧ (compile (Log And e1 e2, s)
   = let (e1,s) = compile (e1,s) in
     let (aa,s) = emit s ARB [JumpNil ARB] in
