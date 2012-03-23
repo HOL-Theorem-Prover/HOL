@@ -55,7 +55,7 @@ val _ = export_rewrites["exp_size_positive"]
 (* move elsewhere? *)
 val free_vars_def = tDefine "free_vars"`
   (free_vars (Var x) = {x})
-∧ (free_vars (Let x _ b) = free_vars b DELETE x)
+∧ (free_vars (Let x e b) = free_vars e ∪ (free_vars b DELETE x))
 ∧ (free_vars (Letrec ls b) = FOLDL (λs (n,x,b). s ∪ (free_vars b DELETE x))
                              (free_vars b DIFF (FOLDL (combin$C ($INSERT o FST)) {} ls))
                              ls)
