@@ -88,30 +88,30 @@ val compile_def = tDefine "compile" `
      (r, s with sz := s.sz + 1))
 ∧ (compile (App Opapp e1 e2, s) =
   (* A closure looks like:
-       Block 0 [CodePtr ck; Block 0 [CodePtr c1; ...; CodePtr cn; v1; ...; vm]]
+       Block 0 [CodePtr c; Block 0 [RefPtr f1; ...; RefPtr fn; v1; ...; vm]]
        where
+         c = this function's code
          v1,...,vm = values of free variables (the environment)
-         c1,...,cn = code of all functions sharing the environment
-         ck = this function's code (thus ck appears twice)
-       Non-recursive closures omit the initial list of CodePtrs.
-       If they additionally don't have any free variables, the
-       entire environment block is replaced by Number 0. *)
+         f1,...,fn = references to values of free variables that are
+                  closures defined in mutual recursion with this one
+       If there are no free variables, the environment block is
+       replaced by Number 0. *)
    let (e1,s) = compile (e1,s) in
    let (e2,s) = compile (e2,s) in
-   (* stack = arg :: Block 0 [CodePtr ck; env] :: rest *)
+   (* stack = arg :: Block 0 [CodePtr c; env] :: rest *)
    let (r,s) = emit s (e1++e2) [Stack (Load 1); Stack (El 0)] in
-   (* stack = CodePtr ck :: arg :: Block 0 [CodePtr ck; env] :: rest *)
+   (* stack = CodePtr c :: arg :: Block 0 [CodePtr c; env] :: rest *)
    let (r,s) = emit s r [Stack (Load 2); Stack (El 1)] in
-   (* stack = env :: CodePtr ck :: arg :: Block 0 [CodePtr ck; env] :: rest *)
+   (* stack = env :: CodePtr c :: arg :: Block 0 [CodePtr c; env] :: rest *)
    let (r,s) = emit s r [Stack (Store 2)] in
-   (* stack = CodePtr ck :: arg :: env :: rest *)
+   (* stack = CodePtr c :: arg :: env :: rest *)
    let (r,s) = emit s r [CallPtr] in
    (* before call stack = arg :: CodePtr ret :: env :: rest
       after call stack = retval :: env :: rest *)
    let (r,s) = emit s r [Stack (Pops 1)] in
    (* stack = retval :: rest *)
      (r,s with sz := s.sz - 1))
-∧ (compile (Letrec defs b, s) = (* TODO: more efficient than LENGTH and MAP? *)
+∧ (compile (Letrec defs b, s) = (* TODO: more efficient than MAP? *)
    let (r1,s) = compile_closures (SOME (MAP FST defs)) s (MAP SND defs) in
    let (r2,s) = compile_bindings s.env b 0 s (MAP FST defs) in
      (r1++r2,s))
@@ -179,14 +179,17 @@ val compile_def = tDefine "compile" `
        (s with env := bind x (CTStack (s.sz - n)) s.env)
        xs)
 ∧ (compile_closures names s xbs =
-   (*  PushInt 0                            0, rest
-       Call L1                              0, CodePtr f1, rest
+   (*  PushInt 0, Ref
+       ...            (* create RefPtrs for (needed?) recursive closures *)
+       PushInt 0, Ref                       RefPtr 0, ..., RefPtr 0, rest
+       PushInt 0                            0, RefPtr 0, ..., RefPtr 0, rest
+       Call L1                              0, CodePtr f1, RefPtr 0, ..., RefPtr 0, rest
        ?
        ...      (* function 1 body *)
        Store 0  (* replace argument with
                    return value *)
        Return
-   L1: Call L2                              0, CodePtr f2, CodePtr f1, rest
+   L1: Call L2                              0, CodePtr f2, CodePtr f1, RefPtrs, rest
        ?
        ...      (* function 2 body *)
        Store 0
@@ -199,29 +202,26 @@ val compile_def = tDefine "compile" `
    LK: Call L
        ...
        Return   (* end of last function *)
-   L:  Pop                                  CodePtr fk, ..., CodePtr f1, rest
-       Load ?   (* copy free vars *)
-       ...                                  vn, ..., v1, CodePtr fk, ..., CodePtr f1, rest
-       (* for non-recursive (nb: k = 1): *)
-       Cons 0 n                             Block 0 Env, CodePtr f1, rest
-       Cons 0 2                             Block 0 [CodePtr f1; Block 0 Env], rest
-       (* for recursive: *)
-       Cons 0 (k+n)  Block 0 Env, rest
-       Load 0        Block 0 Env, Block 0 Env, rest
-       El 1          CodePtr f2, Block 0 Env, rest
-       Load 1        Block 0 Env, CodePtr f2, Block 0 Env, rest
-       Cons 0 2      f2, Block 0 Env, rest
-       Load 1        Block 0 Env, f1, Block 0 Env, rest
-       El 2          CodePtr f3, f1, Block 0 Env, rest
-       Load 2        Block 0 Env, CodePtr f3, f1, Block 0 Env, rest
-       Cons 0 2      f3, f2, Block 0 Env, rest
+   L:  Pop                                  CodePtr fk, ..., CodePtr f1, RefPtrs, rest
+       Load ?   (* copy free mutrec vars for function k *)
+       Load ?   (* copy free vars for function k *)
+       ...                                  vmk, ..., v1, RefPtr 0, ..., RefPtr 0, CodePtr fk, ..., CodePtr f1, RefPtrs, rest
+       Cons 0 (mk + nk)
+       Cons 0 2                             Block 0 [CodePtr fk; Block 0 Env], CodePtr f(k-1), ..., CodePtr f1, RefPtrs, rest
+       Load ?   (* copy free mutrec vars for function k-1 *)
+       Load ?   (* copy free vars for function k-1 *)
        ...
-       Cons 0 2      fk, ..., f2, Block 0 Env, rest
-       Load (k-2+1)  Block 0 Env, fk, ..., f2, Block 0 Env, rest
-       El 0          CodePtr f1, fk, ..., f2, Block 0 Env, rest
-       Load k        Block 0 Env, CodePtr f1, fk, ..., f2, Block 0 Env, rest
-       Cons 0 2      f1, fk, ..., f2, Block 0 Env, rest
-       Store k       fk, ..., f1, rest
+       Cons 0 (m(k-1) + n(k-1))
+       Cons 0 2                             fk, f(k-1), ..., CodePtr f1, RefPtrs, rest
+       ...                                  fk, f(k-1), ..., f1, RefPtrs, rest
+       Load ?
+       Load 1                               fk, RefPtr 0, fk, f(k-1), ..., RefPtrs, rest
+       Update                               fk, f(k-1), ..., f1, RefPtrs, rest
+       Load ?
+       Load 2
+       Update
+       ...      (* update RefPtrs with closures *)
+       Pops ?   (* pop RefPtrs *)           fk, f(k-1), ..., f1, rest
   *)
    let fvs = FOLDL (λfvs (x,b). free_vars (Fun x b)) {} xbs in
    let fvs = case names of NONE => fvs | SOME names => fvs DIFF (set names) in
