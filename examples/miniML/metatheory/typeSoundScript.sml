@@ -1610,7 +1610,7 @@ rw [] >>
            by metis_tac [type_progress] >|
 [fs [def_final_state_def] >>
      rw [] >>
-     qexists_tac `Rval env'` >>
+     qexists_tac `Rval (cenv',env')` >>
      rw [d_small_eval_def] >>
      metis_tac [],
  qexists_tac `Rerr (Rraise err)` >>

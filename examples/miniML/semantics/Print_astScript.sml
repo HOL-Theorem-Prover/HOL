@@ -23,6 +23,8 @@ val _ = Hol_datatype `
 
 (*val string_last : string -> string*)
 
+(*val (%) : num -> num -> num*)
+
 (*val stree_to_string : stree -> string -> string*)
  val stree_to_string_defn = Hol_defn "stree_to_string" `
 
@@ -42,8 +44,6 @@ val _ = Defn.save_defn stree_to_string_defn;
     (S" ")  (spaces (n - 1)))`;
 
 val _ = Defn.save_defn spaces_defn;
-
-(* TODO: use a built-in int_to_string *)
 
  val num_to_string_defn = Hol_defn "num_to_string" `
  (num_to_string n =

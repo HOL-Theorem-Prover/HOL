@@ -18,6 +18,9 @@ sub [hol] string_first s = STRING (SUB (s,0)) ""
 val string_last : string -> string
 sub [hol] string_last s = STRING (SUB (s,STRLEN s - 1)) ""
 
+val (%) : num -> num -> num
+sub [hol] (%) = MOD
+
 val stree_to_string : stree -> string -> string
 let rec
 stree_to_string (S s) acc = s ^ acc
@@ -31,8 +34,6 @@ spaces n =
     S""
   else
     S" " ^^ spaces (n - 1)
-
-(* TODO: use a built-in int_to_string *)
 
 let rec num_to_string n =
   if n > 0 then

@@ -34,8 +34,6 @@ val _ = new_theory "MiniML"
 
 (*val rtc : forall 'a. ('a -> 'a -> bool) -> ('a -> 'a -> bool)*)
 
-(*val (%) : num -> num -> num*)
-
 (* Environments *)
 val _ = type_abbrev((*  ('a,'b) *) "env" , ``: ('a#'b) list``);
 
@@ -721,7 +719,7 @@ val _ = Hol_datatype `
 (*val e_step_reln : state -> state -> bool*)
 (*val small_eval : envC -> envE -> exp -> ctxt list -> v result -> bool*)
 (*val d_step_reln : d_state -> d_state -> bool*)
-(*val d_small_eval : envC -> envE -> dec list -> (pat * state)option -> envE result -> bool*)
+(*val d_small_eval : envC -> envE -> dec list -> (pat * state)option -> (envC * envE) result -> bool*)
 
 val _ = Define `
  (e_step_reln st1 st2 =
@@ -760,8 +758,8 @@ val _ = Define `
 
  val d_small_eval_defn = Hol_defn "d_small_eval" `
 
-(d_small_eval cenv env ds c (Rval env') =
-  ? cenv'. (RTC d_step_reln) (cenv,env,ds,c) (cenv',env',[],NONE))
+(d_small_eval cenv env ds c (Rval (cenv',env')) =
+  (RTC d_step_reln) (cenv,env,ds,c) (cenv',env',[],NONE))
 /\
 (d_small_eval cenv env ds c (Rerr Rtype_error) =
   ? cenv' env' ds' c'.
@@ -789,7 +787,7 @@ val _ = Define `
 (*val evaluate : envC -> envE -> exp -> v result -> bool*)
 (*val evaluate_list : envC -> envE -> exp list -> v list result -> bool*)
 (*val evaluate_match : envC -> envE -> v -> (pat * exp) list -> v result -> bool*)
-(*val evaluate_decs : envC -> envE -> dec list -> envE result -> bool*)
+(*val evaluate_decs : envC -> envE -> dec list -> (envC * envE) result -> bool*)
 
 val _ = Hol_reln `
 
@@ -926,7 +924,6 @@ evaluate cenv env (If e1 e2 e3) (Rerr Rtype_error))
 
 /\
 
-
 (! cenv env e1 e2 e3 err.
 evaluate cenv env e1 (Rerr err)
 ==>
@@ -1051,7 +1048,7 @@ val _ = Hol_reln `
 (! cenv env.
 T
 ==>
-evaluate_decs cenv env [] (Rval env))
+evaluate_decs cenv env [] (Rval (cenv,env)))
 
 /\
 
@@ -1985,5 +1982,85 @@ evaluate_match' env v ((p,e)::pes) (Rerr Rtype_error))
 ~ (ALL_DISTINCT (pat_bindings p []))
 ==>
 evaluate_match' env v ((p,e)::pes) (Rerr Rtype_error))`;
+
+
+val _ = Hol_reln `
+
+(! cenv env.
+T
+==>
+evaluate_decs' cenv env [] (Rval (cenv,env)))
+
+/\
+
+(! cenv env p e ds v env' r.
+evaluate' env e (Rval v) /\
+ALL_DISTINCT (pat_bindings p []) /\
+(pmatch cenv p v env = Match env') /\
+evaluate_decs' cenv env' ds r
+==>
+evaluate_decs' cenv env (Dlet p e :: ds) r)
+
+/\
+
+(! cenv env p e ds v.
+evaluate' env e (Rval v) /\
+ALL_DISTINCT (pat_bindings p []) /\
+(pmatch cenv p v env = No_match)
+==>
+evaluate_decs' cenv env (Dlet p e :: ds) (Rerr (Rraise Bind_error)))
+
+/\
+
+(! cenv env p e ds v.
+evaluate' env e (Rval v) /\
+(pmatch cenv p v env = Match_type_error)
+==>
+evaluate_decs' cenv env (Dlet p e :: ds) (Rerr (Rtype_error)))
+
+/\
+
+(! cenv env p e ds v.
+evaluate' env e (Rval v) /\
+~ (ALL_DISTINCT (pat_bindings p []))
+==>
+evaluate_decs' cenv env (Dlet p e :: ds) (Rerr (Rtype_error)))
+
+/\
+
+(! cenv env p e ds err.
+evaluate' env e (Rerr err)
+==>
+evaluate_decs' cenv env (Dlet p e :: ds) (Rerr err))
+
+/\
+
+(! cenv env funs ds r.
+ALL_DISTINCT (MAP (\ (x,y,z) . x) funs) /\
+evaluate_decs' cenv (build_rec_env funs env) ds r
+==>
+evaluate_decs' cenv env (Dletrec funs :: ds) r)
+
+/\
+
+(! cenv env funs ds.
+~ (ALL_DISTINCT (MAP (\ (x,y,z) . x) funs))
+==>
+evaluate_decs' cenv env (Dletrec funs :: ds) (Rerr Rtype_error))
+
+/\
+
+(! cenv env tds ds r.
+check_dup_ctors tds cenv /\
+evaluate_decs' (merge (build_tdefs tds) cenv) env ds r
+==>
+evaluate_decs' cenv env (Dtype tds :: ds) r)
+
+/\
+
+(! cenv env tds ds.
+~ (check_dup_ctors tds cenv)
+==>
+evaluate_decs' cenv env (Dtype tds :: ds) (Rerr Rtype_error))`;
 val _ = export_theory()
 

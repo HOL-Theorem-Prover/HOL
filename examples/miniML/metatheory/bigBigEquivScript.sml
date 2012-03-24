@@ -44,7 +44,7 @@ val evaluate_to_evaluate' = Q.prove (
    (r ≠ Rerr Rtype_error) ⇒ evaluate_list' env es r) ∧
  (!envc env v p r. evaluate_match envc env v p r ⇒
    (r ≠ Rerr Rtype_error) ⇒ evaluate_match' env v p r)`,
-HO_MATCH_MP_TAC evaluate_ind >>
+ho_match_mp_tac evaluate_ind >>
 rw [] >>
 SIMP_TAC (srw_ss()) [Once evaluate'_cases] >>
 fs [] >>
@@ -59,7 +59,7 @@ val evaluate'_to_evaluate = Q.prove (
  (!env v p r. evaluate_match' env v p r ⇒
    !envc. ¬evaluate_match envc env v p (Rerr Rtype_error) ⇒
    evaluate_match envc env v p r)`,
-HO_MATCH_MP_TAC evaluate'_ind >>
+ho_match_mp_tac evaluate'_ind >>
 rw [] >>
 SIMP_TAC (srw_ss()) [Once evaluate_cases] >>
 fs [] >>
@@ -86,5 +86,52 @@ val evaluate_evaluate'_thm = Q.store_thm ("evaluate_evaluate'_thm",
   ⇒
   (evaluate' env e r = evaluate envC env e r)`,
 metis_tac [type_no_error, evaluate'_to_evaluate, evaluate_to_evaluate']);
+
+
+val evaluate_decs_to_evaluate_decs' = Q.prove (
+`!cenv env ds r. 
+  evaluate_decs cenv env ds r ⇒ 
+  (r ≠ Rerr Rtype_error) ⇒ 
+  evaluate_decs' cenv env ds r`,
+ho_match_mp_tac evaluate_decs_ind >>
+rw [] >>
+fs [] >>
+rw [Once evaluate_decs'_cases] >>
+metis_tac [result_distinct, evaluate_to_evaluate', result_11]);
+
+val evaluate_decs'_to_evaluate_decs = Q.prove (
+`!cenv env ds r. 
+  evaluate_decs' cenv env ds r ⇒ 
+  ¬evaluate_decs cenv env ds (Rerr Rtype_error) ⇒
+  evaluate_decs cenv env ds r`,
+ho_match_mp_tac evaluate_decs'_ind >>
+rw [] >>
+fs [] >>
+rw [Once evaluate_decs_cases] >>
+pop_assum (ASSUME_TAC o SIMP_RULE (srw_ss()) [Once evaluate_decs_cases]) >>
+fs [] >>
+metis_tac [evaluate'_to_evaluate]);
+
+val type_no_error_dec = Q.prove (
+`!tenvC tenv ds t envC env r tenvC' tenvE'.
+  consistent_con_env envC tenvC ∧
+  consistent_con_env2 envC tenvC ∧
+  type_env tenvC env tenv ∧
+  type_ds tenvC tenv ds tenvC' tenvE'
+  ⇒
+  ¬evaluate_decs envC env ds (Rerr Rtype_error)`,
+rw [GSYM small_big_equiv] >>
+metis_tac [untyped_safety, small_determ, type_soundness]);
+
+val evaluate_dec_evaluate_dec'_thm = Q.store_thm ("evaluate_dec_evaluate_dec'_thm",
+`!tenvC envC tenv ds t cenv env r tenvC' tenvE'.
+  consistent_con_env envC tenvC ∧
+  consistent_con_env2 envC tenvC ∧
+  type_env tenvC env tenv ∧
+  type_ds tenvC tenv ds tenvC' tenvE'
+  ⇒
+  (evaluate_decs' envC env ds r = evaluate_decs envC env ds r)`,
+metis_tac [type_no_error_dec, evaluate_decs'_to_evaluate_decs, 
+           evaluate_decs_to_evaluate_decs']);
 
 val _ = export_theory ()

@@ -988,8 +988,8 @@ val big_dec_to_small_dec = Q.prove (
   evaluate_decs cenv env ds r ⇒ d_small_eval cenv env ds NONE r`,
 HO_MATCH_MP_TAC evaluate_decs_ind >>
 rw [d_small_eval_def] >|
-[metis_tac [RTC_REFL],
- cases_on `r` >>
+[cases_on `r` >>
+     TRY (cases_on `a`) >>
      fs [d_small_eval_def] >|
      [`d_step_reln (cenv,env,Dlet p e::ds,NONE)
                    (cenv,env,ds,SOME(p,cenv,env,e,[]))`
@@ -1079,7 +1079,7 @@ rw [d_small_eval_def] >|
                      fs [e_step_def, continue_def]) >>
           metis_tac [RTC_SINGLE, transitive_RTC, transitive_def]],
  cases_on `r` >|
-     [all_tac,
+     [cases_on `a`,
       cases_on `e`] >>
      fs [d_small_eval_def] >>
      `d_step_reln (cenv,env,Dletrec funs::ds,NONE)
@@ -1090,7 +1090,7 @@ rw [d_small_eval_def] >|
         by rw [d_step_def] >>
      metis_tac [RTC_REFL, transitive_RTC, transitive_def],
  cases_on `r` >|
-     [all_tac,
+     [cases_on `a`,
       cases_on `e`] >>
      fs [d_small_eval_def] >>
      `d_step_reln (cenv,env,Dtype tds::ds,NONE)
@@ -1222,7 +1222,7 @@ val evaluate_d_state_no_ctxt = Q.prove (
 rw [evaluate_d_state_cases]);
 
 val evaluate_d_state_val = Q.prove (
-`!cenv env. evaluate_d_state (cenv,env,[],NONE) (Rval env)`,
+`!cenv env. evaluate_d_state (cenv,env,[],NONE) (Rval (cenv,env))`,
 rw [evaluate_d_state_cases] >>
 rw [Once evaluate_decs_cases]);
 
@@ -1230,7 +1230,7 @@ val small_big_equiv = Q.store_thm ("small_big_equiv",
 `!envc env ds r. d_small_eval envc env ds NONE r = evaluate_decs envc env ds r`,
 rw [] >>
 cases_on `r` >|
-[all_tac,
+[cases_on `a`,
  cases_on `e`] >>
 rw [d_small_eval_def] >>
 EQ_TAC >>
