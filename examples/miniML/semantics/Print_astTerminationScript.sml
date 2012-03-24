@@ -30,12 +30,8 @@ val (pat_to_stree_def, pat_to_stree_ind) =
   tprove_no_defn ((pat_to_stree_def, pat_to_stree_ind),
   wf_rel_tac `measure (\(_,x). pat_size x)` >>
   rw [] >|
-  [induct_on `ps` >>
-       rw [] >>
-       fs [pat_size_def] >>
-       decide_tac,
-   decide_tac,
-   induct_on `v9` >>
+  [decide_tac,
+   induct_on `v8` >>
        rw [] >>
        fs [pat_size_def] >>
        decide_tac]);
@@ -50,7 +46,7 @@ val (exp_to_stree_def, exp_to_stree_ind) =
   TRY (induct_on `funs`) >>
   TRY (induct_on `pes`) >>
   TRY (induct_on `es`) >>
-  TRY (induct_on `v56`) >>
+  TRY (induct_on `v51`) >>
   rw [exp_size_def] >>
   fs [exp_size_def] >>
   rw [exp_size_def] >>

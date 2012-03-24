@@ -130,13 +130,10 @@ val _ = Define `
 /\
 (pat_to_stree sml (Plit l) = lit_to_stree sml l)
 /\
-(pat_to_stree sml (Pcon NONE ps) = A  
-  (S"(") (A   (join_strings (S",") (MAP (pat_to_stree sml) ps))  (S")")))
-/\
-(pat_to_stree sml (Pcon (SOME c) []) =
+(pat_to_stree sml (Pcon c []) =
   var_to_stree sml c)
 /\
-(pat_to_stree sml (Pcon (SOME c) ps) = A 
+(pat_to_stree sml (Pcon c ps) = A 
   (S"(") (A   (var_to_stree sml c) (A   
     (S"(") (A   (join_strings (S",") (MAP (pat_to_stree sml) ps)) (A   (S")")  (S")"))))))`;
 
@@ -170,13 +167,10 @@ val _ = Define `
   (* This shouldn't happen in source *)
   S"")
 /\
-(exp_to_stree sml indent (Con NONE es) = A  
-  (S"(") (A   (join_strings (S",") (MAP (exp_to_stree sml indent) es))  (S")")))
-/\
-(exp_to_stree sml indent (Con (SOME c) []) =
+(exp_to_stree sml indent (Con c []) =
   var_to_stree sml c)
 /\
-(exp_to_stree sml indent (Con (SOME c) es) = A 
+(exp_to_stree sml indent (Con c es) = A 
   (S"(") (A   
   (var_to_stree sml c) (A   
   (S"(") (A   

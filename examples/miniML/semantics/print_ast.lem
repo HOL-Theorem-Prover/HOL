@@ -98,13 +98,10 @@ pat_to_stree sml (Pvar v) = var_to_stree sml v
 and
 pat_to_stree sml (Plit l) = lit_to_stree sml l
 and
-pat_to_stree sml (Pcon None ps) = 
-  S"(" ^^ join_strings (S",") (List.map (pat_to_stree sml) ps) ^^ S")"
-and
-pat_to_stree sml (Pcon (Some c) []) =
+pat_to_stree sml (Pcon c []) =
   var_to_stree sml c
 and
-pat_to_stree sml (Pcon (Some c) ps) =
+pat_to_stree sml (Pcon c ps) =
   S"(" ^^ var_to_stree sml c ^^ 
     S"(" ^^ join_strings (S",") (List.map (pat_to_stree sml) ps) ^^ S")" ^^ S")"
 
@@ -131,13 +128,10 @@ exp_to_stree sml indent (Val _) =
   (* This shouldn't happen in source *)
   S""
 and
-exp_to_stree sml indent (Con None es) = 
-  S"(" ^^ join_strings (S",") (List.map (exp_to_stree sml indent) es) ^^ S")"
-and
-exp_to_stree sml indent (Con (Some c) []) =
+exp_to_stree sml indent (Con c []) =
   var_to_stree sml c
 and
-exp_to_stree sml indent (Con (Some c) es) =
+exp_to_stree sml indent (Con c es) =
   S"(" ^^ 
   var_to_stree sml c ^^ 
   S"(" ^^ 

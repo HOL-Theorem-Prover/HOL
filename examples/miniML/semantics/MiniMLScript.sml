@@ -8,12 +8,13 @@ val _ = new_theory "MiniML"
 (* By Scott Owens, University of Cambridge, Copyright 2011
  *
  * Miniml is my idea of the simplest ML-like language that remains convenient
- * to program in.  It is purely functional (no refs or exceptions), has no
- * modules, no type abbreviations, or record types.  It does have mutually
- * recursive datatypes (at the top-level only) and functions, as well as
- * higher-order functions.  It also supports pattern matching for nested
- * patterns (which can fail due to non-exhaustive patterns).  Only booleans and
- * number types are built-in.  Syntactic sugar is generally omitted.
+ * to program in.  It is almost purely functional (no refs or handled
+ * exceptions), has no modules, no type abbreviations, or record types.  It
+ * does have mutually recursive datatypes (at the top-level only) and
+ * functions, as well as higher-order functions.  It also supports pattern
+ * matching for nested patterns (which can fail due to non-exhaustive
+ * patterns).  Only booleans and number types are built-in.  Syntactic sugar is
+ * generally omitted.
  *
  * In some ways it makes more sense to write these kind of semantics in Ott (to
  * get a presentation that looks like ML concrete-syntax-wise, and that has the
@@ -183,9 +184,8 @@ val _ = Hol_datatype `
  pat =
     Pvar of varN
   | Plit of lit
-  (* Constructor applications.  If there is no constructor name, this is an
-   * untyped tuple. *)
-  | Pcon of conN option => pat list`;
+  (* Constructor applications. *)
+  | Pcon of conN => pat list`;
 
 
 (* Runtime errors *)
@@ -200,9 +200,8 @@ val _ = Hol_datatype `
  exp =
     Raise of error
   | Val of v
-  (* Constructor application.  If there is no constructor name, this is an
-   * untyped tuple. *)
-  | Con of conN option => exp list
+  (* Constructor application. *)
+  | Con of conN => exp list
   | Var of varN
   | Fun of varN => exp
   (* Application of an operator (including function application) *)
@@ -217,15 +216,12 @@ val _ = Hol_datatype `
    * The first varN is the function's name, and the second varN is its
    * parameter *)
   | Letrec of (varN # varN # exp) list => exp
-  (* Projection from an untyped tuple *)
-  | Proj of exp => num
 
 (* Value forms *)
 ; v =
     Lit of lit
-  (* Constructor application.  If there is no constructor name, this is an
-   * untyped tuple.  *)
-  | Conv of conN option => v list
+  (* Constructor application. *) 
+  | Conv of conN => v list
   (* Function closures
      The environment is used for the free variables in the function *)
   | Closure of (varN, v) env => varN => exp
@@ -273,8 +269,7 @@ val _ = Hol_datatype `
   | Clet of varN => unit => exp
   (* Evaluating a constructor's arguments
    * The v list should be in reverse order. *)
-  | Ccon of conN option => v list => unit => exp list
-  | Cproj of unit => num`;
+  | Ccon of conN => v list => unit => exp list`;
 
 val _ = type_abbrev( "ctxt" , ``: ctxt_frame # envE``);
 
@@ -291,9 +286,7 @@ val _ = type_abbrev( "ctxt" , ``: ctxt_frame # envE``);
 /\
 (is_source_exp (Val _) = F)
 /\
-(is_source_exp (Con (SOME _) es) = EVERY is_source_exp es)
-/\
-(is_source_exp (Con NONE es) = F)
+(is_source_exp (Con _ es) = EVERY is_source_exp es)
 /\
 (is_source_exp (Var _) = T)
 /\
@@ -312,9 +305,7 @@ val _ = type_abbrev( "ctxt" , ``: ctxt_frame # envE``);
 (is_source_exp (Let _ e1 e2) = is_source_exp e1 /\ is_source_exp e2)
 /\
 (is_source_exp (Letrec funs e) =
-  EVERY (\ (v1,v2,e) . is_source_exp e) funs /\ is_source_exp e)
-/\
-(is_source_exp (Proj _ _) = F)`;
+  EVERY (\ (v1,v2,e) . is_source_exp e) funs /\ is_source_exp e)`;
 
 val _ = Defn.save_defn is_source_exp_defn;
 
@@ -370,7 +361,7 @@ val _ = Hol_datatype `
   else
     Match_type_error)
 /\
-(pmatch envC (Pcon (SOME n) ps) (Conv (SOME n') vs) env =
+(pmatch envC (Pcon n ps) (Conv n' vs) env =
   (case (lookup n envC, lookup n' envC) of
       (SOME (l, ns), SOME (l', ns')) =>
         if n IN ns' /\ n' IN ns /\ (LENGTH ps = l) /\ (LENGTH vs = l')
@@ -383,12 +374,6 @@ val _ = Hol_datatype `
           Match_type_error
     | (_, _) => Match_type_error
   ))
-/\
-(pmatch envC (Pcon NONE ps) (Conv NONE vs) env =
-  if LENGTH ps = LENGTH vs then
-    pmatch_list envC ps vs env
-  else
-    No_match)
 /\
 (pmatch envC _ _ env = Match_type_error)
 /\
@@ -534,29 +519,12 @@ val _ = Define `
 
 
 (* Check that a constructor is properly applied *)
-(*val do_con_check : envC -> conN option -> num -> bool*)
+(*val do_con_check : envC -> conN -> num -> bool*)
 val _ = Define `
  (do_con_check envC n l =
-  (case n of
-      NONE => T
-    | SOME n =>
-        (case lookup n envC of
-            NONE => F
-          | SOME (l',ns) => l = l'
-        )
-  ))`;
-
-
-(*val do_proj : v -> num -> v option*)
-val _ = Define `
- (do_proj v n =
-  (case v of
-      Conv NONE vs =>
-        if n < LENGTH vs then
-          SOME (EL  n  vs)
-        else
-          NONE
-    | _ => NONE
+  (case lookup n envC of
+      NONE => F
+    | SOME (l',ns) => l = l'
   ))`;
 
 
@@ -606,11 +574,6 @@ val _ = Define `
           push envC env e (Ccon n (v::vs) () es) c
         else
           Etype_error
-    | (Cproj () n, env) :: c =>
-        (case do_proj v n of
-            NONE => Etype_error
-          | SOME v => return envC env v c
-        )
   ))`;
 
 
@@ -656,7 +619,6 @@ val _ = Define `
           Etype_error
         else
           Estep (envC, build_rec_env funs env, e, c)
-    | Proj e n => push envC env e (Cproj () n) c
   ))`;
 
 
@@ -1017,29 +979,6 @@ evaluate cenv env (Letrec funs e) (Rerr Rtype_error))
 
 /\
 
-(! cenv env e n v v'.
-evaluate cenv env e (Rval v) /\
-(do_proj v n = SOME v')
-==>
-evaluate cenv env (Proj e n) (Rval v'))
-
-/\
-
-(! cenv env e n v.
-evaluate cenv env e (Rval v) /\
-(do_proj v n = NONE)
-==>
-evaluate cenv env (Proj e n) (Rerr Rtype_error))
-
-/\
-
-(! cenv env e n err.
-evaluate cenv env e (Rerr err)
-==>
-evaluate cenv env (Proj e n) (Rerr err))
-
-/\
-
 (! cenv env.
 T
 ==>
@@ -1300,7 +1239,7 @@ type_p cenv tenv (Plit (IntLit n)) Tnum tenv)
 type_ps cenv tenv ps (MAP (type_subst (ZIP ( tvs, ts'))) ts) tenv' /\
 (lookup cn cenv = SOME (tvs, ts, tn))
 ==>
-type_p cenv tenv (Pcon (SOME cn) ps) (Tapp ts' tn) tenv')
+type_p cenv tenv (Pcon cn ps) (Tapp ts' tn) tenv')
 
 /\
 
@@ -1337,7 +1276,7 @@ type_v cenv (Lit (IntLit n)) Tnum)
 type_vs cenv vs (MAP (type_subst (ZIP ( tvs, ts'))) ts) /\
 (lookup cn cenv = SOME (tvs, ts, tn))
 ==>
-type_v cenv (Conv (SOME cn) vs) (Tapp ts' tn))
+type_v cenv (Conv cn vs) (Tapp ts' tn))
 
 /\
 
@@ -1379,7 +1318,7 @@ type_e cenv tenv (Val v) t)
 type_es cenv tenv es (MAP (type_subst (ZIP ( tvs, ts'))) ts) /\
 (lookup cn cenv = SOME (tvs, ts, tn))
 ==>
-type_e cenv tenv (Con (SOME cn) es) (Tapp ts' tn))
+type_e cenv tenv (Con cn es) (Tapp ts' tn))
 
 /\
 
@@ -1619,7 +1558,7 @@ type_es cenv tenv (REVERSE (MAP Val vs))
 type_es cenv tenv es (MAP (type_subst (ZIP ( tvs, ts'))) ts2) /\
 (lookup cn cenv = SOME (tvs, ts1++([t]++ts2), tn))
 ==>
-type_ctxt cenv tenv (Ccon (SOME cn) vs () es) (type_subst (ZIP ( tvs, ts')) t)
+type_ctxt cenv tenv (Ccon cn vs () es) (type_subst (ZIP ( tvs, ts')) t)
           (Tapp ts' tn))`;
 
 val _ = Hol_reln `
@@ -1719,14 +1658,8 @@ evaluate_ctxt cenv env (Clet n () e) v bv)
 (! cenv env n vs es v bv.
 evaluate cenv env (Con n (MAP Val (REVERSE vs) ++ ([Val v] ++ es))) bv
 ==>
-evaluate_ctxt cenv env (Ccon n vs () es) v bv)
+evaluate_ctxt cenv env (Ccon n vs () es) v bv)`;
 
-/\
-
-(! cenv env n v bv.
-evaluate cenv env (Proj (Val v) n) bv
-==>
-evaluate_ctxt cenv env (Cproj () n) v bv)`;
 
 val _ = Hol_reln `
 
@@ -1785,14 +1718,8 @@ evaluate_state (cenv, env, e, c) (Rerr err))`;
   else
     Match_type_error)
 /\
-(pmatch' (Pcon (SOME n) ps) (Conv (SOME n') vs) env =
+(pmatch' (Pcon n ps) (Conv n' vs) env =
   if (LENGTH ps = LENGTH vs) /\ (n = n') then
-    pmatch_list' ps vs env
-  else
-    No_match)
-/\
-(pmatch' (Pcon NONE ps) (Conv NONE vs) env =
-  if LENGTH ps = LENGTH vs then
     pmatch_list' ps vs env
   else
     No_match)
@@ -1989,29 +1916,6 @@ evaluate' env (Letrec funs e) bv)
 ~ (ALL_DISTINCT (MAP (\ (x,y,z) . x) funs))
 ==>
 evaluate' env (Letrec funs e) (Rerr Rtype_error))
-
-/\
-
-(! env e n v v'.
-evaluate' env e (Rval v) /\
-(do_proj v n = SOME v')
-==>
-evaluate' env (Proj e n) (Rval v'))
-
-/\
-
-(! env e n v.
-evaluate' env e (Rval v) /\
-(do_proj v n = NONE)
-==>
-evaluate' env (Proj e n) (Rerr Rtype_error))
-
-/\
-
-(! env e n err.
-evaluate' env e (Rerr err)
-==>
-evaluate' env (Proj e n) (Rerr err))
 
 /\
 
