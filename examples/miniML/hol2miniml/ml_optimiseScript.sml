@@ -50,8 +50,7 @@ val BOTTOM_UP_OPT_def = tDefine "BOTTOM_UP_OPT" `
   (BOTTOM_UP_OPT f (If x1 x2 x3) = f (If (BOTTOM_UP_OPT f x1) (BOTTOM_UP_OPT f x2) (BOTTOM_UP_OPT f x3))) /\
   (BOTTOM_UP_OPT f (Mat x ys) = f (Mat (BOTTOM_UP_OPT f x) (MAP (\(p,x). (p,BOTTOM_UP_OPT f x)) ys))) /\
   (BOTTOM_UP_OPT f (Let name x1 x2) = f (Let name (BOTTOM_UP_OPT f x1) (BOTTOM_UP_OPT f x2))) /\
-  (BOTTOM_UP_OPT f (Letrec z1 z2) = f (Letrec z1 z2)) /\
-  (BOTTOM_UP_OPT f (Proj q1 q2) = f (Proj q1 q2))`
+  (BOTTOM_UP_OPT f (Letrec z1 z2) = f (Letrec z1 z2))`
  (WF_REL_TAC `measure (exp_size o SND)` THEN REPEAT STRIP_TAC
   THEN IMP_RES_TAC MEM_exp6_size THEN IMP_RES_TAC MEM_exp8_size THEN DECIDE_TAC)
 
@@ -120,11 +119,7 @@ val BOTTOM_UP_OPT_LEMMA = prove(
   THEN1 (Q.PAT_ASSUM `!x.bbb` (fn th => MATCH_MP_TAC th \\ ASSUME_TAC th)
     \\ ASM_SIMP_TAC (srw_ss()) [Once evaluate'_cases] \\ METIS_TAC [])
   THEN1 (ASM_SIMP_TAC (srw_ss()) [Once evaluate'_cases] \\ METIS_TAC [])
-  THEN1 (Q.PAT_ASSUM `!x.bbb` (fn th => MATCH_MP_TAC th \\ ASSUME_TAC th)
-    \\ ASM_SIMP_TAC (srw_ss()) [Once evaluate'_cases,isRval_def] \\ METIS_TAC [])
-  THEN1 (ASM_SIMP_TAC (srw_ss()) [Once evaluate'_cases] \\ METIS_TAC [])
-  THEN (FULL_SIMP_TAC std_ss [MAP]
-    \\ ASM_SIMP_TAC (srw_ss()) [Once evaluate'_cases] \\ METIS_TAC []));
+  THEN1 (ASM_SIMP_TAC (srw_ss()) [Once evaluate'_cases] \\ METIS_TAC []));
 
 val BOTTOM_UP_OPT_THM = prove(
   ``!f.
@@ -399,8 +394,7 @@ val INT_IF_OPT_def = tDefine "INT_IF_OPT" `
   (INT_IF_OPT b (Mat x ys) = Mat (INT_IF_OPT b x) (MAP (\(p,x). (p,INT_IF_OPT (FILTER (int_cmp_keep (pat_vars p)) b) x)) ys)) /\
   (INT_IF_OPT b (Let name x1 x2) = Let name (INT_IF_OPT b x1)
      (INT_IF_OPT (int_cmp_let name x1 b ++ FILTER (int_cmp_keep [name]) b) x2)) /\
-  (INT_IF_OPT b (Letrec z1 z2) = Letrec z1 z2) /\
-  (INT_IF_OPT b (Proj q1 q2) = Proj q1 q2)`
+  (INT_IF_OPT b (Letrec z1 z2) = Letrec z1 z2)`
  (WF_REL_TAC `measure (exp_size o SND)` THEN REPEAT STRIP_TAC
   THEN IMP_RES_TAC MEM_exp6_size THEN IMP_RES_TAC MEM_exp8_size THEN DECIDE_TAC)
 
@@ -473,20 +467,7 @@ val pmatch_lemma = prove(
   \\ FULL_SIMP_TAC std_ss [AND_IMP_INTRO]
   \\ Q.PAT_ASSUM `!env1 env l1. bbb ==> bbbb` (MP_TAC o Q.SPECL [`env1`,`l'`,`t`])
   \\ FULL_SIMP_TAC std_ss []
-  THEN1 (MATCH_MP_TAC IMP_IMP \\ STRIP_TAC THEN1
-     (REPEAT STRIP_TAC \\ FULL_SIMP_TAC std_ss [pat_size_def]
-      \\ Q.PAT_ASSUM `!x.bbb` MATCH_MP_TAC
-      \\ Q.EXISTS_TAC `x2'` \\ FULL_SIMP_TAC std_ss [] \\ DECIDE_TAC)
-    \\ REPEAT STRIP_TAC
-    \\ Q.PAT_ASSUM `!x.bbb` (MP_TAC o Q.SPECL [`h'`,`h`,`env`])
-    \\ FULL_SIMP_TAC (srw_ss()) []
-    \\ MATCH_MP_TAC IMP_IMP \\ STRIP_TAC THEN1
-     (REPEAT STRIP_TAC \\ FULL_SIMP_TAC std_ss [pat_size_def] \\ DECIDE_TAC)
-    \\ REPEAT STRIP_TAC \\ FULL_SIMP_TAC std_ss []
-    \\ Q.EXISTS_TAC `ys ++ ys'`
-    \\ FULL_SIMP_TAC std_ss [LENGTH_APPEND,APPEND_ASSOC,AC ADD_ASSOC ADD_COMM]
-    \\ FULL_SIMP_TAC std_ss [ZIP_APPEND,LENGTH_REVERSE])
-  THEN1 (MATCH_MP_TAC IMP_IMP \\ STRIP_TAC THEN1
+  THEN (MATCH_MP_TAC IMP_IMP \\ STRIP_TAC THEN1
      (REPEAT STRIP_TAC \\ FULL_SIMP_TAC std_ss [pat_size_def]
       \\ Q.PAT_ASSUM `!x.bbb` MATCH_MP_TAC
       \\ Q.EXISTS_TAC `x2'` \\ FULL_SIMP_TAC std_ss [] \\ DECIDE_TAC)
@@ -610,9 +591,6 @@ val INT_IF_OPT_LEMMA = prove(
     \\ Cases_on `x`
     \\ FULL_SIMP_TAC std_ss [int_cmp_sem_def,int_cmp_keep_def]
     \\ Q.EXISTS_TAC `j` \\ FULL_SIMP_TAC std_ss [MEM,lookup_def,bind_def])
-  THEN1 (RES_TAC \\ ASM_SIMP_TAC (srw_ss()) [Once evaluate'_cases] \\ METIS_TAC [])
-  THEN1 (RES_TAC \\ ASM_SIMP_TAC (srw_ss()) [Once evaluate'_cases] \\ METIS_TAC [])
-  THEN1 (RES_TAC \\ ASM_SIMP_TAC (srw_ss()) [Once evaluate'_cases] \\ METIS_TAC [])
   THEN1 (RES_TAC \\ ASM_SIMP_TAC (srw_ss()) [Once evaluate'_cases] \\ METIS_TAC [])
   THEN1 (RES_TAC \\ ASM_SIMP_TAC (srw_ss()) [Once evaluate'_cases] \\ METIS_TAC [])
   THEN1 (FULL_SIMP_TAC std_ss [MAT_INT_IF_OPT_def,MAP]
