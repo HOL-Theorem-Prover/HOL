@@ -9,8 +9,77 @@ open MiniMLTheory
 
 (*open MiniML*)
 
-(* Remove Gt and Geq *)
-(*val remove_Gt_Geq : exp -> exp*)
+(* Intermediate language for MiniML compiler *)
+
+(* Syntax *)
+
+val _ = Hol_datatype `
+ Cprimop =
+    CAdd | CSub | CMult | CDiv | CMod
+  | CLt | CLeq | CEq | CIf | CAnd | COr`;
+
+
+val _ = Hol_datatype `
+ Cpat =
+    CPvar of num
+  | CPlit of lit
+  | CPcon of num => Cpat list`;
+
+
+val _ = Hol_datatype `
+ Cexp =
+    CRaise of error
+  | CVar of num
+  | CLit of lit
+  | CCon of num => Cexp list
+  | CProj of Cexp => num
+  | CMat of num => (Cpat # Cexp) list
+  | CLet of (num # Cexp) list => Cexp
+  | CLetfun of bool => (num # num list # Cexp) list => Cexp
+  | CFun of num list => Cexp
+  | CCall of Cexp => Cexp list
+  | CPrimCall of Cprimop => Cexp list`;
+
+
+(* TODO: move to lem? *)
+(*val range : forall 'a 'b. ('a,'b) Pmap.map -> 'b set*)
+(*val least : (num -> bool) -> num*)
+
+ val remove_mat_exp_defn = Hol_defn "remove_mat_exp" `
+
+(remove_mat_exp (Mat (Var v) pes) =
+  let pes = FOLDL (\ pes (p,e) . (p, remove_mat_exp e)::pes) [] pes in
+  Mat (Var v) pes)
+/\
+(remove_mat_exp (Mat e pes) =
+  let pes = FOLDL (\ pes (p,e) . (p, remove_mat_exp e)::pes) [] pes in
+  Let "" e (Mat (Var "") pes))
+/\
+(remove_mat_exp (Raise err) = Raise err)
+/\
+(remove_mat_exp (Val u) = Val u)
+/\
+(remove_mat_exp (Con cn es) = Con cn (MAP remove_mat_exp es))
+/\
+(remove_mat_exp (Var v) = Var v)
+/\
+(remove_mat_exp (Fun v e) = Fun v (remove_mat_exp e))
+/\
+(remove_mat_exp (App op e1 e2) = App op (remove_mat_exp e1) (remove_mat_exp e2))
+/\
+(remove_mat_exp (Log lg e1 e2) = Log lg (remove_mat_exp e1) (remove_mat_exp e2))
+/\
+(remove_mat_exp (If e1 e2 e3) = If (remove_mat_exp e1) (remove_mat_exp e2) (remove_mat_exp e3))
+/\
+(remove_mat_exp (Let v e1 e2) = Let v (remove_mat_exp e1) (remove_mat_exp e2))
+/\
+(remove_mat_exp (Letrec defs e) =
+  Letrec
+    (MAP (\ (v1,v2,e) . (v1,v2,remove_mat_exp e)) defs)
+    (remove_mat_exp e))`;
+
+val _ = Defn.save_defn remove_mat_exp_defn;
+
  val remove_Gt_Geq_defn = Hol_defn "remove_Gt_Geq" `
 
 (remove_Gt_Geq (Raise err) = Raise err)
@@ -38,154 +107,221 @@ open MiniMLTheory
 (remove_Gt_Geq (Let vn e b) = Let vn (remove_Gt_Geq e) (remove_Gt_Geq b))
 /\
 (remove_Gt_Geq (Letrec defs e) = Letrec (MAP (\ (fn,vn,e) .
-  (fn,vn,remove_Gt_Geq e)) defs) (remove_Gt_Geq e))
-/\
-(remove_Gt_Geq (Proj e n) = Proj (remove_Gt_Geq e) n)`;
+  (fn,vn,remove_Gt_Geq e)) defs) (remove_Gt_Geq e))`;
 
 val _ = Defn.save_defn remove_Gt_Geq_defn;
 
+val _ = Define `
+ (least_not_in s = (LEAST) (\ n . ~ (n IN s)))`;
+
+
+val _ = Define `
+ (extend m vn =
+  let n = least_not_in (FRANGE m) in
+  (FUPDATE  m ( vn, n), n))`;
+
+
+ val pat_to_Cpat_defn = Hol_defn "pat_to_Cpat" `
+
+(pat_to_Cpat (m, Pvar vn) =
+  let (m',vn) = extend m vn in
+  (m', CPvar vn))
+/\
+(pat_to_Cpat (m, Plit l) = (m, CPlit l))
+/\
+(pat_to_Cpat (m, Pcon cn ps) =
+  let (m',ps) = FOLDL
+    (\ (m,ps) p . let (m',p) = pat_to_Cpat (m,p) in (m',p::ps))
+          (m,[]) ps in
+  (m', CPcon (FAPPLY  m  cn) ps))`;
+
+val _ = Defn.save_defn pat_to_Cpat_defn;
+
+ val exp_to_Cexp_defn = Hol_defn "exp_to_Cexp" `
+
+(exp_to_Cexp (m, Raise err) = (m, CRaise err))
+/\
+(exp_to_Cexp (m, Val (Lit l)) = (m, CLit l))
+/\
+(exp_to_Cexp (m, Con cn es) =
+  (m, CCon (FAPPLY  m  cn) (MAP (\ e . let (_m,e) = exp_to_Cexp (m,e) in e) es)))
+/\
+(exp_to_Cexp (m, Var vn) = (m, CVar (FAPPLY  m  vn)))
+/\
+(exp_to_Cexp (m, Fun vn e) =
+  let (m',n) = extend m vn in
+  let (m',Ce) = exp_to_Cexp (m', e) in
+  (m, CFun [n] Ce))
+/\
+(exp_to_Cexp (m, App (Opn opn) e1 e2) =
+  let (_m,Ce1) = exp_to_Cexp (m, e1) in
+  let (_m,Ce2) = exp_to_Cexp (m, e2) in
+  (m, CPrimCall ((case opn of
+                   Plus   => CAdd
+                 | Minus  => CSub
+                 | Times  => CMult
+                 | Divide => CDiv
+                 | Modulo => CMod
+                 ))
+      [Ce1;Ce2]))
+/\
+(exp_to_Cexp (m, App (Opb opb) e1 e2) =
+  let (_m,Ce1) = exp_to_Cexp (m, e1) in
+  let (_m,Ce2) = exp_to_Cexp (m, e2) in
+  (m, CPrimCall ((case opb of
+                   Lt  => CLt
+                 | Leq => CLeq
+                 ))
+      [Ce1;Ce2]))
+/\
+(exp_to_Cexp (m, Log log e1 e2) =
+  let (_m,Ce1) = exp_to_Cexp (m, e1) in
+  let (_m,Ce2) = exp_to_Cexp (m, e2) in
+  (m, CPrimCall ((case log of
+                   And => CAnd
+                 | Or  => COr
+                 ))
+      [Ce1;Ce2]))
+/\
+(exp_to_Cexp (m, If e1 e2 e3) =
+  let (_m,Ce1) = exp_to_Cexp (m, e1) in
+  let (_m,Ce2) = exp_to_Cexp (m, e2) in
+  let (_m,Ce3) = exp_to_Cexp (m, e3) in
+  (m, CPrimCall CIf [Ce1;Ce2;Ce3]))
+/\
+(exp_to_Cexp (m, Mat (Var vn) pes) =
+  let Cpes = FOLDL
+    (\ Cpes (p,e) . let (m,Cp) = pat_to_Cpat (m,p) in
+                       let (_m,Ce) = exp_to_Cexp (m,e) in
+                       (Cp,Ce)::Cpes)
+         [] pes in
+  (m, CMat (FAPPLY  m  vn) Cpes))
+/\
+(exp_to_Cexp (m, Let vn e b) =
+  let (m',n) = extend m vn in
+  let (_m,Ce) = exp_to_Cexp (m, e) in
+  let (_m,Cb) = exp_to_Cexp (m', b) in
+  (m, CLet [(n,Ce)] Cb))
+/\
+(exp_to_Cexp (m, Letrec defs b) =
+  let (m',fns) = FOLDL
+    (\ (m,fns) (d,_vn,_e) . let (m',fn) = extend m d in (m',fn::fns))
+          (m,[]) defs in
+  let Cdefs = FOLDL
+    (\ Cdefs (fn,(_d,vn,e)) .
+      let (m'',n) = extend m' vn in
+      let (_m,Ce) = exp_to_Cexp (m'',e) in
+      (fn,[n],Ce)::Cdefs)
+          [] (ZIP ( fns, defs)) in
+  let (_m,Cb) = exp_to_Cexp (m',b) in
+  (m, CLetfun T Cdefs Cb))`;
+
+val _ = Defn.save_defn exp_to_Cexp_defn;
+
+(* TODO: semantics *)
+(* TODO: simple type system and checker *)
+
+ val free_vars_defn = Hol_defn "free_vars" `
+
+(free_vars (CRaise _) = {})
+/\
+(free_vars (CVar n) = {n})
+/\
+(free_vars (CLit _) = {})
+/\
+(free_vars (CCon _ es) =
+  FOLDL (\ s e . s UNION free_vars e) {} es)
+/\
+(free_vars (CProj e _) = free_vars e)
+/\
+(free_vars (CMat v pes) =
+  (INSERT) v (FOLDL (\ s (p,e) . s UNION free_vars e) {} pes))
+/\
+(free_vars (CLet xes e) =
+  free_vars e UNION
+  FOLDL (\ s (x,e) . s UNION (free_vars e DIFF {x})) {} xes)
+/\
+(free_vars (CLetfun T defs e) =
+  let ns = LIST_TO_SET (MAP ( \x . (case x of (n,_,_) => n)) defs) in
+  free_vars e UNION
+  FOLDL (\ s . \x . (case x of (_,vs,e) => free_vars e DIFF
+                                    (ns UNION (LIST_TO_SET vs))))
+                      {} defs)
+/\
+(free_vars (CLetfun F defs e) =
+  free_vars e UNION
+  FOLDL (\ s . \x . (case x of (_,vs,e) => free_vars e DIFF LIST_TO_SET vs))
+                      {} defs)
+/\
+(free_vars (CFun xs e) = free_vars e DIFF (LIST_TO_SET xs))
+/\
+(free_vars (CCall e es) =
+  free_vars e UNION
+  FOLDL (\ s e . s UNION free_vars e) {} es)
+/\
+(free_vars (CPrimCall _ es) =
+  FOLDL (\ s e . s UNION free_vars e) {} es)`;
+
+val _ = Defn.save_defn free_vars_defn;
+
 (* Remove pattern-matching using continuations *)
 (* TODO: more efficient method *)
-(*val remove_mat : exp -> exp*)
+(*val remove_mat : Cexp -> Cexp*)
 
  val remove_mat_vp_defn = Hol_defn "remove_mat_vp" `
 
-(remove_mat_vp sk ve (Pvar pv) =
-  Let pv ve sk)
+(remove_mat_vp fk sk v (CPvar pv) =
+  CLet [(pv,(CVar v))] sk)
 /\
-(remove_mat_vp sk ve (Plit l) =
-  If (App Equality ve (Val (Lit l)))
-    sk
-    (App Opapp (Var "_fk") (Val (Lit (Bool T)))))
+(remove_mat_vp fk sk v (CPlit l) =
+  CPrimCall CIf [CPrimCall CEq [(CVar v);(CLit l)];
+    sk; (CCall (CVar fk) [])])
 /\
-(remove_mat_vp sk ve (Pcon NONE ps) = remove_mat_con sk ve 0 ps)
+(remove_mat_vp fk sk v (CPcon cn ps) = remove_mat_con fk sk v 0 ps)
 /\
-(remove_mat_con sk ve n [] = sk)
+(remove_mat_con fk sk v n [] = sk)
 /\
-(remove_mat_con sk ve n (p::ps) =
-  remove_mat_vp (remove_mat_con sk ve (n+1) ps) (Proj ve n) p)`;
+(remove_mat_con fk sk v n (p::ps) =
+  let v' = least_not_in ((INSERT) v (free_vars sk)) in
+  CLet [(v',CProj (CVar v) n)]
+    (remove_mat_vp fk (remove_mat_con fk sk v (n+1) ps) v' p))`;
 
 val _ = Defn.save_defn remove_mat_vp_defn;
 
  val remove_mat_defn = Hol_defn "remove_mat" `
 
-(remove_mat (Mat (Var v) pes) = remove_mat_var (Var v) pes)
+(remove_mat (CMat v pes) = remove_mat_var v pes)
 /\
-(remove_mat (Mat e pes) = Let "_mv" e (remove_mat_var (Var "_mv") pes))
+(remove_mat (CRaise err) = CRaise err)
 /\
-(remove_mat (Raise err) = Raise err)
+(remove_mat (CVar n) = CVar n)
 /\
-(remove_mat (Val va) = Val va)
+(remove_mat (CCon n es) = CCon n (MAP remove_mat es))
 /\
-(remove_mat (Con cn es) = Con cn (MAP remove_mat es))
+(remove_mat (CProj e n) = CProj (remove_mat e) n)
 /\
-(remove_mat (Var vn) = Var vn)
+(remove_mat (CLet xes e) = CLet (MAP (\ (x,e) . (x,remove_mat e)) xes) (remove_mat e))
 /\
-(remove_mat (Fun vn e) = Fun vn (remove_mat e))
+(remove_mat (CLetfun b defs e) = CLetfun b (MAP (\ (n,vs,e) . (n,vs,remove_mat e)) defs) (remove_mat e))
 /\
-(remove_mat (App op e1 e2) = App op (remove_mat e1) (remove_mat e2))
+(remove_mat (CCall e es) = CCall (remove_mat e) (MAP remove_mat es))
 /\
-(remove_mat (Log lg e1 e2) = Log lg (remove_mat e1) (remove_mat e2))
+(remove_mat (CPrimCall op es) = CPrimCall op (MAP remove_mat es))
 /\
-(remove_mat (If e1 e2 e3) = If (remove_mat e1) (remove_mat e2) (remove_mat e3))
+(remove_mat_var v [] = CRaise Bind_error)
 /\
-(remove_mat (Let vn e1 e2) = Let vn (remove_mat e1) (remove_mat e2))
-/\
-(remove_mat (Letrec defs e) = Letrec (MAP (\ (v1,v2,e) . (v1,v2,remove_mat e)) defs) (remove_mat e))
-/\
-(remove_mat (Proj e n) = Proj (remove_mat e) n)
-/\
-(remove_mat_var ve [] = Raise Bind_error)
-/\
-(remove_mat_var ve ((p,e)::pes) =
-  Let "_fk" (Fun "_" (remove_mat_var ve pes)) (
-    remove_mat_vp (remove_mat e) ve p))`;
+(remove_mat_var v ((p,e)::pes) =
+  let sk = remove_mat e in
+  let fk = least_not_in ((INSERT) v (free_vars sk)) in
+  CLetfun F [(fk,[],(remove_mat_var v pes))]
+    (remove_mat_vp fk sk v p))`;
 
 val _ = Defn.save_defn remove_mat_defn;
 
-(* Remove all ML data constructors and replace them with untyped tuples with
- * numeric indices *)
-(*val remove_ctors : (conN -> int) -> exp -> exp*)
-
- val pat_remove_ctors_defn = Hol_defn "pat_remove_ctors" `
-
-(pat_remove_ctors cnmap (Pvar vn) = Pvar vn)
-/\
-(pat_remove_ctors cnmap (Plit l) = Plit l)
-/\
-(pat_remove_ctors cnmap (Pcon NONE ps) =
-  Pcon NONE (MAP (pat_remove_ctors cnmap) ps))
-/\
-(pat_remove_ctors cnmap (Pcon (SOME cn) ps) =
-  Pcon NONE ((Plit (IntLit (cnmap cn))) :: MAP (pat_remove_ctors cnmap) ps))`;
-
-val _ = Defn.save_defn pat_remove_ctors_defn;
-
- val remove_ctors_defn = Hol_defn "remove_ctors" `
-
-(remove_ctors cnmap (Raise err) = Raise err)
-/\
-(remove_ctors cnmap (Val v) = Val (v_remove_ctors cnmap v))
-/\
-(remove_ctors cnmap (Con NONE es) = Con NONE (MAP (remove_ctors cnmap) es))
-/\
-(remove_ctors cnmap (Con (SOME cn) es) =
-  Con NONE (Val (Lit (IntLit (cnmap cn))) :: MAP (remove_ctors cnmap) es))
-/\
-(remove_ctors cnmap (Var vn) = Var vn)
-/\
-(remove_ctors cnmap (Fun vn e) = Fun vn (remove_ctors cnmap e))
-/\
-(remove_ctors cnmap (App op e1 e2) =
-  App op (remove_ctors cnmap e1) (remove_ctors cnmap e2))
-/\
-(remove_ctors cnmap (Log op' e1 e2) =
-  Log op' (remove_ctors cnmap e1) (remove_ctors cnmap e2))
-/\
-(remove_ctors cnmap (If e1 e2 e3) =
-  If (remove_ctors cnmap e1) (remove_ctors cnmap e2) (remove_ctors cnmap e3))
-/\
-(remove_ctors cnmap (Mat e pes) =
-  Mat (remove_ctors cnmap e) (match_remove_ctors cnmap pes))
-/\
-(remove_ctors cnmap (Let vn e1 e2) =
-  Let vn (remove_ctors cnmap e1) (remove_ctors cnmap e2))
-/\
-(remove_ctors cnmap (Letrec funs e) =
-  Letrec (funs_remove_ctors cnmap funs) (remove_ctors cnmap e))
-/\
-(remove_ctors cnmap (Proj e n) = Proj (remove_ctors cnmap e) n)
-/\
-(v_remove_ctors cnmap (Lit l) = Lit l)
-/\
-(v_remove_ctors cnmap (Conv NONE vs) =
-  Conv NONE (MAP (v_remove_ctors cnmap) vs))
-/\
-(v_remove_ctors cnmap (Conv (SOME cn) vs) =
-  Conv NONE (Lit (IntLit (cnmap cn)) :: MAP (v_remove_ctors cnmap) vs))
-/\
-(v_remove_ctors cnmap (Closure envE vn e) =
-  Closure (env_remove_ctors cnmap envE) vn (remove_ctors cnmap e))
-/\
-(v_remove_ctors cnmap (Recclosure envE funs vn) =
-  Recclosure (env_remove_ctors cnmap envE) (funs_remove_ctors cnmap funs) vn)
-/\
-(env_remove_ctors cnmap [] = [])
-/\
-(env_remove_ctors cnmap ((vn,v)::env) =
-  ((vn, v_remove_ctors cnmap v)::env_remove_ctors cnmap env))
-/\
-(funs_remove_ctors cnmap [] = [])
-/\
-(funs_remove_ctors cnmap ((vn1,vn2,e)::funs) =
-  ((vn1,vn2,remove_ctors cnmap e)::funs_remove_ctors cnmap funs))
-/\
-(match_remove_ctors cnmap [] = [])
-/\
-(match_remove_ctors cnmap ((p,e)::pes) =
-  (pat_remove_ctors cnmap p, remove_ctors cnmap e)::match_remove_ctors cnmap pes)`;
-
-val _ = Defn.save_defn remove_ctors_defn;
+(* TODO: collapse nested functions *)
+(* TODO: collapse nested lets *)
+(* TODO: removal of redundant expressions *)
+(* TODO: simplification (e.g., constant folding) *)
 
 (* Constant folding
 val fold_consts : exp -> exp

@@ -52,71 +52,36 @@ val exp_size_positive = store_thm(
 Induct >> srw_tac[ARITH_ss][exp_size_def])
 val _ = export_rewrites["exp_size_positive"]
 
-(* move elsewhere? *)
-val free_vars_def = tDefine "free_vars"`
-  (free_vars (Var x) = {x})
-∧ (free_vars (Let x e b) = free_vars e ∪ (free_vars b DELETE x))
-∧ (free_vars (Letrec ls b) = FOLDL (λs (n,x,b). s ∪ (free_vars b DELETE x))
-                             (free_vars b DIFF (FOLDL (combin$C ($INSERT o FST)) {} ls))
-                             ls)
-∧ (free_vars (Fun x b) = free_vars b DELETE x)
-∧ (free_vars (App _ e1 e2) = free_vars e1 ∪ free_vars e2)
-∧ (free_vars (Log _ e1 e2) = free_vars e1 ∪ free_vars e2)
-∧ (free_vars (If e1 e2 e3) = free_vars e1 ∪ free_vars e2 ∪ free_vars e3)
-∧ (free_vars (Mat e pes) = free_vars e ∪ FOLDL (λs (p,e). s ∪ free_vars e) {} pes)
-∧ (free_vars (Proj e _) = free_vars e)
-∧ (free_vars (Raise _) = {})
-∧ (free_vars (Val _) = {})
-∧ (free_vars (Con _ es) = FOLDL (λs e. s ∪ free_vars e) {} es)`
-(WF_REL_TAC `measure exp_size` >>
-srw_tac [ARITH_ss][exp1_size_thm,exp6_size_thm,exp8_size_thm] >>
-imp_res_tac SUM_MAP_MEM_bound >|
-  map (fn q => pop_assum (qspec_then q mp_tac))
-  [`exp2_size`,`exp7_size`,`exp_size`] >>
-srw_tac[ARITH_ss][exp_size_def])
+val Cexp1_size_thm = store_thm(
+"Cexp1_size_thm",
+``∀ls. Cexp1_size ls = SUM (MAP Cexp2_size ls) + LENGTH ls``,
+Induct >- rw[Cexp_size_def] >>
+qx_gen_tac `p` >>
+PairCases_on `p` >>
+srw_tac [ARITH_ss][Cexp_size_def])
 
-val (remove_ctors_def,remove_ctors_ind) =
-  tprove_no_defn ((remove_ctors_def,remove_ctors_ind),
-  WF_REL_TAC
-  `inv_image $< (\x. case x of INL (x,y) => exp_size y
-                         | INR (INL (x,y)) => v_size y
-                         | INR (INR (INL (x,y))) => exp3_size y
-                         | INR (INR (INR (INL (x,y)))) => exp1_size y
-                         | INR (INR (INR (INR (x,y)))) => exp6_size y)` >>
-  rw [] >>
-  TRY decide_tac >>
-  rw[exp8_size_thm,exp9_size_thm] >>
-  qmatch_rename_tac `f a < (X:num)` ["X"] >>
-  Q.ISPECL_THEN [`f`,`a`] mp_tac SUM_MAP_MEM_bound >>
-  disch_then imp_res_tac >>
-  DECIDE_TAC)
-val _ = save_thm ("remove_ctors_def", remove_ctors_def);
-val _ = save_thm ("remove_ctors_ind", remove_ctors_ind);
+val Cexp4_size_thm = store_thm(
+"Cexp4_size_thm",
+``∀ls. Cexp4_size ls = SUM (MAP Cexp6_size ls) + LENGTH ls``,
+Induct >- rw[Cexp_size_def] >>
+srw_tac [ARITH_ss][Cexp_size_def])
 
-val (remove_mat_vp_def,remove_mat_vp_ind) =
-  tprove_no_defn ((remove_mat_vp_def,remove_mat_vp_ind),
-  WF_REL_TAC
-  `inv_image $<
-    (λx. case x of
-         | INL (e,v,p) => pat_size p
-         | INR (e,v,n,ps) => pat1_size ps)`)
-val _ = save_thm ("remove_mat_vp_def", remove_mat_vp_def);
-val _ = save_thm ("remove_mat_vp_ind", remove_mat_vp_ind);
+val Cexp5_size_thm = store_thm(
+"Cexp5_size_thm",
+``∀ls. Cexp5_size ls = SUM (MAP Cexp7_size ls) + LENGTH ls``,
+Induct >- rw[Cexp_size_def] >>
+srw_tac [ARITH_ss][Cexp_size_def])
 
-val (remove_mat_def,remove_mat_ind) =
-  tprove_no_defn ((remove_mat_def,remove_mat_ind),
-  WF_REL_TAC
-  `inv_image $<
-    (λx. case x of
-         | INL e => exp_size e
-         | INR (v,pes) => exp6_size pes)` >>
-  srw_tac[ARITH_ss][exp1_size_thm,exp8_size_thm] >>
-  imp_res_tac SUM_MAP_MEM_bound >|
-    map (fn q => pop_assum (qspec_then q mp_tac))
-    [`exp2_size`,`exp_size`] >>
-  srw_tac[ARITH_ss][exp_size_def])
-val _ = save_thm ("remove_mat_def", remove_mat_def);
-val _ = save_thm ("remove_mat_ind", remove_mat_ind);
+val Cexp8_size_thm = store_thm(
+"Cexp8_size_thm",
+``∀ls. Cexp8_size ls = SUM (MAP Cexp_size ls) + LENGTH ls``,
+Induct >- rw[Cexp_size_def] >>
+srw_tac [ARITH_ss][Cexp_size_def])
+
+val LENGTH_FOLDL_CONS_SND = store_thm(
+"LENGTH_FOLDL_CONS_SND",
+``∀ls f g m lsa. LENGTH (SND (FOLDL (λ(m,ls) x. (f (m,ls) x, (g (m,ls) x::ls))) (m,lsa) ls)) = LENGTH lsa + LENGTH ls``,
+Induct >> srw_tac[ARITH_ss][])
 
 val (remove_Gt_Geq_def,remove_Gt_Geq_ind) =
   tprove_no_defn ((remove_Gt_Geq_def,remove_Gt_Geq_ind),
@@ -129,20 +94,111 @@ val (remove_Gt_Geq_def,remove_Gt_Geq_ind) =
 val _ = save_thm ("remove_Gt_Geq_def", remove_Gt_Geq_def);
 val _ = save_thm ("remove_Gt_Geq_ind", remove_Gt_Geq_ind);
 
-(*
-This is too awful! TODO: Try a simpler definition of fold_consts.
-val (fold_consts_def,fold_consts_ind) =
-  tprove_no_defn ((fold_consts_def,fold_consts_ind),
+val (remove_mat_def,remove_mat_ind) =
+  tprove_no_defn ((remove_mat_def,remove_mat_ind),
   WF_REL_TAC
-  `inv_image $< (λx. case x of
-                     | INL x => exp_size x
-                     | INR (INL x) => v_size x
-                     | INR (INR (INL x)) => exp3_size x
-                     | INR (INR (INR (INL x))) => exp1_size x
-                     | INR (INR (INR (INR (INL x)))) => 1 + exp6_size x
-                     | INR (INR (INR (INR (INR (_,x))))) => exp6_size x)` >>
-  fs [Once fold_consts_UNION_AUX_def]
-*)
+  `inv_image $<
+    (λx. case x of
+         | INL e => Cexp_size e
+         | INR (v,pes) => Cexp5_size pes)` >>
+  srw_tac[ARITH_ss][Cexp1_size_thm,Cexp4_size_thm,Cexp8_size_thm] >>
+  imp_res_tac SUM_MAP_MEM_bound >|
+    map (fn q => pop_assum (qspec_then q mp_tac))
+    [`Cexp2_size`,`Cexp_size`,`Cexp6_size`,`Cexp_size`,`Cexp_size`] >>
+  srw_tac[ARITH_ss][Cexp_size_def])
+val _ = save_thm ("remove_mat_def", remove_mat_def);
+val _ = save_thm ("remove_mat_ind", remove_mat_ind);
+
+val (remove_mat_exp_def, remove_mat_exp_ind) =
+  tprove_no_defn ((remove_mat_exp_def,remove_mat_exp_ind),
+  WF_REL_TAC `measure exp_size` >>
+  srw_tac[ARITH_ss][exp1_size_thm,exp6_size_thm,exp8_size_thm] >>
+  MAP_EVERY (fn q => Q.ISPEC_THEN q mp_tac SUM_MAP_MEM_bound) [`exp7_size`,`exp_size`,`exp2_size`] >>
+  rw[] >> res_tac >> fs[exp_size_def] >> srw_tac[ARITH_ss][])
+val _ = save_thm ("remove_mat_exp_def", remove_mat_exp_def);
+val _ = save_thm ("remove_mat_exp_ind", remove_mat_exp_ind);
+
+val (exp_to_Cexp_def,exp_to_Cexp_ind) =
+  tprove_no_defn ((exp_to_Cexp_def,exp_to_Cexp_ind),
+  WF_REL_TAC `measure (exp_size o SND)` >>
+  srw_tac[ARITH_ss][exp1_size_thm,exp8_size_thm,exp6_size_thm]
+>- (
+  qmatch_assum_abbrev_tac `(m2,fns) = FOLDL ff (m,[]) defs` >>
+  Q.ISPECL_THEN [`defs`,`λx y. FST (ff x y)`,`λx y. HD (SND (ff x y))`,`m`,`[]:num list`] mp_tac LENGTH_FOLDL_CONS_SND >>
+  rw[] >>
+  qmatch_assum_abbrev_tac `LENGTH (SND (FOLDL ff' (m,[]) defs)) = LENGTH defs` >>
+  `ff' = ff` by (
+    unabbrev_all_tac >>
+    fs[FUN_EQ_THM] >>
+    ntac 2 gen_tac >>
+    qx_gen_tac `p` >>
+    PairCases_on `p` >> rw[] ) >>
+  qpat_assum `LENGTH x = LENGTH y` mp_tac >>
+  qpat_assum `(x,y) = FOLDL ff (m,[]) defs` (assume_tac o SYM) >>
+  rw[] >>
+  fs[MEM_ZIP] >> rw[] >>
+  qmatch_assum_rename_tac `(_d,vn,e) = EL mm defs` [] >>
+  `MEM (_d,vn,e) defs` by (rw[MEM_EL] >> PROVE_TAC[]) >>
+  imp_res_tac SUM_MAP_MEM_bound >>
+  pop_assum (qspec_then `exp2_size` mp_tac) >>
+  srw_tac[ARITH_ss][exp_size_def] )
+>- (
+  imp_res_tac SUM_MAP_MEM_bound >>
+  pop_assum (qspec_then `exp_size` mp_tac) >>
+  srw_tac[ARITH_ss][exp_size_def] )
+>- (
+  imp_res_tac SUM_MAP_MEM_bound >>
+  pop_assum (qspec_then `exp7_size` mp_tac) >>
+  srw_tac[ARITH_ss][exp_size_def] ))
+val _ = save_thm ("exp_to_Cexp_def", exp_to_Cexp_def);
+val _ = save_thm ("exp_to_Cexp_ind", exp_to_Cexp_ind);
+
+val least_not_in_aux_exists = prove(
+``∃f. ∀s n. f s n = if n ∈ s then f s (n + (1:num)) else n``,
+qexists_tac `λs n. WHILE (λn. n ∈ s) (λn. n + 1) n` >>
+rw[] >>
+rw[Once whileTheory.WHILE])
+val least_not_in_aux_def = new_specification("least_not_in_aux_def",["least_not_in_aux"],least_not_in_aux_exists)
+
+val least_not_in_thm = store_thm(
+"least_not_in_thm",
+``∀s. FINITE s ⇒ (least_not_in s = least_not_in_aux s 0)``,
+rw[least_not_in_def] >>
+numLib.LEAST_ELIM_TAC >>
+rw[] >- PROVE_TAC[INFINITE_NUM_UNIV, NOT_IN_FINITE] >>
+qsuff_tac `∀m. m ≤ n ⇒ (n = least_not_in_aux s m)` >-
+  PROVE_TAC[arithmeticTheory.ZERO_LESS_EQ] >>
+Induct_on `n-m` >>
+srw_tac[ARITH_ss][] >- (
+  `n = m` by DECIDE_TAC >>
+  rw[Once least_not_in_aux_def] ) >>
+`m < n` by DECIDE_TAC >>
+`m ∈ s` by PROVE_TAC[] >>
+rw[Once least_not_in_aux_def] >>
+first_x_assum (qspecl_then [`n`,`m+1`] mp_tac) >>
+`v = n - (m + 1)` by DECIDE_TAC >>
+`m + 1 ≤ n` by DECIDE_TAC >>
+rw[])
+
+val (free_vars_def, free_vars_ind) =
+  tprove_no_defn ((free_vars_def,free_vars_ind),
+  WF_REL_TAC `measure Cexp_size` >>
+  srw_tac[ARITH_ss][Cexp8_size_thm,Cexp4_size_thm,Cexp1_size_thm,Cexp5_size_thm] >>
+  MAP_EVERY (fn q => Q.ISPEC_THEN q mp_tac SUM_MAP_MEM_bound)
+    [`Cexp6_size`,`Cexp2_size`,`Cexp_size`,`Cexp7_size`] >>
+  rw[] >> res_tac >> fs[Cexp_size_def] >> srw_tac[ARITH_ss][])
+val _ = save_thm ("free_vars_def", free_vars_def);
+val _ = save_thm ("free_vars_ind", free_vars_ind);
+
+val (pat_to_Cpat_def, pat_to_Cpat_ind) =
+  tprove_no_defn ((pat_to_Cpat_def,pat_to_Cpat_ind),
+  WF_REL_TAC `measure (pat_size o SND)` >>
+  srw_tac [ARITH_ss][pat1_size_thm] >>
+  imp_res_tac SUM_MAP_MEM_bound >>
+  pop_assum (qspec_then `pat_size` mp_tac) >>
+  srw_tac[ARITH_ss][])
+val _ = save_thm ("pat_to_Cpat_def", pat_to_Cpat_def);
+val _ = save_thm ("pat_to_Cpat_ind", pat_to_Cpat_ind);
 
 (* ------------------------------------------------------------------------- *)
 
@@ -225,86 +281,20 @@ val _ = export_rewrites["map_result_def"];
 
 (* ------------------------------------------------------------------------- *)
 
-(* TODO: move to evaluateEquations *)
-val evaluate'_raise = store_thm(
-"evaluate'_raise",
-``∀env err r. evaluate' env (Raise err) r = (r = Rerr (Rraise err))``,
-rw [Once evaluate'_cases])
-
-val evaluate'_val = store_thm(
-"evaluate'_val",
-``∀env v r. evaluate' env (Val v) r = (r = Rval v)``,
-rw [Once evaluate'_cases])
-
-val evaluate'_fun = store_thm(
-"evaluate'_fun",
-``∀env n e r. evaluate' env (Fun n e) r = (r = Rval (Closure env n e))``,
-rw [Once evaluate'_cases])
-
-val _ = export_rewrites["evaluate'_raise","evaluate'_val","evaluate'_fun"]
-
-val evaluate'_con = store_thm(
-"evaluate'_con",
-``∀env cn es r. evaluate' env (Con cn es) r =
-  (∃err. evaluate_list' env es (Rerr err) ∧ (r = Rerr err)) ∨
-  (∃vs. evaluate_list' env es (Rval vs) ∧ (r = Rval (Conv cn vs)))``,
-rw [Once evaluate'_cases] >>
-metis_tac [])
-
-val evaluate'_var = store_thm(
-"evaluate'_var",
-``∀env n r. evaluate' env (Var n) r =
-  (∃v. (lookup n env = SOME v) ∧ (r = Rval v)) ∨
-  ((lookup n env = NONE) ∧ (r = Rerr Rtype_error))``,
-rw [Once evaluate'_cases] >>
-metis_tac [])
-
-val evaluate_list'_thm = store_thm(
-"evaluate_list'_thm",
-``∀env r.
-  (evaluate_list' env [] r = (r = Rval [])) ∧
-  (∀e es. evaluate_list' env (e::es) r =
-   (∃v vs. evaluate' env e (Rval v) ∧ evaluate_list' env es (Rval vs) ∧
-           (r = Rval (v::vs))) ∨
-   (∃err. evaluate' env e (Rerr err) ∧
-          (r = Rerr err)) ∨
-   (∃v err. evaluate' env e (Rval v) ∧ evaluate_list' env es (Rerr err) ∧
-            (r = Rerr err)))``,
-rw[] >-
-  rw[Once evaluate'_cases] >>
-rw[EQ_IMP_THM] >- (
-  pop_assum (mp_tac o (SIMP_RULE (srw_ss()) [Once evaluate'_cases])) >>
-  rw [] >> metis_tac[] )
->- rw [evaluate'_rules]
->- rw [evaluate'_rules] >>
-rw[Once evaluate'_cases] >>
-metis_tac [])
-
-val evaluate'_app = store_thm(
-"evaluate'_app",
-``∀env op e1 e2 r. evaluate' env (App op e1 e2) r =
-  (∃v1 v2 env' e. evaluate' env e1 (Rval v1) ∧ (evaluate' env e2 (Rval v2)) ∧
-                  (do_app env op v1 v2 = SOME (env',e)) ∧
-                  evaluate' env' e r) ∨
-  (∃v1 v2. evaluate' env e1 (Rval v1) ∧ (evaluate' env e2 (Rval v2)) ∧
-           (do_app env op v1 v2 = NONE) ∧
-           (r = Rerr Rtype_error)) ∨
-  (∃v1 err. evaluate' env e1 (Rval v1) ∧ (evaluate' env e2 (Rerr err)) ∧
-            (r = Rerr err)) ∨
-  (∃err. evaluate' env e1 (Rerr err) ∧
-         (r = Rerr err))``,
-rw[Once evaluate'_cases] >>
-metis_tac []);
-
-(*
-val _ = augment_srw_ss[rewrites[evaluate_raise,evaluate_val,evaluate_list_val]]
-*)
+(* TODO: move to listTheory (and rich_listTheory) *)
+val FOLDR_MAP = store_thm("FOLDR_MAP",
+    (--`!f e g l.
+       FOLDR f e (MAP g l) = FOLDR (\x y. f (g x) y) e l`--),
+    GEN_TAC THEN GEN_TAC THEN GEN_TAC THEN Induct
+    THEN ASM_REWRITE_TAC[FOLDL,MAP,FOLDR] THEN BETA_TAC
+    THEN REWRITE_TAC[]);
 
 (* TODO: add to terminationProofsTheory? *)
 val _ = augment_srw_ss[rewrites[lookup_def]]
 
 (* Prove compiler phases preserve semantics *)
 
+(*
 val v_remove_ctors_Conv = store_thm(
 "v_remove_ctors_Conv",
 ``∀cnmap cn vs. v_remove_ctors cnmap (Conv cn vs) =
@@ -370,14 +360,6 @@ gen_tac >>
 Induct >- rw [remove_ctors_def] >>
 Cases >>
 rw[remove_ctors_def]);
-
-(* TODO: move to listTheory (and rich_listTheory) *)
-val FOLDR_MAP = store_thm("FOLDR_MAP",
-    (--`!f e g l.
-       FOLDR f e (MAP g l) = FOLDR (\x y. f (g x) y) e l`--),
-    GEN_TAC THEN GEN_TAC THEN GEN_TAC THEN Induct
-    THEN ASM_REWRITE_TAC[FOLDL,MAP,FOLDR] THEN BETA_TAC
-    THEN REWRITE_TAC[]);
 
 val gen_build_rec_env_def = Define`
   gen_build_rec_env funs env funs1 env1 =
@@ -486,6 +468,7 @@ strip_tac >- (
   Cases_on `op = Equality` >- (
     ... ) >>
   rw[do_app_remove_ctors]
+*)
 *)
 
 val _ = export_theory ()
