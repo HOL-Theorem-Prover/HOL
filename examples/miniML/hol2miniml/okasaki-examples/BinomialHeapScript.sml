@@ -313,7 +313,7 @@ val _ = delete_const "tree" handle _ => ()
 val tm =
 ``tree a (Node x1_1 x1_2 x1_3) v ⇔
   ∃v1_1 v1_2 v1_3.
-    (v = Conv (SOME "Node") [v1_1; v1_2; v1_3]) ∧ NUM x1_1 v1_1 ∧
+    (v = Conv "Node" [v1_1; v1_2; v1_3]) ∧ NUM x1_1 v1_1 ∧
     a x1_2 v1_2 ∧ list (\x v. if MEM x x1_3 then tree a x v else ARB) x1_3 v1_3``
 
 val inv_def = tDefine "tree_def" [ANTIQUOTE tm]
