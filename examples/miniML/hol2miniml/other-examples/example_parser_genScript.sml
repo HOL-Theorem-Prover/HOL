@@ -39,10 +39,10 @@ val _ = delete_const "ptree" handle _ => ()
 
 val tm =
   ``(ptree (Leaf x1_1) v ⇔
-   ∃v1_1. (v = Conv (SOME "Leaf") [v1_1]) ∧ list CHAR x1_1 v1_1) ∧
+   ∃v1_1. (v = Conv "Leaf" [v1_1]) ∧ list CHAR x1_1 v1_1) ∧
   (ptree (Node x2_1 x2_2) v ⇔
    ∃v2_1 v2_2.
-     (v = Conv (SOME "Node") [v2_1; v2_2]) ∧ list CHAR x2_1 v2_1 ∧
+     (v = Conv "Node" [v2_1; v2_2]) ∧ list CHAR x2_1 v2_1 ∧
      list (\x v. if MEM x x2_2 then ptree x v else ARB) x2_2 v2_2)``
 
 val inv_def = tDefine "ptree_def" [ANTIQUOTE tm]
