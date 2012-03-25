@@ -1,0 +1,1 @@
+val FRANGE : forall 'a 'b. ('a,'b) fmap -> 'b set
