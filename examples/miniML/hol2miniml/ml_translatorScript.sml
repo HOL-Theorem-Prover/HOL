@@ -1,6 +1,6 @@
 open HolKernel Parse boolLib bossLib; val _ = new_theory "ml_translator";
 
-open MiniMLTheory MiniMLTerminationTheory Print_astTerminationTheory 
+open MiniMLTheory MiniMLTerminationTheory Print_astTerminationTheory
 open determTheory;
 open arithmeticTheory listTheory combinTheory pairTheory;
 open integerTheory;
@@ -168,7 +168,6 @@ val Eval_Bool_Not = store_thm("Eval_Bool_Not",
   \\ REPEAT STRIP_TAC \\ FULL_SIMP_TAC std_ss []
   \\ ONCE_REWRITE_TAC [evaluate_cases] \\ SIMP_TAC (srw_ss()) []
   \\ Q.EXISTS_TAC `(Lit (Bool b1))`
-  \\ Q.EXISTS_TAC `(Lit (Bool F))`
   \\ FULL_SIMP_TAC (srw_ss()) [do_app_def]
   \\ ONCE_REWRITE_TAC [evaluate_cases] \\ SIMP_TAC (srw_ss()) []);
 

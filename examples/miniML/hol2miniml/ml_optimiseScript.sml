@@ -83,20 +83,18 @@ val BOTTOM_UP_OPT_LEMMA = prove(
   THEN1 (ASM_SIMP_TAC (srw_ss()) [Once evaluate'_cases] \\ METIS_TAC [])
   THEN1 (Q.PAT_ASSUM `!x.bbb` (fn th => MATCH_MP_TAC th \\ ASSUME_TAC th)
     \\ ASM_SIMP_TAC (srw_ss()) [Once evaluate'_cases]
-    \\ DISJ1_TAC \\ Q.EXISTS_TAC `v`
+    \\ DISJ1_TAC \\ Q.EXISTS_TAC `v` \\ FULL_SIMP_TAC std_ss []
     \\ FULL_SIMP_TAC std_ss [do_log_def]
-    \\ REPEAT (BasicProvers.FULL_CASE_TAC)
-    \\ FULL_SIMP_TAC (srw_ss()) [] \\ METIS_TAC [])
+    \\ Cases_on `op` \\ FULL_SIMP_TAC (srw_ss()) []
+    \\ Cases_on `v` \\ FULL_SIMP_TAC (srw_ss()) []
+    \\ Cases_on `l` \\ FULL_SIMP_TAC (srw_ss()) []
+    \\ Cases_on `b` \\ FULL_SIMP_TAC (srw_ss()) [])
   THEN1 (ASM_SIMP_TAC (srw_ss()) [Once evaluate'_cases]
     \\ DISJ1_TAC \\ Q.EXISTS_TAC `v`
-    \\ FULL_SIMP_TAC std_ss [do_log_def]
-    \\ REPEAT (BasicProvers.FULL_CASE_TAC)
-    \\ FULL_SIMP_TAC (srw_ss()) [] \\ METIS_TAC [])
+    \\ FULL_SIMP_TAC std_ss [do_log_def])
   THEN1 (ASM_SIMP_TAC (srw_ss()) [Once evaluate'_cases]
     \\ DISJ2_TAC \\ DISJ1_TAC \\ Q.EXISTS_TAC `v`
-    \\ FULL_SIMP_TAC std_ss [do_log_def]
-    \\ REPEAT (BasicProvers.FULL_CASE_TAC)
-    \\ FULL_SIMP_TAC (srw_ss()) [] \\ METIS_TAC [])
+    \\ FULL_SIMP_TAC std_ss [do_log_def])
   THEN1 (Q.PAT_ASSUM `!x.bbb` (fn th => MATCH_MP_TAC th \\ ASSUME_TAC th)
     \\ ASM_SIMP_TAC (srw_ss()) [Once evaluate'_cases]
     \\ DISJ1_TAC \\ Q.EXISTS_TAC `v`
@@ -137,19 +135,18 @@ val BOTTOM_UP_OPT_THM = prove(
 (* rewrite optimisation: (fn x => exp) y --> let x = y in exp *)
 
 val abs2let_def = Define `
-  (abs2let (App Opapp (Fun v exp) y) = Let v y exp) /\
-  (abs2let rest = rest)`;
+  abs2let x =
+     case x of (App Opapp (Fun v exp) y) => Let v y exp
+             | rest => rest`;
 
 val abs2let_thm = prove(
   ``!env exp res. evaluate' env exp (Rval res) ==>
                   evaluate' env (abs2let exp) (Rval res)``,
-  STRIP_TAC \\ HO_MATCH_MP_TAC (fetch "-" "abs2let_ind")
-  \\ FULL_SIMP_TAC std_ss [abs2let_def]
-  \\ SIMP_TAC (srw_ss()) [Once evaluate'_cases]
-  \\ SIMP_TAC (srw_ss()) [Once evaluate'_cases]
-  \\ SIMP_TAC (srw_ss()) [do_app_def]
-  \\ REPEAT STRIP_TAC
-  \\ SIMP_TAC (srw_ss()) [Once evaluate'_cases]
+  SIMP_TAC std_ss [abs2let_def] \\ REPEAT STRIP_TAC
+  \\ REPEAT (BasicProvers.FULL_CASE_TAC)
+  \\ ASM_SIMP_TAC std_ss [] \\ POP_ASSUM MP_TAC
+  \\ SIMP_TAC (srw_ss()) [Once evaluate'_cases,do_app_def]
+  \\ REPEAT STRIP_TAC \\ SIMP_TAC (srw_ss()) [Once evaluate'_cases]
   \\ Q.EXISTS_TAC `v2` \\ FULL_SIMP_TAC std_ss []);
 
 
@@ -228,9 +225,6 @@ val opt_sub_add_thm = prove(
   \\ FULL_SIMP_TAC (srw_ss()) [do_app_def]
   \\ REPEAT (Q.PAT_ASSUM `Val xx = yy` (ASSUME_TAC o GSYM))
   \\ FULL_SIMP_TAC (srw_ss()) []
-  \\ REPEAT (Q.PAT_ASSUM `evaluate' zzz (Val xx) yy` MP_TAC)
-  \\ SIMP_TAC (srw_ss()) [Once evaluate'_cases] \\ STRIP_TAC
-  \\ SIMP_TAC (srw_ss()) [Once evaluate'_cases] \\ STRIP_TAC
   \\ Q.PAT_ASSUM `env' = env''` (fn th => FULL_SIMP_TAC std_ss [th])
   \\ IMP_RES_TAC evaluate'_11_Rval \\ FULL_SIMP_TAC (srw_ss()) []
   \\ FULL_SIMP_TAC (srw_ss()) [opn_lookup_def,
@@ -316,7 +310,7 @@ val get_fact_thm_T = prove(
   \\ REPEAT (POP_ASSUM MP_TAC)
   \\ ONCE_REWRITE_TAC [evaluate'_cases] \\ FULL_SIMP_TAC (srw_ss()) []
   \\ REPEAT STRIP_TAC \\ FULL_SIMP_TAC std_ss []
-  \\ POP_ASSUM (K ALL_TAC) \\ POP_ASSUM (K ALL_TAC) \\ POP_ASSUM (K ALL_TAC)
+  \\ POP_ASSUM (K ALL_TAC) \\ POP_ASSUM (K ALL_TAC)
   \\ intLib.COOPER_TAC);
 
 val get_fact_thm_F = prove(
@@ -337,7 +331,7 @@ val get_fact_thm_F = prove(
   \\ REPEAT (POP_ASSUM MP_TAC)
   \\ ONCE_REWRITE_TAC [evaluate'_cases] \\ FULL_SIMP_TAC (srw_ss()) []
   \\ REPEAT STRIP_TAC \\ FULL_SIMP_TAC std_ss []
-  \\ POP_ASSUM (K ALL_TAC) \\ POP_ASSUM (K ALL_TAC) \\ POP_ASSUM (K ALL_TAC)
+  \\ POP_ASSUM (K ALL_TAC) \\ POP_ASSUM (K ALL_TAC)
   \\ intLib.COOPER_TAC);
 
 val decide_guard_thm = prove(
@@ -509,13 +503,13 @@ val int_cmp_let_thm = prove(
     \\ FULL_SIMP_TAC (srw_ss()) [do_app_def]
     \\ Q.PAT_ASSUM `evaluate' xx yy zz` MP_TAC
     \\ Q.PAT_ASSUM `Val xx = yy` (ASSUME_TAC o GSYM)
-    \\ ASM_SIMP_TAC (srw_ss()) [Once evaluate'_cases]
-    \\ Q.PAT_ASSUM `evaluate' xx yy zz` MP_TAC
-    \\ ASM_SIMP_TAC (srw_ss()) [Once evaluate'_cases]
+    \\ ASM_SIMP_TAC (srw_ss()) []
     \\ Q.PAT_ASSUM `evaluate' xx yy zz` MP_TAC
     \\ ASM_SIMP_TAC (srw_ss()) [Once evaluate'_cases]
     \\ FULL_SIMP_TAC (srw_ss()) [opn_lookup_def]
-    \\ REPEAT STRIP_TAC \\ FULL_SIMP_TAC std_ss []));
+    \\ REPEAT STRIP_TAC \\ FULL_SIMP_TAC std_ss []
+    \\ Q.PAT_ASSUM `-r = i2` (ASSUME_TAC o GSYM)
+    \\ FULL_SIMP_TAC (srw_ss()) []));
 
 val INT_IF_OPT_LEMMA = prove(
   ``(!x1 x2 x3. evaluate' x1 x2 x3 ==>
@@ -539,18 +533,16 @@ val INT_IF_OPT_LEMMA = prove(
   THEN1 (ASM_SIMP_TAC (srw_ss()) [Once evaluate'_cases]
     \\ DISJ1_TAC \\ Q.EXISTS_TAC `v`
     \\ FULL_SIMP_TAC std_ss [do_log_def]
-    \\ REPEAT (BasicProvers.FULL_CASE_TAC)
-    \\ FULL_SIMP_TAC (srw_ss()) [] \\ METIS_TAC [])
+    \\ Cases_on `op` \\ FULL_SIMP_TAC (srw_ss()) []
+    \\ Cases_on `v` \\ FULL_SIMP_TAC (srw_ss()) []
+    \\ Cases_on `l` \\ FULL_SIMP_TAC (srw_ss()) []
+    \\ Cases_on `b'` \\ FULL_SIMP_TAC (srw_ss()) [])
   THEN1 (ASM_SIMP_TAC (srw_ss()) [Once evaluate'_cases]
     \\ DISJ1_TAC \\ Q.EXISTS_TAC `v`
-    \\ FULL_SIMP_TAC std_ss [do_log_def]
-    \\ REPEAT (BasicProvers.FULL_CASE_TAC)
-    \\ FULL_SIMP_TAC (srw_ss()) [] \\ METIS_TAC [])
+    \\ FULL_SIMP_TAC std_ss [do_log_def])
   THEN1 (ASM_SIMP_TAC (srw_ss()) [Once evaluate'_cases]
     \\ DISJ2_TAC \\ DISJ1_TAC \\ Q.EXISTS_TAC `v`
-    \\ FULL_SIMP_TAC std_ss [do_log_def]
-    \\ REPEAT (BasicProvers.FULL_CASE_TAC)
-    \\ FULL_SIMP_TAC (srw_ss()) [] \\ METIS_TAC [])
+    \\ FULL_SIMP_TAC std_ss [do_log_def])
   THEN1
    (Cases_on `decide_guard (get_fact x2) b`
     \\ FULL_SIMP_TAC (srw_ss()) [] THEN1
