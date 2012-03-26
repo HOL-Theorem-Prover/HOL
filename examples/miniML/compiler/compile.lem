@@ -4,9 +4,10 @@ open MiniML
 
 (* Syntax *)
 
-type Cprimop =
-  | CAdd | CSub | CMult | CDiv | CMod
-  | CLt | CLeq | CEq | CIf | CAnd | COr
+(* applicative primitives with bytecode counterparts *)
+type Cprim2 = CAdd | CSub | CMult | CDiv | CMod | CLt | CEq
+(* other primitives *)
+type Clprim = CLeq | CIf | CAnd | COr
 
 type Cpat =
   | CPvar of num
@@ -18,19 +19,23 @@ type Cexp =
   | CVar of num
   | CLit of lit
   | CCon of num * Cexp list
+  | CTagEq of Cexp * num
   | CProj of Cexp * num
   | CMat of num * (Cpat * Cexp) list
   | CLet of (num * Cexp) list * Cexp
-  | CLetfun of bool * (num * num list * Cexp) list * Cexp
+  | CLetfun of bool * num list * (num list * Cexp) list * Cexp
   | CFun of num list * Cexp
   | CCall of Cexp * Cexp list
-  | CPrimCall of Cprimop * Cexp list
+  | CPrim2 of Cprim2 * Cexp * Cexp
+  | CLprim of Clprim * Cexp list
 
 (* TODO: move to lem? *)
 val range : forall 'a 'b. ('a,'b) Pmap.map -> 'b set
 sub [hol] range = FRANGE
 val least : (num -> bool) -> num
 sub [hol] least = (LEAST)
+val replace : forall 'a. 'a -> num -> 'a list -> 'a list
+sub [hol] replace = REPLACE_ELEMENT
 
 let rec
 remove_mat_exp (Mat (Var v) pes) =
@@ -129,38 +134,37 @@ and
 exp_to_Cexp (m, App (Opn opn) e1 e2) =
   let (_m,Ce1) = exp_to_Cexp (m, e1) in
   let (_m,Ce2) = exp_to_Cexp (m, e2) in
-  (m, CPrimCall (match opn with
-                 | Plus   -> CAdd
-                 | Minus  -> CSub
-                 | Times  -> CMult
-                 | Divide -> CDiv
-                 | Modulo -> CMod
-                 end)
-      [Ce1;Ce2])
+  (m, CPrim2 (match opn with
+              | Plus   -> CAdd
+              | Minus  -> CSub
+              | Times  -> CMult
+              | Divide -> CDiv
+              | Modulo -> CMod
+              end)
+      Ce1 Ce2)
 and
 exp_to_Cexp (m, App (Opb opb) e1 e2) =
   let (_m,Ce1) = exp_to_Cexp (m, e1) in
   let (_m,Ce2) = exp_to_Cexp (m, e2) in
-  (m, CPrimCall (match opb with
-                 | Lt  -> CLt
-                 | Leq -> CLeq
-                 end)
-      [Ce1;Ce2])
+  (m, match opb with
+      | Lt -> CPrim2 CLt Ce1 Ce2
+      | Leq -> CLprim CLeq [Ce1;Ce2]
+      end)
 and
 exp_to_Cexp (m, Log log e1 e2) =
   let (_m,Ce1) = exp_to_Cexp (m, e1) in
   let (_m,Ce2) = exp_to_Cexp (m, e2) in
-  (m, CPrimCall (match log with
-                 | And -> CAnd
-                 | Or  -> COr
-                 end)
+  (m, CLprim (match log with
+              | And -> CAnd
+              | Or  -> COr
+              end)
       [Ce1;Ce2])
 and
 exp_to_Cexp (m, If e1 e2 e3) =
   let (_m,Ce1) = exp_to_Cexp (m, e1) in
   let (_m,Ce2) = exp_to_Cexp (m, e2) in
   let (_m,Ce3) = exp_to_Cexp (m, e3) in
-  (m, CPrimCall CIf [Ce1;Ce2;Ce3])
+  (m, CLprim CIf [Ce1;Ce2;Ce3])
 and
 exp_to_Cexp (m, Mat (Var vn) pes) =
   let Cpes = List.fold_left
@@ -181,13 +185,13 @@ exp_to_Cexp (m, Letrec defs b) =
     (fun (m,fns) (d,_vn,_e) -> let (m',fn) = extend m d in (m',fn::fns))
           (m,[]) defs in
   let Cdefs = List.fold_left
-    (fun Cdefs (fn,(_d,vn,e)) ->
+    (fun Cdefs (_d,vn,e) ->
       let (m'',n) = extend m' vn in
       let (_m,Ce) = exp_to_Cexp (m'',e) in
-      (fn,[n],Ce)::Cdefs)
-          [] (List.combine fns defs) in
+      ([n],Ce)::Cdefs)
+         []    defs in
   let (_m,Cb) = exp_to_Cexp (m',b) in
-  (m, CLetfun true Cdefs Cb)
+  (m, CLetfun true fns Cdefs Cb)
 
 (* TODO: semantics *)
 (* TODO: simple type system and checker *)
@@ -202,6 +206,8 @@ and
 free_vars (CCon _ es) =
   List.fold_left (fun s e -> s union free_vars e) {} es
 and
+free_vars (CTagEq e _) = free_vars e
+and
 free_vars (CProj e _) = free_vars e
 and
 free_vars (CMat v pes) =
@@ -211,16 +217,16 @@ free_vars (CLet xes e) =
   free_vars e union
   List.fold_left (fun s (x,e) -> s union (free_vars e \ {x})) {} xes
 and
-free_vars (CLetfun true defs e) =
-  let ns = Set.from_list (List.map (fun (n,_,_) -> n) defs) in
+free_vars (CLetfun true ns defs e) =
   free_vars e union
-  List.fold_left (fun s (_,vs,e) -> free_vars e \
-                                    (ns union (Set.from_list vs)))
+  List.fold_left (fun s (vs,e) -> free_vars e \
+                                  ((Set.from_list ns) union
+                                   (Set.from_list vs)))
                       {} defs
 and
-free_vars (CLetfun false defs e) =
+free_vars (CLetfun false _ defs e) =
   free_vars e union
-  List.fold_left (fun s (_,vs,e) -> free_vars e \ Set.from_list vs)
+  List.fold_left (fun s (vs,e) -> free_vars e \ Set.from_list vs)
                       {} defs
 and
 free_vars (CFun xs e) = free_vars e \ (Set.from_list xs)
@@ -229,7 +235,9 @@ free_vars (CCall e es) =
   free_vars e union
   List.fold_left (fun s e -> s union free_vars e) {} es
 and
-free_vars (CPrimCall _ es) =
+free_vars (CPrim2 _ e1 e2) = free_vars e1 union free_vars e2
+and
+free_vars (CLprim _ es) =
   List.fold_left (fun s e -> s union free_vars e) {} es
 
 (* Remove pattern-matching using continuations *)
@@ -241,10 +249,13 @@ remove_mat_vp fk sk v (CPvar pv) =
   CLet [(pv,(CVar v))] sk
 and
 remove_mat_vp fk sk v (CPlit l) =
-  CPrimCall CIf [CPrimCall CEq [(CVar v);(CLit l)];
+  CLprim CIf [CPrim2 CEq (CVar v) (CLit l);
     sk; (CCall (CVar fk) [])]
 and
-remove_mat_vp fk sk v (CPcon cn ps) = remove_mat_con fk sk v 0 ps
+remove_mat_vp fk sk v (CPcon cn ps) =
+  CLprim CIf [CTagEq (CVar v) cn;
+    remove_mat_con fk sk v 0 ps;
+    CCall (CVar fk) []]
 and
 remove_mat_con fk sk v n [] = sk
 and
@@ -262,30 +273,350 @@ remove_mat (CVar n) = CVar n
 and
 remove_mat (CCon n es) = CCon n (List.map remove_mat es)
 and
+remove_mat (CTagEq e n) = CTagEq (remove_mat e) n
+and
 remove_mat (CProj e n) = CProj (remove_mat e) n
 and
 remove_mat (CLet xes e) = CLet (List.map (fun (x,e) -> (x,remove_mat e)) xes) (remove_mat e)
 and
-remove_mat (CLetfun b defs e) = CLetfun b (List.map (fun (n,vs,e) -> (n,vs,remove_mat e)) defs) (remove_mat e)
+remove_mat (CLetfun b ns defs e) = CLetfun b ns (List.map (fun (vs,e) -> (vs,remove_mat e)) defs) (remove_mat e)
 and
 remove_mat (CCall e es) = CCall (remove_mat e) (List.map remove_mat es)
 and
-remove_mat (CPrimCall op es) = CPrimCall op (List.map remove_mat es)
+remove_mat (CPrim2 o2 e1 e2) = CPrim2 o2 (remove_mat e1) (remove_mat e2)
+and
+remove_mat (CLprim ol es) = CLprim ol (List.map remove_mat es)
 and
 remove_mat_var v [] = CRaise Bind_error
 and
 remove_mat_var v ((p,e)::pes) =
   let sk = remove_mat e in
   let fk = least_not_in (Set.add v (free_vars sk)) in
-  CLetfun false [(fk,[],(remove_mat_var v pes))]
+  CLetfun false [fk] [([],(remove_mat_var v pes))]
     (remove_mat_vp fk sk v p)
 
 (* TODO: collapse nested functions *)
 (* TODO: collapse nested lets *)
+(* TODO: Letfun introduction and reordering *)
+(* TODO: let floating *)
 (* TODO: removal of redundant expressions *)
 (* TODO: simplification (e.g., constant folding) *)
 
 let compile0 m e = (exp_to_Cexp (m, (remove_mat_exp (remove_Gt_Geq e))))
+
+(* values in compile-time environment *)
+type ctbind = CTLet of num | CTArg of num | CTEnv of num | CTRef of num
+(* CTLet n means stack[sz - n]
+   CTArg n means stack[sz + n]
+   CTEnv n means El n of the environment, which is at stack[sz]
+   CTRef n means El n of the environment, but it's a ref pointer *)
+
+open Bytecode
+
+type compiler_state =
+  <| env: (num,ctbind) Pmap.map
+   ; sz: num
+   ; code: bc_inst list (* reversed *)
+   ; next_label: num
+   ; inst_length: bc_inst -> num
+   |>
+
+let i0 = num_to_int 0
+let i1 = num_to_int 1
+let i2 = num_to_int 2
+
+let rec
+error_to_int Bind_error = i0
+and
+error_to_int Div_error = i1
+
+let rec
+prim2_to_bc CAdd = Add
+and
+prim2_to_bc CSub = Sub
+and
+prim2_to_bc CMult = Mult
+and
+prim2_to_bc CDiv = Div2 (* TODO *)
+and
+prim2_to_bc CMod = Mod2 (* TODO *)
+and
+prim2_to_bc CLt = Less
+and
+prim2_to_bc CEq = Equal
+
+let emit = List.fold_left
+  (fun s i -> <| s with next_label = s.next_label + s.inst_length i + 1;
+                        code = i :: s.code |>)
+
+let rec
+compile_varref s (CTLet n) = emit s [Stack (Load (s.sz - n))]
+and
+compile_varref s (CTArg n) = emit s [Stack (Load (s.sz + n))]
+and
+compile_varref s (CTEnv n) = emit s [Stack (Load s.sz); Stack (El n)]
+and
+compile_varref s (CTRef n) = emit (compile_varref s (CTEnv n)) [Deref]
+
+let incsz s = <| s with sz = s.sz + 1 |>
+let decsz s = <| s with sz = s.sz - 1 |>
+
+(* TODO: elsewhere? *)
+let rec
+find_index y [] _ = None
+and
+find_index y (x::xs) (n:num) = if x = y then Some n else find_index y xs (n+1)
+
+(* helper for reconstructing closure environments *)
+type cebind = CEEnv of num | CERef of num
+
+let rec
+emit_ec s (CEEnv fv) = incsz (compile_varref s (Pmap.find fv s.env))
+and
+emit_ec s (CERef j) = incsz (emit s [Stack (Load (s.sz - j))])
+
+let rec
+replace_calls j [_] c = c
+and
+replace_calls j ((_,lab)::(jl,l)::ls) c =
+  replace_calls j ((jl,l)::ls)
+    (replace (Call lab) (j - jl) c)
+
+let rec
+compile s (CRaise err) =
+  emit s [Stack (PushInt (error_to_int err)); Exception]
+and
+compile s (CLit (IntLit i)) =
+  incsz (emit s [Stack (PushInt i)])
+and
+compile s (CLit (Bool b)) =
+  incsz (emit s [Stack (PushInt (bool_to_int b))])
+and
+compile s (CVar n) =
+  incsz (compile_varref s (Pmap.find n s.env))
+and
+compile s (CCon n []) =
+  incsz (emit s [Stack (PushInt (num_to_int n))])
+and
+compile s (CCon n es) =       (* uneta because Hol_defn sucks *)
+  incsz (emit (List.fold_left (fun s e -> compile s e ) s es) [Stack (Cons n (List.length es))])
+and
+compile s (CTagEq e n) =
+  incsz (emit (compile s e) [Stack (TagEquals n)])
+and
+compile s (CProj e n) =
+  incsz (emit (compile s e) [Stack (El n)])
+and
+compile s (CMat _ _) =
+  emit s [Stack (PushInt i2); Exception]
+and
+compile s (CLet xes e) =
+  let s = List.fold_left (fun s (x,e) -> compile s e) s xes in
+  compile_bindings s.env e 0 s (List.map fst xes)
+and
+compile s (CLetfun recp ns defs e) =
+  let s = compile_closures (if recp then Some ns else None) s defs in
+  compile_bindings s.env e 0 s ns
+and
+compile s (CFun xs e) =
+  compile_closures None s [(xs,e)]
+and
+compile s (CCall e es) =
+  let n = List.length es in
+  let s = compile s e in (* uneta because Hol_defn sucks *)
+  let s = List.fold_left (fun s e -> compile s e) s es in
+  (* argn, ..., arg2, arg1, Block 0 [CodePtr c; env], *)
+  let s = emit s [Stack (Load (n+1)); Stack (El 0)] in
+  (* CodePtr c, argn, ..., arg1, Block 0 [CodePtr c; env], *)
+  let s = emit s [Stack (Load (n+2)); Stack (El 1)] in
+  (* env, CodePtr c, argn, ..., arg1, Block 0 [CodePtr c; env], *)
+  let s = emit s [CallPtr] in
+  (* before: env, CodePtr ret, argn, ..., arg1, Block 0 [CodePtr c; env], *)
+  (* after:  retval, *)
+  <| s with sz = s.sz - n |>
+and
+compile s (CPrim2 op e1 e2) =
+  let s = compile s e1 in
+  let s = compile s e2 in
+  emit s [Stack (prim2_to_bc op)]
+and
+compile s (CLprim CLeq [e1;e2]) =
+  let s = incsz (emit s [Stack (PushInt i1)]) in
+  let s = incsz (emit s [Stack (PushInt i0)]) in
+  let s = compile s e1 in
+  let s = compile s e2 in
+  let s = emit s [Stack Sub; Stack Less; Stack Sub] in
+  <| s with sz = s.sz - 3 |>
+and
+compile s (CLprim CIf [e1;e2;e3]) =
+  let s = compile s e1 in
+  let s = emit s [JumpNil 0; Jump 0] in
+  let j1 = List.length s.code in
+  let n1 = s.next_label in
+  let s = compile (decsz s) e2 in
+  let s = emit s [Jump 0] in
+  let j2 = List.length s.code in
+  let n2 = s.next_label in
+  let s = compile (decsz s) e3 in
+  let n3 = s.next_label in
+  let j3 = List.length s.code in
+  <| s with code =
+      (replace (Jump n3) (j3 - j2)
+      (replace (Jump n2) (j3 - j1)
+      (replace (JumpNil n1) (j3 - j1 - 1) s.code))) |>
+and
+compile s (CLprim CAnd [e1;e2]) =
+  let s = compile s e1 in
+  let s = emit s [JumpNil 0] in
+  let j = List.length s.code in
+  let s = compile (decsz s) e2 in
+  <| s with code =
+      replace (JumpNil s.next_label)
+      (List.length s.code - j) s.code |>
+and
+compile s (CLprim COr [e1;e2]) =
+  let s = compile s e1 in
+  let s = emit s [JumpNil 0; Stack (PushInt i1); Jump 0] in
+  let j = List.length s.code in
+  let n1 = s.next_label in
+  let s = compile (decsz s) e2 in
+  let n2 = s.next_label in
+  let j3 = List.length s.code in
+  <| s with code =
+      (replace (Jump n2) (j3 - j)
+      (replace (JumpNil n1) (j3 - j - 2) s.code)) |>
+and
+compile_bindings env0 e n s [] =
+  let s = compile s e in
+  let s = emit s [Stack (Pops n)] in
+  <| s with env = env0 ; sz = s.sz - n |>
+and
+compile_bindings env0 e n s (x::xs) =
+  compile_bindings env0 e
+    (n+1) (* parentheses below because Lem sucks *)
+    (<| s with env = Pmap.add x (CTLet (s.sz - n)) s.env |>)
+    xs
+and
+compile_closures nso s defs =
+  (* calling convention:
+   * before: env, CodePtr ret, argn, ..., arg1, Block 0 [CodePtr c; env],
+   * thus, since env = stack[sz], argk should be CTArg (2 + n - k)
+   * after:  retval,
+       PushInt 0, Ref
+       ...            (* create RefPtrs for recursive closures *)
+       PushInt 0, Ref                       RefPtr 0, ..., RefPtr 0, rest
+       PushInt 0                            0, RefPtr 0, ..., RefPtr 0, rest
+       Call L1                              0, CodePtr f1, RefPtr 0, ..., RefPtr 0, rest
+       ?
+       ...      (* function 1 body *)
+       Store 0  (* replace env with return value *)
+       Pops ?   (* pop arguments and closure *) 
+       Return
+   L1: Call L2                              0, CodePtr f2, CodePtr f1, RefPtrs, rest
+       ?
+       ...      (* function 2 body *)
+       Store 0
+       Pops ?
+       Return
+   L2: Call L3
+       ?
+       ...      (* more function bodies *)
+   ...
+       Return
+   LK: Call L
+       ...
+       Return   (* end of last function *)
+   L:  Pop                                  CodePtr fk, ..., CodePtr f1, RefPtrs, rest
+       Load ?   (* copy code pointer for function 1 *)
+       Load ?   (* copy free mutrec vars for function 1 *)
+       Load ?   (* copy free vars for function 1 *)
+       ...                                  vm1, ..., v1, RefPtr 0, ..., RefPtr 0, CodePtr f1, CodePtr fk, ..., CodePtr f1, RefPtrs, rest
+       Cons 0 (m1 + n1)
+       Cons 0 2                             Block 0 [CodePtr f1; Block 0 Env], CodePtr fk, ..., CodePtr f1, RefPtrs, rest
+       Store ?                              CodePtr fk, ..., CodePtr f2, f1, RefPtrs, rest
+       Load ?   (* copy code pointer for function 2 *)
+       Load ?   (* copy free mutrec vars for function k-1 *)
+       Load ?   (* copy free vars for function k-1 *)
+       ...
+       Cons 0 (m2 + n2)
+       Cons 0 2                             
+       Store ?                              CodePtr fk, ..., CodePtr f3, f2, f1, RefPtrs, rest
+       ...                                  fk, ..., f2, f1, RefPtrs, rest
+       Load ?
+       Load 1                               fk, RefPtr 0, fk, f(k-1), ..., RefPtrs, rest
+       Update                               fk, f(k-1), ..., f1, RefPtrs, rest
+       Load ?
+       Load 2
+       Update
+       ...      (* update RefPtrs with closures *)
+       Store ?  (* pop RefPtrs *)           fk, f(k-1), ..., f1, rest
+       ...
+  *)
+  (*
+   * - push refptrs and leading 0
+   * - for each function (in order), push a Call 0, remember the next label,
+   *   calculate its environment, remember the environment, compile its body in
+   *   that environment
+   * - update Calls
+   * - for each environment emit code to load that
+   *   environment and build the closure
+   * - update refptrs, etc.
+   *)
+  let (nr,ns) = match nso with None -> (0,[]) | Some ns -> (List.length ns,ns) end in
+  let s = List.fold_left (fun s _n -> emit s [Stack (PushInt i0); Ref]) s ns in
+  let s = emit s [Stack (PushInt i0)] in
+  let (s,k,labs,ecs) = List.fold_left
+    (fun (s,k,labs,ecs) (xs,e) ->
+      let az = List.length xs in
+      let lab = s.next_label in
+      let s = emit s [Call 0] in
+      let j = List.length s.code in
+      let fvs = free_vars (CFun xs e) in
+      let bind_fv fv (n,env,ec) =
+        match find_index fv xs 1 with
+        | Some j -> (n, Pmap.add fv (CTArg (2 + az - j)) env, ec)
+        | None -> match find_index fv ns 0 with
+          | None -> (n+1, Pmap.add fv (CTEnv n) env, (CEEnv fv::ec))
+          | Some j -> if j = k
+                      then (n, Pmap.add fv (CTArg (2 + az)) env, ec)
+                      else (n+1, Pmap.add fv (CTRef n) env, (CERef j)::ec)
+          end
+        end in
+      let (n,env,ec) = Set.fold bind_fv fvs (0,Pmap.empty,[]) in
+      let s' = <| s with env = env ; sz = 0 |> in
+      let s' = compile s' e in
+      let s = <| s' with env = s.env ; sz = s.sz |> in
+      (s,k+1,(j,lab)::labs,ec::ecs))
+    (s,0,[],[]) defs in
+  let s = <| s with code =
+    replace_calls (List.length s.code) ((0,s.next_label)::labs) s.code |> in
+  let s = emit s [Stack Pop] in
+  let nk = List.length defs in
+  let s = <| s with sz = s.sz + nk + nr |> in
+  let (s,k) = List.fold_left
+    (fun (s,k) ec ->
+      let s = incsz (emit s [Stack (Load (nk - k))]) in
+      let s = List.fold_left emit_ec s ec in
+      let j = List.length ec in
+      let s = emit s [Stack (Cons 0 j)] in
+      let s = emit s [Stack (Cons 0 2)] in
+      let s = emit s [Stack (Store (nk - k))] in
+      let s = <| s with sz = s.sz - j |> in
+      (s,k+1))
+    (s,0) ecs in
+  let (s,k) = List.fold_left
+    (fun (s,k) _n ->
+      let s = emit s [Stack (Load (nk + nk - k))] in
+      let s = emit s [Stack (Load (nk - k))] in
+      let s = emit s [Update] in
+      (s,k+1))
+    (s,0) ns in
+  let (s,k) = List.fold_left
+    (fun (s,k) _n ->
+      let s = emit s [Stack (Store (s.sz - k))] in
+      (decsz s, k+1))
+    (s,0) ns in
+  s
 
 (* Constant folding
 val fold_consts : exp -> exp
