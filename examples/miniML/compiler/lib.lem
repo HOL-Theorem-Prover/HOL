@@ -1,2 +1,3 @@
 val FRANGE : forall 'a 'b. ('a,'b) fmap -> 'b set
 val LEAST : (num -> bool) -> num
+val REPLACE_ELEMENT : forall 'a. 'a -> num -> 'a list -> 'a list

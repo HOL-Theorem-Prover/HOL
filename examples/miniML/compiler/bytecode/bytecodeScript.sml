@@ -1,38 +1,7 @@
 open HolKernel boolLib bossLib Parse lcsymtacs
-open arithmeticTheory listTheory finite_mapTheory integerTheory
+open BytecodeTheory arithmeticTheory listTheory finite_mapTheory integerTheory
 val _ = new_theory "bytecode";
 infix \\ val op \\ = op THEN;
-
-
-(* --- Syntax --- *)
-
-val _ = Hol_datatype `
-  bc_stack_op =
-    Pop                     (* pop top of stack *)
-  | Pops of num             (* pop n elements under stack top *)
-  | PushInt of int          (* push num onto stack *)
-  | Cons of num => num      (* push new cons with tag m and n elements *)
-  | Load of num             (* push stack[n+1] *)
-  | Store of num            (* pop and store in stack[n+1] *)
-  | El of num               (* read field n of cons block *)
-  | Tag                     (* read tag from cons block *)
-  | IsNum | Equal           (* tests *)
-  | Add | Sub | Mult | Div2 | Mod2 | Less  (* arithmetic *)`;
-
-val _ = Hol_datatype `
-  bc_inst =
-    Stack of bc_stack_op
-  | Jump of num             (* jump to location n *)
-  | JumpNil of num          (* conditional jump to location n *)
-  | Call of num             (* call location n *)
-  | JumpPtr                 (* jump based on code pointer *)
-  | CallPtr                 (* call based on code pointer *)
-  | Return                  (* pop return address, jump *)
-  | Exception               (* restore stack, jump *)
-  | Ref                     (* create a new ref cell *)
-  | Deref                   (* dereference a ref cell *)
-  | Update                  (* update a ref cell *)`;
-
 
 (* --- Semantics --- *)
 
@@ -79,9 +48,6 @@ val bump_pc_def = Define `
 
 (* next state relation *)
 
-val bool2num_def = Define `
-  (bool2num T = 1) /\ (bool2num F = 0:int)`;
-
 val (bc_stack_op_rules,bc_stack_op_ind,bc_stack_op_cases) = Hol_reln `
   bc_stack_op Pop (x::xs) (xs) /\
   bc_stack_op (Pops (LENGTH ys)) (x::ys++xs) (x::xs) /\
@@ -90,10 +56,11 @@ val (bc_stack_op_rules,bc_stack_op_ind,bc_stack_op_cases) = Hol_reln `
   (k < LENGTH xs ==> bc_stack_op (Load k) xs (EL k xs :: xs)) /\
   bc_stack_op (Store (LENGTH ys)) (y::ys ++ x::xs) (ys ++ y::xs) /\
   (k < LENGTH ys ==> bc_stack_op (El k) ((Block tag ys)::xs) (EL k ys::xs)) /\
-  bc_stack_op Tag ((Block tag ys)::xs) (Number (&tag)::xs) /\
-  bc_stack_op IsNum (x::xs) (Number (bool2num (?n. x = Number n)) :: xs) /\
-  bc_stack_op Equal (x2::x1::xs) (Number (bool2num (x1 = x2)) :: xs) /\
-  bc_stack_op Less (Number n :: Number m :: xs) (Number (bool2num (m < n))::xs) /\
+  bc_stack_op (TagEquals t) ((Block tag ys)::xs) (Number (bool_to_int (tag = t))::xs) /\
+  bc_stack_op (TagEquals t) ((Number i)::xs) (Number (bool_to_int (i = &t))::xs) /\
+  bc_stack_op IsNum (x::xs) (Number (bool_to_int (?n. x = Number n)) :: xs) /\
+  bc_stack_op Equal (x2::x1::xs) (Number (bool_to_int (x1 = x2)) :: xs) /\
+  bc_stack_op Less (Number n :: Number m :: xs) (Number (bool_to_int (m < n))::xs) /\
   bc_stack_op Add (Number n :: Number m :: xs) (Number (m + n)::xs) /\
   bc_stack_op Sub (Number n :: Number m :: xs) (Number (m - n)::xs) /\
   bc_stack_op Mult (Number n :: Number m :: xs) (Number (m * n)::xs) /\
@@ -179,14 +146,16 @@ val bc_eval_stack_def = Define`
    then SOME (TAKE k xs ++ y :: (DROP (k+1) xs)) else NONE)
 ∧ (bc_eval_stack (El k) ((Block tag ys)::xs) =
    if k < LENGTH ys then SOME (EL k ys::xs) else NONE)
-∧ (bc_eval_stack Tag ((Block tag ys)::xs) =
-   SOME (Number (&tag)::xs))
+∧ (bc_eval_stack (TagEquals t) ((Block tag ys)::xs) =
+   SOME (Number (bool_to_int (tag = t))::xs))
+∧ (bc_eval_stack (TagEquals t) ((Number i)::xs) =
+   SOME (Number (bool_to_int (i = &t))::xs))
 ∧ (bc_eval_stack IsNum (x::xs) =
-   SOME (Number (bool2num (isNumber x)) :: xs))
+   SOME (Number (bool_to_int (isNumber x)) :: xs))
 ∧ (bc_eval_stack Equal (x2::x1::xs) =
-   SOME (Number (bool2num (x1 = x2)) :: xs))
+   SOME (Number (bool_to_int (x1 = x2)) :: xs))
 ∧ (bc_eval_stack Less (Number n :: Number m :: xs) =
-   SOME (Number (bool2num (m < n))::xs))
+   SOME (Number (bool_to_int (m < n))::xs))
 ∧ (bc_eval_stack Add (Number n :: Number m :: xs) =
    SOME (Number (m + n)::xs))
 ∧ (bc_eval_stack Sub (Number n :: Number m :: xs) =
@@ -239,7 +208,7 @@ Cases >> Cases >> fs[bc_eval_stack_def,bc_stack_op_cases,isNumber_exists_thm] >>
   qmatch_assum_rename_tac `bc_eval_stack (El n) (h::t) = SOME ys` [] >>
   Cases_on `h` >> fs[bc_eval_stack_def] )
 >- (
-  qmatch_assum_rename_tac `bc_eval_stack Tag (h::t) = SOME ys` [] >>
+  qmatch_assum_rename_tac `bc_eval_stack (TagEquals n) (h::t) = SOME ys` [] >>
   Cases_on `h` >> fs[bc_eval_stack_def] )
 >- (
   qmatch_assum_rename_tac `bc_eval_stack Equal (h::t) = SOME ys` [] >>
