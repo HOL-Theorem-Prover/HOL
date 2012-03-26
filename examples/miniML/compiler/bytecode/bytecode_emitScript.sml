@@ -1,5 +1,5 @@
 open HolKernel bossLib boolLib EmitTeX
-open emitLib fmap_emitTheory int_emitTheory bytecodeTheory
+open emitLib fmap_emitTheory int_emitTheory BytecodeTheory bytecodeTheory
 val _ = new_theory "bytecode_emit"
 
 val data = map
@@ -21,7 +21,7 @@ val init_state_def =  Define`
 val defs = map DEFN [
 optionTheory.OPTION_BIND_def,
 bc_fetch_aux_def,bc_fetch_def,bump_pc_def,
-bool2num_def,isNumber_def,
+bool_to_int_def,isNumber_def,
 bc_eval_stack_def,bc_eval1_def,bc_eval_def,
 init_state_def]
 
