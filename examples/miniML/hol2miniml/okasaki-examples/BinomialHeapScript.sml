@@ -296,6 +296,117 @@ rw [heap_to_bag_def, BAG_DIFF, BAG_INSERT, EL_BAG, FUN_EQ_THM, EMPTY_BAG,
 cases_on `x = a` >>
 srw_tac [ARITH_ss] []);
 
+
+(* Verify size and shape invariants *)
+
+val heap_size_def = tDefine "heap_size" `
+(heap_size [] = 0) ∧
+(heap_size (t::ts) = heap_tree_size t + heap_size ts) ∧
+(heap_tree_size (Node _ _ trees) = (1:num) + heap_size trees)`
+(wf_rel_tac `measure (\x. case x of INR y => tree_size (\x.0) y 
+                                  | INL z => tree1_size (\x.0) z)` >>
+ rw []);
+
+val is_binomial_tree_def = Define `
+(is_binomial_tree (Node r x []) = (r = 0)) ∧
+(is_binomial_tree (Node r x (t::ts)) =
+  (r ≠ 0) ∧
+  is_binomial_tree t ∧
+  (rank t = r - 1) ∧
+  is_binomial_tree (Node (r - 1) x ts))`;
+
+val is_binomial_tree_ind = fetch "-" "is_binomial_tree_ind";
+
+val exp2_mod2 = Q.prove (
+`!x. x ≠ 0 ⇒ (2 ** x MOD 2 = 0)`,
+induct_on `x` >>
+rw [] >>
+cases_on `x = 0`>>
+fs [arithmeticTheory.ADD1, arithmeticTheory.EXP_ADD,
+    arithmeticTheory.MOD_EQ_0]);
+
+val is_binomial_tree_size = Q.store_thm ("is_binomial_tree_size",
+`!t. is_binomial_tree t ⇒ (heap_tree_size t = 2 ** rank t)`, 
+recInduct is_binomial_tree_ind >>
+rw [heap_size_def, rank_def, is_binomial_tree_def] >>
+fs [] >>
+`1 + (2 ** (r − 1) + heap_size ts) = 2 ** (r − 1) + (1 + heap_size ts)`
+           by decide_tac >>
+rw [] >>
+`1 ≤ r` by decide_tac >>
+rw [arithmeticTheory.EXP_SUB, GSYM arithmeticTheory.TIMES2,
+    bitTheory.DIV_MULT_THM2, exp2_mod2]);
+
+val is_binomial_heap_def = Define `
+is_binomial_heap h = 
+  EVERY is_binomial_tree h ∧ SORTED ($< : num->num->bool) (MAP rank h)`;
+
+val trans_less = Q.prove (
+`transitive ($< : num->num->bool)`,
+rw [transitive_def] >>
+decide_tac);
+
+val link_binomial_tree = Q.prove (
+`!get_key leq t1 t2.
+  is_binomial_tree t1 ∧ is_binomial_tree t2 ∧ (rank t1 = rank t2)
+  ⇒
+  is_binomial_tree (link get_key leq t1 t2) ∧
+  (rank (link get_key leq t1 t2) = rank t1 + 1)`,
+cases_on `t1` >>
+cases_on `t2` >>
+rw [link_def, is_binomial_tree_def, rank_def] >>
+metis_tac []);
+
+val ins_binomial_heap = Q.prove (
+`!get_key leq t h.
+  is_binomial_tree t ∧ 
+  is_binomial_heap h ∧ 
+  (!t'. MEM t' h ⇒ rank t ≤ rank t')
+  ⇒
+  is_binomial_heap (ins_tree get_key leq t h)`,
+induct_on `h` >>
+rw [is_binomial_heap_def, trans_less, SORTED_EQ, SORTED_DEF, ins_tree_def] >>
+`rank t ≤ rank h'` by metis_tac [] >>
+`rank t = rank h'` by decide_tac >>
+fs [is_binomial_heap_def, MEM_MAP] >>
+`is_binomial_tree (link get_key leq t h') ∧
+ (rank (link get_key leq t h') = rank t + 1)`
+              by metis_tac [link_binomial_tree] >>
+metis_tac [DECIDE ``!(x:num) y . x < y ==> x + 1 ≤ y``]);
+
+(*
+val merge_binomial_heap = Q.store_thm ("merge_binomial_heap",
+
+`!get_key leq h1 h2.
+  is_binomial_heap h1 ∧ is_binomial_heap h2
+  ⇒
+  is_binomial_heap (merge get_key leq h1 h2) ∧
+  (!r. 
+    EVERY (\t. r < rank t) h1 ∧ EVERY (\t. r < rank t) h2
+    ⇒
+    EVERY (\t. r < rank t) (merge get_key leq h1 h2))`
+
+recInduct merge_ind >>
+rw [is_binomial_heap_def, merge_def, trans_less, SORTED_EQ, 
+    is_binomial_tree_def] >>
+fs [MEM_MAP, EVERY_MEM] >>
+rw [] >-
+metis_tac [trans_less, transitive_def] >-
+metis_tac [trans_less, transitive_def] >>
+`rank t1 = rank t2` by decide_tac >>
+fs [] >>
+`is_binomial_tree (link get_key leq t1 t2) ∧
+ (rank (link get_key leq t1 t2) = rank t1 + 1)` 
+            by metis_tac [link_binomial_tree] >>
+`is_binomial_heap (merge get_key leq ts1 ts2)`
+            by metis_tac [EVERY_MEM, is_binomial_heap_def] >>
+`!t'. MEM t' (merge get_key leq ts1 ts2) ⇒ rank (link get_key leq t1 t2) ≤ rank t'`
+           by metis_tac [DECIDE ``!(x:num) y. x < y ⇔ x + 1 ≤ y``] >-
+metis_tac [is_binomial_heap_def, EVERY_MEM, ins_binomial_heap] >-
+metis_tac [is_binomial_heap_def, EVERY_MEM, ins_binomial_heap]
+
+*)
+
 (* translation *)
 
 val _ = set_filename (current_theory())
