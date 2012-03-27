@@ -2,12 +2,16 @@ open HolKernel boolLib bossLib Parse
 
 val _ = new_theory "vbgset"
 
+(* hide constants from the existing (typed) set theory *)
 val _ = app (ignore o hide) ["UNION", "IN", "SUBSET", "EMPTY", "INSERT"]
 
+(* create a new type (of VBG classes) *)
 val _ = new_type("vbgc", 0)
 
+(* with this call, the syntax with ∈ is enabled as well. *)
 val _ = new_constant ("IN", ``:vbgc -> vbgc -> bool``)
 
+(* similarly, this abbreviation also allows for ∉ *)
 val _ = overload_on ("NOTIN", ``λx y. ~(x ∈ y)``)
 
 val SET_def = Define` SET(x) = ∃w. x ∈ w `
@@ -366,11 +370,13 @@ val ZERO_NEQ_ONE = store_thm(
   SRW_TAC [][EXTENSION] THEN Q.EXISTS_TAC `{}` THEN SRW_TAC [][]);
 val _ = export_rewrites ["ZERO_NEQ_ONE"]
 
-(* val POPAIR_01 = store_thm(
+val POPAIR_01 = store_thm(
   "POPAIR_01",
   ``POPAIR {} x ≠ POPAIR {{}} y``,
   SRW_TAC [][POPAIR_def] THEN SRW_TAC [][Once EXTENSION] THEN
-  Q.EXISTS_TAC `{{}}`
+  Q.EXISTS_TAC `{{}}` THEN SRW_TAC [][SING_11] THEN
+  SRW_TAC [][Once EXTENSION] THEN Q.EXISTS_TAC `{{}}` THEN
+  SRW_TAC [][]);
 
 val OPAIR_11 = store_thm(
   "OPAIR_11",
@@ -381,16 +387,34 @@ val OPAIR_11 = store_thm(
   REPEAT STRIP_TAC THENL [
     SIMP_TAC (srw_ss()) [EXTENSION, EQ_IMP_THM] THEN
     Q.X_GEN_TAC `e` THEN REPEAT STRIP_TAC THEN
-    `SET e` by METIS_TAC [SET_def] THENL [
-      FIRST_X_ASSUM (Q.SPEC_THEN `POPAIR {} e` MP_TAC) THEN
-      ASM_SIMP_TAC (srw_ss()) [] THEN
-      `∀z. POPAIR {} e ≠ POPAIR {{}} z`
-         by (STRIP_TAC THEN Cases_on `SET z` THEN SRW_TAC [][POPAIR_INJ] THEN
-             SRW_TAC [][POPAIR_def, Once EXTENSION] THEN
-             Q.EXISTS_TAC `{{}}` THEN SRW_TAC [][SING_11] THEN
-             SRW_TAC [][INSERT_def, PCLASS_SINGC_EMPTY] THEN
-             SRW_TAC [][] THEN METIS_TAC
-*)
+    `SET e` by METIS_TAC [SET_def] THEN
+    FIRST_X_ASSUM (Q.SPEC_THEN `POPAIR {} e` MP_TAC) THEN
+    ASM_SIMP_TAC (srw_ss()) [POPAIR_01] THENL [
+      DISCH_THEN (MP_TAC o CONV_RULE LEFT_IMP_EXISTS_CONV o #1 o
+                  EQ_IMP_RULE),
+      DISCH_THEN (MP_TAC o CONV_RULE LEFT_IMP_EXISTS_CONV o #2 o
+                  EQ_IMP_RULE)
+    ] THEN
+    DISCH_THEN (Q.SPEC_THEN `e` MP_TAC) THEN SRW_TAC [][] THEN
+    POP_ASSUM MP_TAC THEN
+    `SET y` by METIS_TAC [SET_def] THEN
+    SRW_TAC [][POPAIR_INJ],
+
+    SIMP_TAC (srw_ss()) [EXTENSION, EQ_IMP_THM] THEN
+    Q.X_GEN_TAC `e` THEN REPEAT STRIP_TAC THEN
+    `SET e` by METIS_TAC [SET_def] THEN
+    FIRST_X_ASSUM (Q.SPEC_THEN `POPAIR {{}} e` MP_TAC) THEN
+    ASM_SIMP_TAC (srw_ss()) [POPAIR_01] THENL [
+      DISCH_THEN (MP_TAC o CONV_RULE LEFT_IMP_EXISTS_CONV o #1 o
+                  EQ_IMP_RULE),
+      DISCH_THEN (MP_TAC o CONV_RULE LEFT_IMP_EXISTS_CONV o #2 o
+                  EQ_IMP_RULE)
+    ] THEN
+    DISCH_THEN (Q.SPEC_THEN `e` MP_TAC) THEN SRW_TAC [][] THEN
+    POP_ASSUM MP_TAC THEN
+    `SET y` by METIS_TAC [SET_def] THEN
+    SRW_TAC [][POPAIR_INJ]
+  ]);
 
 (*
 val FORMATION = new_axiom(
