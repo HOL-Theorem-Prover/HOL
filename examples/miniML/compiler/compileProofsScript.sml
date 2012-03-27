@@ -126,7 +126,7 @@ val _ = save_thm ("remove_mat_exp_ind", remove_mat_exp_ind);
 
 val (exp_to_Cexp_def,exp_to_Cexp_ind) =
   tprove_no_defn ((exp_to_Cexp_def,exp_to_Cexp_ind),
-  WF_REL_TAC `measure (exp_size o SND)` >>
+  WF_REL_TAC `measure (exp_size o SND o SND)` >>
   srw_tac[ARITH_ss][exp1_size_thm,exp8_size_thm,exp6_size_thm] >>
   MAP_EVERY (fn q => Q.ISPEC_THEN q mp_tac SUM_MAP_MEM_bound) [`exp7_size`,`exp_size`,`exp2_size`] >>
   rw[] >> res_tac >> fs[exp_size_def] >> srw_tac[ARITH_ss][])
@@ -172,7 +172,7 @@ val _ = save_thm ("free_vars_ind", free_vars_ind);
 
 val (pat_to_Cpat_def, pat_to_Cpat_ind) =
   tprove_no_defn ((pat_to_Cpat_def,pat_to_Cpat_ind),
-  WF_REL_TAC `measure (pat_size o SND)` >>
+  WF_REL_TAC `measure (pat_size o SND o SND)` >>
   srw_tac [ARITH_ss][pat1_size_thm] >>
   imp_res_tac SUM_MAP_MEM_bound >>
   pop_assum (qspec_then `pat_size` mp_tac) >>

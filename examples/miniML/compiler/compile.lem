@@ -104,36 +104,36 @@ let extend m vn =
   (Pmap.add vn n m, n)
 
 let rec
-pat_to_Cpat (m, Pvar vn) =
+pat_to_Cpat cm (m, Pvar vn) =
   let (m',vn) = extend m vn in
   (m', CPvar vn)
 and
-pat_to_Cpat (m, Plit l) = (m, CPlit l)
+pat_to_Cpat cm (m, Plit l) = (m, CPlit l)
 and
-pat_to_Cpat (m, Pcon cn ps) =
+pat_to_Cpat cm (m, Pcon cn ps) =
   let (m',ps) = List.fold_left
-    (fun (m,ps) p -> let (m',p) = pat_to_Cpat (m,p) in (m',p::ps))
+    (fun (m,ps) p -> let (m',p) = pat_to_Cpat cm (m,p) in (m',p::ps))
           (m,[]) ps in
-  (m', CPcon (Pmap.find cn m) ps)
+  (m', CPcon (Pmap.find cn cm) ps)
 
 let rec
-exp_to_Cexp (m, Raise err) = (m, CRaise err)
+exp_to_Cexp cm (m, Raise err) = (m, CRaise err)
 and
-exp_to_Cexp (m, Val (Lit l)) = (m, CLit l)
+exp_to_Cexp cm (m, Val (Lit l)) = (m, CLit l)
 and
-exp_to_Cexp (m, Con cn es) =
-  (m, CCon (Pmap.find cn m) (List.map (fun e -> let (_m,e) = exp_to_Cexp (m,e) in e) es))
+exp_to_Cexp cm (m, Con cn es) =
+  (m, CCon (Pmap.find cn cm) (List.map (fun e -> let (_m,e) = exp_to_Cexp cm (m,e) in e) es))
 and
-exp_to_Cexp (m, Var vn) = (m, CVar (Pmap.find vn m))
+exp_to_Cexp cm (m, Var vn) = (m, CVar (Pmap.find vn m))
 and
-exp_to_Cexp (m, Fun vn e) =
+exp_to_Cexp cm (m, Fun vn e) =
   let (m',n) = extend m vn in
-  let (m',Ce) = exp_to_Cexp (m', e) in
+  let (m',Ce) = exp_to_Cexp cm (m', e) in
   (m, CFun [n] Ce)
 and
-exp_to_Cexp (m, App (Opn opn) e1 e2) =
-  let (_m,Ce1) = exp_to_Cexp (m, e1) in
-  let (_m,Ce2) = exp_to_Cexp (m, e2) in
+exp_to_Cexp cm (m, App (Opn opn) e1 e2) =
+  let (_m,Ce1) = exp_to_Cexp cm (m, e1) in
+  let (_m,Ce2) = exp_to_Cexp cm (m, e2) in
   (m, CPrim2 (match opn with
               | Plus   -> CAdd
               | Minus  -> CSub
@@ -143,64 +143,64 @@ exp_to_Cexp (m, App (Opn opn) e1 e2) =
               end)
       Ce1 Ce2)
 and
-exp_to_Cexp (m, App (Opb opb) e1 e2) =
-  let (_m,Ce1) = exp_to_Cexp (m, e1) in
-  let (_m,Ce2) = exp_to_Cexp (m, e2) in
+exp_to_Cexp cm (m, App (Opb opb) e1 e2) =
+  let (_m,Ce1) = exp_to_Cexp cm (m, e1) in
+  let (_m,Ce2) = exp_to_Cexp cm (m, e2) in
   (m, match opb with
       | Lt -> CPrim2 CLt Ce1 Ce2
       | Leq -> CLprim CLeq [Ce1;Ce2]
       end)
 and
-exp_to_Cexp (m, App Equality e1 e2) =
-  let (_m,Ce1) = exp_to_Cexp (m, e1) in
-  let (_m,Ce2) = exp_to_Cexp (m, e2) in
+exp_to_Cexp cm (m, App Equality e1 e2) =
+  let (_m,Ce1) = exp_to_Cexp cm (m, e1) in
+  let (_m,Ce2) = exp_to_Cexp cm (m, e2) in
   (m, CPrim2 CEq Ce1 Ce2)
 and
-exp_to_Cexp (m, App Opapp e1 e2) =
-  let (_m,Ce1) = exp_to_Cexp (m, e1) in
-  let (_m,Ce2) = exp_to_Cexp (m, e2) in
+exp_to_Cexp cm (m, App Opapp e1 e2) =
+  let (_m,Ce1) = exp_to_Cexp cm (m, e1) in
+  let (_m,Ce2) = exp_to_Cexp cm (m, e2) in
   (m, CCall Ce1 [Ce2])
 and
-exp_to_Cexp (m, Log log e1 e2) =
-  let (_m,Ce1) = exp_to_Cexp (m, e1) in
-  let (_m,Ce2) = exp_to_Cexp (m, e2) in
+exp_to_Cexp cm (m, Log log e1 e2) =
+  let (_m,Ce1) = exp_to_Cexp cm (m, e1) in
+  let (_m,Ce2) = exp_to_Cexp cm (m, e2) in
   (m, CLprim (match log with
               | And -> CAnd
               | Or  -> COr
               end)
       [Ce1;Ce2])
 and
-exp_to_Cexp (m, If e1 e2 e3) =
-  let (_m,Ce1) = exp_to_Cexp (m, e1) in
-  let (_m,Ce2) = exp_to_Cexp (m, e2) in
-  let (_m,Ce3) = exp_to_Cexp (m, e3) in
+exp_to_Cexp cm (m, If e1 e2 e3) =
+  let (_m,Ce1) = exp_to_Cexp cm (m, e1) in
+  let (_m,Ce2) = exp_to_Cexp cm (m, e2) in
+  let (_m,Ce3) = exp_to_Cexp cm (m, e3) in
   (m, CLprim CIf [Ce1;Ce2;Ce3])
 and
-exp_to_Cexp (m, Mat (Var vn) pes) =
+exp_to_Cexp cm (m, Mat (Var vn) pes) =
   let Cpes = List.fold_left
-    (fun Cpes (p,e) -> let (m,Cp) = pat_to_Cpat (m,p) in
-                       let (_m,Ce) = exp_to_Cexp (m,e) in
+    (fun Cpes (p,e) -> let (m,Cp) = pat_to_Cpat cm (m,p) in
+                       let (_m,Ce) = exp_to_Cexp cm (m,e) in
                        (Cp,Ce)::Cpes)
          [] pes in
   (m, CMat (Pmap.find vn m) Cpes)
 and
-exp_to_Cexp (m, Let vn e b) =
+exp_to_Cexp cm (m, Let vn e b) =
   let (m',n) = extend m vn in
-  let (_m,Ce) = exp_to_Cexp (m, e) in
-  let (_m,Cb) = exp_to_Cexp (m', b) in
+  let (_m,Ce) = exp_to_Cexp cm (m, e) in
+  let (_m,Cb) = exp_to_Cexp cm (m', b) in
   (m, CLet [(n,Ce)] Cb)
 and
-exp_to_Cexp (m, Letrec defs b) =
+exp_to_Cexp cm (m, Letrec defs b) =
   let (m',fns) = List.fold_left
     (fun (m,fns) (d,_vn,_e) -> let (m',fn) = extend m d in (m',fn::fns))
           (m,[]) defs in
   let Cdefs = List.fold_left
     (fun Cdefs (_d,vn,e) ->
       let (m'',n) = extend m' vn in
-      let (_m,Ce) = exp_to_Cexp (m'',e) in
+      let (_m,Ce) = exp_to_Cexp cm (m'',e) in
       ([n],Ce)::Cdefs)
          []    defs in
-  let (_m,Cb) = exp_to_Cexp (m',b) in
+  let (_m,Cb) = exp_to_Cexp cm (m',b) in
   (m, CLetfun true fns Cdefs Cb)
 
 (* TODO: semantics *)
@@ -312,7 +312,7 @@ remove_mat_var v ((p,e)::pes) =
 (* TODO: removal of redundant expressions *)
 (* TODO: simplification (e.g., constant folding) *)
 
-let compile0 m e = (exp_to_Cexp (m, (remove_mat_exp (remove_Gt_Geq e))))
+let compile0 cm e = (exp_to_Cexp cm (Pmap.empty, (remove_mat_exp (remove_Gt_Geq e))))
 
 (* values in compile-time environment *)
 type ctbind = CTLet of num | CTArg of num | CTEnv of num | CTRef of num
