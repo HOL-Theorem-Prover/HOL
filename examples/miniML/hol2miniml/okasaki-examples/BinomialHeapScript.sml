@@ -363,20 +363,23 @@ val ins_binomial_heap = Q.prove (
   is_binomial_heap h ∧ 
   (!t'. MEM t' h ⇒ rank t ≤ rank t')
   ⇒
-  is_binomial_heap (ins_tree get_key leq t h)`,
+  is_binomial_heap (ins_tree get_key leq t h) ∧
+  (!r. (r < rank t) ⇒ EVERY (\t'. r < rank t') (ins_tree get_key leq t h))`,
 induct_on `h` >>
 rw [is_binomial_heap_def, trans_less, SORTED_EQ, SORTED_DEF, ins_tree_def] >>
-`rank t ≤ rank h'` by metis_tac [] >>
+`rank t ≤ rank h'` by metis_tac [] >-
+decide_tac >-
+(fs [EVERY_MEM] >>
+ metis_tac [arithmeticTheory.LESS_LESS_EQ_TRANS]) >>
 `rank t = rank h'` by decide_tac >>
 fs [is_binomial_heap_def, MEM_MAP] >>
 `is_binomial_tree (link get_key leq t h') ∧
  (rank (link get_key leq t h') = rank t + 1)`
               by metis_tac [link_binomial_tree] >>
-metis_tac [DECIDE ``!(x:num) y . x < y ==> x + 1 ≤ y``]);
+metis_tac [DECIDE ``!(x:num) y . x < y ==> x < y + 1``, 
+           DECIDE ``!(x:num) y . x < y ==> x + 1 ≤ y``]);
 
-(*
 val merge_binomial_heap = Q.store_thm ("merge_binomial_heap",
-
 `!get_key leq h1 h2.
   is_binomial_heap h1 ∧ is_binomial_heap h2
   ⇒
@@ -384,8 +387,7 @@ val merge_binomial_heap = Q.store_thm ("merge_binomial_heap",
   (!r. 
     EVERY (\t. r < rank t) h1 ∧ EVERY (\t. r < rank t) h2
     ⇒
-    EVERY (\t. r < rank t) (merge get_key leq h1 h2))`
-
+    EVERY (\t. r < rank t) (merge get_key leq h1 h2))`,
 recInduct merge_ind >>
 rw [is_binomial_heap_def, merge_def, trans_less, SORTED_EQ, 
     is_binomial_tree_def] >>
@@ -403,8 +405,64 @@ fs [] >>
 `!t'. MEM t' (merge get_key leq ts1 ts2) ⇒ rank (link get_key leq t1 t2) ≤ rank t'`
            by metis_tac [DECIDE ``!(x:num) y. x < y ⇔ x + 1 ≤ y``] >-
 metis_tac [is_binomial_heap_def, EVERY_MEM, ins_binomial_heap] >-
-metis_tac [is_binomial_heap_def, EVERY_MEM, ins_binomial_heap]
+metis_tac [is_binomial_heap_def, EVERY_MEM, ins_binomial_heap] >>
+`!r. (r < rank (link get_key leq t1 t2)) ⇒ 
+     EVERY (\t'. r < rank t')
+           (ins_tree get_key leq (link get_key leq t1 t2) 
+           (merge get_key leq ts1 ts2))`
+     by metis_tac [ins_binomial_heap] >>
+fs [EVERY_MEM] >>
+metis_tac [DECIDE ``!(x:num) y . x < y ==> x < y + 1``]);
 
+val insert_binomial_heap = Q.store_thm ("insert_binomial_heap",
+`!get_key leq x h.
+  is_binomial_heap h ⇒ is_binomial_heap (insert get_key leq x h)`, 
+rw [insert_def] >>
+`is_binomial_tree (Node 0 x [])` by rw [is_binomial_tree_def] >>
+metis_tac [ins_binomial_heap, rank_def, DECIDE ``!(x:num). 0 ≤ x``]);
+
+
+(*
+val remove_min_binomial_heap = Q.prove (
+`!get_key leq h t h'.
+  (h ≠ []) ∧
+  is_binomial_heap h ∧
+  ((t,h') = remove_min_tree get_key leq h)
+  ⇒
+  is_binomial_tree t`
+induct_on `h` >>
+rw [remove_min_tree_def] >>
+cases_on `h` >>
+fs [remove_min_tree_def, is_binomial_heap_def, LET_THM] >>
+cases_on `remove_min_tree get_key leq (h'''::t')` >>
+fs [] >>
+every_case_tac >>
+rw [] >>
+fs [SORTED_DEF] >-
+metis_tac [] >-
+metis_tac [] >>
+fs [trans_less, SORTED_EQ] >>
+rw [] >-
+metis_tac []
+
+metis_tac [MEM_MAP, trans_less, transitive_def]
+
+
+);
+
+val delete_min_binomial_heap = Q.store_thm ("delete_min_binomial_heap",
+`!get_key leq h.
+  (h ≠ []) ∧ is_binomial_heap h
+  ⇒ 
+  is_binomial_heap (delete_min get_key leq h)`,
+
+rw [delete_min_def] >>
+cases_on `remove_min_tree get_key leq h` >>
+rw [] >>
+cases_on `q` >>
+rw [] >>
+`is_binomial_tree (Node n a l) ∧ is_binomial_heap r` 
+            by metis_tac [remove_min_binomial_heap]
 *)
 
 (* translation *)
