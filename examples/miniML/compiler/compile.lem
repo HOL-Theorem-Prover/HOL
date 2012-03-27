@@ -436,19 +436,20 @@ compile s (CCall e es) =
   let s = compile s e in (* uneta because Hol_defn sucks *)
   let s = List.fold_left (fun s e -> compile s e) s es in
   (* argn, ..., arg2, arg1, Block 0 [CodePtr c; env], *)
+  let s = emit s [Stack (Load n); Stack (El 1)] in
+  (* env, argn, ..., arg1, Block 0 [CodePtr c; env], *)
   let s = emit s [Stack (Load (n+1)); Stack (El 0)] in
-  (* CodePtr c, argn, ..., arg1, Block 0 [CodePtr c; env], *)
-  let s = emit s [Stack (Load (n+2)); Stack (El 1)] in
-  (* env, CodePtr c, argn, ..., arg1, Block 0 [CodePtr c; env], *)
+  (* CodePtr c, env, argn, ..., arg1, Block 0 [CodePtr c; env], *)
   let s = emit s [CallPtr] in
   (* before: env, CodePtr ret, argn, ..., arg1, Block 0 [CodePtr c; env], *)
-  (* after:  retval, *)
+  (* after:  retval, argn, ..., arg1, Block 0 [CodePtr c; env], *)
+  let s = emit s [Stack (Pops (n+1))] in
   <| s with sz = s.sz - n |>
 and
 compile s (CPrim2 op e1 e2) =
   let s = compile s e1 in
   let s = compile s e2 in
-  emit s [Stack (prim2_to_bc op)]
+  decsz (emit s [Stack (prim2_to_bc op)])
 and
 compile s (CLprim CLeq [e1;e2]) =
   let s = incsz (emit s [Stack (PushInt i1)]) in
@@ -520,13 +521,11 @@ compile_closures nso s defs =
        ?
        ...      (* function 1 body *)
        Store 0  (* replace env with return value *)
-       Pops ?   (* pop arguments and closure *) 
        Return
    L1: Call L2                              0, CodePtr f2, CodePtr f1, RefPtrs, rest
        ?
        ...      (* function 2 body *)
        Store 0
-       Pops ?
        Return
    L2: Call L3
        ?
@@ -573,7 +572,7 @@ compile_closures nso s defs =
    * - update refptrs, etc.
    *)
   let (nr,ns) = match nso with None -> (0,[]) | Some ns -> (List.length ns,ns) end in
-  let s = List.fold_left (fun s _n -> emit s [Stack (PushInt i0); Ref]) s ns in
+  let s = List.fold_left (fun s _n -> incsz (emit s [Stack (PushInt i0); Ref])) s ns in
   let s = emit s [Stack (PushInt i0)] in
   let (s,k,labs,ecs) = List.fold_left
     (fun (s,k,labs,ecs) (xs,e) ->
@@ -595,25 +594,25 @@ compile_closures nso s defs =
       let (n,env,ec) = Set.fold bind_fv fvs (0,Pmap.empty,[]) in
       let s' = <| s with env = env ; sz = 0 |> in
       let s' = compile s' e in
-      let s = <| s' with env = s.env ; sz = s.sz |> in
+      let s' = emit s' [Stack (Store 0); Return] in
+      let s = <| s' with env = s.env ; sz = s.sz + 1 |> in
       (s,k+1,(j,lab)::labs,ec::ecs))
     (s,0,[],[]) defs in
   let s = <| s with code =
     replace_calls (List.length s.code) ((0,s.next_label)::labs) s.code |> in
   let s = emit s [Stack Pop] in
   let nk = List.length defs in
-  let s = <| s with sz = s.sz + nk + nr |> in
   let (s,k) = List.fold_left
     (fun (s,k) ec ->
       let s = incsz (emit s [Stack (Load (nk - k))]) in
       let s = List.fold_left emit_ec s ec in
       let j = List.length ec in
-      let s = emit s [Stack (Cons 0 j)] in
+      let s = emit s [Stack (if j = 0 then PushInt i0 else Cons 0 j)] in
       let s = emit s [Stack (Cons 0 2)] in
       let s = emit s [Stack (Store (nk - k))] in
       let s = <| s with sz = s.sz - j |> in
       (s,k+1))
-    (s,0) ecs in
+    (s,1) ecs in
   let (s,k) = List.fold_left
     (fun (s,k) _n ->
       let s = emit s [Stack (Load (nk + nk - k))] in

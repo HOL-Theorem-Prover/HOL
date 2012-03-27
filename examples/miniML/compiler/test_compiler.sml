@@ -70,11 +70,9 @@ fun bc_evaln 0 s = s
     end handle Bind => (print "Fail\n"; s)
 
 val test_cnmap = ``FEMPTY |+ ("Nil",0:num) |+ ("Cons",1)``
-
 val s = ``<| env := FEMPTY; code := []; next_label := 1; sz := 0; inst_length := λi. 0 |>``
 fun term_to_num x = (numML.fromString (Parse.term_to_string x))
 fun term_to_int x = (intML.fromString ((Parse.term_to_string x)^"i"))
-
 fun term_to_stack_op tm = let
   val (f,x) = dest_comb tm
 in(case fst (dest_const f) of
@@ -158,16 +156,19 @@ Let "0?" (Fun "x" (App Equality (Var "x") (Val (Lit (IntLit 0)))))
   (Let "x" (Val (Lit (IntLit 1)))
     (Let "x" (App (Opn Minus) (Var "x") (Var "x"))
       (App Opapp (Var "0?") (Var "x"))))``
-val c8 = term_to_bc_list (rhs(concl(EVAL (f2 e8))))
+val c8t = (rhs(concl(EVAL (f2 e8))))
+val c8 = term_to_bc_list c8t
 (* val c8 = f e8 *) (* TODO: EVAL twice *)
-val [Number i] = g c8 (* TODO: Exception- Bind raised *)
+val [Number i] = g c8
 val SOME 1 = intML.toInt i;
 val e9 = ``
 Let "1?" (Fun "x" (App Equality (Var "x") (Val (Lit (IntLit 1)))))
   (Let "x" (Val (Lit (IntLit 1)))
     (Let "x" (App (Opn Minus) (Var "x") (Var "x"))
       (App Opapp (Var "1?") (Var "x"))))``
-val c9 = f e9
+val c9t = rhs(concl(EVAL(f2 e9)))
+val c9 = term_to_bc_list c9t
+(* val c9 = f e9 *) (* TODO *)
 val [Number i] = g c9
 val SOME 0 = intML.toInt i;
 val e10 = ``

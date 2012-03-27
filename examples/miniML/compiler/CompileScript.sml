@@ -514,19 +514,20 @@ val _ = Defn.save_defn replace_calls_defn;
   let s = compile s e in (* uneta because Hol_defn sucks *)
   let s = FOLDL (\ s e . compile s e) s es in
   (* argn, ..., arg2, arg1, Block 0 [CodePtr c; env], *)
+  let s = emit s [Stack (Load n); Stack (El 1)] in
+  (* env, argn, ..., arg1, Block 0 [CodePtr c; env], *)
   let s = emit s [Stack (Load (n+1)); Stack (El 0)] in
-  (* CodePtr c, argn, ..., arg1, Block 0 [CodePtr c; env], *)
-  let s = emit s [Stack (Load (n+2)); Stack (El 1)] in
-  (* env, CodePtr c, argn, ..., arg1, Block 0 [CodePtr c; env], *)
+  (* CodePtr c, env, argn, ..., arg1, Block 0 [CodePtr c; env], *)
   let s = emit s [CallPtr] in
   (* before: env, CodePtr ret, argn, ..., arg1, Block 0 [CodePtr c; env], *)
-  (* after:  retval, *)
+  (* after:  retval, argn, ..., arg1, Block 0 [CodePtr c; env], *)
+  let s = emit s [Stack (Pops (n+1))] in
    s with<| sz := s.sz - n |>)
 /\
 (compile s (CPrim2 op e1 e2) =
   let s = compile s e1 in
   let s = compile s e2 in
-  emit s [Stack (prim2_to_bc op)])
+  decsz (emit s [Stack (prim2_to_bc op)]))
 /\
 (compile s (CLprim CLeq [e1;e2]) =
   let s = incsz (emit s [Stack (PushInt i1)]) in
@@ -598,13 +599,11 @@ val _ = Defn.save_defn replace_calls_defn;
        ?
        ...      (* function 1 body *)
        Store 0  (* replace env with return value *)
-       Pops ?   (* pop arguments and closure *) 
        Return
    L1: Call L2                              0, CodePtr f2, CodePtr f1, RefPtrs, rest
        ?
        ...      (* function 2 body *)
        Store 0
-       Pops ?
        Return
    L2: Call L3
        ?
@@ -651,7 +650,7 @@ val _ = Defn.save_defn replace_calls_defn;
    * - update refptrs, etc.
    *)
   let (nr,ns) = (case nso of NONE => (0,[]) | SOME ns => (LENGTH ns,ns) ) in
-  let s = FOLDL (\ s _n . emit s [Stack (PushInt i0); Ref]) s ns in
+  let s = FOLDL (\ s _n . incsz (emit s [Stack (PushInt i0); Ref])) s ns in
   let s = emit s [Stack (PushInt i0)] in
   let (s,k,labs,ecs) = FOLDL
     (\ (s,k,labs,ecs) (xs,e) .
@@ -673,25 +672,25 @@ val _ = Defn.save_defn replace_calls_defn;
       let (n,env,ec) = ITSET bind_fv fvs (0,FEMPTY,[]) in
       let s' =  s with<| env := env ; sz := 0 |> in
       let s' = compile s' e in
-      let s =  s' with<| env := s.env ; sz := s.sz |> in
+      let s' = emit s' [Stack (Store 0); Return] in
+      let s =  s' with<| env := s.env ; sz := s.sz + 1 |> in
       (s,k+1,(j,lab)::labs,ec::ecs))
     (s,0,[],[]) defs in
   let s =  s with<| code :=
     replace_calls (LENGTH s.code) ((0,s.next_label)::labs) s.code |> in
   let s = emit s [Stack Pop] in
   let nk = LENGTH defs in
-  let s =  s with<| sz := s.sz + nk + nr |> in
   let (s,k) = FOLDL
     (\ (s,k) ec .
       let s = incsz (emit s [Stack (Load (nk - k))]) in
       let s = FOLDL emit_ec s ec in
       let j = LENGTH ec in
-      let s = emit s [Stack (Cons 0 j)] in
+      let s = emit s [Stack (if j = 0 then PushInt i0 else Cons 0 j)] in
       let s = emit s [Stack (Cons 0 2)] in
       let s = emit s [Stack (Store (nk - k))] in
       let s =  s with<| sz := s.sz - j |> in
       (s,k+1))
-    (s,0) ecs in
+    (s,1) ecs in
   let (s,k) = FOLDL
     (\ (s,k) _n .
       let s = emit s [Stack (Load (nk + nk - k))] in
