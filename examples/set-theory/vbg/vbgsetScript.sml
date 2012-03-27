@@ -416,6 +416,14 @@ val OPAIR_11 = store_thm(
     SRW_TAC [][POPAIR_INJ]
   ]);
 
+val _ = add_rule { fixity = Closefix,
+                   term_name = "OPAIR",
+                   block_style = (AroundEachPhrase, (PP.CONSISTENT, 0)),
+                   paren_style = OnlyIfNecessary,
+                   pp_elements = [TOK "〈", TM, HardSpace 1,
+                                  TOK "·", BreakSpace(1,2),
+                                  TM, TOK "〉"]}
+
 (*
 val FORMATION = new_axiom(
 
