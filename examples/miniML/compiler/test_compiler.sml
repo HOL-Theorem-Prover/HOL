@@ -5,11 +5,17 @@ val REPLACE_ELEMENT_compute =
   CONV_RULE numLib.SUC_TO_NUMERAL_DEFN_CONV rich_listTheory.REPLACE_ELEMENT_DEF
 
 (* TODO: move to list? *)
-val _ = computeLib.del_consts [``set``,``$DIFF``]
+val _ = computeLib.del_consts
+[ listSyntax.list_to_set_tm
+, pred_setSyntax.diff_tm
+, pred_setSyntax.choice_tm
+]
 val _ = computeLib.add_funs
 [ listTheory.LIST_TO_SET_THM
 , pred_setTheory.EMPTY_DIFF
 , pred_setTheory.INSERT_DIFF
+, pred_setTheory.CHOICE_SING
+, pred_setTheory.REST_SING
 , listTheory.SUM
 , REPLACE_ELEMENT_compute
 ]
@@ -133,7 +139,8 @@ val c4 = f e4
 val [Number i] = g c4
 val SOME 0 = intML.toInt i;
 val e5 = ``Fun "x" (Var "x")``
-val c5 = f e5
+val c5 = term_to_bc_list (rhs(concl(EVAL (f2 e5))))
+(* val c5 = f e5 *) (* TODO: why need to EVAL twice ? *)
 val st = g c5
 val e6 = ``Let "x" (Val (Lit (IntLit 1))) (App (Opn Plus) (Var "x") (Var "x"))``
 val c6 = f e6
@@ -151,8 +158,9 @@ Let "0?" (Fun "x" (App Equality (Var "x") (Val (Lit (IntLit 0)))))
   (Let "x" (Val (Lit (IntLit 1)))
     (Let "x" (App (Opn Minus) (Var "x") (Var "x"))
       (App Opapp (Var "0?") (Var "x"))))``
-val c8 = f e8
-val [Number i] = g c8
+val c8 = term_to_bc_list (rhs(concl(EVAL (f2 e8))))
+(* val c8 = f e8 *) (* TODO: EVAL twice *)
+val [Number i] = g c8 (* TODO: Exception- Bind raised *)
 val SOME 1 = intML.toInt i;
 val e9 = ``
 Let "1?" (Fun "x" (App Equality (Var "x") (Val (Lit (IntLit 1)))))

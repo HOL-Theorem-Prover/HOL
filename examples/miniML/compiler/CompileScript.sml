@@ -659,7 +659,7 @@ val _ = Defn.save_defn replace_calls_defn;
       let lab = s.next_label in
       let s = emit s [Call 0] in
       let j = LENGTH s.code in
-      let fvs = free_vars (CFun xs e) in
+      let fvs = free_vars e in
       let (bind_fv fv (n,env,ec) =
         (case find_index fv xs 1 of
           SOME j => (n, FUPDATE  env ( fv, (CTArg (2 + az - j))), ec)

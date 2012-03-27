@@ -581,7 +581,7 @@ compile_closures nso s defs =
       let lab = s.next_label in
       let s = emit s [Call 0] in
       let j = List.length s.code in
-      let fvs = free_vars (CFun xs e) in
+      let fvs = free_vars e in
       let bind_fv fv (n,env,ec) =
         match find_index fv xs 1 with
         | Some j -> (n, Pmap.add fv (CTArg (2 + az - j)) env, ec)
