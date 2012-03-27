@@ -281,6 +281,8 @@ remove_mat (CRaise err) = CRaise err
 and
 remove_mat (CVar n) = CVar n
 and
+remove_mat (CLit l) = CLit l
+and
 remove_mat (CCon n es) = CCon n (List.map remove_mat es)
 and
 remove_mat (CTagEq e n) = CTagEq (remove_mat e) n
@@ -290,6 +292,8 @@ and
 remove_mat (CLet xes e) = CLet (List.map (fun (x,e) -> (x,remove_mat e)) xes) (remove_mat e)
 and
 remove_mat (CLetfun b ns defs e) = CLetfun b ns (List.map (fun (vs,e) -> (vs,remove_mat e)) defs) (remove_mat e)
+and
+remove_mat (CFun ns e) = CFun ns (remove_mat e)
 and
 remove_mat (CCall e es) = CCall (remove_mat e) (List.map remove_mat es)
 and
@@ -312,7 +316,10 @@ remove_mat_var v ((p,e)::pes) =
 (* TODO: removal of redundant expressions *)
 (* TODO: simplification (e.g., constant folding) *)
 
-let compile0 cm e = (exp_to_Cexp cm (Pmap.empty, (remove_mat_exp (remove_Gt_Geq e))))
+let compile0 cm e =
+  let (m,Ce) = exp_to_Cexp cm
+    (Pmap.empty, (remove_mat_exp (remove_Gt_Geq e)))
+  in remove_mat Ce
 
 (* values in compile-time environment *)
 type ctbind = CTLet of num | CTArg of num | CTEnv of num | CTRef of num

@@ -318,6 +318,8 @@ val _ = Defn.save_defn remove_mat_vp_defn;
 /\
 (remove_mat (CVar n) = CVar n)
 /\
+(remove_mat (CLit l) = CLit l)
+/\
 (remove_mat (CCon n es) = CCon n (MAP remove_mat es))
 /\
 (remove_mat (CTagEq e n) = CTagEq (remove_mat e) n)
@@ -327,6 +329,8 @@ val _ = Defn.save_defn remove_mat_vp_defn;
 (remove_mat (CLet xes e) = CLet (MAP (\ (x,e) . (x,remove_mat e)) xes) (remove_mat e))
 /\
 (remove_mat (CLetfun b ns defs e) = CLetfun b ns (MAP (\ (vs,e) . (vs,remove_mat e)) defs) (remove_mat e))
+/\
+(remove_mat (CFun ns e) = CFun ns (remove_mat e))
 /\
 (remove_mat (CCall e es) = CCall (remove_mat e) (MAP remove_mat es))
 /\
@@ -352,7 +356,10 @@ val _ = Defn.save_defn remove_mat_defn;
 (* TODO: simplification (e.g., constant folding) *)
 
 val _ = Define `
- (compile0 cm e = (exp_to_Cexp cm (FEMPTY, (remove_mat_exp (remove_Gt_Geq e)))))`;
+ (compile0 cm e =
+  let (m,Ce) = exp_to_Cexp cm
+    (FEMPTY, (remove_mat_exp (remove_Gt_Geq e)))
+  in remove_mat Ce)`;
 
 
 (* values in compile-time environment *)
