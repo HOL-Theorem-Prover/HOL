@@ -1,32 +1,59 @@
-val _ = map load ["rich_listTheory","compilerTheory"]
+val _ = map load ["rich_listTheory","compileProofsTheory"]
 
 (* TODO: move to rich_list  (or somewhere) *)
 val REPLACE_ELEMENT_compute =
   CONV_RULE numLib.SUC_TO_NUMERAL_DEFN_CONV rich_listTheory.REPLACE_ELEMENT_DEF
 
-val _ = computeLib.add_thms
-[ listTheory.SUM (* TODO: put in list_rws? similarly the other one *)
-, REPLACE_ELEMENT_compute
-] computeLib.the_compset
-
-(*  move to compileProofs? *)
-val _ = computeLib.del_consts [``remove_mat``,``remove_mat_vp``]
-val _ = computeLib.del_consts [``remove_Gt_Geq``]
+(* TODO: move to list? *)
+val _ = computeLib.del_consts [``set``,``$DIFF``]
 val _ = computeLib.add_funs
-[ compileProofsTheory.remove_mat_def,
-  compileProofsTheory.remove_mat_vp_def,
-  compileProofsTheory.remove_Gt_Geq_def
+[ listTheory.LIST_TO_SET_THM
+, pred_setTheory.EMPTY_DIFF
+, pred_setTheory.INSERT_DIFF
+, listTheory.SUM
+, REPLACE_ELEMENT_compute
 ]
+
+(* move? *)
+val least_not_in_FRANGE =
+SIMP_RULE (srw_ss()) [] (Q.SPEC `FRANGE fm` compileProofsTheory.least_not_in_thm)
+val in_FRANGE = prove(
+``(x ∈ FRANGE FEMPTY = F) ∧
+  (x ∈ FRANGE (fm |+ (y,z)) = (x = z) ∨ (x ∈ FRANGE (fm \\ y)))``,
+  SRW_TAC[][])
+
+(* move? *)
+val _ = computeLib.del_consts
+[``remove_mat_exp``
+,``remove_Gt_Geq``
+,``exp_to_Cexp``
+,``compile``
+,``compile_varref``
+,``least_not_in``
+,``FRANGE``
+,``extend``
+]
+val _ = computeLib.add_funs
+[ compileProofsTheory.remove_mat_exp_def
+, compileProofsTheory.remove_Gt_Geq_def
+, compileProofsTheory.exp_to_Cexp_def
+, compileProofsTheory.compile_def
+, compileProofsTheory.compile_varref_def
+, least_not_in_FRANGE
+, compileProofsTheory.least_not_in_aux_def
+, in_FRANGE
+, finite_mapTheory.DRESTRICT_FEMPTY
+, finite_mapTheory.DRESTRICT_FUPDATE
+, CompileTheory.extend_def
+]
+
+val _ = computeLib.set_skip computeLib.the_compset boolSyntax.conditional (SOME 1)
 
 val d = !Globals.emitMLDir
 val _ = map (fn s => (use (d^s^"ML.sig"); use (d^s^"ML.sml")))
 ["combin","pair","num","option","list","set",
  "fmap","sum","fcp","string","bit","words","int",
  "rich_list","bytecode"]
-
-val test_cnmap_def = Define`
-  (test_cnmap "Nil" = 0) ∧
-  (test_cnmap "Cons" = 1)`
 
 open bytecodeML
 
@@ -36,7 +63,9 @@ fun bc_evaln 0 s = s
       bc_evaln (n-1) s
     end handle Bind => (print "Fail\n"; s)
 
-val s = ``<| env := []; next_label := 1; sz := 0; inst_length := λi. 0 |>``
+val test_cnmap = ``FEMPTY |+ ("Nil",0:num) |+ ("Cons",1)``
+
+val s = ``<| env := FEMPTY; code := []; next_label := 1; sz := 0; inst_length := λi. 0 |>``
 fun term_to_num x = (numML.fromString (Parse.term_to_string x))
 fun term_to_int x = (intML.fromString ((Parse.term_to_string x)^"i"))
 
@@ -48,6 +77,7 @@ in(case fst (dest_const f) of
   | "Store" => Store (term_to_num x)
   | "Pops" => Pops (term_to_num x)
   | "El" => El (term_to_num x)
+  | "TagEquals" => TagEquals (term_to_num x)
   | s => raise Fail s
   )
 handle HOL_ERR _ => let
@@ -63,7 +93,6 @@ end end handle HOL_ERR _ =>
   | "Sub" => Sub
   | "Less" => Less
   | "IsNum" => IsNum
-  | "Tag" => Tag
   | s => raise Fail s
 fun term_to_bc tm = let
   val (f,x) = dest_comb tm
@@ -80,8 +109,8 @@ end handle HOL_ERR _ =>
   | "Exception" => Exception
   | s => raise Fail s
 val term_to_bc_list = (map term_to_bc) o fst o listSyntax.dest_list
-fun f0 e = ``remove_mat (remove_ctors test_cnmap (remove_Gt_Geq ^e))``
-fun f1 e = EVAL ``FST (compile (^(f0 e),^s))``
+fun f0 e = ``compile0 ^test_cnmap ^e``
+fun f1 e = EVAL ``REVERSE (compile ^s (SND ^(f0 e))).code``
 fun f2 e = rhs (concl (f1 e))
 fun f e = term_to_bc_list (f2 e)
 fun g1 c = bc_eval (init_state c)

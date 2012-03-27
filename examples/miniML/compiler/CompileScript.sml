@@ -179,6 +179,16 @@ val _ = Defn.save_defn pat_to_Cpat_defn;
       | Leq => CLprim CLeq [Ce1;Ce2]
       )))
 /\
+(exp_to_Cexp (m, App Equality e1 e2) =
+  let (_m,Ce1) = exp_to_Cexp (m, e1) in
+  let (_m,Ce2) = exp_to_Cexp (m, e2) in
+  (m, CPrim2 CEq Ce1 Ce2))
+/\
+(exp_to_Cexp (m, App Opapp e1 e2) =
+  let (_m,Ce1) = exp_to_Cexp (m, e1) in
+  let (_m,Ce2) = exp_to_Cexp (m, e2) in
+  (m, CCall Ce1 [Ce2]))
+/\
 (exp_to_Cexp (m, Log log e1 e2) =
   let (_m,Ce1) = exp_to_Cexp (m, e1) in
   let (_m,Ce2) = exp_to_Cexp (m, e2) in
@@ -541,7 +551,7 @@ val _ = Defn.save_defn replace_calls_defn;
    s with<| code :=
       (REPLACE_ELEMENT (Jump n3) (j3 - j2)
       (REPLACE_ELEMENT (Jump n2) (j3 - j1)
-      (REPLACE_ELEMENT (JumpNil n1) (j3 - j1 - 1) s.code))) |>)
+      (REPLACE_ELEMENT (JumpNil n1) (j3 - j1 + 1) s.code))) |>)
 /\
 (compile s (CLprim CAnd [e1;e2]) =
   let s = compile s e1 in

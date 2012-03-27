@@ -151,6 +151,16 @@ exp_to_Cexp (m, App (Opb opb) e1 e2) =
       | Leq -> CLprim CLeq [Ce1;Ce2]
       end)
 and
+exp_to_Cexp (m, App Equality e1 e2) =
+  let (_m,Ce1) = exp_to_Cexp (m, e1) in
+  let (_m,Ce2) = exp_to_Cexp (m, e2) in
+  (m, CPrim2 CEq Ce1 Ce2)
+and
+exp_to_Cexp (m, App Opapp e1 e2) =
+  let (_m,Ce1) = exp_to_Cexp (m, e1) in
+  let (_m,Ce2) = exp_to_Cexp (m, e2) in
+  (m, CCall Ce1 [Ce2])
+and
 exp_to_Cexp (m, Log log e1 e2) =
   let (_m,Ce1) = exp_to_Cexp (m, e1) in
   let (_m,Ce2) = exp_to_Cexp (m, e2) in
@@ -463,7 +473,7 @@ compile s (CLprim CIf [e1;e2;e3]) =
   <| s with code =
       (replace (Jump n3) (j3 - j2)
       (replace (Jump n2) (j3 - j1)
-      (replace (JumpNil n1) (j3 - j1 - 1) s.code))) |>
+      (replace (JumpNil n1) (j3 - j1 + 1) s.code))) |>
 and
 compile s (CLprim CAnd [e1;e2]) =
   let s = compile s e1 in
