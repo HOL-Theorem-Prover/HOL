@@ -1,6 +1,6 @@
 open HolKernel boolLib bossLib Parse lcsymtacs
 open BytecodeTheory arithmeticTheory listTheory finite_mapTheory integerTheory
-val _ = new_theory "bytecode";
+val _ = new_theory "bytecodeProofs";
 infix \\ val op \\ = op THEN;
 
 (* --- Semantics --- *)

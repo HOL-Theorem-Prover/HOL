@@ -1,5 +1,5 @@
 open HolKernel bossLib boolLib EmitTeX
-open emitLib fmap_emitTheory int_emitTheory BytecodeTheory bytecodeTheory
+open emitLib fmap_emitTheory int_emitTheory BytecodeTheory bytecodeProofsTheory
 val _ = new_theory "bytecode_emit"
 
 val data = map
