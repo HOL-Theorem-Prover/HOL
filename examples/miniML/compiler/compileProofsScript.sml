@@ -72,11 +72,24 @@ val Cexp4_size_thm = store_thm(
 Induct >- rw[Cexp_size_def] >>
 srw_tac [ARITH_ss][Cexp_size_def])
 
+val SUM_MAP_Cexp5_size_thm = store_thm(
+"SUM_MAP_Cexp5_size_thm",
+``∀ls. SUM (MAP Cexp5_size ls) = SUM (MAP FST ls) +
+                                 SUM (MAP Cexp_size (MAP SND ls)) +
+                                 LENGTH ls``,
+Induct >- rw[Cexp_size_def] >>
+Cases >> srw_tac[ARITH_ss][Cexp_size_def])
+
 val Cexp7_size_thm = store_thm(
 "Cexp7_size_thm",
 ``∀ls. Cexp7_size ls = SUM (MAP Cexp_size ls) + LENGTH ls``,
 Induct >- rw[Cexp_size_def] >>
 srw_tac [ARITH_ss][Cexp_size_def])
+
+val list_size_thm = store_thm(
+"list_size_thm",
+``∀f ls. list_size f ls = SUM (MAP f ls) + LENGTH ls``,
+gen_tac >> Induct >> srw_tac[ARITH_ss][list_size_def])
 
 val (remove_Gt_Geq_def,remove_Gt_Geq_ind) =
   tprove_no_defn ((remove_Gt_Geq_def,remove_Gt_Geq_ind),
@@ -167,254 +180,41 @@ val (pat_to_Cpat_def, pat_to_Cpat_ind) =
 val _ = save_thm ("pat_to_Cpat_def", pat_to_Cpat_def);
 val _ = save_thm ("pat_to_Cpat_ind", pat_to_Cpat_ind);
 
-(*
-(* compile : exp * compiler_state → bc_inst list * compiler_state *)
-val compile_def = tDefine "compile" `
-  (compile (Raise err, s) = emit s [] [Stack (PushInt (error_to_int err)); Exception])
-∧ (compile (Val v, s) =
-   let (r,s) = emit s [] (compile_val v) in
-     (r, s with sz := s.sz + 1))
-∧ (compile (Mat e pes, s) = emit s [] [Jump 1001]) (* Disallowed: use remove_mat *)
-∧ (compile (Con NONE [(Val (Lit (IntLit i)))], s) =
-   let (r,s) = emit s [] [Stack (PushInt i)] in
-     (r, s with sz := s.sz + 1))
-∧ (compile (Con NONE ((Val (Lit (IntLit i)))::es), s) =
-   let n = LENGTH es in
-   let (es,s) = FOLDL (λ(es,s) e. let (e,s) = compile (e,s) in (es++e,s)) ([],s) es in
-   let (r,s) = emit s es [Stack (Cons (Num i) n)] in
-   (r,s with sz := s.sz + 1 - n))
-∧ (compile (Con _ _, s) = emit s [] [Jump 1002]) (* Disallowed: use remove_ctors *)
-∧ (compile (Proj e n, s) =
-   let (e,s) = compile (e,s) in
-   case n of 0 =>
-   let (r,s) = emit s [] [Stack (Load 0); Stack IsNum; JumpNil ARB;
-                          Stack Tag; Stack (Pops 1)] in
-   let r = REPLACE_ELEMENT (JumpNil s.next_label) 2 r in
-     (e++r,s)
-   | SUC n => emit s e [Stack (El n)])
-∧ (compile (Let x e b, s) =
-   let (e,s) = compile (e,s) in
-   let (r,s) = compile_bindings s.env b 0 s [x] in
-     (e++r,s)) (* TODO: detect nested Lets? *)
-∧ (compile (Var x, s) =
-   case lookup x s.env of
-     NONE => emit s [] [Jump 1003] (* should not happen *)
-   | SOME ct =>
-     let (r,s) = emit s [] (compile_varref s.sz [] ct) in
-     (r, s with sz := s.sz + 1))
-∧ (compile (App Opapp e1 e2, s) =
-  (* A closure looks like:
-       Block 0 [CodePtr c; Block 0 [RefPtr f1; ...; RefPtr fn; v1; ...; vm]]
-       where
-         c = this function's code
-         v1,...,vm = values of free variables (the environment)
-         f1,...,fn = references to values of free variables that are
-                  closures defined in mutual recursion with this one
-       If there are no free variables, the environment block is
-       replaced by Number 0. *)
-   let (e1,s) = compile (e1,s) in
-   let (e2,s) = compile (e2,s) in
-   (* stack = arg :: Block 0 [CodePtr c; env] :: rest *)
-   let (r,s) = emit s (e1++e2) [Stack (Load 1); Stack (El 0)] in
-   (* stack = CodePtr c :: arg :: Block 0 [CodePtr c; env] :: rest *)
-   let (r,s) = emit s r [Stack (Load 2); Stack (El 1)] in
-   (* stack = env :: CodePtr c :: arg :: Block 0 [CodePtr c; env] :: rest *)
-   let (r,s) = emit s r [Stack (Store 2)] in
-   (* stack = CodePtr c :: arg :: env :: rest *)
-   let (r,s) = emit s r [CallPtr] in
-   (* before call stack = arg :: CodePtr ret :: env :: rest
-      after call stack = retval :: env :: rest *)
-   let (r,s) = emit s r [Stack (Pops 1)] in
-   (* stack = retval :: rest *)
-     (r,s with sz := s.sz - 1))
-∧ (compile (Letrec defs b, s) = (* TODO: more efficient than MAP? *)
-   let (r1,s) = compile_closures (SOME (MAP FST defs)) s (MAP SND defs) in
-   let (r2,s) = compile_bindings s.env b 0 s (MAP FST defs) in
-     (r1++r2,s))
-∧ (compile (Fun x b, s) = compile_closures NONE s [(x,b)])
-∧ (compile (App Equality e1 e2, s) =
-   let (e1,s) = compile (e1,s) in
-   let (e2,s) = compile (e2,s) in
-   let (r,s) = emit s (e1++e2) [Stack Equal] in
-     (r, s with sz := s.sz - 1))
-∧ (compile (App (Opn op) e1 e2, s)
-  = let (e1,s) = compile (e1,s) in
-    let (e2,s) = compile (e2,s) in
-    let (r,s) = emit s (e1++e2) (compile_opn op) in
-      (r, s with sz := s.sz - 1))
-∧ (compile (App (Opb Lt) e1 e2, s)
-  = let (e1,s) = compile (e1,s) in
-    let (e2,s) = compile (e2,s) in
-    let (r,s) = emit s (e1++e2) [Stack Less] in
-      (r, s with sz := s.sz - 1))
-∧ (compile (App (Opb Leq) e1 e2, s)
-  = let (e0,s) = emit s [] [Stack (PushInt 1); Stack (PushInt 0)] in
-    let s = s with sz := s.sz + 2 in
-    let (e1,s) = compile (e1,s) in
-    let (e2,s) = compile (e2,s) in
-    let (r,s) = emit s (e0++e1++e2) [Stack Sub;Stack Less;Stack Sub] in
-      (r, s with sz := s.sz - 3))
-∧ (compile (App (Opb Gt) e1 e2, s) = emit s [] [Jump 1004]) (* Disallowed: use remove_Gt_Geq *)
-∧ (compile (App (Opb Geq) e1 e2, s) = emit s [] [Jump 1005]) (* Disallowed: use remove_Gt_Geq *)
-∧ (compile (Log And e1 e2, s)
-  = let (e1,s) = compile (e1,s) in
-    let (aa,s) = emit s ARB [JumpNil ARB] in
-    let s = s with sz := s.sz - 1 in
-    let (e2,s) = compile (e2,s) in
-    (e1++[JumpNil s.next_label]++e2, s))
-∧ (compile (Log Or e1 e2, s)
-  = let (e1,s) = compile (e1,s) in
-    let f n1 n2 = [JumpNil n1;Stack (PushInt (bool2num T));Jump n2] in
-    let (aa,s) = emit s ARB (f ARB ARB) in
-    let n1     = s.next_label in
-    let s = s with sz := s.sz - 1 in
-    let (e2,s) = compile (e2,s) in
-    let n2     = s.next_label in
-    (e1++(f n1 n2)++e2, s))
-∧ (compile (If e1 e2 e3, s)
-  = let (e1,s) = compile (e1,s) in
-    let f n1 n2 = [JumpNil n1;Jump n2] in
-    let (aa,s) = emit s ARB (f ARB ARB) in
-    let n1     = s.next_label in
-    let s = s with sz := s.sz - 1 in
-    let (e2,s) = compile (e2,s) in
-    let (aa,s) = emit s ARB [Jump ARB] in
-    let n2     = s.next_label in
-    let s = s with sz := s.sz - 1 in
-    let (e3,s) = compile (e3,s) in
-    let n3     = s.next_label in
-    (e1++(f n1 n2)++e2++[Jump n3]++e3, s))
-∧ (compile_bindings env0 b n s [] =
-   let (b,s) = compile (b,s) in
-   let (r,s) = emit s b [Stack (Pops n)] in
-     (r, s with <| env := env0 ;
-                   sz  := s.sz - n |>))
-∧ (compile_bindings env0 b n s (x::xs) =
-     compile_bindings env0 b
-       (n + 1)
-       (s with env := bind x (CTStack (s.sz - n)) s.env)
-       xs)
-∧ (compile_closures names s xbs =
-   (*  PushInt 0, Ref
-       ...            (* create RefPtrs for (needed?) recursive closures *)
-       PushInt 0, Ref                       RefPtr 0, ..., RefPtr 0, rest
-       PushInt 0                            0, RefPtr 0, ..., RefPtr 0, rest
-       Call L1                              0, CodePtr f1, RefPtr 0, ..., RefPtr 0, rest
-       ?
-       ...      (* function 1 body *)
-       Store 0  (* replace argument with
-                   return value *)
-       Return
-   L1: Call L2                              0, CodePtr f2, CodePtr f1, RefPtrs, rest
-       ?
-       ...      (* function 2 body *)
-       Store 0
-       Return
-   L2: Call L3
-       ?
-       ...      (* more function bodies *)
-   ...
-       Return
-   LK: Call L
-       ...
-       Return   (* end of last function *)
-   L:  Pop                                  CodePtr fk, ..., CodePtr f1, RefPtrs, rest
-       Load ?   (* copy free mutrec vars for function k *)
-       Load ?   (* copy free vars for function k *)
-       ...                                  vmk, ..., v1, RefPtr 0, ..., RefPtr 0, CodePtr fk, ..., CodePtr f1, RefPtrs, rest
-       Cons 0 (mk + nk)
-       Cons 0 2                             Block 0 [CodePtr fk; Block 0 Env], CodePtr f(k-1), ..., CodePtr f1, RefPtrs, rest
-       Load ?   (* copy free mutrec vars for function k-1 *)
-       Load ?   (* copy free vars for function k-1 *)
-       ...
-       Cons 0 (m(k-1) + n(k-1))
-       Cons 0 2                             fk, f(k-1), ..., CodePtr f1, RefPtrs, rest
-       ...                                  fk, f(k-1), ..., f1, RefPtrs, rest
-       Load ?
-       Load 1                               fk, RefPtr 0, fk, f(k-1), ..., RefPtrs, rest
-       Update                               fk, f(k-1), ..., f1, RefPtrs, rest
-       Load ?
-       Load 2
-       Update
-       ...      (* update RefPtrs with closures *)
-       Pops ?   (* pop RefPtrs *)           fk, f(k-1), ..., f1, rest
-  *)
-   let fvs = FOLDL (λfvs (x,b). free_vars (Fun x b)) {} xbs in
-   let fvs = case names of NONE => fvs | SOME names => fvs DIFF (set names) in
-   let k = case names of NONE => 1 | SOME names => LENGTH names in
-   let (e,i,ldenv) =
-     FOLDL (λ(e,i,ls) (v,n).
-             if v IN fvs     (* s.sz + k because of CodePtrs produced by Calls *)
-             then (bind v (CTEnv i) e, i + 1, compile_varref (s.sz + k) ls n)
-             else (e,i,ls))
-      ([],0,[]) s.env in
-   let (e,j) = case names of NONE => (e,0)
-     | SOME names => FOLDR (λn (e,j). (bind n (CTCode j) e, j + 1)) (e,0) names
-     in
-     (* first "" is the environment, second is return ptr *)
-   let e = bind "" (CTStack 1) (bind "" (CTStack 0) e) in
-   let (r,s) = emit s [] [Stack (PushInt 0)] in
-   let (r,s,ls) = FOLDR (λ(x,b) (r,s,ls).
-                       let i = LENGTH r in
-                       let (r,s) = emit s r [Call ARB] in
-                       let s' = s with <|
-                         env := bind x (CTStack 2) e ;
-                         sz  := 2 |> in
-                       let (b,s') = compile (b,s') in
-                       let s = s' with <|
-                         env := s.env ;
-                         sz  := s.sz |> in
-                       let (r,s) = emit s (r++b) [Stack (Store 0);Return] in
-                         (r,s,(i,s.next_label)::ls))
-                   (r,s,[])
-                   xbs in
-   let r = FOLDR (λ(i,n) r. REPLACE_ELEMENT (Call n) i r) r ls in
-   case names of
-   | NONE =>
-   let (r,s) = if i = 0 then (r,s) else
-     let (r,s) = emit s r (Stack Pop :: ldenv) in
-     emit s r [Stack (Cons 0 i)] in
-   let (r,s) = emit s r [Stack (Cons 0 2)] in
-     (r, s with sz := s.sz + 1)
-   | SOME names =>
-   let (r,s) = emit s r (Stack Pop :: ldenv) in
-   let (r,s) = emit s r [Stack (Cons 0 (i+j))] in
-   let (r,s,n) = FOLDR (λa (r,s,n).
-     let (r,s) = emit s r [Stack (Load n);
-                           Stack (El (n+1));
-                           Stack (Load (n+1));
-                           Stack (Cons 0 2)]
-     in (r,s,n+1)) (r,s,0) (TL names) in
-   let (r,s) =
-   emit s r [Stack (Load (k-1));
-             Stack (El 0);
-             Stack (Load k);
-             Stack (Cons 0 2);
-             Stack (Store k)] in
-   (r, s with sz := s.sz + k))`
-( WF_REL_TAC `inv_image ($< LEX $<) (λx. case x of
-       | INL (e,s) => (exp_size e, 3:num)
-       | INR (INL (env,e,n,s,[])) => (exp_size e, 4)
-       | INR (INL (env,e,n,s,ns)) =>
-         (exp_size e +
-          SUM (MAP (list_size char_size) ns) + LENGTH ns, 2)
-       | INR (INR (NONE,s,xbs)) => (SUM (MAP exp4_size xbs), 1)
-       | INR (INR (SOME ns,s,xbs)) =>
-         (SUM (MAP exp4_size xbs) +
-          SUM (MAP (list_size char_size) ns) + LENGTH ns, 0))` >>
+val (compile_varref_def, compile_varref_ind) =
+  tprove_no_defn ((compile_varref_def, compile_varref_ind),
+  WF_REL_TAC `measure (λp. case p of (_,CTEnv _) => 0 | (_,CTRef _) => 1)`)
+val _ = save_thm ("compile_varref_def", compile_varref_def);
+val _ = save_thm ("compile_varref_ind", compile_varref_ind);
+
+val (compile_def, compile_ind) =
+  tprove_no_defn ((compile_def, compile_ind),
+  WF_REL_TAC `inv_image ($< LEX $<) (λx. case x of
+       | INL (s,e)                 => (Cexp_size e, 3:num)
+       | INR (INL (env,e,n,s,[]))  => (Cexp_size e, 4)
+       | INR (INL (env,e,n,s,ns))  => (Cexp_size e + (SUM ns) + LENGTH ns, 2)
+       | INR (INR (NONE,s,xbs))    => (SUM (MAP Cexp2_size xbs), 1)
+       | INR (INR (SOME ns,s,xbs)) => (SUM (MAP Cexp2_size xbs) + (SUM ns) + LENGTH ns, 0))` >>
   srw_tac[ARITH_ss][] >>
-  srw_tac[ARITH_ss][exp8_size_thm,exp1_size_thm,SUM_MAP_exp2_size_thm,exp_size_def] >- (
-    Q.ISPEC_THEN `exp_size` imp_res_tac SUM_MAP_MEM_bound >>
-    DECIDE_TAC )
-  >- (
-    Q.ISPEC_THEN `exp4_size` imp_res_tac SUM_MAP_MEM_bound >>
-    Cases_on `names` >> rw[] >>
-    fs[exp_size_def] >>
-    DECIDE_TAC ) >>
-  TRY (Cases_on `defs`) >>
-  TRY (Cases_on `xs`) >>
-  srw_tac[ARITH_ss][])
-*)
+  srw_tac[ARITH_ss][Cexp1_size_thm,Cexp7_size_thm,Cexp3_size_thm,Cexp_size_def,list_size_thm]
+  >- (Q.ISPEC_THEN `Cexp_size` imp_res_tac SUM_MAP_MEM_bound >> DECIDE_TAC)
+  >- (Q.ISPEC_THEN `Cexp5_size` imp_res_tac SUM_MAP_MEM_bound >> fs[Cexp_size_def] >> DECIDE_TAC)
+  >- (Cases_on `ns` >> srw_tac[ARITH_ss][])
+  >- (rw[SUM_MAP_Cexp5_size_thm] >>
+      Cases_on `HD xes` >> Cases_on `xes` >>
+      fsrw_tac[ARITH_ss][arithmeticTheory.ADD1,Cexp_size_def])
+  >- (Cases_on `xs` >> srw_tac[ARITH_ss][])
+  >- (Q.ISPEC_THEN `Cexp2_size` imp_res_tac SUM_MAP_MEM_bound >>
+      Cases_on `nso` >> fsrw_tac[ARITH_ss][Cexp_size_def])
+  >- (Q.ISPEC_THEN `Cexp_size` imp_res_tac SUM_MAP_MEM_bound >>
+      srw_tac[ARITH_ss][]))
+val _ = save_thm ("compile_def", compile_def);
+val _ = save_thm ("compile_ind", compile_ind);
+
+val (replace_calls_def,replace_calls_ind) =
+  tprove_no_defn ((replace_calls_def,replace_calls_ind),
+  WF_REL_TAC `measure (LENGTH o FST o SND)` >> rw[] )
+val _ = save_thm ("replace_calls_def", replace_calls_def);
+val _ = save_thm ("replace_calls_ind", replace_calls_ind);
 
 (* ------------------------------------------------------------------------- *)
 
