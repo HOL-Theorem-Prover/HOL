@@ -1,59 +1,82 @@
 val _ = map load ["rich_listTheory","compileProofsTheory"]
 
-(* TODO: move to rich_list  (or somewhere) *)
 val REPLACE_ELEMENT_compute =
   CONV_RULE numLib.SUC_TO_NUMERAL_DEFN_CONV rich_listTheory.REPLACE_ELEMENT_DEF
 
-(* TODO: move to list? *)
-val _ = computeLib.del_consts
-[ listSyntax.list_to_set_tm
-, pred_setSyntax.diff_tm
-, pred_setSyntax.choice_tm
-]
-val _ = computeLib.add_funs
+val ITSET_FOLDL = prove(
+``∀f s a. ITSET f s a = if FINITE s then FOLDL (combin$C f) a (SET_TO_LIST s) else ARB``, SRW_TAC[][listTheory.ITSET_eq_FOLDL_SET_TO_LIST] THEN
+   SRW_TAC[][Once pred_setTheory.ITSET_def])
+
+val compset = listSimps.list_compset()
+
+val _ = computeLib.add_thms
 [ listTheory.LIST_TO_SET_THM
-, pred_setTheory.EMPTY_DIFF
-, pred_setTheory.INSERT_DIFF
-, pred_setTheory.CHOICE_SING
-, pred_setTheory.REST_SING
 , listTheory.SUM
 , REPLACE_ELEMENT_compute
-]
-
-(* move? *)
-val least_not_in_FRANGE =
-SIMP_RULE (srw_ss()) [] (Q.SPEC `FRANGE fm` compileProofsTheory.least_not_in_thm)
-val in_FRANGE = prove(
-``(x ∈ FRANGE FEMPTY = F) ∧
-  (x ∈ FRANGE (fm |+ (y,z)) = (x = z) ∨ (x ∈ FRANGE (fm \\ y)))``,
-  SRW_TAC[][])
-
-(* move? *)
-val _ = computeLib.del_consts
-[``remove_mat_exp``
-,``remove_Gt_Geq``
-,``exp_to_Cexp``
-,``compile``
-,``compile_varref``
-,``least_not_in``
-,``FRANGE``
-,``extend``
-]
-val _ = computeLib.add_funs
-[ compileProofsTheory.remove_mat_exp_def
+, pred_setTheory.EMPTY_DIFF
+, pred_setTheory.INSERT_DIFF
+, pred_setTheory.FINITE_EMPTY
+, pred_setTheory.FINITE_INSERT
+, ITSET_FOLDL
+, pairTheory.UNCURRY
+, pairTheory.FST
+, pairTheory.SND
+, combinTheory.K_THM
+, combinTheory.K_o_THM
+, combinTheory.C_DEF
+, optionTheory.option_case_compute
+, optionTheory.IS_SOME_DEF
+, optionTheory.THE_DEF
+, finite_mapTheory.FAPPLY_FUPDATE_THM
+, finite_mapTheory.FRANGE_FEMPTY
+, finite_mapTheory.FINITE_FRANGE
+, compileProofsTheory.FINITE_free_vars
+, BytecodeTheory.bool_to_int_def
 , compileProofsTheory.remove_Gt_Geq_def
+, compileProofsTheory.remove_mat_exp_def
 , compileProofsTheory.exp_to_Cexp_def
-, compileProofsTheory.compile_def
-, compileProofsTheory.compile_varref_def
-, least_not_in_FRANGE
-, compileProofsTheory.least_not_in_aux_def
-, in_FRANGE
-, finite_mapTheory.DRESTRICT_FEMPTY
-, finite_mapTheory.DRESTRICT_FUPDATE
+, CompileTheory.compile0_def
+, compileProofsTheory.free_vars_def
+, compileProofsTheory.remove_mat_def
+, CompileTheory.remove_mat_vp_def
 , CompileTheory.extend_def
-]
+, CompileTheory.incsz_def
+, CompileTheory.decsz_def
+, CompileTheory.emit_def
+, CompileTheory.prim2_to_bc_def
+, CompileTheory.find_index_def
+, compileProofsTheory.compile_varref_def
+, compileProofsTheory.compile_def
+, CompileTheory.compiler_state_accessors
+, CompileTheory.compiler_state_updates_eq_literal
+, CompileTheory.compiler_state_accfupds
+, CompileTheory.compiler_state_fupdfupds
+, CompileTheory.compiler_state_literal_11
+, CompileTheory.compiler_state_fupdfupds_comp
+, CompileTheory.compiler_state_fupdcanon
+, CompileTheory.compiler_state_fupdcanon_comp
+] compset
 
-val _ = computeLib.set_skip computeLib.the_compset boolSyntax.conditional (SOME 1)
+val _ = computeLib.set_skip compset combinSyntax.K_tm (SOME 1)
+
+val _ = computeLib.add_conv (``least_not_in``,1,
+  fn tm => let
+  val (_,[s]) = boolSyntax.strip_comb tm
+  val finite = EQT_ELIM (computeLib.CBV_CONV compset ``FINITE ^s``)
+  val th = MP (SPEC s compileProofsTheory.least_not_in_thm) finite
+  in th end) compset
+
+val _ = computeLib.add_conv (``least_aux``,2,
+let fun f tm = let
+  val (_,[p,n]) = boolSyntax.strip_comb tm
+  val pp = SIMP_CONV (srw_ss()) [] ``^p ^n``
+  val th = SIMP_CONV bool_ss [Once fsetTheory.least_aux_def,pp] tm
+  in if rhs(concl(pp)) = T then TRANS th (f(rhs(concl th))) else th end
+in f end) compset
+
+(*
+val _ = computeLib.add_conv (``num_set_fold``,...
+*)
 
 val d = !Globals.emitMLDir
 val _ = map (fn s => (use (d^s^"ML.sig"); use (d^s^"ML.sml")))
@@ -114,7 +137,7 @@ end handle HOL_ERR _ =>
   | s => raise Fail s
 val term_to_bc_list = (map term_to_bc) o fst o listSyntax.dest_list
 fun f0 e = ``compile0 ^test_cnmap ^e``
-fun f1 e = EVAL ``REVERSE (compile ^s (SND ^(f0 e))).code``
+fun f1 e = computeLib.CBV_CONV compset ``REVERSE (compile ^s ^(f0 e)).code``
 fun f2 e = rhs (concl (f1 e))
 fun f e = term_to_bc_list (f2 e)
 fun g1 c = bc_eval (init_state c)
@@ -137,8 +160,36 @@ val c4 = f e4
 val [Number i] = g c4
 val SOME 0 = intML.toInt i;
 val e5 = ``Fun "x" (Var "x")``
-val c5 = term_to_bc_list (rhs(concl(EVAL (f2 e5))))
-(* val c5 = f e5 *) (* TODO: why need to EVAL twice ? *)
+
+f2 e5
+computeLib.CBV_CONV compset ``
+      FOLDL
+                          (combin$C
+                             (λfv (n,env,ec).
+                                if
+                                  IS_SOME
+                                    (if least_not_in ∅ = fv then
+                                       SOME 1
+                                     else
+                                       NONE)
+                                then
+                                  (n,
+                                   env |+
+                                   (fv,
+                                    CTArg
+                                      (3 −
+                                       THE
+                                         (if least_not_in ∅ = fv then
+                                            SOME 1
+                                          else
+                                            NONE))),ec)
+                                else
+                                  (n + 1,env |+ (fv,CTEnv n),
+                                   CEEnv fv::ec))) (0,FEMPTY,[])
+                          (SET_TO_LIST {least_not_in ∅})
+``
+
+val c5 = f e5
 val st = g c5
 val e6 = ``Let "x" (Val (Lit (IntLit 1))) (App (Opn Plus) (Var "x") (Var "x"))``
 val c6 = f e6
@@ -156,9 +207,7 @@ Let "0?" (Fun "x" (App Equality (Var "x") (Val (Lit (IntLit 0)))))
   (Let "x" (Val (Lit (IntLit 1)))
     (Let "x" (App (Opn Minus) (Var "x") (Var "x"))
       (App Opapp (Var "0?") (Var "x"))))``
-val c8t = (rhs(concl(EVAL (f2 e8))))
-val c8 = term_to_bc_list c8t
-(* val c8 = f e8 *) (* TODO: EVAL twice *)
+val c8 = ff e8
 val [Number i] = g c8
 val SOME 1 = intML.toInt i;
 val e9 = ``
@@ -166,9 +215,7 @@ Let "1?" (Fun "x" (App Equality (Var "x") (Val (Lit (IntLit 1)))))
   (Let "x" (Val (Lit (IntLit 1)))
     (Let "x" (App (Opn Minus) (Var "x") (Var "x"))
       (App Opapp (Var "1?") (Var "x"))))``
-val c9t = rhs(concl(EVAL(f2 e9)))
-val c9 = term_to_bc_list c9t
-(* val c9 = f e9 *) (* TODO *)
+val c9 = ff e9
 val [Number i] = g c9
 val SOME 0 = intML.toInt i;
 val e10 = ``
@@ -188,13 +235,13 @@ val SOME 3 = intML.toInt i;
 val e12 = ``
 Let "lt2" (Fun "x" (App (Opb Lt) (Var "x") (Val (Lit (IntLit 2)))))
   (App Opapp (Var "lt2") (Val (Lit (IntLit 3))))``
-val c12 = f e12
+val c12 = ff e12
 val [Number i] = g c12
 val SOME 0 = intML.toInt i;
 val e13 = ``
 Let "lq2" (Fun "x" (App (Opb Leq) (Var "x") (Val (Lit (IntLit 2)))))
   (App Opapp (Var "lq2") (Val (Lit (IntLit 0))))``
-val c13 = f e13
+val c13 = ff e13
 val [Number i] = g c13
 val SOME 1 = intML.toInt i;
 val e14 = ``
@@ -212,6 +259,9 @@ Let "x" (Val (Lit (Bool T)))
     [(Plit (Bool F), (Val (Lit (IntLit 1))));
      (Pvar "y", (Var "y"))])
   (Var "x"))``
+
+EVAL(f0 e15)
+
 val c15 = f e15
 val [Number i] = g c15
 val SOME 1 = intML.toInt i;

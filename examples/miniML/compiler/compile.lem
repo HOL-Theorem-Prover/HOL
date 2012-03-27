@@ -36,6 +36,8 @@ val least : (num -> bool) -> num
 sub [hol] least = (LEAST)
 val replace : forall 'a. 'a -> num -> 'a list -> 'a list
 sub [hol] replace = REPLACE_ELEMENT
+val num_set_foldl : forall 'a. ('a -> num -> 'a) -> 'a -> num set -> 'a
+sub [hol] num_set_foldl = num_set_foldl
 
 let rec
 remove_mat_exp (Mat (Var v) pes) =
@@ -588,7 +590,7 @@ compile_closures nso s defs =
       let s = emit s [Call 0] in
       let j = List.length s.code in
       let fvs = free_vars e in
-      let bind_fv fv (n,env,ec) =
+      let bind_fv (n,env,ec) fv =
         match find_index fv xs 1 with
         | Some j -> (n, Pmap.add fv (CTArg (2 + az - j)) env, ec)
         | None -> match find_index fv ns 0 with
@@ -598,7 +600,7 @@ compile_closures nso s defs =
                       else (n+1, Pmap.add fv (CTRef n) env, (CERef j)::ec)
           end
         end in
-      let (n,env,ec) = Set.fold bind_fv fvs (0,Pmap.empty,[]) in
+      let (n,env,ec) = num_set_foldl bind_fv (0,Pmap.empty,[]) fvs in
       let s' = <| s with env = env ; sz = 0 |> in
       let s' = compile s' e in
       let s' = emit s' [Stack (Store 0); Return] in
