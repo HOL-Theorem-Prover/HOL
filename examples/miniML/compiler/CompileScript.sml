@@ -709,16 +709,14 @@ val _ = Defn.save_defn replace_calls_defn;
   let (s,k) = FOLDL
     (\ (s,k) _n .
       let s = emit s [Stack (Load (nk + nk - k))] in
-      let s = emit s [Stack (Load (nk - k))] in
+      let s = emit s [Stack (Load (nk + 1 - k))] in
       let s = emit s [Update] in
       (s,k+1))
-    (s,0) ns in
-  let (s,k) = FOLDL
-    (\ (s,k) _n .
-      let s = emit s [Stack (Store (s.sz - k))] in
-      (decsz s, k+1))
-    (s,0) ns in
-  s)`;
+    (s,1) ns in
+  let k = nk - 1 in
+  FOLDL
+    (\ s _n . decsz (emit s [Stack (Store k)]))
+         s ns)`;
 
 val _ = Defn.save_defn compile_defn;
 

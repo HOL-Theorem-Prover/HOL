@@ -154,6 +154,7 @@ end end handle HOL_ERR _ =>
   | "Pop" => Pop
   | "Add" => Add
   | "Sub" => Sub
+  | "Mult" => Mult
   | "Less" => Less
   | "IsNum" => IsNum
   | s => raise Fail s
@@ -168,6 +169,8 @@ in case fst (dest_const f) of
 end handle HOL_ERR _ =>
   case fst (dest_const tm) of
     "Return" => Return
+  | "Ref" => Ref
+  | "Update" => Update
   | "CallPtr" => CallPtr
   | "Exception" => Exception
   | s => raise Fail s
@@ -351,3 +354,16 @@ CLetfun F [1] [([],CRaise Bind_error)]
 val c27 = term_to_bc_list(rhs(concl(computeLib.CBV_CONV compset ``REVERSE (compile ^s ^e27).code``)))
 val [Number i] = g c27
 val SOME 1 = intML.toInt i;
+val e28 = ``
+Letrec [("fac",("n",
+  If (App Equality (Var "n") (Val (Lit (IntLit 0))))
+     (Val (Lit (IntLit 1)))
+     (App (Opn Times)
+       (Var "n")
+       (App Opapp (Var "fac") (App (Opn Minus)
+                                   (Var "n")
+                                   (Val (Lit (IntLit 1))))))))]
+  (App Opapp (Var "fac") (Val (Lit (IntLit 5))))``
+val c28 = f e28
+val [Number i] = g c28
+val SOME 120 = intML.toInt i;

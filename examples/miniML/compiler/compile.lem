@@ -631,16 +631,14 @@ compile_closures nso s defs =
   let (s,k) = List.fold_left
     (fun (s,k) _n ->
       let s = emit s [Stack (Load (nk + nk - k))] in
-      let s = emit s [Stack (Load (nk - k))] in
+      let s = emit s [Stack (Load (nk + 1 - k))] in
       let s = emit s [Update] in
       (s,k+1))
-    (s,0) ns in
-  let (s,k) = List.fold_left
-    (fun (s,k) _n ->
-      let s = emit s [Stack (Store (s.sz - k))] in
-      (decsz s, k+1))
-    (s,0) ns in
-  s
+    (s,1) ns in
+  let k = nk - 1 in
+  List.fold_left
+    (fun s _n -> decsz (emit s [Stack (Store k)]))
+         s ns
 
 (* Constant folding
 val fold_consts : exp -> exp
