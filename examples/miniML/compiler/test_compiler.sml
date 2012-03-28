@@ -53,7 +53,6 @@ val _ = computeLib.add_thms
 , compileProofsTheory.remove_mat_exp_def
 , compileProofsTheory.exp_to_Cexp_def
 , compileProofsTheory.pat_to_Cpat_def
-, CompileTheory.compile0_def
 , compileProofsTheory.free_vars_def
 , compileProofsTheory.remove_mat_def
 , CompileTheory.remove_mat_vp_def
@@ -79,6 +78,20 @@ val _ = computeLib.add_thms
 , CompileTheory.compiler_state_fupdfupds_comp
 , CompileTheory.compiler_state_fupdcanon
 , CompileTheory.compiler_state_fupdcanon_comp
+, CompileTheory.repl_state_accessors
+, CompileTheory.repl_state_updates_eq_literal
+, CompileTheory.repl_state_accfupds
+, CompileTheory.repl_state_fupdfupds
+, CompileTheory.repl_state_literal_11
+, CompileTheory.repl_state_fupdfupds_comp
+, CompileTheory.repl_state_fupdcanon
+, CompileTheory.repl_state_fupdcanon_comp
+, CompileTheory.compile_exp_def
+, compileProofsTheory.repl_dec_def
+, CompileTheory.repl_exp_def
+, CompileTheory.init_repl_state_def
+, CompileTheory.init_compiler_state_def
+, compileProofsTheory.number_constructors_def
 ] compset
 
 val _ = computeLib.set_skip compset combinSyntax.K_tm (SOME 1)
@@ -128,8 +141,6 @@ fun bc_evaln 0 s = s
       bc_evaln (n-1) s
     end handle Bind => (print "Fail\n"; s)
 
-val test_cnmap = ``FEMPTY |+ ("Nil",0:num) |+ ("Cons",1)``
-val s = ``<| env := FEMPTY; code := []; next_label := 1; sz := 0; inst_length := λi. 0 |>``
 fun term_to_num x = (numML.fromString (Parse.term_to_string x))
 fun term_to_int x = (intML.fromString ((Parse.term_to_string x)^"i"))
 fun term_to_stack_op tm = let
@@ -175,10 +186,19 @@ end handle HOL_ERR _ =>
   | "Exception" => Exception
   | s => raise Fail s
 val term_to_bc_list = (map term_to_bc) o fst o listSyntax.dest_list
-fun f0 e = ``compile0 ^test_cnmap ^e``
-fun f1 e = computeLib.CBV_CONV compset ``REVERSE (compile ^s ^(f0 e)).code``
-fun f2 e = rhs (concl (f1 e))
-fun f e = term_to_bc_list (f2 e)
+
+val s = ``init_repl_state``
+fun f0 s e = ``repl_exp ^s ^e``
+fun f1 s e = computeLib.CBV_CONV compset ``REVERSE (^(f0 s e)).cs.code``
+fun f2 s e = rhs (concl (f1 s e))
+fun f e = term_to_bc_list (f2 s e)
+fun fd e = let
+  fun q s [] = term_to_bc_list (f2 s e)
+    | q s (d::ds) = let
+      val th = computeLib.CBV_CONV compset ``repl_dec ^s ^d``
+      val s = rhs(concl(th))
+      in q s ds end
+in q s end
 fun g1 c = bc_eval (init_state c)
 fun g c = bc_state_stack (g1 c)
 
@@ -312,12 +332,17 @@ val e21 = ``Let "x" (Val (Lit (Bool T)))
 val c21 = f e21
 val [Number i] = g c21
 val SOME 1 = intML.toInt i;
+val listd = ``
+Dtype
+  [(["'a"],"list",
+    [("Cons",[Tvar "'a"; Tapp [Tvar "'a"] "list"]); ("Nil",[])])]
+``
 val e22 = ``Con "Cons" [Val (Lit (Bool T)); Con "Nil" []]``
-val c22 = f e22
+val c22 = fd e22 [listd]
 val [Block (t1,[Number i,Number t2])] = g c22
-val SOME 1 = numML.toInt t1
+val SOME 0 = numML.toInt t1
 val SOME 1 = intML.toInt i
-val SOME 0 = intML.toInt t2;
+val SOME 1 = intML.toInt t2;
 val e23 = ``Mat (Con "Cons" [Val (Lit (IntLit 2));
                  Con "Cons" [Val (Lit (IntLit 3));
                  Con "Nil" []]])
@@ -325,19 +350,19 @@ val e23 = ``Mat (Con "Cons" [Val (Lit (IntLit 2));
               Var "x");
              (Pcon "Nil" [],
               Val (Lit (IntLit 1)))]``
-val c23 = f e23
+val c23 = fd e23 [listd]
 val [Number i] = g c23
 val SOME 2 = intML.toInt i;
 val e24 = ``Mat (Con "Nil" [])
             [(Pcon "Nil" [], Val (Lit (Bool F)))]``
-val c24 = f e24
+val c24 = fd e24 [listd]
 val [Number i] = g c24
 val SOME 0 = intML.toInt i;
 val e25 = ``Mat (Con "Cons" [Val (Lit (IntLit 2));
                  Con "Nil" []])
             [(Pcon "Cons" [Pvar "x"; Pvar "xs"],
               Var "x")]``
-val c25 = f e25
+val c25 = fd e25 [listd]
 val [Number i] = g c25
 val SOME 2 = intML.toInt i;
 val e26 = ``Mat (Con "Cons" [Val (Lit (IntLit 2));
@@ -345,15 +370,15 @@ val e26 = ``Mat (Con "Cons" [Val (Lit (IntLit 2));
             [(Pcon "Cons" [Plit (IntLit 2);
               Pcon "Nil" []],
               Val (Lit (IntLit 5)))]``
-val c26 = f e26
+val c26 = fd e26 [listd]
 val [Number i] = g c26
 val SOME 5 = intML.toInt i;
-val e27 = ``
+(*val e27 = ``
 CLetfun F [1] [([],CRaise Bind_error)]
 (CLprim CIf [CPrim2 CEq (CLit (IntLit 0)) (CLit (IntLit 0)); CLit (IntLit 1); CCall (CVar 1) []])``
 val c27 = term_to_bc_list(rhs(concl(computeLib.CBV_CONV compset ``REVERSE (compile ^s ^e27).code``)))
 val [Number i] = g c27
-val SOME 1 = intML.toInt i;
+val SOME 1 = intML.toInt i;*)
 val e28 = ``
 Letrec [("fac",("n",
   If (App Equality (Var "n") (Val (Lit (IntLit 0))))
@@ -367,3 +392,90 @@ Letrec [("fac",("n",
 val c28 = f e28
 val [Number i] = g c28
 val SOME 120 = intML.toInt i;
+val d0 = ``
+Dletrec
+  [("N","v1",
+    If (App (Opb Gt) (Var "v1") (Val (Lit (IntLit 100))))
+      (App (Opn Minus) (Var "v1") (Val (Lit (IntLit 10))))
+      (App Opapp (Var "N")
+         (App Opapp (Var "N")
+            (App (Opn Plus) (Var "v1") (Val (Lit (IntLit 11)))))))]
+``
+val e29 = ``App Opapp (Var "N") (Val (Lit (IntLit 42)))``
+val c29 = fd e29 [d0]
+val [Number i,cl] = g c29
+val SOME 91 = intML.toInt i;
+(*
+val d0 = listd
+val d1 = ``
+Dletrec
+  [("APPEND","v3",
+    Fun "v4"
+      (Mat (Var "v3")
+         [(Pcon ("Nil") [],Var "v4");
+          (Pcon ("Cons") [Pvar "v2"; Pvar "v1"],
+           Con ("Cons")
+             [Var "v2";
+              App Opapp (App Opapp (Var "APPEND") (Var "v1"))
+                (Var "v4")])]))]
+`` val d2 = ``
+Dtype [(["'a"; "'b"],"prod",[("Pair",[Tvar "'a"; Tvar "'b"])])]
+`` val d3 = ``
+Dletrec
+  [("PART","v3",
+    Fun "v4"
+      (Fun "v5"
+         (Fun "v6"
+            (Mat (Var "v4")
+               [(Pcon ("Nil") [],
+                 Con ("Pair") [Var "v5"; Var "v6"]);
+                (Pcon ("Cons") [Pvar "v2"; Pvar "v1"],
+                 If (App Opapp (Var "v3") (Var "v2"))
+                   (App Opapp
+                      (App Opapp
+                         (App Opapp (App Opapp (Var "PART") (Var "v3"))
+                            (Var "v1"))
+                         (Con ("Cons") [Var "v2"; Var "v5"]))
+                      (Var "v6"))
+                   (App Opapp
+                      (App Opapp
+                         (App Opapp (App Opapp (Var "PART") (Var "v3"))
+                            (Var "v1")) (Var "v5"))
+                      (Con ("Cons") [Var "v2"; Var "v6"])))]))))]
+`` val d4 = ``
+Dlet (Pvar "PARTITION")
+  (Fun "v1"
+     (Fun "v2"
+        (App Opapp
+           (App Opapp
+              (App Opapp (App Opapp (Var "PART") (Var "v1")) (Var "v2"))
+              (Con ("Nil") [])) (Con ("Nil") []))))
+`` val d5 = ``
+Dletrec
+  [("QSORT","v7",
+    Fun "v8"
+      (Mat (Var "v8")
+         [(Pcon ("Nil") [],Con ("Nil") []);
+          (Pcon ("Cons") [Pvar "v6"; Pvar "v5"],
+           Let "v3"
+             (App Opapp
+                (App Opapp (Var "PARTITION")
+                   (Fun "v4"
+                      (App Opapp (App Opapp (Var "v7") (Var "v4"))
+                         (Var "v6")))) (Var "v5"))
+             (Mat (Var "v3")
+                [(Pcon ("Pair") [Pvar "v2"; Pvar "v1"],
+                  App Opapp
+                    (App Opapp (Var "APPEND")
+                       (App Opapp
+                          (App Opapp (Var "APPEND")
+                             (App Opapp
+                                (App Opapp (Var "QSORT") (Var "v7"))
+                                (Var "v2")))
+                          (Con ("Cons")
+                             [Var "v6"; Con ("Nil") []])))
+                    (App Opapp (App Opapp (Var "QSORT") (Var "v7"))
+                       (Var "v1")))]))]))]
+`` val e30 = ``
+App (Opapp (Var "QSORT")
+*)

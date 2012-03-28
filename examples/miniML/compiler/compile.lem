@@ -119,23 +119,23 @@ pat_to_Cpat cm (m, Pcon cn ps) =
   (m', CPcon (Pmap.find cn cm) ps)
 
 let rec
-exp_to_Cexp cm (m, Raise err) = (m, CRaise err)
+exp_to_Cexp d cm (m, Raise err) = (m, CRaise err)
 and
-exp_to_Cexp cm (m, Val (Lit l)) = (m, CLit l)
+exp_to_Cexp d cm (m, Val (Lit l)) = (m, CLit l)
 and
-exp_to_Cexp cm (m, Con cn es) =
-  (m, CCon (Pmap.find cn cm) (List.map (fun e -> let (_m,e) = exp_to_Cexp cm (m,e) in e) es))
+exp_to_Cexp d cm (m, Con cn es) =
+  (m, CCon (Pmap.find cn cm) (List.map (fun e -> let (_m,e) = exp_to_Cexp false cm (m,e) in e) es))
 and
-exp_to_Cexp cm (m, Var vn) = (m, CVar (Pmap.find vn m))
+exp_to_Cexp d cm (m, Var vn) = (m, CVar (if d then 0 else Pmap.find vn m))
 and
-exp_to_Cexp cm (m, Fun vn e) =
+exp_to_Cexp d cm (m, Fun vn e) =
   let (m',n) = extend m vn in
-  let (m',Ce) = exp_to_Cexp cm (m', e) in
+  let (m',Ce) = exp_to_Cexp false cm (m', e) in
   (m, CFun [n] Ce)
 and
-exp_to_Cexp cm (m, App (Opn opn) e1 e2) =
-  let (_m,Ce1) = exp_to_Cexp cm (m, e1) in
-  let (_m,Ce2) = exp_to_Cexp cm (m, e2) in
+exp_to_Cexp d cm (m, App (Opn opn) e1 e2) =
+  let (_m,Ce1) = exp_to_Cexp false cm (m, e1) in
+  let (_m,Ce2) = exp_to_Cexp false cm (m, e2) in
   (m, CPrim2 (match opn with
               | Plus   -> CAdd
               | Minus  -> CSub
@@ -145,65 +145,65 @@ exp_to_Cexp cm (m, App (Opn opn) e1 e2) =
               end)
       Ce1 Ce2)
 and
-exp_to_Cexp cm (m, App (Opb opb) e1 e2) =
-  let (_m,Ce1) = exp_to_Cexp cm (m, e1) in
-  let (_m,Ce2) = exp_to_Cexp cm (m, e2) in
+exp_to_Cexp d cm (m, App (Opb opb) e1 e2) =
+  let (_m,Ce1) = exp_to_Cexp false cm (m, e1) in
+  let (_m,Ce2) = exp_to_Cexp false cm (m, e2) in
   (m, match opb with
       | Lt -> CPrim2 CLt Ce1 Ce2
       | Leq -> CLprim CLeq [Ce1;Ce2]
       end)
 and
-exp_to_Cexp cm (m, App Equality e1 e2) =
-  let (_m,Ce1) = exp_to_Cexp cm (m, e1) in
-  let (_m,Ce2) = exp_to_Cexp cm (m, e2) in
+exp_to_Cexp d cm (m, App Equality e1 e2) =
+  let (_m,Ce1) = exp_to_Cexp false cm (m, e1) in
+  let (_m,Ce2) = exp_to_Cexp false cm (m, e2) in
   (m, CPrim2 CEq Ce1 Ce2)
 and
-exp_to_Cexp cm (m, App Opapp e1 e2) =
-  let (_m,Ce1) = exp_to_Cexp cm (m, e1) in
-  let (_m,Ce2) = exp_to_Cexp cm (m, e2) in
+exp_to_Cexp d cm (m, App Opapp e1 e2) =
+  let (_m,Ce1) = exp_to_Cexp false cm (m, e1) in
+  let (_m,Ce2) = exp_to_Cexp false cm (m, e2) in
   (m, CCall Ce1 [Ce2])
 and
-exp_to_Cexp cm (m, Log log e1 e2) =
-  let (_m,Ce1) = exp_to_Cexp cm (m, e1) in
-  let (_m,Ce2) = exp_to_Cexp cm (m, e2) in
+exp_to_Cexp d cm (m, Log log e1 e2) =
+  let (_m,Ce1) = exp_to_Cexp false cm (m, e1) in
+  let (_m,Ce2) = exp_to_Cexp false cm (m, e2) in
   (m, CLprim (match log with
               | And -> CAnd
               | Or  -> COr
               end)
       [Ce1;Ce2])
 and
-exp_to_Cexp cm (m, If e1 e2 e3) =
-  let (_m,Ce1) = exp_to_Cexp cm (m, e1) in
-  let (_m,Ce2) = exp_to_Cexp cm (m, e2) in
-  let (_m,Ce3) = exp_to_Cexp cm (m, e3) in
+exp_to_Cexp d cm (m, If e1 e2 e3) =
+  let (_m,Ce1) = exp_to_Cexp false cm (m, e1) in
+  let (_m,Ce2) = exp_to_Cexp d cm (m, e2) in
+  let (_m,Ce3) = exp_to_Cexp d cm (m, e3) in
   (m, CLprim CIf [Ce1;Ce2;Ce3])
 and
-exp_to_Cexp cm (m, Mat (Var vn) pes) =
+exp_to_Cexp d cm (m, Mat (Var vn) pes) =
   let Cpes = List.fold_left
     (fun Cpes (p,e) -> let (m,Cp) = pat_to_Cpat cm (m,p) in
-                       let (_m,Ce) = exp_to_Cexp cm (m,e) in
+                       let (_m,Ce) = exp_to_Cexp d cm (m,e) in
                        (Cp,Ce)::Cpes)
          [] pes in
   (m, CMat (Pmap.find vn m) Cpes)
 and
-exp_to_Cexp cm (m, Let vn e b) =
+exp_to_Cexp d cm (m, Let vn e b) =
   let (m',n) = extend m vn in
-  let (_m,Ce) = exp_to_Cexp cm (m, e) in
-  let (_m,Cb) = exp_to_Cexp cm (m', b) in
-  (m, CLet [n] [Ce] Cb)
+  let (_m,Ce) = exp_to_Cexp false cm (m, e) in
+  let (_m,Cb) = exp_to_Cexp d cm (m', b) in
+  (if d then m' else m, CLet [n] [Ce] Cb)
 and
-exp_to_Cexp cm (m, Letrec defs b) =
+exp_to_Cexp d cm (m, Letrec defs b) =
   let (m',fns) = List.fold_left
     (fun (m,fns) (d,_vn,_e) -> let (m',fn) = extend m d in (m',fn::fns))
           (m,[]) defs in
   let Cdefs = List.fold_left
     (fun Cdefs (_d,vn,e) ->
       let (m'',n) = extend m' vn in
-      let (_m,Ce) = exp_to_Cexp cm (m'',e) in
+      let (_m,Ce) = exp_to_Cexp false cm (m'',e) in
       ([n],Ce)::Cdefs)
          []    defs in
-  let (_m,Cb) = exp_to_Cexp cm (m',b) in
-  (m, CLetfun true fns Cdefs Cb)
+  let (_m,Cb) = exp_to_Cexp d cm (m',b) in
+  (if d then m' else m, CLetfun true fns Cdefs Cb)
 
 (* TODO: semantics *)
 (* TODO: simple type system and checker *)
@@ -319,11 +319,6 @@ remove_mat_var v ((p,e)::pes) =
 (* TODO: removal of redundant expressions *)
 (* TODO: simplification (e.g., constant folding) *)
 
-let compile0 cm e =
-  let (m,Ce) = exp_to_Cexp cm
-    (Pmap.empty, (remove_mat_exp (remove_Gt_Geq e)))
-  in remove_mat Ce
-
 (* values in compile-time environment *)
 type ctbind = CTLet of num | CTArg of num | CTEnv of num | CTRef of num
 (* CTLet n means stack[sz - n]
@@ -403,53 +398,55 @@ replace_calls j ((_,lab)::(jl,l)::ls) c =
     (replace (Call lab) (j - jl) c)
 
 let rec
-compile s (CRaise err) =
+compile d s (CRaise err) =
   incsz (emit s [Stack (PushInt (error_to_int err)); Exception])
 and
-compile s (CLit (IntLit i)) =
+compile d s (CLit (IntLit i)) =
   incsz (emit s [Stack (PushInt i)])
 and
-compile s (CLit (Bool b)) =
+compile d s (CLit (Bool b)) =
   incsz (emit s [Stack (PushInt (bool_to_int b))])
 and
-compile s (CVar n) =
+compile false s (CVar n) =
   incsz (compile_varref s (Pmap.find n s.env))
 and
-compile s (CCon n []) =
+compile true s (CVar n) = s
+and
+compile d s (CCon n []) =
   incsz (emit s [Stack (PushInt (num_to_int n))])
 and
-compile s (CCon n es) =
+compile d s (CCon n es) =
   let z = s.sz + 1 in    (* uneta because Hol_defn sucks *)
-  let s = List.fold_left (fun s e -> compile s e) s es in
+  let s = List.fold_left (fun s e -> compile false s e) s es in
   let s = emit s [Stack (Cons n (List.length es))] in
   <| s with sz = z |>
 and
-compile s (CTagEq e n) =
-  emit (compile s e) [Stack (TagEquals n)]
+compile d s (CTagEq e n) =
+  emit (compile false s e) [Stack (TagEquals n)]
 and
-compile s (CProj e n) =
-  emit (compile s e) [Stack (El n)]
+compile d s (CProj e n) =
+  emit (compile false s e) [Stack (El n)]
 and
-compile s (CMat _ _) =
-  emit s [Stack (PushInt i2); Exception]
+compile d s (CMat _ _) =
+  incsz (emit s [Stack (PushInt i2); Exception])
 and
-compile s (CLet xs es e) =
+compile d s (CLet xs es e) =
   let z = s.sz + 1 in    (* uneta because Hol_defn sucks *)
-  let s = List.fold_left (fun s e -> compile s e) s es in
-  compile_bindings s.env z e 0 s xs
+  let s = List.fold_left (fun s e -> compile false s e) s es in
+  compile_bindings d s.env z e 0 s xs
 and
-compile s (CLetfun recp ns defs e) =
+compile d s (CLetfun recp ns defs e) =
   let z = s.sz + 1 in
   let s = compile_closures (if recp then Some ns else None) s defs in
-  compile_bindings s.env z e 0 s ns
+  compile_bindings d s.env z e 0 s ns
 and
-compile s (CFun xs e) =
+compile d s (CFun xs e) =
   compile_closures None s [(xs,e)]
 and
-compile s (CCall e es) =
+compile d s (CCall e es) =
   let n = List.length es in
-  let s = compile s e in (* uneta because Hol_defn sucks *)
-  let s = List.fold_left (fun s e -> compile s e) s es in
+  let s = compile false s e in (* uneta because Hol_defn sucks *)
+  let s = List.fold_left (fun s e -> compile false s e) s es in
   (* argn, ..., arg2, arg1, Block 0 [CodePtr c; env], *)
   let s = emit s [Stack (Load n); Stack (El 1)] in
   (* env, argn, ..., arg1, Block 0 [CodePtr c; env], *)
@@ -461,29 +458,29 @@ compile s (CCall e es) =
   let s = emit s [Stack (Pops (n+1))] in
   <| s with sz = s.sz - n |>
 and
-compile s (CPrim2 op e1 e2) =
-  let s = compile s e1 in
-  let s = compile s e2 in
+compile d s (CPrim2 op e1 e2) =
+  let s = compile false s e1 in
+  let s = compile false s e2 in
   decsz (emit s [Stack (prim2_to_bc op)])
 and
-compile s (CLprim CLeq [e1;e2]) =
+compile d s (CLprim CLeq [e1;e2]) =
   let s = incsz (emit s [Stack (PushInt i1)]) in
   let s = incsz (emit s [Stack (PushInt i0)]) in
-  let s = compile s e1 in
-  let s = compile s e2 in
+  let s = compile false s e1 in
+  let s = compile false s e2 in
   let s = emit s [Stack Sub; Stack Less; Stack Sub] in
   <| s with sz = s.sz - 3 |>
 and
-compile s (CLprim CIf [e1;e2;e3]) =
-  let s = compile s e1 in
+compile d s (CLprim CIf [e1;e2;e3]) =
+  let s = compile false s e1 in
   let s = emit s [JumpNil 0; Jump 0] in
   let j1 = List.length s.code in
   let n1 = s.next_label in
-  let s = compile (decsz s) e2 in
+  let s = compile d (decsz s) e2 in
   let s = emit s [Jump 0] in
   let j2 = List.length s.code in
   let n2 = s.next_label in
-  let s = compile (decsz s) e3 in
+  let s = compile d (decsz s) e3 in
   let n3 = s.next_label in
   let j3 = List.length s.code in
   <| s with code =
@@ -491,34 +488,35 @@ compile s (CLprim CIf [e1;e2;e3]) =
       (replace (Jump n2) (j3 - j1)
       (replace (JumpNil n1) (j3 - j1 + 1) s.code))) |>
 and
-compile s (CLprim CAnd [e1;e2]) =
-  let s = compile s e1 in
+compile d s (CLprim CAnd [e1;e2]) =
+  let s = compile false s e1 in
   let s = emit s [JumpNil 0] in
   let j = List.length s.code in
-  let s = compile (decsz s) e2 in
+  let s = compile false (decsz s) e2 in
   <| s with code =
       replace (JumpNil s.next_label)
       (List.length s.code - j) s.code |>
 and
-compile s (CLprim COr [e1;e2]) =
-  let s = compile s e1 in
+compile d s (CLprim COr [e1;e2]) =
+  let s = compile false s e1 in
   let s = emit s [JumpNil 0; Stack (PushInt i1); Jump 0] in
   let j = List.length s.code in
   let n1 = s.next_label in
-  let s = compile (decsz s) e2 in
+  let s = compile false (decsz s) e2 in
   let n2 = s.next_label in
   let j3 = List.length s.code in
   <| s with code =
       (replace (Jump n2) (j3 - j)
       (replace (JumpNil n1) (j3 - j - 2) s.code)) |>
 and
-compile_bindings env0 sz1 e n s [] =
-  let s = compile s e in
+compile_bindings d env0 sz1 e n s [] =
+  let s = compile d s e in
+  if d then s else
   let s = emit s [Stack (Pops n)] in
   <| s with env = env0 ; sz = sz1 |>
 and
-compile_bindings env0 sz1 e n s (x::xs) =
-  compile_bindings env0 sz1 e
+compile_bindings d env0 sz1 e n s (x::xs) =
+  compile_bindings d env0 sz1 e
     (n+1) (* parentheses below because Lem sucks *)
     (<| s with env = Pmap.add x (CTLet (sz1 + n)) s.env |>)
     xs
@@ -608,7 +606,7 @@ compile_closures nso s defs =
         end in
       let (n,env,ec) = num_set_foldl bind_fv (0,Pmap.empty,[]) fvs in
       let s' = <| s with env = env ; sz = 0 |> in
-      let s' = compile s' e in
+      let s' = compile false s' e in
       let s' = emit s' [Stack (Store 0); Return] in
       let s = <| s' with env = s.env ; sz = s.sz + 1 |> in
       (s,k+1,(j,lab)::labs,ec::ecs))
@@ -639,6 +637,58 @@ compile_closures nso s defs =
   List.fold_left
     (fun s _n -> decsz (emit s [Stack (Store k)]))
          s ns
+
+type repl_state =
+  <| cmap : (string, num) Pmap.map
+   ; vmap : (string, num) Pmap.map
+   ; cs : compiler_state
+   |>
+
+let init_compiler_state =
+  <| env = Pmap.empty
+   ; code = []
+   ; next_label = 1 (* depends on exception handlers *)
+   ; sz = 0
+   ; inst_length = fun i -> 0 (* TODO: depends on runtime *)
+   |>
+
+let init_repl_state =
+  <| cmap = Pmap.empty
+   ; vmap = Pmap.empty
+   ; cs = init_compiler_state
+   |>
+
+let compile_exp d rs e =
+  let e = remove_Gt_Geq e in
+  let e = remove_mat_exp e in
+  let (vm,Ce) = exp_to_Cexp d rs.cmap (rs.vmap, e) in
+  let Ce = remove_mat Ce in
+  let cs = compile d rs.cs Ce in
+  <| rs with vmap = vm ; cs = cs |>
+
+(* TODO: typechecking *)
+(* TODO: printing *)
+
+let rec
+number_constructors cm (n:num) [] = cm
+and
+number_constructors cm n ((c,_)::cs) =
+  number_constructors (Pmap.add c n cm) (n+1) cs
+
+let rec
+repl_dec rs (Dtype []) = rs
+and
+repl_dec rs (Dtype ((_,_,cs)::ts)) =
+  let cm = number_constructors rs.cmap 0 cs in
+  repl_dec (<| rs with cmap = cm |>) (Dtype ts) (* lem sucks *)
+and
+repl_dec rs (Dletrec defs) =
+  compile_exp true rs (Letrec defs (Var ""))
+and
+repl_dec rs (Dlet p e) =
+  compile_exp true rs (Mat e [(p,Var "")])
+
+let repl_exp = compile_exp false
 
 (* Constant folding
 val fold_consts : exp -> exp

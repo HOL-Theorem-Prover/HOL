@@ -111,7 +111,7 @@ val _ = save_thm ("remove_mat_exp_ind", remove_mat_exp_ind);
 
 val (exp_to_Cexp_def,exp_to_Cexp_ind) =
   tprove_no_defn ((exp_to_Cexp_def,exp_to_Cexp_ind),
-  WF_REL_TAC `measure (exp_size o SND o SND)` >>
+  WF_REL_TAC `measure (exp_size o SND o SND o SND)` >>
   srw_tac[ARITH_ss][exp1_size_thm,exp8_size_thm,exp6_size_thm] >>
   MAP_EVERY (fn q => Q.ISPEC_THEN q mp_tac SUM_MAP_MEM_bound) [`exp7_size`,`exp_size`,`exp2_size`] >>
   rw[] >> res_tac >> fs[exp_size_def] >> srw_tac[ARITH_ss][])
@@ -168,21 +168,18 @@ val _ = save_thm ("compile_varref_ind", compile_varref_ind);
 val (compile_def, compile_ind) =
   tprove_no_defn ((compile_def, compile_ind),
   WF_REL_TAC `inv_image ($< LEX $<) (λx. case x of
-       | INL (s,e)                 => (Cexp_size e, 3:num)
-       | INR (INL (env,z,e,n,s,[]))  => (Cexp_size e, 4)
-       | INR (INL (env,z,e,n,s,ns))  => (Cexp_size e + (SUM ns) + LENGTH ns, 2)
+       | INL (d,s,e)                 => (Cexp_size e, 3:num)
+       | INR (INL (d,env,z,e,n,s,[]))  => (Cexp_size e, 4)
+       | INR (INL (d,env,z,e,n,s,ns))  => (Cexp_size e + (SUM ns) + LENGTH ns, 2)
        | INR (INR (NONE,s,xbs))    => (SUM (MAP Cexp2_size xbs), 1)
        | INR (INR (SOME ns,s,xbs)) => (SUM (MAP Cexp2_size xbs) + (SUM ns) + LENGTH ns, 0))` >>
   srw_tac[ARITH_ss][] >>
-  srw_tac[ARITH_ss][Cexp1_size_thm,Cexp3_size_thm,Cexp_size_def,Cexp5_size_thm,list_size_thm]
-  >- (Q.ISPEC_THEN `Cexp_size` imp_res_tac SUM_MAP_MEM_bound >> DECIDE_TAC)
-  >- (Q.ISPEC_THEN `Cexp_size` imp_res_tac SUM_MAP_MEM_bound >> DECIDE_TAC)
-  >- (Cases_on `ns` >> srw_tac[ARITH_ss][])
-  >- (Cases_on `xs` >> srw_tac[ARITH_ss][])
-  >- (Cases_on `xs` >> srw_tac[ARITH_ss][])
-  >- (Q.ISPEC_THEN `Cexp2_size` imp_res_tac SUM_MAP_MEM_bound >>
-      Cases_on `nso` >> fsrw_tac[ARITH_ss][Cexp_size_def])
-  >- (Q.ISPEC_THEN `Cexp_size` imp_res_tac SUM_MAP_MEM_bound >> srw_tac[ARITH_ss][]))
+  srw_tac[ARITH_ss][Cexp1_size_thm,Cexp3_size_thm,Cexp_size_def,Cexp5_size_thm,list_size_thm] >>
+  TRY (Q.ISPEC_THEN `Cexp_size` imp_res_tac SUM_MAP_MEM_bound >> DECIDE_TAC) >>
+  TRY (Cases_on `xs` >> srw_tac[ARITH_ss][]) >>
+  TRY (Cases_on `ns` >> srw_tac[ARITH_ss][]) >>
+  (Q.ISPEC_THEN `Cexp2_size` imp_res_tac SUM_MAP_MEM_bound >>
+   Cases_on `nso` >> fsrw_tac[ARITH_ss][Cexp_size_def]))
 val _ = save_thm ("compile_def", compile_def);
 val _ = save_thm ("compile_ind", compile_ind);
 
@@ -191,6 +188,18 @@ val (replace_calls_def,replace_calls_ind) =
   WF_REL_TAC `measure (LENGTH o FST o SND)` >> rw[] )
 val _ = save_thm ("replace_calls_def", replace_calls_def);
 val _ = save_thm ("replace_calls_ind", replace_calls_ind);
+
+val (number_constructors_def,number_constructors_ind) =
+  tprove_no_defn ((number_constructors_def,number_constructors_ind),
+  WF_REL_TAC `measure (LENGTH o SND o SND)` >> rw[])
+val _ = save_thm ("number_constructors_def", number_constructors_def);
+val _ = save_thm ("number_constructors_ind", number_constructors_ind);
+
+val (repl_dec_def,repl_dec_ind) =
+  tprove_no_defn ((repl_dec_def,repl_dec_ind),
+  WF_REL_TAC `measure (dec_size o SND)`)
+val _ = save_thm ("repl_dec_def", repl_dec_def);
+val _ = save_thm ("repl_dec_ind", repl_dec_ind);
 
 (* ------------------------------------------------------------------------- *)
 
