@@ -259,7 +259,6 @@ Let "x" (Val (Lit (IntLit 0)))
 val c14 = f e14
 val [Number i] = g c14
 val SOME 0 = intML.toInt i;
-
 val e15 = ``
 Let "x" (Val (Lit (Bool T)))
 (App Equality
@@ -267,10 +266,9 @@ Let "x" (Val (Lit (Bool T)))
     [(Plit (Bool F), (Val (Lit (IntLit 1))));
      (Pvar "y", (Var "y"))])
   (Var "x"))``
-val c15 = f e15 (* TODO: loops? *)
+val c15 = f e15
 val [Number i] = g c15
 val SOME 1 = intML.toInt i;
-
 val e16 = ``App Equality (Let "x" (Val (Lit (Bool T))) (Var "x")) (Val (Lit (Bool F)))``
 val c16 = f e16
 val [Number i] = g c16
@@ -317,7 +315,6 @@ val [Block (t1,[Number i,Number t2])] = g c22
 val SOME 1 = numML.toInt t1
 val SOME 1 = intML.toInt i
 val SOME 0 = intML.toInt t2;
-
 val e23 = ``Mat (Con "Cons" [Val (Lit (IntLit 2));
                  Con "Cons" [Val (Lit (IntLit 3));
                  Con "Nil" []]])
@@ -325,10 +322,9 @@ val e23 = ``Mat (Con "Cons" [Val (Lit (IntLit 2));
               Var "x");
              (Pcon "Nil" [],
               Val (Lit (IntLit 1)))]``
-val c23 = f e23 (* TODO: loops? *)
+val c23 = f e23
 val [Number i] = g c23
 val SOME 2 = intML.toInt i;
-
 val e24 = ``Mat (Con "Nil" [])
             [(Pcon "Nil" [], Val (Lit (Bool F)))]``
 val c24 = f e24
@@ -349,3 +345,9 @@ val e26 = ``Mat (Con "Cons" [Val (Lit (IntLit 2));
 val c26 = f e26
 val [Number i] = g c26
 val SOME 5 = intML.toInt i;
+val e27 = ``
+CLetfun F [1] [([],CRaise Bind_error)]
+(CLprim CIf [CPrim2 CEq (CLit (IntLit 0)) (CLit (IntLit 0)); CLit (IntLit 1); CCall (CVar 1) []])``
+val c27 = term_to_bc_list(rhs(concl(computeLib.CBV_CONV compset ``REVERSE (compile ^s ^e27).code``)))
+val [Number i] = g c27
+val SOME 1 = intML.toInt i;

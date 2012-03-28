@@ -39,7 +39,7 @@ val _ = Hol_datatype `
   | CTagEq of Cexp => num
   | CProj of Cexp => num
   | CMat of num => (Cpat # Cexp) list
-  | CLet of (num # Cexp) list => Cexp
+  | CLet of num list => Cexp list => Cexp
   | CLetfun of bool => num list => (num list # Cexp) list => Cexp
   | CFun of num list => Cexp
   | CCall of Cexp => Cexp list
@@ -218,7 +218,7 @@ val _ = Defn.save_defn pat_to_Cpat_defn;
   let (m',n) = extend m vn in
   let (_m,Ce) = exp_to_Cexp cm (m, e) in
   let (_m,Cb) = exp_to_Cexp cm (m', b) in
-  (m, CLet [(n,Ce)] Cb))
+  (m, CLet [n] [Ce] Cb))
 /\
 (exp_to_Cexp cm (m, Letrec defs b) =
   let (m',fns) = FOLDL
@@ -256,20 +256,21 @@ val _ = Defn.save_defn exp_to_Cexp_defn;
 (free_vars (CMat v pes) =
   (INSERT) v (FOLDL (\ s (p,e) . s UNION free_vars e) {} pes))
 /\
-(free_vars (CLet xes e) =
-  free_vars e UNION
-  FOLDL (\ s (x,e) . s UNION (free_vars e DIFF {x})) {} xes)
+(free_vars (CLet xs es e) =
+  (free_vars e DIFF LIST_TO_SET xs) UNION
+  FOLDL (\ s e . s UNION free_vars e) {} es)
 /\
 (free_vars (CLetfun T ns defs e) =
-  free_vars e UNION
-  FOLDL (\ s (vs,e) . free_vars e DIFF
-                                  ((LIST_TO_SET ns) UNION
-                                   (LIST_TO_SET vs)))
+  (free_vars e DIFF LIST_TO_SET ns) UNION
+  FOLDL (\ s (vs,e) .
+    s UNION (free_vars e DIFF (LIST_TO_SET ns UNION
+                            LIST_TO_SET vs)))
                       {} defs)
 /\
-(free_vars (CLetfun F _ defs e) =
-  free_vars e UNION
-  FOLDL (\ s (vs,e) . free_vars e DIFF LIST_TO_SET vs)
+(free_vars (CLetfun F ns defs e) =
+  (free_vars e DIFF LIST_TO_SET ns) UNION
+  FOLDL (\ s (vs,e) .
+    s UNION (free_vars e DIFF LIST_TO_SET vs))
                       {} defs)
 /\
 (free_vars (CFun xs e) = free_vars e DIFF (LIST_TO_SET xs))
@@ -292,7 +293,7 @@ val _ = Defn.save_defn free_vars_defn;
  val remove_mat_vp_defn = Hol_defn "remove_mat_vp" `
 
 (remove_mat_vp fk sk v (CPvar pv) =
-  CLet [(pv,(CVar v))] sk)
+  CLet [pv] [CVar v] sk)
 /\
 (remove_mat_vp fk sk v (CPlit l) =
   CLprim CIf [CPrim2 CEq (CVar v) (CLit l);
@@ -307,7 +308,7 @@ val _ = Defn.save_defn free_vars_defn;
 /\
 (remove_mat_con fk sk v n (p::ps) =
   let v' = least_not_in ((INSERT) v (free_vars sk)) in
-  CLet [(v',CProj (CVar v) n)]
+  CLet [v'] [CProj (CVar v) n]
     (remove_mat_vp fk (remove_mat_con fk sk v (n+1) ps) v' p))`;
 
 val _ = Defn.save_defn remove_mat_vp_defn;
@@ -328,7 +329,7 @@ val _ = Defn.save_defn remove_mat_vp_defn;
 /\
 (remove_mat (CProj e n) = CProj (remove_mat e) n)
 /\
-(remove_mat (CLet xes e) = CLet (MAP (\ (x,e) . (x,remove_mat e)) xes) (remove_mat e))
+(remove_mat (CLet xs es e) = CLet xs (MAP remove_mat es) (remove_mat e))
 /\
 (remove_mat (CLetfun b ns defs e) = CLetfun b ns (MAP (\ (vs,e) . (vs,remove_mat e)) defs) (remove_mat e))
 /\
@@ -510,10 +511,10 @@ val _ = Defn.save_defn replace_calls_defn;
 (compile s (CMat _ _) =
   emit s [Stack (PushInt i2); Exception])
 /\
-(compile s (CLet xes e) =
-  let z = s.sz + 1 in
-  let s = FOLDL (\ s (x,e) . compile s e) s xes in
-  compile_bindings s.env z e 0 s (MAP FST xes))
+(compile s (CLet xs es e) =
+  let z = s.sz + 1 in    (* uneta because Hol_defn sucks *)
+  let s = FOLDL (\ s e . compile s e) s es in
+  compile_bindings s.env z e 0 s xs)
 /\
 (compile s (CLetfun recp ns defs e) =
   let z = s.sz + 1 in

@@ -22,7 +22,7 @@ type Cexp =
   | CTagEq of Cexp * num
   | CProj of Cexp * num
   | CMat of num * (Cpat * Cexp) list
-  | CLet of (num * Cexp) list * Cexp
+  | CLet of num list * Cexp list * Cexp
   | CLetfun of bool * num list * (num list * Cexp) list * Cexp
   | CFun of num list * Cexp
   | CCall of Cexp * Cexp list
@@ -190,7 +190,7 @@ exp_to_Cexp cm (m, Let vn e b) =
   let (m',n) = extend m vn in
   let (_m,Ce) = exp_to_Cexp cm (m, e) in
   let (_m,Cb) = exp_to_Cexp cm (m', b) in
-  (m, CLet [(n,Ce)] Cb)
+  (m, CLet [n] [Ce] Cb)
 and
 exp_to_Cexp cm (m, Letrec defs b) =
   let (m',fns) = List.fold_left
@@ -225,20 +225,21 @@ and
 free_vars (CMat v pes) =
   Set.add v (List.fold_left (fun s (p,e) -> s union free_vars e) {} pes)
 and
-free_vars (CLet xes e) =
-  free_vars e union
-  List.fold_left (fun s (x,e) -> s union (free_vars e \ {x})) {} xes
+free_vars (CLet xs es e) =
+  (free_vars e \ Set.from_list xs) union
+  List.fold_left (fun s e -> s union free_vars e) {} es
 and
 free_vars (CLetfun true ns defs e) =
-  free_vars e union
-  List.fold_left (fun s (vs,e) -> free_vars e \
-                                  ((Set.from_list ns) union
-                                   (Set.from_list vs)))
+  (free_vars e \ Set.from_list ns) union
+  List.fold_left (fun s (vs,e) ->
+    s union (free_vars e \ (Set.from_list ns union
+                            Set.from_list vs)))
                       {} defs
 and
-free_vars (CLetfun false _ defs e) =
-  free_vars e union
-  List.fold_left (fun s (vs,e) -> free_vars e \ Set.from_list vs)
+free_vars (CLetfun false ns defs e) =
+  (free_vars e \ Set.from_list ns) union
+  List.fold_left (fun s (vs,e) ->
+    s union (free_vars e \ Set.from_list vs))
                       {} defs
 and
 free_vars (CFun xs e) = free_vars e \ (Set.from_list xs)
@@ -258,7 +259,7 @@ val remove_mat : Cexp -> Cexp
 
 let rec
 remove_mat_vp fk sk v (CPvar pv) =
-  CLet [(pv,(CVar v))] sk
+  CLet [pv] [CVar v] sk
 and
 remove_mat_vp fk sk v (CPlit l) =
   CLprim CIf [CPrim2 CEq (CVar v) (CLit l);
@@ -273,7 +274,7 @@ remove_mat_con fk sk v n [] = sk
 and
 remove_mat_con fk sk v n (p::ps) =
   let v' = least_not_in (Set.add v (free_vars sk)) in
-  CLet [(v',CProj (CVar v) n)]
+  CLet [v'] [CProj (CVar v) n]
     (remove_mat_vp fk (remove_mat_con fk sk v (n+1) ps) v' p)
 
 let rec
@@ -291,7 +292,7 @@ remove_mat (CTagEq e n) = CTagEq (remove_mat e) n
 and
 remove_mat (CProj e n) = CProj (remove_mat e) n
 and
-remove_mat (CLet xes e) = CLet (List.map (fun (x,e) -> (x,remove_mat e)) xes) (remove_mat e)
+remove_mat (CLet xs es e) = CLet xs (List.map remove_mat es) (remove_mat e)
 and
 remove_mat (CLetfun b ns defs e) = CLetfun b ns (List.map (fun (vs,e) -> (vs,remove_mat e)) defs) (remove_mat e)
 and
@@ -432,10 +433,10 @@ and
 compile s (CMat _ _) =
   emit s [Stack (PushInt i2); Exception]
 and
-compile s (CLet xes e) =
-  let z = s.sz + 1 in
-  let s = List.fold_left (fun s (x,e) -> compile s e) s xes in
-  compile_bindings s.env z e 0 s (List.map fst xes)
+compile s (CLet xs es e) =
+  let z = s.sz + 1 in    (* uneta because Hol_defn sucks *)
+  let s = List.fold_left (fun s e -> compile s e) s es in
+  compile_bindings s.env z e 0 s xs
 and
 compile s (CLetfun recp ns defs e) =
   let z = s.sz + 1 in
