@@ -8,6 +8,10 @@ open ml_translatorLib;
 
 (* implementation *)
 
+(* The following datatype is defined slightly differently from the one
+   Okasaki defines. The definition Okasaki uses is not supported by
+   HOL4's Hol_datatype function. *)
+
 val _ = Hol_datatype `times = Once of 'a | Twice of times => times`;
 val _ = Hol_datatype `digit = Zero | One of 'a times | Two of 'a times => 'a times`;
 val _ = Hol_datatype `queue = Shallow of 'a digit

@@ -169,7 +169,7 @@ val Eval_QSORT_EXPANDED = save_thm("Eval_QSORT_EXPANDED",let
   val th1 = ASSUME ``Eval env (Var "R") ((a --> a --> BOOL) R)``
   val th = MATCH_MP th th1
   val th = MATCH_MP Eval_Arrow th
-  val th1 = ASSUME ``Eval env (Var "xs") ((list a) xs)``
+  val th1 = ASSUME ``Eval env (Var "xs") ((LIST_TYPE a) xs)``
   val th = MATCH_MP th th1
   val th = REWRITE_RULE [Eval_def] th
   val th = DISCH_ALL th
@@ -183,7 +183,7 @@ val ML_QSORT_CORRECT = store_thm ("ML_QSORT_CORRECT",
       (lookup "PARTITION" QSORT_env = SOME (Closure PARTITION_env "v1" PARTITION_ml)) /\
       (lookup "APPEND" QSORT_env = SOME (Recclosure APPEND_env APPEND_ml "APPEND")) /\
       (lookup "PART" PARTITION_env = SOME (Recclosure PART_env PART_ml "PART")) /\
-      list a l xs /\ (lookup "xs" env = SOME xs) /\
+      LIST_TYPE a l xs /\ (lookup "xs" env = SOME xs) /\
       (a --> a --> BOOL) ord R /\ (lookup "R" env = SOME R) /\
       transitive ord /\ total ord
       ==>
@@ -191,7 +191,7 @@ val ML_QSORT_CORRECT = store_thm ("ML_QSORT_CORRECT",
         evaluate' env
             (App Opapp (App Opapp (Var "QSORT") (Var "R")) (Var "xs"))
             (Rval xs') /\
-        (list a l' xs') /\ PERM l l' /\ SORTED ord l'``,
+        (LIST_TYPE a l' xs') /\ PERM l l' /\ SORTED ord l'``,
   REPEAT STRIP_TAC \\ IMP_RES_TAC Eval_QSORT_EXPANDED
   \\ METIS_TAC [sortingTheory.QSORT_PERM,sortingTheory.QSORT_SORTED]);
 

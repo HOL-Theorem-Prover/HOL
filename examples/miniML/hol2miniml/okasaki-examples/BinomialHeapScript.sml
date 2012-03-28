@@ -1,6 +1,10 @@
 open preamble
 open bagTheory bagLib miscTheory ml_translatorLib;
 
+val res = translate APPEND;
+val res = translate REV_DEF;
+val res = translate REVERSE_REV;
+
 val fs = full_simp_tac (srw_ss ())
 val rw = srw_tac []
 
@@ -38,27 +42,27 @@ val is_heap_ordered_def = tDefine "is_heap_ordered" `
                                   | INR (_,_,x) => tree_size (\x.0) x)` >>
  rw [tree_size_def]);
 
-val empty_def = Define `
+val empty_def = mlDefine `
 empty = []`;
 
-val is_empty_def = Define `
+val is_empty_def = mlDefine `
 (is_empty [] = T) ∧
 (is_empty _ = F)`;
 
-val rank_def = Define `
+val rank_def = mlDefine `
 rank (Node r x c) = r`;
 
-val root_def = Define `
+val root_def = mlDefine `
 root (Node r x c) = x`;
 
-val link_def = Define `
+val link_def = mlDefine `
 link get_key leq (Node r x1 c1) (Node r' x2 c2) =
   if leq (get_key x1) (get_key x2) then
     Node (r+1) x1 ((Node r' x2 c2)::c1)
   else
     Node (r+1) x2 ((Node r x1 c1)::c2)`;
 
-val ins_tree_def = Define `
+val ins_tree_def = mlDefine `
 (ins_tree get_key leq t [] = [t]) ∧
 (ins_tree get_key leq t (t'::ts') =
   if rank t < rank t' then
@@ -66,10 +70,10 @@ val ins_tree_def = Define `
   else
     ins_tree get_key leq (link get_key leq t t') ts')`;
 
-val insert_def = Define `
+val insert_def = mlDefine `
 insert get_key leq x ts = ins_tree get_key leq (Node 0 x []) ts`;
 
-val merge_def = Define `
+val merge_def = mlDefine `
 (merge get_key leq ts [] = ts) ∧
 (merge get_key leq [] ts = ts) ∧
 (merge get_key leq (t1::ts1) (t2::ts2) =
@@ -82,7 +86,7 @@ val merge_def = Define `
 
 val merge_ind = fetch "-" "merge_ind";
 
-val remove_min_tree_def = Define `
+val remove_min_tree_def = mlDefine `
 (remove_min_tree get_key leq [t] = (t,[])) ∧
 (remove_min_tree get_key leq (t::ts) =
   let (t',ts') = remove_min_tree get_key leq ts in
@@ -91,12 +95,12 @@ val remove_min_tree_def = Define `
     else
       (t',t::ts'))`;
 
-val find_min_def = Define `
+val find_min_def = mlDefine `
 find_min get_key leq ts =
   let (t,ts') = remove_min_tree get_key leq ts in
     root t`;
 
-val delete_min_def = Define `
+val delete_min_def = mlDefine `
 delete_min get_key leq ts =
   case remove_min_tree get_key leq ts of
     | (Node _ x ts1, ts2) => merge get_key leq (REVERSE ts1) ts2`;
@@ -303,7 +307,7 @@ val heap_size_def = tDefine "heap_size" `
 (heap_size [] = 0) ∧
 (heap_size (t::ts) = heap_tree_size t + heap_size ts) ∧
 (heap_tree_size (Node _ _ trees) = (1:num) + heap_size trees)`
-(wf_rel_tac `measure (\x. case x of INR y => tree_size (\x.0) y 
+(wf_rel_tac `measure (\x. case x of INR y => tree_size (\x.0) y
                                   | INL z => tree1_size (\x.0) z)` >>
  rw []);
 
@@ -326,7 +330,7 @@ fs [arithmeticTheory.ADD1, arithmeticTheory.EXP_ADD,
     arithmeticTheory.MOD_EQ_0]);
 
 val is_binomial_tree_size = Q.store_thm ("is_binomial_tree_size",
-`!t. is_binomial_tree t ⇒ (heap_tree_size t = 2 ** rank t)`, 
+`!t. is_binomial_tree t ⇒ (heap_tree_size t = 2 ** rank t)`,
 recInduct is_binomial_tree_ind >>
 rw [heap_size_def, rank_def, is_binomial_tree_def] >>
 fs [] >>
@@ -338,7 +342,7 @@ rw [arithmeticTheory.EXP_SUB, GSYM arithmeticTheory.TIMES2,
     bitTheory.DIV_MULT_THM2, exp2_mod2]);
 
 val is_binomial_heap_def = Define `
-is_binomial_heap h = 
+is_binomial_heap h =
   EVERY is_binomial_tree h ∧ SORTED ($< : num->num->bool) (MAP rank h)`;
 
 val trans_less = Q.prove (
@@ -359,8 +363,8 @@ metis_tac []);
 
 val ins_binomial_heap = Q.prove (
 `!get_key leq t h.
-  is_binomial_tree t ∧ 
-  is_binomial_heap h ∧ 
+  is_binomial_tree t ∧
+  is_binomial_heap h ∧
   (!t'. MEM t' h ⇒ rank t ≤ rank t')
   ⇒
   is_binomial_heap (ins_tree get_key leq t h) ∧
@@ -376,7 +380,7 @@ fs [is_binomial_heap_def, MEM_MAP] >>
 `is_binomial_tree (link get_key leq t h') ∧
  (rank (link get_key leq t h') = rank t + 1)`
               by metis_tac [link_binomial_tree] >>
-metis_tac [DECIDE ``!(x:num) y . x < y ==> x < y + 1``, 
+metis_tac [DECIDE ``!(x:num) y . x < y ==> x < y + 1``,
            DECIDE ``!(x:num) y . x < y ==> x + 1 ≤ y``]);
 
 val merge_binomial_heap = Q.store_thm ("merge_binomial_heap",
@@ -384,12 +388,12 @@ val merge_binomial_heap = Q.store_thm ("merge_binomial_heap",
   is_binomial_heap h1 ∧ is_binomial_heap h2
   ⇒
   is_binomial_heap (merge get_key leq h1 h2) ∧
-  (!r. 
+  (!r.
     EVERY (\t. r < rank t) h1 ∧ EVERY (\t. r < rank t) h2
     ⇒
     EVERY (\t. r < rank t) (merge get_key leq h1 h2))`,
 recInduct merge_ind >>
-rw [is_binomial_heap_def, merge_def, trans_less, SORTED_EQ, 
+rw [is_binomial_heap_def, merge_def, trans_less, SORTED_EQ,
     is_binomial_tree_def] >>
 fs [MEM_MAP, EVERY_MEM] >>
 rw [] >-
@@ -398,7 +402,7 @@ metis_tac [trans_less, transitive_def] >>
 `rank t1 = rank t2` by decide_tac >>
 fs [] >>
 `is_binomial_tree (link get_key leq t1 t2) ∧
- (rank (link get_key leq t1 t2) = rank t1 + 1)` 
+ (rank (link get_key leq t1 t2) = rank t1 + 1)`
             by metis_tac [link_binomial_tree] >>
 `is_binomial_heap (merge get_key leq ts1 ts2)`
             by metis_tac [EVERY_MEM, is_binomial_heap_def] >>
@@ -406,9 +410,9 @@ fs [] >>
            by metis_tac [DECIDE ``!(x:num) y. x < y ⇔ x + 1 ≤ y``] >-
 metis_tac [is_binomial_heap_def, EVERY_MEM, ins_binomial_heap] >-
 metis_tac [is_binomial_heap_def, EVERY_MEM, ins_binomial_heap] >>
-`!r. (r < rank (link get_key leq t1 t2)) ⇒ 
+`!r. (r < rank (link get_key leq t1 t2)) ⇒
      EVERY (\t'. r < rank t')
-           (ins_tree get_key leq (link get_key leq t1 t2) 
+           (ins_tree get_key leq (link get_key leq t1 t2)
            (merge get_key leq ts1 ts2))`
      by metis_tac [ins_binomial_heap] >>
 fs [EVERY_MEM] >>
@@ -416,7 +420,7 @@ metis_tac [DECIDE ``!(x:num) y . x < y ==> x < y + 1``]);
 
 val insert_binomial_heap = Q.store_thm ("insert_binomial_heap",
 `!get_key leq x h.
-  is_binomial_heap h ⇒ is_binomial_heap (insert get_key leq x h)`, 
+  is_binomial_heap h ⇒ is_binomial_heap (insert get_key leq x h)`,
 rw [insert_def] >>
 `is_binomial_tree (Node 0 x [])` by rw [is_binomial_tree_def] >>
 metis_tac [ins_binomial_heap, rank_def, DECIDE ``!(x:num). 0 ≤ x``]);
@@ -453,7 +457,7 @@ metis_tac [MEM_MAP, trans_less, transitive_def]
 val delete_min_binomial_heap = Q.store_thm ("delete_min_binomial_heap",
 `!get_key leq h.
   (h ≠ []) ∧ is_binomial_heap h
-  ⇒ 
+  ⇒
   is_binomial_heap (delete_min get_key leq h)`,
 
 rw [delete_min_def] >>
@@ -461,63 +465,9 @@ cases_on `remove_min_tree get_key leq h` >>
 rw [] >>
 cases_on `q` >>
 rw [] >>
-`is_binomial_tree (Node n a l) ∧ is_binomial_heap r` 
+`is_binomial_tree (Node n a l) ∧ is_binomial_heap r`
             by metis_tac [remove_min_binomial_heap]
 *)
 
-(* translation *)
-
-val _ = set_filename (current_theory())
-
-val _ = register_type ``:'a list``
-
-(* register tree -- begin *)
-
-(* val _ = register_type ``:'a tree`` *)
-
-val ty = ``:'a tree``
-
-val _ = delete_const "tree" handle _ => ()
-
-val tm =
-``tree a (Node x1_1 x1_2 x1_3) v ⇔
-  ∃v1_1 v1_2 v1_3.
-    (v = Conv "Node" [v1_1; v1_2; v1_3]) ∧ NUM x1_1 v1_1 ∧
-    a x1_2 v1_2 ∧ list (\x v. if MEM x x1_3 then tree a x v else ARB) x1_3 v1_3``
-
-val inv_def = tDefine "tree_def" [ANTIQUOTE tm]
- (WF_REL_TAC `measure (tree_size (\x.0) o FST o SND)`
-  THEN STRIP_TAC THEN Induct
-  THEN EVAL_TAC THEN SIMP_TAC std_ss []
-  THEN REPEAT STRIP_TAC THEN RES_TAC
-  THEN FULL_SIMP_TAC std_ss [] THEN DECIDE_TAC)
-
-val list_SIMP = prove(
-  ``!xs b. list (\x v. if b x \/ MEM x xs then p x v else q) xs = list p xs``,
-  Induct
-  THEN FULL_SIMP_TAC std_ss [FUN_EQ_THM,fetch "-" "list_def",MEM,DISJ_ASSOC])
-  |> Q.SPECL [`xs`,`\x.F`] |> SIMP_RULE std_ss [];
-
-val inv_def = CONV_RULE (DEPTH_CONV ETA_CONV) (SIMP_RULE std_ss [list_SIMP] inv_def)
-
-val _ = set_inv_def (ty,inv_def)
-
-val _ = register_type ty
-
-(* register tree -- end *)
-
-val res = translate APPEND;
-val res = translate REV_DEF;
-val res = translate REVERSE_REV;
-val res = translate is_empty_def;
-val res = translate rank_def;
-val res = translate link_def;
-val res = translate ins_tree_def;
-val res = translate insert_def;
-val res = translate root_def;
-val res = translate remove_min_tree_def;
-val res = translate find_min_def;
-val res = translate merge_def;
-val res = translate delete_min_def;
 
 val _ = export_theory ();

@@ -19,7 +19,6 @@ sig
     val store_eval_thm : thm -> thm
     val store_eq_thm   : thm -> thm
     val register_type  : hol_type -> unit
-    val set_inv_def    : hol_type * thm -> unit
 
     (* interface for producing output from translations *)
 

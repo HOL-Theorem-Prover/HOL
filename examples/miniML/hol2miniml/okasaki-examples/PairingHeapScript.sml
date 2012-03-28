@@ -32,14 +32,14 @@ rw [fetch "-" "heap_size_def"] >>
 fs [] >>
 decide_tac);
 
-val empty_def = Define `
+val empty_def = mlDefine `
 empty = Empty`;
 
-val is_empty_def = Define `
+val is_empty_def = mlDefine `
 (is_empty Empty = T) ∧
 (is_empty _ = F)`;
 
-val merge_def = Define `
+val merge_def = mlDefine `
 (merge get_key leq h Empty = h) ∧
 (merge get_key leq Empty h = h) ∧
 (merge get_key leq (Tree x hs1) (Tree y hs2) =
@@ -50,10 +50,10 @@ val merge_def = Define `
 
 val merge_ind = fetch "-" "merge_ind"
 
-val insert_def = Define `
+val insert_def = mlDefine `
 insert get_key leq x h = merge get_key leq (Tree x []) h`;
 
-val merge_pairs_def = Define `
+val merge_pairs_def = mlDefine `
 (merge_pairs get_key leq [] = Empty) ∧
 (merge_pairs get_key leq [h] = h) ∧
 (merge_pairs get_key leq (h1::h2::hs) =
@@ -61,10 +61,10 @@ val merge_pairs_def = Define `
 
 val merge_pairs_ind = fetch "-" "merge_pairs_ind"
 
-val find_min_def = Define `
+val find_min_def = mlDefine `
 find_min (Tree x _) = x`;
 
-val delete_min_def = Define `
+val delete_min_def = mlDefine `
 delete_min get_key leq (Tree x hs) = merge_pairs get_key leq hs`;
 
 
@@ -142,54 +142,5 @@ fs [delete_min_def, is_heap_ordered_def, merge_pairs_bag] >-
 metis_tac [merge_pairs_heap_ordered] >>
 rw [heap_to_bag_def, find_min_def, BAG_DIFF_INSERT2]);
 
-
-(* Translate to MiniML *)
-
-val res = translate APPEND (* teaching the translator about lists... *)
-
-(* register heap -- begin *)
-
-(* val _ = register_type ``:'a heap`` *)
-
-val ty = ``:'a heap``
-
-val _ = delete_const "heap" handle _ => ()
-
-val tm =
-``(heap a Empty v ⇔ (v = Conv "Empty" []) ∧ T) ∧
-  (heap a (Tree x2_1 x2_2) v ⇔
-   ∃v2_1 v2_2.
-     (v = Conv "Tree" [v2_1; v2_2]) ∧ a x2_1 v2_1 ∧
-     list (\x v. if MEM x x2_2 then heap a x v else ARB) x2_2 v2_2)``
-
-val inv_def = tDefine "heap_def" [ANTIQUOTE tm]
- (WF_REL_TAC `measure (heap_size (\x.0) o FST o SND)`
-  THEN Induct
-  THEN EVAL_TAC THEN SIMP_TAC std_ss []
-  THEN REPEAT STRIP_TAC THEN RES_TAC
-  THEN FULL_SIMP_TAC std_ss [] THEN DECIDE_TAC)
-
-val list_SIMP = prove(
-  ``!xs b. list (\x v. if b x \/ MEM x xs then p x v else q) xs = list p xs``,
-  Induct
-  THEN FULL_SIMP_TAC std_ss [FUN_EQ_THM,fetch "-" "list_def",MEM,DISJ_ASSOC])
-  |> Q.SPECL [`xs`,`\x.F`] |> SIMP_RULE std_ss [];
-
-val inv_def = inv_def |> SIMP_RULE std_ss [list_SIMP]
-                      |> CONV_RULE (DEPTH_CONV ETA_CONV)
-
-val _ = set_inv_def (ty,inv_def)
-
-val _ = register_type ``:'a heap``
-
-(* register heap -- end *)
-
-val res = translate empty_def;
-val res = translate is_empty_def;
-val res = translate merge_def;
-val res = translate insert_def;
-val res = translate find_min_def;
-val res = translate merge_pairs_def;
-val res = translate delete_min_def;
 
 val _ = export_theory ()
