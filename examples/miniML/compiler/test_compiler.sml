@@ -334,20 +334,18 @@ val e24 = ``Mat (Con "Nil" [])
 val c24 = f e24
 val [Number i] = g c24
 val SOME 0 = intML.toInt i;
-
 val e25 = ``Mat (Con "Cons" [Val (Lit (IntLit 2));
                  Con "Nil" []])
             [(Pcon "Cons" [Pvar "x"; Pvar "xs"],
               Var "x")]``
 val c25 = f e25
-val [Number i] = g c25 (* TODO: Exception- Bind raised *)
+val [Number i] = g c25
 val SOME 2 = intML.toInt i;
-
 val e26 = ``Mat (Con "Cons" [Val (Lit (IntLit 2));
                  Con "Nil" []])
             [(Pcon "Cons" [Plit (IntLit 2);
               Pcon "Nil" []],
               Val (Lit (IntLit 5)))]``
 val c26 = f e26
-val [Number i] = g c26 (* TODO: Exception- Bind raised *)
+val [Number i] = g c26
 val SOME 5 = intML.toInt i;

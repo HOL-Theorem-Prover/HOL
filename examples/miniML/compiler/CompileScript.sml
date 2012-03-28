@@ -138,9 +138,9 @@ val _ = Define `
 (pat_to_Cpat cm (m, Plit l) = (m, CPlit l))
 /\
 (pat_to_Cpat cm (m, Pcon cn ps) =
-  let (m',ps) = FOLDL
-    (\ (m,ps) p . let (m',p) = pat_to_Cpat cm (m,p) in (m',p::ps))
-          (m,[]) ps in
+  let (m',ps) = FOLDR 
+    (\ p (m,ps) . let (m',p) = pat_to_Cpat cm (m,p) in (m',p::ps))  (m,[]) 
+         ps in
   (m', CPcon (FAPPLY  cm  cn) ps))`;
 
 val _ = Defn.save_defn pat_to_Cpat_defn;
@@ -481,7 +481,7 @@ val _ = Defn.save_defn replace_calls_defn;
  val compile_defn = Hol_defn "compile" `
 
 (compile s (CRaise err) =
-  emit s [Stack (PushInt (error_to_int err)); Exception])
+  incsz (emit s [Stack (PushInt (error_to_int err)); Exception]))
 /\
 (compile s (CLit (IntLit i)) =
   incsz (emit s [Stack (PushInt i)]))
@@ -495,8 +495,11 @@ val _ = Defn.save_defn replace_calls_defn;
 (compile s (CCon n []) =
   incsz (emit s [Stack (PushInt (& n))]))
 /\
-(compile s (CCon n es) =       (* uneta because Hol_defn sucks *)
-  incsz (emit (FOLDL (\ s e . compile s e ) s es) [Stack (Cons n (LENGTH es))]))
+(compile s (CCon n es) =
+  let z = s.sz + 1 in    (* uneta because Hol_defn sucks *)
+  let s = FOLDL (\ s e . compile s e) s es in
+  let s = emit s [Stack (Cons n (LENGTH es))] in
+   s with<| sz := z |>)
 /\
 (compile s (CTagEq e n) =
   emit (compile s e) [Stack (TagEquals n)])
