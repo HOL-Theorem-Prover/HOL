@@ -183,18 +183,18 @@ val (compile_def, compile_ind) =
   tprove_no_defn ((compile_def, compile_ind),
   WF_REL_TAC `inv_image ($< LEX $<) (λx. case x of
        | INL (s,e)                 => (Cexp_size e, 3:num)
-       | INR (INL (env,e,n,s,[]))  => (Cexp_size e, 4)
-       | INR (INL (env,e,n,s,ns))  => (Cexp_size e + (SUM ns) + LENGTH ns, 2)
+       | INR (INL (env,z,e,n,s,[]))  => (Cexp_size e, 4)
+       | INR (INL (env,z,e,n,s,ns))  => (Cexp_size e + (SUM ns) + LENGTH ns, 2)
        | INR (INR (NONE,s,xbs))    => (SUM (MAP Cexp2_size xbs), 1)
        | INR (INR (SOME ns,s,xbs)) => (SUM (MAP Cexp2_size xbs) + (SUM ns) + LENGTH ns, 0))` >>
   srw_tac[ARITH_ss][] >>
   srw_tac[ARITH_ss][Cexp1_size_thm,Cexp7_size_thm,Cexp3_size_thm,Cexp_size_def,list_size_thm]
   >- (Q.ISPEC_THEN `Cexp_size` imp_res_tac SUM_MAP_MEM_bound >> DECIDE_TAC)
-  >- (Q.ISPEC_THEN `Cexp5_size` imp_res_tac SUM_MAP_MEM_bound >> fs[Cexp_size_def] >> DECIDE_TAC)
   >- (Cases_on `ns` >> srw_tac[ARITH_ss][])
   >- (rw[SUM_MAP_Cexp5_size_thm] >>
       Cases_on `HD xes` >> Cases_on `xes` >>
       fsrw_tac[ARITH_ss][arithmeticTheory.ADD1,Cexp_size_def])
+  >- (Q.ISPEC_THEN `Cexp5_size` imp_res_tac SUM_MAP_MEM_bound >> fs[Cexp_size_def] >> DECIDE_TAC)
   >- (Cases_on `xs` >> srw_tac[ARITH_ss][])
   >- (Q.ISPEC_THEN `Cexp2_size` imp_res_tac SUM_MAP_MEM_bound >>
       Cases_on `nso` >> fsrw_tac[ARITH_ss][Cexp_size_def])

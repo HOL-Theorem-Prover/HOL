@@ -1,4 +1,4 @@
-val _ = map load ["rich_listTheory","compileProofsTheory"]
+val _ = map load ["rich_listTheory","compileProofsTheory","stringLib"]
 
 val REPLACE_ELEMENT_compute =
   CONV_RULE numLib.SUC_TO_NUMERAL_DEFN_CONV rich_listTheory.REPLACE_ELEMENT_DEF
@@ -17,10 +17,22 @@ val _ = computeLib.add_thms
 , pred_setTheory.INSERT_DIFF
 , pred_setTheory.FINITE_EMPTY
 , pred_setTheory.FINITE_INSERT
+, pred_setTheory.FINITE_UNION
+, pred_setTheory.NOT_EMPTY_INSERT
+, pred_setTheory.NOT_INSERT_EMPTY
+, pred_setTheory.NOT_IN_EMPTY
+, pred_setTheory.IN_INSERT
+, pred_setTheory.IN_UNION
+, pred_setTheory.UNION_EMPTY
+, pred_setTheory.INSERT_UNION
+, pred_setTheory.EMPTY_DELETE
+, pred_setTheory.DELETE_INSERT
+, pred_setTheory.IN_COMPL
 , ITSET_FOLDL
 , pairTheory.UNCURRY
 , pairTheory.FST
 , pairTheory.SND
+, stringTheory.CHAR_EQ_THM
 , combinTheory.K_THM
 , combinTheory.K_o_THM
 , combinTheory.C_DEF
@@ -29,12 +41,18 @@ val _ = computeLib.add_thms
 , optionTheory.THE_DEF
 , finite_mapTheory.FAPPLY_FUPDATE_THM
 , finite_mapTheory.FRANGE_FEMPTY
+, finite_mapTheory.FRANGE_FUPDATE
 , finite_mapTheory.FINITE_FRANGE
+, finite_mapTheory.DRESTRICT_FEMPTY
+, finite_mapTheory.DRESTRICT_FUPDATE
 , compileProofsTheory.FINITE_free_vars
+, MiniMLTheory.opn_case_def
+, MiniMLTheory.opb_case_def
 , BytecodeTheory.bool_to_int_def
 , compileProofsTheory.remove_Gt_Geq_def
 , compileProofsTheory.remove_mat_exp_def
 , compileProofsTheory.exp_to_Cexp_def
+, compileProofsTheory.pat_to_Cpat_def
 , CompileTheory.compile0_def
 , compileProofsTheory.free_vars_def
 , compileProofsTheory.remove_mat_def
@@ -43,9 +61,15 @@ val _ = computeLib.add_thms
 , CompileTheory.incsz_def
 , CompileTheory.decsz_def
 , CompileTheory.emit_def
+, CompileTheory.emit_ec_def
 , CompileTheory.prim2_to_bc_def
+, CompileTheory.error_to_int_def
+, CompileTheory.i0_def
+, CompileTheory.i1_def
+, CompileTheory.i2_def
 , CompileTheory.find_index_def
 , compileProofsTheory.compile_varref_def
+, compileProofsTheory.replace_calls_def
 , compileProofsTheory.compile_def
 , CompileTheory.compiler_state_accessors
 , CompileTheory.compiler_state_updates_eq_literal
@@ -59,24 +83,36 @@ val _ = computeLib.add_thms
 
 val _ = computeLib.set_skip compset combinSyntax.K_tm (SOME 1)
 
+val _ = computeLib.add_conv (stringLib.ord_tm,1,stringLib.ORD_CHR_CONV)
+compset
+
 val _ = computeLib.add_conv (``least_not_in``,1,
   fn tm => let
   val (_,[s]) = boolSyntax.strip_comb tm
   val finite = EQT_ELIM (computeLib.CBV_CONV compset ``FINITE ^s``)
   val th = MP (SPEC s compileProofsTheory.least_not_in_thm) finite
-  in th end) compset
+  in th end)
+compset
 
 val _ = computeLib.add_conv (``least_aux``,2,
 let fun f tm = let
   val (_,[p,n]) = boolSyntax.strip_comb tm
-  val pp = SIMP_CONV (srw_ss()) [] ``^p ^n``
-  val th = SIMP_CONV bool_ss [Once fsetTheory.least_aux_def,pp] tm
-  in if rhs(concl(pp)) = T then TRANS th (f(rhs(concl th))) else th end
-in f end) compset
+  val pp = computeLib.CBV_CONV compset ``^p ^n``
+  val th = SPECL [p,n] fsetTheory.least_aux_def
+  val th = PURE_REWRITE_RULE [pp,COND_CLAUSES] th
+  in if rhs(concl(pp)) = T then th else TRANS th (f(rhs(concl th))) end
+in f end)
+compset
 
-(*
-val _ = computeLib.add_conv (``num_set_fold``,...
-*)
+val _ = computeLib.add_conv (``num_set_foldl``,3,
+  fn tm => let
+  val (_,[f,a,s]) = boolSyntax.strip_comb tm
+  val finite = EQT_ELIM (computeLib.CBV_CONV compset ``FINITE ^s``)
+  val th = MP (SPEC s fsetTheory.num_set_foldl_def) finite
+  val th = ISPECL [f,a] th
+  val th2 = computeLib.CBV_CONV compset (rhs(concl th))
+  in TRANS th th2 end)
+compset
 
 val d = !Globals.emitMLDir
 val _ = map (fn s => (use (d^s^"ML.sig"); use (d^s^"ML.sml")))
@@ -160,35 +196,6 @@ val c4 = f e4
 val [Number i] = g c4
 val SOME 0 = intML.toInt i;
 val e5 = ``Fun "x" (Var "x")``
-
-f2 e5
-computeLib.CBV_CONV compset ``
-      FOLDL
-                          (combin$C
-                             (λfv (n,env,ec).
-                                if
-                                  IS_SOME
-                                    (if least_not_in ∅ = fv then
-                                       SOME 1
-                                     else
-                                       NONE)
-                                then
-                                  (n,
-                                   env |+
-                                   (fv,
-                                    CTArg
-                                      (3 −
-                                       THE
-                                         (if least_not_in ∅ = fv then
-                                            SOME 1
-                                          else
-                                            NONE))),ec)
-                                else
-                                  (n + 1,env |+ (fv,CTEnv n),
-                                   CEEnv fv::ec))) (0,FEMPTY,[])
-                          (SET_TO_LIST {least_not_in ∅})
-``
-
 val c5 = f e5
 val st = g c5
 val e6 = ``Let "x" (Val (Lit (IntLit 1))) (App (Opn Plus) (Var "x") (Var "x"))``
@@ -207,7 +214,7 @@ Let "0?" (Fun "x" (App Equality (Var "x") (Val (Lit (IntLit 0)))))
   (Let "x" (Val (Lit (IntLit 1)))
     (Let "x" (App (Opn Minus) (Var "x") (Var "x"))
       (App Opapp (Var "0?") (Var "x"))))``
-val c8 = ff e8
+val c8 = f e8
 val [Number i] = g c8
 val SOME 1 = intML.toInt i;
 val e9 = ``
@@ -215,7 +222,7 @@ Let "1?" (Fun "x" (App Equality (Var "x") (Val (Lit (IntLit 1)))))
   (Let "x" (Val (Lit (IntLit 1)))
     (Let "x" (App (Opn Minus) (Var "x") (Var "x"))
       (App Opapp (Var "1?") (Var "x"))))``
-val c9 = ff e9
+val c9 = f e9
 val [Number i] = g c9
 val SOME 0 = intML.toInt i;
 val e10 = ``
@@ -235,13 +242,13 @@ val SOME 3 = intML.toInt i;
 val e12 = ``
 Let "lt2" (Fun "x" (App (Opb Lt) (Var "x") (Val (Lit (IntLit 2)))))
   (App Opapp (Var "lt2") (Val (Lit (IntLit 3))))``
-val c12 = ff e12
+val c12 = f e12
 val [Number i] = g c12
 val SOME 0 = intML.toInt i;
 val e13 = ``
 Let "lq2" (Fun "x" (App (Opb Leq) (Var "x") (Val (Lit (IntLit 2)))))
   (App Opapp (Var "lq2") (Val (Lit (IntLit 0))))``
-val c13 = ff e13
+val c13 = f e13
 val [Number i] = g c13
 val SOME 1 = intML.toInt i;
 val e14 = ``
@@ -252,6 +259,7 @@ Let "x" (Val (Lit (IntLit 0)))
 val c14 = f e14
 val [Number i] = g c14
 val SOME 0 = intML.toInt i;
+
 val e15 = ``
 Let "x" (Val (Lit (Bool T)))
 (App Equality
@@ -259,12 +267,10 @@ Let "x" (Val (Lit (Bool T)))
     [(Plit (Bool F), (Val (Lit (IntLit 1))));
      (Pvar "y", (Var "y"))])
   (Var "x"))``
-
-EVAL(f0 e15)
-
-val c15 = f e15
+val c15 = f e15 (* TODO: loops? *)
 val [Number i] = g c15
 val SOME 1 = intML.toInt i;
+
 val e16 = ``App Equality (Let "x" (Val (Lit (Bool T))) (Var "x")) (Val (Lit (Bool F)))``
 val c16 = f e16
 val [Number i] = g c16
@@ -305,38 +311,42 @@ val e21 = ``Let "x" (Val (Lit (Bool T)))
 val c21 = f e21
 val [Number i] = g c21
 val SOME 1 = intML.toInt i;
-val e22 = ``Con (SOME "Cons") [Val (Lit (Bool T)); Con (SOME "Nil") []]``
+val e22 = ``Con "Cons" [Val (Lit (Bool T)); Con "Nil" []]``
 val c22 = f e22
 val [Block (t1,[Number i,Number t2])] = g c22
 val SOME 1 = numML.toInt t1
 val SOME 1 = intML.toInt i
 val SOME 0 = intML.toInt t2;
-val e23 = ``Mat (Con (SOME "Cons") [Val (Lit (IntLit 2));
-                 Con (SOME "Cons") [Val (Lit (IntLit 3));
-                 Con (SOME "Nil") []]])
-            [(Pcon (SOME "Cons") [Pvar "x"; Pvar "xs"],
+
+val e23 = ``Mat (Con "Cons" [Val (Lit (IntLit 2));
+                 Con "Cons" [Val (Lit (IntLit 3));
+                 Con "Nil" []]])
+            [(Pcon "Cons" [Pvar "x"; Pvar "xs"],
               Var "x");
-             (Pcon (SOME "Nil") [],
+             (Pcon "Nil" [],
               Val (Lit (IntLit 1)))]``
-val c23 = f e23
-val [Number i] = g c23 (* TODO: Exception- Bind raised *)
+val c23 = f e23 (* TODO: loops? *)
+val [Number i] = g c23
 val SOME 2 = intML.toInt i;
-val e24 = ``Mat (Con (SOME "Nil") [])
-            [(Pcon (SOME "Nil") [], Val (Lit (Bool F)))]``
+
+val e24 = ``Mat (Con "Nil" [])
+            [(Pcon "Nil" [], Val (Lit (Bool F)))]``
 val c24 = f e24
 val [Number i] = g c24
 val SOME 0 = intML.toInt i;
-val e25 = ``Mat (Con (SOME "Cons") [Val (Lit (IntLit 2));
-                 Con (SOME "Nil") []])
-            [(Pcon (SOME "Cons") [Pvar "x"; Pvar "xs"],
+
+val e25 = ``Mat (Con "Cons" [Val (Lit (IntLit 2));
+                 Con "Nil" []])
+            [(Pcon "Cons" [Pvar "x"; Pvar "xs"],
               Var "x")]``
 val c25 = f e25
-val [Number i] = g c25
+val [Number i] = g c25 (* TODO: Exception- Bind raised *)
 val SOME 2 = intML.toInt i;
-val e26 = ``Mat (Con (SOME "Cons") [Val (Lit (IntLit 2));
-                 Con (SOME "Nil") []])
-            [(Pcon (SOME "Cons") [Plit (IntLit 2);
-              Pcon (SOME "Nil") []],
+
+val e26 = ``Mat (Con "Cons" [Val (Lit (IntLit 2));
+                 Con "Nil" []])
+            [(Pcon "Cons" [Plit (IntLit 2);
+              Pcon "Nil" []],
               Val (Lit (IntLit 5)))]``
 val c26 = f e26
 val [Number i] = g c26 (* TODO: Exception- Bind raised *)

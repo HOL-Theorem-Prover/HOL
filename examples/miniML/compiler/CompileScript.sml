@@ -499,21 +499,23 @@ val _ = Defn.save_defn replace_calls_defn;
   incsz (emit (FOLDL (\ s e . compile s e ) s es) [Stack (Cons n (LENGTH es))]))
 /\
 (compile s (CTagEq e n) =
-  incsz (emit (compile s e) [Stack (TagEquals n)]))
+  emit (compile s e) [Stack (TagEquals n)])
 /\
 (compile s (CProj e n) =
-  incsz (emit (compile s e) [Stack (El n)]))
+  emit (compile s e) [Stack (El n)])
 /\
 (compile s (CMat _ _) =
   emit s [Stack (PushInt i2); Exception])
 /\
 (compile s (CLet xes e) =
+  let z = s.sz + 1 in
   let s = FOLDL (\ s (x,e) . compile s e) s xes in
-  compile_bindings s.env e 0 s (MAP FST xes))
+  compile_bindings s.env z e 0 s (MAP FST xes))
 /\
 (compile s (CLetfun recp ns defs e) =
+  let z = s.sz + 1 in
   let s = compile_closures (if recp then SOME ns else NONE) s defs in
-  compile_bindings s.env e 0 s ns)
+  compile_bindings s.env z e 0 s ns)
 /\
 (compile s (CFun xs e) =
   compile_closures NONE s [(xs,e)])
@@ -584,15 +586,15 @@ val _ = Defn.save_defn replace_calls_defn;
       (REPLACE_ELEMENT (Jump n2) (j3 - j)
       (REPLACE_ELEMENT (JumpNil n1) (j3 - j - 2) s.code)) |>)
 /\
-(compile_bindings env0 e n s [] =
+(compile_bindings env0 sz1 e n s [] =
   let s = compile s e in
   let s = emit s [Stack (Pops n)] in
-   s with<| env := env0 ; sz := s.sz - n |>)
+   s with<| env := env0 ; sz := sz1 |>)
 /\
-(compile_bindings env0 e n s (x::xs) =
-  compile_bindings env0 e
+(compile_bindings env0 sz1 e n s (x::xs) =
+  compile_bindings env0 sz1 e
     (n+1) (* parentheses below because Lem sucks *)
-    ( s with<| env := FUPDATE  s.env ( x, (CTLet (s.sz - n))) |>)
+    ( s with<| env := FUPDATE  s.env ( x, (CTLet (sz1 + n))) |>)
     xs)
 /\
 (compile_closures nso s defs =
@@ -696,7 +698,7 @@ val _ = Defn.save_defn replace_calls_defn;
       let j = LENGTH ec in
       let s = emit s [Stack (if j = 0 then PushInt i0 else Cons 0 j)] in
       let s = emit s [Stack (Cons 0 2)] in
-      let s = emit s [Stack (Store (nk - k))] in
+      let s = decsz (emit s [Stack (Store (nk - k))]) in
       let s =  s with<| sz := s.sz - j |> in
       (s,k+1))
     (s,1) ecs in
