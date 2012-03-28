@@ -238,5 +238,28 @@ val sort_bag = Q.store_thm ("sort_bag",
 rw [sort_def, sortable_to_bag_lem, list_to_bag_perm] >>
 metis_tac [mrg_all_perm, APPEND]);
 
+
+(* Simplify the side conditions on the generated certificate theorems, based on
+ * the verification invariant. *)
+
+val add_seg_side_cases = fetch "-" "add_seg_side_cases"
+
+val add_seg_side = Q.prove (
+`!leq size segs n seg. 
+  sortable_inv leq (size,segs) n ⇒ add_seg_side leq seg segs size`,
+recInduct sortable_inv_ind >>
+rw [] >>
+ONCE_REWRITE_TAC [Once add_seg_side_cases] >> 
+rw [] >>
+fs [sortable_inv_def, fetch "-" "HD_side_def", fetch "-" "TL_side_def"] >>
+ONCE_REWRITE_TAC [Once add_seg_side_cases] >> 
+rw []);
+
+val add_side = Q.prove (
+`!leq x size segs n. 
+  sortable_inv leq (size,segs) n ⇒ add_side leq x (size,segs)`,
+rw [fetch "-" "add_side_def"] >>
+metis_tac [add_seg_side]);
+
 val _ = export_theory();
 

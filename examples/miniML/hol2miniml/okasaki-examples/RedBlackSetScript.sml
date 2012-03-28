@@ -352,4 +352,16 @@ rw [] >>
 cases_on `c` >>
 fs [red_black_invariant1_def, rbinv1_root_def]);
 
+
+(* Simplify the side conditions on the generated certificate theorems, based on
+ * the verification. *)
+
+val insert_side_def = fetch "-" "insert_side_def"
+
+val insert_side = Q.prove (
+`∀leq x t. insert_side leq x t`,
+rw [insert_side_def] >>
+`?c t1 y t2. ins leq x t = Tree c t1 y t2` by metis_tac [ins_tree] >>
+rw []);
+
 val _ = export_theory ();

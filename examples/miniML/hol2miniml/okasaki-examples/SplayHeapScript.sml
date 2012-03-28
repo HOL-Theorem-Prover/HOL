@@ -292,4 +292,22 @@ srw_tac [bagLib.BAG_ss]
      rw [BAG_UNION_DIFF, SUB_BAG_UNION] >>
      srw_tac [BAG_AC_ss] []]);
 
+
+(* Simplify the side conditions on the generated certificate theorems *)
+
+val delete_min_side_def = fetch "-" "delete_min_side_def"
+val delete_min_side_ind = fetch "-" "delete_min_side_ind"
+val find_min_side_def = fetch "-" "find_min_side_def"
+val find_min_side_ind = fetch "-" "find_min_side_ind"
+
+val delete_min_side = Q.prove (
+`!h. delete_min_side h = (h ≠ Empty)`,
+recInduct delete_min_side_ind >>
+rw [delete_min_side_def]);
+
+val find_min_side = Q.prove (
+`!h. find_min_side h = (h ≠ Empty)`,
+recInduct find_min_side_ind >>
+rw [find_min_side_def]);
+
 val _ = export_theory()
