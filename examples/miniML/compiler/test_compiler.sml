@@ -1,4 +1,4 @@
-val _ = map load ["rich_listTheory","compileProofsTheory","stringLib"]
+val _ = map load ["rich_listTheory","compileProofsTheory","stringLib","ml_translatorLib"]
 
 val REPLACE_ELEMENT_compute =
   CONV_RULE numLib.SUC_TO_NUMERAL_DEFN_CONV rich_listTheory.REPLACE_ELEMENT_DEF
@@ -405,21 +405,27 @@ val e29 = ``App Opapp (Var "N") (Val (Lit (IntLit 42)))``
 val c29 = fd e29 [d0]
 val [Number i,cl] = g c29
 val SOME 91 = intML.toInt i;
-(*
+val _ = ml_translatorLib.translate listTheory.APPEND
+val t = ml_translatorLib.hol2deep ``[1;2;3]++[4;5;6:num]``
 val d0 = listd
 val d1 = ``
 Dletrec
   [("APPEND","v3",
     Fun "v4"
       (Mat (Var "v3")
-         [(Pcon ("Nil") [],Var "v4");
-          (Pcon ("Cons") [Pvar "v2"; Pvar "v1"],
-           Con ("Cons")
+         [(Pcon "Nil" [],Var "v4");
+          (Pcon "Cons" [Pvar "v2"; Pvar "v1"],
+           Con "Cons"
              [Var "v2";
               App Opapp (App Opapp (Var "APPEND") (Var "v1"))
                 (Var "v4")])]))]
-`` val d2 = ``
-Dtype [(["'a"; "'b"],"prod",[("Pair",[Tvar "'a"; Tvar "'b"])])]
+``
+val e30 = hd(tl(snd(strip_comb(concl t))))
+val c30 = fd e30 [d0,d1]
+val st = g c30 (* TODO: this looks wrong ... *)
+
+val d2 = ``
+Dtype [(["'a"; "'b"],"prod",[("Pair_type",[Tvar "'a"; Tvar "'b"])])]
 `` val d3 = ``
 Dletrec
   [("PART","v3",
@@ -427,21 +433,19 @@ Dletrec
       (Fun "v5"
          (Fun "v6"
             (Mat (Var "v4")
-               [(Pcon ("Nil") [],
-                 Con ("Pair") [Var "v5"; Var "v6"]);
-                (Pcon ("Cons") [Pvar "v2"; Pvar "v1"],
+               [(Pcon "Nil" [],Con "Pair_type" [Var "v5"; Var "v6"]);
+                (Pcon "Cons" [Pvar "v2"; Pvar "v1"],
                  If (App Opapp (Var "v3") (Var "v2"))
                    (App Opapp
                       (App Opapp
                          (App Opapp (App Opapp (Var "PART") (Var "v3"))
                             (Var "v1"))
-                         (Con ("Cons") [Var "v2"; Var "v5"]))
-                      (Var "v6"))
+                         (Con "Cons" [Var "v2"; Var "v5"])) (Var "v6"))
                    (App Opapp
                       (App Opapp
                          (App Opapp (App Opapp (Var "PART") (Var "v3"))
                             (Var "v1")) (Var "v5"))
-                      (Con ("Cons") [Var "v2"; Var "v6"])))]))))]
+                      (Con "Cons" [Var "v2"; Var "v6"])))]))))]
 `` val d4 = ``
 Dlet (Pvar "PARTITION")
   (Fun "v1"
@@ -449,14 +453,14 @@ Dlet (Pvar "PARTITION")
         (App Opapp
            (App Opapp
               (App Opapp (App Opapp (Var "PART") (Var "v1")) (Var "v2"))
-              (Con ("Nil") [])) (Con ("Nil") []))))
+              (Con "Nil" [])) (Con "Nil" []))))
 `` val d5 = ``
 Dletrec
   [("QSORT","v7",
     Fun "v8"
       (Mat (Var "v8")
-         [(Pcon ("Nil") [],Con ("Nil") []);
-          (Pcon ("Cons") [Pvar "v6"; Pvar "v5"],
+         [(Pcon "Nil" [],Con "Nil" []);
+          (Pcon "Cons" [Pvar "v6"; Pvar "v5"],
            Let "v3"
              (App Opapp
                 (App Opapp (Var "PARTITION")
@@ -464,7 +468,7 @@ Dletrec
                       (App Opapp (App Opapp (Var "v7") (Var "v4"))
                          (Var "v6")))) (Var "v5"))
              (Mat (Var "v3")
-                [(Pcon ("Pair") [Pvar "v2"; Pvar "v1"],
+                [(Pcon "Pair_type" [Pvar "v2"; Pvar "v1"],
                   App Opapp
                     (App Opapp (Var "APPEND")
                        (App Opapp
@@ -472,10 +476,15 @@ Dletrec
                              (App Opapp
                                 (App Opapp (Var "QSORT") (Var "v7"))
                                 (Var "v2")))
-                          (Con ("Cons")
-                             [Var "v6"; Con ("Nil") []])))
+                          (Con "Cons" [Var "v6"; Con "Nil" []])))
                     (App Opapp (App Opapp (Var "QSORT") (Var "v7"))
                        (Var "v1")))]))]))]
-`` val e30 = ``
-App (Opapp (Var "QSORT")
-*)
+``
+val _ = ml_translatorLib.translate sortingTheory.PART_DEF
+val _ = ml_translatorLib.translate sortingTheory.PARTITION_DEF
+val _ = ml_translatorLib.translate sortingTheory.QSORT_DEF
+val t = ml_translatorLib.hol2deep ``QSORT (λx y. x ≤ y) [9;8;7;6;2;3;4;5:num]``
+val e31 = hd(tl(snd(strip_comb(concl t))))
+
+val c31 = fd e31 [d0,d1,d2,d3,d4,d5]
+val st = g c31

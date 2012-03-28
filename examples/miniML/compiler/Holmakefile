@@ -1,4 +1,4 @@
-INCLUDES=.. ../semantics ../metatheory ./bytecode
+INCLUDES=.. ../semantics ../metatheory ./bytecode ../hol2miniml
 OPTIONS = QUIT_ON_FAILURE
 
 ifdef POLY
