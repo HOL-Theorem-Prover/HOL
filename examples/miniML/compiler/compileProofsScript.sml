@@ -168,9 +168,9 @@ val _ = save_thm ("compile_varref_ind", compile_varref_ind);
 val (compile_def, compile_ind) =
   tprove_no_defn ((compile_def, compile_ind),
   WF_REL_TAC `inv_image ($< LEX $<) (λx. case x of
-       | INL (d,s,e)                 => (Cexp_size e, 3:num)
-       | INR (INL (d,env,z,e,n,s,[]))  => (Cexp_size e, 4)
-       | INR (INL (d,env,z,e,n,s,ns))  => (Cexp_size e + (SUM ns) + LENGTH ns, 2)
+       | INL (s,e)                 => (Cexp_size e, 3:num)
+       | INR (INL (env,z,e,n,s,[]))=> (Cexp_size e, 4)
+       | INR (INL (env,z,e,n,s,ns))=> (Cexp_size e + (SUM ns) + LENGTH ns, 2)
        | INR (INR (NONE,s,xbs))    => (SUM (MAP Cexp2_size xbs), 1)
        | INR (INR (SOME ns,s,xbs)) => (SUM (MAP Cexp2_size xbs) + (SUM ns) + LENGTH ns, 0))` >>
   srw_tac[ARITH_ss][] >>

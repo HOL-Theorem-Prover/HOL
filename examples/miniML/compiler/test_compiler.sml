@@ -59,6 +59,8 @@ val _ = computeLib.add_thms
 , CompileTheory.extend_def
 , CompileTheory.incsz_def
 , CompileTheory.decsz_def
+, CompileTheory.sdt_def
+, CompileTheory.ldt_def
 , CompileTheory.emit_def
 , CompileTheory.emit_ec_def
 , CompileTheory.prim2_to_bc_def
@@ -405,6 +407,7 @@ val e29 = ``App Opapp (Var "N") (Val (Lit (IntLit 42)))``
 val c29 = fd e29 [d0]
 val [Number i,cl] = g c29
 val SOME 91 = intML.toInt i;
+
 val _ = ml_translatorLib.translate listTheory.APPEND
 val t = ml_translatorLib.hol2deep ``[1;2;3]++[4;5;6:num]``
 val d0 = listd
