@@ -3,17 +3,6 @@ open BytecodeTheory arithmeticTheory listTheory finite_mapTheory integerTheory
 val _ = new_theory "bytecodeProofs";
 infix \\ val op \\ = op THEN;
 
-(* --- Semantics --- *)
-
-(* the stack is a list of elements of bc_value *)
-
-val _ = Hol_datatype `
-  bc_value =
-    Number of int                  (* integer *)
-  | Block of num => bc_value list  (* cons block: tag and payload *)
-  | CodePtr of num                 (* code pointer *)
-  | RefPtr of num                  (* pointer to ref cell *)`;
-
 val _ = Hol_datatype `
   bc_state =
    <| (* main state components *)

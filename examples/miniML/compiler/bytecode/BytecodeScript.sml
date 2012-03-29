@@ -38,7 +38,7 @@ val _ = Hol_datatype `
   | Update`;
                   (* update a ref cell *)
 
-(* Semantics *)
+(* --- Semantics --- *)
 
 (*val num_to_int : num -> Int.int*)
 
@@ -49,5 +49,16 @@ val _ = Hol_datatype `
 (bool_to_int F = & 0)`;
 
 val _ = Defn.save_defn bool_to_int_defn;
+
+(* the stack is a list of elements of bc_value *)
+
+val _ = Hol_datatype `
+
+  bc_value =
+    Number of int                  (* integer *)
+  | Block of num => bc_value list   (* cons block: tag and payload *)
+  | CodePtr of num                 (* code pointer *)
+  | RefPtr of num`;
+                  (* pointer to ref cell *)
 val _ = export_theory()
 

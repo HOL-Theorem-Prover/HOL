@@ -2,3 +2,4 @@ val FRANGE : forall 'a 'b. ('a,'b) fmap -> 'b set
 val LEAST : (num -> bool) -> num
 val REPLACE_ELEMENT : forall 'a. 'a -> num -> 'a list -> 'a list
 val num_set_foldl : forall 'a. ('a -> num -> 'a) -> 'a -> num set -> 'a
+val Num : int -> num

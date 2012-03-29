@@ -72,6 +72,9 @@ val _ = computeLib.add_thms
 , compileProofsTheory.compile_varref_def
 , compileProofsTheory.replace_calls_def
 , compileProofsTheory.compile_def
+, compileProofsTheory.bcv_to_v_def
+, integerTheory.NUM_OF_INT
+, CompileTheory.find_conv_tag_def
 , CompileTheory.compiler_state_accessors
 , CompileTheory.compiler_state_updates_eq_literal
 , CompileTheory.compiler_state_accfupds
@@ -94,6 +97,14 @@ val _ = computeLib.add_thms
 , CompileTheory.init_repl_state_def
 , CompileTheory.init_compiler_state_def
 , compileProofsTheory.number_constructors_def
+, CompileTheory.exp_to_Cexp_state_accessors
+, CompileTheory.exp_to_Cexp_state_updates_eq_literal
+, CompileTheory.exp_to_Cexp_state_accfupds
+, CompileTheory.exp_to_Cexp_state_fupdfupds
+, CompileTheory.exp_to_Cexp_state_literal_11
+, CompileTheory.exp_to_Cexp_state_fupdfupds_comp
+, CompileTheory.exp_to_Cexp_state_fupdcanon
+, CompileTheory.exp_to_Cexp_state_fupdcanon_comp
 ] compset
 
 val _ = computeLib.set_skip compset combinSyntax.K_tm (SOME 1)
@@ -189,25 +200,43 @@ end handle HOL_ERR _ =>
   | s => raise Fail s
 val term_to_bc_list = (map term_to_bc) o fst o listSyntax.dest_list
 
+fun bv_to_term (Number i) = ``Number ^(intSyntax.term_of_int (Arbint.fromInt (valOf (intML.toInt i))))``
+  | bv_to_term (Block (n,vs)) = ``Block ^(numSyntax.term_of_int (valOf (numML.toInt n))) ^(listSyntax.mk_list(map bv_to_term vs,``:bc_value``))``
+  | bv_to_term (CodePtr n) = ``CodePtr ^(numSyntax.term_of_int (valOf (numML.toInt n)))``
+  | bv_to_term (RefPtr n) = ``RefPtr ^(numSyntax.term_of_int (valOf (numML.toInt n)))``
+
 val s = ``init_repl_state``
 fun f0 s e = ``repl_exp ^s ^e``
-fun f1 s e = computeLib.CBV_CONV compset ``REVERSE (^(f0 s e)).cs.code``
-fun f2 s e = rhs (concl (f1 s e))
+fun f1 s e = rhs(concl(computeLib.CBV_CONV compset ``
+let rs = ^(f0 s e) in
+  (REVERSE rs.cs.code, rs.cpam)``))
+fun f2 s e = fst(pairSyntax.dest_pair(f1 s e))
 fun f e = term_to_bc_list (f2 s e)
-fun fd e = let
-  fun q s [] = term_to_bc_list (f2 s e)
+fun fd0 f e = let
+  fun q s [] = f s e
     | q s (d::ds) = let
       val th = computeLib.CBV_CONV compset ``repl_dec ^s ^d``
       val s = rhs(concl(th))
       in q s ds end
 in q s end
+val fd = fd0 (fn s => fn e => term_to_bc_list (f2 s e))
 fun g1 c = bc_eval (init_state c)
 fun g c = bc_state_stack (g1 c)
+val pd0 = fd0 (fn s => fn e => let
+  val p = f1 s e
+  val (c,m) = pairSyntax.dest_pair p
+  val st = g (term_to_bc_list c)
+  in (m,st) end)
+fun pv m bv ty = rhs(concl(computeLib.CBV_CONV compset ``bcv_to_v ^m (^ty,^(bv_to_term bv))``))
+fun pd tys e ds =
+  let val (m,st) = pd0 e ds
+  in map2 (pv m) st tys end
 
 val e1 = ``Val (Lit (IntLit 42))``
 val c1 = f e1
 val [Number i] = g c1
 val SOME 42 = intML.toInt i;
+val true = [``Lit (IntLit 42)``] = (pd [``BTnum``] e1 [])
 val e2 = ``If (Val (Lit (Bool T))) (Val (Lit (IntLit 1))) (Val (Lit (IntLit 2)))``
 val c2 = f e2
 val [Number i] = g c2
@@ -223,6 +252,7 @@ val SOME 0 = intML.toInt i;
 val e5 = ``Fun "x" (Var "x")``
 val c5 = f e5
 val st = g c5
+val true = [``Closure [] "" (Var "")``] = pd [``BTfn``] e5 []
 val e6 = ``Let "x" (Val (Lit (IntLit 1))) (App (Opn Plus) (Var "x") (Var "x"))``
 val c6 = f e6
 val [Number i] = g c6
@@ -424,6 +454,9 @@ Dletrec
                 (Var "v4")])]))]
 ``
 val e30 = hd(tl(snd(strip_comb(concl t))))
+val (m,st) = pd0 e30 [d0,d1]
+val tm = pv m (List.nth (st,1)) ``BTapp "list" [BTnum; BTapp "list" [BTnum; BTapp "list" []]]``
+
 val c30 = fd e30 [d0,d1]
 val st = g c30 (* TODO: this looks wrong ... *)
 

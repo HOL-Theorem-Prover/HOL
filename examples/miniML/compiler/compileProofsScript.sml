@@ -71,6 +71,12 @@ val Cexp5_size_thm = store_thm(
 Induct >- rw[Cexp_size_def] >>
 srw_tac [ARITH_ss][Cexp_size_def])
 
+val bc_type1_size_thm = store_thm(
+"bc_type1_size_thm",
+``∀ls. bc_type1_size ls = SUM (MAP bc_type_size ls) + LENGTH ls``,
+Induct >- rw[bc_type_size_def] >>
+srw_tac [ARITH_ss][bc_type_size_def])
+
 val list_size_thm = store_thm(
 "list_size_thm",
 ``∀f ls. list_size f ls = SUM (MAP f ls) + LENGTH ls``,
@@ -200,6 +206,19 @@ val (repl_dec_def,repl_dec_ind) =
   WF_REL_TAC `measure (dec_size o SND)`)
 val _ = save_thm ("repl_dec_def", repl_dec_def);
 val _ = save_thm ("repl_dec_ind", repl_dec_ind);
+
+val (bcv_to_v_def,bcv_to_v_ind) =
+  tprove_no_defn ((bcv_to_v_def,bcv_to_v_ind),
+  WF_REL_TAC `measure (bc_type_size o FST o SND)` >>
+  rw[bc_type1_size_thm] >>
+  Cases_on `vs` >> fs[] >> srw_tac[ARITH_ss][] >>
+  rpt (pop_assum mp_tac) >> rw[MEM_ZIP] >>
+  qmatch_rename_tac `bc_type_size (EL n ls) < X` ["X"] >>
+  `MEM (EL n ls) ls` by (match_mp_tac rich_listTheory.EL_IS_EL >> rw[]) >>
+  Q.ISPEC_THEN `bc_type_size` imp_res_tac SUM_MAP_MEM_bound >>
+  srw_tac[ARITH_ss][])
+val _ = save_thm ("bcv_to_v_def", bcv_to_v_def);
+val _ = save_thm ("bcv_to_v_ind", bcv_to_v_ind);
 
 (* ------------------------------------------------------------------------- *)
 
