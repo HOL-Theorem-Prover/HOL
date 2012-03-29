@@ -56,11 +56,11 @@ val _ = Hol_datatype `
  val remove_mat_exp_defn = Hol_defn "remove_mat_exp" `
 
 (remove_mat_exp (Mat (Var v) pes) =
-  let pes = FOLDL (\ pes (p,e) . (p, remove_mat_exp e)::pes) [] pes in
+  let pes = FOLDR  (\ (p,e) pes . (p, remove_mat_exp e)::pes)  []  pes in
   Mat (Var v) pes)
 /\
 (remove_mat_exp (Mat e pes) =
-  let pes = FOLDL (\ pes (p,e) . (p, remove_mat_exp e)::pes) [] pes in
+  let pes = FOLDR  (\ (p,e) pes . (p, remove_mat_exp e)::pes)  []  pes in
   Let "" e (Mat (Var "") pes))
 /\
 (remove_mat_exp (Raise err) = Raise err)
@@ -207,11 +207,11 @@ val _ = Defn.save_defn pat_to_Cpat_defn;
   (m, CLprim CIf [Ce1;Ce2;Ce3]))
 /\
 (exp_to_Cexp d cm (m, Mat (Var vn) pes) =
-  let Cpes = FOLDL
-    (\ Cpes (p,e) . let (m,Cp) = pat_to_Cpat cm (m,p) in
+  let Cpes = FOLDR 
+    (\ (p,e) Cpes . let (m,Cp) = pat_to_Cpat cm (m,p) in
                        let (_m,Ce) = exp_to_Cexp d cm (m,e) in
-                       (Cp,Ce)::Cpes)
-         [] pes in
+                       (Cp,Ce)::Cpes)   [] 
+          pes in
   (m, CMat (FAPPLY  m  vn) Cpes))
 /\
 (exp_to_Cexp d cm (m, Let vn e b) =
@@ -221,15 +221,15 @@ val _ = Defn.save_defn pat_to_Cpat_defn;
   (if d then m' else m, CLet [n] [Ce] Cb))
 /\
 (exp_to_Cexp d cm (m, Letrec defs b) =
-  let (m',fns) = FOLDL
-    (\ (m,fns) (d,_vn,_e) . let (m',fn) = extend m d in (m',fn::fns))
-          (m,[]) defs in
-  let Cdefs = FOLDL
-    (\ Cdefs (_d,vn,e) .
+  let (m',fns) = FOLDR 
+    (\ (d,_vn,_e) (m,fns) . let (m',fn) = extend m d in (m',fn::fns))       (m,[]) 
+          defs in
+  let Cdefs = FOLDR 
+    (\ (_d,vn,e) Cdefs .
       let (m'',n) = extend m' vn in
       let (_m,Ce) = exp_to_Cexp F cm (m'',e) in
-      ([n],Ce)::Cdefs)
-         []    defs in
+      ([n],Ce)::Cdefs)      [] 
+          defs in
   let (_m,Cb) = exp_to_Cexp d cm (m',b) in
   (if d then m' else m, CLetfun T fns Cdefs Cb))`;
 
@@ -254,30 +254,28 @@ val _ = Defn.save_defn exp_to_Cexp_defn;
 (free_vars (CProj e _) = free_vars e)
 /\
 (free_vars (CMat v pes) =
-  (INSERT) v (FOLDL (\ s (p,e) . s UNION free_vars e) {} pes))
+  FOLDL (\ s (p,e) . s UNION free_vars e) {v} pes)
 /\
 (free_vars (CLet xs es e) =
-  (free_vars e DIFF LIST_TO_SET xs) UNION
-  FOLDL (\ s e . s UNION free_vars e) {} es)
+  FOLDL (\ s e . s UNION free_vars e)
+  (free_vars e DIFF LIST_TO_SET xs) es)
 /\
 (free_vars (CLetfun T ns defs e) =
-  (free_vars e DIFF LIST_TO_SET ns) UNION
   FOLDL (\ s (vs,e) .
     s UNION (free_vars e DIFF (LIST_TO_SET ns UNION
                             LIST_TO_SET vs)))
-                      {} defs)
+  (free_vars e DIFF LIST_TO_SET ns) defs)
 /\
 (free_vars (CLetfun F ns defs e) =
-  (free_vars e DIFF LIST_TO_SET ns) UNION
   FOLDL (\ s (vs,e) .
     s UNION (free_vars e DIFF LIST_TO_SET vs))
-                      {} defs)
+  (free_vars e DIFF LIST_TO_SET ns) defs)
 /\
 (free_vars (CFun xs e) = free_vars e DIFF (LIST_TO_SET xs))
 /\
 (free_vars (CCall e es) =
-  free_vars e UNION
-  FOLDL (\ s e . s UNION free_vars e) {} es)
+  FOLDL (\ s e . s UNION free_vars e)
+  (free_vars e) es)
 /\
 (free_vars (CPrim2 _ e1 e2) = free_vars e1 UNION free_vars e2)
 /\

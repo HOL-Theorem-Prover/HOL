@@ -208,10 +208,10 @@ val FINITE_free_vars = store_thm(
 ``∀t. FINITE (free_vars t)``,
 ho_match_mp_tac free_vars_ind >>
 rw[free_vars_def] >>
-qmatch_rename_tac `FINITE (FOLDL XXX {} ls)` ["XXX"] >>
-qmatch_abbrev_tac `FINITE (FOLDL ff {} ls)` >>
-qsuff_tac `∀s0. FINITE s0 ⇒ FINITE (FOLDL ff s0 ls)` >- rw[] >>
-Induct_on `ls` >> rw[] >>
+qmatch_rename_tac `FINITE (FOLDL XXX YYY ls)` ["XXX","YYY"] >>
+qmatch_abbrev_tac `FINITE (FOLDL ff s0 ls)` >>
+qsuff_tac `∀s0. FINITE s0 ⇒ FINITE (FOLDL ff s0 ls)` >- rw[Abbr`s0`] >>
+Induct_on `ls` >> rw[Abbr`s0`] >>
 first_assum (ho_match_mp_tac o MP_CANON) >>
 rw[Abbr`ff`] >>
 TRY (Cases_on `h` >> rw[]) >>

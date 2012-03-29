@@ -41,11 +41,11 @@ sub [hol] num_set_foldl = num_set_foldl
 
 let rec
 remove_mat_exp (Mat (Var v) pes) =
-  let pes = List.fold_left (fun pes (p,e) -> (p, remove_mat_exp e)::pes) [] pes in
+  let pes = List.fold_right (fun (p,e) pes -> (p, remove_mat_exp e)::pes) pes [] in
   Mat (Var v) pes
 and
 remove_mat_exp (Mat e pes) =
-  let pes = List.fold_left (fun pes (p,e) -> (p, remove_mat_exp e)::pes) [] pes in
+  let pes = List.fold_right (fun (p,e) pes -> (p, remove_mat_exp e)::pes) pes [] in
   Let "" e (Mat (Var "") pes)
 and
 remove_mat_exp (Raise err) = Raise err
@@ -179,11 +179,11 @@ exp_to_Cexp d cm (m, If e1 e2 e3) =
   (m, CLprim CIf [Ce1;Ce2;Ce3])
 and
 exp_to_Cexp d cm (m, Mat (Var vn) pes) =
-  let Cpes = List.fold_left
-    (fun Cpes (p,e) -> let (m,Cp) = pat_to_Cpat cm (m,p) in
+  let Cpes = List.fold_right
+    (fun (p,e) Cpes -> let (m,Cp) = pat_to_Cpat cm (m,p) in
                        let (_m,Ce) = exp_to_Cexp d cm (m,e) in
                        (Cp,Ce)::Cpes)
-         [] pes in
+          pes  [] in
   (m, CMat (Pmap.find vn m) Cpes)
 and
 exp_to_Cexp d cm (m, Let vn e b) =
@@ -193,15 +193,15 @@ exp_to_Cexp d cm (m, Let vn e b) =
   (if d then m' else m, CLet [n] [Ce] Cb)
 and
 exp_to_Cexp d cm (m, Letrec defs b) =
-  let (m',fns) = List.fold_left
-    (fun (m,fns) (d,_vn,_e) -> let (m',fn) = extend m d in (m',fn::fns))
-          (m,[]) defs in
-  let Cdefs = List.fold_left
-    (fun Cdefs (_d,vn,e) ->
+  let (m',fns) = List.fold_right
+    (fun (d,_vn,_e) (m,fns) -> let (m',fn) = extend m d in (m',fn::fns))
+          defs      (m,[]) in
+  let Cdefs = List.fold_right
+    (fun (_d,vn,e) Cdefs ->
       let (m'',n) = extend m' vn in
       let (_m,Ce) = exp_to_Cexp false cm (m'',e) in
       ([n],Ce)::Cdefs)
-         []    defs in
+          defs     [] in
   let (_m,Cb) = exp_to_Cexp d cm (m',b) in
   (if d then m' else m, CLetfun true fns Cdefs Cb)
 
@@ -223,30 +223,28 @@ and
 free_vars (CProj e _) = free_vars e
 and
 free_vars (CMat v pes) =
-  Set.add v (List.fold_left (fun s (p,e) -> s union free_vars e) {} pes)
+  List.fold_left (fun s (p,e) -> s union free_vars e) {v} pes
 and
 free_vars (CLet xs es e) =
-  (free_vars e \ Set.from_list xs) union
-  List.fold_left (fun s e -> s union free_vars e) {} es
+  List.fold_left (fun s e -> s union free_vars e)
+  (free_vars e \ Set.from_list xs) es
 and
 free_vars (CLetfun true ns defs e) =
-  (free_vars e \ Set.from_list ns) union
   List.fold_left (fun s (vs,e) ->
     s union (free_vars e \ (Set.from_list ns union
                             Set.from_list vs)))
-                      {} defs
+  (free_vars e \ Set.from_list ns) defs
 and
 free_vars (CLetfun false ns defs e) =
-  (free_vars e \ Set.from_list ns) union
   List.fold_left (fun s (vs,e) ->
     s union (free_vars e \ Set.from_list vs))
-                      {} defs
+  (free_vars e \ Set.from_list ns) defs
 and
 free_vars (CFun xs e) = free_vars e \ (Set.from_list xs)
 and
 free_vars (CCall e es) =
-  free_vars e union
-  List.fold_left (fun s e -> s union free_vars e) {} es
+  List.fold_left (fun s e -> s union free_vars e)
+  (free_vars e) es
 and
 free_vars (CPrim2 _ e1 e2) = free_vars e1 union free_vars e2
 and
