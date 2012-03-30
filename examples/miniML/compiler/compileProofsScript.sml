@@ -71,16 +71,22 @@ val Cexp5_size_thm = store_thm(
 Induct >- rw[Cexp_size_def] >>
 srw_tac [ARITH_ss][Cexp_size_def])
 
-val bc_type1_size_thm = store_thm(
-"bc_type1_size_thm",
-``∀ls. bc_type1_size ls = SUM (MAP bc_type_size ls) + LENGTH ls``,
-Induct >- rw[bc_type_size_def] >>
-srw_tac [ARITH_ss][bc_type_size_def])
-
 val list_size_thm = store_thm(
 "list_size_thm",
 ``∀f ls. list_size f ls = SUM (MAP f ls) + LENGTH ls``,
 gen_tac >> Induct >> srw_tac[ARITH_ss][list_size_def])
+
+val bc_value1_size_thm = store_thm(
+"bc_value1_size_thm",
+``∀ls. bc_value1_size ls = SUM (MAP bc_value_size ls) + LENGTH ls``,
+Induct >- rw[BytecodeTheory.bc_value_size_def] >>
+srw_tac [ARITH_ss][BytecodeTheory.bc_value_size_def])
+
+val nt1_size_thm = store_thm(
+"nt1_size_thm",
+``∀ls. nt1_size ls = SUM (MAP nt_size ls) + LENGTH ls``,
+Induct >- rw[nt_size_def] >>
+srw_tac [ARITH_ss][nt_size_def])
 
 val (remove_Gt_Geq_def,remove_Gt_Geq_ind) =
   tprove_no_defn ((remove_Gt_Geq_def,remove_Gt_Geq_ind),
@@ -197,7 +203,7 @@ val _ = save_thm ("replace_calls_ind", replace_calls_ind);
 
 val (number_constructors_def,number_constructors_ind) =
   tprove_no_defn ((number_constructors_def,number_constructors_ind),
-  WF_REL_TAC `measure (LENGTH o SND o SND)` >> rw[])
+  WF_REL_TAC `measure (LENGTH o SND o SND o SND)` >> rw[])
 val _ = save_thm ("number_constructors_def", number_constructors_def);
 val _ = save_thm ("number_constructors_ind", number_constructors_ind);
 
@@ -209,16 +215,26 @@ val _ = save_thm ("repl_dec_ind", repl_dec_ind);
 
 val (bcv_to_v_def,bcv_to_v_ind) =
   tprove_no_defn ((bcv_to_v_def,bcv_to_v_ind),
-  WF_REL_TAC `measure (bc_type_size o FST o SND)` >>
-  rw[bc_type1_size_thm] >>
-  Cases_on `vs` >> fs[] >> srw_tac[ARITH_ss][] >>
-  rpt (pop_assum mp_tac) >> rw[MEM_ZIP] >>
-  qmatch_rename_tac `bc_type_size (EL n ls) < X` ["X"] >>
-  `MEM (EL n ls) ls` by (match_mp_tac rich_listTheory.EL_IS_EL >> rw[]) >>
-  Q.ISPEC_THEN `bc_type_size` imp_res_tac SUM_MAP_MEM_bound >>
+  WF_REL_TAC `measure (bc_value_size o SND o SND)` >>
+  rw[bc_value1_size_thm] >>
+  qmatch_assum_rename_tac `MEM (x,y) (ZIP (MAP f args, vs))` [] >>
+  `LENGTH (MAP f args) = LENGTH vs` by rw[] >>
+  fs[MEM_ZIP] >> rw[] >>
+  qmatch_rename_tac `bc_value_size (EL b ls) < X` ["X"] >>
+  `MEM (EL b ls) ls` by (match_mp_tac rich_listTheory.EL_IS_EL >> rw[]) >>
+  Q.ISPEC_THEN `bc_value_size` imp_res_tac SUM_MAP_MEM_bound >>
   srw_tac[ARITH_ss][])
 val _ = save_thm ("bcv_to_v_def", bcv_to_v_def);
 val _ = save_thm ("bcv_to_v_ind", bcv_to_v_ind);
+
+val (inst_arg_def,inst_arg_ind) =
+  tprove_no_defn ((inst_arg_def,inst_arg_ind),
+  WF_REL_TAC `measure (nt_size o SND)` >>
+  rw[nt1_size_thm] >>
+  Q.ISPEC_THEN `nt_size` imp_res_tac SUM_MAP_MEM_bound >>
+  srw_tac[ARITH_ss][])
+val _ = save_thm ("inst_arg_def", inst_arg_def);
+val _ = save_thm ("inst_arg_ind", inst_arg_ind);
 
 (* ------------------------------------------------------------------------- *)
 

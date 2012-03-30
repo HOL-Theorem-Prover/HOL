@@ -357,6 +357,7 @@ val _ = Defn.save_defn remove_mat_vp_defn;
 
 val _ = Defn.save_defn remove_mat_defn;
 
+(* TODO: make clobbered declarations be replaced on the stack *)
 (* TODO: collapse nested functions *)
 (* TODO: collapse nested lets *)
 (* TODO: Letfun introduction and reordering *)
@@ -773,11 +774,34 @@ val _ = Defn.save_defn replace_calls_defn;
 val _ = Defn.save_defn compile_defn;
 
 val _ = Hol_datatype `
+ nt =
+    NTvar of num
+  | NTapp of nt list => typeN
+  | NTfn
+  | NTnum
+  | NTbool`;
+
+
+ val t_to_nt_defn = Hol_defn "t_to_nt" `
+
+(t_to_nt a (Tvar x) = (case find_index x a 0 of SOME n => NTvar n ))
+/\
+(t_to_nt a (Tapp ts tn) = NTapp (MAP (t_to_nt a) ts) tn)
+/\
+(t_to_nt a (Tfn _ _) = NTfn)
+/\
+(t_to_nt a Tnum = NTnum)
+/\
+(t_to_nt a Tbool = NTbool)`;
+
+val _ = Defn.save_defn t_to_nt_defn;
+
+val _ = Hol_datatype `
  repl_state =
-  <| cmap : (string, num) fmap
-   ; cpam : (string, (num, string) fmap) fmap
-   ; vmap : (string, num) fmap
-   ; vpam : (num, string) fmap
+  <| cmap : (conN, num) fmap
+   ; cpam : (typeN, (num, conN # nt list) fmap) fmap
+   ; vmap : (varN, num) fmap
+   ; vpam : (num, varN) fmap
    ; nextv : num
    ; cs : compiler_state
    |>`;
@@ -821,12 +845,12 @@ val _ = Define `
 
  val number_constructors_defn = Hol_defn "number_constructors" `
 
-(number_constructors (cm,cw) (n:num) [] = (cm,cw))
+(number_constructors a (cm,cw) (n:num) [] = (cm,cw))
 /\
-(number_constructors (cm,cw) n ((c,_)::cs) =
+(number_constructors a (cm,cw) n ((c,tys)::cs) =
   let cm' = FUPDATE  cm ( c, n) in
-  let cw' = FUPDATE  cw ( n, c) in
-  number_constructors (cm',cw') (n+1) cs)`;
+  let cw' = FUPDATE  cw ( n, (c, MAP (t_to_nt a) tys)) in
+  number_constructors a (cm',cw') (n+1) cs)`;
 
 val _ = Defn.save_defn number_constructors_defn;
 
@@ -834,8 +858,8 @@ val _ = Defn.save_defn number_constructors_defn;
 
 (repl_dec rs (Dtype []) = rs)
 /\
-(repl_dec rs (Dtype ((_,ty,cs)::ts)) =
-  let (cm,cw) = number_constructors (rs.cmap,FEMPTY) 0 cs in
+(repl_dec rs (Dtype ((a,ty,cs)::ts)) =
+  let (cm,cw) = number_constructors a (rs.cmap,FEMPTY) 0 cs in
   repl_dec ( rs with<| cmap := cm; cpam := FUPDATE  rs.cpam ( ty, cw) |>) (Dtype ts)) (* parens: Lem sucks *)
 /\
 (repl_dec rs (Dletrec defs) =
@@ -850,41 +874,46 @@ val _ = Define `
  repl_exp = compile_exp F`;
 
 
-val _ = Hol_datatype `
- bc_type =
-    BTnum
-  | BTbool
-  | BTfn
-  | BTapp of typeN => bc_type list`;
-
-
 val _ = Define `
- (find_conv_tag m ty n = FAPPLY  (FAPPLY  m  ty)  n)`;
+ (lookup_conv_ty m ty n = FAPPLY  (FAPPLY  m  ty)  n)`;
 
+
+ val inst_arg_defn = Hol_defn "inst_arg" `
+
+(inst_arg tvs (NTvar n) = EL  n  tvs)
+/\
+(inst_arg tvs (NTapp ts tn) = NTapp (MAP (inst_arg tvs) ts) tn)
+/\
+(inst_arg tvs tt = tt)`;
+
+val _ = Defn.save_defn inst_arg_defn;
 
  val bcv_to_v_defn = Hol_defn "bcv_to_v" `
 
-(bcv_to_v m (BTnum, Number i) = Lit (IntLit i))
+(bcv_to_v m (NTnum, Number i) = Lit (IntLit i))
 /\
-(bcv_to_v m (BTbool, Number i) =
+(bcv_to_v m (NTbool, Number i) =
   if i = bool_to_int T then Lit (Bool T) else
     if i = bool_to_int F then Lit (Bool F) else
       Recclosure [] [] "Fail: Number")
 /\
-(bcv_to_v m (BTapp ty [], Number i) = Conv (find_conv_tag m ty (Num i)) [])
+(bcv_to_v m (NTapp _ ty, Number i) =
+  Conv (FST (lookup_conv_ty m ty (Num i))) [])
 /\
 (bcv_to_v m (_, Number _) = Recclosure [] [] "Fail: Number")
 /\
-(bcv_to_v m (BTapp ty tys, Block n vs) =
-  if LENGTH tys = LENGTH vs then
-  Conv (find_conv_tag m ty n)
-    (MAP (\ (ty,v) . bcv_to_v m (ty,v)) (ZIP ( tys, vs)))
+(bcv_to_v m (NTapp tvs ty, Block n vs) =
+  let (tag, args) = lookup_conv_ty m ty n in
+  let args = MAP (inst_arg tvs) args in
+  if LENGTH args = LENGTH vs then
+  Conv tag
+    (MAP (\ (ty,v) . bcv_to_v m (ty,v)) (ZIP ( args, vs)))
     (* can't use map2 because no congruence theorem (for termination) *)
     (* thus this remains uncurried *)
     (* also, uneta: Hol_defn sucks *)
   else Recclosure [] [] "Fail: Block")
 /\
-(bcv_to_v m (BTfn, Block 0 _) =Closure [] "" (Var ""))
+(bcv_to_v m (NTfn, Block 0 _) =Closure [] "" (Var ""))
 /\
 (bcv_to_v m (_, Block _ _) = Recclosure [] [] "Fail: Block")
 /\

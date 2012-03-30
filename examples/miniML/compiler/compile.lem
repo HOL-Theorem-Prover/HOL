@@ -317,6 +317,7 @@ remove_mat_var v ((p,e)::pes) =
   CLetfun false [fk] [([],(remove_mat_var v pes))]
     (remove_mat_vp fk sk v p)
 
+(* TODO: make clobbered declarations be replaced on the stack *)
 (* TODO: collapse nested functions *)
 (* TODO: collapse nested lets *)
 (* TODO: Letfun introduction and reordering *)
@@ -689,11 +690,29 @@ compile_closures nso s defs =
     (fun s _n -> decsz (emit s [Stack (Store k)]))
          s ns
 
+type nt =
+  | NTvar of num
+  | NTapp of nt list * typeN
+  | NTfn
+  | NTnum
+  | NTbool
+
+let rec
+t_to_nt a (Tvar x) = match find_index x a 0 with Some n -> NTvar n end
+and
+t_to_nt a (Tapp ts tn) = NTapp (List.map (t_to_nt a) ts) tn
+and
+t_to_nt a (Tfn _ _) = NTfn
+and
+t_to_nt a Tnum = NTnum
+and
+t_to_nt a Tbool = NTbool
+
 type repl_state =
-  <| cmap : (string, num) Pmap.map
-   ; cpam : (string, (num, string) Pmap.map) Pmap.map
-   ; vmap : (string, num) Pmap.map
-   ; vpam : (num, string) Pmap.map
+  <| cmap : (conN, num) Pmap.map
+   ; cpam : (typeN, (num, conN * nt list) Pmap.map) Pmap.map
+   ; vmap : (varN, num) Pmap.map
+   ; vpam : (num, varN) Pmap.map
    ; nextv : num
    ; cs : compiler_state
    |>
@@ -729,18 +748,18 @@ let compile_exp d rs e =
 (* TODO: printing *)
 
 let rec
-number_constructors (cm,cw) (n:num) [] = (cm,cw)
+number_constructors a (cm,cw) (n:num) [] = (cm,cw)
 and
-number_constructors (cm,cw) n ((c,_)::cs) =
+number_constructors a (cm,cw) n ((c,tys)::cs) =
   let cm' = Pmap.add c n cm in
-  let cw' = Pmap.add n c cw in
-  number_constructors (cm',cw') (n+1) cs
+  let cw' = Pmap.add n (c, List.map (t_to_nt a) tys) cw in
+  number_constructors a (cm',cw') (n+1) cs
 
 let rec
 repl_dec rs (Dtype []) = rs
 and
-repl_dec rs (Dtype ((_,ty,cs)::ts)) =
-  let (cm,cw) = number_constructors (rs.cmap,Pmap.empty) 0 cs in
+repl_dec rs (Dtype ((a,ty,cs)::ts)) =
+  let (cm,cw) = number_constructors a (rs.cmap,Pmap.empty) 0 cs in
   repl_dec (<| rs with cmap = cm; cpam = Pmap.add ty cw rs.cpam |>) (Dtype ts) (* parens: Lem sucks *)
 and
 repl_dec rs (Dletrec defs) =
@@ -751,36 +770,40 @@ repl_dec rs (Dlet p e) =
 
 let repl_exp = compile_exp false
 
-type bc_type =
-  | BTnum
-  | BTbool
-  | BTfn
-  | BTapp of typeN * bc_type list
-
-let find_conv_tag m ty n = Pmap.find n (Pmap.find ty m)
+let lookup_conv_ty m ty n = Pmap.find n (Pmap.find ty m)
 
 let rec
-bcv_to_v m (BTnum, Number i) = Lit (IntLit i)
+inst_arg tvs (NTvar n) = List.nth tvs n
 and
-bcv_to_v m (BTbool, Number i) =
+inst_arg tvs (NTapp ts tn) = NTapp (List.map (inst_arg tvs) ts) tn
+and
+inst_arg tvs tt = tt
+
+let rec
+bcv_to_v m (NTnum, Number i) = Lit (IntLit i)
+and
+bcv_to_v m (NTbool, Number i) =
   if i = bool_to_int true then Lit (Bool true) else
     if i = bool_to_int false then Lit (Bool false) else
       Recclosure [] [] "Fail: Number"
 and
-bcv_to_v m (BTapp ty [], Number i) = Conv (find_conv_tag m ty (int_to_num i)) []
+bcv_to_v m (NTapp _ ty, Number i) =
+  Conv (fst (lookup_conv_ty m ty (int_to_num i))) []
 and
 bcv_to_v m (_, Number _) = Recclosure [] [] "Fail: Number"
 and
-bcv_to_v m (BTapp ty tys, Block n vs) =
-  if List.length tys = List.length vs then
-  Conv (find_conv_tag m ty n)
-    (List.map (fun (ty,v) -> bcv_to_v m (ty,v)) (List.combine tys vs))
+bcv_to_v m (NTapp tvs ty, Block n vs) =
+  let (tag, args) = lookup_conv_ty m ty n in
+  let args = List.map (inst_arg tvs) args in
+  if List.length args = List.length vs then
+  Conv tag
+    (List.map (fun (ty,v) -> bcv_to_v m (ty,v)) (List.combine args vs))
     (* can't use map2 because no congruence theorem (for termination) *)
     (* thus this remains uncurried *)
     (* also, uneta: Hol_defn sucks *)
   else Recclosure [] [] "Fail: Block"
 and
-bcv_to_v m (BTfn, Block 0 _) =Closure [] "" (Var "")
+bcv_to_v m (NTfn, Block 0 _) =Closure [] "" (Var "")
 and
 bcv_to_v m (_, Block _ _) = Recclosure [] [] "Fail: Block"
 and

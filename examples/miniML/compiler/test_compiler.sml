@@ -72,9 +72,8 @@ val _ = computeLib.add_thms
 , compileProofsTheory.compile_varref_def
 , compileProofsTheory.replace_calls_def
 , compileProofsTheory.compile_def
-, compileProofsTheory.bcv_to_v_def
 , integerTheory.NUM_OF_INT
-, CompileTheory.find_conv_tag_def
+, CompileTheory.lookup_conv_ty_def
 , CompileTheory.compiler_state_accessors
 , CompileTheory.compiler_state_updates_eq_literal
 , CompileTheory.compiler_state_accfupds
@@ -105,6 +104,10 @@ val _ = computeLib.add_thms
 , CompileTheory.exp_to_Cexp_state_fupdfupds_comp
 , CompileTheory.exp_to_Cexp_state_fupdcanon
 , CompileTheory.exp_to_Cexp_state_fupdcanon_comp
+, CompileTheory.t_to_nt_def
+, compileProofsTheory.bcv_to_v_def
+, compileProofsTheory.inst_arg_def
+, CompileTheory.nt_case_def
 ] compset
 
 val _ = computeLib.set_skip compset combinSyntax.K_tm (SOME 1)
@@ -236,7 +239,7 @@ val e1 = ``Val (Lit (IntLit 42))``
 val c1 = f e1
 val [Number i] = g c1
 val SOME 42 = intML.toInt i;
-val true = [``Lit (IntLit 42)``] = (pd [``BTnum``] e1 [])
+val true = [``Lit (IntLit 42)``] = (pd [``NTnum``] e1 [])
 val e2 = ``If (Val (Lit (Bool T))) (Val (Lit (IntLit 1))) (Val (Lit (IntLit 2)))``
 val c2 = f e2
 val [Number i] = g c2
@@ -252,7 +255,7 @@ val SOME 0 = intML.toInt i;
 val e5 = ``Fun "x" (Var "x")``
 val c5 = f e5
 val st = g c5
-val true = [``Closure [] "" (Var "")``] = pd [``BTfn``] e5 []
+val true = [``Closure [] "" (Var "")``] = pd [``NTfn``] e5 []
 val e6 = ``Let "x" (Val (Lit (IntLit 1))) (App (Opn Plus) (Var "x") (Var "x"))``
 val c6 = f e6
 val [Number i] = g c6
@@ -455,7 +458,10 @@ Dletrec
 ``
 val e30 = hd(tl(snd(strip_comb(concl t))))
 val (m,st) = pd0 e30 [d0,d1]
-val tm = pv m (List.nth (st,1)) ``BTapp "list" [BTnum; BTapp "list" [BTnum; BTapp "list" []]]``
+val tm0 = pv m (List.nth (st,0)) ``NTnum``
+val tm1 = pv m (List.nth (st,1)) ``NTapp [NTnum] "list"``
+val tm2 = pv m (List.nth (st,2)) ``NTnum``
+val tm3 = pv m (List.nth (st,3)) ``NTapp [NTnum] "list"``
 
 val c30 = fd e30 [d0,d1]
 val st = g c30 (* TODO: this looks wrong ... *)
