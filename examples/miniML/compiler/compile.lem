@@ -399,9 +399,9 @@ find_index y (x::xs) (n:num) = if x = y then Some n else find_index y xs (n+1)
 type cebind = CEEnv of num | CERef of num
 
 let rec
-emit_ec s (CEEnv fv) = incsz (compile_varref s (Pmap.find fv s.env))
+emit_ec (CEEnv fv) s = incsz (compile_varref s (Pmap.find fv s.env))
 and
-emit_ec s (CERef j) = incsz (emit s [Stack (Load (s.sz - j))])
+emit_ec (CERef j) s = incsz (emit s [Stack (Load (s.sz - j))])
 
 let rec
 replace_calls j [_] c = c
@@ -670,7 +670,7 @@ compile_closures nso s defs =
   let (s,k) = List.fold_left
     (fun (s,k) ec ->
       let s = incsz (emit s [Stack (Load (nk - k))]) in
-      let s = List.fold_left emit_ec s ec in
+      let s = List.fold_right emit_ec ec s in
       let j = List.length ec in
       let s = emit s [Stack (if j = 0 then PushInt i0 else Cons 0 j)] in
       let s = emit s [Stack (Cons 0 2)] in

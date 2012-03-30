@@ -474,9 +474,9 @@ val _ = Hol_datatype `
 
  val emit_ec_defn = Hol_defn "emit_ec" `
 
-(emit_ec s (CEEnv fv) = incsz (compile_varref s (FAPPLY  s.env  fv)))
+(emit_ec (CEEnv fv) s = incsz (compile_varref s (FAPPLY  s.env  fv)))
 /\
-(emit_ec s (CERef j) = incsz (emit s [Stack (Load (s.sz - j))]))`;
+(emit_ec (CERef j) s = incsz (emit s [Stack (Load (s.sz - j))]))`;
 
 val _ = Defn.save_defn emit_ec_defn;
 
@@ -751,7 +751,7 @@ val _ = Defn.save_defn replace_calls_defn;
   let (s,k) = FOLDL
     (\ (s,k) ec .
       let s = incsz (emit s [Stack (Load (nk - k))]) in
-      let s = FOLDL emit_ec s ec in
+      let s = FOLDR  emit_ec  s  ec in
       let j = LENGTH ec in
       let s = emit s [Stack (if j = 0 then PushInt i0 else Cons 0 j)] in
       let s = emit s [Stack (Cons 0 2)] in
