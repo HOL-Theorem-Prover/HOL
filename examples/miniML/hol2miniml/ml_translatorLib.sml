@@ -280,6 +280,7 @@ fun clean_lowercase s = let
   fun f c = if #"a" <= c andalso c <= #"z" then implode [c] else
             if #"A" <= c andalso c <= #"Z" then implode [chr (ord c + 32)] else
             if #"0" <= c andalso c <= #"9" then implode [c] else
+           (* if c = #"," then "pair" else *)
             if mem c [#"_",#"'"] then implode [c] else ""
   in String.translate f s end;
 
@@ -287,6 +288,7 @@ fun clean_uppercase s = let
   fun f c = if #"a" <= c andalso c <= #"z" then implode [chr (ord c - 32)] else
             if #"A" <= c andalso c <= #"Z" then implode [c] else
             if #"0" <= c andalso c <= #"9" then implode [c] else
+           (* if c = #"," then "pair" else *)
             if mem c [#"_",#"'"] then implode [c] else ""
   in String.translate f s end;
 
@@ -1019,7 +1021,7 @@ fun remove_pair_abs def = let
     in delete_pair_arg lemma end handle HOL_ERR _ => def
   val def = delete_pair_arg def
   val def' = (* if can (find_term (can (match_term ``UNCURRY``))) (concl def) then *)
-              SIMP_RULE std_ss [UNCURRY_SIMP] def
+              CONV_RULE (RAND_CONV (SIMP_CONV std_ss [UNCURRY_SIMP])) def
             (* else def *)
   in if concl def' = T then def else def' end
 
@@ -1055,7 +1057,19 @@ fun split_let_and_conv tm = let
                           THEN REWRITE_TAC [])
   in lemma end handle HOL_ERR _ => NO_CONV tm;
 
+local
+  val l1 = prove(``~b ==> (b = F)``,REWRITE_TAC [])
+  val l2 = prove(``b ==> (b = T)``,REWRITE_TAC [])
+in
+  fun force_eqns def = let
+    fun f th = if is_eq (concl (SPEC_ALL th)) then th else
+                 GEN_ALL (MATCH_MP l1 (SPEC_ALL th)) handle HOL_ERR _ =>
+                 GEN_ALL (MATCH_MP l2 (SPEC_ALL th))
+    in LIST_CONJ (map f (CONJUNCTS (SPEC_ALL def))) end
+end
+
 fun preprocess_def def = let
+  val def = force_eqns def
   val is_rec = is_rec_def def
   val (def,ind) = single_line_def def
   val def = RW1 [GSYM TRUE_def, GSYM FALSE_def] def
@@ -1397,6 +1411,12 @@ fun hol2deep tm =
     in check_inv "arb" tm result end
   else raise (UnableToTranslate tm)
 
+fun hol2val tm = let
+  val th_rhs = hol2deep tm
+  val res = mk_comb(rand (concl th_rhs),mk_var("v",``:v``))
+            |> EVAL |> SIMP_RULE std_ss [] |> concl |> rand |> rand
+  in res end;
+
 (*
 val tm = f
 val tm = rhs
@@ -1550,6 +1570,7 @@ fun extract_precondition th pre_var is_rec =
 (*
 val def = delete_min_def
 val def = sortingTheory.PART_DEF;
+
 *)
 
 fun translate def = let
