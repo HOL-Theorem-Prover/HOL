@@ -236,6 +236,22 @@ val (inst_arg_def,inst_arg_ind) =
 val _ = save_thm ("inst_arg_def", inst_arg_def);
 val _ = save_thm ("inst_arg_ind", inst_arg_ind);
 
+val (fold_num_def,fold_num_ind) =
+  tprove_no_defn ((fold_num_def,fold_num_ind),
+  WF_REL_TAC `measure (SND o SND)`)
+val _ = save_thm ("fold_num_def", fold_num_def);
+val _ = save_thm ("fold_num_ind", fold_num_ind);
+
+val (pat_vars_def,pat_vars_ind) =
+  tprove_no_defn ((pat_vars_def,pat_vars_ind),
+  WF_REL_TAC `measure pat_size` >>
+  rw[pat1_size_thm] >>
+  imp_res_tac SUM_MAP_MEM_bound >>
+  pop_assum (qspec_then `pat_size` mp_tac) >>
+  srw_tac[ARITH_ss][])
+val _ = save_thm ("pat_vars_def", pat_vars_def);
+val _ = save_thm ("pat_vars_ind", pat_vars_ind);
+
 (* ------------------------------------------------------------------------- *)
 
 val FINITE_free_vars = store_thm(

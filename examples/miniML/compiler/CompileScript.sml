@@ -53,6 +53,7 @@ val _ = Hol_datatype `
 (*val replace : forall 'a. 'a -> num -> 'a list -> 'a list*)
 (*val num_set_foldl : forall 'a. ('a -> num -> 'a) -> 'a -> num set -> 'a*)
 (*val int_to_num : int -> num*)
+(*val image : forall 'a 'b. ('a -> 'b) -> 'a set -> 'b set*)
 
  val remove_mat_exp_defn = Hol_defn "remove_mat_exp" `
 
@@ -154,6 +155,9 @@ val _ = Define `
 
 val _ = Defn.save_defn pat_to_Cpat_defn;
 
+(* TODO: make exp_to_Cexp avoid skipping variable numbers (i.e. only add
+ * variables that will make it to a top-level declaration to the returned state) *)
+
  val exp_to_Cexp_defn = Hol_defn "exp_to_Cexp" `
 
 (exp_to_Cexp d cm (s, Raise err) = (s, CRaise err))
@@ -161,18 +165,19 @@ val _ = Defn.save_defn pat_to_Cpat_defn;
 (exp_to_Cexp d cm (s, Val (Lit l)) = (s, CLit l))
 /\
 (exp_to_Cexp d cm (s, Con cn es) =
-  (s, CCon (FAPPLY  cm  cn) (MAP (\ e . let (_s,e) = exp_to_Cexp F cm (s,e) in e) es)))
+  (s, CCon (FAPPLY  cm  cn) (MAP (\ e . let (_s,e) = exp_to_Cexp NONE cm (s,e) in e) es)))
 /\
-(exp_to_Cexp d cm (s, Var vn) = (s, CVar (if d then 0 else FAPPLY  s.m  vn)))
+(exp_to_Cexp d cm (s, Var vn) =
+  (s, CVar ((case d of SOME _ => 0 | NONE => FAPPLY  s.m  vn ))))
 /\
 (exp_to_Cexp d cm (s, Fun vn e) =
   let s' = extend s vn in
-  let (s',Ce) = exp_to_Cexp F cm (s', e) in
+  let (s',Ce) = exp_to_Cexp NONE cm (s', e) in
   (s, CFun [s.n] Ce))
 /\
 (exp_to_Cexp d cm (s, App (Opn opn) e1 e2) =
-  let (_s,Ce1) = exp_to_Cexp F cm (s, e1) in
-  let (_s,Ce2) = exp_to_Cexp F cm (s, e2) in
+  let (_s,Ce1) = exp_to_Cexp NONE cm (s, e1) in
+  let (_s,Ce2) = exp_to_Cexp NONE cm (s, e2) in
   (s, CPrim2 ((case opn of
                 Plus   => CAdd
               | Minus  => CSub
@@ -183,26 +188,26 @@ val _ = Defn.save_defn pat_to_Cpat_defn;
       Ce1 Ce2))
 /\
 (exp_to_Cexp d cm (s, App (Opb opb) e1 e2) =
-  let (_s,Ce1) = exp_to_Cexp F cm (s, e1) in
-  let (_s,Ce2) = exp_to_Cexp F cm (s, e2) in
+  let (_s,Ce1) = exp_to_Cexp NONE cm (s, e1) in
+  let (_s,Ce2) = exp_to_Cexp NONE cm (s, e2) in
   (s, (case opb of
         Lt => CPrim2 CLt Ce1 Ce2
       | Leq => CLprim CLeq [Ce1;Ce2]
       )))
 /\
 (exp_to_Cexp d cm (s, App Equality e1 e2) =
-  let (_s,Ce1) = exp_to_Cexp F cm (s, e1) in
-  let (_s,Ce2) = exp_to_Cexp F cm (s, e2) in
+  let (_s,Ce1) = exp_to_Cexp NONE cm (s, e1) in
+  let (_s,Ce2) = exp_to_Cexp NONE cm (s, e2) in
   (s, CPrim2 CEq Ce1 Ce2))
 /\
 (exp_to_Cexp d cm (s, App Opapp e1 e2) =
-  let (_s,Ce1) = exp_to_Cexp F cm (s, e1) in
-  let (_s,Ce2) = exp_to_Cexp F cm (s, e2) in
+  let (_s,Ce1) = exp_to_Cexp NONE cm (s, e1) in
+  let (_s,Ce2) = exp_to_Cexp NONE cm (s, e2) in
   (s, CCall Ce1 [Ce2]))
 /\
 (exp_to_Cexp d cm (s, Log log e1 e2) =
-  let (_s,Ce1) = exp_to_Cexp F cm (s, e1) in
-  let (_s,Ce2) = exp_to_Cexp F cm (s, e2) in
+  let (_s,Ce1) = exp_to_Cexp NONE cm (s, e1) in
+  let (_s,Ce2) = exp_to_Cexp NONE cm (s, e2) in
   (s, CLprim ((case log of
                 And => CAnd
               | Or  => COr
@@ -210,24 +215,25 @@ val _ = Defn.save_defn pat_to_Cpat_defn;
       [Ce1;Ce2]))
 /\
 (exp_to_Cexp d cm (s, If e1 e2 e3) =
-  let (_s,Ce1) = exp_to_Cexp F cm (s, e1) in
-  let (_s,Ce2) = exp_to_Cexp d cm (s, e2) in
-  let (_s,Ce3) = exp_to_Cexp d cm (s, e3) in
-  (s, CLprim CIf [Ce1;Ce2;Ce3]))
+  let (_s,Ce1) = exp_to_Cexp NONE cm (s, e1) in
+  let (s',Ce2) = exp_to_Cexp d cm (s, e2) in
+  let (s',Ce3) = exp_to_Cexp d cm (s', e3) in
+  ((case d of NONE => s | SOME _ => s' ), CLprim CIf [Ce1;Ce2;Ce3]))
 /\
 (exp_to_Cexp d cm (s, Mat (Var vn) pes) =
-  let Cpes = FOLDR 
-    (\ (p,e) Cpes . let (s,Cp) = pat_to_Cpat cm (s,p) in
-                       let (_s,Ce) = exp_to_Cexp d cm (s,e) in
-                       (Cp,Ce)::Cpes)   [] 
+  let (s',Cpes) = FOLDR 
+    (\ (p,e) (s,Cpes) .
+      let (s,Cp) = pat_to_Cpat cm (s,p) in
+      let (s,Ce) = exp_to_Cexp d cm (s,e) in
+      (s,(Cp,Ce)::Cpes))   (s,[]) 
           pes in
-  (s, CMat (FAPPLY  s.m  vn) Cpes))
+  ((case d of NONE => s | SOME _ => s' ), CMat (FAPPLY  s.m  vn) Cpes))
 /\
 (exp_to_Cexp d cm (s, Let vn e b) =
   let s' = extend s vn in
-  let (_s,Ce) = exp_to_Cexp F cm (s, e) in
-  let (_s,Cb) = exp_to_Cexp d cm (s', b) in
-  (if d then s' else s, CLet [s.n] [Ce] Cb))
+  let (_s,Ce) = exp_to_Cexp NONE cm (s, e) in
+  let (s',Cb) = exp_to_Cexp d cm (s', b) in
+  ((case d of NONE => s | SOME _ => s' ), CLet [s.n] [Ce] Cb))
 /\
 (exp_to_Cexp d cm (s, Letrec defs b) =
   let (s',fns) = FOLDR 
@@ -235,11 +241,11 @@ val _ = Defn.save_defn pat_to_Cpat_defn;
           defs in
   let Cdefs = FOLDR 
     (\ (_d,vn,e) Cdefs .
-      let (_s,Ce) = exp_to_Cexp F cm (extend s' vn, e) in
+      let (_s,Ce) = exp_to_Cexp NONE cm (extend s' vn, e) in
       ([s'.n],Ce)::Cdefs)      [] 
           defs in
-  let (_s,Cb) = exp_to_Cexp d cm (s',b) in
-  (if d then s' else s, CLetfun T fns Cdefs Cb))`;
+  let (s',Cb) = exp_to_Cexp d cm (s',b) in
+  ((case d of NONE => s | SOME _ => s' ), CLetfun T fns Cdefs Cb))`;
 
 val _ = Defn.save_defn exp_to_Cexp_defn;
 
@@ -386,7 +392,7 @@ val _ = Hol_datatype `
    ; tail: (num # num)option
    ; next_label: num
    (* not modified on return: *)
-   ; decl: bool
+   ; decl: ((num,ctbind) fmap # num # num set)option
    ; inst_length: bc_inst -> num
    |>`;
 
@@ -452,7 +458,7 @@ val _ = Define `
  (decsz s =  s with<| sz := s.sz - 1 |>)`;
 
 val _ = Define `
- (sdt s = ( s with<| decl := F ; tail := NONE |>, (s.decl, s.tail)))`;
+ (sdt s = ( s with<| decl := NONE ; tail := NONE |>, (s.decl, s.tail)))`;
 
 val _ = Define `
  (ldt (d,t) s =  s with<| decl := d ; tail := t |>)`;
@@ -490,6 +496,12 @@ val _ = Defn.save_defn emit_ec_defn;
 
 val _ = Defn.save_defn replace_calls_defn;
 
+ val fold_num_defn = Hol_defn "fold_num" `
+
+(fold_num f a (n:num) = if n = 0 then a else fold_num f (f a) (n - 1))`;
+
+val _ = Defn.save_defn fold_num_defn;
+
  val compile_defn = Hol_defn "compile" `
 
 (compile s (CRaise err) =
@@ -502,8 +514,31 @@ val _ = Defn.save_defn replace_calls_defn;
   incsz (emit s [Stack (PushInt (bool_to_int b))]))
 /\
 (compile s (CVar n) =
-  if s.decl then s else
-  incsz (compile_varref s (FAPPLY  s.env  n)))
+  (case s.decl of
+    NONE =>
+      incsz (compile_varref s (FAPPLY  s.env  n))
+  | SOME (env0,sz0,vs) => (* TODO: avoid excessive copying? *)
+      let k = s.sz - sz0 in
+      let n = CARD vs in
+      let s = if k < n then
+        fold_num (\ s . incsz (emit s [Stack (PushInt i0)])) s (n - k)
+        else s in
+      let (s,j,env) = num_set_foldl
+        (\ (s,j,env) v . (incsz (compile_varref s (FAPPLY  s.env  v)),
+                             j+1,
+                             FUPDATE  env ( v, (CTLet j))))
+             (s,sz0+1,env0) vs in
+      (* vn, ..., v1, x1, x2, ..., xk, *)
+      (*   with k >= n (and the first few xs are 0s) *)
+      let j = k - n in
+      let s = fold_num (\ s . emit s [Stack (Store ((n - 1)+j))])
+                            s n in
+      (* x1, ..., xj, vn, ..., v1, *)
+      let s = if j = 0 then s else
+        emit s [Stack (PushInt i0); Stack (Pops j); Stack Pop] in
+      (* vn, ..., v1, *)
+       s with<| sz := sz0 + n; env := env |>
+  ))
 /\
 (compile s (CCon n []) =
   incsz (emit s [Stack (PushInt (& n))]))
@@ -638,9 +673,12 @@ val _ = Defn.save_defn replace_calls_defn;
   | None ->
 *)
     let s = compile s e in
-    if s.decl then s else
-    let s = emit s [Stack (Pops n)] in
-     s with<| env := env0 ; sz := sz1 |>)
+    (case s.decl of
+      SOME _ => s
+    | NONE =>
+        let s = emit s [Stack (Pops n)] in
+         s with<| env := env0 ; sz := sz1 |>
+    ))
 (*
   | Some (j,k) ->
     let s = <| s with tail = Some (j,k+n) |> in
@@ -738,7 +776,7 @@ val _ = Defn.save_defn replace_calls_defn;
           )
         )) in
       let (n,env,ec) = num_set_foldl bind_fv (0,FEMPTY,[]) fvs in
-      let s' =  s with<| env := env; sz := 0; decl := F; tail := SOME (az,0) |> in
+      let s' =  s with<| env := env; sz := 0; decl := NONE; tail := SOME (az,0) |> in
       let s' = compile s' e in
       let s' = emit s' [Stack (Store 0); Return] in
       let s =  s' with<| env := s.env; sz := s.sz + 1; decl := s.decl; tail := s.tail |> in
@@ -814,7 +852,7 @@ val _ = Define `
    ; next_label := 1 (* depends on exception handlers *)
    ; sz := 0
    ; inst_length := \ i . 0 (* TODO: depends on runtime *)
-   ; decl := F
+   ; decl := NONE
    ; tail := NONE
    |>`;
 
@@ -836,12 +874,26 @@ val _ = Define `
   let e = remove_mat_exp e in
   let (s,Ce) = exp_to_Cexp d rs.cmap (<|m := rs.vmap; w := rs.vpam; n := rs.nextv|>, e) in
   let Ce = remove_mat Ce in
-  let cs = compile (rs.cs with<| decl := d|>) Ce in (* parens: Lem sucks *)
+  let decl = (case d of NONE => NONE
+             | SOME vs =>
+                 SOME (rs.cs.env, rs.cs.sz, IMAGE (\ v . FAPPLY  s.m  v) vs)
+             ) in
+  let cs = compile (rs.cs with<| decl := decl |>) Ce in (* parens: Lem sucks *)
    rs with<| vmap := s.m; vpam := s.w; nextv := s.n; cs := cs |>)`;
 
 
 (* TODO: typechecking *)
 (* TODO: printing *)
+
+ val pat_vars_defn = Hol_defn "pat_vars" `
+
+(pat_vars (Pvar v) = {v})
+/\
+(pat_vars (Plit _) = {})
+/\
+(pat_vars (Pcon _ ps) = FOLDL (\ s p . s UNION pat_vars p) {} ps)`;
+
+val _ = Defn.save_defn pat_vars_defn;
 
  val number_constructors_defn = Hol_defn "number_constructors" `
 
@@ -863,15 +915,16 @@ val _ = Defn.save_defn number_constructors_defn;
   repl_dec ( rs with<| cmap := cm; cpam := FUPDATE  rs.cpam ( ty, cw) |>) (Dtype ts)) (* parens: Lem sucks *)
 /\
 (repl_dec rs (Dletrec defs) =
-  compile_exp T rs (Letrec defs (Var "")))
+  compile_exp (SOME (LIST_TO_SET (MAP ( \x . (case x of (v,_,_) => v)) defs)))
+    rs (Letrec defs (Var "")))
 /\
 (repl_dec rs (Dlet p e) =
-  compile_exp T rs (Mat e [(p,Var "")]))`;
+  compile_exp (SOME (pat_vars p)) rs (Mat e [(p,Var "")]))`;
 
 val _ = Defn.save_defn repl_dec_defn;
 
 val _ = Define `
- repl_exp = compile_exp F`;
+ repl_exp = compile_exp NONE`;
 
 
 val _ = Define `

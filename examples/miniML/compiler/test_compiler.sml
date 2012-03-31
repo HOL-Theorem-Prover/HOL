@@ -28,10 +28,14 @@ val _ = computeLib.add_thms
 , pred_setTheory.EMPTY_DELETE
 , pred_setTheory.DELETE_INSERT
 , pred_setTheory.IN_COMPL
+, pred_setTheory.CARD_EMPTY
+, pred_setTheory.IMAGE_EMPTY
+, pred_setTheory.IMAGE_INSERT
 , ITSET_FOLDL
 , pairTheory.UNCURRY
 , pairTheory.FST
 , pairTheory.SND
+, pairTheory.pair_case_thm
 , stringTheory.CHAR_EQ_THM
 , combinTheory.K_THM
 , combinTheory.K_o_THM
@@ -108,12 +112,13 @@ val _ = computeLib.add_thms
 , compileProofsTheory.bcv_to_v_def
 , compileProofsTheory.inst_arg_def
 , CompileTheory.nt_case_def
+, compileProofsTheory.pat_vars_def
+, compileProofsTheory.fold_num_def
 ] compset
 
 val _ = computeLib.set_skip compset combinSyntax.K_tm (SOME 1)
-
-val _ = computeLib.add_conv (stringLib.ord_tm,1,stringLib.ORD_CHR_CONV)
-compset
+val _ = computeLib.add_conv (stringLib.ord_tm,1,stringLib.ORD_CHR_CONV) compset
+val _ = computeLib.add_conv (pred_setSyntax.card_tm,1,PFset_conv.CARD_CONV) compset
 
 val eval = computeLib.CBV_CONV compset
 
@@ -122,8 +127,7 @@ val _ = computeLib.add_conv (``least_not_in``,1,
   val (_,[s]) = boolSyntax.strip_comb tm
   val finite = EQT_ELIM (eval ``FINITE ^s``)
   val th = MP (SPEC s compileProofsTheory.least_not_in_thm) finite
-  in th end)
-compset
+  in th end) compset
 
 val _ = computeLib.add_conv (``least_aux``,2,
 let fun f tm = let
@@ -132,8 +136,7 @@ let fun f tm = let
   val th = SPECL [p,n] fsetTheory.least_aux_def
   val th = PURE_REWRITE_RULE [pp,COND_CLAUSES] th
   in if rhs(concl(pp)) = T then th else TRANS th (f(rhs(concl th))) end
-in f end)
-compset
+in f end) compset
 
 val _ = computeLib.add_conv (``num_set_foldl``,3,
   fn tm => let
@@ -142,8 +145,7 @@ val _ = computeLib.add_conv (``num_set_foldl``,3,
   val th = MP (SPEC s fsetTheory.num_set_foldl_def) finite
   val th = ISPECL [f,a] th
   val th2 = eval (rhs(concl th))
-  in TRANS th th2 end)
-compset
+  in TRANS th th2 end) compset
 
 val d = !Globals.emitMLDir
 val _ = map (fn s => (use (d^s^"ML.sig"); use (d^s^"ML.sml")))
@@ -432,6 +434,17 @@ Letrec [("fac",("n",
 val c28 = f e28
 val [Number i] = g c28
 val SOME 120 = intML.toInt i;
+val d = ``Dlet (Pvar "Foo") (Val (Lit (IntLit 42)))``
+val e41 = ``Var "Foo"``
+val c41 = fd e41 [d]
+val [Number i,Number j] = g c41
+val SOME 42 = intML.toInt i;
+val true = i = j;
+val d = ``Dletrec [("I","x",(Var "x"))]``
+val e42 = ``App Opapp (Var "I") (Val (Lit (IntLit 42)))``
+val c42 = fd e42 [d]
+val [Number i,cl] = g c42
+val SOME 42 = intML.toInt i;
 val d0 = ``
 Dletrec
   [("N","v1",
@@ -457,30 +470,6 @@ val e37 = ``Letrec [("z", ("x", (Mat (Var "x") [(Plit (IntLit 0), (Var "x"));(Pv
 val c37 = f e37
 val [Number i] = g c37
 val SOME 0 = intML.toInt i;
-(*
-val rs = s
-val cm = rhs(concl(eval ``(^rs).cmap``))
-val vm = rhs(concl(eval ``(^rs).vmap``))
-val vp = rhs(concl(eval ``(^rs).vpam``))
-val nv = rhs(concl(eval ``(^rs).nextv``))
-val Ce = rhs(concl(eval ``
-    remove_mat (SND (
-      exp_to_Cexp F ^cm (<|m := ^vm; w := ^vp; n := ^nv|>,
-        (remove_mat_exp (remove_Gt_Geq ^e37)))))``))
-val ss = init_state (term_to_bc_list (f2 s e37))
-bc_state_stack (bc_evaln 47 ss)
-numML.toInt (bc_state_pc (bc_evaln 47 ss))
-(* 20 = just after outermost call to CVar 0 *)
-(* 29 = after creating closure for CVar 0 thunk *)
-(* 34 = just after if test (jumped into else branch) *)
-(* 39 = just before call to the CVar 0 thunk *)
-(* 47 = just after creating uncalled thunk *)
-(* 49 = attempted and failed to load CVar 1 (to bind to CVar 2) *)
-Ce
-CC
-val CC = f2 s e37
-eval ``DROP 17 ^CC``
-*)
 val e38 = ``Let "z" (Fun "x" (Mat (Var "x") [(Plit (IntLit 0), (Var "x"));(Pvar "y", (App (Opn Minus) (Var "x") (Var "y")))])) (App Opapp (Var "z") (Val (Lit (IntLit 5))))``
 val c38 = f e38
 val [Number i] = g c38
@@ -505,7 +494,7 @@ val d1 = ``Dletrec ^append_defs``
 val e33 = ``App Opapp (Var "APPEND") (Con "Nil" [])``
 val (m,st) = pd1 e33 [d0,d1]
 val tm = pv m (hd st) ``NTfn``
-val true = tm = ``Closure [] "" (Var "")``
+val true = tm = ``Closure [] "" (Var "")``;
 val e34 = ``App Opapp (App Opapp (Var "APPEND") (Con "Nil" []))
                       (Con "Nil" [])``
 val (m,st) = pd1 e34 [d0,d1]
@@ -513,59 +502,20 @@ val [r,cl] = st
 val tm = pv m r ``NTapp [NTnum] "list"``
 val true = tm = ``Conv "Nil" []``
 val tm = pv m cl ``NTfn``
-val true = tm = ``Closure [] "" (Var "")``
-(*
-val rs = rhs(concl(eval ``repl_dec ^s ^d0``))
-val cm = rhs(concl(eval ``(^rs).cmap``))
-val vm = rhs(concl(eval ``(^rs).vmap``))
-val vp = rhs(concl(eval ``(^rs).vpam``))
-val nv = rhs(concl(eval ``(^rs).nextv``))
-(*
-val ea = ``Letrec ^append_defs (Var "")``
-val c0 = rhs(concl(
-  eval ``
-    remove_mat (SND (
-      exp_to_Cexp T ^cm (<|m := ^vm; w := ^vp; n := ^nv|>,
-        (remove_mat_exp (remove_Gt_Geq ^ea)))))``))
-val bc = rhs(concl(
-  eval ``
-    REVERSE (compile ((^rs).cs with decl := T) ^c0).code``))
-val is = init_state (term_to_bc_list bc)
-bc_state_stack (bc_evaln 13 is)
-*)
-val ea = ``Letrec ^append_defs
-  (App Opapp (App Opapp (Var "APPEND") (Con "Nil" []))
-             (Con "Nil" []))``
-val c0 = rhs(concl(
-  eval ``
-    remove_mat (SND (
-      exp_to_Cexp F ^cm (<|m := ^vm; w := ^vp; n := ^nv|>,
-        (remove_mat_exp (remove_Gt_Geq ^ea)))))``))
-val bc = rhs(concl(
-  eval ``
-    REVERSE (compile ((^rs).cs with decl := F) ^c0).code``))
-val is = init_state (term_to_bc_list bc)
-val p = numML.toInt (bc_state_pc (bc_evaln 85 is))
-c0
-eval ``DROP 37 ^bc``
-
-val (c,m) = pd0 e34 [d0,d1]
-length st
-st
-*)
+val true = tm = ``Closure [] "" (Var "")``;
 fun h t = hd(tl(snd(strip_comb(concl t))))
 val t = ml_translatorLib.hol2deep ``[1;2;3]++[4;5;6:num]``
 val e30 = h t
 val (m,st) = pd1 e30 [d0,d1]
 val [res,cl] = st
 val tm = pv m res ``NTapp [NTnum] "list"``
-(* looks right now! need a good way to automatically compare *)
+val true = tm = ml_translatorLib.hol2val ``[1;2;3;4;5;6:num]``;
 val t = ml_translatorLib.hol2deep ``[]++[4:num]``
 val e32 = h t
 val (m,st) = pd1 e32 [d0,d1]
 val [res,cl] = st
 val tm = pv m res ``NTapp [NTnum] "list"``
-val true = tm = ``Conv "Cons" [Lit (IntLit 4); Conv "Nil" []]``
+val true = tm = ``Conv "Cons" [Lit (IntLit 4); Conv "Nil" []]``;
 val d2 = ``
 Dtype [(["'a"; "'b"],"prod",[("Pair_type",[Tvar "'a"; Tvar "'b"])])]
 `` val d3 = ``
@@ -627,7 +577,14 @@ val _ = ml_translatorLib.translate sortingTheory.PARTITION_DEF
 val _ = ml_translatorLib.translate sortingTheory.QSORT_DEF
 val t = ml_translatorLib.hol2deep ``QSORT (λx y. x ≤ y) [9;8;7;6;2;3;4;5:num]``
 val e31 = h t
-
 val (m,st) = pd1 e31 [d0,d1,d2,d3,d4,d5]
-val [res,cl] = st
+val [res,clQSORT,clPARTITION,clPART,clAPPEND] = st
 val tm = pv m res ``NTapp [NTnum] "list"``
+val true = tm = ml_translatorLib.hol2val ``[2;3;4;5;6;7;8;9:num]``;
+val d = ``
+Dlet (Pvar "add1")
+  (Fun "x" (App (Opn Plus) (Var "x") (Val (Lit (IntLit 1)))))``
+val e40 = ``App Opapp (Var "add1") (Val (Lit (IntLit 1)))``
+val (m,st) = pd1 e40 [d]
+val [res,add1] = st
+val true = pv m res ``NTnum`` = ml_translatorLib.hol2val ``2:int``;
