@@ -517,7 +517,7 @@ val _ = Defn.save_defn fold_num_defn;
   (case s.decl of
     NONE =>
       incsz (compile_varref s (FAPPLY  s.env  n))
-  | SOME (env0,sz0,vs) => (* TODO: avoid excessive copying? *)
+  | SOME (env0,sz0,vs) => (* TODO: avoid excessive copying? same for tail calls *)
       let k = s.sz - sz0 in
       let n = CARD vs in
       let s = if k < n then
@@ -577,39 +577,47 @@ val _ = Defn.save_defn fold_num_defn;
 /\
 (compile s (CCall e es) =
   let n = LENGTH es in
+  let t = s.tail in
   let (s,dt) = sdt s in
-  let s = compile s e in
-  let s = FOLDL (\ s e . compile s e) s es in (* uneta because Hol_defn sucks *)
-  (* argn, ..., arg2, arg1, Block 0 [CodePtr c; env], *)
-(*
-  match s.tail with
-  | None ->
-*)
+  let s = (case t of
+    NONE =>
+    let s = compile s e in
+    let s = FOLDL (\ s e . compile s e) s es in (* uneta because Hol_defn sucks *)
+    (* argn, ..., arg2, arg1, Block 0 [CodePtr c; env], *)
     let s = emit s [Stack (Load n); Stack (El 1)] in
     (* env, argn, ..., arg1, Block 0 [CodePtr c; env], *)
     let s = emit s [Stack (Load (n+1)); Stack (El 0)] in
     (* CodePtr c, env, argn, ..., arg1, Block 0 [CodePtr c; env], *)
-    let s = emit s [CallPtr] in
+    emit s [CallPtr]
     (* before: env, CodePtr ret, argn, ..., arg1, Block 0 [CodePtr c; env], *)
-    (* after:  retval, argn, ..., arg1, Block 0 [CodePtr c; env], *)
-    (* TODO: want callee to clean up under retval so we can jump for tail calls *)
-    let s = emit s [Stack (Pops (n+1))] in
-    ldt dt  s with<| sz := s.sz - n |>)
-(*
-  | Some (j,k) ->
-    (* argn, ..., arg1, Block 0 [CodePtr c; env],
+    (* after:  retval, *)
+  | SOME (j,k) =>
+    let n0 = k+1+1+j+1 in
+    let n1 = 1+1+1+n+1 in
+    let (j,s) = if n0 < n1 then
+      let j = n1 - n0 in
+        (j,fold_num (\ s . incsz (emit s [Stack (PushInt i0)])) s j)
+      else (0,s) in
+    let s = compile s e in
+    let s = FOLDL (\ s e . compile s e) s es in (* uneta because Hol_defn sucks *)
+    (* argn, ..., arg1, Block 0 [CodePtr c; env], 0i, ..., 01,
      * vk, ..., v1, env1, CodePtr ret, argj, ..., arg1, Block 0 [CodePtr c1; env1], *)
-    let s = emit a s [Stack (Load (n+1+k+1))] in
-    (* CodePtr ret, argn, ..., arg1, Block 0 [CodePtr c; env],
+    let s = emit s [Stack (Load (n+1+j+k+1))] in
+    (* CodePtr ret, argn, ..., arg1, Block 0 [CodePtr c; env], 0i, ..., 01,
      * vk, ..., v1, env1, CodePtr ret, argj, ..., arg1, Block 0 [CodePtr c1; env1], *)
-    let s = emit a s [Stack (Load (n+1)); Stack (El 1)] in
-    (* env, CodePtr ret, argn, ..., arg1, Block 0 [CodePtr c; env],
+    let s = emit s [Stack (Load (n+1)); Stack (El 1)] in
+    (* env, CodePtr ret, argn, ..., arg1, Block 0 [CodePtr c; env], 0i, ..., 01,
      * vk, ..., v1, env1, CodePtr ret, argj, ..., arg1, Block 0 [CodePtr c1; env1], *)
-    let s = emit a s [Stack (Load (n+2)); Stack (El 0)] in
-    (* CodePtr c, env, CodePtr ret, argn, ..., arg1, Block 0 [CodePtr c; env],
+    let s = emit s [Stack (Load (n+2)); Stack (El 0)] in
+    (* CodePtr c, env, CodePtr ret, argn, ..., arg1, Block 0 [CodePtr c; env], 0i, ... 01,
      * vk, ..., v1, env1, CodePtr ret, argj, ..., arg1, Block 0 [CodePtr c1; env1], *)
-  end
-*)
+    let j = n0 + j - n1 in
+    let s = fold_num (\ s . emit s [Stack (Store ((n1 - 1)+j))]) s n1 in
+    let s = if j = 0 then s else
+      emit s [Stack (PushInt i0); Stack (Pops j); Stack Pop] in
+    emit s [JumpPtr]
+  ) in
+  ldt dt  s with<| sz := s.sz - n |>)
 /\
 (compile s (CPrim2 op e1 e2) =
   let (s,dt) = sdt s in
@@ -668,23 +676,20 @@ val _ = Defn.save_defn fold_num_defn;
       (REPLACE_ELEMENT (JumpNil n1) (j3 - j - 2) s.code)) |>)
 /\
 (compile_bindings env0 sz1 e n s [] =
-(*
-  match s.tail with
-  | None ->
-*)
+  (case s.tail of
+    NONE =>
     let s = compile s e in
     (case s.decl of
       SOME _ => s
     | NONE =>
         let s = emit s [Stack (Pops n)] in
          s with<| env := env0 ; sz := sz1 |>
-    ))
-(*
-  | Some (j,k) ->
-    let s = <| s with tail = Some (j,k+n) |> in
+    )
+  | SOME (j,k) =>
+    let s =  s with<| tail := SOME (j,k+n) |> in
     let s = compile s e in
-    <| s with env = env0 ; sz = sz1 |>
-*)
+     s with<| env := env0 ; sz := sz1 |>
+  ))
 /\
 (compile_bindings env0 sz1 e n s (x::xs) =
   compile_bindings env0 sz1 e
@@ -704,12 +709,14 @@ val _ = Defn.save_defn fold_num_defn;
        Call L1                              0, CodePtr f1, RefPtr 0, ..., RefPtr 0, rest
        ?
        ...      (* function 1 body *)
-       Store 0  (* replace env with return value *)
+       Pops ?   (* delete local variables and env *)
+       Load 1
+       Store n+2(* replace closure with return pointer *)
+       Pops n+1 (* delete arguments *)
        Return
    L1: Call L2                              0, CodePtr f2, CodePtr f1, RefPtrs, rest
        ?
        ...      (* function 2 body *)
-       Store 0
        Return
    L2: Call L3
        ?
@@ -778,7 +785,12 @@ val _ = Defn.save_defn fold_num_defn;
       let (n,env,ec) = num_set_foldl bind_fv (0,FEMPTY,[]) fvs in
       let s' =  s with<| env := env; sz := 0; decl := NONE; tail := SOME (az,0) |> in
       let s' = compile s' e in
-      let s' = emit s' [Stack (Store 0); Return] in
+      let n = (case s'.tail of NONE => 1 | SOME (j,k) => k+1 ) in
+      let s' = emit s' [Stack (Pops n);
+                        Stack (Load 1);
+                        Stack (Store (az+2));
+                        Stack (Pops (az+1));
+                        Return] in
       let s =  s' with<| env := s.env; sz := s.sz + 1; decl := s.decl; tail := s.tail |> in
       (s,k+1,(j,lab)::labs,ec::ecs))
     (s,0,[],[]) defs in

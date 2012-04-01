@@ -40,7 +40,7 @@ val _ = computeLib.add_thms
 , combinTheory.K_THM
 , combinTheory.K_o_THM
 , combinTheory.C_DEF
-, optionTheory.option_case_compute
+, computeLib.lazyfy_thm optionTheory.option_case_compute
 , optionTheory.IS_SOME_DEF
 , optionTheory.THE_DEF
 , finite_mapTheory.FAPPLY_FUPDATE_THM
@@ -161,6 +161,13 @@ fun bc_evaln 0 s = s
       bc_evaln (n-1) s
     end handle Bind => (print "Fail\n"; s)
 
+fun bc_eval_limit l s = let
+     val SOME s = bc_eval1 s
+     val n = length (bc_state_stack s)
+     val _ = print ((Int.toString n)^" ")
+  in if n > l then NONE else bc_eval_limit l s
+   end handle Bind => SOME s
+
 fun term_to_num x = (numML.fromString (Parse.term_to_string x))
 fun term_to_int x = (intML.fromString ((Parse.term_to_string x)^"i"))
 fun term_to_stack_op tm = let
@@ -203,6 +210,7 @@ end handle HOL_ERR _ =>
   | "Ref" => Ref
   | "Update" => Update
   | "CallPtr" => CallPtr
+  | "JumpPtr" => JumpPtr
   | "Exception" => Exception
   | s => raise Fail s
 val term_to_bc_list = (map term_to_bc) o fst o listSyntax.dest_list
@@ -577,6 +585,18 @@ val _ = ml_translatorLib.translate sortingTheory.PARTITION_DEF
 val _ = ml_translatorLib.translate sortingTheory.QSORT_DEF
 val t = ml_translatorLib.hol2deep ``QSORT (λx y. x ≤ y) [9;8;7;6;2;3;4;5:num]``
 val e31 = h t
+(*
+val rs0 = s
+val rs1 = rhs(concl(eval``repl_dec ^rs0 ^d0``))
+val rs2 = rhs(concl(eval``repl_dec ^rs1 ^d1``))
+val rs3 = rhs(concl(eval``repl_dec ^rs2 ^d2``))
+val rs4 = rhs(concl(eval``repl_dec ^rs3 ^d3``))
+val rs5 = rhs(concl(eval``repl_dec ^rs4 ^d4``))
+val rs6 = rhs(concl(eval``repl_dec ^rs5 ^d5``))
+val res = rhs(concl(eval``repl_exp ^rs6 ^e31``))
+val (c,m) = pairSyntax.dest_pair(rhs(concl(eval``REVERSE (^res).cs.code, (^res).cpam``)))
+val st = g (term_to_bc_list c)
+*)
 val (m,st) = pd1 e31 [d0,d1,d2,d3,d4,d5]
 val [res,clQSORT,clPARTITION,clPART,clAPPEND] = st
 val tm = pv m res ``NTapp [NTnum] "list"``
@@ -588,3 +608,25 @@ val e40 = ``App Opapp (Var "add1") (Val (Lit (IntLit 1)))``
 val (m,st) = pd1 e40 [d]
 val [res,add1] = st
 val true = pv m res ``NTnum`` = ml_translatorLib.hol2val ``2:int``;
+val e43 = ``Letrec [("o","n",
+  If (App Equality (Var "n") (Val (Lit (IntLit 0))))
+     (Var "n")
+     (App Opapp
+       (Var "o")
+       (App (Opn Minus) (Var "n") (Val (Lit (IntLit 1))))))]
+  (App Opapp (Var "o") (Val (Lit (IntLit 1000))))``
+val c43 = f e43
+val SOME s43 = bc_eval_limit 12 (init_state c43)
+val [Number i] = bc_state_stack s43
+val SOME 0 = intML.toInt i;
+val d = ``Dletrec
+[("o","n",
+  If (App Equality (Var "n") (Val (Lit (IntLit 0))))
+     (Var "n")
+     (App Opapp
+       (Var "o")
+       (App (Opn Minus) (Var "n") (Val (Lit (IntLit 1))))))]``
+val e44 = ``App Opapp (Var "o") (Val (Lit (IntLit 1000)))``
+val (m,st) = pd1 e44 [d]
+val [Number i, cl] = st
+val SOME 0 = intML.toInt i;
