@@ -208,6 +208,7 @@ val nle_def = Define`
 `;
 
 val _ = overload_on ("<=", ``λx y. 〈x·y〉 ∈ nle``)
+val _ = overload_on ("<", ``λx:vbgc y. ¬ (y ≤ x)``)
 
 val ZERO_LE = store_thm(
   "ZERO_LE",
@@ -299,5 +300,60 @@ val LE_TOTAL = store_thm(
   qsuff_tac `∀n. n ∈ Nats ⇒ ∀m. m ∈ Nats ⇒ n ≤ m ∨ m ≤ n` >- metis_tac[] >>
   ho_match_mp_tac nat_induction >> rw[] >>
   qspec_then `m` mp_tac Nats_CASES >> rw[] >> rw[]);
+
+
+val LESS_ZERO = store_thm(
+  "LESS_ZERO",
+  ``m ≤ 0 ⇔ (m = 0)``,
+  rw[Once LE_CASES]);
+val _ = export_rewrites ["LESS_ZERO"]
+
+val LE_LT_EQ0 = prove(
+  ``∀m n. m ≤ n ⇒ m < n ∨ (m = n)``,
+  Induct_on `m ≤ n` >> rw[] >> metis_tac []);
+
+(* DON'T USE THIS AS A REWRITE!
+
+   It loops because the m < n on the right is really just ~(n <= m) *)
+val LE_LT_EQ = store_thm(
+  "LE_LT_EQ",
+  ``∀m n. m ≤ n ⇔ m ∈ Nats ∧ n ∈ Nats ∧ (m < n ∨ (m = n))``,
+  metis_tac [LE_LT_EQ0, LE_REFL, LE_TOTAL, nle_Nats]);
+
+val LE_DISCRETE = store_thm(
+  "LE_DISCRETE",
+  ``∀m n. m ∈ Nats ∧ n ∈ Nats ⇒ m ≤ n ∨ vSUC n ≤ m``,
+  qsuff_tac `∀m. m ∈ Nats ⇒ ∀n. n ∈ Nats ⇒ m ≤ n ∨ vSUC n ≤ m` >- metis_tac[]>>
+  Induct_on `m ∈ Nats` >> rw[] >> qspec_then `n` mp_tac Nats_CASES >>
+  asm_simp_tac (srw_ss() ++ DNF_ss)[DISJ_IMP_THM]);
+
+val complete_induction = store_thm(
+  "complete_induction",
+  ``∀P.
+      (∀n. (∀m. m ∈ Nats ∧ m < n ⇒ P m) ⇒ P n) ⇒ ∀n. n ∈ Nats ⇒ P n``,
+  gen_tac >> strip_tac >>
+  qsuff_tac `∀n. n ∈ Nats ⇒ ∀m. m ≤ n ⇒ P m`
+    >- metis_tac [LE_REFL] >>
+  Induct_on `n ∈ Nats` >> srw_tac [CONJ_ss][] >>
+  Cases_on `m ≤ n` >- metis_tac [] >>
+  `m = vSUC n` by metis_tac [LE_DISCRETE, LE_LT_EQ] >> rw[] >>
+  metis_tac [LE_DISCRETE]);
+
+val rwt = SUBSET_def |> Q.SPECL [`B`, `Nats`] |> EQ_IMP_RULE |> #1 |> UNDISCH
+
+(* ⊢ B ⊆ Nats ∧ (∃n. n ∈ B) ⇒ ∃n. n ∈ B ∧ ∀m. m ∈ B ⇒ n ≤ m *)
+val Nats_least_element = save_thm(
+  "Nats_least_element",
+  complete_induction |> Q.SPEC `λn. n ∉ B`
+                     |> CONV_RULE CONTRAPOS_CONV
+                     |> SIMP_RULE bool_ss []
+                     |> CONV_RULE
+                          (RAND_CONV (ONCE_DEPTH_CONV CONTRAPOS_CONV))
+                     |> SIMP_RULE (srw_ss() ++ CONJ_ss) [rwt]
+                     |> SIMP_RULE bool_ss [Once CONJ_COMM]
+                     |> DISCH_ALL
+                     |> REWRITE_RULE [AND_IMP_INTRO]);
+
+
 
 val _ = export_theory()
