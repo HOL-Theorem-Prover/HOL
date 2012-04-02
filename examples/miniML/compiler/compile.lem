@@ -863,36 +863,32 @@ and
 inst_arg tvs tt = tt
 
 let rec
-bcv_to_v m (NTnum, Number i) = Lit (IntLit i)
+bcv_to_v m NTnum (Number i) = Lit (IntLit i)
 and
-bcv_to_v m (NTbool, Number i) =
+bcv_to_v m NTbool (Number i) =
   if i = bool_to_int true then Lit (Bool true) else
     if i = bool_to_int false then Lit (Bool false) else
       Recclosure [] [] "Fail: Number"
 and
-bcv_to_v m (NTapp _ ty, Number i) =
+bcv_to_v m (NTapp _ ty) (Number i) =
   Conv (fst (lookup_conv_ty m ty (int_to_num i))) []
 and
-bcv_to_v m (_, Number _) = Recclosure [] [] "Fail: Number"
+bcv_to_v m _ (Number _) = Recclosure [] [] "Fail: Number"
 and
-bcv_to_v m (NTapp tvs ty, Block n vs) =
+bcv_to_v m (NTapp tvs ty) (Block n vs) =
   let (tag, args) = lookup_conv_ty m ty n in
   let args = List.map (inst_arg tvs) args in
   if List.length args = List.length vs then
-  Conv tag
-    (List.map (fun (ty,v) -> bcv_to_v m (ty,v)) (List.combine args vs))
-    (* can't use map2 because no congruence theorem (for termination) *)
-    (* thus this remains uncurried *)
-    (* also, uneta: Hol_defn sucks *)
+  Conv tag (List.map2 (fun ty v -> bcv_to_v m ty v) args vs) (* uneta: Hol_defn sucks *)
   else Recclosure [] [] "Fail: Block"
 and
-bcv_to_v m (NTfn, Block 0 _) =Closure [] "" (Var "")
+bcv_to_v m NTfn (Block 0 _) = Closure [] "" (Var "")
 and
-bcv_to_v m (_, Block _ _) = Recclosure [] [] "Fail: Block"
+bcv_to_v m _ (Block _ _) = Recclosure [] [] "Fail: Block"
 and
-bcv_to_v m (_, CodePtr _) = Recclosure [] [] "Fail: CodePtr"
+bcv_to_v m _ (CodePtr _) = Recclosure [] [] "Fail: CodePtr"
 and
-bcv_to_v m (_, RefPtr _) = Recclosure [] [] "Fail: RefPtr"
+bcv_to_v m _ (RefPtr _) = Recclosure [] [] "Fail: RefPtr"
 
 
 (* Constant folding

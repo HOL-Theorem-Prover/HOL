@@ -227,26 +227,14 @@ val EL = new_recursive_definition
 (* [TFM 92.04.21]							*)
 (* ---------------------------------------------------------------------*)
 
-val MAP2 =
-  let val lemma = prove
-     (--`?fn.
-         (!f:'a -> 'b -> 'c. fn f [] [] = []) /\
-         (!f h1 t1 h2 t2.
-           fn f (h1::t1) (h2::t2) = f h1 h2::fn f t1 t2)`--,
-      let val th = prove_rec_fn_exists list_Axiom
-           (--`(fn (f:'a -> 'b -> 'c) [] l = []) /\
-               (fn f (h::t) l = CONS (f h (HD l)) (fn f t (TL l)))`--)
-      in
-      STRIP_ASSUME_TAC th THEN
-      EXISTS_TAC (--`fn:('a -> 'b -> 'c) -> 'a list -> 'b list -> 'c list`--)
-      THEN ASM_REWRITE_TAC [HD,TL]
-      end)
-  in
-      Rsyntax.new_specification{
-        name = "MAP2", sat_thm = lemma,
-        consts = [{const_name="MAP2", fixity=NONE}]
-      }
-  end
+val MAP2_DEF = Define`
+  (MAP2 f (h1::t1) (h2::t2) = f h1 h2::MAP2 f t1 t2) /\
+  (MAP2 f x y = [])`
+
+val MAP2 = store_thm ("MAP2",
+``(!f. MAP2 f [] [] = []) /\
+  (!f h1 t1 h2 t2. MAP2 f (h1::t1) (h2::t2) = f h1 h2::MAP2 f t1 t2)``,
+METIS_TAC[MAP2_DEF]);
 
 (* ---------------------------------------------------------------------*)
 (* Proofs of some theorems about lists.					*)
@@ -1140,6 +1128,18 @@ Induct THEN REWRITE_TAC [MAP,MEM]
              THEN REWRITE_TAC [] THEN REPEAT STRIP_TAC
              THEN FIRST_ASSUM MATCH_MP_TAC
              THEN ASM_REWRITE_TAC [MEM]]);
+
+val MAP2_CONG = store_thm("MAP2_CONG",
+Term
+  `!l1 l1' l2 l2' f f'.
+    (l1=l1') /\ (l2=l2') /\
+    (!x y. MEM x l1' /\ MEM y l2' ==> (f x y = f' x y))
+          ==>
+    (MAP2 f l1 l2 = MAP2 f' l1' l2')`,
+Induct THEN SRW_TAC[][MAP2_DEF,MEM] THEN
+SRW_TAC[][MAP2_DEF] THEN
+Cases_on `l2` THEN
+SRW_TAC[][MAP2_DEF])
 
 val EXISTS_CONG = store_thm("EXISTS_CONG",
 Term
@@ -2499,7 +2499,7 @@ val APPEND_EQ_APPEND_MID = store_thm(
 
 (* --------------------------------------------------------------------- *)
 
-val _ = app DefnBase.export_cong ["EXISTS_CONG", "EVERY_CONG", "MAP_CONG",
+val _ = app DefnBase.export_cong ["EXISTS_CONG", "EVERY_CONG", "MAP_CONG", "MAP2_CONG",
                                   "FOLDL_CONG", "FOLDR_CONG", "list_size_cong"]
 
 val _ = adjoin_to_theory

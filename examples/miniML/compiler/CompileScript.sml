@@ -986,36 +986,32 @@ val _ = Defn.save_defn inst_arg_defn;
 
  val bcv_to_v_defn = Hol_defn "bcv_to_v" `
 
-(bcv_to_v m (NTnum, Number i) = Lit (IntLit i))
+(bcv_to_v m NTnum (Number i) = Lit (IntLit i))
 /\
-(bcv_to_v m (NTbool, Number i) =
+(bcv_to_v m NTbool (Number i) =
   if i = bool_to_int T then Lit (Bool T) else
     if i = bool_to_int F then Lit (Bool F) else
       Recclosure [] [] "Fail: Number")
 /\
-(bcv_to_v m (NTapp _ ty, Number i) =
+(bcv_to_v m (NTapp _ ty) (Number i) =
   Conv (FST (lookup_conv_ty m ty (Num i))) [])
 /\
-(bcv_to_v m (_, Number _) = Recclosure [] [] "Fail: Number")
+(bcv_to_v m _ (Number _) = Recclosure [] [] "Fail: Number")
 /\
-(bcv_to_v m (NTapp tvs ty, Block n vs) =
+(bcv_to_v m (NTapp tvs ty) (Block n vs) =
   let (tag, args) = lookup_conv_ty m ty n in
   let args = MAP (inst_arg tvs) args in
   if LENGTH args = LENGTH vs then
-  Conv tag
-    (MAP (\ (ty,v) . bcv_to_v m (ty,v)) (ZIP ( args, vs)))
-    (* can't use map2 because no congruence theorem (for termination) *)
-    (* thus this remains uncurried *)
-    (* also, uneta: Hol_defn sucks *)
+  Conv tag (MAP2 (\ ty v . bcv_to_v m ty v) args vs) (* uneta: Hol_defn sucks *)
   else Recclosure [] [] "Fail: Block")
 /\
-(bcv_to_v m (NTfn, Block 0 _) =Closure [] "" (Var ""))
+(bcv_to_v m NTfn (Block 0 _) = Closure [] "" (Var ""))
 /\
-(bcv_to_v m (_, Block _ _) = Recclosure [] [] "Fail: Block")
+(bcv_to_v m _ (Block _ _) = Recclosure [] [] "Fail: Block")
 /\
-(bcv_to_v m (_, CodePtr _) = Recclosure [] [] "Fail: CodePtr")
+(bcv_to_v m _ (CodePtr _) = Recclosure [] [] "Fail: CodePtr")
 /\
-(bcv_to_v m (_, RefPtr _) = Recclosure [] [] "Fail: RefPtr")`;
+(bcv_to_v m _ (RefPtr _) = Recclosure [] [] "Fail: RefPtr")`;
 
 val _ = Defn.save_defn bcv_to_v_defn;
 

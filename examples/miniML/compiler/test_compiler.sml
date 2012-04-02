@@ -251,7 +251,7 @@ fun pd1 e ds = let
   val (c,m) = pd0 e ds
   val st = g (term_to_bc_list c)
   in (m,st) end
-fun pv m bv ty = rhs(concl(eval``bcv_to_v ^m (^ty,^(bv_to_term bv))``))
+fun pv m bv ty = rhs(concl(eval``bcv_to_v ^m ^ty ^(bv_to_term bv)``))
 fun pd tys e ds =
   let val (m,st) = pd1 e ds
   in map2 (pv m) st tys end

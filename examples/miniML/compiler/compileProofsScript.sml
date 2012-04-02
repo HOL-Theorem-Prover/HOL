@@ -217,11 +217,6 @@ val (bcv_to_v_def,bcv_to_v_ind) =
   tprove_no_defn ((bcv_to_v_def,bcv_to_v_ind),
   WF_REL_TAC `measure (bc_value_size o SND o SND)` >>
   rw[bc_value1_size_thm] >>
-  qmatch_assum_rename_tac `MEM (x,y) (ZIP (MAP f args, vs))` [] >>
-  `LENGTH (MAP f args) = LENGTH vs` by rw[] >>
-  fs[MEM_ZIP] >> rw[] >>
-  qmatch_rename_tac `bc_value_size (EL b ls) < X` ["X"] >>
-  `MEM (EL b ls) ls` by (match_mp_tac rich_listTheory.EL_IS_EL >> rw[]) >>
   Q.ISPEC_THEN `bc_value_size` imp_res_tac SUM_MAP_MEM_bound >>
   srw_tac[ARITH_ss][])
 val _ = save_thm ("bcv_to_v_def", bcv_to_v_def);
