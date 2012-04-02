@@ -41,6 +41,16 @@ val (tyg,tmg) = (type_grammar(),term_grammar())
 val tyg' = type_grammar.remove_abbreviation tyg "set"
 val _ = temp_set_grammars(tyg',tmg)
 val _ = new_type("set",1)
+val _ = temp_clear_overloads_on "set"
+
+val IS_EMPTY_def = Define`IS_EMPTY s = if s = {} then T else F`
+val IS_EMPTY_THM = Q.prove
+(`(IS_EMPTY {} = T) /\ (IS_EMPTY (x INSERT s) = F)`,
+ SRW_TAC[][IS_EMPTY_def])
+val IS_EMPTY_REWRITE = store_thm(
+"IS_EMPTY_REWRITE",
+``((s = {}) = IS_EMPTY s) /\ (({} = s) = IS_EMPTY s)``,
+SRW_TAC[][EQ_IMP_THM,IS_EMPTY_def])
 
 val defs =
   map DEFN_NOSIG [CONJ (F_INTRO NOT_IN_EMPTY) IN_INSERT,
@@ -53,6 +63,7 @@ val defs =
        CONJ CARD_EMPTY (UNDISCH (SPEC_ALL CARD_INSERT)),
        CONJ (T_INTRO (CONJUNCT1 (SPEC_ALL DISJOINT_EMPTY))) DISJOINT_INSERT,
        CROSS_EQNS,
+       listTheory.LIST_TO_SET_THM, IS_EMPTY_THM,
        let val (c1,c2) = TAKE2_CONJUNCTS (SPEC_ALL SUM_IMAGE_THM)
        in CONJ c1 (UNDISCH (SPEC_ALL c2)) end,
        let val (c1,c2) = TAKE2_CONJUNCTS SUM_SET_THM
@@ -80,6 +91,8 @@ val _ = eSML "set"
     :: MLSIG "val CARD     : ''a set -> num"
     :: MLSIG "val DISJOINT : ''a set -> ''a set -> bool"
     :: MLSIG "val CROSS    : ''a set -> ''b set -> (''a * ''b) set"
+    :: MLSIG "val LIST_TO_SET : 'a list -> 'a set"
+    :: MLSIG "val IS_EMPTY : 'a set -> bool"
     :: MLSIG "val SUM_IMAGE : (''a -> num) -> ''a set -> num"
     :: MLSIG "val SUM_SET  : num set -> num"
     :: MLSIG "val MAX_SET  : num set -> num"
