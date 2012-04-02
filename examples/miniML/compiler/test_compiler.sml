@@ -9,7 +9,7 @@ val ITSET_FOLDL = prove(
 
 val compset = listSimps.list_compset()
 
-val _ = computeLib.add_thms
+val _ = computeLib.add_thms (map computeLib.strictify_thm
 [ listTheory.LIST_TO_SET_THM
 , listTheory.SUM
 , REPLACE_ELEMENT_compute
@@ -31,16 +31,9 @@ val _ = computeLib.add_thms
 , pred_setTheory.CARD_EMPTY
 , pred_setTheory.IMAGE_EMPTY
 , pred_setTheory.IMAGE_INSERT
-, ITSET_FOLDL
-, pairTheory.UNCURRY
 , pairTheory.FST
 , pairTheory.SND
-, pairTheory.pair_case_thm
-, stringTheory.CHAR_EQ_THM
-, combinTheory.K_THM
-, combinTheory.K_o_THM
 , combinTheory.C_DEF
-, computeLib.lazyfy_thm optionTheory.option_case_compute
 , optionTheory.IS_SOME_DEF
 , optionTheory.THE_DEF
 , finite_mapTheory.FAPPLY_FUPDATE_THM
@@ -50,8 +43,6 @@ val _ = computeLib.add_thms
 , finite_mapTheory.DRESTRICT_FEMPTY
 , finite_mapTheory.DRESTRICT_FUPDATE
 , compileProofsTheory.FINITE_free_vars
-, MiniMLTheory.opn_case_def
-, MiniMLTheory.opb_case_def
 , BytecodeTheory.bool_to_int_def
 , compileProofsTheory.remove_Gt_Geq_def
 , compileProofsTheory.remove_mat_exp_def
@@ -111,10 +102,25 @@ val _ = computeLib.add_thms
 , CompileTheory.t_to_nt_def
 , compileProofsTheory.bcv_to_v_def
 , compileProofsTheory.inst_arg_def
-, CompileTheory.nt_case_def
 , compileProofsTheory.pat_vars_def
 , compileProofsTheory.fold_num_def
-] compset
+, CompileTheory.pad_def
+, CompileTheory.mv_def
+, combinTheory.K_o_THM
+, combinTheory.K_THM
+, pairTheory.UNCURRY
+, ITSET_FOLDL
+, stringTheory.CHAR_EQ_THM
+]) compset
+
+val _ = computeLib.add_thms (map computeLib.lazyfy_thm
+[ CompileTheory.call_context_case_def
+, pairTheory.pair_case_thm
+, optionTheory.option_case_compute
+, MiniMLTheory.opn_case_def
+, MiniMLTheory.opb_case_def
+, CompileTheory.nt_case_def
+]) compset
 
 val _ = computeLib.set_skip compset combinSyntax.K_tm (SOME 1)
 val _ = computeLib.add_conv (stringLib.ord_tm,1,stringLib.ORD_CHR_CONV) compset
@@ -584,7 +590,7 @@ val _ = ml_translatorLib.translate sortingTheory.PART_DEF
 val _ = ml_translatorLib.translate sortingTheory.PARTITION_DEF
 val _ = ml_translatorLib.translate sortingTheory.QSORT_DEF
 val t = ml_translatorLib.hol2deep ``QSORT (λx y. x ≤ y) [9;8;7;6;2;3;4;5:num]``
-val e31 = h t
+val e31 = h t;
 (*
 val rs0 = s
 val rs1 = rhs(concl(eval``repl_dec ^rs0 ^d0``))

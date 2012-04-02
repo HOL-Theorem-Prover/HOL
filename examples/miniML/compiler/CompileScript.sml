@@ -385,11 +385,15 @@ val _ = Hol_datatype `
 (*open Bytecode*)
 
 val _ = Hol_datatype `
+ call_context = TCNonTail | TCTail of num => num`;
+
+
+val _ = Hol_datatype `
  compiler_state =
   <| env: (num,ctbind) fmap
    ; sz: num
    ; code: bc_inst list (* reversed *)
-   ; tail: (num # num)option
+   ; tail: call_context
    ; next_label: num
    (* not modified on return: *)
    ; decl: ((num,ctbind) fmap # num # num set)option
@@ -458,7 +462,7 @@ val _ = Define `
  (decsz s =  s with<| sz := s.sz - 1 |>)`;
 
 val _ = Define `
- (sdt s = ( s with<| decl := NONE ; tail := NONE |>, (s.decl, s.tail)))`;
+ (sdt s = ( s with<| decl := NONE ; tail := TCNonTail |>, (s.decl, s.tail)))`;
 
 val _ = Define `
  (ldt (d,t) s =  s with<| decl := d ; tail := t |>)`;
@@ -502,6 +506,26 @@ val _ = Defn.save_defn replace_calls_defn;
 
 val _ = Defn.save_defn fold_num_defn;
 
+(* TODO: smarter algorithm than pad and mv? *)
+ val pad_defn = Hol_defn "pad" `
+
+(pad (n0:num) n1 s =
+  if n0 < n1 then
+    let j = n1 - n0 in
+      (j,fold_num (\ s . incsz (emit s [Stack (PushInt i0)])) s j)
+  else (0,s))`;
+
+val _ = Defn.save_defn pad_defn;
+ val mv_defn = Hol_defn "mv" `
+
+(mv (n0i:num) n1 s =
+  let i = n0i - n1 in
+  let s = fold_num (\ s . emit s [Stack (Store ((n1 - 1)+i))]) s n1 in
+  if i = 0 then s else
+    emit s [Stack (PushInt i0); Stack (Pops i); Stack Pop])`;
+
+val _ = Defn.save_defn mv_defn;
+
  val compile_defn = Hol_defn "compile" `
 
 (compile s (CRaise err) =
@@ -517,25 +541,17 @@ val _ = Defn.save_defn fold_num_defn;
   (case s.decl of
     NONE =>
       incsz (compile_varref s (FAPPLY  s.env  n))
-  | SOME (env0,sz0,vs) => (* TODO: avoid excessive copying? same for tail calls *)
+  | SOME (env0,sz0,vs) =>
       let k = s.sz - sz0 in
       let n = CARD vs in
-      let s = if k < n then
-        fold_num (\ s . incsz (emit s [Stack (PushInt i0)])) s (n - k)
-        else s in
-      let (s,j,env) = num_set_foldl
-        (\ (s,j,env) v . (incsz (compile_varref s (FAPPLY  s.env  v)),
-                             j+1,
-                             FUPDATE  env ( v, (CTLet j))))
+      let (j,s) = pad k n s in
+      let (s,i,env) = num_set_foldl
+        (\ (s,i,env) v . (incsz (compile_varref s (FAPPLY  s.env  v)),
+                             i+1,
+                             FUPDATE  env ( v, (CTLet i))))
              (s,sz0+1,env0) vs in
-      (* vn, ..., v1, x1, x2, ..., xk, *)
-      (*   with k >= n (and the first few xs are 0s) *)
-      let j = k - n in
-      let s = fold_num (\ s . emit s [Stack (Store ((n - 1)+j))])
-                            s n in
-      (* x1, ..., xj, vn, ..., v1, *)
-      let s = if j = 0 then s else
-        emit s [Stack (PushInt i0); Stack (Pops j); Stack Pop] in
+      (* vn, ..., v1, 0j, ..., 01, xk, ..., x1, *)
+      let s = mv (k+j) n s in
       (* vn, ..., v1, *)
        s with<| sz := sz0 + n; env := env |>
   ))
@@ -580,7 +596,7 @@ val _ = Defn.save_defn fold_num_defn;
   let t = s.tail in
   let (s,dt) = sdt s in
   let s = (case t of
-    NONE =>
+    TCNonTail =>
     let s = compile s e in
     let s = FOLDL (\ s e . compile s e) s es in (* uneta because Hol_defn sucks *)
     (* argn, ..., arg2, arg1, Block 0 [CodePtr c; env], *)
@@ -591,18 +607,31 @@ val _ = Defn.save_defn fold_num_defn;
     emit s [CallPtr]
     (* before: env, CodePtr ret, argn, ..., arg1, Block 0 [CodePtr c; env], *)
     (* after:  retval, *)
-  | SOME (j,k) =>
+(* does it make sense to distinguish this case?
+  | TCTop sz0 ->
+    let k = match s.decl with None -> s.sz - sz0 | Some _ -> 0 end in
+    let n1 = 1+1+n+1 in
+    let (i,s) = pad k n1 s in
+    let s = compile s e in
+    let s = List.fold_left (fun s e -> compile s e) s es in (* uneta because Hol_defn sucks *)
+    (* argn, ..., arg1, Block 0 [CodePtr c; env], 0i, ..., 01, vk, ..., v1, *)
+    let s = emit s [Stack (Load n); Stack (El 1)] in
+    (* env, argn, ..., arg1, Block 0 [CodePtr c; env], 0i, ..., 01, vk, ..., v1, *)
+    let s = emit s [Stack (Load (n+1)); Stack (El 0)] in
+    (* CodePtr c, env, argn, ..., arg1, Block 0 [CodePtr c; env], 0i, ..., 01, vk, ..., v1, *)
+    let s = mv (k+i) n1 s in
+    (* CodePtr c, env, argn, ..., arg1, Block 0 [CodePtr c; env], *)
+    emit s [CallPtr]
+*)
+  | TCTail j k =>
     let n0 = k+1+1+j+1 in
     let n1 = 1+1+1+n+1 in
-    let (j,s) = if n0 < n1 then
-      let j = n1 - n0 in
-        (j,fold_num (\ s . incsz (emit s [Stack (PushInt i0)])) s j)
-      else (0,s) in
+    let (i,s) = pad n0 n1 s in
     let s = compile s e in
     let s = FOLDL (\ s e . compile s e) s es in (* uneta because Hol_defn sucks *)
     (* argn, ..., arg1, Block 0 [CodePtr c; env], 0i, ..., 01,
      * vk, ..., v1, env1, CodePtr ret, argj, ..., arg1, Block 0 [CodePtr c1; env1], *)
-    let s = emit s [Stack (Load (n+1+j+k+1))] in
+    let s = emit s [Stack (Load (n+1+i+k+1))] in
     (* CodePtr ret, argn, ..., arg1, Block 0 [CodePtr c; env], 0i, ..., 01,
      * vk, ..., v1, env1, CodePtr ret, argj, ..., arg1, Block 0 [CodePtr c1; env1], *)
     let s = emit s [Stack (Load (n+1)); Stack (El 1)] in
@@ -611,10 +640,7 @@ val _ = Defn.save_defn fold_num_defn;
     let s = emit s [Stack (Load (n+2)); Stack (El 0)] in
     (* CodePtr c, env, CodePtr ret, argn, ..., arg1, Block 0 [CodePtr c; env], 0i, ... 01,
      * vk, ..., v1, env1, CodePtr ret, argj, ..., arg1, Block 0 [CodePtr c1; env1], *)
-    let j = n0 + j - n1 in
-    let s = fold_num (\ s . emit s [Stack (Store ((n1 - 1)+j))]) s n1 in
-    let s = if j = 0 then s else
-      emit s [Stack (PushInt i0); Stack (Pops j); Stack Pop] in
+    let s = mv (n0+i) n1 s in
     emit s [JumpPtr]
   ) in
   ldt dt  s with<| sz := s.sz - n |>)
@@ -677,7 +703,7 @@ val _ = Defn.save_defn fold_num_defn;
 /\
 (compile_bindings env0 sz1 e n s [] =
   (case s.tail of
-    NONE =>
+    TCNonTail =>
     let s = compile s e in
     (case s.decl of
       SOME _ => s
@@ -685,10 +711,15 @@ val _ = Defn.save_defn fold_num_defn;
         let s = emit s [Stack (Pops n)] in
          s with<| env := env0 ; sz := sz1 |>
     )
-  | SOME (j,k) =>
-    let s =  s with<| tail := SOME (j,k+n) |> in
+  | TCTail j k =>
+    let s =  s with<| tail := TCTail j (k+n) |> in
     let s = compile s e in
      s with<| env := env0 ; sz := sz1 |>
+(*
+  | TCTop sz0 ->
+    let s = compile s e in
+    <| s with env = env0 ; sz = sz1 |>
+*)
   ))
 /\
 (compile_bindings env0 sz1 e n s (x::xs) =
@@ -783,9 +814,9 @@ val _ = Defn.save_defn fold_num_defn;
           )
         )) in
       let (n,env,ec) = num_set_foldl bind_fv (0,FEMPTY,[]) fvs in
-      let s' =  s with<| env := env; sz := 0; decl := NONE; tail := SOME (az,0) |> in
+      let s' =  s with<| env := env; sz := 0; decl := NONE; tail := TCTail az 0 |> in
       let s' = compile s' e in
-      let n = (case s'.tail of NONE => 1 | SOME (j,k) => k+1 ) in
+      let n = (case s'.tail of TCNonTail => 1 | TCTail j k => k+1 ) in
       let s' = emit s' [Stack (Pops n);
                         Stack (Load 1);
                         Stack (Store (az+2));
@@ -865,7 +896,7 @@ val _ = Define `
    ; sz := 0
    ; inst_length := \ i . 0 (* TODO: depends on runtime *)
    ; decl := NONE
-   ; tail := NONE
+   ; tail := TCNonTail
    |>`;
 
 
