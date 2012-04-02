@@ -387,6 +387,7 @@ val SET_OPAIR = store_thm(
     SRW_TAC [][POW_SET_CLOSED] THEN
     ASM_SIMP_TAC (srw_ss() ++ DNF_ss) [SUBSET_def]
   ]);
+val _ = export_rewrites ["SET_OPAIR"]
 
 val ZERO_NEQ_ONE = store_thm(
   "ZERO_NEQ_ONE",
@@ -439,6 +440,7 @@ val OPAIR_11 = store_thm(
     `SET y` by METIS_TAC [SET_def] THEN
     SRW_TAC [][POPAIR_INJ]
   ]);
+val _ = export_rewrites ["OPAIR_11"]
 
 val _ = add_rule { fixity = Closefix,
                    term_name = "OPAIR",
@@ -524,6 +526,7 @@ val fromNat_in_Nats = store_thm(
     fs [Nats_def, SPEC0, vSUC_def] >>
     fs [inductive_def, vSUC_def]
   ]);
+val _ = export_rewrites ["fromNat_in_Nats"]
 
 val NOT_IN_0 = store_thm(
   "NOT_IN_0",
@@ -532,13 +535,14 @@ val NOT_IN_0 = store_thm(
 val _ = export_rewrites ["NOT_IN_0"]
 
 val vSUC_NOT_0 = store_thm(
-  "vSUC_not_0",
+  "vSUC_NOT_0",
   ``vSUC n ≠ 0``,
   SRW_TAC [][vSUC_def, EXTENSION] THEN
   Cases_on `n = 0` THEN SRW_TAC [][] THENL [
     Q.EXISTS_TAC `0` THEN SRW_TAC [][],
     METIS_TAC [fromNat_def, EMPTY_UNIQUE]
   ]);
+val _ = export_rewrites ["vSUC_NOT_0"]
 
 val Nats_SET = store_thm(
   "Nats_SET",
@@ -580,7 +584,8 @@ val nat_induction = save_thm(
       |> Q.GEN `P`
       |> Q.SPEC `SPEC0 P ∩ Nats`
       |> SIMP_RULE (srw_ss() ++ CONJ_ss)
-                   [Nats_SET, EMPTY_IN_Nats, vSUC_IN_Nats, SPEC0]
+                   [Nats_SET, EMPTY_IN_Nats, vSUC_IN_Nats, SPEC0,
+                    GSYM fromNat_def]
       |> Q.GEN `P`);
 
 val transitive_def = Define`
@@ -627,6 +632,7 @@ val vSUC_11 = store_thm(
   `m ∈ vSUC n` by metis_tac [pre_IN_vSUC, SET_vSUC, Nats_SETs] >>
   fs[vSUC_def] >>
   metis_tac [transitive_ALT, Nats_transitive, Nats_not_selfmembers]);
+val _ = export_rewrites ["vSUC_11"]
 
 
 (*
