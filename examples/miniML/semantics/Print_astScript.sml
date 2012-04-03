@@ -15,7 +15,7 @@ open MiniMLTheory
 
 (*val string_first : string -> string*)
 
-(*val string_last : string -> string*)
+(*val first_ord : string -> num*)
 
 (*val (%) : num -> num -> num*)
 
@@ -190,22 +190,47 @@ val _ = Hol_datatype `
 val _ = Defn.save_defn tree_to_list_defn;
 
 (* Should include "^", but I don't know how to get that into HOL, since
- * antiquote seem stronger than strings. *)
-(* This is very slow
-let sml_infixes = 
-  ["mod"; "<>"; ">="; "<="; ":="; "::"; "before"; "div"; "o"; "@"; ">";
-   "="; "<"; "/"; "-"; "+"; "*"]
- *)
-
+ * antiquote seem stronger than strings.  See the specification in
+ * print_astProofsScript. *)
 val _ = Define `
  (is_sml_infix s =
-  (s = "mod") \/ (s = "<>") \/ (s = ">=") \/ (s = "<=") \/ (s = ":=") \/ (s = "::") \/ 
-  (s = "before") \/ (s = "div") \/ (s = "o") \/ (s = "@") \/ (s = ">") \/ (s = "=") \/ 
-  (s = "<") \/ (s = "/") \/ (s = "-") \/ (s = "+") \/ (s = "*"))`;
+  let c = ORD (SUB ( s,0)) in
+    if c < 65 (* "A" *) then
+      if c < 60 (* "<" *) then
+        (s = "*") \/
+        (s = "+") \/ 
+        (s = "-") \/
+        (s = "/") \/
+        (s = "::") \/ 
+        (s = ":=")
+      else
+        (s = "<") \/ 
+        (s = "<=") \/ 
+        (s = "<>") \/
+        (s = "=") \/ 
+        (s = ">") \/ 
+        (s = ">=") \/ 
+        (s = "@")
+    else
+      if c < 109 (* "m" *) then
+        if c < 100 then
+          s = "before"
+        else
+          s = "div" 
+      else
+        if c < 111 then
+          s = "mod"
+        else
+          s = "o")`;
 
 
 val _ = Define `
- ocaml_infixes = ["="; "+"; "-"; "*"; "/"; "mod"; "<"; ">"; "<="; ">="]`;
+ (is_ocaml_infix s =
+  let c = ORD (SUB ( s,0)) in
+    if c < 65 then
+      MEM s ["*"; "+"; "-"; "/"; "<"; "<="; "="; ">"; ">="]
+    else 
+      s = "mod")`;
 
 
 (*val join_trees : forall 'a. 'a tree -> 'a tree list -> 'a tree*)
@@ -230,26 +255,10 @@ val _ = Defn.save_defn join_trees_defn;
 val _ = Defn.save_defn lit_to_tok_tree_defn;
 
 val _ = Define `
- (pad_start v =
-  if STRING (SUB ( v,0)) "" = "*" then STRCAT 
-    " "  v
-  else
-    v)`;
-
-
-val _ = Define `
- (pad_end v =
-  if STRING (SUB ( v,STRLEN  v - 1)) "" = "*" then STRCAT 
-    v  " "
-  else
-    v)`;
-
-
-val _ = Define `
  (var_to_tok_tree sml v =
   if sml /\ is_sml_infix v then N 
     (L OpT)  (L (IdentT v))
-  else if ~ sml /\ MEM v ocaml_infixes then N 
+  else if ~ sml /\ is_ocaml_infix v then N 
     (L Open_parenT) (N   (L (IdentT v))  (L Close_parenT))
   else
     L (IdentT v))`;

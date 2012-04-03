@@ -6,6 +6,7 @@ val SUB : (string * num) -> char
 val STRLEN : string -> num
 val Num : int -> num
 val CHR : num -> char
+val ORD : char -> num
 
 type word32
 type word16

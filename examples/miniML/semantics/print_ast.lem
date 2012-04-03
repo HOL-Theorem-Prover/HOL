@@ -9,8 +9,8 @@ sub [hol] CHR n = STRING (CHR n) ""
 val string_first : string -> string
 sub [hol] string_first s = STRING (SUB (s,0)) ""
 
-val string_last : string -> string
-sub [hol] string_last s = STRING (SUB (s,STRLEN s - 1)) ""
+val first_ord : string -> num
+sub [hol] first_ord s = ORD (SUB (s,0))
 
 val (%) : num -> num -> num
 sub [hol] (%) = MOD
@@ -165,19 +165,44 @@ and
 tree_to_list (N x1 x2) acc = tree_to_list x1 (tree_to_list x2 acc)
 
 (* Should include "^", but I don't know how to get that into HOL, since
- * antiquote seem stronger than strings. *)
-(* This is very slow
-let sml_infixes = 
-  ["mod"; "<>"; ">="; "<="; ":="; "::"; "before"; "div"; "o"; "@"; ">";
-   "="; "<"; "/"; "-"; "+"; "*"]
- *)
-
+ * antiquote seem stronger than strings.  See the specification in
+ * print_astProofsScript. *)
 let is_sml_infix s =
-  s = "mod" || s = "<>" || s = ">=" || s = "<=" || s = ":=" || s = "::" || 
-  s = "before" || s = "div" || s = "o" || s = "@" || s = ">" || s = "=" || 
-  s = "<" || s = "/" || s = "-" || s = "+" || s = "*"
+  let c = first_ord s in
+    if c < 65 (* "A" *) then
+      if c < 60 (* "<" *) then
+        s = "*" ||
+        s = "+" || 
+        s = "-" ||
+        s = "/" ||
+        s = "::" || 
+        s = ":="
+      else
+        s = "<" || 
+        s = "<=" || 
+        s = "<>" ||
+        s = "=" || 
+        s = ">" || 
+        s = ">=" || 
+        s = "@"
+    else
+      if c < 109 (* "m" *) then
+        if c < 100 then
+          s = "before"
+        else
+          s = "div" 
+      else
+        if c < 111 then
+          s = "mod"
+        else
+          s = "o"
 
-let ocaml_infixes = ["="; "+"; "-"; "*"; "/"; "mod"; "<"; ">"; "<="; ">="]
+let is_ocaml_infix s =
+  let c = first_ord s in
+    if c < 65 then
+      List.mem s ["*"; "+"; "-"; "/"; "<"; "<="; "="; ">"; ">="]
+    else 
+      s = "mod"
 
 (*val join_trees : forall 'a. 'a tree -> 'a tree list -> 'a tree*)
 val join_trees : tok_tree -> tok_tree list -> tok_tree
@@ -194,22 +219,10 @@ lit_to_tok_tree sml (Bool false) = L (IdentT "false")
 and
 lit_to_tok_tree sml (IntLit n) = L (IntlitT n)
 
-let pad_start v =
-  if string_first v = "*" then
-    " " ^ v
-  else
-    v
-
-let pad_end v =
-  if string_last v = "*" then
-    v ^ " "
-  else
-    v
-
 let var_to_tok_tree sml v =
   if sml && is_sml_infix v then
     L OpT ^^ L (IdentT v)
-  else if not sml && List.mem v ocaml_infixes then
+  else if not sml && is_ocaml_infix v then
     L Open_parenT ^^ L (IdentT v) ^^ L Close_parenT
   else
     L (IdentT v)
