@@ -16,13 +16,13 @@ fun register name def ind =
 
 val (num_to_string_def, num_to_string_ind) =
   tprove_no_defn ((num_to_string_def, num_to_string_ind),
-  wf_rel_tac `measure (\x.x)` >>
+  wf_rel_tac `measure (\(x,y).x)` >>
   srw_tac [ARITH_ss] []);
 val _ = register "num_to_string" num_to_string_def num_to_string_ind;
 
 val (spaces_def, spaces_ind) =
   tprove_no_defn ((spaces_def, spaces_ind),
-  wf_rel_tac `measure (\x.x)` >>
+  wf_rel_tac `measure (\(x,y).x)` >>
   srw_tac [ARITH_ss] []);
 val _ = register "spaces" spaces_def spaces_ind;
 
@@ -71,5 +71,11 @@ val (type_to_tok_tree_def, type_to_tok_tree_ind) =
   decide_tac);
 
 val _ = register "type_to_tok_tree" type_to_tok_tree_def type_to_tok_tree_ind;
+
+val tok_to_string_def =
+  save_thm ("tok_to_string_def",SIMP_RULE (srw_ss()) [] tok_to_string_def);
+
+val _ = 
+  computeLib.add_persistent_funs [("tok_to_string_def", tok_to_string_def)];
 
 val _ = export_theory ();

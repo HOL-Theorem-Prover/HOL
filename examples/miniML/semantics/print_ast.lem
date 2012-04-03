@@ -29,28 +29,28 @@ type token =
 (* OCaml additions *)
   | MatchT | TypeT | WithT | AmpampT | BarbarT | SemisemiT
 
-let rec num_to_string n =
-  if n > 0 then
-    num_to_string (n / 10) ^ (CHR (n % 10 + 48))
+let rec num_to_string n acc =
+  if n = 0 then
+    acc
   else
-    ""
+    num_to_string (n / 10) (CHR (n % 10 + 48) ^ acc)
 
 val int_to_string : bool -> Int.int -> string
 let int_to_string sml n =
   if n = i 0 then
     "0"
   else if Int.(>) n (i 0) then
-    num_to_string (Num n)
+    num_to_string (Num n) ""
   else
-    (if sml then "~" else "-") ^ num_to_string (Num (Int.(-) (i 0) n))
+    (if sml then "~" else "-") ^ num_to_string (Num (Int.(-) (i 0) n)) ""
 
 val spaces : num -> string
 let rec 
-spaces n =
+spaces n s =
   if (n:num) = 0 then
-    ""
+    s
   else
-    " " ^ spaces (n - 1)
+    " " ^ spaces (n - 1) s
 
 let space_append s1 s2 =
   if s2 = "" then
@@ -65,7 +65,7 @@ let space_append s1 s2 =
 let rec
 tok_to_string sml NewlineT s = "\n" ^ s
 and
-tok_to_string sml (WhitespaceT n) s = spaces n ^ s
+tok_to_string sml (WhitespaceT n) s = spaces n s
 and
 tok_to_string sml (IntlitT i) s = space_append (int_to_string sml i) s
 and
@@ -115,7 +115,7 @@ tok_to_string sml Open_parenT s =
   else
     "(" ^ s
 and
-tok_to_string sml Close_parenT s = ")" ^ s
+tok_to_string sml Close_parenT s = space_append ")" s
 and
 tok_to_string sml CommaT s = ", " ^ s
 and
@@ -166,9 +166,16 @@ tree_to_list (N x1 x2) acc = tree_to_list x1 (tree_to_list x2 acc)
 
 (* Should include "^", but I don't know how to get that into HOL, since
  * antiquote seem stronger than strings. *)
+(* This is very slow
 let sml_infixes = 
   ["mod"; "<>"; ">="; "<="; ":="; "::"; "before"; "div"; "o"; "@"; ">";
    "="; "<"; "/"; "-"; "+"; "*"]
+ *)
+
+let is_sml_infix s =
+  s = "mod" || s = "<>" || s = ">=" || s = "<=" || s = ":=" || s = "::" || 
+  s = "before" || s = "div" || s = "o" || s = "@" || s = ">" || s = "=" || 
+  s = "<" || s = "/" || s = "-" || s = "+" || s = "*"
 
 let ocaml_infixes = ["="; "+"; "-"; "*"; "/"; "mod"; "<"; ">"; "<="; ">="]
 
@@ -200,7 +207,7 @@ let pad_end v =
     v
 
 let var_to_tok_tree sml v =
-  if sml && List.mem v sml_infixes then
+  if sml && is_sml_infix v then
     L OpT ^^ L (IdentT v)
   else if not sml && List.mem v ocaml_infixes then
     L Open_parenT ^^ L (IdentT v) ^^ L Close_parenT

@@ -36,11 +36,11 @@ val _ = Hol_datatype `
 
 
  val num_to_string_defn = Hol_defn "num_to_string" `
- (num_to_string n =
-  if n > 0 then STRCAT 
-    (num_to_string (n DIV 10))  (STRING (CHR  (n MOD 10 + 48)) "")
+ (num_to_string n acc =
+  if n = 0 then
+    acc
   else
-    "")`;
+    num_to_string (n DIV 10) ( STRCAT (STRING (CHR  (n MOD 10 + 48)) "")  acc))`;
 
 val _ = Defn.save_defn num_to_string_defn;
 
@@ -50,19 +50,19 @@ val _ = Define `
   if n = & 0 then
     "0"
   else if int_gt n (& 0) then
-    num_to_string (Num n)
+    num_to_string (Num n) ""
   else STRCAT 
-    (if sml then "~" else "-")  (num_to_string (Num ((int_sub) (& 0) n))))`;
+    (if sml then "~" else "-")  (num_to_string (Num ((int_sub) (& 0) n)) ""))`;
 
 
-(*val spaces : num -> string*)
+(*val spaces : num -> string -> string*)
  val spaces_defn = Hol_defn "spaces" `
  
-(spaces n =
+(spaces n s =
   if (n:num) = 0 then
-    ""
+    s
   else STRCAT 
-    " "  (spaces (n - 1)))`;
+    " "  (spaces (n - 1) s))`;
 
 val _ = Defn.save_defn spaces_defn;
 
@@ -82,7 +82,7 @@ val _ = Define `
 
 (tok_to_string sml NewlineT s = STRCAT  "\n"  s)
 /\
-(tok_to_string sml (WhitespaceT n) s = STRCAT  (spaces n)  s)
+(tok_to_string sml (WhitespaceT n) s = spaces n s)
 /\
 (tok_to_string sml (IntlitT i) s = space_append (int_to_string sml i) s)
 /\
@@ -132,7 +132,7 @@ val _ = Define `
   else STRCAT 
     "("  s)
 /\
-(tok_to_string sml Close_parenT s = STRCAT  ")"  s)
+(tok_to_string sml Close_parenT s = space_append ")" s)
 /\
 (tok_to_string sml CommaT s = STRCAT  ", "  s)
 /\
@@ -191,10 +191,17 @@ val _ = Defn.save_defn tree_to_list_defn;
 
 (* Should include "^", but I don't know how to get that into HOL, since
  * antiquote seem stronger than strings. *)
-val _ = Define `
- sml_infixes = 
+(* This is very slow
+let sml_infixes = 
   ["mod"; "<>"; ">="; "<="; ":="; "::"; "before"; "div"; "o"; "@"; ">";
-   "="; "<"; "/"; "-"; "+"; "*"]`;
+   "="; "<"; "/"; "-"; "+"; "*"]
+ *)
+
+val _ = Define `
+ (is_sml_infix s =
+  (s = "mod") \/ (s = "<>") \/ (s = ">=") \/ (s = "<=") \/ (s = ":=") \/ (s = "::") \/ 
+  (s = "before") \/ (s = "div") \/ (s = "o") \/ (s = "@") \/ (s = ">") \/ (s = "=") \/ 
+  (s = "<") \/ (s = "/") \/ (s = "-") \/ (s = "+") \/ (s = "*"))`;
 
 
 val _ = Define `
@@ -240,7 +247,7 @@ val _ = Define `
 
 val _ = Define `
  (var_to_tok_tree sml v =
-  if sml /\ MEM v sml_infixes then N 
+  if sml /\ is_sml_infix v then N 
     (L OpT)  (L (IdentT v))
   else if ~ sml /\ MEM v ocaml_infixes then N 
     (L Open_parenT) (N   (L (IdentT v))  (L Close_parenT))

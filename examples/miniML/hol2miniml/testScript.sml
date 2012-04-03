@@ -1,10 +1,10 @@
-open bossLib Theory ml_translatorLib;
+open bossLib Theory intLib Print_astTerminationTheory;
 open MiniMLTheory Print_astTheory;
 val _ = new_theory "test"
 val thm_counter = Count.mk_meter();
 
 val thm =
-save_thm ("thm",EVAL ``dec_to_sml_string
+save_thm ("thm",EVAL ``tok_list_to_string T (tree_to_list (dec_to_tok_tree T 0
 (Dlet (Pvar "Sbox")
   (Fun "v1"
      (Let "x"
@@ -1736,7 +1736,7 @@ save_thm ("thm",EVAL ``dec_to_sml_string
                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                               (
                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                  "Nil")
                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                               []]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]))
-        (App (Opn Modulo) (Var "x") (Val (Lit (IntLit 256)))))))``);
+        (App (Opn Modulo) (Var "x") (Val (Lit (IntLit 256)))))))) [])``);
 
 val _ = Count.report (Count.read thm_counter);
 
