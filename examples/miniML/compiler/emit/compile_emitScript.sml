@@ -53,6 +53,7 @@ boolSyntax.rhs(Thm.concl(SIMP_CONV (srw_ss()) [init_compiler_state_def]
 ``<| env := init_compiler_state.env
    ; sz := init_compiler_state.sz
    ; code := init_compiler_state.code
+   ; code_length := init_compiler_state.code_length
    ; tail := init_compiler_state.tail
    ; next_label := init_compiler_state.next_label
    ; decl := init_compiler_state.decl

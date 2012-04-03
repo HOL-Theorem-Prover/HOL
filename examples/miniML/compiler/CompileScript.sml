@@ -393,6 +393,7 @@ val _ = Hol_datatype `
   <| env: (num,ctbind) fmap
    ; sz: num
    ; code: bc_inst list (* reversed *)
+   ; code_length: num
    ; tail: call_context
    ; next_label: num
    (* not modified on return: *)
@@ -440,7 +441,7 @@ val _ = Defn.save_defn prim2_to_bc_defn;
 val _ = Define `
  emit = FOLDL
   (\ s i .  s with<| next_label := s.next_label + s.inst_length i + 1;
-                        code := i :: s.code |>)`;
+                        code := i :: s.code; code_length := s.code_length + 1 |>)`;
 
 
  val compile_varref_defn = Hol_defn "compile_varref" `
@@ -664,15 +665,15 @@ val _ = Defn.save_defn mv_defn;
   let (s,dt) = sdt s in
   let s = ldt dt (compile s e1) in
   let s = emit s [JumpNil 0; Jump 0] in
-  let j1 = LENGTH s.code in
+  let j1 = s.code_length in
   let n1 = s.next_label in
   let s = compile (decsz s) e2 in
   let s = emit s [Jump 0] in
-  let j2 = LENGTH s.code in
+  let j2 = s.code_length in
   let n2 = s.next_label in
   let s = compile (decsz s) e3 in
   let n3 = s.next_label in
-  let j3 = LENGTH s.code in
+  let j3 = s.code_length in
    s with<| code :=
       (REPLACE_ELEMENT (Jump n3) (j3 - j2)
       (REPLACE_ELEMENT (Jump n2) (j3 - j1)
@@ -682,21 +683,21 @@ val _ = Defn.save_defn mv_defn;
   let (s,dt) = sdt s in
   let s = compile s e1 in
   let s = emit s [JumpNil 0] in
-  let j = LENGTH s.code in
+  let j = s.code_length in
   let s = ldt dt (compile (decsz s) e2) in
    s with<| code :=
       REPLACE_ELEMENT (JumpNil s.next_label)
-      (LENGTH s.code - j) s.code |>)
+      (s.code_length - j) s.code |>)
 /\
 (compile s (CLprim COr [e1;e2]) =
   let (s,dt) = sdt s in
   let s = compile s e1 in
   let s = emit s [JumpNil 0; Stack (PushInt i1); Jump 0] in
-  let j = LENGTH s.code in
+  let j = s.code_length in
   let n1 = s.next_label in
   let s = ldt dt (compile (decsz s) e2) in
   let n2 = s.next_label in
-  let j3 = LENGTH s.code in
+  let j3 = s.code_length in
    s with<| code :=
       (REPLACE_ELEMENT (Jump n2) (j3 - j)
       (REPLACE_ELEMENT (JumpNil n1) (j3 - j - 2) s.code)) |>)
@@ -801,19 +802,19 @@ val _ = Defn.save_defn mv_defn;
       let az = LENGTH xs in
       let lab = s.next_label in
       let s = emit s [Call 0] in
-      let j = LENGTH s.code in
+      let j = s.code_length in
       let fvs = free_vars e in
-      let (bind_fv (n,env,ec) fv =
+      let (bind_fv (n,env,(ecl,ec)) fv =
         (case find_index fv xs 1 of
-          SOME j => (n, FUPDATE  env ( fv, (CTArg (2 + az - j))), ec)
+          SOME j => (n, FUPDATE  env ( fv, (CTArg (2 + az - j))), (ecl,ec))
         | NONE => (case find_index fv ns 0 of
-            NONE => (n+1, FUPDATE  env ( fv, (CTEnv n)), (CEEnv fv::ec))
+            NONE => (n+1, FUPDATE  env ( fv, (CTEnv n)), (ecl+1,CEEnv fv::ec))
           | SOME j => if j = k
-                      then (n, FUPDATE  env ( fv, (CTArg (2 + az))), ec)
-                      else (n+1, FUPDATE  env ( fv, (CTRef n)), (CERef j)::ec)
+                      then (n, FUPDATE  env ( fv, (CTArg (2 + az))), (ecl,ec))
+                      else (n+1, FUPDATE  env ( fv, (CTRef n)), (ecl+1,(CERef j)::ec))
           )
         )) in
-      let (n,env,ec) = num_set_foldl bind_fv (0,FEMPTY,[]) fvs in
+      let (n,env,(ecl,ec)) = num_set_foldl bind_fv (0,FEMPTY,(0,[])) fvs in
       let s' =  s with<| env := env; sz := 0; decl := NONE; tail := TCTail az 0 |> in
       let s' = compile s' e in
       let n = (case s'.tail of TCNonTail => 1 | TCTail j k => k+1 ) in
@@ -823,17 +824,16 @@ val _ = Defn.save_defn mv_defn;
                         Stack (Pops (az+1));
                         Return] in
       let s =  s' with<| env := s.env; sz := s.sz + 1; decl := s.decl; tail := s.tail |> in
-      (s,k+1,(j,lab)::labs,ec::ecs))
+      (s,k+1,(j,lab)::labs,(ecl,ec)::ecs))
     (s,0,[],[]) defs in
   let s =  s with<| code :=
-    replace_calls (LENGTH s.code) ((0,s.next_label)::labs) s.code |> in
+    replace_calls s.code_length ((0,s.next_label)::labs) s.code |> in
   let s = emit s [Stack Pop] in
   let nk = LENGTH defs in
   let (s,k) = FOLDL
-    (\ (s,k) ec .
+    (\ (s,k) (j,ec) .
       let s = incsz (emit s [Stack (Load (nk - k))]) in
       let s = FOLDR  emit_ec  s  ec in
-      let j = LENGTH ec in
       let s = emit s [Stack (if j = 0 then PushInt i0 else Cons 0 j)] in
       let s = emit s [Stack (Cons 0 2)] in
       let s = decsz (emit s [Stack (Store (nk - k))]) in
@@ -892,6 +892,7 @@ val _ = Define `
  init_compiler_state =
   <| env := FEMPTY
    ; code := []
+   ; code_length := 0
    ; next_label := 1 (* depends on exception handlers *)
    ; sz := 0
    ; inst_length := \ i . 0 (* TODO: depends on runtime *)

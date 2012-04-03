@@ -349,6 +349,7 @@ type compiler_state =
   <| env: (num,ctbind) Pmap.map
    ; sz: num
    ; code: bc_inst list (* reversed *)
+   ; code_length: num
    ; tail: call_context
    ; next_label: num
    (* not modified on return: *)
@@ -382,7 +383,7 @@ prim2_to_bc CEq = Equal
 
 let emit = List.fold_left
   (fun s i -> <| s with next_label = s.next_label + s.inst_length i + 1;
-                        code = i :: s.code |>)
+                        code = i :: s.code; code_length = s.code_length + 1 |>)
 
 let rec
 compile_varref s (CTLet n) = emit s [Stack (Load (s.sz - n))]
@@ -573,15 +574,15 @@ compile s (CLprim CIf [e1;e2;e3]) =
   let (s,dt) = sdt s in
   let s = ldt dt (compile s e1) in
   let s = emit s [JumpNil 0; Jump 0] in
-  let j1 = List.length s.code in
+  let j1 = s.code_length in
   let n1 = s.next_label in
   let s = compile (decsz s) e2 in
   let s = emit s [Jump 0] in
-  let j2 = List.length s.code in
+  let j2 = s.code_length in
   let n2 = s.next_label in
   let s = compile (decsz s) e3 in
   let n3 = s.next_label in
-  let j3 = List.length s.code in
+  let j3 = s.code_length in
   <| s with code =
       (replace (Jump n3) (j3 - j2)
       (replace (Jump n2) (j3 - j1)
@@ -591,21 +592,21 @@ compile s (CLprim CAnd [e1;e2]) =
   let (s,dt) = sdt s in
   let s = compile s e1 in
   let s = emit s [JumpNil 0] in
-  let j = List.length s.code in
+  let j = s.code_length in
   let s = ldt dt (compile (decsz s) e2) in
   <| s with code =
       replace (JumpNil s.next_label)
-      (List.length s.code - j) s.code |>
+      (s.code_length - j) s.code |>
 and
 compile s (CLprim COr [e1;e2]) =
   let (s,dt) = sdt s in
   let s = compile s e1 in
   let s = emit s [JumpNil 0; Stack (PushInt i1); Jump 0] in
-  let j = List.length s.code in
+  let j = s.code_length in
   let n1 = s.next_label in
   let s = ldt dt (compile (decsz s) e2) in
   let n2 = s.next_label in
-  let j3 = List.length s.code in
+  let j3 = s.code_length in
   <| s with code =
       (replace (Jump n2) (j3 - j)
       (replace (JumpNil n1) (j3 - j - 2) s.code)) |>
@@ -710,19 +711,19 @@ compile_closures nso s defs =
       let az = List.length xs in
       let lab = s.next_label in
       let s = emit s [Call 0] in
-      let j = List.length s.code in
+      let j = s.code_length in
       let fvs = free_vars e in
-      let bind_fv (n,env,ec) fv =
+      let bind_fv (n,env,(ecl,ec)) fv =
         match find_index fv xs 1 with
-        | Some j -> (n, Pmap.add fv (CTArg (2 + az - j)) env, ec)
+        | Some j -> (n, Pmap.add fv (CTArg (2 + az - j)) env, (ecl,ec))
         | None -> match find_index fv ns 0 with
-          | None -> (n+1, Pmap.add fv (CTEnv n) env, (CEEnv fv::ec))
+          | None -> (n+1, Pmap.add fv (CTEnv n) env, (ecl+1,CEEnv fv::ec))
           | Some j -> if j = k
-                      then (n, Pmap.add fv (CTArg (2 + az)) env, ec)
-                      else (n+1, Pmap.add fv (CTRef n) env, (CERef j)::ec)
+                      then (n, Pmap.add fv (CTArg (2 + az)) env, (ecl,ec))
+                      else (n+1, Pmap.add fv (CTRef n) env, (ecl+1,(CERef j)::ec))
           end
         end in
-      let (n,env,ec) = num_set_foldl bind_fv (0,Pmap.empty,[]) fvs in
+      let (n,env,(ecl,ec)) = num_set_foldl bind_fv (0,Pmap.empty,(0,[])) fvs in
       let s' = <| s with env = env; sz = 0; decl = None; tail = TCTail az 0 |> in
       let s' = compile s' e in
       let n = match s'.tail with TCNonTail -> 1 | TCTail j k -> k+1 end in
@@ -732,17 +733,16 @@ compile_closures nso s defs =
                         Stack (Pops (az+1));
                         Return] in
       let s = <| s' with env = s.env; sz = s.sz + 1; decl = s.decl; tail = s.tail |> in
-      (s,k+1,(j,lab)::labs,ec::ecs))
+      (s,k+1,(j,lab)::labs,(ecl,ec)::ecs))
     (s,0,[],[]) defs in
   let s = <| s with code =
-    replace_calls (List.length s.code) ((0,s.next_label)::labs) s.code |> in
+    replace_calls s.code_length ((0,s.next_label)::labs) s.code |> in
   let s = emit s [Stack Pop] in
   let nk = List.length defs in
   let (s,k) = List.fold_left
-    (fun (s,k) ec ->
+    (fun (s,k) (j,ec) ->
       let s = incsz (emit s [Stack (Load (nk - k))]) in
       let s = List.fold_right emit_ec ec s in
-      let j = List.length ec in
       let s = emit s [Stack (if j = 0 then PushInt i0 else Cons 0 j)] in
       let s = emit s [Stack (Cons 0 2)] in
       let s = decsz (emit s [Stack (Store (nk - k))]) in
@@ -791,6 +791,7 @@ type repl_state =
 let init_compiler_state =
   <| env = Pmap.empty
    ; code = []
+   ; code_length = 0
    ; next_label = 1 (* depends on exception handlers *)
    ; sz = 0
    ; inst_length = fun i -> 0 (* TODO: depends on runtime *)
