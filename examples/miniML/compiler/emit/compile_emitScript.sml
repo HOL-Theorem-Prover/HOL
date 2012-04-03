@@ -60,6 +60,17 @@ boolSyntax.rhs(Thm.concl(SIMP_CONV (srw_ss()) [init_compiler_state_def]
    ; inst_length := init_compiler_state.inst_length
    |>``))), SRW_TAC[][init_compiler_state_def])
 
+val init_repl_state =
+prove(
+boolSyntax.mk_eq(``init_repl_state``,
+boolSyntax.rhs(Thm.concl(SIMP_CONV (srw_ss()) [init_repl_state_def]
+``<| cmap := init_repl_state.cmap
+   ; cpam := init_repl_state.cpam
+   ; vmap := init_repl_state.vmap
+   ; nextv := init_repl_state.nextv
+   ; cs := init_repl_state.cs
+   |>``))), SRW_TAC[][init_repl_state_def])
+
 val defs = map DEFN
 [ incsz_def
 , free_vars_def
@@ -83,7 +94,7 @@ val defs = map DEFN
 , emit_ec_def
 , underscore_rule compile_def
 , init_compiler_state
-, init_repl_state_def
+, init_repl_state
 , remove_Gt_Geq_def
 , remove_mat_exp_def
 , extend_def

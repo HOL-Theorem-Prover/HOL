@@ -163,7 +163,7 @@ val _ = save_thm ("free_vars_ind", free_vars_ind);
 
 val (pat_to_Cpat_def, pat_to_Cpat_ind) =
   tprove_no_defn ((pat_to_Cpat_def,pat_to_Cpat_ind),
-  WF_REL_TAC `measure (pat_size o SND o SND)` >>
+  WF_REL_TAC `measure (pat_size o SND o SND o SND)` >>
   srw_tac [ARITH_ss][pat1_size_thm] >>
   imp_res_tac SUM_MAP_MEM_bound >>
   pop_assum (qspec_then `pat_size` mp_tac) >>

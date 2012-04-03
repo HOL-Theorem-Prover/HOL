@@ -402,9 +402,11 @@ val (m,st) = pd1 e32 [d0,d1]
 val [res,cl] = st
 val tm = pv m res (NTapp ([NTnum],"list"))
 val true = tm = (term_to_v ``Conv "Cons" [Lit (IntLit 4); Conv "Nil" []]``);
-val d2 = ``
+val paird = ``
 Dtype [(["'a"; "'b"],"prod",[("Pair_type",[Tvar "'a"; Tvar "'b"])])]
-`` val d3 = ``
+``
+val d2 = paird
+val d3 = ``
 Dletrec
   [("PART","v3",
     Fun "v4"
@@ -496,3 +498,12 @@ val e44 = ``App Opapp (Var "o") (Val (Lit (IntLit 1000)))``
 val (m,st) = pd1 e44 [d]
 val [Number i, cl] = st
 val SOME 0 = intML.toInt i;
+val d0 = paird
+val d1 = ``Dlet (Pcon "Pair_type" [Pvar "x";Pvar "y"]) (Con "Pair_type" [Val (Lit (IntLit 1));Val (Lit (IntLit 2))])``
+val d2 = ``Dlet (Pvar "x") (Val (Lit (IntLit 3)))``
+val e45 = ``Con "Pair_type" [Var "x";Var "y"]``
+val (m,st) = pd1 e45 [d0,d1,d2] (* TODO: is this what we want on the stack? eventually want x' to overwrite x; not sure about order of x and y *)
+val [bl,Number x',Number x,Number y] = st
+val SOME 1 = intML.toInt x
+val SOME 2 = intML.toInt y
+val SOME 3 = intML.toInt x'
