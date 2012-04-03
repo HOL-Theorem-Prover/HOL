@@ -10,7 +10,7 @@ type
   | Store of num            (* pop and store in stack[n+1] *)
   | El of num               (* read field n of cons block *)
   | TagEquals of num        (* test tag from cons block or number *)
-  | IsNum | Equal           (* tests *)
+  | IsNum | Equal           (* more tests *)
   | Add | Sub | Mult | Div2 | Mod2 | Less  (* arithmetic *)
 
 type
@@ -29,8 +29,11 @@ type
 
 (* --- Semantics --- *)
 
-val num_to_int : num -> Int.int
+(* move to lem *)
+val num_to_int : num -> int
 sub [hol] num_to_int = (&)
+val drop : forall 'a. num -> 'a list -> 'a list
+sub [hol] drop = DROP
 
 let rec
 bool_to_int true = num_to_int 1
@@ -45,3 +48,160 @@ type
   | Block of num * bc_value list   (* cons block: tag and payload *)
   | CodePtr of num                 (* code pointer *)
   | RefPtr of num                  (* pointer to ref cell *)
+
+type
+  bc_state =
+   <| (* main state components *)
+      stack : bc_value list;
+      code : bc_inst list ;
+      pc : num ;
+      refs : (num, bc_value) Pmap.map ;
+      exstack : (num * num) list ;
+      (* artificial state components *)
+      inst_length : bc_inst -> num
+   |>
+
+(* fetching the next instruction from the code *)
+
+let rec
+bc_fetch_aux [] len (n:num) = None
+and
+bc_fetch_aux (x::xs) len n =
+  if n = 0 then Some x else
+    if n < len x + 1 then None else
+      bc_fetch_aux xs len (n - (len x + 1))
+
+let bc_fetch s = bc_fetch_aux s.code s.inst_length s.pc
+
+(* most instructions just bump the pc along, for this we use bump_pc *)
+
+let bump_pc s = match bc_fetch s with
+| None -> s
+| Some x -> <| s with pc = s.pc + s.inst_length x + 1 |>
+end
+
+(* next state relation *)
+
+indreln
+forall x xs. true ==>
+bc_stack_op Pop (x::xs) (xs)
+and
+forall x ys xs. true ==>
+bc_stack_op (Pops (List.length ys)) (x::ys@xs) (x::xs)
+and
+forall n xs. true ==>
+bc_stack_op (PushInt n) (xs) (Number n::xs)
+and
+forall tag ys xs. true ==>
+bc_stack_op (Cons tag (List.length ys)) (ys@xs) (Block tag (List.rev ys)::xs)
+and
+forall k xs. k < List.length xs ==>
+bc_stack_op (Load k) xs (List.nth xs k::xs)
+and
+forall y ys x xs. true ==>
+bc_stack_op (Store (List.length ys)) (y::ys@x::xs) (ys@y::xs)
+and
+forall k tag ys xs. k < List.length ys ==>
+bc_stack_op (El k) ((Block tag ys)::xs) (List.nth ys k::xs)
+and
+forall t tag ys xs. true ==>
+bc_stack_op (TagEquals t) ((Block tag ys)::xs) (Number (bool_to_int (tag = t))::xs)
+and
+forall t i xs. true ==>
+bc_stack_op (TagEquals t) ((Number i)::xs) (Number (bool_to_int (i = num_to_int t))::xs)
+and
+forall x xs. true ==>
+bc_stack_op IsNum (x::xs) (Number (bool_to_int (exist n. x = Number n))::xs)
+and
+forall x2 x1 xs. true ==>
+bc_stack_op Equal (x2::x1::xs) (Number (bool_to_int (x1 = x2))::xs)
+and
+forall n m xs. true ==>
+bc_stack_op Less (Number n::Number m::xs) (Number (bool_to_int (Int.(<) m n))::xs)
+and
+forall n m xs. true ==>
+bc_stack_op Add  (Number n::Number m::xs) (Number (Int.(+) m n)::xs)
+and
+forall n m xs. true ==>
+bc_stack_op Sub  (Number n::Number m::xs) (Number (Int.(-) m n)::xs)
+and
+forall n m xs. true ==>
+bc_stack_op Mult (Number n::Number m::xs) (Number (Int.( *) m n)::xs)
+and
+forall m xs. true ==>
+bc_stack_op Div2 (Number m::xs) (Number (Int.(/) m (num_to_int 2))::xs)
+and
+forall m xs. true ==>
+bc_stack_op Mod2 (Number m::xs) (Number (Int.(%) m (num_to_int 2))::xs)
+
+indreln
+forall s b ys.
+bc_fetch s = Some (Stack b)
+&& bc_stack_op b (s.stack) ys
+==>
+bc_next s (<|bump_pc s with stack = ys|>) (* parens throughout: lem sucks *)
+and
+forall s n.
+(bc_fetch s = Some (Jump n)) (* parens: ugh...*)
+==>
+bc_next s (<|s with pc = n|>)
+and
+forall s n x xs s'.
+bc_fetch s = Some (JumpNil n)
+&& s.stack = x::xs
+&& s' = <|s with stack = xs|>
+==>
+bc_next s (if x = Number (num_to_int 0) then bump_pc s' else <|s' with pc = n|>)
+and
+forall s n x xs.
+bc_fetch s = Some (Call n)
+&& s.stack = x::xs
+==>
+bc_next s (<|s with pc = n; stack = x::CodePtr ((bump_pc s).pc)::xs|>)
+and
+forall s ptr x xs.
+bc_fetch s = Some CallPtr
+&& s.stack = CodePtr ptr::x::xs
+==>
+bc_next s (<|s with pc = ptr; stack = x::CodePtr ((bump_pc s).pc)::xs|>)
+and
+forall s ptr xs.
+bc_fetch s = Some JumpPtr
+&& s.stack = CodePtr ptr::xs
+==>
+bc_next s (<|s with pc = ptr; stack = xs|>)
+and
+forall s x n xs.
+bc_fetch s = Some Return
+&& s.stack = x::CodePtr n::xs
+==>
+bc_next s (<|s with pc = n; stack = x::xs|>)
+and
+forall s p m es x xs.
+bc_fetch s = Some Exception
+&& s.stack = x::xs
+&& s.exstack = (p,m)::es
+&& m <= List.length xs
+==>
+bc_next s (<|s with pc = p; stack = x::drop (List.length xs - m) xs|>)
+and
+forall s x xs ptr.
+bc_fetch s = Some Ref
+&& s.stack = x::xs
+&& not (Pmap.mem ptr s.refs)
+==>
+bc_next s (<|bump_pc s with stack = (RefPtr ptr)::xs; refs = Pmap.add ptr x s.refs|>)
+and
+forall s ptr xs.
+bc_fetch s = Some Deref
+&& s.stack = (RefPtr ptr)::xs
+&& Pmap.mem ptr s.refs
+==>
+bc_next s (<|bump_pc s with stack = Pmap.find ptr s.refs::xs|>)
+and
+forall s x ptr xs.
+bc_fetch s = Some Update
+&& s.stack = x::(RefPtr ptr)::xs
+&& Pmap.mem ptr s.refs
+==>
+bc_next s (<|bump_pc s with stack = xs; refs = Pmap.add ptr x s.refs|>)
