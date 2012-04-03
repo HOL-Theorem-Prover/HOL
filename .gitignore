@@ -109,9 +109,6 @@ Manual/Reference/entries.tex
 
 examples/machine-code/lisp/*.s
 
-examples/miniML/hol2miniml/miniml-heap
-examples/miniML/compiler/miniml-heap
-
 examples/muddy/muddyC/Makefile
 examples/muddy/muddyC/buddy/src/libbdd.a
 examples/muddy/muddyC/muddy.so
