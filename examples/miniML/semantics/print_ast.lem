@@ -44,7 +44,7 @@ let int_to_string sml n =
   else
     (if sml then "~" else "-") ^ num_to_string (Num (Int.(-) (i 0) n)) ""
 
-val spaces : num -> string
+val spaces : num -> string -> string
 let rec 
 spaces n s =
   if (n:num) = 0 then
