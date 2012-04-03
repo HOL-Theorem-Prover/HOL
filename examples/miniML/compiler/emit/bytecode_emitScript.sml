@@ -2,6 +2,8 @@ open HolKernel bossLib boolLib EmitTeX
 open emitLib fmap_emitTheory int_emitTheory BytecodeTheory bytecodeProofsTheory
 val _ = new_theory "bytecode_emit"
 
+val _ = Parse.disable_tyabbrev_printing "env"
+
 val data = map
   (fn th => DATATYPE [QUOTE (datatype_thm_to_string th)])
   [datatype_bc_stack_op,

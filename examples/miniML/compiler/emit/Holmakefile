@@ -1,0 +1,19 @@
+INCLUDES = ../../hol2miniml
+OPTIONS = QUIT_ON_FAILURE
+
+ifdef POLY
+HOLHEAP = miniml-heap
+EXTRA_CLEANS = $(HOLHEAP) $(HOLHEAP).o
+
+BARE_THYS = ../compileProofsTheory\
+ ../../hol2miniml/ml_translatorLib\
+ $(HOLDIR)/src/TeX/EmitTeX\
+ $(HOLDIR)/src/emit/emitLib\
+ $(HOLDIR)/src/emit/fmap_emitTheory\
+ $(HOLDIR)/src/emit/int_emitTheory\
+ $(HOLDIR)/src/emit/string_emitTheory
+DEPS = $(patsubst %,%.uo,$(BARE_THYS))
+
+$(HOLHEAP): $(DEPS)
+	$(protect $(HOLDIR)/bin/buildheap) -o $(HOLHEAP) $(BARE_THYS)
+endif

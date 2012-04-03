@@ -984,37 +984,31 @@ val _ = Define `
 
 val _ = Defn.save_defn inst_arg_defn;
 
+ val num_to_bool_defn = Hol_defn "num_to_bool" `
+
+(num_to_bool (0:num) = F)
+/\
+(num_to_bool 1 = T)`;
+
+val _ = Defn.save_defn num_to_bool_defn;
+
  val bcv_to_v_defn = Hol_defn "bcv_to_v" `
 
 (bcv_to_v m NTnum (Number i) = Lit (IntLit i))
 /\
-(bcv_to_v m NTbool (Number i) =
-  if i = bool_to_int T then Lit (Bool T) else
-    if i = bool_to_int F then Lit (Bool F) else
-      Recclosure [] [] "Fail: Number")
+(bcv_to_v m NTbool (Number i) = Lit (Bool (num_to_bool (Num i))))
 /\
 (bcv_to_v m (NTapp _ ty) (Number i) =
   Conv (FST (lookup_conv_ty m ty (Num i))) [])
 /\
-(bcv_to_v m _ (Number _) = Recclosure [] [] "Fail: Number")
-/\
 (bcv_to_v m (NTapp tvs ty) (Block n vs) =
   let (tag, args) = lookup_conv_ty m ty n in
   let args = MAP (inst_arg tvs) args in
-  if LENGTH args = LENGTH vs then
-  Conv tag (MAP2 (\ ty v . bcv_to_v m ty v) args vs) (* uneta: Hol_defn sucks *)
-  else Recclosure [] [] "Fail: Block")
+  Conv tag (MAP2 (\ ty v . bcv_to_v m ty v) args vs)) (* uneta: Hol_defn sucks *)
 /\
-(bcv_to_v m NTfn (Block 0 _) = Closure [] "" (Var ""))
-/\
-(bcv_to_v m _ (Block _ _) = Recclosure [] [] "Fail: Block")
-/\
-(bcv_to_v m _ (CodePtr _) = Recclosure [] [] "Fail: CodePtr")
-/\
-(bcv_to_v m _ (RefPtr _) = Recclosure [] [] "Fail: RefPtr")`;
+(bcv_to_v m NTfn (Block 0 _) = Closure [] "" (Var ""))`;
 
 val _ = Defn.save_defn bcv_to_v_defn;
-
 
 (* Constant folding
 val fold_consts : exp -> exp

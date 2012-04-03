@@ -1,165 +1,11 @@
-val _ = map load ["rich_listTheory","compileProofsTheory","stringLib","ml_translatorLib"]
-
-val REPLACE_ELEMENT_compute =
-  CONV_RULE numLib.SUC_TO_NUMERAL_DEFN_CONV rich_listTheory.REPLACE_ELEMENT_DEF
-
-val ITSET_FOLDL = prove(
-``∀f s a. ITSET f s a = if FINITE s then FOLDL (combin$C f) a (SET_TO_LIST s) else ARB``, SRW_TAC[][listTheory.ITSET_eq_FOLDL_SET_TO_LIST] THEN
-   SRW_TAC[][Once pred_setTheory.ITSET_def])
-
-val compset = listSimps.list_compset()
-
-val _ = computeLib.add_thms (map computeLib.strictify_thm
-[ listTheory.LIST_TO_SET_THM
-, listTheory.SUM
-, REPLACE_ELEMENT_compute
-, pred_setTheory.EMPTY_DIFF
-, pred_setTheory.INSERT_DIFF
-, pred_setTheory.FINITE_EMPTY
-, pred_setTheory.FINITE_INSERT
-, pred_setTheory.FINITE_UNION
-, pred_setTheory.NOT_EMPTY_INSERT
-, pred_setTheory.NOT_INSERT_EMPTY
-, pred_setTheory.NOT_IN_EMPTY
-, pred_setTheory.IN_INSERT
-, pred_setTheory.IN_UNION
-, pred_setTheory.UNION_EMPTY
-, pred_setTheory.INSERT_UNION
-, pred_setTheory.EMPTY_DELETE
-, pred_setTheory.DELETE_INSERT
-, pred_setTheory.IN_COMPL
-, pred_setTheory.CARD_EMPTY
-, pred_setTheory.IMAGE_EMPTY
-, pred_setTheory.IMAGE_INSERT
-, pairTheory.FST
-, pairTheory.SND
-, combinTheory.C_DEF
-, optionTheory.IS_SOME_DEF
-, optionTheory.THE_DEF
-, finite_mapTheory.FAPPLY_FUPDATE_THM
-, finite_mapTheory.FRANGE_FEMPTY
-, finite_mapTheory.FRANGE_FUPDATE
-, finite_mapTheory.FINITE_FRANGE
-, finite_mapTheory.DRESTRICT_FEMPTY
-, finite_mapTheory.DRESTRICT_FUPDATE
-, compileProofsTheory.FINITE_free_vars
-, BytecodeTheory.bool_to_int_def
-, compileProofsTheory.remove_Gt_Geq_def
-, compileProofsTheory.remove_mat_exp_def
-, compileProofsTheory.exp_to_Cexp_def
-, compileProofsTheory.pat_to_Cpat_def
-, compileProofsTheory.free_vars_def
-, compileProofsTheory.remove_mat_def
-, CompileTheory.remove_mat_vp_def
-, CompileTheory.extend_def
-, CompileTheory.incsz_def
-, CompileTheory.decsz_def
-, CompileTheory.sdt_def
-, CompileTheory.ldt_def
-, CompileTheory.emit_def
-, CompileTheory.emit_ec_def
-, CompileTheory.prim2_to_bc_def
-, CompileTheory.error_to_int_def
-, CompileTheory.i0_def
-, CompileTheory.i1_def
-, CompileTheory.i2_def
-, CompileTheory.find_index_def
-, compileProofsTheory.compile_varref_def
-, compileProofsTheory.replace_calls_def
-, compileProofsTheory.compile_def
-, integerTheory.NUM_OF_INT
-, CompileTheory.lookup_conv_ty_def
-, CompileTheory.compiler_state_accessors
-, CompileTheory.compiler_state_updates_eq_literal
-, CompileTheory.compiler_state_accfupds
-, CompileTheory.compiler_state_fupdfupds
-, CompileTheory.compiler_state_literal_11
-, CompileTheory.compiler_state_fupdfupds_comp
-, CompileTheory.compiler_state_fupdcanon
-, CompileTheory.compiler_state_fupdcanon_comp
-, CompileTheory.repl_state_accessors
-, CompileTheory.repl_state_updates_eq_literal
-, CompileTheory.repl_state_accfupds
-, CompileTheory.repl_state_fupdfupds
-, CompileTheory.repl_state_literal_11
-, CompileTheory.repl_state_fupdfupds_comp
-, CompileTheory.repl_state_fupdcanon
-, CompileTheory.repl_state_fupdcanon_comp
-, CompileTheory.compile_exp_def
-, compileProofsTheory.repl_dec_def
-, CompileTheory.repl_exp_def
-, CompileTheory.init_repl_state_def
-, CompileTheory.init_compiler_state_def
-, compileProofsTheory.number_constructors_def
-, CompileTheory.exp_to_Cexp_state_accessors
-, CompileTheory.exp_to_Cexp_state_updates_eq_literal
-, CompileTheory.exp_to_Cexp_state_accfupds
-, CompileTheory.exp_to_Cexp_state_fupdfupds
-, CompileTheory.exp_to_Cexp_state_literal_11
-, CompileTheory.exp_to_Cexp_state_fupdfupds_comp
-, CompileTheory.exp_to_Cexp_state_fupdcanon
-, CompileTheory.exp_to_Cexp_state_fupdcanon_comp
-, CompileTheory.t_to_nt_def
-, compileProofsTheory.bcv_to_v_def
-, compileProofsTheory.inst_arg_def
-, compileProofsTheory.pat_vars_def
-, compileProofsTheory.fold_num_def
-, CompileTheory.pad_def
-, CompileTheory.mv_def
-, combinTheory.K_o_THM
-, combinTheory.K_THM
-, pairTheory.UNCURRY
-, ITSET_FOLDL
-, stringTheory.CHAR_EQ_THM
-]) compset
-
-val _ = computeLib.add_thms (map computeLib.lazyfy_thm
-[ CompileTheory.call_context_case_def
-, pairTheory.pair_case_thm
-, optionTheory.option_case_compute
-, MiniMLTheory.opn_case_def
-, MiniMLTheory.opb_case_def
-, CompileTheory.nt_case_def
-]) compset
-
-val _ = computeLib.set_skip compset combinSyntax.K_tm (SOME 1)
-val _ = computeLib.add_conv (stringLib.ord_tm,1,stringLib.ORD_CHR_CONV) compset
-val _ = computeLib.add_conv (pred_setSyntax.card_tm,1,PFset_conv.CARD_CONV) compset
-
-val eval = computeLib.CBV_CONV compset
-
-val _ = computeLib.add_conv (``least_not_in``,1,
-  fn tm => let
-  val (_,[s]) = boolSyntax.strip_comb tm
-  val finite = EQT_ELIM (eval ``FINITE ^s``)
-  val th = MP (SPEC s compileProofsTheory.least_not_in_thm) finite
-  in th end) compset
-
-val _ = computeLib.add_conv (``least_aux``,2,
-let fun f tm = let
-  val (_,[p,n]) = boolSyntax.strip_comb tm
-  val pp = eval ``^p ^n``
-  val th = SPECL [p,n] fsetTheory.least_aux_def
-  val th = PURE_REWRITE_RULE [pp,COND_CLAUSES] th
-  in if rhs(concl(pp)) = T then th else TRANS th (f(rhs(concl th))) end
-in f end) compset
-
-val _ = computeLib.add_conv (``num_set_foldl``,3,
-  fn tm => let
-  val (_,[f,a,s]) = boolSyntax.strip_comb tm
-  val finite = EQT_ELIM (eval ``FINITE ^s``)
-  val th = MP (SPEC s fsetTheory.num_set_foldl_def) finite
-  val th = ISPECL [f,a] th
-  val th2 = eval (rhs(concl th))
-  in TRANS th th2 end) compset
-
+open stringLib ml_translatorLib
 val d = !Globals.emitMLDir
 val _ = map (fn s => (use (d^s^"ML.sig"); use (d^s^"ML.sml")))
 ["combin","pair","num","option","list","set",
  "fmap","sum","fcp","string","bit","words","int",
- "rich_list","bytecode"]
+ "rich_list","bytecode","compile"]
 
-open bytecodeML
+open bytecodeML compileML
 
 fun bc_evaln 0 s = s
   | bc_evaln n s = let
@@ -170,88 +16,114 @@ fun bc_evaln 0 s = s
 fun bc_eval_limit l s = let
      val SOME s = bc_eval1 s
      val n = length (bc_state_stack s)
-     val _ = print ((Int.toString n)^" ")
   in if n > l then NONE else bc_eval_limit l s
    end handle Bind => SOME s
 
-fun term_to_num x = (numML.fromString (Parse.term_to_string x))
-fun term_to_int x = (intML.fromString ((Parse.term_to_string x)^"i"))
-fun term_to_stack_op tm = let
+fun dest_list f = map f o (fst o listSyntax.dest_list)
+fun dest_pair f1 f2 = (f1 ## f2) o pairSyntax.dest_pair
+fun term_to_int tm = intML.fromString((Parse.term_to_string tm)^"i")
+fun term_to_bool tm = tm = T
+fun term_to_lit tm = let
   val (f,x) = dest_comb tm
-in(case fst (dest_const f) of
-    "PushInt" => PushInt (term_to_int x)
-  | "Load" => Load (term_to_num x)
-  | "Store" => Store (term_to_num x)
-  | "Pops" => Pops (term_to_num x)
-  | "El" => El (term_to_num x)
-  | "TagEquals" => TagEquals (term_to_num x)
+in case fst(dest_const f) of
+    "IntLit" => IntLit (term_to_int x)
+  | "Bool" => Bool (term_to_bool x)
   | s => raise Fail s
-  )
-handle HOL_ERR _ => let
-  val (f,w) = dest_comb f
-in case fst (dest_const f) of
-    "Cons" => Cons (term_to_num w,term_to_num x)
+end handle (Fail s) => raise Fail s | _ => raise Fail (Parse.term_to_string tm)
+fun term_to_opb tm =
+  case fst(dest_const tm) of
+    "Geq" => Geq
+  | "Gt" => Gt
+  | "Lt" => Lt
+  | "Leq" => Leq
   | s => raise Fail s
-end end handle HOL_ERR _ =>
-  case fst (dest_const tm) of
-    "Equal" => Equal
-  | "Pop" => Pop
-  | "Add" => Add
-  | "Sub" => Sub
-  | "Mult" => Mult
-  | "Less" => Less
-  | "IsNum" => IsNum
+fun term_to_opn tm =
+  case fst(dest_const tm) of
+    "Minus" => Minus
+  | "Plus" => Plus
+  | "Times" => Times
   | s => raise Fail s
-fun term_to_bc tm = let
+fun term_to_op_ tm = let
   val (f,x) = dest_comb tm
-in case fst (dest_const f) of
-    "Jump" => Jump (term_to_num x)
-  | "JumpNil" => JumpNil (term_to_num x)
-  | "Stack" => Stack (term_to_stack_op x)
-  | "Call" => Call (term_to_num x)
+in case fst(dest_const f) of
+    "Opn" => Opn (term_to_opn x)
+  | "Opb" => Opb (term_to_opb x)
   | s => raise Fail s
-end handle HOL_ERR _ =>
-  case fst (dest_const tm) of
-    "Return" => Return
-  | "Ref" => Ref
-  | "Update" => Update
-  | "CallPtr" => CallPtr
-  | "JumpPtr" => JumpPtr
-  | "Exception" => Exception
+end handle _ => (
+case fst(dest_const tm) of
+    "Opapp" => Opapp
+  | "Equality" => Equality
+  | s => raise Fail s )
+handle (Fail s) => raise Fail s | _ => raise Fail (Parse.term_to_string tm)
+fun term_to_pat tm = let
+  val (f,xs) = strip_comb tm
+in case fst(dest_const f) of
+    "Pvar" => let val [x1] = xs in Pvar (fromHOLstring x1) end
+  | "Plit" => let val [x1] = xs in Plit (term_to_lit x1) end
+  | "Pcon" => let val [x1,x2] = xs in Pcon (fromHOLstring x1, dest_list term_to_pat x2) end
   | s => raise Fail s
-val term_to_bc_list = (map term_to_bc) o fst o listSyntax.dest_list
+end handle (Fail s) => raise Fail s | _ => raise Fail (Parse.term_to_string tm)
+fun term_to_v tm = let
+  val (f,xs) = strip_comb tm
+in case fst(dest_const f) of
+    "Lit" => let val [x1] = xs in Lit (term_to_lit x1) end
+  | "Closure" => let val [x1,x2,x3] = xs in Closure (dest_list (dest_pair fromHOLstring term_to_v) x1,fromHOLstring x2,term_to_exp x3) end
+  | "Conv" => let val [x1,x2] = xs in Conv (fromHOLstring x1,dest_list term_to_v x2) end
+  | s => raise Fail s
+end handle (Fail s) => raise Fail s | _ => raise Fail (Parse.term_to_string tm)
+and term_to_exp tm = let
+  val (f,xs) = strip_comb tm
+in case fst(dest_const f) of
+    "Val" => let val [x1] = xs in Val (term_to_v x1) end
+  | "If"  => let val [x1,x2,x3] = xs in If (term_to_exp x1, term_to_exp x2, term_to_exp x3) end
+  | "App" => let val [x1,x2,x3] = xs in App (term_to_op_ x1, term_to_exp x2, term_to_exp x3) end
+  | "Fun" => let val [x1,x2] = xs in Fun (fromHOLstring x1, term_to_exp x2) end
+  | "Var" => let val [x1] = xs in Var (fromHOLstring x1) end
+  | "Let" => let val [x1,x2,x3] = xs in Let (fromHOLstring x1,term_to_exp x2,term_to_exp x3) end
+  | "Mat" => let val [x1,x2] = xs in Mat (term_to_exp x1,dest_list (dest_pair term_to_pat term_to_exp) x2) end
+  | "Con" => let val [x1,x2] = xs in Con (fromHOLstring x1,dest_list term_to_exp x2) end
+  | "Letrec" => let val [x1,x2] = xs in Letrec (dest_list (dest_pair fromHOLstring (dest_pair fromHOLstring term_to_exp)) x1,term_to_exp x2) end
+  | s => raise Fail s
+end handle (Fail s) => raise Fail s | _ => raise Fail (Parse.term_to_string tm)
+fun term_to_t tm = let
+  val (f,xs) = strip_comb tm
+in case fst(dest_const f) of
+    "Tnum" => Tnum
+  | "Tvar" => let val [x1] = xs in Tvar (fromHOLstring x1) end
+  | "Tapp" => let val [x1,x2] = xs in Tapp (dest_list term_to_t x1, fromHOLstring x2) end
+  | s => raise Fail s
+end handle (Fail s) => raise Fail s | _ => raise Fail (Parse.term_to_string tm)
+fun term_to_dec tm = let
+  val (f,xs) = strip_comb tm
+in case fst(dest_const f) of
+    "Dlet" => let val [x1,x2] = xs in Dlet (term_to_pat x1, term_to_exp x2) end
+  | "Dtype" => let val [x1] = xs in Dtype (dest_list (dest_pair (dest_list fromHOLstring) (dest_pair fromHOLstring (dest_list (dest_pair fromHOLstring (dest_list term_to_t))))) x1) end
+  | "Dletrec" => let val [x1] = xs in Dletrec (dest_list (dest_pair fromHOLstring (dest_pair fromHOLstring term_to_exp)) x1) end
+  | s => raise Fail s
+end handle (Fail s) => raise Fail s | _ => raise Fail (Parse.term_to_string tm)
 
-fun int_to_term i = intSyntax.term_of_int (Arbint.fromInt (valOf (intML.toInt i)))
-fun num_to_term n = numSyntax.term_of_int (valOf (numML.toInt n))
-fun bv_to_term (Number i) = ``Number ^(int_to_term i)``
-  | bv_to_term (Block (n,vs)) = ``Block ^(num_to_term n) ^(listSyntax.mk_list(map bv_to_term vs,``:bc_value``))``
-  | bv_to_term (CodePtr n) = ``CodePtr ^(num_to_term n)``
-  | bv_to_term (RefPtr n) = ``RefPtr ^(num_to_term n)``
-
-val s = ``init_repl_state``
-fun f0 s e = ``repl_exp ^s ^e``
-fun f1 s e = rhs(concl(eval ``
-let rs = ^(f0 s e) in
-  (REVERSE rs.cs.code, rs.cpam)``))
-fun f2 s e = fst(pairSyntax.dest_pair(f1 s e))
-fun f e = term_to_bc_list (f2 s e)
+fun f1 s e =
+let val rs = repl_exp s (term_to_exp e) in
+  (rev (compiler_state_code (repl_state_cs rs)),
+   repl_state_cpam rs)
+end
+fun f2 s e = fst(f1 s e)
+fun f e = f2 init_repl_state e
 fun fd0 f e = let
   fun q s [] = f s e
     | q s (d::ds) = let
-      val th = eval ``repl_dec ^s ^d``
-      val s = rhs(concl(th))
+      val s = repl_dec s (term_to_dec d)
       in q s ds end
-in q s end
-val fd = fd0 (fn s => fn e => term_to_bc_list (f2 s e))
+in q init_repl_state end
+val fd = fd0 f2
 fun g1 c = bc_eval (init_state c)
 fun g c = bc_state_stack (g1 c)
-val pd0 = fd0 (fn s => fn e =>
-  pairSyntax.dest_pair (f1 s e))
+val pd0 = fd0 f1
 fun pd1 e ds = let
   val (c,m) = pd0 e ds
-  val st = g (term_to_bc_list c)
+  val st = g c
   in (m,st) end
-fun pv m bv ty = rhs(concl(eval``bcv_to_v ^m ^ty ^(bv_to_term bv)``))
+fun pv m bv ty = bcv_to_v m ty bv
 fun pd tys e ds =
   let val (m,st) = pd1 e ds
   in map2 (pv m) st tys end
@@ -260,7 +132,7 @@ val e1 = ``Val (Lit (IntLit 42))``
 val c1 = f e1
 val [Number i] = g c1
 val SOME 42 = intML.toInt i;
-val true = [``Lit (IntLit 42)``] = (pd [``NTnum``] e1 [])
+val true = [term_to_v ``Lit (IntLit 42)``] = (pd [NTnum] e1 [])
 val e2 = ``If (Val (Lit (Bool T))) (Val (Lit (IntLit 1))) (Val (Lit (IntLit 2)))``
 val c2 = f e2
 val [Number i] = g c2
@@ -276,7 +148,7 @@ val SOME 0 = intML.toInt i;
 val e5 = ``Fun "x" (Var "x")``
 val c5 = f e5
 val st = g c5
-val true = [``Closure [] "" (Var "")``] = pd [``NTfn``] e5 []
+val true = [term_to_v ``Closure [] "" (Var "")``] = pd [NTfn] e5 []
 val e6 = ``Let "x" (Val (Lit (IntLit 1))) (App (Opn Plus) (Var "x") (Var "x"))``
 val c6 = f e6
 val [Number i] = g c6
@@ -507,29 +379,29 @@ val append_defs = ``
 val d1 = ``Dletrec ^append_defs``
 val e33 = ``App Opapp (Var "APPEND") (Con "Nil" [])``
 val (m,st) = pd1 e33 [d0,d1]
-val tm = pv m (hd st) ``NTfn``
-val true = tm = ``Closure [] "" (Var "")``;
+val tm = pv m (hd st) NTfn
+val true = tm = (term_to_v ``Closure [] "" (Var "")``);
 val e34 = ``App Opapp (App Opapp (Var "APPEND") (Con "Nil" []))
                       (Con "Nil" [])``
 val (m,st) = pd1 e34 [d0,d1]
 val [r,cl] = st
-val tm = pv m r ``NTapp [NTnum] "list"``
-val true = tm = ``Conv "Nil" []``
-val tm = pv m cl ``NTfn``
-val true = tm = ``Closure [] "" (Var "")``;
+val tm = pv m r (NTapp ([NTnum],"list"))
+val true = tm = (term_to_v ``Conv "Nil" []``)
+val tm = pv m cl NTfn
+val true = tm = (term_to_v ``Closure [] "" (Var "")``);
 fun h t = hd(tl(snd(strip_comb(concl t))))
 val t = ml_translatorLib.hol2deep ``[1;2;3]++[4;5;6:num]``
 val e30 = h t
 val (m,st) = pd1 e30 [d0,d1]
 val [res,cl] = st
-val tm = pv m res ``NTapp [NTnum] "list"``
-val true = tm = ml_translatorLib.hol2val ``[1;2;3;4;5;6:num]``;
+val tm = pv m res (NTapp ([NTnum],"list"))
+val true = tm = (term_to_v (ml_translatorLib.hol2val ``[1;2;3;4;5;6:num]``));
 val t = ml_translatorLib.hol2deep ``[]++[4:num]``
 val e32 = h t
 val (m,st) = pd1 e32 [d0,d1]
 val [res,cl] = st
-val tm = pv m res ``NTapp [NTnum] "list"``
-val true = tm = ``Conv "Cons" [Lit (IntLit 4); Conv "Nil" []]``;
+val tm = pv m res (NTapp ([NTnum],"list"))
+val true = tm = (term_to_v ``Conv "Cons" [Lit (IntLit 4); Conv "Nil" []]``);
 val d2 = ``
 Dtype [(["'a"; "'b"],"prod",[("Pair_type",[Tvar "'a"; Tvar "'b"])])]
 `` val d3 = ``
@@ -591,29 +463,17 @@ val _ = ml_translatorLib.translate sortingTheory.PARTITION_DEF
 val _ = ml_translatorLib.translate sortingTheory.QSORT_DEF
 val t = ml_translatorLib.hol2deep ``QSORT (λx y. x ≤ y) [9;8;7;6;2;3;4;5:num]``
 val e31 = h t;
-(*
-val rs0 = s
-val rs1 = rhs(concl(eval``repl_dec ^rs0 ^d0``))
-val rs2 = rhs(concl(eval``repl_dec ^rs1 ^d1``))
-val rs3 = rhs(concl(eval``repl_dec ^rs2 ^d2``))
-val rs4 = rhs(concl(eval``repl_dec ^rs3 ^d3``))
-val rs5 = rhs(concl(eval``repl_dec ^rs4 ^d4``))
-val rs6 = rhs(concl(eval``repl_dec ^rs5 ^d5``))
-val res = rhs(concl(eval``repl_exp ^rs6 ^e31``))
-val (c,m) = pairSyntax.dest_pair(rhs(concl(eval``REVERSE (^res).cs.code, (^res).cpam``)))
-val st = g (term_to_bc_list c)
-*)
 val (m,st) = pd1 e31 [d0,d1,d2,d3,d4,d5]
 val [res,clQSORT,clPARTITION,clPART,clAPPEND] = st
-val tm = pv m res ``NTapp [NTnum] "list"``
-val true = tm = ml_translatorLib.hol2val ``[2;3;4;5;6;7;8;9:num]``;
+val tm = pv m res (NTapp([NTnum],"list"))
+val true = tm = term_to_v(ml_translatorLib.hol2val ``[2;3;4;5;6;7;8;9:num]``);
 val d = ``
 Dlet (Pvar "add1")
   (Fun "x" (App (Opn Plus) (Var "x") (Val (Lit (IntLit 1)))))``
 val e40 = ``App Opapp (Var "add1") (Val (Lit (IntLit 1)))``
 val (m,st) = pd1 e40 [d]
 val [res,add1] = st
-val true = pv m res ``NTnum`` = ml_translatorLib.hol2val ``2:int``;
+val true = pv m res NTnum = term_to_v(ml_translatorLib.hol2val ``2:int``);
 val e43 = ``Letrec [("o","n",
   If (App Equality (Var "n") (Val (Lit (IntLit 0))))
      (Var "n")
