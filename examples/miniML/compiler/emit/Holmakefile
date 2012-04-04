@@ -11,6 +11,7 @@ HOLHEAP = miniml-heap
 EXTRA_CLEANS = $(HOLHEAP) $(HOLHEAP).o
 
 BARE_THYS = ../compileProofsTheory\
+ ../bytecode/bytecodeEvalTheory\
  ../../hol2miniml/ml_translatorLib\
  $(HOLDIR)/src/TeX/EmitTeX\
  $(HOLDIR)/src/emit/emitLib\

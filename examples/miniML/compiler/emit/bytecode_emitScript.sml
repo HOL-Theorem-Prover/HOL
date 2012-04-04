@@ -1,5 +1,5 @@
 open HolKernel bossLib boolLib EmitTeX
-open emitLib fmap_emitTheory int_emitTheory BytecodeTheory bytecodeProofsTheory
+open emitLib fmap_emitTheory int_emitTheory BytecodeTheory bytecodeEvalTheory
 val _ = new_theory "bytecode_emit"
 
 val _ = Parse.disable_tyabbrev_printing "env"

@@ -1,8 +1,6 @@
 open HolKernel boolLib bossLib Parse lcsymtacs
 open BytecodeTheory arithmeticTheory listTheory finite_mapTheory integerTheory
-val _ = new_theory "bytecodeProofs";
-
-(* evaluation function *)
+val _ = new_theory "bytecodeEval";
 
 val isNumber_def = Define`
   (isNumber (Number _) = T) ∧
