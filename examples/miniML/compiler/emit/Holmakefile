@@ -1,5 +1,10 @@
-INCLUDES = ../../hol2miniml
+INCLUDES = ../../hol2miniml $(HOLDIR)/src/emit/ML
 OPTIONS = QUIT_ON_FAILURE
+
+EXTRA_CLEANS = selftest.exe
+
+selftest.exe: test_compiler.uo compile_emitTheory.uo
+	$(HOLMOSMLC) -o $@ $<
 
 ifdef POLY
 HOLHEAP = miniml-heap

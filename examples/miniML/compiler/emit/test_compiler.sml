@@ -1,11 +1,4 @@
-open stringLib ml_translatorLib
-val d = !Globals.emitMLDir
-val _ = map (fn s => (use (d^s^"ML.sig"); use (d^s^"ML.sml")))
-["combin","pair","num","option","list","set",
- "fmap","sum","fcp","string","bit","words","int",
- "rich_list","bytecode","compile"]
-
-open bytecodeML compileML
+open HolKernel stringLib ml_translatorLib bytecodeML compileML
 
 fun bc_evaln 0 s = s
   | bc_evaln n s = let
@@ -22,7 +15,7 @@ fun bc_eval_limit l s = let
 fun dest_list f = map f o (fst o listSyntax.dest_list)
 fun dest_pair f1 f2 = (f1 ## f2) o pairSyntax.dest_pair
 fun term_to_int tm = intML.fromString((Parse.term_to_string tm)^"i")
-fun term_to_bool tm = tm = T
+fun term_to_bool tm = tm = boolSyntax.T
 fun term_to_lit tm = let
   val (f,x) = dest_comb tm
 in case fst(dest_const f) of
