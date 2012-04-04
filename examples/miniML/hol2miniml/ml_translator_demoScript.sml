@@ -8,16 +8,9 @@ open stringTheory;
 infix \\ val op \\ = op THEN;
 
 
-(* qsort example *)
-
-val res = translate APPEND;
-val res = translate sortingTheory.PART_DEF;
-val res = translate sortingTheory.PARTITION_DEF;
-val qsort_eval = translate sortingTheory.QSORT_DEF;
-
-
 (* examples from library *)
 
+val res = translate APPEND;
 val res = translate MAP;
 val res = translate FILTER;
 val res = translate REV_DEF;
@@ -145,20 +138,25 @@ val Eval_CHR = prove(
 val Eval_CHAR_LT = prove(
   ``!v. ((NUM --> NUM --> BOOL) (\m n. m < n)) v ==>
         ((CHAR --> CHAR --> BOOL) char_lt) v``,
-  SIMP_TAC (srw_ss()) [Arrow_def,AppReturns_def,CHAR_def,char_lt_def]
+  SIMP_TAC (srw_ss()) [Arrow_def,AppReturns_def,CHAR_def,stringTheory.char_lt_def]
   \\ METIS_TAC [])
   |> MATCH_MP (MATCH_MP Eval_WEAKEN (hol2deep ``\m n. m < n:num``))
   |> store_eval_thm;
 
 (* now we can translate e.g. less-than over strings *)
 
-val res = translate string_lt_def
+val res = translate stringTheory.string_lt_def
 
 val def = mlDefine `
   hi n = if n = 0 then "!" else "hello " ++ hi (n-1:num)`
 
 
-(* qsort expanded *)
+
+(* qsort example *)
+
+val res = translate sortingTheory.PART_DEF;
+val res = translate sortingTheory.PARTITION_DEF;
+val qsort_eval = translate sortingTheory.QSORT_DEF;
 
 val Eval_Var_lemma = prove(
   ``Eval env (Var name) P = ?x. (lookup name env = SOME x) /\ P x``,
@@ -179,10 +177,7 @@ val Eval_QSORT_EXPANDED = save_thm("Eval_QSORT_EXPANDED",let
 
 val ML_QSORT_CORRECT = store_thm ("ML_QSORT_CORRECT",
   ``!env a ord R l xs.
-      (lookup "QSORT" env = SOME (Recclosure QSORT_env QSORT_ml "QSORT")) /\
-      (lookup "PARTITION" QSORT_env = SOME (Closure PARTITION_env "v1" PARTITION_ml)) /\
-      (lookup "APPEND" QSORT_env = SOME (Recclosure APPEND_env APPEND_ml "APPEND")) /\
-      (lookup "PART" PARTITION_env = SOME (Recclosure PART_env PART_ml "PART")) /\
+      DeclAssum ml_translator_demo_decls env /\
       LIST_TYPE a l xs /\ (lookup "xs" env = SOME xs) /\
       (a --> a --> BOOL) ord R /\ (lookup "R" env = SOME R) /\
       transitive ord /\ total ord
@@ -194,7 +189,6 @@ val ML_QSORT_CORRECT = store_thm ("ML_QSORT_CORRECT",
         (LIST_TYPE a l' xs') /\ PERM l l' /\ SORTED ord l'``,
   REPEAT STRIP_TAC \\ IMP_RES_TAC Eval_QSORT_EXPANDED
   \\ METIS_TAC [sortingTheory.QSORT_PERM,sortingTheory.QSORT_SORTED]);
-
 
 val _ = export_theory();
 

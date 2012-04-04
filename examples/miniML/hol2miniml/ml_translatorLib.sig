@@ -21,9 +21,4 @@ sig
     val store_eq_thm   : thm -> thm
     val register_type  : hol_type -> unit
 
-    (* interface for producing output from translations *)
-
-    val clear_filename : unit -> unit
-    val set_filename   : string -> unit
-
 end
