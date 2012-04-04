@@ -131,11 +131,8 @@ val _ = eSML "compile" (
 ::(MLSIG "type bc_stack_op = bytecodeML.bc_stack_op")
 ::(MLSIG "type bc_inst = bytecodeML.bc_inst")
 ::(MLSIG "type bc_value = bytecodeML.bc_value")
-::(MLSIG "val least_aux : (num -> bool) -> num -> num")
 ::(MLSIG "val num_to_bool : num -> bool")
-::data
-@(DEFN_NOSIG fsetTheory.least_aux_def)
 ::(DEFN_NOSIG num_to_bool)
-::defs)
+::data@defs)
 
 val _ = export_theory ();

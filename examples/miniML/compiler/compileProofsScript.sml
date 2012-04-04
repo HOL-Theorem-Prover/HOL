@@ -130,27 +130,6 @@ val (exp_to_Cexp_def,exp_to_Cexp_ind) =
 val _ = save_thm ("exp_to_Cexp_def", exp_to_Cexp_def);
 val _ = save_thm ("exp_to_Cexp_ind", exp_to_Cexp_ind);
 
-val least_not_in_thm = store_thm(
-"least_not_in_thm",
-``∀s. FINITE s ⇒ (least_not_in s = least_aux (λn. n ∉ s) 0)``,
-rw[least_not_in_def] >>
-numLib.LEAST_ELIM_TAC >>
-rw[] >- PROVE_TAC[INFINITE_NUM_UNIV, NOT_IN_FINITE] >>
-qsuff_tac `∀m. m ≤ n ⇒ (n = least_aux (λn. n ∉ s) m)` >-
-  PROVE_TAC[arithmeticTheory.ZERO_LESS_EQ] >>
-Induct_on `n-m` >>
-srw_tac[ARITH_ss][] >- (
-  `n = m` by DECIDE_TAC >>
-  rw[Once least_aux_def] ) >>
-rw[] >>
-`m < n` by DECIDE_TAC >>
-`m ∈ s` by PROVE_TAC[] >>
-rw[Once least_aux_def] >>
-first_x_assum (qspecl_then [`n`,`m+1`] mp_tac) >>
-`v = n - (m + 1)` by DECIDE_TAC >>
-`m + 1 ≤ n` by DECIDE_TAC >>
-rw[])
-
 val (free_vars_def, free_vars_ind) =
   tprove_no_defn ((free_vars_def,free_vars_ind),
   WF_REL_TAC `measure Cexp_size` >>
