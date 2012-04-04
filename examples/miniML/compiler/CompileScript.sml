@@ -381,6 +381,7 @@ val _ = Defn.save_defn remove_mat_defn;
 (* TODO: let floating *)
 (* TODO: removal of redundant expressions *)
 (* TODO: simplification (e.g., constant folding) *)
+(* TODO: avoid Shifts when possible *)
 (* TODO: registers, register allocation, greedy shuffling? *)
 (* TODO: bytecode optimizer: repeated Pops, unreachable code (e.g. after a Jump) *)
 
@@ -518,26 +519,6 @@ val _ = Defn.save_defn replace_calls_defn;
 
 val _ = Defn.save_defn fold_num_defn;
 
-(* TODO: smarter algorithm than pad and mv? *)
- val pad_defn = Hol_defn "pad" `
-
-(pad (n0:num) n1 s =
-  if n0 < n1 then
-    let j = n1 - n0 in
-      (j,fold_num (\ s . incsz (emit s [Stack (PushInt i0)])) s j)
-  else (0,s))`;
-
-val _ = Defn.save_defn pad_defn;
- val mv_defn = Hol_defn "mv" `
-
-(mv (n0i:num) n1 s =
-  let i = n0i - n1 in
-  let s = fold_num (\ s . emit s [Stack (Store ((n1 - 1)+i))]) s n1 in
-  if i = 0 then s else
-    emit s [Stack (PushInt i0); Stack (Pops i); Stack Pop])`;
-
-val _ = Defn.save_defn mv_defn;
-
  val compile_defn = Hol_defn "compile" `
 
 (compile s (CRaise err) =
@@ -545,8 +526,6 @@ val _ = Defn.save_defn mv_defn;
     NONE => incsz (emit s [Stack (PushInt (error_to_int err)); Exception])
   | SOME (env0,sz0,vs) =>
       let k = s.sz - sz0 in
-      let n = CARD (vs DIFF (FDOM env0)) in
-      let (j,s) = pad k n s in
       let (s,i,env) = num_set_foldl
         (\ (s,i,env) v .
           if  v IN FDOM  env0 then
@@ -560,10 +539,8 @@ val _ = Defn.save_defn mv_defn;
              i+1,
              FUPDATE  env ( v, (CTLet i))))
              (s,sz0+1,env0) vs in
-      (* vn, ..., v1, 0j, ..., 01, xk, ..., x1, *)
-      let s = mv (k+j) n s in
-      (* vn, ..., v1, *)
-       s with<| sz := sz0 + n; env := env |>
+      let s = emit s [Stack (Shift (i -(sz0+1)) k)] in
+       s with<| sz := s.sz - k; env := env |>
   ))
 /\
 (compile s (CLit (IntLit i)) =
@@ -642,23 +619,20 @@ val _ = Defn.save_defn mv_defn;
     emit s [CallPtr]
 *)
   | TCTail j k =>
-    let n0 = k+1+1+j+1 in
-    let n1 = 1+1+1+n+1 in
-    let (i,s) = pad n0 n1 s in
     let s = compile s e in
     let s = FOLDL (\ s e . compile s e) s es in (* uneta because Hol_defn sucks *)
-    (* argn, ..., arg1, Block 0 [CodePtr c; env], 0i, ..., 01,
+    (* argn, ..., arg1, Block 0 [CodePtr c; env],
      * vk, ..., v1, env1, CodePtr ret, argj, ..., arg1, Block 0 [CodePtr c1; env1], *)
-    let s = emit s [Stack (Load (n+1+i+k+1))] in
-    (* CodePtr ret, argn, ..., arg1, Block 0 [CodePtr c; env], 0i, ..., 01,
+    let s = emit s [Stack (Load (n+1+k+1))] in
+    (* CodePtr ret, argn, ..., arg1, Block 0 [CodePtr c; env],
      * vk, ..., v1, env1, CodePtr ret, argj, ..., arg1, Block 0 [CodePtr c1; env1], *)
     let s = emit s [Stack (Load (n+1)); Stack (El 1)] in
-    (* env, CodePtr ret, argn, ..., arg1, Block 0 [CodePtr c; env], 0i, ..., 01,
+    (* env, CodePtr ret, argn, ..., arg1, Block 0 [CodePtr c; env],
      * vk, ..., v1, env1, CodePtr ret, argj, ..., arg1, Block 0 [CodePtr c1; env1], *)
     let s = emit s [Stack (Load (n+2)); Stack (El 0)] in
-    (* CodePtr c, env, CodePtr ret, argn, ..., arg1, Block 0 [CodePtr c; env], 0i, ... 01,
+    (* CodePtr c, env, CodePtr ret, argn, ..., arg1, Block 0 [CodePtr c; env],
      * vk, ..., v1, env1, CodePtr ret, argj, ..., arg1, Block 0 [CodePtr c1; env1], *)
-    let s = mv (n0+i) n1 s in
+    let s = emit s [Stack (Shift (1+1+1+n+1) (k+1+1+j+1))] in
     emit s [JumpPtr]
   ) in
   ldt dt  s with<| sz := s.sz - n |>)

@@ -83,8 +83,6 @@ val defs = map DEFN
 , error_to_int_def
 , compile_varref_def
 , fold_num_def
-, pad_def
-, mv_def
 , sdt_def
 , ldt_def
 , decsz_def
