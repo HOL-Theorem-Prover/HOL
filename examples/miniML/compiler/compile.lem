@@ -2,33 +2,6 @@ open MiniML
 
 (* Intermediate language for MiniML compiler *)
 
-(* Syntax *)
-
-(* applicative primitives with bytecode counterparts *)
-type Cprim2 = CAdd | CSub | CMult | CDiv | CMod | CLt | CEq
-(* other primitives *)
-type Clprim = CLeq | CIf | CAnd | COr
-
-type Cpat =
-  | CPvar of num
-  | CPlit of lit
-  | CPcon of num * Cpat list
-
-type Cexp =
-  | CRaise of error
-  | CVar of num
-  | CLit of lit
-  | CCon of num * Cexp list
-  | CTagEq of Cexp * num
-  | CProj of Cexp * num
-  | CMat of num * (Cpat * Cexp) list
-  | CLet of num list * Cexp list * Cexp
-  | CLetfun of bool * num list * (num list * Cexp) list * Cexp
-  | CFun of num list * Cexp
-  | CCall of Cexp * Cexp list
-  | CPrim2 of Cprim2 * Cexp * Cexp
-  | CLprim of Clprim * Cexp list
-
 (* TODO: move to lem? *)
 val range : forall 'a 'b. ('a,'b) Pmap.map -> 'b set
 sub [hol] range = FRANGE
@@ -44,6 +17,170 @@ val int_to_num : int -> num
 sub [hol] int_to_num = Num
 val image : forall 'a 'b. ('a -> 'b) -> 'a set -> 'b set
 sub [hol] image = IMAGE
+type ('a,'b) alist = ('a,'b) Hol.Lib.alist
+val fmap_to_alist : forall 'a 'b. ('a,'b) Pmap.map -> ('a,'b) alist
+sub [hol] fmap_to_alist = fmap_to_alist
+val alist_to_fmap : forall 'a 'b. ('a,'b) alist -> ('a,'b) Pmap.map
+sub [hol] alist_to_fmap = alist_to_fmap
+
+(* Syntax *)
+
+(* applicative primitives with bytecode counterparts *)
+type Cprim2 = CAdd | CSub | CMult | CDiv | CMod | CLt | CEq
+(* other primitives *)
+type Clprim = CLeq | CIf | CAnd | COr
+
+type Cpat =
+  | CPvar of num
+  | CPlit of lit
+  | CPcon of num * Cpat list
+
+type Cexp =
+  | CRaise of error
+  | CVar of num
+  | CVal of Cv
+  | CCon of num * Cexp list
+  | CTagEq of Cexp * num
+  | CProj of Cexp * num
+  | CMat of num * (Cpat * Cexp) list
+  | CLet of num list * Cexp list * Cexp
+  | CLetfun of bool * num list * (num list * Cexp) list * Cexp
+  | CFun of num list * Cexp
+  | CCall of Cexp * Cexp list
+  | CPrim2 of Cprim2 * Cexp * Cexp
+  | CLprim of Clprim * Cexp list
+and Cv =
+  | CLit of lit
+  | CConv of num * Cv list
+  | CClosure of (num,Cv) alist * num list * Cexp
+  | CRecClos of (num,Cv) alist * num list * (num list * Cexp) list * num
+
+(* TODO: fix Hol_datatype, or define Cexp outside of Lem, so as to use finite
+ * maps instead of alists *)
+
+(* Semantics *)
+
+indreln
+forall env error.
+true
+==>
+Cevaluate env (CRaise error) (Rerr (Rraise error))
+
+and
+forall env n v.
+Pmap.mem n env && (Pmap.find n env = v)
+==>
+Cevaluate env (CVar n) (Rval v)
+and
+forall env n.
+not (Pmap.mem n env)
+==>
+Cevaluate env (CVar n) (Rerr Rtype_error)
+
+and
+forall env l.
+true
+==>
+Cevaluate env (CVal (CLit l)) (Rval (CLit l))
+
+and
+forall env n es vs.
+Cevaluate_list env es (Rval vs)
+==>
+Cevaluate env (CCon n es) (Rval (CConv n vs))
+and
+forall env n es err.
+Cevaluate_list env es (Rerr err)
+==>
+Cevaluate env (CCon n es) (Rerr err)
+
+and
+forall env e n m vs.
+Cevaluate env e (Rval (CConv m vs))
+==>
+Cevaluate env (CTagEq e n) (Rval (CLit (Bool (n = m))))
+and
+forall env e n err.
+Cevaluate env e (Rerr err)
+==>
+Cevaluate env (CTagEq e n) (Rerr err)
+
+and
+forall env e n m vs.
+Cevaluate env e (Rval (CConv m vs)) &&
+n < List.length vs
+==>
+Cevaluate env (CProj e n) (Rval (List.nth vs n))
+and
+forall env e n m vs.
+Cevaluate env e (Rval (CConv m vs)) &&
+n >= List.length vs
+==>
+Cevaluate env (CProj e n) (Rerr Rtype_error)
+and
+forall env e n err.
+Cevaluate env e (Rerr err)
+==>
+Cevaluate env (CProj e n) (Rerr err)
+
+(* TODO: CMat *)
+
+and
+forall env b r.
+Cevaluate env b r
+==>
+Cevaluate env (CLet [] [] b) r
+and
+forall env n ns e es b v r.
+Cevaluate env e (Rval v) &&
+Cevaluate (Pmap.add n v env) (CLet ns es b) r
+==>
+Cevaluate env (CLet (n::ns) (e::es) b) r
+and
+forall env e es b.
+true
+==>
+Cevaluate env (CLet [] (e::es) b) (Rerr Rtype_error)
+and
+forall env n ns b.
+true
+==>
+Cevaluate env (CLet (n::ns) [] b) (Rerr Rtype_error)
+
+(* TODO: CLetfun *)
+
+and
+forall env ns b.
+true
+==>
+Cevaluate env (CFun ns b) (Rval (CClosure (fmap_to_alist env) ns b))
+
+(* TODO: CCall *)
+(* TODO: CPrim2 *)
+(* TODO: CLprim *)
+
+and
+forall env.
+true
+==>
+Cevaluate_list env [] (Rval [])
+and
+forall env e es v vs.
+Cevaluate env e (Rval v) &&
+Cevaluate_list env es (Rval vs)
+==>
+Cevaluate_list env (e::es) (Rval (v::vs))
+and
+forall env e es err.
+Cevaluate env e (Rerr err)
+==>
+Cevaluate_list env (e::es) (Rerr err)
+and
+forall env e es v err.
+Cevaluate env e (Rval v) &&
+Cevaluate_list env es (Rerr err)
+==>
+Cevaluate_list env (e::es) (Rerr err)
 
 let rec
 remove_mat_exp (Mat (Var v) pes) =
@@ -146,7 +283,7 @@ pat_to_Cpat tp cm (s, Pcon cn ps) =
 let rec
 exp_to_Cexp tp cm (s, Raise err) = (s, CRaise err)
 and
-exp_to_Cexp tp cm (s, Val (Lit l)) = (s, CLit l)
+exp_to_Cexp tp cm (s, Val (Lit l)) = (s, CVal (CLit l))
 and
 exp_to_Cexp tp cm (s, Con cn es) =
   (s, CCon (Pmap.find cn cm) (List.map (fun e -> let (_s,e) = exp_to_Cexp false cm (s,e) in e) es))
@@ -231,7 +368,6 @@ exp_to_Cexp tp cm (s, Letrec defs b) =
   let (s',Cb) = exp_to_Cexp tp cm (s',b) in
   (if tp then s' else s, CLetfun true fns Cdefs Cb)
 
-(* TODO: semantics *)
 (* TODO: simple type system and checker *)
 
 let rec
@@ -239,7 +375,7 @@ free_vars (CRaise _) = {}
 and
 free_vars (CVar n) = {n}
 and
-free_vars (CLit _) = {}
+free_vars (CVal _) = {}
 and
 free_vars (CCon _ es) =
   List.fold_left (fun s e -> s union free_vars e) {} es
@@ -286,7 +422,7 @@ remove_mat_vp fk sk v (CPvar pv) =
   CLet [pv] [CVar v] sk
 and
 remove_mat_vp fk sk v (CPlit l) =
-  CLprim CIf [CPrim2 CEq (CVar v) (CLit l);
+  CLprim CIf [CPrim2 CEq (CVar v) (CVal (CLit l));
     sk; (CCall (CVar fk) [])]
 and
 remove_mat_vp fk sk v (CPcon cn ps) =
@@ -308,7 +444,7 @@ remove_mat (CRaise err) = CRaise err
 and
 remove_mat (CVar n) = CVar n
 and
-remove_mat (CLit l) = CLit l
+remove_mat (CVal vl) = CVal vl
 and
 remove_mat (CCon n es) = CCon n (List.map remove_mat es)
 and
@@ -459,11 +595,14 @@ compile s (CRaise err) =
       <| s with sz = s.sz-k; env = env |>
   end
 and
-compile s (CLit (IntLit i)) =
+compile s (CVal (CLit (IntLit i))) =
   incsz (emit s [Stack (PushInt i)])
 and
-compile s (CLit (Bool b)) =
+compile s (CVal (CLit (Bool b))) =
   incsz (emit s [Stack (PushInt (bool_to_int b))])
+and
+compile s (CVal _) =
+  incsz (emit s [Stack (PushInt i2); Exception])
 and
 compile s (CVar n) = incsz (compile_varref s (Pmap.find n s.env))
 and

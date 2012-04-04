@@ -8,6 +8,7 @@ val _ = Parse.temp_type_abbrev("string",``:char list``)
 val _ = Parse.temp_type_abbrev("op_",``:op``) (* EmitML should do this *)
 val _ = Parse.disable_tyabbrev_printing "tvarN"
 val _ = Parse.disable_tyabbrev_printing "envE"
+val _ = Parse.disable_tyabbrev_printing "alist"
 
 val underscore_rule = Conv.CONV_RULE let
 fun foldthis (tm,(ls,b)) = let
