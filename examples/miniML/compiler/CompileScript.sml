@@ -49,6 +49,7 @@ val _ = Hol_datatype `
 
 (* TODO: move to lem? *)
 (*val range : forall 'a 'b. ('a,'b) Pmap.map -> 'b set*)
+(*val domain : forall 'a 'b. ('a,'b) Pmap.map -> 'a set*)
 (*val least : (num -> bool) -> num*)
 (*val replace : forall 'a. 'a -> num -> 'a list -> 'a list*)
 (*val num_set_foldl : forall 'a. ('a -> num -> 'a) -> 'a -> num set -> 'a*)
@@ -129,12 +130,14 @@ val _ = Hol_datatype `
  exp_to_Cexp_state =
    (* bindings of variable names to numbers *)
   <| m : (string,num) fmap
+   (* next unused temporary variable number *)
+   ; n : num
    (* not yet bound (in this expression) declaration variables *)
    ; ds : string set
    (* (outermost, or previous) bindings of declaration variables *)
    ; dm : (string,num) fmap
-   (* next unused variable number *)
-   ; n : num
+   (* next unused declaration variable number *)
+   ; dn : num
    |>`;
 
 
@@ -145,8 +148,8 @@ val _ = Define `
       let n = FAPPLY  s.dm  vn in
       (s with<| ds := s.ds DIFF {vn}; m := FUPDATE  s.m ( vn, n)|>, n)
     else
-      (s with<| ds := s.ds DIFF {vn}; m := FUPDATE  s.m ( vn, s.n);
-         dm := FUPDATE  s.dm ( vn, s.n); n := s.n+1|>, s.n)
+      (s with<| ds := s.ds DIFF {vn}; m := FUPDATE  s.m ( vn, s.dn);
+         dm := FUPDATE  s.dm ( vn, s.dn); dn := s.dn+1|>, s.dn)
   else
     (s with<| m := FUPDATE  s.m ( vn, s.n); n := s.n+1|>, s.n))`;
 
@@ -371,7 +374,7 @@ val _ = Defn.save_defn remove_mat_vp_defn;
 
 val _ = Defn.save_defn remove_mat_defn;
 
-(* TODO: make clobbered declarations be replaced on the stack *)
+(* TODO: use Pmap.peek instead of mem when it becomes available *)
 (* TODO: collapse nested functions *)
 (* TODO: collapse nested lets *)
 (* TODO: Letfun introduction and reordering *)
@@ -542,12 +545,20 @@ val _ = Defn.save_defn mv_defn;
     NONE => incsz (emit s [Stack (PushInt (error_to_int err)); Exception])
   | SOME (env0,sz0,vs) =>
       let k = s.sz - sz0 in
-      let n = CARD vs in
+      let n = CARD (vs DIFF (FDOM env0)) in
       let (j,s) = pad k n s in
       let (s,i,env) = num_set_foldl
-        (\ (s,i,env) v . (incsz (compile_varref s (FAPPLY  s.env  v)),
-                             i+1,
-                             FUPDATE  env ( v, (CTLet i))))
+        (\ (s,i,env) v .
+          if  v IN FDOM  env0 then
+            ((case FAPPLY  env0  v of
+               CTLet x => emit (compile_varref s (FAPPLY  s.env  v))
+                               [Stack (Store (s.sz - x))]
+             | _ => emit s [Stack (PushInt i2); Exception] (* should not happen *)
+             ), i, env)
+          else
+            (incsz (compile_varref s (FAPPLY  s.env  v)),
+             i+1,
+             FUPDATE  env ( v, (CTLet i))))
              (s,sz0+1,env0) vs in
       (* vn, ..., v1, 0j, ..., 01, xk, ..., x1, *)
       let s = mv (k+j) n s in
@@ -921,14 +932,16 @@ val _ = Define `
   let e = remove_Gt_Geq e in
   let e = remove_mat_exp e in
   let (tp,ds) = (case d of NONE => (F, {}) | SOME vs => (T, vs) ) in
-  let (s,Ce) = exp_to_Cexp tp rs.cmap (<|m := rs.vmap; ds := ds; dm := rs.vmap; n := rs.nextv|>, e) in
+  let (s,Ce) = exp_to_Cexp tp rs.cmap
+    (<|m := rs.vmap; n := rs.nextv + CARD ds;
+       ds := ds; dm := rs.vmap; dn := rs.nextv|>, e) in
   let Ce = remove_mat Ce in
   let decl = (case d of NONE => NONE
              | SOME vs =>
                  SOME (rs.cs.env, rs.cs.sz, IMAGE (\ v . FAPPLY  s.dm  v) vs)
              ) in
   let cs = compile (rs.cs with<| decl := decl |>) Ce in (* parens: Lem sucks *)
-   rs with<| vmap := s.dm; nextv := s.n; cs := cs |>)`;
+   rs with<| vmap := s.dm; nextv := s.dn; cs := cs |>)`;
 
 
 (* TODO: typechecking *)

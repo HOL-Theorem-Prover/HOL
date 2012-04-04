@@ -502,8 +502,18 @@ val d0 = paird
 val d1 = ``Dlet (Pcon "Pair_type" [Pvar "x";Pvar "y"]) (Con "Pair_type" [Val (Lit (IntLit 1));Val (Lit (IntLit 2))])``
 val d2 = ``Dlet (Pvar "x") (Val (Lit (IntLit 3)))``
 val e45 = ``Con "Pair_type" [Var "x";Var "y"]``
-val (m,st) = pd1 e45 [d0,d1,d2] (* TODO: is this what we want on the stack? eventually want x' to overwrite x; not sure about order of x and y *)
-val [bl,Number x',Number x,Number y] = st
-val SOME 1 = intML.toInt x
+val (m,st) = pd1 e45 [d0,d1,d2]
+val [Block (_,[Number xb,Number yb]),Number x,Number y] = st
+val SOME 3 = intML.toInt x
 val SOME 2 = intML.toInt y
-val SOME 3 = intML.toInt x'
+val true = xb = x
+val true = yb = y;
+val d1 = ``Dlet (Pcon "Pair_type" [Pvar "y";Pvar "x"]) (Con "Pair_type" [Val (Lit (IntLit 1));Val (Lit (IntLit 2))])``
+val d2 = ``Dlet (Pvar "x") (Val (Lit (IntLit 3)))``
+val e46 = ``Con "Pair_type" [Var "x";Var "y"]``
+val (m,st) = pd1 e46 [d0,d1,d2]
+val [Block (_,[Number xb,Number yb]),Number y,Number x] = st
+val SOME 3 = intML.toInt xb
+val SOME 1 = intML.toInt yb
+val true = x = xb
+val true = y = yb;
