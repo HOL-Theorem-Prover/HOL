@@ -201,7 +201,27 @@ Cevaluate (Pmap.add n v env) (CLet ns es b) r
 ==>
 Cevaluate env (CLet (n::ns) (e::es) b) r
 
-(* TODO: CLetfun *)
+and
+forall env ns defs b r.
+Cevaluate
+  (fold_left2
+    (fun env' n (ns,b) ->
+      Pmap.add n (CClosure (fmap_to_alist env) ns b) env')
+    env ns defs)
+  b r
+==>
+Cevaluate env (CLetfun false ns defs b) r
+
+and
+forall env ns defs b r.
+Cevaluate
+  (List.fold_left
+     (fun env' n ->
+       Pmap.add n (CRecClos (fmap_to_alist env) ns defs n) env')
+     env ns)
+  b r
+==>
+Cevaluate env (CLetfun true ns defs b) r
 
 and
 forall env ns b.

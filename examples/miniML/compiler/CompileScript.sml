@@ -222,7 +222,27 @@ Cevaluate env (CLet [] [] b) r)
 ==>
 Cevaluate env (CLet (CONS n ns) (CONS e es) b) r)
 
-(* TODO: CLetfun *)
+/\
+(! env ns defs b r.
+Cevaluate
+  (FOLDL2 
+    (\ env' n (ns,b) .
+      FUPDATE  env' ( n, (CClosure (fmap_to_alist env) ns b))) 
+    env  ns  defs)
+  b r
+==>
+Cevaluate env (CLetfun F ns defs b) r)
+
+/\
+(! env ns defs b r.
+Cevaluate
+  (FOLDL
+     (\ env' n .
+       FUPDATE  env' ( n, (CRecClos (fmap_to_alist env) ns defs n)))
+     env ns)
+  b r
+==>
+Cevaluate env (CLetfun T ns defs b) r)
 
 /\
 (! env ns b.
