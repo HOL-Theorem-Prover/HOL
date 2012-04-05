@@ -13,6 +13,7 @@ open BytecodeTheory MiniMLTheory
 (* Intermediate language for MiniML compiler *)
 
 (* TODO: move to lem? *)
+(*val fold_left2 : forall 'a 'b 'c. ('a -> 'b -> 'c -> 'a) -> 'a -> 'b list -> 'c list -> 'a*)
 (*val range : forall 'a 'b. ('a,'b) Pmap.map -> 'b set*)
 (*val domain : forall 'a 'b. ('a,'b) Pmap.map -> 'a set*)
 (*val least : (num -> bool) -> num*)
@@ -23,6 +24,15 @@ open BytecodeTheory MiniMLTheory
 val _ = type_abbrev((*  ('a,'b) *) "alist" , ``: ('a,'b) alist``);
 (*val fmap_to_alist : forall 'a 'b. ('a,'b) Pmap.map -> ('a,'b) alist*)
 (*val alist_to_fmap : forall 'a 'b. ('a,'b) alist -> ('a,'b) Pmap.map*)
+
+(* TODO: elsewhere? *)
+ val find_index_defn = Hol_defn "find_index" `
+
+(find_index y [] _ = NONE)
+/\
+(find_index y (x::xs) (n:num) = if ($=) x y then SOME n else find_index y xs (($+)n 1))`;
+
+val _ = Defn.save_defn find_index_defn;
 
 (* Syntax *)
 
@@ -164,7 +174,94 @@ T
 ==>
 Cevaluate env (CFun ns b) (Rval (CClosure (fmap_to_alist env) ns b)))
 
-(* TODO: CCall *)
+/\
+(! env e es env' ns b vs r. ($/\)
+(Cevaluate env e (Rval (CClosure env' ns b))) (($/\)
+(Cevaluate_list env es (Rval vs)) (($/\) (($=)
+(LENGTH ns) (LENGTH vs))
+(Cevaluate (FOLDL2  (\ en n v . FUPDATE  en ( n, v)) 
+             (alist_to_fmap env')  ns  vs) b r)))
+==>
+Cevaluate env (CCall e es) r)
+/\
+(! env e es env' ns b vs. ($/\)
+(Cevaluate env e (Rval (CClosure env' ns b))) (($/\)
+(Cevaluate_list env es (Rval vs))
+(~  ( ($=)(LENGTH ns) (LENGTH vs))))
+==>
+Cevaluate env (CCall e es) (Rerr Rtype_error))
+/\
+(! env e es env' ns b err. ($/\)
+(Cevaluate env e (Rval (CClosure env' ns b)))
+(Cevaluate_list env es (Rerr err))
+==>
+Cevaluate env (CCall e es) (Rerr err))
+
+/\
+(! env e es env' ns' defs n i ns b vs r. ($/\)
+(Cevaluate env e (Rval (CRecClos env' ns' defs n))) (($/\) (($=)
+(LENGTH ns') (LENGTH defs)) (($/\) (($=)
+(find_index n ns' 0) (SOME i)) (($/\) (($=)
+(EL  i  defs) (ns,b)) (($/\)
+(Cevaluate_list env es (Rval vs)) (($/\) (($=)
+(LENGTH ns) (LENGTH vs))
+(Cevaluate
+  (FOLDL2  (\ en n v . FUPDATE  en ( n, v)) 
+    (SND (FOLDL2 
+            (\ (n,en) n' def .
+              (($+)n 1, FUPDATE  en ( n', (CRecClos env' ns' defs n)))) 
+            (0,alist_to_fmap env') 
+            ns'  defs)) 
+    ns  vs)
+  b r))))))
+==>
+Cevaluate env (CCall e es) r)
+/\
+(! env e es env' ns' defs n i ns b vs. ($/\)
+(Cevaluate env e (Rval (CRecClos env' ns' defs n))) (($/\) (($=)
+(LENGTH ns') (LENGTH defs)) (($/\) (($=)
+(find_index n ns' 0) (SOME i)) (($/\) (($=)
+(EL  i  defs) (ns,b)) (($/\)
+(Cevaluate_list env es (Rval vs))
+(~  ( ($=)(LENGTH ns) (LENGTH vs)))))))
+==>
+Cevaluate env (CCall e es) (Rerr Rtype_error))
+/\
+(! env e es env' ns' defs n i ns b err. ($/\)
+(Cevaluate env e (Rval (CRecClos env' ns' defs n))) (($/\) (($=)
+(LENGTH ns') (LENGTH defs)) (($/\) (($=)
+(find_index n ns' 0) (SOME i)) (($/\) (($=)
+(EL  i  defs) (ns,b))
+(Cevaluate_list env es (Rerr err)))))
+==>
+Cevaluate env (CCall e es) (Rerr err))
+/\
+(! env e es env' ns' defs n. ($/\)
+(Cevaluate env e (Rval (CRecClos env' ns' defs n))) (($/\) (($=)
+(LENGTH ns') (LENGTH defs)) (($=)
+(find_index n ns' 0) NONE))
+==>
+Cevaluate env (CCall e es) (Rerr Rtype_error))
+/\
+(! env e es env' ns' defs n. ($/\)
+(Cevaluate env e (Rval (CRecClos env' ns' defs n)))
+(~  ( ($=)(LENGTH ns') (LENGTH defs)))
+==>
+Cevaluate env (CCall e es) (Rerr Rtype_error))
+
+/\
+(! env e es v. ($/\)
+(Cevaluate env e (Rval v)) (($/\)
+(! env' ns b. ~  ( ($=)v (CClosure env' ns b)))
+(! env' ns' defs n. ~  ( ($=)v (CRecClos env' ns' defs n))))
+==>
+Cevaluate env (CCall e es) (Rerr Rtype_error))
+/\
+(! env e es err.
+Cevaluate env e (Rerr err)
+==>
+Cevaluate env (CCall e es) (Rerr err))
+
 (* TODO: CPrim2 *)
 (* TODO: CLprim *)
 
@@ -445,6 +542,8 @@ val _ = Defn.save_defn free_vars_defn;
 
 (* Remove pattern-matching using continuations *)
 (* TODO: more efficient method *)
+(* TODO: store type information on CMat nodes *)
+
 (*val remove_mat : Cexp -> Cexp*)
 
  val remove_mat_vp_defn = Hol_defn "remove_mat_vp" `
@@ -614,15 +713,6 @@ val _ = Define `
 val _ = Define `
  (ldt (d,t) s =  s with<| decl := d ; tail := t |>)`;
 
-
-(* TODO: elsewhere? *)
- val find_index_defn = Hol_defn "find_index" `
-
-(find_index y [] _ = NONE)
-/\
-(find_index y (x::xs) (n:num) = if ($=) x y then SOME n else find_index y xs (($+)n 1))`;
-
-val _ = Defn.save_defn find_index_defn;
 
 (* helper for reconstructing closure environments *)
 val _ = Hol_datatype `

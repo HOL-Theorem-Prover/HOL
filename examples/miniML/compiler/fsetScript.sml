@@ -24,4 +24,9 @@ prove_tac[NOT_IN_FINITE,INFINITE_NUM_UNIV,MEMBER_NOT_EMPTY])
 val num_set_foldl_def = new_specification(
 "num_set_foldl_def",["num_set_foldl"],num_set_foldl_exists)
 
+(* TODO: move to list theory *)
+val FOLDL2_def = Define`
+  (FOLDL2 f a (b::bs) (c::cs) = FOLDL2 f (f a b c) bs cs) /\
+  (FOLDL2 f a bs cs = a)`
+
 val _ = export_theory();

@@ -6,3 +6,5 @@ val LEAST : (num -> bool) -> num
 val REPLACE_ELEMENT : forall 'a. 'a -> num -> 'a list -> 'a list
 val num_set_foldl : forall 'a. ('a -> num -> 'a) -> 'a -> num set -> 'a
 val IMAGE : forall 'a 'b. ('a -> 'b) -> 'a set -> 'b set
+val UNCURRY : forall 'a 'b 'c. ('a -> 'b -> 'c) -> (('a * 'b) -> 'c)
+val FOLDL2 : forall 'a 'b 'c. ('a -> 'b -> 'c -> 'a) -> 'a -> 'b list -> 'c list -> 'a

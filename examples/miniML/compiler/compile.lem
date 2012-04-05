@@ -3,6 +3,15 @@ open MiniML
 (* Intermediate language for MiniML compiler *)
 
 (* TODO: move to lem? *)
+val fold_left2 : forall 'a 'b 'c. ('a -> 'b -> 'c -> 'a) -> 'a -> 'b list -> 'c list -> 'a
+let inline {hol} fold_left2 f a lb lc =
+  (* TODO: LEM internal error:
+  List.fold_left (fun a -> Hol.UNCURRY (f a)) a (List.combine lb lc)
+  *)
+  (* TODO: LEM internal error:
+  List.fold_left (fun a (b,c) -> f a b c) a (List.combine lb lc)
+  *)
+  Hol.FOLDL2 f a lb lc
 val range : forall 'a 'b. ('a,'b) Pmap.map -> 'b set
 let inline {hol} range = Hol.FRANGE
 val domain : forall 'a 'b. ('a,'b) Pmap.map -> 'a set
@@ -22,6 +31,12 @@ val fmap_to_alist : forall 'a 'b. ('a,'b) Pmap.map -> ('a,'b) alist
 let inline {hol} fmap_to_alist = Hol.fmap_to_alist
 val alist_to_fmap : forall 'a 'b. ('a,'b) alist -> ('a,'b) Pmap.map
 let inline {hol} alist_to_fmap = Hol.alist_to_fmap
+
+(* TODO: elsewhere? *)
+let rec
+find_index y [] _ = None
+and
+find_index y (x::xs) (n:num) = if x = y then Some n else find_index y xs (n+1)
 
 (* Syntax *)
 
@@ -155,7 +170,94 @@ true
 ==>
 Cevaluate env (CFun ns b) (Rval (CClosure (fmap_to_alist env) ns b))
 
-(* TODO: CCall *)
+and
+forall env e es env' ns b vs r.
+Cevaluate env e (Rval (CClosure env' ns b)) &&
+Cevaluate_list env es (Rval vs) &&
+List.length ns = List.length vs &&
+Cevaluate (fold_left2 (fun en n v -> Pmap.add n v en)
+             (alist_to_fmap env') ns vs) b r
+==>
+Cevaluate env (CCall e es) r
+and
+forall env e es env' ns b vs.
+Cevaluate env e (Rval (CClosure env' ns b)) &&
+Cevaluate_list env es (Rval vs) &&
+not (List.length ns = List.length vs)
+==>
+Cevaluate env (CCall e es) (Rerr Rtype_error)
+and
+forall env e es env' ns b err.
+Cevaluate env e (Rval (CClosure env' ns b)) &&
+Cevaluate_list env es (Rerr err)
+==>
+Cevaluate env (CCall e es) (Rerr err)
+
+and
+forall env e es env' ns' defs n i ns b vs r.
+Cevaluate env e (Rval (CRecClos env' ns' defs n)) &&
+List.length ns' = List.length defs &&
+find_index n ns' 0 = Some i &&
+List.nth defs i = (ns,b) &&
+Cevaluate_list env es (Rval vs) &&
+List.length ns = List.length vs &&
+Cevaluate
+  (fold_left2 (fun en n v -> Pmap.add n v en)
+    (snd (fold_left2
+            (fun (n,en) n' def ->
+              (n+1, Pmap.add n' (CRecClos env' ns' defs n) en))
+            (0,alist_to_fmap env')
+            ns' defs))
+    ns vs)
+  b r
+==>
+Cevaluate env (CCall e es) r
+and
+forall env e es env' ns' defs n i ns b vs.
+Cevaluate env e (Rval (CRecClos env' ns' defs n)) &&
+List.length ns' = List.length defs &&
+find_index n ns' 0 = Some i &&
+List.nth defs i = (ns,b) &&
+Cevaluate_list env es (Rval vs) &&
+not (List.length ns = List.length vs)
+==>
+Cevaluate env (CCall e es) (Rerr Rtype_error)
+and
+forall env e es env' ns' defs n i ns b err.
+Cevaluate env e (Rval (CRecClos env' ns' defs n)) &&
+List.length ns' = List.length defs &&
+find_index n ns' 0 = Some i &&
+List.nth defs i = (ns,b) &&
+Cevaluate_list env es (Rerr err)
+==>
+Cevaluate env (CCall e es) (Rerr err)
+and
+forall env e es env' ns' defs n.
+Cevaluate env e (Rval (CRecClos env' ns' defs n)) &&
+List.length ns' = List.length defs &&
+find_index n ns' 0 = None
+==>
+Cevaluate env (CCall e es) (Rerr Rtype_error)
+and
+forall env e es env' ns' defs n.
+Cevaluate env e (Rval (CRecClos env' ns' defs n)) &&
+not (List.length ns' = List.length defs)
+==>
+Cevaluate env (CCall e es) (Rerr Rtype_error)
+
+and
+forall env e es v.
+Cevaluate env e (Rval v) &&
+(forall env' ns b. not (v = CClosure env' ns b)) &&
+(forall env' ns' defs n. not (v = CRecClos env' ns' defs n))
+==>
+Cevaluate env (CCall e es) (Rerr Rtype_error)
+and
+forall env e es err.
+Cevaluate env e (Rerr err)
+==>
+Cevaluate env (CCall e es) (Rerr err)
+
 (* TODO: CPrim2 *)
 (* TODO: CLprim *)
 
@@ -415,6 +517,8 @@ free_vars (CLprim _ es) =
 
 (* Remove pattern-matching using continuations *)
 (* TODO: more efficient method *)
+(* TODO: store type information on CMat nodes *)
+
 val remove_mat : Cexp -> Cexp
 
 let rec
@@ -547,12 +651,6 @@ let incsz s = <| s with sz = s.sz + 1 |>
 let decsz s = <| s with sz = s.sz - 1 |>
 let sdt s = (<| s with decl = None ; tail = TCNonTail |>, (s.decl, s.tail))
 let ldt (d,t) s = <| s with decl = d ; tail = t |>
-
-(* TODO: elsewhere? *)
-let rec
-find_index y [] _ = None
-and
-find_index y (x::xs) (n:num) = if x = y then Some n else find_index y xs (n+1)
 
 (* helper for reconstructing closure environments *)
 type cebind = CEEnv of num | CERef of num
