@@ -21,4 +21,13 @@ sig
     val store_eq_thm   : thm -> thm
     val register_type  : hol_type -> unit
 
+    (* storing and loading state of translator *)
+
+    val export_theory        : unit -> unit
+    val translation_extends  : string -> unit
+
+    (* simplification of preconditions / sideconditions *)
+
+    val update_precondition  : thm -> thm
+
 end

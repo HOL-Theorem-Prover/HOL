@@ -1,8 +1,9 @@
 open preamble
-open bagTheory bagLib miscTheory ml_translatorLib
-
+open bagTheory bagLib miscTheory ml_translatorLib mini_preludeTheory
 
 val _ = new_theory "LazyPairingHeap"
+
+val _ = translation_extends "mini_prelude";
 
 (* Okasaki page 80 *)
 

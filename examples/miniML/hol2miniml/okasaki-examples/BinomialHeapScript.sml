@@ -1,14 +1,12 @@
 open preamble
-open bagTheory bagLib miscTheory ml_translatorLib;
-
-val res = translate APPEND;
-val res = translate REV_DEF;
-val res = translate REVERSE_REV;
+open bagTheory bagLib miscTheory ml_translatorLib mini_preludeTheory;
 
 val fs = full_simp_tac (srw_ss ())
 val rw = srw_tac []
 
 val _ = new_theory "BinomialHeap"
+
+val _ = translation_extends "mini_prelude";
 
 (* Okasaki page 24 *)
 

@@ -1,5 +1,7 @@
 open HolKernel Parse boolLib bossLib; val _ = new_theory "ml_translator_demo";
 
+(*
+
 open ml_translatorLib ml_translatorTheory;
 
 open arithmeticTheory listTheory combinTheory pairTheory;
@@ -189,6 +191,8 @@ val ML_QSORT_CORRECT = store_thm ("ML_QSORT_CORRECT",
         (LIST_TYPE a l' xs') /\ PERM l l' /\ SORTED ord l'``,
   REPEAT STRIP_TAC \\ IMP_RES_TAC Eval_QSORT_EXPANDED
   \\ METIS_TAC [sortingTheory.QSORT_PERM,sortingTheory.QSORT_SORTED]);
+
+*)
 
 val _ = export_theory();
 

@@ -1,10 +1,12 @@
 open preamble
-open bagTheory bagLib miscTheory ml_translatorLib
+open bagTheory bagLib miscTheory ml_translatorLib mini_preludeTheory
 
 val fs = full_simp_tac (srw_ss ())
 val rw = srw_tac []
 
 val _ = new_theory "PairingHeap"
+
+val _ = translation_extends "mini_prelude";
 
 (* Okasaki page 54 *)
 

@@ -1,11 +1,13 @@
 open preamble
 open bagTheory bagLib miscTheory;
-open ml_translatorLib;
+open ml_translatorLib mini_preludeTheory;
 
 val fs = full_simp_tac (srw_ss ())
 val rw = srw_tac []
 
 val _ = new_theory "LeftistHeap"
+
+val _ = translation_extends "mini_prelude";
 
 (* Okasaki page 20 *)
 

@@ -550,7 +550,7 @@ val PULL_EXISTS = save_thm("PULL_EXISTS",
 val DeclAssum_Dletrec = store_thm("DeclAssum_Dletrec",
   ``!ds n P.
       (!env. DeclAssum ds env ==> Eval env (Var n) P) ==>
-      !funs. ALL_DISTINCT (MAP (\(x,y,z). x) funs) /\ ~(MEM n (MAP FST funs)) ==>
+      !funs. ~(MEM n (MAP FST funs)) ==>
              (!env. DeclAssum (SNOC (Dletrec funs) ds) env ==> Eval env (Var n) P)``,
   SIMP_TAC std_ss [DeclAssum_def,SNOC_APPEND,Decls_APPEND,Decls_Dletrec]
   \\ REPEAT STRIP_TAC \\ FULL_SIMP_TAC std_ss [bind_def,Eval_Var_SIMP]

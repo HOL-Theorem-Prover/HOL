@@ -1,11 +1,9 @@
 
 open HolKernel Parse boolLib bossLib; val _ = new_theory "RealTimeQueue";
 
-open listTheory arithmeticTheory ml_translatorLib;
+open listTheory arithmeticTheory ml_translatorLib mini_preludeTheory;
 
-(* setting up the translator *)
-
-val res = translate listTheory.APPEND;
+val _ = translation_extends "mini_prelude";
 
 (* implementation *)
 

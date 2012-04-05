@@ -51,51 +51,74 @@ fun unpack_5tuple f1 f2 f3 f4 f5 th =
 exception UnableToTranslate of term;
 exception UnsupportedType of hol_type;
 
-(* state -- for certificate theorems *)
+(* code for managing state of certificate theorems *)
+
 local
   (* inv: get_DeclAssum () is a hyp in each thm in each !cert_memory *)
   val module_name = ref "";
   val decl_abbrev = ref TRUTH;
   val decl_term   = ref ``[]:dec list``;
-  val cert_memory = ref ([] : (string * term * thm) list);
+  val cert_memory = ref ([] : (string * term * thm * thm) list);
+  (* session specific state below *)
+  val abbrev_counter = ref 0;
+  val abbrev_defs = ref ([]:thm list);
 in
   fun map_cert_memory f = (cert_memory := map f (!cert_memory))
-  fun get_names () = map (fn (n,_,_) => n) (!cert_memory)
+  fun get_names () = map (fn (n,_,_,_) => n) (!cert_memory)
   fun get_module_name () = let
      val n = !module_name
      in if n <> "" then n else
           let val c = current_theory() in (module_name := c; c) end end
   fun get_DeclAssum () = ``DeclAssum ^(!decl_term) env``
-  (* decl abbreviation *)
-  fun update_decl_abbreviation () = let
+  fun get_decls () = let
     val rw = !decl_abbrev
     val tm = QCONV (REWRITE_CONV [rw]) (!decl_term) |> concl |> rand
-    val name = get_module_name () ^ "_decls"
-    val v = mk_var(name,``:decs``)
-    val tm2 = QCONV (REWRITE_CONV [SNOC]) tm |> concl |> rand
-    val new_rw = new_definition(name,mk_eq(v,tm2))
-    val _ = map_cert_memory (fn (n,tm,th) => (n,tm,REWRITE_RULE [GSYM new_rw,rw,SNOC] th))
-    val _ = (decl_abbrev := new_rw)
-    val _ = (decl_term := (new_rw |> concl |> dest_eq |> fst))
+    in tm end
+  fun get_decl_abbrev () = let
+    val abbrev = !decl_abbrev
+    in if concl abbrev = T then NONE else SOME abbrev end;
+  (* decl abbreviation *)
+  fun update_decl_abbreviation () = let
+    val rhs = (!decl_term)
+    val name = get_module_name () ^ "_decls_" ^ int_to_string (!abbrev_counter)
+    val _ = (abbrev_counter := 1 + (!abbrev_counter))
+    val abbrev_def = new_definition(name,mk_eq(mk_var(name,``:decs``),rhs))
+    val new_rw = REWRITE_RULE [abbrev_def |> GSYM]
+    val _ = map_cert_memory (fn (n,tm,th,pre) => (n,tm,new_rw th,pre))
+    val _ = (decl_term := (abbrev_def |> concl |> dest_eq |> fst))
+    val _ = (abbrev_defs := abbrev_def::(!abbrev_defs))
     in () end
+  fun finish_decl_abbreviation () = let
+    val tm = (!decl_term)
+    val lemma = tm |> QCONV (REWRITE_CONV (SNOC::(!abbrev_defs)))
+    val rhs = lemma |> concl |> rand
+    val name = get_module_name () ^ "_decls"
+    val abbrev_def = new_definition(name,mk_eq(mk_var(name,``:decs``),rhs))
+    val new_rw = REWRITE_RULE [lemma |> RW [GSYM abbrev_def]]
+    val _ = map_cert_memory (fn (n,tm,th,pre) => (n,tm,new_rw th,pre))
+    val _ = (decl_term := (abbrev_def |> concl |> dest_eq |> fst))
+    val _ = (decl_abbrev := abbrev_def)
+    val strs = (!abbrev_defs) |> map (fst o dest_const o fst o dest_eq o concl)
+    val _ = map (fn s => delete_const s handle NotFound => ()) strs
+    in () end;
   (* functions for appending a new declaration *)
   fun snoc_decl decl = let
     val _ = (decl_term := listSyntax.mk_snoc(decl,!decl_term))
     val f = if can (match_term ``Dletrec funs``) decl then
-              (fn (n:string,tm:term,th) =>
+              (fn (n:string,tm:term,th,pre) =>
                 (n,tm,(MATCH_MP DeclAssum_Dletrec th |> SPEC (rand decl)
                  |> CONV_RULE ((RATOR_CONV o RAND_CONV) EVAL) |> REWRITE_RULE [])
-                 handle HOL_ERR _ => th))
+                 handle HOL_ERR _ => th,pre))
             else if can (match_term ``Dlet v x``) decl then
-              (fn (n:string,tm:term,th) =>
+              (fn (n:string,tm:term,th,pre) =>
                 (n,tm,(MATCH_MP DeclAssum_Dlet th
                  |> SPEC (rand (rand (rator decl))) |> SPEC (rand decl)
                  |> CONV_RULE ((RATOR_CONV o RAND_CONV) EVAL) |> REWRITE_RULE [])
-                 handle HOL_ERR _ => th))
+                 handle HOL_ERR _ => th,pre))
             else if can (match_term ``Dtype x``) decl then
-              (fn (n:string,tm:term,th) =>
+              (fn (n:string,tm:term,th,pre) =>
                 (n,tm,(MATCH_MP DeclAssum_Dtype th |> SPEC (rand decl))
-                      handle HOL_ERR _ => th))
+                      handle HOL_ERR _ => th,pre))
             else fail()
     val _ = map_cert_memory f
     in () end;
@@ -110,9 +133,9 @@ in
     val tm = concl (th |> SPEC_ALL |> UNDISCH_ALL)
     val const = tm |> rand |> rand
     val n = term_to_string const
-    val _ = (cert_memory := (n,const,th)::(!cert_memory))
+    val _ = (cert_memory := (n,const,th,TRUTH)::(!cert_memory))
     in th end;
-  fun store_cert th = let
+  fun store_cert th pre = let
     val decl_assum = (th |> hyp |> first (can (match_term ``DeclAssum ds env``)))
     val th = Q.GEN `env` (DISCH decl_assum th)
     val decl = (decl_assum |> rator |> rand |> rator |> rand)
@@ -121,38 +144,70 @@ in
     val const = tm |> rand |> rand
     val _ = is_const const orelse fail()
     val n = tm |> rator |> rand |> rand |> stringSyntax.fromHOLstring
-    val _ = (cert_memory := (n,const,th)::(!cert_memory))
+    val _ = (cert_memory := (n,const,th,pre)::(!cert_memory))
     val _ = update_decl_abbreviation ()
-    val (_,_,th) = hd (!cert_memory)
+    val (_,_,th,pre) = hd (!cert_memory)
     in th end
   fun lookup_cert const = let
-    val (name,c,th) = (first (fn (_,c,_) => can (match_term c) const) (!cert_memory))
+    val (name,c,th,pre) = (first (fn (_,c,_,_) => can (match_term c) const) (!cert_memory))
     val th = th |> SPEC_ALL |> UNDISCH_ALL
     val th = MATCH_MP (REWRITE_RULE [GSYM AND_IMP_INTRO] Eval_Var_SWAP_ENV)
                       (th |> Q.INST [`env`|->`shaddow_env`]) |> UNDISCH_ALL
              handle HOL_ERR _ => th
     in th end
+  fun get_cert fname = let
+    val (name,c,th,pre) = (first (fn (n,_,_,_) => n = fname) (!cert_memory))
+    in (th |> SPEC_ALL |> UNDISCH_ALL, pre) end
   (* simplifying side conditions in certificate theorems *)
-  (* ... *)
+  fun update_precondition new_pre = let
+    fun get_const def = def |> SPEC_ALL |> CONJUNCTS |> hd
+                            |> concl |> dest_eq |> fst |> repeat rator
+    val pre_const = get_const new_pre
+    val (fname,c,th,pre) = (first (fn (_,_,_,pre) => can (find_term (can (match_term pre_const))) (get_const pre) handle HOL_ERR _ => false) (!cert_memory))
+    val pre_is_single_line =
+      (length (new_pre |> SPEC_ALL |> CONJUNCTS |> map SPEC_ALL) = 1)
+    val pre_is_true = let val p = new_pre |> SPEC_ALL |> CONJUNCTS |> map SPEC_ALL
+                          val rhs = hd p |> concl |> dest_eq |> snd
+                      in (rhs = T) andalso (length p = 1) end
+    val pre_is_rec = let val rhss = new_pre |> SPEC_ALL |> CONJUNCTS |> map SPEC_ALL
+                                            |> map (snd o dest_eq o concl o SPEC_ALL)
+                     in 0 < length (filter (can (find_term (can (match_term pre_const)))) rhss) end
+    val (th1,pre1) =
+      if pre_is_true then let
+        val th = th |> DISCH_ALL |> RW [new_pre,PRECONDITION_def] |> UNDISCH_ALL
+                    |> Q.SPEC `env` |> UNDISCH_ALL
+        val pat = Eq_def |> SPEC_ALL |> concl |> dest_eq |> fst
+        val vs = find_terms (can (match_term pat)) (concl th) |> map rand
+        val th = GENL vs th |> SIMP_RULE std_ss [FUN_QUANT_SIMP,Eval_FUN_FORALL_EQ]
+        val th = DISCH (get_DeclAssum ()) th |> Q.GEN `env`
+        in (th,TRUTH) end else
+      if pre_is_rec orelse not pre_is_single_line then (th,new_pre) else
+        (DISCH_ALL th |> RW1 [new_pre] |> UNDISCH_ALL, TRUTH)
+    val _ = map_cert_memory (fn (f,x,th,pre) =>
+              if f = fname then (fname,c,th1,pre1) else (f,x,th,pre))
+    in new_pre end
   (* store/load to/from a single thm *)
-  fun pack_certs () =
-    pack_triple
-      (pack_list (pack_triple pack_string pack_term pack_thm))
-      pack_thm pack_term
-        ((!cert_memory), (!decl_abbrev), (!decl_term))
+  fun pack_certs () = let
+    val _ = finish_decl_abbreviation ()
+    in pack_triple
+         (pack_list (pack_4tuple pack_string pack_term pack_thm pack_thm))
+         pack_thm pack_term
+           ((!cert_memory), (!decl_abbrev), (!decl_term)) end
   fun unpack_certs th = let
     val (cert,abbrev,t) =
       unpack_triple
-        (unpack_list (unpack_triple unpack_string unpack_term unpack_thm))
+        (unpack_list (unpack_4tuple unpack_string unpack_term unpack_thm unpack_thm))
         unpack_thm unpack_term th
     val _ = (cert_memory := cert)
     val _ = (decl_abbrev := abbrev)
+    val _ = (abbrev_defs := [abbrev])
     val _ = (decl_term := t)
     in () end
 end
 
 
-(* state -- for type information *)
+(* code for managing type information *)
+
 local
   val type_mappings = ref ([]:(hol_type * hol_type) list)
   val other_types = ref ([]:(hol_type * term) list)
@@ -256,9 +311,128 @@ in
     in () end
 end
 
+
+(* misc *)
+
+fun get_unique_name str = let
+  val names = get_names()
+  fun find_name str n = let
+    val new_name = str ^ "_" ^ (int_to_string n)
+    in if mem new_name names then find_name str (n+1) else new_name end
+  fun find_new_name str =
+    if mem str names then find_name str 1 else str
+  in find_new_name str end
+
+fun dest_args tm =
+  let val (x,y) = dest_comb tm in dest_args x @ [y] end
+  handle HOL_ERR _ => []
+
+fun D th = let
+  val th = th |> DISCH_ALL |> PURE_REWRITE_RULE [AND_IMP_INTRO]
+  in if is_imp (concl th) then th else DISCH T th end
+
+val quietDefine = (* quiet version of Define -- by Anthony Fox *)
+  Lib.with_flag (Feedback.emit_ERR, false)
+    (Lib.with_flag (Feedback.emit_MESG, false)
+       (Feedback.trace ("auto Defn.tgoal", 0) TotalDefn.Define))
+
+
+(* mapping from dec terms to SML and Ocaml *)
+
+local
+  fun dec2str sml d = let (* very slow at the moment *)
+    val result =
+      (if sml then ``dec_to_sml_string ^d`` else ``dec_to_ocaml_string ^d``)
+      |> EVAL |> concl |> rand |> stringSyntax.fromHOLstring
+      handle HOL_ERR _ => failwith("\nUnable to print "^(term_to_string d)^"\n\n")
+    in result end;
+in
+  fun dec2str_sml d = dec2str true d
+  fun dec2str_ocaml d = dec2str false d
+end
+
+
+(* printing output e.g. SML syntax *)
+
+local
+  val base_filename = ref "";
+  val prelude_decl_count = ref 0;
+  datatype print_item = Translation of string * thm | InvDef of thm
+  val print_items = ref ([]:print_item list)
+  fun add_print_item i = (print_items := i :: (!print_items))
+  val files = ["_ml.txt","_ocaml.txt","_hol.txt","_thm.txt","_ast.txt"]
+  fun check_suffix suffix = mem suffix files orelse failwith("bad file suffix")
+  fun clear_file suffix = let
+    val _ = check_suffix suffix
+    val t = TextIO.openOut((!base_filename) ^ suffix)
+    val _ = TextIO.closeOut(t)
+    in () end
+  fun get_filename () =
+    if !base_filename = "" then let
+      val name = current_theory()
+      val _ = (base_filename := name)
+      val _ = map clear_file files
+      in name end
+    else !base_filename
+  fun append_to_file suffix strs = let
+    val _ = check_suffix suffix
+    val t = TextIO.openAppend(get_filename() ^ suffix)
+    val _ = map (fn s => TextIO.output(t,s)) strs
+    val _ = TextIO.closeOut(t)
+    in () end
+  fun print_decls_aux xs suffix f =
+    map (fn tm => append_to_file suffix (f tm)) xs
+  fun drop n [] = [] | drop n xs = if n = 0 then xs else drop (n-1) (tl xs)
+  fun current_decls () = fst (listSyntax.dest_list (get_decls()))
+  fun print_str str = str
+  fun print_decls () = let
+    val ds = drop (!prelude_decl_count) (current_decls ())
+    val _ = print "Printing ASTs, "
+    val _ = print_decls_aux ds "_ast.txt" (fn tm => ["\n",term_to_string tm,"\n"])
+    val _ = print "done.\n"
+    val _ = print "Printing SML syntax, "
+    val _ = print_decls_aux ds "_ml.txt" (fn tm => ["\n",print_str (dec2str_sml tm),"\n"])
+    val _ = print "done.\n"
+    val _ = print "Printing Ocaml syntax, "
+    val _ = print_decls_aux ds "_ocaml.txt" (fn tm => ["\n",print_str (dec2str_ocaml tm),"\n"])
+    val _ = print "done.\n"
+    in () end;
+  fun print_item (InvDef inv_def) = let
+      val th_str = thm_to_string inv_def
+      val _ = append_to_file "_thm.txt" ["\nDefinition of refinement invariant:\n\n",th_str,"\n"]
+      in () end
+    | print_item (Translation (fname,original_def)) = let
+      val (th,pre) = get_cert fname
+      val def_str = thm_to_string original_def
+      val th_str = thm_to_string (D th |> REWRITE_RULE [GSYM CONJ_ASSOC,CONTAINER_def,PRECONDITION_def])
+      val _ = append_to_file "_hol.txt" ["\n",def_str,"\n"]
+      val _ = append_to_file "_thm.txt" ["\nCertificate theorem for "^fname^":\n\n",th_str,"\n"]
+      val _ = if concl pre = T then () else
+                append_to_file "_thm.txt" ["\nDefinition of side condition for "^fname^":\n\n",thm_to_string pre,"\n"]
+      in () end;
+  fun print_decl_abbrev () =
+    case get_decl_abbrev () of
+      NONE => ()
+    | (SOME abbrev_def) => let
+      val str = thm_to_string abbrev_def
+      val _ = append_to_file "_thm.txt" ["\nAST definition:\n\n",str,"\n\n"]
+      in () end
+in
+  fun init_printer () = let
+    val _ = map clear_file files
+    val _ = (prelude_decl_count := (length (current_decls ())))
+    in () end
+  fun print_translation_output () =
+    (map print_item (rev (!print_items)); print_decl_abbrev (); print_decls ());
+  fun print_fname fname def = add_print_item (Translation (fname,def));
+  fun print_inv_def inv_def = add_print_item (InvDef inv_def);
+end
+
+
+(* code for loading and storing translations into a single thm *)
+
 local
   val suffix = "_translator_state_thm"
-in
   fun pack_state () = let
     val name = get_module_name () ^ suffix
     val name_tm = stringSyntax.fromMLstring name
@@ -279,119 +453,18 @@ in
     val _ = unpack_certs p1
     val _ = unpack_types p2
     in () end;
-end
-
-
-fun get_unique_name str = let
-  val names = get_names()
-  fun find_name str n = let
-    val new_name = str ^ "_" ^ (int_to_string n)
-    in if mem new_name names then find_name str (n+1) else new_name end
-  fun find_new_name str =
-    if mem str names then find_name str 1 else str
-  in find_new_name str end
-
-
-(* collecting declarations *)
-
-(*
-local
-  val decls = ref (tl [(T,"","")])
-  fun print_str str = (print "\n"; print str; print "\n\n"; str)
-  fun dec2str sml d = let
-    val result =
-      (if sml then ``dec_to_sml_string ^d`` else ``dec_to_ocaml_string ^d``)
-      |> EVAL |> concl |> rand |> stringSyntax.fromHOLstring
-      handle HOL_ERR _ => failwith("\nUnable to print "^(term_to_string d)^"\n\n")
-    in result end;
 in
-  fun add_decl d = (decls := (d,print_str (dec2str true d), dec2str false d)::(!decls))
-  fun get_decls () = rev (!decls)
-end
-*)
-
-
-fun D th = let
-  val th = th |> DISCH_ALL |> PURE_REWRITE_RULE [AND_IMP_INTRO]
-  in if is_imp (concl th) then th else DISCH T th end
-
-(*
-
-(* printing output *)
-
-val string2ident = let
-  fun g c = if #"0" <= c andalso c <= #"9" then implode [c] else
-            if #"a" <= c andalso c <= #"z" then implode [c] else
-            if #"A" <= c andalso c <= #"Z" then implode [c] else
-            if mem c [#"_"] then implode [c] else "C" ^ int_to_string (ord c)
-  in String.translate g end
-
-local
-  val base_filename = ref "";
-  fun clear_file suffix = let
-    val t = TextIO.openOut((!base_filename) ^ suffix)
-    val _ = TextIO.closeOut(t)
-    in () end
-  fun get_filename () =
-    if not auto_print then !base_filename else
-    if !base_filename = "" then let
-      val name = current_theory()
-      val _ = (base_filename := name)
-      val _ = clear_file "_ml.txt"
-      val _ = clear_file "_ocaml.txt"
-      val _ = clear_file "_hol.txt"
-      val _ = clear_file "_thm.txt"
-      in name end
-    else !base_filename
-  fun append_to_file suffix strs = let
-    val t = TextIO.openAppend(get_filename() ^ suffix)
-    val _ = map (fn s => TextIO.output(t,s)) strs
-    val _ = TextIO.closeOut(t)
-    in () end
-  fun print_ml_file () = let
-    val _ = clear_file "_ast.txt"
-    val _ = clear_file "_ml.txt"
-    val _ = clear_file "_ocaml.txt"
-    fun print_decl (tm,s,s') = let
-      val _ = append_to_file "_ast.txt" ["\n",term_to_string tm,"\n"]
-      val _ = append_to_file "_ml.txt" ["\n",s,"\n"]
-      val _ = append_to_file "_ocaml.txt" ["\n",s',"\n"]
-      in () end
-    val _ = map print_decl (get_decls())
-    in () end
-in
-  fun print_results fname original_def th code_tm pre =
-    if get_filename() = "" then () else let
-      val filename = get_filename()
-      val def_str = thm_to_string original_def
-      val th_str = thm_to_string (D th |> REWRITE_RULE [GSYM CONJ_ASSOC,Eval_Var_EQ,PRECONDITION_def])
-      val ml_str = term_to_string code_tm
-     (* val _ = append_to_file "_ml.txt" ["\n" ^ fname ^ ":\n\n",ml_str,"\n"] *)
-      val _ = append_to_file "_hol.txt" ["\n",def_str,"\n"]
-      val _ = append_to_file "_thm.txt" ["\nCertificate theorem for "^fname^":\n\n",th_str,"\n"]
-      val _ = case pre of NONE => ()
-              | SOME pre_def => append_to_file "_thm.txt" ["\nDefinition of side condition for "^fname^":\n\n",thm_to_string pre_def,"\n"]
-      val _ = print_ml_file ()
-      in () end;
-  fun print_inv_def inv_def = if get_filename() = "" then () else let
-    val th_str = thm_to_string inv_def
-    val _ = append_to_file "_thm.txt" ["\nDefinition of refinement invariant:\n\n",th_str,"\n"]
+  fun export_theory () = let
+    val _ = pack_state ()
+    val _ = print_translation_output ()
+    in Theory.export_theory () end
+  fun translation_extends name = let
+    val _ = print ("Loading: " ^ name)
+    val _ = unpack_state name
+    val _ = init_printer ()
+    val _ = print (", done.\n")
     in () end;
-  fun clear_filename () = (base_filename := "")
-  fun set_filename name = (base_filename := name;
-    clear_file "_ocaml.txt"; clear_file "_ml.txt"; clear_file "_hol.txt"; clear_file "_thm.txt")
 end
-
-*)
-
-
-
-(* a very quiet version of Define -- by Anthony Fox *)
-
-val quietDefine =
-  Lib.with_flag (Feedback.emit_ERR, false)
-    (Lib.with_flag (Feedback.emit_MESG, false)
-       (Feedback.trace ("auto Defn.tgoal", 0) TotalDefn.Define))
 
 
 (* support for user-defined data-types *)
@@ -478,7 +551,7 @@ fun clean_lowercase s = let
   fun f c = if #"a" <= c andalso c <= #"z" then implode [c] else
             if #"A" <= c andalso c <= #"Z" then implode [chr (ord c + 32)] else
             if #"0" <= c andalso c <= #"9" then implode [c] else
-           (* if c = #"," then "pair" else *)
+            if c = #"," then "pair" else
             if mem c [#"_",#"'"] then implode [c] else ""
   in String.translate f s end;
 
@@ -486,7 +559,7 @@ fun clean_uppercase s = let
   fun f c = if #"a" <= c andalso c <= #"z" then implode [chr (ord c - 32)] else
             if #"A" <= c andalso c <= #"Z" then implode [c] else
             if #"0" <= c andalso c <= #"9" then implode [c] else
-           (* if c = #"," then "pair" else *)
+            if c = #"," then "PAIR" else
             if mem c [#"_",#"'"] then implode [c] else ""
   in String.translate f s end;
 
@@ -498,10 +571,6 @@ fun tag_name type_name const_name = let
   in if y = "" then upper_case_hd x else upper_case_hd y end;
 
 val last_def_fail = ref T
-
-fun dest_args tm =
-  let val (x,y) = dest_comb tm in dest_args x @ [y] end
-  handle HOL_ERR _ => []
 
 fun derive_record_specific_thms ty = let
   val ty_name = name_of_type ty
@@ -596,18 +665,7 @@ fun define_ref_inv tys = let
     val lhs = foldl (fn (x,y) => mk_comb(y,x)) def_name (ss @ [input,``v:v``])
     in (xs,ty,lhs,input) end
   val ys = map mk_lhs all
-  fun reg_type (_,ty,lhs,_) = let
-    val inv = rator (rator lhs)
-(*
-    fun extension_to_get_inv_type ty0 = let
-      val i = match_type ty ty0
-      val ii = map (fn {redex = x, residue = y} => (x,y)) i
-      val ss = map (fn (x,y) => (inst i (get_type_inv x) |-> get_type_inv y)) ii
-      in subst ss (inst i inv) end
-    val _ = new_type_inv extension_to_get_inv_type
-*)
-    val _ = new_type_inv ty inv
-    in () end;
+  fun reg_type (_,ty,lhs,_) = new_type_inv ty (rator (rator lhs));
   val _ = map reg_type ys
   val rw_lemmas = list_lemma ()
   val def_tm = let
@@ -1198,6 +1256,7 @@ fun single_line_def def = let
     |> REWRITE_RULE [EVAL ``PRECONDITION T``]
     |> UNDISCH_ALL |> CONV_RULE (BINOP_CONV (REWR_CONV CONTAINER_def))
   in (lemma,SOME ind) end end
+  handle HOL_ERR _ => failwith("Preprocessor failed: unable to reduce definition to single line.")
 
 fun remove_pair_abs def = let
   fun args tm = let val (x,y) = dest_comb tm in args x @ [y] end
@@ -1280,25 +1339,6 @@ fun preprocess_def def = let
   val def = rename_bound_vars_rule "v" (GEN_ALL def) |> SPEC_ALL
   in (is_rec,def,ind) end;
 
-(*
-
-val pre_lemma = EVAL ``PRECONDITION T``
-
-fun collect_pres th = let
-  val th1 = th |> DISCH_ALL |> PURE_REWRITE_RULE [GSYM AND_IMP_INTRO] |> UNDISCH_ALL
-  val hs = hyp th1
-  val pat1 = ``Eval env exp P``
-  val pat2 = ``EqualityType (Q:'a -> v -> bool)``
-  fun is_pre tm = not (can (match_term pat1) tm)
-          andalso not (can (match_term pat2) tm)
-  val th = foldr (fn (tm,th) => DISCH tm th) th1 (T::filter is_pre hs)
-  val c1 = SIMP_CONV std_ss [PRECONDITION_def,CONTAINER_def]
-  val c2 = REWR_CONV (GSYM PRECONDITION_def)
-  val th = PURE_REWRITE_RULE [AND_IMP_INTRO] th
-           |> CONV_RULE ((RATOR_CONV o RAND_CONV) (c1 THENC c2)) |> RW []
-  in RW [pre_lemma] th end
-
-*)
 
 (* definition of the main work horse: hol2deep: term -> thm *)
 
@@ -1743,9 +1783,12 @@ fun extract_precondition th pre_var is_rec =
 (* main translation routines *)
 
 (*
+
+val new_pre = mk_thm([],``!xs. HD_side xs = ~(xs = [])``);
+
 val def = HD; translate def;
 val def = APPEND; translate def;
-val def = sortingTheory.PART_DEF; translate def
+val def = sortingTheory.PART_DEF; translate def;
 val def = sortingTheory.PARTITION_DEF;
 val def = FLAT; translate def
 val def = ZIP; translate def
@@ -1837,10 +1880,14 @@ fun translate def = let
                 |> MATCH_MP DeclAssum_Dlet_INTRO
                 |> SPEC fname_str |> Q.SPEC `env` |> UNDISCH_ALL
   (* store certificate for later use *)
-  val th = store_cert th |> Q.SPEC `env` |> UNDISCH_ALL
+  val pre = (case pre of NONE => TRUTH | SOME pre_def => pre_def)
+  val th = store_cert th pre |> Q.SPEC `env` |> UNDISCH_ALL
+  val _ = print_fname fname original_def
   in th end handle UnableToTranslate tm => let
     val _ = print "\n\nCannot translate term:  "
     val _ = print_term tm
+    val _ = print "\n\nwhich has type:\n\n"
+    val _ = print_type (type_of tm)
     val _ = print "\n\n"
     in raise UnableToTranslate tm end;
 
@@ -1864,47 +1911,16 @@ fun mltDefine name q tac = let
 
 (*
 
-val _ = Hol_datatype `AAA = A1 of num => BBB ;
-                      BBB = B1 | B2 of AAA`;
+open mini_preludeTheory;
 
-val _ = Hol_datatype `AA = A of BB list ;
-                      BB = B1 of num | B2 of AA`;
-
-val ty = ``:'a list``
-
-register_type ``:'a list``
-register_type ``:AA``
-
-val CHAR_def = Define `
-  CHAR (c:char) = NUM (ORD c)`;
-
-val _ = add_type_inv ``CHAR`` ``:num``
-
-val EqualityType_CHAR = prove(
-  ``EqualityType CHAR``,
-  EVAL_TAC THEN SRW_TAC [] [] THEN EVAL_TAC) |> store_eq_thm;
-
-val _ = Hol_datatype `ptree = Leaf of string | Node of string => ptree list`;
-
-val ty = ``:ptree``
-
-
-val _ = Hol_datatype `
-  heap = Empty | Tree of 'a => heap list`;
+val _ = translation_extends "mini_prelude";
 
 val _ = Hol_datatype `
   tree = Node of num => 'a => tree list`;
 
-val _ = Hol_datatype `
-  tree2 = Node of num => 'a => 'b => tree2 list`;
-
-val ty = ``:'a heap``
+val _ = register_type
 val ty = ``:'a tree``
-val ty = ``:('a,'b) tree2``
 
-register_type ty
-
-  fetch "-" "TREE2_TYPE_def"
 
 *)
 

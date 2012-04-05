@@ -1,10 +1,12 @@
 open preamble
-open bagTheory relationTheory bagLib miscTheory ml_translatorLib;
+open bagTheory relationTheory bagLib miscTheory ml_translatorLib mini_preludeTheory;
 
 val rw = srw_tac []
 val fs = full_simp_tac (srw_ss())
 
 val _ = new_theory "SplayHeap"
+
+val _ = translation_extends "mini_prelude";
 
 (* Okasaki page 50 *)
 
@@ -248,15 +250,15 @@ metis_tac [partition_split, WeakLinearOrder, WeakOrder] >-
  metis_tac [WeakLinearOrder_neg]));
 
 val find_min_correct = Q.store_thm ("find_min_correct",
-`!h get_key leq. 
-  WeakLinearOrder leq ∧ (h ≠ Empty) ∧ is_heap_ordered get_key leq h 
+`!h get_key leq.
+  WeakLinearOrder leq ∧ (h ≠ Empty) ∧ is_heap_ordered get_key leq h
   ⇒
   BAG_IN (find_min h) (heap_to_bag h) ∧
-  (!y. BAG_IN y (heap_to_bag h) ⇒ 
+  (!y. BAG_IN y (heap_to_bag h) ⇒
        leq (get_key (find_min h)) (get_key y))`,
 recInduct find_min_ind >>
 rw [heap_to_bag_def, find_min_def] >>
-fs [is_heap_ordered_def, heap_to_bag_def, BAG_EVERY] >> 
+fs [is_heap_ordered_def, heap_to_bag_def, BAG_EVERY] >>
 metis_tac [WeakLinearOrder, WeakOrder, transitive_def, reflexive_def]);
 
 val delete_min_correct = Q.store_thm ("delete_min_correct",
