@@ -369,6 +369,8 @@ Cevaluate_list env es (CRerr err)
 ==>
 Cevaluate_list env (e::es) (CRerr err)
 
+(* TODO: define map_exp and recover remove_Gt_Geq and remove_mat_exp as instances *)
+
 let rec
 remove_mat_exp (Mat (Var v) pes) =
   let pes = List.fold_right (fun (p,e) pes -> (p, remove_mat_exp e)::pes) pes [] in

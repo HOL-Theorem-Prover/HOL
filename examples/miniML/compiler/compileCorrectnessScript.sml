@@ -1,4 +1,4 @@
-open HolKernel bossLib boolLib MiniMLTheory compileTerminationTheory listTheory lcsymtacs
+open HolKernel bossLib boolLib MiniMLTheory evaluateEquationsTheory compileTerminationTheory listTheory lcsymtacs
 
 val _ = new_theory "compileCorrectness"
 
@@ -88,10 +88,30 @@ val well_typed_App_subexp = store_thm(
 rw[] >> match_mp_tac (MP_CANON well_typed_subexp_lem) >>
 metis_tac [subexp_rules])
 
+(* TODO: move these into the lem source? *)
+
 val map_result_def = Define`
   (map_result f (Rval v) = Rval (f v)) ∧
   (map_result f (Rerr e) = Rerr e)`;
 val _ = export_rewrites["map_result_def"];
+
+val map_v_def = tDefine "map_v"`
+  (map_v f (Lit l) = Lit l) ∧
+  (map_v f (Conv n vs) = Conv n (MAP (map_v f) vs)) ∧
+  (map_v f (Closure env n e) =
+   Closure (MAP (λ(n,v). (n,map_v f v)) env) n (f e)) ∧
+  (map_v f (Recclosure env defs n) =
+   Recclosure
+     (MAP (λ(n,v). (n,map_v f v)) env)
+     (MAP (λ(n,m,e). (n,m,f e)) defs)
+     n)`(
+WF_REL_TAC `measure (v_size o SND)` >>
+srw_tac[ARITH_ss][exp3_size_thm,exp9_size_thm] >>
+imp_res_tac SUM_MAP_MEM_bound >>
+TRY (pop_assum (qspec_then `exp5_size` mp_tac)) >>
+TRY (pop_assum (qspec_then `v_size` mp_tac)) >>
+srw_tac[ARITH_ss][exp_size_def])
+val _ = export_rewrites["map_v_def"];
 
 (* ------------------------------------------------------------------------- *)
 
@@ -99,6 +119,30 @@ val _ = export_rewrites["map_result_def"];
 val _ = augment_srw_ss[rewrites[lookup_def]]
 
 (* Prove compiler phases preserve semantics *)
+
+(*
+val remove_Gt_Geq_eval = store_thm(
+"remove_Gt_Geq_eval",
+``∀env exp res. evaluate' env exp res = evaluate' env (remove_Gt_Geq exp) (map_result (map_v remove_Gt_Geq) res)``,
+rw[EQ_IMP_THM] >- (
+  qsuff_tac`
+  (∀env exp res. evaluate' env exp res ⇒ evaluate' env (remove_Gt_Geq exp) (map_result (map_v remove_Gt_Geq) res)) ∧
+  (∀env exps ress. evaluate_list' env exps ress ⇒ evaluate_list' env (MAP remove_Gt_Geq exps) (map_result (MAP (map_v remove_Gt_Geq)) ress)) ∧
+  (∀env v pes res. evaluate_match' env v pes res ⇒ evaluate_match' env v (MAP (λ(p,e). (p,remove_Gt_Geq e)) pes) (map_result (map_v remove_Gt_Geq) res))` >- rw[] >>
+  ho_match_mp_tac evaluate'_ind >>
+  srw_tac[boolSimps.ETA_ss][remove_Gt_Geq_def,
+  evaluate'_var,evaluate'_log,evaluate'_con]
+*)
+
+(*
+``∀env exp res. evaluate' env exp res = evaluate' env (remove_mat_exp exp) res``
+
+``∀env exp res cm vm nv ds dm dn. evaluate' env exp res ⇒
+  Cevaluate
+    (v_to_Cv o_f (env f_o_f (invert vm)))
+    (exp_to_Cexp false cm <| m = vm; n = nv; ds = ds; dm = dm; dn = dn|>)
+    (res_to_Cres res)``
+*)
 
 (*
 val v_remove_ctors_Conv = store_thm(

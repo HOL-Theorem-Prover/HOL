@@ -11,6 +11,12 @@ qx_gen_tac `p` >>
 PairCases_on `p` >>
 srw_tac [ARITH_ss][exp_size_def])
 
+val exp3_size_thm = store_thm(
+"exp3_size_thm",
+``∀ls. exp3_size ls = SUM (MAP exp5_size ls) + LENGTH ls``,
+Induct >- rw[exp_size_def] >>
+Cases >> srw_tac[ARITH_ss][exp_size_def])
+
 val exp6_size_thm = store_thm(
 "exp6_size_thm",
 ``∀ls. exp6_size ls = SUM (MAP exp7_size ls) + LENGTH ls``,

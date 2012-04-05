@@ -99,6 +99,15 @@ val evaluate'_app = store_thm(
   (∃err. evaluate' env e1 (Rerr err) ∧
          (r = Rerr err))``,
 rw[Once evaluate'_cases] >>
-metis_tac []);
+metis_tac [])
+
+val evaluate'_log = store_thm(
+"evaluate'_log",
+``∀env lg e1 e2 r. evaluate' env (Log lg e1 e2) r =
+  (∃v1 env' e. evaluate' env e1 (Rval v1) ∧ (do_log lg v1 e2 = SOME e) ∧ (evaluate' env e r)) ∨
+  (∃v1. evaluate' env e1 (Rval v1) ∧ (do_log lg v1 e2 = NONE) ∧ (r = Rerr Rtype_error)) ∨
+  (∃err. evaluate' env e1 (Rerr err) ∧ (r = Rerr err))``,
+rw[Once evaluate'_cases] >>
+metis_tac [])
 
 val _ = export_theory ()
