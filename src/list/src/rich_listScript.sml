@@ -1430,14 +1430,14 @@ val FOLDL_REVERSE = store_thm("FOLDL_REVERSE",
 
 
 val FOLDR_MAP = store_thm("FOLDR_MAP",
-    (--`!(f:'a->'a->'a) e (g:'b ->'a) l.
+    (--`!f e g l.
        FOLDR f e (MAP g l) = FOLDR (\x y. f (g x) y) e l`--),
     GEN_TAC THEN GEN_TAC THEN GEN_TAC THEN LIST_INDUCT_TAC
     THEN ASM_REWRITE_TAC[FOLDL,MAP,FOLDR] THEN BETA_TAC
     THEN REWRITE_TAC[]);
 
 val FOLDL_MAP = store_thm("FOLDL_MAP",
-    (--`!(f:'a->'a->'a) e (g:'b ->'a) l.
+    (--`!f e g l.
        FOLDL f e (MAP g l) = FOLDL (\x y. f x (g y)) e l`--),
     GEN_TAC THEN GEN_TAC THEN GEN_TAC THEN SNOC_INDUCT_TAC
     THEN ASM_REWRITE_TAC[MAP,FOLDL,FOLDL_SNOC,MAP_SNOC,FOLDR]

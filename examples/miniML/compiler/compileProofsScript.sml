@@ -321,14 +321,6 @@ val _ = export_rewrites["map_result_def"];
 
 (* ------------------------------------------------------------------------- *)
 
-(* TODO: move to listTheory (and rich_listTheory) *)
-val FOLDR_MAP = store_thm("FOLDR_MAP",
-    (--`!f e g l.
-       FOLDR f e (MAP g l) = FOLDR (\x y. f (g x) y) e l`--),
-    GEN_TAC THEN GEN_TAC THEN GEN_TAC THEN Induct
-    THEN ASM_REWRITE_TAC[FOLDL,MAP,FOLDR] THEN BETA_TAC
-    THEN REWRITE_TAC[]);
-
 (* TODO: add to terminationProofsTheory? *)
 val _ = augment_srw_ss[rewrites[lookup_def]]
 
