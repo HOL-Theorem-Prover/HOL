@@ -1,6 +1,6 @@
 open HolKernel bossLib boolLib EmitTeX
 open emitLib fmap_emitTheory int_emitTheory rich_list_emitTheory string_emitTheory bytecode_emitTheory
-open CompileTheory compileProofsTheory
+open CompileTheory compileTerminationTheory
 val _ = new_theory "compile_emit"
 
 val _ = Parse.temp_type_abbrev("set",``:'a -> bool``)

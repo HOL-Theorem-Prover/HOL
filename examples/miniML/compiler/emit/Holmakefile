@@ -10,7 +10,7 @@ ifdef POLY
 HOLHEAP = miniml-heap
 EXTRA_CLEANS = $(HOLHEAP) $(HOLHEAP).o
 
-BARE_THYS = ../compileProofsTheory\
+BARE_THYS = ../compileTerminationTheory\
  ../bytecode/bytecodeEvalTheory\
  ../../hol2miniml/ml_translatorLib\
  $(HOLDIR)/src/TeX/EmitTeX\
