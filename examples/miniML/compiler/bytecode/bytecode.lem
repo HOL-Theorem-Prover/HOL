@@ -32,9 +32,9 @@ type
 
 (* move to lem *)
 val num_to_int : num -> int
-sub [hol] num_to_int = (&)
+let inline {hol} num_to_int = Hol.(&)
 val drop : forall 'a. num -> 'a list -> 'a list
-sub [hol] drop = DROP
+let inline {hol} drop = Hol.DROP
 
 let rec
 bool_to_int true = num_to_int 1
@@ -153,7 +153,7 @@ and
 forall s n x xs s'.
 bc_fetch s = Some (JumpNil n)
 && s.stack = x::xs
-&& s' = <|s with stack = xs|>
+&& s' = (<|s with stack = xs|>)
 ==>
 bc_next s (if x = Number (num_to_int 0) then bump_pc s' else <|s' with pc = n|>)
 and

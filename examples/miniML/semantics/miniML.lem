@@ -22,13 +22,13 @@
  * on untyped programs. *)
 
 val i : num -> Int.int
-sub [hol] i = (&)
+let inline {hol} i = Hol.(&)
 
 val all_distinct : forall 'a. 'a list -> bool
-sub [hol] all_distinct = ALL_DISTINCT
+let inline {hol} all_distinct = Hol.ALL_DISTINCT
 
 val rtc : forall 'a. ('a -> 'a -> bool) -> ('a -> 'a -> bool)
-sub [hol] rtc = RTC
+let inline {hol} rtc = Hol.RTC
 
 (* Environments *)
 type ('a,'b) env = ('a*'b) list
