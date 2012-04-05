@@ -34,11 +34,21 @@ val _ = type_abbrev((*  ('a,'b) *) "alist" , ``: ('a,'b) alist``);
 
 val _ = Defn.save_defn find_index_defn;
 
+val _ = Define `
+ i0 = & 0`;
+
+val _ = Define `
+ i1 = & 1`;
+
+val _ = Define `
+ i2 = & 2`;
+
+
 (* Syntax *)
 
 (* applicative primitives with bytecode counterparts *)
 val _ = Hol_datatype `
- Cprim2 = CAdd | CSub | CMult | CDiv | CMod | CLt | CEq`;
+ Cprim2 = CAdd | CSub | CMul | CDiv | CMod | CLt | CEq`;
 
 (* other primitives *)
 val _ = Hol_datatype `
@@ -79,70 +89,126 @@ val _ = Hol_datatype `
 
 (* Semantics *)
 
+ val doPrim2_defn = Hol_defn "doPrim2" `
+
+(doPrim2 b ty op (CLit (IntLit x)) (CLit (IntLit y)) =
+  if ($/\) b (($=) y i0) then CRaise Div_error
+  else CVal (CLit (ty (op x y))))`;
+
+val _ = Defn.save_defn doPrim2_defn;
+
+ val CevalPrim2_defn = Hol_defn "CevalPrim2" `
+
+(CevalPrim2 CAdd = doPrim2 F IntLit int_add)
+/\
+(CevalPrim2 CSub = doPrim2 F IntLit ($int_sub))
+/\
+(CevalPrim2 CMul = doPrim2 F IntLit int_mul)
+/\
+(CevalPrim2 CDiv = doPrim2 T IntLit int_div)
+/\
+(CevalPrim2 CMod = doPrim2 T IntLit int_mod)
+/\
+(CevalPrim2 CLt = doPrim2 F Bool int_lt)
+/\
+(CevalPrim2 CEq = doPrim2 F Bool ($=))`;
+
+val _ = Defn.save_defn CevalPrim2_defn;
+
+ val Cpmatch_defn = Hol_defn "Cpmatch" `
+
+(Cpmatch env (CPvar n) v = SOME (FUPDATE  env ( n, v)))
+/\
+(Cpmatch env (CPlit l) (CLit l') =
+  if ($=) l l' then SOME env else NONE)
+/\
+(Cpmatch env (CPcon n ps) (CConv n' vs) =
+  if ($=) n n' then Cpmatch_list env ps vs else NONE)
+/\
+(Cpmatch_list env [] [] = SOME env)
+/\
+(Cpmatch_list env (p::ps) (v::vs) =
+  (case Cpmatch env p v of
+    NONE => NONE
+  | SOME env' => Cpmatch_list env' ps vs
+  ))`;
+
+val _ = Defn.save_defn Cpmatch_defn;
+
+val _ = Hol_datatype `
+(*  'a *) Cresult =
+    CRval of 'a
+  | CRerr of error`;
+
+
 val _ = Hol_reln `
 (! env error.
 T
 ==>
-Cevaluate env (CRaise error) (Rerr (Rraise error)))
+Cevaluate env (CRaise error) (CRerr error))
 
 /\
-(! env n v. ($/\) (($IN)
- n (FDOM  env)) ( ($=)(FAPPLY  env  n) v)
+(! env n v. ($=)
+(FAPPLY  env  n) v
 ==>
-Cevaluate env (CVar n) (Rval v))
-/\
-(! env n.
-~  ( ($IN) n (FDOM  env))
-==>
-Cevaluate env (CVar n) (Rerr Rtype_error))
+Cevaluate env (CVar n) (CRval v))
 
 /\
 (! env l.
 T
 ==>
-Cevaluate env (CVal (CLit l)) (Rval (CLit l)))
+Cevaluate env (CVal (CLit l)) (CRval (CLit l)))
 
 /\
 (! env n es vs.
-Cevaluate_list env es (Rval vs)
+Cevaluate_list env es (CRval vs)
 ==>
-Cevaluate env (CCon n es) (Rval (CConv n vs)))
+Cevaluate env (CCon n es) (CRval (CConv n vs)))
 /\
 (! env n es err.
-Cevaluate_list env es (Rerr err)
+Cevaluate_list env es (CRerr err)
 ==>
-Cevaluate env (CCon n es) (Rerr err))
+Cevaluate env (CCon n es) (CRerr err))
 
 /\
 (! env e n m vs.
-Cevaluate env e (Rval (CConv m vs))
+Cevaluate env e (CRval (CConv m vs))
 ==>
-Cevaluate env (CTagEq e n) (Rval (CLit (Bool ( ($=)n m)))))
+Cevaluate env (CTagEq e n) (CRval (CLit (Bool ( ($=)n m)))))
 /\
 (! env e n err.
-Cevaluate env e (Rerr err)
+Cevaluate env e (CRerr err)
 ==>
-Cevaluate env (CTagEq e n) (Rerr err))
+Cevaluate env (CTagEq e n) (CRerr err))
 
 /\
-(! env e n m vs. ($/\)
-(Cevaluate env e (Rval (CConv m vs))) (($<)
-n (LENGTH vs))
+(! env e n m vs.
+Cevaluate env e (CRval (CConv m vs))
 ==>
-Cevaluate env (CProj e n) (Rval (EL  n  vs)))
-/\
-(! env e n m vs. ($/\)
-(Cevaluate env e (Rval (CConv m vs))) (($>=)
-n (LENGTH vs))
-==>
-Cevaluate env (CProj e n) (Rerr Rtype_error))
+Cevaluate env (CProj e n) (CRval (EL  n  vs)))
 /\
 (! env e n err.
-Cevaluate env e (Rerr err)
+Cevaluate env e (CRerr err)
 ==>
-Cevaluate env (CProj e n) (Rerr err))
+Cevaluate env (CProj e n) (CRerr err))
 
-(* TODO: CMat *)
+/\
+(! env n.
+T
+==>
+Cevaluate env (CMat n []) (CRerr Bind_error))
+/\
+(! env n p e pes env' r. ($/\) (($=)
+(Cpmatch env p (FAPPLY  env  n)) (SOME env'))
+(Cevaluate env' e r)
+==>
+Cevaluate env (CMat n (CONS (p,e)pes)) r)
+/\
+(! env n p e pes r. ($/\) (($=)
+(Cpmatch env p (FAPPLY  env  n)) NONE)
+(Cevaluate env (CMat n pes) r)
+==>
+Cevaluate env (CMat n (CONS (p,e)pes)) r)
 
 /\
 (! env b r.
@@ -151,60 +217,60 @@ Cevaluate env b r
 Cevaluate env (CLet [] [] b) r)
 /\
 (! env n ns e es b v r. ($/\)
-(Cevaluate env e (Rval v))
+(Cevaluate env e (CRval v))
 (Cevaluate (FUPDATE  env ( n, v)) (CLet ns es b) r)
 ==>
 Cevaluate env (CLet (CONS n ns) (CONS e es) b) r)
-/\
-(! env e es b.
-T
-==>
-Cevaluate env (CLet [] (CONS e es) b) (Rerr Rtype_error))
-/\
-(! env n ns b.
-T
-==>
-Cevaluate env (CLet (CONS n ns) [] b) (Rerr Rtype_error))
 
-(* TODO: CLetfun *)
+/\
+(! env ns defs b r.
+Cevaluate
+  (FOLDL2 
+    (\ env' n (ns,b) .
+      FUPDATE  env' ( n, (CClosure (fmap_to_alist env) ns b))) 
+    env  ns  defs)
+  b r
+==>
+Cevaluate env (CLetfun F ns defs b) r)
+
+/\
+(! env ns defs b r.
+Cevaluate
+  (FOLDL
+     (\ env' n .
+       FUPDATE  env' ( n, (CRecClos (fmap_to_alist env) ns defs n)))
+     env ns)
+  b r
+==>
+Cevaluate env (CLetfun T ns defs b) r)
 
 /\
 (! env ns b.
 T
 ==>
-Cevaluate env (CFun ns b) (Rval (CClosure (fmap_to_alist env) ns b)))
+Cevaluate env (CFun ns b) (CRval (CClosure (fmap_to_alist env) ns b)))
 
 /\
 (! env e es env' ns b vs r. ($/\)
-(Cevaluate env e (Rval (CClosure env' ns b))) (($/\)
-(Cevaluate_list env es (Rval vs)) (($/\) (($=)
-(LENGTH ns) (LENGTH vs))
+(Cevaluate env e (CRval (CClosure env' ns b))) (($/\)
+(Cevaluate_list env es (CRval vs))
 (Cevaluate (FOLDL2  (\ en n v . FUPDATE  en ( n, v)) 
-             (alist_to_fmap env')  ns  vs) b r)))
+             (alist_to_fmap env')  ns  vs) b r))
 ==>
 Cevaluate env (CCall e es) r)
 /\
-(! env e es env' ns b vs. ($/\)
-(Cevaluate env e (Rval (CClosure env' ns b))) (($/\)
-(Cevaluate_list env es (Rval vs))
-(~  ( ($=)(LENGTH ns) (LENGTH vs))))
-==>
-Cevaluate env (CCall e es) (Rerr Rtype_error))
-/\
 (! env e es env' ns b err. ($/\)
-(Cevaluate env e (Rval (CClosure env' ns b)))
-(Cevaluate_list env es (Rerr err))
+(Cevaluate env e (CRval (CClosure env' ns b)))
+(Cevaluate_list env es (CRerr err))
 ==>
-Cevaluate env (CCall e es) (Rerr err))
+Cevaluate env (CCall e es) (CRerr err))
 
 /\
 (! env e es env' ns' defs n i ns b vs r. ($/\)
-(Cevaluate env e (Rval (CRecClos env' ns' defs n))) (($/\) (($=)
-(LENGTH ns') (LENGTH defs)) (($/\) (($=)
+(Cevaluate env e (CRval (CRecClos env' ns' defs n))) (($/\)
+(Cevaluate_list env es (CRval vs)) (($/\) (($=)
 (find_index n ns' 0) (SOME i)) (($/\) (($=)
-(EL  i  defs) (ns,b)) (($/\)
-(Cevaluate_list env es (Rval vs)) (($/\) (($=)
-(LENGTH ns) (LENGTH vs))
+(EL  i  defs) (ns,b))
 (Cevaluate
   (FOLDL2  (\ en n v . FUPDATE  en ( n, v)) 
     (SND (FOLDL2 
@@ -213,80 +279,116 @@ Cevaluate env (CCall e es) (Rerr err))
             (0,alist_to_fmap env') 
             ns'  defs)) 
     ns  vs)
-  b r))))))
+  b r))))
 ==>
 Cevaluate env (CCall e es) r)
 /\
-(! env e es env' ns' defs n i ns b vs. ($/\)
-(Cevaluate env e (Rval (CRecClos env' ns' defs n))) (($/\) (($=)
-(LENGTH ns') (LENGTH defs)) (($/\) (($=)
-(find_index n ns' 0) (SOME i)) (($/\) (($=)
-(EL  i  defs) (ns,b)) (($/\)
-(Cevaluate_list env es (Rval vs))
-(~  ( ($=)(LENGTH ns) (LENGTH vs)))))))
+(! env e es env' ns' defs n err. ($/\)
+(Cevaluate env e (CRval (CRecClos env' ns' defs n)))
+(Cevaluate_list env es (CRerr err))
 ==>
-Cevaluate env (CCall e es) (Rerr Rtype_error))
-/\
-(! env e es env' ns' defs n i ns b err. ($/\)
-(Cevaluate env e (Rval (CRecClos env' ns' defs n))) (($/\) (($=)
-(LENGTH ns') (LENGTH defs)) (($/\) (($=)
-(find_index n ns' 0) (SOME i)) (($/\) (($=)
-(EL  i  defs) (ns,b))
-(Cevaluate_list env es (Rerr err)))))
-==>
-Cevaluate env (CCall e es) (Rerr err))
-/\
-(! env e es env' ns' defs n. ($/\)
-(Cevaluate env e (Rval (CRecClos env' ns' defs n))) (($/\) (($=)
-(LENGTH ns') (LENGTH defs)) (($=)
-(find_index n ns' 0) NONE))
-==>
-Cevaluate env (CCall e es) (Rerr Rtype_error))
-/\
-(! env e es env' ns' defs n. ($/\)
-(Cevaluate env e (Rval (CRecClos env' ns' defs n)))
-(~  ( ($=)(LENGTH ns') (LENGTH defs)))
-==>
-Cevaluate env (CCall e es) (Rerr Rtype_error))
+Cevaluate env (CCall e es) (CRerr err))
 
-/\
-(! env e es v. ($/\)
-(Cevaluate env e (Rval v)) (($/\)
-(! env' ns b. ~  ( ($=)v (CClosure env' ns b)))
-(! env' ns' defs n. ~  ( ($=)v (CRecClos env' ns' defs n))))
-==>
-Cevaluate env (CCall e es) (Rerr Rtype_error))
 /\
 (! env e es err.
-Cevaluate env e (Rerr err)
+Cevaluate env e (CRerr err)
 ==>
-Cevaluate env (CCall e es) (Rerr err))
+Cevaluate env (CCall e es) (CRerr err))
 
-(* TODO: CPrim2 *)
-(* TODO: CLprim *)
+/\
+(! env p2 e1 e2 v1 v2 e3 r. ($/\)
+(Cevaluate_list env [e1;e2] (CRval [v1;v2])) (($/\) (($=)
+(CevalPrim2 p2 v1 v2) e3)
+(Cevaluate env e3 r))
+==>
+Cevaluate env (CPrim2 p2 e1 e2) r)
+/\
+(! env p2 e1 e2 err.
+Cevaluate_list env [e1;e2] (CRerr err)
+==>
+Cevaluate env (CPrim2 p2 e1 e2) (CRerr err))
+
+/\
+(! env es v1 v2 e3 r. ($/\)
+(Cevaluate_list env es (CRval [v1;v2])) (($/\) (($=)
+(doPrim2 F Bool int_le v1 v2) e3)
+(Cevaluate env e3 r))
+==>
+Cevaluate env (CLprim CLeq es) r)
+/\
+(! env es err.
+Cevaluate_list env es (CRerr err)
+==>
+Cevaluate env (CLprim CLeq es) (CRerr err))
+
+/\
+(! env e1 e2 e3 b1 r. ($/\)
+(Cevaluate env e1 (CRval (CLit (Bool b1))))
+(Cevaluate env (if b1 then e2 else e3) r)
+==>
+Cevaluate env (CLprim CIf [e1;e2;e3]) r)
+/\
+(! env e1 e2 e3 err.
+Cevaluate env e1 (CRerr err)
+==>
+Cevaluate env (CLprim CIf [e1;e2;e3]) (CRerr err))
+
+/\
+(! env e1 e2.
+Cevaluate env e1 (CRval (CLit (Bool F)))
+==>
+Cevaluate env (CLprim CAnd [e1;e2]) (CRval (CLit (Bool F))))
+/\
+(! env e1 e2 r. ($/\)
+(Cevaluate env e1 (CRval (CLit (Bool T))))
+(Cevaluate env e2 r)
+==>
+Cevaluate env (CLprim CAnd [e1;e2]) r)
+/\
+(! env e1 e2 err.
+Cevaluate env e1 (CRerr err)
+==>
+Cevaluate env (CLprim CAnd [e1;e2]) (CRerr err))
+
+/\
+(! env e1 e2.
+Cevaluate env e1 (CRval (CLit (Bool T)))
+==>
+Cevaluate env (CLprim COr [e1;e2]) (CRval (CLit (Bool T))))
+/\
+(! env e1 e2 r. ($/\)
+(Cevaluate env e1 (CRval (CLit (Bool F))))
+(Cevaluate env e2 r)
+==>
+Cevaluate env (CLprim COr [e1;e2]) r)
+/\
+(! env e1 e2 err.
+Cevaluate env e1 (CRerr err)
+==>
+Cevaluate env (CLprim COr [e1;e2]) (CRerr err))
 
 /\
 (! env.
 T
 ==>
-Cevaluate_list env [] (Rval []))
+Cevaluate_list env [] (CRval []))
 /\
 (! env e es v vs. ($/\)
-(Cevaluate env e (Rval v))
-(Cevaluate_list env es (Rval vs))
+(Cevaluate env e (CRval v))
+(Cevaluate_list env es (CRval vs))
 ==>
-Cevaluate_list env (CONS e es) (Rval (CONS v vs)))
+Cevaluate_list env (CONS e es) (CRval (CONS v vs)))
 /\
 (! env e es err.
-Cevaluate env e (Rerr err)
+Cevaluate env e (CRerr err)
 ==>
-Cevaluate_list env (CONS e es) (Rerr err))
+Cevaluate_list env (CONS e es) (CRerr err))
 /\
 (! env e es v err. ($/\)
-(Cevaluate env e (Rval v))
-(Cevaluate_list env es (Rerr err))
+(Cevaluate env e (CRval v))
+(Cevaluate_list env es (CRerr err))
 ==>
-Cevaluate_list env (CONS e es) (Rerr err))`;
+Cevaluate_list env (CONS e es) (CRerr err))`;
 
  val remove_mat_exp_defn = Hol_defn "remove_mat_exp" `
 
@@ -423,7 +525,7 @@ val _ = Defn.save_defn pat_to_Cpat_defn;
   (s, CPrim2 ((case opn of
                 Plus   => CAdd
               | Minus  => CSub
-              | Times  => CMult
+              | Times  => CMul
               | Divide => CDiv
               | Modulo => CMod
               ))
@@ -647,16 +749,6 @@ val _ = Hol_datatype `
    |>`;
 
 
-val _ = Define `
- i0 = & 0`;
-
-val _ = Define `
- i1 = & 1`;
-
-val _ = Define `
- i2 = & 2`;
-
-
  val error_to_int_defn = Hol_defn "error_to_int" `
 
 (error_to_int Bind_error = i0)
@@ -671,7 +763,7 @@ val _ = Defn.save_defn error_to_int_defn;
 /\
 (prim2_to_bc CSub = Sub)
 /\
-(prim2_to_bc CMult = Mult)
+(prim2_to_bc CMul = Mult)
 /\
 (prim2_to_bc CDiv = Div2) (* TODO *)
 /\

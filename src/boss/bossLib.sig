@@ -29,6 +29,7 @@ sig
   val recInduct         : thm -> tactic
   val Cases_on          : term quotation -> tactic
   val Induct_on         : term quotation -> tactic
+  val PairCases_on      : term quotation -> tactic
   val measureInduct_on  : term quotation -> tactic
   val completeInduct_on : term quotation -> tactic
   val CASE_TAC          : tactic
