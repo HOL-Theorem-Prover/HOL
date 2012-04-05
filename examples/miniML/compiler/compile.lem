@@ -38,10 +38,14 @@ find_index y [] _ = None
 and
 find_index y (x::xs) (n:num) = if x = y then Some n else find_index y xs (n+1)
 
+let i0 = Bytecode.num_to_int 0
+let i1 = Bytecode.num_to_int 1
+let i2 = Bytecode.num_to_int 2
+
 (* Syntax *)
 
 (* applicative primitives with bytecode counterparts *)
-type Cprim2 = CAdd | CSub | CMult | CDiv | CMod | CLt | CEq
+type Cprim2 = CAdd | CSub | CMul | CDiv | CMod | CLt | CEq
 (* other primitives *)
 type Clprim = CLeq | CIf | CAnd | COr
 
@@ -75,6 +79,28 @@ and Cv =
 
 (* Semantics *)
 
+let rec
+doPrim2 b ty op (CLit (IntLit x)) (CLit (IntLit y)) =
+  Some (if b && y = i0 then CRaise Div_error
+        else CVal (CLit (ty (op x y))))
+and
+doPrim2 _ _ _ _ _ = None
+
+let rec
+CevalPrim2 CAdd = doPrim2 false IntLit Int.(+)
+and
+CevalPrim2 CSub = doPrim2 false IntLit Int.(-)
+and
+CevalPrim2 CMul = doPrim2 false IntLit Int.( *)
+and
+CevalPrim2 CDiv = doPrim2 true IntLit Int.(/)
+and
+CevalPrim2 CMod = doPrim2 true IntLit Int.(%)
+and
+CevalPrim2 CLt = doPrim2 false Bool Int.(<)
+and
+CevalPrim2 CEq = doPrim2 false Bool (=)
+
 indreln
 forall env error.
 true
@@ -97,6 +123,11 @@ forall env l.
 true
 ==>
 Cevaluate env (CVal (CLit l)) (Rval (CLit l))
+and
+forall env v.
+(forall l. not (v = CLit l))
+==>
+Cevaluate env (CVal v) (Rerr Rtype_error)
 
 and
 forall env n es vs.
@@ -258,8 +289,110 @@ Cevaluate env e (Rerr err)
 ==>
 Cevaluate env (CCall e es) (Rerr err)
 
-(* TODO: CPrim2 *)
-(* TODO: CLprim *)
+and
+forall env p2 e1 e2 v1 v2 e3 r.
+Cevaluate_list env [e1;e2] (Rval [v1;v2]) &&
+CevalPrim2 p2 v1 v2 = Some e3 &&
+Cevaluate env e3 r
+==>
+Cevaluate env (CPrim2 p2 e1 e2) r
+and
+forall env p2 e1 e2 v1 v2.
+Cevaluate_list env [e1;e2] (Rval [v1;v2]) &&
+CevalPrim2 p2 v1 v2 = None
+==>
+Cevaluate env (CPrim2 p2 e1 e2) (Rerr Rtype_error)
+and
+forall env p2 e1 e2 err.
+Cevaluate_list env [e1;e2] (Rerr err)
+==>
+Cevaluate env (CPrim2 p2 e1 e2) (Rerr err)
+
+and
+forall env es v1 v2 e3 r.
+Cevaluate_list env es (Rval [v1;v2]) &&
+doPrim2 false Bool Int.(<=) v1 v2 = Some e3 &&
+Cevaluate env e3 r
+==>
+Cevaluate env (CLprim CLeq es) r
+and
+forall env es v1 v2.
+Cevaluate_list env es (Rval [v1;v2]) &&
+doPrim2 false Bool Int.(<=) v1 v2 = None
+==>
+Cevaluate env (CLprim CLeq es) (Rerr Rtype_error)
+and
+forall env es err.
+List.length es = 2 &&
+Cevaluate_list env es (Rerr err)
+==>
+Cevaluate env (CLprim CLeq es) (Rerr err)
+and
+forall env es.
+not (List.length es = 2)
+==>
+Cevaluate env (CLprim CLeq es) (Rerr Rtype_error)
+
+and
+forall env e1 e2 e3 b1 r.
+Cevaluate env e1 (Rval (CLit (Bool b1))) &&
+Cevaluate env (if b1 then e2 else e3) r
+==>
+Cevaluate env (CLprim CIf [e1;e2;e3]) r
+and
+forall env e1 e2 e3 err.
+Cevaluate env e1 (Rerr err)
+==>
+Cevaluate env (CLprim CIf [e1;e2;e3]) (Rerr err)
+and
+forall env es.
+not (List.length es = 3)
+==>
+Cevaluate env (CLprim CIf es) (Rerr Rtype_error)
+
+and
+forall env e1 e2.
+Cevaluate env e1 (Rval (CLit (Bool false)))
+==>
+Cevaluate env (CLprim CAnd [e1;e2]) (Rval (CLit (Bool false)))
+and
+forall env e1 e2 r.
+Cevaluate env e1 (Rval (CLit (Bool true))) &&
+Cevaluate env e2 r
+==>
+Cevaluate env (CLprim CAnd [e1;e2]) r
+and
+forall env e1 e2 err.
+Cevaluate env e1 (Rerr err)
+==>
+Cevaluate env (CLprim CAnd [e1;e2]) (Rerr err)
+and
+forall env es.
+not (List.length es = 2)
+==>
+Cevaluate env (CLprim CAnd es) (Rerr Rtype_error)
+
+and
+forall env e1 e2.
+Cevaluate env e1 (Rval (CLit (Bool true)))
+==>
+Cevaluate env (CLprim COr [e1;e2]) (Rval (CLit (Bool true)))
+and
+forall env e1 e2 r.
+Cevaluate env e1 (Rval (CLit (Bool false))) &&
+Cevaluate env e2 r
+==>
+Cevaluate env (CLprim COr [e1;e2]) r
+and
+forall env e1 e2 err.
+Cevaluate env e1 (Rerr err)
+==>
+Cevaluate env (CLprim COr [e1;e2]) (Rerr err)
+and
+forall env es.
+not (List.length es = 2)
+==>
+Cevaluate env (CLprim COr es) (Rerr Rtype_error)
 
 and
 forall env.
@@ -403,7 +536,7 @@ exp_to_Cexp tp cm (s, App (Opn opn) e1 e2) =
   (s, CPrim2 (match opn with
               | Plus   -> CAdd
               | Minus  -> CSub
-              | Times  -> CMult
+              | Times  -> CMul
               | Divide -> CDiv
               | Modulo -> CMod
               end)
@@ -610,10 +743,6 @@ type compiler_state =
    ; inst_length: bc_inst -> num
    |>
 
-let i0 = num_to_int 0
-let i1 = num_to_int 1
-let i2 = num_to_int 2
-
 let rec
 error_to_int Bind_error = i0
 and
@@ -624,7 +753,7 @@ prim2_to_bc CAdd = Add
 and
 prim2_to_bc CSub = Sub
 and
-prim2_to_bc CMult = Mult
+prim2_to_bc CMul = Mult
 and
 prim2_to_bc CDiv = Div2 (* TODO *)
 and

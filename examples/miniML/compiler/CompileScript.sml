@@ -34,11 +34,21 @@ val _ = type_abbrev((*  ('a,'b) *) "alist" , ``: ('a,'b) alist``);
 
 val _ = Defn.save_defn find_index_defn;
 
+val _ = Define `
+ i0 = & 0`;
+
+val _ = Define `
+ i1 = & 1`;
+
+val _ = Define `
+ i2 = & 2`;
+
+
 (* Syntax *)
 
 (* applicative primitives with bytecode counterparts *)
 val _ = Hol_datatype `
- Cprim2 = CAdd | CSub | CMult | CDiv | CMod | CLt | CEq`;
+ Cprim2 = CAdd | CSub | CMul | CDiv | CMod | CLt | CEq`;
 
 (* other primitives *)
 val _ = Hol_datatype `
@@ -79,6 +89,34 @@ val _ = Hol_datatype `
 
 (* Semantics *)
 
+ val doPrim2_defn = Hol_defn "doPrim2" `
+
+(doPrim2 b ty op (CLit (IntLit x)) (CLit (IntLit y)) =
+  SOME (if ($/\) b (($=) y i0) then CRaise Div_error
+        else CVal (CLit (ty (op x y)))))
+/\
+(doPrim2 _ _ _ _ _ = NONE)`;
+
+val _ = Defn.save_defn doPrim2_defn;
+
+ val CevalPrim2_defn = Hol_defn "CevalPrim2" `
+
+(CevalPrim2 CAdd = doPrim2 F IntLit int_add)
+/\
+(CevalPrim2 CSub = doPrim2 F IntLit ($int_sub))
+/\
+(CevalPrim2 CMul = doPrim2 F IntLit int_mul)
+/\
+(CevalPrim2 CDiv = doPrim2 T IntLit int_div)
+/\
+(CevalPrim2 CMod = doPrim2 T IntLit int_mod)
+/\
+(CevalPrim2 CLt = doPrim2 F Bool int_lt)
+/\
+(CevalPrim2 CEq = doPrim2 F Bool ($=))`;
+
+val _ = Defn.save_defn CevalPrim2_defn;
+
 val _ = Hol_reln `
 (! env error.
 T
@@ -101,6 +139,11 @@ Cevaluate env (CVar n) (Rerr Rtype_error))
 T
 ==>
 Cevaluate env (CVal (CLit l)) (Rval (CLit l)))
+/\
+(! env v.
+(! l. ~  ( ($=)v (CLit l)))
+==>
+Cevaluate env (CVal v) (Rerr Rtype_error))
 
 /\
 (! env n es vs.
@@ -262,8 +305,110 @@ Cevaluate env e (Rerr err)
 ==>
 Cevaluate env (CCall e es) (Rerr err))
 
-(* TODO: CPrim2 *)
-(* TODO: CLprim *)
+/\
+(! env p2 e1 e2 v1 v2 e3 r. ($/\)
+(Cevaluate_list env [e1;e2] (Rval [v1;v2])) (($/\) (($=)
+(CevalPrim2 p2 v1 v2) (SOME e3))
+(Cevaluate env e3 r))
+==>
+Cevaluate env (CPrim2 p2 e1 e2) r)
+/\
+(! env p2 e1 e2 v1 v2. ($/\)
+(Cevaluate_list env [e1;e2] (Rval [v1;v2])) (($=)
+(CevalPrim2 p2 v1 v2) NONE)
+==>
+Cevaluate env (CPrim2 p2 e1 e2) (Rerr Rtype_error))
+/\
+(! env p2 e1 e2 err.
+Cevaluate_list env [e1;e2] (Rerr err)
+==>
+Cevaluate env (CPrim2 p2 e1 e2) (Rerr err))
+
+/\
+(! env es v1 v2 e3 r. ($/\)
+(Cevaluate_list env es (Rval [v1;v2])) (($/\) (($=)
+(doPrim2 F Bool int_le v1 v2) (SOME e3))
+(Cevaluate env e3 r))
+==>
+Cevaluate env (CLprim CLeq es) r)
+/\
+(! env es v1 v2. ($/\)
+(Cevaluate_list env es (Rval [v1;v2])) (($=)
+(doPrim2 F Bool int_le v1 v2) NONE)
+==>
+Cevaluate env (CLprim CLeq es) (Rerr Rtype_error))
+/\
+(! env es err. ($/\) (($=)
+(LENGTH es) 2)
+(Cevaluate_list env es (Rerr err))
+==>
+Cevaluate env (CLprim CLeq es) (Rerr err))
+/\
+(! env es.
+~  ( ($=)(LENGTH es) 2)
+==>
+Cevaluate env (CLprim CLeq es) (Rerr Rtype_error))
+
+/\
+(! env e1 e2 e3 b1 r. ($/\)
+(Cevaluate env e1 (Rval (CLit (Bool b1))))
+(Cevaluate env (if b1 then e2 else e3) r)
+==>
+Cevaluate env (CLprim CIf [e1;e2;e3]) r)
+/\
+(! env e1 e2 e3 err.
+Cevaluate env e1 (Rerr err)
+==>
+Cevaluate env (CLprim CIf [e1;e2;e3]) (Rerr err))
+/\
+(! env es.
+~  ( ($=)(LENGTH es) 3)
+==>
+Cevaluate env (CLprim CIf es) (Rerr Rtype_error))
+
+/\
+(! env e1 e2.
+Cevaluate env e1 (Rval (CLit (Bool F)))
+==>
+Cevaluate env (CLprim CAnd [e1;e2]) (Rval (CLit (Bool F))))
+/\
+(! env e1 e2 r. ($/\)
+(Cevaluate env e1 (Rval (CLit (Bool T))))
+(Cevaluate env e2 r)
+==>
+Cevaluate env (CLprim CAnd [e1;e2]) r)
+/\
+(! env e1 e2 err.
+Cevaluate env e1 (Rerr err)
+==>
+Cevaluate env (CLprim CAnd [e1;e2]) (Rerr err))
+/\
+(! env es.
+~  ( ($=)(LENGTH es) 2)
+==>
+Cevaluate env (CLprim CAnd es) (Rerr Rtype_error))
+
+/\
+(! env e1 e2.
+Cevaluate env e1 (Rval (CLit (Bool T)))
+==>
+Cevaluate env (CLprim COr [e1;e2]) (Rval (CLit (Bool T))))
+/\
+(! env e1 e2 r. ($/\)
+(Cevaluate env e1 (Rval (CLit (Bool F))))
+(Cevaluate env e2 r)
+==>
+Cevaluate env (CLprim COr [e1;e2]) r)
+/\
+(! env e1 e2 err.
+Cevaluate env e1 (Rerr err)
+==>
+Cevaluate env (CLprim COr [e1;e2]) (Rerr err))
+/\
+(! env es.
+~  ( ($=)(LENGTH es) 2)
+==>
+Cevaluate env (CLprim COr es) (Rerr Rtype_error))
 
 /\
 (! env.
@@ -423,7 +568,7 @@ val _ = Defn.save_defn pat_to_Cpat_defn;
   (s, CPrim2 ((case opn of
                 Plus   => CAdd
               | Minus  => CSub
-              | Times  => CMult
+              | Times  => CMul
               | Divide => CDiv
               | Modulo => CMod
               ))
@@ -647,16 +792,6 @@ val _ = Hol_datatype `
    |>`;
 
 
-val _ = Define `
- i0 = & 0`;
-
-val _ = Define `
- i1 = & 1`;
-
-val _ = Define `
- i2 = & 2`;
-
-
  val error_to_int_defn = Hol_defn "error_to_int" `
 
 (error_to_int Bind_error = i0)
@@ -671,7 +806,7 @@ val _ = Defn.save_defn error_to_int_defn;
 /\
 (prim2_to_bc CSub = Sub)
 /\
-(prim2_to_bc CMult = Mult)
+(prim2_to_bc CMul = Mult)
 /\
 (prim2_to_bc CDiv = Div2) (* TODO *)
 /\
