@@ -511,4 +511,152 @@ val IN_ANTISYM = store_thm(
   qsuff_tac `∀x. SET x ⇒ ∀y. y ∈ x ⇒ x ∉ y` >- metis_tac [SET_def] >>
   Induct_on `SET x` >> metis_tac []);
 
+val IN3_ANTISYM = store_thm(
+  "IN3_ANTISYM",
+  ``x ∈ y ∧ y ∈ z ∧ z ∈ x ⇔ F``,
+  qsuff_tac `∀x. SET x ⇒ ∀y z. y ∈ z ∧ z ∈ x ⇒ x ∉ y` >- metis_tac [SET_def] >>
+  Induct_on `SET x` >> metis_tac []);
+
+val FORMATION = new_axiom(
+  "FORMATION",
+  ``SET a ∧ (∀x. x ∈ a ⇒ ∃!y. P x y) ∧ (∀x y. x ∈ a ∧ P x y ⇒ SET y) ⇒
+    ∃w. SET w ∧ ∀y. y ∈ w ⇔ ∃x. x ∈ a ∧ P x y``);
+
+val bad_def = with_flag (computeLib.auto_import_definitions, false) Define`
+  bad f a = SET a ∧ (∀i. SET (f i)) ∧ (f 0 = {a}) ∧
+            (∀i x. x ∈ f i ⇒ x ∩ f (i + 1) ≠ {})
+`;
+
+val FOUNDATION2 = store_thm(
+  "FOUNDATION2",
+  ``¬∃f:num -> vbgc.
+       (∀i. SET (f i)) ∧ (∃e. SET e ∧ (f 0 = {e})) ∧
+       (∀i x. x ∈ f i ⇒ x ∩ f (i + 1) ≠ {})``,
+  qsuff_tac `∀a. SET a ⇒ ¬∃f. bad f a`
+    >- (rw[bad_def] >>
+        Tactical.REVERSE (Cases_on `∀i. SET (f i)`) >- metis_tac [] >>
+        rw[] >> Cases_on `∃e. f 0 = {e}` >> fs[] >>
+        Tactical.REVERSE (Cases_on `SET e`)
+          >- (DISJ1_TAC >> rw[Once EXTENSION]) >>
+        DISJ2_TAC >>
+        first_x_assum (qspec_then `e` mp_tac) >> rw[] >>
+        metis_tac []) >>
+  Induct_on `SET a` >> qx_gen_tac `a` >> Cases_on `SET a` >> simp[] >>
+  CONV_TAC CONTRAPOS_CONV >> rw[] >>
+  `a ∈ f 0` by metis_tac [IN_INSERT, bad_def] >>
+  `a ∩ f 1 ≠ {}` by metis_tac [bad_def, DECIDE ``0 + 1 = 1``] >>
+  `∃b. b ∈ a ∩ f 1` by metis_tac [EMPTY_UNIQUE] >>
+  qabbrev_tac `
+    poor = λp. (∀i. p i ⊆ f (i + 1)) ∧ b ∈ p 0 ∧
+               (∀i x. x ∈ p i ⇒ x ∩ f (i + 2) ⊆ p (i + 1))
+  ` >>
+  qabbrev_tac `P = λn. f (n + 1)` >>
+  `poor P`
+     by (srw_tac[ARITH_ss][Abbr`P`,Abbr`poor`] >> fs[] >>
+         rw[SUBSET_def]) >>
+  qabbrev_tac `N = λn. SPEC0 (λx. ∀p. poor p ⇒ x ∈ p n)` >>
+  `b ∈ N 0`
+     by (rw[Abbr`N`] >- metis_tac [SET_def] >> fs[Abbr`poor`]) >>
+  `poor N`
+     by (qpat_assum `Abbrev(poor = X)`
+                    (fn th => ASSUME_TAC th THEN MP_TAC th) >>
+         disch_then (SUBST1_TAC o REWRITE_RULE [markerTheory.Abbrev_def]) >>
+         rw[] >| [
+           qsuff_tac `N i ⊆ P i` >- metis_tac [SUBSET_def] >>
+           rw[Abbr`N`, SUBSET_def],
+           `∀p. poor p ⇒ x ∩ f(i + 2) ⊆ p (i + 1)`
+              by (rpt strip_tac >>
+                  `x ∈ p i` by fs[Abbr`N`, Abbr`poor`] >>
+                  metis_tac []) >>
+           rw[Abbr`N`, SUBSET_def] >> metis_tac [SUBSET_def, IN_INTER]
+         ]) >>
+  qexists_tac `b` >> fs[] >>
+  `∀p. poor p ⇒ ∀n. SET (p n)`
+     by (rw[Abbr`poor`] >> match_mp_tac SUBSETS_ARE_SETS  >>
+         qexists_tac `f (n + 1)` >> fs[bad_def]) >>
+  qexists_tac `N` >> rw[bad_def] >|[
+    rw[Once EXTENSION, EQ_IMP_THM] >>
+    spose_not_then assume_tac >>
+    qpat_assum `x ∈ N 0` mp_tac >>
+    qpat_assum `Abbrev(N = X)`
+      (fn th => ASSUME_TAC th >>
+                MP_TAC (REWRITE_RULE [markerTheory.Abbrev_def] th)) >>
+    disch_then SUBST1_TAC >> rw[] >> DISJ2_TAC >>
+    qexists_tac `λn. if n = 0 then SPEC0 (λy. y ∈ N 0 ∧ y ≠ x) else N n` >>
+    rw[] >>
+    qpat_assum `Abbrev(poor = X)`
+      (fn th => assume_tac th >>
+                SUBST1_TAC (REWRITE_RULE [markerTheory.Abbrev_def] th)) >>
+    simp[] >> conj_tac
+      >- (rw[SUBSET_def] >>
+          qpat_assum `poor N` mp_tac >>
+          rw[Abbr`poor`] >> metis_tac [SUBSET_def, DECIDE ``0 + 1 = 1``]) >>
+    map_every qx_gen_tac [`i`, `y`] >>
+    rw[] >> metis_tac [DECIDE ``(0 + 1 = 1) ∧ (0 + 2 = 2)``],
+    `x ∈ f (i + 1)` by metis_tac[SUBSET_def] >>
+    `x ∩ f(i + 2) ⊆ N (i + 1)` by metis_tac [] >>
+    `x ∩ f(i + 2) ≠ {}` by metis_tac [bad_def, DECIDE ``i + 1 + 1 = i + 2``] >>
+    simp[EXTENSION] >> metis_tac[SET_def, EMPTY_UNIQUE, IN_INTER, SUBSET_def]
+  ])
+
+val lemma0 = prove(
+  ``SET ss ⇒ SET ss ∧ ∀x. x ∈ ss ⇒ SET (x ∩ a)``,
+  rw[] >> match_mp_tac SUBSETS_ARE_SETS >> qexists_tac `x` >>
+  rw[SUBSET_def] >> metis_tac [SET_def])
+val formlemma =
+    FORMATION |> Q.INST [`a` |-> `ss`,
+                         `P` |-> `λx y. (y = x ∩ a)`]
+              |> SIMP_RULE (srw_ss()) []
+              |> C MP (UNDISCH lemma0)
+
+val FOUNDATION3 = store_thm(
+  "FOUNDATION3",
+  ``∀a. a ≠ {} ⇒ ∃x. x ∈ a ∧ (x ∩ a = {})``,
+  spose_not_then strip_assume_tac >>
+  `∃b. b ∈ a` by metis_tac [EMPTY_UNIQUE] >>
+  qabbrev_tac `
+     m = PRIM_REC {b} (λs n. BIGUNION (SPEC0 (λy. ∃x. x ∈ s ∧ (y = x ∩ a))))
+  ` >>
+  `∀i. m i ⊆ a`
+     by (Induct >> rw[Abbr`m`, prim_recTheory.PRIM_REC_THM, SUBSET_def] >>
+         fs[]) >>
+  `∀i. SET (m i)`
+     by (Induct >> rw[Abbr`m`, prim_recTheory.PRIM_REC_THM] >>
+         match_mp_tac BIGUNION_SET_CLOSED >>
+         qpat_assum `SET sss` mp_tac >>
+         qmatch_abbrev_tac `SET ss ⇒ SET sss` >>
+         qunabbrev_tac `sss` >> strip_tac >>
+         strip_assume_tac formlemma >>
+         qsuff_tac `SPEC0 (λy. ∃x. x ∈ ss ∧ (y = x ∩ a)) = w` >- rw[] >>
+         simp[Once EXTENSION, EQ_IMP_THM] >>
+         asm_simp_tac (srw_ss() ++ DNF_ss) [] >> qx_gen_tac `y` >> strip_tac >>
+         match_mp_tac SUBSETS_ARE_SETS >> qexists_tac `y` >>
+         metis_tac [SUBSET_def, SET_def, IN_INTER]) >>
+  `bad m b`
+     by (rw[bad_def]
+            >- metis_tac [SET_def]
+            >- rw[Abbr`m`, prim_recTheory.PRIM_REC_THM]
+            >- (`x ∈ a` by metis_tac [SUBSET_def] >>
+                `x ∩ a ≠ {}` by metis_tac [] >>
+                `∃y. y ∈ x ∩ a` by metis_tac [EMPTY_UNIQUE] >>
+                `y ∈ m (SUC i)`
+                   by (rw[Abbr`m`, prim_recTheory.PRIM_REC_THM] >>
+                       srw_tac [DNF_ss][] >>
+                       qexists_tac `x` >> rw[]
+                         >- (match_mp_tac SUBSETS_ARE_SETS >>
+                             qexists_tac `x` >>
+                             metis_tac [SUBSET_def, IN_INTER, SET_def])
+                         >- metis_tac [SET_def]
+                         >> fs[]) >>
+                fs[arithmeticTheory.ADD1] >>
+                rw[Once EXTENSION] >> metis_tac [SET_def])) >>
+  MP_TAC (FOUNDATION2 |> SIMP_RULE bool_ss []
+                      |> Q.SPEC `m`) >>
+  simp[] >> conj_tac
+     >- (qexists_tac `b` >> rw[Abbr`m`, prim_recTheory.PRIM_REC_THM] >>
+         metis_tac [SET_def]) >>
+  metis_tac [bad_def])
+
+val _ = delete_const "bad"
+
 val _ = export_theory()
