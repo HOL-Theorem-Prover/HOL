@@ -227,12 +227,13 @@ in
     handle HOL_ERR _ => []
   fun add_new_type_mapping ty target_ty =
     (type_mappings := (ty,target_ty) :: (!type_mappings))
+  fun string_tl s = s |> explode |> tl |> implode
   fun type2t ty =
     if ty = ``:bool`` then ``Tbool`` else
     if ty = ``:int`` then ``Tnum`` else
     if ty = ``:num`` then ``Tnum`` else
     if can dest_vartype ty then
-      mk_comb(``Tvar``,stringSyntax.fromMLstring (dest_vartype ty))
+      mk_comb(``Tvar``,stringSyntax.fromMLstring (string_tl (dest_vartype ty)))
     else let
       val (lhs,rhs) = find_type_mapping ty
       val i = match_type lhs ty
@@ -359,10 +360,11 @@ local
   val prelude_decl_count = ref 0;
   datatype print_item = Translation of string * thm | InvDef of thm
   val print_items = ref ([]:print_item list)
+  val prelude_name = ref (NONE: string option);
   fun add_print_item i = (print_items := i :: (!print_items))
   val files = ["_ml.txt","_ocaml.txt","_hol.txt","_thm.txt","_ast.txt"]
   fun check_suffix suffix = mem suffix files orelse failwith("bad file suffix")
-  fun clear_file suffix = let
+  fun clear_file suffix = if (!base_filename) = "" then () else let
     val _ = check_suffix suffix
     val t = TextIO.openOut((!base_filename) ^ suffix)
     val _ = TextIO.closeOut(t)
@@ -374,7 +376,7 @@ local
       val _ = map clear_file files
       in name end
     else !base_filename
-  fun append_to_file suffix strs = let
+  fun append_to_file suffix strs = if get_filename() = "" then () else let
     val _ = check_suffix suffix
     val t = TextIO.openAppend(get_filename() ^ suffix)
     val _ = map (fn s => TextIO.output(t,s)) strs
@@ -385,15 +387,22 @@ local
   fun drop n [] = [] | drop n xs = if n = 0 then xs else drop (n-1) (tl xs)
   fun current_decls () = fst (listSyntax.dest_list (get_decls()))
   fun print_str str = str
+  fun print_prelude_comment suffix =
+    case !prelude_name of
+      NONE => ()
+    | SOME name => append_to_file suffix ["\n(* This code extends '"^name^"'. *)\n"]
   fun print_decls () = let
     val ds = drop (!prelude_decl_count) (current_decls ())
-    val _ = print "Printing ASTs, "
+    val _ = print "Printing ASTs ... "
+    val _ = print_prelude_comment "_ast.txt"
     val _ = print_decls_aux ds "_ast.txt" (fn tm => ["\n",term_to_string tm,"\n"])
     val _ = print "done.\n"
-    val _ = print "Printing SML syntax, "
+    val _ = print "Printing SML syntax ... "
+    val _ = print_prelude_comment "_ml.txt"
     val _ = print_decls_aux ds "_ml.txt" (fn tm => ["\n",print_str (dec2str_sml tm),"\n"])
     val _ = print "done.\n"
-    val _ = print "Printing Ocaml syntax, "
+    val _ = print "Printing Ocaml syntax ... "
+    val _ = print_prelude_comment "_ocaml.txt"
     val _ = print_decls_aux ds "_ocaml.txt" (fn tm => ["\n",print_str (dec2str_ocaml tm),"\n"])
     val _ = print "done.\n"
     in () end;
@@ -415,15 +424,21 @@ local
       NONE => ()
     | (SOME abbrev_def) => let
       val str = thm_to_string abbrev_def
-      val _ = append_to_file "_thm.txt" ["\nAST definition:\n\n",str,"\n\n"]
+      val _ = append_to_file "_thm.txt" ["\nDefinition of declaration list:\n\n",str,"\n\n"]
       in () end
+  fun print_prelude_name () =
+    case !prelude_name of
+      NONE => ()
+    | SOME name => append_to_file "_thm.txt" ["\nThis translation extends '"^name^"'.\n"]
 in
-  fun init_printer () = let
+  fun init_printer name = let
     val _ = map clear_file files
+    val _ = (prelude_name := SOME name)
     val _ = (prelude_decl_count := (length (current_decls ())))
     in () end
   fun print_translation_output () =
-    (map print_item (rev (!print_items)); print_decl_abbrev (); print_decls ());
+    (print_prelude_name (); map print_item (rev (!print_items));
+     print_decl_abbrev (); print_decls ());
   fun print_fname fname def = add_print_item (Translation (fname,def));
   fun print_inv_def inv_def = add_print_item (InvDef inv_def);
 end
@@ -459,10 +474,10 @@ in
     val _ = print_translation_output ()
     in Theory.export_theory () end
   fun translation_extends name = let
-    val _ = print ("Loading: " ^ name)
+    val _ = print ("Loading translation: " ^ name ^ " ... ")
     val _ = unpack_state name
-    val _ = init_printer ()
-    val _ = print (", done.\n")
+    val _ = init_printer name
+    val _ = print ("done.\n")
     in () end;
 end
 
@@ -808,7 +823,8 @@ fun derive_thms_for_type ty = let
       in tm end
     val lines = listSyntax.mk_list(map mk_line xs,``:tvarN # t list``)
     val (name,ts) = dest_type (type_of y)
-    val ts = map (stringSyntax.fromMLstring o dest_vartype) ts
+    fun string_tl s = s |> explode |> tl |> implode
+    val ts = map (stringSyntax.fromMLstring o string_tl o dest_vartype) ts
     val ts_tm = listSyntax.mk_list(ts,``:string``)
     val name_tm = stringSyntax.fromMLstring name
     val dtype = ``(^ts_tm,^name_tm,^lines)``
@@ -817,7 +833,7 @@ fun derive_thms_for_type ty = let
   val dtype = ``Dtype ^dtype_list``
   (* define coupling invariant for data refinement and prove EqualityType lemmas *)
   val inv_defs = define_ref_inv tys
- (* val _ = map (fn (_,inv_def,_) => print_inv_def inv_def) inv_defs *)
+  val _ = map (fn (_,inv_def,_) => print_inv_def inv_def) inv_defs
   fun list_mk_type [] ret_ty = ret_ty
     | list_mk_type (x::xs) ret_ty = mk_type("fun",[type_of x,list_mk_type xs ret_ty])
   (* prove lemma for case_of *)
@@ -1783,16 +1799,7 @@ fun extract_precondition th pre_var is_rec =
 (* main translation routines *)
 
 (*
-
-val new_pre = mk_thm([],``!xs. HD_side xs = ~(xs = [])``);
-
 val def = HD; translate def;
-val def = APPEND; translate def;
-val def = sortingTheory.PART_DEF; translate def;
-val def = sortingTheory.PARTITION_DEF;
-val def = FLAT; translate def
-val def = ZIP; translate def
-val def = Define `KKK = HD [[5]] ++ FLAT [[4]]`; translate def
 *)
 
 fun translate def = let
@@ -1897,7 +1904,7 @@ fun mlDefine q = let
   val def = Define q
   val th = translate def
   val _ = print "\n"
-  val _ = print_thm th
+  val _ = print_thm (D th)
   val _ = print "\n\n"
   in def end;
 
@@ -1905,23 +1912,9 @@ fun mltDefine name q tac = let
   val def = tDefine name q tac
   val th = translate def
   val _ = print "\n"
-  val _ = print_thm th
+  val _ = print_thm (D th)
   val _ = print "\n\n"
   in def end;
 
-(*
-
-open mini_preludeTheory;
-
-val _ = translation_extends "mini_prelude";
-
-val _ = Hol_datatype `
-  tree = Node of num => 'a => tree list`;
-
-val _ = register_type
-val ty = ``:'a tree``
-
-
-*)
 
 end

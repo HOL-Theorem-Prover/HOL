@@ -4,7 +4,9 @@ open arithmeticTheory listTheory combinTheory pairTheory sumTheory;
 open optionTheory oneTheory bitTheory stringTheory;
 open patriciaTheory finite_mapTheory pred_setTheory;
 
-open ml_translatorLib ml_translatorTheory;
+open ml_translatorLib ml_translatorTheory mini_preludeTheory;;
+
+val _ = translation_extends "mini_prelude"; (* HD, TL, APPEND, REV, REVERSE *)
 
 
 (* pair *)
@@ -80,11 +82,8 @@ val LENGTH_AUX_THM = prove(
 
 val res = translate LENGTH_AUX_def;
 val res = translate LENGTH_AUX_THM;
-val res = translate APPEND;
 val res = translate MAP;
 val res = translate FILTER;
-val res = translate REV_DEF;
-val res = translate REVERSE_REV;
 val res = translate FOLDR;
 val res = translate FOLDL;
 val res = translate SUM;
@@ -101,21 +100,9 @@ val res = translate PAD_LEFT;
 val res = translate MEM;
 val res = translate ALL_DISTINCT;
 val res = translate isPREFIX;
-val res = translate HD;
-val res = translate TL;
 val res = translate FRONT_DEF;
 val res = translate ZIP;
 val res = translate EL;
-
-val HD_side_def = prove(
-  ``!xs. HD_side xs = ~(xs = [])``,
-  Cases THEN FULL_SIMP_TAC (srw_ss()) [fetch "-" "HD_side_def"])
-  |> update_precondition;
-
-val TL_side_def = prove(
-  ``!xs. TL_side xs = ~(xs = [])``,
-  Cases THEN FULL_SIMP_TAC (srw_ss()) [fetch "-" "TL_side_def"])
-  |> update_precondition;
 
 val FRONT_side_def = prove(
   ``!xs. FRONT_side xs = ~(xs = [])``,
@@ -123,14 +110,15 @@ val FRONT_side_def = prove(
   |> update_precondition;
 
 val ZIP_side_def = prove(
-  ``!xs ys. ZIP_side (xs,ys) = (LENGTH xs = LENGTH ys)``,
-  Induct THEN Cases_on `ys` THEN FULL_SIMP_TAC (srw_ss()) [fetch "-" "ZIP_side_def"])
+  ``!x. ZIP_side x = (LENGTH (FST x) = LENGTH (SND x))``,
+  Cases THEN Q.SPEC_TAC (`r`,`r`) THEN Induct_on `q` THEN Cases_on `r`
+  THEN FULL_SIMP_TAC (srw_ss()) [fetch "-" "ZIP_side_def"])
   |> update_precondition;
 
 val EL_side_def = prove(
   ``!n xs. EL_side n xs = n < LENGTH xs``,
-  Induct THEN Cases_on `xs` THEN FULL_SIMP_TAC (srw_ss()) [fetch "-" "EL_side_def",
-    fetch "-" "HD_side_def",fetch "-" "TL_side_def",CONTAINER_def])
+  Induct THEN Cases_on `xs` THEN FULL_SIMP_TAC (srw_ss())
+    [fetch "-" "EL_side_def",CONTAINER_def])
   |> update_precondition;
 
 (* sorting *)

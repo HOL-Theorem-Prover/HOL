@@ -44,5 +44,5 @@ val ML_QSORT_CORRECT = store_thm ("ML_QSORT_CORRECT",
   THEN METIS_TAC [sortingTheory.QSORT_PERM,sortingTheory.QSORT_SORTED]);
 
 
-val _ = export_theory();
+val _ = Theory.export_theory();
 
