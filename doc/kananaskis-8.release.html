@@ -32,6 +32,29 @@
 <h2 id="new-features">New features:</h2>
 
 <ul>
+<li><p>The <code>Define</code> function for making function definitions now allows variables that appear as formal parameters to the new functions being defined to share names with existing constants.
+This is based on the view that <code>`f x = x + 1`</code> should be the same as <code>`f = λx. x + 1`</code>.
+In the latter, it was already permitted to use constant names in the position of the <code>x</code>, now it is permitted in the former as well.
+There is one exception: if the formal name is the name of a constructor, then it has to be read as a constant rather than a bound name in order to allow ML-style pattern-matching.
+So, the following now works:
+<pre>
+    &gt; Define`x = 1`;
+    Definition has been stored under "x_def"
+    val it = |- x = 1
+
+    &gt; Define`f x = x + 1`;
+    Definition has been stored under "f_def"
+    val it = |- &#x2200x. f x = x + 1
+</pre>
+<p>But, this next session fails:
+<pre>
+    &gt; Hol_datatype`foo = X | Y`
+    &lt;&lt;HOL Message: Defined type: "foo"&gt;&gt;
+    val it = () : unit
+
+    &gt; Define`g X = X + 1`;
+    ...<i>&lt;Type inference failure&mdash;exception raised&gt;</i>...
+</pre>
 
 </ul>
 
