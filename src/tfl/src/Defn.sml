@@ -1601,11 +1601,12 @@ fun non_head_idents acc alist =
       in
         non_head_idents acc (args @ rest)
       end
+    | Absyn.TYPED(_, a, _)::rest => non_head_idents acc (a::rest)
     | _ :: rest => non_head_idents acc rest
 
 fun get_param_names eqs_a = let
   val eqs = Absyn.strip_conj eqs_a
-  val heads = map (#1 o multi_dest_eq) eqs
+  val heads = map (#1 o multi_dest_eq o #2 o Absyn.strip_forall) eqs
 in
   non_head_idents (HOLset.empty String.compare) heads |> HOLset.listItems
 end
