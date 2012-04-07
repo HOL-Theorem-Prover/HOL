@@ -1457,14 +1457,8 @@ fun vary s S =
     is not great for readability at times.
  ---------------------------------------------------------------------------*)
 
-local fun underscore #"_" = true  | underscore   _  = false
-in
 fun wildcard s =
-  let val ss = Substring.full s
-  in if Substring.isEmpty ss then false
-     else Substring.isEmpty (Substring.dropl underscore ss)
-  end
-end;
+    s <> "" andalso CharVector.all (fn #"_" => true | _ => false) s
 
 local open Absyn
 in
