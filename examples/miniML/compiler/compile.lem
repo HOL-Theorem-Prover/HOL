@@ -1,5 +1,10 @@
 open MiniML
 
+let rec
+map_result f (Rval v) = Rval (f v)
+and
+map_result f (Rerr e) = Rerr e
+
 (* Intermediate language for MiniML compiler *)
 
 (* TODO: move to lem? *)
@@ -369,67 +374,62 @@ Cevaluate_list env es (CRerr err)
 ==>
 Cevaluate_list env (e::es) (CRerr err)
 
-(* TODO: define map_exp and recover remove_Gt_Geq and remove_mat_exp as instances *)
+let rec
+map_exp f (Raise err) = f (Raise err)
+and
+map_exp f (Val v) = f (Val (map_val f v))
+and
+map_exp f (Con n es) = f (Con n (List.map (map_exp f) es))
+and
+map_exp f (Var vn) = f (Var vn)
+and
+map_exp f (Fun vn e) = f (Fun vn (map_exp f e))
+and
+map_exp f (App op e1 e2) = f (App op (map_exp f e1) (map_exp f e2))
+and
+map_exp f (Log lg e1 e2) = f (Log lg (map_exp f e1) (map_exp f e2))
+and
+map_exp f (If e1 e2 e3) = f (If (map_exp f e1) (map_exp f e2) (map_exp f e3))
+and
+map_exp f (Mat e pes) = f (Mat
+  (map_exp f e)
+  (List.map (fun (p,e) -> (p, map_exp f e)) pes))
+and
+map_exp f (Let vn ve e) = f (Let vn (map_exp f ve) (map_exp f e))
+and
+map_exp f (Letrec defs e) = f (Letrec
+  (List.map (fun (x,y,e) -> (x,y,map_exp f e)) defs)
+  (map_exp f e))
+and
+map_val f (Lit l) = Lit l
+and
+map_val f (Conv n vs) = Conv n (List.map (map_val f) vs)
+and
+map_val f (Closure env n e) =
+  Closure (map_env f env) n (map_exp f e)
+and
+map_val f (Recclosure env defs n) =
+  Recclosure (map_env f env)
+    (List.map (fun (x,y,e) -> (x,y,map_exp f e)) defs)
+    n
+and
+map_env f env = List.map (fun (x,v) -> (x, map_val f v)) env (* uneta: Hol_defn sucks *)
 
 let rec
-remove_mat_exp (Mat (Var v) pes) =
-  let pes = List.fold_right (fun (p,e) pes -> (p, remove_mat_exp e)::pes) pes [] in
-  Mat (Var v) pes
+remove_Gt_Geq1 (App (Opb Gt) e1 e2) = App (Opb Lt) e2 e1
 and
-remove_mat_exp (Mat e pes) =
-  let pes = List.fold_right (fun (p,e) pes -> (p, remove_mat_exp e)::pes) pes [] in
-  Let "" e (Mat (Var "") pes)
+remove_Gt_Geq1 (App (Opb Geq) e1 e2) = App (Opb Leq) e2 e1
 and
-remove_mat_exp (Raise err) = Raise err
-and
-remove_mat_exp (Val u) = Val u
-and
-remove_mat_exp (Con cn es) = Con cn (List.map remove_mat_exp es)
-and
-remove_mat_exp (Var v) = Var v
-and
-remove_mat_exp (Fun v e) = Fun v (remove_mat_exp e)
-and
-remove_mat_exp (App op e1 e2) = App op (remove_mat_exp e1) (remove_mat_exp e2)
-and
-remove_mat_exp (Log lg e1 e2) = Log lg (remove_mat_exp e1) (remove_mat_exp e2)
-and
-remove_mat_exp (If e1 e2 e3) = If (remove_mat_exp e1) (remove_mat_exp e2) (remove_mat_exp e3)
-and
-remove_mat_exp (Let v e1 e2) = Let v (remove_mat_exp e1) (remove_mat_exp e2)
-and
-remove_mat_exp (Letrec defs e) =
-  Letrec
-    (List.map (fun (v1,v2,e) -> (v1,v2,remove_mat_exp e)) defs)
-    (remove_mat_exp e)
+remove_Gt_Geq1 e = e
+let remove_Gt_Geq = map_exp remove_Gt_Geq1
 
 let rec
-remove_Gt_Geq (Raise err) = Raise err
+remove_mat_exp1 (Mat (Var v) pes) = (Mat (Var v) pes)
 and
-remove_Gt_Geq (Val v) = Val v
+remove_mat_exp1 (Mat e pes) = Let "" e (Mat (Var "") pes)
 and
-remove_Gt_Geq (Con cn es) = Con cn (List.map remove_Gt_Geq es)
-and
-remove_Gt_Geq (Var vn) = Var vn
-and
-remove_Gt_Geq (Fun vn e) = Fun vn (remove_Gt_Geq e)
-and
-remove_Gt_Geq (App (Opb Gt) e1 e2) = App (Opb Lt) (remove_Gt_Geq e2) (remove_Gt_Geq e1)
-and
-remove_Gt_Geq (App (Opb Geq) e1 e2) = App (Opb Leq) (remove_Gt_Geq e2) (remove_Gt_Geq e1)
-and
-remove_Gt_Geq (App op e1 e2) = App op (remove_Gt_Geq e1) (remove_Gt_Geq e2)
-and
-remove_Gt_Geq (Log lg e1 e2) = Log lg (remove_Gt_Geq e1) (remove_Gt_Geq e2)
-and
-remove_Gt_Geq (If e1 e2 e3) = If (remove_Gt_Geq e1) (remove_Gt_Geq e2) (remove_Gt_Geq e3)
-and
-remove_Gt_Geq (Mat e pes) = Mat (remove_Gt_Geq e) (List.map (fun (p,e) -> (p,remove_Gt_Geq e)) pes)
-and
-remove_Gt_Geq (Let vn e b) = Let vn (remove_Gt_Geq e) (remove_Gt_Geq b)
-and
-remove_Gt_Geq (Letrec defs e) = Letrec (List.map (fun (fn,vn,e) ->
-  (fn,vn,remove_Gt_Geq e)) defs) (remove_Gt_Geq e)
+remove_mat_exp1 e = e
+let remove_mat_exp = map_exp remove_mat_exp1
 
 let least_not_in s = least (fun n -> not (n IN s))
 
@@ -601,6 +601,8 @@ free_vars (CPrim2 _ e1 e2) = free_vars e1 union free_vars e2
 and
 free_vars (CLprim _ es) =
   List.fold_left (fun s e -> s union free_vars e) {} es
+
+(* TODO: map_Cexp and recover remove_mat as instance *)
 
 (* Remove pattern-matching using continuations *)
 (* TODO: more efficient method *)
