@@ -1,4 +1,4 @@
-open HolKernel boolLib bossLib Parse finite_mapTheory listTheory pred_setTheory
+open HolKernel boolLib bossLib Parse finite_mapTheory listTheory pred_setTheory lcsymtacs
 
 val _ = new_theory "alist";
 
@@ -83,6 +83,11 @@ val ALOOKUP_MEM = Q.store_thm(
 Induct THEN SRW_TAC [][] THEN
 Cases_on `h` THEN POP_ASSUM MP_TAC THEN
 SRW_TAC [][]);
+
+val ALOOKUP_MAP = store_thm(
+"ALOOKUP_MAP",
+``∀f al k. ALOOKUP (MAP (λ(x,y). (x,f y)) al) k = OPTION_MAP f (ALOOKUP al k)``,
+gen_tac >> Induct >- rw[] >> Cases >> rw[])
 
 val FDOM_alist_to_fmap = Q.store_thm(
 "FDOM_alist_to_fmap",
