@@ -16,7 +16,20 @@ val evaluate_val = Q.store_thm(
   (evaluate cenv env (Val v) r = (r = Rval v))`,
 rw [Once evaluate_cases]);
 
-val _ = export_rewrites["evaluate_raise","evaluate_val"];
+val evaluate_var = store_thm(
+"evaluate_var",
+``∀cenv env n r. evaluate cenv env (Var n) r =
+  (∃v. (lookup n env = SOME v) ∧ (r = Rval v)) ∨
+  ((lookup n env = NONE) ∧ (r = Rerr Rtype_error))``,
+rw [Once evaluate_cases] >>
+metis_tac [])
+
+val evaluate_fun = store_thm(
+"evaluate_fun",
+``∀cenv env n e r. evaluate cenv env (Fun n e) r = (r = Rval (Closure env n e))``,
+rw [Once evaluate_cases])
+
+val _ = export_rewrites["evaluate_raise","evaluate_val","evaluate_fun"];
 
 val evaluate_con = Q.store_thm(
 "evaluate_con",
@@ -30,6 +43,22 @@ val evaluate_con = Q.store_thm(
    else (r = Rerr Rtype_error))`,
 rw [Once evaluate_cases] >>
 metis_tac []);
+
+val evaluate_app = store_thm(
+"evaluate_app",
+``∀cenv env op e1 e2 r. evaluate cenv env (App op e1 e2) r =
+  (∃v1 v2 env' e. evaluate cenv env e1 (Rval v1) ∧ (evaluate cenv env e2 (Rval v2)) ∧
+                  (do_app env op v1 v2 = SOME (env',e)) ∧
+                  evaluate cenv env' e r) ∨
+  (∃v1 v2. evaluate cenv env e1 (Rval v1) ∧ (evaluate cenv env e2 (Rval v2)) ∧
+           (do_app env op v1 v2 = NONE) ∧
+           (r = Rerr Rtype_error)) ∨
+  (∃v1 err. evaluate cenv env e1 (Rval v1) ∧ (evaluate cenv env e2 (Rerr err)) ∧
+            (r = Rerr err)) ∨
+  (∃err. evaluate cenv env e1 (Rerr err) ∧
+         (r = Rerr err))``,
+rw[Once evaluate_cases] >>
+metis_tac [])
 
 val evaluate'_raise = store_thm(
 "evaluate'_raise",
