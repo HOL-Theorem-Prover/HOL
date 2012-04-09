@@ -94,11 +94,6 @@ val defs = map DEFN
 , underscore_rule compile_def
 , init_compiler_state
 , init_repl_state
-, map_exp_def
-, remove_Gt_Geq1_def
-, remove_Gt_Geq_def
-, remove_mat_exp1_def
-, remove_mat_exp_def
 , extend_def
 , pat_to_Cpat_def
 , underscore_rule exp_to_Cexp_def

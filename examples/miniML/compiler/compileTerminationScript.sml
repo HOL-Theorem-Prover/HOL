@@ -98,23 +98,6 @@ srw_tac [ARITH_ss][nt_size_def])
 
 (* compiler definitions *)
 
-val (map_exp_def,map_exp_ind) =
-  tprove_no_defn ((map_exp_def,map_exp_ind),
-  WF_REL_TAC `inv_image $<
-               (λx. case x of
-                    | INL (f,e) => exp_size e
-                    | INR (INR (f,env)) => exp3_size env
-                    | INR (INL (f,v)) => v_size v)` >>
-  srw_tac[ARITH_ss][exp1_size_thm,exp6_size_thm,exp3_size_thm,exp8_size_thm,exp9_size_thm] >>
-  map_every
-  (fn q => TRY (
-    Q.ISPEC_THEN q imp_res_tac SUM_MAP_MEM_bound >>
-   fsrw_tac[ARITH_ss][exp_size_def]))
-  [`exp2_size`,`exp7_size`,`exp5_size`,`exp_size`,`v_size`])
-val _ = save_thm ("map_exp_def", map_exp_def);
-val _ = save_thm ("map_exp_ind", map_exp_ind);
-val _ = export_rewrites["map_exp_def"]
-
 val (remove_mat_def,remove_mat_ind) =
   tprove_no_defn ((remove_mat_def,remove_mat_ind),
   WF_REL_TAC
@@ -232,18 +215,5 @@ val (pat_vars_def,pat_vars_ind) =
   srw_tac[ARITH_ss][])
 val _ = save_thm ("pat_vars_def", pat_vars_def);
 val _ = save_thm ("pat_vars_ind", pat_vars_ind);
-
-val _ = save_thm ("map_result_def", map_result_def);
-val _ = save_thm ("remove_Gt_Geq_def", remove_Gt_Geq_def);
-val _ = save_thm ("remove_Gt_Geq1_def", remove_Gt_Geq1_def);
-val _ = save_thm ("remove_mat_exp1_def", remove_mat_exp1_def);
-val _ = save_thm ("remove_mat_exp_def", remove_mat_exp_def);
-
-val _ = export_rewrites
-["map_result_def"
-,"remove_Gt_Geq_def"
-,"remove_Gt_Geq1_def"
-,"remove_mat_exp_def"
-,"remove_mat_exp1_def"]
 
 val _ = export_theory()

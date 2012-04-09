@@ -10,14 +10,6 @@ open BytecodeTheory MiniMLTheory
 
 (*open MiniML*)
 
- val map_result_defn = Hol_defn "map_result" `
-
-(map_result f (Rval v) = Rval (f v))
-/\
-(map_result f (Rerr e) = Rerr e)`;
-
-val _ = Defn.save_defn map_result_defn;
-
 (* Intermediate language for MiniML compiler *)
 
 (* TODO: move to lem? *)
@@ -398,76 +390,6 @@ Cevaluate_list env (CONS e es) (CRerr err))
 ==>
 Cevaluate_list env (CONS e es) (CRerr err))`;
 
- val map_exp_defn = Hol_defn "map_exp" `
-
-(map_exp f (Raise err) = f (Raise err))
-/\
-(map_exp f (Val v) = f (Val (map_val f v)))
-/\
-(map_exp f (Con n es) = f (Con n (MAP (map_exp f) es)))
-/\
-(map_exp f (Var vn) = f (Var vn))
-/\
-(map_exp f (Fun vn e) = f (Fun vn (map_exp f e)))
-/\
-(map_exp f (App op e1 e2) = f (App op (map_exp f e1) (map_exp f e2)))
-/\
-(map_exp f (Log lg e1 e2) = f (Log lg (map_exp f e1) (map_exp f e2)))
-/\
-(map_exp f (If e1 e2 e3) = f (If (map_exp f e1) (map_exp f e2) (map_exp f e3)))
-/\
-(map_exp f (Mat e pes) = f (Mat
-  (map_exp f e)
-  (MAP (\ (p,e) . (p, map_exp f e)) pes)))
-/\
-(map_exp f (Let vn ve e) = f (Let vn (map_exp f ve) (map_exp f e)))
-/\
-(map_exp f (Letrec defs e) = f (Letrec
-  (MAP (\ (x,y,e) . (x,y,map_exp f e)) defs)
-  (map_exp f e)))
-/\
-(map_val f (Lit l) = Lit l)
-/\
-(map_val f (Conv n vs) = Conv n (MAP (map_val f) vs))
-/\
-(map_val f (Closure env n e) =
-  Closure (map_env f env) n (map_exp f e))
-/\
-(map_val f (Recclosure env defs n) =
-  Recclosure (map_env f env)
-    (MAP (\ (x,y,e) . (x,y,map_exp f e)) defs)
-    n)
-/\
-(map_env f env = MAP (\ (x,v) . (x, map_val f v)) env)`;
-
-val _ = Defn.save_defn map_exp_defn; (* uneta: Hol_defn sucks *)
-
- val remove_Gt_Geq1_defn = Hol_defn "remove_Gt_Geq1" `
-
-(remove_Gt_Geq1 (App (Opb Gt) e1 e2) = App (Opb Lt) e2 e1)
-/\
-(remove_Gt_Geq1 (App (Opb Geq) e1 e2) = App (Opb Leq) e2 e1)
-/\
-(remove_Gt_Geq1 e = e)`;
-
-val _ = Defn.save_defn remove_Gt_Geq1_defn;
-val _ = Define `
- remove_Gt_Geq = map_exp remove_Gt_Geq1`;
-
-
- val remove_mat_exp1_defn = Hol_defn "remove_mat_exp1" `
-
-(remove_mat_exp1 (Mat (Var v) pes) = (Mat (Var v) pes))
-/\
-(remove_mat_exp1 (Mat e pes) = Let "" e (Mat (Var "") pes))
-/\
-(remove_mat_exp1 e = e)`;
-
-val _ = Defn.save_defn remove_mat_exp1_defn;
-val _ = Define `
- remove_mat_exp = map_exp remove_mat_exp1`;
-
-
 val _ = Define `
  (least_not_in s = $LEAST (\ n . ~  ( ($IN)n s)))`;
 
@@ -548,7 +470,9 @@ val _ = Defn.save_defn pat_to_Cpat_defn;
   let (_s,Ce2) = exp_to_Cexp F cm (s, e2) in
   (s, (case opb of
         Lt => CPrim2 CLt Ce1 Ce2
+      | Gt => CPrim2 CLt Ce2 Ce1
       | Leq => CLprim CLeq [Ce1;Ce2]
+      | Geq => CLprim CLeq [Ce2;Ce1]
       )))
 /\
 (exp_to_Cexp tp cm (s, App Equality e1 e2) =
@@ -584,6 +508,17 @@ val _ = Defn.save_defn pat_to_Cpat_defn;
       (s,CONS (Cp,Ce)Cpes))   (s,[]) 
           pes in
   (if tp then s' else s, CMat (FAPPLY  s.m  vn) Cpes))
+/\
+(exp_to_Cexp tp cm (s, Mat e pes) =
+  let (_s,Ce) = exp_to_Cexp F cm (s, e) in
+  let (s',n) = (s with<| n :=($+) s.n 1|>, s.n) in
+  let (s',Cpes) = FOLDR 
+    (\ (p,e) (s,Cpes) .
+      let (s,Cp) = pat_to_Cpat tp cm (s,p) in
+      let (s,Ce) = exp_to_Cexp tp cm (s,e) in
+      (s,CONS (Cp,Ce)Cpes))   (s',[]) 
+          pes in
+  (if tp then s' else s, CLet [n] [Ce] (CMat n Cpes)))
 /\
 (exp_to_Cexp tp cm (s, Let vn e b) =
   let (s',n) = extend tp s vn in
@@ -1236,8 +1171,6 @@ val _ = Define `
 
 val _ = Define `
  (compile_exp d rs e =
-  let e = remove_Gt_Geq e in
-  let e = remove_mat_exp e in
   let (tp,ds) = (case d of NONE => (F, {}) | SOME vs => (T, vs) ) in
   let (s,Ce) = exp_to_Cexp tp rs.cmap
     (<|m := rs.vmap; n := ($+) rs.nextv (CARD ds);
