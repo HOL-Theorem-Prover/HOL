@@ -658,6 +658,18 @@ fun list_lemma () = let
     |> Q.SPECL [`xs`,`\x.F`] |> SIMP_RULE std_ss [] |> GSYM;
   in LIST_TYPE_SIMP end handle HOL_ERR _ => TRUTH;
 
+fun pair_lemma () = let
+  val _ = is_const (Parse.Term [ANTIQUOTE ``PAIR_TYPE:('a -> v -> bool) -> ('b -> v -> bool) -> 'a # 'b -> v -> bool``])
+          orelse failwith("PAIR_TYPE not yet defined.")
+  val pair_def = LIST_CONJ [
+    EVAL ``PAIR_TYPE (a:('a -> v -> bool)) (b:('b -> v -> bool)) (x,y) v``]
+  val PAIR_TYPE_SIMP = prove(
+    ``!x. CONTAINER PAIR_TYPE (\y v. if y = FST x then a y v else ARB)
+                              (\y v. if y = SND x then b y v else ARB) x =
+          PAIR_TYPE (a:('a -> v -> bool)) (b:('b -> v -> bool)) x``,
+    Cases \\ SIMP_TAC std_ss [pair_def,CONTAINER_def,FUN_EQ_THM]) |> GSYM |> SPEC_ALL
+  in PAIR_TYPE_SIMP end handle HOL_ERR _ => TRUTH;
+
 (*
   val tys = find_mutrec_types ty
 *)
@@ -682,7 +694,7 @@ fun define_ref_inv tys = let
   val ys = map mk_lhs all
   fun reg_type (_,ty,lhs,_) = new_type_inv ty (rator (rator lhs));
   val _ = map reg_type ys
-  val rw_lemmas = list_lemma ()
+  val rw_lemmas = CONJ (list_lemma ()) (pair_lemma ())
   val def_tm = let
     fun mk_lines lhs ty [] input = []
       | mk_lines lhs ty (x::xs) input = let
@@ -709,7 +721,7 @@ fun define_ref_inv tys = let
       in tm :: mk_lines lhs ty xs input end
     val zs = Lib.flatten (map (fn (xs,ty,lhs,input) => mk_lines lhs ty xs input) ys)
     val def_tm = list_mk_conj zs
-    val def_tm = QCONV (ONCE_REWRITE_CONV [rw_lemmas]) def_tm |> concl |> rand
+    val def_tm = QCONV (REWRITE_CONV [rw_lemmas]) def_tm |> concl |> rand
     in def_tm end
   val size_def = snd (TypeBase.size_of (hd tys))
   fun right_list_dest f tm =
@@ -730,8 +742,8 @@ fun define_ref_inv tys = let
   val tac =
     (WF_REL_TAC [QUOTE ("measure (" ^ build_measure tys ^ ")")]
      \\ REPEAT STRIP_TAC
-     \\ Q.PAT_ASSUM `MEM x xs` (fn th => ASSUME_TAC th THEN
-                                         Induct_on [ANTIQUOTE (rand (concl th))])
+     \\ TRY (Q.PAT_ASSUM `MEM x xs` (fn th =>
+              ASSUME_TAC th THEN Induct_on [ANTIQUOTE (rand (concl th))]))
      \\ FULL_SIMP_TAC std_ss [MEM,FORALL_PROD,size_def] \\ REPEAT STRIP_TAC
      \\ FULL_SIMP_TAC std_ss [] \\ RES_TAC \\ DECIDE_TAC)
 (*
@@ -840,7 +852,7 @@ fun derive_thms_for_type ty = let
   fun prove_case_of_lemma (ty,case_th,inv_lhs,inv_def) = let
     val cases_th = TypeBase.case_def_of ty
     val (x1,x2) = cases_th |> CONJUNCTS |> hd |> concl |> repeat (snd o dest_forall)
-                          |> dest_eq
+                           |> dest_eq
     val ty1 = x1 |> rand |> type_of
     val ty2 = x2 |> type_of
     val cases_th = INST_TYPE [ty2 |-> ``:'return_type``] cases_th
@@ -939,7 +951,7 @@ fun derive_thms_for_type ty = let
           \\ ASM_SIMP_TAC (srw_ss()) []
           \\ ONCE_REWRITE_TAC [evaluate'_cases] \\ SIMP_TAC (srw_ss()) []
           \\ Q.EXISTS_TAC `res` \\ FULL_SIMP_TAC std_ss []
-          \\ NTAC 10 (ASM_SIMP_TAC (srw_ss())
+          \\ NTAC (2 * length ts) (ASM_SIMP_TAC (srw_ss())
                [Once evaluate'_cases,pmatch'_def,bind_def,pat_bindings_def])
     val tac = init_tac THENL (map (fn (n,f,fxs,pxs,tm,exp,xs) => case_tac n) ts)
     val case_lemma = prove(goal,tac)
@@ -1312,6 +1324,7 @@ fun find_ind_thm def = let
             fetch (#Thy r) ((#Name r) ^ "_IND")
             handle HOL_ERR _ =>
             fetch (#Thy r) ("ConstMult_ind")
+            handle HOL_ERR _ => TRUTH
   in ind end
 
 fun split_let_and_conv tm = let

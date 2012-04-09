@@ -1,8 +1,9 @@
 open HolKernel Parse boolLib bossLib; val _ = new_theory "std_prelude";
 
 open arithmeticTheory listTheory combinTheory pairTheory sumTheory;
-open optionTheory oneTheory bitTheory stringTheory;
+open optionTheory oneTheory bitTheory stringTheory whileTheory;
 open patriciaTheory finite_mapTheory pred_setTheory;
+open MiniMLTheory MiniMLTerminationTheory Print_astTerminationTheory
 
 open ml_translatorLib ml_translatorTheory mini_preludeTheory;;
 
@@ -273,9 +274,112 @@ val Eval_DOMSUB = prove(
   |> MATCH_MP (MATCH_MP Eval_WEAKEN REMOVE_eval)
   |> store_eval_thm;
 
-(*
-  hol2deep ``(FLOOKUP ((f \\ 5 \\ 6) |+ (5:int,x)) n)``
-*)
+(* owhile *)
+
+val IS_SOME_OWHILE_THM = prove(
+  ``!g f x. (IS_SOME (OWHILE g f x)) =
+            ?n. ~ g (FUNPOW f n x) /\ !m. m < n ==> g (FUNPOW f m x)``,
+  REPEAT STRIP_TAC THEN Cases_on `OWHILE g f x`
+  THEN FULL_SIMP_TAC (srw_ss()) [OWHILE_EQ_NONE]
+  THEN FULL_SIMP_TAC std_ss [OWHILE_def]
+  THEN Q.EXISTS_TAC `LEAST n. ~g (FUNPOW f n x)`
+  THEN (Q.INST [`P`|->`\n. ~g (FUNPOW f n x)`] FULL_LEAST_INTRO
+      |> SIMP_RULE std_ss [] |> IMP_RES_TAC)
+  THEN ASM_SIMP_TAC std_ss [] THEN REPEAT STRIP_TAC
+  THEN IMP_RES_TAC LESS_LEAST THEN FULL_SIMP_TAC std_ss []);
+
+val evaluate_closure_INTRO = prove(
+  ``(?env' e3. (do_app env Opapp v2 v3 = SOME (env',e3)) /\
+               evaluate' env' e3 (Rval v2')) = evaluate_closure v3 v2 v2'``,
+  SIMP_TAC (srw_ss()) [evaluate_closure_def,do_app_def]);
+
+val EXISTS_SWAP = METIS_PROVE [] ``(?x y. P x y) ==> (?y x. P x y)``
+
+val Eval_OWHILE = prove(
+  ``PRECONDITION (IS_SOME (OWHILE g f x)) ==>
+    Eval env (Letrec
+          [("owhile","g",
+            Fun "f"
+              (Fun "x"
+                 (If (App Opapp (Var "g") (Var "x"))
+                    (App Opapp
+                       (App Opapp (App Opapp (Var "owhile") (Var "g"))
+                          (Var "f")) (App Opapp (Var "f") (Var "x")))
+                    (Con "Some" [Var "x"]))))] (Var "owhile"))
+      ((Eq (a --> BOOL) g --> Eq (a --> a) f --> Eq a x --> OPTION_TYPE a) OWHILE)``,
+  REPEAT STRIP_TAC
+  THEN FULL_SIMP_TAC std_ss [PRECONDITION_def,IS_SOME_OWHILE_THM,Eval_def]
+  THEN SIMP_TAC (srw_ss()) [Once evaluate'_cases,build_rec_env_def]
+  THEN SIMP_TAC (srw_ss()) [Once evaluate'_cases,build_rec_env_def]
+  THEN SIMP_TAC (srw_ss()) [lookup_def,bind_def]
+  THEN SIMP_TAC (srw_ss()) [Once Arrow_def,AppReturns_def]
+  THEN SIMP_TAC (srw_ss()) [evaluate_closure_def,do_app_def,find_recfun_def,bind_def,build_rec_env_def]
+  THEN SIMP_TAC (srw_ss()) [Once Arrow_def,AppReturns_def]
+  THEN SIMP_TAC (srw_ss()) [evaluate_closure_def,do_app_def,bind_def]
+  THEN SIMP_TAC std_ss [Once Eq_def] THEN SIMP_TAC std_ss [Once Eq_def]
+  THEN REPEAT STRIP_TAC
+  THEN SIMP_TAC (srw_ss()) [Once Arrow_def,AppReturns_def]
+  THEN SIMP_TAC (srw_ss()) [evaluate_closure_def,do_app_def,bind_def]
+  THEN SIMP_TAC std_ss [Once Eq_def] THEN REPEAT STRIP_TAC
+  THEN REPEAT (POP_ASSUM MP_TAC)
+  THEN Q.SPEC_TAC (`x`,`x`)
+  THEN Q.SPEC_TAC (`v'`,`v1`)
+  THEN Q.SPEC_TAC (`v''`,`v2`)
+  THEN Q.SPEC_TAC (`v'''`,`v3`)
+  THEN Q.SPEC_TAC (`f`,`f`)
+  THEN Q.SPEC_TAC (`g`,`g`)
+  THEN FULL_SIMP_TAC std_ss [GSYM Eval_def] THEN CONV_TAC (DEPTH_CONV ETA_CONV)
+  THEN Induct_on `n` THEN1
+   (FULL_SIMP_TAC std_ss [FUNPOW] THEN REPEAT STRIP_TAC
+    THEN ONCE_REWRITE_TAC [OWHILE_THM]
+    THEN MATCH_MP_TAC (REWRITE_RULE [AND_IMP_INTRO] Eval_If |> GEN_ALL)
+    THEN Q.LIST_EXISTS_TAC [`T`,`F`,`T`]
+    THEN FULL_SIMP_TAC std_ss [CONTAINER_def]
+    THEN REPEAT STRIP_TAC THEN1
+     (`g x = F` by METIS_TAC []
+      THEN POP_ASSUM (fn th => ONCE_REWRITE_TAC [GSYM th])
+      THEN MATCH_MP_TAC (REWRITE_RULE [AND_IMP_INTRO] Eval_Arrow)
+      THEN ASM_SIMP_TAC (srw_ss()) [Once evaluate'_cases,lookup_def,Eval_def]
+      THEN ASM_SIMP_TAC (srw_ss()) [Once evaluate'_cases,lookup_def,Eval_def])
+    THEN NTAC 6 (ASM_SIMP_TAC (srw_ss()) [Once evaluate'_cases,lookup_def,
+         EVAL ``OPTION_TYPE a (SOME x) v``,Eval_def,do_app_def]))
+  THEN FULL_SIMP_TAC std_ss [FUNPOW] THEN REPEAT STRIP_TAC
+  THEN ONCE_REWRITE_TAC [OWHILE_THM]
+  THEN MATCH_MP_TAC (REWRITE_RULE [AND_IMP_INTRO] Eval_If |> GEN_ALL)
+  THEN Q.LIST_EXISTS_TAC [`F`,`T`,`T`]
+  THEN FULL_SIMP_TAC std_ss [CONTAINER_def]
+  THEN `0 < SUC n` by DECIDE_TAC THEN RES_TAC
+  THEN REVERSE STRIP_TAC THEN1 FULL_SIMP_TAC std_ss [FUNPOW]
+  THEN STRIP_TAC THEN1
+   (MATCH_MP_TAC (REWRITE_RULE [AND_IMP_INTRO] Eval_Arrow)
+    THEN ASM_SIMP_TAC (srw_ss()) [Once evaluate'_cases,lookup_def,Eval_def]
+    THEN ASM_SIMP_TAC (srw_ss()) [Once evaluate'_cases,lookup_def,Eval_def])
+  THEN ASM_SIMP_TAC (srw_ss()) [Once evaluate'_cases,lookup_def,Eval_def]
+  THEN ASM_SIMP_TAC (srw_ss()) [Once evaluate'_cases,lookup_def,Eval_def]
+  THEN ASM_SIMP_TAC (srw_ss()) [Once evaluate'_cases,lookup_def,Eval_def]
+  THEN ASM_SIMP_TAC (srw_ss()) [Once evaluate'_cases,lookup_def,Eval_def]
+  THEN SIMP_TAC (srw_ss()) [Once do_app_def,find_recfun_def]
+  THEN ASM_SIMP_TAC (srw_ss()) [Once evaluate'_cases,lookup_def,Eval_def]
+  THEN ASM_SIMP_TAC (srw_ss()) [Once evaluate'_cases,lookup_def,Eval_def]
+  THEN SIMP_TAC (srw_ss()) [Once do_app_def,find_recfun_def]
+  THEN SIMP_TAC (srw_ss()) [Once do_app_def,find_recfun_def]
+  THEN ASM_SIMP_TAC (srw_ss()) [Once evaluate'_cases,lookup_def,Eval_def]
+  THEN ASM_SIMP_TAC (srw_ss()) [Once evaluate'_cases,lookup_def,Eval_def]
+  THEN ASM_SIMP_TAC (srw_ss()) [Once evaluate'_cases,lookup_def,Eval_def]
+  THEN SIMP_TAC (srw_ss()) [bind_def,build_rec_env_def]
+  THEN FULL_SIMP_TAC std_ss [evaluate_closure_INTRO]
+  THEN FULL_SIMP_TAC std_ss [PULL_EXISTS,PULL_FORALL]
+  THEN HO_MATCH_MP_TAC EXISTS_SWAP
+  THEN `?v_fx. evaluate_closure v3 v2 v_fx /\ a (f x) v_fx` by ALL_TAC THEN1
+       (FULL_SIMP_TAC std_ss [Arrow_def,AppReturns_def] THEN METIS_TAC [])
+  THEN Q.EXISTS_TAC `v_fx` THEN FULL_SIMP_TAC std_ss [GSYM Eval_def]
+  THEN FULL_SIMP_TAC std_ss [AND_IMP_INTRO] THEN CONV_TAC (DEPTH_CONV ETA_CONV)
+  THEN Q.PAT_ASSUM `!x1 x2. bbb` MATCH_MP_TAC THEN ASM_SIMP_TAC std_ss []
+  THEN REPEAT STRIP_TAC
+  THEN Q.PAT_ASSUM `!m. bbb` (MP_TAC o Q.SPEC `SUC m`)
+  THEN FULL_SIMP_TAC (srw_ss()) [FUNPOW])
+  |> UNDISCH_ALL |> store_eval_thm;
+
 
 val _ = export_theory();
 

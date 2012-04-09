@@ -158,15 +158,9 @@ val parse = Define `
                              SOME (rst,((sym,st),Leaf (sym2Str sym))::os, push ((s, itl)::rem) (sym,st))
                            | (REDUCE ru) => doReduce m ((sym::rst), os, ((s, itl)::rem)) ru)`
 
-val owhile_def = Define `
-  owhile C f s =
-    if ?n. ~ C (FUNPOW f n s) then
-      SOME (FUNPOW f (LEAST n. ~ C (FUNPOW f n s)) s)
-    else NONE`;
-
 val mwhile = Define`
   mwhile g f s =
-    owhile (\opt. case opt of NONE => F | SOME s => g s)
+    OWHILE (\opt. case opt of NONE => F | SOME s => g s)
            (\opt. case opt of NONE => NONE | SOME s => f s)
            (SOME s)`;
 
