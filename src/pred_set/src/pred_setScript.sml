@@ -1661,17 +1661,17 @@ val lemma =
   end;
 
 val FINITE_INDUCT = store_thm("FINITE_INDUCT",
---`!P. P {} /\ (!s. FINITE s /\ P s ==> (!e. ~(e IN s) ==> P(e INSERT s)))
-       ==> !s:'a set. FINITE s
-                          ==> P s`--,
-     GEN_TAC THEN STRIP_TAC THEN
-     MATCH_MP_TAC lemma THEN
-     ASM_REWRITE_TAC [] THEN
-     REPEAT STRIP_TAC THENL
-     [IMP_RES_THEN MATCH_ACCEPT_TAC FINITE_INSERT,
-      ASM_CASES_TAC (--`(e:'a) IN s`--) THENL
-      [IMP_RES_THEN SUBST1_TAC ABSORPTION, RES_TAC] THEN
-      ASM_REWRITE_TAC []]);
+  ``!P. P {} /\ (!s. FINITE s /\ P s ==> (!e. ~(e IN s) ==> P(e INSERT s))) ==>
+    !s:'a set. FINITE s ==> P s``,
+  GEN_TAC THEN STRIP_TAC THEN
+  MATCH_MP_TAC lemma THEN
+  ASM_REWRITE_TAC [] THEN
+  REPEAT STRIP_TAC THENL
+  [IMP_RES_THEN MATCH_ACCEPT_TAC FINITE_INSERT,
+   ASM_CASES_TAC (--`(e:'a) IN s`--) THENL
+   [IMP_RES_THEN SUBST1_TAC ABSORPTION, RES_TAC] THEN
+   ASM_REWRITE_TAC []]);
+val _ = IndDefLib.export_rule_induction "FINITE_INDUCT"
 
 (* --------------------------------------------------------------------- *)
 (* Load the set induction tactic in...                                   *)
