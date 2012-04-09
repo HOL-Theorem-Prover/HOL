@@ -84,6 +84,7 @@ help/theorygraph/theories.pdf
 src/bool/SharingTables.*
 src/emit/ML/*
 src/emit/Caml/*
+src/quotient/Manual/quotient.pdf
 src/quotient/src/*.html
 src/quotient/src/*.lst
 src/HolSat/sat_solvers/zc2hs/*.h
