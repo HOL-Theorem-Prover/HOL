@@ -1,5 +1,5 @@
 open HolKernel bossLib boolLib EmitTeX
-open emitLib fmap_emitTheory int_emitTheory rich_list_emitTheory string_emitTheory bytecode_emitTheory
+open bytecode_emitTheory
 open CompileTheory compileTerminationTheory
 val _ = new_theory "compile_emit"
 
@@ -23,7 +23,7 @@ Conv.TOP_SWEEP_CONV
 end
 
 val data = map
-  (fn th => DATATYPE [QUOTE (datatype_thm_to_string th)])
+  (fn th => EmitML.DATATYPE [QUOTE (datatype_thm_to_string th)])
   [ MiniMLTheory.datatype_lit
   , MiniMLTheory.datatype_error
   , MiniMLTheory.datatype_opb
@@ -73,10 +73,10 @@ boolSyntax.rhs(Thm.concl(SIMP_CONV (srw_ss()) [init_repl_state_def]
    ; cs := init_repl_state.cs
    |>``))), SRW_TAC[][init_repl_state_def])
 
-val defs = map DEFN
+val defs = map EmitML.DEFN
 [ incsz_def
 , free_vars_def
-, REWRITE_RULE [set_emitTheory.IS_EMPTY_REWRITE]
+, REWRITE_RULE [basis_emitTheory.IS_EMPTY_REWRITE]
     (UNDISCH (SPEC_ALL fsetTheory.num_set_foldl_def))
 , emit_def
 , i0_def
@@ -122,18 +122,18 @@ PROVE_TAC[prim_recTheory.WF_LESS] THEN
 Cases_on `n` THEN SRW_TAC[][] THEN
 Cases_on `n'` THEN SRW_TAC[][])
 
-val _ = eSML "compile" (
-  (OPEN ["num","fmap","set","bytecode"])
-::(MLSIG "type num = numML.num")
-::(MLSIG "type int = intML.int")
-::(MLSTRUCT "type int = intML.int")
-::(MLSIG "type ('a,'b) fmap = ('a,'b) fmapML.fmap")
-::(MLSIG "type 'a set = 'a setML.set")
-::(MLSIG "type bc_stack_op = bytecodeML.bc_stack_op")
-::(MLSIG "type bc_inst = bytecodeML.bc_inst")
-::(MLSIG "type bc_value = bytecodeML.bc_value")
-::(MLSIG "val num_to_bool : num -> bool")
-::(DEFN_NOSIG num_to_bool)
+val _ = EmitML.eSML "compile" (
+  (EmitML.OPEN ["num","fmap","set","bytecode"])
+::(EmitML.MLSIG "type num = numML.num")
+::(EmitML.MLSIG "type int = intML.int")
+::(EmitML.MLSTRUCT "type int = intML.int")
+::(EmitML.MLSIG "type ('a,'b) fmap = ('a,'b) fmapML.fmap")
+::(EmitML.MLSIG "type 'a set = 'a setML.set")
+::(EmitML.MLSIG "type bc_stack_op = bytecodeML.bc_stack_op")
+::(EmitML.MLSIG "type bc_inst = bytecodeML.bc_inst")
+::(EmitML.MLSIG "type bc_value = bytecodeML.bc_value")
+::(EmitML.MLSIG "val num_to_bool : num -> bool")
+::(EmitML.DEFN_NOSIG num_to_bool)
 ::data@defs)
 
 val _ = export_theory ();
