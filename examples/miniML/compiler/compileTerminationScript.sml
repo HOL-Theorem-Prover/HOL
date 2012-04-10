@@ -79,6 +79,12 @@ val Cexp7_size_thm = store_thm(
 Induct >- rw[Cexp_size_def] >>
 srw_tac [ARITH_ss][Cexp_size_def])
 
+val Cexp8_size_thm = store_thm(
+"Cexp8_size_thm",
+``∀ls. Cexp8_size ls = SUM (MAP Cv_size ls) + LENGTH ls``,
+Induct >- rw[Cexp_size_def] >>
+srw_tac [ARITH_ss][Cexp_size_def])
+
 val list_size_thm = store_thm(
 "list_size_thm",
 ``∀f ls. list_size f ls = SUM (MAP f ls) + LENGTH ls``,
@@ -182,14 +188,14 @@ val (repl_dec_def,repl_dec_ind) =
 val _ = save_thm ("repl_dec_def", repl_dec_def);
 val _ = save_thm ("repl_dec_ind", repl_dec_ind);
 
-val (bcv_to_v_def,bcv_to_v_ind) =
-  tprove_no_defn ((bcv_to_v_def,bcv_to_v_ind),
+val (bcv_to_ov_def,bcv_to_ov_ind) =
+  tprove_no_defn ((bcv_to_ov_def,bcv_to_ov_ind),
   WF_REL_TAC `measure (bc_value_size o SND o SND)` >>
   rw[bc_value1_size_thm] >>
   Q.ISPEC_THEN `bc_value_size` imp_res_tac SUM_MAP_MEM_bound >>
   srw_tac[ARITH_ss][])
-val _ = save_thm ("bcv_to_v_def", bcv_to_v_def);
-val _ = save_thm ("bcv_to_v_ind", bcv_to_v_ind);
+val _ = save_thm ("bcv_to_ov_def", bcv_to_ov_def);
+val _ = save_thm ("bcv_to_ov_ind", bcv_to_ov_ind);
 
 val (inst_arg_def,inst_arg_ind) =
   tprove_no_defn ((inst_arg_def,inst_arg_ind),
@@ -215,5 +221,25 @@ val (pat_vars_def,pat_vars_ind) =
   srw_tac[ARITH_ss][])
 val _ = save_thm ("pat_vars_def", pat_vars_def);
 val _ = save_thm ("pat_vars_ind", pat_vars_ind);
+
+val (Cv_to_ov_def,Cv_to_ov_ind) =
+  tprove_no_defn ((Cv_to_ov_def,Cv_to_ov_ind),
+  WF_REL_TAC `measure (Cv_size o SND)` >>
+  rw[Cexp8_size_thm] >>
+  Q.ISPEC_THEN `Cv_size` imp_res_tac SUM_MAP_MEM_bound >>
+  srw_tac[ARITH_ss][])
+val _ = save_thm ("Cv_to_ov_def", Cv_to_ov_def);
+val _ = save_thm ("Cv_to_ov_ind", Cv_to_ov_ind);
+val _ = export_rewrites["Cv_to_ov_def"];
+
+val (v_to_ov_def,v_to_ov_ind) =
+  tprove_no_defn ((v_to_ov_def,v_to_ov_ind),
+  WF_REL_TAC `measure v_size` >>
+  rw[exp9_size_thm] >>
+  Q.ISPEC_THEN `v_size` imp_res_tac SUM_MAP_MEM_bound >>
+  srw_tac[ARITH_ss][])
+val _ = save_thm ("v_to_ov_def", v_to_ov_def);
+val _ = save_thm ("v_to_ov_ind", v_to_ov_ind);
+val _ = export_rewrites["v_to_ov_def"];
 
 val _ = export_theory()

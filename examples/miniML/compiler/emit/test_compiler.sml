@@ -94,6 +94,7 @@ in case fst(dest_const f) of
   | "Dletrec" => let val [x1] = xs in Dletrec (dest_list (dest_pair fromHOLstring (dest_pair fromHOLstring term_to_exp)) x1) end
   | s => raise Fail s
 end handle (Fail s) => raise Fail s | _ => raise Fail (Parse.term_to_string tm)
+val term_to_ov = v_to_ov o term_to_v
 
 fun f1 s e =
 let val rs = repl_exp s (term_to_exp e) in
@@ -116,7 +117,7 @@ fun pd1 e ds = let
   val (c,m) = pd0 e ds
   val st = g c
   in (m,st) end
-fun pv m bv ty = bcv_to_v m ty bv
+fun pv m bv ty = bcv_to_ov m ty bv
 fun pd tys e ds =
   let val (m,st) = pd1 e ds
   in map2 (pv m) st tys end
@@ -125,7 +126,7 @@ val e1 = ``Val (Lit (IntLit 42))``
 val c1 = f e1
 val [Number i] = g c1
 val SOME 42 = intML.toInt i;
-val true = [term_to_v ``Lit (IntLit 42)``] = (pd [NTnum] e1 [])
+val true = [OLit (IntLit (intML.fromInt 42))] = (pd [NTnum] e1 [])
 val e2 = ``If (Val (Lit (Bool T))) (Val (Lit (IntLit 1))) (Val (Lit (IntLit 2)))``
 val c2 = f e2
 val [Number i] = g c2
@@ -141,7 +142,7 @@ val SOME 0 = intML.toInt i;
 val e5 = ``Fun "x" (Var "x")``
 val c5 = f e5
 val st = g c5
-val true = [term_to_v ``Closure [] "" (Var "")``] = pd [NTfn] e5 []
+val true = [OFn] = pd [NTfn] e5 []
 val e6 = ``Let "x" (Val (Lit (IntLit 1))) (App (Opn Plus) (Var "x") (Var "x"))``
 val c6 = f e6
 val [Number i] = g c6
@@ -373,28 +374,28 @@ val d1 = ``Dletrec ^append_defs``
 val e33 = ``App Opapp (Var "APPEND") (Con "Nil" [])``
 val (m,st) = pd1 e33 [d0,d1]
 val tm = pv m (hd st) NTfn
-val true = tm = (term_to_v ``Closure [] "" (Var "")``);
+val true = tm = OFn;
 val e34 = ``App Opapp (App Opapp (Var "APPEND") (Con "Nil" []))
                       (Con "Nil" [])``
 val (m,st) = pd1 e34 [d0,d1]
 val [r,cl] = st
 val tm = pv m r (NTapp ([NTnum],"list"))
-val true = tm = (term_to_v ``Conv "Nil" []``)
+val true = tm = OConv ("Nil",[])
 val tm = pv m cl NTfn
-val true = tm = (term_to_v ``Closure [] "" (Var "")``);
+val true = tm = OFn;
 fun h t = hd(tl(snd(strip_comb(concl t))))
 val t = ml_translatorLib.hol2deep ``[1;2;3]++[4;5;6:num]``
 val e30 = h t
 val (m,st) = pd1 e30 [d0,d1]
 val [res,cl] = st
 val tm = pv m res (NTapp ([NTnum],"list"))
-val true = tm = (term_to_v (ml_translatorLib.hol2val ``[1;2;3;4;5;6:num]``));
+val true = tm = term_to_ov (ml_translatorLib.hol2val ``[1;2;3;4;5;6:num]``);
 val t = ml_translatorLib.hol2deep ``[]++[4:num]``
 val e32 = h t
 val (m,st) = pd1 e32 [d0,d1]
 val [res,cl] = st
 val tm = pv m res (NTapp ([NTnum],"list"))
-val true = tm = (term_to_v ``Conv "Cons" [Lit (IntLit 4); Conv "Nil" []]``);
+val true = tm = OConv ("Cons",[OLit (IntLit (intML.fromInt 4)), OConv ("Nil",[])]);
 val paird = ``
 Dtype [(["'a"; "'b"],"prod",[("Pair_type",[Tvar "'a"; Tvar "'b"])])]
 ``
@@ -461,14 +462,14 @@ val e31 = h t;
 val (m,st) = pd1 e31 [d0,d1,d2,d3,d4,d5]
 val [res,clQSORT,clPARTITION,clPART,clAPPEND] = st
 val tm = pv m res (NTapp([NTnum],"list"))
-val true = tm = term_to_v(ml_translatorLib.hol2val ``[2;3;4;5;6;7;8;9:num]``);
+val true = tm = term_to_ov(ml_translatorLib.hol2val ``[2;3;4;5;6;7;8;9:num]``);
 val d = ``
 Dlet (Pvar "add1")
   (Fun "x" (App (Opn Plus) (Var "x") (Val (Lit (IntLit 1)))))``
 val e40 = ``App Opapp (Var "add1") (Val (Lit (IntLit 1)))``
 val (m,st) = pd1 e40 [d]
 val [res,add1] = st
-val true = pv m res NTnum = term_to_v(ml_translatorLib.hol2val ``2:int``);
+val true = pv m res NTnum = term_to_ov(ml_translatorLib.hol2val ``2:int``);
 val e43 = ``Letrec [("o","n",
   If (App Equality (Var "n") (Val (Lit (IntLit 0))))
      (Var "n")

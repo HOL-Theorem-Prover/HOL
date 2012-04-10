@@ -34,6 +34,7 @@ val data = map
   , MiniMLTheory.datatype_exp
   , MiniMLTheory.datatype_t
   , MiniMLTheory.datatype_dec
+  , datatype_ov
   , datatype_Cprim2
   , datatype_Clprim
   , datatype_Cpat
@@ -108,7 +109,8 @@ val defs = map DEFN
 , lookup_conv_ty_def
 , repl_dec_def
 , inst_arg_def
-, bcv_to_v_def
+, v_to_ov_def
+, bcv_to_ov_def
 ]
 
 val num_to_bool = prove(

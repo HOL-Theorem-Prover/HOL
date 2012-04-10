@@ -8,10 +8,6 @@ val _ = new_theory "Compile"
 
 open BytecodeTheory MiniMLTheory
 
-(*open MiniML*)
-
-(* Intermediate language for MiniML compiler *)
-
 (* TODO: move to lem? *)
 (*val fold_left2 : forall 'a 'b 'c. ('a -> 'b -> 'c -> 'a) -> 'a -> 'b list -> 'c list -> 'a*)
 (*val range : forall 'a 'b. ('a,'b) Pmap.map -> 'b set*)
@@ -33,6 +29,31 @@ val _ = type_abbrev((*  ('a,'b) *) "alist" , ``: ('a,'b) alist``);
 (find_index y (x::xs) (n:num) = if ($=) x y then SOME n else find_index y xs (($+)n 1))`;
 
 val _ = Defn.save_defn find_index_defn;
+
+(*open MiniML*)
+
+(* observable values *)
+
+val _ = Hol_datatype `
+ ov =
+    OLit of lit
+  | OConv of conN => ov list
+  | OFn`;
+
+
+ val v_to_ov_defn = Hol_defn "v_to_ov" `
+
+(v_to_ov (Lit l) = OLit l)
+/\
+(v_to_ov (Conv cn vs) = OConv cn (MAP v_to_ov vs))
+/\
+(v_to_ov (Closure _ _ _) = OFn)
+/\
+(v_to_ov (Recclosure _ _ _) = OFn)`;
+
+val _ = Defn.save_defn v_to_ov_defn;
+
+(* Intermediate language for MiniML compiler *)
 
 val _ = Define `
  i0 = & 0`;
@@ -88,6 +109,18 @@ val _ = Hol_datatype `
  * maps instead of alists *)
 
 (* Semantics *)
+
+ val Cv_to_ov_defn = Hol_defn "Cv_to_ov" `
+
+(Cv_to_ov m (CLit l) = OLit l)
+/\
+(Cv_to_ov m (CConv cn vs) = OConv (FAPPLY  m  cn) (MAP (Cv_to_ov m) vs))
+/\
+(Cv_to_ov m (CClosure _ _ _) = OFn)
+/\
+(Cv_to_ov m (CRecClos _ _ _ _) = OFn)`;
+
+val _ = Defn.save_defn Cv_to_ov_defn;
 
  val doPrim2_defn = Hol_defn "doPrim2" `
 
@@ -1251,23 +1284,23 @@ val _ = Defn.save_defn inst_arg_defn;
 
 val _ = Defn.save_defn num_to_bool_defn;
 
- val bcv_to_v_defn = Hol_defn "bcv_to_v" `
+ val bcv_to_ov_defn = Hol_defn "bcv_to_ov" `
 
-(bcv_to_v m NTnum (Number i) = Lit (IntLit i))
+(bcv_to_ov m NTnum (Number i) = OLit (IntLit i))
 /\
-(bcv_to_v m NTbool (Number i) = Lit (Bool (num_to_bool (Num i))))
+(bcv_to_ov m NTbool (Number i) = OLit (Bool (num_to_bool (Num i))))
 /\
-(bcv_to_v m (NTapp _ ty) (Number i) =
-  Conv (FST (lookup_conv_ty m ty (Num i))) [])
+(bcv_to_ov m (NTapp _ ty) (Number i) =
+  OConv (FST (lookup_conv_ty m ty (Num i))) [])
 /\
-(bcv_to_v m (NTapp tvs ty) (Block n vs) =
+(bcv_to_ov m (NTapp tvs ty) (Block n vs) =
   let (tag, args) = lookup_conv_ty m ty n in
   let args = MAP (inst_arg tvs) args in
-  Conv tag (MAP2 (\ ty v . bcv_to_v m ty v) args vs)) (* uneta: Hol_defn sucks *)
+  OConv tag (MAP2 (\ ty v . bcv_to_ov m ty v) args vs)) (* uneta: Hol_defn sucks *)
 /\
-(bcv_to_v m NTfn (Block 0 _) = Closure [] "" (Var ""))`;
+(bcv_to_ov m NTfn (Block 0 _) = OFn)`;
 
-val _ = Defn.save_defn bcv_to_v_defn;
+val _ = Defn.save_defn bcv_to_ov_defn;
 
 (* Constant folding
 val fold_consts : exp -> exp
