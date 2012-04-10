@@ -4,13 +4,12 @@
 (* ========================================================================= *)
 
 (* interactive use:
-  app load ["wordsLib", "wordsSyntax", "systemTheory",
-            "words_emitTheory", "sum_emitTheory"];
+  app load ["wordsLib", "wordsSyntax", "systemTheory", "basis_emitTheory"];
 *)
 
 open HolKernel boolLib bossLib Parse;
 open Q updateTheory armTheory systemTheory;
-open emitLib words_emitTheory rich_list_emitTheory;
+open EmitML basis_emitTheory;
 
 val _ = new_theory "arm_emit";
 
