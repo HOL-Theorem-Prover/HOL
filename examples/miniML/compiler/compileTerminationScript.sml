@@ -1,61 +1,6 @@
-open MiniMLTheory
+open MiniMLTheory MiniMLTerminationTheory
 open HolKernel boolLib bossLib Defn CompileTheory listTheory lcsymtacs
 val _ = new_theory "compileTermination"
-
-(* move elsewhere? *)
-val exp1_size_thm = store_thm(
-"exp1_size_thm",
-``∀ls. exp1_size ls = SUM (MAP exp2_size ls) + LENGTH ls``,
-Induct >- rw[exp_size_def] >>
-qx_gen_tac `p` >>
-PairCases_on `p` >>
-srw_tac [ARITH_ss][exp_size_def])
-
-val exp3_size_thm = store_thm(
-"exp3_size_thm",
-``∀ls. exp3_size ls = SUM (MAP exp5_size ls) + LENGTH ls``,
-Induct >- rw[exp_size_def] >>
-Cases >> srw_tac[ARITH_ss][exp_size_def])
-
-val exp6_size_thm = store_thm(
-"exp6_size_thm",
-``∀ls. exp6_size ls = SUM (MAP exp7_size ls) + LENGTH ls``,
-Induct >- rw[exp_size_def] >>
-Cases >> srw_tac [ARITH_ss][exp_size_def])
-
-val exp8_size_thm = store_thm(
-"exp8_size_thm",
-``∀ls. exp8_size ls = SUM (MAP exp_size ls) + LENGTH ls``,
-Induct >- rw[exp_size_def] >>
-srw_tac [ARITH_ss][exp_size_def])
-
-val exp9_size_thm = store_thm(
-"exp9_size_thm",
-``∀ls. exp9_size ls = SUM (MAP v_size ls) + LENGTH ls``,
-Induct >- rw[exp_size_def] >>
-srw_tac [ARITH_ss][exp_size_def])
-
-val pat1_size_thm = store_thm(
-"pat1_size_thm",
-``∀ls. pat1_size ls = SUM (MAP pat_size ls) + LENGTH ls``,
-Induct >- rw[pat_size_def] >>
-srw_tac [ARITH_ss][pat_size_def])
-
-val SUM_MAP_exp2_size_thm = store_thm(
-"SUM_MAP_exp2_size_thm",
-``∀defs. SUM (MAP exp2_size defs) = SUM (MAP (list_size char_size) (MAP FST defs)) +
-                                    SUM (MAP exp4_size (MAP SND defs)) +
-                                    LENGTH defs``,
-Induct >- rw[exp_size_def] >>
-qx_gen_tac `p` >>
-PairCases_on `p` >>
-srw_tac[ARITH_ss][exp_size_def])
-
-val exp_size_positive = store_thm(
-"exp_size_positive",
-``∀e. 0 < exp_size e``,
-Induct >> srw_tac[ARITH_ss][exp_size_def])
-val _ = export_rewrites["exp_size_positive"]
 
 (* size helper theorems *)
 

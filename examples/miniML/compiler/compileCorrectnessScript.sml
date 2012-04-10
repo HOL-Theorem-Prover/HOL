@@ -16,9 +16,6 @@ rw[Abbr`ff`] >>
 TRY (Cases_on `h` >> rw[]) >>
 metis_tac[])
 
-(* TODO: add to MiniMLTerminationTheory? *)
-val _ = augment_srw_ss[rewrites[lookup_def]]
-
 (* TODO: move where? *)
 
 val type_es_every_map = store_thm(

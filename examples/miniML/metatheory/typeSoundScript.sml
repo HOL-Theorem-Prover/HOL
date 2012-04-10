@@ -486,8 +486,7 @@ rw [] >>
 fs [lookup_def] >>
 rw [] >>
 cases_on `tenv` >>
-fs [] >-
-fs [Once type_v_cases, bind_def] >>
+fs [] >>
 fs [lookup_def] >>
 cases_on `h` >>
 cases_on `h'` >>
