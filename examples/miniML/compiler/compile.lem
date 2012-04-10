@@ -155,7 +155,7 @@ Cevaluate env (CRaise error) (Rerr (Rraise error))
 
 and
 forall env n v.
-Pmap.find n env = v
+(Pmap.find n env = v) (* TODO: parens :( *)
 ==>
 Cevaluate env (CVar n) (Rval v)
 
