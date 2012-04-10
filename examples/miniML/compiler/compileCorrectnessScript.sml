@@ -91,13 +91,6 @@ val well_typed_App_subexp = store_thm(
 rw[] >> match_mp_tac (MP_CANON well_typed_subexp_lem) >>
 metis_tac [subexp_rules])
 
-(* TODO: move these into the lem source? *)
-
-val map_result_def = Define`
-  (map_result f (Rval v) = Rval (f v)) ∧
-  (map_result f (Rerr e) = Rerr e)`;
-val _ = export_rewrites["map_result_def"];
-
 (* nicer induction theorem for evaluate *)
 (* TODO: move? *)
 
@@ -274,5 +267,26 @@ ho_match_mp_tac evaluate_ind >>
 rw[] >> PROVE_TAC[])
 
 (* Prove compiler phases preserve semantics *)
+
+(*
+val exp_to_Cexp_thm1 = store_thm(
+"exp_to_Cexp_thm1",
+``∀cenv env exp res.
+   evaluate cenv env exp res ⇒
+   (res ≠ Rerr Rtype_error) ⇒
+   ∀cm s. ∃s' Cexp. (exp_to_Cexp F cm (s,exp) = (s',Cexp)) ∧
+     ∀cw Cenv. (good_cmaps cenv cm cw) ∧
+               (good_envs env s s' Cenv) ⇒
+       ∃Cres. Cevaluate Cenv Cexp Cres ∧
+              (map_result (Cv_to_ov cw) Cres =
+               map_result v_to_ov res)``,
+ho_match_mp_tac evaluate_nice_ind >>
+strip_tac >- (
+  rw[exp_to_Cexp_def,
+     Once CompileTheory.Cevaluate_cases]) >>
+strip_tac >- (
+  rw[exp_to_Cexp_def]
+  (* TODO: define exp_to_Cexp on non-literal values *)
+*)
 
 val _ = export_theory ()

@@ -242,4 +242,7 @@ val _ = save_thm ("v_to_ov_def", v_to_ov_def);
 val _ = save_thm ("v_to_ov_ind", v_to_ov_ind);
 val _ = export_rewrites["v_to_ov_def"];
 
+val _ = save_thm ("map_result_def", map_result_def);
+val _ = export_rewrites["map_result_def"];
+
 val _ = export_theory()
