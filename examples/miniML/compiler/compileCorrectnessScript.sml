@@ -94,16 +94,18 @@ metis_tac [subexp_rules])
 (* nicer induction theorem for evaluate *)
 (* TODO: move? *)
 
-val (evaluate_list_with_rules,evaluate_list_with_ind,evaluate_list_with_cases) = Hol_reln`
-(evaluate_list_with P [] (Rval [])) ∧
-(P e (Rval v) ∧
- evaluate_list_with P es (Rval vs) ⇒
- evaluate_list_with P (e::es) (Rval (v::vs))) ∧
-(P e (Rval v) ∧
- evaluate_list_with P es (Rerr err) ⇒
- evaluate_list_with P (e::es) (Rerr err)) ∧
-(P e (Rerr err) ⇒
- evaluate_list_with P (e::es) (Rerr err))`
+val (evaluate_list_with_rules,evaluate_list_with_ind,evaluate_list_with_cases) = Hol_reln [ANTIQUOTE(
+evaluate_rules |> SIMP_RULE (srw_ss()) [] |> concl |>
+strip_conj |>
+Lib.filter (fn tm => tm |> strip_forall |> snd |> strip_imp |> snd |> strip_comb |> fst |> same_const ``evaluate_list``) |>
+let val t1 = ``evaluate cenv env``
+    val t2 = ``evaluate_list cenv env``
+    val tP = type_of t1
+    val P = mk_var ("P",tP)
+    val ew = mk_comb(mk_var("evaluate_list_with",tP --> type_of t2),P)
+in List.map (fn tm => tm |> strip_forall |> snd |>
+                   subst [t1|->P, t2|->ew])
+end |> list_mk_conj)]
 
 val evaluate_list_with_evaluate = store_thm(
 "evaluate_list_with_evaluate",
@@ -117,21 +119,18 @@ rw[Once evaluate_cases] >>
 rw[Once evaluate_list_with_cases,SimpRHS] >>
 PROVE_TAC[])
 
-val (evaluate_match_with_rules,evaluate_match_with_ind,evaluate_match_with_cases) = Hol_reln`
-(evaluate_match_with P cenv env v [] (Rerr (Rraise Bind_error))) ∧
-(ALL_DISTINCT (pat_bindings p []) ∧
- (pmatch cenv p v env = Match env') ∧
- P cenv env' e bv ⇒
- evaluate_match_with P cenv env v ((p,e)::pes) bv) ∧
-(ALL_DISTINCT (pat_bindings p []) ∧
- (pmatch cenv p v env = No_match) ∧
- evaluate_match_with P cenv env v pes bv ⇒
- evaluate_match_with P cenv env v ((p,e)::pes) bv) ∧
-(ALL_DISTINCT (pat_bindings p []) ∧
- (pmatch cenv p v env = Match_type_error) ⇒
- evaluate_match_with P cenv env v ((p,e)::pes) (Rerr Rtype_error)) ∧
-(¬ALL_DISTINCT (pat_bindings p []) ⇒
- evaluate_match_with P cenv env v ((p,e)::pes) (Rerr Rtype_error))`
+val (evaluate_match_with_rules,evaluate_match_with_ind,evaluate_match_with_cases) = Hol_reln [ANTIQUOTE(
+evaluate_rules |> SIMP_RULE (srw_ss()) [] |> concl |>
+strip_conj |>
+Lib.filter (fn tm => tm |> strip_forall |> snd |> strip_imp |> snd |> strip_comb |> fst |> same_const ``evaluate_match``) |>
+let val t1 = ``evaluate``
+    val t2 = ``evaluate_match``
+    val tP = type_of t1
+    val P = mk_var ("P",tP)
+    val ew = mk_comb(mk_var("evaluate_match_with",tP --> type_of t2),P)
+in List.map (fn tm => tm |> strip_forall |> snd |>
+                   subst [t1|->P, t2|->ew])
+end |> list_mk_conj)]
 
 val evaluate_match_with_evaluate = store_thm(
 "evaluate_match_with_evaluate",
@@ -144,127 +143,21 @@ rw[Once evaluate_cases] >>
 rw[Once evaluate_match_with_cases,SimpRHS] >>
 PROVE_TAC[])
 
-val evaluate_nice_ind = store_thm(
+val evaluate_list_implies_with = store_thm(
+"evaluate_list_implies_with",
+``evaluate_list cenv env es rs ⇒ evaluate_list_with (P cenv env)
+evaluate_list_with_evaluate
+
+val evaluate_nice_ind = save_thm(
 "evaluate_nice_ind",
-``∀P.
-(∀cenv env err. P cenv env (Raise err) (Rerr (Rraise err))) ∧
-(∀cenv env v. P cenv env (Val v) (Rval v)) ∧
-(∀cenv env cn es vs.
- do_con_check cenv cn (LENGTH es) ∧
- evaluate_list_with (P cenv env) es (Rval vs) ⇒
- P cenv env (Con cn es) (Rval (Conv cn vs))) ∧
-(∀cenv env cn es.
- ¬do_con_check cenv cn (LENGTH es) ⇒
- P cenv env (Con cn es) (Rerr Rtype_error)) ∧
-(∀cenv env cn es err.
- do_con_check cenv cn (LENGTH es) ∧
- evaluate_list_with (P cenv env) es (Rerr err) ⇒
- P cenv env (Con cn es) (Rerr err)) ∧
-(∀cenv env n v.
- (lookup n env = SOME v) ⇒
- P cenv env (Var n) (Rval v)) ∧
-(∀cenv env n.
- (lookup n env = NONE) ⇒
- P cenv env (Var n) (Rerr Rtype_error)) ∧
-(∀cenv env n e.
- P cenv env (Fun n e) (Rval (Closure env n e))) ∧
-(∀cenv env op e1 e2 v1 v2 env' e3 bv.
- P cenv env e1 (Rval v1) ∧
- P cenv env e2 (Rval v2) ∧
- (do_app env op v1 v2 = SOME (env',e3)) ∧
- P cenv env' e3 bv ⇒
- P cenv env (App op e1 e2) bv) ∧
-(∀cenv env op e1 e2 v1 v2.
- P cenv env e1 (Rval v1) ∧
- P cenv env e2 (Rval v2) ∧ (do_app env op v1 v2 = NONE) ⇒
- P cenv env (App op e1 e2) (Rerr Rtype_error)) ∧
-(∀cenv env op e1 e2 v1 err.
- P cenv env e1 (Rval v1) ∧
- P cenv env e2 (Rerr err) ⇒
- P cenv env (App op e1 e2) (Rerr err)) ∧
-(∀cenv env op e1 e2 err.
- P cenv env e1 (Rerr err) ⇒
- P cenv env (App op e1 e2) (Rerr err)) ∧
-(∀cenv env op e1 e2 v e' bv.
- P cenv env e1 (Rval v) ∧ (do_log op v e2 = SOME e') ∧
- P cenv env e' bv ⇒
- P cenv env (Log op e1 e2) bv) ∧
-(∀cenv env op e1 e2 v.
- P cenv env e1 (Rval v) ∧ (do_log op v e2 = NONE) ⇒
- P cenv env (Log op e1 e2) (Rerr Rtype_error)) ∧
-(∀cenv env op e1 e2 err.
- P cenv env e1 (Rerr err) ⇒
- P cenv env (Log op e1 e2) (Rerr err)) ∧
-(∀cenv env e1 e2 e3 v e' bv.
- P cenv env e1 (Rval v) ∧ (do_if v e2 e3 = SOME e') ∧
- P cenv env e' bv ⇒
- P cenv env (If e1 e2 e3) bv) ∧
-(∀cenv env e1 e2 e3 v.
- P cenv env e1 (Rval v) ∧ (do_if v e2 e3 = NONE) ⇒
- P cenv env (If e1 e2 e3) (Rerr Rtype_error)) ∧
-(∀cenv env e1 e2 e3 err.
- P cenv env e1 (Rerr err) ⇒
- P cenv env (If e1 e2 e3) (Rerr err)) ∧
-(∀cenv env e pes v bv.
- P cenv env e (Rval v) ∧
- evaluate_match_with P cenv env v pes bv ⇒
- P cenv env (Mat e pes) bv) ∧
-(∀cenv env e pes err.
- P cenv env e (Rerr err) ⇒
- P cenv env (Mat e pes) (Rerr err)) ∧
-(∀cenv env n e1 e2 v bv.
- P cenv env e1 (Rval v) ∧
- P cenv (bind n v env) e2 bv ⇒
- P cenv env (Let n e1 e2) bv) ∧
-(∀cenv env n e1 e2 err.
- P cenv env e1 (Rerr err) ⇒
- P cenv env (Let n e1 e2) (Rerr err)) ∧
-(∀cenv env funs e bv.
- ALL_DISTINCT (MAP (λ(x,y,z). x) funs) ∧
- P cenv (build_rec_env funs env) e bv ⇒
- P cenv env (Letrec funs e) bv) ∧
-(∀cenv env funs e.
- ¬ALL_DISTINCT (MAP (λ(x,y,z). x) funs) ⇒
- P cenv env (Letrec funs e) (Rerr Rtype_error)) ∧
-(∀cenv env. evaluate_list_with (P cenv env) [] (Rval [])) ∧
-(∀cenv env e es v vs.
- P cenv env e (Rval v) ∧
- evaluate_list_with (P cenv env) es (Rval vs) ⇒
- evaluate_list_with (P cenv env) (e::es) (Rval (v::vs))) ∧
-(∀cenv env e es err.
- P cenv env e (Rerr err) ⇒
- evaluate_list_with (P cenv env) (e::es) (Rerr err)) ∧
-(∀cenv env e es v err.
- P cenv env e (Rval v) ∧
- evaluate_list_with (P cenv env) es (Rerr err) ⇒
- evaluate_list_with (P cenv env) (e::es) (Rerr err)) ∧
-(∀cenv env v.
- evaluate_match_with P cenv env v [] (Rerr (Rraise Bind_error))) ∧
-(∀cenv env v p e pes env' bv.
- ALL_DISTINCT (pat_bindings p []) ∧
- (pmatch cenv p v env = Match env') ∧ P cenv env' e bv ⇒
- evaluate_match_with P cenv env v ((p,e)::pes) bv) ∧
-(∀cenv env v p e pes bv.
- ALL_DISTINCT (pat_bindings p []) ∧
- (pmatch cenv p v env = No_match) ∧
- evaluate_match_with P cenv env v pes bv ⇒
- evaluate_match_with P cenv env v ((p,e)::pes) bv) ∧
-(∀cenv env v p e pes.
- (pmatch cenv p v env = Match_type_error) ⇒
- evaluate_match_with P cenv env v ((p,e)::pes) (Rerr Rtype_error)) ∧
-(∀cenv env v p e pes.
- ¬ALL_DISTINCT (pat_bindings p []) ⇒
- evaluate_match_with P cenv env v ((p,e)::pes) (Rerr Rtype_error))
-⇒ (∀cenv env exp res.
-   evaluate cenv env exp res
-   ⇒ P cenv env exp res)``,
-ntac 2 strip_tac >>
-qsuff_tac `
-(∀cenv env exp res. evaluate cenv env exp res ⇒ P cenv env exp res) ∧
-(∀cenv env exps ress. evaluate_list cenv env exps ress ⇒ evaluate_list_with (P cenv env) exps ress) ∧
-(∀cenv env v pes res. evaluate_match cenv env v pes res ⇒ evaluate_match_with P cenv env v pes res)` >- rw[] >>
-ho_match_mp_tac evaluate_ind >>
-rw[] >> PROVE_TAC[])
+evaluate_ind
+|> Q.SPECL [`P`,`λcenv env. evaluate_list_with (P cenv env)`,`evaluate_match_with P`] |> SIMP_RULE (srw_ss()) []
+|> UNDISCH_ALL
+|> CONJUNCTS
+|> List.hd
+|> DISCH_ALL
+|> Q.GEN `P`
+|> SIMP_RULE (srw_ss()) [])
 
 (* Prove compiler phases preserve semantics *)
 
