@@ -140,11 +140,6 @@ rw[Once evaluate_cases] >>
 rw[Once evaluate_match_with_cases,SimpRHS] >>
 PROVE_TAC[])
 
-val evaluate_list_implies_with = store_thm(
-"evaluate_list_implies_with",
-``evaluate_list cenv env es rs ⇒ evaluate_list_with (P cenv env)
-evaluate_list_with_evaluate
-
 val evaluate_nice_ind = save_thm(
 "evaluate_nice_ind",
 evaluate_ind
@@ -156,14 +151,40 @@ evaluate_ind
 |> Q.GEN `P`
 |> SIMP_RULE (srw_ss()) [])
 
+(* TODO: save in compileTerminationTheory? *)
+val Cevaluate_cases = CompileTheory.Cevaluate_cases
+val extend_def = CompileTheory.extend_def
+
 (* Prove compiler phases preserve semantics *)
+
+val good_cmaps_def = Define`
+good_cmaps cenv cm cw =
+  (∀cn n. do_con_check cenv cn n ⇒ cn IN FDOM cm) ∧
+  (∀cn. cn IN FDOM cm ⇒ cm ' cn IN FDOM cw ∧
+                        (cw ' (cm ' cn) = cn))`
+
+val good_envs_def = Define`
+  good_envs env s s' Cenv = s.cmap SUBMAP s'.cmap`
+
+(*
+val exp_to_Cexp_cmap_SUBMAP = store_thm(
+"exp_to_Cexp_cmap_SUBMAP",
+``∀b cm s exp s' Cexp.
+  (exp_to_Cexp b cm (s,exp) = (s',Cexp)) ⇒
+  s.m SUBMAP s'.m``,
+qsuff_tac `∀b cm s exp s' Cexp.
+  (exp_to_Cexp b cm (s,exp) = (s',Cexp)) ⇒
+  (FST (s,exp)).m SUBMAP s'.m` >- rw[] >>
+ho_match_mp_tac exp_to_Cexp_ind >>
+rw[exp_to_Cexp_def,extend_def]
+*)
 
 (*
 val exp_to_Cexp_thm1 = store_thm(
 "exp_to_Cexp_thm1",
 ``∀cenv env exp res.
    evaluate cenv env exp res ⇒
-   (res ≠ Rerr Rtype_error) ⇒
+   is_source_exp exp ∧ (res ≠ Rerr Rtype_error) ⇒
    ∀cm s. ∃s' Cexp. (exp_to_Cexp F cm (s,exp) = (s',Cexp)) ∧
      ∀cw Cenv. (good_cmaps cenv cm cw) ∧
                (good_envs env s s' Cenv) ⇒
@@ -173,10 +194,50 @@ val exp_to_Cexp_thm1 = store_thm(
 ho_match_mp_tac evaluate_nice_ind >>
 strip_tac >- (
   rw[exp_to_Cexp_def,
-     Once CompileTheory.Cevaluate_cases]) >>
+     Once Cevaluate_cases]) >>
 strip_tac >- (
-  rw[exp_to_Cexp_def]
-  (* TODO: define exp_to_Cexp on non-literal values *)
+  ntac 2 gen_tac >>
+  Cases >> rw[is_source_exp_def] >>
+  rw[exp_to_Cexp_def] >>
+  rw[Once Cevaluate_cases]) >>
+strip_tac >- (
+  rw[exp_to_Cexp_def,good_cmaps_def] >>
+  res_tac >>
+  qpat_assum `do_con_check X Y Z` kall_tac >>
+  fs[is_source_exp_def] >>
+  Induct_on `es` >- (
+    rw[Once evaluate_list_with_cases] >>
+    rw[Once Cevaluate_cases] >>
+    rw[Once Cevaluate_cases] >>
+    qexists_tac `Rval (CConv (cm ' cn) [])` >>
+    rw[] ) >>
+  rw[Once evaluate_list_with_cases] >>
+  fs[is_source_exp_def] >>
+  first_x_assum (qspecl_then [`cm`,`s`] mp_tac) >>
+  rw[] >> rw[] >>
+  rw[Once Cevaluate_cases]
+  ... ) >>
+strip_tac >- (
+  rw[exp_to_Cexp_def] ) >>
+strip_tac >- (
+  rw[exp_to_Cexp_def] >>
+  rw[Once Cevaluate_cases] >>
+  qexists_tac `Rerr err` >>
+  rw[] >>
+  fs[is_source_exp_def] >>
+  qpat_assum `do_con_check X Y Z` kall_tac >>
+  Induct_on `es` >>
+  rw[Once evaluate_list_with_cases] >>
+  fs[] >>
+  first_x_assum (qspecl_then [`cm`,`s`] mp_tac) >>
+  rw[] >>
+  rw[Once Cevaluate_cases] >>
+  first_x_assum (qspecl_then [`cw`,`Cenv`] mp_tac) >>
+  rw[good_envs_def] >>
+  Cases_on `Cres` >> fs[] >>
+  PROVE_TAC[] ) >>
+strip_tac >- (
+  rw[]
 *)
 
 val _ = export_theory ()
