@@ -16,6 +16,9 @@ rw[Abbr`ff`] >>
 TRY (Cases_on `h` >> rw[]) >>
 metis_tac[])
 
+(* TODO: add to MiniMLTerminationTheory? *)
+val _ = augment_srw_ss[rewrites[lookup_def]]
+
 (* TODO: move where? *)
 
 val type_es_every_map = store_thm(
@@ -95,230 +98,181 @@ val map_result_def = Define`
   (map_result f (Rerr e) = Rerr e)`;
 val _ = export_rewrites["map_result_def"];
 
-val map_v_def = tDefine "map_v"`
-  (map_v f (Lit l) = Lit l) ∧
-  (map_v f (Conv n vs) = Conv n (MAP (map_v f) vs)) ∧
-  (map_v f (Closure env n e) =
-   Closure (MAP (λ(n,v). (n,map_v f v)) env) n (f e)) ∧
-  (map_v f (Recclosure env defs n) =
-   Recclosure
-     (MAP (λ(n,v). (n,map_v f v)) env)
-     (MAP (λ(n,m,e). (n,m,f e)) defs)
-     n)`(
-WF_REL_TAC `measure (v_size o SND)` >>
-srw_tac[ARITH_ss][exp3_size_thm,exp9_size_thm] >>
-imp_res_tac SUM_MAP_MEM_bound >>
-TRY (pop_assum (qspec_then `exp5_size` mp_tac)) >>
-TRY (pop_assum (qspec_then `v_size` mp_tac)) >>
-srw_tac[ARITH_ss][exp_size_def])
-val _ = export_rewrites["map_v_def"];
+(* nicer induction theorem for evaluate *)
+(* TODO: move? *)
 
-(* ------------------------------------------------------------------------- *)
+val (evaluate_list_with_rules,evaluate_list_with_ind,evaluate_list_with_cases) = Hol_reln`
+(evaluate_list_with P [] (Rval [])) ∧
+(P e (Rval v) ∧
+ evaluate_list_with P es (Rval vs) ⇒
+ evaluate_list_with P (e::es) (Rval (v::vs))) ∧
+(P e (Rval v) ∧
+ evaluate_list_with P es (Rerr err) ⇒
+ evaluate_list_with P (e::es) (Rerr err)) ∧
+(P e (Rerr err) ⇒
+ evaluate_list_with P (e::es) (Rerr err))`
 
-(* TODO: add to MiniMLTerminationTheory? *)
-val _ = augment_srw_ss[rewrites[lookup_def]]
+val evaluate_list_with_evaluate = store_thm(
+"evaluate_list_with_evaluate",
+``∀cenv env. evaluate_list cenv env = evaluate_list_with (evaluate cenv env)``,
+ntac 2 gen_tac >>
+simp_tac std_ss [Once FUN_EQ_THM] >>
+Induct >>
+rw[FUN_EQ_THM] >-
+  rw[Once evaluate_cases,Once evaluate_list_with_cases] >>
+rw[Once evaluate_cases] >>
+rw[Once evaluate_list_with_cases,SimpRHS] >>
+PROVE_TAC[])
+
+val (evaluate_match_with_rules,evaluate_match_with_ind,evaluate_match_with_cases) = Hol_reln`
+(evaluate_match_with P cenv env v [] (Rerr (Rraise Bind_error))) ∧
+(ALL_DISTINCT (pat_bindings p []) ∧
+ (pmatch cenv p v env = Match env') ∧
+ P cenv env' e bv ⇒
+ evaluate_match_with P cenv env v ((p,e)::pes) bv) ∧
+(ALL_DISTINCT (pat_bindings p []) ∧
+ (pmatch cenv p v env = No_match) ∧
+ evaluate_match_with P cenv env v pes bv ⇒
+ evaluate_match_with P cenv env v ((p,e)::pes) bv) ∧
+(ALL_DISTINCT (pat_bindings p []) ∧
+ (pmatch cenv p v env = Match_type_error) ⇒
+ evaluate_match_with P cenv env v ((p,e)::pes) (Rerr Rtype_error)) ∧
+(¬ALL_DISTINCT (pat_bindings p []) ⇒
+ evaluate_match_with P cenv env v ((p,e)::pes) (Rerr Rtype_error))`
+
+val evaluate_match_with_evaluate = store_thm(
+"evaluate_match_with_evaluate",
+``evaluate_match = evaluate_match_with evaluate``,
+simp_tac std_ss [FUN_EQ_THM] >>
+ntac 3 gen_tac >>
+Induct >-
+  rw[Once evaluate_cases,Once evaluate_match_with_cases] >>
+rw[Once evaluate_cases] >>
+rw[Once evaluate_match_with_cases,SimpRHS] >>
+PROVE_TAC[])
+
+val evaluate_nice_ind = store_thm(
+"evaluate_nice_ind",
+``∀P.
+(∀cenv env err. P cenv env (Raise err) (Rerr (Rraise err))) ∧
+(∀cenv env v. P cenv env (Val v) (Rval v)) ∧
+(∀cenv env cn es vs.
+ do_con_check cenv cn (LENGTH es) ∧
+ evaluate_list_with (P cenv env) es (Rval vs) ⇒
+ P cenv env (Con cn es) (Rval (Conv cn vs))) ∧
+(∀cenv env cn es.
+ ¬do_con_check cenv cn (LENGTH es) ⇒
+ P cenv env (Con cn es) (Rerr Rtype_error)) ∧
+(∀cenv env cn es err.
+ do_con_check cenv cn (LENGTH es) ∧
+ evaluate_list_with (P cenv env) es (Rerr err) ⇒
+ P cenv env (Con cn es) (Rerr err)) ∧
+(∀cenv env n v.
+ (lookup n env = SOME v) ⇒
+ P cenv env (Var n) (Rval v)) ∧
+(∀cenv env n.
+ (lookup n env = NONE) ⇒
+ P cenv env (Var n) (Rerr Rtype_error)) ∧
+(∀cenv env n e.
+ P cenv env (Fun n e) (Rval (Closure env n e))) ∧
+(∀cenv env op e1 e2 v1 v2 env' e3 bv.
+ P cenv env e1 (Rval v1) ∧
+ P cenv env e2 (Rval v2) ∧
+ (do_app env op v1 v2 = SOME (env',e3)) ∧
+ P cenv env' e3 bv ⇒
+ P cenv env (App op e1 e2) bv) ∧
+(∀cenv env op e1 e2 v1 v2.
+ P cenv env e1 (Rval v1) ∧
+ P cenv env e2 (Rval v2) ∧ (do_app env op v1 v2 = NONE) ⇒
+ P cenv env (App op e1 e2) (Rerr Rtype_error)) ∧
+(∀cenv env op e1 e2 v1 err.
+ P cenv env e1 (Rval v1) ∧
+ P cenv env e2 (Rerr err) ⇒
+ P cenv env (App op e1 e2) (Rerr err)) ∧
+(∀cenv env op e1 e2 err.
+ P cenv env e1 (Rerr err) ⇒
+ P cenv env (App op e1 e2) (Rerr err)) ∧
+(∀cenv env op e1 e2 v e' bv.
+ P cenv env e1 (Rval v) ∧ (do_log op v e2 = SOME e') ∧
+ P cenv env e' bv ⇒
+ P cenv env (Log op e1 e2) bv) ∧
+(∀cenv env op e1 e2 v.
+ P cenv env e1 (Rval v) ∧ (do_log op v e2 = NONE) ⇒
+ P cenv env (Log op e1 e2) (Rerr Rtype_error)) ∧
+(∀cenv env op e1 e2 err.
+ P cenv env e1 (Rerr err) ⇒
+ P cenv env (Log op e1 e2) (Rerr err)) ∧
+(∀cenv env e1 e2 e3 v e' bv.
+ P cenv env e1 (Rval v) ∧ (do_if v e2 e3 = SOME e') ∧
+ P cenv env e' bv ⇒
+ P cenv env (If e1 e2 e3) bv) ∧
+(∀cenv env e1 e2 e3 v.
+ P cenv env e1 (Rval v) ∧ (do_if v e2 e3 = NONE) ⇒
+ P cenv env (If e1 e2 e3) (Rerr Rtype_error)) ∧
+(∀cenv env e1 e2 e3 err.
+ P cenv env e1 (Rerr err) ⇒
+ P cenv env (If e1 e2 e3) (Rerr err)) ∧
+(∀cenv env e pes v bv.
+ P cenv env e (Rval v) ∧
+ evaluate_match_with P cenv env v pes bv ⇒
+ P cenv env (Mat e pes) bv) ∧
+(∀cenv env e pes err.
+ P cenv env e (Rerr err) ⇒
+ P cenv env (Mat e pes) (Rerr err)) ∧
+(∀cenv env n e1 e2 v bv.
+ P cenv env e1 (Rval v) ∧
+ P cenv (bind n v env) e2 bv ⇒
+ P cenv env (Let n e1 e2) bv) ∧
+(∀cenv env n e1 e2 err.
+ P cenv env e1 (Rerr err) ⇒
+ P cenv env (Let n e1 e2) (Rerr err)) ∧
+(∀cenv env funs e bv.
+ ALL_DISTINCT (MAP (λ(x,y,z). x) funs) ∧
+ P cenv (build_rec_env funs env) e bv ⇒
+ P cenv env (Letrec funs e) bv) ∧
+(∀cenv env funs e.
+ ¬ALL_DISTINCT (MAP (λ(x,y,z). x) funs) ⇒
+ P cenv env (Letrec funs e) (Rerr Rtype_error)) ∧
+(∀cenv env. evaluate_list_with (P cenv env) [] (Rval [])) ∧
+(∀cenv env e es v vs.
+ P cenv env e (Rval v) ∧
+ evaluate_list_with (P cenv env) es (Rval vs) ⇒
+ evaluate_list_with (P cenv env) (e::es) (Rval (v::vs))) ∧
+(∀cenv env e es err.
+ P cenv env e (Rerr err) ⇒
+ evaluate_list_with (P cenv env) (e::es) (Rerr err)) ∧
+(∀cenv env e es v err.
+ P cenv env e (Rval v) ∧
+ evaluate_list_with (P cenv env) es (Rerr err) ⇒
+ evaluate_list_with (P cenv env) (e::es) (Rerr err)) ∧
+(∀cenv env v.
+ evaluate_match_with P cenv env v [] (Rerr (Rraise Bind_error))) ∧
+(∀cenv env v p e pes env' bv.
+ ALL_DISTINCT (pat_bindings p []) ∧
+ (pmatch cenv p v env = Match env') ∧ P cenv env' e bv ⇒
+ evaluate_match_with P cenv env v ((p,e)::pes) bv) ∧
+(∀cenv env v p e pes bv.
+ ALL_DISTINCT (pat_bindings p []) ∧
+ (pmatch cenv p v env = No_match) ∧
+ evaluate_match_with P cenv env v pes bv ⇒
+ evaluate_match_with P cenv env v ((p,e)::pes) bv) ∧
+(∀cenv env v p e pes.
+ (pmatch cenv p v env = Match_type_error) ⇒
+ evaluate_match_with P cenv env v ((p,e)::pes) (Rerr Rtype_error)) ∧
+(∀cenv env v p e pes.
+ ¬ALL_DISTINCT (pat_bindings p []) ⇒
+ evaluate_match_with P cenv env v ((p,e)::pes) (Rerr Rtype_error))
+⇒ (∀cenv env exp res.
+   evaluate cenv env exp res
+   ⇒ P cenv env exp res)``,
+ntac 2 strip_tac >>
+qsuff_tac `
+(∀cenv env exp res. evaluate cenv env exp res ⇒ P cenv env exp res) ∧
+(∀cenv env exps ress. evaluate_list cenv env exps ress ⇒ evaluate_list_with (P cenv env) exps ress) ∧
+(∀cenv env v pes res. evaluate_match cenv env v pes res ⇒ evaluate_match_with P cenv env v pes res)` >- rw[] >>
+ho_match_mp_tac evaluate_ind >>
+rw[] >> PROVE_TAC[])
 
 (* Prove compiler phases preserve semantics *)
-
-(*
-val remove_Gt_Geq_eval = store_thm(
-"remove_Gt_Geq_eval",
-``∀env exp res. evaluate' env exp res = evaluate' env (remove_Gt_Geq exp) (map_result (map_v remove_Gt_Geq) res)``,
-rw[EQ_IMP_THM] >- (
-  qsuff_tac`
-  (∀env exp res. evaluate' env exp res ⇒ evaluate' env (remove_Gt_Geq exp) (map_result (map_v remove_Gt_Geq) res)) ∧
-  (∀env exps ress. evaluate_list' env exps ress ⇒ evaluate_list' env (MAP remove_Gt_Geq exps) (map_result (MAP (map_v remove_Gt_Geq)) ress)) ∧
-  (∀env v pes res. evaluate_match' env v pes res ⇒ evaluate_match' env v (MAP (λ(p,e). (p,remove_Gt_Geq e)) pes) (map_result (map_v remove_Gt_Geq) res))` >- rw[] >>
-  ho_match_mp_tac evaluate'_ind >>
-  srw_tac[boolSimps.ETA_ss][remove_Gt_Geq_def,
-  evaluate'_var,evaluate'_log,evaluate'_con]
-*)
-
-(*
-``∀env exp res. evaluate' env exp res = evaluate' env (remove_mat_exp exp) res``
-
-``∀env exp res cm vm nv ds dm dn. evaluate' env exp res ⇒
-  Cevaluate
-    (v_to_Cv o_f (env f_o_f (invert vm)))
-    (exp_to_Cexp false cm <| m = vm; n = nv; ds = ds; dm = dm; dn = dn|>)
-    (res_to_Cres res)``
-*)
-
-(*
-val v_remove_ctors_Conv = store_thm(
-"v_remove_ctors_Conv",
-``∀cnmap cn vs. v_remove_ctors cnmap (Conv cn vs) =
-                case cn of
-                  NONE => Conv NONE (MAP (v_remove_ctors cnmap) vs)
-                | SOME cn => Conv NONE (Lit (IntLit (cnmap cn)) ::
-                                        MAP (v_remove_ctors cnmap) vs)``,
-gen_tac >>
-Cases >> rw [remove_ctors_def] >>
-metis_tac [])
-val _ = export_rewrites["v_remove_ctors_Conv"]
-
-val lookup_remove_ctors = store_thm(
-"lookup_remove_ctors",
-``∀cnmap env n. lookup n (env_remove_ctors cnmap env) =
-   case lookup n env of
-     NONE => NONE
-   | SOME v => SOME (v_remove_ctors cnmap v)``,
-gen_tac >> Induct >-
-  rw [remove_ctors_def] >>
-Cases >>
-rw [remove_ctors_def]);
-
-val bind_remove_ctors = store_thm(
-"bind_remove_ctors",
-``∀cnmap n v env. env_remove_ctors cnmap (bind n v env) =
-   bind n (v_remove_ctors cnmap v) (env_remove_ctors cnmap env)``,
-ntac 3 gen_tac >>
-Induct >>
-rw [remove_ctors_def,bind_def]);
-val _ = export_rewrites["bind_remove_ctors"];
-
-val find_recfun_remove_ctors = store_thm(
-"find_recfun_remove_ctors",
-``∀cnmap n fs. find_recfun n (funs_remove_ctors cnmap fs) =
-   OPTION_MAP (λ(n,e). (n, remove_ctors cnmap e)) (find_recfun n fs)``,
-ntac 2 gen_tac >>
-Induct >- (
-  rw [remove_ctors_def,Once find_recfun_def] >>
-  rw [Once find_recfun_def] ) >>
-qx_gen_tac `h` >>
-PairCases_on `h` >>
-rw [remove_ctors_def] >>
-rw [Once find_recfun_def] >- (
-  rw [Once find_recfun_def] ) >>
-rw [Once find_recfun_def, SimpRHS] );
-val _ = export_rewrites["find_recfun_remove_ctors"];
-
-val funs_remove_ctors_maps = store_thm(
-"funs_remove_ctors_maps",
-``∀cnmap funs. funs_remove_ctors cnmap funs =
-  MAP (λ(vn1,vn2,e). (vn1,vn2,remove_ctors cnmap e)) funs``,
-gen_tac >>
-Induct >- rw[remove_ctors_def] >>
-qx_gen_tac `p` >>
-PairCases_on `p` >>
-rw[remove_ctors_def]);
-
-val env_remove_ctors_maps = store_thm(
-"env_remove_ctors_maps",
-``∀cnmap env. env_remove_ctors cnmap env = MAP (λ(n,v). (n,v_remove_ctors cnmap v)) env``,
-gen_tac >>
-Induct >- rw [remove_ctors_def] >>
-Cases >>
-rw[remove_ctors_def]);
-
-val gen_build_rec_env_def = Define`
-  gen_build_rec_env funs env funs1 env1 =
-    FOLDR (λ(f,x,e) env'. bind f (Recclosure env1 funs1 f) env') env funs`
-
-val gen_build_rec_env_remove_ctors = store_thm(
-"gen_build_rec_env_remove_ctors",
-``∀cnmap funs env funs1 env1.
-  gen_build_rec_env
-    (funs_remove_ctors cnmap funs)
-    (env_remove_ctors cnmap env)
-    (funs_remove_ctors cnmap funs1)
-    (env_remove_ctors cnmap env1)
-  = env_remove_ctors cnmap (gen_build_rec_env funs env funs1 env1)``,
-gen_tac >>
-Induct >-
-  fs[gen_build_rec_env_def,funs_remove_ctors_maps] >>
-fs[gen_build_rec_env_def,funs_remove_ctors_maps,env_remove_ctors_maps] >>
-qx_gen_tac `p` >> PairCases_on `p` >>
-rw[bind_def,remove_ctors_def,env_remove_ctors_maps,funs_remove_ctors_maps])
-
-val gen_build_rec_env_specialises = store_thm(
-"gen_build_rec_env_specialises",
-``build_rec_env = λfuns env. gen_build_rec_env funs env funs env``,
-rw[FUN_EQ_THM,gen_build_rec_env_def,build_rec_env_def])
-
-val build_rec_env_remove_ctors = store_thm(
-"build_rec_env_remove_ctors",
-``∀cnmap funs env.
-  (build_rec_env (funs_remove_ctors cnmap funs) (env_remove_ctors cnmap env) =
-   env_remove_ctors cnmap (build_rec_env funs env))``,
-rw[gen_build_rec_env_specialises,gen_build_rec_env_remove_ctors])
-
-(* Ignore Equality case here, because we would need to know the original expression was well-typed *)
-val do_app_remove_ctors = store_thm(
-"do_app_remove_ctors",
-``∀cnmap env op v1 v2. op ≠ Equality ⇒
-  (do_app (env_remove_ctors cnmap env)
-          op
-          (v_remove_ctors cnmap v1)
-          (v_remove_ctors cnmap v2) =
-  case do_app env op v1 v2 of
-    NONE => NONE
-  | SOME (env',exp) => SOME (env_remove_ctors cnmap env', remove_ctors cnmap exp))``,
-ntac 2 gen_tac >>
-Cases >> Cases >> Cases >>
-rw[do_app_def,remove_ctors_def] >>
-BasicProvers.EVERY_CASE_TAC >>
-fs[] >> rw[remove_ctors_def,build_rec_env_remove_ctors])
-
-(*
-val remove_ctors_thm1 = store_thm(
-"remove_ctors_thm1",
-``∀cnmap.
-  (∀env exp r.
-   evaluate' env exp r ⇒
-   well_typed env exp ⇒
-   evaluate' (env_remove_ctors cnmap env) (remove_ctors cnmap exp) (map_result (v_remove_ctors cnmap) r)) ∧
-  (∀env expl rl.
-   evaluate_list' env expl rl ⇒
-   EVERY (well_typed env) expl ⇒
-   evaluate_list' (env_remove_ctors cnmap env) (MAP (remove_ctors cnmap) expl) (map_result (MAP (v_remove_ctors cnmap)) rl)) ∧
-  (∀env v pes r.
-   evaluate_match' env v pes r ⇒
-   EVERY (well_typed env o SND) pes ⇒
-   evaluate_match' (env_remove_ctors cnmap env) (v_remove_ctors cnmap v) (match_remove_ctors cnmap pes) (map_result (v_remove_ctors cnmap) r))``,
-gen_tac >>
-ho_match_mp_tac evaluate'_ind >>
-strip_tac >-
-  rw [remove_ctors_def] >>
-strip_tac >-
-  rw [remove_ctors_def] >>
-strip_tac >- (
-  gen_tac >>
-  Cases >- (
-    rw [evaluate'_con,remove_ctors_def,do_con_check_def] >>
-    metis_tac [well_typed_Con_subexp ] ) >>
-  rpt gen_tac >>
-  rw [evaluate'_con,remove_ctors_def] >>
-  rw [Once evaluate'_cases] >>
-  metis_tac [well_typed_Con_subexp]) >>
-strip_tac >- (
-  gen_tac >>
-  Cases >> rw [remove_ctors_def] >>
-  rw [Once evaluate'_cases] >-
-    metis_tac [well_typed_Con_subexp] >>
-  rw [Once evaluate_list'_thm] >>
-  metis_tac [well_typed_Con_subexp] ) >>
-strip_tac >-
-  rw [remove_ctors_def,evaluate'_var,lookup_remove_ctors] >>
-strip_tac >-
-  rw [remove_ctors_def,evaluate'_var,lookup_remove_ctors] >>
-strip_tac >-
-  rw [remove_ctors_def] >>
-strip_tac >- (
-  rw [remove_ctors_def] >>
-  imp_res_tac well_typed_App_subexp >>
-  fs[] >>
-  rw [evaluate'_app] >>
-  disj1_tac >>
-  qexists_tac `v_remove_ctors cnmap v1` >>
-  rw [] >>
-  qexists_tac `v_remove_ctors cnmap v2` >>
-  rw [] >>
-  (* need do_app preserves well_typed *)
-  Cases_on `op = Equality` >- (
-    ... ) >>
-  rw[do_app_remove_ctors]
-*)
-*)
 
 val _ = export_theory ()
