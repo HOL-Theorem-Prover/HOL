@@ -24,6 +24,8 @@ infix ## |-> THEN THENL THENC ORELSE ORELSEC THEN_TCL ORELSE_TCL;
 
 local open Omega_AutomataTheory in end;
 
+val ERR = Feedback.mk_HOL_ERR "temporalLib"
+
 local  (* Fix the grammar used by this file *)
   val ambient_grammars = Parse.current_grammars();
   val _ = Parse.temp_set_grammars Omega_AutomataTheory.Omega_Automata_grammars
@@ -357,8 +359,9 @@ fun temp_subst [] t = t |
     temp_subst ((v,x)::sigma) t = temp_subst sigma (tsubst v x t)
 
 
-fun def_subst [] t = t |
-    def_subst (equ(ell,phi)::s) t = def_subst s (tsubst phi ell t)
+fun def_subst [] t = t
+  | def_subst (equ(ell,phi)::s) t = def_subst s (tsubst phi ell t)
+  | def_subst _ _ = raise ERR "def_subst" "bind"
 
 
 
@@ -686,7 +689,7 @@ val boolean_sig_ops = TAC_PROOF(
 			( s_or a b  = \t:num. (a t \/ b t) ) /\
 			( s_imp a b = \t:num. (a t ==> b t) ) /\
 			( s_equiv a b = \t:num. (a t = b t) ) /\
-			( s_ifte a b c = \t:num. (a t => b t | c t))
+			( s_ifte a b c = \t:num. (if a t then b t else c t))
 		     )
 		    /\
 		     (!a b c.
@@ -695,7 +698,7 @@ val boolean_sig_ops = TAC_PROOF(
 			(!t:num. (a t \/ b t)  = s_or a b t) /\
 			(!t:num. (a t ==> b t) = s_imp a b t) /\
 			(!t:num. (a t = b t)   = s_equiv a b t) /\
-			(!t:num. (a t => b t | c t) = s_ifte a b c t)
+			(!t:num. (if a t then b t else c t) = s_ifte a b c t)
 		     )
 	`--),
 	EXISTS_TAC (--`\a.\t:num.~a t`--)
@@ -703,14 +706,14 @@ val boolean_sig_ops = TAC_PROOF(
 	THEN EXISTS_TAC (--`\a b.\t:num. a t \/ b t`--)
 	THEN EXISTS_TAC (--`\a b.\t:num. a t ==> b t`--)
 	THEN EXISTS_TAC (--`\a b.\t:num. (a t):bool = b t`--)
-	THEN EXISTS_TAC (--`\a b c.\t:num. a t => (b t):bool | c t`--)
+	THEN EXISTS_TAC (--`\a b c.\t:num. if a t then (b t):bool else c t`--)
 	THEN CONV_TAC(DEPTH_CONV FUN_EQ_CONV) THEN BETA_TAC
 	THEN REPEAT GEN_TAC THEN REWRITE_TAC[])
 
 
 
 fun PAST_RECURSION_TAC (asm,g) =
-    let fun tll 0 l = l | tll n (e::l) = tll (n-1) l
+    let fun tll 0 l = l | tll n (e::l) = tll (n-1) l | tll _ _ = raise ERR "PAST_RECURSION_TAC" "bind"
 	val rec_thm = Past_Temporal_LogicTheory.RECURSION
 	val past_rec_thms = (map (GEN_ALL o SYM) (tll 8 (CONJUNCTS rec_thm)))
      in
@@ -769,7 +772,7 @@ fun TEMP_DEFS_CONV t =
 	(* ----------------------------------------------------------------------------	*)
 	fun flatten_defs [] = [] |
 	    flatten_defs (d::dl) =
-		let val equ(ell,phi) = d
+		let val (ell,phi) = case d of equ(ell,phi) => (ell,phi) | _ => raise ERR "TEMP_DEFS_CONV" ""
 		 in d::(map (tsubst ell phi) (flatten_defs dl))
 		end
 	val flat_hdefs = map (fun_eta_conv o temporal2hol) (flatten_defs defs)
@@ -879,6 +882,7 @@ fun LTL2OMEGA_CONV t =
 	  | elem i l = elem (i-1) (tl l)
 	fun delete 0 (e::l) = l
 	  | delete i (e::l) = (e::(delete (i-1) l))
+          | delete _ _ = raise ERR "LTL2OMEGA_CONV" ""
 	fun get_constants t =
 	    if (is_var t) then []
 	    else if (is_const t) then [t]
@@ -950,6 +954,7 @@ fun UNSAFE_LTL2OMEGA_CONV t =
 	  | elem i l = elem (i-1) (tl l)
 	fun delete 0 (e::l) = l
 	  | delete i (e::l) = (e::(delete (i-1) l))
+          | delete _ _ = raise ERR "UNSAFE_LTL2OMEGA_CONV" ""
 	fun get_constants t =
 	    if (is_var t) then []
 	    else if (is_const t) then [t]
@@ -1278,13 +1283,13 @@ fun interpret_smv_output stl =
 	fun begins s1 s2 = beginl (explode s1) (explode s2)
 	val stll = ref stl
 	val proved =
-	    let val (l::ll) = !stll
+	    let val (l, ll) = Option.valOf (List.getItem (!stll))
 	     in (stll := ll; beginl [#"\n",#"e",#"u",#"r",#"t"] (rev(explode l)))
 	    end
 	fun skip_lines [] = []|
 	    skip_lines (e::l) = if (e="\n") then skip_lines l else (e::l)
 	fun read_state_lines() = (* reading lines until empty line is read *)
-	    let val (l::ll) = !stll
+	    let val (l, ll) = Option.valOf (List.getItem (!stll))
 		val _ = (stll := ll)
 	     in if l="\n" then []
 		else l::(read_state_lines())
@@ -1400,12 +1405,12 @@ fun SMV_RUN_FILE smv_file =
     end
 
 fun SMV_RUN smv_program =
-    let
-  val file_st = TextIO.openOut((!smv_tmp_dir)^"smv_file.smv")
-  val _ = (
-    TextIO.output(file_st,smv_program);
-    TextIO.flushOut file_st;
-    TextIO.closeOut file_st)
+  let
+     val file_st = TextIO.openOut((!smv_tmp_dir)^"smv_file.smv")
+     val _ = (
+       TextIO.output(file_st,smv_program);
+       TextIO.flushOut file_st;
+       TextIO.closeOut file_st)
   in
     SMV_RUN_FILE ((!smv_tmp_dir)^"smv_file.smv")
   end
@@ -1414,10 +1419,9 @@ fun SMV_RUN smv_program =
 
 
 fun SMV_AUTOMATON_CONV automaton =
-
-    let
-  val smv_program = genbuechi2smv_string automaton
-  val proved = SMV_RUN smv_program
+  let
+     val smv_program = genbuechi2smv_string automaton
+     val proved = SMV_RUN smv_program
   in
     if (proved) then mk_thm([],mk_eq{lhs=automaton,rhs=(--`F`--)})
     else
@@ -1454,6 +1458,6 @@ fun UNSAFE_LTL_CONV t =
     end
 
 val _ = Parse.temp_set_grammars ambient_grammars
-end;
+end
 
-end;
+end
