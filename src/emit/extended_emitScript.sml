@@ -326,7 +326,8 @@ val defs =
    [BRANCHING_BIT_def, PEEK_def, JOIN_def, ADD_def, BRANCH_def,
     REMOVE_def, TRAVERSE_def, KEYS_def, TRANSFORM_def, EVERY_LEAF_def,
     EXISTS_LEAF_def, SIZE_def, DEPTH_def, IS_PTREE_def, IN_PTREE_def,
-    INSERT_PTREE_def, IS_EMPTY_def, FIND_def, fun_rule ADD_LIST_def];
+    INSERT_PTREE_def, patriciaTheory.IS_EMPTY_def, FIND_def,
+    fun_rule ADD_LIST_def];
 
 val _ = eSML "patricia"
    (OPEN ["num", "option", "set"]
