@@ -86,7 +86,7 @@ SRW_TAC [][]);
 
 val ALOOKUP_MAP = store_thm(
 "ALOOKUP_MAP",
-``∀f al k. ALOOKUP (MAP (λ(x,y). (x,f y)) al) k = OPTION_MAP f (ALOOKUP al k)``,
+``!f al k. ALOOKUP (MAP (\(x,y). (x,f y)) al) k = OPTION_MAP f (ALOOKUP al k)``,
 gen_tac >> Induct >- rw[] >> Cases >> rw[])
 
 val FDOM_alist_to_fmap = Q.store_thm(

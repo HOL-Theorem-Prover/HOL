@@ -1194,7 +1194,7 @@ val FRANGE_FUNION = store_thm(
   ``DISJOINT (FDOM fm1) (FDOM fm2) ==>
     (FRANGE (FUNION fm1 fm2) = FRANGE fm1 UNION FRANGE fm2)``,
   STRIP_TAC THEN
-  `∀x. x IN FDOM fm2 ==> x NOTIN FDOM fm1`
+  `!x. x IN FDOM fm2 ==> x NOTIN FDOM fm1`
      by (FULL_SIMP_TAC (srw_ss()) [DISJOINT_DEF, EXTENSION] THEN
          METIS_TAC []) THEN
   ASM_SIMP_TAC (srw_ss() ++ boolSimps.DNF_ss ++ boolSimps.CONJ_ss)

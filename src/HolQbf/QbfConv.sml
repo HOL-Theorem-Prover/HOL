@@ -2,11 +2,13 @@ structure QbfConv :> QbfConv = struct
 
   open Canon Conv Feedback boolSyntax
 
+  val QMETIS_TAC = Feedback.trace ("metis", 0) (METIS_TAC [])
+
   local open Tactical bossLib simpLib boolSimps boolTheory Thm
-    val th1 = prove(``(∀x. (x ∨ P)) = P``,METIS_TAC[])
-    val th2 = prove(``(∀x. (¬x ∨ P)) = P``,SIMP_TAC bool_ss [])
+    val th1 = Tactical.prove(``(!x. (x \/ P)) = P``, QMETIS_TAC)
+    val th2 = prove(``(!x. (~x \/ P)) = P``,SIMP_TAC bool_ss [])
     val th3 = SYM F_DEF
-    val th4 = prove(``(∀x. ¬x) = F``,SIMP_TAC bool_ss [])
+    val th4 = prove(``(!x. ~x) = F``,SIMP_TAC bool_ss [])
     val th5 = AC DISJ_COMM DISJ_ASSOC
     val th6 = AC CONJ_COMM CONJ_ASSOC
   in
