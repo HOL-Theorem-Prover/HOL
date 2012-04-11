@@ -4,7 +4,7 @@ open boolSimps
 
 open set_relationTheory pred_setTheory
 
-val _ = new_theory "ordinal"
+val _ = new_theory "wellorder"
 
 val wellfounded_def = Define`
   wellfounded R <=>
