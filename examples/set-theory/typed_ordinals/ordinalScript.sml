@@ -6,13 +6,6 @@ open set_relationTheory pred_setTheory
 
 val _ = new_theory "ordinal"
 
-val isomorphic_def = Define`
-  isomorphic R1 R2 <=>
-    ?f. (!x y. R2 (f x) (f y) <=> R1 x y) /\
-        (!x y. (f x = f y) = (x = y)) /\
-        (!a. ?x. f x = a)
-`;
-
 val wellfounded_def = Define`
   wellfounded R <=>
    !s. (?w. w IN s) ==> ?min. min IN s /\ !w. (w,min) IN R ==> w NOTIN s
