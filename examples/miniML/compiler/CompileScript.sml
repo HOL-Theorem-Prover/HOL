@@ -10,6 +10,7 @@ open BytecodeTheory MiniMLTheory
 
 (* TODO: move to lem? *)
 (*val fold_left2 : forall 'a 'b 'c. ('a -> 'b -> 'c -> 'a) -> 'a -> 'b list -> 'c list -> 'a*)
+(*val every2 : forall 'a 'b. ('a -> 'b -> bool) -> 'a list -> 'b list -> bool*)
 (*val range : forall 'a 'b. ('a,'b) Pmap.map -> 'b set*)
 (*val domain : forall 'a 'b. ('a,'b) Pmap.map -> 'a set*)
 (*val least : (num -> bool) -> num*)
@@ -190,10 +191,10 @@ Cevaluate env (CRaise error) (Rerr (Rraise error)))
 Cevaluate env (CVar n) (Rval v))
 
 /\
-(! env l.
+(! env v.
 T
 ==>
-Cevaluate env (CVal (CLit l)) (Rval (CLit l)))
+Cevaluate env (CVal v) (Rval v))
 
 /\
 (! env n es vs.
@@ -426,6 +427,115 @@ Cevaluate_list env es (Rerr err)
 ==>
 Cevaluate_list env (e::es) (Rerr err))`;
 
+(* relating source to intermediate language *)
+
+val _ = Hol_reln `
+(! G cm env Cenv err.
+T
+==>
+exp_Cexp G cm env Cenv (Raise err) (CRaise err))
+/\
+(! G cm env Cenv v Cv.
+G cm v Cv
+==>
+exp_Cexp G cm env Cenv (Val v) (CVal Cv))
+/\
+(! G cm env Cenv cn es Ces.
+EVERY2 (exp_Cexp G cm env Cenv) es Ces
+==>
+exp_Cexp G cm env Cenv (Con cn es) (CCon (FAPPLY  cm  cn) Ces))
+/\
+(! G cm env Cenv vn v Cvn Cv.
+(lookup vn env = SOME v) /\
+ Cvn IN FDOM  Cenv /\ (* TODO lookup *)
+(FAPPLY  Cenv  Cvn = Cv) /\
+G cm v Cv
+==>
+exp_Cexp G cm env Cenv (Var vn) (CVar Cvn))
+/\
+(! G cm env Cenv vn e n Ce.
+(! v Cv. G cm v Cv ==>
+  exp_Cexp G cm (bind vn v env) (FUPDATE  Cenv ( n, Cv)) e Ce)
+==>
+exp_Cexp G cm env Cenv (Fun vn e) (CFun [n] Ce))`;
+
+val _ = Hol_reln `
+(! G cm l.
+T
+==>
+v_Cv G cm (Lit l) (CLit l))
+/\
+(! G cm cn vs Cvs.
+EVERY2 (v_Cv G cm) vs Cvs
+==>
+v_Cv G cm (Conv cn vs) (CConv (FAPPLY  cm  cn) Cvs))
+/\
+(! G cm env vn e Cenv n Ce.
+(! v Cv. G cm v Cv ==>
+  exp_Cexp G cm (bind vn v env) (FUPDATE  (alist_to_fmap Cenv) ( n, Cv)) e Ce)
+==>
+v_Cv G cm (Closure env vn e) (CClosure Cenv [n] Ce))`;
+
+(*
+indreln
+forall cm env Cenv err.
+true
+==>
+exp_Cexp cm env Cenv (Raise err) (CRaise err)
+and
+forall cm env Cenv v Cv.
+v_Cv cm v Cv
+==>
+exp_Cexp cm env Cenv (Val v) (CVal Cv)
+and
+forall cm env Cenv cn es Ces.
+every2 (exp_Cexp cm env Cenv) es Ces
+==>
+exp_Cexp cm env Cenv (Con cn es) (CCon (Pmap.find cn cm) Ces)
+and
+forall cm env Cenv vn v Cvn Cv.
+lookup vn env = Some v &&
+Pmap.mem Cvn Cenv && Pmap.find Cvn Cenv = Cv && (* TODO: lookup *)
+v_Cv cm v Cv
+==>
+exp_Cexp cm env Cenv (Var vn) (CVar Cvn)
+and
+forall cm env Cenv vn e n Ce.
+(* but what to do here without a context of equal variables? *)
+(* (see comments in v_Cv below) *)
+==>
+exp_Cexp cm env Cenv (Fun vn e) (CFun n Ce)
+and
+forall cm l.
+true
+==>
+v_Cv cm (Lit l) (CLit l)
+and
+forall cm cn vs Cvs.
+every2 (v_Cv cm) vs Cvs
+==>
+v_Cv cm (Conv cn vs) (CConv (Pmap.find cn cm) Cvs)
+and
+forall cm env vn e Cenv n Ce.
+(* can't do this because it's a negative occurrence of v_Cv,
+ * leading to a non-monotonic rule
+(forall v Cv. v_Cv cm v Cv -->
+ exp_Cexp cm (bind vn v env) (Pmap.add n Cv (alist_to_fmap Cenv)) e Ce)
+*)
+(* obviously this is incorrect (requires the functions to be equivalent on
+ * arbitrary pairs of arguments)
+ * options for extension include:
+   * normal form (open): use the same free variable as the argument
+     * but does this distinguish too many pairs of terms?
+   * carry around a context of equal values/variables
+     * but how does this relate with the environments in closures?
+     * probably just have to have both independently
+   * parameterise by a "global knowledge" relation of equal values *)
+(forall v Cv. exp_Cexp cm (bind vn v env) (Pmap.add n Cv (alist_to_fmap Cenv)) e Ce)
+==>
+v_Cv cm (Closure env vn e) (CClosure Cenv [n] Ce)
+*)
+
 val _ = Define `
  (least_not_in s = $LEAST (\ n . ~  (n IN s)))`;
 
@@ -476,6 +586,10 @@ val _ = Defn.save_defn pat_to_Cpat_defn;
  val exp_to_Cexp_defn = Hol_defn "exp_to_Cexp" `
 
 (exp_to_Cexp tp cm (s, Raise err) = (s, CRaise err))
+(*
+and
+exp_to_Cexp tp cm (s, Val v) = (s, v_to_Cv cm v)
+*)
 /\
 (exp_to_Cexp tp cm (s, Val (Lit l)) = (s, CVal (CLit l)))
 /\
@@ -576,6 +690,15 @@ val _ = Defn.save_defn pat_to_Cpat_defn;
   (if tp then s' else s, CLetfun T fns Cdefs Cb))`;
 
 val _ = Defn.save_defn exp_to_Cexp_defn;
+(*
+and
+v_to_Cv cm (Lit l) = CLit l
+and
+v_to_Cv cm (Conv cn vs) = CConv (Pmap.find cn cm) (List.map (v_to_Cv cn) vs)
+and
+v_to_Cv cm (Closure env vn b) =
+  let 
+*)
 
 (* TODO: simple type system and checker *)
 

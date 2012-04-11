@@ -29,4 +29,39 @@ val FOLDL2_def = Define`
   (FOLDL2 f a (b::bs) (c::cs) = FOLDL2 f (f a b c) bs cs) /\
   (FOLDL2 f a bs cs = a)`
 
+val EVERY2_def = Define`
+  (EVERY2 P (a::as) (b::bs) = P a b /\ EVERY2 P as bs) /\
+  (EVERY2 P as bs = (as = []) /\ (bs = []))`
+val _ = export_rewrites["EVERY2_def"]
+
+val EVERY2_cong = store_thm(
+"EVERY2_cong",
+``!l1 l1' l2 l2' P P'.
+  (l1 = l1') /\ (l2 = l2') /\
+  (!x y. MEM x l1' /\ MEM y l2' ==> (P x y = P' x y)) ==>
+  (EVERY2 P l1 l2 = EVERY2 P' l1' l2')``,
+Induct THEN SIMP_TAC (srw_ss()) [EVERY2_def] THEN
+GEN_TAC THEN Cases THEN SRW_TAC[][EVERY2_def] THEN
+METIS_TAC[])
+val _ = DefnBase.export_cong "EVERY2_cong"
+
+val EVERY2_LENGTH = store_thm(
+"EVERY2_LENGTH",
+``!P l1 l2. EVERY2 P l1 l2 ==> (LENGTH l1 = LENGTH l2)``,
+GEN_TAC THEN Induct THEN SRW_TAC[][EVERY2_def] THEN
+Cases_on `l2` THEN FULL_SIMP_TAC (srw_ss()) [EVERY2_def])
+
+val EVERY2_mono = store_thm(
+"EVERY2_mono",
+``(!x y. P x y ==> Q x y)
+  ==> EVERY2 P l1 l2 ==> EVERY2 Q l1 l2``,
+STRIP_TAC THEN
+MAP_EVERY Q.ID_SPEC_TAC [`l2`,`l1`] THEN
+Induct THEN
+SRW_TAC [][EVERY2_def] THEN
+IMP_RES_TAC EVERY2_LENGTH THEN
+Cases_on `l2` THEN
+FULL_SIMP_TAC (srw_ss()) [EVERY2_def])
+val _ = export_mono "EVERY2_mono"
+
 val _ = export_theory();

@@ -154,14 +154,102 @@ evaluate_ind
 (* TODO: save in compileTerminationTheory? *)
 val Cevaluate_cases = CompileTheory.Cevaluate_cases
 val extend_def = CompileTheory.extend_def
+val exp_Cexp_ind = CompileTheory.exp_Cexp_ind
 
-(* Prove compiler phases preserve semantics *)
+(* Cevaluate functional equations *)
+
+val Cevaluate_raise = store_thm(
+"Cevaluate_raise",
+``∀env err res. Cevaluate env (CRaise err) res = (res = Rerr (Rraise err))``,
+rw[Once Cevaluate_cases])
+
+val Cevaluate_val = store_thm(
+"Cevaluate_val",
+``∀env v res. Cevaluate env (CVal v) res = (res = Rval v)``,
+rw[Once Cevaluate_cases])
+
+val _ = export_rewrites["Cevaluate_raise","Cevaluate_val"]
+
+val good_cm_cw_def = Define`
+  good_cm_cw cm cw =
+  (∀cn. cn IN FDOM cm ⇒ cm ' cn IN FDOM cw ∧
+                        (cw ' (cm ' cn) = cn))`
 
 val good_cmaps_def = Define`
 good_cmaps cenv cm cw =
   (∀cn n. do_con_check cenv cn n ⇒ cn IN FDOM cm) ∧
-  (∀cn. cn IN FDOM cm ⇒ cm ' cn IN FDOM cw ∧
-                        (cw ' (cm ' cn) = cn))`
+  good_cm_cw cm cw`
+
+(*
+val observable_v_def = tDefine "observable_v"`
+  (observable_v (Lit l) = T) ∧
+  (observable_v (Conv cn vs) = EVERY observable_v vs) ∧
+  (observable_v _ = F)`(
+WF_REL_TAC `measure v_size` >>
+rw[MiniMLTerminationTheory.exp9_size_thm] >>
+Q.ISPEC_THEN `v_size` imp_res_tac SUM_MAP_MEM_bound >>
+srw_tac[ARITH_ss][])
+val _ = export_rewrites["observable_v_def"]
+
+val observable_Cv_def = tDefine "observable_Cv"`
+  (observable_Cv (CLit l) = T) ∧
+  (observable_Cv (CConv cn vs) = EVERY observable_Cv vs) ∧
+  (observable_Cv _ = F)`(
+WF_REL_TAC `measure Cv_size` >>
+rw[Cexp8_size_thm] >>
+Q.ISPEC_THEN `Cv_size` imp_res_tac SUM_MAP_MEM_bound >>
+srw_tac[ARITH_ss][])
+val _ = export_rewrites["observable_Cv_def"]
+*)
+
+(* too strong? *)
+val good_G_def = Define`
+  good_G G =
+    (∀cm v Cv. v_Cv G cm v Cv ⇒ G cm v Cv) ∧
+    (∀cm v Cv cw.
+      good_cm_cw cm cw ∧
+      G cm v Cv ⇒ ((v_to_ov v) = (Cv_to_ov cw) Cv))`
+
+(* Soundness(?) of exp_Cexp *)
+
+(*
+
+val exp_Cexp_thm = store_thm(
+"exp_Cexp_thm",``
+∀G cm env Cenv exp Cexp. exp_Cexp G cm env Cenv exp Cexp ⇒
+  good_G G ⇒
+  ∀cenv res.
+    evaluate cenv env exp res ⇒
+    ∀cw. good_cmaps cenv cm cw ⇒
+      ∃Cres.
+        Cevaluate Cenv Cexp Cres ∧
+        (map_result (Cv_to_ov cw) Cres =
+         map_result v_to_ov res)``,
+ho_match_mp_tac exp_Cexp_ind >>
+rw[] >- (
+  fs[good_G_def,good_cmaps_def] >>
+  PROVE_TAC[] )
+>- (
+
+*)
+
+
+(*
+val exp_Cexp_thm = store_thm(
+"exp_Cexp_thm",``
+∀cm env Cenv exp Cexp. exp_Cexp cm env Cenv exp Cexp ⇒
+  ∀cenv res.
+    evaluate cenv env exp res ⇒
+    ∀cw. good_cmaps cenv cm cw ⇒
+      ∃Cres.
+        Cevaluate Cenv Cexp Cres ∧
+        (map_result (Cv_to_ov cw) Cres =
+         map_result v_to_ov res)``,
+ho_match_mp_tac exp_Cexp_ind >>
+rw[]
+*)
+
+(* Prove compiler phases preserve semantics *)
 
 val good_envs_def = Define`
   good_envs env s s' Cenv = s.cmap SUBMAP s'.cmap`
@@ -239,5 +327,34 @@ strip_tac >- (
 strip_tac >- (
   rw[]
 *)
+
+(*
+let rec
+v_to_ov cenv (Lit l) = OLit l
+and
+v_to_ov cenv (Conv cn vs) = OConv cn (List.map (v_to_ov cenv) vs)
+and
+v_to_ov cenv (Closure env vn e) = OFn
+  (fun ov -> map_option (o (v_to_ov cenv) snd)
+    (some (fun (a,r) -> v_to_ov cenv a = ov
+           && evaluate cenv (bind vn a env) e (Rval r))))
+and
+v_to_ov cenv (Recclosure env defs n) = OFn
+  (fun ov -> option_bind (optopt (find_recfun n defs))
+    (fun (vn,e) -> map_option (o (v_to_ov cenv) snd)
+      (some (fun (a,r) -> v_to_ov cenv a = ov
+             && evaluate cenv (bind vn a (build_rec_env defs env)) e (Rval r)))))
+
+let rec
+Cv_to_ov m (CLit l) = OLit l
+and
+Cv_to_ov m (CConv cn vs) = OConv (Pmap.find cn m) (List.map (Cv_to_ov m) vs)
+and
+Cv_to_ov m (CClosure env ns e) = OFn
+  (fun ov -> some
+and
+Cv_to_ov m (CRecClos env ns fns n) = OFn
+*)
+
 
 val _ = export_theory ()
