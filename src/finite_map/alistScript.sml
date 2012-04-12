@@ -94,6 +94,7 @@ val FDOM_alist_to_fmap = Q.store_thm(
 `!al.FDOM (alist_to_fmap al) = set (MAP FST al)`,
 Induct THEN SRW_TAC [][alist_to_fmap_def] THEN
 Cases_on `h` THEN FULL_SIMP_TAC (srw_ss()) [alist_to_fmap_def]);
+val _ = export_rewrites["FDOM_alist_to_fmap"];
 
 val alist_to_fmap_prefix = Q.store_thm(
 "alist_to_fmap_prefix",
