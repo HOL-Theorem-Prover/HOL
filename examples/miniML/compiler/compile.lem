@@ -412,15 +412,15 @@ G cm v Cv
 exp_Cexp G cm env Cenv (Val v) (CVal Cv)
 and
 forall G cm env Cenv cn es Ces.
+Pmap.mem cn cm &&
 every2 (exp_Cexp G cm env Cenv) es Ces
 ==>
 exp_Cexp G cm env Cenv (Con cn es) (CCon (Pmap.find cn cm) Ces)
 and
-forall G cm env Cenv vn v Cvn Cv.
+forall G cm env Cenv vn v Cvn.
 lookup vn env = Some v &&
-Pmap.mem Cvn Cenv && (* TODO lookup *)
-Pmap.find Cvn Cenv = Cv &&
-G cm v Cv
+Pmap.mem Cvn Cenv &&
+G cm v (Pmap.find Cvn Cenv)
 ==>
 exp_Cexp G cm env Cenv (Var vn) (CVar Cvn)
 and
@@ -437,6 +437,7 @@ true
 v_Cv G cm (Lit l) (CLit l)
 and
 forall G cm cn vs Cvs.
+Pmap.mem cn cm &&
 every2 (v_Cv G cm) vs Cvs
 ==>
 v_Cv G cm (Conv cn vs) (CConv (Pmap.find cn cm) Cvs)

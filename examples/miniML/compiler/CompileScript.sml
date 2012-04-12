@@ -441,15 +441,15 @@ G cm v Cv
 exp_Cexp G cm env Cenv (Val v) (CVal Cv))
 /\
 (! G cm env Cenv cn es Ces.
+ cn IN FDOM  cm /\
 EVERY2 (exp_Cexp G cm env Cenv) es Ces
 ==>
 exp_Cexp G cm env Cenv (Con cn es) (CCon (FAPPLY  cm  cn) Ces))
 /\
-(! G cm env Cenv vn v Cvn Cv.
+(! G cm env Cenv vn v Cvn.
 (lookup vn env = SOME v) /\
- Cvn IN FDOM  Cenv /\ (* TODO lookup *)
-(FAPPLY  Cenv  Cvn = Cv) /\
-G cm v Cv
+ Cvn IN FDOM  Cenv /\
+G cm v (FAPPLY  Cenv  Cvn)
 ==>
 exp_Cexp G cm env Cenv (Var vn) (CVar Cvn))
 /\
@@ -466,6 +466,7 @@ T
 v_Cv G cm (Lit l) (CLit l))
 /\
 (! G cm cn vs Cvs.
+ cn IN FDOM  cm /\
 EVERY2 (v_Cv G cm) vs Cvs
 ==>
 v_Cv G cm (Conv cn vs) (CConv (FAPPLY  cm  cn) Cvs))

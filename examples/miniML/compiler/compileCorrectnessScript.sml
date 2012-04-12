@@ -155,6 +155,8 @@ evaluate_ind
 val Cevaluate_cases = CompileTheory.Cevaluate_cases
 val extend_def = CompileTheory.extend_def
 val exp_Cexp_ind = CompileTheory.exp_Cexp_ind
+val v_Cv_ind = CompileTheory.v_Cv_ind
+val v_Cv_cases = CompileTheory.v_Cv_cases
 
 (* Cevaluate functional equations *)
 
@@ -172,8 +174,10 @@ val _ = export_rewrites["Cevaluate_raise","Cevaluate_val"]
 
 val good_cm_cw_def = Define`
   good_cm_cw cm cw =
-  (∀cn. cn IN FDOM cm ⇒ cm ' cn IN FDOM cw ∧
-                        (cw ' (cm ' cn) = cn))`
+  (FDOM cw = FRANGE cm) ∧
+  (FRANGE cw = FDOM cm) ∧
+  (∀x. x ∈ FDOM cm ⇒ (cw ' (cm ' x) = x)) ∧
+  (∀y. y ∈ FDOM cw ⇒ (cm ' (cw ' y) = y))`
 
 val good_cmaps_def = Define`
 good_cmaps cenv cm cw =
@@ -202,7 +206,6 @@ srw_tac[ARITH_ss][])
 val _ = export_rewrites["observable_Cv_def"]
 *)
 
-(* too strong? *)
 val good_G_def = Define`
   good_G G =
     (∀cm v Cv. v_Cv G cm v Cv ⇒ G cm v Cv) ∧
@@ -210,10 +213,27 @@ val good_G_def = Define`
       good_cm_cw cm cw ∧
       G cm v Cv ⇒ ((v_to_ov v) = (Cv_to_ov cw) Cv))`
 
+val a_good_G_exists = store_thm(
+"a_good_G_exists",
+``∃G. good_G G``,
+qexists_tac `v_Cv (K (K (K F)))` >>
+rw[good_G_def] >- (
+  qsuff_tac `∀G cm v Cv. v_Cv G cm v Cv ⇒ (G = v_Cv (K(K(K F)))) ⇒ v_Cv (K(K(K F))) cm v Cv` >- rw[] >>
+  ho_match_mp_tac v_Cv_ind >>
+  rw[] >>
+  rw[v_Cv_cases] >>
+  fsrw_tac[boolSimps.ETA_ss][] ) >>
+qsuff_tac `∀G cm v Cv. v_Cv G cm v Cv ⇒ (G = K(K(K F))) ∧ good_cm_cw cm cw ⇒ (v_to_ov v = Cv_to_ov cw Cv)` >- (rw[] >> PROVE_TAC[]) >>
+ho_match_mp_tac v_Cv_ind >>
+rw[] >- fs[good_cm_cw_def] >>
+pop_assum mp_tac >>
+srw_tac[boolSimps.ETA_ss][] >>
+rw[MAP_EQ_EVERY2] >>
+PROVE_TAC[EVERY2_LENGTH])
+
 (* Soundness(?) of exp_Cexp *)
 
 (*
-
 val exp_Cexp_thm = store_thm(
 "exp_Cexp_thm",``
 ∀G cm env Cenv exp Cexp. exp_Cexp G cm env Cenv exp Cexp ⇒
@@ -230,9 +250,7 @@ rw[] >- (
   fs[good_G_def,good_cmaps_def] >>
   PROVE_TAC[] )
 >- (
-
 *)
-
 
 (*
 val exp_Cexp_thm = store_thm(
