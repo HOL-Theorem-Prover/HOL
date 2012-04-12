@@ -1434,6 +1434,12 @@ RW_TAC bool_ss [INJ_DEF, DELETE_DEF] THENL
   METIS_TAC [],
 METIS_TAC [IN_DIFF]]);
 
+val INJ_INSERT = store_thm(
+"INJ_INSERT",
+``!f x s t. INJ f (x INSERT s) t =
+   INJ f s t /\ (f x) IN t /\
+   (!y. y IN s /\ (f x = f y) ==> (x = y))``,
+SRW_TAC[][INJ_DEF] THEN METIS_TAC[])
 
 (* ===================================================================== *)
 (* Surjective functions on a set.					 *)
