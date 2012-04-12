@@ -333,6 +333,95 @@ val orderlt_REFL = store_thm(
   fs[] >> DISJ2_TAC >> rw[] >> qexists_tac `SUC n` >>
   rw[Once SPECIFICATION]);
 
+val FINITE_IMAGE_INJfn = prove(
+  ``!s. (!x y. x IN s /\ y IN s ==> ((f x = f y) = (x = y))) ==>
+        (FINITE (IMAGE f s) = FINITE s)``,
+  rpt strip_tac >> simp[EQ_IMP_THM, IMAGE_FINITE] >>
+  qsuff_tac `!t. FINITE t ==>
+                 !s'. s' SUBSET s /\ (t = IMAGE f s') ==> FINITE s'`
+    >- metis_tac[SUBSET_REFL] >>
+  Induct_on `FINITE t` >> conj_tac >- metis_tac[IMAGE_EQ_EMPTY, FINITE_EMPTY] >>
+  qx_gen_tac `t` >> strip_tac >> qx_gen_tac `e` >> strip_tac >>
+  qx_gen_tac `s'` >> strip_tac >>
+  `?d. (e = f d) /\ d IN s'`
+     by (pop_assum mp_tac >> simp[EXTENSION] >> metis_tac[]) >>
+  qsuff_tac `t = IMAGE f (s' DELETE d)`
+    >- metis_tac [FINITE_DELETE, DELETE_SUBSET, SUBSET_TRANS] >>
+  Q.UNDISCH_THEN `e INSERT t = IMAGE f s'` mp_tac >> simp[EXTENSION] >>
+  strip_tac >> qx_gen_tac `x` >>
+  `!x. x IN s' ==> x IN s` by fs[SUBSET_DEF] >>
+  Cases_on `x = f d` >> asm_simp_tac(srw_ss() ++ CONJ_ss)[] >- rw[] >>
+  first_x_assum (qspec_then `x` mp_tac) >> simp[] >> metis_tac []);
+
+val IMAGE_CARD_INJfn = prove(
+  ``!s. FINITE s /\ (!x y. x IN s /\ y IN s ==> ((f x = f y) = (x = y))) ==>
+        (CARD (IMAGE f s) = CARD s)``,
+  rpt strip_tac >>
+  qsuff_tac `!t. FINITE t ==> t SUBSET s ==> (CARD (IMAGE f t) = CARD t)`
+    >- metis_tac [SUBSET_REFL] >>
+  Induct_on `FINITE t` >> simp[] >> rpt strip_tac >>
+  `!x. x IN t ==> x IN s` by fs[SUBSET_DEF] >>
+  asm_simp_tac (srw_ss() ++ CONJ_ss) []);
+
+val wobounds_preserve_bijections = store_thm(
+  "wobounds_preserve_bijections",
+  ``BIJ f (elsOf w1) (elsOf w2) /\ x IN elsOf w1 /\
+    (!x y. (x,y) WIN w1 ==> (f x, f y) WIN w2) ==>
+    BIJ f (elsOf (wobound x w1)) (elsOf (wobound (f x) w2))``,
+  simp[BIJ_IFF_INV,elsOf_wobound] >> strip_tac >>
+  `{ y | (y, f x) WIN w2 } = IMAGE f {y | (y,x) WIN w1 }`
+     by (simp[EXTENSION] >> qx_gen_tac `e` >> eq_tac >| [
+           strip_tac >>
+           `e IN elsOf w2 /\ f x IN elsOf w2`
+              by (rw[elsOf_def, in_domain, in_range] >> metis_tac[]) >>
+            `?d. d IN elsOf w1 /\ (e = f d)` by metis_tac[] >>
+            rw[] >>
+            `d <> x` by metis_tac [WIN_REFL] >>
+            `~((x,d) WIN w1)` by metis_tac [WIN_TRANS, WIN_REFL] >>
+            metis_tac [WIN_trichotomy],
+            disch_then (Q.X_CHOOSE_THEN `d` STRIP_ASSUME_TAC) >> rw[]
+         ]) >>
+  qabbrev_tac `ltx = {y | (y,x) WIN w1}` >> simp[] >>
+  `!x y. x IN ltx /\ y IN ltx ==> ((f x = f y) <=> (x = y))`
+     by (simp[Abbr`ltx`] >> metis_tac [IN_UNION, in_domain, elsOf_def]) >>
+  asm_simp_tac (srw_ss() ++ CONJ_ss) [FINITE_IMAGE_INJfn, IMAGE_CARD_INJfn] >>
+  Cases_on `FINITE ltx /\ (CARD ltx = 1)` >> simp[] >| [
+    `!x. x IN ltx ==> x IN elsOf w1`
+       by (rw[Abbr`ltx`, elsOf_def, in_domain] >> metis_tac []) >>
+    asm_simp_tac (srw_ss() ++ DNF_ss) [] >>
+    `!x y. x IN elsOf w1 /\ y IN elsOf w1 ==> ((f x = f y) = (x = y))`
+       by metis_tac [] >>
+    asm_simp_tac (srw_ss() ++ CONJ_ss)[] >> metis_tac []
+  ]);
+
+val orderlt_TRANS = store_thm(
+  "orderlt_TRANS",
+  ``!w1 w2 w3. orderlt w1 w2 /\ orderlt w2 w3 ==> orderlt w1 w3``,
+  simp[orderlt_def] >> rpt gen_tac >>
+  disch_then (CONJUNCTS_THEN2
+                  (Q.X_CHOOSE_THEN `a` strip_assume_tac)
+                  (Q.X_CHOOSE_THEN `b` strip_assume_tac)) >>
+  `(?f. BIJ f (elsOf w1) (elsOf (wobound a w2)) /\
+        !x y. (x,y) WIN w1 ==> (f x, f y) WIN wobound a w2) /\
+   (?g. BIJ g (elsOf w2) (elsOf (wobound b w3)) /\
+        !x y. (x,y) WIN w2 ==> (g x, g y) WIN wobound b w3)`
+     by metis_tac[orderiso_thm] >>
+  `g a IN elsOf (wobound b w3)` by metis_tac [BIJ_IFF_INV] >>
+  `(g a, b) WIN w3`
+    by (pop_assum mp_tac >> simp[elsOf_wobound, in_domain, in_range] >>
+        asm_simp_tac (srw_ss() ++ COND_elim_ss) [LET_THM] >>
+        metis_tac[]) >>
+  qexists_tac `g a` >> conj_tac >- metis_tac[IN_UNION, elsOf_def, in_domain] >>
+  match_mp_tac orderiso_TRANS >> qexists_tac `wobound a w2` >>
+  rw[] >> rw[orderiso_thm] >> qexists_tac `g` >> conj_tac >| [
+    `wobound (g a) w3 = wobound (g a) (wobound b w3)`
+      by rw[wobound2] >>
+    pop_assum SUBST1_TAC >>
+    match_mp_tac wobounds_preserve_bijections >> rw[],
+    fs[IN_wobound]
+  ]);
+
+
 (*val orderlt_WF = store_thm(
   "orderlt_WF",
   ``WF orderlt``,
