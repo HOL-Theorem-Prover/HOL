@@ -1986,6 +1986,77 @@ val DRESTRICT_IDEMPOT = store_thm ("DRESTRICT_IDEMPOT",
 SRW_TAC [][]);
 val _ = export_rewrites ["DRESTRICT_IDEMPOT"]
 
+(*---------------------------------------------------------------------------
+mapping an injective function over the keys of a finite map
+ ---------------------------------------------------------------------------*)
+
+val MAP_KEYS_q =`
+\f fm. if INJ f (FDOM fm) UNIV then
+fm f_o_f (FUN_FMAP (LINV f (FDOM fm)) (IMAGE f (FDOM fm)))
+else FUN_FMAP ARB (IMAGE f (FDOM fm))`
+
+val MAP_KEYS_witness = store_thm(
+"MAP_KEYS_witness",
+``let m = ^(Term MAP_KEYS_q) in
+!f fm. (FDOM (m f fm) = IMAGE f (FDOM fm)) /\
+       ((INJ f (FDOM fm) UNIV) ==>
+        (!x. x IN FDOM fm ==> (((m f fm) ' (f x)) = (fm ' x))))``,
+SIMP_TAC (srw_ss()) [LET_THM] THEN
+REPEAT GEN_TAC THEN
+CONJ_ASM1_TAC THEN1 (
+  SRW_TAC[][f_o_f_DEF,
+            GSYM SUBSET_INTER_ABSORPTION,
+            SUBSET_DEF,FUN_FMAP_DEF] THEN
+  IMP_RES_TAC LINV_DEF THEN
+  SRW_TAC[][] ) THEN
+SRW_TAC[][] THEN
+FULL_SIMP_TAC (srw_ss()) [] THEN
+Q.MATCH_ABBREV_TAC `(fm f_o_f z) ' (f x) = fm ' x` THEN
+`f x IN FDOM (fm f_o_f z)` by (
+  SRW_TAC[][] THEN PROVE_TAC[] ) THEN
+SRW_TAC[][f_o_f_DEF] THEN
+Q.UNABBREV_TAC `z` THEN
+Q.MATCH_ABBREV_TAC `fm ' ((FUN_FMAP z s) ' (f x)) = fm ' x` THEN
+`f x IN s` by (
+  SRW_TAC[][Abbr`s`] THEN PROVE_TAC[] ) THEN
+`FINITE s` by SRW_TAC[][Abbr`s`] THEN
+SRW_TAC[][FUN_FMAP_DEF,Abbr`z`] THEN
+IMP_RES_TAC LINV_DEF THEN
+SRW_TAC[][])
+
+val MAP_KEYS_exists =
+Q.EXISTS (`$? ^(rand(rator(concl(MAP_KEYS_witness))))`,MAP_KEYS_q)
+(BETA_RULE (PURE_REWRITE_RULE [LET_THM] MAP_KEYS_witness))
+
+val MAP_KEYS_def = new_specification(
+"MAP_KEYS_def",["MAP_KEYS"],MAP_KEYS_exists)
+
+val MAP_KEYS_FEMPTY = store_thm(
+"MAP_KEYS_FEMPTY",
+``!f. MAP_KEYS f FEMPTY = FEMPTY``,
+SRW_TAC[][GSYM FDOM_EQ_EMPTY,MAP_KEYS_def])
+val _ = export_rewrites["MAP_KEYS_FEMPTY"]
+
+val MAP_KEYS_FUPDATE = store_thm(
+"MAP_KEYS_FUPDATE",
+``!f fm k v. (INJ f (k INSERT FDOM fm) UNIV) ==>
+  (MAP_KEYS f (fm |+ (k,v)) = (MAP_KEYS f fm) |+ (f k,v))``,
+SRW_TAC[][GSYM fmap_EQ_THM,MAP_KEYS_def] THEN
+SRW_TAC[][MAP_KEYS_def,FAPPLY_FUPDATE_THM] THEN1 (
+  FULL_SIMP_TAC (srw_ss()) [INJ_DEF] THEN
+  PROVE_TAC[] ) THEN
+FULL_SIMP_TAC (srw_ss()) [INJ_INSERT] THEN
+SRW_TAC[][MAP_KEYS_def])
+
+val MAP_KEYS_using_LINV = store_thm(
+"MAP_KEYS_using_LINV",
+``!f fm. INJ f (FDOM fm) UNIV ==>
+  (MAP_KEYS f fm = fm f_o_f (FUN_FMAP (LINV f (FDOM fm)) (IMAGE f (FDOM fm))))``,
+SRW_TAC[][GSYM fmap_EQ_THM,MAP_KEYS_def] THEN
+MP_TAC MAP_KEYS_witness THEN
+SRW_TAC[][LET_THM] THEN
+POP_ASSUM (Q.SPECL_THEN [`f`,`fm`] MP_TAC) THEN
+SRW_TAC[][MAP_KEYS_def])
 
 (*---------------------------------------------------------------------------
      Some helpers for fupdate_NORMALISE_CONV
