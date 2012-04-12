@@ -855,6 +855,11 @@ SIMP_TAC std_ss [GSYM fmap_EQ_THM] THEN
 SIMP_TAC std_ss [FMERGE_DEF, FDOM_FEMPTY, NOT_IN_EMPTY,
 	UNION_EMPTY]);
 
+val FDOM_FMERGE = store_thm(
+"FDOM_FMERGE",
+``!m f g. FDOM (FMERGE m f g) = FDOM f UNION FDOM g``,
+SRW_TAC[][FMERGE_DEF])
+val _ = export_rewrites["FDOM_FMERGE"];
 
 val FMERGE_FUNION = store_thm ("FMERGE_FUNION",
 ``FUNION = FMERGE (\x y. x)``,
@@ -1086,6 +1091,8 @@ val f_o_f_FEMPTY_2 = Q.store_thm (
   `!f:'b|->'c. f f_o_f (FEMPTY:('a,'b)fmap) = FEMPTY`,
   SRW_TAC [][GSYM fmap_EQ_THM, f_o_f_DEF, FDOM_FEMPTY]);
 
+val _ = export_rewrites["f_o_f_FEMPTY_1","f_o_f_FEMPTY_2"];
+
 val o_f_lemma = Q.prove
 (`!f:'b->'c.
   !g:'a|->'b.
@@ -1283,6 +1290,12 @@ val FRANGE_FMAP = store_thm(
   PROVE_TAC []);
 val _ = export_rewrites ["FRANGE_FMAP"]
 
+val FDOM_FMAP = store_thm(
+"FDOM_FMAP",
+``!f s. FINITE s ==> (FDOM (FUN_FMAP f s) = s)``,
+SRW_TAC[][FUN_FMAP_DEF])
+val _ = export_rewrites ["FDOM_FMAP"]
+
 val FLOOKUP_FUN_FMAP = Q.store_thm(
   "FLOOKUP_FUN_FMAP",
   `FINITE P ==>
@@ -1305,6 +1318,33 @@ val FDOM_f_o = Q.store_thm
        ==>
      (FDOM (f f_o g) = { x | g x IN FDOM f})`,
  SRW_TAC [][f_o_DEF, f_o_f_DEF, EXTENSION, FUN_FMAP_DEF, EQ_IMP_THM]);
+val _ = export_rewrites["FDOM_f_o"];
+
+val f_o_FEMPTY = store_thm(
+"f_o_FEMPTY",
+``!g. FEMPTY f_o g = FEMPTY``,
+SRW_TAC[][f_o_DEF])
+val _ = export_rewrites["f_o_FEMPTY"]
+
+val f_o_FUPDATE = store_thm(
+"f_o_FUPDATE",
+``!fm k v g.
+  FINITE {x | g x IN FDOM fm} /\
+  FINITE {x | (g x = k)} ==>
+(fm |+ (k,v) f_o g = FMERGE (combin$C K) (fm f_o g) (FUN_FMAP (K v) {x | g x = k}))``,
+SRW_TAC[][] THEN
+`FINITE {x | (g x = k) \/ g x IN FDOM fm}` by (
+ REPEAT (POP_ASSUM MP_TAC) THEN
+ Q.MATCH_ABBREV_TAC `FINITE s1 ==> FINITE s2 ==> FINITE s` THEN
+ Q_TAC SUFF_TAC `s = s1 UNION s2` THEN1 SRW_TAC[][] THEN
+ UNABBREV_ALL_TAC THEN
+ SRW_TAC[][EXTENSION,EQ_IMP_THM] THEN
+ SRW_TAC[][]) THEN
+SRW_TAC[][GSYM fmap_EQ_THM] THEN1 (
+  SRW_TAC[][EXTENSION,EQ_IMP_THM] THEN
+  SRW_TAC[][] ) THEN
+SRW_TAC[][FMERGE_DEF,FUN_FMAP_DEF,f_o_DEF,f_o_f_DEF
+,FAPPLY_FUPDATE_THM])
 
 val FAPPLY_f_o = Q.store_thm
 ("FAPPLY_f_o",
