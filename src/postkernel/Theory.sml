@@ -734,7 +734,7 @@ fun export_theory () = let
   val {thid,facts,adjoin,thydata} = scrubCT()
   val concat = String.concat
   val thyname = thyid_name thid
-  val name = CTname()^"Theory"
+  val name = thyname^"Theory"
   val (A,D,T) = unkind facts
   val (sig_ps, struct_ps) = unadjzip adjoin ([],[])
   val sigthry = {name = thyname,
