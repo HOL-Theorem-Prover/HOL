@@ -1,4 +1,4 @@
-type ('a,'b) alist
+type ('a,'b) alist = ('a * 'b) list
 val fmap_to_alist : forall 'a 'b. ('a,'b) fmap -> ('a,'b) alist
 val alist_to_fmap : forall 'a 'b. ('a,'b) alist -> ('a,'b) fmap
 val FRANGE : forall 'a 'b. ('a,'b) fmap -> 'b set

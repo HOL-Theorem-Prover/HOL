@@ -71,6 +71,15 @@ val (exp_to_Cexp_def,exp_to_Cexp_ind) =
 val _ = save_thm ("exp_to_Cexp_def", exp_to_Cexp_def);
 val _ = save_thm ("exp_to_Cexp_ind", exp_to_Cexp_ind);
 
+val (v_to_Cv_def,v_to_Cv_ind) =
+  tprove_no_defn ((v_to_Cv_def,v_to_Cv_ind),
+  WF_REL_TAC `measure (v_size o SND o SND)` >>
+  srw_tac[ARITH_ss][exp1_size_thm,exp3_size_thm,exp9_size_thm] >>
+  MAP_EVERY (fn q => Q.ISPEC_THEN q mp_tac SUM_MAP_MEM_bound) [`exp5_size`,`v_size`,`exp2_size`] >>
+  rw[] >> res_tac >> fs[exp_size_def] >> srw_tac[ARITH_ss][])
+val _ = save_thm ("v_to_Cv_def", v_to_Cv_def);
+val _ = save_thm ("v_to_Cv_ind", v_to_Cv_ind);
+
 val (free_vars_def, free_vars_ind) =
   tprove_no_defn ((free_vars_def,free_vars_ind),
   WF_REL_TAC `measure Cexp_size` >>

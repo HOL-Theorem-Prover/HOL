@@ -586,10 +586,6 @@ val _ = Defn.save_defn pat_to_Cpat_defn;
  val exp_to_Cexp_defn = Hol_defn "exp_to_Cexp" `
 
 (exp_to_Cexp tp cm (s, Raise err) = (s, CRaise err))
-(*
-and
-exp_to_Cexp tp cm (s, Val v) = (s, v_to_Cv cm v)
-*)
 /\
 (exp_to_Cexp tp cm (s, Val (Lit l)) = (s, CVal (CLit l)))
 /\
@@ -690,15 +686,34 @@ exp_to_Cexp tp cm (s, Val v) = (s, v_to_Cv cm v)
   (if tp then s' else s, CLetfun T fns Cdefs Cb))`;
 
 val _ = Defn.save_defn exp_to_Cexp_defn;
-(*
-and
-v_to_Cv cm (Lit l) = CLit l
-and
-v_to_Cv cm (Conv cn vs) = CConv (Pmap.find cn cm) (List.map (v_to_Cv cn) vs)
-and
-v_to_Cv cm (Closure env vn b) =
-  let 
-*)
+
+ val v_to_Cv_defn = Hol_defn "v_to_Cv" `
+
+(v_to_Cv cm (s, Lit l) = CLit l)
+/\
+(v_to_Cv cm (s, Conv cn vs) =
+  CConv (FAPPLY  cm  cn) (MAP (\ v . v_to_Cv cm (s,v)) vs))
+/\
+(v_to_Cv cm (s, Closure env vn e) =
+  let Cenv = MAP (\ (x,v) . (FAPPLY  s.m  x, v_to_Cv cm (s,v))) env in
+  let (s',n) = extend F s vn in
+  let (_s,Ce) = exp_to_Cexp F cm (s', e) in
+  CClosure Cenv [n] Ce)
+/\
+(v_to_Cv cm (s, Recclosure env defs vn) =
+  let Cenv = MAP (\ (x,v) . (FAPPLY  s.m  x, v_to_Cv cm (s,v))) env in
+  let (s',fns) = FOLDR 
+    (\ (d,_vn,_e) (s,fns) . let (s,n) = extend F s d in (s, n::fns))       (s,[]) 
+          defs in
+  let Cdefs = FOLDR 
+    (\ (_d,vn,e) Cdefs .
+      let (s',n) = extend F s' vn in
+      let (_s,Ce) = exp_to_Cexp F cm (s', e) in
+      ([n],Ce)::Cdefs)      [] 
+          defs in
+  CRecClos Cenv fns Cdefs (FAPPLY  s.m  vn))`;
+
+val _ = Defn.save_defn v_to_Cv_defn;
 
 (* TODO: simple type system and checker *)
 

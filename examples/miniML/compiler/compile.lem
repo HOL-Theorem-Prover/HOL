@@ -547,10 +547,6 @@ pat_to_Cpat tp cm (s, Pcon cn ps) =
 
 let rec
 exp_to_Cexp tp cm (s, Raise err) = (s, CRaise err)
-(*
-and
-exp_to_Cexp tp cm (s, Val v) = (s, v_to_Cv cm v)
-*)
 and
 exp_to_Cexp tp cm (s, Val (Lit l)) = (s, CVal (CLit l))
 and
@@ -649,15 +645,31 @@ exp_to_Cexp tp cm (s, Letrec defs b) =
           defs     [] in
   let (s',Cb) = exp_to_Cexp tp cm (s',b) in
   (if tp then s' else s, CLetfun true fns Cdefs Cb)
-(*
+
+let rec
+v_to_Cv cm (s, Lit l) = CLit l
 and
-v_to_Cv cm (Lit l) = CLit l
+v_to_Cv cm (s, Conv cn vs) =
+  CConv (Pmap.find cn cm) (List.map (fun v -> v_to_Cv cm (s,v)) vs)
 and
-v_to_Cv cm (Conv cn vs) = CConv (Pmap.find cn cm) (List.map (v_to_Cv cn) vs)
+v_to_Cv cm (s, Closure env vn e) =
+  let Cenv = List.map (fun (x,v) -> (Pmap.find x s.m, v_to_Cv cm (s,v))) env in
+  let (s',n) = extend false s vn in
+  let (_s,Ce) = exp_to_Cexp false cm (s', e) in
+  CClosure Cenv [n] Ce
 and
-v_to_Cv cm (Closure env vn b) =
-  let 
-*)
+v_to_Cv cm (s, Recclosure env defs vn) =
+  let Cenv = List.map (fun (x,v) -> (Pmap.find x s.m, v_to_Cv cm (s,v))) env in
+  let (s',fns) = List.fold_right
+    (fun (d,_vn,_e) (s,fns) -> let (s,n) = extend false s d in (s, n::fns))
+          defs      (s,[]) in
+  let Cdefs = List.fold_right
+    (fun (_d,vn,e) Cdefs ->
+      let (s',n) = extend false s' vn in
+      let (_s,Ce) = exp_to_Cexp false cm (s', e) in
+      ([n],Ce)::Cdefs)
+          defs     [] in
+  CRecClos Cenv fns Cdefs (Pmap.find vn s.m)
 
 (* TODO: simple type system and checker *)
 
