@@ -22,7 +22,7 @@
  * are "arithmetic" and "pair".                                              *
  *---------------------------------------------------------------------------*)
 
-local open arithmeticTheory pairTheory pred_setTheory operatorTheory in end;
+local open arithmeticTheory pairTheory pred_setTheory operatorTheory Datatype OpenTheoryMap in end;
 
 
 (*---------------------------------------------------------------------------
@@ -1537,6 +1537,65 @@ val LENGTH_DROP = store_thm(
   Induct_on `l` THEN SRW_TAC [numSimps.ARITH_ss][]);
 val _ = export_rewrites ["LENGTH_DROP"]
 
+(* More functions for operating on pairs of lists *)
+
+val FOLDL2_def = Define`
+  (FOLDL2 f a (b::bs) (c::cs) = FOLDL2 f (f a b c) bs cs) /\
+  (FOLDL2 f a bs cs = a)`
+
+val FOLDL2_cong = store_thm(
+"FOLDL2_cong",
+``!l1 l1' l2 l2' a a' f f'.
+  (l1 = l1') /\ (l2 = l2') /\ (a = a') /\
+  (!z b c. MEM b l1' /\ MEM c l2' ==> (f z b c = f' z b c))
+  ==>
+  (FOLDL2 f a l1 l2 = FOLDL2 f' a' l1' l2')``,
+Induct THEN SIMP_TAC(srw_ss()) [FOLDL2_def] THEN
+GEN_TAC THEN Cases THEN SRW_TAC[][FOLDL2_def])
+
+val EVERY2_def = Define`
+  (EVERY2 P (a::as) (b::bs) = P a b /\ EVERY2 P as bs) /\
+  (EVERY2 P as bs = (as = []) /\ (bs = []))`
+val _ = export_rewrites["EVERY2_def"]
+
+val EVERY2_cong = store_thm(
+"EVERY2_cong",
+``!l1 l1' l2 l2' P P'.
+  (l1 = l1') /\ (l2 = l2') /\
+  (!x y. MEM x l1' /\ MEM y l2' ==> (P x y = P' x y)) ==>
+  (EVERY2 P l1 l2 = EVERY2 P' l1' l2')``,
+Induct THEN SIMP_TAC (srw_ss()) [EVERY2_def] THEN
+GEN_TAC THEN Cases THEN SRW_TAC[][EVERY2_def] THEN
+METIS_TAC[])
+
+val EVERY2_LENGTH = store_thm(
+"EVERY2_LENGTH",
+``!P l1 l2. EVERY2 P l1 l2 ==> (LENGTH l1 = LENGTH l2)``,
+GEN_TAC THEN Induct THEN SRW_TAC[][EVERY2_def] THEN
+Cases_on `l2` THEN FULL_SIMP_TAC (srw_ss()) [EVERY2_def])
+
+val EVERY2_mono = store_thm(
+"EVERY2_mono",
+``(!x y. P x y ==> Q x y)
+  ==> EVERY2 P l1 l2 ==> EVERY2 Q l1 l2``,
+STRIP_TAC THEN
+MAP_EVERY Q.ID_SPEC_TAC [`l2`,`l1`] THEN
+Induct THEN
+SRW_TAC [][EVERY2_def] THEN
+IMP_RES_TAC EVERY2_LENGTH THEN
+Cases_on `l2` THEN
+FULL_SIMP_TAC (srw_ss()) [EVERY2_def])
+val _ = IndDefLib.export_mono "EVERY2_mono"
+
+val MAP_EQ_EVERY2 = store_thm(
+"MAP_EQ_EVERY2",
+``!f1 f2 l1 l2. (MAP f1 l1 = MAP f2 l2) =
+                (LENGTH l1 = LENGTH l2) /\
+                (EVERY2 (\x y. f1 x = f2 y) l1 l2)``,
+NTAC 2 GEN_TAC THEN
+Induct THEN SRW_TAC[][LENGTH_NIL_SYM,MAP,MAP_EQ_NIL] THEN
+Cases_on `l2` THEN SRW_TAC[][MAP] THEN
+PROVE_TAC[])
 
 (* ----------------------------------------------------------------------
     ALL_DISTINCT
@@ -2499,7 +2558,8 @@ val APPEND_EQ_APPEND_MID = store_thm(
 
 (* --------------------------------------------------------------------- *)
 
-val _ = app DefnBase.export_cong ["EXISTS_CONG", "EVERY_CONG", "MAP_CONG", "MAP2_CONG",
+val _ = app DefnBase.export_cong ["EXISTS_CONG", "EVERY_CONG", "MAP_CONG",
+                                  "MAP2_CONG", "EVERY2_cong", "FOLDL2_cong",
                                   "FOLDL_CONG", "FOLDR_CONG", "list_size_cong"]
 
 val _ = adjoin_to_theory
