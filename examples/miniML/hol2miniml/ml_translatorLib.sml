@@ -469,10 +469,11 @@ local
     val _ = unpack_types p2
     in () end;
 in
-  fun export_theory () = let
+  fun onexport () = let
     val _ = pack_state ()
     val _ = print_translation_output ()
-    in Theory.export_theory () end
+    in () end
+  val _ = Theory.register_onexport onexport
   fun translation_extends name = let
     val _ = print ("Loading translation: " ^ name ^ " ... ")
     val _ = unpack_state name
@@ -480,7 +481,6 @@ in
     val _ = print ("done.\n")
     in () end;
 end
-
 
 (* support for user-defined data-types *)
 
