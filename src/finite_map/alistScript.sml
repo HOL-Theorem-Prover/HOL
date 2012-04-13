@@ -84,6 +84,15 @@ Induct THEN SRW_TAC [][] THEN
 Cases_on `h` THEN POP_ASSUM MP_TAC THEN
 SRW_TAC [][]);
 
+val ALOOKUP_SOME_FAPPLY_alist_to_fmap = store_thm(
+"ALOOKUP_SOME_FAPPLY_alist_to_fmap",
+``!al k v. (ALOOKUP al k = SOME v) ==> (alist_to_fmap al ' k = v)``,
+REPEAT STRIP_TAC THEN
+Q_TAC SUFF_TAC `FLOOKUP (alist_to_fmap al) k = SOME v` THEN1
+  SRW_TAC[][FLOOKUP_DEF,MEM_MAP] THEN
+SRW_TAC[][])
+val _ = export_rewrites["ALOOKUP_SOME_FAPPLY_alist_to_fmap"]
+
 val ALOOKUP_MAP = store_thm(
 "ALOOKUP_MAP",
 ``!f al k. ALOOKUP (MAP (\(x,y). (x,f y)) al) k = OPTION_MAP f (ALOOKUP al k)``,
