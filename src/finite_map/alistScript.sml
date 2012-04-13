@@ -1,4 +1,4 @@
-open HolKernel boolLib bossLib Parse finite_mapTheory listTheory pred_setTheory lcsymtacs
+open HolKernel boolLib bossLib Parse finite_mapTheory listTheory pred_setTheory sortingTheory lcsymtacs
 
 val _ = new_theory "alist";
 
@@ -165,5 +165,38 @@ Q.MATCH_ABBREV_TAC `x = MAP_KEYS f1 (fm |+ (k,v))` THEN
 `INJ f1 (k INSERT FDOM fm) UNIV` by (
   SRW_TAC[][Abbr`fm`,INJ_INSERT] ) THEN
 SRW_TAC[][MAP_KEYS_FUPDATE])
+
+val alist_to_fmap_to_alist = store_thm(
+"alist_to_fmap_to_alist",
+``∀al. fmap_to_alist (alist_to_fmap al) = MAP (\k. (k, THE (ALOOKUP al k))) (SET_TO_LIST (set (MAP FST al)))``,
+SRW_TAC[][fmap_to_alist_def,MAP_EQ_f,MEM_MAP] THEN
+Q.MATCH_ASSUM_RENAME_TAC `MEM p al` [] THEN
+PairCases_on `p` THEN SRW_TAC[][] THEN
+Cases_on `ALOOKUP al p0` THEN
+IMP_RES_TAC ALOOKUP_FAILS THEN
+SRW_TAC[][])
+
+val alist_to_fmap_to_alist_PERM = store_thm(
+"alist_to_fmap_to_alist_PERM",
+``∀al. ALL_DISTINCT (MAP FST al) ==> PERM (fmap_to_alist (alist_to_fmap al)) al``,
+SRW_TAC[][alist_to_fmap_to_alist,ALL_DISTINCT_PERM_LIST_TO_SET_TO_LIST] THEN
+MATCH_MP_TAC PERM_TRANS THEN
+Q.EXISTS_TAC `MAP (\k. (k, THE (ALOOKUP al k))) (MAP FST al)` THEN
+CONJ_TAC THEN1 (
+  MATCH_MP_TAC PERM_MAP THEN
+  SRW_TAC[][PERM_SYM] ) THEN
+SRW_TAC[][MAP_MAP_o] THEN
+FULL_SIMP_TAC (srw_ss()) [GSYM ALL_DISTINCT_PERM_LIST_TO_SET_TO_LIST] THEN
+Q.MATCH_ABBREV_TAC `PERM ll al` THEN
+Q_TAC SUFF_TAC `ll = al` THEN1 SRW_TAC[][] THEN
+UNABBREV_ALL_TAC THEN
+Induct_on `al` THEN1 SRW_TAC[][] THEN
+Cases THEN SRW_TAC[][MEM_MAP] THEN
+FULL_SIMP_TAC (srw_ss()) [] THEN
+Q.MATCH_ASSUM_ABBREV_TAC `MAP f1 al = al` THEN
+Q.MATCH_ABBREV_TAC `MAP f2 al = al` THEN
+Q_TAC SUFF_TAC `!x. MEM x al ==> (f1 x = f2 x)` THEN1 PROVE_TAC[MAP_EQ_f] THEN
+SRW_TAC[][Abbr`f1`,Abbr`f2`] THEN
+PROVE_TAC[])
 
 val _ = export_theory ();
