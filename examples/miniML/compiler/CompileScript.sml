@@ -21,6 +21,8 @@ open BytecodeTheory MiniMLTheory
 val _ = type_abbrev((*  ('a,'b) *) "alist" , ``: ('a,'b) alist``);
 (*val fmap_to_alist : forall 'a 'b. ('a,'b) Pmap.map -> ('a,'b) alist*)
 (*val alist_to_fmap : forall 'a 'b. ('a,'b) alist -> ('a,'b) Pmap.map*)
+(*val qsort : forall 'a. ('a -> 'a -> bool) -> 'a list -> 'a list*)
+(*val a_linear_order : forall 'a. 'a -> 'a -> bool*)
 
 (* TODO: elsewhere? *)
  val find_index_defn = Hol_defn "find_index" `
@@ -131,6 +133,10 @@ val _ = Hol_datatype `
 (Cv_to_ov m (CRecClos _ _ _ _) = OFn)`;
 
 val _ = Defn.save_defn Cv_to_ov_defn;
+
+val _ = Define `
+ (sort_Cenv Cenv = QSORT a_linear_order Cenv)`;
+
 
  val doPrim2_defn = Hol_defn "doPrim2" `
 
@@ -264,7 +270,7 @@ Cevaluate env (CLet (n::ns) (e::es) b) r)
 Cevaluate
   (FOLDL2 
     (\ env' n (ns,b) .
-      FUPDATE  env' ( n, (CClosure (fmap_to_alist env) ns b))) 
+      FUPDATE  env' ( n, (CClosure (sort_Cenv (fmap_to_alist env)) ns b))) 
     env  ns  defs)
   b r
 ==>
@@ -275,7 +281,7 @@ Cevaluate env (CLetfun F ns defs b) r)
 Cevaluate
   (FOLDL
      (\ env' n .
-       FUPDATE  env' ( n, (CRecClos (fmap_to_alist env) ns defs n)))
+       FUPDATE  env' ( n, (CRecClos (sort_Cenv (fmap_to_alist env)) ns defs n)))
      env ns)
   b r
 ==>
@@ -285,7 +291,7 @@ Cevaluate env (CLetfun T ns defs b) r)
 (! env ns b.
 T
 ==>
-Cevaluate env (CFun ns b) (Rval (CClosure (fmap_to_alist env) ns b)))
+Cevaluate env (CFun ns b) (Rval (CClosure (sort_Cenv (fmap_to_alist env)) ns b)))
 
 /\
 (! env e es env' ns b vs r.
@@ -699,7 +705,7 @@ val _ = Defn.save_defn exp_to_Cexp_defn;
   let Cenv = MAP (\ (x,v) . (FAPPLY  s.m  x, v_to_Cv cm (s,v))) env in
   let (s',n) = extend F s vn in
   let (_s,Ce) = exp_to_Cexp F cm (s', e) in
-  CClosure Cenv [n] Ce)
+  CClosure (sort_Cenv Cenv) [n] Ce)
 /\
 (v_to_Cv cm (s, Recclosure env defs vn) =
   let Cenv = MAP (\ (x,v) . (FAPPLY  s.m  x, v_to_Cv cm (s,v))) env in
@@ -712,7 +718,7 @@ val _ = Defn.save_defn exp_to_Cexp_defn;
       let (_s,Ce) = exp_to_Cexp F cm (s', e) in
       ([n],Ce)::Cdefs)      [] 
           defs in
-  CRecClos Cenv fns Cdefs (FAPPLY  s.m  vn))`;
+  CRecClos (sort_Cenv Cenv) fns Cdefs (FAPPLY  s.m  vn))`;
 
 val _ = Defn.save_defn v_to_Cv_defn;
 

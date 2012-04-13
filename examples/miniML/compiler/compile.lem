@@ -29,6 +29,10 @@ val fmap_to_alist : forall 'a 'b. ('a,'b) Pmap.map -> ('a,'b) alist
 let inline {hol} fmap_to_alist = Hol.fmap_to_alist
 val alist_to_fmap : forall 'a 'b. ('a,'b) alist -> ('a,'b) Pmap.map
 let inline {hol} alist_to_fmap = Hol.alist_to_fmap
+val qsort : forall 'a. ('a -> 'a -> bool) -> 'a list -> 'a list
+let inline {hol} qsort = Hol.QSORT
+val a_linear_order : forall 'a. 'a -> 'a -> bool
+let inline {hol} a_linear_order = Hol.a_linear_order
 
 (* TODO: elsewhere? *)
 let rec
@@ -111,6 +115,8 @@ and
 Cv_to_ov m (CClosure _ _ _) = OFn
 and
 Cv_to_ov m (CRecClos _ _ _ _) = OFn
+
+let sort_Cenv Cenv = qsort a_linear_order Cenv
 
 let rec
 doPrim2 b ty op (CLit (IntLit x)) (CLit (IntLit y)) =
@@ -235,7 +241,7 @@ forall env ns defs b r.
 Cevaluate
   (fold_left2
     (fun env' n (ns,b) ->
-      Pmap.add n (CClosure (fmap_to_alist env) ns b) env')
+      Pmap.add n (CClosure (sort_Cenv (fmap_to_alist env)) ns b) env')
     env ns defs)
   b r
 ==>
@@ -246,7 +252,7 @@ forall env ns defs b r.
 Cevaluate
   (List.fold_left
      (fun env' n ->
-       Pmap.add n (CRecClos (fmap_to_alist env) ns defs n) env')
+       Pmap.add n (CRecClos (sort_Cenv (fmap_to_alist env)) ns defs n) env')
      env ns)
   b r
 ==>
@@ -256,7 +262,7 @@ and
 forall env ns b.
 true
 ==>
-Cevaluate env (CFun ns b) (Rval (CClosure (fmap_to_alist env) ns b))
+Cevaluate env (CFun ns b) (Rval (CClosure (sort_Cenv (fmap_to_alist env)) ns b))
 
 and
 forall env e es env' ns b vs r.
@@ -657,7 +663,7 @@ v_to_Cv cm (s, Closure env vn e) =
   let Cenv = List.map (fun (x,v) -> (Pmap.find x s.m, v_to_Cv cm (s,v))) env in
   let (s',n) = extend false s vn in
   let (_s,Ce) = exp_to_Cexp false cm (s', e) in
-  CClosure Cenv [n] Ce
+  CClosure (sort_Cenv Cenv) [n] Ce
 and
 v_to_Cv cm (s, Recclosure env defs vn) =
   let Cenv = List.map (fun (x,v) -> (Pmap.find x s.m, v_to_Cv cm (s,v))) env in
@@ -670,7 +676,7 @@ v_to_Cv cm (s, Recclosure env defs vn) =
       let (_s,Ce) = exp_to_Cexp false cm (s', e) in
       ([n],Ce)::Cdefs)
           defs     [] in
-  CRecClos Cenv fns Cdefs (Pmap.find vn s.m)
+  CRecClos (sort_Cenv Cenv) fns Cdefs (Pmap.find vn s.m)
 
 (* TODO: simple type system and checker *)
 

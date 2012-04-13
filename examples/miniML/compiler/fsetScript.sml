@@ -24,4 +24,7 @@ prove_tac[NOT_IN_FINITE,INFINITE_NUM_UNIV,MEMBER_NOT_EMPTY])
 val num_set_foldl_def = new_specification(
 "num_set_foldl_def",["num_set_foldl"],num_set_foldl_exists)
 
+val a_linear_order_def = Define`
+  a_linear_order = @r. antisymmetric r ∧ transitive r ∧ total r`
+
 val _ = export_theory();

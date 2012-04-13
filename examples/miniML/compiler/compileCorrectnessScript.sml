@@ -1,4 +1,4 @@
-open HolKernel bossLib boolLib MiniMLTheory evaluateEquationsTheory compileTerminationTheory listTheory lcsymtacs
+open HolKernel bossLib boolLib MiniMLTheory evaluateEquationsTheory compileTerminationTheory count_expTheory listTheory lcsymtacs
 
 val _ = new_theory "compileCorrectness"
 
@@ -88,6 +88,14 @@ val well_typed_App_subexp = store_thm(
 rw[] >> match_mp_tac (MP_CANON well_typed_subexp_lem) >>
 metis_tac [subexp_rules])
 
+(* TODO: move? *)
+
+val lookup_ALOOKUP = store_thm(
+"lookup_ALOOKUP",
+``lookup = combin$C ALOOKUP``,
+fs[FUN_EQ_THM] >> gen_tac >> Induct >- rw[] >> Cases >> rw[])
+val _ = export_rewrites["lookup_ALOOKUP"];
+
 (* nicer induction theorem for evaluate *)
 (* TODO: move? *)
 
@@ -153,10 +161,12 @@ evaluate_ind
 
 (* TODO: save in compileTerminationTheory? *)
 val Cevaluate_cases = CompileTheory.Cevaluate_cases
+val Cevaluate_rules = CompileTheory.Cevaluate_rules
 val extend_def = CompileTheory.extend_def
 val exp_Cexp_ind = CompileTheory.exp_Cexp_ind
 val v_Cv_ind = CompileTheory.v_Cv_ind
 val v_Cv_cases = CompileTheory.v_Cv_cases
+val sort_Cenv_def = CompileTheory.sort_Cenv_def
 
 (* Cevaluate functional equations *)
 
@@ -170,7 +180,72 @@ val Cevaluate_val = store_thm(
 ``∀env v res. Cevaluate env (CVal v) res = (res = Rval v)``,
 rw[Once Cevaluate_cases])
 
-val _ = export_rewrites["Cevaluate_raise","Cevaluate_val"]
+val Cevaluate_var = store_thm(
+"Cevaluate_var",
+``∀env vn res. Cevaluate env (CVar vn) res = (res = Rval (env ' vn))``,
+rw[Once Cevaluate_cases])
+
+val _ = export_rewrites["Cevaluate_raise","Cevaluate_val","Cevaluate_var"]
+
+val Cevaluate_con = store_thm(
+"Cevaluate_con",
+``∀env cn es res. Cevaluate env (CCon cn es) res =
+(∃vs. Cevaluate_list env es (Rval vs) ∧ (res = Rval (CConv cn vs))) ∨
+(∃err. Cevaluate_list env es (Rerr err) ∧ (res = Rerr err))``,
+rw[Once Cevaluate_cases] >> PROVE_TAC[])
+
+val (Cevaluate_list_with_rules,Cevaluate_list_with_ind,Cevaluate_list_with_cases) = Hol_reln [ANTIQUOTE(
+Cevaluate_rules |> SIMP_RULE (srw_ss()) [] |> concl |>
+strip_conj |>
+Lib.filter (fn tm => tm |> strip_forall |> snd |> strip_imp |> snd |> strip_comb |> fst |> same_const ``Cevaluate_list``) |>
+let val t1 = ``Cevaluate env``
+    val t2 = ``Cevaluate_list env``
+    val tP = type_of t1
+    val P = mk_var ("P",tP)
+    val ew = mk_comb(mk_var("Cevaluate_list_with",tP --> type_of t2),P)
+in List.map (fn tm => tm |> strip_forall |> snd |>
+                   subst [t1|->P, t2|->ew])
+end |> list_mk_conj)]
+
+val Cevaluate_list_with_Cevaluate = store_thm(
+"Cevaluate_list_with_Cevaluate",
+``∀env. Cevaluate_list env = Cevaluate_list_with (Cevaluate env)``,
+gen_tac >>
+simp_tac std_ss [Once FUN_EQ_THM] >>
+Induct >>
+rw[FUN_EQ_THM] >-
+  rw[Once Cevaluate_cases,Once Cevaluate_list_with_cases] >>
+rw[Once Cevaluate_cases] >>
+rw[Once Cevaluate_list_with_cases,SimpRHS] >>
+PROVE_TAC[])
+
+val evaluate_list_with_nil = store_thm(
+"evaluate_list_with_nil",
+``∀f res. evaluate_list_with f [] res = (res = Rval [])``,
+rw[Once evaluate_list_with_cases])
+val _ = export_rewrites["evaluate_list_with_nil"];
+
+val evaluate_list_with_cons = store_thm(
+"evaluate_list_with_cons",
+``∀f e es res. evaluate_list_with f (e::es) res =
+  (∃v vs. f e (Rval v) ∧ evaluate_list_with f es (Rval vs) ∧ (res = Rval (v::vs))) ∨
+  (∃v err. f e (Rval v) ∧ evaluate_list_with f es (Rerr err) ∧ (res = Rerr err)) ∨
+  (∃err. f e (Rerr err) ∧ (res = Rerr err))``,
+rw[Once evaluate_list_with_cases] >> PROVE_TAC[])
+
+val Cevaluate_list_with_nil = store_thm(
+"Cevaluate_list_with_nil",
+``∀f res. Cevaluate_list_with f [] res = (res = Rval [])``,
+rw[Once Cevaluate_list_with_cases])
+val _ = export_rewrites["Cevaluate_list_with_nil"];
+
+val Cevaluate_list_with_cons = store_thm(
+"Cevaluate_list_with_cons",
+``∀f e es res. Cevaluate_list_with f (e::es) res =
+  (∃v vs. f e (Rval v) ∧ Cevaluate_list_with f es (Rval vs) ∧ (res = Rval (v::vs))) ∨
+  (∃v err. f e (Rval v) ∧ Cevaluate_list_with f es (Rerr err) ∧ (res = Rerr err)) ∨
+  (∃err. f e (Rerr err) ∧ (res = Rerr err))``,
+rw[Once Cevaluate_list_with_cases] >> PROVE_TAC[])
 
 val good_cm_cw_def = Define`
   good_cm_cw cm cw =
@@ -283,6 +358,126 @@ qsuff_tac `∀b cm s exp s' Cexp.
   (FST (s,exp)).m SUBMAP s'.m` >- rw[] >>
 ho_match_mp_tac exp_to_Cexp_ind >>
 rw[exp_to_Cexp_def,extend_def]
+*)
+
+val good_cmap_def = Define`
+good_cmap cenv cm =
+  (∀cn n. do_con_check cenv cn n ⇒ cn IN FDOM cm)`
+
+val good_exp_to_Cexp_state_def = Define`
+  good_exp_to_Cexp_state env s =
+  INJ (FAPPLY s.m) (set (MAP FST env)) UNIV`
+
+(* TODO: move? *)
+val QSORT_eq_if_PERM = store_thm(
+"QSORT_eq_if_PERM",
+``!R l1 l2. total R /\ transitive R /\ antisymmetric R /\ PERM l1 l2 ==> (QSORT R l1 = QSORT R l2)``,
+PROVE_TAC[sortingTheory.QSORT_PERM,sortingTheory.QSORT_SORTED,sortingTheory.SORTED_PERM_EQ,
+          sortingTheory.PERM_TRANS,sortingTheory.PERM_SYM])
+
+local open pred_setTheory relationTheory in
+(* TODO: move, or use set_relation stuff? *)
+val countable_has_linear_order = store_thm(
+"countable_has_linear_order",
+``countable (UNIV:'a set) ==>
+  ?(r:'a->'a->bool). antisymmetric r /\ transitive r /\ total r``,
+SRW_TAC[][countable_def,INJ_DEF] THEN
+Q.EXISTS_TAC `inv_image $<= f` THEN
+SRW_TAC[][antisymmetric_def,
+          transitive_def,
+          total_def,
+          inv_image_def] THEN
+METIS_TAC[arithmeticTheory.LESS_EQUAL_ANTISYM,
+          arithmeticTheory.LESS_EQ_TRANS,
+          arithmeticTheory.LESS_EQ_CASES])
+end
+
+(*
+val exp_to_Cexp_thm1 = store_thm(
+"exp_to_Cexp_thm1",
+``∀tp cm Ps Pexp s exp s' Cexp cenv env res.
+  ((Ps,Pexp) = (s,exp)) ∧
+  good_exp_to_Cexp_state env s ∧
+  (exp_to_Cexp tp cm (s,exp) = (s',Cexp)) ∧
+  (tp = F) ∧
+  evaluate cenv env exp res ∧
+  (res ≠ Rerr Rtype_error) ∧
+  good_cmap cenv cm ⇒
+  Cevaluate (alist_to_fmap (MAP (λ(x,v). (s.m ' x, v_to_Cv cm (s,v))) env)) Cexp (map_result (λv. v_to_Cv cm (s,v)) res)``,
+ho_match_mp_tac exp_to_Cexp_ind >>
+strip_tac >-
+  fs[exp_to_Cexp_def] >>
+strip_tac >-
+  fs[exp_to_Cexp_def,v_to_Cv_def] >>
+strip_tac >- (
+  fs[exp_to_Cexp_def] >>
+  rw[Cevaluate_con,evaluate_con] >>
+  fs[Cevaluate_list_with_Cevaluate,evaluate_list_with_evaluate] >>
+  qpat_assum `do_con_check cenv cn (LENGTH es)` kall_tac >>
+  rw[] >>
+  TRY (qpat_assum `X Y Z (Rval vs)` mp_tac >> qid_spec_tac `vs`) >>
+  Induct_on `es` >- (
+    rw[Once evaluate_cases, Once Cevaluate_cases] ) >>
+  fs[v_to_Cv_def] >- (
+    rw[] >>
+    fs[evaluate_list_with_cons] >- (
+      rw[Cevaluate_list_with_cons] >>
+      disj1_tac >>
+      qmatch_assum_abbrev_tac `P ⇒ Q ⇒ R` >>
+      `R` by metis_tac[] >>
+      qpat_assum `Q` kall_tac >>
+      qpat_assum `P ⇒ Q ⇒ R` kall_tac >>
+      unabbrev_all_tac >>
+      first_x_assum (qspec_then `h` mp_tac) >> rw[] >>
+      first_x_assum (qspecl_then [`cenv`,`env`,`Rval v`] mp_tac) >> rw[] >>
+      metis_tac[] ) >>
+    rw[Cevaluate_list_with_cons] >>
+    disj2_tac >>
+    first_x_assum (qspec_then `h` mp_tac) >> rw[] >>
+    first_x_assum (qspecl_then [`cenv`,`env`,`Rerr err`] mp_tac) >> rw[] ) >>
+  rw[] >>
+  fs[evaluate_list_with_cons] >>
+  rw[Cevaluate_list_with_cons] >- (
+    first_x_assum (qspec_then `h` mp_tac) >> rw[] >>
+    first_x_assum (qspecl_then [`cenv`,`env`,`Rval v`] mp_tac) >> rw[] ) >>
+  first_x_assum (match_mp_tac o MP_CANON) >>
+  rw[] >>
+  metis_tac[] ) >>
+strip_tac >- (
+  fs[exp_to_Cexp_def,evaluate_var] >>
+  rw[] >> rw[] >>
+  fs[good_exp_to_Cexp_state_def] >>
+  qho_match_abbrev_tac `x = alist_to_fmap (MAP (λ(x,y). (f1 x, f2 y)) al) ' z` >>
+  `f1 = FAPPLY s.m` by rw[Abbr`f1`,FUN_EQ_THM] >>
+  rw[alistTheory.alist_to_fmap_MAP] >>
+  `vn IN FDOM (f2 o_f alist_to_fmap al)` by (
+    rw[MEM_MAP] >>
+    imp_res_tac alistTheory.ALOOKUP_MEM >>
+    qexists_tac `(vn,v)` >> rw[] ) >>
+  rw[finite_mapTheory.MAP_KEYS_def,Abbr`z`] >>
+  unabbrev_all_tac >>
+  rw[finite_mapTheory.o_f_DEF] >>
+  imp_res_tac alistTheory.ALOOKUP_SOME_FAPPLY_alist_to_fmap >>
+  rw[] ) >>
+strip_tac >- (
+  fs[exp_to_Cexp_def] >>
+  rw[v_to_Cv_def] >>
+  fs[LET_THM] >>
+  rw[Once Cevaluate_cases] >>
+  rw[sort_Cenv_def] >>
+  match_mp_tac QSORT_eq_if_PERM >>
+  simp_tac(srw_ss())[CONJ_ASSOC] >>
+  conj_tac >- (
+    fs[fsetTheory.a_linear_order_def] >>
+    SELECT_ELIM_TAC >> rw[] >>
+    match_mp_tac countable_has_linear_order >>
+    rw[pred_setTheory.countable_def] >>
+    qexists_tac `count_prod_aux count_num_aux count_Cv_aux` >>
+    rw[pred_setTheory.INJ_DEF] ) >>
+  rw[Once sortingTheory.PERM_SYM] >>
+  match_mp_tac alistTheory.alist_to_fmap_to_alist_PERM >>
+  rw[Abbr`Cenv`,MAP_MAP_o]
+  good_exp_to_Cexp_state_def
 *)
 
 (*

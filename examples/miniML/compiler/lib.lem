@@ -9,3 +9,5 @@ val IMAGE : forall 'a 'b. ('a -> 'b) -> 'a set -> 'b set
 val UNCURRY : forall 'a 'b 'c. ('a -> 'b -> 'c) -> (('a * 'b) -> 'c)
 val FOLDL2 : forall 'a 'b 'c. ('a -> 'b -> 'c -> 'a) -> 'a -> 'b list -> 'c list -> 'a
 val EVERY2 : forall 'a 'b. ('a -> 'b -> bool) -> 'a list -> 'b list -> bool
+val QSORT : forall 'a. ('a -> 'a -> bool) -> 'a list -> 'a list
+val a_linear_order : forall 'a. 'a -> 'a -> bool
