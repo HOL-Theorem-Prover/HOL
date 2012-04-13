@@ -1,6 +1,6 @@
 open HolKernel bossLib boolLib pred_setTheory lcsymtacs
 
-val _ = new_theory "countable"
+val _ = new_theory "countable_init"
 
 val count_num2_def = Define`
   count_num2 = @f. INJ f ((UNIV:num set) CROSS (UNIV:num set)) (UNIV:num set)`
@@ -53,5 +53,34 @@ INT_EQ_NEG,
 EVEN_ODD,
 ODD_DOUBLE,
 EVEN_DOUBLE])
+
+fun prove_inj_rwt inj = let
+  val (hyps,c) = strip_imp (concl inj)
+  val tm = rand(rator(rator c))
+  val (ty,_) = dom_rng(type_of tm)
+  val x = mk_var("x",ty)
+  val y = mk_var("y",ty)
+in
+  prove(list_mk_imp(hyps,
+    list_mk_forall([x,y],(mk_eq(
+      mk_eq(mk_comb(tm,x),mk_comb(tm,y)),
+      mk_eq(x,y))))),
+    assume_tac inj >>
+    fs[INJ_DEF] >>
+    rpt strip_tac >> EQ_TAC >>
+    fs[])
+end
+
+val count_num_aux_inj_rwt = prove_inj_rwt count_num_aux_inj
+val _ = save_thm("count_num_aux_inj_rwt",count_num_aux_inj_rwt)
+val _ = export_rewrites["count_num_aux_inj_rwt"]
+
+val count_char_aux_inj_rwt = prove_inj_rwt count_char_aux_inj
+val _ = save_thm("count_char_aux_inj_rwt",count_char_aux_inj_rwt)
+val _ = export_rewrites["count_char_aux_inj_rwt"]
+
+val count_int_aux_inj_rwt = prove_inj_rwt count_int_aux_inj
+val _ = save_thm("count_int_aux_inj_rwt",count_int_aux_inj_rwt)
+val _ = export_rewrites["count_int_aux_inj_rwt"]
 
 val _ = export_theory ()

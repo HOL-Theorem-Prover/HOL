@@ -1,38 +1,11 @@
-open HolKernel pred_setTheory countableTheory lcsymtacs
+structure countableLib :> countableLib = struct
+open HolKernel bossLib Tactical Drule lcsymtacs
+open pred_setTheory countable_initTheory
 open boolSyntax numSyntax pairSyntax pred_setSyntax
-
-fun prove_inj_rwt inj = let
-  val (hyps,c) = strip_imp (concl inj)
-  val tm = rand(rator(rator c))
-  val (ty,_) = dom_rng(type_of tm)
-  val x = mk_var("x",ty)
-  val y = mk_var("y",ty)
-in
-  prove(list_mk_imp(hyps,
-    list_mk_forall([x,y],(mk_eq(
-      mk_eq(mk_comb(tm,x),mk_comb(tm,y)),
-      mk_eq(x,y))))),
-    assume_tac inj >>
-    fs[INJ_DEF] >>
-    rpt strip_tac >> EQ_TAC >>
-    fs[])
-end
-
-val count_num_aux_inj_rwt = prove_inj_rwt count_num_aux_inj
-val _ = save_thm("count_num_aux_inj_rwt",count_num_aux_inj_rwt)
-val _ = export_rewrites["count_num_aux_inj_rwt"]
-
-val count_char_aux_inj_rwt = prove_inj_rwt count_char_aux_inj
-val _ = save_thm("count_char_aux_inj_rwt",count_char_aux_inj_rwt)
-val _ = export_rewrites["count_char_aux_inj_rwt"]
-
-val count_int_aux_inj_rwt = prove_inj_rwt count_int_aux_inj
-val _ = save_thm("count_int_aux_inj_rwt",count_int_aux_inj_rwt)
-val _ = export_rewrites["count_int_aux_inj_rwt"]
 
 fun uneta tm = let
   val (t,_) = dom_rng (type_of tm)
-  val x = mk_var("x",t)
+  val x = genvar t
 in mk_abs(x,mk_comb(tm,x)) end
 
 val mk_count_aux_inj_rwt_ttac = let
@@ -111,7 +84,7 @@ in fn tys => fn ttac => let
     srw_tac[boolSimps.ETA_ss][] >>
     qmatch_rename_tac `(X = Y z) ⇔ Z` ["X","Y","Z"] >>
     Cases_on `z` >> rw[])
-  val (_,ths) = foldl
+  val (_,ths) = foldr
     (fn (ty,(all,ths)) => let
       val (th,all) = Lib.pluck (fn th => ty = type_of(fst(dest_forall(concl th)))) all
     in (all,th::ths) end)
@@ -126,56 +99,6 @@ end
 
 val mk_count_aux_inj_rwt = Lib.C mk_count_aux_inj_rwt_ttac NONE
 
-val [count_bool_aux_inj_rwt] = mk_count_aux_inj_rwt [``:bool``]
-val [count_list_aux_inj_rwt] = mk_count_aux_inj_rwt [``:α list``]
-
-val count_list_aux_cong = store_thm(
-"count_list_aux_cong",
-``∀l1 l2 f f'. (l1 = l2) ∧ (∀x. MEM x l2 ⇒ (f x = f' x)) ⇒ (count_list_aux f l1 = count_list_aux f' l2)``,
-rw[] >> Induct_on `l1` >>
-rw[definition "count_list_aux_def"])
-val _ = DefnBase.export_cong"count_list_aux_cong"
-
-val [count_option_aux_inj_rwt] = mk_count_aux_inj_rwt [``:α option``]
-val [count_prod_aux_inj_rwt] = mk_count_aux_inj_rwt [``:α # β``]
-
-val count_prod_aux_cong = store_thm(
-"count_prod_aux_cong",
-``∀p1 p2 ca ca' cb cb'. (p1 = p2) ∧ (∀x. (x = FST p2) ⇒ (ca x = ca' x)) ∧ (∀x. (x = SND p2) ⇒ (cb x = cb' x))
-    ⇒ (count_prod_aux ca cb p1 = count_prod_aux ca' cb' p2)``,
-rw[] >> Cases_on `p1` >> fs[])
-val _ = DefnBase.export_cong"count_prod_aux_cong"
-
-open MiniMLTheory
-
-val [count_error_aux_inj_rwt]        = mk_count_aux_inj_rwt [``:error``]
-val [count_lit_aux_inj_rwt]          = mk_count_aux_inj_rwt [``:lit``]
-val [count_error_result_aux_inj_rwt] = mk_count_aux_inj_rwt [``:error_result``]
-val [count_result_aux_inj_rwt]       = mk_count_aux_inj_rwt [``:α result``]
-val [count_opn_aux_inj_rwt]          = mk_count_aux_inj_rwt [``:opn``]
-val [count_opb_aux_inj_rwt]          = mk_count_aux_inj_rwt [``:opb``]
-val [count_op_aux_inj_rwt]           = mk_count_aux_inj_rwt [``:op``]
-val [count_log_aux_inj_rwt]          = mk_count_aux_inj_rwt [``:log``]
-val [count_pat_aux_inj_rwt] = let
-  val tys  = [``:pat``]
-  val ttac = SOME (
-    WF_REL_TAC `measure pat_size` >>
-    gen_tac >> Induct >>
-    rw[pat_size_def] >>
-    res_tac >> DECIDE_TAC )
-in mk_count_aux_inj_rwt_ttac tys ttac end
-val [count_exp_aux_inj_rwt,count_v_aux_inj_rwt] = let
-  val tys  = [``:exp``,``:v``]
-  val ttac = SOME (
-    WF_REL_TAC `inv_image $< (λx. case x of INL v => v_size v | INR e => exp_size e)` >>
-    srw_tac[ARITH_ss][] >>
-    qmatch_assum_rename_tac `MEM X l` ["X"] >>
-    Induct_on `l` >>
-    srw_tac[ARITH_ss][exp_size_def] >>
-    fs[]>>
-    srw_tac[ARITH_ss][exp_size_def] )
-in mk_count_aux_inj_rwt_ttac tys ttac end
-
 fun mk_countable a = ``countable ^(mk_univ a)``
 
 fun inj_rwt_to_countable th = let
@@ -185,4 +108,4 @@ in prove(mk_countable t,
   prove_tac[th])
 end
 
-val countable_v = save_thm("countable_v",inj_rwt_to_countable count_v_aux_inj_rwt)
+end

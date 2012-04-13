@@ -12,6 +12,12 @@ qx_gen_tac `p` >>
 PairCases_on `p` >>
 srw_tac [ARITH_ss][Cexp_size_def])
 
+val Cexp3_size_thm = store_thm(
+"Cexp3_size_thm",
+``∀ls. Cexp3_size ls = SUM (MAP Cexp5_size ls) + LENGTH ls``,
+Induct >- rw[Cexp_size_def] >>
+srw_tac [ARITH_ss][Cexp_size_def])
+
 val Cexp4_size_thm = store_thm(
 "Cexp4_size_thm",
 ``∀ls. Cexp4_size ls = SUM (MAP Cexp6_size ls) + LENGTH ls``,
