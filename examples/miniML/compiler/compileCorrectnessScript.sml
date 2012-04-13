@@ -1,4 +1,4 @@
-open HolKernel bossLib boolLib MiniMLTheory evaluateEquationsTheory compileTerminationTheory count_expTheory listTheory lcsymtacs
+open HolKernel bossLib boolLib intLib MiniMLTheory evaluateEquationsTheory compileTerminationTheory count_expTheory listTheory lcsymtacs
 
 val _ = new_theory "compileCorrectness"
 
@@ -167,6 +167,9 @@ val exp_Cexp_ind = CompileTheory.exp_Cexp_ind
 val v_Cv_ind = CompileTheory.v_Cv_ind
 val v_Cv_cases = CompileTheory.v_Cv_cases
 val sort_Cenv_def = CompileTheory.sort_Cenv_def
+val CevalPrim2_def = CompileTheory.CevalPrim2_def
+val doPrim2_def = CompileTheory.doPrim2_def
+val i0_def = CompileTheory.i0_def
 
 (* Cevaluate functional equations *)
 
@@ -364,16 +367,18 @@ val good_cmap_def = Define`
 good_cmap cenv cm =
   (∀cn n. do_con_check cenv cn n ⇒ cn IN FDOM cm)`
 
-val good_exp_to_Cexp_state_def = Define`
-  good_exp_to_Cexp_state env s =
+val good_env_state_def = Define`
+  good_env_state env s =
+  ALL_DISTINCT (MAP FST env) ∧
   INJ (FAPPLY s.m) (set (MAP FST env)) UNIV`
 
 (* TODO: move? *)
+local open sortingTheory in
 val QSORT_eq_if_PERM = store_thm(
 "QSORT_eq_if_PERM",
 ``!R l1 l2. total R /\ transitive R /\ antisymmetric R /\ PERM l1 l2 ==> (QSORT R l1 = QSORT R l2)``,
-PROVE_TAC[sortingTheory.QSORT_PERM,sortingTheory.QSORT_SORTED,sortingTheory.SORTED_PERM_EQ,
-          sortingTheory.PERM_TRANS,sortingTheory.PERM_SYM])
+PROVE_TAC[QSORT_PERM,QSORT_SORTED,SORTED_PERM_EQ,PERM_TRANS,PERM_SYM])
+end
 
 local open pred_setTheory relationTheory in
 (* TODO: move, or use set_relation stuff? *)
@@ -397,7 +402,7 @@ val exp_to_Cexp_thm1 = store_thm(
 "exp_to_Cexp_thm1",
 ``∀tp cm Ps Pexp s exp s' Cexp cenv env res.
   ((Ps,Pexp) = (s,exp)) ∧
-  good_exp_to_Cexp_state env s ∧
+  good_env_state env s ∧
   (exp_to_Cexp tp cm (s,exp) = (s',Cexp)) ∧
   (tp = F) ∧
   evaluate cenv env exp res ∧
@@ -446,7 +451,7 @@ strip_tac >- (
 strip_tac >- (
   fs[exp_to_Cexp_def,evaluate_var] >>
   rw[] >> rw[] >>
-  fs[good_exp_to_Cexp_state_def] >>
+  fs[good_env_state_def] >>
   qho_match_abbrev_tac `x = alist_to_fmap (MAP (λ(x,y). (f1 x, f2 y)) al) ' z` >>
   `f1 = FAPPLY s.m` by rw[Abbr`f1`,FUN_EQ_THM] >>
   rw[alistTheory.alist_to_fmap_MAP] >>
@@ -476,8 +481,108 @@ strip_tac >- (
     rw[pred_setTheory.INJ_DEF] ) >>
   rw[Once sortingTheory.PERM_SYM] >>
   match_mp_tac alistTheory.alist_to_fmap_to_alist_PERM >>
-  rw[Abbr`Cenv`,MAP_MAP_o]
-  good_exp_to_Cexp_state_def
+  rw[Abbr`Cenv`,MAP_MAP_o] >>
+  fs[good_env_state_def,EL_ALL_DISTINCT_EL_EQ,EL_MAP,pairTheory.UNCURRY] >>
+  fsrw_tac[boolSimps.DNF_ss][pred_setTheory.INJ_DEF,MEM_MAP,MEM_EL] >>
+  metis_tac[] ) >>
+strip_tac >- (
+  rw[exp_to_Cexp_def] >>
+  Cases_on `exp_to_Cexp F cm (s,e1)` >> fs[] >>
+  Cases_on `exp_to_Cexp F cm (s,e2)` >> fs[] >>
+  fs[LET_THM] >> rw[] >>
+  rw[Once Cevaluate_cases] >>
+  fs[evaluate_app] >- (
+    disj1_tac >>
+    rw[Cevaluate_list_with_Cevaluate] >>
+    rw[Cevaluate_list_with_cons] >>
+    qexists_tac `v_to_Cv cm (s,v1)` >>
+    qexists_tac `v_to_Cv cm (s,v2)` >>
+    first_x_assum (qspecl_then [`cenv`,`env`,`Rval v1`] mp_tac) >>
+    first_x_assum (qspecl_then [`cenv`,`env`,`Rval v2`] mp_tac) >>
+    rw[] >>
+    Cases_on `opn` >>
+    Cases_on `v1` >> Cases_on `l` >> fs[do_app_def] >>
+    Cases_on `v2` >> Cases_on `l` >> fs[] >> rw[] >>
+    fs[CevalPrim2_def,doPrim2_def,v_to_Cv_def,opn_lookup_def,i0_def] >>
+    rw[] >> fs[] >> rw[] >>
+    qpat_assum `evaluate cenv env (Val X) Y` mp_tac >>
+    rw[Once evaluate_cases,v_to_Cv_def] )
+  >- (
+    disj2_tac >>
+    rw[Cevaluate_list_with_Cevaluate] >>
+    rw[Cevaluate_list_with_cons] >>
+    disj1_tac >>
+    qexists_tac `v_to_Cv cm (s,v1)` >>
+    first_x_assum (qspecl_then [`cenv`,`env`,`Rval v1`] mp_tac) >>
+    first_x_assum (qspecl_then [`cenv`,`env`,`Rerr err`] mp_tac) >>
+    rw[] )
+  >- (
+    disj2_tac >>
+    rw[Cevaluate_list_with_Cevaluate] >>
+    rw[Cevaluate_list_with_cons] >>
+    disj2_tac >>
+    first_x_assum (qspecl_then [`cenv`,`env`,`Rerr err`] mp_tac) >>
+    rw[] )) >>
+strip_tac >- (
+  rw[exp_to_Cexp_def] >>
+  Cases_on `exp_to_Cexp F cm (s,e1)` >> fs[] >>
+  Cases_on `exp_to_Cexp F cm (s,e2)` >> fs[] >>
+  fs[LET_THM] >> rw[] >>
+  qpat_assum `evaluate cenv env (App (Opb X) e1 e2) res` mp_tac >>
+  rw[evaluate_app] >-
+    let
+      fun tac v1 v2 =
+        qexists_tac (List.map QUOTE ["v_to_Cv cm (s,",v1,")"]) >>
+        qexists_tac (List.map QUOTE ["v_to_Cv cm (s,",v2,")"]) >>
+        first_x_assum (qspecl_then [`cenv`,`env`,`Rval v1`] mp_tac) >>
+        first_x_assum (qspecl_then [`cenv`,`env`,`Rval v2`] mp_tac) >>
+        rw[] >>
+        Cases_on `v1` >> Cases_on `l` >> fs[do_app_def] >>
+        Cases_on `v2` >> Cases_on `l` >> fs[] >> rw[] >>
+        rw[CevalPrim2_def,doPrim2_def,v_to_Cv_def] >>
+        qpat_assum `evaluate cenv env (Val X) Y` mp_tac >>
+        rw[Once evaluate_cases,v_to_Cv_def,opb_lookup_def] >>
+        ARITH_TAC
+      val ltac = tac "v1" "v2"
+      val gtac = tac "v2" "v1"
+    in
+      Cases_on `opb` >> rw[Once Cevaluate_cases] >>
+      disj1_tac >>
+      rw[Cevaluate_list_with_Cevaluate] >>
+      rw[Cevaluate_list_with_cons]
+      >- ltac >- gtac >- ltac >- gtac
+    end
+  >- let
+      fun tac t = t >>
+        first_x_assum (qspecl_then [`cenv`,`env`,`Rval v1`] mp_tac) >>
+        first_x_assum (qspecl_then [`cenv`,`env`,`Rerr err`] mp_tac) >>
+        rw[]
+      val ltac = tac (
+        disj1_tac >>
+        qexists_tac `v_to_Cv cm (s,v1)` )
+      val gtac = tac ( disj2_tac )
+    in
+      Cases_on `opb` >> rw[Once Cevaluate_cases] >>
+      disj2_tac >>
+      rw[Cevaluate_list_with_Cevaluate] >>
+      rw[Cevaluate_list_with_cons]
+      >- ltac >- gtac >- ltac >- gtac
+    end
+  >- let
+      fun tac t = t >>
+        first_x_assum (qspecl_then [`cenv`,`env`,`Rval err`] mp_tac) >>
+        rw[]
+      val gtac = tac (
+        disj1_tac >>
+        qexists_tac `v_to_Cv cm (s,v1)` )
+      val ltac = tac ( disj2_tac )
+    in
+      Cases_on `opb` >> rw[Once Cevaluate_cases] >>
+      disj2_tac >>
+      rw[Cevaluate_list_with_Cevaluate] >>
+      rw[Cevaluate_list_with_cons]
+      >- ltac >- gtac >- ltac >- gtac
+    end
 *)
 
 (*
