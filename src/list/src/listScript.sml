@@ -1433,6 +1433,12 @@ val LAST_CONS = store_thm(
   REWRITE_TAC [LAST_DEF, NOT_CONS_NIL]);
 val _ = export_rewrites ["LAST_CONS"]
 
+val LAST_EL = store_thm(
+"LAST_EL",
+``!ls. (ls <> []) ==> (LAST ls = EL (PRE (LENGTH ls)) ls)``,
+Induct THEN SRW_TAC[][] THEN
+Cases_on `ls` THEN FULL_SIMP_TAC (srw_ss()) [])
+
 val FRONT_CONS = store_thm(
   "FRONT_CONS",
   ``(!x:'a. FRONT [x] = []) /\

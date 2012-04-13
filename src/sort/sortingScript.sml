@@ -823,6 +823,127 @@ SRW_TAC [][] THEN
 METIS_TAC [ADD_SYM,MULT_SYM,DIV_MULT,MOD_MULT])
 end
 
+val SORTED_NIL = store_thm(
+"SORTED_NIL",
+``!R. SORTED R []``,
+SRW_TAC[][SORTED_DEF])
+val _ = export_rewrites["SORTED_NIL"]
+
+val SORTED_SING = store_thm(
+"SORTED_SING",
+``!R x. SORTED R [x]``,
+SRW_TAC[][SORTED_DEF])
+val _ = export_rewrites["SORTED_SING"]
+
+val SORTED_EL_SUC = store_thm(
+"SORTED_EL_SUC",
+``!R ls. SORTED R ls =
+        !n. (SUC n) < LENGTH ls ==>
+            R (EL n ls) (EL (SUC n) ls)``,
+GEN_TAC THEN Induct THEN SRW_TAC[][] THEN
+Cases_on `ls` THEN SRW_TAC[][SORTED_DEF] THEN
+SRW_TAC[][EQ_IMP_THM] THEN1 (
+  Cases_on `n` THEN SRW_TAC[][] THEN
+  FULL_SIMP_TAC (srw_ss()) [] )
+THEN1 (
+  POP_ASSUM (Q.SPEC_THEN `0` MP_TAC) THEN
+  SRW_TAC[][] ) THEN
+FIRST_X_ASSUM (Q.SPEC_THEN `SUC n` MP_TAC) THEN
+SRW_TAC [][])
+
+val SORTED_EL_LESS = store_thm(
+"SORTED_EL_LESS",
+``!R. transitive R ==>
+  !ls. SORTED R ls =
+       !m n. m < n /\ n < LENGTH ls ==>
+             R (EL m ls) (EL n ls)``,
+GEN_TAC THEN STRIP_TAC THEN
+Induct THEN SRW_TAC[][] THEN
+SRW_TAC[][SORTED_EQ,EQ_IMP_THM] THEN1 (
+  Cases_on `n` THEN FULL_SIMP_TAC (srw_ss()) [] THEN
+  Cases_on `m` THEN SRW_TAC[][] THEN1
+    METIS_TAC[MEM_EL] THEN
+  FULL_SIMP_TAC (srw_ss()) [] )
+THEN1 (
+  FIRST_X_ASSUM (Q.SPECL_THEN [`SUC m`,`SUC n`] MP_TAC) THEN
+  SRW_TAC [][] ) THEN
+FULL_SIMP_TAC (srw_ss()) [MEM_EL] THEN
+FIRST_X_ASSUM (Q.SPECL_THEN [`0`,`SUC n`] MP_TAC) THEN
+SRW_TAC [][])
+
+val SORTED_transitive_APPEND_IFF = store_thm(
+"SORTED_transitive_APPEND_IFF",
+``!R. transitive R ==>
+  !L1 L2. SORTED R (L1 ++ L2) =
+          SORTED R L1 /\ SORTED R L2 /\
+          ((L1 = []) \/ (L2 = []) \/ (R (LAST L1) (HD L2)))``,
+GEN_TAC THEN STRIP_TAC THEN
+Induct THEN SRW_TAC[][] THEN
+SRW_TAC[][SORTED_EQ] THEN
+Cases_on `L1` THEN SRW_TAC[][] THEN1 (
+  SRW_TAC[][EQ_IMP_THM] THEN
+  FULL_SIMP_TAC (srw_ss()) [] THEN1 (
+    Cases_on `L2` THEN FULL_SIMP_TAC (srw_ss()) [] ) THEN
+  Q.PAT_ASSUM `SORTED R L2` MP_TAC THEN
+  SRW_TAC[][SORTED_EL_LESS] THEN
+  FULL_SIMP_TAC (srw_ss()) [MEM_EL,transitive_def] THEN
+  Cases_on `n` THEN1 SRW_TAC[][] THEN
+  METIS_TAC[prim_recTheory.LESS_0,EL] ) THEN
+SRW_TAC[][GSYM CONJ_ASSOC] THEN
+Q.MATCH_ABBREV_TAC `P1 /\ P2 /\ P3 /\ P4 = P1 /\ P6 /\ P2 /\ P3` THEN
+Q_TAC SUFF_TAC `P1 /\ P2 /\ P3 ==> (P4 = P6)` THEN1 SRW_TAC[][EQ_IMP_THM] THEN
+UNABBREV_ALL_TAC THEN SRW_TAC[][] THEN1 SRW_TAC[][] THEN
+EQ_TAC THEN1 METIS_TAC[] THEN
+STRIP_TAC THEN Q.X_GEN_TAC `x` THEN
+REVERSE (Cases_on `MEM x L2`) THEN1 METIS_TAC[] THEN
+Q.MATCH_ASSUM_RENAME_TAC `R (LAST (y::t)) (HD L2)` [] THEN
+`R h (LAST (y::t))` by (
+  FIRST_X_ASSUM MATCH_MP_TAC THEN
+  Cases_on `t` THEN1 SRW_TAC[][] THEN
+  SIMP_TAC bool_ss [LAST_CONS,rich_listTheory.MEM_LAST] ) THEN
+`R h (EL 0 L2)` by METIS_TAC [transitive_def,EL] THEN
+Q.PAT_ASSUM `MEM x L2` MP_TAC THEN
+SRW_TAC[][MEM_EL] THEN
+Cases_on `n` THEN1 SRW_TAC[][] THEN
+METIS_TAC [prim_recTheory.LESS_0,SORTED_EL_LESS,transitive_def])
+
+val MEM_PERM =
+  store_thm(
+    "MEM_PERM",
+    ``!l1 l2. PERM l1 l2 ==> (!a. MEM a l1 = MEM a l2)``,
+    METIS_TAC [Q.SPEC `$= a` MEM_FILTER, PERM_DEF]);
+
+val SORTED_PERM_EQ = store_thm(
+"SORTED_PERM_EQ",
+``!R. transitive R /\ antisymmetric R ==>
+  !l1 l2. SORTED R l1 /\ SORTED R l2 /\ PERM l1 l2 ==> (l1 = l2)``,
+GEN_TAC THEN STRIP_TAC THEN
+Induct THEN1 SRW_TAC[][] THEN
+SRW_TAC[][SORTED_EQ,PERM_CONS_EQ_APPEND] THEN
+`!x. MEM x M ==> (x = h)` by (
+  Q.PAT_ASSUM `SORTED R (aa++bb)` MP_TAC THEN
+  SRW_TAC[][SORTED_transitive_APPEND_IFF] THEN
+  FULL_SIMP_TAC (srw_ss()) [] THEN
+  `R h x` by METIS_TAC [MEM_PERM,MEM_APPEND] THEN
+  Cases_on `M = []` THEN FULL_SIMP_TAC (srw_ss()) [] THEN
+  FULL_SIMP_TAC (srw_ss()) [LAST_EL,MEM_EL] THEN
+  `R x h` by (
+    Cases_on `n = PRE (LENGTH M)` THEN1 SRW_TAC[][] THEN
+    `n < PRE (LENGTH M)` by DECIDE_TAC THEN
+    `PRE (LENGTH M) < LENGTH M` by DECIDE_TAC THEN
+    METIS_TAC [SORTED_EL_LESS,transitive_def] ) THEN
+  METIS_TAC [antisymmetric_def] ) THEN
+`M ++ [h] = h::M` by (
+  POP_ASSUM MP_TAC THEN
+  Q.ID_SPEC_TAC `h` THEN
+  REPEAT (POP_ASSUM (K ALL_TAC)) THEN
+  Induct_on `M` THEN SRW_TAC[][] ) THEN
+SRW_TAC[][] THEN
+FIRST_X_ASSUM MATCH_MP_TAC THEN
+FULL_SIMP_TAC (srw_ss()) [] THEN
+Q.PAT_ASSUM `SORTED R (h::N)` MP_TAC THEN
+SRW_TAC[][SORTED_EQ])
+
 (*Perm theorems for the simplication*)
 
 val PERM_FUN_APPEND = store_thm (
@@ -1077,12 +1198,6 @@ val filter_filter =
   prove(
     ``!l P Q. FILTER P (FILTER Q l) = FILTER (\x. P x /\ Q x) l``,
     Induct THEN NTAC 2 (RW_TAC std_ss [FILTER]) THEN PROVE_TAC []);
-
-val MEM_PERM =
-  store_thm(
-    "MEM_PERM",
-    ``!l1 l2. PERM l1 l2 ==> (!a. MEM a l1 = MEM a l2)``,
-    METIS_TAC [Q.SPEC `$= a` MEM_FILTER, PERM_DEF]);
 
 val PERM3_FILTER =
   store_thm(
