@@ -138,22 +138,49 @@ CevalPrim2 CLt = doPrim2 false Bool Int.(<)
 and
 CevalPrim2 CEq = doPrim2 false Bool (=)
 
+type Cmatch_result =
+  | Cmatch of (num,Cv) Pmap.map
+  | Cno_match
+  | Cmatch_error
+
 let rec
-Cpmatch env (CPvar n) v = Some (Pmap.add n v env)
+Cmatch_bind (Cmatch env) f = f env
+and
+Cmatch_bind Cno_match f = Cno_match
+and
+Cmatch_bind Cmatch_error f = Cmatch_error
+
+let rec
+Cmatch_map f (Cmatch env) = Cmatch (f env)
+and
+Cmatch_map f Cno_match = Cno_match
+and
+Cmatch_map f Cmatch_error = Cmatch_error
+
+let rec
+Cpmatch env (CPvar n) v = Cmatch (Pmap.add n v env)
 and
 Cpmatch env (CPlit l) (CLit l') =
-  if l = l' then Some env else None
+  if lit_same_type l l' then
+    if l = l' then Cmatch env else Cno_match
+  else Cmatch_error
 and
 Cpmatch env (CPcon n ps) (CConv n' vs) =
-  if n = n' then Cpmatch_list env ps vs else None
+  if List.length ps = List.length vs then
+    if n = n' then
+      Cpmatch_list env ps vs
+    else Cno_match
+  else Cmatch_error
 and
-Cpmatch_list env [] [] = Some env
+Cpmatch env _ _ = Cmatch_error
+and
+Cpmatch_list env [] [] = Cmatch env
 and
 Cpmatch_list env (p::ps) (v::vs) =
-  match Cpmatch env p v with
-  | None -> None
-  | Some env' -> Cpmatch_list env' ps vs
-  end
+  Cmatch_bind (Cpmatch env p v)
+    (fun env' -> Cpmatch_list env' ps vs)
+and
+Cpmatch_list env _ _ = Cmatch_error
 
 indreln
 forall env error.
@@ -162,10 +189,10 @@ true
 Cevaluate env (CRaise error) (Rerr (Rraise error))
 
 and
-forall env n v.
-(Pmap.find n env = v) (* TODO: parens :( *)
+forall env n.
+Pmap.mem n env
 ==>
-Cevaluate env (CVar n) (Rval v)
+Cevaluate env (CVar n) (Rval (Pmap.find n env))
 
 and
 forall env v.
@@ -213,13 +240,15 @@ true
 Cevaluate env (CMat n []) (Rerr (Rraise Bind_error))
 and
 forall env n p e pes env' r.
-Cpmatch env p (Pmap.find n env) = Some env' &&
+Pmap.mem n env &&
+Cpmatch env p (Pmap.find n env) = Cmatch env' &&
 Cevaluate env' e r
 ==>
 Cevaluate env (CMat n ((p,e)::pes)) r
 and
 forall env n p e pes r.
-Cpmatch env p (Pmap.find n env) = None &&
+Pmap.mem n env &&
+Cpmatch env p (Pmap.find n env) = Cno_match &&
 Cevaluate env (CMat n pes) r
 ==>
 Cevaluate env (CMat n ((p,e)::pes)) r
@@ -235,6 +264,11 @@ Cevaluate env e (Rval v) &&
 Cevaluate (Pmap.add n v env) (CLet ns es b) r
 ==>
 Cevaluate env (CLet (n::ns) (e::es) b) r
+and
+forall env n ns e es b err.
+Cevaluate env e (Rerr err)
+==>
+Cevaluate env (CLet (n::ns) (e::es) b) (Rerr err)
 
 and
 forall env ns defs b r.
@@ -403,6 +437,13 @@ Cevaluate env e (Rval v) &&
 Cevaluate_list env es (Rerr err)
 ==>
 Cevaluate_list env (e::es) (Rerr err)
+
+let rec
+Cpat_vars (CPvar n) = {n}
+and
+Cpat_vars (CPlit _) = {}
+and
+Cpat_vars (CPcon _ ps) = List.fold_left (fun s p -> s union Cpat_vars p) {} ps
 
 (* relating source to intermediate language *)
 

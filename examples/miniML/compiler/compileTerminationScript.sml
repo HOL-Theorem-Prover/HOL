@@ -12,13 +12,14 @@ qx_gen_tac `p` >>
 PairCases_on `p` >>
 srw_tac [ARITH_ss][Cexp_size_def])
 
-val tac = Induct >- rw[Cexp_size_def] >> srw_tac [ARITH_ss][Cexp_size_def]
+val tac = Induct >- rw[Cexp_size_def,Cpat_size_def] >> srw_tac [ARITH_ss][Cexp_size_def,Cpat_size_def]
 fun tm t1 t2 =  ``∀ls. ^t1 ls = SUM (MAP ^t2 ls) + LENGTH ls``
 fun size_thm name t1 t2 = store_thm(name,tm t1 t2,tac)
 val Cexp3_size_thm = size_thm "Cexp3_size_thm" ``Cexp3_size`` ``Cexp5_size``
 val Cexp4_size_thm = size_thm "Cexp4_size_thm" ``Cexp4_size`` ``Cexp6_size``
 val Cexp7_size_thm = size_thm "Cexp7_size_thm" ``Cexp7_size`` ``Cexp_size``
 val Cexp8_size_thm = size_thm "Cexp8_size_thm" ``Cexp8_size`` ``Cv_size``
+val Cpat1_size_thm = size_thm "Cpat1_size_thm" ``Cpat1_size`` ``Cpat_size``
 
 val list_size_thm = store_thm(
 "list_size_thm",
@@ -37,12 +38,80 @@ val nt1_size_thm = store_thm(
 Induct >- rw[nt_size_def] >>
 srw_tac [ARITH_ss][nt_size_def])
 
-(* compiler definitions *)
+(* semantics definitions *)
 
 fun register name (def,ind) = let
   val _ = save_thm(name^"_def", def)
   val _ = save_thm(name^"_ind", ind)
 in (def,ind) end
+
+val (free_vars_def, free_vars_ind) = register "free_vars" (
+  tprove_no_defn ((free_vars_def,free_vars_ind),
+  WF_REL_TAC `measure Cexp_size` >>
+  srw_tac[ARITH_ss][Cexp1_size_thm,Cexp4_size_thm,Cexp7_size_thm] >>
+  MAP_EVERY (fn q => Q.ISPEC_THEN q mp_tac SUM_MAP_MEM_bound)
+  [`Cexp_size`,`Cexp2_size`,`Cexp6_size`] >>
+  rw[] >> res_tac >> fs[Cexp_size_def] >> srw_tac[ARITH_ss][]))
+val _ = export_rewrites["free_vars_def"];
+
+val (inst_arg_def,inst_arg_ind) = register "inst_arg" (
+  tprove_no_defn ((inst_arg_def,inst_arg_ind),
+  WF_REL_TAC `measure (nt_size o SND)` >>
+  rw[nt1_size_thm] >>
+  Q.ISPEC_THEN `nt_size` imp_res_tac SUM_MAP_MEM_bound >>
+  srw_tac[ARITH_ss][]))
+
+val (pat_vars_def,pat_vars_ind) = register "pat_vars" (
+  tprove_no_defn ((pat_vars_def,pat_vars_ind),
+  WF_REL_TAC `measure pat_size` >>
+  rw[pat1_size_thm] >>
+  imp_res_tac SUM_MAP_MEM_bound >>
+  pop_assum (qspec_then `pat_size` mp_tac) >>
+  srw_tac[ARITH_ss][]))
+val _ = export_rewrites["pat_vars_def"]
+
+val (Cpat_vars_def,Cpat_vars_ind) = register "Cpat_vars" (
+  tprove_no_defn ((Cpat_vars_def,Cpat_vars_ind),
+  WF_REL_TAC `measure Cpat_size` >>
+  rw[Cpat1_size_thm] >>
+  imp_res_tac SUM_MAP_MEM_bound >>
+  pop_assum (qspec_then `Cpat_size` mp_tac) >>
+  srw_tac[ARITH_ss][]))
+val _ = export_rewrites["Cpat_vars_def"]
+
+val (Cv_to_ov_def,Cv_to_ov_ind) = register "Cv_to_ov" (
+  tprove_no_defn ((Cv_to_ov_def,Cv_to_ov_ind),
+  WF_REL_TAC `measure (Cv_size o SND)` >>
+  rw[Cexp8_size_thm] >>
+  Q.ISPEC_THEN `Cv_size` imp_res_tac SUM_MAP_MEM_bound >>
+  srw_tac[ARITH_ss][]))
+val _ = export_rewrites["Cv_to_ov_def"];
+
+val (v_to_ov_def,v_to_ov_ind) = register "v_to_ov" (
+  tprove_no_defn ((v_to_ov_def,v_to_ov_ind),
+  WF_REL_TAC `measure v_size` >>
+  rw[exp9_size_thm] >>
+  Q.ISPEC_THEN `v_size` imp_res_tac SUM_MAP_MEM_bound >>
+  srw_tac[ARITH_ss][]))
+val _ = export_rewrites["v_to_ov_def"];
+
+val _ = save_thm ("map_result_def", map_result_def);
+val _ = export_rewrites["map_result_def"];
+
+val _ = save_thm ("Cmatch_map_def", Cmatch_map_def);
+val _ = export_rewrites["Cmatch_map_def"];
+
+val _ = save_thm ("Cmatch_bind_def", Cmatch_bind_def);
+val _ = export_rewrites["Cmatch_bind_def"];
+
+val (Cpmatch_def,Cpmatch_ind) = register "Cpmatch" (
+  tprove_no_defn ((Cpmatch_def,Cpmatch_ind),
+  WF_REL_TAC `inv_image $<
+                (λx. case x of
+                     | (INL (env,p,v)) => Cv_size v
+                     | (INR (env,ps,vs)) => Cexp8_size vs)`))
+
+(* compiler definitions *)
 
 val (remove_mat_def,remove_mat_ind) = register "remove_mat" (
   tprove_no_defn ((remove_mat_def,remove_mat_ind),
@@ -68,15 +137,6 @@ val (v_to_Cv_def,v_to_Cv_ind) = register "v_to_Cv" (
   srw_tac[ARITH_ss][exp1_size_thm,exp3_size_thm,exp9_size_thm] >>
   MAP_EVERY (fn q => Q.ISPEC_THEN q mp_tac SUM_MAP_MEM_bound) [`exp5_size`,`v_size`,`exp2_size`] >>
   rw[] >> res_tac >> fs[exp_size_def] >> srw_tac[ARITH_ss][]))
-
-val (free_vars_def, free_vars_ind) = register "free_vars" (
-  tprove_no_defn ((free_vars_def,free_vars_ind),
-  WF_REL_TAC `measure Cexp_size` >>
-  srw_tac[ARITH_ss][Cexp1_size_thm,Cexp4_size_thm,Cexp7_size_thm] >>
-  MAP_EVERY (fn q => Q.ISPEC_THEN q mp_tac SUM_MAP_MEM_bound)
-  [`Cexp_size`,`Cexp2_size`,`Cexp6_size`] >>
-  rw[] >> res_tac >> fs[Cexp_size_def] >> srw_tac[ARITH_ss][]))
-val _ = export_rewrites["free_vars_def"];
 
 val (pat_to_Cpat_def, pat_to_Cpat_ind) = register "pat_to_Cpat" (
   tprove_no_defn ((pat_to_Cpat_def,pat_to_Cpat_ind),
@@ -125,42 +185,8 @@ val (bcv_to_ov_def,bcv_to_ov_ind) = register "bcv_to_ov" (
   Q.ISPEC_THEN `bc_value_size` imp_res_tac SUM_MAP_MEM_bound >>
   srw_tac[ARITH_ss][]))
 
-val (inst_arg_def,inst_arg_ind) = register "inst_arg" (
-  tprove_no_defn ((inst_arg_def,inst_arg_ind),
-  WF_REL_TAC `measure (nt_size o SND)` >>
-  rw[nt1_size_thm] >>
-  Q.ISPEC_THEN `nt_size` imp_res_tac SUM_MAP_MEM_bound >>
-  srw_tac[ARITH_ss][]))
-
 val (fold_num_def,fold_num_ind) = register "fold_num" (
   tprove_no_defn ((fold_num_def,fold_num_ind),
   WF_REL_TAC `measure (SND o SND)`))
-
-val (pat_vars_def,pat_vars_ind) = register "pat_vars" (
-  tprove_no_defn ((pat_vars_def,pat_vars_ind),
-  WF_REL_TAC `measure pat_size` >>
-  rw[pat1_size_thm] >>
-  imp_res_tac SUM_MAP_MEM_bound >>
-  pop_assum (qspec_then `pat_size` mp_tac) >>
-  srw_tac[ARITH_ss][]))
-
-val (Cv_to_ov_def,Cv_to_ov_ind) = register "Cv_to_ov" (
-  tprove_no_defn ((Cv_to_ov_def,Cv_to_ov_ind),
-  WF_REL_TAC `measure (Cv_size o SND)` >>
-  rw[Cexp8_size_thm] >>
-  Q.ISPEC_THEN `Cv_size` imp_res_tac SUM_MAP_MEM_bound >>
-  srw_tac[ARITH_ss][]))
-val _ = export_rewrites["Cv_to_ov_def"];
-
-val (v_to_ov_def,v_to_ov_ind) = register "v_to_ov" (
-  tprove_no_defn ((v_to_ov_def,v_to_ov_ind),
-  WF_REL_TAC `measure v_size` >>
-  rw[exp9_size_thm] >>
-  Q.ISPEC_THEN `v_size` imp_res_tac SUM_MAP_MEM_bound >>
-  srw_tac[ARITH_ss][]))
-val _ = export_rewrites["v_to_ov_def"];
-
-val _ = save_thm ("map_result_def", map_result_def);
-val _ = export_rewrites["map_result_def"];
 
 val _ = export_theory()

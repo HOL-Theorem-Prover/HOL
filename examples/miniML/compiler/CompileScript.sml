@@ -164,23 +164,58 @@ val _ = Defn.save_defn doPrim2_defn;
 
 val _ = Defn.save_defn CevalPrim2_defn;
 
+val _ = Hol_datatype `
+ Cmatch_result =
+    Cmatch of (num,Cv) fmap
+  | Cno_match
+  | Cmatch_error`;
+
+
+ val Cmatch_bind_defn = Hol_defn "Cmatch_bind" `
+
+(Cmatch_bind (Cmatch env) f = f env)
+/\
+(Cmatch_bind Cno_match f = Cno_match)
+/\
+(Cmatch_bind Cmatch_error f = Cmatch_error)`;
+
+val _ = Defn.save_defn Cmatch_bind_defn;
+
+ val Cmatch_map_defn = Hol_defn "Cmatch_map" `
+
+(Cmatch_map f (Cmatch env) = Cmatch (f env))
+/\
+(Cmatch_map f Cno_match = Cno_match)
+/\
+(Cmatch_map f Cmatch_error = Cmatch_error)`;
+
+val _ = Defn.save_defn Cmatch_map_defn;
+
  val Cpmatch_defn = Hol_defn "Cpmatch" `
 
-(Cpmatch env (CPvar n) v = SOME (FUPDATE  env ( n, v)))
+(Cpmatch env (CPvar n) v = Cmatch (FUPDATE  env ( n, v)))
 /\
 (Cpmatch env (CPlit l) (CLit l') =
-  if l = l' then SOME env else NONE)
+  if lit_same_type l l' then
+    if l = l' then Cmatch env else Cno_match
+  else Cmatch_error)
 /\
 (Cpmatch env (CPcon n ps) (CConv n' vs) =
-  if n = n' then Cpmatch_list env ps vs else NONE)
+  if LENGTH ps = LENGTH vs then
+    if n = n' then
+      Cpmatch_list env ps vs
+    else Cno_match
+  else Cmatch_error)
 /\
-(Cpmatch_list env [] [] = SOME env)
+(Cpmatch env _ _ = Cmatch_error)
+/\
+(Cpmatch_list env [] [] = Cmatch env)
 /\
 (Cpmatch_list env (p::ps) (v::vs) =
-  (case Cpmatch env p v of
-    NONE => NONE
-  | SOME env' => Cpmatch_list env' ps vs
-  ))`;
+  Cmatch_bind (Cpmatch env p v)
+    (\ env' . Cpmatch_list env' ps vs))
+/\
+(Cpmatch_list env _ _ = Cmatch_error)`;
 
 val _ = Defn.save_defn Cpmatch_defn;
 
@@ -191,10 +226,10 @@ T
 Cevaluate env (CRaise error) (Rerr (Rraise error)))
 
 /\
-(! env n v.
-(FAPPLY  env  n = v) (* TODO: parens :( *)
+(! env n.
+ n IN FDOM  env
 ==>
-Cevaluate env (CVar n) (Rval v))
+Cevaluate env (CVar n) (Rval (FAPPLY  env  n)))
 
 /\
 (! env v.
@@ -242,13 +277,15 @@ T
 Cevaluate env (CMat n []) (Rerr (Rraise Bind_error)))
 /\
 (! env n p e pes env' r.
-(Cpmatch env p (FAPPLY  env  n) = SOME env') /\
+ n IN FDOM  env /\
+(Cpmatch env p (FAPPLY  env  n) = Cmatch env') /\
 Cevaluate env' e r
 ==>
 Cevaluate env (CMat n ((p,e)::pes)) r)
 /\
 (! env n p e pes r.
-(Cpmatch env p (FAPPLY  env  n) = NONE) /\
+ n IN FDOM  env /\
+(Cpmatch env p (FAPPLY  env  n) = Cno_match) /\
 Cevaluate env (CMat n pes) r
 ==>
 Cevaluate env (CMat n ((p,e)::pes)) r)
@@ -264,6 +301,11 @@ Cevaluate env e (Rval v) /\
 Cevaluate (FUPDATE  env ( n, v)) (CLet ns es b) r
 ==>
 Cevaluate env (CLet (n::ns) (e::es) b) r)
+/\
+(! env n ns e es b err.
+Cevaluate env e (Rerr err)
+==>
+Cevaluate env (CLet (n::ns) (e::es) b) (Rerr err))
 
 /\
 (! env ns defs b r.
@@ -432,6 +474,16 @@ Cevaluate env e (Rval v) /\
 Cevaluate_list env es (Rerr err)
 ==>
 Cevaluate_list env (e::es) (Rerr err))`;
+
+ val Cpat_vars_defn = Hol_defn "Cpat_vars" `
+
+(Cpat_vars (CPvar n) = {n})
+/\
+(Cpat_vars (CPlit _) = {})
+/\
+(Cpat_vars (CPcon _ ps) = FOLDL (\ s p . s UNION Cpat_vars p) {} ps)`;
+
+val _ = Defn.save_defn Cpat_vars_defn;
 
 (* relating source to intermediate language *)
 
