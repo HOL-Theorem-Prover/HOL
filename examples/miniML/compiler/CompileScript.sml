@@ -623,9 +623,9 @@ val _ = Defn.save_defn pat_to_Cpat_defn;
   let (_s,Ce2) = exp_to_Cexp F cm (s, e2) in
   (s, (case opb of
         Lt => CPrim2 CLt Ce1 Ce2
-      | Gt => CPrim2 CLt Ce2 Ce1
+      | Gt => CLet [s.n;s.n+1] [Ce1;Ce2] (CPrim2 CLt (CVar (s.n+1)) (CVar s.n))
       | Leq => CLprim CLeq [Ce1;Ce2]
-      | Geq => CLprim CLeq [Ce2;Ce1]
+      | Geq => CLet [s.n;s.n+1] [Ce1;Ce2] (CLprim CLeq [CVar (s.n+1);CVar s.n])
       )))
 /\
 (exp_to_Cexp tp cm (s, App Equality e1 e2) =

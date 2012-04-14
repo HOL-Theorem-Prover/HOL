@@ -584,9 +584,9 @@ exp_to_Cexp tp cm (s, App (Opb opb) e1 e2) =
   let (_s,Ce2) = exp_to_Cexp false cm (s, e2) in
   (s, match opb with
       | Lt -> CPrim2 CLt Ce1 Ce2
-      | Gt -> CPrim2 CLt Ce2 Ce1
+      | Gt -> CLet [s.n;s.n+1] [Ce1;Ce2] (CPrim2 CLt (CVar (s.n+1)) (CVar s.n))
       | Leq -> CLprim CLeq [Ce1;Ce2]
-      | Geq -> CLprim CLeq [Ce2;Ce1]
+      | Geq -> CLet [s.n;s.n+1] [Ce1;Ce2] (CLprim CLeq [CVar (s.n+1);CVar s.n])
       end)
 and
 exp_to_Cexp tp cm (s, App Equality e1 e2) =
