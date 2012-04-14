@@ -4,12 +4,18 @@ open arithmeticTheory listTheory combinTheory pairTheory;
 open ml_translatorLib ml_translatorTheory;
 
 
-(* qsort example *)
+(* qsort translation *)
 
 val res = translate listTheory.APPEND;
 val res = translate sortingTheory.PART_DEF;
 val res = translate sortingTheory.PARTITION_DEF;
-val qsort_eval = translate sortingTheory.QSORT_DEF;
+val res = translate sortingTheory.QSORT_DEF;
+
+val _ = finialise_translation ();
+
+(* using the certificte theorem *)
+
+val (qsort_eval,_) = get_cert "QSORT"
 
 val Eval_Var_lemma = prove(
   ``Eval env (Var name) P = ?x. (lookup name env = SOME x) /\ P x``,
@@ -30,7 +36,7 @@ val Eval_QSORT_EXPANDED = save_thm("Eval_QSORT_EXPANDED",let
 
 val ML_QSORT_CORRECT = store_thm ("ML_QSORT_CORRECT",
   ``!env a ord R l xs.
-      DeclAssum ml_translator_demo_decls_5 env /\
+      DeclAssum ml_translator_demo_decls env /\
       LIST_TYPE a l xs /\ (lookup "xs" env = SOME xs) /\
       (a --> a --> BOOL) ord R /\ (lookup "R" env = SOME R) /\
       transitive ord /\ total ord

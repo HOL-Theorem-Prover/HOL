@@ -458,22 +458,21 @@ local
     val th = PURE_ONCE_REWRITE_RULE [tag_lemma] p
     in save_thm(name,th) end
   fun unpack_state name = let
-    val name = name ^ suffix
-    val name_tm = stringSyntax.fromMLstring name
-    val tag_lemma = ISPEC ``b:bool`` (ISPEC name_tm TAG_def) |> GSYM
-    val tag_pat = tag_lemma |> concl |> rand
-    val th = DB.match [] tag_pat |> hd |> snd |> fst
-    val th = PURE_ONCE_REWRITE_RULE [GSYM tag_lemma] th
+    val th = fetch name (name ^ suffix)
+    val th = PURE_ONCE_REWRITE_RULE [TAG_def] th
     val (p1,p2) = unpack_pair I I th
     val _ = unpack_certs p1
     val _ = unpack_types p2
     in () end;
+  val finalised = ref false
 in
-  fun onexport () = let
-    val _ = pack_state ()
-    val _ = print_translation_output ()
-    in () end
-  val _ = Theory.register_onexport onexport
+  fun finialise_translation () =
+    if !finalised then () else let
+      val _ = (finalised := true)
+      val _ = pack_state ()
+      val _ = print_translation_output ()
+      in () end
+  val _ = Theory.register_onexport finialise_translation
   fun translation_extends name = let
     val _ = print ("Loading translation: " ^ name ^ " ... ")
     val _ = unpack_state name
