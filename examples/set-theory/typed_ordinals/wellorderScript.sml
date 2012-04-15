@@ -107,6 +107,14 @@ val WIN_WF = store_thm(
   qsuff_tac `(\p. p WIN w) = wellorder_REP w` >- simp[] >>
   simp[FUN_EQ_THM, SPECIFICATION]);
 
+val CURRY_def = pairTheory.CURRY_DEF |> SPEC_ALL |> ABS ``y:'b``
+                                     |> ABS ``x:'a``
+                                     |> SIMP_RULE (bool_ss ++ ETA_ss) []
+
+val WIN_WF2 = save_thm(
+  "WIN_WF2",
+  WIN_WF |> SIMP_RULE (srw_ss()) [wellfounded_WF, CURRY_def])
+
 val iseg_def = Define`iseg w x = { y | (y,x) WIN w }`
 
 val wellorder_rrestrict = store_thm(
@@ -421,6 +429,140 @@ val orderlt_TRANS = store_thm(
     fs[IN_wobound]
   ]);
 
+val wleast_def = Define`
+  wleast w s =
+    some x. x IN elsOf w /\ x NOTIN s /\
+            !y. y IN elsOf w /\ y NOTIN s /\ x <> y ==> (x,y) WIN w
+`;
+
+val wo2wo_def = Define`
+  wo2wo w1 w2 =
+    WFREC (\x y. (x,y) WIN w1)
+          (\f x. let s0 = IMAGE f (iseg w1 x) in
+                 let s1 = IMAGE THE (s0 DELETE NONE)
+                 in
+                   if s1 = elsOf w2 then NONE
+                   else wleast w2 s1)
+`;
+
+val restrict_away = prove(
+  ``IMAGE (RESTRICT f (\x y. (x,y) WIN w) x) (iseg w x) = IMAGE f (iseg w x)``,
+  rw[EXTENSION, relationTheory.RESTRICT_DEF, iseg_def] >> srw_tac[CONJ_ss][]);
+
+val wo2wo_thm = save_thm(
+  "wo2wo_thm",
+  wo2wo_def |> concl |> strip_forall |> #2 |> rhs |> strip_comb |> #2
+            |> C ISPECL relationTheory.WFREC_THM
+            |> C MATCH_MP WIN_WF2
+            |> SIMP_RULE (srw_ss()) []
+            |> REWRITE_RULE [GSYM wo2wo_def, restrict_away])
+
+
+val WO_INDUCTION =
+    relationTheory.WF_INDUCTION_THM |> C MATCH_MP WIN_WF2 |> Q.GEN `w`
+                                    |> BETA_RULE
+
+val wleast_IN_wo = store_thm(
+  "wleast_IN_wo",
+  ``(wleast w s = SOME x) ==>
+       x IN elsOf w /\ x NOTIN s /\
+       !y. y IN elsOf w /\ y NOTIN s /\ x <> y ==> (x,y) WIN w``,
+  simp[wleast_def] >> DEEP_INTRO_TAC optionTheory.some_intro >>
+  simp[]);
+
+val wleast_EQ_NONE = store_thm(
+  "wleast_EQ_NONE",
+  ``(wleast w s = NONE) ==> elsOf w SUBSET s``,
+  simp[wleast_def] >> DEEP_INTRO_TAC optionTheory.some_intro >> rw[] >>
+  simp[SUBSET_DEF] >>
+  qspec_then `w` ho_match_mp_tac WO_INDUCTION >>
+  qx_gen_tac `x` >> rpt strip_tac >>
+  first_x_assum (fn th => qspec_then `x` mp_tac th >> simp[] >>
+                          disch_then strip_assume_tac) >>
+  `(y,x) WIN w` by metis_tac [WIN_trichotomy] >> metis_tac[]);
+
+val wo2wo_IN_w2 = store_thm(
+  "wo2wo_IN_w2",
+  ``!x y. (wo2wo w1 w2 x = SOME y) ==> y IN elsOf w2``,
+  rw[Once wo2wo_thm, LET_THM] >> metis_tac [wleast_IN_wo]);
+
+val IMAGE_wo2wo_SUBSET = store_thm(
+  "IMAGE_wo2wo_SUBSET",
+  ``IMAGE THE (IMAGE (wo2wo w1 w2) (iseg w1 x) DELETE NONE) SUBSET elsOf w2``,
+  simp_tac (srw_ss() ++ DNF_ss) [SUBSET_DEF] >> qx_gen_tac `a` >>
+  Cases_on `wo2wo w1 w2 a` >> rw[] >> metis_tac [wo2wo_IN_w2]);
+
+val wo2wo_EQ_NONE = store_thm(
+  "wo2wo_EQ_NONE",
+  ``!x. (wo2wo w1 w2 x = NONE) ==>
+        !y. (x,y) WIN w1 ==> (wo2wo w1 w2 y = NONE)``,
+  ONCE_REWRITE_TAC [wo2wo_thm] >> rw[LET_THM] >| [
+    qsuff_tac
+        `IMAGE THE (IMAGE (wo2wo w1 w2) (iseg w1 y) DELETE NONE) = elsOf w2` >-
+        rw[] >>
+    match_mp_tac SUBSET_ANTISYM >> rw[IMAGE_wo2wo_SUBSET] >>
+    match_mp_tac SUBSET_TRANS >>
+    qexists_tac `IMAGE THE (IMAGE (wo2wo w1 w2) (iseg w1 x) DELETE NONE)` >>
+    conj_tac >- rw[] >>
+    simp_tac (srw_ss() ++ DNF_ss) [SUBSET_DEF] >>
+    qsuff_tac `!a. a IN iseg w1 x ==> a IN iseg w1 y` >- metis_tac[] >>
+    rw[iseg_def] >> metis_tac [WIN_TRANS],
+    imp_res_tac wleast_EQ_NONE >>
+    qsuff_tac `IMAGE THE (IMAGE (wo2wo w1 w2) (iseg w1 x) DELETE NONE) SUBSET
+               elsOf w2` >- metis_tac [SUBSET_ANTISYM] >>
+    rw[IMAGE_wo2wo_SUBSET]
+  ]);
+
+val wo2wo_EQ_SOME_downwards = store_thm(
+  "wo2wo_EQ_SOME_downwards",
+  ``!x y. (wo2wo w1 w2 x = SOME y) ==>
+          !x0. (x0,x) WIN w1 ==> ?y0. wo2wo w1 w2 x0 = SOME y0``,
+  metis_tac [wo2wo_EQ_NONE, optionTheory.option_CASES]);
+
+val _ = overload_on (
+  "woseg",
+  ``\w1 w2 x. IMAGE THE (IMAGE (wo2wo w1 w2) (iseg w1 x) DELETE NONE)``)
+
+val mono_woseg = store_thm(
+  "mono_woseg",
+  ``(x1,x2) WIN w1 ==> woseg w1 w2 x1 SUBSET woseg w1 w2 x2``,
+  simp_tac(srw_ss() ++ DNF_ss) [SUBSET_DEF, iseg_def]>> metis_tac [WIN_TRANS]);
+
+val wo2wo_injlemma = prove(
+  ``(x,y) WIN w1 /\ (wo2wo w1 w2 y = SOME z) ==> (wo2wo w1 w2 x <> SOME z)``,
+  rw[Once wo2wo_thm, LET_THM, SimpL ``$==>``] >> strip_tac >>
+  `z IN woseg w1 w2 y`
+     by (asm_simp_tac (srw_ss() ++ DNF_ss) [] >> qexists_tac `x` >>
+         simp[iseg_def]) >>
+  metis_tac [wleast_IN_wo]);
+
+val wo2wo_11 = store_thm(
+  "wo2wo_11",
+  ``x1 IN elsOf w1 /\ x2 IN elsOf w1 /\ (wo2wo w1 w2 x1 = SOME y) /\
+    (wo2wo w1 w2 x2 = SOME y) ==> (x1 = x2)``,
+  rpt strip_tac >>
+  `(x1 = x2) \/ (x1,x2) WIN w1 \/ (x2,x1) WIN w1`
+     by metis_tac [WIN_trichotomy] >>
+  metis_tac [wo2wo_injlemma]);
+
+val wleast_SUBSET = store_thm(
+  "wleast_SUBSET",
+  ``(wleast w s1 = SOME x) /\ (wleast w s2 = SOME y) /\ s1 SUBSET s2 ==>
+    (x = y) \/ (x,y) WIN w``,
+  simp[wleast_def] >> DEEP_INTRO_TAC optionTheory.some_intro >> simp[] >>
+  DEEP_INTRO_TAC optionTheory.some_intro >> simp[] >> metis_tac[SUBSET_DEF]);
+
+val wo2wo_mono = store_thm(
+  "wo2wo_mono",
+  ``(wo2wo w1 w2 x0 = SOME y0) /\ (wo2wo w1 w2 x = SOME y) /\ (x0,x) WIN w1 ==>
+    (y0,y) WIN w2``,
+  rpt strip_tac >>
+  `x0 IN elsOf w1 /\ x IN elsOf w1`
+      by metis_tac [elsOf_def, in_domain, in_range, IN_UNION] >>
+  `y0 <> y` by metis_tac [WIN_REFL, wo2wo_11] >>
+  rpt (qpat_assum `wo2wo X Y Z = WW` mp_tac) >>
+  ONCE_REWRITE_TAC [wo2wo_thm] >> rw[LET_THM] >>
+  metis_tac [mono_woseg, wleast_SUBSET]);
 
 (*val orderlt_WF = store_thm(
   "orderlt_WF",
