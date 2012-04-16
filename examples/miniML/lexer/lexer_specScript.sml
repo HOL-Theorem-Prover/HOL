@@ -23,6 +23,7 @@ regexp =
   | StringLit of string
   | Cat of regexp => regexp
   | Star of regexp
+  | Plus of regexp
   | Or of regexp list
   | Neg of regexp`;
 
@@ -37,6 +38,8 @@ val regexp_matches_def = tDefine "regexp_matches" `
   ∃s1 s2. regexp_matches r1 s1 ∧ regexp_matches r2 s2 ∧ (s = s1 ++ s2)) ∧
 (regexp_matches (Star r) s =
   ∃ss. EVERY (regexp_matches r) ss ∧ (s = FLAT ss)) ∧
+(regexp_matches (Plus r) s =
+  ∃ss. (ss ≠ []) ∧ EVERY (regexp_matches r) ss ∧ (s = FLAT ss)) ∧
 (regexp_matches (Or rs) s =
   EXISTS (\r. regexp_matches r s) rs) ∧
 (regexp_matches (Neg r) s =

@@ -613,7 +613,7 @@ val _ = Define `
     | Mat e pes => push envC env e (Cmat () pes) c
     | Let n e1 e2 => push envC env e1 (Clet n () e2) c
     | Letrec funs e =>
-        if ~ (ALL_DISTINCT (MAP (\ (x,y,z) . x) funs)) then
+        if ~  (ALL_DISTINCT (MAP (\ (x,y,z) . x) funs)) then
           Etype_error
         else
           Estep (envC, build_rec_env funs env, e, c)
@@ -689,7 +689,7 @@ val _ = Define `
           | (Dlet p e) :: ds =>
               Dstep (envC, env, ds, SOME (p, (envC, env, e, [])))
           | (Dletrec funs) :: ds =>
-              if ~ (ALL_DISTINCT (MAP (\ (x,y,z) . x) funs)) then
+              if ~  (ALL_DISTINCT (MAP (\ (x,y,z) . x) funs)) then
                 Dtype_error
               else
                 Dstep (envC, build_rec_env funs env, ds, NONE)
@@ -814,7 +814,7 @@ evaluate cenv env (Con cn es) (Rval (Conv cn vs)))
 /\
 
 (! cenv env cn es.
-~ (do_con_check cenv cn (LENGTH es))
+~  (do_con_check cenv cn (LENGTH es))
 ==>
 evaluate cenv env (Con cn es) (Rerr Rtype_error))
 
@@ -970,7 +970,7 @@ evaluate cenv env (Letrec funs e) bv)
 /\
 
 (! cenv env funs e.
-~ (ALL_DISTINCT (MAP (\ (x,y,z) . x) funs))
+~  (ALL_DISTINCT (MAP (\ (x,y,z) . x) funs))
 ==>
 evaluate cenv env (Letrec funs e) (Rerr Rtype_error))
 
@@ -1039,7 +1039,7 @@ evaluate_match cenv env v ((p,e)::pes) (Rerr Rtype_error))
 /\
 
 (! cenv env v p e pes.
-~ (ALL_DISTINCT (pat_bindings p []))
+~  (ALL_DISTINCT (pat_bindings p []))
 ==>
 evaluate_match cenv env v ((p,e)::pes) (Rerr Rtype_error))`;
 
@@ -1081,7 +1081,7 @@ evaluate_decs cenv env (Dlet p e :: ds) (Rerr (Rtype_error)))
 
 (! cenv env p e ds v.
 evaluate cenv env e (Rval v) /\
-~ (ALL_DISTINCT (pat_bindings p []))
+~  (ALL_DISTINCT (pat_bindings p []))
 ==>
 evaluate_decs cenv env (Dlet p e :: ds) (Rerr (Rtype_error)))
 
@@ -1103,7 +1103,7 @@ evaluate_decs cenv env (Dletrec funs :: ds) r)
 /\
 
 (! cenv env funs ds.
-~ (ALL_DISTINCT (MAP (\ (x,y,z) . x) funs))
+~  (ALL_DISTINCT (MAP (\ (x,y,z) . x) funs))
 ==>
 evaluate_decs cenv env (Dletrec funs :: ds) (Rerr Rtype_error))
 
@@ -1118,7 +1118,7 @@ evaluate_decs cenv env (Dtype tds :: ds) r)
 /\
 
 (! cenv env tds ds.
-~ (check_dup_ctors tds cenv)
+~  (check_dup_ctors tds cenv)
 ==>
 evaluate_decs cenv env (Dtype tds :: ds) (Rerr Rtype_error))`;
 
@@ -1910,7 +1910,7 @@ evaluate' env (Letrec funs e) bv)
 /\
 
 (! env funs e.
-~ (ALL_DISTINCT (MAP (\ (x,y,z) . x) funs))
+~  (ALL_DISTINCT (MAP (\ (x,y,z) . x) funs))
 ==>
 evaluate' env (Letrec funs e) (Rerr Rtype_error))
 
@@ -1979,7 +1979,7 @@ evaluate_match' env v ((p,e)::pes) (Rerr Rtype_error))
 /\
 
 (! env v p e pes.
-~ (ALL_DISTINCT (pat_bindings p []))
+~  (ALL_DISTINCT (pat_bindings p []))
 ==>
 evaluate_match' env v ((p,e)::pes) (Rerr Rtype_error))`;
 
@@ -2022,7 +2022,7 @@ evaluate_decs' cenv env (Dlet p e :: ds) (Rerr (Rtype_error)))
 
 (! cenv env p e ds v.
 evaluate' env e (Rval v) /\
-~ (ALL_DISTINCT (pat_bindings p []))
+~  (ALL_DISTINCT (pat_bindings p []))
 ==>
 evaluate_decs' cenv env (Dlet p e :: ds) (Rerr (Rtype_error)))
 
@@ -2044,7 +2044,7 @@ evaluate_decs' cenv env (Dletrec funs :: ds) r)
 /\
 
 (! cenv env funs ds.
-~ (ALL_DISTINCT (MAP (\ (x,y,z) . x) funs))
+~  (ALL_DISTINCT (MAP (\ (x,y,z) . x) funs))
 ==>
 evaluate_decs' cenv env (Dletrec funs :: ds) (Rerr Rtype_error))
 
@@ -2059,7 +2059,7 @@ evaluate_decs' cenv env (Dtype tds :: ds) r)
 /\
 
 (! cenv env tds ds.
-~ (check_dup_ctors tds cenv)
+~  (check_dup_ctors tds cenv)
 ==>
 evaluate_decs' cenv env (Dtype tds :: ds) (Rerr Rtype_error))`;
 val _ = export_theory()

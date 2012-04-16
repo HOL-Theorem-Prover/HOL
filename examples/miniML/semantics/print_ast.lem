@@ -1,33 +1,47 @@
 open MiniML
 
 val Num : Int.int -> num
-sub [hol] Num = Num
+let inline {hol} Num = Hol.Num
 
 val CHR : num -> string
-sub [hol] CHR n = STRING (CHR n) ""
+let inline {hol} CHR n = Hol.STRING (Hol.CHR n) ""
 
 val string_first : string -> string
-sub [hol] string_first s = STRING (SUB (s,0)) ""
+let inline {hol} string_first s = Hol.STRING (Hol.SUB (s,0)) ""
 
 val first_ord : string -> num
-sub [hol] first_ord s = ORD (SUB (s,0))
+let inline {hol} first_ord s = Hol.ORD (Hol.SUB (s,0))
 
 val (%) : num -> num -> num
-sub [hol] (%) = MOD
+let inline {hol} (%) = Hol.MOD
 
 type token =
-  | NewlineT
-  | WhitespaceT of num
-  | IntlitT of int
-  | IdentT of string
-  | TvT of string
-
-  | AndT | AndalsoT | CaseT | DatatypeT | ElseT | EndT | FnT | FunT | IfT 
-  | InT | LetT | OfT | OpT | OrelseT | RecT | ThenT | ValT | Open_parenT
-  | Close_parenT | CommaT | SemiT | BarT | EqT | EqarrowT | MinusarrowT | StarT
+| WhitespaceT of num
+| NewlineT 
+| HashT | LparT | RparT | StarT | CommaT | ArrowT | DotsT | ColonT | SealT 
+| SemicolonT | EqualsT | DarrowT | LbrackT | RbrackT | UnderbarT | LbraceT 
+| BarT | RbraceT | AbstypeT | AndT | AndalsoT | AsT | CaseT | DatatypeT | DoT 
+| ElseT | EndT | EqtypeT | ExceptionT | FnT | FunT | FunctorT | HandleT | IfT 
+| InT | IncludeT | InfixT | InfixrT | LetT | LocalT | NonfixT | OfT | OpT 
+| OpenT | OrelseT | RaiseT | RecT | SharingT | SigT | SignatureT | StructT 
+| StructureT | ThenT | TypeT | ValT | WhereT | WhileT | WithT | WithtypeT 
+| ZeroT 
+| DigitT of string
+| NumericT of string
+| IntT of int
+| HexintT of string
+| WordT of string
+| HexwordT of string
+| RealT of string
+| StringT of string
+| CharT of string
+| TyvarT of string
+| AlphaT of string
+| SymbolT of string
+| LongidT of string
 
 (* OCaml additions *)
-  | MatchT | TypeT | WithT | AmpampT | BarbarT | SemisemiT
+  | MatchT | AmpampT | BarbarT | SemisemiT
 
 let rec num_to_string n acc =
   if n = 0 then
@@ -67,11 +81,11 @@ tok_to_string sml NewlineT s = "\n" ^ s
 and
 tok_to_string sml (WhitespaceT n) s = spaces n s
 and
-tok_to_string sml (IntlitT i) s = space_append (int_to_string sml i) s
+tok_to_string sml (IntT i) s = space_append (int_to_string sml i) s
 and
-tok_to_string sml (IdentT id) s = space_append id s
+tok_to_string sml (LongidT id) s = space_append id s
 and
-tok_to_string sml (TvT tv) s = space_append ("'" ^ tv) s
+tok_to_string sml (TyvarT tv) s = space_append ("'" ^ tv) s
 and
 tok_to_string sml AndT s = "and " ^ s
 and
@@ -107,7 +121,7 @@ tok_to_string sml ThenT s = "then " ^ s
 and
 tok_to_string sml ValT s = "val " ^ s
 and
-tok_to_string sml Open_parenT s = 
+tok_to_string sml LparT s = 
   if s = "" then
     "("
   else if string_first s = "*" then
@@ -115,19 +129,19 @@ tok_to_string sml Open_parenT s =
   else
     "(" ^ s
 and
-tok_to_string sml Close_parenT s = space_append ")" s
+tok_to_string sml RparT s = space_append ")" s
 and
 tok_to_string sml CommaT s = ", " ^ s
 and
-tok_to_string sml SemiT s = ";" ^ s
+tok_to_string sml SemicolonT s = ";" ^ s
 and
 tok_to_string sml BarT s = "| " ^ s
 and
-tok_to_string sml EqT s = "= " ^ s
+tok_to_string sml EqualsT s = "= " ^ s
 and
-tok_to_string sml EqarrowT s = "=> " ^ s
+tok_to_string sml DarrowT s = "=> " ^ s
 and
-tok_to_string sml MinusarrowT s = "-> " ^ s
+tok_to_string sml ArrowT s = "-> " ^ s
 and
 tok_to_string sml StarT s = "* " ^ s
 and
@@ -154,8 +168,7 @@ type tok_tree = L of token | N of tok_tree * tok_tree
 
 (*val (^^) : forall 'a. 'a tree -> 'a tree -> 'a tree*)
 val (^^) : tok_tree -> tok_tree -> tok_tree
-sub [hol] (^^) x y = N x y
-sub [ocaml] (^^) x y = N x y
+let inline {hol} (^^) x y = N x y
 
 (*val tree_to_list : forall 'a. 'a tree -> 'a list -> 'a list*)
 val tree_to_list : tok_tree -> token list -> token list
@@ -213,19 +226,19 @@ join_trees sep (x::y::l) =
   x ^^ sep ^^ join_trees sep (y::l)
 
 let rec
-lit_to_tok_tree sml (Bool true) = L (IdentT "true")
+lit_to_tok_tree sml (Bool true) = L (LongidT "true")
 and
-lit_to_tok_tree sml (Bool false) = L (IdentT "false")
+lit_to_tok_tree sml (Bool false) = L (LongidT "false")
 and
-lit_to_tok_tree sml (IntLit n) = L (IntlitT n)
+lit_to_tok_tree sml (IntLit n) = L (IntT n)
 
 let var_to_tok_tree sml v =
   if sml && is_sml_infix v then
-    L OpT ^^ L (IdentT v)
+    L OpT ^^ L (LongidT v)
   else if not sml && is_ocaml_infix v then
-    L Open_parenT ^^ L (IdentT v) ^^ L Close_parenT
+    L LparT ^^ L (LongidT v) ^^ L RparT
   else
-    L (IdentT v)
+    L (LongidT v)
 
 let rec
 pat_to_tok_tree sml (Pvar v) = var_to_tok_tree sml v
@@ -235,9 +248,9 @@ and
 pat_to_tok_tree sml (Pcon c []) = var_to_tok_tree sml c
 and
 pat_to_tok_tree sml (Pcon c ps) =
-  L Open_parenT ^^ var_to_tok_tree sml c ^^ 
-    L Open_parenT ^^ join_trees (L CommaT) (List.map (pat_to_tok_tree sml) ps) ^^
-    L Close_parenT ^^ L Close_parenT
+  L LparT ^^ var_to_tok_tree sml c ^^ 
+    L LparT ^^ join_trees (L CommaT) (List.map (pat_to_tok_tree sml) ps) ^^
+    L RparT ^^ L RparT
 
 let inc_indent i = 
   if (i:num) < 30 then
@@ -251,15 +264,15 @@ let newline indent =
 let rec
 exp_to_tok_tree sml indent (Raise r) =
   if sml then
-    L Open_parenT ^^ L (IdentT "raise") ^^ L (IdentT "Bind") ^^ L Close_parenT
+    L LparT ^^ L (LongidT "raise") ^^ L (LongidT "Bind") ^^ L RparT
   else
-    L Open_parenT ^^ L (IdentT "raise") ^^ 
-      L Open_parenT ^^ L (IdentT "Match_failure") ^^ 
-        L Open_parenT ^^ L (IdentT "string_of_bool") ^^ L (IdentT "true") ^^ 
+    L LparT ^^ L (LongidT "raise") ^^ 
+      L LparT ^^ L (LongidT "Match_failure") ^^ 
+        L LparT ^^ L (LongidT "string_of_bool") ^^ L (LongidT "true") ^^ 
         L CommaT ^^
-        L (IntlitT (i 0)) ^^ L CommaT ^^ L (IntlitT (i 0)) ^^ L Close_parenT ^^
-      L Close_parenT ^^
-    L Close_parenT
+        L (IntT (i 0)) ^^ L CommaT ^^ L (IntT (i 0)) ^^ L RparT ^^
+      L RparT ^^
+    L RparT
 and
 exp_to_tok_tree sml indent (Val (Lit l)) =
   lit_to_tok_tree sml l
@@ -268,36 +281,36 @@ exp_to_tok_tree sml indent (Con c []) =
   var_to_tok_tree sml c
 and
 exp_to_tok_tree sml indent (Con c es) =
-  L Open_parenT ^^
+  L LparT ^^
   var_to_tok_tree sml c ^^ 
-  L Open_parenT ^^
+  L LparT ^^
   join_trees (L CommaT) (List.map (exp_to_tok_tree sml indent) es) ^^ 
-  L Close_parenT ^^ L Close_parenT
+  L RparT ^^ L RparT
 and
 exp_to_tok_tree sml indent (Var v) =
   var_to_tok_tree sml v
 and
 exp_to_tok_tree sml indent (Fun v e) =
   newline indent ^^
-  L Open_parenT ^^
+  L LparT ^^
   (if sml then L FnT else L FunT) ^^
   var_to_tok_tree sml v ^^ 
-  (if sml then L EqarrowT else L MinusarrowT) ^^ 
+  (if sml then L DarrowT else L ArrowT) ^^ 
   exp_to_tok_tree sml (inc_indent indent) e ^^ 
-  L Close_parenT
+  L RparT
 and
 exp_to_tok_tree sml indent (App Opapp e1 e2) =
-  L Open_parenT ^^
+  L LparT ^^
   exp_to_tok_tree sml indent e1 ^^ 
   exp_to_tok_tree sml indent e2 ^^ 
-  L Close_parenT
+  L RparT
 and
 exp_to_tok_tree sml indent (App Equality e1 e2) =
-  L Open_parenT ^^
+  L LparT ^^
   exp_to_tok_tree sml indent e1 ^^ 
-  L EqT ^^ 
+  L EqualsT ^^ 
   exp_to_tok_tree sml indent e2 ^^ 
-  L Close_parenT
+  L RparT
 and
 exp_to_tok_tree sml indent (App (Opn o) e1 e2) =
   let s = match o with
@@ -308,11 +321,11 @@ exp_to_tok_tree sml indent (App (Opn o) e1 e2) =
     | Modulo -> "mod"
   end
   in
-    L Open_parenT ^^
+    L LparT ^^
     exp_to_tok_tree sml indent e1 ^^ 
-    L (IdentT s) ^^ 
+    L (LongidT s) ^^ 
     exp_to_tok_tree sml indent e2 ^^ 
-    L Close_parenT
+    L RparT
 and
 exp_to_tok_tree sml indent (App (Opb o') e1 e2) =
   let s = match o' with
@@ -322,25 +335,25 @@ exp_to_tok_tree sml indent (App (Opb o') e1 e2) =
     | Geq -> ">"
   end
   in
-    L Open_parenT ^^
+    L LparT ^^
     exp_to_tok_tree sml indent e1 ^^ 
-    L (IdentT s) ^^ 
+    L (LongidT s) ^^ 
     exp_to_tok_tree sml indent e2 ^^ 
-    L Close_parenT
+    L RparT
 and
 exp_to_tok_tree sml indent (Log lop e1 e2) =
-  L Open_parenT ^^
+  L LparT ^^
   exp_to_tok_tree sml indent e1 ^^ 
   (if lop = And then 
      if sml then L AndalsoT else L AmpampT
    else 
      if sml then L OrelseT else L BarbarT) ^^
   exp_to_tok_tree sml indent e2 ^^ 
-  L Close_parenT
+  L RparT
 and
 exp_to_tok_tree sml indent (If e1 e2 e3) =
   newline indent ^^
-  L Open_parenT ^^
+  L LparT ^^
   L IfT ^^
   exp_to_tok_tree sml indent e1 ^^ 
   newline indent ^^
@@ -349,72 +362,72 @@ exp_to_tok_tree sml indent (If e1 e2 e3) =
   newline indent ^^
   L ElseT ^^
   exp_to_tok_tree sml (inc_indent indent) e3 ^^ 
-  L Close_parenT
+  L RparT
 and
 exp_to_tok_tree sml indent (Mat e pes) =
   newline indent ^^
-  L Open_parenT ^^
+  L LparT ^^
   (if sml then L CaseT else L MatchT) ^^ 
   exp_to_tok_tree sml indent e ^^ 
   (if sml then L OfT else L WithT) ^^
   newline (inc_indent (inc_indent indent)) ^^
   join_trees (newline (inc_indent indent) ^^ L BarT) 
                (List.map (pat_exp_to_tok_tree sml (inc_indent indent)) pes) ^^ 
-  L Close_parenT
+  L RparT
 and
 exp_to_tok_tree sml indent (Let v e1 e2) =
   newline indent ^^
-  (if sml then L LetT ^^ L ValT else L Open_parenT ^^ L LetT) ^^ 
+  (if sml then L LetT ^^ L ValT else L LparT ^^ L LetT) ^^ 
   var_to_tok_tree sml v ^^ 
-  L EqT ^^
+  L EqualsT ^^
   exp_to_tok_tree sml indent e1 ^^ 
   newline indent ^^
   L InT ^^
   exp_to_tok_tree sml (inc_indent indent) e2 ^^ 
-  (if sml then newline indent ^^ L EndT else L Close_parenT)
+  (if sml then newline indent ^^ L EndT else L RparT)
 and
 exp_to_tok_tree sml indent (Letrec funs e) =
   newline indent ^^
-  (if sml then L LetT ^^ L FunT else L Open_parenT ^^ L RecT) ^^ 
+  (if sml then L LetT ^^ L FunT else L LparT ^^ L RecT) ^^ 
   join_trees (newline indent ^^ L AndT) 
                (List.map (fun_to_tok_tree sml indent) funs) ^^ 
   newline indent ^^
   L InT ^^
   exp_to_tok_tree sml indent e ^^ 
-  (if sml then newline indent ^^ L EndT else L Close_parenT)
+  (if sml then newline indent ^^ L EndT else L RparT)
 and
 pat_exp_to_tok_tree sml indent (p,e) =
   pat_to_tok_tree sml p ^^ 
-  (if sml then L EqarrowT else L MinusarrowT) ^^
+  (if sml then L DarrowT else L ArrowT) ^^
   exp_to_tok_tree sml (inc_indent (inc_indent indent)) e
 and
 fun_to_tok_tree sml indent (v1,v2,e) =
   var_to_tok_tree sml v1 ^^
   var_to_tok_tree sml v2 ^^ 
-  L EqT ^^
+  L EqualsT ^^
   exp_to_tok_tree sml (inc_indent indent) e
 
 let rec
 type_to_tok_tree (Tvar tn) =
-  L (TvT tn)
+  L (TyvarT tn)
 and
 type_to_tok_tree (Tapp ts tn) =
   if ts = [] then
-    L (IdentT tn)
+    L (LongidT tn)
   else
-    L Open_parenT ^^
-    join_trees (L CommaT) (List.map type_to_tok_tree ts) ^^ L Close_parenT ^^ 
-    L (IdentT tn)
+    L LparT ^^
+    join_trees (L CommaT) (List.map type_to_tok_tree ts) ^^ L RparT ^^ 
+    L (LongidT tn)
 and
 type_to_tok_tree (Tfn t1 t2) =
-  L Open_parenT ^^ type_to_tok_tree t1 ^^ L MinusarrowT ^^ type_to_tok_tree t2 ^^ 
-  L Close_parenT
+  L LparT ^^ type_to_tok_tree t1 ^^ L ArrowT ^^ type_to_tok_tree t2 ^^ 
+  L RparT
 and
 type_to_tok_tree Tnum =
-  L (IdentT "int")
+  L (LongidT "int")
 and
 type_to_tok_tree Tbool =
-  L (IdentT "bool")
+  L (LongidT "bool")
 
 let variant_to_tok_tree sml (c,ts) =
   if ts = [] then
@@ -427,13 +440,13 @@ let variant_to_tok_tree sml (c,ts) =
 val typedef_to_tok_tree : bool -> num -> tvarN list * typeN * (conN * t list) list -> tok_tree
 let typedef_to_tok_tree sml indent (tvs, name, variants) =
   (if tvs = [] then 
-     L (IdentT name)
+     L (LongidT name)
    else 
-     L Open_parenT ^^ 
-     join_trees (L CommaT) (List.map (fun tv -> L (TvT tv)) tvs) ^^ 
-     L Close_parenT ^^
-     L (IdentT name)) ^^ 
-  L EqT ^^
+     L LparT ^^ 
+     join_trees (L CommaT) (List.map (fun tv -> L (TyvarT tv)) tvs) ^^ 
+     L RparT ^^
+     L (LongidT name)) ^^ 
+  L EqualsT ^^
   newline (inc_indent (inc_indent indent)) ^^
   join_trees (newline (inc_indent indent) ^^ L BarT) 
                (List.map (variant_to_tok_tree sml) variants)
@@ -442,21 +455,21 @@ let rec
 dec_to_tok_tree sml indent (Dlet p e) =
   (if sml then L ValT else L LetT) ^^
   pat_to_tok_tree sml p ^^ 
-  L EqT ^^
+  L EqualsT ^^
   exp_to_tok_tree sml (inc_indent indent) e ^^
-  (if sml then L SemiT else L SemisemiT)
+  (if sml then L SemicolonT else L SemisemiT)
 and
 dec_to_tok_tree sml indent (Dletrec funs) =
   (if sml then L FunT else L LetT ^^ L RecT) ^^ 
   join_trees (newline indent ^^ L AndT) 
              (List.map (fun_to_tok_tree sml indent) funs) ^^
-  (if sml then L SemiT else L SemisemiT)
+  (if sml then L SemicolonT else L SemisemiT)
 and
 dec_to_tok_tree sml indent (Dtype types) =
   (if sml then L DatatypeT else L TypeT) ^^ 
   join_trees (newline indent ^^ L AndT) 
              (List.map (typedef_to_tok_tree sml indent) types) ^^
-  (if sml then L SemiT else L SemisemiT)
+  (if sml then L SemicolonT else L SemisemiT)
 
 let dec_to_sml_string d = 
   tok_list_to_string true (tree_to_list (dec_to_tok_tree true 0 d) [])
