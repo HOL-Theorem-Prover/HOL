@@ -20,16 +20,19 @@ val _ = new_theory "lexer_spec";
 val _ = Hol_datatype `
 regexp = 
     CharSet of char set
+  | StringLit of string
   | Cat of regexp => regexp
   | Star of regexp
   | Or of regexp list
   | Neg of regexp`;
 
-val _ = type_abbrev ("lexer_spec", ``:(regexp#'a) list``);
+val _ = type_abbrev ("lexer_spec", ``:(regexp#(string->'a)) list``);
 
 val regexp_matches_def = tDefine "regexp_matches" `
 (regexp_matches (CharSet ns) s = 
   ∃c. c IN ns ∧ (s = [c])) ∧
+(regexp_matches (StringLit s') s = 
+  (s = s')) ∧
 (regexp_matches (Cat r1 r2) s = 
   ∃s1 s2. regexp_matches r1 s1 ∧ regexp_matches r2 s2 ∧ (s = s1 ++ s2)) ∧
 (regexp_matches (Star r) s =
@@ -46,16 +49,17 @@ full_simp_tac (srw_ss()++ARITH_ss) []);
 
 val lexer_spec_matches_prefix_def = Define `
 lexer_spec_matches_prefix lexer_spec n tok lexeme s_rest s =
-  ∃r.
+  ∃r f.
     n < LENGTH lexer_spec ∧
-    (EL n lexer_spec = (r,tok)) ∧ 
+    (EL n lexer_spec = (r,f)) ∧ 
+    (tok = f lexeme) ∧
     regexp_matches r lexeme ∧ 
     (s = lexeme ++ s_rest)`;
 
 val correct_lex_def = Define `
 (correct_lex lexer_spec s [] = (s = [])) ∧
-(correct_lex lexer_spec s ((tok, lexeme)::toks) =
-  ∃n s_rest.
+(correct_lex lexer_spec s (tok::toks) =
+  ∃lexeme n s_rest.
     (lexeme ≠ []) ∧
     lexer_spec_matches_prefix lexer_spec n tok lexeme s_rest s ∧
     correct_lex lexer_spec s_rest toks ∧
@@ -69,19 +73,16 @@ val correct_lex_def = Define `
         (LENGTH lexeme' ≠ LENGTH lexeme) ∨
         (n ≤ n')))`;
 
-val correct_lex_ind = fetch "-" "correct_lex_ind";
-
 val correct_lex_determ = Q.store_thm ("correct_lex_determ",
 `!lexer_spec s toks toks'.
   correct_lex lexer_spec s toks ∧ correct_lex lexer_spec s toks' 
   ⇒ 
   (toks = toks')`,
-recInduct correct_lex_ind >>
+induct_on `toks` >>
 rw [correct_lex_def] >>
 Cases_on `toks'` >>
 rw [] >>
 fs [] >>
-`?tok' lexeme'. h = (tok',lexeme')` by Cases_on `h` >>
 rw [] >>
 fs [correct_lex_def] >>
 rw [] >|
@@ -94,9 +95,7 @@ rw [] >|
      `n = n'` by decide_tac >>
      fs [lexer_spec_matches_prefix_def] >>
      rw [] >>
-     fs [],
- res_tac >>
-     full_simp_tac (srw_ss()++ARITH_ss) [] >>
+     fs [] >>
      `STRLEN lexeme = STRLEN lexeme'` by decide_tac >>
      fs [lexer_spec_matches_prefix_def] >>
      rw [] >>

@@ -349,8 +349,8 @@ val lexer_def = tDefine "lexer" `
 (lexer (trans,finals,start) s acc =
   case lexer_get_token trans finals start "" NONE s of
     | NONE => NONE
-    | SOME (tok,lexeme,s') =>
-        lexer (trans,finals,start) s' ((tok, REVERSE lexeme)::acc))`
+    | SOME (f,lexeme,s') =>
+        lexer (trans,finals,start) s' (f (REVERSE lexeme)::acc))`
 (WF_REL_TAC `measure (\(x,y,z). STRLEN y)` >>
  rw [] >>
  `lexer_get_token_invariant trans finals start start "" NONE (STRING v8 v9)`
@@ -403,7 +403,7 @@ recInduct lexer_ind >>
 rw [lexer_def] >>
 every_case_tac >>
 fs [] >>
-`?toks. REVERSE (acc ++acc2) ++ res = REVERSE ((q,REVERSE q')::(acc++acc2)) ++ toks` 
+`?toks. REVERSE (acc ++acc2) ++ res = REVERSE (q (REVERSE q')::(acc++acc2)) ++ toks` 
            by metis_tac [lexer_acc_thm] >>
 fs [] >>
 rw [] >>
@@ -460,6 +460,7 @@ fs [] >>
      (!n'. n' < n ⇒ ~regexp_matches (FST (EL n' lexer_spec)) (MAP FST path))`
              by metis_tac [dfa_correct_def] >>
 rw [lexer_spec_matches_prefix_def] >>
+qexists_tac `REVERSE q'` >>
 qexists_tac `n` >>
 qexists_tac `r'` >>
 rw [] >|
@@ -537,7 +538,7 @@ val lexer_complete_lem1 = Q.prove (
     case lexer_get_token trans finals start "" NONE (s1++s2) of
       | NONE => NONE
       | SOME (tok,lexeme,s') =>
-          lexer (trans,finals,start) s' ((tok, REVERSE lexeme)::acc))`,
+          lexer (trans,finals,start) s' (tok (REVERSE lexeme)::acc))`,
 cases_on `s1` >>
 rw [lexer_def]);
 
@@ -549,8 +550,6 @@ val lexer_complete = Q.prove (
   (lexer (trans,finals,start) s acc = SOME (REVERSE acc++toks))`,
 induct_on `toks` >>
 rw [correct_lex_def, lexer_def] >>
-`?tok lexeme. h = (tok,lexeme)` by (PairCases_on `h` >> rw []) >>
-rw [] >>
 fs [correct_lex_def, lexer_spec_matches_prefix_def] >>
 `lexer (trans,finals,start) s_rest acc = SOME (REVERSE acc ++ toks)`
       by metis_tac [] >>
@@ -562,7 +561,7 @@ rw []>>
                   metis_tac [arithmeticTheory.LESS_TRANS,
                              arithmeticTheory.NOT_LESS_EQUAL]) >>
 `?p state. (lexeme = MAP FST p) ∧ dfa_path trans start state p ∧
-       (FLOOKUP finals state = SOME tok)`
+       (FLOOKUP finals state = SOME f)`
             by metis_tac [FST, SND, dfa_correct_def] >>
 rw [lexer_complete_lem1] >>
 cases_on `p = []` >>
