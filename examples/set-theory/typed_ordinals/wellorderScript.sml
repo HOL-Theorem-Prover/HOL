@@ -564,6 +564,21 @@ val wo2wo_mono = store_thm(
   ONCE_REWRITE_TAC [wo2wo_thm] >> rw[LET_THM] >>
   metis_tac [mono_woseg, wleast_SUBSET]);
 
+val wo2wo_ONTO = store_thm(
+  "wo2wo_ONTO",
+  ``(wo2wo w1 w2 x = SOME y) /\ (y0,y) WIN w2 ==>
+    ?x0. wo2wo w1 w2 x0 = SOME y0``,
+  simp[SimpL ``$==>``, Once wo2wo_thm] >> rw[] >>
+  spose_not_then strip_assume_tac >>
+  `y0 NOTIN woseg w1 w2 x`
+     by (asm_simp_tac (srw_ss() ++ DNF_ss) [] >> qx_gen_tac `a` >>
+         `(wo2wo w1 w2 a = NONE) \/ ?y'. wo2wo w1 w2 a = SOME y'`
+            by metis_tac [optionTheory.option_CASES] >> simp[] >>
+         metis_tac[]) >>
+  `y0 <> y` by metis_tac [WIN_REFL] >>
+  `y0 IN elsOf w2 /\ y IN elsOf w2` by metis_tac [WIN_elsOf] >>
+  metis_tac [WIN_TRANS, WIN_REFL, wleast_IN_wo]);
+
 (*val orderlt_WF = store_thm(
   "orderlt_WF",
   ``WF orderlt``,
