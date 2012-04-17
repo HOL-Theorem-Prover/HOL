@@ -579,6 +579,66 @@ val wo2wo_ONTO = store_thm(
   `y0 IN elsOf w2 /\ y IN elsOf w2` by metis_tac [WIN_elsOf] >>
   metis_tac [WIN_TRANS, WIN_REFL, wleast_IN_wo]);
 
+val wo2wo_EQ_NONE_woseg = store_thm(
+  "wo2wo_EQ_NONE_woseg",
+  ``(wo2wo w1 w2 x = NONE) ==> (elsOf w2 = woseg w1 w2 x)``,
+  rw[Once wo2wo_thm, LET_THM] >>
+  `?y. y IN elsOf w2 /\ y NOTIN woseg w1 w2 x`
+     by metis_tac [IMAGE_wo2wo_SUBSET, SUBSET_DEF, EXTENSION] >>
+  strip_tac >> imp_res_tac wleast_EQ_NONE >> metis_tac [SUBSET_DEF]);
+
+(*
+val orderlt_trichotomy = store_thm(
+  "orderlt_trichotomy",
+  ``orderlt w1 w2 \/ orderiso w1 w2 \/ orderlt w2 w1``,
+  Cases_on `?x. x IN elsOf w1 /\ (wo2wo w1 w2 x = NONE)` >| [
+    `?x0. wleast w1 { x | ?y. wo2wo w1 w2 x = SOME y } = SOME x0`
+       by (Cases_on `wleast w1 { x | ?y. wo2wo w1 w2 x = SOME y }` >>
+           rw[] >> imp_res_tac wleast_EQ_NONE >>
+           pop_assum mp_tac >> simp[SUBSET_DEF] >> qexists_tac `x` >>
+           rw[]) >>
+    pop_assum (mp_tac o MATCH_MP (GEN_ALL wleast_IN_wo)) >>
+    rw[] >>
+    `!x. (x,x0) WIN w1 ==> ?y. wo2wo w1 w2 x = SOME y`
+       by metis_tac [WIN_TRANS, WIN_REFL, WIN_elsOf] >>
+    qsuff_tac `orderlt w2 w1` >- rw[] >>
+    simp[orderlt_def] >> qexists_tac `x0` >> rw[] >>
+    MATCH_MP_TAC orderiso_SYM >>
+    rw[orderiso_def] >>
+    qexists_tac `THE o wo2wo w1 w2` >>
+    `elsOf (wobound x0 w1) = { x | (x,x0) WIN w1 }`
+       by (rw[elsOf_wobound] >> rw[] >>
+           `?z. s = {z}` by metis_tac [SING_IFF_CARD1, SING_DEF] >>
+           `(z,x0) WIN w1` by fs[Abbr`s`, EXTENSION] >>
+           `elsOf w2 = woseg w1 w2 x0`
+              by metis_tac [wo2wo_EQ_NONE_woseg, optionTheory.option_CASES] >>
+           ` _ = {THE (wo2wo w1 w2 z)}`
+              by (asm_simp_tac(srw_ss() ++ DNF_ss)[EXTENSION] >>
+                  `?y. wo2wo w1 w2 z = SOME y` by metis_tac[] >>
+                  simp[EQ_IMP_THM, FORALL_AND_THM] >>
+                  Tactical.REVERSE conj_tac
+                    >- (qexists_tac `z` >> rw[iseg_def]) >>
+                  asm_simp_tac (srw_ss() ++ DNF_ss) [iseg_def]) >>
+           fs[elsOf_NEVER_SING]) >>
+    simp[] >> rpt conj_tac >| [
+      metis_tac [wo2wo_IN_w2, optionTheory.THE_DEF],
+      metis_tac [wo2wo_11, optionTheory.THE_DEF, WIN_elsOf],
+      `elsOf w2 = woseg w1 w2 x0`
+        by metis_tac [wo2wo_EQ_NONE_woseg, optionTheory.option_CASES] >>
+      asm_simp_tac (srw_ss() ++ DNF_ss) [iseg_def] >>
+      metis_tac [optionTheory.option_CASES],
+      simp[IN_wobound] >> metis_tac [optionTheory.THE_DEF, wo2wo_mono]
+    ],
+    ALL_TAC
+  ] >>
+  fs[METIS_PROVE []``(!x. ~P x \/ Q x) = (!x. P x ==> Q x)``,
+     METIS_PROVE [optionTheory.option_CASES, optionTheory.NOT_SOME_NONE]
+                  ``(x <> NONE) <=> ?y. x = SOME y``] >>
+
+*)
+
+
+
 (*val orderlt_WF = store_thm(
   "orderlt_WF",
   ``WF orderlt``,
