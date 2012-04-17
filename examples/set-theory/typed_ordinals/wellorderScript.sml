@@ -566,15 +566,15 @@ val wo2wo_mono = store_thm(
 
 val wo2wo_ONTO = store_thm(
   "wo2wo_ONTO",
-  ``(wo2wo w1 w2 x = SOME y) /\ (y0,y) WIN w2 ==>
-    ?x0. wo2wo w1 w2 x0 = SOME y0``,
+  ``x IN elsOf w1 /\ (wo2wo w1 w2 x = SOME y) /\ (y0,y) WIN w2 ==>
+    ?x0. x0 IN elsOf w1 /\ (wo2wo w1 w2 x0 = SOME y0)``,
   simp[SimpL ``$==>``, Once wo2wo_thm] >> rw[] >>
   spose_not_then strip_assume_tac >>
   `y0 NOTIN woseg w1 w2 x`
      by (asm_simp_tac (srw_ss() ++ DNF_ss) [] >> qx_gen_tac `a` >>
          `(wo2wo w1 w2 a = NONE) \/ ?y'. wo2wo w1 w2 a = SOME y'`
-            by metis_tac [optionTheory.option_CASES] >> simp[] >>
-         metis_tac[]) >>
+            by metis_tac [optionTheory.option_CASES] >> simp[iseg_def] >>
+         metis_tac[WIN_elsOf]) >>
   `y0 <> y` by metis_tac [WIN_REFL] >>
   `y0 IN elsOf w2 /\ y IN elsOf w2` by metis_tac [WIN_elsOf] >>
   metis_tac [WIN_TRANS, WIN_REFL, wleast_IN_wo]);
@@ -587,7 +587,6 @@ val wo2wo_EQ_NONE_woseg = store_thm(
      by metis_tac [IMAGE_wo2wo_SUBSET, SUBSET_DEF, EXTENSION] >>
   strip_tac >> imp_res_tac wleast_EQ_NONE >> metis_tac [SUBSET_DEF]);
 
-(*
 val orderlt_trichotomy = store_thm(
   "orderlt_trichotomy",
   ``orderlt w1 w2 \/ orderiso w1 w2 \/ orderlt w2 w1``,
@@ -634,9 +633,60 @@ val orderlt_trichotomy = store_thm(
   fs[METIS_PROVE []``(!x. ~P x \/ Q x) = (!x. P x ==> Q x)``,
      METIS_PROVE [optionTheory.option_CASES, optionTheory.NOT_SOME_NONE]
                   ``(x <> NONE) <=> ?y. x = SOME y``] >>
-
-*)
-
+  Cases_on `elsOf w2 = { y | ?x. x IN elsOf w1 /\ (wo2wo w1 w2 x = SOME y) }`
+  >| [
+    qsuff_tac `orderiso w1 w2` >- rw[] >>
+    rw[orderiso_def] >> qexists_tac `THE o wo2wo w1 w2` >>
+    pop_assum (strip_assume_tac o SIMP_RULE (srw_ss()) [EXTENSION]) >>
+    simp[] >> rpt conj_tac >| [
+      metis_tac [optionTheory.THE_DEF],
+      metis_tac [wo2wo_11, optionTheory.THE_DEF],
+      metis_tac [optionTheory.THE_DEF],
+      metis_tac [optionTheory.THE_DEF, wo2wo_mono, WIN_elsOf]
+    ],
+    ALL_TAC
+  ] >>
+  `?y. y IN elsOf w2 /\ !x. x IN elsOf w1 ==> (wo2wo w1 w2 x <> SOME y)`
+    by (pop_assum mp_tac >> simp[EXTENSION] >> metis_tac [wo2wo_IN_w2]) >>
+  qabbrev_tac `
+    y0_opt = wleast w2 { y | ?x. x IN elsOf w1 /\ (wo2wo w1 w2 x = SOME y) }
+  ` >>
+  `y0_opt <> NONE`
+     by (qunabbrev_tac `y0_opt` >> strip_tac >>
+         imp_res_tac wleast_EQ_NONE >> fs[SUBSET_DEF] >> metis_tac[]) >>
+  `?y0. y0_opt = SOME y0` by metis_tac [optionTheory.option_CASES] >>
+  qunabbrev_tac `y0_opt` >>
+  pop_assum (strip_assume_tac o MATCH_MP wleast_IN_wo) >> fs[] >>
+  qsuff_tac `orderlt w1 w2` >- rw[] >> simp[orderlt_def] >>
+  qexists_tac `y0` >> simp[orderiso_def] >>
+  qexists_tac `THE o wo2wo w1 w2` >>
+  `!a b. a IN elsOf w1 /\ (wo2wo w1 w2 a = SOME b) ==> (b,y0) WIN w2`
+    by (rpt strip_tac >>
+        `b <> y0` by metis_tac [] >>
+        `~((y0,b) WIN w2)`
+           by metis_tac [wo2wo_ONTO, optionTheory.NOT_SOME_NONE] >>
+        metis_tac [WIN_trichotomy, wo2wo_IN_w2]) >>
+  `elsOf (wobound y0 w2) = { y | (y,y0) WIN w2}`
+     by (rw[elsOf_wobound] >> rw[] >>
+         `?z. s = {z}` by metis_tac [SING_IFF_CARD1, SING_DEF] >>
+         `(z,y0) WIN w2` by fs[Abbr`s`, EXTENSION] >>
+         `~((y0,z) WIN w2)` by metis_tac [WIN_TRANS, WIN_REFL] >>
+         `z <> y0` by metis_tac [WIN_REFL] >>
+         `z IN elsOf w2` by metis_tac [WIN_elsOf] >>
+         `?x. x IN elsOf w1 /\ (wo2wo w1 w2 x = SOME z)` by metis_tac[] >>
+         qsuff_tac `elsOf w1 = {x}` >- metis_tac [elsOf_NEVER_SING] >>
+         simp[EXTENSION, EQ_IMP_THM] >> qx_gen_tac `x'` >>
+         spose_not_then strip_assume_tac >>
+         `?z'. (wo2wo w1 w2 x' = SOME z') /\ z' IN elsOf w2 /\ (z',y0) WIN w2`
+            by metis_tac [wo2wo_IN_w2] >>
+         `z' <> z` by metis_tac [wo2wo_11] >>
+         `z' IN s` by rw[Abbr`s`] >> rw[] >> fs[]) >>
+  simp[] >> rpt conj_tac >| [
+    metis_tac [optionTheory.THE_DEF],
+    metis_tac [optionTheory.THE_DEF, wo2wo_11],
+    metis_tac [WIN_REFL, WIN_TRANS, WIN_elsOf, optionTheory.THE_DEF],
+    simp[IN_wobound] >> metis_tac [wo2wo_mono, optionTheory.THE_DEF, WIN_elsOf]
+  ]);
 
 
 (*val orderlt_WF = store_thm(
