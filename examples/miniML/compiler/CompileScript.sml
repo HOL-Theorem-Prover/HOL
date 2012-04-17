@@ -23,6 +23,7 @@ val _ = type_abbrev((*  ('a,'b) *) "alist" , ``: ('a,'b) alist``);
 (*val alist_to_fmap : forall 'a 'b. ('a,'b) alist -> ('a,'b) Pmap.map*)
 (*val qsort : forall 'a. ('a -> 'a -> bool) -> 'a list -> 'a list*)
 (*val a_linear_order : forall 'a. 'a -> 'a -> bool*)
+(*val restrict : forall 'a 'b. ('a,'b) Pmap.map -> 'a set -> ('a,'b) Pmap.map*)
 
 (* TODO: elsewhere? *)
  val find_index_defn = Hol_defn "find_index" `
@@ -134,8 +135,57 @@ val _ = Hol_datatype `
 
 val _ = Defn.save_defn Cv_to_ov_defn;
 
+ val free_vars_defn = Hol_defn "free_vars" `
+
+(free_vars (CRaise _) = {})
+/\
+(free_vars (CVar n) = {n})
+/\
+(free_vars (CVal _) = {})
+/\
+(free_vars (CCon _ es) =
+  FOLDL (\ s e . s UNION free_vars e) {} es)
+/\
+(free_vars (CTagEq e _) = free_vars e)
+/\
+(free_vars (CProj e _) = free_vars e)
+/\
+(free_vars (CMat v pes) =
+  FOLDL (\ s (p,e) . s UNION free_vars e) {v} pes)
+/\
+(free_vars (CLet xs es e) =
+  FOLDL (\ s e . s UNION free_vars e)
+  (free_vars e DIFF LIST_TO_SET xs) es)
+/\
+(free_vars (CLetfun T ns defs e) =
+  FOLDL (\ s (vs,e) .
+    s UNION (free_vars e DIFF (LIST_TO_SET ns UNION
+                            LIST_TO_SET vs)))
+  (free_vars e DIFF LIST_TO_SET ns) defs)
+/\
+(free_vars (CLetfun F ns defs e) =
+  FOLDL (\ s (vs,e) .
+    s UNION (free_vars e DIFF LIST_TO_SET vs))
+  (free_vars e DIFF LIST_TO_SET ns) defs)
+/\
+(free_vars (CFun xs e) = free_vars e DIFF (LIST_TO_SET xs))
+/\
+(free_vars (CCall e es) =
+  FOLDL (\ s e . s UNION free_vars e)
+  (free_vars e) es)
+/\
+(free_vars (CPrim2 _ e1 e2) = free_vars e1 UNION free_vars e2)
+/\
+(free_vars (CLprim _ es) =
+  FOLDL (\ s e . s UNION free_vars e) {} es)`;
+
+val _ = Defn.save_defn free_vars_defn;
+
 val _ = Define `
  (sort_Cenv Cenv = QSORT a_linear_order Cenv)`;
+
+val _ = Define `
+ (mk_env env b = sort_Cenv (fmap_to_alist (DRESTRICT env (free_vars b))))`;
 
 
  val doPrim2_defn = Hol_defn "doPrim2" `
@@ -312,7 +362,7 @@ Cevaluate env (CLet (n::ns) (e::es) b) (Rerr err))
 Cevaluate
   (FOLDL2 
     (\ env' n (ns,b) .
-      FUPDATE  env' ( n, (CClosure (sort_Cenv (fmap_to_alist env)) ns b))) 
+      FUPDATE  env' ( n, (CClosure (mk_env env b) ns b))) 
     env  ns  defs)
   b r
 ==>
@@ -321,10 +371,10 @@ Cevaluate env (CLetfun F ns defs b) r)
 /\
 (! env ns defs b r.
 Cevaluate
-  (FOLDL
-     (\ env' n .
-       FUPDATE  env' ( n, (CRecClos (sort_Cenv (fmap_to_alist env)) ns defs n)))
-     env ns)
+  (FOLDL2 
+     (\ env' n (_ns,b) .
+       FUPDATE  env' ( n, (CRecClos (mk_env env b) ns defs n))) 
+     env  ns  defs)
   b r
 ==>
 Cevaluate env (CLetfun T ns defs b) r)
@@ -333,7 +383,7 @@ Cevaluate env (CLetfun T ns defs b) r)
 (! env ns b.
 T
 ==>
-Cevaluate env (CFun ns b) (Rval (CClosure (sort_Cenv (fmap_to_alist env)) ns b)))
+Cevaluate env (CFun ns b) (Rval (CClosure (mk_env env b) ns b)))
 
 /\
 (! env e es env' ns b vs r.
@@ -754,13 +804,13 @@ val _ = Defn.save_defn exp_to_Cexp_defn;
   CConv (FAPPLY  cm  cn) (MAP (\ v . v_to_Cv cm (s,v)) vs))
 /\
 (v_to_Cv cm (s, Closure env vn e) =
-  let Cenv = MAP (\ (x,v) . (FAPPLY  s.m  x, v_to_Cv cm (s,v))) env in
+  let Cenv = alist_to_fmap (MAP (\ (x,v) . (FAPPLY  s.m  x, v_to_Cv cm (s,v))) env) in
   let (s',n) = extend F s vn in
   let (_s,Ce) = exp_to_Cexp F cm (s', e) in
-  CClosure (sort_Cenv Cenv) [n] Ce)
+  CClosure (mk_env Cenv Ce) [n] Ce)
 /\
 (v_to_Cv cm (s, Recclosure env defs vn) =
-  let Cenv = MAP (\ (x,v) . (FAPPLY  s.m  x, v_to_Cv cm (s,v))) env in
+  let Cenv = alist_to_fmap (MAP (\ (x,v) . (FAPPLY  s.m  x, v_to_Cv cm (s,v))) env) in
   let (s',fns) = FOLDR 
     (\ (d,_vn,_e) (s,fns) . let (s,n) = extend F s d in (s, n::fns))       (s,[]) 
           defs in
@@ -770,57 +820,13 @@ val _ = Defn.save_defn exp_to_Cexp_defn;
       let (_s,Ce) = exp_to_Cexp F cm (s', e) in
       ([n],Ce)::Cdefs)      [] 
           defs in
-  CRecClos (sort_Cenv Cenv) fns Cdefs (FAPPLY  s.m  vn))`;
+  let n = FAPPLY  s.m  vn in
+  let (_a,Ce) = (case find_index n fns 0 of SOME i => EL  i  Cdefs ) in
+  CRecClos (mk_env Cenv Ce) fns Cdefs n)`;
 
 val _ = Defn.save_defn v_to_Cv_defn;
 
 (* TODO: simple type system and checker *)
-
- val free_vars_defn = Hol_defn "free_vars" `
-
-(free_vars (CRaise _) = {})
-/\
-(free_vars (CVar n) = {n})
-/\
-(free_vars (CVal _) = {})
-/\
-(free_vars (CCon _ es) =
-  FOLDL (\ s e . s UNION free_vars e) {} es)
-/\
-(free_vars (CTagEq e _) = free_vars e)
-/\
-(free_vars (CProj e _) = free_vars e)
-/\
-(free_vars (CMat v pes) =
-  FOLDL (\ s (p,e) . s UNION free_vars e) {v} pes)
-/\
-(free_vars (CLet xs es e) =
-  FOLDL (\ s e . s UNION free_vars e)
-  (free_vars e DIFF LIST_TO_SET xs) es)
-/\
-(free_vars (CLetfun T ns defs e) =
-  FOLDL (\ s (vs,e) .
-    s UNION (free_vars e DIFF (LIST_TO_SET ns UNION
-                            LIST_TO_SET vs)))
-  (free_vars e DIFF LIST_TO_SET ns) defs)
-/\
-(free_vars (CLetfun F ns defs e) =
-  FOLDL (\ s (vs,e) .
-    s UNION (free_vars e DIFF LIST_TO_SET vs))
-  (free_vars e DIFF LIST_TO_SET ns) defs)
-/\
-(free_vars (CFun xs e) = free_vars e DIFF (LIST_TO_SET xs))
-/\
-(free_vars (CCall e es) =
-  FOLDL (\ s e . s UNION free_vars e)
-  (free_vars e) es)
-/\
-(free_vars (CPrim2 _ e1 e2) = free_vars e1 UNION free_vars e2)
-/\
-(free_vars (CLprim _ es) =
-  FOLDL (\ s e . s UNION free_vars e) {} es)`;
-
-val _ = Defn.save_defn free_vars_defn;
 
 (* TODO: map_Cexp and recover remove_mat as instance *)
 

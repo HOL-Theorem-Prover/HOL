@@ -33,6 +33,8 @@ val qsort : forall 'a. ('a -> 'a -> bool) -> 'a list -> 'a list
 let inline {hol} qsort = Hol.QSORT
 val a_linear_order : forall 'a. 'a -> 'a -> bool
 let inline {hol} a_linear_order = Hol.a_linear_order
+val restrict : forall 'a 'b. ('a,'b) Pmap.map -> 'a set -> ('a,'b) Pmap.map
+let inline {hol} restrict = Hol.DRESTRICT
 
 (* TODO: elsewhere? *)
 let rec
@@ -116,7 +118,51 @@ Cv_to_ov m (CClosure _ _ _) = OFn
 and
 Cv_to_ov m (CRecClos _ _ _ _) = OFn
 
+let rec
+free_vars (CRaise _) = {}
+and
+free_vars (CVar n) = {n}
+and
+free_vars (CVal _) = {}
+and
+free_vars (CCon _ es) =
+  List.fold_left (fun s e -> s union free_vars e) {} es
+and
+free_vars (CTagEq e _) = free_vars e
+and
+free_vars (CProj e _) = free_vars e
+and
+free_vars (CMat v pes) =
+  List.fold_left (fun s (p,e) -> s union free_vars e) {v} pes
+and
+free_vars (CLet xs es e) =
+  List.fold_left (fun s e -> s union free_vars e)
+  (free_vars e \ Set.from_list xs) es
+and
+free_vars (CLetfun true ns defs e) =
+  List.fold_left (fun s (vs,e) ->
+    s union (free_vars e \ (Set.from_list ns union
+                            Set.from_list vs)))
+  (free_vars e \ Set.from_list ns) defs
+and
+free_vars (CLetfun false ns defs e) =
+  List.fold_left (fun s (vs,e) ->
+    s union (free_vars e \ Set.from_list vs))
+  (free_vars e \ Set.from_list ns) defs
+and
+free_vars (CFun xs e) = free_vars e \ (Set.from_list xs)
+and
+free_vars (CCall e es) =
+  List.fold_left (fun s e -> s union free_vars e)
+  (free_vars e) es
+and
+free_vars (CPrim2 _ e1 e2) = free_vars e1 union free_vars e2
+and
+free_vars (CLprim _ es) =
+  List.fold_left (fun s e -> s union free_vars e) {} es
+
 let sort_Cenv Cenv = qsort a_linear_order Cenv
+let mk_env env b = sort_Cenv (fmap_to_alist (restrict env (free_vars b)))
 
 let rec
 doPrim2 b ty op (CLit (IntLit x)) (CLit (IntLit y)) =
@@ -275,7 +321,7 @@ forall env ns defs b r.
 Cevaluate
   (fold_left2
     (fun env' n (ns,b) ->
-      Pmap.add n (CClosure (sort_Cenv (fmap_to_alist env)) ns b) env')
+      Pmap.add n (CClosure (mk_env env b) ns b) env')
     env ns defs)
   b r
 ==>
@@ -284,10 +330,10 @@ Cevaluate env (CLetfun false ns defs b) r
 and
 forall env ns defs b r.
 Cevaluate
-  (List.fold_left
-     (fun env' n ->
-       Pmap.add n (CRecClos (sort_Cenv (fmap_to_alist env)) ns defs n) env')
-     env ns)
+  (fold_left2
+     (fun env' n (_ns,b) ->
+       Pmap.add n (CRecClos (mk_env env b) ns defs n) env')
+     env ns defs)
   b r
 ==>
 Cevaluate env (CLetfun true ns defs b) r
@@ -296,7 +342,7 @@ and
 forall env ns b.
 true
 ==>
-Cevaluate env (CFun ns b) (Rval (CClosure (sort_Cenv (fmap_to_alist env)) ns b))
+Cevaluate env (CFun ns b) (Rval (CClosure (mk_env env b) ns b))
 
 and
 forall env e es env' ns b vs r.
@@ -701,13 +747,13 @@ v_to_Cv cm (s, Conv cn vs) =
   CConv (Pmap.find cn cm) (List.map (fun v -> v_to_Cv cm (s,v)) vs)
 and
 v_to_Cv cm (s, Closure env vn e) =
-  let Cenv = List.map (fun (x,v) -> (Pmap.find x s.m, v_to_Cv cm (s,v))) env in
+  let Cenv = alist_to_fmap (List.map (fun (x,v) -> (Pmap.find x s.m, v_to_Cv cm (s,v))) env) in
   let (s',n) = extend false s vn in
   let (_s,Ce) = exp_to_Cexp false cm (s', e) in
-  CClosure (sort_Cenv Cenv) [n] Ce
+  CClosure (mk_env Cenv Ce) [n] Ce
 and
 v_to_Cv cm (s, Recclosure env defs vn) =
-  let Cenv = List.map (fun (x,v) -> (Pmap.find x s.m, v_to_Cv cm (s,v))) env in
+  let Cenv = alist_to_fmap (List.map (fun (x,v) -> (Pmap.find x s.m, v_to_Cv cm (s,v))) env) in
   let (s',fns) = List.fold_right
     (fun (d,_vn,_e) (s,fns) -> let (s,n) = extend false s d in (s, n::fns))
           defs      (s,[]) in
@@ -717,52 +763,11 @@ v_to_Cv cm (s, Recclosure env defs vn) =
       let (_s,Ce) = exp_to_Cexp false cm (s', e) in
       ([n],Ce)::Cdefs)
           defs     [] in
-  CRecClos (sort_Cenv Cenv) fns Cdefs (Pmap.find vn s.m)
+  let n = Pmap.find vn s.m in
+  let (_a,Ce) = match find_index n fns 0 with Some i -> List.nth Cdefs i end in
+  CRecClos (mk_env Cenv Ce) fns Cdefs n
 
 (* TODO: simple type system and checker *)
-
-let rec
-free_vars (CRaise _) = {}
-and
-free_vars (CVar n) = {n}
-and
-free_vars (CVal _) = {}
-and
-free_vars (CCon _ es) =
-  List.fold_left (fun s e -> s union free_vars e) {} es
-and
-free_vars (CTagEq e _) = free_vars e
-and
-free_vars (CProj e _) = free_vars e
-and
-free_vars (CMat v pes) =
-  List.fold_left (fun s (p,e) -> s union free_vars e) {v} pes
-and
-free_vars (CLet xs es e) =
-  List.fold_left (fun s e -> s union free_vars e)
-  (free_vars e \ Set.from_list xs) es
-and
-free_vars (CLetfun true ns defs e) =
-  List.fold_left (fun s (vs,e) ->
-    s union (free_vars e \ (Set.from_list ns union
-                            Set.from_list vs)))
-  (free_vars e \ Set.from_list ns) defs
-and
-free_vars (CLetfun false ns defs e) =
-  List.fold_left (fun s (vs,e) ->
-    s union (free_vars e \ Set.from_list vs))
-  (free_vars e \ Set.from_list ns) defs
-and
-free_vars (CFun xs e) = free_vars e \ (Set.from_list xs)
-and
-free_vars (CCall e es) =
-  List.fold_left (fun s e -> s union free_vars e)
-  (free_vars e) es
-and
-free_vars (CPrim2 _ e1 e2) = free_vars e1 union free_vars e2
-and
-free_vars (CLprim _ es) =
-  List.fold_left (fun s e -> s union free_vars e) {} es
 
 (* TODO: map_Cexp and recover remove_mat as instance *)
 

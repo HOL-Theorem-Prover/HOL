@@ -250,7 +250,7 @@ rw[Once Cevaluate_cases])
 
 val Cevaluate_fun = store_thm(
 "Cevaluate_fun",
-``∀env ns b res. Cevaluate env (CFun ns b) res = (res = Rval (CClosure (sort_Cenv (fmap_to_alist env)) ns b))``,
+``∀env ns b res. Cevaluate env (CFun ns b) res = (res = Rval (CClosure (mk_env env b) ns b))``,
 rw[Once Cevaluate_cases])
 
 val _ = export_rewrites["Cevaluate_raise","Cevaluate_val","Cevaluate_var","Cevaluate_mat_nil","Cevaluate_let_nil","Cevaluate_fun"]
@@ -691,15 +691,15 @@ strip_tac >- (
   rw[] >>
   metis_tac[] ) >>
 strip_tac >- (
-  fs[exp_to_Cexp_def,evaluate_var] >>
-  rw[] >> rw[] >>
+  fs[exp_to_Cexp_def,evaluate_var,MEM_MAP] >>
+  rw[] >> srw_tac[boolSimps.DNF_ss][pairTheory.EXISTS_PROD] >>
+  imp_res_tac alistTheory.ALOOKUP_MEM >- PROVE_TAC[] >>
   fs[good_env_state_def] >>
   qho_match_abbrev_tac `x = alist_to_fmap (MAP (λ(x,y). (f1 x, f2 y)) al) ' z` >>
   `f1 = FAPPLY s.m` by rw[Abbr`f1`,FUN_EQ_THM] >>
   rw[alistTheory.alist_to_fmap_MAP] >>
   `vn IN FDOM (f2 o_f alist_to_fmap al)` by (
     rw[MEM_MAP] >>
-    imp_res_tac alistTheory.ALOOKUP_MEM >>
     qexists_tac `(vn,v)` >> rw[] ) >>
   rw[finite_mapTheory.MAP_KEYS_def,Abbr`z`] >>
   unabbrev_all_tac >>
@@ -710,23 +710,7 @@ strip_tac >- (
   fs[exp_to_Cexp_def] >>
   rw[v_to_Cv_def] >>
   fs[LET_THM] >>
-  rw[Once Cevaluate_cases] >>
-  rw[sort_Cenv_def] >>
-  match_mp_tac QSORT_eq_if_PERM >>
-  simp_tac(srw_ss())[CONJ_ASSOC] >>
-  conj_tac >- (
-    fs[fsetTheory.a_linear_order_def] >>
-    SELECT_ELIM_TAC >> rw[] >>
-    match_mp_tac countable_has_linear_order >>
-    rw[countable_def] >>
-    qexists_tac `count_prod_aux count_num_aux count_Cv_aux` >>
-    rw[INJ_DEF] ) >>
-  rw[Once sortingTheory.PERM_SYM] >>
-  match_mp_tac alistTheory.alist_to_fmap_to_alist_PERM >>
-  rw[Abbr`Cenv`,MAP_MAP_o] >>
-  fs[good_env_state_def,EL_ALL_DISTINCT_EL_EQ,EL_MAP,pairTheory.UNCURRY] >>
-  fsrw_tac[boolSimps.DNF_ss][INJ_DEF,MEM_MAP,MEM_EL] >>
-  metis_tac[] ) >>
+  rw[Once Cevaluate_cases] ) >>
 strip_tac >- (
   rw[exp_to_Cexp_def] >>
   Cases_on `exp_to_Cexp F cm (s,e1)` >> fs[] >>
@@ -786,8 +770,10 @@ strip_tac >- (
         qpat_assum `evaluate cenv env (Val X) Y` mp_tac >>
         rw[Once evaluate_cases,v_to_Cv_def,opb_lookup_def]
       val gtac =
+        disj1_tac >>
         qexists_tac `v_to_Cv cm (s,v1)` >>
         rw[Once Cevaluate_cases] >>
+        disj1_tac >>
         qexists_tac `v_to_Cv cm (s,v2)` >>
         rw[Once Cevaluate_cases] >>
         (* need argument about extending environment with variables that don't appear not affecting Cevaluate,
