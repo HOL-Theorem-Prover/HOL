@@ -1834,6 +1834,16 @@ val SUM_MAP_MEM_bound = store_thm(
 NTAC 2 GEN_TAC THEN Induct THEN SRW_TAC[][] THEN
 FULL_SIMP_TAC(srw_ss()++numSimps.ARITH_ss)[MEM,MAP,SUM])
 
+val INJ_MAP_EQ = store_thm(
+"INJ_MAP_EQ",
+``!f l1 l2. (INJ f (set l1 UNION set l2) UNIV) /\ (MAP f l1 = MAP f l2) ==> (l1 = l2)``,
+GEN_TAC THEN Induct THEN1 SRW_TAC[][MAP,MAP_EQ_NIL] THEN
+GEN_TAC THEN Cases THEN SRW_TAC[][MAP] THEN1 (
+  IMP_RES_TAC INJ_DEF THEN
+  FIRST_X_ASSUM (MATCH_MP_TAC o MP_CANON) THEN
+  SRW_TAC[][] ) THEN
+PROVE_TAC[INJ_SUBSET,SUBSET_REFL,SUBSET_DEF,IN_UNION,IN_INSERT])
+
 local open numLib in
 val CARD_LIST_TO_SET = Q.store_thm(
 "CARD_LIST_TO_SET",

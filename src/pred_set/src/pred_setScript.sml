@@ -1441,6 +1441,11 @@ val INJ_INSERT = store_thm(
    (!y. y IN s /\ (f x = f y) ==> (x = y))``,
 SRW_TAC[][INJ_DEF] THEN METIS_TAC[])
 
+val INJ_SUBSET = store_thm(
+"INJ_SUBSET",
+``!f s t s0 t0. INJ f s t /\ s0 SUBSET s /\ t SUBSET t0 ==> INJ f s0 t0``,
+SRW_TAC[][INJ_DEF,SUBSET_DEF])
+
 (* ===================================================================== *)
 (* Surjective functions on a set.					 *)
 (* ===================================================================== *)
