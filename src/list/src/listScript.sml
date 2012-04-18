@@ -2461,6 +2461,18 @@ val FOLDL_UNION_BIGUNION_paired = store_thm(
 GEN_TAC THEN Induct THEN1 SRW_TAC[][FOLDL] THEN
 Cases THEN SRW_TAC[][FOLDL,UNION_ASSOC,GSYM pairTheory.LAMBDA_PROD])
 
+val FOLDL_ZIP_SAME = store_thm(
+"FOLDL_ZIP_SAME",
+``!ls f e. FOLDL f e (ZIP (ls,ls)) = FOLDL (\x y. f x (y,y)) e ls``,
+Induct THEN SRW_TAC[][FOLDL,ZIP])
+val _ = export_rewrites["FOLDL_ZIP_SAME"]
+
+val MAP_ZIP_SAME = store_thm(
+"MAP_ZIP_SAME",
+``!ls f. MAP f (ZIP (ls,ls)) = MAP (\x. f (x,x)) ls``,
+Induct THEN SRW_TAC[][MAP,ZIP])
+val _ = export_rewrites["MAP_ZIP_SAME"]
+
 (* ----------------------------------------------------------------------
     All lists have infinite universes
    ---------------------------------------------------------------------- *)
