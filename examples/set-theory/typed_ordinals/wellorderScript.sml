@@ -688,15 +688,74 @@ val orderlt_trichotomy = store_thm(
     simp[IN_wobound] >> metis_tac [wo2wo_mono, optionTheory.THE_DEF, WIN_elsOf]
   ]);
 
+val wZERO_def = Define`wZERO = wellorder_ABS {}`
 
-(*val orderlt_WF = store_thm(
+val elsOf_wZERO = store_thm(
+  "elsOf_wZERO",
+  ``elsOf wZERO = {}``,
+  simp[wZERO_def, elsOf_def, #repabs_pseudo_id wellorder_results,
+       wellorder_EMPTY, EXTENSION, in_domain, in_range]);
+val _ = export_rewrites ["elsOf_wZERO"]
+
+val WIN_wZERO = store_thm(
+  "WIN_wZERO",
+  ``(x,y) WIN wZERO <=> F``,
+  simp[wZERO_def, #repabs_pseudo_id wellorder_results, wellorder_EMPTY]);
+val _ = export_rewrites ["WIN_wZERO"]
+
+val orderiso_wZERO = store_thm(
+  "orderiso_wZERO",
+  ``orderiso wZERO w <=> (w = wZERO)``,
+  simp[orderiso_thm, BIJ_EMPTY, EQ_IMP_THM] >>
+  Q.ISPEC_THEN `w` strip_assume_tac wellorder_cases >>
+  simp[elsOf_def, EXTENSION, in_range, in_domain, wZERO_def,
+       #term_ABS_pseudo11 wellorder_results, wellorder_EMPTY,
+       #repabs_pseudo_id wellorder_results,
+       pairTheory.FORALL_PROD]);
+
+val elsOf_EQ_EMPTY = store_thm(
+  "elsOf_EQ_EMPTY",
+  ``(elsOf w = {}) <=> (w = wZERO)``,
+  simp[EQ_IMP_THM] >> strip_tac >>
+  qsuff_tac `orderiso w wZERO` >- metis_tac [orderiso_wZERO, orderiso_SYM] >>
+  simp[orderiso_thm, BIJ_EMPTY] >> metis_tac [WIN_elsOf, NOT_IN_EMPTY]);
+val _ = export_rewrites ["elsOf_EQ_EMPTY"]
+
+val LT_wZERO = store_thm(
+  "LT_wZERO",
+  ``orderlt w wZERO = F``,
+  simp[orderlt_def]);
+
+(*
+val orderlt_WF = store_thm(
   "orderlt_WF",
-  ``WF orderlt``,
+  ``WF (orderlt : 'a wellorder -> 'a wellorder -> bool)``,
   rw[prim_recTheory.WF_IFF_WELLFOUNDED, prim_recTheory.wellfounded_def] >>
   spose_not_then strip_assume_tac >>
   qabbrev_tac `w0 = f 0` >>
   qsuff_tac `?g. !n. (g (SUC n), g n) WIN w0`
-    >-
+    >- (strip_tac >>
+        Q.ISPEC_THEN `\x y. (x,y) WIN w0` strip_assume_tac
+                     prim_recTheory.wellfounded_def >>
+        fs[GSYM prim_recTheory.WF_IFF_WELLFOUNDED, WIN_WF2] >> metis_tac[]) >>
+  `!n. elsOf (f n) <> {}` by (simp[] >> metis_tac [LT_wZERO]) >>
+  `!(h:'a -> 'a) n x w. BIJ h (elsOf (f n)) (elsOf (wobound x w)) ==>
+                        (elsOf (wobound x w) = iseg w x)`
+      by (simp[elsOf_wobound, iseg_def] >> rw[BIJ_EMPTY]) >>
+  `!n. ?iso x. x IN elsOf w0 /\ BIJ iso (elsOf (f (SUC n))) (iseg w0 x)`
+    by (Induct >| [
+          `orderlt (f (SUC 0)) (f 0)` by metis_tac[] >>
+          pop_assum mp_tac >> simp_tac (srw_ss()) [orderlt_def] >>
+          asm_simp_tac (srw_ss() ++ DNF_ss) [orderiso_thm] >>
+          metis_tac[],
+          pop_assum strip_assume_tac >>
+          `orderlt (f (SUC (SUC n))) (f (SUC n))` by metis_tac[] >>
+          pop_assum mp_tac >> simp_tac (srw_ss()) [orderlt_def] >>
+          asm_simp_tac (srw_ss() ++ DNF_ss) [orderiso_thm] >>
+          map_every qx_gen_tac [`y`, `g`] >> rpt strip_tac >>
+          map_every qexists_tac [`iso o g`, `iso y`] >> res_tac >>
+          simp[]
+
 
 
 val orderlt_orderiso = store_thm(
