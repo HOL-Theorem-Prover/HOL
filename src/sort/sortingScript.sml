@@ -944,6 +944,12 @@ FULL_SIMP_TAC (srw_ss()) [] THEN
 Q.PAT_ASSUM `SORTED R (h::N)` MP_TAC THEN
 SRW_TAC[][SORTED_EQ])
 
+val QSORT_eq_if_PERM = store_thm(
+"QSORT_eq_if_PERM",
+``!R. total R /\ transitive R /\ antisymmetric R ==>
+  !l1 l2. (QSORT R l1 = QSORT R l2) = PERM l1 l2``,
+PROVE_TAC[QSORT_PERM,QSORT_SORTED,SORTED_PERM_EQ,PERM_TRANS,PERM_SYM])
+
 (*Perm theorems for the simplication*)
 
 val PERM_FUN_APPEND = store_thm (
