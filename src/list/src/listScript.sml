@@ -1326,6 +1326,8 @@ val MAP2_ZIP = store_thm("MAP2_ZIP",
     THEN ASM_REWRITE_TAC[CONS_11,UNCURRY_DEF,INV_SUC_EQ]
     end);
 
+val MAP2_MAP = save_thm("MAP2_MAP",MAP2_ZIP)
+
 val MAP_ZIP = Q.store_thm(
   "MAP_ZIP",
   `(LENGTH l1 = LENGTH l2) ==>
@@ -1548,6 +1550,7 @@ val _ = export_rewrites ["LENGTH_DROP"]
 val FOLDL2_def = Define`
   (FOLDL2 f a (b::bs) (c::cs) = FOLDL2 f (f a b c) bs cs) /\
   (FOLDL2 f a bs cs = a)`
+val _ = export_rewrites["FOLDL2_def"]
 
 val FOLDL2_cong = store_thm(
 "FOLDL2_cong",
@@ -1558,6 +1561,12 @@ val FOLDL2_cong = store_thm(
   (FOLDL2 f a l1 l2 = FOLDL2 f' a' l1' l2')``,
 Induct THEN SIMP_TAC(srw_ss()) [FOLDL2_def] THEN
 GEN_TAC THEN Cases THEN SRW_TAC[][FOLDL2_def])
+
+val FOLDL2_FOLDL = store_thm(
+"FOLDL2_FOLDL",
+``!l1 l2. (LENGTH l1 = LENGTH l2) ==> !f a. FOLDL2 f a l1 l2 = FOLDL (\a. UNCURRY (f a)) a (ZIP (l1,l2))``,
+Induct THEN1 SRW_TAC[][LENGTH_NIL_SYM,ZIP,FOLDL] THEN
+GEN_TAC THEN Cases THEN SRW_TAC[][ZIP,FOLDL])
 
 val EVERY2_def = Define`
   (EVERY2 P (a::as) (b::bs) = P a b /\ EVERY2 P as bs) /\
@@ -1574,11 +1583,26 @@ Induct THEN SIMP_TAC (srw_ss()) [EVERY2_def] THEN
 GEN_TAC THEN Cases THEN SRW_TAC[][EVERY2_def] THEN
 METIS_TAC[])
 
+val MAP_EQ_EVERY2 = store_thm(
+"MAP_EQ_EVERY2",
+``!f1 f2 l1 l2. (MAP f1 l1 = MAP f2 l2) =
+                (LENGTH l1 = LENGTH l2) /\
+                (EVERY2 (\x y. f1 x = f2 y) l1 l2)``,
+NTAC 2 GEN_TAC THEN
+Induct THEN SRW_TAC[][LENGTH_NIL_SYM,MAP,MAP_EQ_NIL] THEN
+Cases_on `l2` THEN SRW_TAC[][MAP] THEN
+PROVE_TAC[])
+
+val EVERY2_EVERY = store_thm(
+"EVERY2_EVERY",
+``!l1 l2 f. EVERY2 f l1 l2 = (LENGTH l1 = LENGTH l2) /\ EVERY (UNCURRY f) (ZIP (l1,l2))``,
+Induct THEN1 SRW_TAC[][LENGTH_NIL_SYM,EQ_IMP_THM,ZIP] THEN
+GEN_TAC THEN Cases THEN SRW_TAC[][ZIP,EQ_IMP_THM])
+
 val EVERY2_LENGTH = store_thm(
 "EVERY2_LENGTH",
 ``!P l1 l2. EVERY2 P l1 l2 ==> (LENGTH l1 = LENGTH l2)``,
-GEN_TAC THEN Induct THEN SRW_TAC[][EVERY2_def] THEN
-Cases_on `l2` THEN FULL_SIMP_TAC (srw_ss()) [EVERY2_def])
+PROVE_TAC[EVERY2_EVERY])
 
 val EVERY2_mono = store_thm(
 "EVERY2_mono",
@@ -1593,15 +1617,6 @@ Cases_on `l2` THEN
 FULL_SIMP_TAC (srw_ss()) [EVERY2_def])
 val _ = IndDefLib.export_mono "EVERY2_mono"
 
-val MAP_EQ_EVERY2 = store_thm(
-"MAP_EQ_EVERY2",
-``!f1 f2 l1 l2. (MAP f1 l1 = MAP f2 l2) =
-                (LENGTH l1 = LENGTH l2) /\
-                (EVERY2 (\x y. f1 x = f2 y) l1 l2)``,
-NTAC 2 GEN_TAC THEN
-Induct THEN SRW_TAC[][LENGTH_NIL_SYM,MAP,MAP_EQ_NIL] THEN
-Cases_on `l2` THEN SRW_TAC[][MAP] THEN
-PROVE_TAC[])
 
 (* ----------------------------------------------------------------------
     ALL_DISTINCT
