@@ -1650,6 +1650,11 @@ val FILTER_ALL_DISTINCT = store_thm (
   ``!P l. ALL_DISTINCT l ==> ALL_DISTINCT (FILTER P l)``,
   Induct_on `l` THEN SRW_TAC [][MEM_FILTER]);
 
+val ALL_DISTINCT_MAP = store_thm(
+"ALL_DISTINCT_MAP",
+``!f ls. ALL_DISTINCT (MAP f ls) ==> ALL_DISTINCT ls``,
+GEN_TAC THEN Induct THEN SRW_TAC[][ALL_DISTINCT, MAP, MEM_MAP] THEN PROVE_TAC[])
+
 val ALL_DISTINCT_EL_EQ = store_thm (
    "EL_ALL_DISTINCT_EL_EQ",
    ``!l. ALL_DISTINCT l =
