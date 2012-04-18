@@ -47,7 +47,6 @@ val ALOOKUP_TABULATE = store_thm(
     (ALOOKUP (MAP (\k. (k, f k)) l) x = SOME (f x))``,
   Induct_on `l` THEN SRW_TAC [][]);
 
-
 val ALOOKUP_EQ_FLOOKUP = Q.store_thm(
 "ALOOKUP_EQ_FLOOKUP",
 `(FLOOKUP (alist_to_fmap al) = ALOOKUP al) /\
@@ -69,7 +68,23 @@ val MEM_fmap_to_alist = store_thm(
   "MEM_fmap_to_alist",
   ``MEM (x,y) (fmap_to_alist fm) = x IN FDOM fm /\ (fm ' x = y)``,
   SRW_TAC [][fmap_to_alist_def, MEM_MAP] THEN METIS_TAC []);
-val _ = export_rewrites ["MEM_fmap_to_alist"]
+
+val MEM_fmap_to_alist_FLOOKUP = store_thm(
+"MEM_fmap_to_alist_FLOOKUP",
+``!p fm. MEM p (fmap_to_alist fm) = (FLOOKUP fm (FST p) = SOME (SND p))``,
+Cases >> rw[MEM_fmap_to_alist,FLOOKUP_DEF])
+
+val MEM_pair_fmap_to_alist_FLOOKUP = store_thm(
+"MEM_pair_fmap_to_alist_FLOOKUP",
+``!x y fm. MEM (x,y) (fmap_to_alist fm) = (FLOOKUP fm x = SOME y)``,
+rw[MEM_fmap_to_alist_FLOOKUP])
+val _ = export_rewrites ["MEM_pair_fmap_to_alist_FLOOKUP"]
+
+val LENGTH_fmap_to_alist = store_thm(
+"LENGTH_fmap_to_alist",
+``!fm. LENGTH (fmap_to_alist fm) = CARD (FDOM fm)``,
+rw[fmap_to_alist_def,SET_TO_LIST_CARD])
+val _ = export_rewrites["LENGTH_fmap_to_alist"]
 
 val fmap_to_alist_to_fmap = store_thm(
   "fmap_to_alist_to_fmap",
@@ -198,5 +213,126 @@ Q.MATCH_ABBREV_TAC `MAP f2 al = al` THEN
 Q_TAC SUFF_TAC `!x. MEM x al ==> (f1 x = f2 x)` THEN1 PROVE_TAC[MAP_EQ_f] THEN
 SRW_TAC[][Abbr`f1`,Abbr`f2`] THEN
 PROVE_TAC[])
+
+val ALOOKUP_LEAST_EL = store_thm(
+"ALOOKUP_LEAST_EL",
+``!ls k. ALOOKUP ls k = if MEM k (MAP FST ls) then
+         SOME (EL (LEAST n. EL n (MAP FST ls) = k) (MAP SND ls))
+         else NONE``,
+Induct THEN1 SRW_TAC[][] THEN
+Cases THEN SRW_TAC[][] THEN
+FULL_SIMP_TAC(srw_ss())[MEM_MAP] THEN1 (
+  numLib.LEAST_ELIM_TAC THEN
+  SRW_TAC[][] THEN1
+    (Q.EXISTS_TAC `0` THEN SRW_TAC[][]) THEN
+  Cases_on `n` THEN SRW_TAC[][] THEN
+  FIRST_X_ASSUM (Q.SPEC_THEN `0` MP_TAC) THEN
+  SRW_TAC[][] ) THEN
+numLib.LEAST_ELIM_TAC THEN
+FULL_SIMP_TAC (srw_ss()) [MEM_EL] THEN
+SRW_TAC[][] THEN1 (
+  Q.EXISTS_TAC `n` THEN
+  SRW_TAC[][EL_MAP] ) THEN
+numLib.LEAST_ELIM_TAC THEN
+SRW_TAC[][] THEN
+Q.MATCH_ASSUM_RENAME_TAC `EL m (MAP FST ls) = FST (EL n ls)`[] THEN1 (
+  Q.EXISTS_TAC `SUC m` THEN
+  SRW_TAC[][] ) THEN
+Cases_on `n < m` THEN1 METIS_TAC[EL_MAP] THEN
+`m < LENGTH ls` by DECIDE_TAC THEN
+FULL_SIMP_TAC(srw_ss())[EL_MAP] THEN
+Q.MATCH_ASSUM_RENAME_TAC `EL z (h::MAP FST ls) = FST (EL n ls)`[] THEN
+Cases_on `SUC n < z` THEN1 (
+  RES_TAC THEN
+  FULL_SIMP_TAC(srw_ss())[] THEN
+  METIS_TAC[EL_MAP]) THEN
+`z < SUC (LENGTH ls)` by DECIDE_TAC THEN
+Cases_on `z` THEN FULL_SIMP_TAC (srw_ss()) [EL_MAP] THEN
+Q.MATCH_RENAME_TAC `SND (EL m ls) = SND (EL z ls)`[] THEN
+Cases_on `m < z` THEN1 (
+  `SUC m < SUC z` by DECIDE_TAC THEN
+  RES_TAC THEN
+  FULL_SIMP_TAC(srw_ss())[] THEN
+  METIS_TAC[EL_MAP] ) THEN
+Cases_on `z < m` THEN1 METIS_TAC[EL_MAP] THEN
+`m = z` by DECIDE_TAC THEN
+SRW_TAC[][])
+
+val ALL_DISTINCT_fmap_to_alist_keys = store_thm(
+"ALL_DISTINCT_fmap_to_alist_keys",
+``!fm. ALL_DISTINCT (MAP FST (fmap_to_alist fm))``,
+qsuff_tac `!s fm. (s = FDOM fm) ⇒ ALL_DISTINCT (MAP FST (fmap_to_alist fm))` >- rw[] >>
+ho_match_mp_tac SET_TO_LIST_IND >> rw[] >>
+fs[fmap_to_alist_def] >>
+Cases_on `FDOM fm = {}` >- rw[] >> fs[] >>
+rw[Once SET_TO_LIST_THM] >- (
+  rw[MEM_MAP,CHOICE_NOT_IN_REST,MAP_MAP_o,pairTheory.EXISTS_PROD] ) >>
+first_x_assum (qspec_then `fm \\ (CHOICE (FDOM fm))` mp_tac) >>
+rw[REST_DEF,MAP_MAP_o] >>
+qmatch_assum_abbrev_tac `ALL_DISTINCT (MAP f1 ls)` >>
+qmatch_abbrev_tac `ALL_DISTINCT (MAP f2 ls)` >>
+qsuff_tac `MAP f2 ls = MAP f1 ls` >- rw[] >>
+rw[MAP_EQ_f,Abbr`f1`,Abbr`f2`,Abbr`ls`,DOMSUB_FAPPLY_THM])
+
+val fmap_to_alist_inj = store_thm(
+"fmap_to_alist_inj",
+``!f1 f2. (fmap_to_alist f1 = fmap_to_alist f2) ==> (f1 = f2)``,
+rw[] >>
+qmatch_assum_abbrev_tac `af1 = af2` >>
+qsuff_tac `alist_to_fmap af1 = alist_to_fmap af2` >- metis_tac[fmap_to_alist_to_fmap] >>
+rw[GSYM fmap_EQ_THM,pairTheory.EXISTS_PROD,MEM_MAP,MEM_fmap_to_alist])
+
+val fmap_to_alist_preserves_FDOM = store_thm(
+"fmap_to_alist_preserves_FDOM",
+``!fm1 fm2. (FDOM fm1 = FDOM fm2) ==> (MAP FST (fmap_to_alist fm1) = MAP FST (fmap_to_alist fm2))``,
+qsuff_tac `!s fm1 fm2. (FDOM fm1 = s) ∧ (FDOM fm2 = s) ⇒ (MAP FST (fmap_to_alist fm1) = MAP FST (fmap_to_alist fm2))` >- rw[] >>
+ho_match_mp_tac SET_TO_LIST_IND >> rw[] >>
+fs[fmap_to_alist_def] >>
+Cases_on `FDOM fm2 = {}` >- rw[] >> fs[] >>
+`FDOM fm1 ≠ {}` by rw[] >>
+rw[Once SET_TO_LIST_THM,SimpLHS] >>
+rw[Once SET_TO_LIST_THM,SimpRHS] >>
+first_x_assum (qspec_then `fm1 \\ (CHOICE (FDOM fm2))` mp_tac) >>
+disch_then (qspec_then `fm2 \\ (CHOICE (FDOM fm2))` mp_tac) >>
+rw[REST_DEF,MAP_MAP_o] >>
+qmatch_assum_abbrev_tac `MAP f1 ls = MAP f2 ls` >>
+qmatch_abbrev_tac `MAP f3 ls = MAP f4 ls` >>
+qsuff_tac `(MAP f3 ls = MAP f1 ls) ∧ (MAP f4 ls = MAP f2 ls)` >- rw[] >>
+rw[MAP_EQ_f,Abbr`f1`,Abbr`f2`,Abbr`f3`,Abbr`f4`,Abbr`ls`,DOMSUB_FAPPLY_THM])
+
+val PERM_fmap_to_alist = store_thm(
+"PERM_fmap_to_alist",
+``PERM (fmap_to_alist fm1) (fmap_to_alist fm2) = (fm1 = fm2)``,
+rw[EQ_IMP_THM] >>
+qmatch_assum_abbrev_tac `PERM af1 af2` >>
+qsuff_tac `alist_to_fmap af1 = alist_to_fmap af2` >-
+  metis_tac[fmap_to_alist_to_fmap] >>
+`FDOM (alist_to_fmap af1) = FDOM (alist_to_fmap af2)` by (
+  rw[] >>
+  match_mp_tac PERM_LIST_TO_SET >>
+  match_mp_tac sortingTheory.PERM_MAP >>
+  rw[] ) >>
+qmatch_abbrev_tac `ff1 = ff2` >>
+qsuff_tac `fmap_to_alist ff1 = fmap_to_alist ff2` >-
+  metis_tac[fmap_to_alist_inj] >>
+Q.ISPEC_THEN `FST` match_mp_tac INJ_MAP_EQ >>
+reverse conj_tac >- (
+  match_mp_tac fmap_to_alist_preserves_FDOM >>
+  rw[Abbr`ff1`,Abbr`ff2`]) >>
+rw[INJ_DEF,Abbr`ff1`,Abbr`ff2`,MEM_fmap_to_alist_FLOOKUP] >>
+Cases_on `x` >> Cases_on `y` >> fs[] >>
+imp_res_tac ALOOKUP_MEM >>
+imp_res_tac MEM_PERM >>
+`ALL_DISTINCT (MAP FST af1) ∧
+ ALL_DISTINCT (MAP FST af2)` by
+  rw[ALL_DISTINCT_fmap_to_alist_keys,Abbr`af1`,Abbr`af2`] >>
+fs[EL_ALL_DISTINCT_EL_EQ,MEM_EL,EL_MAP] >>
+rw[] >>
+qmatch_rename_tac `r1 = r2`[] >>
+qmatch_assum_rename_tac `(q,r1) = EL n1 afx`[] >>
+qmatch_assum_rename_tac `(q,r2) = EL n2 afy`[] >>
+rpt (qpat_assum `(X,Y) = EL N Z` (assume_tac o SYM)) >>
+`LENGTH afy = LENGTH afx` by rw[PERM_LENGTH] >> fs[] >>
+metis_tac[pairTheory.PAIR_EQ,pairTheory.FST])
 
 val _ = export_theory ();
