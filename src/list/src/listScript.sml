@@ -2435,6 +2435,17 @@ val REVERSE_GENLIST = Q.store_thm("REVERSE_GENLIST",
   SRW_TAC [][EL_GENLIST] THEN
   AP_TERM_TAC THEN numLib.DECIDE_TAC)
 
+val FOLDL_UNION_BIGUNION = store_thm(
+"FOLDL_UNION_BIGUNION",
+``!f ls s. FOLDL (\s x. s UNION f x) s ls = s UNION BIGUNION (IMAGE f (set ls))``,
+GEN_TAC THEN Induct THEN SRW_TAC[][FOLDL,UNION_ASSOC])
+
+val FOLDL_UNION_BIGUNION_paired = store_thm(
+"FOLDL_UNION_BIGUNION_paired",
+``!f ls s. FOLDL (\s (x,y). s UNION f x y) s ls = s UNION BIGUNION (IMAGE (UNCURRY f) (set ls))``,
+GEN_TAC THEN Induct THEN1 SRW_TAC[][FOLDL] THEN
+Cases THEN SRW_TAC[][FOLDL,UNION_ASSOC,GSYM pairTheory.LAMBDA_PROD])
+
 (* ----------------------------------------------------------------------
     All lists have infinite universes
    ---------------------------------------------------------------------- *)
