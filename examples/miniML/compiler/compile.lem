@@ -35,6 +35,8 @@ val a_linear_order : forall 'a. 'a -> 'a -> bool
 let inline {hol} a_linear_order = Hol.a_linear_order
 val restrict : forall 'a 'b. ('a,'b) Pmap.map -> 'a set -> ('a,'b) Pmap.map
 let inline {hol} restrict = Hol.DRESTRICT
+val force_dom : forall 'a 'b. ('a,'b) Pmap.map -> 'a set -> ('a,'b) Pmap.map
+let inline {hol} force_dom = Hol.force_dom
 
 (* TODO: elsewhere? *)
 let rec
@@ -162,7 +164,8 @@ free_vars (CLprim _ es) =
   List.fold_left (fun s e -> s union free_vars e) {} es
 
 let sort_Cenv Cenv = qsort a_linear_order Cenv
-let mk_env env b = sort_Cenv (fmap_to_alist (restrict env (free_vars b)))
+let mk_env env b ns =
+  sort_Cenv (fmap_to_alist (force_dom env (free_vars b \ ns)))
 
 let rec
 doPrim2 b ty op (CLit (IntLit x)) (CLit (IntLit y)) =
@@ -270,7 +273,8 @@ Cevaluate env (CTagEq e n) (Rerr err)
 
 and
 forall env e n m vs.
-Cevaluate env e (Rval (CConv m vs))
+Cevaluate env e (Rval (CConv m vs)) &&
+n < List.length vs
 ==>
 Cevaluate env (CProj e n) (Rval (List.nth vs n))
 and
@@ -318,10 +322,12 @@ Cevaluate env (CLet (n::ns) (e::es) b) (Rerr err)
 
 and
 forall env ns defs b r.
+List.length ns = List.length defs &&
+all_distinct ns &&
 Cevaluate
   (fold_left2
     (fun env' n (ns,b) ->
-      Pmap.add n (CClosure (mk_env env b) ns b) env')
+      Pmap.add n (CClosure (mk_env env b (Set.from_list ns)) ns b) env')
     env ns defs)
   b r
 ==>
@@ -329,10 +335,13 @@ Cevaluate env (CLetfun false ns defs b) r
 
 and
 forall env ns defs b r.
+List.length ns = List.length defs &&
+all_distinct ns &&
 Cevaluate
   (fold_left2
-     (fun env' n (_ns,b) ->
-       Pmap.add n (CRecClos (mk_env env b) ns defs n) env')
+     (fun env' n (vs,b) ->
+       Pmap.add n (CRecClos (mk_env env b (Set.from_list ns union Set.from_list vs))
+                            ns defs n) env')
      env ns defs)
   b r
 ==>
@@ -342,12 +351,13 @@ and
 forall env ns b.
 true
 ==>
-Cevaluate env (CFun ns b) (Rval (CClosure (mk_env env b) ns b))
+Cevaluate env (CFun ns b) (Rval (CClosure (mk_env env b (Set.from_list ns)) ns b))
 
 and
 forall env e es env' ns b vs r.
 Cevaluate env e (Rval (CClosure env' ns b)) &&
 Cevaluate_list env es (Rval vs) &&
+List.length ns = List.length vs &&
 Cevaluate (fold_left2 (fun en n v -> Pmap.add n v en)
              (alist_to_fmap env') ns vs) b r
 ==>
@@ -750,7 +760,7 @@ v_to_Cv cm (s, Closure env vn e) =
   let Cenv = alist_to_fmap (List.map (fun (x,v) -> (Pmap.find x s.m, v_to_Cv cm (s,v))) env) in
   let (s',n) = extend false s vn in
   let (_s,Ce) = exp_to_Cexp false cm (s', e) in
-  CClosure (mk_env Cenv Ce) [n] Ce
+  CClosure (mk_env Cenv Ce (Set.from_list [n])) [n] Ce
 and
 v_to_Cv cm (s, Recclosure env defs vn) =
   let Cenv = alist_to_fmap (List.map (fun (x,v) -> (Pmap.find x s.m, v_to_Cv cm (s,v))) env) in
@@ -764,8 +774,8 @@ v_to_Cv cm (s, Recclosure env defs vn) =
       ([n],Ce)::Cdefs)
           defs     [] in
   let n = Pmap.find vn s.m in
-  let (_a,Ce) = match find_index n fns 0 with Some i -> List.nth Cdefs i end in
-  CRecClos (mk_env Cenv Ce) fns Cdefs n
+  let (vs,Ce) = match find_index n fns 0 with Some i -> List.nth Cdefs i end in
+  CRecClos (mk_env Cenv Ce (Set.from_list fns union Set.from_list vs)) fns Cdefs n
 
 (* TODO: simple type system and checker *)
 

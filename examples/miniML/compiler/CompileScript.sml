@@ -24,6 +24,7 @@ val _ = type_abbrev((*  ('a,'b) *) "alist" , ``: ('a,'b) alist``);
 (*val qsort : forall 'a. ('a -> 'a -> bool) -> 'a list -> 'a list*)
 (*val a_linear_order : forall 'a. 'a -> 'a -> bool*)
 (*val restrict : forall 'a 'b. ('a,'b) Pmap.map -> 'a set -> ('a,'b) Pmap.map*)
+(*val force_dom : forall 'a 'b. ('a,'b) Pmap.map -> 'a set -> ('a,'b) Pmap.map*)
 
 (* TODO: elsewhere? *)
  val find_index_defn = Hol_defn "find_index" `
@@ -185,7 +186,8 @@ val _ = Define `
  (sort_Cenv Cenv = QSORT a_linear_order Cenv)`;
 
 val _ = Define `
- (mk_env env b = sort_Cenv (fmap_to_alist (DRESTRICT env (free_vars b))))`;
+ (mk_env env b ns =
+  sort_Cenv (fmap_to_alist (force_dom env (free_vars b DIFF ns))))`;
 
 
  val doPrim2_defn = Hol_defn "doPrim2" `
@@ -311,7 +313,8 @@ Cevaluate env (CTagEq e n) (Rerr err))
 
 /\
 (! env e n m vs.
-Cevaluate env e (Rval (CConv m vs))
+Cevaluate env e (Rval (CConv m vs)) /\
+n < LENGTH vs
 ==>
 Cevaluate env (CProj e n) (Rval (EL  n  vs)))
 /\
@@ -359,10 +362,12 @@ Cevaluate env (CLet (n::ns) (e::es) b) (Rerr err))
 
 /\
 (! env ns defs b r.
+(LENGTH ns = LENGTH defs) /\
+ALL_DISTINCT ns /\
 Cevaluate
   (FOLDL2 
     (\ env' n (ns,b) .
-      FUPDATE  env' ( n, (CClosure (mk_env env b) ns b))) 
+      FUPDATE  env' ( n, (CClosure (mk_env env b (LIST_TO_SET ns)) ns b))) 
     env  ns  defs)
   b r
 ==>
@@ -370,10 +375,13 @@ Cevaluate env (CLetfun F ns defs b) r)
 
 /\
 (! env ns defs b r.
+(LENGTH ns = LENGTH defs) /\
+ALL_DISTINCT ns /\
 Cevaluate
   (FOLDL2 
-     (\ env' n (_ns,b) .
-       FUPDATE  env' ( n, (CRecClos (mk_env env b) ns defs n))) 
+     (\ env' n (vs,b) .
+       FUPDATE  env' ( n, (CRecClos (mk_env env b (LIST_TO_SET ns UNION LIST_TO_SET vs))
+                            ns defs n))) 
      env  ns  defs)
   b r
 ==>
@@ -383,12 +391,13 @@ Cevaluate env (CLetfun T ns defs b) r)
 (! env ns b.
 T
 ==>
-Cevaluate env (CFun ns b) (Rval (CClosure (mk_env env b) ns b)))
+Cevaluate env (CFun ns b) (Rval (CClosure (mk_env env b (LIST_TO_SET ns)) ns b)))
 
 /\
 (! env e es env' ns b vs r.
 Cevaluate env e (Rval (CClosure env' ns b)) /\
 Cevaluate_list env es (Rval vs) /\
+(LENGTH ns = LENGTH vs) /\
 Cevaluate (FOLDL2  (\ en n v . FUPDATE  en ( n, v)) 
              (alist_to_fmap env')  ns  vs) b r
 ==>
@@ -807,7 +816,7 @@ val _ = Defn.save_defn exp_to_Cexp_defn;
   let Cenv = alist_to_fmap (MAP (\ (x,v) . (FAPPLY  s.m  x, v_to_Cv cm (s,v))) env) in
   let (s',n) = extend F s vn in
   let (_s,Ce) = exp_to_Cexp F cm (s', e) in
-  CClosure (mk_env Cenv Ce) [n] Ce)
+  CClosure (mk_env Cenv Ce (LIST_TO_SET [n])) [n] Ce)
 /\
 (v_to_Cv cm (s, Recclosure env defs vn) =
   let Cenv = alist_to_fmap (MAP (\ (x,v) . (FAPPLY  s.m  x, v_to_Cv cm (s,v))) env) in
@@ -821,8 +830,8 @@ val _ = Defn.save_defn exp_to_Cexp_defn;
       ([n],Ce)::Cdefs)      [] 
           defs in
   let n = FAPPLY  s.m  vn in
-  let (_a,Ce) = (case find_index n fns 0 of SOME i => EL  i  Cdefs ) in
-  CRecClos (mk_env Cenv Ce) fns Cdefs n)`;
+  let (vs,Ce) = (case find_index n fns 0 of SOME i => EL  i  Cdefs ) in
+  CRecClos (mk_env Cenv Ce (LIST_TO_SET fns UNION LIST_TO_SET vs)) fns Cdefs n)`;
 
 val _ = Defn.save_defn v_to_Cv_defn;
 

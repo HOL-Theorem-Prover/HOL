@@ -21,6 +21,33 @@ val Cexp7_size_thm = size_thm "Cexp7_size_thm" ``Cexp7_size`` ``Cexp_size``
 val Cexp8_size_thm = size_thm "Cexp8_size_thm" ``Cexp8_size`` ``Cv_size``
 val Cpat1_size_thm = size_thm "Cpat1_size_thm" ``Cpat1_size`` ``Cpat_size``
 
+val SUM_MAP_Cexp2_size_thm = store_thm(
+"SUM_MAP_Cexp2_size_thm",
+``∀env. SUM (MAP Cexp2_size env) =
+  SUM (MAP (list_size (λx. x)) (MAP FST env))
++ SUM (MAP Cexp_size (MAP SND env))
++ LENGTH env``,
+Induct >- rw[Cexp_size_def] >> Cases >>
+srw_tac[ARITH_ss][Cexp_size_def])
+
+val SUM_MAP_Cexp5_size_thm = store_thm(
+"SUM_MAP_Cexp5_size_thm",
+``∀env. SUM (MAP Cexp5_size env) =
+  SUM (MAP FST env)
++ SUM (MAP Cv_size (MAP SND env))
++ LENGTH env``,
+Induct >- rw[Cexp_size_def] >> Cases >>
+srw_tac[ARITH_ss][Cexp_size_def])
+
+val SUM_MAP_Cexp6_size_thm = store_thm(
+"SUM_MAP_Cexp6_size_thm",
+``∀env. SUM (MAP Cexp6_size env) =
+  SUM (MAP Cpat_size (MAP FST env))
++ SUM (MAP Cexp_size (MAP SND env))
++ LENGTH env``,
+Induct >- rw[Cexp_size_def] >> Cases >>
+srw_tac[ARITH_ss][Cexp_size_def])
+
 val list_size_thm = store_thm(
 "list_size_thm",
 ``∀f ls. list_size f ls = SUM (MAP f ls) + LENGTH ls``,
