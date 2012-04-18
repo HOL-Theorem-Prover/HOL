@@ -309,6 +309,13 @@ val PERM_MEM_EQ = Q.store_thm(
   `!l1 l2. PERM l1 l2 ==> !x. MEM x l1 = MEM x l2`,
   HO_MATCH_MP_TAC PERM_IND THEN SRW_TAC [][AC DISJ_ASSOC DISJ_COMM]);
 
+local open pred_setTheory in
+val PERM_LIST_TO_SET = store_thm(
+"PERM_LIST_TO_SET",
+``!l1 l2. PERM l1 l2 ==> (set l1 = set l2)``,
+SRW_TAC[][EXTENSION,PERM_MEM_EQ])
+end
+
 (*---------------------------------------------------------------------------*
  * The idea of sortedness requires a "permutation" relation for lists, and   *
  * a "chain" predicate that holds just when the relation R holds between     *
