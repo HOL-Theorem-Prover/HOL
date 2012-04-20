@@ -53,7 +53,7 @@ val nfix_thm = add_prove(
 val less_eq_thm = add_prove(
   ``!x y. less_eq x y = LISP_TEST (getVal x <= getVal y)``,
   Cases \\ Cases \\ EVAL_TAC \\ SIMP_TAC std_ss [GSYM NOT_LESS]
-  \\ Cases_on `0 < n` \\ ASM_SIMP_TAC std_ss [DECIDE ``(n = 0)=~(0<n)``]
+  \\ Cases_on `0 < n` \\ ASM_SIMP_TAC std_ss [DECIDE ``(n = 0)=~(0<n:num)``]
   \\ Cases_on `n'<n` \\ FULL_SIMP_TAC std_ss []);
 
 val len_thm = add_prove(
@@ -1540,12 +1540,6 @@ val logic_proofp_thm = prove(
 
 
 
-
-
-
-
-
-
 val callmap2sexp_def = Define `
   callmap2sexp ts =
     list2sexp (MAP (\(xs,ys). Dot (list2sexp (MAP t2sexp xs))
@@ -1779,6 +1773,12 @@ val logic_pequal_list_thm = add_prove(
   Induct \\ Cases_on `ys` \\ ONCE_REWRITE_TAC [logic_pequal_list_def]
   \\ FS [MAP,LENGTH,ADD1,ZIP,f2sexp_def]);
 
+val GENLIST_K_LENGTH = prove(
+  ``!xs. GENLIST (K x) (LENGTH xs) = MAP (K x) xs``,
+  Induct \\ FULL_SIMP_TAC std_ss [MAP,GENLIST,LENGTH]
+  \\ POP_ASSUM (K ALL_TAC) \\ Induct_on `xs`
+  \\ FULL_SIMP_TAC std_ss [MAP,GENLIST,LENGTH,SNOC]);
+
 val logic_progress_obligation_thm = add_prove(
   ``(LENGTH formals = LENGTH actuals) /\ term_syntax_ok t ==>
     (logic_progress_obligation (t2sexp t) (list2sexp (MAP Sym formals))
@@ -1798,7 +1798,10 @@ val logic_progress_obligation_thm = add_prove(
   \\ CONV_TAC (DEPTH_CONV (PairRules.PBETA_CONV))
   \\ FS [f2sexp_def,logic_prim2sym_def]
   \\ REPEAT STRIP_TAC \\ REPEAT (AP_TERM_TAC ORELSE AP_THM_TAC)
-  \\ FULL_SIMP_TAC std_ss [FUN_EQ_THM] \\ Cases \\ FULL_SIMP_TAC std_ss []);
+  \\ FULL_SIMP_TAC std_ss [GENLIST_K_LENGTH]
+  \\ REPEAT (POP_ASSUM (K ALL_TAC))
+  \\ Induct_on `rulers`
+  \\ FULL_SIMP_TAC std_ss [MAP,ZIP,FORALL_PROD,CONS_11,t2sexp_def,list2sexp_def]);
 
 val logic_progress_obligations_thm = prove(
   ``!ts.
@@ -2870,7 +2873,8 @@ val axioms_aux_def = Define `
         (MEM (list2sexp [Sym name; list2sexp (MAP Sym params);
                          witness_body name var_name params raw_body]) (sexp2list ftbl)) /\
         (body = (term2t (sexp3term raw_body))) /\
-        (MEM (def_axiom name (params,WITNESS_FUN body var_name,sem)) axioms))`;
+        (MEM (def_axiom name (params,WITNESS_FUN body var_name,sem)) axioms)) /\
+  (axioms_aux name ctxt axioms ftbl params sem NO_FUN = F)`;
 
 val axioms_inv_def = Define `
   axioms_inv ctxt ftbl axioms =
@@ -2887,9 +2891,19 @@ val atbl_ftbl_inv_def = Define `
 val atbl_inv_def = Define `
   atbl_inv atbl = EVERY (\x. isVal (CDR x)) (sexp2list atbl)`;
 
+val context_inv_def = Define `
+  context_inv ctxt =
+    (!fname params body sem.
+       fname IN FDOM ctxt /\ (ctxt ' fname = (params,BODY_FUN body,sem)) ==>
+       (sem = EvalFun fname ctxt)) /\
+    (!fname params var body sem.
+       fname IN FDOM ctxt /\ (ctxt ' fname = (params,WITNESS_FUN body var,sem)) ==>
+       (sem = \args.
+         @v. isTrue (EvalTerm (FunVarBind (var::params) (v::args),ctxt) body)))`;
+
 val milawa_inv_def = Define `
   milawa_inv ctxt k (axioms,thms,atbl,checker,ftbl) =
-    context_ok ctxt /\ atbl_ok ctxt atbl /\ atbl_inv atbl /\
+    context_ok ctxt /\ context_inv ctxt /\ atbl_ok ctxt atbl /\ atbl_inv atbl /\
     thms_inv ctxt thms /\ thms_inv ctxt axioms /\
     core_check_proof_inv checker k /\ ftbl_inv k ftbl /\
     axioms_inv ctxt ftbl axioms /\ atbl_ftbl_inv atbl ftbl /\
@@ -3497,8 +3511,8 @@ val fake_ftbl_entries_NOT_IN_CTXT = prove(
   \\ FULL_SIMP_TAC std_ss [EVERY_MEM] \\ REPEAT STRIP_TAC \\ RES_TAC
   \\ `?params body sem. ctxt ' x = (params,body,sem)` by METIS_TAC [PAIR]
   \\ `func_definition_exists ctxt x params body sem` by METIS_TAC [func_definition_exists_def]
-  \\ RES_TAC \\ `?y z. MEM (list2sexp [Sym x; y; z]) (sexp2list ftbl)` by
-      (Cases_on `body` \\ FULL_SIMP_TAC std_ss [axioms_aux_def] \\ METIS_TAC [])
+  \\ RES_TAC \\ `?y z. MEM (list2sexp [Sym x; y; z]) (sexp2list ftbl)` by ALL_TAC
+  THEN1 (Cases_on `body` \\ FULL_SIMP_TAC std_ss [axioms_aux_def] \\ METIS_TAC [])
   \\ FS [] \\ `~(x = "NIL")` by FULL_SIMP_TAC (srw_ss()) [fake_ftbl_entries_def,MEM]
   \\ IMP_RES_TAC lookup_safe_IMP_MEM
   \\ `CAR (Dot (Sym x) (Dot y (Dot z (Sym "NIL")))) = CAR (Dot (Sym x) (Sym "NIL"))` by EVAL_TAC
@@ -3670,7 +3684,7 @@ val core_admit_defun_thm = prove(
     \\ STRIP_TAC THEN1 (EVAL_TAC \\ FS [])
     \\ ASM_SIMP_TAC std_ss [logic_func2sexp_def,MEM] \\ FS [isTrue_def]
     \\ FS [func_arity_def])
-  \\ `atbl_ok (ctxt |+ (fname,MAP getSym xs,BODY_FUN b,ef)) if_new_atbl` by ALL_TAC THEN1
+  \\ `!body. atbl_ok (ctxt |+ (fname,MAP getSym xs,body,ef)) if_new_atbl` by ALL_TAC THEN1
    (FS [atbl_ok_def] \\ REPEAT STRIP_TAC \\ RES_TAC \\ Q.UNABBREV_TAC `if_new_atbl`
     \\ Cases_on `f` \\ FULL_SIMP_TAC std_ss [func_arity_def]
     \\ `!l. ~(logic_func2sexp (mPrimitiveFun l) = Sym fname)` by
@@ -3684,11 +3698,8 @@ val core_admit_defun_thm = prove(
           [logic_function_namep_def,GSYM list2sexp_def,memberp_thm,MEM] \\ FS [])
     \\ FS [FDOM_FUPDATE,IN_INSERT,FAPPLY_FUPDATE_THM]
     \\ Cases_on `s = fname` \\ FS [LENGTH_MAP])
-  \\ `new_definition (fname,MAP getSym xs,BODY_FUN b,ef,ctxt)` by ALL_TAC THEN1
-   (FS [new_definition_def]
-    \\ MATCH_MP_TAC (GEN_ALL (SIMP_RULE std_ss [AND_IMP_INTRO] logic_term_atblp_thm))
-    \\ Q.EXISTS_TAC `if_new_atbl` \\ FS [])
-  \\ FS []
+  \\ `atbl_ok (ctxt |+ (fname,MAP getSym xs,BODY_FUN b,ef)) if_new_atbl /\
+      atbl_ok (ctxt |+ (fname,MAP getSym xs,NO_FUN,ef)) if_new_atbl` by METIS_TAC []
   \\ `thms_inv (ctxt |+ (fname,MAP getSym xs,BODY_FUN b,ef)) thms` by
    (FS [thms_inv_def,EVERY_MEM] \\ REPEAT STRIP_TAC \\ RES_TAC
     \\ IMP_RES_TAC MilawaTrue_new_definition \\ METIS_TAC [])
@@ -3696,20 +3707,17 @@ val core_admit_defun_thm = prove(
    (FS [thms_inv_def,EVERY_MEM] \\ REPEAT STRIP_TAC \\ RES_TAC
     \\ IMP_RES_TAC MilawaTrue_new_definition \\ METIS_TAC [])
   \\ FS []
-  \\ PUSH_STRIP_TAC THEN1 (ASM_SIMP_TAC std_ss [new_definition_IMP_context_ok])
-  \\ PUSH_STRIP_TAC THEN1
-   (Q.UNABBREV_TAC `if_new_atbl` \\ FS [atbl_inv_def,EVERY_DEF,sexp2list_def])
   \\ `func2f (Fun fname) = mFun fname` by ALL_TAC THEN1
        (FS [fake_ftbl_entries_def] \\ FULL_SIMP_TAC std_ss
           [logic_function_namep_def,GSYM list2sexp_def,memberp_thm,MEM,func2f_def])
-  \\ `term_ok (ctxt |+ (fname,MAP getSym xs,BODY_FUN b,ef)) b /\
-      EVERY (MilawaTrue (ctxt |+ (fname,MAP getSym xs,BODY_FUN b,ef)))
+  \\ `term_ok (ctxt |+ (fname,MAP getSym xs,NO_FUN,ef)) b /\
+      EVERY (MilawaTrue (ctxt |+ (fname,MAP getSym xs,NO_FUN,ef)))
         (termination_obligations fname b (MAP getSym xs) m)` by ALL_TAC THEN1
-   (`term_ok (ctxt |+ (fname,MAP getSym xs,BODY_FUN b,ef)) b` by ALL_TAC
+   (`term_ok (ctxt |+ (fname,MAP getSym xs,NO_FUN,ef)) b` by ALL_TAC
     THEN1 (IMP_RES_TAC logic_term_atblp_thm) \\ FS []
     \\ MP_TAC (logic_termination_obligations_thm
       |> Q.INST [`body`|->`b`,`name`|->`fname`,`formals`|->`MAP getSym xs`,
-                 `ctxt`|->`ctxt |+ (fname,MAP getSym xs,BODY_FUN b,ef)`])
+                 `ctxt`|->`ctxt |+ (fname,MAP getSym xs,NO_FUN,ef)`])
     \\ FS [FAPPLY_FUPDATE_THM,LENGTH_MAP]
     \\ MATCH_MP_TAC IMP_IMP
     \\ STRIP_TAC THEN1 (FS [logic_func2sexp_def]
@@ -3726,7 +3734,24 @@ val core_admit_defun_thm = prove(
     \\ Q.PAT_ASSUM `SND (SND xxx)` MP_TAC
     \\ SIMP_TAC std_ss [AND_IMP_INTRO]
     \\ MATCH_MP_TAC core_check_proof_list_thm \\ FS []
-    \\ FULL_SIMP_TAC std_ss [thms_inv_def,new_definition_IMP_context_ok])
+    \\ STRIP_TAC THEN1 (MATCH_MP_TAC context_ok_None \\ FS [])
+    \\ FS [thms_inv_def,EVERY_MEM] \\ REPEAT STRIP_TAC \\ RES_TAC
+    \\ IMP_RES_TAC MilawaTrue_new_definition \\ METIS_TAC [])
+  \\ `term_ok (ctxt |+ (fname,MAP getSym xs,BODY_FUN b,ef)) b` by ALL_TAC
+  THEN1 (FS [EvalTerm_IGNORE_BODY])
+  \\ `definition_ok (fname,MAP getSym xs,BODY_FUN b,ctxt)` by ALL_TAC THEN1
+   (FS [definition_ok_def,term_ok_IGNORE_SEM,MilawaTrue_IGNORE_SEM,
+      EvalTerm_IGNORE_BODY] \\ Q.EXISTS_TAC `m` \\ FS []) \\ FS []
+  \\ PUSH_STRIP_TAC THEN1 (METIS_TAC [definition_ok_BODY_FUN])
+  \\ PUSH_STRIP_TAC THEN1
+   (FS [context_inv_def] \\ STRIP_TAC \\ STRIP_TAC \\ Cases_on `fname = fname'`
+    \\ FULL_SIMP_TAC (srw_ss()) [FAPPLY_FUPDATE_THM]
+    THEN1 (Q.UNABBREV_TAC `ef` \\ FS [EvalFun_IGNORE_SEM])
+    \\ REPEAT STRIP_TAC \\ FS [context_inv_def] \\ RES_TAC \\ FS []
+    \\ `term_ok ctxt body'` by (FS [context_ok_def] \\ RES_TAC)
+    \\ IMP_RES_TAC EvalFun_FUPDATE \\ FS [GSYM EvalTerm_FUPDATE])
+  \\ PUSH_STRIP_TAC THEN1
+   (Q.UNABBREV_TAC `if_new_atbl` \\ FS [atbl_inv_def,EVERY_DEF,sexp2list_def])
   \\ PUSH_STRIP_TAC THEN1
    (Q.UNABBREV_TAC `if_new_axiom`
     \\ REVERSE (`thms_inv (ctxt |+ (fname,MAP getSym xs,BODY_FUN b,ef)) (new_axiom::axioms)` by ALL_TAC)
@@ -3754,7 +3779,7 @@ val core_admit_defun_thm = prove(
     \\ FULL_SIMP_TAC std_ss []
     \\ Q.PAT_ASSUM `core_check_proof_inv checker k` MP_TAC
     \\ METIS_TAC [core_check_proof_inv_step])
- \\ PUSH_STRIP_TAC THEN1
+  \\ PUSH_STRIP_TAC THEN1
    (FS [define_safe_def,LET_DEF]
     \\ Cases_on `isTrue (lookup_safe (Sym fname) ftbl)` \\ FS []
     \\ FS [ftbl_inv_def,getSym_def]
@@ -3815,9 +3840,10 @@ val core_admit_defun_thm = prove(
     THEN1
      (MATCH_MP_TAC logic_func_inv_EQ
       \\ ASM_SIMP_TAC std_ss [logic_variable_listp_IMP_EVERY_Sym]
-      \\ FS [sexp2sexp_def,new_definition_IMP_context_ok]
-      \\ ASM_SIMP_TAC std_ss [EvalFun_IGNORE_SEM]
-      \\ FS [sexp2sexp_def])
+      \\ FS [EvalTerm_IGNORE_BODY,EvalFun_IGNORE_SEM]
+      \\ REVERSE STRIP_TAC THEN1 (FS [sexp2sexp_def])
+      \\ FS [EVERY_MEM] \\ REPEAT STRIP_TAC \\ RES_TAC
+      \\ MATCH_MP_TAC MilawaTrue_REPLACE_NO_FUN \\ FS [])
     \\ `~("ERROR" IN FDOM ((ctxt |+ (fname,MAP getSym xs,BODY_FUN b,ef))))` by ALL_TAC THEN1
      (FULL_SIMP_TAC std_ss [FDOM_FUPDATE,IN_INSERT]
       \\ FULL_SIMP_TAC std_ss [atbl_ok_def] \\ REPEAT STRIP_TAC
@@ -3827,7 +3853,7 @@ val core_admit_defun_thm = prove(
       \\ `lookup (Sym "ERROR") atbl = Sym "NIL"` by METIS_TAC [atbl_ftbl_inv_def,isTrue_def]
       \\ Q.UNABBREV_TAC `if_new_atbl`
       \\ ONCE_REWRITE_TAC [lookup_def] \\ FS [])
-    \\ FS [sexp2sexp_def] \\ METIS_TAC [NOT_CAR_EQ_ERROR])
+    \\ FS [sexp2sexp_def] \\ METIS_TAC [NOT_CAR_EQ_ERROR,EvalTerm_IGNORE_BODY])
   \\ PUSH_STRIP_TAC THEN1
    (FS [atbl_ftbl_inv_def] \\ Q.UNABBREV_TAC `if_new_atbl` \\ FS []
     \\ ONCE_REWRITE_TAC [lookup_def] \\ FS [] \\ STRIP_TAC
@@ -3847,7 +3873,7 @@ val core_admit_defun_thm = prove(
     \\ FULL_SIMP_TAC std_ss [FDOM_FUPDATE]
     \\ REVERSE (Cases_on `fname = name`) \\ FULL_SIMP_TAC std_ss [] THEN1
      (FULL_SIMP_TAC std_ss [IN_INSERT,FAPPLY_FUPDATE_THM,runtime_inv_def]
-      \\ Q.PAT_ASSUM `!name. bbb` (MP_TAC o Q.SPEC `name`)
+      \\ Q.PAT_ASSUM `!name params. bbb` (MP_TAC o Q.SPEC `name`)
       \\ ASM_SIMP_TAC std_ss []
       \\ STRIP_TAC \\ POP_ASSUM (MP_TAC o Q.SPECL [`args`,`ok'`])
       \\ FULL_SIMP_TAC std_ss [] \\ STRIP_TAC
@@ -3878,10 +3904,9 @@ val core_admit_defun_thm = prove(
     \\ `name IN FDOM ctxt2 /\
         (ctxt2 ' name = (params,BODY_FUN (term2t (sexp3term raw_body)),sem))` by ALL_TAC THEN1
      (Q.UNABBREV_TAC `ctxt2`
-      \\ FULL_SIMP_TAC std_ss [FAPPLY_FUPDATE_THM,
-           FDOM_FUPDATE,IN_INSERT])
+      \\ FULL_SIMP_TAC std_ss [FAPPLY_FUPDATE_THM,FDOM_FUPDATE,IN_INSERT])
     \\ `sem = EvalFun name ctxt2` by ALL_TAC THEN1
-     (FULL_SIMP_TAC std_ss [context_ok_def] \\ METIS_TAC [])
+     (FULL_SIMP_TAC std_ss [context_inv_def] \\ METIS_TAC [])
     \\ ASM_SIMP_TAC std_ss [EvalFun_def]
     \\ STRIP_TAC \\ SIMP_TAC std_ss [Eval_M_ap_def]
     \\ ONCE_REWRITE_TAC [M_ev_cases] \\ FULL_SIMP_TAC (srw_ss()) []
@@ -3905,7 +3930,7 @@ val core_admit_defun_thm = prove(
          (ok2 ==> MilawaTrue ctxt2 (Equal (inst_term (FunVarBind params args) (term2t bb)) (mConst result)))` by ALL_TAC) THEN1
         (Q.EXISTS_TAC `ok2` \\ STRIP_TAC THEN1
           (DISJ1_TAC \\ REVERSE STRIP_TAC
-           THEN1 (MATCH_MP_TAC (GEN_ALL MR_ev_term2term) \\ FULL_SIMP_TAC std_ss [] \\ METIS_TAC [])
+           THEN1 (MATCH_MP_TAC (GEN_ALL MR_ev_term2term) \\ FULL_SIMP_TAC std_ss [] \\ METIS_TAC [EvalTerm_IGNORE_BODY])
            \\ REPEAT STRIP_TAC \\ FULL_SIMP_TAC std_ss [term2t_def]
            \\ Q.PAT_ASSUM `term2t (sexp3term raw_body) = xx` MP_TAC
            \\ SIMP_TAC std_ss []
@@ -3973,9 +3998,7 @@ val core_admit_defun_thm = prove(
      (FULL_SIMP_TAC std_ss [proof_in_full_ctxt_def] \\ REPEAT STRIP_TAC
       \\ Q.PAT_ASSUM `Abbrev (ctxt2 = pat)` (fn th =>
            ASSUME_TAC th THEN ONCE_REWRITE_TAC [REWRITE_RULE [markerTheory.Abbrev_def] th])
-      \\ (MilawaTrue_new_definition |> SPEC_ALL
-           |> UNDISCH |> CONJUNCT1 |> DISCH_ALL |> MATCH_MP_TAC)
-      \\ ASM_SIMP_TAC std_ss [])
+      \\ METIS_TAC [MilawaTrue_new_definition])
     \\ NTAC 2 STRIP_TAC
     \\ FULL_SIMP_TAC std_ss [SUBSET_DEF,IN_LIST_TO_SET]
     \\ `MEM v params` by FULL_SIMP_TAC std_ss []
@@ -4175,17 +4198,26 @@ val core_admit_witness_thm = prove(
           [logic_function_namep_def,GSYM list2sexp_def,memberp_thm,MEM] \\ FS [])
     \\ FS [FDOM_FUPDATE,IN_INSERT,FAPPLY_FUPDATE_THM]
     \\ Cases_on `s = fname` \\ FS [LENGTH_MAP])
-  \\ `new_definition (fname,MAP getSym xs,WITNESS_FUN body var,ef,ctxt)` by ALL_TAC THEN1
-   (FS [new_definition_def] \\ Q.UNABBREV_TAC `ef` \\ FS [ALL_DISTINCT_LEMMA])
-  \\ FS []
+  \\ `definition_ok (fname,MAP getSym xs,WITNESS_FUN body var,ctxt)` by ALL_TAC THEN1
+       (FS [definition_ok_def] \\ FS [ALL_DISTINCT_LEMMA]) \\ FS []
   \\ `thms_inv (ctxt |+ (fname,MAP getSym xs,WITNESS_FUN body var,ef)) thms` by
    (FS [thms_inv_def,EVERY_MEM] \\ REPEAT STRIP_TAC \\ RES_TAC
     \\ IMP_RES_TAC MilawaTrue_new_definition \\ METIS_TAC [])
   \\ `thms_inv (ctxt |+ (fname,MAP getSym xs,WITNESS_FUN body var,ef)) axioms` by
    (FS [thms_inv_def,EVERY_MEM] \\ REPEAT STRIP_TAC \\ RES_TAC
-    \\ IMP_RES_TAC MilawaTrue_new_definition \\ METIS_TAC [])
-  \\ FS []
-  \\ PUSH_STRIP_TAC THEN1 (ASM_SIMP_TAC std_ss [new_definition_IMP_context_ok])
+    \\ IMP_RES_TAC MilawaTrue_new_definition \\ METIS_TAC []) \\ FS []
+  \\ PUSH_STRIP_TAC THEN1
+   (Q.UNABBREV_TAC `ef` \\ MATCH_MP_TAC definition_ok_WITNESS_FUN
+    \\ ASM_SIMP_TAC std_ss [])
+  \\ PUSH_STRIP_TAC THEN1
+   (FS [context_inv_def] \\ STRIP_TAC \\ STRIP_TAC \\ Cases_on `fname = fname'`
+    \\ FULL_SIMP_TAC (srw_ss()) [FAPPLY_FUPDATE_THM] \\ REPEAT STRIP_TAC
+    THEN1 (`term_ok ctxt body'` by (FS [context_ok_def] \\ RES_TAC \\ NO_TAC)
+           \\ METIS_TAC [EvalFun_FUPDATE])
+    THEN1 (Q.UNABBREV_TAC `ef` \\ FS [GSYM EvalTerm_FUPDATE])
+    \\ REPEAT STRIP_TAC \\ FS [context_inv_def] \\ RES_TAC \\ FS []
+    \\ `term_ok ctxt body'` by (FS [context_ok_def] \\ RES_TAC \\ NO_TAC)
+    \\ FS [GSYM EvalTerm_FUPDATE])
   \\ PUSH_STRIP_TAC THEN1
    (Q.UNABBREV_TAC `if_new_atbl` \\ FS [atbl_inv_def,EVERY_DEF,sexp2list_def])
   \\ `func2f (Fun fname) = mFun fname` by ALL_TAC THEN1
@@ -4310,9 +4342,7 @@ val core_admit_witness_thm = prove(
         \\ RES_TAC \\ SIMP_TAC std_ss [define_safe_def,LET_DEF] \\ SRW_TAC [] []
         \\ METIS_TAC [MR_ev_add_def])
       \\ REPEAT STRIP_TAC \\ FULL_SIMP_TAC std_ss [MilawaTrueFun_def]
-      \\ (MilawaTrue_new_definition |> SPEC_ALL |> UNDISCH |> CONJUNCT1
-            |> DISCH_ALL |> MATCH_MP_TAC)
-      \\ ASM_SIMP_TAC std_ss [])
+      \\ METIS_TAC [MilawaTrue_new_definition])
     \\ FULL_SIMP_TAC std_ss [IN_INSERT,FAPPLY_FUPDATE_THM]
     \\ Q.ABBREV_TAC `k2 = FST (SND (define_safe ftbl (Sym name) (list2sexp xs) r k io T))`
     \\ Q.ABBREV_TAC `ftbl2 = (FST (define_safe ftbl (Sym name) (list2sexp xs) r k io T))`
@@ -4566,14 +4596,18 @@ val core_admit_switch_thm = prove(
   \\ REVERSE (Cases_on `z2`) THEN1
    (FULL_SIMP_TAC std_ss [axioms_aux_def,witness_body_def]
     \\ IMP_RES_TAC (MATCH_MP lookup_init_lemma lookup_provablep) \\ FS [])
+  THEN1
+   (FULL_SIMP_TAC std_ss [axioms_aux_def,witness_body_def]
+    \\ IMP_RES_TAC (MATCH_MP lookup_init_lemma lookup_provablep) \\ FS [])
   \\ FULL_SIMP_TAC std_ss [axioms_aux_def,witness_body_def]
   \\ IMP_RES_TAC (MATCH_MP lookup_init_lemma lookup_provablep_thm) \\ FS []
-  \\ `term_ok ctxt (term2t (sexp3term lookup_provablep_body))` by METIS_TAC [context_ok_def]
+  \\ `term_ok ctxt (term2t (sexp3term lookup_provablep_body))` by
+        METIS_TAC [context_ok_def,context_inv_def]
   \\ `"LOGIC.PROVABLE-WITNESS" IN FDOM ctxt /\ (LENGTH (FST (ctxt ' "LOGIC.PROVABLE-WITNESS")) = 4) /\
       "LOGIC.PROOFP" IN FDOM ctxt /\ (LENGTH (FST (ctxt ' "LOGIC.PROOFP")) = 4)` by ALL_TAC THEN1
         (POP_ASSUM MP_TAC \\ EVAL_TAC \\ SRW_TAC [] [])
   \\ `(provablep = EvalFun "LOGIC.PROVABLEP" ctxt)` by ALL_TAC THEN1
-        (FULL_SIMP_TAC std_ss [context_ok_def] \\ RES_TAC \\ ASM_REWRITE_TAC [])
+        (FULL_SIMP_TAC std_ss [context_inv_def] \\ RES_TAC \\ ASM_REWRITE_TAC [])
   \\ Q.PAT_ASSUM `isTrue (logic_appealp x1) ==> bbb` MP_TAC
   \\ ASM_REWRITE_TAC [] \\ REWRITE_TAC [EvalFun_def,Eval_M_ap_def]
   \\ ONCE_REWRITE_TAC [M_ev_cases] \\ ASM_SIMP_TAC (srw_ss()) []
@@ -4635,7 +4669,7 @@ val core_admit_switch_thm = prove(
   \\ Q.PAT_ABBREV_TAC `wit = mApp xxx yyy` \\ STRIP_TAC
   \\ `(provable_witness = (\args. @v.
         isTrue (EvalTerm (FunVarBind ("PROOF"::r1) (v::args),ctxt) wit)))`  by ALL_TAC THEN1
-         (FULL_SIMP_TAC std_ss [context_ok_def] \\ RES_TAC \\ FULL_SIMP_TAC std_ss [])
+         (FULL_SIMP_TAC std_ss [context_inv_def] \\ RES_TAC \\ FULL_SIMP_TAC std_ss [])
   \\ FULL_SIMP_TAC std_ss [] \\ Q.UNABBREV_TAC `wit`
   \\ POP_ASSUM (K ALL_TAC) \\ POP_ASSUM (K ALL_TAC)
   \\ FULL_SIMP_TAC (srw_ss()) [EvalTerm_def,EvalApp_def,MAP,LET_DEF,EVAL_PRIMITIVE_def,
@@ -4962,6 +4996,7 @@ val init_thm = prove(
     \\ REPEAT STRIP_TAC \\ CONV_TAC (RATOR_CONV EVAL) \\ REWRITE_TAC [])
   \\ SIMP_TAC std_ss [milawa_inv_def] \\ REPEAT STRIP_TAC
   THEN1 (FULL_SIMP_TAC std_ss [context_ok_def,FDOM_FEMPTY,NOT_IN_EMPTY])
+  THEN1 (FULL_SIMP_TAC std_ss [context_inv_def,FDOM_FEMPTY,NOT_IN_EMPTY])
   THEN1
    (SIMP_TAC std_ss [atbl_ok_def] \\ REVERSE Cases THEN1
      (FULL_SIMP_TAC std_ss [func_syntax_ok_def,MEM,logic_func2sexp_def]
