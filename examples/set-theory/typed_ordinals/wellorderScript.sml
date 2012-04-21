@@ -726,38 +726,47 @@ val LT_wZERO = store_thm(
   ``orderlt w wZERO = F``,
   simp[orderlt_def]);
 
-(*
 val orderlt_WF = store_thm(
   "orderlt_WF",
   ``WF (orderlt : 'a wellorder -> 'a wellorder -> bool)``,
   rw[prim_recTheory.WF_IFF_WELLFOUNDED, prim_recTheory.wellfounded_def] >>
   spose_not_then strip_assume_tac >>
   qabbrev_tac `w0 = f 0` >>
-  qsuff_tac `?g. !n. (g (SUC n), g n) WIN w0`
-    >- (strip_tac >>
-        Q.ISPEC_THEN `\x y. (x,y) WIN w0` strip_assume_tac
-                     prim_recTheory.wellfounded_def >>
-        fs[GSYM prim_recTheory.WF_IFF_WELLFOUNDED, WIN_WF2] >> metis_tac[]) >>
-  `!n. elsOf (f n) <> {}` by (simp[] >> metis_tac [LT_wZERO]) >>
-  `!(h:'a -> 'a) n x w. BIJ h (elsOf (f n)) (elsOf (wobound x w)) ==>
-                        (elsOf (wobound x w) = iseg w x)`
-      by (simp[elsOf_wobound, iseg_def] >> rw[BIJ_EMPTY]) >>
-  `!n. ?iso x. x IN elsOf w0 /\ BIJ iso (elsOf (f (SUC n))) (iseg w0 x)`
-    by (Induct >| [
-          `orderlt (f (SUC 0)) (f 0)` by metis_tac[] >>
-          pop_assum mp_tac >> simp_tac (srw_ss()) [orderlt_def] >>
-          asm_simp_tac (srw_ss() ++ DNF_ss) [orderiso_thm] >>
-          metis_tac[],
-          pop_assum strip_assume_tac >>
-          `orderlt (f (SUC (SUC n))) (f (SUC n))` by metis_tac[] >>
-          pop_assum mp_tac >> simp_tac (srw_ss()) [orderlt_def] >>
-          asm_simp_tac (srw_ss() ++ DNF_ss) [orderiso_thm] >>
-          map_every qx_gen_tac [`y`, `g`] >> rpt strip_tac >>
-          map_every qexists_tac [`iso o g`, `iso y`] >> res_tac >>
-          simp[]
+  qsuff_tac `~ WF (\x y. (x,y) WIN w0)` >- rw[WIN_WF2] >>
+  simp[relationTheory.WF_DEF] >>
+  `!n. orderlt (f (SUC n)) w0`
+     by (Induct >- metis_tac [arithmeticTheory.ONE] >>
+         metis_tac [orderlt_TRANS]) >>
+  `!n. ?x. x IN elsOf w0 /\ orderiso (wobound x w0) (f (SUC n))`
+     by metis_tac [orderlt_def, orderiso_SYM] >>
+  qexists_tac `
+     \e. ?n. e IN elsOf w0 /\ orderiso (wobound e w0) (f (SUC n))
+  ` >> simp[] >> conj_tac >- metis_tac[] >>
+  qx_gen_tac `y` >>
+  Cases_on `y IN elsOf w0` >> simp[] >>
+  Cases_on `!n. ~ orderiso (wobound y w0) (f (SUC n))` >> simp[] >>
+  pop_assum (Q.X_CHOOSE_THEN `m` strip_assume_tac o SIMP_RULE (srw_ss()) []) >>
+  `orderlt (f (SUC (SUC m))) (f (SUC m))` by metis_tac[] >>
+  pop_assum (Q.X_CHOOSE_THEN `p` strip_assume_tac o
+             SIMP_RULE (srw_ss()) [orderlt_def]) >>
+  `?h. BIJ h (elsOf (f (SUC m))) (elsOf (wobound y w0)) /\
+       !a b. (a,b) WIN f (SUC m) ==> (h a, h b) WIN wobound y w0`
+    by metis_tac [orderiso_thm, orderiso_SYM] >>
+  qexists_tac `h p` >>
+  `h p IN elsOf (wobound y w0)` by metis_tac [BIJ_IFF_INV] >>
+  pop_assum mp_tac >> simp[elsOf_wobound] >> rw[] >>
+  qexists_tac `SUC m` >> conj_tac >- metis_tac [WIN_elsOf] >>
+  match_mp_tac (INST_TYPE [beta |-> alpha] orderiso_TRANS) >>
+  qexists_tac `wobound p (f (SUC m))` >>
+  Tactical.REVERSE conj_tac >- metis_tac [orderiso_SYM] >>
+  match_mp_tac orderiso_SYM >> simp[orderiso_thm] >> qexists_tac `h` >>
+  conj_tac
+    >- (`wobound (h p) w0 = wobound (h p) (wobound y w0)` by rw [wobound2] >>
+        pop_assum SUBST1_TAC >>
+        match_mp_tac wobounds_preserve_bijections >> rw[]) >>
+  fs[IN_wobound])
 
-
-
+(*
 val orderlt_orderiso = store_thm(
   "orderlt_orderiso",
   ``orderiso x0 y0 /\ orderiso a0 b0 ==> (orderlt x0 a0 <=> orderlt y0 b0)``,
