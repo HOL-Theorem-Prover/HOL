@@ -766,7 +766,6 @@ val orderlt_WF = store_thm(
         match_mp_tac wobounds_preserve_bijections >> rw[]) >>
   fs[IN_wobound])
 
-(*
 val orderlt_orderiso = store_thm(
   "orderlt_orderiso",
   ``orderiso x0 y0 /\ orderiso a0 b0 ==> (orderlt x0 a0 <=> orderlt y0 b0)``,
@@ -780,15 +779,18 @@ val orderlt_orderiso = store_thm(
     qsuff_tac `orderiso (wobound x a0) (wobound (f x) b0)`
       >- metis_tac [orderiso_TRANS] >>
     rw[orderiso_thm] >> qexists_tac `f` >> rw[IN_wobound] >>
-    ntac 2 (pop_assum mp_tac) >> rpt (pop_assum (K ALL_TAC)) >>
-    rw[elsOf_wobound]
-    rw[BIJ_DEF, INJ_DEF, SURJ_DEF]
-    match_mp_tac orderiso_TRANS >> qexists_tac `wobound x a0`
-
-
-
-
-
-*)
+    match_mp_tac wobounds_preserve_bijections >>
+    fs[orderiso_thm],
+    `orderiso x0 (wobound x b0)` by metis_tac [orderiso_TRANS] >>
+    `?f. BIJ f (elsOf b0) (elsOf a0) /\
+         (!x y. (x,y) WIN b0 ==> (f x, f y) WIN a0)`
+       by metis_tac [orderiso_thm, orderiso_SYM] >>
+    qexists_tac `f x` >> conj_tac >- metis_tac [BIJ_IFF_INV] >>
+    qsuff_tac `orderiso (wobound x b0) (wobound (f x) a0)`
+      >- metis_tac [orderiso_TRANS] >>
+    rw[orderiso_thm] >> qexists_tac `f` >> rw[IN_wobound] >>
+    match_mp_tac wobounds_preserve_bijections >>
+    metis_tac [orderiso_thm, orderiso_SYM]
+  ]);
 
 val _ = export_theory()
