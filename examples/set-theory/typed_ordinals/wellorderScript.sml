@@ -824,4 +824,68 @@ val islimit_iso = store_thm(
     metis_tac [WIN_trichotomy, WIN_REFL, WIN_TRANS]
   ]);
 
+val finite_def = Define`
+  finite w = FINITE (elsOf w)
+`;
+
+val finite_iso = store_thm(
+  "finite_iso",
+  ``orderiso w1 w2 ==> (finite w1 <=> finite w2)``,
+  rw[orderiso_thm, finite_def] >> metis_tac [BIJ_FINITE, BIJ_LINV_BIJ]);
+
+val finite_wZERO = store_thm(
+  "finite_wZERO",
+  ``finite wZERO``,
+  rw[finite_def]);
+
+(* perform quotient, creating a type of "pre-ordinals".
+
+   These should all that's necessary, but I can't see how to define the limit
+   operation on these.  Instead, the "real" type of ordinals will be the
+   downward-closed sets of pre-ordinals.
+*)
+fun mk_def(s,t) =
+    {def_name = s ^ "_def", fixity = NONE, fname = s, func = t};
+
+val orderiso_equiv = prove(
+  ``!s1 s2. orderiso (s1:'a wellorder) (s2:'a wellorder) <=>
+            (orderiso s1 : 'a wellorder set = orderiso s2)``,
+  rw[FUN_EQ_THM, EQ_IMP_THM] >>
+  metis_tac [orderiso_SYM, orderiso_TRANS, orderiso_REFL])
+
+val alphaise =
+    INST_TYPE  [beta |-> alpha, delta |-> alpha, gamma |-> alpha]
+
+val [preolt_REFL, preolt_TRANS, preolt_WF0, preolt_trichotomy,
+     preolt_ZERO, preo_islimit_ZERO, preo_finite_ZERO] =
+    quotient.define_quotient_types_full
+    {
+     types = [{name = "preord", equiv = orderiso_equiv}],
+     defs = map mk_def
+       [("preolt", ``orderlt : 'a wellorder -> 'a wellorder -> bool``),
+        ("preo_islimit", ``islimit : 'a wellorder -> bool``),
+        ("preo_ZERO", ``wZERO : 'a wellorder``),
+        ("preo_finite", ``finite : 'a wellorder -> bool``)],
+     tyop_equivs = [],
+     tyop_quotients = [],
+     tyop_simps = [],
+     respects = [alphaise islimit_iso, alphaise orderlt_orderiso,
+                 alphaise finite_iso],
+     poly_preserves = [],
+     poly_respects = [],
+     old_thms = [orderlt_REFL, alphaise orderlt_TRANS,
+                 REWRITE_RULE [relationTheory.WF_DEF] orderlt_WF,
+                 alphaise orderlt_trichotomy, alphaise LT_wZERO,
+                 islimit_wZERO, finite_wZERO]}
+
+val _ = save_thm ("preolt_REFL", preolt_REFL)
+val _ = save_thm ("preolt_TRANS", preolt_TRANS)
+val _ = save_thm ("preolt_WF",
+                  REWRITE_RULE [GSYM relationTheory.WF_DEF] preolt_WF0)
+val _ = save_thm ("preo_ZERO", preolt_ZERO)
+val _ = save_thm ("preo_islimit_ZERO", preo_islimit_ZERO)
+val _ = save_thm ("preo_finite_ZERO", preo_finite_ZERO)
+
+
+
 val _ = export_theory()
