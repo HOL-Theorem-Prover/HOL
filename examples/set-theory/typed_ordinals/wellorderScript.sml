@@ -187,43 +187,50 @@ val wellorder_fromNat = store_thm(
     full_simp_tac (srw_ss() ++ ARITH_ss) [domain_def, range_def]
   ]);
 
-val fromNat_def = Define`
-  fromNat n = wellorder_ABS { (i,j) | i < j /\ j <= n }
+val wellorder_fromNat_SUM = store_thm(
+  "wellorder_fromNat_SUM",
+  ``wellorder { (INL i, INL j) | i < j /\ j <= n }``,
+  rw[wellorder_def, wellfounded_def, strict_linear_order_def] >| [
+    Cases_on `w` >| [
+      qexists_tac `INL (LEAST m. INL m IN s)` >> numLib.LEAST_ELIM_TAC >>
+      rw[] >> metis_tac[],
+      qexists_tac `INR y` >> rw[]
+    ],
+    srw_tac[ARITH_ss][transitive_def],
+    full_simp_tac (srw_ss() ++ ARITH_ss) [domain_def, range_def] >> rw[] >>
+    DECIDE_TAC,
+    full_simp_tac (srw_ss() ++ ARITH_ss) [domain_def, range_def] >> rw[] >>
+    DECIDE_TAC,
+    full_simp_tac (srw_ss() ++ ARITH_ss) [domain_def, range_def] >> rw[] >>
+    DECIDE_TAC,
+    full_simp_tac (srw_ss() ++ ARITH_ss) [domain_def, range_def] >> rw[] >>
+    DECIDE_TAC
+  ]);
+
+val fromNat0_def = Define`
+  fromNat0 n = wellorder_ABS { (INL i, INL j) | i < j /\ j <= n }
 `
 
-val fromNat_11 = store_thm(
-  "fromNat_11",
-  ``(fromNat i = fromNat j) <=> (i = j)``,
-  rw[fromNat_def, WEXTENSION, wellorder_fromNat,
+val fromNat0_11 = store_thm(
+  "fromNat0_11",
+  ``(fromNat0 i = fromNat0 j) <=> (i = j)``,
+  rw[fromNat0_def, WEXTENSION, wellorder_fromNat_SUM,
      #repabs_pseudo_id wellorder_results] >>
   simp[EQ_IMP_THM] >> strip_tac >>
   spose_not_then assume_tac >>
   `i < j \/ j < i` by DECIDE_TAC >| [
-     first_x_assum (qspecl_then [`i`, `j`] mp_tac),
-     first_x_assum (qspecl_then [`j`, `i`] mp_tac)
+     first_x_assum (qspecl_then [`INL i`, `INL j`] mp_tac),
+     first_x_assum (qspecl_then [`INL j`, `INL i`] mp_tac)
   ] >> srw_tac[ARITH_ss][]);
 
-val wellorder_REP_fromNat = store_thm(
-  "wellorder_REP_fromNat",
-  ``wellorder_REP (fromNat n) = { (i,j) | i < j /\ j <= n}``,
-  rw[fromNat_def, wellorder_fromNat, #repabs_pseudo_id wellorder_results]);
-
-val wrange_fromNat = store_thm(
-  "wrange_fromNat",
-  ``wrange (fromNat i) = { x | 1 <= x /\ x <= i }``,
-  rw[EXTENSION, wellorder_REP_fromNat, range_def, EQ_IMP_THM] >>
-  TRY DECIDE_TAC >> qexists_tac `x - 1` >> DECIDE_TAC);
-
-val WIN_fromNat = store_thm(
-  "WIN_fromNat",
-  ``(i,j) WIN fromNat n <=> i < j /\ j <= n``,
-  rw[wellorder_REP_fromNat]);
-
-val wobound_fromNat = store_thm(
-  "wobound_fromNat",
-  ``i <= j ==> (wobound i (fromNat j) = fromNat (i - 1))``,
-  rw[WEXTENSION, WIN_fromNat, IN_wobound] >> eq_tac >>
-  srw_tac [ARITH_ss][]);
+val elsOf_fromNat0 = store_thm(
+  "elsOf_fromNat0",
+  ``elsOf (fromNat0 n) = if n = 0 then {} else { INL i | i <= n }``,
+  simp[fromNat0_def, EXTENSION, elsOf_def, #repabs_pseudo_id wellorder_results,
+       wellorder_fromNat_SUM, in_domain, in_range, EQ_IMP_THM] >>
+  simp_tac (srw_ss() ++ DNF_ss) [] >> rw[] >> TRY DECIDE_TAC >>
+  Cases_on `i = n` >- (DISJ2_TAC >> qexists_tac `n - 1` >> DECIDE_TAC) >>
+  DISJ1_TAC >> qexists_tac `n` >> DECIDE_TAC);
 
 val elsOf_wobound = store_thm(
   "elsOf_wobound",
@@ -886,6 +893,58 @@ val _ = save_thm ("preo_ZERO", preolt_ZERO)
 val _ = save_thm ("preo_islimit_ZERO", preo_islimit_ZERO)
 val _ = save_thm ("preo_finite_ZERO", preo_finite_ZERO)
 
+val _ = type_abbrev ("inf", ``:num + 'a``)
 
+val fromNat_def = Define`
+  fromNat n : 'a inf preord =
+    preord_ABS_CLASS (orderiso (fromNat0 n : 'a inf wellorder))
+`;
+
+val preord_repabs = prove(
+  ``preord_REP_CLASS (preord_ABS_CLASS (orderiso (c : 'a wellorder))) =
+    (orderiso c : 'a wellorder set)``,
+  REWRITE_TAC [GSYM (theorem "preord_ABS_REP_CLASS")] >>
+  metis_tac [orderiso_REFL]);
+
+val finite_inl = prove(
+  ``FINITE {INL i | i <= n}``,
+ `{INL i | i <= n } = IMAGE INL {i | i <= n}`
+    by rw[EXTENSION] >>
+ rw[] >>
+ qsuff_tac `{i | i <= n} = n INSERT count n` >- rw[] >>
+ srw_tac[ARITH_ss][EXTENSION]);
+
+val card_inl = prove(
+  ``CARD {INL i | i <= n} = n + 1``,
+ `{INL i | i <= n } = IMAGE INL {i | i <= n}`
+    by rw[EXTENSION] >>
+ `{i | i <= n} = n INSERT count n` by srw_tac[ARITH_ss][EXTENSION] >>
+ rw[CARD_INJ_IMAGE, finite_inl, arithmeticTheory.ADD1]);
+
+val fromNat_11 = store_thm(
+  "fromNat_11",
+  ``(fromNat n = fromNat m) = (n = m)``,
+  rw[fromNat_def, EQ_IMP_THM] >>
+  pop_assum (mp_tac o Q.AP_TERM `preord_REP_CLASS`) >>
+  rw[preord_repabs] >>
+  pop_assum (mp_tac o C Q.AP_THM `fromNat0 n : 'a inf wellorder`) >>
+  simp[orderiso_REFL] >> simp[orderiso_thm] >>
+  disch_then (Q.X_CHOOSE_THEN `f` strip_assume_tac) >>
+  Cases_on `m = 0` >> Cases_on `n = 0` >> fs[BIJ_EMPTY, elsOf_fromNat0] >| [
+    fs[EXTENSION] >> first_x_assum (qspec_then `n` mp_tac) >> rw[],
+    fs[EXTENSION] >> first_x_assum (qspec_then `n` mp_tac) >> rw[],
+    `m + 1 = n + 1` by metis_tac [FINITE_BIJ_CARD_EQ, finite_inl, card_inl] >>
+    fs[]
+  ]);
+
+val preo_finite_fromNat = store_thm(
+  "preo_finite_fromNat",
+  ``preo_finite (fromNat n)``,
+  rw[definition "preo_finite_def", fromNat_def, definition "preord_REP_def"] >>
+  DEEP_INTRO_TAC SELECT_ELIM_THM >> rw[preord_repabs]
+     >- metis_tac [orderiso_REFL] >>
+  fs[orderiso_thm, finite_def] >>
+  qsuff_tac `FINITE (elsOf (fromNat0 n))` >- metis_tac[BIJ_FINITE] >>
+  rw[elsOf_fromNat0, finite_inl]);
 
 val _ = export_theory()
