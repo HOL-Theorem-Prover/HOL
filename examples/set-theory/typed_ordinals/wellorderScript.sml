@@ -793,4 +793,35 @@ val orderlt_orderiso = store_thm(
     metis_tac [orderiso_thm, orderiso_SYM]
   ]);
 
+val islimit_def = Define`
+  islimit w = !e. e IN elsOf w ==>
+                  ?e'. e' IN elsOf w /\ (e,e') WIN w
+`;
+
+val islimit_maximals = store_thm(
+  "islimit_maximals",
+  ``islimit w <=> (maximal_elements (elsOf w) (wellorder_REP w) = {})``,
+  rw[islimit_def, maximal_elements_def, EXTENSION] >>
+  rw[METIS_PROVE [] ``(!x. ~P x \/ Q x) = (!x. P x ==> Q x)``] >>
+  metis_tac [WIN_REFL]);
+
+val islimit_wZERO = store_thm(
+  "islimit_wZERO",
+  ``islimit wZERO``,
+  rw[islimit_def, wZERO_def]);
+
+val islimit_iso = store_thm(
+  "islimit_iso",
+  ``orderiso w1 w2 ==> (islimit w1 <=> islimit w2)``,
+  rw[orderiso_thm, islimit_def, EQ_IMP_THM] >| [
+    `?a. a IN elsOf w1 /\ (f a = e)` by metis_tac [BIJ_IFF_INV] >>
+    `?b. b IN elsOf w1 /\ (a,b) WIN w1` by metis_tac [] >>
+    `f b IN elsOf w2` by metis_tac [BIJ_IFF_INV] >>
+    metis_tac[],
+    `f e IN elsOf w2` by metis_tac [BIJ_IFF_INV] >>
+    `?u. u IN elsOf w2 /\ (f e,u) WIN w2` by metis_tac [] >>
+    `?e'. e' IN elsOf w1 /\ (u = f e')` by metis_tac [BIJ_IFF_INV] >>
+    metis_tac [WIN_trichotomy, WIN_REFL, WIN_TRANS]
+  ]);
+
 val _ = export_theory()
