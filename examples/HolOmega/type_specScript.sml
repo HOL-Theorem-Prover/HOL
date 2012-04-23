@@ -159,11 +159,116 @@ val rock_paper_scissors_spec =
 open quotientLib;
 
 val APPEND_ASSOC = listTheory.APPEND_ASSOC;
+val NOT_CONS_NIL = listTheory.NOT_CONS_NIL;
+
+val vect0_inhab = store_thm(
+   "vect0_inhab",
+   ``?x:bool list. ~(x = [])``,
+   EXISTS_TAC ``[T]``
+   THEN REWRITE_TAC[listTheory.NOT_CONS_NIL]
+  );
+
+val vT0_def = Define `vT0 = [T]`;
+val vF0_def = Define `vF0 = [F]`;
+
+val vT0_INHAB = store_thm(
+   "vT0_INHAB",
+   ``~(vT0 = [])``,
+   SIMP_TAC list_ss [vT0_def]
+  );
+
+val vF0_INHAB = store_thm(
+   "vF0_INHAB",
+   ``~(vF0 = [])``,
+   SIMP_TAC list_ss [vF0_def]
+  );
+
+val APPEND_INHAB = store_thm(
+   "APPEND_INHAB",
+   ``!x y:bool list. ~(x = []) /\ ~(y = []) ==> ~(APPEND x y = [])``,
+   SIMP_TAC list_ss []
+  );
+
+(*
+
+val LIFT_RULE =
+  define_subset_types
+    { types = [{name  = "vect0",
+                inhab = vect0_inhab}],
+      defs  = [{def_name = "vT_def",
+                fname    = "vT",
+                func     = ``vT0``,
+                fixity   = SOME Parse.Closefix },
+               {def_name = "vF_def",
+                fname    = "vF",
+                func     = ``vF0``,
+                fixity   = SOME Parse.Closefix },
+               {def_name = "concat_def",
+                fname    = "concat",
+                func     = ``APPEND : bool list -> bool list -> bool list``,
+                fixity   = SOME (Infixl 480) } ],
+      tyop_equivs    = [],
+      tyop_quotients = [FUN_QUOTIENT],
+      tyop_simps     = [FUN_MAP_I, FUN_REL_EQ],
+      respects       = [APPEND_INHAB, vT0_INHAB, vF0_INHAB],
+      poly_preserves = [FORALL_PRS, EXISTS_UNIQUE_PRS],
+      poly_respects  = [RES_FORALL_RSP, RES_EXISTS_EQUIV_RSP]
+    } handle e => Raise e;
+
+val concat_assoc = LIFT_RULE (INST_TYPE[alpha |-> bool] APPEND_ASSOC);
+
+val _ = associate_restriction ("?!!", "RES_EXISTS_EQUIV");
+
+val NONNIL_EXISTS_UNIQUE_FUN = store_thm(
+   "NONNIL_EXISTS_UNIQUE_FUN",
+   ``!:'b. !(x:'b) (y:'b) (op:'b -> 'b -> 'b).
+              (!b1 b2 b3. op b1 (op b2 b3) = op (op b1 b2) b3) ==>
+              ?!!(fn:bool list -> 'b) :: (vect0_R ===> $=).
+                                     (fn [T]        = x) /\
+                                     (fn [F]        = y) /\
+         (!b1 b2 :: respects vect0_R. fn (b1 ++ b2) = op (fn b1) (fn b2))``,
+   REPEAT STRIP_TAC
+   THEN SIMP_TAC bool_ss [RES_EXISTS_EQUIV_DEF]
+   THEN CONJ_TAC
+   THENL (* resq_SS, resq_ss *)
+     [ CONV_TAC RES_EXISTS_CONV
+       THEN EXISTS_TAC ``examplefn (x:'b) y op``
+       THEN REWRITE_TAC[examplefn_respects]
+       THEN REWRITE_TAC[examplefn_def]
+       THEN POP_ASSUM MP_TAC
+       THEN REWRITE_TAC[examplefn_homo],
+
+       CONV_TAC RES_FORALL_CONV
+       THEN CONV_TAC (ONCE_DEPTH_CONV RES_FORALL_CONV)
+       THEN REWRITE_TAC[IN_RESPECTS,FUN_REL,list_eq_def]
+       THEN SIMP_TAC bool_ss []
+       THEN REPEAT GEN_TAC THEN STRIP_TAC
+       THEN Induct
+       THEN REWRITE_TAC[NOT_CONS_NIL]
+       THEN Cases
+       THEN POP_ASSUM MP_TAC
+       THEN Cases_on `y'' = []`
+       THEN ASM_REWRITE_TAC[]
+       THEN DISCH_TAC
+       THEN IMP_RES_THEN (MP_TAC o CONV_RULE (DEPTH_CONV RES_FORALL_CONV))
+                         fn_cons
+       THEN ASM_REWRITE_TAC [IN_RESPECTS,list_eq_def]
+       THENL [ REPEAT (DISCH_THEN
+                        (ASSUME_TAC o SPECL [``T``,``y'':bool list``])),
+               REPEAT (DISCH_THEN
+                        (ASSUME_TAC o SPECL [``F``,``y'':bool list``])) ]
+       THEN POP_ASSUM MP_TAC
+       THEN POP_ASSUM MP_TAC
+       THEN ASM_SIMP_TAC bool_ss []
+     ]
+  );
+
+*)
+
+
 
 val list_eq_def =
     Define `list_eq (x:bool list) y = ~(x=[]) /\ ~(y=[]) /\ (x=y)`;
-
-val NOT_CONS_NIL = listTheory.NOT_CONS_NIL;
 
 val list_eq_PEQUIV = store_thm(
    "list_eq_PEQUIV",
