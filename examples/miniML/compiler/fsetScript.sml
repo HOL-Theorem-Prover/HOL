@@ -28,6 +28,6 @@ val a_linear_order_def = Define`
   a_linear_order = @r. antisymmetric r ∧ transitive r ∧ total r`
 
 val force_dom_def = Define`
-  force_dom = FUN_FMAP o $FAPPLY`
+  force_dom fm s d = FUN_FMAP (λx. if x ∈ FDOM fm ∩ s then fm ' x else d) s`
 
 val _ = export_theory();

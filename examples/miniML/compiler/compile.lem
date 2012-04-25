@@ -35,7 +35,7 @@ val a_linear_order : forall 'a. 'a -> 'a -> bool
 let inline {hol} a_linear_order = Hol.a_linear_order
 val restrict : forall 'a 'b. ('a,'b) Pmap.map -> 'a set -> ('a,'b) Pmap.map
 let inline {hol} restrict = Hol.DRESTRICT
-val force_dom : forall 'a 'b. ('a,'b) Pmap.map -> 'a set -> ('a,'b) Pmap.map
+val force_dom : forall 'a 'b. ('a,'b) Pmap.map -> 'a set -> 'b -> ('a,'b) Pmap.map
 let inline {hol} force_dom = Hol.force_dom
 
 (* TODO: elsewhere? *)
@@ -165,7 +165,7 @@ free_vars (CLprim _ es) =
 
 let sort_Cenv Cenv = qsort a_linear_order Cenv
 let mk_env env b ns =
-  sort_Cenv (fmap_to_alist (force_dom env (free_vars b \ ns)))
+  sort_Cenv (fmap_to_alist (force_dom env (free_vars b \ ns) (CLit(Bool false))))
 
 let rec
 doPrim2 b ty op (CLit (IntLit x)) (CLit (IntLit y)) =
@@ -358,6 +358,7 @@ forall env e es env' ns b vs r.
 Cevaluate env e (Rval (CClosure env' ns b)) &&
 Cevaluate_list env es (Rval vs) &&
 List.length ns = List.length vs &&
+all_distinct ns &&
 Cevaluate (fold_left2 (fun en n v -> Pmap.add n v en)
              (alist_to_fmap env') ns vs) b r
 ==>
@@ -372,16 +373,23 @@ Cevaluate env (CCall e es) (Rerr err)
 and
 forall env e es env' ns' defs n i ns b vs r.
 Cevaluate env e (Rval (CRecClos env' ns' defs n)) &&
+List.length ns' = List.length defs &&
+all_distinct ns' &&
 Cevaluate_list env es (Rval vs) &&
 find_index n ns' 0 = Some i &&
 List.nth defs i = (ns,b) &&
+List.length ns = List.length vs &&
+all_distinct ns &&
 Cevaluate
   (fold_left2 (fun en n v -> Pmap.add n v en)
-    (snd (fold_left2
-            (fun (n,en) n' def ->
-              (n+1, Pmap.add n' (CRecClos env' ns' defs n) en))
-            (0,alist_to_fmap env')
-            ns' defs))
+    (fold_left2
+      (fun en n' (vs,b) -> Pmap.add n'
+        (CRecClos
+          (mk_env (alist_to_fmap env') b (Set.from_list ns' union Set.from_list vs))
+          ns' defs n')
+        en)
+      (alist_to_fmap env')
+      ns' defs)
     ns vs)
   b r
 ==>

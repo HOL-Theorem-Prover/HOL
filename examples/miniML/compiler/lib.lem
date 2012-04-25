@@ -12,4 +12,4 @@ val EVERY2 : forall 'a 'b. ('a -> 'b -> bool) -> 'a list -> 'b list -> bool
 val QSORT : forall 'a. ('a -> 'a -> bool) -> 'a list -> 'a list
 val a_linear_order : forall 'a. 'a -> 'a -> bool
 val DRESTRICT : forall 'a 'b. ('a,'b) fmap -> 'a set -> ('a,'b) fmap
-val force_dom : forall 'a 'b. ('a,'b) fmap -> 'a set -> ('a,'b) fmap
+val force_dom : forall 'a 'b. ('a,'b) fmap -> 'a set -> 'b -> ('a,'b) fmap

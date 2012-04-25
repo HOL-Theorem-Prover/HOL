@@ -24,7 +24,7 @@ val _ = type_abbrev((*  ('a,'b) *) "alist" , ``: ('a,'b) alist``);
 (*val qsort : forall 'a. ('a -> 'a -> bool) -> 'a list -> 'a list*)
 (*val a_linear_order : forall 'a. 'a -> 'a -> bool*)
 (*val restrict : forall 'a 'b. ('a,'b) Pmap.map -> 'a set -> ('a,'b) Pmap.map*)
-(*val force_dom : forall 'a 'b. ('a,'b) Pmap.map -> 'a set -> ('a,'b) Pmap.map*)
+(*val force_dom : forall 'a 'b. ('a,'b) Pmap.map -> 'a set -> 'b -> ('a,'b) Pmap.map*)
 
 (* TODO: elsewhere? *)
  val find_index_defn = Hol_defn "find_index" `
@@ -187,7 +187,7 @@ val _ = Define `
 
 val _ = Define `
  (mk_env env b ns =
-  sort_Cenv (fmap_to_alist (force_dom env (free_vars b DIFF ns))))`;
+  sort_Cenv (fmap_to_alist (force_dom env (free_vars b DIFF ns) (CLit(Bool F)))))`;
 
 
  val doPrim2_defn = Hol_defn "doPrim2" `
@@ -398,6 +398,7 @@ Cevaluate env (CFun ns b) (Rval (CClosure (mk_env env b (LIST_TO_SET ns)) ns b))
 Cevaluate env e (Rval (CClosure env' ns b)) /\
 Cevaluate_list env es (Rval vs) /\
 (LENGTH ns = LENGTH vs) /\
+ALL_DISTINCT ns /\
 Cevaluate (FOLDL2  (\ en n v . FUPDATE  en ( n, v)) 
              (alist_to_fmap env')  ns  vs) b r
 ==>
@@ -412,16 +413,23 @@ Cevaluate env (CCall e es) (Rerr err))
 /\
 (! env e es env' ns' defs n i ns b vs r.
 Cevaluate env e (Rval (CRecClos env' ns' defs n)) /\
+(LENGTH ns' = LENGTH defs) /\
+ALL_DISTINCT ns' /\
 Cevaluate_list env es (Rval vs) /\
 (find_index n ns' 0 = SOME i) /\
 (EL  i  defs = (ns,b)) /\
+(LENGTH ns = LENGTH vs) /\
+ALL_DISTINCT ns /\
 Cevaluate
   (FOLDL2  (\ en n v . FUPDATE  en ( n, v)) 
-    (SND (FOLDL2 
-            (\ (n,en) n' def .
-              (n+1, FUPDATE  en ( n', (CRecClos env' ns' defs n)))) 
-            (0,alist_to_fmap env') 
-            ns'  defs)) 
+    (FOLDL2 
+      (\ en n' (vs,b) . FUPDATE 
+        en ( n',
+        (CRecClos
+          (mk_env (alist_to_fmap env') b (LIST_TO_SET ns' UNION LIST_TO_SET vs))
+          ns' defs n'))) 
+      (alist_to_fmap env') 
+      ns'  defs) 
     ns  vs)
   b r
 ==>
