@@ -3,14 +3,16 @@ struct
 
 (* Interactive:
 quietdec := true;
-load "emitLib";
-open numTheory prim_recTheory arithmeticTheory IndDefLib
-     emitLib;
+load "EmitML";
+open numTheory prim_recTheory arithmeticTheory IndDefLib EmitML
+     basis_emitTheory;
 quietdec := false;
 *)
 
-open HolKernel boolLib bossLib IndDefLib
-     numTheory prim_recTheory arithmeticTheory emitLib;
+open HolKernel boolLib bossLib IndDefLib EmitML
+     numTheory prim_recTheory arithmeticTheory basis_emitTheory;
+
+val _ = numLib.prefer_num();
 
 (*---------------------------------------------------------------------------*)
 (* Functionality discussed with Matt Kaufmann                                *)

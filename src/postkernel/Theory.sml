@@ -711,6 +711,9 @@ val new_theory_time = ref (total_cpu (Timer.checkCPUTimer Globals.hol_clock))
 val report_times = ref true
 val _ = Feedback.register_btrace ("report_thy_times", report_times)
 
+val onexportfns = ref ([] : (unit -> unit) list)
+fun register_onexport f = (onexportfns := !onexportfns @ [f])
+
 local
   val mesg = Lib.with_flag(Feedback.MESG_to_string, Lib.I) HOL_MESG
   fun maybe_log_time_to_disk thyname timestr = let
@@ -735,10 +738,11 @@ local
   end
 in
 fun export_theory () = let
+  val _ = List.app (fn f => f ()) (!onexportfns)
   val {thid,facts,adjoin,thydata} = scrubCT()
   val concat = String.concat
   val thyname = thyid_name thid
-  val name = CTname()^"Theory"
+  val name = thyname^"Theory"
   val (A,D,T) = unkind facts
   val (sig_ps, struct_ps) = unadjzip adjoin ([],[])
   val sigthry = {name = thyname,

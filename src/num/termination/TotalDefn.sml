@@ -507,6 +507,9 @@ fun proveTotal tac defn =
   end;
 
 local open Defn
+  val auto_tgoal = ref true
+  val () = Feedback.register_btrace("auto Defn.tgoal", auto_tgoal)
+
   fun should_try_to_prove_termination defn rhs_frees =
      let val tcs = tcs_of defn
      in not(null tcs) andalso
@@ -527,7 +530,9 @@ local open Defn
      raise ERR "defnDefine" (String.concat
          ["\nUnable to prove termination!\n\n",
           "Try using \"TotalDefn.tDefine <name> <quotation> <tac>\".\n",
-          "The termination goal has been set up using Defn.tgoal <defn>."])
+          if !auto_tgoal then
+             "The termination goal has been set up using Defn.tgoal <defn>."
+          else ""])
 in
 fun defnDefine term_tac defn =
  let val V = params_of defn
@@ -540,8 +545,11 @@ fun defnDefine term_tac defn =
                  then Lib.tryfind (try_proof defn) (guessR defn)
                  else tprover defn)
               handle HOL_ERR _ =>
-                (Defn.tgoal defn;
-                 Portable.pprint proofManagerLib.pp_proof (proofManagerLib.p());
+                (if !auto_tgoal then
+                   (Defn.tgoal defn;
+                    Portable.pprint proofManagerLib.pp_proof
+                       (proofManagerLib.p()))
+                 else ();
                  termination_proof_failed ()))
          else (defn,NONE)
  in

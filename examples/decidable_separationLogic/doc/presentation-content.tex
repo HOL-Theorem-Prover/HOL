@@ -60,7 +60,7 @@
 \item "\smallfoot\ is an automatic verification tool which checks separation
 logic specifications of concurrent programs which manipulate
 dynamically-allocated recursive data structures." (\smallfoot\ documentation)
-\item developed by 
+\item developed by
 \begin{itemize}
 \item Cristiano Calcagno
 \item Josh Berdine
@@ -99,7 +99,7 @@ list_copy(p) [list(p)] \{
 \item this formalisation may increase the trust in \smallfoot
 \item it may be used as a basis for non decidable fragments of separation
   logic and an interactive proof environment
-\item it may be extended to a \HOL\ implementation of \smallfoot 
+\item it may be extended to a \HOL\ implementation of \smallfoot
 \end{itemize}
 \end{frame}
 
@@ -115,8 +115,8 @@ list_copy(p) [list(p)] \{
 \item a \alert{stack} is a variable assignment
 \item \alert{pure formulae} are inductively defined by
 \begin{itemize}
-\item $\pftrue$ 
-\item $\pfequal {e_1} {e_2}$,  $\pfunequal {e_1} {e_2}$ 
+\item $\pftrue$
+\item $\pfequal {e_1} {e_2}$,  $\pfunequal {e_1} {e_2}$
 \item $pf_1 \wedge pf_2$
 \end{itemize}
 \item the semantics of pure formulae with respect to a stack are defined in
@@ -131,7 +131,7 @@ list_copy(p) [list(p)] \{
 \item a \alert{heap} is finite map $h : (Values \setminus \{nil\}) \tofin Fields \tofin Values$
 \item \alert{spatial formulae} are inductively defined by
 \begin{itemize}
-\item $\sfemp$ 
+\item $\sfemp$
 \item $\sfpointsto {e} {t_1:e_1, \ldots, t_n : e_n}$
 \item $sf_1 * sf_2$
 \item $\sftree((t_1, \ldots, t_n), es, e)$
@@ -237,7 +237,7 @@ $\alert<7->{h := [\alert<4->{1 \to [l \to 2, r \to nil]}, \alert<6->{2 \to [l \t
 \]
 \item entailments in this fragment of separation logic are decidable
 \item inferences can be easily combined to form a decision procedure
-\item inferences and decision procedure are presented in 
+\item inferences and decision procedure are presented in
 \begin{semiverbatim}\small
 Josh Berdine, Cristiano Calcagno, and Peter W. O'Hearn.
 Symbolic Execution with Separation Logic.
@@ -554,7 +554,7 @@ x_2,x_0,(x_3,\nil),(x_1,x_0),\Pi & \vdash & \onslide<6->{\textsc{\tiny Axiom}} \
 \frametitle{example HOL}
 \begin{semiverbatim}\scriptsize
 val t = ``LIST_DS_ENTAILS ([],[])
-  ([pf_unequal (dse_var 0) dse_nil; 
+  ([pf_unequal (dse_var 0) dse_nil;
     pf_unequal (dse_var 1) dse_nil;
     pf_unequal (dse_var 2) dse_nil;
     pf_unequal (dse_var 0) (dse_var 3);
@@ -578,7 +578,7 @@ val t = ``LIST_DS_ENTAILS ([],[])
 \begin{frame}[fragile]
 \frametitle{example HOL II}
 \begin{semiverbatim}\scriptsize
-val thm1 = 
+val thm1 =
 (ds_inference_FRAME___CONV THENC
  ds_inference_APPEND_LIST___CONV THENC
  ds_inference_SIMPLE_UNROLL___CONV THENC
@@ -614,7 +614,7 @@ val thm2 = ds_DECIDE_CONV t;
 
 \end{document}
 
-%%% Local Variables: 
+%%% Local Variables:
 %%% mode: latex
 %%% TeX-master: "presentation"
-%%% End: 
+%%% End:

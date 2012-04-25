@@ -9,7 +9,8 @@ TERMPP = $(dprot $(SIGOBJ)/term_pp.uo)
 DEPS = $(BOOLLIB) $(BOOLTHEORY) $(PRIMREC) $(TERMPP) \
        proofManagerLib.uo History.uo \
        goalStack.uo goalTree.uo Manager.uo \
-       $(dprot $(HOLDIR)/tools-poly/builder0.ML)
+       $(dprot $(HOLDIR)/tools-poly/builder0.ML) \
+       $(dprot $(SIGOBJ)/UnicodeChars.uo)
 
 EXTRA_CLEANS = $(TARGET)
 

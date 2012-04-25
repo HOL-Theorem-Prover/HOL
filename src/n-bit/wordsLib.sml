@@ -221,6 +221,7 @@ local
    numeral_log2, numeral_ilog2, LOG_compute, LOWEST_SET_BIT_compute,
    n2w_w2n, w2n_n2w_compute, MOD_WL1 w2w_n2w, Q.SPEC `^n2w n` sw2sw_def,
    word_len_def, word_L_def, word_H_def, word_T_def,
+   word_abs_def, word_min_def, word_max_def, word_smin_def, word_smax_def,
    saturate_w2w_n2w, saturate_n2w_def,
    saturate_add_def, saturate_sub_def, saturate_mul_def,
    word_join_def, Q.SPECL [`^n2w n`, `n2w m:'b word`] word_concat_def,
@@ -274,6 +275,7 @@ fun add_word_convs cmp =
      (wordsSyntax.uint_max_tm, 1, SIZES_CONV),
      (wordsSyntax.int_min_tm,  1, SIZES_CONV),
      (wordsSyntax.int_max_tm,  1, SIZES_CONV),
+     (pred_setSyntax.finite_tm,1, SIZES_CONV),
      (``min$= : 'a word -> 'a word -> bool``, 2, word_EQ_CONV)];
 
 val _ = computeLib.add_funs thms;
@@ -2281,8 +2283,7 @@ val Cases_on_word = Cases_on;
 
 val LESS_CONV =
 let val compset = reduceLib.num_compset ()
-    val thm = SUC_RULE prim_recTheory.LESS_THM
-    val _ = computeLib.add_thms [thm] compset
+    val () = computeLib.add_thms [wordsTheory.NUMERAL_LESS_THM] compset
 in
  computeLib.CBV_CONV compset
 end;

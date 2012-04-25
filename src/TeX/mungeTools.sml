@@ -181,6 +181,19 @@ fun isChar x y = x = y
 fun mkinst loc opts tm = let
   val insts = List.mapPartial (fn Inst(s1,s2) => SOME (s1,s2) | _ => NONE)
                               (OptSet.listItems opts)
+  val (tytheta,insts) = let
+    fun foldthis ((nm1, nm2), (tyacc, instacc)) =
+        if CharVector.sub(nm1,0) = #":" then
+          if CharVector.sub(nm2,0) = #":" then
+            ((Parse.Type [QUOTE nm2] |-> Parse.Type [QUOTE nm1]) :: tyacc, instacc)
+          else (warn (loc, "Type substitution mal-formed"); die "")
+        else if CharVector.sub(nm2,0) = #":" then
+          (warn (loc, "Type substitution mal-formed"); die "")
+        else (tyacc, (nm1,nm2)::instacc)
+  in
+    List.foldl foldthis ([],[]) insts
+  end
+  val tm = Term.inst tytheta tm
   val vs = FVL [tm] empty_tmset
   fun foldthis (v, acc) = let
     val (n,ty) = dest_var v
@@ -194,7 +207,7 @@ fun mkinst loc opts tm = let
     (mk_var(nm2,ty) |-> mk_var(nm1,ty)) :: acc
   end handle Binarymap.NotFound => acc
 in
-  (insts, foldr foldthis [] insts)
+  (insts, tytheta, foldr foldthis [] insts)
 end
 
 fun mk_s2smap pairs = let
@@ -217,7 +230,8 @@ fun depth1_conv c t =
     (TRY_CONV c THENC TRY_CONV (SUB_CONV (depth1_conv c))) t
 
 fun do_thminsts loc opts th = let
-  val (insts, theta) = mkinst loc opts (concl th)
+  val (insts, tytheta, theta) = mkinst loc opts (concl th)
+  val th = INST_TYPE tytheta th
   val m = mk_s2smap insts
   val th = if null theta then th else INST theta th
 in
@@ -225,7 +239,8 @@ in
 end
 
 fun do_tminsts loc opts tm = let
-  val (insts, theta) = mkinst loc opts tm
+  val (insts, tytheta, theta) = mkinst loc opts tm
+  val tm = Term.inst tytheta tm
   val tm = if null theta then tm else Term.subst theta tm
   val m = mk_s2smap insts
 in

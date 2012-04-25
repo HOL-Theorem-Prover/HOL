@@ -159,7 +159,8 @@ src/temporal/src
 #
 !examples/parity
 !examples/MLsyntax
-!examples/zfset
+!examples/set-theory/zfset
+!examples/set-theory/vbg
 !!examples/category
 !!examples/miller/ho_prover
 !!examples/miller/miller

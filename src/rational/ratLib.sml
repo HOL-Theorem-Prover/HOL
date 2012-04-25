@@ -426,7 +426,7 @@ val RAT_ELIMINATE_MINV_TAC = CONV_TAC RAT_ELIMINATE_MINV_CONV;
 
 (* rewrites to calculate operations on integers - (TODO) remove dependencies: numRingTheory and integerRingTheory *)
 local open numeralTheory numRingTheory integerRingTheory in
-	val num_rewrites = [numeral_distrib, numeral_eq, numeral_suc, numeral_iisuc, numeral_add, numeral_mult, iDUB_removal, ISPEC(``ALT_ZERO``) REFL_CLAUSE, ISPEC(``0:num``) REFL_CLAUSE ];
+	val num_rewrites = [numeral_distrib, numeral_eq, numeral_suc, numeral_iisuc, numeral_add, numeral_mult, iDUB_removal, ISPEC(``arithmetic$ZERO``) REFL_CLAUSE, ISPEC(``0:num``) REFL_CLAUSE ];
 	val int_rewrites = [int_calculate, INT_0, INT_1, numeral_lt, numeral_lte, numeral_sub, iSUB_THM, AND_CLAUSES, SGN_def] @ num_rewrites
 end;
 (* rewrites to calculate operations on fractions *)

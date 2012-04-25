@@ -470,6 +470,42 @@ val define_equivalence_type :
          old_thms : Thm.thm list} -> (* theorems of old fns to be lifted *)
         Thm.thm list                 (* definitions of new lifted functions *)
 
+(* MAIN ENTRY POINT FOR SUBSET TYPE: *)
+
+val define_subset_types :
+        {types: {name:string,          (* name of new subset type *)
+                 inhab:Thm.thm} list,  (* predicate is inhabited *)
+         defs: {def_name:string,            (* name of stored definition *)
+                fname:string,               (* name of new lifted function *)
+                func:Term.term,             (* old function to be lifted *)
+                fixity: Parse.fixity option} list, (* fixity of new function *)
+         tyop_equivs: Thm.thm list,  (* conditional equiv ths for type ops *)
+         tyop_quotients: Thm.thm list,(*conditional quotient ths for type ops*)
+         tyop_simps: Thm.thm list, (* rel/map simplification ths for type ops*)
+         inhabs : Thm.thm list,    (* old functions respect inhabitation *)
+         poly_preserves : Thm.thm list, (* polymorphic fns are preserved
+                                           by quotients *)
+         poly_respects : Thm.thm list,(* polymorphic fns respect equivalence *)
+         old_thms : Thm.thm list} -> (* theorems of old fns to be lifted *)
+        Thm.thm list                 (* new lifted theorems *)
+
+val define_subset_types_rule :
+        {types: {name:string,          (* name of new subset type *)
+                 inhab:Thm.thm} list,  (* predicate is inhabited *)
+         defs: {def_name:string,            (* name of stored definition *)
+                fname:string,               (* name of new lifted function *)
+                func:Term.term,             (* old function to be lifted *)
+                fixity: Parse.fixity option} list, (* fixity of new function *)
+         tyop_equivs: Thm.thm list,  (* conditional equiv ths for type ops *)
+         tyop_quotients: Thm.thm list,(*conditional quotient ths for type ops*)
+         tyop_simps: Thm.thm list, (* rel/map simplification ths for type ops*)
+         inhabs : Thm.thm list,    (* old functions respect inhabitation *)
+         poly_preserves : Thm.thm list, (* polymorphic fns are preserved
+                                           by quotients *)
+         poly_respects : Thm.thm list (* polymorphic fns respect equivalence *)
+        } ->
+        Thm.thm ->             (* theorem of old fns to be lifted *)
+        Thm.thm                (* new lifted theorem *)
 
 
 end;  (* of signature quotient *)

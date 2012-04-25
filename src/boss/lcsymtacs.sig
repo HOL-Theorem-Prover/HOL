@@ -4,6 +4,7 @@ sig
   include Abbrev
   val all_tac : tactic
   val kall_tac : 'a -> tactic
+  val eq_tac : tactic
   val strip_tac : tactic
   val conj_tac : tactic
   val conj_asm1_tac : tactic
@@ -19,6 +20,7 @@ sig
 
   val rewrite_tac : thm list -> tactic
   val once_rewrite_tac : thm list -> tactic
+  val once_asm_rewrite_tac : thm list -> tactic
   val asm_rewrite_tac : thm list -> tactic
   val ho_match_mp_tac : thm_tactic
   val mp_tac : thm_tactic
@@ -66,6 +68,11 @@ sig
   val rw_tac : simpLib.simpset -> thm list -> tactic
   val srw_tac : simpLib.ssfrag list -> thm list -> tactic
   val fsrw_tac : simpLib.ssfrag list -> thm list -> tactic
+  val simp : thm list -> tactic
+  val lrw : thm list -> tactic
+  val lfs : thm list -> tactic
+  val rw : thm list -> tactic
+  val fs : thm list -> tactic
 
   val >> : tactic * tactic -> tactic
   val >| : tactic * tactic list -> tactic

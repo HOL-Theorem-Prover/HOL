@@ -3967,6 +3967,236 @@ fun define_equivalence_type {name, equiv, defs, welldefs, old_thms} =
                            poly_respects=[RES_FORALL_RSP,RES_EXISTS_RSP],
                            old_thms=old_thms};
 
+(* Subset types: *)
+
+(* expects inhab = |- ?x. P[x] *)
+
+fun is_ho_match_term tm1 tm2 =
+    (ho_match_term [] Term.empty_tmset tm1 tm2; true) handle _ => false;
+
+val inhab_tm =
+    --`?(x:'a). P x`--;
+
+fun is_inhab th = is_ho_match_term inhab_tm (concl th);
+
+fun check_inhab th =
+    is_inhab th orelse
+         raise HOL_ERR {
+                  origin_structure = "quotient",
+                  origin_function  = "check_inhab",
+                  message = "The following is not a predicate inhabitation theorem:\n" ^
+                                       thm_to_string th ^ "\n"
+                       }
+
+fun dest_con_inhab c =
+      let open Psyntax
+          val (vs,body) = strip_forall c
+          val (ant,conseq) = if is_imp body andalso not (is_neg body)
+                             then dest_imp body else (T,body)
+          val ants = if ant=T then [] else strip_conj ant
+      in
+          (vs, ants, conseq)
+      end
+
+fun check_con_inhab th =
+   let val (vs, ants, conseq) = dest_con_inhab (concl th)
+       val _ = assert (all is_var) vs
+       val _ = assert distinct vs
+       val _ = assert distinct ants
+   in
+       Term.free_vars (concl th) = []  orelse raise Match
+   end
+   handle e => raise HOL_ERR {
+                  origin_structure = "quotient",
+                  origin_function  = "check_con_inhab",
+                  message = "The following does not have the form of a constant inhabitation theorem:\n" ^
+                                       thm_to_string th ^ "\n"
+                       }
+
+
+fun tryconv f (x:'a) = f x handle HOL_ERR _ => x
+
+(*
+val name = "vect0";
+val inhab = TAC_PROOF (([],``?x:bool list. ~(x = [])``),
+               EXISTS_TAC ``[T]`` THEN REWRITE_TAC[listTheory.NOT_CONS_NIL]);
+*)
+
+fun define_subset_reln {name:string, inhab:thm} =
+  let open Psyntax bossLib
+      val _ = check_inhab inhab
+      val P = tryconv eta_conv (snd (dest_comb (concl inhab)))
+      val ty = fst (dom_rng (type_of P)) (* P : ty -> bool *)
+      val fvs = free_vars P
+      val x = variant fvs (mk_var("x",ty))
+      val y = variant (x::fvs) (mk_var("y",ty))
+      val Px = tryconv beta_conv (mk_comb(P,x))
+      val Py = tryconv beta_conv (mk_comb(P,y))
+      val eq = mk_eq(x,y)
+      val Rbody = list_mk_conj[Px,Py,eq]
+      val Rabs = list_mk_abs([x,y], Rbody)
+      val Rname = name ^ "_R"
+      val Rvar = mk_var(Rname, ty --> ty --> bool)
+      val Rargs = list_mk_comb(Rvar,fvs)
+      val Rdef = new_definition (Rname^"_def", mk_eq(Rargs,Rabs))
+      val Rexp = lhs (concl Rdef)
+      val Rcon = fst (strip_comb Rexp)
+      val Rdef = TAC_PROOF (([], ``^Rexp ^x ^y = ^Rbody``),
+                        REWRITE_TAC [Rdef]
+                        THEN BETA_TAC
+                        THEN REFL_TAC)
+      val PEQUIV_R = TAC_PROOF (([], ``PARTIAL_EQUIV ^Rexp``),
+                        REWRITE_TAC [quotientTheory.PARTIAL_EQUIV_def,FUN_EQ_THM]
+                        THEN CONJ_TAC
+                        THENL
+                          [ SIMP_TAC bool_ss [Rdef,inhab],
+
+                            REPEAT GEN_TAC
+                            THEN EQ_TAC
+                            THENL
+                              [ SIMP_TAC bool_ss [Rdef],
+
+                                STRIP_TAC
+                                THEN POP_ASSUM (fn th => REWRITE_TAC[th])
+                                THEN POP_ASSUM (fn th => REWRITE_TAC[th])
+                              ]
+                          ])
+  in
+    (Rdef, {name=name, equiv=PEQUIV_R})
+  end;
+
+fun dest_Rdef Rdef =
+  let open Psyntax
+    val (qvrs,body) = strip_forall (concl Rdef)
+    val (al,ar) = dest_eq body
+    val (Rcon,vars) = strip_comb al
+    val x = hd vars
+    val y = hd(tl vars)
+    val _ = assert null (tl(tl vars))
+    val (Px,(Py,eqtm)) = ((I ## dest_conj) o dest_conj) ar
+    val P = mk_abs(x,Px)
+    val _ = assert (aconv (tryconv eta_conv P)) (tryconv eta_conv (mk_abs(y,Py)))
+  in
+    (P,Rcon)
+  end
+
+fun variants avoids [] = []
+  | variants avoids (v::vs) =
+      let val v' = variant avoids v
+      in v' :: variants (v'::avoids) vs
+      end
+
+fun LIST_MK_COMB_TAC g =
+    TRY (MK_COMB_TAC THENL [LIST_MK_COMB_TAC, ALL_TAC]) g
+
+fun prove_subset_respects Rdefs =
+  let open Psyntax
+      val Rdefs2 = map GSYM Rdefs
+      val PRs = map dest_Rdef Rdefs
+      val (Ps,Rcons) = unzip PRs
+      fun find_R [] tm =
+            raise HOL_ERR {
+                  origin_structure = "quotient",
+                  origin_function  = "prove_subset_respects",
+                  message = "Term does not match expected predicates: " ^
+                            term_to_string tm
+                          }
+        | find_R ((P,R)::rest) tm =
+            let val (x,body) = dest_abs P
+                val (tmS,tyS) = match_term body tm
+            in (inst tyS R, subst tmS (inst tyS x))
+            end handle HOL_ERR _ => (* if it doesn't match *)
+                       find_R rest tm
+  in
+    fn th =>
+      let val c = concl th
+          val (vs, ants, conseq) = dest_con_inhab c
+          val vs' = variants vs vs
+          val (REL,Parg) = find_R PRs conseq
+          val (copr,cargs) = strip_comb Parg
+          val theta = map op |-> (zip vs vs')
+          val conseq2 = list_mk_comb(REL,[Parg,subst theta Parg])
+          fun mk_ant2 ant =
+            let val (Rant,Parg) = find_R PRs ant
+            in list_mk_comb(Rant,[Parg,subst theta Parg])
+            end
+          val ants2 = map mk_ant2 ants
+          val body2 = if null ants then conseq2
+                      else mk_imp (list_mk_conj ants2, conseq2)
+          val c2 = list_mk_forall(vs @ vs', body2)
+      in
+        TAC_PROOF(([],c2),
+           REPEAT GEN_TAC
+           THEN PURE_REWRITE_TAC Rdefs
+           THEN TRY (DISCH_TAC THEN POP_ASSUM MP_TAC THEN STRIP_TAC)
+           THEN CONJ_TAC
+           THENL
+             [ MATCH_ACCEPT_TAC th
+               ORELSE (MATCH_MP_TAC th
+                       THEN REPEAT CONJ_TAC
+                       THEN FIRST_ASSUM MATCH_ACCEPT_TAC),
+
+               CONJ_TAC
+               THENL
+                 [ MATCH_ACCEPT_TAC th
+                   ORELSE (MATCH_MP_TAC th
+                           THEN REPEAT CONJ_TAC
+                           THEN FIRST_ASSUM MATCH_ACCEPT_TAC),
+
+                   LIST_MK_COMB_TAC
+                   THEN (* n subgoals *)
+                     ( REFL_TAC ORELSE
+                       FIRST_ASSUM MATCH_ACCEPT_TAC )
+                 ]
+             ])
+      end
+  end;
+
+
+
+fun define_subset_types_rule {types, defs, tyop_equivs, tyop_quotients,tyop_simps,
+                           inhabs, poly_preserves, poly_respects} =
+  let val (Rdefs,types') = unzip (map define_subset_reln types)
+      val respects' = map (prove_subset_respects Rdefs) inhabs
+
+      val LIFT_RULE =
+          define_quotient_types_rule
+              {types=types',
+               defs=defs,
+               respects=respects',
+               tyop_equivs=tyop_equivs,
+               tyop_quotients=tyop_quotients,
+               tyop_simps=tyop_simps,
+               poly_preserves=poly_preserves, poly_respects=poly_respects}
+  in LIFT_RULE
+  end;
+
+(* ---------------------------------- *)
+(* MAIN ENTRY POINT FOR SUBSET TYPES. *)
+(* ---------------------------------- *)
+
+fun define_subset_types {types, defs, tyop_equivs, tyop_quotients,tyop_simps,
+                           inhabs, poly_preserves, poly_respects, old_thms} =
+  let fun print_thm' th = if !chatting then (print_thm th; print "\n"; th)
+                                       else th
+
+      val LIFT_RULE =
+          define_subset_types_rule
+              {types=types,
+               defs=defs,
+               inhabs=inhabs,
+               tyop_equivs=tyop_equivs,
+               tyop_quotients=tyop_quotients,
+               tyop_simps=tyop_simps,
+               poly_preserves=poly_preserves, poly_respects=poly_respects}
+
+      val _ = if !chatting then print "\nLifted theorems:\n" else ()
+      val new_thms = map (print_thm' o LIFT_RULE)
+                         old_thms   handle e => Raise e
+  in
+    new_thms
+  end;
+
 
 
 end;  (* of structure quotient *)

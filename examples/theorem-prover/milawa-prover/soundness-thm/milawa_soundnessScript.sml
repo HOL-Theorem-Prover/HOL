@@ -25,16 +25,16 @@ val milawa_soundness_thm = save_thm("milawa_soundness_thm",let
   val th = SPEC_BOOL_FRAME_RULE th assum
   val (th,goal) = SPEC_WEAKEN_RULE th
       ``zERROR_MESSAGE ex \/
-        SEP_EXISTS lines.
-          cond (EVERY output_line_ok lines) * ~zS * ^pc * zLISP_OUTPUT
-            (IO_STREAMS "" (FOLDL (\x y. x ++ y ++ "\n") "" lines ++ "SUCCESS\n"),T)``
+        let output = compute_output cmds in
+          cond (EVERY line_ok output) * ~zS * ^pc * zLISP_OUTPUT
+            (IO_STREAMS "" (output_to_string output ++ "SUCCESS\n"),T)``
   val lemma = prove(goal,
-    SIMP_TAC std_ss [SEP_IMP_MOVE_COND] \\ REPEAT STRIP_TAC
+    SIMP_TAC std_ss [SEP_IMP_MOVE_COND,LET_DEF] \\ REPEAT STRIP_TAC
     \\ MATCH_MP_TAC SEP_IMP_DISJ \\ SIMP_TAC std_ss [SEP_IMP_REFL]
     \\ SIMP_TAC std_ss [SEP_IMP_def,SEP_EXISTS_THM] \\ REPEAT STRIP_TAC
     \\ FULL_SIMP_TAC (std_ss++sep_cond_ss) [cond_STAR]
     \\ IMP_RES_TAC th1 \\ IMP_RES_TAC R_exec_T_11
-    \\ FULL_SIMP_TAC std_ss [] \\ Q.EXISTS_TAC `lines` \\ FULL_SIMP_TAC std_ss [])
+    \\ FULL_SIMP_TAC std_ss [LET_DEF])
   val th = MP th lemma
   val th = th |> SIMP_RULE (std_ss++sep_cond_ss) [] |> REWRITE_RULE [SPEC_MOVE_COND]
   val assum2 = fst (dest_imp (concl th))

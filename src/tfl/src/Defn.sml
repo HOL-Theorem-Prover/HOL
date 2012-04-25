@@ -433,8 +433,7 @@ fun been_stored (s,thm) =
             else
               "Saved definition __ ") ^Lib.quote s^"\n")
    else ()
-   );
-end
+   )
 
 fun store(stem,eqs,ind) =
   let val eqs_bind = defSuffix stem
@@ -445,14 +444,17 @@ fun store(stem,eqs,ind) =
       val _ = add_persistent_funs [(eqs_bind,eqs)]
          handle e => HOL_MESG ("Unable to add "^eqs_bind^" to global compset")
   in
-    mesg (String.concat
-            (if !Globals.interactive then
-               [   "Equations stored under ", Lib.quote eqs_bind,
-                ".\nInduction stored under ", Lib.quote ind_bind, ".\n"]
-             else
-               [  "Saved definition __ ", Lib.quote eqs_bind,
-                "\nSaved induction ___ ", Lib.quote ind_bind, "\n"]))
-  end;
+    if !chatting then
+       mesg (String.concat
+               (if !Globals.interactive then
+                  [   "Equations stored under ", Lib.quote eqs_bind,
+                   ".\nInduction stored under ", Lib.quote ind_bind, ".\n"]
+                else
+                  [  "Saved definition __ ", Lib.quote eqs_bind,
+                   "\nSaved induction ___ ", Lib.quote ind_bind, "\n"]))
+    else ()
+  end
+end
 
 local
   val LIST_CONJ_GEN = LIST_CONJ o map GEN_ALL
@@ -1455,14 +1457,8 @@ fun vary s S =
     is not great for readability at times.
  ---------------------------------------------------------------------------*)
 
-local fun underscore #"_" = true  | underscore   _  = false
-in
 fun wildcard s =
-  let val ss = Substring.full s
-  in if Substring.isEmpty ss then false
-     else Substring.isEmpty (Substring.dropl underscore ss)
-  end
-end;
+    s <> "" andalso CharVector.all (fn #"_" => true | _ => false) s
 
 local open Absyn
 in
@@ -1533,6 +1529,12 @@ fun expand_wildcards asy (asyl,S) =
    let val (asy',S') = exp asy S in (asy'::asyl, S') end
 end;
 
+fun multi_dest_eq t =
+    Absyn.dest_eq t
+      handle HOL_ERR _ => Absyn.dest_binop "<=>" t
+      handle HOL_ERR _ => raise ERRloc "multi_dest_eq"
+                                       (Absyn.locn_of_absyn t)
+                                       "Expected an equality"
 
 local
   fun dest_pvar (Absyn.VIDENT(_,s)) = s
@@ -1562,12 +1564,7 @@ local
 in
 fun munge eq (eqs,fset,V) =
  let val (vlist,body) = Absyn.strip_forall eq
-     val (lhs0,rhs)   = Absyn.dest_eq body
-                        handle HOL_ERR _ =>
-                        Absyn.dest_binop "<=>" body
-                        handle HOL_ERR _ =>
-                               raise ERRloc "munge" (Absyn.locn_of_absyn body)
-                                     "Expected an equality"
+     val (lhs0,rhs)   = multi_dest_eq body
      val   _          = if exists wildcard (names_of rhs []) then
                          raise ERRloc "munge" (Absyn.locn_of_absyn rhs)
                                       "wildcards on rhs" else ()
@@ -1599,16 +1596,55 @@ fun elim_wildcards eqs =
 (* grammar further (ultimately using add_const).                             *)
 (*---------------------------------------------------------------------------*)
 
-fun parse_absyn absyn0 =
- let val (absyn,fn_names) = elim_wildcards absyn0
-     val to_restore = map (fn s => (s,Parse.hide s)) fn_names
-     fun restore() = List.app (uncurry Parse.update_overload_maps) to_restore
-     val tm  = Parse.absyn_to_term (Parse.term_grammar()) absyn
-               handle e => (restore(); raise e)
- in
-   restore();
-   (tm, fn_names)
- end;
+fun non_head_idents acc alist =
+    case alist of
+      [] => acc
+    | Absyn.IDENT(_, s)::rest => let
+        val acc' =
+            if Lexis.is_string_literal s orelse Lexis.is_char_literal s
+            then acc
+            else HOLset.add(acc,s)
+      in
+        non_head_idents acc' rest
+      end
+    | (a as Absyn.APP(_, _, x))::rest => let
+        val (_, args) = Absyn.strip_app a
+      in
+        non_head_idents acc (args @ rest)
+      end
+    | Absyn.TYPED(_, a, _)::rest => non_head_idents acc (a::rest)
+    | _ :: rest => non_head_idents acc rest
+
+fun get_param_names eqs_a = let
+  val eqs = Absyn.strip_conj eqs_a
+  val heads = map (#1 o multi_dest_eq o #2 o Absyn.strip_forall) eqs
+in
+  non_head_idents (HOLset.empty String.compare) heads |> HOLset.listItems
+end
+
+fun is_constructor_name oinfo s = let
+  val possible_ops =
+      case Overload.info_for_name oinfo s of
+        NONE => []
+      | SOME {actual_ops, ...} => actual_ops
+in
+  List.exists TypeBase.is_constructor possible_ops
+end
+
+fun parse_absyn absyn0 = let
+  val (absyn,fn_names) = elim_wildcards absyn0
+  val oinfo = term_grammar.overload_info (term_grammar())
+  val nonconstructor_parameter_names =
+      List.filter (not o is_constructor_name oinfo) (get_param_names absyn)
+  val to_restore =
+      map (fn s => (s,Parse.hide s)) (nonconstructor_parameter_names @ fn_names)
+  fun restore() = List.app (uncurry Parse.update_overload_maps) to_restore
+  val tm  = Parse.absyn_to_term (Parse.term_grammar()) absyn
+            handle e => (restore(); raise e)
+in
+  restore();
+  (tm, fn_names)
+end;
 
 (*---------------------------------------------------------------------------*)
 (* Parse a quotation. Fail if parsing or type inference or overload          *)

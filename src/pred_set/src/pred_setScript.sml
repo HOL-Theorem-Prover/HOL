@@ -10,10 +10,6 @@
 (* DATE:    January 1992						*)
 (* =====================================================================*)
 
-structure pred_setScript =
-struct
-
-
 (* interactive use
 app load ["pairLib", "numLib", "PGspec", "PSet_ind", "Q",
           "Defn", "TotalDefn", "metisLib", "numpairTheory"];
@@ -892,6 +888,13 @@ val INSERT_DIFF =
       REPEAT (STRIP_TAC ORELSE EQ_TAC) THEN ASM_REWRITE_TAC [] THEN
       FIRST_ASSUM (fn th => fn g => SUBST_ALL_TAC th g) THEN RES_TAC]);
 
+(* with INSERT to hand, it's easy to talk about concrete sets *)
+val UNIV_BOOL = store_thm(
+  "UNIV_BOOL",
+  ``univ(:bool) = {T; F}``,
+  SRW_TAC [][EXTENSION]);
+val _ = export_rewrites ["UNIV_BOOL"]
+
 (* ===================================================================== *)
 (* Removal of an element						 *)
 (* ===================================================================== *)
@@ -906,6 +909,7 @@ val IN_DELETE =
      (--`!s. !x:'a. !y. x IN (s DELETE y) = (x IN s /\ ~(x = y))`--),
      PURE_ONCE_REWRITE_TAC [DELETE_DEF] THEN
      REWRITE_TAC [IN_DIFF,IN_INSERT,NOT_IN_EMPTY]);
+val _ = export_rewrites ["IN_DELETE"]
 
 val DELETE_NON_ELEMENT =
     store_thm
@@ -1430,6 +1434,12 @@ RW_TAC bool_ss [INJ_DEF, DELETE_DEF] THENL
   METIS_TAC [],
 METIS_TAC [IN_DIFF]]);
 
+val INJ_INSERT = store_thm(
+"INJ_INSERT",
+``!f x s t. INJ f (x INSERT s) t =
+   INJ f s t /\ (f x) IN t /\
+   (!y. y IN s /\ (f x = f y) ==> (x = y))``,
+SRW_TAC[][INJ_DEF] THEN METIS_TAC[])
 
 (* ===================================================================== *)
 (* Surjective functions on a set.					 *)
@@ -1588,6 +1598,20 @@ EQ_TAC THEN STRIP_TAC THEN1 (
 SRW_TAC [][BIJ_DEF,INJ_DEF,SURJ_DEF] THEN
 METIS_TAC []);
 
+val BIJ_INSERT = store_thm(
+  "BIJ_INSERT",
+  ``BIJ f (e INSERT s) t <=>
+      e NOTIN s /\ f e IN t /\ BIJ f s (t DELETE f e) \/
+      e IN s /\ BIJ f s t``,
+  Cases_on `e IN s` THEN1
+    (SRW_TAC [][ABSORPTION |> SPEC_ALL |> EQ_IMP_RULE |> #1]) THEN
+  SRW_TAC [][] THEN SRW_TAC [][BIJ_IFF_INV] THEN EQ_TAC THENL [
+    SRW_TAC [][DISJ_IMP_THM, FORALL_AND_THM] THEN METIS_TAC [],
+    SRW_TAC [][DISJ_IMP_THM, FORALL_AND_THM] THEN
+    Q.EXISTS_TAC `\x. if x = f e then e else g x` THEN
+    SRW_TAC [][]
+  ]);
+
 val lemma3 = TAC_PROOF(([],
 (--`!f:'a->'b. !s. ?g. !t. SURJ f s t ==> !x:'b. x IN t ==> (f(g x) = x)`--)),
      REPEAT GEN_TAC THEN PURE_REWRITE_TAC [SURJ_DEF] THEN
@@ -1658,17 +1682,17 @@ val lemma =
   end;
 
 val FINITE_INDUCT = store_thm("FINITE_INDUCT",
---`!P. P {} /\ (!s. FINITE s /\ P s ==> (!e. ~(e IN s) ==> P(e INSERT s)))
-       ==> !s:'a set. FINITE s
-                          ==> P s`--,
-     GEN_TAC THEN STRIP_TAC THEN
-     MATCH_MP_TAC lemma THEN
-     ASM_REWRITE_TAC [] THEN
-     REPEAT STRIP_TAC THENL
-     [IMP_RES_THEN MATCH_ACCEPT_TAC FINITE_INSERT,
-      ASM_CASES_TAC (--`(e:'a) IN s`--) THENL
-      [IMP_RES_THEN SUBST1_TAC ABSORPTION, RES_TAC] THEN
-      ASM_REWRITE_TAC []]);
+  ``!P. P {} /\ (!s. FINITE s /\ P s ==> (!e. ~(e IN s) ==> P(e INSERT s))) ==>
+    !s:'a set. FINITE s ==> P s``,
+  GEN_TAC THEN STRIP_TAC THEN
+  MATCH_MP_TAC lemma THEN
+  ASM_REWRITE_TAC [] THEN
+  REPEAT STRIP_TAC THENL
+  [IMP_RES_THEN MATCH_ACCEPT_TAC FINITE_INSERT,
+   ASM_CASES_TAC (--`(e:'a) IN s`--) THENL
+   [IMP_RES_THEN SUBST1_TAC ABSORPTION, RES_TAC] THEN
+   ASM_REWRITE_TAC []]);
+val _ = IndDefLib.export_rule_induction "FINITE_INDUCT"
 
 (* --------------------------------------------------------------------- *)
 (* Load the set induction tactic in...                                   *)
@@ -2307,6 +2331,14 @@ val LESS_CARD_DIFF =
      in
      IMP_RES_TAC (PURE_ONCE_REWRITE_RULE [GSYM NOT_LESS] th4)
      end);
+
+val BIJ_FINITE = store_thm(
+  "BIJ_FINITE",
+  ``!f s t. BIJ f s t /\ FINITE s ==> FINITE t``,
+  Q_TAC SUFF_TAC
+    `!s. FINITE s ==> !f t. BIJ f s t ==> FINITE t` THEN1 METIS_TAC [] THEN
+  Induct_on `FINITE s` THEN SRW_TAC[][BIJ_EMPTY, BIJ_INSERT] THEN
+  METIS_TAC [FINITE_DELETE]);
 
 val FINITE_BIJ_CARD_EQ = Q.store_thm
 ("FINITE_BIJ_CARD_EQ",
@@ -4870,7 +4902,7 @@ val _ = export_rewrites
      (* complement theorems *)
      "COMPL_CLAUSES", "COMPL_COMPL", "COMPL_EMPTY", "IN_COMPL",
      (* "DELETE" theorems *)
-     "IN_DELETE", "DELETE_DELETE", "DELETE_EQ_SING", "DELETE_SUBSET",
+     "DELETE_DELETE", "DELETE_EQ_SING", "DELETE_SUBSET",
      (* "DIFF" theorems *)
      "DIFF_DIFF", "DIFF_EMPTY", "DIFF_EQ_EMPTY", "DIFF_UNIV", "EMPTY_DIFF",
      "DIFF_SUBSET",
@@ -4924,5 +4956,4 @@ val _ = adjoin_to_theory {sig_ps = SOME sigps,
 
 val _ = export_theory();
 
-end
 
