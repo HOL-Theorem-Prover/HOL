@@ -1004,6 +1004,76 @@ val finite_wZERO = store_thm(
   ``finite wZERO``,
   rw[finite_def]);
 
+val canon_wellorder_def = Define`
+  canon_wellorder w = !x. x IN elsOf w ==> (x = @y. ~((y,x) WIN w))
+`;
+
+val orderiso_unique = store_thm(
+  "orderiso_unique",
+  ``BIJ f1 (elsOf w1) (elsOf w2) /\ BIJ f2 (elsOf w1) (elsOf w2) /\
+    (!x y. (x,y) WIN w1 ==> (f1 x, f1 y) WIN w2) /\
+    (!x y. (x,y) WIN w1 ==> (f2 x, f2 y) WIN w2) ==>
+    !x. x IN elsOf w1 ==> (f1 x = f2 x)``,
+  rpt strip_tac >> spose_not_then strip_assume_tac >>
+  `wellorder (wellorder_REP w1)` by rw[termP_term_REP] >>
+  fs[wellorder_def, wellfounded_def] >>
+  first_x_assum (qspec_then `elsOf w1 INTER {x | f1 x <> f2 x}` mp_tac) >>
+  asm_simp_tac (srw_ss() ++ SatisfySimps.SATISFY_ss) [] >>
+  qx_gen_tac `min` >> Cases_on `min IN elsOf w1` >> fs[] >>
+  Cases_on `f1 min = f2 min` >> simp[] >>
+  Cases_on `(f1 min, f2 min) WIN w2` >| [
+    `?a. (f2 a = f1 min) /\ a IN elsOf w1` by metis_tac [BIJ_IFF_INV] >>
+    `(a,min) WIN w1` by metis_tac [WIN_trichotomy, WIN_TRANS, WIN_REFL] >>
+    metis_tac [BIJ_IFF_INV],
+    `(f2 min, f1 min) WIN w2` by metis_tac [BIJ_IFF_INV, WIN_trichotomy] >>
+    `?a. (f1 a = f2 min) /\ a IN elsOf w1` by metis_tac [BIJ_IFF_INV] >>
+    `(a,min) WIN w1` by metis_tac [WIN_trichotomy, WIN_TRANS, WIN_REFL] >>
+    metis_tac [BIJ_IFF_INV]
+  ]);
+
+val seteq_wlog = store_thm(
+  "seteq_wlog",
+  ``!f.
+      (!a b. P a b ==> P b a) /\ (!x a b. P a b /\ x IN f a ==> x IN f b) ==>
+      (!a b. P a b ==> (f a = f b))``,
+  rpt strip_tac >> match_mp_tac SUBSET_ANTISYM >> metis_tac[SUBSET_DEF])
+
+val wo_INDUCTION = save_thm(
+  "wo_INDUCTION",
+  MATCH_MP relationTheory.WF_INDUCTION_THM WIN_WF2
+           |> SIMP_RULE (srw_ss()) []
+           |> Q.SPEC `\x. x IN elsOf w ==> P x`
+           |> SIMP_RULE (srw_ss()) []
+           |> Q.GEN `w` |> Q.GEN `P`)
+
+val canonicals_unique = store_thm(
+  "canonicals_unique",
+  ``canon_wellorder w1 /\ canon_wellorder w2 /\ orderiso w1 w2 ==> (w1 = w2)``,
+  simp[canon_wellorder_def, orderiso_thm] >> rpt strip_tac >>
+  qsuff_tac `!x. x IN elsOf w1 ==> (f x = x)`
+    >- (strip_tac >>
+        qsuff_tac `wellorder_REP w1 = wellorder_REP w2`
+           >- rw [#term_REP_11 wellorder_results] >>
+        simp[EXTENSION, pairTheory.FORALL_PROD] >>
+        `!x y. (x,y) WIN w1 ==> ((f x, f y) WIN w2 = (x,y) WIN w2)`
+           by metis_tac [WIN_elsOf] >>
+        fs[] >> simp[EQ_IMP_THM] >>
+        map_every qx_gen_tac [`a`, `b`] >> strip_tac >>
+        `?a0 b0. a0 IN elsOf w1 /\ (f a0 = a) /\ b0 IN elsOf w1 /\ (f b0 = b)`
+           by metis_tac [BIJ_IFF_INV, WIN_elsOf] >>
+        ntac 2 (qpat_assum `f XX = YY` mp_tac) >> simp[] >> rw[] >>
+        metis_tac [WIN_trichotomy, WIN_TRANS, WIN_REFL]) >>
+  ho_match_mp_tac wo_INDUCTION >> rpt strip_tac >>
+  `f x IN elsOf w2` by metis_tac [BIJ_IFF_INV] >>
+  qsuff_tac `(@y. ~((y,x) WIN w1)) = (@y. ~((y, f x) WIN w2))`
+    >- (res_tac >> ntac 2 (pop_assum (SUBST1_TAC o SYM)) >> rw[]) >>
+  AP_TERM_TAC >> ABS_TAC >> AP_TERM_TAC >> EQ_TAC >-
+    metis_tac [WIN_elsOf] >>
+  strip_tac >>
+  `?x0. x0 IN elsOf w1 /\ (f x0 = y)` by metis_tac [BIJ_IFF_INV, WIN_elsOf] >>
+  `(x0,x) WIN w1` by metis_tac [WIN_trichotomy, WIN_TRANS, WIN_REFL] >>
+  metis_tac[])
+
 (* perform quotient, creating a type of "pre-ordinals".
 
    These should all that's necessary, but I can't see how to define the limit
