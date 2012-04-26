@@ -1218,4 +1218,12 @@ val preds_bij = store_thm(
     fs[EXTENSION] >> metis_tac[]
   ]);
 
+val preds_lt_PSUBSET = store_thm(
+  "preds_lt_PSUBSET",
+  ``ordlt w1 w2 <=> preds w1 PSUBSET preds w2``,
+  simp[PSUBSET_DEF, SUBSET_DEF, preds_def, EQ_IMP_THM, EXTENSION] >> conj_tac
+    >- metis_tac [ordlt_TRANS, ordlt_REFL] >>
+  simp_tac (srw_ss() ++ CONJ_ss) [] >>
+  metis_tac [ordlt_REFL, ordlt_TRANS, ordlt_trichotomy])
+
 val _ = export_theory()
