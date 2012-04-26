@@ -1074,6 +1074,7 @@ val canonicals_unique = store_thm(
   `(x0,x) WIN w1` by metis_tac [WIN_trichotomy, WIN_TRANS, WIN_REFL] >>
   metis_tac[])
 
+
 (* perform quotient, creating a type of "pre-ordinals".
 
    These should all that's necessary, but I can't see how to define the limit
@@ -1092,16 +1093,16 @@ val orderiso_equiv = prove(
 val alphaise =
     INST_TYPE  [beta |-> alpha, delta |-> alpha, gamma |-> alpha]
 
-val [preolt_REFL, preolt_TRANS, preolt_WF0, preolt_trichotomy,
-     preolt_ZERO, preo_islimit_ZERO, preo_finite_ZERO] =
+val [ordlt_REFL, ordlt_TRANS, ordlt_WF0, ordlt_trichotomy,
+     ordlt_ZERO, ord_islimit_ZERO, ord_finite_ZERO] =
     quotient.define_quotient_types_full
     {
-     types = [{name = "preord", equiv = orderiso_equiv}],
+     types = [{name = "ordinal", equiv = orderiso_equiv}],
      defs = map mk_def
-       [("preolt", ``orderlt : 'a wellorder -> 'a wellorder -> bool``),
-        ("preo_islimit", ``islimit : 'a wellorder -> bool``),
-        ("preo_ZERO", ``wZERO : 'a wellorder``),
-        ("preo_finite", ``finite : 'a wellorder -> bool``)],
+       [("ordlt", ``orderlt : 'a wellorder -> 'a wellorder -> bool``),
+        ("ord_islimit", ``islimit : 'a wellorder -> bool``),
+        ("ord_ZERO", ``wZERO : 'a wellorder``),
+        ("ord_finite", ``finite : 'a wellorder -> bool``)],
      tyop_equivs = [],
      tyop_quotients = [],
      tyop_simps = [],
@@ -1114,23 +1115,24 @@ val [preolt_REFL, preolt_TRANS, preolt_WF0, preolt_trichotomy,
                  alphaise orderlt_trichotomy, alphaise LT_wZERO,
                  islimit_wZERO, finite_wZERO]}
 
-val _ = save_thm ("preolt_REFL", preolt_REFL)
-val _ = save_thm ("preolt_TRANS", preolt_TRANS)
-val _ = save_thm ("preolt_WF",
-                  REWRITE_RULE [GSYM relationTheory.WF_DEF] preolt_WF0)
-val _ = save_thm ("preo_ZERO", preolt_ZERO)
-val _ = save_thm ("preo_islimit_ZERO", preo_islimit_ZERO)
-val _ = save_thm ("preo_finite_ZERO", preo_finite_ZERO)
+val _ = save_thm ("ordlt_REFL", ordlt_REFL)
+val _ = save_thm ("ordlt_TRANS", ordlt_TRANS)
+val ordlt_WF = save_thm (
+  "ordlt_WF",
+  REWRITE_RULE [GSYM relationTheory.WF_DEF] ordlt_WF0)
+val _ = save_thm ("ord_ZERO", ordlt_ZERO)
+val _ = save_thm ("ord_islimit_ZERO", ord_islimit_ZERO)
+val _ = save_thm ("ord_finite_ZERO", ord_finite_ZERO)
 
 val fromNat_def = Define`
-  fromNat n : 'a inf preord =
-    preord_ABS_CLASS (orderiso (fromNat0 n : 'a inf wellorder))
+  fromNat n : 'a inf ordinal =
+    ordinal_ABS_CLASS (orderiso (fromNat0 n : 'a inf wellorder))
 `;
 
-val preord_repabs = prove(
-  ``preord_REP_CLASS (preord_ABS_CLASS (orderiso (c : 'a wellorder))) =
+val ordinal_repabs = prove(
+  ``ordinal_REP_CLASS (ordinal_ABS_CLASS (orderiso (c : 'a wellorder))) =
     (orderiso c : 'a wellorder set)``,
-  REWRITE_TAC [GSYM (theorem "preord_ABS_REP_CLASS")] >>
+  REWRITE_TAC [GSYM (theorem "ordinal_ABS_REP_CLASS")] >>
   metis_tac [orderiso_REFL]);
 
 val finite_inl = prove(
@@ -1152,8 +1154,8 @@ val fromNat_11 = store_thm(
   "fromNat_11",
   ``(fromNat n = fromNat m) = (n = m)``,
   rw[fromNat_def, EQ_IMP_THM] >>
-  pop_assum (mp_tac o Q.AP_TERM `preord_REP_CLASS`) >>
-  rw[preord_repabs] >>
+  pop_assum (mp_tac o Q.AP_TERM `ordinal_REP_CLASS`) >>
+  rw[ordinal_repabs] >>
   pop_assum (mp_tac o C Q.AP_THM `fromNat0 n : 'a inf wellorder`) >>
   simp[orderiso_REFL] >> simp[orderiso_thm] >>
   disch_then (Q.X_CHOOSE_THEN `f` strip_assume_tac) >>
@@ -1164,14 +1166,56 @@ val fromNat_11 = store_thm(
     fs[]
   ]);
 
-val preo_finite_fromNat = store_thm(
-  "preo_finite_fromNat",
-  ``preo_finite (fromNat n)``,
-  rw[definition "preo_finite_def", fromNat_def, definition "preord_REP_def"] >>
-  DEEP_INTRO_TAC SELECT_ELIM_THM >> rw[preord_repabs]
+val ord_finite_fromNat = store_thm(
+  "ord_finite_fromNat",
+  ``ord_finite (fromNat n)``,
+  rw[definition "ord_finite_def", fromNat_def, definition "ordinal_REP_def"] >>
+  DEEP_INTRO_TAC SELECT_ELIM_THM >> rw[ordinal_repabs]
      >- metis_tac [orderiso_REFL] >>
   fs[orderiso_thm, finite_def] >>
   qsuff_tac `FINITE (elsOf (fromNat0 n))` >- metis_tac[BIJ_FINITE] >>
   rw[elsOf_fromNat0, finite_inl]);
+
+val preds_def = Define`
+  preds (w : 'a ordinal) = { w0 | ordlt w0 w }
+`;
+
+val IN_preds = store_thm(
+  "IN_preds",
+  ``x IN preds w <=> ordlt x w``,
+  rw[preds_def]);
+
+val preds_11 = store_thm(
+  "preds_11",
+  ``(preds w1 = preds w2) = (w1 = w2)``,
+  rw[EQ_IMP_THM] >>
+  spose_not_then strip_assume_tac >>
+  `ordlt w1 w2 \/ ordlt w2 w1` by metis_tac [ordlt_trichotomy] >>
+  qpat_assum `x = y` mp_tac >> rw[EXTENSION, preds_def] >>
+  metis_tac [ordlt_REFL]);
+
+val downward_closed_def = Define`
+  downward_closed s <=>
+    !a b. a IN s /\ ordlt b a ==> b IN s
+`;
+
+val preds_downward_closed = store_thm(
+  "preds_downward_closed",
+  ``downward_closed (preds w)``,
+  rw[downward_closed_def, preds_def] >> metis_tac [ordlt_TRANS]);
+
+val preds_bij = store_thm(
+  "preds_bij",
+  ``BIJ preds UNIV (downward_closed DELETE UNIV)``,
+  rw[BIJ_DEF, INJ_DEF, SURJ_DEF, preds_11] >>
+  fs[SPECIFICATION, preds_downward_closed] >>
+  rw[EXTENSION] >| [
+    metis_tac [IN_preds, ordlt_REFL],
+    metis_tac [IN_preds, ordlt_REFL],
+    qspec_then `\w. w NOTIN x` mp_tac ordlt_WF0 >> simp[IN_preds] >>
+    qsuff_tac `?w. w NOTIN x`
+       >- metis_tac [downward_closed_def, ordlt_trichotomy] >>
+    fs[EXTENSION] >> metis_tac[]
+  ]);
 
 val _ = export_theory()
