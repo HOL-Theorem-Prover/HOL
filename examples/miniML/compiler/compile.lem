@@ -37,6 +37,8 @@ val restrict : forall 'a 'b. ('a,'b) Pmap.map -> 'a set -> ('a,'b) Pmap.map
 let inline {hol} restrict = Hol.DRESTRICT
 val force_dom : forall 'a 'b. ('a,'b) Pmap.map -> 'a set -> 'b -> ('a,'b) Pmap.map
 let inline {hol} force_dom = Hol.force_dom
+val valOf : forall 'a. 'a option -> 'a
+let inline {hol} valOf = Hol.THE
 
 (* TODO: elsewhere? *)
 let rec
@@ -163,9 +165,62 @@ and
 free_vars (CLprim _ es) =
   List.fold_left (fun s e -> s union free_vars e) {} es
 
+(* Canonical environments *)
+
 let sort_Cenv Cenv = qsort a_linear_order Cenv
 let mk_env env b ns =
-  sort_Cenv (fmap_to_alist (force_dom env (free_vars b \ ns) (CLit(Bool false))))
+  sort_Cenv (fmap_to_alist (force_dom (alist_to_fmap env) (free_vars b \ ns) (CLit(Bool false))))
+
+(* these equations were generated in HOL *)
+let rec
+ce_Cexp (CRaise e) = CRaise e
+and
+ce_Cexp (CVar n1) = CVar n1
+and
+ce_Cexp (CVal C') = CVal (ce_Cv C')
+and
+ce_Cexp (CCon n2 l) = CCon n2 (List.map ce_Cexp l)
+and
+ce_Cexp (CTagEq C'1 n3) = CTagEq (ce_Cexp C'1) n3
+and
+ce_Cexp (CProj C'2 n4) = CProj (ce_Cexp C'2) n4
+and
+ce_Cexp (CMat n5 l1) =
+  CMat n5 (List.map (fun (va,vb) -> (va,ce_Cexp vb)) l1)
+and
+ce_Cexp (CLet l0 l2 C'3) = CLet l0 (List.map ce_Cexp l2) (ce_Cexp C'3)
+and
+ce_Cexp (CLetfun b1 l01 l3 C'4) =
+  CLetfun b1 l01 (List.map (fun (va,vb) -> (va,ce_Cexp vb)) l3) (ce_Cexp C'4)
+and
+ce_Cexp (CFun l4 C'5) = CFun l4 (ce_Cexp C'5)
+and
+ce_Cexp (CCall C'6 l5) = CCall (ce_Cexp C'6) (List.map ce_Cexp l5)
+and
+ce_Cexp (CPrim2 C1 C'7 C0) = CPrim2 C1 (ce_Cexp C'7) (ce_Cexp C0)
+and
+ce_Cexp (CLprim C'8 l6) = CLprim C'8 (List.map ce_Cexp l6)
+and
+ce_Cv (CLit l7) = CLit l7
+and
+ce_Cv (CConv n6 l8) = CConv n6 (List.map ce_Cv l8)
+and
+ce_Cv (CClosure env ns b) =
+  let env = List.map (fun (n,v) -> (n,ce_Cv v)) env in
+  let b = ce_Cexp b in
+  CClosure (mk_env env b (Set.from_list ns)) ns b
+and
+ce_Cv (CRecClos env ns defs n) =
+  match (find_index n ns 0, List.length ns = List.length defs) with
+  | (Some i,true) ->
+    let env = List.map (fun (n,v) -> (n,ce_Cv v)) env in
+    let defs = List.map (fun (vs,b) -> (vs,ce_Cexp b)) defs in
+    let (vs,b) = List.nth defs i in
+    CRecClos (mk_env env b (Set.from_list ns union Set.from_list vs)) ns defs n
+  | _ -> CClosure [] [] (CRaise Bind_error)
+  end
+
+(* Big-step semantics *)
 
 let rec
 doPrim2 b ty op (CLit (IntLit x)) (CLit (IntLit y)) =
@@ -241,13 +296,13 @@ and
 forall env n.
 Pmap.mem n env
 ==>
-Cevaluate env (CVar n) (Rval (Pmap.find n env))
+Cevaluate env (CVar n) (Rval (ce_Cv (Pmap.find n env)))
 
 and
 forall env v.
 true
 ==>
-Cevaluate env (CVal v) (Rval v)
+Cevaluate env (CVal v) (Rval (ce_Cv v))
 
 and
 forall env n es vs.
@@ -327,7 +382,7 @@ all_distinct ns &&
 Cevaluate
   (fold_left2
     (fun env' n (ns,b) ->
-      Pmap.add n (CClosure (mk_env env b (Set.from_list ns)) ns b) env')
+      Pmap.add n (ce_Cv (CClosure (fmap_to_alist env) ns b)) env')
     env ns defs)
   b r
 ==>
@@ -338,11 +393,10 @@ forall env ns defs b r.
 List.length ns = List.length defs &&
 all_distinct ns &&
 Cevaluate
-  (fold_left2
-     (fun env' n (vs,b) ->
-       Pmap.add n (CRecClos (mk_env env b (Set.from_list ns union Set.from_list vs))
-                            ns defs n) env')
-     env ns defs)
+  (List.fold_left
+     (fun env' n ->
+       Pmap.add n (ce_Cv (CRecClos (fmap_to_alist env) ns defs n)) env')
+     env ns)
   b r
 ==>
 Cevaluate env (CLetfun true ns defs b) r
@@ -351,7 +405,7 @@ and
 forall env ns b.
 true
 ==>
-Cevaluate env (CFun ns b) (Rval (CClosure (mk_env env b (Set.from_list ns)) ns b))
+Cevaluate env (CFun ns b) (Rval (ce_Cv (CClosure (fmap_to_alist env) ns b)))
 
 and
 forall env e es env' ns b vs r.
@@ -382,14 +436,11 @@ List.length ns = List.length vs &&
 all_distinct ns &&
 Cevaluate
   (fold_left2 (fun en n v -> Pmap.add n v en)
-    (fold_left2
-      (fun en n' (vs,b) -> Pmap.add n'
-        (CRecClos
-          (mk_env (alist_to_fmap env') b (Set.from_list ns' union Set.from_list vs))
-          ns' defs n')
-        en)
+    (List.fold_left
+      (fun en n' -> Pmap.add n'
+        (ce_Cv (CRecClos env' ns' defs n')) en)
       (alist_to_fmap env')
-      ns' defs)
+      ns')
     ns vs)
   b r
 ==>
@@ -765,13 +816,13 @@ v_to_Cv cm (s, Conv cn vs) =
   CConv (Pmap.find cn cm) (List.map (fun v -> v_to_Cv cm (s,v)) vs)
 and
 v_to_Cv cm (s, Closure env vn e) =
-  let Cenv = alist_to_fmap (List.map (fun (x,v) -> (Pmap.find x s.m, v_to_Cv cm (s,v))) env) in
+  let Cenv = List.map (fun (x,v) -> (Pmap.find x s.m, v_to_Cv cm (s,v))) env in
   let (s',n) = extend false s vn in
   let (_s,Ce) = exp_to_Cexp false cm (s', e) in
-  CClosure (mk_env Cenv Ce (Set.from_list [n])) [n] Ce
+  ce_Cv (CClosure Cenv [n] Ce)
 and
 v_to_Cv cm (s, Recclosure env defs vn) =
-  let Cenv = alist_to_fmap (List.map (fun (x,v) -> (Pmap.find x s.m, v_to_Cv cm (s,v))) env) in
+  let Cenv = List.map (fun (x,v) -> (Pmap.find x s.m, v_to_Cv cm (s,v))) env in
   let (s',fns) = List.fold_right
     (fun (d,_vn,_e) (s,fns) -> let (s,n) = extend false s d in (s, n::fns))
           defs      (s,[]) in
@@ -782,8 +833,7 @@ v_to_Cv cm (s, Recclosure env defs vn) =
       ([n],Ce)::Cdefs)
           defs     [] in
   let n = Pmap.find vn s.m in
-  let (vs,Ce) = match find_index n fns 0 with Some i -> List.nth Cdefs i end in
-  CRecClos (mk_env Cenv Ce (Set.from_list fns union Set.from_list vs)) fns Cdefs n
+  ce_Cv (CRecClos Cenv fns Cdefs n)
 
 (* TODO: simple type system and checker *)
 

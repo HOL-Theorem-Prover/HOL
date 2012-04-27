@@ -4,6 +4,11 @@ val _ = new_theory "compileTermination"
 
 (* size helper theorems *)
 
+val MEM_pair_MAP = store_thm(
+"MEM_pair_MAP",
+``MEM (a,b) ls ==> MEM a (MAP FST ls) /\ MEM b (MAP SND ls)``,
+rw[MEM_MAP,pairTheory.EXISTS_PROD] >> PROVE_TAC[])
+
 val Cexp1_size_thm = store_thm(
 "Cexp1_size_thm",
 ``∀ls. Cexp1_size ls = SUM (MAP Cexp2_size ls) + LENGTH ls``,
@@ -137,6 +142,19 @@ val (Cpmatch_def,Cpmatch_ind) = register "Cpmatch" (
                 (λx. case x of
                      | (INL (env,p,v)) => Cv_size v
                      | (INR (env,ps,vs)) => Cexp8_size vs)`))
+
+val (ce_Cexp_def,ce_Cexp_ind) = register "ce_Cexp"(
+  tprove_no_defn ((ce_Cexp_def,ce_Cexp_ind),
+  WF_REL_TAC `inv_image $<
+                (λx. case x of
+                     | (INL e) => Cexp_size e
+                     | (INR v) => Cv_size v)` >>
+  srw_tac[ARITH_ss][Cexp1_size_thm,Cexp3_size_thm,Cexp4_size_thm,Cexp7_size_thm,Cexp8_size_thm,SUM_MAP_Cexp2_size_thm,SUM_MAP_Cexp5_size_thm,SUM_MAP_Cexp6_size_thm] >>
+  imp_res_tac MEM_pair_MAP >>
+  Q.ISPEC_THEN `Cexp_size` imp_res_tac SUM_MAP_MEM_bound >>
+  Q.ISPEC_THEN `Cv_size` imp_res_tac SUM_MAP_MEM_bound >>
+  fsrw_tac[ARITH_ss][Cexp_size_def]))
+val _ = export_rewrites["ce_Cexp_def"]
 
 (* compiler definitions *)
 
