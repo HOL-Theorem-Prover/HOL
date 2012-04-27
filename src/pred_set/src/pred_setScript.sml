@@ -3500,7 +3500,7 @@ val ITSET_IND = fetch "-" "ITSET_ind";
 
 val ITSET_THM =
 W (GENL o rev o free_vars o concl)
-  (DISCH_ALL(ASM_REWRITE_RULE [ASSUME ``FINITE s``] ITSET_def));
+  (DISCH_ALL(ASM_REWRITE_RULE [ASSUME ``FINITE s``] (SPEC_ALL ITSET_def)));
 
 val _ = save_thm("ITSET_IND",ITSET_IND);
 val _ = save_thm("ITSET_THM",ITSET_THM);
