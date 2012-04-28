@@ -50,10 +50,12 @@ val x2sexp_def = tDefine "x2sexp" `
     THEN SIMP_TAC std_ss [MEM,term_size_def] THEN REPEAT STRIP_TAC
     THEN ASM_REWRITE_TAC [] THEN RES_TAC THEN DECIDE_TAC))
 
+val x2sexp = x2sexp_def |> CONJUNCTS |> map SPEC_ALL |> LIST_CONJ
+
 val term2sexp_def = save_thm("func2sexp_def",save_thm("term2sexp_def",let
   val term2sexp_deff = Define `term2sexp x = x2sexp (T,x,FunVar "nil")`;
   val func2sexp_deff = Define `func2sexp y = x2sexp (F,Var "nil",y)`;
-  val th = Q.INST [`xx`|->`Var "nil"`,`yy`|->`FunVar "nil"`] x2sexp_def
+  val th = Q.INST [`xx`|->`Var "nil"`,`yy`|->`FunVar "nil"`] x2sexp
   val th = REWRITE_RULE [GSYM term2sexp_deff,GSYM func2sexp_deff] th
   in th end));
 
