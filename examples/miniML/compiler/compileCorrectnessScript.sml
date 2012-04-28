@@ -663,6 +663,12 @@ rw[FOLDL2_FOLDL,MAP2_MAP,ZIP_MAP,MAP_ZIP,LENGTH_ZIP,
    pairTheory.UNCURRY,pairTheory.LAMBDA_PROD,FUPDATE_LIST,
    rich_listTheory.FOLDL_MAP])
 
+val FOLDL_FUPDATE_LIST = store_thm(
+"FOLDL_FUPDATE_LIST",
+``!f1 f2 ls a. FOLDL (\fm k. fm |+ (f1 k, f2 k)) a ls =
+  a |++ MAP (\k. (f1 k, f2 k)) ls``,
+SRW_TAC[][FUPDATE_LIST,rich_listTheory.FOLDL_MAP])
+
 val SND_FOLDL2_FUPDATE_LIST = store_thm(
 "SND_FOLDL2_FUPDATE_LIST",
 ``!f1 f2 bs cs a n. (LENGTH bs = LENGTH cs) ⇒
@@ -701,6 +707,11 @@ val alist_to_fmap_APPEND = store_thm(
 Induct >- rw[FUNION_FEMPTY_1] >>
 Cases >> rw[FUNION_FUPDATE_1])
 val _ = export_rewrites["alist_to_fmap_APPEND"]
+
+val ALOOKUP_APPEND = store_thm(
+"ALOOKUP_APPEND",
+``∀l1 l2 k. ALOOKUP (l1 ++ l2) k = case ALOOKUP l1 k of SOME v => SOME v | NONE => ALOOKUP l2 k``,
+rw[] >> Cases_on `ALOOKUP l1 k` >> rw[ALOOKUP_prefix])
 
 val mk_env_canon = store_thm(
 "mk_env_canon",
@@ -1366,8 +1377,6 @@ rw[FLOOKUP_DEF,force_dom_DRESTRICT_FUNION,FUNION_DEF,DRESTRICT_DEF,FUN_FMAP_DEF]
 qexists_tac `CLit (Bool F)` >> rw[])
 
 (*
-val sorry:tactic = (fn (asl,g) => ([],K(mk_thm([],g))))
-
 val Cevaluate_any_env = store_thm(
 "Cevaluate_any_env",
 ``∀env exp res. Cevaluate env exp res ⇒ ∀env'. Cevaluate ((force_dom env (free_vars exp) (CLit(Bool F))) ⊌ env') exp res``,
@@ -1430,16 +1439,11 @@ TRY (
   qsuff_tac `(env0 ⊌ env1 = env1)` >- PROVE_TAC[] >>
   rw[GSYM SUBMAP_FUNION_ABSORPTION] >>
   qunabbrev_tac `env0` >>
-  qho_match_abbrev_tac `DRESTRICT (FOLDL2 (λenv' n (ns,b). env' |+ (n, f n ns b)) env ns defs) (free_vars exp) ⊌ femp SUBMAP env1` >>
-  Q.ISPECL_THEN [`K:num->num list#Cexp->num`,`λn:num (ns,b). f n ns b`,`ns`,`defs`,`env`] mp_tac FOLDL2_FUPDATE_LIST >>
-  rw[pairTheory.LAMBDA_PROD] >>
-  pop_assum kall_tac >> qunabbrev_tac `f` >>
+  fs[FOLDL2_FUPDATE_LIST_paired,FOLDL_FUPDATE_LIST] >>
   qunabbrev_tac `env1` >>
-  qho_match_abbrev_tac `lhs SUBMAP FOLDL2 (λenv' n (ns,b). env' |+ (n, f n ns b)) a ns defs` >>
-  Q.ISPECL_THEN [`K:num->num list#Cexp->num`,`λn:num (ns,b). f n ns b`,`ns`,`defs`,`a`] mp_tac FOLDL2_FUPDATE_LIST >>
-  rw[pairTheory.LAMBDA_PROD] >>
-  pop_assum kall_tac >> unabbrev_all_tac >>
-  qpat_assum `LENGTH ns = LENGTH defs` assume_tac >>
+  fs[LET_THM] >>
+  pop_assum kall_tac >>
+  fs[FOLDL2_FUPDATE_LIST_paired,FOLDL_FUPDATE_LIST] >>
   fs[SUBMAP_DEF] >>
   qx_gen_tac `x` >>
   disch_then assume_tac >>
@@ -1454,8 +1458,9 @@ TRY (
     rpt (pop_assum kall_tac) >> metis_tac[]) >>
   unabbrev_all_tac >>
   strip_tac >>
+  fs[MAP2_MAP,MAP_ZIP,LENGTH_ZIP,FST_triple] >>
   Cases_on `MEM x ns` >- (
-    rw[FUNION_DEF,DRESTRICT_DEF,FDOM_FUPDATE_LIST,MAP_ZIP,MEM_MAP,MEM_ZIP,MAP2_MAP, UNCURRY_K_I_o_FST,LENGTH_ZIP] >>
+    rw[FUNION_DEF,DRESTRICT_DEF,FDOM_FUPDATE_LIST,MAP_ZIP,LENGTH_ZIP,MEM_MAP,pairTheory.EXISTS_PROD] >> fs[] >>
     match_mp_tac FUPDATE_LIST_APPLY_MEM >>
     fs[MAP_ZIP,LENGTH_ZIP,MEM_EL] >>
     qpat_assum `n < LENGTH ns` mp_tac >> rw[] >>
@@ -1468,11 +1473,18 @@ TRY (
       fs[EL_MAP,LENGTH_ZIP,EL_ZIP] >>
       rw[pairTheory.UNCURRY] >>
       rw[mk_env_canon] >>
-      qmatch_abbrev_tac `(env ⊌ fF) ' x = ((DRESTRICT env s ⊌ f0 ⊌ f2) ⊌ fF) ' x` >>
+      rw[ALOOKUP_MAP,ALOOKUP_APPEND] >>
+      qmatch_abbrev_tac `lhs = case OPTION_MAP ce_Cv (FLOOKUP fm x) of NONE => X | SOME v => SOME v` >>
+      `x ∈ FDOM fm` by (
+        fsrw_tac[boolSimps.DNF_ss][Abbr`fm`,DRESTRICT_DEF,pairTheory.EXISTS_PROD] >>
+        metis_tac[pairTheory.pair_CASES,MEM_EL,pairTheory.FST,pairTheory.SND] ) >>
+      rw[FLOOKUP_DEF] >>
+      unabbrev_all_tac >>
+      qmatch_abbrev_tac `lhs = SOME (ce_Cv ((DRESTRICT env s ⊌ f0 ⊌ f1) ' x))` >>
       qsuff_tac `x ∈ s` >- (
         strip_tac >>
         Cases_on `x ∈ FDOM env` >>
-        rw[FUNION_DEF,DRESTRICT_DEF,Abbr`s`,NOT_FDOM_FAPPLY_FEMPTY] >>
+        rw[FUNION_DEF,DRESTRICT_DEF,Abbr`s`,Abbr`lhs`,FLOOKUP_DEF] >>
         unabbrev_all_tac >>
         srw_tac[SATISFY_ss][FUN_FMAP_DEF]) >>
       unabbrev_all_tac >>
@@ -1481,30 +1493,27 @@ TRY (
       rw[pairTheory.UNCURRY] >>
       metis_tac[MEM_EL,IN_DIFF,IN_LIST_TO_SET,IN_UNION] ) >>
     fs[EL_ALL_DISTINCT_EL_EQ] ) >>
-  rw[FUNION_DEF,DRESTRICT_DEF,FDOM_FUPDATE_LIST,MAP_ZIP,MEM_MAP,MEM_ZIP,MAP2_MAP, UNCURRY_K_I_o_FST,LENGTH_ZIP] >- (
-     match_mp_tac FUPDATE_LIST_APPLY_NOT_MEM_matchable >>
-     rw[MAP_ZIP,LENGTH_ZIP] >>
-     match_mp_tac FUPDATE_LIST_APPLY_NOT_MEM_matchable >>
-     rw[MAP_ZIP,LENGTH_ZIP] >>
-     qmatch_abbrev_tac `env ' x = (DRESTRICT env s ⊌ f0 ⊌ f2) ' x` >>
-     qsuff_tac `x ∈ s` >- rw[DRESTRICT_DEF,FUNION_DEF] >>
-     rw[Abbr`s`] ) >>
-   match_mp_tac EQ_SYM >>
-   match_mp_tac FUPDATE_LIST_APPLY_NOT_MEM_matchable >>
-   rw[MAP_ZIP,LENGTH_ZIP] >>
-   rw[FUN_FMAP_DEF] >>
-   qmatch_abbrev_tac `CLit (Bool F) = (DRESTRICT env s ⊌ f0 ⊌ f2) ' x` >>
-   rw[DRESTRICT_DEF,FUNION_DEF,FUN_FMAP_DEF,Abbr`s`] ) >>
+  rw[FUNION_DEF,DRESTRICT_DEF,FDOM_FUPDATE_LIST,MAP_ZIP,LENGTH_ZIP,MEM_MAP,pairTheory.EXISTS_PROD] >> fs[] >- (
+    match_mp_tac FUPDATE_LIST_APPLY_NOT_MEM_matchable >>
+    TRY (conj_tac >- rw[MAP_ZIP,LENGTH_ZIP]) >>
+    rw[MAP_ZIP,LENGTH_ZIP,MEM_MAP,pairTheory.EXISTS_PROD] >>
+    match_mp_tac FUPDATE_LIST_APPLY_NOT_MEM_matchable >>
+    TRY (conj_tac >- rw[MAP_ZIP,LENGTH_ZIP]) >>
+    rw[MAP_ZIP,LENGTH_ZIP,MEM_MAP,pairTheory.EXISTS_PROD] >>
+    qmatch_abbrev_tac `env ' x = (DRESTRICT env s ⊌ f0 ⊌ f2) ' x` >>
+    qsuff_tac `x ∈ s` >- rw[DRESTRICT_DEF,FUNION_DEF] >>
+    rw[Abbr`s`] ) >>
+  match_mp_tac EQ_SYM >>
+  match_mp_tac FUPDATE_LIST_APPLY_NOT_MEM_matchable >>
+  TRY (conj_tac >- rw[MAP_ZIP,LENGTH_ZIP]) >>
+  rw[MAP_ZIP,LENGTH_ZIP,MEM_MAP,pairTheory.EXISTS_PROD] >>
+  rw[FUN_FMAP_DEF] >>
+  rw[DRESTRICT_DEF,FUNION_DEF,FUN_FMAP_DEF] ) >>
 TRY (
+  unabbrev_all_tac >>
   rw[mk_env_canon] >>
-  qmatch_abbrev_tac `(env ⊌ ff) ' x = ((DRESTRICT env s ⊌ f0 ⊌ f2) ⊌ ff) ' x` >>
-  qsuff_tac `x ∈ s` >- (
-    strip_tac >>
-    Cases_on `x ∈ FDOM env` >>
-    rw[FUNION_DEF,DRESTRICT_DEF,Abbr`s`,NOT_FDOM_FAPPLY_FEMPTY] >>
-    unabbrev_all_tac >>
-    srw_tac[][FUN_FMAP_DEF]) >>
-  rw[Abbr`s`] ) >>
+  rw[ALOOKUP_APPEND,ALOOKUP_MAP] >>
+  rw[FLOOKUP_DEF,DRESTRICT_DEF,FUNION_DEF,FUN_FMAP_DEF]) >>
 TRY (
   rw[Once Cevaluate_cases] >>
   disj1_tac >>
@@ -1529,9 +1538,12 @@ TRY (
     qmatch_abbrev_tac `A /\ B \/ B ==> C` >>
     qsuff_tac `B ==> C` >- metis_tac[] >>
     unabbrev_all_tac >>
-    fs[FOLDL2_FUPDATE_LIST,MAP2_MAP,MAP_ZIP,FST_pair,SND_pair,FDOM_FUPDATE_LIST,MEM_MAP,pairTheory.EXISTS_PROD] >>
-    sorry
-    (* TODO *)
+    fs[FOLDL2_FUPDATE_LIST,MAP2_MAP,MAP_ZIP,FST_pair,SND_pair,FDOM_FUPDATE_LIST] >>
+    strip_tac >>
+    `canonical_env_Cv (CClosure env' ns exp')` by (
+      metis_tac [Cevaluate_canonical_envs] ) >>
+    fs[EXTENSION] >>
+    rw[FUNION_DEF,DRESTRICT_DEF,FUN_FMAP_DEF,FDOM_FUPDATE_LIST,MAP_ZIP]
    ) ORELSE (
     qsuff_tac `env0 ⊌ env1 = env1` >- metis_tac[] >>
     rw[GSYM SUBMAP_FUNION_ABSORPTION] >>
@@ -1539,7 +1551,41 @@ TRY (
     srw_tac[boolSimps.DNF_ss,SATISFY_ss][FUN_FMAP_DEF,FOLDL2_FUPDATE_LIST] >>
     srw_tac[boolSimps.DNF_ss,SATISFY_ss][FUN_FMAP_DEF] >>
     metis_tac[MEM_EL]
-   )))
+   ))) >>
+TRY (
+  rw[Once Cevaluate_cases] >>
+  disj2_tac >> disj1_tac >>
+  qmatch_assum_abbrev_tac `∀env''. Cevaluate (env0 ⊌ env'') exp (Rval (CClosure env' ns exp'))` >>
+  map_every qexists_tac [`env'`,`ns`,`exp'`] >>
+  rw[Cevaluate_list_with_Cevaluate] >>
+  fs[Cevaluate_list_with_error] >- (
+    qmatch_abbrev_tac `Cevaluate env1 exp v` >>
+    qsuff_tac `env0 ⊌ env1 = env1` >- metis_tac [] >>
+    rw[GSYM SUBMAP_FUNION_ABSORPTION] >>
+    rw[SUBMAP_DEF,Abbr`env0`,Abbr`env1`,DRESTRICT_DEF,FUNION_DEF,FUN_FMAP_DEF] >>
+    srw_tac[boolSimps.DNF_ss,SATISFY_ss][FUN_FMAP_DEF] >>
+    metis_tac[] ) >>
+  qexists_tac `n` >>
+  rw[] >- (
+    qmatch_assum_abbrev_tac `∀env'. Cevaluate (env1 ⊌ env') (EL n es) (Rerr err)` >>
+    qmatch_abbrev_tac `Cevaluate env2 (EL n es) (Rerr err)` >>
+    qsuff_tac `env1 ⊌ env2 = env2` >- metis_tac[] >>
+    rw[GSYM SUBMAP_FUNION_ABSORPTION] >>
+    rw[SUBMAP_DEF,Abbr`env1`,Abbr`env2`,DRESTRICT_DEF,FUNION_DEF,FUN_FMAP_DEF] >>
+    srw_tac[boolSimps.DNF_ss,SATISFY_ss][FUN_FMAP_DEF] >>
+    srw_tac[boolSimps.DNF_ss,SATISFY_ss][FUN_FMAP_DEF] >>
+    metis_tac[MEM_EL] ) >>
+  first_x_assum (qspec_then `m` mp_tac) >> rw[] >>
+  qexists_tac `v` >>
+  qmatch_assum_abbrev_tac `∀env'. Cevaluate (env1 ⊌ env') (EL m es) (Rval v)` >>
+  qmatch_abbrev_tac `Cevaluate env2 (EL m es) (Rval v)` >>
+  qsuff_tac `env1 ⊌ env2 = env2` >- metis_tac[] >>
+  rw[GSYM SUBMAP_FUNION_ABSORPTION] >>
+  `m < LENGTH es` by srw_tac[ARITH_ss][] >>
+  rw[SUBMAP_DEF,Abbr`env1`,Abbr`env2`,DRESTRICT_DEF,FUNION_DEF,FUN_FMAP_DEF] >>
+  srw_tac[boolSimps.DNF_ss,SATISFY_ss][FUN_FMAP_DEF] >>
+  srw_tac[boolSimps.DNF_ss,SATISFY_ss][FUN_FMAP_DEF] >>
+  metis_tac[MEM_EL] ) >>
 
 >> PROVE_TAC[]
 *)
