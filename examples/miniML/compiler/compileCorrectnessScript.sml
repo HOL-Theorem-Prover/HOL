@@ -169,8 +169,6 @@ val exp_Cexp_ind = CompileTheory.exp_Cexp_ind
 val v_Cv_ind = CompileTheory.v_Cv_ind
 val v_Cv_cases = CompileTheory.v_Cv_cases
 val sort_Cenv_def = CompileTheory.sort_Cenv_def
-val CevalPrim2_def = CompileTheory.CevalPrim2_def
-val doPrim2_def = CompileTheory.doPrim2_def
 val i0_def = CompileTheory.i0_def
 val Cevaluate_ind = CompileTheory.Cevaluate_ind
 val Cevaluate_strongind = CompileTheory.Cevaluate_strongind
@@ -1376,41 +1374,44 @@ rw[FLOOKUP_DEF,force_dom_DRESTRICT_FUNION,FUNION_DEF,DRESTRICT_DEF,FUN_FMAP_DEF]
   rw[INJ_I] >> metis_tac[] ) >>
 qexists_tac `CLit (Bool F)` >> rw[])
 
-(*
-val Cevaluate_any_env = store_thm(
-"Cevaluate_any_env",
-``∀env exp res. Cevaluate env exp res ⇒ ∀env'. Cevaluate ((force_dom env (free_vars exp) (CLit(Bool F))) ⊌ env') exp res``,
-fs[force_dom_DRESTRICT_FUNION] >>
-ho_match_mp_tac Cevaluate_nice_ind >>
-rw[FOLDL_UNION_BIGUNION,FOLDL_UNION_BIGUNION_paired,
-   FAPPLY_FUPDATE_THM,DRESTRICT_DEF,FUNION_DEF,
-   Cevaluate_con,Cevaluate_list_with_Cevaluate,
-   Cevaluate_tageq,Cevaluate_proj,Cevaluate_mat_cons,Cevaluate_let_cons] >>
-TRY (
+val doPrim2_free_vars = store_thm(
+"doPrim2_free_vars",
+``∀b ty op v1 v2 e. (doPrim2 b ty op v1 v2 = SOME e) ⇒ (free_vars e = {})``,
+ntac 3 gen_tac >>
+Cases >> rw[] >>
+Cases_on `l` >> Cases_on `v2` >> fs[] >>
+Cases_on `l` >> fs[] >> pop_assum mp_tac >> rw[] >>
+rw[])
+val _ = export_rewrites["doPrim2_free_vars"]
+
+val CevalPrim2_free_vars = store_thm(
+"CevalPrim2_free_vars",
+``∀p2 v1 v2 e. (CevalPrim2 p2 v1 v2 = SOME e) ⇒ (free_vars e = {})``,
+Cases >> fs[] >> PROVE_TAC[doPrim2_free_vars])
+val _ = export_rewrites["CevalPrim2_free_vars"]
+
+val less2 = prove(``(0:num < 2) ∧ (1:num < 2)``,srw_tac[ARITH_ss][])
+
+val final1 =
+  qmatch_assum_abbrev_tac `∀env'.  Cevaluate (env0 ⊌ env') ee rr` >>
+  qmatch_abbrev_tac `Cevaluate env1 ee rr` >>
+  qsuff_tac `env0 ⊌ env1 = env1` >- PROVE_TAC[] >>
+  rw[GSYM SUBMAP_FUNION_ABSORPTION] >>
+  rw[Abbr`env0`,Abbr`env1`,SUBMAP_DEF,DRESTRICT_DEF,FUNION_DEF,FUN_FMAP_DEF,pairTheory.UNCURRY] >>
+  fsrw_tac[boolSimps.DNF_ss,SATISFY_ss][FUN_FMAP_DEF,pairTheory.UNCURRY] >>
+  metis_tac[]
+val tac1 =
   match_mp_tac (MP_CANON Cevaluate_list_with_mono) >>
   qmatch_assum_abbrev_tac `Cevaluate_list_with P es res` >>
   qexists_tac `P` >> rw[Abbr`P`] >>
-  qmatch_assum_abbrev_tac `∀env'. Cevaluate (env0 ⊌ env') e r` >>
-  qmatch_abbrev_tac `Cevaluate env1 e r` >>
-  qsuff_tac `env0 ⊌ env1 = env1` >- PROVE_TAC[] >>
-  rw[GSYM SUBMAP_FUNION_ABSORPTION] >>
-  rw[Abbr`env0`,Abbr`env1`,SUBMAP_DEF,DRESTRICT_DEF,FUNION_DEF,FUN_FMAP_DEF] >>
-  srw_tac[boolSimps.DNF_ss,SATISFY_ss][FUN_FMAP_DEF] >>
-  metis_tac[] ) >>
-TRY (
+  final1
+val tac2 =
   fs[Once Cpmatch_FEMPTY] >>
   Cases_on `Cpmatch FEMPTY p (env ' n)` >> fs[] >>
   rw[] >>
   (disj1_tac ORELSE rw[Once Cpmatch_FEMPTY]) >>
-  qmatch_assum_abbrev_tac `∀env'.  Cevaluate (env0 ⊌ env') exp res` >>
-  qmatch_abbrev_tac `Cevaluate env1 exp res` >>
-  qsuff_tac `env0 ⊌ env1 = env1` >- PROVE_TAC[] >>
-  rw[GSYM SUBMAP_FUNION_ABSORPTION] >>
-  rw[Abbr`env0`,Abbr`env1`,SUBMAP_DEF,DRESTRICT_DEF,FUNION_DEF,FUN_FMAP_DEF,pairTheory.UNCURRY] >>
-  srw_tac[boolSimps.DNF_ss][FUN_FMAP_DEF,pairTheory.UNCURRY] >>
-  fsrw_tac[boolSimps.DNF_ss,SATISFY_ss][FUN_FMAP_DEF,pairTheory.UNCURRY] >>
-  metis_tac[] ) >>
-TRY (
+  final1
+val tac3 =
   disj1_tac >>
   qexists_tac `v` >>
   qmatch_assum_abbrev_tac `∀env'. Cevaluate (env0 ⊌ env') exp (Rval v)` >>
@@ -1421,18 +1422,8 @@ TRY (
   rw[Abbr`env0`,Abbr`env1`,Abbr`env2`,SUBMAP_DEF,DRESTRICT_DEF,FUNION_DEF,
      DRESTRICT_FUPDATE,FAPPLY_FUPDATE_THM,FUN_FMAP_DEF] >>
   srw_tac[boolSimps.DNF_ss,SATISFY_ss][FUN_FMAP_DEF] >>
-  metis_tac[] ) >>
-TRY (
-  disj2_tac >>
-  qmatch_assum_abbrev_tac `∀env'. Cevaluate (env0 ⊌ env') exp res` >>
-  qmatch_abbrev_tac `Cevaluate env1 exp res` >>
-  qsuff_tac `(env0 ⊌ env1 = env1)` >- PROVE_TAC[] >>
-  rw[GSYM SUBMAP_FUNION_ABSORPTION] >>
-  rw[Abbr`env0`,Abbr`env1`,SUBMAP_DEF,DRESTRICT_DEF,FUNION_DEF,
-     DRESTRICT_FUPDATE,FAPPLY_FUPDATE_THM] >>
-  srw_tac[boolSimps.DNF_ss,SATISFY_ss][FUN_FMAP_DEF] >>
-  metis_tac[] ) >>
-TRY (
+  metis_tac[]
+val tac4 =
   rw[Once Cevaluate_cases] >>
   qmatch_assum_abbrev_tac `∀env'. Cevaluate (env0 ⊌ env') exp res` >>
   qmatch_abbrev_tac `Cevaluate env1 exp res` >>
@@ -1508,13 +1499,93 @@ TRY (
   TRY (conj_tac >- rw[MAP_ZIP,LENGTH_ZIP]) >>
   rw[MAP_ZIP,LENGTH_ZIP,MEM_MAP,pairTheory.EXISTS_PROD] >>
   rw[FUN_FMAP_DEF] >>
-  rw[DRESTRICT_DEF,FUNION_DEF,FUN_FMAP_DEF] ) >>
-TRY (
+  rw[DRESTRICT_DEF,FUNION_DEF,FUN_FMAP_DEF]
+val tac5 =
+  rw[Once Cevaluate_cases] >>
+  ((disj2_tac >> disj1_tac >>
+    qmatch_assum_abbrev_tac `∀env''. Cevaluate (env0 ⊌ env'') exp (Rval (CClosure env' ns exp'))` >>
+    map_every qexists_tac [`env'`,`ns`,`exp'`])
+   ORELSE
+   (disj2_tac >> disj2_tac >> disj2_tac >> disj1_tac >>
+    qmatch_assum_abbrev_tac `∀env''. Cevaluate (env0 ⊌ env'') exp (Rval (CRecClos env' ns' defs n))` >>
+    map_every qexists_tac [`env'`,`ns'`,`defs`,`n`])
+  ) >>
+  rw[Cevaluate_list_with_Cevaluate] >>
+  fs[Cevaluate_list_with_error] >- (
+    qmatch_abbrev_tac `Cevaluate env1 exp v` >>
+    qsuff_tac `env0 ⊌ env1 = env1` >- metis_tac [] >>
+    rw[GSYM SUBMAP_FUNION_ABSORPTION] >>
+    rw[SUBMAP_DEF,Abbr`env0`,Abbr`env1`,DRESTRICT_DEF,FUNION_DEF,FUN_FMAP_DEF] >>
+    srw_tac[boolSimps.DNF_ss,SATISFY_ss][FUN_FMAP_DEF] >>
+    metis_tac[] ) >>
+  qmatch_assum_rename_tac `nn < LENGTH es`[] >>
+  qexists_tac `nn` >>
+  rw[] >- (
+    qmatch_assum_abbrev_tac `∀env'. Cevaluate (env1 ⊌ env') (EL nn es) (Rerr err)` >>
+    qmatch_abbrev_tac `Cevaluate env2 (EL nn es) (Rerr err)` >>
+    qsuff_tac `env1 ⊌ env2 = env2` >- metis_tac[] >>
+    rw[GSYM SUBMAP_FUNION_ABSORPTION] >>
+    rw[SUBMAP_DEF,Abbr`env1`,Abbr`env2`,DRESTRICT_DEF,FUNION_DEF,FUN_FMAP_DEF] >>
+    srw_tac[boolSimps.DNF_ss,SATISFY_ss][FUN_FMAP_DEF] >>
+    srw_tac[boolSimps.DNF_ss,SATISFY_ss][FUN_FMAP_DEF] >>
+    metis_tac[MEM_EL] ) >>
+  first_x_assum (qspec_then `m` mp_tac) >> rw[] >>
+  qexists_tac `v` >>
+  qmatch_assum_abbrev_tac `∀env'. Cevaluate (env1 ⊌ env') (EL m es) (Rval v)` >>
+  qmatch_abbrev_tac `Cevaluate env2 (EL m es) (Rval v)` >>
+  qsuff_tac `env1 ⊌ env2 = env2` >- metis_tac[] >>
+  rw[GSYM SUBMAP_FUNION_ABSORPTION] >>
+  `m < LENGTH es` by srw_tac[ARITH_ss][] >>
+  rw[SUBMAP_DEF,Abbr`env1`,Abbr`env2`,DRESTRICT_DEF,FUNION_DEF,FUN_FMAP_DEF] >>
+  srw_tac[boolSimps.DNF_ss,SATISFY_ss][FUN_FMAP_DEF] >>
+  srw_tac[boolSimps.DNF_ss,SATISFY_ss][FUN_FMAP_DEF] >>
+  metis_tac[MEM_EL]
+val tac6 =
+  rw[Once Cevaluate_cases] >>
+  disj1_tac >>
+  qmatch_assum_abbrev_tac `∀env'. Cevaluate (env0 ⊌ env') exp (Rval (CLit (Bool b)))` >>
+  qexists_tac `b` >>
+  qunabbrev_tac `b` >>
+  conj_tac >- (
+    qmatch_abbrev_tac `Cevaluate env1 ex re` >>
+    qunabbrev_tac `env0` >>
+    qmatch_assum_abbrev_tac `∀env'. Cevaluate (env0 ⊌ env') ex re` >>
+    qsuff_tac `env0 ⊌ env1 = env1` >- metis_tac[] >>
+    rw[GSYM SUBMAP_FUNION_ABSORPTION] >>
+    rw[Abbr`env0`,Abbr`env1`,SUBMAP_DEF,FUNION_DEF,DRESTRICT_DEF,FUN_FMAP_DEF] >>
+    asm_simp_tac(srw_ss()++boolSimps.DNF_ss++SATISFY_ss)[FUN_FMAP_DEF,MEM_EL,pairTheory.UNCURRY] >>
+    metis_tac[]) >>
+  fs[] >>
+  qunabbrev_tac `env0` >>
+  final1
+
+val Cevaluate_any_env = store_thm(
+"Cevaluate_any_env",
+``∀env exp res. Cevaluate env exp res ⇒ ∀env'. Cevaluate ((force_dom env (free_vars exp) (CLit(Bool F))) ⊌ env') exp res``,
+fs[force_dom_DRESTRICT_FUNION] >>
+ho_match_mp_tac Cevaluate_nice_ind >>
+rw[FOLDL_UNION_BIGUNION,FOLDL_UNION_BIGUNION_paired,
+   FAPPLY_FUPDATE_THM,DRESTRICT_DEF,FUNION_DEF,
+   Cevaluate_con,Cevaluate_list_with_Cevaluate,
+   Cevaluate_tageq,Cevaluate_proj,Cevaluate_mat_cons,Cevaluate_let_cons]
+>- tac1
+>- tac1
+>- PROVE_TAC[]
+>- PROVE_TAC[]
+>- tac2
+>- tac2
+>- tac3
+>- tac3
+>- tac3
+>- (disj2_tac >> final1)
+>- tac4
+>- tac4
+>- (
   unabbrev_all_tac >>
   rw[mk_env_canon] >>
   rw[ALOOKUP_APPEND,ALOOKUP_MAP] >>
-  rw[FLOOKUP_DEF,DRESTRICT_DEF,FUNION_DEF,FUN_FMAP_DEF]) >>
-TRY (
+  rw[FLOOKUP_DEF,DRESTRICT_DEF,FUNION_DEF,FUN_FMAP_DEF])
+>- (
   rw[Once Cevaluate_cases] >>
   disj1_tac >>
   qmatch_assum_abbrev_tac `∀env''. Cevaluate (env0 ⊌ env'') exp (Rval (CClosure env' ns exp'))` >>
@@ -1551,46 +1622,221 @@ TRY (
     srw_tac[boolSimps.DNF_ss,SATISFY_ss][FUN_FMAP_DEF,FOLDL2_FUPDATE_LIST] >>
     srw_tac[boolSimps.DNF_ss,SATISFY_ss][FUN_FMAP_DEF] >>
     metis_tac[MEM_EL]
-   ))) >>
-TRY (
+   )))
+>- tac5
+>- (
   rw[Once Cevaluate_cases] >>
-  disj2_tac >> disj1_tac >>
-  qmatch_assum_abbrev_tac `∀env''. Cevaluate (env0 ⊌ env'') exp (Rval (CClosure env' ns exp'))` >>
-  map_every qexists_tac [`env'`,`ns`,`exp'`] >>
-  rw[Cevaluate_list_with_Cevaluate] >>
-  fs[Cevaluate_list_with_error] >- (
-    qmatch_abbrev_tac `Cevaluate env1 exp v` >>
-    qsuff_tac `env0 ⊌ env1 = env1` >- metis_tac [] >>
+  disj2_tac >> disj2_tac >> disj1_tac >>
+  qmatch_assum_abbrev_tac `∀env''. Cevaluate (env0 ⊌ env'') exp (Rval (CRecClos env' ns' defs n))` >>
+  map_every qexists_tac [`env'`,`ns'`,`defs`,`n`] >>
+  qmatch_assum_rename_tac `EL i defs = (ns,exp')`[] >>
+  map_every qexists_tac [`i`,`ns`,`exp'`] >>
+  fs[Cevaluate_list_with_Cevaluate,Cevaluate_list_with_value] >>
+  qexists_tac `vs` >>
+  rw[] >- (
+    qmatch_assum_abbrev_tac `∀env''. Cevaluate (env0 ⊌ env'') exp (Rval v)` >>
+    qmatch_abbrev_tac `Cevaluate env1 exp (Rval v)` >>
+    qsuff_tac `env0 ⊌ env1 = env1` >- metis_tac[] >>
     rw[GSYM SUBMAP_FUNION_ABSORPTION] >>
-    rw[SUBMAP_DEF,Abbr`env0`,Abbr`env1`,DRESTRICT_DEF,FUNION_DEF,FUN_FMAP_DEF] >>
-    srw_tac[boolSimps.DNF_ss,SATISFY_ss][FUN_FMAP_DEF] >>
+    rw[Abbr`env0`,Abbr`env1`,SUBMAP_DEF,DRESTRICT_DEF,FUNION_DEF,FUN_FMAP_DEF] >>
+    srw_tac[SATISFY_ss][FUN_FMAP_DEF] >>
+    metis_tac[] )
+  >- (
+    qmatch_abbrev_tac `Cevaluate env1 (EL m es) (Rval (EL m vs))` >>
+    first_x_assum (qspec_then `m` mp_tac) >> rw[] >>
+    qunabbrev_tac `env0` >>
+    qmatch_assum_abbrev_tac `∀env''. Cevaluate (env0 ⊌ env'') (EL m es) (Rval (EL m vs))` >>
+    qsuff_tac `env0 ⊌ env1 = env1` >- metis_tac[] >>
+    rw[GSYM SUBMAP_FUNION_ABSORPTION] >>
+    rw[Abbr`env0`,Abbr`env1`,SUBMAP_DEF,DRESTRICT_DEF,FUNION_DEF,FUN_FMAP_DEF] >>
+    fsrw_tac[boolSimps.DNF_ss,SATISFY_ss][FUN_FMAP_DEF,MEM_EL] >>
+    metis_tac[MEM_EL] ) >>
+  qmatch_abbrev_tac `Cevaluate env1 exp' res` >>
+  qunabbrev_tac `env0` >>
+  qmatch_assum_abbrev_tac `∀env''. Cevaluate (env0 ⊌ env'') exp' res` >>
+  qsuff_tac `env0 ⊌ env1 = env1` >- metis_tac[] >>
+  rw[GSYM SUBMAP_FUNION_ABSORPTION] >>
+  rw[Abbr`env0`,Abbr`env1`] >>
+  pop_assum kall_tac >>
+  rw[FOLDL2_FUPDATE_LIST,LET_THM,MAP2_MAP,FST_pair,SND_pair,MAP_ZIP,LENGTH_ZIP,FOLDL_FUPDATE_LIST] >>
+  fs[SUBMAP_DEF] >>
+  qx_gen_tac `x` >>
+  fs[DRESTRICT_DEF,FUNION_DEF,FUNION_DEF,FDOM_FUPDATE_LIST,MEM_MAP,pairTheory.EXISTS_PROD,MEM_ZIP,MEM_EL] >>
+  qmatch_abbrev_tac `A ∨ C ⇒ D` >>
+  qsuff_tac `C ⇒ D` >- metis_tac[] >>
+  unabbrev_all_tac >> strip_tac >>
+  conj_asm1_tac >- (
+    `canonical_env_Cv (CRecClos env' ns' defs n)` by metis_tac [Cevaluate_canonical_envs] >>
+    pop_assum mp_tac >>
+    fs[EVERY_MEM,MEM_MAP,pairTheory.EXISTS_PROD,EXTENSION,MEM_EL] >>
     metis_tac[] ) >>
+  rw[] )
+>- tac5
+>- (
+  rw[Once Cevaluate_cases] >>
+  rpt disj2_tac >>
+  qmatch_assum_abbrev_tac `∀env'. Cevaluate (env0 ⊌ env') exp (Rerr err)` >>
+  qmatch_abbrev_tac `Cevaluate env1 exp (Rerr err)` >>
+  qsuff_tac `env0 ⊌ env1 = env1` >- metis_tac[] >>
+  rw[GSYM SUBMAP_FUNION_ABSORPTION] >>
+  rw[Abbr`env0`,Abbr`env1`,SUBMAP_DEF,FUNION_DEF,DRESTRICT_DEF,FUN_FMAP_DEF] >>
+  fsrw_tac[boolSimps.DNF_ss,SATISFY_ss][FUN_FMAP_DEF,MEM_EL] >>
+  metis_tac[])
+>- (
+  rw[Once Cevaluate_cases] >>
+  fs[Cevaluate_list_with_Cevaluate] >>
+  fs[Cevaluate_list_with_value] >>
+  disj1_tac >>
+  qmatch_assum_abbrev_tac `∀env'. Cevaluate (env0 ⊌ env') exp res` >>
+  map_every qexists_tac [`v1`,`v2`,`exp`] >>
+  conj_tac >- (
+    qx_gen_tac `n` >> strip_tac >>
+    first_x_assum (qspec_then `n` mp_tac) >>
+    rw[] >>
+    qmatch_abbrev_tac `Cevaluate env1 ex re` >>
+    qunabbrev_tac `env0` >>
+    qmatch_assum_abbrev_tac `∀env'. Cevaluate (env0 ⊌ env') ex re` >>
+    qsuff_tac `env0 ⊌ env1 = env1` >- metis_tac[] >>
+    rw[GSYM SUBMAP_FUNION_ABSORPTION] >>
+    `(n = 0) ∨ (n = 1)` by DECIDE_TAC >>
+    rw[Abbr`env0`,Abbr`env1`,SUBMAP_DEF,FUNION_DEF,DRESTRICT_DEF,FUN_FMAP_DEF] >>
+    fsrw_tac[boolSimps.DNF_ss,SATISFY_ss][FUN_FMAP_DEF,MEM_EL,MEM] >>
+    full_simp_tac pure_ss [GSYM (CONJUNCT1 EL)] >>
+    metis_tac[less2]) >>
+  fs[] >>
+  qmatch_abbrev_tac `Cevaluate env1 exp res` >>
+  qsuff_tac `env0 ⊌ env1 = env1` >- metis_tac[] >>
+  rw[GSYM SUBMAP_FUNION_ABSORPTION] >>
+  rw[Abbr`env0`,Abbr`env1`,SUBMAP_DEF,FUNION_DEF,DRESTRICT_DEF,FUN_FMAP_DEF] >>
+  imp_res_tac CevalPrim2_free_vars >>
+  fs[] )
+>- (
+  rw[Once Cevaluate_cases] >>
+  rpt disj2_tac >>
+  fs[Cevaluate_list_with_Cevaluate,Cevaluate_list_with_error] >>
   qexists_tac `n` >>
   rw[] >- (
-    qmatch_assum_abbrev_tac `∀env'. Cevaluate (env1 ⊌ env') (EL n es) (Rerr err)` >>
-    qmatch_abbrev_tac `Cevaluate env2 (EL n es) (Rerr err)` >>
-    qsuff_tac `env1 ⊌ env2 = env2` >- metis_tac[] >>
+    qmatch_assum_abbrev_tac `∀env'. Cevaluate (env0 ⊌ env') exp (Rerr err)` >>
+    qmatch_abbrev_tac `Cevaluate env1 exp (Rerr err)` >>
+    qsuff_tac `env0 ⊌ env1 = env1` >- metis_tac[] >>
     rw[GSYM SUBMAP_FUNION_ABSORPTION] >>
-    rw[SUBMAP_DEF,Abbr`env1`,Abbr`env2`,DRESTRICT_DEF,FUNION_DEF,FUN_FMAP_DEF] >>
-    srw_tac[boolSimps.DNF_ss,SATISFY_ss][FUN_FMAP_DEF] >>
-    srw_tac[boolSimps.DNF_ss,SATISFY_ss][FUN_FMAP_DEF] >>
-    metis_tac[MEM_EL] ) >>
+    `(n = 0) ∨ (n = 1)` by DECIDE_TAC >>
+    rw[Abbr`env0`,Abbr`env1`,Abbr`exp`,SUBMAP_DEF,FUNION_DEF,DRESTRICT_DEF,FUN_FMAP_DEF] >>
+    fsrw_tac[boolSimps.DNF_ss,SATISFY_ss][FUN_FMAP_DEF,MEM_EL] >>
+    metis_tac[]) >>
   first_x_assum (qspec_then `m` mp_tac) >> rw[] >>
   qexists_tac `v` >>
-  qmatch_assum_abbrev_tac `∀env'. Cevaluate (env1 ⊌ env') (EL m es) (Rval v)` >>
-  qmatch_abbrev_tac `Cevaluate env2 (EL m es) (Rval v)` >>
-  qsuff_tac `env1 ⊌ env2 = env2` >- metis_tac[] >>
+  qmatch_assum_abbrev_tac `∀env'. Cevaluate (env0 ⊌ env') exp (Rval v)` >>
+  qmatch_abbrev_tac `Cevaluate env1 exp (Rval v)` >>
+  qsuff_tac `env0 ⊌ env1 = env1` >- metis_tac[] >>
   rw[GSYM SUBMAP_FUNION_ABSORPTION] >>
+  `(m = 0) ∨ (m = 1)` by DECIDE_TAC >>
+  rw[Abbr`env0`,Abbr`env1`,Abbr`exp`,SUBMAP_DEF,FUNION_DEF,DRESTRICT_DEF,FUN_FMAP_DEF] >>
+  fsrw_tac[boolSimps.DNF_ss,SATISFY_ss][FUN_FMAP_DEF,MEM_EL] >>
+  metis_tac[])
+>- (
+  rw[Once Cevaluate_cases] >>
+  fs[Cevaluate_list_with_Cevaluate] >>
+  fs[Cevaluate_list_with_value] >>
+  disj1_tac >>
+  qmatch_assum_abbrev_tac `∀env'. Cevaluate (env0 ⊌ env') exp res` >>
+  map_every qexists_tac [`v1`,`v2`,`exp`] >>
+  conj_tac >- (
+    qx_gen_tac `n` >> strip_tac >>
+    first_x_assum (qspec_then `n` mp_tac) >>
+    rw[] >>
+    qmatch_abbrev_tac `Cevaluate env1 ex re` >>
+    qunabbrev_tac `env0` >>
+    qmatch_assum_abbrev_tac `∀env'. Cevaluate (env0 ⊌ env') ex re` >>
+    qsuff_tac `env0 ⊌ env1 = env1` >- metis_tac[] >>
+    rw[GSYM SUBMAP_FUNION_ABSORPTION] >>
+    `(n = 0) ∨ (n = 1)` by DECIDE_TAC >>
+    rw[Abbr`env0`,Abbr`env1`,SUBMAP_DEF,FUNION_DEF,DRESTRICT_DEF,FUN_FMAP_DEF] >>
+    `x ∈ BIGUNION (IMAGE free_vars (set es))` by (
+      rw[] >> qexists_tac `free_vars ex` >> rw[] >>
+      qexists_tac `ex` >>
+      rw[Abbr`ex`] >>
+      Cases_on `es` >> fs[] >>
+      Cases_on `t` >> fs[]) >>
+    `FINITE (BIGUNION (IMAGE free_vars (set es)))` by (
+      rw[] >> rw[] ) >>
+    asm_simp_tac(srw_ss()++boolSimps.DNF_ss++SATISFY_ss)[FUN_FMAP_DEF,MEM_EL,pairTheory.UNCURRY] >>
+    metis_tac[less2]) >>
+  fs[] >>
+  qmatch_abbrev_tac `Cevaluate env1 exp res` >>
+  qsuff_tac `env0 ⊌ env1 = env1` >- metis_tac[] >>
+  rw[GSYM SUBMAP_FUNION_ABSORPTION] >>
+  rw[Abbr`env0`,Abbr`env1`,SUBMAP_DEF,FUNION_DEF,DRESTRICT_DEF,FUN_FMAP_DEF] >>
+  imp_res_tac doPrim2_free_vars >>
+  fs[] )
+>- (
+  rw[Once Cevaluate_cases] >>
+  rpt disj2_tac >>
+  fs[Cevaluate_list_with_Cevaluate,Cevaluate_list_with_error] >>
+  qexists_tac `n` >>
+  rw[] >- (
+    qmatch_assum_abbrev_tac `∀env'. Cevaluate (env0 ⊌ env') exp (Rerr err)` >>
+    qmatch_abbrev_tac `Cevaluate env1 exp (Rerr err)` >>
+    qsuff_tac `env0 ⊌ env1 = env1` >- metis_tac[] >>
+    rw[GSYM SUBMAP_FUNION_ABSORPTION] >>
+    rw[Abbr`env0`,Abbr`env1`,Abbr`exp`,SUBMAP_DEF,FUNION_DEF,DRESTRICT_DEF,FUN_FMAP_DEF] >>
+    fsrw_tac[boolSimps.DNF_ss,SATISFY_ss][FUN_FMAP_DEF,MEM_EL] >>
+    metis_tac[]) >>
+  first_x_assum (qspec_then `m` mp_tac) >> rw[] >>
   `m < LENGTH es` by srw_tac[ARITH_ss][] >>
-  rw[SUBMAP_DEF,Abbr`env1`,Abbr`env2`,DRESTRICT_DEF,FUNION_DEF,FUN_FMAP_DEF] >>
-  srw_tac[boolSimps.DNF_ss,SATISFY_ss][FUN_FMAP_DEF] >>
-  srw_tac[boolSimps.DNF_ss,SATISFY_ss][FUN_FMAP_DEF] >>
-  metis_tac[MEM_EL] ) >>
+  qexists_tac `v` >>
+  qmatch_assum_abbrev_tac `∀env'. Cevaluate (env0 ⊌ env') exp (Rval v)` >>
+  qmatch_abbrev_tac `Cevaluate env1 exp (Rval v)` >>
+  qsuff_tac `env0 ⊌ env1 = env1` >- metis_tac[] >>
+  rw[GSYM SUBMAP_FUNION_ABSORPTION] >>
+  rw[Abbr`env0`,Abbr`env1`,Abbr`exp`,SUBMAP_DEF,FUNION_DEF,DRESTRICT_DEF,FUN_FMAP_DEF] >>
+  fsrw_tac[boolSimps.DNF_ss,SATISFY_ss][FUN_FMAP_DEF,MEM_EL] >>
+  metis_tac[])
+>- tac6
+>- tac6
+>- (
+  rw[Once Cevaluate_cases] >>
+  disj2_tac >>
+  final1 )
+>- (
+  rw[Once Cevaluate_cases] >>
+  disj1_tac >>
+  final1 )
+>- (
+  rw[Once Cevaluate_cases] >>
+  disj2_tac >>
+  disj1_tac >>
+  conj_tac >- (
+    pop_assum kall_tac >>
+    final1 ) >>
+  final1 )
+>- (
+  rw[Once Cevaluate_cases] >>
+  disj2_tac >>
+  final1 )
+>- (
+  rw[Once Cevaluate_cases] >>
+  disj1_tac >>
+  final1 )
+>- (
+  rw[Once Cevaluate_cases] >>
+  disj2_tac >> disj1_tac >>
+  conj_tac >- (
+    pop_assum kall_tac >>
+    final1 ) >>
+  final1 )
+>- (
+  rw[Once Cevaluate_cases] >>
+  disj2_tac >>
+  final1 )
+>- rw[Cevaluate_list_with_cons]
+>- rw[Cevaluate_list_with_cons]
+>- (
+  rw[Cevaluate_list_with_cons] >>
+  disj1_tac >>
+  qexists_tac `v` >>
+  rw[] ))
 
->> PROVE_TAC[]
-*)
-
-(*
 val Cevaluate_free_vars_env = save_thm(
 "Cevaluate_free_vars_env",
 Cevaluate_any_env
@@ -1600,7 +1846,6 @@ Cevaluate_any_env
 |> SIMP_RULE (srw_ss()) [FUNION_FEMPTY_2]
 |> DISCH_ALL
 |> Q.GEN `res` |> Q.GEN `exp` |> Q.GEN `env`)
-*)
 
 (* Prove compiler phases preserve semantics *)
 

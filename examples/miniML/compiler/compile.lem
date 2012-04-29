@@ -224,8 +224,10 @@ ce_Cv (CRecClos env ns defs n) =
 
 let rec
 doPrim2 b ty op (CLit (IntLit x)) (CLit (IntLit y)) =
-  if b && y = i0 then CRaise Div_error
-  else CVal (CLit (ty (op x y)))
+  if b && y = i0 then Some (CRaise Div_error)
+  else Some (CVal (CLit (ty (op x y))))
+and
+doPrim2 b ty op _ _ = None
 
 let rec
 CevalPrim2 CAdd = doPrim2 false IntLit Int.(+)
@@ -461,7 +463,7 @@ Cevaluate env (CCall e es) (Rerr err)
 and
 forall env p2 e1 e2 v1 v2 e3 r.
 Cevaluate_list env [e1;e2] (Rval [v1;v2]) &&
-CevalPrim2 p2 v1 v2 = e3 &&
+CevalPrim2 p2 v1 v2 = Some e3 &&
 Cevaluate env e3 r
 ==>
 Cevaluate env (CPrim2 p2 e1 e2) r
@@ -474,7 +476,7 @@ Cevaluate env (CPrim2 p2 e1 e2) (Rerr err)
 and
 forall env es v1 v2 e3 r.
 Cevaluate_list env es (Rval [v1;v2]) &&
-doPrim2 false Bool Int.(<=) v1 v2 = e3 &&
+doPrim2 false Bool Int.(<=) v1 v2 = Some e3 &&
 Cevaluate env e3 r
 ==>
 Cevaluate env (CLprim CLeq es) r

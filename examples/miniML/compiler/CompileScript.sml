@@ -250,8 +250,10 @@ val _ = Defn.save_defn ce_Cexp_defn;
  val doPrim2_defn = Hol_defn "doPrim2" `
 
 (doPrim2 b ty op (CLit (IntLit x)) (CLit (IntLit y)) =
-  if b /\ (y = i0) then CRaise Div_error
-  else CVal (CLit (ty (op x y))))`;
+  if b /\ (y = i0) then SOME (CRaise Div_error)
+  else SOME (CVal (CLit (ty (op x y)))))
+/\
+(doPrim2 b ty op _ _ = NONE)`;
 
 val _ = Defn.save_defn doPrim2_defn;
 
@@ -503,7 +505,7 @@ Cevaluate env (CCall e es) (Rerr err))
 /\
 (! env p2 e1 e2 v1 v2 e3 r.
 Cevaluate_list env [e1;e2] (Rval [v1;v2]) /\
-(CevalPrim2 p2 v1 v2 = e3) /\
+(CevalPrim2 p2 v1 v2 = SOME e3) /\
 Cevaluate env e3 r
 ==>
 Cevaluate env (CPrim2 p2 e1 e2) r)
@@ -516,7 +518,7 @@ Cevaluate env (CPrim2 p2 e1 e2) (Rerr err))
 /\
 (! env es v1 v2 e3 r.
 Cevaluate_list env es (Rval [v1;v2]) /\
-(doPrim2 F Bool int_le v1 v2 = e3) /\
+(doPrim2 F Bool int_le v1 v2 = SOME e3) /\
 Cevaluate env e3 r
 ==>
 Cevaluate env (CLprim CLeq es) r)
