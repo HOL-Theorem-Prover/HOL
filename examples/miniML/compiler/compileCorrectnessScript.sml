@@ -687,7 +687,7 @@ val UNCURRY_K_I_o_FST = store_thm(
 SRW_TAC[][FUN_EQ_THM,pairTheory.LAMBDA_PROD,pairTheory.FORALL_PROD])
 
 val num_Cv_linear_order_linear = store_thm(
-"a_linear_order_linear",
+"num_Cv_linear_order_linear",
 ``total (a_linear_order:num#Cv->num#Cv->bool) ∧
   transitive (a_linear_order:num#Cv->num#Cv->bool) ∧
   antisymmetric (a_linear_order:num#Cv->num#Cv->bool)``,
@@ -1093,8 +1093,14 @@ val ce_Cexp_eqs = mk_MAP "ce" [
 
 val canonical_env_eqs = mk_EVERY
 "canonical_env"
-[(``canonical_env (CClosure env ns b) = (FDOM (alist_to_fmap env) = free_vars b DIFF (set ns))``),
+[(``canonical_env (CClosure env ns b) =
+    (SORTED a_linear_order env) ∧
+    (ALL_DISTINCT (MAP FST env)) ∧
+    (FDOM (alist_to_fmap env) = free_vars b DIFF (set ns))``),
  (``canonical_env (CRecClos env ns bs n) =
+    (SORTED a_linear_order env) ∧
+    (ALL_DISTINCT (MAP FST env)) ∧
+    (LENGTH ns = LENGTH bs) ∧
     case find_index n ns 0 of
       SOME i => (FDOM (alist_to_fmap env) = free_vars (SND (EL i bs)) DIFF (set (FST (EL i bs))) DIFF (set ns))
     | NONE => F``)]
@@ -1108,7 +1114,7 @@ Q.ISPEC_THEN `Cexp_size` imp_res_tac SUM_MAP_MEM_bound >>
 fsrw_tac[ARITH_ss][Cexp_size_def,SUM_MAP_Cexp2_size_thm,SUM_MAP_Cexp6_size_thm,SUM_MAP_Cexp5_size_thm])
 val canonical_env_thm = save_thm(
 "canonical_env_thm",SIMP_RULE((srw_ss())++boolSimps.ETA_ss)[]canonical_env_def)
-
+val canonical_env_ind = theorem"canonical_env_ind"
 val _ = export_rewrites["canonical_env_thm"]
 
 val FOLDL2_Cmatch_bind_error = store_thm(
@@ -1192,6 +1198,11 @@ val set_MAP_sort_Cenv = store_thm(
 ``set (MAP f (sort_Cenv env)) = set (MAP f env)``,
 rw[sort_Cenv_def])
 val _ = export_rewrites["set_MAP_sort_Cenv"]
+
+val PERM_MAP_sort_Cenv = store_thm(
+"PERM_MAP_sort_Cenv",
+``PERM (MAP f (sort_Cenv env)) (MAP f env)``,
+metis_tac[sort_Cenv_def,QSORT_PERM,PERM_MAP,PERM_SYM])
 
 val EVERY_QSORT = store_thm(
 "EVERY_QSORT",
@@ -1286,6 +1297,49 @@ rpt strip_tac >>
 match_mp_tac ALOOKUP_MEM >>
 ONCE_REWRITE_TAC[SYM(CONJUNCT1 ALOOKUP_EQ_FLOOKUP)] >>
 REWRITE_TAC[FLOOKUP_DEF] >> rw[])
+
+val SORTED_sort_Cenv = store_thm(
+"SORTED_sort_Cenv",
+``∀env:(num,Cv) alist. SORTED a_linear_order (sort_Cenv env)``,
+rw[sort_Cenv_def] >>
+match_mp_tac QSORT_SORTED >>
+rw[num_Cv_linear_order_linear])
+val _ = export_rewrites["SORTED_sort_Cenv"]
+
+val MAP_EQ_ID = store_thm(
+"MAP_EQ_ID",
+``!f ls. (MAP f ls = ls) = (!x. MEM x ls ==> (f x = x))``,
+PROVE_TAC[MAP_EQ_f,MAP_ID,combinTheory.I_THM])
+
+val force_dom_id =  store_thm(
+"force_dom_id",
+``FINITE s ⇒ ((force_dom fm s d = fm) = (s = FDOM fm))``,
+rw[force_dom_DRESTRICT_FUNION,GSYM fmap_EQ_THM,FUNION_DEF,DRESTRICT_DEF,EQ_IMP_THM])
+
+val sort_Cenv_id = store_thm(
+"sort_Cenv_id",
+``(sort_Cenv (env:(num,Cv)alist) = env) = (SORTED a_linear_order env)``,
+rw[sort_Cenv_def,EQ_IMP_THM] >- (
+  pop_assum (SUBST1_TAC o SYM) >>
+  match_mp_tac QSORT_SORTED >>
+  rw[num_Cv_linear_order_linear] ) >>
+match_mp_tac (MP_CANON SORTED_PERM_EQ) >>
+metis_tac[num_Cv_linear_order_linear,QSORT_SORTED,QSORT_PERM,PERM_SYM])
+
+val ALL_DISTINCT_sort_Cenv = store_thm(
+"ALL_DISTINCT_sort_Cenv",
+``ALL_DISTINCT (sort_Cenv env) = ALL_DISTINCT env``,
+metis_tac[sort_Cenv_def,QSORT_PERM,ALL_DISTINCT_PERM])
+val _ = export_rewrites["ALL_DISTINCT_sort_Cenv"]
+
+val ALL_DISTINCT_MAP_sort_Cenv = store_thm(
+"ALL_DISTINCT_MAP_sort_Cenv",
+``ALL_DISTINCT (MAP f (sort_Cenv env)) = ALL_DISTINCT (MAP f env)``,
+metis_tac[ALL_DISTINCT_PERM,PERM_MAP_sort_Cenv])
+val _ = export_rewrites["ALL_DISTINCT_MAP_sort_Cenv"]
+
+(*TODO:move*)
+val _ = augment_srw_ss[rewrites[ALL_DISTINCT_fmap_to_alist_keys]]
 
 val ce_Cexp_canonical_env = store_thm(
 "ce_Cexp_canonical_env",
@@ -1847,9 +1901,60 @@ Cevaluate_any_env
 |> DISCH_ALL
 |> Q.GEN `res` |> Q.GEN `exp` |> Q.GEN `env`)
 
-(* Prove compiler phases preserve semantics *)
+val mk_env_canonical_id = store_thm(
+"mk_env_canonical_id",
+``(mk_env env exp ns = env) =
+  SORTED a_linear_order env ∧
+  (set (MAP FST env) = free_vars exp DIFF ns) ∧
+  ALL_DISTINCT (MAP FST env)``,
+EQ_TAC >- (
+  rw[] >>
+  pop_assum (SUBST1_TAC o SYM) >>
+  rw[mk_env_def] >>
+  metis_tac[ALL_DISTINCT_fmap_to_alist_keys]) >>
+rw[mk_env_def] >>
+qmatch_abbrev_tac `sort_Cenv (fmap_to_alist (force_dom fm s d)) = env` >>
+`force_dom fm s d = fm` by (
+  rw[force_dom_id,Abbr`fm`] ) >>
+rw[Abbr`fm`] >>
+match_mp_tac (MP_CANON SORTED_PERM_EQ) >>
+qexists_tac `a_linear_order` >>
+rw[num_Cv_linear_order_linear] >>
+metis_tac[PERM_MAP_sort_Cenv,MAP_ID,PERM_TRANS,alist_to_fmap_to_alist_PERM])
+
+val ce_Cexp_canonical_id = store_thm(
+"ce_Cexp_canonical_id",
+``(∀exp. canonical_env_Cexp exp ⇒ (ce_Cexp exp = exp)) ∧
+(∀v. canonical_env_Cv v ⇒ (ce_Cv v = v))``,
+ho_match_mp_tac canonical_env_ind >>
+srw_tac[SATISFY_ss][EVERY_MEM,MAP_EQ_ID,pairTheory.FORALL_PROD,MEM_MAP,pairTheory.EXISTS_PROD] >- (
+  `env' = env` by (
+    unabbrev_all_tac >>
+    srw_tac[SATISFY_ss][MAP_EQ_ID,pairTheory.FORALL_PROD] ) >>
+  rw[mk_env_canonical_id] ) >>
+Cases_on `find_index n ns 0` >> fs[LET_THM] >>
+fs[pairTheory.UNCURRY] >>
+conj_asm2_tac >- (
+  qmatch_abbrev_tac `mk_env (MAP f env) X Y = Z` >>
+  `MAP f env = env` by (
+    srw_tac[SATISFY_ss][MAP_EQ_ID,Abbr`f`,pairTheory.FORALL_PROD] ) >>
+  unabbrev_all_tac >>
+  rw[mk_env_canonical_id,DIFF_UNION,DIFF_COMM] ) >>
+srw_tac[SATISFY_ss][MAP_EQ_ID,pairTheory.FORALL_PROD])
 
 (*
+val v_to_Cv_canonical = store_thm(
+"v_to_Cv_canonical",
+``∀cm s v. canonical_env_Cv (v_to_Cv cm (s,v))``,
+ho_match_mp_tac v_to_Cv_ind >>
+rw[v_to_Cv_def,EVERY_MEM,MEM_MAP] >-
+  metis_tac[] >>
+unabbrev_all_tac >>
+rw[mk_env_def,EVERY_MAP,EVERY_MEM,pairTheory.FORALL_PROD,FLOOKUP_DEF] >- (
+  rw[force_dom_DRESTRICT_FUNION,FUNION_DEF,DRESTRICT_DEF,MEM_MAP,pairTheory.EXISTS_PROD,FUN_FMAP_DEF,MAP_MAP_o]
+
+(* Prove compiler phases preserve semantics *)
+
 val exp_to_Cexp_thm1 = store_thm(
 "exp_to_Cexp_thm1",
 ``∀tp cm Ps Pexp s exp s' Cexp cenv env res.
@@ -1905,7 +2010,7 @@ strip_tac >- (
   rw[] >> srw_tac[boolSimps.DNF_ss][pairTheory.EXISTS_PROD] >>
   imp_res_tac alistTheory.ALOOKUP_MEM >- PROVE_TAC[] >>
   fs[good_env_state_def] >>
-  qho_match_abbrev_tac `x = alist_to_fmap (MAP (λ(x,y). (f1 x, f2 y)) al) ' z` >>
+  qho_match_abbrev_tac `x = ce_Cv (alist_to_fmap (MAP (λ(x,y). (f1 x, f2 y)) al) ' z)` >>
   `f1 = FAPPLY s.m` by rw[Abbr`f1`,FUN_EQ_THM] >>
   rw[alistTheory.alist_to_fmap_MAP] >>
   `vn IN FDOM (f2 o_f alist_to_fmap al)` by (
@@ -1916,6 +2021,7 @@ strip_tac >- (
   rw[finite_mapTheory.o_f_DEF] >>
   imp_res_tac alistTheory.ALOOKUP_SOME_FAPPLY_alist_to_fmap >>
   rw[] ) >>
+
 strip_tac >- (
   fs[exp_to_Cexp_def] >>
   rw[v_to_Cv_def] >>
