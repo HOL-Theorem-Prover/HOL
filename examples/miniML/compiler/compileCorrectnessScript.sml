@@ -1942,19 +1942,142 @@ conj_asm2_tac >- (
   rw[mk_env_canonical_id,DIFF_UNION,DIFF_COMM] ) >>
 srw_tac[SATISFY_ss][MAP_EQ_ID,pairTheory.FORALL_PROD])
 
-(*
+(* TODO: Move *)
+val IMAGE_CONG = store_thm(
+"IMAGE_CONG",
+``!f s f' s'. (s = s') /\ (!x. x IN s' ==> (f x = f' x))
+==> (IMAGE f s = IMAGE f' s')``,
+SRW_TAC[][EXTENSION] THEN METIS_TAC[])
+val _ = DefnBase.export_cong"IMAGE_CONG"
+
+val tac =
+WF_REL_TAC `inv_image $< (λx. case x of (INL e) => exp_size e | (INR v) => v_size v)` >>
+rw[MiniMLTerminationTheory.exp1_size_thm,
+   MiniMLTerminationTheory.exp3_size_thm,
+   MiniMLTerminationTheory.exp6_size_thm,
+   MiniMLTerminationTheory.exp8_size_thm,
+   MiniMLTerminationTheory.exp9_size_thm] >>
+srw_tac[ARITH_ss][] >>
+imp_res_tac ALOOKUP_MEM >>
+(Q.ISPEC_THEN `exp2_size` imp_res_tac SUM_MAP_MEM_bound) >>
+(Q.ISPEC_THEN `exp5_size` imp_res_tac SUM_MAP_MEM_bound) >>
+(Q.ISPEC_THEN `exp7_size` imp_res_tac SUM_MAP_MEM_bound) >>
+(Q.ISPEC_THEN `exp_size` imp_res_tac SUM_MAP_MEM_bound) >>
+(Q.ISPEC_THEN `v_size` imp_res_tac SUM_MAP_MEM_bound) >>
+fsrw_tac[ARITH_ss][exp_size_def]
+
+val FV_def = tDefine "FV"`
+(FV_exp (Raise _) = {}) ∧
+(FV_exp (Val v) = FV_v v) ∧
+(FV_exp (Con _ ls) = BIGUNION (IMAGE FV_exp (set ls))) ∧
+(FV_exp (Var x) = {x}) ∧
+(FV_exp (Fun x e) = FV_exp e DIFF {x}) ∧
+(FV_exp (App op e1 e2) = FV_exp e1 ∪ FV_exp e2) ∧
+(FV_exp (Log lg e1 e2) = FV_exp e1 ∪ FV_exp e2) ∧
+(FV_exp (If e1 e2 e3) = FV_exp e1 ∪ FV_exp e2 ∪ FV_exp e3) ∧
+(FV_exp (Mat e pes) = FV_exp e ∪ BIGUNION (IMAGE (λ(p,e). FV_exp e DIFF pat_vars p) (set pes))) ∧
+(FV_exp (Let x e b) = FV_exp e ∪ (FV_exp b DIFF {x})) ∧
+(FV_exp (Letrec defs b) = BIGUNION (IMAGE (λ(y,x,e). FV_exp e DIFF {x}) (set defs)) ∪ (FV_exp b DIFF (IMAGE FST (set defs)))) ∧
+(FV_v (Lit _) = {}) ∧
+(FV_v (Conv _ vs) = BIGUNION (IMAGE FV_v (set vs))) ∧
+(FV_v (Closure env x e) = BIGUNION (IMAGE (λ(n,v). FV_v v) (set env)) ∪ FV_exp e DIFF {x} DIFF (IMAGE FST (set env))) ∧
+(FV_v (Recclosure env defs y) = case ALOOKUP defs y of NONE => {} | SOME (x,e) =>
+  BIGUNION (IMAGE (λ(n,v). FV_v v) (set env)) ∪
+  BIGUNION (IMAGE (λ(y,x,e). FV_exp e DIFF {x}) (set defs)) ∪
+  FV_exp e DIFF {x} DIFF (IMAGE FST (set defs)) DIFF (IMAGE FST (set env)))` tac
+val _ = export_rewrites["FV_def"]
+
+val clV_def = tDefine "clV"`
+(clV_exp (Raise _) = {}) ∧
+(clV_exp (Val v) = clV_v v) ∧
+(clV_exp (Con _ ls) = BIGUNION (IMAGE clV_exp (set ls))) ∧
+(clV_exp (Var _) = {}) ∧
+(clV_exp (Fun _ e) = clV_exp e) ∧
+(clV_exp (App _ e1 e2) = clV_exp e1 ∪ clV_exp e2) ∧
+(clV_exp (Log _ e1 e2) = clV_exp e1 ∪ clV_exp e2) ∧
+(clV_exp (If e1 e2 e3) = clV_exp e1 ∪ clV_exp e2 ∪ clV_exp e3) ∧
+(clV_exp (Mat e pes) = clV_exp e ∪ BIGUNION (IMAGE (λ(p,e). clV_exp e) (set pes))) ∧
+(clV_exp (Let _ e b) = clV_exp e ∪ clV_exp b) ∧
+(clV_exp (Letrec defs b) = BIGUNION (IMAGE (λ(y,x,e). clV_exp e) (set defs)) ∪ clV_exp b) ∧
+(clV_v (Lit _) = {}) ∧
+(clV_v (Conv _ vs) = BIGUNION (IMAGE clV_v (set vs))) ∧
+(clV_v (Closure env _ e) = IMAGE FST (set env) ∪
+  BIGUNION (IMAGE (λ(n,v). clV_v v) (set env)) ∪
+  clV_exp e) ∧
+(clV_v (Recclosure env defs _) = IMAGE FST (set defs) ∪ IMAGE FST (set env) ∪
+  BIGUNION (IMAGE (λ(n,v). clV_v v) (set env)) ∪
+  BIGUNION (IMAGE (λ(y,x,e). clV_exp e) (set defs)))` tac
+val _ = export_rewrites["clV_def"]
+
+(* TODO: move *)
+val FOLDR_CONS = store_thm(
+"FOLDR_CONS",
+``!f ls a. FOLDR (\x y. f x :: y) a ls = (MAP f ls)++a``,
+GEN_TAC THEN Induct THEN SRW_TAC[][])
+
+val FOLDR_CONS_triple = store_thm(
+"FOLDR_CONS_triple",
+``!f ls a. FOLDR (\(x,y,z) w. f x y z :: w) a ls = (MAP (\(x,y,z). f x y z) ls)++a``,
+GEN_TAC THEN
+Induct THEN1 SRW_TAC[][] THEN
+Q.X_GEN_TAC `p` THEN
+PairCases_on `p` THEN
+SRW_TAC[][])
+
+val tac =
+  unabbrev_all_tac >>
+  rw[force_dom_DRESTRICT_FUNION,FUNION_DEF,DRESTRICT_DEF,MEM_MAP,pairTheory.EXISTS_PROD,FUN_FMAP_DEF,MAP_MAP_o] >>
+  qmatch_abbrev_tac `canonical_env_Cv ((alist_to_fmap (MAP f env)) ' k)` >>
+  `∃f1 f2. f = (λ(n,v). (f1 n, f2 v))` by (
+    rw[FUN_EQ_THM,pairTheory.UNCURRY,Abbr`f`,pairTheory.FORALL_PROD] >>
+    rw[GSYM SKOLEM_THM,Once SWAP_EXISTS_THM] >>
+    rw[FORALL_AND_THM] >>
+    rw[GSYM SKOLEM_THM] ) >>
+  `INJ f1 (set (MAP FST env)) UNIV` by (
+    unabbrev_all_tac >>
+    fs[INJ_DEF] >>
+    fs[FUN_EQ_THM,pairTheory.FORALL_PROD,FORALL_AND_THM] >>
+    rpt strip_tac >> fs[] >>
+    first_x_assum (match_mp_tac o MP_CANON) >> fs[] >>
+    fs[SUBSET_DEF,pairTheory.EXISTS_PROD,MEM_MAP] >>
+    metis_tac[] ) >>
+  fs[] >>
+  rw[alist_to_fmap_MAP] >>
+  qmatch_abbrev_tac `canonical_env_Cv (MAP_KEYS f1 fm ' k)` >>
+  `∃a. (a ∈ FDOM fm) ∧ (k = f1 a)` by (
+    fs[FUN_EQ_THM,markerTheory.Abbrev_def,pairTheory.FORALL_PROD,MEM_MAP,pairTheory.EXISTS_PROD] >>
+    metis_tac[] ) >>
+  rw[] >>
+  `INJ f1 (FDOM fm) UNIV` by (
+    fs[FUN_EQ_THM,markerTheory.Abbrev_def,pairTheory.FORALL_PROD] ) >>
+  rw[MAP_KEYS_def,Abbr`fm`] >>
+  fs[o_f_DEF,markerTheory.Abbrev_def,FUN_EQ_THM,pairTheory.FORALL_PROD]
+
 val v_to_Cv_canonical = store_thm(
 "v_to_Cv_canonical",
-``∀cm s v. canonical_env_Cv (v_to_Cv cm (s,v))``,
+``∀cm Ps Pv s v. (s = FST (Ps,Pv)) ∧ (v = SND (Ps,Pv)) ∧
+    (INJ (FAPPLY s.m) (FDOM s.m) UNIV) ∧
+    (clV_v v ⊆ FDOM s.m)
+⇒ canonical_env_Cv (v_to_Cv cm (Ps,Pv))``,
 ho_match_mp_tac v_to_Cv_ind >>
-rw[v_to_Cv_def,EVERY_MEM,MEM_MAP] >-
-  metis_tac[] >>
+rw[v_to_Cv_def,EVERY_MEM,MEM_MAP] >- (
+  fs[SUBSET_DEF] >>
+  metis_tac[] ) >>
+fs[] >>
 unabbrev_all_tac >>
-rw[mk_env_def,EVERY_MAP,EVERY_MEM,pairTheory.FORALL_PROD,FLOOKUP_DEF] >- (
-  rw[force_dom_DRESTRICT_FUNION,FUNION_DEF,DRESTRICT_DEF,MEM_MAP,pairTheory.EXISTS_PROD,FUN_FMAP_DEF,MAP_MAP_o]
+rw[mk_env_def,EVERY_MAP,EVERY_MEM,pairTheory.FORALL_PROD,FLOOKUP_DEF] >- tac  >>
+BasicProvers.EVERY_CASE_TAC >> TRY (fs[LET_THM,pairTheory.UNCURRY] >> NO_TAC) >>
+imp_res_tac find_index_LESS_LENGTH >>
+rw[] >>
+fs[MEM_MAP,EVERY_MAP,EL_MAP,DIFF_UNION,DIFF_COMM] >>
+fs[FOLDR_CONS_triple,LET_THM,pairTheory.UNCURRY,MAP_MAP_o] >>
+qunabbrev_tac `defs'` >> fs[EVERY_MAP,pairTheory.UNCURRY] >>
+rw[EVERY_MEM,pairTheory.FORALL_PROD,FLOOKUP_DEF] >>
+tac)
 
 (* Prove compiler phases preserve semantics *)
 
+(*
 val exp_to_Cexp_thm1 = store_thm(
 "exp_to_Cexp_thm1",
 ``∀tp cm Ps Pexp s exp s' Cexp cenv env res.
