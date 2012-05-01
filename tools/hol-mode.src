@@ -1084,11 +1084,11 @@ printed out.  (That's assuming that quietdec is false to start with.)"
   "Sends term at point (delimited by backquote characters) as a
 subgoal.  Will usually create at least two sub-goals; one will be the
 term just sent, and the others will be the term sent STRIP_ASSUME'd
-onto the assumption list of the old goal.  (Loads the Q module if not
-already loaded.)"
+onto the assumption list of the old goal.  (Loads the BasicProvers
+module if not already loaded.)"
   (interactive)
   (send-string-to-hol
-   (format "proofManagerLib.e (Q.SUBGOAL_THEN `%s` STRIP_ASSUME_TAC)"
+   (format "proofManagerLib.e (BasicProvers.by(`%s`,ALL_TAC))"
            (hol-term-at-point))))
 
 
