@@ -123,6 +123,13 @@ and
 Cv_to_ov m (CRecClos _ _ _ _) = OFn
 
 let rec
+Cpat_vars (CPvar n) = {n}
+and
+Cpat_vars (CPlit _) = {}
+and
+Cpat_vars (CPcon _ ps) = List.fold_left (fun s p -> s union Cpat_vars p) {} ps
+
+let rec
 free_vars (CRaise _) = {}
 and
 free_vars (CVar n) = {n}
@@ -137,7 +144,9 @@ and
 free_vars (CProj e _) = free_vars e
 and
 free_vars (CMat v pes) =
-  List.fold_left (fun s (p,e) -> s union free_vars e) {v} pes
+  List.fold_left (fun s (p,e) ->
+    s union (free_vars e \ Cpat_vars p))
+    {v} pes
 and
 free_vars (CLet xs es e) =
   List.fold_left (fun s e -> s union free_vars e)
@@ -554,13 +563,6 @@ Cevaluate env e (Rval v) &&
 Cevaluate_list env es (Rerr err)
 ==>
 Cevaluate_list env (e::es) (Rerr err)
-
-let rec
-Cpat_vars (CPvar n) = {n}
-and
-Cpat_vars (CPlit _) = {}
-and
-Cpat_vars (CPcon _ ps) = List.fold_left (fun s p -> s union Cpat_vars p) {} ps
 
 (* relating source to intermediate language *)
 

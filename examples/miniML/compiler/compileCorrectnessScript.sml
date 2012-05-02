@@ -463,14 +463,15 @@ ORELSE rw[Cpmatch_def,FUNION_FEMPTY_1]) >- (
 
 val Cpmatch_pat_vars = store_thm(
 "Cpmatch_pat_vars",
-``(∀env p v env'. (Cpmatch env p v = Cmatch env') ⇒ FDOM env' ⊆ FDOM env ∪ Cpat_vars p)
- ∧(∀env ps vs env'. (Cpmatch_list env ps vs = Cmatch env') ⇒ FDOM env' ⊆ FDOM env ∪ BIGUNION (IMAGE Cpat_vars (set ps)))``,
+``(∀env p v env'. (Cpmatch env p v = Cmatch env') ⇒ (FDOM env' = FDOM env ∪ Cpat_vars p))
+ ∧(∀env ps vs env'. (Cpmatch_list env ps vs = Cmatch env') ⇒ (FDOM env' = FDOM env ∪ BIGUNION (IMAGE Cpat_vars (set ps))))``,
 ho_match_mp_tac Cpmatch_ind >>
-rw[Cpmatch_def,FOLDL_UNION_BIGUNION] >> rw[] >>
+rw[Cpmatch_def,FOLDL_UNION_BIGUNION] >> rw[] >-
+  rw[Once INSERT_SING_UNION,Once UNION_COMM] >>
 Cases_on `Cpmatch env p v` >> fs[] >>
 qmatch_assum_rename_tac `Cpmatch env p v = Cmatch env1` [] >>
 first_x_assum (qspec_then `env1` mp_tac) >> rw[] >>
-fs[SUBSET_DEF] >> metis_tac[])
+rw[UNION_ASSOC])
 
 (* Invariants *)
 
@@ -1509,6 +1510,19 @@ val tac2 =
   rw[] >>
   (disj1_tac ORELSE rw[Once Cpmatch_FEMPTY]) >>
   final1
+val tac2a =
+  fs[Once Cpmatch_FEMPTY] >>
+  Cases_on `Cpmatch FEMPTY p (env ' n)` >> fs[] >>
+  rw[] >>
+  disj1_tac >>
+  imp_res_tac Cpmatch_pat_vars >>
+  qmatch_assum_abbrev_tac `∀env'.  Cevaluate (env0 ⊌ env') ee rr` >>
+  qmatch_abbrev_tac `Cevaluate env1 ee rr` >>
+  qsuff_tac `env0 ⊌ env1 = env1` >- PROVE_TAC[] >>
+  rw[GSYM SUBMAP_FUNION_ABSORPTION] >>
+  rw[Abbr`env0`,Abbr`env1`,SUBMAP_DEF,DRESTRICT_DEF,FUNION_DEF,FUN_FMAP_DEF,pairTheory.UNCURRY] >>
+  fsrw_tac[boolSimps.DNF_ss,SATISFY_ss][FUN_FMAP_DEF,pairTheory.UNCURRY,SUBSET_DEF] >>
+  metis_tac[]
 val tac3 =
   disj1_tac >>
   qexists_tac `v` >>
@@ -1670,7 +1684,7 @@ rw[FOLDL_UNION_BIGUNION,FOLDL_UNION_BIGUNION_paired,
 >- tac1
 >- PROVE_TAC[]
 >- PROVE_TAC[]
->- tac2
+>- tac2a
 >- tac2
 >- tac3
 >- tac3

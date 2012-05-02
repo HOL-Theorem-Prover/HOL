@@ -137,6 +137,16 @@ val _ = Hol_datatype `
 
 val _ = Defn.save_defn Cv_to_ov_defn;
 
+ val Cpat_vars_defn = Hol_defn "Cpat_vars" `
+
+(Cpat_vars (CPvar n) = {n})
+/\
+(Cpat_vars (CPlit _) = {})
+/\
+(Cpat_vars (CPcon _ ps) = FOLDL (\ s p . s UNION Cpat_vars p) {} ps)`;
+
+val _ = Defn.save_defn Cpat_vars_defn;
+
  val free_vars_defn = Hol_defn "free_vars" `
 
 (free_vars (CRaise _) = {})
@@ -153,7 +163,9 @@ val _ = Defn.save_defn Cv_to_ov_defn;
 (free_vars (CProj e _) = free_vars e)
 /\
 (free_vars (CMat v pes) =
-  FOLDL (\ s (p,e) . s UNION free_vars e) {v} pes)
+  FOLDL (\ s (p,e) .
+    s UNION (free_vars e DIFF Cpat_vars p))
+    {v} pes)
 /\
 (free_vars (CLet xs es e) =
   FOLDL (\ s e . s UNION free_vars e)
@@ -596,16 +608,6 @@ Cevaluate env e (Rval v) /\
 Cevaluate_list env es (Rerr err)
 ==>
 Cevaluate_list env (e::es) (Rerr err))`;
-
- val Cpat_vars_defn = Hol_defn "Cpat_vars" `
-
-(Cpat_vars (CPvar n) = {n})
-/\
-(Cpat_vars (CPlit _) = {})
-/\
-(Cpat_vars (CPcon _ ps) = FOLDL (\ s p . s UNION Cpat_vars p) {} ps)`;
-
-val _ = Defn.save_defn Cpat_vars_defn;
 
 (* relating source to intermediate language *)
 
