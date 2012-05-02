@@ -183,7 +183,8 @@ SRW_TAC[][MAP_KEYS_FUPDATE])
 
 val alist_to_fmap_to_alist = store_thm(
 "alist_to_fmap_to_alist",
-``∀al. fmap_to_alist (alist_to_fmap al) = MAP (\k. (k, THE (ALOOKUP al k))) (SET_TO_LIST (set (MAP FST al)))``,
+``!al. fmap_to_alist (alist_to_fmap al) =
+       MAP (\k. (k, THE (ALOOKUP al k))) (SET_TO_LIST (set (MAP FST al)))``,
 SRW_TAC[][fmap_to_alist_def,MAP_EQ_f,MEM_MAP] THEN
 Q.MATCH_ASSUM_RENAME_TAC `MEM p al` [] THEN
 PairCases_on `p` THEN SRW_TAC[][] THEN
@@ -193,7 +194,8 @@ SRW_TAC[][])
 
 val alist_to_fmap_to_alist_PERM = store_thm(
 "alist_to_fmap_to_alist_PERM",
-``∀al. ALL_DISTINCT (MAP FST al) ==> PERM (fmap_to_alist (alist_to_fmap al)) al``,
+``!al. ALL_DISTINCT (MAP FST al) ==>
+       PERM (fmap_to_alist (alist_to_fmap al)) al``,
 SRW_TAC[][alist_to_fmap_to_alist,ALL_DISTINCT_PERM_LIST_TO_SET_TO_LIST] THEN
 MATCH_MP_TAC PERM_TRANS THEN
 Q.EXISTS_TAC `MAP (\k. (k, THE (ALOOKUP al k))) (MAP FST al)` THEN
@@ -261,7 +263,8 @@ SRW_TAC[][])
 val ALL_DISTINCT_fmap_to_alist_keys = store_thm(
 "ALL_DISTINCT_fmap_to_alist_keys",
 ``!fm. ALL_DISTINCT (MAP FST (fmap_to_alist fm))``,
-qsuff_tac `!s fm. (s = FDOM fm) ⇒ ALL_DISTINCT (MAP FST (fmap_to_alist fm))` >- rw[] >>
+qsuff_tac `!s fm. (s = FDOM fm) ==> ALL_DISTINCT (MAP FST (fmap_to_alist fm))`
+  >- rw[] >>
 ho_match_mp_tac SET_TO_LIST_IND >> rw[] >>
 fs[fmap_to_alist_def] >>
 Cases_on `FDOM fm = {}` >- rw[] >> fs[] >>
@@ -285,11 +288,14 @@ rw[GSYM fmap_EQ_THM,pairTheory.EXISTS_PROD,MEM_MAP,MEM_fmap_to_alist])
 val fmap_to_alist_preserves_FDOM = store_thm(
 "fmap_to_alist_preserves_FDOM",
 ``!fm1 fm2. (FDOM fm1 = FDOM fm2) ==> (MAP FST (fmap_to_alist fm1) = MAP FST (fmap_to_alist fm2))``,
-qsuff_tac `!s fm1 fm2. (FDOM fm1 = s) ∧ (FDOM fm2 = s) ⇒ (MAP FST (fmap_to_alist fm1) = MAP FST (fmap_to_alist fm2))` >- rw[] >>
+qsuff_tac `
+  !s fm1 fm2. (FDOM fm1 = s) /\ (FDOM fm2 = s) ==>
+              (MAP FST (fmap_to_alist fm1) = MAP FST (fmap_to_alist fm2))`
+  >- rw[] >>
 ho_match_mp_tac SET_TO_LIST_IND >> rw[] >>
 fs[fmap_to_alist_def] >>
 Cases_on `FDOM fm2 = {}` >- rw[] >> fs[] >>
-`FDOM fm1 ≠ {}` by rw[] >>
+`FDOM fm1 <> {}` by rw[] >>
 rw[Once SET_TO_LIST_THM,SimpLHS] >>
 rw[Once SET_TO_LIST_THM,SimpRHS] >>
 first_x_assum (qspec_then `fm1 \\ (CHOICE (FDOM fm2))` mp_tac) >>
@@ -297,7 +303,7 @@ disch_then (qspec_then `fm2 \\ (CHOICE (FDOM fm2))` mp_tac) >>
 rw[REST_DEF,MAP_MAP_o] >>
 qmatch_assum_abbrev_tac `MAP f1 ls = MAP f2 ls` >>
 qmatch_abbrev_tac `MAP f3 ls = MAP f4 ls` >>
-qsuff_tac `(MAP f3 ls = MAP f1 ls) ∧ (MAP f4 ls = MAP f2 ls)` >- rw[] >>
+qsuff_tac `(MAP f3 ls = MAP f1 ls) /\ (MAP f4 ls = MAP f2 ls)` >- rw[] >>
 rw[MAP_EQ_f,Abbr`f1`,Abbr`f2`,Abbr`f3`,Abbr`f4`,Abbr`ls`,DOMSUB_FAPPLY_THM])
 
 val PERM_fmap_to_alist = store_thm(
@@ -323,9 +329,8 @@ rw[INJ_DEF,Abbr`ff1`,Abbr`ff2`,MEM_fmap_to_alist_FLOOKUP] >>
 Cases_on `x` >> Cases_on `y` >> fs[] >>
 imp_res_tac ALOOKUP_MEM >>
 imp_res_tac MEM_PERM >>
-`ALL_DISTINCT (MAP FST af1) ∧
- ALL_DISTINCT (MAP FST af2)` by
-  rw[ALL_DISTINCT_fmap_to_alist_keys,Abbr`af1`,Abbr`af2`] >>
+`ALL_DISTINCT (MAP FST af1) /\ ALL_DISTINCT (MAP FST af2)`
+  by rw[ALL_DISTINCT_fmap_to_alist_keys,Abbr`af1`,Abbr`af2`] >>
 fs[EL_ALL_DISTINCT_EL_EQ,MEM_EL,EL_MAP] >>
 rw[] >>
 qmatch_rename_tac `r1 = r2`[] >>
