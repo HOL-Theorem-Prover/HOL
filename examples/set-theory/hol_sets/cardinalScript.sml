@@ -244,6 +244,15 @@ val CARDEQ_INSERT = store_thm(
     DEEP_INTRO_TAC optionTheory.some_intro >> simp[]
   ]);
 
+(* ∀s. INFINITE s ⇒ x INSERT s ≈ s
+
+   more useful then CARDEQ_INSERT as a (conditional) "rewrite", when
+   working with the ≈ congruence (rather than equality) *)
+val CARDEQ_INSERT_RWT = save_thm(
+  "CARDEQ_INSERT_RWT",
+  ``INFINITE (s:'a set)`` |> ASSUME |> DISJ2 ``(x:'a) ∈ s``
+                          |> EQ_MP (SYM CARDEQ_INSERT) |> DISCH_ALL
+                          |> Q.GEN `s`)
 
 val _ = export_theory()
 
