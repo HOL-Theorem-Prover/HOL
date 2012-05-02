@@ -10,7 +10,7 @@ val cardeq_def = Define`
 `
 
 val _ = set_fixity "=~" (Infix(NONASSOC, 450))
-val _ = set_mapped_fixity {tok = "≃", term_name = "=~",
+val _ = set_mapped_fixity {tok = "≈", term_name = "=~",
                            fixity = Infix(NONASSOC, 450)}
 
 val _ = overload_on("=~", ``cardeq``)
@@ -62,7 +62,7 @@ val INJ_BIJ_SUBSET = store_thm(
 (* Schroder-Bernstein *)
 val cardleq_ANTISYM = store_thm(
   "cardleq_ANTISYM",
-  ``∀s t. s ≼ t ∧ t ≼ s ⇒ s ≃ t``,
+  ``∀s t. s ≼ t ∧ t ≼ s ⇒ s ≈ t``,
   rpt gen_tac >> simp[cardleq_def, cardeq_def] >>
   disch_then (CONJUNCTS_THEN2 (Q.X_CHOOSE_THEN `f` assume_tac)
                               (Q.X_CHOOSE_THEN `g` assume_tac)) >>
