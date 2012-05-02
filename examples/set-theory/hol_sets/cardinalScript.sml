@@ -254,6 +254,37 @@ val CARDEQ_INSERT_RWT = save_thm(
                           |> EQ_MP (SYM CARDEQ_INSERT) |> DISCH_ALL
                           |> Q.GEN `s`)
 
+val CARDEQ_CROSS = store_thm(
+  "CARDEQ_CROSS",
+  ``s1 ≈ s2 ∧ t1 ≈ t2 ⇒ (s1 × t1 ≈ s2 × t2)``,
+  simp[cardeq_def] >>
+  disch_then (CONJUNCTS_THEN2 (Q.X_CHOOSE_THEN `f` assume_tac)
+                              (Q.X_CHOOSE_THEN `g` assume_tac)) >>
+  qexists_tac `f ## g` >>
+  simp[BIJ_DEF, INJ_DEF, SURJ_DEF, pairTheory.FORALL_PROD,
+       pairTheory.EXISTS_PROD] >>
+  fs[BIJ_DEF, INJ_DEF, SURJ_DEF] >> metis_tac []);
+
+val SURJ_INJ_INV = store_thm(
+  "SURJ_INJ_INV",
+  ``SURJ f s t ⇒ ∃g. INJ g t s ∧ (∀y. y ∈ t ⇒ (f (g y) = y))``,
+  simp[SURJ_DEF, INJ_DEF] >>
+  disch_then (CONJUNCTS_THEN2 assume_tac
+                (assume_tac o
+                 SIMP_RULE (srw_ss() ++ DNF_ss)
+                           [SKOLEM_THM, GSYM RIGHT_EXISTS_IMP_THM])) >>
+  metis_tac[]);
+
+val CARDEQ_SUBSET_CARDLEQ = store_thm(
+  "CARDEQ_SUBSET_CARDLEQ",
+  ``s ≈ t ⇒ s ≼ t``,
+  rw[cardeq_def, cardleq_def, BIJ_DEF] >> metis_tac[])
+
+val CARDEQ_CARDLEQ = store_thm(
+  "CARDEQ_CARDLEQ",
+  ``s1 ≈ s2 ∧ t1 ≈ t2 ⇒ (s1 ≼ t1 ⇔ s2 ≼ t2)``,
+  metis_tac[cardeq_SYM, CARDEQ_SUBSET_CARDLEQ, cardleq_TRANS])
+
 val _ = export_theory()
 
 
