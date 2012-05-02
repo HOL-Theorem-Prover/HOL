@@ -755,6 +755,11 @@ STRIP_TAC THEN LIST_INDUCT_TAC THENL [
   LIST_INDUCT_TAC THEN ASM_SIMP_TAC bool_ss [FOLDR]
 ]);
 
+val FOLDR_CONS = store_thm(
+"FOLDR_CONS",
+``!f ls a. FOLDR (\x y. f x :: y) a ls = (MAP f ls)++a``,
+GEN_TAC THEN Induct THEN SRW_TAC[][FOLDR,MAP])
+
 val LENGTH_TL = Q.store_thm
 ("LENGTH_TL",
   `!l. 0 < LENGTH l ==> (LENGTH (TL l) = LENGTH l - 1)`,
