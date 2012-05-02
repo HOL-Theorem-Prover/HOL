@@ -2060,9 +2060,65 @@ qunabbrev_tac `defs'` >> fs[EVERY_MAP,pairTheory.UNCURRY] >>
 rw[EVERY_MEM,pairTheory.FORALL_PROD,FLOOKUP_DEF] >>
 tac)
 
-(* Prove compiler phases preserve semantics *)
+val force_dom_FUNION_id = store_thm(
+"force_dom_FUNION_id",
+``∀fm s d. FINITE s ⇒ ((force_dom fm s d ⊌ fm = fm) = (s ⊆ FDOM fm))``,
+rw[force_dom_DRESTRICT_FUNION,GSYM SUBMAP_FUNION_ABSORPTION] >>
+rw[SUBMAP_DEF,DRESTRICT_DEF,FUN_FMAP_DEF,EQ_IMP_THM,SUBSET_DEF,FUNION_DEF] >>
+fs[])
 
 (*
+val Cevaluate_env_free_vars = store_thm(
+"Cevaluate_env_free_vars",
+``∀env exp res. Cevaluate env exp res ⇒
+  ∀v. (res = Rval v) ⇒ free_vars exp ⊆ FDOM env``,
+ho_match_mp_tac Cevaluate_nice_ind >>
+strip_tac >- rw[] >>
+strip_tac >- rw[] >>
+strip_tac >- rw[] >>
+strip_tac >- (
+  rw[FOLDL_UNION_BIGUNION,Cevaluate_list_with_EVERY,BIGUNION_SUBSET] >>
+  qpat_assum `LENGTH es = LENGTH vs` assume_tac >>
+  fsrw_tac[boolSimps.DNF_ss][EVERY_MEM,MEM_ZIP,pairTheory.FORALL_PROD,EL_MAP,MEM_EL] ) >>
+strip_tac >- rw[] >>
+strip_tac >- rw[] >>
+strip_tac >- rw[] >>
+strip_tac >- rw[] >>
+strip_tac >- rw[] >>
+strip_tac >- rw[] >>
+strip_tac >- (
+  rw[FOLDL_UNION_BIGUNION_paired,BIGUNION_SUBSET,pairTheory.EXISTS_PROD]
+
+NOT TRUE because of lazy evaluation
+
+srw_tac[boolSimps.DNF_ss]
+[FOLDL_UNION_BIGUNION,FOLDL_UNION_BIGUNION_paired,
+ BIGUNION_SUBSET,pairTheory.EXISTS_PROD,
+ Cevaluate_list_with_EVERY]
+>- (
+  qpat_assum `LENGTH es = LENGTH vs` assume_tac >>
+  fsrw_tac[boolSimps.DNF_ss][EVERY_MEM,MEM_ZIP,pairTheory.FORALL_PROD,EL_MAP,MEM_EL] )
+>- (
+  imp_res_tac Cpmatch_pat_vars >>
+  fs[SUBSET_DEF] >>
+  metis_tac[] )
+>- (
+  imp_res_tac Cpmatch_pat_vars >>
+  fs[SUBSET_DEF] >>
+  metis_tac[] )
+*)
+
+(*
+val Cevaluate_FUPDATE = store_thm(
+"Cevaluate_FUPDATE",
+``∀env exp res k v. Cevaluate env exp res ∧ k ∉ free_vars exp ⇒ Cevaluate (env |+ (k,v)) exp res``,
+rw[] >>
+qsuff_tac `env |+ (k,v) = (force_dom env (free_vars exp) (CLit (Bool F))) ⊌ (env |+ (k,v))` >- metis_tac[Cevaluate_any_env] >>
+rw[GSYM SUBMAP_FUNION_ABSORPTION] >>
+rw[force_dom_DRESTRICT_FUNION,SUBMAP_DEF]
+
+(* Prove compiler phases preserve semantics *)
+
 val exp_to_Cexp_thm1 = store_thm(
 "exp_to_Cexp_thm1",
 ``∀tp cm Ps Pexp s exp s' Cexp cenv env res.
@@ -2074,6 +2130,9 @@ val exp_to_Cexp_thm1 = store_thm(
   (res ≠ Rerr Rtype_error) ∧
   good_cmap cenv cm ⇒
   Cevaluate (alist_to_fmap (MAP (λ(x,v). (s.m ' x, v_to_Cv cm (s,v))) env)) Cexp (map_result (λv. v_to_Cv cm (s,v)) res)``,
+
+(* TODO: change statement so the Cenv is either forced to have the free vars of the Cexp as its domain, or do some inference from the fact that evaluate succeeded to say that the env (and hence Cenv)'s domain includes all those variables... *)
+
 ho_match_mp_tac exp_to_Cexp_ind >>
 strip_tac >-
   fs[exp_to_Cexp_def] >>
@@ -2207,9 +2266,15 @@ strip_tac >- (
         rw[Once Cevaluate_cases] >>
         disj1_tac >>
         qexists_tac `v_to_Cv cm (s,v2)` >>
-        rw[Once Cevaluate_cases] >>
-        (* need argument about extending environment with variables that don't appear not affecting Cevaluate,
-           and also that only variables below s.n will appear in the output of exp_to_Cexp *)
+        rw[Once Cevaluate_cases] >- (
+          qmatch_abbrev_tac `Cevaluate (env0 |+ (k,v)) ex re` >>
+          `free_vars ex ⊆ FDOM env0`
+          qsuff_tac `force_dom env0 (free_vars ex) (CLit (Bool F)) =
+                     force_dom (env0 |+ (k,v)) (free_vars ex) (CLit (Bool F))` >- metis_tac [
+          match_mp_tac Cevaluate_free_vars_env
+        (* 
+           only variables below s.n will appear in the output of exp_to_Cexp *)
+
     in
       first_x_assum (qspecl_then [`cenv`,`env`,`Rval v1`] mp_tac) >>
       first_x_assum (qspecl_then [`cenv`,`env`,`Rval v2`] mp_tac) >>
