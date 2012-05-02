@@ -1388,6 +1388,13 @@ val IMAGE_11 = store_thm(
   STRIP_TAC THEN SIMP_TAC (srw_ss()) [EQ_IMP_THM] THEN
   SRW_TAC [boolSimps.DNF_ss][EXTENSION, EQ_IMP_THM]);
 
+val IMAGE_CONG = store_thm(
+"IMAGE_CONG",
+``!f s f' s'. (s = s') /\ (!x. x IN s' ==> (f x = f' x))
+==> (IMAGE f s = IMAGE f' s')``,
+SRW_TAC[][EXTENSION] THEN METIS_TAC[])
+val _ = DefnBase.export_cong"IMAGE_CONG"
+
 (* ===================================================================== *)
 (* Injective functions on a set.					 *)
 (* ===================================================================== *)
