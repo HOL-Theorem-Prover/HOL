@@ -202,6 +202,49 @@ val cardleq_ANTISYM = store_thm(
     `y ∈ Bb` by (simp_tac (srw_ss()) [Abbr`Bb`] >> metis_tac[])
   ]);
 
+val CARDEQ_FINITE = store_thm(
+  "CARDEQ_FINITE",
+  ``s1 ≈ s2 ⇒ (FINITE s1 ⇔ FINITE s2)``,
+  metis_tac [cardeq_def, BIJ_FINITE, BIJ_LINV_BIJ]);
+
+val CARDEQ_CARD = store_thm(
+  "CARDEQ_CARD",
+  ``s1 ≈ s2 ∧ FINITE s1 ⇒ (CARD s1 = CARD s2)``,
+  metis_tac [cardeq_def, FINITE_BIJ_CARD_EQ, CARDEQ_FINITE]);
+
+val CARDEQ_0 = store_thm(
+  "CARDEQ_0",
+  ``(x ≈ ∅ ⇔ (x = ∅)) ∧ ((∅ ≈ x) ⇔ (x = ∅))``,
+  rw[cardeq_def, BIJ_EMPTY]);
+
+val CARDEQ_INSERT = store_thm(
+  "cardeq_INSERT",
+  ``(x INSERT s) ≈ s ⇔ x ∈ s ∨ INFINITE s``,
+  simp[EQ_IMP_THM] >> conj_tac
+    >- (Cases_on `FINITE s` >> simp[] >> strip_tac >>
+        `CARD (x INSERT s) = CARD s` by metis_tac [CARDEQ_CARD, cardeq_SYM] >>
+        pop_assum mp_tac >> srw_tac[ARITH_ss][]) >>
+  Cases_on `x ∈ s` >- metis_tac [ABSORPTION, cardeq_REFL] >> rw[] >>
+  match_mp_tac cardleq_ANTISYM >> Tactical.REVERSE conj_tac
+    >- (rw[cardleq_def] >> qexists_tac `λx. x` >> rw[INJ_DEF]) >>
+  rw[cardleq_def] >> fs[infinite_num_inj] >>
+  qexists_tac `λe. if e = x then f 0
+                   else case some n. e = f n of
+                          NONE => e
+                        | SOME n => f (n + 1)` >>
+  fs[INJ_DEF] >>
+  `∀x y. (f x = f y) ⇔ (x = y)` by metis_tac[] >> rw[] >| [
+    rw[optionTheory.option_case_compute],
+    DEEP_INTRO_TAC optionTheory.some_intro >> rw[] >>
+    metis_tac [DECIDE ``0 ≠ x + 1``],
+    DEEP_INTRO_TAC optionTheory.some_intro >> rw[] >>
+    metis_tac [DECIDE ``0 ≠ x + 1``],
+    pop_assum mp_tac >>
+    DEEP_INTRO_TAC optionTheory.some_intro >> simp[] >>
+    DEEP_INTRO_TAC optionTheory.some_intro >> simp[]
+  ]);
+
+
 val _ = export_theory()
 
 
