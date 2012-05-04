@@ -682,19 +682,6 @@ metis_tac[])
 
 (* Lemmas *)
 
-(*
-val exp_to_Cexp_cmap_SUBMAP = store_thm(
-"exp_to_Cexp_cmap_SUBMAP",
-``∀b cm s exp s' Cexp.
-  (exp_to_Cexp b cm (s,exp) = (s',Cexp)) ⇒
-  s.m SUBMAP s'.m``,
-qsuff_tac `∀b cm s exp s' Cexp.
-  (exp_to_Cexp b cm (s,exp) = (s',Cexp)) ⇒
-  (FST (s,exp)).m SUBMAP s'.m` >- rw[] >>
-ho_match_mp_tac exp_to_Cexp_ind >>
-rw[exp_to_Cexp_def,extend_def]
-*)
-
 local open relationTheory in
 (* TODO: move, or use set_relation stuff? *)
 val countable_has_linear_order = store_thm(
@@ -2009,6 +1996,199 @@ Q.X_GEN_TAC `p` THEN
 PairCases_on `p` THEN
 SRW_TAC[][])
 
+(*
+val good_etCs_def = Define`
+  good_etCs s =
+    FINITE s.ds ∧
+    (s.dn + (CARD s.ds) ≤ s.n) ∧
+    (∀n. n ∈ FRANGE s.m ⇒ n < s.n) ∧
+    (∀n. n ∈ FRANGE s.dm ⇒ n < s.dn) ∧
+    (INJ (FAPPLY s.m) (FDOM s.m) UNIV) ∧
+    (INJ (FAPPLY s.dm) (FDOM s.dm) UNIV)`
+
+val extend_good_etCs = store_thm(
+"extend_good_etCs",
+``∀tp s v. good_etCs s ⇒ good_etCs (FST (extend tp s v))``,
+rw[extend_def,good_etCs_def,LET_THM] >> fs[] >> rw[] >>
+rw[Once INTER_COMM,INSERT_INTER] >>
+fsrw_tac[boolSimps.DNF_ss][FAPPLY_FUPDATE_THM,FRANGE_DEF] >>
+rw[DOMSUB_FAPPLY_THM] >>
+res_tac >>
+TRY (`CARD s.ds ≠ 0` by (srw_tac[SATISFY_ss][GSYM MEMBER_NOT_EMPTY] >> NO_TAC)) >>
+(DECIDE_TAC ORELSE
+  fsrw_tac[boolSimps.DNF_ss][INJ_DEF,FAPPLY_FUPDATE_THM] >>
+  conj_tac >- (
+    rw[] >>
+    res_tac
+)
+*)
+
+(*
+val good_etCs_extend = store_thm(
+"good_etCs_extend",
+``∀tp s v. good_etCs (FST (extend tp s v)) ⇒ good_etCs s``,
+fs[good_etCs_def] >> rpt gen_tac >> strip_tac >>
+conj_asm1_tac >- (
+  qpat_assum `FINITE X` mp_tac >>
+  rw[extend_def,LET_THM] >>
+  metis_tac[FINITE_DIFF_down,FINITE_SING] ) >>
+conj_asm1_tac >- (
+  qpat_assum `X:num ≤ Y` mp_tac >>
+  rw[extend_def,LET_THM] >>
+  qpat_assum `X:num ≤ Y` mp_tac >>
+  rw[Once INTER_COMM,INSERT_INTER] >>
+  DECIDE_TAC
+*)
+
+(*
+val pat_to_Cpat_good_etCs = store_thm(
+"pat_to_Cpat_good_etCs",
+``∀tp cm s p s' Cp. (pat_to_Cpat tp cm (s,p) = (s',Cp)) ∧ good_etCs s ⇒ good_etCs s'``,
+qsuff_tac `∀tp cm s p s' Cp. (pat_to_Cpat tp cm (s,p) = (s',Cp)) ∧ good_etCs (FST (s,p)) ⇒ good_etCs s'` >- rw[] >>
+ho_match_mp_tac pat_to_Cpat_ind >>
+strip_tac >- (
+  rw[pat_to_Cpat_def,LET_THM,pairTheory.UNCURRY] >>
+  rw[extend_good_etCs]) >>
+strip_tac >- (
+  rw[pat_to_Cpat_def] >> rw[] ) >>
+ntac 2 gen_tac >>
+CONV_TAC
+  (RESORT_FORALL_CONV
+     ((Lib.uncurry (Lib.C Lib.cons)) o Lib.front_last)) >>
+fs[pat_to_Cpat_def,LET_THM] >>
+Induct >- rw[] >>
+simp_tac(srw_ss())[] >>
+rpt strip_tac >>
+qmatch_abbrev_tac `G` >>
+qmatch_assum_abbrev_tac `P (R (FOLDR X Y Z)) = Q` >>
+Cases_on `FOLDR X Y Z` >> fs[Abbr`R`] >>
+qmatch_assum_abbrev_tac `(P (R (pat_to_Cpat tp cm V)) = Q)` >>
+Cases_on `pat_to_Cpat tp cm V` >> rw[Abbr`R`,Abbr`P`,Abbr`V`,Abbr`Y`,Abbr`Z`] >>
+fs[] >> ntac 3 (pop_assum mp_tac) >> rw[markerTheory.Abbrev_def] >>
+qmatch_assum_rename_tac `FOLDR X (s,[]) ps = (s0,r)`[] >>
+qmatch_assum_rename_tac `pat_to_Cpat tp cm (s0,p) = (s1,r')`[] >>
+fsrw_tac[SATISFY_ss][] >>
+first_x_assum (qspec_then `s` mp_tac) >> rw[] >>
+first_x_assum (qspec_then `p` mp_tac) >> rw[] >>
+metis_tac[])
+*)
+
+(*
+val extend_SUBMAP = store_thm(
+"extend_SUBMAP",
+``∀tp s v. good_etCs s ⇒
+           (s.m SUBMAP (FST (extend tp s v)).m) ∧
+           (s.dm SUBMAP (FST (extend tp s v)).dm)``,
+rw[extend_def,LET_THM] >> fs[]
+extend_def
+
+val pat_to_Cpat_SUBMAP = store_thm(
+"pat_to_Cpat_SUBMAP",
+``∀tp cm s p s' Cp. (pat_to_Cpat tp cm (s,p) = (s',Cp)) ⇒ (s.m SUBMAP s'.m)``,
+qsuff_tac `∀tp cm s p s' Cp. (pat_to_Cpat tp cm (s,p) = (s',Cp)) ⇒ ((FST (s,p)).m SUBMAP s'.m)` >- rw[] >>
+ho_match_mp_tac pat_to_Cpat_ind >>
+strip_tac >- (
+  rw[pat_to_Cpat_def,LET_THM,pairTheory.UNCURRY]
+
+rw[pat_to_Cpat_def,LET_THM,extend_def] >>
+rw[] >>
+
+fun subterms P tm = let
+  fun f tm ac = let
+    val ac = if P tm then tm::ac else ac handle HOL_ERR _ => ac
+  in let
+      val (t1,t2) = dest_comb tm
+    in f t2 (f t1 ac) end handle HOL_ERR _ => let
+      val (t1,t2) = dest_abs tm
+    in f t2 (f t1 ac) end handle HOL_ERR _ => ac
+  end
+in f tm [] end
+
+fun pairs_with c = subterms (fn t => (can (pairSyntax.dest_prod o type_of) t) andalso (same_const c (#1 (strip_comb t))))
+val pairs = subterms (fn t => (can (pairSyntax.dest_prod o type_of) t) andalso (not (pairSyntax.is_pair t)))
+fun mkq t = [ANTIQUOTE t]
+
+fun split_pairs (g as (asl,w)) = let
+  val qs = map mkq (mk_set (flatten (map pairs (w::asl))))
+in map_every Cases_on qs end g
+
+val tac2 =
+  rw[exp_to_Cexp_def,extend_def,LET_THM] >>
+  TRY (Cases_on `b` >> fs[]) >>
+  split_pairs >> fs[] >> rw[] >>
+  split_pairs >> fs[] >> rw[] >> fsrw_tac[SATISFY_ss][SUBMAP_TRANS]
+
+val tac3 =
+  fs[] >>
+  CONV_TAC
+    (RESORT_FORALL_CONV
+       ((Lib.uncurry (Lib.C Lib.cons)) o Lib.front_last)) >>
+  Induct >- rw[exp_to_Cexp_def,LET_THM] >>
+  fs[exp_to_Cexp_def,LET_THM] >>
+  Cases >> rw[] >>
+  fsrw_tac[boolSimps.DNF_ss][] >>
+  first_x_assum (qspecl_then [`b`,`cm`] mp_tac) >>
+  fsrw_tac[SATISFY_ss][] >>
+  rw[] >>
+  qmatch_assum_abbrev_tac `P (R (FOLDR X Y Z)) = Q` >>
+  Cases_on `FOLDR X Y Z` >> fs[Abbr`R`,Abbr`Q`,Abbr`Y`,Abbr`Z`] >>
+  qmatch_assum_abbrev_tac `P (R (pat_to_Cpat b cm Y)) = Q` >>
+  Cases_on `pat_to_Cpat b cm Y` >> fs[Abbr`Y`,Abbr`R`] >>
+  qmatch_assum_abbrev_tac `P (R (exp_to_Cexp b cm Y)) = Q` >>
+  Cases_on `exp_to_Cexp b cm Y` >> fs[Abbr`Y`,Abbr`R`,Abbr`P`,Abbr`Q`] >>
+  rw[] >> fs[] >>
+  first_x_assum (qspec_then `s` mp_tac) >> rw[] >>
+  first_x_assum (qspecl_then [`q''`,`r''`] mp_tac)
+  match_mp_tac SUBMAP_TRANS >>
+  qexists_tac `s'.m` >>
+  res_tac
+  fsrw_tac[SATISFY_ss][]
+  PROVE_TAC[SUBMAP_TRANS,pairTheory.PAIR_EQ]
+  fsrw_tac[SATISFY_ss][SUBMAP_TRANS]
+
+  fsrw_tac[][pairTheory.UNCURRY]
+  asm_simp_tac (srw_ss()) [pairTheory.UNCURRY]
+  split_pairs >> fs[] >> rw[] >> fs[] >>
+  rpt (qpat_assum `exp_to_Cexp X Y Z = (Q,R)` mp_tac) >>
+  rpt (qpat_assum `pat_to_Cpat X Y Z = (Q,R)` mp_tac) >>
+  rw[] >> fs[] >> rw[] >>
+  split_pairs >> fs[] >> rw[] >>
+  rpt (qpat_assum `exp_to_Cexp X Y Z = (Q,R)` mp_tac) >>
+  rpt (qpat_assum `pat_to_Cpat X Y Z = (Q,R)` mp_tac) >>
+  rw[] >> fs[] >> rw[] >>
+
+val exp_to_Cexp_cmap_SUBMAP = store_thm(
+"exp_to_Cexp_cmap_SUBMAP",
+``∀tp cm s exp s' Cexp.
+  (exp_to_Cexp tp cm (s,exp) = (s',Cexp)) ⇒
+  s.m SUBMAP s'.m``,
+qsuff_tac `(∀b cm p s exp s' Cexp. (s = FST p) ∧ (exp = SND p) ∧
+  (exp_to_Cexp b cm p = (s',Cexp)) ⇒
+  s.m SUBMAP s'.m) ∧ (∀cm:(string |-> num) p:(exp_to_Cexp_state # v). T)` >- rw[pairTheory.FORALL_PROD] >>
+ho_match_mp_tac exp_to_Cexp_ind >>
+strip_tac >- rw[exp_to_Cexp_def] >>
+strip_tac >- rw[exp_to_Cexp_def] >>
+strip_tac >- rw[exp_to_Cexp_def] >>
+strip_tac >- rw[exp_to_Cexp_def] >>
+strip_tac >- tac2 >>
+strip_tac >- tac2 >>
+strip_tac >- tac2 >>
+strip_tac >- tac2 >>
+strip_tac >- tac2 >>
+strip_tac >- tac2 >>
+strip_tac >- tac2 >>
+strip_tac >- tac3 >>
+
+rw[exp_to_Cexp_def,extend_def,LET_THM] >>
+TRY (Cases_on `b` >> fs[]) >>
+split_pairs >> fs[] >> rw[] >>
+split_pairs >> fs[] >> rw[] >> fsrw_tac[SATISFY_ss][SUBMAP_TRANS] >>
+Induct_on `pes`
+>- rw[] >> Cases >> rw[] >> fs[]
+
+NOT TRUE because of shadowing *)
+
+(*
 val tac =
   unabbrev_all_tac >>
   rw[force_dom_DRESTRICT_FUNION,FUNION_DEF,DRESTRICT_DEF,MEM_MAP,pairTheory.EXISTS_PROD,FUN_FMAP_DEF,MAP_MAP_o] >>
@@ -2038,14 +2218,30 @@ val tac =
   rw[MAP_KEYS_def,Abbr`fm`] >>
   fs[o_f_DEF,markerTheory.Abbrev_def,FUN_EQ_THM,pairTheory.FORALL_PROD]
 
-val v_to_Cv_canonical = store_thm(
-"v_to_Cv_canonical",
-``∀cm Ps Pv s v. (s = FST (Ps,Pv)) ∧ (v = SND (Ps,Pv)) ∧
-    (INJ (FAPPLY s.m) (FDOM s.m) UNIV) ∧
-    (clV_v v ⊆ FDOM s.m)
-⇒ canonical_env_Cv (v_to_Cv cm (Ps,Pv))``,
-ho_match_mp_tac v_to_Cv_ind >>
-rw[v_to_Cv_def,EVERY_MEM,MEM_MAP] >- (
+val exp_to_Cexp_canonical = store_thm(
+"exp_to_Cexp_canonical",``
+(∀tp cm p s e. (s = FST p) ∧ (e = SND p) ∧
+  (INJ (FAPPLY s.m) (FDOM s.m) UNIV) ∧
+  (clV_exp e ⊆ FDOM s.m)
+ ⇒ canonical_env_Cexp (SND (exp_to_Cexp tp cm p))) ∧
+(∀cm p s v. (s = FST p) ∧ (v = SND p) ∧
+  (INJ (FAPPLY s.m) (FDOM s.m) UNIV) ∧
+  (clV_v v ⊆ FDOM s.m)
+ ⇒ canonical_env_Cv (v_to_Cv cm p))``,
+ho_match_mp_tac exp_to_Cexp_ind >>
+strip_tac >- rw[exp_to_Cexp_def] >>
+strip_tac >- rw[exp_to_Cexp_def] >>
+strip_tac >- (
+  rw[exp_to_Cexp_def,EVERY_MEM,MEM_MAP] >>
+  fsrw_tac[boolSimps.DNF_ss][BIGUNION_SUBSET] >>
+  metis_tac[pairTheory.SND] ) >>
+strip_tac >- rw[exp_to_Cexp_def] >>
+strip_tac >- (
+  rw[exp_to_Cexp_def] >> rw[] >> fs[] >>
+
+fsrw_tac[boolSimps.DNF_ss][BIGUNION_SUBSET,exp_to_Cexp_def,EVERY_MEM,MEM_MAP,pairTheory.FORALL_PROD] >>
+fsrw_tac[SATISFY_ss][]
+(
   fs[SUBSET_DEF] >>
   metis_tac[] ) >>
 fs[] >>
@@ -2059,6 +2255,7 @@ fs[FOLDR_CONS_triple,LET_THM,pairTheory.UNCURRY,MAP_MAP_o] >>
 qunabbrev_tac `defs'` >> fs[EVERY_MAP,pairTheory.UNCURRY] >>
 rw[EVERY_MEM,pairTheory.FORALL_PROD,FLOOKUP_DEF] >>
 tac)
+*)
 
 val force_dom_FUNION_id = store_thm(
 "force_dom_FUNION_id",

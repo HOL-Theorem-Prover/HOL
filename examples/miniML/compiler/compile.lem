@@ -715,7 +715,7 @@ pat_to_Cpat tp cm (s, Pcon cn ps) =
 let rec
 exp_to_Cexp tp cm (s, Raise err) = (s, CRaise err)
 and
-exp_to_Cexp tp cm (s, Val (Lit l)) = (s, CVal (CLit l))
+exp_to_Cexp tp cm (s, Val v) = (s, CVal (v_to_Cv cm (s,v)))
 and
 exp_to_Cexp tp cm (s, Con cn es) =
   (s, CCon (Pmap.find cn cm) (List.map (fun e -> let (_s,e) = exp_to_Cexp false cm (s,e) in e) es))
@@ -812,8 +812,7 @@ exp_to_Cexp tp cm (s, Letrec defs b) =
           defs     [] in
   let (s',Cb) = exp_to_Cexp tp cm (s',b) in
   (if tp then s' else s, CLetfun true fns Cdefs Cb)
-
-let rec
+and
 v_to_Cv cm (s, Lit l) = CLit l
 and
 v_to_Cv cm (s, Conv cn vs) =

@@ -177,16 +177,9 @@ val (remove_mat_def,remove_mat_ind) = register "remove_mat" (
 
 val (exp_to_Cexp_def,exp_to_Cexp_ind) = register "exp_to_Cexp" (
   tprove_no_defn ((exp_to_Cexp_def,exp_to_Cexp_ind),
-  WF_REL_TAC `measure (exp_size o SND o SND o SND)` >>
-  srw_tac[ARITH_ss][exp1_size_thm,exp8_size_thm,exp6_size_thm] >>
-  MAP_EVERY (fn q => Q.ISPEC_THEN q mp_tac SUM_MAP_MEM_bound) [`exp7_size`,`exp_size`,`exp2_size`] >>
-  rw[] >> res_tac >> fs[exp_size_def] >> srw_tac[ARITH_ss][]))
-
-val (v_to_Cv_def,v_to_Cv_ind) = register "v_to_Cv" (
-  tprove_no_defn ((v_to_Cv_def,v_to_Cv_ind),
-  WF_REL_TAC `measure (v_size o SND o SND)` >>
-  srw_tac[ARITH_ss][exp1_size_thm,exp3_size_thm,exp9_size_thm] >>
-  MAP_EVERY (fn q => Q.ISPEC_THEN q mp_tac SUM_MAP_MEM_bound) [`exp5_size`,`v_size`,`exp2_size`] >>
+  WF_REL_TAC `inv_image $< (λx. case x of INL (_,_,_,e) => exp_size e | INR (_,_,v) => v_size v)` >>
+  srw_tac[ARITH_ss][exp1_size_thm,exp3_size_thm,exp6_size_thm,exp8_size_thm,exp9_size_thm] >>
+  MAP_EVERY (fn q => Q.ISPEC_THEN q mp_tac SUM_MAP_MEM_bound) [`exp2_size`,`exp5_size`,`exp7_size`,`exp_size`,`v_size`] >>
   rw[] >> res_tac >> fs[exp_size_def] >> srw_tac[ARITH_ss][]))
 
 val (pat_to_Cpat_def, pat_to_Cpat_ind) = register "pat_to_Cpat" (

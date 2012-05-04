@@ -770,7 +770,7 @@ val _ = Defn.save_defn pat_to_Cpat_defn;
 
 (exp_to_Cexp tp cm (s, Raise err) = (s, CRaise err))
 /\
-(exp_to_Cexp tp cm (s, Val (Lit l)) = (s, CVal (CLit l)))
+(exp_to_Cexp tp cm (s, Val v) = (s, CVal (v_to_Cv cm (s,v))))
 /\
 (exp_to_Cexp tp cm (s, Con cn es) =
   (s, CCon (FAPPLY  cm  cn) (MAP (\ e . let (_s,e) = exp_to_Cexp F cm (s,e) in e) es)))
@@ -866,12 +866,8 @@ val _ = Defn.save_defn pat_to_Cpat_defn;
       ([n],Ce)::Cdefs)      [] 
           defs in
   let (s',Cb) = exp_to_Cexp tp cm (s',b) in
-  (if tp then s' else s, CLetfun T fns Cdefs Cb))`;
-
-val _ = Defn.save_defn exp_to_Cexp_defn;
-
- val v_to_Cv_defn = Hol_defn "v_to_Cv" `
-
+  (if tp then s' else s, CLetfun T fns Cdefs Cb))
+/\
 (v_to_Cv cm (s, Lit l) = CLit l)
 /\
 (v_to_Cv cm (s, Conv cn vs) =
@@ -897,7 +893,7 @@ val _ = Defn.save_defn exp_to_Cexp_defn;
   let n = FAPPLY  s.m  vn in
   ce_Cv (CRecClos Cenv fns Cdefs n))`;
 
-val _ = Defn.save_defn v_to_Cv_defn;
+val _ = Defn.save_defn exp_to_Cexp_defn;
 
 (* TODO: simple type system and checker *)
 
