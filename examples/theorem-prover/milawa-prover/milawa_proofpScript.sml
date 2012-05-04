@@ -5131,7 +5131,7 @@ val milawa_commands_def = tDefine "milawa_commands" `
         l1 ++ l2 ++ milawa_commands new_ctxt (n+1) (CDR cmds)`
  (WF_REL_TAC `measure (LSIZE o SND o SND)`
   \\ FULL_SIMP_TAC std_ss [isDot_thm] \\ REPEAT STRIP_TAC
-  \\ FS [LSIZE_def] \\ DECIDE_TAC);
+  \\ FS [LSIZE_def] \\ DECIDE_TAC) |> SPEC_ALL;
 
 val line_ok_print_event_number = prove(
   ``line_ok (simple_ctxt,print_event_number n cmds)``,
@@ -5370,7 +5370,7 @@ val init_thm = prove(
 
 val define_safe_list_side_tm =
   milawa_initTheory.define_safe_list_side_def
-  |> concl |> dest_eq |> fst |> find_term is_const
+  |> SPEC_ALL |> concl |> dest_eq |> fst |> find_term is_const
 
 val define_safe_list_side_thm = prove(
   ``!defs ftbl k io ok.

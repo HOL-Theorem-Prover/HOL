@@ -198,7 +198,8 @@ val read_sexps_def = tDefine "read_sexps" `
       if yes then [] else
         let (s,str) = sexp_parse_stream str in
           s::read_sexps str`
-  (WF_REL_TAC `measure LENGTH` \\ METIS_TAC [sexp_parse_stream_PROGRESS]);
+  (WF_REL_TAC `measure LENGTH` \\ METIS_TAC [sexp_parse_stream_PROGRESS])
+  |> SPEC_ALL;
 
 
 val evals = map EVAL
