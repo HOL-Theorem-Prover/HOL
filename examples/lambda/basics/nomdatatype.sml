@@ -116,9 +116,10 @@ fun first2 l =
       (x::y::_) => (x,y)
     | _ => raise Fail "first2: list doesn't have at least two elements"
 
-fun new_type_step1 tyname {vp, lp} = let
+fun new_type_step1 tyname n {vp, lp} = let
   val list_mk_icomb = uncurry (List.foldl (mk_icomb o swap))
-  val termP = list_mk_icomb (genind_t, [vp,lp,numSyntax.mk_numeral Arbnum.zero])
+  val termP =
+      list_mk_icomb (genind_t, [vp,lp,numSyntax.mk_numeral (Arbnum.fromInt n)])
   fun termPf x = mk_comb(termP, x)
   val (gtty,_) = dom_rng (type_of termP)
   val x = mk_var("x",gtty) and y = mk_var("y", gtty)
