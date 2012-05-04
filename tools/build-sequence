@@ -140,6 +140,7 @@ src/opentheory
 [mosml]!!examples/HolCheck
 src/datatype/inftree
 !examples/lambda/basics
+!examples/logic
 !!examples/unification/triangular/nominal
 !examples/lambda/barendregt
 !examples/computability
