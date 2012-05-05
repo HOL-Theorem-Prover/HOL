@@ -18,37 +18,31 @@ val wellfounded_WF = store_thm(
 
 val wellorder_def = Define`
   wellorder R <=>
-    wellfounded R /\ strict_linear_order R (domain R UNION range R)
+    wellfounded (strict R) /\ linear_order R (domain R UNION range R) /\
+    reflexive R (domain R UNION range R)
 `;
 
 (* well order examples *)
 val wellorder_EMPTY = store_thm(
   "wellorder_EMPTY",
   ``wellorder {}``,
-  rw[wellorder_def, wellfounded_def, strict_linear_order_def, transitive_def,
-     antisym_def, domain_def, range_def]);
+  rw[wellorder_def, wellfounded_def, linear_order_def, transitive_def,
+     antisym_def, domain_def, range_def, reflexive_def, strict_def]);
 
 val wellorder_SING = store_thm(
   "wellorder_SING",
-  ``wellorder {(x,y)} <=> x <> y``,
-  rw[wellorder_def, wellfounded_def] >> eq_tac >| [
-    rpt strip_tac >> rw[] >>
-    first_x_assum (qspec_then `{x}` mp_tac) >> simp[],
-
-    strip_tac >> conj_tac >| [
-      rw[] >> Cases_on `x IN s` >- (qexists_tac `x` >> rw[]) >>
-      rw[] >> metis_tac [],
-      rw[strict_linear_order_def, domain_def, range_def] >>
-      rw[transitive_def]
-    ]
+  ``wellorder {(x,y)} <=> (x = y)``,
+  rw[wellorder_def, wellfounded_def, strict_def, reflexive_def,
+     domain_def, range_def] >>
+  eq_tac >| [
+    metis_tac[],
+    simp[linear_order_def, transitive_def, domain_def, range_def, antisym_def]
   ]);
 
 val rrestrict_SUBSET = store_thm(
   "rrestrict_SUBSET",
   ``rrestrict r s SUBSET r``,
   rw[SUBSET_DEF,rrestrict_def] >> rw[]);
-
-
 
 val wellfounded_subset = store_thm(
   "wellfounded_subset",
@@ -67,14 +61,20 @@ val elsOf_def = Define`
   elsOf w = domain (wellorder_REP w) UNION range (wellorder_REP w)
 `;
 
-val _ = overload_on("WIN", ``λp w. p IN wellorder_REP w``)
+val _ = overload_on("WIN", ``λp w. p IN strict (wellorder_REP w)``)
 val _ = set_fixity "WIN" (Infix(NONASSOC, 425))
+val _ = overload_on("WLE", ``λp w. p IN wellorder_REP w``)
+val _ = set_fixity "WLE" (Infix(NONASSOC, 425))
 val _ = overload_on ("wrange", ``\w. range (wellorder_REP w)``)
-
 
 val WIN_elsOf = store_thm(
   "WIN_elsOf",
   ``(x,y) WIN w ==> x IN elsOf w /\ y IN elsOf w``,
+  rw[elsOf_def, range_def, domain_def, strict_def] >> metis_tac[]);
+
+val WLE_elsOf = store_thm(
+  "WLE_elsOf",
+  ``(x,y) WLE w ==> x ∈ elsOf w ∧ y ∈ elsOf w``,
   rw[elsOf_def, range_def, domain_def] >> metis_tac[]);
 
 val WIN_trichotomy = store_thm(
@@ -83,28 +83,59 @@ val WIN_trichotomy = store_thm(
           (x,y) WIN w \/ (x = y) \/ (y,x) WIN w``,
   rpt strip_tac >>
   `wellorder (wellorder_REP w)` by metis_tac [termP_term_REP] >>
-  fs[elsOf_def, wellorder_def, strict_linear_order_def] >> metis_tac[]);
+  fs[elsOf_def, wellorder_def, strict_def, linear_order_def] >> metis_tac[]);
 
 val WIN_REFL = store_thm(
   "WIN_REFL",
   ``(x,x) WIN w = F``,
   `wellorder (wellorder_REP w)` by metis_tac [termP_term_REP] >>
-  fs[wellorder_def, strict_linear_order_def]);
+  fs[wellorder_def, strict_def]);
 val _ = export_rewrites ["WIN_REFL"]
+
+val WLE_TRANS = store_thm(
+  "WLE_TRANS",
+  ``(x,y) WLE w /\ (y,z) WLE w ==> (x,z) WLE w``,
+  strip_tac >>
+  `wellorder (wellorder_REP w)` by metis_tac [termP_term_REP] >>
+  fs[wellorder_def, linear_order_def, transitive_def] >> metis_tac[]);
+
+val WLE_ANTISYM = store_thm(
+  "WLE_ANTISYM",
+  ``(x,y) WLE w /\ (y,x) WLE w ==> (x = y)``,
+  strip_tac >>
+  `wellorder (wellorder_REP w)` by metis_tac [termP_term_REP] >>
+  fs[wellorder_def, linear_order_def, antisym_def]);
+
+val WIN_WLE = store_thm(
+  "WIN_WLE",
+  ``(x,y) WIN w ==> (x,y) WLE w``,
+  rw[strict_def]);
+
+val elsOf_WLE = store_thm(
+  "elsOf_WLE",
+  ``x ∈ elsOf w <=> (x,x) WLE w``,
+  `wellorder (wellorder_REP w)` by metis_tac [termP_term_REP] >>
+  fs[wellorder_def, elsOf_def, reflexive_def, in_domain, in_range] >>
+  metis_tac[]);
+
+val transitive_strict = store_thm(
+  "transitive_strict",
+  ``transitive r /\ antisym r ==> transitive (strict r)``,
+  simp[transitive_def, strict_def, antisym_def] >> metis_tac[]);
 
 val WIN_TRANS = store_thm(
   "WIN_TRANS",
   ``(x,y) WIN w /\ (y,z) WIN w ==> (x,z) WIN w``,
-  `transitive (wellorder_REP w)`
-     by metis_tac [termP_term_REP, wellorder_def, strict_linear_order_def] >>
-  metis_tac [transitive_def]);
+  `transitive (wellorder_REP w) /\ antisym (wellorder_REP w)`
+     by metis_tac [termP_term_REP, wellorder_def, linear_order_def] >>
+  metis_tac [transitive_def, transitive_strict]);
 
 val WIN_WF = store_thm(
   "WIN_WF",
   ``wellfounded (\p. p WIN w)``,
   `wellorder (wellorder_REP w)` by metis_tac [termP_term_REP] >>
   fs[wellorder_def] >>
-  qsuff_tac `(\p. p WIN w) = wellorder_REP w` >- simp[] >>
+  qsuff_tac `(\p. p WIN w) = strict (wellorder_REP w)` >- simp[] >>
   simp[FUN_EQ_THM, SPECIFICATION]);
 
 val CURRY_def = pairTheory.CURRY_DEF |> SPEC_ALL |> ABS ``y:'b``
@@ -117,98 +148,190 @@ val WIN_WF2 = save_thm(
 
 val iseg_def = Define`iseg w x = { y | (y,x) WIN w }`
 
+val strict_subset = store_thm(
+  "strict_subset",
+  ``r1 ⊆ r2 ⇒ strict r1 ⊆ strict r2``,
+  simp[strict_def, SUBSET_DEF, pairTheory.FORALL_PROD]);
+
+val transitive_rrestrict = store_thm(
+  "transitive_rrestrict",
+  ``transitive r ==> transitive (rrestrict r s)``,
+  rw[transitive_def, rrestrict_def] >> metis_tac[]);
+
+val antisym_rrestrict = store_thm(
+  "antisym_rrestrict",
+  ``antisym r ==> antisym (rrestrict r s)``,
+  rw[antisym_def, rrestrict_def] >> metis_tac[]);
+
+val linear_order_rrestrict = store_thm(
+  "linear_order_rrestrict",
+  ``linear_order r (domain r UNION range r) ==>
+    linear_order (rrestrict r s)
+                 (domain (rrestrict r s) ∪ range (rrestrict r s))``,
+  rw[linear_order_def, in_domain, in_range, antisym_rrestrict,
+     transitive_rrestrict] >>
+  fs[rrestrict_def] >> metis_tac[]);
+
+val reflexive_rrestrict = store_thm(
+  "reflexive_rrestrict",
+  ``reflexive r (domain r ∪ range r) ==>
+    reflexive (rrestrict r s)
+              (domain (rrestrict r s) ∪ range (rrestrict r s))``,
+  rw[reflexive_def, rrestrict_def, in_domain, in_range] >> metis_tac[]);
+
 val wellorder_rrestrict = store_thm(
   "wellorder_rrestrict",
   ``wellorder (rrestrict (wellorder_REP w) (iseg w x))``,
-  rw[wellorder_def, iseg_def]
-    >- (match_mp_tac wellfounded_subset >> qexists_tac `wellorder_REP w` >>
-        rw[rrestrict_SUBSET] >>
-        metis_tac [termP_term_REP, wellorder_def])
-    >- (qabbrev_tac `WO = wellorder_REP w` >>
-        qabbrev_tac `els = {y | (y,x) IN WO}` >>
-        simp[strict_linear_order_def] >> rpt conj_tac >| [
-          simp[transitive_def, rrestrict_def] >> metis_tac [WIN_TRANS],
-          simp[rrestrict_def, Abbr`WO`],
-          map_every qx_gen_tac [`a`, `b`] >>
-          simp[rrestrict_def, in_domain, in_range] >>
-          `!e. e IN els ==> e IN elsOf w`
-             by (rw[elsOf_def, Abbr`els`, domain_def, range_def] >>
-                 metis_tac[]) >>
-          metis_tac [WIN_trichotomy]
-        ]))
+  `wellorder (wellorder_REP w)` by metis_tac [termP_term_REP] >>
+  fs[wellorder_def] >>
+  rw[iseg_def, linear_order_rrestrict, reflexive_rrestrict] >>
+  match_mp_tac wellfounded_subset >>
+  qexists_tac `strict(wellorder_REP w)` >>
+  rw[rrestrict_SUBSET, strict_subset]);
 
 val wobound_def = Define`
   wobound x w = wellorder_ABS (rrestrict (wellorder_REP w) (iseg w x))
 `;
 
-val IN_wobound = store_thm(
-  "IN_wobound",
+val WIN_wobound = store_thm(
+  "WIN_wobound",
   ``(x,y) WIN wobound z w <=> (x,z) WIN w /\ (y,z) WIN w /\ (x,y) WIN w``,
+  rw[wobound_def, wellorder_rrestrict, #repabs_pseudo_id wellorder_results,
+     strict_def] >>
+  rw[rrestrict_def, iseg_def, strict_def] >> metis_tac []);
+
+val WLE_wobound = store_thm(
+  "WLE_wobound",
+  ``(x,y) WLE wobound z w <=> (x,z) WIN w /\ (y,z) WIN w /\ (x,y) WLE w``,
   rw[wobound_def, wellorder_rrestrict, #repabs_pseudo_id wellorder_results] >>
-  rw[rrestrict_def, iseg_def] >> metis_tac []);
+  rw[rrestrict_def, iseg_def] >> metis_tac[]);
 
 val localDefine = with_flag (computeLib.auto_import_definitions, false) Define
-
-val wrange_wobound = store_thm(
-  "wrange_wobound",
-  ``wrange (wobound x w) = iseg w x INTER wrange w``,
-  rw[EXTENSION, range_def, iseg_def, IN_wobound, EQ_IMP_THM] >>
-  metis_tac[WIN_TRANS]);
 
 val wellorder_cases = store_thm(
   "wellorder_cases",
   ``!w. ?s. wellorder s /\ (w = wellorder_ABS s)``,
   rw[Once (#termP_exists wellorder_results)] >>
   simp_tac (srw_ss() ++ DNF_ss)[#absrep_id wellorder_results]);
+
 val WEXTENSION = store_thm(
   "WEXTENSION",
-  ``(w1 = w2) <=> !a b. (a,b) WIN w1 <=> (a,b) WIN w2``,
-  qspec_then `w1` (Q.X_CHOOSE_THEN `s1` STRIP_ASSUME_TAC) wellorder_cases >>
-  qspec_then `w2` (Q.X_CHOOSE_THEN `s2` STRIP_ASSUME_TAC) wellorder_cases >>
-  simp[#repabs_pseudo_id wellorder_results,
-       #term_ABS_pseudo11 wellorder_results,
-       EXTENSION, pairTheory.FORALL_PROD]);
+  ``(w1 = w2) <=> !a b. (a,b) WLE w1 <=> (a,b) WLE w2``,
+  qspec_then `w1` strip_assume_tac wellorder_cases >>
+  qspec_then `w2` strip_assume_tac wellorder_cases >>
+  simp[#term_ABS_pseudo11 wellorder_results, EXTENSION, pairTheory.FORALL_PROD,
+       #repabs_pseudo_id wellorder_results]);
 
 val wobound2 = store_thm(
   "wobound2",
   ``(a,b) WIN w ==> (wobound a (wobound b w) = wobound a w)``,
-  rw[WEXTENSION, IN_wobound, EQ_IMP_THM] >> metis_tac [WIN_TRANS]);
+  simp[WEXTENSION, WLE_wobound, WIN_wobound] >> metis_tac [WIN_TRANS]);
 
 val wellorder_fromNat = store_thm(
   "wellorder_fromNat",
-  ``wellorder { (i,j) | i < j /\ j <= n }``,
-  rw[wellorder_def, wellfounded_def, strict_linear_order_def] >| [
-    qexists_tac `LEAST m. m IN s` >> numLib.LEAST_ELIM_TAC >> rw[] >>
-    metis_tac [],
+  ``wellorder { (i,j) | i <= j /\ j < n }``,
+  rw[wellorder_def, wellfounded_def, linear_order_def, in_range, in_domain,
+     reflexive_def]
+  >| [
+    qexists_tac `LEAST m. m IN s` >> numLib.LEAST_ELIM_TAC >> rw[strict_def] >>
+    metis_tac [DECIDE ``x ≤ y ⇔ (x = y) ∨ x < y``],
     srw_tac[ARITH_ss][transitive_def],
-    full_simp_tac (srw_ss() ++ ARITH_ss) [domain_def, range_def],
-    full_simp_tac (srw_ss() ++ ARITH_ss) [domain_def, range_def],
-    full_simp_tac (srw_ss() ++ ARITH_ss) [domain_def, range_def],
-    full_simp_tac (srw_ss() ++ ARITH_ss) [domain_def, range_def]
+    srw_tac[ARITH_ss][antisym_def],
+    decide_tac,
+    decide_tac,
+    decide_tac,
+    decide_tac,
+    decide_tac
+  ]);
+
+val INJ_preserves_transitive = store_thm(
+  "INJ_preserves_transitive",
+  ``transitive r ∧ INJ f (domain r ∪ range r) t ⇒
+    transitive (IMAGE (f ## f) r)``,
+  simp[transitive_def, pairTheory.EXISTS_PROD] >> strip_tac >>
+  map_every qx_gen_tac [`x`, `y`, `z`] >>
+  simp[GSYM AND_IMP_INTRO] >>
+  disch_then (Q.X_CHOOSE_THEN `a` (Q.X_CHOOSE_THEN `b` strip_assume_tac)) >>
+  disch_then (Q.X_CHOOSE_THEN `b'` (Q.X_CHOOSE_THEN `c` strip_assume_tac)) >>
+  rw[] >> qabbrev_tac `DR = domain r ∪ range r` >>
+  `b ∈ DR ∧ b' ∈ DR` by (rw[Abbr`DR`, in_domain, in_range] >> metis_tac[]) >>
+  `b' = b` by metis_tac [INJ_DEF] >> rw[] >> metis_tac[]);
+
+val INJ_preserves_antisym = store_thm(
+  "INJ_preserves_antisym",
+  ``antisym r ∧ INJ f (domain r ∪ range r) t ⇒ antisym (IMAGE (f ## f) r)``,
+  simp[antisym_def, pairTheory.EXISTS_PROD] >> strip_tac >>
+  map_every qx_gen_tac [`x`, `y`] >> simp[GSYM AND_IMP_INTRO] >>
+  disch_then (Q.X_CHOOSE_THEN `a` (Q.X_CHOOSE_THEN `b` strip_assume_tac)) >>
+  disch_then (Q.X_CHOOSE_THEN `a'` (Q.X_CHOOSE_THEN `b'` strip_assume_tac)) >>
+  rw[] >> qabbrev_tac `DR = domain r ∪ range r` >>
+  metis_tac [INJ_DEF, IN_UNION, in_domain, in_range]);
+
+
+val INJ_preserves_linear_order = store_thm(
+  "INJ_preserves_linear_order",
+  ``linear_order r (domain r ∪ range r) ∧ INJ f (domain r ∪ range r) t ⇒
+    linear_order (IMAGE (f ## f) r) (IMAGE f (domain r ∪ range r))``,
+  simp[linear_order_def, pairTheory.EXISTS_PROD] >> rpt strip_tac >| [
+    simp[SUBSET_DEF, in_domain, pairTheory.EXISTS_PROD] >> metis_tac[],
+    simp[SUBSET_DEF, in_range, pairTheory.EXISTS_PROD] >> metis_tac[],
+    metis_tac [INJ_preserves_transitive],
+    metis_tac [INJ_preserves_antisym],
+    prove_tac [INJ_DEF, IN_UNION, in_domain, in_range],
+    prove_tac [INJ_DEF, IN_UNION, in_domain, in_range],
+    prove_tac [INJ_DEF, IN_UNION, in_domain, in_range],
+    prove_tac [INJ_DEF, IN_UNION, in_domain, in_range]
+  ]);
+
+val domain_IMAGE_ff = store_thm(
+  "domain_IMAGE_ff",
+  ``domain (IMAGE (f ## g) r) = IMAGE f (domain r)``,
+  simp[domain_def, EXTENSION, pairTheory.EXISTS_PROD] >> prove_tac[]);
+val range_IMAGE_ff = store_thm(
+  "range_IMAGE_ff",
+  ``range (IMAGE (f ## g) r) = IMAGE g (range r)``,
+  simp[range_def, EXTENSION, pairTheory.EXISTS_PROD] >> prove_tac[]);
+
+val INJ_preserves_wellorder = store_thm(
+  "INJ_preserves_wellorder",
+  ``wellorder r ∧ INJ f (domain r ∪ range r) t ⇒ wellorder (IMAGE (f ## f) r)``,
+  simp[wellorder_def] >> rpt strip_tac >| [
+    fs[wellfounded_def, strict_def] >> qx_gen_tac `s` >>
+    disch_then (Q.X_CHOOSE_THEN `e` assume_tac) >>
+    asm_simp_tac (srw_ss() ++ DNF_ss) [pairTheory.EXISTS_PROD] >>
+    Cases_on `s ∩ IMAGE f (domain r ∪ range r) = ∅` >-
+      (qexists_tac `e` >> fs[EXTENSION, in_domain, in_range] >> metis_tac[]) >>
+    pop_assum mp_tac >> qabbrev_tac `DR = domain r ∪ range r` >>
+    asm_simp_tac (srw_ss() ++ DNF_ss)[EXTENSION] >>
+    qx_gen_tac `x` >> strip_tac >>
+    first_x_assum (qspec_then `{ x | x ∈ DR ∧ f x ∈ s }` mp_tac) >>
+    asm_simp_tac (srw_ss() ++ SatisfySimps.SATISFY_ss) [] >>
+    disch_then (Q.X_CHOOSE_THEN `min` strip_assume_tac) >>
+    qexists_tac `f min` >> simp[] >> map_every qx_gen_tac [`a`, `b`] >>
+    rpt strip_tac >>
+    `a ∈ DR ∧ b ∈ DR` by (rw[Abbr`DR`, in_domain, in_range] >> metis_tac[]) >>
+    `b = min` by metis_tac [INJ_DEF] >> metis_tac[],
+    simp[domain_IMAGE_ff, range_IMAGE_ff] >>
+    metis_tac [IMAGE_UNION, INJ_preserves_linear_order],
+    fs[reflexive_def, pairTheory.EXISTS_PROD, in_domain, in_range] >>
+    metis_tac[]
   ]);
 
 val wellorder_fromNat_SUM = store_thm(
   "wellorder_fromNat_SUM",
-  ``wellorder { (INL i, INL j) | i < j /\ j <= n }``,
-  rw[wellorder_def, wellfounded_def, strict_linear_order_def] >| [
-    Cases_on `w` >| [
-      qexists_tac `INL (LEAST m. INL m IN s)` >> numLib.LEAST_ELIM_TAC >>
-      rw[] >> metis_tac[],
-      qexists_tac `INR y` >> rw[]
-    ],
-    srw_tac[ARITH_ss][transitive_def],
-    full_simp_tac (srw_ss() ++ ARITH_ss) [domain_def, range_def] >> rw[] >>
-    DECIDE_TAC,
-    full_simp_tac (srw_ss() ++ ARITH_ss) [domain_def, range_def] >> rw[] >>
-    DECIDE_TAC,
-    full_simp_tac (srw_ss() ++ ARITH_ss) [domain_def, range_def] >> rw[] >>
-    DECIDE_TAC,
-    full_simp_tac (srw_ss() ++ ARITH_ss) [domain_def, range_def] >> rw[] >>
-    DECIDE_TAC
-  ]);
+  ``wellorder { (INL i, INL j) | i <= j /\ j < n }``,
+  qmatch_abbrev_tac `wellorder w` >>
+  qabbrev_tac `w0 = { (i,j) | i ≤ j ∧ j < n }` >>
+  `w = IMAGE (INL ## INL) w0`
+     by simp[EXTENSION, Abbr`w`, Abbr`w0`, pairTheory.EXISTS_PROD] >>
+  simp[] >> match_mp_tac (GEN_ALL INJ_preserves_wellorder) >>
+  `wellorder w0` by simp[Abbr`w0`, wellorder_fromNat] >>
+  simp[INJ_DEF] >>
+  qexists_tac `IMAGE INL (domain w0 ∪ range w0)` >>
+  simp[]);
 
 val fromNat0_def = Define`
-  fromNat0 n = wellorder_ABS { (INL i, INL j) | i < j /\ j <= n }
+  fromNat0 n = wellorder_ABS { (INL i, INL j) | i <= j /\ j < n }
 `
 
 val fromNat0_11 = store_thm(
@@ -216,97 +339,20 @@ val fromNat0_11 = store_thm(
   ``(fromNat0 i = fromNat0 j) <=> (i = j)``,
   rw[fromNat0_def, WEXTENSION, wellorder_fromNat_SUM,
      #repabs_pseudo_id wellorder_results] >>
-  simp[EQ_IMP_THM] >> strip_tac >>
+  simp[Once EQ_IMP_THM] >> strip_tac >>
   spose_not_then assume_tac >>
   `i < j \/ j < i` by DECIDE_TAC >| [
-     first_x_assum (qspecl_then [`INL i`, `INL j`] mp_tac),
-     first_x_assum (qspecl_then [`INL j`, `INL i`] mp_tac)
+     first_x_assum (qspecl_then [`INL i`, `INL i`] mp_tac),
+     first_x_assum (qspecl_then [`INL j`, `INL j`] mp_tac)
   ] >> srw_tac[ARITH_ss][]);
 
 val elsOf_fromNat0 = store_thm(
   "elsOf_fromNat0",
-  ``elsOf (fromNat0 n) = if n = 0 then {} else { INL i | i <= n }``,
+  ``elsOf (fromNat0 n) = IMAGE INL (count n)``,
   simp[fromNat0_def, EXTENSION, elsOf_def, #repabs_pseudo_id wellorder_results,
        wellorder_fromNat_SUM, in_domain, in_range, EQ_IMP_THM] >>
-  simp_tac (srw_ss() ++ DNF_ss) [] >> rw[] >> TRY DECIDE_TAC >>
-  Cases_on `i = n` >- (DISJ2_TAC >> qexists_tac `n - 1` >> DECIDE_TAC) >>
-  DISJ1_TAC >> qexists_tac `n` >> DECIDE_TAC);
-
-val bijs_preserve_transitive = store_thm(
-  "bijs_preserve_transitive",
-  ``BIJ f (domain r UNION range r) s /\ transitive r ==>
-    transitive (IMAGE (f ## f) r)``,
-  simp[transitive_def, pairTheory.EXISTS_PROD] >> strip_tac >>
-  map_every qx_gen_tac [`x`, `y`, `z`] >>
-  disch_then (CONJUNCTS_THEN2
-                (Q.X_CHOOSE_THEN `a` (Q.X_CHOOSE_THEN `b` strip_assume_tac))
-                (Q.X_CHOOSE_THEN `c` (Q.X_CHOOSE_THEN `d` strip_assume_tac))) >>
-  qabbrev_tac `R = domain r UNION range r` >>
-  `a IN R /\ b IN R /\ c IN R /\ d IN R`
-    by (rw[Abbr`R`, in_domain, in_range] >> metis_tac[]) >>
-  metis_tac[BIJ_DEF, INJ_DEF]);
-
-val bijs_preserve_strict_linear_orders = store_thm(
-  "bijs_preserve_strict_linear_orders",
-  ``BIJ f (domain r UNION range r) s /\ strict_linear_order r rset ==>
-    strict_linear_order (IMAGE (f ## f) r) (IMAGE f rset)``,
-  simp[strict_linear_order_def, pairTheory.EXISTS_PROD,
-       pairTheory.FORALL_PROD] >>
-  strip_tac >> rpt conj_tac >| [
-    fs[SUBSET_DEF, in_domain, pairTheory.EXISTS_PROD, in_range] >> metis_tac[],
-    fs[SUBSET_DEF, in_domain, pairTheory.EXISTS_PROD, in_range] >> metis_tac[],
-    metis_tac [bijs_preserve_transitive],
-    map_every qx_gen_tac [`a`, `b`] >>
-    Cases_on `(a,b) IN r` >> simp[] >>
-    `a IN (domain r UNION range r) /\ b IN (domain r UNION range r)`
-       by (rw[in_domain, in_range] >> metis_tac[]) >>
-    metis_tac [BIJ_IFF_INV],
-    metis_tac[]
-  ]);
-
-val bijs_preserve_wellorder = prove(
-  ``BIJ f (domain r UNION range r) s /\ wellorder r ==>
-    wellorder (IMAGE (f ## f) r)``,
-  simp[wellorder_def, wellfounded_def] >> strip_tac >> conj_tac >| [
-    qx_gen_tac `ss` >> disch_then (Q.X_CHOOSE_THEN `e` assume_tac) >>
-    simp[pairTheory.EXISTS_PROD] >>
-    Cases_on `?x. x IN ss /\ x IN s` >| [
-      fs[] >>
-      `?a. a IN (domain r UNION range r) /\ (f a = x)`
-         by metis_tac [BIJ_IFF_INV] >>
-      first_x_assum
-        (qspec_then `IMAGE (LINV f (domain r UNION range r)) (s INTER ss)`
-         mp_tac) >>
-      simp[] >> asm_simp_tac (srw_ss() ++ SatisfySimps.SATISFY_ss) [] >>
-      disch_then (Q.X_CHOOSE_THEN `rmin` mp_tac) >>
-      disch_then (CONJUNCTS_THEN2 (Q.X_CHOOSE_THEN `smin` strip_assume_tac)
-                                  strip_assume_tac) >>
-      `rmin IN (domain r UNION range r)`
-         by metis_tac [BIJ_LINV_BIJ, BIJ_IFF_INV] >>
-      qexists_tac `smin` >> simp[] >>
-      asm_simp_tac(srw_ss() ++ DNF_ss)[] >>
-      `smin = f rmin` by metis_tac [BIJ_LINV_INV] >>
-      map_every qx_gen_tac [`c`, `d`] >> pop_assum SUBST_ALL_TAC >>
-      strip_tac >>
-      `c IN (domain r UNION range r) /\ d IN (domain r UNION range r)`
-         by (simp[in_domain,in_range] >> metis_tac[]) >>
-      `d = rmin` by metis_tac [BIJ_DEF, INJ_DEF] >> pop_assum SUBST_ALL_TAC >>
-      first_x_assum (qspec_then `c` mp_tac) >> simp[] >>
-      disch_then (qspec_then `f c` mp_tac) >>
-      metis_tac [LINV_DEF, BIJ_DEF, INJ_DEF],
-      qexists_tac `e` >> fs[] >>
-      asm_simp_tac (srw_ss() ++ DNF_ss)[] >>
-      map_every qx_gen_tac [`a`, `b`] >> strip_tac >>
-      `a IN (domain r UNION range r)` by metis_tac [IN_UNION, in_domain] >>
-      metis_tac [BIJ_IFF_INV]
-    ],
-    qsuff_tac `
-      domain (IMAGE (f ## f) r) UNION range (IMAGE (f ## f) r) =
-      IMAGE f (domain r UNION range r)
-    ` >- metis_tac [bijs_preserve_strict_linear_orders] >>
-    simp[EXTENSION, in_domain, in_range, pairTheory.EXISTS_PROD] >>
-    metis_tac[]
-  ])
+  simp_tac (srw_ss() ++ DNF_ss ++ ARITH_ss) [] >>
+  qx_gen_tac `x` >> strip_tac >> disj1_tac >> qexists_tac `x` >> rw[]);
 
 val _ = type_abbrev ("inf", ``:num + 'a``)
 
@@ -332,11 +378,10 @@ val FORALL_SUM =
 val wellorder_shift1 = store_thm(
   "wellorder_shift1",
   ``wellorder w ==> wellorder (IMAGE ((SUC ++ I) ## (SUC ++ I)) w)``,
-  strip_tac >> match_mp_tac (GEN_ALL bijs_preserve_wellorder) >>
-  qabbrev_tac `s0 = domain w UNION range w` >>
+  strip_tac >> match_mp_tac (GEN_ALL INJ_preserves_wellorder) >>
+  qabbrev_tac `s0 = domain w ∪ range w` >>
   qexists_tac `IMAGE (SUC ++ I) s0` >>
-  rw[BIJ_DEF, SURJ_IMAGE] >>
-  simp[INJ_DEF, EXISTS_SUM, FORALL_SUM])
+  simp[INJ_DEF, EXISTS_SUM, FORALL_SUM]);
 
 val ZERO_NOT_SHIFT1 = store_thm(
   "ZERO_NOT_SHIFT1",
@@ -348,43 +393,46 @@ val ZERO_NOT_SHIFT1 = store_thm(
 val ADD1_def = Define`
   ADD1 e w =
     if e IN elsOf w then w
-    else wellorder_ABS (wellorder_REP w UNION {(x,e) | x IN elsOf w})
+    else
+      wellorder_ABS (wellorder_REP w UNION {(x,e) | x IN elsOf w} UNION {(e,e)})
 `;
+
+val WLE_WIN = store_thm(
+  "WLE_WIN",
+  ``(x,y) WLE w ==> (x = y) ∨ (x,y) WIN w``,
+  rw[strict_def]);
 
 val wellorder_ADD1 = store_thm(
   "wellorder_ADD1",
   ``e NOTIN elsOf w ==>
-    wellorder (wellorder_REP w UNION {(x,e) | x IN elsOf w})``,
+    wellorder (wellorder_REP w UNION {(x,e) | x IN elsOf w} UNION {(e,e)})``,
   `wellorder (wellorder_REP w)` by rw [termP_term_REP] >>
   rw[wellorder_def] >| [
-    simp[wellfounded_def] >> qx_gen_tac `s` >>
+    simp[wellfounded_def, strict_def] >> qx_gen_tac `s` >>
     disch_then (Q.X_CHOOSE_THEN `a` assume_tac) >>
     Cases_on `?b. b IN s /\ b IN elsOf w` >> fs[] >| [
       fs[wellorder_def, wellfounded_def] >>
       first_x_assum (qspec_then `elsOf w INTER s` mp_tac) >>
       asm_simp_tac (srw_ss() ++ SatisfySimps.SATISFY_ss)[] >>
-      disch_then (Q.X_CHOOSE_THEN `min` strip_assume_tac) >>
-      metis_tac [WIN_elsOf],
-      qexists_tac `a` >> metis_tac [WIN_elsOf]
+      metis_tac [WLE_elsOf, WLE_WIN],
+      qexists_tac `a` >> metis_tac [WLE_elsOf]
     ],
-    fs[strict_linear_order_def, wellorder_def] >>
-    `domain (wellorder_REP w UNION {(x,e) | x IN elsOf w}) =
-     domain (wellorder_REP w) UNION range (wellorder_REP w)`
+    fs[linear_order_def, wellorder_def] >>
+    `domain (wellorder_REP w UNION {(x,e) | x IN elsOf w} UNION {(e,e)}) =
+     e INSERT elsOf w`
        by (rw[EXTENSION, in_domain, in_range, EQ_IMP_THM] >>
-           metis_tac [elsOf_def, IN_UNION, in_range, in_domain]) >>
-    Cases_on `wellorder_REP w = {}`
-      >- (`elsOf w = {}` by simp[elsOf_def, range_def, domain_def] >>
-          simp[range_def, domain_def, transitive_def]) >>
-    `?a b. (a,b) WIN w`
-       by (fs[EXTENSION, pairTheory.FORALL_PROD] >> metis_tac[]) >>
-    `range (wellorder_REP w UNION {(x,e) | x IN elsOf w}) = e INSERT wrange w`
-       by (rw[EXTENSION, elsOf_def, in_domain, in_range] >> metis_tac[]) >>
-    simp[] >> conj_tac >| [
-      `!e'. ((e,e') WIN w = F) /\ ((e',e) WIN w = F)`
-        by  metis_tac[WIN_elsOf] >>
-      fs[transitive_def] >> metis_tac[WIN_elsOf],
-      metis_tac[elsOf_def, IN_UNION]
-    ]
+           metis_tac [WLE_elsOf]) >>
+    `range (wellorder_REP w UNION {(x,e) | x IN elsOf w} UNION {(e,e)}) =
+     e INSERT elsOf w`
+       by (rw[EXTENSION, in_domain, in_range] >>
+           metis_tac [elsOf_WLE, WLE_elsOf]) >>
+    simp[] >> rpt conj_tac >| [
+      fs[transitive_def] >> metis_tac[WLE_elsOf, elsOf_WLE],
+      fs[antisym_def] >> metis_tac[WLE_elsOf, elsOf_WLE],
+      fs[in_domain, in_range] >> metis_tac[WLE_elsOf, elsOf_WLE]
+    ],
+    fs[wellorder_def, reflexive_def, in_domain, in_range] >>
+    metis_tac[WLE_elsOf, elsOf_WLE]
   ])
 
 val woSUC_def = Define`
@@ -393,39 +441,11 @@ val woSUC_def = Define`
 
 val elsOf_wobound = store_thm(
   "elsOf_wobound",
-  ``elsOf (wobound x w) =
-      let s = { y | (y,x) WIN w }
-      in
-        if FINITE s /\ (CARD s = 1) then {}
-        else s``,
+  ``elsOf (wobound x w) = { y | (y,x) WIN w }``,
   simp[wobound_def, EXTENSION] >> qx_gen_tac `a` >>
   simp[elsOf_def, wellorder_rrestrict, #repabs_pseudo_id wellorder_results] >>
-  simp[rrestrict_def, iseg_def, domain_def, range_def] >> eq_tac >|[
-    disch_then (DISJ_CASES_THEN (Q.X_CHOOSE_THEN `b` STRIP_ASSUME_TAC)) >>
-    rw[] >>
-    `a <> b` by (strip_tac >> fs[WIN_REFL]) >>
-    `a IN { y | (y,x) WIN w} /\ b IN { y | (y,x) WIN w}` by rw[] >>
-    `SING { y | (y,x) WIN w }` by metis_tac [SING_IFF_CARD1] >>
-    `?z. { y | (y,x) WIN w } = {z}` by fs[SING_DEF] >>
-    pop_assum SUBST_ALL_TAC >> fs[],
-
-    rw [] >>
-    qabbrev_tac `s = { y | (y,x) WIN w }` >> Cases_on `FINITE s` >> fs[] >| [
-      `CARD s <> 0`
-        by (strip_tac >> `s = {}` by metis_tac [CARD_EQ_0] >>
-            `a IN s` by rw[Abbr`s`] >> rw[] >> fs[]) >>
-      `?b. a <> b /\ (b,x) WIN w`
-         by (SPOSE_NOT_THEN strip_assume_tac >>
-             qsuff_tac `s = {a}` >- (strip_tac >> fs[]) >>
-             rw[EXTENSION, Abbr`s`, EQ_IMP_THM] >> metis_tac []) >>
-      metis_tac [WIN_trichotomy, WIN_elsOf],
-
-      `?b. a <> b /\ b IN s`
-         by (qspecl_then [`s`, `{a}`] MP_TAC IN_INFINITE_NOT_FINITE >>
-             simp[] >> metis_tac []) >>
-      fs[Abbr`s`] >> metis_tac [WIN_trichotomy, WIN_elsOf]
-    ]
-  ]);
+  simp[rrestrict_def, iseg_def, domain_def, range_def] >>
+  metis_tac [elsOf_WLE, WIN_elsOf]);
 
 val orderiso_def = Define`
   orderiso w1 w2 <=>
@@ -476,30 +496,22 @@ val orderlt_def = Define`
   orderlt w1 w2 = ?x. x IN elsOf w2 /\ orderiso w1 (wobound x w2)
 `;
 
-val elsOf_NEVER_SING = store_thm(
-  "elsOf_NEVER_SING",
-  ``!e. elsOf w <> {e}``,
-  rw[elsOf_def] >> disch_then (assume_tac o SIMP_RULE (srw_ss()) [EXTENSION]) >>
-  `e IN domain (wellorder_REP w) \/ e IN wrange w` by metis_tac[] >>
-   fs[in_domain, in_range] >> metis_tac [WIN_REFL]);
-
 val orderlt_REFL = store_thm(
   "orderlt_REFL",
   ``orderlt w w = F``,
   simp[orderlt_def] >> qx_gen_tac `x` >> Cases_on `x IN elsOf w` >> simp[] >>
   simp[orderiso_thm] >> qx_gen_tac `f` >>
-  Cases_on `BIJ f (elsOf w) (elsOf (wobound x w))` >> simp[] >>
+  Cases_on `BIJ f (elsOf w) (elsOf (wobound x w))` >> simp[strict_def] >>
   spose_not_then strip_assume_tac >>
   `f x IN elsOf (wobound x w)` by metis_tac [BIJ_IFF_INV] >>
   `elsOf (wobound x w) = {y | (y,x) WIN w}`
-       by (full_simp_tac (srw_ss() ++ COND_elim_ss)
-                                 [elsOf_wobound, LET_THM] >>
-                   fs[]) >>
+       by fs[elsOf_wobound] >>
   `!n. (FUNPOW f (SUC n) x, FUNPOW f n x) WIN w`
      by (Induct >> simp[] >- fs[] >>
          `(FUNPOW f (SUC (SUC n)) x, FUNPOW f (SUC n) x) WIN wobound x w`
-            by metis_tac [arithmeticTheory.FUNPOW_SUC] >>
-         fs [IN_wobound]) >>
+            by metis_tac [arithmeticTheory.FUNPOW_SUC, WIN_WLE, WIN_REFL,
+                          WLE_WIN] >>
+         fs [WIN_wobound]) >>
   mp_tac WIN_WF >> simp[wellfounded_def] >>
   qexists_tac `{ FUNPOW f n x | n | T }` >> simp[] >>
   simp_tac (srw_ss() ++ DNF_ss)[] >> qx_gen_tac `min` >>
@@ -543,30 +555,14 @@ val wobounds_preserve_bijections = store_thm(
     (!x y. (x,y) WIN w1 ==> (f x, f y) WIN w2) ==>
     BIJ f (elsOf (wobound x w1)) (elsOf (wobound (f x) w2))``,
   simp[BIJ_IFF_INV,elsOf_wobound] >> strip_tac >>
-  `{ y | (y, f x) WIN w2 } = IMAGE f {y | (y,x) WIN w1 }`
-     by (simp[EXTENSION] >> qx_gen_tac `e` >> eq_tac >| [
-           strip_tac >>
-           `e IN elsOf w2 /\ f x IN elsOf w2`
-              by (rw[elsOf_def, in_domain, in_range] >> metis_tac[]) >>
-            `?d. d IN elsOf w1 /\ (e = f d)` by metis_tac[] >>
-            rw[] >>
-            `d <> x` by metis_tac [WIN_REFL] >>
-            `~((x,d) WIN w1)` by metis_tac [WIN_TRANS, WIN_REFL] >>
-            metis_tac [WIN_trichotomy],
-            disch_then (Q.X_CHOOSE_THEN `d` STRIP_ASSUME_TAC) >> rw[]
-         ]) >>
-  qabbrev_tac `ltx = {y | (y,x) WIN w1}` >> simp[] >>
-  `!x y. x IN ltx /\ y IN ltx ==> ((f x = f y) <=> (x = y))`
-     by (simp[Abbr`ltx`] >> metis_tac [IN_UNION, in_domain, elsOf_def]) >>
-  asm_simp_tac (srw_ss() ++ CONJ_ss) [FINITE_IMAGE_INJfn, IMAGE_CARD_INJfn] >>
-  Cases_on `FINITE ltx /\ (CARD ltx = 1)` >> simp[] >| [
-    `!x. x IN ltx ==> x IN elsOf w1`
-       by (rw[Abbr`ltx`, elsOf_def, in_domain] >> metis_tac []) >>
-    asm_simp_tac (srw_ss() ++ DNF_ss) [] >>
-    `!x y. x IN elsOf w1 /\ y IN elsOf w1 ==> ((f x = f y) = (x = y))`
-       by metis_tac [] >>
-    asm_simp_tac (srw_ss() ++ CONJ_ss)[] >> metis_tac []
-  ]);
+  qexists_tac `g` >> rpt conj_tac >| [
+    qx_gen_tac `y` >> strip_tac >>
+    `y ∈ elsOf w2` by metis_tac [WIN_elsOf] >>
+    `g y ∈ elsOf w1` by metis_tac[] >>
+    metis_tac [WIN_trichotomy, WIN_REFL, WIN_TRANS],
+    metis_tac [WIN_elsOf],
+    metis_tac [WIN_elsOf]
+  ])
 
 val orderlt_TRANS = store_thm(
   "orderlt_TRANS",
@@ -581,18 +577,15 @@ val orderlt_TRANS = store_thm(
         !x y. (x,y) WIN w2 ==> (g x, g y) WIN wobound b w3)`
      by metis_tac[orderiso_thm] >>
   `g a IN elsOf (wobound b w3)` by metis_tac [BIJ_IFF_INV] >>
-  `(g a, b) WIN w3`
-    by (pop_assum mp_tac >> simp[elsOf_wobound, in_domain, in_range] >>
-        asm_simp_tac (srw_ss() ++ COND_elim_ss) [LET_THM] >>
-        metis_tac[]) >>
-  qexists_tac `g a` >> conj_tac >- metis_tac[IN_UNION, elsOf_def, in_domain] >>
+  `(g a, b) WIN w3` by fs[elsOf_wobound, in_domain, in_range] >>
+  qexists_tac `g a` >> conj_tac >- metis_tac[WIN_elsOf] >>
   match_mp_tac orderiso_TRANS >> qexists_tac `wobound a w2` >>
   rw[] >> rw[orderiso_thm] >> qexists_tac `g` >> conj_tac >| [
     `wobound (g a) w3 = wobound (g a) (wobound b w3)`
       by rw[wobound2] >>
     pop_assum SUBST1_TAC >>
     match_mp_tac wobounds_preserve_bijections >> rw[],
-    fs[IN_wobound]
+    fs[WIN_wobound]
   ]);
 
 val wleast_def = Define`
@@ -622,7 +615,6 @@ val wo2wo_thm = save_thm(
             |> C MATCH_MP WIN_WF2
             |> SIMP_RULE (srw_ss()) []
             |> REWRITE_RULE [GSYM wo2wo_def, restrict_away])
-
 
 val WO_INDUCTION =
     relationTheory.WF_INDUCTION_THM |> C MATCH_MP WIN_WF2 |> Q.GEN `w`
@@ -723,8 +715,7 @@ val wo2wo_mono = store_thm(
   ``(wo2wo w1 w2 x0 = SOME y0) /\ (wo2wo w1 w2 x = SOME y) /\ (x0,x) WIN w1 ==>
     (y0,y) WIN w2``,
   rpt strip_tac >>
-  `x0 IN elsOf w1 /\ x IN elsOf w1`
-      by metis_tac [elsOf_def, in_domain, in_range, IN_UNION] >>
+  `x0 IN elsOf w1 /\ x IN elsOf w1` by metis_tac [WIN_elsOf] >>
   `y0 <> y` by metis_tac [WIN_REFL, wo2wo_11] >>
   rpt (qpat_assum `wo2wo X Y Z = WW` mp_tac) >>
   ONCE_REWRITE_TAC [wo2wo_thm] >> rw[LET_THM] >>
@@ -771,20 +762,7 @@ val orderlt_trichotomy = store_thm(
     MATCH_MP_TAC orderiso_SYM >>
     rw[orderiso_def] >>
     qexists_tac `THE o wo2wo w1 w2` >>
-    `elsOf (wobound x0 w1) = { x | (x,x0) WIN w1 }`
-       by (rw[elsOf_wobound] >> rw[] >>
-           `?z. s = {z}` by metis_tac [SING_IFF_CARD1, SING_DEF] >>
-           `(z,x0) WIN w1` by fs[Abbr`s`, EXTENSION] >>
-           `elsOf w2 = woseg w1 w2 x0`
-              by metis_tac [wo2wo_EQ_NONE_woseg, optionTheory.option_CASES] >>
-           ` _ = {THE (wo2wo w1 w2 z)}`
-              by (asm_simp_tac(srw_ss() ++ DNF_ss)[EXTENSION] >>
-                  `?y. wo2wo w1 w2 z = SOME y` by metis_tac[] >>
-                  simp[EQ_IMP_THM, FORALL_AND_THM] >>
-                  Tactical.REVERSE conj_tac
-                    >- (qexists_tac `z` >> rw[iseg_def]) >>
-                  asm_simp_tac (srw_ss() ++ DNF_ss) [iseg_def]) >>
-           fs[elsOf_NEVER_SING]) >>
+    `elsOf (wobound x0 w1) = { x | (x,x0) WIN w1 }` by rw[elsOf_wobound] >>
     simp[] >> rpt conj_tac >| [
       metis_tac [wo2wo_IN_w2, optionTheory.THE_DEF],
       metis_tac [wo2wo_11, optionTheory.THE_DEF, WIN_elsOf],
@@ -792,7 +770,7 @@ val orderlt_trichotomy = store_thm(
         by metis_tac [wo2wo_EQ_NONE_woseg, optionTheory.option_CASES] >>
       asm_simp_tac (srw_ss() ++ DNF_ss) [iseg_def] >>
       metis_tac [optionTheory.option_CASES],
-      simp[IN_wobound] >> metis_tac [optionTheory.THE_DEF, wo2wo_mono]
+      simp[WIN_wobound] >> metis_tac [optionTheory.THE_DEF, wo2wo_mono]
     ],
     ALL_TAC
   ] >>
@@ -832,26 +810,11 @@ val orderlt_trichotomy = store_thm(
         `~((y0,b) WIN w2)`
            by metis_tac [wo2wo_ONTO, optionTheory.NOT_SOME_NONE] >>
         metis_tac [WIN_trichotomy, wo2wo_IN_w2]) >>
-  `elsOf (wobound y0 w2) = { y | (y,y0) WIN w2}`
-     by (rw[elsOf_wobound] >> rw[] >>
-         `?z. s = {z}` by metis_tac [SING_IFF_CARD1, SING_DEF] >>
-         `(z,y0) WIN w2` by fs[Abbr`s`, EXTENSION] >>
-         `~((y0,z) WIN w2)` by metis_tac [WIN_TRANS, WIN_REFL] >>
-         `z <> y0` by metis_tac [WIN_REFL] >>
-         `z IN elsOf w2` by metis_tac [WIN_elsOf] >>
-         `?x. x IN elsOf w1 /\ (wo2wo w1 w2 x = SOME z)` by metis_tac[] >>
-         qsuff_tac `elsOf w1 = {x}` >- metis_tac [elsOf_NEVER_SING] >>
-         simp[EXTENSION, EQ_IMP_THM] >> qx_gen_tac `x'` >>
-         spose_not_then strip_assume_tac >>
-         `?z'. (wo2wo w1 w2 x' = SOME z') /\ z' IN elsOf w2 /\ (z',y0) WIN w2`
-            by metis_tac [wo2wo_IN_w2] >>
-         `z' <> z` by metis_tac [wo2wo_11] >>
-         `z' IN s` by rw[Abbr`s`] >> rw[] >> fs[]) >>
-  simp[] >> rpt conj_tac >| [
+  simp[elsOf_wobound] >> rpt conj_tac >| [
     metis_tac [optionTheory.THE_DEF],
     metis_tac [optionTheory.THE_DEF, wo2wo_11],
     metis_tac [WIN_REFL, WIN_TRANS, WIN_elsOf, optionTheory.THE_DEF],
-    simp[IN_wobound] >> metis_tac [wo2wo_mono, optionTheory.THE_DEF, WIN_elsOf]
+    simp[WIN_wobound] >> metis_tac [wo2wo_mono, optionTheory.THE_DEF, WIN_elsOf]
   ]);
 
 val wZERO_def = Define`wZERO = wellorder_ABS {}`
@@ -866,8 +829,15 @@ val _ = export_rewrites ["elsOf_wZERO"]
 val WIN_wZERO = store_thm(
   "WIN_wZERO",
   ``(x,y) WIN wZERO <=> F``,
-  simp[wZERO_def, #repabs_pseudo_id wellorder_results, wellorder_EMPTY]);
+  simp[wZERO_def, #repabs_pseudo_id wellorder_results, wellorder_EMPTY,
+       strict_def]);
 val _ = export_rewrites ["WIN_wZERO"]
+
+val WLE_wZERO = store_thm(
+  "WLE_wZERO",
+  ``(x,y) WLE wZERO <=> F``,
+  simp[wZERO_def, #repabs_pseudo_id wellorder_results, wellorder_EMPTY]);
+val _ = export_rewrites ["WLE_wZERO"]
 
 val orderiso_wZERO = store_thm(
   "orderiso_wZERO",
@@ -930,7 +900,7 @@ val orderlt_WF = store_thm(
     >- (`wobound (h p) w0 = wobound (h p) (wobound y w0)` by rw [wobound2] >>
         pop_assum SUBST1_TAC >>
         match_mp_tac wobounds_preserve_bijections >> rw[]) >>
-  fs[IN_wobound])
+  fs[WIN_wobound])
 
 val orderlt_orderiso = store_thm(
   "orderlt_orderiso",
@@ -944,7 +914,7 @@ val orderlt_orderiso = store_thm(
       >- metis_tac [BIJ_DEF, INJ_DEF] >>
     qsuff_tac `orderiso (wobound x a0) (wobound (f x) b0)`
       >- metis_tac [orderiso_TRANS] >>
-    rw[orderiso_thm] >> qexists_tac `f` >> rw[IN_wobound] >>
+    rw[orderiso_thm] >> qexists_tac `f` >> rw[WIN_wobound] >>
     match_mp_tac wobounds_preserve_bijections >>
     fs[orderiso_thm],
     `orderiso x0 (wobound x b0)` by metis_tac [orderiso_TRANS] >>
@@ -954,7 +924,7 @@ val orderlt_orderiso = store_thm(
     qexists_tac `f x` >> conj_tac >- metis_tac [BIJ_IFF_INV] >>
     qsuff_tac `orderiso (wobound x b0) (wobound (f x) a0)`
       >- metis_tac [orderiso_TRANS] >>
-    rw[orderiso_thm] >> qexists_tac `f` >> rw[IN_wobound] >>
+    rw[orderiso_thm] >> qexists_tac `f` >> rw[WIN_wobound] >>
     match_mp_tac wobounds_preserve_bijections >>
     metis_tac [orderiso_thm, orderiso_SYM]
   ]);
@@ -969,7 +939,7 @@ val islimit_maximals = store_thm(
   ``islimit w <=> (maximal_elements (elsOf w) (wellorder_REP w) = {})``,
   rw[islimit_def, maximal_elements_def, EXTENSION] >>
   rw[METIS_PROVE [] ``(!x. ~P x \/ Q x) = (!x. P x ==> Q x)``] >>
-  metis_tac [WIN_REFL]);
+  metis_tac [WIN_REFL, WLE_WIN, WIN_WLE]);
 
 val islimit_wZERO = store_thm(
   "islimit_wZERO",
@@ -1046,6 +1016,7 @@ val wo_INDUCTION = save_thm(
            |> SIMP_RULE (srw_ss()) []
            |> Q.GEN `w` |> Q.GEN `P`)
 
+(*
 val canonicals_unique = store_thm(
   "canonicals_unique",
   ``canon_wellorder w1 /\ canon_wellorder w2 /\ orderiso w1 w2 ==> (w1 = w2)``,
@@ -1060,7 +1031,7 @@ val canonicals_unique = store_thm(
         fs[] >> simp[EQ_IMP_THM] >>
         map_every qx_gen_tac [`a`, `b`] >> strip_tac >>
         `?a0 b0. a0 IN elsOf w1 /\ (f a0 = a) /\ b0 IN elsOf w1 /\ (f b0 = b)`
-           by metis_tac [BIJ_IFF_INV, WIN_elsOf] >>
+           by metis_tac [BIJ_IFF_INV, WLE_elsOf] >>
         ntac 2 (qpat_assum `f XX = YY` mp_tac) >> simp[] >> rw[] >>
         metis_tac [WIN_trichotomy, WIN_TRANS, WIN_REFL]) >>
   ho_match_mp_tac wo_INDUCTION >> rpt strip_tac >>
@@ -1073,6 +1044,7 @@ val canonicals_unique = store_thm(
   `?x0. x0 IN elsOf w1 /\ (f x0 = y)` by metis_tac [BIJ_IFF_INV, WIN_elsOf] >>
   `(x0,x) WIN w1` by metis_tac [WIN_trichotomy, WIN_TRANS, WIN_REFL] >>
   metis_tac[])
+*)
 
 
 (* perform quotient, creating a type of "pre-ordinals".
@@ -1136,19 +1108,12 @@ val ordinal_repabs = prove(
   metis_tac [orderiso_REFL]);
 
 val finite_inl = prove(
-  ``FINITE {INL i | i <= n}``,
- `{INL i | i <= n } = IMAGE INL {i | i <= n}`
-    by rw[EXTENSION] >>
- rw[] >>
- qsuff_tac `{i | i <= n} = n INSERT count n` >- rw[] >>
- srw_tac[ARITH_ss][EXTENSION]);
+  ``FINITE (IMAGE INL (count n))``,
+  rw[IMAGE_FINITE]);
 
 val card_inl = prove(
-  ``CARD {INL i | i <= n} = n + 1``,
- `{INL i | i <= n } = IMAGE INL {i | i <= n}`
-    by rw[EXTENSION] >>
- `{i | i <= n} = n INSERT count n` by srw_tac[ARITH_ss][EXTENSION] >>
- rw[CARD_INJ_IMAGE, finite_inl, arithmeticTheory.ADD1]);
+  ``CARD (IMAGE INL (count n)) = n``,
+  rw[CARD_INJ_IMAGE]);
 
 val fromNat_11 = store_thm(
   "fromNat_11",
@@ -1159,12 +1124,7 @@ val fromNat_11 = store_thm(
   pop_assum (mp_tac o C Q.AP_THM `fromNat0 n : 'a inf wellorder`) >>
   simp[orderiso_REFL] >> simp[orderiso_thm] >>
   disch_then (Q.X_CHOOSE_THEN `f` strip_assume_tac) >>
-  Cases_on `m = 0` >> Cases_on `n = 0` >> fs[BIJ_EMPTY, elsOf_fromNat0] >| [
-    fs[EXTENSION] >> first_x_assum (qspec_then `n` mp_tac) >> rw[],
-    fs[EXTENSION] >> first_x_assum (qspec_then `n` mp_tac) >> rw[],
-    `m + 1 = n + 1` by metis_tac [FINITE_BIJ_CARD_EQ, finite_inl, card_inl] >>
-    fs[]
-  ]);
+  fs[elsOf_fromNat0] >> metis_tac [FINITE_BIJ_CARD_EQ, finite_inl, card_inl]);
 
 val ord_finite_fromNat = store_thm(
   "ord_finite_fromNat",
