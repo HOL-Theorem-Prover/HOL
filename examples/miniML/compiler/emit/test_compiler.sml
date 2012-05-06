@@ -393,10 +393,10 @@ val d1 = ``Dlet (Pcon "Pair_type" [Pvar "x";Pvar "y"]) (Con "Pair_type" [Val (Li
 val d2 = ``Dlet (Pvar "x") (Val (Lit (IntLit 3)))``
 val d3 = ``Dlet (Pvar "y") (Val (Lit (IntLit 4)))``
 val e47 = ``Con "Pair_type" [
-              Con "Pair_type" [Var "x", Var "y"],
+              Con "Pair_type" [Var "x"; Var "y"];
               Let "x" (Fun "x" (App (Opn Plus) (Var "x") (Var "y")))
                 (App Opapp (Var "x") (Var "y"))]``
-val (m,st) = pd1 e47 [d0,d1,d2]
+val (m,st) = pd1 e47 [d0,d1,d2,d3]
 val [Block (_,[Block (_,[Number x3,Number y4]),Number yy]),Number x,Number y] = st
 val SOME 4 = intML.toInt y
 val SOME 3 = intML.toInt x

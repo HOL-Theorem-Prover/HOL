@@ -11,15 +11,14 @@ val _ = Parse.disable_tyabbrev_printing "envE"
 val _ = Parse.disable_tyabbrev_printing "alist"
 
 val underscore_rule = Conv.CONV_RULE let
-fun foldthis (tm,(ls,b)) = let
+fun foldthis (tm,(ls,n)) = let
   val (nm,_) = Term.dest_var tm
-in if String.size nm > 1 andalso String.sub(nm,0) = #"_" then ("_"::ls,true) else (nm::ls,b) end in
+in if String.sub(nm,0) = #"_" then (("us"^(Int.toString n))::ls,n+1) else (nm::ls,n) end in
 Conv.TOP_SWEEP_CONV
   (fn tm => let
      val (vs, _) = Term.strip_binder NONE tm
-     val (vs,true) = List.foldr foldthis ([],false) vs
-   in Conv.RENAME_VARS_CONV vs tm end
-   handle Bind => raise Conv.UNCHANGED)
+     val (vs,n) = List.foldr foldthis ([],0) vs
+   in if n = 0 then raise Conv.UNCHANGED else Conv.RENAME_VARS_CONV vs tm end)
 end
 
 val data = map
@@ -75,6 +74,7 @@ boolSyntax.rhs(Thm.concl(SIMP_CONV (srw_ss()) [init_repl_state_def]
 
 val defs = map EmitML.DEFN
 [ incsz_def
+, Cpat_vars_def
 , free_vars_def
 , REWRITE_RULE [basis_emitTheory.IS_EMPTY_REWRITE]
     (UNDISCH (SPEC_ALL fsetTheory.num_set_foldl_def))
@@ -97,7 +97,17 @@ val defs = map EmitML.DEFN
 , init_repl_state
 , extend_def
 , pat_to_Cpat_def
-, underscore_rule exp_to_Cexp_def
+, underscore_rule (
+  let open Lib pairSyntax
+    val glhs = strip_comb o lhs o #2 o strip_forall o concl
+    val (exp_to_Cexp_def,v_to_Cv_def) =
+      partition (same_const ``exp_to_Cexp`` o #1 o glhs)
+        (CONJUNCTS exp_to_Cexp_def) in
+  LIST_CONJ
+  ((op ::)
+     (((fn th => th |> Q.SPEC `Lit l` |> Q.GEN `l` |> SIMP_RULE (srw_ss()) [hd v_to_Cv_def]) ## I)
+       (pluck (same_const ``Val`` o #1 o strip_comb o #2 o dest_pair o el 3 o #2 o glhs)
+          exp_to_Cexp_def))) end)
 , least_not_in_def
 , remove_mat_vp_def
 , remove_mat_def
