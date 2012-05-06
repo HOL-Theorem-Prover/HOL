@@ -388,3 +388,24 @@ val SOME 3 = intML.toInt xb
 val SOME 1 = intML.toInt yb
 val true = x = xb
 val true = y = yb;
+val d0 = paird
+val d1 = ``Dlet (Pcon "Pair_type" [Pvar "x";Pvar "y"]) (Con "Pair_type" [Val (Lit (IntLit 1));Val (Lit (IntLit 2))])``
+val d2 = ``Dlet (Pvar "x") (Val (Lit (IntLit 3)))``
+val d3 = ``Dlet (Pvar "y") (Val (Lit (IntLit 4)))``
+val e47 = ``Con "Pair_type" [
+              Con "Pair_type" [Var "x", Var "y"],
+              Let "x" (Fun "x" (App (Opn Plus) (Var "x") (Var "y")))
+                (App Opapp (Var "x") (Var "y"))]``
+val (m,st) = pd1 e47 [d0,d1,d2]
+val [Block (_,[Block (_,[Number x3,Number y4]),Number yy]),Number x,Number y] = st
+val SOME 4 = intML.toInt y
+val SOME 3 = intML.toInt x
+val SOME 3 = intML.toInt x3
+val SOME 4 = intML.toInt y4
+val SOME 8 = intML.toInt yy;
+val d0 = ``Dlet (Pvar "x") (Let "x" (Val (Lit (IntLit 1))) (App (Opn Minus) (Var "x") (Var "x")))``
+val e48 = ``Var "x"``
+val (m,st) = pd1 e48 [d0]
+val [Number xv,Number xd] = st
+val SOME 0 = intML.toInt xv
+val SOME 0 = intML.toInt xd;
