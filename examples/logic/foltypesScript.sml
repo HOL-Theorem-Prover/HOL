@@ -285,5 +285,47 @@ val fFV_thm = Save_thm(
   "fFV_thm",
   LIST_CONJ (map (supp_clause form_repabs_pseudo_id) fm_cons_info))
 
+val LIST_REL_CONS1 = listTheory.LIST_REL_CONS1
+val LIST_REL_NIL = listTheory.LIST_REL_NIL
+
+val term_ind0 =
+    bvc_genind
+        |> INST_TYPE [alpha |-> ``:ftm_discriminator``, beta |-> ``:unit``]
+        |> Q.INST [`vp` |-> `^vp`, `lp` |-> `^lp`]
+        |> Q.SPEC `λn t0 x. (n = 0) ⇒ Q t0 x`
+        |> Q.INST [`Q` |-> `λt. P (foterm_ABS t)`]
+        |> SPEC_ALL
+        |> UNDISCH_ALL |> SIMP_RULE std_ss []
+        |> SPECL [``0n``, ``foterm_REP ft``]
+        |> SIMP_RULE std_ss [genind_term_REP, term_absrep_id]
+        |> Q.GEN `ft` |> DISCH_ALL
+        |> SIMP_RULE std_ss [LEFT_AND_OVER_OR, DISJ_IMP_THM, LIST_REL_CONS1,
+                             LIST_REL_NIL,
+                             RIGHT_AND_OVER_OR, FORALL_AND_THM, GSYM VAR_def,
+                             oneTheory.FORALL_ONE]
+        |> Q.INST [`P` |-> `λt x. Q t`, `fv` |-> `λx. {}`]
+        |> SIMP_RULE (srw_ss()) [] |> Q.GEN `Q`
+
+val foterm_ind = store_thm(
+  "foterm_ind",
+  ``!P.
+      (∀s. P (VAR s)) ∧
+      (∀s ts. (∀t. MEM t ts ⇒ P t) ⇒ P (FN s ts)) ⇒
+      ∀ft. P ft``,
+  rpt gen_tac >> strip_tac >> match_mp_tac term_ind0 >> simp[] >>
+  rw[listTheory.LIST_REL_EL_EQN] >>
+  `∀i. i < LENGTH uns ⇒ EL i uns = 0` by metis_tac [listTheory.MEM_EL] >>
+  fs[] >>
+  `∃ts. us = MAP foterm_REP ts`
+     by (qexists_tac `MAP foterm_ABS us` >>
+         simp[listTheory.MAP_MAP_o] >>
+         match_mp_tac listTheory.LIST_EQ >> simp[listTheory.EL_MAP] >>
+         qx_gen_tac `i` >> rw[] >> ONCE_REWRITE_TAC [EQ_SYM_EQ] >>
+         match_mp_tac term_repabs_pseudo_id >> metis_tac[]) >>
+  simp[FN_def'] >> first_x_assum match_mp_tac >>
+  rw[] >> qpat_assum `∀n. n < LENGTH uns ⇒ PP ∧ QQ` mp_tac >>
+  simp[listTheory.EL_MAP, term_absrep_id] >>
+  `∃n. n < LENGTH ts ∧ t = EL n ts` by metis_tac[listTheory.MEM_EL] >>
+  simp[])
 
 val _ = export_theory()
