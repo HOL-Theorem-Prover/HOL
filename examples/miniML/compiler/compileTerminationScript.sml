@@ -93,15 +93,6 @@ val (inst_arg_def,inst_arg_ind) = register "inst_arg" (
   Q.ISPEC_THEN `nt_size` imp_res_tac SUM_MAP_MEM_bound >>
   srw_tac[ARITH_ss][]))
 
-val (pat_vars_def,pat_vars_ind) = register "pat_vars" (
-  tprove_no_defn ((pat_vars_def,pat_vars_ind),
-  WF_REL_TAC `measure pat_size` >>
-  rw[pat1_size_thm] >>
-  imp_res_tac SUM_MAP_MEM_bound >>
-  pop_assum (qspec_then `pat_size` mp_tac) >>
-  srw_tac[ARITH_ss][]))
-val _ = export_rewrites["pat_vars_def"]
-
 val (Cpat_vars_def,Cpat_vars_ind) = register "Cpat_vars" (
   tprove_no_defn ((Cpat_vars_def,Cpat_vars_ind),
   WF_REL_TAC `measure Cpat_size` >>
@@ -170,21 +161,25 @@ val (remove_mat_def,remove_mat_ind) = register "remove_mat" (
   `inv_image $<
     (λx. case x of
          | INL e => Cexp_size e
-         | INR (v,pes) => Cexp4_size pes)` >>
+         | INR (_,pes) => Cexp4_size pes)` >>
   srw_tac[ARITH_ss][Cexp1_size_thm,Cexp4_size_thm,Cexp7_size_thm] >>
   MAP_EVERY (fn q => Q.ISPEC_THEN q mp_tac SUM_MAP_MEM_bound) [`Cexp_size`,`Cexp2_size`,`Cexp7_size`] >>
   rw[] >> res_tac >> fs[Cexp_size_def] >> srw_tac[ARITH_ss][]))
 
 val (exp_to_Cexp_def,exp_to_Cexp_ind) = register "exp_to_Cexp" (
   tprove_no_defn ((exp_to_Cexp_def,exp_to_Cexp_ind),
-  WF_REL_TAC `inv_image $< (λx. case x of INL (_,_,_,e) => exp_size e | INR (_,_,v) => v_size v)` >>
+  WF_REL_TAC `inv_image ($< LEX $<) (λx. case x of
+    | INL (_,e) => (exp_size e, 0:num)
+    | INR (INL (_,defs,_)) => (exp1_size defs, 0)
+    | INR (INR (INL (_,e,_))) => (exp_size e, 1)
+    | INR (INR (INR (_,v))) => (v_size v, 0))` >>
   srw_tac[ARITH_ss][exp1_size_thm,exp3_size_thm,exp6_size_thm,exp8_size_thm,exp9_size_thm] >>
   MAP_EVERY (fn q => Q.ISPEC_THEN q mp_tac SUM_MAP_MEM_bound) [`exp2_size`,`exp5_size`,`exp7_size`,`exp_size`,`v_size`] >>
   rw[] >> res_tac >> fs[exp_size_def] >> srw_tac[ARITH_ss][]))
 
 val (pat_to_Cpat_def, pat_to_Cpat_ind) = register "pat_to_Cpat" (
   tprove_no_defn ((pat_to_Cpat_def,pat_to_Cpat_ind),
-  WF_REL_TAC `measure (pat_size o SND o SND o SND)` >>
+  WF_REL_TAC `measure (pat_size o SND o SND)` >>
   srw_tac [ARITH_ss][pat1_size_thm] >>
   imp_res_tac SUM_MAP_MEM_bound >>
   pop_assum (qspec_then `pat_size` mp_tac) >>

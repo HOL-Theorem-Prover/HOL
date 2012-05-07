@@ -608,10 +608,10 @@ good_cmap cenv cm =
 val good_env_state_def = Define`
   good_env_state env s =
   ALL_DISTINCT (MAP FST env) ∧
-  INJ (FAPPLY s.m) (FDOM s.m) UNIV ∧
+  INJ (FAPPLY s.vmap) (FDOM s.vmap) UNIV ∧
   IMAGE FST (set env) ∪
   BIGUNION (IMAGE (clV_v o SND) (set env))
-  ⊆ FDOM s.m`
+  ⊆ FDOM s.vmap`
 
 
 (* Soundness(?) of exp_Cexp *)
