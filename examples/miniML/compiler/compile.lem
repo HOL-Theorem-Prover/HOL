@@ -1001,8 +1001,8 @@ compile_varref s (CTRef n) = emit (compile_varref s (CTEnv n)) [Deref]
 
 let incsz s = <| s with sz = s.sz + 1 |>
 let decsz s = <| s with sz = s.sz - 1 |>
-let sdt s = (<| s with tail = TCNonTail |>, s.tail)
-let ldt t s = <| s with tail = t |>
+let sdt s = (<| s with decl = None; tail = TCNonTail |>, (s.decl,s.tail))
+let ldt (d,t) s = <| s with decl = d; tail = t |>
 
 (* helper for reconstructing closure environments *)
 type cebind = CEEnv of num | CERef of num
@@ -1024,8 +1024,9 @@ fold_num f a (n:num) = if n = 0 then a else fold_num f (f a) (n-1)
 
 let rec
 compile s (CDecl vs) =
-  let (env0,sz0) = match s.decl with Some p -> p end in
-  let k = s.sz - sz0 in
+  match s.decl with Some (env0,sz0) ->
+  let sz1 = s.sz in
+  let k = sz1 - sz0 in
   let (s,i,env) = List.fold_left
     (fun (s,i,env) v ->
       if Pmap.mem v env0 then
@@ -1040,7 +1041,9 @@ compile s (CDecl vs) =
          Pmap.add v (CTLet i) env))
          (s,sz0+1,env0) vs in
   let s = emit s [Stack (Shift (i-(sz0+1)) k)] in
-  <| s with sz = s.sz-k; env = env; decl = None |>
+  <| s with sz = sz1+1; decl = Some (env,s.sz-k) |>
+  | None -> emit s [Stack (PushInt i2); Exception] (* should not happen *)
+  end
 and
 compile s (CRaise err) =
   incsz (emit s [Stack (PushInt (error_to_int err)); Exception])
@@ -1199,25 +1202,14 @@ compile s (CLprim COr [e1;e2]) =
       (replace (JumpNil n1) (j3 - j - 2) s.code)) |>
 and
 compile_bindings env0 sz1 e n s [] =
-  match s.tail with
-  | TCNonTail ->
-    let s = compile s e in
-    match s.decl with
-    | None -> s
-    | Some _ ->
-        let s = emit s [Stack (Pops n)] in
-        <| s with env = env0 ; sz = sz1 |>
+  let s = match s.tail with
+  | TCTail j k -> compile (<| s with tail = TCTail j (k+n) |>) e
+  | TCNonTail -> match s.decl with
+    | None -> emit (compile s e) [Stack (Pops n)]
+    | Some _ -> compile s e
     end
-  | TCTail j k ->
-    let s = <| s with tail = TCTail j (k+n) |> in
-    let s = compile s e in
-    <| s with env = env0 ; sz = sz1 |>
-(*
-  | TCTop sz0 ->
-    let s = compile s e in
-    <| s with env = env0 ; sz = sz1 |>
-*)
-  end
+  end in
+  <| s with env = env0 ; sz = sz1 |>
 and
 compile_bindings env0 sz1 e n s (x::xs) =
   compile_bindings env0 sz1 e
@@ -1355,7 +1347,7 @@ let init_compiler_state =
    ; next_label = 1 (* depends on exception handlers *)
    ; sz = 0
    ; inst_length = fun i -> 0 (* TODO: depends on runtime *)
-   ; decl = Some (Pmap.empty, 0)
+   ; decl = None
    ; tail = TCNonTail
    |>
 
@@ -1369,7 +1361,11 @@ let init_repl_state =
 
 let compile_Cexp rs Ce =
   let Ce = remove_mat Ce in
-  let cs = compile (<|rs.cs with decl = Some (rs.cs.env, rs.cs.sz) |>) Ce in (* parens: Lem sucks *)
+  let cs = compile rs.cs Ce in
+  let cs = match cs.decl with
+    | None -> cs
+    | Some (env,sz) -> <| cs with env = env ; sz = sz |>
+    end in
   <| rs with cs = cs |>
 
 (* TODO: typechecking *)
@@ -1393,14 +1389,17 @@ and
 repl_dec rs (Dletrec defs) =
   let (rs,Ce) =
     Letrec_to_CLetfun rs defs (fun fns s -> CDecl fns) in
+  let rs = <|rs with cs = <|rs.cs with decl=Some(rs.cs.env,rs.cs.sz)|> |> in
   compile_Cexp rs Ce
 and
 repl_dec rs (Dlet p e) =
   let (rs,Ce) = Mat_to_CMat rs e
     (fun s -> let (s',pvs,Cp) = pat_to_Cpat (s,[],p) in (s',[(Cp,CDecl pvs)])) in
+  let rs = <|rs with cs = <|rs.cs with decl=Some(rs.cs.env,rs.cs.sz)|> |> in
   compile_Cexp rs Ce
 
-let repl_exp s exp = compile_Cexp s (exp_to_Cexp s exp)
+let repl_exp s exp =
+  compile_Cexp (<|s with cs = <|s.cs with decl=None|> |>) (exp_to_Cexp s exp) (* parens *)
 
 let lookup_conv_ty m ty n = Pmap.find n (Pmap.find ty m)
 

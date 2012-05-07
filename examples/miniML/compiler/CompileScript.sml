@@ -1094,10 +1094,10 @@ val _ = Define `
  (decsz s =  s with<| sz := s.sz - 1 |>)`;
 
 val _ = Define `
- (sdt s = ( s with<| tail := TCNonTail |>, s.tail))`;
+ (sdt s = ( s with<| decl := NONE; tail := TCNonTail |>, (s.decl,s.tail)))`;
 
 val _ = Define `
- (ldt t s =  s with<| tail := t |>)`;
+ (ldt (d,t) s =  s with<| decl := d; tail := t |>)`;
 
 
 (* helper for reconstructing closure environments *)
@@ -1132,8 +1132,9 @@ val _ = Defn.save_defn fold_num_defn;
  val compile_defn = Hol_defn "compile" `
 
 (compile s (CDecl vs) =
-  let (env0,sz0) = (case s.decl of SOME p => p ) in
-  let k = s.sz - sz0 in
+  (case s.decl of SOME (env0,sz0) =>
+  let sz1 = s.sz in
+  let k = sz1 - sz0 in
   let (s,i,env) = FOLDL
     (\ (s,i,env) v .
       if  v IN FDOM  env0 then
@@ -1148,7 +1149,9 @@ val _ = Defn.save_defn fold_num_defn;
          FUPDATE  env ( v, (CTLet i))))
          (s,sz0+1,env0) vs in
   let s = emit s [Stack (Shift (i -(sz0+1)) k)] in
-   s with<| sz := s.sz - k; env := env; decl := NONE |>)
+   s with<| sz := sz1+1; decl := SOME (env,s.sz - k) |>
+  | NONE => emit s [Stack (PushInt i2); Exception] (* should not happen *)
+  ))
 /\
 (compile s (CRaise err) =
   incsz (emit s [Stack (PushInt (error_to_int err)); Exception]))
@@ -1307,25 +1310,14 @@ val _ = Defn.save_defn fold_num_defn;
       (REPLACE_ELEMENT (JumpNil n1) (j3 - j - 2) s.code)) |>)
 /\
 (compile_bindings env0 sz1 e n s [] =
-  (case s.tail of
-    TCNonTail =>
-    let s = compile s e in
-    (case s.decl of
-      NONE => s
-    | SOME _ =>
-        let s = emit s [Stack (Pops n)] in
-         s with<| env := env0 ; sz := sz1 |>
+  let s = (case s.tail of
+    TCTail j k => compile ( s with<| tail := TCTail j (k+n) |>) e
+  | TCNonTail => (case s.decl of
+      NONE => emit (compile s e) [Stack (Pops n)]
+    | SOME _ => compile s e
     )
-  | TCTail j k =>
-    let s =  s with<| tail := TCTail j (k+n) |> in
-    let s = compile s e in
-     s with<| env := env0 ; sz := sz1 |>
-(*
-  | TCTop sz0 ->
-    let s = compile s e in
-    <| s with env = env0 ; sz = sz1 |>
-*)
-  ))
+  ) in
+   s with<| env := env0 ; sz := sz1 |>)
 /\
 (compile_bindings env0 sz1 e n s (x::xs) =
   compile_bindings env0 sz1 e
@@ -1466,7 +1458,7 @@ val _ = Define `
    ; next_label := 1 (* depends on exception handlers *)
    ; sz := 0
    ; inst_length := \ i . 0 (* TODO: depends on runtime *)
-   ; decl := SOME (FEMPTY, 0)
+   ; decl := NONE
    ; tail := TCNonTail
    |>`;
 
@@ -1484,7 +1476,11 @@ val _ = Define `
 val _ = Define `
  (compile_Cexp rs Ce =
   let Ce = remove_mat Ce in
-  let cs = compile (rs.cs with<| decl := SOME (rs.cs.env, rs.cs.sz) |>) Ce in (* parens: Lem sucks *)
+  let cs = compile rs.cs Ce in
+  let cs = (case cs.decl of
+      NONE => cs
+    | SOME (env,sz) =>  cs with<| env := env ; sz := sz |>
+    ) in
    rs with<| cs := cs |>)`;
 
 
@@ -1513,18 +1509,21 @@ val _ = Defn.save_defn number_constructors_defn;
 (repl_dec rs (Dletrec defs) =
   let (rs,Ce) =
     Letrec_to_CLetfun rs defs (\ fns s . CDecl fns) in
+  let rs = rs with<| cs := rs.cs with<| decl:=SOME(rs.cs.env,rs.cs.sz)|> |> in
   compile_Cexp rs Ce)
 /\
 (repl_dec rs (Dlet p e) =
   let (rs,Ce) = Mat_to_CMat rs e
     (\ s . let (s',pvs,Cp) = pat_to_Cpat (s,[],p) in (s',[(Cp,CDecl pvs)])) in
+  let rs = rs with<| cs := rs.cs with<| decl:=SOME(rs.cs.env,rs.cs.sz)|> |> in
   compile_Cexp rs Ce)`;
 
 val _ = Defn.save_defn repl_dec_defn;
 
 val _ = Define `
- (repl_exp s exp = compile_Cexp s (exp_to_Cexp s exp))`;
-
+ (repl_exp s exp =
+  compile_Cexp (s with<| cs := s.cs with<| decl:=NONE|> |>) (exp_to_Cexp s exp))`;
+ (* parens *)
 
 val _ = Define `
  (lookup_conv_ty m ty n = FAPPLY  (FAPPLY  m  ty)  n)`;

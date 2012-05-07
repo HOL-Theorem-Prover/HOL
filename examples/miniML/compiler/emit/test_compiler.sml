@@ -374,7 +374,7 @@ val d1 = ``Dlet (Pcon "Pair_type" [Pvar "x";Pvar "y"]) (Con "Pair_type" [Val (Li
 val d2 = ``Dlet (Pvar "x") (Val (Lit (IntLit 3)))``
 val e45 = ``Con "Pair_type" [Var "x";Var "y"]``
 val (m,st) = pd1 e45 [d0,d1,d2]
-val [Block (_,[Number xb,Number yb]),Number x,Number y] = st
+val [Block (_,[Number xb,Number yb]),Number y,Number x] = st
 val SOME 3 = intML.toInt x
 val SOME 2 = intML.toInt y
 val true = xb = x
@@ -383,9 +383,9 @@ val d1 = ``Dlet (Pcon "Pair_type" [Pvar "y";Pvar "x"]) (Con "Pair_type" [Val (Li
 val d2 = ``Dlet (Pvar "x") (Val (Lit (IntLit 3)))``
 val e46 = ``Con "Pair_type" [Var "x";Var "y"]``
 val (m,st) = pd1 e46 [d0,d1,d2]
-val [Block (_,[Number xb,Number yb]),Number y,Number x] = st
+val [Block (_,[Number xb,Number yb]),Number x,Number y] = st
 val SOME 3 = intML.toInt xb
-val SOME 1 = intML.toInt yb
+val SOME 1 = intML.toInt yb (* TODO: broken *)
 val true = x = xb
 val true = y = yb;
 val d0 = paird
@@ -397,7 +397,7 @@ val e47 = ``Con "Pair_type" [
               Let "x" (Fun "x" (App (Opn Plus) (Var "x") (Var "y")))
                 (App Opapp (Var "x") (Var "y"))]``
 val (m,st) = pd1 e47 [d0,d1,d2,d3]
-val [Block (_,[Block (_,[Number x3,Number y4]),Number yy]),Number x,Number y] = st
+val [Block (_,[Block (_,[Number x3,Number y4]),Number yy]),Number y,Number x] = st
 val SOME 4 = intML.toInt y
 val SOME 3 = intML.toInt x
 val SOME 3 = intML.toInt x3
@@ -416,3 +416,11 @@ val (m,st) = pd1 e49 [d0,d1]
 val [Number r,Number x] = st
 val SOME ~1 = intML.toInt x
 val SOME 1 = intML.toInt r;
+val d0 = paird
+val d1 = ``Dlet (Pcon "Pair_type" [Pvar "y";Pvar "x"]) (Con "Pair_type" [Val (Lit (IntLit 1));Val (Lit (IntLit 2))])``
+val e50 = ``Var "y"``
+val (m,st) = pd1 e50 [d0,d1]
+val [Number r, Number x, Number y] = st
+val SOME 2 = intML.toInt x
+val SOME 1 = intML.toInt y (* TODO: broken *)
+val true = r = y;

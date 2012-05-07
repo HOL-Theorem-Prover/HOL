@@ -42,7 +42,6 @@ val data = map
   , datatype_cebind
   , datatype_call_context
   , datatype_compiler_state
-  , datatype_exp_to_Cexp_state
   , datatype_nt
   , datatype_repl_state
   ]
@@ -68,7 +67,7 @@ boolSyntax.rhs(Thm.concl(SIMP_CONV (srw_ss()) [init_repl_state_def]
 ``<| cmap := init_repl_state.cmap
    ; cpam := init_repl_state.cpam
    ; vmap := init_repl_state.vmap
-   ; nextv := init_repl_state.nextv
+   ; nv := init_repl_state.nv
    ; cs := init_repl_state.cs
    |>``))), SRW_TAC[][init_repl_state_def])
 
@@ -97,25 +96,25 @@ val defs = map EmitML.DEFN
 , init_repl_state
 , extend_def
 , pat_to_Cpat_def
+, dest_var_def
 , underscore_rule (
   let open Lib pairSyntax
     val glhs = strip_comb o lhs o #2 o strip_forall o concl
-    val (exp_to_Cexp_def,v_to_Cv_def) =
-      partition (same_const ``exp_to_Cexp`` o #1 o glhs)
+    val (v_to_Cv,exp_to_Cexp) =
+      partition (same_const ``v_to_Cv`` o #1 o glhs)
         (CONJUNCTS exp_to_Cexp_def) in
   LIST_CONJ
   ((op ::)
-     (((fn th => th |> Q.SPEC `Lit l` |> Q.GEN `l` |> SIMP_RULE (srw_ss()) [hd v_to_Cv_def]) ## I)
-       (pluck (same_const ``Val`` o #1 o strip_comb o #2 o dest_pair o el 3 o #2 o glhs)
-          exp_to_Cexp_def))) end)
+     (((fn th => th |> Q.SPEC `Lit l` |> Q.GEN `l` |> SIMP_RULE (srw_ss()) [hd v_to_Cv]) ## I)
+       (pluck (same_const ``Val`` o #1 o strip_comb o el 2 o #2 o glhs)
+          exp_to_Cexp))) end)
 , least_not_in_def
 , remove_mat_vp_def
 , remove_mat_def
-, compile_exp_def
+, compile_Cexp_def
 , repl_exp_def
 , t_to_nt_def
 , number_constructors_def
-, pat_vars_def
 , lookup_conv_ty_def
 , repl_dec_def
 , inst_arg_def
@@ -133,12 +132,13 @@ Cases_on `n` THEN SRW_TAC[][] THEN
 Cases_on `n'` THEN SRW_TAC[][])
 
 val _ = EmitML.eSML "compile" (
-  (EmitML.OPEN ["num","fmap","set","bytecode"])
+  (EmitML.OPEN ["num","fmap","set","sum","bytecode"])
 ::(EmitML.MLSIG "type num = numML.num")
 ::(EmitML.MLSIG "type int = intML.int")
 ::(EmitML.MLSTRUCT "type int = intML.int")
 ::(EmitML.MLSIG "type ('a,'b) fmap = ('a,'b) fmapML.fmap")
 ::(EmitML.MLSIG "type 'a set = 'a setML.set")
+::(EmitML.MLSIG "type ('a,'b) sum = ('a,'b) sumML.sum")
 ::(EmitML.MLSIG "type bc_stack_op = bytecodeML.bc_stack_op")
 ::(EmitML.MLSIG "type bc_inst = bytecodeML.bc_inst")
 ::(EmitML.MLSIG "type bc_value = bytecodeML.bc_value")
