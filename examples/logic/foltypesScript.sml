@@ -5,6 +5,8 @@ open nomdatatype
 open nomsetTheory
 open generic_termsTheory
 open lcsymtacs
+open boolSimps
+open pred_setTheory
 
 fun Save_thm (nm, th) = save_thm(nm,th) before export_rewrites [nm]
 fun Store_thm(nm,t,tac) = store_thm(nm,t,tac) before export_rewrites [nm]
@@ -178,7 +180,7 @@ val term_REP_eqv = prove(
 
 val supp_term_REP = prove(
   ``supp (fn_pmact ^t_pmact_t gt_pmact) ^term_REP_t = {}``,
-  REWRITE_TAC [GSYM pred_setTheory.SUBSET_EMPTY] >>
+  REWRITE_TAC [GSYM SUBSET_EMPTY] >>
   MATCH_MP_TAC (GEN_ALL supp_smallest) >>
   srw_tac [][term_REP_eqv])
 
@@ -237,8 +239,7 @@ val form_REP_eqv = prove(
 
 val supp_form_REP = prove(
   ``supp (fn_pmact ^f_pmact_t gt_pmact) ^form_REP_t = {}``,
-  REWRITE_TAC [GSYM pred_setTheory.SUBSET_EMPTY] >>
-  MATCH_MP_TAC (GEN_ALL supp_smallest) >>
+  REWRITE_TAC [GSYM SUBSET_EMPTY] >> MATCH_MP_TAC (GEN_ALL supp_smallest) >>
   srw_tac [][form_REP_eqv])
 
 val fpm_def' =
@@ -327,5 +328,64 @@ val foterm_ind = store_thm(
   simp[listTheory.EL_MAP, term_absrep_id] >>
   `∃n. n < LENGTH ts ∧ t = EL n ts` by metis_tac[listTheory.MEM_EL] >>
   simp[])
+
+val GFVl_thm = prove(
+  ``GFVl [] = {} ∧ GFVl (g::gs) = GFV g ∪ GFVl gs``,
+  rw[EXTENSION, IN_GFVl] >> metis_tac[]);
+
+val formP_eq = prove(
+  ``^formP g <=> ∃f. g = form_REP f``,
+  rw[EQ_IMP_THM] >> rw[formP_form_REP] >> qexists_tac `form_ABS g` >>
+  rw[form_repabs_pseudo_id]);
+
+val fof_ind0 =
+    bvc_genind
+        |> INST_TYPE [alpha |-> ``:ftm_discriminator``, beta |-> ``:unit``]
+        |> Q.INST [`vp` |-> `^vp`, `lp` |-> `^lp`]
+        |> Q.SPEC `λn t0 x. (n = 1) ⇒ Q t0 x`
+        |> Q.INST [`Q` |-> `λt. P (form_ABS t)`]
+        |> SPEC_ALL
+        |> UNDISCH_ALL |> SIMP_RULE std_ss []
+        |> SPECL [``1n``, ``form_REP f``]
+        |> SIMP_RULE std_ss [formP_form_REP, form_absrep_id]
+        |> Q.GEN `f` |> DISCH_ALL
+        |> SIMP_RULE std_ss [LEFT_AND_OVER_OR, DISJ_IMP_THM, LIST_REL_CONS1,
+                             LIST_REL_NIL,
+                             RIGHT_AND_OVER_OR, FORALL_AND_THM, GSYM VAR_def,
+                             oneTheory.FORALL_ONE, formP_eq]
+        |> CONV_RULE (LAND_CONV
+                      (SIMP_CONV (std_ss ++ DNF_ss) [IMP_def', GFVl_thm]))
+        |> SIMP_RULE (srw_ss()) [FALSE_def', form_absrep_id, GSYM ALL_def,
+                                 IMP_def']
+        |> GEN_ALL
+
+val fof_ind = store_thm(
+  "fof_ind",
+  ``∀P fv.
+      (∀x. FINITE (fv x)) ∧ (∀x ts s. P (REL s ts) x) ∧
+      (∀x. P FALSE x) ∧
+      (∀f1 f2 x. (∀x. P f1 x) ∧ (∀x. P f2 x) ⇒ P (IMP f1 f2) x) ∧
+      (∀v x f. v ∉ fv x ∧ (∀x. P f x) ⇒ P (ALL v f) x)
+     ⇒
+      ∀f x. P f x``,
+  rpt gen_tac >> strip_tac >> match_mp_tac fof_ind0 >> qexists_tac `fv` >>
+  simp[] >> rpt strip_tac >>
+  `∃ts. MAP foterm_REP ts = us`
+     by (qexists_tac `MAP foterm_ABS us` >> simp[listTheory.MAP_MAP_o] >>
+         match_mp_tac listTheory.LIST_EQ >> simp[] >>
+         qpat_assum `LIST_REL RR XX YY` mp_tac >>
+         simp[listTheory.LIST_REL_EL_EQN, listTheory.EL_MAP] >>
+         rw[] >> match_mp_tac term_repabs_pseudo_id >>
+         asm_simp_tac (srw_ss() ++ DNF_ss) [] >>
+         fs[IMP_CONJ_THM, FORALL_AND_THM] >>
+         `∀i. i < LENGTH uns ⇒ EL i uns = 0`
+           by metis_tac [listTheory.MEM_EL] >>
+         fs[]) >>
+  rw[REL_def']);
+
+val fof_indX = save_thm(
+  "fof_indX",
+  fof_ind |> Q.SPEC `λf x. Q f` |> Q.SPEC `λx. X` |> SIMP_RULE (srw_ss()) []
+          |> Q.INST [`Q` |-> `P`] |> Q.GEN `X` |> Q.GEN `P`)
 
 val _ = export_theory()
