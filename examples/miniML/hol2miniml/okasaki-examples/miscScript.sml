@@ -81,4 +81,25 @@ val list_to_bag_perm = Q.store_thm ("list_to_bag_perm",
 `!l1 l2. (list_to_bag l1 = list_to_bag l2) = PERM l1 l2`,
 metis_tac [perm_to_list_to_bag, list_to_bag_to_perm]);
 
+val sorted_reverse_lem = Q.prove (
+`!R l. transitive R ∧ SORTED R l ⇒ SORTED (\x y. R y x) (REVERSE l)`,
+induct_on `l` >>
+rw [SORTED_DEF] >>
+match_mp_tac SORTED_APPEND >>
+rw [SORTED_DEF] >-
+(fs [transitive_def] >>
+     metis_tac []) >>
+metis_tac [SORTED_EQ]);
+
+val sorted_reverse = Q.store_thm ("sorted_reverse",
+`!R l. transitive R ⇒ (SORTED R (REVERSE l) = SORTED (\x y. R y x) l)`,
+rw [] >>
+EQ_TAC >>
+rw [] >>
+imp_res_tac sorted_reverse_lem >>
+fs [transitive_def] >>
+`(\x y. R x y) = R` by metis_tac [] >>
+fs [] >>
+metis_tac []);
+
 val _ = export_theory ();

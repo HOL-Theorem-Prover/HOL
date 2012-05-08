@@ -1,8 +1,7 @@
 
 open HolKernel Parse boolLib bossLib; val _ = new_theory "milawa_ordinal";
 
-open lisp_sexpTheory arithmeticTheory pred_setTheory;
-open ordinalTheory;
+open lisp_sexpTheory arithmeticTheory pred_setTheory ordinalTheory;
 
 infix \\
 val op \\ = op THEN;
@@ -73,7 +72,7 @@ val oless_IMP_ORD_LT = prove(
   \\ Cases_on `ord2sexp x = ord2sexp y` \\ FULL_SIMP_TAC std_ss [ORD_LT_IRREFL]);
 
 val ord_size_def = Define `
-  (ord_size (End k) = 0) /\
+  (ord_size (End k) = 0:num) /\
   (ord_size (Plus x n y) = 1 + ord_size x + ord_size y)`;
 
 val sexp2ord_def = tDefine "sexp2ord" `

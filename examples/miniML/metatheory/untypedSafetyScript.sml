@@ -1,5 +1,5 @@
 open preamble;
-open MiniMLTheory terminationProofsTheory;
+open MiniMLTheory MiniMLTerminationTheory;
 
 val _ = new_theory "untypedSafety";
 
@@ -100,7 +100,7 @@ fs [untyped_safety_step] >|
  qexists_tac `Rerr Rtype_error` >>
      rw [d_small_eval_def] >>
      metis_tac [],
- qexists_tac `Rval env'` >>
+ qexists_tac `Rval (cenv',env')` >>
      rw [d_small_eval_def] >>
      metis_tac []]);
 
@@ -108,11 +108,11 @@ val untyped_safety_thm2 = Q.prove (
 `!cenv env ds r.
   ¬(diverges cenv env ds ∧ ?r. d_small_eval cenv env ds NONE r)`,
 rw [diverges_def, METIS_PROVE [] ``~x ∨ ~y = y ⇒ ~x``] >>
-cases_on `r` >>
-TRY (cases_on `e`) >>
+cases_on `r` >|
+[cases_on `a`, cases_on `e`] >>
 fs [d_small_eval_def, d_step_reln_def] >|
 [`∀cenv'' env'' ds'' c''.
-    d_step (cenv',a,[],NONE) ≠ Dstep (cenv'',env'',ds'',c'')`
+    d_step (q,r,[],NONE) ≠ Dstep (cenv'',env'',ds'',c'')`
          by rw [d_step_def] >>
      metis_tac [],
  metis_tac [d_step_result_distinct],

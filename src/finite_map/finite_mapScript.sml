@@ -29,7 +29,7 @@
 open HolKernel Parse boolLib IndDefLib numLib pred_setTheory
      sumTheory pairTheory BasicProvers bossLib metisLib simpLib;
 
-local open pred_setLib listTheory in end
+local open pred_setLib listTheory rich_listTheory in end
 
 val _ = new_theory "finite_map";
 
@@ -336,6 +336,10 @@ val FDOM_EQ_EMPTY = store_thm(
   SIMP_TAC (srw_ss())[EQ_IMP_THM, FDOM_FEMPTY] THEN
   HO_MATCH_MP_TAC fmap_SIMPLE_INDUCT THEN
   SRW_TAC [][FDOM_FUPDATE, EXTENSION] THEN PROVE_TAC []);
+
+val FDOM_EQ_EMPTY_SYM = save_thm(
+"FDOM_EQ_EMPTY_SYM",
+CONV_RULE (QUANT_CONV (LAND_CONV SYM_CONV)) FDOM_EQ_EMPTY)
 
 val FUPDATE_ABSORB_THM = Q.prove (
   `!(f:'a |-> 'b) x y.
@@ -737,6 +741,15 @@ val SUBMAP_DRESTRICT = Q.store_thm(
   SRW_TAC [][DRESTRICT_DEF, SUBMAP_DEF]);
 val _ = export_rewrites ["SUBMAP_DRESTRICT"]
 
+val DRESTRICT_EQ_DRESTRICT = store_thm(
+"DRESTRICT_EQ_DRESTRICT",
+``!f1 f2 s1 s2.
+   (DRESTRICT f1 s1 = DRESTRICT f2 s2) =
+   (DRESTRICT f1 s1 SUBMAP f2 /\ DRESTRICT f2 s2 SUBMAP f1 /\
+    (s1 INTER FDOM f1 = s2 INTER FDOM f2))``,
+SRW_TAC[][GSYM fmap_EQ_THM,DRESTRICT_DEF,SUBMAP_DEF,EXTENSION] THEN
+METIS_TAC[])
+
 (*---------------------------------------------------------------------------
      Union of finite maps
  ---------------------------------------------------------------------------*)
@@ -855,6 +868,11 @@ SIMP_TAC std_ss [GSYM fmap_EQ_THM] THEN
 SIMP_TAC std_ss [FMERGE_DEF, FDOM_FEMPTY, NOT_IN_EMPTY,
 	UNION_EMPTY]);
 
+val FDOM_FMERGE = store_thm(
+"FDOM_FMERGE",
+``!m f g. FDOM (FMERGE m f g) = FDOM f UNION FDOM g``,
+SRW_TAC[][FMERGE_DEF])
+val _ = export_rewrites["FDOM_FMERGE"];
 
 val FMERGE_FUNION = store_thm ("FMERGE_FUNION",
 ``FUNION = FMERGE (\x y. x)``,
@@ -1086,6 +1104,8 @@ val f_o_f_FEMPTY_2 = Q.store_thm (
   `!f:'b|->'c. f f_o_f (FEMPTY:('a,'b)fmap) = FEMPTY`,
   SRW_TAC [][GSYM fmap_EQ_THM, f_o_f_DEF, FDOM_FEMPTY]);
 
+val _ = export_rewrites["f_o_f_FEMPTY_1","f_o_f_FEMPTY_2"];
+
 val o_f_lemma = Q.prove
 (`!f:'b->'c.
   !g:'a|->'b.
@@ -1194,7 +1214,7 @@ val FRANGE_FUNION = store_thm(
   ``DISJOINT (FDOM fm1) (FDOM fm2) ==>
     (FRANGE (FUNION fm1 fm2) = FRANGE fm1 UNION FRANGE fm2)``,
   STRIP_TAC THEN
-  `∀x. x IN FDOM fm2 ==> x NOTIN FDOM fm1`
+  `!x. x IN FDOM fm2 ==> x NOTIN FDOM fm1`
      by (FULL_SIMP_TAC (srw_ss()) [DISJOINT_DEF, EXTENSION] THEN
          METIS_TAC []) THEN
   ASM_SIMP_TAC (srw_ss() ++ boolSimps.DNF_ss ++ boolSimps.CONJ_ss)
@@ -1283,6 +1303,12 @@ val FRANGE_FMAP = store_thm(
   PROVE_TAC []);
 val _ = export_rewrites ["FRANGE_FMAP"]
 
+val FDOM_FMAP = store_thm(
+"FDOM_FMAP",
+``!f s. FINITE s ==> (FDOM (FUN_FMAP f s) = s)``,
+SRW_TAC[][FUN_FMAP_DEF])
+val _ = export_rewrites ["FDOM_FMAP"]
+
 val FLOOKUP_FUN_FMAP = Q.store_thm(
   "FLOOKUP_FUN_FMAP",
   `FINITE P ==>
@@ -1305,6 +1331,33 @@ val FDOM_f_o = Q.store_thm
        ==>
      (FDOM (f f_o g) = { x | g x IN FDOM f})`,
  SRW_TAC [][f_o_DEF, f_o_f_DEF, EXTENSION, FUN_FMAP_DEF, EQ_IMP_THM]);
+val _ = export_rewrites["FDOM_f_o"];
+
+val f_o_FEMPTY = store_thm(
+"f_o_FEMPTY",
+``!g. FEMPTY f_o g = FEMPTY``,
+SRW_TAC[][f_o_DEF])
+val _ = export_rewrites["f_o_FEMPTY"]
+
+val f_o_FUPDATE = store_thm(
+"f_o_FUPDATE",
+``!fm k v g.
+  FINITE {x | g x IN FDOM fm} /\
+  FINITE {x | (g x = k)} ==>
+(fm |+ (k,v) f_o g = FMERGE (combin$C K) (fm f_o g) (FUN_FMAP (K v) {x | g x = k}))``,
+SRW_TAC[][] THEN
+`FINITE {x | (g x = k) \/ g x IN FDOM fm}` by (
+ REPEAT (POP_ASSUM MP_TAC) THEN
+ Q.MATCH_ABBREV_TAC `FINITE s1 ==> FINITE s2 ==> FINITE s` THEN
+ Q_TAC SUFF_TAC `s = s1 UNION s2` THEN1 SRW_TAC[][] THEN
+ UNABBREV_ALL_TAC THEN
+ SRW_TAC[][EXTENSION,EQ_IMP_THM] THEN
+ SRW_TAC[][]) THEN
+SRW_TAC[][GSYM fmap_EQ_THM] THEN1 (
+  SRW_TAC[][EXTENSION,EQ_IMP_THM] THEN
+  SRW_TAC[][] ) THEN
+SRW_TAC[][FMERGE_DEF,FUN_FMAP_DEF,f_o_DEF,f_o_f_DEF
+,FAPPLY_FUPDATE_THM])
 
 val FAPPLY_f_o = Q.store_thm
 ("FAPPLY_f_o",
@@ -1462,6 +1515,12 @@ val SUBMAP_DOMSUB = store_thm(
   ``(f \\ k) SUBMAP f``,
   SRW_TAC [][fmap_domsub]);
 
+val FMERGE_DOMSUB = store_thm(
+"FMERGE_DOMSUB",
+``!m m1 m2 k. (FMERGE m m1 m2) \\ k = FMERGE m (m1 \\ k) (m2 \\ k)``,
+SRW_TAC[][fmap_domsub,FMERGE_DRESTRICT])
+
+
 (*---------------------------------------------------------------------------*)
 (* Is there a better statement of this?                                      *)
 (*---------------------------------------------------------------------------*)
@@ -1537,6 +1596,36 @@ SRW_TAC [][Once UNION_COMM] THEN
 SRW_TAC [][Once (GSYM INSERT_SING_UNION)] THEN
 SRW_TAC [][EQ_IMP_THM]);
 
+local open listTheory in
+val FUPDATE_LIST_APPLY_MEM = store_thm(
+"FUPDATE_LIST_APPLY_MEM",
+``!kvl f k v n. n < LENGTH kvl /\ (k = EL n (MAP FST kvl)) /\ (v = EL n (MAP SND kvl)) /\
+  (!m. n < m /\ m < LENGTH kvl ==> (EL m (MAP FST kvl) <> k))
+  ==> ((f |++ kvl) ' k = v)``,
+Induct THEN1 SRW_TAC[][] THEN
+Cases THEN NTAC 3 GEN_TAC THEN
+Cases THEN1 (
+  Q.MATCH_RENAME_TAC `0 < LENGTH ((q,r)::kvl) /\ X ==> Y` ["X","Y"] THEN
+  Q.ISPECL_THEN [`kvl`,`f |+ (k,r)`,`k`] MP_TAC FUPDATE_LIST_APPLY_NOT_MEM THEN
+  SRW_TAC[][FUPDATE_LIST_THM] THEN
+  FIRST_X_ASSUM MATCH_MP_TAC THEN
+  SRW_TAC[][MEM_MAP,MEM_EL,pairTheory.EXISTS_PROD] THEN
+  Q.MATCH_RENAME_TAC `X \/ Y <> EL n kvl` ["X","Y"] THEN
+  FIRST_X_ASSUM (Q.SPEC_THEN `SUC n` MP_TAC) THEN
+  SRW_TAC[][EL_MAP] THEN
+  METIS_TAC[pairTheory.FST]) THEN
+SRW_TAC[][] THEN
+Q.MATCH_RENAME_TAC `(f |++ ((q,r)::kvl)) ' X = Y` ["X","Y"] THEN
+Q.ISPECL_THEN [`(q,r)`,`kvl`] SUBST1_TAC rich_listTheory.CONS_APPEND THEN
+REWRITE_TAC [FUPDATE_LIST_APPEND] THEN
+FIRST_X_ASSUM MATCH_MP_TAC THEN
+Q.MATCH_ASSUM_RENAME_TAC `n < LENGTH kvl` [] THEN
+Q.EXISTS_TAC `n` THEN
+SRW_TAC[][] THEN
+Q.MATCH_RENAME_TAC `EL m (MAP FST kvl) <> X` ["X"] THEN
+FIRST_X_ASSUM (Q.SPEC_THEN `SUC m` MP_TAC) THEN
+SRW_TAC[][])
+end
 
 (* ----------------------------------------------------------------------
     More theorems
@@ -1946,6 +2035,83 @@ val DRESTRICT_IDEMPOT = store_thm ("DRESTRICT_IDEMPOT",
 SRW_TAC [][]);
 val _ = export_rewrites ["DRESTRICT_IDEMPOT"]
 
+val SUBMAP_FUNION_ABSORPTION = store_thm(
+"SUBMAP_FUNION_ABSORPTION",
+``!f g. f SUBMAP g = (FUNION f g = g)``,
+SRW_TAC[][SUBMAP_DEF,GSYM fmap_EQ_THM,EXTENSION,FUNION_DEF,EQ_IMP_THM]
+THEN PROVE_TAC[])
+
+(*---------------------------------------------------------------------------
+mapping an injective function over the keys of a finite map
+ ---------------------------------------------------------------------------*)
+
+val MAP_KEYS_q =`
+\f fm. if INJ f (FDOM fm) UNIV then
+fm f_o_f (FUN_FMAP (LINV f (FDOM fm)) (IMAGE f (FDOM fm)))
+else FUN_FMAP ARB (IMAGE f (FDOM fm))`
+
+val MAP_KEYS_witness = store_thm(
+"MAP_KEYS_witness",
+``let m = ^(Term MAP_KEYS_q) in
+!f fm. (FDOM (m f fm) = IMAGE f (FDOM fm)) /\
+       ((INJ f (FDOM fm) UNIV) ==>
+        (!x. x IN FDOM fm ==> (((m f fm) ' (f x)) = (fm ' x))))``,
+SIMP_TAC (srw_ss()) [LET_THM] THEN
+REPEAT GEN_TAC THEN
+CONJ_ASM1_TAC THEN1 (
+  SRW_TAC[][f_o_f_DEF,
+            GSYM SUBSET_INTER_ABSORPTION,
+            SUBSET_DEF,FUN_FMAP_DEF] THEN
+  IMP_RES_TAC LINV_DEF THEN
+  SRW_TAC[][] ) THEN
+SRW_TAC[][] THEN
+FULL_SIMP_TAC (srw_ss()) [] THEN
+Q.MATCH_ABBREV_TAC `(fm f_o_f z) ' (f x) = fm ' x` THEN
+`f x IN FDOM (fm f_o_f z)` by (
+  SRW_TAC[][] THEN PROVE_TAC[] ) THEN
+SRW_TAC[][f_o_f_DEF] THEN
+Q.UNABBREV_TAC `z` THEN
+Q.MATCH_ABBREV_TAC `fm ' ((FUN_FMAP z s) ' (f x)) = fm ' x` THEN
+`f x IN s` by (
+  SRW_TAC[][Abbr`s`] THEN PROVE_TAC[] ) THEN
+`FINITE s` by SRW_TAC[][Abbr`s`] THEN
+SRW_TAC[][FUN_FMAP_DEF,Abbr`z`] THEN
+IMP_RES_TAC LINV_DEF THEN
+SRW_TAC[][])
+
+val MAP_KEYS_exists =
+Q.EXISTS (`$? ^(rand(rator(concl(MAP_KEYS_witness))))`,MAP_KEYS_q)
+(BETA_RULE (PURE_REWRITE_RULE [LET_THM] MAP_KEYS_witness))
+
+val MAP_KEYS_def = new_specification(
+"MAP_KEYS_def",["MAP_KEYS"],MAP_KEYS_exists)
+
+val MAP_KEYS_FEMPTY = store_thm(
+"MAP_KEYS_FEMPTY",
+``!f. MAP_KEYS f FEMPTY = FEMPTY``,
+SRW_TAC[][GSYM FDOM_EQ_EMPTY,MAP_KEYS_def])
+val _ = export_rewrites["MAP_KEYS_FEMPTY"]
+
+val MAP_KEYS_FUPDATE = store_thm(
+"MAP_KEYS_FUPDATE",
+``!f fm k v. (INJ f (k INSERT FDOM fm) UNIV) ==>
+  (MAP_KEYS f (fm |+ (k,v)) = (MAP_KEYS f fm) |+ (f k,v))``,
+SRW_TAC[][GSYM fmap_EQ_THM,MAP_KEYS_def] THEN
+SRW_TAC[][MAP_KEYS_def,FAPPLY_FUPDATE_THM] THEN1 (
+  FULL_SIMP_TAC (srw_ss()) [INJ_DEF] THEN
+  PROVE_TAC[] ) THEN
+FULL_SIMP_TAC (srw_ss()) [INJ_INSERT] THEN
+SRW_TAC[][MAP_KEYS_def])
+
+val MAP_KEYS_using_LINV = store_thm(
+"MAP_KEYS_using_LINV",
+``!f fm. INJ f (FDOM fm) UNIV ==>
+  (MAP_KEYS f fm = fm f_o_f (FUN_FMAP (LINV f (FDOM fm)) (IMAGE f (FDOM fm))))``,
+SRW_TAC[][GSYM fmap_EQ_THM,MAP_KEYS_def] THEN
+MP_TAC MAP_KEYS_witness THEN
+SRW_TAC[][LET_THM] THEN
+POP_ASSUM (Q.SPECL_THEN [`f`,`fm`] MP_TAC) THEN
+SRW_TAC[][MAP_KEYS_def])
 
 (*---------------------------------------------------------------------------
      Some helpers for fupdate_NORMALISE_CONV

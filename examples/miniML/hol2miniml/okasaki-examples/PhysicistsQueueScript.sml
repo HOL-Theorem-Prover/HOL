@@ -1,14 +1,9 @@
 
 open HolKernel Parse boolLib bossLib; val _ = new_theory "PhysicistsQueue";
 
-open listTheory arithmeticTheory ml_translatorLib;
+open listTheory arithmeticTheory ml_translatorLib mini_preludeTheory;
 
-(* setting up the translator *)
-
-val res = translate listTheory.REV_DEF;
-val res = translate listTheory.REVERSE_REV;
-val res = translate listTheory.APPEND;
-val res = translate listTheory.TL;
+val _ = translation_extends "mini_prelude";
 
 (* implementation *)
 

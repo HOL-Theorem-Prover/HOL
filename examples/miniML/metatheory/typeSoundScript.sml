@@ -1,4 +1,4 @@
-open preamble MiniMLTheory terminationProofsTheory;
+open preamble MiniMLTheory MiniMLTerminationTheory;
 
 val _ = new_theory "typeSound";
 
@@ -252,27 +252,6 @@ fs [lit_same_type_def] >|
      fs [],
  fs [Once type_v_cases, Once type_p_cases, lit_same_type_def] >>
      rw [] >>
-     fs [],
- fs [Once type_v_cases, Once type_p_cases, lit_same_type_def] >>
-     rw [] >>
-     fs [] >>
-     metis_tac [type_funs_Tfn, t_distinct],
- fs [Once type_v_cases, Once type_p_cases, lit_same_type_def] >>
-     rw [] >>
-     fs [] >>
-     metis_tac [type_funs_Tfn, t_distinct],
- fs [Once type_v_cases, Once type_p_cases, lit_same_type_def] >>
-     rw [] >>
-     fs [],
- fs [Once type_v_cases, Once type_p_cases, lit_same_type_def] >>
-     rw [] >>
-     fs [],
- fs [Once type_v_cases, Once type_p_cases, lit_same_type_def] >>
-     rw [] >>
-     fs [] >>
-     metis_tac [type_funs_Tfn, t_distinct],
- fs [Once type_v_cases, Once type_p_cases, lit_same_type_def] >>
-     rw [] >>
      fs [] >>
      metis_tac [type_funs_Tfn, t_distinct],
  qpat_assum `type_ps tenvC tenv (p::ps) ts tenv'`
@@ -391,8 +370,7 @@ val not_final_state = Q.prove (
      (?e1 e2 e3. e = If e1 e2 e3) ∨
      (?e' pes. e = Mat e' pes) ∨
      (?n e1 e2. e = Let n e1 e2) ∨
-     (?funs e'. e = Letrec funs e') ∨
-     (?e1 n. e = Proj e1 n)`,
+     (?funs e'. e = Letrec funs e')`,
 rw [] >>
 cases_on `e` >>
 cases_on `c` >>
@@ -508,8 +486,7 @@ rw [] >>
 fs [lookup_def] >>
 rw [] >>
 cases_on `tenv` >>
-fs [] >-
-fs [Once type_v_cases, bind_def] >>
+fs [] >>
 fs [lookup_def] >>
 cases_on `h` >>
 cases_on `h'` >>
@@ -560,7 +537,6 @@ rw [pmatch_def] >|
      metis_tac [],
  every_case_tac >>
      fs [],
- fs [Once type_p_cases],
  fs [Once type_p_cases],
  every_case_tac >>
      fs [] >>
@@ -897,9 +873,7 @@ rw [] >|
      match_mp_tac type_env_merge_lem >>
      rw [] >>
      match_mp_tac type_recfun_env >>
-     metis_tac [],
- pop_assum (ASSUME_TAC o SIMP_RULE (srw_ss()) [Once type_v_cases]) >>
-     fs []]);
+     metis_tac []]);
 
 val e_step_ctor_env_same = Q.prove (
 `!cenv env e c cenv' env' e' c'.
@@ -1086,6 +1060,8 @@ val type_preservation = Q.prove (
   type_d_state (merge (REVERSE tenvC'') tenvC) (envC',envE',ds',c') tenvC' tenvE`,
 rw [type_d_state_cases] >>
 fs [d_step_def] >>
+TRY (Q.PAT_ASSUM `ALL_DISTINCT (pat_bindings p [])` ASSUME_TAC) >>
+fs [] >>
 every_case_tac >>
 fs [] >>
 rw [] >-
@@ -1633,7 +1609,7 @@ rw [] >>
            by metis_tac [type_progress] >|
 [fs [def_final_state_def] >>
      rw [] >>
-     qexists_tac `Rval env'` >>
+     qexists_tac `Rval (cenv',env')` >>
      rw [d_small_eval_def] >>
      metis_tac [],
  qexists_tac `Rerr (Rraise err)` >>

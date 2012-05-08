@@ -22,7 +22,7 @@
  * are "arithmetic" and "pair".                                              *
  *---------------------------------------------------------------------------*)
 
-local open arithmeticTheory pairTheory pred_setTheory operatorTheory in end;
+local open arithmeticTheory pairTheory pred_setTheory operatorTheory Datatype OpenTheoryMap in end;
 
 
 (*---------------------------------------------------------------------------
@@ -229,26 +229,14 @@ val EL = new_recursive_definition
 (* [TFM 92.04.21]							*)
 (* ---------------------------------------------------------------------*)
 
-val MAP2 =
-  let val lemma = prove
-     (--`?fn.
-         (!f:'a -> 'b -> 'c. fn f [] [] = []) /\
-         (!f h1 t1 h2 t2.
-           fn f (h1::t1) (h2::t2) = f h1 h2::fn f t1 t2)`--,
-      let val th = prove_rec_fn_exists list_Axiom
-           (--`(fn (f:'a -> 'b -> 'c) [] l = []) /\
-               (fn f (h::t) l = CONS (f h (HD l)) (fn f t (TL l)))`--)
-      in
-      STRIP_ASSUME_TAC th THEN
-      EXISTS_TAC (--`fn:('a -> 'b -> 'c) -> 'a list -> 'b list -> 'c list`--)
-      THEN ASM_REWRITE_TAC [HD,TL]
-      end)
-  in
-      Rsyntax.new_specification{
-        name = "MAP2", sat_thm = lemma,
-        consts = [{const_name="MAP2", fixity=NONE}]
-      }
-  end
+val MAP2_DEF = Define`
+  (MAP2 f (h1::t1) (h2::t2) = f h1 h2::MAP2 f t1 t2) /\
+  (MAP2 f x y = [])`
+
+val MAP2 = store_thm ("MAP2",
+``(!f. MAP2 f [] [] = []) /\
+  (!f h1 t1 h2 t2. MAP2 f (h1::t1) (h2::t2) = f h1 h2::MAP2 f t1 t2)``,
+METIS_TAC[MAP2_DEF]);
 
 (* ---------------------------------------------------------------------*)
 (* Proofs of some theorems about lists.					*)
@@ -769,6 +757,11 @@ STRIP_TAC THEN LIST_INDUCT_TAC THENL [
   LIST_INDUCT_TAC THEN ASM_SIMP_TAC bool_ss [FOLDR]
 ]);
 
+val FOLDR_CONS = store_thm(
+"FOLDR_CONS",
+``!f ls a. FOLDR (\x y. f x :: y) a ls = (MAP f ls)++a``,
+GEN_TAC THEN Induct THEN SRW_TAC[][FOLDR,MAP])
+
 val LENGTH_TL = Q.store_thm
 ("LENGTH_TL",
   `!l. 0 < LENGTH l ==> (LENGTH (TL l) = LENGTH l - 1)`,
@@ -1143,6 +1136,18 @@ Induct THEN REWRITE_TAC [MAP,MEM]
              THEN FIRST_ASSUM MATCH_MP_TAC
              THEN ASM_REWRITE_TAC [MEM]]);
 
+val MAP2_CONG = store_thm("MAP2_CONG",
+Term
+  `!l1 l1' l2 l2' f f'.
+    (l1=l1') /\ (l2=l2') /\
+    (!x y. MEM x l1' /\ MEM y l2' ==> (f x y = f' x y))
+          ==>
+    (MAP2 f l1 l2 = MAP2 f' l1' l2')`,
+Induct THEN SRW_TAC[][MAP2_DEF,MEM] THEN
+SRW_TAC[][MAP2_DEF] THEN
+Cases_on `l2` THEN
+SRW_TAC[][MAP2_DEF])
+
 val EXISTS_CONG = store_thm("EXISTS_CONG",
 Term
   `!l1 l2 P P'.
@@ -1328,6 +1333,8 @@ val MAP2_ZIP = store_thm("MAP2_ZIP",
     THEN ASM_REWRITE_TAC[CONS_11,UNCURRY_DEF,INV_SUC_EQ]
     end);
 
+val MAP2_MAP = save_thm("MAP2_MAP",MAP2_ZIP)
+
 val MAP_ZIP = Q.store_thm(
   "MAP_ZIP",
   `(LENGTH l1 = LENGTH l2) ==>
@@ -1435,6 +1442,12 @@ val LAST_CONS = store_thm(
   REWRITE_TAC [LAST_DEF, NOT_CONS_NIL]);
 val _ = export_rewrites ["LAST_CONS"]
 
+val LAST_EL = store_thm(
+"LAST_EL",
+``!ls. (ls <> []) ==> (LAST ls = EL (PRE (LENGTH ls)) ls)``,
+Induct THEN SRW_TAC[][] THEN
+Cases_on `ls` THEN FULL_SIMP_TAC (srw_ss()) [])
+
 val FRONT_CONS = store_thm(
   "FRONT_CONS",
   ``(!x:'a. FRONT [x] = []) /\
@@ -1539,6 +1552,78 @@ val LENGTH_DROP = store_thm(
   Induct_on `l` THEN SRW_TAC [numSimps.ARITH_ss][]);
 val _ = export_rewrites ["LENGTH_DROP"]
 
+(* More functions for operating on pairs of lists *)
+
+val FOLDL2_def = Define`
+  (FOLDL2 f a (b::bs) (c::cs) = FOLDL2 f (f a b c) bs cs) /\
+  (FOLDL2 f a bs cs = a)`
+val _ = export_rewrites["FOLDL2_def"]
+
+val FOLDL2_cong = store_thm(
+"FOLDL2_cong",
+``!l1 l1' l2 l2' a a' f f'.
+  (l1 = l1') /\ (l2 = l2') /\ (a = a') /\
+  (!z b c. MEM b l1' /\ MEM c l2' ==> (f z b c = f' z b c))
+  ==>
+  (FOLDL2 f a l1 l2 = FOLDL2 f' a' l1' l2')``,
+Induct THEN SIMP_TAC(srw_ss()) [FOLDL2_def] THEN
+GEN_TAC THEN Cases THEN SRW_TAC[][FOLDL2_def])
+
+val FOLDL2_FOLDL = store_thm(
+"FOLDL2_FOLDL",
+``!l1 l2. (LENGTH l1 = LENGTH l2) ==> !f a. FOLDL2 f a l1 l2 = FOLDL (\a. UNCURRY (f a)) a (ZIP (l1,l2))``,
+Induct THEN1 SRW_TAC[][LENGTH_NIL_SYM,ZIP,FOLDL] THEN
+GEN_TAC THEN Cases THEN SRW_TAC[][ZIP,FOLDL])
+
+val EVERY2_def = Define`
+  (EVERY2 P (a::as) (b::bs) = P a b /\ EVERY2 P as bs) /\
+  (EVERY2 P as bs = (as = []) /\ (bs = []))`
+val _ = export_rewrites["EVERY2_def"]
+
+val EVERY2_cong = store_thm(
+"EVERY2_cong",
+``!l1 l1' l2 l2' P P'.
+  (l1 = l1') /\ (l2 = l2') /\
+  (!x y. MEM x l1' /\ MEM y l2' ==> (P x y = P' x y)) ==>
+  (EVERY2 P l1 l2 = EVERY2 P' l1' l2')``,
+Induct THEN SIMP_TAC (srw_ss()) [EVERY2_def] THEN
+GEN_TAC THEN Cases THEN SRW_TAC[][EVERY2_def] THEN
+METIS_TAC[])
+
+val MAP_EQ_EVERY2 = store_thm(
+"MAP_EQ_EVERY2",
+``!f1 f2 l1 l2. (MAP f1 l1 = MAP f2 l2) =
+                (LENGTH l1 = LENGTH l2) /\
+                (EVERY2 (\x y. f1 x = f2 y) l1 l2)``,
+NTAC 2 GEN_TAC THEN
+Induct THEN SRW_TAC[][LENGTH_NIL_SYM,MAP,MAP_EQ_NIL] THEN
+Cases_on `l2` THEN SRW_TAC[][MAP] THEN
+PROVE_TAC[])
+
+val EVERY2_EVERY = store_thm(
+"EVERY2_EVERY",
+``!l1 l2 f. EVERY2 f l1 l2 = (LENGTH l1 = LENGTH l2) /\ EVERY (UNCURRY f) (ZIP (l1,l2))``,
+Induct THEN1 SRW_TAC[][LENGTH_NIL_SYM,EQ_IMP_THM,ZIP] THEN
+GEN_TAC THEN Cases THEN SRW_TAC[][ZIP,EQ_IMP_THM])
+
+val EVERY2_LENGTH = store_thm(
+"EVERY2_LENGTH",
+``!P l1 l2. EVERY2 P l1 l2 ==> (LENGTH l1 = LENGTH l2)``,
+PROVE_TAC[EVERY2_EVERY])
+
+val EVERY2_mono = store_thm(
+"EVERY2_mono",
+``(!x y. P x y ==> Q x y)
+  ==> EVERY2 P l1 l2 ==> EVERY2 Q l1 l2``,
+STRIP_TAC THEN
+MAP_EVERY Q.ID_SPEC_TAC [`l2`,`l1`] THEN
+Induct THEN
+SRW_TAC [][EVERY2_def] THEN
+IMP_RES_TAC EVERY2_LENGTH THEN
+Cases_on `l2` THEN
+FULL_SIMP_TAC (srw_ss()) [EVERY2_def])
+val _ = IndDefLib.export_mono "EVERY2_mono"
+
 
 (* ----------------------------------------------------------------------
     ALL_DISTINCT
@@ -1571,6 +1656,11 @@ val FILTER_ALL_DISTINCT = store_thm (
   "FILTER_ALL_DISTINCT",
   ``!P l. ALL_DISTINCT l ==> ALL_DISTINCT (FILTER P l)``,
   Induct_on `l` THEN SRW_TAC [][MEM_FILTER]);
+
+val ALL_DISTINCT_MAP = store_thm(
+"ALL_DISTINCT_MAP",
+``!f ls. ALL_DISTINCT (MAP f ls) ==> ALL_DISTINCT ls``,
+GEN_TAC THEN Induct THEN SRW_TAC[][ALL_DISTINCT, MAP, MEM_MAP] THEN PROVE_TAC[])
 
 val ALL_DISTINCT_EL_EQ = store_thm (
    "EL_ALL_DISTINCT_EL_EQ",
@@ -1750,6 +1840,16 @@ val SUM_MAP_MEM_bound = store_thm(
 ``!f x ls. MEM x ls ==> f x <= SUM (MAP f ls)``,
 NTAC 2 GEN_TAC THEN Induct THEN SRW_TAC[][] THEN
 FULL_SIMP_TAC(srw_ss()++numSimps.ARITH_ss)[MEM,MAP,SUM])
+
+val INJ_MAP_EQ = store_thm(
+"INJ_MAP_EQ",
+``!f l1 l2. (INJ f (set l1 UNION set l2) UNIV) /\ (MAP f l1 = MAP f l2) ==> (l1 = l2)``,
+GEN_TAC THEN Induct THEN1 SRW_TAC[][MAP,MAP_EQ_NIL] THEN
+GEN_TAC THEN Cases THEN SRW_TAC[][MAP] THEN1 (
+  IMP_RES_TAC INJ_DEF THEN
+  FIRST_X_ASSUM (MATCH_MP_TAC o MP_CANON) THEN
+  SRW_TAC[][] ) THEN
+PROVE_TAC[INJ_SUBSET,SUBSET_REFL,SUBSET_DEF,IN_UNION,IN_INSERT])
 
 local open numLib in
 val CARD_LIST_TO_SET = Q.store_thm(
@@ -2372,6 +2472,29 @@ val REVERSE_GENLIST = Q.store_thm("REVERSE_GENLIST",
   SRW_TAC [][EL_GENLIST] THEN
   AP_TERM_TAC THEN numLib.DECIDE_TAC)
 
+val FOLDL_UNION_BIGUNION = store_thm(
+"FOLDL_UNION_BIGUNION",
+``!f ls s. FOLDL (\s x. s UNION f x) s ls = s UNION BIGUNION (IMAGE f (set ls))``,
+GEN_TAC THEN Induct THEN SRW_TAC[][FOLDL,UNION_ASSOC])
+
+val FOLDL_UNION_BIGUNION_paired = store_thm(
+"FOLDL_UNION_BIGUNION_paired",
+``!f ls s. FOLDL (\s (x,y). s UNION f x y) s ls = s UNION BIGUNION (IMAGE (UNCURRY f) (set ls))``,
+GEN_TAC THEN Induct THEN1 SRW_TAC[][FOLDL] THEN
+Cases THEN SRW_TAC[][FOLDL,UNION_ASSOC,GSYM pairTheory.LAMBDA_PROD])
+
+val FOLDL_ZIP_SAME = store_thm(
+"FOLDL_ZIP_SAME",
+``!ls f e. FOLDL f e (ZIP (ls,ls)) = FOLDL (\x y. f x (y,y)) e ls``,
+Induct THEN SRW_TAC[][FOLDL,ZIP])
+val _ = export_rewrites["FOLDL_ZIP_SAME"]
+
+val MAP_ZIP_SAME = store_thm(
+"MAP_ZIP_SAME",
+``!ls f. MAP f (ZIP (ls,ls)) = MAP (\x. f (x,x)) ls``,
+Induct THEN SRW_TAC[][MAP,ZIP])
+val _ = export_rewrites["MAP_ZIP_SAME"]
+
 (* ----------------------------------------------------------------------
     All lists have infinite universes
    ---------------------------------------------------------------------- *)
@@ -2502,6 +2625,7 @@ val APPEND_EQ_APPEND_MID = store_thm(
 (* --------------------------------------------------------------------- *)
 
 val _ = app DefnBase.export_cong ["EXISTS_CONG", "EVERY_CONG", "MAP_CONG",
+                                  "MAP2_CONG", "EVERY2_cong", "FOLDL2_cong",
                                   "FOLDL_CONG", "FOLDR_CONG", "list_size_cong"]
 
 val _ = adjoin_to_theory

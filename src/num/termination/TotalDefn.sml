@@ -621,6 +621,7 @@ fun tDefine stem q tac =
              end
         else let val (def,ind) = with_flag (proofManagerLib.chatting,false)
                                          Defn.tprove0(defn,tac)
+                 val def = def |> CONJUNCTS |> map GEN_ALL |> LIST_CONJ
              in Defn.store(stem,def,ind) ; def
              end
        end

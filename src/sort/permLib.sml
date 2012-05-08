@@ -33,7 +33,7 @@ val LIST_NIL_CONV =
     QCONV (REWRITE_CONV [CONJUNCT1 APPEND, APPEND_NIL])
 
 
-val PERM_tm = ``PERM``;
+val PERM_tm = ``PERM : 'a list -> 'a list -> bool``;
 val dest_PERM = dest_binop PERM_tm (mk_HOL_ERR "permLib" "dest_PERM" "")
 val is_PERM = can dest_PERM;
 

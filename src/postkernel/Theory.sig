@@ -61,7 +61,10 @@ sig
     (* updates segment data using an encoded string *)
   end
 
-(* Register function to be called when a theory loads *)
+(* Register functions to be called before a theory is exported *)
+  val register_onexport : (unit -> unit) -> unit
+
+(* Register functions to be called after a theory loads *)
   val register_onload : (string -> unit) -> unit
   val load_complete : string -> unit
 

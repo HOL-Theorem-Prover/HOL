@@ -1,6 +1,7 @@
 structure nomdatatype :> nomdatatype =
 struct
 
+
 open binderLib HolKernel Parse boolLib generic_termsTheory
 open nomsetTheory
 
@@ -115,15 +116,14 @@ fun first2 l =
       (x::y::_) => (x,y)
     | _ => raise Fail "first2: list doesn't have at least two elements"
 
-fun new_type_step1 tyname {vp, lp} = let
+fun new_type_step1 tyname n {vp, lp} = let
   val list_mk_icomb = uncurry (List.foldl (mk_icomb o swap))
-  val termP = list_mk_icomb (genind_t, [vp,lp,numSyntax.mk_numeral Arbnum.zero])
+  val termP =
+      list_mk_icomb (genind_t, [vp,lp,numSyntax.mk_numeral (Arbnum.fromInt n)])
   fun termPf x = mk_comb(termP, x)
   val (gtty,_) = dom_rng (type_of termP)
   val x = mk_var("x",gtty) and y = mk_var("y", gtty)
   val (glam_ty, gvar_ty) = first2 (#2 (dest_type gtty))
-  infix /\
-  fun t1 /\ t2 = mk_conj (t1, t2)
   val term_exists =
       prove(mk_exists(x, mk_comb(termP, x)),
             EXISTS_TAC (list_mk_icomb(inst [beta |-> glam_ty] GVAR_t,
@@ -131,57 +131,16 @@ fun new_type_step1 tyname {vp, lp} = let
                                        mk_arb gvar_ty])) THEN
             MATCH_MP_TAC (genind_rules |> SPEC_ALL |> CONJUNCT1) THEN
             BETA_TAC THEN REWRITE_TAC [])
-  val term_bij_ax = new_type_definition (tyname, term_exists)
-  val newty = term_bij_ax |> concl |> dest_exists |> #1 |> type_of |> dom_rng |> #1
-  val term_ABSREP =
-      define_new_type_bijections { ABS = tyname ^ "_ABS", REP = tyname ^ "_REP",
-                                   name = tyname ^ "_ABSREP", tyax = term_bij_ax}
-  val absrep_id = term_ABSREP |> CONJUNCT1
-  val (term_ABS_t, term_REP_t) = let
-    val eqn1_lhs = absrep_id|> concl |> strip_forall |> #2 |> lhs
-    val (a, x) = dest_comb eqn1_lhs
-  in
-    (a, rator x)
-  end
-  fun term_ABSf x = mk_comb(term_ABS_t, x)
-  fun term_REPf x = mk_comb(term_REP_t, x)
-  val g = mk_var("g", newty) and h = mk_var("h", newty)
-  val term_ABS_pseudo11 = prove(
-    mk_imp(termPf x /\ termPf y, mk_eq(mk_eq(term_ABSf x, term_ABSf y), mk_eq(x,y))),
-    STRIP_TAC THEN EQ_TAC THENL [ALL_TAC, DISCH_THEN SUBST1_TAC THEN REFL_TAC] THEN
-    DISCH_THEN (MP_TAC o AP_TERM term_REP_t) THEN
-    REPEAT (POP_ASSUM (SUBST1_TAC o CONV_RULE (REWR_CONV (CONJUNCT2 term_ABSREP)))) THEN
-    REWRITE_TAC [])
-  val term_REP_11 = prove(
-    mk_eq(mk_eq(term_REPf g, term_REPf h), mk_eq(g,h)),
-    EQ_TAC THENL [ALL_TAC, DISCH_THEN SUBST1_TAC THEN REFL_TAC] THEN
-    DISCH_THEN (MP_TAC o AP_TERM term_ABS_t) THEN REWRITE_TAC [absrep_id])
-  val genind_term_REP = prove(
-    termPf (term_REPf g),
-    CONV_TAC (REWR_CONV (CONJUNCT2 term_ABSREP) THENC
-              LAND_CONV (RAND_CONV (REWR_CONV absrep_id))) THEN
-    REFL_TAC)
-  val genind_exists = prove(
-    mk_eq(termPf x, mk_exists(g, mk_eq(x, term_REPf g))),
-    EQ_TAC THENL [
-      REWRITE_TAC [CONJUNCT2 term_ABSREP] THEN DISCH_THEN (SUBST1_TAC o SYM) THEN
-      EXISTS_TAC (term_ABSf x) THEN REFL_TAC,
-      DISCH_THEN (X_CHOOSE_THEN g SUBST1_TAC) THEN
-      CONV_TAC (REWR_CONV (EQT_INTRO genind_term_REP))
-    ])
-  val repabs_pseudo_id =
-      term_ABSREP |> CONJUNCT2 |> SPEC_ALL |> EQ_IMP_RULE |> #1 |> GEN_ALL
+  val {absrep_id, newty, repabs_pseudo_id, termP, termP_exists, termP_term_REP,
+       term_ABS_t, term_ABS_pseudo11,
+       term_REP_t, term_REP_11} =
+      newtypeTools.rich_new_type (tyname, term_exists)
 in
-  {term_ABS_pseudo11 = term_ABS_pseudo11,
-   term_REP_11 = term_REP_11, repabs_pseudo_id = repabs_pseudo_id,
-   absrep_id = absrep_id,
-   genind_term_REP = genind_term_REP,
-   genind_exists = genind_exists,
-   newty = newty,
-   termP = termP,
-   term_REP_t = term_REP_t, term_ABS_t = term_ABS_t}
+  {term_ABS_pseudo11 = term_ABS_pseudo11, term_REP_11 = term_REP_11,
+   term_REP_t = term_REP_t, term_ABS_t = term_ABS_t, absrep_id = absrep_id,
+   repabs_pseudo_id = repabs_pseudo_id, genind_term_REP = termP_term_REP,
+   genind_exists = termP_exists, newty = newty, termP = termP}
 end
-
 
 fun termP_removal (info as {elimth,absrep_id,tpm_def,termP,repty}) t = let
   val (v, body) = dest_forall t

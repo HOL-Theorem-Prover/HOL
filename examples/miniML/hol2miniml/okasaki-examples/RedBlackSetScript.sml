@@ -1,8 +1,10 @@
 open preamble;
 open miscTheory pred_setTheory pred_setSimps;
-open ml_translatorLib
+open ml_translatorLib mini_preludeTheory
 
 val _ = new_theory "RedBlackSet"
+
+val _ = translation_extends "mini_prelude";
 
 (* Okasaki page 28 *)
 
@@ -33,7 +35,7 @@ val not_red_def = Define `
 (not_red _ = T)`;
 
 val red_black_invariant1_def = Define `
-(red_black_invariant1 Empty = T) ∧ 
+(red_black_invariant1 Empty = T) ∧
 (red_black_invariant1 (Tree Black t1 x t2) =
   red_black_invariant1 t1 ∧ red_black_invariant1 t2) ∧
 (red_black_invariant1 (Tree Red t1 x t2) =
@@ -90,7 +92,7 @@ val balance_def = Define `
 val balance_ind = fetch "-" "balance_ind"
 
 (* HOL expands the above balance into over 100 cases, so this alternate
- * definition works better for the translator. *) 
+ * definition works better for the translator. *)
 val balance_left_left_def = mlDefine `
 (balance_left_left (Tree Red (Tree Red a x b) y c) z d =
   SOME (Tree Red (Tree Black a x b) y (Tree Black c z d))) ∧
@@ -162,13 +164,13 @@ rw [balance'_def, balance_left_left_def, balance_left_right_def,
 val balance'_set = Q.prove (
 `!c t1 x t2. tree_to_set (balance' c t1 x t2) = tree_to_set (Tree c t1 x t2)`,
 recInduct balance_ind >>
-srw_tac [PRED_SET_AC_ss] 
+srw_tac [PRED_SET_AC_ss]
         [balance'_def, balance_left_left_def, balance_left_right_def,
          balance_right_left_def, balance_right_right_def, tree_to_set_def]);
 
 val balance'_bst = Q.prove (
 `!c t1 x t2.
-  transitive lt ∧ is_bst lt (Tree c t1 x t2) 
+  transitive lt ∧ is_bst lt (Tree c t1 x t2)
   ⇒
   is_bst lt (balance' c t1 x t2)`,
 recInduct balance_ind >>
@@ -185,7 +187,7 @@ metis_tac [balance'_tree]);
 
 val ins_set = Q.prove (
 `∀lt x t.
-  StrongLinearOrder lt 
+  StrongLinearOrder lt
   ⇒
   (tree_to_set (ins lt x t) = {x} ∪ tree_to_set t)`,
 induct_on `t` >>
@@ -208,7 +210,7 @@ fs [StrongLinearOrder, StrongOrder]);
 
 val insert_set = Q.store_thm ("insert_set",
 `∀lt x t.
-  StrongLinearOrder lt 
+  StrongLinearOrder lt
   ⇒
   (tree_to_set (insert lt x t) = {x} ∪ tree_to_set t)`,
 rw [insert_def] >>
@@ -256,7 +258,7 @@ cases_on `x` >>
 rw []);
 
 val balance_inv2_black = Q.prove (
-`!c t1 a t2 n. 
+`!c t1 a t2 n.
   (red_black_invariant2 t1 = SOME n) ∧
   (red_black_invariant2 t2 = SOME n) ∧
   (c = Black)
@@ -267,9 +269,9 @@ rw [balance_def, red_black_invariant2_def, case_opt_lem] >>
 metis_tac []);
 
 val ins_inv2 = Q.prove (
-`!leq x t n. 
-  (red_black_invariant2 t = SOME n) 
-  ⇒ 
+`!leq x t n.
+  (red_black_invariant2 t = SOME n)
+  ⇒
   (red_black_invariant2 (ins leq x t) = SOME n)`,
 induct_on `t` >>
 rw [red_black_invariant2_def, ins_def, case_opt_lem] >>
@@ -283,9 +285,9 @@ rw [] >|
  rw [balance'_def, red_black_invariant2_def, case_opt_lem]]);
 
 val insert_invariant2 = Q.store_thm ("insert_invariant2",
-`!leq x t n. 
-  (red_black_invariant2 t = SOME n) 
-  ⇒ 
+`!leq x t n.
+  (red_black_invariant2 t = SOME n)
+  ⇒
   (red_black_invariant2 (insert leq x t) = SOME n) ∨
   (red_black_invariant2 (insert leq x t) = SOME (n + 1))`,
 rw [insert_def] >>
@@ -307,10 +309,10 @@ val rbinv1_root_def = Define `
   red_black_invariant1 t1 ∧ red_black_invariant1 t2)`;
 
 val balance_inv1_black = Q.prove (
-`!c t1 a t2 n. 
+`!c t1 a t2 n.
   red_black_invariant1 t1 ∧ rbinv1_root t2 ∧ (c = Black)
   ⇒
-  red_black_invariant1 (balance c t1 a t2) ∧ 
+  red_black_invariant1 (balance c t1 a t2) ∧
   red_black_invariant1 (balance c t2 a t1)`,
 recInduct balance_ind >>
 rw [balance_def, red_black_invariant1_def, rbinv1_root_def, not_red_def]);
@@ -324,7 +326,7 @@ fs [red_black_invariant1_def]);
 
 val ins_inv1 = Q.prove (
 `!leq x t.
-  red_black_invariant1 t 
+  red_black_invariant1 t
   ⇒
   (not_red t ⇒ red_black_invariant1 (ins leq x t)) ∧
   (¬not_red t ⇒ rbinv1_root (ins leq x t))`,
@@ -351,5 +353,17 @@ cases_on `not_red t` >>
 rw [] >>
 cases_on `c` >>
 fs [red_black_invariant1_def, rbinv1_root_def]);
+
+
+(* Simplify the side conditions on the generated certificate theorems, based on
+ * the verification. *)
+
+val insert_side_def = fetch "-" "insert_side_def"
+
+val insert_side = Q.prove (
+`∀leq x t. insert_side leq x t`,
+rw [insert_side_def] >>
+`?c t1 y t2. ins leq x t = Tree c t1 y t2` by metis_tac [ins_tree] >>
+rw []);
 
 val _ = export_theory ();

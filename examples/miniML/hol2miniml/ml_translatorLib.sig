@@ -5,8 +5,9 @@ sig
 
     (* main functionality *)
 
-    val translate  : thm -> thm   (* e.g. try translate listTheory.MAP *)
-    val hol2deep   : term -> thm  (* e.g. try hol2deep ``\x.x`` *)
+    val translate  : thm -> thm    (* e.g. try translate listTheory.MAP *)
+    val hol2deep   : term -> thm   (* e.g. try hol2deep ``\x.x`` *)
+    val hol2val    : term -> term  (* e.g. try hol2val ``5:num`` *)
 
     (* wrapper functions *)
 
@@ -19,11 +20,15 @@ sig
     val store_eval_thm : thm -> thm
     val store_eq_thm   : thm -> thm
     val register_type  : hol_type -> unit
-    val set_inv_def    : hol_type * thm -> unit
 
-    (* interface for producing output from translations *)
+    (* loading / storing state of translator *)
 
-    val clear_filename : unit -> unit
-    val set_filename   : string -> unit
+    val translation_extends   : string -> unit
+    val finialise_translation : unit -> unit   (* happens automatically at export *)
+    val get_cert              : string -> thm * thm
+
+    (* simplification of preconditions / sideconditions *)
+
+    val update_precondition  : thm -> thm
 
 end

@@ -6,8 +6,7 @@
 
 (* interactive use:
   app load ["arm_evalTheory", "wordsLib", "pred_setSyntax", "emitLib",
-            "EmitTeX", "patricia_emitTheory", "option_emitTheory",
-            "set_emitTheory", "int_emitTheory", "rich_list_emitTheory"];
+            "EmitTeX", "extended_emitTheory"];
 *)
 
 open HolKernel boolLib bossLib Parse wordsLib;
@@ -15,8 +14,7 @@ open HolKernel boolLib bossLib Parse wordsLib;
 open arm_coretypesTheory arm_astTheory arm_seq_monadTheory
      arm_decoderTheory arm_opsemTheory armTheory arm_evalTheory;
 
-open emitLib set_emitTheory int_emitTheory rich_list_emitTheory words_emitTheory
-     patricia_emitTheory;
+open EmitML extended_emitTheory;
 
 val _ = new_theory "arm_emit";
 
@@ -145,7 +143,7 @@ val n2w_rule = Q.SPEC `n2w m`
 val extension_rule = SIMP_RULE (srw_ss()) [thumb2_support_def];
 
 val int_rule = SIMP_RULE std_ss (COND_RATOR :: map GSYM
-  [int_emitTheory.i2w_itself_def,
+  [basis_emitTheory.i2w_itself_def,
    i2bits_itself_def, signed_sat_itself_def, unsigned_sat_itself_def,
    signed_sat_q_itself_def, unsigned_sat_q_itself_def]);
 
@@ -177,7 +175,7 @@ val _ = emitML (!Globals.emitMLDir) ("arm",
   map (DATATYPE o f)
     [datatype_iiid, datatype_RName, datatype_PSRName, datatype_ARMpsr,
      datatype_CP14reg, datatype_CP15sctlr, datatype_CP15scr,
-     datatype_CP15nsacr, datatype_CP15vbar, datatype_CP15reg,
+     datatype_CP15nsacr, datatype_CP15reg,
      datatype_coproc_state, datatype_memory_access, datatype_ARMarch,
      datatype_ARMinfo, datatype_SRType, datatype_InstrSet, datatype_Encoding,
      datatype_MemType, datatype_MemoryAttributes, datatype_AddressDescriptor,

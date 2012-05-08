@@ -48,7 +48,8 @@ val (thmrwt_rules, thmrwt_ind, thmrwt_cases) = Hol_reln`
   (∀x y. thmrwt (x ++ [b;b;b] ++ y) (x ++ [I] ++ y)) ∧
   (∀x y. thmrwt (x ++ [a;b;a;b] ++ y) (x ++ [b;b;a;a] ++ y)) ∧
   (∀x y. thmrwt (x ++ [b;b;a;a;b;b] ++ y) (x ++ [a;b;a] ++ y)) ∧
-  (∀x y. thmrwt (x ++ [a;a;b;b;a;a] ++ y) (x ++ [b;a;b] ++ y))
+  (∀x y. thmrwt (x ++ [a;a;b;b;a;a] ++ y) (x ++ [b;a;b] ++ y)) ∧
+  (∀x y. thmrwt (x ++ [a;a;b;b] ++ y) (x ++ [b;a;b;a] ++ y))
 `;
 
 fun thm i = List.nth(CONJUNCTS thmrwt_rules, i)
@@ -149,7 +150,8 @@ in
               (``[b;b;b]``, (``[I:alphabet]``, thm 2)),
               (``[a;b;a;b]``, (``[b;b;a;a]``, thm 3)),
               (``[b;b;a;a;b;b]``, (``[a;b;a]``, thm 4)),
-              (``[a;a;b;b;a;a]``, (``[b;a;b]``, thm 5))]
+              (``[a;a;b;b;a;a]``, (``[b;a;b]``, thm 5)),
+              (``[a;a;b;b]``, (``[b;a;b;a]``, thm 6))]
 end
 
 fun find_cons_matches db els =
@@ -161,28 +163,37 @@ fun find_cons_matches db els =
       end
     | t::ts => let
         val hdres = find_trie_matches els db
-        val hdres' = map (fn v => ([], v, List.drop(els, length els))) hdres
+        fun mapthis (v as (k,r)) = ([], v, List.drop(els,length k))
+        val hdres' = map mapthis hdres
         val tlres = find_cons_matches db ts
       in
         (hdres' @ map (fn (p,v,s) => (t::p,v,s)) tlres)
       end
-
+val alpha_ty = ``:alphabet``
 fun find_app_matches db app_list = let
-  fun recurse acc apps =
+  fun recurse pfxr acc apps =
     case apps of
       [] => acc
     | t::ts => let
         val els = #1 (listSyntax.dest_list t) handle HOL_ERR _ => []
+        val t_results0 = find_cons_matches db els
+        fun mapthis (p,r,s) = let
+          val p_l = if null p then [] else [listSyntax.mk_list(p, alpha_ty)]
+          val s_l = if null s then [] else [listSyntax.mk_list(s, alpha_ty)]
+        in
+          (List.rev(p_l @ pfxr), r, s_l @ ts)
+        end
+        val results = map mapthis t_results0
       in
-        recurse (acc @ find_cons_matches db els) ts
+        recurse (t::pfxr) (acc @ results) ts
       end
 in
-  recurse [] app_list
+  recurse [] [] app_list
 end
 
 open listTheory
 
-(* fun solver (asl, t) = let
+fun solver (asl, t) = let
   val nonnil_asms = map ASSUME (filter is_neg asl)
   fun munge extras p s th =
       th |> SPECL [lmkapp p, lmkapp s]
@@ -198,17 +209,18 @@ in
       val (_, [_, x2, _]) = strip_comb c2
       val app_args1 = stripapp [x1] []
       val app_args2 = stripapp [x2] []
-      val possibilities1 = replace [] app_args1
-      val possibilities2 = replace [] app_args2
+      val possibilities1 = find_app_matches db app_args1
+      val possibilities2 = find_app_matches db app_args2
       fun nilf t = if listSyntax.is_nil t then [] else [t]
-      fun check (p1, res1, s1, th1) (p2, res2, s2, th2) =
+      fun check (p1, (_, (res1, _)), s1) (p2, (_, (res2, _)), s2) =
           p1 @ nilf res1 @ s1 = p2 @ nilf res2 @ s2
       fun checkl t = List.mapPartial (fn t' => if check t t' then SOME (t,t')
                                                else NONE)
       fun checkll [] p2 = []
         | checkll (h::t) p2 = checkl h p2 @ checkll t p2
       val possibilities = checkll possibilities1 possibilities2
-      val ((pfx1, res1, sfx1, th1), (pfx2, res2, sfx2, th2)) = hd possibilities
+      val ((pfx1, (_, (res1, th1)), sfx1), (pfx2, (_, (res2, th2)), sfx2)) =
+          hd possibilities
       fun conclude extras = let
         val th1' = munge extras pfx1 sfx1 th1
         val th2' = munge extras pfx2 sfx2 th2
@@ -238,13 +250,7 @@ in
       EXISTS_TAC x THEN MATCH_ACCEPT_TAC relationTheory.RTC_REFL
     end
 end (asl,t) handle Empty => raise mk_HOL_ERR "wardScript" "solver" "Empty list"
-
-val _ = metisTools.limit :=  { time = NONE, infs = SOME 1 }
-*)
-
 (*
-
-
 val thmrwt_weak_confluent = store_thm(
   "thmrwt_weak_confluent",
   ``∀x y. thmrwt x y ⇒ ∀z. thmrwt x z ⇒ ∃u. thmrwt^* y u ∧ thmrwt^* z u``,

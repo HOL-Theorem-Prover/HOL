@@ -1,2 +1,2 @@
 OPTIONS = QUIT_ON_FAILURE
-INCLUDES = $(protect $(HOLDIR)/examples/zfset)
+INCLUDES = $(protect $(HOLDIR)/examples/set-theory/zfset)

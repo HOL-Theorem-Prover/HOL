@@ -562,7 +562,7 @@ val func2f_def = Define `
   (func2f Funcall = mFun "FUNCALL")`
 
 val SUM_def = Define `
-  (SUM [] = 0) /\
+  (SUM [] = 0:num) /\
   (SUM (x::xs) = x + SUM xs)`;
 
 val MEM_term5_size = prove(
@@ -597,7 +597,7 @@ val term_cost_def = tDefine "term_cost" `
   (term_cost (List xs) = 5 * SUM (MAP term_cost xs) + 5 * LENGTH xs + 5) /\
   (term_cost (Cond ys) = 5 * SUM (MAP term_cost (MAP FST ys)) +
                          5 * SUM (MAP term_cost (MAP SND ys)) + 5 * LENGTH ys + 5) /\
-  (term_cost (Defun name vs body) = 100) /\
+  (term_cost (Defun name vs body) = 100:num) /\
   (term_cost (Let zs x) = SUM (MAP term_cost (MAP SND zs)) +
                           LENGTH zs + term_cost x + 5) /\
   (term_cost (LetStar zs x) = 5 * SUM (MAP term_cost (MAP SND zs)) +
@@ -728,7 +728,7 @@ val bad_names_tm =
 
 val INDEX_OF_def = Define `
   (INDEX_OF n x [] = NONE) /\
-  (INDEX_OF n x (y::xs) = if x = y then SOME n else INDEX_OF (n+1) x xs)`;
+  (INDEX_OF n x (y::xs) = if x = y then SOME n else INDEX_OF (n+1:num) x xs)`;
 
 val logic_func2sexp_def = Define `
   (logic_func2sexp (mPrimitiveFun p) = Sym (logic_prim2sym p)) /\

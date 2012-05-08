@@ -23,7 +23,7 @@ val lp = ``(λn (d:unit + unit + num) tns uns.
 
 val {term_ABS_pseudo11, term_REP_11, genind_term_REP, genind_exists,
      termP, absrep_id, repabs_pseudo_id, newty, term_REP_t, term_ABS_t,...} =
-    new_type_step1 tyname {vp=vp, lp = lp}
+    new_type_step1 tyname 0 {vp=vp, lp = lp}
 
 val _ = temp_overload_on ("termP", termP)
 

@@ -1,11 +1,13 @@
 open preamble
 open bagTheory bagLib miscTheory;
-open ml_translatorLib;
+open ml_translatorLib mini_preludeTheory;
 
 val fs = full_simp_tac (srw_ss ())
 val rw = srw_tac []
 
 val _ = new_theory "LeftistHeap"
+
+val _ = translation_extends "mini_prelude";
 
 (* Okasaki page 20 *)
 
@@ -139,5 +141,27 @@ cases_on `h` >>
 fs [delete_min_def, is_heap_ordered_def, merge_bag] >-
 metis_tac [merge_heap_ordered] >>
 rw [heap_to_bag_def, find_min_def, BAG_DIFF_INSERT2]);
+
+
+(* Simplify the side conditions on the generated certificate theorems *)
+
+val delete_min_side_def = fetch "-" "delete_min_side_def"
+val find_min_side_def = fetch "-" "find_min_side_def"
+
+val delete_min_side = Q.prove (
+`!get_key leq h. delete_min_side get_key leq h = (h ≠ Empty)`,
+rw [delete_min_side_def] >>
+eq_tac >>
+rw [] >>
+cases_on `h` >>
+rw []);
+
+val find_min_side = Q.prove (
+`!h. find_min_side h = (h ≠ Empty)`,
+rw [find_min_side_def] >>
+eq_tac >>
+rw [] >>
+cases_on `h` >>
+rw []);
 
 val _ = export_theory ();

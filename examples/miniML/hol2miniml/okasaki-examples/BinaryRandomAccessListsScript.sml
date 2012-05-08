@@ -1,7 +1,9 @@
 open preamble
-open miscTheory ml_translatorLib;
+open miscTheory ml_translatorLib mini_preludeTheory;
 
 val _ = new_theory "BinaryRandomAccessLists"
+
+val _ = translation_extends "mini_prelude";
 
 (* Okasaki page 123 *)
 
@@ -35,7 +37,7 @@ val cons_tree_def = mlDefine `
 val uncons_tree_def = mlDefine `
 (uncons_tree [One t] = (t, [])) ∧
 (uncons_tree (One t::ts) = (t, Zero :: ts)) ∧
-(uncons_tree (Zero :: ts) = 
+(uncons_tree (Zero :: ts) =
   case uncons_tree ts of
     | (Node _ t1 t2, ts') => (t1, One t2 :: ts'))`;
 
@@ -53,25 +55,25 @@ tail ts = let (x,ts') = uncons_tree ts in ts'`;
 val lookup_tree_def = mlDefine `
 (lookup_tree i (Leaf x) = if i = 0 then x else ARB) ∧
 (lookup_tree i (Node w t1 t2) =
-  if i < w DIV 2  then 
+  if i < w DIV 2  then
     lookup_tree i t1
-  else 
+  else
     lookup_tree (i - w DIV 2) t2)`;
 
 val update_tree_def = mlDefine `
 (update_tree i y (Leaf x) = if i = 0 then Leaf y else ARB) ∧
 (update_tree i y (Node w t1 t2) =
-  if i < w DIV 2 then 
+  if i < w DIV 2 then
     Node w (update_tree i y t1) t2
-  else 
+  else
     Node w t1 (update_tree (i - w DIV 2) y t2))`;
 
 val lookup_def = mlDefine `
 (lookup i (Zero::ts) = lookup i ts) ∧
 (lookup i (One t::ts) =
-  if i < size t then 
+  if i < size t then
     lookup_tree i t
-  else 
+  else
     lookup (i - size t) ts)`;
 
 val update_def = mlDefine `

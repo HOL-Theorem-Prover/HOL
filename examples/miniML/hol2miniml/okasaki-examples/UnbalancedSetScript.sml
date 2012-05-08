@@ -1,8 +1,10 @@
 open preamble
-open miscTheory pred_setTheory pred_setSimps 
-open ml_translatorLib;
+open miscTheory pred_setTheory pred_setSimps
+open ml_translatorLib mini_preludeTheory;
 
 val _ = new_theory "UnbalancedSet"
+
+val _ = translation_extends "mini_prelude";
 
 (* Okasaki page 14 *)
 
@@ -61,7 +63,7 @@ metis_tac []);
 
 val insert_set = Q.store_thm ("insert_set",
 `∀lt x t.
-  StrongLinearOrder lt 
+  StrongLinearOrder lt
   ⇒
   (tree_to_set (insert lt x t) = {x} ∪ tree_to_set t)`,
 induct_on `t` >>

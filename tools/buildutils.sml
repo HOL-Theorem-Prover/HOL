@@ -110,13 +110,10 @@ fun read_buildsequence {kernelpath} bseq_fname = let
                   if isDir dirname orelse mlsys <> "" then
                     read_file ((dirname,testcount)::acc) fstr
                   else
-                    (warn ("** File "^dirname0^
-                           " from build sequence is not a directory \
-                           \-- skipping it");
-                     read_file acc fstr)
-                else (warn ("** File "^s^" from build sequence does not "^
-                          "exist or is inacessible -- skipping it");
-                    read_file acc fstr)
+                    die ("** File "^dirname0^
+                         " from build sequence is not a directory")
+                else die ("** File "^s^" from build sequence does not "^
+                          "exist or is inacessible -- skipping it")
               else read_file acc fstr
             end
         end
