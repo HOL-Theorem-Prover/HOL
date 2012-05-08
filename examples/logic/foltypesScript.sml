@@ -96,7 +96,8 @@ val {absrep_id = form_absrep_id, newty = form_ty,
      repabs_pseudo_id = form_repabs_pseudo_id, termP = formP, termP_exists,
      termP_term_REP = formP_form_REP,
      term_ABS_t = form_ABS_t, term_ABS_pseudo11 = form_ABS_pseudo11,
-     term_REP_t = form_REP_t, term_REP_11} =
+     term_REP_t = form_REP_t,
+     term_REP_11 = form_REP_11} =
     newtypeTools.rich_new_type ("form", forms_exist)
 
 val ALL_t = mk_var("ALL", ``:string -> ^form_ty -> ^form_ty``)
@@ -387,5 +388,13 @@ val fof_indX = save_thm(
   "fof_indX",
   fof_ind |> Q.SPEC `λf x. Q f` |> Q.SPEC `λx. X` |> SIMP_RULE (srw_ss()) []
           |> Q.INST [`Q` |-> `P`] |> Q.GEN `X` |> Q.GEN `P`)
+
+val ALL_eq_thm = save_thm(
+  "ALL_eq_thm",
+  ``ALL v1 f1 = ALL v2 f2``
+    |> SIMP_CONV (srw_ss()) [ALL_def, ALL_formP, form_ABS_pseudo11,
+                             GLAM_eq_thm, form_REP_11, GSYM form_REP_fpm,
+                             GSYM supp_tpm]
+    |> GENL [``v1:string``, ``v2:string``, ``f1:form``, ``f2:form``]);
 
 val _ = export_theory()
