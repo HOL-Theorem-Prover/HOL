@@ -77,6 +77,20 @@ fun register name (def,ind) = let
   val _ = save_thm(name^"_ind", ind)
 in (def,ind) end
 
+val Cevaluate_cases = save_thm("Cevaluate_cases",Cevaluate_cases)
+val Cevaluate_rules = save_thm("Cevaluate_rules",Cevaluate_rules)
+val extend_def = save_thm("extend_def",extend_def)
+val exp_Cexp_ind = save_thm("exp_Cexp_ind",exp_Cexp_ind)
+val v_Cv_ind = save_thm("v_Cv_ind",v_Cv_ind)
+val v_Cv_cases = save_thm("v_Cv_cases",v_Cv_cases)
+val sort_Cenv_def = save_thm("sort_Cenv_def",sort_Cenv_def)
+val i0_def = save_thm("i0_def",i0_def)
+val Cevaluate_ind = save_thm("Cevaluate_ind",Cevaluate_ind)
+val Cevaluate_strongind = save_thm("Cevaluate_strongind",Cevaluate_strongind)
+val mk_env_def = save_thm("mk_env_def",mk_env_def)
+val find_index_def = save_thm("find_index_def",find_index_def)
+val Cexp_size_def = save_thm("Cexp_size_def",Cexp_size_def)
+
 val (free_vars_def, free_vars_ind) = register "free_vars" (
   tprove_no_defn ((free_vars_def,free_vars_ind),
   WF_REL_TAC `measure Cexp_size` >>
