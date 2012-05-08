@@ -397,4 +397,53 @@ val ALL_eq_thm = save_thm(
                              GSYM supp_tpm]
     |> GENL [``v1:string``, ``v2:string``, ``f1:form``, ``f2:form``]);
 
+val (_, repty) = dom_rng (type_of term_REP_t)
+val repty' = ty_antiq repty
+val tlf = ``λ(v:string)
+             (d:ftm_discriminator)
+             (ds1:(ρ -> α) list) (ds2:(ρ -> α) list)
+             (ts1 : ^repty' list) (ts2: ^repty' list) (p:ρ).
+               case d of ftmFN s => f s (MAP foterm_ABS ts2)
+                                        (MAP (λr. r p) ds2) : 'a``
+
+val vf = ``λ(s:string) u:unit p:ρ. vv s p:α``
+
+val termP0 = prove(
+  ``genind ^vp ^lp n t <=> (n = 0) ∧ ^termP t ∨ (n = 1) ∧ ^formP t``,
+  eq_tac >> simp_tac (srw_ss()) [DISJ_IMP_THM] >>
+  strip_tac >> qsuff_tac `n = 0 ∨ n = 1` >- (strip_tac >> rw[]) >>
+  pop_assum mp_tac >>
+  Q.ISPEC_THEN `t` STRUCT_CASES_TAC gterm_cases >>
+  rw[genind_GVAR, genind_GLAM_eqn]);
+
+val termP_term_REP = prove(
+  ``^termP gt ⇔ (∃t. gt = ^term_REP_t t)``,
+  rw[EQ_IMP_THM] >> rw[genind_term_REP] >> qexists_tac `^term_ABS_t gt` >>
+  rw[term_repabs_pseudo_id]);
+
+fun select_exconjs is thm = let
+  val (v, body) = dest_exists (concl thm)
+  val bodyth = ASSUME body
+  val allcs = CONJUNCTS bodyth
+  val cs = map (fn i => List.nth(allcs, i)) is
+  val body' = LIST_CONJ cs
+  val exbody = EXISTS (mk_exists(v, concl body'), v) body'
+in
+  CHOOSE (v, thm) exbody
+end
+
+val tm_recursion0 =
+  parameter_gtm_recursion
+    |> INST_TYPE [alpha |-> ``:ftm_discriminator``, beta |-> ``:unit``,
+                  gamma |-> alpha]
+    |> Q.INST [`lf` |-> `^tlf`, `lp` |-> `^lp`, `vp` |-> `^vp`, `vf` |-> `^vf`]
+    |> ONCE_REWRITE_RULE [termP0]
+    |> SIMP_RULE bool_ss [DISJ_IMP_THM, FORALL_AND_THM, genind_GVAR,
+                          genind_GLAM_eqn, termP_term_REP]
+    |> SIMP_RULE std_ss []
+    |> CONV_RULE (RAND_CONV (SIMP_CONV (srw_ss() ++ DNF_ss) []))
+    |> UNDISCH_ALL
+    |> select_exconjs [0,1,6]
+
+
 val _ = export_theory()
