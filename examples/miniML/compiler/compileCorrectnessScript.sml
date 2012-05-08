@@ -605,14 +605,18 @@ val good_cmap_def = Define`
 good_cmap cenv cm =
   (∀cn n. do_con_check cenv cn n ⇒ cn IN FDOM cm)`
 
+val good_repl_state_def = Define`
+  good_repl_state s =
+    INJ (FAPPLY s.vmap) (FDOM s.vmap) UNIV ∧
+    (∀n. n ∈ FRANGE s.vmap ⇒ n < s.nv)`
+
 val good_env_state_def = Define`
   good_env_state env s =
   ALL_DISTINCT (MAP FST env) ∧
-  INJ (FAPPLY s.vmap) (FDOM s.vmap) UNIV ∧
+  good_repl_state s ∧
   IMAGE FST (set env) ∪
   BIGUNION (IMAGE (clV_v o SND) (set env))
   ⊆ FDOM s.vmap`
-
 
 (* Soundness(?) of exp_Cexp *)
 
@@ -2188,7 +2192,59 @@ Induct_on `pes`
 
 NOT TRUE because of shadowing *)
 
-(*
+val extend_good_repl_state = store_thm(
+"extend_good_repl_state",
+``∀s vn s' n. good_repl_state s ∧ (extend s vn = (s',n)) ⇒ good_repl_state s'``,
+rw[extend_def] >>
+fs[good_repl_state_def,FRANGE_DEF,INJ_DEF] >>
+fs[FAPPLY_FUPDATE_THM,FRANGE_DEF,DOMSUB_FAPPLY_THM] >>
+fsrw_tac[boolSimps.DNF_ss][] >>
+reverse conj_tac >- (
+  rw[] >> res_tac >> DECIDE_TAC ) >>
+conj_asm1_tac >- (
+  rw[] >>
+  spose_not_then strip_assume_tac >>
+  res_tac >> DECIDE_TAC ) >>
+fs[] >> rw[])
+
+val extend_FDOM_SUBSET = store_thm(
+"extend_FDOM_SUBSET",
+``∀s vn s' n. (extend s vn = (s',n)) ⇒ FDOM s.vmap ⊆ FDOM s'.vmap``,
+rw[extend_def,SUBSET_DEF] >> rw[])
+
+val pat_to_Cpat_good_repl_state = store_thm(
+"pat_to_Cpat_good_repl_state",
+``∀s pvs p s' pvs' Cp. good_repl_state s ∧ (pat_to_Cpat (s,pvs,p) = (s',pvs',Cp)) ⇒ good_repl_state s'``,
+qsuff_tac `∀s pvs p s' pvs' Cp. good_repl_state (FST (s,pvs,p)) ∧ (pat_to_Cpat (s,pvs,p) = (s',pvs',Cp)) ⇒ good_repl_state s'` >- rw[] >>
+ho_match_mp_tac pat_to_Cpat_ind >>
+rw[pat_to_Cpat_def,LET_THM] >- (
+  Cases_on `extend s vn` >> fs[] >> rw[] >>
+  fsrw_tac[SATISFY_ss][extend_good_repl_state] ) >>
+rw[] >>
+qmatch_assum_abbrev_tac `P Q = (s',pvs',Cp)` >>
+PairCases_on `Q` >> fs[Abbr`P`] >> rw[] >>
+fs[markerTheory.Abbrev_def] >>
+pop_assum (mp_tac o SYM) >>
+rpt (pop_assum mp_tac) >>
+map_every qid_spec_tac [`Q2`,`Q1`,`Q0`,`pvs`,`s`,`ps`] >>
+Induct >- (rw[] >> rw[]) >>
+rpt strip_tac >>
+qmatch_abbrev_tac `G` >>
+fs[] >>
+qmatch_assum_abbrev_tac `P R = (Q0,Q1,Q2)` >>
+PairCases_on `R` >>
+pop_assum mp_tac >> simp_tac(std_ss)[markerTheory.Abbrev_def] >>
+disch_then (assume_tac o SYM) >> fs[Abbr`P`] >> rw[] >>
+qabbrev_tac `P = pat_to_Cpat (R0,R1,h)` >>
+PairCases_on `P` >>
+pop_assum mp_tac >> rw[markerTheory.Abbrev_def] >>
+pop_assum (assume_tac o SYM) >> fs[] >> rw[] >>
+`good_repl_state R0` by (
+  first_x_assum (qspecl_then [`s`,`pvs`] (match_mp_tac o MP_CANON)) >>
+  fsrw_tac[SATISFY_ss][] ) >>
+first_x_assum (qspecl_then [`h`,`R0`,`R1`] mp_tac) >>
+metis_tac[])
+
 val tac =
   unabbrev_all_tac >>
   rw[force_dom_DRESTRICT_FUNION,FUNION_DEF,DRESTRICT_DEF,MEM_MAP,pairTheory.EXISTS_PROD,FUN_FMAP_DEF,MAP_MAP_o] >>
@@ -2220,34 +2276,42 @@ val tac =
 
 val exp_to_Cexp_canonical = store_thm(
 "exp_to_Cexp_canonical",``
-(∀tp cm p s e. (s = FST p) ∧ (e = SND p) ∧
-  (INJ (FAPPLY s.m) (FDOM s.m) UNIV) ∧
-  (clV_exp e ⊆ FDOM s.m)
- ⇒ canonical_env_Cexp (SND (exp_to_Cexp tp cm p))) ∧
-(∀cm p s v. (s = FST p) ∧ (v = SND p) ∧
-  (INJ (FAPPLY s.m) (FDOM s.m) UNIV) ∧
-  (clV_v v ⊆ FDOM s.m)
- ⇒ canonical_env_Cv (v_to_Cv cm p))``,
-ho_match_mp_tac exp_to_Cexp_ind >>
-strip_tac >- rw[exp_to_Cexp_def] >>
-strip_tac >- rw[exp_to_Cexp_def] >>
-strip_tac >- (
-  rw[exp_to_Cexp_def,EVERY_MEM,MEM_MAP] >>
-  fsrw_tac[boolSimps.DNF_ss][BIGUNION_SUBSET] >>
-  metis_tac[pairTheory.SND] ) >>
-strip_tac >- rw[exp_to_Cexp_def] >>
-strip_tac >- (
-  rw[exp_to_Cexp_def] >> rw[] >> fs[] >>
-
+(∀s e. good_repl_state s ∧
+  (clV_exp e ⊆ FDOM s.vmap)
+ ⇒ canonical_env_Cexp (exp_to_Cexp s e)) ∧
+(∀s defs mk_Cb. good_repl_state s ∧
+  (IMAGE FST (set defs) ∪ BIGUNION (IMAGE (λ(y,x,e). clV_exp e) (set defs)) ⊆ FDOM s.vmap)
+ ⇒ canonical_env_Cexp (SND (Letrec_to_CLetfun s defs mk_Cb))) ∧
+(∀s e mk_Cpes. good_repl_state s ∧
+  (clV_exp e ⊆ FDOM s.vmap)
+ ⇒ canonical_env_Cexp (SND (Mat_to_CMat s e mk_Cpes))) ∧
+(∀s v. good_repl_state s ∧
+  (clV_v v ⊆ FDOM s.vmap)
+ ⇒ canonical_env_Cv (v_to_Cv s v))``,
+ho_match_mp_tac exp_to_Cexp_ind >> rw[exp_to_Cexp_def] >>
 fsrw_tac[boolSimps.DNF_ss][BIGUNION_SUBSET,exp_to_Cexp_def,EVERY_MEM,MEM_MAP,pairTheory.FORALL_PROD] >>
-fsrw_tac[SATISFY_ss][]
-(
+TRY (
+  first_x_assum match_mp_tac >>
+  conj_asm1_tac >- (
+    fsrw_tac[SATISFY_ss][extend_good_repl_state] ) >>
+  imp_res_tac extend_FDOM_SUBSET >>
   fs[SUBSET_DEF] >>
-  metis_tac[] ) >>
-fs[] >>
-unabbrev_all_tac >>
+  NO_TAC)
+>- (
+  BasicProvers.EVERY_CASE_TAC >>
+  fs[LET_THM,pairTheory.UNCURRY] )
+>- (
+  `EVERY canonical_env_Cexp (MAP SND Cpes)` by (
+    fs[LET_THM] >> rw[EVERY_MAP] >>
+    Induct_on `pes` >- (rw[] >> rw[]) >>
+    Cases >> rw[] >>
+    first_x_assum (match_mp_tac o MP_CANON) >>
+    rw[]
+
+  Cases_on `dest_var e` >> fs[] >> rw[] >> rw[]
+  BasicProvers.EVERY_CASE_TAC >> fs[LET_THM] >> rw[]
+
 rw[mk_env_def,EVERY_MAP,EVERY_MEM,pairTheory.FORALL_PROD,FLOOKUP_DEF] >- tac  >>
-BasicProvers.EVERY_CASE_TAC >> TRY (fs[LET_THM,pairTheory.UNCURRY] >> NO_TAC) >>
 imp_res_tac find_index_LESS_LENGTH >>
 rw[] >>
 fs[MEM_MAP,EVERY_MAP,EL_MAP,DIFF_UNION,DIFF_COMM] >>
@@ -2255,7 +2319,6 @@ fs[FOLDR_CONS_triple,LET_THM,pairTheory.UNCURRY,MAP_MAP_o] >>
 qunabbrev_tac `defs'` >> fs[EVERY_MAP,pairTheory.UNCURRY] >>
 rw[EVERY_MEM,pairTheory.FORALL_PROD,FLOOKUP_DEF] >>
 tac)
-*)
 
 val force_dom_FUNION_id = store_thm(
 "force_dom_FUNION_id",
@@ -2388,14 +2451,27 @@ val exp_to_Cexp_vars_below_next = store_thm(
   (exp_to_Cexp tp cm (s,exp) = (s',Cexp))
 ⇒ ∀v. v ∈ free_vars Cexp ⇒ v < s'.n
 exp_to_Cexp_ind
+*)
 
 val exp_to_Cexp_thm1 = store_thm(
 "exp_to_Cexp_thm1",
-``∀tp cm Ps Pexp s exp s' Cexp cenv env res.
-  ((Ps,Pexp) = (s,exp)) ∧
+``∀cenv env exp res. evaluate cenv env exp res ⇒
+  ∀s Cexp. good_env_state env s ∧ (res ≠ Rerr Rtype_error) ∧ (Cexp = exp_to_Cexp s exp) ⇒
+ Cevaluate
+   (force_dom (alist_to_fmap (MAP (λ(x,v). (s.vmap ' x, v_to_Cv s v)) env)) (free_vars Cexp) (CLit (Bool F)))
+   Cexp
+   (map_result (v_to_Cv s) res)``,
+ho_match_mp_tac evaluate_nice_ind >>
+strip_tac >- rw[exp_to_Cexp_def] >>
+strip_tac >- (
+  rw[exp_to_Cexp_def,exp_to_Cexp_canonical] >>
+
+(*
+val exp_to_Cexp_thm1 = store_thm(
+"exp_to_Cexp_thm1",
+``∀tp cm s exp s' Cexp cenv env res.
   good_env_state env s ∧
-  (exp_to_Cexp tp cm (s,exp) = (s',Cexp)) ∧
-  (tp = F) ∧
+  (exp_to_Cexp s exp = Cexp) ∧
   evaluate cenv env exp res ∧
   (res ≠ Rerr Rtype_error) ∧
   good_cmap cenv cm ⇒
