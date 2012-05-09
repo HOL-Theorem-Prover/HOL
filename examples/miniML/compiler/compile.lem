@@ -738,17 +738,21 @@ let extend s vn =
     (<|s with vmap = Pmap.add vn s.nv s.vmap; nv = s.nv+1|>, s.nv)
 
 let rec
-pat_to_Cpat (s, pvs, Pvar vn) =
+pat_to_Cpat s pvs (Pvar vn) =
   let (s',n) = extend s vn in (s', n::pvs, CPvar n)
 and
-pat_to_Cpat (s, pvs, Plit l) = (s, pvs, CPlit l)
+pat_to_Cpat s pvs (Plit l) = (s, pvs, CPlit l)
 and
-pat_to_Cpat (s, pvs, Pcon cn ps) =
-  let (s',pvs,ps) = List.fold_right
-    (fun p (s,pvs,ps) -> let (s',pvs,p) = pat_to_Cpat (s,pvs,p) in
-                           (s',pvs,p::ps))
-         ps (s,pvs,[]) in
-  (s', pvs, CPcon (Pmap.find cn s.cmap) ps)
+pat_to_Cpat s pvs (Pcon cn ps) =
+  let (s',pvs,Cps) = pats_to_Cpats s pvs ps in
+  (s',pvs,CPcon (Pmap.find cn s.cmap) Cps)
+and
+pats_to_Cpats s pvs [] = (s,pvs,[])
+and
+pats_to_Cpats s pvs (p::ps) =
+  let (s,pvs,Cps) = pats_to_Cpats s pvs ps in
+  let (s,pvs,Cp) = pat_to_Cpat s pvs p in
+  (s,pvs,Cp::Cps)
 
 let rec dest_var (Var v) = Some v and dest_var _ = None
 
@@ -819,7 +823,7 @@ exp_to_Cexp s (Mat e pes) =
     Mat_to_CMat s e (fun s' ->
       List.fold_right
       (fun (p,e) (s,Cpes) ->
-        let (s,_pvs,Cp) = pat_to_Cpat (s,[],p) in
+        let (s,_pvs,Cp) = pat_to_Cpat s [] p in
         let Ce = exp_to_Cexp s e in
         (s,(Cp,Ce)::Cpes))
             pes  (s',[])) in
@@ -1394,7 +1398,7 @@ repl_dec rs (Dletrec defs) =
 and
 repl_dec rs (Dlet p e) =
   let (rs,Ce) = Mat_to_CMat rs e
-    (fun s -> let (s',pvs,Cp) = pat_to_Cpat (s,[],p) in (s',[(Cp,CDecl pvs)])) in
+    (fun s -> let (s',pvs,Cp) = pat_to_Cpat s [] p in (s',[(Cp,CDecl pvs)])) in
   let rs = <|rs with cs = <|rs.cs with decl=Some(rs.cs.env,rs.cs.sz)|> |> in
   compile_Cexp rs Ce
 

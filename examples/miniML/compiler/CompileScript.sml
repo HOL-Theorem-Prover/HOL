@@ -801,17 +801,21 @@ val _ = Define `
 
  val pat_to_Cpat_defn = Hol_defn "pat_to_Cpat" `
 
-(pat_to_Cpat (s, pvs, Pvar vn) =
+(pat_to_Cpat s pvs (Pvar vn) =
   let (s',n) = extend s vn in (s', n::pvs, CPvar n))
 /\
-(pat_to_Cpat (s, pvs, Plit l) = (s, pvs, CPlit l))
+(pat_to_Cpat s pvs (Plit l) = (s, pvs, CPlit l))
 /\
-(pat_to_Cpat (s, pvs, Pcon cn ps) =
-  let (s',pvs,ps) = FOLDR 
-    (\ p (s,pvs,ps) . let (s',pvs,p) = pat_to_Cpat (s,pvs,p) in
-                           (s',pvs,p::ps))  (s,pvs,[]) 
-         ps in
-  (s', pvs, CPcon (FAPPLY  s.cmap  cn) ps))`;
+(pat_to_Cpat s pvs (Pcon cn ps) =
+  let (s',pvs,Cps) = pats_to_Cpats s pvs ps in
+  (s',pvs,CPcon (FAPPLY  s.cmap  cn) Cps))
+/\
+(pats_to_Cpats s pvs [] = (s,pvs,[]))
+/\
+(pats_to_Cpats s pvs (p::ps) =
+  let (s,pvs,Cps) = pats_to_Cpats s pvs ps in
+  let (s,pvs,Cp) = pat_to_Cpat s pvs p in
+  (s,pvs,Cp::Cps))`;
 
 val _ = Defn.save_defn pat_to_Cpat_defn;
 
@@ -888,7 +892,7 @@ val _ = Defn.save_defn dest_var_defn;
     Mat_to_CMat s e (\ s' .
       FOLDR 
       (\ (p,e) (s,Cpes) .
-        let (s,_pvs,Cp) = pat_to_Cpat (s,[],p) in
+        let (s,_pvs,Cp) = pat_to_Cpat s [] p in
         let Ce = exp_to_Cexp s e in
         (s,(Cp,Ce)::Cpes))   (s',[]) 
             pes) in
@@ -1514,7 +1518,7 @@ val _ = Defn.save_defn number_constructors_defn;
 /\
 (repl_dec rs (Dlet p e) =
   let (rs,Ce) = Mat_to_CMat rs e
-    (\ s . let (s',pvs,Cp) = pat_to_Cpat (s,[],p) in (s',[(Cp,CDecl pvs)])) in
+    (\ s . let (s',pvs,Cp) = pat_to_Cpat s [] p in (s',[(Cp,CDecl pvs)])) in
   let rs = rs with<| cs := rs.cs with<| decl:=SOME(rs.cs.env,rs.cs.sz)|> |> in
   compile_Cexp rs Ce)`;
 

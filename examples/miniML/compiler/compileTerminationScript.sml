@@ -191,13 +191,7 @@ val (exp_to_Cexp_def,exp_to_Cexp_ind) = register "exp_to_Cexp" (
   MAP_EVERY (fn q => Q.ISPEC_THEN q mp_tac SUM_MAP_MEM_bound) [`exp2_size`,`exp5_size`,`exp7_size`,`exp_size`,`v_size`] >>
   rw[] >> res_tac >> fs[exp_size_def] >> srw_tac[ARITH_ss][]))
 
-val (pat_to_Cpat_def, pat_to_Cpat_ind) = register "pat_to_Cpat" (
-  tprove_no_defn ((pat_to_Cpat_def,pat_to_Cpat_ind),
-  WF_REL_TAC `measure (pat_size o SND o SND)` >>
-  srw_tac [ARITH_ss][pat1_size_thm] >>
-  imp_res_tac SUM_MAP_MEM_bound >>
-  pop_assum (qspec_then `pat_size` mp_tac) >>
-  srw_tac[ARITH_ss][]))
+val pat_to_Cpat_def = save_thm("pat_to_Cpat_def",pat_to_Cpat_def)
 
 val (compile_varref_def, compile_varref_ind) = register "compile_varref" (
   tprove_no_defn ((compile_varref_def, compile_varref_ind),
