@@ -1046,6 +1046,53 @@ val canonicals_unique = store_thm(
   metis_tac[])
 *)
 
+val elsOf_shift1 = store_thm(
+  "elsOf_shift1",
+  ``elsOf (shift1 w) = IMAGE (SUC ++ I) (elsOf w)``,
+  simp[shift1_def, elsOf_def, EXTENSION, #repabs_pseudo_id wellorder_results,
+       wellorder_shift1, #termP_term_REP wellorder_results, in_domain,
+       in_range, EXISTS_SUM, pairTheory.EXISTS_PROD] >>
+  simp_tac (srw_ss() ++ DNF_ss)[] >> metis_tac[]);
+
+val FORALL_NUM = store_thm(
+  "FORALL_NUM",
+  ``(!n. P n) <=> P 0 /\ !n. P (SUC n)``,
+  metis_tac [arithmeticTheory.num_CASES])
+
+val WIN_shift1 = store_thm(
+  "WIN_shift1",
+  ``!x y.
+      (x,y) WIN shift1 w <=>
+      x <> INL 0 ∧ y <> INL 0 ∧ ((PRE ++ I) x, (PRE ++ I) y) WIN w``,
+  simp[shift1_def, #repabs_pseudo_id wellorder_results, wellorder_shift1,
+       #termP_term_REP wellorder_results, strict_def, pairTheory.EXISTS_PROD,
+       EXISTS_SUM, FORALL_SUM] >>
+  simp_tac (srw_ss() ++ DNF_ss) [] >> rpt conj_tac >| [
+    simp[Once FORALL_NUM] >> qx_gen_tac `a` >> simp[Once FORALL_NUM],
+    simp[Once FORALL_NUM],
+    simp[Once FORALL_NUM]
+  ]);
+
+val PRE_SUC_PP = prove(
+  ``(PRE ++ I) ((SUC ++ I) x) = x``,
+  Cases_on `x` >> rw[]);
+
+val SUC_PP11 = prove(
+  ``((SUC ++ I) x1 = (SUC ++ I) x2) = (x1 = x2)``,
+  Cases_on `x1` >> Cases_on `x2` >> rw[]);
+
+val SUC_PP_NEQ0 = prove(
+  ``(SUC ++ I) x <> INL 0``,
+  Cases_on `x` >> rw[])
+
+val shift1_orderiso = store_thm(
+  "shift1_orderiso",
+  ``orderiso w1 w2 ==> orderiso (shift1 w1) (shift1 w2)``,
+  simp[orderiso_def, elsOf_shift1, WIN_shift1] >>
+  disch_then (Q.X_CHOOSE_THEN `f` strip_assume_tac) >>
+  qexists_tac `(SUC ++ I) o f o (PRE ++ I)` >>
+  simp_tac (srw_ss() ++ DNF_ss) [PRE_SUC_PP, SUC_PP11, SUC_PP_NEQ0] >>
+  metis_tac[]);
 
 (* perform quotient, creating a type of "pre-ordinals".
 
