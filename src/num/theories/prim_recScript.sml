@@ -79,6 +79,7 @@ val LESS_DEF = new_definition (
   Term `$< m n = ?P. (!n. P(SUC n) ==> P n) /\ P m /\ ~(P n)`)
 val _ = set_fixity "<" (Infix(NONASSOC, 450))
 val _ = TeX_notation {hol = "<", TeX = ("\\HOLTokenLt{}", 1)}
+val _ = OpenTheoryMap.OpenTheory_const_name{const={Thy="prim_rec",Name="<"},name=(["Number","Natural"],"<")}
 
 val INV_SUC_EQ = save_thm("INV_SUC_EQ",
    GENL [--`m:num`--, --`n:num`--]
@@ -397,7 +398,7 @@ val SIMP_REC_THM = store_thm (
  *---------------------------------------------------------------------------*)
 val PRE_DEF = new_definition("PRE_DEF",
     --`PRE m = (if (m=0) then 0 else @n. m = SUC n)`--);
-
+val _ = OpenTheoryMap.OpenTheory_const_name{const={Thy="prim_rec",Name="PRE"},name=(["Number","Natural"],"pre")}
 
 val PRE =
  store_thm

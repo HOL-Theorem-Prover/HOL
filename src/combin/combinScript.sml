@@ -33,6 +33,13 @@ val _ = set_fixity ":>" (Infixl 310);
 val _ = set_fixity "=+" (Infix(NONASSOC, 320));
 val _ = overload_on("=+", ``UPDATE``);
 
+local open OpenTheoryMap in
+  val _ = OpenTheory_const_name {const={Thy="combin",Name="I"},name=(["Function"],"id")}
+  val _ = OpenTheory_const_name {const={Thy="combin",Name="o"},name=(["Function"],"o")}
+  val _ = OpenTheory_const_name {const={Thy="combin",Name="C"},name=(["Function"],"C")}
+  val _ = OpenTheory_const_name {const={Thy="combin",Name="S"},name=(["Function"],"S")}
+  val _ = OpenTheory_const_name {const={Thy="combin",Name="K"},name=(["Function"],"K")}
+end
 (*---------------------------------------------------------------------------*
  * In I_DEF, the type constraint is necessary in order to meet one of        *
  * the criteria for a definition : the tyvars of the lhs must be a           *

@@ -128,8 +128,9 @@ val _ = add_rule {block_style = (AroundEachPhrase, (PP.CONSISTENT,0)),
 val _ = overload_on ("()", ``one``);
 val _ = type_abbrev("unit",``:one``);
 local open OpenTheoryMap in
-val _ = OpenTheory_tyop_name{tyop={Thy="one",Tyop="one"},name="Data.Unit.unit"}
-val _ = OpenTheory_const_name{const={Thy="one",Name="one"},name="Data.Unit.()"}
+val ns = ["Data","Unit"]
+val _ = OpenTheory_tyop_name{tyop={Thy="one",Tyop="one"},name=(ns,"unit")}
+val _ = OpenTheory_const_name{const={Thy="one",Name="one"},name=(ns,"()")}
 end
 
 val one_induction = Q.store_thm

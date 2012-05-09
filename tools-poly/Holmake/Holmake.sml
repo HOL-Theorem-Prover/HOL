@@ -267,6 +267,7 @@ fun parse_command_line list = let
   val (rem, allfast) = find_toggle "--fast" rem
   val (rem, fastfiles) = find_pairs "-f" rem
   val (rem, qofp) = find_toggle "--qof" rem
+  val (rem, ot) = find_toggle "--ot" rem
   val (rem, no_hmakefile) = find_toggle "--no_holmakefile" rem
   val (rem, no_prereqs) = find_toggle "--no_prereqs" rem
   val (rem, user_hmakefile) =
@@ -289,7 +290,7 @@ in
    additional_includes=includes,
    dontmakes=dontmakes, no_sigobj = no_sigobj,
    quit_on_failure = qofp, no_prereqs = no_prereqs,
-   no_hmakefile = no_hmakefile,
+   opentheory = ot, no_hmakefile = no_hmakefile,
    allfast = allfast, fastfiles = fastfiles,
    user_hmakefile = user_hmakefile,
    no_overlay = no_overlay,
@@ -332,7 +333,7 @@ end
 
 (* parameters which vary from run to run according to the command-line *)
 val {targets, debug, dontmakes, show_usage, allfast, fastfiles,
-     always_rebuild_deps, interactive_flag,
+     always_rebuild_deps, interactive_flag, opentheory,
      additional_includes = cline_additional_includes,
      cmdl_HOLDIR, cmdl_POLYMLLIBDIR, cmdl_POLY, polynothol,
      no_sigobj = cline_no_sigobj, no_prereqs,
@@ -1049,6 +1050,8 @@ in
           then ["fastbuild.uo", scriptuo]
           else if quit_on_failure then [scriptuo]
           else ["holmakebuild.uo", scriptuo]
+      val objectfiles0 =
+        if opentheory then "loggingBossLib.uo" :: objectfiles0 else objectfiles0
       val objectfiles =
         if polynothol then
           objectfiles0
@@ -1417,6 +1420,7 @@ in
      "    --no_prereqs         : don't recursively build in INCLUDES\n",
      "    --no_sigobj | -n     : don't use any HOL files from sigobj\n",
      "    --overlay <file>     : use given .ui file as overlay\n",
+     "    --ot                 : log an OpenTheory article for each theory\n",
      "    --qof                : quit on tactic failure\n",
      "    --quiet              : be quieter in operation\n",
      "    --rebuild_deps | -r  : always rebuild dependency info files \n"]

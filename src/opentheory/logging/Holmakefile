@@ -1,0 +1,13 @@
+mkholdecide: holdecide.uo
+	HOLMOSMLC -o $@ $<
+holdecide.o: mkholdecide
+	./$<
+holdecide: holdecide.o
+	cc -static -o $@ $< -lpolymain -lpolyml -lstdc++ -lm -ldl -lpthread -lgmp
+mkskico: skico.uo
+	HOLMOSMLC -o $@ $<
+skico.o: mkskico
+	./$<
+skico: skico.o
+	cc -static -o $@ $< -lpolymain -lpolyml -lstdc++ -lm -ldl -lpthread -lgmp
+EXTRA_CLEANS=holdecide.o mkholdecide holdecide skico.o mkskico skico

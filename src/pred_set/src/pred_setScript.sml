@@ -32,6 +32,12 @@ val _ = new_theory "pred_set";
 val _ = type_abbrev ("set", ``:'a -> bool``);
 val _ = disable_tyabbrev_printing "set";
 
+local open OpenTheoryMap
+  val ns = ["Set"]
+in
+  fun ot0 x y = OpenTheory_const_name{const={Thy="pred_set",Name=x},name=(ns,y)}
+  fun ot x = ot0 x x
+end
 
 (* =====================================================================*)
 (* Membership. 								*)
@@ -108,6 +114,7 @@ val GSPEC_DEF_LEMMA =
 val GSPECIFICATION = new_specification
   ("GSPECIFICATION", ["GSPEC"], GSPEC_DEF_LEMMA);
 val _ = TeX_notation {hol = "|", TeX = ("\\HOLTokenBar{}", 1)}
+val _ = ot0 "GSPEC" "specification"
 
 (* --------------------------------------------------------------------- *)
 (* load generalized specification code.					 *)
@@ -182,6 +189,7 @@ val EMPTY_DEF = new_definition
 open Unicode
 val _ = overload_on (UChar.emptyset, ``pred_set$EMPTY``)
 val _ = TeX_notation {hol = UChar.emptyset, TeX = ("\\HOLTokenEmpty{}", 1)}
+val _ = ot0 "EMPTY" "{}"
 
 val NOT_IN_EMPTY =
     store_thm
@@ -270,6 +278,7 @@ val _ = set_fixity "SUBSET" (Infix(NONASSOC, 450))
 val _ = unicode_version { u = UChar.subset, tmnm = "SUBSET"};
 val _ = TeX_notation {hol = "SUBSET", TeX = ("\\HOLTokenSubset{}", 1)}
 val _ = TeX_notation {hol = UChar.subset, TeX = ("\\HOLTokenSubset{}", 1)}
+val _ = ot0 "SUBSET" "subset"
 
 val SUBSET_TRANS = store_thm
     ("SUBSET_TRANS",
@@ -333,6 +342,7 @@ val _ = set_fixity "PSUBSET" (Infix(NONASSOC, 450))
 val _ = unicode_version { u = UTF8.chr 0x2282, tmnm = "PSUBSET"}
 val _ = TeX_notation {hol = "PSUBSET", TeX = ("\\HOLTokenPSubset", 1)}
 val _ = TeX_notation {hol = UTF8.chr 0x2282, TeX = ("\\HOLTokenPSubset", 1)}
+val _ = ot0 "PSUBSET" "properSubset"
 
 val PSUBSET_TRANS = store_thm ("PSUBSET_TRANS",
    (--`!s:'a set. !t u. (s PSUBSET t /\ t PSUBSET u) ==> (s PSUBSET u)`--),
@@ -380,6 +390,7 @@ val UNION_DEF = new_infixl_definition
 val _ = unicode_version{ u = UChar.union, tmnm = "UNION"}
 val _ = TeX_notation {hol = "UNION", TeX = ("\\HOLTokenUnion{}", 1)}
 val _ = TeX_notation {hol = UChar.union, TeX = ("\\HOLTokenUnion{}", 1)}
+val _ = ot0 "UNION" "union"
 
 val IN_UNION = store_thm
      ("IN_UNION",
@@ -624,6 +635,7 @@ val DISJOINT_SUBSET = Q.store_thm
 val DIFF_DEF = new_infixl_definition
     ("DIFF_DEF",
      (--`DIFF s t = {x:'a | x IN s /\ ~ (x IN t)}`--),500);
+val _ = ot0 "DIFF" "-"
 
 val IN_DIFF = store_thm
     ("IN_DIFF",
@@ -687,6 +699,7 @@ val UNION_DIFF = store_thm(
 val INSERT_DEF =
     new_infixr_definition
     ("INSERT_DEF", (--`INSERT (x:'a) s = {y | (y = x) \/ y IN s}`--),490);
+val _ = ot0 "INSERT" "insert"
 
 (* --------------------------------------------------------------------- *)
 (* set up sets as a list-form  the {x1;...;xn} notation                  *)
@@ -1092,6 +1105,7 @@ val CHOICE_EXISTS =
      REWRITE_TAC []);
 
 val CHOICE_DEF = new_specification("CHOICE_DEF",["CHOICE"],CHOICE_EXISTS);
+val _ = ot0 "CHOICE" "choice"
 
 (* ===================================================================== *)
 (* The REST of a set after removing a chosen element.			 *)
@@ -1145,6 +1159,7 @@ val REST_PSUBSET =
 val SING_DEF =
     new_definition
     ("SING_DEF", (--`SING s = ?x:'a. s = {x}`--));
+val _ = ot0 "SING" "singleton"
 
 val SING =
     store_thm
@@ -1659,6 +1674,7 @@ val FINITE_DEF =
  ("FINITE_DEF",
   (--`!s:'a set.
     FINITE s = !P. P EMPTY /\ (!s. P s ==> !e. P (e INSERT s)) ==> P s`--));
+val _ = ot0 "FINITE" "finite"
 
 val FINITE_EMPTY =
     store_thm

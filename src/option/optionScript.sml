@@ -39,6 +39,15 @@ val option_TY_DEF =
    prove(Term`?x:'a + one. (\x.T) x`,
           BETA_TAC THEN EXISTS_TAC(--`x:'a + one`--) THEN ACCEPT_TAC TRUTH));
 
+local
+  open OpenTheoryMap
+  val ns = ["Data","Option"]
+  val _ = OpenTheory_tyop_name{tyop={Thy="option",Tyop="option"},name=(ns,"option")}
+in
+  fun ot0 x y = OpenTheory_const_name{const={Thy="option",Name=x},name=(ns,y)}
+  fun ot x = ot0 x x
+end
+
 (*---------------------------------------------------------------------------*
  *  val option_REP_ABS_DEF =                                                 *
  *     |- (!a. option_ABS (option_REP a) = a) /\                             *
@@ -67,6 +76,8 @@ val option_REP_ONTO    = reduce(prove_rep_fn_onto option_REP_ABS_DEF);
 
 val SOME_DEF = new_definition("SOME_DEF",Term`!x. SOME x = option_ABS(INL x)`);
 val NONE_DEF = new_definition("NONE_DEF",Term`NONE = option_ABS(INR one)`);
+val _ = ot "SOME"
+val _ = ot "NONE"
 
 val option_CASES_orig = prove
 (Term`!opt. (?x. opt = SOME x) \/ (opt = NONE)`,
@@ -138,6 +149,7 @@ val option_case_def = Prim_rec.new_recursive_definition
    rec_axiom=option_Axiom,
    def = Term`(option_case u f NONE = u) /\
               (option_case (u:'b) f (SOME (x:'a)) = f x)`};
+val _ = ot0 "option_case" "case"
 
 val OPTION_MAP_DEF = Prim_rec.new_recursive_definition
  {name="OPTION_MAP_DEF",
@@ -146,6 +158,7 @@ val OPTION_MAP_DEF = Prim_rec.new_recursive_definition
   Term`(OPTION_MAP (f:'a->'b) (SOME x) = SOME (f x)) /\
        (OPTION_MAP f NONE = NONE)`};
 val _ = export_rewrites ["OPTION_MAP_DEF"]
+val _ = ot0 "OPTION_MAP" "map"
 
 val IS_SOME_DEF = Prim_rec.new_recursive_definition
   {name="IS_SOME_DEF",
@@ -161,6 +174,7 @@ val THE_DEF = Prim_rec.new_recursive_definition
   {name="THE_DEF",
    rec_axiom=option_Axiom,
    def = Term `THE (SOME x) = x`};
+val _ = ot0 "THE" "the"
 
 val OPTION_MAP2_DEF = Q.new_definition(
   "OPTION_MAP2_DEF",
@@ -174,6 +188,7 @@ val OPTION_JOIN_DEF = Prim_rec.new_recursive_definition
    rec_axiom = option_Axiom,
    def = Term`(OPTION_JOIN NONE = NONE) /\
               (OPTION_JOIN (SOME x) = x)`};
+val _ = ot0 "OPTION_JOIN" "join"
 
 val option_rws =
     [IS_SOME_DEF, THE_DEF, IS_NONE_DEF, option_nchotomy,

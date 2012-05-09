@@ -1,0 +1,31 @@
+OPTIONS = NO_OVERLAY
+
+TAGD = $(dprot $(SIGOBJ)/Tag.ui)
+
+FTAGD = $(dprot $(SIGOBJ)/FinalTag-sig.ui)
+FTAG = $(protect $(SIGOBJ)/FinalTag-sig.ui)
+
+FTYPED = $(dprot $(SIGOBJ)/FinalType-sig.ui)
+FTYPE = $(protect $(SIGOBJ)/FinalType-sig.ui)
+
+FTERMD = $(dprot $(SIGOBJ)/FinalTerm-sig.ui)
+FTERM = $(protect $(SIGOBJ)/FinalTerm-sig.ui)
+
+FTHMD = $(dprot $(SIGOBJ)/FinalThm-sig.ui)
+FTHM = $(protect $(SIGOBJ)/FinalThm-sig.ui)
+
+LIBD = $(dprot $(SIGOBJ)/Lib.ui)
+
+HOLSETD = $(dprot $(SIGOBJ)/HOLset.ui)
+
+Overlay.uo: Overlay.sml Net.ui Thm.ui $(FTAGD) $(FTYPED) $(FTERMD) $(FTHMD)
+	$(HOLMOSMLC) -c -toplevel $(FTAG) $(FTYPE) $(FTERM) $(FTHM) Net.ui Overlay.sml
+
+Type.ui : Type.sig $(FTYPED) $(dprot $(SIGOBJ)/KernelSig.ui) $(LIBD)
+	$(HOLMOSMLC) -c $(FTYPE) $<
+
+Term.ui: Term.sig $(FTERMD) Type.ui
+	$(HOLMOSMLC) -c $(FTERM) $<
+
+Thm.ui: Thm.sig $(FTHMD) $(TAGD) Term.ui
+	$(HOLMOSMLC) -c $(FTHM) $<

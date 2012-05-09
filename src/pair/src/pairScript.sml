@@ -51,6 +51,14 @@ val _ = add_infix_type
           ParseName = SOME "#", Name = "prod",
           Assoc = HOLgrammars.RIGHT};
 val _ = TeX_notation { hol = "#", TeX = ("\\HOLTokenProd{}", 1)}
+local
+  open OpenTheoryMap
+  val ns = ["Data","Pair"]
+in
+  val _ = OpenTheory_tyop_name{tyop={Thy="pair",Tyop="prod"},name=(ns,"*")}
+  fun ot0 x y = OpenTheory_const_name{const={Thy="pair",Name=x},name=(ns,y)}
+  fun ot x = ot0 x x
+end
 
 val REP_ABS_PAIR = Q.prove
 (`!x y. REP_prod (ABS_prod ^pairfn) = ^pairfn`,
@@ -69,6 +77,7 @@ val COMMA_DEF =
  Q.new_definition
   ("COMMA_DEF",
    `$, x y = ABS_prod ^pairfn`);
+val _ = ot","
 
 val _ = add_rule {term_name = ",", fixity = Infixr 50,
                   pp_elements = [TOK ",", BreakSpace(0,0)],
@@ -135,6 +144,8 @@ in
 val FST = save_thm("FST", itlist Q.GEN [`x`,`y`] th2);
 val SND = save_thm("SND", itlist Q.GEN [`x`,`y`] th3);
 end;
+val _ = ot0 "FST" "fst"
+val _ = ot0 "SND" "snd"
 
 val PAIR_FST_SND_EQ = store_thm(
   "PAIR_FST_SND_EQ",
@@ -159,6 +170,7 @@ val CURRY_DEF = Q.new_definition
 val UNCURRY = Q.new_definition
   ("UNCURRY",
    `UNCURRY f (v:'a#'b) = f (FST v) (SND v)`);
+val _ = ot0 "UNCURRY" "uncurry"
 
 val UNCURRY_VAR = save_thm("UNCURRY_VAR", UNCURRY);  (* compatibility *)
 
@@ -486,6 +498,7 @@ RW_TAC bool_ss [EXISTS_UNIQUE_THM]
 
 val pair_case_def =
   new_definition("pair_case_def", Term`pair_case = UNCURRY`);
+val _ = ot0 "pair_case" "case"
 
 val pair_case_thm = save_thm("pair_case_thm",
    Rewrite.REWRITE_RULE [UNCURRY_DEF]

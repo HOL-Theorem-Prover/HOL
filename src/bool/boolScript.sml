@@ -22,20 +22,22 @@ val _ = new_theory "bool";
  *---------------------------------------------------------------------------*)
 
 (* parsing/printing support for theory min *)
-val _ = OpenTheory_const_name {const={Thy="min",Name="="},name="="}
-val _ = OpenTheory_tyop_name {tyop={Thy="min",Tyop="fun"},name="->"}
-val _ = OpenTheory_tyop_name {tyop={Thy="min",Tyop="bool"},name="bool"}
+val _ = OpenTheory_const_name {const={Thy="min",Name="="},name=([],"=")}
+val _ = OpenTheory_tyop_name {tyop={Thy="min",Tyop="fun"},name=([],"->")}
+val _ = OpenTheory_tyop_name {tyop={Thy="min",Tyop="bool"},name=([],"bool")}
+
+val ns = ["Data","Bool"]
 
 val _ = unicode_version {u = UChar.imp, tmnm = "==>"}
 val _ = TeX_notation {hol = "==>", TeX = ("\\HOLTokenImp{}", 1)}
 val _ = TeX_notation {hol = UChar.imp, TeX = ("\\HOLTokenImp{}", 1)}
-val _ = OpenTheory_const_name {const={Thy="min",Name="==>"},name="Data.Bool.==>"}
+val _ = OpenTheory_const_name {const={Thy="min",Name="==>"},name=(ns,"==>")}
 
 val _ = TeX_notation {hol = "\\", TeX = ("\\HOLTokenLambda{}", 1)}
 val _ = TeX_notation {hol = UChar.lambda, TeX = ("\\HOLTokenLambda{}", 1)}
 
 val _ = TeX_notation {hol = "@", TeX = ("\\HOLTokenHilbert{}", 1)}
-val _ = OpenTheory_const_name {const={Thy="min",Name="@"},name="Data.Bool.select"}
+val _ = OpenTheory_const_name {const={Thy="min",Name="@"},name=(ns,"select")}
 
 (* records *)
 val _ = TeX_notation {hol = "<|", TeX = ("\\HOLTokenLeftrec{}", 2)}
@@ -62,7 +64,7 @@ val T_DEF =
    ("T_DEF",          Term `T = ((\x:bool. x) = \x:bool. x)`);
 
 val _ = add_const "T";
-val _ = OpenTheory_const_name {const={Thy="bool",Name="T"},name="Data.Bool.T"}
+val _ = OpenTheory_const_name {const={Thy="bool",Name="T"},name=(ns,"T")}
 
 val FORALL_DEF =
  Definition.new_definition
@@ -72,7 +74,7 @@ val _ = (set_fixity "!" Binder; add_const "!");
 val _ = unicode_version {u = UChar.forall, tmnm = "!"};
 val _ = TeX_notation {hol = "!", TeX = ("\\HOLTokenForall{}",1)}
 val _ = TeX_notation {hol = UChar.forall, TeX = ("\\HOLTokenForall{}",1)}
-val _ = OpenTheory_const_name {const={Thy="bool",Name="!"},name="Data.Bool.!"}
+val _ = OpenTheory_const_name {const={Thy="bool",Name="!"},name=(ns,"!")}
 
 val EXISTS_DEF =
  Definition.new_definition
@@ -82,7 +84,7 @@ val _ = (set_fixity "?" Binder; add_const "?");
 val _ = unicode_version {u = UChar.exists, tmnm = "?"}
 val _ = TeX_notation {hol = "?", TeX = ("\\HOLTokenExists{}",1)}
 val _ = TeX_notation {hol = UChar.exists, TeX = ("\\HOLTokenExists{}",1)}
-val _ = OpenTheory_const_name {const={Thy="bool",Name="?"},name="Data.Bool.?"}
+val _ = OpenTheory_const_name {const={Thy="bool",Name="?"},name=(ns,"?")}
 
 val AND_DEF =
  Definition.new_definition
@@ -92,7 +94,7 @@ val _ = (add_infix ("/\\", 400, RIGHT); add_const "/\\");
 val _ = unicode_version {u = UChar.conj, tmnm = "/\\"};
 val _ = TeX_notation {hol = "/\\", TeX = ("\\HOLTokenConj{}",1)}
 val _ = TeX_notation {hol = UChar.conj, TeX = ("\\HOLTokenConj{}",1)}
-val _ = OpenTheory_const_name {const={Thy="bool",Name="/\\"},name="Data.Bool./\\\\"}
+val _ = OpenTheory_const_name {const={Thy="bool",Name="/\\"},name=(ns,"/\\")}
 
 
 val OR_DEF =
@@ -103,7 +105,7 @@ val _ = (add_infix ("\\/", 300, RIGHT); add_const "\\/");
 val _ = unicode_version {u = UChar.disj, tmnm = "\\/"}
 val _ = TeX_notation {hol = "\\/", TeX = ("\\HOLTokenDisj{}",1)}
 val _ = TeX_notation {hol = UChar.disj, TeX = ("\\HOLTokenDisj{}",1)}
-val _ = OpenTheory_const_name {const={Thy="bool",Name="\\/"},name="Data.Bool.\\\\/"}
+val _ = OpenTheory_const_name {const={Thy="bool",Name="\\/"},name=(ns,"\\/")}
 
 
 val F_DEF =
@@ -111,14 +113,14 @@ val F_DEF =
    ("F_DEF",          Term `F = !t. t`);
 
 val _ = Parse.add_const "F";
-val _ = OpenTheory_const_name {const={Thy="bool",Name="F"},name="Data.Bool.F"}
+val _ = OpenTheory_const_name {const={Thy="bool",Name="F"},name=(ns,"F")}
 
 val NOT_DEF =
  Definition.new_definition
    ("NOT_DEF",        Term `~ = \t. t ==> F`);
 
 val _ = add_const "~";
-val _ = OpenTheory_const_name {const={Thy="bool",Name="~"},name="Data.Bool.~"}
+val _ = OpenTheory_const_name {const={Thy="bool",Name="~"},name=(ns,"~")}
 
 val EXISTS_UNIQUE_DEF =
 Definition.new_definition
@@ -130,14 +132,14 @@ val _ = (set_fixity "?!" Binder; add_const "?!")
 val _ = unicode_version { u = UChar.exists ^ "!", tmnm = "?!"}
 val _ = TeX_notation {hol = "?!", TeX = ("\\HOLTokenUnique{}",2)}
 val _ = TeX_notation {hol = UChar.exists ^ "!", TeX = ("\\HOLTokenUnique{}",2)}
-val _ = OpenTheory_const_name {const={Thy="bool",Name="?!"},name="Data.Bool.?!"}
+val _ = OpenTheory_const_name {const={Thy="bool",Name="?!"},name=(ns,"?!")}
 
 val LET_DEF =
  Definition.new_definition
    ("LET_DEF",        Term `LET = \(f:'a->'b) x. f x`);
 
 val _ = add_const "LET";
-val _ = OpenTheory_const_name {const={Thy="bool",Name="LET"},name="Data.Bool.let"}
+val _ = OpenTheory_const_name {const={Thy="bool",Name="LET"},name=(ns,"let")}
 
 val COND_DEF =
  Definition.new_definition
@@ -145,7 +147,7 @@ val COND_DEF =
                                       @x:'a. ((t=T) ==> (x=t1)) /\
                                              ((t=F) ==> (x=t2))`);
 val _ = add_const "COND";
-val _ = OpenTheory_const_name {const={Thy="bool",Name="COND"},name="Data.Bool.cond"}
+val _ = OpenTheory_const_name {const={Thy="bool",Name="COND"},name=(ns,"cond")}
 
 val ONE_ONE_DEF =
  Definition.new_definition
@@ -168,6 +170,8 @@ val TYPE_DEFINITION =
                               (!x. P x = (?x'. x = rep x'))`);
 
 val _ = add_const "TYPE_DEFINITION";
+val _ = OpenTheory_const_name {const={Thy="bool",Name="TYPE_DEFINITION"},name=(["HOL4"],"TYPE_DEFINITION")}
+val _ = OpenTheory_const_name {const={Thy="bool",Name="DATATYPE"},name=(["HOL4"],"DATATYPE")}
 
 
 (*---------------------------------------------------------------------------*
@@ -241,6 +245,7 @@ val INFINITY_AX =
  *---------------------------------------------------------------------------*)
 
 val arb = new_constant("ARB",alpha);  (* Doesn't have to be defined at all. *)
+val _ = OpenTheory_const_name {const={Thy="bool",Name="ARB"},name=(ns,"arb")}
 
 val bool_case_DEF =
  Definition.new_definition
@@ -252,6 +257,7 @@ val literal_case_DEF =
 
 val _ = List.app add_const ["ARB", "bool_case", "literal_case"];
 val _ = overload_on ("case", ``bool$literal_case``);
+val _ = OpenTheory_const_name {const={Thy="bool",Name="literal_case"},name=(["HOL4"],"literal_case")}
 
 val IN_DEF =
  Definition.new_definition
@@ -261,6 +267,7 @@ val _ = (add_infix ("IN", 425, Parse.NONASSOC); add_const "IN");
 val _ = unicode_version {u = UChar.setelementof, tmnm = "IN"};
 val _ = TeX_notation {hol = "IN", TeX = ("\\HOLTokenIn{}",1)}
 val _ = TeX_notation {hol = UChar.setelementof, TeX = ("\\HOLTokenIn{}",1)}
+val _ = OpenTheory_const_name {const={Thy="bool",Name="IN"},name=(["Set"],"in")}
 
 val RES_FORALL_DEF =
  Definition.new_definition
@@ -299,7 +306,7 @@ val BOUNDED_DEF =
   Definition.new_definition
     ("BOUNDED_DEF",
      Term `BOUNDED = \(v:bool). T`);
-
+val _ = OpenTheory_const_name {const={Thy="bool",Name="BOUNDED"},name=(["HOL4"],"bounded")}
 
 (*---------------------------------------------------------------------------*)
 (* Support for detecting datatypes in theory files                           *)
