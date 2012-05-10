@@ -1087,12 +1087,70 @@ val SUC_PP_NEQ0 = prove(
 
 val shift1_orderiso = store_thm(
   "shift1_orderiso",
-  ``orderiso w1 w2 ==> orderiso (shift1 w1) (shift1 w2)``,
-  simp[orderiso_def, elsOf_shift1, WIN_shift1] >>
+  ``orderiso w (shift1 w)``,
+  rw[orderiso_thm] >> qexists_tac `SUC ++ I` >>
+  simp[elsOf_shift1, BIJ_DEF, INJ_DEF, SURJ_DEF, SUC_PP11, WIN_shift1,
+       PRE_SUC_PP, SUC_PP_NEQ0] >> metis_tac[])
+
+val elsOf_ADD1 = store_thm(
+  "elsOf_ADD1",
+  ``elsOf (ADD1 e w) = e INSERT elsOf w``,
+  simp[EXTENSION, ADD1_def, Once elsOf_def, SimpLHS] >>
+  qx_gen_tac `x` >>
+  rw[#repabs_pseudo_id wellorder_results, wellorder_ADD1] >| [
+    fs[elsOf_def] >> metis_tac[],
+    simp[in_domain, in_range] >> metis_tac [WLE_elsOf]
+  ]);
+
+val strict_UNION = store_thm(
+  "strict_UNION",
+  ``strict (r1 ∪ r2) = strict r1 ∪ strict r2``,
+  simp[EXTENSION, pairTheory.FORALL_PROD, strict_def] >> metis_tac[]);
+
+val WIN_ADD1 = store_thm(
+  "WIN_ADD1",
+  ``(x,y) WIN ADD1 e w <=>
+      e NOTIN elsOf w /\ x IN elsOf w /\ (y = e) \/
+      (x,y) WIN w``,
+  rw[#repabs_pseudo_id wellorder_results, wellorder_ADD1, ADD1_def,
+     strict_def] >> metis_tac[]);
+
+val elsOf_woSUC = store_thm(
+  "elsOf_woSUC",
+  ``elsOf (woSUC w) = INL 0 INSERT IMAGE (SUC ++ I) (elsOf w)``,
+  simp[woSUC_def, elsOf_ADD1, elsOf_shift1]);
+
+val WIN_woSUC = save_thm(
+  "WIN_woSUC",
+  ``(x,y) WIN woSUC w``
+     |> SIMP_CONV (srw_ss()) [woSUC_def, WIN_ADD1, ZERO_NOT_SHIFT1]
+     |> SIMP_RULE (srw_ss()) [elsOf_shift1, WIN_shift1, EXISTS_SUM]);
+
+val SUC_PP_EQ_INL = prove(
+  ``!x. ((SUC ++ I) x = INL y) <=> ?n. (x = INL n) /\ (y = SUC n)``,
+  simp[FORALL_SUM]);
+
+val SUC_PP_EQ_INR = prove(
+  ``!x. ((SUC ++ I) x = INR y) <=> (x = INR y)``,
+  simp[FORALL_SUM]);
+
+val woSUC_orderiso = store_thm(
+  "woSUC_orderiso",
+  ``orderiso w1 w2 ⇒ orderiso (woSUC w1) (woSUC w2)``,
+  simp[orderiso_def, elsOf_woSUC, WIN_woSUC] >>
   disch_then (Q.X_CHOOSE_THEN `f` strip_assume_tac) >>
-  qexists_tac `(SUC ++ I) o f o (PRE ++ I)` >>
-  simp_tac (srw_ss() ++ DNF_ss) [PRE_SUC_PP, SUC_PP11, SUC_PP_NEQ0] >>
-  metis_tac[]);
+  qexists_tac `
+    λx. if x = INL 0 then INL 0 else (SUC ++ I) (f ((PRE ++ I) x))
+  ` >>
+  rw[] >> rw[PRE_SUC_PP, SUC_PP_NEQ0, SUC_PP11, SUC_PP_EQ_INL,
+             SUC_PP_EQ_INR] >>
+  simp[EXISTS_SUM, SUC_PP_NEQ0, RIGHT_AND_OVER_OR, EXISTS_OR_THM, SUC_PP11] >|[
+    simp_tac (srw_ss() ++ COND_elim_ss ++ CONJ_ss) [SUC_PP_NEQ0, SUC_PP11] >>
+    Cases_on `x` >> asm_simp_tac (srw_ss() ++ DNF_ss) [] >>
+    metis_tac [sumTheory.sum_CASES],
+    metis_tac [sumTheory.sum_CASES],
+    metis_tac [sumTheory.sum_CASES]
+  ]);
 
 (* perform quotient, creating a type of "pre-ordinals".
 
