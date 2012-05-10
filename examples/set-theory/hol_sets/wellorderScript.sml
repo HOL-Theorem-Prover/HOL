@@ -1152,6 +1152,38 @@ val woSUC_orderiso = store_thm(
     metis_tac [sumTheory.sum_CASES]
   ]);
 
+val fromNat0_11 = store_thm(
+  "fromNat0_11",
+  ``(fromNat0 n = fromNat0 m) <=> (n = m)``,
+  simp[EQ_IMP_THM] >> disch_then (mp_tac o Q.AP_TERM `elsOf`) >>
+  simp[elsOf_fromNat0, EXTENSION] >> spose_not_then strip_assume_tac >>
+  `n < m ∨ m < n` by decide_tac >| [
+     first_x_assum (qspec_then `INL n` mp_tac) >> simp[],
+     first_x_assum (qspec_then `INL m` mp_tac) >> simp[]
+  ]);
+
+val WIN_fromNat0 = prove(
+  ``(x,y) WIN fromNat0 n <=>
+     ?m p. m < p /\ p < n /\ (x = INL m) /\ (y = INL p)``,
+  rw[fromNat0_def, wellorder_fromNat_SUM, #repabs_pseudo_id wellorder_results,
+     strict_def] >>
+  map_every Cases_on [`x`, `y`] >> simp[]);
+
+val fromNat0_orderiso11 = store_thm(
+  "fromNat0_orderiso11",
+  ``orderiso (fromNat0 n) (fromNat0 m) <=> (n = m)``,
+  simp[EQ_IMP_THM] >> conj_tac >-
+    (simp[orderiso_thm, elsOf_fromNat0] >>
+     disch_then (Q.X_CHOOSE_THEN `f` strip_assume_tac) >>
+     `(CARD (IMAGE INL (count n)) = n) ∧ (CARD (IMAGE INL (count m)) = m)`
+        by rw[CARD_INJ_IMAGE, IMAGE_FINITE] >>
+     metis_tac [IMAGE_FINITE, FINITE_COUNT, FINITE_BIJ_CARD_EQ]) >>
+  rw[orderiso_thm] >>
+  qexists_tac `\x. case x of INL n => INL n | INR a => ARB` >>
+  rw[WIN_fromNat0, elsOf_fromNat0] >> rw[] >>
+  rw[BIJ_DEF, INJ_DEF, SURJ_DEF] >> fs[] >>
+  asm_simp_tac (srw_ss() ++ DNF_ss) []);
+
 (* perform quotient, creating a type of "pre-ordinals".
 
    These should all that's necessary, but I can't see how to define the limit
@@ -1168,29 +1200,34 @@ val orderiso_equiv = prove(
   metis_tac [orderiso_SYM, orderiso_TRANS, orderiso_REFL])
 
 val alphaise =
-    INST_TYPE  [beta |-> alpha, delta |-> alpha, gamma |-> alpha]
+    INST_TYPE  [beta |-> ``:'a inf``, delta |-> ``:'a inf``,
+                gamma |-> ``:'a inf``, alpha |-> ``:'a inf``]
 
 val [ordlt_REFL, ordlt_TRANS, ordlt_WF0, ordlt_trichotomy,
-     ordlt_ZERO, ord_islimit_ZERO, ord_finite_ZERO] =
+     ordlt_ZERO, ord_islimit_ZERO, ord_finite_ZERO, fromNat_11] =
     quotient.define_quotient_types_full
     {
-     types = [{name = "ordinal", equiv = orderiso_equiv}],
+     types = [{name = "ordinal", equiv = alphaise orderiso_equiv}],
      defs = map mk_def
-       [("ordlt", ``orderlt : 'a wellorder -> 'a wellorder -> bool``),
-        ("ord_islimit", ``islimit : 'a wellorder -> bool``),
-        ("ord_ZERO", ``wZERO : 'a wellorder``),
-        ("ord_finite", ``finite : 'a wellorder -> bool``)],
+       [("ordlt", ``orderlt : 'a inf wellorder -> 'a inf wellorder -> bool``),
+        ("ord_islimit", ``islimit : 'a inf wellorder -> bool``),
+        ("ord_ZERO", ``wZERO : 'a inf wellorder``),
+        ("ord_finite", ``finite : 'a inf wellorder -> bool``),
+        ("ord_SUC", ``woSUC : 'a inf wellorder -> 'a inf wellorder``),
+        ("fromNat", ``fromNat0 : num -> 'a inf wellorder``)],
      tyop_equivs = [],
      tyop_quotients = [],
      tyop_simps = [],
      respects = [alphaise islimit_iso, alphaise orderlt_orderiso,
-                 alphaise finite_iso],
+                 alphaise finite_iso,
+                 INST_TYPE [beta |-> alpha] woSUC_orderiso],
      poly_preserves = [],
      poly_respects = [],
-     old_thms = [orderlt_REFL, alphaise orderlt_TRANS,
-                 REWRITE_RULE [relationTheory.WF_DEF] orderlt_WF,
+     old_thms = [alphaise orderlt_REFL, alphaise orderlt_TRANS,
+                 alphaise (REWRITE_RULE [relationTheory.WF_DEF] orderlt_WF),
                  alphaise orderlt_trichotomy, alphaise LT_wZERO,
-                 islimit_wZERO, finite_wZERO]}
+                 alphaise islimit_wZERO, alphaise finite_wZERO,
+                 INST_TYPE [beta |-> alpha] fromNat0_orderiso11]}
 
 val _ = save_thm ("ordlt_REFL", ordlt_REFL)
 val _ = save_thm ("ordlt_TRANS", ordlt_TRANS)
@@ -1200,46 +1237,6 @@ val ordlt_WF = save_thm (
 val _ = save_thm ("ord_ZERO", ordlt_ZERO)
 val _ = save_thm ("ord_islimit_ZERO", ord_islimit_ZERO)
 val _ = save_thm ("ord_finite_ZERO", ord_finite_ZERO)
-
-val fromNat_def = Define`
-  fromNat n : 'a inf ordinal =
-    ordinal_ABS_CLASS (orderiso (fromNat0 n : 'a inf wellorder))
-`;
-
-val ordinal_repabs = prove(
-  ``ordinal_REP_CLASS (ordinal_ABS_CLASS (orderiso (c : 'a wellorder))) =
-    (orderiso c : 'a wellorder set)``,
-  REWRITE_TAC [GSYM (theorem "ordinal_ABS_REP_CLASS")] >>
-  metis_tac [orderiso_REFL]);
-
-val finite_inl = prove(
-  ``FINITE (IMAGE INL (count n))``,
-  rw[IMAGE_FINITE]);
-
-val card_inl = prove(
-  ``CARD (IMAGE INL (count n)) = n``,
-  rw[CARD_INJ_IMAGE]);
-
-val fromNat_11 = store_thm(
-  "fromNat_11",
-  ``(fromNat n = fromNat m) = (n = m)``,
-  rw[fromNat_def, EQ_IMP_THM] >>
-  pop_assum (mp_tac o Q.AP_TERM `ordinal_REP_CLASS`) >>
-  rw[ordinal_repabs] >>
-  pop_assum (mp_tac o C Q.AP_THM `fromNat0 n : 'a inf wellorder`) >>
-  simp[orderiso_REFL] >> simp[orderiso_thm] >>
-  disch_then (Q.X_CHOOSE_THEN `f` strip_assume_tac) >>
-  fs[elsOf_fromNat0] >> metis_tac [FINITE_BIJ_CARD_EQ, finite_inl, card_inl]);
-
-val ord_finite_fromNat = store_thm(
-  "ord_finite_fromNat",
-  ``ord_finite (fromNat n)``,
-  rw[definition "ord_finite_def", fromNat_def, definition "ordinal_REP_def"] >>
-  DEEP_INTRO_TAC SELECT_ELIM_THM >> rw[ordinal_repabs]
-     >- metis_tac [orderiso_REFL] >>
-  fs[orderiso_thm, finite_def] >>
-  qsuff_tac `FINITE (elsOf (fromNat0 n))` >- metis_tac[BIJ_FINITE] >>
-  rw[elsOf_fromNat0, finite_inl]);
 
 val preds_def = Define`
   preds (w : 'a ordinal) = { w0 | ordlt w0 w }
