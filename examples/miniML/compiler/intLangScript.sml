@@ -87,6 +87,17 @@ evaluate_ind
 |> Q.GEN `P`
 |> SIMP_RULE (srw_ss()) [])
 
+val evaluate_nice_strongind = save_thm(
+"evaluate_nice_strongind",
+evaluate_strongind
+|> Q.SPECL [`P`,`λcenv env. evaluate_list_with (P cenv env)`,`evaluate_match_with P`] |> SIMP_RULE (srw_ss()) []
+|> UNDISCH_ALL
+|> CONJUNCTS
+|> List.hd
+|> DISCH_ALL
+|> Q.GEN `P`
+|> SIMP_RULE (srw_ss()) [evaluate_list_with_evaluate])
+
 val (Cevaluate_list_with_rules,Cevaluate_list_with_ind,Cevaluate_list_with_cases) = Hol_reln [ANTIQUOTE(
 Cevaluate_rules |> SIMP_RULE (srw_ss()) [] |> concl |>
 strip_conj |>
