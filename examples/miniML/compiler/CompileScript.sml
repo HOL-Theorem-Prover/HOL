@@ -835,6 +835,14 @@ val _ = Defn.save_defn dest_var_defn;
 
 val _ = Defn.save_defn extend_defs_defn;
 
+val _ = Define `
+ (var_or_new s e =
+  (case dest_var e of
+    SOME vn => INL vn
+  | NONE => INR s.nv
+  ))`;
+ 
+
  val exp_to_Cexp_defn = Hol_defn "exp_to_Cexp" `
 
 (exp_to_Cexp s (Raise err) = CRaise err)
@@ -898,10 +906,12 @@ val _ = Defn.save_defn extend_defs_defn;
   CLprim CIf [Ce1;Ce2;Ce3])
 /\
 (exp_to_Cexp s (Mat e pes) =
-  let (_s,Ce) =
-    Mat_to_CMat s e (\ s' . pes_to_Cpes s' pes)
- in
-  Ce)
+  let (_s,Cpes) = pes_to_Cpes s pes in
+  (case var_or_new s e of
+    INL vn => CMat (FAPPLY  s.vmap  vn) Cpes
+  | INR n => let Ce = exp_to_Cexp s e in
+               CLet [n] [Ce] (CMat n Cpes)
+  ))
 /\
 (exp_to_Cexp s (Let vn e b) =
   let (s',n) = extend s vn in
@@ -910,15 +920,10 @@ val _ = Defn.save_defn extend_defs_defn;
   CLet [n] [Ce] Cb)
 /\
 (exp_to_Cexp s (Letrec defs b) =
-  let (_s,Ce) =
-    Letrec_to_CLetfun s defs (\ fns s . exp_to_Cexp s b) in
-  Ce)
-/\
-(Letrec_to_CLetfun s defs mk_Cb =
   let (s',fns) = extend_defs s defs in
   let Cdefs = defs_to_Cdefs s' defs in
-  let Cb = mk_Cb fns s' in
-  (s', CLetfun T fns Cdefs Cb))
+  let Cb = exp_to_Cexp s' b in
+  CLetfun T fns Cdefs Cb)
 /\
 (defs_to_Cdefs s [] = [])
 /\
@@ -926,20 +931,6 @@ val _ = Defn.save_defn extend_defs_defn;
   let (s',n) = extend s vn in
   let Ce = exp_to_Cexp s' e in
   ([n],Ce)::(defs_to_Cdefs s defs))
-/\
-(Mat_to_CMat s e mk_Cpes =
-  let (s',vpn) =
-    (case dest_var e of
-      SOME vn => (s,INL vn)
-    | NONE => (s with<| nv := s.nv+1|>,INR s.nv)
-    ) in
-  let (s',Cpes) = mk_Cpes s' in
-  (s',
-   (case vpn of
-     INL vn => CMat (FAPPLY  s.vmap  vn) Cpes
-   | INR n => let Ce = exp_to_Cexp s e in
-                CLet [n] [Ce] (CMat n Cpes)
-   )))
 /\
 (pes_to_Cpes s [] = (s,[]))
 /\
@@ -1531,16 +1522,21 @@ val _ = Defn.save_defn number_constructors_defn;
   repl_dec ( rs with<| cmap := cm; cpam := FUPDATE  rs.cpam ( ty, cw) |>) (Dtype ts)) (* parens: Lem sucks *)
 /\
 (repl_dec rs (Dletrec defs) =
-  let (rs,Ce) =
-    Letrec_to_CLetfun rs defs (\ fns s . CDecl fns) in
+  let (rs,fns) = extend_defs rs defs in
+  let Cdefs = defs_to_Cdefs rs defs in
   let rs = rs with<| cs := rs.cs with<| decl:=SOME(rs.cs.env,rs.cs.sz)|> |> in
-  compile_Cexp rs Ce)
+  compile_Cexp rs (CLetfun T fns Cdefs (CDecl fns)))
 /\
 (repl_dec rs (Dlet p e) =
-  let (rs,Ce) = Mat_to_CMat rs e
-    (\ s . let (s',pvs,Cp) = pat_to_Cpat s [] p in (s',[(Cp,CDecl pvs)])) in
-  let rs = rs with<| cs := rs.cs with<| decl:=SOME(rs.cs.env,rs.cs.sz)|> |> in
-  compile_Cexp rs Ce)`;
+  let (rs',pvs,Cp) = pat_to_Cpat rs [] p in
+  let Cpes = [(Cp,CDecl pvs)] in
+  let rs' = rs' with<| cs := rs'.cs with<| decl:=SOME(rs'.cs.env,rs'.cs.sz)|> |> in
+  compile_Cexp rs'
+    (case var_or_new rs e of
+      INL vn => CMat (FAPPLY  rs.vmap  vn) Cpes
+    | INR n => let Ce = exp_to_Cexp rs e in
+                 CLet [n] [Ce] (CMat n Cpes)
+    ))`;
 
 val _ = Defn.save_defn repl_dec_defn;
 
