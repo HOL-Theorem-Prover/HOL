@@ -924,8 +924,8 @@ val _ = Defn.save_defn extend_defs_defn;
 (defs_to_Cdefs s [] = [])
 /\
 (defs_to_Cdefs s ((d,vn,e)::defs) =
-  let (s,n) = extend s vn in
-  let Ce = exp_to_Cexp s e in
+  let (s',n) = extend s vn in
+  let Ce = exp_to_Cexp s' e in
   ([n],Ce)::(defs_to_Cdefs s defs))
 /\
 (Mat_to_CMat s e mk_Cpes =
@@ -963,15 +963,8 @@ val _ = Defn.save_defn extend_defs_defn;
 /\
 (v_to_Cv s (Recclosure env defs vn) =
   let Cenv = MAP (\ (x,v) . (FAPPLY  s.vmap  x, v_to_Cv s v)) env in
-  let (s',fns) = FOLDR 
-    (\ (d,_vn,_e) (s,fns) . let (s,n) = extend s d in (s, n::fns))       (s,[]) 
-          defs in
-  let Cdefs = FOLDR 
-    (\ (_d,vn,e) Cdefs .
-      let (s',n) = extend s' vn in
-      let Ce = exp_to_Cexp s' e in
-      ([n],Ce)::Cdefs)      [] 
-          defs in
+  let (s',fns) = extend_defs s defs in
+  let Cdefs = defs_to_Cdefs s' defs in
   let n = FAPPLY  s.vmap  vn in
   ce_Cv (CRecClos Cenv fns Cdefs n))`;
 

@@ -852,8 +852,8 @@ and
 defs_to_Cdefs s [] = []
 and
 defs_to_Cdefs s ((d,vn,e)::defs) =
-  let (s,n) = extend s vn in
-  let Ce = exp_to_Cexp s e in
+  let (s',n) = extend s vn in
+  let Ce = exp_to_Cexp s' e in
   ([n],Ce)::(defs_to_Cdefs s defs)
 and
 Mat_to_CMat s e mk_Cpes =
@@ -891,15 +891,8 @@ v_to_Cv s (Closure env vn e) =
 and
 v_to_Cv s (Recclosure env defs vn) =
   let Cenv = List.map (fun (x,v) -> (Pmap.find x s.vmap, v_to_Cv s v)) env in
-  let (s',fns) = List.fold_right
-    (fun (d,_vn,_e) (s,fns) -> let (s,n) = extend s d in (s, n::fns))
-          defs      (s,[]) in
-  let Cdefs = List.fold_right
-    (fun (_d,vn,e) Cdefs ->
-      let (s',n) = extend s' vn in
-      let Ce = exp_to_Cexp s' e in
-      ([n],Ce)::Cdefs)
-          defs     [] in
+  let (s',fns) = extend_defs s defs in
+  let Cdefs = defs_to_Cdefs s' defs in
   let n = Pmap.find vn s.vmap in
   ce_Cv (CRecClos Cenv fns Cdefs n)
 
