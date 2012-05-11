@@ -824,6 +824,17 @@ val _ = Defn.save_defn pat_to_Cpat_defn;
 
 val _ = Defn.save_defn dest_var_defn;
 
+ val extend_defs_defn = Hol_defn "extend_defs" `
+
+(extend_defs s [] = (s,[]))
+/\
+(extend_defs s ((d,vn,e)::defs) =
+  let (s,n) = extend s d in
+  let (s,ns) = extend_defs s defs in
+  (s,n::ns))`;
+
+val _ = Defn.save_defn extend_defs_defn;
+
  val exp_to_Cexp_defn = Hol_defn "exp_to_Cexp" `
 
 (exp_to_Cexp s (Raise err) = CRaise err)
@@ -889,13 +900,8 @@ val _ = Defn.save_defn dest_var_defn;
 /\
 (exp_to_Cexp s (Mat e pes) =
   let (_s,Ce) =
-    Mat_to_CMat s e (\ s' .
-      FOLDR 
-      (\ (p,e) (s,Cpes) .
-        let (s,_pvs,Cp) = pat_to_Cpat s [] p in
-        let Ce = exp_to_Cexp s e in
-        (s,(Cp,Ce)::Cpes))   (s',[]) 
-            pes) in
+    Mat_to_CMat s e (\ s' . pes_to_Cpes s' pes)
+ in
   Ce)
 /\
 (exp_to_Cexp s (Let vn e b) =
@@ -910,17 +916,17 @@ val _ = Defn.save_defn dest_var_defn;
   Ce)
 /\
 (Letrec_to_CLetfun s defs mk_Cb =
-  let (s',fns) = FOLDR 
-    (\ (d,_vn,_e) (s,fns) . let (s,n) = extend s d in (s, n::fns))       (s,[]) 
-          defs in
-  let Cdefs = FOLDR 
-    (\ (_d,vn,e) Cdefs .
-      let (s',n) = extend s' vn in
-      let Ce = exp_to_Cexp s' e in
-      ([n],Ce)::Cdefs)      [] 
-          defs in
+  let (s',fns) = extend_defs s defs in
+  let Cdefs = defs_to_Cdefs s' defs in
   let Cb = mk_Cb fns s' in
   (s', CLetfun T fns Cdefs Cb))
+/\
+(defs_to_Cdefs s [] = [])
+/\
+(defs_to_Cdefs s ((d,vn,e)::defs) =
+  let (s,n) = extend s vn in
+  let Ce = exp_to_Cexp s e in
+  ([n],Ce)::(defs_to_Cdefs s defs))
 /\
 (Mat_to_CMat s e mk_Cpes =
   let (s',vpn) =
@@ -935,6 +941,14 @@ val _ = Defn.save_defn dest_var_defn;
    | INR n => let Ce = exp_to_Cexp s e in
                 CLet [n] [Ce] (CMat n Cpes)
    )))
+/\
+(pes_to_Cpes s [] = (s,[]))
+/\
+(pes_to_Cpes s ((p,e)::pes) =
+  let (s',_pvs,Cp) = pat_to_Cpat s [] p in
+  let Ce = exp_to_Cexp s' e in
+  let (_s,Cpes) = pes_to_Cpes s pes in
+  (s,(Cp,Ce)::Cpes))
 /\
 (v_to_Cv s (Lit l) = CLit l)
 /\
