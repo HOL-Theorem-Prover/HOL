@@ -770,8 +770,7 @@ and
 exp_to_Cexp s (Val v) = CVal (v_to_Cv s v)
 and
 exp_to_Cexp s (Con cn es) =
-  CCon (Pmap.find cn s.cmap)
-    (List.map (fun e -> exp_to_Cexp s e) es) (* uneta *)
+  CCon (Pmap.find cn s.cmap) (exps_to_Cexps s es)
 and
 exp_to_Cexp s (Var vn) = CVar (Pmap.find vn s.vmap)
 and
@@ -878,23 +877,37 @@ pes_to_Cpes s ((p,e)::pes) =
   let (_s,Cpes) = pes_to_Cpes s pes in
   (s,(Cp,Ce)::Cpes)
 and
+exps_to_Cexps s [] = []
+and
+exps_to_Cexps s (e::es) =
+  exp_to_Cexp s e :: exps_to_Cexps s es
+and
 v_to_Cv s (Lit l) = CLit l
 and
 v_to_Cv s (Conv cn vs) =
-  CConv (Pmap.find cn s.cmap) (List.map (fun v -> v_to_Cv s v) vs) (* uneta *)
+  CConv (Pmap.find cn s.cmap) (vs_to_Cvs s vs)
 and
 v_to_Cv s (Closure env vn e) =
-  let Cenv = List.map (fun (x,v) -> (Pmap.find x s.vmap, v_to_Cv s v)) env in
+  let Cenv = env_to_Cenv s env in
   let (s',n) = extend s vn in
   let Ce = exp_to_Cexp s' e in
   ce_Cv (CClosure Cenv [n] Ce)
 and
 v_to_Cv s (Recclosure env defs vn) =
-  let Cenv = List.map (fun (x,v) -> (Pmap.find x s.vmap, v_to_Cv s v)) env in
+  let Cenv = env_to_Cenv s env in
   let (s',fns) = extend_defs s defs in
   let Cdefs = defs_to_Cdefs s' defs in
   let n = Pmap.find vn s.vmap in
   ce_Cv (CRecClos Cenv fns Cdefs n)
+and
+vs_to_Cvs s [] = []
+and
+vs_to_Cvs s (v::vs) = v_to_Cv s v :: vs_to_Cvs s vs
+and
+env_to_Cenv s [] = []
+and
+env_to_Cenv s ((x,v)::env) =
+  (Pmap.find x s.vmap, v_to_Cv s v)::(env_to_Cenv s env)
 
 (* TODO: simple type system and checker *)
 

@@ -842,8 +842,7 @@ val _ = Defn.save_defn extend_defs_defn;
 (exp_to_Cexp s (Val v) = CVal (v_to_Cv s v))
 /\
 (exp_to_Cexp s (Con cn es) =
-  CCon (FAPPLY  s.cmap  cn)
-    (MAP (\ e . exp_to_Cexp s e) es)) (* uneta *)
+  CCon (FAPPLY  s.cmap  cn) (exps_to_Cexps s es))
 /\
 (exp_to_Cexp s (Var vn) = CVar (FAPPLY  s.vmap  vn))
 /\
@@ -950,23 +949,37 @@ val _ = Defn.save_defn extend_defs_defn;
   let (_s,Cpes) = pes_to_Cpes s pes in
   (s,(Cp,Ce)::Cpes))
 /\
+(exps_to_Cexps s [] = [])
+/\
+(exps_to_Cexps s (e::es) =
+  exp_to_Cexp s e :: exps_to_Cexps s es)
+/\
 (v_to_Cv s (Lit l) = CLit l)
 /\
 (v_to_Cv s (Conv cn vs) =
-  CConv (FAPPLY  s.cmap  cn) (MAP (\ v . v_to_Cv s v) vs)) (* uneta *)
+  CConv (FAPPLY  s.cmap  cn) (vs_to_Cvs s vs))
 /\
 (v_to_Cv s (Closure env vn e) =
-  let Cenv = MAP (\ (x,v) . (FAPPLY  s.vmap  x, v_to_Cv s v)) env in
+  let Cenv = env_to_Cenv s env in
   let (s',n) = extend s vn in
   let Ce = exp_to_Cexp s' e in
   ce_Cv (CClosure Cenv [n] Ce))
 /\
 (v_to_Cv s (Recclosure env defs vn) =
-  let Cenv = MAP (\ (x,v) . (FAPPLY  s.vmap  x, v_to_Cv s v)) env in
+  let Cenv = env_to_Cenv s env in
   let (s',fns) = extend_defs s defs in
   let Cdefs = defs_to_Cdefs s' defs in
   let n = FAPPLY  s.vmap  vn in
-  ce_Cv (CRecClos Cenv fns Cdefs n))`;
+  ce_Cv (CRecClos Cenv fns Cdefs n))
+/\
+(vs_to_Cvs s [] = [])
+/\
+(vs_to_Cvs s (v::vs) = v_to_Cv s v :: vs_to_Cvs s vs)
+/\
+(env_to_Cenv s [] = [])
+/\
+(env_to_Cenv s ((x,v)::env) =
+  (FAPPLY  s.vmap  x, v_to_Cv s v)::(env_to_Cenv s env))`;
 
 val _ = Defn.save_defn exp_to_Cexp_defn;
 
