@@ -1184,6 +1184,30 @@ val fromNat0_orderiso11 = store_thm(
   rw[BIJ_DEF, INJ_DEF, SURJ_DEF] >> fs[] >>
   asm_simp_tac (srw_ss() ++ DNF_ss) []);
 
+val woSUC_fromNat0 = store_thm(
+  "woSUC_fromNat0",
+  ``orderiso (woSUC (fromNat0 n)) (fromNat0 (n + 1))``,
+  simp[orderiso_def, elsOf_woSUC, elsOf_fromNat0, WIN_woSUC, WIN_fromNat0] >>
+  qexists_tac `λx. case x of INL 0 => INL n
+                           | INL (SUC m) => INL m` >>
+  simp_tac (srw_ss() ++ DNF_ss ++ ARITH_ss)[EXISTS_SUM, FORALL_SUM] >>
+  Cases >> simp[] >> Cases >> simp[]);
+
+val fromNat0_wZERO = store_thm(
+  "fromNat0_wZERO",
+  ``orderiso (fromNat0 0:'a inf wellorder) (wZERO:'b wellorder)``,
+  spose_not_then strip_assume_tac >>
+  `orderlt (wZERO:'b wellorder) (fromNat0 0:'a inf wellorder)`
+    by prove_tac [orderlt_trichotomy, LT_wZERO] >>
+  fs[orderlt_def, elsOf_fromNat0])
+
+val woSUC_fromNat00 = store_thm(
+  "woSUC_fromNat00",
+  ``~orderiso (woSUC w) (fromNat0 0)``,
+  rw[orderiso_thm, elsOf_fromNat0, BIJ_EMPTY] >> DISJ1_TAC >>
+  disch_then (mp_tac o Q.AP_TERM `elsOf`) >>
+  simp[elsOf_woSUC]);
+
 (* perform quotient, creating a type of "pre-ordinals".
 
    These should all that's necessary, but I can't see how to define the limit
@@ -1204,7 +1228,8 @@ val alphaise =
                 gamma |-> ``:'a inf``, alpha |-> ``:'a inf``]
 
 val [ordlt_REFL, ordlt_TRANS, ordlt_WF0, ordlt_trichotomy,
-     ordlt_ZERO, ord_islimit_ZERO, ord_finite_ZERO, fromNat_11] =
+     ordlt_ZERO, ord_islimit_ZERO, ord_finite_ZERO, fromNat_11,
+     ord_SUC_fromNat, ord_SUC_ZERO, fromNat_ZERO] =
     quotient.define_quotient_types_full
     {
      types = [{name = "ordinal", equiv = alphaise orderiso_equiv}],
@@ -1227,7 +1252,11 @@ val [ordlt_REFL, ordlt_TRANS, ordlt_WF0, ordlt_trichotomy,
                  alphaise (REWRITE_RULE [relationTheory.WF_DEF] orderlt_WF),
                  alphaise orderlt_trichotomy, alphaise LT_wZERO,
                  alphaise islimit_wZERO, alphaise finite_wZERO,
-                 INST_TYPE [beta |-> alpha] fromNat0_orderiso11]}
+                 INST_TYPE [beta |-> alpha] fromNat0_orderiso11,
+                 INST_TYPE [beta |-> alpha] woSUC_fromNat0,
+                 INST_TYPE [beta |-> alpha] woSUC_fromNat00,
+                 INST_TYPE [beta |-> ``:'a inf``] fromNat0_wZERO
+                 ]}
 
 val _ = save_thm ("ordlt_REFL", ordlt_REFL)
 val _ = save_thm ("ordlt_TRANS", ordlt_TRANS)
@@ -1237,6 +1266,8 @@ val ordlt_WF = save_thm (
 val _ = save_thm ("ord_ZERO", ordlt_ZERO)
 val _ = save_thm ("ord_islimit_ZERO", ord_islimit_ZERO)
 val _ = save_thm ("ord_finite_ZERO", ord_finite_ZERO)
+val _ = save_thm ("fromNat_11", fromNat_11)
+val _ = save_thm ("ord_SUC_fromNat", ord_SUC_fromNat)
 
 val preds_def = Define`
   preds (w : 'a ordinal) = { w0 | ordlt w0 w }
