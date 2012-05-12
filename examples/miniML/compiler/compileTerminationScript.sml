@@ -180,18 +180,23 @@ val (remove_mat_def,remove_mat_ind) = register "remove_mat" (
   MAP_EVERY (fn q => Q.ISPEC_THEN q mp_tac SUM_MAP_MEM_bound) [`Cexp_size`,`Cexp2_size`,`Cexp7_size`] >>
   rw[] >> res_tac >> fs[Cexp_size_def] >> srw_tac[ARITH_ss][]))
 
+val var_or_new_def = save_thm("var_or_new_def",var_or_new_def)
+val _ = export_rewrites["var_or_new_def"]
+
+val (extend_defs_def,extend_defs_ind) = register "extend_defs" (
+  tprove_no_defn ((extend_defs_def,extend_defs_ind),
+  WF_REL_TAC `measure (LENGTH o SND)` >> rw[]))
+
 val (exp_to_Cexp_def,exp_to_Cexp_ind) = register "exp_to_Cexp" (
   tprove_no_defn ((exp_to_Cexp_def,exp_to_Cexp_ind),
-  WF_REL_TAC `inv_image ($< LEX $<) (λx. case x of
-    | INL (_,e) => (exp_size e, 0:num)
-    | INR (INL (_,defs,_)) => (exp1_size defs, 1)
-    | INR (INR (INL (_,defs))) => (exp1_size defs, 0)
-    | INR (INR (INR (INL (_,e,_)))) => (exp_size e, 1)
-    | INR (INR (INR (INR (INL (_,pes))))) => (exp6_size pes, 0)
-    | INR (INR (INR (INR (INR (_,v))))) => (v_size v, 0))` >>
-  srw_tac[ARITH_ss][exp1_size_thm,exp3_size_thm,exp6_size_thm,exp8_size_thm,exp9_size_thm] >>
-  MAP_EVERY (fn q => Q.ISPEC_THEN q mp_tac SUM_MAP_MEM_bound) [`exp2_size`,`exp5_size`,`exp7_size`,`exp_size`,`v_size`] >>
-  rw[] >> res_tac >> fs[exp_size_def] >> srw_tac[ARITH_ss][]))
+  WF_REL_TAC `inv_image $< (λx. case x of
+    | INL (_,e) => exp_size e
+    | INR (INL (_,defs)) => exp1_size defs
+    | INR (INR (INL (_,pes))) => exp6_size pes
+    | INR (INR (INR (INL (_,es)))) => exp8_size es
+    | INR (INR (INR (INR (INL (_,v))))) => v_size v
+    | INR (INR (INR (INR (INR (INL (_,vs)))))) => exp9_size vs
+    | INR (INR (INR (INR (INR (INR (_,env)))))) => exp3_size env)`))
 
 val pat_to_Cpat_def = save_thm("pat_to_Cpat_def",pat_to_Cpat_def)
 
