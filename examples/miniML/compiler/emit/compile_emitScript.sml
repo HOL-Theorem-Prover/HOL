@@ -97,17 +97,22 @@ val defs = map EmitML.DEFN
 , extend_def
 , pat_to_Cpat_def
 , dest_var_def
+, var_or_new_def
+, extend_defs_def
 , underscore_rule (
   let open Lib pairSyntax
     val glhs = strip_comb o lhs o #2 o strip_forall o concl
-    val (v_to_Cv,exp_to_Cexp) =
-      partition (same_const ``v_to_Cv`` o #1 o glhs)
+    val (v_to_Cv,rest) =
+      partition ((fn c => same_const ``v_to_Cv`` c
+                   orelse same_const ``vs_to_Cvs`` c
+                   orelse same_const ``env_to_Cenv`` c)
+                 o #1 o glhs)
         (CONJUNCTS exp_to_Cexp_def) in
   LIST_CONJ
   ((op ::)
      (((fn th => th |> Q.SPEC `Lit l` |> Q.GEN `l` |> SIMP_RULE (srw_ss()) [hd v_to_Cv]) ## I)
        (pluck (same_const ``Val`` o #1 o strip_comb o el 2 o #2 o glhs)
-          exp_to_Cexp))) end)
+          rest))) end)
 , least_not_in_def
 , remove_mat_vp_def
 , remove_mat_def
