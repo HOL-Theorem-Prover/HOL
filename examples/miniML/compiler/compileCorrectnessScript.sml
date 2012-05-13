@@ -242,20 +242,45 @@ val extend_FDOM_SUBSET = store_thm(
 ``∀s vn s' n. (extend s vn = (s',n)) ⇒ FDOM s.vmap ⊆ FDOM s'.vmap``,
 rw[extend_def,SUBSET_DEF] >> rw[])
 
+val pat_vars_def = tDefine "pat_vars"`
+(pat_vars (Pvar v) = {v}) ∧
+(pat_vars (Plit l) = {}) ∧
+(pat_vars (Pcon c ps) = BIGUNION (IMAGE pat_vars (set ps)))`(
+WF_REL_TAC `measure pat_size` >>
+srw_tac[ARITH_ss][MiniMLTerminationTheory.pat1_size_thm] >>
+Q.ISPEC_THEN `pat_size` imp_res_tac SUM_MAP_MEM_bound >>
+srw_tac[ARITH_ss][])
+val _ = export_rewrites["pat_vars_def"]
+
+val extend_IN_FDOM = store_thm(
+"extend_IN_FDOM",
+``∀s vn s' n. (extend s vn = (s',n)) ⇒ vn ∈ FDOM s'.vmap``,
+rw[extend_def] >> rw[])
+
+val extend_preserve = store_thm(
+"extend_preserve",
+``∀s vn s' n. (extend s vn = (s',n)) ⇒ ∀v. v ∈ FDOM s.vmap ⇒ (s'.vmap ' v = s.vmap ' v)``,
+rw[extend_def] >> rw[FAPPLY_FUPDATE_THM] >> fs[])
+
 val pat_to_Cpat_invariants = store_thm(
 "pat_to_Cpat_invariants",
 ``(∀p s pvs s' pvs' Cp. (pat_to_Cpat s pvs p = (s',pvs',Cp)) ⇒
    (good_repl_state s ⇒ good_repl_state s') ∧
-   (FDOM s.vmap ⊆ FDOM s'.vmap)) ∧
+   (FDOM s.vmap ⊆ FDOM s'.vmap) ∧
+   (pat_vars p ⊆ FDOM s'.vmap) ∧
+   (∀v. v ∈ FDOM s.vmap ⇒ (s'.vmap ' v = s.vmap ' v))) ∧
   (∀ps s pvs s' pvs' Cps. (pats_to_Cpats s pvs ps = (s',pvs',Cps)) ⇒
    (good_repl_state s ⇒ good_repl_state s') ∧
-   (FDOM s.vmap ⊆ FDOM s'.vmap))``,
+   (FDOM s.vmap ⊆ FDOM s'.vmap) ∧
+   (BIGUNION (IMAGE pat_vars (set ps)) ⊆ FDOM s'.vmap) ∧
+   (∀v. v ∈ FDOM s.vmap ⇒ (s'.vmap ' v = s.vmap ' v)) ∧
+   (LENGTH ps = LENGTH Cps))``,
 ho_match_mp_tac (TypeBase.induction_of ``:pat``) >>
 fs[pat_to_Cpat_def,LET_THM] >>
 conj_tac >- (
   qx_gen_tac `vn` >> qx_gen_tac `s` >>
   Cases_on `extend s vn` >> fs[] >> rw[] >>
-  fsrw_tac[SATISFY_ss][extend_good_repl_state,extend_FDOM_SUBSET] ) >>
+  fsrw_tac[SATISFY_ss][extend_good_repl_state,extend_FDOM_SUBSET,extend_IN_FDOM,extend_preserve] ) >>
 conj_tac >- (
   Induct >- rw[pat_to_Cpat_def] >>
   simp_tac (srw_ss()) [pat_to_Cpat_def,LET_THM] >>
@@ -274,7 +299,7 @@ conj_tac >- (
   simp_tac(srw_ss())[] >>
   first_x_assum (qspecl_then [`s`,`pvs`] mp_tac) >>
   ntac 2 (pop_assum mp_tac) >>
-  simp_tac(srw_ss())[] ) >>
+  simp_tac(srw_ss()++ETA_ss)[] ) >>
 rw[] >>
 qabbrev_tac `r = pats_to_Cpats s pvs ps` >>
 pop_assum (assume_tac o SYM o REWRITE_RULE [markerTheory.Abbrev_def]) >>
@@ -284,7 +309,7 @@ qabbrev_tac `r = pat_to_Cpat r0 r1 p` >>
 pop_assum (assume_tac o SYM o REWRITE_RULE [markerTheory.Abbrev_def]) >>
 PairCases_on `r` >>
 fs[] >> rw[] >>
-metis_tac[SUBSET_TRANS])
+PROVE_TAC[SUBSET_TRANS,SUBSET_DEF])
 
 (* TODO: move? *)
 val FOLDR_invariant = store_thm(
@@ -340,7 +365,12 @@ Cases >> rw[exp_to_Cexp_def])
 
 val extend_defs_invariants = store_thm(
 "extend_defs_invariants",
-``∀defs s s' fns. good_repl_state s ∧ (extend_defs s defs = (s',fns)) ⇒ good_repl_state s' ∧ FDOM s.vmap ⊆ FDOM s'.vmap``,
+``∀defs s s' fns. (extend_defs s defs = (s',fns)) ⇒
+  (good_repl_state s ⇒ good_repl_state s') ∧
+  FDOM s.vmap ⊆ FDOM s'.vmap ∧
+  IMAGE FST (set defs) ⊆ FDOM s'.vmap ∧
+  (∀v. v ∈ FDOM s.vmap ⇒ (s'.vmap ' v = s.vmap ' v)) ∧
+  (set fns = IMAGE (FAPPLY s'.vmap o FST) (set defs))``,
 Induct >> fs[extend_defs_def] >>
 qx_gen_tac `d` >> PairCases_on `d` >>
 fs[extend_defs_def,LET_THM] >>
@@ -349,7 +379,18 @@ qabbrev_tac `p = extend s d0` >>
 PairCases_on `p` >> fs[] >>
 qabbrev_tac `q = extend_defs p0 defs` >>
 PairCases_on `q` >> fs[] >>
-PROVE_TAC[extend_FDOM_SUBSET,extend_good_repl_state,SUBSET_TRANS])
+fs[SUBSET_DEF,pairTheory.EXISTS_PROD] >>
+conj_asm1_tac >- PROVE_TAC[extend_good_repl_state] >>
+conj_asm1_tac >- PROVE_TAC[extend_FDOM_SUBSET,SUBSET_DEF] >>
+conj_asm1_tac >- PROVE_TAC[extend_IN_FDOM] >>
+conj_asm1_tac >- PROVE_TAC[extend_preserve,extend_FDOM_SUBSET,SUBSET_DEF] >>
+qpat_assum `Abbrev (X = extend s d0)` mp_tac >>
+rw[markerTheory.Abbrev_def,extend_def] >- PROVE_TAC[] >>
+fs[markerTheory.Abbrev_def] >>
+qmatch_assum_abbrev_tac `(q0,q1) = extend_defs ss defs` >>
+first_x_assum (qspecl_then [`ss`,`q0`,`q1`] mp_tac) >>
+rw[] >> AP_THM_TAC >> AP_TERM_TAC >>
+qunabbrev_tac `ss` >> fs[])
 
 val tac =
   rw[force_dom_DRESTRICT_FUNION,FUNION_DEF,DRESTRICT_DEF,MEM_MAP,pairTheory.EXISTS_PROD,FUN_FMAP_DEF,MAP_MAP_o] >>
@@ -535,15 +576,6 @@ val every_result_def = Define`
   (every_result P (Rval v) = P v)`
 val _ = export_rewrites["every_result_def"]
 
-val pat_vars_def = tDefine "pat_vars"`
-(pat_vars (Pvar v) = {v}) ∧
-(pat_vars (Plit l) = {}) ∧
-(pat_vars (Pcon c ps) = BIGUNION (IMAGE pat_vars (set ps)))`(
-WF_REL_TAC `measure pat_size` >>
-srw_tac[ARITH_ss][MiniMLTerminationTheory.pat1_size_thm] >>
-Q.ISPEC_THEN `pat_size` imp_res_tac SUM_MAP_MEM_bound >>
-srw_tac[ARITH_ss][])
-
 val FV_def = tDefine "FV"`
 (FV (Raise _) = {}) ∧
 (FV (Val v) = {}) ∧
@@ -605,78 +637,6 @@ spose_not_then strip_assume_tac >>
 imp_res_tac exp_to_Cexp_App_case >>
 fs[LET_THM,pairTheory.UNCURRY] >> rw[])
 
-(*
-val free_vars_exp_to_Cexp = store_thm(
-"free_vars_exp_to_Cexp",
-``∀Ce s e. (exp_to_Cexp s e = Ce) ⇒ (free_vars Ce = IMAGE (FAPPLY s.vmap) (FV e))``,
-ho_match_mp_tac free_vars_ind >>
-rw[exp_to_Cexp_cases] >> rw[FOLDL_UNION_BIGUNION] >>
-imp_res_tac exp_to_Cexp_cases >> rw[] >>
-fs[IMAGE_BIGUNION,exp_to_Cexp_def,LET_THM] >>
-rw[LIST_TO_SET_MAP] >> fsrw_tac[boolSimps.DNF_ss,boolSimps.ETA_ss][MEM_MAP] >>
-fsrw_tac[SATISFY_ss][pairTheory.UNCURRY,FOLDL_UNION_BIGUNION_paired] >> rw[]
->- (
-  AP_TERM_TAC >>
-  rw[Once EXTENSION] >>
-  srw_tac[boolSimps.DNF_ss][] >>
-  PROVE_TAC[] )
->- (
-  AP_TERM_TAC >>
-  AP_TERM_TAC >>
-  rw[Once EXTENSION,pairTheory.EXISTS_PROD] >>
-  srw_tac[boolSimps.DNF_ss][]
-*)
-
-val extend_IN_FDOM = store_thm(
-"extend_IN_FDOM",
-``∀s vn s' n. (extend s vn = (s',n)) ⇒ vn ∈ FDOM s'.vmap``,
-rw[extend_def] >> rw[])
-
-(*
-val Letrec_to_CLetfun_with_def = Define
-[ANTIQUOTE (
- exp_to_Cexp_def
-|> concl
-|> strip_conj
-|> first (same_const ``Letrec_to_CLetfun`` o (#1 o strip_comb) o lhs o (#2 o strip_forall))
-|> (fn t => let
-  val f = mk_var("exp_to_Cexp",type_of``exp_to_Cexp``)
-  val l = mk_var("Letrec_to_CLetfun_with",type_of``exp_to_Cexp``-->type_of ``Letrec_to_CLetfun``)
-  val ([s,mk_Cb,defs],b) = strip_forall t
-  val r = rhs b
-  val r = Term.subst[``exp_to_Cexp``|->f] r
-  val vs = [f,s,defs,mk_Cb]
-  val l = list_mk_comb(l,vs)
-  in list_mk_forall(vs,mk_eq(l,r)) end))]
-
-val Mat_to_CMat_with_def = Define
-[ANTIQUOTE (
- exp_to_Cexp_def
-|> concl
-|> strip_conj
-|> first (same_const ``Mat_to_CMat`` o (#1 o strip_comb) o lhs o (#2 o strip_forall))
-|> (fn t => let
-  val f = mk_var("exp_to_Cexp",type_of``exp_to_Cexp``)
-  val l = mk_var("Mat_to_CMat_with",type_of``exp_to_Cexp``-->type_of ``Mat_to_CMat``)
-  val ([s,mk_Cpes,e],b) = strip_forall t
-  val r = rhs b
-  val r = Term.subst[``exp_to_Cexp``|->f] r
-  val vs = [f,s,e,mk_Cpes]
-  val l = list_mk_comb(l,vs)
-  in list_mk_forall(vs,mk_eq(l,r)) end))]
-
-
-val Letrec_to_CLetfun_with_Letrec_to_CLetfun = store_thm(
-"Letrec_to_CLetfun_with_Letrec_to_CLetfun",
-``Letrec_to_CLetfun = Letrec_to_CLetfun_with exp_to_Cexp``,
-rw[FUN_EQ_THM,exp_to_Cexp_def,Letrec_to_CLetfun_with_def])
-
-val Mat_to_CMat_with_Mat_to_CMat = store_thm(
-"Mat_to_CMat_with_Mat_to_CMat",
-``Mat_to_CMat = Mat_to_CMat_with exp_to_Cexp``,
-rw[FUN_EQ_THM,exp_to_Cexp_def,Mat_to_CMat_with_def])
-*)
-
 (* TODO: move? *)
 val DIFF_SAME_UNION = store_thm(
 "DIFF_SAME_UNION",
@@ -706,13 +666,52 @@ SIMP_TAC (srw_ss()) [] THEN
 Cases_on `n` THEN SIMP_TAC (srw_ss()) [] THEN
 PROVE_TAC[])
 
-(*
 val Cpat_vars_pat_to_Cpat = store_thm(
 "Cpat_vars_pat_to_Cpat",
-``∀p. Cpat_vars (FST (pat_to_Cpat s [] p)) = IMAGE ? pat_vars p``
-*)
+``(∀p s pvs s' pvs' Cp. (pat_to_Cpat s pvs p = (s',pvs',Cp))
+  ⇒ (Cpat_vars Cp = IMAGE (FAPPLY s'.vmap) (pat_vars p))) ∧
+  (∀ps s pvs s' pvs' Cps. (pats_to_Cpats s pvs ps = (s',pvs',Cps))
+  ⇒ (MAP Cpat_vars Cps = MAP (IMAGE (FAPPLY s'.vmap) o pat_vars) ps))``,
+ho_match_mp_tac (TypeBase.induction_of ``:pat``) >>
+rw[pat_to_Cpat_def,LET_THM,pairTheory.UNCURRY] >>
+rw[FOLDL_UNION_BIGUNION,IMAGE_BIGUNION] >- (
+  rw[extend_def] )
+>- (
+  qabbrev_tac `q = pats_to_Cpats s' pvs ps` >>
+  PairCases_on `q` >>
+  fsrw_tac[ETA_ss][MAP_EQ_EVERY2,EVERY2_EVERY,EVERY_MEM,pairTheory.FORALL_PROD] >>
+  AP_TERM_TAC >>
+  first_x_assum (qspecl_then [`s'`,`pvs`] mp_tac) >>
+  rw[] >>
+  pop_assum mp_tac >>
+  rw[MEM_ZIP] >>
+  rw[Once EXTENSION,MEM_EL] >>
+  PROVE_TAC[] )
+>- (
+  qabbrev_tac `q = pats_to_Cpats s pvs ps` >>
+  PairCases_on `q` >>
+  qabbrev_tac `r = pat_to_Cpat q0 q1 p` >>
+  PairCases_on `r` >>
+  fs[] >>
+  PROVE_TAC[] )
+>- (
+  qabbrev_tac `q = pats_to_Cpats s pvs ps` >>
+  PairCases_on `q` >>
+  qabbrev_tac `r = pat_to_Cpat q0 q1 p` >>
+  PairCases_on `r` >>
+  fs[] >>
+  fs[LIST_EQ_REWRITE] >>
+  conj_asm1_tac >- PROVE_TAC[pat_to_Cpat_invariants] >>
+  first_x_assum (qspecl_then [`s`,`pvs`,`q0`,`q1`,`q2`] mp_tac) >>
+  rw[EL_MAP] >>
+  rw[Once EXTENSION] >>
+  qsuff_tac `pat_vars (EL x ps) ⊆ FDOM q0.vmap`
+    >- PROVE_TAC [pat_to_Cpat_invariants,SUBSET_DEF] >>
+  `BIGUNION (IMAGE pat_vars (set ps)) ⊆ FDOM q0.vmap`
+    by PROVE_TAC [pat_to_Cpat_invariants] >>
+  fs[SUBSET_DEF,MEM_EL] >>
+  PROVE_TAC[]))
 
-(*
 val free_vars_exp_to_Cexp = store_thm(
 "free_vars_exp_to_Cexp",
 ``
@@ -720,32 +719,31 @@ val free_vars_exp_to_Cexp = store_thm(
   (free_vars (exp_to_Cexp s e) = IMAGE (FAPPLY s.vmap) (FV e))) ∧
 (∀(s:repl_state) (v:v). T)``,
 ho_match_mp_tac exp_to_Cexp_nice_ind >>
-srw_tac[ETA_ss,DNF_ss][exp_to_Cexp_def,FOLDL_UNION_BIGUNION,IMAGE_BIGUNION,BIGUNION_SUBSET,LET_THM] >>
+srw_tac[ETA_ss,DNF_ss][exp_to_Cexp_def,exps_to_Cexps_MAP,pes_to_Cpes_MAP,defs_to_Cdefs_MAP,
+FOLDL_UNION_BIGUNION,IMAGE_BIGUNION,BIGUNION_SUBSET,LET_THM,EVERY_MEM] >>
 rw[] >- (
   AP_TERM_TAC >>
   rw[Once EXTENSION] >>
-  srw_tac[DNF_ss][MEM_MAP] >>
+  fsrw_tac[DNF_ss][MEM_MAP,EVERY_MEM] >>
   PROVE_TAC[] )
 >- (
   qabbrev_tac `p = extend s vn` >>
   PairCases_on `p` >> rw[] >>
-  qpat_assum `Abbrev x` (assume_tac o SYM o REWRITE_RULE[markerTheory.Abbrev_def]) >> fs[] >>
-  `FV e ⊆ FDOM p0.vmap` by (
-    imp_res_tac extend_FDOM_SUBSET >>
-    fs[SUBSET_DEF] >>
-    metis_tac[extend_IN_FDOM] ) >>
-  imp_res_tac extend_good_repl_state >>
-  fs[] >>
   rw[Once EXTENSION] >>
-  qpat_assum `extend s vn = X` mp_tac >>
-  rw[extend_def] >> rw[FAPPLY_FUPDATE_THM] >- (
-    fs[good_repl_state_def,INJ_DEF] >>
-    metis_tac[SUBSET_DEF] ) >>
-  fs[] >>
-  rw[EQ_IMP_THM] >> rw[]
-    >- metis_tac[] >- metis_tac[] >>
-  fs[good_repl_state_def,FRANGE_DEF] >>
-  metis_tac[prim_recTheory.LESS_REFL,SUBSET_DEF,IN_INSERT] )
+  `good_repl_state p0` by metis_tac[extend_good_repl_state] >>
+  `FV e ⊆ FDOM p0.vmap` by (
+    fs[SUBSET_DEF] >>
+    PROVE_TAC[SUBSET_DEF,extend_FDOM_SUBSET,extend_IN_FDOM] ) >>
+  fs[extend_def] >>
+  Cases_on `vn ∈ FDOM s.vmap` >>
+  fs[markerTheory.Abbrev_def,FAPPLY_FUPDATE_THM] >- (
+    fs[good_repl_state_def,INJ_DEF,SUBSET_DEF] >>
+    rw[EQ_IMP_THM] >>
+    PROVE_TAC[] ) >>
+  rw[] >>
+  rw[EQ_IMP_THM] >> rw[] >>
+  fs[good_repl_state_def,FRANGE_DEF,FAPPLY_FUPDATE_THM,SUBSET_DEF] >>
+  PROVE_TAC[prim_recTheory.LESS_REFL] )
 >- (
   fs[] >>
   BasicProvers.EVERY_CASE_TAC >> rw[] >>
@@ -755,13 +753,52 @@ rw[] >- (
   srw_tac[DNF_ss][Once EXTENSION] >>
   PROVE_TAC[] )
 >- (
-  fs[] >>
-  first_x_assum (match_mp_tac o MP_CANON) >>
-  fs[] >>
+  fs[EVERY_MEM,pairTheory.FORALL_PROD] >>
+  Cases_on `dest_var e` >> fs[] >>
+  rw[FOLDL_UNION_BIGUNION_paired,DIFF_SAME_UNION,UNION_COMM] >>
+  imp_res_tac dest_var_case >> rw[] >> fs[] >> rw[] >>
+  AP_TERM_TAC >>
+  rw[Once EXTENSION,MEM_MAP,pairTheory.EXISTS_PROD] >>
+  srw_tac[DNF_ss][] >>
+  fs[SUBSET_DEF,pairTheory.UNCURRY] >>
+  srw_tac[DNF_ss][CONJ_ASSOC, Once CONJ_COMM] >>
+  ((qho_match_abbrev_tac `
+      (∃p1 p2. A p1 p2 ∧ MEM (p1,p2) pes) =
+      (∃p1 p2 x. B p1 p2 x ∧ MEM (p1,p2) pes)`)
+   ORELSE
+   (rw[Once(GSYM CONJ_ASSOC),SimpLHS] >>
+    qho_match_abbrev_tac `
+      (∃p1 p2. MEM (p1,p2) pes ∧ A p1 p2) =
+      (∃p1 p2 x. B p1 p2 x ∧ MEM (p1,p2) pes)`)) >>
+  (qsuff_tac `∀p1 p2. MEM (p1,p2) pes ⇒ (A p1 p2 = ∃x. B p1 p2 x)` >- PROVE_TAC[]) >>
+  srw_tac[DNF_ss][Abbr`A`,Abbr`B`] >>
+  rpt (first_x_assum (qspecl_then [`p1`,`p2`] mp_tac)) >>
+  qabbrev_tac `q = pat_to_Cpat s [] p1` >>
+  PairCases_on `q` >> fs[] >>
+  `good_repl_state q0` by PROVE_TAC[pat_to_Cpat_invariants] >>
   rw[] >>
-  first_x_assum (match_mp_tac o MP_CANON) >>
-  Cases_on `dest_var e` >> fs[] >> rw[] >>
-  metis_tac[] )
+  `pat_vars p1 ⊆ FDOM q0.vmap` by PROVE_TAC[pat_to_Cpat_invariants] >>
+  `FV p2 ⊆ FDOM q0.vmap` by (
+    PROVE_TAC[pat_to_Cpat_invariants,SUBSET_DEF] ) >>
+  fs[SUBSET_DEF] >>
+  fs[markerTheory.Abbrev_def] >>
+  qpat_assum`X = pat_to_Cpat s [] p1` (assume_tac o SYM) >>
+  imp_res_tac Cpat_vars_pat_to_Cpat >>
+  EQ_TAC >> strip_tac >- (
+    qpat_assum `Cpat_vars q2 = X` assume_tac >>
+    fs[] >> PROVE_TAC[pat_to_Cpat_invariants] ) >>
+  fs[Once EXTENSION] >>
+  rw[] >- (
+    res_tac >>
+    fs[good_repl_state_def,FRANGE_DEF] >>
+    PROVE_TAC[prim_recTheory.LESS_REFL,pat_to_Cpat_invariants] ) >>
+  TRY (
+    qmatch_rename_tac `s.vmap ' x1 ≠ q0.vmap ' x2 ∨ x2 ∉ pat_vars p1`[] >>
+    spose_not_then strip_assume_tac >>
+    `q0.vmap ' x1 = q0.vmap ' x2` by PROVE_TAC[pat_to_Cpat_invariants] >>
+    fs[good_repl_state_def,INJ_DEF] >>
+    PROVE_TAC[] ) >>
+  PROVE_TAC[pat_to_Cpat_invariants] )
 >- (
   fs[] >>
   qabbrev_tac `p = extend s vn` >>
@@ -787,125 +824,68 @@ rw[] >- (
   fs[good_repl_state_def,FRANGE_DEF] >>
   metis_tac[prim_recTheory.LESS_REFL,SUBSET_DEF,IN_INSERT] )
 >- (
-  qmatch_abbrev_tac `free_vars (A (B C)) = D` >>
-  PairCases_on `C` >>
-  rw[Abbr`B`,Abbr`A`,FOLDL_UNION_BIGUNION_paired,Abbr`D`] >>
-  qpat_assum `Abbrev X` (assume_tac o SYM o REWRITE_RULE[markerTheory.Abbrev_def]) >>
-  qmatch_assum_abbrev_tac `FOLDR f (s,[]) defs = (C0,C1)` >>
-  `(λ(C0,C1). good_repl_state C0 ∧
-              FDOM s.vmap ⊆ FDOM C0.vmap ∧
-              (∀x. x ∈ FDOM s.vmap ⇒ (s.vmap ' x = C0.vmap ' x)) ∧
-              (∀x. x ∉ FDOM s.vmap ∧ x ∈ FDOM C0.vmap ⇒ (∀y. y ∈ FRANGE s.vmap ⇒ y < C0.vmap ' x)))
-     (FOLDR f (s,[]) defs)` by (
-    match_mp_tac FOLDR_invariant >>
-    fs[Abbr`f`] >>
-    conj_tac >- rw[] >>
-    qx_gen_tac `x` >> qx_gen_tac `a` >>
-    PairCases_on `x` >> PairCases_on `a` >>
-    fs[] >>
-    qabbrev_tac `p = extend a0 x0` >>
-    PairCases_on `p` >>
-    fs[] >>
-    strip_tac >>
-    conj_tac >- metis_tac[extend_good_repl_state] >>
-    conj_tac >- metis_tac[extend_FDOM_SUBSET,SUBSET_TRANS] >>
-    conj_tac >- (
-      qpat_assum `Abbrev ((p0,p1) = extend a0 x0)` mp_tac >>
-      rw[markerTheory.Abbrev_def,extend_def,FAPPLY_FUPDATE_THM] >>
-      rw[] >> metis_tac[SUBSET_DEF]) >>
-    qpat_assum `Abbrev ((p0,p1) = extend a0 x0)` mp_tac >>
-    rw[markerTheory.Abbrev_def,extend_def,FAPPLY_FUPDATE_THM] >> rw[] >> fs[] >>
-    fs[good_repl_state_def] >>
-    first_x_assum match_mp_tac >>
-    fs[FRANGE_DEF,SUBSET_DEF] >>
-    PROVE_TAC[] ) >>
-  pop_assum mp_tac >> rw[] >> fs[] >>
-  `(∀x. MEM x defs ⇒ FST x ∈ FDOM (FST (FOLDR f (s,[]) defs)).vmap) ∧
-   (∀y. MEM y (SND (FOLDR f (s,[]) defs)) = ∃x. MEM x defs ∧ (y = (FST (FOLDR f (s,[]) defs)).vmap ' (FST x)))` by (
-    qho_match_abbrev_tac `P defs (FOLDR f (s,[]) defs)` >>
-    match_mp_tac FOLDR_transitive_property >>
-    conj_tac >- rw[Abbr`P`] >>
-    qx_gen_tac `n` >> qx_gen_tac `a` >>
-    PairCases_on `a` >>
-    fs[Abbr`P`] >>
-    strip_tac >>
-    fs[pairTheory.FORALL_PROD] >>
-    conj_asm1_tac >- (
-      map_every qx_gen_tac [`d`,`x1`,`x2`] >>
-      qabbrev_tac `p = EL n defs` >>
-      PairCases_on `p` >>
-      fs[Abbr`f`] >>
-      qabbrev_tac `q = extend a0 p0` >>
-      PairCases_on `q` >>
-      fs[] >>
-      rw[Once MEM_DROP] >>
-      metis_tac[extend_IN_FDOM,extend_FDOM_SUBSET,SUBSET_DEF] ) >>
-    qx_gen_tac `y` >>
-    qabbrev_tac `p = EL n defs` >>
-    PairCases_on `p` >>
-    fs[Abbr`f`] >>
-    qabbrev_tac `q = extend a0 p0` >>
-    PairCases_on `q` >>
-    fs[] >>
-    rw[Once MEM_DROP,SimpRHS] >>
-    qpat_assum `Abbrev ((q0,q1) = extend a0 p0)` mp_tac >>
-    rw[extend_def,markerTheory.Abbrev_def,FAPPLY_FUPDATE_THM,pairTheory.EXISTS_PROD] >>
-    srw_tac[DNF_ss][] >>
-    rw[EQ_IMP_THM] >> rw[] >>
-    metis_tac[]) >>
-  ntac 2 (pop_assum mp_tac) >> fs[pairTheory.EXISTS_PROD,pairTheory.FORALL_PROD] >>
-  ntac 2 strip_tac >>
-  `IMAGE FST (set defs) ⊆ FDOM C0.vmap` by (
-    rw[SUBSET_DEF,pairTheory.EXISTS_PROD] >> PROVE_TAC[] ) >>
-  `FV e ⊆ FDOM C0.vmap` by (
-    fs[SUBSET_DEF] >> PROVE_TAC[] ) >>
-  `set C1 = IMAGE (FAPPLY C0.vmap o FST) (set defs)` by (
-    rw[EXTENSION,pairTheory.EXISTS_PROD] >> PROVE_TAC[] ) >>
-  fs[IMAGE_COMPOSE] >>
+  qabbrev_tac `p = extend_defs s defs` >>
+  PairCases_on `p` >>
+  fs[FOLDL_UNION_BIGUNION_paired] >>
+  `good_repl_state p0 ∧ FV e ⊆ FDOM p0.vmap` by (
+    fs[SUBSET_DEF] >>
+    PROVE_TAC[SIMP_RULE(srw_ss())[SUBSET_DEF]extend_defs_invariants] ) >>
+  fs[] >>
   qmatch_abbrev_tac `X ∪ Y = Z ∪ A` >>
   `X = A` by (
-    unabbrev_all_tac >>
+    fs[markerTheory.Abbrev_def] >>
     rw[EXTENSION,pairTheory.FORALL_PROD] >>
     fs[SUBSET_DEF,pairTheory.FORALL_PROD] >>
-    rw[EQ_IMP_THM] >> fs[]
-      >- PROVE_TAC[]
-      >- PROVE_TAC[] >>
+    rw[EQ_IMP_THM]
+      >- PROVE_TAC[SIMP_RULE(srw_ss())[EXTENSION,pairTheory.EXISTS_PROD]extend_defs_invariants]
+      >- PROVE_TAC[SIMP_RULE(srw_ss())[EXTENSION,pairTheory.EXISTS_PROD]extend_defs_invariants] >>
+    qmatch_rename_tac `¬MEM (s.vmap ' xz) p1`[] >>
+    qsuff_tac `∀xx p1 p2. MEM (xx,p1,p2) defs ⇒ (s.vmap ' xz ≠ p0.vmap ' xx)`
+      >- PROVE_TAC[SIMP_RULE(srw_ss())[EXTENSION,pairTheory.EXISTS_PROD]extend_defs_invariants] >>
+    `xz ∈ FDOM s.vmap` by PROVE_TAC[] >>
+    `s.vmap ' xz = p0.vmap ' xz` by PROVE_TAC[extend_defs_invariants] >>
+    rw[] >>
+    spose_not_then strip_assume_tac >>
+    qsuff_tac `xx = xz` >- PROVE_TAC[] >>
     fs[good_repl_state_def,INJ_DEF] >>
-    metis_tac[] ) >>
+    qsuff_tac `xx ∈ FDOM p0.vmap` >- PROVE_TAC[] >>
+    `IMAGE FST (set defs) ⊆ FDOM p0.vmap` by PROVE_TAC[extend_defs_invariants] >>
+    fs[SUBSET_DEF,pairTheory.EXISTS_PROD] >> PROVE_TAC[] ) >>
   rw[UNION_COMM] >>
+  qpat_assum `Abbrev (pp = extend_defs s defs)` (assume_tac o SYM o SIMP_RULE(srw_ss())[markerTheory.Abbrev_def]) >>
   unabbrev_all_tac >>
-  rw[FOLDR_CONS_triple,pairTheory.UNCURRY,LIST_TO_SET_MAP] >>
   ntac 2 AP_TERM_TAC >>
   rw[Once EXTENSION,pairTheory.EXISTS_PROD] >>
-  srw_tac[DNF_ss][MEM_MAP,pairTheory.EXISTS_PROD] >>
-  qho_match_abbrev_tac `(∃p1 p2 p3. A p2 p3 ∧ MEM (p1,p2,p3) defs) = (∃p1 p2 p3. B p2 p3 ∧ MEM (p1,p2,p3) defs)` >>
-  qsuff_tac `∀p0 p1 p2. MEM (p0,p1,p2) defs ⇒ (A p1 p2 = B p1 p2)` >- PROVE_TAC[] >>
+  srw_tac[DNF_ss][MEM_MAP,pairTheory.EXISTS_PROD,pairTheory.UNCURRY] >>
+  qho_match_abbrev_tac `(∃q1 q2 q3. A q2 q3 ∧ MEM (q1,q2,q3) defs) = (∃q1 q2 q3. B q2 q3 ∧ MEM (q1,q2,q3) defs)` >>
+  qsuff_tac `∀q0 q1 q2. MEM (q0,q1,q2) defs ⇒ (A q1 q2 = B q1 q2)` >- PROVE_TAC[] >>
   rw[Abbr`A`,Abbr`B`] >>
   qmatch_abbrev_tac `(x = A) = (x = B)` >>
   qsuff_tac `A = B` >- PROVE_TAC[] >>
   rw[Abbr`A`,Abbr`B`] >>
-  qabbrev_tac `q = extend C0 p1` >>
-  PairCases_on `q` >> fs[] >>
-  `good_repl_state q0` by metis_tac [extend_good_repl_state] >>
-  `FV p2 ⊆ FDOM q0.vmap` by (
-    fs[SUBSET_DEF,pairTheory.FORALL_PROD] >>
+  qabbrev_tac `r = extend p0 q1` >>
+  PairCases_on `r` >> fs[] >>
+  fs[pairTheory.FORALL_PROD] >>
+  rpt (first_x_assum (qspecl_then [`q0`,`q1`,`q2`] mp_tac)) >>
+  `good_repl_state r0` by metis_tac [extend_good_repl_state] >>
+  fs[] >> rw[] >>
+  imp_res_tac extend_defs_invariants >>
+  fs[SUBSET_DEF,pairTheory.FORALL_PROD,pairTheory.EXISTS_PROD] >>
+  `FV q2 ⊆ FDOM r0.vmap` by (
+    rw[SUBSET_DEF] >>
     metis_tac[extend_IN_FDOM,extend_FDOM_SUBSET,SUBSET_DEF] ) >>
-  `free_vars (exp_to_Cexp q0 p2) = IMAGE (FAPPLY q0.vmap) (FV p2)` by metis_tac[] >>
-  rw[DIFF_UNION] >>
+  fs[SUBSET_DEF] >>
+  rw[DIFF_UNION,IMAGE_COMPOSE] >>
+  rw[DIFF_COMM,DIFF_DIFF] >>
   srw_tac[DNF_ss][Once EXTENSION,pairTheory.FORALL_PROD,GSYM CONJ_ASSOC] >>
-  qho_match_abbrev_tac `(∃z. (x = q0.vmap ' z) ∧ (z ∈ FV p2) ∧ A x) = (∃z. (x = s.vmap ' z) ∧ (z ∈ FV p2) ∧ B z)` >>
-  qsuff_tac `∀z. z ∈ FV p2 ⇒ (B z ⇒ (q0.vmap ' z = s.vmap ' z)) ∧ (A (q0.vmap ' z) = B z)` >- metis_tac[] >>
+  qho_match_abbrev_tac `(∃z. (x = r0.vmap ' z) ∧ (z ∈ FV p2) ∧ A x) = (∃z. (x = s.vmap ' z) ∧ (z ∈ FV p2) ∧ B z)` >>
+  qsuff_tac `∀z. z ∈ FV p2 ⇒ (B z ⇒ (r0.vmap ' z = s.vmap ' z)) ∧ (A (r0.vmap ' z) = B z)` >- metis_tac[] >>
   qx_gen_tac `z` >> strip_tac >>
   fs[Abbr`A`,Abbr`B`] >>
   conj_asm1_tac >- (
-    rw[] >>
-    qpat_assum `Abbrev (X = extend C0 p1)` mp_tac >>
-    rw[extend_def,markerTheory.Abbrev_def] >>
-    fs[FAPPLY_FUPDATE_THM] >> rw[] >> fs[] >>
-    fs[SUBSET_DEF,pairTheory.EXISTS_PROD] >>
-    PROVE_TAC[] ) >>
-  `∀z. z ∈ FDOM q0.vmap ⇒ ((q0.vmap ' z = q1) = (z = p1))` by (
-    qpat_assum `Abbrev (X = extend C0 p1)` mp_tac >>
+    rw[] >> PROVE_TAC[extend_preserve,extend_defs_invariants] ) >>
+  `∀z. z ∈ FDOM r0.vmap ⇒ ((r0.vmap ' z = r1) = (z = q1))` by (
+    qpat_assum `Abbrev (X = extend p0 q1)` mp_tac >>
     rw[extend_def,markerTheory.Abbrev_def] >>
     fs[FAPPLY_FUPDATE_THM] >> rw[] >> fs[] >- (
       fs[good_repl_state_def,INJ_DEF] >>
@@ -913,56 +893,51 @@ rw[] >- (
     fs[good_repl_state_def] >>
     fs[FRANGE_DEF] >>
     metis_tac[prim_recTheory.LESS_REFL] ) >>
-  `p1 ∈ FDOM q0.vmap` by PROVE_TAC[extend_IN_FDOM] >>
-  Cases_on `z=p1` >> fs[] >>
-  `z ∈ FDOM q0.vmap` by fs[SUBSET_DEF] >>
-  Cases_on `q0.vmap ' z = q1` >> fs[] >- PROVE_TAC[] >>
-  `q0.vmap ' z = C0.vmap ' z` by (
-    qpat_assum `Abbrev (X = extend C0 p1)` mp_tac >>
+  `q1 ∈ FDOM r0.vmap` by PROVE_TAC[extend_IN_FDOM] >>
+  Cases_on `z=q1` >> fs[] >>
+  `z ∈ FDOM r0.vmap` by fs[SUBSET_DEF] >>
+  Cases_on `r0.vmap ' z = r1` >> fs[] >- PROVE_TAC[] >>
+  `r0.vmap ' z = p0.vmap ' z` by (
+    qpat_assum `Abbrev (X = extend p0 q1)` mp_tac >>
     rw[extend_def,markerTheory.Abbrev_def] >>
     fs[FAPPLY_FUPDATE_THM] >> rw[] >> fs[] ) >>
   rw[EQ_IMP_THM] >- PROVE_TAC[] >>
   spose_not_then strip_assume_tac >>
   qmatch_assum_rename_tac `MEM (x1,x2,x3) defs` [] >>
-  `x1 ∈ FDOM C0.vmap` by (
+  `x1 ∈ FDOM p0.vmap` by (
     fs[SUBSET_DEF,pairTheory.EXISTS_PROD] >> PROVE_TAC[] ) >>
-  `z ∈ FDOM C0.vmap` by (
-    qpat_assum `Abbrev (X = extend C0 p1)` mp_tac >>
+  `z ∈ FDOM p0.vmap` by (
+    qpat_assum `Abbrev (X = extend p0 q1)` mp_tac >>
     rw[extend_def,markerTheory.Abbrev_def] >>
     fs[FAPPLY_FUPDATE_THM] >> rw[] >> fs[] ) >>
   fs[good_repl_state_def,INJ_DEF] >>
   metis_tac[])
 >- (
-  fs[] >>
-  Cases_on `dest_var e` >> fs[] >>
-  qmatch_abbrev_tac `free_vars (A (B C)) = D` >>
-  PairCases_on `C` >>
-  rw[Abbr`B`,Abbr`A`,FOLDL_UNION_BIGUNION_paired,Abbr`D`] >>
-  qpat_assum `Abbrev X` (assume_tac o SYM o REWRITE_RULE[markerTheory.Abbrev_def]) >>
-  qmatch_assum_abbrev_tac `FOLDR f (ss,[]) pes = (C0,C1)` >- (
-    `good_repl_state ss` by (
-      fs[Abbr`ss`,good_repl_state_def] >>
-      rw[] >> res_tac >> srw_tac[ARITH_ss][] ) >>
-    Cases_on `mk_Cpes ss` >> fs[] >>
-    rw[UNION_COMM,DIFF_SAME_UNION] >>
-    AP_TERM_TAC >>
-    rw[Once EXTENSION,pairTheory.EXISTS_PROD] >>
-    `(λ(C0,C1). ∀Cp Cexp. MEM (Cp,Cexp) C1 ⇒
-        ∃p e. MEM (p,e) pes ∧
-              ((s,_pvs,Cp) = pat_to_Cpat 
+  qabbrev_tac `p = extend s vn` >>
+  PairCases_on `p` >> fs[] )
+>- (
+  qmatch_assum_rename_tac `MEM d defs`[] >>
+  PairCases_on `d` >> fs[] >>
+  qabbrev_tac `p = extend s d1` >>
+  PairCases_on `p` >> fs[] >>
+  qabbrev_tac `q = extend s vn` >>
+  PairCases_on `q` >> fs[pairTheory.FORALL_PROD] >>
+  first_x_assum (qspecl_then [`d0`,`d1`,`d2`] mp_tac) >>
+  rw[] )
+>- (
+  qabbrev_tac `q = pat_to_Cpat s [] p` >>
+  PairCases_on`q`>>fs[] )
+>- (
+  qmatch_assum_rename_tac `MEM d defs`[] >>
+  PairCases_on `d` >> fs[] >>
+  qabbrev_tac `q = pat_to_Cpat s [] d0` >>
+  PairCases_on `q` >> fs[] >>
+  qabbrev_tac `r = pat_to_Cpat s [] p` >>
+  PairCases_on `r` >> fs[pairTheory.FORALL_PROD] >>
+  first_x_assum (qspecl_then [`d0`,`d1`] mp_tac) >>
+  rw[] ))
 
-     (FOLDR f (ss,[]) pes)` by (
-      match_mp_tac FOLDR_invariant >>
-      fs[] >>
-      qx_gen_tac `x` >> PairCases_on `x` >>
-      qx_gen_tac `a` >> PairCases_on `a` >>
-      fs[Abbr`f`] >>
-      qabbrev_tac `p = pat_to_Cpat a0 [] x0` >>
-      PairCases_on`p` >> fs[] >>
-      strip_tac >> rw[] >> fs[]
-
-  ... )
-
+(*
 val exp_to_Cexp_thm1 = store_thm(
 "exp_to_Cexp_thm1",
 ``∀cenv env exp res. evaluate cenv env exp res ⇒
