@@ -523,18 +523,6 @@ srw_tac[][FUN_FMAP_DEF,DRESTRICT_DEF,FUNION_DEF])
 
 (* Prove compiler phases preserve semantics *)
 
-val tac1 =
-   match_mp_tac Cevaluate_super_env >>
-   fsrw_tac[boolSimps.DNF_ss][] >>
-   (reverse conj_tac >- (
-      match_mp_tac SUBSET_BIGUNION_I >>
-      srw_tac[boolSimps.DNF_ss][MEM_MAP,MEM_EL] >>
-      metis_tac[] )) >>
-   qmatch_abbrev_tac `Cevaluate env0 (exp_to_Cexp s0 (EL kk es)) res0` >>
-   first_x_assum (qspecl_then [`kk`,`s0`] mp_tac) >> rw[] >>
-   pop_assum (match_mp_tac o MP_CANON) >>
-   fsrw_tac[boolSimps.DNF_ss][BIGUNION_SUBSET,MEM_EL]
-
 (* TODO: move? *)
 val ALOOKUP_NONE = store_thm(
 "ALOOKUP_NONE",
@@ -596,6 +584,14 @@ map_every (fn q => Q.ISPEC_THEN q imp_res_tac SUM_MAP_MEM_bound)
 fsrw_tac[ARITH_ss][exp_size_def]
 end
 val _ = export_rewrites["FV_def"]
+
+val FINITE_FV = store_thm(
+"FINITE_FV",
+``∀exp. FINITE (FV exp)``,
+ho_match_mp_tac (theorem"FV_ind") >>
+rw[pairTheory.EXISTS_PROD] >>
+fsrw_tac[SATISFY_ss][])
+val _ = export_rewrites["FINITE_FV"]
 
 val exp_to_Cexp_App_case = store_thm(
 "exp_to_Cexp_App_case",
@@ -937,6 +933,57 @@ rw[] >- (
   first_x_assum (qspecl_then [`d0`,`d1`] mp_tac) >>
   rw[] ))
 
+val tac1 =
+   match_mp_tac Cevaluate_super_env >>
+   fsrw_tac[boolSimps.DNF_ss][] >>
+   (reverse conj_tac >- (
+      match_mp_tac SUBSET_BIGUNION_I >>
+      srw_tac[boolSimps.DNF_ss][MEM_MAP,MEM_EL] >>
+      metis_tac[] )) >>
+   qmatch_abbrev_tac `Cevaluate env0 (exp_to_Cexp s0 (EL kk es)) res0` >>
+   first_x_assum (qspecl_then [`kk`,`s0`] mp_tac) >> rw[] >>
+   pop_assum (match_mp_tac o MP_CANON) >>
+   fsrw_tac[boolSimps.DNF_ss][BIGUNION_SUBSET,MEM_EL]
+
+val tacLt =
+  rw[Once Cevaluate_cases] >>
+  disj1_tac >>
+  rw[Cevaluate_list_with_Cevaluate] >>
+  rw[Cevaluate_list_with_cons] >>
+  qexists_tac `v_to_Cv s v1` >>
+  qexists_tac `v_to_Cv s v2` >>
+  rw[] >>
+  Cases_on `v1` >> Cases_on `l` >> fs[MiniMLTheory.do_app_def] >>
+  Cases_on `v2` >> Cases_on `l` >> fs[] >> rw[] >>
+  fs[CevalPrim2_def,doPrim2_def,exp_to_Cexp_def,MiniMLTheory.opb_lookup_def] >>
+  fsrw_tac[SATISFY_ss][Cevaluate_super_env]
+
+val tacGt =
+  rw[Once Cevaluate_cases] >>
+  disj1_tac >>
+  qexists_tac `v_to_Cv s v1` >>
+  fsrw_tac[SATISFY_ss][GSYM INSERT_SING_UNION,Cevaluate_super_env] >>
+  rw[Once Cevaluate_cases] >>
+  disj1_tac >>
+  qexists_tac `v_to_Cv s v2` >>
+  conj_tac >- (
+    match_mp_tac Cevaluate_FUPDATE >>
+    fs[good_env_state_def] >>
+    fs[free_vars_exp_to_Cexp] >>
+    reverse conj_tac >- (
+      fs[good_repl_state_def,FRANGE_DEF,SUBSET_DEF] >>
+      metis_tac[prim_recTheory.LESS_REFL] ) >>
+    fsrw_tac[SATISFY_ss][Cevaluate_super_env,free_vars_exp_to_Cexp] ) >>
+  rw[Once Cevaluate_cases] >>
+  disj1_tac >>
+  rw[Cevaluate_list_with_Cevaluate] >>
+  rw[Cevaluate_list_with_cons] >>
+  srw_tac[ARITH_ss][FAPPLY_FUPDATE_THM] >>
+  Cases_on `v1` >> Cases_on `l` >> fs[MiniMLTheory.do_app_def] >>
+  Cases_on `v2` >> Cases_on `l` >> fs[] >> rw[] >>
+  fs[doPrim2_def,exp_to_Cexp_def,MiniMLTheory.opb_lookup_def] >>
+  rw[integerTheory.int_gt,integerTheory.int_ge]
+
 (*
 val exp_to_Cexp_thm1 = store_thm(
 "exp_to_Cexp_thm1",
@@ -944,6 +991,7 @@ val exp_to_Cexp_thm1 = store_thm(
   ∀s Cexp. (res ≠ Rerr Rtype_error) ∧
     (Cexp = exp_to_Cexp s exp) ∧
     (clV_exp exp ⊆ FDOM s.vmap) ∧
+    (FV exp ⊆ FDOM s.vmap) ∧
     good_env_state env s ⇒
  Cevaluate
    (force_dom (alist_to_fmap (MAP (λ(x,v). (s.vmap ' x, v_to_Cv s v)) env)) (free_vars Cexp) (CLit (Bool F)))
@@ -955,14 +1003,14 @@ strip_tac >- (
   rw[exp_to_Cexp_def] >>
   match_mp_tac EQ_SYM >>
   match_mp_tac (CONJUNCT2 ce_Cexp_canonical_id) >>
-  match_mp_tac ((funpow 3 CONJUNCT2) exp_to_Cexp_canonical) >>
+  match_mp_tac (CONJUNCT2 exp_to_Cexp_canonical) >>
   fs[good_env_state_def] ) >>
 strip_tac >- (
-  rw[exp_to_Cexp_def,evaluate_list_with_value,Cevaluate_con,Cevaluate_list_with_Cevaluate,Cevaluate_list_with_value,EL_MAP,FOLDL_UNION_BIGUNION] >>
+  rw[exp_to_Cexp_def,exps_to_Cexps_MAP,vs_to_Cvs_MAP,evaluate_list_with_value,Cevaluate_con,Cevaluate_list_with_Cevaluate,Cevaluate_list_with_value,EL_MAP,FOLDL_UNION_BIGUNION] >>
   tac1 ) >>
 strip_tac >- rw[] >>
 strip_tac >- (
-  rw[exp_to_Cexp_def,evaluate_list_with_error,Cevaluate_con,Cevaluate_list_with_Cevaluate,Cevaluate_list_with_error] >>
+  rw[exp_to_Cexp_def,exps_to_Cexps_MAP,evaluate_list_with_error,Cevaluate_con,Cevaluate_list_with_Cevaluate,Cevaluate_list_with_error] >>
   qexists_tac `n` >>
   fs[EL_MAP,FOLDL_UNION_BIGUNION] >>
   conj_tac >- (
@@ -1005,13 +1053,13 @@ strip_tac >- (
   rw[] >>
   match_mp_tac EQ_SYM >>
   match_mp_tac (CONJUNCT2 ce_Cexp_canonical_id) >>
-  match_mp_tac ((funpow 3 CONJUNCT2) exp_to_Cexp_canonical) >>
+  match_mp_tac (CONJUNCT2 exp_to_Cexp_canonical) >>
   fsrw_tac[boolSimps.DNF_ss][good_env_state_def,BIGUNION_SUBSET,pairTheory.EXISTS_PROD,MEM_MAP] >>
   imp_res_tac ALOOKUP_MEM >>
   metis_tac[]) >>
 strip_tac >- rw[] >>
 strip_tac >- (
-  rw[exp_to_Cexp_def] >> rw[] >>
+  rw[exp_to_Cexp_def,env_to_Cenv_MAP] >> rw[] >>
   rw[mk_env_canon,Abbr`env'`,Abbr`env''`,ALOOKUP_APPEND,ALOOKUP_MAP,FLOOKUP_DEF] >>
   unabbrev_all_tac >> fs[] >>
   rw[force_dom_DRESTRICT_FUNION,FUNION_DEF,DRESTRICT_DEF,FUN_FMAP_DEF] >>
@@ -1041,30 +1089,20 @@ strip_tac >- (
     qpat_assum `∀s. good_env_state env s ⇒ P` (qspec_then `s` mp_tac) >>
     rw[Once MiniMLTheory.evaluate_cases,exp_to_Cexp_def] )
   >- (
-    qmatch_assum_rename_tac `do_app env (Opb opn) v1 v2 = SOME (env',exp'')` [] >>
-    Cases_on `opn` >>
-    fs[Abbr`Ce1`,Abbr`Ce2`] >- (
-      rw[Once Cevaluate_cases] >>
-      disj1_tac >>
-      rw[Cevaluate_list_with_Cevaluate] >>
-      rw[Cevaluate_list_with_cons] >>
-      qexists_tac `v_to_Cv s v1` >>
-      qexists_tac `v_to_Cv s v2` >>
-      rw[] >>
-      Cases_on `v1` >> Cases_on `l` >> fs[MiniMLTheory.do_app_def] >>
-      Cases_on `v2` >> Cases_on `l` >> fs[] >> rw[] >>
-      fs[CevalPrim2_def,doPrim2_def,exp_to_Cexp_def,MiniMLTheory.opb_lookup_def] >>
-      fsrw_tac[SATISFY_ss][Cevaluate_super_env] )
-    >- (
-      rw[Once Cevaluate_cases] >>
-      disj1_tac >>
-      qexists_tac `v_to_Cv s v1` >>
-      fsrw_tac[SATISFY_ss][GSYM INSERT_SING_UNION,Cevaluate_super_env] >>
-      rw[Once Cevaluate_cases] >>
-      disj1_tac >>
-      qexists_tac `v_to_Cv s v2` >>
-      conj_tac >- (
-        match_mp_tac Cevaluate_FUPDATE >>
+    qmatch_assum_rename_tac `do_app env (Opb opb) v1 v2 = SOME (env',exp'')` [] >>
+    Cases_on `opb` >> fs[Abbr`Ce1`,Abbr`Ce2`]
+    >- tacLt >- tacGt >- tacLt >- tacGt )
+  >- (
+    rw[Once Cevaluate_cases] >>
+    disj1_tac >>
+    rw[Cevaluate_list_with_Cevaluate] >>
+    rw[Cevaluate_list_with_cons] >>
+    qexists_tac `v_to_Cv s v1` >>
+    qexists_tac `v_to_Cv s v2` >>
+    fsrw_tac[][Cevaluate_super_env,Abbr`Ce1`,Abbr`Ce2`] >>
+    fs[MiniMLTheory.do_app_def]
+
+
 *)
 
 (*
