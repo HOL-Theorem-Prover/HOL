@@ -1,4 +1,4 @@
-open HolKernel bossLib boolLib listTheory pred_setTheory finite_mapTheory sortingTheory alistTheory SatisfySimps lcsymtacs
+open HolKernel bossLib boolLib boolSimps listTheory pred_setTheory finite_mapTheory sortingTheory alistTheory SatisfySimps lcsymtacs
 open MiniMLTheory compileTerminationTheory count_expTheory
 val _ = new_theory "intLang"
 
@@ -1510,6 +1510,34 @@ conj_asm2_tac >- (
   unabbrev_all_tac >>
   rw[mk_env_canonical_id,DIFF_UNION,DIFF_COMM] ) >>
 srw_tac[SATISFY_ss][MAP_EQ_ID,pairTheory.FORALL_PROD])
+
+(* TODO: move *)
+val every_result_def = Define`
+  (every_result P (Rerr _) = T) ∧
+  (every_result P (Rval v) = P v)`
+val _ = export_rewrites["every_result_def"]
+
+val Cevaluate_canonical = store_thm(
+"Cevaluate_canonical",
+``∀env exp res. Cevaluate env exp res ⇒ every_result canonical_env_Cv res``,
+ho_match_mp_tac Cevaluate_nice_ind >> rw[] >>
+fs[Cevaluate_list_with_EVERY,EVERY_MEM,pairTheory.FORALL_PROD,
+   Cevaluate_list_with_error] >>
+TRY (qexists_tac `0` >> rw[]) >>
+TRY (qpat_assum `LENGTH es = LENGTH vs` assume_tac) >>
+TRY (fsrw_tac[DNF_ss][MEM_ZIP,EL_MAP,MEM_EL] >> NO_TAC) >>
+unabbrev_all_tac >>
+rw[mk_env_def,MEM_MAP,pairTheory.EXISTS_PROD,FLOOKUP_DEF,
+   force_dom_DRESTRICT_FUNION,DRESTRICT_DEF,FUNION_DEF,FUN_FMAP_DEF] >>
+rw[FUN_FMAP_DEF] >- (
+  rw[Once EXTENSION,EQ_IMP_THM] >> fs[] ) >>
+qmatch_abbrev_tac `canonical_env_Cv (alist_to_fmap (MAP f al) ' v)` >>
+`alist_to_fmap (MAP f al) =
+ MAP_KEYS I (ce_Cv o_f alist_to_fmap al)` by (
+  Q.ISPECL_THEN [`I`,`ce_Cv`] match_mp_tac alist_to_fmap_MAP_matchable >>
+  qexists_tac `al` >>
+  rw[INJ_DEF] ) >>
+fs[MAP_KEYS_def,Abbr`al`,o_f_FAPPLY] )
 
 (* the remainder is probably junk *)
 

@@ -558,12 +558,6 @@ val exp_to_Cexp_vars_below_next = store_thm(
 exp_to_Cexp_ind
 *)
 
-(* TODO: move *)
-val every_result_def = Define`
-  (every_result P (Rerr _) = T) ∧
-  (every_result P (Rval v) = P v)`
-val _ = export_rewrites["every_result_def"]
-
 val FV_def = tDefine "FV"`
 (FV (Raise _) = {}) ∧
 (FV (Val v) = {}) ∧
