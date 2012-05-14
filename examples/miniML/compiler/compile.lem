@@ -257,7 +257,7 @@ CevalPrim2 CMod = doPrim2 true IntLit Int.(%)
 and
 CevalPrim2 CLt = doPrim2 false Bool Int.(<)
 and
-CevalPrim2 CEq = doPrim2 false Bool (=)
+CevalPrim2 CEq = fun v1 v2 -> Some (CVal (CLit (Bool (v1 = v2))))
 
 type Cmatch_result =
   | Cmatch of (num,Cv) Pmap.map

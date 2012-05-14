@@ -289,7 +289,7 @@ val _ = Defn.save_defn doPrim2_defn;
 /\
 (CevalPrim2 CLt = doPrim2 F Bool int_lt)
 /\
-(CevalPrim2 CEq = doPrim2 F Bool(=))`;
+(CevalPrim2 CEq = \ v1 v2 . SOME (CVal (CLit (Bool (v1 = v2)))))`;
 
 val _ = Defn.save_defn CevalPrim2_defn;
 
