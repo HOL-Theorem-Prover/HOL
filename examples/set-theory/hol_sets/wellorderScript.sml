@@ -1269,6 +1269,108 @@ val _ = save_thm ("ord_finite_ZERO", ord_finite_ZERO)
 val _ = save_thm ("fromNat_11", fromNat_11)
 val _ = save_thm ("ord_SUC_fromNat", ord_SUC_fromNat)
 
+val _ = overload_on ("mkOrdinal", ``ordinal_ABS``)
+
+val allOrds_def = Define`
+  allOrds = wellorder_ABS { (x,y) | (x = y) \/ ordlt x y }
+`;
+
+val wellorder_allOrds = store_thm(
+  "wellorder_allOrds",
+  ``wellorder { (x,y) | (x = y) \/ ordlt x y }``,
+  simp[wellorder_def, strict_def, wellfounded_WF, relationTheory.WF_DEF] >>
+  rpt conj_tac >| [
+    simp_tac (srw_ss() ++ CONJ_ss)
+             [REWRITE_RULE[SPECIFICATION] GSPECIFICATION,
+              pairTheory.EXISTS_PROD] >>
+    metis_tac[ordlt_REFL, ordlt_WF0],
+    simp[linear_order_def, in_domain, in_range] >> rw[]
+      >- (simp[transitive_def]>> metis_tac [ordlt_TRANS])
+      >- (simp[antisym_def] >> metis_tac [ordlt_TRANS, ordlt_REFL]) >>
+    metis_tac [ordlt_trichotomy],
+    simp[reflexive_def]
+  ])
+
+val WIN_allOrds = store_thm(
+  "WIN_allOrds",
+  ``(x,y) WIN allOrds <=> ordlt x y``,
+  simp[allOrds_def, #repabs_pseudo_id wellorder_results, wellorder_allOrds,
+       strict_def] >> metis_tac [ordlt_REFL]);
+
+val elsOf_allOrds = store_thm(
+  "elsOf_allOrds",
+  ``elsOf allOrds = univ(:'a ordinal)``,
+  rw[elsOf_def, EXTENSION, in_domain, in_range, allOrds_def,
+     #repabs_pseudo_id wellorder_results, wellorder_allOrds] >>
+  metis_tac [ordlt_trichotomy]);
+
+val (mkOrdinal_REP, orderiso_mkOrdinal) =
+  theorem "ordinal_QUOTIENT"
+          |> SIMP_RULE (srw_ss()) [quotientTheory.QUOTIENT_def, orderiso_REFL]
+          |> CONJ_PAIR
+
+
+val ordlt_mkOrdinal = store_thm(
+  "ordlt_mkOrdinal",
+  ``ordlt o1 o2 <=>
+    !w1 w2. (mkOrdinal w1 = o1) /\ (mkOrdinal w2 = o2) ==> orderlt w1 w2``,
+  rw[definition "ordlt_def"] >> eq_tac >> rpt strip_tac >| [
+    `orderiso w1 (ordinal_REP o1) /\ orderiso w2 (ordinal_REP o2)`
+      by metis_tac [orderiso_mkOrdinal, mkOrdinal_REP] >>
+    metis_tac [orderlt_orderiso],
+    simp[mkOrdinal_REP]
+  ]);
+
+val orderlt_iso_REFL = store_thm(
+  "orderlt_iso_REFL",
+  ``orderiso w1 w2 ==> ~orderlt w1 w2``,
+  metis_tac [orderlt_orderiso, orderlt_REFL, orderiso_REFL]);
+
+val orderiso_wobound2 = store_thm(
+  "orderiso_wobound2",
+  ``orderiso (wobound x w) (wobound y w) ==> ~((x,y) WIN w)``,
+  rpt strip_tac >>
+  qsuff_tac `orderlt (wobound x w) (wobound y w)`
+     >- metis_tac [orderlt_iso_REFL] >>
+  simp[orderlt_def] >> qexists_tac `x` >>
+  simp[elsOf_wobound, wobound2,orderiso_REFL]);
+
+val wellorder_ordinal_isomorphism = store_thm(
+  "wellorder_ordinal_isomorphism",
+  ``!w. orderiso w (wobound (mkOrdinal w) allOrds)``,
+  spose_not_then assume_tac >>
+  pop_assum (strip_assume_tac o REWRITE_RULE [] o
+             HO_MATCH_MP (REWRITE_RULE [relationTheory.WF_DEF] orderlt_WF)) >>
+  `orderlt w (wobound (mkOrdinal w) allOrds) \/
+     orderlt (wobound (mkOrdinal w) allOrds) w`
+    by metis_tac [orderlt_trichotomy]
+  >| [
+    pop_assum mp_tac >> simp[orderlt_def] >> qx_gen_tac `b` >>
+    Cases_on `b ∈ elsOf (wobound (mkOrdinal w) allOrds)` >> simp[] >>
+    pop_assum mp_tac >> simp[elsOf_wobound, wobound2] >>
+    simp[WIN_allOrds] >> rpt strip_tac >>
+    fs[ordlt_mkOrdinal] >>
+    first_x_assum (qspecl_then [`ordinal_REP b`, `w`] mp_tac) >>
+    simp[mkOrdinal_REP] >> strip_tac >> res_tac >> fs[mkOrdinal_REP] >>
+    metis_tac [orderiso_TRANS, orderiso_SYM, orderlt_iso_REFL],
+    pop_assum mp_tac >> simp[orderlt_def] >> qx_gen_tac `e` >>
+    Cases_on `e ∈ elsOf w` >> simp[] >> strip_tac >>
+    `orderlt (wobound e w) w`
+      by (simp[orderlt_def] >> metis_tac [orderiso_REFL]) >>
+    qabbrev_tac `E = wobound e w` >>
+    `orderiso E (wobound (mkOrdinal E) allOrds)` by metis_tac[] >>
+    `orderiso (wobound (mkOrdinal w) allOrds) (wobound (mkOrdinal E) allOrds)`
+      by metis_tac [orderiso_TRANS] >>
+    `ordlt (mkOrdinal E) (mkOrdinal w)`
+       by (simp[ordlt_mkOrdinal] >>
+           map_every qx_gen_tac [`w1`, `w2`] >>
+           simp[GSYM orderiso_mkOrdinal] >>
+           metis_tac[orderlt_orderiso, orderiso_SYM]) >>
+    `~((mkOrdinal E, mkOrdinal w) WIN allOrds)`
+       by metis_tac[orderiso_wobound2,orderiso_SYM]>>
+    fs[WIN_allOrds]
+  ]);
+
 val preds_def = Define`
   preds (w : 'a ordinal) = { w0 | ordlt w0 w }
 `;
