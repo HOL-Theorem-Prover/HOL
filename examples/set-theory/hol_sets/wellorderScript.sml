@@ -2,7 +2,7 @@ open HolKernel Parse boolLib bossLib
 open lcsymtacs
 open boolSimps
 
-open set_relationTheory pred_setTheory
+open set_relationTheory pred_setTheory cardinalTheory
 
 val _ = new_theory "wellorder"
 
@@ -1420,5 +1420,92 @@ val preds_lt_PSUBSET = store_thm(
     >- metis_tac [ordlt_TRANS, ordlt_REFL] >>
   simp_tac (srw_ss() ++ CONJ_ss) [] >>
   metis_tac [ordlt_REFL, ordlt_TRANS, ordlt_trichotomy])
+
+val preds_wobound = store_thm(
+  "preds_wobound",
+  ``preds ord = elsOf (wobound ord allOrds)``,
+  simp[EXTENSION, elsOf_wobound, preds_def, WIN_allOrds]);
+
+val preds_inj_univ = store_thm(
+  "preds_inj_univ",
+  ``preds (ord:'a ordinal) ≼ univ(:'a inf)``,
+  simp[preds_wobound] >>
+  qspec_then `ordinal_REP ord` mp_tac wellorder_ordinal_isomorphism >>
+  simp[mkOrdinal_REP] >> strip_tac >> imp_res_tac orderiso_SYM >>
+  pop_assum (strip_assume_tac o SIMP_RULE (srw_ss())[orderiso_thm]) >>
+  simp[cardleq_def] >> qexists_tac `f` >>
+  fs[BIJ_DEF, INJ_DEF]);
+
+val _ = type_abbrev("cord", ``:unit ordinal``)
+
+val countable_thm = store_thm(
+  "countable_thm",
+  ``countable s <=> s ≼ univ(:num)``,
+  simp[countable_def, cardleq_def]);
+
+val unitinf_univnum = store_thm(
+  "unitinf_univnum",
+  ``univ(:unit inf) ≈ univ(:num)``,
+  simp[cardeq_def] >>
+  qexists_tac `λs. case s of INL n => n + 1 | INR () => 0` >>
+  simp[BIJ_DEF, INJ_DEF, SURJ_DEF, EXISTS_SUM, FORALL_SUM] >>
+  Cases >> simp[arithmeticTheory.ADD1] >>
+  qexists_tac `()` >> simp[])
+
+val cord_countable_preds = store_thm(
+  "cord_countable_preds",
+  ``countable (preds (ord:cord))``,
+  simp[countable_thm] >>
+  qsuff_tac `preds ord ≼ univ(:unit inf)`
+     >- metis_tac [unitinf_univnum, CARDEQ_CARDLEQ, cardeq_REFL] >>
+  simp[preds_inj_univ]);
+
+val elsOf_cardeq_iso = store_thm(
+  "elsOf_cardeq_iso",
+  ``elsOf (wo:'b wellorder) ≼ univ(:'a) ⇒ ∃wo':'a wellorder. orderiso wo wo'``,
+  simp[cardleq_def] >> disch_then (Q.X_CHOOSE_THEN `f` mp_tac) >>
+  simp[elsOf_def] >> strip_tac >>
+  `wellorder (wellorder_REP wo)` by simp[#termP_term_REP wellorder_results] >>
+  qexists_tac `wellorder_ABS (IMAGE (f ## f) (wellorder_REP wo))` >>
+  simp[orderiso_thm] >>
+  `wellorder (IMAGE (f ## f) (wellorder_REP wo))`
+    by imp_res_tac INJ_preserves_wellorder >>
+  qexists_tac `f` >>
+  simp[#repabs_pseudo_id wellorder_results, elsOf_def, domain_IMAGE_ff,
+       range_IMAGE_ff] >>
+  simp_tac bool_ss [GSYM IMAGE_UNION] >>
+  qabbrev_tac `
+    els = domain (wellorder_REP wo) UNION range (wellorder_REP wo)` >>
+  simp[BIJ_DEF, SURJ_IMAGE] >>
+  simp[strict_def, pairTheory.EXISTS_PROD] >>
+  fs[INJ_DEF] >> conj_tac >- metis_tac [] >>
+  map_every qx_gen_tac [`x`, `y`] >> strip_tac >>
+  `x ∈ elsOf wo ∧ y ∈ elsOf wo` by metis_tac [WLE_elsOf] >>
+  fs[elsOf_def] >> metis_tac[IN_UNION]);
+
+val univ_ord_greater_cardinal = store_thm(
+  "univ_ord_greater_cardinal",
+  ``~(univ(:'a ordinal) ≼ univ(:'a inf))``,
+  strip_tac >>
+  `elsOf allOrds = univ(:'a ordinal)` by simp[elsOf_allOrds] >>
+  `elsOf (allOrds:'a ordinal wellorder) ≼ univ(:'a inf)`
+      by simp[] >>
+  `∃w:'a inf wellorder. orderiso (allOrds:'a ordinal wellorder) w`
+    by metis_tac [elsOf_cardeq_iso] >>
+  `orderiso w (wobound (mkOrdinal w) allOrds)`
+    by simp[wellorder_ordinal_isomorphism] >>
+  `mkOrdinal w ∈ elsOf allOrds` by simp[elsOf_allOrds] >>
+  `orderlt (allOrds:'a ordinal wellorder) (allOrds:'a ordinal wellorder)`
+     by metis_tac [orderlt_def, orderiso_TRANS] >>
+  fs[orderlt_REFL]);
+
+val univ_cord_uncountable = store_thm(
+  "univ_cord_uncountable",
+  ``~countable (univ(:cord))``,
+  simp[countable_thm] >> strip_tac >>
+  `univ(:cord) ≼ univ(:unit inf)`
+     by metis_tac [CARDEQ_CARDLEQ, cardeq_REFL, unitinf_univnum] >>
+  fs[univ_ord_greater_cardinal]);
+
 
 val _ = export_theory()
