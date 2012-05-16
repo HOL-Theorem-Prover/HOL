@@ -145,6 +145,134 @@ Cevaluate_strongind
 |> Q.GEN `P`
 |> SIMP_RULE (srw_ss()) [Cevaluate_list_with_Cevaluate])
 
+(* more theorems about source-language evaluate *)
+
+val variant_args = let
+  fun f (x,(vs,acc)) = let val v = with_flag (Globals.priming,SOME"") (variant vs) x in (v::vs,v::acc) end
+  fun g (tm,(vs,acc)) = let
+    val (c,bs) = strip_comb tm
+    val (vs,bs) = foldl f (vs,[]) bs
+  in (vs,(list_mk_comb(c,rev bs))::acc) end
+in g end
+
+fun args_from_nchotomy ty = map (rhs o #2 o strip_exists) (strip_disj(#2(strip_forall(concl(TypeBase.nchotomy_of ty)))))
+
+fun uneta tm = let
+  val (t,_) = dom_rng (type_of tm)
+  val x = genvar t
+in mk_abs(x,mk_comb(tm,x)) end
+
+fun find_tys listfn add (tm,acc) =
+let val ty' = type_of tm in
+let val ty'' = listSyntax.dest_list_type ty' in
+let val (tya,tyb) = pairSyntax.dest_prod ty''
+    val fst = inst[alpha|->tya,beta|->tyb] pairSyntax.fst_tm
+    val snd = inst[alpha|->tya,beta|->tyb] pairSyntax.snd_tm
+    fun f p EVP = listfn((*uneta*) EVP,listSyntax.mk_map(p,tm)) in
+let val (tyba,tybb) = pairSyntax.dest_prod tyb
+  val fstosnd = combinSyntax.mk_o(inst[alpha|->tyba,beta|->tybb] pairSyntax.fst_tm,snd)
+  val sndosnd = combinSyntax.mk_o(inst[alpha|->tyba,beta|->tybb] pairSyntax.snd_tm,snd) in
+let
+  val acc = add (f fst) tya acc
+  val acc = add (f fstosnd) tyba acc
+  val acc = add (f sndosnd) tybb acc
+in acc end
+end handle HOL_ERR {origin_function="dest_prod",...} => let
+  val acc = add (f fst) tya acc
+  val acc = add (f snd) tyb acc
+in acc end
+end handle HOL_ERR {origin_function="dest_prod",...} =>
+  add (fn EVP => listfn((*uneta*) EVP,tm)) ty'' acc
+end handle HOL_ERR {origin_function="dest_list_type",...} =>
+  add (fn EVP => mk_comb(EVP,tm)) ty' acc
+end
+
+fun lmk_conj ls = list_mk_conj ls handle HOL_ERR _ => T
+fun lmk_disj ls = list_mk_disj ls handle HOL_ERR _ => F
+
+fun mk_EVERY name eqns tys = let
+  val tynames = map (#1 o dest_type) tys
+  val foo_tys = map (fn n => name^"_"^n) tynames
+  val foo_tys = map (fn (foo_ty,ty) => mk_var(foo_ty,ty-->bool)) (zip foo_tys tys)
+  val argss = map args_from_nchotomy tys
+  val lrs = map (((#2 o dest_comb) ## I) o dest_eq) eqns
+  val lhss = map fst lrs
+  val avoids = mk_set (foo_tys@(flatten (map (#2 o strip_comb) lhss)))
+  fun h (tms,(vs,acc)) = let
+    val (vs,tms) = foldl variant_args (vs,[]) tms
+  in (vs,tms::acc) end
+  val (_,argss) = foldl h (avoids,[]) argss
+  val argss = map (fn args => map (fn t => case total (first (can (match_term t))) lhss of SOME l => l | NONE => t) args) argss
+  fun add f ty acc =
+    case total (index (equal ty)) tys of
+      NONE => acc
+    | SOME i => f (List.nth(foo_tys,i)) :: acc
+  fun eq tm = let
+    val ty = type_of tm
+    val i = index (equal ty) tys
+    val foo_ty = List.nth(foo_tys,i)
+    val rhsl = case total (first ((equal tm) o #1)) lrs of NONE => [] | SOME (_,r) => [r]
+    val rhs = lmk_conj(rev(foldl (find_tys listSyntax.mk_every add) rhsl (#2(strip_comb tm))))
+  in
+    mk_eq(mk_comb(foo_ty,tm),rhs)
+  end
+  val eqs = list_mk_conj (map eq (rev (flatten argss)))
+in [ANTIQUOTE eqs] end
+
+val pat_vars_def = tDefine "pat_vars"`
+(pat_vars (Pvar v) = {v}) ∧
+(pat_vars (Plit l) = {}) ∧
+(pat_vars (Pcon c ps) = BIGUNION (IMAGE pat_vars (set ps)))`(
+WF_REL_TAC `measure pat_size` >>
+srw_tac[ARITH_ss][MiniMLTerminationTheory.pat1_size_thm] >>
+Q.ISPEC_THEN `pat_size` imp_res_tac SUM_MAP_MEM_bound >>
+srw_tac[ARITH_ss][])
+val _ = export_rewrites["pat_vars_def"]
+
+val FV_def = tDefine "FV"`
+(FV (Raise _) = {}) ∧
+(FV (Val v) = {}) ∧
+(FV (Con _ ls) = BIGUNION (IMAGE FV (set ls))) ∧
+(FV (Var x) = {x}) ∧
+(FV (Fun x e) = FV e DIFF {x}) ∧
+(FV (App _ e1 e2) = FV e1 ∪ FV e2) ∧
+(FV (Log _ e1 e2) = FV e1 ∪ FV e2) ∧
+(FV (If e1 e2 e3) = FV e1 ∪ FV e2 ∪ FV e3) ∧
+(FV (Mat e pes) = FV e ∪ BIGUNION (IMAGE (λ(p,e). FV e DIFF pat_vars p) (set pes))) ∧
+(FV (Let x e b) = FV e ∪ (FV b DIFF {x})) ∧
+(FV (Letrec defs b) = BIGUNION (IMAGE (λ(y,x,e). FV e DIFF ({x} ∪ (IMAGE FST (set defs)))) (set defs)) ∪ (FV b DIFF (IMAGE FST (set defs))))`
+let open MiniMLTerminationTheory MiniMLTheory in
+WF_REL_TAC `measure exp_size` >>
+srw_tac[ARITH_ss][exp1_size_thm,exp6_size_thm,exp8_size_thm] >>
+map_every (fn q => Q.ISPEC_THEN q imp_res_tac SUM_MAP_MEM_bound)
+  [`exp2_size`,`exp7_size`,`exp_size`] >>
+fsrw_tac[ARITH_ss][exp_size_def]
+end
+val _ = export_rewrites["FV_def"]
+
+val FINITE_FV = store_thm(
+"FINITE_FV",
+``∀exp. FINITE (FV exp)``,
+ho_match_mp_tac (theorem"FV_ind") >>
+rw[pairTheory.EXISTS_PROD] >>
+fsrw_tac[SATISFY_ss][])
+val _ = export_rewrites["FINITE_FV"]
+
+val closed_eqs = mk_EVERY "closed"
+[``closed (Closure env v b) = FV b ⊆ {v} ∪ IMAGE FST (set env)``
+,``closed (Recclosure env defs d) = EVERY (λ(d,v,b).
+    FV b ⊆ {v} ∪ IMAGE FST (set defs) ∪ IMAGE FST (set env)) defs``
+] [``:exp``,``:v``]
+
+val closed_def = tDefine "closed" closed_eqs
+let open MiniMLTerminationTheory combinTheory in
+WF_REL_TAC`inv_image $< (λx. case x of INR v => v_size v | INL e => exp_size e)` >>
+srw_tac[ARITH_ss][exp1_size_thm,exp3_size_thm,exp6_size_thm,exp8_size_thm,exp9_size_thm] >>
+Q.ISPEC_THEN `v_size` imp_res_tac SUM_MAP_MEM_bound >>
+Q.ISPEC_THEN `exp_size` imp_res_tac SUM_MAP_MEM_bound >>
+fsrw_tac[ARITH_ss][SUM_MAP_exp2_size_thm,SUM_MAP_exp4_size_thm,SUM_MAP_exp5_size_thm,SUM_MAP_exp7_size_thm,MAP_MAP_o,o_DEF]
+end
+
 (* Cevaluate functional equations *)
 
 val Cevaluate_raise = store_thm(
@@ -521,68 +649,6 @@ in
 MAP_ZIP
 |> SIMP_RULE (srw_ss()) [f pairTheory.FST,f pairTheory.SND]
 end
-
-val variant_args = let
-  fun f (x,(vs,acc)) = let val v = with_flag (Globals.priming,SOME"") (variant vs) x in (v::vs,v::acc) end
-  fun g (tm,(vs,acc)) = let
-    val (c,bs) = strip_comb tm
-    val (vs,bs) = foldl f (vs,[]) bs
-  in (vs,(list_mk_comb(c,rev bs))::acc) end
-in g end
-
-fun args_from_nchotomy ty = map (rhs o #2 o strip_exists) (strip_disj(#2(strip_forall(concl(TypeBase.nchotomy_of ty)))))
-
-fun uneta tm = let
-  val (t,_) = dom_rng (type_of tm)
-  val x = genvar t
-in mk_abs(x,mk_comb(tm,x)) end
-
-fun find_tys listfn add (tm,acc) =
-let val ty' = type_of tm in
-let val ty'' = listSyntax.dest_list_type ty' in
-let val (tya,tyb) = pairSyntax.dest_prod ty'' in
-let
-  fun f p EVP = listfn((*uneta*) EVP,listSyntax.mk_map(inst[alpha|->tya,beta|->tyb]p,tm))
-  val acc = add (f pairSyntax.fst_tm) tya acc
-  val acc = add (f pairSyntax.snd_tm) tyb acc
-in acc end
-end handle HOL_ERR {origin_function="dest_prod",...} =>
-  add (fn EVP => listfn((*uneta*) EVP,tm)) ty'' acc
-end handle HOL_ERR {origin_function="dest_list_type",...} =>
-  add (fn EVP => mk_comb(EVP,tm)) ty' acc
-end
-
-fun lmk_conj ls = list_mk_conj ls handle HOL_ERR _ => T
-fun lmk_disj ls = list_mk_disj ls handle HOL_ERR _ => F
-
-fun mk_EVERY name eqns tys = let
-  val tynames = map (#1 o dest_type) tys
-  val foo_tys = map (fn n => name^"_"^n) tynames
-  val foo_tys = map (fn (foo_ty,ty) => mk_var(foo_ty,ty-->bool)) (zip foo_tys tys)
-  val argss = map args_from_nchotomy tys
-  val lrs = map (((#2 o dest_comb) ## I) o dest_eq) eqns
-  val lhss = map fst lrs
-  val avoids = mk_set (foo_tys@(flatten (map (#2 o strip_comb) lhss)))
-  fun h (tms,(vs,acc)) = let
-    val (vs,tms) = foldl variant_args (vs,[]) tms
-  in (vs,tms::acc) end
-  val (_,argss) = foldl h (avoids,[]) argss
-  val argss = map (fn args => map (fn t => case total (first (can (match_term t))) lhss of SOME l => l | NONE => t) args) argss
-  fun add f ty acc =
-    case total (index (equal ty)) tys of
-      NONE => acc
-    | SOME i => f (List.nth(foo_tys,i)) :: acc
-  fun eq tm = let
-    val ty = type_of tm
-    val i = index (equal ty) tys
-    val foo_ty = List.nth(foo_tys,i)
-    val rhsl = case total (first ((equal tm) o #1)) lrs of NONE => [] | SOME (_,r) => [r]
-    val rhs = lmk_conj(rev(foldl (find_tys listSyntax.mk_every add) rhsl (#2(strip_comb tm))))
-  in
-    mk_eq(mk_comb(foo_ty,tm),rhs)
-  end
-  val eqs = list_mk_conj (map eq (rev (flatten argss)))
-in [ANTIQUOTE eqs] end
 
 fun map_tys getf tm =
 let val ty = type_of tm in

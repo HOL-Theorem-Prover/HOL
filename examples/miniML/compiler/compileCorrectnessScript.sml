@@ -241,16 +241,6 @@ val extend_FDOM_SUBSET = store_thm(
 ``∀s vn s' n. (extend s vn = (s',n)) ⇒ FDOM s.vmap ⊆ FDOM s'.vmap``,
 rw[extend_def,SUBSET_DEF] >> rw[])
 
-val pat_vars_def = tDefine "pat_vars"`
-(pat_vars (Pvar v) = {v}) ∧
-(pat_vars (Plit l) = {}) ∧
-(pat_vars (Pcon c ps) = BIGUNION (IMAGE pat_vars (set ps)))`(
-WF_REL_TAC `measure pat_size` >>
-srw_tac[ARITH_ss][MiniMLTerminationTheory.pat1_size_thm] >>
-Q.ISPEC_THEN `pat_size` imp_res_tac SUM_MAP_MEM_bound >>
-srw_tac[ARITH_ss][])
-val _ = export_rewrites["pat_vars_def"]
-
 val extend_IN_FDOM = store_thm(
 "extend_IN_FDOM",
 ``∀s vn s' n. (extend s vn = (s',n)) ⇒ vn ∈ FDOM s'.vmap``,
@@ -556,35 +546,6 @@ val exp_to_Cexp_vars_below_next = store_thm(
 ⇒ ∀v. v ∈ free_vars Cexp ⇒ v < s'.n
 exp_to_Cexp_ind
 *)
-
-val FV_def = tDefine "FV"`
-(FV (Raise _) = {}) ∧
-(FV (Val v) = {}) ∧
-(FV (Con _ ls) = BIGUNION (IMAGE FV (set ls))) ∧
-(FV (Var x) = {x}) ∧
-(FV (Fun x e) = FV e DIFF {x}) ∧
-(FV (App _ e1 e2) = FV e1 ∪ FV e2) ∧
-(FV (Log _ e1 e2) = FV e1 ∪ FV e2) ∧
-(FV (If e1 e2 e3) = FV e1 ∪ FV e2 ∪ FV e3) ∧
-(FV (Mat e pes) = FV e ∪ BIGUNION (IMAGE (λ(p,e). FV e DIFF pat_vars p) (set pes))) ∧
-(FV (Let x e b) = FV e ∪ (FV b DIFF {x})) ∧
-(FV (Letrec defs b) = BIGUNION (IMAGE (λ(y,x,e). FV e DIFF ({x} ∪ (IMAGE FST (set defs)))) (set defs)) ∪ (FV b DIFF (IMAGE FST (set defs))))`
-let open MiniMLTerminationTheory MiniMLTheory in
-WF_REL_TAC `measure exp_size` >>
-srw_tac[ARITH_ss][exp1_size_thm,exp6_size_thm,exp8_size_thm] >>
-map_every (fn q => Q.ISPEC_THEN q imp_res_tac SUM_MAP_MEM_bound)
-  [`exp2_size`,`exp7_size`,`exp_size`] >>
-fsrw_tac[ARITH_ss][exp_size_def]
-end
-val _ = export_rewrites["FV_def"]
-
-val FINITE_FV = store_thm(
-"FINITE_FV",
-``∀exp. FINITE (FV exp)``,
-ho_match_mp_tac (theorem"FV_ind") >>
-rw[pairTheory.EXISTS_PROD] >>
-fsrw_tac[SATISFY_ss][])
-val _ = export_rewrites["FINITE_FV"]
 
 val exp_to_Cexp_App_case = store_thm(
 "exp_to_Cexp_App_case",
