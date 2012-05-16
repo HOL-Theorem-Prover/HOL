@@ -53,6 +53,30 @@ qx_gen_tac `p` >>
 PairCases_on `p` >>
 srw_tac[ARITH_ss][exp_size_def])
 
+val SUM_MAP_exp5_size_thm = store_thm(
+"SUM_MAP_exp5_size_thm",
+``∀env. SUM (MAP exp5_size env) = SUM (MAP (list_size char_size) (MAP FST env)) +
+                                  SUM (MAP v_size (MAP SND env)) +
+                                  LENGTH env``,
+Induct >- rw[exp_size_def] >>
+Cases >> srw_tac[ARITH_ss][exp_size_def])
+
+val SUM_MAP_exp4_size_thm = store_thm(
+"SUM_MAP_exp4_size_thm",
+``∀ls. SUM (MAP exp4_size ls) = SUM (MAP (list_size char_size) (MAP FST ls)) +
+                                SUM (MAP exp_size (MAP SND ls)) +
+                                LENGTH ls``,
+Induct >- rw[exp_size_def] >>
+Cases >> srw_tac[ARITH_ss][exp_size_def])
+
+val SUM_MAP_exp7_size_thm = store_thm(
+"SUM_MAP_exp7_size_thm",
+``∀ls. SUM (MAP exp7_size ls) = SUM (MAP pat_size (MAP FST ls)) +
+                                SUM (MAP exp_size (MAP SND ls)) +
+                                LENGTH ls``,
+Induct >- rw[exp_size_def] >>
+Cases >> srw_tac[ARITH_ss][exp_size_def])
+
 val exp_size_positive = store_thm(
 "exp_size_positive",
 ``∀e. 0 < exp_size e``,
