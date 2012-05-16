@@ -118,7 +118,7 @@ handle HOL_ERR _ => (
   )
 end
 
-fun st_(st,{stack,dict,thms,...}) = {stack=st,dict=dict,thms=thms}
+fun st_(st,{stack,dict,thms,line_num}) = {stack=st,dict=dict,thms=thms}
 fun push (ob,st) = st_(ob::(#stack st),st)
 local open Substring in
   val trimlr = fn s => string(trimr 1 (triml 1 (full s)))
