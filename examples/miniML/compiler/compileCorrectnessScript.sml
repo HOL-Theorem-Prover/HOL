@@ -64,69 +64,6 @@ srw_tac[boolSimps.ETA_ss][] >>
 rw[MAP_EQ_EVERY2] >>
 PROVE_TAC[EVERY2_LENGTH])
 
-val tac =
-WF_REL_TAC `inv_image $< (λx. case x of (INL e) => exp_size e | (INR v) => v_size v)` >>
-rw[MiniMLTerminationTheory.exp1_size_thm,
-   MiniMLTerminationTheory.exp3_size_thm,
-   MiniMLTerminationTheory.exp6_size_thm,
-   MiniMLTerminationTheory.exp8_size_thm,
-   MiniMLTerminationTheory.exp9_size_thm] >>
-srw_tac[ARITH_ss][] >>
-imp_res_tac ALOOKUP_MEM >>
-(Q.ISPEC_THEN `exp2_size` imp_res_tac SUM_MAP_MEM_bound) >>
-(Q.ISPEC_THEN `exp5_size` imp_res_tac SUM_MAP_MEM_bound) >>
-(Q.ISPEC_THEN `exp7_size` imp_res_tac SUM_MAP_MEM_bound) >>
-(Q.ISPEC_THEN `exp_size` imp_res_tac SUM_MAP_MEM_bound) >>
-(Q.ISPEC_THEN `v_size` imp_res_tac SUM_MAP_MEM_bound) >>
-fsrw_tac[ARITH_ss][MiniMLTheory.exp_size_def]
-
-(*
-something broken in tDefine. don't need this now anyway...
-val FV_def = tDefine "FV"`
-(FV_exp (Raise _) = {}) ∧
-(FV_exp (Val v) = FV_v v) ∧
-(FV_exp (Con _ ls) = BIGUNION (IMAGE FV_exp (set ls))) ∧
-(FV_exp (Var x) = {x}) ∧
-(FV_exp (Fun x e) = FV_exp e DIFF {x}) ∧
-(FV_exp (App _ e1 e2) = FV_exp e1 ∪ FV_exp e2) ∧
-(FV_exp (Log _ e1 e2) = FV_exp e1 ∪ FV_exp e2) ∧
-(FV_exp (If e1 e2 e3) = FV_exp e1 ∪ FV_exp e2 ∪ FV_exp e3) ∧
-(FV_exp (Mat e pes) = FV_exp e ∪ BIGUNION (IMAGE (λ(p,e). FV_exp e DIFF pat_vars p) (set pes))) ∧
-(FV_exp (Let x e b) = FV_exp e ∪ (FV_exp b DIFF {x})) ∧
-(FV_exp (Letrec defs b) = BIGUNION (IMAGE (λ(y,x,e). FV_exp e DIFF {x}) (set defs)) ∪ (FV_exp b DIFF (IMAGE FST (set defs)))) ∧
-(FV_v (Lit _) = {}) ∧
-(FV_v (Conv _ vs) = BIGUNION (IMAGE FV_v (set vs))) ∧
-(FV_v (Closure env x e) = BIGUNION (IMAGE (λ(n,v). FV_v v) (set env)) ∪ FV_exp e DIFF {x} DIFF (IMAGE FST (set env))) ∧
-(FV_v (Recclosure env defs y) = case ALOOKUP defs y of NONE => {}
-| SOME (x,e) =>
-  BIGUNION (IMAGE (λ(n,v). FV_v v) (set env)) ∪
-  BIGUNION (IMAGE (λ(y,x,e). FV_exp e DIFF {x}) (set defs)) ∪
-  FV_exp e DIFF {x} DIFF (IMAGE FST (set defs)) DIFF (IMAGE FST (set env)))` tac
-val _ = export_rewrites["FV_def"]
-*)
-
-val clV_def = tDefine "clV"`
-(clV_exp (Raise _) = {}) ∧
-(clV_exp (Val v) = clV_v v) ∧
-(clV_exp (Con _ ls) = BIGUNION (IMAGE clV_exp (set ls))) ∧
-(clV_exp (Var _) = {}) ∧
-(clV_exp (Fun _ e) = clV_exp e) ∧
-(clV_exp (App _ e1 e2) = clV_exp e1 ∪ clV_exp e2) ∧
-(clV_exp (Log _ e1 e2) = clV_exp e1 ∪ clV_exp e2) ∧
-(clV_exp (If e1 e2 e3) = clV_exp e1 ∪ clV_exp e2 ∪ clV_exp e3) ∧
-(clV_exp (Mat e pes) = clV_exp e ∪ BIGUNION (IMAGE (λ(p,e). clV_exp e) (set pes))) ∧
-(clV_exp (Let _ e b) = clV_exp e ∪ clV_exp b) ∧
-(clV_exp (Letrec defs b) = BIGUNION (IMAGE (λ(y,x,e). clV_exp e) (set defs)) ∪ clV_exp b) ∧
-(clV_v (Lit _) = {}) ∧
-(clV_v (Conv _ vs) = BIGUNION (IMAGE clV_v (set vs))) ∧
-(clV_v (Closure env _ e) = IMAGE FST (set env) ∪
-  BIGUNION (IMAGE (λ(n,v). clV_v v) (set env)) ∪
-  clV_exp e) ∧
-(clV_v (Recclosure env defs _) = IMAGE FST (set defs) ∪ IMAGE FST (set env) ∪
-  BIGUNION (IMAGE (λ(n,v). clV_v v) (set env)) ∪
-  BIGUNION (IMAGE (λ(y,x,e). clV_exp e) (set defs)))` tac
-val _ = export_rewrites["clV_def"]
-
 val good_envs_def = Define`
   good_envs env s s' Cenv = s.cmap SUBMAP s'.cmap`
 
@@ -422,13 +359,14 @@ val exp_to_Cexp_canonical = store_thm(
   ⇒ canonical_env_Cv (v_to_Cv s v))``,
 ho_match_mp_tac exp_to_Cexp_nice_ind >>
 rw[exp_to_Cexp_def,exps_to_Cexps_MAP,pes_to_Cpes_MAP,defs_to_Cdefs_MAP,vs_to_Cvs_MAP,env_to_Cenv_MAP] >>
-fsrw_tac[boolSimps.DNF_ss][BIGUNION_SUBSET,exp_to_Cexp_def,EVERY_MEM,MEM_MAP,pairTheory.FORALL_PROD] >>
+fsrw_tac[boolSimps.DNF_ss][BIGUNION_SUBSET,exp_to_Cexp_def,EVERY_MEM,MEM_MAP,pairTheory.FORALL_PROD,AND_IMP_INTRO] >>
+fsrw_tac[SATISFY_ss][] >>
 TRY (
   first_x_assum match_mp_tac >>
   conj_asm1_tac >- (
     fsrw_tac[SATISFY_ss][extend_good_repl_state] ) >>
   imp_res_tac extend_FDOM_SUBSET >>
-  fs[SUBSET_DEF] >>
+  fsrw_tac[SATISFY_ss][SUBSET_DEF] >>
   NO_TAC)
 >- (
   BasicProvers.EVERY_CASE_TAC >>
@@ -897,7 +835,7 @@ val tac1 =
    qmatch_abbrev_tac `Cevaluate env0 (exp_to_Cexp s0 (EL kk es)) res0` >>
    first_x_assum (qspecl_then [`kk`,`s0`] mp_tac) >> rw[] >>
    pop_assum (match_mp_tac o MP_CANON) >>
-   fsrw_tac[boolSimps.DNF_ss][BIGUNION_SUBSET,MEM_EL]
+   fsrw_tac[DNF_ss,SATISFY_ss][BIGUNION_SUBSET,MEM_EL]
 
 (*
 val v_to_Cv_inj_rwt = store_thm(
@@ -1267,7 +1205,8 @@ strip_tac >- (
   qpat_assum `∀m. m < nn ⇒ P` (qspec_then `m` mp_tac) >>
   srw_tac[ARITH_ss][EL_MAP] >>
   pop_assum (qspec_then `s` mp_tac) >>
-  fsrw_tac[ARITH_ss][] >>
+  `m < LENGTH es` by srw_tac[ARITH_ss][] >>
+  fsrw_tac[ARITH_ss,SATISFY_ss][] >>
   rw[] >>
   qexists_tac `v_to_Cv s v` >>
   match_mp_tac Cevaluate_super_env >>

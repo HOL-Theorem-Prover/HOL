@@ -219,6 +219,54 @@ fun mk_EVERY name eqns tys = let
   val eqs = list_mk_conj (map eq (rev (flatten argss)))
 in [ANTIQUOTE eqs] end
 
+(* could automate with mk_FOLD or something? *)
+val closures_def = tDefine "closures"`
+(closures_exp (Raise _) = {}) ∧
+(closures_exp (Val v) = closures_v v) ∧
+(closures_exp (Con _ ls) = BIGUNION (IMAGE closures_exp (set ls))) ∧
+(closures_exp (Var _) = {}) ∧
+(closures_exp (Fun _ e) = closures_exp e) ∧
+(closures_exp (App _ e1 e2) = closures_exp e1 ∪ closures_exp e2) ∧
+(closures_exp (Log _ e1 e2) = closures_exp e1 ∪ closures_exp e2) ∧
+(closures_exp (If e1 e2 e3) = closures_exp e1 ∪ closures_exp e2 ∪ closures_exp e3) ∧
+(closures_exp (Mat e pes) = closures_exp e ∪ BIGUNION (IMAGE (λ(p,e). closures_exp e) (set pes))) ∧
+(closures_exp (Let _ e b) = closures_exp e ∪ closures_exp b) ∧
+(closures_exp (Letrec defs b) = BIGUNION (IMAGE (λ(y,x,e). closures_exp e) (set defs)) ∪ closures_exp b) ∧
+(closures_v (Lit _) = {}) ∧
+(closures_v (Conv _ vs) = BIGUNION (IMAGE closures_v (set vs))) ∧
+(closures_v (Closure env x e) = {Closure env x e} ∪
+  BIGUNION (IMAGE (λ(n,v). closures_v v) (set env)) ∪
+  closures_exp e) ∧
+(closures_v (Recclosure env defs d) = {Recclosure env defs d} ∪
+  BIGUNION (IMAGE (λ(n,v). closures_v v) (set env)) ∪
+  BIGUNION (IMAGE (λ(y,x,e). closures_exp e) (set defs)))`(
+WF_REL_TAC `inv_image $< (λx. case x of (INL e) => exp_size e | (INR v) => v_size v)` >>
+rw[MiniMLTerminationTheory.exp1_size_thm,
+   MiniMLTerminationTheory.exp3_size_thm,
+   MiniMLTerminationTheory.exp6_size_thm,
+   MiniMLTerminationTheory.exp8_size_thm,
+   MiniMLTerminationTheory.exp9_size_thm] >>
+srw_tac[ARITH_ss][] >>
+imp_res_tac ALOOKUP_MEM >>
+(Q.ISPEC_THEN `exp2_size` imp_res_tac SUM_MAP_MEM_bound) >>
+(Q.ISPEC_THEN `exp5_size` imp_res_tac SUM_MAP_MEM_bound) >>
+(Q.ISPEC_THEN `exp7_size` imp_res_tac SUM_MAP_MEM_bound) >>
+(Q.ISPEC_THEN `exp_size` imp_res_tac SUM_MAP_MEM_bound) >>
+(Q.ISPEC_THEN `v_size` imp_res_tac SUM_MAP_MEM_bound) >>
+fsrw_tac[ARITH_ss][MiniMLTheory.exp_size_def])
+val _ = export_rewrites["closures_def"]
+
+val clV1_def = Define`
+  (clV1 (Closure env x e) = IMAGE FST (set env)) ∧
+  (clV1 (Recclosure env defs d) = IMAGE FST (set env) ∪ IMAGE FST (set defs))`
+val _ = export_rewrites["clV1_def"]
+
+val clV_exp_def = Define`
+  clV_exp e = BIGUNION (IMAGE clV1 (closures_exp e))`
+val clV_v_def = Define`
+  clV_v v = BIGUNION (IMAGE clV1 (closures_v v))`
+val _ = export_rewrites["clV_exp_def","clV_v_def"]
+
 val pat_vars_def = tDefine "pat_vars"`
 (pat_vars (Pvar v) = {v}) ∧
 (pat_vars (Plit l) = {}) ∧
