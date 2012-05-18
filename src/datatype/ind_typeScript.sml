@@ -199,7 +199,6 @@ val recspace_tydef =
       ("mk_rec","dest_rec") (CONJUNCT1 ZRECSPACE_RULES)
 end;
 
-
 (* ------------------------------------------------------------------------- *)
 (* Define lifted constructors.                                               *)
 (* ------------------------------------------------------------------------- *)
@@ -406,6 +405,16 @@ val ISO_USAGE = store_thm(
 val _ = app (fn s => remove_ovl_mapping s {Name = s, Thy = "ind_type"})
             ["NUMPAIR", "NUMSUM", "INJN", "INJA", "INJF", "INJP",
              "FCONS", "ZCONSTR", "ZBOT", "BOTTOM", "CONSTR", "FNIL", "ISO"]
+
+local open OpenTheoryMap in
+  val ns = ["HOL4","Datatype"]
+  fun c x = OpenTheory_const_name{const={Thy="ind_type",Name=x},name=(ns,x)}
+  val _ = OpenTheory_tyop_name{tyop={Thy="ind_type",Tyop="recspace"},name=(ns,"recspace")}
+  val _ = c "CONSTR"
+  val _ = c "FCONS"
+  val _ = c "FNIL"
+  val _ = c "BOTTOM"
+end
 
 val _ = export_theory();
 

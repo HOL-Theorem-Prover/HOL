@@ -22,7 +22,7 @@ in
     val ind_name = name ^ "_ind"
     val ind = fetch "-" ind_name handle HOL_ERR _ => TRUTH
     val xs = filter (fn (n,def,ind) => not (n = name)) (!defs_inds)
-    val _ = defs_inds := xs @ [(name,def,ind)]
+    val _ = defs_inds := xs @ [(name,SPEC_ALL def,ind)]
     in def end
   fun get_defs_inds () = !defs_inds
 end

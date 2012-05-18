@@ -6,6 +6,13 @@ val Hol_reln = IndDefLib.Hol_reln;
 
 val _ = new_theory "set_relation";
 
+local open OpenTheoryMap
+  val ns = ["Relation"]
+in
+  fun ot0 x y = OpenTheory_const_name{const={Thy="set_relation",Name=x},name=(ns,y)}
+  fun ot x = ot0 x x
+end
+
 (* ------------------------------------------------------------------------ *)
 (*  Basic concepts                                                          *)
 (* ------------------------------------------------------------------------ *)
@@ -22,9 +29,11 @@ SRW_TAC [] []);
 
 val domain_def = Define `
   domain r = {x | ?y. (x, y) IN r}`;
+val _ = ot "domain"
 
 val range_def = Define `
   range r = {y | ?x. (x, y) IN r}`;
+val _ = ot "range"
 
 val in_domain = Q.store_thm ("in_domain",
 `!x r. x IN domain r = ?y. (x,y) IN r`,
@@ -36,6 +45,7 @@ SRW_TAC [] [range_def]);
 
 val rrestrict_def = Define `
   rrestrict r s = {(x, y) | (x, y) IN r /\ x IN s /\ y IN s}`;
+val _ = ot0 "rrestrict" "restrict"
 
 val in_rrestrict = Q.store_thm ("in_rrestrict",
 `!x y r s. (x, y) IN rrestrict r s = (x, y) IN r /\ x IN s /\ y IN s`,
@@ -71,6 +81,7 @@ val univ_reln_def = Define `
 
 val finite_prefixes_def = Define `
   finite_prefixes r s = !e. e IN s ==> FINITE {e' | (e', e) IN r}`;
+val _ = ot0 "finite_prefixes" "finitePrefixes"
 
 val finite_prefixes_subset = Q.store_thm ("finite_prefixes_subset",
 `!r s s'. finite_prefixes r s /\ s' SUBSET s ==> finite_prefixes r s'`,
@@ -414,6 +425,7 @@ val maximal_elements_def = Define `
 val minimal_elements_def = Define `
   minimal_elements xs r =
     {x | x IN xs /\ !x'. x' IN xs /\ (x', x) IN r ==> (x = x')}`;
+val _ = ot0 "minimal_elements" "minimalElements"
 
 val maximal_union = Q.store_thm ("maximal_union",
 `!e s r1 r2.
@@ -652,6 +664,7 @@ val irreflexive_def = Define `
 val transitive_def = Define `
   transitive r =
     !x y z.  (x, y) IN r /\ (y, z) IN r ==> (x, z) IN r`;
+val _ = ot "transitive"
 
 val transitive_tc_lem = Q.prove (
 `!x y. (x, y) IN tc r ==> transitive r ==> (x, y) IN r`,
@@ -678,6 +691,7 @@ METIS_TAC [tc_rules]);
 
 val antisym_def = Define `
   antisym r = !x y. (x, y) IN r /\ (y, x) IN r ==> (x = y)`;
+val _ = ot0 "antisym" "antisymmetric"
 
 val partial_order_def = Define `
   partial_order r s =
@@ -751,6 +765,7 @@ val linear_order_def = Define `
     domain r SUBSET s /\ range r SUBSET s /\
     transitive r /\ antisym r /\
     (!x y. x IN s /\ y IN s ==> (x, y) IN r \/ (y, x) IN r)`;
+val _ = ot0 "linear_order" "linearOrder"
 
 val linear_order_subset = Q.store_thm ("linear_order_subset",
 `!r s s'.

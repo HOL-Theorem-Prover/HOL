@@ -12,6 +12,13 @@ open HolKernel boolLib Parse Prim_rec simpLib boolSimps metisLib
 
 val _ = new_theory "while";
 
+local open OpenTheoryMap
+  val ns = ["While"]
+in
+  fun ot0 x y = OpenTheory_const_name{const={Thy="while",Name=x},name=(ns,y)}
+  fun ot x = ot0 x x
+end
+
 fun INDUCT_TAC g = INDUCT_THEN numTheory.INDUCTION ASSUME_TAC g;
 
 val cond_lemma = prove(
@@ -84,7 +91,7 @@ val WHILE = new_specification
   (CONV_RULE (BINDER_CONV SKOLEM_CONV THENC SKOLEM_CONV) o GEN_ALL o
    REWRITE_RULE [o_THM, cond_lemma] o
    SPEC ``$~ o P : 'a -> bool``) ITERATION);
-
+val _ = ot0 "WHILE" "while"
 
 val WHILE_INDUCTION = Q.store_thm
 ("WHILE_INDUCTION",
@@ -125,6 +132,7 @@ val LEAST_DEF = new_definition(
   "LEAST_DEF",
   ``LEAST P = WHILE ($~ o P) SUC 0``);
 
+val _ = ot0 "LEAST" "least"
 val _ = set_fixity "LEAST" Binder;
 
 val LEAST_INTRO = store_thm(

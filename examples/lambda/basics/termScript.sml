@@ -23,7 +23,7 @@ val lp = ``(λn (d:unit + unit) tns uns.
 
 val {term_ABS_pseudo11, term_REP_11, genind_term_REP, genind_exists,
      termP, absrep_id, repabs_pseudo_id, term_REP_t, term_ABS_t, newty, ...} =
-    new_type_step1 tyname {vp=vp, lp = lp}
+    new_type_step1 tyname 0 {vp=vp, lp = lp}
 val [gvar,glam] = genind_rules |> SPEC_ALL |> CONJUNCTS
 
 val LAM_t = mk_var("LAM", ``:string -> ^newty -> ^newty``)

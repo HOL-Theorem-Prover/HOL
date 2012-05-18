@@ -14,7 +14,7 @@ of the term {tm}, including the term {tm} itself. The supplied conversion {c}
 is applied to the subterms of {tm} in top-down order and is applied repeatedly
 (zero or more times, as is done by {REPEATC}) at each subterm until it fails.
 If a subterm {t} is changed (up to alpha-equivalence) by virtue of the
-application of {c} to its own subterms, then then the term into which {t} is
+application of {c} to its own subterms, then the term into which {t} is
 transformed is retraversed by applying {TOP_DEPTH_CONV c} to it.
 
 \FAILURE

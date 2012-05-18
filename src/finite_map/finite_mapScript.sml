@@ -29,7 +29,7 @@
 open HolKernel Parse boolLib IndDefLib numLib pred_setTheory
      sumTheory pairTheory BasicProvers bossLib metisLib simpLib;
 
-local open pred_setLib listTheory in end
+local open pred_setLib listTheory rich_listTheory in end
 
 val _ = new_theory "finite_map";
 
@@ -336,6 +336,10 @@ val FDOM_EQ_EMPTY = store_thm(
   SIMP_TAC (srw_ss())[EQ_IMP_THM, FDOM_FEMPTY] THEN
   HO_MATCH_MP_TAC fmap_SIMPLE_INDUCT THEN
   SRW_TAC [][FDOM_FUPDATE, EXTENSION] THEN PROVE_TAC []);
+
+val FDOM_EQ_EMPTY_SYM = save_thm(
+"FDOM_EQ_EMPTY_SYM",
+CONV_RULE (QUANT_CONV (LAND_CONV SYM_CONV)) FDOM_EQ_EMPTY)
 
 val FUPDATE_ABSORB_THM = Q.prove (
   `!(f:'a |-> 'b) x y.
@@ -736,6 +740,15 @@ val SUBMAP_DRESTRICT = Q.store_thm(
   `DRESTRICT f P SUBMAP f`,
   SRW_TAC [][DRESTRICT_DEF, SUBMAP_DEF]);
 val _ = export_rewrites ["SUBMAP_DRESTRICT"]
+
+val DRESTRICT_EQ_DRESTRICT = store_thm(
+"DRESTRICT_EQ_DRESTRICT",
+``!f1 f2 s1 s2.
+   (DRESTRICT f1 s1 = DRESTRICT f2 s2) =
+   (DRESTRICT f1 s1 SUBMAP f2 /\ DRESTRICT f2 s2 SUBMAP f1 /\
+    (s1 INTER FDOM f1 = s2 INTER FDOM f2))``,
+SRW_TAC[][GSYM fmap_EQ_THM,DRESTRICT_DEF,SUBMAP_DEF,EXTENSION] THEN
+METIS_TAC[])
 
 (*---------------------------------------------------------------------------
      Union of finite maps
@@ -1502,6 +1515,12 @@ val SUBMAP_DOMSUB = store_thm(
   ``(f \\ k) SUBMAP f``,
   SRW_TAC [][fmap_domsub]);
 
+val FMERGE_DOMSUB = store_thm(
+"FMERGE_DOMSUB",
+``!m m1 m2 k. (FMERGE m m1 m2) \\ k = FMERGE m (m1 \\ k) (m2 \\ k)``,
+SRW_TAC[][fmap_domsub,FMERGE_DRESTRICT])
+
+
 (*---------------------------------------------------------------------------*)
 (* Is there a better statement of this?                                      *)
 (*---------------------------------------------------------------------------*)
@@ -1577,6 +1596,36 @@ SRW_TAC [][Once UNION_COMM] THEN
 SRW_TAC [][Once (GSYM INSERT_SING_UNION)] THEN
 SRW_TAC [][EQ_IMP_THM]);
 
+local open listTheory in
+val FUPDATE_LIST_APPLY_MEM = store_thm(
+"FUPDATE_LIST_APPLY_MEM",
+``!kvl f k v n. n < LENGTH kvl /\ (k = EL n (MAP FST kvl)) /\ (v = EL n (MAP SND kvl)) /\
+  (!m. n < m /\ m < LENGTH kvl ==> (EL m (MAP FST kvl) <> k))
+  ==> ((f |++ kvl) ' k = v)``,
+Induct THEN1 SRW_TAC[][] THEN
+Cases THEN NTAC 3 GEN_TAC THEN
+Cases THEN1 (
+  Q.MATCH_RENAME_TAC `0 < LENGTH ((q,r)::kvl) /\ X ==> Y` ["X","Y"] THEN
+  Q.ISPECL_THEN [`kvl`,`f |+ (k,r)`,`k`] MP_TAC FUPDATE_LIST_APPLY_NOT_MEM THEN
+  SRW_TAC[][FUPDATE_LIST_THM] THEN
+  FIRST_X_ASSUM MATCH_MP_TAC THEN
+  SRW_TAC[][MEM_MAP,MEM_EL,pairTheory.EXISTS_PROD] THEN
+  Q.MATCH_RENAME_TAC `X \/ Y <> EL n kvl` ["X","Y"] THEN
+  FIRST_X_ASSUM (Q.SPEC_THEN `SUC n` MP_TAC) THEN
+  SRW_TAC[][EL_MAP] THEN
+  METIS_TAC[pairTheory.FST]) THEN
+SRW_TAC[][] THEN
+Q.MATCH_RENAME_TAC `(f |++ ((q,r)::kvl)) ' X = Y` ["X","Y"] THEN
+Q.ISPECL_THEN [`(q,r)`,`kvl`] SUBST1_TAC rich_listTheory.CONS_APPEND THEN
+REWRITE_TAC [FUPDATE_LIST_APPEND] THEN
+FIRST_X_ASSUM MATCH_MP_TAC THEN
+Q.MATCH_ASSUM_RENAME_TAC `n < LENGTH kvl` [] THEN
+Q.EXISTS_TAC `n` THEN
+SRW_TAC[][] THEN
+Q.MATCH_RENAME_TAC `EL m (MAP FST kvl) <> X` ["X"] THEN
+FIRST_X_ASSUM (Q.SPEC_THEN `SUC m` MP_TAC) THEN
+SRW_TAC[][])
+end
 
 (* ----------------------------------------------------------------------
     More theorems
@@ -1985,6 +2034,12 @@ val DRESTRICT_IDEMPOT = store_thm ("DRESTRICT_IDEMPOT",
 ``!s vs. DRESTRICT (DRESTRICT s vs) vs = DRESTRICT s vs``,
 SRW_TAC [][]);
 val _ = export_rewrites ["DRESTRICT_IDEMPOT"]
+
+val SUBMAP_FUNION_ABSORPTION = store_thm(
+"SUBMAP_FUNION_ABSORPTION",
+``!f g. f SUBMAP g = (FUNION f g = g)``,
+SRW_TAC[][SUBMAP_DEF,GSYM fmap_EQ_THM,EXTENSION,FUNION_DEF,EQ_IMP_THM]
+THEN PROVE_TAC[])
 
 (*---------------------------------------------------------------------------
 mapping an injective function over the keys of a finite map

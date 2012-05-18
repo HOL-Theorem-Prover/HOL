@@ -1,2 +1,9 @@
 selftest.exe: selftest.uo
 	HOLMOSMLC -o $@ $<
+mkholqbf: holqbf.uo
+	HOLMOSMLC -o $@ $<
+holqbf.o: mkholqbf
+	./$<
+holqbf: holqbf.o
+	cc -static -o $@ $< -lpolymain -lpolyml -lstdc++ -lm -ldl -lpthread -lgmp
+EXTRA_CLEANS=holqbf.o mkholqbf holqbf selftest.exe

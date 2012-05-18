@@ -7,4 +7,4 @@ then
 fi
 
 # assumes recent GNU grep
-grep -R -P "[\x80-\xFF]" --include=*.sml --include=*.sig --exclude=*Theory.sig "$@"
+grep -n -R -P "[\x80-\xFF]" --include=*.sml --include=*.sig --exclude=*Theory.sig "$@"
