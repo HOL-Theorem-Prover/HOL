@@ -424,3 +424,12 @@ val [Number r, Number x, Number y] = st
 val SOME 2 = intML.toInt x
 val SOME 1 = intML.toInt y (* TODO: broken *)
 val true = r = y;
+val d0 = ``Dlet (Pvar "x") (Val (Lit (IntLit 1)))``
+val d1 = ``Dtype [([],"unit",[("()",[])])]``
+val d2 = ``Dlet (Pvar "f") (Fun " " (Mat (Var " ") [(Pcon "()" [],App (Opn Plus) (Var "x") (Val (Lit (IntLit 1))))]))``
+val d3 = ``Dlet (Pvar "x") (Val (Lit (IntLit 100)))``
+val e51 = ``App Opapp (Var "f") (Con "()" [])``
+val (m,st) = pd1 e51 [d0,d1,d2,d3]
+val [Number r, _, Number x] = st
+val SOME 2 = intML.toInt r
+val SOME 100 = intML.toInt x
