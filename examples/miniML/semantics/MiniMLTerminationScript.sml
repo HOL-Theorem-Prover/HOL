@@ -106,6 +106,30 @@ val (type_subst_def, type_subst_ind) =
    decide_tac]);
 val _ = register "type_subst" type_subst_def type_subst_ind;
 
+val (deBruijn_subst_def, deBruijn_subst_ind) =
+  tprove_no_defn ((deBruijn_subst_def, deBruijn_subst_ind),
+  WF_REL_TAC `measure (λ(x,y). t_size y)` >>
+  rw [] >|
+  [induct_on `ts` >>
+       rw [t_size_def] >>
+       res_tac >>
+       decide_tac,
+   decide_tac,
+   decide_tac]);
+val _ = register "deBruijn_subst" deBruijn_subst_def deBruijn_subst_ind;
+
+val (enough_tvars_def, enough_tvars_ind) =
+  tprove_no_defn ((enough_tvars_def, enough_tvars_ind),
+  WF_REL_TAC `measure (λ(x,y). t_size y)` >>
+  rw [] >|
+  [induct_on `ts` >>
+       rw [t_size_def] >>
+       res_tac >>
+       decide_tac,
+   decide_tac,
+   decide_tac]);
+val _ = register "enough_tvars" enough_tvars_def enough_tvars_ind;
+
 val (is_source_exp_def,is_source_exp_ind) =
   tprove_no_defn ((is_source_exp_def,is_source_exp_ind),
   WF_REL_TAC `measure exp_size` >>
@@ -116,5 +140,15 @@ val (is_source_exp_def,is_source_exp_ind) =
   fsrw_tac[ARITH_ss][exp_size_def])
 val _ = register "is_source_exp" is_source_exp_def is_source_exp_ind;
 val _ = export_rewrites["is_source_exp_def"];
+
+val (check_freevars_def,check_freevars_ind) =
+  tprove_no_defn ((check_freevars_def,check_freevars_ind),
+wf_rel_tac `measure (t_size o SND o SND)` >>
+srw_tac [ARITH_ss] [t_size_def] >>
+induct_on `ts` >>
+srw_tac [ARITH_ss] [t_size_def] >>
+res_tac >>
+decide_tac);
+val _ = register "check_freevars" check_freevars_def check_freevars_ind;
 
 val _ = export_theory ();

@@ -68,6 +68,7 @@ metis_tac [pmatch_pmatch', match_result_distinct]);
 
 val type_no_error = Q.prove (
 `!tenvC tenv e t envC env r.
+  tenvC_ok tenvC ∧
   consistent_con_env envC tenvC ∧
   consistent_con_env2 envC tenvC ∧
   type_env tenvC env tenv ∧
@@ -79,6 +80,7 @@ metis_tac [untyped_safety_exp, small_exp_determ, exp_type_soundness]);
 
 val evaluate_evaluate'_thm = Q.store_thm ("evaluate_evaluate'_thm",
 `!tenvC envC tenv e t cenv env r.
+  tenvC_ok tenvC ∧
   consistent_con_env envC tenvC ∧
   consistent_con_env2 envC tenvC ∧
   type_env tenvC env tenv ∧
@@ -114,6 +116,7 @@ metis_tac [evaluate'_to_evaluate]);
 
 val type_no_error_dec = Q.prove (
 `!tenvC tenv ds t envC env r tenvC' tenvE'.
+  tenvC_ok tenvC ∧
   consistent_con_env envC tenvC ∧
   consistent_con_env2 envC tenvC ∧
   type_env tenvC env tenv ∧
@@ -125,6 +128,7 @@ metis_tac [untyped_safety, small_determ, type_soundness]);
 
 val evaluate_dec_evaluate_dec'_thm = Q.store_thm ("evaluate_dec_evaluate_dec'_thm",
 `!tenvC envC tenv ds t cenv env r tenvC' tenvE'.
+  tenvC_ok tenvC ∧
   consistent_con_env envC tenvC ∧
   consistent_con_env2 envC tenvC ∧
   type_env tenvC env tenv ∧

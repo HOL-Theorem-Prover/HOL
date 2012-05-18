@@ -130,6 +130,9 @@ val _ = type_abbrev( "tvarN" , ``: string``);
 val _ = Hol_datatype `
  t =
     Tvar of tvarN
+  (* DeBruin indexed type variables.  The first number is how many lets back is
+   * the binding, and the second is which of that let's bindings it is. *)
+  | Tvar_db of num => num
   | Tapp of t list => typeN
   | Tfn of t => t
   | Tnum
@@ -154,26 +157,74 @@ val _ = Hol_datatype `
 /\
 (type_subst s Tnum = Tnum)
 /\
-(type_subst s Tbool = Tbool)`;
+(type_subst s Tbool = Tbool)
+/\
+(type_subst s (Tvar_db n1 n2) = Tvar_db n1 n2)`;
 
 val _ = Defn.save_defn type_subst_defn;
 
+(* Replace the 0-index deBruijn type variables with the named ones, decrement
+ * the others *)
+(*val deBruijn_subst : tvarN list -> t -> t*)
+ val deBruijn_subst_defn = Hol_defn "deBruijn_subst" `
+
+(deBruijn_subst tvs (Tvar tv) = Tvar tv)
+/\
+(deBruijn_subst tvs (Tvar_db 0 n) = Tvar (EL  n  tvs))
+/\
+(deBruijn_subst tvs (Tvar_db n' n) = Tvar_db (n' - 1) n)
+/\
+(deBruijn_subst tvs (Tapp ts tn) =
+  Tapp (MAP (deBruijn_subst tvs) ts) tn)
+/\
+(deBruijn_subst tvs (Tfn t1 t2) =
+  Tfn (deBruijn_subst tvs t1) (deBruijn_subst tvs t2))
+/\
+(deBruijn_subst tvs Tnum = Tnum)
+/\
+(deBruijn_subst tvs Tbool = Tbool)`;
+
+val _ = Defn.save_defn deBruijn_subst_defn;
+
+(* Check that tvs is long enough to use in a deBruijn subst *)
+(*val enough_tvars : tvarN list -> t -> bool*)
+ val enough_tvars_defn = Hol_defn "enough_tvars" `
+
+(enough_tvars tvs (Tvar tv) = T)
+/\
+(enough_tvars tvs (Tvar_db 0 n) = n < LENGTH tvs)
+/\
+(enough_tvars tvs (Tvar_db n' n) = T)
+/\
+(enough_tvars tvs (Tapp ts tn) = EVERY (enough_tvars tvs) ts)
+/\
+(enough_tvars tvs (Tfn t1 t2) = enough_tvars tvs t1 /\ enough_tvars tvs t2)
+/\
+(enough_tvars tvs Tnum = T)
+/\
+(enough_tvars tvs Tbool = T)`;
+
+val _ = Defn.save_defn enough_tvars_defn;
+
+
 (* Check that the free type variables are in the given list *)
-(*val check_freevars : tvarN list -> t -> bool*)
+(*val check_freevars : bool -> tvarN list -> t -> bool*)
  val check_freevars_defn = Hol_defn "check_freevars" `
 
-(check_freevars tvs (Tvar tv) =
+(check_freevars dbok tvs (Tvar tv) =
   MEM tv tvs)
 /\
-(check_freevars tvs (Tapp ts tn) =
-  EVERY (check_freevars tvs) ts)
+(check_freevars dbok tvs (Tapp ts tn) =
+  EVERY (check_freevars dbok tvs) ts)
 /\
-(check_freevars tvs (Tfn t1 t2) =
-  check_freevars tvs t1 /\ check_freevars tvs t2)
+(check_freevars dbok tvs (Tfn t1 t2) =
+  check_freevars dbok tvs t1 /\ check_freevars dbok tvs t2)
 /\
-(check_freevars tvs Tnum = T)
+(check_freevars dbok tvs Tnum = T)
 /\
-(check_freevars tvs Tbool = T)`;
+(check_freevars dbok tvs Tbool = T)
+/\
+(check_freevars dbok tvs (Tvar_db _ _) = dbok)`;
 
 val _ = Defn.save_defn check_freevars_defn;
 
@@ -1124,9 +1175,6 @@ evaluate_decs cenv env (Dtype tds :: ds) (Rerr Rtype_error))`;
 
 (* ------------------------ Type system --------------------------------- *)
 
-(* The type system does not currently support let polymorphism, but does
-* support polymorphic datatypes *)
-
 (* constructor type environments: each constructor has a type
  * forall (tyvarN list). t list -> typeN *)
 val _ = type_abbrev( "tenvC" , ``: (conN, (tvarN list # t list # typeN)) env``);
@@ -1188,7 +1236,7 @@ val _ = Define `
     (\ (tvs,tn,ctors) .
        ALL_DISTINCT tvs /\
        EVERY
-         (\ (cn,ts) . (EVERY (check_freevars tvs) ts))
+         (\ (cn,ts) . (EVERY (check_freevars F tvs) ts))
          ctors)
     tds /\
   ALL_DISTINCT (MAP ( \x . (case x of (_,tn,_) => tn)) tds) /\
@@ -1211,7 +1259,7 @@ val _ = Define `
 val _ = Hol_reln `
 
 (! cenv tenv n t.
-T
+check_freevars T [] t
 ==>
 type_p cenv tenv (Pvar n) t (bind n ([],t) tenv))
 
@@ -1279,8 +1327,8 @@ type_v cenv (Conv cn vs) (Tapp ts' tn))
 
 (! cenv env tenv n e t1 t2.
 type_env cenv env tenv /\
-(* TODO: type parameters *)
-type_e cenv (bind n ([],t1) tenv) e t2
+check_freevars T [] t1 /\ 
+type_e cenv (bind n ([], t1) tenv) e t2
 ==>
 type_v cenv (Closure env n e) (Tfn t1 t2))
 
@@ -1289,8 +1337,7 @@ type_v cenv (Closure env n e) (Tfn t1 t2))
 (! cenv env funs n t tenv tenv'.
 type_env cenv env tenv /\
 type_funs cenv (merge tenv' tenv) funs tenv' /\
-(* TODO: type parameters *)
-(lookup n tenv' = SOME (([]:tvarN list),t))
+(lookup n tenv' = SOME ([], t))
 ==>
 type_v cenv (Recclosure env funs n) t)
 
@@ -1319,17 +1366,17 @@ type_e cenv tenv (Con cn es) (Tapp ts' tn))
 
 /\
 
-(! cenv tenv n t.
-(* TODO: type parameters *)
-(lookup n tenv = SOME (([]:tvarN list),t))
+(! cenv tenv n tvs ts t.
+(LENGTH tvs = LENGTH ts) /\
+(lookup n tenv = SOME (tvs,t))
 ==>
-type_e cenv tenv (Var n) t)
+type_e cenv tenv (Var n) (type_subst (ZIP ( tvs, ts)) t))
 
 /\
 
 (! cenv tenv n e t1 t2.
-(* TODO: type parameters *)
-type_e cenv (bind n (([]:tvarN list),t1) tenv) e t2
+check_freevars T [] t1 /\
+type_e cenv (bind n ([],t1) tenv) e t2
 ==>
 type_e cenv tenv (Fun n e) (Tfn t1 t2))
 
@@ -1372,10 +1419,11 @@ type_e cenv tenv (Mat e pes) t2)
 
 /\
 
-(! cenv tenv n e1 e2 t1 t2.
+(! cenv tenv n e1 e2 t1 t2 tvs.
 type_e cenv tenv e1 t1 /\
-(* TODO: type parameters *)
-type_e cenv (bind n (([]:tvarN list),t1) tenv) e2 t2
+check_freevars T [] t1 /\
+enough_tvars tvs t1 /\
+type_e cenv (bind n (tvs, deBruijn_subst tvs t1) tenv) e2 t2
 ==>
 type_e cenv tenv (Let n e1 e2) t2)
 
@@ -1426,12 +1474,13 @@ type_env cenv [] [])
 
 /\
 
-(! cenv n v env t tenv.
+(! cenv n v env tvs t tenv.
 type_e cenv [] (Val v) t /\
+enough_tvars tvs t /\
+check_freevars T [] t /\
 type_env cenv env tenv
 ==>
-(* TODO: type parameters *)
-type_env cenv (bind n v env) (bind n (([]:tvarN list),t) tenv))
+type_env cenv (bind n v env) (bind n (tvs, deBruijn_subst tvs t) tenv))
 
 /\
 
@@ -1443,13 +1492,12 @@ type_funs cenv env [] emp)
 /\
 
 (! cenv env fn n e funs env' t1 t2.
-(* TODO: type parameters *)
-type_e cenv (bind n (([]:tvarN list),t1) env) e t2 /\
+check_freevars T [] (Tfn t1 t2) /\
+type_e cenv (bind n ([],t1) env) e t2 /\
 type_funs cenv env funs env' /\
 (lookup fn env' = NONE)
 ==>
-(* TODO: type parameters *)
-type_funs cenv env ((fn, n, e)::funs) (bind fn (([]:tvarN list),Tfn t1 t2) env'))`;
+type_funs cenv env ((fn, n, e)::funs) (bind fn ([], Tfn t1 t2) env'))`;
 
 val _ = Hol_reln `
 
@@ -1540,9 +1588,10 @@ type_ctxt cenv tenv (Cmat () pes) t1 t2)
 
 /\
 
-(! cenv tenv e t1 t2 n.
-(* TODO: type parameters *)
-type_e cenv (bind n (([]:tvarN list),t1) tenv) e t2
+(! cenv tenv e tvs t1 t2 n.
+check_freevars T [] t1 /\
+enough_tvars tvs t1 /\
+type_e cenv (bind n (tvs, deBruijn_subst tvs t1) tenv) e t2
 ==>
 type_ctxt cenv tenv (Clet n () e) t1 t2)
 
