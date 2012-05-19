@@ -852,7 +852,7 @@ val _ = Define `
     Lt => CPrim2 CLt Ce1 Ce2
   | Leq => CLprim CLeq [Ce1;Ce2]
   | opb =>
-      let x1 = fresh_var {} in
+      let x1 = fresh_var (free_vars Ce2) in
       let x2 = fresh_var {x1} in
       CLet [x1;x2] [Ce1;Ce2]
         (case opb of
