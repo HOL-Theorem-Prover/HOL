@@ -27,6 +27,7 @@ val _ = type_abbrev((*  ('a,'b) *) "alist" , ``: ('a,'b) alist``);
 (*val force_dom : forall 'a 'b. ('a,'b) Pmap.map -> 'a set -> 'b -> ('a,'b) Pmap.map*)
 (*val valOf : forall 'a. 'a option -> 'a*)
 
+(*val fresh_var : string set -> string*)
 
 (* TODO: elsewhere? *)
  val find_index_defn = Hol_defn "find_index" `
@@ -94,32 +95,32 @@ val _ = Hol_datatype `
 
 val _ = Hol_datatype `
  Cpat =
-    CPvar of num
+    CPvar of string
   | CPlit of lit
   | CPcon of num => Cpat list`;
 
 
 val _ = Hol_datatype `
  Cexp =
-    CDecl of num list
+    CDecl of string list
   | CRaise of error
-  | CVar of num
+  | CVar of string
   | CVal of Cv
   | CCon of num => Cexp list
   | CTagEq of Cexp => num
   | CProj of Cexp => num
-  | CMat of num => (Cpat # Cexp) list
-  | CLet of num list => Cexp list => Cexp
-  | CLetfun of bool => num list => (num list # Cexp) list => Cexp
-  | CFun of num list => Cexp
+  | CMat of string => (Cpat # Cexp) list
+  | CLet of string list => Cexp list => Cexp
+  | CLetfun of bool => string list => (string list # Cexp) list => Cexp
+  | CFun of string list => Cexp
   | CCall of Cexp => Cexp list
   | CPrim2 of Cprim2 => Cexp => Cexp
   | CLprim of Clprim => Cexp list
 ; Cv =
     CLit of lit
   | CConv of num => Cv list
-  | CClosure of (num,Cv) alist => num list => Cexp
-  | CRecClos of (num,Cv) alist => num list => (num list # Cexp) list => num`;
+  | CClosure of (string,Cv) alist => string list => Cexp
+  | CRecClos of (string,Cv) alist => string list => (string list # Cexp) list => string`;
 
 
 (* TODO: fix Hol_datatype, or define Cexp outside of Lem, so as to use finite
@@ -295,7 +296,7 @@ val _ = Defn.save_defn CevalPrim2_defn;
 
 val _ = Hol_datatype `
  Cmatch_result =
-    Cmatch of (num,Cv) fmap
+    Cmatch of (string,Cv) fmap
   | Cno_match
   | Cmatch_error`;
 
@@ -322,7 +323,7 @@ val _ = Defn.save_defn Cmatch_map_defn;
 
  val Cpmatch_defn = Hol_defn "Cpmatch" `
 
-(Cpmatch env (CPvar n) v = Cmatch (FUPDATE  env ( n, v)))
+(Cpmatch env (CPvar vn) v = Cmatch (FUPDATE  env ( vn, v)))
 /\
 (Cpmatch env (CPlit l) (CLit l') =
   if lit_same_type l l' then
@@ -725,10 +726,6 @@ forall cm env vn e Cenv n Ce.
 v_Cv cm (Closure env vn e) (CClosure Cenv [n] Ce)
 *)
 
-val _ = Define `
- (least_not_in s = $LEAST (\ n . ~  (n IN s)))`;
-
-
 val _ = Hol_datatype `
  nt =
     NTvar of num
@@ -767,16 +764,18 @@ val _ = Hol_datatype `
  call_context = TCNonTail | TCTail of num => num`;
 
 
+val _ = type_abbrev( "ctenv" , ``: (string,ctbind) fmap``);
+
 val _ = Hol_datatype `
  compiler_state =
-  <| env: (num,ctbind) fmap
+  <| env: ctenv
    ; sz: num
    ; code: bc_inst list (* reversed *)
    ; code_length: num
    ; tail: call_context
    ; next_label: num
    (* not modified on return: *)
-   ; decl: ((num,ctbind) fmap # num)option
+   ; decl: (ctenv # num)option
    ; inst_length: bc_inst -> num
    |>`;
 
@@ -785,37 +784,26 @@ val _ = Hol_datatype `
  repl_state =
   <| cmap : (conN, num) fmap
    ; cpam : (typeN, (num, conN # nt list) fmap) fmap
-   ; vmap : (varN, num) fmap
-   ; nv : num
    ; cs : compiler_state
    |>`;
 
 
-val _ = Define `
- (extend s vn =
-  if  vn IN FDOM  s.vmap then
-    (s, FAPPLY  s.vmap  vn)
-  else
-    (s with<| vmap := FUPDATE  s.vmap ( vn, s.nv); nv := s.nv+1|>, s.nv))`;
-
-
  val pat_to_Cpat_defn = Hol_defn "pat_to_Cpat" `
 
-(pat_to_Cpat s pvs (Pvar vn) =
-  let (s',n) = extend s vn in (s', n::pvs, CPvar n))
+(pat_to_Cpat m pvs (Pvar vn) = (vn::pvs, CPvar vn))
 /\
-(pat_to_Cpat s pvs (Plit l) = (s, pvs, CPlit l))
+(pat_to_Cpat m pvs (Plit l) = (pvs, CPlit l))
 /\
-(pat_to_Cpat s pvs (Pcon cn ps) =
-  let (s',pvs,Cps) = pats_to_Cpats s pvs ps in
-  (s',pvs,CPcon (FAPPLY  s.cmap  cn) Cps))
+(pat_to_Cpat m pvs (Pcon cn ps) =
+  let (pvs,Cps) = pats_to_Cpats m pvs ps in
+  (pvs,CPcon (FAPPLY  m  cn) Cps))
 /\
-(pats_to_Cpats s pvs [] = (s,pvs,[]))
+(pats_to_Cpats m pvs [] = (pvs,[]))
 /\
-(pats_to_Cpats s pvs (p::ps) =
-  let (s,pvs,Cps) = pats_to_Cpats s pvs ps in
-  let (s,pvs,Cp) = pat_to_Cpat s pvs p in
-  (s,pvs,Cp::Cps))`;
+(pats_to_Cpats m pvs (p::ps) =
+  let (pvs,Cps) = pats_to_Cpats m pvs ps in
+  let (pvs,Cp) = pat_to_Cpat m pvs p in
+  (pvs,Cp::Cps))`;
 
 val _ = Defn.save_defn pat_to_Cpat_defn;
 
@@ -824,43 +812,31 @@ val _ = Defn.save_defn pat_to_Cpat_defn;
 
 val _ = Defn.save_defn dest_var_defn;
 
- val extend_defs_defn = Hol_defn "extend_defs" `
-
-(extend_defs s [] = (s,[]))
-/\
-(extend_defs s ((d,vn,e)::defs) =
-  let (s,n) = extend s d in
-  let (s,ns) = extend_defs s defs in
-  (s,n::ns))`;
-
-val _ = Defn.save_defn extend_defs_defn;
-
 val _ = Define `
- (var_or_new s e =
+ (var_or_new Cpes e =
   (case dest_var e of
     SOME vn => INL vn
-  | NONE => INR s.nv
+  | NONE => INR (fresh_var (FOLDL (\ s (p,e) . s UNION free_vars e) {} Cpes))
   ))`;
  
 
  val exp_to_Cexp_defn = Hol_defn "exp_to_Cexp" `
 
-(exp_to_Cexp s (Raise err) = CRaise err)
+(exp_to_Cexp m (Raise err) = CRaise err)
 /\
-(exp_to_Cexp s (Val v) = CVal (v_to_Cv s v))
+(exp_to_Cexp m (Val v) = CVal (v_to_Cv m v))
 /\
-(exp_to_Cexp s (Con cn es) =
-  CCon (FAPPLY  s.cmap  cn) (exps_to_Cexps s es))
+(exp_to_Cexp m (Con cn es) =
+  CCon (FAPPLY  m  cn) (exps_to_Cexps m es))
 /\
-(exp_to_Cexp s (Var vn) = CVar (FAPPLY  s.vmap  vn))
+(exp_to_Cexp m (Var vn) = CVar vn)
 /\
-(exp_to_Cexp s (Fun vn e) =
-  let (s',n) = extend s vn in
-  CFun [n] (exp_to_Cexp s' e))
+(exp_to_Cexp m (Fun vn e) =
+  CFun [vn] (exp_to_Cexp m e))
 /\
-(exp_to_Cexp s (App (Opn opn) e1 e2) =
-  let Ce1 = exp_to_Cexp s e1 in
-  let Ce2 = exp_to_Cexp s e2 in
+(exp_to_Cexp m (App (Opn opn) e1 e2) =
+  let Ce1 = exp_to_Cexp m e1 in
+  let Ce2 = exp_to_Cexp m e2 in
   CPrim2 ((case opn of
             Plus   => CAdd
           | Minus  => CSub
@@ -870,107 +846,108 @@ val _ = Define `
           ))
   Ce1 Ce2)
 /\
-(exp_to_Cexp s (App (Opb opb) e1 e2) =
-  let Ce1 = exp_to_Cexp s e1 in
-  let Ce2 = exp_to_Cexp s e2 in
+(exp_to_Cexp m (App (Opb opb) e1 e2) =
+  let Ce1 = exp_to_Cexp m e1 in
+  let Ce2 = exp_to_Cexp m e2 in
   (case opb of
     Lt => CPrim2 CLt Ce1 Ce2
-  | Gt => CLet [s.nv;s.nv+1] [Ce1;Ce2] (CPrim2 CLt (CVar (s.nv+1)) (CVar s.nv))
   | Leq => CLprim CLeq [Ce1;Ce2]
-  | Geq => CLet [s.nv;s.nv+1] [Ce1;Ce2] (CLprim CLeq [CVar (s.nv+1);CVar s.nv])
+  | opb =>
+      let x1 = fresh_var {} in
+      let x2 = fresh_var {x1} in
+      CLet [x1;x2] [Ce1;Ce2]
+        (case opb of
+          Gt =>  CPrim2 CLt  (CVar x2)(CVar x1)
+        | Geq => CLprim CLeq [CVar x2; CVar x1]
+        )
   ))
 /\
-(exp_to_Cexp s (App Equality e1 e2) =
-  let Ce1 = exp_to_Cexp s e1 in
-  let Ce2 = exp_to_Cexp s e2 in
+(exp_to_Cexp m (App Equality e1 e2) =
+  let Ce1 = exp_to_Cexp m e1 in
+  let Ce2 = exp_to_Cexp m e2 in
   CPrim2 CEq Ce1 Ce2)
 /\
-(exp_to_Cexp s (App Opapp e1 e2) =
-  let Ce1 = exp_to_Cexp s e1 in
-  let Ce2 = exp_to_Cexp s e2 in
+(exp_to_Cexp m (App Opapp e1 e2) =
+  let Ce1 = exp_to_Cexp m e1 in
+  let Ce2 = exp_to_Cexp m e2 in
   CCall Ce1 [Ce2])
 /\
-(exp_to_Cexp s (Log log e1 e2) =
-  let Ce1 = exp_to_Cexp s e1 in
-  let Ce2 = exp_to_Cexp s e2 in
+(exp_to_Cexp m (Log log e1 e2) =
+  let Ce1 = exp_to_Cexp m e1 in
+  let Ce2 = exp_to_Cexp m e2 in
   CLprim ((case log of
             And => CAnd
           | Or  => COr
           ))
   [Ce1;Ce2])
 /\
-(exp_to_Cexp s (If e1 e2 e3) =
-  let Ce1 = exp_to_Cexp s e1 in
-  let Ce2 = exp_to_Cexp s e2 in
-  let Ce3 = exp_to_Cexp s e3 in
+(exp_to_Cexp m (If e1 e2 e3) =
+  let Ce1 = exp_to_Cexp m e1 in
+  let Ce2 = exp_to_Cexp m e2 in
+  let Ce3 = exp_to_Cexp m e3 in
   CLprim CIf [Ce1;Ce2;Ce3])
 /\
-(exp_to_Cexp s (Mat e pes) =
-  let (_s,Cpes) = pes_to_Cpes s pes in
-  (case var_or_new s e of
-    INL vn => CMat (FAPPLY  s.vmap  vn) Cpes
-  | INR n => let Ce = exp_to_Cexp s e in
-               CLet [n] [Ce] (CMat n Cpes)
+(exp_to_Cexp m (Mat e pes) =
+  let Cpes = pes_to_Cpes m pes in
+  (case var_or_new Cpes e of
+    INL v => CMat v Cpes
+  | INR v => let Ce = exp_to_Cexp m e in
+               CLet [v] [Ce] (CMat v Cpes)
   ))
 /\
-(exp_to_Cexp s (Let vn e b) =
-  let (s',n) = extend s vn in
-  let Ce = exp_to_Cexp s e in
-  let Cb = exp_to_Cexp s' b in
-  CLet [n] [Ce] Cb)
+(exp_to_Cexp m (Let vn e b) =
+  let Ce = exp_to_Cexp m e in
+  let Cb = exp_to_Cexp m b in
+  CLet [vn] [Ce] Cb)
 /\
-(exp_to_Cexp s (Letrec defs b) =
-  let (s',fns) = extend_defs s defs in
-  let Cdefs = defs_to_Cdefs s' defs in
-  let Cb = exp_to_Cexp s' b in
+(exp_to_Cexp m (Letrec defs b) =
+  let (fns,Cdefs) = defs_to_Cdefs m defs in
+  let Cb = exp_to_Cexp m b in
   CLetfun T fns Cdefs Cb)
 /\
-(defs_to_Cdefs s [] = [])
+(defs_to_Cdefs m [] = ([],[]))
 /\
-(defs_to_Cdefs s ((d,vn,e)::defs) =
-  let (s',n) = extend s vn in
-  let Ce = exp_to_Cexp s' e in
-  ([n],Ce)::(defs_to_Cdefs s defs))
+(defs_to_Cdefs m ((d,vn,e)::defs) =
+  let Ce = exp_to_Cexp m e in
+  let (fns,Cdefs) = defs_to_Cdefs m defs in
+  (d::fns,([vn],Ce)::Cdefs))
 /\
-(pes_to_Cpes s [] = (s,[]))
+(pes_to_Cpes m [] = [])
 /\
-(pes_to_Cpes s ((p,e)::pes) =
-  let (s',_pvs,Cp) = pat_to_Cpat s [] p in
-  let Ce = exp_to_Cexp s' e in
-  let (_s,Cpes) = pes_to_Cpes s pes in
-  (s,(Cp,Ce)::Cpes))
+(pes_to_Cpes m ((p,e)::pes) =
+  let (_pvs,Cp) = pat_to_Cpat m [] p in
+  let Ce = exp_to_Cexp m e in
+  let Cpes = pes_to_Cpes m pes in
+  (Cp,Ce)::Cpes)
 /\
 (exps_to_Cexps s [] = [])
 /\
-(exps_to_Cexps s (e::es) =
-  exp_to_Cexp s e :: exps_to_Cexps s es)
+(exps_to_Cexps m (e::es) =
+  exp_to_Cexp m e :: exps_to_Cexps m es)
 /\
-(v_to_Cv s (Lit l) = CLit l)
+(v_to_Cv m (Lit l) = CLit l)
 /\
-(v_to_Cv s (Conv cn vs) =
-  CConv (FAPPLY  s.cmap  cn) (vs_to_Cvs s vs))
+(v_to_Cv m (Conv cn vs) =
+  CConv (FAPPLY  m  cn) (vs_to_Cvs m vs))
 /\
-(v_to_Cv s (Closure env vn e) =
-  let Cenv = env_to_Cenv s env in
-  let (s',n) = extend s vn in
-  let Ce = exp_to_Cexp s' e in
-  ce_Cv (CClosure Cenv [n] Ce))
+(v_to_Cv m (Closure env vn e) =
+  let Cenv = env_to_Cenv m env in
+  let Ce = exp_to_Cexp m e in
+  ce_Cv (CClosure Cenv [vn] Ce))
 /\
-(v_to_Cv s (Recclosure env defs vn) =
-  let Cenv = env_to_Cenv s env in
-  let (s',fns) = extend_defs s defs in
-  let Cdefs = defs_to_Cdefs s' defs in
-  let n = FAPPLY  s.vmap  vn in
-  ce_Cv (CRecClos Cenv fns Cdefs n))
+(v_to_Cv m (Recclosure env defs vn) =
+  let Cenv = env_to_Cenv m env in
+  let (fns,Cdefs) = defs_to_Cdefs m defs in
+  ce_Cv (CRecClos Cenv fns Cdefs vn))
 /\
-(vs_to_Cvs s [] = [])
+(vs_to_Cvs m [] = [])
 /\
-(vs_to_Cvs s (v::vs) = v_to_Cv s v :: vs_to_Cvs s vs)
+(vs_to_Cvs m (v::vs) = v_to_Cv m v :: vs_to_Cvs m vs)
 /\
-(env_to_Cenv s [] = [])
+(env_to_Cenv m [] = [])
 /\
-(env_to_Cenv s ((x,v)::env) =
-  (FAPPLY  s.vmap  x, v_to_Cv s v)::(env_to_Cenv s env))`;
+(env_to_Cenv m ((x,v)::env) =
+  (x, v_to_Cv m v)::(env_to_Cenv m env))`;
 
 val _ = Defn.save_defn exp_to_Cexp_defn;
 
@@ -1001,7 +978,7 @@ val _ = Defn.save_defn exp_to_Cexp_defn;
 (remove_mat_con fk sk v n [] = sk)
 /\
 (remove_mat_con fk sk v n (p::ps) =
-  let v' = least_not_in ((INSERT) v (free_vars sk)) in
+  let v' = fresh_var ({v} UNION (free_vars sk)) in
   CLet [v'] [CProj (CVar v) n]
     (remove_mat_vp fk (remove_mat_con fk sk v (n+1) ps) v' p))`;
 
@@ -1015,7 +992,7 @@ val _ = Defn.save_defn remove_mat_vp_defn;
 /\
 (remove_mat (CRaise err) = CRaise err)
 /\
-(remove_mat (CVar n) = CVar n)
+(remove_mat (CVar v) = CVar v)
 /\
 (remove_mat (CVal vl) = CVal vl)
 /\
@@ -1041,7 +1018,7 @@ val _ = Defn.save_defn remove_mat_vp_defn;
 /\
 (remove_mat_var v ((p,e)::pes) =
   let sk = remove_mat e in
-  let fk = least_not_in ((INSERT) v (free_vars sk)) in
+  let fk = fresh_var ({v} UNION (free_vars sk)) in
   CLetfun F [fk] [([],(remove_mat_var v pes))]
     (remove_mat_vp fk sk v p))`;
 
@@ -1117,7 +1094,7 @@ val _ = Define `
 
 (* helper for reconstructing closure environments *)
 val _ = Hol_datatype `
- cebind = CEEnv of num | CERef of num`;
+ cebind = CEEnv of string | CERef of num`;
 
 
  val emit_ec_defn = Hol_defn "emit_ec" `
@@ -1137,12 +1114,6 @@ val _ = Defn.save_defn emit_ec_defn;
     (REPLACE_ELEMENT (Call lab) (j - jl) c))`;
 
 val _ = Defn.save_defn replace_calls_defn;
-
- val fold_num_defn = Hol_defn "fold_num" `
-
-(fold_num f a (n:num) = if n = 0 then a else fold_num f (f a) (n - 1))`;
-
-val _ = Defn.save_defn fold_num_defn;
 
  val compile_defn = Hol_defn "compile" `
 
@@ -1180,7 +1151,7 @@ val _ = Defn.save_defn fold_num_defn;
 (compile s (CVal _) =
   incsz (emit s [Stack (PushInt i2); Exception]))
 /\
-(compile s (CVar n) = incsz (compile_varref s (FAPPLY  s.env  n)))
+(compile s (CVar vn) = incsz (compile_varref s (FAPPLY  s.env  vn)))
 /\
 (compile s (CCon n []) =
   incsz (emit s [Stack (PushInt (& n))]))
@@ -1425,7 +1396,7 @@ val _ = Defn.save_defn fold_num_defn;
                       else (n+1, FUPDATE  env ( fv, (CTRef n)), (ecl+1,(CERef j)::ec))
           )
         )) in
-      let (n,env,(ecl,ec)) = num_set_foldl bind_fv (0,FEMPTY,(0,[])) fvs in
+      let (n,env,(ecl,ec)) = FOLDL bind_fv (0,FEMPTY,(0,[])) (SET_TO_LIST fvs) in
       let s' =  s with<| env := env; sz := 0; tail := TCTail az 0 |> in
       let s' = compile s' e in
       let n = (case s'.tail of TCNonTail => 1 | TCTail j k => k+1 ) in
@@ -1482,8 +1453,6 @@ val _ = Define `
  init_repl_state =
   <| cmap := FEMPTY
    ; cpam := FEMPTY
-   ; vmap := FEMPTY
-   ; nv := 0
    ; cs := init_compiler_state
    |>`;
 
@@ -1522,27 +1491,26 @@ val _ = Defn.save_defn number_constructors_defn;
   repl_dec ( rs with<| cmap := cm; cpam := FUPDATE  rs.cpam ( ty, cw) |>) (Dtype ts)) (* parens: Lem sucks *)
 /\
 (repl_dec rs (Dletrec defs) =
-  let (rs,fns) = extend_defs rs defs in
-  let Cdefs = defs_to_Cdefs rs defs in
+  let (fns,Cdefs) = defs_to_Cdefs rs.cmap defs in
   let rs = rs with<| cs := rs.cs with<| decl:=SOME(rs.cs.env,rs.cs.sz)|> |> in
   compile_Cexp rs (CLetfun T fns Cdefs (CDecl fns)))
 /\
 (repl_dec rs (Dlet p e) =
-  let (rs',pvs,Cp) = pat_to_Cpat rs [] p in
+  let (pvs,Cp) = pat_to_Cpat rs.cmap [] p in
   let Cpes = [(Cp,CDecl pvs)] in
-  let rs' = rs' with<| cs := rs'.cs with<| decl:=SOME(rs'.cs.env,rs'.cs.sz)|> |> in
+  let rs' = rs with<| cs := rs.cs with<| decl:=SOME(rs.cs.env,rs.cs.sz)|> |> in
   compile_Cexp rs'
-    (case var_or_new rs e of
-      INL vn => CMat (FAPPLY  rs.vmap  vn) Cpes
-    | INR n => let Ce = exp_to_Cexp rs e in
-                 CLet [n] [Ce] (CMat n Cpes)
+    (case var_or_new Cpes e of
+      INL vn => CMat vn Cpes
+    | INR vn => let Ce = exp_to_Cexp rs.cmap e in
+                  CLet [vn] [Ce] (CMat vn Cpes)
     ))`;
 
 val _ = Defn.save_defn repl_dec_defn;
 
 val _ = Define `
  (repl_exp s exp =
-  compile_Cexp (s with<| cs := s.cs with<| decl:=NONE|> |>) (exp_to_Cexp s exp))`;
+  compile_Cexp (s with<| cs := s.cs with<| decl:=NONE|> |>) (exp_to_Cexp s.cmap exp))`;
  (* parens *)
 
 val _ = Define `

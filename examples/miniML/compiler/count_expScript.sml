@@ -44,8 +44,8 @@ val [count_Cexp_aux_inj_rwt, count_Cv_aux_inj_rwt] = let
   val tys = [``:Cexp``,``:Cv``]
   val ttac = SOME (
     WF_REL_TAC `inv_image $< (λx. case x of INL v => Cv_size v | INR e => Cexp_size e)` >>
-    srw_tac[ARITH_ss][Cexp1_size_thm,Cexp3_size_thm,Cexp4_size_thm,Cexp7_size_thm,Cexp8_size_thm] >>
-    map_every (fn q => TRY (Q.ISPEC_THEN q IMP_RES_TAC listTheory.SUM_MAP_MEM_bound)) [`Cexp2_size`,`Cexp_size`,`Cexp5_size`,`Cv_size`,`Cexp6_size`] >>
+    srw_tac[ARITH_ss][Cexp1_size_thm,Cexp3_size_thm,Cexp5_size_thm,Cexp7_size_thm,Cexp8_size_thm] >>
+    map_every (fn q => TRY (Q.ISPEC_THEN q IMP_RES_TAC listTheory.SUM_MAP_MEM_bound)) [`Cexp2_size`,`Cexp_size`,`Cexp4_size`,`Cv_size`,`Cexp6_size`] >>
     fsrw_tac[ARITH_ss][Cexp_size_def] )
 in mk_count_aux_inj_rwt_ttac tys ttac end
 

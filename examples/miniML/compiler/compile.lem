@@ -40,6 +40,8 @@ let inline {hol} force_dom = Hol.force_dom
 val valOf : forall 'a. 'a option -> 'a
 let inline {hol} valOf = Hol.THE
 type ('a,'b) sum = INL of 'a | INR of 'b
+val fresh_var : string set -> string
+let inline {hol} fresh_var = Hol.fresh_var
 
 (* TODO: elsewhere? *)
 let rec
@@ -85,30 +87,30 @@ type Cprim2 = CAdd | CSub | CMul | CDiv | CMod | CLt | CEq
 type Clprim = CLeq | CIf | CAnd | COr
 
 type Cpat =
-  | CPvar of num
+  | CPvar of string
   | CPlit of lit
   | CPcon of num * Cpat list
 
 type Cexp =
-  | CDecl of num list
+  | CDecl of string list
   | CRaise of error
-  | CVar of num
+  | CVar of string
   | CVal of Cv
   | CCon of num * Cexp list
   | CTagEq of Cexp * num
   | CProj of Cexp * num
-  | CMat of num * (Cpat * Cexp) list
-  | CLet of num list * Cexp list * Cexp
-  | CLetfun of bool * num list * (num list * Cexp) list * Cexp
-  | CFun of num list * Cexp
+  | CMat of string * (Cpat * Cexp) list
+  | CLet of string list * Cexp list * Cexp
+  | CLetfun of bool * string list * (string list * Cexp) list * Cexp
+  | CFun of string list * Cexp
   | CCall of Cexp * Cexp list
   | CPrim2 of Cprim2 * Cexp * Cexp
   | CLprim of Clprim * Cexp list
 and Cv =
   | CLit of lit
   | CConv of num * Cv list
-  | CClosure of (num,Cv) alist * num list * Cexp
-  | CRecClos of (num,Cv) alist * num list * (num list * Cexp) list * num
+  | CClosure of (string,Cv) alist * string list * Cexp
+  | CRecClos of (string,Cv) alist * string list * (string list * Cexp) list * string
 
 (* TODO: fix Hol_datatype, or define Cexp outside of Lem, so as to use finite
  * maps instead of alists *)
@@ -260,7 +262,7 @@ and
 CevalPrim2 CEq = fun v1 v2 -> Some (CVal (CLit (Bool (v1 = v2))))
 
 type Cmatch_result =
-  | Cmatch of (num,Cv) Pmap.map
+  | Cmatch of (string,Cv) Pmap.map
   | Cno_match
   | Cmatch_error
 
@@ -279,7 +281,7 @@ and
 Cmatch_map f Cmatch_error = Cmatch_error
 
 let rec
-Cpmatch env (CPvar n) v = Cmatch (Pmap.add n v env)
+Cpmatch env (CPvar vn) v = Cmatch (Pmap.add vn v env)
 and
 Cpmatch env (CPlit l) (CLit l') =
   if lit_same_type l l' then
@@ -680,8 +682,6 @@ forall cm env vn e Cenv n Ce.
 v_Cv cm (Closure env vn e) (CClosure Cenv [n] Ce)
 *)
 
-let least_not_in s = least (fun n -> not (n IN s))
-
 type nt =
   | NTvar of num
   | NTapp of nt list * typeN
@@ -711,82 +711,66 @@ open Bytecode
 
 type call_context = TCNonTail | TCTail of num * num
 
+type ctenv = (string,ctbind) Pmap.map
+
 type compiler_state =
-  <| env: (num,ctbind) Pmap.map
+  <| env: ctenv
    ; sz: num
    ; code: bc_inst list (* reversed *)
    ; code_length: num
    ; tail: call_context
    ; next_label: num
    (* not modified on return: *)
-   ; decl: ((num,ctbind) Pmap.map * num) option
+   ; decl: (ctenv * num) option
    ; inst_length: bc_inst -> num
    |>
 
 type repl_state =
   <| cmap : (conN, num) Pmap.map
    ; cpam : (typeN, (num, conN * nt list) Pmap.map) Pmap.map
-   ; vmap : (varN, num) Pmap.map
-   ; nv : num
    ; cs : compiler_state
    |>
 
-let extend s vn =
-  if Pmap.mem vn s.vmap then
-    (s, Pmap.find vn s.vmap)
-  else
-    (<|s with vmap = Pmap.add vn s.nv s.vmap; nv = s.nv+1|>, s.nv)
-
 let rec
-pat_to_Cpat s pvs (Pvar vn) =
-  let (s',n) = extend s vn in (s', n::pvs, CPvar n)
+pat_to_Cpat m pvs (Pvar vn) = (vn::pvs, CPvar vn)
 and
-pat_to_Cpat s pvs (Plit l) = (s, pvs, CPlit l)
+pat_to_Cpat m pvs (Plit l) = (pvs, CPlit l)
 and
-pat_to_Cpat s pvs (Pcon cn ps) =
-  let (s',pvs,Cps) = pats_to_Cpats s pvs ps in
-  (s',pvs,CPcon (Pmap.find cn s.cmap) Cps)
+pat_to_Cpat m pvs (Pcon cn ps) =
+  let (pvs,Cps) = pats_to_Cpats m pvs ps in
+  (pvs,CPcon (Pmap.find cn m) Cps)
 and
-pats_to_Cpats s pvs [] = (s,pvs,[])
+pats_to_Cpats m pvs [] = (pvs,[])
 and
-pats_to_Cpats s pvs (p::ps) =
-  let (s,pvs,Cps) = pats_to_Cpats s pvs ps in
-  let (s,pvs,Cp) = pat_to_Cpat s pvs p in
-  (s,pvs,Cp::Cps)
+pats_to_Cpats m pvs (p::ps) =
+  let (pvs,Cps) = pats_to_Cpats m pvs ps in
+  let (pvs,Cp) = pat_to_Cpat m pvs p in
+  (pvs,Cp::Cps)
 
 let rec dest_var (Var v) = Some v and dest_var _ = None
 
-let rec
-extend_defs s [] = (s,[])
-and
-extend_defs s ((d,vn,e)::defs) =
-  let (s,n) = extend s d in
-  let (s,ns) = extend_defs s defs in
-  (s,n::ns)
-
-let var_or_new s e =
+let var_or_new Cpes e =
   match dest_var e with
   | Some vn -> INL vn
-  | None -> INR s.nv
+  | None -> INR (fresh_var (List.fold_left (fun s (p,e) -> s union free_vars e) {} Cpes))
   end 
 
 let rec
-exp_to_Cexp s (Raise err) = CRaise err
+exp_to_Cexp m (Raise err) = CRaise err
 and
-exp_to_Cexp s (Val v) = CVal (v_to_Cv s v)
+exp_to_Cexp m (Val v) = CVal (v_to_Cv m v)
 and
-exp_to_Cexp s (Con cn es) =
-  CCon (Pmap.find cn s.cmap) (exps_to_Cexps s es)
+exp_to_Cexp m (Con cn es) =
+  CCon (Pmap.find cn m) (exps_to_Cexps m es)
 and
-exp_to_Cexp s (Var vn) = CVar (Pmap.find vn s.vmap)
+exp_to_Cexp m (Var vn) = CVar vn
 and
-exp_to_Cexp s (Fun vn e) =
-  let (s',n) = extend s vn in
-  CFun [n] (exp_to_Cexp s' e)
+exp_to_Cexp m (Fun vn e) =
+  CFun [vn] (exp_to_Cexp m e)
 and
-exp_to_Cexp s (App (Opn opn) e1 e2) =
-  let Ce1 = exp_to_Cexp s e1 in
-  let Ce2 = exp_to_Cexp s e2 in
+exp_to_Cexp m (App (Opn opn) e1 e2) =
+  let Ce1 = exp_to_Cexp m e1 in
+  let Ce2 = exp_to_Cexp m e2 in
   CPrim2 (match opn with
           | Plus   -> CAdd
           | Minus  -> CSub
@@ -796,107 +780,108 @@ exp_to_Cexp s (App (Opn opn) e1 e2) =
           end)
   Ce1 Ce2
 and
-exp_to_Cexp s (App (Opb opb) e1 e2) =
-  let Ce1 = exp_to_Cexp s e1 in
-  let Ce2 = exp_to_Cexp s e2 in
+exp_to_Cexp m (App (Opb opb) e1 e2) =
+  let Ce1 = exp_to_Cexp m e1 in
+  let Ce2 = exp_to_Cexp m e2 in
   match opb with
   | Lt -> CPrim2 CLt Ce1 Ce2
-  | Gt -> CLet [s.nv;s.nv+1] [Ce1;Ce2] (CPrim2 CLt (CVar (s.nv+1)) (CVar s.nv))
   | Leq -> CLprim CLeq [Ce1;Ce2]
-  | Geq -> CLet [s.nv;s.nv+1] [Ce1;Ce2] (CLprim CLeq [CVar (s.nv+1);CVar s.nv])
+  | opb ->
+      let x1 = fresh_var {} in
+      let x2 = fresh_var {x1} in
+      CLet [x1;x2] [Ce1;Ce2]
+        match opb with
+        | Gt ->  CPrim2 CLt  (CVar x2)(CVar x1)
+        | Geq -> CLprim CLeq [CVar x2; CVar x1]
+        end
   end
 and
-exp_to_Cexp s (App Equality e1 e2) =
-  let Ce1 = exp_to_Cexp s e1 in
-  let Ce2 = exp_to_Cexp s e2 in
+exp_to_Cexp m (App Equality e1 e2) =
+  let Ce1 = exp_to_Cexp m e1 in
+  let Ce2 = exp_to_Cexp m e2 in
   CPrim2 CEq Ce1 Ce2
 and
-exp_to_Cexp s (App Opapp e1 e2) =
-  let Ce1 = exp_to_Cexp s e1 in
-  let Ce2 = exp_to_Cexp s e2 in
+exp_to_Cexp m (App Opapp e1 e2) =
+  let Ce1 = exp_to_Cexp m e1 in
+  let Ce2 = exp_to_Cexp m e2 in
   CCall Ce1 [Ce2]
 and
-exp_to_Cexp s (Log log e1 e2) =
-  let Ce1 = exp_to_Cexp s e1 in
-  let Ce2 = exp_to_Cexp s e2 in
+exp_to_Cexp m (Log log e1 e2) =
+  let Ce1 = exp_to_Cexp m e1 in
+  let Ce2 = exp_to_Cexp m e2 in
   CLprim (match log with
           | And -> CAnd
           | Or  -> COr
           end)
   [Ce1;Ce2]
 and
-exp_to_Cexp s (If e1 e2 e3) =
-  let Ce1 = exp_to_Cexp s e1 in
-  let Ce2 = exp_to_Cexp s e2 in
-  let Ce3 = exp_to_Cexp s e3 in
+exp_to_Cexp m (If e1 e2 e3) =
+  let Ce1 = exp_to_Cexp m e1 in
+  let Ce2 = exp_to_Cexp m e2 in
+  let Ce3 = exp_to_Cexp m e3 in
   CLprim CIf [Ce1;Ce2;Ce3]
 and
-exp_to_Cexp s (Mat e pes) =
-  let (_s,Cpes) = pes_to_Cpes s pes in
-  match var_or_new s e with
-  | INL vn -> CMat (Pmap.find vn s.vmap) Cpes
-  | INR n -> let Ce = exp_to_Cexp s e in
-               CLet [n] [Ce] (CMat n Cpes)
+exp_to_Cexp m (Mat e pes) =
+  let Cpes = pes_to_Cpes m pes in
+  match var_or_new Cpes e with
+  | INL v -> CMat v Cpes
+  | INR v -> let Ce = exp_to_Cexp m e in
+               CLet [v] [Ce] (CMat v Cpes)
   end
 and
-exp_to_Cexp s (Let vn e b) =
-  let (s',n) = extend s vn in
-  let Ce = exp_to_Cexp s e in
-  let Cb = exp_to_Cexp s' b in
-  CLet [n] [Ce] Cb
+exp_to_Cexp m (Let vn e b) =
+  let Ce = exp_to_Cexp m e in
+  let Cb = exp_to_Cexp m b in
+  CLet [vn] [Ce] Cb
 and
-exp_to_Cexp s (Letrec defs b) =
-  let (s',fns) = extend_defs s defs in
-  let Cdefs = defs_to_Cdefs s' defs in
-  let Cb = exp_to_Cexp s' b in
+exp_to_Cexp m (Letrec defs b) =
+  let (fns,Cdefs) = defs_to_Cdefs m defs in
+  let Cb = exp_to_Cexp m b in
   CLetfun true fns Cdefs Cb
 and
-defs_to_Cdefs s [] = []
+defs_to_Cdefs m [] = ([],[])
 and
-defs_to_Cdefs s ((d,vn,e)::defs) =
-  let (s',n) = extend s vn in
-  let Ce = exp_to_Cexp s' e in
-  ([n],Ce)::(defs_to_Cdefs s defs)
+defs_to_Cdefs m ((d,vn,e)::defs) =
+  let Ce = exp_to_Cexp m e in
+  let (fns,Cdefs) = defs_to_Cdefs m defs in
+  (d::fns,([vn],Ce)::Cdefs)
 and
-pes_to_Cpes s [] = (s,[])
+pes_to_Cpes m [] = []
 and
-pes_to_Cpes s ((p,e)::pes) =
-  let (s',_pvs,Cp) = pat_to_Cpat s [] p in
-  let Ce = exp_to_Cexp s' e in
-  let (_s,Cpes) = pes_to_Cpes s pes in
-  (s,(Cp,Ce)::Cpes)
+pes_to_Cpes m ((p,e)::pes) =
+  let (_pvs,Cp) = pat_to_Cpat m [] p in
+  let Ce = exp_to_Cexp m e in
+  let Cpes = pes_to_Cpes m pes in
+  (Cp,Ce)::Cpes
 and
 exps_to_Cexps s [] = []
 and
-exps_to_Cexps s (e::es) =
-  exp_to_Cexp s e :: exps_to_Cexps s es
+exps_to_Cexps m (e::es) =
+  exp_to_Cexp m e :: exps_to_Cexps m es
 and
-v_to_Cv s (Lit l) = CLit l
+v_to_Cv m (Lit l) = CLit l
 and
-v_to_Cv s (Conv cn vs) =
-  CConv (Pmap.find cn s.cmap) (vs_to_Cvs s vs)
+v_to_Cv m (Conv cn vs) =
+  CConv (Pmap.find cn m) (vs_to_Cvs m vs)
 and
-v_to_Cv s (Closure env vn e) =
-  let Cenv = env_to_Cenv s env in
-  let (s',n) = extend s vn in
-  let Ce = exp_to_Cexp s' e in
-  ce_Cv (CClosure Cenv [n] Ce)
+v_to_Cv m (Closure env vn e) =
+  let Cenv = env_to_Cenv m env in
+  let Ce = exp_to_Cexp m e in
+  ce_Cv (CClosure Cenv [vn] Ce)
 and
-v_to_Cv s (Recclosure env defs vn) =
-  let Cenv = env_to_Cenv s env in
-  let (s',fns) = extend_defs s defs in
-  let Cdefs = defs_to_Cdefs s' defs in
-  let n = Pmap.find vn s.vmap in
-  ce_Cv (CRecClos Cenv fns Cdefs n)
+v_to_Cv m (Recclosure env defs vn) =
+  let Cenv = env_to_Cenv m env in
+  let (fns,Cdefs) = defs_to_Cdefs m defs in
+  ce_Cv (CRecClos Cenv fns Cdefs vn)
 and
-vs_to_Cvs s [] = []
+vs_to_Cvs m [] = []
 and
-vs_to_Cvs s (v::vs) = v_to_Cv s v :: vs_to_Cvs s vs
+vs_to_Cvs m (v::vs) = v_to_Cv m v :: vs_to_Cvs m vs
 and
-env_to_Cenv s [] = []
+env_to_Cenv m [] = []
 and
-env_to_Cenv s ((x,v)::env) =
-  (Pmap.find x s.vmap, v_to_Cv s v)::(env_to_Cenv s env)
+env_to_Cenv m ((x,v)::env) =
+  (x, v_to_Cv m v)::(env_to_Cenv m env)
 
 (* TODO: simple type system and checker *)
 
@@ -924,7 +909,7 @@ and
 remove_mat_con fk sk v n [] = sk
 and
 remove_mat_con fk sk v n (p::ps) =
-  let v' = least_not_in (Set.add v (free_vars sk)) in
+  let v' = fresh_var ({v} union (free_vars sk)) in
   CLet [v'] [CProj (CVar v) n]
     (remove_mat_vp fk (remove_mat_con fk sk v (n+1) ps) v' p)
 
@@ -935,7 +920,7 @@ remove_mat (CDecl xs) = CDecl xs
 and
 remove_mat (CRaise err) = CRaise err
 and
-remove_mat (CVar n) = CVar n
+remove_mat (CVar v) = CVar v
 and
 remove_mat (CVal vl) = CVal vl
 and
@@ -961,7 +946,7 @@ remove_mat_var v [] = CRaise Bind_error
 and
 remove_mat_var v ((p,e)::pes) =
   let sk = remove_mat e in
-  let fk = least_not_in (Set.add v (free_vars sk)) in
+  let fk = fresh_var ({v} union (free_vars sk)) in
   CLetfun false [fk] [([],(remove_mat_var v pes))]
     (remove_mat_vp fk sk v p)
 
@@ -1015,7 +1000,7 @@ let sdt s = (<| s with decl = None; tail = TCNonTail |>, (s.decl,s.tail))
 let ldt (d,t) s = <| s with decl = d; tail = t |>
 
 (* helper for reconstructing closure environments *)
-type cebind = CEEnv of num | CERef of num
+type cebind = CEEnv of string | CERef of num
 
 let rec
 emit_ec (CEEnv fv) s = incsz (compile_varref s (Pmap.find fv s.env))
@@ -1028,9 +1013,6 @@ and
 replace_calls j ((_,lab)::(jl,l)::ls) c =
   replace_calls j ((jl,l)::ls)
     (replace (Call lab) (j - jl) c)
-
-let rec
-fold_num f a (n:num) = if n = 0 then a else fold_num f (f a) (n-1)
 
 let rec
 compile s (CDecl vs) =
@@ -1067,7 +1049,7 @@ and
 compile s (CVal _) =
   incsz (emit s [Stack (PushInt i2); Exception])
 and
-compile s (CVar n) = incsz (compile_varref s (Pmap.find n s.env))
+compile s (CVar vn) = incsz (compile_varref s (Pmap.find vn s.env))
 and
 compile s (CCon n []) =
   incsz (emit s [Stack (PushInt (num_to_int n))])
@@ -1312,7 +1294,7 @@ compile_closures nso s defs =
                       else (n+1, Pmap.add fv (CTRef n) env, (ecl+1,(CERef j)::ec))
           end
         end in
-      let (n,env,(ecl,ec)) = num_set_foldl bind_fv (0,Pmap.empty,(0,[])) fvs in
+      let (n,env,(ecl,ec)) = List.fold_left bind_fv (0,Pmap.empty,(0,[])) (Set.to_list fvs) in
       let s' = <| s with env = env; sz = 0; tail = TCTail az 0 |> in
       let s' = compile s' e in
       let n = match s'.tail with TCNonTail -> 1 | TCTail j k -> k+1 end in
@@ -1364,8 +1346,6 @@ let init_compiler_state =
 let init_repl_state =
   <| cmap = Pmap.empty
    ; cpam = Pmap.empty
-   ; vmap = Pmap.empty
-   ; nv = 0
    ; cs = init_compiler_state
    |>
 
@@ -1397,24 +1377,23 @@ repl_dec rs (Dtype ((a,ty,cs)::ts)) =
   repl_dec (<| rs with cmap = cm; cpam = Pmap.add ty cw rs.cpam |>) (Dtype ts) (* parens: Lem sucks *)
 and
 repl_dec rs (Dletrec defs) =
-  let (rs,fns) = extend_defs rs defs in
-  let Cdefs = defs_to_Cdefs rs defs in
+  let (fns,Cdefs) = defs_to_Cdefs rs.cmap defs in
   let rs = <|rs with cs = <|rs.cs with decl=Some(rs.cs.env,rs.cs.sz)|> |> in
   compile_Cexp rs (CLetfun true fns Cdefs (CDecl fns))
 and
 repl_dec rs (Dlet p e) =
-  let (rs',pvs,Cp) = pat_to_Cpat rs [] p in
+  let (pvs,Cp) = pat_to_Cpat rs.cmap [] p in
   let Cpes = [(Cp,CDecl pvs)] in
-  let rs' = <|rs' with cs = <|rs'.cs with decl=Some(rs'.cs.env,rs'.cs.sz)|> |> in
+  let rs' = <|rs with cs = <|rs.cs with decl=Some(rs.cs.env,rs.cs.sz)|> |> in
   compile_Cexp rs'
-    match var_or_new rs e with
-    | INL vn -> CMat (Pmap.find vn rs.vmap) Cpes
-    | INR n -> let Ce = exp_to_Cexp rs e in
-                 CLet [n] [Ce] (CMat n Cpes)
+    match var_or_new Cpes e with
+    | INL vn -> CMat vn Cpes
+    | INR vn -> let Ce = exp_to_Cexp rs.cmap e in
+                  CLet [vn] [Ce] (CMat vn Cpes)
     end
 
 let repl_exp s exp =
-  compile_Cexp (<|s with cs = <|s.cs with decl=None|> |>) (exp_to_Cexp s exp) (* parens *)
+  compile_Cexp (<|s with cs = <|s.cs with decl=None|> |>) (exp_to_Cexp s.cmap exp) (* parens *)
 
 let lookup_conv_ty m ty n = Pmap.find n (Pmap.find ty m)
 
