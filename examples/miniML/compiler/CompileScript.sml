@@ -15,7 +15,6 @@ open BytecodeTheory MiniMLTheory
 (*val domain : forall 'a 'b. ('a,'b) Pmap.map -> 'a set*)
 (*val least : (num -> bool) -> num*)
 (*val replace : forall 'a. 'a -> num -> 'a list -> 'a list*)
-(*val num_set_foldl : forall 'a. ('a -> num -> 'a) -> 'a -> num set -> 'a*)
 (*val int_to_num : int -> num*)
 (*val image : forall 'a 'b. ('a -> 'b) -> 'a set -> 'b set*)
 val _ = type_abbrev((*  ('a,'b) *) "alist" , ``: ('a,'b) alist``);
@@ -1386,7 +1385,7 @@ val _ = Defn.save_defn replace_calls_defn;
       let s = emit s [Call 0] in
       let j = s.code_length in
       let fvs = free_vars e in
-      let (bind_fv (n,env,(ecl,ec)) fv =
+      let (bind_fv fv (n,env,(ecl,ec)) =
         (case find_index fv xs 1 of
           SOME j => (n, FUPDATE  env ( fv, (CTArg (2 + az - j))), (ecl,ec))
         | NONE => (case find_index fv ns 0 of
@@ -1396,7 +1395,7 @@ val _ = Defn.save_defn replace_calls_defn;
                       else (n+1, FUPDATE  env ( fv, (CTRef n)), (ecl+1,(CERef j)::ec))
           )
         )) in
-      let (n,env,(ecl,ec)) = FOLDL bind_fv (0,FEMPTY,(0,[])) (SET_TO_LIST fvs) in
+      let (n,env,(ecl,ec)) = ITSET bind_fv fvs (0,FEMPTY,(0,[])) in
       let s' =  s with<| env := env; sz := 0; tail := TCTail az 0 |> in
       let s' = compile s' e in
       let n = (case s'.tail of TCNonTail => 1 | TCTail j k => k+1 ) in

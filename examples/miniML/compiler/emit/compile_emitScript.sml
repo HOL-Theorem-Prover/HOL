@@ -8,6 +8,7 @@ val _ = Parse.temp_type_abbrev("string",``:char list``)
 val _ = Parse.temp_type_abbrev("op_",``:op``) (* EmitML should do this *)
 val _ = Parse.disable_tyabbrev_printing "tvarN"
 val _ = Parse.disable_tyabbrev_printing "envE"
+val _ = Parse.disable_tyabbrev_printing "ctenv"
 val _ = Parse.disable_tyabbrev_printing "alist"
 
 val underscore_rule = Conv.CONV_RULE let
@@ -66,24 +67,20 @@ boolSyntax.mk_eq(``init_repl_state``,
 boolSyntax.rhs(Thm.concl(SIMP_CONV (srw_ss()) [init_repl_state_def]
 ``<| cmap := init_repl_state.cmap
    ; cpam := init_repl_state.cpam
-   ; vmap := init_repl_state.vmap
-   ; nv := init_repl_state.nv
    ; cs := init_repl_state.cs
    |>``))), SRW_TAC[][init_repl_state_def])
 
 val defs = map EmitML.DEFN
-[ incsz_def
+[ mk_thm([],``ITSET f s a = FOLDR f a (toList s)``)
+, incsz_def
 , Cpat_vars_def
 , free_vars_def
-, REWRITE_RULE [basis_emitTheory.IS_EMPTY_REWRITE]
-    (UNDISCH (SPEC_ALL fsetTheory.num_set_foldl_def))
 , emit_def
 , i0_def
 , i1_def
 , i2_def
 , error_to_int_def
 , compile_varref_def
-, fold_num_def
 , sdt_def
 , ldt_def
 , decsz_def
@@ -94,11 +91,10 @@ val defs = map EmitML.DEFN
 , underscore_rule compile_def
 , init_compiler_state
 , init_repl_state
-, extend_def
 , pat_to_Cpat_def
 , dest_var_def
+, fsetTheory.fresh_var_def
 , var_or_new_def
-, extend_defs_def
 , underscore_rule (
   let open Lib pairSyntax
     val glhs = strip_comb o lhs o #2 o strip_forall o concl
@@ -113,7 +109,6 @@ val defs = map EmitML.DEFN
      (((fn th => th |> Q.SPEC `Lit l` |> Q.GEN `l` |> SIMP_RULE (srw_ss()) [hd v_to_Cv]) ## I)
        (pluck (same_const ``Val`` o #1 o strip_comb o el 2 o #2 o glhs)
           rest))) end)
-, least_not_in_def
 , remove_mat_vp_def
 , remove_mat_def
 , compile_Cexp_def

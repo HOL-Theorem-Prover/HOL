@@ -18,8 +18,6 @@ val least : (num -> bool) -> num
 let inline {hol} least = Hol.LEAST
 val replace : forall 'a. 'a -> num -> 'a list -> 'a list
 let inline {hol} replace = Hol.REPLACE_ELEMENT
-val num_set_foldl : forall 'a. ('a -> num -> 'a) -> 'a -> num set -> 'a
-let inline {hol} num_set_foldl = Hol.num_set_foldl
 val int_to_num : int -> num
 let inline {hol} int_to_num = Hol.Num
 val image : forall 'a 'b. ('a -> 'b) -> 'a set -> 'b set
@@ -1284,7 +1282,7 @@ compile_closures nso s defs =
       let s = emit s [Call 0] in
       let j = s.code_length in
       let fvs = free_vars e in
-      let bind_fv (n,env,(ecl,ec)) fv =
+      let bind_fv fv (n,env,(ecl,ec)) =
         match find_index fv xs 1 with
         | Some j -> (n, Pmap.add fv (CTArg (2 + az - j)) env, (ecl,ec))
         | None -> match find_index fv ns 0 with
@@ -1294,7 +1292,7 @@ compile_closures nso s defs =
                       else (n+1, Pmap.add fv (CTRef n) env, (ecl+1,(CERef j)::ec))
           end
         end in
-      let (n,env,(ecl,ec)) = List.fold_left bind_fv (0,Pmap.empty,(0,[])) (Set.to_list fvs) in
+      let (n,env,(ecl,ec)) = Set.fold bind_fv fvs (0,Pmap.empty,(0,[])) in
       let s' = <| s with env = env; sz = 0; tail = TCTail az 0 |> in
       let s' = compile s' e in
       let n = match s'.tail with TCNonTail -> 1 | TCTail j k -> k+1 end in
