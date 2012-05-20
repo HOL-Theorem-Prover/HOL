@@ -895,6 +895,26 @@ val tacGt =
   fs[doPrim2_def,exp_to_Cexp_def,MiniMLTheory.opb_lookup_def] >>
   rw[integerTheory.int_gt,integerTheory.int_ge]
 
+(* TODO: Move *)
+val alist_to_fmap_PERM = store_thm(
+"alist_to_fmap_PERM",
+``∀l1 l2. PERM l1 l2 ∧ ALL_DISTINCT (MAP FST l1) ⇒ (alist_to_fmap l1 = alist_to_fmap l2)``,
+let open sortingTheory in
+qsuff_tac
+  `∀l1 l2. PERM l1 l2 ⇒ ALL_DISTINCT (MAP FST l1) ⇒ PERM l1 l2 ∧ (alist_to_fmap l1 = alist_to_fmap l2)`
+  >- rw[] >>
+ho_match_mp_tac PERM_IND >>
+fs[pairTheory.FORALL_PROD] >>
+rw[] >> fs[] >- (
+  fs[PERM_SWAP_AT_FRONT] )
+>- (
+  match_mp_tac FUPDATE_COMMUTES >> rw[] )
+>- (
+  PROVE_TAC[PERM_TRANS,ALL_DISTINCT_PERM,PERM_MAP] )
+>- (
+  PROVE_TAC[PERM_TRANS,ALL_DISTINCT_PERM,PERM_MAP] )
+end)
+
 (*
 val exp_to_Cexp_thm1 = store_thm(
 "exp_to_Cexp_thm1",
@@ -1029,7 +1049,28 @@ strip_tac >- (
       strip_tac >>
       first_x_assum (qspec_then `m` mp_tac) >>
       unabbrev_all_tac >>
-      srw_tac[ETA_ss][mk_env_def,alist_to_fmap_MAP_values]
+      srw_tac[ETA_ss][mk_env_def,alist_to_fmap_MAP_values] >>
+      rw[ce_Cexp_canonical_id,exp_to_Cexp_canonical] >>
+      qmatch_abbrev_tac `Cevaluate ((alist_to_fmap (sort_Cenv ls)) |+ kv) ee rr` >>
+      `PERM (sort_Cenv ls) ls ∧ ALL_DISTINCT (MAP FST (sort_Cenv ls))` by (
+        rw[Abbr`ls`,sort_Cenv_def] >>
+        PROVE_TAC[sortingTheory.QSORT_PERM,sortingTheory.PERM_SYM] ) >>
+      imp_res_tac alist_to_fmap_PERM >> fs[] >>
+      unabbrev_all_tac >> rw[] >>
+      `ce_Cv o v_to_Cv m = v_to_Cv m` by (
+        rw[FUN_EQ_THM,ce_Cexp_canonical_id,exp_to_Cexp_canonical] ) >>
+      fs[] >>
+      rw[] >> (ntac 3 (pop_assum kall_tac)) >>
+      Cases_on `{v} ⊆ free_vars (exp_to_Cexp m b)` >- (
+        rw[force_dom_FUPDATE] >>
+        rw[Once INSERT_SING_UNION] >>
+        fs[UNION_DIFF] ) >>
+      fs[] >>
+      fs[force_dom_of_FUPDATE] >>
+      fs[GSYM DELETE_DEF,DELETE_NON_ELEMENT] >>
+      match_mp_tac Cevaluate_FUPDATE >>
+      fs[GSYM DELETE_DEF,DELETE_NON_ELEMENT] )
+    >-
 
 *)
 
