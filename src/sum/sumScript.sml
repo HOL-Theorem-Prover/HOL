@@ -218,6 +218,15 @@ val FORALL_SUM = Q.store_thm
    [DISCH_TAC THEN ASM_REWRITE_TAC [],
     MATCH_ACCEPT_TAC sum_INDUCT]);
 
+open simpLib
+
+(* !P. (?s. P s) <=> (?x. P (INL x)) \/ (?y. P (INR y)) *)
+val EXISTS_SUM = save_thm(
+  "EXISTS_SUM",
+  FORALL_SUM |> Q.INST [`P` |-> `\x. ~P x`] |> AP_TERM ``$~``
+             |> CONV_RULE (BINOP_CONV (SIMP_CONV bool_ss []))
+             |> Q.GEN `P`)
+
 val sum_Axiom = store_thm(
   "sum_Axiom",
   Term`!(f:'a -> 'c) (g:'b -> 'c).
@@ -381,7 +390,6 @@ val sum_case_cong = save_thm("sum_case_cong",
 (* ----------------------------------------------------------------------
     SUM_MAP
    ---------------------------------------------------------------------- *)
-open simpLib
 
 val SUM_MAP_def = Prim_rec.new_recursive_definition{
   name = "SUM_MAP_def",
