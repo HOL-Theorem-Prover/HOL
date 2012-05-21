@@ -10,40 +10,29 @@ let inline {hol} fold_left2 f a lb lc =
   Hol.FOLDL2 f a lb lc
 val every2 : forall 'a 'b. ('a -> 'b -> bool) -> 'a list -> 'b list -> bool
 let inline {hol} every2 = Hol.EVERY2
-val range : forall 'a 'b. ('a,'b) Pmap.map -> 'b set
-let inline {hol} range = Hol.FRANGE
-val domain : forall 'a 'b. ('a,'b) Pmap.map -> 'a set
-let inline {hol} domain = Hol.FDOM
 val least : (num -> bool) -> num
 let inline {hol} least = Hol.LEAST
+val num_to_string : num -> string
+let inline {hol} num_to_string = Hol.num_to_hex_string
 val replace : forall 'a. 'a -> num -> 'a list -> 'a list
 let inline {hol} replace = Hol.REPLACE_ELEMENT
 val int_to_num : int -> num
 let inline {hol} int_to_num = Hol.Num
-val image : forall 'a 'b. ('a -> 'b) -> 'a set -> 'b set
-let inline {hol} image = Hol.IMAGE
 type ('a,'b) alist = ('a,'b) Hol.Lib.alist
 val fmap_to_alist : forall 'a 'b. ('a,'b) Pmap.map -> ('a,'b) alist
 let inline {hol} fmap_to_alist = Hol.fmap_to_alist
 val alist_to_fmap : forall 'a 'b. ('a,'b) alist -> ('a,'b) Pmap.map
 let inline {hol} alist_to_fmap = Hol.alist_to_fmap
-val qsort : forall 'a. ('a -> 'a -> bool) -> 'a list -> 'a list
-let inline {hol} qsort = Hol.QSORT
-val a_linear_order : forall 'a. 'a -> 'a -> bool
-let inline {hol} a_linear_order = Hol.a_linear_order
-val restrict : forall 'a 'b. ('a,'b) Pmap.map -> 'a set -> ('a,'b) Pmap.map
-let inline {hol} restrict = Hol.DRESTRICT
-val valOf : forall 'a. 'a option -> 'a
-let inline {hol} valOf = Hol.THE
 type ('a,'b) sum = INL of 'a | INR of 'b
-val fresh_var : string set -> string
-let inline {hol} fresh_var = Hol.fresh_var
 
 (* TODO: elsewhere? *)
 let rec
 find_index y [] _ = None
 and
 find_index y (x::xs) (n:num) = if x = y then Some n else find_index y xs (n+1)
+
+let fresh_var s =
+  num_to_string (least (fun n -> not (num_to_string n IN s)))
 
 open MiniML
 
@@ -176,30 +165,6 @@ free_vars (CPrim2 _ e1 e2) = free_vars e1 union free_vars e2
 and
 free_vars (CLprim _ es) =
   List.fold_left (fun s e -> s union free_vars e) {} es
-
-(* Canonical environments *)
-
-let sort_Cenv Cenv = qsort a_linear_order Cenv
-let mk_env env b ns =
-  sort_Cenv (fmap_to_alist (restrict (alist_to_fmap env) (free_vars b \ ns)))
-
-let rec
-ce_Cv (CLitv l) = CLitv l
-and
-ce_Cv (CConv cn vs) = CConv cn (List.map ce_Cv vs)
-and
-ce_Cv (CClosure env ns b) =
-  let env = List.map (fun (n,v) -> (n,ce_Cv v)) env in
-  CClosure (mk_env env b (Set.from_list ns)) ns b
-and
-ce_Cv (CRecClos env ns defs n) =
-  match (find_index n ns 0, List.length ns = List.length defs) with
-  | (Some i,true) ->
-    let env = List.map (fun (n,v) -> (n,ce_Cv v)) env in
-    let (vs,b) = List.nth defs i in
-    CRecClos (mk_env env b (Set.from_list ns union Set.from_list vs)) ns defs n
-  | _ -> CClosure [] [] (CRaise Bind_error)
-  end
 
 (* Big-step semantics *)
 
@@ -365,7 +330,7 @@ all_distinct ns &&
 Cevaluate
   (fold_left2
     (fun env' n (ns,b) ->
-      Pmap.add n (ce_Cv (CClosure (fmap_to_alist env) ns b)) env')
+      Pmap.add n (CClosure (fmap_to_alist env) ns b) env')
     env ns defs)
   b r
 ==>
@@ -378,7 +343,7 @@ all_distinct ns &&
 Cevaluate
   (List.fold_left
      (fun env' n ->
-       Pmap.add n (ce_Cv (CRecClos (fmap_to_alist env) ns defs n)) env')
+       Pmap.add n (CRecClos (fmap_to_alist env) ns defs n) env')
      env ns)
   b r
 ==>
@@ -388,7 +353,7 @@ and
 forall env ns b.
 true
 ==>
-Cevaluate env (CFun ns b) (Rval (ce_Cv (CClosure (fmap_to_alist env) ns b)))
+Cevaluate env (CFun ns b) (Rval (CClosure (fmap_to_alist env) ns b))
 
 and
 forall env e es env' ns b vs r.
@@ -421,7 +386,7 @@ Cevaluate
   (fold_left2 (fun en n v -> Pmap.add n v en)
     (List.fold_left
       (fun en n' -> Pmap.add n'
-        (ce_Cv (CRecClos env' ns' defs n')) en)
+        (CRecClos env' ns' defs n') en)
       (alist_to_fmap env')
       ns')
     ns vs)
@@ -832,12 +797,12 @@ and
 v_to_Cv m (Closure env vn e) =
   let Cenv = env_to_Cenv m env in
   let Ce = exp_to_Cexp m e in
-  ce_Cv (CClosure Cenv [vn] Ce)
+  CClosure Cenv [vn] Ce
 and
 v_to_Cv m (Recclosure env defs vn) =
   let Cenv = env_to_Cenv m env in
   let (fns,Cdefs) = defs_to_Cdefs m defs in
-  ce_Cv (CRecClos Cenv fns Cdefs vn)
+  CRecClos Cenv fns Cdefs vn
 and
 vs_to_Cvs m [] = []
 and

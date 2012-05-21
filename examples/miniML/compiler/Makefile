@@ -4,4 +4,4 @@ sed -i '/datatype/N;/sum = INL/d' $@ &&\
 sed -i 's/Pmap \$$ map/fmap/g' $@ &&\
 sed -i 's/LEAST/$$LEAST/g' $@ &&\
 sed -i 's/Hol \$$ Lib \$$ //g' $@ &&\
-sed -i '4 i open fsetTheory alistTheory' $@
+sed -i '4 i open alistTheory' $@

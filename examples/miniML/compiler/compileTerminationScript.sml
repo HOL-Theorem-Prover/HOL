@@ -82,11 +82,9 @@ val Cevaluate_rules = save_thm("Cevaluate_rules",Cevaluate_rules)
 val exp_Cexp_ind = save_thm("exp_Cexp_ind",exp_Cexp_ind)
 val v_Cv_ind = save_thm("v_Cv_ind",v_Cv_ind)
 val v_Cv_cases = save_thm("v_Cv_cases",v_Cv_cases)
-val sort_Cenv_def = save_thm("sort_Cenv_def",sort_Cenv_def)
 val i0_def = save_thm("i0_def",i0_def)
 val Cevaluate_ind = save_thm("Cevaluate_ind",Cevaluate_ind)
 val Cevaluate_strongind = save_thm("Cevaluate_strongind",Cevaluate_strongind)
-val mk_env_def = save_thm("mk_env_def",mk_env_def)
 val find_index_def = save_thm("find_index_def",find_index_def)
 val Cexp_size_def = save_thm("Cexp_size_def",Cexp_size_def)
 val Cv_size_def = save_thm("Cv_size_def",Cv_size_def)
@@ -153,15 +151,6 @@ val (Cpmatch_def,Cpmatch_ind) = register "Cpmatch" (
                 (λx. case x of
                      | (INL (env,p,v)) => Cv_size v
                      | (INR (env,ps,vs)) => Cv3_size vs)`))
-
-val (ce_Cv_def,ce_Cv_ind) = register "ce_Cv"(
-  tprove_no_defn ((ce_Cv_def,ce_Cv_ind),
-  WF_REL_TAC `measure Cv_size` >>
-  srw_tac[ARITH_ss][Cv1_size_thm,Cv3_size_thm,SUM_MAP_Cv2_size_thm] >>
-  imp_res_tac MEM_pair_MAP >>
-  Q.ISPEC_THEN `Cv_size` imp_res_tac SUM_MAP_MEM_bound >>
-  fsrw_tac[ARITH_ss][Cv_size_def]))
-val _ = export_rewrites["ce_Cv_def"]
 
 (* compiler definitions *)
 

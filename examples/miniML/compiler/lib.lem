@@ -1,15 +1,8 @@
 type ('a,'b) alist = ('a * 'b) list
 val fmap_to_alist : forall 'a 'b. ('a,'b) fmap -> ('a,'b) alist
 val alist_to_fmap : forall 'a 'b. ('a,'b) alist -> ('a,'b) fmap
-val FRANGE : forall 'a 'b. ('a,'b) fmap -> 'b set
 val LEAST : (num -> bool) -> num
+val num_to_hex_string : num -> string
 val REPLACE_ELEMENT : forall 'a. 'a -> num -> 'a list -> 'a list
-val IMAGE : forall 'a 'b. ('a -> 'b) -> 'a set -> 'b set
-val UNCURRY : forall 'a 'b 'c. ('a -> 'b -> 'c) -> (('a * 'b) -> 'c)
 val FOLDL2 : forall 'a 'b 'c. ('a -> 'b -> 'c -> 'a) -> 'a -> 'b list -> 'c list -> 'a
 val EVERY2 : forall 'a 'b. ('a -> 'b -> bool) -> 'a list -> 'b list -> bool
-val QSORT : forall 'a. ('a -> 'a -> bool) -> 'a list -> 'a list
-val a_linear_order : forall 'a. 'a -> 'a -> bool
-val DRESTRICT : forall 'a 'b. ('a,'b) fmap -> 'a set -> ('a,'b) fmap
-val THE : forall 'a 'b. 'a -> 'b
-val fresh_var : string set -> string
