@@ -799,11 +799,83 @@ val final =
   fsrw_tac[boolSimps.DNF_ss,SATISFY_ss][FUN_FMAP_DEF,pairTheory.UNCURRY,MEM_EL] >>
   metis_tac[]
 
+(* TODO: move *)
+
+val syneq_cases = CompileTheory.syneq_cases
+val syneq_ind = CompileTheory.syneq_ind
+
+val rel_result_def = Define`
+rel_result R r1 r2 = (∃e. (r1 = Rerr e) ∧ (r2 = Rerr e)) ∨
+                     (∃v1 v2. (r1 = Rval v1) ∧ (r2 = Rval v2) ∧ R v1 v2)`
+
+val syneq_refl = store_thm(
+"syneq_refl",
+``∀x. syneq x x``,
+(TypeBase.induction_of``:Cv``)
+|> Q.SPECL [`K T`,`W syneq`,`K T`,`K T`,`EVERY (W syneq o SND)`]
+|> Q.SPECL [`W syneq o SND`,`K T`,`K T`,`K T`,`EVERY (W syneq)`]
+|> SIMP_RULE(srw_ss())[]
+|> UNDISCH_ALL
+|> CONJUNCT1
+|> DISCH_ALL
+|> match_mp_tac >>
+rw[syneq_cases] >>
+fsrw_tac[DNF_ss]
+[EVERY2_EVERY,MEM_ZIP,MEM_EL,EVERY_MEM,
+ pairTheory.FORALL_PROD,pairTheory.UNCURRY] >>
+rw[] >>
+Cases_on `ALOOKUP l v` >> fs[optionTheory.OPTREL_def] >>
+imp_res_tac ALOOKUP_MEM >>
+fs[MEM_EL] >>
+PROVE_TAC[])
+val _ = export_rewrites["syneq_refl"]
+
+val syneq_sym = store_thm(
+"syneq_sym",
+``∀x y. syneq x y ⇒ syneq y x``,
+ho_match_mp_tac syneq_ind >> rw[] >>
+rw[syneq_cases] >- (
+  fs[EVERY2_EVERY,EVERY_MEM,MEM_ZIP,
+     pairTheory.FORALL_PROD] >>
+  pop_assum mp_tac >>
+  fs[MEM_ZIP] >>
+  PROVE_TAC[] )
+>- (
+  fs[optionTheory.OPTREL_def] >>
+  PROVE_TAC[] )
+>- (
+  fs[EVERY_MEM,pairTheory.FORALL_PROD,optionTheory.OPTREL_def] >>
+  PROVE_TAC[] ))
+
+val syneq_trans = store_thm(
+"syneq_trans",
+``∀x y. syneq x y ⇒ ∀z. syneq y z ⇒ syneq x z``,
+ho_match_mp_tac syneq_ind >> rw[] >>
+pop_assum mp_tac >>
+rw[syneq_cases] >- (
+  fs[EVERY2_EVERY,EVERY_MEM,MEM_ZIP] >>
+  rpt (qpat_assum` LENGTH X = LENGTH Y` mp_tac) >>
+  ntac 2 strip_tac >>
+  fs[MEM_ZIP,pairTheory.FORALL_PROD] >>
+  PROVE_TAC[] )
+>- (
+  fs[optionTheory.OPTREL_def] >>
+  metis_tac[optionTheory.option_CASES,
+            optionTheory.NOT_SOME_NONE,
+            optionTheory.SOME_11] )
+>- (
+  fs[optionTheory.OPTREL_def,EVERY_MEM,
+     pairTheory.FORALL_PROD] >>
+  metis_tac[optionTheory.option_CASES,
+            optionTheory.NOT_SOME_NONE,
+            optionTheory.SOME_11] ))
+
+(*
 val Cevaluate_any_env = store_thm(
 "Cevaluate_any_env",
 ``∀env exp res. Cevaluate env exp res ⇒
   free_vars exp ⊆ FDOM env ⇒
-    ∀env'. Cevaluate ((DRESTRICT env (free_vars exp)) ⊌ env') exp res``,
+    ∀env'. ∃res'. Cevaluate ((DRESTRICT env (free_vars exp)) ⊌ env') exp res' ∧ (rel_result syneq) res res'``,
 ho_match_mp_tac Cevaluate_nice_ind >>
 strip_tac >- rw[] >>
 strip_tac >- rw[DRESTRICT_DEF,FUNION_DEF] >>
@@ -1188,6 +1260,7 @@ rw[FOLDL_UNION_BIGUNION,FOLDL_UNION_BIGUNION_paired,
   disj1_tac >>
   qexists_tac `v` >>
   rw[] ))
+*)
 
 val Cevaluate_free_vars_env = save_thm(
 "Cevaluate_free_vars_env",
