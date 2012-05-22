@@ -10,6 +10,7 @@ open BytecodeTheory MiniMLTheory
 
 (* TODO: move to lem *)
 (*val fold_left2 : forall 'a 'b 'c. ('a -> 'b -> 'c -> 'a) -> 'a -> 'b list -> 'c list -> 'a*)
+(* TODO: lem library should use this for List.for_all2 *)
 (*val every2 : forall 'a 'b. ('a -> 'b -> bool) -> 'a list -> 'b list -> bool*)
 (*val least : (num -> bool) -> num*)
 (*val num_to_string : num -> string*)
@@ -19,6 +20,7 @@ val _ = type_abbrev((*  ('a,'b) *) "alist" , ``: ('a,'b) alist``);
 (*val fmap_to_alist : forall 'a 'b. ('a,'b) Pmap.map -> ('a,'b) alist*)
 (*val alist_to_fmap : forall 'a 'b. ('a,'b) alist -> ('a,'b) Pmap.map*)
 
+(*val optrel : forall 'a 'b 'c 'd. ('a -> 'b -> bool) -> 'c -> 'd -> bool*)
 
 (* TODO: elsewhere? *)
  val find_index_defn = Hol_defn "find_index" `
@@ -525,6 +527,30 @@ Cevaluate env e (Rval v)/\
 Cevaluate_list env es (Rerr err)
 ==>
 Cevaluate_list env (e::es) (Rerr err))`;
+
+(* equivalence relations on intermediate language *)
+
+val _ = Hol_reln `
+(! l.
+T
+==>
+syneq (CLitv l) (CLitv l))
+/\
+(! cn vs1 vs2.EVERY2 syneq vs1 vs2
+==>
+syneq (CConv cn vs1) (CConv cn vs2))
+/\
+(! env1 env2 xs b.
+(! v. v IN (free_vars b DIFF LIST_TO_SET xs)==> (OPTREL syneq) (lookup v env1) (lookup v env2))
+==>
+syneq (CClosure env1 xs b) (CClosure env2 xs b))
+/\
+(! env1 env2 ns defs d.EVERY
+  (\ (xs,b) .
+    (! v. v IN (free_vars b DIFF (LIST_TO_SET ns UNION LIST_TO_SET xs))==> (OPTREL syneq) (lookup v env1) (lookup v env2)))
+  defs
+==>
+syneq (CRecClos env1 ns defs d) (CRecClos env2 ns defs d))`;
 
 (* relating source to intermediate language *)
 

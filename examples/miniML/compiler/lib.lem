@@ -6,3 +6,5 @@ val num_to_hex_string : num -> string
 val REPLACE_ELEMENT : forall 'a. 'a -> num -> 'a list -> 'a list
 val FOLDL2 : forall 'a 'b 'c. ('a -> 'b -> 'c -> 'a) -> 'a -> 'b list -> 'c list -> 'a
 val EVERY2 : forall 'a 'b. ('a -> 'b -> bool) -> 'a list -> 'b list -> bool
+(* TODO: lem library can't handle option type *)
+val OPTREL : forall 'a 'b 'c 'd. ('a -> 'b -> bool) -> 'c -> 'd -> bool

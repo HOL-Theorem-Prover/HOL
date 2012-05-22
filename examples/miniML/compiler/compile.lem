@@ -8,6 +8,7 @@ let inline {hol} fold_left2 f a lb lc =
   List.fold_left (fun a (b,c) -> f a b c) a (List.combine lb lc)
   *)
   Hol.FOLDL2 f a lb lc
+(* TODO: lem library should use this for List.for_all2 *)
 val every2 : forall 'a 'b. ('a -> 'b -> bool) -> 'a list -> 'b list -> bool
 let inline {hol} every2 = Hol.EVERY2
 val least : (num -> bool) -> num
@@ -24,6 +25,8 @@ let inline {hol} fmap_to_alist = Hol.fmap_to_alist
 val alist_to_fmap : forall 'a 'b. ('a,'b) alist -> ('a,'b) Pmap.map
 let inline {hol} alist_to_fmap = Hol.alist_to_fmap
 type ('a,'b) sum = INL of 'a | INR of 'b
+val optrel : forall 'a 'b 'c 'd. ('a -> 'b -> bool) -> 'c -> 'd -> bool
+let inline {hol} optrel = Hol.OPTREL
 
 (* TODO: elsewhere? *)
 let rec
@@ -500,6 +503,35 @@ Cevaluate env e (Rval v) &&
 Cevaluate_list env es (Rerr err)
 ==>
 Cevaluate_list env (e::es) (Rerr err)
+
+(* equivalence relations on intermediate language *)
+
+indreln
+forall l.
+true
+==>
+syneq (CLitv l) (CLitv l)
+and
+forall cn vs1 vs2.
+every2 syneq vs1 vs2
+==>
+syneq (CConv cn vs1) (CConv cn vs2)
+and
+forall env1 env2 xs b.
+(forall v. v IN (free_vars b \ Set.from_list xs)
+  --> (optrel syneq) (lookup v env1) (lookup v env2))
+==>
+syneq (CClosure env1 xs b) (CClosure env2 xs b)
+and
+forall env1 env2 ns defs d.
+List.for_all
+  (fun (xs,b) ->
+    (forall v. v IN (free_vars b \ (Set.from_list ns union
+                                    Set.from_list xs))
+      --> (optrel syneq) (lookup v env1) (lookup v env2)))
+  defs
+==>
+syneq (CRecClos env1 ns defs d) (CRecClos env2 ns defs d)
 
 (* relating source to intermediate language *)
 
