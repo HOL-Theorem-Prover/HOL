@@ -584,7 +584,8 @@ val _ = Define `
 	continue envC v c
     | Exp e =>
         (case e of
-            Raise e =>
+            Lit l => return envC env (Litv l) c
+          | Raise e =>
               (case c of
                   [] => Estuck
                 | _::c => Estep (envC,env,Exp (Raise e),c)

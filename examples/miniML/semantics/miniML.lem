@@ -511,6 +511,7 @@ let e_step (envC, env, ev, c) =
 	continue envC v c
     | Exp e ->
         match e with
+          | Lit l -> return envC env (Litv l) c
           | Raise e ->
               match c with
                 | [] -> Estuck
