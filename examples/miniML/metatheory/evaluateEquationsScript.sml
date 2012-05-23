@@ -10,10 +10,10 @@ val evaluate_raise = Q.store_thm (
   (evaluate cenv env (Raise err) bv = (bv = Rerr (Rraise err)))`,
 rw [Once evaluate_cases]);
 
-val evaluate_val = Q.store_thm(
-"evaluate_val",
-`!cenv env v r.
-  (evaluate cenv env (Val v) r = (r = Rval v))`,
+val evaluate_lit = Q.store_thm(
+"evaluate_lit",
+`!cenv env l r.
+  (evaluate cenv env (Lit l) r = (r = Rval (Litv l)))`,
 rw [Once evaluate_cases]);
 
 val evaluate_var = store_thm(
@@ -29,7 +29,7 @@ val evaluate_fun = store_thm(
 ``∀cenv env n e r. evaluate cenv env (Fun n e) r = (r = Rval (Closure env n e))``,
 rw [Once evaluate_cases])
 
-val _ = export_rewrites["evaluate_raise","evaluate_val","evaluate_fun"];
+val _ = export_rewrites["evaluate_raise","evaluate_lit","evaluate_fun"];
 
 val evaluate_con = Q.store_thm(
 "evaluate_con",
@@ -65,9 +65,9 @@ val evaluate'_raise = store_thm(
 ``∀env err r. evaluate' env (Raise err) r = (r = Rerr (Rraise err))``,
 rw [Once evaluate'_cases])
 
-val evaluate'_val = store_thm(
-"evaluate'_val",
-``∀env v r. evaluate' env (Val v) r = (r = Rval v)``,
+val evaluate'_lit = store_thm(
+"evaluate'_lit",
+``∀env l r. evaluate' env (Lit l) r = (r = Rval (Litv l))``,
 rw [Once evaluate'_cases])
 
 val evaluate'_fun = store_thm(
@@ -75,7 +75,7 @@ val evaluate'_fun = store_thm(
 ``∀env n e r. evaluate' env (Fun n e) r = (r = Rval (Closure env n e))``,
 rw [Once evaluate'_cases])
 
-val _ = export_rewrites["evaluate'_raise","evaluate'_val","evaluate'_fun"]
+val _ = export_rewrites["evaluate'_raise","evaluate'_lit","evaluate'_fun"]
 
 val evaluate'_con = store_thm(
 "evaluate'_con",
