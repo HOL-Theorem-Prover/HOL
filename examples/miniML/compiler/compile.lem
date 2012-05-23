@@ -1,4 +1,4 @@
-(* TODO: move to lem? *)
+(* TODO: move to lem *)
 val fold_left2 : forall 'a 'b 'c. ('a -> 'b -> 'c -> 'a) -> 'a -> 'b list -> 'c list -> 'a
 let inline {hol} fold_left2 f a lb lc =
   (* TODO: LEM internal error:
@@ -33,8 +33,6 @@ val a_linear_order : forall 'a. 'a -> 'a -> bool
 let inline {hol} a_linear_order = Hol.a_linear_order
 val restrict : forall 'a 'b. ('a,'b) Pmap.map -> 'a set -> ('a,'b) Pmap.map
 let inline {hol} restrict = Hol.DRESTRICT
-val force_dom : forall 'a 'b. ('a,'b) Pmap.map -> 'a set -> 'b -> ('a,'b) Pmap.map
-let inline {hol} force_dom = Hol.force_dom
 val valOf : forall 'a. 'a option -> 'a
 let inline {hol} valOf = Hol.THE
 type ('a,'b) sum = INL of 'a | INR of 'b
@@ -63,7 +61,7 @@ type ov =
   | OFn
 
 let rec
-v_to_ov (Lit l) = OLit l
+v_to_ov (Litv l) = OLit l
 and
 v_to_ov (Conv cn vs) = OConv cn (List.map v_to_ov vs)
 and
@@ -93,7 +91,7 @@ type Cexp =
   | CDecl of string list
   | CRaise of error
   | CVar of string
-  | CVal of Cv
+  | CLit of lit
   | CCon of num * Cexp list
   | CTagEq of Cexp * num
   | CProj of Cexp * num
@@ -104,8 +102,9 @@ type Cexp =
   | CCall of Cexp * Cexp list
   | CPrim2 of Cprim2 * Cexp * Cexp
   | CLprim of Clprim * Cexp list
-and Cv =
-  | CLit of lit
+
+type Cv =
+  | CLitv of lit
   | CConv of num * Cv list
   | CClosure of (string,Cv) alist * string list * Cexp
   | CRecClos of (string,Cv) alist * string list * (string list * Cexp) list * string
@@ -116,7 +115,7 @@ and Cv =
 (* Semantics *)
 
 let rec
-Cv_to_ov m (CLit l) = OLit l
+Cv_to_ov m (CLitv l) = OLit l
 and
 Cv_to_ov m (CConv cn vs) = OConv (Pmap.find cn m) (List.map (Cv_to_ov m) vs)
 and
@@ -138,7 +137,7 @@ free_vars (CRaise _) = {}
 and
 free_vars (CVar n) = {n}
 and
-free_vars (CVal _) = {}
+free_vars (CLit _) = {}
 and
 free_vars (CCon _ es) =
   List.fold_left (fun s e -> s union free_vars e) {} es
@@ -182,54 +181,21 @@ free_vars (CLprim _ es) =
 
 let sort_Cenv Cenv = qsort a_linear_order Cenv
 let mk_env env b ns =
-  sort_Cenv (fmap_to_alist (force_dom (alist_to_fmap env) (free_vars b \ ns) (CLit(Bool false))))
+  sort_Cenv (fmap_to_alist (restrict (alist_to_fmap env) (free_vars b \ ns)))
 
-(* these equations were generated in HOL *)
 let rec
-ce_Cexp (CDecl xs) = CDecl xs
+ce_Cv (CLitv l) = CLitv l
 and
-ce_Cexp (CRaise e) = CRaise e
-and
-ce_Cexp (CVar n1) = CVar n1
-and
-ce_Cexp (CVal C') = CVal (ce_Cv C')
-and
-ce_Cexp (CCon n2 l) = CCon n2 (List.map ce_Cexp l)
-and
-ce_Cexp (CTagEq C'1 n3) = CTagEq (ce_Cexp C'1) n3
-and
-ce_Cexp (CProj C'2 n4) = CProj (ce_Cexp C'2) n4
-and
-ce_Cexp (CMat n5 l1) =
-  CMat n5 (List.map (fun (va,vb) -> (va,ce_Cexp vb)) l1)
-and
-ce_Cexp (CLet l0 l2 C'3) = CLet l0 (List.map ce_Cexp l2) (ce_Cexp C'3)
-and
-ce_Cexp (CLetfun b1 l01 l3 C'4) =
-  CLetfun b1 l01 (List.map (fun (va,vb) -> (va,ce_Cexp vb)) l3) (ce_Cexp C'4)
-and
-ce_Cexp (CFun l4 C'5) = CFun l4 (ce_Cexp C'5)
-and
-ce_Cexp (CCall C'6 l5) = CCall (ce_Cexp C'6) (List.map ce_Cexp l5)
-and
-ce_Cexp (CPrim2 C1 C'7 C0) = CPrim2 C1 (ce_Cexp C'7) (ce_Cexp C0)
-and
-ce_Cexp (CLprim C'8 l6) = CLprim C'8 (List.map ce_Cexp l6)
-and
-ce_Cv (CLit l7) = CLit l7
-and
-ce_Cv (CConv n6 l8) = CConv n6 (List.map ce_Cv l8)
+ce_Cv (CConv cn vs) = CConv cn (List.map ce_Cv vs)
 and
 ce_Cv (CClosure env ns b) =
   let env = List.map (fun (n,v) -> (n,ce_Cv v)) env in
-  let b = ce_Cexp b in
   CClosure (mk_env env b (Set.from_list ns)) ns b
 and
 ce_Cv (CRecClos env ns defs n) =
   match (find_index n ns 0, List.length ns = List.length defs) with
   | (Some i,true) ->
     let env = List.map (fun (n,v) -> (n,ce_Cv v)) env in
-    let defs = List.map (fun (vs,b) -> (vs,ce_Cexp b)) defs in
     let (vs,b) = List.nth defs i in
     CRecClos (mk_env env b (Set.from_list ns union Set.from_list vs)) ns defs n
   | _ -> CClosure [] [] (CRaise Bind_error)
@@ -238,9 +204,9 @@ ce_Cv (CRecClos env ns defs n) =
 (* Big-step semantics *)
 
 let rec
-doPrim2 b ty op (CLit (IntLit x)) (CLit (IntLit y)) =
+doPrim2 b ty op (CLitv (IntLit x)) (CLitv (IntLit y)) =
   if b && y = i0 then Some (CRaise Div_error)
-  else Some (CVal (CLit (ty (op x y))))
+  else Some (CLit (ty (op x y)))
 and
 doPrim2 b ty op _ _ = None
 
@@ -257,7 +223,7 @@ CevalPrim2 CMod = doPrim2 true IntLit Int.(%)
 and
 CevalPrim2 CLt = doPrim2 false Bool Int.(<)
 and
-CevalPrim2 CEq = fun v1 v2 -> Some (CVal (CLit (Bool (v1 = v2))))
+CevalPrim2 CEq = fun v1 v2 -> Some (CLit (Bool (v1 = v2)))
 
 type Cmatch_result =
   | Cmatch of (string,Cv) Pmap.map
@@ -281,7 +247,7 @@ Cmatch_map f Cmatch_error = Cmatch_error
 let rec
 Cpmatch env (CPvar vn) v = Cmatch (Pmap.add vn v env)
 and
-Cpmatch env (CPlit l) (CLit l') =
+Cpmatch env (CPlit l) (CLitv l') =
   if lit_same_type l l' then
     if l = l' then Cmatch env else Cno_match
   else Cmatch_error
@@ -313,13 +279,13 @@ and
 forall env n.
 Pmap.mem n env
 ==>
-Cevaluate env (CVar n) (Rval (ce_Cv (Pmap.find n env)))
+Cevaluate env (CVar n) (Rval (Pmap.find n env))
 
 and
-forall env v.
+forall env l.
 true
 ==>
-Cevaluate env (CVal v) (Rval (ce_Cv v))
+Cevaluate env (CLit l) (Rval (CLitv l))
 
 and
 forall env n es vs.
@@ -336,7 +302,7 @@ and
 forall env e n m vs.
 Cevaluate env e (Rval (CConv m vs))
 ==>
-Cevaluate env (CTagEq e n) (Rval (CLit (Bool (n = m))))
+Cevaluate env (CTagEq e n) (Rval (CLitv (Bool (n = m))))
 and
 forall env e n err.
 Cevaluate env e (Rerr err)
@@ -503,7 +469,7 @@ Cevaluate env (CLprim CLeq es) (Rerr err)
 
 and
 forall env e1 e2 e3 b1 r.
-Cevaluate env e1 (Rval (CLit (Bool b1))) &&
+Cevaluate env e1 (Rval (CLitv (Bool b1))) &&
 Cevaluate env (if b1 then e2 else e3) r
 ==>
 Cevaluate env (CLprim CIf [e1;e2;e3]) r
@@ -515,12 +481,12 @@ Cevaluate env (CLprim CIf [e1;e2;e3]) (Rerr err)
 
 and
 forall env e1 e2.
-Cevaluate env e1 (Rval (CLit (Bool false)))
+Cevaluate env e1 (Rval (CLitv (Bool false)))
 ==>
-Cevaluate env (CLprim CAnd [e1;e2]) (Rval (CLit (Bool false)))
+Cevaluate env (CLprim CAnd [e1;e2]) (Rval (CLitv (Bool false)))
 and
 forall env e1 e2 r.
-Cevaluate env e1 (Rval (CLit (Bool true))) &&
+Cevaluate env e1 (Rval (CLitv (Bool true))) &&
 Cevaluate env e2 r
 ==>
 Cevaluate env (CLprim CAnd [e1;e2]) r
@@ -532,12 +498,12 @@ Cevaluate env (CLprim CAnd [e1;e2]) (Rerr err)
 
 and
 forall env e1 e2.
-Cevaluate env e1 (Rval (CLit (Bool true)))
+Cevaluate env e1 (Rval (CLitv (Bool true)))
 ==>
-Cevaluate env (CLprim COr [e1;e2]) (Rval (CLit (Bool true)))
+Cevaluate env (CLprim COr [e1;e2]) (Rval (CLitv (Bool true)))
 and
 forall env e1 e2 r.
-Cevaluate env e1 (Rval (CLit (Bool false))) &&
+Cevaluate env e1 (Rval (CLitv (Bool false))) &&
 Cevaluate env e2 r
 ==>
 Cevaluate env (CLprim COr [e1;e2]) r
@@ -578,10 +544,10 @@ true
 ==>
 exp_Cexp G cm env Cenv (Raise err) (CRaise err)
 and
-forall G cm env Cenv v Cv.
-G cm v Cv
+forall G cm env Cenv l.
+true
 ==>
-exp_Cexp G cm env Cenv (Val v) (CVal Cv)
+exp_Cexp G cm env Cenv (Lit l) (CLit l)
 and
 forall G cm env Cenv cn es Ces.
 Pmap.mem cn cm &&
@@ -606,7 +572,7 @@ indreln
 forall G cm l.
 true
 ==>
-v_Cv G cm (Lit l) (CLit l)
+v_Cv G cm (Litv l) (CLitv l)
 and
 forall G cm cn vs Cvs.
 Pmap.mem cn cm &&
@@ -756,7 +722,7 @@ let var_or_new Cpes e =
 let rec
 exp_to_Cexp m (Raise err) = CRaise err
 and
-exp_to_Cexp m (Val v) = CVal (v_to_Cv m v)
+exp_to_Cexp m (Lit l) = CLit l
 and
 exp_to_Cexp m (Con cn es) =
   CCon (Pmap.find cn m) (exps_to_Cexps m es)
@@ -856,8 +822,9 @@ exps_to_Cexps s [] = []
 and
 exps_to_Cexps m (e::es) =
   exp_to_Cexp m e :: exps_to_Cexps m es
-and
-v_to_Cv m (Lit l) = CLit l
+
+let rec
+v_to_Cv m (Litv l) = CLitv l
 and
 v_to_Cv m (Conv cn vs) =
   CConv (Pmap.find cn m) (vs_to_Cvs m vs)
@@ -896,7 +863,7 @@ remove_mat_vp fk sk v (CPvar pv) =
   CLet [pv] [CVar v] sk
 and
 remove_mat_vp fk sk v (CPlit l) =
-  CLprim CIf [CPrim2 CEq (CVar v) (CVal (CLit l));
+  CLprim CIf [CPrim2 CEq (CVar v) (CLit l);
     sk; (CCall (CVar fk) [])]
 and
 remove_mat_vp fk sk v (CPcon cn ps) =
@@ -920,7 +887,7 @@ remove_mat (CRaise err) = CRaise err
 and
 remove_mat (CVar v) = CVar v
 and
-remove_mat (CVal vl) = CVal vl
+remove_mat (CLit l) = CLit l
 and
 remove_mat (CCon n es) = CCon n (List.map remove_mat es)
 and
@@ -1038,14 +1005,11 @@ and
 compile s (CRaise err) =
   incsz (emit s [Stack (PushInt (error_to_int err)); Exception])
 and
-compile s (CVal (CLit (IntLit i))) =
+compile s (CLit (IntLit i)) =
   incsz (emit s [Stack (PushInt i)])
 and
-compile s (CVal (CLit (Bool b))) =
+compile s (CLit (Bool b)) =
   incsz (emit s [Stack (PushInt (bool_to_int b))])
-and
-compile s (CVal _) =
-  incsz (emit s [Stack (PushInt i2); Exception])
 and
 compile s (CVar vn) = incsz (compile_varref s (Pmap.find vn s.env))
 and
