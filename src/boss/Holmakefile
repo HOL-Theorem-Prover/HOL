@@ -12,7 +12,6 @@ DEPS = bossLib.uo $(patsubst %,$(dprot $(SIGOBJ)/%.uo),$(boss_deps)) \
 
 $(TARGET): $(DEPS)
 	$(protect $(HOLDIR)/bin/buildheap) -o hol.builder -b $(builder0) $(boss_deps) bossLib && \
-	rm hol.builder.o && \
 	$(MV) hol.builder $(TARGET)
 
 endif

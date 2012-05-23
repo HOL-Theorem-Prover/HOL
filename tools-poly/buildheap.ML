@@ -62,7 +62,8 @@ in
   closeOut ostrm;
   system_ps (base ^ " < " ^ ofile);
   system_ps ("cc -o " ^ outputheap ^ " " ^ outputheap^".o" ^ " " ^
-             String.concatWith " " POLY_LDFLAGS)
+             String.concatWith " " POLY_LDFLAGS);
+  OS.FileSys.remove (outputheap^".o")
 end
 
 
