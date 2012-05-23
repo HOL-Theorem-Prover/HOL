@@ -145,127 +145,7 @@ Cevaluate_strongind
 |> Q.GEN `P`
 |> SIMP_RULE (srw_ss()) [Cevaluate_list_with_Cevaluate])
 
-(* more theorems about source-language evaluate *)
-
-val variant_args = let
-  fun f (x,(vs,acc)) = let val v = with_flag (Globals.priming,SOME"") (variant vs) x in (v::vs,v::acc) end
-  fun g (tm,(vs,acc)) = let
-    val (c,bs) = strip_comb tm
-    val (vs,bs) = foldl f (vs,[]) bs
-  in (vs,(list_mk_comb(c,rev bs))::acc) end
-in g end
-
-fun args_from_nchotomy ty = map (rhs o #2 o strip_exists) (strip_disj(#2(strip_forall(concl(TypeBase.nchotomy_of ty)))))
-
-fun uneta tm = let
-  val (t,_) = dom_rng (type_of tm)
-  val x = genvar t
-in mk_abs(x,mk_comb(tm,x)) end
-
-fun find_tys listfn add (tm,acc) =
-let val ty' = type_of tm in
-let val ty'' = listSyntax.dest_list_type ty' in
-let val (tya,tyb) = pairSyntax.dest_prod ty''
-    val fst = inst[alpha|->tya,beta|->tyb] pairSyntax.fst_tm
-    val snd = inst[alpha|->tya,beta|->tyb] pairSyntax.snd_tm
-    fun f p EVP = listfn((*uneta*) EVP,listSyntax.mk_map(p,tm)) in
-let val (tyba,tybb) = pairSyntax.dest_prod tyb
-  val fstosnd = combinSyntax.mk_o(inst[alpha|->tyba,beta|->tybb] pairSyntax.fst_tm,snd)
-  val sndosnd = combinSyntax.mk_o(inst[alpha|->tyba,beta|->tybb] pairSyntax.snd_tm,snd) in
-let
-  val acc = add (f fst) tya acc
-  val acc = add (f fstosnd) tyba acc
-  val acc = add (f sndosnd) tybb acc
-in acc end
-end handle HOL_ERR {origin_function="dest_prod",...} => let
-  val acc = add (f fst) tya acc
-  val acc = add (f snd) tyb acc
-in acc end
-end handle HOL_ERR {origin_function="dest_prod",...} =>
-  add (fn EVP => listfn((*uneta*) EVP,tm)) ty'' acc
-end handle HOL_ERR {origin_function="dest_list_type",...} =>
-  add (fn EVP => mk_comb(EVP,tm)) ty' acc
-end
-
-fun lmk_conj ls = list_mk_conj ls handle HOL_ERR _ => T
-fun lmk_disj ls = list_mk_disj ls handle HOL_ERR _ => F
-
-fun mk_EVERY name eqns tys = let
-  val tynames = map (#1 o dest_type) tys
-  val foo_tys = map (fn n => name^"_"^n) tynames
-  val foo_tys = map (fn (foo_ty,ty) => mk_var(foo_ty,ty-->bool)) (zip foo_tys tys)
-  val argss = map args_from_nchotomy tys
-  val lrs = map (((#2 o dest_comb) ## I) o dest_eq) eqns
-  val lhss = map fst lrs
-  val avoids = mk_set (foo_tys@(flatten (map (#2 o strip_comb) lhss)))
-  fun h (tms,(vs,acc)) = let
-    val (vs,tms) = foldl variant_args (vs,[]) tms
-  in (vs,tms::acc) end
-  val (_,argss) = foldl h (avoids,[]) argss
-  val argss = map (fn args => map (fn t => case total (first (can (match_term t))) lhss of SOME l => l | NONE => t) args) argss
-  fun add f ty acc =
-    case total (index (equal ty)) tys of
-      NONE => acc
-    | SOME i => f (List.nth(foo_tys,i)) :: acc
-  fun eq tm = let
-    val ty = type_of tm
-    val i = index (equal ty) tys
-    val foo_ty = List.nth(foo_tys,i)
-    val rhsl = case total (first ((equal tm) o #1)) lrs of NONE => [] | SOME (_,r) => [r]
-    val rhs = lmk_conj(rev(foldl (find_tys listSyntax.mk_every add) rhsl (#2(strip_comb tm))))
-  in
-    mk_eq(mk_comb(foo_ty,tm),rhs)
-  end
-  val eqs = list_mk_conj (map eq (rev (flatten argss)))
-in [ANTIQUOTE eqs] end
-
-(* could automate with mk_FOLD or something? *)
-val closures_def = tDefine "closures"`
-(closures_exp (Raise _) = {}) ∧
-(closures_exp (Val v) = closures_v v) ∧
-(closures_exp (Con _ ls) = BIGUNION (IMAGE closures_exp (set ls))) ∧
-(closures_exp (Var _) = {}) ∧
-(closures_exp (Fun _ e) = closures_exp e) ∧
-(closures_exp (App _ e1 e2) = closures_exp e1 ∪ closures_exp e2) ∧
-(closures_exp (Log _ e1 e2) = closures_exp e1 ∪ closures_exp e2) ∧
-(closures_exp (If e1 e2 e3) = closures_exp e1 ∪ closures_exp e2 ∪ closures_exp e3) ∧
-(closures_exp (Mat e pes) = closures_exp e ∪ BIGUNION (IMAGE (λ(p,e). closures_exp e) (set pes))) ∧
-(closures_exp (Let _ e b) = closures_exp e ∪ closures_exp b) ∧
-(closures_exp (Letrec defs b) = BIGUNION (IMAGE (λ(y,x,e). closures_exp e) (set defs)) ∪ closures_exp b) ∧
-(closures_v (Lit _) = {}) ∧
-(closures_v (Conv _ vs) = BIGUNION (IMAGE closures_v (set vs))) ∧
-(closures_v (Closure env x e) = {Closure env x e} ∪
-  BIGUNION (IMAGE (λ(n,v). closures_v v) (set env)) ∪
-  closures_exp e) ∧
-(closures_v (Recclosure env defs d) = {Recclosure env defs d} ∪
-  BIGUNION (IMAGE (λ(n,v). closures_v v) (set env)) ∪
-  BIGUNION (IMAGE (λ(y,x,e). closures_exp e) (set defs)))`(
-WF_REL_TAC `inv_image $< (λx. case x of (INL e) => exp_size e | (INR v) => v_size v)` >>
-rw[MiniMLTerminationTheory.exp1_size_thm,
-   MiniMLTerminationTheory.exp3_size_thm,
-   MiniMLTerminationTheory.exp6_size_thm,
-   MiniMLTerminationTheory.exp8_size_thm,
-   MiniMLTerminationTheory.exp9_size_thm] >>
-srw_tac[ARITH_ss][] >>
-imp_res_tac ALOOKUP_MEM >>
-(Q.ISPEC_THEN `exp2_size` imp_res_tac SUM_MAP_MEM_bound) >>
-(Q.ISPEC_THEN `exp5_size` imp_res_tac SUM_MAP_MEM_bound) >>
-(Q.ISPEC_THEN `exp7_size` imp_res_tac SUM_MAP_MEM_bound) >>
-(Q.ISPEC_THEN `exp_size` imp_res_tac SUM_MAP_MEM_bound) >>
-(Q.ISPEC_THEN `v_size` imp_res_tac SUM_MAP_MEM_bound) >>
-fsrw_tac[ARITH_ss][MiniMLTheory.exp_size_def])
-val _ = export_rewrites["closures_def"]
-
-val clV1_def = Define`
-  (clV1 (Closure env x e) = IMAGE FST (set env)) ∧
-  (clV1 (Recclosure env defs d) = IMAGE FST (set env) ∪ IMAGE FST (set defs))`
-val _ = export_rewrites["clV1_def"]
-
-val clV_exp_def = Define`
-  clV_exp e = BIGUNION (IMAGE clV1 (closures_exp e))`
-val clV_v_def = Define`
-  clV_v v = BIGUNION (IMAGE clV1 (closures_v v))`
-val _ = export_rewrites["clV_exp_def","clV_v_def"]
+(* TODO: move? *)
 
 val pat_vars_def = tDefine "pat_vars"`
 (pat_vars (Pvar v) = {v}) ∧
@@ -279,7 +159,7 @@ val _ = export_rewrites["pat_vars_def"]
 
 val FV_def = tDefine "FV"`
 (FV (Raise _) = {}) ∧
-(FV (Val v) = {}) ∧
+(FV (Lit _) = {}) ∧
 (FV (Con _ ls) = BIGUNION (IMAGE FV (set ls))) ∧
 (FV (Var x) = {x}) ∧
 (FV (Fun x e) = FV e DIFF {x}) ∧
@@ -291,9 +171,9 @@ val FV_def = tDefine "FV"`
 (FV (Letrec defs b) = BIGUNION (IMAGE (λ(y,x,e). FV e DIFF ({x} ∪ (IMAGE FST (set defs)))) (set defs)) ∪ (FV b DIFF (IMAGE FST (set defs))))`
 let open MiniMLTerminationTheory MiniMLTheory in
 WF_REL_TAC `measure exp_size` >>
-srw_tac[ARITH_ss][exp1_size_thm,exp6_size_thm,exp8_size_thm] >>
+srw_tac[ARITH_ss][exp1_size_thm,exp6_size_thm,exp4_size_thm] >>
 map_every (fn q => Q.ISPEC_THEN q imp_res_tac SUM_MAP_MEM_bound)
-  [`exp2_size`,`exp7_size`,`exp_size`] >>
+  [`exp2_size`,`exp5_size`,`exp_size`] >>
 fsrw_tac[ARITH_ss][exp_size_def]
 end
 val _ = export_rewrites["FV_def"]
@@ -306,21 +186,6 @@ rw[pairTheory.EXISTS_PROD] >>
 fsrw_tac[SATISFY_ss][])
 val _ = export_rewrites["FINITE_FV"]
 
-val closed_eqs = mk_EVERY "closed"
-[``closed (Closure env v b) = FV b ⊆ {v} ∪ IMAGE FST (set env)``
-,``closed (Recclosure env defs d) = EVERY (λ(d,v,b).
-    FV b ⊆ {v} ∪ IMAGE FST (set defs) ∪ IMAGE FST (set env)) defs``
-] [``:exp``,``:v``]
-
-val closed_def = tDefine "closed" closed_eqs
-let open MiniMLTerminationTheory combinTheory in
-WF_REL_TAC`inv_image $< (λx. case x of INR v => v_size v | INL e => exp_size e)` >>
-srw_tac[ARITH_ss][exp1_size_thm,exp3_size_thm,exp6_size_thm,exp8_size_thm,exp9_size_thm] >>
-Q.ISPEC_THEN `v_size` imp_res_tac SUM_MAP_MEM_bound >>
-Q.ISPEC_THEN `exp_size` imp_res_tac SUM_MAP_MEM_bound >>
-fsrw_tac[ARITH_ss][SUM_MAP_exp2_size_thm,SUM_MAP_exp4_size_thm,SUM_MAP_exp5_size_thm,SUM_MAP_exp7_size_thm,MAP_MAP_o,o_DEF]
-end
-
 (* Cevaluate functional equations *)
 
 val Cevaluate_raise = store_thm(
@@ -328,14 +193,14 @@ val Cevaluate_raise = store_thm(
 ``∀env err res. Cevaluate env (CRaise err) res = (res = Rerr (Rraise err))``,
 rw[Once Cevaluate_cases])
 
-val Cevaluate_val = store_thm(
-"Cevaluate_val",
-``∀env v res. Cevaluate env (CVal v) res = (res = Rval (ce_Cv v))``,
+val Cevaluate_lit = store_thm(
+"Cevaluate_lit",
+``∀env l res. Cevaluate env (CLit l) res = (res = Rval (CLitv l))``,
 rw[Once Cevaluate_cases])
 
 val Cevaluate_var = store_thm(
 "Cevaluate_var",
-``∀env vn res. Cevaluate env (CVar vn) res = (vn ∈ FDOM env ∧ (res = Rval (ce_Cv (env ' vn))))``,
+``∀env vn res. Cevaluate env (CVar vn) res = (vn ∈ FDOM env ∧ (res = Rval (env ' vn)))``,
 rw[Once Cevaluate_cases] >> PROVE_TAC[])
 
 val Cevaluate_mat_nil = store_thm(
@@ -353,7 +218,7 @@ val Cevaluate_fun = store_thm(
 ``∀env ns b res. Cevaluate env (CFun ns b) res = (res = Rval (ce_Cv (CClosure (fmap_to_alist env) ns b)))``,
 rw[Once Cevaluate_cases])
 
-val _ = export_rewrites["Cevaluate_raise","Cevaluate_val","Cevaluate_var","Cevaluate_mat_nil","Cevaluate_let_nil","Cevaluate_fun"]
+val _ = export_rewrites["Cevaluate_raise","Cevaluate_lit","Cevaluate_var","Cevaluate_mat_nil","Cevaluate_let_nil","Cevaluate_fun"]
 
 val Cevaluate_con = store_thm(
 "Cevaluate_con",
@@ -365,7 +230,7 @@ rw[Once Cevaluate_cases] >> PROVE_TAC[])
 val Cevaluate_tageq = store_thm(
 "Cevaluate_tageq",
 ``∀env exp n res. Cevaluate env (CTagEq exp n) res =
-  (∃m vs. Cevaluate env exp (Rval (CConv m vs)) ∧ (res = (Rval (CLit (Bool (n = m)))))) ∨
+  (∃m vs. Cevaluate env exp (Rval (CConv m vs)) ∧ (res = (Rval (CLitv (Bool (n = m)))))) ∨
   (∃err. Cevaluate env exp (Rerr err) ∧ (res = Rerr err))``,
 rw[Once Cevaluate_cases] >> PROVE_TAC[])
 
@@ -698,103 +563,31 @@ MAP_ZIP
 |> SIMP_RULE (srw_ss()) [f pairTheory.FST,f pairTheory.SND]
 end
 
-fun map_tys getf tm =
-let val ty = type_of tm in
-let val tyl = listSyntax.dest_list_type ty in
-let val (tya,tyb) = pairSyntax.dest_prod tyl
-    val va = mk_var("va",tya)
-    val vb = mk_var("vb",tyb) in
-case getf tya of NONE => (
-  case getf tyb of NONE => tm
-  | SOME fb =>
-    listSyntax.mk_map(``λ(^va,^vb). (va, ^fb ^vb)``,tm))
-| SOME fa => (
-  case getf tyb of NONE =>
-    listSyntax.mk_map(``λ(^va,^vb). (^fa ^va, ^vb)``,tm)
-  | SOME fb =>
-    listSyntax.mk_map(``λ(^va,^vb). (^fa ^va, ^fb ^vb)``,tm))
-end handle HOL_ERR {origin_function="dest_prod",...} =>
-case getf tyl of NONE => tm
-| SOME f => listSyntax.mk_map(f,tm)
-end handle HOL_ERR {origin_function="dest_list_type",...} =>
-case getf ty of NONE => tm
-| SOME f => mk_comb(f,tm)
-end
-
-fun mk_MAP name eqns tys = let
-  val tynames = map (#1 o dest_type) tys
-  val foo_tys = map (fn n => name^"_"^n) tynames
-  val foo_tys = map (fn (foo_ty,ty) => mk_var(foo_ty,ty-->ty)) (zip foo_tys tys)
-  val argss = map args_from_nchotomy tys
-  val lrs = map (((#2 o dest_comb) ## I) o dest_eq) eqns
-  val lhss = map fst lrs
-  val avoids = mk_set (foo_tys@(flatten (map (#2 o strip_comb) lhss)))
-  fun h (tms,(vs,acc)) = let
-    val (vs,tms) = foldl variant_args (vs,[]) tms
-  in (vs,tms::acc) end
-  val (_,argss) = foldl h (avoids,[]) argss
-  val argss = map (fn args => map (fn t => case total (first (can (match_term t))) lhss of SOME l => l | NONE => t) args) argss
-  fun getf ty =
-    Option.map (curry List.nth foo_tys)
-    (total (index (equal ty)) tys)
-  fun eq tm = let
-    val ty = type_of tm
-    val i = index (equal ty) tys
-    val foo_ty = List.nth(foo_tys,i)
-    val rhs = case total (first ((equal tm) o #1)) lrs
-      of SOME (_,r) => r
-      | NONE => let val (f,args) = strip_comb tm
-        in list_mk_comb(f, map (map_tys getf) args) end
-  in
-    mk_eq(mk_comb(foo_ty,tm),rhs)
-  end
-  val eqs = list_mk_conj (map eq (rev (flatten argss)))
-in [ANTIQUOTE eqs] end
-
-(*
-generated equations used in compile.lem:
-val ce_Cexp_eqs = mk_MAP "ce" [
-``ce_Cv (CClosure env ns b) =
-  let env = MAP (λ(n,v). (n,ce_Cv v)) env in
-  let b = ce_Cexp b in
-    CClosure (mk_env env b (set ns)) ns b``,
-``ce_Cv (CRecClos env ns defs n) =
-  case (find_index n ns 0,LENGTH ns = LENGTH defs) of
-  | (SOME i,T) => 
-    let env = MAP (λ(n,v). (n,ce_Cv v)) env in
-    let defs = MAP (λ(vs,b). (vs,ce_Cexp b)) defs in
-    let (vs,b) = EL i defs in
-    CRecClos (mk_env env b (set ns ∪ set vs)) ns defs n
-  | _ => CClosure [] [] (CRaise Bind_error)``
-]
-[``:Cexp``,``:Cv``]
-*)
-
-val canonical_env_eqs = mk_EVERY
-"canonical_env"
-[(``canonical_env (CClosure env ns b) =
-    (SORTED a_linear_order env) ∧
-    (ALL_DISTINCT (MAP FST env)) ∧
-    (FDOM (alist_to_fmap env) = free_vars b DIFF (set ns))``),
- (``canonical_env (CRecClos env ns bs n) =
-    (SORTED a_linear_order env) ∧
-    (ALL_DISTINCT (MAP FST env)) ∧
-    (LENGTH ns = LENGTH bs) ∧
-    case find_index n ns 0 of
-      SOME i => (FDOM (alist_to_fmap env) = free_vars (SND (EL i bs)) DIFF (set (FST (EL i bs))) DIFF (set ns))
-    | NONE => F``)]
-[``:Cexp``,``:Cv``]
-
-val canonical_env_def = tDefine "canonical_env" canonical_env_eqs(
-WF_REL_TAC `inv_image $< (λx. case x of | INR v => Cv_size v | INL e => Cexp_size e)` >>
-srw_tac[ARITH_ss][Cexp3_size_thm,Cexp8_size_thm,Cexp7_size_thm,Cexp5_size_thm,Cexp1_size_thm] >>
+val canonical_Cv_def = tDefine "canonical_Cv" `
+(canonical_Cv (CLitv _) = T) ∧
+(canonical_Cv (CConv _ vs) = EVERY canonical_Cv vs) ∧
+(canonical_Cv (CClosure env ns b) =
+  (SORTED a_linear_order env) ∧
+  (ALL_DISTINCT (MAP FST env)) ∧
+  (FDOM (alist_to_fmap env) = free_vars b DIFF (set ns)) ∧
+  (EVERY canonical_Cv (MAP SND env))) ∧
+(canonical_Cv (CRecClos env ns bs n) =
+  (SORTED a_linear_order env) ∧
+  (ALL_DISTINCT (MAP FST env)) ∧
+  (LENGTH ns = LENGTH bs) ∧
+  (case find_index n ns 0 of
+     SOME i => (FDOM (alist_to_fmap env) = free_vars (SND (EL i bs)) DIFF (set (FST (EL i bs))) DIFF (set ns))
+   | NONE => F) ∧
+  (EVERY canonical_Cv (MAP SND env)))`
+(WF_REL_TAC `measure Cv_size` >>
+srw_tac[ARITH_ss][Cv1_size_thm,Cv3_size_thm] >>
 Q.ISPEC_THEN `Cv_size` imp_res_tac SUM_MAP_MEM_bound >>
-Q.ISPEC_THEN `Cexp_size` imp_res_tac SUM_MAP_MEM_bound >>
-fsrw_tac[ARITH_ss][Cexp_size_def,SUM_MAP_Cexp2_size_thm,SUM_MAP_Cexp6_size_thm,SUM_MAP_Cexp4_size_thm])
-val canonical_env_thm = save_thm(
-"canonical_env_thm",SIMP_RULE((srw_ss())++boolSimps.ETA_ss)[]canonical_env_def)
-val canonical_env_ind = theorem"canonical_env_ind"
-val _ = export_rewrites["canonical_env_thm"]
+Q.ISPEC_THEN `Cv2_size` imp_res_tac SUM_MAP_MEM_bound >>
+fsrw_tac[ARITH_ss][Cv_size_def,SUM_MAP_Cv2_size_thm])
+val canonical_Cv_thm = save_thm(
+"canonical_Cv_thm",SIMP_RULE((srw_ss())++boolSimps.ETA_ss)[]canonical_Cv_def)
+val canonical_Cv_ind = theorem"canonical_Cv_ind"
+val _ = export_rewrites["canonical_Cv_thm"]
 
 val FOLDL2_Cmatch_bind_error = store_thm(
 "FOLDL2_Cmatch_bind_error",
@@ -804,10 +597,10 @@ val FOLDL2_Cmatch_bind_error = store_thm(
 gen_tac >> Induct >- (Cases >> rw[]) >>
 gen_tac >> Cases >> rw[])
 
-val Cpmatch_canonical_envs = store_thm(
-"Cpmatch_canonical_envs",
-``(∀env p v env'. (Cpmatch env p v = Cmatch env') ∧ (∀v. v ∈ FRANGE env ⇒ canonical_env_Cv v) ∧ canonical_env_Cv v ⇒ (∀v. v ∈ FRANGE env' ⇒ canonical_env_Cv v)) ∧
-(∀env ps vs env'. (Cpmatch_list env ps vs = Cmatch env') ∧ (∀v. v ∈ FRANGE env ⇒ canonical_env_Cv v) ∧ EVERY canonical_env_Cv vs ⇒ (∀v. v ∈ FRANGE env' ⇒ canonical_env_Cv v))``,
+val Cpmatch_canonical = store_thm(
+"Cpmatch_canonical",
+``(∀env p v env'. (Cpmatch env p v = Cmatch env') ∧ (∀v. v ∈ FRANGE env ⇒ canonical_Cv v) ∧ canonical_Cv v ⇒ (∀v. v ∈ FRANGE env' ⇒ canonical_Cv v)) ∧
+(∀env ps vs env'. (Cpmatch_list env ps vs = Cmatch env') ∧ (∀v. v ∈ FRANGE env ⇒ canonical_Cv v) ∧ EVERY canonical_Cv vs ⇒ (∀v. v ∈ FRANGE env' ⇒ canonical_Cv v))``,
 ho_match_mp_tac Cpmatch_ind >>
 rw[Cpmatch_def] >>
 fs[FRANGE_DEF] >> rw[DOMSUB_FAPPLY_THM]
@@ -935,20 +728,6 @@ val DIFF_COMM = store_thm(
 "DIFF_COMM",
 ``!x y z. x DIFF y DIFF z = x DIFF z DIFF y``,
 SRW_TAC[][EXTENSION] THEN METIS_TAC[])
-
-val free_vars_ce_Cexp = store_thm(
-"free_vars_ce_Cexp",
-``(∀exp. free_vars (ce_Cexp exp) = free_vars exp)``,
-CONV_TAC(
-  ONCE_REWRITE_CONV[
-    SYM (CONJUNCT1 (CONJUNCT2 (SPEC_ALL AND_CLAUSES)))] THENC
-  RAND_CONV (ONCE_REWRITE_CONV[INST_TYPE[alpha|->``:Cv``](GSYM FORALL_SIMP)])) >>
-ho_match_mp_tac ce_Cexp_ind >> rw[] >>
-TRY (qmatch_rename_tac `X = free_vars (CLetfun b ns defs exp)` ["X"] >> Cases_on `b`) >>
-rw[FOLDL_UNION_BIGUNION,FOLDL_UNION_BIGUNION_paired,LIST_TO_SET_MAP] >>
-srw_tac[boolSimps.DNF_ss][EXTENSION,pairTheory.EXISTS_PROD] >>
-metis_tac[])
-val _ = export_rewrites["free_vars_ce_Cexp"]
 
 (* TODO: move? *)
 val INJ_I = store_thm(

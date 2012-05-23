@@ -89,6 +89,7 @@ val Cevaluate_strongind = save_thm("Cevaluate_strongind",Cevaluate_strongind)
 val mk_env_def = save_thm("mk_env_def",mk_env_def)
 val find_index_def = save_thm("find_index_def",find_index_def)
 val Cexp_size_def = save_thm("Cexp_size_def",Cexp_size_def)
+val Cv_size_def = save_thm("Cv_size_def",Cv_size_def)
 
 val (free_vars_def, free_vars_ind) = register "free_vars" (
   tprove_no_defn ((free_vars_def,free_vars_ind),
