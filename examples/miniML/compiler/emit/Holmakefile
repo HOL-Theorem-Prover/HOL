@@ -1,4 +1,4 @@
-INCLUDES = ../../hol2miniml $(HOLDIR)/src/emit/ML ../bytecode/benchmarking
+INCLUDES = .. ../../hol2miniml $(HOLDIR)/src/emit/ML ../bytecode/benchmarking
 OPTIONS = QUIT_ON_FAILURE
 
 EXTRA_CLEANS = selftest.exe
