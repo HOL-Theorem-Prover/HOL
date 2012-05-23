@@ -6,6 +6,11 @@ open set_relationTheory pred_setTheory cardinalTheory
 
 val _ = new_theory "wellorder"
 
+val FORALL_PROD = pairTheory.FORALL_PROD
+val EXISTS_PROD = pairTheory.EXISTS_PROD
+val EXISTS_SUM = sumTheory.EXISTS_SUM
+val FORALL_SUM = sumTheory.FORALL_SUM
+
 val wellfounded_def = Define`
   wellfounded R <=>
    !s. (?w. w IN s) ==> ?min. min IN s /\ !w. (w,min) IN R ==> w NOTIN s
@@ -151,7 +156,7 @@ val iseg_def = Define`iseg w x = { y | (y,x) WIN w }`
 val strict_subset = store_thm(
   "strict_subset",
   ``r1 ⊆ r2 ⇒ strict r1 ⊆ strict r2``,
-  simp[strict_def, SUBSET_DEF, pairTheory.FORALL_PROD]);
+  simp[strict_def, SUBSET_DEF, FORALL_PROD]);
 
 val transitive_rrestrict = store_thm(
   "transitive_rrestrict",
@@ -219,7 +224,7 @@ val WEXTENSION = store_thm(
   ``(w1 = w2) <=> !a b. (a,b) WLE w1 <=> (a,b) WLE w2``,
   qspec_then `w1` strip_assume_tac wellorder_cases >>
   qspec_then `w2` strip_assume_tac wellorder_cases >>
-  simp[#term_ABS_pseudo11 wellorder_results, EXTENSION, pairTheory.FORALL_PROD,
+  simp[#term_ABS_pseudo11 wellorder_results, EXTENSION, FORALL_PROD,
        #repabs_pseudo_id wellorder_results]);
 
 val wobound2 = store_thm(
@@ -248,7 +253,7 @@ val INJ_preserves_transitive = store_thm(
   "INJ_preserves_transitive",
   ``transitive r ∧ INJ f (domain r ∪ range r) t ⇒
     transitive (IMAGE (f ## f) r)``,
-  simp[transitive_def, pairTheory.EXISTS_PROD] >> strip_tac >>
+  simp[transitive_def, EXISTS_PROD] >> strip_tac >>
   map_every qx_gen_tac [`x`, `y`, `z`] >>
   simp[GSYM AND_IMP_INTRO] >>
   disch_then (Q.X_CHOOSE_THEN `a` (Q.X_CHOOSE_THEN `b` strip_assume_tac)) >>
@@ -260,7 +265,7 @@ val INJ_preserves_transitive = store_thm(
 val INJ_preserves_antisym = store_thm(
   "INJ_preserves_antisym",
   ``antisym r ∧ INJ f (domain r ∪ range r) t ⇒ antisym (IMAGE (f ## f) r)``,
-  simp[antisym_def, pairTheory.EXISTS_PROD] >> strip_tac >>
+  simp[antisym_def, EXISTS_PROD] >> strip_tac >>
   map_every qx_gen_tac [`x`, `y`] >> simp[GSYM AND_IMP_INTRO] >>
   disch_then (Q.X_CHOOSE_THEN `a` (Q.X_CHOOSE_THEN `b` strip_assume_tac)) >>
   disch_then (Q.X_CHOOSE_THEN `a'` (Q.X_CHOOSE_THEN `b'` strip_assume_tac)) >>
@@ -272,9 +277,9 @@ val INJ_preserves_linear_order = store_thm(
   "INJ_preserves_linear_order",
   ``linear_order r (domain r ∪ range r) ∧ INJ f (domain r ∪ range r) t ⇒
     linear_order (IMAGE (f ## f) r) (IMAGE f (domain r ∪ range r))``,
-  simp[linear_order_def, pairTheory.EXISTS_PROD] >> rpt strip_tac >| [
-    simp[SUBSET_DEF, in_domain, pairTheory.EXISTS_PROD] >> metis_tac[],
-    simp[SUBSET_DEF, in_range, pairTheory.EXISTS_PROD] >> metis_tac[],
+  simp[linear_order_def, EXISTS_PROD] >> rpt strip_tac >| [
+    simp[SUBSET_DEF, in_domain, EXISTS_PROD] >> metis_tac[],
+    simp[SUBSET_DEF, in_range, EXISTS_PROD] >> metis_tac[],
     metis_tac [INJ_preserves_transitive],
     metis_tac [INJ_preserves_antisym],
     prove_tac [INJ_DEF, IN_UNION, in_domain, in_range],
@@ -286,11 +291,11 @@ val INJ_preserves_linear_order = store_thm(
 val domain_IMAGE_ff = store_thm(
   "domain_IMAGE_ff",
   ``domain (IMAGE (f ## g) r) = IMAGE f (domain r)``,
-  simp[domain_def, EXTENSION, pairTheory.EXISTS_PROD] >> prove_tac[]);
+  simp[domain_def, EXTENSION, EXISTS_PROD] >> prove_tac[]);
 val range_IMAGE_ff = store_thm(
   "range_IMAGE_ff",
   ``range (IMAGE (f ## g) r) = IMAGE g (range r)``,
-  simp[range_def, EXTENSION, pairTheory.EXISTS_PROD] >> prove_tac[]);
+  simp[range_def, EXTENSION, EXISTS_PROD] >> prove_tac[]);
 
 val INJ_preserves_wellorder = store_thm(
   "INJ_preserves_wellorder",
@@ -298,7 +303,7 @@ val INJ_preserves_wellorder = store_thm(
   simp[wellorder_def] >> rpt strip_tac >| [
     fs[wellfounded_def, strict_def] >> qx_gen_tac `s` >>
     disch_then (Q.X_CHOOSE_THEN `e` assume_tac) >>
-    asm_simp_tac (srw_ss() ++ DNF_ss) [pairTheory.EXISTS_PROD] >>
+    asm_simp_tac (srw_ss() ++ DNF_ss) [EXISTS_PROD] >>
     Cases_on `s ∩ IMAGE f (domain r ∪ range r) = ∅` >-
       (qexists_tac `e` >> fs[EXTENSION, in_domain, in_range] >> metis_tac[]) >>
     pop_assum mp_tac >> qabbrev_tac `DR = domain r ∪ range r` >>
@@ -313,7 +318,7 @@ val INJ_preserves_wellorder = store_thm(
     `b = min` by metis_tac [INJ_DEF] >> metis_tac[],
     simp[domain_IMAGE_ff, range_IMAGE_ff] >>
     metis_tac [IMAGE_UNION, INJ_preserves_linear_order],
-    fs[reflexive_def, pairTheory.EXISTS_PROD, in_domain, in_range] >>
+    fs[reflexive_def, EXISTS_PROD, in_domain, in_range] >>
     metis_tac[]
   ]);
 
@@ -323,7 +328,7 @@ val wellorder_fromNat_SUM = store_thm(
   qmatch_abbrev_tac `wellorder w` >>
   qabbrev_tac `w0 = { (i,j) | i ≤ j ∧ j < n }` >>
   `w = IMAGE (INL ## INL) w0`
-     by simp[EXTENSION, Abbr`w`, Abbr`w0`, pairTheory.EXISTS_PROD] >>
+     by simp[EXTENSION, Abbr`w`, Abbr`w0`, EXISTS_PROD] >>
   simp[] >> match_mp_tac (GEN_ALL INJ_preserves_wellorder) >>
   `wellorder w0` by simp[Abbr`w0`, wellorder_fromNat] >>
   simp[INJ_DEF] >>
@@ -366,15 +371,6 @@ val SURJ_IMAGE = store_thm(
   ``SURJ f s (IMAGE f s)``,
   rw[SURJ_DEF] >> metis_tac[]);
 
-val EXISTS_SUM = prove(
-  ``(?x:'a + 'b. P x) = (?a. P (INL a)) \/ (?b. P (INR b))``,
-  metis_tac [sumTheory.sum_CASES]);
-
-val FORALL_SUM =
-  EXISTS_SUM |> Q.INST [`P` |-> `\x. ~ Q x`] |> AP_TERM ``(~)``
-             |> CONV_RULE (BINOP_CONV (SIMP_CONV bool_ss []))
-             |> Q.INST [`Q` |-> `P`]
-
 val wellorder_shift1 = store_thm(
   "wellorder_shift1",
   ``wellorder w ==> wellorder (IMAGE ((SUC ++ I) ## (SUC ++ I)) w)``,
@@ -388,7 +384,7 @@ val ZERO_NOT_SHIFT1 = store_thm(
   ``INL 0 NOTIN elsOf (shift1 w)``,
   simp[shift1_def, elsOf_def, in_domain, in_range,
        #repabs_pseudo_id wellorder_results, wellorder_shift1,
-       #termP_term_REP wellorder_results, FORALL_SUM, pairTheory.FORALL_PROD]);
+       #termP_term_REP wellorder_results, FORALL_SUM, FORALL_PROD]);
 
 val ADD1_def = Define`
   ADD1 e w =
@@ -847,7 +843,7 @@ val orderiso_wZERO = store_thm(
   simp[elsOf_def, EXTENSION, in_range, in_domain, wZERO_def,
        #term_ABS_pseudo11 wellorder_results, wellorder_EMPTY,
        #repabs_pseudo_id wellorder_results,
-       pairTheory.FORALL_PROD]);
+       FORALL_PROD]);
 
 val elsOf_EQ_EMPTY = store_thm(
   "elsOf_EQ_EMPTY",
@@ -1025,7 +1021,7 @@ val canonicals_unique = store_thm(
     >- (strip_tac >>
         qsuff_tac `wellorder_REP w1 = wellorder_REP w2`
            >- rw [#term_REP_11 wellorder_results] >>
-        simp[EXTENSION, pairTheory.FORALL_PROD] >>
+        simp[EXTENSION, FORALL_PROD] >>
         `!x y. (x,y) WIN w1 ==> ((f x, f y) WIN w2 = (x,y) WIN w2)`
            by metis_tac [WIN_elsOf] >>
         fs[] >> simp[EQ_IMP_THM] >>
@@ -1051,7 +1047,7 @@ val elsOf_shift1 = store_thm(
   ``elsOf (shift1 w) = IMAGE (SUC ++ I) (elsOf w)``,
   simp[shift1_def, elsOf_def, EXTENSION, #repabs_pseudo_id wellorder_results,
        wellorder_shift1, #termP_term_REP wellorder_results, in_domain,
-       in_range, EXISTS_SUM, pairTheory.EXISTS_PROD] >>
+       in_range, EXISTS_SUM, EXISTS_PROD] >>
   simp_tac (srw_ss() ++ DNF_ss)[] >> metis_tac[]);
 
 val FORALL_NUM = store_thm(
@@ -1065,7 +1061,7 @@ val WIN_shift1 = store_thm(
       (x,y) WIN shift1 w <=>
       x <> INL 0 ∧ y <> INL 0 ∧ ((PRE ++ I) x, (PRE ++ I) y) WIN w``,
   simp[shift1_def, #repabs_pseudo_id wellorder_results, wellorder_shift1,
-       #termP_term_REP wellorder_results, strict_def, pairTheory.EXISTS_PROD,
+       #termP_term_REP wellorder_results, strict_def, EXISTS_PROD,
        EXISTS_SUM, FORALL_SUM] >>
   simp_tac (srw_ss() ++ DNF_ss) [] >> rpt conj_tac >| [
     simp[Once FORALL_NUM] >> qx_gen_tac `a` >> simp[Once FORALL_NUM],
@@ -1105,7 +1101,7 @@ val elsOf_ADD1 = store_thm(
 val strict_UNION = store_thm(
   "strict_UNION",
   ``strict (r1 ∪ r2) = strict r1 ∪ strict r2``,
-  simp[EXTENSION, pairTheory.FORALL_PROD, strict_def] >> metis_tac[]);
+  simp[EXTENSION, FORALL_PROD, strict_def] >> metis_tac[]);
 
 val WIN_ADD1 = store_thm(
   "WIN_ADD1",
@@ -1282,7 +1278,7 @@ val wellorder_allOrds = store_thm(
   rpt conj_tac >| [
     simp_tac (srw_ss() ++ CONJ_ss)
              [REWRITE_RULE[SPECIFICATION] GSPECIFICATION,
-              pairTheory.EXISTS_PROD] >>
+              EXISTS_PROD] >>
     metis_tac[ordlt_REFL, ordlt_WF0],
     simp[linear_order_def, in_domain, in_range] >> rw[]
       >- (simp[transitive_def]>> metis_tac [ordlt_TRANS])
@@ -1477,7 +1473,7 @@ val elsOf_cardeq_iso = store_thm(
   qabbrev_tac `
     els = domain (wellorder_REP wo) UNION range (wellorder_REP wo)` >>
   simp[BIJ_DEF, SURJ_IMAGE] >>
-  simp[strict_def, pairTheory.EXISTS_PROD] >>
+  simp[strict_def, EXISTS_PROD] >>
   fs[INJ_DEF] >> conj_tac >- metis_tac [] >>
   map_every qx_gen_tac [`x`, `y`] >> strip_tac >>
   `x ∈ elsOf wo ∧ y ∈ elsOf wo` by metis_tac [WLE_elsOf] >>
