@@ -5,78 +5,49 @@ val _ = new_theory "MiniMLTermination";
 
 (* ------------------ Termination proofs for MiniMLTheory ----------------- *)
 
-(* TODO: Fix these as necessary 
-val exp1_size_thm = store_thm(
-"exp1_size_thm",
-``∀ls. exp1_size ls = SUM (MAP exp2_size ls) + LENGTH ls``,
-Induct >- rw[exp_size_def] >>
-qx_gen_tac `p` >>
-PairCases_on `p` >>
-srw_tac [ARITH_ss][exp_size_def])
-
-val exp3_size_thm = store_thm(
-"exp3_size_thm",
-``∀ls. exp3_size ls = SUM (MAP exp5_size ls) + LENGTH ls``,
-Induct >- rw[exp_size_def] >>
-Cases >> srw_tac[ARITH_ss][exp_size_def])
-
-val exp6_size_thm = store_thm(
-"exp6_size_thm",
-``∀ls. exp6_size ls = SUM (MAP exp7_size ls) + LENGTH ls``,
-Induct >- rw[exp_size_def] >>
-Cases >> srw_tac [ARITH_ss][exp_size_def])
-
-val exp8_size_thm = store_thm(
-"exp8_size_thm",
-``∀ls. exp8_size ls = SUM (MAP exp_size ls) + LENGTH ls``,
-Induct >- rw[exp_size_def] >>
-srw_tac [ARITH_ss][exp_size_def])
-
-val exp9_size_thm = store_thm(
-"exp9_size_thm",
-``∀ls. exp9_size ls = SUM (MAP v_size ls) + LENGTH ls``,
-Induct >- rw[exp_size_def] >>
-srw_tac [ARITH_ss][exp_size_def])
-
-val pat1_size_thm = store_thm(
-"pat1_size_thm",
-``∀ls. pat1_size ls = SUM (MAP pat_size ls) + LENGTH ls``,
-Induct >- rw[pat_size_def] >>
-srw_tac [ARITH_ss][pat_size_def])
+val tac = Induct >- rw[exp_size_def,pat_size_def,v_size_def] >> srw_tac [ARITH_ss][exp_size_def,pat_size_def,v_size_def]
+fun tm t1 t2 =  ``∀ls. ^t1 ls = SUM (MAP ^t2 ls) + LENGTH ls``
+fun size_thm name t1 t2 = store_thm(name,tm t1 t2,tac)
+val exp1_size_thm = size_thm "exp1_size_thm" ``exp1_size`` ``exp2_size``
+val exp4_size_thm = size_thm "exp4_size_thm" ``exp4_size`` ``exp5_size``
+val exp6_size_thm = size_thm "exp6_size_thm" ``exp6_size`` ``exp_size``
+val pat1_size_thm = size_thm "pat1_size_thm" ``pat1_size`` ``pat_size``
+val v1_size_thm = size_thm "v1_size_thm" ``v1_size`` ``v2_size``
+val v3_size_thm = size_thm "v3_size_thm" ``v3_size`` ``v_size``
 
 val SUM_MAP_exp2_size_thm = store_thm(
 "SUM_MAP_exp2_size_thm",
 ``∀defs. SUM (MAP exp2_size defs) = SUM (MAP (list_size char_size) (MAP FST defs)) +
-                                    SUM (MAP exp4_size (MAP SND defs)) +
+                                    SUM (MAP exp3_size (MAP SND defs)) +
                                     LENGTH defs``,
 Induct >- rw[exp_size_def] >>
 qx_gen_tac `p` >>
 PairCases_on `p` >>
 srw_tac[ARITH_ss][exp_size_def])
 
+val SUM_MAP_exp3_size_thm = store_thm(
+"SUM_MAP_exp3_size_thm",
+``∀ls. SUM (MAP exp3_size ls) = SUM (MAP (list_size char_size) (MAP FST ls)) +
+                                SUM (MAP exp_size (MAP SND ls)) +
+                                LENGTH ls``,
+Induct >- rw[exp_size_def] >>
+Cases >> srw_tac[ARITH_ss][exp_size_def])
+
 val SUM_MAP_exp5_size_thm = store_thm(
 "SUM_MAP_exp5_size_thm",
-``∀env. SUM (MAP exp5_size env) = SUM (MAP (list_size char_size) (MAP FST env)) +
-                                  SUM (MAP v_size (MAP SND env)) +
-                                  LENGTH env``,
-Induct >- rw[exp_size_def] >>
-Cases >> srw_tac[ARITH_ss][exp_size_def])
-
-val SUM_MAP_exp4_size_thm = store_thm(
-"SUM_MAP_exp4_size_thm",
-``∀ls. SUM (MAP exp4_size ls) = SUM (MAP (list_size char_size) (MAP FST ls)) +
+``∀ls. SUM (MAP exp5_size ls) = SUM (MAP pat_size (MAP FST ls)) +
                                 SUM (MAP exp_size (MAP SND ls)) +
                                 LENGTH ls``,
 Induct >- rw[exp_size_def] >>
 Cases >> srw_tac[ARITH_ss][exp_size_def])
 
-val SUM_MAP_exp7_size_thm = store_thm(
-"SUM_MAP_exp7_size_thm",
-``∀ls. SUM (MAP exp7_size ls) = SUM (MAP pat_size (MAP FST ls)) +
-                                SUM (MAP exp_size (MAP SND ls)) +
-                                LENGTH ls``,
-Induct >- rw[exp_size_def] >>
-Cases >> srw_tac[ARITH_ss][exp_size_def])
+val SUM_MAP_v2_size_thm = store_thm(
+"SUM_MAP_v2_size_thm",
+``∀env. SUM (MAP v2_size env) = SUM (MAP (list_size char_size) (MAP FST env)) +
+                                SUM (MAP v_size (MAP SND env)) +
+                                LENGTH env``,
+Induct >- rw[v_size_def] >>
+Cases >> srw_tac[ARITH_ss][v_size_def])
 
 val exp_size_positive = store_thm(
 "exp_size_positive",
@@ -84,7 +55,6 @@ val exp_size_positive = store_thm(
 Induct >> srw_tac[ARITH_ss][exp_size_def])
 val _ = export_rewrites["exp_size_positive"];
 
-  *)
 fun register name def ind =
   let val _ = save_thm (name ^ "_def", def);
       val _ = save_thm (name ^ "_ind", ind);
