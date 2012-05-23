@@ -5,6 +5,7 @@ val _ = new_theory "MiniMLTermination";
 
 (* ------------------ Termination proofs for MiniMLTheory ----------------- *)
 
+(* TODO: Fix these as necessary 
 val exp1_size_thm = store_thm(
 "exp1_size_thm",
 ``∀ls. exp1_size ls = SUM (MAP exp2_size ls) + LENGTH ls``,
@@ -83,6 +84,7 @@ val exp_size_positive = store_thm(
 Induct >> srw_tac[ARITH_ss][exp_size_def])
 val _ = export_rewrites["exp_size_positive"];
 
+  *)
 fun register name def ind =
   let val _ = save_thm (name ^ "_def", def);
       val _ = save_thm (name ^ "_ind", ind);
@@ -153,17 +155,6 @@ val (enough_tvars_def, enough_tvars_ind) =
    decide_tac,
    decide_tac]);
 val _ = register "enough_tvars" enough_tvars_def enough_tvars_ind;
-
-val (is_source_exp_def,is_source_exp_ind) =
-  tprove_no_defn ((is_source_exp_def,is_source_exp_ind),
-  WF_REL_TAC `measure exp_size` >>
-  srw_tac[ARITH_ss][exp1_size_thm,exp6_size_thm,exp8_size_thm] >>
-  map_every (fn q =>
-    TRY (Q.ISPEC_THEN q imp_res_tac SUM_MAP_MEM_bound))
-  [`exp2_size`,`exp7_size`,`exp_size`] >>
-  fsrw_tac[ARITH_ss][exp_size_def])
-val _ = register "is_source_exp" is_source_exp_def is_source_exp_ind;
-val _ = export_rewrites["is_source_exp_def"];
 
 val (check_freevars_def,check_freevars_ind) =
   tprove_no_defn ((check_freevars_def,check_freevars_ind),

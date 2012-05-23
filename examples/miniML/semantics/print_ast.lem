@@ -274,7 +274,7 @@ exp_to_tok_tree sml indent (Raise r) =
       L RparT ^^
     L RparT
 and
-exp_to_tok_tree sml indent (Val (Lit l)) =
+exp_to_tok_tree sml indent (Lit l) =
   lit_to_tok_tree sml l
 and
 exp_to_tok_tree sml indent (Con c []) =
