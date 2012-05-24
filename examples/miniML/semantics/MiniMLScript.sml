@@ -732,8 +732,8 @@ val _ = Define `
 /\
 (small_eval cenv env e c (Rerr Rtype_error) =
   ? env' e' c'.
-    (RTC e_step_reln) (cenv,env,Exp e,c) (cenv,env',Exp e',c')/\
-    (e_step (cenv,env',Exp e',c')= Etype_error))`;
+    (RTC e_step_reln) (cenv,env,Exp e,c) (cenv,env',e',c')/\
+    (e_step (cenv,env',e',c')= Etype_error))`;
 
 val _ = Defn.save_defn small_eval_defn;
 

@@ -10,7 +10,7 @@ val _ = new_theory "untypedSafety";
 val untyped_safety_exp_step = Q.prove (
 `∀envC env e c.
   (e_step (envC, env, e, c) = Estuck) = 
-  (c = []) ∧ ((?v. e = Val v) ∨ (?err. e = Raise err))`,
+  (c = []) ∧ ((?v. e = Val v) ∨ (?err. e = Exp (Raise err)))`,
 rw [e_step_def, continue_def, push_def, return_def] >>
 every_case_tac);
 
@@ -54,7 +54,7 @@ fs [small_eval_def, e_step_reln_def] >|
      metis_tac [],
  metis_tac [e_step_result_distinct],
  `∀cenv'' env'' e''' c''.
-    e_step (cenv,env',Raise e'',[]) ≠ Estep (cenv'',env'',e''',c'')`
+    e_step (cenv,env',Exp (Raise e''),[]) ≠ Estep (cenv'',env'',e''',c'')`
          by rw [e_step_def, continue_def] >>
      metis_tac []]);
 

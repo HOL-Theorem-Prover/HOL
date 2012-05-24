@@ -646,8 +646,8 @@ small_eval cenv env e c (Rerr (Rraise err)) =
 and
 small_eval cenv env e c (Rerr Rtype_error) =
   exist env' e' c'.
-    (rtc e_step_reln) (cenv,env,Exp e,c) (cenv,env',Exp e',c') &&
-    (e_step (cenv,env',Exp e',c') = Etype_error)
+    (rtc e_step_reln) (cenv,env,Exp e,c) (cenv,env',e',c') &&
+    (e_step (cenv,env',e',c') = Etype_error)
 
 val e_diverges : envC -> envE -> exp -> bool
 let e_diverges cenv env e =
