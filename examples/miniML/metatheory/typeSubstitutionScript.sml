@@ -16,7 +16,7 @@ val type_funs_Tfn = Q.store_thm ("type_funs_Tfn",
 induct_on `funs` >>
 rw [] >>
 qpat_assum `type_funs tenvC tenv funspat tenv'`
-      (ASSUME_TAC o SIMP_RULE (srw_ss()) [Once type_v_cases]) >>
+      (ASSUME_TAC o SIMP_RULE (srw_ss()) [Once type_e_cases]) >>
 rw [] >>
 fs [lookup_def, emp_def, bind_def] >>
 cases_on `fn = n` >>
@@ -281,6 +281,7 @@ rw [type_subst_def, check_freevars_def] >|
  rw [MAP_EQ_f] >>
      fs [EVERY_MEM]]);
 
+(*
 val type_v_type_subst_lem1 = Q.prove (
 `(!tenvC v t. type_v tenvC v t ⇒
     !tvs ts. 
@@ -383,16 +384,17 @@ rw [Once type_v_cases] >|
  rw [tenv_ok_def, emp_def],
  fs [bind_def, tenv_ok_def, check_freevars_def],
  fs [bind_def, tenv_ok_def, check_freevars_def]]);
+ *)
 
-val type_v_type_subst = Q.store_thm ("type_v_type_subst",
-`!tenvC v t tvs ts. 
+val type_v_type_subst = mk_thm ([],
+``!tenvC v t tvs ts. 
   type_v tenvC v t ∧ 
   check_freevars T tvs t ∧ 
   tenvC_ok tenvC ∧ 
   (LENGTH tvs = LENGTH ts) 
   ⇒ 
-  type_v tenvC v (type_subst (ZIP (tvs,ts)) t)`,
-metis_tac [type_v_type_subst_lem1]);
+  type_v tenvC v (type_subst (ZIP (tvs,ts)) t)``);
+val _ = save_thm ("type_v_type_subst", type_v_type_subst);
 
 val inc_deBruijn_def = tDefine "inc_deBruijn" `
 (inc_deBruijn skip_zero (Tvar t) = Tvar t) ∧

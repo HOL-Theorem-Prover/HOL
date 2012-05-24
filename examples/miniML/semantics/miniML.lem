@@ -595,8 +595,8 @@ let d_step (envC, env, ds, st) =
           Dtype_error
     | Some (p, (envC, env', Exp (Raise err), [])) ->
         Draise err
-    | Some (p, (envC', env', Exp e, c)) ->
-        match e_step (envC', env', Exp e, c) with
+    | Some (p, (envC', env', e, c)) ->
+        match e_step (envC', env', e, c) with
           | Estep st -> Dstep (envC, env, ds, Some (p, st))
           | Etype_error -> Dtype_error
           | Estuck -> Dstuck
@@ -652,10 +652,10 @@ small_eval cenv env e c (Rerr Rtype_error) =
 val e_diverges : envC -> envE -> exp -> bool
 let e_diverges cenv env e =
   forall cenv' env' e' c'.
-    (rtc e_step_reln) (cenv,env,Exp e,[]) (cenv',env',Exp e',c')
+    (rtc e_step_reln) (cenv,env,Exp e,[]) (cenv',env', e',c')
     -->
     exist cenv'' env'' e'' c''.
-      e_step_reln (cenv',env',Exp e',c') (cenv'',env'',Exp e'',c'')
+      e_step_reln (cenv',env', e',c') (cenv'',env'',e'',c'')
 
 let d_step_reln st st' =
   (d_step st = Dstep st')

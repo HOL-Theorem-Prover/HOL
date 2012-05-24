@@ -673,8 +673,8 @@ val _ = Define `
           Dtype_error
     |SOME (p, (envC, env', Exp (Raise err), [])) =>
         Draise err
-    |SOME (p, (envC', env', Exp e, c)) =>
-        (case e_step (envC', env', Exp e, c) of
+    |SOME (p, (envC', env', e, c)) =>
+        (case e_step (envC', env', e, c) of
             Estep st => Dstep (envC, env, ds,SOME (p, st))
           | Etype_error => Dtype_error
           | Estuck => Dstuck
@@ -741,9 +741,9 @@ val _ = Defn.save_defn small_eval_defn;
 val _ = Define `
  (e_diverges cenv env e =
   ! cenv' env' e' c'.
-    (RTC e_step_reln) (cenv,env,Exp e,[]) (cenv',env',Exp e',c')==>
+    (RTC e_step_reln) (cenv,env,Exp e,[]) (cenv',env', e',c')==>
     (? cenv'' env'' e'' c''.
-      e_step_reln (cenv',env',Exp e',c') (cenv'',env'',Exp e'',c'')))`;
+      e_step_reln (cenv',env', e',c') (cenv'',env'',e'',c'')))`;
 
 
 val _ = Define `
