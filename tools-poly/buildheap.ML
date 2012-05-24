@@ -64,6 +64,8 @@ in
   system_ps ("cc -o " ^ outputheap ^ " " ^ outputheap^".o" ^ " " ^
              String.concatWith " " POLY_LDFLAGS);
   OS.FileSys.remove (outputheap^".o")
+    handle OS.SysErr(msg, _) =>
+           warn ("Couldn't remove "^outputheap^".o: "^msg)
 end
 
 
