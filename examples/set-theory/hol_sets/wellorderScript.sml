@@ -1357,6 +1357,10 @@ val ord_CASES0 = store_thm(
   simp[fromNat_ZERO] >> gen_tac >> Cases_on `ord_islimit α` >> simp[] >>
   metis_tac [notlimit_SUC]);
 
+val _ = add_numeral_form (#"o", SOME "fromNat")
+
+val _ = overload_on ("<", ``ordlt``)
+
 val allOrds_def = Define`
   allOrds = wellorder_ABS { (x,y) | (x = y) \/ ordlt x y }
 `;
