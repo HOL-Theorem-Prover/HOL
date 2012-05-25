@@ -186,10 +186,10 @@ val reflexive_rrestrict = store_thm(
 
 val wellorder_rrestrict = store_thm(
   "wellorder_rrestrict",
-  ``wellorder (rrestrict (wellorder_REP w) (iseg w x))``,
+  ``wellorder (rrestrict (wellorder_REP w) s)``,
   `wellorder (wellorder_REP w)` by metis_tac [termP_term_REP] >>
   fs[wellorder_def] >>
-  rw[iseg_def, linear_order_rrestrict, reflexive_rrestrict] >>
+  rw[linear_order_rrestrict, reflexive_rrestrict] >>
   match_mp_tac wellfounded_subset >>
   qexists_tac `strict(wellorder_REP w)` >>
   rw[rrestrict_SUBSET, strict_subset]);
@@ -1204,12 +1204,85 @@ val woSUC_fromNat00 = store_thm(
   disch_then (mp_tac o Q.AP_TERM `elsOf`) >>
   simp[elsOf_woSUC]);
 
-(* perform quotient, creating a type of "pre-ordinals".
+val WLE_WIN_EQ = store_thm(
+  "WLE_WIN_EQ",
+  ``(x,y) WLE w <=> (x = y) ∧ x IN elsOf w \/ (x,y) WIN w``,
+  metis_tac [elsOf_WLE, WLE_WIN, WIN_WLE]);
 
-   These should all that's necessary, but I can't see how to define the limit
-   operation on these.  Instead, the "real" type of ordinals will be the
-   downward-closed sets of pre-ordinals.
-*)
+val woSUC_not_limit = store_thm(
+  "woSUC_not_limit",
+  ``¬ islimit (woSUC w)``,
+  simp[islimit_maximals, EXTENSION, maximal_elements_def] >>
+  qexists_tac `INL 0` >>
+  simp[elsOf_woSUC, FORALL_SUM, WIN_woSUC, WLE_WIN_EQ]);
+
+val remove_def = Define`
+  remove e w = wellorder_ABS { (x,y) | x ≠ e ∧ y ≠ e ∧ (x,y) WLE w }
+`;
+
+val wellorder_remove = store_thm(
+  "wellorder_remove",
+  ``wellorder { (x,y) | x ≠ e ∧ y ≠ e ∧ (x,y) WLE w }``,
+  qspec_then `w` assume_tac (GEN_ALL termP_term_REP) >>
+  qmatch_abbrev_tac `wellorder r` >>
+  `r = rrestrict (wellorder_REP w) (elsOf w DELETE e)`
+     by (simp[EXTENSION, Abbr`r`, rrestrict_def, FORALL_PROD] >>
+         metis_tac [WLE_elsOf]) >>
+  simp[wellorder_rrestrict]);
+
+val elsOf_remove = store_thm(
+  "elsOf_remove",
+  ``elsOf (remove e w) = elsOf w DELETE e``,
+  simp[elsOf_def, remove_def, wellorder_remove,
+       #repabs_pseudo_id wellorder_results] >>
+  simp[domain_def, range_def, EXTENSION] >>
+  metis_tac[WLE_elsOf, WLE_WIN_EQ]);
+
+val WIN_remove = store_thm(
+  "WIN_remove",
+  ``(x,y) WIN remove e w <=> x ≠ e ∧ y ≠ e ∧ (x,y) WIN w``,
+  simp[remove_def, #repabs_pseudo_id wellorder_results, wellorder_remove,
+       strict_def]);
+
+val not_limit_woSUC = store_thm(
+  "not_limit_woSUC",
+  ``¬islimit (w:'a inf wellorder) ==>
+    ∃w0:'a inf wellorder. orderiso (woSUC w0) w``,
+  simp[islimit_maximals, EXTENSION, maximal_elements_def] >>
+  disch_then (Q.X_CHOOSE_THEN `m` strip_assume_tac) >>
+  qexists_tac `remove m w` >>
+  simp[orderiso_thm, elsOf_woSUC, elsOf_remove, WIN_woSUC, WIN_remove] >>
+  qexists_tac `
+    λe. case e of INL 0 => m | INL (SUC n) => INL n | INR x => INR x
+  ` >>
+  simp[EXISTS_SUM, FORALL_SUM] >> rpt conj_tac >| [
+    simp[BIJ_DEF, INJ_DEF, SURJ_DEF, EXISTS_SUM, FORALL_SUM] >>
+    rw[] >> rw[] >> fs[] >| [
+      qpat_assum `INL X ∈ elsOf w` mp_tac >>
+      qmatch_abbrev_tac `INL a ∈ elsOf w ==> GOAL` >>
+      qunabbrev_tac `GOAL` >> Q.RM_ABBREV_TAC `a` >> strip_tac >>
+      Cases_on `m = INL a` >- (qexists_tac `0` >> simp[]) >>
+      Q.REFINE_EXISTS_TAC `SUC N` >> simp[],
+      qpat_assum `INR Y ∈ elsOf w` mp_tac >>
+      qmatch_abbrev_tac `INR a ∈ elsOf w ==> GOAL` >>
+      qunabbrev_tac `GOAL` >> Q.RM_ABBREV_TAC `a` >> strip_tac >>
+      Cases_on `m = INR a` >> simp[] >> qexists_tac `0` >> simp[]
+    ],
+    qx_gen_tac `n` >>
+    `(n = 0) ∨ ∃n0. n = SUC n0` by (Cases_on `n` >> simp[]) >> simp[] >>
+    Cases_on `m = INL n0` >> simp[] >> qx_gen_tac `a` >>
+    `(a = 0) ∨ ∃b. a = SUC b` by (Cases_on `a` >> simp[]) >> simp[] >>
+    strip_tac >> first_x_assum (qspec_then `INL n0` mp_tac) >> simp[] >>
+    metis_tac [WIN_trichotomy, WIN_WLE],
+    qx_gen_tac `a` >> qx_gen_tac `n` >>
+    `(n = 0) ∨ ∃n0. n = SUC n0` by (Cases_on `n` >> simp[]) >> simp[] >>
+    strip_tac >> first_x_assum (qspec_then `INR a` mp_tac) >> simp[] >>
+    metis_tac [WIN_trichotomy, WIN_WLE]
+  ]);
+
+
+
+(* perform quotient, creating a type of "ordinals". *)
 fun mk_def(s,t) =
     {def_name = s ^ "_def", fixity = NONE, fname = s, func = t};
 
@@ -1225,7 +1298,8 @@ val alphaise =
 
 val [ordlt_REFL, ordlt_TRANS, ordlt_WF0, ordlt_trichotomy,
      ordlt_ZERO, ord_islimit_ZERO, ord_finite_ZERO, fromNat_11,
-     ord_SUC_fromNat, ord_SUC_ZERO, fromNat_ZERO] =
+     ord_SUC_fromNat, ord_SUC_ZERO, fromNat_ZERO, SUC_notlimit,
+     notlimit_SUC] =
     quotient.define_quotient_types_full
     {
      types = [{name = "ordinal", equiv = alphaise orderiso_equiv}],
@@ -1251,7 +1325,8 @@ val [ordlt_REFL, ordlt_TRANS, ordlt_WF0, ordlt_trichotomy,
                  INST_TYPE [beta |-> alpha] fromNat0_orderiso11,
                  INST_TYPE [beta |-> alpha] woSUC_fromNat0,
                  INST_TYPE [beta |-> alpha] woSUC_fromNat00,
-                 INST_TYPE [beta |-> ``:'a inf``] fromNat0_wZERO
+                 INST_TYPE [beta |-> ``:'a inf``] fromNat0_wZERO,
+                 woSUC_not_limit, not_limit_woSUC
                  ]}
 
 val _ = save_thm ("ordlt_REFL", ordlt_REFL)
@@ -1262,10 +1337,25 @@ val ordlt_WF = save_thm (
 val _ = save_thm ("ord_ZERO", ordlt_ZERO)
 val _ = save_thm ("ord_islimit_ZERO", ord_islimit_ZERO)
 val _ = save_thm ("ord_finite_ZERO", ord_finite_ZERO)
+val _ = save_thm ("ordlt_trichotomy", ordlt_trichotomy)
 val _ = save_thm ("fromNat_11", fromNat_11)
 val _ = save_thm ("ord_SUC_fromNat", ord_SUC_fromNat)
+val _ = save_thm ("SUC_notlimit", SUC_notlimit)
+val _ = save_thm ("notlimit_SUC", notlimit_SUC)
 
 val _ = overload_on ("mkOrdinal", ``ordinal_ABS``)
+
+(*val ord_SUC_11 = store_thm(
+  "ord_SUC_11",
+  ``(ord_SUC α = ord_SUC β) <=> (α = β)``,
+  ord_SUC_fromNat
+*)
+
+val ord_CASES0 = store_thm(
+  "ord_CASES0",
+  ``!α. (α = fromNat 0) ∨ (∃β. α = ord_SUC β) ∨ ord_islimit α``,
+  simp[fromNat_ZERO] >> gen_tac >> Cases_on `ord_islimit α` >> simp[] >>
+  metis_tac [notlimit_SUC]);
 
 val allOrds_def = Define`
   allOrds = wellorder_ABS { (x,y) | (x = y) \/ ordlt x y }
