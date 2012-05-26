@@ -1707,5 +1707,39 @@ val univ_cord_uncountable = store_thm(
      by metis_tac [CARDEQ_CARDLEQ, cardeq_REFL, unitinf_univnum] >>
   fs[univ_ord_greater_cardinal]);
 
+val oleast_def = Define`
+  $oleast P = @x. P x ∧ ∀y. y < x ==> ¬P y
+`;
+
+val _ = set_fixity "oleast" Binder
+
+val oleast_intro = store_thm(
+  "oleast_intro",
+  ``∀Q P. (∃α. P α) ∧ (∀α. (∀β. β < α ==> ¬ P β) ∧ P α ==> Q α) ==>
+          Q ($oleast P)``,
+  rw[oleast_def] >> SELECT_ELIM_TAC >> conj_tac >-
+    (match_mp_tac ordlt_WF0 >> metis_tac[]) >>
+  rw[]);
+
+val sup_def = Define`
+  sup ordset = oleast α. α ∉ BIGUNION (IMAGE preds ordset)
+`;
+
+(*
+val sup_thm = store_thm(
+  "sup_thm",
+  ``ordset <> univ(:'a ordinal) ==>
+    (∀α. α ∈ ordset ⇒ (α = sup ordset) ∨ α < sup ordset) ∧
+    ∀β. β < sup ordset ==> ∃δ. δ ∈ ordset ∧ β < δ``,
+  strip_tac >> simp[sup_def] >> rw[] >| [
+    DEEP_INTRO_TAC oleast_intro >> conj_tac
+    >- (qsuff_tac `∃α. ∀x. x ∈ ordset ==> α ∉ preds x` >- metis_tac[] >>
+        `∃β. β ∉ ordset` by (fs[EXTENSION] >> metis_tac[]) >>
+        simp[IN_preds] >>
+        qspec_then `λβ. β ∉ ordset` mp_tac ordlt_WF0 >>
+        asm_simp_tac (srw_ss() ++ SatisfySimps.SATISFY_ss) [] >>
+        disch_then (Q.X_CHOOSE_THEN `min` strip_assume_tac) >>
+        qexists_tac `min` >>
+*)
 
 val _ = export_theory()
