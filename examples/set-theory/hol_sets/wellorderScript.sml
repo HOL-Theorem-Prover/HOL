@@ -1148,6 +1148,76 @@ val woSUC_orderiso = store_thm(
     metis_tac [sumTheory.sum_CASES]
   ]);
 
+(*
+val woSUC_11 = store_thm(
+  "woSUC_11",
+  ``orderiso (woSUC w1 : 'a inf wellorder) (woSUC w2 : 'b inf wellorder) ==>
+    orderiso w1 w2``,
+  simp[orderiso_thm] >> disch_then (Q.X_CHOOSE_THEN `f` mp_tac) >>
+  simp_tac (srw_ss() ++ DNF_ss) [elsOf_woSUC, WIN_woSUC] >>
+  strip_tac >>
+  `f (INL 0) = INL 0`
+     by (fs[BIJ_DEF, SURJ_DEF] >>
+         first_x_assum (qspec_then `INL 0 : 'b inf` mp_tac) >> simp[] >>
+         disch_then (Q.X_CHOOSE_THEN `y` strip_assume_tac) >> rw[] >>
+         Cases_on `x` >> res_tac >> fs[]) >>
+  fs[] >>
+  qexists_tac `(PRE ++ I) o f o (SUC ++ I)` >> conj_tac >| [
+    qpat_assum `BIJ f SS TT` mp_tac >> simp[BIJ_IFF_INV] >>
+    disch_then (CONJUNCTS_THEN2 assume_tac
+                                (Q.X_CHOOSE_THEN `g` strip_assume_tac)) >>
+    `g (INL 0) = INL 0`
+       by (first_x_assum (qspec_then `INL 0 : 'a inf` mp_tac) >> simp[]) >>
+    `∀n. INL n ∈ elsOf w2 ==> g (INL (SUC n)) <> INL 0`
+       by (rpt strip_tac >>
+           first_x_assum (qspec_then `INL (SUC n) : 'b inf` mp_tac) >>
+           simp[EXISTS_SUM]) >>
+    `∀b. INR b ∈ elsOf w2 ==> g (INR b) <> INL 0`
+       by (rpt strip_tac >>
+           first_x_assum (qspec_then `INR b : 'b inf` mp_tac) >>
+           simp[EXISTS_SUM]) >>
+    conj_tac >| [
+      qx_gen_tac `x` >>
+      `(∃n. x = INL n) ∨ (∃a. x = INR a)` by (Cases_on `x` >> simp[]) >>
+      rw[] >| [
+        first_x_assum
+          (qspec_then `INL (SUC n):'a inf` mp_tac o
+           assert (not o free_in ``g:'b inf->'a inf`` o concl)) >>
+        simp[EXISTS_SUM] >>
+        pop_assum (fn th => first_x_assum
+                                 (fn impth => mp_tac (MATCH_MP impth th))) >>
+        rw[] >> rw[],
+        first_x_assum (qspec_then `INR a:'a inf` mp_tac o
+                       assert (not o free_in ``g:'b inf -> 'a inf`` o concl)) >>
+        simp[EXISTS_SUM] >>
+        pop_assum (fn th => first_x_assum
+                                 (fn impth => mp_tac (MATCH_MP impth th))) >>
+        rw[] >> rw[]
+      ],
+      qexists_tac `(PRE ++ I) o g o (SUC ++ I)` >> simp[] >> rpt conj_tac >| [
+        qx_gen_tac `x` >>
+        `(∃n. x = INL n) ∨ (∃b. x = INR b)` by (Cases_on `x` >> simp[]) >>
+        rw[] >| [
+          first_x_assum
+            (qspec_then `INL (SUC n):'b inf` mp_tac o
+             assert (not o free_in ``f:'a inf->'b inf`` o concl)) >>
+          simp[EXISTS_SUM] >> rw[] >> rw[],
+          first_x_assum
+            (qspec_then `INR b : 'b inf` mp_tac o
+             assert (not o free_in ``f:'a inf->'b inf`` o concl)) >>
+          simp[EXISTS_SUM] >> rw[] >> rw[]
+        ],
+
+
+
+
+
+      first_x_assum (qspec_then `INL (SUC n) : 'a inf` mp_tac)
+  simp[BIJ_IFF_INV] >> fs[BIJ_IFF_INV] >>
+  simp[FORALL_SUM] > fs[DISJ_IMP_THM, FORALL_AND_THM]
+
+*)
+
 val fromNat0_11 = store_thm(
   "fromNat0_11",
   ``(fromNat0 n = fromNat0 m) <=> (n = m)``,
