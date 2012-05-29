@@ -237,6 +237,18 @@ Cpmatch_list env (p::ps) (v::vs) =
 and
 Cpmatch_list env _ _ = Cmatch_error
 
+let extend_env env ns vs =
+  fold_left2 (fun en n v -> Pmap.add n v en) (alist_to_fmap env) ns vs
+
+let extend_rec_env env rs defs ns vs =
+  fold_left2 (fun en n v -> Pmap.add n v en)
+    (List.fold_left
+        (fun en n -> Pmap.add n
+          (CRecClos env rs defs n) en)
+        (alist_to_fmap env)
+        rs)
+    ns vs
+
 indreln
 forall env error.
 true
@@ -364,8 +376,7 @@ Cevaluate env e (Rval (CClosure env' ns b)) &&
 Cevaluate_list env es (Rval vs) &&
 List.length ns = List.length vs &&
 all_distinct ns &&
-Cevaluate (fold_left2 (fun en n v -> Pmap.add n v en)
-             (alist_to_fmap env') ns vs) b r
+Cevaluate (extend_env env' ns vs) b r
 ==>
 Cevaluate env (CCall e es) r
 and
@@ -385,15 +396,7 @@ find_index n ns' 0 = Some i &&
 List.nth defs i = (ns,b) &&
 List.length ns = List.length vs &&
 all_distinct ns &&
-Cevaluate
-  (fold_left2 (fun en n v -> Pmap.add n v en)
-    (List.fold_left
-      (fun en n' -> Pmap.add n'
-        (CRecClos env' ns' defs n') en)
-      (alist_to_fmap env')
-      ns')
-    ns vs)
-  b r
+Cevaluate (extend_rec_env env' ns' defs ns vs) b r
 ==>
 Cevaluate env (CCall e es) r
 and

@@ -277,6 +277,20 @@ val _ = Defn.save_defn Cmatch_map_defn;
 
 val _ = Defn.save_defn Cpmatch_defn;
 
+val _ = Define `
+ (extend_env env ns vs =FOLDL2  (\ en n v .FUPDATE  en ( n, v))  (alist_to_fmap env)  ns  vs)`;
+
+
+val _ = Define `
+ (extend_rec_env env rs defs ns vs =FOLDL2  (\ en n v .FUPDATE  en ( n, v)) 
+    (FOLDL
+        (\ en n .FUPDATE  en ( n,
+          (CRecClos env rs defs n)))
+        (alist_to_fmap env)
+        rs) 
+    ns  vs)`;
+
+
 val _ = Hol_reln `
 (! env error.
 T
@@ -393,8 +407,7 @@ Cevaluate env (CFun ns b) (Rval (CClosure (fmap_to_alist env) ns b)))
 (! env e es env' ns b vs r.
 Cevaluate env e (Rval (CClosure env' ns b))/\
 Cevaluate_list env es (Rval vs)/\(LENGTH ns=LENGTH vs)/\ALL_DISTINCT ns/\
-Cevaluate (FOLDL2  (\ en n v .FUPDATE  en ( n, v)) 
-             (alist_to_fmap env')  ns  vs) b r
+Cevaluate (extend_env env' ns vs) b r
 ==>
 Cevaluate env (CCall e es) r)
 /\
@@ -409,15 +422,7 @@ Cevaluate env (CCall e es) (Rerr err))
 Cevaluate env e (Rval (CRecClos env' ns' defs n))/\(LENGTH ns'=LENGTH defs)/\ALL_DISTINCT ns'/\
 Cevaluate_list env es (Rval vs)/\(
 find_index n ns' 0=SOME i)/\(EL  i  defs= (ns,b))/\(LENGTH ns=LENGTH vs)/\ALL_DISTINCT ns/\
-Cevaluate
-  (FOLDL2  (\ en n v .FUPDATE  en ( n, v)) 
-    (FOLDL
-      (\ en n' .FUPDATE  en ( n',
-        (CRecClos env' ns' defs n')))
-      (alist_to_fmap env')
-      ns') 
-    ns  vs)
-  b r
+Cevaluate (extend_rec_env env' ns' defs ns vs) b r
 ==>
 Cevaluate env (CCall e es) r)
 /\
@@ -746,8 +751,8 @@ val _ = Defn.save_defn dest_var_defn;
 val _ = Define `
  (var_or_new Cpes e =
   (case dest_var e of
-   SOME vn => INL vn
-  |NONE => INR (fresh_var (FOLDL (\ s (p,e) . s UNION free_vars e) {} Cpes))
+    SOME vn => INL vn
+  | NONE => INR (fresh_var (FOLDL (\ s (p,e) . s UNION free_vars e) {} Cpes))
   ))`;
  
 
@@ -1070,7 +1075,7 @@ val _ = Defn.save_defn replace_calls_defn;
          (s,sz0+1,env0) vs in
   let s = emit s [Stack (Shift (i -(sz0+1)) k)] in
    s with<| sz := sz1+1; decl :=SOME (env,s.sz - k) |>
-  |NONE => emit s [Stack (PushInt i2); Exception] (* should not happen *)
+  | NONE => emit s [Stack (PushInt i2); Exception] (* should not happen *)
   ))
 /\
 (compile s (CRaise err) =
@@ -1229,8 +1234,8 @@ val _ = Defn.save_defn replace_calls_defn;
   let s = (case s.tail of
     TCTail j k => compile ( s with<| tail := TCTail j (k+n) |>) e
   | TCNonTail => (case s.decl of
-     NONE => emit (compile s e) [Stack (Pops n)]
-    |SOME _ => compile s e
+      NONE => emit (compile s e) [Stack (Pops n)]
+    | SOME _ => compile s e
     )
   ) in
    s with<| env := env0 ; sz := sz1 |>)
@@ -1306,7 +1311,7 @@ val _ = Defn.save_defn replace_calls_defn;
    *   environment and build the closure
    * - update refptrs, etc.
    *)
-  let (nr,ns) = (case nso of NONE => (0,[]) |SOME ns => (LENGTH ns,ns) ) in
+  let (nr,ns) = (case nso of NONE => (0,[]) | SOME ns => (LENGTH ns,ns) ) in
   let s =FOLDL (\ s _n . incsz (emit s [Stack (PushInt i0); Ref])) s ns in
   let s = emit s [Stack (PushInt i0)] in
   let (s,k,labs,ecs) =FOLDL
@@ -1318,10 +1323,10 @@ val _ = Defn.save_defn replace_calls_defn;
       let fvs = free_vars e in
       let (bind_fv fv (n,env,(ecl,ec)) =
         (case find_index fv xs 1 of
-         SOME j => (n,FUPDATE  env ( fv, (CTArg (2+ az - j))), (ecl,ec))
-        |NONE => (case find_index fv ns 0 of
-           NONE => (n+1,FUPDATE  env ( fv, (CTEnv n)), (ecl+1,CEEnv fv::ec))
-          |SOME j => if j= k
+          SOME j => (n,FUPDATE  env ( fv, (CTArg (2+ az - j))), (ecl,ec))
+        | NONE => (case find_index fv ns 0 of
+            NONE => (n+1,FUPDATE  env ( fv, (CTEnv n)), (ecl+1,CEEnv fv::ec))
+          | SOME j => if j= k
                       then (n,FUPDATE  env ( fv, (CTArg (2+ az))), (ecl,ec))
                       else (n+1,FUPDATE  env ( fv, (CTRef n)), (ecl+1,(CERef j)::ec))
           )
@@ -1391,8 +1396,8 @@ val _ = Define `
   let Ce = remove_mat Ce in
   let cs = compile rs.cs Ce in
   let cs = (case cs.decl of
-     NONE => cs
-    |SOME (env,sz) =>  cs with<| env := env ; sz := sz |>
+      NONE => cs
+    | SOME (env,sz) =>  cs with<| env := env ; sz := sz |>
     ) in
    rs with<| cs := cs |>)`;
 

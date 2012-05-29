@@ -630,9 +630,6 @@ val _ = export_rewrites["CevalPrim2_free_vars"]
 
 (* TODO: move *)
 
-val syneq_cases = CompileTheory.syneq_cases
-val syneq_ind = CompileTheory.syneq_ind
-
 val result_rel_def = Define`
 (result_rel R (Rval v1) (Rval v2) = R v1 v2) ∧
 (result_rel R (Rerr e1) (Rerr e2) = (e1 = e2)) ∧
@@ -749,6 +746,40 @@ val fmap_rel_FEMPTY = store_thm(
 ``fmap_rel R FEMPTY FEMPTY``,
 rw[fmap_rel_def])
 val _ = export_rewrites["fmap_rel_FEMPTY"]
+
+val fmap_rel_refl = store_thm(
+"fmap_rel_refl",
+``(∀x. R x x) ⇒ fmap_rel R x x``,
+rw[fmap_rel_def])
+val _ = export_rewrites["fmap_rel_refl"]
+
+val fmap_rel_extend_env_same = store_thm(
+"fmap_rel_extend_env_same",
+``fmap_rel R (alist_to_fmap env1) (alist_to_fmap env2) ∧
+  LIST_REL R v1 v2 ∧
+  (LENGTH xs = LENGTH v1)
+⇒ fmap_rel R (extend_env env1 xs v1) (extend_env env2 xs v2)``,
+rw[extend_env_def,LIST_REL_EL_EQN,FOLDL2_FUPDATE_LIST] >>
+rw[MAP2_MAP,FST_pair,SND_pair,MAP_ZIP] >>
+match_mp_tac fmap_rel_FUPDATE_LIST_same >>
+rw[MAP_ZIP,LIST_REL_EL_EQN,LENGTH_ZIP])
+
+val fmap_rel_extend_rec_env_same = store_thm(
+"fmap_rel_extend_rec_env_same",
+``fmap_rel R (alist_to_fmap env1) (alist_to_fmap env2) ∧
+  LIST_REL R vs1 vs2 ∧
+  (LENGTH ns = LENGTH vs1) ∧
+  (∀b. MEM b rs ⇒ R (CRecClos env1 rs defs b) (CRecClos env2 rs defs b))
+  ⇒ fmap_rel R
+      (extend_rec_env env1 rs defs ns vs1)
+      (extend_rec_env env2 rs defs ns vs2)``,
+rw[extend_rec_env_def,FOLDL_FUPDATE_LIST,FOLDL2_FUPDATE_LIST,LIST_REL_EL_EQN] >>
+rw[MAP2_MAP,FST_pair,SND_pair,MAP_ZIP] >>
+match_mp_tac fmap_rel_FUPDATE_LIST_same >>
+rw[MAP_ZIP,LENGTH_ZIP,LIST_REL_EL_EQN] >>
+match_mp_tac fmap_rel_FUPDATE_LIST_same >>
+rw[MAP_ZIP,LENGTH_ZIP,LIST_REL_EL_EQN,EL_MAP,MAP_MAP_o,combinTheory.o_DEF] >>
+fsrw_tac[DNF_ss][MEM_EL])
 
 (* TODO: move *)
 val LIST_REL_EVERY_ZIP = store_thm(
