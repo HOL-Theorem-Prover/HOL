@@ -1735,6 +1735,17 @@ val sup_def = Define`
   sup ordset = oleast α. α ∉ BIGUNION (IMAGE preds ordset)
 `;
 
+val ord_induction = save_thm(
+  "ord_induction",
+  ordlt_WF0 |> Q.SPEC `P` |> CONV_RULE CONTRAPOS_CONV
+            |> CONV_RULE (BINOP_CONV NOT_EXISTS_CONV)
+            |> CONV_RULE (LAND_CONV (REWRITE_CONV [DE_MORGAN_THM] THENC
+                                     ONCE_REWRITE_CONV [DISJ_SYM] THENC
+                                     REWRITE_CONV [GSYM IMP_DISJ_THM]))
+            |> Q.INST [`P` |-> `\x. ~ P x`] |> BETA_RULE
+            |> REWRITE_RULE []
+            |> CONV_RULE (RAND_CONV (RENAME_VARS_CONV ["α"])))
+
 (*
 val sup_thm = store_thm(
   "sup_thm",
