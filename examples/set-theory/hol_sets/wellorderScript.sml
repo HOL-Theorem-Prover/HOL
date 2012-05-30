@@ -1392,7 +1392,16 @@ val not_limit_woSUC = store_thm(
     metis_tac [WIN_trichotomy, WIN_WLE]
   ]);
 
-
+val orderlt_woSUC = store_thm(
+  "orderlt_woSUC",
+  ``!w. orderlt w (woSUC w)``,
+  simp[orderlt_def, orderiso_thm, elsOf_woSUC] >> gen_tac >>
+  qexists_tac `INL 0` >> simp[WIN_wobound, elsOf_wobound] >>
+  qexists_tac `SUC ++ I` >> simp[WIN_woSUC, PRE_SUC_PP] >>
+  simp[EXISTS_SUM, FORALL_SUM] >> Tactical.REVERSE conj_tac
+     >- metis_tac [WIN_elsOf] >>
+  simp[BIJ_DEF, INJ_DEF, EXISTS_SUM, FORALL_SUM, SURJ_DEF] >>
+  metis_tac[]);
 
 (* perform quotient, creating a type of "ordinals". *)
 fun mk_def(s,t) =
@@ -1411,7 +1420,7 @@ val alphaise =
 val [ordlt_REFL, ordlt_TRANS, ordlt_WF0, ordlt_trichotomy,
      ordlt_ZERO, ord_islimit_ZERO, ord_finite_ZERO, fromNat_11,
      ord_SUC_fromNat, ord_SUC_ZERO, fromNat_ZERO, SUC_notlimit,
-     notlimit_SUC, ordSUC_11] =
+     notlimit_SUC, ordSUC_11, ordlt_SUC] =
     quotient.define_quotient_types_full
     {
      types = [{name = "ordinal", equiv = alphaise orderiso_equiv}],
@@ -1439,7 +1448,8 @@ val [ordlt_REFL, ordlt_TRANS, ordlt_WF0, ordlt_trichotomy,
                  INST_TYPE [beta |-> alpha] woSUC_fromNat00,
                  INST_TYPE [beta |-> ``:'a inf``] fromNat0_wZERO,
                  woSUC_not_limit, not_limit_woSUC,
-                 INST_TYPE [beta |-> alpha] woSUC_11
+                 INST_TYPE [beta |-> alpha] woSUC_11,
+                 orderlt_woSUC
                  ]}
 
 val _ = save_thm ("ordlt_REFL", ordlt_REFL)
