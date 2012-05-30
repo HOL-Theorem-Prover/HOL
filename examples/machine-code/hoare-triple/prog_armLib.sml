@@ -361,6 +361,7 @@ fun introduce_aMEM th = let
   val th = introduce_aBYTE_MEMORY th
   val th = collect_READ32_WRITE32 th
   val th = Q.INST [`df`|->`dm`,`f`|->`m`] th
+  val th = RW1 [GSYM READ8_def,GSYM WRITE8_def] th
   (* val th = introduce_aMEM_aux th
      val _ = not (can (find_term (fn tm => tm = ``aBYTE_MEMORY``)) (concl th)) orelse fail() *)
   in th end

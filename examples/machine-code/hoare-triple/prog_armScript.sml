@@ -714,6 +714,12 @@ val SEP_EXISTS_aSTACK = store_thm("SEP_EXISTS_aSTACK",
 (* Reading/writing chunks of memory                                              *)
 (* ----------------------------------------------------------------------------- *)
 
+val READ8_def = Define `
+  READ8 a (m:word32 -> word8) = m a`;
+
+val WRITE8_def = Define `
+  WRITE8 (a:word32) (w:word8) m = (a =+ w:word8) m`;
+
 val _ = wordsLib.guess_lengths();
 val READ32_def = Define `
   READ32 a (m:word32 -> word8) =
