@@ -324,6 +324,14 @@ gen_tac >> Cases >> rw[evaluate_list_with_cons,EQ_IMP_THM] >- (
 first_x_assum (qspec_then `SUC n` mp_tac) >>
 rw[])
 
+val evaluate_list_with_EVERY = store_thm(
+"evaluate_list_with_EVERY",
+``∀P es vs. evaluate_list_with P es (Rval vs) = (LENGTH es = LENGTH vs) ∧ EVERY (UNCURRY P) (ZIP (es,MAP Rval vs))``,
+gen_tac >> Induct >- (
+  rw[evaluate_list_with_nil,LENGTH_NIL_SYM,EQ_IMP_THM] ) >>
+rw[evaluate_list_with_cons,EQ_IMP_THM] >> rw[] >>
+Cases_on `vs` >> fs[])
+
 val Cevaluate_list_with_error = store_thm(
 "Cevaluate_list_with_error",
 ``!P ls err. Cevaluate_list_with P ls (Rerr err) =
