@@ -44,6 +44,7 @@ sig
     val WORD_DECIDE         : conv
     val WORD_DECIDE_TAC     : tactic
 
+    val WORD_GROUND_CONV    : conv
     val WORD_EVAL_CONV      : conv
     val WORD_EVAL_RULE      : rule
     val WORD_EVAL_TAC       : tactic

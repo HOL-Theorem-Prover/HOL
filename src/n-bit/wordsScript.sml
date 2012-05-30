@@ -872,6 +872,9 @@ val w2n_eq_0 = store_thm("w2n_eq_0",
   STRIP_TAC \\ Q.SPEC_THEN `w` STRUCT_CASES_TAC word_nchotomy \\ SRW_TAC [][]);
 val _ = export_rewrites ["w2n_eq_0"];
 
+val n2w_dimword = Q.store_thm("n2w_dimword",
+  `n2w (dimword (:'a)) = 0w : 'a word`, SRW_TAC [] []);
+
 val word_2comp_dimindex_1 = Q.store_thm("word_2comp_dimindex_1",
   `!w:'a word. (dimindex (:'a) = 1) ==> (-w = w)`,
   Cases \\ STRIP_TAC

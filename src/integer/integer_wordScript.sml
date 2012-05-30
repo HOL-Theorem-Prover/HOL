@@ -260,7 +260,7 @@ val ranged_int_word_nchotomy = Q.store_thm("ranged_int_word_nchotomy",
   THEN SRW_TAC [] [i2w_w2i, w2i_le, w2i_ge]);
 
 fun Cases_on_i2w t =
-  Tactic.FULL_STRUCT_CASES_TAC (Q.ISPEC t ranged_int_word_nchotomy);
+   Q.ISPEC_THEN t Tactic.FULL_STRUCT_CASES_TAC ranged_int_word_nchotomy
 
 val DIMINDEX_SUB1 = Q.prove(
   `2n ** (dimindex (:'a) - 1) < 2 ** dimindex (:'a)`,
@@ -1210,6 +1210,100 @@ val signed_saturate_add = Q.store_thm("signed_saturate_add",
     \\ asm_rewrite_tac []
   ]
 );
+
+(* ------------------------------------------------------------------------- *)
+
+val different_sign_then_no_overflow = Q.store_thm(
+  "different_sign_then_no_overflow",
+  `!x y. word_msb x <> word_msb y ==> (w2i (x + y) = w2i x + w2i y)`,
+  rw [GSYM word_add_i2w, wordsTheory.word_msb_neg, GSYM w2i_lt_0]
+  \\ match_mp_tac w2i_i2w
+  \\ qspec_then `x` assume_tac w2i_ge
+  \\ qspec_then `x` assume_tac w2i_le
+  \\ qspec_then `y` assume_tac w2i_ge
+  \\ qspec_then `y` assume_tac w2i_le
+  \\ intLib.ARITH_TAC);
+
+val w2i_i2w_pos = Q.store_thm("w2i_i2w_pos",
+   `!n. n <= INT_MAX (:'a) ==> (w2i (i2w (&n) : 'a word) = &n)`,
+   ntac 2 strip_tac \\ match_mp_tac w2i_i2w
+   \\ fsrw_tac [intLib.INT_ARITH_ss] []);
+
+val w2i_i2w_neg = Q.store_thm("w2i_i2w_neg",
+   `!n. n <= INT_MIN (:'a) ==> (w2i (i2w (-&n) : 'a word) = -&n)`,
+   ntac 2 strip_tac \\ match_mp_tac w2i_i2w
+   \\ fsrw_tac [intLib.INT_ARITH_ss] []);
+
+val lem_pos = Q.prove(
+   `!n:num. n <= INT_MAX (:'a) ==> ~(INT_MIN (:'a) <= n)`,
+   lrw [wordsTheory.BOUND_ORDER, arithmeticTheory.NOT_LESS_EQUAL]);
+
+val lem_neg = Q.prove(
+   `!n. n <> 0n /\ n <= INT_MIN (:'a) ==>
+        &INT_MIN (:'a) <= (&dimword (:'a) - &n) % &dimword (:'a)`,
+   REPEAT strip_tac
+   \\ `&n:int < &dimword (:'a)` by lrw [wordsTheory.BOUND_ORDER]
+   \\ `0i <= &dimword (:'a) - &n /\ &dimword (:'a) - &n < &dimword (:'a) : int`
+   by intLib.ARITH_TAC
+   \\ lfs [integerTheory.INT_LESS_MOD, integerTheory.INT_SUB,
+           wordsTheory.dimword_IS_TWICE_INT_MIN]);
+
+val lem = Q.prove(
+  `!n. &INT_MIN (:'a) <= &dimword (:'a) - &n : int = n <= INT_MIN (:'a)`,
+  srw_tac [intLib.INT_ARITH_ss]
+    [intLib.ARITH_PROVE ``a <= b - c = c <= b - a : int``,
+     intLib.ARITH_PROVE ``&(2n * a) - &a = &a : int``,
+     wordsTheory.dimword_IS_TWICE_INT_MIN]);
+
+val overflow = Q.store_thm("overflow",
+  `!x y. w2i (x + y) <> w2i x + w2i y =
+         ((word_msb x = word_msb y) /\ word_msb x <> word_msb (x + y))`,
+  ntac 2 strip_tac
+  \\ Cases_on `word_msb x = word_msb y`
+  \\ simp [different_sign_then_no_overflow]
+  \\ Cases_on_i2w `x`
+  \\ Cases_on_i2w `y`
+  \\ fs [w2i_i2w, word_i2w_add, word_msb_i2w]
+  \\ `i < &dimword (:'a) /\ i' <  &dimword (:'a)`
+  by (ASSUME_TAC wordsTheory.INT_MAX_LT_DIMWORD \\ intLib.ARITH_TAC)
+  \\ `&dimword (:'a) <> 0i /\ INT_MIN (:'a) <> 0n`
+  by lfs [DECIDE ``0 < n ==> n <> 0n``]
+  \\ Cases_on `i`
+  \\ Cases_on `i'`
+  \\ fsrw_tac [intLib.INT_ARITH_ss]
+       [integerTheory.INT_MOD_NEG_NUMERATOR, integerTheory.INT_LESS_MOD,
+        i2w_0, word_0_w2i, arithmeticTheory.NOT_LESS_EQUAL,
+        w2i_i2w_pos, w2i_i2w_neg, lem_pos, lem_neg]
+  \\ `&n + &n' <> 0i` by intLib.ARITH_TAC
+  >- (`&n + &n' < &dimword (:'a) : int`
+     by (lrw [integerTheory.INT_ADD, wordsTheory.dimword_IS_TWICE_INT_MIN]
+         \\ metis_tac [wordsTheory.BOUND_ORDER,
+              DECIDE ``a <= n /\ b <= n /\ n < m ==> a + b < 2n * m``])
+     \\ lrw [integerTheory.INT_LESS_MOD, integerTheory.INT_ADD,
+             arithmeticTheory.NOT_LESS_EQUAL]
+     \\ Cases_on `n + n' <= INT_MAX (:'a)` \\ simp [w2i_i2w_pos]
+     >- metis_tac [arithmeticTheory.LESS_EQ_LESS_TRANS, wordsTheory.BOUND_ORDER]
+     \\ `INT_MIN (:'a) <= n + n'`
+     by lfs [arithmeticTheory.NOT_LESS_EQUAL, wordsTheory.INT_MAX_def]
+     \\ simp [i2w_def]
+     \\ lfs [integerTheory.INT_ADD, w2i_def, wordsTheory.word_msb_n2w_numeric])
+  \\ Cases_on `n + n' = dimword (:'a)`
+  \\ simp [integerTheory.INT_ADD_CALCULATE, integerTheory.INT_MOD_NEG_NUMERATOR]
+  >- lrw [word_0_w2i, i2w_def, n2w_dimword]
+  \\ `&dimword (:'a) - &(n + n') < &dimword (:'a) : int` by intLib.ARITH_TAC
+  \\ `&(n + n') < &dimword (:'a) : int`
+  by lrw [integerTheory.INT_ADD, wordsTheory.dimword_IS_TWICE_INT_MIN]
+  \\ `0i <= &dimword (:'a) - &(n + n')` by intLib.ARITH_TAC
+  \\ lrw [integerTheory.INT_ADD_CALCULATE, integerTheory.INT_MOD_NEG_NUMERATOR,
+          integerTheory.INT_LESS_MOD, lem]
+  \\ Cases_on `n + n' <= INT_MIN (:'a)`
+  \\ simp [w2i_i2w_neg]
+  \\ `INT_MIN (:'a) < n + n'` by intLib.ARITH_TAC
+  \\ lfs [i2w_def, wordsTheory.word_2comp_n2w]
+  \\ imp_res_tac arithmeticTheory.LESS_ADD
+  \\ `p' < INT_MIN (:'a)` by lrw [wordsTheory.dimword_IS_TWICE_INT_MIN]
+  \\ qpat_assum `a + b = dimword(:'a)` (SUBST1_TAC o SYM)
+  \\ lrw [w2i_def, wordsTheory.word_msb_n2w_numeric]);
 
 (* ------------------------------------------------------------------------- *)
 

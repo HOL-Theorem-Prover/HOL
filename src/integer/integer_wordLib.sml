@@ -9,8 +9,9 @@ val ERR = mk_HOL_ERR "integer_wordLib";
 val WORD_DECIDE = wordsLib.WORD_DP wordsLib.WORD_CONV intLib.COOPER_PROVE
 
 fun Cases_on_i2w t =
-  Tactic.FULL_STRUCT_CASES_TAC
-    (Q.ISPEC t integer_wordTheory.ranged_int_word_nchotomy);
+   Q.ISPEC_THEN t Tactic.FULL_STRUCT_CASES_TAC
+     integer_wordTheory.ranged_int_word_nchotomy
+
 
 fun INT_SIZES_CONV tm =
   if integer_wordSyntax.is_uint_max tm then
