@@ -90,6 +90,7 @@ sig
   val ZAP_TAC        : simpset -> thm list -> tactic
   val SPOSE_NOT_THEN : (thm -> tactic) -> tactic
   val by             : term quotation * tactic -> tactic   (* infix *)
+  val cheat          : tactic
 
   (* Abbreviations  (see also Q structure) *)
 
