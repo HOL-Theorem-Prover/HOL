@@ -945,6 +945,73 @@ strip_tac >- (
     >-
 *)
 
+val free_vars_remove_mat_vp = store_thm(
+"free_vars_remove_mat_vp",
+``(∀p fk sk v. free_vars (remove_mat_vp fk sk v p) ⊆
+  {v;fk} ∪ (free_vars sk DIFF Cpat_vars p)) ∧
+(∀ps fk sk v n. free_vars (remove_mat_con fk sk v n ps) ⊆
+  {v;fk} ∪ (free_vars sk DIFF BIGUNION (IMAGE Cpat_vars (set ps))))``,
+ho_match_mp_tac (TypeBase.induction_of(``:Cpat``)) >>
+strip_tac >- (
+  rw[SUBSET_DEF] >> rw[] ) >>
+strip_tac >- rw[] >>
+strip_tac >- rw[FOLDL_UNION_BIGUNION] >>
+strip_tac >- rw[] >>
+srw_tac[DNF_ss][LET_THM,SUBSET_DEF] >>
+res_tac >> fs[] >>
+res_tac >> fs[])
+
+val free_vars_remove_mat = store_thm(
+"free_vars_remove_mat",
+``(∀exp. free_vars (remove_mat exp) ⊆ free_vars exp) ∧
+  (∀v pes. free_vars (remove_mat_var v pes) ⊆ free_vars (CMat v pes))
+``,
+ho_match_mp_tac remove_mat_ind >>
+strip_tac >- rw[] >>
+strip_tac >- rw[] >>
+strip_tac >- rw[] >>
+strip_tac >- rw[] >>
+strip_tac >- rw[] >>
+strip_tac >- (
+  srw_tac[ETA_ss][FOLDL_UNION_BIGUNION] >>
+  fsrw_tac[DNF_ss][SUBSET_DEF,MEM_MAP] >>
+  PROVE_TAC[] ) >>
+strip_tac >- rw[] >>
+strip_tac >- rw[] >>
+strip_tac >- (
+  srw_tac[ETA_ss][FOLDL_UNION_BIGUNION] >>
+  fsrw_tac[DNF_ss][SUBSET_DEF,MEM_MAP] >>
+  PROVE_TAC[] ) >>
+strip_tac >- (
+  Cases >>
+  srw_tac[ETA_ss][FOLDL_UNION_BIGUNION_paired] >>
+  fsrw_tac[DNF_ss][SUBSET_DEF,MEM_MAP,pairTheory.EXISTS_PROD] >>
+  PROVE_TAC[] ) >>
+strip_tac >- rw[SUBSET_DEF] >>
+strip_tac >- (
+  srw_tac[ETA_ss][FOLDL_UNION_BIGUNION] >>
+  fsrw_tac[DNF_ss][SUBSET_DEF,MEM_MAP] >>
+  PROVE_TAC[] ) >>
+strip_tac >- (
+  rw[SUBSET_DEF] >>
+  PROVE_TAC[] ) >>
+strip_tac >- (
+  srw_tac[ETA_ss][FOLDL_UNION_BIGUNION] >>
+  fsrw_tac[DNF_ss][SUBSET_DEF,MEM_MAP] >>
+  PROVE_TAC[] ) >>
+strip_tac >- rw[] >>
+srw_tac[ETA_ss][FOLDL_UNION_BIGUNION_paired] >>
+fsrw_tac[DNF_ss][SUBSET_DEF,pairTheory.EXISTS_PROD] >>
+rw[] >- (
+  (free_vars_remove_mat_vp
+   |> CONJUNCT1
+   |> qspecl_then [`p`,`fk`,`sk`,`v`] mp_tac) >>
+  fs[SUBSET_DEF] >>
+  disch_then (qspec_then `x` mp_tac) >>
+  fs[] >>
+  PROVE_TAC[] ) >>
+PROVE_TAC[])
+
 (*
 val remove_mat_thm1 = store_thm(
 "remove_mat_thm1",
