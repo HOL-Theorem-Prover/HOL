@@ -1896,7 +1896,58 @@ val sup_preds_SUC = store_thm(
       fs[ordlt_SUC_DISCRETE] >> metis_tac [ordlt_REFL, ordlt_TRANS]) >>
   res_tac >> fs[ordlt_SUC]);
 
-(*val islimit_csup = store_thm(
+val omax_def = Define`
+  omax (s : 'a ordinal set) =
+    some α. maximal_elements s { (x,y) | x <= y } = {α}
+`;
+
+val omax_SOME = store_thm(
+  "omax_SOME",
+  ``(omax s = SOME α) <=> α ∈ s ∧ !β. β ∈ s ⇒ β ≤ α``,
+  simp[omax_def] >> DEEP_INTRO_TAC optionTheory.some_intro >> simp[] >>
+  conj_tac
+  >- (qx_gen_tac `β` >> simp[maximal_elements_def, EXTENSION] >>
+      strip_tac >> eq_tac
+      >- (strip_tac >> simp[] >> conj_tac >- metis_tac[] >>
+          qx_gen_tac `γ` >> rpt strip_tac >>
+          metis_tac [ordlt_REFL, ordle_lteq]) >>
+      metis_tac[]) >>
+  simp[EXTENSION, maximal_elements_def] >> strip_tac >> Cases_on `α ∈ s` >>
+  simp[] >> first_assum (qspec_then `α` mp_tac) >>
+  disch_then (Q.X_CHOOSE_THEN `β` strip_assume_tac) >>
+  Cases_on `β = α`
+  >- (qpat_assum `P ∧ Q <=/=> R` mp_tac >> simp[] >> metis_tac [ordle_lteq]) >>
+  fs[] >> metis_tac []);
+
+val omax_NONE = store_thm(
+  "omax_NONE",
+  ``(omax s = NONE) <=> ∀α. α ∈ s ⇒ ∃β. β ∈ s ∧ α < β``,
+  simp[omax_def] >> DEEP_INTRO_TAC optionTheory.some_intro >>
+  simp[maximal_elements_def, EXTENSION] >>
+  metis_tac [ordle_lteq]);
+
+val omax_sup = store_thm(
+  "omax_sup",
+  ``(omax s = SOME α) ==> (sup s = α)``,
+  simp[omax_SOME, sup_def] >> strip_tac >>
+  DEEP_INTRO_TAC oleast_intro >> simp[] >> conj_tac
+  >- (qsuff_tac `∃β. ∀γ. β ∈ preds γ ==> γ ∉ s` >- metis_tac[] >>
+      simp[IN_preds] >> metis_tac[]) >>
+  asm_simp_tac (srw_ss() ++ DNF_ss) [IN_preds] >>
+  qx_gen_tac `β` >> strip_tac >>
+  `∀γ. β ∈ preds γ ⇒ γ ∉ s` by metis_tac[] >>
+  fs [IN_preds] >> qsuff_tac `α ≤ β ∧ β ≤ α` >- metis_tac [ordlt_trichotomy] >>
+  metis_tac[]);
+
+(*
+val preds_omax_SOME_SUC = store_thm(
+  "preds_omax_SOME_SUC",
+  ``(omax (preds α) = SOME β) <=> (α = β⁺)``,
+  eq_tac >- (strip_tac >> `sup (preds α) = β` by simp[omax_sup] >>
+             fs[sup_preds_SUC
+
+
+val islimit_csup = store_thm(
   "islimit_csup",
   ``ord_islimit (α:cord) <=> (α = sup (preds α))``,
   qsuff_tac `¬ord_islimit α <=> α <> sup (preds α)` >- simp[] >>
