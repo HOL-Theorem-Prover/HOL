@@ -1,9 +1,10 @@
-open HolKernel boolLib bossLib lcsymtacs arithmeticTheory relationTheory pairTheory prim_recTheory ml_translatorLib
+open HolKernel boolLib bossLib lcsymtacs arithmeticTheory relationTheory pairTheory prim_recTheory (* ml_translatorLib *)
 
 val _ = new_theory"benchmark"
 
 val _ = intLib.deprecate_int()
 
+(*
 val fib_def = mlDefine`
   (fib 0 = 1) ∧
   (fib (SUC 0) = 1) ∧
@@ -12,6 +13,7 @@ val fib_def = mlDefine`
 val fact_def = mlDefine`
   (fact 0 = 1) ∧
   (fact (SUC n) = (SUC n) * fact n)`
+*)
 
 (*
 val m1_def = Define`

@@ -1,5 +1,5 @@
 structure test_compilerLib = struct
-open HolKernel stringLib ml_translatorLib bytecodeML compileML
+open HolKernel stringLib bytecodeML compileML (* ml_translatorLib *)
 
 fun bc_evaln 0 s = s
   | bc_evaln n s = let
@@ -60,7 +60,7 @@ end handle (Fail s) => raise Fail s | _ => raise Fail (Parse.term_to_string tm)
 fun term_to_v tm = let
   val (f,xs) = strip_comb tm
 in case fst(dest_const f) of
-    "Lit" => let val [x1] = xs in Lit (term_to_lit x1) end
+    "Litv" => let val [x1] = xs in Litv (term_to_lit x1) end
   | "Closure" => let val [x1,x2,x3] = xs in Closure (dest_list (dest_pair fromHOLstring term_to_v) x1,fromHOLstring x2,term_to_exp x3) end
   | "Conv" => let val [x1,x2] = xs in Conv (fromHOLstring x1,dest_list term_to_v x2) end
   | s => raise Fail s
@@ -68,7 +68,7 @@ end handle (Fail s) => raise Fail s | _ => raise Fail (Parse.term_to_string tm)
 and term_to_exp tm = let
   val (f,xs) = strip_comb tm
 in case fst(dest_const f) of
-    "Val" => let val [x1] = xs in Val (term_to_v x1) end
+    "Lit" => let val [x1] = xs in Lit (term_to_lit x1) end
   | "If"  => let val [x1,x2,x3] = xs in If (term_to_exp x1, term_to_exp x2, term_to_exp x3) end
   | "App" => let val [x1,x2,x3] = xs in App (term_to_op_ x1, term_to_exp x2, term_to_exp x3) end
   | "Fun" => let val [x1,x2] = xs in Fun (fromHOLstring x1, term_to_exp x2) end
