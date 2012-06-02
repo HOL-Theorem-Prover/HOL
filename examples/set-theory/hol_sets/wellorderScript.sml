@@ -1517,6 +1517,8 @@ val _ = save_thm ("ordlt_SUC", ordlt_SUC)
 val _ = export_rewrites ["ordlt_ZERO"]
 val _ = export_rewrites ["ordlt_REFL"]
 val _ = export_rewrites ["ordlt_SUC"]
+val _ = export_rewrites ["ord_islimit_ZERO"]
+val _ = export_rewrites ["ordSUC_11"]
 
 val _ = overload_on ("mkOrdinal", ``ordinal_ABS``)
 
@@ -1926,6 +1928,18 @@ val omax_NONE = store_thm(
   simp[maximal_elements_def, EXTENSION] >>
   metis_tac [ordle_lteq]);
 
+val omax_EMPTY = store_thm(
+  "omax_EMPTY",
+  ``omax {} = NONE``,
+  simp[omax_NONE]);
+val _ = export_rewrites ["omax_EMPTY"]
+
+val preds_0 = store_thm(
+  "preds_0",
+  ``preds 0 = {}``,
+  simp[preds_def]);
+val _ = export_rewrites ["preds_0"]
+
 val omax_sup = store_thm(
   "omax_sup",
   ``(omax s = SOME α) ==> (sup s = α)``,
@@ -1939,22 +1953,27 @@ val omax_sup = store_thm(
   fs [IN_preds] >> qsuff_tac `α ≤ β ∧ β ≤ α` >- metis_tac [ordlt_trichotomy] >>
   metis_tac[]);
 
-(*
 val preds_omax_SOME_SUC = store_thm(
   "preds_omax_SOME_SUC",
   ``(omax (preds α) = SOME β) <=> (α = β⁺)``,
-  eq_tac >- (strip_tac >> `sup (preds α) = β` by simp[omax_sup] >>
-             fs[sup_preds_SUC
+  simp[omax_SOME, IN_preds] >> eq_tac >> strip_tac
+  >- (qsuff_tac `α ≤ β⁺ ∧ β⁺ ≤ α` >- metis_tac [ordlt_trichotomy] >>
+      rpt strip_tac >- metis_tac [ordlt_SUC] >>
+      metis_tac [ordlt_SUC_DISCRETE, ordlt_TRANS, ordlt_REFL]) >>
+  simp[ordlt_SUC_DISCRETE, ordle_lteq]);
 
+val omax_preds_SUC = store_thm(
+  "omax_preds_SUC",
+  ``omax (preds α⁺) = SOME α``,
+  metis_tac [preds_omax_SOME_SUC]);
+val _ = export_rewrites ["omax_preds_SUC"]
 
-val islimit_csup = store_thm(
-  "islimit_csup",
-  ``ord_islimit (α:cord) <=> (α = sup (preds α))``,
-  qsuff_tac `¬ord_islimit α <=> α <> sup (preds α)` >- simp[] >>
-  REWRITE_TAC [notlimit_SUC_eqn] >> eq_tac
-  >- (disch_then (Q.X_CHOOSE_THEN `β` SUBST1_TAC) >>
-      simp[sup_preds_SUC] >> metis_tac [ordlt_REFL, ordlt_SUC]) >>
-*)
-
+val preds_omax_NONE_limit = store_thm(
+  "preds_omax_NONE_limit",
+  ``ord_islimit α <=> (omax (preds α) = NONE)``,
+  Cases_on `∃β. α = β⁺` >> fs[SUC_notlimit] >>
+  qspec_then `α` mp_tac ord_CASES0 >> simp[] >> strip_tac >- simp[] >>
+  simp[] >> Cases_on `omax (preds α)` >> simp[] >>
+  fs[preds_omax_SOME_SUC])
 
 val _ = export_theory()
