@@ -431,10 +431,6 @@ val wellorder_ADD1 = store_thm(
     metis_tac[WLE_elsOf, elsOf_WLE]
   ])
 
-val woSUC_def = Define`
-  woSUC (w : 'a inf wellorder) = ADD1 (INL 0) (shift1 w)
-`;
-
 val elsOf_wobound = store_thm(
   "elsOf_wobound",
   ``elsOf (wobound x w) = { y | (y,x) WIN w }``,
@@ -925,37 +921,6 @@ val orderlt_orderiso = store_thm(
     metis_tac [orderiso_thm, orderiso_SYM]
   ]);
 
-val islimit_def = Define`
-  islimit w = !e. e IN elsOf w ==>
-                  ?e'. e' IN elsOf w /\ (e,e') WIN w
-`;
-
-val islimit_maximals = store_thm(
-  "islimit_maximals",
-  ``islimit w <=> (maximal_elements (elsOf w) (wellorder_REP w) = {})``,
-  rw[islimit_def, maximal_elements_def, EXTENSION] >>
-  rw[METIS_PROVE [] ``(!x. ~P x \/ Q x) = (!x. P x ==> Q x)``] >>
-  metis_tac [WIN_REFL, WLE_WIN, WIN_WLE]);
-
-val islimit_wZERO = store_thm(
-  "islimit_wZERO",
-  ``islimit wZERO``,
-  rw[islimit_def, wZERO_def]);
-
-val islimit_iso = store_thm(
-  "islimit_iso",
-  ``orderiso w1 w2 ==> (islimit w1 <=> islimit w2)``,
-  rw[orderiso_thm, islimit_def, EQ_IMP_THM] >| [
-    `?a. a IN elsOf w1 /\ (f a = e)` by metis_tac [BIJ_IFF_INV] >>
-    `?b. b IN elsOf w1 /\ (a,b) WIN w1` by metis_tac [] >>
-    `f b IN elsOf w2` by metis_tac [BIJ_IFF_INV] >>
-    metis_tac[],
-    `f e IN elsOf w2` by metis_tac [BIJ_IFF_INV] >>
-    `?u. u IN elsOf w2 /\ (f e,u) WIN w2` by metis_tac [] >>
-    `?e'. e' IN elsOf w1 /\ (u = f e')` by metis_tac [BIJ_IFF_INV] >>
-    metis_tac [WIN_trichotomy, WIN_REFL, WIN_TRANS]
-  ]);
-
 val finite_def = Define`
   finite w = FINITE (elsOf w)
 `;
@@ -1111,17 +1076,6 @@ val WIN_ADD1 = store_thm(
   rw[#repabs_pseudo_id wellorder_results, wellorder_ADD1, ADD1_def,
      strict_def] >> metis_tac[]);
 
-val elsOf_woSUC = store_thm(
-  "elsOf_woSUC",
-  ``elsOf (woSUC w) = INL 0 INSERT IMAGE (SUC ++ I) (elsOf w)``,
-  simp[woSUC_def, elsOf_ADD1, elsOf_shift1]);
-
-val WIN_woSUC = save_thm(
-  "WIN_woSUC",
-  ``(x,y) WIN woSUC w``
-     |> SIMP_CONV (srw_ss()) [woSUC_def, WIN_ADD1, ZERO_NOT_SHIFT1]
-     |> SIMP_RULE (srw_ss()) [elsOf_shift1, WIN_shift1, EXISTS_SUM]);
-
 val SUC_PP_EQ_INL = prove(
   ``!x. ((SUC ++ I) x = INL y) <=> ?n. (x = INL n) /\ (y = SUC n)``,
   simp[FORALL_SUM]);
@@ -1130,203 +1084,10 @@ val SUC_PP_EQ_INR = prove(
   ``!x. ((SUC ++ I) x = INR y) <=> (x = INR y)``,
   simp[FORALL_SUM]);
 
-val woSUC_orderiso = store_thm(
-  "woSUC_orderiso",
-  ``orderiso w1 w2 ⇒ orderiso (woSUC w1) (woSUC w2)``,
-  simp[orderiso_def, elsOf_woSUC, WIN_woSUC] >>
-  disch_then (Q.X_CHOOSE_THEN `f` strip_assume_tac) >>
-  qexists_tac `
-    λx. if x = INL 0 then INL 0 else (SUC ++ I) (f ((PRE ++ I) x))
-  ` >>
-  rw[] >> rw[PRE_SUC_PP, SUC_PP_NEQ0, SUC_PP11, SUC_PP_EQ_INL,
-             SUC_PP_EQ_INR] >>
-  simp[EXISTS_SUM, SUC_PP_NEQ0, RIGHT_AND_OVER_OR, EXISTS_OR_THM, SUC_PP11] >|[
-    simp_tac (srw_ss() ++ COND_elim_ss ++ CONJ_ss) [SUC_PP_NEQ0, SUC_PP11] >>
-    Cases_on `x` >> asm_simp_tac (srw_ss() ++ DNF_ss) [] >>
-    metis_tac [sumTheory.sum_CASES],
-    metis_tac [sumTheory.sum_CASES],
-    metis_tac [sumTheory.sum_CASES]
-  ]);
-
-val woSUC_11_imp = prove(
-  ``orderiso (woSUC w1 : 'a inf wellorder) (woSUC w2 : 'b inf wellorder) ==>
-    orderiso w1 w2``,
-  simp[orderiso_thm] >> disch_then (Q.X_CHOOSE_THEN `f` mp_tac) >>
-  simp_tac (srw_ss() ++ DNF_ss) [elsOf_woSUC, WIN_woSUC] >>
-  strip_tac >>
-  `f (INL 0) = INL 0`
-     by (fs[BIJ_DEF, SURJ_DEF] >>
-         first_x_assum (qspec_then `INL 0 : 'b inf` mp_tac) >> simp[] >>
-         disch_then (Q.X_CHOOSE_THEN `y` strip_assume_tac) >> rw[] >>
-         Cases_on `x` >> res_tac >> fs[]) >>
-  fs[] >>
-  qexists_tac `(PRE ++ I) o f o (SUC ++ I)` >> conj_tac >| [
-    qpat_assum `BIJ f SS TT` mp_tac >> simp[BIJ_IFF_INV] >>
-    disch_then (CONJUNCTS_THEN2 assume_tac
-                                (Q.X_CHOOSE_THEN `g` strip_assume_tac)) >>
-    `g (INL 0) = INL 0`
-       by (first_x_assum (qspec_then `INL 0 : 'a inf` mp_tac) >> simp[]) >>
-    `∀n. INL n ∈ elsOf w2 ==> g (INL (SUC n)) <> INL 0`
-       by (rpt strip_tac >>
-           first_x_assum (qspec_then `INL (SUC n) : 'b inf` mp_tac) >>
-           simp[EXISTS_SUM]) >>
-    `∀b. INR b ∈ elsOf w2 ==> g (INR b) <> INL 0`
-       by (rpt strip_tac >>
-           first_x_assum (qspec_then `INR b : 'b inf` mp_tac) >>
-           simp[EXISTS_SUM]) >>
-    conj_tac >-
-      (qx_gen_tac `x` >>
-       `(∃n. x = INL n) ∨ (∃a. x = INR a)` by (Cases_on `x` >> simp[]) >>
-       rw[] >| [
-         first_x_assum
-           (qspec_then `INL (SUC n):'a inf` mp_tac o
-            assert (not o free_in ``g:'b inf->'a inf`` o concl)) >>
-         simp[EXISTS_SUM] >>
-         pop_assum (fn th => first_x_assum
-                                  (fn impth => mp_tac (MATCH_MP impth th))) >>
-         rw[] >> rw[],
-         first_x_assum (qspec_then `INR a:'a inf` mp_tac o
-                        assert (not o free_in ``g:'b inf -> 'a inf`` o
-                                concl)) >>
-         simp[EXISTS_SUM] >>
-         pop_assum (fn th => first_x_assum
-                                  (fn impth => mp_tac (MATCH_MP impth th))) >>
-         rw[] >> rw[]
-       ]) >>
-    qexists_tac `(PRE ++ I) o g o (SUC ++ I)` >> simp[] >> rpt conj_tac
-    >- (qx_gen_tac `x` >>
-         `(∃n. x = INL n) ∨ (∃b. x = INR b)` by (Cases_on `x` >> simp[]) >>
-         rw[] >| [
-           first_x_assum
-             (qspec_then `INL (SUC n):'b inf` mp_tac o
-              assert (not o free_in ``f:'a inf->'b inf`` o concl)) >>
-           simp[EXISTS_SUM] >> rw[] >> rw[],
-           first_x_assum
-             (qspec_then `INR b : 'b inf` mp_tac o
-              assert (not o free_in ``f:'a inf->'b inf`` o concl)) >>
-           simp[EXISTS_SUM] >> rw[] >> rw[]
-         ])
-    >- (qx_gen_tac `x` >>
-        `(∃n. x = INL n) ∨ (∃a. x = INR a)` by (Cases_on `x` >> simp[]) >>
-        rw[] >-
-          (first_assum (fn th =>
-             first_x_assum (fn impth => mp_tac (MATCH_MP impth th))) >>
-           rw[] >> rw[]
-           >- (first_x_assum (SUBST1_TAC o SYM) >>
-               qsuff_tac `g (f (INL (SUC n))) = INL (SUC n)` >- simp[] >>
-               first_x_assum match_mp_tac >> simp[EXISTS_SUM]) >>
-           first_x_assum (SUBST1_TAC o SYM) >>
-           qsuff_tac `g (f (INL (SUC n))) = INL (SUC n)` >- simp[] >>
-           first_x_assum match_mp_tac >> simp[EXISTS_SUM]) >>
-        first_assum (fn th =>
-          first_x_assum (fn impth => mp_tac (MATCH_MP impth th))) >>
-        rw[] >> rw[]
-        >- (first_x_assum (SUBST1_TAC o SYM) >> fs[EXISTS_SUM]) >>
-        first_x_assum (SUBST1_TAC o SYM) >> fs[EXISTS_SUM])
-    >- (qx_gen_tac `x` >>
-        `(∃n. x = INL n) ∨ (∃b. x = INR b)` by (Cases_on `x` >> simp[]) >>
-        rw[]
-        >- (`(∃m. g (INL (SUC n)) = INL m) ∨ (∃a. g (INL (SUC n)) = INR a)`
-               by (Cases_on `g (INL (SUC n))` >> simp[])
-            >- (simp[] >> `m <> 0` by metis_tac [] >>
-                `SUC (PRE m) = m` by decide_tac >> rw[] >>
-                qpat_assum `g (INL (SUC n)) = INL m` (SUBST1_TAC o SYM) >>
-                fs[EXISTS_SUM]) >>
-            simp[] >> first_x_assum (SUBST1_TAC o SYM) >> fs[EXISTS_SUM])
-        >- (`(∃m. g (INR b) = INL m) ∨ (∃a. g (INR b) = INR a)`
-              by (Cases_on `g (INR b)` >> simp[]) >> simp[]
-            >- (`m <> 0` by metis_tac[] >> `SUC (PRE m) = m` by decide_tac >>
-                rw[] >> pop_assum (K ALL_TAC) >>
-                first_x_assum (SUBST1_TAC o SYM) >> fs[EXISTS_SUM])
-            >- (first_x_assum (SUBST1_TAC o SYM) >> fs[EXISTS_SUM]))),
-
-    (* monotonicity *)
-    map_every qx_gen_tac [`a`, `b`] >> strip_tac >>
-    first_x_assum (qspecl_then [`(SUC ++ I) a`, `(SUC ++ I) b`] mp_tac) >>
-    simp[SUC_PP_NEQ0, PRE_SUC_PP] >>
-    qsuff_tac `!x. x IN elsOf w1 ==> f ((SUC ++ I) x) <> INL 0`
-       >- (`a IN elsOf w1 ∧ b IN elsOf w1`
-             by (imp_res_tac WIN_elsOf >> simp[]) >>
-           simp[]) >>
-    qx_gen_tac `x` >>
-    `(∃n. x = INL n) ∨ (∃aa. x = INR aa)` by (Cases_on `x` >> simp[]) >> rw[]
-    >- (pop_assum (fn th => first_x_assum (fn impth =>
-          mp_tac (MATCH_MP impth th))) >> rw[] >> rw[])
-    >- (pop_assum (fn th => first_x_assum (fn impth =>
-          mp_tac (MATCH_MP impth th))) >> rw[] >> rw[])
-  ])
-
-val woSUC_11 = save_thm(
-  "woSUC_11",
-  IMP_ANTISYM_RULE woSUC_11_imp woSUC_orderiso);
-
-val fromNat0_11 = store_thm(
-  "fromNat0_11",
-  ``(fromNat0 n = fromNat0 m) <=> (n = m)``,
-  simp[EQ_IMP_THM] >> disch_then (mp_tac o Q.AP_TERM `elsOf`) >>
-  simp[elsOf_fromNat0, EXTENSION] >> spose_not_then strip_assume_tac >>
-  `n < m ∨ m < n` by decide_tac >| [
-     first_x_assum (qspec_then `INL n` mp_tac) >> simp[],
-     first_x_assum (qspec_then `INL m` mp_tac) >> simp[]
-  ]);
-
-val WIN_fromNat0 = prove(
-  ``(x,y) WIN fromNat0 n <=>
-     ?m p. m < p /\ p < n /\ (x = INL m) /\ (y = INL p)``,
-  rw[fromNat0_def, wellorder_fromNat_SUM, #repabs_pseudo_id wellorder_results,
-     strict_def] >>
-  map_every Cases_on [`x`, `y`] >> simp[]);
-
-val fromNat0_orderiso11 = store_thm(
-  "fromNat0_orderiso11",
-  ``orderiso (fromNat0 n) (fromNat0 m) <=> (n = m)``,
-  simp[EQ_IMP_THM] >> conj_tac >-
-    (simp[orderiso_thm, elsOf_fromNat0] >>
-     disch_then (Q.X_CHOOSE_THEN `f` strip_assume_tac) >>
-     `(CARD (IMAGE INL (count n)) = n) ∧ (CARD (IMAGE INL (count m)) = m)`
-        by rw[CARD_INJ_IMAGE, IMAGE_FINITE] >>
-     metis_tac [IMAGE_FINITE, FINITE_COUNT, FINITE_BIJ_CARD_EQ]) >>
-  rw[orderiso_thm] >>
-  qexists_tac `\x. case x of INL n => INL n | INR a => ARB` >>
-  rw[WIN_fromNat0, elsOf_fromNat0] >> rw[] >>
-  rw[BIJ_DEF, INJ_DEF, SURJ_DEF] >> fs[] >>
-  asm_simp_tac (srw_ss() ++ DNF_ss) []);
-
-val woSUC_fromNat0 = store_thm(
-  "woSUC_fromNat0",
-  ``orderiso (woSUC (fromNat0 n)) (fromNat0 (n + 1))``,
-  simp[orderiso_def, elsOf_woSUC, elsOf_fromNat0, WIN_woSUC, WIN_fromNat0] >>
-  qexists_tac `λx. case x of INL 0 => INL n
-                           | INL (SUC m) => INL m` >>
-  simp_tac (srw_ss() ++ DNF_ss ++ ARITH_ss)[EXISTS_SUM, FORALL_SUM] >>
-  Cases >> simp[] >> Cases >> simp[]);
-
-val fromNat0_wZERO = store_thm(
-  "fromNat0_wZERO",
-  ``orderiso (fromNat0 0:'a inf wellorder) (wZERO:'b wellorder)``,
-  spose_not_then strip_assume_tac >>
-  `orderlt (wZERO:'b wellorder) (fromNat0 0:'a inf wellorder)`
-    by prove_tac [orderlt_trichotomy, LT_wZERO] >>
-  fs[orderlt_def, elsOf_fromNat0])
-
-val woSUC_fromNat00 = store_thm(
-  "woSUC_fromNat00",
-  ``~orderiso (woSUC w) (fromNat0 0)``,
-  rw[orderiso_thm, elsOf_fromNat0, BIJ_EMPTY] >> DISJ1_TAC >>
-  disch_then (mp_tac o Q.AP_TERM `elsOf`) >>
-  simp[elsOf_woSUC]);
-
 val WLE_WIN_EQ = store_thm(
   "WLE_WIN_EQ",
   ``(x,y) WLE w <=> (x = y) ∧ x IN elsOf w \/ (x,y) WIN w``,
   metis_tac [elsOf_WLE, WLE_WIN, WIN_WLE]);
-
-val woSUC_not_limit = store_thm(
-  "woSUC_not_limit",
-  ``¬ islimit (woSUC w)``,
-  simp[islimit_maximals, EXTENSION, maximal_elements_def] >>
-  qexists_tac `INL 0` >>
-  simp[elsOf_woSUC, FORALL_SUM, WIN_woSUC, WLE_WIN_EQ]);
 
 val remove_def = Define`
   remove e w = wellorder_ABS { (x,y) | x ≠ e ∧ y ≠ e ∧ (x,y) WLE w }
@@ -1356,93 +1117,6 @@ val WIN_remove = store_thm(
   simp[remove_def, #repabs_pseudo_id wellorder_results, wellorder_remove,
        strict_def]);
 
-val not_limit_woSUC = store_thm(
-  "not_limit_woSUC",
-  ``¬islimit (w:'a inf wellorder) ==>
-    ∃w0:'a inf wellorder. orderiso (woSUC w0) w``,
-  simp[islimit_maximals, EXTENSION, maximal_elements_def] >>
-  disch_then (Q.X_CHOOSE_THEN `m` strip_assume_tac) >>
-  qexists_tac `remove m w` >>
-  simp[orderiso_thm, elsOf_woSUC, elsOf_remove, WIN_woSUC, WIN_remove] >>
-  qexists_tac `
-    λe. case e of INL 0 => m | INL (SUC n) => INL n | INR x => INR x
-  ` >>
-  simp[EXISTS_SUM, FORALL_SUM] >> rpt conj_tac >| [
-    simp[BIJ_DEF, INJ_DEF, SURJ_DEF, EXISTS_SUM, FORALL_SUM] >>
-    rw[] >> rw[] >> fs[] >| [
-      qpat_assum `INL X ∈ elsOf w` mp_tac >>
-      qmatch_abbrev_tac `INL a ∈ elsOf w ==> GOAL` >>
-      qunabbrev_tac `GOAL` >> Q.RM_ABBREV_TAC `a` >> strip_tac >>
-      Cases_on `m = INL a` >- (qexists_tac `0` >> simp[]) >>
-      Q.REFINE_EXISTS_TAC `SUC N` >> simp[],
-      qpat_assum `INR Y ∈ elsOf w` mp_tac >>
-      qmatch_abbrev_tac `INR a ∈ elsOf w ==> GOAL` >>
-      qunabbrev_tac `GOAL` >> Q.RM_ABBREV_TAC `a` >> strip_tac >>
-      Cases_on `m = INR a` >> simp[] >> qexists_tac `0` >> simp[]
-    ],
-    qx_gen_tac `n` >>
-    `(n = 0) ∨ ∃n0. n = SUC n0` by (Cases_on `n` >> simp[]) >> simp[] >>
-    Cases_on `m = INL n0` >> simp[] >> qx_gen_tac `a` >>
-    `(a = 0) ∨ ∃b. a = SUC b` by (Cases_on `a` >> simp[]) >> simp[] >>
-    strip_tac >> first_x_assum (qspec_then `INL n0` mp_tac) >> simp[] >>
-    metis_tac [WIN_trichotomy, WIN_WLE],
-    qx_gen_tac `a` >> qx_gen_tac `n` >>
-    `(n = 0) ∨ ∃n0. n = SUC n0` by (Cases_on `n` >> simp[]) >> simp[] >>
-    strip_tac >> first_x_assum (qspec_then `INR a` mp_tac) >> simp[] >>
-    metis_tac [WIN_trichotomy, WIN_WLE]
-  ]);
-
-val orderlt_woSUC = store_thm(
-  "orderlt_woSUC",
-  ``!w. orderlt w (woSUC w)``,
-  simp[orderlt_def, orderiso_thm, elsOf_woSUC] >> gen_tac >>
-  qexists_tac `INL 0` >> simp[WIN_wobound, elsOf_wobound] >>
-  qexists_tac `SUC ++ I` >> simp[WIN_woSUC, PRE_SUC_PP] >>
-  simp[EXISTS_SUM, FORALL_SUM] >> Tactical.REVERSE conj_tac
-     >- metis_tac [WIN_elsOf] >>
-  simp[BIJ_DEF, INJ_DEF, EXISTS_SUM, FORALL_SUM, SURJ_DEF] >>
-  metis_tac[]);
-
-val orderlt_woSUC_discrete = store_thm(
-  "orderlt_woSUC_discrete",
-  ``orderlt (w1:'a wellorder) (woSUC w2 : 'b inf wellorder) ==>
-    orderlt w1 w2 ∨ orderiso w1 w2``,
-  simp[orderlt_def] >> disch_then (Q.X_CHOOSE_THEN `y` strip_assume_tac) >>
-  fs[elsOf_woSUC]
-  >- (DISJ2_TAC >> qpat_assum `orderiso XX YY` mp_tac >>
-      simp[orderiso_thm] >>
-      disch_then (Q.X_CHOOSE_THEN `f` strip_assume_tac) >>
-      fs[elsOf_wobound, elsOf_woSUC, WIN_woSUC, WIN_wobound] >>
-      qexists_tac `(PRE ++ I) o f` >> conj_tac
-      >- (fs[BIJ_DEF, SURJ_DEF, INJ_DEF] >> fs[] >>
-          simp_tac (srw_ss() ++ CONJ_ss) [] >> rpt conj_tac
-          >- (map_every qx_gen_tac [`x1`,`x2`] >> strip_tac >> res_tac >>
-              simp[])
-          >- (qx_gen_tac `x` >> strip_tac >> res_tac >> simp[]) >>
-          full_simp_tac (srw_ss() ++ DNF_ss) [] >>
-          simp[FORALL_SUM] >> rpt strip_tac >> res_tac >>
-          metis_tac[sumTheory.SUM_MAP_def, DECIDE ``PRE (SUC x) = x``,
-                    combinTheory.I_THM]) >>
-      map_every qx_gen_tac [`a`, `b`] >> strip_tac >> simp[] >>
-      full_simp_tac (srw_ss() ++ DNF_ss)[] >>
-      `∀c. c ∈ elsOf w1 ==> f c <> INL 0`
-         by (rpt strip_tac >> fs[BIJ_DEF, INJ_DEF] >>
-             Q.UNDISCH_THEN `c ∈ elsOf w1`
-               (fn th => first_x_assum (mp_tac o C MATCH_MP th)) >>
-             simp[]) >>
-      imp_res_tac WIN_elsOf >>
-      Q.UNDISCH_THEN `(a,b) WIN w1`
-        (fn th => first_x_assum (mp_tac o C MATCH_MP th)) >>
-      simp[]) >>
-  DISJ1_TAC >> qexists_tac `x` >> simp[] >>
-  qsuff_tac `orderiso (wobound x w2) (wobound y (woSUC w2))`
-    >- metis_tac [orderiso_TRANS, orderiso_SYM] >>
-  simp[orderiso_thm, elsOf_wobound, WIN_wobound, WIN_woSUC] >>
-  qexists_tac `SUC ++ I` >> simp[SUC_PP_NEQ0, PRE_SUC_PP] >>
-  simp_tac (srw_ss() ++ CONJ_ss) [BIJ_DEF, SURJ_DEF, INJ_DEF,
-                                  SUC_PP_NEQ0, PRE_SUC_PP, SUC_PP11] >>
-  simp[FORALL_SUM, EXISTS_SUM] >> Cases >> simp[])
-
 (* perform quotient, creating a type of "ordinals". *)
 fun mk_def(s,t) =
     {def_name = s ^ "_def", fixity = NONE, fname = s, func = t};
@@ -1458,98 +1132,39 @@ val alphaise =
                 gamma |-> ``:'a inf``, alpha |-> ``:'a inf``]
 
 val [ordlt_REFL, ordlt_TRANS, ordlt_WF0, ordlt_trichotomy,
-     ordlt_ZERO0, ord_islimit_ZERO0, ord_finite_ZERO0, fromNat_11,
-     ord_SUC_fromNat, ord_SUC_ZERO, fromNat_ZERO, SUC_notlimit,
-     notlimit_SUC, ordSUC_11, ordlt_SUC, ordlt_woSUC_lemma] =
+     ordlt_ZERO0, ord_finite_ZERO0] =
     quotient.define_quotient_types_full
     {
      types = [{name = "ordinal", equiv = alphaise orderiso_equiv}],
      defs = map mk_def
        [("ordlt", ``orderlt : 'a inf wellorder -> 'a inf wellorder -> bool``),
-        ("ord_islimit", ``islimit : 'a inf wellorder -> bool``),
         ("ord_ZERO", ``wZERO : 'a inf wellorder``),
-        ("ord_finite", ``finite : 'a inf wellorder -> bool``),
-        ("ord_SUC", ``woSUC : 'a inf wellorder -> 'a inf wellorder``),
-        ("fromNat", ``fromNat0 : num -> 'a inf wellorder``)],
+        ("ord_finite", ``finite : 'a inf wellorder -> bool``)],
      tyop_equivs = [],
      tyop_quotients = [],
      tyop_simps = [],
-     respects = [alphaise islimit_iso, alphaise orderlt_orderiso,
-                 alphaise finite_iso,
-                 INST_TYPE [beta |-> alpha] woSUC_orderiso],
+     respects = [alphaise orderlt_orderiso, alphaise finite_iso],
      poly_preserves = [],
      poly_respects = [],
      old_thms = [alphaise orderlt_REFL, alphaise orderlt_TRANS,
                  alphaise (REWRITE_RULE [relationTheory.WF_DEF] orderlt_WF),
                  alphaise orderlt_trichotomy, alphaise LT_wZERO,
-                 alphaise islimit_wZERO, alphaise finite_wZERO,
-                 INST_TYPE [beta |-> alpha] fromNat0_orderiso11,
-                 INST_TYPE [beta |-> alpha] woSUC_fromNat0,
-                 INST_TYPE [beta |-> alpha] woSUC_fromNat00,
-                 INST_TYPE [beta |-> ``:'a inf``] fromNat0_wZERO,
-                 woSUC_not_limit, not_limit_woSUC,
-                 INST_TYPE [beta |-> alpha] woSUC_11,
-                 orderlt_woSUC,
-                 INST_TYPE [alpha |-> ``:'a inf``, beta |-> alpha]
-                           orderlt_woSUC_discrete
+                 alphaise finite_wZERO
                  ]}
 
-val elimZERO = REWRITE_RULE [SYM fromNat_ZERO]
-
 val _ = save_thm ("ordlt_REFL", ordlt_REFL)
+val _ = export_rewrites ["ordlt_REFL"]
 val _ = save_thm ("ordlt_TRANS", ordlt_TRANS)
 val ordlt_WF = save_thm (
   "ordlt_WF",
   REWRITE_RULE [GSYM relationTheory.WF_DEF] ordlt_WF0)
-val ordlt_ZERO = save_thm ("ordlt_ZERO", elimZERO ordlt_ZERO0)
-val ord_islimit_ZERO = save_thm ("ord_islimit_ZERO", elimZERO ord_islimit_ZERO0)
-val ord_finite_ZERO = save_thm ("ord_finite_ZERO", elimZERO ord_finite_ZERO0)
-val _ = save_thm ("ordlt_trichotomy", ordlt_trichotomy)
-val _ = save_thm ("fromNat_11", fromNat_11)
-val _ = save_thm ("ord_SUC_fromNat", ord_SUC_fromNat)
-val _ = save_thm ("ord_SUC_ZERO", ord_SUC_ZERO)
-val _ = save_thm ("ordSUC_11", ordSUC_11)
-val _ = save_thm ("SUC_notlimit", SUC_notlimit)
-val _ = save_thm ("notlimit_SUC", notlimit_SUC)
-val _ = save_thm ("fromNat_ZERO", fromNat_ZERO)
-val _ = save_thm ("ordlt_SUC", ordlt_SUC)
-
-val _ = export_rewrites ["ordlt_ZERO"]
-val _ = export_rewrites ["ordlt_REFL"]
-val _ = export_rewrites ["ordlt_SUC"]
-val _ = export_rewrites ["ord_islimit_ZERO"]
-val _ = export_rewrites ["ordSUC_11"]
-
-val _ = overload_on ("mkOrdinal", ``ordinal_ABS``)
-
-val ord_CASES0 = store_thm(
-  "ord_CASES0",
-  ``!α. (α = fromNat 0) ∨ (∃β. α = ord_SUC β) ∨ ord_islimit α``,
-  simp[fromNat_ZERO] >> gen_tac >> Cases_on `ord_islimit α` >> simp[] >>
-  metis_tac [notlimit_SUC]);
-
-val _ = add_numeral_form (#"o", SOME "fromNat")
 
 val _ = overload_on ("<", ``ordlt``)
-val _ = overload_on ("TC", ``ord_SUC``)
+val _ = overload_on ("<=", ``\a b. ~(b < a)``)
 
-val ordlt_SUC_DISCRETE = store_thm(
-  "ordlt_SUC_DISCRETE",
-  ``α < β⁺ <=> α < β ∨ (α = β)``,
-  metis_tac [ordlt_SUC, ordlt_TRANS, ordlt_woSUC_lemma]);
+val _ = save_thm ("ordlt_trichotomy", ordlt_trichotomy)
 
-val ordSUC_MONO = store_thm(
-  "ordSUC_MONO",
-  ``α⁺ < β⁺ <=> α < β``,
-  eq_tac >> spose_not_then strip_assume_tac
-  >- (fs[ordlt_SUC_DISCRETE]
-      >- (`(α = β) ∨ β < α` by metis_tac [ordlt_trichotomy] >>
-          metis_tac [ordlt_TRANS, ordlt_REFL, ordlt_SUC]) >>
-      rw[] >> fs[ordlt_SUC]) >>
-  fs[ordlt_SUC_DISCRETE] >>
-  `β < α⁺` by metis_tac [ordlt_trichotomy] >>
-  fs[ordlt_SUC_DISCRETE] >> metis_tac [ordlt_TRANS, ordlt_REFL])
-val _ = export_rewrites ["ordSUC_MONO"]
+val _ = overload_on ("mkOrdinal", ``ordinal_ABS``)
 
 val allOrds_def = Define`
   allOrds = wellorder_ABS { (x,y) | (x = y) \/ ordlt x y }
@@ -1659,6 +1274,7 @@ val IN_preds = store_thm(
   "IN_preds",
   ``x IN preds w <=> ordlt x w``,
   rw[preds_def]);
+val _ = export_rewrites ["IN_preds"]
 
 val preds_11 = store_thm(
   "preds_11",
@@ -1668,6 +1284,7 @@ val preds_11 = store_thm(
   `ordlt w1 w2 \/ ordlt w2 w1` by metis_tac [ordlt_trichotomy] >>
   qpat_assum `x = y` mp_tac >> rw[EXTENSION, preds_def] >>
   metis_tac [ordlt_REFL]);
+val _ = export_rewrites ["preds_11"]
 
 val downward_closed_def = Define`
   downward_closed s <=>
@@ -1687,7 +1304,7 @@ val preds_bij = store_thm(
   rw[EXTENSION] >| [
     metis_tac [IN_preds, ordlt_REFL],
     metis_tac [IN_preds, ordlt_REFL],
-    qspec_then `\w. w NOTIN x` mp_tac ordlt_WF0 >> simp[IN_preds] >>
+    qspec_then `\w. w NOTIN x` mp_tac ordlt_WF0 >> simp[] >>
     qsuff_tac `?w. w NOTIN x`
        >- metis_tac [downward_closed_def, ordlt_trichotomy] >>
     fs[EXTENSION] >> metis_tac[]
@@ -1787,8 +1404,13 @@ val univ_cord_uncountable = store_thm(
      by metis_tac [CARDEQ_CARDLEQ, cardeq_REFL, unitinf_univnum] >>
   fs[univ_ord_greater_cardinal]);
 
+val ordle_lteq = store_thm(
+  "ordle_lteq",
+  ``(α:α ordinal) ≤ β <=> α < β ∨ (α = β)``,
+  metis_tac [ordlt_trichotomy, ordlt_REFL, ordlt_TRANS])
+
 val oleast_def = Define`
-  $oleast P = @x. P x ∧ ∀y. y < x ==> ¬P y
+  $oleast (P:'a ordinal -> bool) = @x. P x ∧ ∀y. y < x ==> ¬P y
 `;
 
 val _ = set_fixity "oleast" Binder
@@ -1800,6 +1422,127 @@ val oleast_intro = store_thm(
   rw[oleast_def] >> SELECT_ELIM_TAC >> conj_tac >-
     (match_mp_tac ordlt_WF0 >> metis_tac[]) >>
   rw[]);
+
+val ordSUC_def = Define`
+  ordSUC α = oleast β. α < β
+`
+val _ = overload_on ("TC", ``ordSUC``)
+
+val fromNat_def = Define`
+  (fromNat 0 = oleast α. T) ∧
+  (fromNat (SUC n) = ordSUC (fromNat n))
+`;
+val _ = add_numeral_form (#"o", SOME "fromNat")
+
+(* prints as 0 ≤ α *)
+val ordlt_ZERO = store_thm(
+  "ordlt_ZERO",
+  ``¬(α < 0)``,
+ simp[fromNat_def] >> DEEP_INTRO_TAC oleast_intro >> simp[])
+val _ = export_rewrites ["ordlt_ZERO"]
+
+val EMPTY_CARDLEQ = store_thm(
+  "EMPTY_CARDLEQ",
+  ``{} ≼ t``,
+  simp[cardleq_def, INJ_EMPTY]);  (* export_rewrites for pred_set *)
+val _ = export_rewrites ["EMPTY_CARDLEQ"]
+
+val FINITE_CLE_INFINITE = store_thm(
+  "FINITE_CLE_INFINITE",
+  ``FINITE s ∧ INFINITE t ==> s ≼ t``,
+  qsuff_tac `INFINITE t ⇒ ∀s. FINITE s ⇒ s ≼ t` >- metis_tac[] >>
+  strip_tac >> Induct_on `FINITE` >> conj_tac >- simp[] >>
+  simp[cardleq_def] >> gen_tac >>
+  disch_then (CONJUNCTS_THEN2 assume_tac
+                              (Q.X_CHOOSE_THEN `f` assume_tac)) >>
+  qx_gen_tac `e` >> strip_tac >>
+  `FINITE (IMAGE f s)` by simp[] >>
+  `∃y. y ∈ t ∧ y ∉ IMAGE f s` by metis_tac [IN_INFINITE_NOT_FINITE] >>
+  qexists_tac `λx. if x = e then y else f x` >>
+  fs[INJ_DEF] >> asm_simp_tac (srw_ss() ++ DNF_ss) [] >> rw[] >> metis_tac[])
+
+val INFINITE_UNIV_INF = store_thm(
+  "INFINITE_UNIV_INF",
+  ``INFINITE univ(:'a inf)``,
+  simp[INFINITE_UNIV] >> qexists_tac `SUC ++ I` >> simp[SUC_PP11] >>
+  qexists_tac `INL 0` >> simp[FORALL_SUM]);
+val _ = export_rewrites ["INFINITE_UNIV_INF"]
+
+val preds_surj = save_thm(
+  "preds_surj",
+  preds_bij |> SIMP_RULE (srw_ss()) [BIJ_DEF] |> CONJUNCT2
+            |> SIMP_RULE (srw_ss()) [SURJ_DEF] |> CONJUNCT2
+            |> REWRITE_RULE [SPECIFICATION]);
+
+val no_maximal_ordinal = store_thm(
+  "no_maximal_ordinal",
+  ``∀α. ∃β. α < β``,
+  simp[preds_lt_PSUBSET] >> gen_tac >>
+  qabbrev_tac `P = preds α ∪ {α}` >>
+  `α ∉ preds α` by simp[ordlt_REFL] >>
+  `P ≠ univ(:'a ordinal)`
+     by (strip_tac >>
+         qsuff_tac `P ≼ univ(:'a inf)` >-
+           metis_tac [univ_ord_greater_cardinal] >>
+         pop_assum (K ALL_TAC) >>
+         Cases_on `FINITE P` >- simp[FINITE_CLE_INFINITE] >>
+         `P = α INSERT preds α` by metis_tac [INSERT_SING_UNION,UNION_COMM] >>
+         `INFINITE (preds α)` by fs[] >>
+         `P ≈ preds α` by metis_tac [cardeq_INSERT] >>
+         metis_tac [CARDEQ_CARDLEQ, cardeq_REFL, preds_inj_univ]) >>
+  `downward_closed P` by (simp[Abbr`P`, downward_closed_def] >>
+                          metis_tac [ordlt_TRANS]) >>
+  `∃β. preds β = P` by metis_tac [preds_surj] >>
+  qexists_tac `β` >> simp[Abbr`P`] >>
+  simp[PSUBSET_DEF, EXTENSION] >> metis_tac [ordlt_REFL]);
+
+val ordlt_SUC = store_thm(
+  "ordlt_SUC",
+  ``α < ordSUC α``,
+  simp[ordSUC_def] >> DEEP_INTRO_TAC oleast_intro >> conj_tac
+  >- metis_tac[no_maximal_ordinal] >> simp[]);
+val _ = export_rewrites ["ordlt_SUC"]
+
+val ordSUC_ZERO = store_thm(
+  "ordSUC_ZERO",
+  ``ordSUC α ≠ 0``,
+  simp[ordSUC_def] >> DEEP_INTRO_TAC oleast_intro >> conj_tac
+  >- metis_tac [ordlt_SUC] >>
+  rpt strip_tac >> fs[]);
+val _ = export_rewrites ["ordSUC_ZERO"]
+
+val ordlt_DISCRETE1 = store_thm(
+  "ordlt_DISCRETE1",
+  ``¬(α < β ∧ β < ordSUC α)``,
+  simp[ordSUC_def] >> DEEP_INTRO_TAC oleast_intro >> conj_tac >-
+  metis_tac [ordlt_SUC] >> metis_tac [ordle_lteq]);
+
+val ordlt_SUC_DISCRETE = store_thm(
+  "ordlt_SUC_DISCRETE",
+  ``α < β⁺ <=> α < β ∨ (α = β)``,
+  Tactical.REVERSE eq_tac >- metis_tac [ordlt_TRANS, ordlt_SUC] >>
+  metis_tac [ordlt_trichotomy, ordlt_DISCRETE1]);
+
+val ordSUC_MONO = store_thm(
+  "ordSUC_MONO",
+  ``α⁺ < β⁺ <=> α < β``,
+  eq_tac >> spose_not_then strip_assume_tac
+  >- (fs[ordlt_SUC_DISCRETE]
+      >- (`(α = β) ∨ β < α` by metis_tac [ordlt_trichotomy] >>
+          metis_tac [ordlt_TRANS, ordlt_REFL, ordlt_SUC]) >>
+      rw[] >> fs[ordlt_SUC]) >>
+  fs[ordlt_SUC_DISCRETE] >>
+  `β < α⁺` by metis_tac [ordlt_trichotomy] >>
+  fs[ordlt_SUC_DISCRETE] >> metis_tac [ordlt_TRANS, ordlt_REFL])
+val _ = export_rewrites ["ordSUC_MONO"]
+
+val ordSUC_11 = store_thm(
+  "ordSUC_11",
+  ``(α⁺ = β⁺) <=> (α = β)``,
+  simp[EQ_IMP_THM] >> strip_tac >> spose_not_then assume_tac >>
+  `α < β ∨ β < α` by metis_tac [ordlt_trichotomy] >>
+  metis_tac [ordlt_REFL, ordSUC_MONO]);
+val _ = export_rewrites ["ordSUC_11"]
 
 val sup_def = Define`
   sup ordset = oleast α. α ∉ BIGUNION (IMAGE preds ordset)
@@ -1816,13 +1559,6 @@ val ord_induction = save_thm(
             |> REWRITE_RULE []
             |> CONV_RULE (RAND_CONV (RENAME_VARS_CONV ["α"])))
 
-val _ = overload_on ("<=", ``\a b. ~(b < a)``)
-
-val ordle_lteq = store_thm(
-  "ordle_lteq",
-  ``(α:α ordinal) ≤ β <=> α < β ∨ (α = β)``,
-  metis_tac [ordlt_trichotomy, ordlt_REFL, ordlt_TRANS])
-
 val csup_thm = store_thm(
   "csup_thm",
   ``countable (s : cord set) ==>
@@ -1837,7 +1573,7 @@ val csup_thm = store_thm(
   `bpreds <> univ(:cord)` by metis_tac [univ_cord_uncountable] >>
   `downward_closed bpreds`
      by (asm_simp_tac (srw_ss() ++ DNF_ss)
-                      [Abbr`bpreds`, downward_closed_def, IN_preds] >>
+                      [Abbr`bpreds`, downward_closed_def] >>
          metis_tac [ordlt_TRANS]) >>
   `∃α. preds α = bpreds`
      by (mp_tac (INST_TYPE [alpha |-> ``:unit``] preds_bij) >>
@@ -1850,7 +1586,7 @@ val csup_thm = store_thm(
          qsuff_tac `α' ≤ α ∧ α ≤ α'` >- metis_tac [ordlt_trichotomy] >>
          rpt strip_tac >| [
            `α ∈ bpreds` by res_tac >> metis_tac [IN_preds, ordlt_REFL],
-           rw[] >> fs[IN_preds]
+           rw[] >> fs[]
          ]) >>
   simp[] >> conj_tac >| [
     qx_gen_tac `γ` >> rpt strip_tac >>
@@ -1873,23 +1609,18 @@ val sup_SING = store_thm(
   "sup_SING",
   ``sup {α} = α``,
   simp[sup_def] >> DEEP_INTRO_TAC oleast_intro >> simp[] >> conj_tac >-
-    (qexists_tac `α` >> simp[IN_preds]) >>
-  simp[IN_preds] >> qx_gen_tac `β` >> rw[ordle_lteq] >>
+    (qexists_tac `α` >> simp[]) >>
+  simp[] >> qx_gen_tac `β` >> rw[ordle_lteq] >>
   metis_tac [ordlt_REFL]);
 val _ = export_rewrites ["sup_SING"]
-
-val notlimit_SUC_eqn = store_thm(
-  "notlimit_SUC_eqn",
-  ``¬ord_islimit α <=> ∃β. α = β⁺``,
-  metis_tac [SUC_notlimit, notlimit_SUC]);
 
 val sup_preds_SUC = store_thm(
   "sup_preds_SUC",
   ``sup (preds α⁺) = α``,
   simp[sup_def] >> DEEP_INTRO_TAC oleast_intro >> simp[] >> conj_tac >-
-    (qsuff_tac `∃β. ∀x. β ∈ preds x ==> x ∉ preds α⁺` >- metis_tac[] >>
-     simp[IN_preds] >> qexists_tac `α⁺` >> simp[ordle_lteq]) >>
-  qx_gen_tac `β` >> simp_tac (srw_ss() ++ DNF_ss) [IN_preds] >>
+    (qsuff_tac `∃β. ∀x. β ∈ preds x ==> α⁺ ≤ x ` >- metis_tac[] >>
+     simp[] >> qexists_tac `α⁺` >> simp[ordle_lteq]) >>
+  qx_gen_tac `β` >> simp_tac (srw_ss() ++ DNF_ss) [] >>
   strip_tac >>
   `∀δ. β < δ ==> α⁺ ≤ δ` by metis_tac [IN_preds] >>
   qsuff_tac `β ≤ α ∧ α ≤ β` >- metis_tac [ordlt_trichotomy] >>
@@ -1946,17 +1677,17 @@ val omax_sup = store_thm(
   simp[omax_SOME, sup_def] >> strip_tac >>
   DEEP_INTRO_TAC oleast_intro >> simp[] >> conj_tac
   >- (qsuff_tac `∃β. ∀γ. β ∈ preds γ ==> γ ∉ s` >- metis_tac[] >>
-      simp[IN_preds] >> metis_tac[]) >>
-  asm_simp_tac (srw_ss() ++ DNF_ss) [IN_preds] >>
+      simp[] >> metis_tac[]) >>
+  asm_simp_tac (srw_ss() ++ DNF_ss) [] >>
   qx_gen_tac `β` >> strip_tac >>
   `∀γ. β ∈ preds γ ⇒ γ ∉ s` by metis_tac[] >>
-  fs [IN_preds] >> qsuff_tac `α ≤ β ∧ β ≤ α` >- metis_tac [ordlt_trichotomy] >>
+  fs [] >> qsuff_tac `α ≤ β ∧ β ≤ α` >- metis_tac [ordlt_trichotomy] >>
   metis_tac[]);
 
 val preds_omax_SOME_SUC = store_thm(
   "preds_omax_SOME_SUC",
   ``(omax (preds α) = SOME β) <=> (α = β⁺)``,
-  simp[omax_SOME, IN_preds] >> eq_tac >> strip_tac
+  simp[omax_SOME] >> eq_tac >> strip_tac
   >- (qsuff_tac `α ≤ β⁺ ∧ β⁺ ≤ α` >- metis_tac [ordlt_trichotomy] >>
       rpt strip_tac >- metis_tac [ordlt_SUC] >>
       metis_tac [ordlt_SUC_DISCRETE, ordlt_TRANS, ordlt_REFL]) >>
@@ -1968,12 +1699,36 @@ val omax_preds_SUC = store_thm(
   metis_tac [preds_omax_SOME_SUC]);
 val _ = export_rewrites ["omax_preds_SUC"]
 
-val preds_omax_NONE_limit = store_thm(
-  "preds_omax_NONE_limit",
-  ``ord_islimit α <=> (omax (preds α) = NONE)``,
-  Cases_on `∃β. α = β⁺` >> fs[SUC_notlimit] >>
-  qspec_then `α` mp_tac ord_CASES0 >> simp[] >> strip_tac >- simp[] >>
-  simp[] >> Cases_on `omax (preds α)` >> simp[] >>
-  fs[preds_omax_SOME_SUC])
+val islimit_def = Define`
+  islimit α <=> (omax (preds α) = NONE)
+`;
+
+val islimit_0 = store_thm(
+  "islimit_0",
+  ``islimit 0``,
+  simp[islimit_def]);
+val _ = export_rewrites ["islimit_0"]
+
+val omega_def = Define`
+  omega = sup { fromNat i | T }
+`;
+val _ = overload_on ("ω", ``omega``)
+
+(*
+val nonNat_exists = store_thm(
+  "nonNat_exists",
+  ``∃α:α ordinal. ∀i. α ≠ &i``,
+  spose_not_then assume_tac >> fs[] >>
+  `INJ
+
+val fromNat_lt_omega = store_thm(
+  "fromNat_lt_omega",
+  ``∀n. fromNat n < ω``
+  simp[sup_def, omega_def] >> gen_tac >> DEEP_INTRO_TAC oleast_intro >>
+  conj_tac
+  >- (qsuff_tac `∃α. ∀x. α < x ⇒ ∀i. x ≠ &i` >- metis_tac [IN_preds] >>
+      ordlt_WF0
+
+*)
 
 val _ = export_theory()
