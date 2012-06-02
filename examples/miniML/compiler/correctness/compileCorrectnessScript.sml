@@ -271,49 +271,6 @@ val ALOOKUP_NONE = store_thm(
 ``!l x. (ALOOKUP l x = NONE) = ~MEM x (MAP FST l)``,
 SRW_TAC[][ALOOKUP_FAILS,MEM_MAP,pairTheory.FORALL_PROD])
 
-(* TODO: move *)
-val dest_var_def = save_thm("dest_var_def",CompileTheory.dest_var_def)
-val _ = export_rewrites["dest_var_def"]
-
-val dest_var_case = store_thm(
-"dest_var_case",
-``(dest_var e = SOME x) ⇒ (∃v. e = Var v)``,
-Cases_on `e` >> rw[dest_var_def])
-
-(*
-val exp_to_Cexp_App_case = store_thm(
-"exp_to_Cexp_App_case",
-``(exp_to_Cexp s (App op e1 e2) = x) ⇒
-  ((∃Ce Ces. (x = CCall Ce Ces) ∧ (op = Opapp)) ∨
-   (∃ns es b. (x = CLet ns es b) ∧ ((op = Opb Gt) ∨ (op = Opb Geq))) ∨
-   (∃Cop2 Ce1 Ce2. x = CPrim2 Cop2 Ce1 Ce2) ∨
-   (∃Ce1 Ce2. x = CLprim CLeq [Ce1; Ce2]))``,
-Cases_on `op` >> rw[exp_to_Cexp_def,LET_THM] >>
-BasicProvers.EVERY_CASE_TAC >> rw[])
-
-val exp_to_Cexp_cases = store_thm(
-"exp_to_Cexp_cases",``
-(¬(exp_to_Cexp s e = CDecl xs)) ∧
-((exp_to_Cexp s e = CRaise err) = (e = Raise err)) ∧
-((exp_to_Cexp s e = CVar n) = (∃x. (e = Var x) ∧ (n = s.vmap ' x))) ∧
-((exp_to_Cexp s e = CVal Cv) = (∃v. (e = Val v) ∧ (Cv = v_to_Cv s v))) ∧
-((exp_to_Cexp s e = CCon cn Ces) ⇒ (∃n es. (e = Con n es))) ∧
-(¬(exp_to_Cexp s e = CTagEq Ce n)) ∧
-(¬(exp_to_Cexp s e = CProj Ce n)) ∧
-((exp_to_Cexp s e = CMat n Cpes) ⇒ (∃v pes. e = Mat (Var v) pes)) ∧
-(¬(exp_to_Cexp s e = CLetfun F fns Cdefs Cb)) ∧
-((exp_to_Cexp s e = CLet xs es Ce) ⇒ ((∃e1 pes. (e = Mat e1 pes) ∧ (dest_var e = NONE)) ∨ (∃opb e1 e2. (e = App (Opb opb) e1 e2) ∧ ((opb = Gt) ∨ (opb = Geq))) ∨ (∃x r b. e = Let x r b))) ∧
-((exp_to_Cexp s e = CFun xs Ce) ⇒ (∃x b. e = Fun x b)) ∧
-((exp_to_Cexp s e = CCall Ce es) ⇒ (∃e1 e2. e = App Opapp e1 e2)) ∧
-((exp_to_Cexp s e = CLetfun T fns Cdefs Cb) ⇒ (∃defs b. e = Letrec defs b))``,
-Cases_on `e` >> rw[exp_to_Cexp_def] >>
-BasicProvers.EVERY_CASE_TAC >> rw[EQ_IMP_THM] >>
-imp_res_tac dest_var_case >> fs[] >>
-spose_not_then strip_assume_tac >>
-imp_res_tac exp_to_Cexp_App_case >>
-fs[LET_THM,pairTheory.UNCURRY] >> rw[])
-*)
-
 (* TODO: move? *)
 val DIFF_SAME_UNION = store_thm(
 "DIFF_SAME_UNION",
@@ -396,6 +353,23 @@ val NOT_fresh_var = store_thm(
 ``∀s x. x ∈ s ∧ FINITE s ⇒ x ≠ fresh_var s``,
 PROVE_TAC[FINITE_has_fresh_string,fresh_var_not_in])
 
+val Cpes_vars_thm = store_thm(
+"Cpes_vars_thm",
+``Cpes_vars Cpes = BIGUNION (IMAGE Cpat_vars (set (MAP FST Cpes))) ∪ BIGUNION (IMAGE free_vars (set (MAP SND Cpes)))``,
+rw[Cpes_vars_def] >>
+rw[Once (GSYM UNION_ASSOC)] >>
+rw[FOLDL_UNION_BIGUNION_paired] >>
+srw_tac[DNF_ss][Once EXTENSION,MEM_MAP,pairTheory.EXISTS_PROD] >>
+PROVE_TAC[])
+
+val FINITE_Cpat_vars = store_thm(
+"FINITE_Cpat_vars",
+``∀p. FINITE (Cpat_vars p)``,
+ho_match_mp_tac Cpat_vars_ind >>
+rw[FOLDL_UNION_BIGUNION] >>
+PROVE_TAC[])
+val _ = export_rewrites["FINITE_Cpat_vars"]
+
 val free_vars_exp_to_Cexp = store_thm(
 "free_vars_exp_to_Cexp",
 ``∀s e. free_vars (exp_to_Cexp s e) = FV e``,
@@ -416,23 +390,17 @@ rw[] >- (
   srw_tac[DNF_ss][Once EXTENSION] >>
   PROVE_TAC[] )
 >- (
-  fs[EVERY_MEM,pairTheory.FORALL_PROD] >>
-  Cases_on `dest_var e` >> fs[] >>
-  rw[FOLDL_UNION_BIGUNION_paired,DIFF_SAME_UNION,UNION_COMM] >>
-  imp_res_tac dest_var_case >> rw[] >> fs[] >> rw[] >>
+  fs[EVERY_MEM,pairTheory.FORALL_PROD,FOLDL_UNION_BIGUNION_paired,Cpes_vars_thm] >>
+  fs[MAP_MAP_o,combinTheory.o_DEF,pairTheory.LAMBDA_PROD] >>
+  rw[DIFF_SAME_UNION,UNION_COMM] >>
   AP_TERM_TAC >>
   rw[Once EXTENSION,MEM_MAP,pairTheory.EXISTS_PROD] >>
   srw_tac[DNF_ss][] >>
   fs[SUBSET_DEF,pairTheory.UNCURRY] >>
   srw_tac[DNF_ss][CONJ_ASSOC, Once CONJ_COMM] >>
-  ((qho_match_abbrev_tac `
-      (∃p1 p2. A p1 p2 ∧ MEM (p1,p2) pes) =
-      (∃p1 p2. B p1 p2 ∧ MEM (p1,p2) pes)`)
-   ORELSE
-   (rw[Once(GSYM CONJ_ASSOC),SimpLHS] >>
-    qho_match_abbrev_tac `
-      (∃p1 p2. MEM (p1,p2) pes ∧ A p1 p2) =
-      (∃p1 p2. B p1 p2 ∧ MEM (p1,p2) pes)`)) >>
+  qho_match_abbrev_tac `
+    (∃p1 p2. A p1 p2 ∧ MEM (p1,p2) pes) =
+    (∃p1 p2. B p1 p2 ∧ MEM (p1,p2) pes)` >>
   (qsuff_tac `∀p1 p2. MEM (p1,p2) pes ⇒ (A p1 p2 = B p1 p2)` >- PROVE_TAC[]) >>
   srw_tac[DNF_ss][Abbr`A`,Abbr`B`] >>
   first_x_assum (qspecl_then [`p1`,`p2`] mp_tac) >>
