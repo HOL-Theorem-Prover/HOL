@@ -237,6 +237,7 @@ val Cevaluate_FUPDATE = store_thm(
 "Cevaluate_FUPDATE",
 ``∀env exp res k v. Cevaluate env exp res ∧
  (free_vars exp ⊆ FDOM env) ∧
+ (∀v. v ∈ FRANGE env ⇒ closed v) ∧
  k ∉ free_vars exp
  ⇒ ∃res'. Cevaluate (env |+ (k,v)) exp res' ∧ result_rel syneq res res'``,
 rw[] >>
@@ -248,7 +249,8 @@ fs[SUBSET_DEF] >> rw[] >> fs[])
 
 val Cevaluate_super_env = store_thm(
 "Cevaluate_super_env",
-``∀s env exp res. Cevaluate (DRESTRICT env (free_vars exp)) exp res ∧ free_vars exp ⊆ s ∧ free_vars exp ⊆ FDOM env
+``∀s env exp res. Cevaluate (DRESTRICT env (free_vars exp)) exp res ∧ free_vars exp ⊆ s
+  ∧ free_vars exp ⊆ FDOM env ∧ (∀v. v ∈ FRANGE (DRESTRICT env (free_vars exp)) ⇒ closed v)
   ⇒ ∃res'. Cevaluate (DRESTRICT env s) exp res' ∧ result_rel syneq res res'``,
 rw[] >>
 imp_res_tac Cevaluate_any_env >>
