@@ -93,9 +93,8 @@ val defs = map EmitML.DEFN
 , init_compiler_state
 , init_repl_state
 , pat_to_Cpat_def
-, dest_var_def
 , fresh_var_def
-, var_or_new_def
+, Cpes_vars_def
 , underscore_rule exp_to_Cexp_def
 , remove_mat_vp_def
 , remove_mat_def

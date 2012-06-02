@@ -172,8 +172,7 @@ val (remove_mat_def,remove_mat_ind) = register "remove_mat" (
 val _ = save_thm("remove_mat_vp_def",remove_mat_vp_def)
 val _ = export_rewrites["remove_mat_def","remove_mat_vp_def"]
 
-val var_or_new_def = save_thm("var_or_new_def",var_or_new_def)
-val _ = export_rewrites["var_or_new_def"]
+val Cpes_vars_def = save_thm("Cpes_vars_def",Cpes_vars_def)
 
 val (exp_to_Cexp_def,exp_to_Cexp_ind) = register "exp_to_Cexp" (
   tprove_no_defn ((exp_to_Cexp_def,exp_to_Cexp_ind),
