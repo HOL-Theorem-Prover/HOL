@@ -1562,7 +1562,6 @@ val ord_induction = save_thm(
 val csup_thm = store_thm(
   "csup_thm",
   ``countable (s : cord set) ==>
-      (∀α. α ∈ s ⇒ α ≤ sup s) ∧
       (∀β. β < sup s ⇔ ∃δ. δ ∈ s ∧ β < δ)``,
   strip_tac >>
   qabbrev_tac `bpreds = BIGUNION (IMAGE preds s)` >>
@@ -1588,14 +1587,10 @@ val csup_thm = store_thm(
            `α ∈ bpreds` by res_tac >> metis_tac [IN_preds, ordlt_REFL],
            rw[] >> fs[]
          ]) >>
-  simp[] >> conj_tac >| [
-    qx_gen_tac `γ` >> rpt strip_tac >>
-    `α ∈ bpreds` by (simp[Abbr`bpreds`] >> metis_tac [IN_preds]) >>
-    metis_tac [IN_preds, ordlt_REFL],
-    qx_gen_tac `β` >> rpt strip_tac >>
-    `β < α ⇔ β ∈ bpreds` by metis_tac [IN_preds] >>
-    simp[Abbr`bpreds`] >> metis_tac [IN_preds]
-  ]);
+  simp[] >>
+  qx_gen_tac `β` >> rpt strip_tac >>
+  `β < α ⇔ β ∈ bpreds` by metis_tac [IN_preds] >>
+  simp[Abbr`bpreds`] >> metis_tac [IN_preds]);
 
 val sup_EMPTY = store_thm(
   "sup_EMPTY",
@@ -1708,6 +1703,11 @@ val islimit_0 = store_thm(
   ``islimit 0``,
   simp[islimit_def]);
 val _ = export_rewrites ["islimit_0"]
+
+(* val preds_sup_thm = store_thm(
+  "preds_sup_thm",
+  ``downward_closed s ∧ s ≠ univ(:α ordinal) ⇒
+*)
 
 val omega_def = Define`
   omega = sup { fromNat i | T }
