@@ -1704,31 +1704,105 @@ val islimit_0 = store_thm(
   simp[islimit_def]);
 val _ = export_rewrites ["islimit_0"]
 
-(* val preds_sup_thm = store_thm(
+fun mklesup th =
+    th |> UNDISCH_ALL |> Q.SPEC `sup s`
+       |> SIMP_RULE (srw_ss()) []
+       |> REWRITE_RULE [DECIDE ``¬p ∨ q <=> (p ==> q)``]
+       |> DISCH_ALL
+(* |- countable s ⇒ ∀δ. δ ∈ s ⇒ δ ≤ sup s *)
+val csup_lesup = save_thm("csup_lesup", mklesup csup_thm)
+
+fun mksuple th =
+    th |> UNDISCH_ALL |> Q.SPEC `β` |> AP_TERM ``$~``
+       |> CONV_RULE (RAND_CONV (SIMP_CONV (srw_ss()) []))
+       |> REWRITE_RULE [DECIDE ``¬p ∨ q <=> (p ==> q)``]
+       |> DISCH_ALL
+
+val csup_suple = save_thm("csup_suple", mksuple csup_thm)
+
+val preds_sup_thm = store_thm(
   "preds_sup_thm",
   ``downward_closed s ∧ s ≠ univ(:α ordinal) ⇒
-*)
+    ∀β. β < sup s <=> ∃δ. δ ∈ s ∧ β < δ``,
+  strip_tac >>
+  qspec_then `s` mp_tac preds_surj >> simp[] >>
+  disch_then (Q.X_CHOOSE_THEN `α` ASSUME_TAC) >>
+  `(omax s = NONE) ∨ ∃β. omax s = SOME β` by (Cases_on `omax s` >> simp[])
+  >- (`sup s = α`
+        by (simp[sup_def] >> DEEP_INTRO_TAC oleast_intro >>
+            asm_simp_tac (srw_ss() ++ DNF_ss)
+                         [DECIDE ``¬p ∨ q <=> (p ⇒ q)``] >>
+            qexists_tac `α` >> conj_tac >- rw[ordle_lteq] >>
+            qx_gen_tac `β` >> rw[] >>
+            qsuff_tac `β ≤ α ∧ α ≤ β` >- metis_tac [ordlt_trichotomy] >>
+            rpt strip_tac >- metis_tac [ordlt_TRANS, ordlt_REFL] >>
+            fs[omax_NONE] >> metis_tac[]) >>
+      pop_assum SUBST1_TAC >> rw[] >> fs[omax_NONE] >>
+      metis_tac[ordlt_TRANS]) >>
+  `α = β⁺` by (rw[] >> fs[preds_omax_SOME_SUC]) >> qx_gen_tac `δ` >> rw[] >>
+  simp[sup_preds_SUC] >> eq_tac >- (strip_tac >> qexists_tac `β` >> simp[]) >>
+  simp[ordlt_SUC_DISCRETE] >>
+  disch_then (Q.X_CHOOSE_THEN `γ` strip_assume_tac) >- metis_tac[ordlt_TRANS] >>
+  rw[]);
+
+val preds_lesup = save_thm("preds_lesup", mklesup preds_sup_thm)
+val preds_suple = save_thm("preds_suple", mksuple preds_sup_thm)
+
+
+
+val fromNat_11 = store_thm(
+  "fromNat_11",
+  ``∀x y. (&x:α ordinal = &y) = (x = y)``,
+  Induct >- (Cases >> simp[SimpRHS, fromNat_def]) >>
+  Cases >- simp[SimpLHS, fromNat_def] >> simp[fromNat_def]);
+val _ = export_rewrites ["fromNat_11"]
+
+val ordlt_fromNat = store_thm(
+  "ordlt_fromNat",
+  ``∀n (x:α ordinal). x < &n <=> ∃m. (x = &m) ∧ m < n``,
+  Induct >>
+  asm_simp_tac (srw_ss() ++ DNF_ss)
+               [fromNat_def, ordlt_SUC_DISCRETE,
+                DECIDE ``m < SUC n <=> m < n ∨ (m = n)``]);
+
+val allNats_dwardclosedetc = prove(
+  ``downward_closed { fromNat i : α ordinal | T } ∧
+    { fromNat i | T } ≠ univ(:α ordinal)``,
+  simp[downward_closed_def] >> conj_tac
+  >- (map_every qx_gen_tac [`a`, `b`] >>
+      disch_then (CONJUNCTS_THEN2 (Q.X_CHOOSE_THEN `i` assume_tac)
+                                  assume_tac) >>
+      rw[] >> fs[ordlt_fromNat]) >>
+  qsuff_tac `{&i : 'a ordinal | T} ≼ univ(:α inf)`
+  >- metis_tac [univ_ord_greater_cardinal] >>
+  simp[cardleq_def] >> qexists_tac `λα. INL (@n. &n = α)` >>
+  simp[INJ_DEF] >> rw[] >> fs[]);
 
 val omega_def = Define`
   omega = sup { fromNat i | T }
 `;
 val _ = overload_on ("ω", ``omega``)
 
-(*
-val nonNat_exists = store_thm(
-  "nonNat_exists",
-  ``∃α:α ordinal. ∀i. α ≠ &i``,
-  spose_not_then assume_tac >> fs[] >>
-  `INJ
+val lt_omega0 =
+  MATCH_MP preds_sup_thm allNats_dwardclosedetc
+           |> SIMP_RULE (srw_ss() ++ DNF_ss) [SYM omega_def, ordlt_fromNat]
+
+val lt_omega = store_thm(
+  "lt_omega",
+  ``∀α. α < ω <=> ∃m. α = &m``,
+  simp_tac (srw_ss() ++ DNF_ss) [lt_omega0, EQ_IMP_THM] >> qx_gen_tac `n` >>
+  qexists_tac `SUC n` >> simp[]);
 
 val fromNat_lt_omega = store_thm(
   "fromNat_lt_omega",
-  ``∀n. fromNat n < ω``
-  simp[sup_def, omega_def] >> gen_tac >> DEEP_INTRO_TAC oleast_intro >>
-  conj_tac
-  >- (qsuff_tac `∃α. ∀x. α < x ⇒ ∀i. x ≠ &i` >- metis_tac [IN_preds] >>
-      ordlt_WF0
+  ``∀n. &n < ω``,
+  simp[lt_omega]);
+val _ = export_rewrites ["fromNat_lt_omega"]
 
-*)
+val fromNat_eq_omega = store_thm(
+  "fromNat_eq_omega",
+  ``∀n. &n ≠ ω``,
+  metis_tac [ordlt_REFL, fromNat_lt_omega]);
+val _ = export_rewrites ["fromNat_lt_omega"]
 
 val _ = export_theory()
