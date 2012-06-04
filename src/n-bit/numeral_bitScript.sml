@@ -10,21 +10,29 @@
   load "bitTheory";
 *)
 
-open HolKernel Parse boolLib bossLib;
+open HolKernel Parse boolLib bossLib lcsymtacs;
 open Q arithmeticTheory numeralTheory;
 open bitTheory;
 
 val _ = new_theory "numeral_bit";
 
-(* ------------------------------------------------------------------------- *)
-
-infix \\ << >>
-
+infix \\
 val op \\ = op THEN;
-val op << = op THENL;
-val op >> = op THEN1;
 
 (* ------------------------------------------------------------------------- *)
+
+val numeral_mod2 = Q.store_thm("numeral_mod2",
+   `(0 MOD 2 = 0) /\
+    (!n. NUMERAL (BIT1 n) MOD 2 = 1) /\
+    (!n. NUMERAL (BIT2 n) MOD 2 = 0)`,
+   rw []
+   >| [`NUMERAL (BIT1 n) = 2 * n + 1`
+       by metisLib.METIS_TAC [NUMERAL_DEF, ONE, ADD_ASSOC, BIT1, TIMES2],
+       `NUMERAL (BIT2 n) = 2 * (SUC n)`
+       by metisLib.METIS_TAC [NUMERAL_DEF, ADD_ASSOC, ADD1, ADD, BIT2, TIMES2]]
+   \\ pop_assum SUBST1_TAC
+   \\ srw_tac [numSimps.MOD_ss] []
+);
 
 val iDUB_NUMERAL = store_thm("iDUB_NUMERAL",
   `numeral$iDUB (NUMERAL i) = NUMERAL (numeral$iDUB i)`,
@@ -43,7 +51,7 @@ val BIT_R = ``\(x,y). (x DIV 2, 2 * y + SBIT (BIT 0 x) 0)``;
 val BIT_R_FUNPOW = prove(
   `!n x y. FUNPOW ^BIT_R (SUC n) (x,y) =
    (x DIV 2 ** (SUC n), 2 * (SND (FUNPOW ^BIT_R n (x, y))) + SBIT (BIT n x) 0)`,
-  Induct >> SIMP_TAC arith_ss [FUNPOW]
+  Induct >- SIMP_TAC arith_ss [FUNPOW]
     \\ `!x n. BIT 0 (x DIV 2 ** n) = BIT n x`
       by SIMP_TAC std_ss [BIT_def,BITS_THM,BITS_COMP_THM2,DIV_1,SUC_SUB]
     \\ ASM_SIMP_TAC std_ss [FUNPOW_SUC,DIV_DIV_DIV_MULT,ZERO_LT_TWOEXP,
@@ -51,12 +59,12 @@ val BIT_R_FUNPOW = prove(
 
 val BIT_R_BIT_REV = prove(
   `!n a y. SND (FUNPOW ^BIT_R n (a, y)) = BIT_REV n a y`,
-  Induct >> SIMP_TAC std_ss [FUNPOW,BIT_REV_def]
+  Induct >- SIMP_TAC std_ss [FUNPOW,BIT_REV_def]
     \\ ASM_SIMP_TAC std_ss [FUNPOW,BIT_REV_def,LSB_def,GSYM LSB_ODD]);
 
 val BIT_REVERSE_REV = prove(
   `!m n. BIT_REVERSE m n = SND (FUNPOW ^BIT_R m (n, 0))`,
-  Induct >> SIMP_TAC std_ss [BIT_REVERSE_def,FUNPOW]
+  Induct >- SIMP_TAC std_ss [BIT_REVERSE_def,FUNPOW]
     \\ ASM_SIMP_TAC arith_ss [BIT_REVERSE_def,BIT_R_FUNPOW]);
 
 val BIT_REVERSE_EVAL = save_thm("BIT_REVERSE_EVAL",
@@ -83,7 +91,7 @@ val BIT_M_FUNPOW = prove(
         then 2 ** n * e + FST (FUNPOW ^BIT_M n (y,f,x,b,e))
         else FST (FUNPOW ^BIT_M n (y,f,x,b,e)),
         f, x DIV 2 ** (SUC n), b + SUC n, 2 ** SUC n * e)`,
-  Induct >> SIMP_TAC arith_ss [FUNPOW]
+  Induct >- SIMP_TAC arith_ss [FUNPOW]
     \\ `!x n. BIT 0 (x DIV 2 ** n) = BIT n x`
       by SIMP_TAC std_ss [BIT_def,BITS_THM,BITS_COMP_THM2,DIV_1,SUC_SUB]
     \\ ASM_SIMP_TAC arith_ss [FUNPOW_SUC,DIV_DIV_DIV_MULT,ZERO_LT_TWOEXP,
@@ -92,12 +100,12 @@ val BIT_M_FUNPOW = prove(
 
 val BIT_M_BIT_MODF = prove(
   `!n f x b e y. FST (FUNPOW ^BIT_M n (y,f,x,b,e)) = BIT_MODF n f x b e y`,
-  Induct >> SIMP_TAC std_ss [FUNPOW,BIT_MODF_def]
+  Induct >- SIMP_TAC std_ss [FUNPOW,BIT_MODF_def]
     \\ ASM_SIMP_TAC std_ss [FUNPOW,BIT_MODF_def,LSB_def,GSYM LSB_ODD]);
 
 val BIT_MODIFY_MODF = prove(
   `!m f n. BIT_MODIFY m f n = FST (FUNPOW ^BIT_M m (0,f,n,0,1))`,
-  Induct >> SIMP_TAC std_ss [BIT_MODIFY_def,FUNPOW]
+  Induct >- SIMP_TAC std_ss [BIT_MODIFY_def,FUNPOW]
     \\ RW_TAC arith_ss [SBIT_def,BIT_MODIFY_def,BIT_M_FUNPOW]);
 
 val BIT_MODIFY_EVAL = save_thm("BIT_MODIFY_EVAL",
@@ -209,12 +217,11 @@ val SFUNPOW_strict = prove(
 val SFUNPOW_BIT1_lem = prove(
    `!n f x. (f 0 = 0) ==>
       (SFUNPOW f (NUMERAL (BIT1 n)) x = SFUNPOW (FDUB f) n (f x))`,
-   REWRITE_TAC [NUMERAL_DEF,BIT1,ADD_CLAUSES] \\
-   Induct \\ REPEAT STRIP_TAC \\ REWRITE_TAC [NUMERAL_DEF,BIT1,ADD_CLAUSES] >>
-	(IMP_RES_TAC FDUB_lem \\ ASM_REWRITE_TAC [SFUNPOW_def] \\ PROVE_TAC []) \\
-   ONCE_REWRITE_TAC [SFUNPOW_def] \\ ONCE_REWRITE_TAC [SFUNPOW_def] \\
-   RES_TAC \\ RW_TAC std_ss [] \\
-   IMP_RES_TAC FDUB_lem \\ PROVE_TAC []);
+   REWRITE_TAC [NUMERAL_DEF,BIT1,ADD_CLAUSES]
+   \\ Induct \\ REPEAT STRIP_TAC \\ REWRITE_TAC [NUMERAL_DEF,BIT1,ADD_CLAUSES]
+   >- (IMP_RES_TAC FDUB_lem \\ ASM_REWRITE_TAC [SFUNPOW_def] \\ PROVE_TAC [])
+   \\ ONCE_REWRITE_TAC [SFUNPOW_def] \\ ONCE_REWRITE_TAC [SFUNPOW_def]
+   \\ RES_TAC \\ RW_TAC std_ss [] \\ IMP_RES_TAC FDUB_lem \\ PROVE_TAC []);
 
 val SFUNPOW_BIT2_lem = prove(
   `!n f x. (f 0 = 0) ==>
@@ -259,11 +266,12 @@ val NUMERAL_iDIV2 = store_thm("NUMERAL_iDIV2",
 val NUMERAL_DIV_2EXP = store_thm("NUMERAL_DIV_2EXP",
   `(!n. DIV_2EXP n 0 = 0) /\
    (!n x. DIV_2EXP n (NUMERAL x) = NUMERAL (SFUNPOW iDIV2 n x))`,
-  CONJ_TAC \\ REWRITE_TAC [DIV_2EXP_def] >>
-	(STRIP_TAC \\ MATCH_MP_TAC ZERO_DIV \\ RW_TAC std_ss [ZERO_LT_TWOEXP]) \\
-  Induct \\ REWRITE_TAC [EXP,SFUNPOW_def,DIV_1] \\
-  `!x. NUMERAL x DIV 2 = NUMERAL (x DIV 2)` by REWRITE_TAC [NUMERAL_DEF] \\
-  RW_TAC arith_ss [ZERO_LT_TWOEXP,GSYM DIV_DIV_DIV_MULT,SFUNPOW_strict,iDIV2_def,DIV2_def]);
+  CONJ_TAC \\ REWRITE_TAC [DIV_2EXP_def]
+  >- (STRIP_TAC \\ MATCH_MP_TAC ZERO_DIV \\ RW_TAC std_ss [ZERO_LT_TWOEXP])
+  \\ Induct \\ REWRITE_TAC [EXP,SFUNPOW_def,DIV_1]
+  \\ `!x. NUMERAL x DIV 2 = NUMERAL (x DIV 2)` by REWRITE_TAC [NUMERAL_DEF]
+  \\ RW_TAC arith_ss
+      [ZERO_LT_TWOEXP,GSYM DIV_DIV_DIV_MULT,SFUNPOW_strict,iDIV2_def,DIV2_def]);
 
 val NUMERAL_SFUNPOW_iDIV2 =
   save_thm("NUMERAL_SFUNPOW_iDIV2",
@@ -322,7 +330,7 @@ val numeral_ilog2 = store_thm("numeral_ilog2",
    (!n. iLOG2 (BIT2 n) = 1 + iLOG2 n)`,
   RW_TAC bool_ss [ALT_ZERO,NUMERAL_DEF,BIT1,BIT2,iLOG2_def]
     \\ SIMP_TAC arith_ss [LOG2_1]
-    << [
+    >| [
       MATCH_MP_TAC ((SIMP_RULE arith_ss [] o
               SPECL [`2 * n + 2`,`LOG2 (n + 1) + 1`]) LOG2_UNIQUE)
         \\ SIMP_TAC arith_ss [EXP_ADD,LOG2_def]
@@ -369,7 +377,7 @@ val MOD_2EXP_MAX = store_thm("MOD_2EXP_MAX",
   (!n a. MOD_2EXP_MAX (SUC n) a = ODD a /\ MOD_2EXP_MAX n (DIV2 a))`,
   SRW_TAC [] [MOD_2EXP_MAX_def, MOD_2EXP_def, GSYM BITS_ZERO3]
     \\ Cases_on `n`
-    >> SIMP_TAC std_ss [SYM LSB_ODD, LSB_def, BIT_def]
+    >- SIMP_TAC std_ss [SYM LSB_ODD, LSB_def, BIT_def]
     \\ ONCE_REWRITE_TAC [GSYM lem]
     \\ SIMP_TAC std_ss [GSYM BITS_ZERO3, SYM LSB_ODD, LSB_def,
          GSYM BIT_BITS_THM, BIT_DIV2, DIV2_def]
@@ -388,9 +396,9 @@ val LOWEST_SET_BIT = store_thm("LOWEST_SET_BIT",
   SRW_TAC [ARITH_ss] [LOWEST_SET_BIT_def,DIV2_def,ADD1]
     \\ MATCH_MP_TAC LEAST_THM
     \\ SRW_TAC [] [GSYM LSB_def,LSB_ODD]
-    << [
+    >| [
       Cases_on `(LEAST i. BIT i (n DIV 2)) = 0`
-        << [
+        >| [
           FULL_SIMP_TAC (srw_ss())
             [DECIDE ``m < 1 ==> (m = 0)``,GSYM LSB_def,LSB_ODD],
           IMP_RES_TAC (DECIDE ``~(a = 0) /\ m < a + 1 ==> (m - 1 < a)``)
