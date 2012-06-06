@@ -311,14 +311,7 @@ unabbrev_all_tac >>
 rw[FUN_FMAP_DEF] >>
 rw[Cv1_bij_thm])
 
-val Cv1_nice_ind =
-Cv1_induction
-|> Q.SPECL [`P`,`FEVERY (P o SND)`,`EVERY P`]
-|> SIMP_RULE (srw_ss()) [FEVERY_FEMPTY,FEVERY_STRENGTHEN_THM]
-|> UNDISCH_ALL
-|> CONJUNCT1
-|> DISCH_ALL
-|> Q.GEN `P`
+val [Cv1_case_def] = Prim_rec.define_case_constant Cv1_Axiom
 
 val Cv1_11 = store_thm(
 "Cv1_11",``
@@ -382,6 +375,30 @@ pop_assum mp_tac >> rw[] >>
 PROVE_TAC[Cv1_bij_thm] )
 val _ = export_rewrites["Cv1_11"]
 
+val Cv1_nice_ind = save_thm(
+"Cv1_nice_ind",
+Cv1_induction
+|> Q.SPECL [`P`,`FEVERY (P o SND)`,`EVERY P`]
+|> SIMP_RULE (srw_ss()) [FEVERY_FEMPTY,FEVERY_STRENGTHEN_THM]
+|> UNDISCH_ALL
+|> CONJUNCT1
+|> DISCH_ALL
+|> Q.GEN `P`)
+
+val Cv1_nchotomy = store_thm(
+"Cv1_nchotomy",
+``∀Cv1.
+  (∃l. Cv1 = CLitv l) ∨
+  (∃m vs. Cv1 = CConv m vs) ∨
+  (∃env xs b. Cv1 = CClosure env xs b) ∨
+  (∃env ns defs n. Cv1 = CRecClos env ns defs n)``,
+ho_match_mp_tac Cv1_nice_ind >> rw[])
+
+val Cv1_case_cong = save_thm(
+"Cv1_case_cong",
+Prim_rec.case_cong_thm Cv1_nchotomy Cv1_case_def)
+val _ = DefnBase.export_cong"Cv1_case_cong"
+
 val Cv1_distinct = store_thm(
 "Cv1_distinct",
 ``(∀l m vs. CLitv l ≠ CConv m vs) ∧
@@ -394,21 +411,7 @@ rw[CLitv_def,CConv_def,CClosure_def,CRecClos_def] >>
 qmatch_abbrev_tac `toCv1 r1 ≠ toCv1 r2` >>
 (qsuff_tac `Cvwf r1 ∧ Cvwf r2 ∧ r1 ≠ r2` >- PROVE_TAC[Cv1_bij_thm]) >>
 unabbrev_all_tac >> fs[])
-
-val Cv1_nchotomy = store_thm(
-"Cv1_nchotomy",
-``∀Cv1.
-  (∃l. Cv1 = CLitv l) ∨
-  (∃m vs. Cv1 = CConv m vs) ∨
-  (∃env xs b. Cv1 = CClosure env xs b) ∨
-  (∃env ns defs n. Cv1 = CRecClos env ns defs n)``,
-ho_match_mp_tac Cv1_nice_ind >> rw[])
-
-val [Cv1_case_def] = Prim_rec.define_case_constant Cv1_Axiom
-val Cv1_case_cong = save_thm(
-"Cv1_case_cong",
-Prim_rec.case_cong_thm Cv1_nchotomy Cv1_case_def)
-val _ = DefnBase.export_cong"Cv1_case_cong"
+val _ = export_rewrites["Cv1_distinct"]
 
 val fmap_size_def = Define`
 fmap_size kz vz fm = SIGMA (λk. kz k + vz (fm ' k)) (FDOM fm)`
@@ -425,5 +428,43 @@ Cv1_Axiom
 |> Q.GEN`Cexp_size`
 |> SIMP_RULE(srw_ss())[SKOLEM_THM]
 |> (fn th => new_specification("Cv1_size_def",["Cv1_size","Cv1s_size","Cv1_env_size"],th))
+
+val _ = TypeBase.write
+  [TypeBasePure.mk_datatype_info
+     {ax=TypeBasePure.ORIG Cv1_Axiom,
+      case_def=Cv1_case_def,
+      case_cong=Cv1_case_cong,
+      induction=TypeBasePure.ORIG Cv1_induction,
+      nchotomy=Cv1_nchotomy,
+      size=SOME (Parse.Term[QUOTE"Cv1_size"],TypeBasePure.ORIG Cv1_size_def),
+      encode=NONE,
+      fields=[], accessors=[], updates=[],
+      recognizers = [],
+      destructors = [],
+      lift=NONE,
+      one_one=SOME Cv1_11,
+      distinct=SOME Cv1_distinct}];
+
+val _ = adjoin_to_theory
+{sig_ps = NONE,
+ struct_ps = SOME(fn ppstrm =>
+   let val S = PP.add_string ppstrm
+       fun NL() = PP.add_newline ppstrm
+   in
+S "val _ = TypeBase.write"                          ;NL();
+S "  [TypeBasePure.mk_datatype_info"                ;NL();
+S "     {ax=TypeBasePure.ORIG Cv1_Axiom,"           ;NL();
+S "      case_def=Cv1_case_def,"                    ;NL();
+S "      case_cong=Cv1_case_cong,"                  ;NL();
+S "      induction=TypeBasePure.ORIG Cv1_induction,";NL();
+S "      nchotomy=Cv1_nchotomy,"                    ;NL();
+S "      size=SOME (Parse.Term[QUOTE\"Cv1_size\"],TypeBasePure.ORIG Cv1_size_def),";NL();
+S "      encode=NONE,"                              ;NL();
+S "      fields=[], accessors=[], updates=[],"      ;NL();
+S "      recognizers = [],"                         ;NL();
+S "      destructors = [],"                         ;NL();
+S "      lift=NONE,"                                ;NL();
+S "      one_one=SOME Cv1_11,"                      ;NL();
+S "      distinct=SOME Cv1_distinct}];"             ;NL()end)}
 
 val _ = export_theory()
