@@ -285,6 +285,15 @@ val CARDEQ_CARDLEQ = store_thm(
   ``s1 ≈ s2 ∧ t1 ≈ t2 ⇒ (s1 ≼ t1 ⇔ s2 ≼ t2)``,
   metis_tac[cardeq_SYM, CARDEQ_SUBSET_CARDLEQ, cardleq_TRANS])
 
+val _ = type_abbrev ("inf", ``:num + 'a``)
+
+val INFINITE_UNIV_INF = store_thm(
+  "INFINITE_UNIV_INF",
+  ``INFINITE univ(:'a inf)``,
+  simp[INFINITE_UNIV] >> qexists_tac `SUC ++ I` >>
+  simp[sumTheory.FORALL_SUM] >> qexists_tac `INL 0` >> simp[]);
+val _ = export_rewrites ["INFINITE_UNIV_INF"]
+
 val _ = export_theory()
 
 
