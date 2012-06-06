@@ -669,4 +669,38 @@ val fromNat_eq_omega = store_thm(
   metis_tac [ordlt_REFL, fromNat_lt_omega]);
 val _ = export_rewrites ["fromNat_lt_omega"]
 
+(* recursion principles *)
+val restrict_away = prove(
+  ``IMAGE (RESTRICT f $< (α:α ordinal)) (preds α) = IMAGE f (preds α)``,
+  rw[EXTENSION, relationTheory.RESTRICT_DEF] >> srw_tac[CONJ_ss][]);
+
+val ord_RECURSION_RAW = store_thm(
+  "ord_RECURSION_RAW",
+  ``!f:'a ordinal -> 'b set -> 'b.
+       ?h : 'a ordinal -> 'b.
+            !α. h α = f α (IMAGE h (preds α))``,
+  gen_tac >> qexists_tac `WFREC $< (λg x. f x (IMAGE g (preds x)))` >>
+  gen_tac >>
+  simp[relationTheory.WFREC_THM, ordlt_WF, restrict_away]);
+
+val ordADD_def = new_specification(
+  "ordADD_def", ["ordADD"],
+  ord_RECURSION_RAW
+      |> Q.ISPEC `λα rs. if α = 0 then β
+                         else case omax (preds α) of
+                                NONE => sup rs
+                              | SOME _ => (sup rs)⁺`
+      |> SIMP_RULE (srw_ss()) []
+      |> Q.GEN `β`
+      |> CONV_RULE SKOLEM_CONV)
+
+val ordADD_0 = store_thm("ordADD_0", ``ordADD α 0 = α``, simp[ordADD_def]);
+val _ = export_rewrites ["ordADD_0"]
+
+(*val ordADD_SUC = store_thm(
+  "ordADD_SUC",
+  ``ordADD α β⁺ = (ordADD α β)⁺``,
+  simp[ordADD_def, SimpLHS]
+*)
+
 val _ = export_theory()
