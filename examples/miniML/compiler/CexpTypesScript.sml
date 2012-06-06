@@ -234,11 +234,23 @@ val toCv_o_fromCv = store_thm(
 rw[FUN_EQ_THM,Cv_bij_thm])
 val _ = export_rewrites["toCv_o_fromCv"]
 
+(* TODO: move? *)
 val I_o_f = store_thm(
 "I_o_f",
 ``I o_f fm = fm``,
 rw[GSYM fmap_EQ_THM])
 val _ = export_rewrites["I_o_f"]
+
+(* this is no good
+val o_f_cong = store_thm(
+"o_f_cong",
+``!f f' fm fm'.
+(FDOM fm = FDOM fm') /\
+(!x. x IN FDOM fm' ==> (f (fm ' x) = f' (fm' ' x)))
+==> (f o_f fm = f' o_f fm')``,
+SRW_TAC[][GSYM fmap_EQ_THM])
+val _ = DefnBase.export_cong"o_f_cong"
+*)
 
 val Cvwf_fromCv = store_thm(
 "Cvwf_fromCv",

@@ -19,7 +19,6 @@ open BytecodeTheory MiniMLTheory
 (*val alist_to_fmap : forall 'a 'b. ('a * 'b) list -> ('a,'b) Pmap.map*)
 (*val optrel : forall 'a 'b 'c 'd. ('a -> 'b -> bool) -> 'c -> 'd -> bool*)
 (*val flookup : forall 'a 'b 'c. ('a,'b) Pmap.map -> 'a -> 'c*)
-(*val map_values : forall 'a 'b 'c. ('a -> 'b) -> ('c,'a) Pmap.map -> ('c,'b) Pmap.map*)
 
 (* TODO: elsewhere? *)
  val find_index_defn = Hol_defn "find_index" `
@@ -836,18 +835,23 @@ val _ = Defn.save_defn exp_to_Cexp_defn;
   CConv (FAPPLY  m  cn) (vs_to_Cvs m vs))
 /\
 (v_to_Cv m (Closure env vn e) =
-  let Cenv =($o_f) (v_to_Cv m) (alist_to_fmap env) in
+  let Cenv =alist_to_fmap (env_to_Cenv m env) in
   let Ce = exp_to_Cexp m e in
   CClosure Cenv [vn] Ce)
 /\
 (v_to_Cv m (Recclosure env defs vn) =
-  let Cenv =($o_f) (v_to_Cv m) (alist_to_fmap env) in
+  let Cenv =alist_to_fmap (env_to_Cenv m env) in
   let (fns,Cdefs) = defs_to_Cdefs m defs in
   CRecClos Cenv fns Cdefs vn)
 /\
 (vs_to_Cvs m [] = [])
 /\
-(vs_to_Cvs m (v::vs) = v_to_Cv m v:: vs_to_Cvs m vs)`;
+(vs_to_Cvs m (v::vs) = v_to_Cv m v:: vs_to_Cvs m vs)
+/\
+(env_to_Cenv m [] = [])
+/\
+(env_to_Cenv m ((x,v)::env) =
+  (x, v_to_Cv m v)::(env_to_Cenv m env))`;
 
 val _ = Defn.save_defn v_to_Cv_defn;
 

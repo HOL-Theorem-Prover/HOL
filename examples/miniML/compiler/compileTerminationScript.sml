@@ -1,4 +1,4 @@
-open MiniMLTheory MiniMLTerminationTheory
+open MiniMLTheory MiniMLTerminationTheory CexpTypesTheory
 open HolKernel boolLib bossLib Defn CompileTheory listTheory lcsymtacs
 val _ = new_theory "compileTermination"
 
@@ -23,8 +23,7 @@ fun size_thm name t1 t2 = store_thm(name,tm t1 t2,tac)
 val Cexp3_size_thm = size_thm "Cexp3_size_thm" ``Cexp3_size`` ``Cexp4_size``
 val Cexp5_size_thm = size_thm "Cexp5_size_thm" ``Cexp5_size`` ``Cexp_size``
 val Cpat1_size_thm = size_thm "Cpat1_size_thm" ``Cpat1_size`` ``Cpat_size``
-val Cv1_size_thm = size_thm "Cv1_size_thm" ``Cv1_size`` ``Cv2_size``
-val Cv3_size_thm = size_thm "Cv3_size_thm" ``Cv3_size`` ``Cv_size``
+val Cvs_size_thm = size_thm "Cvs_size_thm" ``Cvs_size`` ``Cv_size``
 
 val SUM_MAP_Cexp2_size_thm = store_thm(
 "SUM_MAP_Cexp2_size_thm",
@@ -43,15 +42,6 @@ val SUM_MAP_Cexp4_size_thm = store_thm(
 + LENGTH env``,
 Induct >- rw[Cexp_size_def] >> Cases >>
 srw_tac[ARITH_ss][Cexp_size_def])
-
-val SUM_MAP_Cv2_size_thm = store_thm(
-"SUM_MAP_Cv2_size_thm",
-``∀vs. SUM (MAP Cv2_size vs) =
-  SUM (MAP (list_size char_size) (MAP FST vs))
-+ SUM (MAP Cv_size (MAP SND vs))
-+ LENGTH vs``,
-Induct >- rw[Cv_size_def] >> Cases >>
-srw_tac[ARITH_ss][Cv_size_def])
 
 val list_size_thm = store_thm(
 "list_size_thm",
@@ -121,7 +111,7 @@ val _ = export_rewrites["Cpat_vars_def"]
 val (Cv_to_ov_def,Cv_to_ov_ind) = register "Cv_to_ov" (
   tprove_no_defn ((Cv_to_ov_def,Cv_to_ov_ind),
   WF_REL_TAC `measure (Cv_size o SND)` >>
-  rw[Cv3_size_thm] >>
+  rw[Cvs_size_thm] >>
   Q.ISPEC_THEN `Cv_size` imp_res_tac SUM_MAP_MEM_bound >>
   srw_tac[ARITH_ss][]))
 val _ = export_rewrites["Cv_to_ov_def"];
@@ -154,7 +144,7 @@ val (Cpmatch_def,Cpmatch_ind) = register "Cpmatch" (
   WF_REL_TAC `inv_image $<
                 (λx. case x of
                      | (INL (env,p,v)) => Cv_size v
-                     | (INR (env,ps,vs)) => Cv3_size vs)`))
+                     | (INR (env,ps,vs)) => Cvs_size vs)`))
 
 (* compiler definitions *)
 

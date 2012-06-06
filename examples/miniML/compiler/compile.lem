@@ -25,8 +25,6 @@ val optrel : forall 'a 'b 'c 'd. ('a -> 'b -> bool) -> 'c -> 'd -> bool
 let inline {hol} optrel = Hol.OPTREL
 val flookup : forall 'a 'b 'c. ('a,'b) Pmap.map -> 'a -> 'c
 let inline {hol} flookup = Hol.FLOOKUP
-val map_values : forall 'a 'b 'c. ('a -> 'b) -> ('c,'a) Pmap.map -> ('c,'b) Pmap.map
-let inline {hol} map_values = Hol.o_f
 
 (* TODO: elsewhere? *)
 let rec
@@ -820,18 +818,23 @@ v_to_Cv m (Conv cn vs) =
   CConv (Pmap.find cn m) (vs_to_Cvs m vs)
 and
 v_to_Cv m (Closure env vn e) =
-  let Cenv = map_values (v_to_Cv m) (alist_to_fmap env) in
+  let Cenv = alist_to_fmap (env_to_Cenv m env) in
   let Ce = exp_to_Cexp m e in
   CClosure Cenv [vn] Ce
 and
 v_to_Cv m (Recclosure env defs vn) =
-  let Cenv = map_values (v_to_Cv m) (alist_to_fmap env) in
+  let Cenv = alist_to_fmap (env_to_Cenv m env) in
   let (fns,Cdefs) = defs_to_Cdefs m defs in
   CRecClos Cenv fns Cdefs vn
 and
 vs_to_Cvs m [] = []
 and
 vs_to_Cvs m (v::vs) = v_to_Cv m v :: vs_to_Cvs m vs
+and
+env_to_Cenv m [] = []
+and
+env_to_Cenv m ((x,v)::env) =
+  (x, v_to_Cv m v)::(env_to_Cenv m env)
 
 (* TODO: simple type system and checker *)
 
