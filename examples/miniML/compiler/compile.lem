@@ -19,13 +19,14 @@ val replace : forall 'a. 'a -> num -> 'a list -> 'a list
 let inline {hol} replace = Hol.REPLACE_ELEMENT
 val int_to_num : int -> num
 let inline {hol} int_to_num = Hol.Num
-type ('a,'b) alist = ('a,'b) Hol.Lib.alist
-val fmap_to_alist : forall 'a 'b. ('a,'b) Pmap.map -> ('a,'b) alist
-let inline {hol} fmap_to_alist = Hol.fmap_to_alist
-val alist_to_fmap : forall 'a 'b. ('a,'b) alist -> ('a,'b) Pmap.map
+val alist_to_fmap : forall 'a 'b. ('a * 'b) list -> ('a,'b) Pmap.map
 let inline {hol} alist_to_fmap = Hol.alist_to_fmap
 val optrel : forall 'a 'b 'c 'd. ('a -> 'b -> bool) -> 'c -> 'd -> bool
 let inline {hol} optrel = Hol.OPTREL
+val flookup : forall 'a 'b 'c. ('a,'b) Pmap.map -> 'a -> 'c
+let inline {hol} flookup = Hol.FLOOKUP
+val map_values : forall 'a 'b 'c. ('a -> 'b) -> ('c,'a) Pmap.map -> ('c,'b) Pmap.map
+let inline {hol} map_values = Hol.o_f
 
 (* TODO: elsewhere? *)
 let rec
@@ -97,11 +98,8 @@ type Cexp =
 type Cv =
   | CLitv of lit
   | CConv of num * Cv list
-  | CClosure of (string,Cv) alist * string list * Cexp
-  | CRecClos of (string,Cv) alist * string list * (string list * Cexp) list * string
-
-(* TODO: fix Hol_datatype, or define Cexp outside of Lem, so as to use finite
- * maps instead of alists *)
+  | CClosure of (string,Cv) Pmap.map * string list * Cexp
+  | CRecClos of (string,Cv) Pmap.map * string list * (string list * Cexp) list * string
 
 (* Semantics *)
 
@@ -237,14 +235,14 @@ and
 Cpmatch_list env _ _ = Cmatch_error
 
 let extend_env env ns vs =
-  fold_left2 (fun en n v -> Pmap.add n v en) (alist_to_fmap env) ns vs
+  fold_left2 (fun en n v -> Pmap.add n v en) env ns vs
 
 let extend_rec_env env rs defs ns vs =
   fold_left2 (fun en n v -> Pmap.add n v en)
     (List.fold_left
         (fun en n -> Pmap.add n
           (CRecClos env rs defs n) en)
-        (alist_to_fmap env)
+        env
         rs)
     ns vs
 
@@ -344,7 +342,7 @@ all_distinct ns &&
 Cevaluate
   (fold_left2
     (fun env' n (ns,b) ->
-      Pmap.add n (CClosure (fmap_to_alist env) ns b) env')
+      Pmap.add n (CClosure env ns b) env')
     env ns defs)
   b r
 ==>
@@ -357,7 +355,7 @@ all_distinct ns &&
 Cevaluate
   (List.fold_left
      (fun env' n ->
-       Pmap.add n (CRecClos (fmap_to_alist env) ns defs n) env')
+       Pmap.add n (CRecClos env ns defs n) env')
      env ns)
   b r
 ==>
@@ -367,7 +365,7 @@ and
 forall env ns b.
 true
 ==>
-Cevaluate env (CFun ns b) (Rval (CClosure (fmap_to_alist env) ns b))
+Cevaluate env (CFun ns b) (Rval (CClosure env ns b))
 
 and
 forall env e es env' ns b vs r.
@@ -521,7 +519,7 @@ syneq (CConv cn vs1) (CConv cn vs2)
 and
 forall env1 env2 xs b.
 (forall v. v IN (free_vars b \ Set.from_list xs)
-  --> (optrel syneq) (lookup v env1) (lookup v env2))
+  --> (optrel syneq) (flookup env1 v) (flookup env2 v))
 ==>
 syneq (CClosure env1 xs b) (CClosure env2 xs b)
 and
@@ -530,7 +528,7 @@ List.for_all
   (fun (xs,b) ->
     (forall v. v IN (free_vars b \ (Set.from_list ns union
                                     Set.from_list xs))
-      --> (optrel syneq) (lookup v env1) (lookup v env2)))
+      --> (optrel syneq) (flookup env1 v) (flookup env2 v)))
   defs
 ==>
 syneq (CRecClos env1 ns defs d) (CRecClos env2 ns defs d)
@@ -581,7 +579,7 @@ v_Cv G cm (Conv cn vs) (CConv (Pmap.find cn cm) Cvs)
 and
 forall G cm env vn e Cenv n Ce.
 (forall v Cv. G cm v Cv -->
-  exp_Cexp G cm (bind vn v env) (Pmap.add n Cv (alist_to_fmap Cenv)) e Ce)
+  exp_Cexp G cm (bind vn v env) (Pmap.add n Cv Cenv) e Ce)
 ==>
 v_Cv G cm (Closure env vn e) (CClosure Cenv [n] Ce)
 
@@ -822,23 +820,18 @@ v_to_Cv m (Conv cn vs) =
   CConv (Pmap.find cn m) (vs_to_Cvs m vs)
 and
 v_to_Cv m (Closure env vn e) =
-  let Cenv = env_to_Cenv m env in
+  let Cenv = map_values (v_to_Cv m) (alist_to_fmap env) in
   let Ce = exp_to_Cexp m e in
   CClosure Cenv [vn] Ce
 and
 v_to_Cv m (Recclosure env defs vn) =
-  let Cenv = env_to_Cenv m env in
+  let Cenv = map_values (v_to_Cv m) (alist_to_fmap env) in
   let (fns,Cdefs) = defs_to_Cdefs m defs in
   CRecClos Cenv fns Cdefs vn
 and
 vs_to_Cvs m [] = []
 and
 vs_to_Cvs m (v::vs) = v_to_Cv m v :: vs_to_Cvs m vs
-and
-env_to_Cenv m [] = []
-and
-env_to_Cenv m ((x,v)::env) =
-  (x, v_to_Cv m v)::(env_to_Cenv m env)
 
 (* TODO: simple type system and checker *)
 

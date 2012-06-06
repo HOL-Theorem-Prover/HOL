@@ -1,10 +1,10 @@
-type ('a,'b) alist = ('a * 'b) list
-val fmap_to_alist : forall 'a 'b. ('a,'b) fmap -> ('a,'b) alist
-val alist_to_fmap : forall 'a 'b. ('a,'b) alist -> ('a,'b) fmap
+val alist_to_fmap : forall 'a 'b. ('a * 'b) list -> ('a,'b) fmap
 val LEAST : (num -> bool) -> num
 val num_to_hex_string : num -> string
 val REPLACE_ELEMENT : forall 'a. 'a -> num -> 'a list -> 'a list
 val FOLDL2 : forall 'a 'b 'c. ('a -> 'b -> 'c -> 'a) -> 'a -> 'b list -> 'c list -> 'a
 val EVERY2 : forall 'a 'b. ('a -> 'b -> bool) -> 'a list -> 'b list -> bool
+val o_f : forall 'a 'b 'c. ('a -> 'b) -> ('c,'a) fmap -> ('c,'b) fmap
 (* TODO: lem library can't handle option type *)
 val OPTREL : forall 'a 'b 'c 'd. ('a -> 'b -> bool) -> 'c -> 'd -> bool
+val FLOOKUP : forall 'a 'b 'c. ('a,'b) fmap -> 'a -> 'c
