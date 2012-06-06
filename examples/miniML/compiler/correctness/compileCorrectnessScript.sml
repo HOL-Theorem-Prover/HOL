@@ -238,10 +238,12 @@ val Cevaluate_FUPDATE = store_thm(
 ``∀env exp res k v. Cevaluate env exp res ∧
  (free_vars exp ⊆ FDOM env) ∧
  (∀v. v ∈ FRANGE env ⇒ closed v) ∧
- k ∉ free_vars exp
+ k ∉ free_vars exp ∧ closed v
  ⇒ ∃res'. Cevaluate (env |+ (k,v)) exp res' ∧ result_rel syneq res res'``,
 rw[] >>
-qsuff_tac `env |+ (k,v) = (DRESTRICT env (free_vars exp)) ⊌ (env |+ (k,v))`
+`∀w. w ∈ FRANGE (env |+ (k,v)) ⇒ closed w` by (
+  fsrw_tac[DNF_ss][FRANGE_DEF,DOMSUB_FAPPLY_THM] ) >>
+qsuff_tac `(env |+ (k,v) = (DRESTRICT env (free_vars exp)) ⊌ (env |+ (k,v)))`
   >- metis_tac[Cevaluate_any_env,fmap_rel_refl,syneq_refl] >>
 rw[GSYM SUBMAP_FUNION_ABSORPTION] >>
 rw[SUBMAP_DEF,FUNION_DEF,FUN_FMAP_DEF,DRESTRICT_DEF,FAPPLY_FUPDATE_THM] >>
@@ -250,16 +252,22 @@ fs[SUBSET_DEF] >> rw[] >> fs[])
 val Cevaluate_super_env = store_thm(
 "Cevaluate_super_env",
 ``∀s env exp res. Cevaluate (DRESTRICT env (free_vars exp)) exp res ∧ free_vars exp ⊆ s
-  ∧ free_vars exp ⊆ FDOM env ∧ (∀v. v ∈ FRANGE (DRESTRICT env (free_vars exp)) ⇒ closed v)
+  ∧ free_vars exp ⊆ FDOM env ∧ (∀v. v ∈ FRANGE (DRESTRICT env s) ⇒ closed v)
   ⇒ ∃res'. Cevaluate (DRESTRICT env s) exp res' ∧ result_rel syneq res res'``,
 rw[] >>
-imp_res_tac Cevaluate_any_env >>
-qpat_assum `free_vars exp ⊆ FDOM env` assume_tac >>
-fs[DRESTRICT_DEF] >>
-first_x_assum (qspec_then `DRESTRICT env (free_vars exp)` mp_tac) >>
-rw[] >>
+qmatch_assum_abbrev_tac `Cevaluate e1 exp res` >>
+qspecl_then [`e1`,`exp`,`res`] mp_tac Cevaluate_any_env >> rw[] >>
+pop_assum (qspec_then `e1` mp_tac) >> rw[] >>
+`free_vars exp ⊆ FDOM e1` by (
+  unabbrev_all_tac >> rw[DRESTRICT_DEF] ) >>
+`∀v. v ∈ FRANGE e1 ⇒ closed v` by (
+  unabbrev_all_tac >>
+  fsrw_tac[DNF_ss][FRANGE_DEF,DRESTRICT_DEF,SUBSET_DEF] ) >>
+fs[] >>
+first_x_assum (qspec_then `DRESTRICT env s` mp_tac) >>
+fs[] >> rw[] >>
+unabbrev_all_tac >>
 qmatch_abbrev_tac `∃res'. Cevaluate env1 exp res' ∧ result_rel syneq res res'` >>
-first_x_assum (qspec_then `env1` strip_assume_tac) >>
 qmatch_assum_abbrev_tac `Cevaluate (env0 ⊌ env1) exp res'` >>
 qsuff_tac `env1 = env0 ⊌ env1` >- metis_tac[] >>
 rw[GSYM SUBMAP_FUNION_ABSORPTION] >>
