@@ -193,14 +193,17 @@ qexists_tac `x` >> rw[]
 *)
 )
 
-val Cv1_nice_ind =
-Cv1_induction
-|> Q.SPECL [`P`,`FEVERY (P o SND)`,`EVERY P`]
-|> SIMP_RULE (srw_ss()) [FEVERY_FEMPTY,FEVERY_STRENGTHEN_THM]
-|> UNDISCH_ALL
-|> CONJUNCT1
-|> DISCH_ALL
-|> Q.GEN `P`
+val toCv1_o_fromCv1 = store_thm(
+"toCv1_o_fromCv1",
+``toCv1 o fromCv1 = I``,
+rw[FUN_EQ_THM,Cv1_bij_thm])
+val _ = export_rewrites["toCv1_o_fromCv1"]
+
+val I_o_f = store_thm(
+"I_o_f",
+``I o_f fm = fm``,
+rw[GSYM fmap_EQ_THM])
+val _ = export_rewrites["I_o_f"]
 
 val Cvwf_fromCv1 = store_thm(
 "Cvwf_fromCv1",
@@ -243,6 +246,79 @@ val fromCv1_thm = store_thm(
 (fromCv1 (CRecClos env ns defs d) = ^(rand(rhs(concl(SPEC_ALL CRecClos_def)))))``,
 rw[CLitv_def, CConv_def, CClosure_def, CRecClos_def,
    GSYM (CONJUNCT2 Cv1_bij_thm)])
+
+val Cv1_Axiom = store_thm(
+"Cv1_Axiom",
+``∀f0 f1 f2 f3 f4 f5 f6.
+∃fn0 fn1 fn2.
+(∀l. fn0 (CLitv l) = f0 l) ∧
+(∀m vs. fn0 (CConv m vs) = f1 m vs (fn1 vs)) ∧
+(∀env xs b. fn0 (CClosure env xs b) = f2 env xs b (fn2 env)) ∧
+(∀env ns defs d. fn0 (CRecClos env ns defs d) = f3 env ns defs d (fn2 env)) ∧
+(fn1 [] = f4) ∧
+(∀v vs. fn1 (v::vs) = f5 v vs (fn0 v) (fn1 vs)) ∧
+(∀env. fn2 env = f6 env (fn0 o_f env))``,
+rw[] >>
+qho_match_abbrev_tac `∃fn0. P fn0` >>
+qsuff_tac `∃fn0. P (fn0 o fromCv1)` >- PROVE_TAC[] >>
+qunabbrev_tac `P` >>
+fs[fromCv1_thm] >>
+qho_match_abbrev_tac `∃fn0 fn1 fn2. P fn0 fn1 fn2` >>
+qsuff_tac `∃fn1 fn0. P fn0 (λvs. fn1 vs (MAP (fn0 o fromCv1) vs)) (λenv. f6 env (fn0 o fromCv1 o_f env))` >- PROVE_TAC[] >>
+Q.ISPECL_THEN [`λr0:α list. f4`,`λv vs r r0. f5 v vs (HD r0) (r (TL r0))`] strip_assume_tac listTheory.list_Axiom >>
+qexists_tac `fn` >>
+qunabbrev_tac `P` >>
+fs[] >>
+qexists_tac `fmtreerec
+  (λi res fm.
+    case i of
+    | (INL l) => f0 l
+    | (INR (INL m)) =>
+      let vs =
+        (MAP toCv1 (GENLIST (FAPPLY fm o num_to_s0) (CARD (FDOM fm))))
+      in f1 m vs (fn vs (GENLIST (FAPPLY res o num_to_s0) (CARD (FDOM res))))
+    | (INR (INR (INL (xs,b)))) =>
+      let env = toCv1 o_f fm in
+      f2 env xs b (f6 env res)
+    | (INR (INR (INR (ns,defs,d)))) =>
+      let env = toCv1 o_f fm in
+      f3 env ns defs d (f6 env res))` >>
+rw[fmtreerec_thm,LET_THM] >>
+rw[listTheory.MAP_GENLIST] >>
+qmatch_abbrev_tac `f1 m vs' (fn vs' gl) = f1 m vs (fn vs ml)` >>
+`vs' = vs` by (
+  unabbrev_all_tac >>
+  rw[listTheory.LIST_EQ_REWRITE,CARD_INJ_IMAGE,num_to_s0_inj] >>
+  rw[Cv1_bij_thm] >>
+  qmatch_abbrev_tac `FUN_FMAP w y ' z = Z` >>
+  `z ∈ y` by (
+    unabbrev_all_tac >> rw[] >> PROVE_TAC[] ) >>
+  unabbrev_all_tac >>
+  rw[FUN_FMAP_DEF] ) >>
+rw[] >>
+AP_TERM_TAC >>
+AP_TERM_TAC >>
+unabbrev_all_tac >>
+fs[CARD_INJ_IMAGE,num_to_s0_inj] >>
+rw[listTheory.LIST_EQ_REWRITE,listTheory.EL_MAP] >>
+AP_TERM_TAC >>
+rw[Cv1_bij_thm] >>
+AP_TERM_TAC >>
+qmatch_abbrev_tac `FUN_FMAP w y ' z = Z` >>
+`z ∈ y` by (
+  unabbrev_all_tac >> rw[] >> PROVE_TAC[] ) >>
+unabbrev_all_tac >>
+rw[FUN_FMAP_DEF] >>
+rw[Cv1_bij_thm])
+
+val Cv1_nice_ind =
+Cv1_induction
+|> Q.SPECL [`P`,`FEVERY (P o SND)`,`EVERY P`]
+|> SIMP_RULE (srw_ss()) [FEVERY_FEMPTY,FEVERY_STRENGTHEN_THM]
+|> UNDISCH_ALL
+|> CONJUNCT1
+|> DISCH_ALL
+|> Q.GEN `P`
 
 val Cv1_11 = store_thm(
 "Cv1_11",``
@@ -328,88 +404,26 @@ val Cv1_nchotomy = store_thm(
   (∃env ns defs n. Cv1 = CRecClos env ns defs n)``,
 ho_match_mp_tac Cv1_nice_ind >> rw[])
 
-val toCv1_o_fromCv1 = store_thm(
-"toCv1_o_fromCv1",
-``toCv1 o fromCv1 = I``,
-rw[FUN_EQ_THM,Cv1_bij_thm])
-val _ = export_rewrites["toCv1_o_fromCv1"]
-
-val I_o_f = store_thm(
-"I_o_f",
-``I o_f fm = fm``,
-rw[GSYM fmap_EQ_THM])
-val _ = export_rewrites["I_o_f"]
-
-val Cv1_Axiom = store_thm(
-"Cv1_Axiom",
-``∀f0 f1 f2 f3 f4 f5 f6 f7.
-∃fn0 fn1 fn2.
-(∀l. fn0 (CLitv l) = f0 l) ∧
-(∀m vs. fn0 (CConv m vs) = f1 m vs (fn1 vs)) ∧
-(∀env xs b. fn0 (CClosure env xs b) = f2 env xs b (fn2 env)) ∧
-(∀env ns defs d. fn0 (CRecClos env ns defs d) = f3 env ns defs d (fn2 env)) ∧
-(fn1 [] = f4) ∧
-(∀v vs. fn1 (v::vs) = f5 v vs (fn0 v) (fn1 vs)) ∧
-(∀env. fn2 env = f6 env (f7 o_f env))``,
-rw[] >>
-qho_match_abbrev_tac `∃fn0. P fn0` >>
-qsuff_tac `∃fn0. P (fn0 o fromCv1)` >- PROVE_TAC[] >>
-qunabbrev_tac `P` >>
-fs[fromCv1_thm] >>
-CONV_TAC (RESORT_EXISTS_CONV (fn [x,y,z] => [z,x,y])) >>
-qexists_tac `λenv. f6 env (f7 o_f env)` >> rw[] >>
-qho_match_abbrev_tac `∃fn0 fn1. P fn0 fn1` >>
-qsuff_tac `∃fn1 fn0. P fn0 (λvs. fn1 vs (MAP (fn0 o fromCv1) vs))` >- PROVE_TAC[] >>
-Q.ISPECL_THEN [`λr0:α list. f4`,`λv vs r r0. f5 v vs (HD r0) (r (TL r0))`] strip_assume_tac listTheory.list_Axiom >>
-qexists_tac `fn` >>
-qunabbrev_tac `P` >>
-fs[] >>
-qexists_tac `fmtreerec
-  (λi res fm.
-    case i of
-    | (INL l) => f0 l
-    | (INR (INL m)) =>
-      let vs =
-        (MAP toCv1 (GENLIST (FAPPLY fm o num_to_s0) (CARD (FDOM fm))))
-      in f1 m vs (fn vs (GENLIST (FAPPLY res o num_to_s0) (CARD (FDOM res))))
-    | (INR (INR (INL (xs,b)))) =>
-      let env = toCv1 o_f fm in
-      f2 env xs b (f6 env (f7 o_f env))
-    | (INR (INR (INR (ns,defs,d)))) =>
-      let env = toCv1 o_f fm in
-      f3 env ns defs d (f6 env (f7 o_f env)))` >>
-rw[fmtreerec_thm,LET_THM] >>
-rw[listTheory.MAP_GENLIST] >>
-qmatch_abbrev_tac `f1 m vs' (fn vs' gl) = f1 m vs (fn vs ml)` >>
-`vs' = vs` by (
-  unabbrev_all_tac >>
-  rw[listTheory.LIST_EQ_REWRITE,CARD_INJ_IMAGE,num_to_s0_inj] >>
-  rw[Cv1_bij_thm] >>
-  qmatch_abbrev_tac `FUN_FMAP w y ' z = Z` >>
-  `z ∈ y` by (
-    unabbrev_all_tac >> rw[] >> PROVE_TAC[] ) >>
-  unabbrev_all_tac >>
-  rw[FUN_FMAP_DEF] ) >>
-rw[] >>
-AP_TERM_TAC >>
-AP_TERM_TAC >>
-unabbrev_all_tac >>
-fs[CARD_INJ_IMAGE,num_to_s0_inj] >>
-rw[listTheory.LIST_EQ_REWRITE,listTheory.EL_MAP] >>
-AP_TERM_TAC >>
-rw[Cv1_bij_thm] >>
-AP_TERM_TAC >>
-qmatch_abbrev_tac `FUN_FMAP w y ' z = Z` >>
-`z ∈ y` by (
-  unabbrev_all_tac >> rw[] >> PROVE_TAC[] ) >>
-unabbrev_all_tac >>
-rw[FUN_FMAP_DEF] >>
-rw[Cv1_bij_thm])
-
 val [Cv1_case_def] = Prim_rec.define_case_constant Cv1_Axiom
 val Cv1_case_cong = save_thm(
 "Cv1_case_cong",
 Prim_rec.case_cong_thm Cv1_nchotomy Cv1_case_def)
 val _ = DefnBase.export_cong"Cv1_case_cong"
+
+val fmap_size_def = Define`
+fmap_size kz vz fm = SIGMA (λk. kz k + vz (fm ' k)) (FDOM fm)`
+
+val Cv1_size_def =
+Cv1_Axiom
+|> Q.ISPEC `λl. 1 + lit_size l`
+|> Q.ISPEC `λm (vs : β Cv1 list) (r:num). 1 + m + r`
+|> Q.ISPEC `λ(env:string |-> β Cv1) xs (b:β) (r:num). 1 + r + list_size (list_size char_size) xs + Cexp_size b`
+|> Q.ISPEC `λ(env:string |-> β Cv1) ns (defs:(string list,β) env) n r. 1 + r + list_size (list_size char_size) ns + list_size (pair_size (list_size (list_size char_size)) Cexp_size) defs + list_size char_size n`
+|> Q.ISPEC `0:num`
+|> Q.ISPEC `λv:β Cv1 (vs : β Cv1 list) (rv:num) rvs. 1 + rv + rvs`
+|> Q.ISPEC `λ(env:string |-> β Cv1). fmap_size (list_size char_size) I`
+|> Q.GEN`Cexp_size`
+|> SIMP_RULE(srw_ss())[SKOLEM_THM]
+|> (fn th => new_specification("Cv1_size_def",["Cv1_size","Cv1s_size","Cv1_env_size"],th))
 
 val _ = export_theory()
