@@ -1007,32 +1007,10 @@ val canonicals_unique = store_thm(
   metis_tac[])
 *)
 
-val elsOf_shift1 = store_thm(
-  "elsOf_shift1",
-  ``elsOf (shift1 w) = IMAGE (SUC ++ I) (elsOf w)``,
-  simp[shift1_def, elsOf_def, EXTENSION, #repabs_pseudo_id wellorder_results,
-       wellorder_shift1, #termP_term_REP wellorder_results, in_domain,
-       in_range, EXISTS_SUM, EXISTS_PROD] >>
-  simp_tac (srw_ss() ++ DNF_ss)[] >> metis_tac[]);
-
 val FORALL_NUM = store_thm(
   "FORALL_NUM",
   ``(!n. P n) <=> P 0 /\ !n. P (SUC n)``,
   metis_tac [arithmeticTheory.num_CASES])
-
-val WIN_shift1 = store_thm(
-  "WIN_shift1",
-  ``!x y.
-      (x,y) WIN shift1 w <=>
-      x <> INL 0 ∧ y <> INL 0 ∧ ((PRE ++ I) x, (PRE ++ I) y) WIN w``,
-  simp[shift1_def, #repabs_pseudo_id wellorder_results, wellorder_shift1,
-       #termP_term_REP wellorder_results, strict_def, EXISTS_PROD,
-       EXISTS_SUM, FORALL_SUM] >>
-  simp_tac (srw_ss() ++ DNF_ss) [] >> rpt conj_tac >| [
-    simp[Once FORALL_NUM] >> qx_gen_tac `a` >> simp[Once FORALL_NUM],
-    simp[Once FORALL_NUM],
-    simp[Once FORALL_NUM]
-  ]);
 
 val PRE_SUC_PP = prove(
   ``(PRE ++ I) ((SUC ++ I) x) = x``,
@@ -1046,35 +1024,10 @@ val SUC_PP_NEQ0 = prove(
   ``(SUC ++ I) x <> INL 0``,
   Cases_on `x` >> rw[])
 
-val shift1_orderiso = store_thm(
-  "shift1_orderiso",
-  ``orderiso w (shift1 w)``,
-  rw[orderiso_thm] >> qexists_tac `SUC ++ I` >>
-  simp[elsOf_shift1, BIJ_DEF, INJ_DEF, SURJ_DEF, SUC_PP11, WIN_shift1,
-       PRE_SUC_PP, SUC_PP_NEQ0] >> metis_tac[])
-
-val elsOf_ADD1 = store_thm(
-  "elsOf_ADD1",
-  ``elsOf (ADD1 e w) = e INSERT elsOf w``,
-  simp[EXTENSION, ADD1_def, Once elsOf_def, SimpLHS] >>
-  qx_gen_tac `x` >>
-  rw[#repabs_pseudo_id wellorder_results, wellorder_ADD1] >| [
-    fs[elsOf_def] >> metis_tac[],
-    simp[in_domain, in_range] >> metis_tac [WLE_elsOf]
-  ]);
-
 val strict_UNION = store_thm(
   "strict_UNION",
   ``strict (r1 ∪ r2) = strict r1 ∪ strict r2``,
   simp[EXTENSION, FORALL_PROD, strict_def] >> metis_tac[]);
-
-val WIN_ADD1 = store_thm(
-  "WIN_ADD1",
-  ``(x,y) WIN ADD1 e w <=>
-      e NOTIN elsOf w /\ x IN elsOf w /\ (y = e) \/
-      (x,y) WIN w``,
-  rw[#repabs_pseudo_id wellorder_results, wellorder_ADD1, ADD1_def,
-     strict_def] >> metis_tac[]);
 
 val SUC_PP_EQ_INL = prove(
   ``!x. ((SUC ++ I) x = INL y) <=> ?n. (x = INL n) /\ (y = SUC n)``,
