@@ -586,16 +586,6 @@ METIS_TAC[fmap_to_alist_to_fmap,FDOM_alist_to_fmap])
 val _ = export_rewrites["set_MAP_FST_fmap_to_alist"]
 *)
 
-(*
-val alist_to_fmap_MAP_matchable = store_thm(
-"alist_to_fmap_MAP_matchable",
-``∀f1 f2 al mal v. INJ f1 (set (MAP FST al)) UNIV ∧
-  (mal = MAP (λ(x,y). (f1 x,f2 y)) al) ∧
-  (v = MAP_KEYS f1 (f2 o_f alist_to_fmap al)) ⇒
-  (alist_to_fmap mal = v)``,
-METIS_TAC[alist_to_fmap_MAP])
-*)
-
 val DIFF_UNION = store_thm(
 "DIFF_UNION",
 ``!x y z. x DIFF (y UNION z) = x DIFF y DIFF z``,

@@ -460,6 +460,14 @@ val MAP_values_fmap_to_alist = store_thm(
 ``∀f fm. MAP (λ(k,v). (k, f v)) (fmap_to_alist fm) = fmap_to_alist (f o_f fm)``,
 rw[fmap_to_alist_def,MAP_MAP_o,MAP_EQ_f])
 
+val alist_to_fmap_MAP_matchable = store_thm(
+"alist_to_fmap_MAP_matchable",
+``∀f1 f2 al mal v. INJ f1 (set (MAP FST al)) UNIV ∧
+  (mal = MAP (λ(x,y). (f1 x,f2 y)) al) ∧
+  (v = MAP_KEYS f1 (f2 o_f alist_to_fmap al)) ⇒
+  (alist_to_fmap mal = v)``,
+METIS_TAC[alist_to_fmap_MAP])
+
 val alist_to_fmap_MAP_values = store_thm(
 "alist_to_fmap_MAP_values",
 ``∀f al. alist_to_fmap (MAP (λ(k,v). (k, f v)) al) = f o_f (alist_to_fmap al)``,
