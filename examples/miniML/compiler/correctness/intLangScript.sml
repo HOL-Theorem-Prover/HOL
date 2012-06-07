@@ -1,5 +1,5 @@
-open HolKernel bossLib boolLib boolSimps listTheory pred_setTheory finite_mapTheory sortingTheory alistTheory SatisfySimps lcsymtacs
-open MiniMLTheory compileTerminationTheory count_expTheory
+open HolKernel bossLib boolLib boolSimps listTheory pred_setTheory finite_mapTheory alistTheory SatisfySimps lcsymtacs
+open MiniMLTheory compileTerminationTheory
 val _ = new_theory "intLang"
 
 (* TODO: move? *)

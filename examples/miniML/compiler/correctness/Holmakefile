@@ -1,11 +1,11 @@
-INCLUDES=$(HOLDIR)/examples/countable .. ../../semantics ../../metatheory
+INCLUDES= .. ../../semantics ../../metatheory
 OPTIONS = QUIT_ON_FAILURE
 
 ifdef POLY
 HOLHEAP = miniml-heap
 EXTRA_CLEANS = $(HOLHEAP) $(HOLHEAP).o
 
-BARE_THYS = $(HOLDIR)/examples/countable/countableTheory ../../semantics/MiniMLTerminationTheory ../../metatheory/evaluateEquationsTheory
+BARE_THYS = ../../semantics/MiniMLTerminationTheory ../../metatheory/evaluateEquationsTheory
 DEPS = $(patsubst %,%.uo,$(BARE_THYS))
 
 $(HOLHEAP): $(DEPS)
