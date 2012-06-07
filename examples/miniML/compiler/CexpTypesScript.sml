@@ -162,9 +162,7 @@ val Cv_induction = store_thm(
 (∀vs. P2 vs ⇒ ∀n. P0 (CConv n vs)) ∧
 (∀env. P1 env ⇒ ∀xs b. P0 (CClosure env xs b)) ∧
 (∀env. P1 env ⇒ ∀ns defs d. P0 (CRecClos env ns defs d)) ∧
-(* (∀env. (∀v. v ∈ FRANGE env ⇒ P0 v) ⇒ P1 env) ∧ *)
-(P1 FEMPTY) ∧
-(∀s v env. P0 v ∧ P1 env ⇒ P1 (env |+ (s,v))) ∧
+(∀env. (∀v. v ∈ FRANGE env ⇒ P0 v) ⇒ P1 env) ∧
 (P2 []) ∧
 (∀v vs. P0 v ∧ P2 vs ⇒ P2 (v::vs))
 ⇒
@@ -198,35 +196,18 @@ first_x_assum match_mp_tac >- (
   rw[FRANGE_DEF] >>
   qexists_tac `num_to_s0 m` >>
   fs[FUN_FMAP_DEF,CARD_INJ_IMAGE,num_to_s0_inj] ) >>
-`∀env. (∀v. v ∈ FRANGE env ⇒ P0 v) ⇒ P1 env` by (
-  ho_match_mp_tac fmap_INDUCT >>
-  rw[] >>
-  first_x_assum match_mp_tac >>
-  conj_tac >> first_x_assum match_mp_tac >>
-  fs[FRANGE_DEF,DOMSUB_FAPPLY_THM] >>
-  PROVE_TAC[] ) >>
-pop_assum match_mp_tac >>
-rw[FRANGE_DEF] >>
-rw[o_f_FAPPLY] >>
-first_x_assum (qspec_then `x` (match_mp_tac o MP_CANON)) >>
-fs[Cvwf_thm] >>
-first_x_assum match_mp_tac >>
-rw[FRANGE_DEF] >>
-qexists_tac `x` >> rw[]
-(*
 first_assum match_mp_tac >>
 fs[Cvwf_thm] >>
 ONCE_REWRITE_TAC[FRANGE_DEF] >>
 simp_tac(srw_ss())[] >>
 simp_tac(srw_ss()++boolSimps.DNF_ss)[] >>
 rpt strip_tac >>
-first_x_assum (qspec_then `x` (match_mp_tac o MP_CANON)) >>
+qmatch_assum_rename_tac `k ∈ FDOM fm`[] >>
+first_x_assum (qspec_then `k` (match_mp_tac o MP_CANON)) >>
 rw[] >>
 first_x_assum match_mp_tac >>
 rw[FRANGE_DEF] >>
-qexists_tac `x` >> rw[]
-*)
-)
+qexists_tac `k` >> rw[])
 
 val toCv_o_fromCv = store_thm(
 "toCv_o_fromCv",
@@ -240,6 +221,20 @@ val I_o_f = store_thm(
 ``I o_f fm = fm``,
 rw[GSYM fmap_EQ_THM])
 val _ = export_rewrites["I_o_f"]
+
+val FEVERY_o_SND_FRANGE = store_thm(
+"FEVERY_o_SND_FRANGE",
+``∀P fm. FEVERY (P o SND) fm = ∀v. v ∈ FRANGE fm ⇒ P v``,
+rpt gen_tac >> EQ_TAC >- (
+  strip_tac >>
+  rw[FRANGE_FLOOKUP] >>
+  qsuff_tac `(P o SND) (k,v)` >- rw[] >>
+  PROVE_TAC[FEVERY_FLOOKUP] ) >>
+qid_spec_tac `fm` >>
+ho_match_mp_tac fmap_INDUCT >>
+rw[FEVERY_DEF,FAPPLY_FUPDATE_THM] >> rw[] >>
+fsrw_tac[boolSimps.DNF_ss][FRANGE_DEF,DOMSUB_FAPPLY_THM])
+val _ = export_rewrites["FEVERY_o_SND_FRANGE"]
 
 (* this is no good
 val o_f_cong = store_thm(
@@ -460,6 +455,7 @@ qmatch_abbrev_tac `toCv r1 ≠ toCv r2` >>
 unabbrev_all_tac >> fs[])
 val _ = export_rewrites["Cv_distinct"]
 
+(* TODO: move *)
 val fmap_size_def = Define`
 fmap_size kz vz fm = SIGMA (λk. kz k + vz (fm ' k)) (FDOM fm)`
 
