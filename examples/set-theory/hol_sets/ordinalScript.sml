@@ -562,6 +562,17 @@ val islimit_def = Define`
   islimit α <=> (omax (preds α) = NONE)
 `;
 
+val sup_preds_omax_NONE = store_thm(
+  "sup_preds_omax_NONE",
+  ``(omax (preds α) = NONE) ⇔ (sup (preds α) = α)``,
+  simp[omax_NONE, sup_def] >> DEEP_INTRO_TAC oleast_intro >> simp[] >>
+  simp_tac(srw_ss() ++ DNF_ss) [DECIDE ``¬p ∨ q <=> (p ==> q)``] >>
+  qexists_tac `α` >> conj_tac >- simp[ordle_lteq] >>
+  qx_gen_tac `γ` >> strip_tac >> Tactical.REVERSE eq_tac
+  >- (rw[] >> metis_tac[]) >>
+  strip_tac >> qsuff_tac `γ ≤ α ∧ α ≤ γ` >- metis_tac [ordlt_trichotomy] >>
+  metis_tac [ordlt_TRANS, ordlt_REFL]);
+
 val islimit_0 = store_thm(
   "islimit_0",
   ``islimit 0``,
@@ -674,33 +685,47 @@ val restrict_away = prove(
   ``IMAGE (RESTRICT f $< (α:α ordinal)) (preds α) = IMAGE f (preds α)``,
   rw[EXTENSION, relationTheory.RESTRICT_DEF] >> srw_tac[CONJ_ss][]);
 
-val ord_RECURSION_RAW = store_thm(
-  "ord_RECURSION_RAW",
-  ``!f:'a ordinal -> 'b set -> 'b.
+val ord_RECURSION = store_thm(
+  "ord_RECURSION",
+  ``!(z:'b) (sf:'a ordinal -> 'b -> 'b) (lf:'a ordinal -> 'b set -> 'b).
        ?h : 'a ordinal -> 'b.
-            !α. h α = f α (IMAGE h (preds α))``,
-  gen_tac >> qexists_tac `WFREC $< (λg x. f x (IMAGE g (preds x)))` >>
-  gen_tac >>
-  simp[relationTheory.WFREC_THM, ordlt_WF, restrict_away]);
+         (h 0 = z) ∧
+         (∀α. h α⁺ = sf α (h α)) ∧
+         !α. α ≠ 0 ∧ (omax (preds α) = NONE) ==>
+             (h α = lf α (IMAGE h (preds α)))``,
+  rpt gen_tac >>
+  qexists_tac `WFREC $< (λg x. if x = 0 then z
+                               else
+                                 case omax (preds x) of
+                                   NONE => lf x (IMAGE g (preds x))
+                                 | SOME x0 => sf x0 (g x0)) ` >>
+  rpt conj_tac
+  >- simp[relationTheory.WFREC_THM, ordlt_WF]
+  >- simp[Once relationTheory.WFREC_THM, relationTheory.RESTRICT_DEF, SimpLHS,
+          ordlt_WF] >>
+  simp[relationTheory.WFREC_THM, ordlt_WF, restrict_away])
 
 val ordADD_def = new_specification(
   "ordADD_def", ["ordADD"],
-  ord_RECURSION_RAW
-      |> Q.ISPEC `λα rs. if α = 0 then β
-                         else case omax (preds α) of
-                                NONE => sup rs
-                              | SOME _ => (sup rs)⁺`
-      |> SIMP_RULE (srw_ss()) []
-      |> Q.GEN `β`
-      |> CONV_RULE SKOLEM_CONV)
+  ord_RECURSION |> Q.ISPEC `β:'a ordinal` |> Q.SPEC `λ(x:'a ordinal) r. r⁺`
+                |> Q.SPEC `λx rs. sup rs`
+                |> SIMP_RULE (srw_ss()) []
+                |> Q.GEN `β`
+                |> CONV_RULE SKOLEM_CONV)
+val _ = export_rewrites ["ordADD_def"]
+val _ = overload_on ("+", ``ordADD``)
 
-val ordADD_0 = store_thm("ordADD_0", ``ordADD α 0 = α``, simp[ordADD_def]);
-val _ = export_rewrites ["ordADD_0"]
-
-(*val ordADD_SUC = store_thm(
-  "ordADD_SUC",
-  ``ordADD α β⁺ = (ordADD α β)⁺``,
-  simp[ordADD_def, SimpLHS]
-*)
+val ordADD_0L = store_thm(
+  "ordADD_0L",
+  ``∀α. 0o + α = α``,
+  ho_match_mp_tac ord_induction >> gen_tac >>
+  Cases_on `α = 0` >- simp[] >>
+  Cases_on `omax (preds α)`
+  >- (simp[ordADD_def] >> strip_tac >>
+      `IMAGE ($+ 0) (preds α) = preds α`
+         by (rpt (asm_simp_tac (srw_ss() ++ CONJ_ss)[EXTENSION])) >>
+      fs[sup_preds_omax_NONE]) >>
+  fs[preds_omax_SOME_SUC]);
+val _ = export_rewrites ["ordADD_0L"]
 
 val _ = export_theory()
