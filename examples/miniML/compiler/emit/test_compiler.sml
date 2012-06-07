@@ -442,3 +442,10 @@ val e52 = ``Let "x" (Con "Pair_type" [Lit (IntLit 1);Lit (IntLit 2)])
 val (m,st) = pd1 e52 [d0]
 val [Number r] = st
 val SOME 1 = intML.toInt r;
+val d0 = paird
+val e53 = ``Let "x" (Con "Pair_type" [Lit (IntLit 1);Con "Pair_type" [Lit (IntLit 2); Lit (IntLit 3)]])
+  (Mat (Var "x")
+      [(Pcon "Pair_type" [Pvar "x";Pcon "Pair_type" [Pvar "y";Pvar "z"]], Var "y")])``
+val (m,st) = pd1 e53 [d0]
+val [Number r] = st
+val SOME 2 = intML.toInt r;
