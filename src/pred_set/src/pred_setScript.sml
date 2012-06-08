@@ -1520,6 +1520,12 @@ val IMAGE_SURJ =
       [EXISTS_TAC (--`x:'a`--) THEN ASM_REWRITE_TAC [],
        EXISTS_TAC (--`x':'a`--) THEN ASM_REWRITE_TAC []]]);
 
+val SURJ_IMAGE = store_thm(
+  "SURJ_IMAGE",
+  ``SURJ f s (IMAGE f s)``,
+  REWRITE_TAC[IMAGE_SURJ]);
+val _ = export_rewrites ["SURJ_IMAGE"]
+
 (* ===================================================================== *)
 (* Bijective functions on a set.					 *)
 (* ===================================================================== *)
