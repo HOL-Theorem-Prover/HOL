@@ -366,10 +366,7 @@ val elsOf_fromNatWO = store_thm(
   simp_tac (srw_ss() ++ DNF_ss ++ ARITH_ss) [] >>
   qx_gen_tac `x` >> strip_tac >> disj1_tac >> qexists_tac `x` >> rw[]);
 
-val SURJ_IMAGE = store_thm(
-  "SURJ_IMAGE",
-  ``SURJ f s (IMAGE f s)``,
-  rw[SURJ_DEF] >> metis_tac[]);
+
 
 val WLE_WIN = store_thm(
   "WLE_WIN",

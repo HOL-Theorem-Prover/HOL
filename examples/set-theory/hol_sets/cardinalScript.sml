@@ -294,6 +294,12 @@ val INFINITE_UNIV_INF = store_thm(
   simp[sumTheory.FORALL_SUM] >> qexists_tac `INL 0` >> simp[]);
 val _ = export_rewrites ["INFINITE_UNIV_INF"]
 
+val IMAGE_cardleq = store_thm(
+  "IMAGE_cardleq",
+  ``IMAGE f s ≼ s``,
+  simp[cardleq_def] >> metis_tac [SURJ_IMAGE, SURJ_INJ_INV]);
+val _ = export_rewrites ["IMAGE_cardleq"]
+
 val _ = export_theory()
 
 

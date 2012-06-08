@@ -303,6 +303,9 @@ val fromNat_def = Define`
   (fromNat 0 = oleast α. T) ∧
   (fromNat (SUC n) = ordSUC (fromNat n))
 `;
+val fromNat_SUC = save_thm("fromNat_SUC", fromNat_def |> CONJUNCT2)
+val _ = export_rewrites ["fromNat_SUC"]
+
 val _ = add_numeral_form (#"o", SOME "fromNat")
 
 (* prints as 0 ≤ α *)
@@ -562,11 +565,13 @@ val islimit_def = Define`
   islimit α <=> (omax (preds α) = NONE)
 `;
 
+val impI = DECIDE ``¬p ∨ q <=> (p ==> q)``
+
 val sup_preds_omax_NONE = store_thm(
   "sup_preds_omax_NONE",
   ``(omax (preds α) = NONE) ⇔ (sup (preds α) = α)``,
   simp[omax_NONE, sup_def] >> DEEP_INTRO_TAC oleast_intro >> simp[] >>
-  simp_tac(srw_ss() ++ DNF_ss) [DECIDE ``¬p ∨ q <=> (p ==> q)``] >>
+  simp_tac(srw_ss() ++ DNF_ss) [impI] >>
   qexists_tac `α` >> conj_tac >- simp[ordle_lteq] >>
   qx_gen_tac `γ` >> strip_tac >> Tactical.REVERSE eq_tac
   >- (rw[] >> metis_tac[]) >>
@@ -581,16 +586,14 @@ val _ = export_rewrites ["islimit_0"]
 
 fun mklesup th =
     th |> UNDISCH_ALL |> Q.SPEC `sup s`
-       |> SIMP_RULE (srw_ss()) []
-       |> REWRITE_RULE [DECIDE ``¬p ∨ q <=> (p ==> q)``]
-       |> DISCH_ALL
+       |> SIMP_RULE (srw_ss()) [] |> REWRITE_RULE [impI] |> DISCH_ALL
 (* |- countable s ⇒ ∀δ. δ ∈ s ⇒ δ ≤ sup s *)
 val csup_lesup = save_thm("csup_lesup", mklesup csup_thm)
 
 fun mksuple th =
     th |> UNDISCH_ALL |> Q.SPEC `β` |> AP_TERM ``$~``
        |> CONV_RULE (RAND_CONV (SIMP_CONV (srw_ss()) []))
-       |> REWRITE_RULE [DECIDE ``¬p ∨ q <=> (p ==> q)``]
+       |> REWRITE_RULE [impI]
        |> DISCH_ALL
 
 val csup_suple = save_thm("csup_suple", mksuple csup_thm)
@@ -605,8 +608,7 @@ val preds_sup_thm = store_thm(
   `(omax s = NONE) ∨ ∃β. omax s = SOME β` by (Cases_on `omax s` >> simp[])
   >- (`sup s = α`
         by (simp[sup_def] >> DEEP_INTRO_TAC oleast_intro >>
-            asm_simp_tac (srw_ss() ++ DNF_ss)
-                         [DECIDE ``¬p ∨ q <=> (p ⇒ q)``] >>
+            asm_simp_tac (srw_ss() ++ DNF_ss) [impI] >>
             qexists_tac `α` >> conj_tac >- rw[ordle_lteq] >>
             qx_gen_tac `β` >> rw[] >>
             qsuff_tac `β ≤ α ∧ α ≤ β` >- metis_tac [ordlt_trichotomy] >>
@@ -639,6 +641,12 @@ val ordlt_fromNat = store_thm(
   asm_simp_tac (srw_ss() ++ DNF_ss)
                [fromNat_def, ordlt_SUC_DISCRETE,
                 DECIDE ``m < SUC n <=> m < n ∨ (m = n)``]);
+
+val fromNat_ordlt = store_thm(
+  "fromNat_ordlt",
+  ``(&n:'a ordinal < &m) ⇔ (n < m)``,
+  simp[ordlt_fromNat]);
+val _ = export_rewrites ["fromNat_ordlt"]
 
 val allNats_dwardclosedetc = prove(
   ``downward_closed { fromNat i : α ordinal | T } ∧
@@ -678,7 +686,7 @@ val fromNat_eq_omega = store_thm(
   "fromNat_eq_omega",
   ``∀n. &n ≠ ω``,
   metis_tac [ordlt_REFL, fromNat_lt_omega]);
-val _ = export_rewrites ["fromNat_lt_omega"]
+val _ = export_rewrites ["fromNat_eq_omega"]
 
 (* recursion principles *)
 val restrict_away = prove(
@@ -727,5 +735,92 @@ val ordADD_0L = store_thm(
       fs[sup_preds_omax_NONE]) >>
   fs[preds_omax_SOME_SUC]);
 val _ = export_rewrites ["ordADD_0L"]
+
+val ubsup_thm = store_thm(
+  "ubsup_thm",
+  ``(∀α. α ∈ s ⇒ α < β) ==> ∀γ. γ < sup s ⇔ ∃δ. δ ∈ s ∧ γ < δ``,
+  strip_tac >> simp[sup_def] >> gen_tac >> DEEP_INTRO_TAC oleast_intro >>
+  asm_simp_tac (srw_ss() ++ DNF_ss) [impI] >>
+  qexists_tac `β` >> conj_tac >- metis_tac [ordlt_TRANS, ordlt_REFL] >>
+  qx_gen_tac `α` >> strip_tac >> eq_tac >- metis_tac[] >>
+  disch_then (Q.X_CHOOSE_THEN `δ` strip_assume_tac) >>
+  `δ ≤ α`by metis_tac[] >> fs[ordle_lteq] >> rw[] >> metis_tac [ordlt_TRANS]);
+
+val ordADD_fromNat = store_thm(
+  "ordADD_fromNat",
+  ``ordADD (&n) (&m) = &(n + m)``,
+  Induct_on `m` >> simp[arithmeticTheory.ADD_CLAUSES]);
+val _ = export_rewrites ["ordADD_fromNat"]
+
+val omax_preds_omega = store_thm(
+  "omax_preds_omega",
+  ``omax (preds ω) = NONE``,
+  simp_tac (srw_ss() ++ DNF_ss) [omax_NONE, lt_omega] >> qx_gen_tac `m` >>
+  qexists_tac `SUC m` >> simp[]);
+
+val ordle_ANTISYM = store_thm(
+  "ordle_ANTISYM",
+  ``α ≤ β ∧ β ≤ α ⇒ (α = β)``,
+  metis_tac [ordlt_trichotomy]);
+
+val ordADD_fromNat_omega = store_thm(
+  "ordADD_fromNat_omega",
+  ``&n + ω = ω``,
+  simp[ordADD_def,omax_preds_omega] >>
+  `∀α. α ∈ IMAGE ($+ (&n)) (preds ω) ==> α < ω`
+     by simp_tac (srw_ss() ++ DNF_ss) [lt_omega] >>
+  pop_assum (assume_tac o MATCH_MP ubsup_thm) >>
+  match_mp_tac ordle_ANTISYM >> simp[] >> conj_tac
+  >- (qx_gen_tac `δ` >> Cases_on `δ ≤ ω` >> simp[] >> fs[] >>
+      simp[lt_omega] >> qx_gen_tac `x` >>
+      Cases_on `∃m. x = &m` >> fs[] >> strip_tac >>
+      metis_tac [fromNat_lt_omega, ordlt_TRANS, ordlt_REFL]) >>
+  simp[lt_omega] >> qx_gen_tac `m` >> strip_tac >>
+  full_simp_tac (srw_ss() ++ DNF_ss) [lt_omega, impI] >>
+  first_x_assum (qspec_then `&m` mp_tac) >> simp[] >>
+  qexists_tac `m+1` >> decide_tac);
+
+(*
+val predimage_sup_thm = store_thm(
+  "predimage_sup_thm",
+  ``∀β. β < sup (IMAGE f (preds α)) <=> ∃δ. δ < α ∧ β < f δ``,
+  gen_tac >> simp[sup_def] >> DEEP_INTRO_TAC oleast_intro >>
+  simp_tac (srw_ss() ++ DNF_ss) [impI] >>
+  `IMAGE f (preds α) ≠ univ(:'a ordinal)`
+     by (qsuff_tac `IMAGE f (preds α) ≼ univ(:'a inf)`
+         >- metis_tac [univ_ord_greater_cardinal] >>
+         `IMAGE f (preds α) ≼ preds α` by simp[] >>
+         `preds α ≼ univ(:'b inf)` by metis_tac[preds_inj_univ] >>
+         match_mp_tac cardleq_TRANS >> qexists_tac `preds α`
+
+val ordlt_CANCEL_ADDR = store_thm(
+  "ordlt_CANCEL_ADDR",
+  ``∀(b:'a ordinal) a. a < a + b <=> 0 < b``,
+  ho_match_mp_tac ord_induction >> qx_gen_tac `b` >> strip_tac >>
+  Cases_on `b = 0` >- simp[] >>
+  Cases_on `omax (preds b)`
+  >- (simp[] >> qx_gen_tac `a` >>
+      `∀x. x ∈ IMAGE ($+ a) (preds b) ==> x < a + b`
+         by simp_tac (srw_ss() ++ DNF_ss) []
+
+val ordlt_CANCEL = store_thm(
+  "ordlt_CANCEL",
+  ``∀a b (c:'a ordinal). a < b ==> c + a < c + b``,
+  ho_match_mp_tac ord_induction >> qx_gen_tac `a` >> strip_tac >>
+  Cases_on `a = 0` >> simp[]
+
+val ordADD_CANCEL_LEMMA0 = prove(
+  ``(α = α + γ) ⇒ (γ = 0)``,
+  Cases_on `γ = 0` >> simp[] >> Cases_on `omax (preds γ)`
+  >- (simp[] >>
+      `∀β. β ∈ IMAGE ($+ α) (preds γ) ⇒ β < α + γ`
+         by (simp_tac (srw_ss() ++ DNF_ss)[]
+
+val ordADD_RIGHT_CANCEL = store_thm(
+  "ordADD_RIGHT_CANCEL",
+  ``∀β α γ. ((α:α ordinal) + β = α + γ) ⇔ (β = γ)``,
+  simp[EQ_IMP_THM] >> ho_match_mp_tac ord_induction >>
+  qx_gen_tac `β` >> strip_tac >> Cases_on `β = 0` >> simp[]
+*)
 
 val _ = export_theory()
