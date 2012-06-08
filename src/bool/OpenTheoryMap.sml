@@ -72,11 +72,17 @@ struct
   end
   val temp_OpenTheory_tyop_name = temp_OpenTheory_tyop_name0 "OpenTheory_tyop_name call"
   fun temp_OpenTheory_const_name0 src {const,name} = let
-    val _ = case Map.peek(!the_const_to_ot,const) of NONE => ()
-            | SOME oldn =>
-              Feedback.HOL_WARNING "OpenTheoryMap" "OpenTheory_const_name"
-                (src^" overrides "^constToString const^
-                 " (was \""^(ots oldn)^"\"; now \""^(ots name)^"\"")
+    val _ =
+        case Map.peek(!the_const_to_ot,const) of
+          NONE => ()
+        | SOME oldn =>
+          if oldn = name then ()
+          else
+            Feedback.HOL_WARNING
+                "OpenTheoryMap" "OpenTheory_const_name"
+                (String.concat [src, " overrides ", constToString const,
+                                " (was \"", ots oldn, "\"; now \"", ots name,
+                                "\""])
   in
     the_const_to_ot   := Map.insert(!the_const_to_ot  ,const,name);
     if unwanted name then () else the_const_from_ot := Map.insert(!the_const_from_ot,name,const)
