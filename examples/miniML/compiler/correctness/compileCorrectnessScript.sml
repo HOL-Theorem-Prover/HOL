@@ -257,13 +257,11 @@ val Cevaluate_super_env = store_thm(
 rw[] >>
 qmatch_assum_abbrev_tac `Cevaluate e1 exp res` >>
 qspecl_then [`e1`,`exp`,`res`] mp_tac Cevaluate_any_env >> rw[] >>
-pop_assum (qspec_then `e1` mp_tac) >> rw[] >>
-`free_vars exp ⊆ FDOM e1` by (
-  unabbrev_all_tac >> rw[DRESTRICT_DEF] ) >>
+`free_vars exp ⊆ FDOM e1` by ( fs[Abbr`e1`,DRESTRICT_DEF] ) >>
 `∀v. v ∈ FRANGE e1 ⇒ closed v` by (
-  unabbrev_all_tac >>
-  fsrw_tac[DNF_ss][FRANGE_DEF,DRESTRICT_DEF,SUBSET_DEF] ) >>
+  fsrw_tac[DNF_ss][Abbr`e1`,FRANGE_DEF,DRESTRICT_DEF,SUBSET_DEF] ) >>
 fs[] >>
+first_x_assum (qspec_then `e1` mp_tac) >> rw[] >>
 first_x_assum (qspec_then `DRESTRICT env s` mp_tac) >>
 fs[] >> rw[] >>
 unabbrev_all_tac >>
