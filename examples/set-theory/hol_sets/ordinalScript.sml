@@ -315,26 +315,6 @@ val ordlt_ZERO = store_thm(
  simp[fromNat_def] >> DEEP_INTRO_TAC oleast_intro >> simp[])
 val _ = export_rewrites ["ordlt_ZERO"]
 
-val EMPTY_CARDLEQ = store_thm(
-  "EMPTY_CARDLEQ",
-  ``{} ≼ t``,
-  simp[cardleq_def, INJ_EMPTY]);  (* export_rewrites for pred_set *)
-val _ = export_rewrites ["EMPTY_CARDLEQ"]
-
-val FINITE_CLE_INFINITE = store_thm(
-  "FINITE_CLE_INFINITE",
-  ``FINITE s ∧ INFINITE t ==> s ≼ t``,
-  qsuff_tac `INFINITE t ⇒ ∀s. FINITE s ⇒ s ≼ t` >- metis_tac[] >>
-  strip_tac >> Induct_on `FINITE` >> conj_tac >- simp[] >>
-  simp[cardleq_def] >> gen_tac >>
-  disch_then (CONJUNCTS_THEN2 assume_tac
-                              (Q.X_CHOOSE_THEN `f` assume_tac)) >>
-  qx_gen_tac `e` >> strip_tac >>
-  `FINITE (IMAGE f s)` by simp[] >>
-  `∃y. y ∈ t ∧ y ∉ IMAGE f s` by metis_tac [IN_INFINITE_NOT_FINITE] >>
-  qexists_tac `λx. if x = e then y else f x` >>
-  fs[INJ_DEF] >> asm_simp_tac (srw_ss() ++ DNF_ss) [] >> rw[] >> metis_tac[])
-
 val preds_surj = save_thm(
   "preds_surj",
   preds_bij |> SIMP_RULE (srw_ss()) [BIJ_DEF] |> CONJUNCT2

@@ -48,6 +48,7 @@ val cardleq_REFL = store_thm(
   "cardleq_REFL",
   ``∀s:'a set. s ≼ s``,
   rw[cardleq_def] >> qexists_tac `\x. x` >> rw[INJ_ID]);
+val _ = export_rewrites ["cardleq_REFL"]
 
 val cardleq_TRANS = store_thm(
   "cardleq_TRANS",
@@ -254,6 +255,27 @@ val CARDEQ_INSERT_RWT = save_thm(
                           |> EQ_MP (SYM CARDEQ_INSERT) |> DISCH_ALL
                           |> Q.GEN `s`)
 
+val EMPTY_CARDLEQ = store_thm(
+  "EMPTY_CARDLEQ",
+  ``{} ≼ t``,
+  simp[cardleq_def, INJ_EMPTY]);  (* export_rewrites for pred_set *)
+val _ = export_rewrites ["EMPTY_CARDLEQ"]
+
+val FINITE_CLE_INFINITE = store_thm(
+  "FINITE_CLE_INFINITE",
+  ``FINITE s ∧ INFINITE t ==> s ≼ t``,
+  qsuff_tac `INFINITE t ⇒ ∀s. FINITE s ⇒ s ≼ t` >- metis_tac[] >>
+  strip_tac >> Induct_on `FINITE` >> conj_tac >- simp[] >>
+  simp[cardleq_def] >> gen_tac >>
+  disch_then (CONJUNCTS_THEN2 assume_tac
+                              (Q.X_CHOOSE_THEN `f` assume_tac)) >>
+  qx_gen_tac `e` >> strip_tac >>
+  `FINITE (IMAGE f s)` by simp[] >>
+  `∃y. y ∈ t ∧ y ∉ IMAGE f s` by metis_tac [IN_INFINITE_NOT_FINITE] >>
+  qexists_tac `λx. if x = e then y else f x` >>
+  fs[INJ_DEF] >> asm_simp_tac (srw_ss() ++ DNF_ss) [] >> rw[] >> metis_tac[])
+
+val FORALL_PROD = pairTheory.FORALL_PROD
 val CARDEQ_CROSS = store_thm(
   "CARDEQ_CROSS",
   ``s1 ≈ s2 ∧ t1 ≈ t2 ⇒ (s1 × t1 ≈ s2 × t2)``,
@@ -261,7 +283,7 @@ val CARDEQ_CROSS = store_thm(
   disch_then (CONJUNCTS_THEN2 (Q.X_CHOOSE_THEN `f` assume_tac)
                               (Q.X_CHOOSE_THEN `g` assume_tac)) >>
   qexists_tac `f ## g` >>
-  simp[BIJ_DEF, INJ_DEF, SURJ_DEF, pairTheory.FORALL_PROD,
+  simp[BIJ_DEF, INJ_DEF, SURJ_DEF, FORALL_PROD,
        pairTheory.EXISTS_PROD] >>
   fs[BIJ_DEF, INJ_DEF, SURJ_DEF] >> metis_tac []);
 
@@ -299,6 +321,242 @@ val IMAGE_cardleq = store_thm(
   ``IMAGE f s ≼ s``,
   simp[cardleq_def] >> metis_tac [SURJ_IMAGE, SURJ_INJ_INV]);
 val _ = export_rewrites ["IMAGE_cardleq"]
+
+val CARDLEQ_CROSS_CONG = store_thm(
+  "CARDLEQ_CROSS_CONG",
+  ``x1 ≼ x2 ∧ y1 ≼ y2 ⇒ x1 CROSS y1 ≼ x2 CROSS y2``,
+  simp[cardleq_def] >>
+  disch_then (CONJUNCTS_THEN2 (Q.X_CHOOSE_THEN `f1` assume_tac)
+                              (Q.X_CHOOSE_THEN `f2` assume_tac)) >>
+  fs [INJ_DEF] >>
+  qexists_tac `λ(x,y). (f1 x, f2 y)` >>
+  simp[FORALL_PROD]);
+
+val SUBSET_CARDLEQ = store_thm(
+  "SUBSET_CARDLEQ",
+  ``x ⊆ y ⇒ x ≼ y``,
+  simp[SUBSET_DEF, cardleq_def] >> strip_tac >> qexists_tac `I` >>
+  simp[INJ_DEF]);
+
+val better_BIJ = BIJ_DEF |> SIMP_RULE (srw_ss() ++ CONJ_ss) [INJ_DEF, SURJ_DEF]
+
+fun unabbrev_in_goal s = let
+  fun check th = let
+    val c = concl th
+    val _ = match_term ``Abbrev b`` c
+    val (v,ty) = c |> rand |> lhand |> dest_var
+  in
+    if v = s then let
+        val th' = PURE_REWRITE_RULE [markerTheory.Abbrev_def] th
+      in
+        SUBST1_TAC th'
+      end
+    else NO_TAC
+  end
+in
+  first_assum check
+end
+
+(*
+val INFINITE_CROSS_UNIV = store_thm(
+  "INFINITE_CROSS_UNIV",
+  ``INFINITE s ⇒ (s × s ≈ s)``,
+  strip_tac >>
+  qabbrev_tac `A = { (As,f) | As ⊆ s ∧ BIJ f As (As × As) ∧
+                              ∀x. x ∉ As ⇒ (f x = ARB) }` >>
+(*  `∃Nf. INJ Nf univ(:num) s` by metis_tac [infinite_num_inj] >>
+  qabbrev_tac `Nfn = λa. case some n. Nf n = a of
+                           NONE => ARB
+                         | SOME na => (Nf (nfst na), Nf (nsnd na))` >>
+  `(IMAGE Nf univ(:num), Nfn) ∈ A`
+     by (simp[Abbr`A`, Abbr`Nfn`] >> conj_tac
+         >- (fs[SUBSET_DEF, INJ_DEF] >> metis_tac[]) >>
+         simp[BIJ_DEF, INJ_DEF, SURJ_DEF] >>
+         full_simp_tac (srw_ss() ++ DNF_ss) [INJ_DEF] >>
+         pop_assum (fn th=> `!x y. (Nf x = Nf y) = (x = y)` by metis_tac[th]) >>
+         simp[] >> conj_tac
+         >- (map_every qx_gen_tac [`n`, `m`] >>
+             strip_tac >>
+             map_every (fn q => qspec_then q (SUBST1_TAC o SYM)
+                                           numpairTheory.npair)
+                       [`n`, `m`] >>
+             simp[]) >>
+         simp[FORALL_PROD] >>
+         map_every qx_gen_tac [`m`, `n`] >> qexists_tac `m ⊗ n` >>
+         simp[]) >>
+  pop_assum mp_tac >> qmatch_abbrev_tac `NS ∈ A ==> s × s ≈ s` >>
+  strip_tac >> map_every markerLib.RM_ABBREV_TAC ["Nfn", "NS"] >> *)
+  qabbrev_tac `
+    rr = {((s1:'a set,f1),(s2,f2)) | (s1,f1) ∈ A ∧ (s2,f2) ∈ A ∧ s1 ⊆ s2 ∧
+              ∀x. x ∈ s1 ⇒ (f1 x = f2 x)}
+  ` >>
+  `partial_order rr A`
+     by (simp[partial_order_def] >> rpt conj_tac
+         >- (simp[domain_def, Abbr`rr`, SUBSET_DEF] >> rw[] >> rw[])
+         >- (simp[range_def, Abbr`rr`, SUBSET_DEF] >> rw[] >> rw[])
+         >- (simp[transitive_def, Abbr`rr`] >> rw[] >>
+             metis_tac [SUBSET_TRANS, SUBSET_DEF])
+         >- simp[reflexive_def, Abbr`rr`, FORALL_PROD] >>
+         simp[antisym_def, Abbr`rr`, FORALL_PROD] >>
+         map_every qx_gen_tac [`s1`, `f1`, `s2`, `f2`] >>
+         strip_tac >> `s1 = s2` by metis_tac [SUBSET_ANTISYM] >>
+         fs[Abbr`A`] >> simp[FUN_EQ_THM] >> metis_tac[]) >>
+  `({}, K ARB) ∈ A` by simp[Abbr`A`, BIJ_EMPTY] >>
+  `∀x. x ∈ A ==> (({},K ARB), x) ∈ rr` by simp[Abbr`rr`, FORALL_PROD] >>
+  `∀t. chain t rr ⇒ upper_bounds t rr ≠ {}`
+     by (gen_tac >>
+         simp[chain_def] >> strip_tac >>
+         `∀s0 f. (s0,f) ∈ t ⇒ BIJ f s0 (s0 × s0) ∧ s0 ⊆ s ∧ (s0,f) ∈ A ∧
+                              ∀x. x ∉ s0 ⇒ (f x = ARB)`
+            by (rpt gen_tac >> strip_tac >>
+                pop_assum (fn th => first_x_assum (fn impth =>
+                  mp_tac (MATCH_MP impth (CONJ th th)))) >>
+                rw[Abbr`rr`, Abbr`A`]) >>
+         simp[upper_bounds_def] >> simp[EXTENSION] >>
+         `∀s1 f1 s2 f2 x. (s1,f1) ∈ t ∧ (s2,f2) ∈ t ∧ x ∈ s1 ∧ x ∈ s2 ⇒
+                          (f1 x = f2 x)`
+            by (rpt strip_tac >>
+                Q.UNDISCH_THEN `(s1,f1) ∈ t` (fn th1 =>
+                   Q.UNDISCH_THEN `(s2,f2) ∈ t` (fn th2 =>
+                    first_x_assum (fn impth =>
+                                      mp_tac
+                                          (MATCH_MP impth (CONJ th1 th2))))) >>
+                simp[Abbr`rr`] >> rw[] >> rw[]) >>
+         qabbrev_tac `BigSet = BIGUNION (IMAGE FST t)` >>
+         qabbrev_tac `BigF = (λa. case some (s,f). (s,f) ∈ t ∧ a ∈ s of
+                                    NONE => ARB
+                                  | SOME (_, f) => f a)` >>
+         `(BigSet,BigF) ∈ A` by
+            (unabbrev_in_goal "A" >> simp[] >> rpt conj_tac
+             >- (simp_tac (srw_ss() ++ DNF_ss)
+                          [BIGUNION_SUBSET, FORALL_PROD, Abbr`BigSet`] >>
+                 metis_tac[]) >>
+             >- ((* showing function is a bijection *)
+                 asm_simp_tac (srw_ss() ++ DNF_ss)
+                              [better_BIJ, FORALL_PROD, Abbr`BigF`,
+                               Abbr`BigSet`, pairTheory.EXISTS_PROD] >>
+                 rpt conj_tac
+                 >- ((* function hits target set *)
+                     map_every qx_gen_tac [`a`, `ss`, `sf`] >>
+                     strip_tac >>
+                     map_every qexists_tac [`ss`, `sf`, `ss`, `sf`] >>
+                     simp[] >>
+                     qmatch_abbrev_tac `FST XX ∈ ss ∧ SND XX ∈ ss` >>
+                     `XX = sf a`
+                        by (simp[Abbr`XX`] >>
+                            DEEP_INTRO_TAC optionTheory.some_intro >>
+                            simp[FORALL_PROD] >> metis_tac[]) >>
+                     `BIJ sf ss (ss × ss)` by metis_tac[] >> simp[] >>
+                     pop_assum mp_tac >> simp_tac (srw_ss())[better_BIJ] >>
+                     simp[])
+                 >- ((* function is injective *)
+                     map_every qx_gen_tac
+                               [`a1`, `a2`, `s1`, `f1`, `s2`, `f2`] >>
+                     strip_tac >>
+                     qmatch_abbrev_tac `(XX1 = XX2) ⇒ (a1 = a2)` >>
+                     `XX1 = f1 a1`
+                        by (simp[Abbr`XX1`] >>
+                            DEEP_INTRO_TAC optionTheory.some_intro >>
+                            simp[FORALL_PROD] >> metis_tac[]) >>
+                     `XX2 = f2 a2`
+                        by (simp[Abbr`XX2`] >>
+                            DEEP_INTRO_TAC optionTheory.some_intro >>
+                            simp[FORALL_PROD] >> metis_tac[]) >>
+                     map_every markerLib.RM_ABBREV_TAC ["XX1", "XX2"] >>
+                     rw[] >>
+                     Q.UNDISCH_THEN `(s1,f1) ∈ t` (fn th1 =>
+                        (Q.UNDISCH_THEN `(s2,f2) ∈ t` (fn th2 =>
+                           (first_x_assum (fn impth =>
+                              mp_tac (MATCH_MP impth (CONJ th1 th2))))))) >>
+                     simp[Abbr`rr`, Abbr`A`] >> rw[]
+                     >- (`f1 a1 = f2 a1` by metis_tac[] >>
+                         `a1 ∈ s2` by metis_tac [SUBSET_DEF] >>
+                         metis_tac [BIJ_DEF, INJ_DEF]) >>
+                     `f2 a2 = f1 a2` by metis_tac[] >>
+                     `a2 ∈ s1` by metis_tac [SUBSET_DEF] >>
+                     metis_tac [BIJ_DEF, INJ_DEF]) >>
+                 (* function is surjective *)
+                 map_every qx_gen_tac [`a`, `b`, `s1`, `f1`, `s2`, `f2`] >>
+                 strip_tac >>
+                 Q.UNDISCH_THEN `(s1,f1) ∈ t` (fn th1 =>
+                    (Q.UNDISCH_THEN `(s2,f2) ∈ t` (fn th2 =>
+                       (first_assum (fn impth =>
+                          mp_tac (MATCH_MP impth (CONJ th1 th2)) >>
+                          assume_tac th1 >> assume_tac th2))))) >>
+                 unabbrev_in_goal "rr" >> simp_tac(srw_ss())[] >> rw[]
+                 >- (`a ∈ s2` by metis_tac [SUBSET_DEF] >>
+                     `(a,b) ∈ s2 × s2` by simp[] >>
+                     `∃x. x ∈ s2 ∧ (f2 x = (a,b))`
+                       by metis_tac [SURJ_DEF, BIJ_DEF] >>
+                     map_every qexists_tac [`x`, `s2`, `f2`] >>
+                     simp[] >> DEEP_INTRO_TAC optionTheory.some_intro >>
+                     simp[FORALL_PROD] >>
+                     Tactical.REVERSE conj_tac >- metis_tac[] >>
+                     map_every qx_gen_tac [`s3`, `f3`] >> strip_tac >>
+                     Q.UNDISCH_THEN `(s2,f2) ∈ t` (fn th1 =>
+                        (Q.UNDISCH_THEN `(s3,f3) ∈ t` (fn th2 =>
+                           (first_x_assum (fn impth =>
+                              mp_tac (MATCH_MP impth (CONJ th1 th2))))))) >>
+                     unabbrev_in_goal "rr" >> simp[] >> rw[] >> metis_tac[]) >>
+                 `b ∈ s1` by metis_tac [SUBSET_DEF] >>
+                 `(a,b) ∈ s1 × s1` by simp[] >>
+                 `∃x. x ∈ s1 ∧ (f1 x = (a,b))`
+                   by metis_tac[BIJ_DEF, SURJ_DEF] >>
+                 map_every qexists_tac [`x`, `s1`, `f1`] >> simp[] >>
+                 DEEP_INTRO_TAC optionTheory.some_intro >>
+                 simp[FORALL_PROD] >>
+                 Tactical.REVERSE conj_tac >- metis_tac[] >>
+                 map_every qx_gen_tac [`s3`, `f3`] >> strip_tac >>
+                 Q.UNDISCH_THEN `(s1,f1) ∈ t` (fn th1 =>
+                    (Q.UNDISCH_THEN `(s3,f3) ∈ t` (fn th2 =>
+                       (first_x_assum (fn impth =>
+                          mp_tac (MATCH_MP impth (CONJ th1 th2))))))) >>
+                 unabbrev_in_goal "rr" >> simp[] >> rw[] >> metis_tac[]) >>
+             (* function is ARB outside of domain *)
+             qx_gen_tac `x` >>
+             asm_simp_tac (srw_ss() ++ DNF_ss)
+                          [Abbr`BigF`, Abbr`BigSet`,
+                           DECIDE ``¬p∨q = (p ⇒ q)``, FORALL_PROD]>>
+             strip_tac >> DEEP_INTRO_TAC optionTheory.some_intro >>
+             simp[FORALL_PROD] >> metis_tac[]) >>
+         qexists_tac `(BigSet, BigF)` >> conj_tac
+         >- ((* (BigSet, BigF) ∈ range rr *)
+             simp[range_def] >> qexists_tac `({}, K ARB)` >> simp[]) >>
+         (* upper bound really is bigger than arbitrary element of chain *)
+         simp[FORALL_PROD] >> map_every qx_gen_tac [`s1`, `f1`] >>
+         Cases_on `(s1,f1) ∈ t` >> simp[] >>
+         unabbrev_in_goal "rr" >> simp[] >> conj_tac
+         >- (simp[Abbr`BigSet`] >> match_mp_tac SUBSET_BIGUNION_I >>
+             simp[pairTheory.EXISTS_PROD] >> metis_tac[]) >>
+         qx_gen_tac `x` >> strip_tac >> simp[Abbr`BigF`] >>
+         DEEP_INTRO_TAC optionTheory.some_intro >>
+         simp[FORALL_PROD] >> metis_tac[]) >>
+  `A ≠ {}` by (strip_tac >> fs[]) >>
+  `∃Mf. Mf ∈ maximal_elements A rr` by metis_tac [zorns_lemma] >>
+  `∃M mf. Mf = (M,mf)` by metis_tac [pairTheory.pair_CASES] >>
+  pop_assum SUBST_ALL_TAC >>
+  fs[maximal_elements_def] >>
+  Q.UNDISCH_THEN `(M,mf) ∈ A` mp_tac >> unabbrev_in_goal "A" >> simp[] >>
+  strip_tac >>
+  `M ≈ M × M` by metis_tac[cardeq_def] >>
+  Cases_on `M ≈ s` >- metis_tac [CARDEQ_CROSS, cardeq_TRANS, cardeq_SYM] >>
+  `M ≼ s` by simp[SUBSET_CARDLEQ] >>
+  `INFINITE M`
+    by (strip_tac >>
+  `M ≈ {T;F} × M`
+     by (match_mp_tac cardleq_ANTISYM >> conj_tac
+         >- (simp[cardleq_def] >> qexists_tac `λx. (T,x)` >> simp[INJ_DEF]) >>
+         `M × M ≼ M` by metis_tac [CARDEQ_CARDLEQ, cardleq_REFL, cardeq_REFL] >>
+         qsuff_tac `{T;F} × M ≼ M × M` >- metis_tac [cardleq_TRANS] >>
+         match_mp_tac CARDLEQ_CROSS_CONG >> simp[FINITE_CLE_INFINITE]
+
+
+
+  `s = M UNION (s DIFF M)` by (fs[EXTENSION, SUBSET_DEF] >> metis_tac[]) >>
+  `¬(s DIFF M ≼ M)`
+    by (strip_tac >>
+*)
+
 
 val _ = export_theory()
 
