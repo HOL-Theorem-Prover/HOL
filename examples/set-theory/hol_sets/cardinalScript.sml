@@ -364,28 +364,6 @@ val INFINITE_CROSS_UNIV = store_thm(
   strip_tac >>
   qabbrev_tac `A = { (As,f) | As ⊆ s ∧ BIJ f As (As × As) ∧
                               ∀x. x ∉ As ⇒ (f x = ARB) }` >>
-(*  `∃Nf. INJ Nf univ(:num) s` by metis_tac [infinite_num_inj] >>
-  qabbrev_tac `Nfn = λa. case some n. Nf n = a of
-                           NONE => ARB
-                         | SOME na => (Nf (nfst na), Nf (nsnd na))` >>
-  `(IMAGE Nf univ(:num), Nfn) ∈ A`
-     by (simp[Abbr`A`, Abbr`Nfn`] >> conj_tac
-         >- (fs[SUBSET_DEF, INJ_DEF] >> metis_tac[]) >>
-         simp[BIJ_DEF, INJ_DEF, SURJ_DEF] >>
-         full_simp_tac (srw_ss() ++ DNF_ss) [INJ_DEF] >>
-         pop_assum (fn th=> `!x y. (Nf x = Nf y) = (x = y)` by metis_tac[th]) >>
-         simp[] >> conj_tac
-         >- (map_every qx_gen_tac [`n`, `m`] >>
-             strip_tac >>
-             map_every (fn q => qspec_then q (SUBST1_TAC o SYM)
-                                           numpairTheory.npair)
-                       [`n`, `m`] >>
-             simp[]) >>
-         simp[FORALL_PROD] >>
-         map_every qx_gen_tac [`m`, `n`] >> qexists_tac `m ⊗ n` >>
-         simp[]) >>
-  pop_assum mp_tac >> qmatch_abbrev_tac `NS ∈ A ==> s × s ≈ s` >>
-  strip_tac >> map_every markerLib.RM_ABBREV_TAC ["Nfn", "NS"] >> *)
   qabbrev_tac `
     rr = {((s1:'a set,f1),(s2,f2)) | (s1,f1) ∈ A ∧ (s2,f2) ∈ A ∧ s1 ⊆ s2 ∧
               ∀x. x ∈ s1 ⇒ (f1 x = f2 x)}
@@ -430,7 +408,7 @@ val INFINITE_CROSS_UNIV = store_thm(
             (unabbrev_in_goal "A" >> simp[] >> rpt conj_tac
              >- (simp_tac (srw_ss() ++ DNF_ss)
                           [BIGUNION_SUBSET, FORALL_PROD, Abbr`BigSet`] >>
-                 metis_tac[]) >>
+                 metis_tac[])
              >- ((* showing function is a bijection *)
                  asm_simp_tac (srw_ss() ++ DNF_ss)
                               [better_BIJ, FORALL_PROD, Abbr`BigF`,
@@ -541,6 +519,50 @@ val INFINITE_CROSS_UNIV = store_thm(
   `M ≈ M × M` by metis_tac[cardeq_def] >>
   Cases_on `M ≈ s` >- metis_tac [CARDEQ_CROSS, cardeq_TRANS, cardeq_SYM] >>
   `M ≼ s` by simp[SUBSET_CARDLEQ] >>
+  `M ≠ {}`
+     by (strip_tac >> fs[] >>
+         `∃c. c ∈ s` by metis_tac [INFINITE_INHAB] >>
+         first_x_assum (qspec_then `({c}, (λx. if x = c then (c,c)
+                                               else ARB))` mp_tac) >>
+         `mf = K ARB` by simp[FUN_EQ_THM] >> pop_assum SUBST_ALL_TAC >>
+         map_every unabbrev_in_goal ["A", "rr"] >> simp[better_BIJ] >>
+         unabbrev_in_goal "A" >> simp[better_BIJ, FORALL_PROD]) >>
+  `∀e. M ≠ {e}`
+     by (rpt strip_tac >> fs[] >>
+         `∃Nf n. INJ Nf univ(:num) s ∧ (Nf n = e)`
+           by (`∃Nf0. INJ Nf0 univ(:num) s` by metis_tac [infinite_num_inj] >>
+               Cases_on `∃n. Nf0 n = e` >- metis_tac[] >> fs[]
+               map_every qexists_tac [`λn. if n = 0 then e else Nf0 n`, `0`] >>
+               simp[] >> fs[INJ_DEF] >> rw[]) >>
+         qabbrev_tac `
+           Nfn = λa. case some m. Nf m = a of
+                           NONE => ARB
+                         | SOME m => (Nf (nfst m), Nf (nsnd m))` >>
+         `(IMAGE Nf univ(:num), Nfn) ∈ A`
+           by (simp[Abbr`A`] >> conj_tac
+               >- (fs[SUBSET_DEF, INJ_DEF] >> metis_tac[]) >>
+               simp[better_BIJ] >>
+               asm_simp_tac (srw_ss() ++ DNF_ss) [FORALL_PROD] >>
+               `∀x y. (Nf x = Nf y) = (x = y)`
+                 by metis_tac [INJ_DEF, IN_UNIV] >>
+               simp[Abbr`Nfn`] >> conj_tac
+               >- (map_every qx_gen_tac [`m`, `p`] >> strip_tac >>
+                   map_every (fn q => qspec_then q (SUBST1_TAC o SYM)
+                                                 numpairTheory.npair)
+                             [`m`, `p`] >> simp[]) >>
+               simp[FORALL_PROD] >>
+               map_every qx_gen_tac [`m`, `p`] >> qexists_tac `m ⊗ p` >>
+               simp[]) >>
+         first_x_assum (qspec_then `(IMAGE Nf univ(:num), Nfn)` mp_tac) >>
+         map_every unabbrev_in_goal ["A", "rr"] >> simp[better_BIJ] >>
+         `∀x y. (Nf x = Nf y) = (x = y)` by metis_tac [INJ_DEF, IN_UNIV] >>
+         simp[Abbr`Nfn`] >>
+         asm_simp_tac (srw_ss() ++ DNF_ss) [] >> DISJ1_TAC >> qexists_tac `n` >>
+
+
+
+
+
   `INFINITE M`
     by (strip_tac >>
   `M ≈ {T;F} × M`
