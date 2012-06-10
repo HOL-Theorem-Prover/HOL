@@ -338,6 +338,10 @@ val SUBSET_CARDLEQ = store_thm(
   simp[SUBSET_DEF, cardleq_def] >> strip_tac >> qexists_tac `I` >>
   simp[INJ_DEF]);
 
+(* val cardleq_dichotomy = store_thm(
+  "cardleq_dichotomy",
+  ``s ≼ t ∨ t ≼ s``,
+
 val better_BIJ = BIJ_DEF |> SIMP_RULE (srw_ss() ++ CONJ_ss) [INJ_DEF, SURJ_DEF]
 
 fun unabbrev_in_goal s = let
@@ -357,7 +361,6 @@ in
   first_assum check
 end
 
-(*
 val INFINITE_CROSS_UNIV = store_thm(
   "INFINITE_CROSS_UNIV",
   ``INFINITE s ⇒ (s × s ≈ s)``,
@@ -529,10 +532,15 @@ val INFINITE_CROSS_UNIV = store_thm(
          unabbrev_in_goal "A" >> simp[better_BIJ, FORALL_PROD]) >>
   `∀e. M ≠ {e}`
      by (rpt strip_tac >> fs[] >>
-         `∃Nf n. INJ Nf univ(:num) s ∧ (Nf n = e)`
+         `∃Nf. INJ Nf univ(:num) s ∧ (Nf 0 = e)`
            by (`∃Nf0. INJ Nf0 univ(:num) s` by metis_tac [infinite_num_inj] >>
-               Cases_on `∃n. Nf0 n = e` >- metis_tac[] >> fs[]
-               map_every qexists_tac [`λn. if n = 0 then e else Nf0 n`, `0`] >>
+               Cases_on `∃n. Nf0 n = e`
+               >- (fs[] >> Cases_on `n = 0` >- metis_tac[] >>
+                   qexists_tac `λm. if m = 0 then e
+                                    else if m = n then Nf0 0
+                                    else Nf0 m` >>
+                   fs[INJ_DEF] >> rw[] >> metis_tac[]) >>
+               qexists_tac `λn. if n = 0 then e else Nf0 n` >>
                simp[] >> fs[INJ_DEF] >> rw[]) >>
          qabbrev_tac `
            Nfn = λa. case some m. Nf m = a of
@@ -557,26 +565,50 @@ val INFINITE_CROSS_UNIV = store_thm(
          map_every unabbrev_in_goal ["A", "rr"] >> simp[better_BIJ] >>
          `∀x y. (Nf x = Nf y) = (x = y)` by metis_tac [INJ_DEF, IN_UNIV] >>
          simp[Abbr`Nfn`] >>
-         asm_simp_tac (srw_ss() ++ DNF_ss) [] >> DISJ1_TAC >> qexists_tac `n` >>
-
-
-
-
-
+         asm_simp_tac (srw_ss() ++ DNF_ss) [] >> DISJ1_TAC >> qexists_tac `0` >>
+         rpt conj_tac
+         >- (fs[INJ_DEF, SUBSET_DEF] >> metis_tac[])
+         >- (map_every qx_gen_tac [`m`, `p`] >>
+             map_every (fn q => qspec_then q (SUBST1_TAC o SYM)
+                                                 numpairTheory.npair)
+                       [`m`, `p`] >> simp[])
+         >- (simp[FORALL_PROD] >>
+             metis_tac[numpairTheory.nfst_npair, numpairTheory.nsnd_npair])
+         >- simp[Abbr`A`]
+         >- simp[]
+         >- (rw[] >> fs[BIJ_DEF, INJ_DEF] >> EVAL_TAC) >>
+         simp[EXTENSION] >> rw[] >> qexists_tac `Nf 1` >> simp[]) >>
   `INFINITE M`
     by (strip_tac >>
+        `FINITE (M × M)` by simp[] >>
+        `CARD M = CARD (M × M)` by metis_tac [FINITE_BIJ_CARD_EQ] >>
+        `_ = CARD M * CARD M`
+          by simp_tac (srw_ss())[CARD_CROSS, ASSUME ``FINITE M``] >>
+        `(CARD M = 1) ∨ (CARD M = 0)`
+          by metis_tac [arithmeticTheory.EQ_MULT_LCANCEL,
+                        arithmeticTheory.MULT_CLAUSES]
+        >- metis_tac [SING_IFF_CARD1, SING_DEF] >>
+        metis_tac [CARD_EQ_0]) >>
   `M ≈ {T;F} × M`
-     by (match_mp_tac cardleq_ANTISYM >> conj_tac
-         >- (simp[cardleq_def] >> qexists_tac `λx. (T,x)` >> simp[INJ_DEF]) >>
-         `M × M ≼ M` by metis_tac [CARDEQ_CARDLEQ, cardleq_REFL, cardeq_REFL] >>
-         qsuff_tac `{T;F} × M ≼ M × M` >- metis_tac [cardleq_TRANS] >>
-         match_mp_tac CARDLEQ_CROSS_CONG >> simp[FINITE_CLE_INFINITE]
-
-
-
+    by (match_mp_tac cardleq_ANTISYM >> conj_tac
+        >- (simp[cardleq_def] >> qexists_tac `λx. (T,x)` >> simp[INJ_DEF]) >>
+        `M × M ≼ M` by metis_tac [CARDEQ_CARDLEQ, cardleq_REFL, cardeq_REFL] >>
+        qsuff_tac `{T;F} × M ≼ M × M` >- metis_tac [cardleq_TRANS] >>
+        match_mp_tac CARDLEQ_CROSS_CONG >> simp[FINITE_CLE_INFINITE]) >>
   `s = M UNION (s DIFF M)` by (fs[EXTENSION, SUBSET_DEF] >> metis_tac[]) >>
   `¬(s DIFF M ≼ M)`
     by (strip_tac >>
+        qsuff_tac `s ≼ M` >- metis_tac [cardleq_ANTISYM] >>
+        qsuff_tac `s ≼ {T;F} × M` >- metis_tac[CARDEQ_CARDLEQ, cardeq_REFL] >>
+        `∃f0. INJ f0 (s DIFF M) M` by metis_tac[cardleq_def] >>
+        simp[cardleq_def, INJ_DEF] >>
+        qexists_tac `λa. if a ∈ M then (T,a) else (F,f0 a)` >>
+        simp[] >> conj_tac
+        >- (rw[] >> metis_tac [IN_DIFF, INJ_DEF]) >>
+        rw[] >> prove_tac[IN_DIFF, INJ_DEF]) >>
+  `¬(s DIFF M ≈ M)` by metis_tac [CARDEQ_SUBSET_CARDLEQ] >>
+
+
 *)
 
 
