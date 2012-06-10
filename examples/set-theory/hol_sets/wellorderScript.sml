@@ -2,7 +2,7 @@ open HolKernel Parse boolLib bossLib
 open lcsymtacs
 open boolSimps
 
-open set_relationTheory pred_setTheory cardinalTheory
+open set_relationTheory pred_setTheory (* cardinalTheory *)
 
 val _ = new_theory "wellorder"
 
@@ -959,8 +959,8 @@ val WIN_remove = store_thm(
 
 val elsOf_cardeq_iso = store_thm(
   "elsOf_cardeq_iso",
-  ``elsOf (wo:'b wellorder) ≼ univ(:'a) ⇒ ∃wo':'a wellorder. orderiso wo wo'``,
-  simp[cardleq_def] >> disch_then (Q.X_CHOOSE_THEN `f` mp_tac) >>
+  ``INJ f (elsOf (wo:'b wellorder)) univ(:'a) ⇒
+    ∃wo':'a wellorder. orderiso wo wo'``,
   simp[elsOf_def] >> strip_tac >>
   `wellorder (wellorder_REP wo)` by simp[#termP_term_REP wellorder_results] >>
   qexists_tac `wellorder_ABS (IMAGE (f ## f) (wellorder_REP wo))` >>
@@ -978,6 +978,46 @@ val elsOf_cardeq_iso = store_thm(
   map_every qx_gen_tac [`x`, `y`] >> strip_tac >>
   `x ∈ elsOf wo ∧ y ∈ elsOf wo` by metis_tac [WLE_elsOf] >>
   fs[elsOf_def] >> metis_tac[IN_UNION]);
+
+(*
+val allsets_wellorderable = store_thm(
+  "allsets_wellorderable",
+  ``!s. ∃wo. elsOf wo = s``,
+  gen_tac >>
+  qabbrev_tac `A = { w | elsOf w ⊆ s }` >>
+  qabbrev_tac `
+    R = { (w1,w2) | w1 ∈ A ∧ w2 ∈ A ∧
+                    ((w1 = w2) ∨ ∃x. x ∈ elsOf w2 ∧ (w1 = wobound x w2)) }
+  ` >>
+  `A ≠ ∅` by (simp[EXTENSION, Abbr`A`] >> qexists_tac `wZERO` >> simp[]) >>
+  `partial_order R A`
+    by (simp[partial_order_def, Abbr`R`, domain_def, range_def] >>
+        rpt conj_tac
+        >- simp_tac (srw_ss() ++ DNF_ss) [SUBSET_DEF]
+        >- simp_tac (srw_ss() ++ DNF_ss) [SUBSET_DEF]
+        >- (simp[transitive_def] >> rw[] >> fs[elsOf_wobound] >>
+            metis_tac[wobound2, WIN_elsOf])
+        >- simp[reflexive_def]
+        >> simp[antisym_def] >> rw[] >> fs[elsOf_wobound] >>
+           metis_tac[orderlt_def, orderiso_REFL, orderlt_REFL,
+                     wobound2, WIN_elsOf]) >>
+  `∀c. chain c R ⇒ upper_bounds c R ≠ ∅`
+    by (simp[EXTENSION, chain_def, upper_bounds_def] >> gen_tac >> strip_tac >>
+        qabbrev_tac `Ls = BIGUNION (IMAGE destWO c)` >>
+        `∀x y. (x,y) IN Ls ⇔ ∃w. w ∈ c ∧ (x,y) WLE w`
+          by (simp_tac (srw_ss() ++ DNF_ss) [Abbr`Ls`] >> metis_tac[]) >>
+        `wellorder Ls`
+           by (simp[wellorder_def] >> rpt conj_tac
+               >- (simp[wellfounded_def, strict_def] >>
+                   simp_tac(srw_ss() ++ DNF_ss)[] >>
+                   map_every qx_gen_tac [`x`, `ss`] >> strip_tac >>
+                   Cases_on `∃w. w ∈ c ∧ ss ⊆ elsOf w`
+        qexists_tac `mkWO ()` >> conj_tac
+        >- (simp[range_def]
+
+
+  zorns_lemma
+*)
 
 val _ = export_theory()
 

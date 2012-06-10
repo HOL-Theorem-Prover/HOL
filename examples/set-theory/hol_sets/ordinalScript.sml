@@ -259,7 +259,7 @@ val univ_ord_greater_cardinal = store_thm(
   `elsOf (allOrds:'a ordinal wellorder) ≼ univ(:'a inf)`
       by simp[] >>
   `∃w:'a inf wellorder. orderiso (allOrds:'a ordinal wellorder) w`
-    by metis_tac [elsOf_cardeq_iso] >>
+    by metis_tac [elsOf_cardeq_iso, cardleq_def] >>
   `orderiso w (wobound (mkOrdinal w) allOrds)`
     by simp[wellorder_ordinal_isomorphism] >>
   `mkOrdinal w ∈ elsOf allOrds` by simp[elsOf_allOrds] >>
