@@ -979,6 +979,22 @@ val elsOf_cardeq_iso = store_thm(
   `x ∈ elsOf wo ∧ y ∈ elsOf wo` by metis_tac [WLE_elsOf] >>
   fs[elsOf_def] >> metis_tac[IN_UNION]);
 
+fun unabbrev_in_goal s = let
+  fun check th = let
+    val c = concl th
+    val _ = match_term ``Abbrev b`` c
+    val (v,ty) = c |> rand |> lhand |> dest_var
+  in
+    if v = s then let
+        val th' = PURE_REWRITE_RULE [markerTheory.Abbrev_def] th
+      in
+        SUBST1_TAC th'
+      end
+    else NO_TAC
+  end
+in
+  first_assum check
+end
 (*
 val allsets_wellorderable = store_thm(
   "allsets_wellorderable",
@@ -1006,17 +1022,129 @@ val allsets_wellorderable = store_thm(
         qabbrev_tac `Ls = BIGUNION (IMAGE destWO c)` >>
         `∀x y. (x,y) IN Ls ⇔ ∃w. w ∈ c ∧ (x,y) WLE w`
           by (simp_tac (srw_ss() ++ DNF_ss) [Abbr`Ls`] >> metis_tac[]) >>
+        `∀w1 w2. w1 ∈ c ∧ w2 ∈ c ⇒ elsOf w1 ⊆ elsOf w2 ∨ elsOf w2 ⊆ elsOf w1`
+          by (rpt strip_tac >> `(w1,w2) ∈ R ∨ (w2,w1) ∈ R` by metis_tac[] >>
+              pop_assum mp_tac >> simp[Abbr`R`] >> rw[] >- simp[]
+              >- (simp[SUBSET_DEF, elsOf_wobound] >> metis_tac [WIN_elsOf])
+              >- simp[] >>
+              simp[SUBSET_DEF, elsOf_wobound] >> metis_tac [WIN_elsOf]) >>
+        `∀e. e ∈ (domain Ls ∪ range Ls) ⇔ ∃w. w ∈ c ∧ e ∈ elsOf w`
+          by (simp[domain_def, range_def] >> gen_tac >>
+              eq_tac >- metis_tac [WLE_elsOf] >>
+              metis_tac [elsOf_WLE]) >>
         `wellorder Ls`
            by (simp[wellorder_def] >> rpt conj_tac
-               >- (simp[wellfounded_def, strict_def] >>
+               >- ((* WF *)simp[wellfounded_def, strict_def] >>
                    simp_tac(srw_ss() ++ DNF_ss)[] >>
-                   map_every qx_gen_tac [`x`, `ss`] >> strip_tac >>
-                   Cases_on `∃w. w ∈ c ∧ ss ⊆ elsOf w`
-        qexists_tac `mkWO ()` >> conj_tac
-        >- (simp[range_def]
+                   map_every qx_gen_tac [`ss`, `x`] >> strip_tac >>
+                   Cases_on `∃w. w ∈ c ∧ ss ∩ elsOf w ≠ ∅`
+                   >- (fs[] >>
+                       `wellorder (destWO w)` by simp [termP_term_REP] >>
+                       `wellfounded (strict (destWO w))` by fs[wellorder_def] >>
+                       pop_assum (qspec_then `ss ∩ elsOf w` mp_tac o
+                                  SIMP_RULE (srw_ss()) [wellfounded_def]) >>
+                       simp_tac (srw_ss() ++ DNF_ss)[] >>
+                       `∃y. y ∈ ss ∧ y ∈ elsOf w`
+                         by (fs[EXTENSION] >> metis_tac[]) >>
+                       disch_then (qspec_then `y` mp_tac) >> simp[] >>
+                       disch_then (Q.X_CHOOSE_THEN `min` strip_assume_tac) >>
+                       qexists_tac `min` >> simp[] >>
+                       map_every qx_gen_tac [`z`, `w'`] >> strip_tac >>
+                       `∀u. (u,min) WIN w ⇒ u ∉ ss` by metis_tac [WIN_elsOf] >>
+                       Cases_on `w = w'` >- metis_tac[WLE_WIN_EQ] >>
+                       `(w,w') ∈ R ∨ (w',w) ∈ R` by metis_tac[] >>
+                       pop_assum mp_tac >>
+                       asm_simp_tac (srw_ss() ++ DNF_ss) [Abbr`R`] >>
+                       qx_gen_tac `b` >> strip_tac >>
+                       first_x_assum match_mp_tac
+                       >- (simp[WIN_wobound] >> fs[elsOf_wobound] >>
+                           metis_tac[WLE_WIN_EQ, WIN_TRANS]) >>
+                       metis_tac [WIN_wobound, WLE_WIN_EQ]) >>
+                   fs[] >> qexists_tac `x` >> simp[] >>
+                   fs[EXTENSION] >> metis_tac[WLE_elsOf])
+               >- ((* linear *)
+                   simp[linear_order_def] >> rpt conj_tac
+                   >- ((* transitive *)
+                       simp[transitive_def] >>
+                       map_every qx_gen_tac [`x`, `y`, `z`] >>
+                       disch_then (CONJUNCTS_THEN2
+                                   (Q.X_CHOOSE_THEN `w1` strip_assume_tac)
+                                   (Q.X_CHOOSE_THEN `w2` strip_assume_tac)) >>
+                       `(w1,w2) ∈ R ∨ (w2,w1) ∈ R` by simp[] >>
+                       pop_assum mp_tac >> simp[Abbr`R`] >>
+                       Cases_on `w1 = w2` >- metis_tac [WLE_TRANS] >> simp[]>>
+                       rw[] >> fs[WLE_wobound] >> metis_tac[WLE_TRANS])
+                   >- ((* antisym *)
+                       simp[antisym_def] >>
+                       map_every qx_gen_tac [`x`, `y`] >>
+                       disch_then (CONJUNCTS_THEN2
+                                   (Q.X_CHOOSE_THEN `w1` strip_assume_tac)
+                                   (Q.X_CHOOSE_THEN `w2` strip_assume_tac)) >>
+                       `(w1,w2) ∈ R ∨ (w2,w1) ∈ R` by simp[] >>
+                       pop_assum mp_tac >> simp[Abbr`R`] >>
+                       Cases_on `w1 = w2` >- metis_tac [WLE_ANTISYM] >> simp[]>>
+                       rw[] >> fs[WLE_wobound] >> metis_tac [WLE_ANTISYM]) >>
+                   (* trichotomous *)
+                   map_every qx_gen_tac [`x`, `y`] >>
+                   disch_then (CONJUNCTS_THEN2
+                               (Q.X_CHOOSE_THEN `w1` strip_assume_tac)
+                               (Q.X_CHOOSE_THEN `w2` strip_assume_tac)) >>
+                   `(w1,w2) ∈ R ∨ (w2,w1) ∈ R` by simp[] >>
+                   pop_assum mp_tac >> simp[Abbr`R`] >>
+                   Cases_on `w1 = w2`
+                   >- metis_tac [WIN_trichotomy, WLE_WIN_EQ] >> simp[]>>
+                   rw[] >> fs[elsOf_wobound] >>
+                   metis_tac [WIN_elsOf, WIN_trichotomy, WLE_WIN_EQ]) >>
+               (* reflexive *)
+               simp[reflexive_def] >> simp[elsOf_WLE]) >>
+        qexists_tac `mkWO Ls` >> conj_tac
+        >- ((* mkWO Ls ∈ range R *)
+            simp[range_def] >> qexists_tac `wZERO` >>
+            map_every unabbrev_in_goal ["R", "A"] >> simp[] >> conj_tac
+            >- (asm_simp_tac bool_ss [elsOf_def, SUBSET_DEF, destWO_mkWO] >>
+                simp_tac bool_ss [GSYM elsOf_def] >> qx_gen_tac `x` >>
+                disch_then (Q.X_CHOOSE_THEN `w` strip_assume_tac) >>
+                qpat_assum `w ∈ c`
+                  (fn th =>
+                     first_x_assum
+                       (fn imp => mp_tac (MATCH_MP imp (CONJ th th)) >>
+                                  simp[SUBSET_DEF, Abbr`R`, Abbr`A`] >>
+                                  NO_TAC))) >>
+            Cases_on `c = {}` >- fs[Abbr`Ls`, wZERO_def] >>
+            Cases_on `c = {wZERO}` >- fs[Abbr`Ls`] >>
+            `∃w. w ∈ c ∧ w ≠ wZERO` by (fs[EXTENSION] >> metis_tac[]) >>
+            DISJ2_TAC >> qexists_tac `THE (wleast w ∅)` >>
+            Cases_on `wleast w ∅` >- (imp_res_tac wleast_EQ_NONE >> fs[]) >>
+            pop_assum (mp_tac o MATCH_MP wleast_IN_wo) >> simp[] >>
+            strip_tac >> asm_simp_tac bool_ss [elsOf_def, destWO_mkWO] >>
+            simp_tac bool_ss [GSYM elsOf_def] >> conj_tac >- metis_tac[] >>
+            simp[wobound_def,iseg_def, destWO_mkWO, strict_def] >>
+            qmatch_abbrev_tac `wZERO = mkWO (rrestrict Ls ss)` >>
+            qsuff_tac `ss = {}` >- simp[wZERO_def, rrestrict_def] >>
+            qunabbrev_tac `ss` >> simp[EXTENSION] >>
+            qx_gen_tac `y` >> Cases_on `x = y` >> simp[] >>
+            qx_gen_tac `w'` >> Cases_on `w' ∈ c` >> simp[] >>
+            `(w,w') ∈ R ∨ (w',w) ∈ R` by simp[] >>
+            pop_assum mp_tac >> simp[Abbr`R`] >>
+            Cases_on `w = w'` >> simp[]
+            >- metis_tac[WLE_WIN_EQ, WIN_elsOf, WIN_TRANS, WIN_REFL]
+            >- (rw[] >> fs[elsOf_wobound, WIN_wobound] >>
+                metis_tac [WLE_WIN_EQ, WIN_TRANS, WIN_REFL])
+            >- metis_tac[WLE_WIN_EQ, WIN_elsOf, WIN_TRANS, WIN_REFL] >>
+            rw[WLE_wobound] >>
+            metis_tac [WIN_TRANS, WIN_REFL, WLE_WIN_EQ, WIN_elsOf]) >>
+        (* mkWO Ls actually is u.b. *)
+        qx_gen_tac `y` >> Cases_on `y ∈ c` >> simp[] >>
+        `(y,y) ∈ R` by metis_tac[] >> pop_assum mp_tac >>
+        unabbrev_in_goal "R" >> simp[] >> disch_then (K ALL_TAC) >> conj_tac
+        >- (simp[Abbr`A`] >>
+            asm_simp_tac bool_ss [elsOf_def, destWO_mkWO, SUBSET_DEF] >>
+            simp_tac bool_ss [GSYM elsOf_def] >> qx_gen_tac `x` >>
+            disch_then (Q.X_CHOOSE_THEN `w` strip_assume_tac) >>
+            `(w,w) ∈ R` by metis_tac [] >> pop_assum mp_tac >>
+            simp[Abbr`R`, SUBSET_DEF]) >>
 
 
-  zorns_lemma
 *)
 
 val _ = export_theory()
