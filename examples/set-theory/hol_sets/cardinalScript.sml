@@ -411,6 +411,39 @@ in
   first_assum check
 end
 
+val set_binomial2 = store_thm(
+  "set_binomial2",
+  ``((A ∪ B) × (A ∪ B) = A × A ∪ A × B ∪ B × A ∪ B × B)``,
+  simp[EXTENSION, FORALL_PROD] >>
+  simp_tac (srw_ss() ++ DNF_ss) [DISJ_ASSOC]);
+
+val lemma1 = prove(
+  ``INFINITE M ∧ M ≈ M × M ⇒
+    M ≈ {T;F} × M ∧
+    ∀A B. DISJOINT A B ∧ A ≈ M ∧ B ≈ M ⇒ A ∪ B ≈ M``,
+  strip_tac >> CONJ_ASM1_TAC
+  >- (match_mp_tac cardleq_ANTISYM >> conj_tac
+      >- (simp[cardleq_def] >> qexists_tac `λx. (T,x)` >> simp[INJ_DEF]) >>
+     `M × M ≼ M` by metis_tac [CARDEQ_CARDLEQ, cardleq_REFL, cardeq_REFL] >>
+     qsuff_tac `{T;F} × M ≼ M × M` >- metis_tac [cardleq_TRANS] >>
+     match_mp_tac CARDLEQ_CROSS_CONG >> simp[FINITE_CLE_INFINITE]) >>
+  simp[DISJOINT_DEF, EXTENSION] >> rpt strip_tac >>
+  `(∃f1. BIJ f1 A M) ∧ (∃f2. BIJ f2 B M)` by metis_tac[cardeq_def] >>
+  qsuff_tac `A ∪ B ≈ {T;F} × M`
+  >- metis_tac [cardeq_TRANS, cardeq_SYM] >>
+  simp[cardeq_def] >>
+  qexists_tac `λx. if x ∈ A then (T,f1 x) else (F,f2 x)` >>
+  simp[better_BIJ] >> rpt conj_tac
+  >- (fs[better_BIJ] >> rw[])
+  >- (map_every qx_gen_tac [`a`, `b`] >> strip_tac >> simp[] >>
+      metis_tac[BIJ_DEF, INJ_DEF, pairTheory.PAIR_EQ]) >>
+  simp[FORALL_PROD] >> map_every qx_gen_tac [`test`, `m`] >> strip_tac >>
+  Cases_on `test`
+  >- (`∃a. a ∈ A ∧ (f1 a = m)` by metis_tac [BIJ_DEF, SURJ_DEF] >>
+      qexists_tac `a` >> simp[]) >>
+  `∃b. b ∈ B ∧ (f2 b = m)` by metis_tac [BIJ_DEF, SURJ_DEF] >>
+  qexists_tac `b` >> simp[] >> metis_tac[]);
+
 (*
 val INFINITE_CROSS_UNIV = store_thm(
   "INFINITE_CROSS_UNIV",
@@ -640,12 +673,7 @@ val INFINITE_CROSS_UNIV = store_thm(
                         arithmeticTheory.MULT_CLAUSES]
         >- metis_tac [SING_IFF_CARD1, SING_DEF] >>
         metis_tac [CARD_EQ_0]) >>
-  `M ≈ {T;F} × M`
-    by (match_mp_tac cardleq_ANTISYM >> conj_tac
-        >- (simp[cardleq_def] >> qexists_tac `λx. (T,x)` >> simp[INJ_DEF]) >>
-        `M × M ≼ M` by metis_tac [CARDEQ_CARDLEQ, cardleq_REFL, cardeq_REFL] >>
-        qsuff_tac `{T;F} × M ≼ M × M` >- metis_tac [cardleq_TRANS] >>
-        match_mp_tac CARDLEQ_CROSS_CONG >> simp[FINITE_CLE_INFINITE]) >>
+  `M ≈ {T;F} × M` by metis_tac [lemma1] >>
   `s = M UNION (s DIFF M)` by (fs[EXTENSION, SUBSET_DEF] >> metis_tac[]) >>
   `¬(s DIFF M ≼ M)`
     by (strip_tac >>
@@ -658,6 +686,40 @@ val INFINITE_CROSS_UNIV = store_thm(
         >- (rw[] >> metis_tac [IN_DIFF, INJ_DEF]) >>
         rw[] >> prove_tac[IN_DIFF, INJ_DEF]) >>
   `¬(s DIFF M ≈ M)` by metis_tac [CARDEQ_SUBSET_CARDLEQ] >>
+  `∃f. INJ f M (s DIFF M)` by metis_tac [cardleq_def, cardlt_lenoteq] >>
+  qabbrev_tac `E = IMAGE f M` >>
+  `E ⊆ s DIFF M` by (fs[INJ_DEF, SUBSET_DEF, Abbr`E`] >> metis_tac[]) >>
+  `INJ f M E` by (fs[Abbr`E`, INJ_DEF] >> metis_tac[]) >>
+  `SURJ f M E` by simp[Abbr`E`] >>
+  `M ≈ E` by metis_tac[cardeq_def, BIJ_DEF] >>
+  `E × E ≈ M` by metis_tac [CARDEQ_CROSS, cardeq_SYM, cardeq_TRANS] >>
+  `E × M ≈ M` by metis_tac [CARDEQ_CROSS, cardeq_SYM, cardeq_TRANS] >>
+  `M × E ≈ M` by metis_tac [CARDEQ_CROSS, cardeq_SYM, cardeq_TRANS] >>
+  `DISJOINT (E × M) (E × E)`
+    by (simp[DISJOINT_DEF, EXTENSION, FORALL_PROD] >>
+        metis_tac [SUBSET_DEF, IN_DIFF]) >>
+  `(E × M) ∪ (E × E) ≈ M` by metis_tac [lemma1] >>
+  `DISJOINT (M × E) (E × M ∪ E × E)`
+    by (simp[DISJOINT_DEF, EXTENSION, FORALL_PROD] >>
+        metis_tac [SUBSET_DEF, IN_DIFF]) >>
+  `M × E ∪ (E × M ∪ E × E) ≈ M` by metis_tac[lemma1] >>
+  `M × E ∪ E × M ∪ E × E ≈ E`
+    by metis_tac[UNION_ASSOC, cardeq_TRANS] >>
+  pop_assum mp_tac >> qmatch_abbrev_tac `ME ≈ E ⇒ s × s ≈ s` >>
+  strip_tac >>
+  `∃f0. BIJ f0 E ME` by metis_tac [cardeq_def, cardeq_SYM] >>
+  qabbrev_tac `FF = λm. if m ∈ M then mf m else if m ∈ E then f0 m else ARB` >>
+  `(M ∪ E) × (M ∪ E) = M × M ∪ ME`
+    by simp[Abbr`ME`, UNION_ASSOC, set_binomial2] >>
+  `BIJ FF (M ∪ E) ((M ∪ E) × (M ∪ E))`
+    by (simp[better_BIJ, Abbr`FF`] >> rpt conj_tac
+        >- (qx_gen_tac `m` >> Cases_on `m ∈ M` >> simp[] >>
+            fs[better_BIJ] >> strip_tac >> qunabbrev_tac `ME` >>
+            fs[] >> metis_tac[])
+        >- (
+
+
+
 
 
 *)
