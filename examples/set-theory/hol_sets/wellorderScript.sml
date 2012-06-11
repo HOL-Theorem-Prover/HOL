@@ -957,6 +957,64 @@ val WIN_remove = store_thm(
   ``(x,y) WIN remove e w <=> x ≠ e ∧ y ≠ e ∧ (x,y) WIN w``,
   simp[remove_def, destWO_mkWO, wellorder_remove, strict_def]);
 
+val ADD1_def = Define`
+  ADD1 e w =
+    if e IN elsOf w then w
+    else
+      mkWO (destWO w UNION {(x,e) | x IN elsOf w} UNION {(e,e)})
+`;
+
+val wellorder_ADD1 = store_thm(
+  "wellorder_ADD1",
+  ``e NOTIN elsOf w ==>
+    wellorder (destWO w UNION {(x,e) | x IN elsOf w} UNION {(e,e)})``,
+  `wellorder (destWO w)` by rw [termP_term_REP] >>
+  rw[wellorder_def] >| [
+    simp[wellfounded_def, strict_def] >> qx_gen_tac `s` >>
+    disch_then (Q.X_CHOOSE_THEN `a` assume_tac) >>
+    Cases_on `?b. b IN s /\ b IN elsOf w` >> fs[] >| [
+      fs[wellorder_def, wellfounded_def] >>
+      first_x_assum (qspec_then `elsOf w INTER s` mp_tac) >>
+      asm_simp_tac (srw_ss() ++ SatisfySimps.SATISFY_ss)[] >>
+      metis_tac [WLE_elsOf, WLE_WIN],
+      qexists_tac `a` >> metis_tac [WLE_elsOf]
+    ],
+    fs[linear_order_def, wellorder_def] >>
+    `domain (wellorder_REP w UNION {(x,e) | x IN elsOf w} UNION {(e,e)}) =
+     e INSERT elsOf w`
+       by (rw[EXTENSION, in_domain, in_range, EQ_IMP_THM] >>
+           metis_tac [WLE_elsOf]) >>
+    `range (wellorder_REP w UNION {(x,e) | x IN elsOf w} UNION {(e,e)}) =
+     e INSERT elsOf w`
+       by (rw[EXTENSION, in_domain, in_range] >>
+           metis_tac [elsOf_WLE, WLE_elsOf]) >>
+    simp[] >> rpt conj_tac >| [
+      fs[transitive_def] >> metis_tac[WLE_elsOf, elsOf_WLE],
+      fs[antisym_def] >> metis_tac[WLE_elsOf, elsOf_WLE],
+      fs[in_domain, in_range] >> metis_tac[WLE_elsOf, elsOf_WLE]
+    ],
+    fs[wellorder_def, reflexive_def, in_domain, in_range] >>
+    metis_tac[WLE_elsOf, elsOf_WLE]
+  ])
+
+val elsOf_ADD1 = store_thm(
+  "elsOf_ADD1",
+  ``elsOf (ADD1 e w) = e INSERT elsOf w``,
+  simp[EXTENSION, ADD1_def, Once elsOf_def, SimpLHS] >>
+  qx_gen_tac `x` >>
+  rw[#repabs_pseudo_id wellorder_results, wellorder_ADD1] >| [
+    fs[elsOf_def] >> metis_tac[],
+    simp[in_domain, in_range] >> metis_tac [WLE_elsOf]
+  ]);
+
+val WIN_ADD1 = store_thm(
+  "WIN_ADD1",
+  ``(x,y) WIN ADD1 e w <=>
+      e NOTIN elsOf w /\ x IN elsOf w /\ (y = e) \/
+      (x,y) WIN w``,
+  rw[#repabs_pseudo_id wellorder_results, wellorder_ADD1, ADD1_def,
+     strict_def] >> metis_tac[]);
+
 val elsOf_cardeq_iso = store_thm(
   "elsOf_cardeq_iso",
   ``INJ f (elsOf (wo:'b wellorder)) univ(:'a) ⇒
@@ -995,28 +1053,6 @@ fun unabbrev_in_goal s = let
 in
   first_assum check
 end
-
-(*
-val add_lemma = store_thm(
-  "add_lemma",
-  ``∀w a. a ∉ elsOf w ⇒ ∃w'. a ∈ elsOf w' ∧ destWO w ⊆ destWO w'``,
-  rpt strip_tac >>
-  qabbrev_tac `Ws = destWO w ∪ {(x,a) | x ∈ elsOf w} ∪ {(a,a)}` >>
-  `wellorder Ws`
-    by (simp[wellorder_def] >> rpt conj_tac
-        >- (simp[wellfounded_def, strict_def] >> qx_gen_tac `s` >>
-            disch_then (Q.X_CHOOSE_THEN `b` assume_tac) >>
-            Cases_on `s = {a}` >- (fs[] >> rw[]) >>
-            `∃c. c ∈ s DELETE a` by (simp[] >> fs[EXTENSION] >> metis_tac[]) >>
-            pop_assum
-            (mp_tac o
-             MATCH_MP
-                 (SIMP_RULE (srw_ss() ++ DNF_ss) [wellfounded_def] WIN_WF)) >>
-            disch_then (Q.X_CHOOSE_THEN `min` strip_assume_tac) >>
-            pop_assum (assume_tac o SIMP_RULE bool_ss [Once SPECIFICATION]) >>
-            qexists_tac `min` >> simp[] >> fs[] >> qx_gen_tac `x` >>
-            simp[Abbr`Ws`] >> rw[] >- metis_tac [WLE_WIN_EQ] >>
-
 
 val allsets_wellorderable = store_thm(
   "allsets_wellorderable",
@@ -1242,13 +1278,16 @@ val allsets_wellorderable = store_thm(
   `elsOf M ⊆ s` by fs[Abbr`A`] >>
   `∃a. a ∈ s ∧ a ∉ elsOf M` by (fs[EXTENSION, SUBSET_DEF] >> metis_tac[]) >>
   qabbrev_tac `Ms = destWO M ∪ {(x,a) | x ∈ elsOf M} ∪ {(a,a)}` >>
-  `wellor
-
-
-
-
-
-*)
+  `ADD1 a M ∈ A` by simp[Abbr`A`, elsOf_ADD1] >>
+  `M ≠ ADD1 a M`
+    by (disch_then (mp_tac o Q.AP_TERM `elsOf`) >>
+        simp[EXTENSION, elsOf_ADD1] >> metis_tac[]) >>
+  `(M,ADD1 a M) ∈ R`
+    by (unabbrev_in_goal "R" >> simp[] >> qexists_tac `a` >>
+        simp[WEXTENSION, WLE_wobound, WIN_ADD1, WLE_WIN_EQ, elsOf_ADD1] >>
+        `∀x. ~((x,a) WIN M)` by metis_tac [WIN_elsOf] >> simp[] >>
+        metis_tac[WIN_elsOf]) >>
+  metis_tac[]);
 
 val _ = export_theory()
 
