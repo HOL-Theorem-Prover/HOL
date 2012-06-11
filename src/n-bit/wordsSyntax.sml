@@ -402,9 +402,9 @@ val (s2w_tm, mk_s2w, dest_s2w, is_s2w) = s "s2w"
 val s = syntax_fns "words" 3
    (fn tm1 => fn e => fn w =>
       let
-         val (n1, n2, w) = HolKernel.dest_triop tm1 e w
+         val (n1, n2, w1) = HolKernel.dest_triop tm1 e w
       in
-         (n1, n2, w, dim_of w)
+         (n1, n2, w1, dim_of w)
       end)
    (fn (tm, (n1, n2, w, ty)) =>
        Term.list_mk_comb
