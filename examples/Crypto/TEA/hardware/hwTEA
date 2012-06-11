@@ -27,8 +27,8 @@ loadPath := ".." ::
             Path.concat(HOLDIR,"examples/dev/dff") :: !loadPath;
 
 quietdec := true;
-app load ["word32Lib", "compile", "vsynth"];
-open word32Theory word32Lib pairTheory arithmeticTheory compile ;
+app load ["wordsLib", "compile", "vsynth"];
+open wordsTheory wordsLib pairTheory arithmeticTheory compile ;
 quietdec := false;
 
 val RESTR_EVAL_TAC = computeLib.RESTR_EVAL_TAC;
@@ -79,7 +79,8 @@ add_combinational ["ShiftXor"];
 
 val (ShiftXor_def,_,ShiftXor_dev) = 
  hwDefine 
-   `ShiftXor (x,s,k0,k1) = ((x << 4) + k0) # (x + s) # ((x >> 5) + k1)`;
+   `ShiftXor (x:word32,s:word32,k0:word32,k1:word32) = 
+     ((x << 4) + k0) ?? (x + s) ?? ((x >> 5) + k1)`;
 
 (* --------------------------------------------------------------------------*)
 (* One round forward computation and one round backward computation          *)
@@ -131,13 +132,14 @@ val (wRounds_def,wRounds_ind) =
  Defn.tprove
   (Hol_defn
     "wRounds"
-    `wRounds (n,s:state) = if n=0w then s else wRounds (n-1w,Round s)`,
+    `wRounds (n:word32, s:state) = if n=0w then s else wRounds (n-1w,Round s)`,
    WF_REL_TAC `measure (w2n o FST)` THEN METIS_TAC [WORD_PRED_THM]);
 
 val Total_wRounds = 
  prove(getTotal wRounds_def,
-   RW_TAC list_ss [composeTheory.TOTAL_def] THEN
-   WF_REL_TAC `(w2n o FST)` THEN 
+   RW_TAC std_ss [composeTheory.TOTAL_def] THEN
+   Q.EXISTS_TAC `(w2n o FST)` THEN 
+   SIMP_TAC std_ss [FORALL_PROD] THEN
    METIS_TAC [WORD_PRED_THM]);
 
 
@@ -146,7 +148,7 @@ val Total_wRounds =
 (*---------------------------------------------------------------------------*)
 
 val wRounds_dev =
-  PURE_REWRITE_RULE[GSYM DEV_IMP_def] 
+  PURE_REWRITE_RULE[GSYM compileTheory.DEV_IMP_def] 
         (RecCompileConvert (SPEC_ALL wRounds_def) Total_wRounds);
 
 hwDefineLib := (wRounds_def,wRounds_ind,wRounds_dev) :: !hwDefineLib;
@@ -159,17 +161,18 @@ val (wInvRounds_def,wInvRounds_ind) =
  Defn.tprove
   (Hol_defn
     "wInvRounds"
-    `wInvRounds (n,s:state) = if n=0w then s else wInvRounds (n-1w,InvRound s)`,
+    `wInvRounds (n:word32,s:state) = if n=0w then s else wInvRounds (n-1w,InvRound s)`,
    WF_REL_TAC `measure (w2n o FST)` THEN METIS_TAC [WORD_PRED_THM]);
 
 val Total_wInvRounds = 
  prove(getTotal wInvRounds_def,
-   RW_TAC list_ss [composeTheory.TOTAL_def] THEN
-   WF_REL_TAC `(w2n o FST)` THEN 
+   RW_TAC std_ss [composeTheory.TOTAL_def] THEN
+   Q.EXISTS_TAC `(w2n o FST)` THEN 
+   SIMP_TAC std_ss [FORALL_PROD] THEN
    METIS_TAC [WORD_PRED_THM]);
 
 val wInvRounds_dev =
-  PURE_REWRITE_RULE[GSYM DEV_IMP_def] 
+  PURE_REWRITE_RULE[GSYM compileTheory.DEV_IMP_def] 
         (RecCompileConvert (SPEC_ALL wInvRounds_def) Total_wInvRounds);
 
 hwDefineLib := (wInvRounds_def,wInvRounds_ind,wInvRounds_dev) :: !hwDefineLib;
