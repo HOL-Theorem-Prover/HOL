@@ -15,26 +15,24 @@ struct
 (*
 quietdec := true;
 loadPath :="dff" :: !loadPath;
-map load
- ["List","composeTheory","compileTheory", "hol88Lib" (*for subst*),"unwindLib"];
+app load ["composeTheory","compileTheory", "unwindLib", "wordsLib"];
 open arithmeticTheory pairLib pairTheory PairRules pairSyntax
      combinTheory listTheory unwindLib composeTheory compileTheory;
-
-loadPath := "Fact32" :: !loadPath;
-map load ["wordsLib","compile"];
-open wordsTheory wordsLib compile ;
+open wordsTheory wordsLib;
 
 quietdec := false;
 *)
 
 (******************************************************************************
-* Boilerplate needed for compilation
-******************************************************************************)
-open HolKernel Parse boolLib bossLib compileTheory;
+ * Boilerplate needed for compilation
+ ******************************************************************************)
+
+open HolKernel Parse boolLib bossLib;
 
 (******************************************************************************
-* Open theories
-******************************************************************************)
+ * Open theories
+ ******************************************************************************)
+
 open arithmeticTheory pairLib pairTheory PairRules pairSyntax
      combinTheory listTheory unwindLib composeTheory compileTheory;
 
@@ -45,21 +43,39 @@ open arithmeticTheory pairLib pairTheory PairRules pairSyntax
 (*****************************************************************************)
 (* Use numbers rather than primes for renaming variables.                    *)
 (*****************************************************************************)
+
 val _ = (Globals.priming := SOME "");
 
 (*****************************************************************************)
 (* Error reporting function                                                  *)
 (*****************************************************************************)
+
 val ERR = mk_HOL_ERR "compile";
 
 (*****************************************************************************)
 (* List of definitions (useful for rewriting)                                *)
 (*****************************************************************************)
+
 val SimpThms = [Seq_def,Par_def,Ite_def,Rec_def];
+
+(*---------------------------------------------------------------------------*)
+(* Make an application TOTAL f1 f2 f3                                        *)
+(*---------------------------------------------------------------------------*)
+
+val total_tm = prim_mk_const{Name="TOTAL",Thy="compose"};
+
+fun mk_total (tm1,tm2,tm3) =
+ let val ty1 = fst(dom_rng(type_of tm1))
+     val ty2 = type_of tm2
+ in
+   mk_comb(inst[alpha |-> ty1, beta |-> ty2] total_tm,
+           pairLib.list_mk_pair[tm1,tm2,tm3])
+ end;
 
 (*****************************************************************************)
 (* Destruct ``d1 ===> d2`` into (``d1``,``d2``)                              *)
 (*****************************************************************************)
+
 fun dest_dev_imp tm =
  if is_comb tm
      andalso is_comb(rator tm)
@@ -247,6 +263,7 @@ fun Convert_CONV f =
 (*****************************************************************************)
 (* Predicate to test whether a term occurs in another term                   *)
 (*****************************************************************************)
+
 fun occurs_in t1 t2 = can (find_term (aconv t1)) t2;
 
 (*****************************************************************************)
@@ -257,6 +274,7 @@ fun occurs_in t1 t2 = can (find_term (aconv t1)) t2;
 (* where p is a combinatory expression built from the combinators Seq, Par   *)
 (* and Ite.                                                                  *)
 (*****************************************************************************)
+
 fun Convert defth =
  let val (lt,rt) =
          dest_eq(concl(SPEC_ALL defth))
@@ -328,6 +346,7 @@ fun Convert defth =
 (*                (Seq (Par (\(n,acc). n) (\(n,acc). acc)) (UNCURRY $* )))   *)
 (*                                                                           *)
 (*****************************************************************************)
+
 fun RecConvert defth totalth =
  let val (lt,rt) =
          dest_eq(concl(SPEC_ALL defth))
@@ -365,7 +384,7 @@ fun RecConvert defth totalth =
    let val fb = mk_pabs(args,b)
        val f1 = mk_pabs(args,t1)
        val f2 = mk_pabs(args,rand t2)
-       val _  = if aconv (concl(SPEC_ALL totalth)) ``TOTAL(^fb,^f1,^f2)``
+       val _  = if aconv (concl(SPEC_ALL totalth)) (mk_total(fb,f1,f2))
                  then ()
                  else (print "bad TOTAL theorem\n";
                        raise ERR "RecConvert" "bad TOTAL theorem")
@@ -408,16 +427,6 @@ fun RecConvert defth totalth =
 (* function of the form f(x) = if f1(x) then f2(x) else f (f3(x))            *)
 (*---------------------------------------------------------------------------*)
 
-val total_tm = prim_mk_const{Name="TOTAL",Thy="compose"};
-
-fun mk_total (tm1,tm2,tm3) =
- let val ty1 = fst(dom_rng(type_of tm1))
-     val ty2 = type_of tm2
- in
-   mk_comb(inst[alpha |-> ty1, beta |-> ty2] total_tm,
-           pairLib.list_mk_pair[tm1,tm2,tm3])
- end;
-
 fun getTotal def =
  let val (lt,rt) = boolSyntax.dest_eq(concl (SPEC_ALL def))
      val (func,args) = dest_comb lt
@@ -436,6 +445,7 @@ fun getTotal def =
 (* Check if term tm is a well-formed expression built out of Seq, Par, Ite,  *)
 (* Rec or Let. If so return a pair (constructor, args), else return (tm,[])  *)
 (*****************************************************************************)
+
 fun dest_exp tm =
  if not(fst(dest_type(type_of tm)) = "fun")
   then (print_term tm;print "\n";
@@ -474,6 +484,7 @@ fun dest_exp tm =
 (* combinational by having their names included in the assignable list       *)
 (* combinational_constants                                                   *)
 (*****************************************************************************)
+
 val combinational_constants =
  ref["T","F","/\\","\\/","~",",","o","CURRY","UNCURRY","COND",
      "FST","SND","=","Seq","Par","Ite","Let",
@@ -496,6 +507,7 @@ fun is_combinational tm =
 (* Test if a term is built from combinational constants using only           *)
 (* function application.                                                     *)
 (*****************************************************************************)
+
 fun is_combinational_const tm =
  (is_const tm andalso  mem (fst(dest_const tm))  (!combinational_constants))
   orelse (is_comb tm
@@ -507,6 +519,7 @@ fun is_combinational_const tm =
 (* -->                                                                       *)
 (* [REC assumption] |- <circuit> ===> DEV exp                                *)
 (*****************************************************************************)
+
 fun CompileExp tm =
  let val _ = if not(fst(dest_type(type_of tm)) = "fun")
               then (print_term tm; print "\n";
@@ -556,6 +569,7 @@ fun CompileExp tm =
 (*****************************************************************************)
 (* CompileProg prog tm --> rewrite tm with prog, then compiles the result    *)
 (*****************************************************************************)
+
 fun CompileProg prog tm =
  let val expand_th = REWRITE_CONV prog tm
      val compile_th = CompileExp (rhs(concl expand_th))
@@ -566,6 +580,7 @@ fun CompileProg prog tm =
 (*****************************************************************************)
 (* Compile (|- f args = bdy) = CompileProg [|- f args = bdy] ``f``           *)
 (*****************************************************************************)
+
 fun Compile th =
  let val (func,_) =
       dest_eq(concl(SPEC_ALL th))
@@ -582,6 +597,7 @@ fun Compile th =
 (*   -->                                                                     *)
 (*   |- (f = \(x1,x2,...,xn). B) = !x1 x2 ... xn. f(x1,x2,...,xn) = B        *)
 (*****************************************************************************)
+
 fun FUN_DEF_CONV tm =                            (* Supplied by Konrad Slind *)
   let val (M,N) = dest_eq tm
       val th1 = ISPECL [M,N] FUN_EQ_THM
@@ -596,12 +612,14 @@ fun FUN_DEF_RULE th = CONV_RULE(DEPTH_CONV FUN_DEF_CONV) th handle _ => th;
 (*****************************************************************************)
 (* Simp prog thm rewrites thm using definitions in prog                      *)
 (*****************************************************************************)
+
 fun Simp prog =
  FUN_DEF_RULE o (SIMP_RULE list_ss (LAMBDA_PROD::SimpThms@prog));
 
 (*****************************************************************************)
 (* SimpExp prog term expands term using definitions in prog                  *)
 (*****************************************************************************)
+
 fun SimpExp prog =
  FUN_DEF_RULE o (SIMP_CONV list_ss (LAMBDA_PROD::SimpThms@prog));
 
@@ -610,6 +628,7 @@ fun SimpExp prog =
 (*  -------------------------------------------                              *)
 (*  |- TOTAL((\x. f1 x), (\x. f2 x), (\x. f3 x))                             *)
 (*****************************************************************************)
+
 val UNPAIR_TOTAL =
  CONV_RULE
   (RAND_CONV
@@ -622,11 +641,13 @@ val UNPAIR_TOTAL =
 (*****************************************************************************)
 (* Convert a non-recursive definition to an expression and then compile it   *)
 (*****************************************************************************)
+
 fun CompileConvert defth = Compile(Convert defth);
 
 (*****************************************************************************)
 (* Convert a recursive definition to an expression and then compile it.      *)
 (*****************************************************************************)
+
 fun RecCompileConvert defth totalth =
  let val previousShowTypes = !show_types
      val (l,r) = dest_eq(concl(SPEC_ALL defth))
@@ -751,6 +772,7 @@ fun hwDefine defq =
 (*****************************************************************************)
 (* PRECEDE abstract syntax functions                                         *)
 (*****************************************************************************)
+
 fun is_PRECEDE tm =
  is_comb tm
   andalso is_comb(rator tm)
@@ -764,6 +786,7 @@ fun mk_PRECEDE(f,d) = ``PRECEDE ^f ^d``;
 (*****************************************************************************)
 (* FOLLOW abstract syntax functions                                          *)
 (*****************************************************************************)
+
 fun is_FOLLOW tm =
  is_comb tm
   andalso is_comb(rator tm)
@@ -777,6 +800,7 @@ fun mk_FOLLOW(d,f) = ``FOLLOW ^d ^f``;
 (*****************************************************************************)
 (* ATM                                                                       *)
 (*****************************************************************************)
+
 fun is_ATM tm =
  is_comb tm
   andalso is_const(rator tm)
@@ -789,6 +813,7 @@ fun mk_ATM tm = ``ATM ^tm``;
 (*****************************************************************************)
 (* SEQ                                                                       *)
 (*****************************************************************************)
+
 fun is_SEQ tm =
  is_comb tm
   andalso is_comb(rator tm)
@@ -802,6 +827,7 @@ fun mk_SEQ(tm1,tm2) = ``SEQ ^tm1 ^tm2``;
 (*****************************************************************************)
 (* PAR                                                                       *)
 (*****************************************************************************)
+
 fun is_PAR tm =
  is_comb tm
   andalso is_comb(rator tm)
@@ -815,6 +841,7 @@ fun mk_PAR(tm1,tm2) = ``PAR ^tm1 ^tm2``;
 (*****************************************************************************)
 (* ITE                                                                       *)
 (*****************************************************************************)
+
 fun is_ITE tm =
  is_comb tm
   andalso is_comb(rator tm)
@@ -829,6 +856,7 @@ fun mk_ITE(tm1,tm2,tm3) = ``ITE ^tm1 ^tm2 ^tm3``;
 (*****************************************************************************)
 (* REC                                                                       *)
 (*****************************************************************************)
+
 fun is_REC tm =
  is_comb tm
   andalso is_comb(rator tm)
@@ -843,6 +871,7 @@ fun mk_REC(tm1,tm2,tm3) = ``REC ^tm1 ^tm2 ^tm3``;
 (*****************************************************************************)
 (* Dev                                                                       *)
 (*****************************************************************************)
+
 fun is_DEV tm =
  is_comb tm
   andalso is_const(rator tm)
@@ -868,6 +897,7 @@ fun mk_DEV tm = ``DEV ^tm``;
 (* ATM_REFINE ``DEV f``  =  |- ATM f ===> DEV f : thm                        *)
 (*                                                                           *)
 (*****************************************************************************)
+
 fun ATM_REFINE tm =
  if not(is_comb tm
          andalso is_const(rator tm)
@@ -887,6 +917,7 @@ fun ATM_REFINE tm =
 (* that it finds in the supplied list (i.e. library).                        *)
 (* Fails if no refining theorem found.                                       *)
 (*****************************************************************************)
+
 fun LIB_REFINE lib tm =
  if is_DEV tm
   then
@@ -921,6 +952,7 @@ fun LIB_REFINE lib tm =
 (*                                                                           *)
 (* (if refine fails, then no action is taken, i.e. |- tm ===> tm used)       *)
 (*****************************************************************************)
+
 fun DEPTHR refine tm =
  if is_DEV tm
   then (refine tm
@@ -988,6 +1020,7 @@ fun DEPTHR refine tm =
 (*                                                                           *)
 (*  |- <circuit'> ===> Dev f                                                 *)
 (*****************************************************************************)
+
 fun REFINE refine th =
  MATCH_MP
   DEV_IMP_TRANS
@@ -1003,12 +1036,14 @@ fun REFINE refine th =
 (*   --------------- refine t2 = |- t3 ===> t2                               *)
 (*    |- t3 ===> t1                                                          *)
 (*****************************************************************************)
+
 fun ANTE_REFINE th refine =
   MATCH_MP DEV_IMP_TRANS (CONJ (refine (fst(dest_dev_imp(concl th)))) th);
 
 (*****************************************************************************)
 (* Apply two refinements in succession;  fail if either does.                *)
 (*****************************************************************************)
+
 infixr 3 THENR;
 
 fun (refine1 THENR refine2) tm = ANTE_REFINE (refine1 tm) refine2;
@@ -1017,6 +1052,7 @@ fun (refine1 THENR refine2) tm = ANTE_REFINE (refine1 tm) refine2;
 (* Apply refine1;  if it raises a HOL_ERR then apply refine2. Note that      *)
 (* interrupts and other exceptions will sail on through.                     *)
 (*****************************************************************************)
+
 infixr 3 ORELSER;
 
 fun (refine1 ORELSER refine2) tm =
@@ -1025,11 +1061,13 @@ fun (refine1 ORELSER refine2) tm =
 (*****************************************************************************)
 (* Identity refinement    tm --> |- tm ===> tm                               *)
 (*****************************************************************************)
+
 fun ALL_REFINE tm = ISPEC tm DEV_IMP_REFL;
 
 (*****************************************************************************)
 (* Repeat refine until no change                                             *)
 (*****************************************************************************)
+
 fun REPEATR refine tm =
  let val th = refine tm
      val (tm1,tm2) = dest_dev_imp(concl th)
@@ -1042,6 +1080,7 @@ fun REPEATR refine tm =
 (*****************************************************************************)
 (* Refine using hwDefineLib and then convert all remaining DEVs to ATMs      *)
 (*****************************************************************************)
+
 fun REFINE_ALL th =
  REFINE
   (REPEATR
@@ -1059,6 +1098,7 @@ fun REFINE_ALL th =
 (* LIST_EXISTS_ALPHA_CONV s n ``?a b c ...`` =                               *)
 (*  |- (?a b c ...) = ?sn sn+1 sn+2 ...                                      *)
 (*****************************************************************************)
+
 fun LIST_EXISTS_ALPHA_CONV s n t =
  if is_exists t
   then
@@ -1074,6 +1114,7 @@ fun LIST_EXISTS_ALPHA_CONV s n t =
 (* Standardise apart all quantified variables to ``v0``, ``v1``, ...         *)
 (* where "v" is given as an argument                                         *)
 (*****************************************************************************)
+
 fun OLD_STANDARDIZE_EXISTS_CONV s =
  let val count_ref = ref 0
      fun mkv ty = let val newv = mk_var((s^Int.toString(!count_ref)),ty)
@@ -1134,8 +1175,8 @@ fun STANDARDIZE_EXISTS_CONV s =
 *)
 
 local
-val init_theta:(term,term)Binarymap.dict
-          = Binarymap.mkDict Term.var_compare;
+val init_theta:(term,term)Binarymap.dict = Binarymap.mkDict Term.var_compare;
+
 fun mksubst L1 L2 theta_0 =
  rev_itlist2
     (fn redex:term => fn residue:term => fn theta =>
@@ -1197,6 +1238,7 @@ end;
 (* returns a pair consisting of a list of existentially quantified vars      *)
 (* and a list of conjuncts                                                   *)
 (*****************************************************************************)
+
 fun EXISTS_OUT t =
  let val vars_ref = ref([]:term list) (* collect existentially quantified variables *)
      fun LOCAL_EXISTS_OUT t =
@@ -1223,8 +1265,9 @@ fun EXISTS_OUT t =
 (* PRUNE1_FUN(v,[t1,...,tp,v=u,tq,...,tn]) or                                *)
 (* PRUNE1_FUN(v,[t1,...,tp,u=v,tq,...,tn])                                   *)
 (* returns [t1[u/v],...,tp[u/v],tq[u/v],...,tn[u/v]]                         *)
-(* has no effect if there is no equation ``v=u`` of ``u=v`` in the list      *)
+(* has no effect if there is no equation ``v=u`` or ``u=v`` in the list      *)
 (*****************************************************************************)
+(*
 fun PRUNE1_FUN(v,tml) =
  let val l = filter (fn t => is_eq t andalso ((lhs t = v) orelse (rhs t = v))) tml
  in
@@ -1239,6 +1282,27 @@ fun PRUNE1_FUN(v,tml) =
       (map (hol88Lib.subst[(u,v)]) tml)
     end
  end;
+*)
+
+fun PRUNE1_FUN(v,tml) =
+ let fun is_eqv t = 
+      let val (l,r) = dest_eq t
+      in (l = v) orelse (r = v)
+      end handle HOL_ERR _ => false
+     fun is_eq_id t = 
+      let val (l,r) = dest_eq t
+      in aconv l r
+      end handle HOL_ERR _ => false
+ in 
+   case filter is_eqv tml
+    of [] => tml
+     | h::_ => 
+        let val (t1,t2) = dest_eq h
+            val u = if t1=v then t2 else t1
+            val tml' = map (subst [v |-> u]) tml
+        in filter (not o is_eq_id) tml'
+    end
+ end;
 
 fun EXISTS_OUT_CONV t =
  let val th        = (*time*) (STANDARDIZE_EXISTS_CONV "v") t
@@ -1251,9 +1315,9 @@ fun EXISTS_OUT_CONV t =
                       in
                        (count_ref := (!count_ref)+1; newv)
                       end
-     val subsl     = map (fn v => (mkv(snd(dest_var v)),v)) vl1
-     val vl2       = map fst subsl
-     val t2        = (*time*) (hol88Lib.subst subsl) t1
+     val theta     = map (fn v => v |-> mkv(snd(dest_var v))) vl1
+     val t2        = (*time*) (subst theta) t1
+     val vl2       = map #residue theta
      val t3        = (*time*) list_mk_exists (vl2, t2)
      val th        = (*time*)
                       mk_oracle_thm (* YIKES! -- what's this!!! *)
@@ -1265,6 +1329,7 @@ fun EXISTS_OUT_CONV t =
 (*****************************************************************************)
 (* BUS_CONCAT abstract syntax functions                                      *)
 (*****************************************************************************)
+
 fun is_BUS_CONCAT tm =
  is_comb tm
   andalso is_comb(rator tm)
@@ -1287,6 +1352,7 @@ fun mk_BUS_CONCAT(b1,b2) = ``BUS_CONCAT ^b1 ^b2``;
 (* -->                                                                       *)
 (* [(``p1 - 1``,``v165``), (``p1'``,``v164``),(``p1' + p2``,``v163``)        *)
 (*****************************************************************************)
+
 fun BUS_MATCH vst bus =
   (if not(is_pair vst) andalso not(is_BUS_CONCAT bus)
      then [(vst,bus)]
@@ -1303,6 +1369,7 @@ fun BUS_MATCH vst bus =
 (* Example: varstruct_to_bus ty ``(v1,(v2,v3),v4)`` = ``v1<>(v2<>v3)<>v4``   *)
 (* (where types are lifted to functions from domain ty)                      *)
 (*****************************************************************************)
+
 fun varstruct_to_bus time_ty vs =
  if is_var vs
   then let val (name,ty) = dest_var vs
@@ -1321,6 +1388,7 @@ fun varstruct_to_bus time_ty vs =
 (* <body> is built out of variables in <varstruct> and combinational         *)
 (* constants using pairing.                                                  *)
 (*****************************************************************************)
+
 fun is_pure_abs tm =
  is_pabs tm
   andalso
@@ -1345,6 +1413,7 @@ fun is_Let tm =
 (*****************************************************************************)
 (* Generate a bus made of fresh variables from the type of a term            *)
 (*****************************************************************************)
+
 fun genbus time_ty v =
     let fun concatbus(tm1,tm2) = ``^tm1 <> ^tm2``
         fun makebus ty =
@@ -1394,6 +1463,7 @@ fun genbus time_ty v =
 (*  (v164 = v108) /\                                                         *)
 (*  COMB (UNCURRY $+) (v108 <> v107, v163)                                   *)
 (*****************************************************************************)
+
 val comb_synth_goalref = ref T;
 
 val if_print_flag = ref false;
@@ -1673,6 +1743,7 @@ val COMB_SYNTH_CONV =
 (* f fails) and returning |- tm' ==> tm for some term tm'                    *)
 (*                                                                           *)
 (*****************************************************************************)
+
 fun DEPTH_IMP f tm =
  if is_exists tm
   then let val (v,bdy) = dest_exists tm
@@ -1692,6 +1763,7 @@ fun DEPTH_IMP f tm =
 (* AP_ANTE_IMP_TRANS f (|- t1 ==> t2) applies f to t1 to get |- t0 ==> t1    *)
 (* and then, using transitivity of ==>, returns |- t0 ==> t2                 *)
 (*****************************************************************************)
+
 fun AP_ANTE_IMP_TRANS f th =
  IMP_TRANS (f(fst(dest_imp(concl th)))) th;
 
@@ -1699,11 +1771,13 @@ fun AP_ANTE_IMP_TRANS f th =
 (* DEV_IMP f (|- tm ==> d) applies f to tm to generate an implication        *)
 (* |- tm' ==> tm and then returns |- tm' ==> d                               *)
 (*****************************************************************************)
+
 fun DEV_IMP f th = IMP_TRANS (f(fst(dest_imp(concl th)))) th;
 
 (*****************************************************************************)
 (* DFF_IMP_INTRO ``DFF p`` --> |- DFF_IMP p => DFF p                         *)
 (*****************************************************************************)
+
 fun DFF_IMP_INTRO tm =
  if is_comb tm
      andalso is_const(rator tm)
@@ -1714,6 +1788,7 @@ fun DFF_IMP_INTRO tm =
 (*****************************************************************************)
 (* Test is a term is of the from ``s1 at p``                                 *)
 (*****************************************************************************)
+
 fun is_at tm =
  is_comb tm
   andalso is_comb(rator tm)
@@ -1725,6 +1800,7 @@ fun is_at tm =
 (* sub is found such that sub tm2 = tm then |- sub tm1 ==> sub tm2 is        *)
 (* returned; if the match fails IMP_REFINE_Fail is raised.                   *)
 (*****************************************************************************)
+
 exception IMP_REFINE_Fail;
 
 fun IMP_REFINE th tm =
@@ -1741,6 +1817,7 @@ fun IMP_REFINE th tm =
 (* to tm in turn until one succeeds.  If none succeeds then |- tm => tm      *)
 (* is returned. Never fails.                                                 *)
 (*****************************************************************************)
+
 fun IMP_REFINEL [] tm = DISCH tm (ASSUME tm)
  |  IMP_REFINEL (th::thl) tm =
      IMP_REFINE th tm handle _
@@ -1751,6 +1828,7 @@ fun IMP_REFINEL [] tm = DISCH tm (ASSUME tm)
 (*  ------------------------------------------------------- at_SPECL ``clk`` *)
 (*  ([``s1``,...,``sn``], |- P (s1 at clk) ... (sn at clk))                  *)
 (*****************************************************************************)
+
 fun at_SPEC_ALL clk th =
  let val (vl,bdy) = strip_forall(concl th)
  in
@@ -1762,6 +1840,7 @@ fun at_SPEC_ALL clk th =
 (*   ---------------- (x not free in Q)                                      *)
 (*   |- (?x. P) ==> Q                                                        *)
 (*****************************************************************************)
+
 fun ANTE_EXISTS_INTRO v th =
  (let val (t1,t2) = dest_imp(concl th)
       val exists_tm = mk_exists(v,t1)
@@ -1780,15 +1859,18 @@ fun LIST_ANTE_EXISTS_INTRO([],th) = th
 (*****************************************************************************)
 (* ``: ty1 # ... # tyn`` --> [`:ty```, ..., :``tyn``]                        *)
 (*****************************************************************************)
+
 fun strip_prodtype ty =
  (let val ("prod", [ty1,ty2]) = dest_type ty
   in
   ty1 :: strip_prodtype ty2
   end)
  handle _ => [ty];
+
 (*****************************************************************************)
 (* mapcount f [x1,...,xn] = [f 1 x1, ..., f n xn]                            *)
 (*****************************************************************************)
+
 local
 fun mapcount_aux n f [] = []
  |  mapcount_aux n f (x::xl) = f n x :: (mapcount_aux (n+1) f xl);
@@ -1799,9 +1881,10 @@ end;
 (*****************************************************************************)
 (* ``s : ty -> ty1#...#tyn``  -->  ``(s1:ty->ty1) <> ... <> (sn:ty->tyn)``   *)
 (*****************************************************************************)
+
 fun bus_split tm =
  (let val (name,ty) = dest_var tm
-      val ("fun",[ty1,ty2]) = dest_type ty
+      val (ty1,ty2) = dom_rng ty
       val tyl = strip_prodtype ty2
   in
    if (length tyl = 1)
@@ -1825,6 +1908,7 @@ fun bus_split tm =
 (*     ==>                                                                   *)
 (*     DEV f (load,(inp1<>...<>inpm),done,(out1<>...<>outn))                 *)
 (*****************************************************************************)
+
 fun IN_OUT_SPLIT th =
  let val (tm1,tm2) = dest_dev_imp(concl th)
      val (ty1,ty2) = dom_rng (type_of tm2)
@@ -1842,6 +1926,7 @@ fun IN_OUT_SPLIT th =
 (*****************************************************************************)
 (* User modifiable library of combinational components.                      *)
 (*****************************************************************************)
+
 val combinational_components = ref([] : thm list);
 
 fun add_combinational_components thl =
@@ -2069,7 +2154,7 @@ fun STEP5_CONV tm =
         if same_const c comb_tm
          then RATOR_CONV(RAND_CONV(DEPTH_CONV LAMBDA_CONCAT_CONV)) tm
          else raise ERR "STEP5_CONV" ""
-    | other => raise ERR "STEP5_CONV" ""
+    | other => raise ERR "STEP5_CONV" "";
 
 (*---------------------------------------------------------------------------*)
 (* Translate a DEV into a netlist                                            *)
@@ -2135,6 +2220,7 @@ fun MAKE_NETLIST devth =
 (*****************************************************************************)
 (* User modifiable list of Melham-style temporal abstraction theorem         *)
 (*****************************************************************************)
+
 val temporal_abstractions = ref([] : thm list);
 
 fun add_temporal_abstractions thl =
@@ -2334,6 +2420,7 @@ val NEW_MAKE_CIRCUIT'' =
 (*****************************************************************************)
 (* Expand occurrences of component names into their definitions              *)
 (*****************************************************************************)
+
 fun EXPAND_COMPONENTS th = (* Eta expanded to block !hwDefineLib evaluation  *)
  CONV_RULE
   (RATOR_CONV

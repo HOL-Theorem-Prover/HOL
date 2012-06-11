@@ -4,17 +4,25 @@
 (*****************************************************************************)
 
 quietdec := true;
+
 loadPath := "../" :: "../dff/" :: !loadPath;
 app load
  ["compileTheory","compile","metisLib", "wordsLib", "dffTheory","vsynth"];
 open compile metisLib wordsTheory wordsLib;
 open arithmeticTheory pairLib pairTheory PairRules combinTheory
      devTheory composeTheory compileTheory compile vsynth dffTheory;
-quietdec := false;
-
 infixr 3 THENR;
 infixr 3 ORELSER;
 numLib.prefer_num();
+
+quietdec := false;
+
+
+(*****************************************************************************)
+(* Start new theory "Fact32"                                                 *)
+(*****************************************************************************)
+
+val _ = new_theory "Fact32";
 
 (*---------------------------------------------------------------------------*)
 (* Tell hwDefine about how to deal with "predecessor-based" recursions on    *)
@@ -25,12 +33,6 @@ add_combinational ["MOD","DIV"];
 add_combinational ["word_add","word_sub"];
 add_combinational ["BITS","w2n","n2w"];
 
-(*****************************************************************************)
-(* Start new theory "Fact32"                                                 *)
-(*****************************************************************************)
-
-val _ = new_theory "Fact32";
-
 AddBinop ("ADD32",   (``UNCURRY $+ : word32#word32->word32``,  "+"));
 AddBinop ("SUB32",   (``UNCURRY $- : word32#word32->word32``,  "-"));
 AddBinop ("LESS32",  (``UNCURRY $< : word32#word32->bool``,    "<"));
@@ -39,6 +41,7 @@ AddBinop ("EQ32",    (``UNCURRY $= : word32#word32->bool``,    "=="));
 (*****************************************************************************)
 (* 32-bit MUX                                                                *)
 (*****************************************************************************)
+
 add_vsynth
  [(``\(sel:bool,in1:word32,in2:word32). if sel then in1 else in2``,
    fn [i1,i2,i3] => (i1 ^ " ? " ^ i2 ^ " : " ^ i3))
@@ -51,8 +54,9 @@ add_vsynth
 
 val (Mult32Iter,Mult32Iter_ind,Mult32Iter_cir) =
  compile.cirDefine
-  `(Mult32Iter (m,n,acc) =
-     if m = 0w then (0w,n,acc) else Mult32Iter(m-1w,n,n + acc))
+  `(Mult32Iter (m:word32,n:word32,acc:word32) =
+     if m = 0w then (0w:word32,n,acc) 
+     else Mult32Iter(m-1w,n,n + acc))
    measuring (w2n o FST)`;
 
 (*****************************************************************************)
@@ -61,7 +65,7 @@ val (Mult32Iter,Mult32Iter_ind,Mult32Iter_cir) =
 
 val (Mult32,_,Mult32_cir) =
  compile.cirDefine
-  `Mult32(m,n) = SND(SND(Mult32Iter(m:word32,n,0):word32 # num # num))`;
+  `Mult32(m,n) = SND(SND(Mult32Iter(m,n,0w)))`;
 
 (*****************************************************************************)
 (* Implement iterative function as a step to implementing factorial          *)
@@ -69,8 +73,9 @@ val (Mult32,_,Mult32_cir) =
 
 val (Fact32Iter,Fact32Iter_ind,Fact32Iter_cir) =
  compile.cirDefine
-  `(Fact32Iter (n,acc) =
-     if n = 0w then (n,acc) else Fact32Iter(n-1w, Mult32(n,acc)))
+  `(Fact32Iter (n:word32,acc:word32) =
+     if n = 0w then (n,acc) 
+     else Fact32Iter(n-1w, Mult32(n,acc)))
    measuring (w2n o FST)`;
 
 (*****************************************************************************)

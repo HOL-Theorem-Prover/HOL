@@ -1,3 +1,6 @@
+structure vsynth = 
+struct
+
 (*****************************************************************************)
 (* Conversion ("pretty printing") of output of compiler to Verilog           *)
 (*****************************************************************************)
@@ -12,9 +15,8 @@
 (*
 quietdec := true;
 loadPath :="dff" :: !loadPath;
-map load
- ["composeTheory","compileTheory", "hol88Lib" (*for subst*),"compile",
-  "Date","FileSys","TextIO","Process","Char","String"];
+app load ["compile","wordsLib",
+          "FileSys","TextIO","Process","Char","String"];
 open arithmeticTheory pairLib pairTheory PairRules combinTheory listTheory
      composeTheory compileTheory compile;
 quietdec := false;
@@ -23,13 +25,18 @@ quietdec := false;
 (******************************************************************************
 * Boilerplate needed for compilation
 ******************************************************************************)
+
+local
 open HolKernel Parse boolLib bossLib compileTheory;
 
 (******************************************************************************
 * Open theories
 ******************************************************************************)
+
 open arithmeticTheory pairLib pairTheory PairRules combinTheory listTheory
      unwindLib composeTheory compileTheory compile;
+
+in
 
 (*****************************************************************************)
 (* END BOILERPLATE                                                           *)
@@ -38,17 +45,20 @@ open arithmeticTheory pairLib pairTheory PairRules combinTheory listTheory
 (*****************************************************************************)
 (* Error reporting function                                                  *)
 (*****************************************************************************)
+
 val ERR = mk_HOL_ERR "vsynth";
 
 (*****************************************************************************)
 (* Date and time                                                             *)
 (*****************************************************************************)
+
 fun date() = Date.fmt "%c" (Date.fromTimeLocal (Time.now ()));
 
 (*****************************************************************************)
 (* Convert a term to a string showing types of variables                     *)
 (* by setting show_types to true during printing                             *)
 (*****************************************************************************)
+
 fun term2string tm =
  let val saved_val = !show_types
      val _ = (show_types := true)
@@ -61,22 +71,26 @@ fun term2string tm =
 (*****************************************************************************)
 (* Test if a string is a constant                                            *)
 (*****************************************************************************)
+
 fun is_constant s = mem s (known_constants());
 
 (*****************************************************************************)
 (* Boilerplate definitions of primitive components                           *)
 (*****************************************************************************)
+
 fun string2int s =
  let val (SOME n) = Int.fromString s in n end;
 
 (*****************************************************************************)
 (* Test if a ty is ``:word<n>`` for some n                                   *)
 (*****************************************************************************)
+
 val is_word_type = wordsSyntax.is_word_type;
 
 (*****************************************************************************)
 (* Extraxt <n> from ``:word<n>``                                             *)
 (*****************************************************************************)
+
 val dest_word_type =
   Arbnum.toInt o fcpLib.index_to_num o wordsSyntax.dest_word_type;
 
@@ -84,6 +98,7 @@ val dest_word_type =
 (* Test if a type can be represented in Verilog.                             *)
 (* Currently this means the type is ``:word<n>``, ``:num`` or ``:bool``      *)
 (*****************************************************************************)
+
 fun is_supported_type ty =
  is_word_type ty orelse (ty = ``:num``) orelse (ty = ``:bool``);
 
@@ -92,6 +107,7 @@ fun is_supported_type ty =
 (* ``:num``   --> 31                                                         *)
 (* ``:bool``  --> "0"                                                        *)
 (*****************************************************************************)
+
 fun ty2size ty =
  let val n =
       if (ty = ``:bool``) then 1
@@ -109,6 +125,7 @@ fun ty2size ty =
 (* ``v : num -> num``   --> 31    (warning issued if !numWarning is true)    *)
 (* ``v : num -> bool``  --> "0"                                              *)
 (*****************************************************************************)
+
 val numWarning = ref true;
 fun var2size tm =
  let val (str, [_,ty]) = dest_type(type_of tm)
@@ -130,6 +147,7 @@ fun var2size tm =
 (*****************************************************************************)
 (* ``:ty1 --> ty2`` --> (``:ty1``,``:ty2``)                                  *)
 (*****************************************************************************)
+
 fun dest_unop_type uty =
  let val (opr, utyl) = dest_type uty
      val _ = if opr = "fun"
@@ -145,6 +163,7 @@ fun dest_unop_type uty =
 (*****************************************************************************)
 (* ``:ty1 # ty2 --> ty3`` --> (``:ty1``,``:ty2``,``:ty3``)                   *)
 (*****************************************************************************)
+
 fun dest_binop_type bty =
  let val (opr, btyl) = dest_type bty
      val _ = if opr = "fun"
@@ -171,6 +190,7 @@ fun dest_binop_type bty =
 (*****************************************************************************)
 (* ``v0 <> ... <> vn`` --> [``v0``, ... ,``vn``]                             *)
 (*****************************************************************************)
+
 fun strip_BUS_CONCAT tm =
  if is_BUS_CONCAT tm
   then let val (tm1,tm2) = dest_BUS_CONCAT tm
@@ -741,7 +761,7 @@ val vlogger_path    = ref "/usr/bin/vlogcmd";
 ** (not happened yet apparently)
 *)
 
-fun isSuccess s = (s = Process.success);
+val isSuccess = Process.isSuccess;
 
 (*****************************************************************************)
 (* Run iverilog on name.vl                                                   *)
@@ -858,3 +878,7 @@ fun SIMULATE thm stimulus =
  in
   ()
  end;
+
+end (* local open *)
+
+end (* vsynth *)

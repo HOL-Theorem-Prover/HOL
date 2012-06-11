@@ -11,16 +11,19 @@ sig
 (*****************************************************************************)
 (* Error reporting function                                                  *)
 (*****************************************************************************)
+
 val ERR : string -> string -> exn
 
 (*****************************************************************************)
 (* List of definitions (useful for rewriting)                                *)
 (*****************************************************************************)
+
 val SimpThms : thm list
 
 (*****************************************************************************)
 (* Destruct ``d1 ===> d2`` into (``d1``,``d2``)                              *)
 (*****************************************************************************)
+
 val dest_dev_imp : term -> term * term
 
 (*****************************************************************************)
@@ -72,6 +75,7 @@ val occurs_in : term -> term -> bool
 (* where p is a combinatory expression built from the combinators Seq, Par   *)
 (* and Ite.                                                                  *)
 (*****************************************************************************)
+
 val Convert : thm -> thm
 
 (*****************************************************************************)
@@ -339,6 +343,7 @@ val LIB_REFINE : thm list -> term -> thm
 (*                                                                           *)
 (* (if refine fails, then no action is taken, i.e. |- tm ===> tm used)       *)
 (*****************************************************************************)
+
 val DEPTHR : (term -> thm) -> term -> thm
 
 (*****************************************************************************)
@@ -351,6 +356,7 @@ val DEPTHR : (term -> thm) -> term -> thm
 (*                                                                           *)
 (*  |- <circuit'> ===> Dev f                                                 *)
 (*****************************************************************************)
+
 val REFINE : (term -> thm) -> thm -> thm
 
 (*****************************************************************************)
@@ -362,34 +368,40 @@ val REFINE : (term -> thm) -> thm -> thm
 (*   --------------- refine t2 = |- t3 ===> t2                               *)
 (*    |- t3 ===> t1                                                          *)
 (*****************************************************************************)
+
 val ANTE_REFINE : thm -> (term -> thm) -> thm
 
 (*****************************************************************************)
 (* Apply two refinements in succession;  fail if either does.                *)
 (*****************************************************************************)
 (*infixr 3 THENR;*)
-val 'a THENR : ('a -> thm) * (term -> thm) -> 'a -> thm
+
+val THENR : ('a -> thm) * (term -> thm) -> 'a -> thm
 
 (*****************************************************************************)
 (* Apply refine1;  if it raises a HOL_ERR then apply refine2. Note that      *)
 (* interrupts and other exceptions will sail on through.                     *)
 (*****************************************************************************)
 (*infixr 3 ORELSER;*)
-val ('a, 'b) ORELSER : ('a -> 'b) * ('a -> 'b) -> 'a -> 'b
+
+val ORELSER : ('a -> 'b) * ('a -> 'b) -> 'a -> 'b
 
 (*****************************************************************************)
 (* Identity refinement    tm --> |- tm ===> tm                               *)
 (*****************************************************************************)
+
 val ALL_REFINE : term -> thm
 
 (*****************************************************************************)
 (* Repeat refine until no change                                             *)
 (*****************************************************************************)
+
 val REPEATR : (term -> thm) -> term -> thm
 
 (*****************************************************************************)
 (* Refine using hwDefineLib and then convert all remaining DEVs to ATMs      *)
 (*****************************************************************************)
+
 val REFINE_ALL : thm -> thm
 
 (*****************************************************************************)
@@ -400,17 +412,20 @@ val REFINE_ALL : thm -> thm
 (* LIST_EXISTS_ALPHA_CONV s n ``?a b c ...`` =                               *)
 (*  |- (?a b c ...) = ?sn sn+1 sn+2 ...                                      *)
 (*****************************************************************************)
+
 val LIST_EXISTS_ALPHA_CONV : string -> int -> term -> thm
 
 (*****************************************************************************)
 (* Standardise apart all quantified variables to ``v0``, ``v1``, ...         *)
 (* where "v" is given as an argument                                         *)
 (*****************************************************************************)
+
 val OLD_STANDARDIZE_EXISTS_CONV : string -> term -> thm
 
 (*---------------------------------------------------------------------------*)
 (* A faster version of STANDARDIZE_EXISTS_CONV.                              *)
 (*---------------------------------------------------------------------------*)
+
 val STANDARDIZE_EXISTS_CONV : string -> term -> thm
 
 
@@ -423,6 +438,7 @@ val STANDARDIZE_EXISTS_CONV : string -> term -> thm
 (* returns a pair consisting of a list of existentially quantified vars      *)
 (* and a list of conjuncts                                                   *)
 (*****************************************************************************)
+
 val EXISTS_OUT : term -> term list * term list
 
 (*****************************************************************************)
@@ -431,6 +447,7 @@ val EXISTS_OUT : term -> term list * term list
 (* returns [t1[u/v],...,tp[u/v],tq[u/v],...,tn[u/v]]                         *)
 (* has no effect if there is no equation ``v=u`` of ``u=v`` in the list      *)
 (*****************************************************************************)
+
 val PRUNE1_FUN : term * term list -> term list
 
 val EXISTS_OUT_CONV : term -> thm
@@ -454,6 +471,7 @@ val mk_BUS_CONCAT : term * term -> term
 (* -->                                                                       *)
 (* [(``p1 - 1``,``v165``), (``p1'``,``v164``),(``p1' + p2``,``v163``)        *)
 (*****************************************************************************)
+
 val BUS_MATCH : term -> term -> (term * term) list
 
 (*****************************************************************************)
@@ -461,6 +479,7 @@ val BUS_MATCH : term -> term -> (term * term) list
 (* Example: varstruct_to_bus ty ``(v1,(v2,v3),v4)`` = ``v1<>(v2<>v3)<>v4``   *)
 (* (where types are lifted to functions from domain ty)                      *)
 (*****************************************************************************)
+
 val varstruct_to_bus : hol_type -> term -> term
 
 (*****************************************************************************)
@@ -468,11 +487,13 @@ val varstruct_to_bus : hol_type -> term -> term
 (* <body> is built out of variables in <varstruct> and combinational         *)
 (* constants using pairing.                                                  *)
 (*****************************************************************************)
+
 val is_pure_abs : term -> bool
 
 (*****************************************************************************)
 (* Generate a bus made of fresh variables from the type of a term            *)
 (*****************************************************************************)
+
 val genbus : hol_type -> term -> term * term list
 
 (*****************************************************************************)
@@ -506,6 +527,7 @@ val genbus : hol_type -> term -> term * term list
 (*  (v164 = v108) /\                                                         *)
 (*  COMB (UNCURRY $+) (v108 <> v107, v163)                                   *)
 (*****************************************************************************)
+
 val comb_synth_goalref : term ref
 val if_print_flag : bool ref
 val if_print : string -> unit
@@ -523,28 +545,33 @@ val COMB_SYNTH_CONV : term -> thm
 (* f fails) and returning |- tm' ==> tm for some term tm'                    *)
 (*                                                                           *)
 (*****************************************************************************)
+
 val DEPTH_IMP : (term -> thm) -> term -> thm
 
 (*****************************************************************************)
 (* AP_ANTE_IMP_TRANS f (|- t1 ==> t2) applies f to t1 to get |- t0 ==> t1    *)
 (* and then, using transitivity of ==>, returns |- t0 ==> t2                 *)
 (*****************************************************************************)
+
 val AP_ANTE_IMP_TRANS : (term -> thm) -> thm -> thm
 
 (*****************************************************************************)
 (* DEV_IMP f (|- tm ==> d) applies f to tm to generate an implication        *)
 (* |- tm' ==> tm and then returns |- tm' ==> d                               *)
 (*****************************************************************************)
+
 val DEV_IMP : (term -> thm) -> thm -> thm
 
 (*****************************************************************************)
 (* DFF_IMP_INTRO ``DFF p`` --> |- DFF_IMP p => DFF p                         *)
 (*****************************************************************************)
+
 val DFF_IMP_INTRO : term -> thm
 
 (*****************************************************************************)
 (* Test is a term is of the from ``s1 at p``                                 *)
 (*****************************************************************************)
+
 val is_at : term -> bool
 
 (*****************************************************************************)
@@ -552,6 +579,7 @@ val is_at : term -> bool
 (* sub is found such that sub tm2 = tm then |- sub tm1 ==> sub tm2 is        *)
 (* returned; if the match fails IMP_REFINE_Fail is raised.                   *)
 (*****************************************************************************)
+
 exception IMP_REFINE_Fail
 val IMP_REFINE : thm -> term -> thm
 
@@ -560,6 +588,7 @@ val IMP_REFINE : thm -> term -> thm
 (* to tm in turn until one succeeds.  If none succeeds then |- tm => tm      *)
 (* is returned. Never fails.                                                 *)
 (*****************************************************************************)
+
 val IMP_REFINEL : thm list -> term -> thm
 
 (*****************************************************************************)
@@ -567,6 +596,7 @@ val IMP_REFINEL : thm list -> term -> thm
 (*  ------------------------------------------------------- at_SPECL ``clk`` *)
 (*  ([``s1``,...,``sn``], |- P (s1 at clk) ... (sn at clk))                  *)
 (*****************************************************************************)
+
 val at_SPEC_ALL : term -> thm -> term list * thm
 
 (*****************************************************************************)
@@ -574,22 +604,26 @@ val at_SPEC_ALL : term -> thm -> term list * thm
 (*   ---------------- (x not free in Q)                                      *)
 (*   |- (?x. P) ==> Q                                                        *)
 (*****************************************************************************)
+
 val ANTE_EXISTS_INTRO : term -> thm -> thm
 val LIST_ANTE_EXISTS_INTRO : term list * thm -> thm
 
 (*****************************************************************************)
 (* ``: ty1 # ... # tyn`` --> [`:ty```, ..., :``tyn``]                        *)
 (*****************************************************************************)
+
 val strip_prodtype : hol_type -> hol_type list
 
 (*****************************************************************************)
 (* mapcount f [x1,...,xn] = [f 1 x1, ..., f n xn]                            *)
 (*****************************************************************************)
-val ('a, 'b) mapcount : (int -> 'a -> 'b) -> 'a list -> 'b list
+
+val mapcount : (int -> 'a -> 'b) -> 'a list -> 'b list
 
 (*****************************************************************************)
 (* ``s : ty -> ty1#...#tyn``  -->  ``(s1:ty->ty1) <> ... <> (sn:ty->tyn)``   *)
 (*****************************************************************************)
+
 val bus_split : term -> term
 
 (*****************************************************************************)
@@ -599,19 +633,22 @@ val bus_split : term -> term
 (*     ==>                                                                   *)
 (*     DEV f (load,(inp1<>...<>inpm),done,(out1<>...<>outn))                 *)
 (*****************************************************************************)
+
 val IN_OUT_SPLIT : thm -> thm
 
 (*****************************************************************************)
 (* User modifiable library of combinational components.                      *)
 (*****************************************************************************)
+
 val combinational_components : thm list ref
 val add_combinational_components : thm list -> unit
 
 (*---------------------------------------------------------------------------*)
 (* Building netlists                                                         *)
 (*---------------------------------------------------------------------------*)
+
 val monitor_netlist_construction : bool ref
-val ('a, 'b) ptime : string -> ('a -> 'b) -> 'a -> 'b
+val ptime : string -> ('a -> 'b) -> 'a -> 'b
 val comb_tm : term
 val CIRC_CONV : (term -> thm) -> term -> thm
 val CIRC_RULE : (term -> thm) -> thm -> thm
@@ -626,6 +663,7 @@ val bus_concat_of : hol_type -> term list -> term * term list
 (*---------------------------------------------------------------------------*)
 (* STEP 4                                                                    *)
 (*---------------------------------------------------------------------------*)
+
 val FUN_EXISTS_PROD_CONV : term -> thm
 val OLD_STEP4a : thm -> thm
 val STEP4a : thm -> thm
@@ -643,24 +681,28 @@ val STEP4 : thm -> thm
 (*                                                                           *)
 (* Contorted code because of efficiency hacks.                               *)
 (*---------------------------------------------------------------------------*)
+
 val LAMBDA_CONCAT_CONV : term -> thm
 val STEP5_CONV : term -> thm
 
 (*---------------------------------------------------------------------------*)
 (* Translate a DEV into a netlist                                            *)
 (*---------------------------------------------------------------------------*)
+
 val MAKE_NETLIST : thm -> thm
 
 
 (*****************************************************************************)
 (* User modifiable list of Melham-style temporal abstraction theorem         *)
 (*****************************************************************************)
+
 val temporal_abstractions : thm list ref
 val add_temporal_abstractions : thm list -> unit
 
 (*****************************************************************************)
 (* Compile a device implementation into a clocked circuit represented in HOL *)
 (*****************************************************************************)
+
 val MAKE_CIRCUIT : thm -> thm
 val EXISTSL_CONV : term -> thm
 val NEW_MAKE_CIRCUIT : thm -> thm
@@ -670,12 +712,14 @@ val NEW_MAKE_CIRCUIT'' : thm -> thm
 (*****************************************************************************)
 (* Expand occurrences of component names into their definitions              *)
 (*****************************************************************************)
+
 val EXPAND_COMPONENTS : thm -> thm
 
 (*****************************************************************************)
 (* Invoke hwDefine and then apply MAKE_CIRCUIT, EXPAND_COMPONENTS and        *)
 (* REFINE_ALL to the device                                                  *)
 (*****************************************************************************)
+
 val cirDefine : term frag list -> thm * thm * thm
 val newcirDefine : term frag list -> thm * thm * thm
 
@@ -683,6 +727,7 @@ val newcirDefine : term frag list -> thm * thm * thm
 (* Don't go all the way to circuits. Instead stop at netlists built from     *)
 (* COMB, CONSTANT, DEL and DELT.                                             *)
 (*---------------------------------------------------------------------------*)
+
 val netDefine : term frag list -> thm * thm * thm
 
 end (* sig *)
