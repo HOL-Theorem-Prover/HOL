@@ -338,9 +338,34 @@ val SUBSET_CARDLEQ = store_thm(
   simp[SUBSET_DEF, cardleq_def] >> strip_tac >> qexists_tac `I` >>
   simp[INJ_DEF]);
 
-(* val cardleq_dichotomy = store_thm(
+open wellorderTheory
+val cardleq_dichotomy = store_thm(
   "cardleq_dichotomy",
   ``s ≼ t ∨ t ≼ s``,
+  `(∃w1. elsOf w1 = s) ∧ (∃w2. elsOf w2 = t)`
+    by metis_tac [allsets_wellorderable] >>
+  `orderlt w1 w2 ∨ orderiso w1 w2 ∨ orderlt w2 w1`
+    by metis_tac [orderlt_trichotomy]
+  >| [
+    `∃f x. BIJ f s (elsOf (wobound x w2))`
+      by metis_tac[orderlt_def, orderiso_thm] >>
+    `elsOf (wobound x w2) ⊆ t`
+      by (simp[elsOf_wobound, SUBSET_DEF] >> metis_tac [WIN_elsOf]) >>
+    rw[] >> qsuff_tac `elsOf w1 ≼ elsOf w2` >- simp[] >>
+    simp[cardleq_def] >> qexists_tac `f` >>
+    fs[BIJ_DEF, INJ_DEF, SUBSET_DEF],
+
+    `∃f. BIJ f s t` by metis_tac [orderiso_thm] >>
+    fs[BIJ_DEF, cardleq_def] >> metis_tac[],
+
+    `∃f x. BIJ f t (elsOf (wobound x w1))`
+      by metis_tac[orderlt_def, orderiso_thm] >>
+    `elsOf (wobound x w1) ⊆ s`
+      by (simp[elsOf_wobound, SUBSET_DEF] >> metis_tac [WIN_elsOf]) >>
+    rw[] >> qsuff_tac `elsOf w2 ≼ elsOf w1` >- simp[] >>
+    simp[cardleq_def] >> qexists_tac `f` >>
+    fs[BIJ_DEF, INJ_DEF, SUBSET_DEF]
+  ]);
 
 val better_BIJ = BIJ_DEF |> SIMP_RULE (srw_ss() ++ CONJ_ss) [INJ_DEF, SURJ_DEF]
 
@@ -361,6 +386,7 @@ in
   first_assum check
 end
 
+(*
 val INFINITE_CROSS_UNIV = store_thm(
   "INFINITE_CROSS_UNIV",
   ``INFINITE s ⇒ (s × s ≈ s)``,
