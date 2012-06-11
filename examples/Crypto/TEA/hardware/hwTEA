@@ -47,14 +47,14 @@ fun cirDefine qdef =
 (*---------------------------------------------------------------------------*)
 
 val _ = add_combinational 
-           ["bitwise_and", "bitwise_eor", "word_lsl", "word_asr", 
+           ["bitwise_and", "bitwise_eor", "word_lsl", "word_lsr", 
             "word_add", "word_sub", "w2n","n2w"];
 
 vsynth.AddBinop ("XOR32",   (``UNCURRY $#  : word32#word32->word32``,  "^"));
 vsynth.AddBinop ("ADD32",   (``UNCURRY $+  : word32#word32->word32``,  "+"));
 vsynth.AddBinop ("SUB32",   (``UNCURRY $-  : word32#word32->word32``,  "-"));
 vsynth.AddBinop ("LSL32",   (``UNCURRY $<< : word32#num->word32``,     "<<"));
-vsynth.AddBinop ("ASR32",   (``UNCURRY $>> : word32#num->word32``,     ">>"));
+vsynth.AddBinop ("LSR32",   (``UNCURRY $>>> : word32#num->word32``,     ">>"));
 vsynth.AddBinop ("EQ32",    (``UNCURRY $=  : word32#word32->bool``,    "=="));
 
 
@@ -80,7 +80,7 @@ add_combinational ["ShiftXor"];
 val (ShiftXor_def,_,ShiftXor_dev) = 
  hwDefine 
    `ShiftXor (x:word32,s:word32,k0:word32,k1:word32) = 
-     ((x << 4) + k0) ?? (x + s) ?? ((x >> 5) + k1)`;
+     ((x << 4) + k0) ?? (x + s) ?? ((x >>> 5) + k1)`;
 
 (* --------------------------------------------------------------------------*)
 (* One round forward computation and one round backward computation          *)

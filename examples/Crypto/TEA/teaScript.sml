@@ -12,23 +12,23 @@
 (*---------------------------------------------------------------------------*)
 
 (*
-load "wordsLib";
-quietdec := true;
+app load ["EmitML","wordsLib"];
 *)
 open HolKernel Parse boolLib bossLib;
-open wordsTheory wordsLib pairTheory pairLib;
-(*
-quietdec := false;
-*)
+open wordsTheory wordsLib pairTheory pairLib basis_emitTheory;
+
+
+(*---------------------------------------------------------------------------*)
+(* Inititialize new theory for TEA                                           *)
+(*---------------------------------------------------------------------------*)
 
 val _ = new_theory "tea";
 
-val _ = Globals.priming := SOME"_";
+(*---------------------------------------------------------------------------*)
+(* General stuff                                                             *)
+(*---------------------------------------------------------------------------*)
 
-val KMATCH_MP_TAC =
-  MATCH_MP_TAC o
-  Ho_Rewrite.REWRITE_RULE [AND_IMP_INTRO,
-           METIS_PROVE [] ``(a ==> !x. b x) = !x. a ==> b x``];
+val _ = Globals.priming := SOME"_";
 
 val WORD_PRED_EXISTS = Q.prove
 (`!w:'a word. ~(w = 0w) ==> ?u. w = u + 1w`,
@@ -45,16 +45,30 @@ val _ = type_abbrev("block", ``:word32 # word32``);
 val _ = type_abbrev("key",   ``:word32 # word32 # word32 # word32``);
 val _ = type_abbrev("state", ``:block # key # word32``);
 
+
+(*---------------------------------------------------------------------------*)
+(* Case analysis on a state                                                  *)
+(*---------------------------------------------------------------------------*)
+
+val FORALL_STATE = Q.store_thm
+("FORALL_STATE",
+ `(!x:state. P x) = !v0 v1 k0 k1 k2 k3 sum. P((v0,v1),(k0,k1,k2,k3),sum)`,
+    METIS_TAC [PAIR]);
+
 (*---------------------------------------------------------------------------*)
 (* Basic constants and operations.                                           *)
 (*---------------------------------------------------------------------------*)
 
-val DELTA_def = Define `DELTA = 0x9e3779b9w:word32`;
+val DELTA_def = Define `DELTA = 0x9e3779b9w : word32`;
+
+(*---------------------------------------------------------------------------*)
+(* ?? = xor  (infix) and >>> is LSR                                          *)
+(*---------------------------------------------------------------------------*)
 
 val ShiftXor_def =
  Define
    `ShiftXor (x:word32,s,k0,k1) =
-          ((x << 4) + k0) ?? (x + s) ?? ((x >> 5) + k1)`;
+          ((x << 4) + k0) ?? (x + s) ?? ((x >>> 5) + k1)`;
 
 (* --------------------------------------------------------------------------*)
 (*	One round forward computation    				     *)
@@ -64,10 +78,10 @@ val Round_def =
  Define
    `Round ((y,z),(k0,k1,k2,k3),s):state =
       let s' = s + DELTA in let
-          y' = y + ShiftXor(z, s', k0, k1)
+          y' = y + ShiftXor(z, s', k0, k1) in let
+          z' = z + ShiftXor(y', s', k2, k3) 
       in
-	((y', z + ShiftXor(y', s', k2, k3)),
-	 (k0,k1,k2,k3), s')`;
+	((y',z'), (k0,k1,k2,k3), s')`;
 
 (*---------------------------------------------------------------------------*)
 (* Arbitrary number of cipher rounds                                         *)
@@ -78,7 +92,7 @@ val Rounds_def =
    `Rounds (n:word32,s:state) =
       if n=0w then s else Rounds (n-1w, Round s)`;
 
-val Rounds_ind = fetch "-" "Rounds_ind";
+val Rounds_ind = fetch "-" "Rounds_ind";   (* induction *)
 
 (*---------------------------------------------------------------------------*)
 (* Encrypt  (32 rounds)                                                      *)
@@ -101,11 +115,12 @@ val teaEncrypt_def =
 
 val InvRound_def =
  Define
-   `InvRound((y,z),(k0,k1,k2,k3),sum)  =
-        ((y - ShiftXor(z - ShiftXor(y, sum, k2, k3), sum, k0, k1),
-          z - ShiftXor(y, sum, k2, k3)),
-         (k0,k1,k2,k3),
-         sum-DELTA)`;
+   `InvRound((y,z),(k0,k1,k2,k3),sum) =
+      let z' = z - ShiftXor(y, sum, k2, k3) in
+      let y' = y - ShiftXor(z',sum, k0, k1) in 
+      let sum' = sum-DELTA
+      in 
+         ((y',z'), (k0,k1,k2,k3), sum')`;
 
 (*---------------------------------------------------------------------------*)
 (* Arbitrary number of decipher rounds                                       *)
@@ -132,15 +147,6 @@ val teaDecrypt_def =
 (*===========================================================================*)
 
 (*---------------------------------------------------------------------------*)
-(* Case analysis on a state                                                  *)
-(*---------------------------------------------------------------------------*)
-
-val FORALL_STATE = Q.store_thm
-("FORALL_STATE",
- `(!x:state. P x) = !v0 v1 k0 k1 k2 k3 sum. P((v0,v1),(k0,k1,k2,k3),sum)`,
-    METIS_TAC [PAIR]);
-
-(*---------------------------------------------------------------------------*)
 (* Basic inversion lemma                                                     *)
 (*---------------------------------------------------------------------------*)
 
@@ -151,7 +157,7 @@ val OneRound_Inversion = Q.store_thm
  RW_TAC list_ss [Round_def, InvRound_def,WORD_ADD_SUB, LET_THM]);
 
 (*---------------------------------------------------------------------------*)
-(* Tweaked version of Rounds induction.                                      *)
+(* Tweaked version of Rounds induction is more useful for this proof.        *)
 (*---------------------------------------------------------------------------*)
 
 val Rounds_ind' = Q.prove
@@ -207,12 +213,17 @@ val tea_correct = Q.store_thm
   THEN RW_TAC std_ss [OneRound_Inversion]);
 
 (*---------------------------------------------------------------------------*)
-(* Generate code                                                             *)
+(* Generate ML code in current directory. The generated code depends on      *)
+(* ML code generated for the basic system. That code lives in                *)
+(*                                                                           *)
+(*   HOLDIR/src/emit/ML                                                      *)
+(*                                                                           *)
+(* and needs to be visible on the search path when using or loading teaML.   *)
 (*---------------------------------------------------------------------------*)
 
 (*
 val _ =
- let open emitLib wordsTheory
+ let open EmitML wordsTheory
      val elems =
      MLSIG "type num = numML.num"::
      MLSIG "type word32 = wordsML.word32"::
@@ -236,7 +247,7 @@ val _ =
          [DELTA_def, ShiftXor_def, Round_def, InvRound_def,
           Rounds_def, InvRounds_def, teaEncrypt_def, teaDecrypt_def]
  in
-   emitML (!Globals.emitMLDir) ("tea",elems)
+   emitML "" ("tea",elems)
  end
  handle _ => ();
 *)

@@ -40,7 +40,7 @@ compile.monitor_netlist_construction := true;
 (*---------------------------------------------------------------------------*)
 
 val _ = add_combinational 
-           ["bitwise_and", "bitwise_eor", "word_lsl", "word_asr", 
+           ["bitwise_and", "bitwise_eor", "word_lsl", "word_lsr", 
             "word_add", "word_sub", "w2n","n2w"];
 
 vsynth.AddBinop ("XOR32",   (``UNCURRY $#  : word32#word32->word32``,  "^"));
@@ -51,9 +51,9 @@ vsynth.AddBinop ("SUB32",   (``UNCURRY $-  : word32#word32->word32``,  "-"));
 vsynth.AddBinop ("EQ32",    (``UNCURRY $=  : word32#word32->bool``,    "=="));
 
 vsynth.add_vsynth
-   [(``\(in1,in2). in1 >> in2``,
+   [(``\(in1,in2). in1 >>> in2``,
      (fn[i1,i2] => ("{{31{" ^ i1 ^ "[31]}}," ^ i1 ^ "} >> " ^i2))),
-    (``UNCURRY $>>``,
+    (``UNCURRY $>>>``,
      (fn[i1,i2] => ("{{31{" ^ i1 ^ "[31]}}," ^ i1 ^ "} >> " ^i2)))];
 
 vsynth.add_vsynth
@@ -87,7 +87,7 @@ val _ = type_abbrev("state", ``:block # keys # word32``);
 
 val (ShiftXor_def,_,ShiftXor_dev) = 
  hwDefine 
-   `ShiftXor (x,s,k0,k1) = ((x << 4) + k0) # (x + s) # ((x >> 5) + k1)`;
+   `ShiftXor (x,s,k0,k1) = ((x << 4) + k0) ?? (x + s) ?? ((x >> 5) + k1)`;
 
 add_combinational ["ShiftXor"];
 
