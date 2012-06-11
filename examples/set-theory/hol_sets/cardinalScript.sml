@@ -367,6 +367,31 @@ val cardleq_dichotomy = store_thm(
     fs[BIJ_DEF, INJ_DEF, SUBSET_DEF]
   ]);
 
+val _ = set_fixity "≺" (Infix(NONASSOC, 450))
+val _ = overload_on ("≺", ``λ(s1:'a set) s2. ¬(s2 ≼ s1)``)
+
+val cardleq_lteq = store_thm(
+  "cardleq_lteq",
+  ``s1 ≼ s2 ⇔ s1 ≺ s2 ∨ (s1 ≈ s2)``,
+  metis_tac [cardleq_ANTISYM, cardleq_dichotomy, CARDEQ_SUBSET_CARDLEQ]);
+
+val cardlt_REFL = store_thm(
+  "cardlt_REFL",
+  ``~(s ≺ s)``,
+  simp[cardleq_REFL]);
+
+val cardlt_lenoteq = store_thm(
+  "cardlt_iso_REFL",
+  ``s ≺ t ⇔ s ≼ t ∧ ¬(s ≈ t)``,
+  metis_tac [cardleq_dichotomy, CARDEQ_SUBSET_CARDLEQ, cardeq_SYM,
+             cardleq_ANTISYM, cardeq_REFL]);
+
+val cardlt_TRANS = store_thm(
+  "cardlt_TRANS",
+  ``∀s t u:'a set. s ≺ t ∧ t ≺ u ⇒ s ≺ u``,
+  metis_tac [cardleq_TRANS, cardleq_ANTISYM, CARDEQ_SUBSET_CARDLEQ,
+             cardeq_SYM, cardlt_lenoteq]);
+
 val better_BIJ = BIJ_DEF |> SIMP_RULE (srw_ss() ++ CONJ_ss) [INJ_DEF, SURJ_DEF]
 
 fun unabbrev_in_goal s = let
