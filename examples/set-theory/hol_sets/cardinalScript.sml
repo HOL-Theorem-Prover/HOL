@@ -444,10 +444,12 @@ val lemma1 = prove(
   `∃b. b ∈ B ∧ (f2 b = m)` by metis_tac [BIJ_DEF, SURJ_DEF] >>
   qexists_tac `b` >> simp[] >> metis_tac[]);
 
-(*
-val INFINITE_CROSS_UNIV = store_thm(
-  "INFINITE_CROSS_UNIV",
+fun PRINT_TAC s gl = (print ("** " ^ s ^ "\n"); ALL_TAC gl)
+
+val SET_SQUARED_CARDEQ_SET = store_thm(
+  "SET_SQUARED_CARDEQ_SET",
   ``INFINITE s ⇒ (s × s ≈ s)``,
+  PRINT_TAC "beginning s × s ≈ s proof" >>
   strip_tac >>
   qabbrev_tac `A = { (As,f) | As ⊆ s ∧ BIJ f As (As × As) ∧
                               ∀x. x ∉ As ⇒ (f x = ARB) }` >>
@@ -469,7 +471,8 @@ val INFINITE_CROSS_UNIV = store_thm(
   `({}, K ARB) ∈ A` by simp[Abbr`A`, BIJ_EMPTY] >>
   `∀x. x ∈ A ==> (({},K ARB), x) ∈ rr` by simp[Abbr`rr`, FORALL_PROD] >>
   `∀t. chain t rr ⇒ upper_bounds t rr ≠ {}`
-     by (gen_tac >>
+     by (PRINT_TAC "beginning proof that chains have upper bound" >>
+         gen_tac >>
          simp[chain_def] >> strip_tac >>
          `∀s0 f. (s0,f) ∈ t ⇒ BIJ f s0 (s0 × s0) ∧ s0 ⊆ s ∧ (s0,f) ∈ A ∧
                               ∀x. x ∉ s0 ⇒ (f x = ARB)`
@@ -596,6 +599,7 @@ val INFINITE_CROSS_UNIV = store_thm(
          qx_gen_tac `x` >> strip_tac >> simp[Abbr`BigF`] >>
          DEEP_INTRO_TAC optionTheory.some_intro >>
          simp[FORALL_PROD] >> metis_tac[]) >>
+  PRINT_TAC "proved that upper bound works" >>
   `A ≠ {}` by (strip_tac >> fs[]) >>
   `∃Mf. Mf ∈ maximal_elements A rr` by metis_tac [zorns_lemma] >>
   `∃M mf. Mf = (M,mf)` by metis_tac [pairTheory.pair_CASES] >>
@@ -673,6 +677,7 @@ val INFINITE_CROSS_UNIV = store_thm(
                         arithmeticTheory.MULT_CLAUSES]
         >- metis_tac [SING_IFF_CARD1, SING_DEF] >>
         metis_tac [CARD_EQ_0]) >>
+  PRINT_TAC "proved M infinite" >>
   `M ≈ {T;F} × M` by metis_tac [lemma1] >>
   `s = M UNION (s DIFF M)` by (fs[EXTENSION, SUBSET_DEF] >> metis_tac[]) >>
   `¬(s DIFF M ≼ M)`
@@ -711,19 +716,48 @@ val INFINITE_CROSS_UNIV = store_thm(
   qabbrev_tac `FF = λm. if m ∈ M then mf m else if m ∈ E then f0 m else ARB` >>
   `(M ∪ E) × (M ∪ E) = M × M ∪ ME`
     by simp[Abbr`ME`, UNION_ASSOC, set_binomial2] >>
+  qabbrev_tac `MM = M × M` >>
+  `DISJOINT M E`
+    by (simp[DISJOINT_DEF, EXTENSION] >> metis_tac[IN_DIFF, SUBSET_DEF]) >>
+  `DISJOINT MM ME`
+    by (pop_assum mp_tac >>
+        simp[DISJOINT_DEF, EXTENSION, Abbr`ME`, Abbr`MM`, FORALL_PROD] >>
+        metis_tac[]) >>
+  PRINT_TAC "proving properties of new (can't exist) bijection" >>
   `BIJ FF (M ∪ E) ((M ∪ E) × (M ∪ E))`
     by (simp[better_BIJ, Abbr`FF`] >> rpt conj_tac
         >- (qx_gen_tac `m` >> Cases_on `m ∈ M` >> simp[] >>
-            fs[better_BIJ] >> strip_tac >> qunabbrev_tac `ME` >>
+            fs[better_BIJ] >> strip_tac >>
+            map_every qunabbrev_tac [`ME`, `MM`] >>
             fs[] >> metis_tac[])
-        >- (
+        >- (map_every qx_gen_tac [`m1`, `m2`] >>
+            strip_tac >> fs[better_BIJ, DISJOINT_DEF, EXTENSION] >>
+            metis_tac[])
+        >- (simp[FORALL_PROD] >> map_every qx_gen_tac [`m1`, `m2`] >>
+            strip_tac
+            >- (fs[better_BIJ] >> qsuff_tac `(m1,m2) ∈ MM` >- metis_tac[] >>
+                simp[Abbr`MM`]) >>
+            (Q.UNDISCH_THEN `DISJOINT M E` mp_tac >>
+             simp[DISJOINT_DEF, EXTENSION] >> strip_tac >>
+             fs[better_BIJ] >>
+             qsuff_tac `(m1,m2) ∈ ME` >- metis_tac[] >>
+             simp[Abbr`ME`]))) >>
+  `(M ∪ E, FF) ∈ A`
+    by (simp[Abbr`A`] >> conj_tac >- (fs[SUBSET_DEF] >> metis_tac[]) >>
+        simp[Abbr`FF`]) >>
+  `(M,mf) ≠ (M ∪ E, FF)`
+    by (simp[] >> DISJ1_TAC >> simp[EXTENSION] >>
+        fs[DISJOINT_DEF, EXTENSION] >> metis_tac[]) >>
+  qsuff_tac `((M,mf), (M ∪ E, FF)) ∈ rr` >- metis_tac[] >>
+  simp[Abbr`rr`] >> conj_tac >- simp[Abbr`A`] >>
+  simp[Abbr`FF`])
 
-
-
-
-
-*)
-
+val SET_SUM_CARDEQ_SET = store_thm(
+  "SET_SUM_CARDEQ_SET",
+  ``INFINITE s ⇒
+    s ≈ {T;F} × s ∧
+    ∀A B. DISJOINT A B ∧ A ≈ s ∧ B ≈ s ⇒ A ∪ B ≈ s``,
+  metis_tac[lemma1, SET_SQUARED_CARDEQ_SET, cardeq_SYM]);
 
 val _ = export_theory()
 
