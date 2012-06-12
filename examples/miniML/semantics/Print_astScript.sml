@@ -241,7 +241,8 @@ val _ = Define `
 val _ = Define `
  (is_ocaml_infix s =
   let c =ORD (SUB ( s,0)) in
-    if c< 65 then MEM s ["*"; "+"; "-"; "/"; "<"; "<="; "="; ">"; ">="]
+    if c< 65 then
+      MEM s ["*"; "+"; "-"; "/"; "<"; "<="; "="; ">"; ">="]
     else 
       s= "mod")`;
 

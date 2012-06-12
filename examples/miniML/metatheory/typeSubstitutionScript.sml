@@ -10,7 +10,7 @@ val _ = new_theory "typeSubstitution";
 val type_funs_Tfn = Q.store_thm ("type_funs_Tfn",
 `∀tenvC tenv funs tenv' tvs t n.
   type_funs tenvC tenv funs tenv' ∧
-  (lookup n tenv' = SOME (tvs,t))
+  (lookup n tenv' = SOME t)
   ⇒
   ∃t1 t2. (t = Tfn t1 t2) ∧ check_freevars T [] (Tfn t1 t2)`,
 induct_on `funs` >>
@@ -78,7 +78,9 @@ val tenvC_ok_def = Define `
 tenvC_ok tenvC = EVERY (\(cn,tvs,ts,tn). EVERY (check_freevars F tvs) ts) tenvC`;
 
 val tenv_ok_def = Define `
-tenv_ok tenv = EVERY (\(x,tvs,t). check_freevars T tvs t) tenv`;
+(tenv_ok Env_empty = T) ∧
+(tenv_ok (Tvar_bind tenv) = tenv_ok tenv) ∧
+(tenv_ok (Var_bind x tvs t tenv) = check_freevars T tvs t ∧ tenv_ok tenv)`;
 
 val tenvC_ok_lookup = Q.prove (
 `!tenvC cn tvs ts tn. 
@@ -94,19 +96,22 @@ rw [] >>
 fs [] >>
 metis_tac []);
 
+val check_freevars_deBruijn_inc = Q.prove (
+`!dbok tvs t. 
+  check_freevars dbok tvs t ⇒ 
+  !idx. check_freevars dbok tvs (deBruijn_inc idx t)`,
+ho_match_mp_tac check_freevars_ind >>
+rw [check_freevars_def, deBruijn_inc_def, EVERY_MAP] >>
+fs [EVERY_MEM]);
+
 val tenv_ok_lookup = Q.prove (
-`!tenv tv tvs t. 
-  tenv_ok tenv ∧ (lookup tv tenv = SOME (tvs,t))
+`!tenv tv tvs t idx. 
+  tenv_ok tenv ∧ (lookup_var tv idx tenv = SOME (tvs,t))
   ⇒
   check_freevars T tvs t`,
 induct_on `tenv` >>
-rw [] >>
-PairCases_on `h` >>
-fs [tenv_ok_def] >>
-every_case_tac >>
-rw [] >>
-fs [] >>
-metis_tac []);
+rw [tenv_ok_def, lookup_var_def] >>
+metis_tac [check_freevars_deBruijn_inc]);
 
 val pmatch_tenv_ok = Q.prove (
 `(!envC tenv p v tenv'. 
@@ -157,72 +162,6 @@ rw [] >|
  qexists_tac `ARB::l'` >>
      rw []]);
 
-val check_freevars_deBruijn_subst = Q.store_thm ("check_freevars_deBruijn_subst",
-`!tvs t.
-  enough_tvars tvs t ∧ check_freevars T [] t 
-  ⇒ 
-  check_freevars T tvs (deBruijn_subst tvs t)`,
-recInduct enough_tvars_ind >>
-rw [deBruijn_subst_def, check_freevars_def, enough_tvars_def] >>
-fs [rich_listTheory.EL_IS_EL, EVERY_MEM] >>
-rw [] >>
-fs [MEM_MAP]);
-
-val no_freevars_subst = Q.prove (
-`!dbok fvs t tvs ts. 
-  (fvs = []) ∧ check_freevars dbok fvs t ∧ (LENGTH tvs = LENGTH ts) 
-  ⇒ 
-  (type_subst (ZIP (tvs,ts)) t = t)`,
-recInduct check_freevars_ind >>
-rw [check_freevars_def, type_subst_def] >|
-[every_case_tac >>
-     rw [] >>
-     fs [],
- induct_on `ts` >>
-     rw []]);
-
-val type_subst_type_subst_single = Q.prove (
-`!s t tvs dbok tvs' ts ts'.
-  (LENGTH tvs = LENGTH ts) ∧ 
-  (LENGTH tvs' = LENGTH ts') ∧ 
-  check_freevars dbok tvs t ∧
-  (s = (ZIP (tvs,ts))) ⇒
-  (type_subst (ZIP (tvs',ts')) (type_subst (ZIP (tvs,ts)) t) =
-   type_subst (ZIP (tvs,MAP (type_subst (ZIP (tvs',ts'))) ts)) t)`,
-recInduct type_subst_ind >>
-rw [type_subst_def, check_freevars_def] >|
-[every_case_tac >>
-     fs [type_subst_def] >>
-     every_case_tac >>
-     fs [type_subst_def] >|
-     [imp_res_tac lookup_notin >>
-          imp_res_tac MAP_ZIP >>
-          fs [],
-      metis_tac [lookup_zip_map, optionTheory.OPTION_MAP_DEF,
-                 optionTheory.NOT_SOME_NONE],
-      metis_tac [lookup_zip_map, optionTheory.OPTION_MAP_DEF,
-                 optionTheory.NOT_SOME_NONE],
-      metis_tac [lookup_zip_map, optionTheory.OPTION_MAP_DEF,
-                 optionTheory.NOT_SOME_NONE],
-      metis_tac [lookup_zip_map, optionTheory.OPTION_MAP_DEF,
-                 optionTheory.SOME_11]],
- rw [rich_listTheory.MAP_EQ_f, MAP_MAP_o] >>
-     fs [EVERY_MEM] >>
-     metis_tac [],
- metis_tac [],
- metis_tac []]); 
-
-val type_subst_type_subst_list = Q.prove (
-`!t tvs dbok tvs' ts ts' ts''.
-  (LENGTH tvs = LENGTH ts) ∧ 
-  (LENGTH tvs' = LENGTH ts') ∧ 
-  EVERY (check_freevars dbok tvs) ts'' ⇒
-  (MAP (type_subst (ZIP (tvs',ts'))) (MAP (type_subst (ZIP (tvs,ts))) ts'') =
-   MAP (type_subst (ZIP (tvs,MAP (type_subst (ZIP (tvs',ts'))) ts))) ts'')`,
-induct_on `ts''` >>
-rw [] >>
-metis_tac [type_subst_type_subst_single]);
-
 val check_freevars_subst_single = Q.prove (
 `!dbok tvs t tvs' ts.
   (LENGTH tvs = LENGTH ts) ∧
@@ -253,6 +192,110 @@ induct_on `ts'` >>
 rw [] >>
 metis_tac [check_freevars_subst_single]);
 
+val deBruijn_subst2_def = tDefine "deBruijn_subst2" `
+(deBruijn_subst2 ts inc (Tvar tv) = Tvar tv) ∧
+(deBruijn_subst2 ts inc (Tvar_db 0 n) = EL n ts) ∧
+(deBruijn_subst2 ts inc (Tvar_db i n) = Tvar_db (i - 1 + inc) n) ∧
+(deBruijn_subst2 ts inc (Tapp ts' tn) = 
+  Tapp (MAP (deBruijn_subst2 ts inc) ts') tn) ∧
+(deBruijn_subst2 ts inc (Tfn t1 t2) =
+  Tfn (deBruijn_subst2 ts inc t1) (deBruijn_subst2 ts inc t2)) ∧
+(deBruijn_subst2 ts inc Tnum = Tnum) ∧
+(deBruijn_subst2 ts inc Tbool = Tbool)`
+(wf_rel_tac `measure (t_size o SND o SND)` >>
+ rw [t_size_def] >>
+ TRY (induct_on `ts'`) >>
+ rw [t_size_def] >>
+ res_tac >>
+ decide_tac);
+
+val type_subst_type_subst_single = Q.prove (
+`!s t tvs dbok tvs' ts ts' inc.
+  (LENGTH tvs = LENGTH ts) ∧ 
+  check_freevars F tvs t ∧
+  (s = (ZIP (tvs,ts))) ⇒
+  (deBruijn_subst2 ts' inc (type_subst (ZIP (tvs,ts)) t) =
+   type_subst (ZIP (tvs,MAP (deBruijn_subst2 ts' inc) ts)) t)`,
+recInduct type_subst_ind >>
+rw [deBruijn_subst2_def, type_subst_def, check_freevars_def] >|
+[every_case_tac >>
+     fs [deBruijn_subst2_def] >|
+     [imp_res_tac lookup_notin >>
+          imp_res_tac MAP_ZIP >>
+          fs [],
+      metis_tac [lookup_zip_map, optionTheory.OPTION_MAP_DEF,
+                 optionTheory.NOT_SOME_NONE],
+      metis_tac [lookup_zip_map, optionTheory.OPTION_MAP_DEF,
+                 optionTheory.SOME_11]],
+ rw [rich_listTheory.MAP_EQ_f, MAP_MAP_o] >>
+     fs [EVERY_MEM] >>
+     metis_tac []]); 
+
+val type_subst_type_subst_list = Q.prove (
+`!t tvs dbok tvs' ts ts' ts'' inc.
+  (LENGTH tvs = LENGTH ts) ∧ 
+  (LENGTH tvs' = LENGTH ts') ∧ 
+  EVERY (check_freevars F tvs) ts'' ⇒
+  (MAP (deBruijn_subst2 ts' inc) (MAP (type_subst (ZIP (tvs,ts))) ts'') =
+   MAP (type_subst (ZIP (tvs,MAP (deBruijn_subst2 ts' inc) ts))) ts'')`,
+induct_on `ts''` >>
+rw [] >>
+metis_tac [type_subst_type_subst_single]);
+
+val subst_check_freevars = Q.prove (
+`(!t tvs ts dbok.
+  (LENGTH tvs = LENGTH ts) ∧
+  check_freevars dbok [] (type_subst (ZIP (tvs, ts)) t)
+  ⇒
+  check_freevars dbok tvs t) ∧
+ (!ts tvs ts' dbok.
+  (LENGTH tvs = LENGTH ts') ∧
+  EVERY (λt. check_freevars dbok [] (type_subst (ZIP (tvs, ts')) t)) ts
+  ⇒
+  EVERY (λt. check_freevars dbok tvs t) ts)`,
+ho_match_mp_tac t_induction >>
+rw [check_freevars_def, type_subst_def, EVERY_MAP] >|
+[every_case_tac >>
+     fs [check_freevars_def] >>
+     imp_res_tac lookup_in >>
+     fs [MEM_MAP] >>
+     imp_res_tac MEM_ZIP >>
+     fs [] >>
+     rw [MEM_EL] >>
+     metis_tac [], 
+ fs [EVERY_MEM] >>
+     rw [] >>
+     metis_tac [],
+ metis_tac [],
+ metis_tac [],
+ metis_tac []]);
+
+val check_freevars_deBruijn_subst = Q.store_thm ("check_freevars_deBruijn_subst",
+`!tvs t.
+  enough_tvars tvs t ∧ check_freevars T [] t 
+  ⇒ 
+  check_freevars T tvs (deBruijn_subst tvs t)`,
+recInduct enough_tvars_ind >>
+rw [deBruijn_subst_def, check_freevars_def, enough_tvars_def] >>
+fs [rich_listTheory.EL_IS_EL, EVERY_MEM] >>
+rw [] >>
+fs [MEM_MAP]);
+
+ (*
+val no_freevars_subst = Q.prove (
+`!dbok fvs t tvs ts. 
+  (fvs = []) ∧ check_freevars dbok fvs t ∧ (LENGTH tvs = LENGTH ts) 
+  ⇒ 
+  (type_subst (ZIP (tvs,ts)) t = t)`,
+recInduct check_freevars_ind >>
+rw [check_freevars_def, type_subst_def] >|
+[every_case_tac >>
+     rw [] >>
+     fs [],
+ induct_on `ts` >>
+     rw []]);
+
+
 val lem = Q.prove (
 `!env t tvs tvs' ts.
   check_freevars T tvs t ∧
@@ -280,49 +323,90 @@ rw [type_subst_def, check_freevars_def] >|
           fs []],
  rw [MAP_EQ_f] >>
      fs [EVERY_MEM]]);
+     *)
 
-(*
+val deBruijn_subst_tenv_def = Define `
+(deBruijn_subst_tenv ts inc Env_empty = Env_empty) ∧
+(deBruijn_subst_tenv ts inc (Tvar_bind tenv) =
+  Tvar_bind tenv) ∧
+(deBruijn_subst_tenv ts inc (Var_bind n tvs t tenv) =
+  (Var_bind n tvs (deBruijn_subst2 ts inc t) 
+                  (deBruijn_subst_tenv ts inc tenv)))`;
+
+val type_e_type_subst = Q.prove (
+`(!tenvC tenv e t. type_e tenvC tenv e t ⇒
+    !ts inc. 
+       EVERY (check_freevars T []) ts ∧
+       check_freevars T [] t ∧ 
+       tenvC_ok tenvC ∧ 
+       tenv_ok tenv 
+       ⇒ 
+       type_e tenvC (deBruijn_subst_tenv ts inc tenv) e (deBruijn_subst2 ts inc t)) ∧
+ (!tenvC tenv es ts. type_es tenvC tenv es ts ⇒
+    !ts' inc. 
+       EVERY (check_freevars T []) ts ∧
+       EVERY (check_freevars T []) ts' ∧ 
+       tenvC_ok tenvC ∧ 
+       tenv_ok tenv 
+       ⇒ 
+       type_es tenvC (deBruijn_subst_tenv ts inc tenv) es (MAP (deBruijn_subst2 ts' inc) ts)) ∧
+ (!tenvC tenv funs tenv'. type_funs tenvC tenv funs tenv' ⇒
+    !inc. type_funs tenvC tenv funs tenv')`,
+
+ho_match_mp_tac type_e_strongind >>
+rw [deBruijn_subst2_def, check_freevars_def] >>
+rw [Once type_e_cases] >|
+
+[all_tac,
+ imp_res_tac tenvC_ok_lookup >>
+     `EVERY (check_freevars T tvs) ts` 
+              by metis_tac [EVERY_MEM,check_freevars_F_to_T] >>
+     metis_tac [type_subst_type_subst_list, check_freevars_subst_list],
+ qexists_tac `MAP (deBruijn_subst2 ts' inc) ts` >>
+     rw [] >>
+     match_mp_tac type_subst_type_subst_single >>
+     rw [] >>
+     metis_tac [subst_check_freevars],
+
+
+
+
+
 val type_v_type_subst_lem1 = Q.prove (
 `(!tenvC v t. type_v tenvC v t ⇒
-    !tvs ts. 
-       check_freevars T tvs t ∧ tenvC_ok tenvC ∧ (LENGTH tvs = LENGTH ts) 
+    !ts skip inc. 
+       check_freevars T [] t ∧ tenvC_ok tenvC
        ⇒ 
-       type_v tenvC v (type_subst (ZIP (tvs,ts)) t)) ∧
- (!tenvC tenv e t. type_e tenvC tenv e t ⇒
-    !tvs ts. 
-       check_freevars T tvs t ∧ 
-       tenvC_ok tenvC ∧ 
-       (LENGTH tvs = LENGTH ts) ∧ 
-       tenv_ok tenv 
-       ⇒ 
-       type_e tenvC tenv e (type_subst (ZIP (tvs,ts)) t)) ∧
- (!tenvC tenv es ts. type_es tenvC tenv es ts ⇒
-    !tvs ts'. 
-       EVERY (check_freevars T tvs) ts ∧ 
-       tenvC_ok tenvC ∧ 
-       (LENGTH tvs = LENGTH ts') ∧
-       tenv_ok tenv 
-       ⇒ 
-       type_es tenvC tenv es (MAP (type_subst (ZIP (tvs,ts'))) ts)) ∧
+       type_v tenvC v (deBruijn_subst ts (deBruijn_inc skip inc t))) ∧
  (!tenvC vs ts. type_vs tenvC vs ts ⇒
-    !tvs ts'. 
-       tenvC_ok tenvC ∧ 
-       EVERY (check_freevars T tvs) ts ∧ 
-       tenvC_ok tenvC ∧ 
-       (LENGTH tvs = LENGTH ts') 
+    !ts' skip inc. 
+       tenvC_ok tenvC ∧ EVERY (check_freevars T []) ts ∧ tenvC_ok tenvC
        ⇒ 
-       type_vs tenvC vs (MAP (type_subst (ZIP (tvs,ts'))) ts)) ∧
+       type_vs tenvC vs (MAP (\t. deBruijn_subst ts' (deBruijn_inc skip inc t)) ts)) ∧
  (!tenvC env tenv. type_env tenvC env tenv ⇒
-       tenv_ok tenv ∧ type_env tenvC env tenv) ∧
- (!tenvC tenv funs tenv'. type_funs tenvC tenv funs tenv' ⇒
-       tenv_ok tenv' ∧ type_funs tenvC tenv funs tenv')`,
+       tenv_ok tenv ∧ type_env tenvC env tenv)`,
+
 ho_match_mp_tac type_v_strongind >>
-rw [type_subst_def, check_freevars_def] >>
+rw [deBruijn_subst_def, check_freevars_def, bind_def, (*tenv_ok_def,*)
+    deBruijn_inc_def] >>
 rw [Once type_v_cases] >|
 [imp_res_tac tenvC_ok_lookup >>
      `EVERY (check_freevars T tvs) ts` 
               by metis_tac [EVERY_MEM,check_freevars_F_to_T] >>
      metis_tac [type_subst_type_subst_list, check_freevars_subst_list],
+ all_tac,
+ all_tac,
+ rw [check_freevars_deBruijn_subst],
+ rw [bind_def] >>
+     metis_tac []]
+
+
+
+     rw [] >>
+     match_mp_tac type_subst_type_subst_single >>
+     rw []
+ metis_tac [type_subst_type_subst_single, subst_check_freevars], 
+
  fs [bind_def, tenv_ok_def] >>
      metis_tac [no_freevars_subst],
  metis_tac [no_freevars_subst, type_funs_Tfn],
@@ -384,87 +468,16 @@ rw [Once type_v_cases] >|
  rw [tenv_ok_def, emp_def],
  fs [bind_def, tenv_ok_def, check_freevars_def],
  fs [bind_def, tenv_ok_def, check_freevars_def]]);
- *)
 
-val type_v_type_subst = mk_thm ([],
-``!tenvC v t tvs ts. 
+val type_v_type_subst = Q.store_thm ("type_v_type_subst",
+`!tenvC v t tvs ts. 
   type_v tenvC v t ∧ 
   check_freevars T tvs t ∧ 
   tenvC_ok tenvC ∧ 
   (LENGTH tvs = LENGTH ts) 
   ⇒ 
-  type_v tenvC v (type_subst (ZIP (tvs,ts)) t)``);
-val _ = save_thm ("type_v_type_subst", type_v_type_subst);
-
-val inc_deBruijn_def = tDefine "inc_deBruijn" `
-(inc_deBruijn skip_zero (Tvar t) = Tvar t) ∧
-(inc_deBruijn skip_zero (Tvar_db n1 n2) = 
-  if skip_zero ∧ (n1 = 0) then
-    Tvar_db 0 n2
-  else
-    Tvar_db (n1 + 1) n2) ∧
-(inc_deBruijn skip_zero (Tfn t1 t2) = 
-  Tfn (inc_deBruijn skip_zero t1) (inc_deBruijn skip_zero t2)) ∧
-(inc_deBruijn skip_zero (Tapp ts tn) = 
-  Tapp (MAP (inc_deBruijn skip_zero) ts) tn) ∧
-(inc_deBruijn skip_zero Tnum = Tnum) ∧
-(inc_deBruijn skip_zero Tbool = Tbool)`
-(wf_rel_tac (`measure (\(x,y). t_size y)`) >>
- srw_tac [ARITH_ss] [t_size_def] >>
- induct_on `ts` >>
- rw [t_size_def] >>
- res_tac >>
- decide_tac);
-
-val inc_deBruijn_ind = fetch "-" "inc_deBruijn_ind"
-
-val inc_deBruijn_subst_single = Q.prove (
-`!skip_zero t tvs ts tvs'. 
-  (LENGTH tvs = LENGTH ts) ∧ check_freevars F tvs' t ⇒
-  (inc_deBruijn skip_zero (type_subst (ZIP (tvs,ts)) t) =
-   type_subst (ZIP (tvs, MAP (inc_deBruijn skip_zero) ts)) t)`,
-recInduct inc_deBruijn_ind >>
-rw [inc_deBruijn_def, type_subst_def, check_freevars_def] >|
-[every_case_tac >>
-     rw [inc_deBruijn_def] >>
-     metis_tac [lookup_zip_map, optionTheory.OPTION_MAP_DEF,
-                optionTheory.NOT_SOME_NONE, optionTheory.SOME_11],
- metis_tac [],
- metis_tac [],
- fs [EVERY_MEM, MAP_MAP_o, rich_listTheory.MAP_EQ_f] >>
-     metis_tac []]);
-
-val inc_deBruijn_subst_list = Q.prove (
-`!ts' skip_zero tvs ts tvs'. 
-  (LENGTH tvs = LENGTH ts) ∧ EVERY (check_freevars F tvs') ts' ⇒
-  (MAP (inc_deBruijn skip_zero) (MAP (type_subst (ZIP (tvs,ts))) ts') =
-   MAP (type_subst (ZIP (tvs, MAP (inc_deBruijn skip_zero) ts))) ts')`,
-induct_on `ts'` >>
-rw [] >>
-metis_tac [inc_deBruijn_subst_single]);
-
-val inc_deBruijn_check_freevars = Q.prove (
-`∀dbok tvs t skip_zero.
-  check_freevars dbok tvs t 
-  ⇒ 
-  check_freevars dbok tvs (inc_deBruijn skip_zero t)`,
-recInduct check_freevars_ind >>
-rw [] >>
-cases_on `skip_zero` >>
-fs [MEM_MAP, EVERY_MEM, inc_deBruijn_def, check_freevars_def] >>
-rw [inc_deBruijn_def, check_freevars_def] >-
-metis_tac [] >-
-metis_tac [] >>
-cases_on `v0` >>
-rw [inc_deBruijn_def, check_freevars_def]);
-
-val inc_deBruijn_enough_tvars = Q.prove (
-`(!t (tvs : 'a list). enough_tvars tvs (inc_deBruijn F t)) ∧
- (!ts (tvs : 'a list). EVERY (\t. enough_tvars tvs (inc_deBruijn F t)) ts)`,
-ho_match_mp_tac t_induction >>
-rw [enough_tvars_def, inc_deBruijn_def] >>
-`n + 1 = SUC n` by decide_tac >>
-rw [enough_tvars_def, EVERY_MAP]);
+  type_v tenvC v (type_subst (ZIP (tvs,ts)) t)`,
+metis_tac [type_v_type_subst_lem1]);
 
 (*
 ∃t'.
@@ -567,9 +580,8 @@ type_v tenvC v (deBruijn_subst tvs t1)
 HO_MATCH_MP_TAC type_v_ind >>
 rw [deBruijn_subst_def, enough_tvars_def] >>
 rw [Once type_v_cases] >|
-
 [all_tac,
- all_tac,
+ metis_tac [check_freevars_deBruijn_subst],
  all_tac,
  all_tac,
  all_tac,
@@ -580,6 +592,9 @@ rw [Once type_v_cases] >|
  all_tac,
  all_tac,
  all_tac]
+
+
+
 *)
 
  
