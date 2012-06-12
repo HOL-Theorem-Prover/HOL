@@ -12,17 +12,18 @@
 (* available without supplying the "arithmeticTheory." prefix.               *)
 (*---------------------------------------------------------------------------*)
 
-open arithmeticTheory
+open arithmeticTheory;
 
 (*---------------------------------------------------------------------------*)
 (* Divisibility.                                                             *)
 (*---------------------------------------------------------------------------*)
 
+set_fixity "divides" (Infix(NONASSOC, 450));
+
 val divides_def =
  Define
-  `divides a b = ?x. b = a * x`;
+  `a divides b = ?x. b = a * x`;
 
-set_fixity "divides" (Infix(NONASSOC, 450));
 
 (*---------------------------------------------------------------------------*)
 (* Primality.                                                                *)
