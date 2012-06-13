@@ -1,6 +1,6 @@
 \DOC
 
-\TYPE {boolSimps.DNF_ss : ssfrag}
+\TYPE {DNF_ss : ssfrag}
 
 \SYNOPSIS
 A simpset fragment that does aggressive propositional and quantifier
