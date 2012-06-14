@@ -721,4 +721,32 @@ val SET_SUM_CARDEQ_SET = store_thm(
     ∀A B. DISJOINT A B ∧ A ≈ s ∧ B ≈ s ⇒ A ∪ B ≈ s``,
   metis_tac[lemma1, SET_SQUARED_CARDEQ_SET, cardeq_SYM]);
 
+val CARD_BIGUNION = store_thm(
+  "CARD_BIGUNION",
+  ``INFINITE k ∧ s1 ≼ k ∧ (∀e. e ∈ s1 ⇒ e ≼ k) ⇒ BIGUNION s1 ≼ k``,
+  `BIGUNION s1 = BIGUNION (s1 DELETE ∅)` by (simp[EXTENSION] >> metis_tac[]) >>
+  pop_assum SUBST1_TAC >>
+  Cases_on `INFINITE k` >> simp[cardleq_def] >>
+  disch_then (CONJUNCTS_THEN2
+                  (Q.X_CHOOSE_THEN `f` strip_assume_tac) strip_assume_tac) >>
+  qabbrev_tac `s = s1 DELETE ∅` >>
+  `INJ f s k` by fs[INJ_DEF, Abbr`s`] >>
+  `(s = ∅) ∨ ∃ff. SURJ ff k s` by metis_tac [inj_surj] >- simp[INJ_EMPTY] >>
+  `∅ ∉ s` by simp[Abbr`s`] >>
+  qsuff_tac `∃fg. SURJ fg k (BIGUNION s)` >- metis_tac[SURJ_INJ_INV] >>
+  `k ≈ k × k` by metis_tac [SET_SQUARED_CARDEQ_SET, cardeq_SYM] >>
+  `∃kkf. BIJ kkf k (k × k)` by metis_tac [cardeq_def] >>
+  qsuff_tac `∃fg. SURJ fg (k × k) (BIGUNION s)`
+  >- (strip_tac >> qexists_tac `fg o kkf` >> match_mp_tac SURJ_COMPOSE >>
+      metis_tac[BIJ_DEF]) >>
+  `∀e. e ∈ s ⇒ ∃g. SURJ g k e` by metis_tac[inj_surj, IN_DELETE] >>
+  pop_assum (Q.X_CHOOSE_THEN `g` assume_tac o
+             CONV_RULE (BINDER_CONV RIGHT_IMP_EXISTS_CONV THENC
+                        SKOLEM_CONV)) >>
+  qexists_tac `λ(k1,k2). g (ff k1) k2` >>
+  asm_simp_tac (srw_ss() ++ DNF_ss)
+       [SURJ_DEF, FORALL_PROD, pairTheory.EXISTS_PROD] >>
+  fs[SURJ_DEF] >> metis_tac[]);
+
+
 val _ = export_theory()
