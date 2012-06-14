@@ -451,7 +451,7 @@ val SET_SQUARED_CARDEQ_SET = store_thm(
   ``INFINITE s ⇒ (s × s ≈ s)``,
   PRINT_TAC "beginning s × s ≈ s proof" >>
   strip_tac >>
-  qabbrev_tac `A = { (As,f) | As ⊆ s ∧ BIJ f As (As × As) ∧
+  qabbrev_tac `A = { (As,f) | INFINITE As ∧ As ⊆ s ∧ BIJ f As (As × As) ∧
                               ∀x. x ∉ As ⇒ (f x = ARB) }` >>
   qabbrev_tac `
     rr = {((s1:'a set,f1),(s2,f2)) | (s1,f1) ∈ A ∧ (s2,f2) ∈ A ∧ s1 ⊆ s2 ∧
@@ -468,8 +468,28 @@ val SET_SQUARED_CARDEQ_SET = store_thm(
          map_every qx_gen_tac [`s1`, `f1`, `s2`, `f2`] >>
          strip_tac >> `s1 = s2` by metis_tac [SUBSET_ANTISYM] >>
          fs[Abbr`A`] >> simp[FUN_EQ_THM] >> metis_tac[]) >>
-  `({}, K ARB) ∈ A` by simp[Abbr`A`, BIJ_EMPTY] >>
-  `∀x. x ∈ A ==> (({},K ARB), x) ∈ rr` by simp[Abbr`rr`, FORALL_PROD] >>
+  `A ≠ ∅`
+    by (`∃Nf. INJ Nf univ(:num) s` by metis_tac [infinite_num_inj] >>
+        qabbrev_tac `
+           Nfn = λa. case some m. Nf m = a of
+                           NONE => ARB
+                         | SOME m => (Nf (nfst m), Nf (nsnd m))` >>
+        `(IMAGE Nf univ(:num), Nfn) ∈ A`
+           by (`∀x y. (Nf x = Nf y) = (x = y)`
+                 by metis_tac [INJ_DEF, IN_UNIV] >>
+               simp[Abbr`A`] >> conj_tac
+               >- (fs[SUBSET_DEF, INJ_DEF] >> metis_tac[]) >>
+               simp[better_BIJ] >>
+               asm_simp_tac (srw_ss() ++ DNF_ss) [FORALL_PROD] >>
+               simp[Abbr`Nfn`] >> conj_tac
+               >- (map_every qx_gen_tac [`m`, `p`] >> strip_tac >>
+                   map_every (fn q => qspec_then q (SUBST1_TAC o SYM)
+                                                 numpairTheory.npair)
+                             [`m`, `p`] >> simp[]) >>
+               simp[FORALL_PROD] >>
+               map_every qx_gen_tac [`m`, `p`] >> qexists_tac `m ⊗ p` >>
+               simp[]) >>
+        strip_tac >> fs[]) >>
   `∀t. chain t rr ⇒ upper_bounds t rr ≠ {}`
      by (PRINT_TAC "beginning proof that chains have upper bound" >>
          gen_tac >>
@@ -494,8 +514,17 @@ val SET_SQUARED_CARDEQ_SET = store_thm(
          qabbrev_tac `BigF = (λa. case some (s,f). (s,f) ∈ t ∧ a ∈ s of
                                     NONE => ARB
                                   | SOME (_, f) => f a)` >>
+         Cases_on `t = ∅`
+         >- (simp[range_def] >>
+             `∃x. x ∈ A` by (fs[EXTENSION] >> metis_tac[]) >>
+             map_every qexists_tac [`x`, `x`] >>
+             simp[Abbr`rr`] >> Cases_on `x` >> simp[]) >>
          `(BigSet,BigF) ∈ A` by
             (unabbrev_in_goal "A" >> simp[] >> rpt conj_tac
+             >- (simp[Abbr`BigSet`] >> DISJ2_TAC >>
+                 simp[pairTheory.EXISTS_PROD] >>
+                 `∃pr. pr ∈ t` by simp[MEMBER_NOT_EMPTY] >>
+                 Cases_on `pr` >> res_tac >> fs[Abbr`A`] >> metis_tac[])
              >- (simp_tac (srw_ss() ++ DNF_ss)
                           [BIGUNION_SUBSET, FORALL_PROD, Abbr`BigSet`] >>
                  metis_tac[])
@@ -589,7 +618,8 @@ val SET_SQUARED_CARDEQ_SET = store_thm(
              simp[FORALL_PROD] >> metis_tac[]) >>
          qexists_tac `(BigSet, BigF)` >> conj_tac
          >- ((* (BigSet, BigF) ∈ range rr *)
-             simp[range_def] >> qexists_tac `({}, K ARB)` >> simp[]) >>
+             simp[range_def] >> qexists_tac `(BigSet,BigF)` >>
+             simp[Abbr`rr`]) >>
          (* upper bound really is bigger than arbitrary element of chain *)
          simp[FORALL_PROD] >> map_every qx_gen_tac [`s1`, `f1`] >>
          Cases_on `(s1,f1) ∈ t` >> simp[] >>
@@ -600,7 +630,6 @@ val SET_SQUARED_CARDEQ_SET = store_thm(
          DEEP_INTRO_TAC optionTheory.some_intro >>
          simp[FORALL_PROD] >> metis_tac[]) >>
   PRINT_TAC "proved that upper bound works" >>
-  `A ≠ {}` by (strip_tac >> fs[]) >>
   `∃Mf. Mf ∈ maximal_elements A rr` by metis_tac [zorns_lemma] >>
   `∃M mf. Mf = (M,mf)` by metis_tac [pairTheory.pair_CASES] >>
   pop_assum SUBST_ALL_TAC >>
@@ -610,74 +639,6 @@ val SET_SQUARED_CARDEQ_SET = store_thm(
   `M ≈ M × M` by metis_tac[cardeq_def] >>
   Cases_on `M ≈ s` >- metis_tac [CARDEQ_CROSS, cardeq_TRANS, cardeq_SYM] >>
   `M ≼ s` by simp[SUBSET_CARDLEQ] >>
-  `M ≠ {}`
-     by (strip_tac >> fs[] >>
-         `∃c. c ∈ s` by metis_tac [INFINITE_INHAB] >>
-         first_x_assum (qspec_then `({c}, (λx. if x = c then (c,c)
-                                               else ARB))` mp_tac) >>
-         `mf = K ARB` by simp[FUN_EQ_THM] >> pop_assum SUBST_ALL_TAC >>
-         map_every unabbrev_in_goal ["A", "rr"] >> simp[better_BIJ] >>
-         unabbrev_in_goal "A" >> simp[better_BIJ, FORALL_PROD]) >>
-  `∀e. M ≠ {e}`
-     by (rpt strip_tac >> fs[] >>
-         `∃Nf. INJ Nf univ(:num) s ∧ (Nf 0 = e)`
-           by (`∃Nf0. INJ Nf0 univ(:num) s` by metis_tac [infinite_num_inj] >>
-               Cases_on `∃n. Nf0 n = e`
-               >- (fs[] >> Cases_on `n = 0` >- metis_tac[] >>
-                   qexists_tac `λm. if m = 0 then e
-                                    else if m = n then Nf0 0
-                                    else Nf0 m` >>
-                   fs[INJ_DEF] >> rw[] >> metis_tac[]) >>
-               qexists_tac `λn. if n = 0 then e else Nf0 n` >>
-               simp[] >> fs[INJ_DEF] >> rw[]) >>
-         qabbrev_tac `
-           Nfn = λa. case some m. Nf m = a of
-                           NONE => ARB
-                         | SOME m => (Nf (nfst m), Nf (nsnd m))` >>
-         `(IMAGE Nf univ(:num), Nfn) ∈ A`
-           by (simp[Abbr`A`] >> conj_tac
-               >- (fs[SUBSET_DEF, INJ_DEF] >> metis_tac[]) >>
-               simp[better_BIJ] >>
-               asm_simp_tac (srw_ss() ++ DNF_ss) [FORALL_PROD] >>
-               `∀x y. (Nf x = Nf y) = (x = y)`
-                 by metis_tac [INJ_DEF, IN_UNIV] >>
-               simp[Abbr`Nfn`] >> conj_tac
-               >- (map_every qx_gen_tac [`m`, `p`] >> strip_tac >>
-                   map_every (fn q => qspec_then q (SUBST1_TAC o SYM)
-                                                 numpairTheory.npair)
-                             [`m`, `p`] >> simp[]) >>
-               simp[FORALL_PROD] >>
-               map_every qx_gen_tac [`m`, `p`] >> qexists_tac `m ⊗ p` >>
-               simp[]) >>
-         first_x_assum (qspec_then `(IMAGE Nf univ(:num), Nfn)` mp_tac) >>
-         map_every unabbrev_in_goal ["A", "rr"] >> simp[better_BIJ] >>
-         `∀x y. (Nf x = Nf y) = (x = y)` by metis_tac [INJ_DEF, IN_UNIV] >>
-         simp[Abbr`Nfn`] >>
-         asm_simp_tac (srw_ss() ++ DNF_ss) [] >> DISJ1_TAC >> qexists_tac `0` >>
-         rpt conj_tac
-         >- (fs[INJ_DEF, SUBSET_DEF] >> metis_tac[])
-         >- (map_every qx_gen_tac [`m`, `p`] >>
-             map_every (fn q => qspec_then q (SUBST1_TAC o SYM)
-                                                 numpairTheory.npair)
-                       [`m`, `p`] >> simp[])
-         >- (simp[FORALL_PROD] >>
-             metis_tac[numpairTheory.nfst_npair, numpairTheory.nsnd_npair])
-         >- simp[Abbr`A`]
-         >- simp[]
-         >- (rw[] >> fs[BIJ_DEF, INJ_DEF] >> EVAL_TAC) >>
-         simp[EXTENSION] >> rw[] >> qexists_tac `Nf 1` >> simp[]) >>
-  `INFINITE M`
-    by (strip_tac >>
-        `FINITE (M × M)` by simp[] >>
-        `CARD M = CARD (M × M)` by metis_tac [FINITE_BIJ_CARD_EQ] >>
-        `_ = CARD M * CARD M`
-          by simp_tac (srw_ss())[CARD_CROSS, ASSUME ``FINITE M``] >>
-        `(CARD M = 1) ∨ (CARD M = 0)`
-          by metis_tac [arithmeticTheory.EQ_MULT_LCANCEL,
-                        arithmeticTheory.MULT_CLAUSES]
-        >- metis_tac [SING_IFF_CARD1, SING_DEF] >>
-        metis_tac [CARD_EQ_0]) >>
-  PRINT_TAC "proved M infinite" >>
   `M ≈ {T;F} × M` by metis_tac [lemma1] >>
   `s = M UNION (s DIFF M)` by (fs[EXTENSION, SUBSET_DEF] >> metis_tac[]) >>
   `¬(s DIFF M ≼ M)`
@@ -746,8 +707,9 @@ val SET_SQUARED_CARDEQ_SET = store_thm(
     by (simp[Abbr`A`] >> conj_tac >- (fs[SUBSET_DEF] >> metis_tac[]) >>
         simp[Abbr`FF`]) >>
   `(M,mf) ≠ (M ∪ E, FF)`
-    by (simp[] >> DISJ1_TAC >> simp[EXTENSION] >>
-        fs[DISJOINT_DEF, EXTENSION] >> metis_tac[]) >>
+    by (`M ≠ ∅` by metis_tac[FINITE_EMPTY] >>
+        simp[] >> DISJ1_TAC >> simp[EXTENSION] >>
+        fs[DISJOINT_DEF, EXTENSION] >> metis_tac[INJ_DEF]) >>
   qsuff_tac `((M,mf), (M ∪ E, FF)) ∈ rr` >- metis_tac[] >>
   simp[Abbr`rr`] >> conj_tac >- simp[Abbr`A`] >>
   simp[Abbr`FF`])
@@ -760,13 +722,3 @@ val SET_SUM_CARDEQ_SET = store_thm(
   metis_tac[lemma1, SET_SQUARED_CARDEQ_SET, cardeq_SYM]);
 
 val _ = export_theory()
-
-
-
-
-
-
-
-
-
-
