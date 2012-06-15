@@ -406,38 +406,51 @@ val ord_induction = save_thm(
             |> REWRITE_RULE []
             |> CONV_RULE (RAND_CONV (RENAME_VARS_CONV ["α"])))
 
-val csup_thm = store_thm(
-  "csup_thm",
-  ``countable (s : cord set) ==>
-      (∀β. β < sup s ⇔ ∃δ. δ ∈ s ∧ β < δ)``,
+val sup_thm = store_thm(
+  "sup_thm",
+  ``(s: 'a ordinal set) ≼ univ(:'a inf) ==> ∀α. α < sup s ⇔ ∃β. β ∈ s ∧ α < β``,
   strip_tac >>
-  qabbrev_tac `bpreds = BIGUNION (IMAGE preds s)` >>
-  `countable bpreds`
-       by (qunabbrev_tac `bpreds` >> match_mp_tac bigunion_countable >>
-           asm_simp_tac (srw_ss() ++ DNF_ss) [image_countable,
-                                              cord_countable_preds]) >>
-  `bpreds <> univ(:cord)` by metis_tac [univ_cord_uncountable] >>
-  `downward_closed bpreds`
-     by (asm_simp_tac (srw_ss() ++ DNF_ss)
-                      [Abbr`bpreds`, downward_closed_def] >>
-         metis_tac [ordlt_TRANS]) >>
-  `∃α. preds α = bpreds`
-     by (mp_tac (INST_TYPE [alpha |-> ``:unit``] preds_bij) >>
-         simp[BIJ_DEF, SURJ_DEF, SPECIFICATION]) >>
+  qabbrev_tac `apreds = BIGUNION (IMAGE preds s)` >>
+  `apreds ≼ univ(:'a inf)`
+    by (qunabbrev_tac `apreds` >> match_mp_tac CARD_BIGUNION >>
+        asm_simp_tac (srw_ss() ++ DNF_ss) [preds_inj_univ] >>
+        metis_tac [cardleq_TRANS, IMAGE_cardleq]) >>
+  `apreds ≠ univ(:'a ordinal)` by metis_tac [univ_ord_greater_cardinal] >>
+  `downward_closed apreds`
+    by (asm_simp_tac(srw_ss() ++ DNF_ss)
+                    [Abbr`apreds`, downward_closed_def] >>
+        metis_tac[ordlt_TRANS]) >>
+  `∃α. preds α = apreds`
+    by (mp_tac preds_bij >> simp[BIJ_DEF, SURJ_DEF, SPECIFICATION]) >>
   `sup s = α`
-     by (asm_simp_tac bool_ss [sup_def] >>
-         DEEP_INTRO_TAC oleast_intro >> conj_tac
-           >- (fs[EXTENSION] >> metis_tac[]) >>
-         simp[] >> qx_gen_tac `α'` >> strip_tac >>
-         qsuff_tac `α' ≤ α ∧ α ≤ α'` >- metis_tac [ordlt_trichotomy] >>
-         rpt strip_tac >| [
-           `α ∈ bpreds` by res_tac >> metis_tac [IN_preds, ordlt_REFL],
-           rw[] >> fs[]
-         ]) >>
+    by (asm_simp_tac bool_ss [sup_def] >>
+        DEEP_INTRO_TAC oleast_intro >> conj_tac
+        >- (fs[EXTENSION] >> metis_tac[]) >>
+        simp[] >> qx_gen_tac `α'` >> strip_tac >>
+        qsuff_tac `α' ≤ α ∧ α ≤ α'` >- metis_tac [ordlt_trichotomy] >>
+        rpt strip_tac >| [
+          `α ∈ apreds` by res_tac >> metis_tac [IN_preds, ordlt_REFL],
+          rw[] >> fs[]
+        ]) >>
   simp[] >>
   qx_gen_tac `β` >> rpt strip_tac >>
-  `β < α ⇔ β ∈ bpreds` by metis_tac [IN_preds] >>
-  simp[Abbr`bpreds`] >> metis_tac [IN_preds]);
+  `β < α ⇔ β ∈ apreds` by metis_tac [IN_preds] >>
+  simp[Abbr`apreds`] >> metis_tac [IN_preds]);
+
+val csup_thm = store_thm(
+  "csup_thm",
+  ``countable (s : cord set) ==> ∀β. β < sup s ⇔ ∃δ. δ ∈ s ∧ β < δ``,
+  simp[countable_def] >>
+  metis_tac [sup_thm, cardleq_def, unitinf_univnum, cardeq_REFL,
+             CARDEQ_CARDLEQ])
+
+val predimage_sup_thm = store_thm(
+  "predimage_sup_thm",
+  ``∀β:'a ordinal.
+          β < sup (IMAGE f (preds (α:'a ordinal))) <=> ∃δ. δ < α ∧ β < f δ``,
+  match_mp_tac (sup_thm |> Q.INST [`s` |-> `IMAGE f (preds (α:'b ordinal))`]
+                        |> SIMP_RULE (srw_ss() ++ DNF_ss) []) >>
+  metis_tac [cardleq_TRANS, IMAGE_cardleq, preds_inj_univ]);
 
 val sup_EMPTY = store_thm(
   "sup_EMPTY",
@@ -605,13 +618,10 @@ val preds_sup_thm = store_thm(
 val preds_lesup = save_thm("preds_lesup", mklesup preds_sup_thm)
 val preds_suple = save_thm("preds_suple", mksuple preds_sup_thm)
 
-
-
 val fromNat_11 = store_thm(
   "fromNat_11",
   ``∀x y. (&x:α ordinal = &y) = (x = y)``,
-  Induct >- (Cases >> simp[SimpRHS, fromNat_def]) >>
-  Cases >- simp[SimpLHS, fromNat_def] >> simp[fromNat_def]);
+  Induct >- (Cases >> simp[]) >> Cases >> simp[])
 val _ = export_rewrites ["fromNat_11"]
 
 val ordlt_fromNat = store_thm(
@@ -619,7 +629,7 @@ val ordlt_fromNat = store_thm(
   ``∀n (x:α ordinal). x < &n <=> ∃m. (x = &m) ∧ m < n``,
   Induct >>
   asm_simp_tac (srw_ss() ++ DNF_ss)
-               [fromNat_def, ordlt_SUC_DISCRETE,
+               [ordlt_SUC_DISCRETE,
                 DECIDE ``m < SUC n <=> m < n ∨ (m = n)``]);
 
 val fromNat_ordlt = store_thm(
@@ -760,34 +770,52 @@ val ordADD_fromNat_omega = store_thm(
   first_x_assum (qspec_then `&m` mp_tac) >> simp[] >>
   qexists_tac `m+1` >> decide_tac);
 
-(*
-val predimage_sup_thm = store_thm(
-  "predimage_sup_thm",
-  ``∀β. β < sup (IMAGE f (preds α)) <=> ∃δ. δ < α ∧ β < f δ``,
-  gen_tac >> simp[sup_def] >> DEEP_INTRO_TAC oleast_intro >>
-  simp_tac (srw_ss() ++ DNF_ss) [impI] >>
-  `IMAGE f (preds α) ≠ univ(:'a ordinal)`
-     by (qsuff_tac `IMAGE f (preds α) ≼ univ(:'a inf)`
-         >- metis_tac [univ_ord_greater_cardinal] >>
-         `IMAGE f (preds α) ≼ preds α` by simp[] >>
-         `preds α ≼ univ(:'b inf)` by metis_tac[preds_inj_univ] >>
-         match_mp_tac cardleq_TRANS >> qexists_tac `preds α`
+val lt_suppreds = save_thm(
+  "lt_suppreds",
+  predimage_sup_thm |> Q.INST [`f` |-> `λx. x`] |> SIMP_RULE (srw_ss()) [])
+
+val ordleq0 = store_thm(
+  "ordleq0",
+  ``(x:'a ordinal) ≤ 0 ⇔ (x = 0)``,
+  eq_tac >> simp[ordle_lteq]);
+val _ = export_rewrites ["ordleq0"]
+
+val omax_preds_SUC = store_thm(
+  "omax_preds_SUC",
+  ``omax (preds x⁺) = SOME x``,
+  simp[preds_omax_SOME_SUC]);
+
+val ORD_ONE = store_thm(
+  "ORD_ONE",
+  ``0⁺ = 1``,
+  simp_tac bool_ss [GSYM fromNat_SUC] >> simp[]);
+val _ = export_rewrites ["ORD_ONE"]
 
 val ordlt_CANCEL_ADDR = store_thm(
   "ordlt_CANCEL_ADDR",
   ``∀(b:'a ordinal) a. a < a + b <=> 0 < b``,
   ho_match_mp_tac ord_induction >> qx_gen_tac `b` >> strip_tac >>
   Cases_on `b = 0` >- simp[] >>
-  Cases_on `omax (preds b)`
-  >- (simp[] >> qx_gen_tac `a` >>
-      `∀x. x ∈ IMAGE ($+ a) (preds b) ==> x < a + b`
-         by simp_tac (srw_ss() ++ DNF_ss) []
+  `0 < b` by metis_tac [ordlt_trichotomy, ordlt_ZERO] >> simp[] >>
+  `(omax (preds b) = NONE) ∨ ∃x. omax (preds b) = SOME x`
+    by metis_tac [optionTheory.option_CASES]
+  >- (asm_simp_tac (srw_ss() ++ CONJ_ss)[predimage_sup_thm] >>
+      qexists_tac `1` >> simp[] >> spose_not_then strip_assume_tac >>
+      fs[ordle_lteq, ordlt_fromNat]
+      >- (`m = 0` by decide_tac >> fs[]) >>
+      `b = 0⁺` by simp[] >>
+      pop_assum SUBST_ALL_TAC >> fs[]) >>
+  fs[preds_omax_SOME_SUC] >> qx_gen_tac `a` >>
+  Cases_on `x = 0` >- simp[] >>
+  match_mp_tac ordlt_TRANS >> qexists_tac `a⁺` >> simp[] >>
+  spose_not_then strip_assume_tac >> fs[ordle_lteq]);
 
+(*
 val ordlt_CANCEL = store_thm(
   "ordlt_CANCEL",
-  ``∀a b (c:'a ordinal). a < b ==> c + a < c + b``,
+  ``∀a b (c:'a ordinal). c + a < c + b <=> a < b``,
   ho_match_mp_tac ord_induction >> qx_gen_tac `a` >> strip_tac >>
-  Cases_on `a = 0` >> simp[]
+  Cases_on `a = 0` >> simp[ordlt_CANCEL_ADDR] >>
 
 val ordADD_CANCEL_LEMMA0 = prove(
   ``(α = α + γ) ⇒ (γ = 0)``,
