@@ -92,7 +92,7 @@ fun mk_foldl(f,b,l) = list_mk_comb(inst[alpha |-> eltype l,
                                         beta  |-> type_of b] foldl_tm,[f,b,l])
 fun mk_every(P,l)   = list_mk_comb(inst[alpha |-> eltype l] every_tm,[P,l])
 fun mk_exists(P,l)  = list_mk_comb(inst[alpha |-> eltype l] exists_tm,[P,l])
-fun mk_el(n,l)      = list_mk_comb(inst[alpha |-> numSyntax.num] el_tm,[n,l])
+fun mk_el(n,l)      = list_mk_comb(inst[alpha |-> eltype l] el_tm,[n,l])
 fun mk_zip(l1,l2)   = mk_comb(inst[alpha |-> eltype l1,
                                    beta  |-> eltype l2] zip_tm,
                               pairSyntax.mk_pair(l1,l2))
@@ -101,7 +101,7 @@ fun mk_unzip l =
   in mk_comb(inst[alpha |-> ty1, beta |-> ty2] unzip_tm, l)
   end
 
-fun mk_sum l = mk_comb(inst[alpha |-> numSyntax.num] sum_tm,l);
+fun mk_sum l = mk_comb(sum_tm,l);
 fun mk_reverse l = mk_comb(inst[alpha |-> eltype l] reverse_tm,l);
 fun mk_last l = mk_comb(inst[alpha |-> eltype l] last_tm,l);
 fun mk_front l = mk_comb(inst[alpha |-> eltype l] front_tm,l);
