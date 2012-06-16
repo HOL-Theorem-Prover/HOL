@@ -452,6 +452,21 @@ val predimage_sup_thm = store_thm(
                         |> SIMP_RULE (srw_ss() ++ DNF_ss) []) >>
   metis_tac [cardleq_TRANS, IMAGE_cardleq, preds_inj_univ]);
 
+val impI = DECIDE ``¬p ∨ q <=> (p ==> q)``
+
+val predimage_suplt_ELIM = save_thm(
+  "predimage_suplt_ELIM",
+  predimage_sup_thm |> SPEC_ALL |> Q.AP_TERM `$~`
+                    |> CONV_RULE (RAND_CONV (SIMP_CONV bool_ss [impI]))
+                    |> EQ_IMP_RULE |> #1
+                    |> SIMP_RULE bool_ss [SimpL ``$==>``, ordle_lteq]
+                    |> SIMP_RULE bool_ss [DISJ_IMP_THM]
+                    |> CONJUNCT1)
+val suppred_suplt_ELIM = save_thm(
+  "suppred_suplt_ELIM",
+  predimage_suplt_ELIM |> Q.INST [`f` |-> `λx.x`]
+                       |> SIMP_RULE (srw_ss()) []);
+
 val sup_EMPTY = store_thm(
   "sup_EMPTY",
   ``sup {} = 0``,
@@ -557,8 +572,6 @@ val _ = export_rewrites ["omax_preds_SUC"]
 val islimit_def = Define`
   islimit α <=> (omax (preds α) = NONE)
 `;
-
-val impI = DECIDE ``¬p ∨ q <=> (p ==> q)``
 
 val sup_preds_omax_NONE = store_thm(
   "sup_preds_omax_NONE",
@@ -791,6 +804,12 @@ val ORD_ONE = store_thm(
   simp_tac bool_ss [GSYM fromNat_SUC] >> simp[]);
 val _ = export_rewrites ["ORD_ONE"]
 
+val ordSUC_NUMERAL = store_thm(
+  "ordSUC_NUMERAL",
+  ``(&NUMERAL n)⁺ = &(NUMERAL n + 1)``,
+  simp[GSYM arithmeticTheory.ADD1]);
+val _ = export_rewrites ["ordSUC_NUMERAL"]
+
 val ordlt_CANCEL_ADDR = store_thm(
   "ordlt_CANCEL_ADDR",
   ``∀(b:'a ordinal) a. a < a + b <=> 0 < b``,
@@ -800,35 +819,71 @@ val ordlt_CANCEL_ADDR = store_thm(
   `(omax (preds b) = NONE) ∨ ∃x. omax (preds b) = SOME x`
     by metis_tac [optionTheory.option_CASES]
   >- (asm_simp_tac (srw_ss() ++ CONJ_ss)[predimage_sup_thm] >>
-      qexists_tac `1` >> simp[] >> spose_not_then strip_assume_tac >>
-      fs[ordle_lteq, ordlt_fromNat]
-      >- (`m = 0` by decide_tac >> fs[]) >>
-      `b = 0⁺` by simp[] >>
-      pop_assum SUBST_ALL_TAC >> fs[]) >>
+      simp[GSYM lt_suppreds] >> fs[sup_preds_omax_NONE]) >>
   fs[preds_omax_SOME_SUC] >> qx_gen_tac `a` >>
   Cases_on `x = 0` >- simp[] >>
   match_mp_tac ordlt_TRANS >> qexists_tac `a⁺` >> simp[] >>
   spose_not_then strip_assume_tac >> fs[ordle_lteq]);
+val _ = export_rewrites ["ordlt_CANCEL_ADDR"]
 
-(*
-val ordlt_CANCEL = store_thm(
-  "ordlt_CANCEL",
-  ``∀a b (c:'a ordinal). c + a < c + b <=> a < b``,
-  ho_match_mp_tac ord_induction >> qx_gen_tac `a` >> strip_tac >>
-  Cases_on `a = 0` >> simp[ordlt_CANCEL_ADDR] >>
+val ordlt_CANCEL_ADDL = store_thm(
+  "ordlt_CANCEL_ADDL",
+  ``a + b < a = F``,
+  simp[ordle_lteq] >> Cases_on `0 < b` >> simp[] >>
+  fs[ordleq0]);
+val _ = export_rewrites ["ordlt_CANCEL_ADDL"]
 
 val ordADD_CANCEL_LEMMA0 = prove(
-  ``(α = α + γ) ⇒ (γ = 0)``,
-  Cases_on `γ = 0` >> simp[] >> Cases_on `omax (preds γ)`
-  >- (simp[] >>
-      `∀β. β ∈ IMAGE ($+ α) (preds γ) ⇒ β < α + γ`
-         by (simp_tac (srw_ss() ++ DNF_ss)[]
+  ``(α = α + γ) ⇔ (γ = 0)``,
+  Cases_on `γ = 0` >> simp[] >>
+  qsuff_tac `α < α + γ` >- metis_tac[ordlt_REFL] >> simp[] >>
+  spose_not_then strip_assume_tac >> fs[ordle_lteq])
+val ordADD_CANCEL1 = save_thm(
+  "ordADD_CANCEL1",
+  CONJ (GEN_ALL ordADD_CANCEL_LEMMA0)
+       (ordADD_CANCEL_LEMMA0 |> CONV_RULE (LAND_CONV (REWR_CONV EQ_SYM_EQ))
+                             |> GEN_ALL))
+val _ = export_rewrites ["ordADD_CANCEL1"]
+
+val ordADD_MONO = store_thm(
+  "ordADD_MONO",
+  ``∀b:'a ordinal a c. a < b ⇒ c + a < c + b``,
+  ho_match_mp_tac ord_induction >> qx_gen_tac `b` >> strip_tac >>
+  Cases_on `b = 0` >- simp[] >>
+  `(omax (preds b) = NONE) ∨ ∃b0. omax (preds b) = SOME b0`
+    by metis_tac [optionTheory.option_CASES]
+  >- (simp[predimage_sup_thm] >> map_every qx_gen_tac [`a`, `c`] >> strip_tac >>
+      `∃d. d < b ∧ a < d`
+        by (simp[GSYM lt_suppreds] >> fs[sup_preds_omax_NONE]) >>
+      metis_tac[]) >>
+  fs[preds_omax_SOME_SUC] >> simp[ordlt_SUC_DISCRETE] >> rw[] >> rw[]);
+
+val ordlt_CANCEL = store_thm(
+  "ordlt_CANCEL",
+  ``∀b a (c:'a ordinal). c + a < c + b <=> a < b``,
+  simp[EQ_IMP_THM, ordADD_MONO] >> rpt strip_tac >>
+  metis_tac[ordlt_trichotomy, ordlt_REFL, ordlt_TRANS, ordADD_MONO]);
+val _ = export_rewrites ["ordlt_CANCEL"]
 
 val ordADD_RIGHT_CANCEL = store_thm(
   "ordADD_RIGHT_CANCEL",
   ``∀β α γ. ((α:α ordinal) + β = α + γ) ⇔ (β = γ)``,
-  simp[EQ_IMP_THM] >> ho_match_mp_tac ord_induction >>
-  qx_gen_tac `β` >> strip_tac >> Cases_on `β = 0` >> simp[]
+  metis_tac[ordlt_trichotomy, ordADD_MONO, ordlt_REFL]);
+val _ = export_rewrites ["ordADD_RIGHT_CANCEL"]
+
+(*
+val ordlt_EXISTS_ADD = store_thm(
+  "ordlt_EXISTS_ADD",
+  ``∀b a:'a ordinal. a < b ⇔ ∃c. c ≠ 0 ∧ (a + c = b)``,
+  simp_tac (srw_ss() ++ DNF_ss) [EQ_IMP_THM] >> Tactical.REVERSE conj_tac
+  >- metis_tac[ordlt_trichotomy, ordlt_ZERO] >>
+  ho_match_mp_tac ord_induction >> qx_gen_tac `b` >> strip_tac >>
+  Cases_on `b = 0` >> simp[] >>
+  `(omax (preds b) = NONE) ∨ ∃b0. omax (preds b) = SOME b0`
+    by metis_tac [optionTheory.option_CASES]
+  >- (simp[]
 *)
+
+
 
 val _ = export_theory()
