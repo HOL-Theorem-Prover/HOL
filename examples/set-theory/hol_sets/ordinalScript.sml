@@ -871,6 +871,20 @@ val ordADD_RIGHT_CANCEL = store_thm(
   metis_tac[ordlt_trichotomy, ordADD_MONO, ordlt_REFL]);
 val _ = export_rewrites ["ordADD_RIGHT_CANCEL"]
 
+val leqLEFT_CANCEL = store_thm(
+  "leqLEFT_CANCEL",
+  ``∀x a. x ≤ a + x``,
+  ho_match_mp_tac ord_induction >> qx_gen_tac `x` >> strip_tac >>
+  Cases_on `x = 0` >> simp[] >>
+  `(omax (preds x) = NONE) ∨ ∃x0. omax (preds x) = SOME x0`
+    by metis_tac [optionTheory.option_CASES]
+  >- (qx_gen_tac `a` >> strip_tac >>
+      `∃b. a + x < b ∧ b < x` by metis_tac[omax_NONE, IN_preds] >>
+      `b ≤ a + b` by metis_tac[] >>
+      `a + x < a + b` by metis_tac [ordle_lteq, ordlt_TRANS] >>
+      fs[] >> metis_tac[ordlt_TRANS, ordlt_REFL]) >>
+  fs[preds_omax_SOME_SUC]);
+
 (*
 val ordlt_EXISTS_ADD = store_thm(
   "ordlt_EXISTS_ADD",
