@@ -7,7 +7,7 @@ open wellorderTheory
 
 val _ = new_theory "ordinal"
 
-
+fun dsimp thl = asm_simp_tac (srw_ss() ++ DNF_ss) thl
 
 (* perform quotient, creating a type of "ordinals". *)
 fun mk_def(s,t) =
@@ -413,12 +413,10 @@ val sup_thm = store_thm(
   qabbrev_tac `apreds = BIGUNION (IMAGE preds s)` >>
   `apreds ≼ univ(:'a inf)`
     by (qunabbrev_tac `apreds` >> match_mp_tac CARD_BIGUNION >>
-        asm_simp_tac (srw_ss() ++ DNF_ss) [preds_inj_univ] >>
-        metis_tac [cardleq_TRANS, IMAGE_cardleq]) >>
+        dsimp[preds_inj_univ] >> metis_tac [cardleq_TRANS, IMAGE_cardleq]) >>
   `apreds ≠ univ(:'a ordinal)` by metis_tac [univ_ord_greater_cardinal] >>
   `downward_closed apreds`
-    by (asm_simp_tac(srw_ss() ++ DNF_ss)
-                    [Abbr`apreds`, downward_closed_def] >>
+    by (dsimp[Abbr`apreds`, downward_closed_def] >>
         metis_tac[ordlt_TRANS]) >>
   `∃α. preds α = apreds`
     by (mp_tac preds_bij >> simp[BIJ_DEF, SURJ_DEF, SPECIFICATION]) >>
@@ -548,8 +546,7 @@ val omax_sup = store_thm(
   DEEP_INTRO_TAC oleast_intro >> simp[] >> conj_tac
   >- (qsuff_tac `∃β. ∀γ. β ∈ preds γ ==> γ ∉ s` >- metis_tac[] >>
       simp[] >> metis_tac[]) >>
-  asm_simp_tac (srw_ss() ++ DNF_ss) [] >>
-  qx_gen_tac `β` >> strip_tac >>
+  dsimp [] >> qx_gen_tac `β` >> strip_tac >>
   `∀γ. β ∈ preds γ ⇒ γ ∉ s` by metis_tac[] >>
   fs [] >> qsuff_tac `α ≤ β ∧ β ≤ α` >- metis_tac [ordlt_trichotomy] >>
   metis_tac[]);
@@ -614,8 +611,7 @@ val preds_sup_thm = store_thm(
   `(omax s = NONE) ∨ ∃β. omax s = SOME β` by (Cases_on `omax s` >> simp[])
   >- (`sup s = α`
         by (simp[sup_def] >> DEEP_INTRO_TAC oleast_intro >>
-            asm_simp_tac (srw_ss() ++ DNF_ss) [impI] >>
-            qexists_tac `α` >> conj_tac >- rw[ordle_lteq] >>
+            dsimp[impI] >> qexists_tac `α` >> conj_tac >- rw[ordle_lteq] >>
             qx_gen_tac `β` >> rw[] >>
             qsuff_tac `β ≤ α ∧ α ≤ β` >- metis_tac [ordlt_trichotomy] >>
             rpt strip_tac >- metis_tac [ordlt_TRANS, ordlt_REFL] >>
@@ -641,9 +637,7 @@ val ordlt_fromNat = store_thm(
   "ordlt_fromNat",
   ``∀n (x:α ordinal). x < &n <=> ∃m. (x = &m) ∧ m < n``,
   Induct >>
-  asm_simp_tac (srw_ss() ++ DNF_ss)
-               [ordlt_SUC_DISCRETE,
-                DECIDE ``m < SUC n <=> m < n ∨ (m = n)``]);
+  dsimp [ordlt_SUC_DISCRETE, DECIDE ``m < SUC n <=> m < n ∨ (m = n)``]);
 
 val fromNat_ordlt = store_thm(
   "fromNat_ordlt",
@@ -743,7 +737,7 @@ val ubsup_thm = store_thm(
   "ubsup_thm",
   ``(∀α. α ∈ s ⇒ α < β) ==> ∀γ. γ < sup s ⇔ ∃δ. δ ∈ s ∧ γ < δ``,
   strip_tac >> simp[sup_def] >> gen_tac >> DEEP_INTRO_TAC oleast_intro >>
-  asm_simp_tac (srw_ss() ++ DNF_ss) [impI] >>
+  dsimp[impI] >>
   qexists_tac `β` >> conj_tac >- metis_tac [ordlt_TRANS, ordlt_REFL] >>
   qx_gen_tac `α` >> strip_tac >> eq_tac >- metis_tac[] >>
   disch_then (Q.X_CHOOSE_THEN `δ` strip_assume_tac) >>
@@ -770,8 +764,7 @@ val ordADD_fromNat_omega = store_thm(
   "ordADD_fromNat_omega",
   ``&n + ω = ω``,
   simp[ordADD_def,omax_preds_omega] >>
-  `∀α. α ∈ IMAGE ($+ (&n)) (preds ω) ==> α < ω`
-     by simp_tac (srw_ss() ++ DNF_ss) [lt_omega] >>
+  `∀α. α ∈ IMAGE ($+ (&n)) (preds ω) ==> α < ω` by dsimp[lt_omega] >>
   pop_assum (assume_tac o MATCH_MP ubsup_thm) >>
   match_mp_tac ordle_ANTISYM >> simp[] >> conj_tac
   >- (qx_gen_tac `δ` >> Cases_on `δ ≤ ω` >> simp[] >> fs[] >>
@@ -895,7 +888,39 @@ val ordlt_EXISTS_ADD = store_thm(
   Cases_on `b = 0` >> simp[] >>
   `(omax (preds b) = NONE) ∨ ∃b0. omax (preds b) = SOME b0`
     by metis_tac [optionTheory.option_CASES]
-  >- (simp[]
+  >- (qx_gen_tac `a` >> strip_tac >>
+      `∃f. ∀b' a. a < b' ∧ b' < b ⇒ f b' a ≠ 0 ∧ (a + f b' a = b')`
+        by (full_simp_tac (srw_ss() ++ DNF_ss)
+                          [SKOLEM_THM, GSYM RIGHT_EXISTS_IMP_THM] >>
+            metis_tac []) >>
+      qabbrev_tac `d = sup (IMAGE (λb. f b a) (preds b DIFF {x | x ≤ a}))` >>
+      qexists_tac `d` >>
+      `∀x. x < d <=> ∃y. a < y ∧ y < b ∧ x < f y a`
+        by (`IMAGE (λb. f b a) (preds b DIFF {x | x ≤ a}) ≼ univ(:'a inf)`
+              by (`IMAGE (λb. f b a) (preds b DIFF {x | x ≤ a}) ≼
+                   IMAGE (λb. f b a) (preds b)`
+                    by (match_mp_tac SUBSET_CARDLEQ >> simp[SUBSET_DEF]) >>
+                  qsuff_tac `IMAGE (λb. f b a) (preds b) ≼ univ(:'a inf)`
+                  >- metis_tac [cardleq_TRANS] >>
+                  metis_tac [cardleq_TRANS, IMAGE_cardleq, preds_inj_univ]) >>
+            simp[Abbr`d`, sup_thm] >> metis_tac[]) >>
+      `d ≠ 0`
+        by (qsuff_tac `0 < d` >- metis_tac [ordlt_REFL] >>
+            asm_simp_tac (srw_ss() ++ DNF_ss) [] >>
+            fs[omax_NONE] >> metis_tac[ordlt_ZERO, ordlt_trichotomy]) >>
+      simp[] >>
+      qabbrev_tac `dset = IMAGE (λb. f b a) (preds b DIFF {x | x ≤ a})` >>
+      `∀x. x ∈ dset ⇒ x < b`
+        by (dsimp[Abbr`dset`] >> qx_gen_tac `c` >> strip_tac >>
+            `f c a ≤ a + f c a` >> strip_tac
+            match_mp_tac ordlt_TRANS >> qexists_tac `a + f c a` >>
+            simp[]
+
+      `omax (preds d) = NONE`
+        by (simp[omax_NONE] >> metis_tac []qx_gen_tac `α` >>
+            disch_then (Q.X_CHOOSE_THEN `c` strip_assume_tac) >>
+            fs[omax_NONE] >> metis_tac[]
+            simp[predimage_sup_thm] >> metis_tac[]
 *)
 
 
