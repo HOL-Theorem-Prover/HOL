@@ -102,11 +102,8 @@ type tvarN = string
  *)
 type t =
   | Tvar of tvarN
-  (* DeBruin indexed type variables.  Each let binding can introduce a number of
-   * type variables for computing the type of the expression to be bound (not
-   * the body). The first number is how many nested let bindings the binding is,
-   * and the second is which of that let's bindings it is. *)
-  | Tvar_db of num * num
+  (* DeBruin indexed type variables. *)
+  | Tvar_db of num
   | Tapp of t list * typeN
   | Tfn of t * t
   | Tnum
@@ -955,12 +952,10 @@ type tenvC = (conN, (tvarN list * t list * typeN)) env
 (* Type environments *)
 type tenvE = 
   | Env_empty
-  (* Bind a deBruijn type variable *)
-  | Tvar_bind of tenvE
-  (* The bool is true for polymorphic bindings, in which case deBruijn level 0
-   * represents the forall quantified variables.  The bool is false for
-   * monomorphic bindings *)
-  | Var_bind of bool * varN * t * tenvE
+  (* Bind a number of deBruijn type variables *)
+  | Tvar_bind of num * tenvE
+  (* The number is how many deBruijn indices the type scheme binds. *)
+  | Var_bind of num * varN * t * tenvE
 
 (* Increment the deBruijn indices in a type by n levels, skipping all levels 
  * less than skip. *)
@@ -968,7 +963,11 @@ val deBruijn_inc : num -> num -> t -> t
 let rec
 deBruijn_inc skip n (Tvar tv) = Tvar tv
 and
-deBruijn_inc skip n (Tvar_db m m') = Tvar_db (m + n) m'
+deBruijn_inc skip n (Tvar_db m) = 
+  if m < skip then
+    Tvar_db m
+  else
+    Tvar_db (m + n)
 and
 deBruijn_inc skip n (Tapp ts tn) = Tapp (List.map (deBruijn_inc skip n) ts) tn
 and
@@ -981,15 +980,15 @@ deBruijn_inc skip n Tbool = Tbool
 
 (* Lookup a variable, incrementing its deBruijn indices by how many type
  * variable quantifiers it is lifted past. *)
-val lookup_var : varN -> num -> tenvE -> t option
+val lookup_var : varN -> num -> tenvE -> (t * num) option
 let rec
 lookup_var n inc Env_empty = None
 and
-lookup_var n inc (Tvar_bind tenv) = lookup_var n (inc + 1) tenv
+lookup_var n inc (Tvar_bind levels tenv) = lookup_var n (inc + levels) tenv
 and
-lookup_var n inc (Var_bind is_poly n' t tenv) = 
+lookup_var n inc (Var_bind levels n' t tenv) = 
   if n = n' then
-    Some (deBruijn_inc (if is_poly then 1 else 0) inc t)
+    Some (deBruijn_inc levels inc t, levels)
   else
     lookup_var n inc tenv
 
@@ -1043,7 +1042,7 @@ check_freevars dbok tvs Tnum = true
 and
 check_freevars dbok tvs Tbool = true
 and
-check_freevars dbok tvs (Tvar_db _ _) = dbok
+check_freevars dbok tvs (Tvar_db _) = dbok
 
 (* Check that a type definition defines no already defined (or duplicate)
  * constructors or types, and that the free type variables of each constructor
@@ -1092,17 +1091,18 @@ type_subst s Tnum = Tnum
 and
 type_subst s Tbool = Tbool
 and
-type_subst s (Tvar_db n1 n2) = Tvar_db n1 n2
+type_subst s (Tvar_db n) = Tvar_db n
 
-(* Replace the 0-index deBruijn type variables with the given types, decrement
- * the others *)
+(* Replace the n lowest index deBruijn type variables with the given types *)
 val deBruijn_subst : t list -> t -> t
 let rec
 deBruijn_subst ts (Tvar tv) = Tvar tv
 and
-deBruijn_subst ts (Tvar_db 0 n) = List.nth ts n
-and
-deBruijn_subst ts (Tvar_db n' n) = Tvar_db (n' - 1) n
+deBruijn_subst ts (Tvar_db n) =
+  if n < List.length ts then
+    List.nth ts n
+  else
+    Tvar_db (n - List.length ts)
 and
 deBruijn_subst ts (Tapp ts' tn) =
   Tapp (List.map (deBruijn_subst ts) ts') tn
@@ -1114,36 +1114,19 @@ deBruijn_subst ts Tnum = Tnum
 and
 deBruijn_subst ts Tbool = Tbool
 
-(* Check that ts is long enough to use in a deBruijn subst *)
-val enough_ts : t list -> t -> bool
-let rec
-enough_ts ts (Tvar tv) = true
-and
-enough_ts ts (Tvar_db 0 n) = n < List.length ts
-and
-enough_ts ts (Tvar_db n' n) = true
-and
-enough_ts ts (Tapp ts' tn) = List.for_all (enough_ts ts) ts'
-and
-enough_ts ts (Tfn t1 t2) = enough_ts ts t1 && enough_ts ts t2
-and
-enough_ts ts Tnum = true
-and
-enough_ts ts Tbool = true
-
-val bind_var_list : bool -> (varN * t) list -> tenvE -> tenvE
+val bind_var_list : num -> (varN * t) list -> tenvE -> tenvE
 let rec 
-bind_var_list is_poly [] tenv = tenv
+bind_var_list levels [] tenv = tenv
 and
-bind_var_list is_poly ((n,t)::binds) tenv = 
-  Var_bind is_poly n t (bind_var_list is_poly binds tenv)
+bind_var_list levels ((n,t)::binds) tenv = 
+  Var_bind levels n t (bind_var_list levels binds tenv)
 
 indreln
 
 forall cenv tenv n t.
 check_freevars true [] t
 ==>
-type_p cenv tenv (Pvar n) t (Var_bind false n t tenv)
+type_p cenv tenv (Pvar n) t (Var_bind 0 n t tenv)
 
 and
 
@@ -1216,10 +1199,10 @@ type_e cenv tenv (Con cn es) (Tapp ts' tn)
 
 and
 
-forall cenv tenv n ts t.
+forall cenv tenv levels n t ts.
+(levels = List.length ts) &&
 List.for_all (check_freevars true []) ts &&
-enough_ts ts t &&
-(lookup_var n 0 tenv = Some t)
+(lookup_var n 0 tenv = Some (t,levels))
 ==>
 type_e cenv tenv (Var n) (deBruijn_subst ts t)
 
@@ -1227,7 +1210,7 @@ and
 
 forall cenv tenv n e t1 t2.
 check_freevars true [] t1 &&
-type_e cenv (Var_bind false n t1 tenv) e t2
+type_e cenv (Var_bind 0 n t1 tenv) e t2
 ==>
 type_e cenv tenv (Fun n e) (Tfn t1 t2)
 
@@ -1270,18 +1253,18 @@ type_e cenv tenv (Mat e pes) t2
 
 and
 
-forall cenv tenv n e1 e2 t1 t2.
-type_e cenv (Tvar_bind tenv) e1 t1 &&
+forall cenv tenv levels n e1 e2 t1 t2.
+type_e cenv (Tvar_bind levels tenv) e1 t1 &&
 check_freevars true [] t1 &&
-type_e cenv (Var_bind true n t1 tenv) e2 t2
+type_e cenv (Var_bind levels n t1 tenv) e2 t2
 ==>
 type_e cenv tenv (Let n e1 e2) t2
 
 and
 
-forall cenv tenv funs e t tenv'.
-type_funs cenv (bind_var_list false tenv' (Tvar_bind tenv)) funs tenv' &&
-type_e cenv (bind_var_list true tenv' tenv) e t
+forall cenv tenv funs e t tenv' levels.
+type_funs cenv (bind_var_list 0 tenv' (Tvar_bind levels tenv)) funs tenv' &&
+type_e cenv (bind_var_list levels tenv' tenv) e t
 ==>
 type_e cenv tenv (Letrec funs e) t
  
@@ -1311,7 +1294,7 @@ and
 
 forall cenv env fn n e funs env' t1 t2.
 check_freevars true [] (Tfn t1 t2) &&
-type_e cenv (Var_bind false n t1 env) e t2 &&
+type_e cenv (Var_bind 0 n t1 env) e t2 &&
 type_funs cenv env funs env' &&
 lookup fn env' = None
 ==>
@@ -1328,10 +1311,10 @@ type_d cenv tenv (Dlet p e) emp tenv'
 
 and
 
-forall cenv tenv funs tenv'.
-type_funs cenv (bind_var_list false tenv' (Tvar_bind tenv)) funs tenv'
+forall cenv tenv funs tenv' levels.
+type_funs cenv (bind_var_list 0 tenv' (Tvar_bind levels tenv)) funs tenv'
 ==>
-type_d cenv tenv (Dletrec funs) emp (bind_var_list true tenv' tenv)
+type_d cenv tenv (Dletrec funs) emp (bind_var_list levels tenv' tenv)
 
 and
 
@@ -1401,7 +1384,7 @@ and
 forall cenv env tenv n e t1 t2.
 type_env cenv env tenv &&
 check_freevars true [] t1 && 
-type_e cenv (Var_bind false n t1 tenv) e t2
+type_e cenv (Var_bind 0 n t1 tenv) e t2
 ==>
 type_v cenv (Closure env n e) (Tfn t1 t2)
 
@@ -1409,7 +1392,7 @@ and
 
 forall cenv env funs n t tenv tenv'.
 type_env cenv env tenv &&
-type_funs cenv (bind_var_list false tenv' tenv) funs tenv' &&
+type_funs cenv (bind_var_list 0 tenv' tenv) funs tenv' &&
 lookup n tenv' = Some t
 ==>
 type_v cenv (Recclosure env funs n) t
@@ -1438,19 +1421,19 @@ type_env cenv [] Env_empty
 
 and
 
-forall cenv n v env t tenv is_poly.
+forall cenv n v env t tenv levels.
 type_v cenv v t &&
 check_freevars true [] t &&
 type_env cenv env tenv
 ==>
-type_env cenv (bind n v env) (Var_bind is_poly n t tenv)
+type_env cenv (bind n v env) (Var_bind levels n t tenv)
 
 and
 
-forall cenv env tenv.
+forall cenv env tenv n.
 type_env cenv env tenv
 ==>
-type_env cenv env (Tvar_bind tenv)
+type_env cenv env (Tvar_bind n tenv)
 
 indreln
 
@@ -1495,9 +1478,9 @@ type_ctxt cenv tenv (Cmat () pes) t1 t2
 
 and
 
-forall cenv tenv e t1 t2 n.
+forall cenv tenv e t1 t2 levels n.
 check_freevars true [] t1 &&
-type_e cenv (Var_bind true n t1 tenv) e t2
+type_e cenv (Var_bind levels n t1 tenv) e t2
 ==>
 type_ctxt cenv tenv (Clet n () e) t1 t2
 

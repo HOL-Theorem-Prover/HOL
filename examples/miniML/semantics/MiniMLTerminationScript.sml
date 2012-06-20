@@ -114,18 +114,6 @@ val (deBruijn_subst_def, deBruijn_subst_ind) =
    decide_tac]);
 val _ = register "deBruijn_subst" deBruijn_subst_def deBruijn_subst_ind;
 
-val (enough_ts_def, enough_ts_ind) =
-  tprove_no_defn ((enough_ts_def, enough_ts_ind),
-  WF_REL_TAC `measure (λ(x,y). t_size y)` >>
-  rw [] >|
-  [induct_on `ts'` >>
-       rw [t_size_def] >>
-       res_tac >>
-       decide_tac,
-   decide_tac,
-   decide_tac]);
-val _ = register "enough_ts" enough_ts_def enough_ts_ind;
-
 val (check_freevars_def,check_freevars_ind) =
   tprove_no_defn ((check_freevars_def,check_freevars_ind),
 wf_rel_tac `measure (t_size o SND o SND)` >>

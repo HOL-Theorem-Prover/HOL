@@ -565,13 +565,13 @@ metis_tac []);
  * the type environment. *)
 val type_lookup_lem2 = Q.prove (
 `∀tenvC env tenv tvs v s t' ts idx.
-  enough_ts ts t' ∧
+  EVERY (check_freevars T []) ts ∧
   tenvC_ok tenvC ∧
   type_env tenvC env tenv ∧
-  (lookup_var s idx tenv = SOME t') ∧
+  (lookup_var s idx tenv = SOME (t', LENGTH ts)) ∧
   (lookup s env = SOME v)
   ⇒
-  type_v tenvC v (deBruijn_subst ts t')`,
+  type_v tenvC v (deBruijn_substs ts t')`,
 
 induct_on `tenv` >>
 rw [] >>
@@ -587,8 +587,6 @@ rw [] >>
 fs [lookup_def, bind_def] >>
 rw [] >|
 [all_tac,
- metis_tac [],
- all_tac,
  metis_tac []]
 
 rw [] >>
@@ -701,10 +699,9 @@ fs [e_step_def] >|
       pop_assum (ASSUME_TAC o SIMP_RULE (srw_ss()) [Once type_e_cases]) >>
           rw [Once type_ctxts_cases, type_ctxt_cases] >>
           qexists_tac `t1'` >>
-          qexists_tac `Tvar_bind tenv` >>
-          rw [] >|
-          [all_tac (*TODO*),
-           metis_tac [type_v_rules]],
+          qexists_tac `Tvar_bind levels tenv` >>
+          rw [] >>
+          metis_tac [type_v_rules],
       every_case_tac >>
           fs [] >>
           rw [] >>

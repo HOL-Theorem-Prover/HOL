@@ -129,11 +129,8 @@ val _ = type_abbrev( "tvarN" , ``: string``);
 val _ = Hol_datatype `
  t =
     Tvar of tvarN
-  (* DeBruin indexed type variables.  Each let binding can introduce a number of
-   * type variables for computing the type of the expression to be bound (not
-   * the body). The first number is how many nested let bindings the binding is,
-   * and the second is which of that let's bindings it is. *)
-  | Tvar_db of num => num
+  (* DeBruin indexed type variables. *)
+  | Tvar_db of num
   | Tapp of t list => typeN
   | Tfn of t => t
   | Tnum
@@ -1032,12 +1029,10 @@ val _ = type_abbrev( "tenvC" , ``: (conN, (tvarN list # t list # typeN)) env``);
 val _ = Hol_datatype `
  tenvE = 
     Env_empty
-  (* Bind a deBruijn type variable *)
-  | Tvar_bind of tenvE
-  (* The bool is true for polymorphic bindings, in which case deBruijn level 0
-   * represents the forall quantified variables.  The bool is false for
-   * monomorphic bindings *)
-  | Var_bind of bool => varN => t => tenvE`;
+  (* Bind a number of deBruijn type variables *)
+  | Tvar_bind of num => tenvE
+  (* The number is how many deBruijn indices the type scheme binds. *)
+  | Var_bind of num => varN => t => tenvE`;
 
 
 (* Increment the deBruijn indices in a type by n levels, skipping all levels 
@@ -1047,7 +1042,11 @@ val _ = Hol_datatype `
 
 (deBruijn_inc skip n (Tvar tv) = Tvar tv)
 /\
-(deBruijn_inc skip n (Tvar_db m m') = Tvar_db (m+ n) m')
+(deBruijn_inc skip n (Tvar_db m) = 
+  if m< skip then
+    Tvar_db m
+  else
+    Tvar_db (m+ n))
 /\
 (deBruijn_inc skip n (Tapp ts tn) = Tapp (MAP (deBruijn_inc skip n) ts) tn)
 /\
@@ -1062,15 +1061,15 @@ val _ = Defn.save_defn deBruijn_inc_defn;
 
 (* Lookup a variable, incrementing its deBruijn indices by how many type
  * variable quantifiers it is lifted past. *)
-(*val lookup_var : varN -> num -> tenvE -> t option*)
+(*val lookup_var : varN -> num -> tenvE -> (t * num)option*)
  val lookup_var_defn = Hol_defn "lookup_var" `
 
 (lookup_var n inc Env_empty =NONE)
 /\
-(lookup_var n inc (Tvar_bind tenv) = lookup_var n (inc+ 1) tenv)
+(lookup_var n inc (Tvar_bind levels tenv) = lookup_var n (inc+ levels) tenv)
 /\
-(lookup_var n inc (Var_bind is_poly n' t tenv) = 
-  if n= n' then SOME (deBruijn_inc (if is_poly then 1 else 0) inc t)
+(lookup_var n inc (Var_bind levels n' t tenv) = 
+  if n= n' then SOME (deBruijn_inc levels inc t, levels)
   else
     lookup_var n inc tenv)`;
 
@@ -1129,7 +1128,7 @@ val _ = Define `
 /\
 (check_freevars dbok tvs Tbool = T)
 /\
-(check_freevars dbok tvs (Tvar_db _ _) = dbok)`;
+(check_freevars dbok tvs (Tvar_db _) = dbok)`;
 
 val _ = Defn.save_defn check_freevars_defn;
 
@@ -1183,20 +1182,21 @@ val _ = Define `
 /\
 (type_subst s Tbool = Tbool)
 /\
-(type_subst s (Tvar_db n1 n2) = Tvar_db n1 n2)`;
+(type_subst s (Tvar_db n) = Tvar_db n)`;
 
 val _ = Defn.save_defn type_subst_defn;
 
-(* Replace the 0-index deBruijn type variables with the given types, decrement
- * the others *)
+(* Replace the n lowest index deBruijn type variables with the given types *)
 (*val deBruijn_subst : t list -> t -> t*)
  val deBruijn_subst_defn = Hol_defn "deBruijn_subst" `
 
 (deBruijn_subst ts (Tvar tv) = Tvar tv)
 /\
-(deBruijn_subst ts (Tvar_db 0 n) = EL  n  ts)
-/\
-(deBruijn_subst ts (Tvar_db n' n) = Tvar_db (n' - 1) n)
+(deBruijn_subst ts (Tvar_db n) =
+  if n< LENGTH ts then
+    EL  n  ts
+  else
+    Tvar_db (n - LENGTH ts))
 /\
 (deBruijn_subst ts (Tapp ts' tn) =
   Tapp (MAP (deBruijn_subst ts) ts') tn)
@@ -1210,33 +1210,13 @@ val _ = Defn.save_defn type_subst_defn;
 
 val _ = Defn.save_defn deBruijn_subst_defn;
 
-(* Check that ts is long enough to use in a deBruijn subst *)
-(*val enough_ts : t list -> t -> bool*)
- val enough_ts_defn = Hol_defn "enough_ts" `
-
-(enough_ts ts (Tvar tv) = T)
-/\
-(enough_ts ts (Tvar_db 0 n) = n< LENGTH ts)
-/\
-(enough_ts ts (Tvar_db n' n) = T)
-/\
-(enough_ts ts (Tapp ts' tn) = EVERY (enough_ts ts) ts')
-/\
-(enough_ts ts (Tfn t1 t2) = enough_ts ts t1/\ enough_ts ts t2)
-/\
-(enough_ts ts Tnum = T)
-/\
-(enough_ts ts Tbool = T)`;
-
-val _ = Defn.save_defn enough_ts_defn;
-
-(*val bind_var_list : bool -> (varN * t) list -> tenvE -> tenvE*)
+(*val bind_var_list : num -> (varN * t) list -> tenvE -> tenvE*)
  val bind_var_list_defn = Hol_defn "bind_var_list" `
  
-(bind_var_list is_poly [] tenv = tenv)
+(bind_var_list levels [] tenv = tenv)
 /\
-(bind_var_list is_poly ((n,t)::binds) tenv = 
-  Var_bind is_poly n t (bind_var_list is_poly binds tenv))`;
+(bind_var_list levels ((n,t)::binds) tenv = 
+  Var_bind levels n t (bind_var_list levels binds tenv))`;
 
 val _ = Defn.save_defn bind_var_list_defn;
 
@@ -1245,7 +1225,7 @@ val _ = Hol_reln `
 (! cenv tenv n t.
 check_freevars T [] t
 ==>
-type_p cenv tenv (Pvar n) t (Var_bind F n t tenv))
+type_p cenv tenv (Pvar n) t (Var_bind 0 n t tenv))
 
 /\
 
@@ -1318,10 +1298,10 @@ type_e cenv tenv (Con cn es) (Tapp ts' tn))
 
 /\
 
-(! cenv tenv n ts t.
+(! cenv tenv levels n t ts.
+(levels= LENGTH ts)/\
 EVERY (check_freevars T []) ts/\
-enough_ts ts t/\
-(lookup_var n 0 tenv=SOME t)
+(lookup_var n 0 tenv=SOME (t,levels))
 ==>
 type_e cenv tenv (Var n) (deBruijn_subst ts t))
 
@@ -1329,7 +1309,7 @@ type_e cenv tenv (Var n) (deBruijn_subst ts t))
 
 (! cenv tenv n e t1 t2.
 check_freevars T [] t1/\
-type_e cenv (Var_bind F n t1 tenv) e t2
+type_e cenv (Var_bind 0 n t1 tenv) e t2
 ==>
 type_e cenv tenv (Fun n e) (Tfn t1 t2))
 
@@ -1371,18 +1351,18 @@ type_e cenv tenv (Mat e pes) t2)
 
 /\
 
-(! cenv tenv n e1 e2 t1 t2.
-type_e cenv (Tvar_bind tenv) e1 t1/\
+(! cenv tenv levels n e1 e2 t1 t2.
+type_e cenv (Tvar_bind levels tenv) e1 t1/\
 check_freevars T [] t1/\
-type_e cenv (Var_bind T n t1 tenv) e2 t2
+type_e cenv (Var_bind levels n t1 tenv) e2 t2
 ==>
 type_e cenv tenv (Let n e1 e2) t2)
 
 /\
 
-(! cenv tenv funs e t tenv'.
-type_funs cenv (bind_var_list F tenv' (Tvar_bind tenv)) funs tenv'/\
-type_e cenv (bind_var_list T tenv' tenv) e t
+(! cenv tenv funs e t tenv' levels.
+type_funs cenv (bind_var_list 0 tenv' (Tvar_bind levels tenv)) funs tenv'/\
+type_e cenv (bind_var_list levels tenv' tenv) e t
 ==>
 type_e cenv tenv (Letrec funs e) t)
  
@@ -1412,7 +1392,7 @@ type_funs cenv env [] [])
 
 (! cenv env fn n e funs env' t1 t2.
 check_freevars T [] (Tfn t1 t2)/\
-type_e cenv (Var_bind F n t1 env) e t2/\
+type_e cenv (Var_bind 0 n t1 env) e t2/\
 type_funs cenv env funs env'/\(
 lookup fn env'=NONE)
 ==>
@@ -1428,10 +1408,10 @@ type_d cenv tenv (Dlet p e) emp tenv')
 
 /\
 
-(! cenv tenv funs tenv'.
-type_funs cenv (bind_var_list F tenv' (Tvar_bind tenv)) funs tenv'
+(! cenv tenv funs tenv' levels.
+type_funs cenv (bind_var_list 0 tenv' (Tvar_bind levels tenv)) funs tenv'
 ==>
-type_d cenv tenv (Dletrec funs) emp (bind_var_list T tenv' tenv))
+type_d cenv tenv (Dletrec funs) emp (bind_var_list levels tenv' tenv))
 
 /\
 
@@ -1501,7 +1481,7 @@ type_v cenv (Conv cn vs) (Tapp ts' tn))
 (! cenv env tenv n e t1 t2.
 type_env cenv env tenv/\
 check_freevars T [] t1/\ 
-type_e cenv (Var_bind F n t1 tenv) e t2
+type_e cenv (Var_bind 0 n t1 tenv) e t2
 ==>
 type_v cenv (Closure env n e) (Tfn t1 t2))
 
@@ -1509,7 +1489,7 @@ type_v cenv (Closure env n e) (Tfn t1 t2))
 
 (! cenv env funs n t tenv tenv'.
 type_env cenv env tenv/\
-type_funs cenv (bind_var_list F tenv' tenv) funs tenv'/\(
+type_funs cenv (bind_var_list 0 tenv' tenv) funs tenv'/\(
 lookup n tenv'=SOME t)
 ==>
 type_v cenv (Recclosure env funs n) t)
@@ -1538,19 +1518,19 @@ type_env cenv [] Env_empty)
 
 /\
 
-(! cenv n v env t tenv is_poly.
+(! cenv n v env t tenv levels.
 type_v cenv v t/\
 check_freevars T [] t/\
 type_env cenv env tenv
 ==>
-type_env cenv (bind n v env) (Var_bind is_poly n t tenv))
+type_env cenv (bind n v env) (Var_bind levels n t tenv))
 
 /\
 
-(! cenv env tenv.
+(! cenv env tenv n.
 type_env cenv env tenv
 ==>
-type_env cenv env (Tvar_bind tenv))`;
+type_env cenv env (Tvar_bind n tenv))`;
 
 val _ = Hol_reln `
 
@@ -1594,9 +1574,9 @@ type_ctxt cenv tenv (Cmat () pes) t1 t2)
 
 /\
 
-(! cenv tenv e t1 t2 n.
+(! cenv tenv e t1 t2 levels n.
 check_freevars T [] t1/\
-type_e cenv (Var_bind T n t1 tenv) e t2
+type_e cenv (Var_bind levels n t1 tenv) e t2
 ==>
 type_ctxt cenv tenv (Clet n () e) t1 t2)
 
