@@ -1,0 +1,49 @@
+The vp and lp polymorphic variables are used to add extra data to the GVAR and GLAM constructors so that non-recursive values can be included.  They also allow one constructor to code for multiple constructors in the new type. In the case of the bog-standard lambda-calculus, there are no extra values, but there are two GLAM constructors.  One of the latter corresponds to APP, and the other corresponds to LAM.  Thus, the glam type variable gets instantiated to :unit + unit.  It could just as well be :bool.
+
+Perhaps one way of understanding that is to look at the definitions of the constructors in termScript.sml.  For example, APP_def is
+
+  ``^APP_t t1 t2 =
+       ^term_ABS_t (GLAM ARB (INL ()) [] [^term_REP_t t1; ^term_REP_t t2])``);
+
+So, the APP term is secretly a GLAM underneath, with the type variable information using INL to indicate which of the two possibilities it is.
+
+Note there is another type that uses this machinery defined in
+
+  examples/lambda/barendregt/labelledTermsScript.sml
+
+The BNF for this datatype would look something like
+
+  Λ' ::= v | Λ' Λ' | (λv. Λ') | (λₙv. Λ') Λ'
+
+So there are four constructors: the three standard ones, and another one that takes a binding variable, a label (just a number), a term that has v bound within it, and a term that is not in the scope of the v.  This form corresponds to a redex.   In this type, the GLAM type variable gets instantiated to
+
+   :unit (*APP*) + unit (*LAM*) + num (*labelled redex*)
+
+If you look at the LAMi_def (LAMi is the labelled redex constructor) in that file, you’ll see how the two term arguments get split apart the two lists (one is bound; one is not).  Note that when you have no terms in the bound scope (as happens in APP), you still have to provide a bound variable (ARB in the definitions), but there is a theorem that says all choices of bound variables result in the same g.term (GLAM_NIL_EQ).
+
+The last thing to understand is the vp and lp predicates that restrict the new type to be a subset of the full generic term universe.
+
+These predicates encode the possible shapes of the new recursive type.  See the lp definition at the top of labelledTermsScript:
+
+  val lp = ``(λn (d:unit + unit + num) tns uns.
+                 (n = 0) ∧ ISL d ∧ (tns = []) ∧ (uns = [0;0]) ∨
+                 (n = 0) ∧ ISR d ∧ ISL (OUTR d) ∧ (tns = [0]) ∧ (uns = []) ∨
+                 (n = 0) ∧ ISR d ∧ ISR (OUTR d) ∧ (tns = [0]) ∧ (uns = [0]))``
+
+This is the predicate specifying what’s allowed in the case of GLAM.  There are three possibilities.  Each picks out one of the possible data forms and then constrains the tns and uns list.  These lists "correspond" to the two list arguments that are passed to GLAM.   The first clause above says that if the data component is an INL, then tns must be empty, and there must be two values in the uns list.  This is encoding APP, which does indeed require two term arguments, but where these are not bound.  The second possibility corresponds to LAM, and insists on one element in tns and none in uns.  The one element of tns corresponds to the one term argument of LAM.  Finally, the third argument corresponds to the LAMi case, where there is a term in each list.
+
+Now, finally, why the numbers?  So, this scheme is meant to allow for multiple types to be defined at once, where there’s mutual recursion.  If you do that, you specify different numbers at the head of the clause, and in the sub-lists. I think this will work, and there is an example in
+
+  examples/logic/foltypesScript.sml
+
+where the type is meant to correspond to first-order logic terms and formulas, with BNF of
+
+  t ::= v | fnsym of string => t list
+  f ::= relsym of string => t list
+     |  imp of f => f
+     |  neg of f
+     |  all of string => f
+
+This example is not all worked out just yet, and I think I’m going to change the way I’m doing it (mainly because the underlying type t is not really nominal at all).  However, I hope the generic terms substrate will stay unchanged, and will still be useful.
+
+The way the numbers and the predicates "carve out" the subset of the generic terms is all done by the genind constant.
