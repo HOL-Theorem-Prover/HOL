@@ -870,60 +870,52 @@ val _ = export_rewrites ["ordADD_RIGHT_CANCEL"]
 val leqLEFT_CANCEL = store_thm(
   "leqLEFT_CANCEL",
   ``∀x a. x ≤ a + x``,
-  ho_match_mp_tac ord_induction >> qx_gen_tac `x` >> strip_tac >>
-  Cases_on `x = 0` >> simp[] >>
-  `(omax (preds x) = NONE) ∨ ∃x0. omax (preds x) = SOME x0`
-    by metis_tac [optionTheory.option_CASES]
-  >- (qx_gen_tac `a` >> strip_tac >>
-      `∃b. a + x < b ∧ b < x` by metis_tac[omax_NONE, IN_preds] >>
-      `b ≤ a + b` by metis_tac[] >>
-      `a + x < a + b` by metis_tac [ordle_lteq, ordlt_TRANS] >>
-      fs[] >> metis_tac[ordlt_TRANS, ordlt_REFL]) >>
-  fs[preds_omax_SOME_SUC]);
+  ho_match_mp_tac simple_ord_induction >> rpt conj_tac >- simp[] >- simp[] >>
+  qx_gen_tac `x` >> strip_tac >>
+  qx_gen_tac `a` >> strip_tac >>
+  `∃b. a + x < b ∧ b < x` by metis_tac[omax_NONE, IN_preds] >>
+  `b ≤ a + b` by metis_tac[] >>
+  `a + x < a + b` by metis_tac [ordle_lteq, ordlt_TRANS] >>
+  fs[] >> metis_tac[ordlt_TRANS, ordlt_REFL]);
+val _ = export_rewrites ["leqLEFT_CANCEL"]
 
-(*
+val lemma = prove(
+  ``∀c a b:'a ordinal. a < b ∧ b < a + c ⇒ ∃d. a + d = b``,
+  ho_match_mp_tac simple_ord_induction >> simp[] >> rpt conj_tac
+  >- metis_tac [ordlt_TRANS, ordlt_REFL]
+  >- (simp[ordlt_SUC_DISCRETE] >> metis_tac[]) >>
+  simp[predimage_sup_thm]);
+
 val ordlt_EXISTS_ADD = store_thm(
   "ordlt_EXISTS_ADD",
-  ``∀b a:'a ordinal. a < b ⇔ ∃c. c ≠ 0 ∧ (a + c = b)``,
+  ``∀a b:'a ordinal. a < b ⇔ ∃c. c ≠ 0 ∧ (b = a + c)``,
   simp_tac (srw_ss() ++ DNF_ss) [EQ_IMP_THM] >> Tactical.REVERSE conj_tac
   >- metis_tac[ordlt_trichotomy, ordlt_ZERO] >>
-  ho_match_mp_tac ord_induction >> qx_gen_tac `b` >> strip_tac >>
-  Cases_on `b = 0` >> simp[] >>
-  `(omax (preds b) = NONE) ∨ ∃b0. omax (preds b) = SOME b0`
-    by metis_tac [optionTheory.option_CASES]
-  >- (qx_gen_tac `a` >> strip_tac >>
-      `∃f. ∀b' a. a < b' ∧ b' < b ⇒ f b' a ≠ 0 ∧ (a + f b' a = b')`
-        by (full_simp_tac (srw_ss() ++ DNF_ss)
-                          [SKOLEM_THM, GSYM RIGHT_EXISTS_IMP_THM] >>
-            metis_tac []) >>
-      qabbrev_tac `d = sup (IMAGE (λb. f b a) (preds b DIFF {x | x ≤ a}))` >>
-      qexists_tac `d` >>
-      `∀x. x < d <=> ∃y. a < y ∧ y < b ∧ x < f y a`
-        by (`IMAGE (λb. f b a) (preds b DIFF {x | x ≤ a}) ≼ univ(:'a inf)`
-              by (`IMAGE (λb. f b a) (preds b DIFF {x | x ≤ a}) ≼
-                   IMAGE (λb. f b a) (preds b)`
-                    by (match_mp_tac SUBSET_CARDLEQ >> simp[SUBSET_DEF]) >>
-                  qsuff_tac `IMAGE (λb. f b a) (preds b) ≼ univ(:'a inf)`
-                  >- metis_tac [cardleq_TRANS] >>
-                  metis_tac [cardleq_TRANS, IMAGE_cardleq, preds_inj_univ]) >>
-            simp[Abbr`d`, sup_thm] >> metis_tac[]) >>
-      `d ≠ 0`
-        by (qsuff_tac `0 < d` >- metis_tac [ordlt_REFL] >>
-            asm_simp_tac (srw_ss() ++ DNF_ss) [] >>
-            fs[omax_NONE] >> metis_tac[ordlt_ZERO, ordlt_trichotomy]) >>
-      simp[] >>
-      qabbrev_tac `dset = IMAGE (λb. f b a) (preds b DIFF {x | x ≤ a})` >>
-      `∀x. x ∈ dset ⇒ x < b`
-        by (dsimp[Abbr`dset`] >> qx_gen_tac `c` >> strip_tac >>
-            `f c a ≤ a + f c a` >> strip_tac
-            match_mp_tac ordlt_TRANS >> qexists_tac `a + f c a` >>
-            simp[]
+  map_every qx_gen_tac [`a`, `b`] >> strip_tac >>
+  `b ≤ a + b` by simp[] >> fs[ordle_lteq]
+  >- (`∃c. a + c = b` by metis_tac[lemma] >> rw[] >> strip_tac >> fs[]) >>
+  qexists_tac `b` >> simp[] >> strip_tac >> fs[]);
 
-      `omax (preds d) = NONE`
-        by (simp[omax_NONE] >> metis_tac []qx_gen_tac `α` >>
-            disch_then (Q.X_CHOOSE_THEN `c` strip_assume_tac) >>
-            fs[omax_NONE] >> metis_tac[]
-            simp[predimage_sup_thm] >> metis_tac[]
+val ordle_EXISTS_ADD = store_thm(
+  "ordle_EXISTS_ADD",
+  ``∀a b:'a ordinal. a ≤ b ⇔ ∃c. b = a + c``,
+  simp[ordle_lteq] >> metis_tac [ordlt_EXISTS_ADD, ordADD_def]);
+
+val ordle_CANCEL_ADDR = store_thm(
+  "ordle_CANCEL_ADDR",
+  ``x ≤ x + a``,
+  simp[ordle_lteq] >> metis_tac[ordlt_trichotomy, ordlt_ZERO]);
+val _ = export_rewrites ["ordle_CANCEL_ADDR"]
+(*
+val ordADD_ASSOC = store_thm(
+  "ordADD_ASSOC",
+  ``∀a b c:'a ordinal. a + (b + c) = (a + b) + c``,
+  qsuff_tac `∀c a b:'a ordinal. a + (b + c) = (a + b) + c` >- simp[] >>
+  ho_match_mp_tac simple_ord_induction >> simp[predimage_sup_thm] >>
+  qx_gen_tac `c` >> strip_tac >> map_every qx_gen_tac [`a`, `b`] >>
+  qabbrev_tac `pbset = IMAGE ($+ b) (preds c)` >>
+  `sup pbset ≠ 0`
+  `islimit (
 *)
 
 val _ = export_theory()
