@@ -592,6 +592,13 @@ val sup_preds_omax_NONE = store_thm(
   strip_tac >> qsuff_tac `γ ≤ α ∧ α ≤ γ` >- metis_tac [ordlt_trichotomy] >>
   metis_tac [ordlt_TRANS, ordlt_REFL]);
 
+val dclose_def = Define`dclose s = { x:'a ordinal | ∃y. y ∈ s ∧ x < y }`;
+
+val preds_sup = store_thm(
+  "preds_sup",
+  ``s ≼ univ(:'a inf) ⇒ (preds (sup s:'a ordinal) = dclose s)``,
+  simp[EXTENSION, sup_thm, dclose_def]);
+
 fun mklesup th =
     th |> UNDISCH_ALL |> Q.SPEC `sup s`
        |> SIMP_RULE (srw_ss()) [] |> REWRITE_RULE [impI] |> DISCH_ALL
@@ -906,16 +913,101 @@ val ordle_CANCEL_ADDR = store_thm(
   ``x ≤ x + a``,
   simp[ordle_lteq] >> metis_tac[ordlt_trichotomy, ordlt_ZERO]);
 val _ = export_rewrites ["ordle_CANCEL_ADDR"]
-(*
+
+val IMAGE_cardleq_rwt = store_thm(
+  "IMAGE_cardleq_rwt",
+  ``s ≼ t ⇒ IMAGE f s ≼ t``,
+  metis_tac [cardleq_TRANS, IMAGE_cardleq]);
+
+val dclose_BIGUNION = store_thm(
+  "dclose_BIGUNION",
+  ``dclose s = BIGUNION (IMAGE preds s)``,
+  dsimp[Once EXTENSION, dclose_def] >> metis_tac[]);
+
+val dclose_cardleq_univinf = store_thm(
+  "dclose_cardleq_univinf",
+  ``(s:'a ordinal set) ≼ univ(:'a inf) ==> dclose s ≼ univ(:'a inf)``,
+  strip_tac >> simp[dclose_BIGUNION] >>
+  match_mp_tac CARD_BIGUNION >>
+  dsimp[preds_inj_univ] >> metis_tac [cardleq_TRANS, IMAGE_cardleq]);
+
+val sup_lt_implies = store_thm(
+  "sup_lt_implies",
+  ``(s:'a ordinal set) ≼ univ(:'a inf) ∧ sup s < a ∧ b ∈ s ⇒ b < a``,
+  strip_tac >>
+  `sup s ≤ a` by simp[ordle_lteq] >>
+  pop_assum mp_tac >> simp[sup_thm, impI] >> strip_tac >>
+  `b ≤ a` by simp[] >> fs[ordle_lteq] >> fs[] >>
+  `a ≤ sup s` by metis_tac [mklesup sup_thm]);
+
+val sup_eq_max = store_thm(
+  "sup_eq_max",
+  ``(∀b. b ∈ s ⇒ b ≤ a) ∧ a ∈ s ⇒ (sup s = a)``,
+  strip_tac >>
+  `∀b. b ∈ s ⇒ b < a⁺` by fs[ordlt_SUC_DISCRETE, ordle_lteq] >>
+  pop_assum (assume_tac o MATCH_MP ubsup_thm) >>
+  `a ≤ sup s` by metis_tac [ordlt_REFL] >>
+  `sup s ≤ a` by simp[impI] >>
+  metis_tac [ordle_ANTISYM]);
+
+val ordADD_continuous = store_thm(
+  "ordADD_continuous",
+  ``s ≼ univ(:'a inf) ∧ s ≠ ∅ ⇒
+    ((x:'a ordinal) + sup s = sup (IMAGE ($+ x) s))``,
+  strip_tac >>
+  `islimit (sup s) ∨ ∃a. omax (preds (sup s)) = SOME a`
+    by metis_tac [optionTheory.option_CASES]
+  >| [
+    Cases_on `sup s = 0` >> simp[]
+    >- (pop_assum (mp_tac o Q.AP_TERM `preds`) >>
+        asm_simp_tac bool_ss [preds_sup] >> simp[dclose_def, EXTENSION] >>
+        fs[omax_NONE] >>
+        disch_then (qspec_then `0` mp_tac) >>
+        disch_then (assume_tac o SIMP_RULE (srw_ss()) []) >>
+        `s = {0}` by (fs[EXTENSION] >> metis_tac[]) >> simp[]) >>
+    `0 < sup s` by metis_tac [ordlt_trichotomy, ordlt_ZERO] >>
+    simp[preds_sup] >>
+    qpat_assum `islimit (sup s)` mp_tac >> simp[preds_sup] >> strip_tac >>
+    match_mp_tac ordle_ANTISYM >>
+    dsimp[sup_thm, IMAGE_cardleq_rwt, impI, dclose_cardleq_univinf] >>
+    conj_tac
+    >- dsimp[dclose_def, ordle_lteq, sup_thm, IMAGE_cardleq_rwt] >>
+    qx_gen_tac `a` >> strip_tac >>
+    Cases_on `∃b. b ∈ s ∧ a < b`
+    >- (fs[] >>
+        dsimp[sup_thm, IMAGE_cardleq_rwt, dclose_cardleq_univinf, ordle_lteq,
+              dclose_def] >>
+        DISJ1_TAC >> fs[omax_NONE, dclose_def] >> metis_tac[]) >>
+    fs[impI] >>
+    `sup s = a` by metis_tac [sup_eq_max] >>
+    `dclose s = preds a` by metis_tac[preds_sup] >> fs[],
+
+    `sup (preds (sup s)) = a` by metis_tac[omax_sup] >>
+    fs[preds_omax_SOME_SUC] >>
+    ONCE_REWRITE_TAC [EQ_SYM_EQ] >>
+    match_mp_tac sup_eq_max >> dsimp[] >>
+    simp_tac bool_ss [GSYM ordADD_def, ordADD_RIGHT_CANCEL,
+                      ordlt_CANCEL] >>
+    conj_tac >- metis_tac [mklesup sup_thm] >>
+    `a < sup s` by simp[] >> pop_assum mp_tac >>
+    simp[sup_thm] >> disch_then (Q.X_CHOOSE_THEN `b` mp_tac) >>
+    strip_tac >> qsuff_tac `b = a⁺` >- metis_tac[] >>
+    match_mp_tac ordle_ANTISYM >> conj_tac
+    >- metis_tac [sup_lt_implies, ordlt_REFL] >>
+    simp[ordlt_SUC_DISCRETE] >> metis_tac[ordle_lteq, ordlt_REFL]
+  ])
+
 val ordADD_ASSOC = store_thm(
   "ordADD_ASSOC",
   ``∀a b c:'a ordinal. a + (b + c) = (a + b) + c``,
   qsuff_tac `∀c a b:'a ordinal. a + (b + c) = (a + b) + c` >- simp[] >>
   ho_match_mp_tac simple_ord_induction >> simp[predimage_sup_thm] >>
   qx_gen_tac `c` >> strip_tac >> map_every qx_gen_tac [`a`, `b`] >>
-  qabbrev_tac `pbset = IMAGE ($+ b) (preds c)` >>
-  `sup pbset ≠ 0`
-  `islimit (
-*)
+  `IMAGE ($+ (a + b)) (preds c) = IMAGE ($+ a) (IMAGE ($+ b) (preds c))`
+    by (dsimp[EXTENSION] >> asm_simp_tac (srw_ss() ++ CONJ_ss) []) >>
+  simp[] >>
+  match_mp_tac ordADD_continuous >>
+  simp[IMAGE_cardleq_rwt, preds_inj_univ] >>
+  metis_tac [preds_0, preds_11, ordlt_REFL]);
 
 val _ = export_theory()
