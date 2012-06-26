@@ -2278,4 +2278,57 @@ val mlt_TO_EMPTY_BAG = Q.store_thm(
   SRW_TAC [][BAG_INSERT_UNION,COMM_BAG_UNION]);
 val _ = export_rewrites ["mlt_TO_EMPTY_BAG"];
 
+(*---------------------------------------------------------------------------*)
+(* Size of a finite multiset is taken to be the sum of the sizes of all the  *)
+(* elements, plus the number of elements.                                    *)
+(*---------------------------------------------------------------------------*)
+
+val bag_size_def = 
+ Define
+  `bag_size eltsize b = ITBAG (\e acc. 1 + eltsize e + acc) b 0`;
+
+val BAG_SIZE_EMPTY = Q.store_thm
+("BAG_SIZE_EMPTY",
+ `bag_size eltsize {||} = 0`,
+ METIS_TAC [ITBAG_THM,bag_size_def,FINITE_EMPTY_BAG]);
+
+(*---------------------------------------------------------------------------*)
+(* BAG_SIZE_INSERT =                                                         *)
+(*  |- FINITE_BAG b ==>                                                      *)
+(*   bag_size eltsize (BAG_INSERT e b) = 1 + eltsize e + bag_size eltsize b  *)
+(*---------------------------------------------------------------------------*)
+
+val BAG_SIZE_INSERT = save_thm
+("BAG_SIZE_INSERT",
+ let val f = ``\(e:'a) acc. 1 + eltsize e + acc``
+     val LCOMM_INCR = Q.prove
+     (`!x y z. ^f x (^f y z) = ^f y (^f x z)`, RW_TAC arith_ss [])
+ in COMMUTING_ITBAG_RECURSES 
+    |> ISPEC f 
+    |> SIMP_RULE bool_ss [LCOMM_INCR]
+    |> (ISPEC``0n`` o Q.ID_SPEC o Q.ID_SPEC)
+    |> SIMP_RULE bool_ss [GSYM bag_size_def]
+ end);
+
+(*---------------------------------------------------------------------------*)
+(* Add multiset type to the TypeBase.                                        *)
+(*---------------------------------------------------------------------------*)
+
+val _ = adjoin_to_theory
+  {sig_ps = NONE,
+   struct_ps = SOME (fn pps => 
+    let fun pp_line s = (PP.add_string pps s; PP.add_newline pps)
+    in
+     app pp_line
+     ["val _ = ",
+      " TypeBase.write",
+      " [TypeBasePure.mk_nondatatype_info",
+      "  (alpha --> numSyntax.num,",
+      "    {nchotomy = SOME BAG_cases,",
+      "     induction = SOME STRONG_FINITE_BAG_INDUCT,",
+      "     size = SOME(Parse.Term`\\(obsize:'a->num) (y:'b). bag$bag_size obsize`,CONJ BAG_SIZE_EMPTY BAG_SIZE_INSERT),",
+      "     encode=NONE})];\n"
+      ] end)};
+
+
 val _ = export_theory();

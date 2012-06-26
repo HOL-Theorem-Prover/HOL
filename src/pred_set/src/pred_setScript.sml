@@ -1734,6 +1734,15 @@ val _ = IndDefLib.export_rule_induction "FINITE_INDUCT"
 
 val SET_INDUCT_TAC = PSet_ind.SET_INDUCT_TAC FINITE_INDUCT;
 
+val set_tyinfo = TypeBasePure.mk_nondatatype_info
+                      (``:'a set``,
+                       {nchotomy = SOME SET_CASES,
+                        induction= SOME FINITE_INDUCT,
+                        size=NONE,
+                        encode=NONE});
+
+val _ = TypeBase.write [set_tyinfo];
+
 val FINITE_DELETE =
     TAC_PROOF
     (([], --`!s. FINITE s ==> !x:'a. FINITE (s DELETE x)`--),
@@ -2121,20 +2130,6 @@ val CARD_EXISTS = TAC_PROOF(([],
 (* ---------------------------------------------------------------------*)
 
 val CARD_DEF = new_specification ("CARD_DEF", ["CARD"], CARD_EXISTS);
-
-(*---------------------------------------------------------------------------*)
-(* Support for Cases_on ... still preliminary                                *)
-(*---------------------------------------------------------------------------*)
-
-val set_tyinfo = TypeBasePure.mk_nondatatype_info
-                      (``:'a set``,
-                       {nchotomy = SOME SET_CASES,
-                        induction = SOME FINITE_INDUCT,
-                        size=SOME(``CARD``,CARD_DEF),
-                        encode=NONE});
-
-val _ = TypeBase.write [set_tyinfo];
-
 
 (* ---------------------------------------------------------------------*)
 (* Various cardinality results.						*)
@@ -3888,6 +3883,19 @@ Q.EXISTS_TAC `f e + SIGMA g s` THEN
 SRW_TAC [][]);
 
 (*---------------------------------------------------------------------------*)
+(* Support for Cases, Cases_on, Induct, and termination proofs               *)
+(*---------------------------------------------------------------------------*)
+
+val set_tyinfo = TypeBasePure.mk_nondatatype_info
+                      (``:'a set``,
+                       {nchotomy = SOME SET_CASES,
+                        induction = SOME FINITE_INDUCT,
+                        size=SOME(``\(x:'a->num) (y:'b). SUM_IMAGE x``,SUM_IMAGE_THM),
+                        encode=NONE});
+
+val _ = TypeBase.write [set_tyinfo];
+
+(*---------------------------------------------------------------------------*)
 (* SUM_SET sums the elements of a set of natural numbers                     *)
 (*---------------------------------------------------------------------------*)
 
@@ -4991,24 +4999,21 @@ val _ = adjoin_to_theory {sig_ps = SOME sigps,
                           struct_ps =
                           SOME (fn pps => PP.add_string pps sspec_conv_str)}
 
-(*
 val _ = adjoin_to_theory
   {sig_ps = NONE,
    struct_ps = SOME (fn pps => 
-    let val card_tm_string = String.concat
-             ["prim_mk_const{Thy=",quote"pred_set",",Name=",quote"CARD","}"]
-     in
-     app (fn s => (PP.add_string pps s; PP.add_newline pps))
+    let fun pp_line s = (PP.add_string pps s; PP.add_newline pps)
+    in
+     List.app pp_line
      ["val _ = ",
       " TypeBase.write",
       " [TypeBasePure.mk_nondatatype_info",
       "  (alpha --> bool,",
       "    {nchotomy = SOME SET_CASES,",
       "     induction = SOME FINITE_INDUCT,",
-      ("     size = SOME("^card_tm_string^",CARD_DEF),"),
+      "     size = SOME(Parse.Term`\\(obsize:'a->num) (y:'b). pred_set$SUM_IMAGE (\\x:'a. 1 + obsize x)`,SUM_IMAGE_THM),",
       "     encode=NONE})];\n"
       ] end)};
-*)
 
 val _ = export_theory();
 

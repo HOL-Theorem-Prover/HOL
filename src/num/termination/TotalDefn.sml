@@ -357,12 +357,11 @@ fun known_fun tm =
 
 fun relevant (tm,_) = known_fun tm;
 
-local
- open Defn numSyntax simpLib boolSimps
- fun tysize ty = TypeBasePure.type_size (TypeBase.theTypeBase()) ty
- fun size_app v = mk_comb(tysize (type_of v),v)
-in
 fun guessR defn =
+ let open Defn numSyntax simpLib boolSimps
+   fun tysize ty = TypeBasePure.type_size (TypeBase.theTypeBase()) ty
+   fun size_app v = mk_comb(tysize (type_of v),v)
+ in
  if null (tcs_of defn) then []
   else
   case reln_of defn
@@ -404,7 +403,7 @@ fun guessR defn =
          allrels'
        end
 end
- handle e => raise wrap_exn "TotalDefn" "guessR";
+ handle e => raise wrap_exn "TotalDefn" "guessR" e;
 
 (*---------------------------------------------------------------------------*)
 (* Wellfoundedness and termination provers (parameterized by theorems).      *)

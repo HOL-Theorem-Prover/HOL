@@ -1,10 +1,15 @@
 structure DataSize :> DataSize =
 struct
 
-open HolKernel Parse boolLib Prim_rec
+open HolKernel Parse boolLib Prim_rec arithmeticTheory;
 val ERR = mk_HOL_ERR "DataSize";
 
 val num = numSyntax.num
+
+val Zero  = numSyntax.zero_tm
+val One   = numSyntax.term_of_int 1
+
+fun Kzero ty = mk_abs(mk_var("v",ty), numSyntax.zero_tm)
 
 val defn_const =
   #1 o strip_comb o lhs o #2 o strip_forall o hd o strip_conj o concl;
@@ -52,7 +57,6 @@ fun tysize_env db =
 
 local fun drop [] ty = fst(dom_rng ty)
         | drop (_::t) ty = drop t (snd(dom_rng ty));
-      fun Kzero ty = mk_abs(mk_var("v",ty), numSyntax.zero_tm)
       fun OK f ty M =
          let val (Rator,Rand) = dest_comb M
          in (Rator=f) andalso is_var Rand andalso (type_of Rand = ty)
@@ -91,11 +95,8 @@ fun crunch [] = []
     in (key, (x,y)::yes)::crunch no
     end;
 
-local open arithmeticTheory
-      val zero_rws = [Rewrite.ONCE_REWRITE_RULE [ADD_SYM] ADD_0, ADD_0]
-      val Zero  = numSyntax.zero_tm
-      val One   = numSyntax.term_of_int 1
-in
+val zero_rws = [Rewrite.ONCE_REWRITE_RULE [ADD_SYM] ADD_0, ADD_0]
+
 fun define_size ax db =
  let val dtys = Prim_rec.doms_of_tyaxiom ax  (* primary types in axiom *)
      val tyvars = Lib.U (map (snd o dest_type) dtys)
@@ -174,7 +175,6 @@ fun define_size ax db =
  in
     SOME {def=defn,const_tyopl=const_tyopl}
  end
- handle HOL_ERR _ => NONE
-end;
+ handle HOL_ERR _ => NONE;
 
 end

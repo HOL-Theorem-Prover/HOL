@@ -853,8 +853,6 @@ INDUCT_THEN fmap_INDUCT ASSUME_TAC THENL [
 ]);
 
 
-
-
 val FMERGE_DEF = new_specification
   ("FMERGE_DEF", ["FMERGE"],
    CONV_RULE (ONCE_DEPTH_CONV SKOLEM_CONV) fmerge_exists);
@@ -1851,15 +1849,10 @@ SIMP_TAC std_ss [GSYM fmap_EQ_THM, FMAP_MAP2_THM,
 		 COND_RAND, COND_RATOR,
 		 DISJ_IMP_THM]);
 
-
-
-
-
 (*---------------------------------------------------------------------------*)
 (* Some general stuff                                                        *)
 (* added 17 March 2009 by Thomas Tuerk                                       *)
 (*---------------------------------------------------------------------------*)
-
 
 val FEVERY_STRENGTHEN_THM =
 store_thm ("FEVERY_STRENGTHEN_THM",
@@ -1898,11 +1891,6 @@ SIMP_TAC std_ss [FEVERY_DEF, IN_INTER,
 		 RIGHT_AND_OVER_OR, IN_COMPL,
                  DISJ_IMP_THM, FORALL_AND_THM] THEN
 PROVE_TAC[]);
-
-
-
-
-
 
 
 (*---------------------------------------------------------------------------
@@ -2172,6 +2160,37 @@ CONJ_TAC THEN GEN_TAC THENL [
    Cases_on `x = k` THEN ASM_SIMP_TAC std_ss [FAPPLY_FUPDATE_THM]
 ]);
 
+(*---------------------------------------------------------------------------*)
+(* From Ramana Kumar                                                         *)
+(*---------------------------------------------------------------------------*)
+
+val fmap_size_def = 
+ Define
+   `fmap_size kz vz fm = SIGMA (\k. kz k + vz (fm ' k)) (FDOM fm)`;
+
+(*---------------------------------------------------------------------------*)
+(* Add fmap type to the TypeBase. Notice that we treat keys as being of size *)
+(* zero, and make sure to add one to the size of each mapped value. This     *)
+(* ought to handle the case where the map points to something of size 0:     *)
+(* deleting it from the map will then make the map smaller.                  *)
+(*---------------------------------------------------------------------------*)
+
+val _ = adjoin_to_theory
+  {sig_ps = NONE,
+   struct_ps = SOME (fn pps => 
+    let fun pp_line s = (PP.add_string pps s; PP.add_newline pps)
+    in
+     app pp_line
+     ["val _ = ",
+      " TypeBase.write",
+      " [TypeBasePure.mk_nondatatype_info",
+      "  (mk_type(\"fmap\",[alpha,beta]),",
+      "    {nchotomy = SOME fmap_CASES,",
+      "     induction = SOME fmap_INDUCT,",
+      "     size = SOME(Parse.Term`\\(ksize:'a->num) (vsize:'b->num). fmap_size (\\k:'a. 0) (\\v. 1 + vsize v)`,",
+      "                 fmap_size_def),",
+      "     encode=NONE})];\n"
+      ] end)};
 
 
 (* ----------------------------------------------------------------------

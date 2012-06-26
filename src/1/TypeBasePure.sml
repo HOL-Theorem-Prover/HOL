@@ -702,42 +702,57 @@ fun tystring ty =
  in String.concat [thy,"$",name]
  end;
 
+(*---------------------------------------------------------------------------*)
+(* gamma models polymorphic functions of the form                            *)
+(*                                                                           *)
+(*  ty |-> ty_size size1 ... sizen arg = ...                                 *)
+(*                                                                           *)
+(* where arg is a term with a type having n type variables. In order to      *)
+(* synthesize the correct instance of ty_size, we have to match the types    *)
+(* of size1...sizen against the concrete types found in the instance of type *)
+(* ty. Hence the complex lead-up to matching.                                *)
+(*---------------------------------------------------------------------------*)
+
 fun typeValue (theta,gamma,undef) =
  let fun tyValue ty =
       case theta ty
        of SOME fvar => fvar
         | NONE =>
-           case gamma ty
-              of SOME f =>
-                  let val (tys,rng) = strip_fun (type_of f)
-                      val vty = last tys
-                      val sigma = match_type vty ty handle HOL_ERR _ => []
-                      val args = snd(dest_type ty)
-                  in list_mk_comb(inst sigma f, map tyValue args)
+            case gamma ty
+             of SOME f =>
+                 (let val args = snd(dest_type ty)
+                      val csizefns = map tyValue args
+                      val (tys,rng) = strip_fun (type_of f)
+                      val (gen_sizefn_tys,vty) = front_last tys
+                      val tyinst = match_type (list_mk_fun(gen_sizefn_tys,bool))
+                                              (list_mk_fun(map type_of csizefns,bool))
+                  in list_mk_comb(inst tyinst f, csizefns)
                   end handle HOL_ERR _ 
                       => (WARN "typeValue" 
                            ("Badly typed terms at type constructor "
                             ^Lib.quote (tystring ty)^". Continuing anyway.");
-                          undef ty)
+                          undef ty))
                | NONE => undef ty
  in tyValue
  end
 
-(*---------------------------------------------------------------------------
-    Map a HOL type (ty) into a term having type :ty -> num.
- ---------------------------------------------------------------------------*)
+(*---------------------------------------------------------------------------*)
+(*    Map a HOL type (ty) into a term having type :ty -> num.                *)
+(*---------------------------------------------------------------------------*)
 
 fun num() = mk_thy_type{Tyop="num",Thy="num",Args=[]}
 fun Zero() = mk_thy_const{Name="0",Thy="num", Ty=num()}
              handle HOL_ERR _ => 
              raise ERR "type_size.Zero()" "Numbers not declared"
 
-fun K0 ty = mk_abs(mk_var("v",ty),Zero())
-fun tysize_env db = Option.map fst o
-                    Option.composePartial (size_of,fetch db);
-fun theta ty = if is_vartype ty then SOME (K0 ty) else NONE
-
-fun type_size db ty = typeValue (theta,tysize_env db,K0) ty;
+fun type_size db ty = 
+ let fun K0 ty = mk_abs(mk_var("v",ty),Zero())
+     fun theta ty = if is_vartype ty then SOME (K0 ty) else NONE
+     val gamma = Option.map fst o
+                 Option.composePartial (size_of,fetch db)
+  in 
+    typeValue (theta,gamma,K0) ty
+  end
 
 (*---------------------------------------------------------------------------
     Encoding: map a HOL type (ty) into a term having type :ty -> bool list
