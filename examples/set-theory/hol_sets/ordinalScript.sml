@@ -1010,4 +1010,61 @@ val ordADD_ASSOC = store_thm(
   simp[IMAGE_cardleq_rwt, preds_inj_univ] >>
   metis_tac [preds_0, preds_11, ordlt_REFL]);
 
+val exists_C = prove(
+  ``(∃h:'a -> 'a -> 'a. P h) <=> (∃h. P (combin$C h))``,
+  eq_tac >> strip_tac
+  >- (qexists_tac `combin$C h` >>
+      qsuff_tac `combin$C (combin$C h) = h` >- simp[] >>
+      simp[FUN_EQ_THM]) >> metis_tac[]);
+
+val ADD1R = store_thm(
+  "ADD1R",
+  ``a + 1 = a⁺``,
+  REWRITE_TAC [GSYM ORD_ONE] >> simp[]);
+
+(* Multiplication *)
+
+val ordMULT_def = new_specification(
+  "ordMULT_def", ["ordMULT"],
+  ord_RECURSION |> INST_TYPE [beta |-> ``:'a ordinal``]
+                |> Q.SPEC `0`
+                |> Q.SPEC `λap r. r + b`
+                |> Q.SPEC `λa preds. sup preds`
+                |> Q.GEN `b`
+                |> CONV_RULE SKOLEM_CONV
+                |> BETA_RULE
+                |> SIMP_RULE (srw_ss()) [Once exists_C]
+                |> SIMP_RULE (srw_ss()) [combinTheory.C_DEF])
+val _ = export_rewrites ["ordMULT_def"]
+val _ = overload_on ("*", ``ordMULT``)
+
+val ordMULT_0R = store_thm(
+  "ordMULT_0R",
+  ``∀a:'a ordinal. a * 0 = 0``,
+  ho_match_mp_tac simple_ord_induction >> simp[] >> qx_gen_tac `a` >>
+  strip_tac >> qsuff_tac `IMAGE (λy. y * 0) (preds a) = {0}` >> simp[] >>
+  simp[EXTENSION] >>
+  asm_simp_tac (srw_ss() ++ DNF_ss ++ CONJ_ss) [] >> metis_tac[]);
+val _ = export_rewrites ["ordMULT_0R"]
+
+val ordMULT_1L = store_thm(
+  "ordMULT_1L",
+  ``1 * (a:'a ordinal) = a``,
+  REWRITE_TAC [GSYM ORD_ONE] >> simp[]);
+val _ = export_rewrites ["ordMULT_1L"]
+
+val ordMULT_2L = store_thm(
+  "ordMULT_2L",
+  ``2 * (a:'a ordinal) = a + a``,
+  `2 = 1⁺` by simp[] >> pop_assum SUBST1_TAC >> simp[]);
+
+val ordMULT_1R = store_thm(
+  "ordMULT_1R",
+  ``∀a:'a ordinal. a * 1 = a``,
+  ho_match_mp_tac simple_ord_induction >> simp[ADD1R] >>
+  qx_gen_tac `a` >> strip_tac >>
+  qsuff_tac `IMAGE (λy. y * 1) (preds a) = preds a`
+  >- fs[sup_preds_omax_NONE] >>
+  dsimp[EXTENSION] >> asm_simp_tac (srw_ss() ++ CONJ_ss) []);
+
 val _ = export_theory()
