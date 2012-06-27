@@ -2,15 +2,12 @@
 (* Nested reverse via step-indexing.                                         *)
 (*---------------------------------------------------------------------------*)
 
-set_trace "Unicode" 0;
-set_trace "pp_annotations" 0;
+open arithmeticTheory optionTheory listTheory;
 
 use (HOLDIR^"/src/pfl/defchoose");
-use (HOLDIR^"/src/pfl/tactics.sml");
+use (HOLDIR^"/src/pfl/pflLib.sml");
 
-quietdec := true;
-open arithmeticTheory optionTheory listTheory;
-quietdec := false;
+open pflLib;
 
 (*---------------------------------------------------------------------------*)
 (* General purpose support.                                                  *)
@@ -32,26 +29,26 @@ val rev_orig_tm =
    ``(rev [] = []) /\
      (rev (x::xs) =
         case rev xs
-         of [] -> [x]
-         || y::ys -> y :: rev (x::rev ys))``;
+         of [] => [x]
+         | y::ys => y :: rev (x::rev ys))``;
 
 val irev_def = 
  Define
   `irev d list = 
      if d=0 then NONE else
      case list 
-      of [] -> SOME []
-      || (x::xs) ->
+      of [] => SOME []
+      | (x::xs) =>
         case irev (d-1) xs 
-         of NONE -> NONE
-         || SOME [] -> SOME [x]
-         || SOME (y::ys) ->
+         of NONE => NONE
+         | SOME [] => SOME [x]
+         | SOME (y::ys) =>
              case irev (d-1) ys 
-              of NONE -> NONE
-              || SOME v ->
+              of NONE => NONE
+              | SOME v =>
                   case irev (d-1) (x::v) 
-                   of NONE -> NONE
-                   || SOME v -> SOME (y::v)`;
+                   of NONE => NONE
+                   | SOME v => SOME (y::v)`;
 
 (*---------------------------------------------------------------------------*)
 (* Domain of the function.                                                   *)
@@ -117,21 +114,21 @@ val rev_base = Q.prove
 val rev_step = Q.prove
 (`!list x xs. dom list /\ (list=x::xs) ==> 
              (rev list = case rev xs
-                   of [] -> [x]
-                   || y::ys -> y :: rev (x::rev ys))`,
+                   of [] => [x]
+                   | y::ys => y :: rev (x::rev ys))`,
  RW_TAC std_ss [rev_def,dom_def] THEN 
  `d<>0` by METIS_TAC [IS_SOME_IREV] THEN 
  `irev d (x::xs) = 
    case irev (d - 1) xs 
-    of NONE -> NONE
-    || SOME [] -> SOME [x]
-    || SOME (y::ys) ->
+    of NONE => NONE
+    | SOME [] => SOME [x]
+    | SOME (y::ys) =>
          case irev (d - 1) ys
-          of NONE -> NONE
-          || SOME v'' ->
+          of NONE => NONE
+          | SOME v'' =>
                case irev (d - 1) (x::v'') 
-                of NONE -> NONE
-                || SOME v -> SOME (y::v)` 
+                of NONE => NONE
+                | SOME v => SOME (y::v)` 
      by (GEN_REWRITE_TAC LHS_CONV bool_rewrites [irev_def] THEN 
          ASM_SIMP_TAC std_ss [list_case_def]) THEN 
  POP_ASSUM MP_TAC THEN REPEAT CASE_TAC THEN 
@@ -146,10 +143,10 @@ val rev_eqns = Q.prove
 (`!list. dom list ==>
          (rev list =
             case list 
-             of [] -> []
-             || x::xs -> case rev xs 
-                         of [] -> [x] 
-                         || h::t -> h::rev (x::rev t))`,
+             of [] => []
+             | x::xs => case rev xs 
+                         of [] => [x] 
+                         | h::t => h::rev (x::rev t))`,
  Cases THEN RW_TAC std_ss [] THEN METIS_TAC [rev_base, rev_step]);
 
 
@@ -225,8 +222,8 @@ val dom_eqns = Q.prove
 (`(dom [] = T) /\
   (dom (x::xs) = dom (xs:'a list) /\ 
                  (case rev xs
-                   of [] -> T
-                   || h::t -> dom t /\ dom (x::rev t)))`,
+                   of [] => T
+                   | h::t => dom t /\ dom (x::rev t)))`,
  CONJ_TAC THENL [ALL_TAC, CASE_TAC] THEN 
  METIS_TAC [dom_base_case,lem1a,lem3a,lem1a,lem2a,lem2b,lem3b]);
 
@@ -325,11 +322,11 @@ val exec_def =
  `exec d list = 
     if d=0 then (if dom list then rev list else ARB) else
     case list 
-     of [] -> [] 
-     || x::xs ->
+     of [] => [] 
+     | x::xs =>
          case exec (d-1) xs
-          of [] -> [x]
-          || y::ys -> y :: exec (d-1) (x::exec (d-1) ys)`;
+          of [] => [x]
+          | y::ys => y :: exec (d-1) (x::exec (d-1) ys)`;
 
 val exec_equals_rev = Q.prove
 (`!d list. dom list ==> (exec d list = rev list)`,
@@ -359,8 +356,8 @@ val Rev_dom_eqns = Q.prove
   (dom (x::xs) <=> 
      dom xs /\ 
      case Rev xs 
-      of [] -> T 
-      || h::t -> dom t /\ dom (x::Rev t))`,
+      of [] => T 
+      | h::t => dom t /\ dom (x::Rev t))`,
  CONJ_TAC THENL 
  [METIS_TAC [dom_eqns],
   RW_TAC list_ss [Once dom_eqns,Rev_def] THEN 
@@ -369,11 +366,11 @@ val Rev_dom_eqns = Q.prove
 val Rev_eqns = Q.prove
 (`dom list ==> 
    (Rev list = 
-      case list of
-         [] -> []
-      || x::xs -> case Rev xs of 
-                     [] -> [x] 
-                  || h::t -> h::Rev (x::Rev t))`,
+      case list
+       of [] => []
+        | x::xs => case Rev xs 
+                    of [] => [x] 
+                     | h::t => h::Rev (x::Rev t))`,
  SIMP_TAC std_ss [Rev_def] THEN CASE_TAC THENL
  [RW_TAC list_ss [rev_eqns],
   STRIP_TAC THEN IMP_RES_TAC rev_eqns THEN POP_ASSUM SUBST_ALL_TAC THEN 

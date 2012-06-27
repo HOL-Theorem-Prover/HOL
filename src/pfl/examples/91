@@ -1,21 +1,13 @@
 (*---------------------------------------------------------------------------*)
-(* Kaufmannian (monadic) version of McCarthy's 91 function                   *)
+(* McCarthy's 91 function                                                    *)
 (*---------------------------------------------------------------------------*)
 
-set_trace "Unicode" 0;
-set_trace "pp_annotations" 0;
+open arithmeticTheory optionTheory ;
 
-(*
 use (HOLDIR^"/src/pfl/defchoose");
 use (HOLDIR^"/src/pfl/pflLib.sml");
-*)
 
-quietdec := true;
-use ("../defchoose");
-open arithmeticTheory optionTheory;
-use ("../pflLib.sml");
 open pflLib;
-quietdec := false;
 
 (*---------------------------------------------------------------------------*)
 (* General purpose support.                                                  *)

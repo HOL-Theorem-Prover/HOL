@@ -5,15 +5,12 @@
 (* Hacked up further by : Konrad Slind                                       *)
 (*---------------------------------------------------------------------------*)
 
-set_trace "Unicode" 0;
-set_trace "pp_annotations" 0;
-
-quietdec := true;
 open arithmeticTheory optionTheory BasicProvers;
-quietdec := false;
 
 use (HOLDIR^"/src/pfl/defchoose");
 use (HOLDIR^"/src/pfl/pflLib.sml");
+
+open pflLib;
 
 (*---------------------------------------------------------------------------*)
 (* General purpose support.                                                  *)
@@ -48,8 +45,8 @@ val iack_def =
     if x=0 then SOME (y+1) else
     if y=0 then iack (d-1) (x-1) 1
     else case iack (d-1) x (y-1)
-          of NONE -> NONE
-          || SOME val -> iack (d-1) (x-1) val`
+          of NONE => NONE
+           | SOME val => iack (d-1) (x-1) val`
    (WF_REL_TAC `measure FST`);
 
 (*---------------------------------------------------------------------------*)
@@ -101,7 +98,6 @@ val dom_def = Define `dom x y = ?d. IS_SOME(iack d x y)`;
 val (IS_SOME_IACK, _, _, 
      iack_monotone, iack_norm, iack_determ) = pflLib.basic_lemmas iack_def ack_rdepth;
 
-STOP;
 
 (*---------------------------------------------------------------------------*)
 (* Now derive eqns for dom                                                   *)
@@ -224,8 +220,8 @@ val ack_0_step_2 = Q.prove
  `d <> 0` by METIS_TAC [IS_SOME_IACK] THEN
  `iack d x y = 
      case iack (d - 1) x (y - 1) 
-      of NONE -> NONE
-      || SOME val -> iack (d - 1) (x - 1) val` by METIS_TAC [iack_def] THEN 
+      of NONE => NONE
+       | SOME val => iack (d - 1) (x - 1) val` by METIS_TAC [iack_def] THEN 
  POP_ASSUM MP_TAC THEN CASE_TAC THEN
  METIS_TAC [IS_SOME_EXISTS,NOT_SOME_NONE,THE_DEF,iack_norm]);
 
@@ -241,6 +237,7 @@ val ack_0_eqns = Q.prove
       else ack_0 (x-1) (ack_0 x (y-1)))`,
  METIS_TAC [ack_0_base, ack_0_step_1,ack_0_step_2]);
 
+(*
 g `!x y. dom x y ==> 
     (ack_0 x y =
       if x=0 then y+1 else
@@ -249,6 +246,7 @@ g `!x y. dom x y ==>
 e (NORM_TAC std_ss [dom_def,ack_0_def,IS_SOME_EXISTS]);
 (*1*)
 e (METIS_TAC [iack_norm',iack_def,THE_DEF]);e (METIS_TAC [iack_norm',iack_def,THE_DEF]);
+*)
 
 (*---------------------------------------------------------------------------*)
 (* Now prove induction theorem. This is based on using ack_rdepth as a measure   *)
