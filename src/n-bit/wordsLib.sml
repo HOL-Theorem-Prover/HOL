@@ -88,6 +88,7 @@ local
 
   val exn = ERR "SIZES_CONV"
               "Term not dimword, dimindex, INT_MIN, INT_MAX, UINT_MAX or FINITE"
+  val cnv = Conv.CHANGED_CONV (computeLib.CBV_CONV sizes_comp)
 in
   fun SIZES_CONV t = let
        val rtr = Lib.with_exn (fst o dest_const o rator) t exn
@@ -95,7 +96,7 @@ in
                (rtr = "INT_MIN") orelse (rtr = "FINITE") orelse
                (rtr = "INT_MAX") orelse (rtr = "UINT_MAX") orelse raise exn
     in
-      Conv.CHANGED_CONV (computeLib.CBV_CONV sizes_comp) t
+      cnv t
       handle HOL_ERR _ =>
         let val x = conv t in computeLib.add_thms [x] sizes_comp; x end
     end
@@ -118,25 +119,26 @@ val SUC_RULE = CONV_RULE numLib.SUC_TO_NUMERAL_DEFN_CONV;
 
 val word_EQ_CONV =
 let
- fun is_word_literal t = wordsSyntax.is_word_literal t orelse is_uintmax t
- val comp = reduceLib.num_compset ()
- val _ = computeLib.add_thms
-          (word_eq_n2w :: map (SUC_RULE) [MOD_2EXP_EQ, MOD_2EXP_MAX]) comp
- val _ = computeLib.add_conv
-          (``fcp$dimindex:'a itself -> num``, 1, SIZES_CONV) comp
+  fun is_word_literal t = wordsSyntax.is_word_literal t orelse is_uintmax t
+  val comp = reduceLib.num_compset ()
+  val _ = computeLib.add_thms
+           (word_eq_n2w :: map (SUC_RULE) [MOD_2EXP_EQ, MOD_2EXP_MAX]) comp
+  val _ = computeLib.add_conv
+           (``fcp$dimindex:'a itself -> num``, 1, SIZES_CONV) comp
+  val cnv = CHANGED_CONV (computeLib.CBV_CONV comp)
 in
- fn tm =>
-   case total dest_eq tm
-   of NONE => raise ERR "word_EQ_CONV" "not an equality"
-    | SOME (w1, w2) =>
-        if is_word_literal w1 andalso is_word_literal w2
-        then if w1=w2
-             then Thm.SPEC w1 (INST_TYPE[alpha|->type_of w1] REFL_CLAUSE)
-             else
-                  if null (type_vars_in_term w1)
-                  then CHANGED_CONV (computeLib.CBV_CONV comp) tm
-                  else raise ERR "word_EQ_CONV" "contains type variables"
-        else raise ERR "word_eq_CONV" "non-literal in equality"
+  fn tm =>
+    case total dest_eq tm
+    of NONE => raise ERR "word_EQ_CONV" "not an equality"
+     | SOME (w1, w2) =>
+         if is_word_literal w1 andalso is_word_literal w2
+         then if w1=w2
+              then Thm.SPEC w1 (INST_TYPE[alpha|->type_of w1] REFL_CLAUSE)
+              else
+                   if null (type_vars_in_term w1)
+                   then cnv tm
+                   else raise ERR "word_EQ_CONV" "contains type variables"
+         else raise ERR "word_eq_CONV" "non-literal in equality"
 end;
 
 (* ------------------------------------------------------------------------- *)
@@ -426,8 +428,7 @@ in
               raise ERR "WORD_GROUND_CONV"
                         "Term not ground or contains type variables."
   in
-    (PURE_REWRITE_CONV alpha_rws THENC
-     computeLib.CBV_CONV (words_compset ()) THENC UINT_MAX_CONV) t
+    (PURE_REWRITE_CONV alpha_rws THENC WORD_EVAL_CONV THENC UINT_MAX_CONV) t
   end
 
   val WORD_GROUND_ss =
@@ -440,20 +441,23 @@ in
          key   = NONE}]
 end;
 
-fun bit_set_compset () =
-  let val cmp = words_compset ()
-      val _ = computeLib.add_thms
-                [REWRITE_RULE [GSYM arithmeticTheory.DIV2_def] BIT_SET_def] cmp
-  in
-    cmp
-  end;
-
-val BIT_SET_CONV =
-  REWR_CONV BIT_SET
-    THENC RAND_CONV (computeLib.CBV_CONV (bit_set_compset ()))
-    THENC REWRITE_CONV [pred_setTheory.NOT_IN_EMPTY,
-            Q.ISPEC `0n` pred_setTheory.IN_INSERT,
-            Q.ISPEC `^Na` pred_setTheory.IN_INSERT];
+local
+   fun bit_set_compset () =
+     let
+        val cmp = words_compset ()
+        val _ = computeLib.add_thms
+                 [REWRITE_RULE [GSYM arithmeticTheory.DIV2_def] BIT_SET_def] cmp
+     in
+        cmp
+     end
+in
+   val BIT_SET_CONV =
+     REWR_CONV BIT_SET
+       THENC RAND_CONV (computeLib.CBV_CONV (bit_set_compset ()))
+       THENC REWRITE_CONV [pred_setTheory.NOT_IN_EMPTY,
+               Q.ISPEC `0n` pred_setTheory.IN_INSERT,
+               Q.ISPEC `^Na` pred_setTheory.IN_INSERT];
+end
 
 val BIT_ss =
   simpLib.named_merge_ss "bit"

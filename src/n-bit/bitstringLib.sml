@@ -63,10 +63,9 @@ local
    val () = computeLib.add_thms [combinTheory.K_THM] cmp
    val () = computeLib.add_conv
              (``fcp$dimindex:'a itself -> num``, 1, wordsLib.SIZES_CONV) cmp
+   val cnv = Conv.REWR_CONV thm THENC CHANGE_CBV_CONV cmp
 in
-   fun FIX_CONV tm =
-      Lib.with_exn (Conv.REWR_CONV thm THENC CHANGE_CBV_CONV cmp) tm 
-         (ERR "FIX_CONV" "")
+   fun FIX_CONV tm = Lib.with_exn cnv tm (ERR "FIX_CONV" "")
 end
 
 (* ------------------------------------------------------------------------- *)
@@ -79,17 +78,20 @@ end
    val it = |- v2w [T; T] = v2w [F; F; T; T]: thm
 *)
 
-fun FIX_v2w_CONV tm =
-  let
-     val (l, n) = bitstringSyntax.dest_v2w tm
-     val sz = Arbnum.toInt (fcpSyntax.dest_numeric_type n)
-  in
-     if sz = list_length l
-        then raise Conv.UNCHANGED
-     else Lib.with_exn
-             (Conv.REWR_CONV (GSYM bitstringTheory.v2w_fixwidth)
-              THENC Conv.RAND_CONV FIX_CONV) tm (ERR "FIX_v2w_CONV" "")
-  end
+local
+   val cnv = Conv.REWR_CONV (GSYM bitstringTheory.v2w_fixwidth)
+             THENC Conv.RAND_CONV FIX_CONV
+in
+   fun FIX_v2w_CONV tm =
+     let
+        val (l, n) = bitstringSyntax.dest_v2w tm
+        val sz = Arbnum.toInt (fcpSyntax.dest_numeric_type n)
+     in
+        if sz = list_length l
+           then raise Conv.UNCHANGED
+        else Lib.with_exn cnv tm (ERR "FIX_v2w_CONV" "")
+     end
+end
 
 (* ------------------------------------------------------------------------- *)
 
@@ -120,13 +122,14 @@ local
    val cmp = computeLib.new_compset
               [bitstringTheory.bitify_def, num_from_bin_list_compute,
                l2n_2_numeric, iDUB_removal]
+
+   val cnv = Conv.REWR_CONV bitstringTheory.v2n_def
+             THENC CHANGE_CBV_CONV cmp
+             THENC Conv.TRY_CONV (Conv.REWR_CONV NORM_0)
 in
    fun v2n_CONV tm =
       check numLib.is_numeral (ERR "v2n_CONV" "not ground")
-      (Lib.with_exn
-         (Conv.REWR_CONV bitstringTheory.v2n_def
-          THENC CHANGE_CBV_CONV cmp
-          THENC Conv.TRY_CONV (Conv.REWR_CONV NORM_0)) tm (ERR "v2n_CONV" ""))
+      (Lib.with_exn cnv tm (ERR "v2n_CONV" ""))
 end
 
 (* ------------------------------------------------------------------------- *)
@@ -209,6 +212,7 @@ local
    val () = computeLib.add_conv
               (``fcp$dimindex:'a itself -> num``, 1, wordsLib.SIZES_CONV) cmp
    fun is_bool tm = tm = boolSyntax.T orelse tm = boolSyntax.F
+   val cnv = Conv.REWR_CONV bitstringTheory.v2w_11 THENC CHANGE_CBV_CONV cmp
 in
    fun word_eq_CONV tm =
       let
@@ -217,8 +221,7 @@ in
          if bitstringSyntax.is_v2w l
             then if bitstringSyntax.is_v2w r
                     then check is_bool (ERR "word_eq_CONV" "not ground")
-                           ((Conv.REWR_CONV bitstringTheory.v2w_11
-                             THENC CHANGE_CBV_CONV cmp) tm)
+                           (cnv tm)
                  else (Conv.LHS_CONV v2w_n2w_CONV
                        THENC wordsLib.word_EQ_CONV) tm
          else if bitstringSyntax.is_v2w r
@@ -296,6 +299,7 @@ local
    val word_bit_last_shiftr =
       REWRITE_RULE [bitstringTheory.shiftr_def]
          bitstringTheory.word_bit_last_shiftr
+   val cnv = CHANGE_CBV_CONV (listSimps.list_compset())
 in
    fun word_bit_CONV tm =
       let
@@ -308,8 +312,7 @@ in
                  |> Drule.EQT_ELIM
          val thm = Drule.MATCH_MP word_bit_last_shiftr lt_thm
       in
-         (Conv.REWR_CONV thm
-          THENC CHANGE_CBV_CONV (listSimps.list_compset())) tm
+         (Conv.REWR_CONV thm THENC cnv) tm
       end handle HOL_ERR _ => raise ERR "word_bit_CONV" ""
 end
 
