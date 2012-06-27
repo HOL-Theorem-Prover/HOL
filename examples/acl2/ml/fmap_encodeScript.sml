@@ -456,7 +456,7 @@ val PERM_SORTED_EQ = store_thm(
         POP_ASSUM SUBST1_TAC THEN
         REWRITE_TAC [PERM_APPEND_IFF, PERM_APPEND]) THEN
   POP_ASSUM SUBST_ALL_TAC THEN
-  FULL_SIMP_TAC (srw_ss()) [PERM_CONS_IFF2])
+  FULL_SIMP_TAC (srw_ss()) [PERM_CONS_IFF2]);
 
 val SORTSET_SORTEDSET = store_thm("SORTSET_SORTEDSET",
     ``!l. transitive R /\ (irreflexive R \/ antisymmetric R) /\ SORTS sort R /\ SORTEDSET R l ==> (SORTSET sort R l = l)``,
@@ -716,7 +716,7 @@ val STRING_LESS_EQ_THM = prove(
   METIS_TAC []);
 
 fun Prove(t,tac) = let val th = prove(t,tac)
-                   in augment_srw_ss[rewrites [th]]; th end
+                   in augment_srw_ss[rewrites [th]]; th end;
 
 val not_nil = store_thm(
   "not_nil",
@@ -747,7 +747,7 @@ val _ = augment_srw_ss [rewrites [sexpTheory.consp_def, not_nil,
                                   sexpTheory.characterp_def,
                                   sexpTheory.stringp_def,
                                   sexpTheory.andl_def,
-                                  ite_rewrites, sexpTheory.equal_def]]
+                                  ite_rewrites, sexpTheory.equal_def]];
 
 val bool_ite = Prove(
   ``((ite x t nil = nil) = (x = nil)) /\
@@ -803,7 +803,20 @@ val string_less_l_nil = prove(``!a b. string_less_l (str a) (str b) (int 0) = ni
                   sexpTheory.STRING_LESS_IRREFLEXIVE, GSYM translateTheory.INT_LT, integerTheory.INT_LT_CALCULATE,
                   bool_rwr, sexpTheory.STRING_LESS_def, sexpTheory.LIST_LEX_ORDER_def, MAP, stringTheory.ORD_11, sexpTheory.cpx_def]);
 
-val lexorder_sym = prove(``lexorder (sym a b) (sym c d) =
+(*---------------------------------------------------------------------------*)
+(* In the good old days, strings were a separate type. Now the string type   *)
+(* is an abbreviation for :char list. As a consequence, EXPLODE is the       *)
+(* identity function. I am not sure if one should prove this fact in         *)
+(* stringTheory. YES: because it is true; NO: because one would like strings *)
+(* to be an abstract entity characterized by some operations.                *)
+(*---------------------------------------------------------------------------*)
+
+val EXPLODE_ID_LEM = prove
+(``!s. EXPLODE s = s``, Induct THEN SRW_TAC [] []);
+
+
+val lexorder_sym = prove(
+``lexorder (sym a b) (sym c d) =
     if ~(a = "") /\ (BASIC_INTERN b a = sym a b)
        then if ~(c = "") /\ (BASIC_INTERN d c = sym c d)
                then if STRING_LESS b d \/ (b = d) /\ STRING_LESS_EQ a c then t else nil
@@ -811,12 +824,23 @@ val lexorder_sym = prove(``lexorder (sym a b) (sym c d) =
        else if ~(c = "") /\ (BASIC_INTERN d c = sym c d)
        	       then nil
 	       else if STRING_LESS a c \/ (a = c) /\ STRING_LESS_EQ b d then t else nil``,
-    ONCE_REWRITE_TAC [lexorder_def] THEN
-    REWRITE_TAC [sexpTheory.coerce_string_to_list_def, hol_defaxiomsTheory.ACL2_SIMPS, sexpTheory.itel_def, hol_defaxiomsTheory.ACL2_SIMPS,
-                sexpTheory.SEXP_SYM_LESS_EQ_def,sexpTheory.SEXP_SYM_LESS_def] THEN
-    REPEAT (CHANGED_TAC (REPEAT (POP_ASSUM MP_TAC) THEN RW_TAC (std_ss ++ boolSimps.LET_ss)
-    	   [GSYM sexpTheory.int_def, hol_defaxiomsTheory.ACL2_SIMPS,sexpTheory.coerce_string_to_list_def, REWRITE_RULE [sexpTheory.nil_def] sexp_str_lt_l1, string_less_l_nil, sexpTheory.COMMON_LISP_def])) THEN
-    TRY (METIS_TAC [sexpTheory.STRING_LESS_TRANS, sexpTheory.STRING_LESS_TRANS_NOT, sexpTheory.STRING_LESS_EQ_TRANS, sexpTheory.STRING_LESS_EQ_def, sexpTheory.STRING_LESS_EQ_ANTISYM, sexpTheory.STRING_LESS_IRREFLEXIVE]));
+ ONCE_REWRITE_TAC [lexorder_def] THEN
+ REWRITE_TAC [sexpTheory.coerce_string_to_list_def, 
+   hol_defaxiomsTheory.ACL2_SIMPS, sexpTheory.itel_def, 
+   sexpTheory.SEXP_SYM_LESS_EQ_def,sexpTheory.SEXP_SYM_LESS_def] THEN
+  REPEAT (CHANGED_TAC (REPEAT (POP_ASSUM MP_TAC) THEN RW_TAC (std_ss ++ boolSimps.LET_ss)
+    	   [GSYM sexpTheory.int_def, hol_defaxiomsTheory.ACL2_SIMPS,
+            sexpTheory.coerce_string_to_list_def, 
+            REWRITE_RULE [sexpTheory.nil_def] sexp_str_lt_l1, 
+            string_less_l_nil, sexpTheory.COMMON_LISP_def])) THEN
+    METIS_TAC [sexpTheory.STRING_LESS_TRANS, 
+               sexpTheory.STRING_LESS_TRANS_NOT, 
+               EXPLODE_ID_LEM,
+               sexpTheory.STRING_LESS_TRICHOTOMY, 
+               sexpTheory.STRING_LESS_EQ_TRANS, 
+               sexpTheory.STRING_LESS_EQ_def, 
+               sexpTheory.STRING_LESS_EQ_ANTISYM, 
+               sexpTheory.STRING_LESS_IRREFLEXIVE]);
 
 
 val vars1 = [``num (com a b)``, ``sym a b``, ``str a``, ``chr a``, ``cons a b``];
@@ -1360,12 +1384,16 @@ val apply_rewrite = store_thm("apply_rewrite",
     RW_TAC std_ss [] THEN
     METIS_TAC [MEM_M2L, PERM_QSORT3, MEM_PERM]);
 
-val ains_def = TotalDefn.tDefine "ains" `ains a l = itel [(not (consp l), cons a nil) ;
-                                            (equal (caar l) (car a), cons a (cdr l)) ;
-    	       	 		            (lexorder (car a) (caar l), cons a l)]
-                                           (cons (car l) (ains a (cdr l)))`
-    (WF_REL_TAC `measure (sexp_size o SND)` THEN
-     GEN_TAC THEN Cases THEN RW_TAC std_ss [hol_defaxiomsTheory.ACL2_SIMPS, sexpTheory.sexp_size_def]);
+val ains_def = 
+ TotalDefn.tDefine 
+   "ains" 
+   `ains a l = itel [(not (consp l), cons a nil) ;
+                     (equal (caar l) (car a), cons a (cdr l)) ;
+                     (lexorder (car a) (caar l), cons a l)]
+                 (cons (car l) (ains a (cdr l)))`
+ (WF_REL_TAC `measure (sexp_size o SND)` THEN
+  GEN_TAC THEN Cases THEN 
+  RW_TAC std_ss [hol_defaxiomsTheory.ACL2_SIMPS, sexpTheory.sexp_size_def]);
 
 val insert_def = Define `(insert R (x,y) [] = [(x,y)]) /\
                          (insert R (x,y) ((hx,hy)::tl) =

@@ -1,4 +1,5 @@
 default : defaxiomsTheory.uo
+HOLMAKE = $(HOLDIR)/bin/Holmake
 
 ## poly.ml supplies empty definitions for quietdec, printDepth/Length and compile_theory
 defaxiomsTheory.sig defaxiomsTheory.sml: complex_rationalTheory.uo sexp.uo sexpTheory.uo make_defaxioms.ml
@@ -11,7 +12,7 @@ defaxiomsTheory.sig defaxiomsTheory.sml: complex_rationalTheory.uo sexp.uo sexpT
 ## Since we didn't compile the theory (under polyml) we create the dependency graph first
 .HOLMK/defaxiomsTheory.sig.d .HOLMK/defaxiomsTheory.sml.d : defaxiomsTheory.sig defaxiomsTheory.sml
 	touch defaxiomsScript.sml && touch defaxiomsTheory.sig defaxiomsTheory.sml && \
-	Holmake -r --no_holmakefile && rm defaxiomsScript.sml
+	$(HOLMAKE) -r --no_holmakefile && rm defaxiomsScript.sml
 
 ## We then produce the ui and uo files as 'poly_compile' would
 defaxiomsTheory.ui : .HOLMK/defaxiomsTheory.sig.d
