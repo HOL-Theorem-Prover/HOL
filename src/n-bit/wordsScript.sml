@@ -2592,6 +2592,10 @@ val WORD_ADD_RID_UNIQ = save_thm("WORD_ADD_RID_UNIQ",
   (GEN `v` o GEN `w` o ONCE_REWRITE_RULE [WORD_ADD_COMM] o
    SPECL [`w`,`v`]) WORD_ADD_LID_UNIQ);
 
+val WORD_SUM_ZERO = Q.store_thm("WORD_SUM_ZERO",
+  `!a b. (a + b = 0w) = (a = -b)`,
+  METIS_TAC [WORD_SUB_LZERO, WORD_LCANCEL_SUB, WORD_ADD_SUB]);
+
 val WORD_ADD_SUB2 = save_thm("WORD_ADD_SUB2",
   ONCE_REWRITE_RULE [WORD_ADD_COMM] WORD_ADD_SUB);
 

@@ -325,7 +325,7 @@ local
       "word_to_hex_string",
       "word_reduce", "reduce_and", "reduce_or", "reduce_xor",
       "reduce_nand", "reduce_nor", "reduce_xnor",
-      "word_replicate", "concat_word_list", "bit_field_insert",
+      "word_replicate", "concat_word_list", "bit_field_insert", "word_len",
       "w2w", "w2n", "sw2sw", "word_log2", "word_reverse", "word_msb",
       "word_join", "word_concat", "word_bit", "word_bits", "word_signed_bits",
       "word_slice", "word_extract", "word_asr", "word_lsr", "word_lsl",

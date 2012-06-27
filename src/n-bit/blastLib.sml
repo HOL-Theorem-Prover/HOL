@@ -2,8 +2,8 @@ structure blastLib :> blastLib =
 struct
 
 open HolKernel boolLib bossLib;
-open bitTheory wordsTheory blastTheory;
-open wordsLib bitSyntax;
+open bitTheory wordsTheory bitstringTheory blastTheory;
+open listLib wordsLib bitSyntax bitstringSyntax;
 
 structure Parse = struct
   open Parse
@@ -92,6 +92,87 @@ in
                       handle HOL_ERR _ => raise Conv.UNCHANGED
 end
 
+(* --------------------------------------------------------------------
+   mk_testbit_thms : find terms of the form ``FCP i. testbit i [..]`` and
+                     ``testbit n [..]``, then generate rewrites for extracting
+                     bits from the bitstring
+   -------------------------------------------------------------------- *)
+
+local
+   val nd = Drule.CONJUNCTS numeralTheory.numeral_distrib
+   val cmp = computeLib.new_compset
+              [Thm.CONJUNCT1 listTheory.EL, listTheory.EL_simp_restricted,
+               listTheory.HD, numeralTheory.numeral_pre,
+               arithmeticTheory.NORM_0, List.nth (nd, 15), List.nth (nd, 16)]
+   val EL_CONV = computeLib.CBV_CONV cmp
+
+   fun gen_testbit_thms (n, m) =
+      let
+         val vs = List.tabulate
+                     (n, fn i => Term.mk_var ("v" ^ Int.toString i, Type.bool))
+         val vs = listSyntax.mk_list (vs, Type.bool)
+         val lvs = listSyntax.mk_length vs
+         val l = listLib.LENGTH_CONV lvs
+         val el_thms =
+            List.tabulate (n,
+               fn i => EL_CONV (listSyntax.mk_el (numSyntax.term_of_int i, vs)))
+      in
+         List.tabulate (m,
+            fn i =>
+              let
+                 val ti = numSyntax.term_of_int i
+              in
+                 if i < n then
+                    let
+                       val thm = numSyntax.mk_less (ti, lvs)
+                                   |> (Conv.RAND_CONV (Conv.REWR_CONV l)
+                                       THENC numLib.REDUCE_CONV)
+                                   |> Drule.EQT_ELIM
+                       val thm = Drule.MATCH_MP bitstringTheory.testbit_el thm
+                    in
+                       Conv.RIGHT_CONV_RULE
+                         (PURE_REWRITE_CONV [l]
+                          THENC Conv.RATOR_CONV
+                                  (Conv.RAND_CONV numLib.REDUCE_CONV)
+                          THENC PURE_REWRITE_CONV el_thms) thm
+                    end
+                 else
+                    let
+                       val thm = numSyntax.mk_leq (lvs, ti)
+                                   |> (Conv.LAND_CONV (Conv.REWR_CONV l)
+                                       THENC numLib.REDUCE_CONV)
+                                   |> Drule.EQT_ELIM
+                    in
+                       Drule.MATCH_MP bitstringTheory.testbit_geq_len thm
+                    end
+              end)
+      end
+
+   fun testbit_dest tm =
+      let
+         val (i, v) = bitstringSyntax.dest_testbit tm
+      in
+         (List.length (fst (listSyntax.dest_list v)),
+          numSyntax.int_of_term i + 1)
+      end handle HOL_ERR _ =>
+         let
+            val (j, t) =
+               HolKernel.dest_binder fcpSyntax.fcp_tm (ERR "dest_FCP" "") tm
+            val (i, v) = bitstringSyntax.dest_testbit t
+         in
+            (List.length (fst (listSyntax.dest_list v)),
+             Arbnum.toInt (wordsSyntax.size_of tm))
+         end
+in
+   fun mk_testbit_thms tm =
+      tm |> HolKernel.find_terms (Lib.can testbit_dest)
+         |> List.map testbit_dest
+         |> Listsort.sort (Lib.pair_compare (Int.compare, Int.compare))
+         |> Lib.op_mk_set (fn a => fn b => fst a = fst b)
+         |> List.map gen_testbit_thms
+         |> List.concat
+end
+
 (* ------------------------------------------------------------------------
    EVAL_CONV    : General purpose evaluation
    ------------------------------------------------------------------------ *)
@@ -123,39 +204,43 @@ end
 
 (* ------------------------------------------------------------------------ *)
 
+fun INST_b3 t thm =
+   Thm.GENL [``x:num->bool``,``y:num->bool``, ``c:bool``, ``i:num``,
+             ``n:num``, ``b1:bool``, ``b2:bool``] o
+   PURE_REWRITE_RULE [thm] o Thm.INST [``b3:bool`` |-> t] o Drule.SPEC_ALL
+
 val BCARRY_mp = Q.prove(
-  `(i = SUC n) /\ (x n = b1) /\ (y n = b2) /\ (BCARRY n x y c = b3) ==>
-   (BCARRY i x y c = bcarry b1 b2 b3)`,
+  `!x y c i n b1 b2 b3.
+      (i = SUC n) /\ (x n = b1) /\ (y n = b2) /\ (BCARRY n x y c = b3) ==>
+      (BCARRY i x y c = bcarry b1 b2 b3)`,
    SRW_TAC [] [BCARRY_def]);
 
 val BCARRY_mp = REWRITE_RULE [bcarry_def] BCARRY_mp;
 
-val BCARRY_mp_carry =
-  BCARRY_mp
-  |> Q.INST [`b3` |-> `T`]
-  |> PURE_REWRITE_RULE [DECIDE ``x /\ y \/ (x \/ y) /\ T = x \/ y``];
+val BCARRY_mp_carry = INST_b3 boolSyntax.T
+   (DECIDE ``x /\ y \/ (x \/ y) /\ T = x \/ y``) BCARRY_mp
 
-val BCARRY_mp_not_carry =
-  BCARRY_mp
-  |> Q.INST [`b3` |-> `F`]
-  |> PURE_REWRITE_RULE [DECIDE ``x /\ y \/ (x \/ y) /\ F = x /\ y``];
+val BCARRY_mp_not_carry = INST_b3 boolSyntax.F
+  (DECIDE ``x /\ y \/ (x \/ y) /\ F = x /\ y``) BCARRY_mp
+
+fun INST_b3 t thm =
+   Thm.GENL [``x:num->bool``,``y:num->bool``, ``c:bool``, ``i:num``,
+             ``b1:bool``, ``b2:bool``] o
+   PURE_REWRITE_RULE [thm] o Thm.INST [``b3:bool`` |-> t] o Drule.SPEC_ALL
 
 val BSUM_mp = Q.prove(
-  `(x i = b1) /\ (y i = b2) /\ (BCARRY i x y c = b3) ==>
-   (BSUM i x y c = bsum b1 b2 b3)`,
+  `!x y c i b1 b2 b3.
+     (x i = b1) /\ (y i = b2) /\ (BCARRY i x y c = b3) ==>
+     (BSUM i x y c = bsum b1 b2 b3)`,
   SRW_TAC [] [BSUM_def]);
 
 val BSUM_mp = REWRITE_RULE [bsum_def] BSUM_mp;
 
-val BSUM_mp_carry =
-  BSUM_mp
-  |> Q.INST [`b3` |-> `T`]
-  |> PURE_REWRITE_RULE [DECIDE ``((x = ~y) = ~T) = (x:bool = y)``];
+val BSUM_mp_carry = INST_b3 boolSyntax.T
+  (DECIDE ``((x = ~y) = ~T) = (x:bool = y)``) BSUM_mp
 
-val BSUM_mp_not_carry =
-  BSUM_mp
-  |> Q.INST [`b3` |-> `F`]
-  |> PURE_REWRITE_RULE [DECIDE ``((x = ~y) = ~F) = (x:bool = ~y)``];
+val BSUM_mp_not_carry = INST_b3 boolSyntax.F
+  (DECIDE ``((x = ~y) = ~F) = (x:bool = ~y)``) BSUM_mp
 
 val rhs_rewrite =
   Conv.RIGHT_CONV_RULE
@@ -174,16 +259,14 @@ fun mk_summation rwts (max, x, y, c) =
 let
   val conv = INDEX_CONV THENC PURE_REWRITE_CONV rwts
 
-  val INST_SUM = Thm.INST [``x:num -> bool`` |-> x,
-                           ``y:num -> bool`` |-> y,
-                           ``c:bool`` |-> c]
+  val SPEC_SUM = Drule.SPECL [x, y, c]
 
-  val iBSUM_mp_carry       = INST_SUM BSUM_mp_carry
-  val iBSUM_mp_not_carry   = INST_SUM BSUM_mp_not_carry
-  val iBSUM_mp             = INST_SUM BSUM_mp
-  val iBCARRY_mp_carry     = INST_SUM BCARRY_mp_carry
-  val iBCARRY_mp_not_carry = INST_SUM BCARRY_mp_not_carry
-  val iBCARRY_mp           = INST_SUM BCARRY_mp
+  val iBSUM_mp_carry       = SPEC_SUM BSUM_mp_carry
+  val iBSUM_mp_not_carry   = SPEC_SUM BSUM_mp_not_carry
+  val iBSUM_mp             = SPEC_SUM BSUM_mp
+  val iBCARRY_mp_carry     = SPEC_SUM BCARRY_mp_carry
+  val iBCARRY_mp_not_carry = SPEC_SUM BCARRY_mp_not_carry
+  val iBCARRY_mp           = SPEC_SUM BCARRY_mp
 
   fun mk_sums p (s, c_thm) =
     if p = max then
@@ -207,20 +290,14 @@ let
           val c_concl = rhsc c_thm
           val (thm1,thm2) =
                 if c_concl = boolSyntax.T then
-                  (iBSUM_mp_carry, iBCARRY_mp_carry)
+                  (Drule.SPECL [n, x_concl, y_concl] iBSUM_mp_carry,
+                   Drule.SPECL [i, n, x_concl, y_concl] iBCARRY_mp_carry)
                 else if c_concl = boolSyntax.F then
-                  (iBSUM_mp_not_carry, iBCARRY_mp_not_carry)
+                  (Drule.SPECL [n, x_concl, y_concl] iBSUM_mp_not_carry,
+                   Drule.SPECL [i, n, x_concl, y_concl] iBCARRY_mp_not_carry)
                 else
-                  (iBSUM_mp, iBCARRY_mp)
-         val thm1 = Thm.INST [``i:num`` |-> n,
-                              ``b1:bool`` |-> x_concl,
-                              ``b2:bool`` |-> y_concl,
-                              ``b3:bool`` |-> c_concl] thm1
-         val thm2 = Thm.INST [``i:num`` |-> i,
-                              ``n:num`` |-> n,
-                              ``b1:bool`` |-> x_concl,
-                              ``b2:bool`` |-> y_concl,
-                              ``b3:bool`` |-> c_concl] thm2
+                  (Drule.SPECL [n, x_concl, y_concl, c_concl] iBSUM_mp,
+                   Drule.SPECL [i, n, x_concl, y_concl, c_concl] iBCARRY_mp)
         in
           (rhs_rewrite
              (Thm.MP thm1 (Drule.LIST_CONJ [x_thm, y_thm, c_thm])) :: s,
@@ -231,7 +308,7 @@ let
 in
   mk_sums Arbnum.zero
     ([], BCARRY_def |> Thm.CONJUNCT1 |> Drule.SPECL [x,y,c])
-end;
+end
 
 (* --------------------------------------------------------------------
    mk_carry : returns theorem of the form  ``BCARRY max x y c = exp``,
@@ -242,13 +319,11 @@ fun mk_carry rwts (max, x, y, c) =
 let
   val conv = INDEX_CONV THENC PURE_REWRITE_CONV rwts
 
-  val INST_CARRY = Thm.INST [``x:num -> bool`` |-> x,
-                           ``y:num -> bool`` |-> y,
-                           ``c:bool`` |-> c]
+  val SPEC_CARRY = Drule.SPECL [x, y, c]
 
-  val iBCARRY_mp_carry     = INST_CARRY BCARRY_mp_carry
-  val iBCARRY_mp_not_carry = INST_CARRY BCARRY_mp_not_carry
-  val iBCARRY_mp           = INST_CARRY BCARRY_mp
+  val iBCARRY_mp_carry     = SPEC_CARRY BCARRY_mp_carry
+  val iBCARRY_mp_not_carry = SPEC_CARRY BCARRY_mp_not_carry
+  val iBCARRY_mp           = SPEC_CARRY BCARRY_mp
 
   fun mk_c p c_thm =
     if p = max then
@@ -272,16 +347,11 @@ let
           val c_concl = rhsc c_thm
           val thm =
                 if c_concl = boolSyntax.T then
-                  iBCARRY_mp_carry
+                  Drule.SPECL [i, n, x_concl, y_concl] iBCARRY_mp_carry
                 else if c_concl = boolSyntax.F then
-                  iBCARRY_mp_not_carry
+                  Drule.SPECL [i, n, x_concl, y_concl] iBCARRY_mp_not_carry
                 else
-                  iBCARRY_mp
-         val thm = Thm.INST [``i:num`` |-> i,
-                             ``n:num`` |-> n,
-                             ``b1:bool`` |-> x_concl,
-                             ``b2:bool`` |-> y_concl,
-                             ``b3:bool`` |-> c_concl] thm
+                  Drule.SPECL [i, n, x_concl, y_concl, c_concl] iBCARRY_mp
         in
           rhs_rewrite
             (Thm.MP thm (Drule.LIST_CONJ [i_thm, x_thm, y_thm, c_thm]))
@@ -294,7 +364,7 @@ end;
 (* --------------------------------------------------------------------
    mk_sums : find terms of the form ``FCP i. BSUM i x y c`` and
              ``BCARRY n x y c``; it then uses mk_summation and mk_carry
-             to generate rewrites and returns an appropriate conversion.
+             to generate appropriate rewrites
    -------------------------------------------------------------------- *)
 
 local
@@ -327,8 +397,9 @@ local
           pick_max l h :: remove_redundant r
         end
 in
-  fun mk_sums conv tm =
+  fun mk_sums tm =
     let
+      val rws = mk_testbit_thms tm
       val tms = HolKernel.find_terms is_sum tm
       val tms = tms |> Lib.mk_set
                     |> Listsort.sort
@@ -351,7 +422,7 @@ in
                     (i + 1, rwts, mk_carry rwts nxyc :: c_outs)
                   else
                     (i + 1, mk_summation rwts nxyc @ rwts, c_outs)))
-              (1, [],[]) tms
+              (1, rws, []) tms
     in
       rwts @ c_outs
     end
@@ -479,6 +550,10 @@ end
 (* ------------------------------------------------------------------------ *)
 
 local
+   val thm = Q.SPECL [`a`, `n2w (NUMERAL n)`] wordsTheory.WORD_SUM_ZERO
+   val WORD_SUM_ZERO_CONV =
+      Conv.REWR_CONV thm THENC Conv.RHS_CONV wordsLib.WORD_EVAL_CONV
+
   val word_ss = std_ss++wordsLib.SIZES_ss++wordsLib.WORD_ARITH_ss++
                 wordsLib.WORD_LOGIC_ss++wordsLib.WORD_SHIFT_ss++
                 wordsLib.WORD_CANCEL_ss
@@ -502,6 +577,7 @@ local
 in
   val WORD_SIMP_CONV =
         SIMP_CONV word_ss bit_rwts
+        THENC Conv.TRY_CONV WORD_SUM_ZERO_CONV
         THENC REWRITE_CONV order_rwts
         THENC Conv.DEPTH_CONV wordsLib.SIZES_CONV
         THENC Conv.DEPTH_CONV SMART_MUL_LSL_CONV
@@ -713,7 +789,7 @@ local
   val cmp = reduceLib.num_compset ()
 
   val _ = computeLib.add_thms
-     [n2w_def, word_xor, word_or_def, word_and_def, word_1comp_def,
+     [n2w_def, v2w_def, word_xor, word_or_def, word_and_def, word_1comp_def,
       word_nor_def, word_xnor_def, word_nand_def, word_reduce_def,
       reduce_or_def, reduce_and_def, reduce_xor, reduce_xnor_def,
       reduce_nand_def, word_compare_def, word_replicate_def, word_join,
@@ -1023,17 +1099,17 @@ in
     if Term.term_eq c boolSyntax.T orelse Term.term_eq c boolSyntax.F then
       thm
     else let
-      val SUM_CONV = PURE_REWRITE_CONV (mk_sums INDEX_CONV c)
+      val RW_CONV = PURE_REWRITE_CONV (mk_sums c)
     in
       if wordsSyntax.is_index tm then
-        Conv.RIGHT_CONV_RULE (TAUT_INDEX_CONV top SUM_CONV) thm
+        Conv.RIGHT_CONV_RULE (TAUT_INDEX_CONV top RW_CONV) thm
         handle Conv.UNCHANGED => thm
       else if wordsSyntax.is_word_lo tm then
-        Conv.RIGHT_CONV_RULE SUM_CONV thm
+        Conv.RIGHT_CONV_RULE RW_CONV thm
       else let
         val (l,r) = boolSyntax.dest_eq c
       in
-        case bit_theorems top SUM_CONV (dim_of_word l, l, r)
+        case bit_theorems top RW_CONV (dim_of_word l, l, r)
         of Lib.PASS thms =>
                Conv.RIGHT_CONV_RULE
                  (Conv.REWR_CONV (fcp_eq_thm (Term.type_of l))
