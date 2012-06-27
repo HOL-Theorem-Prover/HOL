@@ -4,3 +4,14 @@ emit_eval.ui:
 	
 emit_eval.uo:
 	
+ifdef POLY
+HOLHEAP = arm-heap
+EXTRA_CLEANS = $(HOLHEAP) $(HOLHEAP).o
+
+BARE_THYS = ../armTheory ../armLib
+DEPS = $(patsubst %,%.uo,$(BARE_THYS))
+
+$(HOLHEAP): $(DEPS)
+	$(protect $(HOLDIR)/bin/buildheap) -o arm-heap $(BARE_THYS)
+
+endif
