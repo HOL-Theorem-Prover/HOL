@@ -368,7 +368,7 @@ fun guessR defn =
   case reln_of defn
    of NONE => []
     | SOME R =>
-       let val domty  = fst(dom_rng(type_of R))
+       let val domty = fst(dom_rng(type_of R))
            val (_,tcs0) = Lib.pluck isWFR (tcs_of defn)
            val tcs = map (rhs o concl o QCONV (SIMP_CONV bool_ss [])) tcs0
            val tcs = filter (not o equal T) tcs
@@ -403,7 +403,8 @@ fun guessR defn =
        in
          allrels'
        end
-end;
+end
+ handle e => raise wrap_exn "TotalDefn" "guessR";
 
 (*---------------------------------------------------------------------------*)
 (* Wellfoundedness and termination provers (parameterized by theorems).      *)
