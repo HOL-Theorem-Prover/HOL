@@ -10,6 +10,7 @@ type ppstream = Portable.ppstream
 type simpfrag = simpfrag.simpfrag
 
 val ERR = mk_HOL_ERR "TypeBasePure";
+val WARN = HOL_WARNING "TypeBasePure";
 
 fun type_names ty =
   let val {Thy,Tyop,Args} = Type.dest_thy_type ty
@@ -50,6 +51,7 @@ type dtyinfo =
 
 type ntyinfo = hol_type *
           {nchotomy : thm option,
+           induction : thm option,
            size : (term * thm) option,
            encode : (term * thm) option};
 
@@ -93,12 +95,13 @@ fun case_def_of (DFACTS {case_def,...}) = case_def
        raise ERR "case_def_of" (dollarty ty^" is not a datatype");
 
 fun induction_of0 (DFACTS {induction,...}) = induction
-  | induction_of0 (NFACTS (ty,_)) =
-        raise ERR "induction_of0" (dollarty ty^" is not a datatype");
+  | induction_of0 (NFACTS (ty,{induction,...})) 
+     = raise ERR "induction_of0" "not a mutrec. datatype";
 
 fun induction_of (DFACTS {induction,...}) = thm_of induction
-  | induction_of (NFACTS (ty,_)) =
-        raise ERR "induction_of" (dollarty ty^" is not a datatype");
+  | induction_of (NFACTS(_,{induction=SOME th,...})) = th
+  | induction_of (NFACTS(ty,{induction=NONE,...})) =
+        raise ERR "induction_of" (dollarty ty^" no induction theorem available");
 
 fun nchotomy_of (DFACTS {nchotomy,...}) = nchotomy
   | nchotomy_of (NFACTS(_,{nchotomy=SOME th,...})) = th
@@ -170,8 +173,8 @@ fun put_nchotomy th (DFACTS
             accessors=accessors, updates=updates, simpls=simpls,
             size=size, encode=encode,lift=lift,
             recognizers=recognizers,destructors=destructors}
-  | put_nchotomy th (NFACTS(ty,{nchotomy,size,encode})) =
-      NFACTS(ty,{nchotomy=SOME th,size=size,encode=encode});
+  | put_nchotomy th (NFACTS(ty,{nchotomy,induction,size,encode})) =
+      NFACTS(ty,{nchotomy=SOME th,induction=induction,size=size,encode=encode});
 
 fun put_simpls thl (DFACTS
  {ty,axiom, case_const, case_cong, case_def, constructors,
@@ -198,7 +201,10 @@ fun put_induction th (DFACTS
           one_one=one_one, fields=fields, accessors=accessors, updates=updates,
           simpls=simpls, size=size, encode=encode,lift=lift,
           recognizers=recognizers,destructors=destructors}
- | put_induction _ _ = raise ERR "put_induction" "not a datatype";
+  | put_induction (ORIG th) (NFACTS(ty,{nchotomy,induction,size,encode})) =
+      NFACTS(ty,{induction=SOME th,nchotomy=nchotomy,size=size,encode=encode})
+  | put_induction (COPY th) (NFACTS(ty,{nchotomy,induction,size,encode})) =
+     raise ERR "put_induction" "non-datatype but mutrec"
 
 fun put_size (size_tm,size_rw) (DFACTS
        {ty,axiom, case_const,case_cong,case_def,constructors,
@@ -213,9 +219,11 @@ fun put_size (size_tm,size_rw) (DFACTS
             accessors=accessors, updates=updates, simpls=simpls,
             size=SOME(size_tm,size_rw), encode=encode,lift=lift,
             recognizers=recognizers,destructors=destructors}
-  | put_size (size_tm,size_rw) (NFACTS(ty,{nchotomy,size,encode})) =
-      NFACTS(ty,{nchotomy=nchotomy,size=SOME(size_tm,thm_of size_rw),
-                 encode=encode});
+  | put_size (size_tm,ORIG size_rw) (NFACTS(ty,{nchotomy,induction,size,encode})) =
+      NFACTS(ty,{nchotomy=nchotomy,size=SOME(size_tm,size_rw),
+                 induction=induction,encode=encode})
+  | put_size (size_tm,COPY size_rw) (NFACTS(ty,{nchotomy,induction,size,encode})) =
+      raise ERR "put_size" "non-datatype but mutrec"
 
 fun put_encode (encode_tm,encode_rw) (DFACTS
        {ty,axiom, case_const,case_cong,case_def,constructors,
@@ -230,8 +238,12 @@ fun put_encode (encode_tm,encode_rw) (DFACTS
             accessors=accessors, updates=updates, simpls=simpls,
             size=size, encode=SOME(encode_tm,encode_rw), lift=lift,
             recognizers=recognizers,destructors=destructors}
-  | put_encode (encode_tm,encode_rw) (NFACTS(ty,{nchotomy,size,encode})) =
-     NFACTS(ty,{nchotomy=nchotomy,size=size,encode=SOME(encode_tm,thm_of encode_rw)});
+  | put_encode (encode_tm,ORIG encode_rw) (NFACTS(ty,{nchotomy,induction,size,encode})) =
+     NFACTS(ty,{nchotomy=nchotomy,induction=induction,
+                size=size,encode=SOME(encode_tm,encode_rw)})
+  | put_encode (encode_tm,COPY encode_rw) (NFACTS(ty,{nchotomy,induction,size,encode})) =
+      raise ERR "put_encode" "non-datatype but mutrec"
+
 
 fun put_lift lift_tm (DFACTS
  {ty,axiom, case_const,case_cong,case_def,constructors,
@@ -510,7 +522,7 @@ fun pp_tyinfo ppstrm (d as DFACTS recd) =
      val pp_type = Parse.pp_type ppstrm
      val pp_term = Parse.pp_term ppstrm
      val pp_thm = Parse.pp_thm ppstrm
-     val {nchotomy,size,encode} = recd
+     val {nchotomy,induction,size,encode} = recd
    in
     begin_block CONSISTENT 0;
      begin_block INCONSISTENT 0;
@@ -526,6 +538,23 @@ fun pp_tyinfo ppstrm (d as DFACTS recd) =
        (case nchotomy
          of NONE => add_string "none"
           | SOME thm => pp_thm thm);
+     end_block();
+    add_break(1,0);
+     begin_block CONSISTENT 1;
+       add_string "Induction:"; add_break (1,0);
+       (case induction
+        of NONE  => add_string "none"
+         | SOME thm => pp_thm thm);
+     end_block();
+    add_break(1,0);
+     begin_block CONSISTENT 1;
+       add_string "Size:"; add_break (1,0);
+       (case size
+         of NONE => add_string "none"
+          | SOME (tm,size_def) =>
+             (begin_block CONSISTENT 1;
+              (if is_const tm then pp_thm size_def else pp_term tm);
+              end_block()));
      end_block();
     end_block()
   end;
@@ -589,10 +618,7 @@ fun prim_get (db:typeBase) (thy,tyop) =
         TypeNet.peek (db, ty)
       end
 
-fun add db (d as DFACTS x) = TypeNet.insert(db, normalise_ty (ty_of d), d)
-  | add db (NFACTS _) = raise ERR "add" "not a datatype"
-
-fun listItems db = map #2 (TypeNet.listItems db)
+fun insert db x = TypeNet.insert(db,normalise_ty (ty_of x), x);
 
 fun get db s = let
   fun foldthis (ty,tyi as DFACTS _,acc) =
@@ -601,6 +627,8 @@ fun get db s = let
 in
   TypeNet.fold foldthis [] db
 end
+
+fun listItems db = map #2 (TypeNet.listItems db)
 
 (*---------------------------------------------------------------------------*)
 (* If ty1 is an instance of ty2, then return the record                      *)
@@ -636,9 +664,6 @@ fun fetch tbase ty =
         SOME (#2 (hd sorted))
       end
 
-fun insert dbs (x as DFACTS _) = add dbs x
-  | insert db (x as NFACTS _) = TypeNet.insert(db,normalise_ty (ty_of x),x)
-
 
 (*---------------------------------------------------------------------------
       General facility for interpreting types as terms. It takes a
@@ -672,7 +697,11 @@ fun typeValue (theta,gamma,undef) =
 end
 *)
 
-(* Not sure this will work ... *)
+fun tystring ty = 
+ let val (thy,name) = type_names ty
+ in String.concat [thy,"$",name]
+ end;
+
 fun typeValue (theta,gamma,undef) =
  let fun tyValue ty =
       case theta ty
@@ -685,7 +714,11 @@ fun typeValue (theta,gamma,undef) =
                       val sigma = match_type vty ty handle HOL_ERR _ => []
                       val args = snd(dest_type ty)
                   in list_mk_comb(inst sigma f, map tyValue args)
-                  end
+                  end handle HOL_ERR _ 
+                      => (WARN "typeValue" 
+                           ("Badly typed terms at type constructor "
+                            ^Lib.quote (tystring ty)^". Continuing anyway.");
+                          undef ty)
                | NONE => undef ty
  in tyValue
  end
@@ -694,18 +727,17 @@ fun typeValue (theta,gamma,undef) =
     Map a HOL type (ty) into a term having type :ty -> num.
  ---------------------------------------------------------------------------*)
 
-local fun num() = mk_thy_type{Tyop="num",Thy="num",Args=[]}
-      fun Zero() = mk_thy_const{Name="0",Thy="num", Ty=num()}
-        handle HOL_ERR _ => raise ERR "type_size.Zero()" "Numbers not declared"
-      fun K0 ty = mk_abs(mk_var("v",ty),Zero())
-      fun tysize_env db = Option.map fst o
-                          Option.composePartial (size_of,fetch db)
-in
-fun type_size db ty =
-   let fun theta ty = if is_vartype ty then SOME (K0 ty) else NONE
-   in typeValue (theta,tysize_env db,K0) ty
-   end
-end
+fun num() = mk_thy_type{Tyop="num",Thy="num",Args=[]}
+fun Zero() = mk_thy_const{Name="0",Thy="num", Ty=num()}
+             handle HOL_ERR _ => 
+             raise ERR "type_size.Zero()" "Numbers not declared"
+
+fun K0 ty = mk_abs(mk_var("v",ty),Zero())
+fun tysize_env db = Option.map fst o
+                    Option.composePartial (size_of,fetch db);
+fun theta ty = if is_vartype ty then SOME (K0 ty) else NONE
+
+fun type_size db ty = typeValue (theta,tysize_env db,K0) ty;
 
 (*---------------------------------------------------------------------------
     Encoding: map a HOL type (ty) into a term having type :ty -> bool list

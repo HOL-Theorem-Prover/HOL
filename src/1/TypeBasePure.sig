@@ -33,9 +33,10 @@ sig
 
    val mk_nondatatype_info
            : hol_type *
-             {nchotomy : thm option,
-              size     : (term * thm) option,
-              encode   : (term * thm) option} -> tyinfo
+             {nchotomy  : thm option,
+              induction : thm option,
+              size      : (term * thm) option,
+              encode    : (term * thm) option} -> tyinfo
 
    val pp_tyinfo       : ppstream -> tyinfo -> unit
 
@@ -82,7 +83,7 @@ sig
 
    val empty           : typeBase
    val insert          : typeBase -> tyinfo -> typeBase
-   val add             : typeBase -> tyinfo -> typeBase
+(*   val add             : typeBase -> tyinfo -> typeBase  *)
 
    val fetch           : typeBase -> hol_type -> tyinfo option
    val prim_get        : typeBase -> string * string -> tyinfo option

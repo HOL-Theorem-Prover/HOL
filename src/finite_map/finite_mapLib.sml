@@ -5,7 +5,7 @@ struct
 
   val ERR = mk_HOL_ERR "finite_mapLib"
 
-  local open finite_mapTheory finite_mapSyntax pred_setTheory simpLib in
+local open finite_mapTheory finite_mapSyntax pred_setTheory simpLib in
 
 
 val FEVERY_cs = computeLib.bool_compset ()
@@ -15,7 +15,6 @@ val _         = computeLib.add_thms
 			    NOT_IN_EMPTY,
 			    FEVERY_DRESTRICT_COMPL] FEVERY_cs;
 
-
 fun fevery_EXPAND_CONV t =
 let
    val _ = if (is_fevery t) then () else raise UNCHANGED;
@@ -23,9 +22,6 @@ let
 in
    thm
 end;
-
-
-
 
 local
    fun add_fup ([], []) kL2 thm = thm
@@ -64,10 +60,8 @@ let
    val (base, kvL) = strip_fupdate t
    val (kL,vL) = unzip (map pairSyntax.dest_pair kvL)
 
-
    val typed_empty_tm =
         Term.inst [alpha |-> fst (finite_mapSyntax.dest_fmap_ty (type_of base))] pred_setSyntax.empty_tm
-
 
    val thm0 = ISPECL [typed_empty_tm, base] fmap_EQ_UPTO___EQ
    val thm1 = add_fup (kL, vL) [] thm0

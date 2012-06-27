@@ -501,6 +501,7 @@ val _ = adjoin_to_theory_struct [
   " [TypeBasePure.mk_nondatatype_info",
   "  (type_of v, ",
   "    {nchotomy = SOME ranged_char_nchotomy,",
+  "     induction = NONE,",
   "     size = SOME(char_size_tm,char_size_def),",
   "     encode = NONE})]",
   "end;"];

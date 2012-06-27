@@ -2128,7 +2128,10 @@ val CARD_DEF = new_specification ("CARD_DEF", ["CARD"], CARD_EXISTS);
 
 val set_tyinfo = TypeBasePure.mk_nondatatype_info
                       (``:'a set``,
-                       {nchotomy = SOME SET_CASES,size=NONE,encode=NONE});
+                       {nchotomy = SOME SET_CASES,
+                        induction = SOME FINITE_INDUCT,
+                        size=SOME(``CARD``,CARD_DEF),
+                        encode=NONE});
 
 val _ = TypeBase.write [set_tyinfo];
 
@@ -4987,6 +4990,25 @@ fun sigps pps = (PP.add_string pps "val SET_SPEC_ss : simpLib.ssfrag";
 val _ = adjoin_to_theory {sig_ps = SOME sigps,
                           struct_ps =
                           SOME (fn pps => PP.add_string pps sspec_conv_str)}
+
+(*
+val _ = adjoin_to_theory
+  {sig_ps = NONE,
+   struct_ps = SOME (fn pps => 
+    let val card_tm_string = String.concat
+             ["prim_mk_const{Thy=",quote"pred_set",",Name=",quote"CARD","}"]
+     in
+     app (fn s => (PP.add_string pps s; PP.add_newline pps))
+     ["val _ = ",
+      " TypeBase.write",
+      " [TypeBasePure.mk_nondatatype_info",
+      "  (alpha --> bool,",
+      "    {nchotomy = SOME SET_CASES,",
+      "     induction = SOME FINITE_INDUCT,",
+      ("     size = SOME("^card_tm_string^",CARD_DEF),"),
+      "     encode=NONE})];\n"
+      ] end)};
+*)
 
 val _ = export_theory();
 

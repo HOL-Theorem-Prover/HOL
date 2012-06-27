@@ -3399,6 +3399,7 @@ val _ = adjoin_to_theory {sig_ps = NONE,
    app (fn s => (PP.add_string ppstrm s; PP.add_newline ppstrm))
    ["val _ = TypeBase.write [TypeBasePure.mk_nondatatype_info",
     "  (``:int``, {nchotomy = SOME INT_NUM_CASES,",
+    "              induction = NONE,",
     "              encode = NONE, size = NONE})];"])}
 
 val _ = export_theory();

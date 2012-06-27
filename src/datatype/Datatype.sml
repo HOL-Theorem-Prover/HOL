@@ -1033,7 +1033,7 @@ fun define_type_from_astl prevtypes db astl = let
   val f = define_type_from_astl
   fun handle_astl (astl, (prevtypes, db, tyinfo_acc)) = let
     val (db, new_tyinfos) = prim_define_type_from_astl prevtypes f db astl
-    fun addtyi ((tyi, _), db) = TypeBasePure.add db tyi
+    fun addtyi ((tyi, _), db) = TypeBasePure.insert db tyi
     val alltyvars =
         List.foldl (fn ((_, dtf), acc) => dtForm_vartypes(dtf, acc))
                    empty_stringset

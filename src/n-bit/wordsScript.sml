@@ -831,6 +831,7 @@ val ranged_word_nchotomy = store_thm("ranged_word_nchotomy",
 val _ = TypeBase.write [TypeBasePure.mk_nondatatype_info
    (``:'a word``,
      {nchotomy = SOME ranged_word_nchotomy, encode=NONE,
+      induction = NONE,
       size = SOME (``\(v1:bool->num) (v2:'a->num) (v3:'a word). w2n v3``,
                    CONJUNCT1 (SPEC_ALL AND_CLAUSES))})];
 
@@ -4743,6 +4744,7 @@ val _ = adjoin_to_theory_struct
   " [TypeBasePure.mk_nondatatype_info",
   "  (word_type,",
   "    {nchotomy = SOME ranged_word_nchotomy,",
+  "     induction = NONE,",
   "     size = SOME(w2n_abs,CONJUNCT1(Drule.SPEC_ALL boolTheory.AND_CLAUSES)),",
   "     encode=NONE})]",
   "end;"];
