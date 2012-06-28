@@ -5,38 +5,44 @@ struct
   app load
      ["combinML", "pairML", "sumML", "numML", "listML", "setML", "optionML",
       "rich_listML", "basicSizeML", "stringML", "bitML", "fcpML", "wordsML",
-      "intML", "sortingML", "patriciaML", "armML"];
+      "intML", "sortingML", "patriciaML", "armML"]
 *)
 
 local
   open combinML pairML sumML numML listML setML optionML rich_listML basicSizeML
        stringML bitML fcpML wordsML intML sortingML patriciaML armML
-in end;
+in end
 
 (* ------------------------------------------------------------------------ *)
+
+(*
+open Int
+val op o = General.o
+*)
 
 type arm_mem = armML.word8 patriciaML.ptree
 
 fun mem i = List.exists (fn x => x = i)
 
-fun load_program (s,t) =
-let val istrm = TextIO.openIn s
-    val a = TextIO.inputAll istrm before TextIO.closeIn istrm
-    fun pair [a,b] = (numML.fromHexString a,
-                      wordsML.toWord8 (numML.fromHexString b))
-      | pair _ = raise Match
-in
-  a |> String.tokens (fn c => c = #"\n")
-    |> List.map (pair o String.tokens Char.isSpace)
-    |> patriciaML.ADD_LIST t
-end;
+fun load_program (s, t) =
+   let
+      val istrm = TextIO.openIn s
+      val a = TextIO.inputAll istrm before TextIO.closeIn istrm
+      fun pair [a, b] = (numML.fromHexString a,
+                         wordsML.toWord8 (numML.fromHexString b))
+        | pair _ = raise Match
+   in
+      a |> String.tokens (fn c => c = #"\n")
+        |> List.map (pair o String.tokens Char.isSpace)
+        |> patriciaML.ADD_LIST t
+   end
 
-val load_programs = List.foldl load_program patriciaML.Empty;
+val load_programs = List.foldl load_program patriciaML.Empty
 
 (* ------------------------------------------------------------------------ *)
 
-fun toWord i n = wordsML.fromNum (n, fcpML.ITSELF (numML.fromInt i));
-val zero32 = wordsML.toWord32 numML.ZERO;
+fun toWord i n = wordsML.fromNum (n, fcpML.ITSELF (numML.fromInt i))
+val zero32 = wordsML.toWord32 numML.ZERO
 
 fun mk_arm_state arch regs psrs md mem =
   armML.arm_state
@@ -48,7 +54,7 @@ fun mk_arm_state arch regs psrs md mem =
              of SOME d => d
               | NONE => md,
      [],                     (* accesses *)
-     armML.ARMinfo (arch,setML.EMPTY,true),
+     armML.ARMinfo (arch, setML.EMPTY, true),
      armML.Coprocessors
        (armML.coproc_state
           (armML.CP14reg zero32,
@@ -68,7 +74,7 @@ fun mk_arm_state arch regs psrs md mem =
         combinML.K (combinML.K (armML.constC ())),
         combinML.K (armML.constC zero32),
         combinML.K (combinML.K (armML.constC ())),
-        combinML.K (armML.constC (zero32,zero32))),
+        combinML.K (armML.constC (zero32, zero32))),
      armML.ExclusiveMonitors
        ((combinML.K setML.EMPTY, setML.EMPTY),
         combinML.K (armML.constE ()),
@@ -76,7 +82,7 @@ fun mk_arm_state arch regs psrs md mem =
         combinML.K (armML.constE false),
         combinML.K (armML.constE false),
         combinML.K (armML.constE ()),
-        combinML.K (armML.constE ())));
+        combinML.K (armML.constE ())))
 
 (* ------------------------------------------------------------------------ *)
 
@@ -93,7 +99,7 @@ fun architecture a =
    | "armv6t2" => armML.ARMv6T2
    | "armv7-a" => armML.ARMv7_A
    | "armv7-r" => armML.ARMv7_R
-   | _ => raise Fail "architecture";
+   | _ => raise Fail "architecture"
 
 fun string_of_rname r =
   case r
@@ -129,7 +135,7 @@ fun string_of_rname r =
    | armML.RName_LRabt => "lr_abt"
    | armML.RName_LRund => "lr_und"
    | armML.RName_LRmon => "lr_mon"
-   | armML.RName_PC    => "pc";
+   | armML.RName_PC    => "pc"
 
 fun rname i =
   case i
@@ -166,7 +172,7 @@ fun rname i =
    | 30 => armML.RName_LRund
    | 31 => armML.RName_LRmon
    | 32 => armML.RName_PC
-   | _ => raise Fail "rname";
+   | _ => raise Fail "rname"
 
 fun string_of_psrname p =
   case p
@@ -187,7 +193,7 @@ fun psrname i =
    | 4 => armML.SPSR_mon
    | 5 => armML.SPSR_abt
    | 6 => armML.SPSR_und
-   | _ => raise Fail "psrname";
+   | _ => raise Fail "psrname"
 
 fun encoding armML.Encoding_Thumb   = "16-bit Thumb:\t"
   | encoding armML.Encoding_Thumb2  = "32-bit Thumb:\t"
@@ -211,9 +217,9 @@ fun condition (cond:armML.word4) =
    | 12 => "gt"
    | 13 => "le"
    | 14 => "al"
-   | _  => raise Fail "condition";
+   | _  => raise Fail "condition"
 
-fun data_processing (enc,opc,n) =
+fun data_processing (enc, opc, n) =
   case w2int opc
   of 0  => "and"
    | 1  => "eor"
@@ -234,9 +240,9 @@ fun data_processing (enc,opc,n) =
              "orn"
            else
              "mvn"
-   | _  => raise Fail "data_processing";
+   | _  => raise Fail "data_processing"
 
-fun instruction (enc,instr) =
+fun instruction (enc, instr) =
   case instr
   of armML.Unpredictable                      => "unpredictable"
    | armML.Undefined                          => "undefined"
@@ -255,9 +261,9 @@ fun instruction (enc,instr) =
         "handler branch with link and parameter"
    | armML.Branch (armML.Handler_Branch_Parameter _) =>
         "handler branch with parameter"
-   | armML.DataProcessing (armML.Data_Processing (opc,_,n,_,_)) =>
-       data_processing (enc,opc,n)
-   | armML.DataProcessing (armML.Add_Sub (add,_,_,_)) =>
+   | armML.DataProcessing (armML.Data_Processing (opc, _, n, _, _)) =>
+       data_processing (enc, opc, n)
+   | armML.DataProcessing (armML.Add_Sub (add, _, _, _)) =>
        if add then "add (wide)" else "sub (wide)"
    | armML.DataProcessing (armML.Move_Halfword _)     => "move halfword"
    | armML.DataProcessing (armML.Divide _)            => "divide"
@@ -356,82 +362,88 @@ fun instruction (enc,instr) =
    | armML.Coprocessor _    => "coprocessor"
 
 fun for_se base top f =
- let fun For i = if i > top then () else (f i; For (i+1)) in For base end;
+  let
+     fun For i = if i > top then () else (f i; For (i+1))
+  in
+     For base
+  end
 
 val word8  = wordsML.toWord8 o numML.fromHexString
 val word32 = wordsML.toWord32 o numML.fromHexString
 
 fun for_word32 base top f =
- let val t = word32 top
-     val b = word32 base
-     val one = wordsML.toWord32 numML.ONE
-     val add1 = wordsML.word_add one
-     fun For i = if wordsML.word_gt i t then
-                   ()
-                 else
-                   (f i; For (add1 i))
- in For b end;
+   let
+      val t = word32 top
+      val b = word32 base
+      val one = wordsML.toWord32 numML.ONE
+      val add1 = wordsML.word_add one
+      fun For i = if wordsML.word_gt i t then () else (f i; For (add1 i))
+   in
+      For b
+   end
 
-fun hex n s = StringCvt.padLeft #"0" n (wordsML.word_to_hex_string s);
+fun hex n s = StringCvt.padLeft #"0" n (wordsML.word_to_hex_string s)
 
-val traceOut = ref TextIO.stdOut;
+val traceOut = ref TextIO.stdOut
 
-fun out l = TextIO.output (!traceOut, String.concat (l @ ["\n"]));
+fun out l = TextIO.output (!traceOut, String.concat (l @ ["\n"]))
 
-fun print_reg_updates ii (s1,s2) =
-let val reg1 = armML.arm_state_registers s1
-    val reg2 = armML.arm_state_registers s2
-    val psr1 = armML.arm_state_psrs s1
-    val psr2 = armML.arm_state_psrs s2
-    val id = armML.iiid_proc ii
-    val first = ref true
-in
-  for_se 0 32 (fn i =>
-    let val r = rname i
-        val d = reg2 (id,r)
-    in
-      if reg1 (id,r) <> d then
-        out [if !first then
-               (first := false; "Registers:\t")
-             else
-               "\t\t", string_of_rname r, " <- ", hex 8 d]
-      else
-        ()
-    end);
-  for_se 0 6 (fn i =>
-    let val r = psrname i
-        val d = psr2 (id,r)
-    in
-      if psr1 (id,r) <> d then
-        out [if !first then
-               (first := false; "Registers:\t")
-             else
-               "\t\t", string_of_psrname r, " <- ", hex 8 (armML.encode_psr d)]
-      else
-        ()
-    end)
-end;
+fun print_reg_updates ii (s1, s2) =
+   let
+      val reg1 = armML.arm_state_registers s1
+      val reg2 = armML.arm_state_registers s2
+      val psr1 = armML.arm_state_psrs s1
+      val psr2 = armML.arm_state_psrs s2
+      val id = armML.iiid_proc ii
+      val first = ref true
+   in
+      for_se 0 32 (fn i =>
+        let
+           val r = rname i
+           val d = reg2 (id, r)
+        in
+           if reg1 (id, r) <> d then
+             out [if !first then
+                    (first := false; "Registers:\t")
+                  else
+                    "\t\t", string_of_rname r, " <- ", hex 8 d]
+           else
+             ()
+        end);
+      for_se 0 6 (fn i =>
+        let
+           val r = psrname i
+           val d = psr2 (id, r)
+        in
+           if psr1 (id, r) <> d then
+              out [if !first then (first := false; "Registers:\t") else "\t\t",
+                   string_of_psrname r, " <- ", hex 8 (armML.encode_psr d)]
+           else
+              ()
+        end)
+   end
 
 fun print_mem_updates s =
-let val first = ref true in
-  List.app (fn acc =>
-    case acc
-    of armML.MEM_WRITE (a,d) =>
-         out [if !first then
-                (first := false; "Memory:")
-              else
-                "", "\t\t[", hex 8 a, "] <- ", hex 2 d]
-     | _ => ()) (List.rev (armML.arm_state_accesses s))
-end
+   let
+      val first = ref true
+   in
+      List.app (fn acc =>
+        case acc
+        of armML.MEM_WRITE (a, d) =>
+             out [if !first then (first := false; "Memory:") else "",
+                  "\t\t[", hex 8 a, "] <- ", hex 2 d]
+         | _ => ()) (List.rev (armML.arm_state_accesses s))
+   end
 
-fun print_instr (opc,(enc,(cond,instr))) =
-  out [encoding enc, opc, " ; ", condition cond, ", ", instruction (enc,instr)]
+fun print_instr (opc, (enc, (cond, instr))) =
+   out [encoding enc, opc, " ; ", condition cond, ", ",
+        instruction (enc, instr)]
 
-val instruction_printer = ref print_instr;
+val instruction_printer = ref print_instr
 
 type run_trace =
   { cycle : bool, pc : bool, ireg : bool, regs : bool, mem : bool,
-    rule : int * char };
+    rule : int * char }
 
 fun int_to_trace i =
   { cycle = i > 0,
@@ -439,39 +451,46 @@ fun int_to_trace i =
     ireg  = i > 2,
     regs  = i > 3,
     mem   = i > 4,
-    rule  = if i > 1 then (40,#"-") else (0,#" ") };
+    rule  = if i > 1 then (40, #"-") else (0, #" ") }
 
-fun print_trace ii (trace : run_trace) (cycle,pc,instr,s1,s2) =
+fun print_trace ii (trace : run_trace) (cycle, pc, instr, s1, s2) =
   (if #cycle trace then out ["Cycle:\t\t", Int.toString cycle] else ();
    if #pc trace then out ["PC:\t\t", hex 8 pc] else ();
    if #ireg trace then (!instruction_printer) instr else ();
-   if #regs trace then print_reg_updates ii (s1,s2) else ();
+   if #regs trace then print_reg_updates ii (s1, s2) else ();
    if #mem trace then print_mem_updates s2 else ();
-   let val (l,c) = #rule trace in
-     if l > 0 then out [StringCvt.padLeft c l ""] else ()
-   end);
+   let
+      val (l, c) = #rule trace
+   in
+      if l > 0 then out [StringCvt.padLeft c l ""] else ()
+   end)
 
 fun print_arm_state s =
-let val reg = armML.arm_state_registers s
-    val psr = armML.arm_state_psrs s
-    val ii = armML.iiid numML.ZERO
-    val id = armML.iiid_proc ii
-    fun pad n s = StringCvt.padRight #" " n s ^ ": "
-in
-  out ["General Purpose Registers\n",
-       "=========================\n"];
-  for_se 0 32 (fn i =>
-    let val r = rname i in
-      out [pad 9 (string_of_rname r), hex 8 (reg (id,r))]
-    end);
-  out ["\nProgram Status Registers\n",
-       "========================\n"];
-  for_se 0 6 (fn i =>
-    let val r = psrname i
-    in
-      out [pad 9 (string_of_psrname r), hex 8 (armML.encode_psr (psr (id,r)))]
-    end)
-end
+   let
+      val reg = armML.arm_state_registers s
+      val psr = armML.arm_state_psrs s
+      val ii = armML.iiid numML.ZERO
+      val id = armML.iiid_proc ii
+      fun pad n s = StringCvt.padRight #" " n s ^ ": "
+   in
+      out ["General Purpose Registers\n",
+           "=========================\n"];
+      for_se 0 32 (fn i =>
+        let
+           val r = rname i
+        in
+           out [pad 9 (string_of_rname r), hex 8 (reg (id, r))]
+        end);
+      out ["\nProgram Status Registers\n",
+           "========================\n"];
+      for_se 0 6 (fn i =>
+        let
+           val r = psrname i
+        in
+           out [pad 9 (string_of_psrname r),
+                hex 8 (armML.encode_psr (psr (id, r)))]
+        end)
+   end
 
 (*
 fun examine_arm_mem mem =
@@ -482,12 +501,13 @@ let
    fun print_range () : unit =
      let val _ = print "Enter memory range [hex - hex]: "
          val s = valOf (TextIO.inputLine TextIO.stdIn)
-         val (b,t) = case String.tokens
+         val (b, t) = case String.tokens
                             (fn c => Char.isSpace c orelse c = #"-") s
-                     of [l,r] => let val x = word32 l
+                     of [l, r] => let
+                                     val x = word32 l
                                      val y = word32 r
                                  in
-                                   if wordsML.word_lo x y then (l,r) else (r,l)
+                                    if wordsML.word_lo x y then (l,r) else (r,l)
                                  end
                       | _ => raise Fail "print_arm_mem"
      in
@@ -499,118 +519,125 @@ end
 *)
 
 local
-  fun print_line (a,b : wordsML.word8) =
-        out ["[", hex 8 (wordsML.toWord32 a), "] : ", hex 2 b]
-  fun mem_compare ((a1,_),(a2,_)) =
-         if a1 = a2 then
-           General.EQUAL
-         else if numML.< a1 a2 then
-           General.LESS
-         else
-           General.GREATER
-  val print_mem = List.app print_line o Listsort.sort mem_compare
+   fun print_line (a, b : wordsML.word8) =
+      out ["[", hex 8 (wordsML.toWord32 a), "] : ", hex 2 b]
+   fun mem_compare ((a1, _), (a2, _)) =
+      if a1 = a2 then
+         General.EQUAL
+      else if numML.< a1 a2 then
+         General.LESS
+      else
+         General.GREATER
+   val print_mem = List.app print_line o Listsort.sort mem_compare
 in
-  val print_arm_mem = print_mem o patriciaML.toList
-  fun print_diff_arm_mem prog1 prog2 =
-  let
-    val new = Lib.set_diff (patriciaML.toList prog2) (patriciaML.toList prog1)
-  in
-    out ["\nModified Memory\n",
-         "===============\n"];
-    print_mem new
-  end
+   val print_arm_mem = print_mem o patriciaML.toList
+   fun print_diff_arm_mem prog1 prog2 =
+   let
+      val new = Lib.set_diff (patriciaML.toList prog2) (patriciaML.toList prog1)
+   in
+      out ["\nModified Memory\n",
+           "===============\n"];
+      print_mem new
+   end
 end
 
-fun print_arm_run prog (message,prog_state) =
+fun print_arm_run prog (message, prog_state) =
   (if message = "" then () else
      out ["Final Message\n", "=============\n\n", message, "\n"];
    case prog_state
-   of SOME (prog',state) =>
+   of SOME (prog', state) =>
         (print_arm_state state; print_diff_arm_mem prog prog')
-   | _ => out ["state upredictable"]);
+   | _ => out ["state upredictable"])
 
 (* ------------------------------------------------------------------------ *)
 
 fun update_prog p [] = p
   | update_prog p (armML.MEM_READ _ :: l) = update_prog p l
-  | update_prog p (armML.MEM_WRITE (a,d) :: l) =
+  | update_prog p (armML.MEM_WRITE (a, d) :: l) =
       update_prog (patriciaML.ADD p (wordsML.w2n a, d)) l
 
-fun ptree_arm_run run_trace (prog,state) t =
-let
-  val ii = armML.iiid numML.ZERO
-  val arch = case armML.read_arch ii state
-             of armML.Error s => raise Fail "couldn't read Architecture"
-              | armML.ValueState (a,_) => a
-  fun ptree_arm_loop prog' cycle t =
-    armML.seqT (armML.waiting_for_interrupt ii) (fn wfi =>
-      if wfi orelse t = 0 then
-        armML.constT ((prog',cycle),"finished")
-      else
-        armML.attempt (prog',cycle)
-          (armML.fetch_instruction ii
-             (armML.ptree_read_word prog') (armML.ptree_read_halfword prog'))
-          (fn instr =>
-             armML.seqT
-               (armML.writeT
-                    (armML.arm_state_accesses_fupd (combinML.K []))) (fn _ =>
-                  armML.seqT (armML.readT combinML.I) (fn s1 =>
-                    armML.seqT (armML.arm_instr ii (pairML.SND instr))
-                      (fn _ => armML.seqT (armML.readT combinML.I) (fn s2 =>
-                         let
-                           val pc = armML.arm_state_registers s1
-                                      (numML.ZERO, armML.RName_PC)
-                           val _ = print_trace ii run_trace
-                                     (cycle,pc,instr,s1,s2)
-                         in
-                           ptree_arm_loop
-                             (update_prog prog' (armML.arm_state_accesses s2))
-                             (cycle + 1)
-                             (if t < 0 then t else t - 1)
-                         end))))))
-in
-  case ptree_arm_loop prog 0 t state
-  of armML.Error e => (e, NONE)
-   | armML.ValueState (((prog',c),v), s') =>
-       ("at cycle " ^ Int.toString c ^ ": " ^ v, SOME (prog',s'))
-end;
+fun ptree_arm_run run_trace (prog, state) t =
+   let
+      val ii = armML.iiid numML.ZERO
+      val arch = case armML.read_arch ii state
+                 of armML.Error s => raise Fail "couldn't read Architecture"
+                  | armML.ValueState (a, _) => a
+      fun ptree_arm_loop prog' cycle t =
+        armML.seqT (armML.waiting_for_interrupt ii) (fn wfi =>
+          if wfi orelse t = 0 then
+            armML.constT ((prog', cycle), "finished")
+          else
+            armML.attempt (prog', cycle)
+              (armML.fetch_instruction ii
+                 (armML.ptree_read_word prog')
+                 (armML.ptree_read_halfword prog'))
+              (fn instr =>
+                 armML.seqT
+                   (armML.writeT
+                      (armML.arm_state_accesses_fupd (combinML.K [])))
+                        (fn _ =>
+                          armML.seqT (armML.readT combinML.I) (fn s1 =>
+                            armML.seqT (armML.arm_instr ii (pairML.SND instr))
+                              (fn _ => armML.seqT (armML.readT combinML.I)
+                                (fn s2 =>
+                                    let
+                                       val pc = armML.arm_state_registers s1
+                                                  (numML.ZERO, armML.RName_PC)
+                                       val _ = print_trace ii run_trace
+                                                 (cycle, pc, instr, s1, s2)
+                                    in
+                                       ptree_arm_loop
+                                         (update_prog prog'
+                                            (armML.arm_state_accesses s2))
+                                         (cycle + 1)
+                                         (if t < 0 then t else t - 1)
+                                    end))))))
+   in
+      case ptree_arm_loop prog 0 t state
+      of armML.Error e => (e, NONE)
+       | armML.ValueState (((prog', c), v), s') =>
+           ("at cycle " ^ Int.toString c ^ ": " ^ v, SOME (prog', s'))
+   end
 
 (* ------------------------------------------------------------------------ *)
 
-val lower_string = String.implode o map Char.toLower o String.explode;
+val lower_string = String.implode o map Char.toLower o String.explode
 
 fun pluck P =
- let fun pl _ [] = raise Fail "pluck: predicate not satisfied"
-       | pl A (h::t) = if P h then (h, List.revAppend(A,t)) else pl (h::A) t
- in pl []
- end;
+   let fun pl _ [] = raise Fail "pluck: predicate not satisfied"
+         | pl A (h::t) = if P h then (h, List.revAppend(A, t)) else pl (h::A) t
+   in
+      pl []
+   end
 
 fun init_config prog s =
-let val l = s |> String.tokens (fn c => mem c [#",", #";",#"\n"])
-              |> map (fn a =>
+   let
+      val l =
+         s |> String.tokens (fn c => mem c [#",", #";",#"\n"])
+           |> map (fn a =>
                    case String.tokens (fn c => c = #"=" orelse Char.isSpace c) a
-                   of [l,r] => (lower_string l, lower_string r)
-                    | _ => raise Fail "init_config")
-    val ((_,arch),l) = pluck (fn (n,_) => n = "arch") l
-                         handle Fail _ => (("","armv7-a"),l)
-    val ((_,default_reg),l) = pluck (fn (n,_) => n = "reg_") l
-                                handle Fail _ => (("","0"),l)
-    val ((_,default_psr),l) = pluck (fn (n,_) => n = "_psr") l
-                                handle Fail _ => (("","10"),l)
-    val ((_,default_mem),l) = pluck (fn (n,_) => n = "mem_") l
-                                handle Fail _ => (("","0"),l)
-    val dreg = word32 default_reg
-    val dpsr = armML.decode_psr (word32 default_psr)
-in
-  mk_arm_state (architecture arch)
-   (fn r => case List.find (fn (n,_) => string_of_rname r = n) l
-            of SOME (_,v) => word32 v
-             | _ => dreg)
-   (fn r => case List.find (fn (n,_) => string_of_psrname r = n) l
-            of SOME (_,v) => armML.decode_psr (word32 v)
-             | _ => dpsr)
-   (word8 default_mem) prog
-end
+                     of [l, r] => (lower_string l, lower_string r)
+                      | _ => raise Fail "init_config")
+      val ((_, arch), l) = pluck (fn (n, _) => n = "arch") l
+                           handle Fail _ => (("", "armv7-a"), l)
+      val ((_, default_reg), l) = pluck (fn (n, _) => n = "reg_") l
+                                  handle Fail _ => (("", "0"), l)
+      val ((_, default_psr), l) = pluck (fn (n, _) => n = "_psr") l
+                                  handle Fail _ => (("", "10"), l)
+      val ((_, default_mem), l) = pluck (fn (n, _) => n = "mem_") l
+                                  handle Fail _ => (("", "0"), l)
+      val dreg = word32 default_reg
+      val dpsr = armML.decode_psr (word32 default_psr)
+   in
+      mk_arm_state (architecture arch)
+       (fn r => case List.find (fn (n, _) => string_of_rname r = n) l
+                of SOME (_, v) => word32 v
+                 | _ => dreg)
+       (fn r => case List.find (fn (n, _) => string_of_psrname r = n) l
+                of SOME (_, v) => armML.decode_psr (word32 v)
+                 | _ => dpsr)
+       (word8 default_mem) prog
+   end
 
 (* ------------------------------------------------------------------------ *)
 
@@ -640,42 +667,43 @@ fun time f x =
     val () = pt ()
   in
     y
-  end;
+  end
 *)
 
 fun input_number P message =
-let val _ = print message in
-  case TextIO.inputLine TextIO.stdIn
-  of NONE => input_number P message
-   | SOME s => case Int.fromString s
-               of SOME n => if P n then n else input_number P message
-                | NONE => input_number P message
-end
+   let
+      val _ = print message
+   in
+      case TextIO.inputLine TextIO.stdIn
+      of NONE => input_number P message
+       | SOME s => case Int.fromString s
+                   of SOME n => if P n then n else input_number P message
+                    | NONE => input_number P message
+   end
 
 fun arm_run trace prog options count =
-let
-  val state = init_config prog options
-  val out = ptree_arm_run trace (prog,state) count
-in
-  out
-end;
+   let
+      val state = init_config prog options
+   in
+      ptree_arm_run trace (prog, state) count
+   end
 
 fun main () =
-let
-  val prog = load_programs (CommandLine.arguments())
-  val _ = print "Enter architecture, initial register values and default\
-                \ memory content.\n(Enter values as Hex.)\n\
-                \For example: arch = ARMv7-A, pc = A00, r0 = AF, r_ = 10,\n\
-                \             cpsr = 80000010, _psr = 10, mem_ = 0\n> "
-  val options = valOf (TextIO.inputLine TextIO.stdIn)
-  val trace = input_number (fn i => 0 <= i andalso i <= 5)
-                "Enter trace level [0 - 5]: "
-  val count = input_number (fn i => ~1 <= i) "Enter number of cycles: "
-in
-  case time (arm_run (int_to_trace trace) prog options) count
-  of out as (_, SOME _) => print_arm_run prog out
-   | (e, NONE) => out [e]
-end;
+   let
+      val prog = load_programs (CommandLine.arguments())
+      val _ = print "Enter architecture, initial register values and default\
+                    \ memory content.\n(Enter values as Hex.)\n\
+                    \For example: arch = ARMv7-A, pc = A00, r0 = AF, r_ = 10,\n\
+                    \             cpsr = 80000010, _psr = 10, mem_ = 0\n> "
+      val options = valOf (TextIO.inputLine TextIO.stdIn)
+      val trace = input_number (fn i => 0 <= i andalso i <= 5)
+                    "Enter trace level [0 - 5]: "
+      val count = input_number (fn i => ~1 <= i) "Enter number of cycles: "
+   in
+      case time (arm_run (int_to_trace trace) prog options) count
+      of out as (_, SOME _) => print_arm_run prog out
+       | (e, NONE) => out [e]
+   end
 
 (*
 let
@@ -687,7 +715,8 @@ val prog = load_programs ["md5.o"];
 val options = "pc = 8000, r0 = C0000, lr = A0000, sp = B0000, cpsr = 10";
 val trace = 5;
 
-val _ = PolyML.export("HOLarm", main);
+PolyML.shareCommonData main;
+PolyML.export("HOLarm", main);
 
 gcc -o run HOLarm.o -L$HOME/polyml/lib -lpolymain -lpolyml
 *)
