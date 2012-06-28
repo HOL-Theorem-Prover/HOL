@@ -1022,6 +1022,18 @@ val ADD1R = store_thm(
   ``a + 1 = a⁺``,
   REWRITE_TAC [GSYM ORD_ONE] >> simp[]);
 
+val ordADD_weak_MONO = store_thm(
+  "ordADD_weak_MONO",
+  ``∀c a b:'a ordinal. a < b ⇒ a + c ≤ b + c``,
+  ho_match_mp_tac simple_ord_induction >> simp[] >> conj_tac
+  >- simp[ordle_lteq] >>
+  qx_gen_tac `c` >> strip_tac >> map_every qx_gen_tac [`a`, `b`] >>
+  strip_tac >> simp[predimage_sup_thm, impI] >> qx_gen_tac `d` >> strip_tac >>
+  strip_tac >>
+  `a + d ≤ b + d` by metis_tac[] >>
+  `b + d ∈ IMAGE ($+ b) (preds c)` by simp[] >>
+  metis_tac[sup_lt_implies, IMAGE_cardleq_rwt, preds_inj_univ]);
+
 (* Multiplication *)
 
 val ordMULT_def = new_specification(
@@ -1066,5 +1078,47 @@ val ordMULT_1R = store_thm(
   qsuff_tac `IMAGE (λy. y * 1) (preds a) = preds a`
   >- fs[sup_preds_omax_NONE] >>
   dsimp[EXTENSION] >> asm_simp_tac (srw_ss() ++ CONJ_ss) []);
+
+val ord_CASES = store_thm(
+  "ord_CASES",
+  ``∀a. (a = 0) ∨ (∃a0. a = a0⁺) ∨ (0 < a ∧ islimit a)``,
+  gen_tac >> Cases_on `a = 0` >- simp[] >>
+  `0 < a` by metis_tac [ordlt_trichotomy, ordlt_ZERO] >>
+  Cases_on `omax (preds a)` >> simp[] >>
+  fs[preds_omax_SOME_SUC]);
+
+val islimit_SUC = store_thm(
+  "islimit_SUC",
+  ``islimit b ∧ a < b ⇒ a⁺ < b``,
+  fs[omax_NONE] >> metis_tac [ordlt_SUC_DISCRETE, ordlt_trichotomy, ordle_lteq])
+
+val ordMULT_le_MONO_L = store_thm(
+  "ordMULT_le_MONO_L",
+  ``∀a b c:'a ordinal. a ≤ b ⇒ a * c ≤ b * c``,
+  ho_match_mp_tac simple_ord_induction >> simp[] >> conj_tac
+  >- (simp[ordlt_SUC_DISCRETE] >> qx_gen_tac `a` >> strip_tac >>
+      map_every qx_gen_tac [`b`, `c`] >>
+      `(b = 0) ∨ (∃b0. b = b0⁺) ∨ 0 < b ∧ islimit b` by metis_tac [ord_CASES]
+      >- (simp[] >> metis_tac[])
+      >- (simp[] >> strip_tac >> `a < b0⁺` by metis_tac [ordle_lteq] >>
+          fs[ordlt_SUC_DISCRETE] >>
+          `a * c ≤ b0 * c` by metis_tac[ordle_lteq] >>
+          pop_assum (strip_assume_tac o SIMP_RULE (srw_ss()) [ordle_lteq])
+          >- metis_tac [ordADD_weak_MONO] >> simp[]) >>
+      strip_tac >>
+      Tactical.REVERSE (Cases_on `0 < c`) >- fs[] >>
+      fs[sup_preds_omax_NONE] >>
+      `a < b` by metis_tac [ordle_lteq] >>
+      simp[ordle_lteq] >> DISJ1_TAC >>
+      simp[predimage_sup_thm] >>
+      qexists_tac `a⁺ ⁺` >> simp[] >>
+      metis_tac [sup_preds_omax_NONE, islimit_SUC]) >>
+  qx_gen_tac `a` >> strip_tac >> map_every qx_gen_tac [`b`, `c`] >>
+  strip_tac >>
+  `∀d. d < a ⇒ d ≤ b`
+    by metis_tac[sup_preds_omax_NONE, IN_preds, preds_inj_univ, sup_thm] >>
+  dsimp[sup_thm, IMAGE_cardleq_rwt, preds_inj_univ, impI]);
+
+
 
 val _ = export_theory()
