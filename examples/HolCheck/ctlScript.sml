@@ -1,4 +1,3 @@
-
 (* app load ["envTheory","setLemmasTheory","res_quanLib","stringLib","pred_setLib","ksTheory"] *)
 
 open HolKernel Parse boolLib bossLib
@@ -337,8 +336,8 @@ THENL [
 * C_SEM M s f means "M, s |= f"
 * The mutual recursion is not necessary here, but makes fCTL defs easier
 ******************************************************************************)
-val C_SEM_def =
- Define
+val csem_eqns as [CEG_def, CEU_def, CEX_def,C_SEM_def_aux] =
+ TotalDefn.multiDefine
   `(C_SEM M (C_BOOL b) s = B_SEM (M.L s) b) /\
    (C_SEM M (C_NOT f) s = ~(C_SEM M f s)) /\
    (C_SEM M (C_AND(f1,f2)) s = C_SEM M f1 s /\ C_SEM M f2 s) /\
@@ -349,6 +348,8 @@ val C_SEM_def =
    (CEU M (X1,X2) s = ?p. PATH M p s /\ ?k :: (0 to PLENGTH p). (ELEM p k) IN X2 /\ !j. j < k ==> (ELEM p j) IN X1) /\
    (CEG M X s = ?p. PATH M p s /\ !j :: (0 to PLENGTH p). (ELEM p j) IN X)
 `;
+
+val C_SEM_def = save_thm("C_SEM_def",LIST_CONJ csem_eqns);
 
 val CTL_MODEL_SAT_def = Define `CTL_MODEL_SAT M f = (!s. s IN M.S0 ==> C_SEM M f s)`
 

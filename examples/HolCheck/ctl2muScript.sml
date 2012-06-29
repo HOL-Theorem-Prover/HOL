@@ -1,7 +1,9 @@
-
-(*app load ["bossLib","stringTheory","stringLib","HolBddLib","pairTheory","pred_setLib","listLib","boolSimps","pairSimps","combinSimps",
-          "optionSimps", "numSimps", "listSimps","pairTools","pairLib","pairSyntax","pred_setTheory","sumTheory","ksTheory","numLib",
-          "muTheory","intLib","res_quanLib","unwindLib","ctlTheory","ctl2muTools","metisLib","res_quanLib"];
+(*
+app load 
+["pairTheory", "pairLib", "pairTools", "pairSyntax", "pred_setTheory", "pred_setLib", 
+ "stringLib", "listTheory", "rich_listTheory", "simpLib", "stringTheory", "sumTheory",
+ "ksTheory", "numLib", "setLemmasTheory", "muSyntaxTheory", "muTheory", "res_quanLib",
+ "envTheory", "ctlTheory", "metisLib", "res_quanLib"];
 *)
 
 open HolKernel Parse boolLib bossLib
