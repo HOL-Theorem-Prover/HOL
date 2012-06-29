@@ -17,7 +17,7 @@ sig
   val print_arm_mem      : arm_mem -> unit
   val print_diff_arm_mem : arm_mem -> arm_mem -> unit
 
-  val arm_run : run_trace -> armML.word8 patriciaML.ptree -> string -> int ->
+  val arm_run : run_trace -> arm_mem -> string -> int ->
                 string * (arm_mem * armML.arm_state) option
 
   val main    : unit -> unit

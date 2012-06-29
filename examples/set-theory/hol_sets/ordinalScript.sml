@@ -1022,6 +1022,18 @@ val ADD1R = store_thm(
   ``a + 1 = a⁺``,
   REWRITE_TAC [GSYM ORD_ONE] >> simp[]);
 
+val ordADD_weak_MONO = store_thm(
+  "ordADD_weak_MONO",
+  ``∀c a b:'a ordinal. a < b ⇒ a + c ≤ b + c``,
+  ho_match_mp_tac simple_ord_induction >> simp[] >> conj_tac
+  >- simp[ordle_lteq] >>
+  qx_gen_tac `c` >> strip_tac >> map_every qx_gen_tac [`a`, `b`] >>
+  strip_tac >> simp[predimage_sup_thm, impI] >> qx_gen_tac `d` >> strip_tac >>
+  strip_tac >>
+  `a + d ≤ b + d` by metis_tac[] >>
+  `b + d ∈ IMAGE ($+ b) (preds c)` by simp[] >>
+  metis_tac[sup_lt_implies, IMAGE_cardleq_rwt, preds_inj_univ]);
+
 (* Multiplication *)
 
 val ordMULT_def = new_specification(
@@ -1066,5 +1078,84 @@ val ordMULT_1R = store_thm(
   qsuff_tac `IMAGE (λy. y * 1) (preds a) = preds a`
   >- fs[sup_preds_omax_NONE] >>
   dsimp[EXTENSION] >> asm_simp_tac (srw_ss() ++ CONJ_ss) []);
+
+val ord_CASES = store_thm(
+  "ord_CASES",
+  ``∀a. (a = 0) ∨ (∃a0. a = a0⁺) ∨ (0 < a ∧ islimit a)``,
+  gen_tac >> Cases_on `a = 0` >- simp[] >>
+  `0 < a` by metis_tac [ordlt_trichotomy, ordlt_ZERO] >>
+  Cases_on `omax (preds a)` >> simp[] >>
+  fs[preds_omax_SOME_SUC]);
+
+val islimit_SUC = store_thm(
+  "islimit_SUC",
+  ``islimit b ∧ a < b ⇒ a⁺ < b``,
+  fs[omax_NONE] >> metis_tac [ordlt_SUC_DISCRETE, ordlt_trichotomy, ordle_lteq])
+
+val ordMULT_lt_MONO_L = store_thm(
+  "ordMULT_lt_MONO_L",
+  ``∀a b c:'a ordinal. a < b ∧ 0 < c ⇒ a * c < b * c``,
+  qsuff_tac `∀b a c:'a ordinal. a < b ∧ 0 < c ⇒ a * c < b * c` >- metis_tac[]>>
+  ho_match_mp_tac simple_ord_induction >> simp[] >> conj_tac
+  >- (simp[ordlt_SUC_DISCRETE] >> qx_gen_tac `b` >> strip_tac >>
+      map_every qx_gen_tac [`a`, `c`] >>
+      Cases_on `a = b` >> simp[] >> strip_tac >>
+      `a * c < b * c` by metis_tac[] >>
+      `b * c < b * c + c` by simp[] >> metis_tac [ordlt_TRANS]) >>
+  qx_gen_tac `b` >> strip_tac >> map_every qx_gen_tac [`a`, `c`] >>
+  strip_tac >> simp[predimage_sup_thm] >>
+  `∃d. a < d ∧ d < b`
+    by metis_tac[sup_preds_omax_NONE, IN_preds, preds_inj_univ, sup_thm] >>
+  metis_tac[]);
+
+val ordMULT_le_MONO_L = store_thm(
+  "ordMULT_le_MONO_L",
+  ``∀a b c:'a ordinal. a ≤ b ⇒ a * c ≤ b * c``,
+  simp[ordle_lteq] >> rpt strip_tac >> simp[] >>
+  Cases_on `c = 0` >> simp[] >>
+  `0 < c` by metis_tac [ordlt_ZERO, ordlt_trichotomy] >>
+  metis_tac [ordMULT_lt_MONO_L])
+
+val ordMULT_lt_MONO_L_EQN = store_thm(
+  "ordMULT_lt_MONO_L_EQN",
+  ``a * c < b * c <=> a < b ∧ 0 < c``,
+  simp[EQ_IMP_THM, ordMULT_lt_MONO_L] >>
+  Cases_on `0 < c` >- metis_tac [ordMULT_le_MONO_L] >> fs[]);
+val _ = export_rewrites ["ordMULT_lt_MONO_L_EQN"]
+
+val ordle_TRANS = store_thm(
+  "ordle_TRANS",
+  ``∀x y z. (x:'a ordinal) ≤ y ∧ y ≤ z ⇒ x ≤ z``,
+  metis_tac [ordlt_TRANS, ordle_lteq]);
+
+val ordADD_le_MONO_L = store_thm(
+  "ordADD_le_MONO_L",
+  ``x ≤ y ⇒ x + z ≤ y + z``,
+  simp[ordle_lteq, SimpL ``$==>``] >> simp[DISJ_IMP_THM, ordADD_weak_MONO]);
+
+val ordMULT_le_MONO_R = store_thm(
+  "ordMULT_le_MONO_R",
+  ``∀a b c:'a ordinal. a ≤ b ⇒ c * a ≤ c * b``,
+  qsuff_tac `∀c a b:'a ordinal. a ≤ b ⇒ c * a ≤ c * b` >- metis_tac[] >>
+  ho_match_mp_tac simple_ord_induction >> simp[] >> conj_tac
+  >- (qx_gen_tac `c` >> strip_tac >> map_every qx_gen_tac [`a`, `b`] >>
+      strip_tac >>
+      `c * a + a ≤ c * a + b` by simp[] >>
+      match_mp_tac ordle_TRANS >> qexists_tac `c * a + b` >> simp[] >>
+      simp[ordADD_le_MONO_L]) >>
+  qx_gen_tac `c` >> strip_tac >> map_every qx_gen_tac [`a`, `b`] >> strip_tac>>
+  simp[predimage_sup_thm, impI] >> qx_gen_tac `d` >> strip_tac >>
+  match_mp_tac ordle_TRANS >> qexists_tac `d * b` >> simp[] >>
+  qsuff_tac `d * b ∈ IMAGE (λy. y * b) (preds c)`
+  >- metis_tac [mklesup sup_thm, IMAGE_cardleq_rwt, preds_inj_univ] >>
+  simp[] >> metis_tac[]);
+
+val ordMULT_CANCEL_L = store_thm(
+  "ordMULT_CANCEL_L",
+  ``(x * z = y * z:'a ordinal) <=> (z = 0) ∨ (x = y)``,
+  simp[EQ_IMP_THM, DISJ_IMP_THM] >> strip_tac >>
+  Tactical.REVERSE (Cases_on `0 < z`) >- fs[] >>
+  `x < y ∨ (x = y) ∨ y < x` by metis_tac [ordlt_trichotomy] >>
+  metis_tac [ordMULT_lt_MONO_L_EQN, ordlt_REFL]);
 
 val _ = export_theory()

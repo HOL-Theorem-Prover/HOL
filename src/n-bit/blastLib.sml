@@ -80,15 +80,16 @@ local
 
   val cmp = reduceLib.num_compset ()
   val _ = computeLib.add_thms [combinTheory.o_THM, combinTheory.K_THM] cmp
+  val cnv = computeLib.CBV_CONV cmp
 
   fun add_index_thms tm =
         let val new_tys = new_word_types tm in
           List.app (fn ty => computeLib.add_thms (mk_index_thms ty) cmp) new_tys
         end
 in
-  fun ADD_INDEX_CONV tm = (add_index_thms tm; computeLib.CBV_CONV cmp tm)
+  fun ADD_INDEX_CONV tm = (add_index_thms tm; cnv tm)
 
-  fun INDEX_CONV tm = Conv.CHANGED_CONV (computeLib.CBV_CONV cmp) tm
+  fun INDEX_CONV tm = Conv.CHANGED_CONV cnv tm
                       handle HOL_ERR _ => raise Conv.UNCHANGED
 end
 
