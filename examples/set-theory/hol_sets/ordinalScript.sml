@@ -1123,4 +1123,39 @@ val ordMULT_lt_MONO_L_EQN = store_thm(
   Cases_on `0 < c` >- metis_tac [ordMULT_le_MONO_L] >> fs[]);
 val _ = export_rewrites ["ordMULT_lt_MONO_L_EQN"]
 
+val ordle_TRANS = store_thm(
+  "ordle_TRANS",
+  ``∀x y z. (x:'a ordinal) ≤ y ∧ y ≤ z ⇒ x ≤ z``,
+  metis_tac [ordlt_TRANS, ordle_lteq]);
+
+val ordADD_le_MONO_L = store_thm(
+  "ordADD_le_MONO_L",
+  ``x ≤ y ⇒ x + z ≤ y + z``,
+  simp[ordle_lteq, SimpL ``$==>``] >> simp[DISJ_IMP_THM, ordADD_weak_MONO]);
+
+val ordMULT_le_MONO_R = store_thm(
+  "ordMULT_le_MONO_R",
+  ``∀a b c:'a ordinal. a ≤ b ⇒ c * a ≤ c * b``,
+  qsuff_tac `∀c a b:'a ordinal. a ≤ b ⇒ c * a ≤ c * b` >- metis_tac[] >>
+  ho_match_mp_tac simple_ord_induction >> simp[] >> conj_tac
+  >- (qx_gen_tac `c` >> strip_tac >> map_every qx_gen_tac [`a`, `b`] >>
+      strip_tac >>
+      `c * a + a ≤ c * a + b` by simp[] >>
+      match_mp_tac ordle_TRANS >> qexists_tac `c * a + b` >> simp[] >>
+      simp[ordADD_le_MONO_L]) >>
+  qx_gen_tac `c` >> strip_tac >> map_every qx_gen_tac [`a`, `b`] >> strip_tac>>
+  simp[predimage_sup_thm, impI] >> qx_gen_tac `d` >> strip_tac >>
+  match_mp_tac ordle_TRANS >> qexists_tac `d * b` >> simp[] >>
+  qsuff_tac `d * b ∈ IMAGE (λy. y * b) (preds c)`
+  >- metis_tac [mklesup sup_thm, IMAGE_cardleq_rwt, preds_inj_univ] >>
+  simp[] >> metis_tac[]);
+
+val ordMULT_CANCEL_L = store_thm(
+  "ordMULT_CANCEL_L",
+  ``(x * z = y * z:'a ordinal) <=> (z = 0) ∨ (x = y)``,
+  simp[EQ_IMP_THM, DISJ_IMP_THM] >> strip_tac >>
+  Tactical.REVERSE (Cases_on `0 < z`) >- fs[] >>
+  `x < y ∨ (x = y) ∨ y < x` by metis_tac [ordlt_trichotomy] >>
+  metis_tac [ordMULT_lt_MONO_L_EQN, ordlt_REFL]);
+
 val _ = export_theory()
