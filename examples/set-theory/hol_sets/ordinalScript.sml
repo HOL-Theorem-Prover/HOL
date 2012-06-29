@@ -1092,33 +1092,35 @@ val islimit_SUC = store_thm(
   ``islimit b ∧ a < b ⇒ a⁺ < b``,
   fs[omax_NONE] >> metis_tac [ordlt_SUC_DISCRETE, ordlt_trichotomy, ordle_lteq])
 
+val ordMULT_lt_MONO_L = store_thm(
+  "ordMULT_lt_MONO_L",
+  ``∀a b c:'a ordinal. a < b ∧ 0 < c ⇒ a * c < b * c``,
+  qsuff_tac `∀b a c:'a ordinal. a < b ∧ 0 < c ⇒ a * c < b * c` >- metis_tac[]>>
+  ho_match_mp_tac simple_ord_induction >> simp[] >> conj_tac
+  >- (simp[ordlt_SUC_DISCRETE] >> qx_gen_tac `b` >> strip_tac >>
+      map_every qx_gen_tac [`a`, `c`] >>
+      Cases_on `a = b` >> simp[] >> strip_tac >>
+      `a * c < b * c` by metis_tac[] >>
+      `b * c < b * c + c` by simp[] >> metis_tac [ordlt_TRANS]) >>
+  qx_gen_tac `b` >> strip_tac >> map_every qx_gen_tac [`a`, `c`] >>
+  strip_tac >> simp[predimage_sup_thm] >>
+  `∃d. a < d ∧ d < b`
+    by metis_tac[sup_preds_omax_NONE, IN_preds, preds_inj_univ, sup_thm] >>
+  metis_tac[]);
+
 val ordMULT_le_MONO_L = store_thm(
   "ordMULT_le_MONO_L",
   ``∀a b c:'a ordinal. a ≤ b ⇒ a * c ≤ b * c``,
-  ho_match_mp_tac simple_ord_induction >> simp[] >> conj_tac
-  >- (simp[ordlt_SUC_DISCRETE] >> qx_gen_tac `a` >> strip_tac >>
-      map_every qx_gen_tac [`b`, `c`] >>
-      `(b = 0) ∨ (∃b0. b = b0⁺) ∨ 0 < b ∧ islimit b` by metis_tac [ord_CASES]
-      >- (simp[] >> metis_tac[])
-      >- (simp[] >> strip_tac >> `a < b0⁺` by metis_tac [ordle_lteq] >>
-          fs[ordlt_SUC_DISCRETE] >>
-          `a * c ≤ b0 * c` by metis_tac[ordle_lteq] >>
-          pop_assum (strip_assume_tac o SIMP_RULE (srw_ss()) [ordle_lteq])
-          >- metis_tac [ordADD_weak_MONO] >> simp[]) >>
-      strip_tac >>
-      Tactical.REVERSE (Cases_on `0 < c`) >- fs[] >>
-      fs[sup_preds_omax_NONE] >>
-      `a < b` by metis_tac [ordle_lteq] >>
-      simp[ordle_lteq] >> DISJ1_TAC >>
-      simp[predimage_sup_thm] >>
-      qexists_tac `a⁺ ⁺` >> simp[] >>
-      metis_tac [sup_preds_omax_NONE, islimit_SUC]) >>
-  qx_gen_tac `a` >> strip_tac >> map_every qx_gen_tac [`b`, `c`] >>
-  strip_tac >>
-  `∀d. d < a ⇒ d ≤ b`
-    by metis_tac[sup_preds_omax_NONE, IN_preds, preds_inj_univ, sup_thm] >>
-  dsimp[sup_thm, IMAGE_cardleq_rwt, preds_inj_univ, impI]);
+  simp[ordle_lteq] >> rpt strip_tac >> simp[] >>
+  Cases_on `c = 0` >> simp[] >>
+  `0 < c` by metis_tac [ordlt_ZERO, ordlt_trichotomy] >>
+  metis_tac [ordMULT_lt_MONO_L])
 
-
+val ordMULT_lt_MONO_L_EQN = store_thm(
+  "ordMULT_lt_MONO_L_EQN",
+  ``a * c < b * c <=> a < b ∧ 0 < c``,
+  simp[EQ_IMP_THM, ordMULT_lt_MONO_L] >>
+  Cases_on `0 < c` >- metis_tac [ordMULT_le_MONO_L] >> fs[]);
+val _ = export_rewrites ["ordMULT_lt_MONO_L_EQN"]
 
 val _ = export_theory()
