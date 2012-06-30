@@ -950,11 +950,29 @@ val sup_eq_max = store_thm(
   `sup s ≤ a` by simp[impI] >>
   metis_tac [ordle_ANTISYM]);
 
-val ordADD_continuous = store_thm(
-  "ordADD_continuous",
-  ``s ≼ univ(:'a inf) ∧ s ≠ ∅ ⇒
-    ((x:'a ordinal) + sup s = sup (IMAGE ($+ x) s))``,
-  strip_tac >>
+val sup_eq_SUC = store_thm(
+  "sup_eq_SUC",
+  ``s:'a ordinal set ≼ univ(:'a inf) ∧ (sup s = a⁺) ⇒ a⁺ ∈ s``,
+  rpt strip_tac >> `a < sup s` by simp[] >>
+  pop_assum mp_tac >> pop_assum (mp_tac o SYM) >> simp[sup_thm] >> strip_tac >>
+  disch_then (Q.X_CHOOSE_THEN `b` strip_assume_tac) >>
+  qsuff_tac `b = a⁺` >- metis_tac[] >>
+  match_mp_tac ordle_ANTISYM >> conj_tac
+  >- metis_tac [sup_lt_implies, ordlt_REFL] >>
+  simp[ordlt_SUC_DISCRETE] >> metis_tac[ordle_lteq, ordlt_REFL]);
+
+val ordle_TRANS = store_thm(
+  "ordle_TRANS",
+  ``∀x y z. (x:'a ordinal) ≤ y ∧ y ≤ z ⇒ x ≤ z``,
+  metis_tac [ordlt_TRANS, ordle_lteq]);
+
+val generic_continuity = store_thm(
+  "generic_continuity",
+  ``(∀a. 0 < a ∧ islimit a ⇒ (f a :'a ordinal = sup (IMAGE f (preds a)))) ∧
+    (∀x y. x ≤ y ⇒ f x ≤ f y) ⇒
+    ∀s:'a ordinal set.
+          s ≼ univ(:'a inf) ∧ s ≠ ∅ ⇒ (f (sup s) = sup (IMAGE f s))``,
+  rpt strip_tac >>
   `islimit (sup s) ∨ ∃a. omax (preds (sup s)) = SOME a`
     by metis_tac [optionTheory.option_CASES]
   >| [
@@ -965,37 +983,34 @@ val ordADD_continuous = store_thm(
         disch_then (qspec_then `0` mp_tac) >>
         disch_then (assume_tac o SIMP_RULE (srw_ss()) []) >>
         `s = {0}` by (fs[EXTENSION] >> metis_tac[]) >> simp[]) >>
+    match_mp_tac ordle_ANTISYM >> Tactical.REVERSE conj_tac
+    >- (dsimp[sup_thm, IMAGE_cardleq_rwt, impI, dclose_cardleq_univinf] >>
+        ntac 2 strip_tac >> first_x_assum match_mp_tac >>
+        simp[mklesup sup_thm]) >>
     `0 < sup s` by metis_tac [ordlt_trichotomy, ordlt_ZERO] >>
     simp[preds_sup] >>
     qpat_assum `islimit (sup s)` mp_tac >> simp[preds_sup] >> strip_tac >>
-    match_mp_tac ordle_ANTISYM >>
-    dsimp[sup_thm, IMAGE_cardleq_rwt, impI, dclose_cardleq_univinf] >>
-    conj_tac
-    >- dsimp[dclose_def, ordle_lteq, sup_thm, IMAGE_cardleq_rwt] >>
-    qx_gen_tac `a` >> strip_tac >>
-    Cases_on `∃b. b ∈ s ∧ a < b`
-    >- (fs[] >>
-        dsimp[sup_thm, IMAGE_cardleq_rwt, dclose_cardleq_univinf, ordle_lteq,
-              dclose_def] >>
-        DISJ1_TAC >> fs[omax_NONE, dclose_def] >> metis_tac[]) >>
-    fs[impI] >>
-    `sup s = a` by metis_tac [sup_eq_max] >>
-    `dclose s = preds a` by metis_tac[preds_sup] >> fs[],
+    dsimp[sup_thm, IMAGE_cardleq_rwt, impI, dclose_cardleq_univinf,
+          dclose_def] >>
+    ntac 4 strip_tac >>
+    match_mp_tac ordle_TRANS >> qexists_tac `f y` >> conj_tac
+    >- metis_tac [ordle_lteq] >>
+    match_mp_tac
+      (SIMP_RULE (srw_ss() ++ DNF_ss) [AND_IMP_INTRO] (mklesup sup_thm)) >>
+    simp[IMAGE_cardleq_rwt] >> metis_tac[],
 
     `sup (preds (sup s)) = a` by metis_tac[omax_sup] >>
     fs[preds_omax_SOME_SUC] >>
+    `a⁺ ∈ s` by metis_tac [sup_eq_SUC] >>
     ONCE_REWRITE_TAC [EQ_SYM_EQ] >>
-    match_mp_tac sup_eq_max >> dsimp[] >>
-    simp_tac bool_ss [GSYM ordADD_def, ordADD_RIGHT_CANCEL,
-                      ordlt_CANCEL] >>
-    conj_tac >- metis_tac [mklesup sup_thm] >>
-    `a < sup s` by simp[] >> pop_assum mp_tac >>
-    simp[sup_thm] >> disch_then (Q.X_CHOOSE_THEN `b` mp_tac) >>
-    strip_tac >> qsuff_tac `b = a⁺` >- metis_tac[] >>
-    match_mp_tac ordle_ANTISYM >> conj_tac
-    >- metis_tac [sup_lt_implies, ordlt_REFL] >>
-    simp[ordlt_SUC_DISCRETE] >> metis_tac[ordle_lteq, ordlt_REFL]
+    match_mp_tac sup_eq_max >> dsimp[] >> qexists_tac `a⁺` >> simp[] >>
+    ntac 2 strip_tac >> first_x_assum match_mp_tac >>
+    metis_tac [mklesup sup_thm]
   ])
+
+val ordADD_continuous = save_thm(
+  "ordADD_continuous",
+  generic_continuity |> Q.INST [`f` |-> `$+ a`] |> SIMP_RULE (srw_ss()) [])
 
 val ordADD_ASSOC = store_thm(
   "ordADD_ASSOC",
@@ -1123,11 +1138,6 @@ val ordMULT_lt_MONO_L_EQN = store_thm(
   Cases_on `0 < c` >- metis_tac [ordMULT_le_MONO_L] >> fs[]);
 val _ = export_rewrites ["ordMULT_lt_MONO_L_EQN"]
 
-val ordle_TRANS = store_thm(
-  "ordle_TRANS",
-  ``∀x y z. (x:'a ordinal) ≤ y ∧ y ≤ z ⇒ x ≤ z``,
-  metis_tac [ordlt_TRANS, ordle_lteq]);
-
 val ordADD_le_MONO_L = store_thm(
   "ordADD_le_MONO_L",
   ``x ≤ y ⇒ x + z ≤ y + z``,
@@ -1157,5 +1167,16 @@ val ordMULT_CANCEL_L = store_thm(
   Tactical.REVERSE (Cases_on `0 < z`) >- fs[] >>
   `x < y ∨ (x = y) ∨ y < x` by metis_tac [ordlt_trichotomy] >>
   metis_tac [ordMULT_lt_MONO_L_EQN, ordlt_REFL]);
+
+val ordMULT_continuous0 =
+  generic_continuity |> Q.INST [`f` |-> `λx. x * y`]
+                     |> SIMP_RULE (srw_ss()) []
+
+val ordMULT_continuous = store_thm(
+  "ordMULT_continuous",
+  ``∀s:'a ordinal set. s ≼ univ(:'a inf) ⇒
+           (sup s * a = sup (IMAGE (λx. x * a) s))``,
+  rpt strip_tac >> Cases_on `s = {}` >> simp[ordMULT_continuous0]);
+
 
 val _ = export_theory()
