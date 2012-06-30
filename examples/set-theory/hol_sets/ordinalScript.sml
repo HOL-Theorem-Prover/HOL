@@ -1178,5 +1178,44 @@ val ordMULT_continuous = store_thm(
            (sup s * a = sup (IMAGE (λx. x * a) s))``,
   rpt strip_tac >> Cases_on `s = {}` >> simp[ordMULT_continuous0]);
 
+val ordMULT_fromNat = store_thm(
+  "ordMULT_fromNat",
+  ``(&n : 'a ordinal) * &m = &(n * m)``,
+  Induct_on `n` >> simp[arithmeticTheory.MULT_CLAUSES]);
+val _ = export_rewrites ["ordMULT_fromNat"]
+
+val omega_MUL_fromNat = store_thm(
+  "omega_MUL_fromNat",
+  ``0 < n ⇒ (ω * &n = ω)``,
+  simp[omax_preds_omega] >> strip_tac >>
+  match_mp_tac ordle_ANTISYM >> dsimp[predimage_sup_thm, lt_omega, impI] >>
+  conj_tac >- simp[ordle_lteq] >>
+  qx_gen_tac `m` >>
+  qsuff_tac `&m < sup (IMAGE (λy. y * &n) (preds ω))` >- metis_tac[ordlt_REFL]>>
+  dsimp[predimage_sup_thm, lt_omega] >>
+  qexists_tac `m + 1` >> simp[arithmeticTheory.RIGHT_ADD_DISTRIB] >>
+  qsuff_tac `m ≤ m * n ∧ m * n < n + m * n` >- DECIDE_TAC >>
+  simp[]);
+
+val ordMULT_RDISTRIB = store_thm(
+  "ordMULT_RDISTRIB",
+  ``∀a b c:'a ordinal. (a + b) * c = a * c + b * c``,
+  qsuff_tac `∀b a c. (a + b) * c = a * c + b * c` >- simp[] >>
+  ho_match_mp_tac simple_ord_induction >> simp[ordADD_ASSOC] >>
+  qx_gen_tac `b` >> strip_tac >>
+  `preds b ≠ {}` by (simp[EXTENSION] >> metis_tac[]) >>
+  simp[ordADD_continuous, ordMULT_continuous, IMAGE_cardleq_rwt,
+       preds_inj_univ] >>
+  rpt strip_tac >> AP_TERM_TAC >> dsimp[EXTENSION] >>
+  asm_simp_tac (srw_ss() ++ CONJ_ss) [])
+
+val ordMULT_ASSOC = store_thm(
+  "ordMULT_ASSOC",
+  ``∀a b c:'a ordinal. a * (b * c) = (a * b) * c``,
+  ho_match_mp_tac simple_ord_induction >> simp[ordMULT_RDISTRIB] >>
+  simp[ordMULT_continuous, IMAGE_cardleq_rwt, preds_inj_univ] >>
+  rpt strip_tac >> AP_TERM_TAC >> dsimp[EXTENSION] >>
+  asm_simp_tac (srw_ss() ++ CONJ_ss) [])
+
 
 val _ = export_theory()
