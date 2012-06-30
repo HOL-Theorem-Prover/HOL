@@ -1217,5 +1217,89 @@ val ordMULT_ASSOC = store_thm(
   rpt strip_tac >> AP_TERM_TAC >> dsimp[EXTENSION] >>
   asm_simp_tac (srw_ss() ++ CONJ_ss) [])
 
+val ordDIVISION0 = prove(
+  ``∀a b:'a ordinal. 0 < b ⇒ ∃q r. (a = q * b + r) ∧ r < b``,
+  rpt strip_tac >>
+  qabbrev_tac `d = sup { c | c * b ≤ a }` >>
+  `∀c. c * b ≤ a ⇒ c ≤ a`
+     by (ntac 2 strip_tac >> match_mp_tac ordle_TRANS >>
+         qexists_tac `c * b` >> simp[] >>
+         simp[Once (GSYM ordMULT_1R), SimpR ``ordlt``] >>
+         match_mp_tac ordMULT_le_MONO_R >>
+         simp_tac bool_ss [GSYM ORD_ONE, ordlt_SUC_DISCRETE] >>
+         simp[] >> strip_tac >> fs[]) >>
+  `∀α. α ∈ { c | c * b ≤ a } ⇒ α < a⁺`
+    by (simp[ordlt_SUC_DISCRETE] >> metis_tac [ordle_lteq]) >>
+  `∀α. α < d ⇔ ∃c. c * b ≤ a ∧ α < c`
+    by (simp[Abbr`d`] >> pop_assum (assume_tac o MATCH_MP ubsup_thm) >>
+        simp[]) >>
+  `d * b ≤ a`
+    by (simp[Abbr`d`] >>
+        `{ c | c * b ≤ a } ≼ univ(:'a inf)`
+          by (`{ c | c * b ≤ a } ≼ preds a⁺`
+                by simp[SUBSET_DEF, SUBSET_CARDLEQ] >>
+              `preds a⁺ ≼ univ(:'a inf)` by simp[preds_inj_univ] >>
+              metis_tac [cardleq_TRANS]) >>
+        dsimp[ordMULT_continuous, sup_thm, IMAGE_cardleq_rwt, impI]) >>
+  `∃r. d * b + r = a` by metis_tac [ordle_EXISTS_ADD] >>
+  qsuff_tac `r < b` >- metis_tac[] >>
+  spose_not_then strip_assume_tac >>
+  `∃bb. b + bb = r` by metis_tac [ordle_EXISTS_ADD] >>
+  `d⁺ * b + bb = a` by simp[GSYM ordADD_ASSOC] >>
+  `∀c. c * b ≤ a ⇒ c ≤ d` by metis_tac [ordlt_REFL] >>
+  metis_tac [ordlt_SUC, ordle_EXISTS_ADD]);
+
+val ordDIVISION = new_specification(
+  "ordDIVISION", ["ordDIV", "ordMOD"],
+  SIMP_RULE (srw_ss()) [SKOLEM_THM, GSYM RIGHT_EXISTS_IMP_THM] ordDIVISION0)
+
+val _ = set_fixity "/" (Infixl 600)
+val _ = overload_on ("/", ``ordDIV``)
+
+val _ = set_fixity "%" (Infixl 650)
+val _ = overload_on ("%", ``ordMOD``)
+
+val ordDIV_UNIQUE = store_thm(
+  "ordDIV_UNIQUE",
+  ``∀a b q r. 0 < (b:'a ordinal) ∧ (a = q*b + r) ∧ r < b ⇒ (a / b = q)``,
+  rpt strip_tac >>
+  `(a = a / b * b + a % b) ∧ a % b < b` by metis_tac [ordDIVISION] >>
+  `a / b < q ∨ (a / b = q) ∨ q < a / b` by metis_tac [ordlt_trichotomy] >| [
+    `∃bb. (q = a/b + bb) ∧ 0 < bb`
+      by metis_tac [ordlt_EXISTS_ADD, ordlt_trichotomy, ordlt_ZERO] >>
+    `a = (a/b + bb) * b + r` by metis_tac[] >>
+    `_ = a/b * b + bb * b + r` by metis_tac[ordMULT_RDISTRIB] >>
+    `a % b = bb * b + r` by metis_tac [ordADD_ASSOC, ordADD_RIGHT_CANCEL] >>
+    `bb * b + r < b` by metis_tac[] >>
+    `b ≤ bb * b`
+      by (simp_tac bool_ss [Once (GSYM ordMULT_1L), SimpR ``ordlt``] >>
+          match_mp_tac ordMULT_le_MONO_L >>
+          simp_tac bool_ss [GSYM ORD_ONE, ordlt_SUC_DISCRETE] >>
+          simp[] >> strip_tac >> fs[]) >>
+    `b ≤ bb * b + r` by metis_tac [ordle_CANCEL_ADDR, ordADD_le_MONO_L,
+                                   ordle_TRANS],
+
+    `∃bb. (q + bb = a/b) ∧ 0 < bb`
+      by metis_tac [ordlt_EXISTS_ADD, ordlt_trichotomy, ordlt_ZERO] >>
+    `a = (q + bb) * b + a % b` by metis_tac[] >>
+    `_ = q * b + bb * b + a % b` by simp[ordMULT_RDISTRIB] >>
+    `r = bb * b + a % b` by metis_tac [ordADD_ASSOC, ordADD_RIGHT_CANCEL] >>
+    `bb * b + a % b < b` by metis_tac[] >>
+    `b ≤ bb * b`
+      by (simp_tac bool_ss [Once (GSYM ordMULT_1L), SimpR ``ordlt``] >>
+          match_mp_tac ordMULT_le_MONO_L >>
+          simp_tac bool_ss [GSYM ORD_ONE, ordlt_SUC_DISCRETE] >>
+          simp[] >> strip_tac >> fs[]) >>
+    `b ≤ bb * b + a % b`
+      by metis_tac [ordle_CANCEL_ADDR, ordADD_le_MONO_L, ordle_TRANS]
+  ]);
+
+val ordMOD_UNIQUE = store_thm(
+  "ordMOD_UNIQUE",
+  ``∀a b q r. 0 < b ∧ (a = q * b + r) ∧ r < b ⇒ (a % b = r)``,
+  rpt strip_tac >>
+  `(a = a / b * b + a % b) ∧ a % b < b` by metis_tac [ordDIVISION] >>
+  `a / b = q` by metis_tac [ordDIV_UNIQUE] >> pop_assum SUBST_ALL_TAC >>
+  qabbrev_tac `r' = a % b` >> fs[])
 
 val _ = export_theory()
