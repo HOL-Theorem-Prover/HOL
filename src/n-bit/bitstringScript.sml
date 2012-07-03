@@ -396,6 +396,26 @@ val v2w_11 = Q.store_thm("v2w_11",
 
 (* ------------------------------------------------------------------------- *)
 
+val take_id_imp =
+   metisLib.METIS_PROVE [listTheory.TAKE_LENGTH_ID]
+     ``!n w: 'a list. (n = LENGTH w) ==> (TAKE n w = w)``
+
+val field_concat_right = Q.store_thm("field_concat_right",
+   `!h a b. (LENGTH b = SUC h) ==> (field h 0 (a ++ b) = b)`,
+   lrw [field_def, shiftr_def, take_id_imp]
+   \\ lrw [fixwidth_def, rich_listTheory.BUTFIRSTN_LENGTH_APPEND])
+
+val field_concat_left = Q.store_thm("field_concat_left",
+   `!h l a b.
+        (LENGTH a = SUC h - l) /\ (LENGTH b = l) ==>
+        (field h l (a ++ b) = a)`,
+   ntac 2 strip_tac
+   \\ Cases_on `l <= h`
+   \\ lrw [field_def, shiftr_def, fixwidth_id_imp, take_id_imp,
+           listTheory.TAKE_APPEND1])
+
+(* ------------------------------------------------------------------------- *)
+
 val word_lsb_v2w = Q.store_thm("word_lsb_v2w",
   `!v. word_lsb (v2w v) = v <> [] /\ LAST v`,
   lrw [wordsTheory.word_lsb_def, wordsTheory.word_bit, bit_v2w, testbit,
@@ -825,7 +845,6 @@ val DROP_LAST = Q.prove(
    \\ lfs []
    \\ lfs [rich_listTheory.LASTN_1, listTheory.LENGTH_NIL])
 
-
 val word_bit_last_shiftr = Q.store_thm("word_bit_last_shiftr",
   `!i v. i < dimindex(:'a) ==>
          (word_bit i (v2w v : 'a word) =
@@ -895,6 +914,12 @@ val ops_to_n2w = Q.store_thm("ops_to_n2w",
    rewrite_tac [n2w_v2n]);
 
 (* ------------------------------------------------------------------------- *)
+
+val () = bossLib.export_rewrites
+   ["length_w2v", "length_fixwidth", "length_field",
+    "length_bitify", "length_shiftr",
+    "v2w_w2v", "v2n_n2v", "v2w_n2v",
+    "fixwidth_fixwidth", "fixwidth_id_imp"]
 
 val _ = computeLib.add_persistent_funs [
      ("testbit", testbit),
