@@ -1054,9 +1054,6 @@ val _ = Defn.save_defn replace_calls_defn;
 /\
 (compile s (CVar vn) = incsz (compile_varref s (FAPPLY  s.env  vn)))
 /\
-(compile s (CCon n []) =
-  incsz (emit s [Stack (PushInt (& n))]))
-/\
 (compile s (CCon n es) =
   let z = s.sz+ 1 in
   let (s,dt) = sdt s in
@@ -1066,7 +1063,7 @@ val _ = Defn.save_defn replace_calls_defn;
 /\
 (compile s (CTagEq e n) =
   let (s,dt) = sdt s in
-  ldt dt (emit (compile s e) [Stack (TagEquals n)]))
+  ldt dt (emit (compile s e) [Stack (TagEq n)]))
 /\
 (compile s (CProj e n) =
   let (s,dt) = sdt s in

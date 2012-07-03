@@ -1001,9 +1001,6 @@ compile s (CLit (Bool b)) =
 and
 compile s (CVar vn) = incsz (compile_varref s (Pmap.find vn s.env))
 and
-compile s (CCon n []) =
-  incsz (emit s [Stack (PushInt (num_to_int n))])
-and
 compile s (CCon n es) =
   let z = s.sz + 1 in
   let (s,dt) = sdt s in
@@ -1013,7 +1010,7 @@ compile s (CCon n es) =
 and
 compile s (CTagEq e n) =
   let (s,dt) = sdt s in
-  ldt dt (emit (compile s e) [Stack (TagEquals n)])
+  ldt dt (emit (compile s e) [Stack (TagEq n)])
 and
 compile s (CProj e n) =
   let (s,dt) = sdt s in

@@ -10,8 +10,8 @@ type
   | Load of num             (* push stack[n+1] *)
   | Store of num            (* pop and store in stack[n+1] *)
   | El of num               (* read field n of cons block *)
-  | TagEquals of num        (* test tag from cons block or number *)
-  | IsNum | Equal           (* more tests *)
+  | TagEq of num            (* test tag of block *)
+  | Equal                   (* test equality *)
   | Add | Sub | Mult | Div2 | Mod2 | Less  (* arithmetic *)
 
 type
@@ -109,13 +109,7 @@ forall k tag ys xs. k < List.length ys ==>
 bc_stack_op (El k) ((Block tag ys)::xs) (List.nth ys k::xs)
 and
 forall t tag ys xs. true ==>
-bc_stack_op (TagEquals t) ((Block tag ys)::xs) (Number (bool_to_int (tag = t))::xs)
-and
-forall t i xs. true ==>
-bc_stack_op (TagEquals t) ((Number i)::xs) (Number (bool_to_int (i = num_to_int t))::xs)
-and
-forall x xs. true ==>
-bc_stack_op IsNum (x::xs) (Number (bool_to_int (exist n. x = Number n))::xs)
+bc_stack_op (TagEq t) ((Block tag ys)::xs) (Number (bool_to_int (tag = t))::xs)
 and
 forall x2 x1 xs. true ==>
 bc_stack_op Equal (x2::x1::xs) (Number (bool_to_int (x1 = x2))::xs)

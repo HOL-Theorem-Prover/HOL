@@ -138,7 +138,7 @@ val bc2x64_aux_def = Define `
        SOME [^(x86_bytes "test rax,1");
              ^(x86_bytes "mov rax,r8");
              ^(x86_bytes "cmove rax,r9")]) /\
-  (bc2x64_aux pos (Stack (TagEquals n)) = 
+  (bc2x64_aux pos (Stack (TagEq n)) = 
        SOME [^(x86_bytes "test rax,1");
              ^(x86_bytes "je 3");
              ^(x86_bytes "mov eax,[rax+3]");

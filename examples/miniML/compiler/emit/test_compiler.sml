@@ -138,10 +138,10 @@ Dtype
 ``
 val e22 = ``Con "Cons" [Lit (Bool T); Con "Nil" []]``
 val c22 = fd e22 [listd]
-val [Block (t1,[Number i,Number t2])] = g c22
+val [Block (t1,[Number i,Block (t2,[])])] = g c22
 val SOME 0 = numML.toInt t1
 val SOME 1 = intML.toInt i
-val SOME 1 = intML.toInt t2;
+val SOME 1 = numML.toInt t2;
 val e23 = ``Mat (Con "Cons" [Lit (IntLit 2);
                  Con "Cons" [Lit (IntLit 3);
                  Con "Nil" []]])
