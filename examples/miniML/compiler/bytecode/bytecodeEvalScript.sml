@@ -41,10 +41,10 @@ val bc_eval_stack_def = Define`
    SOME (Number (m - n)::xs))
 ∧ (bc_eval_stack Mult (Number n :: Number m :: xs) =
    SOME (Number (m * n)::xs))
-∧ (bc_eval_stack Div2 (Number m :: xs) =
-   SOME (Number (m / 2)::xs))
-∧ (bc_eval_stack Mod2 (Number m :: xs) =
-   SOME (Number (m % 2)::xs))
+∧ (bc_eval_stack Div (Number n :: Number m :: xs) =
+   SOME (Number (m / n)::xs))
+∧ (bc_eval_stack Mod (Number n :: Number m :: xs) =
+   SOME (Number (m % n)::xs))
 ∧ (bc_eval_stack _ _ = NONE)`
 
 val bc_eval_stack_thm1 = prove(
@@ -124,10 +124,10 @@ fs[bc_eval_stack_def,bc_stack_op_cases,isNumber_exists_thm] >> rw[]
   qmatch_assum_rename_tac `bc_eval_stack Mult (h::t) = SOME ys` [] >>
   Cases_on `h` >> Cases_on `HD t` >> Cases_on `t` >> fs[bc_eval_stack_def] )
 >- (
-  qmatch_assum_rename_tac `bc_eval_stack Div2 (h::t) = SOME ys` [] >>
+  qmatch_assum_rename_tac `bc_eval_stack Div (h::t) = SOME ys` [] >>
   Cases_on `h` >> Cases_on `HD t` >> Cases_on `t` >> fs[bc_eval_stack_def] )
 >- (
-  qmatch_assum_rename_tac `bc_eval_stack Mod2 (h::t) = SOME ys` [] >>
+  qmatch_assum_rename_tac `bc_eval_stack Mod (h::t) = SOME ys` [] >>
   Cases_on `h` >> Cases_on `HD t` >> Cases_on `t` >> fs[bc_eval_stack_def] )
 >- (
   qmatch_assum_rename_tac `bc_eval_stack Less (h::t) = SOME ys` [] >>

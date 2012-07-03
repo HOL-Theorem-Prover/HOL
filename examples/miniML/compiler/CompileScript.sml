@@ -955,9 +955,9 @@ val _ = Defn.save_defn error_to_int_defn;
 /\
 (prim2_to_bc CMul = Mult)
 /\
-(prim2_to_bc CDiv = Div2) (* TODO *)
+(prim2_to_bc CDiv = Div)
 /\
-(prim2_to_bc CMod = Mod2) (* TODO *)
+(prim2_to_bc CMod = Mod)
 /\
 (prim2_to_bc CLt = Less)
 /\

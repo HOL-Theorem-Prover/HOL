@@ -926,9 +926,9 @@ prim2_to_bc CSub = Sub
 and
 prim2_to_bc CMul = Mult
 and
-prim2_to_bc CDiv = Div2 (* TODO *)
+prim2_to_bc CDiv = Div
 and
-prim2_to_bc CMod = Mod2 (* TODO *)
+prim2_to_bc CMod = Mod
 and
 prim2_to_bc CLt = Less
 and

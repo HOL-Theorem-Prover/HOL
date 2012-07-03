@@ -12,7 +12,7 @@ type
   | El of num               (* read field n of cons block *)
   | TagEq of num            (* test tag of block *)
   | Equal                   (* test equality *)
-  | Add | Sub | Mult | Div2 | Mod2 | Less  (* arithmetic *)
+  | Add | Sub | Mult | Div | Mod | Less  (* arithmetic *)
 
 type
   bc_inst =
@@ -126,11 +126,11 @@ and
 forall n m xs. true ==>
 bc_stack_op Mult (Number n::Number m::xs) (Number (Int.( *) m n)::xs)
 and
-forall m xs. true ==>
-bc_stack_op Div2 (Number m::xs) (Number (Int.(/) m (num_to_int 2))::xs)
+forall n m xs. true ==>
+bc_stack_op Div  (Number n::Number m::xs) (Number (Int.(/) m n)::xs)
 and
-forall m xs. true ==>
-bc_stack_op Mod2 (Number m::xs) (Number (Int.(%) m (num_to_int 2))::xs)
+forall n m xs. true ==>
+bc_stack_op Mod  (Number n::Number m::xs) (Number (Int.(%) m n)::xs)
 
 indreln
 forall s b ys.

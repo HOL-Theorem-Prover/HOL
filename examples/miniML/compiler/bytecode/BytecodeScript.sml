@@ -20,7 +20,7 @@ val _ = Hol_datatype `
   | El of num               (* read field n of cons block *)
   | TagEq of num            (* test tag of block *)
   | Equal                   (* test equality *)
-  | Add | Sub | Mult | Div2 | Mod2 | Less`;
+  | Add | Sub | Mult | Div | Mod | Less`;
   (* arithmetic *)
 
 val _ = Hol_datatype `
@@ -149,11 +149,11 @@ bc_stack_op Sub  (Number n::Number m::xs) (Number ((int_sub) m n)::xs))
 (! n m xs. T ==>
 bc_stack_op Mult (Number n::Number m::xs) (Number (int_mul m n)::xs))
 /\
-(! m xs. T ==>
-bc_stack_op Div2 (Number m::xs) (Number (int_div m (& 2))::xs))
+(! n m xs. T ==>
+bc_stack_op Div  (Number n::Number m::xs) (Number (int_div m n)::xs))
 /\
-(! m xs. T ==>
-bc_stack_op Mod2 (Number m::xs) (Number (int_mod m (& 2))::xs))`;
+(! n m xs. T ==>
+bc_stack_op Mod  (Number n::Number m::xs) (Number (int_mod m n)::xs))`;
 
 val _ = Hol_reln `
 (! s b ys.(
