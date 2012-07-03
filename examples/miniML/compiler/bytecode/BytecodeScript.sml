@@ -149,10 +149,10 @@ bc_stack_op Sub  (Number n::Number m::xs) (Number ((int_sub) m n)::xs))
 (! n m xs. T ==>
 bc_stack_op Mult (Number n::Number m::xs) (Number (int_mul m n)::xs))
 /\
-(! n m xs. T ==>
+(! n m xs.~  (n= & 0) ==>
 bc_stack_op Div  (Number n::Number m::xs) (Number (int_div m n)::xs))
 /\
-(! n m xs. T ==>
+(! n m xs.~  (n= & 0) ==>
 bc_stack_op Mod  (Number n::Number m::xs) (Number (int_mod m n)::xs))`;
 
 val _ = Hol_reln `

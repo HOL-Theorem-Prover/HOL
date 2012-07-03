@@ -126,10 +126,10 @@ and
 forall n m xs. true ==>
 bc_stack_op Mult (Number n::Number m::xs) (Number (Int.( *) m n)::xs)
 and
-forall n m xs. true ==>
+forall n m xs. not (n = num_to_int 0) ==>
 bc_stack_op Div  (Number n::Number m::xs) (Number (Int.(/) m n)::xs)
 and
-forall n m xs. true ==>
+forall n m xs. not (n = num_to_int 0) ==>
 bc_stack_op Mod  (Number n::Number m::xs) (Number (Int.(%) m n)::xs)
 
 indreln

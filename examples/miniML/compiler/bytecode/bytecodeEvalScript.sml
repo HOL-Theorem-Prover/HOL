@@ -42,8 +42,10 @@ val bc_eval_stack_def = Define`
 ∧ (bc_eval_stack Mult (Number n :: Number m :: xs) =
    SOME (Number (m * n)::xs))
 ∧ (bc_eval_stack Div (Number n :: Number m :: xs) =
+   if n = 0 then NONE else
    SOME (Number (m / n)::xs))
 ∧ (bc_eval_stack Mod (Number n :: Number m :: xs) =
+   if n = 0 then NONE else
    SOME (Number (m % n)::xs))
 ∧ (bc_eval_stack _ _ = NONE)`
 
