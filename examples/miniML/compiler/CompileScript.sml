@@ -1140,7 +1140,7 @@ val _ = Defn.save_defn replace_calls_defn;
 (compile s (CPrim2 op e1 e2) =
   let (s,dt) = sdt s in
   let s = compile s e1 in
-  let s = compile s e2 in
+  let s = compile s e2 in (* TODO: need to detect div by zero *)
   decsz (ldt dt (emit s [Stack (prim2_to_bc op)])))
 /\
 (compile s (CLprim CLeq [e1;e2]) =
@@ -1357,7 +1357,8 @@ val _ = Define `
 val _ = Define `
  (compile_Cexp rs Ce =
   let Ce = remove_mat Ce in
-  let cs = compile rs.cs Ce in
+  let cs =  rs.cs with<| code := [] ; code_length := 0 |> in
+  let cs = compile cs Ce in
   let cs = (case cs.decl of
      NONE => cs
     |SOME (env,sz) =>  cs with<| env := env ; sz := sz |>
@@ -1381,7 +1382,8 @@ val _ = Defn.save_defn number_constructors_defn;
 
  val repl_dec_defn = Hol_defn "repl_dec" `
 
-(repl_dec rs (Dtype []) = rs)
+(repl_dec rs (Dtype []) =
+   rs with<| cs := rs.cs with<| code := []; code_length := 0|> |>)
 /\
 (repl_dec rs (Dtype ((a,ty,cs)::ts)) =
   let (cm,cw) = number_constructors a (rs.cmap,FEMPTY) 0 cs in

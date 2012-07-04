@@ -12,10 +12,10 @@ val data = map
    datatype_bc_value,
    datatype_bc_state]
 
-val init_state_def =  Define`
-  init_state ls = <|
+val init_bc_state_def =  Define`
+  init_bc_state = <|
     stack := [];
-    code := (Stack (Pops 1))::ls;
+    code := [Stack (Pops 1)];
     pc := 1;
     refs := FEMPTY;
     exstack := [(0,0)];
@@ -26,7 +26,7 @@ optionTheory.OPTION_BIND_def,
 bc_fetch_aux_def,bc_fetch_def,bump_pc_def,
 bool_to_int_def,isNumber_def,
 bc_eval_stack_def,bc_eval1_def,bc_eval_def,
-init_state_def]
+init_bc_state_def]
 
 val _ = EmitML.eSML "bytecode" (
   (EmitML.OPEN ["num","int","fmap"])
