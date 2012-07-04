@@ -407,12 +407,18 @@ val field_concat_right = Q.store_thm("field_concat_right",
 
 val field_concat_left = Q.store_thm("field_concat_left",
    `!h l a b.
-        (LENGTH a = SUC h - l) /\ (LENGTH b = l) ==>
-        (field h l (a ++ b) = a)`,
-   ntac 2 strip_tac
-   \\ Cases_on `l <= h`
-   \\ lrw [field_def, shiftr_def, fixwidth_id_imp, take_id_imp,
-           listTheory.TAKE_APPEND1])
+       l <= h /\ LENGTH b <= l ==>
+       (field h l (a ++ b) = field (h - LENGTH b) (l - LENGTH b) a)`,
+   rw [field_def, shiftr_def]
+   \\ imp_res_tac arithmeticTheory.LESS_EQUAL_ADD
+   \\ pop_assum kall_tac
+   \\ pop_assum SUBST_ALL_TAC
+   \\ lfs [listTheory.TAKE_APPEND1]
+   \\ simp [DECIDE ``p + l <= h ==> (SUC h - (p + l) = SUC (h - l) - p)``])
+
+val field_id_imp = Q.store_thm("field_id_imp",
+   `!n v. (SUC n = LENGTH v) ==> (field n 0 v = v)`,
+   metis_tac [fixwidth_id_imp, field_fixwidth])
 
 (* ------------------------------------------------------------------------- *)
 
