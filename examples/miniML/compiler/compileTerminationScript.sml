@@ -214,8 +214,8 @@ val (repl_dec_def,repl_dec_ind) = register "repl_dec" (
   tprove_no_defn ((repl_dec_def,repl_dec_ind),
   WF_REL_TAC `measure (dec_size o SND)`))
 
-val (bcv_to_ov_def,bcv_to_ov_ind) = register "bcv_to_ov" (
-  tprove_no_defn ((bcv_to_ov_def,bcv_to_ov_ind),
+val (bv_to_ov_def,bv_to_ov_ind) = register "bv_to_ov" (
+  tprove_no_defn ((bv_to_ov_def,bv_to_ov_ind),
   WF_REL_TAC `measure (bc_value_size o SND o SND)` >>
   rw[bc_value1_size_thm] >>
   Q.ISPEC_THEN `bc_value_size` imp_res_tac SUM_MAP_MEM_bound >>

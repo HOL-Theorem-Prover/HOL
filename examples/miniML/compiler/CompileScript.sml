@@ -636,6 +636,24 @@ forall cm env vn e Cenv n Ce.
 v_Cv cm (Closure env vn e) (CClosure Cenv [n] Ce)
 *)
 
+(*
+let rec
+Cv_to_bv (CLitv (IntLit i)) = Number i
+and
+Cv_to_bv (CLitv (Bool b)) = Number (bool_to_int b)
+and
+Cv_to_bv (CConv n vs) = Block n (Cvs_to_bvs vs)
+and
+Cv_to_bv (CClosure env vs b) = Block 0 [CodePtr ?, ?]
+and
+Cv_to_bv (CRecClos env ns defs n) = Block 0 [CodePtr ?, ?]
+and
+Cvs_to_bvs [] = []
+and
+Cvs_to_bvs (v::vs) = Cv_to_bv v :: Cvs_to_bvs vs
+*)
+
+
 val _ = Hol_datatype `
  nt =
     NTvar of num
@@ -827,6 +845,8 @@ val _ = Define `
 
 val _ = Defn.save_defn exp_to_Cexp_defn;
 
+(* conversions between values in different languages *)
+
  val v_to_Cv_defn = Hol_defn "v_to_Cv" `
 
 (v_to_Cv m (Litv l) = CLitv l)
@@ -854,6 +874,64 @@ val _ = Defn.save_defn exp_to_Cexp_defn;
   (x, v_to_Cv m v)::(env_to_Cenv m env))`;
 
 val _ = Defn.save_defn v_to_Cv_defn;
+
+(*
+let rec
+Cv_to_bv (CLitv (IntLit i)) = Number i
+and
+Cv_to_bv (CLitv (Bool b)) = Number (bool_to_int b)
+and
+Cv_to_bv (CConv n vs) = Block n (Cvs_to_bvs vs)
+and
+Cv_to_bv (CClosure env vs b) = Block 0 [CodePtr ?, ?]
+and
+Cv_to_bv (CRecClos env ns defs n) = Block 0 [CodePtr ?, ?]
+and
+Cvs_to_bvs [] = []
+and
+Cvs_to_bvs (v::vs) = Cv_to_bv v :: Cvs_to_bvs vs
+*)
+
+val _ = Define `
+ (lookup_conv_ty m ty n = FAPPLY  (FAPPLY  m  ty)  n)`;
+
+
+ val inst_arg_defn = Hol_defn "inst_arg" `
+
+(inst_arg tvs (NTvar n) = EL  n  tvs)
+/\
+(inst_arg tvs (NTapp ts tn) = NTapp (MAP (inst_arg tvs) ts) tn)
+/\
+(inst_arg tvs tt = tt)`;
+
+val _ = Defn.save_defn inst_arg_defn;
+
+ val num_to_bool_defn = Hol_defn "num_to_bool" `
+
+(num_to_bool (0:num) = F)
+/\
+(num_to_bool 1 = T)`;
+
+val _ = Defn.save_defn num_to_bool_defn;
+
+ val bv_to_ov_defn = Hol_defn "bv_to_ov" `
+
+(bv_to_ov m NTnum (Number i) = OLit (IntLit i))
+/\
+(bv_to_ov m NTbool (Number i) = OLit (Bool (num_to_bool (Num i))))
+/\
+(bv_to_ov m (NTapp _ ty) (Number i) =
+  OConv (FST (lookup_conv_ty m ty (Num i))) [])
+/\
+(bv_to_ov m (NTapp tvs ty) (Block n vs) =
+  let (tag, args) = lookup_conv_ty m ty n in
+  let args = MAP (inst_arg tvs) args in
+  OConv tag (MAP2 (\ ty v . bv_to_ov m ty v) args vs)) (* uneta: Hol_defn sucks *)
+/\
+(bv_to_ov m NTfn (Block 0 _) = OFn)`;
+
+val _ = Defn.save_defn bv_to_ov_defn;
+
 
 (* TODO: simple type system and checker *)
 
@@ -1018,6 +1096,21 @@ val _ = Defn.save_defn emit_ec_defn;
     (REPLACE_ELEMENT (Call lab) (j - jl) c))`;
 
 val _ = Defn.save_defn replace_calls_defn;
+
+ val bind_fv_defn = Hol_defn "bind_fv" `
+
+(bind_fv ns xs az k fv (n,env,((ecl:num),ec)) =
+  (case find_index fv xs 1 of
+   SOME j => (n, FUPDATE  env ( fv, (CTArg (2+ az - j))), (ecl,ec))
+  |NONE => (case find_index fv ns 0 of
+     NONE => (n+1, FUPDATE  env ( fv, (CTEnv n)), (ecl+1,CEEnv fv::ec))
+    |SOME j => if j= k
+                then (n, FUPDATE  env ( fv, (CTArg (2+ az))), (ecl,ec))
+                else (n+1, FUPDATE  env ( fv, (CTRef n)), (ecl+1,(CERef j)::ec))
+    )
+  ))`;
+
+val _ = Defn.save_defn bind_fv_defn;
 
  val compile_defn = Hol_defn "compile" `
 
@@ -1282,18 +1375,8 @@ val _ = Defn.save_defn replace_calls_defn;
       let lab = s.next_label in
       let s = emit s [Call 0] in
       let j = s.code_length in
-      let fvs = free_vars e in
-      let (bind_fv fv (n,env,(ecl,ec)) =
-        (case find_index fv xs 1 of
-         SOME j => (n, FUPDATE  env ( fv, (CTArg (2+ az - j))), (ecl,ec))
-        |NONE => (case find_index fv ns 0 of
-           NONE => (n+1, FUPDATE  env ( fv, (CTEnv n)), (ecl+1,CEEnv fv::ec))
-          |SOME j => if j= k
-                      then (n, FUPDATE  env ( fv, (CTArg (2+ az))), (ecl,ec))
-                      else (n+1, FUPDATE  env ( fv, (CTRef n)), (ecl+1,(CERef j)::ec))
-          )
-        )) in
-      let (n,env,(ecl,ec)) = ITSET bind_fv fvs (0,FEMPTY,(0,[])) in
+      let (n,env,(ecl,ec)) =
+        ITSET (bind_fv ns xs az k) (free_vars e) (0,FEMPTY,(0,[])) in
       let s' =  s with<| env := env; sz := 0; tail := TCTail az 0 |> in
       let s' = compile s' e in
       let n = (case s'.tail of TCNonTail => 1 | TCTail j k => k+1 ) in
@@ -1332,6 +1415,82 @@ val _ = Defn.save_defn replace_calls_defn;
          s ns)`;
 
 val _ = Defn.save_defn compile_defn;
+
+val _ = Hol_reln `
+(! il c cc.
+T
+==>
+bc_code_prefix il (APPEND c cc) (0:num) c)
+/\
+(! il p i c cc.
+bc_code_prefix il cc p c
+==>
+bc_code_prefix il (i::cc) (p+ il i) c)`;
+
+ val body_cs_defn = Hol_defn "body_cs" `
+
+(body_cs il env xs lab =
+  <| env := env; sz := 0; tail := TCTail (LENGTH xs) 0;
+     code := []; code_length := 0;
+     next_label := lab;
+     decl :=NONE;
+     inst_length := il |>)`;
+
+val _ = Defn.save_defn body_cs_defn;
+
+ val body_env_defn = Hol_defn "body_env" `
+
+(body_env ns xs j fvs =
+  let (n,env,(nec,ec)) =
+    ITSET (bind_fv ns xs (LENGTH xs) j) fvs (0,FEMPTY,(0,[])) in
+  (env,ec))`;
+
+val _ = Defn.save_defn body_env_defn;
+
+val _ = Hol_reln `
+(! il c i.
+T
+==>
+bceqv il c (CLitv (IntLit i)) (Number i))
+/\
+(! il c b.
+T
+==>
+bceqv il c (CLitv (Bool b)) (Number (bool_to_int b)))
+/\
+(! il c n vs bvs.EVERY2 (bceqv il c) vs bvs
+==>
+bceqv il c (CConv n vs) (Block n bvs))
+/\
+(! il c env xs e f cenv ec bvs lab.
+((cenv,ec)= body_env [] xs 0 (free_vars e))/\
+(LENGTH bvs= LENGTH ec)/\
+(! i. i< LENGTH ec==>
+  (? fv. (EL  i  ec= CEEnv fv)/\
+            bceqv il c (FAPPLY  env  fv) (EL  i  bvs)))/\
+bc_code_prefix il c f (REVERSE (compile (body_cs il cenv xs lab) e).code)
+==>
+bceqv il c (CClosure env xs e)
+  (Block 0 [CodePtr f; if bvs= [] then Number i0 else Block 0 bvs]))
+/\
+(! il c env ns defs n j xs e cenv ec f bvs lab.(
+find_index n ns 0=SOME j)/\
+(EL  j  defs= (xs,e))/\
+((cenv,ec)= body_env ns xs j (free_vars e))/\
+(LENGTH bvs= LENGTH ec)/\
+(! i. i< LENGTH ec==>
+    (? fv. (EL  i  ec= CEEnv fv)/\
+               bceqv il c (FAPPLY  env  fv) (EL  i  bvs))\/
+    (? k kxs ke kenv kec g l.
+        (EL  i  ec= CERef k)/\
+        (EL  k  defs= (kxs,ke))/\
+        ((kenv,kec)= body_env ns xs k (free_vars ke))/\
+        bc_code_prefix il c g
+          (REVERSE (compile (body_cs il kenv kxs l) ke).code)))/\
+bc_code_prefix il c f (REVERSE (compile (body_cs il cenv xs lab) e).code)
+==>
+bceqv il c (CRecClos env ns defs n)
+  (Block 0 [CodePtr f; if bvs= [] then Number i0 else Block 0 bvs]))`;
 
 val _ = Define `
  init_compiler_state =
@@ -1408,46 +1567,6 @@ val _ = Define `
  (repl_exp s exp =
   compile_Cexp (s with<| cs := s.cs with<| decl:=NONE|> |>) (exp_to_Cexp s.cmap exp))`;
  (* parens *)
-
-val _ = Define `
- (lookup_conv_ty m ty n = FAPPLY  (FAPPLY  m  ty)  n)`;
-
-
- val inst_arg_defn = Hol_defn "inst_arg" `
-
-(inst_arg tvs (NTvar n) = EL  n  tvs)
-/\
-(inst_arg tvs (NTapp ts tn) = NTapp (MAP (inst_arg tvs) ts) tn)
-/\
-(inst_arg tvs tt = tt)`;
-
-val _ = Defn.save_defn inst_arg_defn;
-
- val num_to_bool_defn = Hol_defn "num_to_bool" `
-
-(num_to_bool (0:num) = F)
-/\
-(num_to_bool 1 = T)`;
-
-val _ = Defn.save_defn num_to_bool_defn;
-
- val bcv_to_ov_defn = Hol_defn "bcv_to_ov" `
-
-(bcv_to_ov m NTnum (Number i) = OLit (IntLit i))
-/\
-(bcv_to_ov m NTbool (Number i) = OLit (Bool (num_to_bool (Num i))))
-/\
-(bcv_to_ov m (NTapp _ ty) (Number i) =
-  OConv (FST (lookup_conv_ty m ty (Num i))) [])
-/\
-(bcv_to_ov m (NTapp tvs ty) (Block n vs) =
-  let (tag, args) = lookup_conv_ty m ty n in
-  let args = MAP (inst_arg tvs) args in
-  OConv tag (MAP2 (\ ty v . bcv_to_ov m ty v) args vs)) (* uneta: Hol_defn sucks *)
-/\
-(bcv_to_ov m NTfn (Block 0 _) = OFn)`;
-
-val _ = Defn.save_defn bcv_to_ov_defn;
 
 (* Constant folding
 val fold_consts : exp -> exp
