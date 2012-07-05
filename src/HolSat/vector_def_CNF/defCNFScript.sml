@@ -1,6 +1,7 @@
-open HolKernel Parse boolLib bossLib simpLib numLib rich_listTheory
-     arithmeticTheory;
+open HolKernel Parse boolLib simpLib numLib rich_listTheory
+     arithmeticTheory
 
+open TotalDefn BasicProvers
 val _ = new_theory "defCNF";
 
 infixr 0 THEN ORELSE THENL ++ || << |-> THENC;
@@ -10,26 +11,16 @@ val op++ = op THEN;
 val op|| = op ORELSE;
 val op>> = op THEN1;
 val op<< = op THENL;
-val Suff = Q_TAC SUFF_TAC;
-val Know = Q_TAC KNOW_TAC;
-fun K_TAC _ = ALL_TAC;
-val Cond =
-  MATCH_MP_TAC (PROVE [] ``!a b c. a /\ (b ==> c) ==> (a ==> b) ==> c``)
-  ++ CONJ_TAC;
-val STRONG_CONJ_TAC =
-  Know `!a b. a /\ (a ==> b) ==> a /\ b` >> PROVE_TAC []
-  ++ DISCH_THEN MATCH_MP_TAC
-  ++ CONJ_TAC;
 
 (* ------------------------------------------------------------------------- *)
 (* Definitions.                                                              *)
 (* ------------------------------------------------------------------------- *)
 
-val UNIQUE_def = Define
-  `(UNIQUE (v:num->bool) n (conn, INL i, INL j) = (v n = conn (v i) (v j))) /\
-   (UNIQUE v n (conn, INL i, INR b) = (v n = conn (v i) b)) /\
-   (UNIQUE v n (conn, INR a, INL j) = (v n = conn a (v j))) /\
-   (UNIQUE v n (conn, INR a, INR b) = (v n = conn a b))`;
+val UNIQUE_def = Define`
+  (UNIQUE (v:num->bool) n (conn, INL i, INL j) = (v n = conn (v i) (v j))) /\
+  (UNIQUE v n (conn, INL i, INR b) = (v n = conn (v i) b)) /\
+  (UNIQUE v n (conn, INR a, INL j) = (v n = conn a (v j))) /\
+  (UNIQUE v n (conn, INR a, INR b) = (v n = conn a b))`;
 
 val DEF_def = Define
   `(DEF (v:num->bool) n [] = T) /\
@@ -130,7 +121,33 @@ val CONSISTENCY = store_thm
      Q.EXISTS_TAC `\m. if m = n + LENGTH l then q y y' else v m` THEN
      RW_TAC arith_ss []]]);
 
+val BIGSTEP = store_thm(
+  "BIGSTEP",
+  ``!P Q R.
+       (!v:num->bool. P v ==> (Q = R v)) ==>
+       ((?v. P v) /\ Q = (?v. P v /\ R v))``,
+  REPEAT STRIP_TAC THEN
+  EQ_TAC THENL [
+   STRIP_TAC THEN
+   EXISTS_TAC ``v:num->bool`` THEN
+   Q.PAT_ASSUM `!v:num->bool. A v` (MP_TAC o Q.SPEC `v`) THEN
+   ASM_REWRITE_TAC [],
+   STRIP_TAC THEN
+   Q.PAT_ASSUM `!v:num->bool. A v` (MP_TAC o Q.SPEC `v`) THEN
+   ASM_REWRITE_TAC [] THEN
+   STRIP_TAC THEN
+   ASM_REWRITE_TAC [] THEN
+   EXISTS_TAC ``v:num->bool`` THEN
+   ASM_REWRITE_TAC []
+  ]);
+
+val FINAL_DEF = store_thm(
+  "FINAL_DEF",
+  ``!v n x. (v n = x) = (v n = x) /\ DEF v (SUC n) []``,
+  SIMP_TAC boolSimps.bool_ss [DEF_def]);
+
+val _ = app
+            (fn s => remove_ovl_mapping s {Thy = "defCNF", Name = s})
+            ["OKDEF", "DEF", "UNIQUE", "OK"]
+
 val _ = export_theory ();
-
-
-
