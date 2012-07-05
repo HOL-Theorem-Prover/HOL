@@ -1033,6 +1033,8 @@ val STRONG_FINITE_BAG_INDUCT = save_thm(
       |> SIMP_RULE std_ss [FINITE_EMPTY_BAG, FINITE_BAG_INSERT]
       |> GEN_ALL)
 
+val _ = IndDefLib.export_rule_induction "STRONG_FINITE_BAG_INDUCT";
+
 val FINITE_BAG_INSERT_down' = prove(
   ``!b. FINITE_BAG b ==> (!e b0. (b = BAG_INSERT e b0) ==> FINITE_BAG b0)``,
   HO_MATCH_MP_TAC STRONG_FINITE_BAG_INDUCT THEN
