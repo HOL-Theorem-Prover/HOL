@@ -1302,4 +1302,59 @@ val ordMOD_UNIQUE = store_thm(
   `a / b = q` by metis_tac [ordDIV_UNIQUE] >> pop_assum SUBST_ALL_TAC >>
   qabbrev_tac `r' = a % b` >> fs[])
 
+(* Exponentiation *)
+val ordEXP_def = new_specification(
+  "ordEXP_def", ["ordEXP"],
+  ord_RECURSION |> INST_TYPE [beta |-> ``:'a ordinal``]
+                |> Q.SPEC `1`
+                |> Q.SPEC `λap r. a * r`
+                |> Q.SPEC `λa preds. sup preds`
+                |> Q.GEN `a`
+                |> CONV_RULE SKOLEM_CONV
+                |> BETA_RULE
+                |> SIMP_RULE (srw_ss()) [FORALL_AND_THM])
+val _ = export_rewrites ["ordEXP_def"]
+val _ = overload_on ("**", ``ordEXP``)
+
+val _ = export_rewrites ["ordMULT_1R"]
+val ordEXP_1R = store_thm(
+  "ordEXP_1R",
+  ``(a:'a ordinal) ** 1 = a``,
+  simp_tac bool_ss [GSYM ORD_ONE, ordEXP_def] >> simp[]);
+val _ = export_rewrites ["ordEXP_1R"]
+
+val ordEXP_1L = store_thm(
+  "ordEXP_1L",
+  ``∀a:'a ordinal. 1 ** a = 1``,
+  ho_match_mp_tac simple_ord_induction >> simp[] >> qx_gen_tac `a` >>
+  strip_tac >> qsuff_tac `IMAGE ($** 1) (preds a) = {1}` >> simp[] >>
+  simp[EXTENSION] >> asm_simp_tac (srw_ss() ++ CONJ_ss) [] >> metis_tac[]);
+val _ = export_rewrites ["ordEXP_1L"]
+
+val ordEXP_2R = store_thm(
+  "ordEXP_2R",
+  ``(a:'a ordinal) ** 2 = a * a``,
+  `2 = 1⁺` by simp[] >> pop_assum SUBST1_TAC >> simp[]);
+
+val ordEXP_fromNat = store_thm(
+  "ordEXP_fromNat",
+  ``(&x:'a ordinal) ** &n = &(x ** n)``,
+  Induct_on `n` >> simp[arithmeticTheory.EXP]);
+val _ = export_rewrites ["ordEXP_fromNat"]
+
+val ordEXP_le_MONO_L = store_thm(
+  "ordEXP_le_MONO_L",
+  ``∀x a b. a ≤ b ⇒ a ** x ≤ b ** x``,
+  ho_match_mp_tac simple_ord_induction >> simp[] >> conj_tac
+  >- (qx_gen_tac `x` >> strip_tac >> map_every qx_gen_tac [`a`, `b`] >>
+      strip_tac >> match_mp_tac ordle_TRANS >>
+      qexists_tac `b * a ** x` >> simp[ordMULT_le_MONO_L, ordMULT_le_MONO_R]) >>
+  qx_gen_tac `x` >> strip_tac >> map_every qx_gen_tac [`a`, `b`] >>
+  strip_tac >> simp[predimage_sup_thm, impI] >>
+  qx_gen_tac `d` >> strip_tac >>
+  `a ** d ≤ b ** d` by simp[] >>
+  `b ** d ∈ IMAGE ($** b) (preds x)` by (simp[] >> metis_tac[]) >>
+  metis_tac [mklesup sup_thm, ordle_TRANS, IMAGE_cardleq_rwt, preds_inj_univ]);
+
+
 val _ = export_theory()
