@@ -212,24 +212,6 @@ fun primInduct st ind_tac (g as (asl,c)) =
          else ind_non_var (free_vars M) M g
  end
 
-val is_mutind_thm = is_conj o snd o strip_imp o snd o strip_forall o concl;
-
-fun induct_on_type st ty g = 
- case TypeBase.fetch ty
-  of SOME facts => 
-       let val thm = TypeBasePure.induction_of facts
-       in if is_mutind_thm thm 
-            then Mutual.MUTUAL_INDUCT_TAC thm g
-            else primInduct st (Prim_rec.INDUCT_THEN thm ASSUME_TAC) g
-       end
-  | NONE => raise ERR "induct_on_type"
-            ("No induction theorem found for type: "
-             ^Hol_pp.type_to_string ty);
- 
-
-val is_fun_ty = can dom_rng
-fun rule_induct indth = HO_MATCH_MP_TAC indth
-
 (*---------------------------------------------------------------------------*)
 (* Induct on a quoted term. First determine the term, then use that to       *)
 (* select the induction theorem to use. There are 3 kinds of induction       *)
@@ -240,6 +222,27 @@ fun rule_induct indth = HO_MATCH_MP_TAC indth
 (* TypeBase.theTypeBase).                                                    *)
 (*---------------------------------------------------------------------------*)
 
+fun induct_on_type st ty g = 
+ case TypeBase.fetch ty
+  of SOME facts => 
+     let val is_mutind_thm = is_conj o snd o strip_imp o snd o strip_forall o concl
+     in 
+      case total TypeBasePure.induction_of facts
+       of NONE => raise ERR "induct_on_type" 
+                   (String.concat ["Type :",Hol_pp.type_to_string ty,
+                    " is registed in the types database, ",
+                    "but there is no associated induction theorem"])
+        | SOME thm => (* now select induction tactic *)
+           if null (TypeBasePure.constructors_of facts) (* not a datatype *)
+             then HO_MATCH_MP_TAC thm else
+           if is_mutind_thm thm 
+               then Mutual.MUTUAL_INDUCT_TAC thm
+           else primInduct st (Prim_rec.INDUCT_THEN thm ASSUME_TAC)
+     end g
+  | NONE => raise ERR "induct_on_type"
+            (String.concat ["Type: ",Hol_pp.type_to_string ty,
+             " is not registered in the types database"]);
+ 
 fun Induct_on qtm g = 
  let val st = find_subterm qtm g
      val tm = dest_tmkind st
@@ -247,19 +250,18 @@ fun Induct_on qtm g =
      val (_, rngty) = strip_fun ty
  in
   if rngty = Type.bool then (* inductive relation *)
-  let val (c, _) = strip_comb tm
-  in
-      case Lib.total dest_thy_const c of
-        SOME {Thy,Name,...} => let
-          val crec = {Thy=Thy,Name=Name}
-          val rules = Binarymap.find(IndDefLib.rule_induction_map(), crec)
-                      handle NotFound => []
-        in
-          MAP_FIRST rule_induct rules ORELSE
-          induct_on_type st ty
-        end g
-      | NONE => induct_on_type st ty g
-    end
+   let val (c, _) = strip_comb tm
+   in case Lib.total dest_thy_const c
+       of SOME {Thy,Name,...} => 
+           let val indth = Binarymap.find
+                            (IndDefLib.rule_induction_map(), 
+                             {Thy=Thy,Name=Name}) handle NotFound => []
+           in
+             MAP_FIRST HO_MATCH_MP_TAC indth ORELSE
+             induct_on_type st ty
+           end g
+       | NONE => induct_on_type st ty g
+   end
   else
     induct_on_type st ty g
  end
