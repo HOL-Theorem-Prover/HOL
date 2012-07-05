@@ -152,7 +152,6 @@ local fun trav tm A =
 in
 fun TUPLE v thm = GEN v (SPECL (trav v []) thm)
 
-
 fun TUPLE_TAC vtuple:tactic = fn (asl,w) =>
    let val (Bvar,Body) = dest_forall w
        val w1 = subst [Bvar |-> vtuple] Body
