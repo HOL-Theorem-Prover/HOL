@@ -26,10 +26,10 @@ fun ERR f s =
 fun distinct [] = true
   | distinct (x :: rest) = not (mem x rest) andalso distinct rest;
 
-val zero = ``0 : num``;
-val suc = ``SUC : num->num``;
+val zero = numSyntax.zero_tm
+val suc = numSyntax.suc_tm
 
-val beq = ``$= : bool->bool->bool``;
+val beq = mk_thy_const{Name = "=", Ty = bool --> bool --> bool, Thy = "min"}
 
 fun dest_beq tm =
   let val (a, b, ty) = dest_eq_ty tm
@@ -38,7 +38,7 @@ fun dest_beq tm =
 
 val is_beq = can dest_beq;
 
-val OKDEF = ``OKDEF``;
+val OKDEF = prim_mk_const{Thy = "defCNF", Name = "OKDEF"};
 
 (* ------------------------------------------------------------------------- *)
 (* Definitional Conjunctive Normal Form using variable vectors               *)
@@ -51,27 +51,6 @@ val OKDEF = ``OKDEF``;
 (*     (v 3 = (v 2 = ~r)) /\ (v 4 = (v 1 = v 3)) /\ v 4                      *)
 (* ------------------------------------------------------------------------- *)
 
-val BIGSTEP = prove
-  (``!P Q R.
-       (!v:num->bool. P v ==> (Q = R v)) ==>
-       ((?v. P v) /\ Q = (?v. P v /\ R v))``,
-   REPEAT STRIP_TAC THEN
-   EQ_TAC THENL
-   [STRIP_TAC THEN
-    EXISTS_TAC ``v:num->bool`` THEN
-    Q.PAT_ASSUM `!v:num->bool. A v` (MP_TAC o Q.SPEC `v`) THEN
-    ASM_REWRITE_TAC [],
-    STRIP_TAC THEN
-    Q.PAT_ASSUM `!v:num->bool. A v` (MP_TAC o Q.SPEC `v`) THEN
-    ASM_REWRITE_TAC [] THEN
-    STRIP_TAC THEN
-    ASM_REWRITE_TAC [] THEN
-    EXISTS_TAC ``v:num->bool`` THEN
-    ASM_REWRITE_TAC []]);
-
-val FINAL_DEF = prove
-  (``!v n x. (v n = x) = (v n = x) /\ DEF v (SUC n) []``,
-   SIMP_TAC boolSimps.bool_ss [DEF_def]);
 
 fun sub_cnf f con defs (a, b) =
     let
@@ -112,9 +91,11 @@ fun conj_cnf defs tm =
 
 val DISCH_CONJ = CONV_RULE (REWR_CONV AND_IMP_INTRO) o uncurry DISCH;
 
-val UNIQUE_CONV =
-  FIRST_CONV
-  (map (REWR_CONV o GEN ``v:num->bool`` o SYM) (CONJUNCTS UNIQUE_def));
+val UNIQUE_CONV = let
+  val v = mk_var("v", numSyntax.num --> bool)
+in
+  FIRST_CONV (map (REWR_CONV o GEN v o SYM) (CONJUNCTS UNIQUE_def))
+end
 
 val DEF_CONV = (REWR_CONV o GSYM o CONJUNCT2) DEF_def;
 

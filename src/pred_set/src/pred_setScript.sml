@@ -5002,7 +5002,7 @@ val _ = adjoin_to_theory {sig_ps = SOME sigps,
 
 val _ = adjoin_to_theory
   {sig_ps = NONE,
-   struct_ps = SOME (fn pps => 
+   struct_ps = SOME (fn pps =>
     let fun pp_line s = (PP.add_string pps s; PP.add_newline pps)
     in
      List.app pp_line

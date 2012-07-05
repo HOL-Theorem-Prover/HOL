@@ -1,85 +1,71 @@
 open test_compilerLib
 val e1 = ``Lit (IntLit 42)``
-val c1 = f e1
-val [Number i] = g c1
+val [Number i] = run_exp e1
 val SOME 42 = intML.toInt i;
-val true = [OLit (IntLit (intML.fromInt 42))] = (pd [NTnum] e1 [])
+(*val true = [OLit (IntLit (intML.fromInt 42))] = (pd [NTnum] e1 [])*)
 val e2 = ``If (Lit (Bool T)) (Lit (IntLit 1)) (Lit (IntLit 2))``
-val c2 = f e2
-val [Number i] = g c2
+val [Number i] = run_exp e2
 val SOME 1 = intML.toInt i;
 val e3 = ``If (Lit (Bool F)) (Lit (IntLit 1)) (Lit (IntLit 2))``
-val c3 = f e3
-val [Number i] = g c3
+val [Number i] = run_exp e3
 val SOME 2 = intML.toInt i;
 val e4 = ``App Equality (Lit (IntLit 1)) (Lit (IntLit 2))``
-val c4 = f e4
-val [Number i] = g c4
+val [Number i] = run_exp e4
 val SOME 0 = intML.toInt i;
 val e5 = ``Fun "x" (Var "x")``
-val c5 = f e5
-val st = g c5
-val true = [OFn] = pd [NTfn] e5 []
+val [f] = run_exp e5
+(*val true = [OFn] = pd [NTfn] e5 []*)
 val e6 = ``Let "x" (Lit (IntLit 1)) (App (Opn Plus) (Var "x") (Var "x"))``
-val c6 = f e6
-val [Number i] = g c6
+val [Number i] = run_exp e6
 val SOME 2 = intML.toInt i;
 val e7 = ``Let "x" (Lit (IntLit 1))
              (Let "y" (Lit (IntLit 2))
                 (Let "x" (Lit (IntLit 3))
                    (App (Opn Plus) (Var "x") (Var "y"))))``
-val c7 = f e7
-val [Number i] = g c7
+val [Number i] = run_exp e7
 val SOME 5 = intML.toInt i;
 val e8 = ``
 Let "0?" (Fun "x" (App Equality (Var "x") (Lit (IntLit 0))))
   (Let "x" (Lit (IntLit 1))
     (Let "x" (App (Opn Minus) (Var "x") (Var "x"))
       (App Opapp (Var "0?") (Var "x"))))``
-val c8 = f e8
-val [Number i] = g c8
+val [Number i] = run_exp e8
 val SOME 1 = intML.toInt i;
 val e9 = ``
 Let "1?" (Fun "x" (App Equality (Var "x") (Lit (IntLit 1))))
   (Let "x" (Lit (IntLit 1))
     (Let "x" (App (Opn Minus) (Var "x") (Var "x"))
       (App Opapp (Var "1?") (Var "x"))))``
-val c9 = f e9
-val [Number i] = g c9
+val [Number i] = run_exp e9
 val SOME 0 = intML.toInt i;
 val e10 = ``
 Let "x" (Lit (IntLit 3))
 (If (App (Opb Gt) (Var "x") (App (Opn Plus) (Var "x") (Var "x")))
   (Var "x") (Lit (IntLit 4)))``
-val c10 = f e10
-val [Number i] = g c10
+val [Number i] = run_exp e10
 val SOME 4 = intML.toInt i;
 val e11 = ``
 Let "x" (Lit (IntLit 3))
 (If (App (Opb Geq) (Var "x") (Var "x"))
   (Var "x") (Lit (IntLit 4)))``
-val c11 = f e11
-val [Number i] = g c11
+val [Number i] = run_exp e11
 val SOME 3 = intML.toInt i;
 val e12 = ``
 Let "lt2" (Fun "x" (App (Opb Lt) (Var "x") (Lit (IntLit 2))))
   (App Opapp (Var "lt2") (Lit (IntLit 3)))``
-val c12 = f e12
-val [Number i] = g c12
+val [Number i] = run_exp e12
 val SOME 0 = intML.toInt i;
 val e13 = ``
 Let "lq2" (Fun "x" (App (Opb Leq) (Var "x") (Lit (IntLit 2))))
   (App Opapp (Var "lq2") (Lit (IntLit 0)))``
-val c13 = f e13
-val [Number i] = g c13
+val [Number i] = run_exp e13
 val SOME 1 = intML.toInt i;
 val e14 = ``
 Let "x" (Lit (IntLit 0))
   (Let "y" (App (Opn Plus) (Var "x") (Lit (IntLit 2)))
     (If (App (Opb Geq) (Var "y") (Var "x"))
       (Var "x") (Lit (IntLit 4))))``
-val c14 = f e14
-val [Number i] = g c14
+val [Number i] = run_exp e14
 val SOME 0 = intML.toInt i;
 val e15 = ``
 Let "x" (Lit (Bool T))
@@ -88,48 +74,41 @@ Let "x" (Lit (Bool T))
     [(Plit (Bool F), (Lit (IntLit 1)));
      (Pvar "y", (Var "y"))])
   (Var "x"))``
-val c15 = f e15
-val [Number i] = g c15
+val [Number i] = run_exp e15
 val SOME 1 = intML.toInt i;
 val e16 = ``App Equality (Let "x" (Lit (Bool T)) (Var "x")) (Lit (Bool F))``
-val c16 = f e16
-val [Number i] = g c16
+val [Number i] = run_exp e16
 val SOME 0 = intML.toInt i;
 val e17 = ``App Equality
   (Let "f" (Fun "_" (Lit (Bool T))) (App Opapp (Var "f") (Lit (Bool T))))
   (Lit (Bool F))``
-val c17 = f e17
-val [Number i] = g c17
+val [Number i] = run_exp e17
 val SOME 0 = intML.toInt i;
 val e18 = ``
 Let "x" (Lit (Bool T))
   (App Equality
     (Let "f" (Fun "_" (Var "x")) (App Opapp (Var "f") (Var "x")))
     (Var "x"))``
-val c18 = f e18
-val [Number i] = g c18
+val [Number i] = run_exp e18
 val SOME 1 = intML.toInt i;
 val e19 = ``
 Let "x" (Lit (Bool T))
   (App Opapp (Fun "_" (Var "x")) (Lit (Bool F)))``
-val c19 = f e19
-val [Number i] = g c19
+val [Number i] = run_exp e19
 val SOME 1 = intML.toInt i;
 val e20 = ``
 Let "f" (Fun "_" (Lit (Bool T)))
 (App Equality
   (App Opapp (Var "f") (Lit (Bool T)))
   (Lit (Bool F)))``
-val c20 = f e20
-val [Number i] = g c20
+val [Number i] = run_exp e20
 val SOME 0 = intML.toInt i;
 val e21 = ``Let "x" (Lit (Bool T))
 (App Equality
   (Let "f" (Fun "_" (Var "x"))
     (App Opapp (Var "f") (Var "x")))
   (Var "x"))``
-val c21 = f e21
-val [Number i] = g c21
+val [Number i] = run_exp e21
 val SOME 1 = intML.toInt i;
 val listd = ``
 Dtype
@@ -137,11 +116,10 @@ Dtype
     [("Cons",[Tvar "'a"; Tapp [Tvar "'a"] "list"]); ("Nil",[])])]
 ``
 val e22 = ``Con "Cons" [Lit (Bool T); Con "Nil" []]``
-val c22 = fd e22 [listd]
-val [Block (t1,[Number i,Number t2])] = g c22
+val [Block (t1,[Number i,Block (t2,[])])] = run_decs_exp ([listd],e22)
 val SOME 0 = numML.toInt t1
 val SOME 1 = intML.toInt i
-val SOME 1 = intML.toInt t2;
+val SOME 1 = numML.toInt t2;
 val e23 = ``Mat (Con "Cons" [Lit (IntLit 2);
                  Con "Cons" [Lit (IntLit 3);
                  Con "Nil" []]])
@@ -149,28 +127,24 @@ val e23 = ``Mat (Con "Cons" [Lit (IntLit 2);
               Var "x");
              (Pcon "Nil" [],
               Lit (IntLit 1))]``
-val c23 = fd e23 [listd]
-val [Number i] = g c23
+val [Number i] = run_decs_exp ([listd],e23)
 val SOME 2 = intML.toInt i;
 val e24 = ``Mat (Con "Nil" [])
             [(Pcon "Nil" [], Lit (Bool F))]``
-val c24 = fd e24 [listd]
-val [Number i] = g c24
+val [Number i] = run_decs_exp([listd],e24)
 val SOME 0 = intML.toInt i;
 val e25 = ``Mat (Con "Cons" [Lit (IntLit 2);
                  Con "Nil" []])
             [(Pcon "Cons" [Pvar "x"; Pvar "xs"],
               Var "x")]``
-val c25 = fd e25 [listd]
-val [Number i] = g c25
+val [Number i] = run_decs_exp([listd],e25)
 val SOME 2 = intML.toInt i;
 val e26 = ``Mat (Con "Cons" [Lit (IntLit 2);
                  Con "Nil" []])
             [(Pcon "Cons" [Plit (IntLit 2);
               Pcon "Nil" []],
               Lit (IntLit 5))]``
-val c26 = fd e26 [listd]
-val [Number i] = g c26
+val [Number i] = run_decs_exp([listd],e26)
 val SOME 5 = intML.toInt i;
 (*val e27 = ``
 CLetfun F [1] [([],CRaise Bind_error)]
@@ -188,19 +162,16 @@ Letrec [("fac",("n",
                                    (Var "n")
                                    (Lit (IntLit 1)))))))]
   (App Opapp (Var "fac") (Lit (IntLit 5)))``
-val c28 = f e28
-val [Number i] = g c28
+val [Number i] = run_exp e28
 val SOME 120 = intML.toInt i;
 val d = ``Dlet (Pvar "Foo") (Lit (IntLit 42))``
 val e41 = ``Var "Foo"``
-val c41 = fd e41 [d]
-val [Number i,Number j] = g c41
+val [Number i,Number j] = run_decs_exp([d],e41)
 val SOME 42 = intML.toInt i;
 val true = i = j;
 val d = ``Dletrec [("I","x",(Var "x"))]``
 val e42 = ``App Opapp (Var "I") (Lit (IntLit 42))``
-val c42 = fd e42 [d]
-val [Number i,cl] = g c42
+val [Number i,cl] = run_decs_exp([d],e42)
 val SOME 42 = intML.toInt i;
 val d0 = ``
 Dletrec
@@ -212,28 +183,22 @@ Dletrec
             (App (Opn Plus) (Var "v1") (Lit (IntLit 11))))))]
 ``
 val e29 = ``App Opapp (Var "N") (Lit (IntLit 42))``
-val c29 = fd e29 [d0]
-val [Number i,cl] = g c29
+val [Number i,cl] = run_decs_exp([d0],e29)
 val SOME 91 = intML.toInt i;
 val e35 = ``Let "f" (Fun "x" (Fun "y" (App (Opn Plus) (Var "x") (Var "y")))) (App Opapp (App Opapp (Var "f") (Lit (IntLit 2))) (Lit (IntLit 3)))``
-val c35 = f e35
-val [Number i] = g c35
+val [Number i] = run_exp e35
 val SOME 5 = intML.toInt i;
 val e36 = ``Letrec [("f", ("x", (Fun "y" (App (Opn Plus) (Var "x") (Var "y")))))] (App Opapp (App Opapp (Var "f") (Lit (IntLit 2))) (Lit (IntLit 3)))``
-val c36 = f e36
-val [Number i] = g c36
+val [Number i] = run_exp e36
 val SOME 5 = intML.toInt i;
 val e37 = ``Letrec [("z", ("x", (Mat (Var "x") [(Plit (IntLit 0), (Var "x"));(Pvar "y", App Opapp (Var "z") (App (Opn Minus) (Var "x") (Var "y")))])))] (App Opapp (Var "z") (Lit (IntLit 5)))``
-val c37 = f e37
-val [Number i] = g c37
+val [Number i] = run_exp e37
 val SOME 0 = intML.toInt i;
 val e38 = ``Let "z" (Fun "x" (Mat (Var "x") [(Plit (IntLit 0), (Var "x"));(Pvar "y", (App (Opn Minus) (Var "x") (Var "y")))])) (App Opapp (Var "z") (Lit (IntLit 5)))``
-val c38 = f e38
-val [Number i] = g c38
+val [Number i] = run_exp e38
 val SOME 0 = intML.toInt i;
 val e39 = ``Letrec [("z", ("x", (Mat (Var "x") [(Plit (IntLit 0), (Var "x"));(Pvar "y", (App (Opn Minus) (Var "x") (Var "y")))])))] (App Opapp (Var "z") (Lit (IntLit 5)))``
-val c39 = f e39
-val [Number i] = g c39
+val [Number i] = run_exp e39
 val SOME 0 = intML.toInt i;
 val paird = ``
 Dtype [(["'a"; "'b"],"prod",[("Pair_type",[Tvar "'a"; Tvar "'b"])])]
@@ -356,8 +321,8 @@ val e43 = ``Letrec [("o","n",
        (Var "o")
        (App (Opn Minus) (Var "n") (Lit (IntLit 1)))))]
   (App Opapp (Var "o") (Lit (IntLit 1000)))``
-val c43 = f e43
-val SOME s43 = bc_eval_limit 12 (init_state c43)
+val (bs43,_) = prep_exp inits e43
+val SOME s43 = bc_eval_limit 12 bs43
 val [Number i] = bc_state_stack s43
 val SOME 0 = intML.toInt i;
 val d = ``Dletrec
@@ -368,15 +333,13 @@ val d = ``Dletrec
        (Var "o")
        (App (Opn Minus) (Var "n") (Lit (IntLit 1)))))]``
 val e44 = ``App Opapp (Var "o") (Lit (IntLit 1000))``
-val (m,st) = pd1 e44 [d]
-val [Number i, cl] = st
+val [Number i, cl] = run_decs_exp ([d],e44)
 val SOME 0 = intML.toInt i;
 val d0 = paird
 val d1 = ``Dlet (Pcon "Pair_type" [Pvar "x";Pvar "y"]) (Con "Pair_type" [Lit (IntLit 1);Lit (IntLit 2)])``
 val d2 = ``Dlet (Pvar "x") (Lit (IntLit 3))``
 val e45 = ``Con "Pair_type" [Var "x";Var "y"]``
-val (m,st) = pd1 e45 [d0,d1,d2]
-val [Block (_,[Number xb,Number yb]),Number y,Number x] = st
+val [Block (_,[Number xb,Number yb]),Number y,Number x] = run_decs_exp ([d0,d1,d2],e45)
 val SOME 3 = intML.toInt x
 val SOME 2 = intML.toInt y
 val true = xb = x
@@ -384,8 +347,7 @@ val true = yb = y;
 val d1 = ``Dlet (Pcon "Pair_type" [Pvar "y";Pvar "x"]) (Con "Pair_type" [Lit (IntLit 1);Lit (IntLit 2)])``
 val d2 = ``Dlet (Pvar "x") (Lit (IntLit 3))``
 val e46 = ``Con "Pair_type" [Var "x";Var "y"]``
-val (m,st) = pd1 e46 [d0,d1,d2]
-val [Block (_,[Number xb,Number yb]),Number x,Number y] = st
+val [Block (_,[Number xb,Number yb]),Number x,Number y] = run_decs_exp ([d0,d1,d2],e46)
 val SOME 3 = intML.toInt xb
 val SOME 1 = intML.toInt yb
 val true = x = xb
@@ -398,8 +360,7 @@ val e47 = ``Con "Pair_type" [
               Con "Pair_type" [Var "x"; Var "y"];
               Let "x" (Fun "x" (App (Opn Plus) (Var "x") (Var "y")))
                 (App Opapp (Var "x") (Var "y"))]``
-val (m,st) = pd1 e47 [d0,d1,d2,d3]
-val [Block (_,[Block (_,[Number x3,Number y4]),Number yy]),Number y,Number x] = st
+val [Block (_,[Block (_,[Number x3,Number y4]),Number yy]),Number y,Number x] = run_decs_exp([d0,d1,d2,d3],e47)
 val SOME 4 = intML.toInt y
 val SOME 3 = intML.toInt x
 val SOME 3 = intML.toInt x3
@@ -407,22 +368,19 @@ val SOME 4 = intML.toInt y4
 val SOME 8 = intML.toInt yy;
 val d0 = ``Dlet (Pvar "x") (Let "x" (Lit (IntLit 1)) (App (Opn Minus) (Var "x") (Var "x")))``
 val e48 = ``Var "x"``
-val (m,st) = pd1 e48 [d0]
-val [Number xv,Number xd] = st
+val [Number xv,Number xd] = run_decs_exp([d0],e48)
 val SOME 0 = intML.toInt xv
 val SOME 0 = intML.toInt xd;
 val d0 = ``Dlet (Pvar "x") (Let "x" (Lit (IntLit 1)) (App (Opn Minus) (Var "x") (Var "x")))``
 val d1 = ``Dlet (Pvar "x") (App (Opn Minus) (Var "x") (Let "x" (Lit (IntLit 1)) (Var "x")))``
 val e49 = ``App (Opn Times) (Var "x") (Let "x" (Lit (IntLit (-1))) (Var "x"))``
-val (m,st) = pd1 e49 [d0,d1]
-val [Number r,Number x] = st
+val [Number r,Number x] = run_decs_exp([d0,d1],e49)
 val SOME ~1 = intML.toInt x
 val SOME 1 = intML.toInt r;
 val d0 = paird
 val d1 = ``Dlet (Pcon "Pair_type" [Pvar "y";Pvar "x"]) (Con "Pair_type" [Lit (IntLit 1);Lit (IntLit 2)])``
 val e50 = ``Var "y"``
-val (m,st) = pd1 e50 [d0,d1]
-val [Number r, Number x, Number y] = st
+val [Number r, Number x, Number y] = run_decs_exp([d0,d1],e50)
 val SOME 2 = intML.toInt x
 val SOME 1 = intML.toInt y
 val true = r = y;
@@ -431,14 +389,18 @@ val d1 = ``Dtype [([],"unit",[("()",[])])]``
 val d2 = ``Dlet (Pvar "f") (Fun " " (Mat (Var " ") [(Pcon "()" [],App (Opn Plus) (Var "x") (Lit (IntLit 1)))]))``
 val d3 = ``Dlet (Pvar "x") (Lit (IntLit 100))``
 val e51 = ``App Opapp (Var "f") (Con "()" [])``
-val (m,st) = pd1 e51 [d0,d1,d2,d3]
-val [Number r, _, Number x] = st
+val [Number r, _, Number x] = run_decs_exp([d0,d1,d2,d3],e51)
 val SOME 2 = intML.toInt r
 val SOME 100 = intML.toInt x;
 val d0 = paird
 val e52 = ``Let "x" (Con "Pair_type" [Lit (IntLit 1);Lit (IntLit 2)])
   (Mat (Var "x")
       [(Pcon "Pair_type" [Pvar "x";Plit (IntLit 2)], Lit (IntLit 1))])``
-val (m,st) = pd1 e52 [d0]
-val [Number r] = st
+val [Number r] = run_decs_exp([d0],e52)
 val SOME 1 = intML.toInt r;
+val d0 = paird
+val e53 = ``Let "x" (Con "Pair_type" [Lit (IntLit 1);Con "Pair_type" [Lit (IntLit 2); Lit (IntLit 3)]])
+  (Mat (Var "x")
+      [(Pcon "Pair_type" [Pvar "x";Pcon "Pair_type" [Pvar "y";Pvar "z"]], Var "y")])``
+val [Number r] = run_decs_exp([d0],e53)
+val SOME 2 = intML.toInt r;

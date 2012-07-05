@@ -2659,8 +2659,10 @@ val _ = export_rewrites
            "SUM", "APPEND_ASSOC", "CONS", "CONS_11",
            "LENGTH_MAP", "MAP_APPEND",
            "NOT_CONS_NIL", "NOT_NIL_CONS", "MAP_EQ_NIL",
-           "CONS_ACYCLIC", "list_case_def", "ZIP",
-           "UNZIP", "EVERY_APPEND", "EXISTS_APPEND", "EVERY_SIMP",
+           "CONS_ACYCLIC", "list_case_def",
+           "ZIP", "UNZIP", "ZIP_UNZIP", "UNZIP_ZIP",
+           "LENGTH_ZIP", "LENGTH_UNZIP",
+           "EVERY_APPEND", "EXISTS_APPEND", "EVERY_SIMP",
            "EXISTS_SIMP", "NOT_EVERY", "NOT_EXISTS",
            "FOLDL", "FOLDR"];
 

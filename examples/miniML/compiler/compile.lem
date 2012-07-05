@@ -926,9 +926,9 @@ prim2_to_bc CSub = Sub
 and
 prim2_to_bc CMul = Mult
 and
-prim2_to_bc CDiv = Div2 (* TODO *)
+prim2_to_bc CDiv = Div
 and
-prim2_to_bc CMod = Mod2 (* TODO *)
+prim2_to_bc CMod = Mod
 and
 prim2_to_bc CLt = Less
 and
@@ -1001,9 +1001,6 @@ compile s (CLit (Bool b)) =
 and
 compile s (CVar vn) = incsz (compile_varref s (Pmap.find vn s.env))
 and
-compile s (CCon n []) =
-  incsz (emit s [Stack (PushInt (num_to_int n))])
-and
 compile s (CCon n es) =
   let z = s.sz + 1 in
   let (s,dt) = sdt s in
@@ -1013,7 +1010,7 @@ compile s (CCon n es) =
 and
 compile s (CTagEq e n) =
   let (s,dt) = sdt s in
-  ldt dt (emit (compile s e) [Stack (TagEquals n)])
+  ldt dt (emit (compile s e) [Stack (TagEq n)])
 and
 compile s (CProj e n) =
   let (s,dt) = sdt s in
@@ -1090,7 +1087,7 @@ and
 compile s (CPrim2 op e1 e2) =
   let (s,dt) = sdt s in
   let s = compile s e1 in
-  let s = compile s e2 in
+  let s = compile s e2 in (* TODO: need to detect div by zero *)
   decsz (ldt dt (emit s [Stack (prim2_to_bc op)]))
 and
 compile s (CLprim CLeq [e1;e2]) =
@@ -1301,7 +1298,8 @@ let init_repl_state =
 
 let compile_Cexp rs Ce =
   let Ce = remove_mat Ce in
-  let cs = compile rs.cs Ce in
+  let cs = <| rs.cs with code = [] ; code_length = 0 |> in
+  let cs = compile cs Ce in
   let cs = match cs.decl with
     | None -> cs
     | Some (env,sz) -> <| cs with env = env ; sz = sz |>
@@ -1320,7 +1318,8 @@ number_constructors a (cm,cw) n ((c,tys)::cs) =
   number_constructors a (cm',cw') (n+1) cs
 
 let rec
-repl_dec rs (Dtype []) = rs
+repl_dec rs (Dtype []) =
+  <| rs with cs = <|rs.cs with code = []; code_length = 0|> |>
 and
 repl_dec rs (Dtype ((a,ty,cs)::ts)) =
   let (cm,cw) = number_constructors a (rs.cmap,Pmap.empty) 0 cs in

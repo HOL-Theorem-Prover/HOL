@@ -97,30 +97,31 @@ in case fst(dest_const f) of
 end handle (Fail s) => raise Fail s | _ => raise Fail (Parse.term_to_string tm)
 val term_to_ov = v_to_ov o term_to_v
 
-fun f1 s e =
-let val rs = repl_exp s (term_to_exp e) in
-  (rev (compiler_state_code (repl_state_cs rs)),
-   repl_state_cpam rs)
-end
-fun f2 s e = fst(f1 s e)
-fun f e = f2 init_repl_state e
-fun fd0 f s e = let
-  fun q s [] = f s e
-    | q s (d::ds) = let
-      val s = repl_dec s (term_to_dec d)
-      in q s ds end
-in q s end
-val fdi = fd0 f2
-val fd = fdi init_repl_state
-fun g1 c = bc_eval (init_state c)
-fun g c = bc_state_stack (g1 c)
-val pd0 = fd0 f1 init_repl_state
-fun pd1 e ds = let
-  val (c,m) = pd0 e ds
-  val st = g c
-  in (m,st) end
-fun pv m bv ty = bcv_to_ov m ty bv
-fun pd tys e ds =
-  let val (m,st) = pd1 e ds
-  in map2 (pv m) st tys end
+val rs_code = rev o compiler_state_code o repl_state_cs
+
+val add_code = bc_state_code_fupd o C append o rs_code
+
+fun prep_decs (bs,rs) [] = (bs,rs)
+  | prep_decs (bs,rs) (d::ds) = let
+      val rs = repl_dec rs (term_to_dec d)
+      val bs = add_code rs bs
+    in prep_decs (bs,rs) ds end
+
+fun prep_exp (bs,rs) e = let
+  val rs = repl_exp rs (term_to_exp e)
+  val bs = add_code rs bs
+in (bs,rs) end
+
+fun prep_decs_exp (bs,rs) (ds,e) = let
+  val (bs,rs) = prep_decs (bs,rs) ds
+  val (bs,rs) = prep_exp (bs,rs) e
+in (bs,rs) end
+
+val inits = (init_bc_state, init_repl_state)
+
+val run_decs_exp  =
+  bc_state_stack o bc_eval o fst o
+  prep_decs_exp inits
+
+fun run_exp e = run_decs_exp ([],e)
 end

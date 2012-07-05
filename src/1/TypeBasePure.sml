@@ -95,7 +95,7 @@ fun case_def_of (DFACTS {case_def,...}) = case_def
        raise ERR "case_def_of" (dollarty ty^" is not a datatype");
 
 fun induction_of0 (DFACTS {induction,...}) = induction
-  | induction_of0 (NFACTS (ty,{induction,...})) 
+  | induction_of0 (NFACTS (ty,{induction,...}))
      = raise ERR "induction_of0" "not a mutrec. datatype";
 
 fun induction_of (DFACTS {induction,...}) = thm_of induction
@@ -697,7 +697,7 @@ fun typeValue (theta,gamma,undef) =
 end
 *)
 
-fun tystring ty = 
+fun tystring ty =
  let val (thy,name) = type_names ty
  in String.concat [thy,"$",name]
  end;
@@ -727,8 +727,8 @@ fun typeValue (theta,gamma,undef) =
                       val tyinst = match_type (list_mk_fun(gen_sizefn_tys,bool))
                                               (list_mk_fun(map type_of csizefns,bool))
                   in list_mk_comb(inst tyinst f, csizefns)
-                  end handle HOL_ERR _ 
-                      => (WARN "typeValue" 
+                  end handle HOL_ERR _
+                      => (WARN "typeValue"
                            ("Badly typed terms at type constructor "
                             ^Lib.quote (tystring ty)^". Continuing anyway.");
                           undef ty))
@@ -742,15 +742,15 @@ fun typeValue (theta,gamma,undef) =
 
 fun num() = mk_thy_type{Tyop="num",Thy="num",Args=[]}
 fun Zero() = mk_thy_const{Name="0",Thy="num", Ty=num()}
-             handle HOL_ERR _ => 
+             handle HOL_ERR _ =>
              raise ERR "type_size.Zero()" "Numbers not declared"
 
-fun type_size db ty = 
+fun type_size db ty =
  let fun K0 ty = mk_abs(mk_var("v",ty),Zero())
      fun theta ty = if is_vartype ty then SOME (K0 ty) else NONE
      val gamma = Option.map fst o
                  Option.composePartial (size_of,fetch db)
-  in 
+  in
     typeValue (theta,gamma,K0) ty
   end
 
