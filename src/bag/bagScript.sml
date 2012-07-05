@@ -2283,7 +2283,7 @@ val _ = export_rewrites ["mlt_TO_EMPTY_BAG"];
 (* elements, plus the number of elements.                                    *)
 (*---------------------------------------------------------------------------*)
 
-val bag_size_def = 
+val bag_size_def =
  Define
   `bag_size eltsize b = ITBAG (\e acc. 1 + eltsize e + acc) b 0`;
 
@@ -2303,8 +2303,8 @@ val BAG_SIZE_INSERT = save_thm
  let val f = ``\(e:'a) acc. 1 + eltsize e + acc``
      val LCOMM_INCR = Q.prove
      (`!x y z. ^f x (^f y z) = ^f y (^f x z)`, RW_TAC arith_ss [])
- in COMMUTING_ITBAG_RECURSES 
-    |> ISPEC f 
+ in COMMUTING_ITBAG_RECURSES
+    |> ISPEC f
     |> SIMP_RULE bool_ss [LCOMM_INCR]
     |> (ISPEC``0n`` o Q.ID_SPEC o Q.ID_SPEC)
     |> SIMP_RULE bool_ss [GSYM bag_size_def]
@@ -2316,7 +2316,7 @@ val BAG_SIZE_INSERT = save_thm
 
 val _ = adjoin_to_theory
   {sig_ps = NONE,
-   struct_ps = SOME (fn pps => 
+   struct_ps = SOME (fn pps =>
     let fun pp_line s = (PP.add_string pps s; PP.add_newline pps)
     in
      app pp_line

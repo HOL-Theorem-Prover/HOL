@@ -2164,7 +2164,7 @@ CONJ_TAC THEN GEN_TAC THENL [
 (* From Ramana Kumar                                                         *)
 (*---------------------------------------------------------------------------*)
 
-val fmap_size_def = 
+val fmap_size_def =
  Define
    `fmap_size kz vz fm = SIGMA (\k. kz k + vz (fm ' k)) (FDOM fm)`;
 
@@ -2177,7 +2177,7 @@ val fmap_size_def =
 
 val _ = adjoin_to_theory
   {sig_ps = NONE,
-   struct_ps = SOME (fn pps => 
+   struct_ps = SOME (fn pps =>
     let fun pp_line s = (PP.add_string pps s; PP.add_newline pps)
     in
      app pp_line
