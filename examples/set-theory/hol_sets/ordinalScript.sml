@@ -7,6 +7,8 @@ open wellorderTheory
 
 val _ = new_theory "ordinal"
 
+val _ = ParseExtras.tight_equality()
+
 fun dsimp thl = asm_simp_tac (srw_ss() ++ DNF_ss) thl
 
 (* perform quotient, creating a type of "ordinals". *)
@@ -67,7 +69,7 @@ val FORALL_SUM = sumTheory.FORALL_SUM
 
 val wellorder_allOrds = store_thm(
   "wellorder_allOrds",
-  ``wellorder { (x,y) | (x = y) \/ ordlt x y }``,
+  ``wellorder { (x,y) | x = y \/ ordlt x y }``,
   simp[wellorder_def, strict_def, wellfounded_WF, relationTheory.WF_DEF] >>
   rpt conj_tac >| [
     simp_tac (srw_ss() ++ CONJ_ss)
@@ -833,13 +835,13 @@ val _ = export_rewrites ["ordlt_CANCEL_ADDR"]
 
 val ordlt_CANCEL_ADDL = store_thm(
   "ordlt_CANCEL_ADDL",
-  ``a + b < a = F``,
+  ``a + b < a <=> F``,
   simp[ordle_lteq] >> Cases_on `0 < b` >> simp[] >>
   fs[ordleq0]);
 val _ = export_rewrites ["ordlt_CANCEL_ADDL"]
 
 val ordADD_CANCEL_LEMMA0 = prove(
-  ``(α = α + γ) ⇔ (γ = 0)``,
+  ``α = α + γ ⇔ γ = 0``,
   Cases_on `γ = 0` >> simp[] >>
   qsuff_tac `α < α + γ` >- metis_tac[ordlt_REFL] >> simp[] >>
   spose_not_then strip_assume_tac >> fs[ordle_lteq])
@@ -895,7 +897,7 @@ val lemma = prove(
 
 val ordlt_EXISTS_ADD = store_thm(
   "ordlt_EXISTS_ADD",
-  ``∀a b:'a ordinal. a < b ⇔ ∃c. c ≠ 0 ∧ (b = a + c)``,
+  ``∀a b:'a ordinal. a < b ⇔ ∃c. c ≠ 0 ∧ b = a + c``,
   simp_tac (srw_ss() ++ DNF_ss) [EQ_IMP_THM] >> Tactical.REVERSE conj_tac
   >- metis_tac[ordlt_trichotomy, ordlt_ZERO] >>
   map_every qx_gen_tac [`a`, `b`] >> strip_tac >>
@@ -942,7 +944,7 @@ val sup_lt_implies = store_thm(
 
 val sup_eq_max = store_thm(
   "sup_eq_max",
-  ``(∀b. b ∈ s ⇒ b ≤ a) ∧ a ∈ s ⇒ (sup s = a)``,
+  ``(∀b. b ∈ s ⇒ b ≤ a) ∧ a ∈ s ⇒ sup s = a``,
   strip_tac >>
   `∀b. b ∈ s ⇒ b < a⁺` by fs[ordlt_SUC_DISCRETE, ordle_lteq] >>
   pop_assum (assume_tac o MATCH_MP ubsup_thm) >>
@@ -952,7 +954,7 @@ val sup_eq_max = store_thm(
 
 val sup_eq_SUC = store_thm(
   "sup_eq_SUC",
-  ``s:'a ordinal set ≼ univ(:'a inf) ∧ (sup s = a⁺) ⇒ a⁺ ∈ s``,
+  ``s:'a ordinal set ≼ univ(:'a inf) ∧ sup s = a⁺ ⇒ a⁺ ∈ s``,
   rpt strip_tac >> `a < sup s` by simp[] >>
   pop_assum mp_tac >> pop_assum (mp_tac o SYM) >> simp[sup_thm] >> strip_tac >>
   disch_then (Q.X_CHOOSE_THEN `b` strip_assume_tac) >>
@@ -968,10 +970,10 @@ val ordle_TRANS = store_thm(
 
 val generic_continuity = store_thm(
   "generic_continuity",
-  ``(∀a. 0 < a ∧ islimit a ⇒ (f a :'a ordinal = sup (IMAGE f (preds a)))) ∧
+  ``(∀a. 0 < a ∧ islimit a ⇒ f a :'a ordinal = sup (IMAGE f (preds a))) ∧
     (∀x y. x ≤ y ⇒ f x ≤ f y) ⇒
     ∀s:'a ordinal set.
-          s ≼ univ(:'a inf) ∧ s ≠ ∅ ⇒ (f (sup s) = sup (IMAGE f s))``,
+          s ≼ univ(:'a inf) ∧ s ≠ ∅ ⇒ f (sup s) = sup (IMAGE f s)``,
   rpt strip_tac >>
   `islimit (sup s) ∨ ∃a. omax (preds (sup s)) = SOME a`
     by metis_tac [optionTheory.option_CASES]
@@ -1186,7 +1188,7 @@ val _ = export_rewrites ["ordMULT_fromNat"]
 
 val omega_MUL_fromNat = store_thm(
   "omega_MUL_fromNat",
-  ``0 < n ⇒ (ω * &n = ω)``,
+  ``0 < n ⇒ ω * &n = ω``,
   simp[omax_preds_omega] >> strip_tac >>
   match_mp_tac ordle_ANTISYM >> dsimp[predimage_sup_thm, lt_omega, impI] >>
   conj_tac >- simp[ordle_lteq] >>
@@ -1218,7 +1220,7 @@ val ordMULT_ASSOC = store_thm(
   asm_simp_tac (srw_ss() ++ CONJ_ss) [])
 
 val ordDIVISION0 = prove(
-  ``∀a b:'a ordinal. 0 < b ⇒ ∃q r. (a = q * b + r) ∧ r < b``,
+  ``∀a b:'a ordinal. 0 < b ⇒ ∃q r. a = q * b + r ∧ r < b``,
   rpt strip_tac >>
   qabbrev_tac `d = sup { c | c * b ≤ a }` >>
   `∀c. c * b ≤ a ⇒ c ≤ a`
@@ -1261,10 +1263,10 @@ val _ = overload_on ("%", ``ordMOD``)
 
 val ordDIV_UNIQUE = store_thm(
   "ordDIV_UNIQUE",
-  ``∀a b q r. 0 < (b:'a ordinal) ∧ (a = q*b + r) ∧ r < b ⇒ (a / b = q)``,
+  ``∀a b q r. 0 < (b:'a ordinal) ∧ a = q*b + r ∧ r < b ⇒ a / b = q``,
   rpt strip_tac >>
-  `(a = a / b * b + a % b) ∧ a % b < b` by metis_tac [ordDIVISION] >>
-  `a / b < q ∨ (a / b = q) ∨ q < a / b` by metis_tac [ordlt_trichotomy] >| [
+  `a = a / b * b + a % b ∧ a % b < b` by metis_tac [ordDIVISION] >>
+  `a / b < q ∨ a / b = q ∨ q < a / b` by metis_tac [ordlt_trichotomy] >| [
     `∃bb. (q = a/b + bb) ∧ 0 < bb`
       by metis_tac [ordlt_EXISTS_ADD, ordlt_trichotomy, ordlt_ZERO] >>
     `a = (a/b + bb) * b + r` by metis_tac[] >>
@@ -1279,7 +1281,7 @@ val ordDIV_UNIQUE = store_thm(
     `b ≤ bb * b + r` by metis_tac [ordle_CANCEL_ADDR, ordADD_le_MONO_L,
                                    ordle_TRANS],
 
-    `∃bb. (q + bb = a/b) ∧ 0 < bb`
+    `∃bb. q + bb = a/b ∧ 0 < bb`
       by metis_tac [ordlt_EXISTS_ADD, ordlt_trichotomy, ordlt_ZERO] >>
     `a = (q + bb) * b + a % b` by metis_tac[] >>
     `_ = q * b + bb * b + a % b` by simp[ordMULT_RDISTRIB] >>
@@ -1296,7 +1298,7 @@ val ordDIV_UNIQUE = store_thm(
 
 val ordMOD_UNIQUE = store_thm(
   "ordMOD_UNIQUE",
-  ``∀a b q r. 0 < b ∧ (a = q * b + r) ∧ r < b ⇒ (a % b = r)``,
+  ``∀a b q r. 0 < b ∧ a = q * b + r ∧ r < b ⇒ a % b = r``,
   rpt strip_tac >>
   `(a = a / b * b + a % b) ∧ a % b < b` by metis_tac [ordDIVISION] >>
   `a / b = q` by metis_tac [ordDIV_UNIQUE] >> pop_assum SUBST_ALL_TAC >>
