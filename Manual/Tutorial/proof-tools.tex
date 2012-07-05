@@ -652,7 +652,7 @@ Once inputs get even a little beyond the clearly trivial, the function
 we have written (at the top-level, \ml{DPLL\_UNIV}) performs considerably
 better than the truth table implementation.  For example, the
 generalisation of the following term, with 29 variables, takes
-\ml{wrapper} two and a half minutes to demonstrate as a tautology:
+\ml{wrapper} three and a half seconds to demonstrate as a tautology:
 \begin{hol}
 \begin{verbatim}
    (s0_0 = (x_0 = ~y_0)) /\ (c0_1 = x_0 /\ y_0) /\
@@ -677,9 +677,7 @@ generalisation of the following term, with 29 variables, takes
    (c_3 = c2_3) /\ (s_0 = s2_0) /\ (s_1 = s2_1) /\ (s_2 = s2_2)
 \end{verbatim}
 \end{hol}
-(if you want real speed, the built-in function \ml{tautLib.TAUT\_PROVE} does the above
-in less than a second, by using  an external tool to generate the proof
- of unsatisfiability, and then translating that proof back into HOL).
+(if you want real speed, the built-in function \ml{tautLib.TAUT\_PROVE} does the above in less than a hundredth of a second, by using  an external tool to generate the proof of unsatisfiability, and then translating that proof back into HOL).
 
 \section{Extending our Procedure's Applicability}
 \label{sec:dpll-applicability-extension}
