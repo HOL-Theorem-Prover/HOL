@@ -1104,8 +1104,8 @@ val ord_CASES = store_thm(
   Cases_on `omax (preds a)` >> simp[] >>
   fs[preds_omax_SOME_SUC]);
 
-val islimit_SUC = store_thm(
-  "islimit_SUC",
+val islimit_SUC_lt = store_thm(
+  "islimit_SUC_lt",
   ``islimit b ∧ a < b ⇒ a⁺ < b``,
   fs[omax_NONE] >> metis_tac [ordlt_SUC_DISCRETE, ordlt_trichotomy, ordle_lteq])
 
@@ -1358,5 +1358,120 @@ val ordEXP_le_MONO_L = store_thm(
   `b ** d ∈ IMAGE ($** b) (preds x)` by (simp[] >> metis_tac[]) >>
   metis_tac [mklesup sup_thm, ordle_TRANS, IMAGE_cardleq_rwt, preds_inj_univ]);
 
+val IFF_ZERO_lt = store_thm(
+  "IFF_ZERO_lt",
+  ``(x:'a ordinal ≠ 0 ⇔ 0 < x) ∧ (1 ≤ x ⇔ 0 < x)``,
+  REWRITE_TAC [GSYM ORD_ONE] >> simp[ordlt_SUC_DISCRETE] >>
+  metis_tac [ordlt_trichotomy, ordlt_ZERO]);
+
+val islimit_SUC = store_thm(
+  "islimit_SUC",
+  ``islimit x⁺ ⇔ F``,
+  simp[omax_NONE, impI, ordlt_SUC_DISCRETE] >>
+  metis_tac[ordle_lteq]);
+val _ = export_rewrites ["islimit_SUC"]
+
+val islimit_fromNat = store_thm(
+  "islimit_fromNat",
+  ``islimit &x ⇔ x = 0``,
+  Cases_on `x` >> simp[]);
+val _ = export_rewrites ["islimit_fromNat"]
+
+val ordEXP_ZERO_limit = store_thm(
+  "ordEXP_ZERO_limit",
+  ``∀x. islimit x ⇒ 0 ** x = 1``,
+  ho_match_mp_tac simple_ord_induction >> simp[] >>
+  qx_gen_tac `x` >> strip_tac >>
+  qsuff_tac `IMAGE ($** 0) (preds x) = {0; 1}`
+  >- (simp[] >> dsimp[sup_def, impI] >> strip_tac >>
+      DEEP_INTRO_TAC oleast_intro >> simp[] >>
+      conj_tac >- metis_tac [ordlt_REFL] >>
+      qx_gen_tac `a` >> strip_tac >>
+      qsuff_tac `a ≤ 1` >- metis_tac[ordle_ANTISYM] >>
+      metis_tac[ordlt_REFL]) >>
+  simp[EXTENSION] >> qx_gen_tac `y` >> dsimp[EQ_IMP_THM] >>
+  Tactical.REVERSE (rpt conj_tac)
+  >- (strip_tac >> qexists_tac `0` >> simp[])
+  >- (strip_tac >> qexists_tac `0⁺` >> simp[] >>
+      spose_not_then strip_assume_tac >> fs[ordle_lteq]
+      >- metis_tac [ordlt_DISCRETE1, ORD_ONE] >>
+      fs[]) >>
+  qx_gen_tac `z` >> strip_tac >> Cases_on `islimit z` >- metis_tac[] >>
+  `∃z0. z = z0⁺`
+    by metis_tac [preds_omax_SOME_SUC, optionTheory.option_CASES] >>
+  simp[])
+
+val ordEXP_ZERO_nonlimit = store_thm(
+  "ordEXP_ZERO_nonlimit",
+  ``¬islimit x ⇒ 0 ** x = 0``,
+  metis_tac [preds_omax_SOME_SUC, optionTheory.option_CASES, ordEXP_def,
+             ordMULT_def]);
+
+val sup_EQ_0 = store_thm(
+  "sup_EQ_0",
+  ``s:'a ordinal set ≼ univ(:'a inf) ⇒ (sup s = 0 ⇔ s = {} ∨ s = {0})``,
+  strip_tac >>
+  qspec_then `0` (mp_tac o Q.AP_TERM `$~`) (sup_thm |> UNDISCH_ALL) >>
+  simp_tac pure_ss [NOT_EXISTS_THM] >> simp[impI] >>
+  disch_then (K ALL_TAC) >> simp[EXTENSION] >> metis_tac[])
+
+val ordADD_EQ_0 = store_thm(
+  "ordADD_EQ_0",
+  ``∀y x. (x:'a ordinal) + y = 0 ⇔ x = 0 ∧ y = 0``,
+  ho_match_mp_tac simple_ord_induction >> simp[] >>
+  simp[sup_EQ_0, IMAGE_cardleq_rwt, preds_inj_univ] >>
+  qx_gen_tac `y` >> strip_tac >> qx_gen_tac `x` >>
+  `preds y <> {}` by (simp[EXTENSION] >> metis_tac[]) >>
+  simp[EXTENSION] >>
+  `y ≠ 0` by metis_tac [ordlt_REFL] >> simp[] >>
+  qexists_tac `x⁺` >> simp[] >> qexists_tac `1` >>
+  metis_tac [ADD1R, islimit_SUC_lt, ORD_ONE])
+val _ = export_rewrites ["ordADD_EQ_0"]
+
+val IMAGE_EQ_SING = store_thm(
+  "IMAGE_EQ_SING",
+  ``IMAGE f s = {x} ⇔ (∃y. y ∈ s) ∧ ∀y. y ∈ s ⇒ f y = x``,
+  simp[EXTENSION] >> metis_tac []);
+
+val ordMULT_EQ_0 = store_thm(
+  "ordMULT_EQ_0",
+  ``∀x y. x * y = 0 ⇔ x = 0 ∨ y = 0``,
+  ho_match_mp_tac simple_ord_induction >> simp[] >>
+  simp_tac (srw_ss() ++ CONJ_ss) [] >> qx_gen_tac `x` >> strip_tac >>
+  simp[sup_EQ_0, IMAGE_cardleq_rwt, preds_inj_univ] >>
+  `preds x <> {}` by (simp[EXTENSION] >> metis_tac[]) >>
+  `x <> 0` by (strip_tac >> fs[]) >> simp[] >>
+  qx_gen_tac `y` >> eq_tac
+  >- (simp[IMAGE_EQ_SING] >> strip_tac >>
+      pop_assum (qspec_then `1` mp_tac) >> simp[] >>
+      disch_then match_mp_tac >> metis_tac [islimit_SUC_lt, ORD_ONE]) >>
+  simp[IMAGE_EQ_SING] >> metis_tac[]);
+val _ = export_rewrites ["ordMULT_EQ_0"]
+
+(*
+val ordEXP_EQ_0 = store_thm(
+  "ordEXP_EQ_0",
+  ``∀y x. x ** y = 0 ⇔ x = 0 ∧ ¬islimit y``,
+  ho_match_mp_tac simple_ord_induction >> simp[] >> conj_tac
+  >- metis_tac[] >>
+  qx_gen_tac `y` >> strip_tac >>
+  simp[sup_EQ_0, IMAGE_cardleq_rwt, preds_inj_univ]
+
+val ZERO_lt_ordEXP_I = store_thm(
+  "ZERO_lt_ordEXP_I",
+  ``∀x a. 0 < a ⇒ 0 < a ** x``,
+  ho_match_mp_tac simple_ord_induction >> simp[]
+
+val ZERO_lt_ordEXP = store_thm(
+  "ZERO_lt_ordEXP",
+  ``0 < a ** x ⇔ 0 < a ∨ a = 0 ∧ islimit x``,
+  Cases_on `0 < a` >> simp[]
+
+val ordEXP_le_MONO_R = store_thm(
+  "ordEXP_le_MONO_R",
+  ``∀x y a. 0 < a ∧ x ≤ y ⇒ a ** x ≤ a ** y``,
+  ho_match_mp_tac simple_ord_induction >> simp[] >> rpt conj_tac
+  >- (simp[IFF_ZERO_lt]
+*)
 
 val _ = export_theory()
