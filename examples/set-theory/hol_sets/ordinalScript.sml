@@ -1448,30 +1448,37 @@ val ordMULT_EQ_0 = store_thm(
   simp[IMAGE_EQ_SING] >> metis_tac[]);
 val _ = export_rewrites ["ordMULT_EQ_0"]
 
-(*
 val ordEXP_EQ_0 = store_thm(
   "ordEXP_EQ_0",
   ``∀y x. x ** y = 0 ⇔ x = 0 ∧ ¬islimit y``,
   ho_match_mp_tac simple_ord_induction >> simp[] >> conj_tac
   >- metis_tac[] >>
   qx_gen_tac `y` >> strip_tac >>
-  simp[sup_EQ_0, IMAGE_cardleq_rwt, preds_inj_univ]
+  simp[sup_EQ_0, IMAGE_cardleq_rwt, preds_inj_univ] >>
+  `preds y ≠ ∅` by (simp[EXTENSION] >> metis_tac[]) >> simp[] >>
+  simp[IMAGE_EQ_SING] >> qx_gen_tac `x` >> DISJ2_TAC >>
+  qexists_tac `0` >> simp[]);
 
 val ZERO_lt_ordEXP_I = store_thm(
   "ZERO_lt_ordEXP_I",
-  ``∀x a. 0 < a ⇒ 0 < a ** x``,
-  ho_match_mp_tac simple_ord_induction >> simp[]
+  ``∀a x:'a ordinal. 0 < a ⇒ 0 < a ** x``,
+  metis_tac [IFF_ZERO_lt, ordEXP_EQ_0]);
 
 val ZERO_lt_ordEXP = store_thm(
   "ZERO_lt_ordEXP",
-  ``0 < a ** x ⇔ 0 < a ∨ a = 0 ∧ islimit x``,
-  Cases_on `0 < a` >> simp[]
-
+  ``0 < a ** x ⇔ 0 < a ∨ islimit x``,
+  metis_tac [ordEXP_EQ_0, IFF_ZERO_lt])
+(*
 val ordEXP_le_MONO_R = store_thm(
   "ordEXP_le_MONO_R",
   ``∀x y a. 0 < a ∧ x ≤ y ⇒ a ** x ≤ a ** y``,
   ho_match_mp_tac simple_ord_induction >> simp[] >> rpt conj_tac
-  >- (simp[IFF_ZERO_lt]
+  >- simp[IFF_ZERO_lt, ZERO_lt_ordEXP]
+  >- (qx_gen_tac `x` >> strip_tac >> map_every qx_gen_tac [`y`, `a`] >>
+      `y = 0 ∨ (∃y0. y = y0⁺) ∨ 0 < y ∧ islimit y`
+        by (qspec_then `y` strip_assume_tac ord_CASES >> simp[])
+      >- simp[] >- simp[ordMULT_le_MONO_R] >>
 *)
+
 
 val _ = export_theory()
