@@ -437,6 +437,11 @@ val sup_thm = store_thm(
   `β < α ⇔ β ∈ apreds` by metis_tac [IN_preds] >>
   simp[Abbr`apreds`] >> metis_tac [IN_preds]);
 
+val suple_thm = store_thm(
+  "suple_thm",
+  ``∀β s:'a ordinal set. s ≼ univ(:'a inf) ∧ β ∈ s ⇒ β ≤ sup s``,
+  metis_tac [sup_thm, ordlt_REFL]);
+
 val csup_thm = store_thm(
   "csup_thm",
   ``countable (s : cord set) ==> ∀β. β < sup s ⇔ ∃δ. δ ∈ s ∧ β < δ``,
@@ -1468,17 +1473,31 @@ val ZERO_lt_ordEXP = store_thm(
   "ZERO_lt_ordEXP",
   ``0 < a ** x ⇔ 0 < a ∨ islimit x``,
   metis_tac [ordEXP_EQ_0, IFF_ZERO_lt])
-(*
+
 val ordEXP_le_MONO_R = store_thm(
   "ordEXP_le_MONO_R",
   ``∀x y a. 0 < a ∧ x ≤ y ⇒ a ** x ≤ a ** y``,
   ho_match_mp_tac simple_ord_induction >> simp[] >> rpt conj_tac
-  >- simp[IFF_ZERO_lt, ZERO_lt_ordEXP]
-  >- (qx_gen_tac `x` >> strip_tac >> map_every qx_gen_tac [`y`, `a`] >>
-      `y = 0 ∨ (∃y0. y = y0⁺) ∨ 0 < y ∧ islimit y`
+  >- simp[IFF_ZERO_lt, ZERO_lt_ordEXP] >>
+  qx_gen_tac `x` >> strip_tac >> map_every qx_gen_tac [`y`, `a`]
+  >- (`y = 0 ∨ (∃y0. y = y0⁺) ∨ 0 < y ∧ islimit y`
         by (qspec_then `y` strip_assume_tac ord_CASES >> simp[])
       >- simp[] >- simp[ordMULT_le_MONO_R] >>
-*)
+      simp[] >> strip_tac >>
+      `x ≤ y` by metis_tac [ordle_lteq, ordlt_SUC_DISCRETE] >>
+      Cases_on `x = y` >> rw[] >- fs[] >>
+      `x < y` by metis_tac [ordle_lteq] >>
+      match_mp_tac suple_thm >> simp[IMAGE_cardleq_rwt, preds_inj_univ] >>
+      qexists_tac `x⁺` >> simp[] >> metis_tac [islimit_SUC_lt]) >>
+  strip_tac >> simp[predimage_sup_thm, impI] >> qx_gen_tac `d` >>
+  strip_tac >> `d ≤ y` by metis_tac [ordlt_TRANS, ordle_lteq] >>
+  metis_tac[]);
 
+val ordEXP_continuous = store_thm(
+  "ordEXP_continuous",
+  ``∀a s:'a ordinal set.
+       0 < a ∧ s ≼ univ(:'a inf) ∧ s ≠ ∅ ⇒
+       a ** sup s = sup (IMAGE ($** a) s)``,
+  simp[generic_continuity, ordEXP_le_MONO_R]);
 
 val _ = export_theory()
