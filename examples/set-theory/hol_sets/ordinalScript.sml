@@ -1500,4 +1500,15 @@ val ordEXP_continuous = store_thm(
        a ** sup s = sup (IMAGE ($** a) s)``,
   simp[generic_continuity, ordEXP_le_MONO_R]);
 
+(*val cantor_normal_form = store_thm(
+  "cantor_normal_form",
+  ``∀a:'a ordinal b.
+      1 < a ⇒
+      ∃!ces.
+        (∀i j. i < j ∧ j < LENGTH ces ⇒ SND (EL j ces) < SND (EL i ces)) ∧
+        (∀c e. MEM (c,e) ces ⇒ 0 < c ∧ c < a) ∧
+        b = FOLDL (λacc (c,e). acc + c * a ** e) 0 ces``,
+  ...)
+*)
+
 val _ = export_theory()
