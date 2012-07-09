@@ -110,7 +110,7 @@ val _ = export_rewrites["ALOOKUP_SOME_FAPPLY_alist_to_fmap"]
 
 val alist_to_fmap_FAPPLY_MEM = store_thm(
 "alist_to_fmap_FAPPLY_MEM",
-``∀al z. z ∈ FDOM (alist_to_fmap al) ⇒ MEM (z, (alist_to_fmap al) ' z) al``,
+``!al z. z IN FDOM (alist_to_fmap al) ==> MEM (z, (alist_to_fmap al) ' z) al``,
 rpt strip_tac >>
 match_mp_tac ALOOKUP_MEM >>
 ONCE_REWRITE_TAC[SYM(CONJUNCT1 ALOOKUP_EQ_FLOOKUP)] >>
@@ -138,7 +138,7 @@ Cases_on `h` THEN SRW_TAC [][] THEN METIS_TAC []);
 
 val alist_to_fmap_APPEND = store_thm(
 "alist_to_fmap_APPEND",
-``∀l1 l2. alist_to_fmap (l1 ++ l2) = alist_to_fmap l1 ⊌ alist_to_fmap l2``,
+``!l1 l2. alist_to_fmap (l1 ++ l2) = FUNION (alist_to_fmap l1) (alist_to_fmap l2)``,
 Induct >- rw[FUNION_FEMPTY_1] >>
 Cases >> rw[FUNION_FUPDATE_1])
 val _ = export_rewrites["alist_to_fmap_APPEND"]
@@ -155,7 +155,7 @@ SRW_TAC [][]);
 
 val ALOOKUP_APPEND = store_thm(
 "ALOOKUP_APPEND",
-``∀l1 l2 k. ALOOKUP (l1 ++ l2) k = case ALOOKUP l1 k of SOME v => SOME v | NONE => ALOOKUP l2 k``,
+``!l1 l2 k. ALOOKUP (l1 ++ l2) k = case ALOOKUP l1 k of SOME v => SOME v | NONE => ALOOKUP l2 k``,
 rw[] >> Cases_on `ALOOKUP l1 k` >> rw[ALOOKUP_prefix])
 
 val FUPDATE_LIST_EQ_APPEND_REVERSE = Q.store_thm(
