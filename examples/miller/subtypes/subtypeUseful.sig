@@ -347,8 +347,6 @@ sig
   val CONJUNCTS_TAC : tactic
   val FUN_EQ_TAC : tactic
   val SET_EQ_TAC : tactic
-  val SUFF_TAC : term frag list -> tactic
-  val KNOW_TAC : term frag list -> tactic
   val CHECK_ASMS_TAC : tactic
   val EXACT_MP_TAC : thm_tactic
   val STRONG_CONJ_TAC : tactic

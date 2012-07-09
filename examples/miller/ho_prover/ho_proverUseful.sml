@@ -1027,15 +1027,6 @@ fun CONJUNCTS_TAC g = TRY (CONJ_TAC << [ALL_TAC, CONJUNCTS_TAC]) g;
 val FUN_EQ_TAC = CONV_TAC (CHANGED_CONV (ONCE_DEPTH_CONV FUN_EQ_CONV));
 val SET_EQ_TAC = CONV_TAC (CHANGED_CONV (ONCE_DEPTH_CONV SET_EQ_CONV));
 
-fun SUFF_TAC t (al, c)
-  = let val tm = parse_with_goal t (al, c)
-    in ([(al, mk_imp (tm, c)), (al, tm)],
-	fn [th1, th2] => MP th1 th2
-	 | _ => raise ERR "SUFF_TAC" "panic")
-    end;
-
-fun KNOW_TAC t = REVERSE (SUFF_TAC t);
-
 local
   val th1 = (prove (``!t. T ==> (F ==> t)``, PROVE_TAC []))
 in
@@ -1255,4 +1246,3 @@ fun ASM_MATCH_MP_TAC_N depth ths =
 val ASM_MATCH_MP_TAC = ASM_MATCH_MP_TAC_N 10;
 
 end; (* probTools *)
-
