@@ -240,10 +240,10 @@ val _ = Define `
 
 
 val _ = Define `
- (extend_rec_env env rs defs ns vs =FOLDL2  (\ en n v . FUPDATE  en ( n, v)) 
+ (extend_rec_env cenv env rs defs ns vs =FOLDL2  (\ en n v . FUPDATE  en ( n, v)) 
     (FOLDL
         (\ en n . FUPDATE  en ( n,
-          (CRecClos env rs defs n)))
+          (CRecClos cenv rs defs n)))
         env
         rs) 
     ns  vs)`;
@@ -391,7 +391,7 @@ Cevaluate_list env es (Rval vs)/\(
 find_index n ns' 0=SOME i)/\
 (EL  i  defs= (ns,b))/\
 (LENGTH ns= LENGTH vs)/\ALL_DISTINCT ns/\
-Cevaluate (extend_rec_env env' ns' defs ns vs) b r
+Cevaluate (extend_rec_env env' env' ns' defs ns vs) b r
 ==>
 Cevaluate env (CCall e es) r)
 /\
