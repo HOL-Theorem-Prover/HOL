@@ -1474,24 +1474,34 @@ val ZERO_lt_ordEXP = store_thm(
   ``0 < a ** x ⇔ 0 < a ∨ islimit x``,
   metis_tac [ordEXP_EQ_0, IFF_ZERO_lt])
 
+val ordEXP_lt_MONO_R = store_thm(
+  "ordEXP_lt_MONO_R",
+  ``∀y x a:'a ordinal. 1 < a ∧ x < y ⇒ a ** x < a ** y``,
+  ho_match_mp_tac simple_ord_induction >> simp[] >> rpt conj_tac >>
+  qx_gen_tac `y` >> strip_tac >> map_every qx_gen_tac [`x`, `a`]
+  >- (simp[ordlt_SUC_DISCRETE] >> rw[] >| [
+        match_mp_tac ordlt_TRANS >> qexists_tac `a ** y` >> simp[],
+        ALL_TAC
+      ] >> simp_tac bool_ss [SimpL ``ordlt``, Once (GSYM ordMULT_1L)] >>
+      simp[ZERO_lt_ordEXP] >> DISJ1_TAC >>
+      match_mp_tac ordlt_TRANS >> qexists_tac `1` >> simp[]) >>
+  simp[predimage_sup_thm] >> fs[omax_NONE] >>
+  metis_tac[]);
+
+val ordEXP_lt_IFF = store_thm(
+  "ordEXP_lt_IFF",
+  ``∀x y a:'a ordinal. 1 < a ⇒ (a ** x < a ** y ⇔ x < y)``,
+  simp[EQ_IMP_THM, ordEXP_lt_MONO_R] >> rpt strip_tac >>
+  spose_not_then strip_assume_tac >> fs[ordle_lteq]
+  >- metis_tac[ordlt_TRANS, ordlt_REFL, ordEXP_lt_MONO_R] >> fs[]);
+
 val ordEXP_le_MONO_R = store_thm(
   "ordEXP_le_MONO_R",
   ``∀x y a. 0 < a ∧ x ≤ y ⇒ a ** x ≤ a ** y``,
-  ho_match_mp_tac simple_ord_induction >> simp[] >> rpt conj_tac
-  >- simp[IFF_ZERO_lt, ZERO_lt_ordEXP] >>
-  qx_gen_tac `x` >> strip_tac >> map_every qx_gen_tac [`y`, `a`]
-  >- (`y = 0 ∨ (∃y0. y = y0⁺) ∨ 0 < y ∧ islimit y`
-        by (qspec_then `y` strip_assume_tac ord_CASES >> simp[])
-      >- simp[] >- simp[ordMULT_le_MONO_R] >>
-      simp[] >> strip_tac >>
-      `x ≤ y` by metis_tac [ordle_lteq, ordlt_SUC_DISCRETE] >>
-      Cases_on `x = y` >> rw[] >- fs[] >>
-      `x < y` by metis_tac [ordle_lteq] >>
-      match_mp_tac suple_thm >> simp[IMAGE_cardleq_rwt, preds_inj_univ] >>
-      qexists_tac `x⁺` >> simp[] >> metis_tac [islimit_SUC_lt]) >>
-  strip_tac >> simp[predimage_sup_thm, impI] >> qx_gen_tac `d` >>
-  strip_tac >> `d ≤ y` by metis_tac [ordlt_TRANS, ordle_lteq] >>
-  metis_tac[]);
+  rpt gen_tac >> simp[ordle_lteq] >> rw[] >> Cases_on `a = 1` >- simp[] >>
+  qsuff_tac `1 < a` >- metis_tac [ordEXP_lt_MONO_R] >>
+  spose_not_then strip_assume_tac >> fs[ordle_lteq] >> fs[] >>
+  metis_tac [ORD_ONE, ordlt_DISCRETE1]);
 
 val ordEXP_continuous = store_thm(
   "ordEXP_continuous",
