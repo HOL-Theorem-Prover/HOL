@@ -92,6 +92,15 @@ val (free_vars_def, free_vars_ind) = register "free_vars" (
   rw[] >> res_tac >> fs[Cexp_size_def] >> srw_tac[ARITH_ss][]))
 val _ = export_rewrites["free_vars_def"];
 
+val (no_closures_def, no_closures_ind) = register "no_closures" (
+  tprove_no_defn ((no_closures_def, no_closures_ind),
+  WF_REL_TAC `measure Cv_size` >>
+  rw[Cvs_size_thm] >>
+  imp_res_tac SUM_MAP_MEM_bound >>
+  pop_assum (qspec_then `Cv_size` mp_tac) >>
+  srw_tac[ARITH_ss][]))
+val _ = export_rewrites["no_closures_def"];
+
 val (inst_arg_def,inst_arg_ind) = register "inst_arg" (
   tprove_no_defn ((inst_arg_def,inst_arg_ind),
   WF_REL_TAC `measure (nt_size o SND)` >>
