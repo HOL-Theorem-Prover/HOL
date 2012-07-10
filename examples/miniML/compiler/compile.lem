@@ -167,11 +167,20 @@ free_vars (CLprim _ es) =
 (* Big-step semantics *)
 
 let rec
-doPrim2 b ty op (CLitv (IntLit x)) (CLitv (IntLit y)) =
-  if b && y = i0 then Some (CRaise Div_error)
-  else Some (CLit (ty (op x y)))
+no_closures (CLitv _) = true
 and
-doPrim2 b ty op _ _ = None
+no_closures (CConv _ vs) = List.for_all no_closures vs
+and
+no_closures (CClosure _ _ _) = false
+and
+no_closures (CRecClos _ _ _ _) = false
+
+let rec
+doPrim2 b ty op (CLitv (IntLit x)) (CLitv (IntLit y)) =
+  if b && y = i0 then (Rerr (Rraise Div_error))
+  else Rval (CLitv (ty (op x y)))
+and
+doPrim2 b ty op _ _ = Rerr Rtype_error
 
 let rec
 CevalPrim2 CAdd = doPrim2 false IntLit Int.(+)
@@ -186,7 +195,10 @@ CevalPrim2 CMod = doPrim2 true IntLit Int.(%)
 and
 CevalPrim2 CLt = doPrim2 false Bool Int.(<)
 and
-CevalPrim2 CEq = fun v1 v2 -> Some (CLit (Bool (v1 = v2)))
+CevalPrim2 CEq = fun v1 v2 ->
+  if no_closures v1 && no_closures v2
+  then Rval (CLitv (Bool (v1 = v2)))
+  else Rerr Rtype_error
 
 type Cmatch_result =
   | Cmatch of (string,Cv) Pmap.map
@@ -408,12 +420,10 @@ Cevaluate env e (Rerr err)
 Cevaluate env (CCall e es) (Rerr err)
 
 and
-forall env p2 e1 e2 v1 v2 e3 r.
-Cevaluate_list env [e1;e2] (Rval [v1;v2]) &&
-CevalPrim2 p2 v1 v2 = Some e3 &&
-Cevaluate env e3 r
+forall env p2 e1 e2 v1 v2.
+Cevaluate_list env [e1;e2] (Rval [v1;v2])
 ==>
-Cevaluate env (CPrim2 p2 e1 e2) r
+Cevaluate env (CPrim2 p2 e1 e2) (CevalPrim2 p2 v1 v2)
 and
 forall env p2 e1 e2 err.
 Cevaluate_list env [e1;e2] (Rerr err)
@@ -421,12 +431,10 @@ Cevaluate_list env [e1;e2] (Rerr err)
 Cevaluate env (CPrim2 p2 e1 e2) (Rerr err)
 
 and
-forall env es v1 v2 e3 r.
-Cevaluate_list env es (Rval [v1;v2]) &&
-doPrim2 false Bool Int.(<=) v1 v2 = Some e3 &&
-Cevaluate env e3 r
+forall env es v1 v2.
+Cevaluate_list env es (Rval [v1;v2])
 ==>
-Cevaluate env (CLprim CLeq es) r
+Cevaluate env (CLprim CLeq es) (doPrim2 false Bool Int.(<=) v1 v2)
 and
 forall env es err.
 Cevaluate_list env es (Rerr err)

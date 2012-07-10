@@ -152,13 +152,25 @@ val _ = Defn.save_defn free_vars_defn;
 
 (* Big-step semantics *)
 
+ val no_closures_defn = Hol_defn "no_closures" `
+
+(no_closures (CLitv _) = T)
+/\
+(no_closures (CConv _ vs) = EVERY no_closures vs)
+/\
+(no_closures (CClosure _ _ _) = F)
+/\
+(no_closures (CRecClos _ _ _ _) = F)`;
+
+val _ = Defn.save_defn no_closures_defn;
+
  val doPrim2_defn = Hol_defn "doPrim2" `
 
 (doPrim2 b ty op (CLitv (IntLit x)) (CLitv (IntLit y)) =
-  if b/\ (y= i0) then SOME (CRaise Div_error)
-  else SOME (CLit (ty (op x y))))
+  if b/\ (y= i0) then (Rerr (Rraise Div_error))
+  else Rval (CLitv (ty (op x y))))
 /\
-(doPrim2 b ty op _ _ =NONE)`;
+(doPrim2 b ty op _ _ = Rerr Rtype_error)`;
 
 val _ = Defn.save_defn doPrim2_defn;
 
@@ -176,7 +188,10 @@ val _ = Defn.save_defn doPrim2_defn;
 /\
 (CevalPrim2 CLt = doPrim2 F Bool int_lt)
 /\
-(CevalPrim2 CEq = \ v1 v2 .SOME (CLit (Bool (v1= v2))))`;
+(CevalPrim2 CEq = \ v1 v2 .
+  if no_closures v1/\ no_closures v2
+  then Rval (CLitv (Bool (v1= v2)))
+  else Rerr Rtype_error)`;
 
 val _ = Defn.save_defn CevalPrim2_defn;
 
@@ -408,12 +423,10 @@ Cevaluate env e (Rerr err)
 Cevaluate env (CCall e es) (Rerr err))
 
 /\
-(! env p2 e1 e2 v1 v2 e3 r.
-Cevaluate_list env [e1;e2] (Rval [v1;v2])/\(
-CevalPrim2 p2 v1 v2=SOME e3)/\
-Cevaluate env e3 r
+(! env p2 e1 e2 v1 v2.
+Cevaluate_list env [e1;e2] (Rval [v1;v2])
 ==>
-Cevaluate env (CPrim2 p2 e1 e2) r)
+Cevaluate env (CPrim2 p2 e1 e2) (CevalPrim2 p2 v1 v2))
 /\
 (! env p2 e1 e2 err.
 Cevaluate_list env [e1;e2] (Rerr err)
@@ -421,12 +434,10 @@ Cevaluate_list env [e1;e2] (Rerr err)
 Cevaluate env (CPrim2 p2 e1 e2) (Rerr err))
 
 /\
-(! env es v1 v2 e3 r.
-Cevaluate_list env es (Rval [v1;v2])/\(
-doPrim2 F Bool int_le v1 v2=SOME e3)/\
-Cevaluate env e3 r
+(! env es v1 v2.
+Cevaluate_list env es (Rval [v1;v2])
 ==>
-Cevaluate env (CLprim CLeq es) r)
+Cevaluate env (CLprim CLeq es) (doPrim2 F Bool int_le v1 v2))
 /\
 (! env es err.
 Cevaluate_list env es (Rerr err)
