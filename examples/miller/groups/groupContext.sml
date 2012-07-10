@@ -14,7 +14,7 @@ if !show_assums then () else
   show_assums := true);
 *)
 
-open subtypeTools pred_setContext groupTheory formalizeUseful arithContext
+open subtypeTools pred_setContext groupTheory HurdUseful arithContext
      listContext;
 
 infixr 0 ++ || ORELSEC ## THENC THEN_TCL ORELSE_TCL;

@@ -29,7 +29,7 @@ installPP subtypeTools.pp_context;
 
 open bossLib arithmeticTheory dividesTheory gcdTheory
      res_quanTheory pred_setTheory subtypeTheory
-     res_quanTools subtypeTools ho_proverTools numContext formalizeUseful
+     res_quanTools subtypeTools ho_proverTools numContext HurdUseful
      extra_numTheory ho_basicTools arithContext extra_arithTheory
      binomialTheory summationTheory;
 
@@ -50,8 +50,6 @@ val S_TAC = !! (POP_ASSUM MP_TAC) ++ !! RESQ_STRIP_TAC;
 
 val (R_TAC, AR_TAC, R_TAC', AR_TAC') = SIMPLIFY_TACS arith_c;
 
-val Suff = PARSE_TAC SUFF_TAC;
-val Know = PARSE_TAC KNOW_TAC;
 
 (* ------------------------------------------------------------------------- *)
 (* Definitions.                                                              *)

@@ -20,11 +20,11 @@ val () = app load
    "primeTheory",
    "gcdTheory",
    "probLib",
-   "ho_proverUseful"];
+   "HurdUseful"];
 val () = show_assums := true;
 *)
 
-open ho_proverUseful ho_basicTools;
+open HurdUseful ho_basicTools;
 
 infixr 0 oo ## ++ << || THENC ORELSEC THENR ORELSER;
 infix 1 >>;

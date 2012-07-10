@@ -1,12 +1,12 @@
 open HolKernel Parse boolLib;
 val _ = new_theory "miller_rabin_ml";
 
-open bossLib formalizeUseful miller_rabinTheory state_transformerTheory
+open bossLib HurdUseful miller_rabinTheory state_transformerTheory
      pairTheory arithmeticTheory combinTheory prob_uniformTheory
      extra_numTheory probTheory;
 
 val EXISTS_DEF = boolTheory.EXISTS_DEF;
-val REVERSE = formalizeUseful.REVERSE;
+val REVERSE = HurdUseful.REVERSE;
 
 infixr 0 oo ## ++ << || THENC ORELSEC THENR ORELSER -->;
 infix 1 >> |->;
@@ -23,8 +23,6 @@ val op>> = op THEN1;
 
 val Strip = !! STRIP_TAC;
 val Simplify = RW_TAC std_ss;
-val Suff = PARSE_TAC SUFF_TAC;
-val Know = PARSE_TAC KNOW_TAC;
 
 (* ========================================================================= *)
 (* miller_rabin_ml theory.                                                   *)

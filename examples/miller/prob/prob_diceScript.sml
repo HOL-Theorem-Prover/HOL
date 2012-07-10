@@ -9,7 +9,7 @@ quietdec := true;
 open HolKernel Parse boolLib;
 open bossLib arithmeticTheory pred_setTheory listTheory
      sequenceTheory state_transformerTheory probabilityTheory
-     formalizeUseful extra_numTheory combinTheory pairTheory
+     HurdUseful extra_numTheory combinTheory pairTheory
      realTheory realLib extra_boolTheory extra_pred_setTheory
      prob_algebraTheory probTheory extra_realTheory extra_pred_setTools
      measureTheory numTheory simpLib seqTheory sequenceTools
@@ -29,8 +29,6 @@ val op++ = op THEN;
 val op<< = op THENL;
 val op|| = op ORELSE;
 val op>> = op THEN1;
-val Know = PARSE_TAC KNOW_TAC;
-val Suff = PARSE_TAC SUFF_TAC;
 val Rewr = DISCH_THEN (REWRITE_TAC o wrap);
 val Rewr' = DISCH_THEN (ONCE_REWRITE_TAC o wrap);
 val STRONG_DISJ_TAC = CONV_TAC (REWR_CONV (GSYM IMP_DISJ_THM)) ++ STRIP_TAC;

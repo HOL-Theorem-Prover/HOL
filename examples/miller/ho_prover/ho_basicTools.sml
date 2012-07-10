@@ -25,7 +25,7 @@ val () = show_assums := true;
 
 *)
 
-open ho_proverUseful;
+open HurdUseful;
 
 infixr 0 oo ## ++ << || THENC ORELSEC THENR ORELSER;
 infix 1 >>;

@@ -7,11 +7,11 @@ val _ = new_theory "subtype";
 show_assums := true;
 loadPath := union ["../ho_prover"] (!loadPath);
 app load
-  ["bossLib", "combinTheory", "pred_setTheory", "seqTheory", "subtypeUseful",
+  ["bossLib", "combinTheory", "pred_setTheory", "seqTheory", "HurdUseful",
    "res_quanTheory", "ho_proverTools", "pairTheory"];
 *)
 
-open bossLib combinTheory pred_setTheory seqTheory subtypeUseful
+open bossLib combinTheory pred_setTheory seqTheory HurdUseful
      res_quanTheory ho_proverTools pairTheory;
 
 infixr 0 ++ << || THENC ORELSEC ORELSER ##;

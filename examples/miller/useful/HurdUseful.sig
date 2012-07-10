@@ -1,4 +1,4 @@
-signature formalizeUseful =
+signature HurdUseful =
 sig
 
   (* GENERAL *)
@@ -196,6 +196,7 @@ sig
 
   (* HOL *)
 
+  type 'a set = 'a HOLset.set
   type hol_type = Type.hol_type
   type term = Term.term
   type thm = Thm.thm
@@ -213,13 +214,12 @@ sig
   type term_subst = (term, term) subst
   type substitution = term_subst * type_subst
   type ho_substitution = substitution * thm thunk
-  type raw_substitution = term_subst * (type_subst * hol_type list)
+  type raw_substitution = (term_subst * term set) * (type_subst * hol_type list)
   type ho_raw_substitution = raw_substitution * thm thunk
 
   (* General *)
   val profile : ('a -> 'b) -> 'a -> 'b
   val parse_with_goal : term frag list -> goal -> term
-  val PARSE_TAC : (term -> tactic) -> term frag list -> tactic
 
   (* Term/type substitutions *)
   val empty_subst : substitution
@@ -350,6 +350,8 @@ sig
   val EXACT_MP_TAC : thm_tactic
   val STRONG_CONJ_TAC : tactic
   val FORWARD_TAC : (thm list -> thm list) -> tactic
+  val Know : term quotation -> tactic
+  val Suff : term quotation -> tactic
 
   (* Simple CNF conversion *)
   val CNF_CONV : conv

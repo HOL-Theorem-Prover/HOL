@@ -10,7 +10,7 @@ open HolKernel Parse boolLib bossLib arithmeticTheory pred_setTheory
      listTheory rich_listTheory pairTheory combinTheory sequenceTheory
      sequenceTools extra_pred_setTheory prob_canonTheory
      prob_canonTools numSyntax extra_pred_setTools extra_listTheory
-     formalizeUseful measureTheory prob_algebraTheory realTheory
+     HurdUseful measureTheory prob_algebraTheory realTheory
      realLib probabilityTheory subtypeTheory seqTheory
      state_transformerTheory extra_realTheory extra_boolTheory
      ho_proverTools extra_numTheory simpLib res_quanTheory;
@@ -31,8 +31,6 @@ val op|| = op ORELSE;
 val op>> = op THEN1;
 val std_ss' = simpLib.++ (std_ss, boolSimps.ETA_ss);
 val Strip = REPEAT STRIP_TAC;
-val Know = PARSE_TAC KNOW_TAC;
-val Suff = PARSE_TAC SUFF_TAC;
 val Rewr = DISCH_THEN (REWRITE_TAC o wrap);
 val Rewr' = DISCH_THEN (ONCE_REWRITE_TAC o wrap);
 val STRONG_DISJ_TAC = CONV_TAC (REWR_CONV (GSYM IMP_DISJ_THM)) ++ STRIP_TAC;

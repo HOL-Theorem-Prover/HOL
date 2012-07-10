@@ -1,14 +1,14 @@
 (* interactive mode
 loadPath := ["../ho_prover","../subtypes","../rsa"] @ !loadPath;
 app load ["bossLib","realLib","transcTheory","subtypeTheory",
-          "formalizeUseful","extra_boolTheory",
+          "HurdUseful","extra_boolTheory",
           "boolContext","extra_pred_setTools","extra_realTheory"];
 quietdec := true;
 *)
 
 open HolKernel Parse boolLib bossLib arithmeticTheory realTheory
      seqTheory pred_setTheory res_quanTheory listTheory
-     rich_listTheory pairTheory combinTheory realLib formalizeUseful
+     rich_listTheory pairTheory combinTheory realLib HurdUseful
      subtypeTheory extra_pred_setTheory extra_boolTheory optionTheory
      extra_realTheory ho_proverTools extra_numTheory extra_pred_setTools;
 
@@ -36,8 +36,6 @@ val UNION_ASSOC = GSYM UNION_ASSOC
 
 val Strip = !! (POP_ASSUM MP_TAC) ++ !! STRIP_TAC;
 val Simplify = RW_TAC arith_ss;
-val Suff = PARSE_TAC SUFF_TAC;
-val Know = PARSE_TAC KNOW_TAC;
 val Rewr = DISCH_THEN (REWRITE_TAC o wrap);
 val Rewr' = DISCH_THEN (ONCE_REWRITE_TAC o wrap);
 val STRONG_DISJ_TAC = CONV_TAC (REWR_CONV (GSYM IMP_DISJ_THM)) ++ STRIP_TAC;

@@ -1,13 +1,13 @@
 (* interactive mode
 loadPath := ["../ho_prover","../subtypes","../rsa"] @ !loadPath;
-app load ["bossLib","subtypeTheory","formalizeUseful","extra_boolTheory",
+app load ["bossLib","subtypeTheory","HurdUseful","extra_boolTheory",
           "boolContext","extra_listTheory","listContext",
           "state_transformerTheory"];
 quietdec := true;
 *)
 
 open HolKernel Parse boolLib bossLib arithmeticTheory combinTheory
-     pred_setTheory formalizeUseful boolContext listTheory
+     pred_setTheory HurdUseful boolContext listTheory
      res_quanTools res_quanTheory subtypeTheory subtypeTools
      extra_listTheory ho_proverTools listContext extra_numTheory
      pairTheory state_transformerTheory simpLib;
@@ -42,8 +42,6 @@ val (R_TAC, AR_TAC, R_TAC', AR_TAC') = SIMPLIFY_TACS std_c;
 
 val Strip = S_TAC;
 val Simplify = R_TAC;
-val Suff = PARSE_TAC SUFF_TAC;
-val Know = PARSE_TAC KNOW_TAC;
 val bool_ss = boolSimps.bool_ss;
 val Cond =
   MATCH_MP_TAC (PROVE [] ``!a b c. a /\ (b ==> c) ==> ((a ==> b) ==> c)``)

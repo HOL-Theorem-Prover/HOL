@@ -16,7 +16,7 @@ app load
 "primeTheory", "dividesTheory", "gcdTheory"];
 *)
 
-open bossLib listTheory formalizeUseful subtypeTools
+open bossLib listTheory HurdUseful subtypeTools
      pred_setTheory dividesTheory gcdTheory extra_pred_setTheory
      arithContext listContext relationTheory
      ho_proverTools extra_listTheory
@@ -43,8 +43,6 @@ val std_c = precontext_compile std_pc;
 
 val (R_TAC, AR_TAC, R_TAC', AR_TAC') = SIMPLIFY_TACS std_c;
 
-val Suff = PARSE_TAC SUFF_TAC;
-val Know = PARSE_TAC KNOW_TAC;
 
 (* ------------------------------------------------------------------------- *)
 (* Definitions.                                                             *)

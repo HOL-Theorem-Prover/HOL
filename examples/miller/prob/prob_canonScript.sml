@@ -2,13 +2,13 @@
 loadPath := ["../ho_prover","../subtypes","../formalize"] @ !loadPath;
 app load
   ["bossLib", "pred_setTheory", "listTheory", "rich_listTheory",
-   "pairTheory", "realLib", "formalizeUseful", "extra_listTheory"];
+   "pairTheory", "realLib", "HurdUseful", "extra_listTheory"];
 quietdec := true;
 *)
 
 open HolKernel Parse boolLib;
 open bossLib pred_setTheory listTheory rich_listTheory pairTheory realLib
-     formalizeUseful extra_listTheory;
+     HurdUseful extra_listTheory;
 
 (* interactive mode
 quietdec := false;
@@ -23,8 +23,6 @@ val op++ = op THEN;
 val op<< = op THENL;
 val op|| = op ORELSE;
 val op>> = op THEN1;
-val Suff = PARSE_TAC SUFF_TAC;
-val Know = PARSE_TAC KNOW_TAC;
 
 (* ------------------------------------------------------------------------- *)
 (* Definition of the canonicalisation of algebra elements.                   *)

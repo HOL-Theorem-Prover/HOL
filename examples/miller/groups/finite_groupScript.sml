@@ -1,7 +1,7 @@
 open HolKernel Parse boolLib;
 val _ = new_theory "finite_group";
 
-open bossLib listTheory formalizeUseful subtypeTools res_quanTools
+open bossLib listTheory HurdUseful subtypeTools res_quanTools
      res_quanTheory pred_setTheory extra_pred_setTheory arithContext
      relationTheory ho_proverTools extra_listTheory listContext
      arithmeticTheory groupTheory pred_setContext groupContext
@@ -32,8 +32,6 @@ val (R_TAC, AR_TAC, R_TAC', AR_TAC') = SIMPLIFY_TACS std_c;
 
 val Strip = S_TAC;
 val Simplify = R_TAC;
-val Suff = PARSE_TAC SUFF_TAC;
-val Know = PARSE_TAC KNOW_TAC;
 
 (* ------------------------------------------------------------------------- *)
 (* Definitions.                                                              *)

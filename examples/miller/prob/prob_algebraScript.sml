@@ -2,7 +2,7 @@
 loadPath := ["../ho_prover","../subtypes","../formalize"] @ !loadPath;
 app load
   ["bossLib", "pred_setTheory", "listTheory", "rich_listTheory",
-   "pairTheory", "realLib", "formalizeUseful", "extra_listTheory",
+   "pairTheory", "realLib", "HurdUseful", "extra_listTheory",
    "measureTheory","probabilityTheory",
    "sequenceTools","extra_pred_setTools","prob_canonTools"];
 quietdec := true;
@@ -12,7 +12,7 @@ open HolKernel Parse boolLib bossLib arithmeticTheory pred_setTheory
      listTheory rich_listTheory pairTheory combinTheory sequenceTheory
      sequenceTools extra_pred_setTheory prob_canonTheory
      prob_canonTools numSyntax extra_pred_setTools extra_listTheory
-     formalizeUseful measureTheory realTheory extra_realTheory realLib
+     HurdUseful measureTheory realTheory extra_realTheory realLib
      subtypeTheory extra_numTheory seqTheory probabilityTheory
      simpLib;
 
@@ -29,8 +29,6 @@ val op++ = op THEN;
 val op<< = op THENL;
 val op|| = op ORELSE;
 val op>> = op THEN1;
-val Suff = PARSE_TAC SUFF_TAC;
-val Know = PARSE_TAC KNOW_TAC;
 val std_ss' = simpLib.++ (std_ss, boolSimps.ETA_ss);
 
 (* ------------------------------------------------------------------------- *)

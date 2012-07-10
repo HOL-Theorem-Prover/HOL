@@ -15,7 +15,7 @@ if !show_assums then () else
 *)
 
 open pairTheory pred_setTheory
-     res_quanTheory formalizeUseful ho_proverTools res_quanTools subtypeTools
+     res_quanTheory HurdUseful ho_proverTools res_quanTools subtypeTools
      subtypeTheory;
 
 infixr 0 ++ || ORELSEC ## THENC THEN_TCL ORELSE_TCL;

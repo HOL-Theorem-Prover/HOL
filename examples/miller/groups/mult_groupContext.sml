@@ -14,7 +14,7 @@ if !show_assums then () else
   show_assums := true);
 *)
 
-open subtypeTools formalizeUseful finite_groupContext mult_groupTheory;
+open subtypeTools HurdUseful finite_groupContext mult_groupTheory;
 
 infixr 0 ++ || ORELSEC ## THENC THEN_TCL ORELSE_TCL;
 infix 1 >>;
