@@ -167,64 +167,82 @@ fun pp_prekind pps kd =
      val pp_prerank = Prerank.pp_prerank pps
      val pp_if_prerank = pp_if_prerank add_string pp_prerank
      fun pp2 paren (Typekind rk) =
-                        (add_string "ty";
+                        (begin_block INCONSISTENT 0;
+                         add_string "ty";
                          if rk=Zerorank then () else
                            (add_string ":";
                             add_break(0,0);
-                            pp_prerank rk))
+                            pp_prerank rk);
+                         end_block())
        | pp2 paren (Varkind (s,rk)) =
-                        (add_string s;
+                        (begin_block INCONSISTENT 0;
+                         add_string s;
                          if rk=Zerorank then () else
                            (add_string ":";
                             add_break(0,0);
-                            pp_prerank rk))
+                            pp_prerank rk);
+                         end_block())
        | pp2 paren (UVarkind (r as ref (SOMEK kd))) =
                         (add_string (Int.toString(Portable.ref_to_int r) ^ "=");
                          add_break(1,0);
                          pp1 paren kd)
        | pp2 paren (UVarkind (r as ref (NONEK rk))) =
-                        (add_string ("?" ^ Int.toString(Portable.ref_to_int r));
+                        (begin_block INCONSISTENT 0;
+                         add_string ("?" ^ Int.toString(Portable.ref_to_int r));
                          if rk=Zerorank then () else
                            (add_string ":";
                             add_break(1,0);
-                            pp_prerank rk))
+                            pp_prerank rk);
+                         end_block())
        | pp2 paren (KdRankConstr {Kd,Rank}) =
-                        ( pp1 true Kd;
+                        (begin_block INCONSISTENT 0;
+                          pp1 true Kd;
                           add_string " :";
                           add_break(1,0);
-                          pp_prerank Rank )
+                          pp_prerank Rank;
+                         end_block() )
        | pp2 paren (Arrowkind(Rator,Rand)) =
-          ( if paren then (add_string "("; begin_block INCONSISTENT 0) else ();
+          ( if paren then add_string "(" else ();
+            begin_block INCONSISTENT 0;
             pp true Rator; add_string " =>"; add_break(1,0); pp false Rand;
-            if paren then (end_block(); add_string ")") else () )
+            end_block();
+            if paren then add_string ")" else () )
      and pp1 paren (PK(kd,_)) = pp2 paren kd
      and pp0 paren (Typekind rk) =
-                        (add_string "ty";
+                        (begin_block INCONSISTENT 0;
+                         add_string "ty";
                          if rk=Zerorank then () else
                            (add_string ":";
                             add_break(0,0);
-                            pp_prerank rk))
+                            pp_prerank rk);
+                         end_block())
        | pp0 paren (Varkind (s,rk)) =
-                        (add_string s;
+                        (begin_block INCONSISTENT 0;
+                         add_string s;
                          if rk=Zerorank then () else
                            (add_string ":";
                             add_break(0,0);
-                            pp_prerank rk))
+                            pp_prerank rk);
+                         end_block())
        | pp0 paren (UVarkind (r as ref (SOMEK kd))) =
                         (add_string (Int.toString(Portable.ref_to_int r) ^ "=");
                          add_break(1,0);
                          pp paren kd)
        | pp0 paren (UVarkind (r as ref (NONEK rk))) =
-                        (add_string ("?" ^ Int.toString(Portable.ref_to_int r));
+                        (begin_block INCONSISTENT 0;
+                         add_string ("?" ^ Int.toString(Portable.ref_to_int r));
                          if rk=Zerorank then () else
                            (add_string ":";
                             add_break(1,0);
-                            pp_prerank rk))
+                            pp_prerank rk);
+                         end_block())
        | pp0 paren (KdRankConstr {Kd,Rank}) =
-                        ( pp true Kd;
+                        (begin_block INCONSISTENT 0;
+                          pp true Kd;
                           add_string " :";
                           add_break(1,0);
-                          pp_prerank Rank )
+                          pp_prerank Rank;
+                         end_block() )
        | pp0 paren kd = if current_trace "pp_arity_kinds" = 0 then pp2 paren kd
                         else let val kd1 = PK(kd,locn.Loc_None)
                              in if is_arity kd1
@@ -372,26 +390,15 @@ fun no_rank_unify n r1 r2 (rk_env,kd_env) = ((rk_env,kd_env), SOME())
 
 fun report s cmp n kd1 kd2 m e =
   let fun spaces n = if n = 0 then "" else ("  " ^ spaces(n-1))
-      val _ = if not (is_debug()) then () else
-          print ("\n" ^ spaces n ^ s ^ ": " ^ prekind_to_string kd1 ^ "\n" ^
+      val resstr = if not (is_debug()) then "" else
+                ("\n" ^ spaces n ^ s ^ ": " ^ prekind_to_string kd1 ^ "\n" ^
                  spaces n ^ "to be  " ^ cmp ^ "   to: " ^ prekind_to_string kd2 ^ "\n")
+      val _ = if not (is_debug()) then () else print resstr
       val (e',result) = m e
-      val resstr = "\n" ^ spaces n ^ s ^ ": " ^ prekind_to_string kd1 ^ "\n" ^
-                 spaces n ^ "to be  " ^ cmp ^ "   to: " ^ prekind_to_string kd2 ^ "\n"
-  in case result
-       of NONE => if not (is_debug()) then () else (print (resstr ^ spaces n ^ "failed\n"))
-      | SOME() => if not (is_debug()) then () else (print (resstr ^ spaces n ^ "succeeded\n"));
-(*
-       of NONE => if not (is_debug()) then () else print (resstr ^ spaces n "failed\n")
-                  (print ("\n" ^ spaces n ^ s ^ " failed for\n" ^ spaces n);
-                   print (prekind_to_string kd1 ^ " compared to " ^ cmp ^ "\n" ^ spaces n);
-                   print (prekind_to_string kd2 ^ "\n"))
-      | SOME() => if not (is_debug()) then () else
-                  (print ("\n" ^ spaces n ^ s ^ " succeeded for\n" ^ spaces n);
-                   print (prekind_to_string kd1 ^ " compared to " ^ cmp ^ "\n" ^ spaces n);
-                   print (prekind_to_string kd2 ^ "\n"));
-*)
-      (e',result)
+  in if not (is_debug()) then ()
+     else print (resstr ^ spaces n ^
+                   (case result of NONE => "failed" | SOME () => "succeeded") ^ "\n");
+     (e',result)
   end
 
 
@@ -430,47 +437,26 @@ fun gen_unify (rank_unify   :int -> prerank -> prerank -> ('a -> 'a * unit optio
 in
 report "Unifying kinds" s n kd1 kd2 (
   case (k1, k2) of
-(* Believe that rank_unify_le should be rank_unify (forcing equality),
-   when binding a prekind UVarkind NONE to a value
-   NO: this fails when type constant c:(tuv1:r1 => tuv2:r1) => ty:r1
-       is applied to type value v:('k:r => 'l:0);
-       tuv2 is bound to 'l:0, so r1 is bound to be equal to 0,
-       but then tuv1 is bound to 'k:r, so r1(=0) must  be >= r. !!!
-   Correction: for the fifth line below, it must be rank_unify, not rank_unify_le,
-               so that the rank of the kind uvar (r) does not decrease
-   Correction: for the second case below, it must be rank_unify, not rank_unify_le,
-               so that the rank of the kind uvar (r) is equal to that of kd1
-   2011-01-31: added first and fifth cases for less determined inferencing; experimental  *)
-    (Typekind rk1, UVarkind (r as ref (NONEK rk))) =>
-       rank_unify_le rk1 rk >> bind gen_unify r (PK((Typekind rk),locn2)) (* experimental *)
-  | (Arrowkind(kd11, kd12), UVarkind (r as ref (NONEK rk))) =>
-       let (*val kd21 = all_new_uvar()
-           and kd22 = all_new_uvar()
-           val kd2' = PK(Arrowkind(kd21,kd22),locn2)*)
-           val kd2' = PK(Arrowkind(all_new_uvar(),all_new_uvar()),locn2)
-       in rank_unify (prank_of kd2') rk >> bind gen_unify r kd2' >> gen_unify kd1 kd2'
-       (*in rank_unify_le (prank_of kd2') rk >>
-          gen_unify_eq kd11 kd21 >> gen_unify kd12 kd22 >> bind gen_unify r kd2'*)
-       end
-  (*| (_, UVarkind (r as ref (NONEK rk))) => rank_unify(*_le*) (prank_of kd1) rk >> bind gen_unify r kd1*)
-  | (_, UVarkind (r as ref (NONEK rk))) => rank_unify_le (prank_of kd1) rk >> bind gen_unify r kd1
+(* When binding a UVarkind to a kind expression,
+   first the ranks of the two sides must be reconciled.
+   As with substitutions of kind expressions for kind variables,
+   we must ensure that the rank of the expression is less than or equal to
+   the rank of the variable being bound to the expression, so that the rank
+   of the unification variable in other contexts does not rise.
+   But also, the current context requires ensuring that
+   the rank of the left side is <= the rank of the right side.
+   Together, these two restrictions imply that:
+   1) If the UVarkind is on the right, then the rank reconciliation can be <= ,
+   2) but if the UVarkind is on the left, then the rank reconciliation must be = .
+*)
+    (_, UVarkind (r as ref (NONEK rk)))  =>
+       rank_unify_le (prank_of kd1) (* <= *) rk >> bind gen_unify r kd1
   | (k1, UVarkind (r as ref (SOMEK k2))) => gen_unify kd1 k2
-  | (UVarkind (r as ref (NONEK rk)), Typekind rk2) =>
-       rank_unify_le rk rk2 >> bind gen_unify r (PK((Typekind rk),locn1)) (* experimental *)
-  | (UVarkind (r as ref (NONEK rk)), Arrowkind(kd21, kd22)) =>
-       let (*val kd11 = all_new_uvar()
-           and kd12 = all_new_uvar()
-           val kd1' = PK(Arrowkind(kd11,kd12),locn2)*)
-           val kd1' = PK(Arrowkind(all_new_uvar(),all_new_uvar()),locn2)
-       in rank_unify rk (prank_of kd1') >> bind gen_unify r kd1' >> gen_unify kd1' kd2
-       (*in rank_unify rk (prank_of kd1') >>
-          gen_unify_eq kd11 kd21 >> gen_unify kd12 kd22 >> bind gen_unify r kd1'*)
-       end
-  (*| (UVarkind (r as ref (NONEK rk)), _) => rank_unify(*_le*) rk (prank_of kd2) >> bind gen_unify r kd2*)
-  | (UVarkind (r as ref (NONEK rk)), _) => rank_unify_le rk (prank_of kd2) >> bind gen_unify r kd2
+  | (UVarkind (r as ref (NONEK rk)), _)  =>
+       rank_unify rk (* = *) (prank_of kd2) >> bind gen_unify r kd2
   | (UVarkind (r as ref (SOMEK k1)), k2) => gen_unify k1 kd2
-  | (Varkind (s1,rk1), Varkind (s2,rk2)) => (fn e => (if s1 = s2 then ok else fail) e)
-                                            >> rank_unify rk1 rk2
+  | (Varkind (s1,rk1), Varkind (s2,rk2)) =>
+       (fn e => (if s1 = s2 then ok else fail) e) >> rank_unify rk1 rk2
   | (Typekind rk1, Typekind rk2) => rank_unify_le rk1 rk2
   | (Arrowkind(kd11, kd12), Arrowkind(kd21, kd22)) =>
        gen_unify_eq kd11 kd21 >> gen_unify kd12 kd22
@@ -652,10 +638,6 @@ fun rename_kv avds (kd as PK(kd0, locn)) =
   | Varkind (s,rk) =>
        if mem s avds then (rename_rv rk >>- (fn rk' => return (PK(Varkind(s,rk'), locn))))
        else replace (s,rk)
-(*
-       rename_rv rk >>- (fn rk' =>
-       if mem s avds then return (PK(Varkind(s,rk'), locn)) else replace (s,rk'))
-*)
   | Arrowkind (kd1, kd2) =>
       rename_kv avds kd1 >- (fn kd1' =>
       rename_kv avds kd2 >- (fn kd2' =>
@@ -670,7 +652,6 @@ fun rename_kv avds (kd as PK(kd0, locn)) =
   | UVarkind (r as ref (NONEK rk)) =>
       rename_rv rk >>- (fn rk' =>
       (r := NONEK rk'; return (PK(UVarkind r, locn))))
-(* | _ => return kd *)
 
 fun rename_kindvars avds kd = valOf (#2 (rename_kv avds kd ([],[])))
 end
@@ -683,8 +664,8 @@ fun fromKind k =
     end
   else if Kind.is_type_kind k then
     PK(Typekind (Prerank.fromRank (Kind.dest_type_kind k)), locn.Loc_None)
-  else (* if Kind.is_opr_kind k then *) let
-      val (kd1, kd2) = Kind.kind_dom_rng k
+  else (* if Kind.is_arrow_kind k then *) let
+      val (kd1, kd2) = Kind.dest_arrow_kind k
     in
       PK(Arrowkind(fromKind kd1, fromKind kd2), locn.Loc_None)
     end
@@ -778,6 +759,7 @@ fun chase (PK(Arrowkind(_, kd), _)) = kd
 (*---------------------------------------------------------------------------
  * Kind inference for HOL types. Looks ugly because of error messages, but is
  * actually very simple, given side-effecting unification.
+ * Implies rank inference as well.
  *---------------------------------------------------------------------------*)
 
 fun is_atom0 (Varkind _) = true

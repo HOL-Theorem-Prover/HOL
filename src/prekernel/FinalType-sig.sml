@@ -163,6 +163,6 @@ sig
  val del_segment : string -> unit
  val uptodate_type : hol_type -> bool
 
-
+ val set_pp_type : (HOLPP.ppstream -> hol_type -> unit) -> unit
 
 end

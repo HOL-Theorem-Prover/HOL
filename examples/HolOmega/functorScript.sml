@@ -153,7 +153,7 @@ val identity_functor = store_thm
 
 val constant_functor = store_thm
   ("constant_functor",
-   ``!:'a. functor ((\:'b 'c. \f. I) : ('a K) functor)``,
+   ``!:'a. functor ((\:'b 'c. K I) : ('a K) functor)``,
    SIMP_TAC combin_ss [functor_def]
   );
 
@@ -163,14 +163,15 @@ val PAIR_o = store_thm
   ("PAIR_o",
    ``!(f1 :'a -> 'b) (g1 :'b -> 'c) (f2 :'d -> 'e) (g2 :'e -> 'f).
         (g1 o f1 ## g2 o f2) = (g1 ## g2) o (f1 ## f2)``,
+   (* SIMP_TAC (combin_ss ++ pairSimps.PAIR_ss) [FUN_EQ_THM,pairTheory.PAIR_MAP] *)
    REPEAT STRIP_TAC
    THEN REWRITE_TAC[FUN_EQ_THM]
    THEN Cases
    THEN REWRITE_TAC[pairTheory.PAIR_MAP_THM,o_THM]
   );
 
-val square_functor = store_thm
-  ("square_functor",
+val diagonal_functor = store_thm
+  ("diagonal_functor",
    ``functor ((\:'b 'c. \f. f ## f) : (\'a. 'a # 'a) functor)``,
    SIMP_TAC bool_ss [functor_def,PAIR_I,PAIR_o]
   );

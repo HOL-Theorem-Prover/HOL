@@ -74,7 +74,7 @@ fun top_goals(GSTK{prop=POSED g, stack=[], ...}) = [g]
 val top_goal = hd o top_goals;
 
 fun new_goal (g as (asl,w)) f =
-   if all (fn tm => type_of tm = bool) (w::asl)
+   if all (fn tm => eq_ty (type_of tm) bool) (w::asl)
     then GSTK{prop=POSED g, stack=[], final=f}
     else raise ERR "set_goal" "not a proposition; new goal not added";
 

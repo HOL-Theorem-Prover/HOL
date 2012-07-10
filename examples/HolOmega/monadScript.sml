@@ -15,7 +15,6 @@ open HolKernel Parse boolLib
 
 open combinTheory functorTheory;
 
-val _ = set_trace "Unicode" 1;
 val _ = set_trace "kinds" 0;
 
 
@@ -54,7 +53,8 @@ val monad_def = new_definition("monad_def", Term
 (*---------------------------------------------------------------------------
             Monad predicate, on unit, map and join term operators
  ---------------------------------------------------------------------------*)
-val _ = set_trace "debug_type_inference" 0;
+(* val _ = (set_trace "debug_type_inference" 0; set_trace "ranks" 1); *)
+
 val umj_monad_def = new_definition(
    "umj_monad_def",
    ``umj_monad (unit: 'M unit,

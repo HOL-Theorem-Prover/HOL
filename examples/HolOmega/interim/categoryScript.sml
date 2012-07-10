@@ -221,7 +221,7 @@ val g_I_dual = store_thm ("g_I_dual",
   SRW_TAC [] [g_dual_functor_def, g_I_def]) ;
   
 val g_oo_dual = store_thm ("g_oo_dual",
-  ``g_dual_functor ($g_oo [:'C,'D,'E:] G F') =
+  ``g_dual_functor ($g_oo [:'C,'D,'E:] (G: 'G (('D,'E)g_functor)) (F': 'F (('C,'D)g_functor))) =
     $g_oo [:'C C,'D C,'E C:] (g_dual_functor G) (g_dual_functor F')``,
   SRW_TAC [] [g_dual_functor_def, g_oo_thm]) ;
 

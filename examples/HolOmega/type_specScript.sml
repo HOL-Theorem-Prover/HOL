@@ -87,7 +87,7 @@ struct
 
 open HolKernel Parse boolLib bossLib
 
-val _ = set_trace "Unicode" 1;
+val _ = set_trace "Unicode" 0;
 
 val _ = new_theory "type_spec";
 
@@ -154,385 +154,323 @@ val rock_paper_scissors_spec =
                sat_thm = three_type_def };
 
 
-(* Tom Melham's examples of non-empty bit vectors *)
+(* ---------------------------------------------- *)
+(* Tom Melham's example of non-empty bit vectors  *)
+(* This version done without the quotient library *)
+(* ---------------------------------------------- *)
 
-open quotientLib;
+(* First, create the type of non-empty bit vectors *)
 
-val APPEND_ASSOC = listTheory.APPEND_ASSOC;
+val P = ``\l:bool list. ~(l = [])``;
+
 val NOT_CONS_NIL = listTheory.NOT_CONS_NIL;
 
-val vect0_inhab = store_thm(
-   "vect0_inhab",
-   ``?x:bool list. ~(x = [])``,
+val bits_inhab = TAC_PROOF(([],
+   ``?l. ^P l``),
    EXISTS_TAC ``[T]``
-   THEN REWRITE_TAC[listTheory.NOT_CONS_NIL]
+   THEN BETA_TAC
+   THEN REWRITE_TAC[NOT_CONS_NIL]
   );
 
-val vT0_def = Define `vT0 = [T]`;
-val vF0_def = Define `vF0 = [F]`;
+val bits_def = new_type_definition ("bits", bits_inhab);
 
-val vT0_INHAB = store_thm(
-   "vT0_INHAB",
-   ``~(vT0 = [])``,
-   SIMP_TAC list_ss [vT0_def]
+val bits_bijs = define_new_type_bijections
+                    {name="bits_bijs",
+                     ABS ="bits_ABS",
+                     REP ="bits_REP",
+                     tyax=bits_def};
+
+(* definition "bits_bijs"; *)
+
+val bits_REP_one_one = BETA_RULE (prove_rep_fn_one_one bits_bijs);
+val bits_REP_onto    = BETA_RULE (prove_rep_fn_onto    bits_bijs);
+val bits_ABS_one_one = BETA_RULE (prove_abs_fn_one_one bits_bijs);
+val bits_ABS_onto    = BETA_RULE (prove_abs_fn_onto    bits_bijs);
+
+val (bits_ABS_REP,bits_EQ_REP_ABS) = CONJ_PAIR (BETA_RULE bits_bijs);
+
+val bits_REP_ABS = store_thm(
+   "bits_REP_ABS",
+   ``!r. ~(r = []) ==> (bits_REP (bits_ABS r) = r)``,
+   REWRITE_TAC [bits_EQ_REP_ABS]
   );
 
-val vF0_INHAB = store_thm(
-   "vF0_INHAB",
-   ``~(vF0 = [])``,
-   SIMP_TAC list_ss [vF0_def]
+val bits_REP_NOT_NULL = store_thm(
+   "bits_REP_NOT_NULL",
+   ``!a. ~(bits_REP a = [])``,
+   SIMP_TAC list_ss [bits_REP_onto,bits_REP_one_one]
   );
 
-val APPEND_INHAB = store_thm(
-   "APPEND_INHAB",
-   ``!x y:bool list. ~(x = []) /\ ~(y = []) ==> ~(APPEND x y = [])``,
-   SIMP_TAC list_ss []
+(* Define the constants and operators of the new type "bits". *)
+
+val t0_def = Define `t0 = bits_ABS [T]`;
+val f0_def = Define `f0 = bits_ABS [F]`;
+val c0_def = Define `c0 x y = bits_ABS (bits_REP x ++ bits_REP y)`;
+
+val c0_assoc = store_thm(
+   "c0_assoc",
+   ``!x y z:bits. c0 x (c0 y z) = c0 (c0 x y) z``,
+   SIMP_TAC list_ss [c0_def,bits_REP_ABS,bits_REP_NOT_NULL]
+  );
+
+(* A useful lemma. *)
+
+val bits_CONS_EQ_REP_ABS_APPEND = store_thm(
+   "bits_CONS_EQ_REP_ABS_APPEND",
+   ``!x y ys. x :: y :: ys = bits_REP (bits_ABS [x]) ++ bits_REP (bits_ABS (y::ys))``,
+   SIMP_TAC list_ss [bits_REP_ABS]
+  );
+
+
+val bits_cases = store_thm(
+   "bits_cases",
+   ``!b:bits. (b = t0) \/ (b = f0) \/ (?x y. b = c0 x y)``,
+   ONCE_REWRITE_TAC [GSYM bits_ABS_REP]
+   THEN REWRITE_TAC [t0_def,f0_def,c0_def]
+   THEN SIMP_TAC list_ss [bits_REP_ABS,bits_ABS_one_one,bits_REP_NOT_NULL]
+   THEN GEN_TAC
+   THEN MP_TAC (SPEC ``b:bits`` bits_REP_NOT_NULL)
+   THEN SPEC_TAC (``bits_REP b``,``l:bool list``)
+   THEN Cases (* two subgoals *)
+   THEN REWRITE_TAC[NOT_CONS_NIL] (* eliminates one subgoal *)
+   THEN Cases_on `t` (* two subgoals *)
+   THENL
+     [ Cases_on `h` (* two subgoals *)
+       THEN REWRITE_TAC [],
+
+       SIMP_TAC list_ss []
+       THEN EXISTS_TAC ``bits_ABS [h]``
+       THEN EXISTS_TAC ``bits_ABS (h'::t')``
+       THEN MATCH_ACCEPT_TAC bits_CONS_EQ_REP_ABS_APPEND
+     ]
+  );
+
+
+val bits_induct = store_thm(
+   "bits_induct",
+   ``!P:bits -> bool.
+       (P t0) /\
+       (P f0) /\
+       (!x y. P x /\ P y ==> P (c0 x y)) ==>
+       (!b. P b)``,
+   REWRITE_TAC [t0_def,f0_def,c0_def]
+   THEN GEN_TAC THEN STRIP_TAC
+   THEN ONCE_REWRITE_TAC [GSYM bits_ABS_REP]
+   THEN GEN_TAC
+   THEN MP_TAC (SPEC ``b:bits`` bits_REP_NOT_NULL)
+   THEN SPEC_TAC (``bits_REP b``,``l:bool list``)
+   THEN measureInduct_on `LENGTH l`
+   THEN Cases_on `l` (* two subgoals *)
+   THEN REWRITE_TAC[NOT_CONS_NIL] (* eliminates one subgoal *)
+   THEN Cases_on `t` (* two subgoals *)
+   THENL
+     [ Cases_on `h` (* two subgoals *)
+       THEN ASM_REWRITE_TAC [],
+
+       REWRITE_TAC [bits_CONS_EQ_REP_ABS_APPEND]
+       THEN ASM_SIMP_TAC list_ss []
+     ]
+  );
+
+(* Define the combinator "bits_fold x y op"
+   which creates a recursive function f
+   which on the argument t0, returns x,
+         on the argument f0, returns y,
+     and on the argument c0 a b, returns op (f a) (f b).
+
+   We do this in three stages:
+     bit_fold1  (x:'b) (y:'b)    : bool -> 'b
+     bits_fold1 (x:'b) (y:'b) op : bool list -> 'b
+     bits_fold  (x:'b) (y:'b) op : bits -> 'b
+*)
+
+val bit_fold1_def = Define
+  `(bit_fold1 x y T = x:'a) /\
+   (bit_fold1 x y F = y)`;
+
+val bits_fold1_def = Define
+   `bits_fold1 (x:'b) (y:'b) (op:'b -> 'b -> 'b) (z :: zs) =
+      if zs = []
+        then bit_fold1 x y z
+        else op (bit_fold1 x y z) (bits_fold1 x y op zs)`;
+
+val bits_fold_def = Define
+   `bits_fold (x:'b) y op z = bits_fold1 x y op (bits_REP z)`;
+
+val bits_fold_scalars = store_thm(
+   "bits_fold_scalars",
+   ``!(x :'b) (y:'b) (op:'b -> 'b -> 'b).
+       (bits_fold x y op t0 = x) /\
+       (bits_fold x y op f0 = y)``,
+   SIMP_TAC list_ss
+     [bits_fold_def,t0_def,f0_def,bits_REP_ABS,bits_fold1_def,bit_fold1_def]
+  );
+
+(* f : bool list -> 'b is a homomorphism if and only if
+   it causes this diagram to commute:
+
+                          f x f
+         list x list  ------------>   'b x 'b
+              |                          |
+           ++ |                          | op
+              |                          |
+              V                          V
+            list      ------------>     'b
+                            f
+*)
+
+(* load "res_quanLib"; *)
+open res_quanLib;
+
+val bits_fold1_is_homo = store_thm(
+   "bits_fold1_is_homo",
+   ``!(x :'b) (y:'b) (op:'b -> 'b -> 'b).
+       (!b1 b2 b3. op b1 (op b2 b3) = op (op b1 b2) b3) ==>
+       !(a :bool list) (b:bool list) :: (\v.~(v = [])).
+           bits_fold1 x y op (a ++ b) =
+           op (bits_fold1 x y op a) (bits_fold1 x y op b)``,
+   REPEAT GEN_TAC
+   THEN DISCH_TAC
+   THEN SIMP_TAC (bool_ss ++ resq_SS) [pred_setTheory.IN_ABS]
+   THEN Induct (* two subgoals *)
+   THEN REWRITE_TAC [NOT_CONS_NIL] (* eliminates one subgoal *)
+   THEN REWRITE_TAC [listTheory.APPEND,bits_fold1_def]
+   THEN Cases_on `a` (* two subgoals *)
+   THEN ASM_SIMP_TAC list_ss []
+  );
+
+(* f : bits -> 'b is a homomorphism if and only if
+   it causes this diagram to commute:
+
+                          f x f
+         bits x bits  ------------>   'b x 'b
+              |                          |
+           c0 |                          | op
+              |                          |
+              V                          V
+            bits      ------------>     'b
+                            f
+*)
+
+val bits_fold_is_homo = store_thm(
+   "bits_fold_is_homo",
+   ``!(x :'b) (y:'b) (op:'b -> 'b -> 'b).
+       (!b1 b2 b3. op b1 (op b2 b3) = op (op b1 b2) b3) ==>
+       !a b.
+           bits_fold x y op (c0 a b) =
+           op (bits_fold x y op a) (bits_fold x y op b)``,
+   SIMP_TAC (list_ss ++ resq_SS)
+        [bits_fold_def,c0_def,bits_REP_ABS,bits_REP_NOT_NULL,
+         pred_setTheory.IN_ABS,bits_fold1_is_homo]
   );
 
 (*
+  bits with (t0,f0,c0) is initial if there exists one and only one arrow
+  from it to any type 'b with (x:'b,y:'b,op:'b->'b->'b) where op is associative,
+  in the category of algebras where the arrows are homomorphisms.
+*)
 
-val LIFT_RULE =
-  define_subset_types
-    { types = [{name  = "vect0",
-                inhab = vect0_inhab}],
-      defs  = [{def_name = "vT_def",
-                fname    = "vT",
-                func     = ``vT0``,
-                fixity   = SOME Parse.Closefix },
-               {def_name = "vF_def",
-                fname    = "vF",
-                func     = ``vF0``,
-                fixity   = SOME Parse.Closefix },
-               {def_name = "concat_def",
-                fname    = "concat",
-                func     = ``APPEND : bool list -> bool list -> bool list``,
-                fixity   = SOME (Infixl 480) } ],
-      tyop_equivs    = [],
-      tyop_quotients = [FUN_QUOTIENT],
-      tyop_simps     = [FUN_MAP_I, FUN_REL_EQ],
-      respects       = [APPEND_INHAB, vT0_INHAB, vF0_INHAB],
-      poly_preserves = [FORALL_PRS, EXISTS_UNIQUE_PRS],
-      poly_respects  = [RES_FORALL_RSP, RES_EXISTS_EQUIV_RSP]
-    } handle e => Raise e;
-
-val concat_assoc = LIFT_RULE (INST_TYPE[alpha |-> bool] APPEND_ASSOC);
-
-val _ = associate_restriction ("?!!", "RES_EXISTS_EQUIV");
-
-val NONNIL_EXISTS_UNIQUE_FUN = store_thm(
-   "NONNIL_EXISTS_UNIQUE_FUN",
+val bits_is_initial = store_thm(
+   "bits_is_initial",
    ``!:'b. !(x:'b) (y:'b) (op:'b -> 'b -> 'b).
               (!b1 b2 b3. op b1 (op b2 b3) = op (op b1 b2) b3) ==>
-              ?!!(fn:bool list -> 'b) :: (vect0_R ===> $=).
-                                     (fn [T]        = x) /\
-                                     (fn [F]        = y) /\
-         (!b1 b2 :: respects vect0_R. fn (b1 ++ b2) = op (fn b1) (fn b2))``,
+              ?!(fn:bits -> 'b).
+                        (fn  t0           = x) /\
+                        (fn  f0           = y) /\
+                  (!a b. fn (c0 a b) = op (fn a) (fn b))``,
    REPEAT STRIP_TAC
-   THEN SIMP_TAC bool_ss [RES_EXISTS_EQUIV_DEF]
+   THEN SIMP_TAC bool_ss [EXISTS_UNIQUE_DEF]
    THEN CONJ_TAC
-   THENL (* resq_SS, resq_ss *)
-     [ CONV_TAC RES_EXISTS_CONV
-       THEN EXISTS_TAC ``examplefn (x:'b) y op``
-       THEN REWRITE_TAC[examplefn_respects]
-       THEN REWRITE_TAC[examplefn_def]
+   THENL
+     [ EXISTS_TAC ``bits_fold (x:'b) y op``
+       THEN REWRITE_TAC[bits_fold_scalars]
        THEN POP_ASSUM MP_TAC
-       THEN REWRITE_TAC[examplefn_homo],
+       THEN REWRITE_TAC[bits_fold_is_homo],
 
-       CONV_TAC RES_FORALL_CONV
-       THEN CONV_TAC (ONCE_DEPTH_CONV RES_FORALL_CONV)
-       THEN REWRITE_TAC[IN_RESPECTS,FUN_REL,list_eq_def]
-       THEN SIMP_TAC bool_ss []
-       THEN REPEAT GEN_TAC THEN STRIP_TAC
-       THEN Induct
-       THEN REWRITE_TAC[NOT_CONS_NIL]
-       THEN Cases
-       THEN POP_ASSUM MP_TAC
-       THEN Cases_on `y'' = []`
-       THEN ASM_REWRITE_TAC[]
-       THEN DISCH_TAC
-       THEN IMP_RES_THEN (MP_TAC o CONV_RULE (DEPTH_CONV RES_FORALL_CONV))
-                         fn_cons
-       THEN ASM_REWRITE_TAC [IN_RESPECTS,list_eq_def]
-       THENL [ REPEAT (DISCH_THEN
-                        (ASSUME_TAC o SPECL [``T``,``y'':bool list``])),
-               REPEAT (DISCH_THEN
-                        (ASSUME_TAC o SPECL [``F``,``y'':bool list``])) ]
-       THEN POP_ASSUM MP_TAC
-       THEN POP_ASSUM MP_TAC
-       THEN ASM_SIMP_TAC bool_ss []
+       Q.X_GEN_TAC `f`
+       THEN Q.X_GEN_TAC `g`
+       THEN STRIP_TAC
+       THEN CONV_TAC FUN_EQ_CONV
+       THEN HO_MATCH_MP_TAC bits_induct (* induct on b *)
+       THEN REPEAT STRIP_TAC (* 3 subgoals *)
+       THEN ASM_REWRITE_TAC []
      ]
   );
+
+(*
+g `!:'b. !(x:'b) (y:'b) (op:'b -> 'b -> 'b).
+              (!b1 b2 b3. op b1 (op b2 b3) = op (op b1 b2) b3) ==>
+              ?!(fn:bits -> 'b).
+                        (fn  t0           = x) /\
+                        (fn  f0           = y) /\
+                  (!a b. fn (c0 a b) = op (fn a) (fn b))`;
+e (REPEAT STRIP_TAC);
+e (SIMP_TAC bool_ss [EXISTS_UNIQUE_DEF]);
+e (CONJ_TAC);
+e (EXISTS_TAC ``bits_fold (x:'b) y op``);
+e (REWRITE_TAC[bits_fold_scalars]);
+e (POP_ASSUM MP_TAC THEN REWRITE_TAC[bits_fold_is_homo]);
+
+e (Q.X_GEN_TAC `f` THEN Q.X_GEN_TAC `g`);
+e (STRIP_TAC);
+e (CONV_TAC FUN_EQ_CONV);
+e (HO_MATCH_MP_TAC bits_induct);
+e (REPEAT STRIP_TAC THEN ASM_REWRITE_TAC []);
 
 *)
 
-
-
-val list_eq_def =
-    Define `list_eq (x:bool list) y = ~(x=[]) /\ ~(y=[]) /\ (x=y)`;
-
-val list_eq_PEQUIV = store_thm(
-   "list_eq_PEQUIV",
-   ``PARTIAL_EQUIV list_eq``,
-   SIMP_TAC list_ss [PARTIAL_EQUIV_def,list_eq_def,FUN_EQ_THM]
-   THEN CONJ_TAC
-   THENL
-     [ EXISTS_TAC ``[T]``
-       THEN SIMP_TAC list_ss [],
-
-       PROVE_TAC []
-     ]
-  );
-
-val list_eq_RSP = store_thm(
-   "list_eq_RSP",
-   ``!x1 y1 x2 y2.
-       list_eq x1 x2 /\ list_eq y1 y2 ==>
-       (list_eq x1 y1 = list_eq x2 y2)``,
-   SIMP_TAC list_ss [list_eq_def]
-  );
-
-val APPEND_CONG = store_thm(
-   "APPEND_CONG",
-   ``!(x1:bool list) x2 y1 y2.
-          list_eq x1 x2 /\ list_eq y1 y2 ==>
-          list_eq (x1 ++ y1) (x2 ++ y2)``,
-   SIMP_TAC list_ss [list_eq_def]
-  );
-
-open res_quanLib res_quanTheory;
-val W_DEF = combinTheory.W_DEF;
-val SPECIFICATION = pred_setTheory.SPECIFICATION;
-
-val NONNIL_ASSOC = store_thm(
-   "NONNIL_ASSOC",
-   ``!(l1 :bool list) l2 l3 :: respects list_eq.
-       list_eq
-         (l1 ++ (l2 ++ l3))
-         ((l1 ++ l2) ++ l3)``,
-   SIMP_TAC (list_ss ++ resq_SS)
-            [respects_def,W_DEF,SPECIFICATION,list_eq_def,APPEND_ASSOC]
-  );
-
-val examplefn_def = Define
-  `(examplefn (x:'b) (y:'b) (op:'b -> 'b -> 'b) [] = x) /\
-   (examplefn x y op [T] = x) /\
-   (examplefn x y op [F] = y) /\
-   (examplefn x y op (T :: zs) = op x (examplefn x y op zs)) /\
-   (examplefn x y op (F :: zs) = op y (examplefn x y op zs))`;
-
-val examplefn_respects = store_thm(
-   "examplefn_respects",
-   ``!(x :'b) (y:'b) (op:'b -> 'b -> 'b).
-       examplefn x y op IN respects (list_eq ===> $=)``,
-   SIMP_TAC bool_ss [IN_RESPECTS,FUN_REL,list_eq_def]
-  );
-
-val examplefn_ind = theorem "examplefn_ind";
-
-val examplefn_cons = store_thm(
-   "examplefn_cons",
-   ``!(x :'b) (y:'b) (op:'b -> 'b -> 'b).
-       !(a :bool) (b:bool list :: respects list_eq).
-           examplefn x y op (a :: b) =
-           op (examplefn x y op [a]) (examplefn x y op b)``,
-   GEN_TAC THEN GEN_TAC THEN GEN_TAC
-   THEN Cases (* two subgoals, a = T or F *)
-   THEN CONV_TAC RES_FORALL_CONV
-   THEN REWRITE_TAC[IN_RESPECTS,FUN_REL,list_eq_def]
-   THEN Cases
-   THEN SIMP_TAC list_ss [NOT_CONS_NIL,examplefn_def]
-  );
-
-val examplefn_cons1 = TAC_PROOF(([],
-   ``!(x :'b) (y:'b) (op:'b -> 'b -> 'b).
-       !(a :bool) (b:bool list).
-           ~(b = []) ==>
-           (examplefn x y op (a :: b) =
-            op (examplefn x y op [a]) (examplefn x y op b))``),
-   REPEAT STRIP_TAC
-   THEN MATCH_MP_TAC (DISCH_ALL (RESQ_SPEC ``b:bool list``
-                                    (SPEC_ALL examplefn_cons)))
-   THEN ASM_REWRITE_TAC[IN_RESPECTS,list_eq_def]
-  );
-
-local open simpLib
-in
-val list_resq_ss = list_ss ++ resq_SS
-end
-
-val examplefn_homo = store_thm(
-   "examplefn_homo",
-   ``!(x :'b) (y:'b) (op:'b -> 'b -> 'b).
-       (!b1 b2 b3. op b1 (op b2 b3) = op (op b1 b2) b3) ==>
-       !(a :bool list) (b:bool list) :: respects list_eq.
-           examplefn x y op (a ++ b) =
-           op (examplefn x y op a) (examplefn x y op b)``,
-   GEN_TAC THEN GEN_TAC THEN GEN_TAC
-   THEN DISCH_TAC
-   THEN CONV_TAC RES_FORALL_CONV
-   THEN REWRITE_TAC[IN_RESPECTS,FUN_REL,list_eq_def]
-   THEN Induct
-   THEN REWRITE_TAC [NOT_CONS_NIL]
-   THEN GEN_TAC
-   THEN Cases_on `a: bool list`
-   THEN POP_ASSUM (STRIP_ASSUME_TAC o REWRITE_RULE [NOT_CONS_NIL])
-   THENL
-     [ SIMP_TAC list_ss [examplefn_cons],
-
-       CONV_TAC RES_FORALL_CONV
-       THEN GEN_TAC
-       THEN POP_ASSUM (MP_TAC o CONV_RULE RES_FORALL_CONV)
-       THEN REWRITE_TAC[IN_RESPECTS,list_eq_def]
-       THEN ASM_SIMP_TAC list_ss [examplefn_cons1]
-     ]
-  );
-
-val fn_cons = store_thm(
-   "fn_cons",
-   ``!(op:'b -> 'b -> 'b) (fn:bool list -> 'b).
-        (!b1 b2 :: respects list_eq. fn (b1 ++ b2) = op (fn b1) (fn b2)) ==>
-        !(a :bool) (b:bool list :: respects list_eq).
-           fn (a :: b) = op (fn [a]) (fn b)``,
-   REPEAT GEN_TAC
-   THEN CONV_TAC (DEPTH_CONV RES_FORALL_CONV)
-   THEN REWRITE_TAC[IN_RESPECTS,FUN_REL,list_eq_def]
-   THEN STRIP_TAC
-   THEN POP_ASSUM (fn th => ASM_SIMP_TAC list_ss [GSYM th])
-  );
-
-val _ = associate_restriction ("?!!", "RES_EXISTS_EQUIV");
-
-val NONNIL_EXISTS_UNIQUE_FUN = store_thm(
-   "NONNIL_EXISTS_UNIQUE_FUN",
-   ``!:'b. !(x:'b) (y:'b) (op:'b -> 'b -> 'b).
-              (!b1 b2 b3. op b1 (op b2 b3) = op (op b1 b2) b3) ==>
-              ?!!(fn:bool list -> 'b) :: (list_eq ===> $=).
-                                     (fn [T]        = x) /\
-                                     (fn [F]        = y) /\
-         (!b1 b2 :: respects list_eq. fn (b1 ++ b2) = op (fn b1) (fn b2))``,
-   REPEAT STRIP_TAC
-   THEN SIMP_TAC bool_ss [RES_EXISTS_EQUIV_DEF]
-   THEN CONJ_TAC
-   THENL (* resq_SS, resq_ss *)
-     [ CONV_TAC RES_EXISTS_CONV
-       THEN EXISTS_TAC ``examplefn (x:'b) y op``
-       THEN REWRITE_TAC[examplefn_respects]
-       THEN REWRITE_TAC[examplefn_def]
-       THEN POP_ASSUM MP_TAC
-       THEN REWRITE_TAC[examplefn_homo],
-
-       CONV_TAC RES_FORALL_CONV
-       THEN CONV_TAC (ONCE_DEPTH_CONV RES_FORALL_CONV)
-       THEN REWRITE_TAC[IN_RESPECTS,FUN_REL,list_eq_def]
-       THEN SIMP_TAC bool_ss []
-       THEN REPEAT GEN_TAC THEN STRIP_TAC
-       THEN Induct
-       THEN REWRITE_TAC[NOT_CONS_NIL]
-       THEN Cases
-       THEN POP_ASSUM MP_TAC
-       THEN Cases_on `y'' = []`
-       THEN ASM_REWRITE_TAC[]
-       THEN DISCH_TAC
-       THEN IMP_RES_THEN (MP_TAC o CONV_RULE (DEPTH_CONV RES_FORALL_CONV))
-                         fn_cons
-       THEN ASM_REWRITE_TAC [IN_RESPECTS,list_eq_def]
-       THENL [ REPEAT (DISCH_THEN
-                        (ASSUME_TAC o SPECL [``T``,``y'':bool list``])),
-               REPEAT (DISCH_THEN
-                        (ASSUME_TAC o SPECL [``F``,``y'':bool list``])) ]
-       THEN POP_ASSUM MP_TAC
-       THEN POP_ASSUM MP_TAC
-       THEN ASM_SIMP_TAC bool_ss []
-     ]
-  );
-
-val vT0_def = Define `vT0 = [T]`;
-val vF0_def = Define `vF0 = [F]`;
-
-val vT0_RSP = store_thm(
-   "vT0_RSP",
-   ``list_eq vT0 vT0``,
-   SIMP_TAC list_ss [vT0_def,list_eq_def]
-  );
-
-val vF0_RSP = store_thm(
-   "vF0_RSP",
-   ``list_eq vF0 vF0``,
-   SIMP_TAC list_ss [vF0_def,list_eq_def]
-  );
-
-val NONNIL_EXISTS_UNIQUE_FUN_1 =
-   REWRITE_RULE (map GSYM [vT0_def,vF0_def])
-                (TY_SPEC_ALL NONNIL_EXISTS_UNIQUE_FUN);
-
-val _ = quotientLib.chatting := true;
-
-val [concat_assoc,vect_exists_unique_fun] =
-  define_quotient_types
-    { types = [{name  = "vect0",
-                equiv = list_eq_PEQUIV}],
-      defs  = [{def_name = "vT_def",
-                fname    = "vT",
-                func     = ``vT0``,
-                fixity   = SOME Parse.Closefix },
-               {def_name = "vF_def",
-                fname    = "vF",
-                func     = ``vF0``,
-                fixity   = SOME Parse.Closefix },
-               {def_name = "concat_def",
-                fname    = "concat",
-                func     = ``APPEND : bool list -> bool list -> bool list``,
-                fixity   = SOME (Infixl 480) } ],
-      tyop_equivs    = [],
-      tyop_quotients = [FUN_QUOTIENT],
-      tyop_simps     = [FUN_MAP_I, FUN_REL_EQ],
-      respects       = [APPEND_CONG, vT0_RSP, vF0_RSP],
-      poly_preserves = [FORALL_PRS, EXISTS_UNIQUE_PRS],
-      poly_respects  = [RES_FORALL_RSP, RES_EXISTS_EQUIV_RSP],
-      old_thms       = [NONNIL_ASSOC, NONNIL_EXISTS_UNIQUE_FUN_1]
-    };
+(* Now we can prove that there exists some type with such a set of
+   operators (t,f,c), with c associative, and which is initial. *)
 
 val vect_exists = store_thm(
    "vect_exists",
    ``?:'a.
        ?(t:'a) (f:'a) (c:'a -> 'a -> 'a).
-         (!b1 b2 b3. c b1 (c b2 b3) = c (c b1 b2) b3) /\
+         (!a1 a2 a3. c a1 (c a2 a3) = c (c a1 a2) a3) /\
          (!:'b.
             !(x:'b) (y:'b) (op:'b -> 'b -> 'b).
               (!b1 b2 b3. op b1 (op b2 b3) = op (op b1 b2) b3) ==>
               ?!fn:'a -> 'b.         (fn t         = x) /\
                                      (fn f         = y) /\
-                             (!b1 b2. fn (c b1 b2) = op (fn b1) (fn b2)))``,
-   TY_EXISTS_TAC ``:vect0``
-   THEN EXISTS_TAC ``vT``
-   THEN EXISTS_TAC ``vF``
-   THEN EXISTS_TAC ``$concat``
-   THEN REWRITE_TAC [concat_assoc,vect_exists_unique_fun]
+                             (!a1 a2. fn (c a1 a2) = op (fn a1) (fn a2)))``,
+   TY_EXISTS_TAC ``:bits``
+   THEN EXISTS_TAC ``t0``
+   THEN EXISTS_TAC ``f0``
+   THEN EXISTS_TAC ``c0``
+   THEN REWRITE_TAC [c0_assoc,bits_is_initial]
   );
 
-val vect_def = new_type_specification("vect",["vect"],vect_exists);
+(* Since such a type exists, we may now create it in the logic
+   using the definitional principle of new type specification. *)
 
-(* New constant specification, tuple syntax:
+val vect_TY_SPEC = new_type_specification("vect",["vect"],vect_exists);
 
-val vect_constants_spec =
-  new_specification ("vect_consts_spec",
-                     [ "VT",
-                       "VF",
-                       "vconcat" ],
-                     vect_def);
-*)
+(* Now we may create the associated constants of the new type
+   using the definitional principle of new constant specification. *)
 
-(* New constant specification, record syntax: *)
+(* New constant specification, tuple syntax: *)
 
-val vect_constants_spec =
+val vect_consts_spec =
+    new_specification ("vect_consts_spec",
+                       [ "VT", "VF", "VCONCAT" ],
+                       vect_TY_SPEC);
+
+
+(* Alternative: New constant specification, record syntax:
+
+val vect_consts_spec =
   Rsyntax.new_specification
              { name    = "vect_consts_spec",
                consts  = [ {const_name="VT",      fixity=SOME Parse.Closefix},
                            {const_name="VF",      fixity=SOME Parse.Closefix},
-                           {const_name="vconcat", fixity=SOME (Infixl 480)} ],
+                           {const_name="VCONCAT", fixity=SOME (Infixl 480)} ],
                sat_thm = vect_def };
 
+*)
 
+val (VCONCAT_ASSOC, vect_is_initial) = CONJ_PAIR vect_consts_spec;
+
+val _ = match [] ``VCONCAT``;
 
 
 val _ = set_trace "types" 1;

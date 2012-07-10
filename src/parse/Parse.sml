@@ -398,6 +398,7 @@ in
      type_parser2 := parse_type typantiq_constructors  (!kind_parser1) false (type_grammar());
      type_var_parser1 := parse_type termantiq_constructors (!kind_parser0) false (type_var_grammar());
      type_printer := type_pp.pp_type (type_grammar());
+     Type.set_pp_type (!type_printer (!current_backend) false);
      type_grammar_changed := false
   end
   else ()

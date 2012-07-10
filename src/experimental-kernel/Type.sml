@@ -107,6 +107,12 @@ datatype hol_type = Tyv of tyvar
                   | TyExi of tyvar * hol_type
                   | TyAbs of tyvar * hol_type
 
+val pp_type_ref = ref (fn pps:HOLPP.ppstream => fn ty:hol_type => ())
+val type_to_string_ref = ref (fn ty:hol_type => "<type>")
+fun sprint pp x = HOLPP.pp_to_string 80 pp x
+fun set_pp_type f = (pp_type_ref := f; type_to_string_ref := sprint f)
+fun type_to_string ty = !type_to_string_ref ty
+
 val funref = #1 (KernelSig.find(operator_table, {Thy="min", Name = "fun"}))
 val fun_tyc = TyCon (funref, mk_arity 2)
 
@@ -1765,7 +1771,10 @@ fun prim_rk_kd_ty_subst rkS kdS theta =
     else if List.all (is_var_type o #redex) theta then let
         fun foldthis1  (r as {redex,residue}, acc) = let
           val _ = rank_of redex >= rank_of residue
-                  orelse raise ERR "vsubst_rk_kd_ty" "Bad kind substitution list"
+                  orelse raise ERR "vsubst_rk_kd_ty"
+                      (* "Bad kind substitution list" *)
+          ("rank of residue is not contained in rank of redex"
+           ^ "\n" ^ kind_to_string redex ^ "  |-> " ^ kind_to_string residue)
         in
           if redex = residue then acc
           else r::acc
@@ -1773,7 +1782,10 @@ fun prim_rk_kd_ty_subst rkS kdS theta =
         val akdS = List.foldr foldthis1 [] kdS
         fun foldthis  ({redex,residue}, acc) = let
           val _ = kind_of redex :>=: kind_of residue
-                  orelse raise ERR "vsubst_rk_kd_ty" "Bad substitution list"
+                  orelse raise ERR "vsubst_rk_kd_ty"
+                      (* "Bad type substitution list" *)
+          ("kind of residue is not contained in kind of redex, or does not respect rank"
+           ^ "\n" ^ type_to_string redex ^ "  |->\n" ^ type_to_string residue)
         in
           if redex = residue then acc
           else vsub_insert(acc, redex, residue)
@@ -3069,26 +3081,32 @@ fun type_homatch kdavoids lconsts rkin kdins (insts, homs) = let
             homatch newrkin newkdins (newinsts, tl homs)
           end
       else (* vty not a type var *) let
-          val (vhop, vargs) = strip_app_type vty (* vhop should be a type variable *)
+          val (vhop, vargs) = strip_app_type vty (* vhop should be a type operator variable *)
           val afvs = type_varsl vargs
           val (kdins',_) = Kind.norm_subst(kdins,rkin)
           val inst_fn = inst_rank_kind (fst kdins', fst rkin)
+          (*exp*) val schem_fvs = Lib.subtract afvs (map #redex (env @ insts))
+          val schem_fvs' = map inst_fn schem_fvs
         in
           (let
+             val _ = null schem_fvs
+                       orelse all (C mem (type_vars cty)) schem_fvs'
+                       orelse raise ERR "type_homatch" "not schematic"
              val tyins =
                  map (fn a =>
                          (inst_fn a |->
-                                  (find_residue(*_ty*) a env
+                                  (find_residue a env
                                    handle _ =>
-                                          find_residue(*_ty*) a insts
+                                          find_residue a insts
                                    handle _ =>
                                           if HOLset.member(lconsts, a)
                                           then a
-                                          else raise ERR "type_homatch" "not bound"))) afvs
+                                          else inst_fn a))) afvs (* experiment: schematic type vars *)
+                                       (* else raise ERR "type_homatch" "not bound"))) afvs *) (* normal *)
              val pats0 = map inst_fn vargs
              val pats = map (pure_type_subst tyins) pats0
              val vhop' = inst_fn vhop
-             val icty = list_mk_app_type(vhop', pats)
+             (* val icty = list_mk_app_type(vhop', pats) *)
              val ni = let
                val (chop,cargs) = strip_app_type cty
              in
@@ -3096,15 +3114,20 @@ fun type_homatch kdavoids lconsts rkin kdins (insts, homs) = let
                  if eq_ty chop vhop then insts
                  else safe_insert_tya (vhop |-> chop) insts
                else let
+                   val kdEnv = map (kind_of o #redex) env
                    val ginsts = map (fn p => (p |->
                                                 (if is_var_type p then p
-                                                 else gen_var_type(kd_of p (map (kind_of o #redex) env)))))
+                                                 else gen_var_type(kd_of p kdEnv))))
                                     pats
                    val cty' = full_type_subst ginsts cty
                    val gvs = map #residue ginsts
                    val absty = list_mk_abs_type(gvs,cty')
+                   (*exp*) val _ = null (intersect schem_fvs' (type_vars absty))
+                                   orelse raise ERR "type_homatch" "schematic type var in ho binding"
                    val vinsts = safe_insert_tya (vhop |-> absty) insts
-                   val icpair = (list_mk_app_type(vhop',gvs) |-> cty')
+                   val vinsts = List.foldl (fn ((v,v'),ins) => safe_insert_tya (v |-> v') ins)
+                                           vinsts (Lib.zip schem_fvs schem_fvs')
+                   (* val icpair = (list_mk_app_type(vhop',gvs) |-> cty') *)
                  in
                    (* safe_insert_tya icpair *) vinsts
                    (* icpair::vinsts *)
