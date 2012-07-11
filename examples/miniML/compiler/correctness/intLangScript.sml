@@ -1093,14 +1093,6 @@ strip_tac >- rw[] >>
 strip_tac >- rw[] >>
 strip_tac >- rw[] >>
 strip_tac >- rw[] >>
-strip_tac >- rw[] >>
-strip_tac >- rw[] >>
-strip_tac >- rw[] >>
-strip_tac >- rw[] >>
-strip_tac >- rw[] >>
-strip_tac >- rw[] >>
-strip_tac >- rw[] >>
-strip_tac >- rw[] >>
 strip_tac >- (
   rw[Cevaluate_list_with_value] >> fs[] >>
   Cases_on `n` >> fs[] ) >>
@@ -2324,91 +2316,6 @@ strip_tac >- (
   rw[] >>
   PROVE_TAC[]) >>
 strip_tac >- (
-  rw[FOLDL_UNION_BIGUNION] >>
-  rw[Once Cevaluate_cases] >>
-  fsrw_tac[DNF_ss][] >>
-  disj1_tac >>
-  rw[Cevaluate_list_with_Cevaluate] >>
-  fs[Cevaluate_list_with_EVERY] >>
-  fsrw_tac[DNF_ss][] >>
-  qmatch_assum_rename_tac `fmap_rel syneq env env2`[] >>
-  Q.PAT_ABBREV_TAC `env3 = (DRESTRICT env2 X) ⊌ Y` >>
-  `∀v. v ∈ FRANGE env3 ⇒ closed v` by (
-    unabbrev_all_tac >>
-    match_mp_tac IN_FRANGE_FUNION_suff >> fs[] >>
-    match_mp_tac IN_FRANGE_DRESTRICT_suff >> fs[] ) >>
-  `∃e1 e2. es = [e1;e2]` by (
-    Cases_on `es` >> fs[] >>
-    qmatch_assum_rename_tac `LENGTH es = 1`[] >>
-    Cases_on `es` >> fs[] >>
-    fs[LENGTH_NIL] ) >>
-  fs[] >>
-  first_x_assum (qspecl_then [`env2`,`env3`] mp_tac) >>
-  first_x_assum (qspecl_then [`env2`,`env3`] mp_tac) >>
-  fs[DRESTRICT_IS_FEMPTY,FUNION_FEMPTY_1] >> rw[] >>
-  qmatch_assum_rename_tac `syneq v1 w1`[] >>
-  qmatch_assum_rename_tac `syneq v2 w2`[] >>
-  map_every qexists_tac [`w1`,`w2`] >>
-  fs[] >>
-  `DRESTRICT env2 (free_vars e1) ⊌ env3 = env3` by (
-    rw[GSYM SUBMAP_FUNION_ABSORPTION] >>
-    unabbrev_all_tac >>
-    match_mp_tac SUBMAP_FUNION >>
-    disj1_tac >>
-    rw[DRESTRICT_SUBSET_SUBMAP] ) >>
-  `DRESTRICT env2 (free_vars e2) ⊌ env3 = env3` by (
-    rw[GSYM SUBMAP_FUNION_ABSORPTION] >>
-    unabbrev_all_tac >>
-    match_mp_tac SUBMAP_FUNION >>
-    disj1_tac >>
-    rw[DRESTRICT_SUBSET_SUBMAP] ) >>
-  fs[] >>
-  qmatch_abbrev_tac `result_rel syneq r1 r2` >>
-  qsuff_tac `r1 = r2` >- rw[] >>
-  unabbrev_all_tac >>
-  PROVE_TAC[doPrim2_syneq,syneq_refl,syneq_trans]) >>
-strip_tac >- (
-  rw[FOLDL_UNION_BIGUNION] >>
-  rw[Once Cevaluate_cases] >>
-  fsrw_tac[DNF_ss][] >>
-  disj2_tac >>
-  rw[Cevaluate_list_with_Cevaluate] >>
-  fs[Cevaluate_list_with_error] >>
-  qpat_assum `n < LENGTH es` mp_tac >>
-  qmatch_rename_tac `z < LENGTH es ==> P`["P"] >>
-  qmatch_assum_rename_tac `n < LENGTH es`[] >>
-  strip_tac >>
-  qexists_tac `n` >>
-  qmatch_assum_rename_tac `fmap_rel syneq env env2`[] >>
-  Q.PAT_ABBREV_TAC `env3 = (DRESTRICT env2 X) ⊌ Y` >>
-  `∀v. v ∈ FRANGE env3 ⇒ closed v` by (
-    unabbrev_all_tac >>
-    match_mp_tac IN_FRANGE_FUNION_suff >> fs[] >>
-    match_mp_tac IN_FRANGE_DRESTRICT_suff >> fs[] ) >>
-  `∀m. m < LENGTH es ⇒ free_vars (EL m es) ⊆ FDOM env` by (
-    fsrw_tac[DNF_ss][SUBSET_DEF] >>
-    fsrw_tac[DNF_ss][MEM_EL] >>
-    PROVE_TAC[]) >>
-  qpat_assum `n<LENGTH es` assume_tac >>
-  first_x_assum (qspecl_then [`env2`,`env3`] mp_tac) >>
-  fs[] >>
-  `∀m. m < LENGTH es ⇒ (DRESTRICT env2 (free_vars (EL m es)) ⊌ env3 = env3)` by (
-    rw[GSYM SUBMAP_FUNION_ABSORPTION] >>
-    unabbrev_all_tac >>
-    match_mp_tac SUBMAP_FUNION >>
-    disj1_tac >>
-    match_mp_tac DRESTRICT_SUBSET_SUBMAP >>
-    srw_tac[DNF_ss][SUBSET_DEF,MEM_EL] >>
-    PROVE_TAC[]) >> fs[] >>
-  strip_tac >>
-  qx_gen_tac `m` >> strip_tac >>
-  qpat_assum `∀m. m < n ⇒ P` (qspec_then `m` mp_tac) >>
-  `m < LENGTH es` by DECIDE_TAC >>
-  fs[] >> rw[] >>
-  first_x_assum (qspecl_then [`env2`,`env3`] mp_tac) >>
-  rw[] >>
-  PROVE_TAC[]) >>
-strip_tac >- (
   rpt gen_tac >>
   rpt strip_tac >>
   fsrw_tac[DNF_ss][] >>
@@ -2441,8 +2348,7 @@ strip_tac >- (
     match_mp_tac SUBMAP_FUNION >>
     disj1_tac >>
     match_mp_tac DRESTRICT_SUBSET_SUBMAP >>
-    srw_tac[DNF_ss][SUBSET_DEF]) >> fs[] >>
-  fs[]) >>
+    srw_tac[DNF_ss][SUBSET_DEF]) >> fs[]) >>
 strip_tac >- (
   rw[] >>
   rw[Once Cevaluate_cases] >>
@@ -2463,7 +2369,12 @@ strip_tac >- (
     disj1_tac >>
     match_mp_tac DRESTRICT_SUBSET_SUBMAP >>
     srw_tac[DNF_ss][SUBSET_DEF]) >> fs[]) >>
-cheat)
+strip_tac >- rw[] >>
+strip_tac >- rw[Cevaluate_list_with_cons] >>
+strip_tac >- rw[Cevaluate_list_with_cons] >>
+rw[Cevaluate_list_with_cons] >>
+fsrw_tac[DNF_ss][] >>
+metis_tac[])
 
 val Cevaluate_free_vars_env = save_thm(
 "Cevaluate_free_vars_env",
