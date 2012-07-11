@@ -200,8 +200,7 @@ val (compile_def, compile_ind) = register "compile" (
        | INL (s,e)                 => (Cexp_size e, 3:num)
        | INR (INL (env,z,e,n,s,[]))=> (Cexp_size e, 4)
        | INR (INL (env,z,e,n,s,ns))=> (Cexp_size e + (SUM (MAP (list_size char_size) ns)) + LENGTH ns, 2)
-       | INR (INR (NONE,s,xbs))    => (SUM (MAP Cexp2_size xbs), 1)
-       | INR (INR (SOME ns,s,xbs)) => (SUM (MAP Cexp2_size xbs) + (SUM (MAP (list_size char_size) ns)) + LENGTH ns, 0))` >>
+       | INR (INR (ns,s,xbs))      => (SUM (MAP Cexp2_size xbs) + (SUM (MAP (list_size char_size) ns)) + LENGTH ns, 0))` >>
   srw_tac[ARITH_ss][] >>
   srw_tac[ARITH_ss][Cexp1_size_thm,Cexp5_size_thm,Cexp_size_def,list_size_thm,SUM_MAP_Cexp2_size_thm] >>
   TRY (Q.ISPEC_THEN `Cexp_size` imp_res_tac SUM_MAP_MEM_bound >> DECIDE_TAC) >>
@@ -209,7 +208,7 @@ val (compile_def, compile_ind) = register "compile" (
   TRY (Cases_on `ns` >> srw_tac[ARITH_ss][]) >>
   srw_tac[ARITH_ss][list_size_thm] >>
   (Q.ISPEC_THEN `Cexp2_size` imp_res_tac SUM_MAP_MEM_bound >>
-   Cases_on `nso` >> fsrw_tac[ARITH_ss][Cexp_size_def,list_size_thm,SUM_MAP_Cexp2_size_thm])))
+   fsrw_tac[ARITH_ss][Cexp_size_def,list_size_thm,SUM_MAP_Cexp2_size_thm])))
 
 val (replace_calls_def,replace_calls_ind) = register "replace_calls" (
   tprove_no_defn ((replace_calls_def,replace_calls_ind),

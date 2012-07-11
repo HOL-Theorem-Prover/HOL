@@ -1137,11 +1137,11 @@ val _ = Defn.save_defn bind_fv_defn;
 /\
 (compile s (CLetfun recp ns defs e) =
   let z = s.sz+ 1 in
-  let s = compile_closures (if recp then SOME ns else NONE) s defs in
+  let s = compile_closures (if recp then ns else []) s defs in
   compile_bindings s.env z e 0 s ns)
 /\
 (compile s (CFun xs e) =
-  compile_closures NONE s [(xs,e)])
+  compile_closures [] s [(xs,e)])
 /\
 (compile s (CCall e es) =
   let n = LENGTH es in
@@ -1234,7 +1234,7 @@ val _ = Defn.save_defn bind_fv_defn;
     ( s with<| env := FUPDATE  s.env ( x, (CTLet (sz1+ n))) |>)
     xs)
 /\
-(compile_closures nso s defs =
+(compile_closures ns s defs =
   (* calling convention:
    * before: env, CodePtr ret, argn, ..., arg1, Block 0 [CodePtr c; env],
    * thus, since env = stack[sz], argk should be CTArg (2 + n - k)
@@ -1299,7 +1299,6 @@ val _ = Defn.save_defn bind_fv_defn;
    *   environment and build the closure
    * - update refptrs, etc.
    *)
-  let (nr,ns) = (case nso of NONE => (0,[]) |SOME ns => (LENGTH ns,ns) ) in
   let s = FOLDL (\ s _n . incsz (emit s [Stack (PushInt i0); Ref])) s ns in
   let s = emit s [Stack (PushInt i0)] in
   let (s,k,labs,ecs) = FOLDL

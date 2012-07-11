@@ -1065,11 +1065,11 @@ compile s (CLet xs es e) =
 and
 compile s (CLetfun recp ns defs e) =
   let z = s.sz + 1 in
-  let s = compile_closures (if recp then Some ns else None) s defs in
+  let s = compile_closures (if recp then ns else []) s defs in
   compile_bindings s.env z e 0 s ns
 and
 compile s (CFun xs e) =
-  compile_closures None s [(xs,e)]
+  compile_closures [] s [(xs,e)]
 and
 compile s (CCall e es) =
   let n = List.length es in
@@ -1162,7 +1162,7 @@ compile_bindings env0 sz1 e n s (x::xs) =
     (<| s with env = Pmap.add x (CTLet (sz1 + n)) s.env |>)
     xs
 and
-compile_closures nso s defs =
+compile_closures ns s defs =
   (* calling convention:
    * before: env, CodePtr ret, argn, ..., arg1, Block 0 [CodePtr c; env],
    * thus, since env = stack[sz], argk should be CTArg (2 + n - k)
@@ -1227,7 +1227,6 @@ compile_closures nso s defs =
    *   environment and build the closure
    * - update refptrs, etc.
    *)
-  let (nr,ns) = match nso with None -> (0,[]) | Some ns -> (List.length ns,ns) end in
   let s = List.fold_left (fun s _n -> incsz (emit s [Stack (PushInt i0); Ref])) s ns in
   let s = emit s [Stack (PushInt i0)] in
   let (s,k,labs,ecs) = List.fold_left
