@@ -7,10 +7,23 @@ open preamble MiniMLTheory MiniMLTerminationTheory;
 val _ = new_theory "typeSubstitution";
 
 val deBruijn_subst_env_def = Define `
-(deBruijn_subst_env (ts:t list) skip inc Env_empty = Env_empty) ∧
-(deBruijn_subst_env (ts:t list) skip inc (Var_bind levels n t tenv) = 
-  Var_bind 0 n (deBruijn_subst ts (deBruijn_inc skip inc t)) 
-           (deBruijn_subst_env ts skip inc tenv))`;
+(deBruijn_subst_env depth (ts:t list) Env_empty = Env_empty) ∧
+(deBruijn_subst_env depth (ts:t list) (Tvar_bind levels tenv) =
+  Tvar_bind levels (deBruijn_subst_env (depth + levels) ts tenv)) ∧
+(deBruijn_subst_env depth (ts:t list) (Var_bind levels n t tenv) = 
+  Var_bind levels n
+           (deBruijn_subst levels (MAP (deBruijn_inc 0 levels) (DROP depth ts)) t)
+           (deBruijn_subst_env depth ts tenv))`;
+
+val deBruijn_subst_env_def = Define `
+(deBruijn_subst_env ts Env_empty = Env_empty) ∧
+(deBruijn_subst_env ts (Tvar_bind levels tenv) = 
+  Tvar_bind levels (deBruijn_subst_env ts tenv)) ∧
+(deBruijn_subst_env ts (Var_bind levels n t tenv) = 
+  Var_bind levels n (deBruijn_subst levels ts t) (deBruijn_subst_env ts tenv))`;
+
+
+
 
 
 (* Recursive functions have function type *)
@@ -38,6 +51,14 @@ cases_on `h` >>
 fs [lookup_def] >>
 every_case_tac >>
 fs []);
+
+val lookup_in = Q.store_thm ("lookup_in",
+`!x e v. (lookup x e = SOME v) ⇒ MEM x (MAP FST e)`,
+induct_on `e` >>
+rw [lookup_def] >>
+cases_on `h` >>
+fs [lookup_def] >>
+metis_tac []);
 
 val lookup_in2 = Q.prove (
 `!x e v. (lookup x e = SOME v) ⇒ MEM v (MAP SND e)`,
@@ -133,24 +154,29 @@ every_case_tac >>
 rw [check_freevars_def]);
 
 val check_freevars_deBruijn_subst = Q.prove (
-`!ts t tvs.
+`!skip ts t tvs.
   check_freevars T [] t ∧
   EVERY (check_freevars T tvs) ts
   ⇒ 
-  check_freevars T tvs (deBruijn_subst ts t)`,
+  check_freevars T tvs (deBruijn_subst skip ts t)`,
 recInduct deBruijn_subst_ind >>
 rw [deBruijn_subst_def, check_freevars_def] >>
 fs [rich_listTheory.EL_IS_EL, EVERY_MEM] >>
 rw [] >>
-fs [MEM_MAP]);
+fs [MEM_MAP, MEM_EL] >|
+[`n - skip < LENGTH ts` by decide_tac >>
+     metis_tac [],
+ rw [] >>
+     res_tac >>
+     fs []]);
 
 val type_subst_deBruijn_subst_single = Q.prove (
-`!s t tvs dbok tvs' ts ts' inc skip.
+`!s t tvs dbok tvs' ts ts' inc.
   (LENGTH tvs = LENGTH ts) ∧ 
   check_freevars F tvs t ∧
   (s = (ZIP (tvs,ts))) ⇒
-  (deBruijn_subst ts' (deBruijn_inc skip inc (type_subst (ZIP (tvs,ts)) t)) =
-   type_subst (ZIP (tvs,MAP (\t. deBruijn_subst ts' (deBruijn_inc skip inc t)) ts)) t)`,
+  (deBruijn_subst 0 ts' (deBruijn_inc (LENGTH ts') inc (type_subst (ZIP (tvs,ts)) t)) =
+   type_subst (ZIP (tvs,MAP (\t. deBruijn_subst 0 ts' (deBruijn_inc (LENGTH ts') inc t)) ts)) t)`,
 recInduct type_subst_ind >>
 rw [deBruijn_subst_def, deBruijn_inc_def, type_subst_def, check_freevars_def] >|
 [every_case_tac >>
@@ -161,9 +187,9 @@ rw [deBruijn_subst_def, deBruijn_inc_def, type_subst_def, check_freevars_def] >|
       metis_tac [lookup_zip_map, optionTheory.OPTION_MAP_DEF,
                  optionTheory.NOT_SOME_NONE],
       `lookup tv (ZIP (tvs, 
-                       MAP (λt. deBruijn_subst ts'
-                                  (deBruijn_inc skip inc t)) ts)) = 
-       OPTION_MAP (λt. deBruijn_subst ts' (deBruijn_inc skip inc t)) (SOME x)` 
+                       MAP (λt. deBruijn_subst 0 ts'
+                                  (deBruijn_inc (LENGTH ts') inc t)) ts)) = 
+       OPTION_MAP (λt. deBruijn_subst 0 ts' (deBruijn_inc (LENGTH ts') inc t)) (SOME x)` 
                      by metis_tac [lookup_zip_map] >>
           fs []],
  rw [rich_listTheory.MAP_EQ_f, MAP_MAP_o] >>
@@ -171,20 +197,118 @@ rw [deBruijn_subst_def, deBruijn_inc_def, type_subst_def, check_freevars_def] >|
      metis_tac []]); 
 
 val type_subst_deBruijn_subst_list = Q.prove (
-`!t tvs dbok tvs' ts ts' ts'' inc skip.
+`!t tvs dbok tvs' ts ts' ts'' inc.
   (LENGTH tvs = LENGTH ts) ∧ 
   EVERY (check_freevars F tvs) ts'' ⇒
-  (MAP (\t. deBruijn_subst ts' (deBruijn_inc skip inc t)) (MAP (type_subst (ZIP (tvs,ts))) ts'') =
-   MAP (type_subst (ZIP (tvs,MAP (\t. deBruijn_subst ts' (deBruijn_inc skip inc
-   t)) ts))) ts'')`,
+  (MAP (\t. deBruijn_subst 0 ts' (deBruijn_inc (LENGTH ts') inc t)) (MAP (type_subst (ZIP (tvs,ts))) ts'') =
+   MAP (type_subst (ZIP (tvs,MAP (\t. deBruijn_subst 0 ts' (deBruijn_inc (LENGTH ts') inc t)) ts))) ts'')`,
 induct_on `ts''` >>
 rw [] >>
 metis_tac [type_subst_deBruijn_subst_single]);
 
+val deBruijn_no_subst_inc = Q.prove (
+`(!t ts. deBruijn_subst 0 ts (deBruijn_inc 0 (LENGTH ts) t) = t) ∧
+ (!ts' ts. MAP (deBruijn_subst 0 ts) (MAP (deBruijn_inc 0 (LENGTH ts)) ts') = ts')`,
+ho_match_mp_tac t_induction >>
+rw [deBruijn_subst_def, deBruijn_inc_def, EL_MAP] >>
+metis_tac []);
 
+val deBruijn_subst_swap = Q.prove (
+`(!t ts' inc ts. 
+    deBruijn_subst 0 ts' (deBruijn_inc (LENGTH ts') inc (deBruijn_subst 0 ts t)) =
+    deBruijn_subst 0 (MAP (deBruijn_subst 0 ts') (MAP (deBruijn_inc (LENGTH ts') inc) ts))
+                     (deBruijn_subst (LENGTH ts) (MAP (deBruijn_inc 0 (LENGTH ts)) ts') (deBruijn_inc (LENGTH ts + LENGTH ts') inc t))) ∧
+ (!ts'' ts' inc ts. 
+    MAP (deBruijn_subst 0 ts') (MAP (deBruijn_inc (LENGTH ts') inc) (MAP (deBruijn_subst 0 ts) ts'')) =
+    MAP (deBruijn_subst 0 (MAP (deBruijn_subst 0 ts') (MAP (deBruijn_inc (LENGTH ts') inc) ts)))
+                          (MAP (deBruijn_subst (LENGTH ts) (MAP (deBruijn_inc 0 (LENGTH ts)) ts')) 
+                               (MAP (deBruijn_inc (LENGTH ts + LENGTH ts') inc) ts'')))`,
+ho_match_mp_tac t_induction >>
+rw [deBruijn_subst_def, deBruijn_inc_def, EL_MAP] >>
+fs [] >>
+full_simp_tac (srw_ss()++ARITH_ss) [] >>
+rw [deBruijn_subst_def] >>
+full_simp_tac (srw_ss()++ARITH_ss) [] >>
+rw [EL_MAP] >>
+metis_tac [deBruijn_no_subst_inc, LENGTH_MAP]);
+
+val deBruijn_subst_inc_lem = Q.prove (
+`(!t ts idx. 
+   (deBruijn_subst 0 ts (deBruijn_inc (LENGTH ts) idx t) =
+    deBruijn_subst idx ts (deBruijn_inc 0 idx t))) ∧
+ (!ts' ts idx. 
+   (MAP (\t. deBruijn_subst 0 ts (deBruijn_inc (LENGTH ts) idx t)) ts' =
+    MAP (\t. deBruijn_subst idx ts (deBruijn_inc 0 idx t)) ts'))`,
+ho_match_mp_tac t_induction >>
+rw [deBruijn_subst_def, deBruijn_inc_def] >>
+full_simp_tac (srw_ss() ++ ARITH_ss) [MAP_MAP_o, combinTheory.o_DEF]);
+
+ 
+(*
+STOP;
+
+val lookup_deBruijn_subst_env_lem = Q.prove (
+`(!t l depth inc ts' d1 d2 d3 d4.
+    deBruijn_inc l (d2 + inc)
+      (deBruijn_subst l (MAP (deBruijn_inc 0 l) (DROP d3 ts')) t) =
+    deBruijn_subst l (MAP (deBruijn_inc 0 l) ts')
+      (deBruijn_inc (l + LENGTH ts') (d4 + inc) (deBruijn_inc l d1 t))) ∧
+ (!ts'' l depth inc ts' d1 d2 d3 d4.
+    MAP (\t. deBruijn_inc l (d2 + inc)
+      (deBruijn_subst l (MAP (deBruijn_inc 0 l) (DROP d3 ts')) t)) ts'' =
+    MAP (\t. deBruijn_subst l (MAP (deBruijn_inc 0 l) ts')
+      (deBruijn_inc (l + LENGTH ts') (d4 + inc) (deBruijn_inc l d1 t))) ts'')`,
+
+
+ho_match_mp_tac t_induction >>
+rw [deBruijn_inc_def, deBruijn_subst_def] >>
+full_simp_tac (srw_ss()++ARITH_ss) [] >>
+rw [deBruijn_inc_def, deBruijn_subst_def] >>
+full_simp_tac (srw_ss()++ARITH_ss) [rich_listTheory.EL_BUTFIRSTN, EL_MAP, arithmeticTheory.NOT_LESS] >>
+
+`depth < LENGTH ts'` by decide_tac
+
+metis_tac []
+
+decide_tac
+
+intLib.ARITH_TAC
+
+val lookup_deBruijn_subst_env = Q.prove (
+`!n tenv t l inc ts' depth depth'.
+  (lookup_var n depth tenv = SOME (t, l))
+  ⇒
+  (lookup_var n depth (deBruijn_subst_env depth ts' tenv) =
+   SOME (deBruijn_subst l (MAP (deBruijn_inc 0 (l + depth)) ts')
+          (deBruijn_inc (l + LENGTH ts') inc t),l))`, 
+
+induct_on `tenv` >>
+rw [lookup_var_def, deBruijn_subst_env_def] >>
+fs [lookup_var_def, deBruijn_subst_env_def] >>
+res_tac >>
+full_simp_tac (srw_ss()++ARITH_ss) []
+
+
+pop_assum (MP_TAC o Q.SPECL [`ts'`, `inc`]) >>
+rw []
+
+res_tac
+
+rw []
+
+metis_tac [arithmeticTheory.ADD_COMM, arithmeticTheory.ADD_ASSOC]
+
+
+cases_on `?n. t0 = Tvar_db n` >>
+fs [] >>
+rw [deBruijn_inc_def, deBruijn_subst_def] >>
+full_simp_tac (srw_ss()++ARITH_ss) [] >>
+rw [deBruijn_inc_def, deBruijn_subst_def] >>
+full_simp_tac (srw_ss()++ARITH_ss) [rich_listTheory.EL_BUTFIRSTN, EL_MAP, arithmeticTheory.NOT_LESS] >>
 
 
 STOP;
+
 
 
 val type_e_type_subst_lem = Q.prove (
@@ -193,15 +317,15 @@ val type_e_type_subst_lem = Q.prove (
       tenvC_ok tenvC ∧
       EVERY (check_freevars T []) ts
       ⇒
-      type_e tenvC (deBruijn_subst_env ts (LENGTH ts) inc tenv) e 
-             (deBruijn_subst ts (deBruijn_inc (LENGTH ts) inc t))) ∧
+      type_e tenvC (Tvar_bind inc (deBruijn_subst_env 0 ts tenv)) e 
+             (deBruijn_subst 0 ts (deBruijn_inc (LENGTH ts) inc t))) ∧
  (!tenvC tenv es ts'. type_es tenvC tenv es ts' ⇒
-    !n t1 ts skip inc.
+    !n t1 ts inc.
       tenvC_ok tenvC ∧
       EVERY (check_freevars T []) ts
       ⇒
-      type_es tenvC (deBruijn_subst_env ts (LENGTH ts) inc tenv) es 
-              (MAP (deBruijn_subst ts) (MAP (deBruijn_inc (LENGTH ts) inc) ts'))) ∧
+      type_es tenvC (Tvar_bind inc (deBruijn_subst_env 0 ts tenv)) es 
+              (MAP (deBruijn_subst 0 ts) (MAP (deBruijn_inc (LENGTH ts) inc) ts'))) ∧
  (!tenvC tenv funs fun_types. type_funs tenvC tenv funs fun_types ⇒ T)`,
 
 ho_match_mp_tac type_e_strongind >>
@@ -224,10 +348,15 @@ rw [Once type_e_cases] >|
                             check_freevars_F_to_T, EVERY_MEM] >>
      rw [MAP_MAP_o, combinTheory.o_DEF] >>
      metis_tac [type_subst_deBruijn_subst_list, MAP_MAP_o, combinTheory.o_DEF],
- qexists_tac `deBruijn_inc (LENGTH ts') inc (deBruijn_subst ts t)` >>
-     qexists_tac `ts'` >>
-     rw [] >>
-     all_tac,
+ qexists_tac `deBruijn_subst (LENGTH ts) 
+                             (MAP (deBruijn_inc 0 (LENGTH ts)) ts') 
+                             (deBruijn_inc (LENGTH (ts ++ ts')) inc t)` >>
+     qexists_tac `MAP (deBruijn_subst 0 ts') (MAP (deBruijn_inc (LENGTH ts') inc) ts)` >>
+     rw [EVERY_MAP, deBruijn_subst_swap] >|
+     [fs [EVERY_MEM] >>
+          rw [] >>
+          metis_tac [check_freevars_deBruijn_inc, EVERY_MEM, check_freevars_deBruijn_subst],
+      all_tac],
  metis_tac [check_freevars_deBruijn_subst, check_freevars_deBruijn_inc],
  fs [deBruijn_subst_env_def],
  fs [type_op_def] >>
@@ -261,31 +390,44 @@ rw [Once type_e_cases] >|
           qexists_tac `Tfn (deBruijn_subst ts (deBruijn_inc (LENGTH ts) inc t'))
                            (deBruijn_subst ts (deBruijn_inc (LENGTH ts) inc t''))` >>
           rw []],
- all_tac,
- all_tac,
+ fs [RES_FORALL] >>
+     qexists_tac `(deBruijn_subst ts (deBruijn_inc (LENGTH ts) inc t))` >>
+     rw [] >>
+     PairCases_on `x` >>
+     rw [] >>
+     res_tac >>
+     fs [] >|
+     [all_tac,
+      all_tac],
+ fs [deBruijn_subst_env_def] >>
+     metis_tac [check_freevars_deBruijn_subst, check_freevars_deBruijn_inc] ,
  all_tac]
 
+ 
+ 
+
+     fs [pat_bindings_def]
 
  
 val type_v_type_subst_lem = Q.prove (
 `(!tenvC v t. type_v tenvC v t ⇒
-    !ts inc. 
+    !ts inc.
        tenvC_ok tenvC ∧ check_freevars T [] t ∧ EVERY (check_freevars T []) ts
        ⇒ 
-       type_v tenvC v (deBruijn_subst ts (deBruijn_inc (LENGTH ts) inc t))) ∧
+       type_v tenvC v (deBruijn_subst 0 ts (deBruijn_inc (LENGTH ts) inc t))) ∧
  (!tenvC vs ts. type_vs tenvC vs ts ⇒
-    !ts' skip inc. 
+    !ts' inc. 
        tenvC_ok tenvC ∧ 
        EVERY (check_freevars T []) ts ∧
        EVERY (check_freevars T []) ts'
        ⇒ 
-       type_vs tenvC vs (MAP (\t. deBruijn_subst ts' (deBruijn_inc (LENGTH ts') inc t)) ts)) ∧
+       type_vs tenvC vs (MAP (\t. deBruijn_subst 0 ts' (deBruijn_inc (LENGTH ts') inc t)) ts)) ∧
  (!tenvC env tenv. type_env tenvC env tenv ⇒
-    !ts skip inc. 
+    !ts inc. 
        tenvC_ok tenvC ∧ 
        EVERY (check_freevars T []) ts
        ⇒
-       type_env tenvC env (deBruijn_subst_env ts (LENGTH ts) inc tenv))`,
+       type_env tenvC env (deBruijn_subst_env 0 ts tenv))`,
 
 ho_match_mp_tac type_v_strongind >>
 rw [deBruijn_subst_def, check_freevars_def, bind_def, (*tenv_ok_def,*)
@@ -331,14 +473,6 @@ cases_on `h` >>
 fs [lookup_def] >>
 rw [] >>
 fs []);
-
-val lookup_in = Q.store_thm ("lookup_in",
-`!x e v. (lookup x e = SOME v) ⇒ MEM x (MAP FST e)`,
-induct_on `e` >>
-rw [lookup_def] >>
-cases_on `h` >>
-fs [lookup_def] >>
-metis_tac []);
 
 val tenv_ok_def = Define `
 (tenv_ok Env_empty = T) ∧
@@ -736,5 +870,5 @@ val type_v_deBruijn_subst2 = mk_thm ([],
   type_v tenvC v (deBruijn_subst tvs t)``);
 
 val _ = save_thm ("type_v_deBruijn_subst2", type_v_deBruijn_subst2);
-
+*)
 val _ = export_theory ();

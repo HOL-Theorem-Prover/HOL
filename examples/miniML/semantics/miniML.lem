@@ -1093,26 +1093,28 @@ type_subst s Tbool = Tbool
 and
 type_subst s (Tvar_db n) = Tvar_db n
 
-(* Replace the n lowest index deBruijn type variables with the given types *)
-val deBruijn_subst : t list -> t -> t
+(* skip the lowest given indices and replace the next (LENGTH ts) with the given types and reduce all the higher ones *)
+val deBruijn_subst : num -> t list -> t -> t
 let rec
-deBruijn_subst ts (Tvar tv) = Tvar tv
+deBruijn_subst skip ts (Tvar tv) = Tvar tv
 and
-deBruijn_subst ts (Tvar_db n) =
-  if n < List.length ts then
-    List.nth ts n
-  else
+deBruijn_subst skip ts (Tvar_db n) =
+  if not (n < skip) && n < List.length ts + skip then
+    List.nth ts (n - skip)
+  else if not (n < skip) then
     Tvar_db (n - List.length ts)
+  else 
+    Tvar_db n
 and
-deBruijn_subst ts (Tapp ts' tn) =
-  Tapp (List.map (deBruijn_subst ts) ts') tn
+deBruijn_subst skip ts (Tapp ts' tn) =
+  Tapp (List.map (deBruijn_subst skip ts) ts') tn
 and
-deBruijn_subst ts (Tfn t1 t2) =
-  Tfn (deBruijn_subst ts t1) (deBruijn_subst ts t2)
+deBruijn_subst skip ts (Tfn t1 t2) =
+  Tfn (deBruijn_subst skip ts t1) (deBruijn_subst skip ts t2)
 and
-deBruijn_subst ts Tnum = Tnum
+deBruijn_subst skip ts Tnum = Tnum
 and
-deBruijn_subst ts Tbool = Tbool
+deBruijn_subst skip ts Tbool = Tbool
 
 val bind_var_list : num -> (varN * t) list -> tenvE -> tenvE
 let rec 
@@ -1204,7 +1206,7 @@ forall cenv tenv levels n t ts.
 List.for_all (check_freevars true []) ts &&
 (lookup_var n 0 tenv = Some (t,levels))
 ==>
-type_e cenv tenv (Var n) (deBruijn_subst ts t)
+type_e cenv tenv (Var n) (deBruijn_subst 0 ts t)
 
 and
 

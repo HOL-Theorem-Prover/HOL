@@ -1186,27 +1186,29 @@ val _ = Define `
 
 val _ = Defn.save_defn type_subst_defn;
 
-(* Replace the n lowest index deBruijn type variables with the given types *)
-(*val deBruijn_subst : t list -> t -> t*)
+(* skip the lowest given indices and replace the next (LENGTH ts) with the given types and reduce all the higher ones *)
+(*val deBruijn_subst : num -> t list -> t -> t*)
  val deBruijn_subst_defn = Hol_defn "deBruijn_subst" `
 
-(deBruijn_subst ts (Tvar tv) = Tvar tv)
+(deBruijn_subst skip ts (Tvar tv) = Tvar tv)
 /\
-(deBruijn_subst ts (Tvar_db n) =
-  if n< LENGTH ts then
-    EL  n  ts
-  else
-    Tvar_db (n - LENGTH ts))
+(deBruijn_subst skip ts (Tvar_db n) =
+  if ~  (n< skip)/\ n< LENGTH ts+ skip then
+    EL  (n - skip)  ts
+  else if ~  (n< skip) then
+    Tvar_db (n - LENGTH ts)
+  else 
+    Tvar_db n)
 /\
-(deBruijn_subst ts (Tapp ts' tn) =
-  Tapp (MAP (deBruijn_subst ts) ts') tn)
+(deBruijn_subst skip ts (Tapp ts' tn) =
+  Tapp (MAP (deBruijn_subst skip ts) ts') tn)
 /\
-(deBruijn_subst ts (Tfn t1 t2) =
-  Tfn (deBruijn_subst ts t1) (deBruijn_subst ts t2))
+(deBruijn_subst skip ts (Tfn t1 t2) =
+  Tfn (deBruijn_subst skip ts t1) (deBruijn_subst skip ts t2))
 /\
-(deBruijn_subst ts Tnum = Tnum)
+(deBruijn_subst skip ts Tnum = Tnum)
 /\
-(deBruijn_subst ts Tbool = Tbool)`;
+(deBruijn_subst skip ts Tbool = Tbool)`;
 
 val _ = Defn.save_defn deBruijn_subst_defn;
 
@@ -1303,7 +1305,7 @@ type_e cenv tenv (Con cn es) (Tapp ts' tn))
 EVERY (check_freevars T []) ts/\
 (lookup_var n 0 tenv=SOME (t,levels))
 ==>
-type_e cenv tenv (Var n) (deBruijn_subst ts t))
+type_e cenv tenv (Var n) (deBruijn_subst 0 ts t))
 
 /\
 
