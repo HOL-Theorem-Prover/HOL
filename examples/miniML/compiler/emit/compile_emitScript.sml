@@ -89,6 +89,7 @@ val defs = map EmitML.DEFN
 , find_index_def
 , replace_calls_def
 , emit_ec_def
+, bind_fv_def
 , underscore_rule compile_def
 , init_compiler_state
 , init_repl_state
@@ -106,7 +107,7 @@ val defs = map EmitML.DEFN
 , repl_dec_def
 , inst_arg_def
 , v_to_ov_def
-, bcv_to_ov_def
+, bv_to_ov_def
 ]
 
 val num_to_bool = prove(
