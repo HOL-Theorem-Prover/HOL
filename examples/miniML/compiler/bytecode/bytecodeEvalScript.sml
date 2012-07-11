@@ -156,9 +156,9 @@ val bc_eval1_def = Define`
     OPTION_BIND (bc_eval_stack b s.stack)
       (λys. SOME (bump_pc s with stack := ys))
   | (Jump n, _) => SOME (s with pc := n)
-  | (JumpNil n, x::xs) =>
+  | (JumpNil n, Number x::xs) =>
       let s' = s with stack := xs in
-        SOME (if x = Number 0 then bump_pc s' else s' with pc := n)
+        SOME (if x = 0 then bump_pc s' else s' with pc := n)
   | (Call n, x::xs) =>
       SOME (s with <| pc := n; stack := x :: CodePtr ((bump_pc s).pc) :: xs |>)
   | (CallPtr, CodePtr ptr::x::xs) =>
@@ -196,6 +196,7 @@ Cases_on `inst` >> fs[GSYM bc_eval_stack_thm]
 >- rw[bc_next_rules]
 >- (
   Cases_on `s1.stack` >> fs[LET_THM] >>
+  Cases_on `h` >> fs[LET_THM] >>
   rw[bc_next_cases] )
 >- (
   Cases_on `s1.stack` >> fs[LET_THM] >>
@@ -254,6 +255,7 @@ Cases_on `inst` >> fs[bc_eval_stack_NONE]
 >- rw[bc_next_cases]
 >- (
   Cases_on `s1.stack` >> fs[LET_THM] >>
+  TRY (Cases_on `h`) >> fs[LET_THM] >>
   rw[bc_next_cases] )
 >- (
   Cases_on `s1.stack` >> fs[LET_THM] >>
