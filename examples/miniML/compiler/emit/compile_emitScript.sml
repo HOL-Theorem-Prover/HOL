@@ -37,7 +37,6 @@ val data = map
   , MiniMLTheory.datatype_dec
   , datatype_ov
   , datatype_Cprim2
-  , datatype_Clprim
   , datatype_Cpat
   , datatype_Cexp
   , datatype_ctbind

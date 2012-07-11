@@ -145,8 +145,7 @@ val _ = Defn.save_defn Cpat_vars_defn;
 /\
 (free_vars (CPrim2 _ e1 e2) = free_vars e1 UNION free_vars e2)
 /\
-(free_vars (CLprim _ es) =
-  FOLDL (\ s e . s UNION free_vars e) {} es)`;
+(free_vars (CIf e1 e2 e3) = free_vars e1 UNION free_vars e2 UNION free_vars e3)`;
 
 val _ = Defn.save_defn free_vars_defn;
 
@@ -434,61 +433,16 @@ Cevaluate_list env [e1;e2] (Rerr err)
 Cevaluate env (CPrim2 p2 e1 e2) (Rerr err))
 
 /\
-(! env es v1 v2.
-Cevaluate_list env es (Rval [v1;v2])
-==>
-Cevaluate env (CLprim CLeq es) (doPrim2 F Bool int_le v1 v2))
-/\
-(! env es err.
-Cevaluate_list env es (Rerr err)
-==>
-Cevaluate env (CLprim CLeq es) (Rerr err))
-
-/\
 (! env e1 e2 e3 b1 r.
 Cevaluate env e1 (Rval (CLitv (Bool b1)))/\
 Cevaluate env (if b1 then e2 else e3) r
 ==>
-Cevaluate env (CLprim CIf [e1;e2;e3]) r)
+Cevaluate env (CIf e1 e2 e3) r)
 /\
 (! env e1 e2 e3 err.
 Cevaluate env e1 (Rerr err)
 ==>
-Cevaluate env (CLprim CIf [e1;e2;e3]) (Rerr err))
-
-/\
-(! env e1 e2.
-Cevaluate env e1 (Rval (CLitv (Bool F)))
-==>
-Cevaluate env (CLprim CAnd [e1;e2]) (Rval (CLitv (Bool F))))
-/\
-(! env e1 e2 r.
-Cevaluate env e1 (Rval (CLitv (Bool T)))/\
-Cevaluate env e2 r
-==>
-Cevaluate env (CLprim CAnd [e1;e2]) r)
-/\
-(! env e1 e2 err.
-Cevaluate env e1 (Rerr err)
-==>
-Cevaluate env (CLprim CAnd [e1;e2]) (Rerr err))
-
-/\
-(! env e1 e2.
-Cevaluate env e1 (Rval (CLitv (Bool T)))
-==>
-Cevaluate env (CLprim COr [e1;e2]) (Rval (CLitv (Bool T))))
-/\
-(! env e1 e2 r.
-Cevaluate env e1 (Rval (CLitv (Bool F)))/\
-Cevaluate env e2 r
-==>
-Cevaluate env (CLprim COr [e1;e2]) r)
-/\
-(! env e1 e2 err.
-Cevaluate env e1 (Rerr err)
-==>
-Cevaluate env (CLprim COr [e1;e2]) (Rerr err))
+Cevaluate env (CIf e1 e2 e3) (Rerr err))
 
 /\
 (! env.
@@ -782,14 +736,14 @@ val _ = Define `
   let Ce2 = exp_to_Cexp m e2 in
   (case opb of
     Lt => CPrim2 CLt Ce1 Ce2
-  | Leq => CLprim CLeq [Ce1;Ce2]
+  | Leq => CPrim2 CLt (CPrim2 CSub Ce1 Ce2) (CLit (IntLit i1))
   | opb =>
       let x1 = fresh_var (free_vars Ce2) in
       let x2 = fresh_var {x1} in
       CLet [x1;x2] [Ce1;Ce2]
         (case opb of
-          Gt =>  CPrim2 CLt  (CVar x2)(CVar x1)
-        | Geq => CLprim CLeq [CVar x2; CVar x1]
+          Gt =>  CPrim2 CLt (CVar x2) (CVar x1)
+        | Geq => CPrim2 CLt (CPrim2 CSub (CVar x2) (CVar x1)) (CLit (IntLit i1))
         )
   ))
 /\
@@ -806,17 +760,16 @@ val _ = Define `
 (exp_to_Cexp m (Log log e1 e2) =
   let Ce1 = exp_to_Cexp m e1 in
   let Ce2 = exp_to_Cexp m e2 in
-  CLprim ((case log of
-            And => CAnd
-          | Or  => COr
-          ))
-  [Ce1;Ce2])
+  ((case log of
+     And => CIf Ce1 Ce2 (CLit (Bool F))
+   | Or  => CIf Ce1 (CLit (Bool T)) Ce2
+   )))
 /\
 (exp_to_Cexp m (If e1 e2 e3) =
   let Ce1 = exp_to_Cexp m e1 in
   let Ce2 = exp_to_Cexp m e2 in
   let Ce3 = exp_to_Cexp m e3 in
-  CLprim CIf [Ce1;Ce2;Ce3])
+  CIf Ce1 Ce2 Ce3)
 /\
 (exp_to_Cexp m (Mat e pes) =
   let Cpes = pes_to_Cpes m pes in
@@ -960,13 +913,13 @@ val _ = Defn.save_defn bv_to_ov_defn;
   CLet [pv] [CVar v] sk)
 /\
 (remove_mat_vp fk sk v (CPlit l) =
-  CLprim CIf [CPrim2 CEq (CVar v) (CLit l);
-    sk; (CCall (CVar fk) [])])
+  CIf (CPrim2 CEq (CVar v) (CLit l))
+    sk (CCall (CVar fk) []))
 /\
 (remove_mat_vp fk sk v (CPcon cn ps) =
-  CLprim CIf [CTagEq (CVar v) cn;
-    remove_mat_con fk sk v 0 ps;
-    CCall (CVar fk) []])
+  CIf (CTagEq (CVar v) cn)
+    (remove_mat_con fk sk v 0 ps)
+    (CCall (CVar fk) []))
 /\
 (remove_mat_con fk sk v n [] = sk)
 /\
@@ -1005,7 +958,7 @@ val _ = Defn.save_defn remove_mat_vp_defn;
 /\
 (remove_mat (CPrim2 o2 e1 e2) = CPrim2 o2 (remove_mat e1) (remove_mat e2))
 /\
-(remove_mat (CLprim ol es) = CLprim ol (MAP remove_mat es))
+(remove_mat (CIf e1 e2 e3) = CIf (remove_mat e1) (remove_mat e2) (remove_mat e3))
 /\
 (remove_mat_var v [] = CRaise Bind_error)
 /\
@@ -1247,16 +1200,7 @@ val _ = Defn.save_defn bind_fv_defn;
   let s = compile s e2 in (* TODO: need to detect div by zero *)
   decsz (ldt dt (emit s [Stack (prim2_to_bc op)])))
 /\
-(compile s (CLprim CLeq [e1;e2]) =
-  let s = incsz (emit s [Stack (PushInt i1)]) in
-  let s = incsz (emit s [Stack (PushInt i0)]) in
-  let (s,dt) = sdt s in
-  let s = compile s e1 in
-  let s = compile s e2 in
-  let s = emit s [Stack Sub; Stack Less; Stack Sub] in
-  ldt dt  s with<| sz := s.sz - 3 |>)
-/\
-(compile s (CLprim CIf [e1;e2;e3]) =
+(compile s (CIf e1 e2 e3) =
   let (s,dt) = sdt s in
   let s = ldt dt (compile s e1) in
   let s = emit s [JumpNil 0; Jump 0] in
@@ -1273,28 +1217,6 @@ val _ = Defn.save_defn bind_fv_defn;
       (REPLACE_ELEMENT (Jump n3) (j3 - j2)
       (REPLACE_ELEMENT (Jump n2) (j3 - j1)
       (REPLACE_ELEMENT (JumpNil n1) (j3 - j1+ 1) s.code))) |>)
-/\
-(compile s (CLprim CAnd [e1;e2]) =
-  let (s,dt) = sdt s in
-  let s = compile s e1 in
-  let s = emit s [JumpNil 0] in
-  let j = s.code_length in
-  let s = ldt dt (compile (decsz s) e2) in
-   s with<| code :=REPLACE_ELEMENT (JumpNil s.next_label)
-      (s.code_length - j) s.code |>)
-/\
-(compile s (CLprim COr [e1;e2]) =
-  let (s,dt) = sdt s in
-  let s = compile s e1 in
-  let s = emit s [JumpNil 0; Stack (PushInt i1); Jump 0] in
-  let j = s.code_length in
-  let n1 = s.next_label in
-  let s = ldt dt (compile (decsz s) e2) in
-  let n2 = s.next_label in
-  let j3 = s.code_length in
-   s with<| code :=
-      (REPLACE_ELEMENT (Jump n2) (j3 - j)
-      (REPLACE_ELEMENT (JumpNil n1) (j3 - j - 2) s.code)) |>)
 /\
 (compile_bindings env0 sz1 e n s [] =
   let s = (case s.tail of
