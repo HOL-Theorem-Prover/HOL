@@ -15,6 +15,10 @@ infix \\ val op \\ = op THEN;
 
 
 
+(* -------------------------------------------------------------------------- *
+    Definition of hardware bytecode
+ * -------------------------------------------------------------------------- *)
+
 val UPDATE_NTH_def = Define `
   (UPDATE_NTH n x [] = []) /\
   (UPDATE_NTH 0 x (y::ys) = x::ys) /\
@@ -23,6 +27,7 @@ val UPDATE_NTH_def = Define `
 val _ = Hol_datatype `
   hw_instruction =
     hwPop                     (* pop top of stack *)
+  | hwPop1                    (* pop element below top of stack *)
   | hwPushImm of 6 word       (* push immediate *)
   | hwShiftAddImm of 6 word   (* top := top << 6 + imm *)
   | hwStackLoad               (* load value from inside stack *)
@@ -100,6 +105,10 @@ val hw_step_def = Define `
     let s = inc_pc s in
       case instr of
           hwPop => SND (arg s)
+        | hwPop1 =>
+            let (x2,s) = arg s in
+            let (x1,s) = arg s in
+              push x2 s
         | hwPushImm imm => push (w2w imm) s
         | hwShiftAddImm imm =>
             let (i,s) = arg s in
@@ -175,10 +184,6 @@ val hw_step_rel_def = Define `
   hw_step_rel code s t =
     w2n s.pc < LENGTH code /\ (t = hw_step (EL (w2n s.pc) code) s)`;
 
-val hw_steps_def = Define `
-  (hw_steps [] s = s) /\
-  (hw_steps (x::xs) s = hw_steps xs (hw_step x s))`;
-
 val hw_decode_def = Define `
   hw_decode b =
     if w2n b DIV 64 = 1 then hwPushImm (w2w b) else
@@ -188,6 +193,7 @@ val hw_decode_def = Define `
     if b = 1w then hwPop else
     if b = 2w then hwStackLoad else
     if b = 3w then hwStackStore else
+    if b = 4w then hwPop1 else
     (* --- *)
     if b = 8w then hwEqual else
     if b = 9w then hwLess else
@@ -207,11 +213,10 @@ val hw_decode_def = Define `
     if b = 36w then hwWrite else
     if b = 37w then hwCompareExchange else hwAbort`
 
-val hw_fetch_def = Define `
-  hw_fetch s code = EL (w2n s.pc) code`;
 
-val (hw_exec_rules,hw_exec_cases,hw_exec_ind) = Hol_reln `
-  (!s. hw_exec code s (hw_step (hw_fetch s code) s))`
+(* -------------------------------------------------------------------------- *
+    Definition of translation: bytecode --> hardware bytecode
+ * -------------------------------------------------------------------------- *)
 
 val push_imm_def = Define `
   push_imm n = if 2**32 <= n then [hwFail] else
@@ -222,8 +227,7 @@ val push_imm_def = Define `
 val hwml_def = Define `
   (hwml (Stack Pop) = [hwPop]) /\
   (hwml (Stack (Pops n)) =
-     if n = 0 then [(hwPushImm 0w); hwPop] else
-       FLAT (REPLICATE n [hwSwap;hwPop])) /\
+     if n = 0 then [(hwPushImm 0w); hwPop] else REPLICATE n hwPop1) /\
   (hwml (Stack (Shift m n)) =
      if m <= n then
        push_imm (n - 1) ++ REPLICATE m hwStackStore ++ [hwPop] ++
@@ -266,7 +270,9 @@ val hwml_length_def = Define `
   hwml_length x = LENGTH (hwml x) - 1`;
 
 
-
+(* -------------------------------------------------------------------------- *
+    Correctness of translation: bytecode --> hardware bytecode
+ * -------------------------------------------------------------------------- *)
 
 val hw_val_lemma = prove(
   ``!xs x. MEM x xs ==> bc_value_size x < bc_value1_size xs``,
@@ -307,6 +313,10 @@ val MOD_lemma = prove(
   ``!w n. n <= w2n (w:word32) ==> (n MOD dimword (:32) = n)``,
   Cases \\ FULL_SIMP_TAC std_ss [w2n_n2w] \\ REPEAT STRIP_TAC
   \\ IMP_RES_TAC LESS_EQ_LESS_TRANS \\ FULL_SIMP_TAC std_ss [LESS_MOD]);
+
+val hw_steps_def = Define `
+  (hw_steps [] s = s) /\
+  (hw_steps (x::xs) s = hw_steps xs (hw_step x s))`;
 
 val F_TAC =
   FULL_SIMP_TAC (srw_ss()) [hw_steps_def,hw_step_def,LET_DEF,inc_pc_def,overflow_def]
@@ -353,7 +363,7 @@ val push_imm_lemma = prove(
   \\ REPEAT STRIP_TAC \\ DECIDE_TAC);
 
 val Swap_Pop_heap = prove(
-  ``!n s1. (hw_steps (FLAT (REPLICATE n [hwSwap; hwPop])) s1).heap = s1.heap``,
+  ``!n s1. (hw_steps (REPLICATE n hwPop1) s1).heap = s1.heap``,
   Induct \\ FULL_SIMP_TAC (srw_ss()) [REPLICATE,FLAT,hw_steps_def,
     APPEND,hw_step_def,LET_DEF,arg_def,push_def,inc_pc_def,overflow_def]);
 
@@ -412,8 +422,8 @@ val EVERY2_CONS_APPEND_CONS = prove(
 
 val hw_steps_swap_pop_pc = prove(
   ``!ys1 ys2 y s1.
-      ((hw_steps (FLAT (REPLICATE (LENGTH ys1) [hwSwap; hwPop])) s1).pc =
-        s1.pc + n2w (LENGTH ((FLAT (REPLICATE (LENGTH ys1) [hwSwap; hwPop])))))``,
+      ((hw_steps ((REPLICATE (LENGTH ys1) hwPop1)) s1).pc =
+        s1.pc + n2w (LENGTH (((REPLICATE (LENGTH ys1) hwPop1)))))``,
   Induct \\ FULL_SIMP_TAC (srw_ss()) [LENGTH,REPLICATE,LENGTH,FLAT,
     hw_steps_def,WORD_ADD_0,hw_steps_def,hw_step_def,LET_DEF,inc_pc_def,arg_def,
     overflow_def,push_def]
@@ -423,8 +433,8 @@ val hw_steps_swap_pop_pc = prove(
 val hw_steps_swap_pop = prove(
   ``!ys1 ys2 y s1.
       (s1.stack = y::ys1 ++ ys2) ==>
-      ((hw_steps (FLAT (REPLICATE (LENGTH ys1) [hwSwap; hwPop])) s1).stack = y::ys2)``,
-  Induct \\ FULL_SIMP_TAC std_ss [LENGTH,REPLICATE,FLAT,hw_steps_def,APPEND,WORD_ADD_0]
+      ((hw_steps (REPLICATE (LENGTH ys1) hwPop1) s1).stack = y::ys2)``,
+  Induct \\ FULL_SIMP_TAC std_ss [LENGTH,REPLICATE,hw_steps_def,APPEND,WORD_ADD_0]
   \\ REPEAT STRIP_TAC \\ Q.PAT_ASSUM `!x.bbb` MATCH_MP_TAC
   \\ FULL_SIMP_TAC (srw_ss()) [hw_step_def,arg_def,push_def] \\ F_TAC);
 
