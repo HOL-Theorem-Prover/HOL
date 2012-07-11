@@ -416,3 +416,20 @@ val e55 = ``Letrec [
     (App Opapp (Var "f") (Lit (IntLit 1)))``
 val [Number r] = run_exp e55
 val SOME 2 = intML.toInt r;
+val e56 = ``Letrec [
+  ("x","x",App (Opn Plus) (Var "x") (Lit (IntLit 1)))]
+    (App Opapp (Var "x") (Lit (IntLit 1)))``
+val [Number r] = run_exp e56
+val SOME 2 = intML.toInt r;
+val e57 = ``Letrec [
+  ("f","y",App Opapp (Var "g") (Var "y"));
+  ("g","x",App (Opn Plus) (Var "x") (Lit (IntLit 1)))]
+    (App Opapp (Var "f") (Lit (IntLit 1)))``
+val [Number r] = run_exp e57
+val SOME 2 = intML.toInt r;
+val e58 = ``Letrec [
+  ("g","x",App (Opn Plus) (Var "x") (Lit (IntLit 1)));
+  ("f","y",App Opapp (Var "g") (Var "y"))]
+    (App Opapp (Var "f") (Lit (IntLit 1)))``
+val [Number r] = run_exp e58
+val SOME 2 = intML.toInt r;
