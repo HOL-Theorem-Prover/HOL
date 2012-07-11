@@ -169,7 +169,7 @@ bc_next s (s with<| pc := n|>))
 (! s n x xs s'.(
 bc_fetch s=SOME (JumpNil n))/\ (s.stack= Number x::xs)/\ (s'= (s with<| stack := xs|>))
 ==>
-bc_next s (if x= 0 then bump_pc s' else s' with<| pc := n|>))
+bc_next s (if x= & 0 then bump_pc s' else s' with<| pc := n|>))
 /\
 (! s n x xs.(
 bc_fetch s=SOME (Call n))/\ (s.stack= x::xs)

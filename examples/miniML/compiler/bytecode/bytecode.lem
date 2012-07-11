@@ -146,10 +146,10 @@ bc_next s (<|s with pc = n|>)
 and
 forall s n x xs s'.
 bc_fetch s = Some (JumpNil n)
-&& s.stack = x::xs
+&& s.stack = Number x::xs
 && s' = (<|s with stack = xs|>)
 ==>
-bc_next s (if x = Number (num_to_int 0) then bump_pc s' else <|s' with pc = n|>)
+bc_next s (if x = num_to_int 0 then bump_pc s' else <|s' with pc = n|>)
 and
 forall s n x xs.
 bc_fetch s = Some (Call n)
