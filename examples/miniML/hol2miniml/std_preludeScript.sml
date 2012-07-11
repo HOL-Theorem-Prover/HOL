@@ -166,7 +166,7 @@ val EqualityType_CHAR = prove(
   |> store_eq_thm;
 
 val Eval_Val_CHAR = prove(
-  ``n < 256 ==> Eval env (Val (Lit (IntLit (&n)))) (CHAR (CHR n))``,
+  ``n < 256 ==> Eval env (Lit (IntLit (&n))) (CHAR (CHR n))``,
   SIMP_TAC (srw_ss()) [Eval_Val_NUM,CHAR_def])
   |> store_eval_thm;
 
@@ -303,8 +303,10 @@ val tac =
   THEN SIMP_TAC (srw_ss()) [lookup_def,bind_def]
   THEN SIMP_TAC (srw_ss()) [Once Arrow_def,AppReturns_def]
   THEN SIMP_TAC (srw_ss()) [evaluate_closure_def,do_app_def,find_recfun_def,bind_def,build_rec_env_def]
+  THEN SIMP_TAC (srw_ss()) [Once evaluate'_cases]
   THEN SIMP_TAC (srw_ss()) [Once Arrow_def,AppReturns_def]
   THEN SIMP_TAC (srw_ss()) [evaluate_closure_def,do_app_def,bind_def]
+  THEN SIMP_TAC (srw_ss()) [Once evaluate'_cases]
   THEN SIMP_TAC std_ss [Once Eq_def] THEN SIMP_TAC std_ss [Once Eq_def]
   THEN REPEAT STRIP_TAC
   THEN SIMP_TAC (srw_ss()) [Once Arrow_def,AppReturns_def]
@@ -347,15 +349,16 @@ val tac =
   THEN ASM_SIMP_TAC (srw_ss()) [Once evaluate'_cases,lookup_def,Eval_def]
   THEN ASM_SIMP_TAC (srw_ss()) [Once evaluate'_cases,lookup_def,Eval_def]
   THEN ASM_SIMP_TAC (srw_ss()) [Once evaluate'_cases,lookup_def,Eval_def]
+  THEN ASM_SIMP_TAC (srw_ss()) [Once evaluate'_cases,lookup_def,Eval_def]
+  THEN SIMP_TAC (srw_ss()) [Once do_app_def,find_recfun_def]
+  THEN ASM_SIMP_TAC (srw_ss()) [Once evaluate'_cases,lookup_def,Eval_def]
+  THEN ASM_SIMP_TAC (srw_ss()) [Once evaluate'_cases,lookup_def,Eval_def]
+  THEN SIMP_TAC (srw_ss()) [Once do_app_def,find_recfun_def]
+  THEN ASM_SIMP_TAC (srw_ss()) [Once evaluate'_cases,lookup_def,Eval_def]
   THEN SIMP_TAC (srw_ss()) [Once do_app_def,find_recfun_def]
   THEN ASM_SIMP_TAC (srw_ss()) [Once evaluate'_cases,lookup_def,Eval_def]
   THEN ASM_SIMP_TAC (srw_ss()) [Once evaluate'_cases,lookup_def,Eval_def]
-  THEN SIMP_TAC (srw_ss()) [Once do_app_def,find_recfun_def]
-  THEN SIMP_TAC (srw_ss()) [Once do_app_def,find_recfun_def]
   THEN ASM_SIMP_TAC (srw_ss()) [Once evaluate'_cases,lookup_def,Eval_def]
-  THEN ASM_SIMP_TAC (srw_ss()) [Once evaluate'_cases,lookup_def,Eval_def]
-  THEN ASM_SIMP_TAC (srw_ss()) [Once evaluate'_cases,lookup_def,Eval_def]
-  THEN SIMP_TAC (srw_ss()) [bind_def,build_rec_env_def]
   THEN FULL_SIMP_TAC std_ss [evaluate_closure_INTRO]
   THEN FULL_SIMP_TAC std_ss [PULL_EXISTS,PULL_FORALL]
   THEN HO_MATCH_MP_TAC EXISTS_SWAP
@@ -363,6 +366,7 @@ val tac =
        (FULL_SIMP_TAC std_ss [Arrow_def,AppReturns_def] THEN METIS_TAC [])
   THEN Q.EXISTS_TAC `v_fx` THEN FULL_SIMP_TAC std_ss [GSYM Eval_def]
   THEN FULL_SIMP_TAC std_ss [AND_IMP_INTRO] THEN CONV_TAC (DEPTH_CONV ETA_CONV)
+  THEN SIMP_TAC (srw_ss()) [bind_def,build_rec_env_def]
   THEN Q.PAT_ASSUM `!x1 x2. bbb` MATCH_MP_TAC THEN ASM_SIMP_TAC std_ss []
   THEN REPEAT STRIP_TAC
   THEN Q.PAT_ASSUM `!m. bbb` (MP_TAC o Q.SPEC `SUC m`)

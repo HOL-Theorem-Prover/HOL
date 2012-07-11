@@ -1,13 +1,11 @@
-INCLUDES=../semantics\
-../metatheory
+INCLUDES=../semantics
 OPTIONS = QUIT_ON_FAILURE
 
 ifdef POLY
 HOLHEAP = miniml-heap
 EXTRA_CLEANS = $(HOLHEAP) $(HOLHEAP).o
 
-BARE_THYS = ../semantics/MiniMLTheory \
-            ../metatheory/determTheory
+BARE_THYS = ../semantics/MiniMLTheory
 DEPS = $(patsubst %,%.uo,$(BARE_THYS))
 
 $(HOLHEAP): $(DEPS)

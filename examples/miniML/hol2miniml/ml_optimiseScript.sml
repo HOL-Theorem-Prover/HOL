@@ -1,6 +1,6 @@
 open HolKernel Parse boolLib bossLib; val _ = new_theory "ml_optimise";
 
-open MiniMLTheory MiniMLTerminationTheory determTheory;
+open MiniMLTheory MiniMLTerminationTheory (* determTheory *);
 open arithmeticTheory listTheory combinTheory pairTheory;
 open integerTheory ml_translatorTheory;
 
@@ -28,19 +28,19 @@ infix \\ val op \\ = op THEN;
 
 (* first an optimisation combinator: BOTTOM_UP_OPT *)
 
-val MEM_exp8_size = prove(
-  ``!xs a. MEM a xs ==> exp_size a <= exp8_size xs``,
+val MEM_exp_size1 = prove(
+  ``!xs a. MEM a xs ==> exp_size a <= exp6_size xs``,
   Induct THEN FULL_SIMP_TAC (srw_ss()) [exp_size_def]
   THEN REPEAT STRIP_TAC THEN FULL_SIMP_TAC std_ss [] THEN RES_TAC THEN DECIDE_TAC);
 
-val MEM_exp6_size = prove(
-  ``!ys p x. MEM (p,x) ys ==> exp_size x < exp6_size ys``,
+val MEM_exp_size2 = prove(
+  ``!ys p x. MEM (p,x) ys ==> exp_size x < exp4_size ys``,
   Induct THEN FULL_SIMP_TAC (srw_ss()) [exp_size_def] THEN Cases
   THEN FULL_SIMP_TAC std_ss [exp_size_def]
   THEN REPEAT STRIP_TAC THEN FULL_SIMP_TAC std_ss [] THEN RES_TAC THEN DECIDE_TAC);
 
 val BOTTOM_UP_OPT_def = tDefine "BOTTOM_UP_OPT" `
-  (BOTTOM_UP_OPT f (Val v) = f (Val v)) /\
+  (BOTTOM_UP_OPT f (Lit v) = f (Lit v)) /\
   (BOTTOM_UP_OPT f (Raise ex) = f (Raise ex)) /\
   (BOTTOM_UP_OPT f (Var name) = f (Var name)) /\
   (BOTTOM_UP_OPT f (Con tag xs) = f (Con tag (MAP (BOTTOM_UP_OPT f) xs))) /\
@@ -52,9 +52,9 @@ val BOTTOM_UP_OPT_def = tDefine "BOTTOM_UP_OPT" `
   (BOTTOM_UP_OPT f (Let name x1 x2) = f (Let name (BOTTOM_UP_OPT f x1) (BOTTOM_UP_OPT f x2))) /\
   (BOTTOM_UP_OPT f (Letrec z1 z2) = f (Letrec z1 z2))`
  (WF_REL_TAC `measure (exp_size o SND)` THEN REPEAT STRIP_TAC
-  THEN IMP_RES_TAC MEM_exp6_size THEN IMP_RES_TAC MEM_exp8_size THEN DECIDE_TAC)
+  THEN IMP_RES_TAC MEM_exp_size1 THEN IMP_RES_TAC MEM_exp_size2 THEN DECIDE_TAC)
 
-val two_assums = METIS_PROVE [] ``(b ==> c) = (b ==> c /\ b)``
+val two_assums = METIS_PROVE [] ``(b ==> c) = (b ==> c /\ b)``;
 
 val isRval_def = Define `(isRval (Rval _) = T) /\ (isRval _ = F)`;
 
@@ -147,7 +147,10 @@ val abs2let_thm = prove(
   \\ ASM_SIMP_TAC std_ss [] \\ POP_ASSUM MP_TAC
   \\ SIMP_TAC (srw_ss()) [Once evaluate'_cases,do_app_def]
   \\ REPEAT STRIP_TAC \\ SIMP_TAC (srw_ss()) [Once evaluate'_cases]
-  \\ Q.EXISTS_TAC `v2` \\ FULL_SIMP_TAC std_ss []);
+  \\ Q.EXISTS_TAC `v2` \\ FULL_SIMP_TAC std_ss []
+  \\ Q.PAT_ASSUM `evaluate' env (Fun s e') (Rval v1)` MP_TAC
+  \\ SIMP_TAC (srw_ss()) [Once evaluate'_cases,do_app_def]
+  \\ REPEAT STRIP_TAC \\ FULL_SIMP_TAC (srw_ss()) []);
 
 
 (* rewrite optimisation: let x = y in x --> y *)
@@ -193,7 +196,7 @@ val dest_binop_thm = prove(
 
 val do_app_IMP = prove(
   ``(do_app env (Opn opn) v1 v2 = SOME (env1,e3)) ==>
-    ?i1 i2. (v1 = Lit (IntLit i1)) /\ (v2 = Lit (IntLit i2))``,
+    ?i1 i2. (v1 = Litv (IntLit i1)) /\ (v2 = Litv (IntLit i2))``,
   FULL_SIMP_TAC (srw_ss()) [do_app_def]
   \\ REPEAT (BasicProvers.FULL_CASE_TAC)
   \\ FULL_SIMP_TAC (srw_ss()) []);
@@ -203,6 +206,10 @@ val evaluate'_11_Rval = prove(
     evaluate' env exp (Rval res2) ==> (res1 = res2)``,
   REPEAT STRIP_TAC \\ IMP_RES_TAC big_exp_determ'
   \\ FULL_SIMP_TAC (srw_ss()) []);
+
+val evaluate_Lit = prove(
+  ``evaluate' env (Lit l) (Rval res) = (res = Litv l)``,
+  FULL_SIMP_TAC (srw_ss()) [Once evaluate'_cases]);
 
 val opt_sub_add_thm = prove(
   ``!env exp res. evaluate' env exp (Rval res) ==>
@@ -219,12 +226,12 @@ val opt_sub_add_thm = prove(
   \\ SIMP_TAC (srw_ss()) [Once evaluate'_cases]
   \\ SIMP_TAC (srw_ss()) [Once evaluate'_cases]
   \\ REPEAT STRIP_TAC
-  \\ `?i1 i2. (v1 = Lit (IntLit i1)) /\ (v2 = Lit (IntLit i2))` by METIS_TAC [do_app_IMP]
-  \\ `?i1' i2'. (v1' = Lit (IntLit i1')) /\ (v2' = Lit (IntLit i2'))` by METIS_TAC [do_app_IMP]
+  \\ `?i1 i2. (v1 = Litv (IntLit i1)) /\ (v2 = Litv (IntLit i2))` by METIS_TAC [do_app_IMP]
+  \\ `?i1' i2'. (v1' = Litv (IntLit i1')) /\ (v2' = Litv (IntLit i2'))` by METIS_TAC [do_app_IMP]
   \\ FULL_SIMP_TAC std_ss []
   \\ FULL_SIMP_TAC (srw_ss()) [do_app_def]
-  \\ REPEAT (Q.PAT_ASSUM `Val xx = yy` (ASSUME_TAC o GSYM))
-  \\ FULL_SIMP_TAC (srw_ss()) []
+  \\ REPEAT (Q.PAT_ASSUM `Lit xx = yy` (ASSUME_TAC o GSYM))
+  \\ FULL_SIMP_TAC (srw_ss()) [evaluate_Lit]
   \\ Q.PAT_ASSUM `env' = env''` (fn th => FULL_SIMP_TAC std_ss [th])
   \\ IMP_RES_TAC evaluate'_11_Rval \\ FULL_SIMP_TAC (srw_ss()) []
   \\ FULL_SIMP_TAC (srw_ss()) [opn_lookup_def,
@@ -251,14 +258,14 @@ val _ = Hol_datatype `
                       | IntGreater of int => string`;
 
 val get_fact_def = Define `
-  (get_fact (App (Opb Gt) (Var v) (Val (Lit (IntLit i)))) = IntLessEq (i+1) v) /\
-  (get_fact (App (Opb Geq) (Var v) (Val (Lit (IntLit i)))) = IntLessEq i v) /\
-  (get_fact (App (Opb Lt) (Val (Lit (IntLit i))) (Var v)) = IntLessEq (i+1) v) /\
-  (get_fact (App (Opb Leq) (Val (Lit (IntLit i))) (Var v)) = IntLessEq i v) /\
-  (get_fact (App (Opb Gt) (Val (Lit (IntLit i))) (Var v)) = IntGreater i v) /\
-  (get_fact (App (Opb Geq) (Val (Lit (IntLit i))) (Var v)) = IntGreater (i+1) v) /\
-  (get_fact (App (Opb Lt) (Var v) (Val (Lit (IntLit i)))) = IntGreater i v) /\
-  (get_fact (App (Opb Leq) (Var v) (Val (Lit (IntLit i)))) = IntGreater (i+1) v) /\
+  (get_fact (App (Opb Gt) (Var v) ((Lit (IntLit i)))) = IntLessEq (i+1) v) /\
+  (get_fact (App (Opb Geq) (Var v) ((Lit (IntLit i)))) = IntLessEq i v) /\
+  (get_fact (App (Opb Lt) ((Lit (IntLit i))) (Var v)) = IntLessEq (i+1) v) /\
+  (get_fact (App (Opb Leq) ((Lit (IntLit i))) (Var v)) = IntLessEq i v) /\
+  (get_fact (App (Opb Gt) ((Lit (IntLit i))) (Var v)) = IntGreater i v) /\
+  (get_fact (App (Opb Geq) ((Lit (IntLit i))) (Var v)) = IntGreater (i+1) v) /\
+  (get_fact (App (Opb Lt) (Var v) ((Lit (IntLit i)))) = IntGreater i v) /\
+  (get_fact (App (Opb Leq) (Var v) ((Lit (IntLit i)))) = IntGreater (i+1) v) /\
   (get_fact _ = IntUnkown)`;
 
 val int_negate_def = Define `
@@ -288,13 +295,13 @@ val decide_guard_def = Define `
 val int_cmp_sem_def = Define `
   (int_cmp_sem env res IntUnkown = T) /\
   (int_cmp_sem env res (IntLessEq i v) =
-     ?j. (lookup v env = SOME (Lit (IntLit j))) /\ (i <= j = res)) /\
+     ?j. (lookup v env = SOME (Litv (IntLit j))) /\ (i <= j = res)) /\
   (int_cmp_sem env res (IntGreater i v) =
-     ?j. (lookup v env = SOME (Lit (IntLit j))) /\ (j < i = res))`;
+     ?j. (lookup v env = SOME (Litv (IntLit j))) /\ (j < i = res))`;
 
 val get_fact_thm_T = prove(
   ``!x env.
-      evaluate' env x (Rval (Lit (Bool T))) ==>
+      evaluate' env x (Rval (Litv (Bool T))) ==>
       int_cmp_sem env T ((get_fact x))``,
   HO_MATCH_MP_TAC (fetch "-" "get_fact_ind")
   \\ FULL_SIMP_TAC std_ss [get_fact_def,int_negate_def,int_cmp_sem_def]
@@ -304,9 +311,9 @@ val get_fact_thm_T = prove(
   \\ REPEAT (BasicProvers.FULL_CASE_TAC)
   \\ FULL_SIMP_TAC (srw_ss()) [do_app_def] \\ TRY (Cases_on `l'`)
   \\ FULL_SIMP_TAC (srw_ss()) [do_app_def] \\ TRY (Cases_on `l`)
-  \\ FULL_SIMP_TAC (srw_ss()) [do_app_def]
-  \\ Q.PAT_ASSUM `Val xxx = e` (fn th => FULL_SIMP_TAC std_ss [GSYM th])
-  \\ FULL_SIMP_TAC (srw_ss()) [opb_lookup_def]
+  \\ FULL_SIMP_TAC (srw_ss()) [do_app_def,evaluate_Lit]
+  \\ Q.PAT_ASSUM `Lit xxx = e` (fn th => FULL_SIMP_TAC std_ss [GSYM th])
+  \\ FULL_SIMP_TAC (srw_ss()) [opb_lookup_def,evaluate_Lit]
   \\ REPEAT (POP_ASSUM MP_TAC)
   \\ ONCE_REWRITE_TAC [evaluate'_cases] \\ FULL_SIMP_TAC (srw_ss()) []
   \\ REPEAT STRIP_TAC \\ FULL_SIMP_TAC std_ss []
@@ -315,7 +322,7 @@ val get_fact_thm_T = prove(
 
 val get_fact_thm_F = prove(
   ``!x env.
-      evaluate' env x (Rval (Lit (Bool F))) ==>
+      evaluate' env x (Rval (Litv (Bool F))) ==>
       int_cmp_sem env T (int_negate (get_fact x))``,
   HO_MATCH_MP_TAC (fetch "-" "get_fact_ind")
   \\ FULL_SIMP_TAC std_ss [get_fact_def,int_negate_def,int_cmp_sem_def]
@@ -325,9 +332,9 @@ val get_fact_thm_F = prove(
   \\ REPEAT (BasicProvers.FULL_CASE_TAC)
   \\ FULL_SIMP_TAC (srw_ss()) [do_app_def] \\ TRY (Cases_on `l'`)
   \\ FULL_SIMP_TAC (srw_ss()) [do_app_def] \\ TRY (Cases_on `l`)
-  \\ FULL_SIMP_TAC (srw_ss()) [do_app_def]
-  \\ Q.PAT_ASSUM `Val xxx = e` (fn th => FULL_SIMP_TAC std_ss [GSYM th])
-  \\ FULL_SIMP_TAC (srw_ss()) [opb_lookup_def]
+  \\ FULL_SIMP_TAC (srw_ss()) [do_app_def,evaluate_Lit]
+  \\ Q.PAT_ASSUM `Lit xxx = e` (fn th => FULL_SIMP_TAC std_ss [GSYM th])
+  \\ FULL_SIMP_TAC (srw_ss()) [opb_lookup_def,evaluate_Lit]
   \\ REPEAT (POP_ASSUM MP_TAC)
   \\ ONCE_REWRITE_TAC [evaluate'_cases] \\ FULL_SIMP_TAC (srw_ss()) []
   \\ REPEAT STRIP_TAC \\ FULL_SIMP_TAC std_ss []
@@ -351,8 +358,8 @@ val int_cmp_keep_def = Define `
 
 val int_read_exp_def = Define `
   (int_read_exp (Var v) = SOME (v,0)) /\
-  (int_read_exp (App (Opn Plus) (Var v) (Val (Lit (IntLit i)))) = SOME (v,i)) /\
-  (int_read_exp (App (Opn Minus) (Var v) (Val (Lit (IntLit i)))) = SOME (v,0-i)) /\
+  (int_read_exp (App (Opn Plus) (Var v) ((Lit (IntLit i)))) = SOME (v,i)) /\
+  (int_read_exp (App (Opn Minus) (Var v) ((Lit (IntLit i)))) = SOME (v,0-i)) /\
   (int_read_exp _ = NONE)`;
 
 val int_cmp_apply_def = Define `
@@ -372,7 +379,7 @@ val int_cmp_let_def = Define `
     | (SOME (v,i)) => int_cmp_apply (name,v,i) b`;
 
 val INT_IF_OPT_def = tDefine "INT_IF_OPT" `
-  (INT_IF_OPT b (Val v) = Val v) /\
+  (INT_IF_OPT b (Lit v) = Lit v) /\
   (INT_IF_OPT b (Raise ex) = Raise ex) /\
   (INT_IF_OPT b (Var name) = Var name) /\
   (INT_IF_OPT b (Con tag xs) = Con tag (MAP (INT_IF_OPT b) xs)) /\
@@ -390,7 +397,7 @@ val INT_IF_OPT_def = tDefine "INT_IF_OPT" `
      (INT_IF_OPT (int_cmp_let name x1 b ++ FILTER (int_cmp_keep [name]) b) x2)) /\
   (INT_IF_OPT b (Letrec z1 z2) = Letrec z1 z2)`
  (WF_REL_TAC `measure (exp_size o SND)` THEN REPEAT STRIP_TAC
-  THEN IMP_RES_TAC MEM_exp6_size THEN IMP_RES_TAC MEM_exp8_size THEN DECIDE_TAC)
+  THEN IMP_RES_TAC MEM_exp_size1 THEN IMP_RES_TAC MEM_exp_size2 THEN DECIDE_TAC)
 
 val MAT_INT_IF_OPT_def = Define `
   MAT_INT_IF_OPT b ys =
@@ -478,8 +485,8 @@ val pmatch_lemma = prove(
 val int_read_exp_IMP = prove(
   ``!x2. (int_read_exp x2 = SOME (s,r)) ==>
          ((x2 = Var s) /\ (r = 0)) \/
-         (x2 = (App (Opn Plus) (Var s) (Val (Lit (IntLit r))))) \/
-         (x2 = (App (Opn Minus) (Var s) (Val (Lit (IntLit (0-r))))))``,
+         (x2 = (App (Opn Plus) (Var s) ((Lit (IntLit r))))) \/
+         (x2 = (App (Opn Minus) (Var s) ((Lit (IntLit (0-r))))))``,
   HO_MATCH_MP_TAC (fetch "-" "int_read_exp_ind")
   \\ FULL_SIMP_TAC (srw_ss()) [int_read_exp_def]
   \\ REPEAT STRIP_TAC
@@ -500,16 +507,16 @@ val int_cmp_let_thm = prove(
     \\ ASM_SIMP_TAC (srw_ss()) [Once evaluate'_cases]
     THEN1 (ONCE_REWRITE_TAC [EQ_SYM_EQ] \\ FULL_SIMP_TAC (srw_ss()) [])
     \\ REPEAT STRIP_TAC \\ IMP_RES_TAC do_app_IMP
-    \\ FULL_SIMP_TAC (srw_ss()) [do_app_def]
+    \\ FULL_SIMP_TAC (srw_ss()) [do_app_def,evaluate_Lit]
     \\ Q.PAT_ASSUM `evaluate' xx yy zz` MP_TAC
-    \\ Q.PAT_ASSUM `Val xx = yy` (ASSUME_TAC o GSYM)
+    \\ Q.PAT_ASSUM `Lit xx = yy` (ASSUME_TAC o GSYM)
     \\ ASM_SIMP_TAC (srw_ss()) []
     \\ Q.PAT_ASSUM `evaluate' xx yy zz` MP_TAC
     \\ ASM_SIMP_TAC (srw_ss()) [Once evaluate'_cases]
-    \\ FULL_SIMP_TAC (srw_ss()) [opn_lookup_def]
+    \\ FULL_SIMP_TAC (srw_ss()) [opn_lookup_def,evaluate_Lit]
     \\ REPEAT STRIP_TAC \\ FULL_SIMP_TAC std_ss []
     \\ Q.PAT_ASSUM `-r = i2` (ASSUME_TAC o GSYM)
-    \\ FULL_SIMP_TAC (srw_ss()) []));
+    \\ FULL_SIMP_TAC (srw_ss()) [evaluate_Lit]));
 
 val INT_IF_OPT_LEMMA = prove(
   ``(!x1 x2 x3. evaluate' x1 x2 x3 ==>
@@ -559,7 +566,7 @@ val INT_IF_OPT_LEMMA = prove(
         \\ MATCH_MP_TAC get_fact_thm_T \\ FULL_SIMP_TAC std_ss []))
     \\ IMP_RES_TAC decide_guard_thm
     \\ FULL_SIMP_TAC std_ss [do_if_def]
-    \\ Cases_on `v = Lit (Bool T)` \\ FULL_SIMP_TAC std_ss []
+    \\ Cases_on `v = Litv (Bool T)` \\ FULL_SIMP_TAC std_ss []
     THEN1 (Cases_on `x` \\ FULL_SIMP_TAC (srw_ss()) []
       \\ IMP_RES_TAC get_fact_thm_T
       \\ IMP_RES_TAC decide_guard_IMP
