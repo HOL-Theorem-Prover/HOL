@@ -404,3 +404,15 @@ val e53 = ``Let "x" (Con "Pair_type" [Lit (IntLit 1);Con "Pair_type" [Lit (IntLi
       [(Pcon "Pair_type" [Pvar "x";Pcon "Pair_type" [Pvar "y";Pvar "z"]], Var "y")])``
 val [Number r] = run_decs_exp([d0],e53)
 val SOME 2 = intML.toInt r;
+val e54 = ``Letrec [
+  ("x","x",App (Opn Plus) (Var "x") (Lit (IntLit 1)));
+  ("f","y",App Opapp (Var "x") (Var "y"))]
+    (App Opapp (Var "f") (Lit (IntLit 1)))``
+val [Number r] = run_exp e54
+val SOME 2 = intML.toInt r;
+val e55 = ``Letrec [
+  ("f","y",App Opapp (Var "x") (Var "y"));
+  ("x","x",App (Opn Plus) (Var "x") (Lit (IntLit 1)))]
+    (App Opapp (Var "f") (Lit (IntLit 1)))``
+val [Number r] = run_exp e55
+val SOME 2 = intML.toInt r;
