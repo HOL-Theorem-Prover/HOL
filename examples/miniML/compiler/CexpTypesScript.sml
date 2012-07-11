@@ -38,7 +38,6 @@ val _ = Parse.overload_on("s0_to_num",``STRLEN``)
 val b = ``:string``
 val a = ``:lit +
 num +
-string list # Cexp +
 string list # (string list # Cexp) list # string``
 val Cv0 = ``:(^b,^a) fmaptree``
 val _ = Parse.type_abbrev("Cv0",Cv0)
@@ -49,8 +48,7 @@ fmtree_Axiom
 case i of
   | (INL l) => (fm = FEMPTY)
   | (INR (INL n)) => ∃vs. (fm = FUN_FMAP (combin$C EL vs o s0_to_num) (IMAGE num_to_s0 (count (LENGTH vs))))
-  | (INR (INR (INL (xs,b)))) => T
-  | (INR (INR (INR (ns,defs,d)))) => T`)
+  | (INR (INR (ns,defs,d))) => T`)
 val Cvs_exist = new_type_definition("Cv",
 prove(
 ``∃v. Cvwf v``,
@@ -66,13 +64,9 @@ val CConv_def = Define`
   CConv n vs = toCv
     (FTNode (INR (INL n))
             (fromCv o_f FUN_FMAP (combin$C EL vs o s0_to_num) (IMAGE num_to_s0 (count (LENGTH vs)))))`
-val CClosure_def = Define`
-  CClosure env xs b = toCv
-    (FTNode (INR (INR (INL (xs,b))))
-            (fromCv o_f env))`
 val CRecClos_def = Define`
   CRecClos env ns defs d = toCv
-    (FTNode (INR (INR (INR (ns,defs,d))))
+    (FTNode (INR (INR (ns,defs,d)))
             (fromCv o_f env))`
 
 val num_to_s0_inj = store_thm(
@@ -88,8 +82,7 @@ val toCv_thm = store_thm(
   (toCv (FTNode i fm) = case i of
    | INL l => CLitv l
    | INR (INL n) => CConv n (MAP toCv (GENLIST (FAPPLY fm o num_to_s0) (CARD (FDOM fm))))
-   | INR (INR (INL (xs,b))) => CClosure (toCv o_f fm) xs b
-   | INR (INR (INR (ns,defs,n))) => CRecClos (toCv o_f fm) ns defs n)``,
+   | INR (INR (ns,defs,n)) => CRecClos (toCv o_f fm) ns defs n)``,
 rw[Cvwf_def] >>
 BasicProvers.EVERY_CASE_TAC >- (
   rw[CLitv_def] )
@@ -115,18 +108,7 @@ BasicProvers.EVERY_CASE_TAC >- (
   qexists_tac `num_to_s0 x` >>
   rw[FUN_FMAP_DEF] >>
   PROVE_TAC[])
->- (
-  rw[CClosure_def] >>
-  AP_TERM_TAC >>
-  AP_TERM_TAC >>
-  ONCE_REWRITE_TAC[GSYM fmap_EQ_THM] >>
-  rw[] >>
-  match_mp_tac EQ_SYM >>
-  rw[GSYM (CONJUNCT2 Cv_bij_thm)] >>
-  first_x_assum match_mp_tac >>
-  rw[FRANGE_DEF] >>
-  qexists_tac `x` >>
-  rw[] ) >>
+>>
 rw[CRecClos_def] >>
 AP_TERM_TAC >>
 AP_TERM_TAC >>
@@ -147,8 +129,7 @@ metis_tac[Cv_bij_thm])
 val Cvwf_thm = LIST_CONJ [
   SIMP_RULE (srw_ss())[](Q.SPEC`INL l`Cvwf_def),
   SIMP_RULE (srw_ss())[](Q.SPEC`INR (INL n)`Cvwf_def),
-  SIMP_RULE (srw_ss())[](Q.SPEC`INR (INR (INL (xs,b)))`Cvwf_def),
-  SIMP_RULE (srw_ss())[](Q.SPEC`INR (INR (INR (ns,defs,n)))`Cvwf_def)
+  SIMP_RULE (srw_ss())[](Q.SPEC`INR (INR (ns,defs,n))`Cvwf_def)
 ]
 
 val Cv_induction = store_thm(
@@ -156,7 +137,6 @@ val Cv_induction = store_thm(
 ``∀P0 P1 P2.
 (∀l. P0 (CLitv l)) ∧
 (∀vs. P2 vs ⇒ ∀n. P0 (CConv n vs)) ∧
-(∀env. P1 env ⇒ ∀xs b. P0 (CClosure env xs b)) ∧
 (∀env. P1 env ⇒ ∀ns defs d. P0 (CRecClos env ns defs d)) ∧
 (∀env. (∀v. v ∈ FRANGE env ⇒ P0 v) ⇒ P1 env) ∧
 (P2 []) ∧
@@ -259,7 +239,6 @@ val Cvwf_constructors = store_thm(
 "Cvwf_constructors",
 ``(Cvwf ^(rand(rhs(concl(SPEC_ALL CLitv_def))))) ∧
   (Cvwf ^(rand(rhs(concl(SPEC_ALL CConv_def))))) ∧
-  (Cvwf ^(rand(rhs(concl(SPEC_ALL CClosure_def))))) ∧
   (Cvwf ^(rand(rhs(concl(SPEC_ALL CRecClos_def)))))``,
 rw[Cvwf_def,FRANGE_DEF] >>
 rw[o_f_FAPPLY] >- (
@@ -280,9 +259,8 @@ val fromCv_thm = store_thm(
 "fromCv_thm",``
 (fromCv (CLitv l) = ^(rand(rhs(concl(SPEC_ALL CLitv_def))))) ∧
 (fromCv (CConv n vs) = ^(rand(rhs(concl(SPEC_ALL CConv_def))))) ∧
-(fromCv (CClosure env xs b) = ^(rand(rhs(concl(SPEC_ALL CClosure_def))))) ∧
 (fromCv (CRecClos env ns defs d) = ^(rand(rhs(concl(SPEC_ALL CRecClos_def)))))``,
-rw[CLitv_def, CConv_def, CClosure_def, CRecClos_def,
+rw[CLitv_def, CConv_def,  CRecClos_def,
    GSYM (CONJUNCT2 Cv_bij_thm)])
 
 val Cv_Axiom = store_thm(
@@ -291,7 +269,6 @@ val Cv_Axiom = store_thm(
 ∃fn0 fn1 fn2.
 (∀l. fn0 (CLitv l) = f0 l) ∧
 (∀m vs. fn0 (CConv m vs) = f1 m vs (fn1 vs)) ∧
-(∀env xs b. fn0 (CClosure env xs b) = f2 env xs b (fn2 env)) ∧
 (∀env ns defs d. fn0 (CRecClos env ns defs d) = f3 env ns defs d (fn2 env)) ∧
 (fn1 [] = f4) ∧
 (∀v vs. fn1 (v::vs) = f5 v vs (fn0 v) (fn1 vs)) ∧
@@ -315,10 +292,7 @@ qexists_tac `fmtreerec
       let vs =
         (MAP toCv (GENLIST (FAPPLY fm o num_to_s0) (CARD (FDOM fm))))
       in f1 m vs (fn vs (GENLIST (FAPPLY res o num_to_s0) (CARD (FDOM res))))
-    | (INR (INR (INL (xs,b)))) =>
-      let env = toCv o_f fm in
-      f2 env xs b (f6 env res)
-    | (INR (INR (INR (ns,defs,d)))) =>
+    | (INR (INR (ns,defs,d))) =>
       let env = toCv o_f fm in
       f3 env ns defs d (f6 env res))` >>
 rw[fmtreerec_thm,LET_THM] >>
@@ -357,9 +331,6 @@ val Cv_11 = store_thm(
   (CLitv l1 = CLitv l2) = (l1 = l2)) ∧
 (∀m1 vs1 m2 vs2.
   (CConv m1 vs1 = CConv m2 vs2) = ((m1 = m2) ∧ (vs1 = vs2))) ∧
-(∀env1 xs1 b1 env2 xs2 b2.
-  (CClosure env1 xs1 b1 = CClosure env2 xs2 b2) =
-  ((env1 = env2) ∧ (xs1 = xs2) ∧ (b1 = b2))) ∧
 (∀env1 ns1 defs1 n1 env2 ns2 defs2 n2.
   (CRecClos env1 ns1 defs1 n1 = CRecClos env2 ns2 defs2 n2) =
   ((env1 = env2) ∧ (ns1 = ns2) ∧ (defs1 = defs2) ∧ (n1 = n2)))``,
@@ -390,17 +361,6 @@ conj_tac >- (
     rw[] >> PROVE_TAC[] ) >>
   rw[FUN_FMAP_DEF] >>
   PROVE_TAC[Cv_bij_thm] ) >>
-conj_tac >- (
-  rw[CClosure_def] >>
-  reverse EQ_TAC >- rw[] >>
-  strip_tac >>
-  qmatch_assum_abbrev_tac `toCv r1 = toCv r2` >>
-  `Cvwf r1 ∧ Cvwf r2` by rw[Abbr`r1`,Abbr`r2`] >>
-  `r1 = r2` by PROVE_TAC[Cv_bij_thm] >>
-  unabbrev_all_tac >>
-  fsrw_tac[boolSimps.DNF_ss][GSYM fmap_EQ_THM] >>
-  pop_assum mp_tac >> rw[] >>
-  PROVE_TAC[Cv_bij_thm] ) >>
 rw[CRecClos_def] >>
 reverse EQ_TAC >- rw[] >>
 strip_tac >>
@@ -428,7 +388,6 @@ val Cv_nchotomy = store_thm(
 ``∀Cv.
   (∃l. Cv = CLitv l) ∨
   (∃m vs. Cv = CConv m vs) ∨
-  (∃env xs b. Cv = CClosure env xs b) ∨
   (∃env ns defs n. Cv = CRecClos env ns defs n)``,
 ho_match_mp_tac Cv_nice_ind >> rw[])
 
@@ -440,12 +399,9 @@ val _ = DefnBase.export_cong"Cv_case_cong"
 val Cv_distinct = store_thm(
 "Cv_distinct",
 ``(∀l m vs. CLitv l ≠ CConv m vs) ∧
-  (∀l env xs b. CLitv l ≠ CClosure env xs b) ∧
   (∀l env ns defs n. CLitv l ≠ CRecClos env ns defs n) ∧
-  (∀m vs env xs b. CConv m vs ≠ CClosure env xs b) ∧
-  (∀m vs env ns defs n. CConv m vs ≠ CRecClos env ns defs n) ∧
-  (∀env xs b envr ns defs n. CClosure env xs b ≠ CRecClos envr ns defs n)``,
-rw[CLitv_def,CConv_def,CClosure_def,CRecClos_def] >>
+  (∀m vs env ns defs n. CConv m vs ≠ CRecClos env ns defs n)``,
+rw[CLitv_def,CConv_def,CRecClos_def] >>
 qmatch_abbrev_tac `toCv r1 ≠ toCv r2` >>
 (qsuff_tac `Cvwf r1 ∧ Cvwf r2 ∧ r1 ≠ r2` >- PROVE_TAC[Cv_bij_thm]) >>
 unabbrev_all_tac >> fs[])

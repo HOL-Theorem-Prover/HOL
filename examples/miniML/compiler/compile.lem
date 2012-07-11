@@ -94,7 +94,6 @@ type Cexp =
 type Cv =
   | CLitv of lit
   | CConv of num * Cv list
-  | CClosure of (string,Cv) Pmap.map * string list * Cexp
   | CRecClos of (string,Cv) Pmap.map * string list * (string list * Cexp) list * string
 
 (* Semantics *)
@@ -103,8 +102,6 @@ let rec
 Cv_to_ov m (CLitv l) = OLit l
 and
 Cv_to_ov m (CConv cn vs) = OConv (Pmap.find cn m) (List.map (Cv_to_ov m) vs)
-and
-Cv_to_ov m (CClosure _ _ _) = OFn
 and
 Cv_to_ov m (CRecClos _ _ _ _) = OFn
 
@@ -167,8 +164,6 @@ let rec
 no_closures (CLitv _) = true
 and
 no_closures (CConv _ vs) = List.for_all no_closures vs
-and
-no_closures (CClosure _ _ _) = false
 and
 no_closures (CRecClos _ _ _ _) = false
 
@@ -343,13 +338,14 @@ Cevaluate env e (Rerr err)
 Cevaluate env (CLet (n::ns) (e::es) b) (Rerr err)
 
 and
-forall env ns defs b r.
+forall env ns defs a b r.
 List.length ns = List.length defs &&
 all_distinct ns &&
+not (a IN free_vars b) &&
 Cevaluate
   (fold_left2
-    (fun env' n (ns,b) ->
-      Pmap.add n (CClosure env ns b) env')
+    (fun env' n (xs,b) ->
+      Pmap.add n (CRecClos env [a] [(xs,b)] a) env')
     env ns defs)
   b r
 ==>
@@ -369,26 +365,10 @@ Cevaluate
 Cevaluate env (CLetfun true ns defs b) r
 
 and
-forall env ns b.
-true
+forall env xs a b.
+not (a IN free_vars b)
 ==>
-Cevaluate env (CFun ns b) (Rval (CClosure env ns b))
-
-and
-forall env e es env' ns b vs r.
-Cevaluate env e (Rval (CClosure env' ns b)) &&
-Cevaluate_list env es (Rval vs) &&
-List.length ns = List.length vs &&
-all_distinct ns &&
-Cevaluate (extend_env env' ns vs) b r
-==>
-Cevaluate env (CCall e es) r
-and
-forall env e es env' ns b err.
-Cevaluate env e (Rval (CClosure env' ns b)) &&
-Cevaluate_list env es (Rerr err)
-==>
-Cevaluate env (CCall e es) (Rerr err)
+Cevaluate env (CFun xs b) (Rval (CRecClos env [a] [(xs,b)] a))
 
 and
 forall env e es env' ns' defs n i ns b vs r.
@@ -475,12 +455,6 @@ every2 syneq vs1 vs2
 ==>
 syneq (CConv cn vs1) (CConv cn vs2)
 and
-forall env1 env2 xs b.
-(forall v. v IN (free_vars b \ Set.from_list xs)
-  --> (optrel syneq) (flookup env1 v) (flookup env2 v))
-==>
-syneq (CClosure env1 xs b) (CClosure env2 xs b)
-and
 forall env1 env2 ns defs d.
 List.for_all
   (fun (xs,b) ->
@@ -534,12 +508,6 @@ Pmap.mem cn cm &&
 every2 (v_Cv G cm) vs Cvs
 ==>
 v_Cv G cm (Conv cn vs) (CConv (Pmap.find cn cm) Cvs)
-and
-forall G cm env vn e Cenv n Ce.
-(forall v Cv. G cm v Cv -->
-  exp_Cexp G cm (bind vn v env) (Pmap.add n Cv Cenv) e Ce)
-==>
-v_Cv G cm (Closure env vn e) (CClosure Cenv [n] Ce)
 
 (*
 indreln
@@ -799,7 +767,8 @@ and
 v_to_Cv m (Closure env vn e) =
   let Cenv = alist_to_fmap (env_to_Cenv m env) in
   let Ce = exp_to_Cexp m e in
-  CClosure Cenv [vn] Ce
+  let a = fresh_var (free_vars Ce) in
+  CRecClos Cenv [a] [([vn],Ce)] a
 and
 v_to_Cv m (Recclosure env defs vn) =
   let Cenv = alist_to_fmap (env_to_Cenv m env) in
@@ -1315,17 +1284,6 @@ forall il c n vs bvs.
 every2 (bceqv il c) vs bvs
 ==>
 bceqv il c (CConv n vs) (Block n bvs)
-and
-forall il c env xs e f cenv ec bvs lab.
-(cenv,ec) = body_env [] xs 0 (free_vars e) &&
-List.length bvs = List.length ec &&
-(forall i. i < List.length ec -->
-  exist fv. List.nth ec i = CEEnv fv &&
-            bceqv il c (Pmap.find fv env) (List.nth bvs i)) &&
-bc_code_prefix il c f (List.rev (compile (body_cs il cenv xs lab) e).code)
-==>
-bceqv il c (CClosure env xs e)
-  (Block 0 [CodePtr f; if bvs = [] then Number i0 else Block 0 bvs])
 and
 forall il c env ns defs n j xs e cenv ec f bvs lab.
 find_index n ns 0 = Some j &&

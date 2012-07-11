@@ -84,8 +84,6 @@ val _ = Define `
 /\
 (Cv_to_ov m (CConv cn vs) = OConv (FAPPLY  m  cn) (MAP (Cv_to_ov m) vs))
 /\
-(Cv_to_ov m (CClosure _ _ _) = OFn)
-/\
 (Cv_to_ov m (CRecClos _ _ _ _) = OFn)`;
 
 val _ = Defn.save_defn Cv_to_ov_defn;
@@ -156,8 +154,6 @@ val _ = Defn.save_defn free_vars_defn;
 (no_closures (CLitv _) = T)
 /\
 (no_closures (CConv _ vs) = EVERY no_closures vs)
-/\
-(no_closures (CClosure _ _ _) = F)
 /\
 (no_closures (CRecClos _ _ _ _) = F)`;
 
@@ -353,12 +349,12 @@ Cevaluate env e (Rerr err)
 Cevaluate env (CLet (n::ns) (e::es) b) (Rerr err))
 
 /\
-(! env ns defs b r.
-(LENGTH ns= LENGTH defs)/\ALL_DISTINCT ns/\
+(! env ns defs a b r.
+(LENGTH ns= LENGTH defs)/\ALL_DISTINCT ns/\~  (a IN free_vars b)/\
 Cevaluate
   (FOLDL2 
-    (\ env' n (ns,b) .
-      FUPDATE  env' ( n, (CClosure env ns b))) 
+    (\ env' n (xs,b) .
+      FUPDATE  env' ( n, (CRecClos env [a] [(xs,b)] a))) 
     env  ns  defs)
   b r
 ==>
@@ -377,25 +373,9 @@ Cevaluate
 Cevaluate env (CLetfun T ns defs b) r)
 
 /\
-(! env ns b.
-T
+(! env xs a b.~  (a IN free_vars b)
 ==>
-Cevaluate env (CFun ns b) (Rval (CClosure env ns b)))
-
-/\
-(! env e es env' ns b vs r.
-Cevaluate env e (Rval (CClosure env' ns b))/\
-Cevaluate_list env es (Rval vs)/\
-(LENGTH ns= LENGTH vs)/\ALL_DISTINCT ns/\
-Cevaluate (extend_env env' ns vs) b r
-==>
-Cevaluate env (CCall e es) r)
-/\
-(! env e es env' ns b err.
-Cevaluate env e (Rval (CClosure env' ns b))/\
-Cevaluate_list env es (Rerr err)
-==>
-Cevaluate env (CCall e es) (Rerr err))
+Cevaluate env (CFun xs b) (Rval (CRecClos env [a] [(xs,b)] a)))
 
 /\
 (! env e es env' ns' defs n i ns b vs r.
@@ -479,11 +459,6 @@ syneq (CLitv l) (CLitv l))
 ==>
 syneq (CConv cn vs1) (CConv cn vs2))
 /\
-(! env1 env2 xs b.
-(! v. v IN (free_vars b DIFF LIST_TO_SET xs)==> (OPTREL syneq) (FLOOKUP env1 v) (FLOOKUP env2 v))
-==>
-syneq (CClosure env1 xs b) (CClosure env2 xs b))
-/\
 (! env1 env2 ns defs d.
 EVERY
   (\ (xs,b) .
@@ -533,13 +508,7 @@ v_Cv G cm (Litv l) (CLitv l))
 (! G cm cn vs Cvs.
  cn IN FDOM  cm/\EVERY2 (v_Cv G cm) vs Cvs
 ==>
-v_Cv G cm (Conv cn vs) (CConv (FAPPLY  cm  cn) Cvs))
-/\
-(! G cm env vn e Cenv n Ce.
-(! v Cv. G cm v Cv==>
-  exp_Cexp G cm (bind vn v env) (FUPDATE  Cenv ( n, Cv)) e Ce)
-==>
-v_Cv G cm (Closure env vn e) (CClosure Cenv [n] Ce))`;
+v_Cv G cm (Conv cn vs) (CConv (FAPPLY  cm  cn) Cvs))`;
 
 (*
 indreln
@@ -821,7 +790,8 @@ val _ = Defn.save_defn exp_to_Cexp_defn;
 (v_to_Cv m (Closure env vn e) =
   let Cenv =alist_to_fmap (env_to_Cenv m env) in
   let Ce = exp_to_Cexp m e in
-  CClosure Cenv [vn] Ce)
+  let a = fresh_var (free_vars Ce) in
+  CRecClos Cenv [a] [([vn],Ce)] a)
 /\
 (v_to_Cv m (Recclosure env defs vn) =
   let Cenv =alist_to_fmap (env_to_Cenv m env) in
@@ -1394,17 +1364,6 @@ bceqv il c (CLitv (Bool b)) (Number (bool_to_int b)))
 (! il c n vs bvs.EVERY2 (bceqv il c) vs bvs
 ==>
 bceqv il c (CConv n vs) (Block n bvs))
-/\
-(! il c env xs e f cenv ec bvs lab.
-((cenv,ec)= body_env [] xs 0 (free_vars e))/\
-(LENGTH bvs= LENGTH ec)/\
-(! i. i< LENGTH ec==>
-  (? fv. (EL  i  ec= CEEnv fv)/\
-            bceqv il c (FAPPLY  env  fv) (EL  i  bvs)))/\
-bc_code_prefix il c f (REVERSE (compile (body_cs il cenv xs lab) e).code)
-==>
-bceqv il c (CClosure env xs e)
-  (Block 0 [CodePtr f; if bvs= [] then Number i0 else Block 0 bvs]))
 /\
 (! il c env ns defs n j xs e cenv ec f bvs lab.(
 find_index n ns 0=SOME j)/\
