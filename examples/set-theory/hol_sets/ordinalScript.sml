@@ -1494,6 +1494,7 @@ val ordEXP_lt_IFF = store_thm(
   simp[EQ_IMP_THM, ordEXP_lt_MONO_R] >> rpt strip_tac >>
   spose_not_then strip_assume_tac >> fs[ordle_lteq]
   >- metis_tac[ordlt_TRANS, ordlt_REFL, ordEXP_lt_MONO_R] >> fs[]);
+val _ = export_rewrites ["ordEXP_lt_IFF"]
 
 val ordEXP_le_MONO_R = store_thm(
   "ordEXP_le_MONO_R",
@@ -1509,6 +1510,80 @@ val ordEXP_continuous = store_thm(
        0 < a ∧ s ≼ univ(:'a inf) ∧ s ≠ ∅ ⇒
        a ** sup s = sup (IMAGE ($** a) s)``,
   simp[generic_continuity, ordEXP_le_MONO_R]);
+
+val fixpoints_exist = store_thm(
+  "fixpoints_exist",
+  ``(!s:'a ordinal set. s ≠ ∅ ∧ s ≼ univ(:'a inf) ⇒
+                        f (sup s) = sup (IMAGE f s)) ∧
+    (∀x. x ≤ f x) ⇒
+    ∀a. ∃b. a ≤ b ∧ f b = b``,
+  rpt strip_tac >> qexists_tac `sup { FUNPOW f n a | n | T }` >>
+  `{FUNPOW f n a | n | T} ≼ univ(:'a inf)`
+    by (simp[cardleq_def] >>
+        qsuff_tac `∃g. SURJ g univ(:'a inf) {FUNPOW f n a | n | T}`
+        >- metis_tac[SURJ_INJ_INV] >>
+        qexists_tac `λx. case x of INL n => FUNPOW f n a
+                                 | INR n => a` >>
+        dsimp[SURJ_DEF] >> conj_tac
+        >- (simp[sumTheory.FORALL_SUM] >>
+            metis_tac [arithmeticTheory.FUNPOW]) >>
+        qx_gen_tac `n` >> qexists_tac `INL n` >> simp[]) >>
+  conj_tac
+  >- (match_mp_tac suple_thm >> simp[] >> qexists_tac `0` >> simp[]) >>
+  `{ FUNPOW f n a | n | T } ≠ ∅` by simp[EXTENSION] >>
+  simp[] >> match_mp_tac ordle_ANTISYM >>
+  dsimp[sup_thm, impI, IMAGE_cardleq_rwt] >> ntac 2 strip_tac
+  >- (match_mp_tac suple_thm >> simp[] >>
+      metis_tac [arithmeticTheory.FUNPOW_SUC]) >>
+  Cases_on `n` >> simp[]
+  >- (qsuff_tac `f a ≤ sup (IMAGE f {FUNPOW f n a | n | T})`
+      >- metis_tac [ordle_TRANS] >>
+      match_mp_tac suple_thm >> dsimp[IMAGE_cardleq_rwt] >>
+      qexists_tac `0` >> simp[]) >>
+  match_mp_tac suple_thm >> dsimp[IMAGE_cardleq_rwt] >>
+  simp[arithmeticTheory.FUNPOW_SUC] >> metis_tac[])
+
+val x_le_ordEXP_x = store_thm(
+  "x_le_ordEXP_x",
+  ``∀a x. 1 < a ⇒ x ≤ a ** x``,
+  gen_tac >> Cases_on `1 < a` >> simp[] >>
+  ho_match_mp_tac simple_ord_induction >> simp[] >> conj_tac >>
+  qx_gen_tac `x` >> strip_tac
+  >- (qsuff_tac `x < a * a ** x`
+      >- (simp[ordlt_SUC_DISCRETE] >> simp[ordle_lteq] >>
+          metis_tac[ordlt_REFL]) >>
+      qsuff_tac `a ** x < a * a ** x`
+      >- metis_tac[ordle_lteq, ordlt_TRANS] >>
+      SIMP_TAC bool_ss [SimpL ``ordlt``, Once (GSYM ordMULT_1L)] >>
+      simp[ZERO_lt_ordEXP] >> DISJ1_TAC >> match_mp_tac ordlt_TRANS >>
+      qexists_tac `1` >> simp[]) >>
+  `∀b. b < x ⇒ b⁺ < x` by metis_tac [islimit_SUC_lt] >>
+  fs[omax_NONE] >> strip_tac >>
+  `∃b. b < x ∧ sup (IMAGE ($** a) (preds x)) < b` by metis_tac[] >>
+  `∀d. d < x ⇒ a ** d ≤ b` by metis_tac[predimage_suplt_ELIM] >>
+  `a ** b < a ** b⁺` by simp[] >>
+  `a ** b⁺ ≤ b` by metis_tac[] >>
+  `b ≤ a ** b` by metis_tac[] >>
+  metis_tac[ordlt_TRANS, ordle_lteq, ordlt_REFL])
+
+val epsilon0_def = Define`
+  epsilon0 = oleast x. ω ** x = x
+`
+
+val _ = overload_on("ε₀", ``epsilon0``)
+
+val epsilon0_fixpoint = store_thm(
+  "epsilon0_fixpoint",
+  ``ω ** ε₀ = ε₀``,
+  simp[epsilon0_def] >> DEEP_INTRO_TAC oleast_intro >> simp[] >>
+  metis_tac [fromNat_lt_omega, ordEXP_continuous, x_le_ordEXP_x,
+             fixpoints_exist]);
+
+val epsilon0_least_fixpoint = store_thm(
+  "epsilon0_least_fixpoint",
+  ``∀a. a < ε₀ ⇒ ω ** a ≠ a``,
+  gen_tac >> simp[epsilon0_def] >> DEEP_INTRO_TAC oleast_intro >>
+  metis_tac [epsilon0_fixpoint]);
 
 (*val cantor_normal_form = store_thm(
   "cantor_normal_form",
