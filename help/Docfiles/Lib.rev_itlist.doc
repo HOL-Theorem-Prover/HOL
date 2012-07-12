@@ -9,7 +9,7 @@ Applies a binary function between adjacent elements of the reverse of a list.
 list.
 
 \DESCRIBE
-{rev_itlist f [x1,...,xn] b} returns {f xn ( ... (f x2 (f x1 y))...)}.
+{rev_itlist f [x1,...,xn] b} returns {f xn ( ... (f x2 (f x1 b))...)}.
 It returns {b} if the second argument is an empty list.
 
 \FAILURE
