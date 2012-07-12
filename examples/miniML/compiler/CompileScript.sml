@@ -1045,9 +1045,9 @@ val _ = Hol_datatype `
 
  val emit_ec_defn = Hol_defn "emit_ec" `
 
-(emit_ec (CEEnv fv) s = incsz (compile_varref s (FAPPLY  s.env  fv)))
+(emit_ec z (CEEnv fv) s = incsz (compile_varref s (FAPPLY  s.env  fv)))
 /\
-(emit_ec (CERef j) s = incsz (emit s [Stack (Load (s.sz - j))]))`;
+(emit_ec z (CERef j) s = incsz (emit s [Stack (Load (s.sz - z - j))]))`;
 
 val _ = Defn.save_defn emit_ec_defn;
 
@@ -1299,6 +1299,7 @@ val _ = Defn.save_defn bind_fv_defn;
    *   environment and build the closure
    * - update refptrs, etc.
    *)
+  let sz0 = s.sz in
   let s = FOLDL (\ s _n . incsz (emit s [Stack (PushInt i0); Ref])) s ns in
   let s = emit s [Stack (PushInt i0)] in
   let (s,k,labs,ecs) = FOLDL
@@ -1327,7 +1328,7 @@ val _ = Defn.save_defn bind_fv_defn;
   let (s,k) = FOLDL
     (\ (s,k) (j,ec) .
       let s = incsz (emit s [Stack (Load (nk - k))]) in
-      let s = FOLDR  emit_ec  s  ec in
+      let s = FOLDR  (emit_ec sz0)  s  ec in
       let s = emit s [Stack (if j= 0 then PushInt i0 else Cons 0 j)] in
       let s = emit s [Stack (Cons 0 2)] in
       let s = decsz (emit s [Stack (Store (nk - k))]) in

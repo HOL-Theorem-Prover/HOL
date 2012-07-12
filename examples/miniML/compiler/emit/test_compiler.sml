@@ -433,3 +433,10 @@ val e58 = ``Letrec [
     (App Opapp (Var "f") (Lit (IntLit 1)))``
 val [Number r] = run_exp e58
 val SOME 2 = intML.toInt r;
+val e59 = ``Let "x" (Lit (IntLit 2))
+  (Letrec [
+    ("x","x",App (Opn Plus) (Var "x") (Lit (IntLit 1)));
+    ("f","y",App Opapp (Var "x") (Var "y"))]
+      (App Opapp (Var "f") (Lit (IntLit 1))))``
+val [Number r] = run_exp e59
+val SOME 2 = intML.toInt r;
