@@ -1,7 +1,7 @@
 open HolKernel Parse boolLib;
 val _ = new_theory "sequence";
 
-open bossLib arithmeticTheory extra_numTheory combinTheory formalizeUseful;
+open bossLib arithmeticTheory extra_numTheory combinTheory HurdUseful;
 
 infixr 0 ++ || ORELSEC;
 infix 1 >>;
@@ -10,8 +10,6 @@ nonfix THEN ORELSE;
 val op++ = op THEN;
 val op|| = op ORELSE;
 val op>> = op THEN1;
-val Suff = PARSE_TAC SUFF_TAC;
-val Know = PARSE_TAC KNOW_TAC;
 
 (* ------------------------------------------------------------------------- *)
 (* Definitions.                                                              *)

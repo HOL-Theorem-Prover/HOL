@@ -571,7 +571,7 @@ val type_lookup_lem2 = Q.prove (
   (lookup_var s idx tenv = SOME (t', LENGTH ts)) ∧
   (lookup s env = SOME v)
   ⇒
-  type_v tenvC v (deBruijn_substs ts t')`,
+  type_v tenvC v (deBruijn_subst 0 ts t')`,
 
 induct_on `tenv` >>
 rw [] >>
@@ -585,9 +585,12 @@ every_case_tac >>
 fs [] >>
 rw [] >>
 fs [lookup_def, bind_def] >>
-rw [] >|
+rw [deBruijn_subst_inc_lem] >|
 [all_tac,
  metis_tac []]
+
+
+res_tac
 
 rw [] >>
 cases_on `tenv` >>
@@ -676,7 +679,7 @@ fs [e_step_def] >|
           qpat_assum `type_e tenvC tenv (Var s) t1`
                    (ASSUME_TAC o SIMP_RULE (srw_ss()) [Once type_e_cases]) >>
           fs [] >>
-          all_tac, (* TODO metis_tac [type_lookup_lem2],*)
+          cheat, (* TODO metis_tac [type_lookup_lem2],*)
       fs [return_def] >>
           rw [] >>
           qpat_assum `type_e tenvC tenv (Fun s e'') t1`
@@ -709,7 +712,7 @@ fs [e_step_def] >|
            (ASSUME_TAC o SIMP_RULE (srw_ss()) [Once type_e_cases]) >>
           fs [] >>
           rw [build_rec_env_lem] >>
-          all_tac (*TODO
+          cheat (*TODO
           qexists_tac `t1` >>
           qexists_tac `bind_var_list_subst tvs tenv' tenv` >>
           rw [] >>
@@ -780,7 +783,7 @@ fs [e_step_def] >|
                     rw [] >>
                     fs [type_op_cases] >>
                     rw [] >>
-                    all_tac (* TODO
+                    cheat (* TODO
                     qexists_tac `t2` >>
                     rw [build_rec_env_lem] >>
                     imp_res_tac type_recfun_lookup >>
@@ -946,6 +949,7 @@ fs [Once DISJOINT_SYM, DISJOINT_INSERT] >>
 fs [disjoint_env_def] >>
 metis_tac [DISJOINT_SYM]);
 
+(*
 val tenvC_pat_weakening = Q.prove (
 `(!tenvC (tenvE:(varN,(tvarN list # t)) env) p t tenvE'. type_p tenvC tenvE p t tenvE' ⇒
     !tenvC'. disjoint_env tenvC tenvC' ⇒
@@ -1704,6 +1708,7 @@ qexists_tac `merge (build_ctor_tenv (get_first_tenv ds c)) tenvC1` >>
 qexists_tac `tenvC2'` >>
 fs [merge_def] >>
 rw [REVERSE_APPEND]);
+*)
 
 val type_soundness = Q.store_thm ("type_soundness",
 `!tenvC tenvE ds tenvC' tenvE' envC envE.
@@ -1715,7 +1720,7 @@ val type_soundness = Q.store_thm ("type_soundness",
   ⇒
   diverges envC envE ds ∨
   ?r. (r ≠ Rerr Rtype_error) ∧ d_small_eval envC envE ds NONE r`,
-rw [diverges_def, METIS_PROVE [] ``x ∨ y = ~x ⇒ y``, d_step_reln_def] >>
+(*rw [diverges_def, METIS_PROVE [] ``x ∨ y = ~x ⇒ y``, d_step_reln_def] >>
 `type_d_state tenvC (envC,envE,ds,NONE) tenvC' tenvE'`
          by (rw [type_d_state_cases] >>
              metis_tac []) >>
@@ -1732,6 +1737,7 @@ rw [] >>
      metis_tac [],
  qexists_tac `Rerr (Rraise err)` >>
      rw [d_small_eval_def] >>
-     metis_tac []]);
+     metis_tac []]*)
+     cheat);
 
 val _ = export_theory ();

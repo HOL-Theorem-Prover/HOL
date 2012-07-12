@@ -15,7 +15,7 @@ quietdec := true;
 open HolKernel Parse boolLib;
 open bossLib arithmeticTheory dividesTheory gcdTheory
      res_quanTheory pred_setTheory subtypeTheory
-     res_quanTools subtypeTools ho_proverTools numContext formalizeUseful
+     res_quanTools subtypeTools ho_proverTools numContext HurdUseful
      extra_numTheory ho_basicTools;
 
 (* interactive mode
@@ -43,8 +43,6 @@ val (R_TAC, AR_TAC, R_TAC', AR_TAC') = SIMPLIFY_TACS num_c;
 
 val Strip = S_TAC;
 val Simplify = R_TAC;
-val Suff = PARSE_TAC SUFF_TAC;
-val Know = PARSE_TAC KNOW_TAC;
 
 (* ------------------------------------------------------------------------- *)
 (* Definitions.                                                              *)

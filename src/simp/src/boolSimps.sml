@@ -41,6 +41,7 @@ val ETA_ss = SSFRAG {name = SOME "ETA",
  val literal_cong = prove(
    ``(v:'a = v') ==> (literal_case (f:'a -> 'b) v = literal_case f (I v'))``,
    DISCH_THEN SUBST_ALL_TAC THEN REWRITE_TAC [literal_case_THM, combinTheory.I_THM])
+
 val literal_I_thm = prove(
   ``literal_case (f : 'a -> 'b) (I x) = f x``,
   REWRITE_TAC [combinTheory.I_THM, literal_case_THM]);

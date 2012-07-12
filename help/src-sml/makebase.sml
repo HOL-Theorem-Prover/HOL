@@ -169,17 +169,23 @@ fun docdir_to_entries path (endpath, entries) =
   end
 end;
 
+fun okay_sig s =
+   String.isSuffix ".sig" s
+   andalso not (Option.isSome (List.find (fn e => e = s) Keepers.exclude))
+
 fun dirToBase (sigdir, docdirs, filename) =
-    let val doc_entryl = List.foldl (docdir_to_entries HOLpath) [] docdirs
-        val res = List.foldl (Parsspec.processfile stoplist sigdir)
-                             doc_entryl Keepers.keepers
-        val _ = print ("\nProcessed " ^ Int.toString (length res)
-                       ^ " entries in total.\n");
-        val _ = print ("Building database...\n");
-        val db = mkbase res
-        val _ = print ("Writing database to file " ^ filename ^ "\n");
+    let
+       val doc_entryl = List.foldl (docdir_to_entries HOLpath) [] docdirs
+       val ok_sigs = List.filter okay_sig (Htmlsigs.listDir sigdir)
+       val res = List.foldl (Parsspec.processfile stoplist sigdir)
+                             doc_entryl ok_sigs
+       val _ = print ("\nProcessed " ^ Int.toString (length res)
+                      ^ " entries in total.\n");
+       val _ = print ("Building database...\n");
+       val db = mkbase res
+       val _ = print ("Writing database to file " ^ filename ^ "\n");
     in
-        Database.writebase(filename, db)
+       Database.writebase(filename, db)
     end
     handle exn as OS.SysErr (str, _) => (print(str ^ "\n\n"); raise exn)
 

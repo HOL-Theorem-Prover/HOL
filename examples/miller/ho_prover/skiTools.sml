@@ -7,14 +7,14 @@ open HolKernel Parse boolLib;
 (* interactive mode
 val () = loadPath := union ["..", "../finished"] (!loadPath);
 val () = app load
-  ["ho_proverUseful",
+  ["HurdUseful",
    "ho_basicTools",
    "unifyTools",
    "skiTheory"];
 val () = show_assums := true;
 *)
 
-open ho_proverUseful ho_basicTools unifyTools skiTheory;
+open HurdUseful ho_basicTools unifyTools skiTheory;
 
 infixr 0 oo ## ++ << || THENC ORELSEC THENR ORELSER;
 infix 1 >> |->;

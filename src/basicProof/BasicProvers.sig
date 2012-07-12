@@ -49,7 +49,7 @@ sig
       | Bound of term list * term
       | Alien of term;
 
-  val tmkind_tyof       : tmkind -> hol_type
+  val dest_tmkind       : tmkind -> term
   val prim_find_subterm : term list -> term -> goal -> tmkind
   val find_subterm      : term quotation -> goal -> tmkind
   val primInduct        : tmkind -> tactic -> tactic

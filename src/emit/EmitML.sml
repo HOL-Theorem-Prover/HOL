@@ -1519,9 +1519,8 @@ fun emit_xML (Ocaml,sigSuffix,structSuffix) p (s,elems_0) =
     pp_struct structPPstrm (s,elems,map (fst o dest_const o snd) consts);
     TextIO.closeOut sigStrm;
     TextIO.closeOut structStrm;
-    HOL_MESG ("emitML: wrote files "^s^ sigSuffix ^" and \n\
-     \                                   "^s^ structSuffix^" \n\
-              \ in directory "^path);
+    HOL_MESG ("emitML: " ^ s ^ "{" ^ sigSuffix ^ "," ^ structSuffix ^ "}\n\
+              \ written to directory "^path);
     emit_adjoin_call s (consts,pcs)
    )
    handle e => (List.app TextIO.closeOut [sigStrm, structStrm];

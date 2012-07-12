@@ -54,7 +54,7 @@ local
   val imp_def = METIS_PROVE[]``$==> = (\p q. p /\ q = p)``;
   val and_def = prove(``$/\ = (\p q. (\f:bool->bool->bool. f p q) = (\f. f T T))``,
     SRW_TAC [][FUN_EQ_THM,EQ_IMP_THM]);
-  val exists_def = prove(``$? = (λP. ∀q. (∀x. P x ⇒ q) ⇒ q)``,
+  val exists_def = prove(``$? = (\P. !q. (!x. P x ==> q) ==> q)``,
     SRW_TAC [][FUN_EQ_THM] THEN
     SUBST_TAC [GSYM (ISPEC ``P:'a->bool`` ETA_THM)] THEN
     METIS_TAC [])

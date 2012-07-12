@@ -1,5 +1,5 @@
 open HolKernel Parse boolLib bossLib arithmeticTheory numTheory sequenceTheory
-     sequenceTools formalizeUseful combinTheory;
+     sequenceTools HurdUseful combinTheory;
 
 val _ = new_theory "prob_pseudo";
 

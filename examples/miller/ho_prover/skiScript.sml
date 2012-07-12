@@ -20,7 +20,7 @@ val () = app load
 val () = show_assums := true;
 *)
 
-open bossLib combinTheory ho_proverUseful;
+open bossLib combinTheory HurdUseful;
 
 infixr 0 ++ << || THENC ORELSEC ORELSER ## |->;
 infix 1 >>;

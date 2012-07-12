@@ -19,7 +19,7 @@ quietdec := true;
 open HolKernel Parse boolLib bossLib listTheory subtypeTools
      res_quanTools res_quanTheory pred_setTheory extra_pred_setTheory
      arithContext ho_proverTools extra_listTheory subtypeTheory
-     listContext arithmeticTheory groupTheory formalizeUseful
+     listContext arithmeticTheory groupTheory HurdUseful
      groupContext extra_numTheory gcdTheory dividesTheory
      extra_arithTheory finite_groupTheory finite_groupContext
      abelian_groupTheory num_polyTheory extra_binomialTheory
@@ -34,7 +34,7 @@ quietdec := false;
 val _ = new_theory "miller_rabin";
 
 val EXISTS_DEF = boolTheory.EXISTS_DEF;
-val REVERSE = formalizeUseful.REVERSE;
+val REVERSE = HurdUseful.REVERSE;
 
 infixr 0 ++ << || THENC ORELSEC ORELSER ## |->;
 infix 1 >>;
@@ -61,8 +61,6 @@ val (G_TAC, AG_TAC, G_TAC', AG_TAC') = SIMPLIFY_TACS finite_group_c;
 
 val Strip = S_TAC;
 val Simplify = R_TAC;
-val Suff = PARSE_TAC SUFF_TAC;
-val Know = PARSE_TAC KNOW_TAC;
 val Rewr = DISCH_THEN (REWRITE_TAC o wrap);
 val Rewr' = DISCH_THEN (ONCE_REWRITE_TAC o wrap);
 val STRONG_DISJ_TAC = CONV_TAC (REWR_CONV (GSYM IMP_DISJ_THM)) ++ STRIP_TAC;

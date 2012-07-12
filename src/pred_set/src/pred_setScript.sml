@@ -1726,7 +1726,8 @@ val FINITE_INDUCT = store_thm("FINITE_INDUCT",
    ASM_CASES_TAC (--`(e:'a) IN s`--) THENL
    [IMP_RES_THEN SUBST1_TAC ABSORPTION, RES_TAC] THEN
    ASM_REWRITE_TAC []]);
-val _ = IndDefLib.export_rule_induction "FINITE_INDUCT"
+
+val _ = IndDefLib.export_rule_induction "FINITE_INDUCT";
 
 (* --------------------------------------------------------------------- *)
 (* Load the set induction tactic in...                                   *)

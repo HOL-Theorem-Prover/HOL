@@ -5,10 +5,6 @@ val _ = new_theory"CexpTypes"
 val _ = Hol_datatype `
  Cprim2 = CAdd | CSub | CMul | CDiv | CMod | CLt | CEq`;
 
-(* other primitives *)
-val _ = Hol_datatype `
- Clprim = CLeq | CIf | CAnd | COr`;
-
 
 val _ = Hol_datatype `
  Cpat =
@@ -32,7 +28,7 @@ val _ = Hol_datatype `
   | CFun of string list => Cexp
   | CCall of Cexp => Cexp list
   | CPrim2 of Cprim2 => Cexp => Cexp
-  | CLprim of Clprim => Cexp list`;
+  | CIf of Cexp => Cexp => Cexp`;
 
 (* and now the Cv type with its unnecessarily difficult recursion *)
 

@@ -17,7 +17,7 @@ app load
 "finite_groupTheory", "finite_groupContext"];
 *)
 
-open bossLib listTheory formalizeUseful subtypeTools res_quanTools
+open bossLib listTheory HurdUseful subtypeTools res_quanTools
      res_quanTheory pred_setTheory extra_pred_setTheory arithContext
      relationTheory ho_proverTools extra_listTheory orderTheory
      subtypeTheory listContext arithmeticTheory extra_numTheory
@@ -25,7 +25,7 @@ open bossLib listTheory formalizeUseful subtypeTools res_quanTools
      finite_groupTheory pred_setContext rich_listTheory;
 
 val EXISTS_DEF = boolTheory.EXISTS_DEF;
-val REVERSE = formalizeUseful.REVERSE;
+val REVERSE = HurdUseful.REVERSE;
 
 infixr 0 ++ << || THENC ORELSEC ORELSER ##;
 infix 1 >>;
@@ -47,8 +47,6 @@ val std_c = precontext_compile std_pc;
 
 val (R_TAC, AR_TAC, R_TAC', AR_TAC') = SIMPLIFY_TACS std_c;
 
-val Suff = PARSE_TAC SUFF_TAC;
-val Know = PARSE_TAC KNOW_TAC;
 
 (* ------------------------------------------------------------------------- *)
 (* Definitions.                                                              *)

@@ -18,7 +18,7 @@ open HolKernel Parse boolLib;
 open bossLib listTheory subtypeTools res_quanTools res_quanTheory
      pred_setTheory extra_pred_setTheory arithContext
      ho_proverTools extra_listTheory subtypeTheory
-     listContext arithmeticTheory groupTheory formalizeUseful
+     listContext arithmeticTheory groupTheory HurdUseful
      groupContext extra_numTheory gcdTheory dividesTheory
      extra_arithTheory finite_groupTheory finite_groupContext
      abelian_groupTheory num_polyTheory extra_binomialTheory
@@ -56,8 +56,6 @@ val (G_TAC, AG_TAC, G_TAC', AG_TAC') = SIMPLIFY_TACS finite_group_c;
 
 val Strip = S_TAC;
 val Simplify = R_TAC;
-val Suff = PARSE_TAC SUFF_TAC;
-val Know = PARSE_TAC KNOW_TAC;
 
 (* ------------------------------------------------------------------------- *)
 (* Definitions.                                                              *)
@@ -552,9 +550,10 @@ val MULT_GROUP_PRIME_CYCLIC = store_thm
        ++ MP_TAC (Q.SPEC `p` ADD_GROUP_SET_FINITE)
        ++ R_TAC [add_group_def, gset_def])
    ++ R_TAC [SUBSET_DEF]
+   ++ Q.X_GEN_TAC `x`
    ++ S_TAC
    ++ R_TAC [SPECIFICATION]
-   ++ Q.PAT_ASSUM `!h :: P. Q h` (MP_TAC o Q_RESQ_SPEC `x'`)
+   ++ Q.PAT_ASSUM `!h :: P. Q h` (MP_TAC o Q_RESQ_SPEC `x`)
    ++ S_TAC
    >> (Q.PAT_ASSUM `x IN s` MP_TAC
        ++ R_TAC [mult_group_def, add_group_def, gset_def]

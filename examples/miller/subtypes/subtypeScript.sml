@@ -7,11 +7,11 @@ val _ = new_theory "subtype";
 show_assums := true;
 loadPath := union ["../ho_prover"] (!loadPath);
 app load
-  ["bossLib", "combinTheory", "pred_setTheory", "seqTheory", "subtypeUseful",
+  ["bossLib", "combinTheory", "pred_setTheory", "seqTheory", "HurdUseful",
    "res_quanTheory", "ho_proverTools", "pairTheory"];
 *)
 
-open bossLib combinTheory pred_setTheory seqTheory subtypeUseful
+open bossLib combinTheory pred_setTheory seqTheory HurdUseful
      res_quanTheory ho_proverTools pairTheory;
 
 infixr 0 ++ << || THENC ORELSEC ORELSER ##;
@@ -251,7 +251,7 @@ val res_select_cong = store_thm
        (!x. x IN p' ==> (f x = f' x)) ==>
        (RES_SELECT p f = RES_SELECT p' f')``,
    RW_TAC std_ss [RES_SELECT]
-   ++ SUFF_TAC `!x. x IN p /\ f x = x IN p /\ f' x` >> RW_TAC std_ss []
+   ++ Q_TAC SUFF_TAC `!x. x IN p /\ f x = x IN p /\ f' x` >> RW_TAC std_ss []
    ++ ho_PROVE_TAC []);
 
 val res_abstract_cong = store_thm

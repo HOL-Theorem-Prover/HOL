@@ -7,7 +7,7 @@ val _ = new_theory "abelian_group";
 show_assums := true;
 loadPath := union ["..", "../finished"] (!loadPath);
 app load
-["bossLib", "listTheory", "formalizeUseful", "subtypeTools",
+["bossLib", "listTheory", "HurdUseful", "subtypeTools",
 "res_quanTools", "res_quan2Theory", "pred_setTheory",
 "extra_pred_setTheory", "arithContext", "relationTheory",
 "ho_proverTools", "prob_extraTools", "prob_extraTheory",
@@ -17,7 +17,7 @@ app load
 "finite_groupTheory", "finite_groupContext"];
 *)
 
-open bossLib listTheory formalizeUseful subtypeTools res_quanTools
+open bossLib listTheory HurdUseful subtypeTools res_quanTools
      pred_setTheory extra_pred_setTheory arithContext relationTheory
      ho_proverTools extra_listTheory
      subtypeTheory res_quanTheory listContext arithmeticTheory groupTheory
@@ -54,8 +54,6 @@ val (R_TAC, AR_TAC, R_TAC', AR_TAC') = SIMPLIFY_TACS std_c;
 
 val (G_TAC, AG_TAC, G_TAC', AG_TAC') = SIMPLIFY_TACS finite_group_c;
 
-val Suff = PARSE_TAC SUFF_TAC;
-val Know = PARSE_TAC KNOW_TAC;
 
 (* ------------------------------------------------------------------------- *)
 (* Definitions.                                                              *)

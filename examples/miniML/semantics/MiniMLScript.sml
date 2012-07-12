@@ -1186,27 +1186,29 @@ val _ = Define `
 
 val _ = Defn.save_defn type_subst_defn;
 
-(* Replace the n lowest index deBruijn type variables with the given types *)
-(*val deBruijn_subst : t list -> t -> t*)
+(* skip the lowest given indices and replace the next (LENGTH ts) with the given types and reduce all the higher ones *)
+(*val deBruijn_subst : num -> t list -> t -> t*)
  val deBruijn_subst_defn = Hol_defn "deBruijn_subst" `
 
-(deBruijn_subst ts (Tvar tv) = Tvar tv)
+(deBruijn_subst skip ts (Tvar tv) = Tvar tv)
 /\
-(deBruijn_subst ts (Tvar_db n) =
-  if n< LENGTH ts then
-    EL  n  ts
-  else
-    Tvar_db (n - LENGTH ts))
+(deBruijn_subst skip ts (Tvar_db n) =
+  if ~  (n< skip)/\ n< LENGTH ts+ skip then
+    EL  (n - skip)  ts
+  else if ~  (n< skip) then
+    Tvar_db (n - LENGTH ts)
+  else 
+    Tvar_db n)
 /\
-(deBruijn_subst ts (Tapp ts' tn) =
-  Tapp (MAP (deBruijn_subst ts) ts') tn)
+(deBruijn_subst skip ts (Tapp ts' tn) =
+  Tapp (MAP (deBruijn_subst skip ts) ts') tn)
 /\
-(deBruijn_subst ts (Tfn t1 t2) =
-  Tfn (deBruijn_subst ts t1) (deBruijn_subst ts t2))
+(deBruijn_subst skip ts (Tfn t1 t2) =
+  Tfn (deBruijn_subst skip ts t1) (deBruijn_subst skip ts t2))
 /\
-(deBruijn_subst ts Tnum = Tnum)
+(deBruijn_subst skip ts Tnum = Tnum)
 /\
-(deBruijn_subst ts Tbool = Tbool)`;
+(deBruijn_subst skip ts Tbool = Tbool)`;
 
 val _ = Defn.save_defn deBruijn_subst_defn;
 
@@ -1303,7 +1305,7 @@ type_e cenv tenv (Con cn es) (Tapp ts' tn))
 EVERY (check_freevars T []) ts/\
 (lookup_var n 0 tenv=SOME (t,levels))
 ==>
-type_e cenv tenv (Var n) (deBruijn_subst ts t))
+type_e cenv tenv (Var n) (deBruijn_subst 0 ts t))
 
 /\
 
@@ -1650,95 +1652,156 @@ type_d_state tenvC (envC, env, ds,SOME (p, (envC,env',e,c))) tenvC' tenv'')`;
 (*val evaluate_ctxt : envC -> envE -> ctxt_frame -> v -> v result -> bool*)
 (*val evaluate_ctxts : envC -> ctxt list -> v -> v result -> bool*)
 (*val evaluate_state : state -> v result -> bool*)
-(*
-indreln
 
-forall cenv env op e v bv.
-evaluate cenv env (App op (Val v) e) bv
+val _ = Hol_reln `
+
+(! cenv env op e2 v1 v2 env' e3 bv.
+evaluate cenv env e2 (Rval v2)/\(
+do_app env op v1 v2=SOME (env', e3))/\
+evaluate cenv env' e3 bv
 ==>
-evaluate_ctxt cenv env (Capp1 op () e) v bv
+evaluate_ctxt cenv env (Capp1 op () e2) v1 bv)
 
-and
+/\
 
-forall cenv env op v1 v2 bv.
-evaluate cenv env (App op (Val v1) (Val v2)) bv
+(! cenv env op e2 v1 v2.
+evaluate cenv env e2 (Rval v2)/\(
+do_app env op v1 v2=NONE)
 ==>
-evaluate_ctxt cenv env (Capp2 op v1 ()) v2 bv
+evaluate_ctxt cenv env (Capp1 op () e2) v1 (Rerr Rtype_error))
 
-and
+/\
 
-forall cenv env op e v bv.
-evaluate cenv env (Log op (Val v) e) bv
+(! cenv env op e2 v1 err.
+evaluate cenv env e2 (Rerr err)
 ==>
-evaluate_ctxt cenv env (Clog op () e) v bv
+evaluate_ctxt cenv env (Capp1 op () e2) v1 (Rerr err))
 
-and
+/\
 
-forall cenv env e1 e2 v bv.
-evaluate cenv env (If (Val v) e1 e2) bv
+(! cenv env op v1 v2 env' e3 bv.(
+do_app env op v1 v2=SOME (env', e3))/\
+evaluate cenv env' e3 bv
 ==>
-evaluate_ctxt cenv env (Cif () e1 e2) v bv
+evaluate_ctxt cenv env (Capp2 op v1 ()) v2 bv)
 
-and
+/\
 
-forall cenv env pes v bv.
-evaluate cenv env (Mat (Val v) pes) bv
+(! cenv env op v1 v2.
+(do_app env op v1 v2=NONE)
 ==>
-evaluate_ctxt cenv env (Cmat () pes) v bv
+evaluate_ctxt cenv env (Capp2 op v1 ()) v2 (Rerr Rtype_error))
 
-and
+/\
 
-forall cenv env n e v bv.
-evaluate cenv env (Let n (Val v) e) bv
+(! cenv env op e2 v e' bv.(
+do_log op v e2=SOME e')/\
+evaluate cenv env e' bv
 ==>
-evaluate_ctxt cenv env (Clet n () e) v bv
+evaluate_ctxt cenv env (Clog op () e2) v bv)
 
-and
+/\
 
-forall cenv env n vs es v bv.
-evaluate cenv env (Con n (List.map Val (List.rev vs) @ [Val v] @ es)) bv
+(! cenv env op e2 v.
+(do_log op v e2=NONE)
 ==>
-evaluate_ctxt cenv env (Ccon n vs () es) v bv
+evaluate_ctxt cenv env (Clog op () e2) v (Rerr Rtype_error))
 
-
-indreln
-
-forall cenv v.
-true
+/\
+(! cenv env e2 e3 v e' bv.(
+do_if v e2 e3=SOME e')/\
+evaluate cenv env e' bv
 ==>
-evaluate_ctxts cenv [] v (Rval v)
+evaluate_ctxt cenv env (Cif () e2 e3) v bv)
 
-and
+/\
 
-forall cenv c cs env v v' bv.
-evaluate_ctxt cenv env c v (Rval v') &&
+(! cenv env e2 e3 v.
+(do_if v e2 e3=NONE)
+==>
+evaluate_ctxt cenv env (Cif () e2 e3) v (Rerr Rtype_error))
+
+/\
+
+(! cenv env pes v bv.
+evaluate_match cenv env v pes bv
+==>
+evaluate_ctxt cenv env (Cmat () pes) v bv)
+
+/\
+
+(! cenv env n e2 v bv.
+evaluate cenv (bind n v env) e2 bv
+==>
+evaluate_ctxt cenv env (Clet n () e2) v bv)
+
+/\
+
+(! cenv env cn es vs v vs'.
+do_con_check cenv cn (LENGTH vs+ LENGTH es+ 1)/\
+evaluate_list cenv env es (Rval vs')
+==>
+evaluate_ctxt cenv env (Ccon cn vs () es) v (Rval (Conv cn (REVERSE vs++ ([v]++ vs')))))
+
+/\
+
+(! cenv env cn es vs v.~  (do_con_check cenv cn (LENGTH vs+ LENGTH es+ 1))
+==>
+evaluate_ctxt cenv env (Ccon cn vs () es) v (Rerr Rtype_error))
+
+/\
+
+(! cenv env cn es vs v err.
+do_con_check cenv cn (LENGTH vs+ LENGTH es+ 1)/\
+evaluate_list cenv env es (Rerr err)
+==>
+evaluate_ctxt cenv env (Ccon cn vs () es) v (Rerr err))`;
+
+val _ = Hol_reln `
+
+(! cenv v.
+T
+==>
+evaluate_ctxts cenv [] v (Rval v))
+
+/\
+
+(! cenv c cs env v v' bv.
+evaluate_ctxt cenv env c v (Rval v')/\
 evaluate_ctxts cenv cs v' bv
 ==>
-evaluate_ctxts cenv ((c,env)::cs) v bv
+evaluate_ctxts cenv ((c,env)::cs) v bv)
 
-and
+/\
 
-forall cenv c cs v env err.
+(! cenv c cs v env err.
 evaluate_ctxt cenv env c v (Rerr err)
 ==>
-evaluate_ctxts cenv ((c,env)::cs) v (Rerr err)
+evaluate_ctxts cenv ((c,env)::cs) v (Rerr err))`;
 
-indreln
+val _ = Hol_reln `
 
-forall cenv env e c v bv.
-evaluate cenv env e (Rval v) &&
+(! cenv env e c v bv.
+evaluate cenv env e (Rval v)/\
 evaluate_ctxts cenv c v bv
 ==>
-evaluate_state (cenv, env, e, c) bv
+evaluate_state (cenv, env, Exp e, c) bv)
 
-and
+/\
 
-forall cenv env e c err.
+(! cenv env e c err.
 evaluate cenv env e (Rerr err)
 ==>
-evaluate_state (cenv, env, e, c) (Rerr err)
+evaluate_state (cenv, env, Exp e, c) (Rerr err))
 
- *)
+/\
+
+(! cenv env v c bv.
+evaluate_ctxts cenv c v bv
+==>
+evaluate_state (cenv, env, Val v, c) bv)`; 
+
+
 (* ------------------------------------------------------------------------- *)
 
 (* A version of the big-step expression semantics that doesn't use the

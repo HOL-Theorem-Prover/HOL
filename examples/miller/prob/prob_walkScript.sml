@@ -8,7 +8,7 @@ quietdec := true;
 
 open HolKernel Parse boolLib bossLib arithmeticTheory pred_setTheory
      listTheory sequenceTheory state_transformerTheory
-     probabilityTheory formalizeUseful extra_numTheory combinTheory
+     probabilityTheory HurdUseful extra_numTheory combinTheory
      pairTheory realTheory realLib extra_boolTheory
      extra_pred_setTheory prob_algebraTheory probTheory
      extra_realTheory extra_pred_setTools measureTheory numTheory
@@ -29,8 +29,6 @@ val op<< = op THENL;
 val op|| = op ORELSE;
 val op>> = op THEN1;
 val std_ss' = simpLib.++ (std_ss, boolSimps.ETA_ss);
-val Know = PARSE_TAC KNOW_TAC;
-val Suff = PARSE_TAC SUFF_TAC;
 val Rewr = DISCH_THEN (REWRITE_TAC o wrap);
 val Rewr' = DISCH_THEN (ONCE_REWRITE_TAC o wrap);
 val STRONG_DISJ_TAC = CONV_TAC (REWR_CONV (GSYM IMP_DISJ_THM)) ++ STRIP_TAC;

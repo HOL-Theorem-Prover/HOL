@@ -1,9 +1,10 @@
 open HolKernel Parse boolLib bossLib; val _ = new_theory "ml_translator";
 
 open MiniMLTheory MiniMLTerminationTheory Print_astTerminationTheory
-open determTheory;
+(* open determTheory; *)
 open arithmeticTheory listTheory combinTheory pairTheory;
 open integerTheory;
+open lcsymtacs;
 
 infix \\ val op \\ = op THEN;
 
@@ -35,13 +36,13 @@ val Eq_def = Define `
     (\y v. (x = y) /\ abs y v)`;
 
 val INT_def = Define `
-  INT i = \v. (v = Lit (IntLit i))`;
+  INT i = \v. (v = Litv (IntLit i))`;
 
 val NUM_def = Define `
   NUM n = INT (& n)`;
 
 val BOOL_def = Define `
-  BOOL b = \v. (v = Lit (Bool b))`;
+  BOOL b = \v. (v = Litv (Bool b))`;
 
 val CONTAINER_def = Define `CONTAINER x = x`;
 
@@ -54,6 +55,20 @@ val PreImp_def = Define `
 
 
 (* Theorems *)
+
+val big_exp_determ' = store_thm("big_exp_determ'",
+ ``(!env e r1.
+      evaluate' env e r1 ==>
+     !r2. evaluate' env e r2 ==> (r1 = r2)) /\
+   (!env es r1.
+      evaluate_list' env es r1 ==>
+      !r2. evaluate_list' env es r2 ==> (r1 = r2)) /\
+   (!env v pes r1.
+      evaluate_match' env v pes r1 ==>
+      !r2. evaluate_match' env v pes r2 ==> (r1 = r2))``,
+  HO_MATCH_MP_TAC evaluate'_ind >> rw [] >>
+  pop_assum (ASSUME_TAC o SIMP_RULE (srw_ss ()) [Once evaluate'_cases]) >>
+  fs [] >> rw [] >> fs [] >> res_tac >> fs [] >> rw []);
 
 val evaluate_cases = evaluate'_cases;
 
@@ -100,9 +115,11 @@ val Eval_Let = store_thm("Eval_Let",
   \\ RES_TAC \\ Q.EXISTS_TAC `res''` \\ FULL_SIMP_TAC std_ss [LET_DEF,bind_def]
   \\ Q.EXISTS_TAC `res'` \\ FULL_SIMP_TAC std_ss []);
 
+(*
 val Eval_Val = store_thm("Eval_Val",
   ``!x. Eval env (Val x) (\v. v = x)``,
   SIMP_TAC (srw_ss()) [Once evaluate_cases,Eval_def]);
+*)
 
 val Eval_Var = store_thm("Eval_Var",
   ``!name x. Eval env (Var name) (\v. v = x) = (lookup name env = SOME x)``,
@@ -120,15 +137,15 @@ val Eval_Var_EQ = store_thm("Eval_Var_EQ",
   SIMP_TAC (srw_ss()) [Once evaluate_cases,Eval_def]);
 
 val Eval_Val_INT = store_thm("Eval_Val_INT",
-  ``!n. Eval env (Val (Lit (IntLit n))) (INT n)``,
+  ``!n. Eval env (Lit (IntLit n)) (INT n)``,
   SIMP_TAC (srw_ss()) [Once evaluate_cases,NUM_def,INT_def,Eval_def]);
 
 val Eval_Val_NUM = store_thm("Eval_Val_NUM",
-  ``!n. Eval env (Val (Lit (IntLit (&n)))) (NUM n)``,
+  ``!n. Eval env (Lit (IntLit (&n))) (NUM n)``,
   SIMP_TAC (srw_ss()) [Once evaluate_cases,NUM_def,INT_def,Eval_def]);
 
 val Eval_Val_BOOL = store_thm("Eval_Val_BOOL",
-  ``!n. Eval env (Val (Lit (Bool n))) (BOOL n)``,
+  ``!n. Eval env (Lit (Bool n)) (BOOL n)``,
   SIMP_TAC (srw_ss()) [Once evaluate_cases,BOOL_def,Eval_def]);
 
 val Eval_Or = store_thm("Eval_Or",
@@ -138,7 +155,7 @@ val Eval_Or = store_thm("Eval_Or",
   SIMP_TAC std_ss [Eval_def,NUM_def,BOOL_def] \\ SIMP_TAC std_ss []
   \\ REPEAT STRIP_TAC \\ FULL_SIMP_TAC std_ss []
   \\ ONCE_REWRITE_TAC [evaluate_cases] \\ SIMP_TAC (srw_ss()) []
-  \\ Q.EXISTS_TAC `(Lit (Bool b1))` \\ Cases_on `b1`
+  \\ Q.EXISTS_TAC `(Litv (Bool b1))` \\ Cases_on `b1`
   \\ FULL_SIMP_TAC (srw_ss()) [do_log_def]
   \\ ONCE_REWRITE_TAC [evaluate_cases] \\ SIMP_TAC (srw_ss()) []);
 
@@ -149,7 +166,7 @@ val Eval_And = store_thm("Eval_And",
   SIMP_TAC std_ss [Eval_def,NUM_def,BOOL_def] \\ SIMP_TAC std_ss []
   \\ REPEAT STRIP_TAC \\ FULL_SIMP_TAC std_ss []
   \\ ONCE_REWRITE_TAC [evaluate_cases] \\ SIMP_TAC (srw_ss()) []
-  \\ Q.EXISTS_TAC `(Lit (Bool b1))` \\ Cases_on `b1`
+  \\ Q.EXISTS_TAC `(Litv (Bool b1))` \\ Cases_on `b1`
   \\ FULL_SIMP_TAC (srw_ss()) [do_log_def]
   \\ ONCE_REWRITE_TAC [evaluate_cases] \\ SIMP_TAC (srw_ss()) []);
 
@@ -164,28 +181,28 @@ val Eval_If = store_thm("Eval_If",
   \\ ONCE_REWRITE_TAC [evaluate_cases] \\ SIMP_TAC (srw_ss()) []
   \\ Cases_on `b1` \\ FULL_SIMP_TAC std_ss []
   THEN1 (Q.EXISTS_TAC `res` \\ ASM_SIMP_TAC std_ss []
-    \\ Q.EXISTS_TAC `Lit (Bool T)` \\ ASM_SIMP_TAC (srw_ss()) [do_if_def])
+    \\ Q.EXISTS_TAC `Litv (Bool T)` \\ ASM_SIMP_TAC (srw_ss()) [do_if_def])
   THEN1 (Q.EXISTS_TAC `res` \\ ASM_SIMP_TAC std_ss []
-    \\ Q.EXISTS_TAC `Lit (Bool F)` \\ ASM_SIMP_TAC (srw_ss()) [do_if_def]));
+    \\ Q.EXISTS_TAC `Litv (Bool F)` \\ ASM_SIMP_TAC (srw_ss()) [do_if_def]));
 
 val Eval_Bool_Not = store_thm("Eval_Bool_Not",
   ``Eval env x1 (BOOL b1) ==>
-    Eval env (App Equality x1 (Val (Lit (Bool F)))) (BOOL (~b1))``,
+    Eval env (App Equality x1 (Lit (Bool F))) (BOOL (~b1))``,
   SIMP_TAC std_ss [Eval_def,NUM_def,BOOL_def] \\ SIMP_TAC std_ss []
   \\ REPEAT STRIP_TAC \\ FULL_SIMP_TAC std_ss []
   \\ ONCE_REWRITE_TAC [evaluate_cases] \\ SIMP_TAC (srw_ss()) []
-  \\ Q.EXISTS_TAC `(Lit (Bool b1))`
+  \\ Q.EXISTS_TAC `(Litv (Bool b1))`
   \\ FULL_SIMP_TAC (srw_ss()) [do_app_def]
   \\ ONCE_REWRITE_TAC [evaluate_cases] \\ SIMP_TAC (srw_ss()) []);
 
 val Eval_Implies = store_thm("Eval_Implies",
   ``Eval env x1 (BOOL b1) ==>
     Eval env x2 (BOOL b2) ==>
-    Eval env (If x1 x2 (Val (Lit (Bool T)))) (BOOL (b1 ==> b2))``,
+    Eval env (If x1 x2 (Lit (Bool T))) (BOOL (b1 ==> b2))``,
   SIMP_TAC std_ss [Eval_def,NUM_def,BOOL_def] \\ SIMP_TAC std_ss []
   \\ REPEAT STRIP_TAC \\ FULL_SIMP_TAC std_ss []
   \\ ONCE_REWRITE_TAC [evaluate_cases] \\ SIMP_TAC (srw_ss()) []
-  \\ Q.EXISTS_TAC `(Lit (Bool b1))` \\ Cases_on `b1`
+  \\ Q.EXISTS_TAC `(Litv (Bool b1))` \\ Cases_on `b1`
   \\ FULL_SIMP_TAC (srw_ss()) [do_if_def]
   \\ ONCE_REWRITE_TAC [evaluate_cases] \\ SIMP_TAC (srw_ss()) []);
 
@@ -303,7 +320,7 @@ val Eval_Opn = prove(
   SIMP_TAC std_ss [Eval_def,INT_def] \\ SIMP_TAC std_ss [PRECONDITION_def]
   \\ REPEAT STRIP_TAC \\ FULL_SIMP_TAC std_ss []
   \\ ONCE_REWRITE_TAC [evaluate_cases] \\ SIMP_TAC (srw_ss()) []
-  \\ Q.LIST_EXISTS_TAC [`Lit (IntLit n1)`,`Lit (IntLit n2)`]
+  \\ Q.LIST_EXISTS_TAC [`Litv (IntLit n1)`,`Litv (IntLit n2)`]
   \\ FULL_SIMP_TAC (srw_ss()) [do_app_def]
   \\ Cases_on `f` \\ FULL_SIMP_TAC (srw_ss()) []
   \\ ONCE_REWRITE_TAC [evaluate_cases] \\ SIMP_TAC (srw_ss()) []);
@@ -328,7 +345,7 @@ val Eval_Opb = prove(
   SIMP_TAC std_ss [Eval_def,INT_def,BOOL_def] \\ SIMP_TAC std_ss []
   \\ REPEAT STRIP_TAC \\ FULL_SIMP_TAC std_ss []
   \\ ONCE_REWRITE_TAC [evaluate_cases] \\ SIMP_TAC (srw_ss()) []
-  \\ Q.LIST_EXISTS_TAC [`Lit (IntLit n1)`,`Lit (IntLit n2)`]
+  \\ Q.LIST_EXISTS_TAC [`Litv (IntLit n1)`,`Litv (IntLit n2)`]
   \\ FULL_SIMP_TAC (srw_ss()) [do_app_def]
   \\ ONCE_REWRITE_TAC [evaluate_cases] \\ SIMP_TAC (srw_ss()) []);
 
@@ -387,8 +404,8 @@ val th = MATCH_MP Eval_If (LIST_CONJ (map (DISCH T) [th2,th0,th1]))
          |> REWRITE_RULE [CONTAINER_def]
 val code =
   ``Let "k" (App (Opn Minus) x1 x2)
-      (If (App (Opb Lt) (Var "k") (Val (Lit (IntLit 0))))
-         (Val (Lit (IntLit 0))) (Var "k"))``
+      (If (App (Opb Lt) (Var "k") (Lit (IntLit 0)))
+          (Lit (IntLit 0)) (Var "k"))``
 
 in
 
@@ -430,7 +447,7 @@ val Eval_NUM_GREATER_EQ = save_thm("Eval_NUM_GREATER_EQ",
 
 val Eval_NUM_EQ_0 = store_thm("Eval_NUM_EQ_0",
   ``!n. Eval env x (NUM n) ==>
-        Eval env (App (Opb Leq) x (Val (Lit (IntLit 0)))) (BOOL (n = 0))``,
+        Eval env (App (Opb Leq) x (Lit (IntLit 0))) (BOOL (n = 0))``,
   REPEAT STRIP_TAC \\ ASSUME_TAC (Q.SPEC `0` Eval_Val_NUM)
   \\ FULL_SIMP_TAC std_ss [NUM_def]
   \\ `(n = 0) = &n <= 0` by intLib.COOPER_TAC
@@ -440,19 +457,18 @@ val Eval_NUM_EQ_0 = store_thm("Eval_NUM_EQ_0",
 (* Equality *)
 
 val no_closures_def = tDefine "no_closures" `
-  (no_closures (Lit l) = T) /\
+  (no_closures (Litv l) = T) /\
   (no_closures (Conv name vs) = EVERY no_closures vs) /\
   (no_closures _ = F)`
  (WF_REL_TAC `measure v_size` \\ REPEAT STRIP_TAC
   \\ Induct_on `vs` \\ FULL_SIMP_TAC (srw_ss()) [MEM]
-  \\ REPEAT STRIP_TAC \\ FULL_SIMP_TAC (srw_ss()) [MEM,exp_size_def]
+  \\ REPEAT STRIP_TAC \\ FULL_SIMP_TAC (srw_ss()) [MEM,v_size_def]
   \\ DECIDE_TAC)
 
 val EqualityType_def = Define `
   EqualityType (abs:'a->v->bool) =
     (!x1 v1. abs x1 v1 ==> no_closures v1) /\
-    !x1 v1 x2 v2.
-      abs x1 v1 /\ abs x2 v2 ==> ((v1 = v2) = (x1 = x2))`;
+    (!x1 v1 x2 v2. abs x1 v1 /\ abs x2 v2 ==> ((v1 = v2) = (x1 = x2)))`;
 
 val EqualityType_NUM_BOOL = store_thm("EqualityType_NUM_BOOL",
   ``EqualityType NUM /\ EqualityType INT /\ EqualityType BOOL``,

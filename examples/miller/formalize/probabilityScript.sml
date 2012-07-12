@@ -1,6 +1,6 @@
 open HolKernel Parse boolLib bossLib arithmeticTheory realTheory
      seqTheory pred_setTheory res_quanTheory listTheory
-     rich_listTheory pairTheory combinTheory realLib formalizeUseful
+     rich_listTheory pairTheory combinTheory realLib HurdUseful
      subtypeTheory extra_pred_setTheory extra_boolTheory optionTheory
      extra_realTheory ho_proverTools extra_numTheory
      extra_pred_setTools measureTheory simpLib;
@@ -22,8 +22,6 @@ val op>> = op THEN1;
 
 val Strip = !! (POP_ASSUM MP_TAC) ++ !! STRIP_TAC;
 val Simplify = RW_TAC arith_ss;
-val Suff = PARSE_TAC SUFF_TAC;
-val Know = PARSE_TAC KNOW_TAC;
 val Rewr = DISCH_THEN (REWRITE_TAC o wrap);
 val Rewr' = DISCH_THEN (ONCE_REWRITE_TAC o wrap);
 val Cond =
@@ -628,4 +626,3 @@ val INDEP_REFL = store_thm
    ++ PROVE_TAC [REAL_MUL_IDEMPOT]);
 
 val _ = export_theory ();
-

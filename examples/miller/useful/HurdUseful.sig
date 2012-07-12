@@ -1,4 +1,4 @@
-signature ho_proverUseful =
+signature HurdUseful =
 sig
 
   (* GENERAL *)
@@ -346,12 +346,12 @@ sig
   val CONJUNCTS_TAC : tactic
   val FUN_EQ_TAC : tactic
   val SET_EQ_TAC : tactic
-  val SUFF_TAC : term frag list -> tactic
-  val KNOW_TAC : term frag list -> tactic
   val CHECK_ASMS_TAC : tactic
   val EXACT_MP_TAC : thm_tactic
   val STRONG_CONJ_TAC : tactic
   val FORWARD_TAC : (thm list -> thm list) -> tactic
+  val Know : term quotation -> tactic
+  val Suff : term quotation -> tactic
 
   (* Simple CNF conversion *)
   val CNF_CONV : conv

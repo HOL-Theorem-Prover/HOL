@@ -6,7 +6,7 @@ structure sequenceTools :> sequenceTools =
 struct
 
 open HolKernel Parse boolLib;
-open bossLib sequenceTheory formalizeUseful;
+open bossLib sequenceTheory HurdUseful;
 
 infixr 0 ++ || ORELSEC ## THENC;
 infix 1 >>;
@@ -30,6 +30,6 @@ fun SEQUENCE_CASES_TAC vtm =
   ++ STRIP_TAC
   ++ POP_ASSUM (fn th => POP_ALL_THEN (PURE_REWRITE_TAC [th]));
 
-val SEQ_CASES_TAC = PARSE_TAC SEQUENCE_CASES_TAC;
+val SEQ_CASES_TAC = Q_TAC SEQUENCE_CASES_TAC;
 
 end;

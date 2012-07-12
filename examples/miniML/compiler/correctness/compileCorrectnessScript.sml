@@ -1,5 +1,5 @@
 open HolKernel bossLib boolLib listTheory pred_setTheory finite_mapTheory alistTheory lcsymtacs
-open SatisfySimps boolSimps compileTerminationTheory intLangTheory
+open SatisfySimps boolSimps compileTerminationTheory intLangTheory BytecodeTheory
 
 val _ = new_theory "compileCorrectness"
 
@@ -1299,6 +1299,20 @@ strip_tac >- (
 
 *)
 
+val bc_finish_def = Define`
+  bc_finish s1 s2 = bc_next^* s1 s2 ∧ ∀s3. ¬bc_next s2 s3`
+
+(*
+val compile_thm1 = store_thm(
+"compile_thm1",
+``∀env exp res. Cevaluate env exp res ⇒
+  ∀v. (res = Rval v) ∧ (∀s. exp ≠ CDecl s) ⇒
+    ∀cs cs'. (cs' = compile cs exp) ⇒
+      ∃c. (cs'.code = (REVERSE c)++cs.code) ∧
+      ∀b1. ∃b2. bc_finish (b1 with <| code := b1.code ++ c |>) b2 ∧
+                ∃bv. (b2.stack = bv::b1.stack) ∧
+                     bceqv cs'.inst_length b2.code v bv``,
+*)
 
 (*
 let rec

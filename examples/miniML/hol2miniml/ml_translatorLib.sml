@@ -4,7 +4,7 @@ struct
 open HolKernel boolLib bossLib;
 
 open MiniMLTheory MiniMLTerminationTheory Print_astTerminationTheory;
-open determTheory ml_translatorTheory;
+open ml_translatorTheory;
 open arithmeticTheory listTheory combinTheory pairTheory;
 open integerTheory intLib ml_optimiseTheory;
 

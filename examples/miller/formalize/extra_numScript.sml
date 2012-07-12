@@ -1,10 +1,10 @@
 (* interactive mode
 loadPath := ["../ho_prover","../subtypes","../rsa"] @ !loadPath;
-app load ["bossLib","subtypeTheory","formalizeUseful","extra_boolTheory"];
+app load ["bossLib","subtypeTheory","HurdUseful","extra_boolTheory"];
 quietdec := true;
 *)
 
-open HolKernel Parse boolLib bossLib arithmeticTheory formalizeUseful
+open HolKernel Parse boolLib bossLib arithmeticTheory HurdUseful
      pred_setTheory subtypeTheory extra_boolTheory combinTheory;
 
 (*
@@ -28,8 +28,6 @@ val op>> = op THEN1;
 
 val Strip = !! STRIP_TAC;
 val Simplify = RW_TAC arith_ss;
-val Suff = PARSE_TAC SUFF_TAC;
-val Know = PARSE_TAC KNOW_TAC;
 val bool_ss = boolSimps.bool_ss;
 
 (* ------------------------------------------------------------------------- *)

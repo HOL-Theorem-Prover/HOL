@@ -3,7 +3,7 @@
 (* Joe Hurd, 10 June 2001                                                    *)
 (* ========================================================================= *)
 
-structure subtypeUseful :> subtypeUseful =
+structure HurdUseful :> HurdUseful =
 struct
 
 open Susp HolKernel Parse Hol_pp boolLib BasicProvers pred_setTheory;
@@ -31,10 +31,10 @@ exception BUG_EXN of
   {origin_structure : string, origin_function : string, message : string};
 
 fun ERR f s = HOL_ERR
-  {origin_structure = "subtypeUseful", origin_function = f, message = s};
+  {origin_structure = "ho_proverUseful", origin_function = f, message = s};
 
 fun BUG f s = BUG_EXN
-  {origin_structure = "subtypeUseful", origin_function = f, message = s};
+  {origin_structure = "ho_proverUseful", origin_function = f, message = s};
 
 fun BUG_to_string (BUG_EXN {origin_structure, origin_function, message}) =
   ("\nBUG discovered by " ^ origin_structure ^ " at " ^
@@ -743,13 +743,6 @@ end;
 
 (* Conversionals *)
 
-fun CHANGED_CONV c tm =
-    let
-      val th = QCONV c tm
-    in
-      if rhs (concl th) = tm then raise ERR "CHANGED_CONV" "" else th
-    end;
-
 fun FIRSTC [] tm = raise ERR "FIRSTC" "ran out of convs"
   | FIRSTC (c::cs) tm = (c ORELSEC FIRSTC cs) tm;
 
@@ -1035,15 +1028,6 @@ fun CONJUNCTS_TAC g = TRY (CONJ_TAC << [ALL_TAC, CONJUNCTS_TAC]) g;
 val FUN_EQ_TAC = CONV_TAC (CHANGED_CONV (ONCE_DEPTH_CONV FUN_EQ_CONV));
 val SET_EQ_TAC = CONV_TAC (CHANGED_CONV (ONCE_DEPTH_CONV SET_EQ_CONV));
 
-fun SUFF_TAC t (al, c)
-  = let val tm = parse_with_goal t (al, c)
-    in ([(al, mk_imp (tm, c)), (al, tm)],
-	fn [th1, th2] => MP th1 th2
-	 | _ => raise ERR "SUFF_TAC" "panic")
-    end;
-
-fun KNOW_TAC t = REVERSE (SUFF_TAC t);
-
 local
   val th1 = (prove (``!t. T ==> (F ==> t)``, PROVE_TAC []))
 in
@@ -1118,6 +1102,9 @@ fun FORWARD_TAC f (asms, g:term) =
        fn [th] => (REORDER_ASMS asms o ZAP_CONSTS_RULE o forward_just ths) th
         | _ => raise BUG "FORWARD_TAC" "justification function panic")
   end;
+
+val Know = Q_TAC KNOW_TAC
+val Suff = Q_TAC SUFF_TAC
 
 (* --------------------------------------------------------------------- *)
 (* A simple-minded CNF conversion.                                       *)
@@ -1264,4 +1251,3 @@ fun ASM_MATCH_MP_TAC_N depth ths =
 val ASM_MATCH_MP_TAC = ASM_MATCH_MP_TAC_N 10;
 
 end; (* probTools *)
-

@@ -1,16 +1,18 @@
-structure congruentScript =
-struct
-
-(* Header for interactive use
-
-  app load ["numLib", "bossLib",
-            "gcdTheory",
-            "powerTheory", "summationTheory", "dividesTheory"];
- *)
+(* interactive mode
+app load ["bossLib","gcdTheory","powerTheory","summationTheory"];
+quietdec := true;
+*)
 
 open HolKernel Parse boolLib bossLib
      numLib arithmeticTheory prim_recTheory
-     gcdTheory summationTheory dividesTheory;
+     gcdTheory powerTheory summationTheory dividesTheory;
+
+(*
+quietdec := false;
+*)
+
+infix THEN THENC THENL;
+infix 8 by;
 
 val ARW = RW_TAC arith_ss;
 
@@ -20,7 +22,7 @@ val _ = new_theory "congruent";
 val CONGRUENT = Define `congruent a b n = ?c d. a+c*n = b+d*n`;
 
 
-val CONGRUENT_REFL = store_thm("CONGRUENT_REFL",
+val CONGRUENT_REF = store_thm("CONGRUENT_REF",
 			Term `!a n. congruent a a n`,
                         PROVE_TAC[CONGRUENT]);
 
@@ -61,9 +63,10 @@ val CONGRUENT_TIMES = store_thm("CONGRUENT_TIMES",
                         THEN EXISTS_TAC (Term `c'*c`)
                         THEN EXISTS_TAC (Term `d*c`)
                         THEN  ARW[RIGHT_ADD_DISTRIB]
-                        THEN `a*c + c * c' * n = (a+c'*n)*c`
+                        THEN `a*c + (c' * c) * n = (a+c'*n)*c`
                           by PROVE_TAC[MULT_ASSOC,MULT_SYM,RIGHT_ADD_DISTRIB]
-                        THEN ARW[])
+                        THEN POP_ASSUM MP_TAC
+                        THEN ARW[]);
 
 val CONGRUENT_MULT = store_thm("CONGRUENT_MULT",
 			Term `!a b c d n. congruent a b n /\ congruent c d n
@@ -85,9 +88,9 @@ val CONGRUENT_MULT = store_thm("CONGRUENT_MULT",
 val CONGRUENT_POWER = store_thm("CONGRUENT_POWER",
 			Term `!a b c n. congruent a b n
                                            ==>
-                                        congruent (a ** c) (b ** c) n`,
+                                        congruent ($EXP a c) ($EXP b c) n`,
                         Induct_on `c` THEN
-                        PROVE_TAC[EXP,CONGRUENT_MULT,CONGRUENT_REFL]);
+                        PROVE_TAC[power_def,CONGRUENT_MULT,CONGRUENT_REF]);
 
 
 val CONGRUENT_LE_EX = store_thm("CONGRUENT_LE_EX",
@@ -131,5 +134,3 @@ val CONGRUENT_DIVIDES = store_thm("CONGRUENT_DIVIDES",
                                         DIVIDES_REFL,MULT_SYM]);
 
 val _ = export_theory();
-
-end;

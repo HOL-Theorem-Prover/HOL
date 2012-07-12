@@ -92,6 +92,15 @@ val (free_vars_def, free_vars_ind) = register "free_vars" (
   rw[] >> res_tac >> fs[Cexp_size_def] >> srw_tac[ARITH_ss][]))
 val _ = export_rewrites["free_vars_def"];
 
+val (no_closures_def, no_closures_ind) = register "no_closures" (
+  tprove_no_defn ((no_closures_def, no_closures_ind),
+  WF_REL_TAC `measure Cv_size` >>
+  rw[Cvs_size_thm] >>
+  imp_res_tac SUM_MAP_MEM_bound >>
+  pop_assum (qspec_then `Cv_size` mp_tac) >>
+  srw_tac[ARITH_ss][]))
+val _ = export_rewrites["no_closures_def"];
+
 val (inst_arg_def,inst_arg_ind) = register "inst_arg" (
   tprove_no_defn ((inst_arg_def,inst_arg_ind),
   WF_REL_TAC `measure (nt_size o SND)` >>
@@ -191,8 +200,7 @@ val (compile_def, compile_ind) = register "compile" (
        | INL (s,e)                 => (Cexp_size e, 3:num)
        | INR (INL (env,z,e,n,s,[]))=> (Cexp_size e, 4)
        | INR (INL (env,z,e,n,s,ns))=> (Cexp_size e + (SUM (MAP (list_size char_size) ns)) + LENGTH ns, 2)
-       | INR (INR (NONE,s,xbs))    => (SUM (MAP Cexp2_size xbs), 1)
-       | INR (INR (SOME ns,s,xbs)) => (SUM (MAP Cexp2_size xbs) + (SUM (MAP (list_size char_size) ns)) + LENGTH ns, 0))` >>
+       | INR (INR (ns,s,xbs))      => (SUM (MAP Cexp2_size xbs) + (SUM (MAP (list_size char_size) ns)) + LENGTH ns, 0))` >>
   srw_tac[ARITH_ss][] >>
   srw_tac[ARITH_ss][Cexp1_size_thm,Cexp5_size_thm,Cexp_size_def,list_size_thm,SUM_MAP_Cexp2_size_thm] >>
   TRY (Q.ISPEC_THEN `Cexp_size` imp_res_tac SUM_MAP_MEM_bound >> DECIDE_TAC) >>
@@ -200,7 +208,7 @@ val (compile_def, compile_ind) = register "compile" (
   TRY (Cases_on `ns` >> srw_tac[ARITH_ss][]) >>
   srw_tac[ARITH_ss][list_size_thm] >>
   (Q.ISPEC_THEN `Cexp2_size` imp_res_tac SUM_MAP_MEM_bound >>
-   Cases_on `nso` >> fsrw_tac[ARITH_ss][Cexp_size_def,list_size_thm,SUM_MAP_Cexp2_size_thm])))
+   fsrw_tac[ARITH_ss][Cexp_size_def,list_size_thm,SUM_MAP_Cexp2_size_thm])))
 
 val (replace_calls_def,replace_calls_ind) = register "replace_calls" (
   tprove_no_defn ((replace_calls_def,replace_calls_ind),
@@ -214,8 +222,8 @@ val (repl_dec_def,repl_dec_ind) = register "repl_dec" (
   tprove_no_defn ((repl_dec_def,repl_dec_ind),
   WF_REL_TAC `measure (dec_size o SND)`))
 
-val (bcv_to_ov_def,bcv_to_ov_ind) = register "bcv_to_ov" (
-  tprove_no_defn ((bcv_to_ov_def,bcv_to_ov_ind),
+val (bv_to_ov_def,bv_to_ov_ind) = register "bv_to_ov" (
+  tprove_no_defn ((bv_to_ov_def,bv_to_ov_ind),
   WF_REL_TAC `measure (bc_value_size o SND o SND)` >>
   rw[bc_value1_size_thm] >>
   Q.ISPEC_THEN `bc_value_size` imp_res_tac SUM_MAP_MEM_bound >>
