@@ -1045,9 +1045,9 @@ val _ = Hol_datatype `
 
  val emit_ec_defn = Hol_defn "emit_ec" `
 
-(emit_ec z (CEEnv fv) s = incsz (compile_varref s (FAPPLY  s.env  fv)))
+(emit_ec z s (CEEnv fv) = incsz (compile_varref s (FAPPLY  s.env  fv)))
 /\
-(emit_ec z (CERef j) s = incsz (emit s [Stack (Load (s.sz - z - j))]))`;
+(emit_ec z s (CERef j) = incsz (emit s [Stack (Load (s.sz - z - j))]))`;
 
 val _ = Defn.save_defn emit_ec_defn;
 
@@ -1070,7 +1070,7 @@ val _ = Defn.save_defn replace_calls_defn;
      NONE => (n+1, FUPDATE  env ( fv, (CTEnv n)), (ecl+1,CEEnv fv::ec))
     |SOME j => if j= k
                 then (n, FUPDATE  env ( fv, (CTArg (2+ az))), (ecl,ec))
-                else (n+1, FUPDATE  env ( fv, (CTRef n)), (ecl+1,(CERef j)::ec))
+                else (n+1, FUPDATE  env ( fv, (CTRef n)), (ecl+1,(CERef (j+1))::ec))
     )
   ))`;
 
@@ -1328,13 +1328,13 @@ val _ = Defn.save_defn bind_fv_defn;
   let (s,k) = FOLDL
     (\ (s,k) (j,ec) .
       let s = incsz (emit s [Stack (Load (nk - k))]) in
-      let s = FOLDR  (emit_ec sz0)  s  ec in
+      let s = FOLDL (emit_ec sz0) s (REVERSE ec) in
       let s = emit s [Stack (if j= 0 then PushInt i0 else Cons 0 j)] in
       let s = emit s [Stack (Cons 0 2)] in
       let s = decsz (emit s [Stack (Store (nk - k))]) in
       let s =  s with<| sz := s.sz - j |> in
       (s,k+1))
-    (s,1) ecs in
+    (s,1) (REVERSE ecs) in
   let (s,k) = FOLDL
     (\ (s,k) _n .
       let s = emit s [Stack (Load (nk+ nk - k))] in

@@ -440,3 +440,30 @@ val e59 = ``Let "x" (Lit (IntLit 2))
       (App Opapp (Var "f") (Lit (IntLit 1))))``
 val [Number r] = run_exp e59
 val SOME 2 = intML.toInt r;
+val e60 = ``Let "i" (Lit (IntLit 10))
+  (Let "1" (Lit (IntLit 1))
+    (Letrec [
+("z","j",App Equality (Var "j") (Lit (IntLit 0)));
+("f0","i",If (App Opapp (Var "z") (Var "i")) (Lit (Bool T))
+         (App Opapp (Var "f2") (App Opapp (Var "s") (Var "i"))));
+("f1","i",If (App Opapp (Var "z") (Var "i")) (Lit (Bool F))
+         (App Opapp (Var "f0") (App Opapp (Var "s") (Var "i"))));
+("f2","i",If (App Opapp (Var "z") (Var "i")) (Lit (Bool F))
+         (App Opapp (Var "f1") (App Opapp (Var "s") (Var "i"))));
+("s","k",App (Opn Minus) (Var "k") (Var "1"))]
+  (App Opapp (Var "f0") (Var "i"))))``
+val [Number r] = run_exp e60
+val SOME 0 = intML.toInt r;
+val d0 = ``Dlet (Pvar "1") (Lit (IntLit 1))``
+val d1 = ``Dletrec [
+("z","j",App Equality (Var "j") (Lit (IntLit 0)));
+("f0","i",If (App Opapp (Var "z") (Var "i")) (Lit (Bool T))
+         (App Opapp (Var "f2") (App Opapp (Var "s") (Var "i"))));
+("f1","i",If (App Opapp (Var "z") (Var "i")) (Lit (Bool F))
+         (App Opapp (Var "f0") (App Opapp (Var "s") (Var "i"))));
+("f2","i",If (App Opapp (Var "z") (Var "i")) (Lit (Bool F))
+         (App Opapp (Var "f1") (App Opapp (Var "s") (Var "i"))));
+("s","k",App (Opn Minus) (Var "k") (Var "1"))]``
+val e61 = ``App Opapp (Var "f0") (Lit (IntLit 12))``
+val [Number r,_,_,_,_,_,_] = run_decs_exp([d0,d1],e61)
+val SOME 1 = intML.toInt r;

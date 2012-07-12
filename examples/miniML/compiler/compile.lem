@@ -982,9 +982,9 @@ let ldt (d,t) s = <| s with decl = d; tail = t |>
 type cebind = CEEnv of string | CERef of num
 
 let rec
-emit_ec z (CEEnv fv) s = incsz (compile_varref s (Pmap.find fv s.env))
+emit_ec z s (CEEnv fv) = incsz (compile_varref s (Pmap.find fv s.env))
 and
-emit_ec z (CERef j) s = incsz (emit s [Stack (Load (s.sz - z - j))])
+emit_ec z s (CERef j) = incsz (emit s [Stack (Load (s.sz - z - j))])
 
 let rec
 replace_calls j [_] c = c
@@ -1001,7 +1001,7 @@ bind_fv ns xs az k fv (n,env,((ecl:num),ec)) =
     | None -> (n+1, Pmap.add fv (CTEnv n) env, (ecl+1,CEEnv fv::ec))
     | Some j -> if j = k
                 then (n, Pmap.add fv (CTArg (2 + az)) env, (ecl,ec))
-                else (n+1, Pmap.add fv (CTRef n) env, (ecl+1,(CERef j)::ec))
+                else (n+1, Pmap.add fv (CTRef n) env, (ecl+1,(CERef (j+1))::ec))
     end
   end
 
@@ -1256,13 +1256,13 @@ compile_closures ns s defs =
   let (s,k) = List.fold_left
     (fun (s,k) (j,ec) ->
       let s = incsz (emit s [Stack (Load (nk - k))]) in
-      let s = List.fold_right (emit_ec sz0) ec s in
+      let s = List.fold_left (emit_ec sz0) s (List.rev ec) in
       let s = emit s [Stack (if j = 0 then PushInt i0 else Cons 0 j)] in
       let s = emit s [Stack (Cons 0 2)] in
       let s = decsz (emit s [Stack (Store (nk - k))]) in
       let s = <| s with sz = s.sz - j |> in
       (s,k+1))
-    (s,1) ecs in
+    (s,1) (List.rev ecs) in
   let (s,k) = List.fold_left
     (fun (s,k) _n ->
       let s = emit s [Stack (Load (nk + nk - k))] in
