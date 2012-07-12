@@ -4805,8 +4805,8 @@ SIMP_TAC std_ss [DISJ_IMP_THM, FORALL_AND_THM,
            K (SOME (s1''' ' c1 tl))
          else
            LIST_TO_FMAP
-             (MAP (\x. (FST (FST x),K (SOME (HD (SND (SND x))))))
-                (ZIP (data,data))) ' (FST x'')) (FST s) =
+             (MAP (\x. (FST x,K (SOME (HD (SND x)))))
+                data) ' (FST x'')) (FST s) =
          SOME (HD (SND x'')))` by ALL_TAC THEN1 (
    ASM_SIMP_TAC (std_ss++CONJ_ss) [PAIR_FORALL_THM, holfoot_ap_points_to_def,
       IN_ABS, LET_THM, FEVERY_DEF, IS_SOME_EXISTS,
