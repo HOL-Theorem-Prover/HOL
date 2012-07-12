@@ -224,6 +224,15 @@ val push_imm_def = Define `
                  push_imm (n DIV 2 ** 6) ++
                  [hwShiftAddImm (n2w (n MOD 2**6))]`;
 
+val push_fixed_imm_def = Define `
+  push_fixed_imm n =
+    if 64 * 64 * 64 * 64 <= n then [hwFail] else
+      let n1 = n2w (n MOD 64) in
+      let n2 = n2w ((n DIV 64) MOD 64) in
+      let n3 = n2w ((n DIV (64 * 64)) MOD 64) in
+      let n4 = n2w ((n DIV (64 * 64 * 64)) MOD 64) in
+        [hwPushImm n4; hwShiftAddImm n3; hwShiftAddImm n2; hwShiftAddImm n1]`;
+
 val hwml_def = Define `
   (hwml (Stack Pop) = [hwPop]) /\
   (hwml (Stack (Pops n)) =
@@ -252,9 +261,9 @@ val hwml_def = Define `
   (hwml (Stack Div) = [hwFail]) /\
   (hwml (Stack Mod) = [hwFail]) /\
   (hwml (Stack Less) = [hwLess]) /\
-  (hwml (Jump n) = push_imm n ++ [hwJump]) /\
-  (hwml (JumpNil n) = push_imm n ++ [hwJumpIfNotZero]) /\
-  (hwml (Call n) = push_imm n ++ [hwCall]) /\
+  (hwml (Jump n) = push_fixed_imm n ++ [hwJump]) /\
+  (hwml (JumpNil n) = push_fixed_imm n ++ [hwJumpIfNotZero]) /\
+  (hwml (Call n) = push_fixed_imm n ++ [hwCall]) /\
   (hwml JumpPtr = [hwJump]) /\
   (hwml CallPtr = [hwCall]) /\
   (hwml Return = [hwSwap; hwJump]) /\
@@ -361,6 +370,37 @@ val push_imm_lemma = prove(
   \\ ONCE_REWRITE_TAC [ADD_COMM]
   \\ FULL_SIMP_TAC std_ss [GSYM DIVISION]
   \\ REPEAT STRIP_TAC \\ DECIDE_TAC);
+
+val push_fixed_imm_lemma = prove(
+  ``!n. ~(hw_steps (push_fixed_imm n) s1).error ==>
+        (hw_steps (push_fixed_imm n) s1 = s1 with
+           <| stack := n2w n :: s1.stack; pc := s1.pc + n2w (LENGTH (push_fixed_imm n)) |> ) /\
+        n < 2**32 /\ ~s1.error``,
+  cheat);
+(*
+  HO_MATCH_MP_TAC (fetch "-" "push_imm_ind") \\ STRIP_TAC \\ STRIP_TAC
+  \\ ONCE_REWRITE_TAC [push_imm_def]
+  \\ Cases_on `2 ** 32 <= n` \\ FULL_SIMP_TAC std_ss [] THEN1 F_TAC
+  \\ Cases_on `n < 64` \\ FULL_SIMP_TAC std_ss []
+  THEN1
+   (FULL_SIMP_TAC (srw_ss()) [hw_steps_def,hw_step_def,LET_DEF,
+         push_def,inc_pc_def,overflow_def,w2w_def,n2w_w2n]
+    \\ Tactical.REVERSE (REPEAT STRIP_TAC) THEN1 DECIDE_TAC
+    \\ FULL_SIMP_TAC (srw_ss()) [fetch "-" "hw_state_component_equality"])
+  \\ FULL_SIMP_TAC std_ss [hw_steps_APPEND,hw_steps_def]
+  \\ REPEAT STRIP_TAC
+  \\ IMP_RES_TAC hw_step_error_IMP \\ FULL_SIMP_TAC std_ss []
+  \\ POP_ASSUM MP_TAC \\ POP_ASSUM MP_TAC
+  \\ FULL_SIMP_TAC (srw_ss()) [hw_steps_def,hw_step_def,LET_DEF,
+         push_def,inc_pc_def,overflow_def,w2w_def,n2w_w2n,arg_def]
+  \\ FULL_SIMP_TAC std_ss [GSYM word_add_n2w,WORD_ADD_ASSOC]
+  \\ FULL_SIMP_TAC (srw_ss()) [fetch "-" "hw_state_component_equality"]
+  \\ FULL_SIMP_TAC std_ss [WORD_MUL_LSL,word_add_n2w,word_mul_n2w]
+  \\ ONCE_REWRITE_TAC [MULT_COMM]
+  \\ ONCE_REWRITE_TAC [ADD_COMM]
+  \\ FULL_SIMP_TAC std_ss [GSYM DIVISION]
+  \\ REPEAT STRIP_TAC \\ DECIDE_TAC);
+*)
 
 val Swap_Pop_heap = prove(
   ``!n s1. (hw_steps (REPLICATE n hwPop1) s1).heap = s1.heap``,
@@ -593,6 +633,10 @@ val push_imm_LESS = prove(
   NTAC 7 (ONCE_REWRITE_TAC [push_imm_def]) \\ SRW_TAC [] []
   \\ FULL_SIMP_TAC std_ss [DIV_DIV_DIV_MULT,DIV_LT_X,X_LE_DIV]
   \\ `F` by DECIDE_TAC);
+
+val push_fixed_imm_LESS = prove(
+  ``!n. LENGTH (push_fixed_imm n) < 7``,
+  SIMP_TAC std_ss [push_fixed_imm_def] \\ SRW_TAC [] [LENGTH] \\ EVAL_TAC);
 
 val hw_steps_pc = prove(
   ``!n s. ((hw_steps (REPLICATE n hwPop) s).pc = s.pc + n2w n) /\
@@ -1140,7 +1184,7 @@ val hw_steps_hwml_lemma = prove(
          LENGTH_APPEND,LENGTH_REPLICATE,LENGTH]
     \\ STRIP_TAC \\ STRIP_TAC \\ STRIP_TAC
     \\ IMP_RES_TAC hw_step_error_IMP
-    \\ IMP_RES_TAC push_imm_lemma
+    \\ IMP_RES_TAC push_fixed_imm_lemma
     \\ FULL_SIMP_TAC std_ss []
     \\ F_TAC \\ FULL_SIMP_TAC (srw_ss()) [arg_def])
   THEN1
@@ -1152,15 +1196,15 @@ val hw_steps_hwml_lemma = prove(
          LENGTH_APPEND,LENGTH_REPLICATE,LENGTH]
     \\ STRIP_TAC \\ STRIP_TAC \\ STRIP_TAC
     \\ IMP_RES_TAC hw_step_error_IMP
-    \\ IMP_RES_TAC push_imm_lemma
+    \\ IMP_RES_TAC push_fixed_imm_lemma
     \\ FULL_SIMP_TAC std_ss [] \\ F_TAC \\ FULL_SIMP_TAC (srw_ss()) [arg_def]
     \\ Cases_on `s1.stack` \\ FULL_SIMP_TAC (srw_ss()) [EVERY2_def]
     \\ Cases_on `x = 0` \\ Cases_on `h = 0w`  \\ FULL_SIMP_TAC (srw_ss()) []
     \\ FULL_SIMP_TAC std_ss [word_add_n2w,AC ADD_COMM ADD_ASSOC]
     \\ FULL_SIMP_TAC std_ss [hw_val_def]
     \\ Cases_on `h` \\ FULL_SIMP_TAC (srw_ss()) []
-    \\ `LENGTH (push_imm n) < 7` by FULL_SIMP_TAC std_ss [push_imm_LESS]
-    \\ `s.pc + LENGTH (push_imm n) + 1 < 4294967296` by DECIDE_TAC
+    \\ `LENGTH (push_fixed_imm n) < 7` by FULL_SIMP_TAC std_ss [push_fixed_imm_LESS]
+    \\ `s.pc + LENGTH (push_fixed_imm n) + 1 < 4294967296` by DECIDE_TAC
     \\ FULL_SIMP_TAC (srw_ss()) [AC ADD_COMM ADD_ASSOC]
     \\ `F` by intLib.COOPER_TAC)
   THEN1
@@ -1168,7 +1212,7 @@ val hw_steps_hwml_lemma = prove(
       hw_steps_APPEND,hw_steps_def]
     \\ STRIP_TAC \\ STRIP_TAC \\ STRIP_TAC
     \\ IMP_RES_TAC hw_step_error_IMP
-    \\ IMP_RES_TAC push_imm_lemma
+    \\ IMP_RES_TAC push_fixed_imm_lemma
     \\ FULL_SIMP_TAC (srw_ss()) [hw_step_def,LET_DEF,inc_pc_def,
          arg_def,push_def,overflow_def]
     \\ Cases_on `s1.stack` \\ FULL_SIMP_TAC (srw_ss()) [EVERY2_def]
@@ -1177,10 +1221,10 @@ val hw_steps_hwml_lemma = prove(
     \\ FULL_SIMP_TAC (srw_ss()) []
     \\ Q.PAT_ASSUM `s1.pc = n2w s.pc` ASSUME_TAC
     \\ FULL_SIMP_TAC std_ss [word_add_n2w]
-    \\ `LENGTH (push_imm n) < 7` by FULL_SIMP_TAC std_ss [push_imm_LESS]
-    \\ `s.pc + LENGTH (push_imm n) < 4294967296` by DECIDE_TAC
+    \\ `LENGTH (push_fixed_imm n) < 7` by FULL_SIMP_TAC std_ss [push_fixed_imm_LESS]
+    \\ `s.pc + LENGTH (push_fixed_imm n) < 4294967296` by DECIDE_TAC
     \\ FULL_SIMP_TAC (srw_ss()) []
-    \\ `LENGTH (push_imm n) + s.pc + 1 < 4294967296` by DECIDE_TAC
+    \\ `LENGTH (push_fixed_imm n) + s.pc + 1 < 4294967296` by DECIDE_TAC
     \\ FULL_SIMP_TAC std_ss [] \\ DECIDE_TAC)
   THEN1
    (FULL_SIMP_TAC (srw_ss()) [hw_inv_aux_def,bump_pc_def,
@@ -1300,6 +1344,10 @@ val push_imm_next = prove(
   \\ SRW_TAC [] [] \\ FULL_SIMP_TAC std_ss []
   \\ EVAL_TAC \\ FULL_SIMP_TAC std_ss []);
 
+val push_fixed_imm_next = prove(
+  ``!n. EVERY hw_pc_next (push_fixed_imm n)``,
+  SRW_TAC [] [push_fixed_imm_def] \\ EVAL_TAC \\ FULL_SIMP_TAC std_ss []);
+
 val hwml_next = prove(
   ``!x. EVERY hw_pc_next (FRONT (hwml x)) /\ ~(hwml x = [])``,
   Cases \\ TRY (Cases_on `b`)
@@ -1315,7 +1363,7 @@ val hwml_next = prove(
   THEN1 (Cases_on `n` \\ FULL_SIMP_TAC (srw_ss()) [REPLICATE,FLAT])
   \\ SIMP_TAC std_ss [REWRITE_RULE [SNOC_APPEND] FRONT_SNOC]
   \\ TRY (MATCH_MP_TAC EVERY_FRONT)
-  \\ FULL_SIMP_TAC (srw_ss()) [EVERY_REPLICATE,push_imm_next]
+  \\ FULL_SIMP_TAC (srw_ss()) [EVERY_REPLICATE,push_imm_next,push_fixed_imm_next]
   \\ TRY (ONCE_REWRITE_TAC [push_imm_def] \\ SRW_TAC [] [] \\ NO_TAC)
   \\ EVAL_TAC \\ FULL_SIMP_TAC std_ss []);
 
