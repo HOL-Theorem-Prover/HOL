@@ -1,4 +1,4 @@
-INCLUDES = .. $(HOLDIR)/src/emit/ML ../bytecode/benchmarking # ../../hol2miniml
+INCLUDES = .. $(HOLDIR)/src/emit/ML ../bytecode/benchmarking ../../hol2miniml
 OPTIONS = QUIT_ON_FAILURE
 
 EXTRA_CLEANS = selftest.exe
@@ -14,8 +14,8 @@ BARE_THYS = ../compileTerminationTheory\
  ../bytecode/bytecodeEvalTheory\
  $(HOLDIR)/src/TeX/EmitTeX\
  $(HOLDIR)/src/emit/basis_emitTheory\
- ../bytecode/benchmarking/bytecode_testerLib
-#../../hol2miniml/ml_translatorLib
+ ../bytecode/benchmarking/bytecode_testerLib\
+ ../../hol2miniml/ml_translatorLib
 DEPS = $(patsubst %,%.uo,$(BARE_THYS))
 
 $(HOLHEAP): $(DEPS)

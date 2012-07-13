@@ -1,8 +1,8 @@
 open test_compilerLib
 val e1 = ``Lit (IntLit 42)``
-val [Number i] = run_exp e1
+val (m,[r as Number i]) = mst_run_exp e1
 val SOME 42 = intML.toInt i;
-(*val true = [OLit (IntLit (intML.fromInt 42))] = (pd [NTnum] e1 [])*)
+val true = (OLit (IntLit (intML.fromInt 42))) = (bv_to_ov m NTnum r)
 val e2 = ``If (Lit (Bool T)) (Lit (IntLit 1)) (Lit (IntLit 2))``
 val [Number i] = run_exp e2
 val SOME 1 = intML.toInt i;
@@ -13,8 +13,8 @@ val e4 = ``App Equality (Lit (IntLit 1)) (Lit (IntLit 2))``
 val [Number i] = run_exp e4
 val SOME 0 = intML.toInt i;
 val e5 = ``Fun "x" (Var "x")``
-val [f] = run_exp e5
-(*val true = [OFn] = pd [NTfn] e5 []*)
+val (m,[f]) = mst_run_exp e5
+val true = OFn = bv_to_ov m NTfn f
 val e6 = ``Let "x" (Lit (IntLit 1)) (App (Opn Plus) (Var "x") (Var "x"))``
 val [Number i] = run_exp e6
 val SOME 2 = intML.toInt i;
@@ -146,12 +146,17 @@ val e26 = ``Mat (Con "Cons" [Lit (IntLit 2);
               Lit (IntLit 5))]``
 val [Number i] = run_decs_exp([listd],e26)
 val SOME 5 = intML.toInt i;
-(*val e27 = ``
-CLetfun F [1] [([],CRaise Bind_error)]
-(CLprim CIf [CPrim2 CEq (CLit (IntLit 0)) (CLit (IntLit 0)); CLit (IntLit 1); CCall (CVar 1) []])``
-val c27 = term_to_bc_list(rhs(concl(computeLib.CBV_CONV compset ``REVERSE (compile ^s ^e27).code``)))
-val [Number i] = g c27
-val SOME 1 = intML.toInt i;*)
+val e27 =
+CLetfun(false,["1"],[([],CRaise Bind_error)],
+CIf(CPrim2(CEq,CLit (IntLit i0),CLit (IntLit i0)),
+    CLit (IntLit i1),
+    CCall (CVar "1",[])))
+val (bs,rs) = inits
+val rs = compile_Cexp rs e27
+val bs = add_code rs bs
+val bs = bc_eval bs
+val [Number i] = bc_state_stack bs
+val SOME 1 = intML.toInt i;
 val e28 = ``
 Letrec [("fac",("n",
   If (App Equality (Var "n") (Lit (IntLit 0)))
@@ -203,7 +208,6 @@ val SOME 0 = intML.toInt i;
 val paird = ``
 Dtype [(["'a"; "'b"],"prod",[("Pair_type",[Tvar "'a"; Tvar "'b"])])]
 ``
-(*
 val _ = ml_translatorLib.translate listTheory.APPEND
 val d0 = listd
 val append_defs = ``
@@ -218,29 +222,29 @@ val append_defs = ``
                 (Var "v4")])]))] ``
 val d1 = ``Dletrec ^append_defs``
 val e33 = ``App Opapp (Var "APPEND") (Con "Nil" [])``
-val (m,st) = pd1 e33 [d0,d1]
-val tm = pv m (hd st) NTfn
+val (m,st) = mst_run_decs_exp ([d0,d1],e33)
+val tm = bv_to_ov m NTfn (hd st)
 val true = tm = OFn;
 val e34 = ``App Opapp (App Opapp (Var "APPEND") (Con "Nil" []))
                       (Con "Nil" [])``
-val (m,st) = pd1 e34 [d0,d1]
+val (m,st) = mst_run_decs_exp ([d0,d1],e34)
 val [r,cl] = st
-val tm = pv m r (NTapp ([NTnum],"list"))
+val tm = bv_to_ov m (NTapp ([NTnum],"list")) r
 val true = tm = OConv ("Nil",[])
-val tm = pv m cl NTfn
+val tm = bv_to_ov m NTfn cl
 val true = tm = OFn;
 fun h t = hd(tl(snd(strip_comb(concl t))))
 val t = ml_translatorLib.hol2deep ``[1;2;3]++[4;5;6:num]``
 val e30 = h t
-val (m,st) = pd1 e30 [d0,d1]
+val (m,st) = mst_run_decs_exp ([d0,d1],e30)
 val [res,cl] = st
-val tm = pv m res (NTapp ([NTnum],"list"))
+val tm = bv_to_ov m (NTapp ([NTnum],"list")) res
 val true = tm = term_to_ov (ml_translatorLib.hol2val ``[1;2;3;4;5;6:num]``);
 val t = ml_translatorLib.hol2deep ``[]++[4:num]``
 val e32 = h t
-val (m,st) = pd1 e32 [d0,d1]
+val (m,st) = mst_run_decs_exp ([d0,d1],e32)
 val [res,cl] = st
-val tm = pv m res (NTapp ([NTnum],"list"))
+val tm = bv_to_ov m (NTapp ([NTnum],"list")) res
 val true = tm = OConv ("Cons",[OLit (IntLit (intML.fromInt 4)), OConv ("Nil",[])]);
 val d2 = paird
 val d3 = ``
@@ -302,18 +306,17 @@ val _ = ml_translatorLib.translate sortingTheory.PARTITION_DEF
 val _ = ml_translatorLib.translate sortingTheory.QSORT_DEF
 val t = ml_translatorLib.hol2deep ``QSORT (λx y. x ≤ y) [9;8;7;6;2;3;4;5:num]``
 val e31 = h t;
-val (m,st) = pd1 e31 [d0,d1,d2,d3,d4,d5]
+val (m,st) = mst_run_decs_exp ([d0,d1,d2,d3,d4,d5],e31)
 val [res,clQSORT,clPARTITION,clPART,clAPPEND] = st
-val tm = pv m res (NTapp([NTnum],"list"))
+val tm = bv_to_ov m (NTapp([NTnum],"list")) res
 val true = tm = term_to_ov(ml_translatorLib.hol2val ``[2;3;4;5;6;7;8;9:num]``);
 val d = ``
 Dlet (Pvar "add1")
   (Fun "x" (App (Opn Plus) (Var "x") (Lit (IntLit 1))))``
 val e40 = ``App Opapp (Var "add1") (Lit (IntLit 1))``
-val (m,st) = pd1 e40 [d]
+val (m,st) = mst_run_decs_exp ([d],e40)
 val [res,add1] = st
-val true = pv m res NTnum = term_to_ov(ml_translatorLib.hol2val ``2:int``);
-*)
+val true = bv_to_ov m NTnum res = term_to_ov(ml_translatorLib.hol2val ``2:int``);
 val e43 = ``Letrec [("o","n",
   If (App Equality (Var "n") (Lit (IntLit 0)))
      (Var "n")
