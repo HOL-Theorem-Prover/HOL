@@ -1,5 +1,5 @@
 structure test_compilerLib = struct
-open HolKernel stringLib bytecodeML compileML (* ml_translatorLib *)
+open HolKernel stringLib bytecodeML compileML ml_translatorLib
 
 fun bc_evaln 0 s = s
   | bc_evaln n s = let

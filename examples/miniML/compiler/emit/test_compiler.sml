@@ -208,115 +208,55 @@ val SOME 0 = intML.toInt i;
 val paird = ``
 Dtype [(["'a"; "'b"],"prod",[("Pair_type",[Tvar "'a"; Tvar "'b"])])]
 ``
-val _ = ml_translatorLib.translate listTheory.APPEND
-val d0 = listd
-val append_defs = ``
-  [("APPEND","v3",
-    Fun "v4"
-      (Mat (Var "v3")
-         [(Pcon "Nil" [],Var "v4");
-          (Pcon "Cons" [Pvar "v2"; Pvar "v1"],
-           Con "Cons"
-             [Var "v2";
-              App Opapp (App Opapp (Var "APPEND") (Var "v1"))
-                (Var "v4")])]))] ``
-val d1 = ``Dletrec ^append_defs``
+val _ = reset_translation()
+val _ = translate listTheory.APPEND
+val _ = finalise_translation()
+val ds = dest_list I (get_decls())
 val e33 = ``App Opapp (Var "APPEND") (Con "Nil" [])``
-val (m,st) = mst_run_decs_exp ([d0,d1],e33)
+val (m,st) = mst_run_decs_exp (ds,e33)
 val tm = bv_to_ov m NTfn (hd st)
 val true = tm = OFn;
 val e34 = ``App Opapp (App Opapp (Var "APPEND") (Con "Nil" []))
                       (Con "Nil" [])``
-val (m,st) = mst_run_decs_exp ([d0,d1],e34)
+val (m,st) = mst_run_decs_exp (ds,e34)
 val [r,cl] = st
 val tm = bv_to_ov m (NTapp ([NTnum],"list")) r
 val true = tm = OConv ("Nil",[])
 val tm = bv_to_ov m NTfn cl
 val true = tm = OFn;
 fun h t = hd(tl(snd(strip_comb(concl t))))
-val t = ml_translatorLib.hol2deep ``[1;2;3]++[4;5;6:num]``
+val t = hol2deep ``[1;2;3]++[4;5;6:num]``
 val e30 = h t
-val (m,st) = mst_run_decs_exp ([d0,d1],e30)
+val (m,st) = mst_run_decs_exp (ds,e30)
 val [res,cl] = st
 val tm = bv_to_ov m (NTapp ([NTnum],"list")) res
-val true = tm = term_to_ov (ml_translatorLib.hol2val ``[1;2;3;4;5;6:num]``);
-val t = ml_translatorLib.hol2deep ``[]++[4:num]``
+val true = tm = term_to_ov (hol2val ``[1;2;3;4;5;6:num]``);
+val t = hol2deep ``[]++[4:num]``
 val e32 = h t
-val (m,st) = mst_run_decs_exp ([d0,d1],e32)
+val (m,st) = mst_run_decs_exp (ds,e32)
 val [res,cl] = st
 val tm = bv_to_ov m (NTapp ([NTnum],"list")) res
 val true = tm = OConv ("Cons",[OLit (IntLit (intML.fromInt 4)), OConv ("Nil",[])]);
-val d2 = paird
-val d3 = ``
-Dletrec
-  [("PART","v3",
-    Fun "v4"
-      (Fun "v5"
-         (Fun "v6"
-            (Mat (Var "v4")
-               [(Pcon "Nil" [],Con "Pair_type" [Var "v5"; Var "v6"]);
-                (Pcon "Cons" [Pvar "v2"; Pvar "v1"],
-                 If (App Opapp (Var "v3") (Var "v2"))
-                   (App Opapp
-                      (App Opapp
-                         (App Opapp (App Opapp (Var "PART") (Var "v3"))
-                            (Var "v1"))
-                         (Con "Cons" [Var "v2"; Var "v5"])) (Var "v6"))
-                   (App Opapp
-                      (App Opapp
-                         (App Opapp (App Opapp (Var "PART") (Var "v3"))
-                            (Var "v1")) (Var "v5"))
-                      (Con "Cons" [Var "v2"; Var "v6"])))]))))]
-`` val d4 = ``
-Dlet (Pvar "PARTITION")
-  (Fun "v1"
-     (Fun "v2"
-        (App Opapp
-           (App Opapp
-              (App Opapp (App Opapp (Var "PART") (Var "v1")) (Var "v2"))
-              (Con "Nil" [])) (Con "Nil" []))))
-`` val d5 = ``
-Dletrec
-  [("QSORT","v7",
-    Fun "v8"
-      (Mat (Var "v8")
-         [(Pcon "Nil" [],Con "Nil" []);
-          (Pcon "Cons" [Pvar "v6"; Pvar "v5"],
-           Let "v3"
-             (App Opapp
-                (App Opapp (Var "PARTITION")
-                   (Fun "v4"
-                      (App Opapp (App Opapp (Var "v7") (Var "v4"))
-                         (Var "v6")))) (Var "v5"))
-             (Mat (Var "v3")
-                [(Pcon "Pair_type" [Pvar "v2"; Pvar "v1"],
-                  App Opapp
-                    (App Opapp (Var "APPEND")
-                       (App Opapp
-                          (App Opapp (Var "APPEND")
-                             (App Opapp
-                                (App Opapp (Var "QSORT") (Var "v7"))
-                                (Var "v2")))
-                          (Con "Cons" [Var "v6"; Con "Nil" []])))
-                    (App Opapp (App Opapp (Var "QSORT") (Var "v7"))
-                       (Var "v1")))]))]))]
-``
-val _ = ml_translatorLib.translate sortingTheory.PART_DEF
-val _ = ml_translatorLib.translate sortingTheory.PARTITION_DEF
-val _ = ml_translatorLib.translate sortingTheory.QSORT_DEF
-val t = ml_translatorLib.hol2deep ``QSORT (λx y. x ≤ y) [9;8;7;6;2;3;4;5:num]``
+val _ = reset_translation()
+val _ = translate sortingTheory.PART_DEF
+val _ = translate sortingTheory.PARTITION_DEF
+val _ = translate listTheory.APPEND
+val _ = translate sortingTheory.QSORT_DEF
+val _ = finalise_translation()
+val ds = dest_list I (get_decls())
+val t = hol2deep ``QSORT (λx y. x ≤ y) [9;8;7;6;2;3;4;5:num]``
 val e31 = h t;
-val (m,st) = mst_run_decs_exp ([d0,d1,d2,d3,d4,d5],e31)
+val (m,st) = mst_run_decs_exp (ds,e31)
 val [res,clQSORT,clPARTITION,clPART,clAPPEND] = st
 val tm = bv_to_ov m (NTapp([NTnum],"list")) res
-val true = tm = term_to_ov(ml_translatorLib.hol2val ``[2;3;4;5;6;7;8;9:num]``);
+val true = tm = term_to_ov(hol2val ``[2;3;4;5;6;7;8;9:num]``);
 val d = ``
 Dlet (Pvar "add1")
   (Fun "x" (App (Opn Plus) (Var "x") (Lit (IntLit 1))))``
 val e40 = ``App Opapp (Var "add1") (Lit (IntLit 1))``
 val (m,st) = mst_run_decs_exp ([d],e40)
 val [res,add1] = st
-val true = bv_to_ov m NTnum res = term_to_ov(ml_translatorLib.hol2val ``2:int``);
+val true = bv_to_ov m NTnum res = term_to_ov(hol2val ``2:int``);
 val e43 = ``Letrec [("o","n",
   If (App Equality (Var "n") (Lit (IntLit 0)))
      (Var "n")
