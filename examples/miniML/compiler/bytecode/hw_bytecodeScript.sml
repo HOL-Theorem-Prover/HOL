@@ -186,8 +186,8 @@ val hw_step_rel_def = Define `
 
 val hw_decode_def = Define `
   hw_decode b =
-    if w2n b DIV 64 = 1 then hwPushImm (w2w b) else
-    if w2n b DIV 64 = 3 then hwShiftAddImm (w2w b) else
+    if b ' 6 /\ ~(b ' 7) then hwPushImm (w2w b) else
+    if b ' 6 /\ b ' 7 then hwShiftAddImm (w2w b) else
     (* --- *)
     if b = 0w then hwAbort else
     if b = 1w then hwPop else
@@ -211,7 +211,48 @@ val hw_decode_def = Define `
     if b = 34w then hwHeapAddress else
     if b = 35w then hwRead else
     if b = 36w then hwWrite else
-    if b = 37w then hwCompareExchange else hwAbort`
+    if b = 37w then hwCompareExchange else
+    if b = 39w then hwFail else hwAbort`
+
+val hw_encode_def = Define `
+  hw_encode instr =
+    case instr of
+      hwPushImm imm => 64w !! w2w imm
+    | hwShiftAddImm imm => 3w * 64w !! w2w imm
+    (* --- *)
+    | hwPop => (1w:word8)
+    | hwPop1 => 4w
+    | hwStackLoad => 2w
+    | hwStackStore => 3w
+    (* --- *)
+    | hwEqual => 8w
+    | hwLess => 9w
+    | hwAdd => 10w
+    | hwSub => 11w
+    | hwSwap => 12w
+    (* --- *)
+    | hwJump => 16w
+    | hwJumpIfNotZero => 17w
+    | hwCall => 18w
+    (* --- *)
+    | hwHeapLoad => 32w
+    | hwHeapStore => 33w
+    | hwHeapAlloc => 38w
+    | hwHeapAddress => 34w
+    | hwRead => 35w
+    | hwWrite => 36w
+    | hwCompareExchange => 37w
+    | hwFail => 39w
+    | hwAbort => 40w`;
+
+val hw_decode_encode = store_thm("hw_decode_encode",
+  ``!x. hw_decode (hw_encode x) = x``,
+  Cases \\ EVAL_TAC
+  \\ `((64w:word8) !! w2w (c:6 word)) ' 6 /\ ~(64w:word8 !! w2w (c:6 word)) ' 7 /\
+      ((192w:word8) !! w2w (c:6 word)) ' 6 /\ (192w:word8 !! w2w (c:6 word)) ' 7 /\
+      (w2w ((64w:word8) !! w2w c) = c:6 word) /\
+      (w2w ((192w:word8) !! w2w c) = c:6 word)` by blastLib.BBLAST_TAC
+  \\ FULL_SIMP_TAC std_ss []);
 
 
 (* -------------------------------------------------------------------------- *
