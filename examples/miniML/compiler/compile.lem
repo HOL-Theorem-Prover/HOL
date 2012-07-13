@@ -1308,9 +1308,9 @@ let init_compiler_state =
   <| env = Pmap.empty
    ; code = []
    ; code_length = 0
-   ; next_label = 1 (* depends on exception handlers *)
+   ; next_label = 0 (* depends on exception handlers *)
    ; sz = 0
-   ; inst_length = fun i -> 0 (* TODO: depends on runtime *)
+   ; inst_length = fun i -> 0 (* depends on runtime *)
    ; decl = None
    ; tail = TCNonTail
    |>

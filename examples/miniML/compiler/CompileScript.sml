@@ -1389,9 +1389,9 @@ val _ = Define `
   <| env := FEMPTY
    ; code := []
    ; code_length := 0
-   ; next_label := 1 (* depends on exception handlers *)
+   ; next_label := 0 (* depends on exception handlers *)
    ; sz := 0
-   ; inst_length := \ i . 0 (* TODO: depends on runtime *)
+   ; inst_length := \ i . 0 (* depends on runtime *)
    ; decl :=NONE
    ; tail := TCNonTail
    |>`;
