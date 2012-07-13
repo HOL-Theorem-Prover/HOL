@@ -6,6 +6,9 @@ EXTRA_CLEANS = selftest.exe
 selftest.exe: test_compiler.uo compile_emitTheory.uo
 	$(HOLMOSMLC) -o $@ $<
 
+hw_test.exe: hw_test.uo hw_bytecode_emitTheory.uo
+	$(HOLMOSMLC) -o $@ $<
+
 ifdef POLY
 HOLHEAP = miniml-heap
 EXTRA_CLEANS = $(HOLHEAP) $(HOLHEAP).o

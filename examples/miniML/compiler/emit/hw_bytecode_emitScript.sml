@@ -18,6 +18,7 @@ val defs = map EmitML.DEFN
 , hwml_def
 , full_hwml_def
 , hwml_length_def
+, hw_encode_def
 ]
 
 val _ = EmitML.eSML "hw_bytecode" (
@@ -25,6 +26,7 @@ val _ = EmitML.eSML "hw_bytecode" (
 ::(EmitML.MLSIG "type num = numML.num")
 ::(EmitML.MLSIG "type bc_inst = bytecodeML.bc_inst")
 ::(EmitML.MLSIG "type word6 = wordsML.word6")
+::(EmitML.MLSIG "type word8 = wordsML.word8")
 ::data@defs)
 
 val _ = export_theory ();
