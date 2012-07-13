@@ -103,11 +103,11 @@ val Cevaluate_FUPDATE = store_thm(
 "Cevaluate_FUPDATE",
 ``∀env exp res k v. Cevaluate env exp res ∧
  (free_vars exp ⊆ FDOM env) ∧
- (∀v. v ∈ FRANGE env ⇒ closed v) ∧
- k ∉ free_vars exp ∧ closed v
+ (∀v. v ∈ FRANGE env ⇒ Cclosed v) ∧
+ k ∉ free_vars exp ∧ Cclosed v
  ⇒ ∃res'. Cevaluate (env |+ (k,v)) exp res' ∧ result_rel syneq res res'``,
 rw[] >>
-`∀w. w ∈ FRANGE (env |+ (k,v)) ⇒ closed w` by (
+`∀w. w ∈ FRANGE (env |+ (k,v)) ⇒ Cclosed w` by (
   fsrw_tac[DNF_ss][FRANGE_DEF,DOMSUB_FAPPLY_THM] ) >>
 qsuff_tac `(env |+ (k,v) = (DRESTRICT env (free_vars exp)) ⊌ (env |+ (k,v)))`
   >- metis_tac[Cevaluate_any_env,fmap_rel_refl,syneq_refl] >>
@@ -118,13 +118,13 @@ fs[SUBSET_DEF] >> rw[] >> fs[])
 val Cevaluate_super_env = store_thm(
 "Cevaluate_super_env",
 ``∀s env exp res. Cevaluate (DRESTRICT env (free_vars exp)) exp res ∧ free_vars exp ⊆ s
-  ∧ free_vars exp ⊆ FDOM env ∧ (∀v. v ∈ FRANGE (DRESTRICT env s) ⇒ closed v)
+  ∧ free_vars exp ⊆ FDOM env ∧ (∀v. v ∈ FRANGE (DRESTRICT env s) ⇒ Cclosed v)
   ⇒ ∃res'. Cevaluate (DRESTRICT env s) exp res' ∧ result_rel syneq res res'``,
 rw[] >>
 qmatch_assum_abbrev_tac `Cevaluate e1 exp res` >>
 qspecl_then [`e1`,`exp`,`res`] mp_tac Cevaluate_any_env >> rw[] >>
 `free_vars exp ⊆ FDOM e1` by ( fs[Abbr`e1`,DRESTRICT_DEF] ) >>
-`∀v. v ∈ FRANGE e1 ⇒ closed v` by (
+`∀v. v ∈ FRANGE e1 ⇒ Cclosed v` by (
   fsrw_tac[DNF_ss][Abbr`e1`,FRANGE_DEF,DRESTRICT_DEF,SUBSET_DEF] ) >>
 fs[] >>
 first_x_assum (qspec_then `e1` mp_tac) >> rw[] >>
@@ -378,7 +378,7 @@ val tacGt =
   qmatch_assum_abbrev_tac `Cevaluate env0 exp0 (Rval w2)` >>
 
   Q.ISPECL_THEN[`env0`,`exp0`,`Rval w2`,`fresh_var (free_vars exp0)`,`w1`]mp_tac Cevaluate_FUPDATE >>
-  `∀v. v ∈ FRANGE env0 ⇒ closed v` by (
+  `∀v. v ∈ FRANGE env0 ⇒ Cclosed v` by (
     unabbrev_all_tac >>
     fsrw_tac[ETA_ss][env_to_Cenv_MAP,alist_to_fmap_MAP_values,o_f_FRANGE]
 
@@ -435,7 +435,7 @@ val _ = export_rewrites["OPTREL_refl"]
 val exp_to_Cexp_thm1 = store_thm(
 "exp_to_Cexp_thm1",
 ``∀cenv env exp res. evaluate cenv env exp res ⇒
-  (res ≠ Rerr Rtype_error) ⇒
+  (∀v. MEM v (MAP SND env) ⇒ closed v) ∧ (res ≠ Rerr Rtype_error) ⇒
   ∀m. ∃Cres. Cevaluate (alist_to_fmap (env_to_Cenv m env)) (exp_to_Cexp m exp) Cres ∧
              result_rel syneq (map_result (v_to_Cv m) res) Cres``,
 ho_match_mp_tac evaluate_nice_strongind >>
@@ -709,12 +709,12 @@ SRW_TAC[][] THEN PROVE_TAC[])
 val Cevaluate_FOLDR_trans = store_thm(
 "Cevaluate_FOLDR_trans",
 ``∀ls.
-(∀v. v ∈ FRANGE env ⇒ closed v) ∧
+(∀v. v ∈ FRANGE env ⇒ Cclosed v) ∧
 (free_vars (FOLDR f a ls) ⊆ FDOM env) ∧
 (∀x exp. free_vars exp ⊆ free_vars (f x exp)) ∧
 (∃res'. Cevaluate (DRESTRICT env (free_vars a)) a res ∧ result_rel syneq res res') ∧
 (∀x exp res'. Cevaluate (DRESTRICT env (free_vars exp)) exp res' ∧
-              (∀v. v ∈ FRANGE env ⇒ closed v) ∧
+              (∀v. v ∈ FRANGE env ⇒ Cclosed v) ∧
               (free_vars exp ⊆ FDOM env)
 ⇒ ∃res''. Cevaluate (DRESTRICT env (free_vars (f x exp))) (f x exp) res'' ∧ result_rel syneq res' res'') ⇒
 ∃res'. Cevaluate env (FOLDR f a ls) res' ∧ result_rel syneq res res'``,
