@@ -466,13 +466,13 @@ local
     in () end;
   val finalised = ref false
 in
-  fun finialise_translation () =
+  fun finalise_translation () =
     if !finalised then () else let
       val _ = (finalised := true)
       val _ = pack_state ()
       val _ = print_translation_output ()
       in () end
-  val _ = Theory.register_onexport finialise_translation
+  val _ = Theory.register_onexport finalise_translation
   fun translation_extends name = let
     val _ = print ("Loading translation: " ^ name ^ " ... ")
     val _ = unpack_state name

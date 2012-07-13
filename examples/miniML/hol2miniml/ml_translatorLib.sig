@@ -24,7 +24,7 @@ sig
     (* loading / storing state of translator *)
 
     val translation_extends   : string -> unit
-    val finialise_translation : unit -> unit   (* happens automatically at export *)
+    val finalise_translation  : unit -> unit   (* happens automatically at export *)
     val get_cert              : string -> thm * thm
 
     (* simplification of preconditions / sideconditions *)
