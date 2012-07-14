@@ -846,8 +846,11 @@ MAP_ZIP
 val (closed_rules,closed_ind,closed_cases) = Hol_reln`
 (closed (Litv l)) ∧
 (EVERY closed vs ⇒ closed (Conv n vs)) ∧
-(FV b ⊆ set (MAP FST env) ∪ {x} ⇒ closed (Closure env x b)) ∧
-((MEM d (MAP FST defs)) ∧
+(EVERY closed (MAP SND env) ∧
+ FV b ⊆ set (MAP FST env) ∪ {x}
+⇒ closed (Closure env x b)) ∧
+(EVERY closed (MAP SND env) ∧
+ MEM d (MAP FST defs) ∧
  (∀i d x b. i < LENGTH defs ∧ (EL i defs = (d,x,b)) ⇒
             FV b ⊆ set (MAP FST env) ∪ set (MAP FST defs) ∪ {x})
 ⇒ closed (Recclosure env defs d))`

@@ -339,19 +339,33 @@ rw[] >>
 Q.ISPECL_THEN [`I:γ->γ`,`f`,`al`] match_mp_tac alist_to_fmap_MAP_matchable >>
 rw[INJ_I])
 
-(*
 val v_to_Cv_closed = store_thm(
 "v_to_Cv_closed",
-``(∀m v. closed (v_to_Cv m v)) ∧
-  (∀m vs. EVERY closed (vs_to_Cvs m vs)) ∧
-  (∀m env. FEVERY (closed o SND) (alist_to_fmap (env_to_Cenv m env)))``,
+``(∀m v. closed v ⇒ Cclosed (v_to_Cv m v)) ∧
+  (∀m vs. EVERY closed vs ⇒ EVERY Cclosed (vs_to_Cvs m vs)) ∧
+  (∀m env. EVERY closed (MAP SND env) ⇒ FEVERY (Cclosed o SND) (alist_to_fmap (env_to_Cenv m env)))``,
 ho_match_mp_tac v_to_Cv_ind >>
-rw[v_to_Cv_def] >> rw[closed_rules]
+rw[v_to_Cv_def] >> rw[Cclosed_rules]
 >- (
-  rw[Once closed_cases,Abbr`Ce`]
-  need to say the MiniML value was closed too...
-  )
-*)
+  fs[Once closed_cases] >>
+  rw[Cclosed_rules] )
+>- (
+  fs[Once closed_cases] >>
+  rw[Once Cclosed_cases,Abbr`Ce`,Abbr`Cenv`,env_to_Cenv_MAP,MAP_MAP_o,combinTheory.o_DEF,pairTheory.LAMBDA_PROD,FST_pair] >>
+  fs[SUBSET_DEF] >> PROVE_TAC[])
+>- (
+  fs[Once closed_cases] >>
+  fs[defs_to_Cdefs_MAP] >> rw[] >>
+  rw[Once Cclosed_cases,Abbr`Cenv`,env_to_Cenv_MAP] >>
+  pop_assum mp_tac >> rw[EL_MAP] >>
+  qabbrev_tac `p = EL i defs` >>
+  PairCases_on `p` >> fs[] >> rw[] >>
+  rw[MAP_MAP_o,combinTheory.o_DEF,pairTheory.LAMBDA_PROD,FST_pair] >>
+  fs[SUBSET_DEF] >> PROVE_TAC[] ) >>
+first_x_assum (match_mp_tac o MP_CANON) >>
+pop_assum mp_tac >>
+rw[FRANGE_DEF,DOMSUB_FAPPLY_THM] >>
+rw[] >> PROVE_TAC[])
 
 val tacLt =
   rw[Once Cevaluate_cases] >>
@@ -435,7 +449,7 @@ val _ = export_rewrites["OPTREL_refl"]
 val exp_to_Cexp_thm1 = store_thm(
 "exp_to_Cexp_thm1",
 ``∀cenv env exp res. evaluate cenv env exp res ⇒
-  (∀v. MEM v (MAP SND env) ⇒ closed v) ∧ (res ≠ Rerr Rtype_error) ⇒
+  (EVERY closed (MAP SND env)) ∧ (res ≠ Rerr Rtype_error) ⇒
   ∀m. ∃Cres. Cevaluate (alist_to_fmap (env_to_Cenv m env)) (exp_to_Cexp m exp) Cres ∧
              result_rel syneq (map_result (v_to_Cv m) res) Cres``,
 ho_match_mp_tac evaluate_nice_strongind >>
