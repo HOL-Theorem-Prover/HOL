@@ -19,15 +19,12 @@ includes timing information about the function call.
 {
 - Count.apply (CONJUNCTS o SPEC_ALL) AND_CLAUSES;
 runtime: 0.000s,    gctime: 0.000s,     systime: 0.000s.
-Axioms asserted: 0.
-Definitions made: 0.
-Oracle invocations: 0.
-Theorems loaded from disk: 0.
-HOL primitive inference steps: 9.
-Total: 9.
-> val it =
-    [|- T /\ t = t, |- t /\ T = t, |- F /\ t = F, |- t /\ F = F,
-     |- t /\ t = t] : thm list
+Axioms: 0, Defs: 0, Disk: 0, Orcl: 0, Prims: 9; Total: 9
+val it =
+   [|- T /\ t <=> t,
+    |- t /\ T <=> t, |- F /\ t <=> F,
+    |- t /\ F <=> F,
+    |- t /\ t <=> t]: thm list
 }
 
 \FAILURE
