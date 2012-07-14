@@ -1585,15 +1585,88 @@ val epsilon0_least_fixpoint = store_thm(
   gen_tac >> simp[epsilon0_def] >> DEEP_INTRO_TAC oleast_intro >>
   metis_tac [epsilon0_fixpoint]);
 
-(*val cantor_normal_form = store_thm(
-  "cantor_normal_form",
+val FOLDL_SUM_lemma = prove(
+  ``∀ces x s:'a ordinal.
+       x + FOLDL (λacc (c,e). acc + c * a ** e) s ces =
+       FOLDL (λacc (c,e). acc + c * a ** e) (x + s) ces``,
+  Induct >> simp[pairTheory.FORALL_PROD] >> simp[ordADD_ASSOC]);
+
+val poly_lemma0 = prove(
   ``∀a:'a ordinal b.
       1 < a ⇒
-      ∃!ces.
+      ∃ces.
         (∀i j. i < j ∧ j < LENGTH ces ⇒ SND (EL j ces) < SND (EL i ces)) ∧
         (∀c e. MEM (c,e) ces ⇒ 0 < c ∧ c < a) ∧
         b = FOLDL (λacc (c,e). acc + c * a ** e) 0 ces``,
-  ...)
-*)
+  gen_tac >> Cases_on `1 < a` >> simp[] >>
+  `0 < a` by (match_mp_tac ordlt_TRANS >> qexists_tac `1` >> simp[]) >>
+  ho_match_mp_tac ord_induction >>
+  qx_gen_tac `b` >> strip_tac >> Cases_on `b = 0`
+  >- (qexists_tac `[]` >> simp[]) >>
+  `0 < b ∧ 1 ≤ b` by fs[IFF_ZERO_lt] >>
+  qabbrev_tac `s = { e | a ** e ≤ b }` >>
+  `∀e. e ∈ s ⇔ a ** e ≤ b` by simp[Abbr`s`] >>
+  `s ≠ ∅` by (simp[EXTENSION] >> qexists_tac `0` >> simp[]) >>
+  `∀c. c ∈ s ⇒ c < b⁺`
+    by (simp[ordlt_SUC_DISCRETE, GSYM ordle_lteq] >>
+        metis_tac [x_le_ordEXP_x, ordle_TRANS]) >>
+  `s ≼ univ(:'a inf)`
+    by (`s ≼ preds b⁺` by simp[SUBSET_CARDLEQ, SUBSET_DEF] >>
+        metis_tac [cardleq_TRANS, preds_inj_univ]) >>
+  qabbrev_tac `E = sup s` >>
+  `∀g. g < E ⇔ ∃d. d ∈ s ∧ g < d` by simp[sup_thm, Abbr`E`] >>
+  `a ** E ≤ b`
+    by dsimp[Abbr`E`, ordEXP_continuous, sup_thm, IMAGE_cardleq_rwt, impI] >>
+  `b < a ** E⁺`
+    by (spose_not_then strip_assume_tac >>
+        `E⁺ ∈ s` by simp[] >> `E⁺ ≤ E` by metis_tac [suple_thm] >>
+        fs[]) >>
+  qabbrev_tac `c1 = b / a ** E` >>
+  qabbrev_tac `r = b % a ** E` >>
+  `0 < a ** E` by simp[ZERO_lt_ordEXP] >>
+  `b = c1 * a ** E + r ∧ r < a ** E` by metis_tac [ordDIVISION] >>
+  `r < b` by metis_tac [ordlt_TRANS, ordle_lteq] >>
+  `0 < c1` by (spose_not_then strip_assume_tac >> fs[]) >>
+  `c1 < a`
+    by (spose_not_then strip_assume_tac >>
+        `a * a ** E ≤ c1 * a ** E` by simp[] >>
+        `a * a ** E + r ≤ b` by simp[ordADD_le_MONO_L] >>
+        metis_tac [ordEXP_def, ordle_CANCEL_ADDR, ordle_TRANS]) >>
+  `∃ces. (∀i j. i < j ∧ j < LENGTH ces ⇒ SND (EL j ces) < SND (EL i ces)) ∧
+         (∀c e. MEM (c,e) ces ⇒ 0 < c ∧ c < a) ∧
+         r = FOLDL (λacc (c,e). acc + c * a ** e) 0 ces` by metis_tac[] >>
+  qexists_tac `(c1,E) :: ces` >> dsimp[] >> Tactical.REVERSE (rpt conj_tac)
+  >- simp[FOLDL_SUM_lemma] >- metis_tac[] >- metis_tac[] >>
+  gen_tac >>
+  `(∃i0. i = SUC i0) ∨ i = 0` by (Cases_on `i` >> simp[])
+  >- (gen_tac >> Cases_on `j` >> simp[]) >>
+  qpat_assum `∀g. g < E ⇔ P` (K ALL_TAC) >> simp[] >>
+  qsuff_tac `0 < LENGTH ces ⇒ SND (EL 0 ces) < E`
+  >- (strip_tac >> qx_gen_tac `j` >> strip_tac >>
+      `j = 0 ∨ ∃j0. j = SUC j0` by (Cases_on `j` >> simp[]) >> simp[] >>
+      `j0 < LENGTH ces` by fs[] >>
+      `0 < LENGTH ces` by decide_tac >>
+      Cases_on `j0 = 0` >- asm_simp_tac bool_ss [] >>
+      `0 < j0` by decide_tac >>
+      metis_tac [ordlt_TRANS]) >>
+  `ces = [] ∨ ∃c0 e0 t. ces = (c0,e0)::t`
+    by metis_tac [pairTheory.pair_CASES, listTheory.list_CASES] >- simp[] >>
+  simp[] >> (* rts: e0 < E *) spose_not_then strip_assume_tac >>
+  `r = c0 * a ** e0 + FOLDL (λacc (c,e). acc + c * a ** e) 0 t`
+    by simp[FOLDL_SUM_lemma] >>
+  `a ** E ≤ a ** e0` by simp[ordEXP_le_MONO_R] >>
+  `a ** e0 ≤ c0 * a ** e0`
+    by (simp_tac bool_ss [SimpR ``ordlt``, Once (GSYM ordMULT_1L)] >>
+        match_mp_tac ordMULT_le_MONO_L >> simp[IFF_ZERO_lt] >> fs[]) >>
+  `c0 * a ** e0 ≤ c0 * a ** e0 + FOLDL (λacc (c,e). acc + c * a ** e) 0 t`
+    by simp[] >>
+  metis_tac [ordle_TRANS, ordle_lteq, ordlt_REFL, ordlt_TRANS])
+
+
+
+
+
+
 
 val _ = export_theory()
+
