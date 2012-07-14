@@ -182,6 +182,7 @@ fun processSig db version bgcolor HOLpath SRCFILES sigfile htmlfile =
            fn "FinalType" => "Type"
             | "FinalTerm" => "Term"
             | "FinalThm" => "Thm"
+            | "HolKernelDoc" => "HolKernel"
             | s => s
 
         fun locate_docfile id =
