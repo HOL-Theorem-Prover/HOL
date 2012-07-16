@@ -52,7 +52,7 @@ val _ = mk_test "hwt1" (tr_exp ``1+1:num``)
 
 val _ = mk_test "hwt2" (tr_exp ``let x = F in if ¬x then 0 else 1``)
 
-val test_def = Define `test = EL 3 (QSORT (\m n. m <= n) [3;5;1;9;8;5;4:num])`;
+val t = Define `test = EL 3 (QSORT (\m n. m <= n) [3;5;1;9;8;5;4:num])`;
 val _ = reset_translation ()
 val _ = translate listTheory.APPEND;
 val _ = translate sortingTheory.PART_DEF;
@@ -61,7 +61,26 @@ val _ = translate sortingTheory.QSORT_DEF;
 val _ = translate listTheory.HD;
 val _ = translate listTheory.TL;
 val _ = translate listTheory.EL;
-val _ = translate test_def;
+val _ = translate t
 val _ = finalise_translation ();
 val ds = dest_list I (get_decls())
 val _ = mk_test_ds "hwt3" (ds,``Var "test"``)
+
+val t = Define `test = HD [1;0:num]`
+val _ = reset_translation()
+val _ = translate listTheory.HD
+val _ = translate t
+val _ = finalise_translation ()
+val ds = dest_list I (get_decls())
+val _ = mk_test_ds "hwt4" (ds, ``Var "test"``)
+
+val t = Define `test = EL 4 ([1;2;3] ++ [4;5;6])`
+val _ = reset_translation()
+val _ = translate listTheory.APPEND
+val _ = translate listTheory.HD
+val _ = translate listTheory.TL;
+val _ = translate listTheory.EL;
+val _ = translate t
+val _ = finalise_translation ()
+val ds = dest_list I (get_decls())
+val _ = mk_test_ds "hwt5" (ds, ``Var "test"``)
