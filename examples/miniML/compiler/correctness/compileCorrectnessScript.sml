@@ -457,6 +457,9 @@ val _ = export_rewrites["OPTREL_refl"]
 val do_app_def = MiniMLTheory.do_app_def
 val bind_def = MiniMLTheory.bind_def
 val build_rec_env_def = MiniMLTheory.build_rec_env_def
+val find_recfun_def = MiniMLTerminationTheory.find_recfun_def
+val do_log_def = MiniMLTheory.do_log_def
+val do_if_def = MiniMLTheory.do_if_def
 
 val build_rec_env_closed = store_thm(
 "build_rec_env_closed",
@@ -475,13 +478,34 @@ rw[Once closed_cases] >- (
 first_x_assum match_mp_tac >>
 PROVE_TAC[])
 
+val build_rec_env_dom = store_thm(
+"build_rec_env_dom",
+``MAP FST (build_rec_env defs env) = MAP FST defs ++ MAP FST env``,
+rw[build_rec_env_def,bind_def,FOLDR_CONS_triple] >>
+rw[MAP_MAP_o,combinTheory.o_DEF,pairTheory.LAMBDA_PROD] >>
+rw[FST_triple])
+val _ = export_rewrites["build_rec_env_dom"]
+
+val find_recfun_ALOOKUP = store_thm(
+"find_recfun_ALOOKUP",
+``find_recfun = combin$C ALOOKUP``,
+rw[FUN_EQ_THM] >>
+qmatch_rename_tac `find_recfun n funs = ALOOKUP funs n`[] >>
+qid_spec_tac `n` >>
+Induct_on `funs` >- rw[find_recfun_def] >>
+qx_gen_tac `d` >>
+PairCases_on `d` >>
+rw[find_recfun_def])
+val _ = export_rewrites["find_recfun_ALOOKUP"]
+
 val do_app_closed = store_thm(
 "do_app_closed",
 ``∀env op v1 v2 env' exp.
   EVERY closed (MAP SND env) ∧
   closed v1 ∧ closed v2 ∧
   (do_app env op v1 v2 = SOME (env',exp))
-  ⇒ EVERY closed (MAP SND env')``,
+  ⇒ EVERY closed (MAP SND env') ∧
+    FV exp ⊆ set (MAP FST env')``,
 gen_tac >> Cases
 >- (
   Cases >> TRY (Cases_on `l`) >>
@@ -499,11 +523,17 @@ gen_tac >> Cases
   rw[do_app_def] >> fs[]) >>
 Cases >> Cases >> rw[do_app_def,bind_def] >> fs[closed_cases] >>
 fs[] >> rw[] >>
+rw[Once INSERT_SING_UNION,Once UNION_COMM] >>
 qmatch_assum_rename_tac `MEM s (MAP FST defs)`[] >>
-Cases_on `find_recfun s defs` >> fs[] >>
-qmatch_assum_rename_tac `find_recfun s defs = SOME p`[] >>
+Cases_on `ALOOKUP defs s` >> fs[] >>
+qmatch_assum_rename_tac `ALOOKUP defs d = SOME p`[] >>
 Cases_on `p` >> fs[] >> rw[] >> rw[Once closed_cases] >>
-PROVE_TAC[build_rec_env_closed])
+TRY (qmatch_abbrev_tac `EVERY closed X` >>
+     PROVE_TAC[build_rec_env_closed]) >>
+imp_res_tac ALOOKUP_MEM >>
+fsrw_tac[DNF_ss][MEM_EL] >>
+fsrw_tac[DNF_ss][SUBSET_DEF] >>
+PROVE_TAC[])
 
 val do_prim_app_FV = store_thm(
 "do_prim_app_FV",
@@ -515,6 +545,115 @@ gen_tac >> Cases >>
 Cases >> TRY (Cases_on `l`) >>
 Cases >> TRY (Cases_on `l`) >>
 rw[do_app_def] >> rw[])
+
+val do_log_FV = store_thm(
+"do_log_FV",
+``(do_log op v e2 = SOME exp) ⇒
+  (FV exp ⊆ FV e2)``,
+fs[do_log_def] >>
+BasicProvers.EVERY_CASE_TAC >>
+rw[] >>rw[])
+
+val do_if_FV = store_thm(
+"do_if_FV",
+``(do_if v e2 e3 = SOME e) ⇒
+  (FV e ⊆ FV e2 ∪ FV e3)``,
+fs[do_if_def] >>
+BasicProvers.EVERY_CASE_TAC >>
+rw[] >>rw[])
+
+val closed_lit = save_thm(
+"closed_lit",
+SIMP_RULE(srw_ss())[]
+(Q.SPEC`Litv l`closed_cases))
+val _ = export_rewrites["closed_lit"]
+
+val closed_conv = save_thm(
+"closed_conv",
+SIMP_RULE(srw_ss())[]
+(Q.SPEC`Conv cn vs`closed_cases))
+val _ = export_rewrites["closed_conv"]
+
+val evaluate_closed = store_thm(
+"evaluate_closed",
+``∀cenv env exp res.
+  evaluate cenv env exp res ⇒
+  FV exp ⊆ set (MAP FST env) ∧
+  EVERY closed (MAP SND env) ⇒
+  every_result closed res``,
+ho_match_mp_tac evaluate_nice_ind >>
+strip_tac >- rw[] >>
+strip_tac >- rw[] >>
+strip_tac >- (
+  rw[] >>
+  fs[evaluate_list_with_EVERY] >>
+  qpat_assum `LENGTH X = Y` assume_tac >>
+  fsrw_tac[DNF_ss][EVERY_MEM,MEM_ZIP,EL_MAP] >>
+  rw[MEM_EL] >>
+  fsrw_tac[DNF_ss][SUBSET_DEF,MEM_EL] >>
+  PROVE_TAC[]) >>
+strip_tac >- rw[] >>
+strip_tac >- rw[] >>
+strip_tac >- (
+  rw[] >>
+  imp_res_tac ALOOKUP_MEM >>
+  fs[EVERY_MEM,MEM_MAP,pairTheory.EXISTS_PROD] >>
+  PROVE_TAC[]) >>
+strip_tac >- rw[] >>
+strip_tac >- (
+  rw[] >>
+  rw[Once closed_cases] >>
+  fsrw_tac[DNF_ss][SUBSET_DEF] >>
+  PROVE_TAC[]) >>
+strip_tac >- (
+  rw[] >> fs[] >>
+  PROVE_TAC[do_app_closed]) >>
+strip_tac >- rw[] >>
+strip_tac >- rw[] >>
+strip_tac >- rw[] >>
+strip_tac >- (
+  rw[] >> fs[] >>
+  PROVE_TAC[do_log_FV,SUBSET_TRANS]) >>
+strip_tac >- rw[] >>
+strip_tac >- rw[] >>
+strip_tac >- (
+  rw[] >> fs[] >>
+  PROVE_TAC[do_if_FV,SUBSET_DEF,IN_UNION]) >>
+strip_tac >- rw[] >>
+strip_tac >- rw[] >>
+strip_tac >- (
+  rw[] >>
+  cheat ) >>
+strip_tac >- rw[] >>
+strip_tac >- (
+  rw[bind_def] >>
+  fs[] >>
+  fsrw_tac[DNF_ss][SUBSET_DEF] >>
+  PROVE_TAC[]) >>
+strip_tac >- rw[] >>
+strip_tac >- (
+  rw[] >>
+  fs[LIST_TO_SET_MAP] >>
+  fsrw_tac[DNF_ss][SUBSET_DEF,pairTheory.EXISTS_PROD] >>
+  first_x_assum match_mp_tac >>
+  conj_tac >- PROVE_TAC[] >>
+  match_mp_tac build_rec_env_closed >>
+  fs[LIST_TO_SET_MAP] >>
+  fsrw_tac[DNF_ss][MEM_EL,SUBSET_DEF] >>
+  metis_tac[pairTheory.FST,pairTheory.PAIR_EQ,pairTheory.pair_CASES]) >>
+strip_tac >- rw[] >>
+strip_tac >- rw[] >>
+strip_tac >- rw[evaluate_list_with_cons] >>
+strip_tac >- rw[evaluate_list_with_cons] >>
+strip_tac >- rw[evaluate_list_with_cons] >>
+strip_tac >- rw[Once evaluate_match_with_cases] >>
+strip_tac >- rw[Once evaluate_match_with_cases] >>
+strip_tac >- (
+  rw[] >> rw[Once evaluate_match_with_cases] ) >>
+strip_tac >- (
+  rw[] >> rw[Once evaluate_match_with_cases] ) >>
+strip_tac >- (
+  rw[] >> rw[Once evaluate_match_with_cases] ))
 
 val exp_to_Cexp_thm1 = store_thm(
 "exp_to_Cexp_thm1",
@@ -602,6 +741,8 @@ strip_tac >- (
   >- (
     qmatch_assum_rename_tac `do_app env (Opb opb) v1 v2 = SOME (env',exp'')` [] >>
     fs[] >>
+    evaluate_closed
+    imp_res_tac do_app_closed
 
     do_app_closed
     do_app_FV
