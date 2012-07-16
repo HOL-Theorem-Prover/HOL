@@ -834,6 +834,7 @@ val (closed_rules,closed_ind,closed_cases) = Hol_reln`
  FV b ⊆ set (MAP FST env) ∪ {x}
 ⇒ closed (Closure env x b)) ∧
 (EVERY closed (MAP SND env) ∧
+ ALL_DISTINCT (MAP FST defs) ∧
  MEM d (MAP FST defs) ∧
  (∀i d x b. i < LENGTH defs ∧ (EL i defs = (d,x,b)) ⇒
             FV b ⊆ set (MAP FST env) ∪ set (MAP FST defs) ∪ {x})
@@ -844,7 +845,8 @@ val (Cclosed_rules,Cclosed_ind,Cclosed_cases) = Hol_reln`
 (EVERY Cclosed vs ⇒ Cclosed (CConv cn vs)) ∧
 ((∀v. v ∈ FRANGE env ⇒ Cclosed v) ∧
  (LENGTH ns = LENGTH defs) ∧
- (MEM n ns) ∧
+ ALL_DISTINCT ns ∧
+ MEM n ns ∧
  (∀i xs b. i < LENGTH ns ∧ (EL i defs = (xs,b)) ⇒
     free_vars b ⊆ FDOM env ∪ set ns ∪ set xs)
   ⇒ Cclosed (CRecClos env ns defs n))`
@@ -996,7 +998,7 @@ strip_tac >- (
     qexists_tac `n` >> fs[LENGTH_ZIP,EL_MAP,EL_ZIP] >>
     fs[EL_ALL_DISTINCT_EL_EQ] >>
     rw[Once Cclosed_cases,MEM_EL] >>
-    fsrw_tac[DNF_ss][SUBSET_DEF,FRANGE_DEF]
+    fsrw_tac[DNF_ss][SUBSET_DEF,FRANGE_DEF,EL_ALL_DISTINCT_EL_EQ]
     >- PROVE_TAC[] >- PROVE_TAC[] >>
     qmatch_assum_rename_tac `EL i defs = (xs,b)`[] >>
     qx_gen_tac `x` >>
@@ -1021,43 +1023,24 @@ strip_tac >- (
     imp_res_tac find_index_LESS_LENGTH >>
     fs[] >> PROVE_TAC[] ) >>
   pop_assum mp_tac >>
-  fs[extend_rec_env_def,FRANGE_DEF,FOLDL2_FUPDATE_LIST,FOLDL_FUPDATE_LIST] >>
-  fs[MAP2_MAP,FST_pair,SND_pair,MAP_MAP_o,MAP_ZIP] >>
-  fs[Q.SPEC`CRecClos env' ns' defs n`Cclosed_cases,FRANGE_DEF] >>
-  fsrw_tac[DNF_ss][] >>
-  fs[GSYM FORALL_AND_THM] >>
-  qx_gen_tac `x` >>
-  fs[CONJ_COMM] >>
-  qho_match_abbrev_tac `(P0 ∧ Q ⇒ R) ∧ (P1 ∧ Q ⇒ R) ∧ (P2 ∧ Q ⇒ R)` >>
-  qsuff_tac `(P0 ∧ Q ⇒ R) ∧ (¬P0 ∧ P1 ∧ Q ⇒ R) ∧ (¬P0 ∧ ¬P1 ∧ P2 ∧ Q ⇒ R)` >- METIS_TAC[] >>
-  unabbrev_all_tac >> rw[] >>
-  ho_match_mp_tac FUPDATE_LIST_APPLY_HO_THM >|[
-    disj1_tac >>
-    fsrw_tac[DNF_ss][MAP_ZIP,LENGTH_ZIP,MEM_MAP,MEM_EL,EL_ALL_DISTINCT_EL_EQ] >>
-    fsrw_tac[DNF_ss][Cevaluate_list_with_value] >>
-    qmatch_assum_rename_tac `x = EL z ns`[] >>
-    `free_vars (EL z es) ⊆ FDOM env` by (
-      fsrw_tac[DNF_ss][SUBSET_DEF,MEM_EL] >>
-      PROVE_TAC[] ) >>
-    PROVE_TAC[prim_recTheory.LESS_REFL],
-    disj2_tac >> fs[MAP_ZIP] >>
-    ho_match_mp_tac FUPDATE_LIST_APPLY_HO_THM >>
-    disj1_tac >>
-    fsrw_tac[DNF_ss][MAP_ZIP,LENGTH_ZIP,MEM_MAP,MEM_EL,MAP_MAP_o,combinTheory.o_DEF] >>
-    qmatch_assum_rename_tac `x = EL z ns'`[] >>
-    qexists_tac `z` >>
-    qpat_assum `LENGTH ns' = LENGTH defs` assume_tac >>
-    fs[EL_MAP] >>
-    fs[EL_ALL_DISTINCT_EL_EQ] >>
-    simp_tac (srw_ss()) [Once Cclosed_cases] >>
-    fsrw_tac[DNF_ss][MEM_EL,FRANGE_DEF,EL_MAP] >>
-    qexists_tac `z` >> fs[] >> rw[] >>
-    fsrw_tac[DNF_ss][SUBSET_DEF] >>
-    PROVE_TAC[],
-    disj2_tac >> fs[MAP_ZIP] >>
-    ho_match_mp_tac FUPDATE_LIST_APPLY_HO_THM >>
-    disj2_tac >>
-    fs[MAP_ZIP,MAP_MAP_o,combinTheory.o_DEF] ]) >>
+  fs[extend_rec_env_def,FOLDL2_FUPDATE_LIST,FOLDL_FUPDATE_LIST] >>
+  match_mp_tac IN_FRANGE_FUPDATE_LIST_suff >>
+  fs[MAP2_MAP,FST_pair,SND_pair,MAP_ZIP] >>
+  conj_tac >- (
+    match_mp_tac IN_FRANGE_FUPDATE_LIST_suff >>
+    fs[MAP_MAP_o,combinTheory.o_DEF] >>
+    conj_tac >- (
+      fs[Q.SPEC`CRecClos env' ns' defs n`Cclosed_cases] ) >>
+    fsrw_tac[DNF_ss][MEM_MAP] >>
+    fs[Q.SPEC`CRecClos env' ns' defs n`Cclosed_cases] >>
+    rw[MEM_EL] >> PROVE_TAC[] ) >>
+  fs[Cevaluate_list_with_EVERY] >>
+  qpat_assum `LENGTH es = X` assume_tac >>
+  fs[EVERY_MEM,pairTheory.FORALL_PROD,MEM_ZIP] >>
+  fsrw_tac[DNF_ss][EL_MAP] >>
+  rw[MEM_EL] >>
+  fsrw_tac[DNF_ss][SUBSET_DEF,MEM_EL] >>
+  PROVE_TAC[]) >>
 strip_tac >- rw[] >>
 strip_tac >- rw[] >>
 strip_tac >- rw[] >>

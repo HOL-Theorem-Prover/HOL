@@ -405,6 +405,7 @@ val build_rec_env_closed = store_thm(
 "build_rec_env_closed",
 ``∀defs l.
   EVERY closed (MAP SND l) ∧
+  ALL_DISTINCT (MAP FST defs) ∧
   (∀i d x b. i < LENGTH defs ∧ (EL i defs = (d,x,b)) ⇒
    FV b ⊆ set (MAP FST l) ∪ set (MAP FST defs) ∪ {x})
   ⇒ EVERY closed (MAP SND (build_rec_env defs l))``,
@@ -579,7 +580,7 @@ strip_tac >- (
   conj_tac >- PROVE_TAC[] >>
   match_mp_tac build_rec_env_closed >>
   fs[LIST_TO_SET_MAP] >>
-  fsrw_tac[DNF_ss][MEM_EL,SUBSET_DEF] >>
+  fsrw_tac[DNF_ss][MEM_EL,SUBSET_DEF,FST_triple] >>
   metis_tac[pairTheory.FST,pairTheory.PAIR_EQ,pairTheory.pair_CASES]) >>
 strip_tac >- rw[] >>
 strip_tac >- rw[] >>
@@ -903,11 +904,6 @@ strip_tac >- (
     CONV_TAC SWAP_EXISTS_CONV >> qexists_tac `n` >>
     rw[] >>
     fs[Q.SPEC`CRecClos env1 ns' defs n`Cclosed_cases] >>
-    Cclosed_rules
-    closed_rules
-    want (C)closed rules to ensure ALL_DISTINCT bundles?
-    DB.find"find_index"
-    find_recfun
 
     fs[MiniMLTheory.do_app_def] >>
     Cases_on `v1` >> fs[] >- (
