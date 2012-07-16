@@ -595,6 +595,32 @@ strip_tac >- (
 strip_tac >- (
   rw[] >> rw[Once evaluate_match_with_cases] ))
 
+val do_Opapp_SOME_CRecClos = store_thm(
+"do_Opapp_SOME_CRecClos",
+``(do_app env Opapp v1 v2 = SOME (env',exp'')) ∧
+  syneq (v_to_Cv m v1) w1 ⇒
+  ∃env'' ns' defs n.
+    (w1 = CRecClos env'' ns' defs n)``,
+Cases_on `v1` >> rw[do_app_def,v_to_Cv_def,LET_THM] >>
+fs[defs_to_Cdefs_MAP, syneq_cases])
+
+val FRANGE_alist_to_fmap_SUBSET = store_thm(
+"FRANGE_alist_to_fmap_SUBSET",
+``FRANGE (alist_to_fmap ls) ⊆ IMAGE SND (set ls)``,
+srw_tac[DNF_ss][FRANGE_DEF,SUBSET_DEF,pairTheory.EXISTS_PROD] >>
+qmatch_assum_rename_tac `MEM z (MAP FST ls)`[] >>
+qexists_tac `z` >>
+match_mp_tac alist_to_fmap_FAPPLY_MEM >>
+rw[])
+
+val IN_FRANGE_alist_to_fmap_suff = store_thm(
+"IN_FRANGE_alist_to_fmap_suff",
+``(∀v. MEM v (MAP SND ls) ⇒ P v) ⇒ (∀v. v ∈ FRANGE (alist_to_fmap ls) ⇒ P v)``,
+rw[] >>
+imp_res_tac(SIMP_RULE(srw_ss())[SUBSET_DEF]FRANGE_alist_to_fmap_SUBSET) >>
+fs[MEM_MAP] >>
+PROVE_TAC[])
+
 val exp_to_Cexp_thm1 = store_thm(
 "exp_to_Cexp_thm1",
 ``∀cenv env exp res. evaluate cenv env exp res ⇒
@@ -828,12 +854,69 @@ strip_tac >- (
     rw[Abbr`P`,Q.SPEC`CLitv l`syneq_cases] >>
     cheat )
   >- (
+    `every_result closed (Rval v1) ∧
+     every_result closed (Rval v2)` by (
+      conj_tac >>
+      match_mp_tac (MP_CANON evaluate_closed) >>
+      PROVE_TAC[]) >>
+    fs[] >>
+    `EVERY closed (MAP SND env') ∧
+     FV exp'' ⊆ set (MAP FST env')` by
+      metis_tac[do_app_closed] >>
+    fs[] >>
+    rpt (first_x_assum (qspec_then `m` mp_tac)) >> rw[] >>
+    qmatch_assum_rename_tac `syneq (v_to_Cv m v1) w1`[] >>
+    qmatch_assum_rename_tac `syneq (v_to_Cv m v2) w2`[] >>
+    rw[Once Cevaluate_cases] >>
+    srw_tac[DNF_ss][] >>
+    disj1_tac >>
+    rw[Cevaluate_list_with_Cevaluate] >>
+    rw[Cevaluate_list_with_cons] >>
+    srw_tac[DNF_ss][] >>
+    qmatch_assum_abbrev_tac `Cevaluate env0 ee1 (Rval w1)` >>
+    qmatch_assum_abbrev_tac `Cevaluate env0 ee2 (Rval w2)` >>
+    `∀v. v ∈ FRANGE env0 ⇒ Cclosed v` by (
+      unabbrev_all_tac >>
+      match_mp_tac IN_FRANGE_alist_to_fmap_suff >>
+      fs[env_to_Cenv_MAP,MAP_MAP_o,combinTheory.o_DEF,
+         pairTheory.LAMBDA_PROD] >>
+      fs[MEM_MAP,pairTheory.EXISTS_PROD] >>
+      srw_tac[DNF_ss][] >>
+      match_mp_tac (CONJUNCT1 v_to_Cv_closed) >>
+      fs[EVERY_MEM,MEM_MAP,pairTheory.EXISTS_PROD] >>
+      PROVE_TAC[]) >>
+    `every_result Cclosed (Rval w1) ∧
+     every_result Cclosed (Rval w2)` by(
+       conj_tac >>
+       match_mp_tac (MP_CANON Cevaluate_closed) >>
+       qexists_tac `alist_to_fmap (env_to_Cenv m env)` >|[
+         qexists_tac `exp_to_Cexp m e1`,
+         qexists_tac `exp_to_Cexp m e2`] >>
+       fs[] >>
+       fs[env_to_Cenv_MAP,MAP_MAP_o,combinTheory.o_DEF,
+          pairTheory.LAMBDA_PROD,FST_pair] ) >>
+    `∃env1 ns' defs n. w1 = CRecClos env1 ns' defs n` by (
+      imp_res_tac do_Opapp_SOME_CRecClos >> rw[] ) >>
+    CONV_TAC SWAP_EXISTS_CONV >> qexists_tac `env1` >>
+    CONV_TAC SWAP_EXISTS_CONV >> qexists_tac `ns'` >>
+    CONV_TAC SWAP_EXISTS_CONV >> qexists_tac `defs` >>
+    CONV_TAC SWAP_EXISTS_CONV >> qexists_tac `n` >>
+    rw[] >>
+    fs[Q.SPEC`CRecClos env1 ns' defs n`Cclosed_cases] >>
+    Cclosed_rules
+    closed_rules
+    want (C)closed rules to ensure ALL_DISTINCT bundles?
+    DB.find"find_index"
+    find_recfun
+
     fs[MiniMLTheory.do_app_def] >>
     Cases_on `v1` >> fs[] >- (
       rw[Once Cevaluate_cases] >>
+      srw_tac[DNF_ss][] >>
       disj1_tac >>
       srw_tac[DNF_ss][Cevaluate_list_with_Cevaluate,Cevaluate_list_with_cons] >>
       qmatch_assum_rename_tac `evaluate cenv env e1 (Rval (Closure env' v b))`[] >>
+
       qpat_assum `∀s''. Cevaluate A B (Rval (v_to_Cv s'' (Closure env' v b)))` (qspec_then `m` mp_tac) >>
       fs[exp_to_Cexp_def,LET_THM] >>
       qmatch_abbrev_tac `Cevaluate Cenv Ce1 (Rval (CClosure Cenv' ns Cb)) ⇒ X` >>
