@@ -1,4 +1,4 @@
-open HolKernel bossLib boolLib listTheory pred_setTheory finite_mapTheory alistTheory lcsymtacs
+open HolKernel bossLib boolLib listTheory pred_setTheory finite_mapTheory alistTheory intLib lcsymtacs
 open SatisfySimps boolSimps compileTerminationTheory intLangTheory BytecodeTheory evaluateEquationsTheory
 
 val _ = new_theory "compileCorrectness"
@@ -367,66 +367,6 @@ pop_assum mp_tac >>
 rw[FRANGE_DEF,DOMSUB_FAPPLY_THM] >>
 rw[] >> PROVE_TAC[])
 
-val tacLt =
-  rw[Once Cevaluate_cases] >>
-  rw[Cevaluate_list_with_Cevaluate] >>
-  rw[Cevaluate_list_with_cons] >>
-  srw_tac[DNF_ss][] >>
-  disj1_tac >>
-  qexists_tac `w1` >>
-  qexists_tac `w2` >>
-  rw[] >>
-  Cases_on `v1` >> Cases_on `l` >> fs[MiniMLTheory.do_app_def] >>
-  Cases_on `v2` >> Cases_on `l` >> fs[] >> rw[] >>
-  fs[CevalPrim2_def,doPrim2_def,exp_to_Cexp_def,MiniMLTheory.opb_lookup_def] >>
-  rw[] >> fs[v_to_Cv_def] >> fs[Q.SPEC`CLitv l`syneq_cases]
-
-(*
-val tacGt =
-  rw[Once Cevaluate_cases] >>
-  srw_tac[DNF_ss][] >>
-  disj1_tac >>
-  CONV_TAC SWAP_EXISTS_CONV >> qexists_tac `w1` >> fs[] >>
-  rw[Once Cevaluate_cases] >>
-  srw_tac[DNF_ss][] >>
-  disj1_tac >>
-  qmatch_assum_abbrev_tac `Cevaluate env0 exp0 (Rval w2)` >>
-  `∀v. v ∈ FRANGE env0 ⇒ Cclosed v` by (
-    imp_res_tac v_to_Cv_closed >>
-    fs[FEVERY_DEF] >> PROVE_TAC[] ) >>
-  `every_result Cclosed (Rval w1)` by (
-    match_mp_tac (MP_CANON Cevaluate_closed)
-
-  Q.ISPECL_THEN[`env0`,`exp0`,`Rval w2`,`fresh_var (free_vars exp0)`,`w1`]mp_tac Cevaluate_FUPDATE >>
-  `∀v. v ∈ FRANGE env0 ⇒ Cclosed v` by (
-    unabbrev_all_tac >>
-    fsrw_tac[ETA_ss][env_to_Cenv_MAP,alist_to_fmap_MAP_values,o_f_FRANGE]
-
-  fs[free_vars_exp_to_Cexp,Abbr`exp0`]
-    match_mp_tac Cevaluate_FUPDATE >>
-    fs[] >>
-    fs[free_vars_exp_to_Cexp] >>
-    reverse conj_tac >- (
-      unabbrev_all_tac >>
-      match_mp_tac fresh_var_not_in >>
-      match_mp_tac FINITE_has_fresh_string >>
-      rw[]) >>
-    fsrw_tac[SATISFY_ss][Cevaluate_super_env,free_vars_exp_to_Cexp] ) >>
-  rw[Once Cevaluate_cases] >>
-  disj1_tac >>
-  rw[Cevaluate_list_with_Cevaluate] >>
-  rw[Cevaluate_list_with_cons] >>
-  `x1 ≠ x2` by (
-    rw[Abbr`x1`,Abbr`x2`] >>
-    match_mp_tac NOT_fresh_var >>
-    rw[] ) >>
-  srw_tac[ARITH_ss][FAPPLY_FUPDATE_THM] >>
-  Cases_on `v1` >> Cases_on `l` >> fs[MiniMLTheory.do_app_def] >>
-  Cases_on `v2` >> Cases_on `l` >> fs[] >> rw[] >>
-  fs[doPrim2_def,exp_to_Cexp_def,MiniMLTheory.opb_lookup_def] >>
-  rw[integerTheory.int_gt,integerTheory.int_ge]
-*)
-
 (* TODO: Move *)
 val alist_to_fmap_PERM = store_thm(
 "alist_to_fmap_PERM",
@@ -741,30 +681,152 @@ strip_tac >- (
   >- (
     qmatch_assum_rename_tac `do_app env (Opb opb) v1 v2 = SOME (env',exp'')` [] >>
     fs[] >>
-    evaluate_closed
-    imp_res_tac do_app_closed
-
-    do_app_closed
-    do_app_FV
-
+    `every_result closed (Rval v1) ∧
+     every_result closed (Rval v2)` by metis_tac[evaluate_closed] >>
+    fs[] >>
+    `EVERY closed (MAP SND env') ∧
+     FV exp'' ⊆ set (MAP FST env')` by PROVE_TAC[do_app_closed] >>
+    fs[] >>
     rpt (first_x_assum (qspec_then `m` mp_tac)) >> rw[] >>
     qmatch_assum_rename_tac `syneq (v_to_Cv m v1) w1`[] >>
     qmatch_assum_rename_tac `syneq (v_to_Cv m v2) w2`[] >>
     Cases_on `opb` >> fsrw_tac[DNF_ss][]
-    >- tacLt
-    >- tacGt
-    >- tacLt
-    >- tacGt )
+    >- (
+      rw[Once Cevaluate_cases] >>
+      rw[Cevaluate_list_with_Cevaluate] >>
+      rw[Cevaluate_list_with_cons] >>
+      srw_tac[DNF_ss][] >>
+      disj1_tac >>
+      qexists_tac `w1` >>
+      qexists_tac `w2` >>
+      rw[] >>
+      Cases_on `v1` >> Cases_on `l` >> fs[MiniMLTheory.do_app_def] >>
+      Cases_on `v2` >> Cases_on `l` >> fs[] >> rw[] >>
+      fs[CevalPrim2_def,doPrim2_def,exp_to_Cexp_def,MiniMLTheory.opb_lookup_def] >>
+      rw[] >> fs[v_to_Cv_def] >> fs[Q.SPEC`CLitv l`syneq_cases])
+    >- (
+      rw[Once Cevaluate_cases] >>
+      srw_tac[DNF_ss][] >>
+      disj1_tac >>
+      CONV_TAC SWAP_EXISTS_CONV >> qexists_tac `w1` >> fs[] >>
+      rw[Once Cevaluate_cases] >>
+      srw_tac[DNF_ss][] >>
+      disj1_tac >>
+      qmatch_assum_abbrev_tac `Cevaluate env0 exp0 (Rval w2)` >>
+      `∀v. v ∈ FRANGE env0 ⇒ Cclosed v` by (
+        imp_res_tac v_to_Cv_closed >>
+        fs[FEVERY_DEF] >> PROVE_TAC[] ) >>
+      `free_vars exp0 ⊆ FDOM env0` by (
+        fs[Abbr`exp0`,Abbr`env0`,env_to_Cenv_MAP,MAP_MAP_o,
+           pairTheory.LAMBDA_PROD,combinTheory.o_DEF,FST_pair] ) >>
+      `every_result Cclosed (Rval w1)` by (
+        match_mp_tac (MP_CANON Cevaluate_closed) >>
+        map_every qexists_tac [`env0`,`exp_to_Cexp m e1`] >>
+        fs[Abbr`env0`,env_to_Cenv_MAP,MAP_MAP_o,
+           pairTheory.LAMBDA_PROD,combinTheory.o_DEF,FST_pair] ) >>
+      `∃res. Cevaluate (env0 |+ (fresh_var (FV e2),w1)) exp0 res ∧
+             result_rel syneq (Rval w2) res` by (
+        match_mp_tac Cevaluate_FUPDATE >>
+        fs[Abbr`exp0`] >>
+        rw[fresh_var_not_in,FINITE_has_fresh_string] ) >>
+      fs[] >> rw[] >>
+      qmatch_assum_rename_tac `syneq w2 y2`[] >>
+      CONV_TAC SWAP_EXISTS_CONV >> qexists_tac `y2` >> fs[] >>
+      rw[Once Cevaluate_cases] >>
+      srw_tac[DNF_ss][] >>
+      disj1_tac >>
+      rw[Cevaluate_list_with_Cevaluate] >>
+      rw[Cevaluate_list_with_cons] >>
+      rw[FAPPLY_FUPDATE_THM,NOT_fresh_var] >>
+      Cases_on `v1` >> Cases_on `l` >> fs[MiniMLTheory.do_app_def] >>
+      Cases_on `v2` >> Cases_on `l` >> fs[] >> rw[] >>
+      fs[doPrim2_def,exp_to_Cexp_def,MiniMLTheory.opb_lookup_def] >>
+      fs[v_to_Cv_def,Q.SPEC`CLitv l`syneq_cases] >> rw[] >>
+      fs[Q.SPEC`CLitv l`syneq_cases] >> rw[] >>
+      rw[integerTheory.int_gt,integerTheory.int_ge])
+    >- (
+      rw[Once Cevaluate_cases] >>
+      srw_tac[DNF_ss][] >>
+      disj1_tac >>
+      rw[Cevaluate_list_with_Cevaluate] >>
+      rw[Cevaluate_list_with_cons] >>
+      rw[Once Cevaluate_cases] >>
+      srw_tac[DNF_ss][] >>
+      rw[Cevaluate_list_with_Cevaluate] >>
+      rw[Cevaluate_list_with_cons] >>
+      CONV_TAC SWAP_EXISTS_CONV >> qexists_tac `w1` >>
+      CONV_TAC SWAP_EXISTS_CONV >> qexists_tac `w2` >>
+      rw[] >>
+      Cases_on `v1` >> Cases_on `l` >> fs[MiniMLTheory.do_app_def] >>
+      Cases_on `v2` >> Cases_on `l` >> fs[] >> rw[] >>
+      fs[CevalPrim2_def,doPrim2_def,exp_to_Cexp_def,MiniMLTheory.opb_lookup_def] >>
+      rw[] >> fs[v_to_Cv_def] >> fs[Q.SPEC`CLitv l`syneq_cases] >>
+      rw[CompileTheory.i1_def] >> ARITH_TAC)
+    >- (
+      rw[Once Cevaluate_cases] >>
+      srw_tac[DNF_ss][] >>
+      disj1_tac >>
+      CONV_TAC SWAP_EXISTS_CONV >> qexists_tac `w1` >> fs[] >>
+      rw[Once Cevaluate_cases] >>
+      srw_tac[DNF_ss][] >>
+      disj1_tac >>
+      qmatch_assum_abbrev_tac `Cevaluate env0 exp0 (Rval w2)` >>
+      `∀v. v ∈ FRANGE env0 ⇒ Cclosed v` by (
+        imp_res_tac v_to_Cv_closed >>
+        fs[FEVERY_DEF] >> PROVE_TAC[] ) >>
+      `free_vars exp0 ⊆ FDOM env0` by (
+        fs[Abbr`exp0`,Abbr`env0`,env_to_Cenv_MAP,MAP_MAP_o,
+           pairTheory.LAMBDA_PROD,combinTheory.o_DEF,FST_pair] ) >>
+      `every_result Cclosed (Rval w1)` by (
+        match_mp_tac (MP_CANON Cevaluate_closed) >>
+        map_every qexists_tac [`env0`,`exp_to_Cexp m e1`] >>
+        fs[Abbr`env0`,env_to_Cenv_MAP,MAP_MAP_o,
+           pairTheory.LAMBDA_PROD,combinTheory.o_DEF,FST_pair] ) >>
+      `∃res. Cevaluate (env0 |+ (fresh_var (FV e2),w1)) exp0 res ∧
+             result_rel syneq (Rval w2) res` by (
+        match_mp_tac Cevaluate_FUPDATE >>
+        fs[Abbr`exp0`] >>
+        rw[fresh_var_not_in,FINITE_has_fresh_string] ) >>
+      fs[] >> rw[] >>
+      qmatch_assum_rename_tac `syneq w2 y2`[] >>
+      CONV_TAC SWAP_EXISTS_CONV >> qexists_tac `y2` >> fs[] >>
+      rw[Once Cevaluate_cases] >>
+      srw_tac[DNF_ss][] >>
+      disj1_tac >>
+      rw[Cevaluate_list_with_Cevaluate] >>
+      rw[Cevaluate_list_with_cons] >>
+      rw[FAPPLY_FUPDATE_THM,NOT_fresh_var] >>
+      Cases_on `v1` >> Cases_on `l` >> fs[MiniMLTheory.do_app_def] >>
+      Cases_on `v2` >> Cases_on `l` >> fs[] >> rw[] >>
+      fs[doPrim2_def,exp_to_Cexp_def,MiniMLTheory.opb_lookup_def] >>
+      fs[v_to_Cv_def,Q.SPEC`CLitv l`syneq_cases] >> rw[] >>
+      fs[Q.SPEC`CLitv l`syneq_cases] >> rw[] >>
+      rw[Once Cevaluate_cases] >>
+      rw[Cevaluate_list_with_Cevaluate] >>
+      rw[Cevaluate_list_with_cons] >>
+      rw[FAPPLY_FUPDATE_THM,NOT_fresh_var] >>
+      rw[CompileTheory.i1_def] >>
+      ARITH_TAC))
   >- (
     rw[Once Cevaluate_cases] >>
+    srw_tac[DNF_ss][] >>
     disj1_tac >>
     rw[Cevaluate_list_with_Cevaluate] >>
     rw[Cevaluate_list_with_cons] >>
-    qexists_tac `v_to_Cv m v1` >>
-    qexists_tac `v_to_Cv m v2` >>
-    fsrw_tac[][Cevaluate_super_env,Abbr`Ce1`,Abbr`Ce2`] >>
-    fs[MiniMLTheory.do_app_def] >> rw[] >> fs[exp_to_Cexp_def] >>
-    sorry )
+    fs[] >>
+    rpt (first_x_assum (qspec_then `m` mp_tac)) >>
+    rw[] >>
+    qmatch_assum_rename_tac `syneq (v_to_Cv m v1) w1`[] >>
+    qmatch_assum_rename_tac `syneq (v_to_Cv m v2) w2`[] >>
+    qexists_tac `w1` >>
+    qexists_tac `w2` >>
+    fs[] >>
+    fs[MiniMLTheory.do_app_def] >>
+    qmatch_abbrev_tac `P` >> rw[] >>
+    fs[exp_to_Cexp_def] >> rw[] >>
+    fs[v_to_Cv_def] >>
+    rw[Abbr`P`,Q.SPEC`CLitv l`syneq_cases] >>
+    cheat )
   >- (
     fs[MiniMLTheory.do_app_def] >>
     Cases_on `v1` >> fs[] >- (
