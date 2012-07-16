@@ -2092,13 +2092,15 @@ val Cevaluate_free_vars_env = save_thm(
 "Cevaluate_free_vars_env",
 Cevaluate_any_env
 |> SPEC_ALL
+|> SIMP_RULE (srw_ss()) [GSYM AND_IMP_INTRO]
 |> UNDISCH_ALL
 |> Q.SPEC `env`
-|> SIMP_RULE (srw_ss()) []
+|> SIMP_RULE (srw_ss()) [GSYM AND_IMP_INTRO]
 |> UNDISCH_ALL
 |> Q.SPEC `FEMPTY`
 |> SIMP_RULE (srw_ss()) [FUNION_FEMPTY_2]
 |> DISCH_ALL
-|> Q.GEN `res` |> Q.GEN `exp` |> Q.GEN `env`)
+|> Q.GEN `res` |> Q.GEN `exp` |> Q.GEN `env`
+|> SIMP_RULE (srw_ss()) [AND_IMP_INTRO,GSYM CONJ_ASSOC])
 
 val _ = export_theory()
