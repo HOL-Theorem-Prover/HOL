@@ -246,10 +246,6 @@ val _ = Defn.save_defn Cmatch_map_defn;
 val _ = Defn.save_defn Cpmatch_defn;
 
 val _ = Define `
- (extend_env env ns vs =FOLDL2  (\ en n v . FUPDATE  en ( n, v))  env  ns  vs)`;
-
-
-val _ = Define `
  (extend_rec_env cenv env rs defs ns vs =FOLDL2  (\ en n v . FUPDATE  en ( n, v)) 
     (FOLDL
         (\ en n . FUPDATE  en ( n,

@@ -236,9 +236,6 @@ Cpmatch_list env (p::ps) (v::vs) =
 and
 Cpmatch_list env _ _ = Cmatch_error
 
-let extend_env env ns vs =
-  fold_left2 (fun en n v -> Pmap.add n v en) env ns vs
-
 let extend_rec_env cenv env rs defs ns vs =
   fold_left2 (fun en n v -> Pmap.add n v en)
     (List.fold_left

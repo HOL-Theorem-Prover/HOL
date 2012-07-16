@@ -731,15 +731,6 @@ val fmap_rel_refl = store_thm(
 rw[fmap_rel_def])
 val _ = export_rewrites["fmap_rel_refl"]
 
-val fmap_rel_extend_env_same = store_thm(
-"fmap_rel_extend_env_same",
-``fmap_rel R env1 env2 ∧ LIST_REL R v1 v2 ∧ (LENGTH xs = LENGTH v1)
-⇒ fmap_rel R (extend_env env1 xs v1) (extend_env env2 xs v2)``,
-rw[extend_env_def,LIST_REL_EL_EQN,FOLDL2_FUPDATE_LIST] >>
-rw[MAP2_MAP,FST_pair,SND_pair,MAP_ZIP] >>
-match_mp_tac fmap_rel_FUPDATE_LIST_same >>
-rw[MAP_ZIP,LIST_REL_EL_EQN,LENGTH_ZIP])
-
 val fmap_rel_extend_rec_env_same = store_thm(
 "fmap_rel_extend_rec_env_same",
 ``fmap_rel R env1 env2 ∧ LIST_REL R vs1 vs2 ∧ (LENGTH ns = LENGTH vs1) ∧
@@ -754,13 +745,6 @@ rw[MAP_ZIP,LENGTH_ZIP,LIST_REL_EL_EQN] >>
 match_mp_tac fmap_rel_FUPDATE_LIST_same >>
 rw[MAP_ZIP,LENGTH_ZIP,LIST_REL_EL_EQN,EL_MAP,MAP_MAP_o,combinTheory.o_DEF] >>
 fsrw_tac[DNF_ss][MEM_EL])
-
-val FDOM_extend_env = store_thm(
-"FDOM_extend_env",
-``(LENGTH ns = LENGTH vs) ⇒ (FDOM (extend_env env ns vs) = FDOM env ∪ (set ns))``,
-rw[extend_env_def,FOLDL2_FUPDATE_LIST,FDOM_FUPDATE_LIST] >>
-rw[MAP2_MAP,FST_pair,SND_pair,MAP_ZIP])
-val _ = export_rewrites["FDOM_extend_env"]
 
 val FDOM_extend_rec_env = store_thm(
 "FDOM_extend_rec_env",
@@ -1173,29 +1157,6 @@ Cases_on `y = FST p` >> rw[] >>
 first_x_assum match_mp_tac >>
 fs[MEM_MAP] >>
 PROVE_TAC[])
-
-val extend_env_FUNION = store_thm(
-"extend_env_FUNION",
-``(LENGTH ns = LENGTH vs) ⇒
-  (extend_env f ns vs = extend_env FEMPTY ns vs ⊌ f)``,
-rw[extend_env_def,FOLDL2_FUPDATE_LIST] >>
-fs[GSYM fmap_EQ_THM] >>
-conj_tac >- (
-  rw[FDOM_FUPDATE_LIST,MAP_ZIP,MAP2_MAP,FST_pair,SND_pair] >>
-  PROVE_TAC[UNION_COMM,UNION_ASSOC] ) >>
-qx_gen_tac `x` >>
-fs[FST_pair,SND_pair,MAP_ZIP,MAP2_MAP] >>
-strip_tac >>
-Cases_on `MEM x ns` >- (
-  `x ∈ FDOM (FEMPTY |++ ZIP (ns,vs))` by (
-    rw[FDOM_FUPDATE_LIST,MAP_ZIP] ) >>
-  rw[Once FUNION_DEF,SimpRHS] >>
-  rw[Once FUNION_DEF,SimpRHS] >>
-  match_mp_tac FUPDATE_SAME_LIST_APPLY >>
-  rw[MAP_ZIP] ) >>
-ho_match_mp_tac FUPDATE_LIST_APPLY_NOT_MEM_matchable >>
-fs[MAP_ZIP] >>
-rw[FUNION_DEF,FDOM_FUPDATE_LIST,MAP_ZIP])
 
 val extend_rec_env_FUNION = store_thm(
 "extend_rec_env_FUNION",
