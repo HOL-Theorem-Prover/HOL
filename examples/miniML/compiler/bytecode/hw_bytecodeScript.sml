@@ -412,36 +412,40 @@ val push_imm_lemma = prove(
   \\ FULL_SIMP_TAC std_ss [GSYM DIVISION]
   \\ REPEAT STRIP_TAC \\ DECIDE_TAC);
 
+val divmod_def = Define `
+  (divmod 0 n = 0) /\
+  (divmod (SUC k) n = n MOD 64 + 64 * divmod k (n DIV 64))`;
+
+val divmod_thm = prove(
+  ``!k n. n < 64 ** k ==> (divmod k n = n)``,
+  Induct \\ FULL_SIMP_TAC std_ss [divmod_def] THEN1 DECIDE_TAC
+  \\ FULL_SIMP_TAC std_ss [EXP] \\ REPEAT STRIP_TAC
+  \\ `n DIV 64 < 64 ** k` by (FULL_SIMP_TAC std_ss [DIV_LT_X] \\ DECIDE_TAC)
+  \\ RES_TAC \\ FULL_SIMP_TAC std_ss []
+  \\ ONCE_REWRITE_TAC [ADD_COMM] \\ ONCE_REWRITE_TAC [MULT_COMM]
+  \\ FULL_SIMP_TAC std_ss [GSYM DIVISION]);
+
 val push_fixed_imm_lemma = prove(
   ``!n. ~(hw_steps (push_fixed_imm n) s1).error ==>
         (hw_steps (push_fixed_imm n) s1 = s1 with
-           <| stack := n2w n :: s1.stack; pc := s1.pc + n2w (LENGTH (push_fixed_imm n)) |> ) /\
+           <| stack := n2w n :: s1.stack;
+              pc := s1.pc + n2w (LENGTH (push_fixed_imm n)) |> ) /\
         n < 2**32 /\ ~s1.error``,
-  cheat);
-(*
-  HO_MATCH_MP_TAC (fetch "-" "push_imm_ind") \\ STRIP_TAC \\ STRIP_TAC
-  \\ ONCE_REWRITE_TAC [push_imm_def]
-  \\ Cases_on `2 ** 32 <= n` \\ FULL_SIMP_TAC std_ss [] THEN1 F_TAC
-  \\ Cases_on `n < 64` \\ FULL_SIMP_TAC std_ss []
-  THEN1
-   (FULL_SIMP_TAC (srw_ss()) [hw_steps_def,hw_step_def,LET_DEF,
-         push_def,inc_pc_def,overflow_def,w2w_def,n2w_w2n]
-    \\ Tactical.REVERSE (REPEAT STRIP_TAC) THEN1 DECIDE_TAC
-    \\ FULL_SIMP_TAC (srw_ss()) [fetch "-" "hw_state_component_equality"])
-  \\ FULL_SIMP_TAC std_ss [hw_steps_APPEND,hw_steps_def]
-  \\ REPEAT STRIP_TAC
-  \\ IMP_RES_TAC hw_step_error_IMP \\ FULL_SIMP_TAC std_ss []
-  \\ POP_ASSUM MP_TAC \\ POP_ASSUM MP_TAC
-  \\ FULL_SIMP_TAC (srw_ss()) [hw_steps_def,hw_step_def,LET_DEF,
-         push_def,inc_pc_def,overflow_def,w2w_def,n2w_w2n,arg_def]
-  \\ FULL_SIMP_TAC std_ss [GSYM word_add_n2w,WORD_ADD_ASSOC]
+  FULL_SIMP_TAC (srw_ss()) [hw_steps_def,push_fixed_imm_def,LET_DEF,hw_step_def]
+  \\ STRIP_TAC \\ Cases_on `16777216 <= n`
+  \\ NTAC 10 (FULL_SIMP_TAC (srw_ss()) [Once hw_steps_def,hw_step_def,
+       LET_DEF,inc_pc_def,arg_def,overflow_def,push_def])
+  \\ FULL_SIMP_TAC (srw_ss()) [w2w_def,w2n_n2w,WORD_MUL_LSL,
+       word_add_n2w,word_mul_n2w]
+  \\ FULL_SIMP_TAC std_ss [EVAL ``divmod 4 n``
+       |> SIMP_RULE std_ss [LEFT_ADD_DISTRIB,MULT_ASSOC,ADD_ASSOC,DIV_DIV_DIV_MULT]
+       |> GSYM]
+  \\ `n < 64 ** 4` by (FULL_SIMP_TAC std_ss [] \\ DECIDE_TAC)
+  \\ IMP_RES_TAC divmod_thm \\ FULL_SIMP_TAC std_ss [] \\ REPEAT STRIP_TAC
   \\ FULL_SIMP_TAC (srw_ss()) [fetch "-" "hw_state_component_equality"]
-  \\ FULL_SIMP_TAC std_ss [WORD_MUL_LSL,word_add_n2w,word_mul_n2w]
-  \\ ONCE_REWRITE_TAC [MULT_COMM]
-  \\ ONCE_REWRITE_TAC [ADD_COMM]
-  \\ FULL_SIMP_TAC std_ss [GSYM DIVISION]
-  \\ REPEAT STRIP_TAC \\ DECIDE_TAC);
-*)
+  \\ DECIDE_TAC);
+
+val _ = delete_const "divmod"; (* remove temp definition *)
 
 val Swap_Pop_heap = prove(
   ``!n s1. (hw_steps (REPLICATE n hwPop1) s1).heap = s1.heap``,
