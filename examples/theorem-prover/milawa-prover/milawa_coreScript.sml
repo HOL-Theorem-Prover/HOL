@@ -27,11 +27,7 @@ fun text_from_file filename = let
                  " lines and " ^ int_to_string (size output) ^ " characters.\n\n")
   in output end;
 
-(*
-val test_tm = stringSyntax.fromMLstring (text_from_file "test.lisp");
-val milawa_axioms_tm = stringSyntax.fromMLstring (text_from_file "axioms.lisp");
-*)
-val milawa_core_tm = stringSyntax.fromMLstring (text_from_file "core.lisp-without-comments");
+val milawa_core_tm = stringSyntax.fromMLstring (text_from_file "core.lisp");
 
 local
   val app_cons = APPEND |> SPEC_ALL |> CONJUNCT2
@@ -188,10 +184,6 @@ val sexp_parse_stream_PROGRESS = store_thm("sexp_parse_stream_PROGRESS",
   \\ FULL_SIMP_TAC std_ss [] \\ SRW_TAC [] []
   \\ IMP_RES_TAC sexp_lex_parse_LESS_EQ \\ DECIDE_TAC);
 
-
-
-
-
 val read_sexps_def = tDefine "read_sexps" `
   read_sexps str =
     let (yes,str) = is_eof str in
@@ -200,7 +192,6 @@ val read_sexps_def = tDefine "read_sexps" `
           s::read_sexps str`
   (WF_REL_TAC `measure LENGTH` \\ METIS_TAC [sexp_parse_stream_PROGRESS])
   |> SPEC_ALL;
-
 
 val evals = map EVAL
   [``next_token (STRING #")" cs)``,
@@ -419,38 +410,35 @@ in
     in th end;
 end
 
-local
-  val str_tm = ``str:string``
-  val pattern = ``is_eof str``
-  val lemma = SIMP_RULE std_ss [LET_DEF,DROP_WHILE_NOT_NL_INTRO] is_eof_def
-  fun space_char c = ord c <= 32
-  fun eq_T th = ((th |> concl |> rand) = T)
-  val drop_const = ``DROP_WHILE_NOT_NL``
-  val empty_string_tm = ``""``
-in
-  fun DROP_WHILE_NOT_NL_conv tm =
-    if (not (rator tm = drop_const)) handle HOL_ERR _ => true then REFL tm else
-      (ONCE_REWRITE_CONV [DROP_WHILE_NOT_NL_def] THENC
-       (RATOR_CONV o RATOR_CONV o RAND_CONV) EVAL THENC
-       COND_CONV THENC DROP_WHILE_NOT_NL_conv) tm
-  fun aux_is_eof_conv tm =
-    if rand tm = empty_string_tm then ONCE_REWRITE_CONV [lemma] tm else
-    if is_var (rand tm) then REFL tm else let
-    val th = (ONCE_REWRITE_CONV [lemma] THENC
-              (RATOR_CONV o RATOR_CONV o RAND_CONV) EVAL THENC
-              (RAND_CONV o RATOR_CONV o RATOR_CONV o RAND_CONV) EVAL THENC
-              (RAND_CONV) COND_CONV THENC
-              COND_CONV) tm
-    in if pairSyntax.is_pair (rand (concl th)) then th else
-         CONV_RULE ((RAND_CONV o RAND_CONV) DROP_WHILE_NOT_NL_conv
-                    THENC (RAND_CONV aux_is_eof_conv)) th end
-  fun is_eof_conv tm = let
-    val _ = print ("is_eof: " (* ^ (term_to_string tm) ^ "\n" *))
-    val s = fst (match_term pattern tm)
-    val result = aux_is_eof_conv tm
-    val _ = print "done\n"
-    in result end
-end
+val is_eof_aux_def = Define `
+  (is_eof_aux "" = is_eof "") /\
+  (is_eof_aux (x::xs) = if x = #"\n" then is_eof xs else is_eof_aux xs)`
+
+val is_eof_comment = prove(
+  ``!xs. is_eof (#";"::xs) = is_eof_aux xs``,
+  SIMP_TAC std_ss [is_eof_def,LET_DEF,EVAL ``space_char #";"``]
+  \\ Q.SPEC_TAC (`""`,`ys`) \\ Induct_on `xs`
+  \\ FULL_SIMP_TAC std_ss [read_while_def,is_eof_aux_def]
+  \\ SRW_TAC [] [] \\ FULL_SIMP_TAC std_ss [is_eof_def,EVAL ``space_char #"\n"``]);
+
+val is_eof_lemmas = let
+  fun all_below f 0 = []
+    | all_below f n = f (n-1) :: all_below f (n-1)
+  val is_eof_aux_nil = EVAL ``is_eof_aux ""``
+  fun is_eof_aux n =
+    EVAL (``is_eof_aux (CHR n::cs)`` |> subst [``n:num``|->numSyntax.term_of_int n])
+  val is_eof_aux_lemmas = (is_eof_aux_nil :: all_below is_eof_aux 256)
+  val is_eof_nil = EVAL ``is_eof ""``
+  fun is_eof n =
+    if n = ord #";" then SPEC_ALL is_eof_comment else
+      EVAL (``is_eof (CHR n::cs)`` |> subst [``n:num``|->numSyntax.term_of_int n])
+  val is_eof_lemmas = is_eof_nil :: all_below is_eof 256
+  in is_eof_aux_lemmas @ is_eof_lemmas end;
+
+fun TRY_EACHC [] = NO_CONV
+  | TRY_EACHC (c::cs) = c ORELSEC TRY_EACHC cs
+
+val is_eof_conv = REPEATC (TRY_EACHC (map REWR_CONV is_eof_lemmas))
 
 local
   val pattern = ``read_sexps str``
