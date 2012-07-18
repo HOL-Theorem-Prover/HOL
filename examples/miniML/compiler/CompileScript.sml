@@ -115,11 +115,6 @@ val _ = Defn.save_defn Cpat_vars_defn;
 /\
 (free_vars (CProj e _) = free_vars e)
 /\
-(free_vars (CMat v pes) =
-  FOLDL (\ s (p,e) .
-    s UNION (free_vars e DIFF Cpat_vars p))
-    {v} pes)
-/\
 (free_vars (CLet xs es e) =
   FOLDL (\ s e . s UNION free_vars e)
   (free_vars e DIFF LIST_TO_SET xs) es)
@@ -190,61 +185,6 @@ val _ = Defn.save_defn doPrim2_defn;
 
 val _ = Defn.save_defn CevalPrim2_defn;
 
-val _ = Hol_datatype `
- Cmatch_result =
-    Cmatch of (string,Cv) fmap
-  | Cno_match
-  | Cmatch_error`;
-
-
- val Cmatch_bind_defn = Hol_defn "Cmatch_bind" `
-
-(Cmatch_bind (Cmatch env) f = f env)
-/\
-(Cmatch_bind Cno_match f = Cno_match)
-/\
-(Cmatch_bind Cmatch_error f = Cmatch_error)`;
-
-val _ = Defn.save_defn Cmatch_bind_defn;
-
- val Cmatch_map_defn = Hol_defn "Cmatch_map" `
-
-(Cmatch_map f (Cmatch env) = Cmatch (f env))
-/\
-(Cmatch_map f Cno_match = Cno_match)
-/\
-(Cmatch_map f Cmatch_error = Cmatch_error)`;
-
-val _ = Defn.save_defn Cmatch_map_defn;
-
- val Cpmatch_defn = Hol_defn "Cpmatch" `
-
-(Cpmatch env (CPvar vn) v = Cmatch (FUPDATE  env ( vn, v)))
-/\
-(Cpmatch env (CPlit l) (CLitv l') =
-  if lit_same_type l l' then
-    if l= l' then Cmatch env else Cno_match
-  else Cmatch_error)
-/\
-(Cpmatch env (CPcon n ps) (CConv n' vs) =
-  if LENGTH ps= LENGTH vs then
-    if n= n' then
-      Cpmatch_list env ps vs
-    else Cno_match
-  else Cmatch_error)
-/\
-(Cpmatch env _ _ = Cmatch_error)
-/\
-(Cpmatch_list env [] [] = Cmatch env)
-/\
-(Cpmatch_list env (p::ps) (v::vs) =
-  Cmatch_bind (Cpmatch env p v)
-    (\ env' . Cpmatch_list env' ps vs))
-/\
-(Cpmatch_list env _ _ = Cmatch_error)`;
-
-val _ = Defn.save_defn Cpmatch_defn;
-
 val _ = Define `
  (extend_rec_env cenv env rs defs ns vs =FOLDL2  (\ en n v . FUPDATE  en ( n, v)) 
     (FOLDL
@@ -306,26 +246,6 @@ Cevaluate env (CProj e n) (Rval (EL  n  vs)))
 Cevaluate env e (Rerr err)
 ==>
 Cevaluate env (CProj e n) (Rerr err))
-
-/\
-(! env n.
-T
-==>
-Cevaluate env (CMat n []) (Rerr (Rraise Bind_error)))
-/\
-(! env n p e pes env' r.
- n IN FDOM  env/\(
-Cpmatch env p (FAPPLY  env  n)= Cmatch env')/\
-Cevaluate env' e r
-==>
-Cevaluate env (CMat n ((p,e)::pes)) r)
-/\
-(! env n p e pes r.
- n IN FDOM  env/\(
-Cpmatch env p (FAPPLY  env  n)= Cno_match)/\
-Cevaluate env (CMat n pes) r
-==>
-Cevaluate env (CMat n ((p,e)::pes)) r)
 
 /\
 (! env b r.
@@ -670,6 +590,44 @@ val _ = Define `
   FOLDL (\ s (p,e) . s UNION Cpat_vars p UNION free_vars e) {}`;
 
 
+(* Remove pattern-matching using continuations *)
+(* TODO: more efficient method *)
+(* TODO: store type information on CMat nodes *)
+
+ val remove_mat_vp_defn = Hol_defn "remove_mat_vp" `
+
+(remove_mat_vp fk sk v (CPvar pv) =
+  CLet [pv] [CVar v] sk)
+/\
+(remove_mat_vp fk sk v (CPlit l) =
+  CIf (CPrim2 CEq (CVar v) (CLit l))
+    sk (CCall (CVar fk) []))
+/\
+(remove_mat_vp fk sk v (CPcon cn ps) =
+  CIf (CTagEq (CVar v) cn)
+    (remove_mat_con fk sk v 0 ps)
+    (CCall (CVar fk) []))
+/\
+(remove_mat_con fk sk v n [] = sk)
+/\
+(remove_mat_con fk sk v n (p::ps) =
+  let v' = fresh_var ({v}UNION (free_vars sk)UNION (Cpat_vars p)) in
+  CLet [v'] [CProj (CVar v) n]
+    (remove_mat_vp fk (remove_mat_con fk sk v (n+1) ps) v' p))`;
+
+val _ = Defn.save_defn remove_mat_vp_defn;
+
+ val remove_mat_var_defn = Hol_defn "remove_mat_var" `
+
+(remove_mat_var v [] = CRaise Bind_error)
+/\
+(remove_mat_var v ((p,sk)::pes) =
+  let fk = fresh_var ({v}UNION (free_vars sk)UNION (Cpat_vars p)) in
+  CLetfun F [fk] [([],(remove_mat_var v pes))]
+    (remove_mat_vp fk sk v p))`;
+
+val _ = Defn.save_defn remove_mat_var_defn;
+
  val exp_to_Cexp_defn = Hol_defn "exp_to_Cexp" `
 
 (exp_to_Cexp m (Raise err) = CRaise err)
@@ -740,7 +698,7 @@ val _ = Define `
   let Cpes = pes_to_Cpes m pes in
   let v = fresh_var (Cpes_vars Cpes) in
   let Ce = exp_to_Cexp m e in
-  CLet [v] [Ce] (CMat v Cpes))
+  CLet [v] [Ce] (remove_mat_var v Cpes))
 /\
 (exp_to_Cexp m (Let vn e b) =
   let Ce = exp_to_Cexp m e in
@@ -865,76 +823,7 @@ val _ = Defn.save_defn bv_to_ov_defn;
 
 (* TODO: simple type system and checker *)
 
-(* TODO: map_Cexp and recover remove_mat as instance *)
-
-(* Remove pattern-matching using continuations *)
-(* TODO: more efficient method *)
-(* TODO: store type information on CMat nodes *)
-
-(*val remove_mat : Cexp -> Cexp*)
-
- val remove_mat_vp_defn = Hol_defn "remove_mat_vp" `
-
-(remove_mat_vp fk sk v (CPvar pv) =
-  CLet [pv] [CVar v] sk)
-/\
-(remove_mat_vp fk sk v (CPlit l) =
-  CIf (CPrim2 CEq (CVar v) (CLit l))
-    sk (CCall (CVar fk) []))
-/\
-(remove_mat_vp fk sk v (CPcon cn ps) =
-  CIf (CTagEq (CVar v) cn)
-    (remove_mat_con fk sk v 0 ps)
-    (CCall (CVar fk) []))
-/\
-(remove_mat_con fk sk v n [] = sk)
-/\
-(remove_mat_con fk sk v n (p::ps) =
-  let v' = fresh_var ({v}UNION (free_vars sk)UNION (Cpat_vars p)) in
-  CLet [v'] [CProj (CVar v) n]
-    (remove_mat_vp fk (remove_mat_con fk sk v (n+1) ps) v' p))`;
-
-val _ = Defn.save_defn remove_mat_vp_defn;
-
- val remove_mat_defn = Hol_defn "remove_mat" `
-
-(remove_mat (CMat v pes) = remove_mat_var v pes)
-/\
-(remove_mat (CDecl xs) = CDecl xs)
-/\
-(remove_mat (CRaise err) = CRaise err)
-/\
-(remove_mat (CVar v) = CVar v)
-/\
-(remove_mat (CLit l) = CLit l)
-/\
-(remove_mat (CCon n es) = CCon n (MAP remove_mat es))
-/\
-(remove_mat (CTagEq e n) = CTagEq (remove_mat e) n)
-/\
-(remove_mat (CProj e n) = CProj (remove_mat e) n)
-/\
-(remove_mat (CLet xs es e) = CLet xs (MAP remove_mat es) (remove_mat e))
-/\
-(remove_mat (CLetfun b ns defs e) = CLetfun b ns (MAP (\ (vs,e) . (vs,remove_mat e)) defs) (remove_mat e))
-/\
-(remove_mat (CFun ns e) = CFun ns (remove_mat e))
-/\
-(remove_mat (CCall e es) = CCall (remove_mat e) (MAP remove_mat es))
-/\
-(remove_mat (CPrim2 o2 e1 e2) = CPrim2 o2 (remove_mat e1) (remove_mat e2))
-/\
-(remove_mat (CIf e1 e2 e3) = CIf (remove_mat e1) (remove_mat e2) (remove_mat e3))
-/\
-(remove_mat_var v [] = CRaise Bind_error)
-/\
-(remove_mat_var v ((p,e)::pes) =
-  let sk = remove_mat e in
-  let fk = fresh_var ({v}UNION (free_vars sk)UNION (Cpat_vars p)) in
-  CLetfun F [fk] [([],(remove_mat_var v pes))]
-    (remove_mat_vp fk sk v p))`;
-
-val _ = Defn.save_defn remove_mat_defn;
+(* TODO: map_Cexp? *)
 
 (* TODO: use Pmap.peek instead of mem when it becomes available *)
 (* TODO: collapse nested functions *)
@@ -1091,9 +980,6 @@ val _ = Defn.save_defn bind_fv_defn;
 (compile s (CProj e n) =
   let (s,dt) = sdt s in
   ldt dt (emit (compile s e) [Stack (El n)]))
-/\
-(compile s (CMat _ _) =
-  incsz (emit s [Stack (PushInt i2); Exception]))
 /\
 (compile s (CLet xs es e) =
   let z = s.sz+ 1 in
@@ -1403,7 +1289,6 @@ val _ = Define `
 
 val _ = Define `
  (compile_Cexp rs Ce =
-  let Ce = remove_mat Ce in
   let cs =  rs.cs with<| code := [] ; code_length := 0 |> in
   let cs = compile cs Ce in
   let cs = (case cs.decl of
@@ -1447,7 +1332,7 @@ val _ = Defn.save_defn number_constructors_defn;
   let vn = fresh_var (Cpes_vars Cpes) in
   let Ce = exp_to_Cexp rs.cmap e in
   let rs' = rs with<| cs := rs.cs with<| decl:=SOME(rs.cs.env,rs.cs.sz)|> |> in
-  compile_Cexp rs' (CLet [vn] [Ce] (CMat vn Cpes)))`;
+  compile_Cexp rs' (CLet [vn] [Ce] (remove_mat_var vn Cpes)))`;
 
 val _ = Defn.save_defn repl_dec_defn;
 

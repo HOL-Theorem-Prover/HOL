@@ -83,7 +83,6 @@ type Cexp =
   | CCon of num * Cexp list
   | CTagEq of Cexp * num
   | CProj of Cexp * num
-  | CMat of string * (Cpat * Cexp) list
   | CLet of string list * Cexp list * Cexp
   | CLetfun of bool * string list * (string list * Cexp) list * Cexp
   | CFun of string list * Cexp
@@ -127,11 +126,6 @@ and
 free_vars (CTagEq e _) = free_vars e
 and
 free_vars (CProj e _) = free_vars e
-and
-free_vars (CMat v pes) =
-  List.fold_left (fun s (p,e) ->
-    s union (free_vars e \ Cpat_vars p))
-    {v} pes
 and
 free_vars (CLet xs es e) =
   List.fold_left (fun s e -> s union free_vars e)
@@ -191,50 +185,6 @@ CevalPrim2 CEq = fun v1 v2 ->
   if no_closures v1 && no_closures v2
   then Rval (CLitv (Bool (v1 = v2)))
   else Rerr Rtype_error
-
-type Cmatch_result =
-  | Cmatch of (string,Cv) Pmap.map
-  | Cno_match
-  | Cmatch_error
-
-let rec
-Cmatch_bind (Cmatch env) f = f env
-and
-Cmatch_bind Cno_match f = Cno_match
-and
-Cmatch_bind Cmatch_error f = Cmatch_error
-
-let rec
-Cmatch_map f (Cmatch env) = Cmatch (f env)
-and
-Cmatch_map f Cno_match = Cno_match
-and
-Cmatch_map f Cmatch_error = Cmatch_error
-
-let rec
-Cpmatch env (CPvar vn) v = Cmatch (Pmap.add vn v env)
-and
-Cpmatch env (CPlit l) (CLitv l') =
-  if lit_same_type l l' then
-    if l = l' then Cmatch env else Cno_match
-  else Cmatch_error
-and
-Cpmatch env (CPcon n ps) (CConv n' vs) =
-  if List.length ps = List.length vs then
-    if n = n' then
-      Cpmatch_list env ps vs
-    else Cno_match
-  else Cmatch_error
-and
-Cpmatch env _ _ = Cmatch_error
-and
-Cpmatch_list env [] [] = Cmatch env
-and
-Cpmatch_list env (p::ps) (v::vs) =
-  Cmatch_bind (Cpmatch env p v)
-    (fun env' -> Cpmatch_list env' ps vs)
-and
-Cpmatch_list env _ _ = Cmatch_error
 
 let extend_rec_env cenv env rs defs ns vs =
   fold_left2 (fun en n v -> Pmap.add n v en)
@@ -296,26 +246,6 @@ forall env e n err.
 Cevaluate env e (Rerr err)
 ==>
 Cevaluate env (CProj e n) (Rerr err)
-
-and
-forall env n.
-true
-==>
-Cevaluate env (CMat n []) (Rerr (Rraise Bind_error))
-and
-forall env n p e pes env' r.
-Pmap.mem n env &&
-Cpmatch env p (Pmap.find n env) = Cmatch env' &&
-Cevaluate env' e r
-==>
-Cevaluate env (CMat n ((p,e)::pes)) r
-and
-forall env n p e pes r.
-Pmap.mem n env &&
-Cpmatch env p (Pmap.find n env) = Cno_match &&
-Cevaluate env (CMat n pes) r
-==>
-Cevaluate env (CMat n ((p,e)::pes)) r
 
 and
 forall env b r.
@@ -652,6 +582,38 @@ pats_to_Cpats m pvs (p::ps) =
 let Cpes_vars =
   List.fold_left (fun s (p,e) -> s union Cpat_vars p union free_vars e) {}
 
+(* Remove pattern-matching using continuations *)
+(* TODO: more efficient method *)
+(* TODO: store type information on CMat nodes *)
+
+let rec
+remove_mat_vp fk sk v (CPvar pv) =
+  CLet [pv] [CVar v] sk
+and
+remove_mat_vp fk sk v (CPlit l) =
+  CIf (CPrim2 CEq (CVar v) (CLit l))
+    sk (CCall (CVar fk) [])
+and
+remove_mat_vp fk sk v (CPcon cn ps) =
+  CIf (CTagEq (CVar v) cn)
+    (remove_mat_con fk sk v 0 ps)
+    (CCall (CVar fk) [])
+and
+remove_mat_con fk sk v n [] = sk
+and
+remove_mat_con fk sk v n (p::ps) =
+  let v' = fresh_var ({v} union (free_vars sk) union (Cpat_vars p)) in
+  CLet [v'] [CProj (CVar v) n]
+    (remove_mat_vp fk (remove_mat_con fk sk v (n+1) ps) v' p)
+
+let rec
+remove_mat_var v [] = CRaise Bind_error
+and
+remove_mat_var v ((p,sk)::pes) =
+  let fk = fresh_var ({v} union (free_vars sk) union (Cpat_vars p)) in
+  CLetfun false [fk] [([],(remove_mat_var v pes))]
+    (remove_mat_vp fk sk v p)
+
 let rec
 exp_to_Cexp m (Raise err) = CRaise err
 and
@@ -721,7 +683,7 @@ exp_to_Cexp m (Mat e pes) =
   let Cpes = pes_to_Cpes m pes in
   let v = fresh_var (Cpes_vars Cpes) in
   let Ce = exp_to_Cexp m e in
-  CLet [v] [Ce] (CMat v Cpes)
+  CLet [v] [Ce] (remove_mat_var v Cpes)
 and
 exp_to_Cexp m (Let vn e b) =
   let Ce = exp_to_Cexp m e in
@@ -830,70 +792,7 @@ bv_to_ov m NTfn (Block 0 _) = OFn
 
 (* TODO: simple type system and checker *)
 
-(* TODO: map_Cexp and recover remove_mat as instance *)
-
-(* Remove pattern-matching using continuations *)
-(* TODO: more efficient method *)
-(* TODO: store type information on CMat nodes *)
-
-val remove_mat : Cexp -> Cexp
-
-let rec
-remove_mat_vp fk sk v (CPvar pv) =
-  CLet [pv] [CVar v] sk
-and
-remove_mat_vp fk sk v (CPlit l) =
-  CIf (CPrim2 CEq (CVar v) (CLit l))
-    sk (CCall (CVar fk) [])
-and
-remove_mat_vp fk sk v (CPcon cn ps) =
-  CIf (CTagEq (CVar v) cn)
-    (remove_mat_con fk sk v 0 ps)
-    (CCall (CVar fk) [])
-and
-remove_mat_con fk sk v n [] = sk
-and
-remove_mat_con fk sk v n (p::ps) =
-  let v' = fresh_var ({v} union (free_vars sk) union (Cpat_vars p)) in
-  CLet [v'] [CProj (CVar v) n]
-    (remove_mat_vp fk (remove_mat_con fk sk v (n+1) ps) v' p)
-
-let rec
-remove_mat (CMat v pes) = remove_mat_var v pes
-and
-remove_mat (CDecl xs) = CDecl xs
-and
-remove_mat (CRaise err) = CRaise err
-and
-remove_mat (CVar v) = CVar v
-and
-remove_mat (CLit l) = CLit l
-and
-remove_mat (CCon n es) = CCon n (List.map remove_mat es)
-and
-remove_mat (CTagEq e n) = CTagEq (remove_mat e) n
-and
-remove_mat (CProj e n) = CProj (remove_mat e) n
-and
-remove_mat (CLet xs es e) = CLet xs (List.map remove_mat es) (remove_mat e)
-and
-remove_mat (CLetfun b ns defs e) = CLetfun b ns (List.map (fun (vs,e) -> (vs,remove_mat e)) defs) (remove_mat e)
-and
-remove_mat (CFun ns e) = CFun ns (remove_mat e)
-and
-remove_mat (CCall e es) = CCall (remove_mat e) (List.map remove_mat es)
-and
-remove_mat (CPrim2 o2 e1 e2) = CPrim2 o2 (remove_mat e1) (remove_mat e2)
-and
-remove_mat (CIf e1 e2 e3) = CIf (remove_mat e1) (remove_mat e2) (remove_mat e3)
-and
-remove_mat_var v [] = CRaise Bind_error
-and
-remove_mat_var v ((p,e)::pes) =
-  let sk = remove_mat e in
-  let fk = fresh_var ({v} union (free_vars sk) union (Cpat_vars p)) in
-  CLetfun false [fk] [([],(remove_mat_var v pes))]
-    (remove_mat_vp fk sk v p)
+(* TODO: map_Cexp? *)
 
 (* TODO: use Pmap.peek instead of mem when it becomes available *)
 (* TODO: collapse nested functions *)
@@ -1019,9 +918,6 @@ and
 compile s (CProj e n) =
   let (s,dt) = sdt s in
   ldt dt (emit (compile s e) [Stack (El n)])
-and
-compile s (CMat _ _) =
-  incsz (emit s [Stack (PushInt i2); Exception])
 and
 compile s (CLet xs es e) =
   let z = s.sz + 1 in
@@ -1319,7 +1215,6 @@ let init_repl_state =
    |>
 
 let compile_Cexp rs Ce =
-  let Ce = remove_mat Ce in
   let cs = <| rs.cs with code = [] ; code_length = 0 |> in
   let cs = compile cs Ce in
   let cs = match cs.decl with
@@ -1358,7 +1253,7 @@ repl_dec rs (Dlet p e) =
   let vn = fresh_var (Cpes_vars Cpes) in
   let Ce = exp_to_Cexp rs.cmap e in
   let rs' = <|rs with cs = <|rs.cs with decl=Some(rs.cs.env,rs.cs.sz)|> |> in
-  compile_Cexp rs' (CLet [vn] [Ce] (CMat vn Cpes))
+  compile_Cexp rs' (CLet [vn] [Ce] (remove_mat_var vn Cpes))
 
 let repl_exp s exp =
   compile_Cexp (<|s with cs = <|s.cs with decl=None|> |>) (exp_to_Cexp s.cmap exp) (* parens *)

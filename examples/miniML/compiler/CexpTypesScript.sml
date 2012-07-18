@@ -22,7 +22,6 @@ val _ = Hol_datatype `
   | CCon of num => Cexp list
   | CTagEq of Cexp => num
   | CProj of Cexp => num
-  | CMat of string => (Cpat # Cexp) list
   | CLet of string list => Cexp list => Cexp
   | CLetfun of bool => string list => (string list # Cexp) list => Cexp
   | CFun of string list => Cexp

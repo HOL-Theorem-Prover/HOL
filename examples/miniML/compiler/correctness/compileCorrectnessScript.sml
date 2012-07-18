@@ -244,6 +244,11 @@ rw[FOLDL_UNION_BIGUNION] >>
 PROVE_TAC[])
 val _ = export_rewrites["FINITE_Cpat_vars"]
 
+val free_vars_remove_mat_var = store_thm(
+"free_vars_remove_mat_var",
+``free_vars (remove_mat_var v pes) = ?``,
+...)
+
 val free_vars_exp_to_Cexp = store_thm(
 "free_vars_exp_to_Cexp",
 ``∀s e. free_vars (exp_to_Cexp s e) = FV e``,
@@ -1507,28 +1512,6 @@ rw[] >- (
   fs[] >>
   PROVE_TAC[] ) >>
 PROVE_TAC[])
-
-(* TODO: move? *)
-val Cpmatch_lit_match = store_thm(
-"Cpmatch_lit_match",
-``(Cpmatch env (CPlit l) v = Cmatch env') = ((v = CLitv l) ∧ (env' = env))``,
-Cases_on `v` >> rw[Cpmatch_def,MiniMLTheory.lit_same_type_def] >>
-BasicProvers.EVERY_CASE_TAC >>
-rw[EQ_IMP_THM])
-val _ = export_rewrites["Cpmatch_lit_match"]
-
-val Cpmatch_con_match = store_thm(
-"Cpmatch_con_match",
-``(Cpmatch env (CPcon n ps) v = Cmatch env') = ∃vs. (v = CConv n vs) ∧ (LENGTH vs = LENGTH ps) ∧ (Cpmatch_list env ps vs = Cmatch env')``,
-Cases_on `v` >> fs[Cpmatch_def] >> rw[] >> PROVE_TAC[])
-val _ = export_rewrites["Cpmatch_con_match"]
-
-val Cpmatch_list_nil_match = store_thm(
-"Cpmatch_list_nil_match",
-``((Cpmatch_list env [] vs = Cmatch env') = ((vs = []) ∧ (env' = env))) ∧
-  ((Cpmatch_list env ps [] = Cmatch env') = ((ps = []) ∧ (env' = env)))``,
-Cases_on `vs` >> Cases_on `ps` >> fs[Cpmatch_def,EQ_IMP_THM])
-val _ = export_rewrites["Cpmatch_list_nil_match"]
 
 val Cpat_nice_ind =
 TypeBase.induction_of(``:Cpat``)

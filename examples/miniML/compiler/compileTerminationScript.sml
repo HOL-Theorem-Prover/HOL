@@ -20,8 +20,8 @@ srw_tac [ARITH_ss][Cexp_size_def])
 val tac = Induct >- rw[Cexp_size_def,Cpat_size_def,Cv_size_def] >> srw_tac [ARITH_ss][Cexp_size_def,Cpat_size_def,Cv_size_def]
 fun tm t1 t2 =  ``∀ls. ^t1 ls = SUM (MAP ^t2 ls) + LENGTH ls``
 fun size_thm name t1 t2 = store_thm(name,tm t1 t2,tac)
-val Cexp3_size_thm = size_thm "Cexp3_size_thm" ``Cexp3_size`` ``Cexp4_size``
-val Cexp5_size_thm = size_thm "Cexp5_size_thm" ``Cexp5_size`` ``Cexp_size``
+val Cexp1_size_thm = size_thm "Cexp1_size_thm" ``Cexp1_size`` ``Cexp2_size``
+val Cexp3_size_thm = size_thm "Cexp3_size_thm" ``Cexp3_size`` ``Cexp_size``
 val Cpat1_size_thm = size_thm "Cpat1_size_thm" ``Cpat1_size`` ``Cpat_size``
 val Cvs_size_thm = size_thm "Cvs_size_thm" ``Cvs_size`` ``Cv_size``
 
@@ -29,15 +29,6 @@ val SUM_MAP_Cexp2_size_thm = store_thm(
 "SUM_MAP_Cexp2_size_thm",
 ``∀env. SUM (MAP Cexp2_size env) =
   SUM (MAP (list_size (list_size char_size)) (MAP FST env))
-+ SUM (MAP Cexp_size (MAP SND env))
-+ LENGTH env``,
-Induct >- rw[Cexp_size_def] >> Cases >>
-srw_tac[ARITH_ss][Cexp_size_def])
-
-val SUM_MAP_Cexp4_size_thm = store_thm(
-"SUM_MAP_Cexp4_size_thm",
-``∀env. SUM (MAP Cexp4_size env) =
-  SUM (MAP Cpat_size (MAP FST env))
 + SUM (MAP Cexp_size (MAP SND env))
 + LENGTH env``,
 Induct >- rw[Cexp_size_def] >> Cases >>
@@ -85,9 +76,9 @@ val syneq_ind = save_thm("syneq_ind",syneq_ind)
 val (free_vars_def, free_vars_ind) = register "free_vars" (
   tprove_no_defn ((free_vars_def,free_vars_ind),
   WF_REL_TAC `measure Cexp_size` >>
-  srw_tac[ARITH_ss][Cexp1_size_thm,Cexp3_size_thm,Cexp5_size_thm] >>
+  srw_tac[ARITH_ss][Cexp1_size_thm,Cexp3_size_thm] >>
   MAP_EVERY (fn q => Q.ISPEC_THEN q mp_tac SUM_MAP_MEM_bound)
-  [`Cexp_size`,`Cexp2_size`,`Cexp4_size`] >>
+  [`Cexp_size`,`Cexp2_size`] >>
   rw[] >> res_tac >> fs[Cexp_size_def] >> srw_tac[ARITH_ss][]))
 val _ = export_rewrites["free_vars_def"];
 
@@ -135,40 +126,16 @@ val _ = export_rewrites["v_to_ov_def"];
 val _ = save_thm ("map_result_def", map_result_def);
 val _ = export_rewrites["map_result_def"];
 
-val _ = save_thm ("Cmatch_map_def", Cmatch_map_def);
-val _ = export_rewrites["Cmatch_map_def"];
-
-val _ = save_thm ("Cmatch_bind_def", Cmatch_bind_def);
-val _ = export_rewrites["Cmatch_bind_def"];
-
 val _ = save_thm ("doPrim2_def", doPrim2_def);
 val _ = export_rewrites["doPrim2_def"];
 
 val _ = save_thm ("CevalPrim2_def", CevalPrim2_def);
 val _ = export_rewrites["CevalPrim2_def"];
 
-val (Cpmatch_def,Cpmatch_ind) = register "Cpmatch" (
-  tprove_no_defn ((Cpmatch_def,Cpmatch_ind),
-  WF_REL_TAC `inv_image $<
-                (λx. case x of
-                     | (INL (env,p,v)) => Cv_size v
-                     | (INR (env,ps,vs)) => Cvs_size vs)`))
-
 (* compiler definitions *)
 
-val (remove_mat_def,remove_mat_ind) = register "remove_mat" (
-  tprove_no_defn ((remove_mat_def,remove_mat_ind),
-  WF_REL_TAC
-  `inv_image $<
-    (λx. case x of
-         | INL e => Cexp_size e
-         | INR (_,pes) => Cexp3_size pes)` >>
-  srw_tac[ARITH_ss][Cexp1_size_thm,Cexp3_size_thm,Cexp5_size_thm] >>
-  MAP_EVERY (fn q => Q.ISPEC_THEN q mp_tac SUM_MAP_MEM_bound) [`Cexp_size`,`Cexp2_size`,`Cexp5_size`] >>
-  rw[] >> res_tac >> fs[Cexp_size_def] >> srw_tac[ARITH_ss][]))
-
 val _ = save_thm("remove_mat_vp_def",remove_mat_vp_def)
-val _ = export_rewrites["remove_mat_def","remove_mat_vp_def"]
+val _ = export_rewrites["remove_mat_vp_def"]
 
 val Cpes_vars_def = save_thm("Cpes_vars_def",Cpes_vars_def)
 
@@ -201,7 +168,7 @@ val (compile_def, compile_ind) = register "compile" (
        | INR (INL (env,z,e,n,s,ns))=> (Cexp_size e + (SUM (MAP (list_size char_size) ns)) + LENGTH ns, 2)
        | INR (INR (ns,s,xbs))      => (SUM (MAP Cexp2_size xbs) + (SUM (MAP (list_size char_size) ns)) + LENGTH ns, 0))` >>
   srw_tac[ARITH_ss][] >>
-  srw_tac[ARITH_ss][Cexp1_size_thm,Cexp5_size_thm,Cexp_size_def,list_size_thm,SUM_MAP_Cexp2_size_thm] >>
+  srw_tac[ARITH_ss][Cexp1_size_thm,Cexp3_size_thm,Cexp_size_def,list_size_thm,SUM_MAP_Cexp2_size_thm] >>
   TRY (Q.ISPEC_THEN `Cexp_size` imp_res_tac SUM_MAP_MEM_bound >> DECIDE_TAC) >>
   TRY (Cases_on `xs` >> srw_tac[ARITH_ss][]) >>
   TRY (Cases_on `ns` >> srw_tac[ARITH_ss][]) >>
