@@ -25,15 +25,12 @@ val alphaise =
     INST_TYPE  [beta |-> ``:'a inf``, delta |-> ``:'a inf``,
                 gamma |-> ``:'a inf``, alpha |-> ``:'a inf``]
 
-val [ordlt_REFL, ordlt_TRANS, ordlt_WF0, ordlt_trichotomy,
-     ordlt_ZERO0, ord_finite_ZERO0] =
+val [ordlt_REFL, ordlt_TRANS, ordlt_WF0, ordlt_trichotomy] =
     quotient.define_quotient_types_full
     {
      types = [{name = "ordinal", equiv = alphaise orderiso_equiv}],
      defs = map mk_def
-       [("ordlt", ``orderlt : 'a inf wellorder -> 'a inf wellorder -> bool``),
-        ("ord_ZERO", ``wZERO : 'a inf wellorder``),
-        ("ord_finite", ``finite : 'a inf wellorder -> bool``)],
+       [("ordlt", ``orderlt : 'a inf wellorder -> 'a inf wellorder -> bool``)],
      tyop_equivs = [],
      tyop_quotients = [],
      tyop_simps = [],
@@ -42,9 +39,7 @@ val [ordlt_REFL, ordlt_TRANS, ordlt_WF0, ordlt_trichotomy,
      poly_respects = [],
      old_thms = [alphaise orderlt_REFL, alphaise orderlt_TRANS,
                  alphaise (REWRITE_RULE [relationTheory.WF_DEF] orderlt_WF),
-                 alphaise orderlt_trichotomy, alphaise LT_wZERO,
-                 alphaise finite_wZERO
-                 ]}
+                 alphaise orderlt_trichotomy]}
 
 val _ = save_thm ("ordlt_REFL", ordlt_REFL)
 val _ = export_rewrites ["ordlt_REFL"]
@@ -1669,4 +1664,3 @@ val poly_lemma0 = prove(
 
 
 val _ = export_theory()
-
