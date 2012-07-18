@@ -1373,7 +1373,7 @@ strip_tac >- (
     fsrw_tac[DNF_ss][] >>
     rw[Cevaluate_list_with_Cevaluate] >>
     rw[Cevaluate_list_with_cons] >>
-    cheat )) >>
+    PROVE_TAC[])) >>
 strip_tac >- (
   ntac 2 gen_tac >>
   Cases >> fs[exp_to_Cexp_def] >>

@@ -385,8 +385,8 @@ Cevaluate (extend_rec_env env' env' ns' defs ns vs) b r
 ==>
 Cevaluate env (CCall e es) r)
 /\
-(! env e es env' ns' defs n err.
-Cevaluate env e (Rval (CRecClos env' ns' defs n))/\
+(! env e v es err.
+Cevaluate env e (Rval v)/\
 Cevaluate_list env es (Rerr err)
 ==>
 Cevaluate env (CCall e es) (Rerr err))
