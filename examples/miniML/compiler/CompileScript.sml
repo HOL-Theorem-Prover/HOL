@@ -611,7 +611,7 @@ val _ = Define `
 (remove_mat_con fk sk v n [] = sk)
 /\
 (remove_mat_con fk sk v n (p::ps) =
-  let v' = fresh_var ({v}UNION (free_vars sk)UNION (Cpat_vars p)) in
+  let v' = fresh_var ({v;fk}UNION (free_vars sk)UNION (Cpat_vars p)) in
   CLet [v'] [CProj (CVar v) n]
     (remove_mat_vp fk (remove_mat_con fk sk v (n+1) ps) v' p))`;
 
@@ -622,7 +622,7 @@ val _ = Defn.save_defn remove_mat_vp_defn;
 (remove_mat_var v [] = CRaise Bind_error)
 /\
 (remove_mat_var v ((p,sk)::pes) =
-  let fk = fresh_var ({v}UNION (free_vars sk)UNION (Cpat_vars p)) in
+  let fk = fresh_var ({v}UNION (free_vars sk)) in
   CLetfun F [fk] [([],(remove_mat_var v pes))]
     (remove_mat_vp fk sk v p))`;
 

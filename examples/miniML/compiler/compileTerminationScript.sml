@@ -137,6 +137,10 @@ val _ = export_rewrites["CevalPrim2_def"];
 val _ = save_thm("remove_mat_vp_def",remove_mat_vp_def)
 val _ = export_rewrites["remove_mat_vp_def"]
 
+val _ = register "remove_mat_var" (
+  tprove_no_defn ((remove_mat_var_def,remove_mat_var_ind),
+  WF_REL_TAC `measure (LENGTH o SND)` >> rw[]))
+
 val Cpes_vars_def = save_thm("Cpes_vars_def",Cpes_vars_def)
 
 val (exp_to_Cexp_def,exp_to_Cexp_ind) = register "exp_to_Cexp" (

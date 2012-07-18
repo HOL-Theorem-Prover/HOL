@@ -244,10 +244,89 @@ rw[FOLDL_UNION_BIGUNION] >>
 PROVE_TAC[])
 val _ = export_rewrites["FINITE_Cpat_vars"]
 
+val fresh_var_not_in_any = store_thm(
+"fresh_var_not_in_any",
+``FINITE s ∧ t ⊆ s ⇒ fresh_var s ∉ t``,
+PROVE_TAC[fresh_var_not_in,SUBSET_DEF,FINITE_has_fresh_string])
+
+val free_vars_remove_mat_vp = store_thm(
+"free_vars_remove_mat_vp",
+``(∀p fk sk v.
+    (free_vars (remove_mat_vp fk sk v p) DIFF {v;fk} =
+     free_vars sk DIFF Cpat_vars p DIFF {v;fk})) ∧
+  (∀ps fk sk v n.
+   (free_vars (remove_mat_con fk sk v n ps) DIFF {v;fk} =
+    free_vars sk DIFF BIGUNION (IMAGE Cpat_vars (set ps)) DIFF {v;fk}))``,
+ho_match_mp_tac (TypeBase.induction_of(``:Cpat``)) >>
+strip_tac >- (
+  rw[EXTENSION] >> PROVE_TAC[] ) >>
+strip_tac >- (
+  rw[EXTENSION] >> PROVE_TAC[] ) >>
+strip_tac >- (
+  rw[FOLDL_UNION_BIGUNION] >>
+  fs[EXTENSION] >> METIS_TAC[] ) >>
+strip_tac >- (
+  rw[EXTENSION] >> PROVE_TAC[] ) >>
+rw[LET_THM] >>
+qmatch_abbrev_tac `free_vars (remove_mat_vp fk sk0 v0 p) DIFF {v0} UNION {v} DIFF {v; fk} = vs DIFF {v; fk}` >>
+simp_tac std_ss [Once EXTENSION] >>
+qx_gen_tac `x` >>
+fs[] >>
+Cases_on `x=v` >> fs[] >>
+Cases_on `x=fk` >> fs[] >>
+Cases_on `x=v0` >> fs[] >- (
+  unabbrev_all_tac >>
+  match_mp_tac fresh_var_not_in_any >>
+  fs[SUBSET_DEF] ) >>
+qpat_assum `∀fk sk v. P = Q` (qspecl_then [`fk`,`sk0`,`v0`] mp_tac) >>
+simp_tac std_ss [Once EXTENSION] >>
+disch_then (qspec_then `x` mp_tac) >>
+fs[] >> strip_tac >>
+first_x_assum (qspecl_then [`fk`,`sk`,`v`,`n+1`] mp_tac) >>
+simp_tac std_ss [Once EXTENSION] >>
+disch_then (qspec_then `x` mp_tac) >>
+fs[] >> strip_tac >>
+fs[Abbr`vs`] >> PROVE_TAC[])
+
+val free_vars_remove_mat_vp_SUBSET = store_thm(
+"free_vars_remove_mat_vp_SUBSET",
+``(∀p fk sk v. free_vars (remove_mat_vp fk sk v p) ⊆
+  {v;fk} ∪ (free_vars sk DIFF Cpat_vars p)) ∧
+(∀ps fk sk v n. free_vars (remove_mat_con fk sk v n ps) ⊆
+  {v;fk} ∪ (free_vars sk DIFF BIGUNION (IMAGE Cpat_vars (set ps))))``,
+ho_match_mp_tac (TypeBase.induction_of(``:Cpat``)) >>
+strip_tac >- (
+  rw[SUBSET_DEF] >> rw[] ) >>
+strip_tac >- rw[] >>
+strip_tac >- rw[FOLDL_UNION_BIGUNION] >>
+strip_tac >- rw[] >>
+srw_tac[DNF_ss][LET_THM,SUBSET_DEF] >>
+res_tac >> fs[] >>
+res_tac >> fs[])
+
+val fsd = full_simp_tac std_ss
+
 val free_vars_remove_mat_var = store_thm(
 "free_vars_remove_mat_var",
-``free_vars (remove_mat_var v pes) = ?``,
-...)
+``∀v pes. free_vars (remove_mat_var v pes) DIFF {v} =
+  BIGUNION (IMAGE (λ(p,e). free_vars e DIFF Cpat_vars p) (set pes)) DIFF {v}``,
+ho_match_mp_tac remove_mat_var_ind >>
+strip_tac >- rw[remove_mat_var_def] >>
+rw[remove_mat_var_def] >>
+rw[] >>
+full_simp_tac std_ss [EXTENSION,IN_UNION,IN_DIFF,IN_SING] >>
+qx_gen_tac `x` >>
+Cases_on `x=v` >> fsd[] >>
+Cases_on `x=fk` >> fsd[] >- (
+  `fk ∉ free_vars sk` by (
+    unabbrev_all_tac >>
+    match_mp_tac fresh_var_not_in_any >>
+    fs[SUBSET_DEF] ) >>
+  fsd[] >>
+  PROVE_TAC[] ) >>
+mp_tac (CONJUNCT1 free_vars_remove_mat_vp) >>
+fsd[EXTENSION,IN_DIFF,IN_INSERT,IN_SING] >>
+metis_tac[])
 
 val free_vars_exp_to_Cexp = store_thm(
 "free_vars_exp_to_Cexp",
@@ -268,30 +347,48 @@ rw[] >- (
 >- (
   BasicProvers.EVERY_CASE_TAC >> rw[] )
 >- (
-  fs[EVERY_MEM,pairTheory.FORALL_PROD,FOLDL_UNION_BIGUNION_paired,Cpes_vars_thm] >>
-  fs[MAP_MAP_o,combinTheory.o_DEF,pairTheory.LAMBDA_PROD] >>
-  rw[DIFF_SAME_UNION,UNION_COMM] >>
-  AP_TERM_TAC >>
-  rw[Once EXTENSION,MEM_MAP,pairTheory.EXISTS_PROD] >>
-  srw_tac[DNF_ss][] >>
-  fs[SUBSET_DEF,pairTheory.UNCURRY] >>
-  srw_tac[DNF_ss][CONJ_ASSOC, Once CONJ_COMM] >>
+  qmatch_abbrev_tac `free_vars (remove_mat_var v pe) DIFF x ∪ y = z` >>
+  qspecl_then [`v`,`pe`] mp_tac free_vars_remove_mat_var >>
+  asm_simp_tac std_ss [EXTENSION,IN_DIFF,IN_SING,IN_UNION] >>
+  strip_tac >>
+  qx_gen_tac `u` >>
+  Cases_on `u ∈ y` >> fsd[] >>
+  qunabbrev_tac `y` >>
+  fsd[pairTheory.FORALL_PROD] >>
+  Cases_on `u=v` >> fsd[] >- (
+    qunabbrev_tac`v` >>
+    match_mp_tac fresh_var_not_in_any >>
+    qunabbrev_tac`x` >>
+    qunabbrev_tac`z` >>
+    pop_assum kall_tac >>
+    ntac 2 (pop_assum kall_tac) >>
+    fsrw_tac[DNF_ss][SUBSET_DEF,pairTheory.FORALL_PROD,
+                     Abbr`pe`,Cpes_vars_thm] >>
+    fsrw_tac[DNF_ss][MAP_MAP_o,combinTheory.o_DEF,
+                     pairTheory.LAMBDA_PROD] >>
+    fsrw_tac[DNF_ss][MEM_MAP,pairTheory.EXISTS_PROD] >>
+    fsrw_tac[DNF_ss][pairTheory.UNCURRY] >>
+    map_every qx_gen_tac [`x`,`y`,`z`] >>
+    strip_tac >>
+    disj2_tac >>
+    map_every qexists_tac [`y`,`z`] >>
+    rw[] >> PROVE_TAC[] ) >>
+  fsrw_tac[DNF_ss][pairTheory.EXISTS_PROD] >>
+  fsrw_tac[DNF_ss][Abbr`pe`,MEM_MAP,pairTheory.EXISTS_PROD] >>
+  qunabbrev_tac`x` >>
+  qunabbrev_tac`z` >>
+  fsrw_tac[DNF_ss][pairTheory.UNCURRY] >>
+  rw[Once CONJ_ASSOC] >>
   qho_match_abbrev_tac `
     (∃p1 p2. A p1 p2 ∧ MEM (p1,p2) pes) =
     (∃p1 p2. B p1 p2 ∧ MEM (p1,p2) pes)` >>
   (qsuff_tac `∀p1 p2. MEM (p1,p2) pes ⇒ (A p1 p2 = B p1 p2)` >- PROVE_TAC[]) >>
   srw_tac[DNF_ss][Abbr`A`,Abbr`B`] >>
   first_x_assum (qspecl_then [`p1`,`p2`] mp_tac) >>
+  rw[] >>
   qabbrev_tac `q = pat_to_Cpat s [] p1` >>
   PairCases_on `q` >> fs[] >>
-  fs[markerTheory.Abbrev_def] >>
-  qpat_assum`X = pat_to_Cpat s [] p1` (assume_tac o SYM) >>
-  imp_res_tac Cpat_vars_pat_to_Cpat >>
-  strip_tac >> fs[] >>
-  EQ_TAC >> strip_tac >> fs[] >>
-  match_mp_tac NOT_fresh_var >>
-  srw_tac[DNF_ss][pairTheory.EXISTS_PROD,MEM_MAP] >>
-  PROVE_TAC[] )
+  PROVE_TAC[Cpat_vars_pat_to_Cpat])
 >- (
   rw[EXTENSION] >> PROVE_TAC[] )
 >- (
@@ -1446,73 +1543,6 @@ strip_tac >- (
   rw[Once Cevaluate_cases] ) >>
 cheat)
 
-val free_vars_remove_mat_vp = store_thm(
-"free_vars_remove_mat_vp",
-``(∀p fk sk v. free_vars (remove_mat_vp fk sk v p) ⊆
-  {v;fk} ∪ (free_vars sk DIFF Cpat_vars p)) ∧
-(∀ps fk sk v n. free_vars (remove_mat_con fk sk v n ps) ⊆
-  {v;fk} ∪ (free_vars sk DIFF BIGUNION (IMAGE Cpat_vars (set ps))))``,
-ho_match_mp_tac (TypeBase.induction_of(``:Cpat``)) >>
-strip_tac >- (
-  rw[SUBSET_DEF] >> rw[] ) >>
-strip_tac >- rw[] >>
-strip_tac >- rw[FOLDL_UNION_BIGUNION] >>
-strip_tac >- rw[] >>
-srw_tac[DNF_ss][LET_THM,SUBSET_DEF] >>
-res_tac >> fs[] >>
-res_tac >> fs[])
-
-val free_vars_remove_mat = store_thm(
-"free_vars_remove_mat",
-``(∀exp. free_vars (remove_mat exp) ⊆ free_vars exp) ∧
-  (∀v pes. free_vars (remove_mat_var v pes) ⊆ free_vars (CMat v pes))
-``,
-ho_match_mp_tac remove_mat_ind >>
-strip_tac >- rw[] >>
-strip_tac >- rw[] >>
-strip_tac >- rw[] >>
-strip_tac >- rw[] >>
-strip_tac >- rw[] >>
-strip_tac >- (
-  srw_tac[ETA_ss][FOLDL_UNION_BIGUNION] >>
-  fsrw_tac[DNF_ss][SUBSET_DEF,MEM_MAP] >>
-  PROVE_TAC[] ) >>
-strip_tac >- rw[] >>
-strip_tac >- rw[] >>
-strip_tac >- (
-  srw_tac[ETA_ss][FOLDL_UNION_BIGUNION] >>
-  fsrw_tac[DNF_ss][SUBSET_DEF,MEM_MAP] >>
-  PROVE_TAC[] ) >>
-strip_tac >- (
-  Cases >>
-  srw_tac[ETA_ss][FOLDL_UNION_BIGUNION_paired] >>
-  fsrw_tac[DNF_ss][SUBSET_DEF,MEM_MAP,pairTheory.EXISTS_PROD] >>
-  PROVE_TAC[] ) >>
-strip_tac >- rw[SUBSET_DEF] >>
-strip_tac >- (
-  srw_tac[ETA_ss][FOLDL_UNION_BIGUNION] >>
-  fsrw_tac[DNF_ss][SUBSET_DEF,MEM_MAP] >>
-  PROVE_TAC[] ) >>
-strip_tac >- (
-  rw[SUBSET_DEF] >>
-  PROVE_TAC[] ) >>
-strip_tac >- (
-  srw_tac[ETA_ss][FOLDL_UNION_BIGUNION] >>
-  fsrw_tac[DNF_ss][SUBSET_DEF,MEM_MAP] >>
-  PROVE_TAC[] ) >>
-strip_tac >- rw[] >>
-srw_tac[ETA_ss][FOLDL_UNION_BIGUNION_paired] >>
-fsrw_tac[DNF_ss][SUBSET_DEF,pairTheory.EXISTS_PROD] >>
-rw[] >- (
-  (free_vars_remove_mat_vp
-   |> CONJUNCT1
-   |> qspecl_then [`p`,`fk`,`sk`,`v`] mp_tac) >>
-  fs[SUBSET_DEF] >>
-  disch_then (qspec_then `x` mp_tac) >>
-  fs[] >>
-  PROVE_TAC[] ) >>
-PROVE_TAC[])
-
 val Cpat_nice_ind =
 TypeBase.induction_of(``:Cpat``)
 |> Q.SPECL[`P`,`EVERY P`]
@@ -1527,7 +1557,7 @@ val remove_mat_con_FOLDR = store_thm(
 ``∀ps n fk sk v.
   remove_mat_con fk sk v n ps =
     FOLDR (λ(n,p) r.
-      let v' = fresh_var ({v} ∪ free_vars sk ∪ Cpat_vars p) in
+      let v' = fresh_var ({v;fk} ∪ free_vars sk ∪ Cpat_vars p) in
       CLet [v'] [CProj (CVar v) n]
         (remove_mat_vp fk r v' p))
       sk (ZIP(GENLIST ($+ n) (LENGTH ps),ps))``,
