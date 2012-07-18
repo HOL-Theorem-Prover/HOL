@@ -72,13 +72,14 @@ sig
   val Cong           : thm -> thm
   val AC             : thm -> thm -> thm
 
-  val SIMP_CONV      : simpset -> thm list -> conv
-  val SIMP_RULE      : simpset -> thm list -> thm -> thm
-  val SIMP_TAC       : simpset -> thm list -> tactic
-  val ASM_SIMP_TAC   : simpset -> thm list -> tactic
-  val FULL_SIMP_TAC  : simpset -> thm list -> tactic
-  val RW_TAC         : simpset -> thm list -> tactic
-  val SRW_TAC        : ssfrag list -> thm list -> tactic
+  val SIMP_CONV         : simpset -> thm list -> conv
+  val SIMP_RULE         : simpset -> thm list -> thm -> thm
+  val SIMP_TAC          : simpset -> thm list -> tactic
+  val ASM_SIMP_TAC      : simpset -> thm list -> tactic
+  val FULL_SIMP_TAC     : simpset -> thm list -> tactic
+  val REV_FULL_SIMP_TAC : simpset -> thm list -> tactic
+  val RW_TAC            : simpset -> thm list -> tactic
+  val SRW_TAC           : ssfrag list -> thm list -> tactic
 
   (* Call-by-value evaluation *)
   val EVAL           : term -> thm
