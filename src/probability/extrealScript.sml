@@ -1,7 +1,9 @@
-(* =============================================== *)
-(* Extended real numbers                           *)
-(* Author: Tarek Mhamdi, HVG Concordia University  *)
-(* =============================================== *)
+(* ------------------------------------------------------------------------- *)
+(* Measure Theory defined on the extended reals and includes Borel spaces    *)
+(* Authors: Tarek Mhamdi, Osman Hasan, Sofiene Tahar                         *)
+(* HVG Group, Concordia University, Montreal                                 *)
+(* ------------------------------------------------------------------------- *)
+
 
 (*
 val () = app load ["bossLib", "metisLib", "arithmeticTheory", "pred_setTheory", "extra_pred_setTheory", "extra_realTheory", "realLib", "pairTheory", "seqTheory", "transcTheory"];
