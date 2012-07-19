@@ -6,7 +6,8 @@
 
 
 (*
-val () = app load ["bossLib", "metisLib", "arithmeticTheory", "pred_setTheory", "extra_pred_setTheory", "extra_realTheory", "realLib", "pairTheory", "seqTheory", "transcTheory"];
+val () = app load ["bossLib", "metisLib", "arithmeticTheory", "pred_setTheory", "extra_pred_setTheory", 
+                   "extra_realTheory", "realLib", "pairTheory", "seqTheory", "transcTheory"];
 val () = quietdec := true;
 set_trace "Unicode" 0;
 *)
@@ -2006,7 +2007,7 @@ val EXTREAL_SUM_IMAGE_CMUL2 = store_thm
   ++ Cases_on `0 < c`
   >> METIS_TAC [extreal_le_def,add_ldistrib_normal2,REAL_LT_IMP_LE,IN_INSERT]
   ++ `c < 0` by METIS_TAC [REAL_LT_TOTAL]
-  ++ `SIGMA f s <> NegInf` by METIS_TAC [EXTREAL_SUM_IMAGE_NOT_INFTY,IN_INSERT]
+  ++ `EXTREAL_SUM_IMAGE f s <> NegInf` by METIS_TAC [EXTREAL_SUM_IMAGE_NOT_INFTY,IN_INSERT]
   ++ METIS_TAC [extreal_le_def,add_ldistrib_normal,REAL_LT_IMP_LE,IN_INSERT]);
 
 val EXTREAL_SUM_IMAGE_IMAGE = store_thm
@@ -2295,7 +2296,7 @@ val EXTREAL_SUM_IMAGE_IN_IF_ALT = store_thm
 
 val EXTREAL_SUM_IMAGE_CROSS_SYM = store_thm
  ("EXTREAL_SUM_IMAGE_CROSS_SYM", ``!f s1 s2. FINITE s1 /\ FINITE s2 ==> 
-   (SIGMA (\(x,y). f (x,y)) (s1 CROSS s2) = SIGMA (\(y,x). f (x,y)) (s2 CROSS s1))``,
+   (EXTREAL_SUM_IMAGE (\(x,y). f (x,y)) (s1 CROSS s2) = EXTREAL_SUM_IMAGE (\(y,x). f (x,y)) (s2 CROSS s1))``,
   RW_TAC std_ss []
   ++ `s2 CROSS s1 = IMAGE (\a. (SND a, FST a)) (s1 CROSS s2)`
 	by (RW_TAC std_ss [IN_IMAGE, IN_CROSS,EXTENSION] ++ METIS_TAC [FST,SND,PAIR])
@@ -3212,7 +3213,7 @@ val ext_suminf_suminf = store_thm
   ++ FULL_SIMP_TAC std_ss [sup_eq,le_infty]
   ++ `!n. SIGMA (\n. Normal (r n)) (count n) <= y`
        by (RW_TAC std_ss []
-           ++ Q.PAT_ASSUM `!z. P => Q` MATCH_MP_TAC
+           ++ Q.PAT_ASSUM `!z. P ==> Q` MATCH_MP_TAC
            ++ ONCE_REWRITE_TAC [GSYM SPECIFICATION]
 	   ++ RW_TAC std_ss [IN_IMAGE,IN_UNIV]
 	   ++ METIS_TAC [])
@@ -3889,7 +3890,6 @@ val DIV_IN_Q = store_thm
   ++ `?x1. x = Normal x1` by METIS_TAC [Q_not_infty]
   ++ `?y1. y = Normal y1` by METIS_TAC [Q_not_infty]
   ++ RW_TAC std_ss [extreal_div_def,extreal_inv_def,extreal_mul_def]
-  >> METIS_TAC [extreal_of_num_def]
   ++ `Normal (inv y1) IN Q_set` by METIS_TAC [INV_IN_Q,REAL_INV_1OVER,INV_IN_Q,extreal_div_eq,extreal_inv_def,extreal_of_num_def]
   ++  METIS_TAC [MUL_IN_Q,extreal_mul_def]);
 
@@ -3902,38 +3902,17 @@ val rat_not_infty = store_thm
 val ceiling_def = Define
         `ceiling (Normal x) = LEAST (n:num). x <= &n`;
 
-fun LEAST_ELIM_TAC (asl, w) = let
-  val least_terms = find_terms numSyntax.is_least w
-  val tbc = TRY_CONV BETA_CONV
-  fun doit t =
-    if free_in t w then
-      CONV_TAC (UNBETA_CONV t) THEN
-      MATCH_MP_TAC whileTheory.LEAST_ELIM THEN
-      CONV_TAC
-        (FORK_CONV
-           (BINDER_CONV tbc, (* ?n. P n *)
-            BINDER_CONV      (* !n. (!m. m < n ==> ~P m) /\ P n ==> Q n *)
-              (FORK_CONV
-                 (FORK_CONV
-                    (BINDER_CONV (RAND_CONV (RAND_CONV tbc)), (* !m.... *)
-                     tbc), (* P n *)
-                    tbc))))
-    else NO_TAC
-in
-  FIRST (map doit least_terms)
-end (asl, w);
-
 val CEILING_LBOUND = store_thm
   ("CEILING_LBOUND",``!x. Normal x <= &(ceiling (Normal x))``,
   RW_TAC std_ss [ceiling_def]
-  ++ LEAST_ELIM_TAC
+  ++ numLib.LEAST_ELIM_TAC
   ++ REWRITE_TAC [SIMP_REAL_ARCH]
   ++ METIS_TAC [extreal_of_num_def,extreal_le_def]);
 
 val CEILING_UBOUND = store_thm
   ("CEILING_UBOUND", ``!x. (0 <= x) ==> &(ceiling( Normal x)) < (Normal x) + 1``,
   RW_TAC std_ss [ceiling_def,extreal_of_num_def,extreal_add_def,extreal_lt_eq]
-  ++ LEAST_ELIM_TAC
+  ++ numLib.LEAST_ELIM_TAC
   ++ REWRITE_TAC [SIMP_REAL_ARCH]
   ++ RW_TAC real_ss []	
   ++ FULL_SIMP_TAC real_ss [GSYM real_lt]
@@ -4029,7 +4008,6 @@ val Q_DENSE_IN_R = store_thm
      ++ RW_TAC std_ss [GSYM REAL_LT_ADD_SUB,REAL_LT_SUB_RADD])
  ++ RW_TAC std_ss [Q_DENSE_IN_R_LEMMA]);
 
-
 val COUNTABLE_ENUM_Q = store_thm
   ("COUNTABLE_ENUM_Q",
    ``!c. countable c = (c = {}) \/ (?f:extreal->'a. c = IMAGE f Q_set)``,
@@ -4122,7 +4100,6 @@ val CROSS_COUNTABLE_LEMMA2 = store_thm
             ++ RW_TAC std_ss [] >> RW_TAC std_ss []
             ++ RW_TAC std_ss [])
   ++ METIS_TAC [COUNTABLE_IMAGE,CROSS_COUNTABLE_LEMMA1]);
-
 
 val CROSS_COUNTABLE = store_thm
  ("CROSS_COUNTABLE", ``!s. countable s /\ countable t ==> countable (s CROSS t)``,

@@ -8,14 +8,14 @@
 
 (* interactive mode
 app load ["bossLib","realLib","transcTheory","subtypeTheory",
-          "formalizeUseful","extra_boolTheory", "transcTheory",
+          "HurdUseful","extra_boolTheory", "transcTheory",
           "extra_pred_setTheory","extra_realTheory", "extrealTheory"];
 quietdec := true;
 *)
 
 open HolKernel Parse boolLib bossLib arithmeticTheory realTheory
      seqTheory pred_setTheory res_quanTheory listTheory transcTheory
-     rich_listTheory pairTheory combinTheory realLib formalizeUseful
+     rich_listTheory pairTheory combinTheory realLib HurdUseful
      subtypeTheory extra_pred_setTheory extra_boolTheory optionTheory
      extra_realTheory extra_numTheory extrealTheory;
 
@@ -37,6 +37,8 @@ val UNION_ASSOC = GSYM UNION_ASSOC;
 (* ------------------------------------------------------------------------- *)
 (* Tools.                                                                    *)
 (* ------------------------------------------------------------------------- *)
+
+val PARSE_TAC = fn tac => fn q => W (tac o parse_with_goal q);
 
 val Reverse = Tactical.REVERSE
 val Strip = !! (POP_ASSUM MP_TAC) ++ !! STRIP_TAC;

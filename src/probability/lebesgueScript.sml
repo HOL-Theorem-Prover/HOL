@@ -8,7 +8,7 @@
 
 (*
 app load ["bossLib", "metisLib", "arithmeticTheory", "pred_setTheory", "prim_recTheory", "listTheory",
-   	  "state_transformerTheory", "formalizeUseful", "combinTheory", "pairTheory", 
+   	  "state_transformerTheory", "HurdUseful", "combinTheory", "pairTheory", 
 	  "realTheory", "realLib", "extra_boolTheory", "jrhUtils",
 	  "extra_pred_setTheory", "realSimps", "extra_realTheory",
 	  "numTheory", "simpLib", "seqTheory", "subtypeTheory",
@@ -18,7 +18,7 @@ app load ["bossLib", "metisLib", "arithmeticTheory", "pred_setTheory", "prim_rec
 quietdec := true;
 *)
 open HolKernel Parse boolLib bossLib metisLib arithmeticTheory pred_setTheory prim_recTheory 
-     listTheory state_transformerTheory formalizeUseful extra_numTheory 
+     listTheory state_transformerTheory HurdUseful extra_numTheory 
      combinTheory pairTheory realTheory realLib extra_boolTheory jrhUtils
      extra_pred_setTheory realSimps extra_realTheory  numTheory
      simpLib seqTheory subtypeTheory transcTheory limTheory stringTheory 
@@ -34,6 +34,8 @@ val op << = op THENL;
 val op >> = op THEN1;
 val op || = op ORELSE;
 val REVERSE = Tactical.REVERSE;
+
+val PARSE_TAC = fn tac => fn q => W (tac o parse_with_goal q);
 
 val Simplify = RW_TAC arith_ss;
 val Suff = PARSE_TAC SUFF_TAC;

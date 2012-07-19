@@ -1,17 +1,17 @@
 (* interactive mode
 loadPath := ["../ho_prover","../subtypes","../rsa"] @ !loadPath;
-app load ["bossLib","subtypeTheory","formalizeUseful","extra_boolTheory",
+app load ["bossLib","subtypeTheory","HurdUseful","extra_boolTheory",
           "boolContext","extra_listTheory","listContext",
           "state_transformerTheory"];
 open HolKernel Parse boolLib bossLib arithmeticTheory combinTheory
-     pred_setTheory formalizeUseful boolContext listTheory
+     pred_setTheory HurdUseful boolContext listTheory
      res_quanTools res_quanTheory subtypeTheory subtypeTools
      extra_listTheory ho_proverTools listContext extra_numTheory
      pairTheory state_transformerTheory simpLib seqTheory;
 
 
 loadPath := ["../subtypes"] @ !loadPath;
-app load ["bossLib","subtypeTheory","formalizeUseful","extra_boolTheory",
+app load ["bossLib","subtypeTheory","HurdUseful","extra_boolTheory",
           "extra_listTheory", "res_quanTools",
           "state_transformerTheory", "seqTheory"];
 
@@ -21,7 +21,7 @@ quietdec := true;
 
 
 open HolKernel Parse boolLib bossLib arithmeticTheory combinTheory
-     pred_setTheory formalizeUseful listTheory rich_listTheory
+     pred_setTheory HurdUseful listTheory rich_listTheory
      res_quanTools res_quanTheory subtypeTheory
      extra_listTheory extra_numTheory
      pairTheory realTheory realLib state_transformerTheory simpLib
@@ -50,6 +50,8 @@ val REVERSE = Tactical.REVERSE;
 (* ------------------------------------------------------------------------- *)
 (* Tools.                                                                    *)
 (* ------------------------------------------------------------------------- *)
+
+val PARSE_TAC = fn tac => fn q => W (tac o parse_with_goal q);
 
 val S_TAC = !! (POP_ASSUM MP_TAC) ++ !! RESQ_STRIP_TAC;
 val Strip = S_TAC;

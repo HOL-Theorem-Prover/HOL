@@ -9,7 +9,7 @@
 (* interactive mode
 app load ["boolLib", "bossLib", "arithmeticTheory", "realTheory", "simpLib", 
      "seqTheory", "pred_setTheory", "res_quanTheory", "listTheory",
-     "rich_listTheory", "pairTheory", "combinTheory", "realLib", "formalizeUseful",
+     "rich_listTheory", "pairTheory", "combinTheory", "realLib", "HurdUseful",
      "subtypeTheory", "extra_pred_setTheory", "extra_boolTheory", "optionTheory",
       "extra_numTheory", "extra_realTheory", "extrealTheory", "measureTheory", "lebesgueTheory"];
 quietdec := true;
@@ -17,7 +17,7 @@ quietdec := true;
 
 open HolKernel Parse boolLib bossLib arithmeticTheory realTheory simpLib 
      seqTheory pred_setTheory res_quanTheory listTheory
-     rich_listTheory pairTheory combinTheory realLib formalizeUseful
+     rich_listTheory pairTheory combinTheory realLib HurdUseful
      subtypeTheory extra_pred_setTheory extra_boolTheory optionTheory
      extra_numTheory extra_realTheory extrealTheory measureTheory lebesgueTheory;
 
@@ -35,6 +35,8 @@ val op>> = op THEN1;
 (* ------------------------------------------------------------------------- *)
 (* Tools.                                                                    *)
 (* ------------------------------------------------------------------------- *)
+
+val PARSE_TAC = fn tac => fn q => W (tac o parse_with_goal q);
 
 val Strip = !! (POP_ASSUM MP_TAC) ++ !! STRIP_TAC;
 val Simplify = RW_TAC arith_ss;
