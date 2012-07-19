@@ -1,17 +1,17 @@
 (* interactive mode
 loadPath := ["../ho_prover","../subtypes","../rsa"] @ !loadPath;
-app load ["bossLib","subtypeTheory","formalizeUseful","extra_boolTheory",
+app load ["bossLib","subtypeTheory","HurdUseful","extra_boolTheory",
           "boolContext","extra_listTheory","listContext",
           "state_transformerTheory"];
 open HolKernel Parse boolLib bossLib arithmeticTheory combinTheory
-     pred_setTheory formalizeUseful boolContext listTheory
+     pred_setTheory HurdUseful boolContext listTheory
      res_quanTools res_quanTheory subtypeTheory subtypeTools
      extra_listTheory ho_proverTools listContext extra_numTheory
      pairTheory state_transformerTheory simpLib seqTheory;
 
 
 loadPath := ["../subtypes"] @ !loadPath;
-app load ["bossLib","subtypeTheory","formalizeUseful","extra_boolTheory",
+app load ["bossLib","subtypeTheory","HurdUseful","extra_boolTheory",
           "extra_listTheory", "res_quanTools",
           "state_transformerTheory", "seqTheory"];
 
@@ -21,7 +21,7 @@ quietdec := true;
 
 
 open HolKernel Parse boolLib bossLib arithmeticTheory combinTheory
-     pred_setTheory formalizeUseful listTheory rich_listTheory
+     pred_setTheory HurdUseful listTheory rich_listTheory
      res_quanTools res_quanTheory subtypeTheory
      extra_listTheory extra_numTheory
      pairTheory realTheory realLib state_transformerTheory simpLib
@@ -63,8 +63,6 @@ val Strip = S_TAC;
    val Strip = S_TAC;
    val Simplify = R_TAC; *)
 
-val Suff = PARSE_TAC SUFF_TAC;
-val Know = PARSE_TAC KNOW_TAC;
 val bool_ss = boolSimps.bool_ss;
 val Cond =
   MATCH_MP_TAC (PROVE [] ``!a b c. a /\ (b ==> c) ==> ((a ==> b) ==> c)``)
@@ -111,7 +109,7 @@ val (list_elts_def, list_elts_ind) = ((Q.GEN `s` ## I) o Defn.tprove)
       ++ MP_TAC (Q.SPEC `s` CARD_EQ_0)
       ++ RW_TAC arith_ss [])
   end;
-      
+
 val _ = save_thm ("list_elts_def", list_elts_def);
 val _ = save_thm ("list_elts_ind", list_elts_ind);
 
@@ -167,7 +165,7 @@ val GSPEC_DEF_ALT = store_thm
   ("GSPEC_DEF_ALT",
    ``!(f:'a -> 'b # bool). GSPEC f = (\v. ?x. (v, T) = f x)``,
    RW_TAC std_ss [EXTENSION, GSPECIFICATION]
-   ++ RW_TAC std_ss [SPECIFICATION]);   
+   ++ RW_TAC std_ss [SPECIFICATION]);
 
 val UNION_DISJOINT_SPLIT = store_thm
   ("UNION_DISJOINT_SPLIT",
@@ -250,7 +248,23 @@ val CARD_IMAGE = store_thm
    ++ RW_TAC std_ss [SUBSET_DEF]
    ++ PROVE_TAC [IN_INSERT]);
 
-val CARD_IMAGE2_lem = prove  (``!P. FINITE P ==>		(\P. (!f. (!x y. x IN P /\ y IN P /\ (f x = f y) ==> (x = y)) ==>		 (CARD (IMAGE f P) = CARD P))) P``,   MATCH_MP_TAC FINITE_INDUCT   ++ RW_TAC std_ss [IMAGE_INSERT, IMAGE_EMPTY, CARD_EMPTY, CARD_INSERT, IMAGE_FINITE, IN_IMAGE]   ++ `~?x. (f e = f x) /\ x IN s` by METIS_TAC [IN_INSERT] ++ RW_TAC arith_ss []   ++ Q.PAT_ASSUM `!f. b ==> (c = d)` MATCH_MP_TAC   ++ METIS_TAC [IN_INSERT]);val CARD_IMAGE2 = store_thm  ("CARD_IMAGE2",   ``!P. FINITE P ==>		(!f. (!x y. x IN P /\ y IN P /\ (f x = f y) ==> (x = y)) ==>		 (CARD (IMAGE f P) = CARD P))``,   METIS_TAC [CARD_IMAGE2_lem]);
+val CARD_IMAGE2_lem = prove
+  (``!P. FINITE P ==>
+		(\P. (!f. (!x y. x IN P /\ y IN P /\ (f x = f y) ==> (x = y)) ==>
+		 (CARD (IMAGE f P) = CARD P))) P``,
+   MATCH_MP_TAC FINITE_INDUCT
+   ++ RW_TAC std_ss [IMAGE_INSERT, IMAGE_EMPTY, CARD_EMPTY, CARD_INSERT, IMAGE_FINITE, IN_IMAGE]
+   ++ `~?x. (f e = f x) /\ x IN s` by METIS_TAC [IN_INSERT] ++ RW_TAC arith_ss []
+   ++ Q.PAT_ASSUM `!f. b ==> (c = d)` MATCH_MP_TAC
+   ++ METIS_TAC [IN_INSERT]);
+
+val CARD_IMAGE2 = store_thm
+  ("CARD_IMAGE2",
+   ``!P. FINITE P ==>
+		(!f. (!x y. x IN P /\ y IN P /\ (f x = f y) ==> (x = y)) ==>
+		 (CARD (IMAGE f P) = CARD P))``,
+   METIS_TAC [CARD_IMAGE2_lem]);
+
 
 val CARD_SUBSET_PROPER = store_thm
   ("CARD_SUBSET_PROPER",
@@ -777,8 +791,7 @@ val SCHROEDER_BERNSTEIN_AUTO = store_thm
    ++ RW_TAC std_ss [BIJ_DEF]
    >> (BasicProvers.NORM_TAC std_ss [INJ_DEF] <<
        [PROVE_TAC [SCHROEDER_CLOSED, SUBSET_DEF, IN_IMAGE],
-        PROVE_TAC [SCHROEDER_CLOSED, SUBSET_DEF, IN_IMAGE],
-        PROVE_TAC []])
+        PROVE_TAC [SCHROEDER_CLOSED, SUBSET_DEF, IN_IMAGE]])
    ++ RW_TAC std_ss [SURJ_DEF]
    ++ REVERSE (Cases_on `x IN schroeder_close f (s DIFF t)`) >> PROVE_TAC []
    ++ POP_ASSUM MP_TAC
@@ -1473,7 +1486,7 @@ val COUNTABLE_BIGUNION = store_thm
    ++ Q.PAT_ASSUM `!x. P x` (MP_TAC o Q.SPEC `f (n : num)`)
    ++ RW_TAC std_ss []
    ++ POP_ASSUM (MP_TAC o Q.SPEC `x`)
-   ++ RW_TAC std_ss []      
+   ++ RW_TAC std_ss []
    ++ Q.PAT_ASSUM `BIJ f' X Y` MP_TAC
    ++ RW_TAC std_ss [BIJ_DEF, SURJ_DEF, IN_UNIV, IN_CROSS]
    ++ POP_ASSUM (MP_TAC o Q.SPEC `(n, n')`)
@@ -1930,7 +1943,7 @@ val REAL_SUM_IMAGE_SPOS = store_thm
 		(\s. (~(s = {})) ==>
 	   !f. (!x. x IN s ==> 0 < f x) ==>
 		0 < REAL_SUM_IMAGE f s) s`
-   >> RW_TAC std_ss [] 
+   >> RW_TAC std_ss []
    ++ MATCH_MP_TAC FINITE_INDUCT
    ++ RW_TAC real_ss [REAL_SUM_IMAGE_THM, DELETE_NON_ELEMENT, IN_INSERT, DISJ_IMP_THM,
 		      FORALL_AND_THM]
@@ -2012,7 +2025,8 @@ val REAL_SUM_IMAGE_IF_ELIM = store_thm
 
 val REAL_SUM_IMAGE_FINITE_SAME_lem = prove
   (``!P. FINITE P ==>
-	 (\P. !f p.             p IN P /\ (!q. q IN P ==> (f p = f q)) ==> (REAL_SUM_IMAGE f P = (&(CARD P)) * f p)) P``,
+	 (\P. !f p.
+             p IN P /\ (!q. q IN P ==> (f p = f q)) ==> (REAL_SUM_IMAGE f P = (&(CARD P)) * f p)) P``,
    MATCH_MP_TAC FINITE_INDUCT
    ++ RW_TAC real_ss [REAL_SUM_IMAGE_THM, CARD_EMPTY, DELETE_NON_ELEMENT]
    ++ `f p = f e` by FULL_SIMP_TAC std_ss [IN_INSERT]
@@ -2027,11 +2041,12 @@ val REAL_SUM_IMAGE_FINITE_SAME_lem = prove
    ++ `f e = f x` by FULL_SIMP_TAC std_ss [IN_INSERT]
    ++ FULL_SIMP_TAC std_ss [] ++ POP_ASSUM (K ALL_TAC)
    ++ Q.PAT_ASSUM `!f p. b` MATCH_MP_TAC ++ METIS_TAC [IN_INSERT]);
-   
+
 val REAL_SUM_IMAGE_FINITE_SAME = store_thm
   ("REAL_SUM_IMAGE_FINITE_SAME",
    ``!P. FINITE P ==>
-	 !f p.             p IN P /\ (!q. q IN P ==> (f p = f q)) ==> (REAL_SUM_IMAGE f P = (&(CARD P)) * f p)``,
+	 !f p.
+             p IN P /\ (!q. q IN P ==> (f p = f q)) ==> (REAL_SUM_IMAGE f P = (&(CARD P)) * f p)``,
    MP_TAC REAL_SUM_IMAGE_FINITE_SAME_lem ++ RW_TAC std_ss []);
 
 val REAL_SUM_IMAGE_FINITE_CONST = store_thm
@@ -2155,7 +2170,7 @@ val REAL_SUM_IMAGE_EQ_CARD_lem = prove
    ++ RW_TAC real_ss [REAL_SUM_IMAGE_THM, CARD_EMPTY, IN_INSERT]
    ++ (MP_TAC o Q.SPECL [`s`]) CARD_INSERT
    ++ RW_TAC real_ss [ADD1] ++ ONCE_REWRITE_TAC [GSYM REAL_ADD]
-   ++ Suff `REAL_SUM_IMAGE (\x. (if (x = e) \/ x IN s then 1 else 0)) (s DELETE e) = 
+   ++ Suff `REAL_SUM_IMAGE (\x. (if (x = e) \/ x IN s then 1 else 0)) (s DELETE e) =
 		REAL_SUM_IMAGE (\x. (if x IN s then 1 else 0)) s`
    >> RW_TAC real_ss []
    ++ Q.PAT_ASSUM `REAL_SUM_IMAGE (\x. (if x IN s then 1 else 0)) s = & (CARD s)` (K ALL_TAC)
@@ -2230,7 +2245,7 @@ val REAL_SUM_IMAGE_INTER_ELIM = store_thm
    ``!P. FINITE P ==>
 	 !f P'. (!x. (~(x IN P')) ==> (f x = 0)) ==>
 			(REAL_SUM_IMAGE f (P INTER P') =
-			 REAL_SUM_IMAGE f P)``,   
+			 REAL_SUM_IMAGE f P)``,
    METIS_TAC [REAL_SUM_IMAGE_INTER_ELIM_lem]);
 
 val REAL_SUM_IMAGE_COUNT = store_thm
@@ -2302,7 +2317,7 @@ val REAL_SUM_IMAGE_CONST_EQ_1_EQ_INV_CARD = store_thm
 	by METIS_TAC []
       ++ POP_ORW
       ++ ONCE_REWRITE_TAC [(GSYM o UNDISCH o Q.SPEC `s`) REAL_SUM_IMAGE_IN_IF]
-      ++ (MP_TAC o Q.SPECL [`(\x. (f:'a->real) e)`, `(f:'a->real) e`] o 
+      ++ (MP_TAC o Q.SPECL [`(\x. (f:'a->real) e)`, `(f:'a->real) e`] o
 	  UNDISCH o Q.ISPEC `s:'a -> bool`) REAL_SUM_IMAGE_FINITE_CONST
       ++ SIMP_TAC std_ss []
       ++ STRIP_TAC ++ POP_ASSUM (K ALL_TAC)
@@ -2321,7 +2336,7 @@ val REAL_SUM_IMAGE_CONST_EQ_1_EQ_INV_CARD = store_thm
 	by METIS_TAC []
    ++ POP_ORW
    ++ ONCE_REWRITE_TAC [(GSYM o UNDISCH o Q.SPEC `s`) REAL_SUM_IMAGE_IN_IF]
-   ++ (MP_TAC o Q.SPECL [`(\x. (f:'a->real) e)`, `(f:'a->real) e`] o 
+   ++ (MP_TAC o Q.SPECL [`(\x. (f:'a->real) e)`, `(f:'a->real) e`] o
 	  UNDISCH o Q.ISPEC `s:'a -> bool`) REAL_SUM_IMAGE_FINITE_CONST
    ++ SIMP_TAC std_ss []
    ++ STRIP_TAC ++ POP_ASSUM (K ALL_TAC)
@@ -2368,18 +2383,18 @@ val REAL_SUM_IMAGE_REAL_SUM_IMAGE = store_thm
 	    ++ METIS_TAC [])
    ++ POP_ORW
    ++ `DISJOINT (IMAGE (\x. (e,x)) s') (s CROSS s')`
-	by (FULL_SIMP_TAC std_ss [GSYM DELETE_NON_ELEMENT, DISJOINT_DEF, Once EXTENSION, 
+	by (FULL_SIMP_TAC std_ss [GSYM DELETE_NON_ELEMENT, DISJOINT_DEF, Once EXTENSION,
 				  NOT_IN_EMPTY, IN_INTER, IN_CROSS, IN_SING, IN_IMAGE]
 	    ++ STRIP_TAC ++ (MP_TAC o Q.ISPEC `x:'a#'b`) pair_CASES
 	    ++ RW_TAC std_ss [FST, SND]
 	    ++ METIS_TAC [])
-   ++ (MP_TAC o REWRITE_RULE [GSYM AND_IMP_INTRO] o 
-	Q.ISPECL [`IMAGE (\x. (e:'a,x)) (s':'b->bool)`, `(s:'a->bool) CROSS (s':'b->bool)`]) 
+   ++ (MP_TAC o REWRITE_RULE [GSYM AND_IMP_INTRO] o
+	Q.ISPECL [`IMAGE (\x. (e:'a,x)) (s':'b->bool)`, `(s:'a->bool) CROSS (s':'b->bool)`])
 	REAL_SUM_IMAGE_DISJOINT_UNION
    ++ RW_TAC std_ss [FINITE_CROSS, IMAGE_FINITE]
    ++ POP_ASSUM (K ALL_TAC)
-   ++ (MP_TAC o Q.SPEC `(\x. (e,x))` o UNDISCH o Q.SPEC `s'` o 
-	INST_TYPE [``:'c``|->``:'a # 'b``] o INST_TYPE [``:'a``|->``:'b``] o 
+   ++ (MP_TAC o Q.SPEC `(\x. (e,x))` o UNDISCH o Q.SPEC `s'` o
+	INST_TYPE [``:'c``|->``:'a # 'b``] o INST_TYPE [``:'a``|->``:'b``] o
 	INST_TYPE [``:'b``|->``:'c``]) REAL_SUM_IMAGE_IMAGE
    ++ RW_TAC std_ss [INJ_DEF, IN_IMAGE, o_DEF] ++ METIS_TAC []);
 
@@ -2465,8 +2480,8 @@ val finite_enumeration_of_sets_has_max_non_empty = store_thm
 		++ Cases_on `n < N`
 		>> (Q.EXISTS_TAC `N`
 		    ++ RW_TAC std_ss [GREATER_EQ]
-		    ++ `~(n' = n)` 
-			by METIS_TAC [LESS_LESS_EQ_TRANS, 
+		    ++ `~(n' = n)`
+			by METIS_TAC [LESS_LESS_EQ_TRANS,
 				      DECIDE ``!m (n:num). m < n ==> ~(m=n)``]
 		    ++ Cases_on `f n' = f n`
 		    >> (`DISJOINT (f n') (f n)` by METIS_TAC []
@@ -2479,7 +2494,7 @@ val finite_enumeration_of_sets_has_max_non_empty = store_thm
 		++ Q.EXISTS_TAC `SUC n`
 		++ RW_TAC std_ss [GREATER_EQ]
 		++ FULL_SIMP_TAC std_ss [NOT_LESS]
-		++ `~(n' = n)` 
+		++ `~(n' = n)`
 			by METIS_TAC [LESS_LESS_EQ_TRANS,
 				      DECIDE ``!n:num. n < SUC n``,
 				      DECIDE ``!m (n:num). m < n ==> ~(m=n)``]
@@ -2502,7 +2517,72 @@ val finite_enumeration_of_sets_has_max_non_empty = store_thm
    ++ METIS_TAC [IN_INSERT]);
 
 val _ = overload_on ("SIGMA", ``REAL_SUM_IMAGE ``);
-val LIST_TO_SET_NIL = prove  (``(LIST_TO_SET [] = {})``,   RW_TAC std_ss [EXTENSION, GSPECIFICATION, NOT_IN_EMPTY, IN_LIST_TO_SET, MEM]);val LIST_TO_SET_SING = store_thm  ("LIST_TO_SET_SING",   ``!x. LIST_TO_SET [x] = {x}``,   RW_TAC list_ss [EXTENSION, GSPECIFICATION, IN_SING, IN_LIST_TO_SET]);val LIST_TO_SET_THM = store_thm  ("LIST_TO_SET_THM",   ``(LIST_TO_SET [] = {}) /\     (!h l. LIST_TO_SET (h::l) = h INSERT (LIST_TO_SET l))``,   CONJ_TAC >> SIMP_TAC std_ss [LIST_TO_SET_NIL]   ++ RW_TAC std_ss [EXTENSION, GSPECIFICATION, IN_INSERT, IN_LIST_TO_SET, MEM]);val FINITE_LIST_TO_SET = store_thm  ("FINITE_LIST_TO_SET",   ``!l. FINITE (LIST_TO_SET l)``,   Induct   ++ RW_TAC std_ss [FINITE_EMPTY, FINITE_INSERT, LIST_TO_SET_THM]);   val ALL_DISTINCT_imp_REAL_SUM_IMAGE_of_LIST_TO_SET_eq_REAL_SUM = store_thm  ("ALL_DISTINCT_imp_REAL_SUM_IMAGE_of_LIST_TO_SET_eq_REAL_SUM",   ``!l. ALL_DISTINCT l ==>		(REAL_SUM_IMAGE f (LIST_TO_SET l) = REAL_SUM (MAP f l))``,   Induct   ++ RW_TAC list_ss [REAL_SUM_def, LIST_TO_SET_THM, REAL_SUM_IMAGE_THM, ALL_DISTINCT, FINITE_INSERT, FINITE_LIST_TO_SET]   ++ METIS_TAC [DELETE_NON_ELEMENT, IN_LIST_TO_SET, REAL_EQ_LADD]);val LIST_TO_SET_APPEND = store_thm  ("LIST_TO_SET_APPEND",   ``!l l'. LIST_TO_SET (l++l') = (LIST_TO_SET l) UNION (LIST_TO_SET l')``,   RW_TAC std_ss [EXTENSION, GSPECIFICATION, IN_UNION, IN_LIST_TO_SET, MEM_APPEND]);val LIST_TO_SET_MAP = store_thm  ("LIST_TO_SET_MAP",   ``!f l. LIST_TO_SET (MAP f l) = IMAGE f (LIST_TO_SET l)``,   RW_TAC std_ss [EXTENSION, GSPECIFICATION, IN_IMAGE, IN_LIST_TO_SET, MEM_MAP]);val IMAGE_LIST_TO_SET = store_thm  ("IMAGE_LIST_TO_SET",   ``!f l. IMAGE f (LIST_TO_SET l) = LIST_TO_SET (MAP f l)``,   RW_TAC std_ss [GSYM LIST_TO_SET_MAP]);val CROSS_LIST_TO_SET = store_thm  ("CROSS_LIST_TO_SET",   ``!l l'. (LIST_TO_SET l) CROSS (LIST_TO_SET l') =	    LIST_TO_SET (LIST_COMBS l l')``,   RW_TAC std_ss [EXTENSION, IN_CROSS, IN_LIST_TO_SET, MEM_LIST_COMBS]);val LIST_TO_SET_MAKE_ALL_DISTINCT = store_thm  ("LIST_TO_SET_MAKE_ALL_DISTINCT",   ``!l. LIST_TO_SET (MAKE_ALL_DISTINCT l) = LIST_TO_SET l``,   RW_TAC std_ss [EXTENSION, IN_LIST_TO_SET, MEM_MAKE_ALL_DISTINCT]);val CARD_LIST_TO_SET = store_thm  ("CARD_LIST_TO_SET",   ``!l. CARD (LIST_TO_SET l) =	 LENGTH (MAKE_ALL_DISTINCT l)``,   Induct >> RW_TAC std_ss [MAKE_ALL_DISTINCT_def, LENGTH, CARD_EMPTY, LIST_TO_SET_THM]   ++ RW_TAC std_ss [MAKE_ALL_DISTINCT_def, LENGTH, CARD_EMPTY, LIST_TO_SET_THM]   >> METIS_TAC [ABSORPTION, IN_LIST_TO_SET]   ++ ASM_SIMP_TAC bool_ss [CARD_DEF, FINITE_LIST_TO_SET, IN_LIST_TO_SET]);
+
+val LIST_TO_SET_NIL = prove
+  (``(LIST_TO_SET [] = {})``,
+   RW_TAC std_ss [EXTENSION, GSPECIFICATION, NOT_IN_EMPTY, IN_LIST_TO_SET, MEM]);
+
+val LIST_TO_SET_SING = store_thm
+  ("LIST_TO_SET_SING",
+   ``!x. LIST_TO_SET [x] = {x}``,
+   RW_TAC list_ss [EXTENSION, GSPECIFICATION, IN_SING, IN_LIST_TO_SET]);
+
+val LIST_TO_SET_THM = store_thm
+  ("LIST_TO_SET_THM",
+   ``(LIST_TO_SET [] = {}) /\
+     (!h l. LIST_TO_SET (h::l) = h INSERT (LIST_TO_SET l))``,
+   CONJ_TAC >> SIMP_TAC std_ss [LIST_TO_SET_NIL]
+   ++ RW_TAC std_ss [EXTENSION, GSPECIFICATION, IN_INSERT, IN_LIST_TO_SET, MEM]);
+
+val FINITE_LIST_TO_SET = store_thm
+  ("FINITE_LIST_TO_SET",
+   ``!l. FINITE (LIST_TO_SET l)``,
+   Induct
+   ++ RW_TAC std_ss [FINITE_EMPTY, FINITE_INSERT, LIST_TO_SET_THM]);
+
+val ALL_DISTINCT_imp_REAL_SUM_IMAGE_of_LIST_TO_SET_eq_REAL_SUM = store_thm
+  ("ALL_DISTINCT_imp_REAL_SUM_IMAGE_of_LIST_TO_SET_eq_REAL_SUM",
+   ``!l. ALL_DISTINCT l ==>
+		(REAL_SUM_IMAGE f (LIST_TO_SET l) = REAL_SUM (MAP f l))``,
+   Induct
+   ++ RW_TAC list_ss [REAL_SUM_def, LIST_TO_SET_THM, REAL_SUM_IMAGE_THM, ALL_DISTINCT, FINITE_INSERT, FINITE_LIST_TO_SET]
+   ++ METIS_TAC [DELETE_NON_ELEMENT, IN_LIST_TO_SET, REAL_EQ_LADD]);
+
+val LIST_TO_SET_APPEND = store_thm
+  ("LIST_TO_SET_APPEND",
+   ``!l l'. LIST_TO_SET (l++l') = (LIST_TO_SET l) UNION (LIST_TO_SET l')``,
+   RW_TAC std_ss [EXTENSION, GSPECIFICATION, IN_UNION, IN_LIST_TO_SET, MEM_APPEND]);
+
+val LIST_TO_SET_MAP = store_thm
+  ("LIST_TO_SET_MAP",
+   ``!f l. LIST_TO_SET (MAP f l) = IMAGE f (LIST_TO_SET l)``,
+   RW_TAC std_ss [EXTENSION, GSPECIFICATION, IN_IMAGE, IN_LIST_TO_SET, MEM_MAP]);
+
+val IMAGE_LIST_TO_SET = store_thm
+  ("IMAGE_LIST_TO_SET",
+   ``!f l. IMAGE f (LIST_TO_SET l) = LIST_TO_SET (MAP f l)``,
+   RW_TAC std_ss [GSYM LIST_TO_SET_MAP]);
+
+val CROSS_LIST_TO_SET = store_thm
+  ("CROSS_LIST_TO_SET",
+   ``!l l'. (LIST_TO_SET l) CROSS (LIST_TO_SET l') =
+	    LIST_TO_SET (LIST_COMBS l l')``,
+   RW_TAC std_ss [EXTENSION, IN_CROSS, IN_LIST_TO_SET, MEM_LIST_COMBS]);
+
+val LIST_TO_SET_MAKE_ALL_DISTINCT = store_thm
+  ("LIST_TO_SET_MAKE_ALL_DISTINCT",
+   ``!l. LIST_TO_SET (MAKE_ALL_DISTINCT l) = LIST_TO_SET l``,
+   RW_TAC std_ss [EXTENSION, IN_LIST_TO_SET, MEM_MAKE_ALL_DISTINCT]);
+
+val CARD_LIST_TO_SET = store_thm
+  ("CARD_LIST_TO_SET",
+   ``!l. CARD (LIST_TO_SET l) =
+	 LENGTH (MAKE_ALL_DISTINCT l)``,
+   Induct >> RW_TAC std_ss [MAKE_ALL_DISTINCT_def, LENGTH, CARD_EMPTY, LIST_TO_SET_THM]
+   ++ RW_TAC std_ss [MAKE_ALL_DISTINCT_def, LENGTH, CARD_EMPTY, LIST_TO_SET_THM]
+   >> METIS_TAC [ABSORPTION, IN_LIST_TO_SET]
+   ++ ASM_SIMP_TAC bool_ss [CARD_DEF, FINITE_LIST_TO_SET, IN_LIST_TO_SET]);
+
 
 val UNIV_NEQ_EMPTY = store_thm
   ("UNIV_NEQ_EMPTY",
@@ -2511,17 +2591,17 @@ val UNIV_NEQ_EMPTY = store_thm
 
 val DIFF_INTER = store_thm
 	("DIFF_INTER", ``!s t g. (s DIFF t) INTER g = s INTER g DIFF t``,
-		RW_TAC std_ss [DIFF_DEF,INTER_DEF,EXTENSION] 
-		++ RW_TAC std_ss [GSPECIFICATION] 
+		RW_TAC std_ss [DIFF_DEF,INTER_DEF,EXTENSION]
+		++ RW_TAC std_ss [GSPECIFICATION]
 		++ EQ_TAC >> RW_TAC std_ss [] ++ RW_TAC std_ss []
-    ); 
-    
+    );
+
 val DIFF_INTER2 = store_thm
 	("DIFF_INTER2", ``!s t. s DIFF (t INTER s) = s DIFF t``,
-		RW_TAC std_ss [DIFF_DEF,INTER_DEF,EXTENSION] 
-		++ RW_TAC std_ss [GSPECIFICATION,LEFT_AND_OVER_OR] 	
-    ); 
-    
+		RW_TAC std_ss [DIFF_DEF,INTER_DEF,EXTENSION]
+		++ RW_TAC std_ss [GSPECIFICATION,LEFT_AND_OVER_OR]
+    );
+
 val PREIMAGE_COMPL_INTER = store_thm
 	("PREIMAGE_COMPL_INTER", ``!f t sp. PREIMAGE f (COMPL t) INTER sp = sp DIFF (PREIMAGE f t)``,
 	RW_TAC std_ss [COMPL_DEF]
@@ -2529,27 +2609,27 @@ val PREIMAGE_COMPL_INTER = store_thm
 	++ STRIP_TAC
 	++ `(PREIMAGE f (UNIV DIFF t)) INTER sp = (UNIV DIFF PREIMAGE f t) INTER sp` by METIS_TAC []
 	++ METIS_TAC [DIFF_INTER,INTER_UNIV]
-			 
+
    );
-   
-val PREIMAGE_REAL_COMPL1 = store_thm 
+
+val PREIMAGE_REAL_COMPL1 = store_thm
    ("PREIMAGE_REAL_COMPL1", ``!c:real. COMPL {x | c < x} = {x | x <= c}``,
    RW_TAC real_ss [COMPL_DEF,UNIV_DEF,DIFF_DEF,EXTENSION] THEN RW_TAC real_ss [GSPECIFICATION,GSYM real_lte,SPECIFICATION]
    );
 
-val PREIMAGE_REAL_COMPL2 = store_thm 
+val PREIMAGE_REAL_COMPL2 = store_thm
    ("PREIMAGE_REAL_COMPL2", ``!c:real. COMPL {x | c <= x} = {x | x < c}``,
    RW_TAC real_ss [COMPL_DEF,UNIV_DEF,DIFF_DEF,EXTENSION] THEN RW_TAC real_ss [GSPECIFICATION,GSYM real_lt,SPECIFICATION]
    );
 
 
-val PREIMAGE_REAL_COMPL3 = store_thm 
+val PREIMAGE_REAL_COMPL3 = store_thm
    ("PREIMAGE_REAL_COMPL3", ``!c:real. COMPL {x | x <= c} = {x | c < x}``,
    RW_TAC real_ss [COMPL_DEF,UNIV_DEF,DIFF_DEF,EXTENSION] THEN RW_TAC real_ss [GSPECIFICATION,GSYM real_lt,SPECIFICATION]
    );
 
 
-val PREIMAGE_REAL_COMPL4 = store_thm 
+val PREIMAGE_REAL_COMPL4 = store_thm
    ("PREIMAGE_REAL_COMPL4", ``!c:real. COMPL {x | x < c} = {x | c <= x}``,
    RW_TAC real_ss [COMPL_DEF,UNIV_DEF,DIFF_DEF,EXTENSION] THEN RW_TAC real_ss [GSPECIFICATION,GSYM real_lte,SPECIFICATION]
    );
@@ -2560,15 +2640,15 @@ val DIFF_DIFF_SUBSET = store_thm
  	++ EQ_TAC >> RW_TAC std_ss []
  	++ RW_TAC std_ss []
    );
- 
- 
+
+
 val BIGINTER_SUBSET = store_thm
 ("BIGINTER_SUBSET", ``!sp s. (!t. t IN s ==> t SUBSET sp)  /\ (~(s = {})) ==> (BIGINTER s) SUBSET sp``,
   RW_TAC std_ss [SUBSET_DEF,IN_BIGINTER]
   ++ `?u. u IN s` by METIS_TAC [CHOICE_DEF]
   ++ METIS_TAC []
  );
-  
+
 val DIFF_BIGINTER1 = store_thm
    ("DIFF_BIGINTER1", ``!sp s. sp DIFF (BIGINTER s) = BIGUNION (IMAGE (\u. sp DIFF u) s)``,
   	RW_TAC std_ss [DIFF_DEF,BIGINTER,BIGUNION,EXTENSION,GSPECIFICATION,IN_IMAGE,IN_BIGINTER]
@@ -2576,8 +2656,8 @@ val DIFF_BIGINTER1 = store_thm
   	++ RW_TAC std_ss [] >> METIS_TAC []
  	++ Q.EXISTS_TAC `u` ++ METIS_TAC []
    );
- 
- 
+
+
 val DIFF_BIGINTER = store_thm
    ("DIFF_BIGINTER", ``!sp s. (!t. t IN s ==> t SUBSET sp)  /\ (~(s = {})) ==> ( BIGINTER s = sp DIFF (BIGUNION (IMAGE (\u. sp DIFF u) s)) )``,
   	RW_TAC std_ss []
@@ -2586,7 +2666,7 @@ val DIFF_BIGINTER = store_thm
 	++ `sp DIFF (sp DIFF (BIGINTER s)) = (BIGINTER s)` by RW_TAC std_ss [DIFF_DIFF_SUBSET]
 	++ METIS_TAC []
    );
- 
+
 
 
 val _ = export_theory ();

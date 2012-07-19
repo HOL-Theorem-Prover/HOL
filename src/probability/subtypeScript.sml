@@ -7,14 +7,14 @@ val _ = new_theory "subtype";
 show_assums := true;
 loadPath := union ["../ho_prover"] (!loadPath);
 app load
-  ["bossLib", "combinTheory", "pred_setTheory", "seqTheory", "subtypeUseful",
+  ["bossLib", "combinTheory", "pred_setTheory", "seqTheory", "HurdUseful",
    "res_quanTheory", "ho_proverTools", "pairTheory"];
 *)
 
-(* open bossLib combinTheory pred_setTheory seqTheory subtypeUseful
+(* open bossLib combinTheory pred_setTheory seqTheory HurdUseful
      res_quanTheory ho_proverTools pairTheory;*)
 
-open bossLib metisLib combinTheory pred_setTheory seqTheory subtypeUseful
+open bossLib metisLib combinTheory pred_setTheory seqTheory HurdUseful
      res_quanTheory pairTheory;
 
 infixr 0 ++ << || THENC ORELSEC ORELSER ##;
@@ -56,15 +56,10 @@ val FUNSET_def = Define
 val DFUNSET_def = Define
   `DFUNSET (P:'a->bool) (Q:'a->'b->bool) = \f. !x. x IN P ==> f x IN Q x`;
 
-(* home
-val _ = overload_on
-  ("->", ``FUNSET:('a->bool) -> ('b->bool) -> (('a->'b)->bool)``);
-*)
+val _ = add_infix("->", 250, HOLgrammars.RIGHT);
 
-(* work
-*)
 val _ = overload_on
-  (GrammarSpecials.case_arrow_special,
+  ("->",
    ``FUNSET : ('a->bool) -> ('b->bool) -> (('a->'b)->bool)``);
 
 val _ = overload_on
@@ -126,7 +121,7 @@ val K_SUBSET = store_thm
    RW_TAC std_ss [K_DEF, SUBSET_DEF, IN_UNIV]
    ++ RW_TAC std_ss [SPECIFICATION]
    ++ PROVE_TAC []);
-  
+
 val SUBSET_K = store_thm
   ("SUBSET_K",
    ``!x y. x SUBSET K y = (x SUBSET EMPTY) \/ y``,
@@ -261,7 +256,7 @@ val res_select_cong = store_thm
        (!x. x IN p' ==> (f x = f' x)) ==>
        (RES_SELECT p f = RES_SELECT p' f')``,
    RW_TAC std_ss [RES_SELECT]
-   ++ SUFF_TAC `!x. x IN p /\ f x = x IN p /\ f' x` >> RW_TAC std_ss []
+   ++ Q_TAC SUFF_TAC `!x. x IN p /\ f x = x IN p /\ f' x` >> RW_TAC std_ss []
    ++ METIS_TAC []);
 
 val res_abstract_cong = store_thm
