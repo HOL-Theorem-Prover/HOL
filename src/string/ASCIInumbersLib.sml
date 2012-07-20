@@ -2,13 +2,13 @@
 (* STRING CONVERSIONS                                                        *)
 (* ========================================================================= *)
 
-structure extra_stringLib :> extra_stringLib =
+structure ASCIInumbersLib :> ASCIInumbersLib =
 struct
 
 open HolKernel Parse boolLib bossLib metisLib arithmeticTheory
      listTheory numTheory simpLib
      stringTheory rich_listTheory stringSimps
-     listSimps extra_stringTheory;
+     listSimps ASCIInumbersTheory;
 
 
 val safe_list_ss = (simpLib.++ (bool_ss, LIST_ss));

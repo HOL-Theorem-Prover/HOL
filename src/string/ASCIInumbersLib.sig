@@ -1,4 +1,4 @@
-signature extra_stringLib =
+signature ASCIInumbesLib =
 sig
 
    include Abbrev

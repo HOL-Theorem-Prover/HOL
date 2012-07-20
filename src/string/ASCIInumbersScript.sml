@@ -17,16 +17,12 @@ app load ["bossLib", "metisLib", "arithmeticTheory",
 *)
 
 open HolKernel Parse boolLib bossLib metisLib arithmeticTheory
-     listTheory HurdUseful extra_numTheory combinTheory pairTheory
-     extra_boolTheory jrhUtils numTheory simpLib
+     listTheory combinTheory pairTheory
+     numTheory simpLib
      stringTheory rich_listTheory stringSimps
-     listSimps;
+     listSimps
 
-(* ------------------------------------------------------------------------- *)
-(* Start a new theory called "information"                                   *)
-(* ------------------------------------------------------------------------- *)
-
-val _ = new_theory "extra_string";
+val _ = new_theory "ASCIInumbers";
 
 (* ------------------------------------------------------------------------- *)
 (* Helpful proof tools                                                       *)
@@ -35,15 +31,12 @@ val _ = new_theory "extra_string";
 infixr 0 ++ << || THENC ORELSEC ORELSER ##;
 infix 1 >>;
 
-val PARSE_TAC = fn tac => fn q => W (tac o parse_with_goal q);
-
-
 val op ++ = op THEN;
 val op << = op THENL;
 val op >> = op THEN1;
 val op || = op ORELSE;
 val REVERSE = Tactical.REVERSE;
-val Suff = PARSE_TAC SUFF_TAC;
+val Suff = Q_TAC SUFF_TAC;
 
 
 val POP_ORW = POP_ASSUM (fn thm => ONCE_REWRITE_TAC [thm]);
@@ -65,22 +58,16 @@ val rec_toString_def = Define
 	(rec_toString ((SUC n) DIV 10)) ++ [CHR (48 + ((SUC n) MOD 10))])`;
 
 val toString_def = Define
-   `toString n = if (n = 0) then "0" else IMPLODE (rec_toString n)`;
+   `toString n = if (n = 0) then "0" else rec_toString n`;
 
 val rec_toNum_def = Define
   `(rec_toNum [] n = 0:num) /\
    (rec_toNum (c::cs) n = (10**n) * ((ORD c) - 48) + rec_toNum cs (SUC n))`;
 
-val toNum_def = Define
-   `toNum s = rec_toNum (REVERSE (EXPLODE s)) 0`;
+val toNum_def = Define `toNum s = rec_toNum (REVERSE s) 0`;
 
 (* ------------------------------------------------------------------------- *)
 (* ------------------------------------------------------------------------- *)
-
-val STRCAT1 = store_thm
-  ("STRCAT1",
-   ``!s1 s2. STRCAT s1 s2 = IMPLODE (EXPLODE s1 ++ EXPLODE s2)``,
-   Induct_on `s1` THEN SRW_TAC [][STRCAT_def]);
 
 val append_neq_lem = prove
   (``!m l. (~(l = [])) ==> (~(l ++ m = m))``,
@@ -94,67 +81,16 @@ val append_sing_eq_lem = prove
   (``!l l' x x'. (l ++ [x] = l' ++ [x']) = ((l = l') /\ (x = x'))``,
    RW_TAC std_ss [GSYM SNOC_APPEND, SNOC_11] ++ DECIDE_TAC);
 
-val IMPLODE_APPEND_EQ = store_thm
-  ("IMPLODE_APPEND_EQ",
-   ``!s1 s2 s1' s2'.
-	(IMPLODE (s1 ++ s2) = IMPLODE (s1' ++ s2')) =
-	(s1 ++ s2 = s1' ++ s2')``,
-   Induct
-   >> (Induct >> (RW_TAC std_ss [APPEND_NIL, IMPLODE_EQ_EMPTYSTRING, IMPLODE_EQNS]
-  		  ++ RW_TAC bool_ss [EQ_SYM_EQ])
-       ++ FULL_SIMP_TAC std_ss [APPEND_NIL, IMPLODE_EQNS, IMPLODE_EQ_THM, EXPLODE_IMPLODE]
-       ++ RW_TAC bool_ss [EQ_SYM_EQ])
-   ++ FULL_SIMP_TAC std_ss [APPEND, IMPLODE_EQNS, IMPLODE_EQ_THM, EXPLODE_IMPLODE]
-   ++ RW_TAC bool_ss [EQ_SYM_EQ]);
-
 val STRCAT_NEQ = store_thm
   ("STRCAT_NEQ",
    ``!s1 s1'.
-	(~ (s1 = "")) /\ (~ (s1' = "")) /\
-	(~ (IS_PREFIX (EXPLODE s1) (EXPLODE s1'))) /\
-	(~ (IS_PREFIX (EXPLODE s1') (EXPLODE s1))) ==>
-	(!s2 s2'. ~(STRCAT s1 s2 = STRCAT s1' s2'))``,
-   STRIP_TAC ++ STRIP_TAC
-   ++ (ASSUME_TAC o Q.SPEC `s1`) IMPLODE_ONTO
-   ++ FULL_SIMP_TAC std_ss [] ++ POP_ASSUM (K ALL_TAC)
-   ++ (ASSUME_TAC o Q.SPEC `s1'`) IMPLODE_ONTO
-   ++ FULL_SIMP_TAC std_ss [] ++ POP_ASSUM (K ALL_TAC)
-   ++ RW_TAC std_ss [EXPLODE_IMPLODE, IMPLODE_EQ_EMPTYSTRING]
-   ++ (ASSUME_TAC o Q.SPEC `s2`) IMPLODE_ONTO
-   ++ FULL_SIMP_TAC std_ss [] ++ POP_ASSUM (K ALL_TAC)
-   ++ (ASSUME_TAC o Q.SPEC `s2'`) IMPLODE_ONTO
-   ++ FULL_SIMP_TAC std_ss [] ++ POP_ASSUM (K ALL_TAC)
-   ++ RW_TAC std_ss [EXPLODE_IMPLODE, Once STRCAT1, IMPLODE_APPEND_EQ]
-   ++ Q.ABBREV_TAC `foo = IMPLODE (STRCAT cs cs'')`
-   ++ RW_TAC std_ss [EXPLODE_IMPLODE, Once STRCAT1, IMPLODE_APPEND_EQ]
-   ++ Q.UNABBREV_TAC `foo`
-   ++ RW_TAC std_ss [EXPLODE_IMPLODE, IMPLODE_APPEND_EQ]
-   ++ SPOSE_NOT_THEN STRIP_ASSUME_TAC
-   ++ (ASSUME_TAC o Q.ISPECL [`LENGTH (cs:char list)`,
-      		    	      `LENGTH (cs':char list)`]) LESS_EQ_CASES
-   ++ FULL_SIMP_TAC std_ss []
-   >> ((ASSUME_TAC o Q.ISPEC `(cs''':char list)` o
-      	UNDISCH o Q.ISPECL [`LENGTH (cs:char list)`,`(cs':char list)`])
-      	FIRSTN_APPEND1
-       ++ `FIRSTN (LENGTH (cs:char list)) (cs':char list) = cs`
-       	  by METIS_TAC [FIRSTN_APPEND1, LESS_EQ_REFL, FIRSTN_LENGTH_ID]
-       ++ FULL_SIMP_TAC std_ss [LESS_EQ_EXISTS]
-       ++ (ASSUME_TAC o UNDISCH o REWRITE_RULE [Once EQ_SYM_EQ, Once ADD_COMM]
-	   o Q.ISPECL [`p:num`, `LENGTH (cs:char list)`,`(cs':char list)`] )
-	   APPEND_FIRSTN_LASTN
-       ++ FULL_SIMP_TAC std_ss [IS_PREFIX_APPEND]
-       ++ METIS_TAC [])
-   ++ (ASSUME_TAC o Q.ISPEC `(cs'':char list)` o
-       UNDISCH o Q.ISPECL [`LENGTH (cs':char list)`,`(cs:char list)`]) FIRSTN_APPEND1
-   ++ `FIRSTN (LENGTH (cs':char list)) (cs:char list) = cs'`
-      by METIS_TAC [FIRSTN_APPEND1, LESS_EQ_REFL, FIRSTN_LENGTH_ID]
-   ++ FULL_SIMP_TAC std_ss [LESS_EQ_EXISTS]
-   ++ (ASSUME_TAC o UNDISCH o REWRITE_RULE [Once EQ_SYM_EQ, Once ADD_COMM]
-	   o Q.ISPECL [`p:num`, `LENGTH (cs':char list)`,`(cs:char list)`])
-       APPEND_FIRSTN_LASTN
-   ++ FULL_SIMP_TAC std_ss [IS_PREFIX_APPEND]
-   ++ METIS_TAC []);
-
+	~(s1 = "") /\ ~ (s1' = "") /\
+	~IS_PREFIX s1 s1' /\ ~IS_PREFIX s1' s1 ==>
+	!s2 s2'. ~(STRCAT s1 s2 = STRCAT s1' s2')``,
+  Induct THEN1 SIMP_TAC (srw_ss()) [] THEN
+  REPEAT GEN_TAC THEN Cases_on `s1'` THEN SIMP_TAC (srw_ss()) [] THEN
+  Cases_on `h = h'` THEN ASM_SIMP_TAC (srw_ss()) [] THEN
+  MAP_EVERY Cases_on [`s1 = ""`, `t = ""`] THEN ASM_SIMP_TAC (srw_ss()) []);
 
 (* ------------------------------------------------------------------------- *)
 (* ------------------------------------------------------------------------- *)
@@ -252,7 +188,7 @@ val toString_inj = store_thm
 val STRCAT_toString_inj = store_thm
   ("STRCAT_toString_inj",
    ``!n m s. (STRCAT s (toString n) = STRCAT s (toString m)) = (n = m)``,
-   SRW_TAC [] [STRCAT1, toString_inj]);
+   SRW_TAC [] [toString_inj]);
 
 (* ------------------------------------------------------------------------- *)
 (* ------------------------------------------------------------------------- *)
@@ -265,7 +201,7 @@ val toString_toNum_cancel = store_thm
    >> (SRW_TAC [] [toString_def, toNum_def, rec_toNum_def])
    ++ SRW_TAC [] [toString_def, rec_toString_def, toNum_def, rec_toNum_def,
   		 GSYM SNOC_APPEND, REVERSE_SNOC]
-   ++ (MP_TAC o Q.SPECL [`48 + SUC n' MOD 10`]) ORD_CHR
+   ++ Q.SPECL_THEN  [`48 + SUC n' MOD 10`] MP_TAC ORD_CHR
    ++ `!n. 48 + SUC n MOD 10 < 256`
 	by (STRIP_TAC ++ MATCH_MP_TAC LESS_LESS_EQ_TRANS ++ Q.EXISTS_TAC `48 + 10:num`
 	    ++ RW_TAC arith_ss [LT_ADD_LCANCEL, MATCH_MP
@@ -274,12 +210,12 @@ val toString_toNum_cancel = store_thm
    ++ Suff `SUC n' MOD 10 + rec_toNum (REVERSE (rec_toString (SUC n' DIV 10))) 1 =
 		SUC n' MOD 10 + (SUC n' DIV 10) * 10`
    >> METIS_TAC [ADD_COMM, MATCH_MP DIVISION (DECIDE ``0:num < 10:num``)]
-   ++ RW_TAC arith_ss [EQ_ADD_RCANCEL]
+   ++ SRW_TAC [][]
    ++ `SUC n' DIV 10 < SUC n'`
 		by (MATCH_MP_TAC DIV_LESS ++ RW_TAC arith_ss [])
    ++ Suff `rec_toNum (REVERSE (rec_toString (SUC n' DIV 10))) 1 =
 		10 * (toNum (toString (SUC n' DIV 10)))`
-   >> METIS_TAC []
+   >> METIS_TAC [MULT_COMM]
    ++ POP_ASSUM (K ALL_TAC)
    ++ POP_ASSUM (K ALL_TAC)
    ++ POP_ASSUM (K ALL_TAC)
@@ -291,7 +227,7 @@ val toString_toNum_cancel = store_thm
    ++ POP_ASSUM (K ALL_TAC)
    ++ Suff `!n m. rec_toNum (REVERSE (rec_toString (SUC n))) (SUC m) =
 		      10 * rec_toNum (REVERSE (rec_toString (SUC n))) m`
-   >> METIS_TAC [SUC_0]
+   >> METIS_TAC [ONE]
    ++ completeInduct_on `SUC n`
    ++ SRW_TAC [] [toString_def, rec_toString_def, toNum_def, rec_toNum_def,
    		  GSYM SNOC_APPEND, REVERSE_SNOC, LEFT_ADD_DISTRIB]
