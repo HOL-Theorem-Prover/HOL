@@ -49,8 +49,6 @@ val PARSE_TAC = fn tac => fn q => W (tac o parse_with_goal q);
 val Reverse = Tactical.REVERSE;
 val Strip = !! (POP_ASSUM MP_TAC) ++ !! STRIP_TAC;
 val Simplify = RW_TAC arith_ss;
-val Suff = PARSE_TAC SUFF_TAC;
-val Know = PARSE_TAC KNOW_TAC;
 val Rewr = DISCH_THEN (REWRITE_TAC o wrap);
 val Rewr' = DISCH_THEN (ONCE_REWRITE_TAC o wrap);
 val STRONG_DISJ_TAC = CONV_TAC (REWR_CONV (GSYM IMP_DISJ_THM)) ++ STRIP_TAC;
@@ -1171,7 +1169,7 @@ val SUMS_PICK = store_thm
    ++ DISCH_THEN (CONV_TAC o RAND_CONV o ONCE_REWRITE_CONV o wrap o SYM)
    ++ MATCH_MP_TAC SER_0
    ++ RW_TAC arith_ss []);
-   
+
 val SUM_REORDER_LE = store_thm
   ("SUM_REORDER_LE",
    ``!f n1 n2 j1 j2.
@@ -1314,8 +1312,7 @@ val SER_BIJ_COMPRESS1 = store_thm
    ++ Q.PAT_ASSUM `BIJ h X Y` MP_TAC
    ++ BasicProvers.NORM_TAC std_ss [SUBSET_DEF, IN_IMAGE, INJ_DEF, IN_UNIV,
                                     IN_COUNT, INJ_DEF, BIJ_DEF, SURJ_DEF] <<
-   [Cases_on `n'`
-    ++ RW_TAC std_ss [sum_case_def, K_THM, REAL_LE_REFL],
+   [SRW_TAC [][],
     Q.PAT_ASSUM `!x. P x` (MP_TAC o Q.SPEC `n'`)
     ++ RW_TAC std_ss []
     ++ Q.EXISTS_TAC `y`
@@ -1375,8 +1372,7 @@ val SER_BIJ_COMPRESS2 = store_thm
        ++ Q.PAT_ASSUM `BIJ h X Y` MP_TAC
        ++ BasicProvers.NORM_TAC std_ss [SUBSET_DEF, IN_IMAGE, INJ_DEF, IN_UNIV,
                                         IN_COUNT, INJ_DEF, BIJ_DEF, SURJ_DEF] <<
-       [Cases_on `n'`
-        ++ RW_TAC std_ss [sum_case_def, K_THM, REAL_LE_REFL],
+       [SRW_TAC [][],
         Q.PAT_ASSUM `!x. P x` (MP_TAC o Q.SPEC `n'`)
         ++ RW_TAC std_ss []
         ++ Q.EXISTS_TAC `y`
@@ -1879,7 +1875,7 @@ val exp_convex_lemma6 = store_thm
    ++ Q.EXISTS_TAC `(\x. (1-t) * exp x - (1 - t)*exp ((1-t)*x))`
    ++ Q.UNABBREV_TAC `f`
    ++ RW_TAC real_ss [exp_convex_lemma2, exp_convex_lemma3, exp_convex_lemma4]);
-	   
+
 val exp_convex = store_thm
   ("exp_convex",
    ``exp IN convex_fn``,
@@ -1903,7 +1899,7 @@ val exp_convex = store_thm
 (* ------------------------------------------------------------------------- *)
 
 val pos_convex_fn = Define
-	`pos_convex_fn = {f | !x y t. (0 < x /\ 0 < y /\ 0 <= t /\ t <= 1) ==> 
+	`pos_convex_fn = {f | !x y t. (0 < x /\ 0 < y /\ 0 <= t /\ t <= 1) ==>
 				f (t * x + (1 - t) * y) <= t * f x + (1 - t) * f y}`;
 
 val pos_concave_fn = Define
@@ -2161,7 +2157,7 @@ val jensen_pos_convex_SIGMA = store_thm
        ++ Cases_on `s = {}` >> FULL_SIMP_TAC real_ss [REAL_SUM_IMAGE_THM]
        ++ `0 < SIGMA (\x. g x / (1 - g e) * g' x) s`
        	by (RW_TAC std_ss [REAL_LT_LE]
-	    >> ((MATCH_MP_TAC o UNDISCH o REWRITE_RULE [GSYM AND_IMP_INTRO] o 
+	    >> ((MATCH_MP_TAC o UNDISCH o REWRITE_RULE [GSYM AND_IMP_INTRO] o
 			Q.SPECL [`(\x. g x / (1 - g e) * g' x)`,`s`]) REAL_SUM_IMAGE_POS
 		++ RW_TAC real_ss [] ++ Cases_on `g x = 0` >> RW_TAC real_ss []
 	        ++ MATCH_MP_TAC REAL_LE_MUL
@@ -2190,7 +2186,7 @@ val jensen_pos_convex_SIGMA = store_thm
 				    ++ CONJ_TAC
 				    >> (MATCH_MP_TAC REAL_LT_MUL ++ PROVE_TAC [REAL_LT_LE])
 				    ++ RW_TAC std_ss [REAL_LT_LE]
-				    ++ (MATCH_MP_TAC o UNDISCH o REWRITE_RULE [GSYM AND_IMP_INTRO] o 
+				    ++ (MATCH_MP_TAC o UNDISCH o REWRITE_RULE [GSYM AND_IMP_INTRO] o
 					Q.SPECL [`(\x. g x * g' x)`,`s`]) REAL_SUM_IMAGE_POS
 				    ++ RW_TAC std_ss []
 				    ++ Cases_on `g x = 0` >> RW_TAC real_ss []
@@ -2205,7 +2201,7 @@ val jensen_pos_convex_SIGMA = store_thm
 				    ++ CONJ_TAC
 				    >> (MATCH_MP_TAC REAL_LT_MUL ++ METIS_TAC [REAL_LT_LE])
 				    ++ RW_TAC std_ss [REAL_LT_LE]
-				    ++ (MATCH_MP_TAC o UNDISCH o REWRITE_RULE [GSYM AND_IMP_INTRO] o 
+				    ++ (MATCH_MP_TAC o UNDISCH o REWRITE_RULE [GSYM AND_IMP_INTRO] o
 					Q.SPECL [`(\x. g x * g' x)`,`s`]) REAL_SUM_IMAGE_POS
 				    ++ RW_TAC std_ss []
 				    ++ Cases_on `g x' = 0` >> RW_TAC real_ss []
@@ -2213,7 +2209,7 @@ val jensen_pos_convex_SIGMA = store_thm
 		    ++ METIS_TAC [REAL_LT_IMP_NE])
 	    ++ POP_ASSUM (ASSUME_TAC o UNDISCH o Q.SPEC `s`) ++ FULL_SIMP_TAC std_ss [IMP_CONJ_THM, FORALL_AND_THM]
 	    ++ POP_ASSUM (ASSUME_TAC o UNDISCH_ALL o REWRITE_RULE [GSYM AND_IMP_INTRO] o Q.SPECL [`g`,`g'`])
-	    ++ (ASSUME_TAC o Q.SPECL [`(\x. if x IN s then g x else 0)`, `0`] o 
+	    ++ (ASSUME_TAC o Q.SPECL [`(\x. if x IN s then g x else 0)`, `0`] o
 		UNDISCH o Q.SPEC `s`) REAL_SUM_IMAGE_FINITE_CONST
 	    ++ `SIGMA (\x. (if x IN s then g x else 0)) s = SIGMA g s` by METIS_TAC [GSYM REAL_SUM_IMAGE_IN_IF]
 	    ++ FULL_SIMP_TAC real_ss [])
@@ -2273,13 +2269,13 @@ val REAL_SUB_POW_2 = store_thm
     RW_TAC real_ss [POW_2,REAL_SUB_RDISTRIB,REAL_SUB_LDISTRIB]
     ++ REAL_ARITH_TAC);
 
-(* ---------------------------------------------- 
+(* ----------------------------------------------
 	S bounded and non empty set of R
 	==> There exists a non decreasing
 	sequence convergent to sup S
  ----------------------------------------------- *)
 
-val seq_sup_def = Define `(seq_sup P 0 = @r. r IN P /\ (sup P - 1) < r) /\  
+val seq_sup_def = Define `(seq_sup P 0 = @r. r IN P /\ (sup P - 1) < r) /\
   (seq_sup P (SUC n) = (@r. r IN P /\ max (sup P - (1/2) pow (SUC n)) (seq_sup P n) < r /\ r < sup P))`;
 
 val REAL_SUP_SEQ = store_thm
@@ -2293,11 +2289,11 @@ val REAL_SUP_SEQ = store_thm
 	++ `!x. P x ==> x < sup P` by METIS_TAC [REAL_LT_LE,REAL_SUP_UBOUND_LE]
 	++ (MP_TAC o Q.SPEC `P`) REAL_SUP_LE
 	++ DISCH_TAC
-	++ `!n. seq_sup P n < sup P` 
-	   by ( Induct 
-		   >> ( RW_TAC std_ss [seq_sup_def] 
+	++ `!n. seq_sup P n < sup P`
+	   by ( Induct
+		   >> ( RW_TAC std_ss [seq_sup_def]
 			++ Suff `(\r. r < sup P) (@r. r IN P /\ sup P - 1 < r)`
-			>> METIS_TAC [] 
+			>> METIS_TAC []
 			++ MATCH_MP_TAC SELECT_ELIM_THM
 			++ RW_TAC std_ss []
 			   >> ( `sup P - 1 < sup P` by RW_TAC real_ss [REAL_LT_ADDR,REAL_LT_SUB_RADD]
@@ -2306,7 +2302,7 @@ val REAL_SUP_SEQ = store_thm
 			      )
 			++ METIS_TAC [SPECIFICATION]
 		      )
- 	        ++ RW_TAC std_ss [seq_sup_def] 
+ 	        ++ RW_TAC std_ss [seq_sup_def]
 		++ Suff `(\r. r < sup P) (@r. r IN P /\ max (sup P - (1 / 2) pow (SUC n)) (seq_sup P n) < r /\  r < sup P)`
 		>> METIS_TAC []
 		++ MATCH_MP_TAC SELECT_ELIM_THM
@@ -2320,20 +2316,20 @@ val REAL_SUP_SEQ = store_thm
 		++ FULL_SIMP_TAC std_ss [GSYM real_lt]
 		++ METIS_TAC [REAL_LT_TRANS]
 	      )
-	++ `!n. seq_sup P n IN P` 
+	++ `!n. seq_sup P n IN P`
 	   by ( Induct
-		   >> ( RW_TAC std_ss [seq_sup_def] 
+		   >> ( RW_TAC std_ss [seq_sup_def]
 			++ Suff `(\r. r IN P) (@r. r IN P /\ sup P - 1 < r)`
-			>> METIS_TAC [] 
+			>> METIS_TAC []
 			++ MATCH_MP_TAC SELECT_ELIM_THM
 			++ RW_TAC std_ss []
 			++ `sup P - 1 < sup P` by RW_TAC real_ss [REAL_LT_ADDR,REAL_LT_SUB_RADD]
 			++ `?x. P x /\ sup P - 1 < x` by METIS_TAC []
 			++ METIS_TAC [SPECIFICATION]
 		      )
-		++ RW_TAC std_ss [seq_sup_def] 
+		++ RW_TAC std_ss [seq_sup_def]
 		++ Suff `(\r. r IN P) (@r. r IN P /\ max (sup P - (1 / 2) pow SUC n) (seq_sup P n) < r /\ r < sup P)`
-		>> METIS_TAC [] 
+		>> METIS_TAC []
 		++ MATCH_MP_TAC SELECT_ELIM_THM
 		++ RW_TAC std_ss []
 		++ `sup P - (1 / 2) pow (SUC n) < sup P` by METIS_TAC [REAL_LT_SUB_RADD,REAL_LT_ADDR,POW_HALF_POS]
@@ -2363,11 +2359,11 @@ val REAL_SUP_SEQ = store_thm
 		++ `seq_sup P n <= max (sup P - (1 / 2) pow (SUC n)) (seq_sup P n)` by RW_TAC real_ss [max_def]
 		++ METIS_TAC [REAL_LET_TRANS,REAL_LT_IMP_LE]
 	      )
-	++ `!n. sup P - (1/2) pow n  <= seq_sup P n` 
-   		  by  ( Induct 
+	++ `!n. sup P - (1/2) pow n  <= seq_sup P n`
+   		  by  ( Induct
 			   >> ( RW_TAC std_ss [seq_sup_def,pow]
 				++ Suff `(\r. sup P - 1 <= r) (@r. r IN P /\ sup P - 1 < r)`
-				>> METIS_TAC [] 
+				>> METIS_TAC []
 				++ MATCH_MP_TAC SELECT_ELIM_THM
 				++ RW_TAC std_ss []
 				>> ( `sup P - 1 < sup P` by RW_TAC real_ss [REAL_LT_ADDR,REAL_LT_SUB_RADD]
@@ -2386,7 +2382,7 @@ val REAL_SUP_SEQ = store_thm
 			     ++ `?x. P x /\ sup P - (1 / 2) pow (SUC n) < x` by METIS_TAC []
 			     ++ Q.EXISTS_TAC `max x' x''`
 			     ++ RW_TAC std_ss [max_def,SPECIFICATION]
-			     >> METIS_TAC [REAL_LTE_TRANS]			   
+			     >> METIS_TAC [REAL_LTE_TRANS]
 			     ++ FULL_SIMP_TAC std_ss [GSYM real_lt]
 			     ++ METIS_TAC [REAL_LT_TRANS]
 			   )
@@ -2397,7 +2393,7 @@ val REAL_SUP_SEQ = store_thm
 	++ Q.EXISTS_TAC `(\n. sup P - (1 / 2) pow n)`
 	++ Q.EXISTS_TAC `(\n. sup P)`
 	++ RW_TAC std_ss [SEQ_CONST,REAL_LT_IMP_LE]
-	++ `(\n. sup P - (1 / 2) pow n) = (\n. (\n. sup P) n - (\n. (1 / 2) pow n) n)` by RW_TAC std_ss [] 
+	++ `(\n. sup P - (1 / 2) pow n) = (\n. (\n. sup P) n - (\n. (1 / 2) pow n) n)` by RW_TAC std_ss []
 	++ `(\n. sup P) --> sup P` by RW_TAC std_ss [SEQ_CONST]
 	++ Suff `(\n. (1 / 2) pow n) --> 0`
 	>> METIS_TAC [(REWRITE_RULE [REAL_SUB_RZERO] o Q.SPECL [`(\n. sup P)`,`sup P`,`(\n. (1 / 2) pow n)`,`0`]) SEQ_SUB]
@@ -2406,14 +2402,14 @@ val REAL_SUP_SEQ = store_thm
 
 
 val REAL_SUP_SEQ_IMAGE = store_thm
-  ("REAL_SUP_SEQ_IMAGE", ``!P P'. (?x. P x) /\ (?z. !x. P x ==> x <= z) /\ (P = IMAGE f P') /\ 
+  ("REAL_SUP_SEQ_IMAGE", ``!P P'. (?x. P x) /\ (?z. !x. P x ==> x <= z) /\ (P = IMAGE f P') /\
   	  (!x y. x <= y ==> f x <= f y) ==>
 	  ?x. (!n. x n IN P') /\ (!n. x n <= x (SUC n)) /\ (\n. f (x n)) --> sup P ``,
 	REPEAT STRIP_TAC
 	++ `?y. (!n. y n IN P) /\ (!n. y n <= y (SUC n)) /\ y --> sup P` by METIS_TAC [REAL_SUP_SEQ]
 	++ Q.EXISTS_TAC `(\n. @r. (r IN P') /\ (f r = y n))`
 	++ `(\n. f (@r. r IN P' /\ (f r = y n))) = y` by RW_TAC std_ss [FUN_EQ_THM]
-  	   >> ( Suff `(\r. f r = y n) (@r. r IN P' /\ (f r = y n))` 
+  	   >> ( Suff `(\r. f r = y n) (@r. r IN P' /\ (f r = y n))`
 		>> METIS_TAC []
 		++ MATCH_MP_TAC SELECT_ELIM_THM
 		++ RW_TAC std_ss []
@@ -2421,7 +2417,7 @@ val REAL_SUP_SEQ_IMAGE = store_thm
 	      )
 	++ ASM_SIMP_TAC std_ss []
 	++ RW_TAC std_ss []
-	   >> ( Suff `(\r. r IN P') (@r. r IN P' /\ (f r = y n))` 
+	   >> ( Suff `(\r. r IN P') (@r. r IN P' /\ (f r = y n))`
 		>> METIS_TAC []
 		++ MATCH_MP_TAC SELECT_ELIM_THM
 		++ RW_TAC std_ss []
@@ -2435,20 +2431,20 @@ val REAL_SUP_SEQ_IMAGE = store_thm
 	++ `f (@r. r IN P' /\ (f r = y n)) = y n`  by FULL_SIMP_TAC  std_ss [FUN_EQ_THM]
 	++ `f (@r. r IN P' /\ (f r = y (SUC n))) = y (SUC n)`  by FULL_SIMP_TAC  std_ss [FUN_EQ_THM]
 	++ `?z. (@r. r IN P' /\ (f r = y (SUC n))) < z /\ z < @r. r IN P' /\ (f r = y n)` by RW_TAC std_ss [REAL_MEAN]
-	++ `f z' <= y n` by METIS_TAC [REAL_LT_IMP_LE] 
-	++ `y (SUC n) <= f z'` by METIS_TAC [REAL_LT_IMP_LE] 
+	++ `f z' <= y n` by METIS_TAC [REAL_LT_IMP_LE]
+	++ `y (SUC n) <= f z'` by METIS_TAC [REAL_LT_IMP_LE]
 	++ METIS_TAC [REAL_LE_TRANS,real_lte]
   );
 
 val REAL_SUP_FUN_SEQ_IMAGE = store_thm
-  ("REAL_SUP_FUN_SEQ_IMAGE", ``!(P:real->bool) (P':('a->real)->bool). 
-		(?x. P x) /\ (?z. !x. P x ==> x <= z) /\ (P = IMAGE f P')  
+  ("REAL_SUP_FUN_SEQ_IMAGE", ``!(P:real->bool) (P':('a->real)->bool).
+		(?x. P x) /\ (?z. !x. P x ==> x <= z) /\ (P = IMAGE f P')
   	  	 ==> ?g. (!n. g n IN P') /\ (\n. f (g n)) --> sup P ``,
 	REPEAT STRIP_TAC
 	++ `?y. (!n. y n IN P) /\ (!n. y n <= y (SUC n)) /\ y --> sup P` by METIS_TAC [REAL_SUP_SEQ]
 	++ Q.EXISTS_TAC `(\n. @r. (r IN P') /\ (f r  = y n))`
 	++ `(\n. f (@r. r IN P' /\ (f r = y n))) = y` by RW_TAC std_ss [FUN_EQ_THM]
-  	   >> ( Suff `(\r. f r = y n) (@r. r IN P' /\ (f r = y n))` 
+  	   >> ( Suff `(\r. f r = y n) (@r. r IN P' /\ (f r = y n))`
 		>> METIS_TAC []
 		++ MATCH_MP_TAC SELECT_ELIM_THM
 		++ RW_TAC std_ss []
@@ -2456,7 +2452,7 @@ val REAL_SUP_FUN_SEQ_IMAGE = store_thm
 	      )
 	++ ASM_SIMP_TAC std_ss []
 	++ RW_TAC std_ss []
-	   >> ( Suff `(\r. r IN P') (@r. r IN P' /\ (f r = y n))` 
+	   >> ( Suff `(\r. r IN P') (@r. r IN P' /\ (f r = y n))`
 		>> METIS_TAC []
 		++ MATCH_MP_TAC SELECT_ELIM_THM
 		++ RW_TAC std_ss []
@@ -2475,8 +2471,8 @@ val max_fn_seq_inc = store_thm
 
 
 val REAL_SUP_FUN_SEQ_INC_IMAGE = store_thm
-  ("REAL_SUP_FUN_SEQ_INC_IMAGE", ``!(P:real->bool) (P':('a->real)->bool). 
-		(?x. P x) /\ (?z. !x. P x ==> x <= z) /\ (P = IMAGE f P') /\ 
+  ("REAL_SUP_FUN_SEQ_INC_IMAGE", ``!(P:real->bool) (P':('a->real)->bool).
+		(?x. P x) /\ (?z. !x. P x ==> x <= z) /\ (P = IMAGE f P') /\
   	  	(!g1 g2. (g1 IN P' /\ g2 IN P' /\ !x. g1 x <= g2 x)  ==> f g1 <= f g2) /\
 		(!g1 g2. g1 IN P' /\ g2 IN P' ==> (\x. max (g1 x) (g2 x)) IN P')  ==>
 	  ?g. (!n. g n IN P') /\ (!x n. g n x <= g (SUC n) x) /\ (\n. f (g n)) --> sup P ``,
@@ -2484,7 +2480,7 @@ val REAL_SUP_FUN_SEQ_INC_IMAGE = store_thm
 	REPEAT STRIP_TAC
 	++ `?g. (!n. g n IN P') /\ (\n. f (g n)) --> sup P` by METIS_TAC [REAL_SUP_FUN_SEQ_IMAGE]
 	++ Q.EXISTS_TAC `max_fn_seq g`
-	++ `!n. max_fn_seq g n IN P'` 
+	++ `!n. max_fn_seq g n IN P'`
 		by ( Induct
  		      >> ( `max_fn_seq g 0 = g 0` by RW_TAC std_ss [FUN_EQ_THM,max_fn_seq_def]
 			    ++ METIS_TAC []
@@ -2495,10 +2491,10 @@ val REAL_SUP_FUN_SEQ_INC_IMAGE = store_thm
 	            )
 	++ `!g n x. max_fn_seq g n x <= max_fn_seq g (SUC n) x` by RW_TAC real_ss [max_fn_seq_def,max_def]
 	++ (REPEAT STRIP_TAC
-		THENL [ 
+		THENL [
 			METIS_TAC [],
 			METIS_TAC[],
-			`!n. (!x. g n x <= max_fn_seq g n x)` 
+			`!n. (!x. g n x <= max_fn_seq g n x)`
 				   by ( Induct >> RW_TAC std_ss [max_fn_seq_def,REAL_LE_REFL]
 					++ METIS_TAC [REAL_LE_MAX2,max_fn_seq_def]
 		      		      )
@@ -2516,19 +2512,19 @@ val REAL_SUP_FUN_SEQ_INC_IMAGE = store_thm
 val REAL_NEG_NZ = store_thm
   ("REAL_NEG_NZ",``!x. x<0 ==> x <>0``,
   	 RW_TAC real_ss []
- 	 ++ `0<-x` by RW_TAC real_ss [REAL_NEG_GT0]         
+ 	 ++ `0<-x` by RW_TAC real_ss [REAL_NEG_GT0]
   	 ++ `-x <>0` by FULL_SIMP_TAC real_ss [REAL_POS_NZ]
 	 ++ `x<>0` by (SPOSE_NOT_THEN ASSUME_TAC ++ METIS_TAC [GSYM REAL_EQ_NEG,REAL_NEG_0])
   );
-  	
-   
+
+
  val REAL_LT_RDIV_EQ_NEG = store_thm
  ("REAL_LT_RDIV_EQ_NEG", ``!x y z. z < 0 ==> (y /z < x <=> x * z < y)``,
 	 RW_TAC real_ss []
-	 ++ `0<-z` by RW_TAC real_ss [REAL_NEG_GT0]         
+	 ++ `0<-z` by RW_TAC real_ss [REAL_NEG_GT0]
 	 ++ `z<>0` by (METIS_TAC [REAL_NEG_NZ])
 	 ++EQ_TAC
-	    >> ( RW_TAC real_ss []         
+	    >> ( RW_TAC real_ss []
 	         ++ `y/z*(-z) < x*(-z)` by METIS_TAC [GSYM REAL_LT_RMUL]
 	         ++ FULL_SIMP_TAC real_ss []
 	         ++ METIS_TAC [REAL_DIV_RMUL,REAL_LT_NEG]
@@ -2538,15 +2534,15 @@ val REAL_NEG_NZ = store_thm
 	 ++ `-y * inv(-z) < x` by METIS_TAC [GSYM REAL_LT_LDIV_EQ,real_div]
 	 ++ METIS_TAC [REAL_NEG_INV,REAL_NEG_MUL2,GSYM real_div]
     );
- 
- 
+
+
  val REAL_LE_RDIV_EQ_NEG = store_thm
  ("REAL_LE_RDIV_EQ_NEG", ``!x y z. z < 0 ==> (y /z <= x <=> x * z <= y)``,
 	 RW_TAC real_ss []
-	 ++ `0<-z` by RW_TAC real_ss [REAL_NEG_GT0]         
+	 ++ `0<-z` by RW_TAC real_ss [REAL_NEG_GT0]
 	 ++ `z<>0` by (METIS_TAC [REAL_NEG_NZ])
 	 ++EQ_TAC
-	    >> ( RW_TAC real_ss []         
+	    >> ( RW_TAC real_ss []
 	         ++ `y/z*(-z) <= x*(-z)` by METIS_TAC [GSYM REAL_LE_RMUL]
 	         ++ FULL_SIMP_TAC real_ss []
 	         ++ METIS_TAC [REAL_DIV_RMUL,REAL_LE_NEG]
@@ -2556,7 +2552,7 @@ val REAL_NEG_NZ = store_thm
 	 ++ `-y * inv(-z) <= x` by METIS_TAC [GSYM REAL_LE_LDIV_EQ,real_div]
 	 ++ METIS_TAC [REAL_NEG_INV,REAL_NEG_MUL2,GSYM real_div]
     );
-    
+
 
 val SIMP_REAL_ARCH = store_thm
   ("SIMP_REAL_ARCH",
@@ -2577,7 +2573,7 @@ val SIMP_REAL_ARCH_NEG = store_thm
         ++ `?n. -x <= &n` by PROVE_TAC [SIMP_REAL_ARCH]
         ++ Q.EXISTS_TAC `n`
         ++ PROVE_TAC [REAL_LE_NEG,REAL_NEG_NEG]
-        
+
 );
 
 val _ = export_theory ();

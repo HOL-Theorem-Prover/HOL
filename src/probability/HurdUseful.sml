@@ -31,10 +31,10 @@ exception BUG_EXN of
   {origin_structure : string, origin_function : string, message : string};
 
 fun ERR f s = HOL_ERR
-  {origin_structure = "ho_proverUseful", origin_function = f, message = s};
+  {origin_structure = "HurdUseful", origin_function = f, message = s};
 
 fun BUG f s = BUG_EXN
-  {origin_structure = "ho_proverUseful", origin_function = f, message = s};
+  {origin_structure = "HurdUseful", origin_function = f, message = s};
 
 fun BUG_to_string (BUG_EXN {origin_structure, origin_function, message}) =
   ("\nBUG discovered by " ^ origin_structure ^ " at " ^

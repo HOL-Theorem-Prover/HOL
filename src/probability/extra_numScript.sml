@@ -29,8 +29,6 @@ val PARSE_TAC = fn tac => fn q => W (tac o parse_with_goal q);
 
 val Strip = !! STRIP_TAC;
 val Simplify = RW_TAC arith_ss;
-val Suff = PARSE_TAC SUFF_TAC;
-val Know = PARSE_TAC KNOW_TAC;
 val bool_ss = boolSimps.bool_ss;
 
 (* ------------------------------------------------------------------------- *)
@@ -170,7 +168,7 @@ val LESS_MOD_EQ = store_thm
    ++ ASM_REWRITE_TAC []
    ++ DISCH_THEN (MP_TAC o Q.SPEC `x`)
    ++ RW_TAC arith_ss []);
-    
+
 val MOD_PLUS1 = store_thm
   ("MOD_PLUS1",
    ``!n a b. 0 < n ==> ((a MOD n + b) MOD n = (a + b) MOD n)``,
@@ -298,7 +296,7 @@ val DIV_TWO_MONO = store_thm
    ++ REPEAT STRIP_TAC
    ++ Know `(m MOD 2 = 0) \/ (m MOD 2 = 1)` >> PROVE_TAC [MOD_TWO]
    ++ Know `(n MOD 2 = 0) \/ (n MOD 2 = 1)` >> PROVE_TAC [MOD_TWO]
-   ++ DECIDE_TAC);   
+   ++ DECIDE_TAC);
 
 val DIV_TWO_MONO_EVEN = store_thm
   ("DIV_TWO_MONO_EVEN",
@@ -749,7 +747,7 @@ val LOG2_UPPER_SUC = store_thm
    STRIP_TAC
    ++ MP_TAC (Q.SPEC `n` LOG2_UPPER)
    ++ REVERSE (Cases_on `n = 0`) >> RW_TAC arith_ss []
-   ++ RW_TAC arith_ss [log2_def, EXP]);   
+   ++ RW_TAC arith_ss [log2_def, EXP]);
 
 val MINIMAL_EQ_IMP = store_thm
   ("MINIMAL_EQ_IMP",

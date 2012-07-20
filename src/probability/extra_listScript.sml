@@ -34,6 +34,7 @@ val op>> = op THEN1;
 
 val POP_ORW = POP_ASSUM (fn thm => ONCE_REWRITE_TAC [thm]);
 
+
 (* ------------------------------------------------------------------------- *)
 (* Definitions.                                                              *)
 (* ------------------------------------------------------------------------- *)
@@ -115,7 +116,7 @@ val FILTER_MEM = store_thm
    ``!P (x:'a) l. MEM x (FILTER P l) ==> P x``,
    NTAC 2 STRIP_TAC
    ++ Induct >> RW_TAC std_ss [MEM, FILTER]
-   ++ (RW_TAC std_ss [MEM, FILTER] ++ PROVE_TAC []));   
+   ++ (RW_TAC std_ss [MEM, FILTER] ++ PROVE_TAC []));
 
 val MEM_FILTER = store_thm
   ("MEM_FILTER",
@@ -354,11 +355,106 @@ val GTLIST1_SUBSET_GTLIST0 = store_thm
    RW_TAC std_ss [SUBSET_DEF, IN_GTLIST]
    ++ DECIDE_TAC);
 
-val REAL_SUM = Define   `(REAL_SUM [] = 0:real) /\    (!x l. REAL_SUM (x::l) = x + REAL_SUM l)`;val REAL_SUM_MAP_CMUL = store_thm  ("REAL_SUM_MAP_CMUL",   ``!f c l. REAL_SUM (MAP (\x. c * f x) l) = c * REAL_SUM (MAP f l)``,   STRIP_TAC ++ STRIP_TAC ++ Induct   ++ RW_TAC real_ss [REAL_SUM, MAP, REAL_ADD_LDISTRIB]);
+val REAL_SUM = Define
+   `(REAL_SUM [] = 0:real) /\
+    (!x l. REAL_SUM (x::l) = x + REAL_SUM l)`;
 
-val LIST_COMBS = Define  `(LIST_COMBS [] _ = []) /\   (LIST_COMBS (x::xs) l = (MAP (\y. (x, y)) l) ++ (LIST_COMBS xs l))`;val MEM_LIST_COMBS = store_thm  ("MEM_LIST_COMBS",   ``!l l' x. MEM x (LIST_COMBS l l') = (MEM (FST x) l /\ MEM (SND x) l')``,   Induct   ++ RW_TAC list_ss [LIST_COMBS]   ++ `?f s. x = (f, s)` by METIS_TAC [pair_CASES]   ++ RW_TAC list_ss [MEM_MAP, FST, SND]   ++ DECIDE_TAC);val LENGTH_LIST_COMBS = store_thm  ("LENGTH_LIST_COMBS",   ``!x y. LENGTH (LIST_COMBS x y) = LENGTH x * LENGTH y``,   Induct ++ RW_TAC real_ss [LENGTH, LIST_COMBS, LENGTH_APPEND, LENGTH_MAP]   ++ `LENGTH y + LENGTH x * LENGTH y = 1 * LENGTH y + LENGTH x * LENGTH y` by RW_TAC arith_ss []   ++ POP_ORW ++ RW_TAC arith_ss [GSYM RIGHT_ADD_DISTRIB, ADD1]);val LIST_COMBS_EQ_NIL = store_thm  ("LIST_COMBS_EQ_NIL",   ``!x y. (LIST_COMBS x y = []) = ((x = []) \/ (y = []))``,   Induct ++ RW_TAC list_ss [LIST_COMBS]   ++ DECIDE_TAC);
+val REAL_SUM_MAP_CMUL = store_thm
+  ("REAL_SUM_MAP_CMUL",
+   ``!f c l. REAL_SUM (MAP (\x. c * f x) l) = c * REAL_SUM (MAP f l)``,
+   STRIP_TAC ++ STRIP_TAC ++ Induct
+   ++ RW_TAC real_ss [REAL_SUM, MAP, REAL_ADD_LDISTRIB]);
 
-val ALL_DISTINCT_APPEND = store_thm  ("ALL_DISTINCT_APPEND",   ``!l l'. ALL_DISTINCT l /\ ALL_DISTINCT l' /\ (!x. ~(MEM x l /\ MEM x l')) ==>		ALL_DISTINCT (l ++ l')``,   Induct   >> RW_TAC std_ss [APPEND_NIL]   ++ RW_TAC std_ss [APPEND, ALL_DISTINCT, MEM, MEM_APPEND]   ++ METIS_TAC [APPEND, ALL_DISTINCT, MEM, MEM_APPEND]);val ALL_DISTINCT_MAP = store_thm  ("ALL_DISTINCT_MAP",   ``!l f. ALL_DISTINCT l /\ (!x y. (f x = f y) = (x = y)) ==>		ALL_DISTINCT (MAP f l)``,   Induct   ++ RW_TAC std_ss [MAP, ALL_DISTINCT, MEM_MAP]);val ALL_DISTINCT_MAP2 = store_thm  ("ALL_DISTINCT_MAP2",   ``!l f. ALL_DISTINCT l /\ (!x y. MEM x l /\ MEM y l /\ (f x = f y) ==> (x = y)) ==>		ALL_DISTINCT (MAP f l)``,   Induct ++ RW_TAC std_ss [MAP, ALL_DISTINCT, MEM_MAP, MEM]   ++ METIS_TAC []);val ALL_DISTINCT_LIST_COMBS = store_thm  ("ALL_DISTINCT_LIST_COMBS",   ``!l l'. ALL_DISTINCT l /\ ALL_DISTINCT l' ==> ALL_DISTINCT (LIST_COMBS l l')``,   Induct   ++ RW_TAC std_ss [LIST_COMBS, ALL_DISTINCT]   ++ MATCH_MP_TAC ALL_DISTINCT_APPEND   ++ CONJ_TAC >> (MATCH_MP_TAC ALL_DISTINCT_MAP ++ RW_TAC std_ss [])   ++ RW_TAC std_ss [MEM_MAP, MEM_LIST_COMBS]   ++ (ASSUME_TAC o Q.SPEC `x`) pair_CASES   ++ FULL_SIMP_TAC std_ss []   ++ Cases_on `q = h` ++ RW_TAC std_ss []);val MAKE_ALL_DISTINCT = Define   `(MAKE_ALL_DISTINCT [] = []) /\    (MAKE_ALL_DISTINCT (h::t) = if MEM h t then MAKE_ALL_DISTINCT t else h::(MAKE_ALL_DISTINCT t))`;val MAKE_ALL_DISTINCT_ALL_DISTINCT = store_thm  ("MAKE_ALL_DISTINCT_ALL_DISTINCT",   ``!l. ALL_DISTINCT l ==> (MAKE_ALL_DISTINCT l = l)``,   Induct ++ RW_TAC std_ss [MAKE_ALL_DISTINCT, ALL_DISTINCT]);val MEM_MAKE_ALL_DISTINCT = store_thm  ("MEM_MAKE_ALL_DISTINCT",   ``!l x. MEM x (MAKE_ALL_DISTINCT l) = MEM x l``,    Induct ++ RW_TAC std_ss [MAKE_ALL_DISTINCT, MEM]    ++ METIS_TAC []);val ALL_DISTINCT_MAKE_ALL_DISTINCT = store_thm  ("ALL_DISTINCT_MAKE_ALL_DISTINCT",   ``!l. ALL_DISTINCT (MAKE_ALL_DISTINCT l)``,   Induct ++ RW_TAC std_ss [ALL_DISTINCT, MAKE_ALL_DISTINCT, MEM_MAKE_ALL_DISTINCT]);val MAKE_ALL_DISTINCT_EQ_NIL = store_thm  ("MAKE_ALL_DISTINCT_EQ_NIL",   ``!l. (MAKE_ALL_DISTINCT l = []) = (l = [])``,   Induct ++ RW_TAC list_ss [MAKE_ALL_DISTINCT]   ++ SPOSE_NOT_THEN STRIP_ASSUME_TAC   ++ FULL_SIMP_TAC list_ss []);
+
+val LIST_COMBS = Define
+  `(LIST_COMBS [] _ = []) /\
+   (LIST_COMBS (x::xs) l = (MAP (\y. (x, y)) l) ++ (LIST_COMBS xs l))`;
+
+val MEM_LIST_COMBS = store_thm
+  ("MEM_LIST_COMBS",
+   ``!l l' x. MEM x (LIST_COMBS l l') = (MEM (FST x) l /\ MEM (SND x) l')``,
+   Induct
+   ++ RW_TAC list_ss [LIST_COMBS]
+   ++ `?f s. x = (f, s)` by METIS_TAC [pair_CASES]
+   ++ RW_TAC list_ss [MEM_MAP, FST, SND]
+   ++ DECIDE_TAC);
+
+val LENGTH_LIST_COMBS = store_thm
+  ("LENGTH_LIST_COMBS",
+   ``!x y. LENGTH (LIST_COMBS x y) = LENGTH x * LENGTH y``,
+   Induct ++ RW_TAC real_ss [LENGTH, LIST_COMBS, LENGTH_APPEND, LENGTH_MAP]
+   ++ `LENGTH y + LENGTH x * LENGTH y = 1 * LENGTH y + LENGTH x * LENGTH y` by RW_TAC arith_ss []
+   ++ POP_ORW ++ RW_TAC arith_ss [GSYM RIGHT_ADD_DISTRIB, ADD1]);
+
+val LIST_COMBS_EQ_NIL = store_thm
+  ("LIST_COMBS_EQ_NIL",
+   ``!x y. (LIST_COMBS x y = []) = ((x = []) \/ (y = []))``,
+   Induct ++ RW_TAC list_ss [LIST_COMBS]
+   ++ DECIDE_TAC);
+
+
+val ALL_DISTINCT_APPEND = store_thm
+  ("ALL_DISTINCT_APPEND",
+   ``!l l'. ALL_DISTINCT l /\ ALL_DISTINCT l' /\ (!x. ~(MEM x l /\ MEM x l')) ==>
+		ALL_DISTINCT (l ++ l')``,
+   Induct
+   >> RW_TAC std_ss [APPEND_NIL]
+   ++ RW_TAC std_ss [APPEND, ALL_DISTINCT, MEM, MEM_APPEND]
+   ++ METIS_TAC [APPEND, ALL_DISTINCT, MEM, MEM_APPEND]);
+
+val ALL_DISTINCT_MAP = store_thm
+  ("ALL_DISTINCT_MAP",
+   ``!l f. ALL_DISTINCT l /\ (!x y. (f x = f y) = (x = y)) ==>
+		ALL_DISTINCT (MAP f l)``,
+   Induct
+   ++ RW_TAC std_ss [MAP, ALL_DISTINCT, MEM_MAP]);
+
+val ALL_DISTINCT_MAP2 = store_thm
+  ("ALL_DISTINCT_MAP2",
+   ``!l f. ALL_DISTINCT l /\ (!x y. MEM x l /\ MEM y l /\ (f x = f y) ==> (x = y)) ==>
+		ALL_DISTINCT (MAP f l)``,
+   Induct ++ RW_TAC std_ss [MAP, ALL_DISTINCT, MEM_MAP, MEM]
+   ++ METIS_TAC []);
+
+val ALL_DISTINCT_LIST_COMBS = store_thm
+  ("ALL_DISTINCT_LIST_COMBS",
+   ``!l l'. ALL_DISTINCT l /\ ALL_DISTINCT l' ==> ALL_DISTINCT (LIST_COMBS l l')``,
+   Induct
+   ++ RW_TAC std_ss [LIST_COMBS, ALL_DISTINCT]
+   ++ MATCH_MP_TAC ALL_DISTINCT_APPEND
+   ++ CONJ_TAC >> (MATCH_MP_TAC ALL_DISTINCT_MAP ++ RW_TAC std_ss [])
+   ++ RW_TAC std_ss [MEM_MAP, MEM_LIST_COMBS]
+   ++ (ASSUME_TAC o Q.SPEC `x`) pair_CASES
+   ++ FULL_SIMP_TAC std_ss []
+   ++ Cases_on `q = h` ++ RW_TAC std_ss []);
+
+val MAKE_ALL_DISTINCT = Define
+   `(MAKE_ALL_DISTINCT [] = []) /\
+    (MAKE_ALL_DISTINCT (h::t) = if MEM h t then MAKE_ALL_DISTINCT t else h::(MAKE_ALL_DISTINCT t))`;
+
+val MAKE_ALL_DISTINCT_ALL_DISTINCT = store_thm
+  ("MAKE_ALL_DISTINCT_ALL_DISTINCT",
+   ``!l. ALL_DISTINCT l ==> (MAKE_ALL_DISTINCT l = l)``,
+   Induct ++ RW_TAC std_ss [MAKE_ALL_DISTINCT, ALL_DISTINCT]);
+
+val MEM_MAKE_ALL_DISTINCT = store_thm
+  ("MEM_MAKE_ALL_DISTINCT",
+   ``!l x. MEM x (MAKE_ALL_DISTINCT l) = MEM x l``,
+    Induct ++ RW_TAC std_ss [MAKE_ALL_DISTINCT, MEM]
+    ++ METIS_TAC []);
+
+val ALL_DISTINCT_MAKE_ALL_DISTINCT = store_thm
+  ("ALL_DISTINCT_MAKE_ALL_DISTINCT",
+   ``!l. ALL_DISTINCT (MAKE_ALL_DISTINCT l)``,
+   Induct ++ RW_TAC std_ss [ALL_DISTINCT, MAKE_ALL_DISTINCT, MEM_MAKE_ALL_DISTINCT]);
+
+val MAKE_ALL_DISTINCT_EQ_NIL = store_thm
+  ("MAKE_ALL_DISTINCT_EQ_NIL",
+   ``!l. (MAKE_ALL_DISTINCT l = []) = (l = [])``,
+   Induct ++ RW_TAC list_ss [MAKE_ALL_DISTINCT]
+   ++ SPOSE_NOT_THEN STRIP_ASSUME_TAC
+   ++ FULL_SIMP_TAC list_ss []);
+
 
 (* non-interactive mode
 *)

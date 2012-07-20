@@ -11,8 +11,8 @@ app load
    "res_quanTheory", "ho_proverTools", "pairTheory"];
 *)
 
-open bossLib combinTheory pred_setTheory seqTheory HurdUseful
-     res_quanTheory ho_proverTools pairTheory;
+open bossLib metisLib combinTheory pred_setTheory seqTheory HurdUseful
+     res_quanTheory pairTheory;
 
 infixr 0 ++ << || THENC ORELSEC ORELSER ##;
 infix 1 >>;
@@ -252,7 +252,7 @@ val res_select_cong = store_thm
        (RES_SELECT p f = RES_SELECT p' f')``,
    RW_TAC std_ss [RES_SELECT]
    ++ Q_TAC SUFF_TAC `!x. x IN p /\ f x = x IN p /\ f' x` >> RW_TAC std_ss []
-   ++ ho_PROVE_TAC []);
+   ++ METIS_TAC []);
 
 val res_abstract_cong = store_thm
   ("res_abstract_cong",
