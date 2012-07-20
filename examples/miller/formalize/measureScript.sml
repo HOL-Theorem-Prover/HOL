@@ -29,6 +29,7 @@ val op>> = op THEN1;
 val std_ss' = simpLib.++ (std_ss, boolSimps.ETA_ss);
 val INTER_ASSOC = GSYM INTER_ASSOC
 val UNION_ASSOC = GSYM UNION_ASSOC
+val Reverse = Tactical.REVERSE
 
 (* ------------------------------------------------------------------------- *)
 (* Tools.                                                                    *)
@@ -394,7 +395,7 @@ val SIGMA_ALGEBRA_ALT = store_thm
    ++ EQ_TAC
    >> (RW_TAC std_ss [countable_def, IN_FUNSET, IN_UNIV]
        ++ Q.PAT_ASSUM `!c. P c ==> Q c` MATCH_MP_TAC
-       ++ REVERSE (RW_TAC std_ss [IN_IMAGE, SUBSET_DEF, IN_UNIV])
+       ++ Reverse (RW_TAC std_ss [IN_IMAGE, SUBSET_DEF, IN_UNIV])
        >> PROVE_TAC []
        ++ Q.EXISTS_TAC `f`
        ++ RW_TAC std_ss []
@@ -447,7 +448,7 @@ val SIGMA_ALGEBRA_ALT_MONO = store_thm
        ++ PROVE_TAC [])
    ++ DISCH_THEN (REWRITE_TAC o wrap)
    ++ POP_ASSUM MATCH_MP_TAC
-   ++ REVERSE (RW_TAC std_ss [SUBSET_DEF, IN_BIGUNION, IN_COUNT, IN_IMAGE,
+   ++ Reverse (RW_TAC std_ss [SUBSET_DEF, IN_BIGUNION, IN_COUNT, IN_IMAGE,
                               COUNT_ZERO, IMAGE_EMPTY, BIGUNION_EMPTY])
    >> (Q.EXISTS_TAC `f x'`
        ++ RW_TAC std_ss []
@@ -455,7 +456,7 @@ val SIGMA_ALGEBRA_ALT_MONO = store_thm
        ++ DECIDE_TAC)
    ++ MATCH_MP_TAC ALGEBRA_FINITE_UNION
    ++ POP_ASSUM MP_TAC
-   ++ REVERSE (RW_TAC std_ss [IN_FUNSET, IN_UNIV, SUBSET_DEF, IN_IMAGE])
+   ++ Reverse (RW_TAC std_ss [IN_FUNSET, IN_UNIV, SUBSET_DEF, IN_IMAGE])
    >> PROVE_TAC []
    ++ MATCH_MP_TAC IMAGE_FINITE
    ++ RW_TAC std_ss [FINITE_COUNT]);
@@ -479,7 +480,7 @@ val SIGMA_ALGEBRA_ALT_DISJOINT = store_thm
    >> (POP_ASSUM K_TAC
        ++ ONCE_REWRITE_TAC [EXTENSION]
        ++ RW_TAC std_ss [IN_BIGUNION, IN_IMAGE, IN_UNIV, IN_DIFF]
-       ++ REVERSE EQ_TAC
+       ++ Reverse EQ_TAC
        >> (RW_TAC std_ss []
            ++ POP_ASSUM MP_TAC
            ++ RW_TAC std_ss [IN_DIFF]
@@ -737,7 +738,7 @@ val LAMBDA_SYSTEM_CARATHEODORY = store_thm
     ++ CONJ_TAC
     >> (RW_TAC std_ss [EXTENSION, IN_INTER, IN_BIGUNION, IN_IMAGE, IN_UNIV,
                        o_DEF]
-        ++ REVERSE EQ_TAC >> PROVE_TAC []
+        ++ Reverse EQ_TAC >> PROVE_TAC []
         ++ RW_TAC std_ss [GSYM EXTENSION]
         ++ Q.EXISTS_TAC `f x' INTER g`
         ++ RW_TAC std_ss [IN_INTER]
@@ -950,7 +951,7 @@ val INF_MEASURE_AGREES = store_thm
        >> (Q.EXISTS_TAC `0`
            ++ ho_PROVE_TAC [INF_MEASURE_POS0])
        ++ Q.EXISTS_TAC `measure m s`
-       ++ REVERSE CONJ_TAC >> RW_TAC std_ss [REAL_LE_REFL]
+       ++ Reverse CONJ_TAC >> RW_TAC std_ss [REAL_LE_REFL]
        ++ MATCH_MP_TAC INF_MEASURE_NONEMPTY
        ++ RW_TAC std_ss [SUBSET_REFL])
    ++ MATCH_MP_TAC LE_INF
@@ -1034,7 +1035,7 @@ val INF_MEASURE_EMPTY = store_thm
    ``!m. algebra (measurable_sets m) /\ positive m ==> (inf_measure m {} = 0)``,
    RW_TAC std_ss []
    ++ ONCE_REWRITE_TAC [GSYM REAL_LE_ANTISYM]
-   ++ REVERSE CONJ_TAC >> PROVE_TAC [INF_MEASURE_POS]
+   ++ Reverse CONJ_TAC >> PROVE_TAC [INF_MEASURE_POS]
    ++ RW_TAC std_ss [inf_measure_def]
    ++ MATCH_MP_TAC INF_LE
    ++ CONJ_TAC >> ho_PROVE_TAC [INF_MEASURE_POS0]
@@ -1133,7 +1134,7 @@ val INF_MEASURE_LE = store_thm
     ++ Q.EXISTS_TAC
        `f (minimal (\n. x IN f n)) DIFF
         BIGUNION (IMAGE f (count (minimal (\n. x IN f n))))`
-    ++ REVERSE CONJ_TAC >> PROVE_TAC []
+    ++ Reverse CONJ_TAC >> PROVE_TAC []
     ++ RW_TAC std_ss [IN_DIFF, IN_BIGUNION, IN_IMAGE, IN_COUNT]
     ++ PROVE_TAC []]);
 
@@ -1277,7 +1278,7 @@ val ALGEBRA_SUBSET_LAMBDA_SYSTEM = store_thm
        algebra (measurable_sets m) /\ positive m /\ increasing m /\
        additive m ==>
        measurable_sets m SUBSET lambda_system UNIV (inf_measure m)``,
-   REVERSE (RW_TAC std_ss [SUBSET_DEF, lambda_system_def, GSPECIFICATION,
+   Reverse (RW_TAC std_ss [SUBSET_DEF, lambda_system_def, GSPECIFICATION,
                            IN_UNIV, GSYM REAL_LE_ANTISYM])
    >> (Know `inf_measure m = measure (UNIV, inf_measure m)`
        >> RW_TAC std_ss [measure_def]
@@ -1308,7 +1309,7 @@ val ALGEBRA_SUBSET_LAMBDA_SYSTEM = store_thm
            ++ Q.EXISTS_TAC `measure m o f`
            ++ RW_TAC std_ss [GREATER_EQ]
            ++ Q.EXISTS_TAC `0`
-           ++ REVERSE (RW_TAC arith_ss [o_THM, abs])
+           ++ Reverse (RW_TAC arith_ss [o_THM, abs])
            >> PROVE_TAC [positive_def, ALGEBRA_INTER]
            ++ MATCH_MP_TAC INCREASING
            ++ RW_TAC std_ss [INTER_SUBSET, ALGEBRA_INTER])
@@ -1706,7 +1707,7 @@ val SIGMA_PROPERTY_DISJOINT_LEMMA1 = store_thm
     ++ MATCH_MP_TAC CLOSED_CDI_INCREASING
     ++ Q.PAT_ASSUM `f IN X` MP_TAC
     ++ RW_TAC std_ss [SMALLEST_CLOSED_CDI, IN_FUNSET, IN_UNIV, GSPECIFICATION]
-    >> (REVERSE (Cases_on `x`) >> RW_TAC arith_ss []
+    >> (Reverse (Cases_on `x`) >> RW_TAC arith_ss []
         ++ RW_TAC arith_ss []
         ++ PROVE_TAC [SMALLEST_CLOSED_CDI, ALGEBRA_EMPTY, SUBSET_DEF])
     ++ Cases_on `n` >> RW_TAC arith_ss [num_case_def, EMPTY_SUBSET]
@@ -1806,7 +1807,7 @@ val SIGMA_PROPERTY_DISJOINT_LEMMA2 = store_thm
     ++ MATCH_MP_TAC CLOSED_CDI_INCREASING
     ++ Q.PAT_ASSUM `f IN X` MP_TAC
     ++ RW_TAC std_ss [SMALLEST_CLOSED_CDI, IN_FUNSET, IN_UNIV, GSPECIFICATION]
-    >> (REVERSE (Cases_on `x`) >> RW_TAC arith_ss []
+    >> (Reverse (Cases_on `x`) >> RW_TAC arith_ss []
         ++ RW_TAC arith_ss []
         ++ PROVE_TAC [SMALLEST_CLOSED_CDI, ALGEBRA_EMPTY, SUBSET_DEF])
     ++ Cases_on `n` >> RW_TAC arith_ss [num_case_def, EMPTY_SUBSET]
@@ -1846,7 +1847,7 @@ val SIGMA_PROPERTY_DISJOINT_LEMMA = store_thm
    RW_TAC std_ss []
    ++ MATCH_MP_TAC SUBSET_TRANS
    ++ Q.EXISTS_TAC `smallest_closed_cdi a`
-   ++ REVERSE CONJ_TAC
+   ++ Reverse CONJ_TAC
    >> (RW_TAC std_ss [SUBSET_DEF, smallest_closed_cdi_def, IN_BIGINTER,
                       GSPECIFICATION]
        ++ PROVE_TAC [SUBSET_DEF])
@@ -1989,7 +1990,7 @@ val MEASURE_COUNTABLE_INCREASING = store_thm
        ++ RW_TAC std_ss [])
    ++ CONJ_TAC
    >> (PSET_TAC [EXTENSION]
-       ++ REVERSE (EQ_TAC ++ RW_TAC std_ss [])
+       ++ Reverse (EQ_TAC ++ RW_TAC std_ss [])
        >> PROVE_TAC []
        ++ Know `x IN f x'` >> PROVE_TAC []
        ++ NTAC 2 (POP_ASSUM K_TAC)

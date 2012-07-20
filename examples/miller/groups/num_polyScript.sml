@@ -25,7 +25,7 @@ open bossLib listTheory HurdUseful subtypeTools res_quanTools
      finite_groupTheory pred_setContext rich_listTheory;
 
 val EXISTS_DEF = boolTheory.EXISTS_DEF;
-val REVERSE = HurdUseful.REVERSE;
+val REVERSE = Tactical.REVERSE;
 
 infixr 0 ++ << || THENC ORELSEC ORELSER ##;
 infix 1 >>;

@@ -24,6 +24,7 @@ val Strip = !! (POP_ASSUM MP_TAC) ++ !! STRIP_TAC;
 val Simplify = RW_TAC arith_ss;
 val Rewr = DISCH_THEN (REWRITE_TAC o wrap);
 val Rewr' = DISCH_THEN (ONCE_REWRITE_TAC o wrap);
+val Reverse = Tactical.REVERSE
 val Cond =
   DISCH_THEN
   (fn mp_th =>
@@ -359,7 +360,7 @@ val PROB_ZERO_UNION = store_thm
    ++ STRIP_TAC
    ++ Know `prob p (t DIFF s) = 0`
    >> (ONCE_REWRITE_TAC [GSYM REAL_LE_ANTISYM]
-       ++ REVERSE CONJ_TAC >> PROVE_TAC [PROB_POSITIVE]
+       ++ Reverse CONJ_TAC >> PROVE_TAC [PROB_POSITIVE]
        ++ Q.PAT_ASSUM `prob p t = 0` (ONCE_REWRITE_TAC o wrap o SYM)
        ++ MATCH_MP_TAC PROB_INCREASING
        ++ RW_TAC std_ss [DIFF_SUBSET])
@@ -465,7 +466,7 @@ val PROB_FINITELY_ADDITIVE = store_thm
        (prob p o (\m. if m < n then f m else {})) sums
        sum (0, n) (prob p o f)`
    >> PROVE_TAC [SUM_UNIQ]
-   ++ REVERSE CONJ_TAC
+   ++ Reverse CONJ_TAC
    >> (Know
        `sum (0,n) (prob p o f) =
         sum (0,n) (prob p o (\m. (if m < n then f m else {})))`
@@ -550,7 +551,7 @@ val PROB_COUNTABLY_SUBADDITIVE = store_thm
         ++ PROVE_TAC [LT_SUC],
         SET_EQ_TAC
         ++ RW_TAC std_ss [IN_BIGUNION_IMAGE, IN_UNIV, IN_COUNT]
-        ++ REVERSE EQ_TAC >> PROVE_TAC []
+        ++ Reverse EQ_TAC >> PROVE_TAC []
         ++ RW_TAC std_ss []
         ++ Q.EXISTS_TAC `SUC x'`
         ++ Q.EXISTS_TAC `x'`
@@ -594,7 +595,7 @@ val PROB_COUNTABLY_ZERO = store_thm
    ++ NTAC 2 (POP_ASSUM K_TAC)
    ++ STRIP_TAC
    ++ ONCE_REWRITE_TAC [GSYM REAL_LE_ANTISYM]
-   ++ REVERSE CONJ_TAC
+   ++ Reverse CONJ_TAC
    >> (MATCH_MP_TAC PROB_POSITIVE
        ++ RW_TAC std_ss []
        ++ MATCH_MP_TAC EVENTS_COUNTABLE_UNION

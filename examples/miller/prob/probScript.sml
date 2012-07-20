@@ -43,26 +43,9 @@ val Cond =
      KNOW_TAC cond << [ALL_TAC, DISCH_THEN (MP_TAC o MP mp_th)]
    end);
 
-(* bool *)
-
-(* num *)
-
-(* state_transformer *)
-
-(* sequence *)
-
-(* extra_real *)
-
-(* extra_pred_set *)
-
-(* measure *)
-
-(* probability *)
-
-(* prob_algebra *)
-
 val INTER_ASSOC = GSYM INTER_ASSOC
 val UNION_ASSOC = GSYM UNION_ASSOC
+val REVERSE = Tactical.REVERSE
 
 (* ------------------------------------------------------------------------- *)
 (* The definition of probability.                                            *)

@@ -151,7 +151,7 @@ src/datatype/inftree
 !!examples/computability/register
 src/Boolify/src
 src/float
-src/prob
+src/probability
 src/temporal/src
 
 #
