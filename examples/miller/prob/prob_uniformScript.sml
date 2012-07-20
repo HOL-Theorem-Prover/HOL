@@ -173,7 +173,7 @@ val PROB_BERN_UNIF = store_thm
     >> (DISCH_THEN (MP_TAC o SYM)
         ++ Rewr
         ++ RW_TAC std_ss []
-        ++ MATCH_MP_TAC RAND_THM
+        ++ AP_TERM_TAC
         ++ ONCE_REWRITE_TAC [EXTENSION]
         ++ RW_TAC bool_ss [IN_INTER, IN_o, IN_HALFSPACE, o_THM, GSPECIFICATION]
         ++ RW_TAC std_ss [SPECIFICATION]
@@ -204,7 +204,7 @@ val PROB_BERN_UNIF = store_thm
     >> (DISCH_THEN (MP_TAC o SYM)
         ++ Rewr
         ++ RW_TAC std_ss []
-        ++ MATCH_MP_TAC RAND_THM
+        ++ AP_TERM_TAC
         ++ ONCE_REWRITE_TAC [EXTENSION]
         ++ RW_TAC bool_ss [IN_INTER, IN_o, IN_HALFSPACE, o_THM, GSPECIFICATION]
         ++ RW_TAC std_ss [SPECIFICATION]

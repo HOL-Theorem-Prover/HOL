@@ -1345,7 +1345,7 @@ val ALGEBRA_SUBSET_LAMBDA_SYSTEM = store_thm
    ++ RW_TAC std_ss [SUMINF_ADD, o_THM]
    ++ Know `!a b : real. (a = b) ==> a <= b` >> REAL_ARITH_TAC
    ++ DISCH_THEN MATCH_MP_TAC
-   ++ MATCH_MP_TAC RAND_THM
+   ++ AP_TERM_TAC
    ++ FUN_EQ_TAC
    ++ RW_TAC std_ss [o_THM]
    ++ MATCH_MP_TAC EQ_SYM

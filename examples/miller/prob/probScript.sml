@@ -2428,7 +2428,7 @@ val PROB_WHILE_TERMINATES_PREFIX_COVER_STAR = store_thm
    >> (RW_TAC std_ss [FUNPOW, prefix_cover_level_def, IMAGE_EMPTY,
                       BIGUNION_EMPTY, NOT_IN_EMPTY, IMAGE_INSERT, IMAGE_EMPTY,
                       BIGUNION_SING, prefix_set_def, IN_UNIV, GEMPTY]
-       ++ MATCH_MP_TAC RAND_THM
+       ++ AP_TERM_TAC
        ++ SET_EQ_TAC
        ++ RW_TAC std_ss [GSPECIFICATION, IN_UNIV]
        ++ MATCH_MP_TAC MINIMAL_EQ_IMP
@@ -2972,7 +2972,7 @@ val PROB_WHILE_CUT_REV = store_thm
    ++ REVERSE (Cases_on `c a`)
    >> RW_TAC std_ss [BIND_DEF, UNIT_DEF, o_DEF, UNCURRY]
    ++ RW_TAC std_ss [GSYM BIND_ASSOC]
-   ++ MATCH_MP_TAC RAND_THM
+   ++ AP_TERM_TAC
    ++ FUN_EQ_TAC
    ++ RW_TAC std_ss []);
 
@@ -4031,7 +4031,7 @@ val PROB_BERN_UNTIL = store_thm
    >> REAL_ARITH_TAC
    ++ DISCH_THEN MATCH_MP_TAC
    ++ CONJ_TAC
-   >> (MATCH_MP_TAC RAND_THM
+   >> (AP_TERM_TAC
        ++ SET_EQ_TAC
        ++ MP_TAC (Q.SPECL [`b`, `c`] PROB_UNTIL_ADVANCE)
        ++ Cond >> RW_TAC std_ss []
@@ -4045,7 +4045,7 @@ val PROB_BERN_UNTIL = store_thm
    >> (Rewr
        ++ MATCH_MP_TAC INDEP_FN_PROB
        ++ RW_TAC std_ss [INDEP_FN_FST_EVENTS, INDEP_FN_PROB_UNTIL])
-   ++ MATCH_MP_TAC RAND_THM
+   ++ AP_TERM_TAC
    ++ SET_EQ_TAC
    ++ MP_TAC (Q.SPECL [`b`, `c`] PROB_UNTIL_ADVANCE)
    ++ Cond >> RW_TAC std_ss []
