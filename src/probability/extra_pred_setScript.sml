@@ -76,8 +76,6 @@ val POP_ORW = POP_ASSUM (fn thm => ONCE_REWRITE_TAC [thm]);
 (* Definitions.                                                              *)
 (* ------------------------------------------------------------------------- *)
 
-val BIGINTER_def = Define `BIGINTER a = {x | !s. s IN a ==> x IN s}`;
-
 val countable_def = Define
   `countable s = ?f. !x : 'a. x IN s ==> ?n : num. f n = x`;
 
@@ -966,11 +964,6 @@ val DIFF_ALT = store_thm
   ("DIFF_ALT",
    ``!s t. s DIFF t = s INTER (COMPL t)``,
    RW_TAC std_ss [EXTENSION, IN_DIFF, IN_INTER, IN_COMPL]);
-
-val IN_BIGINTER = store_thm
-  ("IN_BIGINTER",
-   ``!x. x IN BIGINTER a = !s. s IN a ==> x IN s``,
-   RW_TAC std_ss [BIGINTER_def, GSPECIFICATION]);
 
 val DIFF_SUBSET = store_thm
   ("DIFF_SUBSET",
@@ -2652,11 +2645,12 @@ val BIGINTER_SUBSET = store_thm
  );
 
 val DIFF_BIGINTER1 = store_thm
-   ("DIFF_BIGINTER1", ``!sp s. sp DIFF (BIGINTER s) = BIGUNION (IMAGE (\u. sp DIFF u) s)``,
-  	RW_TAC std_ss [DIFF_DEF,BIGINTER,BIGUNION,EXTENSION,GSPECIFICATION,IN_IMAGE,IN_BIGINTER]
-  	++ EQ_TAC >> ( RW_TAC std_ss [] ++ Q.EXISTS_TAC `(sp DIFF s')` ++ RW_TAC std_ss [DIFF_DEF,GSPECIFICATION] ++ Q.EXISTS_TAC `s'` ++ RW_TAC std_ss [] )
-  	++ RW_TAC std_ss [] >> METIS_TAC []
- 	++ Q.EXISTS_TAC `u` ++ METIS_TAC []
+   ("DIFF_BIGINTER1",
+    ``!sp s. sp DIFF (BIGINTER s) = BIGUNION (IMAGE (\u. sp DIFF u) s)``,
+    SRW_TAC [][EXTENSION]
+    ++ EQ_TAC >> METIS_TAC [IN_DIFF]
+    ++ RW_TAC std_ss []
+    ++ METIS_TAC []
    );
 
 

@@ -3684,7 +3684,7 @@ val finite_prod_measure_space_POW = store_thm
 	    ++ POP_ASSUM MATCH_MP_TAC
 	    ++ METIS_TAC [SUBSET_DEF, IN_CROSS])
   ++ RW_TAC std_ss [SUBSET_DEF, IN_IMAGE, IN_SING]
-  ++ Q.PAT_ASSUM `!x. P ==> x IN s` MATCH_MP_TAC
+  ++ FIRST_X_ASSUM MATCH_MP_TAC
   ++ Q.EXISTS_TAC `({FST a}, {SND a})` ++ RW_TAC std_ss [PAIR_EQ, IN_SING]
   ++ ONCE_REWRITE_TAC [EXTENSION] ++ RW_TAC std_ss [IN_CROSS, IN_SING]
   ++ METIS_TAC [PAIR_EQ, PAIR, FST, SND]);
@@ -3808,7 +3808,7 @@ val finite_prod_measure_space_POW3 = store_thm
 	    ++ POP_ASSUM MATCH_MP_TAC
 	    ++ RW_TAC std_ss [SUBSET_DEF, IN_CROSS])
   ++ RW_TAC std_ss [SUBSET_DEF, IN_IMAGE, IN_SING]
-  ++ Q.PAT_ASSUM `!x. P ==> x IN s` MATCH_MP_TAC
+  ++ FIRST_X_ASSUM MATCH_MP_TAC
   ++ Q.EXISTS_TAC `({FST a}, {FST (SND a)}, {SND(SND a)})` ++ RW_TAC std_ss [IN_SING]
   ++ RW_TAC std_ss [IN_SING,EXTENSION,IN_CROSS,PAIR]
   ++ METIS_TAC [PAIR]);

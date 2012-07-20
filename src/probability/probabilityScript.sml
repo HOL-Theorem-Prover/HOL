@@ -366,7 +366,8 @@ val PROB_ONE_INTER = store_thm
   ++ RW_TAC real_ss []);
 
 val EVENTS_COUNTABLE_INTER = store_thm
-("EVENTS_COUNTABLE_INTER", ``!p c. prob_space p /\ c SUBSET events p /\ countable c /\ (~(c={}))
+("EVENTS_COUNTABLE_INTER",
+ ``!p c. prob_space p /\ c SUBSET events p /\ countable c /\ (~(c={}))
                                ==> BIGINTER c IN events p``,
   RW_TAC std_ss []
   ++ Know `BIGINTER c = p_space p DIFF (p_space p DIFF (BIGINTER c))`
@@ -384,8 +385,8 @@ val EVENTS_COUNTABLE_INTER = store_thm
   >> (ONCE_REWRITE_TAC [EXTENSION]
       ++ RW_TAC std_ss [IN_DIFF, IN_BIGUNION, IN_IMAGE, IN_BIGINTER]
       ++ EQ_TAC
-      >> (RW_TAC std_ss [] ++ Q.EXISTS_TAC `p_space p DIFF s`
-          ++ RW_TAC std_ss [IN_DIFF] ++ Q.EXISTS_TAC `s`
+      >> (RW_TAC std_ss [] ++ Q.EXISTS_TAC `p_space p DIFF P`
+          ++ RW_TAC std_ss [IN_DIFF] ++ Q.EXISTS_TAC `P`
           ++ RW_TAC std_ss [])
       ++ RW_TAC std_ss []
       >> FULL_SIMP_TAC std_ss [IN_DIFF]

@@ -1122,20 +1122,19 @@ val SIGMA_ALGEBRA_SIGMA = store_thm
    ``!sp sts. subset_class sp sts ==> sigma_algebra (sigma sp sts)``,
    SIMP_TAC std_ss [subset_class_def]
    ++ NTAC 3 STRIP_TAC
-   ++ RW_TAC std_ss [sigma_def, sigma_algebra_def, algebra_def, subsets_def, space_def, IN_BIGINTER,
+   ++ RW_TAC std_ss [sigma_def, sigma_algebra_def, algebra_def,
+                     subsets_def, space_def, IN_BIGINTER,
                      GSPECIFICATION, subset_class_def]
    >> (POP_ASSUM (MATCH_MP_TAC o REWRITE_RULE [IN_POW, DIFF_SUBSET, UNION_SUBSET, EMPTY_SUBSET] o Q.ISPEC `POW (sp :'a -> bool)`)
        ++ RW_TAC std_ss [SUBSET_DEF, IN_POW, IN_BIGUNION]
        ++ PROVE_TAC [])
    ++ POP_ASSUM (fn th => MATCH_MP_TAC th ++ ASSUME_TAC th)
    ++ RW_TAC std_ss [SUBSET_DEF]
-   ++ Q.PAT_ASSUM `c SUBSET P` MP_TAC
-   ++ REWRITE_TAC [SUBSET_DEF, IN_BIGINTER, GSPECIFICATION]
-   ++ BETA_TAC
+   ++ Q.PAT_ASSUM `c SUBSET PP` MP_TAC
+   ++ CONV_TAC (LAND_CONV (SIMP_CONV (srw_ss()) [SUBSET_DEF]))
    ++ DISCH_THEN (MP_TAC o Q.SPEC `x`)
    ++ ASM_REWRITE_TAC []
    ++ DISCH_THEN MATCH_MP_TAC
-   ++ Q.EXISTS_TAC `s`
    ++ RW_TAC std_ss []
    ++ PROVE_TAC [SUBSET_DEF]);
 
@@ -1575,15 +1574,17 @@ val MEASURE_COMPL = store_thm
 val SIGMA_PROPERTY = store_thm
   ("SIGMA_PROPERTY",
    ``!sp p a.
-       subset_class sp p /\ {} IN p /\ a SUBSET p /\ (!s. s IN (p INTER subsets (sigma sp a)) ==> (sp DIFF s) IN p) /\
-       (!c. countable c /\ c SUBSET (p INTER subsets (sigma sp a)) ==> BIGUNION c IN p) ==>
+       subset_class sp p /\ {} IN p /\ a SUBSET p /\
+       (!s. s IN (p INTER subsets (sigma sp a)) ==> (sp DIFF s) IN p) /\
+       (!c. countable c /\ c SUBSET (p INTER subsets (sigma sp a)) ==>
+            BIGUNION c IN p) ==>
        subsets (sigma sp a) SUBSET p``,
    RW_TAC std_ss []
    ++ Suff `subsets (sigma sp a) SUBSET p INTER subsets (sigma sp a)`
    >> SIMP_TAC std_ss [SUBSET_INTER]
    ++ Suff `p INTER subsets (sigma sp a) IN {b | a SUBSET b /\ sigma_algebra (sp,b)}`
    >> (KILL_TAC
-       ++ RW_TAC std_ss [sigma_def, GSPECIFICATION, SUBSET_DEF, INTER_DEF, BIGINTER_def, subsets_def])
+       ++ RW_TAC std_ss [sigma_def, GSPECIFICATION, SUBSET_DEF, INTER_DEF, BIGINTER, subsets_def])
    ++ RW_TAC std_ss [GSPECIFICATION]
    >> PROVE_TAC [SUBSET_DEF, IN_INTER, IN_SIGMA]
    ++ Know `subset_class sp a` >> PROVE_TAC [subset_class_def, SUBSET_DEF]
@@ -1661,7 +1662,7 @@ val SIGMA_PROPERTY_ALT = store_thm
    >> SIMP_TAC std_ss [SUBSET_INTER]
    ++ Suff `p INTER subsets (sigma sp a) IN {b | a SUBSET b /\ sigma_algebra (sp, b)}`
    >> (KILL_TAC
-       ++ RW_TAC std_ss [sigma_def, GSPECIFICATION, SUBSET_DEF, INTER_DEF, BIGINTER_def, subsets_def])
+       ++ RW_TAC std_ss [sigma_def, GSPECIFICATION, SUBSET_DEF, INTER_DEF, BIGINTER, subsets_def])
    ++ RW_TAC std_ss [GSPECIFICATION]
    >> PROVE_TAC [SUBSET_DEF, IN_INTER, IN_SIGMA]
    ++ POP_ASSUM MP_TAC
@@ -1689,7 +1690,7 @@ val SIGMA_PROPERTY_DISJOINT_WEAK = store_thm
    >> SIMP_TAC std_ss [SUBSET_INTER]
    ++ Suff `p INTER subsets (sigma sp a) IN {b | a SUBSET b /\ sigma_algebra (sp, b)}`
    >> (KILL_TAC
-       ++ RW_TAC std_ss [sigma_def, GSPECIFICATION, SUBSET_DEF, INTER_DEF, BIGINTER_def, subsets_def, space_def])
+       ++ RW_TAC std_ss [sigma_def, GSPECIFICATION, SUBSET_DEF, INTER_DEF, BIGINTER, subsets_def, space_def])
    ++ RW_TAC std_ss [GSPECIFICATION]
    >> PROVE_TAC [SUBSET_DEF, IN_INTER, IN_SIGMA]
    ++ POP_ASSUM MP_TAC
@@ -1713,7 +1714,7 @@ val SMALLEST_CLOSED_CDI = store_thm
    ``!a. algebra a ==> subsets a SUBSET subsets (smallest_closed_cdi a) /\ closed_cdi (smallest_closed_cdi a) /\
 	 subset_class (space a) (subsets (smallest_closed_cdi a))``,
    Know `!a. algebra a ==> subsets a SUBSET subsets (smallest_closed_cdi a) /\ closed_cdi (smallest_closed_cdi a)`
-   >> (RW_TAC std_ss [smallest_closed_cdi_def, GSPECIFICATION, SUBSET_DEF, INTER_DEF, BIGINTER_def,
+   >> (RW_TAC std_ss [smallest_closed_cdi_def, GSPECIFICATION, SUBSET_DEF, INTER_DEF, BIGINTER,
 		       subset_class_def, algebra_def, subsets_def]
         ++ RW_TAC std_ss [closed_cdi_def, GSPECIFICATION, IN_BIGINTER, IN_FUNSET,
                           IN_UNIV, subsets_def, space_def, subset_class_def]
@@ -1793,7 +1794,7 @@ val SIGMA_PROPERTY_DISJOINT_LEMMA1 = store_thm
     ++ RW_TAC std_ss [subset_class_def, SUBSET_DEF, GSPECIFICATION]
     ++ PROVE_TAC [algebra_def, subset_class_def, SUBSET_DEF],
     PROVE_TAC [closed_cdi_def, SMALLEST_CLOSED_CDI, SPACE_SMALLEST_CLOSED_CDI],
-    Know `s INTER (space a DIFF s'') = space (smallest_closed_cdi a) DIFF (space (smallest_closed_cdi a) DIFF s UNION (s INTER s''))`
+    Know `s INTER (space a DIFF s') = space (smallest_closed_cdi a) DIFF (space (smallest_closed_cdi a) DIFF s UNION (s INTER s'))`
     >> (RW_TAC std_ss [EXTENSION, INTER_DEF, COMPL_DEF, UNION_DEF, GSPECIFICATION, IN_UNIV, IN_DIFF]
         ++ PROVE_TAC [SPACE_SMALLEST_CLOSED_CDI])
     ++ DISCH_THEN (ONCE_REWRITE_TAC o wrap)
@@ -1866,7 +1867,7 @@ val SIGMA_PROPERTY_DISJOINT_LEMMA1 = store_thm
     ++ MATCH_MP_TAC CLOSED_CDI_DISJOINT
     ++ Q.PAT_ASSUM `f IN X` MP_TAC
     ++ RW_TAC std_ss [SMALLEST_CLOSED_CDI, IN_FUNSET, IN_UNIV, GSPECIFICATION]
-    ++ Q.PAT_ASSUM `!m n. P m n` (MP_TAC o Q.SPECL [`m`, `n`])
+    ++ Q.PAT_ASSUM `!m n. PP m n` (MP_TAC o Q.SPECL [`m`, `n`])
     ++ RW_TAC std_ss [DISJOINT_DEF, EXTENSION, IN_INTER, NOT_IN_EMPTY]
     ++ PROVE_TAC []]);
 
@@ -1879,7 +1880,8 @@ val SIGMA_PROPERTY_DISJOINT_LEMMA2 = store_thm
           s INTER t IN subsets (smallest_closed_cdi a))``,
    RW_TAC std_ss []
    ++ POP_ASSUM MP_TAC
-   ++ RW_TAC std_ss [smallest_closed_cdi_def, IN_BIGINTER, GSPECIFICATION, subsets_def]
+   ++ SIMP_TAC std_ss [smallest_closed_cdi_def, IN_BIGINTER, GSPECIFICATION, subsets_def]
+   ++ STRIP_TAC ++ Q.X_GEN_TAC `P`
    ++ Suff
       `t IN
        {b | b IN subsets (smallest_closed_cdi a) /\ s INTER b IN subsets (smallest_closed_cdi a)}`
@@ -1889,12 +1891,18 @@ val SIGMA_PROPERTY_DISJOINT_LEMMA2 = store_thm
    >> (RW_TAC std_ss [SUBSET_DEF, GSPECIFICATION] <<
        [PROVE_TAC [SMALLEST_CLOSED_CDI, SUBSET_DEF],
         PROVE_TAC [SIGMA_PROPERTY_DISJOINT_LEMMA1, INTER_COMM]])
-   ++ RW_TAC std_ss [GSPECIFICATION, SUBSET_DEF, closed_cdi_def, space_def, subsets_def] <<
+   ++ SIMP_TAC std_ss [GSPECIFICATION, SUBSET_DEF, closed_cdi_def, space_def, subsets_def]
+   ++ STRIP_TAC ++ REPEAT CONJ_TAC <<
    [(MP_TAC o UNDISCH o Q.SPEC `a`) SMALLEST_CLOSED_CDI
     ++ RW_TAC std_ss [subset_class_def, SUBSET_DEF, GSPECIFICATION]
     ++ PROVE_TAC [algebra_def, subset_class_def, SUBSET_DEF],
-    PROVE_TAC [closed_cdi_def, SMALLEST_CLOSED_CDI, SPACE_SMALLEST_CLOSED_CDI],
-    Know `s INTER (space a DIFF s'') = space (smallest_closed_cdi a) DIFF (space (smallest_closed_cdi a) DIFF s UNION (s INTER s''))`
+    Q.X_GEN_TAC `s'`
+    ++ REPEAT STRIP_TAC
+    >> PROVE_TAC [closed_cdi_def, SMALLEST_CLOSED_CDI,
+                  SPACE_SMALLEST_CLOSED_CDI]
+    ++ Know `s INTER (space a DIFF s') =
+             space (smallest_closed_cdi a) DIFF
+             (space (smallest_closed_cdi a) DIFF s UNION (s INTER s'))`
     >> (RW_TAC std_ss [EXTENSION, INTER_DEF, COMPL_DEF, UNION_DEF, GSPECIFICATION, IN_UNIV, IN_DIFF, SPACE_SMALLEST_CLOSED_CDI]
         ++ DECIDE_TAC)
     ++ DISCH_THEN (ONCE_REWRITE_TAC o wrap)
@@ -1910,13 +1918,14 @@ val SIGMA_PROPERTY_DISJOINT_LEMMA2 = store_thm
     ++ CONJ_TAC >> PROVE_TAC [SMALLEST_CLOSED_CDI, SUBSET_DEF]
     ++ RW_TAC std_ss [DISJOINT_DEF, COMPL_DEF, INTER_DEF, IN_DIFF, IN_UNIV, GSPECIFICATION, EXTENSION, NOT_IN_EMPTY]
     ++ DECIDE_TAC,
-    Q.PAT_ASSUM `f IN x` MP_TAC
-    ++ RW_TAC std_ss [IN_FUNSET, IN_UNIV, GSPECIFICATION]
-    ++ MATCH_MP_TAC CLOSED_CDI_INCREASING
-    ++ RW_TAC std_ss [SMALLEST_CLOSED_CDI, IN_FUNSET, SUBSET_DEF],
-    Know
-    `s INTER BIGUNION (IMAGE f UNIV) =
-     BIGUNION (IMAGE (num_case {} (\n. s INTER f n)) UNIV)`
+    Q.X_GEN_TAC `f` ++ REPEAT STRIP_TAC
+    >> (Q.PAT_ASSUM `f IN x` MP_TAC
+        ++ RW_TAC std_ss [IN_FUNSET, IN_UNIV, GSPECIFICATION]
+        ++ MATCH_MP_TAC CLOSED_CDI_INCREASING
+        ++ RW_TAC std_ss [SMALLEST_CLOSED_CDI, IN_FUNSET, SUBSET_DEF])
+    ++ Know
+         `s INTER BIGUNION (IMAGE f UNIV) =
+          BIGUNION (IMAGE (num_case {} (\n. s INTER f n)) UNIV)`
     >> (KILL_TAC
         ++ RW_TAC std_ss [Once EXTENSION, IN_BIGUNION, GSPECIFICATION, IN_IMAGE, IN_UNIV, IN_INTER]
         ++ (EQ_TAC ++ RW_TAC std_ss [NOT_IN_EMPTY]) <<
@@ -1942,13 +1951,14 @@ val SIGMA_PROPERTY_DISJOINT_LEMMA2 = store_thm
         ++ PROVE_TAC [SMALLEST_CLOSED_CDI, ALGEBRA_EMPTY, SUBSET_DEF])
     ++ Cases_on `n` >> RW_TAC arith_ss [num_case_def, EMPTY_SUBSET]
     ++ RW_TAC arith_ss [num_case_def, SUBSET_DEF, IN_INTER],
-    Q.PAT_ASSUM `f IN x` MP_TAC
-    ++ RW_TAC std_ss [IN_FUNSET, IN_UNIV, GSPECIFICATION]
-    ++ MATCH_MP_TAC CLOSED_CDI_DISJOINT
-    ++ RW_TAC std_ss [SMALLEST_CLOSED_CDI, IN_FUNSET, SUBSET_DEF],
-    Know
-    `s INTER BIGUNION (IMAGE f UNIV) =
-     BIGUNION (IMAGE (\n. s INTER f n) UNIV)`
+    Q.X_GEN_TAC `f` ++ REPEAT STRIP_TAC
+    >> (Q.PAT_ASSUM `f IN x` MP_TAC
+        ++ RW_TAC std_ss [IN_FUNSET, IN_UNIV, GSPECIFICATION]
+        ++ MATCH_MP_TAC CLOSED_CDI_DISJOINT
+        ++ RW_TAC std_ss [SMALLEST_CLOSED_CDI, IN_FUNSET, SUBSET_DEF])
+    ++ Know
+        `s INTER BIGUNION (IMAGE f UNIV) =
+         BIGUNION (IMAGE (\n. s INTER f n) UNIV)`
     >> (KILL_TAC
         ++ RW_TAC std_ss [Once EXTENSION, IN_BIGUNION, GSPECIFICATION, IN_IMAGE, IN_UNIV, IN_INTER]
         ++ (EQ_TAC ++ RW_TAC std_ss []) <<
@@ -1967,7 +1977,7 @@ val SIGMA_PROPERTY_DISJOINT_LEMMA2 = store_thm
     ++ MATCH_MP_TAC CLOSED_CDI_DISJOINT
     ++ Q.PAT_ASSUM `f IN X` MP_TAC
     ++ RW_TAC std_ss [SMALLEST_CLOSED_CDI, IN_FUNSET, IN_UNIV, GSPECIFICATION]
-    ++ Q.PAT_ASSUM `!m n. P m n` (MP_TAC o Q.SPECL [`m`, `n`])
+    ++ Q.PAT_ASSUM `!m n. PP m n` (MP_TAC o Q.SPECL [`m`, `n`])
     ++ RW_TAC std_ss [DISJOINT_DEF, EXTENSION, IN_INTER, NOT_IN_EMPTY]
     ++ PROVE_TAC []]);
 
@@ -1984,7 +1994,7 @@ val SIGMA_PROPERTY_DISJOINT_LEMMA = store_thm
    ++ NTAC 2 (POP_ASSUM K_TAC)
    ++ Suff `subsets (smallest_closed_cdi (sp, a)) IN {b | a SUBSET b /\ sigma_algebra (sp,b)}`
    >> (KILL_TAC
-       ++ RW_TAC std_ss [sigma_def, BIGINTER_def, SUBSET_DEF, GSPECIFICATION,subsets_def])
+       ++ RW_TAC std_ss [sigma_def, BIGINTER, SUBSET_DEF, GSPECIFICATION,subsets_def])
    ++ RW_TAC std_ss [GSPECIFICATION, SIGMA_ALGEBRA_ALT_DISJOINT,
                      ALGEBRA_ALT_INTER, space_def, subsets_def] <<
    [PROVE_TAC [SMALLEST_CLOSED_CDI, subsets_def],
