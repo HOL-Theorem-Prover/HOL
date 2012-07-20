@@ -198,7 +198,7 @@ val conj_cong = store_thm
        (a' ==> (b = b')) ==>
        (a /\ b = a' /\ b')``,
    RW_TAC std_ss []
-   ++ ho_PROVE_TAC []);
+   ++ METIS_TAC []);
 
 val disj_cong = store_thm
   ("disj_cong",
@@ -207,7 +207,7 @@ val disj_cong = store_thm
        (~a' ==> (b = b')) ==>
        (a \/ b = a' \/ b')``,
    RW_TAC std_ss []
-   ++ ho_PROVE_TAC []);
+   ++ METIS_TAC []);
 
 val imp_cong = store_thm
   ("imp_cong",
@@ -216,7 +216,7 @@ val imp_cong = store_thm
        (a' ==> (b = b')) ==>
        (a ==> b = a' ==> b')``,
    RW_TAC std_ss []
-   ++ ho_PROVE_TAC []);
+   ++ METIS_TAC []);
 
 val cond_cong = store_thm
   ("cond_cong",
@@ -242,7 +242,7 @@ val res_exists_cong = store_thm
        (!x. x IN p' ==> (f x = f' x)) ==>
        (RES_EXISTS p f = RES_EXISTS p' f')``,
    RW_TAC std_ss [RES_EXISTS]
-   ++ ho_PROVE_TAC []);
+   ++ METIS_TAC []);
 
 val res_select_cong = store_thm
   ("res_select_cong",
