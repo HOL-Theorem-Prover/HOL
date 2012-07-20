@@ -770,7 +770,7 @@ end
  * Use the conclusion of the first theorem to delete a hypothesis of         *
  * the second theorem.                                                       *
  *                                                                           *
- *    A |- t1 	B, t1 |- t2                                                  *
+ *    A |- t1   B, t1 |- t2                                                  *
  *    -----------------------                                                *
  *         A u B |- t2                                                       *
  *---------------------------------------------------------------------------*)
@@ -1723,9 +1723,9 @@ fun HO_MATCH_MP ith =
    outermost negations being converted to implications).
 
      ~t            --->          t ==> F        (at outermost level)
-     t1 /\ t2      --->	         t1,   t2
-     (t1/\t2)==>t  --->	         t1==> (t2==>t)
-     (t1\/t2)==>t  --->	         t1==>t, t2==>t
+     t1 /\ t2      --->          t1,   t2
+     (t1/\t2)==>t  --->          t1==> (t2==>t)
+     (t1\/t2)==>t  --->          t1==>t, t2==>t
 
    Modification provided by David Shepherd of Inmos to make resolution
    work with equalities as well as implications. HOL88.1.08,23 jun 1989.
@@ -1748,7 +1748,7 @@ fun HO_MATCH_MP ith =
            if is_conj ante then
                let a,b = dest_conj ante in
                RES_CANON_FUN
-               (DISCH a (DISCH b (MP th (CONJ (ASSUME a) (ASSUME b)))))	
+               (DISCH a (DISCH b (MP th (CONJ (ASSUME a) (ASSUME b)))))
            else if is_disj ante then
                let a,b = dest_disj ante in
                RES_CANON_FUN (DISCH a (MP th (DISJ1 (ASSUME a) b))) @
@@ -1794,7 +1794,7 @@ fun HO_MATCH_MP ith =
    The complete list of transformations is now:
 
      ~t              --->       t ==> F        (at outermost level)
-     t1 /\ t2        --->       t1, t2	       (at outermost level)
+     t1 /\ t2        --->       t1, t2         (at outermost level)
      (t1/\t2)==>t    --->       t1==>(t2==>t), t2==>(t1==>t)
      (t1\/t2)==>t    --->       t1==>t, t2==>t
      t1 = t2         --->       t1==>t2, t2==>t1

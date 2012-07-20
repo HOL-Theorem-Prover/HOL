@@ -28,7 +28,7 @@ fun pairths f [x, y] = f x y
  * Accepts a theorem that satisfies the goal                                 *
  *                                                                           *
  *      A                                                                    *
- *    =========	ACCEPT_TAC "|-A"                                             *
+ *    ========= ACCEPT_TAC "|-A"                                             *
  *      -                                                                    *
  *---------------------------------------------------------------------------*)
 
@@ -435,7 +435,7 @@ val FULL_STRUCT_CASES_TAC =
  * condition p is not a constant. Perform a case split on the condition.     *
  *                                                                           *
  *      t[p=>u|v]                                                            *
- *    =================	 COND_CASES_TAC                                      *
+ *    =================  COND_CASES_TAC                                      *
  *       {p}  t[u]                                                           *
  *       {~p}  t[v]                                                          *
  *                                                                           *
@@ -587,7 +587,7 @@ fun UNDISCH_TAC wf (asl, w) =
    else raise ERR "UNDISCH_TAC" "Specified term not in assumption list"
 
 (*---------------------------------------------------------------------------*
- * AP_TERM_TAC: Strips a function application off the lhs and rhs of an	     *
+ * AP_TERM_TAC: Strips a function application off the lhs and rhs of an      *
  * equation.  If the function is not one-to-one, does not preserve           *
  * equivalence of the goal and subgoal.                                      *
  *                                                                           *
@@ -667,7 +667,7 @@ val BINOP_TAC = MK_COMB_TAC THENL [AP_TERM_TAC, ALL_TAC]
  * ABS_TAC: inverts the ABS inference rule.                                  *
  *                                                                           *
  *   \x. f x = \x. g x                                                       *
- * =====================                               	                     *
+ * =====================                                                     *
  *       f x = g x                                                           *
  *                                                                           *
  * Added: TT 2009.12.23                                                      *
