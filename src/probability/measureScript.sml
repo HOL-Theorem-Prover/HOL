@@ -3705,7 +3705,7 @@ val IN_MEASURABLE_BOREL_ADD = store_thm
 	    ++ EQ_TAC
 	    >> (RW_TAC std_ss []
 	        ++ METIS_TAC [lt_sub_imp,Q_DENSE_IN_R])
-	    ++ REVERSE (RW_TAC std_ss [])
+	    ++ Reverse (RW_TAC std_ss [])
 	    >> METIS_TAC []
 	    ++ METIS_TAC [lt_sub,lt_trans,extreal_not_infty])
   ++ FULL_SIMP_TAC std_ss []
@@ -3823,7 +3823,7 @@ val IN_MEASURABLE_BOREL_MUL_INDICATOR = store_thm
       ++ POP_ORW
       ++ MATCH_MP_TAC ALGEBRA_UNION
       ++ CONJ_TAC >> FULL_SIMP_TAC std_ss [sigma_algebra_def]
-      ++ REVERSE CONJ_TAC >> FULL_SIMP_TAC std_ss [sigma_algebra_def,algebra_def]
+      ++ Reverse CONJ_TAC >> FULL_SIMP_TAC std_ss [sigma_algebra_def,algebra_def]
       ++ MATCH_MP_TAC ALGEBRA_INTER
       ++ FULL_SIMP_TAC std_ss [sigma_algebra_def])
   ++ `{x | f x * indicator_fn s x <= c} INTER space a = (({x | f x <= c} INTER space a) INTER s)`
@@ -4126,7 +4126,7 @@ val indicator_fn_suminf = store_thm
       >> (FULL_SIMP_TAC std_ss [IN_BIGUNION_IMAGE,IN_UNIV]
           ++ RW_TAC std_ss [indicator_fn_def,EXTREAL_SUM_IMAGE_ZERO,FINITE_COUNT,le_refl,le_01])
       ++ FULL_SIMP_TAC std_ss [IN_BIGUNION_IMAGE,IN_UNIV,indicator_fn_def]
-      ++ REVERSE (RW_TAC std_ss [])
+      ++ Reverse (RW_TAC std_ss [])
       >> METIS_TAC []
       ++ `!n. n <> x' ==> ~(x IN a n)` by METIS_TAC [DISJOINT_DEF,EXTENSION,IN_INTER,NOT_IN_EMPTY]
       ++ Cases_on `~(x' IN count n)`
@@ -4153,7 +4153,7 @@ val indicator_fn_suminf = store_thm
 	   ++ ONCE_REWRITE_TAC [GSYM SPECIFICATION]
 	   ++ RW_TAC std_ss [IN_IMAGE,IN_UNIV]
 	   ++ METIS_TAC [])
-  ++ REVERSE (RW_TAC std_ss [indicator_fn_def,IN_BIGUNION_IMAGE,IN_UNIV])
+  ++ Reverse (RW_TAC std_ss [indicator_fn_def,IN_BIGUNION_IMAGE,IN_UNIV])
   >> (`0 <= SIGMA (\i. indicator_fn (a i) x) (count 0)` by RW_TAC std_ss [COUNT_ZERO,EXTREAL_SUM_IMAGE_THM,le_refl]
       ++ METIS_TAC [le_trans])
   ++ Suff `SIGMA (\i. indicator_fn (a i) x) (count (SUC x')) = 1`

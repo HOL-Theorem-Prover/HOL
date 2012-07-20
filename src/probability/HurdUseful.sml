@@ -973,46 +973,6 @@ fun POP_ASSUM_TAC tac =
       ++ tac
       ++ TRY (DISCH_THEN (EVERY o map ASSUME_TAC o CONJUNCTS))));
 
-(*---------------------------------------------------------------------------
- * tac1 THEN1 tac2: A tactical like THEN that applies tac2 only to the
- *                  first subgoal of tac1
- *---------------------------------------------------------------------------*)
-
-fun op THEN1 (tac1 : tactic, tac2 : tactic) : tactic =
-  fn g =>
-  let
-    val (gl, jf) = tac1 g
-    val (h_g, t_gl) =
-      case gl of []
-        => raise ERR "THEN1" "goal completely solved by first tactic"
-      | h :: t => (h, t)
-    val (h_gl, h_jf) = tac2 h_g
-    val _ =
-      assert (null h_gl) (ERR "THEN1" "1st subgoal not solved by second tactic")
-  in
-    (t_gl, fn thl => jf (h_jf [] :: thl))
-  end
-  handle HOL_ERR{origin_structure,origin_function,message}
-  => raise ERR "THEN1" (origin_structure^"."^origin_function^": "^message);
-
-val op>> = op THEN1;
-
-(*---------------------------------------------------------------------------
- * REVERSE tac: A tactical that reverses the list of subgoals of tac.
- *              Intended for use with THEN1 to pick the `easy' subgoal, e.g.:
- *              - CONJ_TAC THEN1 SIMP_TAC
- *                  if the first conjunct is easily dispatched
- *              - REVERSE CONJ_TAC THEN1 SIMP_TAC
- *                  if it is the second conjunct that yields.
- *---------------------------------------------------------------------------*)
-
-fun REVERSE tac g
-  = let val (gl, jf) = tac g
-    in (rev gl, jf o rev)
-    end
-    handle HOL_ERR{origin_structure,origin_function,message}
-    => raise ERR "REVERSE" (origin_structure^"."^origin_function^": "^message);
-
 (* --------------------------------------------------------------------- *)
 (* Tactics.                                                              *)
 (* --------------------------------------------------------------------- *)

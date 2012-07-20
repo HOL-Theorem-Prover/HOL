@@ -338,8 +338,6 @@ sig
   val PURE_CONV_TAC : conv -> tactic
   val ASMLIST_CASES : tactic -> (term -> tactic) -> tactic
   val POP_ASSUM_TAC : tactic -> tactic
-  val THEN1 : tactic * tactic -> tactic
-  val REVERSE : tactic -> tactic
   val TRUTH_TAC : tactic
   val K_TAC : 'a -> tactic
   val KILL_TAC : tactic
