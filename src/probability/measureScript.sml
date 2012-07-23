@@ -4117,8 +4117,10 @@ val indicator_fn_split = store_thm
    ++ METIS_TAC [IN_SING,IN_DIFF,IN_DISJOINT]);
 
 val indicator_fn_suminf = store_thm
- ("indicator_fn_suminf",``!a x. (!m n. m <> n ==> DISJOINT (a m) (a n)) ==>
-        (suminf (\i. indicator_fn (a i) x) = indicator_fn (BIGUNION (IMAGE a univ(:num))) x)``,
+ ("indicator_fn_suminf",
+  ``!a x. (!m n. m <> n ==> DISJOINT (a m) (a n)) ==>
+          (suminf (\i. indicator_fn (a i) x) =
+             indicator_fn (BIGUNION (IMAGE a univ(:num))) x)``,
   RW_TAC std_ss [ext_suminf_def,sup_eq]
   >> (POP_ASSUM (MP_TAC o ONCE_REWRITE_RULE [GSYM SPECIFICATION])
       ++ RW_TAC std_ss [IN_IMAGE,IN_UNIV]
@@ -4153,9 +4155,11 @@ val indicator_fn_suminf = store_thm
 	   ++ ONCE_REWRITE_TAC [GSYM SPECIFICATION]
 	   ++ RW_TAC std_ss [IN_IMAGE,IN_UNIV]
 	   ++ METIS_TAC [])
-  ++ Reverse (RW_TAC std_ss [indicator_fn_def,IN_BIGUNION_IMAGE,IN_UNIV])
+  ++ ASM_SIMP_TAC std_ss [indicator_fn_def,IN_BIGUNION_IMAGE,IN_UNIV]
+  ++ (Reverse (Cases_on `?x'. x IN a x'`) ++ ASM_SIMP_TAC std_ss [])
   >> (`0 <= SIGMA (\i. indicator_fn (a i) x) (count 0)` by RW_TAC std_ss [COUNT_ZERO,EXTREAL_SUM_IMAGE_THM,le_refl]
       ++ METIS_TAC [le_trans])
+  ++ POP_ASSUM (Q.X_CHOOSE_THEN `x'` ASSUME_TAC)
   ++ Suff `SIGMA (\i. indicator_fn (a i) x) (count (SUC x')) = 1`
   >> METIS_TAC []
   ++ FULL_SIMP_TAC std_ss [EXTREAL_SUM_IMAGE_THM,FINITE_COUNT,COUNT_SUC]
