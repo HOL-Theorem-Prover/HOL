@@ -52,18 +52,22 @@ rw[Once evaluate_cases] >>
 rw[Once evaluate_list_with_cases,SimpRHS] >>
 PROVE_TAC[])
 
-val (evaluate_match_with_rules,evaluate_match_with_ind,evaluate_match_with_cases) = Hol_reln [ANTIQUOTE(
-evaluate_rules |> SIMP_RULE (srw_ss()) [] |> concl |>
-strip_conj |>
-Lib.filter (fn tm => tm |> strip_forall |> snd |> strip_imp |> snd |> strip_comb |> fst |> same_const ``evaluate_match``) |>
-let val t1 = ``evaluate``
-    val t2 = ``evaluate_match``
-    val tP = type_of t1
-    val P = mk_var ("P",tP)
-    val ew = mk_comb(mk_var("evaluate_match_with",tP --> type_of t2),P)
-in List.map (fn tm => tm |> strip_forall |> snd |>
-                   subst [t1|->P, t2|->ew])
-end |> list_mk_conj)]
+val (evaluate_match_with_rules,evaluate_match_with_ind,evaluate_match_with_cases) = Hol_reln
+  (* evaluate_rules |> SIMP_RULE (srw_ss()) [] |> concl |> strip_conj |>
+     Lib.filter (fn tm => tm |> strip_forall |> snd |> strip_imp |> snd |>
+     strip_comb |> fst |> same_const ``evaluate_match``) *)
+   `(evaluate_match_with P cenv env v [] (Rerr (Rraise Bind_error))) ∧
+    (ALL_DISTINCT (pat_bindings p []) ∧
+     (pmatch cenv p v env = Match env') ∧ P cenv env' e bv ⇒
+     evaluate_match_with P cenv env v ((p,e)::pes) bv) ∧
+    (ALL_DISTINCT (pat_bindings p []) ∧
+     (pmatch cenv p v env = No_match) ∧
+     evaluate_match_with P cenv env v pes bv ⇒
+     evaluate_match_with P cenv env v ((p,e)::pes) bv) ∧
+    ((pmatch cenv p v env = Match_type_error) ⇒
+     evaluate_match_with P cenv env v ((p,e)::pes) (Rerr Rtype_error)) ∧
+    (¬ALL_DISTINCT (pat_bindings p []) ⇒
+     evaluate_match_with P cenv env v ((p,e)::pes) (Rerr Rtype_error))`
 
 val evaluate_match_with_evaluate = store_thm(
 "evaluate_match_with_evaluate",
