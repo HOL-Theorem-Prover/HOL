@@ -270,6 +270,11 @@ val shiftr_field = Q.prove(
    by (rw [length_shiftr] \\ decide_tac)
    \\ lrw [field_def, fixwidth_id]);
 
+val el_w2v = Q.store_thm("el_w2v",
+   `!w: 'a word n.
+      n < dimindex (:'a) ==> (EL n (w2v w) = w ' (dimindex (:'a) - 1 - n))`,
+      lrw [w2v_def])
+
 val el_shiftr = Q.store_thm("el_shiftr",
   `!i v n d.
        n < d /\ i < d - n /\ 0 < d ==>
@@ -419,6 +424,14 @@ val field_concat_left = Q.store_thm("field_concat_left",
 val field_id_imp = Q.store_thm("field_id_imp",
    `!n v. (SUC n = LENGTH v) ==> (field n 0 v = v)`,
    metis_tac [fixwidth_id_imp, field_fixwidth])
+
+(* ------------------------------------------------------------------------- *)
+
+val shiftl_replicate_F = Q.store_thm("shiftl_replicate_F",
+   `!v n. shiftl v n = v ++ replicate [F] n`,
+   lrw [shiftl_def, replicate_def, listTheory.PAD_RIGHT]
+   \\ Induct_on `n`
+   \\ lrw [listTheory.GENLIST_CONS])
 
 (* ------------------------------------------------------------------------- *)
 
