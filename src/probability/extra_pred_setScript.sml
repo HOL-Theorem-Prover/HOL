@@ -117,8 +117,6 @@ val set_def = Define `set p s = s SUBSET p`;
 
 val nonempty_def = Define `nonempty s = ~(s = {})`;
 
-val count_def = Define `count (n:num) m = m < n`;
-
 val PREIMAGE_def = Define `PREIMAGE f s = {x | f x IN s}`;
 
 val range_def = Define `range f = IMAGE f UNIV`;
@@ -970,29 +968,6 @@ val DIFF_SUBSET = store_thm
    ``!a b. a DIFF b SUBSET a``,
    RW_TAC std_ss [SUBSET_DEF, EXTENSION, IN_DIFF]);
 
-val IN_COUNT = store_thm
-  ("IN_COUNT",
-   ``!m n. m IN count n = m < n``,
-   RW_TAC std_ss [SPECIFICATION, count_def]);
-
-val COUNT_ZERO = store_thm
-  ("COUNT_ZERO",
-   ``count 0 = {}``,
-   RW_TAC std_ss [EXTENSION, IN_COUNT, NOT_IN_EMPTY]
-   ++ DECIDE_TAC);
-
-val COUNT_SUC = store_thm
-  ("COUNT_SUC",
-   ``!n. count (SUC n) = n INSERT count n``,
-   RW_TAC std_ss [EXTENSION, IN_INSERT, IN_COUNT]
-   ++ DECIDE_TAC);
-
-val FINITE_COUNT = store_thm
-  ("FINITE_COUNT",
-   ``!n. FINITE (count n)``,
-   Induct >> RW_TAC std_ss [COUNT_ZERO, FINITE_EMPTY]
-   ++ RW_TAC std_ss [COUNT_SUC, FINITE_INSERT]);
-
 val NUM_2D_BIJ = store_thm
   ("NUM_2D_BIJ",
    ``?f.
@@ -1126,18 +1101,6 @@ val INFINITE_DELETE = store_thm
    ``!x s. INFINITE (s DELETE x) = INFINITE s``,
    RW_TAC std_ss [DELETE_DEF]
    ++ PROVE_TAC [INFINITE_DIFF_FINITE_EQ, FINITE_SING, SING]);
-
-val NOT_FINITE_NUM = store_thm
-  ("NOT_FINITE_NUM",
-   ``~FINITE (UNIV : num -> bool)``,
-   RW_TAC std_ss [FINITE_SUBSET_COUNT, SUBSET_DEF, IN_UNIV, IN_COUNT]
-   ++ Q.EXISTS_TAC `n`
-   ++ RW_TAC arith_ss []);
-
-val INFINITE_NUM = store_thm
-  ("INFINITE_NUM",
-   ``INFINITE (UNIV : num -> bool)``,
-   RW_TAC std_ss [INFINITE_DEF, NOT_FINITE_NUM]);
 
 val FINITE_TL = store_thm
   ("FINITE_TL",
@@ -2101,23 +2064,25 @@ val REAL_SUM_IMAGE_NEG = store_thm
    ++ (ASSUME_TAC o Q.SPECL [`f`, `~1`] o UNDISCH o Q.SPEC `P`) REAL_SUM_IMAGE_CMUL
    ++ FULL_SIMP_TAC real_ss []);
 
-val REAL_SUM_IMAGE_IMAGE_lem = prove
-  (``!P. FINITE P ==>
-	(\P.!f'. INJ f' P (IMAGE f' P) ==> (!f. REAL_SUM_IMAGE f (IMAGE f' P) = REAL_SUM_IMAGE (f o f') P)) P``,
-   MATCH_MP_TAC FINITE_INDUCT
-   ++ RW_TAC std_ss [REAL_SUM_IMAGE_THM, IMAGE_EMPTY, IMAGE_INSERT, INJ_DEF, IN_INSERT]
-   ++ `FINITE (IMAGE f' s)` by (MATCH_MP_TAC IMAGE_FINITE ++ RW_TAC std_ss [])
-   ++ `~ (f' e IN IMAGE f' s)`
-	by (RW_TAC std_ss [IN_IMAGE] ++ REVERSE (Cases_on `x IN s`) >> ASM_REWRITE_TAC [] ++ METIS_TAC [])
-   ++ FULL_SIMP_TAC std_ss [DELETE_NON_ELEMENT, REAL_SUM_IMAGE_THM, REAL_EQ_LADD]
-   ++ Q.PAT_ASSUM `!f'. a /\ b ==> (!f. c = d)` MATCH_MP_TAC
-   ++ RW_TAC std_ss [IN_IMAGE] ++ Q.EXISTS_TAC `x` ++ RW_TAC std_ss []);
-
 val REAL_SUM_IMAGE_IMAGE = store_thm
   ("REAL_SUM_IMAGE_IMAGE",
    ``!P. FINITE P ==>
-	!f'. INJ f' P (IMAGE f' P) ==> (!f. REAL_SUM_IMAGE f (IMAGE f' P) = REAL_SUM_IMAGE (f o f') P)``,
-   METIS_TAC [REAL_SUM_IMAGE_IMAGE_lem]);
+	 !f'. INJ f' P (IMAGE f' P) ==>
+              !f. REAL_SUM_IMAGE f (IMAGE f' P) = REAL_SUM_IMAGE (f o f') P``,
+   Induct_on `FINITE`
+   ++ SRW_TAC [][REAL_SUM_IMAGE_THM]
+   ++ `IMAGE f' P DELETE f' e = IMAGE f' P`
+   by (SRW_TAC [][EXTENSION]
+       ++ EQ_TAC >> (METIS_TAC[])
+       ++ POP_ASSUM MP_TAC
+       ++ ASM_SIMP_TAC (srw_ss()) [INJ_DEF]
+       ++ METIS_TAC[])
+   ++ `P DELETE e = P` by METIS_TAC [DELETE_NON_ELEMENT]
+   ++ SRW_TAC [][]
+   ++ FIRST_X_ASSUM MATCH_MP_TAC
+   ++ Q.PAT_ASSUM `INJ f' SS1 SS2` MP_TAC
+   ++ CONV_TAC (BINOP_CONV (SIMP_CONV (srw_ss()) [INJ_DEF]))
+   ++ METIS_TAC[])
 
 val REAL_SUM_IMAGE_DISJOINT_UNION_lem = prove
   (``!P.

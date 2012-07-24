@@ -3686,7 +3686,7 @@ val Q_INFINITE = store_thm
   ++ MATCH_MP_TAC (INST_TYPE [alpha |-> ``:num``] INFINITE_INJ)
   ++ Q.EXISTS_TAC `(\n. &n)`
   ++ Q.EXISTS_TAC `UNIV`
-  ++ RW_TAC real_ss [NOT_FINITE_NUM, INJ_DEF,INFINITE_DEF,GSPECIFICATION]
+  ++ RW_TAC real_ss [INFINITE_NUM_UNIV, INJ_DEF,INFINITE_DEF,GSPECIFICATION]
   >> METIS_TAC []
   ++ FULL_SIMP_TAC real_ss [extreal_11,extreal_of_num_def]);
 
@@ -3726,7 +3726,7 @@ val INV_IN_Q = store_thm
       ++ RW_TAC std_ss [extreal_lt_eq,extreal_ainv_def,extreal_div_eq,real_div,REAL_INV_MUL]
       ++ `inv (&b) <> 0:real` by FULL_SIMP_TAC real_ss [REAL_POS_NZ,REAL_INV_EQ_0,REAL_POS_NZ]
       ++ RW_TAC real_ss [GSYM REAL_NEG_INV,REAL_NEG_EQ0,REAL_EQ_NEG,REAL_ENTIRE]
-      ++ RW_TAC real_ss [REAL_INV_MUL,REAL_INV_INV,REAL_MUL_COMM]) 	
+      ++ RW_TAC real_ss [REAL_INV_MUL,REAL_INV_INV,REAL_MUL_COMM])
   ++ DISJ2_TAC
   ++ `&b <> 0:real` by METIS_TAC [extreal_lt_eq,REAL_LT_IMP_NE]
   ++ FULL_SIMP_TAC std_ss [extreal_div_eq,extreal_lt_eq,extreal_11,extreal_ainv_def]
@@ -3764,7 +3764,7 @@ val ADD_IN_Q = store_thm
    ++ Q.EXISTS_TAC `b*b'`
    ++ RW_TAC std_ss [extreal_div_eq,extreal_add_def,extreal_11,extreal_lt_eq]
    ++ RW_TAC real_ss [REAL_ADD_RAT,REAL_MUL_COMM,REAL_LT_MUL],
-  	
+
    `&b <> 0:real /\ &b' <> 0:real` by FULL_SIMP_TAC real_ss [extreal_lt_eq,REAL_LT_IMP_NE]
    ++ Cases_on `&a*(&b')-(&a'* (&b)) = 0:real`
    >> (DISJ1_TAC
@@ -3791,12 +3791,12 @@ val ADD_IN_Q = store_thm
    ++ `&(b * b') <> 0:real` by RW_TAC std_ss [REAL_LT_IMP_NE]
    ++ RW_TAC std_ss [extreal_div_eq,extreal_ainv_def,extreal_add_def,extreal_lt_eq]
    ++ `&a * &b' - &a' * &b < 0:real` by (FULL_SIMP_TAC real_ss [GSYM real_lte,REAL_LE_LT] ++ FULL_SIMP_TAC real_ss [])
-   ++ `&a * &b' < &a' * (&b):real` by FULL_SIMP_TAC real_ss [REAL_LT_SUB_RADD]  	
+   ++ `&a * &b' < &a' * (&b):real` by FULL_SIMP_TAC real_ss [REAL_LT_SUB_RADD]
    ++ `a' * b <> a * b'` by FULL_SIMP_TAC real_ss []
    ++ RW_TAC std_ss [REAL_SUB_RAT,REAL_MUL_COMM,REAL_LT_MUL,GSYM real_sub]
    ++ RW_TAC std_ss [GSYM mult_ints]
    ++ FULL_SIMP_TAC real_ss [REAL_NEG_SUB,REAL_SUB,neg_rat],
-  	     	
+
    `&b <> 0:real /\ &b' <> 0:real` by FULL_SIMP_TAC real_ss [extreal_lt_eq,REAL_LT_IMP_NE]
    ++ `0:real < &(b * b')` by METIS_TAC [extreal_lt_eq,REAL_LT_MUL,mult_ints]
    ++ `&(b * b') <> 0:real` by RW_TAC std_ss [REAL_LT_IMP_NE]
@@ -3824,7 +3824,7 @@ val ADD_IN_Q = store_thm
    ++ Q.EXISTS_TAC `b * b'`
    ++ RW_TAC std_ss [REAL_ADD_COMM,GSYM real_sub,extreal_lt_eq]
    ++ `&a * &b' - &a' * &b < 0:real` by (FULL_SIMP_TAC real_ss [GSYM real_lte,REAL_LE_LT] ++ FULL_SIMP_TAC real_ss [])
-   ++ `&a * &b' < &a' * (&b):real` by FULL_SIMP_TAC real_ss [REAL_LT_SUB_RADD]  	
+   ++ `&a * &b' < &a' * (&b):real` by FULL_SIMP_TAC real_ss [REAL_LT_SUB_RADD]
    ++ `a' * b <> a * b'` by FULL_SIMP_TAC real_ss []
    ++ RW_TAC std_ss [extreal_div_eq,extreal_ainv_def,extreal_add_def,extreal_11]
    ++ RW_TAC std_ss [REAL_ADD_COMM,GSYM real_sub,REAL_SUB_RAT,REAL_MUL_COMM,REAL_LT_MUL,GSYM mult_ints]
@@ -3841,7 +3841,7 @@ val ADD_IN_Q = store_thm
    ++ RW_TAC std_ss [REAL_ADD_RAT,REAL_MUL_COMM,REAL_LT_MUL]]);
 
 val SUB_IN_Q = store_thm
-  ("SUB_IN_Q", ``!x y. (x IN Q_set) /\ (y IN Q_set) ==> (x - y IN Q_set)``,	
+  ("SUB_IN_Q", ``!x y. (x IN Q_set) /\ (y IN Q_set) ==> (x - y IN Q_set)``,
   RW_TAC std_ss []
   ++ `?x1. x = Normal x1` by METIS_TAC [Q_not_infty]
   ++ `?y1. y = Normal y1` by METIS_TAC [Q_not_infty]
@@ -3849,7 +3849,7 @@ val SUB_IN_Q = store_thm
   ++ METIS_TAC [OPP_IN_Q,ADD_IN_Q,extreal_add_def,extreal_sub_def,real_sub,extreal_ainv_def]);
 
 val MUL_IN_Q = store_thm
-  ("MUL_IN_Q", ``!x y. (x IN Q_set) /\ (y IN Q_set) ==> (x * y IN Q_set)``,	
+  ("MUL_IN_Q", ``!x y. (x IN Q_set) /\ (y IN Q_set) ==> (x * y IN Q_set)``,
   RW_TAC std_ss [Q_set_def,EXTENSION,GSPECIFICATION,IN_UNION,extreal_of_num_def] <<
  [DISJ1_TAC
   ++ `&b <> 0:real /\ &b' <> 0:real` by FULL_SIMP_TAC real_ss [extreal_lt_eq,REAL_LT_IMP_NE]
@@ -3882,10 +3882,10 @@ val MUL_IN_Q = store_thm
   ++ Q.EXISTS_TAC `a*a'`
   ++ Q.EXISTS_TAC `b*b'`
   ++ RW_TAC std_ss [extreal_div_eq,extreal_mul_def,extreal_lt_eq,extreal_ainv_def]
-  ++ FULL_SIMP_TAC real_ss [mult_rat,REAL_LT_REFL,ZERO_LESS_MULT]]);  	
-  	
+  ++ FULL_SIMP_TAC real_ss [mult_rat,REAL_LT_REFL,ZERO_LESS_MULT]]);
+
 val DIV_IN_Q = store_thm
-  ("DIV_IN_Q", ``!x y. (x IN Q_set) /\ (y IN Q_set) /\ (y <> 0) ==> (x / y IN Q_set)``,	
+  ("DIV_IN_Q", ``!x y. (x IN Q_set) /\ (y IN Q_set) /\ (y <> 0) ==> (x / y IN Q_set)``,
   RW_TAC std_ss []
   ++ `?x1. x = Normal x1` by METIS_TAC [Q_not_infty]
   ++ `?y1. y = Normal y1` by METIS_TAC [Q_not_infty]
@@ -3914,7 +3914,7 @@ val CEILING_UBOUND = store_thm
   RW_TAC std_ss [ceiling_def,extreal_of_num_def,extreal_add_def,extreal_lt_eq]
   ++ numLib.LEAST_ELIM_TAC
   ++ REWRITE_TAC [SIMP_REAL_ARCH]
-  ++ RW_TAC real_ss []	
+  ++ RW_TAC real_ss []
   ++ FULL_SIMP_TAC real_ss [GSYM real_lt]
   ++ PAT_ASSUM ``!m. P`` (MP_TAC o Q.SPEC `n-1`)
   ++ RW_TAC real_ss []
@@ -3922,7 +3922,7 @@ val CEILING_UBOUND = store_thm
   ++ `0 < n` by RW_TAC real_ss []
   ++ `&(n - 1) < x:real` by RW_TAC real_ss []
   ++ `0 <= n-1` by RW_TAC real_ss []
-  ++ `0:real <= (&(n-1))` by RW_TAC real_ss []	
+  ++ `0:real <= (&(n-1))` by RW_TAC real_ss []
   ++ `0 < x` by METIS_TAC [REAL_LET_TRANS]
   ++ Cases_on `n = 1` >> METIS_TAC [REAL_LE_REFL,REAL_ADD_RID,REAL_LTE_ADD2,REAL_ADD_COMM]
   ++ `0 <> n-1` by RW_TAC real_ss []
@@ -3948,7 +3948,7 @@ val Q_DENSE_IN_R_LEMMA = store_thm
   ++ RW_TAC real_ss []
   ++ Suff `?r2. r2 IN Q_set /\ &n * Normal (r) < r2 /\ r2 < &n * Normal (r')`
   >> (RW_TAC real_ss []
-      ++ `0 < n` by ( RW_TAC real_ss [] ++ SPOSE_NOT_THEN ASSUME_TAC ++ `n = 0` by RW_TAC real_ss [] ++ FULL_SIMP_TAC real_ss [])	
+      ++ `0 < n` by ( RW_TAC real_ss [] ++ SPOSE_NOT_THEN ASSUME_TAC ++ `n = 0` by RW_TAC real_ss [] ++ FULL_SIMP_TAC real_ss [])
       ++ `0 < (&n)` by RW_TAC real_ss [extreal_lt_eq,extreal_of_num_def]
       ++ Q.EXISTS_TAC `r2 / (&n)`
       ++ RW_TAC real_ss [DIV_IN_Q,NUM_IN_Q,lt_imp_ne]
@@ -4075,7 +4075,7 @@ val CROSS_COUNTABLE_UNIV = store_thm
   ++ Q.EXISTS_TAC `f`
   ++ RW_TAC std_ss []
   ++ FULL_SIMP_TAC std_ss [BIJ_DEF,INJ_DEF,SURJ_DEF,CROSS_DEF,IN_UNIV]);
-		
+
 val CROSS_COUNTABLE_LEMMA1 = store_thm
   ("CROSS_COUNTABLE_LEMMA1", ``!s. countable s /\ FINITE s /\ countable t ==> countable (s CROSS t)``,
   RW_TAC std_ss []
@@ -4087,7 +4087,7 @@ val CROSS_COUNTABLE_LEMMA1 = store_thm
   ++ MATCH_MP_TAC COUNTABLE_UNION
   ++ RW_TAC std_ss []
   ++ RW_TAC std_ss [COUNTABLE_IMAGE]);
-	
+
 val CROSS_COUNTABLE_LEMMA2 = store_thm
   ("CROSS_COUNTABLE_LEMMA2", ``!s. countable s /\ countable t /\ FINITE t ==> countable (s CROSS t)``,
   RW_TAC std_ss []
@@ -4137,11 +4137,11 @@ val open_intervals_set_def = Define
 
 val rational_intervals_def = Define
 	`rational_intervals = {open_interval a b | a IN Q_set /\ b IN Q_set}`;
-	
+
 val COUNTABLE_RATIONAL_INTERVALS = store_thm
  ("COUNTABLE_RATIONAL_INTERVALS", ``countable rational_intervals``,
  `rational_intervals = IMAGE (\(a,b). open_interval a b) (Q_set CROSS Q_set)`
-     by (RW_TAC std_ss [rational_intervals_def,IMAGE_DEF,EXTENSION,GSPECIFICATION,IN_CROSS]	
+     by (RW_TAC std_ss [rational_intervals_def,IMAGE_DEF,EXTENSION,GSPECIFICATION,IN_CROSS]
          ++ EQ_TAC
          >> (RW_TAC std_ss []
  	     ++ Q.EXISTS_TAC `x'`
