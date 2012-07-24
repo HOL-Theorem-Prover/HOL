@@ -1164,11 +1164,6 @@ val (Cevaluate_match_rules,Cevaluate_match_ind,Cevaluate_match_cases) = Hol_reln
   (Cpnomatch p v ∧ Cevaluate_match v pes env r
     ⇒ Cevaluate_match v ((p,e)::pes) env r)`
 
-(*
-val Cevaluate_match_remove_mat_var = store_thm("Cevaluate_match_remove_mat_var",
-  ``
-*)
-
 val EVERY2_MAP = store_thm("EVERY2_MAP",
   ``(EVERY2 P (MAP f l1) l2 = EVERY2 (λx y. P (f x) y) l1 l2) ∧
     (EVERY2 Q l1 (MAP g l2) = EVERY2 (λx y. Q x (g y)) l1 l2)``,
@@ -1311,8 +1306,11 @@ val pmatch_Cpnomatch = store_thm("pmatch_Cpnomatch",
   strip_tac >- rw[pmatch_def] >>
   rw[pmatch_def])
 
+val matchres_def = Define`
+  matchres env cenv env' e r = ∃env''. (env' = env'' ++ env) ∧ (r = Rval (env'',e))`
+
 val evaluate_match_with_Cevaluate_match = store_thm("evaluate_match_with_Cevaluate_match",
-  ``∀pes r. evaluate_match_with (λcenv env' e r. ∃env''. (env' = env'' ++ env) ∧ (r = Rval (env'',e))) cenv env v pes r ⇒
+  ``∀pes r. evaluate_match_with (matchres env) cenv env v pes r ⇒
       ∀m. good_cenv cenv ∧ good_cmap cenv m ⇒
         ((r = Rerr (Rraise Bind_error))
             ⇒ Cevaluate_match (v_to_Cv m v)
@@ -1326,12 +1324,138 @@ val evaluate_match_with_Cevaluate_match = store_thm("evaluate_match_with_Cevalua
   strip_tac >- ( rw[] >> rw[Once Cevaluate_match_cases] ) >>
   strip_tac >- (
     rw[] >> rw[Once Cevaluate_match_cases] >>
+    fs[matchres_def] >>
     PROVE_TAC[pmatch_Cpmatch] ) >>
   strip_tac >- (
     rw[] >>
     rw[Once Cevaluate_match_cases] >>
     PROVE_TAC[pmatch_Cpnomatch] ) >>
   strip_tac >- rw[] >> rw[] )
+
+val evaluate_match_with_matchres = store_thm("evaluate_match_with_matchres",
+  ``∀pes r. evaluate_match_with P cenv env v pes r ⇒
+            (r ≠ Rerr Rtype_error) ⇒
+            ((r = Rerr (Rraise Bind_error)) ∧
+             evaluate_match_with (matchres env) cenv env v pes (Rerr (Rraise Bind_error))) ∨
+            ∃menv mr. evaluate_match_with (matchres env) cenv env v pes (Rval (menv,mr)) ∧
+                      P cenv (menv++env) mr r``,
+  ho_match_mp_tac evaluate_match_with_ind >>
+  strip_tac >- rw[Once evaluate_match_with_cases] >>
+  strip_tac >- (
+    rw[] >>
+    disj2_tac >>
+    rw[Once evaluate_match_with_cases] >>
+    rw[matchres_def] >>
+    fs[Once pmatch_nil] >>
+    Cases_on `pmatch cenv p v []` >>fs[] >>
+    PROVE_TAC[] ) >>
+  strip_tac >- (
+    rw[] >> fs[] >>
+    rw[Once evaluate_match_with_cases] >>
+    disj2_tac >>
+    rw[Once evaluate_match_with_cases] >>
+    PROVE_TAC[] ) >>
+  strip_tac >- rw[] >>
+  rw[])
+
+val evaluate_match_with_matchres_closed = store_thm("evaluate_match_with_matchres_closed",
+  ``∀pes r. evaluate_match_with (matchres env) cenv env v pes r ⇒
+            EVERY closed (MAP SND env) ∧ closed v ⇒
+            every_result (λ(menv,mr). EVERY closed (MAP SND menv) ∧
+                                      ∃p. MEM (p,mr) pes ∧
+                                          (set (MAP FST menv) = pat_vars p)) r ``,
+  ho_match_mp_tac evaluate_match_with_ind >>
+  strip_tac >- rw[] >>
+  strip_tac >- (
+    rw[matchres_def] >>
+    fs[] >>
+    fs[Once pmatch_nil] >>
+    Cases_on `pmatch cenv p v []` >> fs[] >>
+    qspecl_then [`cenv`,`p`,`v`,`[]`] mp_tac (CONJUNCT1 pmatch_closed) >>
+    fs[] >> fsrw_tac[DNF_ss][] ) >>
+  strip_tac >- (
+    rw[] >> fs[] >>
+    Cases_on `r` >> fs[] >>
+    fs[pairTheory.UNCURRY] >>
+    fsrw_tac[DNF_ss][] >> PROVE_TAC[]) >>
+  strip_tac >- rw[] >>
+  rw[])
+
+val Cevaluate_match_MAP_exp = store_thm("Cevaluate_match_MAP_exp",
+  ``∀pes env r. Cevaluate_match v pes env r ⇒
+      ∀f. Cevaluate_match v (MAP (λ(p,e). (p, f e)) pes) env (OPTION_MAP f r)``,
+  ho_match_mp_tac Cevaluate_match_ind >>
+  strip_tac >- rw[Once Cevaluate_match_rules] >>
+  strip_tac >- rw[Once Cevaluate_match_cases] >>
+  rw[] >>
+  rw[Once Cevaluate_match_cases])
+
+(*
+  probably need to reason up to syneq only, and
+  need to be clearer about which variable names are (contained in or fresh for)
+  where, so can more easily permute FUNIONs and FUPDATEs and stuff within the
+  proofs
+
+  val Cpmatch_remove_mat = store_thm("Cpmatch_remove_mat",
+    ``(∀p v menv. Cpmatch p v menv ⇒
+         ∀env x. (FLOOKUP env x = SOME v) ⇒
+           ∀fk e r. Cevaluate (menv ⊌ env) e r ⇒ Cevaluate env (remove_mat_vp fk e x p) r) ∧
+      (∀ps vs menv. Cpmatch_list ps vs menv ⇒
+         ∀env x c. (FLOOKUP env x = SOME (CConv c vs)) ⇒
+           ∀fk e n r. n ≤ LENGTH ps ∧ Cevaluate (menv ⊌ env) e r
+                        ⇒ Cevaluate env (remove_mat_con fk e x n (DROP n ps)) r)``,
+    ho_match_mp_tac Cpmatch_ind >>
+    strip_tac >- (
+      rw[remove_mat_var_def] >>
+      rw[Once Cevaluate_cases] >>
+      fs[FLOOKUP_DEF] >>
+      fs[FUNION_FUPDATE_1,FUNION_FEMPTY_1] ) >>
+    strip_tac >- (
+      rw[remove_mat_vp_def] >>
+      fs[FLOOKUP_DEF] >>
+      rw[Once Cevaluate_cases] >>
+      disj1_tac >>
+      qexists_tac `T` >>
+      fs[FUNION_FEMPTY_1] >>
+      rw[Once Cevaluate_cases] >>
+      rw[Cevaluate_list_with_Cevaluate,Cevaluate_list_with_cons] ) >>
+    strip_tac >- (
+      rw[] >>
+      rw[Once Cevaluate_cases] >>
+      disj1_tac >>
+      qexists_tac `T` >>
+      fs[] >>
+      conj_tac >- (
+        rw[Once Cevaluate_cases] >>
+        fs[FLOOKUP_DEF] ) >>
+      `ps = DROP 0 ps` by rw[] >>
+      pop_assum SUBST1_TAC >>
+      first_x_assum (match_mp_tac o MP_CANON) >>
+      rw[] >> PROVE_TAC[] ) >>
+    strip_tac >- rw[FUNION_FEMPTY_1] >>
+    rpt gen_tac >> strip_tac >>
+    rpt gen_tac >> strip_tac >>
+    ntac 2 gen_tac >>
+    Cases >- (
+      rw[] >>
+      rw[Once Cevaluate_cases] >>
+      disj1_tac >>
+      rw[Once Cevaluate_cases] >>
+      qpat_assum `FLOOKUP env x = Y` mp_tac >>
+      rw[FLOOKUP_DEF] >>
+
+  val Cevaluate_match_remove_mat_var = store_thm("Cevaluate_match_remove_mat_var",
+    ``∀pes menv mr. Cevaluate_match v pes menv mr ⇒
+        ∀env x. (FLOOKUP env x = SOME v) ⇒
+         case mr of
+         | NONE => Cevaluate env (remove_mat_var x pes) (Rerr (Rraise Bind_error))
+         | SOME e => ∀r. Cevaluate (menv ⊌ env) e r ⇒ Cevaluate env (remove_mat_var x pes) r``,
+    ho_match_mp_tac Cevaluate_match_ind >>
+    strip_tac >- rw[remove_mat_var_def] >>
+    strip_tac >- (
+      rw[remove_mat_var_def] >>
+      rw[Once Cevaluate_cases] >>
+*)
 
 val exp_to_Cexp_thm1 = store_thm("exp_to_Cexp_thm1",
   ``∀cenv env exp res. evaluate cenv env exp res ⇒
@@ -2017,42 +2141,68 @@ strip_tac >- (
   rpt strip_tac >> fs[] >>
   first_x_assum (qspec_then `m` mp_tac) >> rw[] >>
   qmatch_assum_rename_tac `syneq (v_to_Cv m v) w`[] >>
-  rw[exp_to_Cexp_def,LET_THM]
-
->> (*
-  gen_tac >>
-  CONV_TAC (RESORT_FORALL_CONV
-    (uncurry cons o pluck (equal "pes" o fst o dest_var))) >>
-  Induct >- (
-    rw[evaluate_match_with_evaluate] >>
-    rw[exp_to_Cexp_def,LET_THM] >>
-    rw[Once Cevaluate_cases] >>
-    rw[remove_mat_var_def] >>
-    fs[Once evaluate_match_with_cases] >>
-    rw[] >> PROVE_TAC[] ) >>
-  qx_gen_tac `pe` >>
-  fs[evaluate_match_with_evaluate] >>
   rw[exp_to_Cexp_def,LET_THM] >>
   rw[Once Cevaluate_cases] >>
-  fsrw_tac[DNF_ss][] >>
+  srw_tac[DNF_ss][] >>
   disj1_tac >>
-  first_x_assum (qspec_then `m` mp_tac) >>
-  rw[] >>
-  qmatch_assum_rename_tac `syneq (v_to_Cv m v) w`[] >>
   CONV_TAC SWAP_EXISTS_CONV >> qexists_tac `w` >> fs[] >>
-  fs[exp_to_Cexp_def,LET_THM] >>
-  qpat_assum `evaluate_match_with evaluate cenv env v p9 res` mp_tac >>
-  rw[Once evaluate_match_with_cases] >- (
-  
-    rw[pes_to_Cpes_MAP]
-    MiniMLTerminationTheory.pmatch_def
-  fs[evaluate_match_with_cases]
-
-  Induct_on `pes` >- (
-    fs[pes_to_Cpes_MAP,remove_mat_var_def] >>
-    fs[Once evaluate_match_with_cases] ) >>
-*) cheat) >>
-
+  qmatch_assum_abbrev_tac `evaluate_match_with P cenv env v pes res` >>
+  Q.ISPECL_THEN [`pes`,`res`] mp_tac evaluate_match_with_matchres >> fs[] >>
+  strip_tac >>
+  qmatch_assum_abbrev_tac `evaluate_match_with (matchres env) cenv env v pes r` >>
+  Q.ISPECL_THEN [`pes`,`r`] mp_tac evaluate_match_with_Cevaluate_match >>
+  fs[Abbr`r`] >>
+  disch_then (qspec_then `m` mp_tac) >>
+  rw[] >- (
+    qmatch_assum_abbrev_tac `Cevaluate_match vv ppes FEMPTY NONE` >>
+    `Cevaluate_match vv (MAP (λ(p,e). (p, exp_to_Cexp m e)) ppes) FEMPTY NONE` by (
+      metis_tac [Cevaluate_match_MAP_exp, optionTheory.OPTION_MAP_DEF] ) >>
+    qmatch_assum_abbrev_tac `Cevaluate_match vv (MAP ff ppes) FEMPTY NONE` >>
+    `MAP ff ppes = pes_to_Cpes m pes` by (
+      unabbrev_all_tac >>
+      rw[pes_to_Cpes_MAP,LET_THM] >>
+      rw[MAP_MAP_o,combinTheory.o_DEF,pairTheory.LAMBDA_PROD] >>
+      rw[pairTheory.UNCURRY] ) >>
+    fs[] >>
+    unabbrev_all_tac >>
+    pop_assum kall_tac >>
+    pop_assum mp_tac >>
+    pop_assum kall_tac >>
+    strip_tac >>
+    cheat (* Cevaluate_match_remove_mat_var *) ) >>
+  qmatch_assum_abbrev_tac `Cevaluate_match vv ppes eenv (SOME mr)` >>
+  `Cevaluate_match vv (MAP (λ(p,e). (p, exp_to_Cexp m e)) ppes) eenv (SOME (exp_to_Cexp m mr))` by (
+    metis_tac [Cevaluate_match_MAP_exp, optionTheory.OPTION_MAP_DEF] ) >>
+  pop_assum mp_tac >>
+  unabbrev_all_tac >>
+  pop_assum kall_tac >>
+  strip_tac >>
+  qmatch_assum_abbrev_tac `Cevaluate_match vv (MAP ff ppes) eenv mmr` >>
+  `MAP ff ppes = pes_to_Cpes m pes` by (
+    unabbrev_all_tac >>
+    rw[pes_to_Cpes_MAP,LET_THM] >>
+    rw[MAP_MAP_o,combinTheory.o_DEF,pairTheory.LAMBDA_PROD] >>
+    rw[pairTheory.UNCURRY] ) >>
+  fs[] >>
+  unabbrev_all_tac >>
+  pop_assum kall_tac >>
+  pop_assum mp_tac >>
+  pop_assum mp_tac >>
+  fs[] >>
+  `every_result closed (Rval v)` by (
+    match_mp_tac (MP_CANON evaluate_closed) >>
+    PROVE_TAC[] ) >>
+  Q.ISPECL_THEN [`pes`,`Rval (menv,mr)`] mp_tac evaluate_match_with_matchres_closed >>
+  fs[] >> strip_tac >>
+  `FV mr ⊆ set (MAP FST menv) ∪ set (MAP FST env)` by (
+    fsrw_tac[DNF_ss][SUBSET_DEF] >>
+    fsrw_tac[DNF_ss][pairTheory.FORALL_PROD,MEM_MAP,pairTheory.EXISTS_PROD] >>
+    fsrw_tac[DNF_ss][EXTENSION,MEM_MAP,pairTheory.EXISTS_PROD] >>
+    PROVE_TAC[] ) >>
+  fs[] >>
+  disch_then (qspec_then `m` mp_tac) >>
+  rw[] >>
+  cheat (* Cevaluate_match_remove_mat_var *) ) >>
 cheat)
 
 val Cpat_nice_ind =
