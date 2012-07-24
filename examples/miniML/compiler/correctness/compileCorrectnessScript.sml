@@ -1370,6 +1370,7 @@ strip_tac >- (
   `∀n. n < LENGTH es ⇒ FV (EL n es) ⊆ set (MAP FST env)` by (
     fsrw_tac[DNF_ss][SUBSET_DEF,MEM_EL] >>
     PROVE_TAC[] ) >>
+  qpat_assum `good_cmap cenv m` assume_tac >>
   fs[] >>
   fs[Once (GSYM RIGHT_EXISTS_IMP_THM),SKOLEM_THM] >>
   qexists_tac `GENLIST f (LENGTH vs)` >>
@@ -1387,6 +1388,7 @@ strip_tac >- (
   rpt (qpat_assum `X < LENGTH es` mp_tac) >> rw[] >>
   fsrw_tac[ARITH_ss][] >>
   first_x_assum (qspec_then `m` strip_assume_tac) >>
+  qpat_assum `good_cmap cenv m` assume_tac >> fs[] >>
   qmatch_assum_rename_tac `Cevaluate Cenv (exp_to_Cexp m (EL k es)) (Rerr err)`["Cenv"] >>
   qexists_tac `k` >> fs[EL_MAP] >>
   qx_gen_tac `z` >> strip_tac >>
