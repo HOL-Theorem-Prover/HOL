@@ -617,6 +617,88 @@ SIMP_RULE(srw_ss())[]
 (Q.SPEC`Conv cn vs`closed_cases))
 val _ = export_rewrites["closed_conv"]
 
+(* TODO: move *)
+val pmatch_def = MiniMLTerminationTheory.pmatch_def
+val pmatch_ind = MiniMLTerminationTheory.pmatch_ind
+val lit_same_type_def = MiniMLTheory.lit_same_type_def
+
+val pmatch_plit = store_thm(
+"pmatch_plit",
+``(pmatch cenv (Plit l) v env = r) =
+  (((v = Litv l) ∧ (r = Match env)) ∨
+   ((∃l'. (v = Litv l') ∧ lit_same_type l l' ∧ l ≠ l') ∧
+    (r = No_match)) ∨
+   ((∀l'. (v = Litv l') ⇒ ¬lit_same_type l l') ∧ (r = Match_type_error)))``,
+Cases_on `v` >> rw[pmatch_def,EQ_IMP_THM] >>
+Cases_on `l` >> fs[lit_same_type_def])
+
+(*
+val pmatch_pcon = store_thm(
+"pmatch_pcon",
+``(pmatch cenv (Pcon n ps) v env = r) =
+*)
+
+val map_match_def = Define`
+  (map_match f (Match env) = Match (f env)) ∧
+  (map_match f x = x)`
+val _ = export_rewrites["map_match_def"]
+
+
+(* TODO: move *)
+val DROP_APPEND1 = rich_listTheory.BUTFIRSTN_APPEND1
+val DROP_APPEND2 = rich_listTheory.BUTFIRSTN_APPEND2
+val DROP_LENGTH_NIL = rich_listTheory.BUTFIRSTN_LENGTH_NIL
+
+val pmatch_APPEND = store_thm(
+"pmatch_APPEND",
+``(∀cenv p v env n.
+    (pmatch cenv p v env =
+     map_match (combin$C APPEND (DROP n env)) (pmatch cenv p v (TAKE n env)))) ∧
+  (∀cenv ps vs env n.
+    (pmatch_list cenv ps vs env =
+     map_match (combin$C APPEND (DROP n env)) (pmatch_list cenv ps vs (TAKE n env))))``,
+ho_match_mp_tac pmatch_ind >>
+strip_tac >- rw[pmatch_def,bind_def] >>
+strip_tac >- rw[pmatch_def] >>
+strip_tac >- (
+  rw[pmatch_def] >>
+  Cases_on `ALOOKUP cenv n` >> fs[] >>
+  PairCases_on `x` >> fs[] >>
+  rw[] >> fs[] >>
+  Cases_on `ALOOKUP cenv n'` >> fs[] >>
+  PairCases_on `x` >> fs[] >>
+  rw[] >> fs[] ) >>
+strip_tac >- rw[pmatch_def] >>
+strip_tac >- rw[pmatch_def] >>
+strip_tac >- rw[pmatch_def] >>
+strip_tac >- rw[pmatch_def] >>
+strip_tac >- rw[pmatch_def] >>
+strip_tac >- rw[pmatch_def] >>
+strip_tac >- rw[pmatch_def] >>
+strip_tac >- (
+  rw[pmatch_def] >>
+  Cases_on `pmatch cenv p v (TAKE n env)` >> fs[] >>
+  Cases_on `pmatch cenv p v env` >> fs[] >>
+  TRY (first_x_assum (qspec_then `n` mp_tac) >> rw[] >> NO_TAC) >>
+  first_x_assum (qspec_then `n` mp_tac) >> rw[] >>
+  first_x_assum (qspec_then `LENGTH l` mp_tac) >> rw[] >>
+  rw[TAKE_APPEND1,DROP_APPEND1,DROP_LENGTH_NIL] ) >>
+strip_tac >- rw[pmatch_def] >>
+strip_tac >- rw[pmatch_def])
+
+val pmatch_nil = save_thm("pmatch_nil",
+  LIST_CONJ [
+    pmatch_APPEND
+    |> CONJUNCT1
+    |> Q.SPECL[`cenv`,`p`,`v`,`env`,`0`]
+    |> SIMP_RULE(srw_ss())[]
+  ,
+    pmatch_APPEND
+    |> CONJUNCT2
+    |> Q.SPECL[`cenv`,`ps`,`vs`,`env`,`0`]
+    |> SIMP_RULE(srw_ss())[]
+  ])
+
 val pmatch_closed = store_thm("pmatch_closed",
   ``(∀cenv p v env env'.
       EVERY closed (MAP SND env) ∧ closed v ∧
@@ -655,7 +737,13 @@ val pmatch_closed = store_thm("pmatch_closed",
   strip_tac >- ( rw[pmatch_def] >> rw[] ) >>
   strip_tac >- (
     rpt gen_tac >>
-    cheat ) >>
+    strip_tac >>
+    simp_tac(srw_ss())[pmatch_def] >>
+    Cases_on `pmatch cenv p v env` >> fs[] >>
+    qmatch_assum_rename_tac `pmatch cenv p v env = Match env0`[] >>
+    Cases_on `pmatch_list cenv ps vs env0` >> fs[] >>
+    strip_tac >> fs[] >>
+    PROVE_TAC[UNION_COMM,UNION_ASSOC]) >>
   rw[pmatch_def])
 
 val evaluate_closed = store_thm(
@@ -990,88 +1078,6 @@ val DROP_NIL = store_thm(
 ``∀ls n. (DROP n ls = []) = (n ≥ LENGTH ls)``,
 Induct >> rw[] >>
 srw_tac[ARITH_ss][])
-
-(* TODO: move *)
-val pmatch_def = MiniMLTerminationTheory.pmatch_def
-val pmatch_ind = MiniMLTerminationTheory.pmatch_ind
-val lit_same_type_def = MiniMLTheory.lit_same_type_def
-
-val pmatch_plit = store_thm(
-"pmatch_plit",
-``(pmatch cenv (Plit l) v env = r) =
-  (((v = Litv l) ∧ (r = Match env)) ∨
-   ((∃l'. (v = Litv l') ∧ lit_same_type l l' ∧ l ≠ l') ∧
-    (r = No_match)) ∨
-   ((∀l'. (v = Litv l') ⇒ ¬lit_same_type l l') ∧ (r = Match_type_error)))``,
-Cases_on `v` >> rw[pmatch_def,EQ_IMP_THM] >>
-Cases_on `l` >> fs[lit_same_type_def])
-
-(*
-val pmatch_pcon = store_thm(
-"pmatch_pcon",
-``(pmatch cenv (Pcon n ps) v env = r) =
-*)
-
-val map_match_def = Define`
-  (map_match f (Match env) = Match (f env)) ∧
-  (map_match f x = x)`
-val _ = export_rewrites["map_match_def"]
-
-
-(* TODO: move *)
-val DROP_APPEND1 = rich_listTheory.BUTFIRSTN_APPEND1
-val DROP_APPEND2 = rich_listTheory.BUTFIRSTN_APPEND2
-val DROP_LENGTH_NIL = rich_listTheory.BUTFIRSTN_LENGTH_NIL
-
-val pmatch_APPEND = store_thm(
-"pmatch_APPEND",
-``(∀cenv p v env n.
-    (pmatch cenv p v env =
-     map_match (combin$C APPEND (DROP n env)) (pmatch cenv p v (TAKE n env)))) ∧
-  (∀cenv ps vs env n.
-    (pmatch_list cenv ps vs env =
-     map_match (combin$C APPEND (DROP n env)) (pmatch_list cenv ps vs (TAKE n env))))``,
-ho_match_mp_tac pmatch_ind >>
-strip_tac >- rw[pmatch_def,bind_def] >>
-strip_tac >- rw[pmatch_def] >>
-strip_tac >- (
-  rw[pmatch_def] >>
-  Cases_on `ALOOKUP cenv n` >> fs[] >>
-  PairCases_on `x` >> fs[] >>
-  rw[] >> fs[] >>
-  Cases_on `ALOOKUP cenv n'` >> fs[] >>
-  PairCases_on `x` >> fs[] >>
-  rw[] >> fs[] ) >>
-strip_tac >- rw[pmatch_def] >>
-strip_tac >- rw[pmatch_def] >>
-strip_tac >- rw[pmatch_def] >>
-strip_tac >- rw[pmatch_def] >>
-strip_tac >- rw[pmatch_def] >>
-strip_tac >- rw[pmatch_def] >>
-strip_tac >- rw[pmatch_def] >>
-strip_tac >- (
-  rw[pmatch_def] >>
-  Cases_on `pmatch cenv p v (TAKE n env)` >> fs[] >>
-  Cases_on `pmatch cenv p v env` >> fs[] >>
-  TRY (first_x_assum (qspec_then `n` mp_tac) >> rw[] >> NO_TAC) >>
-  first_x_assum (qspec_then `n` mp_tac) >> rw[] >>
-  first_x_assum (qspec_then `LENGTH l` mp_tac) >> rw[] >>
-  rw[TAKE_APPEND1,DROP_APPEND1,DROP_LENGTH_NIL] ) >>
-strip_tac >- rw[pmatch_def] >>
-strip_tac >- rw[pmatch_def])
-
-val pmatch_nil = save_thm("pmatch_nil",
-  LIST_CONJ [
-    pmatch_APPEND
-    |> CONJUNCT1
-    |> Q.SPECL[`cenv`,`p`,`v`,`env`,`0`]
-    |> SIMP_RULE(srw_ss())[]
-  ,
-    pmatch_APPEND
-    |> CONJUNCT2
-    |> Q.SPECL[`cenv`,`ps`,`vs`,`env`,`0`]
-    |> SIMP_RULE(srw_ss())[]
-  ])
 
 val (Cpmatch_rules,Cpmatch_ind,Cpmatch_cases) = Hol_reln`
   (Cpmatch (CPvar x) v (FEMPTY |+ (x,v))) ∧
