@@ -617,6 +617,47 @@ SIMP_RULE(srw_ss())[]
 (Q.SPEC`Conv cn vs`closed_cases))
 val _ = export_rewrites["closed_conv"]
 
+val pmatch_closed = store_thm("pmatch_closed",
+  ``(∀cenv p v env env'.
+      EVERY closed (MAP SND env) ∧ closed v ∧
+      (pmatch cenv p v env = Match env') ⇒
+      EVERY closed (MAP SND env') ∧
+      (set (MAP FST env') = pat_vars p ∪ set (MAP FST env))) ∧
+    (∀cenv ps vs env env'.
+      EVERY closed (MAP SND env) ∧ EVERY closed vs ∧
+      (pmatch_list cenv ps vs env = Match env') ⇒
+      EVERY closed (MAP SND env') ∧
+      (set (MAP FST env') = BIGUNION (IMAGE pat_vars (set ps)) ∪ set (MAP FST env)))``,
+  ho_match_mp_tac pmatch_ind >>
+  strip_tac >- (
+    rw[pmatch_def,bind_def] >>
+    rw[] >> rw[EXTENSION] ) >>
+  strip_tac >- (
+    rw[pmatch_def] >> rw[] ) >>
+  strip_tac >- (
+    rpt gen_tac >> fs[] >>
+    Cases_on `ALOOKUP cenv n` >> fs[] >- (
+      rw[pmatch_def] ) >>
+    qmatch_assum_rename_tac `ALOOKUP cenv n = SOME p`[] >>
+    PairCases_on `p` >> fs[] >>
+    Cases_on `ALOOKUP cenv n'` >> fs[] >- (
+      rw[pmatch_def] ) >>
+    qmatch_assum_rename_tac `ALOOKUP cenv n' = SOME p`[] >>
+    PairCases_on `p` >> fs[] >>
+    rw[pmatch_def] >>
+    srw_tac[ETA_ss][] ) >>
+  strip_tac >- rw[pmatch_def] >>
+  strip_tac >- rw[pmatch_def] >>
+  strip_tac >- rw[pmatch_def] >>
+  strip_tac >- rw[pmatch_def] >>
+  strip_tac >- rw[pmatch_def] >>
+  strip_tac >- rw[pmatch_def] >>
+  strip_tac >- ( rw[pmatch_def] >> rw[] ) >>
+  strip_tac >- (
+    rpt gen_tac >>
+    cheat ) >>
+  rw[pmatch_def])
+
 val evaluate_closed = store_thm(
 "evaluate_closed",
 ``∀cenv env exp res.
@@ -665,8 +706,24 @@ strip_tac >- (
 strip_tac >- rw[] >>
 strip_tac >- rw[] >>
 strip_tac >- (
+  gen_tac >>
+  CONV_TAC (RESORT_FORALL_CONV
+    (uncurry cons o pluck (equal "pes" o fst o dest_var))) >>
+  Induct >- rw[Once evaluate_match_with_cases] >>
+  rpt gen_tac >>
+  strip_tac >>
+  pop_assum mp_tac >>
+  rw[Once evaluate_match_with_cases] >> rw[] >- (
+    fs[] >>
+    first_x_assum match_mp_tac >>
+    imp_res_tac (CONJUNCT1 pmatch_closed) >>
+    fs[] >>
+    fsrw_tac[DNF_ss][SUBSET_DEF] >>
+    PROVE_TAC[] ) >>
+  first_x_assum (match_mp_tac o MP_CANON) >>
   rw[] >>
-  cheat ) >>
+  map_every qexists_tac[`env`,`exp`,`v`] >>
+  fs[] ) >>
 strip_tac >- rw[] >>
 strip_tac >- (
   rw[bind_def] >>
