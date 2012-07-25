@@ -1597,19 +1597,73 @@ val Cpmatch_remove_mat = store_thm("Cpmatch_remove_mat",
 
 (* TODO: Is Cpes_vars necessary, or is Cpat_vars enough? *)
 
-(*
+val Cevaluate_match_strongind = theorem"Cevaluate_match_strongind"
+
 val Cevaluate_match_remove_mat_var = store_thm("Cevaluate_match_remove_mat_var",
   ``∀pes menv mr. Cevaluate_match v pes menv mr ⇒
-      ∀env x. (FLOOKUP env x = SOME v) ⇒
+      ∀env x. (FLOOKUP env x = SOME v) ∧
+              x ∉ BIGUNION (IMAGE (Cpat_vars o FST) (set pes)) ∧
+              BIGUNION (IMAGE (λ(p,e). free_vars e DIFF Cpat_vars p) (set pes)) ⊆ FDOM env ∧
+              Cclosed v ∧
+              (∀v. v ∈ FRANGE env ⇒ Cclosed v) ⇒
        case mr of
        | NONE => Cevaluate env (remove_mat_var x pes) (Rerr (Rraise Bind_error))
-       | SOME e => ∀r. Cevaluate (menv ⊌ env) e r ⇒ Cevaluate env (remove_mat_var x pes) r``,
+       | SOME e => ∀r0. Cevaluate (menv ⊌ env) e r0
+                  ⇒ ∃r. Cevaluate env (remove_mat_var x pes) r ∧
+                        result_rel syneq r r0``,
   ho_match_mp_tac Cevaluate_match_ind >>
   strip_tac >- rw[remove_mat_var_def] >>
   strip_tac >- (
-    rw[remove_mat_var_def] >>
+    rw[remove_mat_var_def,LET_THM] >>
     rw[Once Cevaluate_cases] >>
-*)
+    fsrw_tac[DNF_ss][] >>
+    CONV_TAC SWAP_EXISTS_CONV >>
+    Q.PAT_ABBREV_TAC`fk = fresh_var X` >>
+    qexists_tac `fresh_var (free_vars (remove_mat_vp fk e x p))` >>
+    rw[RIGHT_EXISTS_AND_THM,GSYM CONJ_ASSOC]
+      >- rw[fresh_var_not_in,FINITE_has_fresh_string] >>
+    qmatch_abbrev_tac `∃r. Cevaluate ee (remove_mat_vp fk e x p) r ∧ result_rel syneq r r0` >>
+    qspecl_then [`p`,`v`,`menv`] mp_tac (CONJUNCT1 Cpmatch_remove_mat) >>
+    fs[] >>
+    disch_then (qspecl_then [`ee`,`x`,`fk`,`e`] mp_tac) >>
+    fsrw_tac[DNF_ss][pairTheory.FORALL_PROD] >>
+    `fk ∉ {x} ∪ free_vars e` by (
+      rw[Abbr`fk`,fresh_var_not_in,FINITE_has_fresh_string] ) >>
+    `FLOOKUP ee x = SOME v` by fs[Abbr`ee`,FLOOKUP_UPDATE] >> fs[] >>
+    `fk ∈ FDOM ee` by fs[Abbr`ee`] >> fs[] >>
+    `x ∉ Cpat_vars p` by metis_tac[] >> fs[] >>
+    `∀v. v ∈ FRANGE ee ⇒ Cclosed v` by (
+      unabbrev_all_tac >>
+      match_mp_tac IN_FRANGE_FUPDATE_suff  >>
+      fs[] >>
+      rw[Once Cclosed_cases] >>
+      qspecl_then [`x`,`pes`] strip_assume_tac free_vars_remove_mat_var >>
+      pop_assum mp_tac >>
+      srw_tac[DNF_ss][Once EXTENSION,SUBSET_DEF] >>
+      fsrw_tac[DNF_ss][pairTheory.EXISTS_PROD,SUBSET_DEF] >>
+      `x ∈ FDOM env` by fs[FLOOKUP_DEF] >>
+      fsrw_tac[DNF_ss][pairTheory.FORALL_PROD] >>
+      metis_tac[] ) >> fs[] >>
+    `free_vars e ⊆ Cpat_vars p ∪ FDOM ee` by (
+      fsrw_tac[DNF_ss][SUBSET_DEF] >>
+      rw[Abbr`ee`] >>
+      metis_tac[] ) >> fs[] >>
+    qsuff_tac `∃rx. Cevaluate (menv ⊌ ee) e rx ∧ result_rel syneq r0 rx` >- (
+      metis_tac[result_rel_syneq_trans,result_rel_syneq_sym] ) >>
+    unabbrev_all_tac >>
+    Q.PAT_ABBREV_TAC`fv = fresh_var (free_vars X)` >>
+    Q.PAT_ABBREV_TAC`fk = fresh_var (a ∪ b)` >>
+    Cases_on `fk ∈ FDOM menv` >>
+    rw[FUNION_FUPDATE_2] >- metis_tac[result_rel_refl,syneq_refl] >>
+    match_mp_tac (MP_CANON Cevaluate_FUPDATE) >>
+    fs[] >>
+    imp_res_tac Cpmatch_FDOM >>
+    fsrw_tac[DNF_ss][SUBSET_DEF] >>
+    conj_tac >- PROVE_TAC[] >>
+    match_mp_tac IN_FRANGE_FUNION_suff >>
+    fs[] >>
+    imp_res_tac Cpmatch_closed) >>
+  cheat)
 
 val exp_to_Cexp_thm1 = store_thm("exp_to_Cexp_thm1",
   ``∀cenv env exp res. evaluate cenv env exp res ⇒
