@@ -28,16 +28,23 @@ fun print_filled_words strm col wlist =
            print_filled_words strm (col + sz + 1) ws)
       end
 
+local
+  val picker =
+      if Systeml.OS = "winNT" then (fn x => fn y => y)
+      else (fn x => fn y => x)
+  val lsquo = picker "\226\128\152" "'"
+  val rsquo = picker "\226\128\153" "'"
+  val ldquo = picker "\226\128\156" "\""
+  val rdquo = picker "\226\128\157" "\""
+in
+
+
 fun text_encode ss = let
   (* passes over a substring, replacing single apostrophes with ’
      backquotes with ‘ and the "latex" encodings of nice double-quotes:
      `` with “ and '' with ” *)
   open Substring
   datatype state = backquote | apostrophe | normal of int * substring
-  val lsquo = "\226\128\152"
-  val rsquo = "\226\128\153"
-  val ldquo = "\226\128\156"
-  val rdquo = "\226\128\157"
   fun recurse acc s ss =
       case (s, getc ss) of
         (backquote, NONE) => (lsquo :: acc)
@@ -64,6 +71,7 @@ in
   String.concat (List.rev (recurse [] (normal(0,ss)) ss))
 end
 
+end (* local *)
 
 
 fun print_markups strm mlist =
