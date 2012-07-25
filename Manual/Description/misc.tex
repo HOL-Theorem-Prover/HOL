@@ -698,6 +698,84 @@ Note that environment variables with non-empty values are also considered to be 
 \index{Holmake@\holmake|)}
 
 
+\section{Generating and Using Heaps in Poly/ML \HOL{}}
+\label{sec:polyml-heaps}
+
+\index{heaps (in Poly/ML)|(}
+\index{Poly/ML}
+\index{Moscow ML}
+Poly/ML has a nice facility whereby the state of one of its interactive sessions can be stored on disk and then reloaded.
+This allows for an efficient resumption of work in a known state.
+The \HOL{} implementation uses this facility to implement the \texttt{hol} executable.
+In Poly/ML, \texttt{hol} starts immediately.
+In Moscow~ML, \texttt{hol} starts up by visibly (and relatively slowly) ``loading'' the various source files that provide the system's functionality (\eg, \ml{bossLib}).
+
+Users can use the same basic technology to ``dump'' heaps of their own.
+Such heaps can be preloaded with source code implementing special-purpose reasoning facilities, and with various necessary background theories.
+This can make developing big mechanisations considerably more pleasant.
+
+\subsection{Generating \HOL{} Heaps}
+
+The easiest way to generate a \HOL{} heap is to use the \texttt{buildheap} executable that is built as part of the standard build process for (Poly/ML)~\HOL.
+This program takes a list of object files to include in a heap, an optional heap to build upon (use the \texttt{-b} command-line switch; the default is to use the heap behind the core \texttt{hol} executable), and an optional name for the new heap (the default is the traditional Unix \texttt{a.out}).
+Thus the command-line
+\begin{alltt}
+   buildheap -o realheap transcTheory polyTheory
+\end{alltt}
+would build a heap in the current directory called \texttt{realheap}, and would preload it with the standard theories of transcendental numbers and real-valued polynomials.
+
+A reasonable way to manage the generation of heaps is to use a \texttt{Holmakefile}.
+For example, the \texttt{realheap} above might be generated with the source in Figure~\ref{fig:realheap-makefile}.
+The use of the special variable \texttt{HOLHEAP} has a number of nice side effects.
+First, it makes the given file a dependency of all other products in the current directory.
+This means that the \HOL{} heap will be built first.
+Secondly, the other products in the current directory will be built on top of that heap, not the default heap behind \texttt{hol}.
+\begin{figure}
+\begin{alltt}
+   ifdef POLY
+   HOLHEAP = realheap
+   OBJNAMES = polyTheory transcTheory
+   DEPS = $(patsubst %,$(dprot $(SIGOBJ)/%),$(OBJNAMES))
+
+   $(HOLHEAP): $(DEPS)
+           $(protect $(HOLDIR)/bin/buildheap) -o $@ $(OBJNAMES)
+   endif
+\end{alltt}
+\caption{A \texttt{Holmakefile} fragment for building a custom \HOL{} heap embodying the standard real number theories.
+If the heap's dependencies are not core \HOL{} theories as they are here, then both the dependency line and the arguments to \texttt{buildheap} will need to be adjusted to link to the directory containing the files.
+For core \HOL{} theories, the dependency has to mention the \texttt{SIGOBJ} directory, but when passing arguments to \texttt{buildheap}, that information doesn't need to be provided as \texttt{SIGOBJ} is always consulted by all \HOL{} builds.
+Finally, note how the use of the \texttt{dprot} and \texttt{protect} functions will ensure that \holmake{} will do the right thing even when \texttt{HOLDIR} contains spaces.}
+\label{fig:realheap-makefile}
+\end{figure}
+
+\subsection{Using \HOL{} Heaps}
+As just described, if a \texttt{Holmakefile} specifies a \texttt{HOLHEAP}, then files in that directory will be built on top of that heap rather than the default.
+This is also true if the specified heap is in another directory (\ie, the \texttt{HOLHEAP} line might specify a file such as \texttt{otherdir/myheap}).
+In this case, the \texttt{Holmakefile} won't (shouldn't) include instructions on how to build that heap, but the advantages of that heap are still available.
+Again, that heap is also considered a dependency for all files in the current directory, so that they will be rebuilt if it is newer than they are.
+
+It is obviously important to be able to use heaps interactively.
+If the standard \texttt{hol} executable is invoked in a directory where there is a \texttt{Holmakefile} specifying a heap, the default heap will not be used and the given heap will be used instead.
+The fact that this is happening is mentioned as the interactive session begins.
+For example:
+\begin{alltt}
+---------------------------------------------------------------------
+       HOL-4 [Kananaskis 8 (stdknl, built Tue Jul 24 16:48:44 2012)]
+
+       For introductory HOL help, type: help "hol";
+---------------------------------------------------------------------
+
+[extending loadPath with Holmakefile INCLUDES variable]
+[In non-standard heap: computability-heap]
+Poly/ML 5.4.1 Release
+>
+\end{alltt}
+
+Finally, note that heaps are required to be built first in a directory, and that heaps embody theories or \ML{} sources that are \emph{ancestral} to the directory in which the heap occurs.
+This has the unfortunate consequence that one cannot package up a heap embodying the standard theories for the real numbers in \texttt{src/real}, but that such a heap has to built in some other directory.
+This is counter-intuitive.
+
+\index{heaps (in Poly/ML)|)}
 \section{Timing and Counting Theorems}
 
 \index{counting inferences, in HOL proofs@counting inferences, in \HOL{} proofs|(}
@@ -1447,3 +1525,5 @@ Finally, all theory-bindings made with \ml{TeX\_notation} can be overridden with
 %%% mode: latex
 %%% TeX-master: "description"
 %%% End:
+
+%  LocalWords:  HOL mechanisations HOLHEAP Holmakefile
