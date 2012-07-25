@@ -1595,6 +1595,79 @@ val Cpmatch_remove_mat = store_thm("Cpmatch_remove_mat",
   fsrw_tac[DNF_ss][SUBSET_DEF] >>
   metis_tac[])
 
+val Cpnomatch_strongind = theorem"Cpnomatch_strongind"
+
+val Cpnomatch_remove_mat = store_thm("Cpnomatch_remove_mat",
+  ``(∀p v. Cpnomatch p v ⇒
+       ∀env x fk e r0.
+         (FLOOKUP env x = SOME v) ∧
+         Cevaluate env (CCall (CVar fk) []) r0
+         ⇒ ∃r. Cevaluate env (remove_mat_vp fk e x p) r ∧
+               ((r = Rerr Rtype_error) ∨ (r = r0))) ∧
+    (∀ps vs. Cpnomatch_list ps vs ⇒
+       ∀env x c vs0 ps0 fk e r0.
+         (FLOOKUP env x = SOME (CConv c (vs0 ++ vs))) ∧
+         Cevaluate env (CCall (CVar fk) []) r0
+         ⇒ ∃r. Cevaluate env (remove_mat_con fk e x (LENGTH ps0) ps) r ∧
+               ((r = Rerr Rtype_error) ∨ (r = r0)))``,
+  ho_match_mp_tac Cpnomatch_ind >>
+  strip_tac >- (
+    rw[] >>
+    rw[Once Cevaluate_cases] >>
+    srw_tac[DNF_ss][] >>
+    disj1_tac >> disj2_tac >>
+    qexists_tac `F` >> fs[] >>
+    rw[Once Cevaluate_cases] >>
+    fs[FLOOKUP_DEF] >>
+    rw[Cevaluate_list_with_Cevaluate,Cevaluate_list_with_cons] ) >>
+  strip_tac >- (
+    rw[] >>
+    rw[Once Cevaluate_cases] >>
+    rw[Once Cevaluate_cases] >>
+    fsrw_tac[DNF_ss][] >>
+    fs[FLOOKUP_DEF] >>
+    rw[Cevaluate_list_with_Cevaluate,Cevaluate_list_with_cons] >>
+    rw[Once Cevaluate_cases] >>
+    rw[Cevaluate_list_with_Cevaluate,Cevaluate_list_with_cons] ) >>
+  strip_tac >- (
+    rw[FLOOKUP_DEF] >>
+    rw[Once Cevaluate_cases] >>
+    rw[Once Cevaluate_cases] >>
+    rw[Cevaluate_list_with_Cevaluate,Cevaluate_list_with_cons] >>
+    rw[Once Cevaluate_cases] >>
+    rw[Cevaluate_list_with_Cevaluate,Cevaluate_list_with_cons] ) >>
+  strip_tac >- (
+    rw[FLOOKUP_DEF] >>
+    rw[Once Cevaluate_cases] >>
+    rw[Once Cevaluate_cases] >>
+    rw[Cevaluate_list_with_Cevaluate,Cevaluate_list_with_cons] >>
+    rw[Once Cevaluate_cases] >>
+    rw[Cevaluate_list_with_Cevaluate,Cevaluate_list_with_cons] ) >>
+  strip_tac >- (
+    rw[FLOOKUP_DEF] >>
+    rw[Once Cevaluate_cases] >>
+    rw[Once Cevaluate_cases] >>
+    PROVE_TAC[] ) >>
+  strip_tac >- (
+    rw[FLOOKUP_DEF] >>
+    rw[Once Cevaluate_cases] >>
+    rw[Once Cevaluate_cases] >>
+    fsrw_tac[DNF_ss][] >>
+    `env ' x = CConv c ([] ++ vs)` by rw[] >>
+    res_tac >>
+    metis_tac[LENGTH_NIL] ) >>
+  strip_tac >- (
+    rw[FLOOKUP_DEF] >>
+    rw[Once Cevaluate_cases] >>
+    rw[Once Cevaluate_cases] >>
+    rw[Once Cevaluate_cases] ) >>
+  strip_tac >- (
+    rw[FLOOKUP_DEF] >>
+    rw[Once Cevaluate_cases] >>
+    rw[Once Cevaluate_cases] >>
+    rw[Cevaluate_proj] >>
+    Cases_on `LENGTH ps0 < LENGTH vs0` >> fs[]
+
 (* TODO: Is Cpes_vars necessary, or is Cpat_vars enough? *)
 
 val Cevaluate_match_strongind = theorem"Cevaluate_match_strongind"
@@ -1663,7 +1736,12 @@ val Cevaluate_match_remove_mat_var = store_thm("Cevaluate_match_remove_mat_var",
     match_mp_tac IN_FRANGE_FUNION_suff >>
     fs[] >>
     imp_res_tac Cpmatch_closed) >>
-  cheat)
+  rw[] >>
+  rw[remove_mat_var_def] >>
+  Cases_on `mr` >> fs[] >- (
+    rw[Once Cevaluate_cases] >>
+
+  Cpnomatch_thm
 
 val exp_to_Cexp_thm1 = store_thm("exp_to_Cexp_thm1",
   ``∀cenv env exp res. evaluate cenv env exp res ⇒
