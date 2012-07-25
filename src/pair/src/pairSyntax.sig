@@ -11,6 +11,7 @@ sig
  val comma_tm        : term
  val fst_tm          : term
  val snd_tm          : term
+ val swap_tm         : term
  val uncurry_tm      : term
  val curry_tm        : term
  val pair_map_tm     : term
@@ -19,6 +20,7 @@ sig
  val mk_pair         : term * term -> term
  val mk_fst          : term -> term
  val mk_snd          : term -> term
+ val mk_swap         : term -> term
  val mk_curry        : term * term * term -> term
  val mk_uncurry      : term * term -> term
  val mk_pair_map     : term * term -> term
@@ -34,6 +36,7 @@ sig
  val dest_pair       : term -> term * term
  val dest_fst        : term -> term
  val dest_snd        : term -> term
+ val dest_swap       : term -> term
  val dest_curry      : term -> term * term * term
  val dest_uncurry    : term -> term * term
  val dest_pair_map   : term -> term * term
@@ -66,6 +69,7 @@ sig
  val is_pair         : term -> bool
  val is_fst          : term -> bool
  val is_snd          : term -> bool
+ val is_swap         : term -> bool
  val is_curry        : term -> bool
  val is_uncurry      : term -> bool
  val is_pair_map     : term -> bool
