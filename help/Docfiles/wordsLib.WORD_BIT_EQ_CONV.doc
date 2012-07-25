@@ -18,6 +18,8 @@ The conversion {WORD_BIT_EQ_CONV} performs simplification using {fcpLib.FCP_ss}.
 
 \SEEALSO
 
-wordsLib.WORD_BIT_EQ_ss, wordsLib.WORD_ARITH_CONV, wordsLib.WORD_LOGIC_CONV, wordsLib.WORD_MUL_LSL_CONV, wordsLib.WORD_CONV, wordsLib.WORD_EVAL_CONV
+wordsLib.WORD_BIT_EQ_ss, blastLib.BBLAST_CONV, wordsLib.WORD_ARITH_CONV,
+wordsLib.WORD_LOGIC_CONV, wordsLib.WORD_MUL_LSL_CONV, wordsLib.WORD_CONV,
+wordsLib.WORD_EVAL_CONV
 
 \ENDDOC

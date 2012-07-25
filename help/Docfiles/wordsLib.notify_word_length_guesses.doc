@@ -8,7 +8,9 @@ Controls notification of word length guesses.
 
 \DESCRIBE
 
-When the reference {notify_word_length_guesses} is true a HOL message is printed (in interactive sessions) when the function {inst_word_lengths} instantiates types in a term.
+When the reference {notify_word_length_guesses} is true a HOL message is
+printed (in interactive sessions) when the function {inst_word_lengths}
+instantiates types in a term.
 
 \EXAMPLE
 {

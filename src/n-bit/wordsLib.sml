@@ -906,15 +906,12 @@ in
       val r = if is_zero r then [] else get_coeff_terms [] r
    in
       case pick_coeff_terms [] (l, r) of
-         [] =>
-           if swap_sides l r then
-             Conv.REWR_CONV boolTheory.EQ_SYM_EQ tm
-           else
-             raise ERR "WORD_CANCEL_CONV" "Nothing to cancel"
-       | ps =>
-          (List.foldl
-             (fn (p, cnv) => cnv THENC Conv.REWR_CONV (mk_cancel_thm p))
-             Conv.ALL_CONV ps) tm
+         [] => if swap_sides l r
+                  then Conv.REWR_CONV boolTheory.EQ_SYM_EQ tm
+               else raise ERR "WORD_CANCEL_CONV" "Nothing to cancel"
+       | ps => (List.foldl
+                  (fn (p, cnv) => cnv THENC Conv.REWR_CONV (mk_cancel_thm p))
+                  Conv.ALL_CONV ps) tm
    end
 end
 
@@ -1461,7 +1458,7 @@ local
    fun reduce_thm f ty =
       if Lib.can (fcpLib.index_to_num o dest_word_type) ty
          then conv (f (Term.mk_var ("w", ty)))
-      else raise ERR "EXPAND_WORD_REDUCE_CONV" ""
+      else raise ERR "EXPAND_REDUCE_CONV" ""
 in
    fun EXPAND_REDUCE_CONV tm =
       let
@@ -1473,7 +1470,7 @@ in
              | ("words$reduce_nand", [w]) => (wordsSyntax.mk_reduce_nand, w)
              | ("words$reduce_nor",  [w]) => (wordsSyntax.mk_reduce_nor,  w)
              | ("words$reduce_xnor", [w]) => (wordsSyntax.mk_reduce_xnor, w)
-             | _ => raise ERR "EXPAND_WORD_REDUCE_CONV" ""
+             | _ => raise ERR "EXPAND_REDUCE_CONV" ""
        in
           Conv.REWR_CONV (reduce_thm f (Term.type_of w)) tm
        end

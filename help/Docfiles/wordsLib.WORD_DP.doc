@@ -36,7 +36,8 @@ The invocation will fail when the decision procedure {dp} fails.
 
 \COMMENTS
 
-On large problems {intLib.ARITH_PROVE} will perform much better than {bossLib.DECIDE}.
+On large problems {intLib.ARITH_PROVE} will perform much better than
+{bossLib.DECIDE}.
 
 \SEEALSO
 

@@ -25,6 +25,9 @@ The fragment {BIT_ss} rewrites the term {``BIT i n``} for ground {n}.
 
 \SEEALSO
 
-wordsLib.WORD_CONV, fcpLib.FCP_ss, wordsLib.SIZES_ss, wordsLib.WORD_ARITH_ss, wordsLib.WORD_LOGIC_ss, wordsLib.WORD_SHIFT_ss, wordsLib.WORD_ARITH_EQ_ss, wordsLib.WORD_BIT_EQ_ss, wordsLib.WORD_EXTRACT_ss, wordsLib.WORD_MUL_LSL_ss, wordsLib.WORD_ss
+wordsLib.WORD_CONV, fcpLib.FCP_ss, wordsLib.SIZES_ss, wordsLib.WORD_ARITH_ss,
+wordsLib.WORD_LOGIC_ss, wordsLib.WORD_SHIFT_ss, wordsLib.WORD_ARITH_EQ_ss,
+wordsLib.WORD_BIT_EQ_ss, wordsLib.WORD_EXTRACT_ss, wordsLib.WORD_MUL_LSL_ss,
+wordsLib.WORD_ss
 
 \ENDDOC
