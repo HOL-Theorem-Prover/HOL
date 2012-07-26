@@ -7,57 +7,57 @@
 (* ------------------------------------------------------------------------- *)
 
 (* interactive mode
-app load ["bossLib","realLib","transcTheory","subtypeTheory",
-          "HurdUseful","extra_boolTheory", "transcTheory",
-          "extra_pred_setTheory","extra_realTheory", "extrealTheory"];
+app load ["arithmeticTheory", "realTheory", "seqTheory", "pred_setTheory","res_quanTheory", 
+		"res_quanTools", "listTheory", "transcTheory", "rich_listTheory", "pairTheory",
+		"combinTheory", "realLib", "optionTheory", "real_sigmaTheory", 
+		"util_probTheory", "extrealTheory"];
 quietdec := true;
 *)
 
 open HolKernel Parse boolLib bossLib arithmeticTheory realTheory
-     seqTheory pred_setTheory res_quanTheory listTheory transcTheory
-     rich_listTheory pairTheory combinTheory realLib HurdUseful
-     subtypeTheory extra_pred_setTheory extra_boolTheory optionTheory
-     extra_realTheory extra_numTheory extrealTheory;
+     seqTheory pred_setTheory res_quanTheory res_quanTools listTheory transcTheory
+     rich_listTheory pairTheory combinTheory realLib  optionTheory 
+     real_sigmaTheory util_probTheory extrealTheory;
 
 val _ = new_theory "measure";
 
-infixr 0 ++ << || ORELSEC ## --> THENC;
-infix 1 >> |->;
+infixr 0 ++ << || THENC ORELSEC ORELSER ##;
+infix 1 >>;
 
-val !! = REPEAT;
+val op!! = op REPEAT;
 val op++ = op THEN;
 val op<< = op THENL;
 val op|| = op ORELSE;
 val op>> = op THEN1;
-val std_ss' = simpLib.++ (std_ss, boolSimps.ETA_ss);
 
-val INTER_ASSOC = GSYM INTER_ASSOC;
-val UNION_ASSOC = GSYM UNION_ASSOC;
+val REVERSE = Tactical.REVERSE;
 
-(* ------------------------------------------------------------------------- *)
-(* Tools.                                                                    *)
-(* ------------------------------------------------------------------------- *)
+val S_TAC = !! (POP_ASSUM MP_TAC) ++ !! RESQ_STRIP_TAC;
+val Strip = S_TAC;
 
-val PARSE_TAC = fn tac => fn q => W (tac o parse_with_goal q);
-
-val Reverse = Tactical.REVERSE
-val Strip = !! (POP_ASSUM MP_TAC) ++ !! STRIP_TAC;
-val Simplify = RW_TAC arith_ss;
-val Rewr = DISCH_THEN (REWRITE_TAC o wrap);
-val Rewr' = DISCH_THEN (ONCE_REWRITE_TAC o wrap);
-val STRONG_DISJ_TAC = CONV_TAC (REWR_CONV (GSYM IMP_DISJ_THM)) ++ STRIP_TAC;
-val Cond =
-  DISCH_THEN
-  (fn mp_th =>
-   let
-     val cond = fst (dest_imp (concl mp_th))
-   in
-     KNOW_TAC cond << [ALL_TAC, DISCH_THEN (MP_TAC o MP mp_th)]
-   end);
-
+fun K_TAC _ = ALL_TAC;
+val KILL_TAC = POP_ASSUM_LIST K_TAC;
+val Know = Q_TAC KNOW_TAC;
+val Suff = Q_TAC SUFF_TAC;
 val POP_ORW = POP_ASSUM (fn thm => ONCE_REWRITE_TAC [thm]);
 
-(* interactive mode
+val Cond =
+  MATCH_MP_TAC (PROVE [] ``!a b c. a /\ (b ==> c) ==> ((a ==> b) ==> c)``)
+  ++ CONJ_TAC;
+
+local
+  val th = prove (``!a b. a /\ (a ==> b) ==> a /\ b``, PROVE_TAC [])
+in
+  val STRONG_CONJ_TAC :tactic = MATCH_MP_TAC th ++ CONJ_TAC
+end;
+
+fun wrap a = [a];
+val Rewr = DISCH_THEN (REWRITE_TAC o wrap);
+val Rewr' = DISCH_THEN (ONCE_REWRITE_TAC o wrap);
+val std_ss' = simpLib.++ (std_ss, boolSimps.ETA_ss);
+
+(*
+ interactive mode
 quietdec := false;
 *)
 
@@ -316,7 +316,6 @@ val ALGEBRA_INTER_SPACE = store_thm
    RW_TAC std_ss [algebra_def, SUBSET_DEF, IN_INTER, EXTENSION, subset_class_def]
    ++ PROVE_TAC []);
 
-
 val LAMBDA_SYSTEM_EMPTY = store_thm
   ("LAMBDA_SYSTEM_EMPTY",
    ``!g0 lam. algebra g0 /\ positive (space g0, subsets g0, lam) ==> {} IN lambda_system g0 lam``,
@@ -336,7 +335,6 @@ val LAMBDA_SYSTEM_COMPL = store_thm
    >> (RW_TAC std_ss [Once EXTENSION, IN_DIFF, LEFT_AND_OVER_OR] ++ PROVE_TAC [algebra_def, subset_class_def, SUBSET_DEF])
    ++ RW_TAC std_ss []
    ++ PROVE_TAC [REAL_ADD_SYM]);
-
 
 val LAMBDA_SYSTEM_INTER = store_thm
   ("LAMBDA_SYSTEM_INTER",
@@ -370,7 +368,7 @@ val LAMBDA_SYSTEM_INTER = store_thm
        >> (RW_TAC std_ss [EXTENSION, IN_INTER, IN_DIFF]
            ++ PROVE_TAC [])
        ++ DISCH_THEN (ONCE_REWRITE_TAC o wrap)
-       ++ REWRITE_TAC [INTER_ASSOC]
+       ++ REWRITE_TAC [GSYM INTER_ASSOC]
        ++ Q.PAT_ASSUM `!g. P g` K_TAC
        ++ Q.PAT_ASSUM `!g. P g` MATCH_MP_TAC
        ++ PROVE_TAC [ALGEBRA_ALT_INTER])
@@ -385,15 +383,15 @@ val LAMBDA_SYSTEM_INTER = store_thm
    ++ KILL_TAC
    ++ REAL_ARITH_TAC);
 
-
 val LAMBDA_SYSTEM_ALGEBRA = store_thm
   ("LAMBDA_SYSTEM_ALGEBRA",
    ``!g0 lam.
-       algebra g0 /\ positive (space g0, subsets g0, lam) ==> algebra (space g0, lambda_system g0 lam)``,
+       algebra g0 /\ positive (space g0, subsets g0, lam)  
+       ==> algebra (space g0, lambda_system g0 lam)``,
    RW_TAC std_ss [ALGEBRA_ALT_INTER, LAMBDA_SYSTEM_EMPTY, positive_def,
-                  LAMBDA_SYSTEM_COMPL, LAMBDA_SYSTEM_INTER, space_def, subsets_def, subset_class_def]
+                  LAMBDA_SYSTEM_COMPL, LAMBDA_SYSTEM_INTER, space_def, 
+		  subsets_def, subset_class_def]
    ++ FULL_SIMP_TAC std_ss [lambda_system_def, GSPECIFICATION]);
-
 
 val LAMBDA_SYSTEM_STRONG_ADDITIVE = store_thm
   ("LAMBDA_SYSTEM_STRONG_ADDITIVE",
@@ -421,7 +419,6 @@ val LAMBDA_SYSTEM_STRONG_ADDITIVE = store_thm
    ++ Q.PAT_ASSUM `l1 IN x` MP_TAC
    ++ RW_TAC std_ss [lambda_system_def, GSPECIFICATION]);
 
-
 val LAMBDA_SYSTEM_ADDITIVE = store_thm
   ("LAMBDA_SYSTEM_ADDITIVE",
    ``!g0 lam l1 l2.
@@ -430,8 +427,8 @@ val LAMBDA_SYSTEM_ADDITIVE = store_thm
    RW_TAC std_ss [additive_def, measure_def, measurable_sets_def]
    ++ MP_TAC (Q.SPECL [`g0`, `lam`, `space g0`, `s`, `t`]
               LAMBDA_SYSTEM_STRONG_ADDITIVE)
-   ++ FULL_SIMP_TAC std_ss [lambda_system_def, GSPECIFICATION, ALGEBRA_INTER_SPACE, ALGEBRA_SPACE, ALGEBRA_UNION]);
-
+   ++ FULL_SIMP_TAC std_ss [lambda_system_def, GSPECIFICATION, ALGEBRA_INTER_SPACE, 
+      		    	    ALGEBRA_SPACE, ALGEBRA_UNION]);
 
 val COUNTABLY_SUBADDITIVE_SUBADDITIVE = store_thm
   ("COUNTABLY_SUBADDITIVE_SUBADDITIVE",
@@ -496,7 +493,7 @@ val SIGMA_ALGEBRA_ALT = store_thm
    ++ EQ_TAC
    >> (RW_TAC std_ss [countable_def, IN_FUNSET, IN_UNIV]
        ++ Q.PAT_ASSUM `!c. P c ==> Q c` MATCH_MP_TAC
-       ++ Reverse (RW_TAC std_ss [IN_IMAGE, SUBSET_DEF, IN_UNIV])
+       ++ REVERSE (RW_TAC std_ss [IN_IMAGE, SUBSET_DEF, IN_UNIV])
        >> PROVE_TAC []
        ++ Q.EXISTS_TAC `f`
        ++ RW_TAC std_ss []
@@ -550,7 +547,7 @@ val SIGMA_ALGEBRA_ALT_MONO = store_thm
        ++ PROVE_TAC [])
    ++ DISCH_THEN (REWRITE_TAC o wrap)
    ++ POP_ASSUM MATCH_MP_TAC
-   ++ Reverse (RW_TAC std_ss [SUBSET_DEF, IN_BIGUNION, IN_COUNT, IN_IMAGE,
+   ++ REVERSE (RW_TAC std_ss [SUBSET_DEF, IN_BIGUNION, IN_COUNT, IN_IMAGE,
                               COUNT_ZERO, IMAGE_EMPTY, BIGUNION_EMPTY])
    >> (Q.EXISTS_TAC `f x'`
        ++ RW_TAC std_ss []
@@ -558,7 +555,7 @@ val SIGMA_ALGEBRA_ALT_MONO = store_thm
        ++ DECIDE_TAC)
    ++ MATCH_MP_TAC ALGEBRA_FINITE_UNION
    ++ POP_ASSUM MP_TAC
-   ++ Reverse (RW_TAC std_ss [IN_FUNSET, IN_UNIV, SUBSET_DEF, IN_IMAGE])
+   ++ REVERSE (RW_TAC std_ss [IN_FUNSET, IN_UNIV, SUBSET_DEF, IN_IMAGE])
    >> PROVE_TAC []
    ++ MATCH_MP_TAC IMAGE_FINITE
    ++ RW_TAC std_ss [FINITE_COUNT]);
@@ -583,7 +580,7 @@ val SIGMA_ALGEBRA_ALT_DISJOINT = store_thm
    >> (POP_ASSUM K_TAC
        ++ ONCE_REWRITE_TAC [EXTENSION]
        ++ RW_TAC std_ss [IN_BIGUNION, IN_IMAGE, IN_UNIV, IN_DIFF]
-       ++ Reverse EQ_TAC
+       ++ REVERSE EQ_TAC
        >> (RW_TAC std_ss []
            ++ POP_ASSUM MP_TAC
            ++ RW_TAC std_ss [IN_DIFF]
@@ -787,10 +784,10 @@ val LAMBDA_SYSTEM_CARATHEODORY = store_thm
        ++ Suff `(\s. s INTER BIGUNION (IMAGE f UNIV)) o f = f`
        >> RW_TAC std_ss []
        ++ KILL_TAC
-       ++ FUN_EQ_TAC
+       ++ RW_TAC std_ss [FUN_EQ_THM]
        ++ RW_TAC std_ss [o_DEF, EXTENSION, IN_INTER, IN_BIGUNION,
                          GSPECIFICATION, IN_IMAGE, IN_UNIV]
-       ++ PROVE_TAC [])
+       ++ METIS_TAC [IN_INTER,SPECIFICATION,IN_BIGUNION_IMAGE,IN_UNIV])
    ++ !! GEN_TAC
    ++ STRIP_TAC
    ++ Know `summable (lam o (\s. s INTER g) o f)`
@@ -851,7 +848,7 @@ val LAMBDA_SYSTEM_CARATHEODORY = store_thm
     ++ CONJ_TAC
     >> (RW_TAC std_ss [EXTENSION, IN_INTER, IN_BIGUNION, IN_IMAGE, IN_UNIV,
                        o_DEF]
-        ++ Reverse EQ_TAC >> PROVE_TAC []
+        ++ REVERSE EQ_TAC >> PROVE_TAC []
         ++ RW_TAC std_ss [GSYM EXTENSION]
         ++ Q.EXISTS_TAC `f x' INTER g`
         ++ RW_TAC std_ss [IN_INTER]
@@ -1064,7 +1061,7 @@ val INF_MEASURE_AGREES = store_thm
        >> (Q.EXISTS_TAC `0`
            ++ METIS_TAC [INF_MEASURE_POS0])
        ++ Q.EXISTS_TAC `measure m s`
-       ++ Reverse CONJ_TAC >> RW_TAC std_ss [REAL_LE_REFL]
+       ++ REVERSE CONJ_TAC >> RW_TAC std_ss [REAL_LE_REFL]
        ++ MATCH_MP_TAC INF_MEASURE_NONEMPTY
        ++ RW_TAC std_ss [SUBSET_REFL])
    ++ MATCH_MP_TAC LE_INF
@@ -1163,7 +1160,7 @@ val INF_MEASURE_EMPTY = store_thm
    ``!m. algebra (m_space m, measurable_sets m) /\ positive m ==> (inf_measure m {} = 0)``,
    RW_TAC std_ss []
    ++ ONCE_REWRITE_TAC [GSYM REAL_LE_ANTISYM]
-   ++ Reverse CONJ_TAC >> PROVE_TAC [INF_MEASURE_POS, EMPTY_SUBSET]
+   ++ REVERSE CONJ_TAC >> PROVE_TAC [INF_MEASURE_POS, EMPTY_SUBSET]
    ++ RW_TAC std_ss [inf_measure_def]
    ++ MATCH_MP_TAC INF_LE
    ++ CONJ_TAC >> METIS_TAC [INF_MEASURE_POS0, EMPTY_SUBSET]
@@ -1263,7 +1260,7 @@ val INF_MEASURE_LE = store_thm
     ++ Q.EXISTS_TAC
        `f (minimal (\n. x IN f n)) DIFF
         BIGUNION (IMAGE f (count (minimal (\n. x IN f n))))`
-    ++ Reverse CONJ_TAC >> PROVE_TAC []
+    ++ REVERSE CONJ_TAC >> PROVE_TAC []
     ++ RW_TAC std_ss [IN_DIFF, IN_BIGUNION, IN_IMAGE, IN_COUNT]
     ++ PROVE_TAC []]);
 
@@ -1375,7 +1372,7 @@ val INF_MEASURE_COUNTABLY_SUBADDITIVE = store_thm
     ++ Q.EXISTS_TAC `y`
     ++ RW_TAC std_ss [UNCURRY_DEF],
     Know `measure m o UNCURRY g o f' = UNCURRY (\m'. measure m o g m') o f'`
-    >> (FUN_EQ_TAC
+    >> (RW_TAC std_ss [FUN_EQ_THM]
         ++ RW_TAC std_ss [o_DEF]
         ++ Cases_on `f' x`
         ++ RW_TAC std_ss [UNCURRY_DEF])
@@ -1383,7 +1380,7 @@ val INF_MEASURE_COUNTABLY_SUBADDITIVE = store_thm
     ++ MATCH_MP_TAC SUMINF_2D
     ++ RW_TAC std_ss [o_THM]
     ++ PROVE_TAC [positive_def]]);
-
+ 
 val INF_MEASURE_OUTER = store_thm
   ("INF_MEASURE_OUTER",
    ``!m.
@@ -1431,7 +1428,7 @@ val ALGEBRA_SUBSET_LAMBDA_SYSTEM = store_thm
            ++ Q.EXISTS_TAC `measure m o f`
            ++ RW_TAC std_ss [GREATER_EQ]
            ++ Q.EXISTS_TAC `0`
-           ++ Reverse (RW_TAC arith_ss [o_THM, abs])
+           ++ REVERSE (RW_TAC arith_ss [o_THM, abs])
            >> PROVE_TAC [positive_def, (REWRITE_RULE [subsets_def, space_def] o Q.SPEC `(m_space m,measurable_sets m)`) ALGEBRA_INTER]
            ++ MATCH_MP_TAC INCREASING
            ++ RW_TAC std_ss [INTER_SUBSET, (REWRITE_RULE [subsets_def, space_def] o Q.SPEC `(m_space m,measurable_sets m)`) ALGEBRA_INTER])
@@ -1469,7 +1466,7 @@ val ALGEBRA_SUBSET_LAMBDA_SYSTEM = store_thm
    ++ Know `!a b : real. (a = b) ==> a <= b` >> REAL_ARITH_TAC
    ++ DISCH_THEN MATCH_MP_TAC
    ++ AP_TERM_TAC
-   ++ FUN_EQ_TAC
+   ++ RW_TAC std_ss [FUN_EQ_THM]
    ++ RW_TAC std_ss [o_THM]
    ++ MATCH_MP_TAC EQ_SYM
    ++ MATCH_MP_TAC ADDITIVE
@@ -1487,6 +1484,7 @@ val ALGEBRA_SUBSET_LAMBDA_SYSTEM = store_thm
                      INF_MEASURE_POSITIVE, POW_ALGEBRA,
                      COUNTABLY_SUBADDITIVE_SUBADDITIVE,
                      measurable_sets_def, m_space_def]]);
+
 
 val CARATHEODORY = store_thm
   ("CARATHEODORY",
@@ -1837,7 +1835,7 @@ val SIGMA_PROPERTY_DISJOINT_LEMMA1 = store_thm
     ++ MATCH_MP_TAC CLOSED_CDI_INCREASING
     ++ Q.PAT_ASSUM `f IN X` MP_TAC
     ++ RW_TAC std_ss [SMALLEST_CLOSED_CDI, IN_FUNSET, IN_UNIV, GSPECIFICATION]
-    >> (Reverse (Cases_on `x`) >> RW_TAC arith_ss []
+    >> (REVERSE (Cases_on `x`) >> RW_TAC arith_ss []
         ++ RW_TAC arith_ss []
         ++ PROVE_TAC [SMALLEST_CLOSED_CDI, ALGEBRA_EMPTY, SUBSET_DEF])
     ++ Cases_on `n` >> RW_TAC arith_ss [num_case_def, EMPTY_SUBSET]
@@ -1946,7 +1944,7 @@ val SIGMA_PROPERTY_DISJOINT_LEMMA2 = store_thm
     ++ MATCH_MP_TAC CLOSED_CDI_INCREASING
     ++ Q.PAT_ASSUM `f IN X` MP_TAC
     ++ RW_TAC std_ss [SMALLEST_CLOSED_CDI, IN_FUNSET, IN_UNIV, GSPECIFICATION]
-    >> (Reverse (Cases_on `x`) >> RW_TAC arith_ss []
+    >> (REVERSE (Cases_on `x`) >> RW_TAC arith_ss []
         ++ RW_TAC arith_ss []
         ++ PROVE_TAC [SMALLEST_CLOSED_CDI, ALGEBRA_EMPTY, SUBSET_DEF])
     ++ Cases_on `n` >> RW_TAC arith_ss [num_case_def, EMPTY_SUBSET]
@@ -1987,7 +1985,7 @@ val SIGMA_PROPERTY_DISJOINT_LEMMA = store_thm
    RW_TAC std_ss []
    ++ MATCH_MP_TAC SUBSET_TRANS
    ++ Q.EXISTS_TAC `subsets (smallest_closed_cdi (sp, a))`
-   ++ Reverse CONJ_TAC
+   ++ REVERSE CONJ_TAC
    >> (RW_TAC std_ss [SUBSET_DEF, smallest_closed_cdi_def, IN_BIGINTER,
                       GSPECIFICATION, subsets_def, space_def]
        ++ PROVE_TAC [SUBSET_DEF])
@@ -2117,16 +2115,19 @@ val MEASURE_COUNTABLE_INCREASING = store_thm
    RW_TAC std_ss [IN_FUNSET, IN_UNIV]
    ++ Know
       `measure m o f = (\n. sum (0, n) (measure m o (\m. f (SUC m) DIFF f m)))`
-   >> (FUN_EQ_TAC
-       ++ Induct >> RW_TAC std_ss [o_THM, sum, MEASURE_EMPTY]
+   >> (RW_TAC std_ss [FUN_EQ_THM]
+       ++ Induct_on `n` >> RW_TAC std_ss [o_THM, sum, MEASURE_EMPTY]
        ++ POP_ASSUM (MP_TAC o SYM)
        ++ RW_TAC arith_ss [o_THM, sum]
        ++ MATCH_MP_TAC MEASURE_ADDITIVE
-       ++ FULL_SIMP_TAC std_ss [EXTENSION, IN_UNION, IN_DIFF, DISJOINT_DEF, NOT_IN_EMPTY, IN_INTER, SUBSET_DEF]
+       ++ FULL_SIMP_TAC std_ss [EXTENSION, IN_UNION, IN_DIFF, DISJOINT_DEF, NOT_IN_EMPTY, 
+       	  		        IN_INTER, SUBSET_DEF]
        ++ Know `algebra (m_space m, measurable_sets m)`
-       >> FULL_SIMP_TAC std_ss [measure_space_def, sigma_algebra_def, algebra_def, space_def, subsets_def]
+       >> FULL_SIMP_TAC std_ss [measure_space_def, sigma_algebra_def, algebra_def, 
+       	  		       	space_def, subsets_def]
        ++ STRIP_TAC
-       ++ (MP_TAC o REWRITE_RULE [subsets_def, space_def] o Q.SPEC `(m_space m, measurable_sets m)`) ALGEBRA_DIFF
+       ++ (MP_TAC o REWRITE_RULE [subsets_def, space_def] o 
+           Q.SPEC `(m_space m, measurable_sets m)`) ALGEBRA_DIFF
        ++ PROVE_TAC [])
    ++ DISCH_THEN (ONCE_REWRITE_TAC o wrap)
    ++ RW_TAC std_ss [GSYM sums]
@@ -2135,9 +2136,11 @@ val MEASURE_COUNTABLE_INCREASING = store_thm
    ++ CONJ_TAC
    >> (RW_TAC std_ss [IN_FUNSET, IN_UNIV]
        ++ Know `algebra (m_space m, measurable_sets m)`
-       >> FULL_SIMP_TAC std_ss [measure_space_def, sigma_algebra_def, algebra_def, space_def, subsets_def]
+       >> FULL_SIMP_TAC std_ss [measure_space_def, sigma_algebra_def, algebra_def, 
+       	  		        space_def, subsets_def]
        ++ STRIP_TAC
-       ++ (MP_TAC o REWRITE_RULE [subsets_def, space_def] o Q.SPEC `(m_space m, measurable_sets m)`) ALGEBRA_DIFF
+       ++ (MP_TAC o REWRITE_RULE [subsets_def, space_def] o 
+       	   Q.SPEC `(m_space m, measurable_sets m)`) ALGEBRA_DIFF
        ++ PROVE_TAC [])
    ++ CONJ_TAC
    >> (REPEAT STRIP_TAC
@@ -2148,7 +2151,7 @@ val MEASURE_COUNTABLE_INCREASING = store_thm
    >> (FULL_SIMP_TAC std_ss [EXTENSION, IN_UNION, IN_DIFF, DISJOINT_DEF, NOT_IN_EMPTY, IN_INTER,
 			     SUBSET_DEF, IN_BIGUNION, IN_IMAGE, IN_UNIV, DIFF_DEF]
        ++ STRIP_TAC
-       ++ Reverse (EQ_TAC ++ RW_TAC std_ss [])
+       ++ REVERSE (EQ_TAC ++ RW_TAC std_ss [])
        >> PROVE_TAC []
        ++ Know `x IN f x'` >> PROVE_TAC []
        ++ NTAC 2 (POP_ASSUM K_TAC)
@@ -2199,7 +2202,7 @@ val MONOTONE_CONVERGENCE = store_thm
          RW_TAC std_ss [num_case_def]],
         Cases_on `n`
         ++ RW_TAC std_ss [num_case_def, EMPTY_SUBSET],
-        SET_EQ_TAC
+        RW_TAC std_ss [EXTENSION,GSPECIFICATION]
         ++ RW_TAC std_ss [IN_BIGUNION_IMAGE, IN_UNIV]
         ++ EQ_TAC <<
         [RW_TAC std_ss []
@@ -2212,7 +2215,7 @@ val MONOTONE_CONVERGENCE = store_thm
          ++ PROVE_TAC []]])
    ++ RW_TAC std_ss []
    ++ Know `measure m o f = (\n. (measure m o (num_case {} f)) (SUC n))`
-   >> (FUN_EQ_TAC
+   >> (RW_TAC std_ss [FUN_EQ_THM]
        ++ RW_TAC std_ss [num_case_def, o_THM])
    ++ Rewr
    ++ Ho_Rewrite.REWRITE_TAC [GSYM SEQ_SUC]
@@ -2264,7 +2267,7 @@ val MEASUBABLE_BIGUNION_LEMMA = store_thm
 		BIGUNION c IN IMAGE (PREIMAGE f) (subsets b))``,
    RW_TAC std_ss [SIGMA_ALGEBRA, IN_FUNSET, IN_IMAGE]
    ++ Q.EXISTS_TAC `BIGUNION (IMAGE (\x. @x'. x' IN subsets b /\ (PREIMAGE f x' = x)) c)`
-   ++ Reverse CONJ_TAC
+   ++ REVERSE CONJ_TAC
    >> (Q.PAT_ASSUM `!c. countable c /\ c SUBSET subsets b ==> BIGUNION c IN subsets b` MATCH_MP_TAC
        ++ RW_TAC std_ss [COUNTABLE_IMAGE, SUBSET_DEF, IN_IMAGE]
        ++ Suff `(\x''. x'' IN subsets b) (@x''. x'' IN subsets b /\ (PREIMAGE f x'' = x'))`
@@ -2403,7 +2406,7 @@ val MEASURE_PRESERVING_LIFT = store_thm
        f IN measure_preserving m1 (m_space m2, a, measure m2) ==>
        f IN measure_preserving m1 m2``,
    RW_TAC std_ss []
-   ++ Reverse (Cases_on `algebra (m_space m2, a)`)
+   ++ REVERSE (Cases_on `algebra (m_space m2, a)`)
    >> FULL_SIMP_TAC std_ss [IN_MEASURE_PRESERVING, IN_MEASURABLE, m_space_def, measurable_sets_def, sigma_algebra_def]
    ++ Suff `f IN measure_preserving m1 (m_space m2, measurable_sets m2, measure m2)`
    >> RW_TAC std_ss [MEASURE_SPACE_REDUCE]
@@ -2469,7 +2472,7 @@ val MEASURE_PRESERVING_LIFT = store_thm
     >> (MATCH_MP_TAC MEASURE_COUNTABLE_INCREASING
         ++ RW_TAC std_ss [IN_FUNSET, IN_UNIV, SUBSET_DEF])
     ++ Know `measure m2 o f' = measure m1 o (\x. (PREIMAGE f o f') x INTER m_space m1)`
-    >> (FUN_EQ_TAC
+    >> (RW_TAC std_ss [FUN_EQ_THM]
         ++ RW_TAC std_ss [o_THM])
     ++ DISCH_THEN (ONCE_REWRITE_TAC o wrap)
     ++ MATCH_MP_TAC MEASURE_COUNTABLE_INCREASING
@@ -2496,7 +2499,7 @@ val MEASURE_PRESERVING_LIFT = store_thm
     >> (MATCH_MP_TAC MEASURE_COUNTABLY_ADDITIVE
         ++ RW_TAC std_ss [IN_FUNSET, IN_UNIV])
     ++ Know `measure m2 o f' = measure m1 o (\x. (PREIMAGE f o f') x INTER m_space m1)`
-    >> (FUN_EQ_TAC
+    >> (RW_TAC std_ss [FUN_EQ_THM]
         ++ RW_TAC std_ss [o_THM])
     ++ DISCH_THEN (ONCE_REWRITE_TAC o wrap)
     ++ MATCH_MP_TAC MEASURE_COUNTABLY_ADDITIVE
@@ -3054,6 +3057,7 @@ val BIGUNION_IMAGE_Q = store_thm
    ++ RW_TAC std_ss [COUNTABLE_IMAGE, IN_IMAGE,Q_COUNTABLE]
    ++ METIS_TAC []);
 
+
 (* ******************************************* *)
 (*    ------------------------------------     *)
 (*    Borel Space and Measurable functions     *)
@@ -3561,6 +3565,7 @@ val BOREL_MEASURABLE_SETS = store_thm
     BOREL_MEASURABLE_SETS7,BOREL_MEASURABLE_SETS8,
     BOREL_MEASURABLE_SETS9,BOREL_MEASURABLE_SETS10]);
 
+
 (* ******************************************* *)
 (*        Borel measurable functions           *)
 (* ******************************************* *)
@@ -3705,7 +3710,7 @@ val IN_MEASURABLE_BOREL_ADD = store_thm
 	    ++ EQ_TAC
 	    >> (RW_TAC std_ss []
 	        ++ METIS_TAC [lt_sub_imp,Q_DENSE_IN_R])
-	    ++ Reverse (RW_TAC std_ss [])
+	    ++ REVERSE (RW_TAC std_ss [])
 	    >> METIS_TAC []
 	    ++ METIS_TAC [lt_sub,lt_trans,extreal_not_infty])
   ++ FULL_SIMP_TAC std_ss []
@@ -3823,7 +3828,7 @@ val IN_MEASURABLE_BOREL_MUL_INDICATOR = store_thm
       ++ POP_ORW
       ++ MATCH_MP_TAC ALGEBRA_UNION
       ++ CONJ_TAC >> FULL_SIMP_TAC std_ss [sigma_algebra_def]
-      ++ Reverse CONJ_TAC >> FULL_SIMP_TAC std_ss [sigma_algebra_def,algebra_def]
+      ++ REVERSE CONJ_TAC >> FULL_SIMP_TAC std_ss [sigma_algebra_def,algebra_def]
       ++ MATCH_MP_TAC ALGEBRA_INTER
       ++ FULL_SIMP_TAC std_ss [sigma_algebra_def])
   ++ `{x | f x * indicator_fn s x <= c} INTER space a = (({x | f x <= c} INTER space a) INTER s)`
@@ -4128,7 +4133,7 @@ val indicator_fn_suminf = store_thm
       >> (FULL_SIMP_TAC std_ss [IN_BIGUNION_IMAGE,IN_UNIV]
           ++ RW_TAC std_ss [indicator_fn_def,EXTREAL_SUM_IMAGE_ZERO,FINITE_COUNT,le_refl,le_01])
       ++ FULL_SIMP_TAC std_ss [IN_BIGUNION_IMAGE,IN_UNIV,indicator_fn_def]
-      ++ Reverse (RW_TAC std_ss [])
+      ++ REVERSE (RW_TAC std_ss [])
       >> METIS_TAC []
       ++ `!n. n <> x' ==> ~(x IN a n)` by METIS_TAC [DISJOINT_DEF,EXTENSION,IN_INTER,NOT_IN_EMPTY]
       ++ Cases_on `~(x' IN count n)`
@@ -4156,7 +4161,7 @@ val indicator_fn_suminf = store_thm
 	   ++ RW_TAC std_ss [IN_IMAGE,IN_UNIV]
 	   ++ METIS_TAC [])
   ++ ASM_SIMP_TAC std_ss [indicator_fn_def,IN_BIGUNION_IMAGE,IN_UNIV]
-  ++ (Reverse (Cases_on `?x'. x IN a x'`) ++ ASM_SIMP_TAC std_ss [])
+  ++ (REVERSE (Cases_on `?x'. x IN a x'`) ++ ASM_SIMP_TAC std_ss [])
   >> (`0 <= SIGMA (\i. indicator_fn (a i) x) (count 0)` by RW_TAC std_ss [COUNT_ZERO,EXTREAL_SUM_IMAGE_THM,le_refl]
       ++ METIS_TAC [le_trans])
   ++ POP_ASSUM (Q.X_CHOOSE_THEN `x'` ASSUME_TAC)
@@ -4215,7 +4220,7 @@ val measure_split = store_thm
              (if j = x then b x UNION b e else b j))`
           by (FULL_SIMP_TAC std_ss [DISJOINT_DEF, EXTENSION, GSPECIFICATION, IN_INSERT, IN_INTER, NOT_IN_EMPTY]
        ++ METIS_TAC [IN_UNION])
-   ++ ASM_REWRITE_TAC [] ++ POP_ASSUM (K ALL_TAC)
+   ++ ASM_REWRITE_TAC [GSYM UNION_ASSOC] ++ POP_ASSUM (K ALL_TAC)
    ++ `(!i. (i = x) \/ i IN s' ==> (if i = x then b x UNION b e else b i) IN measurable_sets m)`
 	by METIS_TAC [ALGEBRA_UNION, sigma_algebra_def, measure_space_def, subsets_def]
    ++ ASM_REWRITE_TAC [] ++ POP_ASSUM (K ALL_TAC)

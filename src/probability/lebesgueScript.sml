@@ -6,62 +6,59 @@
 (* Based on the work of Aaron Coble, Cambridge University                    *)
 (* ------------------------------------------------------------------------- *)
 
-(*
-app load ["bossLib", "metisLib", "arithmeticTheory", "pred_setTheory", "prim_recTheory", "listTheory",
-   	  "state_transformerTheory", "HurdUseful", "combinTheory", "pairTheory",
-	  "realTheory", "realLib", "extra_boolTheory", "jrhUtils",
-	  "extra_pred_setTheory", "realSimps", "extra_realTheory",
-	  "numTheory", "simpLib", "seqTheory", "subtypeTheory",
-	  "transcTheory", "limTheory", "stringTheory", "rich_listTheory",
-	  "stringSimps", "listSimps", "extrealTheory", "measureTheory"];
-
+(* interactive mode
+app load ["arithmeticTheory", "realTheory", "prim_recTheory", "seqTheory", 
+    	  "pred_setTheory","res_quanTheory", "res_quanTools", "listTheory", 
+	  "transcTheory", "rich_listTheory", "pairTheory",
+	  "combinTheory", "realLib", "optionTheory", "real_sigmaTheory", 
+	  "util_probTheory", "extrealTheory", "measureTheory"];
 quietdec := true;
 *)
-open HolKernel Parse boolLib bossLib metisLib arithmeticTheory pred_setTheory prim_recTheory
-     listTheory state_transformerTheory HurdUseful extra_numTheory
-     combinTheory pairTheory realTheory realLib extra_boolTheory jrhUtils
-     extra_pred_setTheory realSimps extra_realTheory  numTheory
-     simpLib seqTheory subtypeTheory transcTheory limTheory stringTheory
-     rich_listTheory stringSimps listSimps extrealTheory measureTheory;
+
+open HolKernel Parse boolLib bossLib arithmeticTheory realTheory prim_recTheory 
+     seqTheory pred_setTheory res_quanTheory res_quanTools listTheory transcTheory
+     rich_listTheory pairTheory combinTheory realLib  optionTheory 
+     real_sigmaTheory util_probTheory extrealTheory measureTheory;
 
 val _ = new_theory "lebesgue";
 
 infixr 0 ++ << || THENC ORELSEC ORELSER ##;
 infix 1 >>;
 
-val op ++ = op THEN;
-val op << = op THENL;
-val op >> = op THEN1;
-val op || = op ORELSE;
+val op!! = op REPEAT;
+val op++ = op THEN;
+val op<< = op THENL;
+val op|| = op ORELSE;
+val op>> = op THEN1;
+
 val REVERSE = Tactical.REVERSE;
 
-val PARSE_TAC = fn tac => fn q => W (tac o parse_with_goal q);
+val S_TAC = !! (POP_ASSUM MP_TAC) ++ !! RESQ_STRIP_TAC;
+val Strip = S_TAC;
 
-val Simplify = RW_TAC arith_ss;
-val Suff = PARSE_TAC SUFF_TAC;
-val Know = PARSE_TAC KNOW_TAC;
+fun K_TAC _ = ALL_TAC;
+val KILL_TAC = POP_ASSUM_LIST K_TAC;
+val Know = Q_TAC KNOW_TAC;
+val Suff = Q_TAC SUFF_TAC;
+val POP_ORW = POP_ASSUM (fn thm => ONCE_REWRITE_TAC [thm]);
+
+val Cond =
+  MATCH_MP_TAC (PROVE [] ``!a b c. a /\ (b ==> c) ==> ((a ==> b) ==> c)``)
+  ++ CONJ_TAC;
+
+local
+  val th = prove (``!a b. a /\ (a ==> b) ==> a /\ b``, PROVE_TAC [])
+in
+  val STRONG_CONJ_TAC :tactic = MATCH_MP_TAC th ++ CONJ_TAC
+end;
+
+fun wrap a = [a];
 val Rewr = DISCH_THEN (REWRITE_TAC o wrap);
 val Rewr' = DISCH_THEN (ONCE_REWRITE_TAC o wrap);
-val Cond =
-  DISCH_THEN
-  (fn mp_th =>
-   let
-     val cond = fst (dest_imp (concl mp_th))
-   in
-     KNOW_TAC cond << [ALL_TAC, DISCH_THEN (MP_TAC o MP mp_th)]
-   end);
-
-val POP_ORW = POP_ASSUM (fn thm => ONCE_REWRITE_TAC [thm]);
-
-val safe_list_ss = (simpLib.++ (bool_ss, LIST_ss));
-
-val safe_string_ss = (simpLib.++ (bool_ss, STRING_ss));
-
-val arith_string_ss = (simpLib.++ (arith_ss, STRING_ss));
-
-val POP_ORW = POP_ASSUM (fn thm => ONCE_REWRITE_TAC [thm]);
+val std_ss' = simpLib.++ (std_ss, boolSimps.ETA_ss);
 
 (*
+ interactive mode
 quietdec := false;
 *)
 
@@ -88,8 +85,10 @@ val integral_def = Define
 val integrable_def = Define
    `integrable m f =
      f IN measurable (m_space m,measurable_sets m) Borel /\
-     (?z. (!r. r IN {r | ?g. r IN psfis m g /\ !x. x IN m_space m ==> g x <= fn_plus f x} ==> (r <= z))) /\
-     (?z. (!r. r IN {r | ?g. r IN psfis m g /\ !x. x IN m_space m ==> g x <= fn_minus f x} ==> (r <= z)))`;
+     (?z. (!r. r IN {r | ?g. r IN psfis m g /\ !x. x IN m_space m ==> g x <= fn_plus f x} 
+          ==> (r <= z))) /\
+     (?z. (!r. r IN {r | ?g. r IN psfis m g /\ !x. x IN m_space m ==> g x <= fn_minus f x} 
+          ==> (r <= z)))`;
 
 val finite_space_integral_def = Define
    `finite_space_integral m f =
@@ -4189,6 +4188,138 @@ val pos_fn_integral_suminf_integrable = store_thm
 (* Radon Nikodym Theorem                                                     *)
 (* ------------------------------------------------------------------------- *)
 
+(* -------------------------------------------------------------------------
+  S bounded and non empty set of R
+  ==> There exists a non decreasing sequence convergent to sup S
+ ------------------------------------------------------------------------- *)
+
+val seq_sup_def = Define `(seq_sup P 0 = @r. r IN P /\ (sup P - 1) < r:real) /\
+                          (seq_sup P (SUC n) =  (@r. r IN P /\ 
+                                                 max (sup P - (1/2) pow (SUC n)) (seq_sup P n) < r 
+                                                 /\ r < sup P))`;
+
+val REAL_SUP_SEQ = store_thm
+  ("REAL_SUP_SEQ",``!P:real->bool. (?x. P x) /\ (?z. !x. P x ==> x <= z) ==>
+                    ?x. (!n. x n IN P) /\ (!n. x n <= x (SUC n)) /\ x --> sup P``,
+  RW_TAC std_ss []
+  ++ Cases_on `?z. P z /\ (z = sup P)`
+  >> (Q.EXISTS_TAC `(\i. sup P)` ++ RW_TAC std_ss [REAL_LE_REFL,SEQ_CONST,SPECIFICATION])
+  ++ Q.EXISTS_TAC `seq_sup P`
+  ++ FULL_SIMP_TAC std_ss []
+  ++ `!x:real. P x ==> x < sup P` by METIS_TAC [REAL_LT_LE,REAL_SUP_UBOUND_LE]
+  ++ (MP_TAC o Q.SPEC `P`) REAL_SUP_LE
+  ++ DISCH_TAC
+  ++ `!n. seq_sup P n < sup P`
+        by (Induct
+	    >> (RW_TAC std_ss [seq_sup_def]
+		++ Suff `(\r. r < sup P) (@r. r IN P /\ sup P - 1 < r)`
+		>> METIS_TAC []
+		++ MATCH_MP_TAC SELECT_ELIM_THM
+		++ RW_TAC std_ss []
+		   >> (`sup P - 1 < sup P` by RW_TAC real_ss [REAL_LT_ADDR,REAL_LT_SUB_RADD]
+			++ `?x. P x /\ sup P - 1 < x` by METIS_TAC []
+			++ METIS_TAC [SPECIFICATION])
+		++ METIS_TAC [SPECIFICATION])
+	   ++ RW_TAC std_ss [seq_sup_def]
+	   ++ Suff `(\r. r < sup P) (@r. r IN P /\ max (sup P - (1 / 2) pow (SUC n)) (seq_sup P n) < r /\  r < sup P)`
+	   >> METIS_TAC []
+	   ++ MATCH_MP_TAC SELECT_ELIM_THM
+	   ++ RW_TAC std_ss []
+	   ++ `sup P - (1 / 2) pow (SUC n) < sup P` by METIS_TAC [REAL_LT_SUB_RADD,REAL_LT_ADDR,POW_HALF_POS]
+	   ++ `?x. P x /\ seq_sup P n < x` by METIS_TAC []
+	   ++ `?x. P x /\ sup P - (1 / 2) pow (SUC n) < x` by METIS_TAC []
+	   ++ Q.EXISTS_TAC `max x' x''`
+	   ++ RW_TAC std_ss [max_def,SPECIFICATION]
+	   >> METIS_TAC [REAL_LTE_TRANS]
+	   ++ FULL_SIMP_TAC std_ss [GSYM real_lt]
+	   ++ METIS_TAC [REAL_LT_TRANS])
+  ++ `!n. seq_sup P n IN P`
+	   by (Induct
+	       >> (RW_TAC std_ss [seq_sup_def]
+		   ++ Suff `(\r. r IN P) (@r. r IN P /\ sup P - 1 < r)`
+		   >> METIS_TAC []
+		   ++ MATCH_MP_TAC SELECT_ELIM_THM
+		   ++ RW_TAC std_ss []
+		   ++ `sup P - 1 < sup P` by RW_TAC real_ss [REAL_LT_ADDR,REAL_LT_SUB_RADD]
+		   ++ `?x. P x /\ sup P - 1 < x` by METIS_TAC []
+		   ++ METIS_TAC [SPECIFICATION])
+		++ RW_TAC std_ss [seq_sup_def]
+		++ Suff `(\r. r IN P) 
+                   (@r. r IN P /\ max (sup P - (1 / 2) pow SUC n) (seq_sup P n) < r /\ r < sup P)`
+		>> METIS_TAC []
+		++ MATCH_MP_TAC SELECT_ELIM_THM
+		++ RW_TAC std_ss []
+		++ `sup P - (1 / 2) pow (SUC n) < sup P` 
+                    by METIS_TAC [REAL_LT_SUB_RADD,REAL_LT_ADDR,POW_HALF_POS]
+		++ `?x. P x /\ seq_sup P n < x` by METIS_TAC []
+		++ `?x. P x /\ sup P - (1 / 2) pow (SUC n) < x` by METIS_TAC []
+		++ Q.EXISTS_TAC `max x' x''`
+		++ RW_TAC std_ss [max_def,SPECIFICATION]
+		>> METIS_TAC [REAL_LTE_TRANS]
+		++ FULL_SIMP_TAC std_ss [GSYM real_lt]
+		++ METIS_TAC [REAL_LT_TRANS])
+  ++ RW_TAC std_ss []
+  >> (RW_TAC std_ss [seq_sup_def]
+      ++ Suff `(\r. seq_sup P n <= r) 
+               (@r. r IN P /\ max (sup P - (1 / 2) pow SUC (n)) (seq_sup P n) < r /\ r < sup P)`
+      >> METIS_TAC []
+      ++ MATCH_MP_TAC SELECT_ELIM_THM
+      ++ RW_TAC std_ss []
+      >> (`sup P - (1 / 2) pow (SUC n) < sup P` 
+           by METIS_TAC [REAL_LT_SUB_RADD,REAL_LT_ADDR,POW_HALF_POS]
+	  ++ `?x. P x /\ seq_sup P n < x` by METIS_TAC []
+	  ++ `?x. P x /\ sup P - (1 / 2) pow (SUC n) < x` by METIS_TAC []
+	  ++ Q.EXISTS_TAC `max x' x''`
+	  ++ RW_TAC std_ss [max_def,SPECIFICATION]
+	  >> METIS_TAC [REAL_LTE_TRANS]
+	  ++ FULL_SIMP_TAC std_ss [GSYM real_lt]
+	  ++ METIS_TAC [REAL_LT_TRANS])
+      ++ `seq_sup P n <= max (sup P - (1 / 2) pow (SUC n)) (seq_sup P n)` 
+           by RW_TAC real_ss [max_def]
+      ++ METIS_TAC [REAL_LET_TRANS,REAL_LT_IMP_LE])
+  ++ `!n. sup P - (1/2) pow n  <= seq_sup P n`
+  	by  (Induct
+	     >> (RW_TAC std_ss [seq_sup_def,pow]
+		 ++ Suff `(\r. sup P - 1 <= r) (@r. r IN P /\ sup P - 1 < r)`
+	 	 >> METIS_TAC []
+		 ++ MATCH_MP_TAC SELECT_ELIM_THM
+		 ++ RW_TAC std_ss []
+		 >> (`sup P - 1 < sup P` by RW_TAC real_ss [REAL_LT_ADDR,REAL_LT_SUB_RADD]
+		      ++ `?x. P x /\ sup P - 1 < x` by METIS_TAC []
+		      ++ METIS_TAC [SPECIFICATION])
+		 ++ RW_TAC std_ss [REAL_LT_IMP_LE])
+		 ++ RW_TAC std_ss [seq_sup_def]
+		 ++ Suff `(\r. sup P - (1 / 2) pow (SUC n) <= r) 
+ 	             (@r. r IN P /\ max (sup P - (1 / 2) pow (SUC n)) (seq_sup P n) < r /\ 
+		     	  r < sup P)`
+		 >> METIS_TAC []
+		 ++ MATCH_MP_TAC SELECT_ELIM_THM
+		 ++ RW_TAC std_ss []
+		 >> (`sup P - (1 / 2) pow (SUC n) < sup P` 
+                      by METIS_TAC [REAL_LT_SUB_RADD,REAL_LT_ADDR,POW_HALF_POS]
+		     ++ `?x. P x /\ seq_sup P n < x` by METIS_TAC []
+		     ++ `?x. P x /\ sup P - (1 / 2) pow (SUC n) < x` by METIS_TAC []
+		     ++ Q.EXISTS_TAC `max x' x''`
+		     ++ RW_TAC std_ss [max_def,SPECIFICATION]
+		     >> METIS_TAC [REAL_LTE_TRANS]
+		     ++ FULL_SIMP_TAC std_ss [GSYM real_lt]
+		     ++ METIS_TAC [REAL_LT_TRANS])
+		++ `sup P - (1 / 2) pow (SUC n) <= 
+		    max (sup P - (1 / 2) pow (SUC n)) (seq_sup P n)` 
+		     by RW_TAC real_ss [max_def]
+		++ METIS_TAC [REAL_LET_TRANS,REAL_LT_IMP_LE])
+  ++ MATCH_MP_TAC SEQ_SANDWICH
+  ++ Q.EXISTS_TAC `(\n. sup P - (1 / 2) pow n)`
+  ++ Q.EXISTS_TAC `(\n. sup P)`
+  ++ RW_TAC std_ss [SEQ_CONST,REAL_LT_IMP_LE]
+  ++ `(\n. sup P - (1 / 2) pow n) = (\n. (\n. sup P) n - (\n. (1 / 2) pow n) n)` 
+      by RW_TAC std_ss []
+  ++ `(\n. sup P) --> sup P` by RW_TAC std_ss [SEQ_CONST]
+  ++ Suff `(\n. (1 / 2) pow n) --> 0`
+  >> METIS_TAC [(REWRITE_RULE [REAL_SUB_RZERO] o 
+                Q.SPECL [`(\n. sup P)`,`sup P`,`(\n. (1 / 2) pow n)`,`0`]) SEQ_SUB]
+  ++ RW_TAC real_ss [SEQ_POWER]);
+
 val EXTREAL_SUP_FUN_SEQ_IMAGE = store_thm
 ("EXTREAL_SUP_FUN_SEQ_IMAGE", ``!(P:real->bool) (P':('a->extreal)->bool) f.
 		(?x. P x) /\ (?z. !x. P x ==> x <= z) /\ (P = IMAGE f P')
@@ -4205,7 +4336,6 @@ val EXTREAL_SUP_FUN_SEQ_IMAGE = store_thm
   >> (SELECT_ELIM_TAC
       ++ RW_TAC std_ss []
       ++ METIS_TAC [IN_IMAGE]));
-
 
 val max_fn_seq_def = Define `(max_fn_seq g 0 x  = g 0 x ) /\
 	 ((max_fn_seq g (SUC n) x) = max (max_fn_seq g n x) (g (SUC n) x))`;

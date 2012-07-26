@@ -7,54 +7,50 @@
 (* ------------------------------------------------------------------------- *)
 
 (* interactive mode
-app load ["boolLib", "bossLib", "arithmeticTheory", "realTheory", "simpLib",
-     "seqTheory", "pred_setTheory", "res_quanTheory", "listTheory",
-     "rich_listTheory", "pairTheory", "combinTheory", "realLib", "HurdUseful",
-     "subtypeTheory", "extra_pred_setTheory", "extra_boolTheory", "optionTheory",
-      "extra_numTheory", "extra_realTheory", "extrealTheory", "measureTheory", "lebesgueTheory"];
+app load ["arithmeticTheory", "realTheory", "prim_recTheory", "seqTheory", 
+    	  "pred_setTheory","res_quanTheory", "res_quanTools", "listTheory", 
+	  "transcTheory", "rich_listTheory", "pairTheory",
+	  "combinTheory", "realLib", "optionTheory", "real_sigmaTheory", 
+	  "util_probTheory", "extrealTheory", "measureTheory", "lebesgueTheory"];
 quietdec := true;
 *)
 
-open HolKernel Parse boolLib bossLib arithmeticTheory realTheory simpLib
-     seqTheory pred_setTheory res_quanTheory listTheory
-     rich_listTheory pairTheory combinTheory realLib HurdUseful
-     subtypeTheory extra_pred_setTheory extra_boolTheory optionTheory
-     extra_numTheory extra_realTheory extrealTheory measureTheory lebesgueTheory;
+open HolKernel Parse boolLib bossLib arithmeticTheory realTheory prim_recTheory 
+     seqTheory pred_setTheory res_quanTheory res_quanTools listTheory transcTheory
+     rich_listTheory pairTheory combinTheory realLib  optionTheory 
+     real_sigmaTheory util_probTheory extrealTheory measureTheory lebesgueTheory;
 
 val _ = new_theory "probability";
 
-infixr 0 ++ << || ORELSEC ## --> THENC;
-infix 1 >> |->;
+infixr 0 ++ << || THENC ORELSEC ORELSER ##;
+infix 1 >>;
 
-val !! = REPEAT;
+val op!! = op REPEAT;
 val op++ = op THEN;
 val op<< = op THENL;
 val op|| = op ORELSE;
 val op>> = op THEN1;
-val Reverse = Tactical.REVERSE
 
-(* ------------------------------------------------------------------------- *)
-(* Tools.                                                                    *)
-(* ------------------------------------------------------------------------- *)
+val REVERSE = Tactical.REVERSE;
 
-val PARSE_TAC = fn tac => fn q => W (tac o parse_with_goal q);
+val S_TAC = !! (POP_ASSUM MP_TAC) ++ !! RESQ_STRIP_TAC;
+val Strip = S_TAC;
 
-val Strip = !! (POP_ASSUM MP_TAC) ++ !! STRIP_TAC;
-val Simplify = RW_TAC arith_ss;
-val Suff = PARSE_TAC SUFF_TAC;
-val Know = PARSE_TAC KNOW_TAC;
+fun K_TAC _ = ALL_TAC;
+val KILL_TAC = POP_ASSUM_LIST K_TAC;
+val Know = Q_TAC KNOW_TAC;
+val Suff = Q_TAC SUFF_TAC;
+val POP_ORW = POP_ASSUM (fn thm => ONCE_REWRITE_TAC [thm]);
+
+fun wrap a = [a];
 val Rewr = DISCH_THEN (REWRITE_TAC o wrap);
 val Rewr' = DISCH_THEN (ONCE_REWRITE_TAC o wrap);
-val Cond =
-  DISCH_THEN
-  (fn mp_th =>
-   let
-     val cond = fst (dest_imp (concl mp_th))
-   in
-     KNOW_TAC cond << [ALL_TAC, DISCH_THEN (MP_TAC o MP mp_th)]
-   end);
 
-val POP_ORW = POP_ASSUM (fn thm => ONCE_REWRITE_TAC [thm]);
+
+(*
+ interactive mode
+quietdec := false;
+*)
 
 (* ------------------------------------------------------------------------- *)
 (* Basic probability theory definitions.                                     *)
@@ -331,7 +327,7 @@ val PROB_ZERO_UNION = store_thm
   ++ STRIP_TAC
   ++ Know `prob p (t DIFF s) = 0`
   >> (ONCE_REWRITE_TAC [GSYM REAL_LE_ANTISYM]
-      ++ Reverse CONJ_TAC >> PROVE_TAC [PROB_POSITIVE]
+      ++ REVERSE CONJ_TAC >> PROVE_TAC [PROB_POSITIVE]
       ++ Q.PAT_ASSUM `prob p t = 0` (ONCE_REWRITE_TAC o wrap o SYM)
       ++ MATCH_MP_TAC PROB_INCREASING
       ++ RW_TAC std_ss [DIFF_SUBSET])
@@ -443,7 +439,7 @@ val PROB_FINITELY_ADDITIVE = store_thm
        (prob p o (\m. if m < n then f m else {})) sums
        sum (0, n) (prob p o f)`
    >> PROVE_TAC [SUM_UNIQ]
-   ++ Reverse CONJ_TAC
+   ++ REVERSE CONJ_TAC
    >> (Know
        `sum (0,n) (prob p o f) =
         sum (0,n) (prob p o (\m. (if m < n then f m else {})))`
@@ -455,8 +451,7 @@ val PROB_FINITELY_ADDITIVE = store_thm
    ++ Know
       `BIGUNION (IMAGE f (count n)) =
        BIGUNION (IMAGE (\m. (if m < n then f m else {})) UNIV)`
-   >> (SET_EQ_TAC
-       ++ RW_TAC std_ss [IN_BIGUNION_IMAGE, IN_COUNT, IN_UNIV]
+   >> (RW_TAC std_ss [EXTENSION,IN_BIGUNION_IMAGE, IN_COUNT, IN_UNIV]
        ++ PROVE_TAC [NOT_IN_EMPTY])
    ++ Rewr
    ++ MATCH_MP_TAC PROB_COUNTABLY_ADDITIVE
@@ -490,8 +485,7 @@ val PROB_SUBADDITIVE = store_thm
        prob p s <= prob p t + prob p u``,
    RW_TAC std_ss []
    ++ Know `t UNION u = t UNION (u DIFF t)`
-   >> (SET_EQ_TAC
-       ++ RW_TAC std_ss [IN_UNION, IN_DIFF]
+   >> (RW_TAC std_ss [EXTENSION, IN_UNION, IN_DIFF]
        ++ PROVE_TAC [])
    ++ Rewr
    ++ Know `u DIFF t IN events p`
@@ -526,9 +520,8 @@ val PROB_COUNTABLY_SUBADDITIVE = store_thm
         ++ PROVE_TAC [],
         RW_TAC std_ss [SUBSET_DEF, IN_BIGUNION, IN_IMAGE, IN_COUNT]
         ++ PROVE_TAC [LT_SUC],
-        SET_EQ_TAC
-        ++ RW_TAC std_ss [IN_BIGUNION_IMAGE, IN_UNIV, IN_COUNT]
-        ++ Reverse EQ_TAC >> PROVE_TAC []
+        RW_TAC std_ss [EXTENSION, IN_BIGUNION_IMAGE, IN_UNIV, IN_COUNT]
+        ++ REVERSE EQ_TAC >> PROVE_TAC []
         ++ RW_TAC std_ss []
         ++ Q.EXISTS_TAC `SUC x'`
         ++ Q.EXISTS_TAC `x'`
@@ -572,7 +565,7 @@ val PROB_COUNTABLY_ZERO = store_thm
    ++ NTAC 2 (POP_ASSUM K_TAC)
    ++ STRIP_TAC
    ++ ONCE_REWRITE_TAC [GSYM REAL_LE_ANTISYM]
-   ++ Reverse CONJ_TAC
+   ++ REVERSE CONJ_TAC
    >> (MATCH_MP_TAC PROB_POSITIVE
        ++ RW_TAC std_ss []
        ++ MATCH_MP_TAC EVENTS_COUNTABLE_UNION
@@ -910,7 +903,7 @@ val uniform_distribution_prob_space = store_thm
 	  ++ METIS_TAC [CHOICE_DEF,NOT_IN_EMPTY])
   ++ `CARD (space s) <> 0` by METIS_TAC [CARD_EQ_0]
   ++ `&CARD (space s) <> 0:real` by RW_TAC real_ss []
-  ++ Reverse (RW_TAC std_ss [prob_space_def,measure_def,PSPACE])
+  ++ REVERSE (RW_TAC std_ss [prob_space_def,measure_def,PSPACE])
   >> RW_TAC std_ss [uniform_distribution_def,REAL_DIV_REFL]
   ++ MATCH_MP_TAC finite_additivity_sufficient_for_finite_spaces
   ++ CONJ_TAC >> FULL_SIMP_TAC std_ss [random_variable_def,IN_MEASURABLE]
