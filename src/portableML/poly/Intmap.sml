@@ -50,17 +50,15 @@ exception NotFound
 fun wt (i : int) = 3 * i
 
 datatype 'a intmap =
-  E
-| T of {
-    key : int,
-    value : 'a,
-    cnt : int,
-    left : 'a intmap,
-    right : 'a intmap
-}
+   E
+ | T of {key: int,
+         value: 'a,
+         cnt: int,
+         left: 'a intmap,
+         right: 'a intmap}
 
 fun numItems E = 0
-  | numItems (T{cnt,...}) = cnt
+  | numItems (T {cnt, ...}) = cnt
 
 local
     fun N(k,v,E,E) = T{key=k,value=v,cnt=1,left=E,right=E}
@@ -165,7 +163,7 @@ in
     fun listItems d = let
       fun d2l E res = res
         | d2l (T{key,value,left,right,...}) res =
-	  d2l left ((key,value) :: d2l right res)
+          d2l left ((key,value) :: d2l right res)
       in d2l d [] end
 
     fun app f d = let

@@ -760,9 +760,9 @@ fun end_time timer =
       val gc = Timer.checkGCTime timer
    in
       TextIO.output (TextIO.stdOut,
-           "runtime: "^Time.toString usr ^ "s,\
-       \    gctime: "^Time.toString gc ^ "s, \
-       \    systime: "^Time.toString sys ^"s.\n");
+           "runtime: " ^ Time.toString usr ^ "s,\
+       \    gctime: " ^ Time.toString gc ^ "s, \
+       \    systime: " ^ Time.toString sys ^ "s.\n");
       TextIO.flushOut TextIO.stdOut
    end
 

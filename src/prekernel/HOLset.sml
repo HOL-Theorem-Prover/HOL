@@ -4,4 +4,4 @@ struct
   open Redblackset
 
   fun pp_holset pps s = HOLPP.add_string pps "<holset>"
-end;
+end
