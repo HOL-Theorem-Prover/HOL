@@ -24,10 +24,14 @@ A call to {output_words_as_oct} will make word literals output in octal format.
 
 \COMMENTS
 
-Printing and parsing in octal is controlled by the reference {base_tokens.allow_octal_input}.  A call to {output_words_as_oct} sets this value to true.
+Printing and parsing in octal is controlled by the reference
+{base_tokens.allow_octal_input}.  A call to {output_words_as_oct} sets this
+value to true.
 
 \SEEALSO
 
-wordsLib.output_words_as, wordsLib.remove_word_printer, wordsLib.output_words_as_dec, wordsLib.output_words_as_bin, wordsLib.output_words_as_hex
+wordsLib.output_words_as, wordsLib.remove_word_printer,
+wordsLib.output_words_as_dec, wordsLib.output_words_as_bin,
+wordsLib.output_words_as_hex
 
 \ENDDOC

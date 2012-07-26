@@ -8,7 +8,8 @@ Initiate an induction on the value of a word.
 
 \DESCRIBE
 
-The tactic {Induct_word} makes use of the tactic {bossLib.recInduct wordsTheory.WORD_INDUCT}.
+The tactic {Induct_word} makes use of the tactic
+{bossLib.recInduct wordsTheory.WORD_INDUCT}.
 
 \EXAMPLE
 Given the goal

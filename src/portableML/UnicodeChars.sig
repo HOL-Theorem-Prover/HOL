@@ -98,6 +98,12 @@ sig
   val circlestar     : string
   val stardiaeresis  : string
 
+  (* quotation marks *)
+  val ldquo : string
+  val lsquo : string
+  val rdquo : string
+  val rsquo : string
+
   (* boolTheory connectives *)
   val forall : string
   val exists : string
@@ -149,4 +155,3 @@ sig
 
 
 end
-

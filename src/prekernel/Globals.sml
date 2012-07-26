@@ -8,7 +8,6 @@
 (*                                                                       *)
 (* ===================================================================== *)
 
-
 structure Globals :> Globals =
 struct
 
@@ -17,7 +16,6 @@ struct
  *---------------------------------------------------------------------------*)
 
 val HOLDIR = Systeml.HOLDIR
-
 
 (*---------------------------------------------------------------------------*
  * Version information                                                       *
@@ -56,24 +54,25 @@ val show_scrub = ref true
  *---------------------------------------------------------------------------*)
 
 fun outHOL_ERR_default {message,origin_function,origin_structure} =
-    (TextIO.output(TextIO.stdOut,
-                   "\nException raised at "^ origin_structure^"."^
-		   origin_function^":\n"^message^"\n");
-     TextIO.flushOut TextIO.stdOut)
+   (TextIO.output (TextIO.stdOut,
+                   "\nException raised at " ^ origin_structure ^ "." ^
+                   origin_function ^ ":\n" ^ message ^ "\n")
+    ; TextIO.flushOut TextIO.stdOut)
+
 val output_HOL_ERR = ref outHOL_ERR_default
 
 (*---------------------------------------------------------------------------*
  * Prettyprinting flags                                                      *
  *---------------------------------------------------------------------------*)
 
-val type_pp_prefix = ref "`"  and type_pp_suffix = ref "`"
-val term_pp_prefix = ref "`"  and term_pp_suffix = ref "`"
-
+val type_pp_prefix = ref "`" and type_pp_suffix = ref "`"
+val term_pp_prefix = ref "`" and term_pp_suffix = ref "`"
 
 (*---------------------------------------------------------------------------*
  * Tells the prettyprinters how wide the page is.                            *
  *---------------------------------------------------------------------------*)
-val linewidth = ref 72;
+
+val linewidth = ref 72
 
 (*---------------------------------------------------------------------------*
  * Controls depth of printing for terms. Since the pp recursively decrements *
@@ -82,36 +81,32 @@ val linewidth = ref 72;
  * this will work to negmaxint, but no guarantees after that.                *
  *---------------------------------------------------------------------------*)
 
-val max_print_depth = ref ~1;
+val max_print_depth = ref ~1
 
-val pp_flags = {show_types     = ref false,
-                show_numeral_types = ref false};
-
+val pp_flags = {show_types = ref false, show_numeral_types = ref false}
 
 (*---------------------------------------------------------------------------*
  * For prettyprinting type information in a term.                            *
  *---------------------------------------------------------------------------*)
 
-val show_types = #show_types pp_flags;
-val show_types_verbosely = ref false;
-
+val show_types = #show_types pp_flags
+val show_types_verbosely = ref false
 
 (*---------------------------------------------------------------------------*
  * To make the system print out character suffixes on numerals to identify   *
  * them as belonging to particular types.                                    *
  *---------------------------------------------------------------------------*)
 
-val show_numeral_types = #show_numeral_types pp_flags;
+val show_numeral_types = #show_numeral_types pp_flags
 
-val goal_line = ref "------------------------------------";
-
+val goal_line = ref "------------------------------------"
 
 (*---------------------------------------------------------------------------*
  * At the end of type inference, HOL now guesses names for unconstrained     *
  * type variables, if this flag is set.                                      *
  *---------------------------------------------------------------------------*)
 
-val guessing_tyvars = ref true;
+val guessing_tyvars = ref true
 
 (*---------------------------------------------------------------------------*
  * At the end of type inference, HOL will guess which instance of an         *
@@ -119,22 +114,22 @@ val guessing_tyvars = ref true;
  * this flag is set.                                                         *
  *---------------------------------------------------------------------------*)
 
-val guessing_overloads = ref true;
+val guessing_overloads = ref true
 
 (*---------------------------------------------------------------------------*
  * If this flag is set, then the system will print a message when such       *
  * guesses are made.                                                         *
  *---------------------------------------------------------------------------*)
 
-val notify_on_tyvar_guess = ref true;
+val notify_on_tyvar_guess = ref true
 
 (*---------------------------------------------------------------------------*
  * Whether or not to be strict about what name a type or constant has.       *
  * Checked in Theory.new_type and Theory.new_constant.                       *
  *---------------------------------------------------------------------------*)
 
-val checking_type_names   = ref true;
-val checking_const_names  = ref true;
+val checking_type_names  = ref true
+val checking_const_names = ref true
 
 (* ----------------------------------------------------------------------
     The syntax used to highlight out-of-date constants in the
@@ -143,27 +138,28 @@ val checking_const_names  = ref true;
     might otherwise overlap, and be identified.
    ---------------------------------------------------------------------- *)
 
-val old = let
-  val c = ref 0
-in
-  (fn s => String.concat["old", Int.toString (!c), "->",s,"<-old"] before
-           c := !c + 1)
-end
+val old =
+   let
+      val c = ref 0
+   in
+      fn s => String.concat ["old", Int.toString (!c), "->", s, "<-old"] before
+              c := !c + 1
+   end
 
 (*---------------------------------------------------------------------------*
  * Flag used to tell how to do renaming: if it's NONE, do priming; if it's   *
  * SOME s, increment a numerical suffix and append it to s.                  *
  *---------------------------------------------------------------------------*)
 
-val priming = ref (NONE:string option);
+val priming = ref (NONE: string option)
 
 (*---------------------------------------------------------------------------*
  *    Flag allowing schematic definitions. Used by code in TotalDefn.        *
  *---------------------------------------------------------------------------*)
 
-val allow_schema_definition = ref false;
+val allow_schema_definition = ref false
 
-val print_thy_loads = ref false;
+val print_thy_loads = ref false
 
 (* ----------------------------------------------------------------------
     Flag telling us whether or not we're interactive.
@@ -171,15 +167,16 @@ val print_thy_loads = ref false;
     verbose.  It's set by std.prelude, so theory scripts and the like that
     Holmake runs won't cause the printing of messages.
    ---------------------------------------------------------------------- *)
-val interactive = ref false;
 
-val hol_clock = Timer.startCPUTimer()
+val interactive = ref false
+
+val hol_clock = Timer.startCPUTimer ()
 
 (*---------------------------------------------------------------------------*)
 (* The default directory where ML extracted from theory files is written.    *)
 (*---------------------------------------------------------------------------*)
 
-val emitMLDir = ref (Path.concat(HOLDIR,"src/emit/ML/"));
-val emitCAMLDir = ref (Path.concat(HOLDIR,"src/emit/Caml/"));
+val emitMLDir = ref (Path.concat(HOLDIR,"src/emit/ML/"))
+val emitCAMLDir = ref (Path.concat(HOLDIR,"src/emit/Caml/"))
 
 end (* Globals *)

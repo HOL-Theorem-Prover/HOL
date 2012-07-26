@@ -19,6 +19,7 @@ The conversion {WORD_CONV} applies the simpset fragment {WORD_ss}.
 
 \SEEALSO
 
-wordsLib.WORD_ss, wordsLib.WORD_ARITH_CONV, wordsLib.WORD_LOGIC_CONV, wordsLib.WORD_MUL_LSL_CONV, wordsLib.WORD_BIT_EQ_CONV, wordsLib.WORD_EVAL_CONV
+wordsLib.WORD_ss, wordsLib.WORD_ARITH_CONV, wordsLib.WORD_LOGIC_CONV,
+wordsLib.WORD_MUL_LSL_CONV, wordsLib.WORD_BIT_EQ_CONV, wordsLib.WORD_EVAL_CONV
 
 \ENDDOC

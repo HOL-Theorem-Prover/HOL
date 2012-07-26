@@ -12,7 +12,10 @@ simplification, words.
 
 \DESCRIBE
 
-The fragment {WORD_SHIFT_ss} does some basic simplifications for the operations: {<<} (left shift), {>>} (arithmetic right shift), {>>>} (logical right shift), {#>>} (rotate right) and {#<<} (rotate left).  More simplification is possible when used in combination with {wordsLib.SIZES_ss}.
+The fragment {WORD_SHIFT_ss} does some basic simplifications for the
+operations: {<<} (left shift), {>>} (arithmetic right shift), {>>>} (logical
+right shift), {#>>} (rotate right) and {#<<} (rotate left).  More
+simplification is possible when used in combination with {wordsLib.SIZES_ss}.
 
 \EXAMPLE
 
@@ -40,6 +43,8 @@ When the word length is known the fragment {WORD_ss} simplifies {#<<} to {#>>}.
 
 \SEEALSO
 
-fcpLib.FCP_ss, wordsLib.BIT_ss, wordsLib.SIZES_ss, wordsLib.WORD_ARITH_ss, wordsLib.WORD_LOGIC_ss, wordsLib.WORD_ARITH_EQ_ss, wordsLib.WORD_BIT_EQ_ss, wordsLib.WORD_EXTRACT_ss, wordsLib.WORD_MUL_LSL_ss, wordsLib.WORD_ss
+fcpLib.FCP_ss, wordsLib.BIT_ss, wordsLib.SIZES_ss, wordsLib.WORD_ARITH_ss,
+wordsLib.WORD_LOGIC_ss, wordsLib.WORD_ARITH_EQ_ss, wordsLib.WORD_BIT_EQ_ss,
+wordsLib.WORD_EXTRACT_ss, wordsLib.WORD_MUL_LSL_ss, wordsLib.WORD_ss
 
 \ENDDOC

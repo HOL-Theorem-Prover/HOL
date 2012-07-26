@@ -12,7 +12,8 @@ simplification, words.
 
 \DESCRIBE
 
-The fragment {WORD_MUL_LSL_ss} simplifies a multiplication by a word literal into a sum of left shifts.
+The fragment {WORD_MUL_LSL_ss} simplifies a multiplication by a word literal
+into a sum of left shifts.
 
 \EXAMPLE
 
@@ -27,10 +28,15 @@ The fragment {WORD_MUL_LSL_ss} simplifies a multiplication by a word literal int
 
 \COMMENTS
 
-This fragment is not included in {WORDS_ss}.  It should not be used in combination with {WORD_ARITH_EQ_ss} or {wordsLib.WORD_ARITH_CONV}, since these convert left shifts into multiplications.
+This fragment is not included in {WORDS_ss}.  It should not be used in
+combination with {WORD_ARITH_EQ_ss} or {wordsLib.WORD_ARITH_CONV}, since these
+convert left shifts into multiplications.
 
 \SEEALSO
 
-wordsLib.WORD_MUL_LSL_CONV, fcpLib.FCP_ss, wordsLib.BIT_ss, wordsLib.SIZES_ss, wordsLib.WORD_ARITH_ss, wordsLib.WORD_LOGIC_ss, wordsLib.WORD_ARITH_EQ_ss, wordsLib.WORD_BIT_EQ_ss, wordsLib.WORD_SHIFT_ss, wordsLib.WORD_EXTRACT_ss, wordsLib.WORD_ss
+wordsLib.WORD_MUL_LSL_CONV, fcpLib.FCP_ss, wordsLib.BIT_ss, wordsLib.SIZES_ss,
+wordsLib.WORD_ARITH_ss, wordsLib.WORD_LOGIC_ss, wordsLib.WORD_ARITH_EQ_ss,
+wordsLib.WORD_BIT_EQ_ss, wordsLib.WORD_SHIFT_ss, wordsLib.WORD_EXTRACT_ss,
+wordsLib.WORD_ss
 
 \ENDDOC

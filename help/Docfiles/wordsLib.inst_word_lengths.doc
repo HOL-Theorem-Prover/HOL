@@ -8,7 +8,8 @@ Guess and instantiate word index type variables in a term.
 
 \DESCRIBE
 
-The function {inst_word_lengths} tries to instantiate type variables that correspond with the return type of {word_concat} and {word_extract}.
+The function {inst_word_lengths} tries to instantiate type variables that
+correspond with the return type of {word_concat} and {word_extract}.
 
 \EXAMPLE
 {
@@ -26,7 +27,8 @@ The function {inst_word_lengths} tries to instantiate type variables that corres
 
 \COMMENTS
 
-The function {guess_lengths} adds {inst_word_lengths} as a post-processing stage to the term parser.
+The function {guess_lengths} adds {inst_word_lengths} as a post-processing
+stage to the term parser.
 
 \SEEALSO
 
