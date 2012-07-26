@@ -26,25 +26,28 @@ and in the same order.
    --------------------------------------  MATCH_MP
           A1 u A2 |- !xa..xk. t2'
 }
-
+As with {MP} and the underlying syntactic function {dest_imp}, negated
+terms (of the form {~p}) are treated as if they were implications from
+the argument of the negation to falsity.
 
 \FAILURE
 Fails unless the first theorem is a (possibly repeatedly universally
-quantified) implication whose antecedent can be instantiated to match
-the conclusion of the second theorem, without instantiating any variables
-which are free in {A1}, the first theorem's assumption list.
+quantified) implication (in the sense of {dest_imp}) whose antecedent
+can be instantiated to match the conclusion of the second theorem,
+without instantiating any variables which are free in {A1}, the first
+theorem's assumption list.
 
 \EXAMPLE
 In this example, automatic renaming occurs to maintain the most general form of
 the theorem, and the variant corresponding to {z} is universally quantified
 over, since it was universally quantified over in the first argument theorem.
 {
-   - val ith = (GENL [Term `x:num`, Term `z:num`] 
-                  o DISCH_ALL 
+   - val ith = (GENL [Term `x:num`, Term `z:num`]
+                  o DISCH_ALL
                   o AP_TERM (Term `$+ (w + z)`))
                (ASSUME (Term `x:num = y`));
    > val ith = |- !x z. (x = y) ==> (w + z + x = w + z + y) : thm
-   
+
    - val th = ASSUME (Term `w:num = z`);
    > val th = [w = z] |- w = z : thm
 
@@ -54,5 +57,5 @@ over, since it was universally quantified over in the first argument theorem.
 
 
 \SEEALSO
-Thm.EQ_MP, Tactic.MATCH_MP_TAC, Thm.MP, Tactic.MP_TAC, ConseqConv.CONSEQ_REWRITE_CONV.
+boolSyntax.dest_imp, Thm.EQ_MP, Tactic.MATCH_MP_TAC, Thm.MP, Tactic.MP_TAC, ConseqConv.CONSEQ_REWRITE_CONV.
 \ENDDOC
