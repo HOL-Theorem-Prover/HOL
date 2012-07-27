@@ -186,12 +186,12 @@ val _ = Defn.save_defn doPrim2_defn;
 val _ = Defn.save_defn CevalPrim2_defn;
 
 val _ = Define `
- (extend_rec_env cenv env rs defs ns vs =FOLDL2  (\ en n v . FUPDATE  en ( n, v)) 
+ (extend_rec_env cenv env rs defs ns vs =FOLDL2  (\ en n v . FUPDATE  en ( n, v))
     (FOLDL
         (\ en n . FUPDATE  en ( n,
           (CRecClos cenv rs defs n)))
         env
-        rs) 
+        rs)
     ns  vs)`;
 
 
@@ -268,9 +268,9 @@ Cevaluate env (CLet (n::ns) (e::es) b) (Rerr err))
 (! env ns defs a b r.
 (LENGTH ns= LENGTH defs)/\ALL_DISTINCT ns/\~  (a IN free_vars b)/\
 Cevaluate
-  (FOLDL2 
+  (FOLDL2
     (\ env' n (xs,b) .
-      FUPDATE  env' ( n, (CRecClos env [a] [(xs,b)] a))) 
+      FUPDATE  env' ( n, (CRecClos env [a] [(xs,b)] a)))
     env  ns  defs)
   b r
 ==>
@@ -1128,7 +1128,7 @@ val _ = Defn.save_defn bind_fv_defn;
        Load ?   (* copy free vars for function k-1 *)
        ...
        Cons 0 (m2 + n2)
-       Cons 0 2                             
+       Cons 0 2
        Store ?                              CodePtr fk, ..., CodePtr f3, f2, f1, RefPtrs, rest
        ...                                  fk, ..., f2, f1, RefPtrs, rest
        Load ?

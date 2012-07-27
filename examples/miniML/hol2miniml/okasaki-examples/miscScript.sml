@@ -62,7 +62,7 @@ HO_MATCH_MP_TAC PERM_IND >>
 srw_tac [BAG_ss] [list_to_bag_def, BAG_INSERT_UNION]);
 
 val perm_to_list_to_bag_lem = Q.prove (
-`!l1 l2 x. 
+`!l1 l2 x.
   (list_to_bag (FILTER ($= x) l1) = list_to_bag (FILTER ($= x) l2))
   ⇒
   (FILTER ($= x) l1 = FILTER ($= x) l2)`,

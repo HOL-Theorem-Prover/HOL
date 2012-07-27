@@ -60,7 +60,7 @@ val it = 165580141: int
 val it =
    [("fib", {n = 1, gc = 0.000, sys = 0.003, usr = 4.700, real = 4.755})]:
    (string * call_info) list
-> 
+>
 ramana@lois >iler/emit % hol
 
 Vim input /tmp/vimhol0

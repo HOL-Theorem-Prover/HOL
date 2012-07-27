@@ -65,8 +65,8 @@ val digit_def = Define `
 digit = CharSet (set "0123456789")`;
 
 val digit_not_zero_def = Define `
-digit_not_zero = CharSet (set "123456789")`; 
- 
+digit_not_zero = CharSet (set "123456789")`;
+
 val hexdigit_def = Define `
 hexdigit = CharSet (set "0123456789ABCDEFabcdef")`;
 
@@ -98,9 +98,9 @@ val exp_def = Define `
 exp = CharSet (set "Ee")`;
 
 val real_def = Define `
-real = Or [ Cat decint 
-           (Cat (StringLit ".") 
-           (Cat (Plus digit) 
+real = Or [ Cat decint
+           (Cat (StringLit ".")
+           (Cat (Plus digit)
                 (Or [Cat exp decint; StringLit ""])));
            (Cat decint (Cat exp decint))]`;
 
@@ -120,7 +120,7 @@ val tyvar_def = Define `
 tyvar = Cat (StringLit "'") (Star (Or [letter; digit; CharSet (set "_'")]))`;
 
 val longid_def = Define `
-longid = Cat (Plus (Cat alphanumid (StringLit "."))) 
+longid = Cat (Plus (Cat alphanumid (StringLit ".")))
              (Or [id; StringLit "="; StringLit "*"])`;
 
 val printable = Define `
@@ -129,10 +129,10 @@ printable = CharSet (set
 
 val escape_def = Define `
 escape = Or [StringLit "\\a"; StringLit "\\b"; StringLit "\\t"; StringLit "\\n";
-             StringLit "\\v"; StringLit "\\f"; StringLit "\\r"; 
+             StringLit "\\v"; StringLit "\\f"; StringLit "\\r";
 	     Cat (StringLit "\\\094") (CharSet (set "@-_"));
              Cat (StringLit "\\") (Cat digit (Cat digit digit));
-             Cat (StringLit "\\u") 
+             Cat (StringLit "\\u")
                  (Cat hexdigit (Cat hexdigit (Cat hexdigit hexdigit)));
 	     StringLit "\\\"";
              StringLit "\\\\"]`;
@@ -144,11 +144,11 @@ val stringchar_def = Define `
 stringchar = Or [printable; StringLit " "; escape]`;
 
 val string_def = Define `
-string = Cat (StringLit "\"") 
+string = Cat (StringLit "\"")
              (Cat (Star (Or [stringchar; gap])) (StringLit "\""))`;
 
 val char_def = Define `
-char = Cat (StringLit "#\"") 
+char = Cat (StringLit "#\"")
            (Cat (Star gap) (Cat stringchar (Cat (Star gap) (StringLit "\""))))`;
 
 val SML_lex_spec_def = Define `

@@ -389,9 +389,9 @@ rw [] >|
          (*
 val deBruijn_subst_check_freevars = Q.prove (
 `!tvs t.
-  enough_tvars tvs t ∧ 
+  enough_tvars tvs t ∧
   check_freevars T tvs (deBruijn_subst tvs t)
-  ⇒ 
+  ⇒
   check_freevars T tvs t`,
 recInduct enough_tvars_ind >>
 rw [deBruijn_subst_def, check_freevars_def, enough_tvars_def] >>
@@ -523,7 +523,7 @@ rw [bind_def, Once type_v_cases] >>
 `type_env tenvC (MAP (λ(fn,n,e). (fn,Recclosure env funs' fn)) funs) env'`
               by metis_tac [optionTheory.NOT_SOME_NONE, lookup_def, bind_def] >>
 rw [] >>
-`type_v tenvC (Recclosure env funs' fn) (Tfn t1 t2)` 
+`type_v tenvC (Recclosure env funs' fn) (Tfn t1 t2)`
          by (rw [Once type_v_cases] >>
                  metis_tac [lookup_def, bind_def]) >>
 imp_res_tac type_v_deBruijn_subst1 >>
@@ -548,12 +548,12 @@ rw [Once type_v_cases]);
 
 (*
 val check_added_tyvars = Q.prove (
-`!tvs t. 
-  enough_tvars tvs t ∧ check_freevars T [] t 
-  ⇒ 
+`!tvs t.
+  enough_tvars tvs t ∧ check_freevars T [] t
+  ⇒
   check_freevars T tvs (deBruijn_subst tvs t)`,
 recInduct deBruijn_subst_ind >>
-rw [check_freevars_def, deBruijn_subst_def, enough_tvars_def, 
+rw [check_freevars_def, deBruijn_subst_def, enough_tvars_def,
     rich_listTheory.EL_IS_EL] >>
 fs [EVERY_MEM] >>
 rw [MEM_MAP] >>
@@ -576,8 +576,8 @@ val type_lookup_lem2 = Q.prove (
 induct_on `tenv` >>
 rw [] >>
 fs [lookup_var_def] >>
-Q.PAT_ASSUM `type_env tenvC env tenv_pat` 
-        (MP_TAC o SIMP_RULE (srw_ss ()) 
+Q.PAT_ASSUM `type_env tenvC env tenv_pat`
+        (MP_TAC o SIMP_RULE (srw_ss ())
                          [Once (hd (tl (tl (CONJUNCTS type_v_cases))))]) >>
 rw [] >-
 metis_tac [] >>
@@ -607,7 +607,7 @@ cases_on `q = s` >>
 fs [] >>
 rw [] >>
 fs [] >>
-metis_tac [type_v_type_subst, type_v_deBruijn_subst2, 
+metis_tac [type_v_type_subst, type_v_deBruijn_subst2,
            check_freevars_deBruijn_subst]);
            *)
 
@@ -792,7 +792,7 @@ fs [e_step_def] >|
                     imp_res_tac type_v_deBruijn_subst1 >>
                     qexists_tac `t'` >>
                     rw [] >|
-                    [`check_freevars T [] (Tfn (deBruijn_subst [] t') t2)` 
+                    [`check_freevars T [] (Tfn (deBruijn_subst [] t') t2)`
                                 by metis_tac [type_funs_Tfn] >>
                          fs [check_freevars_def] >>
                          metis_tac [deBruijn_subst_check_freevars],
@@ -1036,7 +1036,7 @@ rw [disjoint_env_def] >>
 fs [Once DISJOINT_SYM] >>
 metis_tac [disjoint_env_def, DISJOINT_SYM]);
 
-val TAC = 
+val TAC =
 PairCases_on `p'` >>
 rw [] >>
 fs [merge_def, emp_def, get_first_tenv_def, build_ctor_tenv_def] >>
@@ -1103,7 +1103,7 @@ fs [d_step_def] >|
       TAC,
       TAC,
       TAC]]);
-  
+
 val def_final_state_def = Define `
   def_final_state (envC,envE,ds,c) = (c = NONE) ∧ (ds = [])`;
 

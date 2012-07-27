@@ -225,7 +225,7 @@ val (small_eval_list_rules, small_eval_list_ind, small_eval_list_cases) = Hol_re
    small_eval_list cenv env es (Rerr Rtype_error))
   ⇒
   (small_eval_list cenv env (e::es) (Rerr Rtype_error)))`;
-  
+
 val small_eval_list_length = Q.prove (
 `!cenv env es r. small_eval_list cenv env es r ⇒
   !vs. (r = Rval vs) ⇒ (LENGTH es = LENGTH vs)`,
@@ -1093,19 +1093,19 @@ rw [] >-
      fs [evaluate_state_no_ctxt] >>
      fs [] >>
      rw [Once evaluate_decs_cases] >>
-     metis_tac []) >- 
+     metis_tac []) >-
 (fs [evaluate_d_state_cases] >>
      rw [] >>
      fs [evaluate_state_no_ctxt] >>
      fs [] >>
      rw [Once evaluate_decs_cases] >>
-     metis_tac []) >- 
+     metis_tac []) >-
 (fs [evaluate_d_state_cases] >>
      rw [] >>
      fs [evaluate_state_no_ctxt] >>
      fs [] >>
      rw [Once evaluate_decs_cases] >>
-     metis_tac []) >> 
+     metis_tac []) >>
 fs [evaluate_d_state_cases] >>
 rw [] >>
 metis_tac [one_step_backward, evaluate_state_val_no_ctxt]);

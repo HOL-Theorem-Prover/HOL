@@ -5,7 +5,7 @@ val _ = new_theory "Print_astTermination";
 
 (* ----------------- Termination proofs for Print_astTheory --------------- *)
 
-fun register name def ind = 
+fun register name def ind =
   let val _ = save_thm (name ^ "_def", def);
       val _ = save_thm (name ^ "_ind", ind);
       val _ = computeLib.add_persistent_funs [(name ^ "_def", def)];
@@ -75,7 +75,7 @@ val _ = register "type_to_tok_tree" type_to_tok_tree_def type_to_tok_tree_ind;
 val tok_to_string_def =
   save_thm ("tok_to_string_def",SIMP_RULE (srw_ss()) [] tok_to_string_def);
 
-val _ = 
+val _ =
   computeLib.add_persistent_funs [("tok_to_string_def", tok_to_string_def)];
 
 val _ = export_theory ();
