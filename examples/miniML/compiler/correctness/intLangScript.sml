@@ -1871,4 +1871,93 @@ Cevaluate_any_env
 |> Q.GEN `res` |> Q.GEN `exp` |> Q.GEN `env`
 |> SIMP_RULE (srw_ss()) [AND_IMP_INTRO,GSYM CONJ_ASSOC])
 
+val Cevaluate_determ = store_thm("Cevaluate_determ",
+  ``(∀env exp res. Cevaluate env exp res ⇒ ∀res'. Cevaluate env exp res' ⇒ (res' = res)) ∧
+    (∀env exps ress. Cevaluate_list env exps ress ⇒ ∀ress'. Cevaluate_list env exps ress' ⇒ (ress' = ress))``,
+  ho_match_mp_tac Cevaluate_ind >>
+  strip_tac >- rw[] >>
+  strip_tac >- rw[] >>
+  strip_tac >- rw[] >>
+  strip_tac >- (
+    rw[Cevaluate_con] >>
+    res_tac >> fs[]) >>
+  strip_tac >- (
+    rw[Cevaluate_con] >>
+    res_tac >> fs[]) >>
+  strip_tac >- (
+    rw[Cevaluate_tageq] >>
+    res_tac >> fs[]) >>
+  strip_tac >- (
+    rw[Cevaluate_tageq] >>
+    res_tac >> fs[]) >>
+  strip_tac >- (
+    rw[Cevaluate_proj] >>
+    res_tac >> fs[]) >>
+  strip_tac >- (
+    rw[Cevaluate_proj] >>
+    res_tac >> fs[]) >>
+  strip_tac >- rw[] >>
+  strip_tac >- (
+    rw[Cevaluate_let_cons] >>
+    res_tac >> fs[]) >>
+  strip_tac >- (
+    rw[Cevaluate_let_cons] >>
+    res_tac >> fs[]) >>
+  strip_tac >- (
+    rw[] >>
+    pop_assum mp_tac >>
+    rw[Once Cevaluate_cases]) >>
+  strip_tac >- (
+    rw[] >>
+    pop_assum mp_tac >>
+    rw[Once Cevaluate_cases]) >>
+  strip_tac >- rw[] >>
+  strip_tac >- (
+    rw[] >>
+    pop_assum mp_tac >>
+    rw[Once Cevaluate_cases] >>
+    res_tac >> fs[] >>
+    rw[] >>
+    metis_tac[pairTheory.PAIR_EQ]) >>
+  strip_tac >- (
+    rw[] >>
+    pop_assum mp_tac >>
+    rw[Once Cevaluate_cases] >>
+    res_tac >> fs[]) >>
+  strip_tac >- (
+    rw[] >>
+    pop_assum mp_tac >>
+    rw[Once Cevaluate_cases] >>
+    res_tac >> fs[]) >>
+  strip_tac >- (
+    rw[] >>
+    pop_assum mp_tac >>
+    rw[Once Cevaluate_cases] >>
+    res_tac >> fs[]) >>
+  strip_tac >- (
+    rw[] >>
+    pop_assum mp_tac >>
+    rw[Once Cevaluate_cases] >>
+    res_tac >> fs[]) >>
+  strip_tac >- (
+    rw[] >>
+    pop_assum mp_tac >>
+    rw[Once Cevaluate_cases] >>
+    res_tac >> fs[]) >>
+  strip_tac >- (
+    rw[] >>
+    pop_assum mp_tac >>
+    rw[Once Cevaluate_cases] >>
+    res_tac >> fs[]) >>
+  strip_tac >- rw[Cevaluate_list_with_Cevaluate] >>
+  strip_tac >- (
+    rw[Cevaluate_list_with_Cevaluate,Cevaluate_list_with_cons] >>
+    res_tac >> fs[] ) >>
+  strip_tac >- (
+    rw[Cevaluate_list_with_Cevaluate,Cevaluate_list_with_cons] >>
+    res_tac >> fs[] ) >>
+  strip_tac >- (
+    rw[Cevaluate_list_with_Cevaluate,Cevaluate_list_with_cons] >>
+    res_tac >> fs[] ))
+
 val _ = export_theory()
