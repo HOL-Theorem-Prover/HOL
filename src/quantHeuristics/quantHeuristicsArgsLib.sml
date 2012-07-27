@@ -70,7 +70,7 @@ val GUESS_PAIR_THM = prove (
 simpLib.SIMP_TAC numLib.std_ss [GUESS_REWRITES])
 
 
-fun QUANT_INSTANTIATE_HEURISTIC___SPLIT_PAIR_GEN PL (sys:quant_heuristic) v t =
+fun QUANT_INSTANTIATE_HEURISTIC___SPLIT_PAIR_GEN PL (sys:quant_heuristic_base) v t =
 let
    (*check whether something should be done*)
    val _ = pairSyntax.dest_prod (type_of v) handle HOL_ERR _ => raise QUANT_INSTANTIATE_HEURISTIC___no_guess_exp;
@@ -293,7 +293,21 @@ in
 end;
 
 
-fun QUANT_INSTANTIATE_HEURISTIC___RECORDS do_rewrites P (sys:quant_heuristic) v t =
+(*
+
+Hol_datatype `my_record = <| field1 : bool ;
+                             field2 : num  ;
+                             field3 : bool |>`
+
+val do_rewrites = false
+fun P v t = true
+
+val v = ``r1:my_record``
+val t = ``r1.field1``
+
+*)
+
+fun QUANT_INSTANTIATE_HEURISTIC___RECORDS do_rewrites P sys v t =
 let
    (*check whether something should be done*)
    val v_info = case TypeBase.fetch (type_of v) of NONE   => raise QUANT_INSTANTIATE_HEURISTIC___no_guess_exp
@@ -304,7 +318,7 @@ let
 
    val vars = let
       val (v_name,_) = dest_var v
-      fun mk_new_var (s, ty) = mk_var (v_name ^ "_" ^ s, ty);
+      fun mk_new_var (s, ty) = mk_var (s, ty);
       in
          map mk_new_var (TypeBasePure.fields_of v_info)
       end;
@@ -312,10 +326,8 @@ let
    val thm0 =
         let
            val xthm0 = DB.fetch thyname (typename^"_literal_nchotomy")
-
-           val xthm1 = ISPEC v xthm0;
-           val xthm2 =  CONV_RULE (RENAME_VARS_CONV (map (fst o dest_var) vars)) xthm1
-        in xthm2
+           val xthm1 =  CONV_RULE (RENAME_VARS_CONV (map (fst o dest_var) (v :: vars))) xthm0
+        in xthm1
         end;
    val gc = QUANT_INSTANTIATE_HEURISTIC___one_case thm0 sys v t
 in
