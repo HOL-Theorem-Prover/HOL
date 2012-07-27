@@ -214,7 +214,7 @@ rw[Once Cevaluate_cases])
 
 val Cevaluate_fun = store_thm(
 "Cevaluate_fun",
-``∀env ns b res. Cevaluate env (CFun ns b) res = (∃a. a ∉ free_vars b ∧ (res = Rval (CRecClos env [a] [(ns,b)] a)))``,
+``∀env ns b res. Cevaluate env (CFun ns b) res = (res = Rval (CRecClos env [fresh_var (free_vars b)] [(ns,b)] (fresh_var (free_vars b))))``,
 rw[Once Cevaluate_cases] >> PROVE_TAC[])
 
 val _ = export_rewrites["Cevaluate_raise","Cevaluate_lit","Cevaluate_var","Cevaluate_let_nil","Cevaluate_fun"]
@@ -1271,7 +1271,6 @@ strip_tac >- (
     fsrw_tac[DNF_ss][SUBSET_DEF,pairTheory.FORALL_PROD] >>
     PROVE_TAC[] ) >>
   fs[] >>
-  CONV_TAC SWAP_EXISTS_CONV >> qexists_tac `a` >> fs[] >>
   qho_match_abbrev_tac `∃res'. Cevaluate (env0 |++ (ls0 env0)) exp res' ∧ result_rel syneq res res'` >>
   `fmap_rel syneq (env |++ (ls0 env)) (env' |++ (ls0 env0))` by (
     unabbrev_all_tac >> fs[] >>

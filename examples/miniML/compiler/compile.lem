@@ -265,14 +265,14 @@ Cevaluate env e (Rerr err)
 Cevaluate env (CLet (n::ns) (e::es) b) (Rerr err)
 
 and
-forall env ns defs a b r.
+forall env ns defs b r.
 List.length ns = List.length defs &&
 all_distinct ns &&
-not (a IN free_vars b) &&
 Cevaluate
   (fold_left2
     (fun env' n (xs,b) ->
-      Pmap.add n (CRecClos env [a] [(xs,b)] a) env')
+      Pmap.add n (CRecClos env [fresh_var (free_vars b)] [(xs,b)]
+                               (fresh_var (free_vars b))) env')
     env ns defs)
   b r
 ==>
@@ -292,10 +292,12 @@ Cevaluate
 Cevaluate env (CLetfun true ns defs b) r
 
 and
-forall env xs a b.
-not (a IN free_vars b)
+forall env xs b.
+true
 ==>
-Cevaluate env (CFun xs b) (Rval (CRecClos env [a] [(xs,b)] a))
+Cevaluate env (CFun xs b)
+  (Rval (CRecClos env [fresh_var (free_vars b)] [(xs,b)]
+                      (fresh_var (free_vars b))))
 
 and
 forall env e es env' ns' defs n i ns b vs r.
