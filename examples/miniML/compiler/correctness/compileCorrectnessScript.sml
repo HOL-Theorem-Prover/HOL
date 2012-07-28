@@ -244,6 +244,12 @@ rw[FOLDL_UNION_BIGUNION] >>
 PROVE_TAC[])
 val _ = export_rewrites["FINITE_Cpat_vars"]
 
+val FINITE_pat_vars = store_thm("FINITE_pat_vars",
+  ``∀p. FINITE (pat_vars p)``,
+  ho_match_mp_tac pat_vars_ind >>
+  rw[] >> res_tac)
+val _ = export_rewrites["FINITE_pat_vars"]
+
 val fresh_var_not_in_any = store_thm(
 "fresh_var_not_in_any",
 ``FINITE s ∧ t ⊆ s ⇒ fresh_var s ∉ t``,
@@ -327,6 +333,13 @@ Cases_on `x=fk` >> fsd[] >- (
 mp_tac (CONJUNCT1 free_vars_remove_mat_vp) >>
 fsd[EXTENSION,IN_DIFF,IN_INSERT,IN_SING] >>
 metis_tac[])
+
+val Cpat_vars_SND_pat_to_Cpat = store_thm("Cpat_vars_SND_pat_to_Cpat",
+  ``Cpat_vars (SND (pat_to_Cpat s [] z)) = pat_vars z``,
+  Cases_on `pat_to_Cpat s [] z` >>
+  imp_res_tac Cpat_vars_pat_to_Cpat >>
+  rw[])
+val _ = export_rewrites["Cpat_vars_SND_pat_to_Cpat"]
 
 val free_vars_exp_to_Cexp = store_thm(
 "free_vars_exp_to_Cexp",
@@ -1908,8 +1921,6 @@ val Cpnomatch_remove_mat = store_thm("Cpnomatch_remove_mat",
     match_mp_tac IN_FRANGE_FUNION_suff >> fs[] ) >>
   qunabbrev_tac`P` >> fs[] >>
   metis_tac[result_rel_syneq_trans,result_rel_syneq_sym] )
-
-(* TODO: Is Cpes_vars necessary, or is Cpat_vars enough? *)
 
 val Cevaluate_match_strongind = theorem"Cevaluate_match_strongind"
 
