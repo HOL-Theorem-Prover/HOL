@@ -3060,7 +3060,92 @@ val exp_to_Cexp_thm1 = store_thm("exp_to_Cexp_thm1",
   strip_tac >- (
     rw[exp_to_Cexp_def,LET_THM] >>
     fs[] >> rw[Once Cevaluate_cases] ) >>
-  cheat)
+  strip_tac >- (
+    rw[exp_to_Cexp_def,LET_THM] >>
+    fsrw_tac[DNF_ss][bind_def] >>
+    `every_result closed (Rval v)` by (
+      match_mp_tac (MP_CANON evaluate_closed) >>
+      METIS_TAC[] ) >>
+    fs[] >>
+    rw[Once Cevaluate_cases] >>
+    fsrw_tac[DNF_ss][] >>
+    disj1_tac >>
+    rpt (first_x_assum (qspec_then `m` mp_tac)) >>
+    rw[] >>
+    qmatch_assum_rename_tac`syneq (v_to_Cv m v) w`[] >>
+    CONV_TAC SWAP_EXISTS_CONV >> qexists_tac `w` >> fs[] >>
+    pop_assum mp_tac >>
+    Q.PAT_ABBREV_TAC`P = X ⊆ Y` >>
+    `P` by (
+      unabbrev_all_tac >>
+      fsrw_tac[DNF_ss][SUBSET_DEF] >>
+      METIS_TAC[] ) >>
+    rw[] >>
+    qmatch_assum_abbrev_tac `Cevaluate ee xx Cres` >>
+    Q.PAT_ABBREV_TAC`ef = X |+ (n,w)` >>
+    qspecl_then [`ef`,`ee`,`xx`,`Cres`] mp_tac Cevaluate_any_syneq_env >>
+    qmatch_abbrev_tac`(P ⇒ Q) ⇒ R` >>
+    `P` by (
+      unabbrev_all_tac >>
+      fs[] >>
+      conj_tac >- (
+        rw[fmap_rel_def,env_to_Cenv_MAP,FAPPLY_FUPDATE_THM] >>
+        rw[] ) >>
+      qabbrev_tac `ev = alist_to_fmap (env_to_Cenv m env)` >>
+      `∀v. v ∈ FRANGE ev ⇒ Cclosed v` by (
+        unabbrev_all_tac >>
+        match_mp_tac IN_FRANGE_alist_to_fmap_suff >>
+        rw[env_to_Cenv_MAP,MAP_MAP_o,combinTheory.o_DEF,pairTheory.LAMBDA_PROD,FST_pair] >>
+        fsrw_tac[DNF_ss][MEM_MAP,EVERY_MEM,pairTheory.UNCURRY] >>
+        match_mp_tac (CONJUNCT1 v_to_Cv_closed) >>
+        METIS_TAC[] ) >>
+      `every_result Cclosed (Rval w)` by (
+        match_mp_tac (MP_CANON Cevaluate_closed) >>
+        qmatch_assum_abbrev_tac `Cevaluate e1 x1 (Rval w)` >>
+        map_every qexists_tac [`e1`,`x1`] >>
+        unabbrev_all_tac >> fs[] >>
+        rw[env_to_Cenv_MAP,MAP_MAP_o,combinTheory.o_DEF,pairTheory.LAMBDA_PROD,FST_pair] ) >>
+      fs[] >>
+      conj_tac >- (
+        rw[] >> rw[] >>
+        pop_assum mp_tac >>
+        match_mp_tac IN_FRANGE_DOMSUB_suff >>
+        rw[] ) >>
+      fs[env_to_Cenv_MAP] >>
+      fsrw_tac[DNF_ss][MAP_MAP_o,combinTheory.o_DEF,pairTheory.LAMBDA_PROD,FST_pair] >>
+      fsrw_tac[][SUBSET_DEF] >>
+      METIS_TAC[v_to_Cv_closed,IN_FRANGE_DOMSUB_suff] ) >>
+    metis_tac[result_rel_syneq_trans] ) >>
+  strip_tac >- (
+    rw[exp_to_Cexp_def,LET_THM] >>
+    rw[Once Cevaluate_cases] ) >>
+  strip_tac >- (
+    rw[exp_to_Cexp_def,LET_THM,FST_triple] >>
+    fs[] >>
+    rw[defs_to_Cdefs_MAP] >>
+    rw[Once Cevaluate_cases,FOLDL_FUPDATE_LIST] >>
+    cheat ) >>
+  strip_tac >- rw[] >>
+  strip_tac >- rw[] >>
+  strip_tac >- rw[evaluate_list_with_cons] >>
+  strip_tac >- rw[evaluate_list_with_cons] >>
+  strip_tac >- (
+    rw[evaluate_list_with_cons] >>
+    fsrw_tac[DNF_ss][] >>
+    METIS_TAC[] ) >>
+  strip_tac >- rw[Once evaluate_match_with_cases] >>
+  strip_tac >- rw[Once evaluate_match_with_cases] >>
+  strip_tac >- (
+    rw[] >>
+    simp_tac std_ss [Once evaluate_match_with_cases] >>
+    fsrw_tac[][] ) >>
+  strip_tac >- (
+    rw[] >>
+    simp_tac std_ss [Once evaluate_match_with_cases] >>
+    fsrw_tac[][] ) >>
+  rw[] >>
+  simp_tac std_ss [Once evaluate_match_with_cases] >>
+  fsrw_tac[][])
 
 val Cpat_nice_ind =
 TypeBase.induction_of(``:Cpat``)
