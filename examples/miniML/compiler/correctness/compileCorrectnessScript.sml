@@ -1971,7 +1971,7 @@ val Cevaluate_match_remove_mat_var = store_thm("Cevaluate_match_remove_mat_var",
     disch_then (qspecl_then [`ee`,`x`,`fk`,`e`] mp_tac) >>
     fsrw_tac[DNF_ss][pairTheory.FORALL_PROD] >>
     `fk ∉ {x} ∪ free_vars e` by (
-      rw[Abbr`fk`,fresh_var_not_in,FINITE_has_fresh_string] ) >>
+      qunabbrev_tac`fk` >> match_mp_tac fresh_var_not_in_any >> rw[SUBSET_DEF] ) >>
     `FLOOKUP ee x = SOME v` by fs[Abbr`ee`,FLOOKUP_UPDATE] >> fs[] >>
     `fk ∈ FDOM ee` by fs[Abbr`ee`] >> fs[] >>
     `x ∉ Cpat_vars p` by metis_tac[] >> fs[] >>
@@ -2049,7 +2049,10 @@ val Cevaluate_match_remove_mat_var = store_thm("Cevaluate_match_remove_mat_var",
     qunabbrev_tac`env1` >>
     rw[FLOOKUP_UPDATE] ) >>
   `fk ∈ FDOM env1` by rw[Abbr`env1`] >>
-  `fk ∉ Cpat_vars p` by cheat >>
+  `fk ∉ Cpat_vars p` by (
+    qunabbrev_tac`fk` >>
+    match_mp_tac fresh_var_not_in_any >>
+    rw[SUBSET_DEF] ) >>
   `∀v. v ∈ FRANGE env1 ⇒ Cclosed v` by (
     qunabbrev_tac`env1` >>
     match_mp_tac IN_FRANGE_FUPDATE_suff >>

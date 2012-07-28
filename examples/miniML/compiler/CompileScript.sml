@@ -626,7 +626,7 @@ val _ = Defn.save_defn remove_mat_vp_defn;
 (remove_mat_var v [] = CRaise Bind_error)
 /\
 (remove_mat_var v ((p,sk)::pes) =
-  let fk = fresh_var ({v}UNION (free_vars sk)) in
+  let fk = fresh_var ({v}UNION (free_vars sk)UNION (Cpat_vars p)) in
   CLetfun F [fk] [([],(remove_mat_var v pes))]
     (remove_mat_vp fk sk v p))`;
 
