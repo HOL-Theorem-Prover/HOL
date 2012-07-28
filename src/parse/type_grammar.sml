@@ -34,6 +34,10 @@ fun typstruct_uptodate ts =
 
 exception GrammarError = HOLgrammars.GrammarError
 
+val prefix_type_syntax = ref 0
+val _ = Feedback.register_trace("prefix_type_syntax", prefix_type_syntax, 1)
+fun prefix_types() = (!prefix_type_syntax) > 0;
+
 fun dest_var_st (TYVAR tvr) = tvr
   | dest_var_st _ = raise GrammarError "dest_var_st: not a type variable"
 
@@ -246,7 +250,7 @@ fun conform_structure_to_type G s st ty =
                                 end
                            else strip_abs_st st
       val body_ty = structure_to_type body
-      val (tyS,kdS,rk) = Type.kind_match_type body_ty ty
+      val (tyS,kdS,rk) = Type.om_match_type body_ty ty
   in
     inst_rank_kind (kdS,rk) st
   end
@@ -601,7 +605,7 @@ fun abb_dest_type0 (TYG(_, _, _, pmap)) ty = let
   val net_matches = TypeNet.match(pmap, ty)
   fun mymatch pat ty = let
     val ((i, sames), (k, kdsames), (r, rkfixed)) =
-       Type.raw_kind_match_type pat ty (([], []), ([], []), (0, false))
+       Type.raw_om_match_type pat ty (([], []), ([], []), (0, false))
   in
     (i @ (map (fn ty => ty |-> ty) sames),
      k @ (map (fn kd => kd |-> kd) kdsames),

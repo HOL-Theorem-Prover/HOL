@@ -75,7 +75,7 @@ fun type_match vty cty sofar =
          else failwith "type_match"
        end;
 *)
-fun type_match vty cty [] = Type.kind_match_type vty cty
+fun type_match vty cty [] = Type.om_match_type vty cty
   | type_match vty cty _  = failwith "type_match: non-null accumulator";
 
 

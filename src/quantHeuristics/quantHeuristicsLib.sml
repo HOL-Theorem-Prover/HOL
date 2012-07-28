@@ -1424,7 +1424,7 @@ local
 
    fun test_thmL v_t_type tvset v t (P_t, thmL) =
    let
-       val (ty_m,kd_m,rk_m) = kind_match_type (type_of P_t) v_t_type
+       val (ty_m,kd_m,rk_m) = om_match_type (type_of P_t) v_t_type
        val P_t' = inst_rk_kd_ty (ty_m,kd_m,rk_m) P_t;
        val (v'', t'') = dest_abs P_t';
        val t''' = subst [v'' |-> v] t'';

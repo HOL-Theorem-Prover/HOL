@@ -389,9 +389,14 @@ fun pp_type0 (G:grammar) backend = let
                   (* knowing that there are two args, we know that they will
                      be printed with parentheses, so the gravity we pass in
                      here makes no difference. *)
-                  print_args Top Args;
-                  add_break(1,0);
-                  add_ann_string (Tyop, TyOp tooltip);
+                  if prefix_types() then
+                    (add_ann_string (Tyop, TyOp tooltip);
+                     add_break(1,0);
+                     print_args Top Args)
+                  else
+                    (print_args Top Args;
+                     add_break(1,0);
+                     add_ann_string (Tyop, TyOp tooltip));
                   end_block()
                 end
               | IR(prec, assoc, printthis) => let
@@ -427,9 +432,14 @@ fun pp_type0 (G:grammar) backend = let
               | SOME _ => let
                 in
                   begin_block INCONSISTENT 0;
-                  print_args Sfx Args;
-                  add_break(1,0);
-                  add_ann_string (Tyop, TyOp tooltip);
+                  if prefix_types() then
+                    (add_ann_string (Tyop, TyOp tooltip);
+                     add_break(1,0);
+                     print_args Sfx Args)
+                  else
+                    (print_args Sfx Args;
+                     add_break(1,0);
+                     add_ann_string (Tyop, TyOp tooltip));
                   end_block()
                 end
             end
@@ -453,9 +463,14 @@ fun pp_type0 (G:grammar) backend = let
               val (base, args) = strip_app_type ty
             in
               begin_block INCONSISTENT 0;
-              print_args Sfx args;
-              add_break(1,0);
-              pr_ty binderp pps base Sfx (depth - 1);
+              if prefix_types() then
+                (pr_ty binderp pps base Sfx (depth - 1);
+                 add_break(1,0);
+                 print_args Sfx args)
+              else
+                (print_args Sfx args;
+                 add_break(1,0);
+                 pr_ty binderp pps base Sfx (depth - 1));
               end_block ()
             end
           | TyV_Abs _ => let

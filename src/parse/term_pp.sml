@@ -742,7 +742,7 @@ fun pp_term (G : grammar) TyG backend = let
      if printers_exist then let
          fun sysprint (pg,lg,rg) depth tm = pr_term tm pg lg rg depth
          val candidates = Net.match tm uprinters
-         fun test (pat,_,_) = can (kind_match_term pat) tm
+         fun test (pat,_,_) = can (om_match_term pat) tm
          fun printwith f = f (TyG, G)
                              backend sysprint ppfns
                              (pgrav, lgrav, rgrav)

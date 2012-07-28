@@ -110,7 +110,7 @@ local
                   failwith ("not applicable")
           val thmLHS = rand (rator (concl thm))
           val rkvars = Term.has_var_rankl (HOLset.listItems boundvars)
-          val match = kind_match_terml rkvars [] [] boundvars thmLHS term
+          val match = om_match_terml rkvars [] [] boundvars thmLHS term
           val thm = INST_ALL match thm
         in
           thm

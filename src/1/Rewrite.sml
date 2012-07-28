@@ -233,7 +233,7 @@ and FILTER_ONCE_ASM_REWRITE_TAC f thl =
  *---------------------------------------------------------------------------*)
 
 fun SUBST_MATCH eqth th =
-  let val matchr = kind_match_term (lhs(concl eqth))
+  let val matchr = om_match_term (lhs(concl eqth))
       fun find_match t =
              matchr t              handle HOL_ERR _ =>
              find_match(rator t)   handle HOL_ERR _ =>

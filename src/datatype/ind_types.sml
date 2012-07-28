@@ -68,7 +68,7 @@ fun mk_const (thy, n, theta) =
 
 fun mk_icomb(tm1,tm2) =
    let val (ty, _) = Type.dom_rng (type_of tm1)
-       val (tyins,kdins,rkin) = Type.kind_match_type ty (type_of tm2)
+       val (tyins,kdins,rkin) = Type.om_match_type ty (type_of tm2)
    in
       mk_comb(Term.inst_rk_kd_ty (tyins,kdins,rkin) tm1, tm2)
    end;
@@ -1212,7 +1212,7 @@ fun prove_inductive_types_isomorphic n k (ith0,rth0) (ith1,rth1) = let
     val icjs = conjuncts(rand(concl itha))
     val cinsts =
       map (fn tm =>
-              tryfind (fn vtm => ho_kind_match_term [] [] empty_tmset vtm tm) icjs)
+              tryfind (fn vtm => ho_om_match_term [] [] empty_tmset vtm tm) icjs)
           (conjuncts (rand ctm2))
     val tvs = op_subtract eq (fst(strip_forall(concl ith0)))
                 (itlist (fn (x,_,_,_) => op_union eq (map #redex x)) cinsts [])
@@ -1226,7 +1226,7 @@ fun prove_inductive_types_isomorphic n k (ith0,rth0) (ith1,rth1) = let
     val itha = SPEC_ALL ith1
     val icjs = conjuncts(rand(concl itha))
     val cinsts = map (fn tm => tryfind
-                      (fn vtm => ho_kind_match_term [] [] empty_tmset vtm tm) icjs)
+                      (fn vtm => ho_om_match_term [] [] empty_tmset vtm tm) icjs)
                      (conjuncts (lhand ctm2))
     val tvs = op_subtract eq (fst(strip_forall(concl ith1)))
       (itlist (fn (x,_,_,_) => op_union eq (map #redex x)) cinsts [])
@@ -1521,7 +1521,7 @@ local
     val (evs,bod) = strip_exists(snd(strip_forall(concl rth)))
     val cjs = map (lhand o snd o strip_forall) (conjuncts bod)
     val rtys = map (hd o snd o strip_app_type o type_of) evs
-    val Theta = tryfind (fn vty => Type.kind_match_type vty nty) rtys
+    val Theta = tryfind (fn vty => Type.om_match_type vty nty) rtys
     val cjs' = map (Term.inst_rk_kd_ty Theta o rand) (fst(chop_list k cjs))
     val mtys = itlist (insert o type_of) cjs' []
     val pcons = map (fn ty => filter (fn t => type_of t = ty) cjs') mtys

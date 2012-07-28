@@ -343,8 +343,8 @@ fun is_overloaded (overloads:overload_info) s =
   isSome (info_for_name overloads s)
 
 fun type_compare (ty1, ty2) = let
-  val ty1_gte_ty2 = Lib.can (Type.kind_match_type ty1) ty2
-  val ty2_gte_ty1 = Lib.can (Type.kind_match_type ty2) ty1
+  val ty1_gte_ty2 = Lib.can (Type.om_match_type ty1) ty2
+  val ty2_gte_ty1 = Lib.can (Type.om_match_type ty2) ty1
 in
   case (ty1_gte_ty2, ty2_gte_ty1) of
     (true, true) => SOME EQUAL
@@ -563,7 +563,7 @@ fun strip_comb ((_, prmap): overload_info) t = let
     val kdvs = tmlist_kdvs fvs
     val tyvs = tmlist_tyvs fvs
     val tmset = HOLset.addList(empty_tmset, fvs)
-    val ((tmi0,tmeq),(tyi0,tyeq),(kdi0,kdeq),(rki,rkfx)) = raw_kind_match rkvs kdvs tyvs tmset pat t' ([],[],[],0)
+    val ((tmi0,tmeq),(tyi0,tyeq),(kdi0,kdeq),(rki,rkfx)) = raw_om_match rkvs kdvs tyvs tmset pat t' ([],[],[],0)
     val tmi = HOLset.foldl (fn (t,acc) => if HOLset.member(tmset,t) then acc
                                           else (t |-> t) :: acc)
                            tmi0

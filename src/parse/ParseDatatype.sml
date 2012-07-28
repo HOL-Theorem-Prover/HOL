@@ -632,6 +632,15 @@ fun qtyop {Tyop, Thy, Locn, Args} =
 fun tyop ((s,locn), args) =
     dTyop {Tyop = s,    Thy = NONE,     Args = args}
 
+fun dSubst theta ty = raise ERR "dSubst" "not yet implemented"
+
+val op |-> = HolKernel.|->;
+infix |->;
+
+fun dTyBeta (dTyApp (dTyAbst(bv,body), arg)) =
+        dSubst [bv |-> arg] body
+  | dTyBeta _ = raise ERR "dTyBeta" "not a type beta redex"
+
 (* Building the kind parser: *)
 
 val kd_antiq = parse_kind.kd_antiq;
@@ -683,7 +692,8 @@ fun parse_type strm =
   parse_type.parse_type {vartype = dVartype o #1, tyop = tyop, qtyop = qtyop,
                          antiq = dAQ, kindcast = kindcast, rankcast = rankcast,
                          tycon = mk_conty, tyapp = dTyApp,
-                         tyuniv = dTyUniv, tyexist = dTyExist, tyabs = dTyAbst}
+                         tyuniv = dTyUniv, tyexist = dTyExist, tyabs = dTyAbst,
+                         tybeta = dTyBeta}
                         kindparser true
   (Parse.type_grammar()) strm
 

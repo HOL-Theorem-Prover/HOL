@@ -176,7 +176,7 @@ fun GEN_REWRITE_TAC rw_func thl =
  ****************************************************************************)
 
 local fun find_match u =
-       let val hom = ho_kind_match_term [] [] empty_tmset u
+       let val hom = ho_om_match_term [] [] empty_tmset u
            fun find_mt t =
                hom t handle HOL_ERR _ =>
                find_mt(rator t)  handle HOL_ERR _ =>
@@ -223,7 +223,7 @@ val HIGHER_REWRITE_CONV =
           fun insert p = Ho_Net.enter ([],[],p,p)
           val mnet = itlist insert pats Ho_Net.empty_net
           fun look_fn t = mapfilter
-                    (fn p => if can (ho_kind_match_term [] [] empty_tmset p) t then p
+                    (fn p => if can (ho_om_match_term [] [] empty_tmset p) t then p
                              else fail())
                     (lookup t mnet)
       in fn tm =>
@@ -231,11 +231,11 @@ val HIGHER_REWRITE_CONV =
                         (fn t => not (null (look_fn t)) andalso free_in t tm) tm
               val stm = Lib.trye hd (sort free_in ts)
               val pat = Lib.trye hd (look_fn stm)
-              val (tmin,tyin,kdin,rkin) = ho_kind_match_term [] [] empty_tmset pat stm
+              val (tmin,tyin,kdin,rkin) = ho_om_match_term [] [] empty_tmset pat stm
               val (pred,(th,beta_fn)) = op_assoc eq pat ass_list
               val gv = genvar(type_of stm)
               val abs = mk_abs(gv,subst[stm |-> gv] tm)
-              val inst0 = ho_kind_match_term [] [] empty_tmset pred abs
+              val inst0 = ho_om_match_term [] [] empty_tmset pred abs
           in CONV_RULE beta_fn (INST tmin (INST_ALL inst0 th))
           end
       end

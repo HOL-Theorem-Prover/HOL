@@ -155,7 +155,7 @@ fun C_MATCH_MP imp th =
     let val imp1 = GEN_QUOT_TYVARS imp
         val ant = (#ant o dest_imp o snd o strip_forall o concl) imp1
         val subj = (snd o strip_forall o concl) th
-        val (_, ty_sub, kd_sub, rk_sub) = kind_match_term ant subj
+        val (_, ty_sub, kd_sub, rk_sub) = om_match_term ant subj
         val imp' = (*CAREFUL_*)INST_RK_KD_TY (ty_sub,kd_sub,rk_sub) imp1
     in
         MATCH_MP imp' th

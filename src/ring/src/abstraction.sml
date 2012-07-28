@@ -155,7 +155,7 @@ fun inst_csts inst env tm =
     LAMB(Bvar,Body) => inst_csts inst (Bvar::env) Body
   | TYLAMB(Bvar,Body) => inst_csts inst env Body
   | COMB(Rator,Rand) =>
-      (SOME (first_match env (kind_match_term tm) inst)
+      (SOME (first_match env (om_match_term tm) inst)
        handle HOL_ERR _ =>
 	 (case inst_csts inst env Rand of
 	   SOME i => SOME i

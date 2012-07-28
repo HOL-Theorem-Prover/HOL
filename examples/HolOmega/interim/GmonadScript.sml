@@ -36,7 +36,7 @@ val _ = type_abbrev ("djoin",
 
 val EXTD_def = Define 
   `(EXTD ((id, comp) : 'A category) 
-  (dmap : ('A, 'N, 'M) dmap, djoin: ('A, 'N, 'M) djoin) : ('A, 'N o 'M) ext) = 
+  (dmap : ('A, 'N, 'M) dmap, djoin: ('A, 'N, 'M) djoin) : ('A, 'M o 'N) ext) = 
     \:'a 'b. \f. comp djoin (dmap [:'a, 'b 'N:] f)` ;
 
    (* Gmonad ((id, comp) : 'A category) = \: 'N 'M.  *)
@@ -45,9 +45,9 @@ val Gmonad_def = Define
      \ (dunit: ('A, 'N, 'M) dunit,
                 dmap : ('A, 'N, 'M) dmap ,
                 djoin: ('A, 'N, 'M) djoin) 
-	       (unitNM: ('A, 'N o 'M) gunit,
-                mapNM : ('A, 'N o 'M) gmap ,
-                joinNM: ('A, 'N o 'M) gjoin)
+	       (unitNM: ('A, 'M o 'N) gunit,
+                mapNM : ('A, 'M o 'N) gmap ,
+                joinNM: ('A, 'M o 'N) gjoin)
    (unitM: ('A, 'M) gunit).
      (* map_I *)         (!:'a. dmap (unitM [:'a:]) = id) /\
      (* map_o *)         (!:'a 'b 'c. !(f: ('a, 'b) 'A) (g: ('b, 'c 'M) 'A).

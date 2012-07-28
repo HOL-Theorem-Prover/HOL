@@ -470,7 +470,83 @@ val vect_consts_spec =
 
 val (VCONCAT_ASSOC, vect_is_initial) = CONJ_PAIR vect_consts_spec;
 
+val (vect_fn_exists,vect_fn_unique) = CONJ_PAIR
+      (CONV_RULE (Ho_Rewrite.ONCE_REWRITE_CONV [IMP_CONJ_THM] THENC
+           DEPTH_CONV (FORALL_IMP_CONV ORELSEC TY_FORALL_IMP_CONV ORELSEC
+                       FORALL_AND_CONV ORELSEC TY_FORALL_AND_CONV))
+        (SIMP_RULE bool_ss [EXISTS_UNIQUE_DEF] vect_is_initial));
+
 val _ = match [] ``VCONCAT``;
+
+(* Can we actually prove recursion and induction from initiality? *)
+
+(*
+
+val vect_Axiom = store_thm(
+   "vect_Axiom",
+   ``!f0 f1 f2.
+       (!x y z. f2 x (f2 y z) = f2 (f2 x y) z) ==>
+       ?fn:vect -> 'a.
+         (fn VT = f0) /\
+         (fn VF = f1) /\
+         !a0 a1. fn (VCONCAT a0 a1) = f2 (fn a0) (fn a1)``,
+   REWRITE_TAC [vect_fn_exists]
+  );
+
+val EQT_ELIM_TAC :tactic = fn (asl,gl) =>
+    ([(asl,mk_eq(gl,boolSyntax.T))],
+     fn [th] => EQT_ELIM th);
+
+
+val vect_induct1 = store_thm(
+   "vect_induct1",
+   ``!P:vect -> bool.
+       (P VT) /\
+       (P VF) /\
+       (!x y. P x /\ P y = P (VCONCAT x y)) ==>
+       (!b. P b)``,
+   GEN_TAC THEN STRIP_TAC
+   THEN REWRITE_TAC [FORALL_DEF]
+   THEN BETA_TAC
+   THEN HO_MATCH_MP_TAC (MATCH_MP vect_fn_unique CONJ_ASSOC)
+   THEN EXISTS_TAC ``T : bool``
+   THEN EXISTS_TAC ``T : bool``
+   THEN ASM_REWRITE_TAC []
+  );
+
+val vect_induct = store_thm(
+   "vect_induct",
+   ``!P:vect -> bool.
+      (!x y z. P
+       (P VT) /\
+       (P VF) /\
+       (!x y. P x /\ P y ==> P (VCONCAT x y)) ==>
+       (!b. P b)``,
+   GEN_TAC THEN STRIP_TAC
+   THEN REWRITE_TAC [FORALL_DEF]
+   THEN BETA_TAC
+   THEN HO_MATCH_MP_TAC (MATCH_MP vect_fn_unique CONJ_ASSOC)
+   THEN EXISTS_TAC ``T : bool``
+   THEN EXISTS_TAC ``T : bool``
+   THEN ASM_REWRITE_TAC []
+   THEN ONCE_REWRITE_TAC [GSYM bits_ABS_REP]
+   THEN GEN_TAC
+   THEN MP_TAC (SPEC ``b:bits`` bits_REP_NOT_NULL)
+   THEN SPEC_TAC (``bits_REP b``,``l:bool list``)
+   THEN measureInduct_on `LENGTH l`
+   THEN Cases_on `l` (* two subgoals *)
+   THEN REWRITE_TAC[NOT_CONS_NIL] (* eliminates one subgoal *)
+   THEN Cases_on `t` (* two subgoals *)
+   THENL
+     [ Cases_on `h` (* two subgoals *)
+       THEN ASM_REWRITE_TAC [],
+
+       REWRITE_TAC [bits_CONS_EQ_REP_ABS_APPEND]
+       THEN ASM_SIMP_TAC list_ss []
+     ]
+  );
+*)
+
 
 
 val _ = set_trace "types" 1;

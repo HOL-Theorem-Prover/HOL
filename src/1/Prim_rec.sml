@@ -72,7 +72,7 @@ fun mymatch_and_instantiate axth pattern instance = let
   fun tmlist_type (tm,ty) = type_of tm --> ty
   val pat_type = List.foldr tmlist_type Type.bool patvars
   val inst_type = List.foldr tmlist_type Type.bool instvars
-  val (tyinst,kdinst,rkinst) = Type.kind_match_type pat_type inst_type
+  val (tyinst,kdinst,rkinst) = Type.om_match_type pat_type inst_type
   val instfn = Term.inst_rk_kd_ty (tyinst,kdinst,rkinst)
   val new_patbody0 = instfn patbody
   val new_patvars = map instfn patvars
@@ -126,7 +126,7 @@ in
 end
 
 fun findax c ((p,ax)::rst) =
-      ((kind_match_term p c; (ax,rst))
+      ((om_match_term p c; (ax,rst))
         handle HOL_ERR _ => let val (a,l) = findax c rst in (a,(p,ax)::l) end)
   | findax c [] = raise ERR "prove_raw_recursive_functions_exist" "findax";
 
@@ -679,7 +679,7 @@ fun INDUCT_THEN th =
                             (DISCH asm eta_th))
  in fn ttac => fn (A,t) =>
      let val lam = snd(dest_comb t)
-         val (_,tyS,kdS,rkS) = Term.kind_match_term v lam
+         val (_,tyS,kdS,rkS) = Term.om_match_term v lam
          val spec = SPEC lam (INST_RK_KD_TY (tyS,kdS,rkS) ind)
          val (ant,conseq) = dest_imp(concl spec)
          val beta = SUBST [boolvar |-> bconv ant]
@@ -1386,7 +1386,7 @@ fun case_cong_thm nchotomy case_def =
        let val lth = TRANS (AP_TERM(rator lconseqM') icase_thm) case_def_clause
            val rth = TRANS (AP_TERM(rator rconseq) icase_thm)
                            (INST theta case_def_clause)
-           val theta = Term.kind_match_term disjrhs
+           val theta = Term.om_match_term disjrhs
                      ((rhs o fst o dest_imp o #2 o strip_forall o concl) iimp)
            val th = MATCH_MP iimp icase_thm
            val th1 = TRANS lth th

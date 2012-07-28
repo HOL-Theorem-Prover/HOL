@@ -49,7 +49,7 @@ val bounded_tm   = prim_mk_const {Name="BOUNDED",      Thy="bool"};
  ---------------------------------------------------------------------------*)
 
 fun mk_eq (lhs,rhs) =
- let val (tyS,kdS,rkS) = kind_match_type alpha (type_of lhs)
+ let val (tyS,kdS,rkS) = om_match_type alpha (type_of lhs)
  in (*list_mk_comb(inst[alpha |-> type_of lhs] equality, [lhs,rhs])*)
    list_mk_comb(inst_rk_kd_ty (tyS,kdS,rkS) equality, [lhs,rhs])
  end
@@ -109,7 +109,7 @@ fun mk_itself ty =
 fun mk_icomb (t1, t2) =
   let
     val (dom, _) = dom_rng (type_of t1)
-    val (i,k,r) = kind_match_type dom (type_of t2)
+    val (i,k,r) = om_match_type dom (type_of t2)
   in
     mk_comb (inst_rk_kd_ty (i,k,r) t1, t2)
   end

@@ -37,14 +37,14 @@ val _ = ``(x : ('C, 'D, 'F, 'G) g_sharp) = (y : ('C C, 'D C, 'F, 'G) g_flatt)`` 
 val g_adjf1_def = new_definition("g_adjf1_def",
   ``g_adjf1 = \: 'C 'D 'F 'G. 
     \ (idC : 'C id, compC : 'C o_arrow) (G : ('D, 'C, 'G) g_functor)
-      (eta : ('C, I, 'F o 'G) g_nattransf) (sharp : ('C, 'D, 'F, 'G) g_sharp).
+      (eta : ('C, I, 'G o 'F) g_nattransf) (sharp : ('C, 'D, 'F, 'G) g_sharp).
     (!: 'a 'b. (! (f : ('a, 'b 'G) 'C) g. 
       (compC (G g) eta = f) = (sharp f = g)))`` ) ;
 
 val g_adjf2_def = new_definition("g_adjf2_def",
   ``g_adjf2 = \: 'D 'C 'G 'F.
     \ (idD : 'D id, compD : 'D o_arrow) (F' : ('C, 'D, 'F) g_functor)
-      (eps : ('D, 'G o 'F, I) g_nattransf) (flatt : ('D, 'C, 'G, 'F) g_flatt). 
+      (eps : ('D, 'F o 'G, I) g_nattransf) (flatt : ('D, 'C, 'G, 'F) g_flatt). 
     (!: 'b 'a. (! g (f : ('a, 'b 'G) 'C). 
       (compD eps (F' f) = g) = (flatt g = f)))``) ;
 
@@ -52,7 +52,7 @@ val g_adjf3_def = new_definition("g_adjf3_def",
   ``g_adjf3 = \: 'C 'D 'F 'G. 
     \ (idC : 'C id, compC : 'C o_arrow) (idD : 'D id, compD : 'D o_arrow)
     (F' : ('C, 'D, 'F) g_functor) (G : ('D, 'C, 'G) g_functor)
-    (eta : ('C, I, 'F o 'G) g_nattransf) (eps : ('D, 'G o 'F, I) g_nattransf).
+    (eta : ('C, I, 'G o 'F) g_nattransf) (eps : ('D, 'F o 'G, I) g_nattransf).
     (!: 'a 'b. ! (f : ('a, 'b 'G) 'C) g. 
       (compC (G g) eta = f) = (compD eps (F' f) = g))``);
 
@@ -70,7 +70,7 @@ val g_adjf5_def = new_definition("g_adjf5_def",
   ``g_adjf5 = \: 'C 'D 'F 'G. 
     \ (idC : 'C id, compC : 'C o_arrow) (idD : 'D id, compD : 'D o_arrow)
     (F' : ('C, 'D, 'F) g_functor) (G : ('D, 'C, 'G) g_functor)
-    (eta : ('C, I, 'F o 'G) g_nattransf) (eps : ('D, 'G o 'F, I) g_nattransf).
+    (eta : ('C, I, 'G o 'F) g_nattransf) (eps : ('D, 'F o 'G, I) g_nattransf).
     (!: 'b. (compC (G eps) eta = idC [:'b 'G:])) /\
     (!: 'a. (compD eps (F' eta) = idD [:'a 'F:]))``);
 
@@ -107,7 +107,7 @@ val g_adjf5_thm = store_thm ("g_adjf5_thm",
   ``g_adjf5 [:'C, 'D, 'F, 'G:] (idC : 'C id, compC : 'C o_arrow)
     (idD : 'D id, compD : 'D o_arrow)
     (F' : ('C, 'D, 'F) g_functor) (G : ('D, 'C, 'G) g_functor)
-    (eta : ('C, I, 'F o 'G) g_nattransf) (eps : ('D, 'G o 'F, I) g_nattransf) =
+    (eta : ('C, I, 'G o 'F) g_nattransf) (eps : ('D, 'F o 'G, I) g_nattransf) =
     ((!: 'b. (compC (G eps) eta = idC [:'b 'G:])) /\
     (!: 'a. (compD eps (F' eta) = idD [:'a 'F:])))``,
    SRW_TAC [] [g_adjf5_def]);
@@ -139,7 +139,7 @@ val g_adjf4_dual = store_thm ("g_adjf4_dual",
 
 val g_adjf1DGh = store_thm ("g_adjf1DGh", 
   ``g_adjf1 [:'C,'D, 'F,'G:] (idC, compC : 'C o_arrow) G
-            (eta : ('C, I, 'F o 'G) g_nattransf) sharp ==>
+            (eta : ('C, I, 'G o 'F) g_nattransf) sharp ==>
     (!:'a 'b. !f. compC (G (sharp [:'a,'b:] f)) eta = f)``,
   STRIP_TAC
   THEN IMP_RES_TAC g_adjf1_thm
@@ -182,12 +182,12 @@ val (g_nattransfD, _) = EQ_IMP_RULE g_nattransf_thm ;
 val EPS_def = Define
   `EPS = \: 'C 'D. \ ((idC, compC) : 'C category) 
       (sharp : ('C,'D, 'F,'G) g_sharp).
-    (\:'e. sharp [:'e 'G, 'e:] idC) : ('D, 'G o 'F, I) g_nattransf` ;
+    (\:'e. sharp [:'e 'G, 'e:] idC) : ('D, 'F o 'G, I) g_nattransf` ;
 
 val ETA_def = Define 
   `ETA = \: 'D 'C. \ ((idD, compD) : 'D category)
       (flatt : ('D,'C, 'G,'F) g_flatt).
-    (\:'e. flatt [:'e 'F, 'e:] idD) : ('C, I, 'F o 'G) g_nattransf` ;
+    (\:'e. flatt [:'e 'F, 'e:] idD) : ('C, I, 'G o 'F) g_nattransf` ;
 
 val EPS_thm = store_thm ("EPS_thm",
   ``EPS [:'C, 'D:] (idC, compC) (sharp : ('C,'D, 'F,'G) g_sharp) =
@@ -201,23 +201,23 @@ val ETA_thm = store_thm ("ETA_thm",
 
 val FLATT_def = Define 
   `FLATT = \: 'D 'C. \ ((idC, compC) : 'C category)
-      (G : ('D, 'C, 'G) g_functor) (eta : ('C, I, 'F o 'G) g_nattransf).
+      (G : ('D, 'C, 'G) g_functor) (eta : ('C, I, 'G o 'F) g_nattransf).
     (\:'b 'a. \g : ('a 'F, 'b) 'D. compC (G g) eta) : ('D,'C, 'G,'F) g_flatt`;
 
 val SHARP_def = Define 
   `SHARP = \: 'C 'D. \ ((idD, compD) : 'D category)
-      (F' : ('C, 'D, 'F) g_functor) (eps : ('D, 'G o 'F, I) g_nattransf).
+      (F' : ('C, 'D, 'F) g_functor) (eps : ('D, 'F o 'G, I) g_nattransf).
     (\:'a 'b. \f : ('a, 'b 'G) 'C. compD eps (F' f)) : ('C,'D, 'F,'G) g_sharp`;
 
 val FLATT_thm = store_thm ("FLATT_thm", 
   ``FLATT [:'D, 'C:] (idC, compC)
-          (G : ('D, 'C, 'G) g_functor) (eta : ('C, I, 'F o 'G) g_nattransf) =
+          (G : ('D, 'C, 'G) g_functor) (eta : ('C, I, 'G o 'F) g_nattransf) =
     (\:'b 'a. \g : ('a 'F, 'b) 'D. compC (G g) eta)``,
   SRW_TAC [] [FLATT_def]) ;
 
 val SHARP_thm = store_thm ("SHARP_thm",  
   ``SHARP [:'C, 'D:] (idD, compD)
-          (F' : ('C, 'D, 'F) g_functor) (eps : ('D, 'G o 'F, I) g_nattransf) =
+          (F' : ('C, 'D, 'F) g_functor) (eps : ('D, 'F o 'G, I) g_nattransf) =
     (\:'a 'b. \f : ('a, 'b 'G) 'C. compD eps (F' f))``,
   SRW_TAC [] [SHARP_def]) ;
 
@@ -237,13 +237,13 @@ val EPS_ETA_dual = store_thm ("EPS_ETA_dual",
 
 val SHARP_FLATT_dual = store_thm ("SHARP_FLATT_dual",
   ``SHARP [:'C, 'D:] (idD,compD)
-          (F' : ('C, 'D, 'F) g_functor) (eps : ('D, 'G o 'F, I) g_nattransf) =
+          (F' : ('C, 'D, 'F) g_functor) (eps : ('D, 'F o 'G, I) g_nattransf) =
     FLATT [:'C C, 'D C:] (idD, dual_comp compD) (g_dual_functor F') eps``,
   SIMP_TAC bool_ss [SHARP_thm, FLATT_def, dual_comp_def, g_dual_functor_def, UNCURRY_DEF]) ;
 
 val FLATT_SHARP_dual = store_thm ("FLATT_SHARP_dual",
   ``FLATT [:'D, 'C:] (idC,compC)
-          (G : ('D, 'C, 'G) g_functor) (eta : ('C, I, 'F o 'G) g_nattransf) =
+          (G : ('D, 'C, 'G) g_functor) (eta : ('C, I, 'G o 'F) g_nattransf) =
     SHARP [:'D C, 'C C:] (idC, dual_comp compC) (g_dual_functor G) eta``,
   SIMP_TAC bool_ss [SHARP_def, FLATT_thm, dual_comp_def, g_dual_functor_def, UNCURRY_DEF]) ;
 
@@ -312,7 +312,7 @@ val g_adjf1_sharp_eta = store_thm ("g_adjf1_sharp_eta",
   ``category (idC,compC) /\
     g_functor (idD,compD) (idC,compC) (G : ('D, 'C, 'G) g_functor) /\
     g_adjf1 (idC, compC) G
-            (eta : ('C, I, 'F o 'G) g_nattransf)
+            (eta : ('C, I, 'G o 'F) g_nattransf)
             (sharp : ('C, 'D, 'F, 'G) g_sharp) ==> 
     (sharp [:'a, 'a 'F:] (eta [:'a:]) = idD [:'a 'F:])``,
   STRIP_TAC
@@ -374,9 +374,9 @@ val g_adjf1_F_fun = store_thm ("g_adjf1_F_fun", tmff,
 
 val sharp_flatt_inv_defs = store_thm ("sharp_flatt_inv_defs",
   ``(category (idD,compD) /\ g_functor [:'C,'D,'F:] (idC,compC) (idD,compD) F' ==> 
-      ((eps : ('D, 'G o 'F, I) g_nattransf) = EPS (idC,compC) (SHARP (idD,compD) F' eps))) /\ 
+      ((eps : ('D, 'F o 'G, I) g_nattransf) = EPS (idC,compC) (SHARP (idD,compD) F' eps))) /\ 
     (category (idC,compC) /\ g_functor [:'D,'C,'G:] (idD,compD) (idC,compC) G ==> 
-      ((eta : ('C, I, 'F o 'G) g_nattransf) = ETA (idD,compD) (FLATT (idC,compC) G eta)))``,
+      ((eta : ('C, I, 'G o 'F) g_nattransf) = ETA (idD,compD) (FLATT (idC,compC) G eta)))``,
   SIMP_TAC (bool_ss ++ ETA_ss)
            [SHARP_def, FLATT_def, EPS_thm, ETA_thm, 
             g_functor_def, category_def, UNCURRY_DEF] ) ;
@@ -419,7 +419,7 @@ val g_adjf1_3 = store_thm ("g_adjf1_3", tm13,
   SIMP_TAC satisfy_ss [g_adjf3_thm, EPS_thm, g_adjf1_sharp_eq, g_adjf1D]) ;
 
 (* prove g_adjf2_3 by duality from g_adjf1_3 *)
-val tm23 = ``g_nattransf (idD,compD) (eps : ('D, 'G o 'F, I) g_nattransf)
+val tm23 = ``g_nattransf (idD,compD) (eps : ('D, 'F o 'G, I) g_nattransf)
                          ((F':('C, 'D, 'F) g_functor) g_oo (G:('D, 'C, 'G) g_functor))
                          (g_I [:'D:]) /\
        category (idD,compD) /\ g_functor (idC,compC) (idD,compD) F' /\
@@ -457,8 +457,8 @@ val g_adjf1_2 = save_thm ("g_adjf1_2", REWRITE_RULE [g_adjf3_2] g_adjf1_3) ;
 val SHARP_eta_I = store_thm ("SHARP_eta_I", 
   ``g_adjf3 (idC,compC) (idD,compD)
             (F':('C, 'D, 'F) g_functor) (G:('D, 'C, 'G) g_functor)
-            (eta : ('C, I, 'F o 'G) g_nattransf)
-            (eps : ('D, 'G o 'F, I) g_nattransf) /\
+            (eta : ('C, I, 'G o 'F) g_nattransf)
+            (eps : ('D, 'F o 'G, I) g_nattransf) /\
     category (idC, compC) /\ g_functor (idD,compD) (idC,compC) G ==> 
     (compD eps (F' eta) = idD)``,
   STRIP_TAC
@@ -469,8 +469,8 @@ val SHARP_eta_I = store_thm ("SHARP_eta_I",
 val FLATT_eps_I = store_thm ("FLATT_eps_I", 
   ``g_adjf3 (idC,compC) (idD,compD)
             (F':('C, 'D, 'F) g_functor) (G:('D, 'C, 'G) g_functor)
-            (eta : ('C, I, 'F o 'G) g_nattransf)
-            (eps : ('D, 'G o 'F, I) g_nattransf) /\
+            (eta : ('C, I, 'G o 'F) g_nattransf)
+            (eps : ('D, 'F o 'G, I) g_nattransf) /\
     category (idD, compD) /\ g_functor (idC,compC) (idD,compD) F' ==>
     (compC (G eps) eta = idC)``,
   STRIP_TAC
@@ -721,7 +721,7 @@ which has type
 
 val tm14e = ``category (idC,compC) ∧ category (idD,compD) ==>
   (g_adjf1 [:'C,'D, 'F,'G:] (idC,compC) G
-                     (eta : ('C, I, 'F o 'G) g_nattransf) sharp /\
+                     (eta : ('C, I, 'G o 'F) g_nattransf) sharp /\
     g_functor (idD,compD) (idC,compC) G /\
     g_nattransf [:'C:] (idC, compC) eta (g_I [:'C:])
                        (G g_oo (F' : ('C, 'D, 'F) g_functor)) /\ 
@@ -768,7 +768,7 @@ val g_adjf3_eq1 = REWRITE_RULE [GSYM AND_IMP_INTRO]
 
 val tm14e = ``category (idC,compC) /\ category (idD,compD) ==>
   (g_adjf1 [:'C,'D:] (idC,compC) (G:('D, 'C, 'G) g_functor)
-                     (eta : ('C, I, 'F o 'G) g_nattransf) sharp /\
+                     (eta : ('C, I, 'G o 'F) g_nattransf) sharp /\
     g_functor (idD,compD) (idC,compC) G /\
     g_nattransf [:'C:] (idC, compC) eta (g_I [:'C:])
                        (G g_oo (F' : ('C, 'D, 'F) g_functor)) /\ 
@@ -979,8 +979,8 @@ val adjf_thm_3_eq_5 = store_thm ("adjf_thm_3_eq_5",
 val tmjmj = 
 ``category (idC, compC) /\ g_functor [:'D,'C,'G:] (idD,compD) (idC,compC) G  /\
   category (idD, compD) /\ g_functor [:'C,'D,'F:] (idC,compC) (idD,compD) F' /\
-  g_adjf3 (idC,compC) (idD,compD) F' G (eta : ('C, I, 'F o 'G) g_nattransf)
-                                       (eps : ('D, 'G o 'F, I) g_nattransf) ==> 
+  g_adjf3 (idC,compC) (idD,compD) F' G (eta : ('C, I, 'G o 'F) g_nattransf)
+                                       (eps : ('D, 'F o 'G, I) g_nattransf) ==> 
   (compD (eps [:'a:]) (F' (G eps)) = compD eps eps)`` ;
 
 val g_adjf3_jmj_lem = store_thm ("g_adjf3_jmj_lem", tmjmj,
@@ -996,7 +996,7 @@ val g_adjf3_jmj_lem = store_thm ("g_adjf3_jmj_lem", tmjmj,
 (* NOTE - where do we assume that eta is a natural transformation *)
 
 val tmass = ``category (idC,compC) /\ g_functor [:'D,'C,'G:] (idD,compD) (idC,compC) G /\
-  g_adjf1 (idC,compC) G (eta : ('C, I, 'F o 'G) g_nattransf) sharp ==> 
+  g_adjf1 (idC,compC) G (eta : ('C, I, 'G o 'F) g_nattransf) sharp ==> 
   (sharp [:'a,'b:] (compC (G (sharp [:'c,'b:] h)) k) = compD (sharp h) (sharp k))`` ;
 
 val g_adjf1_monad_lem = store_thm ("g_adjf1_monad_lem", tmass,
@@ -1010,7 +1010,7 @@ val g_adjf1_monad_lem = store_thm ("g_adjf1_monad_lem", tmass,
 val tmmon = ``category (idC,compC) /\ 
   g_functor [:'D,'C,'G:] (idD,compD) (idC,compC) G /\
   g_adjf1 [:'C,'D,'F,'G:] (idC,compC) G eta sharp ==> 
-  Kmonad [:'C, 'F o 'G:] (idC,compC) (eta, \: 'a 'b. G o sharp)`` ;
+  Kmonad [:'C, 'G o 'F:] (idC,compC) (eta, \: 'a 'b. G o sharp)`` ;
 
 val g_adjf1_IMP_Kmonad = store_thm ("g_adjf1_IMP_Kmonad", tmmon,
   SIMP_TAC combin_ss [Kmonad_thm]

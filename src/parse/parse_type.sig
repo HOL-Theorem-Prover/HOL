@@ -12,7 +12,8 @@ sig
       tyapp  : 'a * 'a -> 'a,
       tyuniv : 'a * 'a -> 'a,
       tyexist: 'a * 'a -> 'a,
-      tyabs  : 'a * 'a -> 'a
+      tyabs  : 'a * 'a -> 'a,
+      tybeta : 'a -> 'a
      }
   type term = Term.term
 

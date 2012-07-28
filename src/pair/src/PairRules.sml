@@ -1534,7 +1534,7 @@ fun PSPECL xl th = rev_itlist PSPEC xl th;
 fun IPSPEC x th =
     let val (p,tm) = with_exn dest_pforall(concl th)
                     (ERR"IPSPEC" "input theorem not universally quantified")
-	val (_,inst,kdinst,rk) = kind_match_term p x
+	val (_,inst,kdinst,rk) = om_match_term p x
 	    handle HOL_ERR _ => raise (ERR "IPSPEC"
 			        "can't type-instantiate input theorem")
     in
@@ -1557,7 +1557,7 @@ val IPSPECL =
 	  let val pl = with_exn striper (concl th)
                        (ERR "IPSPECL"
                             "list of terms too long for theorem")
-	       val (_,inst,kdinst,rk) = kind_match_term (tup pl) tupxl handle HOL_ERR _ =>
+	       val (_,inst,kdinst,rk) = om_match_term (tup pl) tupxl handle HOL_ERR _ =>
                   raise (ERR "IPSPECL"
                              "can't type-instantiate input theorem")
 	  in
@@ -2373,7 +2373,7 @@ handle HOL_ERR _ => failwith "SWAP_PEXISTS_CONV";
 fun PART_PMATCH partfn th =
     let val pth = GPSPEC (GSPEC (GEN_ALL th))
 	val pat = partfn (concl pth)
-	val matchfn = kind_match_term pat
+	val matchfn = om_match_term pat
     in
 	fn tm => INST_ALL (matchfn tm) pth
     end;
@@ -2405,7 +2405,7 @@ val PMATCH_MP_TAC : thm_tactic =
 	in
 	    fn (A,g) => let
                  val (gps,gl) = strip_pforall g
-		 val ins = kind_match_term con gl
+		 val ins = om_match_term con gl
                      handle HOL_ERR _ =>
                             raise ERR "PMATCH_MP_TAC" "no match"
 		 val ith = INST_ALL ins th2
@@ -2453,7 +2453,7 @@ val PMATCH_MP =
 	in
 	    fn th =>
 	    let val (B,t') = dest_thm th
-		val (_,ty_inst,kd_inst,rk_inst) = kind_match_term t t'
+		val (_,ty_inst,kd_inst,rk_inst) = om_match_term t t'
 		val ith_ = INST_RK_KD_TY (ty_inst,kd_inst,rk_inst) ith
 		val (A_, forall_ps_t_imp_u_) = dest_thm ith_
 		val (ps_,t_imp_u_) = strip_pforall forall_ps_t_imp_u_

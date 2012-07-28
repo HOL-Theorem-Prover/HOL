@@ -68,7 +68,7 @@ fun TY_ETA_CONV t =
       val tysubst = [bty |-> mk_abs_type(tyvar, ty)]
 (* The code above essentially does the following, quickly:
       val pat = lhs (snd (dest_forall (concl TY_ETA_AX)))
-      val (tmsubst, tysubst, kdsubst, rksubst) = kind_match_term pat t
+      val (tmsubst, tysubst, kdsubst, rksubst) = om_match_term pat t
 *)
 (* old version:
       val rk      = Int.max(rank_of ty - 1, 0)
@@ -1052,7 +1052,7 @@ fun ISPEC t th =
        val (Bvar,_) = dest_forall(concl th) handle HOL_ERR _
                       => raise ERR "ISPEC"
                            "input theorem not universally quantified"
-       val (_,inst,kd_inst,rk) = kind_match_term Bvar t handle HOL_ERR _
+       val (_,inst,kd_inst,rk) = om_match_term Bvar t handle HOL_ERR _
                       => raise ERR "ISPEC"
                            "can't type-instantiate input theorem"
        val rth = INST_RANK rk th
@@ -1101,7 +1101,7 @@ fun ISPECL [] = TY_SPEC_ALL (*I*)
                      => raise ERR "ISPECL" "list of terms too long for theorem"
          val (pats,obs) = split pairs
          val (ty_theta,kd_theta,rk) =
-             Type.kind_match_type (funty pats) (funty obs)
+             Type.om_match_type (funty pats) (funty obs)
                       handle HOL_ERR _ => raise ERR "ISPECL"
                               "can't type-instantiate input theorem"
      in SPECL tms (INST_RK_KD_TY (ty_theta,kd_theta,rk) th) handle HOL_ERR _
@@ -1647,7 +1647,7 @@ fun PART_MATCH partfn th = let
   val hyprkvars = Term.has_var_rankl (Thm.hyp th)
   val pat = partfn(concl th)
   val matchfn =
-      kind_match_terml hyprkvars hypkdvars hyptyvars (HOLset.intersection(conclfvs, hypfvs)) pat
+      om_match_terml hyprkvars hypkdvars hyptyvars (HOLset.intersection(conclfvs, hypfvs)) pat
 in
   (fn tm => INST_ALL (matchfn tm) th)
 end
@@ -1709,7 +1709,7 @@ fun MATCH_MP ith =
      val lconsts = HOLset.intersection
                      (FVL [concl ith] empty_tmset, hyptmvars)
  in fn th =>
-   let val mfn = C (Term.kind_match_terml hyprkvars hypkdvars hyptyvars lconsts) (concl th)
+   let val mfn = C (Term.om_match_terml hyprkvars hypkdvars hyptyvars lconsts) (concl th)
        val (_,tyS,kdS,rkS) = mfn bod
        val (atyS,tyS) = partition (fn {redex,residue} => mem redex ityl) tyS
        val tth = INST_RK_KD_TY (tyS,kdS,rkS) ith
@@ -1929,7 +1929,7 @@ fun deep_alpha ([],[]) tm = tm
  *         end
  *       val pbod = partfn bod
  *   in fn tm =>
- *     let val (tmin,tyin,kdin,rkin) = kind_match_term pbod tm
+ *     let val (tmin,tyin,kdin,rkin) = om_match_term pbod tm
  *         val th0 = INST_ALL (tmin,tyin,kdin,rkin) sth
  *     in finish_fn tyin (map #redex tmin) th0
  *     end
@@ -2270,7 +2270,7 @@ fun HO_PART_MATCH partfn th =
      val lkdconsts = HOLset.listItems (hyp_kdvars th)
      val ltyconsts = HOLset.listItems (hyp_tyvars th)
  in fn tm =>
-    let val (tmin,tyin,kdin,rkin) = ho_kind_match_term lkdconsts ltyconsts lconsts pbod tm
+    let val (tmin,tyin,kdin,rkin) = ho_om_match_term lkdconsts ltyconsts lconsts pbod tm
         val (tmbtvs,tmbvs) = bound_vars tm
         fun foldthis ({redex,residue}, acc) =
             if (is_abs residue orelse is_tyabs residue) andalso
@@ -2763,8 +2763,8 @@ fun prove_abs_fn_one_one th =
 (* Rules related to "semantic tags" for controlling rewriting                *)
 (*---------------------------------------------------------------------------*)
 
-val is_comm = can (kind_match_term comm_tm);
-val is_assoc = can (kind_match_term assoc_tm);
+val is_comm = can (om_match_term comm_tm);
+val is_assoc = can (om_match_term assoc_tm);
 
 (*---------------------------------------------------------------------------*)
 (* Classify a pair of theorems as one assoc. thm and one comm. thm. Then     *)
@@ -2879,7 +2879,7 @@ The free variables in the theorem itself get in the way.  The fix is
 to examine whether or not the new bound variable clashes with a named
 variable in the body of the theorem ("look_for_avoids bvms").  If so, then 
 the theorem has that variable instantiated to a genvar.  (The instantiation 
-returned by ho_kind_match_term also needs to be adjusted because it may be 
+returned by ho_om_match_term also needs to be adjusted because it may be 
 expecting to instantiate some of the pattern theorem's free variables.)
 
 So, the code in match_bvs figures out what renamings of bound

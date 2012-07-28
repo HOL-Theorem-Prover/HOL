@@ -3324,7 +3324,7 @@ end (* local *)
 
 (* We redefine the main type matching functions here to use higher order matching. *)
 
-fun prim_kind_match_type pat ob ((tyS,tyId), (kdS,kdId), rkS) =
+fun prim_om_match_type pat ob ((tyS,tyId), (kdS,kdId), rkS) =
     let val tyfixed = HOLset.addList(empty_tyset, tyId)
         val (_,tyS',(kdS',kdId'),rkS') = ho_match_type1 false kdId tyfixed pat ob (tyS,[]) ((kdS,kdId),rkS)
      in ((tyS',tyId), (kdS',kdId'), rkS')
@@ -3453,7 +3453,7 @@ fun norm_type_subst 0 [] = I
   in norm ## normId
   end
 
-fun raw_kind_match_type pat ob ((tyS,tyId), (kdS,kdId), (rkS,rkfixed)) =
+fun raw_om_match_type pat ob ((tyS,tyId), (kdS,kdId), (rkS,rkfixed)) =
     let val tyfixed = HOLset.addList(empty_tyset, tyId)
     in (* works fast for traditional HOL types; throws HIGHER_ORDER for others *)
       let val _ = if null kdS andalso rkS=0 then () else raise HIGHER_ORDER
@@ -3474,7 +3474,7 @@ fun raw_kind_match_type pat ob ((tyS,tyId), (kdS,kdId), (rkS,rkfixed)) =
     end;
 
 (* pure higher-order type matching: correct but slow:
-fun raw_kind_match_type pat ob ((tyS,tyId), (kdS,kdId), rkS) =
+fun raw_om_match_type pat ob ((tyS,tyId), (kdS,kdId), rkS) =
     let val tyfixed = HOLset.addList(empty_tyset, tyId)
         val (_,tyS',(kdS',kdId'),rkS') =
                   ho_match_type1 true kdId tyfixed pat ob (tyS,[]) ((rkS,rkfixed),(kdS,kdId))
@@ -3492,20 +3492,20 @@ fun clean_subst ((tyS,_),(kdS,_),(rkS,_)) =
  in (del [] tyS,kdS,rkS)
  end
 
-fun kind_match_type pat ob =
-      clean_subst (raw_kind_match_type pat ob (([],[]), ([],[]), (0,false)))
+fun om_match_type pat ob =
+      clean_subst (raw_om_match_type pat ob (([],[]), ([],[]), (0,false)))
 
-fun kind_match_types theta =
- let fun match ({redex,residue},matches) = raw_kind_match_type redex residue matches
+fun om_match_types theta =
+ let fun match ({redex,residue},matches) = raw_om_match_type redex residue matches
  in clean_subst (List.foldr match (([],[]), ([],[]), (0,false)) theta)
  end
 
 fun raw_match_type pat ob (tyS,tyId) =
     let val ((tyS',tyId'),(kdS',kdId'),(rkS',_)) =
-              raw_kind_match_type pat ob ((tyS,tyId),([],[]),(0,false))
+              raw_om_match_type pat ob ((tyS,tyId),([],[]),(0,false))
     in if null kdS' andalso null kdId' andalso rkS' = 0 then (tyS',tyId')
        else raise ERR "raw_match_type"
-                  "kind and/or rank variable matches: use raw_kind_match_type instead"
+                  "kind and/or rank variable matches: use raw_om_match_type instead"
     end;
 
 fun match_type_restr fixed pat ob  = fst (raw_match_type pat ob ([],fixed))

@@ -1130,7 +1130,10 @@ fun temp_type_abbrev (s, ty) = let
       else raise ERROR "temp_type_abbrev" "Unexpected sort of type"
 in
   the_type_grammar := type_grammar.new_abbreviation (!the_type_grammar)
-                                                    (s, mk_structure pset [] ty);
+                                                    (s, if current_trace "prefix_type_syntax" = 1
+                                                        then mk_structure (Binarymap.mkDict Type.compare)
+                                                                          [] (list_mk_abs_type(params, ty))
+                                                        else (* old *) mk_structure pset [] ty);
   type_grammar_changed := true;
   term_grammar_changed := true
 end handle GrammarError s => raise ERROR "type_abbrev" s

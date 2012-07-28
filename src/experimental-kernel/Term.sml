@@ -334,7 +334,7 @@ fun first_decl fname Name =
 fun mk_const(s, ty) =
   let val const as (id,basety) = first_decl "mk_const" s
   in
-    let val Theta as (tyS,kdS,rkS) = Type.kind_match_type basety ty
+    let val Theta as (tyS,kdS,rkS) = Type.om_match_type basety ty
         val reduce = if null tyS then I else Type.deep_beta_eta_ty
     in case (tyS,kdS,rkS)
         of ([],[],0) => Const const
@@ -355,7 +355,7 @@ fun mk_thy_const {Thy,Name,Ty} = let
 in
   case KernelSig.peek(const_table, k) of
     NONE => raise ERR "mk_thy_const" ("No such constant: "^id2string k)
-  | SOME (id,basety) => let val Theta as (tyS,kdS,rkS) = Type.kind_match_type basety Ty
+  | SOME (id,basety) => let val Theta as (tyS,kdS,rkS) = Type.om_match_type basety Ty
                             val reduce = if null tyS then I else Type.deep_beta_eta_ty
                             val Ty' = reduce (Type.inst_rk_kd_ty Theta basety)
                         in Const(id, Ty')
@@ -2126,7 +2126,7 @@ local
 fun align_terms0 (tyS,kdS,rkS) [] = (tyS,kdS,rkS)
   | align_terms0 (tyS,kdS,rkS) ({redex,residue} :: s) = let
         val (tyS',kdS',rkS') =
-            Type.raw_kind_match_type (type_of redex) (type_of residue) (tyS,kdS,rkS)
+            Type.raw_om_match_type (type_of redex) (type_of residue) (tyS,kdS,rkS)
       in
         align_terms0 (tyS',kdS',rkS') s
       end
@@ -2161,7 +2161,7 @@ local
                          (* let val dom = fst(Type.dom_rng(type_of abs))
                             in mk_comb (align_inst[ty |-> dom] c, abs)
                             end *)
-                            let val (tytheta,kdtheta,rk) = kind_match_type ty (type_of abs)
+                            let val (tytheta,kdtheta,rk) = om_match_type ty (type_of abs)
                             in mk_comb (inst_rk_kd_ty (tytheta,kdtheta,rk) c, abs)
                             end)
 in
@@ -2193,7 +2193,7 @@ local
                                 val kdv = kind_of ty
                             in mk_comb (align_inst_kind [kdv |-> dom] c, univ)
                             end *) 
-                            let val (tytheta,kdtheta,rk) = kind_match_type ty (type_of univ)
+                            let val (tytheta,kdtheta,rk) = om_match_type ty (type_of univ)
                             in mk_comb (inst_rk_kd_ty (tytheta,kdtheta,rk) c, univ)
                             end)
 in
@@ -2406,7 +2406,7 @@ datatype tmpair = TMP of term * term
                                 n : int}
 
 val kdmatch = Kind.raw_match_kind
-(*val tymatch = Type.raw_kind_match_type *)
+(*val tymatch = Type.raw_om_match_type *)
 fun tymatch pat ob ((lctys,env,insts_homs),kdS,rkS) =
         let val insts_homs' = Type.type_pmatch lctys env pat ob insts_homs
             val (kdS',rkS') = Type.get_rank_kind_insts [] env (fst insts_homs') (kdS,rkS)
@@ -2490,7 +2490,7 @@ fun RM patobs (theta0 as (tminfo, S as (tyS,kdS,rkS))) =
 
 val empty_intsubst = Map.mkDict compare
 
-fun raw_kind_match rkfixed kdfixed tyfixed tmfixed pat ob (tmS,tyS,kdS,rkS)
+fun raw_om_match rkfixed kdfixed tyfixed tmfixed pat ob (tmS,tyS,kdS,rkS)
    = let val tyfixed_set = HOLset.addList(raw_empty_tyset, tyfixed)
          val (tmtheta,((_,_,pinsts_homs),kdS1,rkS1)) =
             RM [TMP (pat, ob)] ({ids = tmfixed, n = 0, theta = tmS,
@@ -2505,9 +2505,9 @@ fun raw_kind_match rkfixed kdfixed tyfixed tmfixed pat ob (tmS,tyS,kdS,rkS)
      end;
 
 fun raw_match tyfixed tmfixed pat ob (tmS,tyS)
-   = let val (tmSId,tySId,(kdS,kdIds),(rkS,_)) = raw_kind_match false [] tyfixed tmfixed pat ob (tmS,tyS,[],0)
+   = let val (tmSId,tySId,(kdS,kdIds),(rkS,_)) = raw_om_match false [] tyfixed tmfixed pat ob (tmS,tyS,[],0)
      in if null kdS andalso null kdIds andalso rkS = 0 then (tmSId,tySId)
-        else raise ERR "raw_match" "kind and/or rank instantiation needed: use raw_kind_match instead"
+        else raise ERR "raw_match" "kind and/or rank instantiation needed: use raw_om_match instead"
      end;
 
 (* val raw_match0 = raw_match
@@ -2561,21 +2561,21 @@ fun kind_norm_subst (S as (_,_,([],_),(0,_))) = kind_norm_subst0 S
  end
 end (* local *)
 
-fun kind_match_terml rkfixed kdfixed tyfixed tmfixed pat ob =
- kind_norm_subst (raw_kind_match rkfixed kdfixed tyfixed tmfixed pat ob ([],[],[],0))
+fun om_match_terml rkfixed kdfixed tyfixed tmfixed pat ob =
+ kind_norm_subst (raw_om_match rkfixed kdfixed tyfixed tmfixed pat ob ([],[],[],0))
 
 fun match_terml tyfixed tmfixed pat ob =
- let val (tmS,tyS,kdS,rkS) = kind_match_terml false [] tyfixed tmfixed pat ob
+ let val (tmS,tyS,kdS,rkS) = om_match_terml false [] tyfixed tmfixed pat ob
  in if null kdS andalso rkS = 0 then (tmS,tyS)
-    else raise ERR "match_terml" "kind and/or rank instantiation needed: use kind_match_terml instead"
+    else raise ERR "match_terml" "kind and/or rank instantiation needed: use om_match_terml instead"
  end
 
-val kind_match_term = kind_match_terml false [] [] empty_varset
+val om_match_term = om_match_terml false [] [] empty_varset
 
 fun match_term pat ob =
- let val (tmS,tyS,kdS,rkS) = kind_match_term pat ob
+ let val (tmS,tyS,kdS,rkS) = om_match_term pat ob
  in if null kdS andalso rkS = 0 then (tmS,tyS)
-    else raise ERR "match_term" "kind and/or rank instantiation needed: use kind_match_term instead"
+    else raise ERR "match_term" "kind and/or rank instantiation needed: use om_match_term instead"
  end;
 
 (*---------------------------------------------------------------------------
@@ -3054,7 +3054,7 @@ local
 (*
 fun get_type_kind_rank_insts kdavoids tyavoids L ((tyS,tyId),(kdS,kdId),rkS) =
  itlist (fn {redex,residue} => fn Theta =>
-          Type.prim_kind_match_type (snd(dest_var redex)) (type_of residue) Theta)
+          Type.prim_om_match_type (snd(dest_var redex)) (type_of residue) Theta)
        L ((tyS,union tyavoids tyId),(kdS,union kdavoids kdId),rkS)
 *)
 
@@ -3184,7 +3184,7 @@ in
         if aconv ctm vtm then term_homatch rkin kdins tyins (insts, tl homs)
         else let
             (* val (newtyins,newkdins,newrkin) =
-                Type.prim_kind_match_type (snd (dest_var vtm)) (type_of ctm) (tyins,kdins,rkin) *)
+                Type.prim_om_match_type (snd (dest_var vtm)) (type_of ctm) (tyins,kdins,rkin) *)
             val newtyins =
                 tyenv_safe_insert (snd (dest_var vtm) |-> type_of ctm) tyins
             val newinsts = (vtm |-> ctm)::insts
@@ -3342,7 +3342,7 @@ end
 
 in
 
-fun ho_kind_match_term0 kdavoids tyavoids lconsts vtm ctm = let
+fun ho_om_match_term0 kdavoids tyavoids lconsts vtm ctm = let
   val pinsts_homs = term_pmatch lconsts [] [] vtm ctm ([], [])
   val (tyins,kdins,rkin) = get_type_kind_rank_insts kdavoids tyavoids (fst pinsts_homs) (([],[]),([],[]),(0,false))
   val insts = term_homatch kdavoids tyavoids lconsts rkin kdins tyins pinsts_homs
@@ -3359,11 +3359,11 @@ in
   (bcs,tmins,tyins)
 end
 
-fun ho_kind_match_term kdavoids tyavoids lconsts vtm ctm = let
-  val (bcs, tmins, tyins, kdins, rkin) = ho_kind_match_term0 kdavoids tyavoids lconsts vtm ctm
+fun ho_om_match_term kdavoids tyavoids lconsts vtm ctm = let
+  val (bcs, tmins, tyins, kdins, rkin) = ho_om_match_term0 kdavoids tyavoids lconsts vtm ctm
 in
   (tmins, #1 tyins, #1 kdins, #1 rkin)
-end handle e => raise (wrap_exn "HolKernel" "ho_kind_match_term" e)
+end handle e => raise (wrap_exn "HolKernel" "ho_om_match_term" e)
 
 fun ho_match_term tyavoids lconsts vtm ctm = let
   val (bcs, tmins, tyins) = ho_match_term0 tyavoids lconsts vtm ctm

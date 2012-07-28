@@ -59,8 +59,8 @@ fun is_congruence tm =
     is_eq tm orelse let
       val (rel,left,right) = dest_binop tm
     in
-      (can (ho_kind_match_term [] [] empty_tmset left) right) andalso
-      (can (ho_kind_match_term [] [] empty_tmset right) left)
+      (can (ho_om_match_term [] [] empty_tmset left) right) andalso
+      (can (ho_om_match_term [] [] empty_tmset right) left)
     end
    handle HOL_ERR _ => false
 
@@ -147,7 +147,7 @@ in fn {relation,solver,depther,freevars} =>
     failwith "not applicable"
   else fn tm =>
   let
-    val (theta,kdtheta,rk) = kind_match_type (#1 (dom_rng (type_of relation))) (type_of tm)
+    val (theta,kdtheta,rk) = om_match_type (#1 (dom_rng (type_of relation))) (type_of tm)
     val relation' = Term.inst_rk_kd_ty (theta,kdtheta,rk) relation
     val match_thm = matcher (mk_comb(relation',tm))
     val _ = trace(3,OPENING(tm,match_thm))

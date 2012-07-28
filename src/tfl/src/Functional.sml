@@ -18,7 +18,7 @@ val stringize = list_to_string int_to_string ", ";
 fun enumerate l = map (fn (x,y) => (y,x)) (Lib.enumerate 0 l);
 
 fun match_term thry tm1 tm2 = Term.match_term tm1 tm2;
-fun match_type thry ty1 ty2 = Type.kind_match_type ty1 ty2;
+fun match_type thry ty1 ty2 = Type.om_match_type ty1 ty2;
 
 fun match_info db s =
 case TypeBasePure.prim_get db s

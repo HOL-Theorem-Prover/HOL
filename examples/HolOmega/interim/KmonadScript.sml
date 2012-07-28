@@ -542,13 +542,13 @@ val (sgs, goal) = top_goal () ;
   a monad in the Kleisli category of another monad *)
 (* first note this type equality *)
 val true = Type `: (('A, 'M) Kleisli, 'N) Kleisli` =
-  Type `: ('A, 'N o 'M) Kleisli` ;
+  Type `: ('A, 'M o 'N) Kleisli` ;
 
 val tmKopext = ``category (id, comp) ==> 
   Komonad [:'A, 'M:] (id,comp) (unitM, extM, kcomp) ==> 
   Komonad [: ('A, 'M) Kleisli, 'N :] (unitM, kcomp) (unitNM, pext, oNM) ==>
   (extNM = \:'a 'b. \f. extM (pext f)) ==>
-  Komonad [: 'A, 'N o 'M :] (id, comp) (unitNM, extNM, oNM)`` ;
+  Komonad [: 'A, 'M o 'N :] (id, comp) (unitNM, extNM, oNM)`` ;
 
 fun usekc' kc = 
   (POP_ASSUM_LIST (MAP_EVERY (ASSUME_TAC o REWRITE_RULE [kc, Komonad_thm]))) 
@@ -570,7 +570,7 @@ val (sgs, goal) = top_goal () ;
 val J1S_def = Define 
   `J1S ((id, comp) : 'A category) (extM : ('A, 'M) ext) extNM =
     (!: 'a 'b. !f : ('a, 'b 'N 'M) 'A.
-      extM ((extNM : ('A, 'N o 'M) ext) f) = comp (extNM f) (extM id))` ;
+      extM ((extNM : ('A, 'M o 'N) ext) f) = comp (extNM f) (extM id))` ;
 
 val EQ_IMP_IMP =
   auxLib.sfg (auxLib.ufd CONJUNCT1 o fst o EQ_IMP_RULE) EQ_IMP_THM ;
@@ -602,7 +602,7 @@ val J1_IMP_ext_pext = store_thm ("J1_IMP_ext_pext", tmepe,
 
 val tmpextio = ``category (id, comp) ==> 
   Komonad [:'A, 'M:] (id,comp) (unitM, extM, kcomp) ==> 
-  Komonad [: 'A, 'N o 'M :] (id, comp) (unitNM, extNM, oNM) ==>
+  Komonad [: 'A, 'M o 'N :] (id, comp) (unitNM, extNM, oNM) ==>
   J1S (id, comp) extM extNM ==>
   (pext = \:'a 'b. \f. comp (extNM f) unitM) ==>
   Komonad [: ('A, 'M) Kleisli, 'N :] (unitM, kcomp) (unitNM, pext, oNM)`` ;
@@ -628,7 +628,7 @@ val cm_if_J1o = store_thm ("cm_if_J1o", tmpextio,
 
 val tm_Ko_J1S = 
   ``category (id,comp) /\ Komonad (id,comp) (unitM, extM, kcomp) ==> 
-  (Komonad [: 'A, 'N o 'M :] (id,comp) (unitNM,extNM,oNM) /\
+  (Komonad [: 'A, 'M o 'N :] (id,comp) (unitNM,extNM,oNM) /\
   J1S (id, comp) extM extNM /\
   (pext = (\:'a 'b. (\f. comp (extNM f) unitM))) = 
   Komonad [:('A,'M) Kleisli, 'N:] (unitM, kcomp) (unitNM,pext,oNM) /\
@@ -654,7 +654,7 @@ val [Ko_cmD_cm, Ko_cmD_J1S, Ko_cmD_pext] = ListPair.map save_thm
 
 val tm_J1S_C3S = ``category (id, comp) /\ 
   Kdmonad [:'A, 'M:] (id, comp) (unitM, extM, mapM, joinM) /\
-  Kmonad [:'A, 'N o 'M:] (id, comp) (unitNM, extNM) /\
+  Kmonad [:'A, 'M o 'N:] (id, comp) (unitNM, extNM) /\
   (unitNM = \:'a. comp (unitM [:'a 'N:]) (unitN [:'a:])) ==>
   J1S (id,comp) extM extNM ==> 
     (!: 'a 'b. !f : ('a, 'b 'N 'M) 'A. comp (extNM f) (mapM unitN) = extM f)`` ;
@@ -674,7 +674,7 @@ val J1S_IMP_C3S = store_thm ("J1S_IMP_C3S", tm_J1S_C3S,
 
 val tm_C3S_J1S = ``category (id, comp) /\ 
   Kdmonad [:'A, 'M:] (id, comp) (unitM, extM, mapM, joinM) /\
-  Kmonad [:'A, 'N o 'M:] (id, comp) (unitNM, extNM) /\
+  Kmonad [:'A, 'M o 'N:] (id, comp) (unitNM, extNM) /\
   (!: 'a 'b. !f : ('a, 'b 'N 'M) 'A. 
     comp (extNM f) (mapM (unitN : ('A, 'N) gunit)) = extM f) ==>
   J1S (id,comp) extM extNM`` ;
@@ -686,7 +686,7 @@ val C3S_IMP_J1S = store_thm ("C3S_IMP_J1S", tm_C3S_J1S,
 
 val tm_J1S_iff_C3S = ``category (id, comp) /\ 
   Kdmonad [:'A, 'M:] (id, comp) (unitM, extM, mapM, joinM) /\
-  Kmonad [:'A, 'N o 'M:] (id, comp) (unitNM, extNM) /\
+  Kmonad [:'A, 'M o 'N:] (id, comp) (unitNM, extNM) /\
   (unitNM = \:'a. comp (unitM [:'a 'N:]) (unitN [:'a:])) ==>
   (J1S (id,comp) extM extNM = 
     (!: 'a 'b. !f : ('a, 'b 'N 'M)'A. comp (extNM f) (mapM unitN) = extM f))``;
@@ -703,7 +703,7 @@ val J1S_IFF_C3S = store_thm ("J1S_IFF_C3S", tm_J1S_iff_C3S,
 (* note - the extra condition here is implied by mapNM f = mapM (mapN f) *)
 val tm_C4_J1S = ``category (id, comp) /\ 
   Kdmonad [:'A, 'M:] (id, comp) (unitM, extM, mapM, joinM) /\
-  Kdmonad [:'A, 'N o 'M:] (id, comp) (unitNM, extNM, mapNM, joinNM) /\
+  Kdmonad [:'A, 'M o 'N:] (id, comp) (unitNM, extNM, mapNM, joinNM) /\
   (!: 'a 'b. !f. extM (mapNM [:'a,'b:] f) = comp (mapNM [:'a,'b:] f) joinM) ==>
   ((!:'a. extM (joinNM [:'a:]) = comp joinNM joinM) =
   J1S (id,comp) extM extNM)`` ;
@@ -732,7 +732,7 @@ val C4_IFF_J1S = store_thm ("C4_IFF_J1S", tm_C4_J1S,
 val tm_C3_iff_C3S = ``category (id, comp) /\ 
   Kdmonad [:'A, 'M:] (id, comp) (unitM, extM, mapM, joinM) /\
   Kdmonad [:'A, 'N:] (id, comp) (unitN, extN, mapN, joinN) /\
-  Kdmonad [:'A, 'N o 'M:] (id, comp) (unitNM, extNM, mapNM, joinNM) /\
+  Kdmonad [:'A, 'M o 'N:] (id, comp) (unitNM, extNM, mapNM, joinNM) /\
   (mapNM = \:'a 'b. \f. mapM (mapN f)) ==>
   ((!: 'a. comp joinNM (mapM unitN) = joinM [:'a 'N:]) =
     (!: 'a 'b. !f.  comp (extNM [:'a, 'b:] f) (mapM unitN) = extM f))``;
@@ -759,7 +759,7 @@ val (sgs, goal) = top_goal () ;
   we show these are equivalent; note, (C5) is (J2) of Jones & Duponcheeel *)
 
 val tmBWC25 =
-    ``category (id,comp) /\ Kmonad [:'A, 'N o 'M:] (id,comp) (unitNM,extNM) ==>
+    ``category (id,comp) /\ Kmonad [:'A, 'M o 'N:] (id,comp) (unitNM,extNM) ==>
     (extNM unitM = djoin) ==> (comp djoin (extNM id) = extNM djoin)`` ;
 
 val BW_C2_C5 = store_thm ("BW_C2_C5", tmBWC25,
@@ -769,7 +769,7 @@ val BW_C2_C5 = store_thm ("BW_C2_C5", tmBWC25,
 
 val tmBWC52 = 
   ``category [:'A:] (id,comp) ==> 
-    Kmonad [:'A, 'N o 'M:] (id,comp) (unitNM,extNM) ==>
+    Kmonad [:'A, 'M o 'N:] (id,comp) (unitNM,extNM) ==>
     Kdmonad [:'A, 'N:] (id,comp) (unitN,extN,mapN,joinN) ==>
     Kdmonad [:'A, 'M:] (id,comp) (unitM,extM,mapM,joinM) ==>
     (unitNM = \:'a. comp (unitM [:'a 'N:]) (unitN [:'a:])) ==>

@@ -848,7 +848,7 @@ fun MATCH_MP_TAC thm :tactic = let
 in
 fn (A,g) =>
    let val (vs,gl) = strip_all_forall g
-       val ins     = kind_match_terml hyprkvars hypkdvars hyptyvars lconsts con gl
+       val ins     = om_match_terml hyprkvars hypkdvars hyptyvars lconsts con gl
            handle HOL_ERR _ => raise ERR "MATCH_MP_TAC" "No match"
        val ith     = INST_ALL ins th2
        val gth     = TY_TM_GENL vs (UNDISCH ith)
@@ -1046,7 +1046,7 @@ fun DEEP_INTROk_TAC th tac (asl, g) = let
                                    "Conclusion not of form ``var (pattern)``"
   fun test(bvs,t) = let
     val ((theta_tms, tmids),(theta_tys, tyids),_,_) =
-        raw_kind_match hyrkvars hykdvars hytyvars hyfrees pattern t ([],[],[],0)
+        raw_om_match hyrkvars hykdvars hytyvars hyfrees pattern t ([],[],[],0)
     val (btvs,bvs) = List.foldr (fn (inL tyv,(tys,tms)) => (tyv::tys,tms)
                                   | (inR tmv,(tys,tms)) => (tys,tmv::tms))
                                 ([],[]) bvs

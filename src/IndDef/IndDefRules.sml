@@ -381,7 +381,7 @@ fun RULE_INDUCT_THEN th =
  in
  fn ttac1 => fn ttac2 => fn (A,g) =>
    let val (gvs,body) = strip_forall g
-       val (theta as (slis,ilis,klis,rlis)) = kind_match_term (rator cncl) (rator body)
+       val (theta as (slis,ilis,klis,rlis)) = om_match_term (rator cncl) (rator body)
        val sith = INST_ALL theta sthm
        val largs = snd(strip_comb (rand(rator body)))
        val instfn = inst_rk_kd_ty (ilis,klis,rlis)
@@ -404,7 +404,7 @@ end;
 
 fun axiom_tac th :tactic = fn (A,g) =>
  let val (vs,body) = strip_forall g
-     val instl = kind_match_term (concl th) body
+     val instl = om_match_term (concl th) body
  in ([], K (itlist ADD_ASSUM A (GENL vs (INST_ALL instl th))))
  end
  handle HOL_ERR _ => raise ERR "axiom_tac" "axiom does not match goal";
@@ -440,7 +440,7 @@ fun RULE_TAC th =
         val ith = DISCH ant (SPECL cvs (UNDISCH (SPECL vs th)))
     in fn (A,g) =>
         let val (gvs,body) = strip_forall g
-            val theta as (slis,ilis,klis,rlis) = kind_match_term cncl body
+            val theta as (slis,ilis,klis,rlis) = om_match_term cncl body
             val th1 = INST_ALL theta ith
             val svs = rev (free_varsl (map (inst_all theta) vs))
             val nvs = op_intersect eq gvs svs

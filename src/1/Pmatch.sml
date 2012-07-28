@@ -34,8 +34,8 @@ val stringize = list_to_string int_to_string ", ";
 
 fun enumerate l = map (fn (x,y) => (y,x)) (Lib.enumerate 0 l);
 
-fun match_term thry tm1 tm2 = Term.kind_match_term tm1 tm2;
-fun match_type thry ty1 ty2 = Type.kind_match_type ty1 ty2;
+fun match_term thry tm1 tm2 = Term.om_match_term tm1 tm2;
+fun match_type thry ty1 ty2 = Type.om_match_type ty1 ty2;
 
 fun match_info db s = db s
 
@@ -439,7 +439,7 @@ fun subst_inst (term_sub,type_sub,kind_sub,rank_sub) tm =
     Term.inst_all (term_sub, type_sub, kind_sub, rank_sub) tm;
 
 fun pat_match1 (pat,exp) given_pat =
- let val sub = Term.kind_match_term pat given_pat
+ let val sub = Term.om_match_term pat given_pat
  in (subst_inst sub pat, subst_inst sub exp);
     sub
  end
@@ -492,7 +492,7 @@ fun mk_case1 tybase (exp, plist) =
            val fns = map (fn (p,R) => list_mk_abs(snd(strip_comb p),R)) plist
            val ty' = list_mk_fun (map type_of fns@[type_of exp],
                                   type_of (snd (hd plist)))
-           val (ty_theta,kd_theta,rk) = Type.kind_match_type (type_of c) ty'
+           val (ty_theta,kd_theta,rk) = Type.om_match_type (type_of c) ty'
        in list_mk_comb(inst_rk_kd_ty (ty_theta,kd_theta,rk) c, fns@[exp])
        end;
 
@@ -531,7 +531,7 @@ local fun build_case_clause((ty,constr),rhs) =
            end
      val (V,rhs') = peel args rhs
      val (ty_theta,kd_theta,rk) =
-           Type.kind_match_type (type_of constr)
+           Type.om_match_type (type_of constr)
                       (list_mk_fun (map type_of V, ty))
      val constr' = inst_rk_kd_ty (ty_theta,kd_theta,rk) constr
  in
@@ -599,7 +599,7 @@ local fun dest tybase (pat,rhs) =
                      then flatten
                             (map (dest tybase)
                                (zip (map (fn p =>
-                                           subst (#1 (Term.kind_match_term exp p)) pat) pats)
+                                           subst (#1 (Term.om_match_term exp p)) pat) pats)
                                     rhsides))
                      else [(pat,rhs)]
                   end

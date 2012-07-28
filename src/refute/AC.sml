@@ -103,7 +103,7 @@ val DISTRIB_CONV =
               then RAW_DISTRIB_CONV lth0 rth0 hop0 lop0
               else let val vty = type_of htm
                    in fn tm =>
-                       let val (tyins,kdins,rk) = kind_match_type vty (type_of tm)
+                       let val (tyins,kdins,rk) = om_match_type vty (type_of tm)
                            val INST_fn = INST_RK_KD_TY (tyins,kdins,rk)
                            and inst_fn = inst_rk_kd_ty (tyins,kdins,rk)
                        in
@@ -160,7 +160,7 @@ val ASSOC_CONV =
          then MK_ASSOC_CONV oper assoc t1 t2 t3
 	 else fn tm =>
 	     let val xop = rator(rator tm)
-             in case ho_kind_match_term [] [] empty_tmset oper xop
+             in case ho_om_match_term [] [] empty_tmset oper xop
 		 of ([],tyin,kdin,rk) =>
                      (let val inst_fn = inst_rk_kd_ty (tyin,kdin,rk)
                           val assoc' = INST_RK_KD_TY (tyin,kdin,rk) assoc

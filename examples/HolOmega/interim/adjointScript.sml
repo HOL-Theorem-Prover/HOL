@@ -21,18 +21,18 @@ val _ = type_abbrev ("flatt",
   Type `: \'G 'F. !'b 'a. ('a 'F -> 'b) -> ('a -> 'b 'G)`) ;
 
 val adjf1_def = new_definition("adjf1_def",
-  ``adjf1 (G : 'G functor) (eta : (I, 'F o 'G) nattransf) 
+  ``adjf1 (G : 'G functor) (eta : (I, 'G o 'F) nattransf) 
       (sharp : ('F, 'G) sharp) =
     (!: 'a 'b. (! (f : 'a -> 'b 'G) g. (G g o eta = f) = (sharp f = g)))``) ;
 
 val adjf2_def = new_definition("adjf2_def",
-  ``adjf2 (F' : 'F functor) (eps : ('G o 'F, I) nattransf) 
+  ``adjf2 (F' : 'F functor) (eps : ('F o 'G, I) nattransf) 
       (flatt : ('G, 'F) flatt) = 
     (!: 'b 'a. (! g (f : 'a -> 'b 'G). (eps o F' f = g) = (flatt g = f)))``) ;
 
 val adjf3_def = new_definition("adjf3_def",
   ``adjf3 (F' : 'F functor) (G : 'G functor)
-    (eta : (I, 'F o 'G) nattransf) (eps : ('G o 'F, I) nattransf) =
+    (eta : (I, 'G o 'F) nattransf) (eps : ('F o 'G, I) nattransf) =
     (!: 'a 'b. ! (f : 'a -> 'b 'G) g. (G g o eta = f) = (eps o F' f = g))``);
 
 val adjf1DGh' = prove (``adjf1 G eta sharp ==> (G (sharp f) o eta = f)``,
@@ -60,19 +60,19 @@ val adjf1_sharp_eq = save_thm ("adjf1_sharp_eq",
   DISCH_ALL (TY_GEN_ALL (GEN_ALL (UNDISCH adjf1_sharp_eq')))) ;
 
 val EPS_def = new_definition ("EPS_def", 
-  ``(EPS (sharp : ('F,'G) sharp) : ('G o 'F, I) nattransf) =
+  ``(EPS (sharp : ('F,'G) sharp) : ('F o 'G, I) nattransf) =
     (\:'e. sharp [:'e 'G, 'e:] I)``) ;
 
 val FLATT_def = new_definition ("FLATT_def", 
-  ``(FLATT (G : 'G functor) (eta : (I, 'F o 'G) nattransf) : ('G,'F) flatt) =
+  ``(FLATT (G : 'G functor) (eta : (I, 'G o 'F) nattransf) : ('G,'F) flatt) =
     ((\:'b 'a. \g : 'a 'F -> 'b. G g o eta))``) ;
 
 val ETA_def = new_definition ("ETA_def", 
-  ``(ETA (flatt : ('G,'F) flatt) : (I, 'F o 'G) nattransf) = 
+  ``(ETA (flatt : ('G,'F) flatt) : (I, 'G o 'F) nattransf) = 
     (\:'e. flatt [:'e 'F, 'e:] I)``) ;
 
 val SHARP_def = new_definition ("SHARP_def", 
-  ``(SHARP (F' : 'F functor) (eps : ('G o 'F, I) nattransf) : ('F,'G) sharp) =
+  ``(SHARP (F' : 'F functor) (eps : ('F o 'G, I) nattransf) : ('F,'G) sharp) =
     ((\:'a 'b. \f : 'a -> 'b 'G. eps o F' f))``) ;
 
 val tmd = ``nattransf eta (\:'a 'b. I) (G oo F') /\ functor G /\

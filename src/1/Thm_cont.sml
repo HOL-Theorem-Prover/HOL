@@ -415,7 +415,7 @@ local
     val lconstants = HOLset.intersection
                          (FVL [concl sth] empty_tmset, hyp_frees sth)
     val matchfn =
-        kind_match_terml hyprkvars hypkdvars hyptyvars lconstants (fst(dest_imp(concl sth)))
+        om_match_terml hyprkvars hypkdvars hyptyvars lconstants (fst(dest_imp(concl sth)))
   in fn th => MP (INST_ALL (matchfn (concl th)) sth) th
   end;
 

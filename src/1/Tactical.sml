@@ -234,14 +234,14 @@ fun PRED_ASSUM pred thfun (asl, w) =
 local
   fun match_with_constants constants pat ob = let
     val (tm_inst, ty_inst, kd_inst, rk) =
-        ho_kind_match_term [] [] empty_tmset pat ob
+        ho_om_match_term [] [] empty_tmset pat ob
     val bound_vars = map #redex tm_inst
   in
     null (op_intersect eq constants bound_vars)
   end handle HOL_ERR _ => false
 in
 fun PAT_ASSUM pat thfun (asl, w) =
-  case List.filter (can (ho_kind_match_term [] [] empty_tmset pat)) asl
+  case List.filter (can (ho_om_match_term [] [] empty_tmset pat)) asl
    of []  => raise ERR "PAT_ASSUM" "No assumptions match the given pattern"
     | [x] => let val (ob, asl') = Lib.pluck (Term.eq x) asl
              in thfun (ASSUME ob) (asl', w)

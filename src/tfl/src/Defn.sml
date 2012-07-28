@@ -273,7 +273,7 @@ fun inst_defn (STDREC{eqs,ind,R,SV,stem}) theta =
 fun set_reln def R =
    case reln_of def
     of NONE => def
-     | SOME Rpat => inst_defn def (Term.kind_match_term Rpat R)
+     | SOME Rpat => inst_defn def (Term.om_match_term Rpat R)
                     handle e => (HOL_MESG"set_reln: unable"; raise e);
 
 fun PROVE_HYPL thl th = itlist PROVE_HYP thl th
@@ -1230,7 +1230,7 @@ fun mk_Rdefn stem R eqs =
   let val defn = mk_defn stem eqs
   in case reln_of defn
       of NONE => defn
-       | SOME Rvar => inst_defn defn (Term.kind_match_term Rvar R)
+       | SOME Rvar => inst_defn defn (Term.om_match_term Rvar R)
   end;
 
 (*===========================================================================*)
@@ -1678,7 +1678,7 @@ fun Hol_Rdefn stem Rquote eqs_quote =
       of NONE => defn
        | SOME Rvar =>
           let val R = Parse.typedTerm Rquote (type_of Rvar)
-          in inst_defn defn (Term.kind_match_term Rvar R)
+          in inst_defn defn (Term.om_match_term Rvar R)
           end
   end;
 

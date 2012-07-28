@@ -204,7 +204,7 @@ fun matchp P thylist =
 fun matcher f thyl pat =
   matchp (fn th => can (find_term (can (f pat))) (concl th)) thyl;
 
-val match = matcher (ho_kind_match_term [] [] empty_tmset);
+val match = matcher (ho_om_match_term [] [] empty_tmset);
 val apropos = match [];
 
 

@@ -62,6 +62,16 @@ val PAIR_MAP_I = store_thm
     THEN REWRITE_TAC[PAIR_MAP_THM,I_THM]
    );
 
+val PAIR_MAP_o = store_thm
+  ("PAIR_MAP_o",
+   ``!(f1 :'a -> 'b) (g1 :'b -> 'c) (f2 :'d -> 'e) (g2 :'e -> 'f).
+        (g1 o f1 ## g2 o f2) = (g1 ## g2) o (f1 ## f2)``,
+   REPEAT STRIP_TAC
+   THEN REWRITE_TAC[FUN_EQ_THM]
+   THEN Cases
+   THEN REWRITE_TAC[PAIR_MAP_THM,o_THM]
+  );
+
 (* just like RPROD_DEF, except infix: *)
 
 val PAIR_REL =

@@ -20,7 +20,8 @@ type ('a,'b) tyconstructors =
       tyapp  : 'a * 'a -> 'a,
       tyuniv : 'a * 'a -> 'a,
       tyexist: 'a * 'a -> 'a,
-      tyabs  : 'a * 'a -> 'a
+      tyabs  : 'a * 'a -> 'a,
+      tybeta : 'a -> 'a
      }
 
 val ERR = Feedback.mk_HOL_ERR "Parse" "parse_type"
@@ -50,7 +51,8 @@ fun parse_type (tyfns :
      tyapp  : ('a * 'a) -> 'a,
      tyuniv : ('a * 'a) -> 'a,
      tyexist: ('a * 'a) -> 'a,
-     tyabs  : ('a * 'a) -> 'a})
+     tyabs  : ('a * 'a) -> 'a,
+     tybeta : 'a -> 'a})
                (kindparser : 'b qbuf.qbuf -> Prekind.prekind)
                allow_unknown_suffixes G = let
   val G = rules G and abbrevs = abbreviations G and specials = specials G
@@ -58,7 +60,8 @@ fun parse_type (tyfns :
   val {vartype = pVartype, tyop = pType, antiq = pAQ, qtyop,
        kindcast, rankcast,
        tycon = pConType,
-       tyapp = pAppType, tyuniv = pUnivType, tyexist = pExistType, tyabs = pAbstType} = tyfns
+       tyapp = pAppType, tyuniv = pUnivType, tyexist = pExistType, tyabs = pAbstType,
+       tybeta = pBetaType} = tyfns
   fun structure_num_args st =
     let val max = Int.max
         fun nargs (PARAM (n,kd)) = n + 1
@@ -69,6 +72,30 @@ fun parse_type (tyfns :
           | nargs _ = 0
     in nargs st
     end
+(*
+  fun structure_arg_kds st =
+    let val empt = Binarymap.mkDict Int.compare : (int, kind) Binarymap.dict
+        fun arg_kds d (PARAM (n,kd)) = Binarymap.insert(d, n, kd)
+          | arg_kds d (TYAPP  (opr, arg )) = arg_kds (arg_kds d opr) arg
+          | arg_kds d (TYUNIV (bvar,body)) = arg_kds d body
+          | arg_kds d (TYEXIS (bvar,body)) = arg_kds d body
+          | arg_kds d (TYABST (bvar,body)) = arg_kds d body
+          | arg_kds d _ = d
+    in arg_kds empt st
+    end
+  fun structure_gen_args st =
+    let val nargs = structure_num_args st
+        val arg_kds = structure_arg_kds st
+        fun mk_gen_args n =
+          if n >= nargs then []
+          else
+             (case Binarymap.peek(arg_kds,n)
+               of SOME kd => Pretype.gen_var_type (Prekind.fromKind kd)
+                | NONE    => Pretype.gen_var_type (Prekind.typ Prerank.Zerorank))
+             :: mk_gen_args (n+1)
+    in mk_gen_args 0
+    end
+*)
   fun structure_to_value0 (s,locn) args st =
     let val stv = structure_to_value0 (s,locn) args
     in
@@ -239,7 +266,8 @@ end
                             val (largs,rargs) = if nargs = 0 then ([],args) else (args,[])
                             val _ = if length largs <= nargs then () else
                                           raise ERRloc locn ("type abbreviation " ^ s ^
-                                                             " given too many arguments")
+                                                             " given too many arguments (expects " ^
+                                                             Int.toString nargs ^ ")")
                             val abr = structure_to_value (s,locn) largs st
                             val res = apply_tyop (abr,locn) rargs
                         in res (* (adv(); (res, locn)) *)
@@ -479,61 +507,6 @@ end
     ((t,locn),alphas)
   end
 
-(*
-  val {suffixes,infixes = rules} = G
-
-  datatype ('op,'array) OPARRAY = NormalSfx of 'op
-                                | ArraySfx of 'array * locn.locn
-  fun parse_oparray p strm = let
-    val (adv, (t,locn)) = typetok_of strm
-  in
-    case t of
-      LBracket => ArraySfx (parse_asfx p strm, locn)
-    | _ => NormalSfx (parse_op suffixes strm)
-  end
-  fun apply_oparrays ops base =
-      case ops of
-        [] => base
-      | NormalSfx sfx :: rest => apply_oparrays rest (apply_tyop sfx [base])
-      | ArraySfx (index,l) :: rest =>
-          apply_oparrays rest (apply_asfx l (base, index))
-
-  fun tuple_oparrays first rest tuple =
-      case first of
-        ArraySfx (i,l) => let
-        in
-          if length tuple <> 1 then
-            raise ERRloc l "array type can't take tuple as first argument"
-          else
-            apply_oparrays rest (apply_asfx l (hd tuple, i))
-        end
-      | NormalSfx s => apply_oparrays rest (apply_tyop s tuple)
-
-  fun parse_atomsuffixes p strm = let
-  in
-    case totalify (parse_tuple p) strm of
-      NONE => let
-        val ty1 = let
-          val op1 = parse_op suffixes strm
-        in
-          apply_tyop op1 []
-        end handle InternalFailure l => parse_atom strm
-        val ops = many (parse_oparray p) strm
-      in
-        apply_oparrays ops ty1
-      end
-    | SOME (tyl,locn) => let
-      in
-        case (many (parse_oparray p) strm) of
-          [] => if length tyl <> 1 then
-                  raise ERRloc locn "tuple with no suffix"
-                else
-                  hd tyl
-        | h::t => tuple_oparrays h t tyl
-      end
-  end
-*)
-
 
   fun parse_term current strm =
       case current of
@@ -615,78 +588,53 @@ end
       end
     | APPLICATION => let
         val _ = if is_debug() then print ">> APPLICATION\n" else ()
-        val ty1 = case totalify (parse_abbrev []) strm of
+        val (ty1,in_abbr) = case totalify (parse_abbrev []) strm of
                     SOME (ty2,locn) => (if is_debug() then print ("  APPLICATION did abbrev.\n") else ();
-                                        [ty2])
-                  | NONE => next_level strm
-        val _ = if is_debug() then print ("  APPLICATION got arg.\n") else ()
+                                        ([ty2], true))
+                  | NONE => (next_level strm, false)
+        val _ = if is_debug() then print ("  APPLICATION got " ^
+                                          (if prefix_types() then "opr" else "arg") ^
+                                          (if in_abbr then " abbrev" else "") ^
+                                          ".\n") else ()
         fun recurse acc = let
-          in case totalify (parse_abbrev acc) strm of
+            val abbrev_args = if prefix_types() then [] else acc
+          in case totalify (parse_abbrev abbrev_args) strm of
                     SOME (ty2,locn) => (if is_debug() then print ("  APPLICATION did abbrev.\n") else ();
-                                        recurse [ty2])
+                                        recurse [if prefix_types()
+                                                 then let val ty3 = apply_tyop (one locn acc, locn) [ty2]
+                                                      in pBetaType ty3 handle HOL_ERR _ => ty3
+                                                      end
+                                                 else ty2])
                   | NONE => let
                  val (adv, (t,locn1)) = typetok_of strm
                  val ts = type_tokens.token_string t
-                 val _ = if is_debug() then print ("  APPLICATION looking for operator;\n") else ()
+                 val _ = if is_debug() then print ("  APPLICATION looking for " ^
+                                                   (if prefix_types() then "argument" else "operator") ^
+                                                   ";\n") else ()
              in
                case t of
                  LBracket => recurse [ apply_asfx locn1 (one locn1 acc, parse_asfx (parse_term G) strm) ]
                | _ =>
                  if not (is_left_token t) then
-                   (if is_debug() then print "  APPLICATION returns, no operator found.\n" else ();
+                   (if is_debug() then print ("  APPLICATION returns, no " ^
+                                              (if prefix_types() then "argument" else "operator") ^
+                                              " found.\n") else ();
                     acc)
                  else
                    let val ty2 = next_level strm
-                   in if is_debug() then print "  APPLICATION found operator!\n" else ();
-                      recurse [apply_tyop (one locn1 ty2, locn1) acc]
+                   in if is_debug() then print ("  APPLICATION found " ^
+                                                (if prefix_types() then "argument" else "operator") ^
+                                                "!\n") else ();
+                      recurse [if prefix_types() then
+                                 apply_tyop (one locn1 acc, locn1) ty2
+                               else
+                                 apply_tyop (one locn1 ty2, locn1) acc
+                              ]
                    end
-(*
-               case totalify next_level strm of
-                 NONE => (if not (is_debug()) then () else
-                           (print "  APPLICATION returns, no operator found.\n";
-                            if is_left_token t then print ("is_left_token("^ts^") true but no type\n") else ());
-                          acc)
-               | SOME ty2 => (if not (is_debug()) then () else
-                               (print "  APPLICATION found operator!\n";
-                                if is_left_token t then () else print ("is_left_token("^ts^") false but a type\n"));
-                              recurse [apply_tyop (one locn1 ty2,locn1) acc])
-*)
              end
           end
       in recurse ty1
       end
-(*
-    | TUPLE_APPL => let
-        val _ = if is_debug() then print ">> TUPLE_APPL\n" else ()
-      in
-        case totalify (parse_tuple (parse_term G)) strm of
-          NONE => let
-            val ty1 = let
-              val op1 = parse_op slist strm
-            in
-              apply_tyop op1 []
-            end handle InternalFailure l => next_level strm
-            val ops = many (parse_op slist) strm
-          in
-            n_appls(ops, ty1)
-          end
-        | SOME (tyl,locn) => let
-          in
-            case totalify (parse_abbrev tyl) strm of
-               SOME (ty2,locn) => ty2
-             | NONE => let
-               val (adv, (t,locn1)) = typetok_of strm
-             in
-               case totalify same_level strm of
-                 NONE => if length tyl <> 1 then
-                           raise ERRloc locn "tuple with no suffix"
-                         else
-                           hd tyl
-               | SOME ty2 => apply_tyop (ty2,locn1) tyl
-             end
-          end
-      end
-*)
   end
 in
   fn (qb : 'b qbuf.qbuf) => let val (adv, (t,locn)) = typetok_of qb

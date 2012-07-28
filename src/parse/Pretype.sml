@@ -3296,7 +3296,8 @@ val termantiq_constructors =
      antiq = fn x => fromType (remove_ty_aq x),
      kindcast = do_kindcast, rankcast = do_rankcast,
      tycon = mk_conty, tyapp = mk_app_type,
-     tyuniv = mk_univ_type, tyexist = mk_exist_type, tyabs = mk_abs_type}
+     tyuniv = mk_univ_type, tyexist = mk_exist_type, tyabs = mk_abs_type,
+     tybeta = beta_conv_ty}
 
 val typantiq_constructors =
     {vartype = mk_basevarty, qtyop = do_qtyop,
@@ -3304,7 +3305,8 @@ val typantiq_constructors =
      antiq = fromType,
      kindcast = do_kindcast, rankcast = do_rankcast,
      tycon = mk_conty, tyapp = mk_app_type,
-     tyuniv = mk_univ_type, tyexist = mk_exist_type, tyabs = mk_abs_type}
+     tyuniv = mk_univ_type, tyexist = mk_exist_type, tyabs = mk_abs_type,
+     tybeta = beta_conv_ty}
 
 fun has_unbound_uvar (PT(pty,_)) =
     case pty of

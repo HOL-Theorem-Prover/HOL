@@ -42,10 +42,13 @@ val _ = type_abbrev ("algebra", Type `: \'F 'a. 'a 'F -> 'a`);
 (* For example, the algebra (Nat,+) of the natural numbers and addition
    is an algebra of the functor F A = A # A and F h = h ## h.               *)
 
+val PAIR_MAP_I = quotient_pairTheory.PAIR_MAP_I;
+val PAIR_MAP_o = quotient_pairTheory.PAIR_MAP_o;
+
 val Nat_plus_functor = store_thm
   ("Nat_plus_functor",
    ``functor ((\:'a 'b. \h. h ## h) : (\'a. 'a # 'a) functor)``,
-   SIMP_TAC combin_ss [functor_def,quotient_pairTheory.PAIR_MAP_I,PAIR_o]
+   SIMP_TAC combin_ss [functor_def,PAIR_MAP_I,PAIR_MAP_o]
   );
 
 val Nat_plus_algebra = ``UNCURRY $+ : (\'a. 'a # 'a, num)algebra``;
@@ -281,12 +284,14 @@ val _ = type_abbrev ("ifun_functor", Type `: \'a. (\'b. one + 'a # 'b)functor`);
 val ifun_list_def = new_definition("ifun_list_def", Term
    `ifun_list = \:'b 'c. \f: 'b -> 'c. (I :one -> one) ++ ((I :'a -> 'a) ## f)`);
 
-val PAIR_I = quotient_pairTheory.PAIR_MAP_I;
+val PAIR_MAP_I = quotient_pairTheory.PAIR_MAP_I;
+val PAIR_MAP_o = quotient_pairTheory.PAIR_MAP_o;
 
 val functor_ifun_list = store_thm
   ("functor_ifun_list",
   ``functor (ifun_list :'a ifun_functor)``,
-   SIMP_TAC bool_ss [functor_def,ifun_list_def,PAIR_I,SUM_I,GSYM PAIR_o,GSYM SUM_o,I_o_ID]
+   SIMP_TAC bool_ss [functor_def,ifun_list_def,PAIR_MAP_I,SUM_I,
+                     GSYM PAIR_MAP_o,GSYM SUM_o,I_o_ID]
   );
 
 val foldr_cata_lemma = store_thm

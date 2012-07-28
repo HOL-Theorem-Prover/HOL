@@ -123,9 +123,9 @@ sig
  val type_subst       : (hol_type,hol_type)Lib.subst -> hol_type -> hol_type (* aligns kinds, ranks to match *)
  val full_type_subst  : (hol_type,hol_type)Lib.subst -> hol_type -> hol_type (* redexes can be expressions *)
  val match_type       : hol_type -> hol_type -> (hol_type,hol_type) Lib.subst
- val kind_match_type  : hol_type -> hol_type ->
+ val om_match_type    : hol_type -> hol_type ->
                         (hol_type,hol_type)Lib.subst * (kind,kind)Lib.subst * rank
- val kind_match_types : (hol_type,hol_type)Lib.subst ->
+ val om_match_types   : (hol_type,hol_type)Lib.subst ->
                         (hol_type,hol_type)Lib.subst * (kind,kind)Lib.subst * rank
 
  val match_type_restr : hol_type list -> hol_type -> hol_type 
@@ -138,7 +138,7 @@ sig
  val raw_match_type: hol_type -> hol_type 
                       -> (hol_type,hol_type) Lib.subst * hol_type list
                       -> (hol_type,hol_type) Lib.subst * hol_type list
- val raw_kind_match_type : hol_type -> hol_type
+ val raw_om_match_type : hol_type -> hol_type
                       -> ( (hol_type,hol_type) Lib.subst * hol_type list ) *
                          ( (kind,kind) Lib.subst * kind list ) * (rank * bool)
                       -> ( (hol_type,hol_type) Lib.subst * hol_type list ) *

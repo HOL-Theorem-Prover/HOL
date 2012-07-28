@@ -15,12 +15,11 @@ open HolKernel Parse boolLib
 app load ["quotient_pairTheory","quotient_listTheory","rich_listTheory"];
 *)
 
-open combinTheory combinSimps
-
 val _ = set_trace "kinds" 0;
 
-
 val _ = new_theory "functor";
+
+open combinTheory combinSimps
 
 val combin_ss = bool_ss ++ COMBIN_ss
 
@@ -126,7 +125,20 @@ val epic_surjective = store_thm
             Functor type abbreviation
  ---------------------------------------------------------------------------*)
 
-val _ = type_abbrev ("functor", Type `: \'F. !'a 'b. ('a -> 'b) -> 'a 'F -> 'b 'F`);
+val _ = type_abbrev ("functor", ``: \'F. !'a 'b. ('a -> 'b) -> 'a 'F -> 'b 'F``);
+
+(* Examples:
+set_trace "Unicode" 0;
+
+``:!'a 'b. ('a -> 'b) -> ('a list -> 'b list)``;
+> val it =
+    ``:list functor``
+     : hol_type
+``:!'a 'b. ('a -> 'b) -> (('a -> 'a) -> ('b -> 'b))``;
+> val it =
+    ``:(\'b. 'b -> 'b) functor``
+     : hol_type
+*)
 
 (*---------------------------------------------------------------------------
             Functor predicate
@@ -157,25 +169,6 @@ val constant_functor = store_thm
    SIMP_TAC combin_ss [functor_def]
   );
 
-val PAIR_I = quotient_pairTheory.PAIR_MAP_I;
-
-val PAIR_o = store_thm
-  ("PAIR_o",
-   ``!(f1 :'a -> 'b) (g1 :'b -> 'c) (f2 :'d -> 'e) (g2 :'e -> 'f).
-        (g1 o f1 ## g2 o f2) = (g1 ## g2) o (f1 ## f2)``,
-   (* SIMP_TAC (combin_ss ++ pairSimps.PAIR_ss) [FUN_EQ_THM,pairTheory.PAIR_MAP] *)
-   REPEAT STRIP_TAC
-   THEN REWRITE_TAC[FUN_EQ_THM]
-   THEN Cases
-   THEN REWRITE_TAC[pairTheory.PAIR_MAP_THM,o_THM]
-  );
-
-val diagonal_functor = store_thm
-  ("diagonal_functor",
-   ``functor ((\:'b 'c. \f. f ## f) : (\'a. 'a # 'a) functor)``,
-   SIMP_TAC bool_ss [functor_def,PAIR_I,PAIR_o]
-  );
-
 val MAP_I = quotient_listTheory.LIST_MAP_I;
 val MAP_o = rich_listTheory.MAP_o;
 
@@ -183,6 +176,15 @@ val map_functor = store_thm
   ("map_functor",
    ``functor ((\:'a 'b. MAP) : list functor)``,
    SIMP_TAC bool_ss [functor_def,MAP_I,MAP_o]
+  );
+
+val PAIR_I = quotient_pairTheory.PAIR_MAP_I;
+val PAIR_o = quotient_pairTheory.PAIR_MAP_o;
+
+val diagonal_functor = store_thm
+  ("diagonal_functor",
+   ``functor ((\:'b 'c. \f. f ## f) : (\'a. 'a # 'a) functor)``,
+   SIMP_TAC bool_ss [functor_def,PAIR_I,PAIR_o]
   );
 
 val I_EQ = store_thm
@@ -241,7 +243,7 @@ val functor_exists = store_thm
 
 val oo_def = Define `$oo (G: 'G functor) (F': 'F functor) = \:'a 'b. G o F' [:'a,'b:]`;
 val _ = add_infix("oo", 800, HOLgrammars.RIGHT);
-val _ = overload_on ("o", Term`$oo : 'G functor -> 'F functor -> ('F o 'G) functor`);
+val _ = overload_on ("o", ``$oo : 'G functor -> 'F functor -> ('G o 'F) functor``);
 (*
 val _ = set_trace "overload" 1;
 val _ = set_trace "debug_type_inference" 2;
@@ -272,7 +274,7 @@ val map_o_map_functor = save_thm
 
 val map_oo_map_functor = save_thm
   ("map_oo_map_functor",
-   (TY_BETA_RULE o MATCH_MP functor_oo) (CONJ map_functor map_functor)
+   MATCH_MP functor_oo (CONJ map_functor map_functor)
   );
 
 
@@ -371,6 +373,13 @@ val functor_bifunctor_right = store_thm
 
 val _ = type_abbrev ("nattransf", Type `: \'F 'G. !'a. 'a 'F -> 'a 'G`);
 
+(*
+- ``: !'a. 'a list -> 'a set``;
+> val it =
+    ``:(list, \'a. 'a -> bool) nattransf``
+     : hol_type
+*)
+
 (*---------------------------------------------------------------------------
             Natural transformation predicate
  ---------------------------------------------------------------------------*)
@@ -414,25 +423,58 @@ val nattransf_comp = store_thm
    THEN ASM_REWRITE_TAC[GSYM o_ASSOC]
   );
 
-(* Composition of a functor (on the left) with a natural transformation *)
+(* Horizontal composition of two natural transformations *)
 
-val foo_def = Define `$foo (H: 'H functor) (phi: ('F,'G)nattransf) =
-                      \:'a. H (phi[:'a:])`;
-val _ = add_infix("foo", 750, HOLgrammars.LEFT);
-val _ = overload_on ("o", Term`$foo : 'H functor -> ('F,'G) nattransf -> ('F o 'H,'G o 'H) nattransf`);
+val hcomp_def = Define `hcomp (phi2: ('F2,'G2)nattransf)
+                              (F2:'F2 functor)
+                              (phi1: ('F1,'G1)nattransf) =
+                         \:'a. phi2 o F2 (phi1[:'a:])`;
 
+(* hcomp could have been defined as
+``\:'a. (G2:'G2 functor) (phi1: ('F1,'G1)nattransf) o ((phi2: ('F2,'G2)nattransf)[:'a 'F1:])``;
+*)
 
-val functor_nattransf_comp = store_thm
-  ("functor_nattransf_comp",
-   ``nattransf (phi : ('F,'G)nattransf) F' G  /\
-     functor (H : 'H functor) ==>
-     nattransf (H o phi)      (* H foo phi *)
-               (H o F')       (* H oo F'   *)
-               (H o G)``,     (* H oo G    *)
-   SIMP_TAC combin_ss [nattransf_def,functor_def,oo_def,foo_def]
+val nattransf_hcomp = store_thm
+  ("nattransf_hcomp",
+   ``nattransf (phi1 : ('F1,'G1) nattransf) F1 G1 /\
+     nattransf (phi2 : ('F2,'G2) nattransf) F2 G2 /\
+     functor F2 ==>
+     nattransf (hcomp phi2 F2 phi1)
+               (F2 o F1)
+               (G2 o G1)``,
+   SIMP_TAC bool_ss [nattransf_def,functor_def,hcomp_def,oo_def]
    THEN REPEAT STRIP_TAC
-   THEN POP_ASSUM (fn th => REWRITE_TAC[GSYM th])
+   THEN ASM_SIMP_TAC bool_ss [o_THM,o_ASSOC]
+   THEN POP_ASSUM (fn th => REWRITE_TAC[GSYM o_ASSOC,GSYM th])
    THEN ASM_REWRITE_TAC[]
+  );
+
+val hcomp'_def = Define `hcomp' (phi2: ('F2,'G2)nattransf)
+                                (G2:'G2 functor)
+                                (phi1: ('F1,'G1)nattransf) =
+                           \:'a. G2 phi1 o (phi2[:'a 'F1:])`;
+
+val nattransf_hcomp' = store_thm
+  ("nattransf_hcomp'",
+   ``nattransf (phi1 : ('F1,'G1) nattransf) F1 G1 /\
+     nattransf (phi2 : ('F2,'G2) nattransf) F2 G2 /\
+     functor F2 ==>
+     nattransf (hcomp' phi2 G2 phi1)
+               (F2 o F1)
+               (G2 o G1)``,
+   SIMP_TAC bool_ss [nattransf_def,functor_def,hcomp'_def,oo_def]
+   THEN REPEAT STRIP_TAC
+   THEN ASM_SIMP_TAC bool_ss [o_THM,o_ASSOC]
+   THEN POP_ASSUM (fn th => REWRITE_TAC[GSYM o_ASSOC,GSYM th])
+   THEN ASM_REWRITE_TAC[]
+  );
+
+val nattransf_hcomp_hcomp' = store_thm
+  ("nattransf_hcomp_hcomp'",
+   ``!(phi1 : ('F1,'G1) nattransf) (phi2 : ('F2,'G2) nattransf) F2 G2.
+      nattransf phi2 F2 G2 ==>
+      (hcomp phi2 F2 phi1 = hcomp' phi2 G2 phi1)``,
+   SIMP_TAC bool_ss [nattransf_def,hcomp_def,hcomp'_def]
   );
 
 (* Composition of a natural transformation with a functor (on the right) *)
@@ -440,7 +482,9 @@ val functor_nattransf_comp = store_thm
 val oof_def = Define `$oof (phi: ('F,'G) nattransf) (H': 'H functor) =
                       \:'a. phi [:'a 'H:]`;
 val _ = add_infix("oof", 750, HOLgrammars.LEFT);
-val _ = overload_on ("o", Term`$oof : ('F,'G) nattransf -> 'H functor -> ('H o 'F,'H o 'G) nattransf`);
+val _ = overload_on ("o", Term `$oof : ('F,'G) nattransf ->
+                                       'H functor ->
+                                       ('F o 'H,'G o 'H) nattransf`);
 
 
 val nattransf_functor_comp = store_thm
@@ -461,20 +505,25 @@ val nattransf_commute = store_thm
    SIMP_TAC bool_ss [nattransf_def]
   );
 
-(* Horizontal composition of two natural transformations *)
+(* Composition of a functor (on the left) with a natural transformation *)
 
-val nattransf_comp2 = store_thm
-  ("nattransf_comp2",
-   ``nattransf (phi1 : ('F1,'G1) nattransf) F1 G1 /\
-     nattransf (phi2 : ('F2,'G2) nattransf) F2 G2 /\
-     functor F2 ==>
-     nattransf (\:'a. phi2 o F2 (phi1[:'a:]))
-               (F2 oo F1)
-               (G2 oo G1)``,
-   SIMP_TAC bool_ss [nattransf_def,functor_def,oo_def]
+val foo_def = Define `$foo (H: 'H functor) (phi: ('F,'G)nattransf) =
+                      \:'a. H (phi[:'a:])`;
+val _ = add_infix("foo", 750, HOLgrammars.LEFT);
+val _ = overload_on ("o", Term `$foo : 'H functor ->
+                                       ('F,'G) nattransf ->
+                                       ('H o 'F,'H o 'G) nattransf`);
+
+val functor_nattransf_comp = store_thm
+  ("functor_nattransf_comp",
+   ``nattransf (phi : ('F,'G)nattransf) F' G  /\
+     functor (H : 'H functor) ==>
+     nattransf (H o phi)      (* H foo phi *)
+               (H o F')       (* H oo F'   *)
+               (H o G)``,     (* H oo G    *)
+   SIMP_TAC combin_ss [nattransf_def,functor_def,oo_def,foo_def]
    THEN REPEAT STRIP_TAC
-   THEN ASM_SIMP_TAC bool_ss [o_THM,o_ASSOC]
-   THEN POP_ASSUM (fn th => REWRITE_TAC[GSYM o_ASSOC,GSYM th])
+   THEN POP_ASSUM (fn th => REWRITE_TAC[GSYM th])
    THEN ASM_REWRITE_TAC[]
   );
 

@@ -149,7 +149,7 @@ val _ = add_infix_type
           ParseName = SOME "o", Name = "comp",
           Assoc = HOLgrammars.RIGHT};
 
-val _ = type_abbrev ("comp", Type `: \('f:'k => 'l) ('g:'l => 'm) 'a. 'a 'f 'g`);
+val _ = type_abbrev ("comp", Type `: \('g:'l => 'm) ('f:'k => 'l) 'a. 'a 'f 'g`);
 
 val _ = disable_tyabbrev_printing "K";
 val _ = disable_tyabbrev_printing "S";
@@ -643,7 +643,7 @@ fun TY_ETA_CONV t =
       val tysubst = [bty |-> mk_abs_type(tyvar, ty)]
 (* The code above essentially does the following, quickly:
       val pat = lhs (snd (dest_forall (concl TY_ETA_AX)))
-      val (tmsubst, tysubst, kdsubst, rksubst) = kind_match_term pat t
+      val (tmsubst, tysubst, kdsubst, rksubst) = om_match_term pat t
 *)
       val th = SPEC (tyrator tycmb)
                  (INST_RK_KD_TY (rksubst,kdsubst,tysubst) TY_ETA_AX)

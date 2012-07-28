@@ -78,5 +78,6 @@ TApp   ::= Leaf | Tuple Leaf
   val prettyprint_grammar   : Portable.ppstream -> grammar -> unit
   val initialise_typrinter
     : (grammar -> Portable.ppstream -> Type.hol_type -> unit) -> unit
+  val prefix_types : unit -> bool
 
 end
