@@ -173,7 +173,7 @@ CevalPrim2 CAdd = doPrim2 false IntLit Int.(+)
 and
 CevalPrim2 CSub = doPrim2 false IntLit Int.(-)
 and
-CevalPrim2 CMul = doPrim2 false IntLit Int.( *)
+CevalPrim2 CMul = doPrim2 false IntLit Int.( * )
 and
 CevalPrim2 CDiv = doPrim2 true IntLit Int.(/)
 and
