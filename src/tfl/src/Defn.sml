@@ -410,9 +410,15 @@ fun add_persistent_funs l =
                                       o strip_conj o concl
       fun f (s, th) =
         [(s, th)] @
-        (if has_lhs_SUC th then
-           [("(Conv.CONV_RULE numLib.SUC_TO_NUMERAL_DEFN_CONV " ^ s ^ ")",
-             CONV_RULE (!SUC_TO_NUMERAL_DEFN_CONV_hook) th)]
+        (if has_lhs_SUC th then let
+            val name = s^"_compute"
+            val name = let
+              val used = Lib.C Lib.mem (#1 (Lib.unzip (current_theorems())))
+              fun loop n = let val x = (name^(Int.toString n)) in if used x then loop (n+1) else x end
+              in if used name then loop 0 else name end
+            val th_compute = CONV_RULE (!SUC_TO_NUMERAL_DEFN_CONV_hook) th
+            val _ = save_thm(name,th_compute)
+            in [(name,th_compute)] end
          else [])
     in
       computeLib.add_persistent_funs (List.concat (map f l))
