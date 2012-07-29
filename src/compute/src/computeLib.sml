@@ -222,26 +222,9 @@ fun write_datatype_info tyinfo =
 (* Usage note: call this before export_theory().                             *)
 (*---------------------------------------------------------------------------*)
 
-fun add_persistent_funs [] = ()
-  | add_persistent_funs alist =
-     let open Portable
-         val (names,thms) = unzip alist
-     in
-       add_funs thms
-       ; Theory.adjoin_to_theory
-          {sig_ps = NONE,
-           struct_ps = SOME(fn ppstrm =>
-             (PP.begin_block ppstrm CONSISTENT 0;
-              PP.add_string ppstrm "val _ = computeLib.add_funs [";
-              PP.begin_block ppstrm INCONSISTENT 0;
-              pr_list_to_ppstream ppstrm
-                 PP.add_string (C PP.add_string ",")
-                 (C PP.add_break (0,0)) names;
-              PP.end_block ppstrm;
-              PP.add_string ppstrm "];";
-              PP.add_break ppstrm (2,0);
-              PP.end_block ppstrm))}
-     end
+open LoadableThyData
+val {export,...} = ThmSetData.new_exporter "compute" add_funs
+val add_persistent_funs = ignore o (app export ## add_funs) o unzip
 
 (*---------------------------------------------------------------------------*)
 (* Once we delete a constant from a compset, we will probably want to make   *)
