@@ -31,15 +31,15 @@ type
 (* --- Semantics --- *)
 
 (* move to lem *)
-val num_to_int : num -> int
-let inline {hol} num_to_int = Hol.(&)
+val int_of_num : num -> int
+let inline {hol} int_of_num = Hol.int_of_num
 val drop : forall 'a. num -> 'a list -> 'a list
 let inline {hol} drop = Hol.DROP
 
 let rec
-bool_to_int true = num_to_int 1
+bool_to_int true = int_of_num 1
 and
-bool_to_int false = num_to_int 0
+bool_to_int false = int_of_num 0
 
 (* the stack is a list of elements of bc_value *)
 
@@ -126,10 +126,10 @@ and
 forall n m xs. true ==>
 bc_stack_op Mult (Number n::Number m::xs) (Number (Int.( * ) m n)::xs)
 and
-forall n m xs. not (n = num_to_int 0) ==>
+forall n m xs. not (n = int_of_num 0) ==>
 bc_stack_op Div  (Number n::Number m::xs) (Number (Int.(/) m n)::xs)
 and
-forall n m xs. not (n = num_to_int 0) ==>
+forall n m xs. not (n = int_of_num 0) ==>
 bc_stack_op Mod  (Number n::Number m::xs) (Number (Int.(%) m n)::xs)
 
 indreln
@@ -149,7 +149,7 @@ bc_fetch s = Some (JumpNil n)
 && s.stack = Number x::xs
 && s' = (<|s with stack = xs|>)
 ==>
-bc_next s (if x = num_to_int 0 then bump_pc s' else <|s' with pc = n|>)
+bc_next s (if x = int_of_num 0 then bump_pc s' else <|s' with pc = n|>)
 and
 forall s n x xs.
 bc_fetch s = Some (Call n)

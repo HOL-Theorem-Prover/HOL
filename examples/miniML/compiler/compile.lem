@@ -30,7 +30,7 @@ let inline {hol} flookup = Hol.FLOOKUP
 let rec
 find_index y [] _ = None
 and
-find_index y (x::xs) (n:num) = if x = y then Some n else find_index y xs (n+1)
+find_index y (x::xs) n = if x = y then Some n else find_index y xs (n+1)
 
 let fresh_var s =
   num_to_string (least (fun n -> not (num_to_string n IN s)))
@@ -61,9 +61,9 @@ v_to_ov (Recclosure _ _ _) = OFn
 
 (* Intermediate language for MiniML compiler *)
 
-let i0 = Bytecode.num_to_int 0
-let i1 = Bytecode.num_to_int 1
-let i2 = Bytecode.num_to_int 2
+let i0 = Bytecode.int_of_num 0
+let i1 = Bytecode.int_of_num 1
+let i2 = Bytecode.int_of_num 2
 
 (* Syntax *)
 
@@ -772,7 +772,7 @@ and
 inst_arg tvs tt = tt
 
 let rec
-num_to_bool (0:num) = false
+num_to_bool 0 = false
 and
 num_to_bool 1 = true
 
@@ -861,7 +861,7 @@ replace_calls j ((_,lab)::(jl,l)::ls) c =
     (replace (Call lab) (j - jl) c)
 
 let rec
-bind_fv ns xs az k fv (n,env,((ecl:num),ec)) =
+bind_fv ns xs az k fv (n,env,(ecl,ec)) =
   match find_index fv xs 1 with
   | Some j -> (n, Pmap.add fv (CTArg (2 + az - j)) env, (ecl,ec))
   | None -> match find_index fv ns 0 with
@@ -1143,7 +1143,7 @@ indreln
 forall il c cc.
 true
 ==>
-bc_code_prefix il (List.append c cc) (0:num) c
+bc_code_prefix il (List.append c cc) 0 c
 and
 forall il p i c cc.
 bc_code_prefix il cc p c
@@ -1229,7 +1229,7 @@ let compile_Cexp rs Ce =
 (* TODO: printing *)
 
 let rec
-number_constructors a (cm,cw) (n:num) [] = (cm,cw)
+number_constructors a (cm,cw) n [] = (cm,cw)
 and
 number_constructors a (cm,cw) n ((c,tys)::cs) =
   let cm' = Pmap.add c n cm in

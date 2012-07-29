@@ -42,14 +42,14 @@ val _ = Hol_datatype `
 (* --- Semantics --- *)
 
 (* move to lem *)
-(*val num_to_int : num -> int*)
+(*val int_of_num : num -> int*)
 (*val drop : forall 'a. num -> 'a list -> 'a list*)
 
  val bool_to_int_defn = Hol_defn "bool_to_int" `
 
-(bool_to_int T = & 1)
+(bool_to_int T = int_of_num 1)
 /\
-(bool_to_int F = & 0)`;
+(bool_to_int F = int_of_num 0)`;
 
 val _ = Defn.save_defn bool_to_int_defn;
 
@@ -149,10 +149,10 @@ bc_stack_op Sub  (Number n::Number m::xs) (Number ((int_sub) m n)::xs))
 (! n m xs. T ==>
 bc_stack_op Mult (Number n::Number m::xs) (Number (int_mul m n)::xs))
 /\
-(! n m xs. ~  (n = & 0) ==>
+(! n m xs. ~  (n = int_of_num 0) ==>
 bc_stack_op Div  (Number n::Number m::xs) (Number (int_div m n)::xs))
 /\
-(! n m xs. ~  (n = & 0) ==>
+(! n m xs. ~  (n = int_of_num 0) ==>
 bc_stack_op Mod  (Number n::Number m::xs) (Number (int_mod m n)::xs))`;
 
 val _ = Hol_reln `
@@ -172,7 +172,7 @@ bc_next s (s with<| pc := n|>))
 /\ (s.stack = Number x::xs)
 /\ (s' = (s with<| stack := xs|>))
 ==>
-bc_next s (if x = & 0 then bump_pc s' else s' with<| pc := n|>))
+bc_next s (if x = int_of_num 0 then bump_pc s' else s' with<| pc := n|>))
 /\
 (! s n x xs.
 (bc_fetch s = SOME (Call n))
