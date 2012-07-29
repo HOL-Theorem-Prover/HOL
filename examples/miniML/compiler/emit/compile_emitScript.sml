@@ -42,33 +42,11 @@ val data = map
   , datatype_ctbind
   , datatype_cebind
   , datatype_call_context
+  , datatype_lbc_inst
   , datatype_compiler_state
   , datatype_nt
   , datatype_repl_state
   ]
-
-val init_compiler_state =
-prove(
-boolSyntax.mk_eq(``init_compiler_state``,
-boolSyntax.rhs(Thm.concl(SIMP_CONV (srw_ss()) [init_compiler_state_def]
-``<| env := init_compiler_state.env
-   ; sz := init_compiler_state.sz
-   ; code := init_compiler_state.code
-   ; code_length := init_compiler_state.code_length
-   ; tail := init_compiler_state.tail
-   ; next_label := init_compiler_state.next_label
-   ; decl := init_compiler_state.decl
-   ; inst_length := init_compiler_state.inst_length
-   |>``))), SRW_TAC[][init_compiler_state_def])
-
-val init_repl_state =
-prove(
-boolSyntax.mk_eq(``init_repl_state``,
-boolSyntax.rhs(Thm.concl(SIMP_CONV (srw_ss()) [init_repl_state_def]
-``<| cmap := init_repl_state.cmap
-   ; cpam := init_repl_state.cpam
-   ; cs := init_repl_state.cs
-   |>``))), SRW_TAC[][init_repl_state_def])
 
 val defs = map EmitML.DEFN
 [ mk_thm([],``ITSET f s a = FOLDR f a (toList s)``)
@@ -80,24 +58,27 @@ val defs = map EmitML.DEFN
 , i1_def
 , i2_def
 , error_to_int_def
+, ULS_def
+, get_labels_def
 , compile_varref_def
 , sdt_def
 , ldt_def
 , decsz_def
 , prim2_to_bc_def
 , find_index_def
-, replace_calls_def
 , emit_ec_def
 , bind_fv_def
 , underscore_rule compile_def
-, init_compiler_state
-, init_repl_state
+, calculate_labels_def
+, replace_labels_def
+, compile_labels_def
+, init_repl_state_def
 , pat_to_Cpat_def
 , fresh_var_def
 , Cpes_vars_def
-, underscore_rule exp_to_Cexp_def
 , remove_mat_vp_def
-, remove_mat_def
+, remove_mat_var_def
+, underscore_rule exp_to_Cexp_def
 , compile_Cexp_def
 , repl_exp_def
 , t_to_nt_def

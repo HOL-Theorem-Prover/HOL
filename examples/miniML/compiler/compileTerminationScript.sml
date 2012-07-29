@@ -180,10 +180,6 @@ val (compile_def, compile_ind) = register "compile" (
   (Q.ISPEC_THEN `Cexp2_size` imp_res_tac SUM_MAP_MEM_bound >>
    fsrw_tac[ARITH_ss][Cexp_size_def,list_size_thm,SUM_MAP_Cexp2_size_thm])))
 
-val (replace_calls_def,replace_calls_ind) = register "replace_calls" (
-  tprove_no_defn ((replace_calls_def,replace_calls_ind),
-  WF_REL_TAC `measure (LENGTH o FST o SND)` >> rw[] ))
-
 val (number_constructors_def,number_constructors_ind) = register "number_constructors" (
   tprove_no_defn ((number_constructors_def,number_constructors_ind),
   WF_REL_TAC `measure (LENGTH o SND o SND o SND)` >> rw[]))

@@ -14,11 +14,11 @@ open BytecodeTheory MiniMLTheory
 (*val every2 : forall 'a 'b. ('a -> 'b -> bool) -> 'a list -> 'b list -> bool*)
 (*val least : (num -> bool) -> num*)
 (*val num_to_string : num -> string*)
-(*val replace : forall 'a. 'a -> num -> 'a list -> 'a list*)
 (*val int_to_num : int -> num*)
 (*val alist_to_fmap : forall 'a 'b. ('a * 'b) list -> ('a,'b) Pmap.map*)
 (*val optrel : forall 'a 'b 'c 'd. ('a -> 'b -> bool) -> 'c -> 'd -> bool*)
 (*val flookup : forall 'a 'b 'c. ('a,'b) Pmap.map -> 'a -> 'c*)
+(*val genlist : forall 'a. (num -> 'a) -> num -> 'a list*)
 
 (* TODO: elsewhere? *)
  val find_index_defn = Hol_defn "find_index" `
@@ -553,6 +553,12 @@ val _ = Hol_datatype `
 (*open Bytecode*)
 
 val _ = Hol_datatype `
+ lbc_inst =
+    UL of bc_inst
+  | Label of num`;
+
+
+val _ = Hol_datatype `
  call_context = TCNonTail | TCTail of num => num`;
 
 
@@ -562,13 +568,11 @@ val _ = Hol_datatype `
  compiler_state =
   <| env: ctenv
    ; sz: num
-   ; code: bc_inst list (* reversed *)
-   ; code_length: num
-   ; tail: call_context
+   ; out: lbc_inst list (* reversed code *)
    ; next_label: num
+   ; tail: call_context
    (* not modified on return: *)
    ; decl: (ctenv # num)option
-   ; inst_length: bc_inst -> num
    |>`;
 
 
@@ -576,7 +580,11 @@ val _ = Hol_datatype `
  repl_state =
   <| cmap : (conN, num) fmap
    ; cpam : (typeN, (num, conN # nt list) fmap) fmap
-   ; cs : compiler_state
+   ; code : bc_inst list
+   ; renv : ctenv
+   ; rsz  : num
+   ; next_addr : num
+   ; inst_length : bc_inst -> num
    |>`;
 
 
@@ -877,20 +885,29 @@ val _ = Defn.save_defn error_to_int_defn;
 val _ = Defn.save_defn prim2_to_bc_defn;
 
 val _ = Define `
- emit = FOLDL
-  (\ s i .  s with<| next_label := s.next_label + s.inst_length i + 1;
-                        code := i :: s.code; code_length := s.code_length + 1 |>)`;
+ emit = FOLDL (\ s i .  s with<| out := i :: s.out |>)`;
 
 
+ val ULS_defn = Hol_defn "ULS" `
+ (ULS x = UL (Stack x))`;
+
+val _ = Defn.save_defn ULS_defn;
+
+ val get_labels_defn = Hol_defn "get_labels" `
+
+(get_labels n s = ( s with<| next_label := s.next_label + n |>,
+                  GENLIST (\ i . s.next_label + i) n))`;
+
+val _ = Defn.save_defn get_labels_defn;
  val compile_varref_defn = Hol_defn "compile_varref" `
 
-(compile_varref s (CTLet n) = emit s [Stack (Load (s.sz - n))])
+(compile_varref s (CTLet n) = emit s [ULS (Load (s.sz - n))])
 /\
-(compile_varref s (CTArg n) = emit s [Stack (Load (s.sz + n))])
+(compile_varref s (CTArg n) = emit s [ULS (Load (s.sz + n))])
 /\
-(compile_varref s (CTEnv n) = emit s [Stack (Load s.sz); Stack (El n)])
+(compile_varref s (CTEnv n) = emit s [ULS (Load s.sz); ULS (El n)])
 /\
-(compile_varref s (CTRef n) = emit (compile_varref s (CTEnv n)) [Deref])`;
+(compile_varref s (CTRef n) = emit (compile_varref s (CTEnv n)) [UL Deref])`;
 
 val _ = Defn.save_defn compile_varref_defn;
 
@@ -916,19 +933,9 @@ val _ = Hol_datatype `
 
 (emit_ec z s (CEEnv fv) = incsz (compile_varref s (FAPPLY  s.env  fv)))
 /\
-(emit_ec z s (CERef j) = incsz (emit s [Stack (Load (s.sz - z - j))]))`;
+(emit_ec z s (CERef j) = incsz (emit s [ULS (Load (s.sz - z - j))]))`;
 
 val _ = Defn.save_defn emit_ec_defn;
-
- val replace_calls_defn = Hol_defn "replace_calls" `
-
-(replace_calls j [_] c = c)
-/\
-(replace_calls j ((_,lab)::(jl,l)::ls) c =
-  replace_calls j ((jl,l)::ls)
-    (REPLACE_ELEMENT (Call lab) (j - jl) c))`;
-
-val _ = Defn.save_defn replace_calls_defn;
 
  val bind_fv_defn = Hol_defn "bind_fv" `
 
@@ -956,27 +963,27 @@ val _ = Defn.save_defn bind_fv_defn;
       if  v IN FDOM  env0 then
         ((case FAPPLY  env0  v of
            CTLet x => emit (compile_varref s (FAPPLY  s.env  v))
-                           [Stack (Store (s.sz - x))]
-         | _ => emit s [Stack (PushInt i2); Exception] (* should not happen *)
+                           [ULS (Store (s.sz - x))]
+         | _ => emit s [ULS (PushInt i2); UL Exception] (* should not happen *)
          ), i, env)
       else
         (incsz (compile_varref s (FAPPLY  s.env  v)),
          i+1,
          FUPDATE  env ( v, (CTLet i))))
          (s,sz0+1,env0) vs in
-  let s = emit s [Stack (Shift (i -(sz0+1)) k)] in
+  let s = emit s [ULS (Shift (i -(sz0+1)) k)] in
    s with<| sz := sz1+1; decl := SOME (env,s.sz - k) |>
-  | NONE => emit s [Stack (PushInt i2); Exception] (* should not happen *)
+  | NONE => emit s [ULS (PushInt i2); UL Exception] (* should not happen *)
   ))
 /\
 (compile s (CRaise err) =
-  incsz (emit s [Stack (PushInt (error_to_int err)); Exception]))
+  incsz (emit s [ULS (PushInt (error_to_int err)); UL Exception]))
 /\
 (compile s (CLit (IntLit i)) =
-  incsz (emit s [Stack (PushInt i)]))
+  incsz (emit s [ULS (PushInt i)]))
 /\
 (compile s (CLit (Bool b)) =
-  incsz (emit s [Stack (PushInt (bool_to_int b))]))
+  incsz (emit s [ULS (PushInt (bool_to_int b))]))
 /\
 (compile s (CVar vn) = incsz (compile_varref s (FAPPLY  s.env  vn)))
 /\
@@ -984,16 +991,16 @@ val _ = Defn.save_defn bind_fv_defn;
   let z = s.sz + 1 in
   let (s,dt) = sdt s in
   let s = FOLDL (\ s e . compile s e) s es in (* uneta because Hol_defn sucks *)
-  let s = emit (ldt dt s) [Stack (Cons n (LENGTH es))] in
+  let s = emit (ldt dt s) [ULS (Cons n (LENGTH es))] in
    s with<| sz := z |>)
 /\
 (compile s (CTagEq e n) =
   let (s,dt) = sdt s in
-  ldt dt (emit (compile s e) [Stack (TagEq n)]))
+  ldt dt (emit (compile s e) [ULS (TagEq n)]))
 /\
 (compile s (CProj e n) =
   let (s,dt) = sdt s in
-  ldt dt (emit (compile s e) [Stack (El n)]))
+  ldt dt (emit (compile s e) [ULS (El n)]))
 /\
 (compile s (CLet xs es e) =
   let z = s.sz + 1 in
@@ -1018,11 +1025,11 @@ val _ = Defn.save_defn bind_fv_defn;
     let s = compile s e in
     let s = FOLDL (\ s e . compile s e) s es in (* uneta because Hol_defn sucks *)
     (* argn, ..., arg2, arg1, Block 0 [CodePtr c; env], *)
-    let s = emit s [Stack (Load n); Stack (El 1)] in
+    let s = emit s [ULS (Load n); ULS (El 1)] in
     (* env, argn, ..., arg1, Block 0 [CodePtr c; env], *)
-    let s = emit s [Stack (Load (n+1)); Stack (El 0)] in
+    let s = emit s [ULS (Load (n+1)); ULS (El 0)] in
     (* CodePtr c, env, argn, ..., arg1, Block 0 [CodePtr c; env], *)
-    emit s [CallPtr]
+    emit s [UL CallPtr]
     (* before: env, CodePtr ret, argn, ..., arg1, Block 0 [CodePtr c; env], *)
     (* after:  retval, *)
 (* does it make sense to distinguish this case?
@@ -1046,17 +1053,17 @@ val _ = Defn.save_defn bind_fv_defn;
     let s = FOLDL (\ s e . compile s e) s es in (* uneta because Hol_defn sucks *)
     (* argn, ..., arg1, Block 0 [CodePtr c; env],
      * vk, ..., v1, env1, CodePtr ret, argj, ..., arg1, Block 0 [CodePtr c1; env1], *)
-    let s = emit s [Stack (Load (n+1+k+1))] in
+    let s = emit s [ULS (Load (n+1+k+1))] in
     (* CodePtr ret, argn, ..., arg1, Block 0 [CodePtr c; env],
      * vk, ..., v1, env1, CodePtr ret, argj, ..., arg1, Block 0 [CodePtr c1; env1], *)
-    let s = emit s [Stack (Load (n+1)); Stack (El 1)] in
+    let s = emit s [ULS (Load (n+1)); ULS (El 1)] in
     (* env, CodePtr ret, argn, ..., arg1, Block 0 [CodePtr c; env],
      * vk, ..., v1, env1, CodePtr ret, argj, ..., arg1, Block 0 [CodePtr c1; env1], *)
-    let s = emit s [Stack (Load (n+2)); Stack (El 0)] in
+    let s = emit s [ULS (Load (n+2)); ULS (El 0)] in
     (* CodePtr c, env, CodePtr ret, argn, ..., arg1, Block 0 [CodePtr c; env],
      * vk, ..., v1, env1, CodePtr ret, argj, ..., arg1, Block 0 [CodePtr c1; env1], *)
-    let s = emit s [Stack (Shift (1+1+1+n+1) (k+1+1+j+1))] in
-    emit s [JumpPtr]
+    let s = emit s [ULS (Shift (1+1+1+n+1) (k+1+1+j+1))] in
+    emit s [UL JumpPtr]
   ) in
   ldt dt  s with<| sz := s.sz - n |>)
 /\
@@ -1064,31 +1071,26 @@ val _ = Defn.save_defn bind_fv_defn;
   let (s,dt) = sdt s in
   let s = compile s e1 in
   let s = compile s e2 in (* TODO: need to detect div by zero *)
-  decsz (ldt dt (emit s [Stack (prim2_to_bc op)])))
+  decsz (ldt dt (emit s [ULS (prim2_to_bc op)])))
 /\
 (compile s (CIf e1 e2 e3) =
   let (s,dt) = sdt s in
   let s = ldt dt (compile s e1) in
-  let s = emit s [JumpNil 0; Jump 0] in
-  let j1 = s.code_length in
-  let n1 = s.next_label in
+  let (s,labs) = get_labels 3 s in
+  let n0 = EL  0  labs in
+  let n1 = EL  1  labs in
+  let n2 = EL  2  labs in
+  let s = emit s [UL (JumpNil n0); UL (Jump n1); Label n0] in
   let s = compile (decsz s) e2 in
-  let s = emit s [Jump 0] in
-  let j2 = s.code_length in
-  let n2 = s.next_label in
+  let s = emit s [UL (Jump n2); Label n1] in
   let s = compile (decsz s) e3 in
-  let n3 = s.next_label in
-  let j3 = s.code_length in
-   s with<| code :=
-      (REPLACE_ELEMENT (Jump n3) (j3 - j2)
-      (REPLACE_ELEMENT (Jump n2) (j3 - j1)
-      (REPLACE_ELEMENT (JumpNil n1) (j3 - j1 + 1) s.code))) |>)
+  emit s [Label n2])
 /\
 (compile_bindings env0 sz1 e n s [] =
   let s = (case s.tail of
     TCTail j k => compile ( s with<| tail := TCTail j (k+n) |>) e
   | TCNonTail => (case s.decl of
-      NONE => emit (compile s e) [Stack (Pops n)]
+      NONE => emit (compile s e) [ULS (Pops n)]
     | SOME _ => compile s e
     )
   ) in
@@ -1166,54 +1168,91 @@ val _ = Defn.save_defn bind_fv_defn;
    * - update refptrs, etc.
    *)
   let sz0 = s.sz in
-  let s = FOLDL (\ s _n . incsz (emit s [Stack (PushInt i0); Ref])) s ns in
-  let s = emit s [Stack (PushInt i0)] in
-  let (s,k,labs,ecs) = FOLDL
-    (\ (s,k,labs,ecs) (xs,e) .
+  let s = FOLDL (\ s _n . incsz (emit s [ULS (PushInt i0); UL Ref])) s ns in
+  let s = emit s [ULS (PushInt i0)] in
+  let nk = LENGTH defs in
+  let (s,labs) = get_labels nk s in
+  let (s,k,ecs) = FOLDL
+    (\ (s,k,ecs) (xs,e) .
       let az = LENGTH xs in
-      let lab = s.next_label in
-      let s = emit s [Call 0] in
-      let j = s.code_length in
+      let lab = EL  k  labs in
+      let s = emit s [UL (Call lab)] in
       let (n,env,(ecl,ec)) =
         ITSET (bind_fv ns xs az k) (free_vars e) (0,FEMPTY,(0,[])) in
       let s' =  s with<| env := env; sz := 0; tail := TCTail az 0 |> in
       let s' = compile s' e in
       let n = (case s'.tail of TCNonTail => 1 | TCTail j k => k+1 ) in
-      let s' = emit s' [Stack (Pops n);
-                        Stack (Load 1);
-                        Stack (Store (az+2));
-                        Stack (Pops (az+1));
-                        Return] in
+      let s' = emit s' [ULS (Pops n);
+                        ULS (Load 1);
+                        ULS (Store (az+2));
+                        ULS (Pops (az+1));
+                        UL Return;
+                        Label lab] in
       let s =  s' with<| env := s.env; sz := s.sz + 1; tail := s.tail |> in
-      (s,k+1,(j,lab)::labs,(ecl,ec)::ecs))
-    (s,0,[],[]) defs in
-  let s =  s with<| code :=
-    replace_calls s.code_length ((0,s.next_label)::labs) s.code |> in
-  let s = emit s [Stack Pop] in
-  let nk = LENGTH defs in
+      (s,k+1,(ecl,ec)::ecs))
+    (s,0,[]) defs in
+  let s = emit s [ULS Pop] in
   let (s,k) = FOLDL
     (\ (s,k) (j,ec) .
-      let s = incsz (emit s [Stack (Load (nk - k))]) in
+      let s = incsz (emit s [ULS (Load (nk - k))]) in
       let s = FOLDL (emit_ec sz0) s (REVERSE ec) in
-      let s = emit s [Stack (if j = 0 then PushInt i0 else Cons 0 j)] in
-      let s = emit s [Stack (Cons 0 2)] in
-      let s = decsz (emit s [Stack (Store (nk - k))]) in
+      let s = emit s [ULS (if j = 0 then PushInt i0 else Cons 0 j)] in
+      let s = emit s [ULS (Cons 0 2)] in
+      let s = decsz (emit s [ULS (Store (nk - k))]) in
       let s =  s with<| sz := s.sz - j |> in
       (s,k+1))
     (s,1) (REVERSE ecs) in
   let (s,k) = FOLDL
     (\ (s,k) _n .
-      let s = emit s [Stack (Load (nk + nk - k))] in
-      let s = emit s [Stack (Load (nk + 1 - k))] in
-      let s = emit s [Update] in
+      let s = emit s [ULS (Load (nk + nk - k))] in
+      let s = emit s [ULS (Load (nk + 1 - k))] in
+      let s = emit s [UL Update] in
       (s,k+1))
     (s,1) ns in
   let k = nk - 1 in
   FOLDL
-    (\ s _n . decsz (emit s [Stack (Store k)]))
+    (\ s _n . decsz (emit s [ULS (Store k)]))
          s ns)`;
 
 val _ = Defn.save_defn compile_defn;
+
+ val calculate_labels_defn = Hol_defn "calculate_labels" `
+
+(calculate_labels il m n a [] = (m,n,a))
+/\
+(calculate_labels il m n a (Label l::lbc) =
+  calculate_labels il (FUPDATE  m ( l, n)) n a lbc)
+/\
+(calculate_labels il m n a (UL i::lbc) =
+  calculate_labels il m (n + il i + 1) (i::a) lbc)`;
+
+val _ = Defn.save_defn calculate_labels_defn;
+
+ val replace_labels_defn = Hol_defn "replace_labels" `
+
+(replace_labels m a [] = a)
+/\
+(replace_labels m a (Jump l::bc) =
+  replace_labels m (Jump (FAPPLY  m  l)::a) bc)
+/\
+(replace_labels m a (JumpNil l::bc) =
+  replace_labels m (JumpNil (FAPPLY  m  l)::a) bc)
+/\
+(replace_labels m a (Call l::bc) =
+  replace_labels m (Call (FAPPLY  m  l)::a) bc)
+/\
+(replace_labels m a (i::bc) =
+  replace_labels m (i::a) bc)`;
+
+val _ = Defn.save_defn replace_labels_defn;
+
+ val compile_labels_defn = Hol_defn "compile_labels" `
+
+(compile_labels rs lbc =
+  let (m,n,bc) = calculate_labels rs.inst_length FEMPTY rs.next_addr [] lbc in
+   rs with<| code := replace_labels m [] bc ; next_addr := n |>)`;
+
+val _ = Defn.save_defn compile_labels_defn;
 
 val _ = Hol_reln `
 (! il c cc.
@@ -1228,12 +1267,9 @@ bc_code_prefix il (i::cc) (p + il i) c)`;
 
  val body_cs_defn = Hol_defn "body_cs" `
 
-(body_cs il env xs lab =
-  <| env := env; sz := 0; tail := TCTail (LENGTH xs) 0;
-     code := []; code_length := 0;
-     next_label := lab;
-     decl := NONE;
-     inst_length := il |>)`;
+(body_cs env xs =
+  <| env := env; sz := 0; out := []; next_label := 0;
+     tail := TCTail (LENGTH xs) 0; decl := NONE |>)`;
 
 val _ = Defn.save_defn body_cs_defn;
 
@@ -1262,7 +1298,7 @@ EVERY2 (bceqv il c) vs bvs
 ==>
 bceqv il c (CConv n vs) (Block n bvs))
 /\
-(! il c env ns defs n j xs e cenv ec f bvs lab.
+(! il c env ns defs n j xs e cenv ec f bvs.
 (find_index n ns 0 = SOME j) /\
 (EL  j  defs = (xs,e)) /\
 ((cenv,ec) = body_env ns xs j (free_vars e)) /\
@@ -1270,47 +1306,40 @@ bceqv il c (CConv n vs) (Block n bvs))
 (! i. i < LENGTH ec ==>
     (? fv. (EL  i  ec = CEEnv fv) /\
                bceqv il c (FAPPLY  env  fv) (EL  i  bvs)) \/
-    (? k kxs ke kenv kec g l.
+    (? k kxs ke kenv kec g.
         (EL  i  ec = CERef k) /\
         (EL  k  defs = (kxs,ke)) /\
         ((kenv,kec) = body_env ns xs k (free_vars ke)) /\
         bc_code_prefix il c g
-          (REVERSE (compile (body_cs il kenv kxs l) ke).code))) /\
-bc_code_prefix il c f (REVERSE (compile (body_cs il cenv xs lab) e).code)
+          (REVERSE (compile (body_cs kenv kxs) ke).out))) /\
+bc_code_prefix il c f (REVERSE (compile (body_cs cenv xs) e).out)
 ==>
 bceqv il c (CRecClos env ns defs n)
   (Block 0 [CodePtr f; if bvs = [] then Number i0 else Block 0 bvs]))`;
 
 val _ = Define `
- init_compiler_state =
-  <| env := FEMPTY
-   ; code := []
-   ; code_length := 0
-   ; next_label := 0 (* depends on exception handlers *)
-   ; sz := 0
-   ; inst_length := \ i . 0 (* depends on runtime *)
-   ; decl := NONE
-   ; tail := TCNonTail
-   |>`;
-
-
-val _ = Define `
  init_repl_state =
   <| cmap := FEMPTY
    ; cpam := FEMPTY
-   ; cs := init_compiler_state
+   ; code := []
+   ; renv := FEMPTY
+   ; rsz  := 0
+   ; next_addr := 0
+   ; inst_length := \ i . 0
    |>`;
 
 
 val _ = Define `
- (compile_Cexp rs Ce =
-  let cs =  rs.cs with<| code := [] ; code_length := 0 |> in
+ (compile_Cexp rs decl Ce =
+  let cs = <| env := rs.renv; sz := rs.rsz
+            ; out := []; next_label := 0
+            ; tail := TCNonTail; decl := decl |> in
   let cs = compile cs Ce in
-  let cs = (case cs.decl of
-      NONE => cs
-    | SOME (env,sz) =>  cs with<| env := env ; sz := sz |>
+  let rs = (case cs.decl of
+      NONE => rs
+    | SOME (env,sz) =>  rs with<| renv := env ; rsz := sz |>
     ) in
-   rs with<| cs := cs |>)`;
+  compile_labels rs (REVERSE cs.out))`;
 
 
 (* TODO: typechecking *)
@@ -1329,8 +1358,7 @@ val _ = Defn.save_defn number_constructors_defn;
 
  val repl_dec_defn = Hol_defn "repl_dec" `
 
-(repl_dec rs (Dtype []) =
-   rs with<| cs := rs.cs with<| code := []; code_length := 0|> |>)
+(repl_dec rs (Dtype []) =  rs with<| code := [] |>)
 /\
 (repl_dec rs (Dtype ((a,ty,cs)::ts)) =
   let (cm,cw) = number_constructors a (rs.cmap,FEMPTY) 0 cs in
@@ -1338,23 +1366,22 @@ val _ = Defn.save_defn number_constructors_defn;
 /\
 (repl_dec rs (Dletrec defs) =
   let (fns,Cdefs) = defs_to_Cdefs rs.cmap defs in
-  let rs = rs with<| cs := rs.cs with<| decl:=SOME(rs.cs.env,rs.cs.sz)|> |> in
-  compile_Cexp rs (CLetfun T fns Cdefs (CDecl fns)))
+  let decl = SOME(rs.renv,rs.rsz) in
+  compile_Cexp rs decl (CLetfun T fns Cdefs (CDecl fns)))
 /\
 (repl_dec rs (Dlet p e) =
   let (pvs,Cp) = pat_to_Cpat rs.cmap [] p in
   let Cpes = [(Cp,CDecl pvs)] in
   let vn = fresh_var (Cpes_vars Cpes) in
   let Ce = exp_to_Cexp rs.cmap e in
-  let rs' = rs with<| cs := rs.cs with<| decl:=SOME(rs.cs.env,rs.cs.sz)|> |> in
-  compile_Cexp rs' (CLet [vn] [Ce] (remove_mat_var vn Cpes)))`;
+  let decl = SOME(rs.renv,rs.rsz) in
+  compile_Cexp rs decl (CLet [vn] [Ce] (remove_mat_var vn Cpes)))`;
 
 val _ = Defn.save_defn repl_dec_defn;
 
 val _ = Define `
- (repl_exp s exp =
-  compile_Cexp (s with<| cs := s.cs with<| decl:=NONE|> |>) (exp_to_Cexp s.cmap exp))`;
- (* parens *)
+ (repl_exp s exp = compile_Cexp s NONE (exp_to_Cexp s.cmap exp))`;
+
 
 (* Constant folding
 val fold_consts : exp -> exp
