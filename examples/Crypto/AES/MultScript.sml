@@ -47,7 +47,7 @@ val ConstMult_def =
          then b2 ?? ((b1 >>> 1) ** xtime b2)
          else       ((b1 >>> 1) ** xtime b2)`;
 
-val _ = computeLib.add_persistent_funs [("ConstMult_def",ConstMult_def)];
+val _ = computeLib.add_persistent_funs ["ConstMult_def"];
 
 val ConstMultDistrib = Q.store_thm
 ("ConstMultDistrib",
@@ -68,7 +68,7 @@ val IterConstMult_def =
        else IterConstMult (b1 >>> 1, xtime b2,
                            if word_lsb b1 then (b2 ?? acc) else acc)`;
 
-val _ = computeLib.add_persistent_funs [("IterConstMult_def",IterConstMult_def)];
+val _ = computeLib.add_persistent_funs ["IterConstMult_def"];
 
 (*---------------------------------------------------------------------------*)
 (* Equivalence between recursive and iterative forms.                        *)

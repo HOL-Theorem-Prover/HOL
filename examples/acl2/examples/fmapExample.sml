@@ -1211,10 +1211,10 @@ val SOME_EQ_ELIM =
    RW_TAC (srw_ss()) []);
 
 val _ = computeLib.add_persistent_funs
-         [("IS_SOME_if",   IS_SOME_if),
-          ("THE_if",       THE_if),
-          ("if_SOME",      if_SOME),
-          ("SOME_EQ_ELIM", SOME_EQ_ELIM)];
+         ["IS_SOME_if",
+          "THE_if",
+          "if_SOME",
+          "SOME_EQ_ELIM"];
 
 (* Technical theorem to make EVAL work with output from SYMBOLIC_EVAL_PROVE *)
 val ScalarOf_if =
@@ -1251,10 +1251,10 @@ val EqRightIf =
    METIS_TAC[]);
 
 val _ = computeLib.add_persistent_funs
-         [("ScalarOfIf",     ScalarOfIf),
-          ("ScalarIf",       ScalarIf),
-          ("EqLeftIf",       EqLeftIf),
-          ("EqRightIf",      EqRightIf)];
+         ["ScalarOfIf",
+          "ScalarIf",
+          "EqLeftIf",
+          "EqRightIf"];
 
 val int_opLeftIf =
  store_thm
@@ -1280,25 +1280,21 @@ val int_relRightIf =
    ``!(r:int->int->bool). r (if b then x else y) n = if b then r x n else r y n``,
    METIS_TAC[]);
 
-val _ =
-  (map
-    (fn con =>
-      (save_thm ((fst(dest_const con) ^ "LeftIf"),   SPEC con int_opLeftIf);
-       save_thm ((fst(dest_const con) ^ "RightIf"),  SPEC con int_opRightIf);
-       computeLib.add_persistent_funs
-        [((fst(dest_const con) ^ "LeftIf"),   SPEC con int_opLeftIf),
-         ((fst(dest_const con) ^ "RightIf"),  SPEC con int_opRightIf)]))
-    [``$int_add``,``$int_sub``]);
-
-val _ =
-  (map
-    (fn con =>
-      (save_thm ((fst(dest_const con) ^ "LeftIf"),   SPEC con int_relLeftIf);
-       save_thm ((fst(dest_const con) ^ "RightIf"),  SPEC con int_relRightIf);
-       computeLib.add_persistent_funs
-        [((fst(dest_const con) ^ "LeftIf"),   SPEC con int_relLeftIf),
-         ((fst(dest_const con) ^ "RightIf"),  SPEC con int_relRightIf)]))
-    [``$int_lt``,``$int_le``,``$int_gt``,``$int_ge``]);
+local
+  fun f thl thr =
+    (app
+      (fn con => let
+        val nl = (fst(dest_const con) ^ "LeftIf")
+        val nr = (fst(dest_const con) ^ "RightIf")
+        val _ = save_thm (nl, SPEC con thl)
+        val _ = save_thm (nr, SPEC con thr)
+        in computeLib.add_persistent_funs [nl,nr] end))
+in
+  val _ = f int_opLeftIf int_opRightIf
+    [``$int_add``,``$int_sub``];
+  val _ = f int_relLeftIf int_relRightIf
+    [``$int_lt``,``$int_le``,``$int_gt``,``$int_ge``]
+end
 
 
 (* Monad binding operation *)
@@ -1344,7 +1340,7 @@ val RUN_BIND_RUN_RETURN =
    RW_TAC std_ss [RUN_BIND_RUN_RETURN_def,RUN_BIND_def,RUN_RETURN_def]);
 
 (* Add to EVAL compset *)
-val _ = computeLib.add_persistent_funs[("CONS_if",CONS_if)];
+val _ = computeLib.add_persistent_funs["CONS_if"];
 
 (* Technical theorems to make ML EVAL work with outcomes *)
 
@@ -1378,9 +1374,9 @@ val pair_case_if =
 
 (* Add to EVAL compset *)
 val _ = computeLib.add_persistent_funs
-         [("outcome_case_def",outcome_case_def),
-          ("outcome_case_if",outcome_case_if),
-          ("pair_case_if",pair_case_if)
+         ["outcome_case_def",
+          "outcome_case_if",
+          "pair_case_if"
          ];
 
 (*===========================================================================*)
@@ -1545,7 +1541,7 @@ val RUN =
 
 (* Tell EVAL about RUN and various properties of finite maps *)
 
-val _ = computeLib.add_persistent_funs[("RUN",RUN)];
+val _ = computeLib.add_persistent_funs["RUN"];
 
 (*===========================================================================*)
 (* Small step next-state function                                            *)
@@ -1608,7 +1604,7 @@ val STEP1 =
       THEN RW_TAC list_ss [STEP1_def]);
 
 (* Add to EVAL compset *)
-val _ = computeLib.add_persistent_funs [("STEP1",STEP1)];
+val _ = computeLib.add_persistent_funs ["STEP1"];
 
 (* Various lemmas follow -- I'm not sure they are all needed *)
 val SMALL_EVAL_IMP_STEP1 =
@@ -2350,7 +2346,7 @@ val ACC_STEP =
      THEN RW_TAC std_ss [ACC_STEP_def,ACC_STEP_BIND_def]);
 
 (* Add to EVAL compset *)
-val _ = computeLib.add_persistent_funs [("ACC_STEP",ACC_STEP)];
+val _ = computeLib.add_persistent_funs ["ACC_STEP"];
 
 val ACC_STEP_STEP =
  store_thm
@@ -3482,7 +3478,7 @@ val EVAL_FUN =
 
 val _ =
  computeLib.add_persistent_funs
-  [("EVAL_FUN",     EVAL_FUN)];
+  ["EVAL_FUN"];
 
 
 (* ============================================================================

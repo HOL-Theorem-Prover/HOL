@@ -1206,9 +1206,9 @@ val decode_tree = store_thm
      [decode_tree_def, dec2enc_enc2dec, wf_dec2enc, wf_encode_tree]]]);
 
 val _ = computeLib.add_persistent_funs
-         [("decode_unit",decode_unit),
-          ("decode_bool",decode_bool),
-          ("decode_num",decode_num)];
+         ["decode_unit",
+          "decode_bool",
+          "decode_num"];
 
 (* decode_prod, decode_sum, decode_option, decode_list, decode_blist,
    decode_bnum, and decode_tree all have preconditions that need

@@ -551,7 +551,7 @@ val QSORT_SORTS = Q.store_thm
 (*---------------------------------------------------------------------------*)
 
 val _ =
- computeLib.add_persistent_funs [("QSORT_DEF",QSORT_DEF)];
+ computeLib.add_persistent_funs ["QSORT_DEF"];
 
 
 

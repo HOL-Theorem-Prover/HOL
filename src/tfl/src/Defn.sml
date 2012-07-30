@@ -409,7 +409,7 @@ fun add_persistent_funs l =
               (can (find_term is_suc) o lhs o #2 o strip_forall)
                                       o strip_conj o concl
       fun f (s, th) =
-        [(s, th)] @
+        [s] @
         (if has_lhs_SUC th then let
             val name = s^"_compute"
             val name = let
@@ -418,7 +418,7 @@ fun add_persistent_funs l =
               in if used name then loop 0 else name end
             val th_compute = CONV_RULE (!SUC_TO_NUMERAL_DEFN_CONV_hook) th
             val _ = save_thm(name,th_compute)
-            in [(name,th_compute)] end
+            in [name] end
          else [])
     in
       computeLib.add_persistent_funs (List.concat (map f l))

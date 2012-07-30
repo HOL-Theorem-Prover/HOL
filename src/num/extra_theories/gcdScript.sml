@@ -296,15 +296,13 @@ val GCD_EFFICIENTLY = store_thm(
   ASM_SIMP_TAC bool_ss [DECIDE (Term`(x:num) + y - x = y`)] THEN
   SIMP_TAC bool_ss [GCD_SYM]);
 
-val _ = computeLib.add_persistent_funs [("GCD_EFFICIENTLY",GCD_EFFICIENTLY)];
-
 val lcm_def = Define`
   lcm m n = if (m = 0) \/ (n = 0) then 0 else (m * n) DIV gcd m n
 `;
 
 val _ = computeLib.add_persistent_funs
-      [("GCD_EFFICIENTLY",GCD_EFFICIENTLY),
-       ("lcm_def", lcm_def)];
+      ["GCD_EFFICIENTLY"
+      ,"lcm_def"];
 
 val LCM_IS_LEAST_COMMON_MULTIPLE = store_thm(
   "LCM_IS_LEAST_COMMON_MULTIPLE",

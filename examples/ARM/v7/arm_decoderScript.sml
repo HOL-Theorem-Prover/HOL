@@ -1555,20 +1555,20 @@ val thumb2_decode = save_thm("thumb2_decode",
   rule [`arch`,`n2w it`, `n2w m`, `n2w n`] thumb2_decode_def);
 
 val _ = computeLib.add_persistent_funs
-  [("arm_decode_v4", arm_decode_v4),
-   ("arm_decode_not_v4", arm_decode_not_v4),
-   ("thumb_decode", thumb_decode),
-   ("thumbee_decode", thumbee_decode),
-   ("thumb2_decode_aux1", thumb2_decode_aux1),
-   ("thumb2_decode_aux2", thumb2_decode_aux2),
-   ("thumb2_decode_aux3", thumb2_decode_aux3),
-   ("thumb2_decode_aux4", thumb2_decode_aux4),
-   ("thumb2_decode_aux5", thumb2_decode_aux5),
-   ("thumb2_decode_aux6", thumb2_decode_aux6),
-   ("thumb2_decode_aux7", thumb2_decode_aux7),
-   ("thumb2_decode_aux8", thumb2_decode_aux8),
-   ("thumb2_decode_aux9", thumb2_decode_aux9),
-   ("thumb2_decode", thumb2_decode)];
+  ["arm_decode_v4",
+   "arm_decode_not_v4",
+   "thumb_decode",
+   "thumbee_decode",
+   "thumb2_decode_aux1",
+   "thumb2_decode_aux2",
+   "thumb2_decode_aux3",
+   "thumb2_decode_aux4",
+   "thumb2_decode_aux5",
+   "thumb2_decode_aux6",
+   "thumb2_decode_aux7",
+   "thumb2_decode_aux8",
+   "thumb2_decode_aux9",
+   "thumb2_decode"];
 
 (* ------------------------------------------------------------------------ *)
 

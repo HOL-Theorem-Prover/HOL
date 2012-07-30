@@ -224,7 +224,8 @@ fun write_datatype_info tyinfo =
 
 open LoadableThyData
 val {export,...} = ThmSetData.new_exporter "compute" add_funs
-val add_persistent_funs = ignore o (app export ## add_funs) o unzip
+fun get s = DB.theorem s handle HOL_ERR _ => DB.definition s handle HOL_ERR _ => DB.axiom s
+fun add_persistent_funs sl = (add_funs (map get sl); app export sl)
 
 (*---------------------------------------------------------------------------*)
 (* Once we delete a constant from a compset, we will probably want to make   *)

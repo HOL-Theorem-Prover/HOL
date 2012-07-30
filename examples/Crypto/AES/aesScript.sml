@@ -183,7 +183,7 @@ Defn.tprove
 
 val _ = save_thm ("expand_def", expand_def);
 val _ = save_thm ("expand_ind", expand_ind);
-val _ = computeLib.add_persistent_funs [("expand_def", expand_def)];
+val _ = computeLib.add_persistent_funs ["expand_def"];
 
 val mk_keysched_def = Define
  `mk_keysched ((b0,b1,b2,b3,b4,b5,b6,b7,b8,b9,b10,b11,b12,b13,b14,b15):key)

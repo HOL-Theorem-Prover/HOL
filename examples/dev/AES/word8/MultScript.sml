@@ -51,7 +51,7 @@ val (ConstMult_def,ConstMult_ind) =
 
 val _ = save_thm("ConstMult_def",ConstMult_def);
 val _ = save_thm("ConstMult_ind",ConstMult_ind);
-val _ = computeLib.add_persistent_funs [("ConstMult_def",ConstMult_def)];
+val _ = computeLib.add_persistent_funs ["ConstMult_def"];
 
 val ConstMultDistrib = Q.store_thm
 ("ConstMultDistrib",
@@ -78,7 +78,7 @@ val (IterConstMult_def,IterConstMult_ind) =
 
 val _ = save_thm("IterConstMult_def",IterConstMult_def);
 val _ = save_thm("IterConstMult_ind",IterConstMult_ind);
-val _ = computeLib.add_persistent_funs [("IterConstMult_def",IterConstMult_def)];
+val _ = computeLib.add_persistent_funs ["IterConstMult_def"];
 
 (*---------------------------------------------------------------------------*)
 (* Equivalence between recursive and iterative forms.                        *)

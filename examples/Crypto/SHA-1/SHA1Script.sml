@@ -236,7 +236,7 @@ val (expand_def, expand_ind) = Defn.tprove
 
 val _ = save_thm("expand_def",expand_def);
 
-val _ = computeLib.add_persistent_funs [("expand_def", expand_def)];
+val _ = computeLib.add_persistent_funs ["expand_def"];
 
 (*---------------------------------------------------------------------------*)
 (* Digest a block	                                                     *)
@@ -308,9 +308,9 @@ val stringMD_def =
 (*---------------------------------------------------------------------------*)
 
 val _ = computeLib.add_persistent_funs
-         [("TAKE_def",TAKE_def),
-          ("pBits_def",pBits_def),
-          ("digest_def",digest_def)];
+         ["TAKE_def",
+          "pBits_def",
+          "digest_def"];
 
 val _ = type_pp.pp_num_types := false;
 val _ = type_pp.pp_array_types := false;

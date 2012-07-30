@@ -380,9 +380,9 @@ val _ = add_listform {leftdelim = [TOK "-{"], rightdelim = [TOK "}-"],
                       block_info = (PP.INCONSISTENT, 0)};
 
 val _ = computeLib.add_persistent_funs
-  [("ADD_INSERT_WORD", ADD_INSERT_WORD),
-   ("ADD_INSERT_STRING", ADD_INSERT_STRING),
-   ("THE_PTREE_SOME_PTREE", THE_PTREE_SOME_PTREE)];
+  ["ADD_INSERT_WORD",
+   "ADD_INSERT_STRING",
+   "THE_PTREE_SOME_PTREE"];
 
 (* ------------------------------------------------------------------------- *)
 

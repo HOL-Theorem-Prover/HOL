@@ -365,7 +365,7 @@ val compute_divides = Q.store_thm
 
 val _ =
  computeLib.add_persistent_funs
-     [("compute_divides",compute_divides)];
+     ["compute_divides"];
 
 val _ = export_theory();
 

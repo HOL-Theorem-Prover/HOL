@@ -1004,7 +1004,7 @@ val SIZE = store_thm("SIZE",
    (!k d. SIZE (Leaf k d) = 1) /\
    (!p m l r. SIZE (Branch p m l r) = SIZE l + SIZE r)`,
   SRW_TAC [] [SIZE_def, TRAVERSE_def]);
-val _ = computeLib.add_persistent_funs [("SIZE", SIZE)];
+val _ = computeLib.add_persistent_funs ["SIZE"];
 
 val LENGTH_FOLDL_ADD = prove(
   `!l t. IS_PTREE t /\ ALL_DISTINCT (TRAVERSE t ++ l) ==>
@@ -1040,10 +1040,10 @@ val DELETE_UNION = store_thm("DELETE_UNION",
   SRW_TAC [] [pred_setTheory.EXTENSION] \\ METIS_TAC []);
 
 val _ = computeLib.add_persistent_funs
-  [("DELETE_UNION", DELETE_UNION),
-   ("TRAVERSE_AUX", TRAVERSE_AUX),
-   ("ADD_INSERT", ADD_INSERT),
-   ("PTREE_OF_NUMSET_EMPTY", PTREE_OF_NUMSET_EMPTY)];
+  ["DELETE_UNION"
+  ,"TRAVERSE_AUX"
+  ,"ADD_INSERT"
+  ,"PTREE_OF_NUMSET_EMPTY"];
 
 (* ------------------------------------------------------------------------- *)
 

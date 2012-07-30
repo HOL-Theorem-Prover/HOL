@@ -651,7 +651,7 @@ val x64_decode_aux_thm = let
 
 fun permanently_add_to_compset name thm = let
   val _ = save_thm(name,thm)
-  val _ = computeLib.add_persistent_funs [(name,thm)]
+  val _ = computeLib.add_persistent_funs [name]
   in print ("Permanently added to compset: "^name^"\n") end;
 
 val _ = permanently_add_to_compset "Zreg_distinct" Zreg_distinct;

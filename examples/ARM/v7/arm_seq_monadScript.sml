@@ -855,8 +855,8 @@ val coproc_get_two_words_def = Define`
          constT data)`;
 
 val _ = computeLib.add_persistent_funs
-  [("have_security_ext", have_security_ext),
-   ("have_thumbEE", have_thumbEE),
-   ("have_jazelle", have_jazelle)];
+  ["have_security_ext",
+   "have_thumbEE",
+   "have_jazelle"];
 
 val _ = export_theory ();

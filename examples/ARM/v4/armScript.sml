@@ -919,11 +919,13 @@ val ARM_SPEC_def = Define`
 
 (* ------------------------------------------------------------------------- *)
 
-val _ = let open pred_setTheory in
+val _ = let open pred_setTheory
+  val _ = save_thm("pred_setTheory_IN_INSERT",IN_INSERT)
+  val _ = save_thm("pred_setTheory_NOT_IN_EMPTY",NOT_IN_EMPTY)
+in
   computeLib.add_persistent_funs
-  ([("pred_setTheory.IN_INSERT", IN_INSERT),
-    ("pred_setTheory.NOT_IN_EMPTY", NOT_IN_EMPTY)] @
-  map (fn s => (s, theorem s))
+  (["pred_setTheory_IN_INSERT",
+    "pred_setTheory_NOT_IN_EMPTY"] @
   ["register_EQ_register","num2register_thm","register2num_thm", "mode_EQ_mode",
    "mode2num_thm", "psr_EQ_psr", "psr2num_thm", "iclass_EQ_iclass",
    "iclass2num_thm", "num2condition_thm", "condition2num_thm",

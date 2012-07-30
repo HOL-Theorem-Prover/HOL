@@ -786,7 +786,7 @@ let val thm = aligned_bx_def |> Q.SPEC `n2w a` |> GEN_ALL in
     |> SIMP_RULE (srw_ss()) [bitTheory.BITS_ZERO3, word_extract_n2w]
 end);
 
-val _ = computeLib.add_persistent_funs [("aligned_bx_n2w", aligned_bx_n2w)];
+val _ = computeLib.add_persistent_funs ["aligned_bx_n2w"];
 
 val aligned_bx_0w = EVAL ``aligned_bx (0w:word32)``;
 val aligned_bx_1w = EVAL ``aligned_bx (1w:word32)``;

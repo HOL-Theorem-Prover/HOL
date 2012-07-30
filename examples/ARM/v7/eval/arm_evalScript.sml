@@ -176,9 +176,10 @@ end;
 
 val proc = Q.store_thm("proc", `proc n f (n,x) = f x`, SRW_TAC [] [proc_def]);
 
+val _ = save_thm("combinTheory_o_THM",combinTheory.o_THM)
 val _ = computeLib.add_persistent_funs
-  [("combinTheory.o_THM", combinTheory.o_THM), ("proc", proc),
-   ("register_update", register_update), ("psr_update", psr_update)];
+  ["combinTheory_o_THM", "proc",
+   "register_update", "psr_update"];
 
 (* ------------------------------------------------------------------------ *)
 

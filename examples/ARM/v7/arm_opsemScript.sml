@@ -3872,7 +3872,7 @@ val instructions =
   map (I ## instruction_rule) (!instructions);
 
 val _ = map save_thm instructions;
-val _ = computeLib.add_persistent_funs instructions;
+val _ = computeLib.add_persistent_funs (map fst instructions);
 
 val instructions = map fst (List.drop (instructions,2));
 

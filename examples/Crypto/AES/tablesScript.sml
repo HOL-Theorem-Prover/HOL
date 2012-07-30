@@ -86,7 +86,7 @@ val InvSbox = save_thm("InvSbox",
   LIST_CONJ (map (REWRITE_CONV [InvSbox_def] THENC EVAL) (for 0 255
     (fn i => ``InvSbox (n2w ^(numSyntax.term_of_int i))``))));
 
-val _ = computeLib.add_persistent_funs [("Sbox", Sbox), ("InvSbox", InvSbox)];
+val _ = computeLib.add_persistent_funs ["Sbox", "InvSbox"];
 
 val Sbox_Inversion = Q.store_thm
 ("Sbox_Inversion",

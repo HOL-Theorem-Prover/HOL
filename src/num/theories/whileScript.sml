@@ -339,8 +339,8 @@ val OWHILE_INV_IND = store_thm(
 
 val _ =
  computeLib.add_persistent_funs
-   [("WHILE",WHILE),
-    ("LEAST_DEF",LEAST_DEF)];
+   ["WHILE"
+   ,"LEAST_DEF"];
 
 val _ = export_theory();
 
