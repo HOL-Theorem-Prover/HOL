@@ -1040,14 +1040,7 @@ val DELETE_UNION = store_thm("DELETE_UNION",
   SRW_TAC [] [pred_setTheory.EXTENSION] \\ METIS_TAC []);
 
 val _ = computeLib.add_persistent_funs
-  [("listTheory.LIST_TO_SET_THM", LIST_TO_SET_THM),
-   ("pred_setTheory.EMPTY_DELETE", pred_setTheory.EMPTY_DELETE),
-   ("pred_setTheory.DELETE_INSERT", pred_setTheory.DELETE_INSERT),
-   ("DELETE_UNION", DELETE_UNION),
-   ("pred_setTheory.FINITE_EMPTY", pred_setTheory.FINITE_EMPTY),
-   ("pred_setTheory.FINITE_INSERT", pred_setTheory.FINITE_INSERT),
-   ("pred_setTheory.FINITE_UNION", pred_setTheory.FINITE_UNION),
-   ("pred_setTheory.FINITE_DELETE", pred_setTheory.FINITE_DELETE),
+  [("DELETE_UNION", DELETE_UNION),
    ("TRAVERSE_AUX", TRAVERSE_AUX),
    ("ADD_INSERT", ADD_INSERT),
    ("PTREE_OF_NUMSET_EMPTY", PTREE_OF_NUMSET_EMPTY)];
