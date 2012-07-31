@@ -412,9 +412,10 @@ val push_imm_lemma = prove(
   \\ FULL_SIMP_TAC std_ss [GSYM DIVISION]
   \\ REPEAT STRIP_TAC \\ DECIDE_TAC);
 
-val divmod_def = Define `
+val divmod_def = zDefine`
   (divmod 0 n = 0) /\
   (divmod (SUC k) n = n MOD 64 + 64 * divmod k (n DIV 64))`;
+val _ = computeLib.add_funs[numLib.SUC_RULE divmod_def]
 
 val divmod_thm = prove(
   ``!k n. n < 64 ** k ==> (divmod k n = n)``,
@@ -445,6 +446,7 @@ val push_fixed_imm_lemma = prove(
   \\ FULL_SIMP_TAC (srw_ss()) [fetch "-" "hw_state_component_equality"]
   \\ DECIDE_TAC);
 
+val _ = computeLib.del_consts[``divmod``]
 val _ = delete_const "divmod"; (* remove temp definition *)
 
 val Swap_Pop_heap = prove(
