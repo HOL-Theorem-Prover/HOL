@@ -47,20 +47,18 @@ val _ = clear_overloads_on "TC"; (* Stop TC R printing as TC^+ *)
 
 val _ = new_theory "newOpsem";
 
-val s = map (fn p => (save_thm p; fst p))
-         [("finite_mapTheory_FUPDATE_LIST_THM",FUPDATE_LIST_THM),
-          ("finite_mapTheory_DOMSUB_FUPDATE_THM",DOMSUB_FUPDATE_THM),
-          ("finite_mapTheory_DOMSUB_FEMPTY",DOMSUB_FEMPTY),
-          ("finite_mapTheory_FDOM_FUPDATE",FDOM_FUPDATE),
-          ("finite_mapTheory_FAPPLY_FUPDATE_THM",FAPPLY_FUPDATE_THM),
-          ("finite_mapTheory_FDOM_FEMPTY",FDOM_FEMPTY),
-          ("pred_setTheory_IN_INSERT",pred_setTheory.IN_INSERT),
-          ("pred_setTheory_IN_UNION",pred_setTheory.IN_UNION),
-          ("pred_setTheory_NOT_IN_EMPTY",pred_setTheory.NOT_IN_EMPTY),
-          ("integerTheory_NUM_OF_INT", integerTheory.NUM_OF_INT),
-          ("whileTheory_WHILE", whileTheory.WHILE)
-         ];
-val _ = computeLib.add_persistent_funs s
+val _ = computeLib.add_persistent_funs
+       ["finite_map.FUPDATE_LIST_THM",
+        "finite_map.DOMSUB_FUPDATE_THM",
+        "finite_map.DOMSUB_FEMPTY",
+        "finite_map.FDOM_FUPDATE",
+        "finite_map.FAPPLY_FUPDATE_THM",
+        "finite_map.FDOM_FEMPTY",
+        "pred_set.IN_INSERT",
+        "pred_set.IN_UNION",
+        "pred_set.NOT_IN_EMPTY",
+        "integer.NUM_OF_INT",
+        "while.WHILE"];
 
 (* make infix ``$/`` equal to ``$DIV`` *)
 

@@ -482,18 +482,12 @@ val encode_psr_bits = Q.store_thm("encode_psr_bits",
 
 (* ------------------------------------------------------------------------ *)
 
-val _ = app save_thm
-  [("pairTheory_UNCURRY",pairTheory.UNCURRY)
-   ("pairTheory_LEX_DEF",pairTheory.LEX_DEF)
-   ("pred_setTheory_IN_CROSS",pred_setTheory.IN_CROSS)
-   ("pred_setTheory_IN_DELETE",pred_setTheory.IN_DELETE)
-   ("wordsTheory_BIT_UPDATE",wordsTheory.BIT_UPDATE)]
 val _ = computeLib.add_persistent_funs
-  ["pairTheory_UNCURRY",
-   "pairTheory_LEX_DEF",
-   "pred_setTheory_IN_CROSS",
-   "pred_setTheory_IN_DELETE",
-   "wordsTheory_BIT_UPDATE",
+  ["pair.UNCURRY",
+   "pair.LEX_DEF",
+   "pred_set.IN_CROSS",
+   "pred_set.IN_DELETE",
+   "words.BIT_UPDATE",
    "NOT_IN_EMPTY_SPECIFICATION",
    "NUMERIC_LSL_C",
    "NUMERIC_LSR_C",
