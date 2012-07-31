@@ -14,10 +14,17 @@ in
   | [] => raise Fail "String.fields returns empty list??"
 end
 
-fun lookup nm = uncurry DB.fetch (splitnm nm)
+fun lookup nm =
+    SOME (uncurry DB.fetch (splitnm nm))
+    handle HOL_ERR _ =>
+           (Feedback.HOL_WARNING "ThmSetData" "lookup"
+                                 ("Bad theorem name: " ^ nm);
+            NONE)
 
 fun read s =
-  SOME (map (fn n => (n, lookup n)) (String.fields Char.isSpace s))
+  SOME (List.mapPartial
+            (fn n => Option.map (fn r => (n,r)) (lookup n))
+            (String.fields Char.isSpace s))
   handle HOL_ERR _ => NONE
 
 fun writeset set = let
@@ -34,11 +41,15 @@ end
 fun new s = let
   val (mk,dest) = LoadableThyData.new {merge = op@, read = read,
                                        write = writeset, thydataty = s}
-  fun foldthis (nm,set) = (nm, lookup nm) :: set
-  fun mk' slist = let val unencoded = foldl foldthis [] slist
-                  in
-                    (mk unencoded, unencoded)
-                  end
+  fun foldthis (nm,set) =
+      case lookup nm of
+        SOME r => (nm, r) :: set
+      | NONE => raise mk_HOL_ERR "ThmSetData" "new" ("Bad theorem name: "^nm)
+  fun mk' slist =
+      let val unencoded = foldl foldthis [] slist
+      in
+        (mk unencoded, unencoded)
+      end
 in
   (mk',dest)
 end
