@@ -5016,17 +5016,4 @@ val _ = adjoin_to_theory
       "     encode=NONE})];\n"
       ] end)};
 
-val _ = computeLib.add_persistent_funs
-  ["EMPTY_DELETE"
-  ,"DELETE_INSERT"
-  ,"FINITE_EMPTY"
-  ,"FINITE_INSERT"
-  ,"FINITE_UNION"
-  ,"FINITE_DELETE"
-  ,"IMAGE_EMPTY"
-  ,"IMAGE_INSERT"
-  ,"IMAGE_UNION"]
-
 val _ = export_theory();
-
-

@@ -2681,7 +2681,4 @@ fun dest_list M =
                else raise ERR "dest_list" "not terminated with nil"
      | SOME(h,t) => h::dest_list t
 
-val _ = computeLib.add_persistent_funs ["LIST_TO_SET_THM"]
-
 val _ = export_theory();
-
