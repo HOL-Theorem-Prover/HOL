@@ -20,9 +20,6 @@ fun read s =
   SOME (map (fn n => (n, lookup n)) (String.fields Char.isSpace s))
   handle HOL_ERR _ => NONE
 
-
-fun write slist = String.concatWith " " slist
-
 fun writeset set = let
   fun foldthis ((nm,_), acc) = let
     val (thy,nm) = splitnm nm
