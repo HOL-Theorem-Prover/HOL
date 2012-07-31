@@ -30,6 +30,7 @@ val op<< = op THENL;
 val op|| = op ORELSE;
 val op>> = op THEN1;
 val std_ss' = simpLib.++ (std_ss, boolSimps.ETA_ss);
+val REVERSE = Tactical.REVERSE
 
 (* ------------------------------------------------------------------------- *)
 (* Definition of the embedding function from boolean list lists to boolean   *)
@@ -1690,4 +1691,3 @@ val IMAGE_MIRROR = store_thm
    ++ PROVE_TAC [MIRROR_MIRROR]);
 
 val _ = export_theory ();
-

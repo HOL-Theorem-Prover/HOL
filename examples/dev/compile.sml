@@ -1285,18 +1285,18 @@ fun PRUNE1_FUN(v,tml) =
 *)
 
 fun PRUNE1_FUN(v,tml) =
- let fun is_eqv t = 
+ let fun is_eqv t =
       let val (l,r) = dest_eq t
       in (l = v) orelse (r = v)
       end handle HOL_ERR _ => false
-     fun is_eq_id t = 
+     fun is_eq_id t =
       let val (l,r) = dest_eq t
       in aconv l r
       end handle HOL_ERR _ => false
- in 
+ in
    case filter is_eqv tml
     of [] => tml
-     | h::_ => 
+     | h::_ =>
         let val (t1,t2) = dest_eq h
             val u = if t1=v then t2 else t1
             val tml' = map (subst [v |-> u]) tml

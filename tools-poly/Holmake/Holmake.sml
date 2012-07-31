@@ -1004,9 +1004,6 @@ fun get_explicit_dependencies (f : File) : File list =
 datatype buildcmds = Compile of File list
                    | BuildScript of string * File list
 
-(*** Pre-processing of files that use `` *)
-
-
 (*** Compilation of files *)
 val failed_script_cache = ref (Binaryset.empty String.compare)
 

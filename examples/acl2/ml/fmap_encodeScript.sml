@@ -825,21 +825,21 @@ val lexorder_sym = prove(
        	       then nil
 	       else if STRING_LESS a c \/ (a = c) /\ STRING_LESS_EQ b d then t else nil``,
  ONCE_REWRITE_TAC [lexorder_def] THEN
- REWRITE_TAC [sexpTheory.coerce_string_to_list_def, 
-   hol_defaxiomsTheory.ACL2_SIMPS, sexpTheory.itel_def, 
+ REWRITE_TAC [sexpTheory.coerce_string_to_list_def,
+   hol_defaxiomsTheory.ACL2_SIMPS, sexpTheory.itel_def,
    sexpTheory.SEXP_SYM_LESS_EQ_def,sexpTheory.SEXP_SYM_LESS_def] THEN
   REPEAT (CHANGED_TAC (REPEAT (POP_ASSUM MP_TAC) THEN RW_TAC (std_ss ++ boolSimps.LET_ss)
     	   [GSYM sexpTheory.int_def, hol_defaxiomsTheory.ACL2_SIMPS,
-            sexpTheory.coerce_string_to_list_def, 
-            REWRITE_RULE [sexpTheory.nil_def] sexp_str_lt_l1, 
+            sexpTheory.coerce_string_to_list_def,
+            REWRITE_RULE [sexpTheory.nil_def] sexp_str_lt_l1,
             string_less_l_nil, sexpTheory.COMMON_LISP_def])) THEN
-    METIS_TAC [sexpTheory.STRING_LESS_TRANS, 
-               sexpTheory.STRING_LESS_TRANS_NOT, 
+    METIS_TAC [sexpTheory.STRING_LESS_TRANS,
+               sexpTheory.STRING_LESS_TRANS_NOT,
                EXPLODE_ID_LEM,
-               sexpTheory.STRING_LESS_TRICHOTOMY, 
-               sexpTheory.STRING_LESS_EQ_TRANS, 
-               sexpTheory.STRING_LESS_EQ_def, 
-               sexpTheory.STRING_LESS_EQ_ANTISYM, 
+               sexpTheory.STRING_LESS_TRICHOTOMY,
+               sexpTheory.STRING_LESS_EQ_TRANS,
+               sexpTheory.STRING_LESS_EQ_def,
+               sexpTheory.STRING_LESS_EQ_ANTISYM,
                sexpTheory.STRING_LESS_IRREFLEXIVE]);
 
 
@@ -1384,15 +1384,15 @@ val apply_rewrite = store_thm("apply_rewrite",
     RW_TAC std_ss [] THEN
     METIS_TAC [MEM_M2L, PERM_QSORT3, MEM_PERM]);
 
-val ains_def = 
- TotalDefn.tDefine 
-   "ains" 
+val ains_def =
+ TotalDefn.tDefine
+   "ains"
    `ains a l = itel [(not (consp l), cons a nil) ;
                      (equal (caar l) (car a), cons a (cdr l)) ;
                      (lexorder (car a) (caar l), cons a l)]
                  (cons (car l) (ains a (cdr l)))`
  (WF_REL_TAC `measure (sexp_size o SND)` THEN
-  GEN_TAC THEN Cases THEN 
+  GEN_TAC THEN Cases THEN
   RW_TAC std_ss [hol_defaxiomsTheory.ACL2_SIMPS, sexpTheory.sexp_size_def]);
 
 val insert_def = Define `(insert R (x,y) [] = [(x,y)]) /\

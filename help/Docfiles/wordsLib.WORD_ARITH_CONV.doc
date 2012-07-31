@@ -8,7 +8,8 @@ Conversion based on {WORD_ARITH_ss} and {WORD_ARITH_EQ_ss}.
 
 \DESCRIBE
 
-The conversion {WORD_ARITH_CONV} converts word arithmetic expressions into a canonical form.
+The conversion {WORD_ARITH_CONV} converts word arithmetic expressions into a
+canonical form.
 
 \EXAMPLE
 {WORD_ARITH_CONV} fixes the sign of equalities.
@@ -22,10 +23,13 @@ The conversion {WORD_ARITH_CONV} converts word arithmetic expressions into a can
 
 \COMMENTS
 
-The fragment {WORD_ARITH_EQ_ss} and conversion {WORD_CONV} do not adjust the sign of equalities.
+The fragment {WORD_ARITH_EQ_ss} and conversion {WORD_CONV} do not adjust the
+sign of equalities.
 
 \SEEALSO
 
-wordsLib.WORD_ARITH_ss, wordsLib.WORD_ARITH_EQ_ss, wordsLib.WORD_LOGIC_CONV, wordsLib.WORD_MUL_LSL_CONV, wordsLib.WORD_CONV, wordsLib.WORD_BIT_EQ_CONV, wordsLib.WORD_EVAL_CONV
+wordsLib.WORD_ARITH_ss, wordsLib.WORD_ARITH_EQ_ss, wordsLib.WORD_LOGIC_CONV,
+wordsLib.WORD_MUL_LSL_CONV, wordsLib.WORD_CONV, wordsLib.WORD_BIT_EQ_CONV,
+wordsLib.WORD_EVAL_CONV
 
 \ENDDOC

@@ -6,7 +6,7 @@ open bossLib HurdUseful miller_rabinTheory state_transformerTheory
      extra_numTheory probTheory;
 
 val EXISTS_DEF = boolTheory.EXISTS_DEF;
-val REVERSE = HurdUseful.REVERSE;
+val REVERSE = Tactical.REVERSE;
 
 infixr 0 oo ## ++ << || THENC ORELSEC THENR ORELSER -->;
 infix 1 >> |->;

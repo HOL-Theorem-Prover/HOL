@@ -79,7 +79,7 @@ val Round_def =
    `Round ((y,z),(k0,k1,k2,k3),s):state =
       let s' = s + DELTA in let
           y' = y + ShiftXor(z, s', k0, k1) in let
-          z' = z + ShiftXor(y', s', k2, k3) 
+          z' = z + ShiftXor(y', s', k2, k3)
       in
 	((y',z'), (k0,k1,k2,k3), s')`;
 
@@ -117,9 +117,9 @@ val InvRound_def =
  Define
    `InvRound((y,z),(k0,k1,k2,k3),sum) =
       let z' = z - ShiftXor(y, sum, k2, k3) in
-      let y' = y - ShiftXor(z',sum, k0, k1) in 
+      let y' = y - ShiftXor(z',sum, k0, k1) in
       let sum' = sum-DELTA
-      in 
+      in
          ((y',z'), (k0,k1,k2,k3), sum')`;
 
 (*---------------------------------------------------------------------------*)

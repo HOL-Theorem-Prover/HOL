@@ -26,16 +26,15 @@ exception Mod = General.Div
  ---------------------------------------------------------------------------*)
 
 fun inc r = (r := !r + 1)
-fun dec r = (r := !r - 1);
-
+fun dec r = (r := !r - 1)
 
 (*---------------------------------------------------------------------------
    SML/NJ v.93 style string operations
  ---------------------------------------------------------------------------*)
 
-fun ordof (string,place) = Char.ord(String.sub(string,place))
-val implode = String.concat;
-val explode = map Char.toString o String.explode;
+fun ordof (string, place) = Char.ord (String.sub (string, place))
+val implode = String.concat
+val explode = map Char.toString o String.explode
 
 (*---------------------------------------------------------------------------
     System
@@ -48,7 +47,6 @@ fun system s = if Process.isSuccess (Process.system s) then 0 else 1
 val getArgs  = CommandLine.arguments
 val argv     = getArgs
 fun exit()   = Process.exit Process.success
-
 
 (*---------------------------------------------------------------------------
     IO
@@ -79,25 +77,26 @@ val end_of_stream  = TextIO.endOfStream
 
 type time = Time.time
 
-local open Time
+local
+   open Time
 in
-  val timestamp : unit -> time = now
-  val time_to_string : time -> string = toString
-  fun dest_time t =
-     let val r = toReal t
+   val timestamp: unit -> time = now
+   val time_to_string: time -> string = toString
+   fun dest_time t =
+      let
+         val r = toReal t
          val sec = Arbnum.floor (toReal t)
-         val sec_million = Arbnum.*(sec, Arbnum.fromInt 1000000)
+         val sec_million = Arbnum.* (sec, Arbnum.fromInt 1000000)
          val r_million = r * 1000000.0
-         val usec = Arbnum.-(Arbnum.floor r_million, sec_million)
-     in
-        {sec=sec, usec=usec}
-     end
-  fun mk_time {sec,usec} =
-      fromReal (Real.+(Arbnum.toReal sec, Arbnum.toReal usec / 1000000.0))
-  fun time_eq (t1:time) t2 = (t1 = t2)
-  fun time_lt (t1:time) t2 = Time.<(t1,t2)
+         val usec = Arbnum.- (Arbnum.floor r_million, sec_million)
+      in
+         {sec = sec, usec = usec}
+      end
+   fun mk_time {sec, usec} =
+      fromReal (Real.+ (Arbnum.toReal sec, Arbnum.toReal usec / 1000000.0))
+   fun time_eq (t1:time) t2 = (t1 = t2)
+   fun time_lt (t1:time) t2 = Time.<(t1,t2)
 end
-
 
 (*---------------------------------------------------------------------------
     Pretty Printing
@@ -120,12 +119,15 @@ fun defaultConsumer () =
     flush     = fn () => TextIO.flushOut TextIO.stdOut}
 
 fun pp_to_string linewidth ppfn ob =
-    let val l = ref ([]:string list)
-	fun attach s = l := (s::(!l))
-    in with_pp {consumer = attach,
-		linewidth=linewidth, flush = fn()=>()}
-               (fn ppstrm =>  ppfn ppstrm ob);
-	String.concat(List.rev(!l))
+   let
+      val l = ref ([]: string list)
+      fun attach s = l := (s :: (!l))
+    in
+       with_pp {consumer = attach,
+                linewidth = linewidth,
+                flush = fn () => ()}
+               (fn ppstrm => ppfn ppstrm ob)
+       ; String.concat (List.rev (!l))
     end
 
 val mk_consumer = fn x => x
@@ -134,7 +136,7 @@ val mk_consumer = fn x => x
 (* Generate a standard ppstream                                              *)
 (*---------------------------------------------------------------------------*)
 
-fun stdOut_ppstream () = mk_ppstream (defaultConsumer());
+fun stdOut_ppstream () = mk_ppstream (defaultConsumer())
 
 (*---------------------------------------------------------------------------
  * Print a list of items.
@@ -145,11 +147,13 @@ fun stdOut_ppstream () = mk_ppstream (defaultConsumer());
  *---------------------------------------------------------------------------*)
 
 fun pr_list_to_ppstream ppstrm pfun dfun bfun =
- let fun pr [] = ()
-       | pr [i] = pfun ppstrm i
-       | pr (i::rst) = ( pfun ppstrm i; dfun ppstrm ; bfun ppstrm ; pr rst )
- in pr end;
-
+   let
+      fun pr [] = ()
+        | pr [i] = pfun ppstrm i
+        | pr (i :: rst) = (pfun ppstrm i; dfun ppstrm; bfun ppstrm; pr rst)
+   in
+      pr
+   end
 
 (*---------------------------------------------------------------------------
  * Simple and heavily used.
@@ -159,24 +163,29 @@ fun pr_list_to_ppstream ppstrm pfun dfun bfun =
  *---------------------------------------------------------------------------*)
 
 fun pr_list pfun dfun bfun =
-   let fun pr [] = ()
-         | pr [i] = pfun i
-         | pr (i::rst) = ( pfun i; dfun() ; bfun() ; pr rst )
-   in pr end;
+   let
+      fun pr [] = ()
+        | pr [i] = pfun i
+        | pr (i :: rst) = (pfun i; dfun (); bfun (); pr rst)
+   in
+      pr
+   end
 
 (*---------------------------------------------------------------------------*)
 (* Send the results of prettyprinting to stdOut                              *)
 (*---------------------------------------------------------------------------*)
 
 fun pprint pp x =
- let val strm = stdOut_ppstream ()
- in
-   let val _  = pp strm x
-   in flush_ppstream strm; ()
-   end handle e => (flush_ppstream strm; raise e)
- end;
-
-
+   let
+      val strm = stdOut_ppstream ()
+   in
+      let
+         val _ = pp strm x
+      in
+         flush_ppstream strm; ()
+      end
+      handle e => (flush_ppstream strm; raise e)
+   end
 
 (*---------------------------------------------------------------------------
       MoscowML returns lists of QUOTE'd strings when a quote is spread
@@ -186,14 +195,17 @@ fun pprint pp x =
 
 fun norm_quote [] = []
   | norm_quote [x] = [x]
-  | norm_quote (QUOTE s1::QUOTE s2::rst) = norm_quote (QUOTE(s1^s2)::rst)
-  | norm_quote (h::rst) = h::norm_quote rst;
+  | norm_quote (QUOTE s1 :: QUOTE s2 :: rst) =
+      norm_quote (QUOTE (s1 ^ s2) :: rst)
+  | norm_quote (h :: rst) = h :: norm_quote rst
 
 (* suck in implementation specific stuff *)
+
 open MLSYSPortable
 structure HOLSusp = MLSYSPortable.HOLSusp
 
 (* rebinding the exception seems to be necessary in Moscow ML 2.01 *)
+
 exception Interrupt = MLSYSPortable.Interrupt
 
 end (* Portable *)

@@ -28,6 +28,52 @@ fun print_filled_words strm col wlist =
            print_filled_words strm (col + sz + 1) ws)
       end
 
+local
+  val picker =
+      if Systeml.OS = "winNT" then (fn x => fn y => y)
+      else (fn x => fn y => x)
+  val lsquo = picker "\226\128\152" "'"
+  val rsquo = picker "\226\128\153" "'"
+  val ldquo = picker "\226\128\156" "\""
+  val rdquo = picker "\226\128\157" "\""
+in
+
+
+fun text_encode ss = let
+  (* passes over a substring, replacing single apostrophes with ’
+     backquotes with ‘ and the "latex" encodings of nice double-quotes:
+     `` with “ and '' with ” *)
+  open Substring
+  datatype state = backquote | apostrophe | normal of int * substring
+  fun recurse acc s ss =
+      case (s, getc ss) of
+        (backquote, NONE) => (lsquo :: acc)
+      | (apostrophe, NONE) => (rsquo :: acc)
+      | (normal(n,ss0), NONE) => (string ss0 :: acc)
+      | (normal (n,ss0), SOME(#"'", ss')) =>
+          recurse (string (slice(ss0,0,SOME n)) :: acc) apostrophe ss'
+      | (normal(n,ss0), SOME(#"`", ss')) =>
+          recurse (string (slice(ss0,0,SOME n))::acc) backquote ss'
+      | (normal(n,ss0), SOME(c, ss')) => recurse acc (normal(n + 1, ss0)) ss'
+      | (apostrophe, SOME(#"'", ss')) =>
+          recurse (rdquo :: acc) (normal(0,ss')) ss'
+      | (apostrophe, SOME(#"`", ss')) =>
+          recurse (rsquo :: acc) backquote ss'
+      | (apostrophe, SOME _) =>
+          recurse (rsquo :: acc) (normal(0,ss)) ss
+      | (backquote, SOME(#"`", ss')) =>
+          recurse (ldquo :: acc) (normal(0,ss')) ss'
+      | (backquote, SOME(#"'", ss')) =>
+          recurse (lsquo :: acc) apostrophe ss'
+      | (backquote, SOME _) =>
+          recurse (lsquo :: acc) (normal(0,ss)) ss
+in
+  String.concat (List.rev (recurse [] (normal(0,ss)) ss))
+end
+
+end (* local *)
+
+
 fun print_markups strm mlist =
     case mlist of
       [] => ()
@@ -35,7 +81,7 @@ fun print_markups strm mlist =
       in
         case m of
           PARA => (out(strm, "\n\n"); print_markups strm ms)
-        | TEXT ss => (out(strm, Substring.string ss);
+        | TEXT ss => (out(strm, text_encode ss);
                       print_markups strm ms)
         | BRKT ss => (out(strm, "{" ^ Substring.string ss ^ "}");
                       print_markups strm ms)

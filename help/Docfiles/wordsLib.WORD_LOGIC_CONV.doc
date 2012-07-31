@@ -8,7 +8,8 @@ Conversion based on {WORD_LOGIC_ss}.
 
 \DESCRIBE
 
-The conversion {WORD_LOGIC_CONV} converts word logic expressions into a canonical form.
+The conversion {WORD_LOGIC_CONV} converts word logic expressions into a
+canonical form.
 
 \EXAMPLE
 {
@@ -19,6 +20,7 @@ The conversion {WORD_LOGIC_CONV} converts word logic expressions into a canonica
 
 \SEEALSO
 
-wordsLib.WORD_LOGIC_ss, wordsLib.WORD_ARITH_CONV, wordsLib.WORD_MUL_LSL_CONV, wordsLib.WORD_CONV, wordsLib.WORD_BIT_EQ_CONV, wordsLib.WORD_EVAL_CONV
+wordsLib.WORD_LOGIC_ss, wordsLib.WORD_ARITH_CONV, wordsLib.WORD_MUL_LSL_CONV,
+wordsLib.WORD_CONV, wordsLib.WORD_BIT_EQ_CONV, wordsLib.WORD_EVAL_CONV
 
 \ENDDOC

@@ -23,25 +23,25 @@ fun run_bytecode reps bytecode_tm = let
     | asm_line xs = foldl (fn (x,y) => y ^ ", 0x" ^ x) ("\t.byte\t0x" ^ (hd xs)) (tl xs) ^ "\n"
   val res = EVAL ``bytecode_to_x64 ^bytecode_tm`` |> concl |> rand
             |> listSyntax.dest_list |> fst |> map optionSyntax.dest_some
-            |> map (fn tm => tm |> listSyntax.dest_list |> fst |> 
-                   map (fn tm => tm |> listSyntax.dest_list |> fst |> 
-                       map (fn tm => tm |> rand |> numSyntax.dest_numeral 
+            |> map (fn tm => tm |> listSyntax.dest_list |> fst |>
+                   map (fn tm => tm |> listSyntax.dest_list |> fst |>
+                       map (fn tm => tm |> rand |> numSyntax.dest_numeral
                                         |> Arbnum.toHexString |> pad2)))
-            |> map (fn xs => []::xs) |> Lib.flatten |> map asm_line  
+            |> map (fn xs => []::xs) |> Lib.flatten |> map asm_line
   in build_and_run res reps end;
 
-(* examples: 
+(* examples:
 
   val reps = 1000000;
   val bytecode_tm = ``[Stack (PushInt 1); Stack (PushInt 2); Stack (PushInt 3)]``;
-  val _ = run_bytecode reps bytecode_tm; 
+  val _ = run_bytecode reps bytecode_tm;
 
   val reps = 1000000;
-  val bytecode_tm = ``[Stack (PushInt 1); 
+  val bytecode_tm = ``[Stack (PushInt 1);
                        Jump 30; (* skips next instruction *)
-                       Stack (PushInt 3); 
+                       Stack (PushInt 3);
                        Stack (PushInt 2)]``;
-  val _ = run_bytecode reps bytecode_tm; 
+  val _ = run_bytecode reps bytecode_tm;
 
 *)
 

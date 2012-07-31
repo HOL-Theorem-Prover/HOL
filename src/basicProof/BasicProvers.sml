@@ -222,28 +222,28 @@ fun primInduct st ind_tac (g as (asl,c)) =
 (* TypeBase.theTypeBase).                                                    *)
 (*---------------------------------------------------------------------------*)
 
-fun induct_on_type st ty g = 
+fun induct_on_type st ty g =
  case TypeBase.fetch ty
-  of SOME facts => 
+  of SOME facts =>
      let val is_mutind_thm = is_conj o snd o strip_imp o snd o strip_forall o concl
-     in 
+     in
       case total TypeBasePure.induction_of facts
-       of NONE => raise ERR "induct_on_type" 
+       of NONE => raise ERR "induct_on_type"
                    (String.concat ["Type :",Hol_pp.type_to_string ty,
                     " is registed in the types database, ",
                     "but there is no associated induction theorem"])
         | SOME thm => (* now select induction tactic *)
            if null (TypeBasePure.constructors_of facts) (* not a datatype *)
              then HO_MATCH_MP_TAC thm else
-           if is_mutind_thm thm 
+           if is_mutind_thm thm
                then Mutual.MUTUAL_INDUCT_TAC thm
            else primInduct st (Prim_rec.INDUCT_THEN thm ASSUME_TAC)
      end g
   | NONE => raise ERR "induct_on_type"
             (String.concat ["Type: ",Hol_pp.type_to_string ty,
              " is not registered in the types database"]);
- 
-fun Induct_on qtm g = 
+
+fun Induct_on qtm g =
  let val st = find_subterm qtm g
      val tm = dest_tmkind st
      val ty = type_of (dest_tmkind st)
@@ -252,9 +252,9 @@ fun Induct_on qtm g =
   if rngty = Type.bool then (* inductive relation *)
    let val (c, _) = strip_comb tm
    in case Lib.total dest_thy_const c
-       of SOME {Thy,Name,...} => 
+       of SOME {Thy,Name,...} =>
            let val indth = Binarymap.find
-                            (IndDefLib.rule_induction_map(), 
+                            (IndDefLib.rule_induction_map(),
                              {Thy=Thy,Name=Name}) handle NotFound => []
            in
              MAP_FIRST HO_MATCH_MP_TAC indth ORELSE

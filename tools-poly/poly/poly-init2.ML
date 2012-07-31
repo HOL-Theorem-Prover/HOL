@@ -6,6 +6,10 @@ val _ = use "Holmake/Systeml.sml";
 
 local
 
+  fun die s = (TextIO.output(TextIO.stdErr, s ^ "\n");
+               TextIO.flushOut TextIO.stdErr;
+               raise Fail s)
+
   val redirected_files = ["mlibOmegaint.sml"];
 
   (* used to stand for "has double quote", but the same analysis is necessary
@@ -30,41 +34,46 @@ local
   fun unquote_to file1 file2 =
       systeml [HOLDIR ++ "bin" ++ "unquote", file1, file2];
 
+
+structure FS = OS.FileSys
+
 fun quse s = let
-  val _ = if OS.FileSys.access (s, [OS.FileSys.A_READ]) then ()
-          else let
-              val msg = "Use: non-existent file "^s
-            in
-              TextIO.output(TextIO.stdErr, msg ^ "\n");
-              raise Fail msg
-            end
+  fun mkHOLMK () =
+      if FS.access (".HOLMK", [FS.A_READ, FS.A_EXEC]) andalso FS.isDir ".HOLMK"
+      then ()
+      else
+        FS.mkDir ".HOLMK"
+        handle OS.SysErr (msg, _) =>
+               die ("Couldn't make .HOLMK directory: "^msg)
+  fun holtemp s = (mkHOLMK(); OS.Path.concat(".HOLMK", OS.Path.file s))
+
+  val _ = if FS.access (s, [FS.A_READ]) then ()
+          else die ("Use: non-existent file "^s)
 in
   if has_dq s then let
-      val filename = OS.FileSys.tmpName()
+      val filename = holtemp s
     in
       (if OS.Process.isSuccess (unquote_to s filename) then
-         (PolyML.use filename; OS.FileSys.remove filename)
-       else (TextIO.output(TextIO.stdOut,
-                           ("Failed to translate file: "^s^"\n"));
-             raise Fail "use"))
+         (PolyML.use filename; FS.remove filename)
+       else die ("Failed to handle quotations in file: "^s^"\n"))
       handle e => (try_remove filename; raise e)
     end
   else PolyML.use s
-end
+end handle OS.Path.Path => die ("Path exception in quse "^s)
 
 fun myuse f =
-  let val op ^ = OS.Path.concat
+  let val op ++ = OS.Path.concat
       val file = OS.Path.file f
       val pd = !PolyML.Compiler.printDepth
   in
     PolyML.print_depth 0;
     ((if List.exists (fn f => f = file) redirected_files then
-        quse (Systeml.HOLDIR ^ "tools-poly" ^ "poly" ^ "redirects" ^ file)
+        quse (Systeml.HOLDIR ++ "tools-poly" ++ "poly" ++ "redirects" ++ file)
       else
         quse f)
      handle e => (PolyML.print_depth pd; raise e));
     PolyML.print_depth pd
-  end;
+  end handle OS.Path.Path => die ("Path exception in myuse "^f)
 
 val loadPath : string list ref = ref [];
 
@@ -92,11 +101,12 @@ let val i = TextIO.openIn uo
       String.tokens (fn c => c = #"\n") (TextIO.inputAll i)
     val _ = TextIO.closeIn i
     fun loadOne f =
-      ((*print (modName ^ "\n");*)
-       case OS.Path.ext f of
+      (case OS.Path.ext f of
          SOME "sml" => myuse f
        | SOME "sig" => myuse f
-       | _ => load f) handle OS.Path.InvalidArc => raise Fail ("Invalid arc on "^f)
+       | _ => load f) handle OS.Path.InvalidArc => die ("Invalid arc exception in loading "^f)
+                           | OS.Path.Path => die ("Path exception in loading "^f)
+                           | OS.SysErr(msg,_) => die ("System error '"^msg^"' in loading "^f)
 in
   List.app loadOne files
 end
@@ -104,7 +114,7 @@ and load modPath =
 let val modName = OS.Path.file modPath;
     fun l ext =
       case findUo (modPath ^ ext) ("."::(!loadPath)) of
-        NONE => raise (Fail ("Cannot find file " ^ modPath ^ ext))
+        NONE => die ("Cannot find file " ^ modPath ^ ext)
       | SOME uo => loadUo uo modName;
 in
   if Binaryset.member (!loadedMods, modName) then
@@ -150,4 +160,3 @@ structure FileSys = OS.FileSys;
 exception Interrupt = SML90.Interrupt;
 exception Io = IO.Io;
 exception SysErr = OS.SysErr;
-

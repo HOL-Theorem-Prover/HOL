@@ -8,10 +8,10 @@ val _ = new_theory "dfa";
 
 val dfa_path_def = Define `
 (dfa_path trans start_state end_state [] = (start_state = end_state)) ∧
-(dfa_path trans start_state end_state ((c,state)::path) = 
+(dfa_path trans start_state end_state ((c,state)::path) =
   case FLOOKUP trans (start_state,c) of
     | NONE => F
-    | SOME new_state => 
+    | SOME new_state =>
         (new_state = state) ∧ dfa_path trans state end_state path)`;
 
 val dfa_path_ind = fetch "-" "dfa_path_ind";
@@ -28,7 +28,7 @@ metis_tac []);
 
 val dfa_path_extend = Q.store_thm ("dfa_path_extend",
 `!trans s1 s2 p c s3.
-  dfa_path trans s1 s2 p ∧ (FLOOKUP trans (s2,c) = SOME s3) 
+  dfa_path trans s1 s2 p ∧ (FLOOKUP trans (s2,c) = SOME s3)
   ⇒
   dfa_path trans s1 s3 (p++[(c,s3)])`,
 rw [dfa_path_append] >>
@@ -51,7 +51,7 @@ fs [dfa_path_def] >>
 rw []);
 
 val dfa_path_determ = Q.store_thm ("dfa_path_determ",
-`!trans s1 s2 p s2' p'. 
+`!trans s1 s2 p s2' p'.
   dfa_path trans s1 s2 p ∧ dfa_path trans s1 s2' p' ∧ (MAP FST p = MAP FST p')
   ⇒
   (p = p') ∧ (s2 = s2')`,

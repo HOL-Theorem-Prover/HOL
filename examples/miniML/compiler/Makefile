@@ -6,4 +6,4 @@ sed -i 's/LEAST/$$LEAST/g' $@ &&\
 sed -i 's/(o_f)/($$o_f)/g' $@ &&\
 sed -i 's/Hol \$$ Lib \$$ //g' $@ &&\
 sed -i '/(\* Syntax \*)/,/(\* Semantics \*)/d' $@ &&\
-sed -i '4 i open alistTheory CexpTypesTheory' $@
+sed -i '4 i open alistTheory CexpTypesTheory; val _ = intLib.deprecate_int();' $@

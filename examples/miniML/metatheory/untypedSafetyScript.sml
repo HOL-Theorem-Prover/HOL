@@ -9,7 +9,7 @@ val _ = new_theory "untypedSafety";
 
 val untyped_safety_exp_step = Q.prove (
 `∀envC env e c.
-  (e_step (envC, env, e, c) = Estuck) = 
+  (e_step (envC, env, e, c) = Estuck) =
   (c = []) ∧ ((?v. e = Val v) ∨ (?err. e = Exp (Raise err)))`,
 rw [e_step_def, continue_def, push_def, return_def] >>
 every_case_tac);
@@ -35,8 +35,8 @@ fs [e_step_reln_def] >>
 metis_tac [e_step_cenv_same]);
 
 val e_step_rtc_cenv_same = Q.store_thm("e_step_rtc_cenv_same",
-`!envC env e c envC' env' e' c'. 
-  e_step_reln^* (envC, env, e, c) (envC', env', e', c') 
+`!envC env e c envC' env' e' c'.
+  e_step_reln^* (envC, env, e, c) (envC', env', e', c')
   ⇒
   (envC = envC')`,
 metis_tac [e_step_rtc_cenv_same_lem]);
@@ -65,7 +65,7 @@ rw [e_diverges_def, METIS_PROVE [] ``x ∨ y = ~x ⇒ y``, e_step_reln_def] >>
 cases_on `e_step (cenv',env',e',c')` >>
 fs [untyped_safety_exp_step] >>
 `cenv = cenv'` by metis_tac [e_step_rtc_cenv_same] >|
-[PairCases_on `p` >> 
+[PairCases_on `p` >>
      fs [],
  qexists_tac `Rerr Rtype_error` >>
      rw [small_eval_def] >>

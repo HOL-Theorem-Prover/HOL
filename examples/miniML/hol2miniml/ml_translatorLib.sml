@@ -63,6 +63,13 @@ local
   val abbrev_counter = ref 0;
   val abbrev_defs = ref ([]:thm list);
 in
+  fun cert_reset () =
+    (module_name := "";
+     decl_abbrev := TRUTH;
+     decl_term   := ``[]:dec list``;
+     cert_memory := [];
+     (* abbrev_counter := 0; *)
+     abbrev_defs := [])
   fun map_cert_memory f = (cert_memory := map f (!cert_memory))
   fun get_names () = map (fn (n,_,_,_) => n) (!cert_memory)
   fun get_module_name () = let
@@ -215,6 +222,12 @@ local
   val type_memory = ref ([]:(hol_type * thm * (term * thm) list * thm) list)
   val all_eq_lemmas = ref (CONJUNCTS EqualityType_NUM_BOOL)
 in
+  fun type_reset () =
+    (type_mappings := [];
+     other_types := [];
+     preprocessor_rws := [];
+     type_memory := [];
+     all_eq_lemmas := (CONJUNCTS EqualityType_NUM_BOOL))
   fun dest_fun_type ty = let
     val (name,args) = dest_type ty
     in if name = "fun" then (el 1 args, el 2 args) else failwith("not fun type") end
@@ -431,6 +444,11 @@ local
       NONE => ()
     | SOME name => append_to_file "_thm.txt" ["\nThis translation extends '"^name^"'.\n"]
 in
+  fun print_reset () =
+    (base_filename := "";
+     prelude_decl_count := 0;
+     print_items := [];
+     prelude_name := NONE)
   fun init_printer name = let
     val _ = map clear_file files
     val _ = (prelude_name := SOME name)
@@ -466,13 +484,14 @@ local
     in () end;
   val finalised = ref false
 in
-  fun finialise_translation () =
+  fun finalise_reset () = (finalised := false)
+  fun finalise_translation () =
     if !finalised then () else let
       val _ = (finalised := true)
       val _ = pack_state ()
       val _ = print_translation_output ()
       in () end
-  val _ = Theory.register_onexport finialise_translation
+  val _ = Theory.register_onexport finalise_translation
   fun translation_extends name = let
     val _ = print ("Loading translation: " ^ name ^ " ... ")
     val _ = unpack_state name
@@ -1928,5 +1947,7 @@ fun mltDefine name q tac = let
   val _ = print "\n\n"
   in def end;
 
+fun reset_translation () =
+  (cert_reset(); type_reset(); print_reset(); finalise_reset());
 
 end

@@ -1,0 +1,13 @@
+INCLUDES = $(HOLDIR)/examples/machine-code/compiler $(HOLDIR)/examples/machine-code/decompiler $(HOLDIR)/examples/machine-code/hoare-triple $(HOLDIR)/examples/machine-code/instruction-set-models/common $(HOLDIR)/examples/machine-code/instruction-set-models/x86_64
+OPTIONS=QUIT_ON_FAILURE
+
+ifdef POLY
+HOLHEAP = miniml-heap
+EXTRA_CLEANS = $(HOLHEAP) $(HOLHEAP).o
+
+BARE_THYS = $(HOLDIR)/examples/machine-code/compiler/compilerLib
+DEPS = $(patsubst %,%.uo,$(BARE_THYS))
+
+$(HOLHEAP): $(DEPS)
+	$(protect $(HOLDIR)/bin/buildheap) -o $(HOLHEAP) $(BARE_THYS)
+endif

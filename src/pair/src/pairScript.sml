@@ -157,7 +157,7 @@ val PAIR_FST_SND_EQ = store_thm(
                 (SPEC ``q:'a # 'b`` ABS_PAIR_THM) THEN
   REWRITE_TAC [PAIR_EQ, FST, SND]);
 
-
+val SWAP_def = new_definition ("SWAP_def", ``SWAP a = (SND a, FST a)``)
 
 (*---------------------------------------------------------------------------*)
 (* CURRY and UNCURRY. UNCURRY is needed for terms of the form `\(x,y).t`     *)
@@ -649,11 +649,11 @@ val _ = adjoin_to_theory
    let val S = PP.add_string ppstrm
        fun NL() = PP.add_newline ppstrm
    in
-      S "val _ = let open computeLib";                            NL();
-      S "        in add_funs (map lazyfy_thm";                    NL();
-      S "              [CLOSED_PAIR_EQ, FST, SND,pair_case_thm,"; NL();
-      S "               CURRY_DEF,UNCURRY_DEF,PAIR_MAP_THM])";    NL();
-      S "        end;";                                           NL()
+      S "val _ = let open computeLib";                                   NL();
+      S "        in add_funs (map lazyfy_thm";                           NL();
+      S "              [CLOSED_PAIR_EQ,FST,SND,pair_case_thm,SWAP_def,"; NL();
+      S "               CURRY_DEF,UNCURRY_DEF,PAIR_MAP_THM])";           NL();
+      S "        end;";                                                  NL()
   end)};
 
 

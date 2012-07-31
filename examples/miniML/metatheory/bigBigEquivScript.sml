@@ -91,9 +91,9 @@ metis_tac [type_no_error, evaluate'_to_evaluate, evaluate_to_evaluate']);
 
 
 val evaluate_decs_to_evaluate_decs' = Q.prove (
-`!cenv env ds r. 
-  evaluate_decs cenv env ds r ⇒ 
-  (r ≠ Rerr Rtype_error) ⇒ 
+`!cenv env ds r.
+  evaluate_decs cenv env ds r ⇒
+  (r ≠ Rerr Rtype_error) ⇒
   evaluate_decs' cenv env ds r`,
 ho_match_mp_tac evaluate_decs_ind >>
 rw [] >>
@@ -102,8 +102,8 @@ rw [Once evaluate_decs'_cases] >>
 metis_tac [result_distinct, evaluate_to_evaluate', result_11]);
 
 val evaluate_decs'_to_evaluate_decs = Q.prove (
-`!cenv env ds r. 
-  evaluate_decs' cenv env ds r ⇒ 
+`!cenv env ds r.
+  evaluate_decs' cenv env ds r ⇒
   ¬evaluate_decs cenv env ds (Rerr Rtype_error) ⇒
   evaluate_decs cenv env ds r`,
 ho_match_mp_tac evaluate_decs'_ind >>
@@ -135,7 +135,7 @@ val evaluate_dec_evaluate_dec'_thm = Q.store_thm ("evaluate_dec_evaluate_dec'_th
   type_ds tenvC tenv ds tenvC' tenvE'
   ⇒
   (evaluate_decs' envC env ds r = evaluate_decs envC env ds r)`,
-metis_tac [type_no_error_dec, evaluate_decs'_to_evaluate_decs, 
+metis_tac [type_no_error_dec, evaluate_decs'_to_evaluate_decs,
            evaluate_decs_to_evaluate_decs']);
 
 val _ = export_theory ()

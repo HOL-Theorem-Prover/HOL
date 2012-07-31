@@ -65,7 +65,7 @@ type opb = Lt | Gt | Leq | Geq
 let opn_lookup n = match n with
   | Plus -> Int.(+)
   | Minus -> Int.(-)
-  | Times -> Int.( *)
+  | Times -> Int.( * )
   | Divide -> Int.(/)
   | Modulo -> Int.(%)
 end

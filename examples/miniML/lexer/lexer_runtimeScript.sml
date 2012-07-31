@@ -6,7 +6,7 @@ open lcsymtacs;
 open dfaTheory lexer_specTheory;
 
 val strcat_lem = Q.prove (
-`!s1 s2 s3 s4. 
+`!s1 s2 s3 s4.
   (STRLEN s1 = STRLEN s3) ∧ (STRCAT s1 s2 = STRCAT s3 s4)
   ⇒
   (s1 = s3) ∧
@@ -41,9 +41,9 @@ fs [] >>
 metis_tac []);
 
 val exists_split = Q.prove (
-`!P l. 
-  EXISTS P l 
-  ⇒ 
+`!P l.
+  EXISTS P l
+  ⇒
   ?l1 x l2. (l = l1 ++ [x] ++ l2) ∧ ~EXISTS P l1 ∧ P x`,
 induct_on `l` >>
 rw [] >|
@@ -65,7 +65,7 @@ val lexer_get_token_def = Define `
    case FLOOKUP transition (cur_state,c) of
      | NONE => prev_answer
      | SOME next_state =>
-         lexer_get_token transition finals next_state 
+         lexer_get_token transition finals next_state
            (c::cur_lexeme)
            (case FLOOKUP finals next_state of
               | NONE => prev_answer
@@ -75,20 +75,20 @@ val lexer_get_token_def = Define `
 val lexer_get_token_invariant_def = Define `
 lexer_get_token_invariant transition finals start state lexeme answer s =
   case answer of
-    | NONE => 
-        ∃path. 
+    | NONE =>
+        ∃path.
           dfa_path transition start state path ∧
           (REVERSE lexeme = MAP FST path) ∧
           EVERY (\extra_state. FLOOKUP finals extra_state = NONE) (MAP SND path)
     | SOME (answer_tok, answer_lexeme, answer_rest) =>
-        ∃intermediate_state answer_path path_extension. 
+        ∃intermediate_state answer_path path_extension.
           dfa_path transition start intermediate_state answer_path ∧
           dfa_path transition intermediate_state state path_extension ∧
           (REVERSE answer_lexeme = MAP FST answer_path) ∧
           (FLOOKUP finals intermediate_state = SOME answer_tok) ∧
           (REVERSE answer_lexeme ++ answer_rest = REVERSE lexeme ++ s) ∧
           (REVERSE lexeme = MAP FST (answer_path ++ path_extension)) ∧
-          EVERY (\extra_state. FLOOKUP finals extra_state = NONE) 
+          EVERY (\extra_state. FLOOKUP finals extra_state = NONE)
                 (MAP SND path_extension)`;
 
 val lexer_get_token_preserves_invariant = Q.prove (
@@ -111,19 +111,19 @@ fs [] >|
      metis_tac [dfa_path_extend],
  PairCases_on `x` >>
      fs [] >>
-     MAP_EVERY qexists_tac 
+     MAP_EVERY qexists_tac
                [`intermediate_state`, `answer_path`,
                 `path_extension++[(c,next_state)]`] >>
      rw [] >>
      metis_tac [dfa_path_extend],
-     MAP_EVERY qexists_tac 
+     MAP_EVERY qexists_tac
                [`next_state`, `path++[(c,next_state)]`, `[]`] >>
      rw [] >-
      metis_tac [dfa_path_extend] >>
      rw [dfa_path_def],
  PairCases_on `x'` >>
      fs [] >>
-     MAP_EVERY qexists_tac 
+     MAP_EVERY qexists_tac
                [`next_state`, `answer_path++path_extension++[(c,next_state)]`,
                 `[]`] >>
      rw [] >-
@@ -135,11 +135,11 @@ val lexer_get_token_invariant_initial = Q.prove (
   lexer_get_token_invariant transition finals start start "" NONE s`,
 rw [lexer_get_token_invariant_def, dfa_path_def] >>
 cases_on `FLOOKUP finals start` >>
-rw []); 
+rw []);
 
 val lexer_get_token_partial_correctness_lem1 = Q.prove (
-`!l1 l2 l3. 
-  (MAP FST l1 ++ l2 = MAP FST l3) ⇒ 
+`!l1 l2 l3.
+  (MAP FST l1 ++ l2 = MAP FST l3) ⇒
   ∃l4 l5. (l3 = l4 ++ l5) ∧ (l2 = MAP FST l5)`,
 Induct_on `l3` >>
 rw [] >>
@@ -179,7 +179,7 @@ metis_tac []);
 val lexer_get_token_partial_correctness = Q.prove (
 `∀transition finals start state lexeme answer s tok lexeme' s'.
   lexer_get_token_invariant transition finals start state lexeme answer s ∧
-  (lexer_get_token transition finals state lexeme answer s = 
+  (lexer_get_token transition finals state lexeme answer s =
    SOME (tok,lexeme',s'))
   ⇒
   ∃state path.
@@ -190,8 +190,8 @@ val lexer_get_token_partial_correctness = Q.prove (
     (∀path_extension state'.
       dfa_path transition state state' path_extension ∧
       (?s''. MAP FST path_extension ++ s'' = s')
-      ⇒ 
-      EVERY (\extra_state. FLOOKUP finals extra_state = NONE) 
+      ⇒
+      EVERY (\extra_state. FLOOKUP finals extra_state = NONE)
             (MAP SND path_extension))`,
 induct_on `s` >>
 rw [lexer_get_token_def] >>
@@ -209,7 +209,7 @@ rw [] >|
      `path_extension' = l4` by metis_tac [dfa_path_determ] >>
      rw [],
  fs [lexer_get_token_invariant_def] >>
-     `s' = MAP FST path_extension ++ [h] ++ s` 
+     `s' = MAP FST path_extension ++ [h] ++ s`
                 by metis_tac [APPEND_11, APPEND_ASSOC] >>
      rw [] >>
      MAP_EVERY qexists_tac [`intermediate_state`, `answer_path`] >>
@@ -246,7 +246,7 @@ val lexer_get_token_no_more_final = Q.prove (
   EVERY (λextra_state. FLOOKUP finals extra_state = NONE) (MAP SND path) ∧
   ((s = []) ∨ ((s = c::s') ∧ (FLOOKUP trans (state,c) = NONE)))
   ⇒
-  (lexer_get_token trans finals start lexeme answer (MAP FST path++s) = 
+  (lexer_get_token trans finals start lexeme answer (MAP FST path++s) =
    answer)`,
 recInduct dfa_path_ind >>
 rw [lexer_get_token_def] >>
@@ -301,11 +301,11 @@ val lexer_get_token_complete = Q.prove (
   (∀path_extension state'.
     dfa_path transition state state' path_extension ∧
     (?s'. MAP FST path_extension ++ s' = s)
-    ⇒ 
-    EVERY (\extra_state. FLOOKUP finals extra_state = NONE) 
+    ⇒
+    EVERY (\extra_state. FLOOKUP finals extra_state = NONE)
           (MAP SND path_extension))
   ⇒
-  (lexer_get_token transition finals start lexeme answer (MAP FST path++s) = 
+  (lexer_get_token transition finals start lexeme answer (MAP FST path++s) =
    SOME (tok, REVERSE (MAP FST path)++lexeme,s))`,
 recInduct dfa_path_ind >>
 rw [dfa_path_def] >>
@@ -330,7 +330,7 @@ rw [] >|
      fs [] >>
      metis_tac [lexer_get_token_no_more_final,APPEND_NIL],
  metis_tac [APPEND, APPEND_ASSOC]]);
-     
+
 val get_token_size_lem = Q.prove (
 `!trans finals start lexeme answer s tok lexeme' s'.
   ((answer = NONE) ∨ (?a b c. (answer = SOME (a,b,c)) ∧ b ≠ "")) ∧
@@ -370,12 +370,12 @@ val lexer_ind = fetch "-" "lexer_ind";
 
 val dfa_correct_def = Define `
 dfa_correct lexer_spec trans finals start =
-  ∀l t. 
+  ∀l t.
     (?p s.
       (l = MAP FST p) ∧ dfa_path trans start s p ∧ (FLOOKUP finals s = SOME t))
     =
     ∃n.
-      n < LENGTH lexer_spec ∧ 
+      n < LENGTH lexer_spec ∧
       (SND (EL n lexer_spec) = t) ∧
       (regexp_matches (FST (EL n lexer_spec)) l) ∧
       (∀n'. n' < n ⇒ ¬regexp_matches (FST (EL n' lexer_spec)) l)`;
@@ -394,24 +394,24 @@ fs []);
 
 val lexer_acc_thm2 = Q.prove (
 `!trans finals start s acc1 acc2 res x.
-  (lexer (trans,finals,start) s (acc1++acc2) = 
+  (lexer (trans,finals,start) s (acc1++acc2) =
     SOME (REVERSE (acc1++acc2) ++ res))
   ⇒
-  (lexer (trans,finals,start) s (acc1++x::acc2) = 
+  (lexer (trans,finals,start) s (acc1++x::acc2) =
     SOME (REVERSE (acc1++x::acc2)++res))`,
 recInduct lexer_ind >>
 rw [lexer_def] >>
 every_case_tac >>
 fs [] >>
-`?toks. REVERSE (acc ++acc2) ++ res = REVERSE (q (REVERSE q')::(acc++acc2)) ++ toks` 
+`?toks. REVERSE (acc ++acc2) ++ res = REVERSE (q (REVERSE q')::(acc++acc2)) ++ toks`
            by metis_tac [lexer_acc_thm] >>
 fs [] >>
 rw [] >>
 metis_tac [APPEND, APPEND_ASSOC]);
 
 val lexer_partial_correctness_lem1 = Q.prove (
-`!s1 l s2 s3. 
-  STRLEN s1 < LENGTH l ∧ (s1 ++ s2 = MAP FST l ++ s3) 
+`!s1 l s2 s3.
+  STRLEN s1 < LENGTH l ∧ (s1 ++ s2 = MAP FST l ++ s3)
   ⇒
   (?l' l''. (l = l' ++ l'') ∧ (s1 = MAP FST l'))`,
 induct_on `s1` >>
@@ -468,34 +468,34 @@ rw [] >|
  cases_on  `(EL n lexer_spec)` >>
      fs [] >>
      metis_tac [],
- `?n_min. 
-    (?r_min tok_min. 
-       n_min < LENGTH lexer_spec ∧ 
+ `?n_min.
+    (?r_min tok_min.
+       n_min < LENGTH lexer_spec ∧
        (EL n_min lexer_spec = (r_min,tok_min)) ∧
        regexp_matches r_min lexeme') ∧
-    (!n_min'. n_min' < n_min ⇒ 
-       ¬(?r_min tok_min. 
+    (!n_min'. n_min' < n_min ⇒
+       ¬(?r_min tok_min.
             (EL n_min' lexer_spec = (r_min,tok_min)) ∧
             regexp_matches r_min lexeme'))`
         by (imp_res_tac ((Q.SPEC `r` o
-                          SIMP_RULE (srw_ss()) 
+                          SIMP_RULE (srw_ss())
                               [METIS_PROVE [] ``(?x. P x) ⇒ Q = !x. P x ⇒ Q``] o
-                          Q.SPECL [`\n_min. ?r_min tok_min. 
-                                      n_min < LENGTH lexer_spec ∧ 
-                                      (EL n_min lexer_spec = (r_min,tok_min)) ∧ 
-                                      regexp_matches r_min lexeme'`, 
+                          Q.SPECL [`\n_min. ?r_min tok_min.
+                                      n_min < LENGTH lexer_spec ∧
+                                      (EL n_min lexer_spec = (r_min,tok_min)) ∧
+                                      regexp_matches r_min lexeme'`,
                                    `n'`])
                                   min_lem) >>
             qexists_tac `n''` >>
             rw [] >>
             metis_tac [arithmeticTheory.LESS_TRANS]) >>
      fs [] >>
-     `!n_min'. n_min' < n_min ⇒ ~regexp_matches (FST (EL n_min' lexer_spec)) lexeme'` 
+     `!n_min'. n_min' < n_min ⇒ ~regexp_matches (FST (EL n_min' lexer_spec)) lexeme'`
               by (rw [] >>
                   cases_on `EL n_min' lexer_spec` >>
                   rw [] >>
                   metis_tac []) >>
-     `?p s. 
+     `?p s.
        (lexeme' = MAP FST p) ∧ dfa_path trans start s p ∧
        (FLOOKUP finals s = SOME tok_min)`
                 by metis_tac [dfa_correct_def, FST, SND] >>
@@ -503,10 +503,10 @@ rw [] >|
      rw [] >>
      CCONTR_TAC >>
      fs [arithmeticTheory.NOT_LESS_EQUAL] >>
-     `?path' path_extension. 
-        (p = path' ++ path_extension) ∧ 
+     `?path' path_extension.
+        (p = path' ++ path_extension) ∧
         (LENGTH (REVERSE q') = LENGTH path')`
-             by metis_tac [LENGTH_MAP, LENGTH_REVERSE, 
+             by metis_tac [LENGTH_MAP, LENGTH_REVERSE,
                            lexer_partial_correctness_lem1] >>
      fs [] >>
      rw [] >>
@@ -583,7 +583,7 @@ fs [] >|
      cases_on `FLOOKUP trans (s''',x0)` >>
      fs [] >>
      rw [] >>
-     `dfa_path trans start s'' (p++l1++[(x0,s'')])` 
+     `dfa_path trans start s'' (p++l1++[(x0,s'')])`
              by metis_tac [dfa_path_extend, dfa_path_append] >>
      cases_on `FLOOKUP finals s''` >>
      fs [] >>
@@ -602,7 +602,7 @@ val lexer_correct = Q.store_thm ("lexer_correct",
   dfa_correct lexer_spec trans finals start
   ⇒
   (!s toks.
-     correct_lex lexer_spec s toks = 
+     correct_lex lexer_spec s toks =
      (lexer (trans,finals,start) s [] = SOME toks))`,
 metis_tac [lexer_complete, lexer_partial_correctness, APPEND, REVERSE_DEF]);
 

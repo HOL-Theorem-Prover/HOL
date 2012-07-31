@@ -12,7 +12,14 @@
 structure PFset_conv :> PFset_conv =
 struct
 
-open HolKernel Parse boolLib pred_setSyntax pred_setTheory;
+open HolKernel boolLib pred_setSyntax pred_setTheory;
+
+structure Parse =
+struct
+  open Parse
+  val (Type,Term) = parse_from_grammars pred_setTheory.pred_set_grammars
+end
+open Parse
 
 val ERR = mk_HOL_ERR "PFset_conv"
 
@@ -388,15 +395,17 @@ end;
 (*---------------------------------------------------------------------------*)
 
 local val SIGMA_EMPTY = CONJUNCT1 (SPEC_ALL SUM_IMAGE_THM)
-      val SIGMA_INSERT = Q.prove
-          (`!f s e. FINITE s ==>
-                  (SIGMA f (e INSERT s) =
-                     f e + (if e IN s then SIGMA f s - f e else SIGMA f s))`,
-           REPEAT STRIP_TAC THEN
-           IMP_RES_TAC (CONJUNCT2 (SPEC_ALL SUM_IMAGE_THM)) THEN
-           ASM_REWRITE_TAC[] THEN
-           IMP_RES_TAC SUM_IMAGE_DELETE THEN
-           ASM_REWRITE_TAC [])
+      val SIGMA_INSERT =
+          SUM_IMAGE_THM
+              |> SPEC_ALL
+              |> CONJUNCT2
+              |> SPEC_ALL
+              |> UNDISCH_ALL
+              |> REWRITE_RULE [SUM_IMAGE_DELETE |> SPEC_ALL |> UNDISCH_ALL]
+              |> DISCH_ALL
+              |> GEN (mk_var("e", alpha))
+              |> GEN (mk_var("s", alpha --> bool))
+              |> GEN (mk_var("f", alpha --> numSyntax.num))
 in
 fun SUM_IMAGE_CONV tm =
  let open numSyntax

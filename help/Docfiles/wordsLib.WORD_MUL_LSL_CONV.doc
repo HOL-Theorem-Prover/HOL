@@ -8,7 +8,8 @@ Conversion based on {WORD_MUL_LSL_ss}.
 
 \DESCRIBE
 
-The conversion {WORD_MUL_LSL_CONV} converts a multiplication by a word literal into a sum of left shifts.
+The conversion {WORD_MUL_LSL_CONV} converts a multiplication by a word literal
+into a sum of left shifts.
 
 \EXAMPLE
 {
@@ -18,6 +19,8 @@ The conversion {WORD_MUL_LSL_CONV} converts a multiplication by a word literal i
 
 \SEEALSO
 
-wordsLib.WORD_MUL_LSL_ss, wordsLib.WORD_ARITH_CONV, wordsLib.WORD_LOGIC_CONV, wordsLib.WORD_CONV, wordsLib.WORD_BIT_EQ_CONV, wordsLib.WORD_EVAL_CONV
+wordsLib.WORD_MUL_LSL_ss, wordsLib.WORD_DIV_LSR_CONV, wordsLib.WORD_ARITH_CONV,
+wordsLib.WORD_LOGIC_CONV, wordsLib.WORD_CONV, wordsLib.WORD_BIT_EQ_CONV,
+wordsLib.WORD_EVAL_CONV
 
 \ENDDOC

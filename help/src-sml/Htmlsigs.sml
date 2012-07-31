@@ -169,9 +169,26 @@ fun processSig db version bgcolor HOLpath SRCFILES sigfile htmlfile =
 	fun idhref_full link id =
 	    (out "<a href=\"file://"; out link; out "\">"; out id; out"</a>")
 
+        fun removeTrailingColon id =
+           let
+              val n = String.size id - 1
+           in
+              if 0 < n andalso String.sub (id, n) = #":"
+                 then String.substring (id, 0, n)
+              else id
+           end
+
+        val aliasStrName =
+           fn "FinalType" => "Type"
+            | "FinalTerm" => "Term"
+            | "FinalThm" => "Thm"
+            | "HolKernelDoc" => "HolKernel"
+            | s => s
+
         fun locate_docfile id =
            let open OS.FileSys OS.Path Database
-               val qualid = strName^"."^id
+               val id = removeTrailingColon id
+               val qualid = aliasStrName strName ^ "." ^ id
                fun trav [] = NONE
                  | trav({comp=Database.Term(x,SOME "HOL"),file,line}::rst)
                    = if x=qualid
@@ -179,9 +196,8 @@ fun processSig db version bgcolor HOLpath SRCFILES sigfile htmlfile =
                         else trav rst
                  | trav (_::rst) = trav rst
            in
-             trav (lookup(db,id))
+             Option.map (fn x => (x, id)) (trav (lookup(db,id)))
            end
-
 
 	fun declaration isThryFile lineno space1 decl kindtag =
 	    let open Substring
@@ -200,7 +216,9 @@ fun processSig db version bgcolor HOLpath SRCFILES sigfile htmlfile =
                       then if isThryFile then out id (* shouldn't happen *)
                            else case locate_docfile id
                                  of NONE => out id
-                                  | SOME file => idhref_full file id
+                                  | SOME (file, id2) =>
+                                      (idhref_full file id2
+                                       ; if id <> id2 then out ":" else ())
                       else idhref link id
                ;
 		outSubstr after

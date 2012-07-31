@@ -11,7 +11,7 @@ val res = translate sortingTheory.PART_DEF;
 val res = translate sortingTheory.PARTITION_DEF;
 val res = translate sortingTheory.QSORT_DEF;
 
-val _ = finialise_translation ();
+val _ = finalise_translation ();
 
 (* using the certificte theorem *)
 

@@ -91,6 +91,12 @@ val asterisk             = U 0x2217
 val circlestar           = U 0x235F
 val stardiaeresis        = U 0x2363
 
+(* quotation marks *)
+val ldquo = U 0x201C
+val lsquo = U 0x2018
+val rdquo = U 0x201D
+val rsquo = U 0x2019
+
 (* superscripts *)
 val sup_0 =      U 0x2070
 val sup_1 =      U 0x00B9
@@ -187,4 +193,3 @@ in
 end
 
 end (* struct *)
-

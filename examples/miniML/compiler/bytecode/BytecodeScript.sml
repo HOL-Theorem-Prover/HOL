@@ -42,14 +42,14 @@ val _ = Hol_datatype `
 (* --- Semantics --- *)
 
 (* move to lem *)
-(*val num_to_int : num -> int*)
+(*val int_of_num : num -> int*)
 (*val drop : forall 'a. num -> 'a list -> 'a list*)
 
  val bool_to_int_defn = Hol_defn "bool_to_int" `
 
-(bool_to_int T = & 1)
+(bool_to_int T = int_of_num 1)
 /\
-(bool_to_int F = & 0)`;
+(bool_to_int F = int_of_num 0)`;
 
 val _ = Defn.save_defn bool_to_int_defn;
 
@@ -82,12 +82,12 @@ val _ = Hol_datatype `
 
  val bc_fetch_aux_defn = Hol_defn "bc_fetch_aux" `
 
-(bc_fetch_aux [] len (n:num) =NONE)
+(bc_fetch_aux [] len (n:num) = NONE)
 /\
 (bc_fetch_aux (x::xs) len n =
-  if n= 0 then SOME x else
-    if n< len x+ 1 then NONE else
-      bc_fetch_aux xs len (n - (len x+ 1)))`;
+  if n = 0 then SOME x else
+    if n < len x + 1 then NONE else
+      bc_fetch_aux xs len (n - (len x + 1)))`;
 
 val _ = Defn.save_defn bc_fetch_aux_defn;
 
@@ -99,8 +99,8 @@ val _ = Define `
 
 val _ = Define `
  (bump_pc s = (case bc_fetch s of
- NONE => s
-|SOME x =>  s with<| pc := s.pc+ s.inst_length x+ 1 |>
+  NONE => s
+| SOME x =>  s with<| pc := s.pc + s.inst_length x + 1 |>
 ))`;
 
 
@@ -122,20 +122,20 @@ bc_stack_op (PushInt n) (xs) (Number n::xs))
 (! tag ys xs. T ==>
 bc_stack_op (Cons tag (LENGTH ys)) (ys++xs) (Block tag (REVERSE ys)::xs))
 /\
-(! k xs. k< LENGTH xs ==>
+(! k xs. k < LENGTH xs ==>
 bc_stack_op (Load k) xs (EL  k  xs::xs))
 /\
 (! y ys x xs. T ==>
 bc_stack_op (Store (LENGTH ys)) (y::ys++x::xs) (ys++y::xs))
 /\
-(! k tag ys xs. k< LENGTH ys ==>
+(! k tag ys xs. k < LENGTH ys ==>
 bc_stack_op (El k) ((Block tag ys)::xs) (EL  k  ys::xs))
 /\
 (! t tag ys xs. T ==>
-bc_stack_op (TagEq t) ((Block tag ys)::xs) (Number (bool_to_int (tag= t))::xs))
+bc_stack_op (TagEq t) ((Block tag ys)::xs) (Number (bool_to_int (tag = t))::xs))
 /\
 (! x2 x1 xs. T ==>
-bc_stack_op Equal (x2::x1::xs) (Number (bool_to_int (x1= x2))::xs))
+bc_stack_op Equal (x2::x1::xs) (Number (bool_to_int (x1 = x2))::xs))
 /\
 (! n m xs. T ==>
 bc_stack_op Less (Number n::Number m::xs) (Number (bool_to_int (int_lt m n))::xs))
@@ -149,65 +149,81 @@ bc_stack_op Sub  (Number n::Number m::xs) (Number ((int_sub) m n)::xs))
 (! n m xs. T ==>
 bc_stack_op Mult (Number n::Number m::xs) (Number (int_mul m n)::xs))
 /\
-(! n m xs.~  (n= & 0) ==>
+(! n m xs. ~  (n = int_of_num 0) ==>
 bc_stack_op Div  (Number n::Number m::xs) (Number (int_div m n)::xs))
 /\
-(! n m xs.~  (n= & 0) ==>
+(! n m xs. ~  (n = int_of_num 0) ==>
 bc_stack_op Mod  (Number n::Number m::xs) (Number (int_mod m n)::xs))`;
 
 val _ = Hol_reln `
-(! s b ys.(
-bc_fetch s=SOME (Stack b))/\ bc_stack_op b (s.stack) ys
+(! s b ys.
+(bc_fetch s = SOME (Stack b))
+/\ bc_stack_op b (s.stack) ys
 ==>
 bc_next s (bump_pc s with<| stack := ys|>)) (* parens throughout: lem sucks *)
 /\
 (! s n.
-(bc_fetch s=SOME (Jump n)) (* parens: ugh...*)
+(bc_fetch s = SOME (Jump n)) (* parens: ugh...*)
 ==>
 bc_next s (s with<| pc := n|>))
 /\
-(! s n x xs s'.(
-bc_fetch s=SOME (JumpNil n))/\ (s.stack= Number x::xs)/\ (s'= (s with<| stack := xs|>))
+(! s n x xs s'.
+(bc_fetch s = SOME (JumpNil n))
+/\ (s.stack = Number x::xs)
+/\ (s' = (s with<| stack := xs|>))
 ==>
-bc_next s (if x= & 0 then bump_pc s' else s' with<| pc := n|>))
+bc_next s (if x = int_of_num 0 then bump_pc s' else s' with<| pc := n|>))
 /\
-(! s n x xs.(
-bc_fetch s=SOME (Call n))/\ (s.stack= x::xs)
+(! s n x xs.
+(bc_fetch s = SOME (Call n))
+/\ (s.stack = x::xs)
 ==>
 bc_next s (s with<| pc := n; stack := x::CodePtr ((bump_pc s).pc)::xs|>))
 /\
-(! s ptr x xs.(
-bc_fetch s=SOME CallPtr)/\ (s.stack= CodePtr ptr::x::xs)
+(! s ptr x xs.
+(bc_fetch s = SOME CallPtr)
+/\ (s.stack = CodePtr ptr::x::xs)
 ==>
 bc_next s (s with<| pc := ptr; stack := x::CodePtr ((bump_pc s).pc)::xs|>))
 /\
-(! s ptr xs.(
-bc_fetch s=SOME JumpPtr)/\ (s.stack= CodePtr ptr::xs)
+(! s ptr xs.
+(bc_fetch s = SOME JumpPtr)
+/\ (s.stack = CodePtr ptr::xs)
 ==>
 bc_next s (s with<| pc := ptr; stack := xs|>))
 /\
-(! s x n xs.(
-bc_fetch s=SOME Return)/\ (s.stack= x::CodePtr n::xs)
+(! s x n xs.
+(bc_fetch s = SOME Return)
+/\ (s.stack = x::CodePtr n::xs)
 ==>
 bc_next s (s with<| pc := n; stack := x::xs|>))
 /\
-(! s p m es x xs.(
-bc_fetch s=SOME Exception)/\ (s.stack= x::xs)/\ (s.exstack= (p,m)::es)/\ m<= LENGTH xs
+(! s p m es x xs.
+(bc_fetch s = SOME Exception)
+/\ (s.stack = x::xs)
+/\ (s.exstack = (p,m)::es)
+/\ m <= LENGTH xs
 ==>
 bc_next s (s with<| pc := p; stack := x::DROP (LENGTH xs - m) xs|>))
 /\
-(! s x xs ptr.(
-bc_fetch s=SOME Ref)/\ (s.stack= x::xs)/\~  ( ptr IN FDOM  s.refs)
+(! s x xs ptr.
+(bc_fetch s = SOME Ref)
+/\ (s.stack = x::xs)
+/\ ~  ( ptr IN FDOM  s.refs)
 ==>
 bc_next s (bump_pc s with<| stack := (RefPtr ptr)::xs; refs := FUPDATE  s.refs ( ptr, x)|>))
 /\
-(! s ptr xs.(
-bc_fetch s=SOME Deref)/\ (s.stack= (RefPtr ptr)::xs)/\  ptr IN FDOM  s.refs
+(! s ptr xs.
+(bc_fetch s = SOME Deref)
+/\ (s.stack = (RefPtr ptr)::xs)
+/\  ptr IN FDOM  s.refs
 ==>
 bc_next s (bump_pc s with<| stack := FAPPLY  s.refs  ptr::xs|>))
 /\
-(! s x ptr xs.(
-bc_fetch s=SOME Update)/\ (s.stack= x::(RefPtr ptr)::xs)/\  ptr IN FDOM  s.refs
+(! s x ptr xs.
+(bc_fetch s = SOME Update)
+/\ (s.stack = x::(RefPtr ptr)::xs)
+/\  ptr IN FDOM  s.refs
 ==>
 bc_next s (bump_pc s with<| stack := xs; refs := FUPDATE  s.refs ( ptr, x)|>))`;
 val _ = export_theory()

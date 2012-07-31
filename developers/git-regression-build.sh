@@ -125,7 +125,9 @@ esac
  then
      cat update-log
  else
-     echo "git pull failed - continuing anyway."
+     echo "git pull failed - "
+     (while read line ; do echo "  $line" ; done) < update-log 
+     echo "continuing anyway"
  fi &&
  echo "-- Configuration Description Ends --" &&
  echo &&
