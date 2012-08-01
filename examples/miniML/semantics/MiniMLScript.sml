@@ -5,16 +5,16 @@ open set_relationTheory sortingTheory stringTheory wordsTheory
 
 val _ = new_theory "MiniML"
 
-(* By Scott Owens, University of Cambridge, Copyright 2011
+(* By Scott Owens, University of Cambridge, Copyright 2011, 2012
  *
- * Miniml is my idea of the simplest ML-like language that remains convenient
- * to program in.  It is almost purely functional (no refs or handled
- * exceptions), has no modules, no type abbreviations, or record types.  It
- * does have mutually recursive datatypes (at the top-level only) and
- * functions, as well as higher-order functions.  It also supports pattern
- * matching for nested patterns (which can fail due to non-exhaustive
- * patterns).  Only booleans and number types are built-in.  Syntactic sugar is
- * generally omitted.
+ * MiniML is my idea of the simplest ML-like language that remains convenient to
+ * program in.  It is almost purely functional (no refs or handled exceptions),
+ * has no modules, no type abbreviations, or record types.  It does have
+ * mutually recursive datatypes (at the top-level only) and functions, as well
+ * as higher-order functions.  It also supports pattern matching for nested
+ * patterns (which can fail due to non-exhaustive patterns).  Polymorphism is
+ * limited to top-level definitions.  Only booleans and number types are
+ * built-in.  Syntactic sugar is generally omitted.
  *
  * In some ways it makes more sense to write these kind of semantics in Ott (to
  * get a presentation that looks like ML concrete-syntax-wise, and that has the
@@ -24,9 +24,8 @@ val _ = new_theory "MiniML"
  * relations.
  *
  * The small-step operational semantics is based on the CEK machine.  The type
- * system is typical, but it doesn't yet support polymorphism.  The big step
- * semantics is also typical.  The small-step and big-step semantics agree even
- * on untyped programs. *)
+ * system is typical.  The big step semantics is also typical.  The small-step
+ * and big-step semantics agree even on untyped programs. *)
 
 (*val i : num -> Int.int*)
 
@@ -1104,9 +1103,8 @@ val _ = Defn.save_defn deBruijn_inc_defn;
 val _ = Defn.save_defn lookup_var_defn;
 
 (* A pattern matches values of a certain type and extends the type environment
- * with the pattern's binders.  The pattern's type does not depend on the input
- * environment *)
-(*val type_p : tenvC -> tenvE -> pat -> t -> tenvE -> bool*)
+ * with the pattern's binders. *)
+(*val type_p : tenvC -> pat -> t -> (varN * t) list -> bool*)
 
 (* An expression has a type *)
 (*val type_e : tenvC -> tenvE -> exp -> t -> bool*)
@@ -1254,49 +1252,49 @@ val _ = Defn.save_defn bind_var_list_defn;
 
 val _ = Hol_reln `
 
-(! cenv tenv n t.
+(! cenv n t.
 check_freevars T [] t
 ==>
-type_p cenv tenv (Pvar n) t (Var_bind 0 n t tenv))
+type_p cenv (Pvar n) t [(n,t)])
 
 /\
 
-(! cenv tenv b.
+(! cenv b.
 T
 ==>
-type_p cenv tenv (Plit (Bool b)) Tbool tenv)
+type_p cenv (Plit (Bool b)) Tbool [])
 
 /\
 
-(! cenv tenv n.
+(! cenv n.
 T
 ==>
-type_p cenv tenv (Plit (IntLit n)) Tnum tenv)
+type_p cenv (Plit (IntLit n)) Tnum [])
 
 /\
 
-(! cenv tenv cn ps ts tvs tn ts' tenv'.
+(! cenv cn ps ts tvs tn ts' tenv.
 EVERY (check_freevars T []) ts' /\
 (LENGTH ts' = LENGTH tvs) /\
-type_ps cenv tenv ps (MAP (type_subst (ZIP ( tvs, ts'))) ts) tenv' /\
+type_ps cenv ps (MAP (type_subst (ZIP ( tvs, ts'))) ts) tenv /\
 (lookup cn cenv = SOME (tvs, ts, tn))
 ==>
-type_p cenv tenv (Pcon cn ps) (Tapp ts' tn) tenv')
+type_p cenv (Pcon cn ps) (Tapp ts' tn) tenv)
 
 /\
 
-(! cenv tenv.
+(! cenv .
 T
 ==>
-type_ps cenv tenv [] [] tenv)
+type_ps cenv [] [] [])
 
 /\
 
-(! cenv tenv p ps t ts tenv' tenv''.
-type_p cenv tenv p t tenv' /\
-type_ps cenv tenv' ps ts tenv''
+(! cenv p ps t ts tenv tenv'.
+type_p cenv p t tenv /\
+type_ps cenv ps ts tenv'
 ==>
-type_ps cenv tenv (p::ps) (t::ts) tenv'')`;
+type_ps cenv (p::ps) (t::ts) (tenv++tenv'))`;
 
 val _ = Hol_reln `
 
@@ -1377,25 +1375,27 @@ type_e cenv tenv (If e1 e2 e3) t)
 type_e cenv tenv e t1 /\
 (! ((p,e) :: LIST_TO_SET pes) tenv'.
    ALL_DISTINCT (pat_bindings p []) /\
-   type_p cenv tenv p t1 tenv' /\
-   type_e cenv tenv' e t2)
+   type_p cenv p t1 tenv' /\
+   type_e cenv (bind_var_list 0 tenv' tenv) e t2)
 ==>
 type_e cenv tenv (Mat e pes) t2)
 
 /\
 
-(! cenv tenv levels n e1 e2 t1 t2.
-type_e cenv (Tvar_bind levels tenv) e1 t1 /\
+(* Don't do let-polymorphism for nested expressions *)
+(! cenv tenv n e1 e2 t1 t2.
+type_e cenv tenv e1 t1 /\
 check_freevars T [] t1 /\
-type_e cenv (Var_bind levels n t1 tenv) e2 t2
+type_e cenv (Var_bind 0 n t1 tenv) e2 t2
 ==>
 type_e cenv tenv (Let n e1 e2) t2)
 
 /\
 
-(! cenv tenv funs e t tenv' levels.
-type_funs cenv (bind_var_list 0 tenv' (Tvar_bind levels tenv)) funs tenv' /\
-type_e cenv (bind_var_list levels tenv' tenv) e t
+(* Don't do let-polymorphism for nested expressions *)
+(! cenv tenv funs e t tenv'.
+type_funs cenv (bind_var_list 0 tenv' tenv) funs tenv' /\
+type_e cenv (bind_var_list 0 tenv' tenv) e t
 ==>
 type_e cenv tenv (Letrec funs e) t)
  
@@ -1433,12 +1433,12 @@ type_funs cenv env ((fn, n, e)::funs) ((fn, Tfn t1 t2)::env'))`;
 
 val _ = Hol_reln `
 
-(! cenv tenv p e t tenv'.
+(! levels cenv tenv p e t tenv'.
 ALL_DISTINCT (pat_bindings p []) /\
-type_p cenv tenv p t tenv' /\
-type_e cenv tenv e t
+type_p cenv p t tenv' /\
+type_e cenv (Tvar_bind levels tenv) e t
 ==>
-type_d cenv tenv (Dlet p e) emp tenv')
+type_d cenv tenv (Dlet p e) emp (bind_var_list levels tenv' tenv))
 
 /\
 
@@ -1557,14 +1557,7 @@ type_v cenv v t /\
 check_freevars T [] t /\
 type_env cenv env tenv
 ==>
-type_env cenv (bind n v env) (Var_bind levels n t tenv))
-
-/\
-
-(! cenv env tenv n.
-type_env cenv env tenv
-==>
-type_env cenv env (Tvar_bind n tenv))`;
+type_env cenv (bind n v env) (Var_bind levels n t tenv))`;
 
 val _ = Hol_reln `
 
@@ -1602,8 +1595,8 @@ type_ctxt cenv tenv (Cif () e1 e2) Tbool t)
 (! cenv tenv t1 t2 pes.
 (! ((p,e) :: LIST_TO_SET pes) tenv'.
    ALL_DISTINCT (pat_bindings p []) /\
-   type_p cenv tenv p t1 tenv' /\
-   type_e cenv tenv' e t2)
+   type_p cenv p t1 tenv' /\
+   type_e cenv (bind_var_list 0 tenv' tenv) e t2)
 ==>
 type_ctxt cenv tenv (Cmat () pes) t1 t2)
 
@@ -1676,8 +1669,8 @@ type_d_state tenvC (envC, env, ds, NONE) tenvC' tenv')
 type_env tenvC env tenv /\
 type_state tenvC (envC,env',e,c) t /\
 ALL_DISTINCT (pat_bindings p []) /\
-type_p tenvC tenv p t tenv' /\
-type_ds tenvC tenv' ds tenvC' tenv''
+type_p tenvC p t tenv' /\
+type_ds tenvC (bind_var_list 0 tenv' tenv) ds tenvC' tenv''
 ==>
 type_d_state tenvC (envC, env, ds, SOME (p, (envC,env',e,c))) tenvC' tenv'')`;
 
