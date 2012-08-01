@@ -112,5 +112,12 @@ struct
         List.app (temp_OpenTheory_const_name0 src) l2
       end
   val _ = map onload (Theory.ancestry "-")
-  val _ = Theory.register_onload onload
+  fun otmap td = let
+    open TheoryDelta
+  in
+    case td of
+      TheoryLoaded s => onload s
+    | _ => ()
+  end
+  val _ = Theory.register_hook ("OpenTheory.onload", otmap)
 end

@@ -666,7 +666,11 @@ struct
 
   val _ = traceset 1
 
-  val _ = Theory.register_onload (fn s => lift ProvideUnicode.apply_thydata s)
+  val _ = Theory.register_hook
+              ("Parse.ProvideUnicode",
+               (fn TheoryDelta.TheoryLoaded s =>
+                   lift ProvideUnicode.apply_thydata s
+                 | _ => ()))
 
 end
 
@@ -1512,7 +1516,12 @@ val _ = let
 in
   Theory.pp_thm := rawpp_thm
 end
-val _ = Theory.after_new_theory setup_grammars;
+
+val _ = Theory.register_hook
+            ("Parse.setup_grammars",
+             (fn TheoryDelta.NewTheory{oldseg,newseg} =>
+                 setup_grammars(oldseg, newseg)
+               | _ => ()))
 
 
 fun export_theorems_as_docfiles dirname thms = let
@@ -1615,8 +1624,12 @@ val TOK = term_grammar.RE o term_grammar.TOK
     term_grammar_changed := true
   end
 
-  val _ = after_new_theory
-          (fn (old, new) => if old = new then clear_thy_consts_from_grammar old
-                            else ())
+  val _ = Theory.register_hook
+              ("Parse.clear_consts_from_grammar",
+               fn TheoryDelta.NewTheory{oldseg,newseg} =>
+                  if oldseg = newseg then
+                    clear_thy_consts_from_grammar oldseg
+                  else ()
+                | _ => ())
 
 end

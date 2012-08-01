@@ -78,6 +78,10 @@ struct
 
   val _ = map onload (ancestry "-")
 
-  val _ = Theory.register_onload onload
+  val _ = Theory.register_hook
+          ("TexTokenMap.onload",
+           fn TheoryDelta.TheoryLoaded s => onload s
+            | _ => ())
+
 
 end (* struct *)

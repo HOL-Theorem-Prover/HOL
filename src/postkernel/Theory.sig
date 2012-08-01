@@ -42,7 +42,12 @@ sig
 
   val adjoin_to_theory   : thy_addon -> unit
   val export_theory      : unit -> unit
-  val after_new_theory   : (string * string -> unit) -> unit
+
+(* Make hooks available so that theory changes can be seen by
+   "interested parties" *)
+  val register_hook : string * (TheoryDelta.t -> unit) -> unit
+  val delete_hook : string -> unit
+  val get_hooks : unit -> (string * (TheoryDelta.t -> unit)) list
 
 (* -- and persistent data added to theories *)
   structure LoadableThyData : sig
@@ -60,13 +65,6 @@ sig
                                data : string} -> unit
     (* updates segment data using an encoded string *)
   end
-
-(* Register functions to be called before a theory is exported *)
-  val register_onexport : (unit -> unit) -> unit
-
-(* Register functions to be called after a theory loads *)
-  val register_onload : (string -> unit) -> unit
-  val load_complete : string -> unit
 
 (* Freshness information on HOL objects *)
 
@@ -91,5 +89,12 @@ sig
   val store_definition   : string * thm -> thm
   val incorporate_consts : string -> hol_type Vector.vector ->
                            (string*int) list -> unit
+  (* Theory files (which are just SML source code) call this function as
+     the last thing done when they load.  This will in turn cause a
+     TheoryDelta event to be sent to all registered listeners *)
+  val load_complete : string -> unit
+
+
+
 
 end

@@ -923,7 +923,9 @@ fun onload thyname =
         thy_ssfrags := Binarymap.insert(!thy_ssfrags, thyname, ssfrag);
         augment_srw_ss [ssfrag]
       end
-val _ = register_onload onload
+val _ = register_hook ("BasicProvers.srw_ss.onload",
+                       (fn TheoryDelta.TheoryLoaded s => onload s
+                         | _ => ()))
 
 val _ = List.app onload (ancestry "-")
 

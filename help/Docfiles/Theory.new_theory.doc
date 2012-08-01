@@ -9,22 +9,22 @@ Creates a new theory segment.
 A theory consists of a hierarchy of named parts called `theory
 segments'. All theory segments have a `theory' of the
 same name associated with them consisting of the theory segment itself
-together with the contents of all its ancestors.  Each axiom, 
-definition, specification and theorem belongs to a particular 
+together with the contents of all its ancestors.  Each axiom,
+definition, specification and theorem belongs to a particular
 theory segment.
 
 Calling {new_theory thy} creates a new, and empty, theory segment
 having name {thy}. The theory segment which was current before the
-call becomes a parent of the new theory segment. The new theory 
-therefore consists of the current theory extended with the new 
-theory segment. The new theory segment replaces its parent as the 
+call becomes a parent of the new theory segment. The new theory
+therefore consists of the current theory extended with the new
+theory segment. The new theory segment replaces its parent as the
 current theory segment. The parent segment is exported to disk.
 
 In the interests of interactive usability, the behaviour of {new_theory}
-has some special cases. First, if {new_theory thy} is called in 
+has some special cases. First, if {new_theory thy} is called in
 a situation where the current theory segment is already called {thy},
 then this is interpreted as the user wanting to restart the current
-segment. In that case, the current segment is wiped clean 
+segment. In that case, the current segment is wiped clean
 (types and constants declared in it are removed from the signature, and
 all definitions, theorems and axioms are deleted) but is otherwise
 unchanged (it keeps the same parents, for example).
@@ -35,7 +35,7 @@ are the parents of {"scratch"}. (This situation is almost never visible
 to users.)
 
 \FAILURE
-A call {new_theory thy} fails if the name {thy} is unsuitable for 
+A call {new_theory thy} fails if the name {thy} is unsuitable for
 use as a filename. In particular, it should be an alphanumeric
 identifier.
 
@@ -61,15 +61,15 @@ declare a new theory segment.
    - parents "-";
    > val it = ["list", "option"] : string list
 }
-Next we make a definition, prove and store a theorem, and 
-then change our mind about the name of the defined constant. Restarting 
+Next we make a definition, prove and store a theorem, and
+then change our mind about the name of the defined constant. Restarting
 the current theory keeps the static theory context fixed but clears
 the current segment so that we have a clean slate to work from.
 {
    - val def = new_definition("foo", Term `foo x = x + x`);
    > val def = |- !x. foo x = x + x : thm
 
-   val thm = Q.store_thm("foo_thm", `foo x = 2 * x`, 
+   val thm = Q.store_thm("foo_thm", `foo x = 2 * x`,
                                     RW_TAC arith_ss [def]);
    > val thm = |- foo x = 2 * x : thm
 
@@ -81,28 +81,26 @@ the current segment so that we have a clean slate to work from.
    > val def = |- !x. twice x = x + x : thm
 
    - curr_defs();
-   > val it = [("twice", |- !x. twice x = x + x)] 
+   > val it = [("twice", |- !x. twice x = x + x)]
               : (string * thm) list
 }
 
 
 \COMMENTS
 The theory file in which the data of the new theory segment is
-ultimately stored will have name {thyTheory} in the directory 
+ultimately stored will have name {thyTheory} in the directory
 in which {export_theory} is called.
 
 \USES
-Modularizing large formalizations. By splitting a formalization 
-effort into theory segments by use of {new_theory}, the work 
-required if definitions, etc., need to be changed is minimized. 
+Modularizing large formalizations. By splitting a formalization
+effort into theory segments by use of {new_theory}, the work
+required if definitions, etc., need to be changed is minimized.
 Only the associated segment and its descendants need be redefined.
 
 \SEEALSO
 Theory.current_theory, Theory.new_axiom, Theory.parents,
-boolSyntax.new_binder, Theory.new_constant, 
-Definition.new_definition, boolSyntax.new_infix, 
-Definition.new_specification, Theory.new_type, 
-DB.print_theory, Theory.save_thm, Theory.export_theory,
-Theory.after_new_theory.
-
+boolSyntax.new_binder, Theory.new_constant,
+Definition.new_definition, boolSyntax.new_infix,
+Definition.new_specification, Theory.new_type,
+DB.print_theory, Theory.save_thm, Theory.export_theory.
 \ENDDOC

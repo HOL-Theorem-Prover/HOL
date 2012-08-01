@@ -68,5 +68,5 @@ of an ML variable {pair_rws} to the structure {pairTheory}.
 The {PP} structure is documented in the MoscowML library documentation.
 
 \SEEALSO
-Theory.after_new_theory, Theory.thy_addon, BasicProvers.export_rewrites.
+Theory.thy_addon, BasicProvers.export_rewrites.
 \ENDDOC

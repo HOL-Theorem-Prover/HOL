@@ -56,15 +56,17 @@ end
 
 fun new_exporter name addfn = let
   val (mk,dest) = new name
-  open LoadableThyData
+  open LoadableThyData TheoryDelta
   fun onload thyname =
-    case segment_data {thy = thyname, thydataty = name} of
-      NONE => ()
-    | SOME d => let
-        val thms = valOf (dest d)
-      in
-        addfn (map #2 thms)
-      end
+      case segment_data {thy = thyname, thydataty = name} of
+        NONE => ()
+      | SOME d => let
+          val thms = valOf (dest d)
+        in
+          addfn (map #2 thms)
+        end
+  fun hook (TheoryLoaded s) = onload s
+    | hook _ = ()
   fun export s = let
     val (data, namedthms) = mk [s]
     val thms = map #2 namedthms
@@ -73,7 +75,7 @@ fun new_exporter name addfn = let
     write_data_update {thydataty = name, data = data}
   end
 in
-  register_onload onload;
+  register_hook ("ThmSetData.onload." ^ name, hook);
   List.app onload (ancestry "-");
   {export = export, mk = mk, dest = dest}
 end

@@ -64,6 +64,64 @@ val WARN = HOL_WARNING "Theory";
 type thy_addon = {sig_ps    : (ppstream -> unit) option,
                   struct_ps : (ppstream -> unit) option}
 
+local
+  val hooks =
+    (* hooks are stored in the order they are registered, with later
+       hooks earlier in the list. *)
+      ref ([] : (string * (TheoryDelta.t -> unit)) list)
+in
+fun call_hooks td = let
+  val hooks_rev = List.rev (!hooks)
+  fun protect nm (f:TheoryDelta.t -> unit) td = let
+    fun error_pfx() =
+        "Hook "^nm^" failed on event " ^ TheoryDelta.toString td
+  in
+    f td
+    handle e as HOL_ERR {origin_function,origin_structure,message} =>
+           Feedback.HOL_WARNING
+               "Theory"
+               "callhooks"
+               (error_pfx() ^ " with problem " ^
+                Feedback.exn_to_string e)
+         | Match =>
+           Feedback.HOL_WARNING
+               "Theory"
+               "callhooks"
+               (error_pfx() ^ " with a Match exception")
+  end
+  fun recurse l =
+      case l of
+        [] => ()
+      | (nm, f) :: rest => let
+        in
+          protect nm f td;
+          recurse rest
+        end
+in
+  recurse (List.rev (!hooks))
+end
+
+fun register_hook (nm, f) = let
+  val hooks0 = !hooks
+  val hooks0 = List.filter (fn (nm',f) => nm' <> nm) hooks0
+in
+  hooks := ((nm,f) :: hooks0)
+end
+
+fun delete_hook nm = let
+  val (deleting, remaining) =
+      Lib.partition (fn (nm', _) => nm' = nm) (!hooks)
+in
+  case deleting of
+    [] => HOL_WARNING "Theory" "delete_hook" ("No hook with name: "^nm)
+  | _ => ();
+  hooks := remaining
+end
+
+fun get_hooks () = !hooks
+
+
+end (* local block enclosing declaration of hooks variable *)
 
 (* This reference is set in course of loading the parsing library *)
 
@@ -703,9 +761,6 @@ val new_theory_time = ref (total_cpu (Timer.checkCPUTimer Globals.hol_clock))
 val report_times = ref true
 val _ = Feedback.register_btrace ("report_thy_times", report_times)
 
-val onexportfns = ref ([] : (unit -> unit) list)
-fun register_onexport f = (onexportfns := !onexportfns @ [f])
-
 local
   val mesg = Lib.with_flag(Feedback.MESG_to_string, Lib.I) HOL_MESG
   fun maybe_log_time_to_disk thyname timestr = let
@@ -730,10 +785,10 @@ local
   end
 in
 fun export_theory () = let
-  val _ = List.app (fn f => f ()) (!onexportfns)
   val {thid,facts,adjoin,thydata} = scrubCT()
   val concat = String.concat
   val thyname = thyid_name thid
+  val _ = call_hooks (TheoryDelta.ExportTheory thyname)
   val name = thyname^"Theory"
   val (A,D,T) = unkind facts
   val (sig_ps, struct_ps) = unadjzip adjoin ([],[])
@@ -828,40 +883,15 @@ end;
     "on load" stuff
    ---------------------------------------------------------------------- *)
 
-val onloadfns = ref ([] : (string -> unit) list)
-fun register_onload f = (onloadfns := !onloadfns @ [f])
-
-fun load_complete thyname = List.app (fn f => f thyname) (!onloadfns)
+fun load_complete thyname =
+    call_hooks (TheoryDelta.TheoryLoaded thyname)
 
 
-(*---------------------------------------------------------------------------*
- *    Allocate a new theory segment over an existing one. After              *
- *    that, initialize any registered packages. A package registers          *
- *    with a call to "after_new_theory".                                     *
- *---------------------------------------------------------------------------*)
-
-local val initializers = ref [] : (string * string -> unit) list ref
-in
-fun after_new_theory f = (initializers := f :: !initializers)
-fun initialize oldname =
-  let val ct = current_theory()
-      fun rev_app [] = ()
-        | rev_app (f::rst) =
-            (rev_app rst;
-             f (oldname, ct) handle e =>
-                let val errstr =
-                   case e
-                    of HOL_ERR r => !ERR_to_string r
-                     | otherwise => General.exnMessage e
-                in
-                  WARN "new_theory.initialize"
-                        ("an initializer failed with message: "
-                         ^errstr^"\n ... continuing anyway. \n")
-                end)
-  in rev_app (!initializers)
-  end
-end;
-
+(* ----------------------------------------------------------------------
+     Allocate a new theory segment over an existing one. After
+     that, initialize any registered packages. A package registers
+     with a call to "register_hook".
+    ---------------------------------------------------------------------- *)
 
 fun new_theory str =
     if not(Lexis.ok_identifier str) then
@@ -870,14 +900,17 @@ fun new_theory str =
     else let
         val thy as {thid, ...} = theCT()
         val thyname = thyid_name thid
+        val tdelta = TheoryDelta.NewTheory{oldseg=thyname,newseg=str}
         fun mk_thy () = (HOL_MESG ("Created theory "^Lib.quote str);
-                         makeCT(fresh_segment str); initialize thyname)
+                         makeCT(fresh_segment str);
+                         call_hooks tdelta)
         val _ =
             new_theory_time := total_cpu (Timer.checkCPUTimer Globals.hol_clock)
       in
         if str=thyname then
           (HOL_MESG("Restarting theory "^Lib.quote str);
-           zapCT str; initialize thyname)
+           zapCT str;
+           call_hooks tdelta)
         else if mem str (ancestry thyname) then
           raise ERR"new_theory" ("theory: "^Lib.quote str^" already exists.")
         else if thyname="scratch" andalso empty_segment thy then
@@ -893,7 +926,8 @@ fun new_theory str =
     revert to previous state.
 
     We do not (yet) track changes to the state used by adjoin_to_theory or
-    after_new_theory.
+    any hooks, though the hooks should see the changes adding and
+    removing things from the "signature".
    ---------------------------------------------------------------------- *)
 
 fun try_theory_extension f x =
