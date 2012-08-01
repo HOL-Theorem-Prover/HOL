@@ -4,6 +4,9 @@ open arithmeticTheory listTheory combinTheory pairTheory;
 open ml_translatorLib ml_translatorTheory;
 
 
+
+val res = translate listTheory.FOLDL;
+
 (* qsort translation *)
 
 val res = translate listTheory.APPEND;
