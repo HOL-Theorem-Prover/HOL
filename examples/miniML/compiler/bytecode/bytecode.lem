@@ -83,8 +83,8 @@ bc_fetch_aux (Label _::xs) len n =
 and
 bc_fetch_aux (x::xs) len n =
   if n = 0 then Some x else
-    if n < calc_len len x then None else
-      bc_fetch_aux xs len (n - (calc_len len x))
+    if n < len x + 1 then None else
+      bc_fetch_aux xs len (n - (len x + 1))
 
 let bc_fetch s = bc_fetch_aux s.code s.inst_length s.pc
 
