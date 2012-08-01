@@ -543,10 +543,6 @@ type ctbind = CTLet of num | CTArg of num | CTEnv of num | CTRef of num
 
 open Bytecode
 
-type lbc_inst =
-  | UL of bc_inst
-  | Label of num
-
 type call_context = TCNonTail | TCTail of num * num
 
 type ctenv = (string,ctbind) Pmap.map
@@ -554,7 +550,7 @@ type ctenv = (string,ctbind) Pmap.map
 type compiler_state =
   <| env: ctenv
    ; sz: num
-   ; out: lbc_inst list (* reversed code *)
+   ; out: bc_inst list (* reversed code *)
    ; next_label: num
    ; tail: call_context
    (* not modified on return: *)
@@ -835,19 +831,17 @@ prim2_to_bc CEq = Equal
 
 let emit = List.fold_left (fun s i -> <| s with out = i :: s.out |>)
 
-let rec ULS x = UL (Stack x)
-
 let rec
 get_labels n s = (<| s with next_label = s.next_label + n |>,
                   genlist (fun i -> s.next_label + i) n)
 let rec
-compile_varref s (CTLet n) = emit s [ULS (Load (s.sz - n))]
+compile_varref s (CTLet n) = emit s [Stack (Load (s.sz - n))]
 and
-compile_varref s (CTArg n) = emit s [ULS (Load (s.sz + n))]
+compile_varref s (CTArg n) = emit s [Stack (Load (s.sz + n))]
 and
-compile_varref s (CTEnv n) = emit s [ULS (Load s.sz); ULS (El n)]
+compile_varref s (CTEnv n) = emit s [Stack (Load s.sz); Stack (El n)]
 and
-compile_varref s (CTRef n) = emit (compile_varref s (CTEnv n)) [UL Deref]
+compile_varref s (CTRef n) = emit (compile_varref s (CTEnv n)) [Deref]
 
 let incsz s = <| s with sz = s.sz + 1 |>
 let decsz s = <| s with sz = s.sz - 1 |>
@@ -860,7 +854,7 @@ type cebind = CEEnv of string | CERef of num
 let rec
 emit_ec z s (CEEnv fv) = incsz (compile_varref s (Pmap.find fv s.env))
 and
-emit_ec z s (CERef j) = incsz (emit s [ULS (Load (s.sz - z - j))])
+emit_ec z s (CERef j) = incsz (emit s [Stack (Load (s.sz - z - j))])
 
 let rec
 bind_fv ns xs az k fv (n,env,(ecl,ec)) =
@@ -884,27 +878,27 @@ compile s (CDecl vs) =
       if Pmap.mem v env0 then
         (match Pmap.find v env0 with
          | CTLet x -> emit (compile_varref s (Pmap.find v s.env))
-                           [ULS (Store (s.sz - x))]
-         | _ -> emit s [ULS (PushInt i2); UL Exception] (* should not happen *)
+                           [Stack (Store (s.sz - x))]
+         | _ -> emit s [Stack (PushInt i2); Exception] (* should not happen *)
          end, i, env)
       else
         (incsz (compile_varref s (Pmap.find v s.env)),
          i+1,
          Pmap.add v (CTLet i) env))
          (s,sz0+1,env0) vs in
-  let s = emit s [ULS (Shift (i-(sz0+1)) k)] in
+  let s = emit s [Stack (Shift (i-(sz0+1)) k)] in
   <| s with sz = sz1+1; decl = Some (env,s.sz-k) |>
-  | None -> emit s [ULS (PushInt i2); UL Exception] (* should not happen *)
+  | None -> emit s [Stack (PushInt i2); Exception] (* should not happen *)
   end
 and
 compile s (CRaise err) =
-  incsz (emit s [ULS (PushInt (error_to_int err)); UL Exception])
+  incsz (emit s [Stack (PushInt (error_to_int err)); Exception])
 and
 compile s (CLit (IntLit i)) =
-  incsz (emit s [ULS (PushInt i)])
+  incsz (emit s [Stack (PushInt i)])
 and
 compile s (CLit (Bool b)) =
-  incsz (emit s [ULS (PushInt (bool_to_int b))])
+  incsz (emit s [Stack (PushInt (bool_to_int b))])
 and
 compile s (CVar vn) = incsz (compile_varref s (Pmap.find vn s.env))
 and
@@ -912,16 +906,16 @@ compile s (CCon n es) =
   let z = s.sz + 1 in
   let (s,dt) = sdt s in
   let s = List.fold_left (fun s e -> compile s e) s es in (* uneta because Hol_defn sucks *)
-  let s = emit (ldt dt s) [ULS (Cons n (List.length es))] in
+  let s = emit (ldt dt s) [Stack (Cons n (List.length es))] in
   <| s with sz = z |>
 and
 compile s (CTagEq e n) =
   let (s,dt) = sdt s in
-  ldt dt (emit (compile s e) [ULS (TagEq n)])
+  ldt dt (emit (compile s e) [Stack (TagEq n)])
 and
 compile s (CProj e n) =
   let (s,dt) = sdt s in
-  ldt dt (emit (compile s e) [ULS (El n)])
+  ldt dt (emit (compile s e) [Stack (El n)])
 and
 compile s (CLet xs es e) =
   let z = s.sz + 1 in
@@ -946,11 +940,11 @@ compile s (CCall e es) =
     let s = compile s e in
     let s = List.fold_left (fun s e -> compile s e) s es in (* uneta because Hol_defn sucks *)
     (* argn, ..., arg2, arg1, Block 0 [CodePtr c; env], *)
-    let s = emit s [ULS (Load n); ULS (El 1)] in
+    let s = emit s [Stack (Load n); Stack (El 1)] in
     (* env, argn, ..., arg1, Block 0 [CodePtr c; env], *)
-    let s = emit s [ULS (Load (n+1)); ULS (El 0)] in
+    let s = emit s [Stack (Load (n+1)); Stack (El 0)] in
     (* CodePtr c, env, argn, ..., arg1, Block 0 [CodePtr c; env], *)
-    emit s [UL CallPtr]
+    emit s [CallPtr]
     (* before: env, CodePtr ret, argn, ..., arg1, Block 0 [CodePtr c; env], *)
     (* after:  retval, *)
 (* does it make sense to distinguish this case?
@@ -974,17 +968,17 @@ compile s (CCall e es) =
     let s = List.fold_left (fun s e -> compile s e) s es in (* uneta because Hol_defn sucks *)
     (* argn, ..., arg1, Block 0 [CodePtr c; env],
      * vk, ..., v1, env1, CodePtr ret, argj, ..., arg1, Block 0 [CodePtr c1; env1], *)
-    let s = emit s [ULS (Load (n+1+k+1))] in
+    let s = emit s [Stack (Load (n+1+k+1))] in
     (* CodePtr ret, argn, ..., arg1, Block 0 [CodePtr c; env],
      * vk, ..., v1, env1, CodePtr ret, argj, ..., arg1, Block 0 [CodePtr c1; env1], *)
-    let s = emit s [ULS (Load (n+1)); ULS (El 1)] in
+    let s = emit s [Stack (Load (n+1)); Stack (El 1)] in
     (* env, CodePtr ret, argn, ..., arg1, Block 0 [CodePtr c; env],
      * vk, ..., v1, env1, CodePtr ret, argj, ..., arg1, Block 0 [CodePtr c1; env1], *)
-    let s = emit s [ULS (Load (n+2)); ULS (El 0)] in
+    let s = emit s [Stack (Load (n+2)); Stack (El 0)] in
     (* CodePtr c, env, CodePtr ret, argn, ..., arg1, Block 0 [CodePtr c; env],
      * vk, ..., v1, env1, CodePtr ret, argj, ..., arg1, Block 0 [CodePtr c1; env1], *)
-    let s = emit s [ULS (Shift (1+1+1+n+1) (k+1+1+j+1))] in
-    emit s [UL JumpPtr]
+    let s = emit s [Stack (Shift (1+1+1+n+1) (k+1+1+j+1))] in
+    emit s [JumpPtr]
   end in
   ldt dt <| s with sz = s.sz - n |>
 and
@@ -992,7 +986,7 @@ compile s (CPrim2 op e1 e2) =
   let (s,dt) = sdt s in
   let s = compile s e1 in
   let s = compile s e2 in (* TODO: need to detect div by zero *)
-  decsz (ldt dt (emit s [ULS (prim2_to_bc op)]))
+  decsz (ldt dt (emit s [Stack (prim2_to_bc op)]))
 and
 compile s (CIf e1 e2 e3) =
   let (s,dt) = sdt s in
@@ -1001,9 +995,9 @@ compile s (CIf e1 e2 e3) =
   let n0 = List.nth labs 0 in
   let n1 = List.nth labs 1 in
   let n2 = List.nth labs 2 in
-  let s = emit s [UL (JumpNil n0); UL (Jump n1); Label n0] in
+  let s = emit s [(JumpNil (Lab n0)); (Jump (Lab n1)); Label n0] in
   let s = compile (decsz s) e2 in
-  let s = emit s [UL (Jump n2); Label n1] in
+  let s = emit s [(Jump (Lab n2)); Label n1] in
   let s = compile (decsz s) e3 in
   emit s [Label n2]
 and
@@ -1011,7 +1005,7 @@ compile_bindings env0 sz1 e n s [] =
   let s = match s.tail with
   | TCTail j k -> compile (<| s with tail = TCTail j (k+n) |>) e
   | TCNonTail -> match s.decl with
-    | None -> emit (compile s e) [ULS (Pops n)]
+    | None -> emit (compile s e) [Stack (Pops n)]
     | Some _ -> compile s e
     end
   end in
@@ -1089,50 +1083,50 @@ compile_closures ns s defs =
    * - update refptrs, etc.
    *)
   let sz0 = s.sz in
-  let s = List.fold_left (fun s _n -> incsz (emit s [ULS (PushInt i0); UL Ref])) s ns in
-  let s = emit s [ULS (PushInt i0)] in
+  let s = List.fold_left (fun s _n -> incsz (emit s [Stack (PushInt i0); Ref])) s ns in
+  let s = emit s [Stack (PushInt i0)] in
   let nk = List.length defs in
   let (s,labs) = get_labels nk s in
   let (s,k,ecs) = List.fold_left
     (fun (s,k,ecs) (xs,e) ->
       let az = List.length xs in
       let lab = List.nth labs k in
-      let s = emit s [UL (Call lab)] in
+      let s = emit s [(Call (Lab lab))] in
       let (n,env,(ecl,ec)) =
         Set.fold (bind_fv ns xs az k) (free_vars e) (0,Pmap.empty,(0,[])) in
       let s' = <| s with env = env; sz = 0; tail = TCTail az 0 |> in
       let s' = compile s' e in
       let n = match s'.tail with TCNonTail -> 1 | TCTail j k -> k+1 end in
-      let s' = emit s' [ULS (Pops n);
-                        ULS (Load 1);
-                        ULS (Store (az+2));
-                        ULS (Pops (az+1));
-                        UL Return;
+      let s' = emit s' [Stack (Pops n);
+                        Stack (Load 1);
+                        Stack (Store (az+2));
+                        Stack (Pops (az+1));
+                        Return;
                         Label lab] in
       let s = <| s' with env = s.env; sz = s.sz + 1; tail = s.tail |> in
       (s,k+1,(ecl,ec)::ecs))
     (s,0,[]) defs in
-  let s = emit s [ULS Pop] in
+  let s = emit s [Stack Pop] in
   let (s,k) = List.fold_left
     (fun (s,k) (j,ec) ->
-      let s = incsz (emit s [ULS (Load (nk - k))]) in
+      let s = incsz (emit s [Stack (Load (nk - k))]) in
       let s = List.fold_left (emit_ec sz0) s (List.rev ec) in
-      let s = emit s [ULS (if j = 0 then PushInt i0 else Cons 0 j)] in
-      let s = emit s [ULS (Cons 0 2)] in
-      let s = decsz (emit s [ULS (Store (nk - k))]) in
+      let s = emit s [Stack (if j = 0 then PushInt i0 else Cons 0 j)] in
+      let s = emit s [Stack (Cons 0 2)] in
+      let s = decsz (emit s [Stack (Store (nk - k))]) in
       let s = <| s with sz = s.sz - j |> in
       (s,k+1))
     (s,1) (List.rev ecs) in
   let (s,k) = List.fold_left
     (fun (s,k) _n ->
-      let s = emit s [ULS (Load (nk + nk - k))] in
-      let s = emit s [ULS (Load (nk + 1 - k))] in
-      let s = emit s [UL Update] in
+      let s = emit s [Stack (Load (nk + nk - k))] in
+      let s = emit s [Stack (Load (nk + 1 - k))] in
+      let s = emit s [Update] in
       (s,k+1))
     (s,1) ns in
   let k = nk - 1 in
   List.fold_left
-    (fun s _n -> decsz (emit s [ULS (Store k)]))
+    (fun s _n -> decsz (emit s [Stack (Store k)]))
          s ns
 
 let rec
@@ -1141,20 +1135,20 @@ and
 calculate_labels il m n a (Label l::lbc) =
   calculate_labels il (Pmap.add l n m) n a lbc
 and
-calculate_labels il m n a (UL i::lbc) =
+calculate_labels il m n a (i::lbc) =
   calculate_labels il m (n + il i + 1) (i::a) lbc
 
 let rec
 replace_labels m a [] = a
 and
-replace_labels m a (Jump l::bc) =
-  replace_labels m (Jump (Pmap.find l m)::a) bc
+replace_labels m a (Jump (Lab l)::bc) =
+  replace_labels m (Jump (Addr (Pmap.find l m))::a) bc
 and
-replace_labels m a (JumpNil l::bc) =
-  replace_labels m (JumpNil (Pmap.find l m)::a) bc
+replace_labels m a (JumpNil (Lab l)::bc) =
+  replace_labels m (JumpNil (Addr (Pmap.find l m))::a) bc
 and
-replace_labels m a (Call l::bc) =
-  replace_labels m (Call (Pmap.find l m)::a) bc
+replace_labels m a (Call (Lab l)::bc) =
+  replace_labels m (Call (Addr (Pmap.find l m))::a) bc
 and
 replace_labels m a (i::bc) =
   replace_labels m (i::a) bc

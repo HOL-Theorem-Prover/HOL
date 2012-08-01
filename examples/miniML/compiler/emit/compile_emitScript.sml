@@ -42,7 +42,6 @@ val data = map
   , datatype_ctbind
   , datatype_cebind
   , datatype_call_context
-  , datatype_lbc_inst
   , datatype_compiler_state
   , datatype_nt
   , datatype_repl_state
@@ -58,7 +57,6 @@ val defs = map EmitML.DEFN
 , i1_def
 , i2_def
 , error_to_int_def
-, ULS_def
 , get_labels_def
 , compile_varref_def
 , sdt_def

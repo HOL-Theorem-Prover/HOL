@@ -553,12 +553,6 @@ val _ = Hol_datatype `
 (*open Bytecode*)
 
 val _ = Hol_datatype `
- lbc_inst =
-    UL of bc_inst
-  | Label of num`;
-
-
-val _ = Hol_datatype `
  call_context = TCNonTail | TCTail of num => num`;
 
 
@@ -568,7 +562,7 @@ val _ = Hol_datatype `
  compiler_state =
   <| env: ctenv
    ; sz: num
-   ; out: lbc_inst list (* reversed code *)
+   ; out: bc_inst list (* reversed code *)
    ; next_label: num
    ; tail: call_context
    (* not modified on return: *)
@@ -888,11 +882,6 @@ val _ = Define `
  emit = FOLDL (\ s i .  s with<| out := i :: s.out |>)`;
 
 
- val ULS_defn = Hol_defn "ULS" `
- (ULS x = UL (Stack x))`;
-
-val _ = Defn.save_defn ULS_defn;
-
  val get_labels_defn = Hol_defn "get_labels" `
 
 (get_labels n s = ( s with<| next_label := s.next_label + n |>,
@@ -901,13 +890,13 @@ val _ = Defn.save_defn ULS_defn;
 val _ = Defn.save_defn get_labels_defn;
  val compile_varref_defn = Hol_defn "compile_varref" `
 
-(compile_varref s (CTLet n) = emit s [ULS (Load (s.sz - n))])
+(compile_varref s (CTLet n) = emit s [Stack (Load (s.sz - n))])
 /\
-(compile_varref s (CTArg n) = emit s [ULS (Load (s.sz + n))])
+(compile_varref s (CTArg n) = emit s [Stack (Load (s.sz + n))])
 /\
-(compile_varref s (CTEnv n) = emit s [ULS (Load s.sz); ULS (El n)])
+(compile_varref s (CTEnv n) = emit s [Stack (Load s.sz); Stack (El n)])
 /\
-(compile_varref s (CTRef n) = emit (compile_varref s (CTEnv n)) [UL Deref])`;
+(compile_varref s (CTRef n) = emit (compile_varref s (CTEnv n)) [Deref])`;
 
 val _ = Defn.save_defn compile_varref_defn;
 
@@ -933,7 +922,7 @@ val _ = Hol_datatype `
 
 (emit_ec z s (CEEnv fv) = incsz (compile_varref s (FAPPLY  s.env  fv)))
 /\
-(emit_ec z s (CERef j) = incsz (emit s [ULS (Load (s.sz - z - j))]))`;
+(emit_ec z s (CERef j) = incsz (emit s [Stack (Load (s.sz - z - j))]))`;
 
 val _ = Defn.save_defn emit_ec_defn;
 
@@ -963,27 +952,27 @@ val _ = Defn.save_defn bind_fv_defn;
       if  v IN FDOM  env0 then
         ((case FAPPLY  env0  v of
            CTLet x => emit (compile_varref s (FAPPLY  s.env  v))
-                           [ULS (Store (s.sz - x))]
-         | _ => emit s [ULS (PushInt i2); UL Exception] (* should not happen *)
+                           [Stack (Store (s.sz - x))]
+         | _ => emit s [Stack (PushInt i2); Exception] (* should not happen *)
          ), i, env)
       else
         (incsz (compile_varref s (FAPPLY  s.env  v)),
          i+1,
          FUPDATE  env ( v, (CTLet i))))
          (s,sz0+1,env0) vs in
-  let s = emit s [ULS (Shift (i -(sz0+1)) k)] in
+  let s = emit s [Stack (Shift (i -(sz0+1)) k)] in
    s with<| sz := sz1+1; decl := SOME (env,s.sz - k) |>
-  | NONE => emit s [ULS (PushInt i2); UL Exception] (* should not happen *)
+  | NONE => emit s [Stack (PushInt i2); Exception] (* should not happen *)
   ))
 /\
 (compile s (CRaise err) =
-  incsz (emit s [ULS (PushInt (error_to_int err)); UL Exception]))
+  incsz (emit s [Stack (PushInt (error_to_int err)); Exception]))
 /\
 (compile s (CLit (IntLit i)) =
-  incsz (emit s [ULS (PushInt i)]))
+  incsz (emit s [Stack (PushInt i)]))
 /\
 (compile s (CLit (Bool b)) =
-  incsz (emit s [ULS (PushInt (bool_to_int b))]))
+  incsz (emit s [Stack (PushInt (bool_to_int b))]))
 /\
 (compile s (CVar vn) = incsz (compile_varref s (FAPPLY  s.env  vn)))
 /\
@@ -991,16 +980,16 @@ val _ = Defn.save_defn bind_fv_defn;
   let z = s.sz + 1 in
   let (s,dt) = sdt s in
   let s = FOLDL (\ s e . compile s e) s es in (* uneta because Hol_defn sucks *)
-  let s = emit (ldt dt s) [ULS (Cons n (LENGTH es))] in
+  let s = emit (ldt dt s) [Stack (Cons n (LENGTH es))] in
    s with<| sz := z |>)
 /\
 (compile s (CTagEq e n) =
   let (s,dt) = sdt s in
-  ldt dt (emit (compile s e) [ULS (TagEq n)]))
+  ldt dt (emit (compile s e) [Stack (TagEq n)]))
 /\
 (compile s (CProj e n) =
   let (s,dt) = sdt s in
-  ldt dt (emit (compile s e) [ULS (El n)]))
+  ldt dt (emit (compile s e) [Stack (El n)]))
 /\
 (compile s (CLet xs es e) =
   let z = s.sz + 1 in
@@ -1025,11 +1014,11 @@ val _ = Defn.save_defn bind_fv_defn;
     let s = compile s e in
     let s = FOLDL (\ s e . compile s e) s es in (* uneta because Hol_defn sucks *)
     (* argn, ..., arg2, arg1, Block 0 [CodePtr c; env], *)
-    let s = emit s [ULS (Load n); ULS (El 1)] in
+    let s = emit s [Stack (Load n); Stack (El 1)] in
     (* env, argn, ..., arg1, Block 0 [CodePtr c; env], *)
-    let s = emit s [ULS (Load (n+1)); ULS (El 0)] in
+    let s = emit s [Stack (Load (n+1)); Stack (El 0)] in
     (* CodePtr c, env, argn, ..., arg1, Block 0 [CodePtr c; env], *)
-    emit s [UL CallPtr]
+    emit s [CallPtr]
     (* before: env, CodePtr ret, argn, ..., arg1, Block 0 [CodePtr c; env], *)
     (* after:  retval, *)
 (* does it make sense to distinguish this case?
@@ -1053,17 +1042,17 @@ val _ = Defn.save_defn bind_fv_defn;
     let s = FOLDL (\ s e . compile s e) s es in (* uneta because Hol_defn sucks *)
     (* argn, ..., arg1, Block 0 [CodePtr c; env],
      * vk, ..., v1, env1, CodePtr ret, argj, ..., arg1, Block 0 [CodePtr c1; env1], *)
-    let s = emit s [ULS (Load (n+1+k+1))] in
+    let s = emit s [Stack (Load (n+1+k+1))] in
     (* CodePtr ret, argn, ..., arg1, Block 0 [CodePtr c; env],
      * vk, ..., v1, env1, CodePtr ret, argj, ..., arg1, Block 0 [CodePtr c1; env1], *)
-    let s = emit s [ULS (Load (n+1)); ULS (El 1)] in
+    let s = emit s [Stack (Load (n+1)); Stack (El 1)] in
     (* env, CodePtr ret, argn, ..., arg1, Block 0 [CodePtr c; env],
      * vk, ..., v1, env1, CodePtr ret, argj, ..., arg1, Block 0 [CodePtr c1; env1], *)
-    let s = emit s [ULS (Load (n+2)); ULS (El 0)] in
+    let s = emit s [Stack (Load (n+2)); Stack (El 0)] in
     (* CodePtr c, env, CodePtr ret, argn, ..., arg1, Block 0 [CodePtr c; env],
      * vk, ..., v1, env1, CodePtr ret, argj, ..., arg1, Block 0 [CodePtr c1; env1], *)
-    let s = emit s [ULS (Shift (1+1+1+n+1) (k+1+1+j+1))] in
-    emit s [UL JumpPtr]
+    let s = emit s [Stack (Shift (1+1+1+n+1) (k+1+1+j+1))] in
+    emit s [JumpPtr]
   ) in
   ldt dt  s with<| sz := s.sz - n |>)
 /\
@@ -1071,7 +1060,7 @@ val _ = Defn.save_defn bind_fv_defn;
   let (s,dt) = sdt s in
   let s = compile s e1 in
   let s = compile s e2 in (* TODO: need to detect div by zero *)
-  decsz (ldt dt (emit s [ULS (prim2_to_bc op)])))
+  decsz (ldt dt (emit s [Stack (prim2_to_bc op)])))
 /\
 (compile s (CIf e1 e2 e3) =
   let (s,dt) = sdt s in
@@ -1080,9 +1069,9 @@ val _ = Defn.save_defn bind_fv_defn;
   let n0 = EL  0  labs in
   let n1 = EL  1  labs in
   let n2 = EL  2  labs in
-  let s = emit s [UL (JumpNil n0); UL (Jump n1); Label n0] in
+  let s = emit s [(JumpNil (Lab n0)); (Jump (Lab n1)); Label n0] in
   let s = compile (decsz s) e2 in
-  let s = emit s [UL (Jump n2); Label n1] in
+  let s = emit s [(Jump (Lab n2)); Label n1] in
   let s = compile (decsz s) e3 in
   emit s [Label n2])
 /\
@@ -1090,7 +1079,7 @@ val _ = Defn.save_defn bind_fv_defn;
   let s = (case s.tail of
     TCTail j k => compile ( s with<| tail := TCTail j (k+n) |>) e
   | TCNonTail => (case s.decl of
-      NONE => emit (compile s e) [ULS (Pops n)]
+      NONE => emit (compile s e) [Stack (Pops n)]
     | SOME _ => compile s e
     )
   ) in
@@ -1168,50 +1157,50 @@ val _ = Defn.save_defn bind_fv_defn;
    * - update refptrs, etc.
    *)
   let sz0 = s.sz in
-  let s = FOLDL (\ s _n . incsz (emit s [ULS (PushInt i0); UL Ref])) s ns in
-  let s = emit s [ULS (PushInt i0)] in
+  let s = FOLDL (\ s _n . incsz (emit s [Stack (PushInt i0); Ref])) s ns in
+  let s = emit s [Stack (PushInt i0)] in
   let nk = LENGTH defs in
   let (s,labs) = get_labels nk s in
   let (s,k,ecs) = FOLDL
     (\ (s,k,ecs) (xs,e) .
       let az = LENGTH xs in
       let lab = EL  k  labs in
-      let s = emit s [UL (Call lab)] in
+      let s = emit s [(Call (Lab lab))] in
       let (n,env,(ecl,ec)) =
         ITSET (bind_fv ns xs az k) (free_vars e) (0,FEMPTY,(0,[])) in
       let s' =  s with<| env := env; sz := 0; tail := TCTail az 0 |> in
       let s' = compile s' e in
       let n = (case s'.tail of TCNonTail => 1 | TCTail j k => k+1 ) in
-      let s' = emit s' [ULS (Pops n);
-                        ULS (Load 1);
-                        ULS (Store (az+2));
-                        ULS (Pops (az+1));
-                        UL Return;
+      let s' = emit s' [Stack (Pops n);
+                        Stack (Load 1);
+                        Stack (Store (az+2));
+                        Stack (Pops (az+1));
+                        Return;
                         Label lab] in
       let s =  s' with<| env := s.env; sz := s.sz + 1; tail := s.tail |> in
       (s,k+1,(ecl,ec)::ecs))
     (s,0,[]) defs in
-  let s = emit s [ULS Pop] in
+  let s = emit s [Stack Pop] in
   let (s,k) = FOLDL
     (\ (s,k) (j,ec) .
-      let s = incsz (emit s [ULS (Load (nk - k))]) in
+      let s = incsz (emit s [Stack (Load (nk - k))]) in
       let s = FOLDL (emit_ec sz0) s (REVERSE ec) in
-      let s = emit s [ULS (if j = 0 then PushInt i0 else Cons 0 j)] in
-      let s = emit s [ULS (Cons 0 2)] in
-      let s = decsz (emit s [ULS (Store (nk - k))]) in
+      let s = emit s [Stack (if j = 0 then PushInt i0 else Cons 0 j)] in
+      let s = emit s [Stack (Cons 0 2)] in
+      let s = decsz (emit s [Stack (Store (nk - k))]) in
       let s =  s with<| sz := s.sz - j |> in
       (s,k+1))
     (s,1) (REVERSE ecs) in
   let (s,k) = FOLDL
     (\ (s,k) _n .
-      let s = emit s [ULS (Load (nk + nk - k))] in
-      let s = emit s [ULS (Load (nk + 1 - k))] in
-      let s = emit s [UL Update] in
+      let s = emit s [Stack (Load (nk + nk - k))] in
+      let s = emit s [Stack (Load (nk + 1 - k))] in
+      let s = emit s [Update] in
       (s,k+1))
     (s,1) ns in
   let k = nk - 1 in
   FOLDL
-    (\ s _n . decsz (emit s [ULS (Store k)]))
+    (\ s _n . decsz (emit s [Stack (Store k)]))
          s ns)`;
 
 val _ = Defn.save_defn compile_defn;
@@ -1223,7 +1212,7 @@ val _ = Defn.save_defn compile_defn;
 (calculate_labels il m n a (Label l::lbc) =
   calculate_labels il (FUPDATE  m ( l, n)) n a lbc)
 /\
-(calculate_labels il m n a (UL i::lbc) =
+(calculate_labels il m n a (i::lbc) =
   calculate_labels il m (n + il i + 1) (i::a) lbc)`;
 
 val _ = Defn.save_defn calculate_labels_defn;
@@ -1232,14 +1221,14 @@ val _ = Defn.save_defn calculate_labels_defn;
 
 (replace_labels m a [] = a)
 /\
-(replace_labels m a (Jump l::bc) =
-  replace_labels m (Jump (FAPPLY  m  l)::a) bc)
+(replace_labels m a (Jump (Lab l)::bc) =
+  replace_labels m (Jump (Addr (FAPPLY  m  l))::a) bc)
 /\
-(replace_labels m a (JumpNil l::bc) =
-  replace_labels m (JumpNil (FAPPLY  m  l)::a) bc)
+(replace_labels m a (JumpNil (Lab l)::bc) =
+  replace_labels m (JumpNil (Addr (FAPPLY  m  l))::a) bc)
 /\
-(replace_labels m a (Call l::bc) =
-  replace_labels m (Call (FAPPLY  m  l)::a) bc)
+(replace_labels m a (Call (Lab l)::bc) =
+  replace_labels m (Call (Addr (FAPPLY  m  l))::a) bc)
 /\
 (replace_labels m a (i::bc) =
   replace_labels m (i::a) bc)`;
