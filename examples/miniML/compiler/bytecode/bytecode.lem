@@ -15,11 +15,17 @@ type
   | Add | Sub | Mult | Div | Mod | Less  (* arithmetic *)
 
 type
+  loc =
+    Lab of num              (* label *)
+  | Addr of num             (* address *)
+
+type
   bc_inst =
     Stack of bc_stack_op
-  | Jump of num             (* jump to location n *)
-  | JumpNil of num          (* conditional jump to location n *)
-  | Call of num             (* call location n *)
+  | Label of num            (* label location *)
+  | Jump of loc             (* jump to location n *)
+  | JumpNil of loc          (* conditional jump to location n *)
+  | Call of loc             (* call location n *)
   | JumpPtr                 (* jump based on code pointer *)
   | CallPtr                 (* call based on code pointer *)
   | Return                  (* pop return address, jump *)
@@ -65,12 +71,20 @@ type
 (* fetching the next instruction from the code *)
 
 let rec
+calc_len len (Label _) = 0
+and
+calc_len len x = len x + 1
+
+let rec
 bc_fetch_aux [] len (n:num) = None
+and
+bc_fetch_aux (Label _::xs) len n =
+  bc_fetch_aux xs len n
 and
 bc_fetch_aux (x::xs) len n =
   if n = 0 then Some x else
-    if n < len x + 1 then None else
-      bc_fetch_aux xs len (n - (len x + 1))
+    if n < calc_len len x then None else
+      bc_fetch_aux xs len (n - (calc_len len x))
 
 let bc_fetch s = bc_fetch_aux s.code s.inst_length s.pc
 
@@ -80,6 +94,19 @@ let bump_pc s = match bc_fetch s with
 | None -> s
 | Some x -> <| s with pc = s.pc + s.inst_length x + 1 |>
 end
+
+(* finding the address of a location *)
+let rec
+bc_find_loc_aux [] len l n = None
+and
+bc_find_loc_aux (x::xs) len l n =
+  if x = Label l then Some n else
+    bc_find_loc_aux xs len l (n + calc_len len x)
+
+let rec
+bc_find_loc s (Addr n) = Some n
+and
+bc_find_loc s (Lab l) = bc_find_loc_aux s.code s.inst_length l 0
 
 (* next state relation *)
 
@@ -139,20 +166,23 @@ bc_fetch s = Some (Stack b)
 ==>
 bc_next s (<|bump_pc s with stack = ys|>) (* parens throughout: lem sucks *)
 and
-forall s n.
-(bc_fetch s = Some (Jump n)) (* parens: ugh...*)
+forall s l n.
+(bc_fetch s = Some (Jump l)) (* parens: ugh...*)
+&& (bc_find_loc s l = Some n)
 ==>
 bc_next s (<|s with pc = n|>)
 and
-forall s n x xs s'.
-bc_fetch s = Some (JumpNil n)
+forall s l n x xs s'.
+bc_fetch s = Some (JumpNil l)
+&& (bc_find_loc s l = Some n)
 && s.stack = Number x::xs
 && s' = (<|s with stack = xs|>)
 ==>
 bc_next s (if x = int_of_num 0 then bump_pc s' else <|s' with pc = n|>)
 and
-forall s n x xs.
-bc_fetch s = Some (Call n)
+forall s l n x xs.
+bc_fetch s = Some (Call l)
+&& (bc_find_loc s l = Some n)
 && s.stack = x::xs
 ==>
 bc_next s (<|s with pc = n; stack = x::CodePtr ((bump_pc s).pc)::xs|>)
