@@ -56,10 +56,16 @@ sig
                read : string -> 'a option, write : 'a -> string} ->
               ('a -> t) * (t -> 'a option)
     val segment_data : {thy: string, thydataty: string} -> t option
+
     val write_data_update : {thydataty : string, data : t} -> unit
-    (* call in a session to record something for later -
-       updates segment data, and  will eventually cause a call to
-       temp_encoded_update to appear in the theory file. *)
+    val set_theory_data : {thydataty : string, data : t} -> unit
+    (* call these in a session to update and record something for later -
+       these will update segment data, and  also cause a call to
+       temp_encoded_update to appear in the theory file meaning that the
+       change to the data will persist/be exported.  The first,
+       write_data_update uses the merge functionality to augment what has
+       already been stored.  The set_theory_data function overrides whatever
+       might have been there. *)
 
     val temp_encoded_update : {thy : string, thydataty : string,
                                data : string} -> unit

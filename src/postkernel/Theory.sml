@@ -654,6 +654,18 @@ struct
                   facts=facts}
         end
 
+  fun set_theory_data {thydataty,data} =
+      case Binarymap.peek(!dataops, thydataty) of
+        NONE => raise ERR "set_theory_data"
+                          ("No operations defined for "^thydataty)
+      | SOME{read,write,...} => let
+          val {thydata,thid,adjoin,facts} = theCT()
+          open Binarymap
+        in
+          makeCT {thydata = insert(thydata, thydataty, Loaded data),
+                  thid = thid, adjoin = adjoin, facts = facts}
+        end
+
   fun temp_encoded_update {thy, thydataty, data} = let
     val {thydata, thid, adjoin, facts} = theCT()
     open Binarymap
