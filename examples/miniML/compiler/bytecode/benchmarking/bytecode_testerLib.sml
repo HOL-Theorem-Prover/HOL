@@ -38,7 +38,7 @@ fun run_bytecode reps bytecode_tm = let
 
   val reps = 1000000;
   val bytecode_tm = ``[Stack (PushInt 1);
-                       Jump 30; (* skips next instruction *)
+                       Jump (Addr 30); (* skips next instruction *)
                        Stack (PushInt 3);
                        Stack (PushInt 2)]``;
   val _ = run_bytecode reps bytecode_tm;
