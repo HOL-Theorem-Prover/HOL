@@ -612,25 +612,21 @@ struct
   val dataops = ref (Binarymap.mkDict String.compare :
                      (string, DataOps) Binarymap.dict)
 
-
-  fun ThyMap() = let
+  fun segment_data {thy,thydataty} = let
     val {thydata,thid,...} = theCT()
-    val nm = thyid_name thid
+    fun check_map m =
+        case Binarymap.peek(m, thydataty) of
+          NONE => NONE
+        | SOME (Loaded value) => SOME value
+        | SOME (Pending _) => raise ERR "segment_data"
+                                        "Can't interpret pending loads"
   in
-    Binarymap.insert(!allthydata, nm, thydata)
-  end
-
-  fun segment_data {thy,thydataty} =
-      case Binarymap.peek(ThyMap(), thy) of
+    if thyid_name thid = thy then check_map thydata
+    else
+      case Binarymap.peek(!allthydata, thy) of
         NONE => NONE
-      | SOME dmap => let
-        in
-          case Binarymap.peek(dmap, thydataty) of
-            NONE => NONE
-          | SOME (Loaded value) => SOME value
-          | SOME (Pending _) => raise ERR "segment_data"
-                                          "Can't interpret pending loads"
-        end
+      | SOME dmap => check_map dmap
+  end
 
   fun write_data_update {thydataty,data} =
       case Binarymap.peek(!dataops, thydataty) of
