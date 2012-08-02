@@ -152,7 +152,7 @@ CIf(CPrim2(CEq,CLit (IntLit i0),CLit (IntLit i0)),
     CLit (IntLit i1),
     CCall (CVar "1",[])))
 val (bs,rs) = inits
-val rs = compile_Cexp rs e27
+val rs = compile_Cexp rs NONE e27
 val bs = add_code rs bs
 val bs = bc_eval bs
 val [Number i] = bc_state_stack bs

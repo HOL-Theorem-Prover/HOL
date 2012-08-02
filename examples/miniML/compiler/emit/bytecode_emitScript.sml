@@ -8,6 +8,7 @@ val _ = Parse.disable_tyabbrev_printing "alist"
 val data = map
   (fn th => EmitML.DATATYPE [QUOTE (datatype_thm_to_string th)])
   [datatype_bc_stack_op,
+   datatype_loc,
    datatype_bc_inst,
    datatype_bc_value,
    datatype_bc_state]
@@ -23,8 +24,9 @@ val init_bc_state_def =  Define`
 
 val defs = map EmitML.DEFN [
 optionTheory.OPTION_BIND_def,
-bc_fetch_aux_def,bc_fetch_def,bump_pc_def,
-bool_to_int_def,isNumber_def,
+calc_len_def,bc_fetch_aux_def,bc_fetch_def,
+bc_find_loc_aux_def,bc_find_loc_def,
+bump_pc_def,bool_to_int_def,isNumber_def,
 bc_eval_stack_def,bc_eval1_def,bc_eval_def,
 init_bc_state_def]
 

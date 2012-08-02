@@ -14,6 +14,15 @@ open pred_setTheory;
 infix \\ val op \\ = op THEN;
 
 
+(* misc *)
+
+val (bc_fetch_aux_def, bc_fetch_aux_ind) =
+  Defn.tprove_no_defn ((bc_fetch_aux_def, bc_fetch_aux_ind),
+  WF_REL_TAC `measure (LENGTH o FST)` THEN SRW_TAC [] []);
+val _ = save_thm ("bc_fetch_aux_def", bc_fetch_aux_def);
+val _ = save_thm ("bc_fetch_aux_ind", bc_fetch_aux_ind);
+val _ = export_rewrites["bc_fetch_aux_def"];
+
 
 (* -------------------------------------------------------------------------- *
     Definition of hardware bytecode
@@ -302,16 +311,18 @@ val hwml_def = Define `
   (hwml (Stack Div) = [hwFail]) /\
   (hwml (Stack Mod) = [hwFail]) /\
   (hwml (Stack Less) = [hwLess]) /\
-  (hwml (Jump n) = push_fixed_imm n ++ [hwJump]) /\
-  (hwml (JumpNil n) = push_fixed_imm n ++ [hwJumpIfNotZero]) /\
-  (hwml (Call n) = push_fixed_imm n ++ [hwCall]) /\
+  (hwml (Jump (Addr n)) = push_fixed_imm n ++ [hwJump]) /\
+  (hwml (JumpNil (Addr n)) = push_fixed_imm n ++ [hwJumpIfNotZero]) /\
+  (hwml (Call (Addr n)) = push_fixed_imm n ++ [hwCall]) /\
   (hwml JumpPtr = [hwJump]) /\
   (hwml CallPtr = [hwCall]) /\
   (hwml Return = [hwSwap; hwJump]) /\
   (hwml Exception = [hwFail]) /\
   (hwml Ref = [hwHeapAddress; hwSwap; hwHeapAlloc]) /\
   (hwml Deref = [hwHeapLoad]) /\
-  (hwml Update = [hwSwap; hwHeapStore; hwPop])`;
+  (hwml Update = [hwSwap; hwHeapStore; hwPop]) /\
+  (hwml (Label _) = []) /\
+  (hwml _ = [hwFail])`;
 
 val full_hwml_def = Define `
   full_hwml xs = FLAT (MAP hwml xs)`;
@@ -412,9 +423,10 @@ val push_imm_lemma = prove(
   \\ FULL_SIMP_TAC std_ss [GSYM DIVISION]
   \\ REPEAT STRIP_TAC \\ DECIDE_TAC);
 
-val divmod_def = Define `
+val divmod_def = zDefine`
   (divmod 0 n = 0) /\
   (divmod (SUC k) n = n MOD 64 + 64 * divmod k (n DIV 64))`;
+val _ = computeLib.add_funs[numLib.SUC_RULE divmod_def]
 
 val divmod_thm = prove(
   ``!k n. n < 64 ** k ==> (divmod k n = n)``,
@@ -445,6 +457,7 @@ val push_fixed_imm_lemma = prove(
   \\ FULL_SIMP_TAC (srw_ss()) [fetch "-" "hw_state_component_equality"]
   \\ DECIDE_TAC);
 
+val _ = computeLib.del_consts[``divmod``]
 val _ = delete_const "divmod"; (* remove temp definition *)
 
 val Swap_Pop_heap = prove(
@@ -662,14 +675,33 @@ val EVERY2_EL = prove(
   Induct \\ Cases_on `ys` \\ FULL_SIMP_TAC (srw_ss()) [EVERY2_def,LENGTH,EL,HD,TL]
   \\ Cases_on `n` \\ FULL_SIMP_TAC (srw_ss()) [] \\ METIS_TAC []);
 
-val hwml_length_thm = prove(
-  ``!x. p + hwml_length x + 1 = p + LENGTH (hwml x)``,
-  STRIP_TAC \\ FULL_SIMP_TAC std_ss [hwml_length_def]
+val is_Label_def = Define `
+  (is_Label (Label x) = T) /\ (is_Label _ = F)`;
+
+val bc_fetch_aux_NOT_Label = prove(
+  ``!xs l n x. (bc_fetch_aux xs l n = SOME x) ==> ~is_Label x``,
+  Induct \\ TRY (Cases_on `h`) \\ FULL_SIMP_TAC std_ss [bc_fetch_aux_def]
+  \\ SRW_TAC [] [] \\ FULL_SIMP_TAC std_ss [is_Label_def] \\ RES_TAC);
+
+val bc_fetch_NOT_Label = prove(
+  ``!s x. (bc_fetch s = SOME x) ==> ~is_Label x``,
+  SIMP_TAC std_ss [bc_fetch_def] \\ METIS_TAC [bc_fetch_aux_NOT_Label]);
+
+val hwml_length_lemma = prove(
+  ``!x. ~is_Label x ==> (p + hwml_length x + 1 = p + LENGTH (hwml x))``,
+  STRIP_TAC \\ STRIP_TAC \\ FULL_SIMP_TAC std_ss [hwml_length_def]
+  \\ IMP_RES_TAC bc_fetch_NOT_Label
   \\ Tactical.REVERSE (`0 < LENGTH (hwml x)` by ALL_TAC)
-  THEN1 DECIDE_TAC \\ Cases_on `x` \\ TRY (Cases_on `b`)
+  THEN1 DECIDE_TAC \\ Cases_on `x` \\ TRY (Cases_on `b`) \\ TRY (Cases_on `l`)
   \\ SRW_TAC [] [hwml_def,LENGTH,DECIDE ``0<n+1:num /\ 0<n+2:num``,Once push_imm_def]
   \\ TRY (Cases_on `n`)
-  \\ FULL_SIMP_TAC (srw_ss()) [REPLICATE,FLAT,LENGTH,LENGTH_APPEND] \\ DECIDE_TAC);
+  \\ FULL_SIMP_TAC (srw_ss()) [REPLICATE,FLAT,LENGTH,LENGTH_APPEND,
+       is_Label_def] \\ DECIDE_TAC);
+
+val hwml_length_thm = prove(
+  ``!x. (bc_fetch s = SOME x) ==>
+        (p + hwml_length x + 1 = p + LENGTH (hwml x))``,
+  METIS_TAC [bc_fetch_NOT_Label,hwml_length_lemma]);
 
 val NOT_LESS_EQ = DECIDE ``~(m <= n) = n < m:num``
 
@@ -911,16 +943,16 @@ val hw_steps_hwml_lemma = prove(
           hw_inv_aux t t1 (if bc_fetch s <> SOME Ref then r else
                              r |+ ((@n. n IN (FDOM t.refs DIFF FDOM s.refs)),LENGTH s1.heap))``,
   HO_MATCH_MP_TAC bc_next_ind \\ REPEAT STRIP_TAC
-  \\ TRY (Cases_on `b`) \\ FULL_SIMP_TAC std_ss [hwml_def]
+  \\ TRY (Cases_on `b`) \\ TRY (Cases_on `l`) \\ FULL_SIMP_TAC std_ss [hwml_def]
   \\ FULL_SIMP_TAC (srw_ss()) [bc_stack_op_cases,LET_DEF]
   \\ POP_ASSUM MP_TAC \\ POP_ASSUM MP_TAC
-  THEN1
+  THEN1 (* Pop *)
    (FULL_SIMP_TAC (srw_ss()) [hw_steps_def,hw_step_def,arg_def,LET_DEF]
     \\ FULL_SIMP_TAC (srw_ss()) [hw_inv_aux_def,bump_pc_def,inc_pc_def,
          overflow_def,hwml_length_def,hwml_def,word_add_n2w] \\ STRIP_TAC
     \\ Cases_on `s1.stack` \\ FULL_SIMP_TAC std_ss [EVERY2_def,NOT_CONS_NIL,TL]
     \\ REPEAT STRIP_TAC \\ DECIDE_TAC)
-  THEN1
+  THEN1 (* Pops *)
    (Cases_on `ys' = []` \\ FULL_SIMP_TAC std_ss [LENGTH]
     \\ FULL_SIMP_TAC (srw_ss()) [hw_steps_def,hw_step_def,LET_DEF,arg_def,
          inc_pc_def,push_def,overflow_def,bump_pc_def,hw_inv_aux_def,
@@ -932,7 +964,7 @@ val hw_steps_hwml_lemma = prove(
     \\ FULL_SIMP_TAC std_ss [NOT_LESS_EQ,GSYM AND_IMP_INTRO]
     \\ Cases_on `ys1` \\ FULL_SIMP_TAC std_ss [LENGTH,LENGTH_NIL]
     \\ FULL_SIMP_TAC std_ss [LENGTH,REPLICATE,FLAT,LENGTH,APPEND,ADD1,ADD_ASSOC,word_add_n2w])
-  THEN1
+  THEN1 (* Shift *)
    (Cases_on `LENGTH ys' <= LENGTH zs` \\ FULL_SIMP_TAC std_ss [] THEN1
      (FULL_SIMP_TAC std_ss [hw_steps_APPEND,hw_steps_def]
       \\ FULL_SIMP_TAC std_ss [hw_inv_aux_def]
@@ -948,7 +980,8 @@ val hw_steps_hwml_lemma = prove(
       \\ IMP_RES_TAC hw_steps_error_IMP
       \\ ASM_SIMP_TAC (srw_ss()) [bump_pc_def]
       \\ ASM_SIMP_TAC std_ss [hw_step_pc,hw_steps_pc,push_imm_pc,push_imm_heap]
-      \\ SIMP_TAC std_ss [hwml_length_thm]
+      \\ Q.PAT_ASSUM `bc_fetch s = SOME (Stack (Shift (LENGTH ys') (LENGTH zs)))` MP_TAC
+      \\ SIMP_TAC std_ss [hwml_length_thm] \\ STRIP_TAC
       \\ ASM_SIMP_TAC std_ss [hwml_length_def,hwml_def,LENGTH_APPEND,LENGTH,
            word_add_n2w,GSYM WORD_ADD_ASSOC,LENGTH_REPLICATE,AC ADD_COMM ADD_ASSOC]
       \\ IMP_RES_TAC push_imm_stack
@@ -975,7 +1008,9 @@ val hw_steps_hwml_lemma = prove(
       THEN1 (IMP_RES_TAC EVERY2_LENGTH \\ FULL_SIMP_TAC std_ss [LENGTH_APPEND])
       \\ FULL_SIMP_TAC std_ss [GSYM APPEND_ASSOC]
       \\ IMP_RES_TAC REPLICATE_hwPop_stack
-      \\ FULL_SIMP_TAC std_ss [EVERY2_APPEND])
+      \\ FULL_SIMP_TAC std_ss [EVERY2_APPEND]
+      \\ AP_TERM_TAC
+      \\ DECIDE_TAC)
     \\ FULL_SIMP_TAC std_ss [hw_steps_APPEND,hw_steps_def]
     \\ FULL_SIMP_TAC std_ss [hw_inv_aux_def]
     \\ STRIP_TAC \\ STRIP_TAC \\ STRIP_TAC
@@ -993,7 +1028,7 @@ val hw_steps_hwml_lemma = prove(
     \\ IMP_RES_TAC hw_steps_error_IMP
     \\ ASM_SIMP_TAC (srw_ss()) [bump_pc_def]
     \\ ASM_SIMP_TAC std_ss [hw_step_pc,hw_steps_pc,push_imm_pc,push_imm_heap]
-    \\ SIMP_TAC std_ss [hwml_length_thm]
+    \\ ASM_SIMP_TAC std_ss [hwml_length_thm]
     \\ `~(LENGTH ys' <= LENGTH zs)` by DECIDE_TAC \\ FULL_SIMP_TAC std_ss []
     \\ ASM_SIMP_TAC std_ss [hwml_length_def,hwml_def,LENGTH_APPEND,LENGTH,
          word_add_n2w,GSYM WORD_ADD_ASSOC,LENGTH_REPLICATE,AC ADD_COMM ADD_ASSOC]
@@ -1036,17 +1071,18 @@ val hw_steps_hwml_lemma = prove(
     \\ FULL_SIMP_TAC std_ss [GSYM APPEND_ASSOC]
     \\ `(hw_steps (REPLICATE (LENGTH ys3) hwPop) s7).stack = ys1 ++ xs1` by ALL_TAC
     THEN1 (IMP_RES_TAC REPLICATE_hwPop_stack \\ FULL_SIMP_TAC std_ss [])
-    \\ FULL_SIMP_TAC std_ss [EVERY2_APPEND])
-  THEN1
+    \\ FULL_SIMP_TAC std_ss [EVERY2_APPEND]
+    \\ AP_TERM_TAC \\ DECIDE_TAC)
+  THEN1 (* PushInt *)
    (Cases_on `i < 0` THEN1 F_TAC \\ FULL_SIMP_TAC std_ss []
     \\ REPEAT STRIP_TAC \\ IMP_RES_TAC push_imm_lemma
     \\ FULL_SIMP_TAC std_ss []
     \\ FULL_SIMP_TAC (srw_ss()) [hw_inv_aux_def,bump_pc_def]
     \\ FULL_SIMP_TAC (srw_ss()) [hw_val_def,w2n_n2w]
-    \\ FULL_SIMP_TAC std_ss [hwml_length_thm]
+    \\ IMP_RES_TAC hwml_length_thm \\ FULL_SIMP_TAC std_ss []
     \\ FULL_SIMP_TAC std_ss [hwml_def,word_add_n2w,AC ADD_ASSOC ADD_COMM]
     \\ intLib.COOPER_TAC)
-  THEN1
+  THEN1 (* Cons *)
    (FULL_SIMP_TAC (srw_ss()) [hw_inv_aux_def,bump_pc_def,hw_steps_APPEND,hw_steps_def]
     \\ NTAC 3 STRIP_TAC \\ NTAC 3 (IMP_RES_TAC hw_step_error_IMP)
     \\ IMP_RES_TAC push_imm_lemma \\ IMP_RES_TAC EVERY2_APPEND_IMP
@@ -1080,11 +1116,13 @@ val hw_steps_hwml_lemma = prove(
       \\ Q.PAT_ASSUM `EVERY2 (λx1 x2. hw_val x1 x2 s1.heap r) xs ys2` MP_TAC
       \\ MATCH_MP_TAC EVERY2_IMP_EVERY2
       \\ FULL_SIMP_TAC std_ss [hw_val_APPEND])
+    \\ IMP_RES_TAC hwml_length_thm \\ FULL_SIMP_TAC std_ss []
+    \\ FULL_SIMP_TAC std_ss [hwml_def,LENGTH_APPEND,LENGTH,LENGTH_REPLICATE]
     \\ FULL_SIMP_TAC std_ss [AC ADD_ASSOC ADD_COMM]
     \\ MATCH_MP_TAC hw_refs_APPEND
     \\ MATCH_MP_TAC hw_refs_APPEND
     \\ FULL_SIMP_TAC std_ss [])
-  THEN1
+  THEN1 (* Load *)
    (FULL_SIMP_TAC (srw_ss()) [hw_inv_aux_def,bump_pc_def,
       hw_steps_APPEND,hw_steps_def]
     \\ STRIP_TAC \\ STRIP_TAC \\ STRIP_TAC
@@ -1095,10 +1133,11 @@ val hw_steps_hwml_lemma = prove(
     \\ F_TAC \\ FULL_SIMP_TAC (srw_ss()) [arg_def,stack_load_def,push_def,LET_DEF]
     \\ F_TAC \\ FULL_SIMP_TAC (srw_ss()) [arg_def,stack_load_def,push_def,LET_DEF]
     \\ IMP_RES_TAC EVERY2_EL \\ FULL_SIMP_TAC std_ss []
+    \\ IMP_RES_TAC hwml_length_thm
     \\ FULL_SIMP_TAC std_ss [hwml_def,word_add_n2w,hwml_length_thm,
          LENGTH_APPEND,LENGTH_REPLICATE,LENGTH]
     \\ FULL_SIMP_TAC std_ss [AC ADD_ASSOC ADD_COMM])
-  THEN1
+  THEN1 (* Store *)
    (FULL_SIMP_TAC (srw_ss()) [hw_inv_aux_def,bump_pc_def,
       hw_steps_APPEND,hw_steps_def]
     \\ STRIP_TAC \\ STRIP_TAC \\ STRIP_TAC
@@ -1112,10 +1151,11 @@ val hw_steps_hwml_lemma = prove(
     \\ FULL_SIMP_TAC std_ss [GSYM APPEND_ASSOC,EVERY2_APPEND,APPEND,EVERY2_def]
     \\ FULL_SIMP_TAC std_ss [UPDATE_NTH_THM]
     \\ FULL_SIMP_TAC std_ss [GSYM APPEND_ASSOC,EVERY2_APPEND,APPEND,EVERY2_def]
+    \\ IMP_RES_TAC hwml_length_thm
     \\ FULL_SIMP_TAC std_ss [hwml_def,word_add_n2w,hwml_length_thm,
          LENGTH_APPEND,LENGTH_REPLICATE,LENGTH]
     \\ FULL_SIMP_TAC std_ss [AC ADD_ASSOC ADD_COMM])
-  THEN1
+  THEN1 (* El *)
    (FULL_SIMP_TAC (srw_ss()) [hw_inv_aux_def,bump_pc_def,
       hw_steps_APPEND,hw_steps_def]
     \\ STRIP_TAC \\ STRIP_TAC \\ STRIP_TAC
@@ -1152,10 +1192,11 @@ val hw_steps_hwml_lemma = prove(
       \\ REPEAT (POP_ASSUM (K ALL_TAC)) \\ DECIDE_TAC)
     \\ FULL_SIMP_TAC std_ss []
     \\ IMP_RES_TAC EVERY2_EL \\ FULL_SIMP_TAC std_ss []
+    \\ IMP_RES_TAC hwml_length_thm
     \\ FULL_SIMP_TAC std_ss [hwml_def,word_add_n2w,hwml_length_thm,
          LENGTH_APPEND,LENGTH_REPLICATE,LENGTH]
     \\ FULL_SIMP_TAC std_ss [AC ADD_ASSOC ADD_COMM])
-  THEN1
+  THEN1 (* TagEq *)
    (FULL_SIMP_TAC (srw_ss()) [hw_inv_aux_def,bump_pc_def,
       hw_steps_APPEND,hw_steps_def]
     \\ STRIP_TAC \\ STRIP_TAC \\ STRIP_TAC
@@ -1169,14 +1210,16 @@ val hw_steps_hwml_lemma = prove(
     \\ Cases_on `EL (w2n h) s1.heap`
     \\ FULL_SIMP_TAC (srw_ss()) []
     \\ `tag < 4294967296` by DECIDE_TAC \\ FULL_SIMP_TAC std_ss []
+    \\ IMP_RES_TAC hwml_length_thm
     \\ FULL_SIMP_TAC std_ss [hwml_def,word_add_n2w,hwml_length_thm,
          LENGTH_APPEND,LENGTH_REPLICATE,LENGTH]
     \\ FULL_SIMP_TAC std_ss [AC ADD_ASSOC ADD_COMM]
     \\ Cases_on `tag = n` \\ FULL_SIMP_TAC std_ss [] \\ EVAL_TAC)
-  THEN1 F_TAC
-  THEN1
+  THEN1 F_TAC (* Equal *)
+  THEN1 (* Add *)
    (FULL_SIMP_TAC (srw_ss()) [hw_steps_def,hw_step_def,LET_DEF,
       overflow_def,push_def,inc_pc_def,arg_def,hw_inv_aux_def,bump_pc_def]
+    \\ IMP_RES_TAC hwml_length_thm
     \\ FULL_SIMP_TAC std_ss [hwml_def,word_add_n2w,hwml_length_thm,
          LENGTH_APPEND,LENGTH_REPLICATE,LENGTH]
     \\ Cases_on `s1.stack` \\ FULL_SIMP_TAC std_ss [EVERY2_def,NOT_CONS_NIL]
@@ -1191,9 +1234,10 @@ val hw_steps_hwml_lemma = prove(
     \\ FULL_SIMP_TAC std_ss [LESS_MOD]
     \\ FULL_SIMP_TAC std_ss [AC ADD_ASSOC ADD_COMM]
     \\ intLib.COOPER_TAC)
-  THEN1
+  THEN1 (* Add *)
    (FULL_SIMP_TAC (srw_ss()) [hw_steps_def,hw_step_def,LET_DEF,
       overflow_def,push_def,inc_pc_def,arg_def,hw_inv_aux_def,bump_pc_def]
+    \\ IMP_RES_TAC hwml_length_thm
     \\ FULL_SIMP_TAC std_ss [hwml_def,word_add_n2w,hwml_length_thm,
          LENGTH_APPEND,LENGTH_REPLICATE,LENGTH]
     \\ Cases_on `s1.stack` \\ FULL_SIMP_TAC std_ss [EVERY2_def,NOT_CONS_NIL]
@@ -1207,12 +1251,13 @@ val hw_steps_hwml_lemma = prove(
     \\ `(n'' − n') < dimword (:32)` by DECIDE_TAC
     \\ FULL_SIMP_TAC std_ss [w2n_n2w]
     \\ intLib.COOPER_TAC)
-  THEN1 F_TAC
-  THEN1 F_TAC
-  THEN1 F_TAC
-  THEN1
+  THEN1 F_TAC (* Mult *)
+  THEN1 F_TAC (* Div *)
+  THEN1 F_TAC (* Mod *)
+  THEN1 (* Less *)
    (FULL_SIMP_TAC (srw_ss()) [hw_steps_def,hw_step_def,LET_DEF,
       overflow_def,push_def,inc_pc_def,arg_def,hw_inv_aux_def,bump_pc_def]
+    \\ IMP_RES_TAC hwml_length_thm
     \\ FULL_SIMP_TAC std_ss [hwml_def,word_add_n2w,hwml_length_thm,
          LENGTH_APPEND,LENGTH_REPLICATE,LENGTH]
     \\ STRIP_TAC \\ IMP_RES_TAC EVERY2_TWO
@@ -1222,9 +1267,11 @@ val hw_steps_hwml_lemma = prove(
     \\ FULL_SIMP_TAC std_ss []
     \\ Cases_on `m < n` \\ FULL_SIMP_TAC std_ss [bool_to_int_def]
     \\ REPEAT STRIP_TAC \\ EVAL_TAC)
-  THEN1
+  THEN1 F_TAC (* Jump Lab *)
+  THEN1 (* Jump Addr *)
    (FULL_SIMP_TAC (srw_ss()) [hw_inv_aux_def,bump_pc_def,
-      hw_steps_APPEND,hw_steps_def]
+      hw_steps_APPEND,hw_steps_def,hwml_def,bc_find_loc_def]
+    \\ IMP_RES_TAC hwml_length_thm
     \\ FULL_SIMP_TAC std_ss [hwml_def,word_add_n2w,hwml_length_thm,
          LENGTH_APPEND,LENGTH_REPLICATE,LENGTH]
     \\ STRIP_TAC \\ STRIP_TAC \\ STRIP_TAC
@@ -1232,11 +1279,13 @@ val hw_steps_hwml_lemma = prove(
     \\ IMP_RES_TAC push_fixed_imm_lemma
     \\ FULL_SIMP_TAC std_ss []
     \\ F_TAC \\ FULL_SIMP_TAC (srw_ss()) [arg_def])
-  THEN1
-   (FULL_SIMP_TAC std_ss [bump_pc_def]
-    \\ `bc_fetch (s with stack := xs) = SOME (JumpNil n)` by ALL_TAC
+  THEN1 F_TAC (* JumpNil Lab *)
+  THEN1 (* JumpNil Addr *)
+   (FULL_SIMP_TAC std_ss [bump_pc_def,bc_find_loc_def]
+    \\ `bc_fetch (s with stack := xs) = SOME (JumpNil (Addr n))` by ALL_TAC
     THEN1 (FULL_SIMP_TAC (srw_ss()) [bc_fetch_def])
     \\ FULL_SIMP_TAC (srw_ss()) [hw_inv_aux_def,hw_steps_APPEND,hw_steps_def]
+    \\ IMP_RES_TAC hwml_length_thm
     \\ FULL_SIMP_TAC std_ss [hwml_def,word_add_n2w,hwml_length_thm,
          LENGTH_APPEND,LENGTH_REPLICATE,LENGTH]
     \\ STRIP_TAC \\ STRIP_TAC \\ STRIP_TAC
@@ -1246,21 +1295,24 @@ val hw_steps_hwml_lemma = prove(
     \\ Cases_on `s1.stack` \\ FULL_SIMP_TAC (srw_ss()) [EVERY2_def]
     \\ Cases_on `x = 0` \\ Cases_on `h = 0w`  \\ FULL_SIMP_TAC (srw_ss()) []
     \\ FULL_SIMP_TAC std_ss [word_add_n2w,AC ADD_COMM ADD_ASSOC]
+    \\ FULL_SIMP_TAC std_ss [bc_find_loc_def]
     \\ FULL_SIMP_TAC std_ss [hw_val_def]
     \\ Cases_on `h` \\ FULL_SIMP_TAC (srw_ss()) []
     \\ `LENGTH (push_fixed_imm n) < 7` by FULL_SIMP_TAC std_ss [push_fixed_imm_LESS]
     \\ `s.pc + LENGTH (push_fixed_imm n) + 1 < 4294967296` by DECIDE_TAC
     \\ FULL_SIMP_TAC (srw_ss()) [AC ADD_COMM ADD_ASSOC]
     \\ `F` by intLib.COOPER_TAC)
-  THEN1
+  THEN1 F_TAC (* Call Lab *)
+  THEN1 (* Call Addr *)
    (FULL_SIMP_TAC (srw_ss()) [hw_inv_aux_def,bump_pc_def,
-      hw_steps_APPEND,hw_steps_def]
+      hw_steps_APPEND,hw_steps_def,bc_find_loc_def]
     \\ STRIP_TAC \\ STRIP_TAC \\ STRIP_TAC
     \\ IMP_RES_TAC hw_step_error_IMP
     \\ IMP_RES_TAC push_fixed_imm_lemma
     \\ FULL_SIMP_TAC (srw_ss()) [hw_step_def,LET_DEF,inc_pc_def,
          arg_def,push_def,overflow_def]
     \\ Cases_on `s1.stack` \\ FULL_SIMP_TAC (srw_ss()) [EVERY2_def]
+    \\ IMP_RES_TAC hwml_length_thm
     \\ FULL_SIMP_TAC std_ss [hw_val_def,hwml_length_def,hwml_def,LENGTH_APPEND,LENGTH]
     \\ FULL_SIMP_TAC std_ss [word_add_n2w,w2n_n2w]
     \\ FULL_SIMP_TAC (srw_ss()) []
@@ -1271,7 +1323,7 @@ val hw_steps_hwml_lemma = prove(
     \\ FULL_SIMP_TAC (srw_ss()) []
     \\ `LENGTH (push_fixed_imm n) + s.pc + 1 < 4294967296` by DECIDE_TAC
     \\ FULL_SIMP_TAC std_ss [] \\ DECIDE_TAC)
-  THEN1
+  THEN1 (* CallPtr *)
    (FULL_SIMP_TAC (srw_ss()) [hw_inv_aux_def,bump_pc_def,
       hw_steps_APPEND,hw_steps_def]
     \\ STRIP_TAC \\ IMP_RES_TAC EVERY2_TWO
@@ -1282,22 +1334,22 @@ val hw_steps_hwml_lemma = prove(
     \\ STRIP_TAC \\ STRIP_TAC
     \\ FULL_SIMP_TAC (srw_ss()) [hw_val_def,EVAL ``hwml_length CallPtr``,word_add_n2w]
     \\ DECIDE_TAC)
-  THEN1
+  THEN1 (* JumpPtr *)
    (FULL_SIMP_TAC (srw_ss()) [hw_step_def,LET_DEF,inc_pc_def,
       arg_def,push_def,overflow_def,hw_steps_def,hw_inv_aux_def] \\ STRIP_TAC
     \\ Cases_on `s1.stack` \\ FULL_SIMP_TAC (srw_ss()) [EVERY2_def]
     \\ FULL_SIMP_TAC std_ss [hw_val_def]
     \\ Q.PAT_ASSUM `w2n h = ptr` (ASSUME_TAC o GSYM)
     \\ FULL_SIMP_TAC (srw_ss()) [])
-  THEN1
+  THEN1 (* Return *)
    (FULL_SIMP_TAC (srw_ss()) [hw_steps_def,hw_step_def,LET_DEF,
       overflow_def,push_def,inc_pc_def,arg_def,hw_inv_aux_def,bump_pc_def]
     \\ STRIP_TAC \\ IMP_RES_TAC EVERY2_TWO \\ FULL_SIMP_TAC (srw_ss()) []
     \\ FULL_SIMP_TAC std_ss [hw_val_def]
     \\ Q.PAT_ASSUM `w2n h = ptr` (ASSUME_TAC o GSYM)
     \\ FULL_SIMP_TAC (srw_ss()) [])
-  THEN1 F_TAC
-  THEN1
+  THEN1 F_TAC (* Exception *)
+  THEN1 (* Ref *)
    (FULL_SIMP_TAC std_ss [RIGHT_AND_OVER_OR]
     \\ `(@n. (n = ptr) /\ ~(n IN FDOM s.refs)) = ptr` by METIS_TAC []
     \\ FULL_SIMP_TAC std_ss []
@@ -1305,6 +1357,7 @@ val hw_steps_hwml_lemma = prove(
          overflow_def,push_def,inc_pc_def,arg_def,hw_inv_aux_def,bump_pc_def,
          heap_address_def,heap_alloc_def]
     \\ Cases_on `s1.stack` \\ FULL_SIMP_TAC (srw_ss()) [EVERY2_def]
+    \\ IMP_RES_TAC hwml_length_thm
     \\ FULL_SIMP_TAC std_ss [hwml_length_thm,EVAL ``LENGTH (hwml Ref)``]
     \\ FULL_SIMP_TAC std_ss [word_add_n2w] \\ REPEAT STRIP_TAC
     THEN1 (FULL_SIMP_TAC (srw_ss()) [hw_val_def,FLOOKUP_DEF] \\ DECIDE_TAC)
@@ -1333,19 +1386,21 @@ val hw_steps_hwml_lemma = prove(
       \\ FULL_SIMP_TAC std_ss [EL_APPEND1]
       \\ MATCH_MP_TAC hw_val_APPEND
       \\ MATCH_MP_TAC hw_val_FUPDATE \\ FULL_SIMP_TAC std_ss [hw_refs_def]))
-  THEN1
+  THEN1 (* Deref *)
    (FULL_SIMP_TAC (srw_ss()) [hw_steps_def,hw_step_def,LET_DEF,heap_load_def,
       overflow_def,push_def,inc_pc_def,arg_def,hw_inv_aux_def,bump_pc_def]
     \\ Cases_on `s1.stack` \\ FULL_SIMP_TAC (srw_ss()) [EVERY2_def]
+    \\ IMP_RES_TAC hwml_length_thm
     \\ FULL_SIMP_TAC std_ss [hwml_length_thm,EVAL ``LENGTH (hwml Deref)``]
     \\ FULL_SIMP_TAC std_ss [word_add_n2w] \\ REPEAT STRIP_TAC
     \\ FULL_SIMP_TAC std_ss [hw_refs_def,FEVERY_DEF]
-    \\ `ptr ∈ FDOM r` by FULL_SIMP_TAC std_ss [] \\ RES_TAC
+    \\ `ptr IN FDOM r` by FULL_SIMP_TAC std_ss [] \\ RES_TAC
     \\ FULL_SIMP_TAC std_ss [hw_val_def,FLOOKUP_DEF] \\ METIS_TAC [])
-  THEN1
+  THEN1 (* Update *)
    (FULL_SIMP_TAC (srw_ss()) [hw_steps_def,hw_step_def,LET_DEF,heap_store_def,
       overflow_def,push_def,inc_pc_def,arg_def,hw_inv_aux_def,bump_pc_def]
     \\ STRIP_TAC \\ IMP_RES_TAC EVERY2_TWO \\ FULL_SIMP_TAC std_ss [EVERY2_def,TL,HD]
+    \\ IMP_RES_TAC hwml_length_thm
     \\ FULL_SIMP_TAC std_ss [hwml_length_thm,EVAL ``LENGTH (hwml Update)``]
     \\ FULL_SIMP_TAC std_ss [word_add_n2w] \\ REPEAT STRIP_TAC
     \\ ASSUME_TAC (UNDISCH hw_val_UPDATE_NTH) \\ FULL_SIMP_TAC std_ss []
@@ -1394,9 +1449,9 @@ val push_fixed_imm_next = prove(
   SRW_TAC [] [push_fixed_imm_def] \\ EVAL_TAC \\ FULL_SIMP_TAC std_ss []);
 
 val hwml_next = prove(
-  ``!x. EVERY hw_pc_next (FRONT (hwml x)) /\ ~(hwml x = [])``,
-  Cases \\ TRY (Cases_on `b`)
-  \\ FULL_SIMP_TAC std_ss [hwml_def,FRONT_DEF,EVERY_DEF]
+  ``!x. ~is_Label x ==> EVERY hw_pc_next (FRONT (hwml x)) /\ ~(hwml x = [])``,
+  Cases \\ TRY (Cases_on `b`) \\ TRY (Cases_on `l`)
+  \\ FULL_SIMP_TAC std_ss [hwml_def,FRONT_DEF,EVERY_DEF,is_Label_def]
   \\ SRW_TAC [] []
   THEN1 (EVAL_TAC \\ FULL_SIMP_TAC std_ss [])
   THEN1
@@ -1443,6 +1498,11 @@ val bc_next_IMP_fetch = prove(
   ``!x y. bc_next x y ==> ?z. bc_fetch x = SOME z``,
   SIMP_TAC std_ss [bc_next_cases] \\ REPEAT STRIP_TAC \\ FULL_SIMP_TAC (srw_ss()) []);
 
+val hwml_NOT_NIL_IMP = prove(
+  ``!x. hwml x <> [] ==> ~is_Label x``,
+  Cases \\ TRY (Cases_on `b`) \\ TRY (Cases_on `l`)
+  \\ SRW_TAC [] [is_Label_def,hwml_def]);
+
 val bc_next_IMP_RTC_hw_step_rel = prove(
   ``!s t s1.
       bc_next s t /\ hw_inv s s1 /\ ~s1.error ==>
@@ -1459,18 +1519,36 @@ val bc_next_IMP_RTC_hw_step_rel = prove(
     \\ POP_ASSUM MP_TAC \\ FULL_SIMP_TAC std_ss []
     \\ REPEAT (POP_ASSUM (K ALL_TAC))
     \\ Q.SPEC_TAC (`s.pc`,`n`) \\ Q.SPEC_TAC (`s.code`,`xs`)
-    \\ Induct \\ FULL_SIMP_TAC std_ss [bc_fetch_aux_def]
-    \\ SRW_TAC [] [] THEN1 (Q.LIST_EXISTS_TAC [`[]`,`full_hwml xs`] \\ EVAL_TAC)
+    \\ Induct \\ TRY (STRIP_TAC \\ Cases_on `h`)
+    \\ FULL_SIMP_TAC std_ss [bc_fetch_aux_def] \\ SRW_TAC [] []
+    \\ TRY (Q.LIST_EXISTS_TAC [`[]`,`full_hwml xs`] \\ EVAL_TAC \\ NO_TAC)
+    \\ TRY (FULL_SIMP_TAC std_ss [full_hwml_def,MAP,hwml_def,FLAT,APPEND] \\ NO_TAC)
+    THENL [Q.ABBREV_TAC `h = Stack b`,
+           Q.ABBREV_TAC `h = Jump l`,
+           Q.ABBREV_TAC `h = JumpNil l`,
+           Q.ABBREV_TAC `h = Call l`,
+           Q.ABBREV_TAC `h = JumpPtr`,
+           Q.ABBREV_TAC `h = CallPtr`,
+           Q.ABBREV_TAC `h = Return`,
+           Q.ABBREV_TAC `h = Exception`,
+           Q.ABBREV_TAC `h = Ref`,
+           Q.ABBREV_TAC `h = Deref`,
+           Q.ABBREV_TAC `h = Update`]
+    \\ MP_TAC (Q.SPEC `h` hwml_length_lemma |> Q.GEN `p` |> Q.SPEC `0`) \\ STRIP_TAC
     \\ RES_TAC \\ FULL_SIMP_TAC std_ss [full_hwml_def,FLAT,MAP,APPEND_ASSOC]
     \\ Q.LIST_EXISTS_TAC [`hwml h ++ xs'`,`zs`]
-    \\ FULL_SIMP_TAC std_ss [LENGTH_APPEND,
-         hwml_length_thm |> Q.INST [`p`|->`0`] |> SIMP_RULE std_ss []]
+    \\ Q.UNABBREV_TAC `h` \\ FULL_SIMP_TAC std_ss [is_Label_def]
+    \\ FULL_SIMP_TAC std_ss [calc_len_def,LENGTH_APPEND]
     \\ DECIDE_TAC)
   \\ `s.pc < 4294967196` by ALL_TAC THEN1
        (FULL_SIMP_TAC std_ss [LENGTH_APPEND] \\ DECIDE_TAC)
   \\ FULL_SIMP_TAC std_ss []
-  \\ MATCH_MP_TAC hw_step_rel_lemma
-  \\ FULL_SIMP_TAC std_ss [hwml_next,hw_inv_aux_def,hw_inv_def]
+  \\ Cases_on `hwml (THE (bc_fetch s)) = []`
+  THEN1 (FULL_SIMP_TAC std_ss [hw_steps_def,RTC_REFL])
+  \\ MATCH_MP_TAC hw_step_rel_lemma \\ ASM_SIMP_TAC std_ss []
+  \\ IMP_RES_TAC hwml_NOT_NIL_IMP
+  \\ IMP_RES_TAC hwml_next
+  \\ FULL_SIMP_TAC std_ss [hw_inv_aux_def,hw_inv_def]
   \\ FULL_SIMP_TAC (srw_ss()) [] \\ DECIDE_TAC);
 
 val full_hw_inv_def = Define `

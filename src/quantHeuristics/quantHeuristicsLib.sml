@@ -33,6 +33,20 @@ quietdec := false;
 
 val std_ss = numLib.std_ss
 
+
+(*******************************************************
+ * Traces and other global parameters
+ *******************************************************)
+
+val QUANT_INSTANTIATE_HEURISTIC___max_rec_depth = ref 250;
+
+val QUANT_INSTANTIATE_HEURISTIC___debug = ref 0;
+val _ = register_trace("QUANT_INSTANTIATE_HEURISTIC", QUANT_INSTANTIATE_HEURISTIC___debug, 3);
+
+val QUANT_INSTANTIATE_HEURISTIC___print_term_length = ref 20;
+val _ = register_trace("QUANT_INSTANTIATE_HEURISTIC___print_term_length", QUANT_INSTANTIATE_HEURISTIC___print_term_length, 20);
+
+
 (*******************************************************
  * Some general auxiliary functions
  *******************************************************)
@@ -74,15 +88,8 @@ end;
   of a universal or existential quantifier for different reasons.
   The datatype guess captures these guesses and the reason.
 
-  Let us consider terms of the form
-  ?v. P v and !v. P v.
-
-  A heuristic tries to guess an instatiation for uv / ev based on
-  the body for the following reasons. All guesses consist of
-  a instatiation, a list of free variables in this instatiation and
-  perhaps a theorem justifying the guess.
-  Let in the following i denote the guess and [fv1, ..., fvn] be the free variables in i.
-  Then there are the following types of guesses:
+  There are 6 types of guesses with corresponding arguments as
+  defined in quantHeuristicsScript.
 *)
 
 datatype guess_type =
@@ -92,115 +99,6 @@ datatype guess_type =
 | gty_forall
 | gty_exists_strong
 | gty_forall_strong
-
-
-datatype guess =
-    guess_general of term * term list
-  | guess_thm  of guess_type * term * term list * thm
-  | guess_term of guess_type * term * term list * term
-
-
-fun is_guess_general (guess_general _) = true
-  | is_guess_general _ = false;
-
-fun is_guess_thm gty (guess_thm (gty2, _, _, _)) = (gty = gty2)
-  | is_guess_thm gty _ = false;
-
-fun is_guess_term gty (guess_term (gty2, _, _, _)) = (gty = gty2)
-  | is_guess_term gty _ = false;
-
-fun is_guess gty (guess_term (gty2, _, _, _)) = (gty = gty2)
-  | is_guess gty (guess_thm (gty2, _, _, _)) = (gty = gty2)
-  | is_guess gty _ = false;
-
-
-type guess_collection =
-   {rewrites            : thm list,
-    general             : guess list,
-    true                : guess list,
-    false               : guess list,
-    exists              : guess list,
-    forall              : guess list,
-    exists_strong       : guess list,
-    forall_strong       : guess list}
-
-fun guess_collection_guess_type gty_true = (#true:guess_collection -> guess list)
-  | guess_collection_guess_type gty_false = #false
-  | guess_collection_guess_type gty_exists = #exists
-  | guess_collection_guess_type gty_forall = #forall
-  | guess_collection_guess_type gty_exists_strong = #exists_strong
-  | guess_collection_guess_type gty_forall_strong = #forall_strong
-
-val empty_guess_collection =
-   {rewrites            = [],
-    general             = [],
-    true                = [],
-    false               = [],
-    exists              = [],
-    forall              = [],
-    exists_strong       = [],
-    forall_strong       = []}:guess_collection
-
-
-
-fun is_empty_guess_collection (gc:guess_collection) =
-   (null (#rewrites gc)) andalso
-   (null (#general gc)) andalso
-   (null (#true gc)) andalso
-   (null (#false gc)) andalso
-   (null (#exists gc)) andalso
-   (null (#forall gc)) andalso
-   (null (#exists_strong gc)) andalso
-   (null (#forall_strong gc))
-
-
-fun guess_collection_append (c1:guess_collection) (c2:guess_collection) =
-   {rewrites            = append (#rewrites c1) (#rewrites c2),
-    general             = append (#general c1) (#general c2),
-    true                = append (#true c1) (#true c2),
-    false               = append (#false c1) (#false c2),
-    exists              = append (#exists c1) (#exists c2),
-    forall              = append (#forall c1) (#forall c2),
-    exists_strong       = append (#exists_strong c1) (#exists_strong c2),
-    forall_strong       = append (#forall_strong c1) (#forall_strong c2)}:guess_collection
-
-
-fun guess_collection_flatten [] = empty_guess_collection
-  | guess_collection_flatten (NONE::L) = guess_collection_flatten L
-  | guess_collection_flatten ((SOME gc)::L) =
-    guess_collection_append gc (guess_collection_flatten L);
-
-
-local
-fun guess_list2collection___int gp [] = gp
-  | guess_list2collection___int (g1,g3,g4,g5,g6,g7,g8) (guess::gL) =
-      let
-         val g1 = if (is_guess_general guess) then guess::g1 else g1;
-         val g3 = if (is_guess gty_true guess) then guess::g3 else g3;
-         val g4 = if (is_guess gty_false guess) then guess::g4 else g4;
-         val g5 = if (is_guess gty_exists guess) then guess::g5 else g5;
-         val g6 = if (is_guess gty_forall guess) then guess::g6 else g6;
-         val g7 = if (is_guess gty_exists_strong guess) then guess::g7 else g7;
-         val g8 = if (is_guess gty_forall_strong guess) then guess::g8 else g8;
-      in
-         guess_list2collection___int (g1,g3,g4,g5,g6,g7,g8) gL
-      end;
-in
-   fun guess_list2collection (rewL, gL) =
-   let
-      val (g1,g3,g4,g5,g6,g7,g8) = guess_list2collection___int ([],[],[],[],[],[],[]) gL;
-   in
-      {rewrites = rewL, general = g1, true = g3, false = g4, exists = g5,
-       forall = g6, exists_strong = g7, forall_strong = g8}:guess_collection
-   end;
-
-end;
-
-
-fun guess_collection2list (gc:guess_collection) =
-  (#rewrites gc,
-   flatten [#general gc, #true gc, #false gc, #forall gc,
-            #exists gc, #forall_strong gc, #exists_strong gc]);
 
 
 fun qh_mk_const n =
@@ -237,68 +135,47 @@ fun guess_term2type gtm =
        Feedback.fail();
 
 
-(*
-val v = ``x:num``
-val t = ``(P (x:num)):bool``
-val i = ``SUC y + z``
-val fvL = [``y:num``, ``z:num``]
-val base = GUESS_FALSE_tm
+(*  
+  All guesses consist of an instatiation, a list of free variables in this instatiation. There might also be
+  a justification that might have been proved. The justification of a guess consists of a guess-type accompanied by either a theorem
+  or a term. The term/theorem has to correspond to the ML-level information.
+  Depending on the guess-type, it has to be a single guess as defined in
+  quantHeuristicsScritpt (either GUESS_TRUE, GUESS_FALSE, GUESS_EXISTS, GUESS_FORALL,  GUESS_EXISTS_STRONG or GUESS_FORALL_STRONG).
+  The list of free variables is mainly used to record names. In the guess theorem/term, only a single variable is allowed.
+  A simple example is
+  
+  guess_term
+    (gty_false,
+     ``SUC (y :num) + (z :num)``,
+     [``(y :num)``, ``(z :num)``],
+     ``GUESS_FALSE (λ(x :num # num). SUC (FST x) + SND x)
+       (λ(x :num). (P :num -> bool) x)``)
+
+  Look at the ML-function check_guess for a more formal description, please.
 *)
-val unit_ty = Type `:unit`;
 
-fun make_guess_thm_term gty v t i fvL =
-let
-   val base = guess_type2term gty;
-   val vt = mk_abs (v, t);
-   val fvL = if null fvL then [genvar unit_ty] else fvL;
-   val ip = pairLib.mk_pabs (pairLib.list_mk_pair fvL, i);
-   val ip_thm = (pairTools.PABS_ELIM_CONV ip) handle UNCHANGED => REFL ip;
-in
-   list_mk_icomb (base, [rhs (concl ip_thm), vt])
-end;
+datatype guess =
+    (* Oracle Guesses *)
+    guess_general of term * term list    
+  | (* formally justified guesses *) 
+    guess_thm  of guess_type * term * term list * thm
+  | (* informally justified guesses *)
+    guess_term of guess_type * term * term list * term
 
 
-fun mk_guess gty v t i fvL =
-   guess_term (gty, i, fvL, make_guess_thm_term gty v t i fvL)
+(* Some auxiliary functions to check type of guesses and destruct them. *)
+fun is_guess_general (guess_general _) = true
+  | is_guess_general _ = false;
 
+fun is_guess_thm gty (guess_thm (gty2, _, _, _)) = (gty = gty2)
+  | is_guess_thm gty _ = false;
 
-fun make_set_guess_thm (guess_term(ty, i, fvL, tm)) proofConv =
-    guess_thm (ty, i, fvL, proofConv tm)
-  | make_set_guess_thm guess _ =  guess
+fun is_guess_term gty (guess_term (gty2, _, _, _)) = (gty = gty2)
+  | is_guess_term gty _ = false;
 
-fun guess_remove_thm v t (guess_thm(ty, i, fvL, thm)) =
-    mk_guess ty v t i fvL
-  | guess_remove_thm v t (guess_term(ty, i, fvL, tm)) =
-    mk_guess ty v t i fvL
-  | guess_remove_thm _ _ guess =  guess;
-
-fun guess_thm2term (guess_thm(ty, i, fvL, thm)) =
-    guess_term (ty, i, fvL, concl thm)
-  | guess_thm2term guess =  guess;
-
-
-fun make_set_guess_thm___dummy guess =
-    ((say_HOL_WARNING "make_set_guess_thm_opt___dummy"
-		    "mk_thm was used to create a guess");
-    make_set_guess_thm guess (fn x => mk_thm ([], x)));
-
-fun make_guess___dummy gty v t i fvL =
-     make_set_guess_thm___dummy (mk_guess gty v t i fvL);
-
-fun make_set_guess_thm___assume guess =
-    make_set_guess_thm guess ASSUME;
-
-fun make_guess___assume gty v t i fvL =
-     make_set_guess_thm___assume (mk_guess gty v t i fvL)
-
-
-fun make_set_guess_thm___simple guess =
-     make_set_guess_thm guess (fn x => EQT_ELIM
-        (SIMP_CONV std_ss [GUESS_REWRITES] x))
-
-fun make_guess___simple gty v t i fvL =
-     make_set_guess_thm___simple (mk_guess gty v t i fvL)
-
+fun is_guess gty (guess_term (gty2, _, _, _)) = (gty = gty2)
+  | is_guess gty (guess_thm (gty2, _, _, _)) = (gty = gty2)
+  | is_guess gty _ = false;
 
 fun guess_extract (guess_general (i,fvL)) = (i,fvL)
   | guess_extract (guess_thm (_,i,fvL,_)) = (i,fvL)
@@ -318,7 +195,6 @@ fun guess2thm (guess_thm (_,_,_,thm)) = (true, thm)
 
 fun guess2thm_opt (guess_thm (_,_,_,thm)) = SOME thm
   | guess2thm_opt _ = NONE
-
 
 fun guess_extract_type (guess_general (i,fvL)) = NONE
   | guess_extract_type (guess_thm (ty,i,fvL,_)) = SOME ty
@@ -374,88 +250,97 @@ end;
 val is_guess_tm = can dest_guess_tm
 
 
-type inference_collection =
-   {true                : thm list,
-    false               : thm list,
-    exists              : thm list,
-    forall              : thm list,
-    exists_strong       : thm list,
-    forall_strong       : thm list};
+(*******************************************************
+ * Creating guesses in various ways
+ *******************************************************)
 
+(*
+val v = ``x:num``
+val t = ``(P (x:num)):bool``
+val i = ``SUC y + z``
+val fvL = [``y:num``, ``z:num``]
+val base = GUESS_FALSE_tm
+val gty = gty_false
+*)
+val unit_ty = Type `:unit`;
 
-val empty_inference_collection =
-   {true          = [],
-    false         = [],
-    exists        = [],
-    forall        = [],
-    exists_strong = [],
-    forall_strong = []}:inference_collection;
-
-
-fun GUESS_THM_list2collection inference_thmL =
+fun make_guess_thm_term gty v t i fvL =
 let
-    val L0 = flatten (map BODY_CONJUNCTS inference_thmL)
-    val L1 = map (SIMP_RULE std_ss [combinTheory.K_DEF]) L0;
-    fun sort_fun (thm, (l1,l2,l3,l4,l5,l6)) =
-    let
-       val gtm = (fst o strip_comb o snd o dest_imp o concl) thm
-    in
-       if (same_const gtm GUESS_FALSE_tm)then
-          (thm::l1, l2, l3, l4, l5, l6) else
-       if (same_const gtm GUESS_TRUE_tm) then
-          (l1, thm::l2, l3, l4, l5, l6) else
-       if (same_const gtm GUESS_EXISTS_tm) then
-          (l1, l2, thm::l3, l4, l5, l6) else
-       if (same_const gtm GUESS_FORALL_tm) then
-          (l1, l2, l3, thm::l4, l5, l6) else
-       if (same_const gtm GUESS_EXISTS_STRONG_tm) then
-          (l1, l2, l3, l4, thm::l5, l6) else
-       if (same_const gtm GUESS_FORALL_STRONG_tm) then
-          (l1, l2, l3, l4, l5, thm::l6) else
-          (l1, l2, l3, l4, l5, l6)
-    end handle HOL_ERR _ => (l1,l2,l3,l4,l5,l6)
-
-    val (l1,l2,l3,l4,l5,l6) = foldl sort_fun ([],[],[],[],[],[]) L1;
+   val base = guess_type2term gty;
+   val vt = mk_abs (v, t);
+   val fvL = if null fvL then [genvar unit_ty] else fvL;
+   val ip = pairLib.mk_pabs (pairLib.list_mk_pair fvL, i);
+   val ip_thm = (pairTools.PABS_ELIM_CONV ip) handle UNCHANGED => REFL ip;
 in
-   {true          = l2,
-    false         = l1,
-    exists        = l3,
-    forall        = l4,
-    exists_strong = l5,
-    forall_strong = l6 }:inference_collection
+   list_mk_icomb (base, [rhs (concl ip_thm), vt])
 end;
 
 
-
-(*_
-val tref = ref NONE
-
-val (v,t,thmL,guess) = valOf (!tref)
-val fvL = [``x:num``, ``y:num``]
-val rewrite_thm = GSYM (HO_PART_MATCH lhs (hd thmL) ((fst o dest_imp) (concl thm_org)))
-val fv = []
-
-val v = ``x:num``
-val t = ``!t. (P (x:num) /\ Z t):bool``
-val t' = ``!t. X t \/ (Q (x:num))``
-val i = ``(i (y:num) (z:num)):num``
-val fvL = [``y:num``, ``z:num``]
-
-val rew_thm = mk_thm ([], mk_eq(t,t'))
-
-val guess = make_set_guess_thm_opt___dummy v t' (guess_forall (i,fvL,NONE));
-correct_guess fv v t (guess_rewrite_thm_opt v t rew_thm guess)
-*)
-
-fun guess_rewrite rew_thm (guess_general (i, fvL)) = guess_general (i,fvL)
-  | guess_rewrite rew_thm (guess_thm (gty, i, fvL, thm)) =
-      guess_thm (gty, i, fvL,
-         CONV_RULE (RAND_CONV (ABS_CONV (K (GSYM rew_thm)))) thm)
-  | guess_rewrite rew_thm (guess_term (gty, i, fvL, tm)) =
-      guess_term (gty, i, fvL,
-         (rhs o concl) (RAND_CONV (ABS_CONV (K (GSYM rew_thm))) tm))
+(* This is the prefered way to generate a well-formed guess *)
+fun mk_guess gty v t i fvL =
+   guess_term (gty, i, fvL, make_guess_thm_term gty v t i fvL)
 
 
+(* Given a guess_term the function is applied to prove the term. *)
+fun make_set_guess_thm (guess_term(ty, i, fvL, tm)) proofConv =
+    guess_thm (ty, i, fvL, proofConv tm)
+  | make_set_guess_thm guess _ =  guess
+
+fun guess_remove_thm v t (guess_thm(ty, i, fvL, thm)) =
+    mk_guess ty v t i fvL
+  | guess_remove_thm v t (guess_term(ty, i, fvL, tm)) =
+    mk_guess ty v t i fvL
+  | guess_remove_thm _ _ guess =  guess;
+
+fun guess_thm2term (guess_thm(ty, i, fvL, thm)) =
+    guess_term (ty, i, fvL, concl thm)
+  | guess_thm2term guess =  guess;
+
+
+(* A dummy version that just uses mk_thm. *)
+fun make_set_guess_thm___dummy guess =
+    ((say_HOL_WARNING "make_set_guess_thm_opt___dummy"
+		    "mk_thm was used to create a guess");
+    make_set_guess_thm guess (fn x => mk_thm ([], x)));
+
+fun make_guess___dummy gty v t i fvL =
+     make_set_guess_thm___dummy (mk_guess gty v t i fvL);
+
+(* A dummy version that just uses assume. *)
+fun make_set_guess_thm___assume guess =
+    make_set_guess_thm guess ASSUME;
+
+fun make_guess___assume gty v t i fvL =
+     make_set_guess_thm___assume (mk_guess gty v t i fvL)
+
+
+(* A simple version that uses the simplifier. Surprisingly, this is often sufficient. *)
+fun make_set_guess_thm___simple guess =
+     make_set_guess_thm guess (fn x => EQT_ELIM
+        (SIMP_CONV std_ss [GUESS_REWRITES] x))
+
+fun make_guess___simple gty v t i fvL =
+     make_set_guess_thm___simple (mk_guess gty v t i fvL)
+
+
+(* A simple version that uses rewrites. *)
+fun REWRITE_PROVE t =
+let
+   open metisLib
+   val thm = REWRITE_CONV [] t handle UNCHANGED => REFL t;
+   val t2 = rhs (concl thm)
+   val thm2 = if t2 = T then TRUTH else METIS_PROVE [] t2;
+in
+   EQ_MP (GSYM thm) thm2
+end;
+
+
+fun make_guess___rewrite gty v t i fvL =
+     make_set_guess_thm (mk_guess gty v t i fvL) REWRITE_PROVE
+
+
+
+(* Other stuff *)
 fun term_list_to_string [] = ""
   | term_list_to_string [t] = (term_to_string t)
   | term_list_to_string (t1::t2::ts) =
@@ -471,6 +356,7 @@ fun guess_to_string show_thm (guess_general (i,fvL)) =
     (if show_thm then term_to_string tm else "-")^"``)";
 
 
+(* Checking whether a guess is well-formed and if not try to correct it automatically. *)
 fun check_guess v t (guess_general _) = true
   | check_guess v t guess =
    let
@@ -507,42 +393,9 @@ fun correct_guess_list v t = mapPartial (correct_guess v t)
 
 
 
-val QUANT_INSTANTIATE_HEURISTIC___max_rec_depth = ref 250;
-val QUANT_INSTANTIATE_HEURISTIC___debug = ref 0;
-val _ = register_trace("QUANT_INSTANTIATE_HEURISTIC", QUANT_INSTANTIATE_HEURISTIC___debug, 3);
-
-(*
-val guess = hd (#exists gc)
-val gc_ref = ref []
-val gc = hd (!gc_ref)
-*)
-
-fun correct_guess_collection v t (gc:guess_collection) =
-  if (!QUANT_INSTANTIATE_HEURISTIC___debug > 0) then
-  let
-     val gc =
-     {rewrites            = #rewrites gc,
-      general             = correct_guess_list v t (#general gc),
-      true                = correct_guess_list v t (#true gc),
-      false               = correct_guess_list v t (#false gc),
-      forall              = correct_guess_list v t (#forall gc),
-      exists              = correct_guess_list v t (#exists gc),
-      forall_strong       = correct_guess_list v t (#forall_strong gc),
-      exists_strong       = correct_guess_list v t (#exists_strong gc)}:guess_collection;
-
-     val _ = if (all (is_guess gty_true) (#true gc)) andalso
-                (all (is_guess gty_false) (#false gc)) andalso
-                (all is_guess_general (#general gc)) andalso
-                (all (is_guess gty_forall) (#forall gc)) andalso
-                (all (is_guess gty_exists) (#exists gc)) andalso
-                (all (is_guess gty_forall_strong) (#forall_strong gc)) andalso
-                (all (is_guess gty_exists_strong) (#exists_strong gc)) then () else
-                   say_HOL_WARNING "correct_guess_collection" "Guess-collection-invariant violated!"
-  in
-     gc
-  end else gc;
-
-
+(*******************************************************
+ * Try to weaken guesses to get guess_exists or guess_forall
+ *******************************************************)
 
 local
 
@@ -603,6 +456,139 @@ fun guess_weaken (guess_general (i, fvL)) = guess_general (i,fvL)
 end
 
 
+(*******************************************************
+ * Collections of guesses
+ *
+ * There are usually many guesses around. Therefore, they are
+ * collected in one datastructure, that separates them after their
+ * type.  Moreover, this datastructures also records rewrite theorems
+ * that were used to come up with these guesses. These rewrites might
+ * then be used later for simplification.
+ ********************************************************)
+
+type guess_collection =
+   {rewrites            : thm list,
+    general             : guess list,
+    true                : guess list,
+    false               : guess list,
+    exists              : guess list,
+    forall              : guess list,
+    exists_strong       : guess list,
+    forall_strong       : guess list}
+
+fun guess_collection_guess_type gty_true = (#true:guess_collection -> guess list)
+  | guess_collection_guess_type gty_false = #false
+  | guess_collection_guess_type gty_exists = #exists
+  | guess_collection_guess_type gty_forall = #forall
+  | guess_collection_guess_type gty_exists_strong = #exists_strong
+  | guess_collection_guess_type gty_forall_strong = #forall_strong
+
+val empty_guess_collection =
+   {rewrites            = [],
+    general             = [],
+    true                = [],
+    false               = [],
+    exists              = [],
+    forall              = [],
+    exists_strong       = [],
+    forall_strong       = []}:guess_collection
+
+
+
+fun is_empty_guess_collection (gc:guess_collection) =
+   (null (#rewrites gc)) andalso
+   (null (#general gc)) andalso
+   (null (#true gc)) andalso
+   (null (#false gc)) andalso
+   (null (#exists gc)) andalso
+   (null (#forall gc)) andalso
+   (null (#exists_strong gc)) andalso
+   (null (#forall_strong gc))
+
+
+fun guess_collection_append (c1:guess_collection) (c2:guess_collection) =
+   {rewrites            = append (#rewrites c1) (#rewrites c2),
+    general             = append (#general c1) (#general c2),
+    true                = append (#true c1) (#true c2),
+    false               = append (#false c1) (#false c2),
+    exists              = append (#exists c1) (#exists c2),
+    forall              = append (#forall c1) (#forall c2),
+    exists_strong       = append (#exists_strong c1) (#exists_strong c2),
+    forall_strong       = append (#forall_strong c1) (#forall_strong c2)}:guess_collection
+
+
+fun guess_collection_flatten [] = empty_guess_collection
+  | guess_collection_flatten (NONE::L) = guess_collection_flatten L
+  | guess_collection_flatten ((SOME gc)::L) =
+    guess_collection_append gc (guess_collection_flatten L);
+
+
+
+(* Create a guess-collection from a list of rewrites and a list of guesses by
+   sorting the guesses in the right bucket. *)
+local
+fun guess_list2collection___int gp [] = gp
+  | guess_list2collection___int (g1,g3,g4,g5,g6,g7,g8) (guess::gL) =
+      let
+         val g1 = if (is_guess_general guess) then guess::g1 else g1;
+         val g3 = if (is_guess gty_true guess) then guess::g3 else g3;
+         val g4 = if (is_guess gty_false guess) then guess::g4 else g4;
+         val g5 = if (is_guess gty_exists guess) then guess::g5 else g5;
+         val g6 = if (is_guess gty_forall guess) then guess::g6 else g6;
+         val g7 = if (is_guess gty_exists_strong guess) then guess::g7 else g7;
+         val g8 = if (is_guess gty_forall_strong guess) then guess::g8 else g8;
+      in
+         guess_list2collection___int (g1,g3,g4,g5,g6,g7,g8) gL
+      end;
+in
+   fun guess_list2collection (rewL, gL) =
+   let
+      val (g1,g3,g4,g5,g6,g7,g8) = guess_list2collection___int ([],[],[],[],[],[],[]) gL;
+   in
+      {rewrites = rewL, general = g1, true = g3, false = g4, exists = g5,
+       forall = g6, exists_strong = g7, forall_strong = g8}:guess_collection
+   end;
+
+end;
+
+
+fun guess_collection2list (gc:guess_collection) =
+  (#rewrites gc,
+   flatten [#general gc, #true gc, #false gc, #forall gc,
+            #exists gc, #forall_strong gc, #exists_strong gc]);
+
+
+(*
+val guess = hd (#exists gc)
+val gc_ref = ref []
+val gc = hd (!gc_ref)
+*)
+
+fun correct_guess_collection v t (gc:guess_collection) =
+  if (!QUANT_INSTANTIATE_HEURISTIC___debug > 0) then
+  let
+     val gc =
+     {rewrites            = #rewrites gc,
+      general             = correct_guess_list v t (#general gc),
+      true                = correct_guess_list v t (#true gc),
+      false               = correct_guess_list v t (#false gc),
+      forall              = correct_guess_list v t (#forall gc),
+      exists              = correct_guess_list v t (#exists gc),
+      forall_strong       = correct_guess_list v t (#forall_strong gc),
+      exists_strong       = correct_guess_list v t (#exists_strong gc)}:guess_collection;
+
+     val _ = if (all (is_guess gty_true) (#true gc)) andalso
+                (all (is_guess gty_false) (#false gc)) andalso
+                (all is_guess_general (#general gc)) andalso
+                (all (is_guess gty_forall) (#forall gc)) andalso
+                (all (is_guess gty_exists) (#exists gc)) andalso
+                (all (is_guess gty_forall_strong) (#forall_strong gc)) andalso
+                (all (is_guess gty_exists_strong) (#exists_strong gc)) then () else
+                   say_HOL_WARNING "correct_guess_collection" "Guess-collection-invariant violated!"
+  in
+     gc
+  end else gc;
+
 fun guess_collection___get_exists_weaken (c:guess_collection) =
     append (#true c)
    (append (#exists c)
@@ -613,6 +599,13 @@ fun guess_collection___get_forall_weaken (c:guess_collection) =
    (append (#forall c)
 	   (#forall_strong c));
 
+
+
+(*******************************************************
+ * Cleaning a guess collecion, i.e. removing duplicate
+ * guesses or guesses that can be easily derived by weakening 
+ * stronger ones.
+ *******************************************************)
 
 local
 
@@ -689,32 +682,92 @@ end;
 
 
 
+
+
+
+
 (*******************************************************
  *
  * Heuristics for the common boolean operations
  *
  *******************************************************)
 
-(* A quant heuristics gets two arguments v and t.
-   It then tries to find guesses for \v. t. *)
-type quant_heuristic = term -> term -> guess_collection;
+(* A basic quantifier heuristics gets two arguments v and t.
+   It then tries to find guesses for "\v. t". *)
+type quant_heuristic_base = term -> term -> guess_collection;
+
+(* Often quantifier heuristics need to get guesses for subterms.
+   Therefore, they get an additional argument that can be used
+   as a system callback to get guesses for subterms. *)
+type quant_heuristic = quant_heuristic_base -> quant_heuristic_base;
 
 (* If a heuristic does not find any guesses, this exception is
    thrown *)
 exception QUANT_INSTANTIATE_HEURISTIC___no_guess_exp;
 
 
-type quant_param =
-{distinct_thms      : thm list,
- cases_thms         : thm list,
- rewrite_thms       : thm list,
- inference_thms     : thm list,
- convs              : conv list,
- filter             : (term -> term -> bool) list,
- top_heuristics     : (quant_heuristic -> quant_heuristic) list,
- heuristics         : (quant_heuristic -> quant_heuristic) list,
- final_rewrite_thms : thm list};
+(* Dummy system callbacks that are handy for debugging.
 
+fun dummy_term_sys v t =
+let
+   val i = mk_var ("i", type_of v);
+   val fvL = [];
+in
+   {rewrites            = [],
+    general             = [],
+    true                = [mk_guess gty_true v t i fvL],
+    false               = [mk_guess gty_false v t i fvL],
+    exists              = [mk_guess gty_exists v t i fvL],
+    forall              = [mk_guess gty_forall v t i fvL],
+    exists_strong       = [mk_guess gty_exists_strong v t i fvL],
+    forall_strong       = [mk_guess gty_forall_strong v t i fvL]}
+end;
+
+fun dummy_sys v t =
+let
+   val i = mk_var ("i", type_of v);
+   val fvL = [];
+in
+   {rewrites            = [],
+    general             = [],
+    true                = [make_guess___dummy gty_true v t i fvL],
+    false               = [make_guess___dummy gty_false v t i fvL],
+    exists              = [make_guess___dummy gty_exists v t i fvL],
+    forall              = [make_guess___dummy gty_forall v t i fvL],
+    exists_strong       = [make_guess___dummy gty_exists_strong v t i fvL],
+    forall_strong       = [make_guess___dummy gty_forall_strong v t i fvL]}
+end;
+
+*)
+
+
+(*********************************
+ * Simple heuristic for Booleans
+ *********************************)
+
+(*
+  val t = ``x:bool``
+  val v = t
+*)
+
+fun QUANT_INSTANTIATE_HEURISTIC___BOOL sys v t =
+let
+   val _ = if (aconv v t) then () else raise QUANT_INSTANTIATE_HEURISTIC___no_guess_exp;
+in
+  {rewrites            = [],
+   general             = [],
+   true                = [make_guess___simple gty_true v t T []],
+   false               = [make_guess___simple gty_false v t F []],
+   forall              = [],
+   exists              = [],
+   forall_strong       = [make_guess___simple gty_forall_strong v t F []],
+   exists_strong       = [make_guess___simple gty_exists_strong v t T []]}
+end;
+
+
+(*********************************
+ * Heuristic for equations
+ *********************************)
 
 (*
 val t = ``7 + y + z = (x:num)``;
@@ -775,60 +828,10 @@ in
    exists_strong = g_exists_strongL}:guess_collection
 end;
 
-(*
-fun QUANT_INSTANTIATE_HEURISTIC___EQUATION sys v t =
-let
-   val _ = if (is_eq t) then () else raise QUANT_INSTANTIATE_HEURISTIC___no_guess_exp;
-   val (l,r) = dest_eq t;
 
-   val (turn,top,i,s) = if (l = v) then (false, true, r,r) else
-		        if (r = v) then (true,  true, l,l) else
-		      (false, false, match_term_var v l r, r) handle HOL_ERR _ =>
-		      (true,  false, match_term_var v r l, l) handle HOL_ERR _ =>
-		      raise QUANT_INSTANTIATE_HEURISTIC___no_guess_exp;
-
-   val g_trueL = [make_guess___simple gty_true v t i []]
-   val g_exists_strongL = if not top then [] else
-	    [make_set_guess_thm_opt___simple v t (guess_exists_strong (i, [], NONE))]
-in
-  {rewrites            = [],
-   general             = [],
-   true                = g_trueL,
-   false               = [],
-   forall              = [],
-   exists              = [],
-   forall_strong       = [],
-   exists_strong = g_exists_strongL}:guess_collection
-end;
-*)
-
-(*
-val t = ``x:bool``
-val v = t
-*)
-
-fun QUANT_INSTANTIATE_HEURISTIC___BOOL sys v t =
-let
-   val _ = if (aconv v t) then () else raise QUANT_INSTANTIATE_HEURISTIC___no_guess_exp;
-in
-  {rewrites            = [],
-   general             = [],
-   true                = [make_guess___simple gty_true v t T []],
-   false               = [make_guess___simple gty_false v t F []],
-   forall              = [],
-   exists              = [],
-   forall_strong       = [make_guess___simple gty_forall_strong v t F []],
-   exists_strong       = [make_guess___simple gty_exists_strong v t T []]}
-end;
-
-
-(*
-   val t = ``l:'a list = []``;
-   val v = ``l:'a list``;
-   val fv = [];
-   val sys = NONE;
-   val thm = TypeBase.nchotomy_of ``:'a list``;
-*)
+(*********************************************
+ * Heuristic for monochotomies and dichotomies
+ *********************************************)
 
 fun prefix_free_vars (prefix, fvL, i) =
 let
@@ -843,8 +846,15 @@ in
    (fvL', i')
 end;
 
+(*
+   val t = ``l:'a list = []``;
+   val v = ``l:'a list``;
+   val fv = [];
+   val sys = NONE;
+   val thm = TypeBase.nchotomy_of ``:'a list``;
+*)
 
-fun QUANT_INSTANTIATE_HEURISTIC___EQUATION_cases thm sys v t =
+fun QUANT_INSTANTIATE_HEURISTIC___EQUATION_two_cases thm sys v t =
 let
    val _ = if is_eq t then () else raise QUANT_INSTANTIATE_HEURISTIC___no_guess_exp;
    val (l,r) = dest_eq t;
@@ -889,10 +899,13 @@ end handle UNCHANGED => raise QUANT_INSTANTIATE_HEURISTIC___no_guess_exp
          | HOL_ERR _ => raise QUANT_INSTANTIATE_HEURISTIC___no_guess_exp
 
 
+
 (*
 val v = ``X:('a # 'b)``
 val t = ``(P (X:('a # 'b))):bool``
 val thm = TypeBase.nchotomy_of (type_of v)
+val sys = dummy_sys
+val thm = GEN v thm0
 *)
 
 fun QUANT_INSTANTIATE_HEURISTIC___one_case thm sys v t =
@@ -965,7 +978,7 @@ in
       if is_sing_case_thm thm then
          QUANT_INSTANTIATE_HEURISTIC___one_case thm
       else if is_double_case_thm thm then
-         QUANT_INSTANTIATE_HEURISTIC___EQUATION_cases thm
+         QUANT_INSTANTIATE_HEURISTIC___EQUATION_two_cases thm
       else
          QUANT_INSTANTIATE_HEURISTIC___FAIL
    end;
@@ -977,7 +990,7 @@ in
       val thmL2 = filter is_double_case_thm thmL
 
       val hL1 = map QUANT_INSTANTIATE_HEURISTIC___one_case thmL1;
-      val hL2 = map QUANT_INSTANTIATE_HEURISTIC___EQUATION_cases thmL2;
+      val hL2 = map QUANT_INSTANTIATE_HEURISTIC___EQUATION_two_cases thmL2;
    in
       (hL1, hL2)
    end
@@ -994,14 +1007,18 @@ in
 end handle HOL_ERR _ => raise QUANT_INSTANTIATE_HEURISTIC___no_guess_exp);
 
 
+(*********************************
+ * Another Heuristic for dichotomies
+ *********************************)
 (*
    val t = ``n = x:num``;
+   val t = ``x = n:num``;
    val v = ``x:num``;
    val fv = [``x_n``];
    val sys = NONE;
    val thmL = [GSYM prim_recTheory.SUC_ID]
 
-   val t = ``l = []:'a list``;
+   val t = ``[] = l:'a list``;
    val v = ``l:'a list``
    val thmL = [rich_listTheory.NOT_CONS_NIL]
 
@@ -1020,9 +1037,7 @@ let
    val thmL'' = append thmL' (map GSYM thmL');
 
    val ni_thm = tryfind (fn thm => PART_MATCH (rhs o dest_neg) thm i) thmL'';
-   val ni_thm = if turn then GSYM ni_thm else ni_thm;
-   val ihs = if turn then rhs else lhs;
-   val ni = (ihs o dest_neg o concl) ni_thm;
+   val ni = (lhs o dest_neg o concl) ni_thm;
 
 
    val fvL_set = HOLset.difference (FVL [ni] empty_tmset, FVL [i] empty_tmset)
@@ -1037,11 +1052,11 @@ let
 
    val g_thm = let
         val (i_v, i_b) = dest_forall (concl ni_thm3);
-        val i = mk_abs (i_v, ihs (dest_neg i_b))
-        val g_thm0 = ISPECL [i, mk_abs(v,l), mk_abs(v,r)] GUESS_RULES_EQUATION_FALSE
+        val i = mk_abs (i_v, lhs (dest_neg i_b))
+        val (vl, vr) = (mk_abs(v,l), mk_abs(v,r));
+        val g_thm0 = ISPECL [i, if turn then vr else vl, if turn then vl else vr] GUESS_RULES_EQUATION_FALSE
         val g_thm1 = BETA_RULE g_thm0
         val g_thm2 = HO_MATCH_MP g_thm1 ni_thm3;
-
         val g_thm3 = CONV_RULE (RAND_CONV
                         (ALPHA_CONV v THENC
                          (if (turn) then
@@ -1074,37 +1089,77 @@ end handle HOL_ERR _ => raise QUANT_INSTANTIATE_HEURISTIC___no_guess_exp;
 
 
 
-fun dummy_term_sys v t =
+
+(*********************************
+ * Inference Collection
+ *********************************)
+
+(* Some of the heuristics are able to use general theorems to generate guesses.
+   These theorems should be of the form
+
+   ``pre ==> GUESS_TYPE i P``
+
+   For efficiency, it is convient to collect these inference theorems
+   depending on the type of the conclusion. That is what an inference collection
+   does.
+*)
+
+type inference_collection =
+   {true                : thm list,
+    false               : thm list,
+    exists              : thm list,
+    forall              : thm list,
+    exists_strong       : thm list,
+    forall_strong       : thm list};
+
+
+val empty_inference_collection =
+   {true          = [],
+    false         = [],
+    exists        = [],
+    forall        = [],
+    exists_strong = [],
+    forall_strong = []}:inference_collection;
+
+
+fun GUESS_THM_list2collection inference_thmL =
 let
-   val i = mk_var ("i", type_of v);
-   val fvL = [];
+    val L0 = flatten (map BODY_CONJUNCTS inference_thmL)
+    val L1 = map (SIMP_RULE std_ss [combinTheory.K_DEF]) L0;
+    fun sort_fun (thm, (l1,l2,l3,l4,l5,l6)) =
+    let
+       val gtm = (fst o strip_comb o snd o dest_imp o concl) thm
+    in
+       if (same_const gtm GUESS_FALSE_tm)then
+          (thm::l1, l2, l3, l4, l5, l6) else
+       if (same_const gtm GUESS_TRUE_tm) then
+          (l1, thm::l2, l3, l4, l5, l6) else
+       if (same_const gtm GUESS_EXISTS_tm) then
+          (l1, l2, thm::l3, l4, l5, l6) else
+       if (same_const gtm GUESS_FORALL_tm) then
+          (l1, l2, l3, thm::l4, l5, l6) else
+       if (same_const gtm GUESS_EXISTS_STRONG_tm) then
+          (l1, l2, l3, l4, thm::l5, l6) else
+       if (same_const gtm GUESS_FORALL_STRONG_tm) then
+          (l1, l2, l3, l4, l5, thm::l6) else
+          (l1, l2, l3, l4, l5, l6)
+    end handle HOL_ERR _ => (l1,l2,l3,l4,l5,l6)
+
+    val (l1,l2,l3,l4,l5,l6) = foldl sort_fun ([],[],[],[],[],[]) L1;
 in
-   {rewrites            = [],
-    general             = [],
-    true                = [mk_guess gty_true v t i fvL],
-    false               = [mk_guess gty_false v t i fvL],
-    exists              = [mk_guess gty_exists v t i fvL],
-    forall              = [mk_guess gty_forall v t i fvL],
-    exists_strong       = [mk_guess gty_exists_strong v t i fvL],
-    forall_strong       = [mk_guess gty_forall_strong v t i fvL]}
+   {true          = l2,
+    false         = l1,
+    exists        = l3,
+    forall        = l4,
+    exists_strong = l5,
+    forall_strong = l6 }:inference_collection
 end;
 
-fun dummy_sys v t =
-let
-   val i = mk_var ("i", type_of v);
-   val fvL = [];
-in
-   {rewrites            = [],
-    general             = [],
-    true                = [make_guess___dummy gty_true v t i fvL],
-    false               = [make_guess___dummy gty_false v t i fvL],
-    exists              = [make_guess___dummy gty_exists v t i fvL],
-    forall              = [make_guess___dummy gty_forall v t i fvL],
-    exists_strong       = [make_guess___dummy gty_exists_strong v t i fvL],
-    forall_strong       = [make_guess___dummy gty_forall_strong v t i fvL]}
-end;
 
 
+(*********************************
+ * Heuristics for Quantifiers
+ *********************************)
 
 (*
 val t = ``!x. P x /\ (y = 2 + x) /\ Q y``
@@ -1672,12 +1727,40 @@ end handle HOL_ERR _ => empty_guess_collection;
 
 end;
 
-(*
-correct_guess_list v t
-(QUANT_INSTANTIATE_HEURISTIC___REWRITE sys fv v rew_thm)
 
-rew_thm
+(******************************************************************************)
+(* Heuristics that apply conversions                                          *)
+(******************************************************************************)
+
+(* Applying a rewrite rule to a guess *)
+(*
+val tref = ref NONE
+
+val (v,t,thmL,guess) = valOf (!tref)
+val fvL = [``x:num``, ``y:num``]
+val rewrite_thm = GSYM (HO_PART_MATCH lhs (hd thmL) ((fst o dest_imp) (concl thm_org)))
+val fv = []
+
+val v = ``x:num``
+val t = ``!t. (P (x:num) /\ Z t):bool``
+val t' = ``!t. X t \/ (Q (x:num))``
+val i = ``(i (y:num) (z:num)):num``
+val fvL = [``y:num``, ``z:num``]
+
+val rew_thm = mk_thm ([], mk_eq(t,t'))
+
+val guess = make_set_guess_thm_opt___dummy v t' (guess_forall (i,fvL,NONE));
+correct_guess fv v t (guess_rewrite_thm_opt v t rew_thm guess)
 *)
+
+fun guess_rewrite rew_thm (guess_general (i, fvL)) = guess_general (i,fvL)
+  | guess_rewrite rew_thm (guess_thm (gty, i, fvL, thm)) =
+      guess_thm (gty, i, fvL,
+         CONV_RULE (RAND_CONV (ABS_CONV (K (GSYM rew_thm)))) thm)
+  | guess_rewrite rew_thm (guess_term (gty, i, fvL, tm)) =
+      guess_term (gty, i, fvL,
+         (rhs o concl) (RAND_CONV (ABS_CONV (K (GSYM rew_thm))) tm))
+
 
 fun QUANT_INSTANTIATE_HEURISTIC___REWRITE sys (v:term) rew_thm =
 let
@@ -1699,7 +1782,6 @@ in
 end;
 
 
-
 fun QUANT_INSTANTIATE_HEURISTIC___CONV conv sys v t =
 let
    val thm_opt = SOME (QCHANGED_CONV (CHANGED_CONV conv) t) handle HOL_ERR _ =>  NONE
@@ -1707,7 +1789,6 @@ in
    if not (isSome thm_opt) then raise QUANT_INSTANTIATE_HEURISTIC___no_guess_exp else
    QUANT_INSTANTIATE_HEURISTIC___REWRITE sys v (valOf thm_opt)
 end;
-
 
 
 fun QUANT_INSTANTIATE_HEURISTIC___EQUATION___TypeBase_one_one sys v t =
@@ -1721,46 +1802,262 @@ end handle UNCHANGED => raise QUANT_INSTANTIATE_HEURISTIC___no_guess_exp
 
 
 
+(******************************************************************************)
+(******************************************************************************)
+(*                                                                            *)
+(* Put everything together                                                    *)
+(* Combine Heuristics / Caching etc                                           *)
+(*                                                                            *)
+(******************************************************************************)
+(******************************************************************************)
 
 
+(******************************************************************************)
+(* Quantifier Heuristics Parameters                                           *)
+(******************************************************************************)
+
+(* One needs to collect all the heuristics, theorems etc used during guess search.
+   The following datastructures achieves this. *)
+
+type quant_param =
+{distinct_thms      : thm list, (* Dichotomy theorems showing distinctiness *)
+ cases_thms         : thm list, (* Dichotomy theorems showing case completeness *)
+ rewrite_thms       : thm list, (* Theorems used for rewrites *)
+ inference_thms     : thm list, (* Theorems used as inference rules to derive guesses from guesses for subterms. *)
+ convs              : conv list, (* Conversions used *)
+ filter             : (term -> term -> bool) list, (* Getting a free variable and a term, these ML functions decide, whether to try and find a guess *)
+ top_heuristics     : quant_heuristic list, (* Heuristics that should only be applied at top level *)
+ heuristics         : quant_heuristic list, (* Heuristics that should be applied for all subterms *)
+ final_rewrite_thms : thm list (* Rewrites used for cleaning up after instantiations. *) };
+
+
+fun combine_qp
+   ({distinct_thms      = l11,
+     rewrite_thms       = l12,
+     cases_thms         = l13,
+     convs              = l14,
+     heuristics         = l15,
+     filter             = l19,
+     top_heuristics     = l18,
+     inference_thms     = l17,
+     final_rewrite_thms = l16}:quant_param)
+   ({distinct_thms      = l21,
+     rewrite_thms       = l22,
+     cases_thms         = l23,
+     convs              = l24,
+     heuristics         = l25,
+     filter             = l29,
+     top_heuristics     = l28,
+     inference_thms     = l27,
+     final_rewrite_thms = l26}:quant_param) =
+
+   ({distinct_thms      = (append l11 l21),
+     rewrite_thms       = (append l12 l22),
+     cases_thms         = (append l13 l23),
+     convs              = (append l14 l24),
+     filter             = (append l19 l29),
+     top_heuristics     = (append l18 l28),
+     heuristics         = (append l15 l25),
+     inference_thms     = (append l17 l27),
+     final_rewrite_thms = (append l16 l26)}:quant_param)
+
+
+val empty_qp =
+   ({distinct_thms      = [],
+     rewrite_thms       = [],
+     cases_thms         = [],
+     convs              = [],
+     heuristics         = [],
+     filter             = [],
+     top_heuristics     = [],
+     inference_thms     = [],
+     final_rewrite_thms = []}:quant_param)
+
+fun combine_qps L =
+    foldl (fn (a1,a2) => combine_qp a1 a2) empty_qp L;
+
+
+fun distinct_qp thmL =
+   {distinct_thms=thmL,
+    rewrite_thms=[],
+    cases_thms=[],
+    filter=[],
+    top_heuristics=[],
+    inference_thms=[],
+    convs=[],heuristics=[],
+    final_rewrite_thms=[]}:quant_param;
+
+
+fun rewrite_qp thmL =
+   {distinct_thms=[],
+    rewrite_thms=thmL,
+    cases_thms=[],
+    filter=[],
+    top_heuristics=[],
+    inference_thms=[],
+    convs=[],heuristics=[],
+    final_rewrite_thms=[]}:quant_param;
+
+fun final_rewrite_qp thmL =
+   {distinct_thms=[],
+    rewrite_thms=[],
+    cases_thms=[],
+    filter=[],
+    top_heuristics=[],
+    inference_thms=[],
+    convs=[],heuristics=[],
+    final_rewrite_thms=thmL}:quant_param;
+
+
+fun cases_qp thmL =
+   {distinct_thms=[],
+    rewrite_thms=[],
+    cases_thms=thmL,
+    filter=[],
+    top_heuristics=[],
+    inference_thms=[],
+    convs=[],heuristics=[],
+    final_rewrite_thms=[]}:quant_param;
+
+fun inference_qp thmL =
+   {distinct_thms=[],
+    rewrite_thms=[],
+    cases_thms=[],
+    filter=[],
+    top_heuristics=[],
+    inference_thms=thmL,
+    convs=[],heuristics=[],
+    final_rewrite_thms=[]}:quant_param;
+
+fun convs_qp cL =
+   {distinct_thms=[],
+    rewrite_thms=[],
+    cases_thms=[],
+    filter=[],
+    top_heuristics=[],
+    inference_thms=[],
+    convs=cL,heuristics=[],
+    final_rewrite_thms=[]}:quant_param;
+
+fun heuristics_qp hL =
+   {distinct_thms=[],
+    rewrite_thms=[],
+    cases_thms=[],
+    filter=[],
+    top_heuristics=[],
+    inference_thms=[],
+    convs=[],heuristics=hL,
+    final_rewrite_thms=[]}:quant_param;
+
+
+fun top_heuristics_qp hL =
+   {distinct_thms=[],
+    rewrite_thms=[],
+    cases_thms=[],
+    filter=[],
+    top_heuristics=hL,
+    inference_thms=[],
+    convs=[],heuristics=[],
+    final_rewrite_thms=[]}:quant_param;
+
+fun filter_qp fL =
+   {distinct_thms=[],
+    rewrite_thms=[],
+    cases_thms=[],
+    filter=fL,
+    top_heuristics=[],
+    inference_thms=[],
+    convs=[],heuristics=[],
+    final_rewrite_thms=[]}:quant_param;
+
+
+
+(******************************************************************
+ * a stateful heuristic and quant_param
+ ******************************************************************)
+
+val quant_param_ref = ref empty_qp;
+fun clear_stateful_qp () = (quant_param_ref := empty_qp);
+
+
+fun stateful_qp___add_combine_arguments args =
+   (quant_param_ref :=
+     combine_qps ((!quant_param_ref)::args));
+
+
+fun QUANT_INSTANTIATE_HEURISTIC___STATEFUL sys v t =
+  let
+    val {distinct_thms = distinct_thmL,
+         cases_thms = cases_thmL,
+         rewrite_thms = rewrite_thmL,
+         top_heuristics = _,
+         filter = _,
+         convs = convL,
+         heuristics = heuristicL,
+         inference_thms= inference_thmL2,
+         final_rewrite_thms = final_rewrite_thmL} = !quant_param_ref;
+
+    val (guesses_net_complex2, guesses_net_simple2) = mk_guess_net inference_thmL2;
+
+    val (hcL1, hcL2) = QUANT_INSTANTIATE_HEURISTIC___cases_list cases_thmL;
+    val hL = (QUANT_INSTANTIATE_HEURISTIC___EQUATION_distinct distinct_thmL)::
+             (QUANT_INSTANTIATE_HEURISTIC___THM_GENERAL_SIMPLE guesses_net_simple2)::
+             (QUANT_INSTANTIATE_HEURISTIC___THM_GENERAL_COMPLEX guesses_net_complex2)::
+             (append (map QUANT_INSTANTIATE_HEURISTIC___CONV ((TOP_ONCE_REWRITE_CONV rewrite_thmL)::convL))
+	      (append hcL1 (append hcL2 heuristicL)));
+    val gc = guess_collection_flatten (map (fn h => SOME (h sys v t) handle QUANT_INSTANTIATE_HEURISTIC___no_guess_exp => NONE) hL)
+in
+   gc
+end;
+
+
+val TypeBase_qp =
+   {distinct_thms=[],
+    rewrite_thms=[],
+    cases_thms=[],
+    top_heuristics=[],
+    filter=[],
+    final_rewrite_thms = [],
+    inference_thms = [],
+    convs=[],heuristics=[
+       QUANT_INSTANTIATE_HEURISTIC___EQUATION___TypeBase_one_one,
+       QUANT_INSTANTIATE_HEURISTIC___EQUATION___TypeBase_distinct,
+       QUANT_INSTANTIATE_HEURISTIC___TypeBase_cases]}:quant_param;
+
+
+val pure_stateful_qp =
+   {distinct_thms=[],
+    rewrite_thms=[],
+    cases_thms=[],
+    top_heuristics=[],
+    filter=[],
+    inference_thms = [],
+    final_rewrite_thms = [],
+    convs=[],heuristics=[
+       QUANT_INSTANTIATE_HEURISTIC___STATEFUL]}:quant_param;
+
+val stateful_qp = combine_qp TypeBase_qp pure_stateful_qp;
+
+
+fun get_qp___for_types typeL =
+       {distinct_thms = map TypeBase.distinct_of typeL,
+        cases_thms = map TypeBase.nchotomy_of typeL,
+        rewrite_thms = map TypeBase.one_one_of typeL,
+        top_heuristics=[], filter=[],
+        final_rewrite_thms = [],
+        inference_thms = [],
+        convs=[],heuristics=[]}:quant_param;
+
+
+(******************************************************************************)
+(* Cache                                                                      *)
+(******************************************************************************)
 
 (*
    val heuristicL = [QUANT_INSTANTIATE_HEURISTIC___EQUATION];
    val v = ``x:num``
    val t = ``x:num = 9``
 *)
-
-
-
-val QUANT_INSTANTIATE_HEURISTIC___print_term_length = ref 20;
-val _ = register_trace("QUANT_INSTANTIATE_HEURISTIC___print_term_length", QUANT_INSTANTIATE_HEURISTIC___print_term_length, 20);
-
-fun cut_term_to_string t =
-    let
-       val n = !QUANT_INSTANTIATE_HEURISTIC___print_term_length;
-       val st = term_to_string t;
-       val st' = if (String.size st > n) then
-		     (substring (st,0,n)^"...") else st
-    in
-       st'
-    end;
-
-
-fun COMBINE_HEURISTIC_FUNS L =
-let
-   val gcL = map (fn h =>
-	    ((SOME (h ())
-              handle QUANT_INSTANTIATE_HEURISTIC___no_guess_exp => NONE
-	      handle HOL_ERR _ => raise UNCHANGED)
-                                  handle UNCHANGED =>
-              (say_HOL_WARNING "QUANT_INSTANTIATE_HEURISTIC___COMBINE"
-			      ("Some heuristic produced an error!"); NONE)
-            )) L;
-   val gc = guess_collection_flatten gcL;
-in
-   gc
-end;
-
 
 type quant_heuristic_cache =  (Term.term, (Term.term, guess_collection) Redblackmap.dict) Redblackmap.dict
 fun mk_quant_heuristic_cache () = (Redblackmap.mkDict Term.compare):quant_heuristic_cache
@@ -1795,6 +2092,35 @@ in
    SOME gc
 end handle Redblackmap.NotFound => NONE;
 
+
+
+(******************************************************************************)
+
+fun cut_term_to_string t =
+    let
+       val n = !QUANT_INSTANTIATE_HEURISTIC___print_term_length;
+       val st = term_to_string t;
+       val st' = if (String.size st > n) then
+		     (substring (st,0,n)^"...") else st
+    in
+       st'
+    end;
+
+
+fun COMBINE_HEURISTIC_FUNS L =
+let
+   val gcL = map (fn h =>
+	    ((SOME (h ())
+              handle QUANT_INSTANTIATE_HEURISTIC___no_guess_exp => NONE
+	      handle HOL_ERR _ => raise UNCHANGED)
+                                  handle UNCHANGED =>
+              (say_HOL_WARNING "QUANT_INSTANTIATE_HEURISTIC___COMBINE"
+			      ("Some heuristic produced an error!"); NONE)
+            )) L;
+   val gc = guess_collection_flatten gcL;
+in
+   gc
+end;
 
 
 (*
@@ -1860,8 +2186,10 @@ else let
 
    val _ = if ((not cache_found) andalso (!QUANT_INSTANTIATE_HEURISTIC___debug > 0)) then
                let
+                  val gL = (snd (guess_collection2list gc));
 		  val prefix = prefix_string n;
-                  val _ = say (prefix^"found guesses for ``"^
+                  val guesses_found_string = if null gL then "no" else Int.toString (length gL);
+                  val _ = say (prefix^guesses_found_string^" guesses found for ``"^
 	           (term_to_string v)^"`` in ``"^(cut_term_to_string t)^"``\n")
 
 	          val show_thm = (!QUANT_INSTANTIATE_HEURISTIC___debug > 1);
@@ -1885,6 +2213,7 @@ end;
 
 val QUANT_INSTANTIATE_HEURISTIC___COMBINE =
     BOUNDED_QUANT_INSTANTIATE_HEURISTIC___COMBINE 0;
+
 
 val (guesses_net_complex, guesses_net_simple) = mk_guess_net inference_thmL
 fun QUANT_INSTANTIATE_HEURISTIC___PURE_COMBINE
@@ -2180,148 +2509,9 @@ REWRITE_CONV rwL;
 
 
 
-(*******************************************************
- * Combine this basic operations to high level ones
- *******************************************************)
-
-fun combine_qp
-   ({distinct_thms      = l11,
-     rewrite_thms       = l12,
-     cases_thms         = l13,
-     convs              = l14,
-     heuristics         = l15,
-     filter             = l19,
-     top_heuristics     = l18,
-     inference_thms     = l17,
-     final_rewrite_thms = l16}:quant_param)
-   ({distinct_thms      = l21,
-     rewrite_thms       = l22,
-     cases_thms         = l23,
-     convs              = l24,
-     heuristics         = l25,
-     filter             = l29,
-     top_heuristics     = l28,
-     inference_thms     = l27,
-     final_rewrite_thms = l26}:quant_param) =
-
-   ({distinct_thms      = (append l11 l21),
-     rewrite_thms       = (append l12 l22),
-     cases_thms         = (append l13 l23),
-     convs              = (append l14 l24),
-     filter             = (append l19 l29),
-     top_heuristics     = (append l18 l28),
-     heuristics         = (append l15 l25),
-     inference_thms     = (append l17 l27),
-     final_rewrite_thms = (append l16 l26)}:quant_param)
-
-
-val empty_qp =
-   ({distinct_thms      = [],
-     rewrite_thms       = [],
-     cases_thms         = [],
-     convs              = [],
-     heuristics         = [],
-     filter             = [],
-     top_heuristics     = [],
-     inference_thms     = [],
-     final_rewrite_thms = []}:quant_param)
-
-fun combine_qps L =
-    foldl (fn (a1,a2) => combine_qp a1 a2) empty_qp L;
-
-
-fun distinct_qp thmL =
-   {distinct_thms=thmL,
-    rewrite_thms=[],
-    cases_thms=[],
-    filter=[],
-    top_heuristics=[],
-    inference_thms=[],
-    convs=[],heuristics=[],
-    final_rewrite_thms=[]}:quant_param;
-
-
-fun rewrite_qp thmL =
-   {distinct_thms=[],
-    rewrite_thms=thmL,
-    cases_thms=[],
-    filter=[],
-    top_heuristics=[],
-    inference_thms=[],
-    convs=[],heuristics=[],
-    final_rewrite_thms=[]}:quant_param;
-
-fun final_rewrite_qp thmL =
-   {distinct_thms=[],
-    rewrite_thms=[],
-    cases_thms=[],
-    filter=[],
-    top_heuristics=[],
-    inference_thms=[],
-    convs=[],heuristics=[],
-    final_rewrite_thms=thmL}:quant_param;
-
-
-fun cases_qp thmL =
-   {distinct_thms=[],
-    rewrite_thms=[],
-    cases_thms=thmL,
-    filter=[],
-    top_heuristics=[],
-    inference_thms=[],
-    convs=[],heuristics=[],
-    final_rewrite_thms=[]}:quant_param;
-
-fun inference_qp thmL =
-   {distinct_thms=[],
-    rewrite_thms=[],
-    cases_thms=[],
-    filter=[],
-    top_heuristics=[],
-    inference_thms=thmL,
-    convs=[],heuristics=[],
-    final_rewrite_thms=[]}:quant_param;
-
-fun convs_qp cL =
-   {distinct_thms=[],
-    rewrite_thms=[],
-    cases_thms=[],
-    filter=[],
-    top_heuristics=[],
-    inference_thms=[],
-    convs=cL,heuristics=[],
-    final_rewrite_thms=[]}:quant_param;
-
-fun heuristics_qp hL =
-   {distinct_thms=[],
-    rewrite_thms=[],
-    cases_thms=[],
-    filter=[],
-    top_heuristics=[],
-    inference_thms=[],
-    convs=[],heuristics=hL,
-    final_rewrite_thms=[]}:quant_param;
-
-
-fun top_heuristics_qp hL =
-   {distinct_thms=[],
-    rewrite_thms=[],
-    cases_thms=[],
-    filter=[],
-    top_heuristics=hL,
-    inference_thms=[],
-    convs=[],heuristics=[],
-    final_rewrite_thms=[]}:quant_param;
-
-fun filter_qp fL =
-   {distinct_thms=[],
-    rewrite_thms=[],
-    cases_thms=[],
-    filter=fL,
-    top_heuristics=[],
-    inference_thms=[],
-    convs=[],heuristics=[],
-    final_rewrite_thms=[]}:quant_param;
+(********************************************************)
+(* Provide High level interfaces                        *)
+(********************************************************)
 
 (*****************************************************
  * One of the most basic conversions.
@@ -2340,6 +2530,10 @@ fun filter_qp fL =
  * - filter : term -> bool
  *     the conversion just tries to instantiate variables,
  *     for which this function returns true
+ *
+ * - min_occs
+ *     should occurences of the variable be tried to be removed in
+ *     a preprocessing step?
  *
  * - expand_eq : bool
  *     all build in heuristics provide proofs with all guesses
@@ -2368,102 +2562,23 @@ val (cache_ref_opt, re,   filter,   min_occs, expand_eq, args) =
     (NONE,          true, (K true), true,     false,     [pair_default_qp])
 *)
 
-(*A simpler interface, here just the
-  quant_params list is needed*)
+
+
+
+(******************************************************************
+ * A simpler interface, here just the quant_params list is needed
+ ******************************************************************)
 val QUANT_INSTANTIATE_CONV =
     EXTENSIBLE_QUANT_INSTANTIATE_CONV NONE true (K true) true false
 
 val FAST_QUANT_INSTANTIATE_CONV =
     EXTENSIBLE_QUANT_INSTANTIATE_CONV NONE true (K true) false false
 
-
-(*a stateful heuristic and
-    quant_param*)
-
-val quant_param_ref =
-   ref empty_qp;
-
-fun clear_stateful_qp () =
-    (quant_param_ref := empty_qp);
-
-
-fun stateful_qp___add_combine_arguments args =
-   (quant_param_ref :=
-     combine_qps ((!quant_param_ref)::args));
-
-
-
-fun QUANT_INSTANTIATE_HEURISTIC___STATEFUL sys v t =
-  let
-    val {distinct_thms = distinct_thmL,
-         cases_thms = cases_thmL,
-         rewrite_thms = rewrite_thmL,
-         top_heuristics = _,
-         filter = _,
-         convs = convL,
-         heuristics = heuristicL,
-         inference_thms= inference_thmL2,
-         final_rewrite_thms = final_rewrite_thmL} = !quant_param_ref;
-
-    val (guesses_net_complex2, guesses_net_simple2) = mk_guess_net inference_thmL2;
-
-    val (hcL1, hcL2) = QUANT_INSTANTIATE_HEURISTIC___cases_list cases_thmL;
-    val hL = (QUANT_INSTANTIATE_HEURISTIC___EQUATION_distinct distinct_thmL)::
-             (QUANT_INSTANTIATE_HEURISTIC___THM_GENERAL_SIMPLE guesses_net_simple2)::
-             (QUANT_INSTANTIATE_HEURISTIC___THM_GENERAL_COMPLEX guesses_net_complex2)::
-             (append (map QUANT_INSTANTIATE_HEURISTIC___CONV ((TOP_ONCE_REWRITE_CONV rewrite_thmL)::convL))
-	      (append hcL1 (append hcL2 heuristicL)));
-    val gc = guess_collection_flatten (map (fn h => SOME (h sys v t) handle QUANT_INSTANTIATE_HEURISTIC___no_guess_exp => NONE) hL)
-in
-   gc
-end;
-
-
-val TypeBase_qp =
-   {distinct_thms=[],
-    rewrite_thms=[],
-    cases_thms=[],
-    top_heuristics=[],
-    filter=[],
-    final_rewrite_thms = [],
-    inference_thms = [],
-    convs=[],heuristics=[
-       QUANT_INSTANTIATE_HEURISTIC___EQUATION___TypeBase_one_one,
-       QUANT_INSTANTIATE_HEURISTIC___EQUATION___TypeBase_distinct,
-       QUANT_INSTANTIATE_HEURISTIC___TypeBase_cases]}:quant_param;
-
-
-val pure_stateful_qp =
-   {distinct_thms=[],
-    rewrite_thms=[],
-    cases_thms=[],
-    top_heuristics=[],
-    filter=[],
-    inference_thms = [],
-    final_rewrite_thms = [],
-    convs=[],heuristics=[
-       QUANT_INSTANTIATE_HEURISTIC___STATEFUL]}:quant_param;
-
-val stateful_qp = combine_qp TypeBase_qp pure_stateful_qp;
-
-
-
-fun get_qp___for_types typeL =
-       {distinct_thms = map TypeBase.distinct_of typeL,
-        cases_thms = map TypeBase.nchotomy_of typeL,
-        rewrite_thms = map TypeBase.one_one_of typeL,
-        top_heuristics=[], filter=[],
-        final_rewrite_thms = [],
-        inference_thms = [],
-        convs=[],heuristics=[]}:quant_param;
-
 fun QUANT_INSTANTIATE_TAC L =
     CONV_TAC (QUANT_INSTANTIATE_CONV L);
 
-
 fun ASM_QUANT_INSTANTIATE_TAC L =
     DISCH_ASM_CONV_TAC (QUANT_INSTANTIATE_CONV L);
-
 
 fun FAST_QUANT_INSTANTIATE_TAC L =
     CONV_TAC (FAST_QUANT_INSTANTIATE_CONV L);
@@ -2471,30 +2586,59 @@ fun FAST_QUANT_INSTANTIATE_TAC L =
 fun ASM_FAST_QUANT_INSTANTIATE_TAC L =
     DISCH_ASM_CONV_TAC (FAST_QUANT_INSTANTIATE_CONV L);
 
+fun QUANT_INST_ss qpL = simpLib.conv_ss
+   {name = "QUANT_INSTANTIATE_CONV",
+    trace = 2,
+    key = NONE,
+    conv = K (K (QUANT_INSTANTIATE_CONV qpL))}
+
+fun FAST_QUANT_INST_ss qpL = simpLib.conv_ss
+   {name = "FAST_QUANT_INSTANTIATE_CONV",
+    trace = 2,
+    key = NONE,
+    conv = K (K (FAST_QUANT_INSTANTIATE_CONV qpL))}
+
+
+(******************************************************************
+ * Interfaces for consequence conversions
+ ******************************************************************)
+
+fun HEURISTIC_QUANT_INSTANTIATE_CONSEQ_CONV re filter min_occs heuristic rwL dir =
+THEN_CONSEQ_CONV
+((if re then REDEPTH_CONSEQ_CONV else DEPTH_CONSEQ_CONV)
+   (QUANT_INSTANTIATE_HEURISTIC_STEP_CONSEQ_CONV (false,true,false) filter min_occs heuristic rwL) dir)
+(REWRITE_CONV rwL);
+
+
+fun EXTENSIBLE_QUANT_INSTANTIATE_CONSEQ_CONV cache_ref_opt re filter min_occs args =
+    let val arg = (combine_qps args) in
+    HEURISTIC_QUANT_INSTANTIATE_CONSEQ_CONV re filter min_occs (QUANT_INSTANTIATE_HEURISTIC___PURE_COMBINE
+       arg cache_ref_opt) (#final_rewrite_thms arg) end;
+
+val QUANT_INSTANTIATE_CONSEQ_CONV =
+    EXTENSIBLE_QUANT_INSTANTIATE_CONSEQ_CONV NONE true (K true) true
+
+val FAST_QUANT_INSTANTIATE_CONSEQ_CONV =
+    EXTENSIBLE_QUANT_INSTANTIATE_CONSEQ_CONV NONE true (K true) false
+
+fun EXTENSIBLE_QUANT_INSTANTIATE_STEP_CONSEQ_CONV cache_ref_opt filter min_occs args =
+    let val arg = (combine_qps args) in
+    (QUANT_INSTANTIATE_HEURISTIC_STEP_CONSEQ_CONV (false,true,false) filter min_occs
+          (QUANT_INSTANTIATE_HEURISTIC___PURE_COMBINE arg cache_ref_opt)
+            (#final_rewrite_thms arg)) end;
 
 
 
-(***********************************************
- * Instantiate quantifiers by explicitly given
- * guesses
- ***********************************************)
-
-fun REWRITE_PROVE t =
-let
-   open metisLib
-   val thm = REWRITE_CONV [] t handle UNCHANGED => REFL t;
-   val t2 = rhs (concl thm)
-   val thm2 = if t2 = T then TRUTH else METIS_PROVE [] t2;
-in
-   EQ_MP (GSYM thm) thm2
-end;
-
-
-fun make_guess___rewrite gty v t i fvL =
-     make_set_guess_thm (mk_guess gty v t i fvL) REWRITE_PROVE
-
-
-
+(*********************************************************************
+ * Instantiate quantifiers by explicitly given guesses
+ *
+ * QUANT_INST_TAC / QUANT_INST_CONV are able to
+ * instantiate quantifiers at subpositions.
+ * They get a list of trible consisting of
+ * (name_of_var, instantiation, list of free variables instantiation).
+ * They then try to (partially) instantiate the named variables
+ * with the given instantiations.
+ **********************************************************************)
 
 (*
 val t = ``t = 0``
@@ -2554,8 +2698,6 @@ fun QUANT_INST_TAC L (asm,t) =
   end;
 
 
-
-
 fun QUANT_INST_CONV L t =
   let
      val ctxt = HOLset.listItems (FVL [t] empty_tmset);
@@ -2565,43 +2707,6 @@ fun QUANT_INST_CONV L t =
          (K true) false (QUANT_INSTANTIATE_HEURISTIC___LIST ctxt true L) [] CONSEQ_CONV_UNKNOWN_direction)
     t
   end;
-
-
-
-fun HEURISTIC_QUANT_INSTANTIATE_CONSEQ_CONV re filter min_occs heuristic rwL dir =
-THEN_CONSEQ_CONV
-((if re then REDEPTH_CONSEQ_CONV else DEPTH_CONSEQ_CONV)
-   (QUANT_INSTANTIATE_HEURISTIC_STEP_CONSEQ_CONV (false,true,false) filter min_occs heuristic rwL) dir)
-(REWRITE_CONV rwL);
-
-
-fun EXTENSIBLE_QUANT_INSTANTIATE_CONSEQ_CONV cache_ref_opt re filter min_occs args =
-    let val arg = (combine_qps args) in
-    HEURISTIC_QUANT_INSTANTIATE_CONSEQ_CONV re filter min_occs (QUANT_INSTANTIATE_HEURISTIC___PURE_COMBINE
-       arg cache_ref_opt) (#final_rewrite_thms arg) end;
-
-val QUANT_INSTANTIATE_CONSEQ_CONV =
-    EXTENSIBLE_QUANT_INSTANTIATE_CONSEQ_CONV NONE true (K true) true
-
-val FAST_QUANT_INSTANTIATE_CONSEQ_CONV =
-    EXTENSIBLE_QUANT_INSTANTIATE_CONSEQ_CONV NONE true (K true) false
-
-fun EXTENSIBLE_QUANT_INSTANTIATE_STEP_CONSEQ_CONV cache_ref_opt filter min_occs args =
-    let val arg = (combine_qps args) in
-    (QUANT_INSTANTIATE_HEURISTIC_STEP_CONSEQ_CONV (false,true,false) filter min_occs
-          (QUANT_INSTANTIATE_HEURISTIC___PURE_COMBINE arg cache_ref_opt)
-            (#final_rewrite_thms arg)) end;
-
-
-(*******************************************************************
- * Simpset frags
- *******************************************************************)
-
-fun QUANT_INST_ss qpL = simpLib.conv_ss
-   {name = "QUANT_INSTANTIATE_CONV",
-    trace = 2,
-    key = NONE,
-    conv = K (K (QUANT_INSTANTIATE_CONV qpL))}
 
 
 end

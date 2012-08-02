@@ -1,4 +1,5 @@
-open preamble MiniMLTheory MiniMLTerminationTheory typeSubstitutionTheory;
+open preamble MiniMLTheory MiniMLTerminationTheory;
+open typeSubstitutionTheory;
 
 val _ = new_theory "typeSound";
 
@@ -74,8 +75,8 @@ rw [] >>
 metis_tac []);
 
 val type_ps_length_lem = Q.prove (
-`∀tenvC tenv ps ts tenv'.
-  type_ps tenvC tenv ps ts tenv' ⇒ (LENGTH ps = LENGTH ts)`,
+`∀tenvC ps ts tenv.
+  type_ps tenvC ps ts tenv ⇒ (LENGTH ps = LENGTH ts)`,
 induct_on `ps` >>
 rw [Once type_p_cases] >>
 rw [] >>
@@ -137,18 +138,18 @@ metis_tac [type_funs_Tfn, t_distinct]);
 (* Well-typed pattern matches either match or not, but don't raise type errors
 * *)
 val pmatch_type_progress = Q.prove (
-`(∀envC p v env t tenv tenv'.
+`(∀envC p v env t tenv.
   consistent_con_env envC tenvC ∧
   consistent_con_env2 envC tenvC ∧
-  type_p tenvC tenv p t tenv' ∧
+  type_p tenvC p t tenv ∧
   type_v tenvC v t
   ⇒
   (pmatch envC p v env = No_match) ∨
   (∃env'. pmatch envC p v env = Match env')) ∧
- (∀envC ps vs env ts tenv tenv'.
+ (∀envC ps vs env ts tenv.
   consistent_con_env envC tenvC ∧
   consistent_con_env2 envC tenvC ∧
-  type_ps tenvC tenv ps ts tenv' ∧
+  type_ps tenvC ps ts tenv ∧
   type_vs tenvC vs ts
   ⇒
   (pmatch_list envC ps vs env = No_match) ∨
@@ -195,7 +196,7 @@ fs [lit_same_type_def] >|
      rw [] >>
      fs [deBruijn_subst_def] >>
      metis_tac [type_funs_Tfn, t_distinct],
- qpat_assum `type_ps tenvC tenv (p::ps) ts tenv'`
+ qpat_assum `type_ps tenvC (p::ps) ts tenv`
          (ASSUME_TAC o SIMP_RULE (srw_ss()) [Once type_p_cases]) >>
      qpat_assum `type_vs tenvC (v::vs) ts`
          (ASSUME_TAC o SIMP_RULE (srw_ss()) [Once type_v_cases]) >>
@@ -401,26 +402,27 @@ fs [MEM_MAP] >>
 metis_tac []);
 *)
 
+(* TODO
 (* A successful pattern match gives a binding environment with the type given by
 * the pattern type checker *)
 val pmatch_type_preservation = Q.prove (
 `(∀envC p v env env' (tenvC:tenvC) tenv t tenv'.
   (pmatch envC p v env = Match env') ∧
   type_v tenvC v t ∧
-  type_p tenvC tenv p t tenv' ∧
+  type_p tenvC p t tenv' ∧
   type_env tenvC env tenv ⇒
-  type_env tenvC env' tenv') ∧
+  type_env tenvC env' (bind_var_list 0 tenv' tenv)) ∧
  (∀envC ps vs env env' (tenvC:tenvC) tenv tenv' ts.
   (pmatch_list envC ps vs env = Match env') ∧
   type_vs tenvC vs ts ∧
-  type_ps tenvC tenv ps ts tenv' ∧
+  type_ps tenvC ps ts tenv' ∧
   type_env tenvC env tenv ⇒
-  type_env tenvC env' tenv')`,
+  type_env tenvC env' (bind_var_list 0 tenv' tenv))`,
 HO_MATCH_MP_TAC pmatch_ind >>
 rw [pmatch_def] >|
-[rw [Once type_v_cases, bind_def] >>
-     fs [Once type_p_cases, bind_def],
- fs [Once type_p_cases],
+[rw [Once type_v_cases] >>
+     fs [Once type_p_cases, bind_var_list_def, bind_def],
+ fs [Once type_p_cases, bind_var_list_def],
  every_case_tac >>
      fs [] >>
      qpat_assum `type_v tenvC vpat t`
@@ -431,23 +433,26 @@ rw [pmatch_def] >|
      rw [] >>
      cases_on `ps` >>
      fs [] >>
-     qpat_assum `type_ps a b c d e`
+     qpat_assum `type_ps a c d e`
              (ASSUME_TAC o SIMP_RULE (srw_ss()) [Once type_p_cases]) >>
      fs [] >>
      metis_tac [],
  every_case_tac >>
      fs [],
- fs [Once type_p_cases],
+ fs [Once type_p_cases, bind_var_list_def],
  every_case_tac >>
      fs [] >>
      qpat_assum `type_vs tenvC (v::vs) ts`
              (ASSUME_TAC o SIMP_RULE (srw_ss ()) [Once type_v_cases]) >>
      fs [] >>
-     qpat_assum `type_ps a b c d e`
+     qpat_assum `type_ps a c d e`
              (ASSUME_TAC o SIMP_RULE (srw_ss()) [Once type_p_cases]) >>
      fs [] >>
      rw [] >>
+
+     res_tac
      metis_tac []]);
+     *)
 
 val build_rec_env_help_lem = Q.prove (
 `∀funs env funs'.
@@ -579,13 +584,11 @@ fs [lookup_var_def] >>
 Q.PAT_ASSUM `type_env tenvC env tenv_pat`
         (MP_TAC o SIMP_RULE (srw_ss ())
                          [Once (hd (tl (tl (CONJUNCTS type_v_cases))))]) >>
-rw [] >-
-metis_tac [] >>
+rw [] >>
 every_case_tac >>
 fs [] >>
 rw [] >>
-fs [lookup_def, bind_def] >>
-rw [deBruijn_subst_inc_lem] >|
+fs [lookup_def, bind_def] >|
 [all_tac,
  metis_tac []]
 
@@ -702,7 +705,7 @@ fs [e_step_def] >|
       pop_assum (ASSUME_TAC o SIMP_RULE (srw_ss()) [Once type_e_cases]) >>
           rw [Once type_ctxts_cases, type_ctxt_cases] >>
           qexists_tac `t1'` >>
-          qexists_tac `Tvar_bind levels tenv` >>
+          qexists_tac `tenv` >>
           rw [] >>
           metis_tac [type_v_rules],
       every_case_tac >>
@@ -711,8 +714,8 @@ fs [e_step_def] >|
           qpat_assum `type_e tenvC tenv epat t1`
            (ASSUME_TAC o SIMP_RULE (srw_ss()) [Once type_e_cases]) >>
           fs [] >>
-          rw [build_rec_env_lem] >>
           cheat (*TODO
+          rw [build_rec_env_lem] >>
           qexists_tac `t1` >>
           qexists_tac `bind_var_list_subst tvs tenv' tenv` >>
           rw [] >>
@@ -816,7 +819,8 @@ fs [e_step_def] >|
           metis_tac [],
       fs [RES_FORALL, FORALL_PROD] >>
           rw [] >>
-          metis_tac [pmatch_type_preservation],
+          cheat,
+          (* metis_tac [pmatch_type_preservation], *)
       rw [Once type_v_cases, bind_def] >>
           metis_tac [],
       rw [Once (hd (CONJUNCTS type_v_cases))] >>

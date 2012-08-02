@@ -205,7 +205,8 @@ val qh_test_num = test_conv "QUANT_INSTANTIATE_CONV [num_qp]" (QUANT_INSTANTIATE
 val qh_testCases_num =
   [(``!x:num. (x + 7 = 2 + 7)``, SOME F),
    (``!x:num. ~(x = 0) ==> P x``, SOME ``!x_n. P (SUC x_n)``),
-   (``!x:num. x = y``, SOME F)];
+   (``!x:num. x = y``, SOME F),
+   (``!x:num. y = x``, SOME F)];
 
 val _ = map (qh_test_num hard_fail quiet) qh_testCases_num;
 

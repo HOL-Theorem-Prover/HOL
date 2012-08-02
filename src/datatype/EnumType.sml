@@ -241,8 +241,9 @@ fun define_enum_type(name,clist,ABS,REP) =
      val ABSconst = mk_const(ABS, NUM --> TYPE)
      val REPconst = mk_const(REP, TYPE --> NUM)
      val nclist   = enumerate 0 clist
-     fun def(n,s) = (s,mk_eq(mk_var(s,TYPE),
-                             mk_comb(ABSconst,term_of_int n)))
+     fun def(n,s) = (s ^ "_def",
+                     mk_eq(mk_var(s,TYPE),
+                           mk_comb(ABSconst,term_of_int n)))
      val defs     = map (new_definition o def) nclist
      val constrs  = map (lhs o concl) defs
  in
@@ -334,10 +335,10 @@ in
 end
 
 
-fun enum_type_to_tyinfo (ty, constrs) = let
+fun enum_type_to_tyinfo (ty, clist) = let
   val abs = "num2"^ty
   val rep = ty^"2num"
-  val (result as {constrs,TYPE,...}) = define_enum_type(ty,constrs,abs,rep)
+  val (result as {constrs,TYPE,...}) = define_enum_type(ty,clist,abs,rep)
   val abs_thm = save_thm(abs ^ "_thm", LIST_CONJ (map SYM (#defs result)))
   val rep_name = rep ^ "_thm"
   val rep_thm = save_thm(rep_name,
@@ -373,6 +374,7 @@ fun enum_type_to_tyinfo (ty, constrs) = let
           recognizers = [],
           destructors = [],
           distinct = distinct }
+  val _ = List.app (fn s => Theory.delete_binding (s ^ "_def")) clist
 in
   case distinct of
     NONE => (update_tyinfo ty eq_elim_th rep_thm tyinfo0,

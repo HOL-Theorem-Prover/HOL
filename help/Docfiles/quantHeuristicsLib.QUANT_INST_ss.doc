@@ -1,0 +1,10 @@
+\DOC QUANT_INST_ss
+
+\TYPE {QUANT_INST_ss : quant_param list -> simpLib.ssfrag}
+
+\SYNOPSIS
+A simpset fragement corresponding to {QUANT_INSTANTIATE_CONV}.
+
+\SEEALSO
+quantHeuristicsLib.QUANT_INSTANTIATE_CONV.
+\ENDDOC

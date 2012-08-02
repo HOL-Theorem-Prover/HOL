@@ -102,9 +102,7 @@ in case fst(dest_const f) of
 end handle (Fail s) => raise Fail s | _ => raise Fail (Parse.term_to_string tm)
 val term_to_ov = v_to_ov o term_to_v
 
-val rs_code = rev o compiler_state_code o repl_state_cs
-
-val add_code = bc_state_code_fupd o C append o rs_code
+val add_code = bc_state_code_fupd o C append o repl_state_code
 
 fun prep_decs (bs,rs) [] = (bs,rs)
   | prep_decs (bs,rs) (d::ds) = let

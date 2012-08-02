@@ -155,12 +155,16 @@ val bc_eval1_def = Define`
   | (Stack b, _) =>
     OPTION_BIND (bc_eval_stack b s.stack)
       (λys. SOME (bump_pc s with stack := ys))
-  | (Jump n, _) => SOME (s with pc := n)
-  | (JumpNil n, Number x::xs) =>
-      let s' = s with stack := xs in
-        SOME (if x = 0 then bump_pc s' else s' with pc := n)
-  | (Call n, x::xs) =>
-      SOME (s with <| pc := n; stack := x :: CodePtr ((bump_pc s).pc) :: xs |>)
+  | (Jump l, _) =>
+    OPTION_BIND (bc_find_loc s l)
+      (λn. SOME (s with pc := n))
+  | (JumpNil l, Number x::xs) =>
+    OPTION_BIND (bc_find_loc s l)
+      (λn. let s' = s with stack := xs in
+        SOME (if x = 0 then bump_pc s' else s' with pc := n))
+  | (Call l, x::xs) =>
+      OPTION_BIND (bc_find_loc s l)
+      (λn. SOME (s with <| pc := n; stack := x :: CodePtr ((bump_pc s).pc) :: xs |>))
   | (CallPtr, CodePtr ptr::x::xs) =>
       SOME (s with <| pc := ptr; stack := x :: CodePtr ((bump_pc s).pc) :: xs |>)
   | (JumpPtr, CodePtr ptr::xs) =>
@@ -270,6 +274,18 @@ Cases_on `inst` >> fs[bc_eval_stack_NONE]
   rw[bc_next_cases] >>
   qmatch_assum_rename_tac `s1.stack = h::t` [] >>
   Cases_on `h` >> Cases_on `t` >> fs[] )
+>- (
+  Cases_on `s1.stack` >> fs[LET_THM] >>
+  rw[bc_next_cases] >>
+  qmatch_assum_rename_tac `s1.stack = h::t` [] >>
+  Cases_on `h` >> fs[] >>
+  Cases_on `n=ptr` >> fs[] )
+>- (
+  Cases_on `s1.stack` >> fs[LET_THM] >>
+  rw[bc_next_cases] >>
+  qmatch_assum_rename_tac `s1.stack = h::t` [] >>
+  Cases_on `h` >> fs[] >>
+  Cases_on `t` >> fs[] )
 >- (
   Cases_on `s1.stack` >> fs[LET_THM] >>
   rw[bc_next_cases] >>

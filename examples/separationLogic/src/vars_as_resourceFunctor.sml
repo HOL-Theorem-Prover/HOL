@@ -3219,7 +3219,7 @@ val VAR_RES_STRUCTURE_NORMALISE_CONV =
 (* Quantifier instantiations                                                  *)
 (******************************************************************************)
 
-fun QUANT_INSTANTIATE_HEURISTIC___VAR_RES_FRAME_SPLIT___bool (sys:quant_heuristic) v tt =
+fun QUANT_INSTANTIATE_HEURISTIC___VAR_RES_FRAME_SPLIT___bool (sys:quant_heuristic_base) v tt =
 let
    val (_,_,_,_,_,_,sfb_imp,_) = dest_VAR_RES_FRAME_SPLIT tt
 			  handle HOL_ERR _ => raise QUANT_INSTANTIATE_HEURISTIC___no_guess_exp;

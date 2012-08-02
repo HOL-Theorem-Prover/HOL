@@ -98,6 +98,12 @@ val GUESSES_UEXISTS_THM3 = store_thm("GUESSES_UEXISTS_THM3",
 SIMP_TAC std_ss [GUESS_REWRITES, combinTheory.K_DEF] THEN
 METIS_TAC[]);
 
+val GUESSES_UEXISTS_THM4 = store_thm("GUESSES_UEXISTS_THM4",
+``!i P. GUESS_TRUE (\x. i) P ==> GUESS_EXISTS_STRONG (\x. i) P ==>
+        ($?! P = T)``,
+SIMP_TAC std_ss [GUESS_REWRITES, combinTheory.K_DEF] THEN
+METIS_TAC[]);
+
 
 val GUESSES_NEG_DUALITY = store_thm ("GUESSES_NEG_DUALITY",
 ``(GUESS_EXISTS i ($~ o P) =
@@ -228,7 +234,6 @@ val GUESS_RULES_CONSTANT_FORALL = store_thm ("GUESS_RULES_CONSTANT_FORALL",
 ``(GUESS_FORALL i (\x. p)) = T``,
 SIMP_TAC std_ss [GUESS_REWRITES]);
 
-
 val GUESS_RULES_DISJ = store_thm ("GUESS_RULES_DISJ",
 ``(GUESS_TRUE i (\x. P x) ==>
    GUESS_TRUE i (\x. P x \/ Q x)) /\
@@ -239,6 +244,13 @@ val GUESS_RULES_DISJ = store_thm ("GUESS_RULES_DISJ",
   (GUESS_EXISTS i (\x. P x) /\
    GUESS_EXISTS i (\x. Q x) ==>
    GUESS_EXISTS i (\x. P x \/ Q x)) /\
+
+  (* Not needed because of GUESS_RULES_CONSTANT_EXISTS, GUESS_RULES_CONSTANT_FORALL 
+  (GUESS_EXISTS i (\x. P x) ==>
+   GUESS_EXISTS i (\x. P x \/ q)) /\
+
+  (GUESS_EXISTS i (\x. Q x) ==>
+   GUESS_EXISTS i (\x. p \/ Q x)) /\ *)
 
   (GUESS_EXISTS_STRONG i (\x. P x) /\
    GUESS_EXISTS_STRONG i (\x. Q x) ==>
@@ -505,7 +517,6 @@ SIMP_TAC std_ss [GUESS_REWRITES] THEN
 METIS_TAC[]);
 
 
-
 val GUESS_RULES_FORALL___NEW_FV = store_thm ("GUESS_RULES_FORALL___NEW_FV",
 ``((!y. GUESS_FALSE (iy y) (\x. P x y)) ==>
    GUESS_FALSE (\fv. iy (FST fv) (SND fv)) (\x. !y. P x y)) /\
@@ -523,6 +534,7 @@ SIMP_TAC std_ss [GUESS_REWRITES, FORALL_PROD, EXISTS_PROD] THEN
 METIS_TAC[]);
 
 
+(* A variant of GUESS_RULES_FORALL___NEW_FV that eliminates unit directly. *)
 val GUESS_RULES_FORALL___NEW_FV_1 = store_thm ("GUESS_RULES_FORALL___NEW_FV_1",
 ``((!y. GUESS_FALSE (\xxx:unit. (i y)) (\x. P (x:'c) (y:'a))) ==>
    GUESS_FALSE i (\x. !y. P x y)) /\
@@ -538,7 +550,6 @@ val GUESS_RULES_FORALL___NEW_FV_1 = store_thm ("GUESS_RULES_FORALL___NEW_FV_1",
 
 SIMP_TAC std_ss [GUESS_REWRITES, FORALL_PROD, EXISTS_PROD] THEN
 METIS_TAC[]);
-
 
 
 val GUESS_RULES_FORALL = store_thm ("GUESS_RULES_FORALL",

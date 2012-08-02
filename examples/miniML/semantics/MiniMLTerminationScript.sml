@@ -134,4 +134,11 @@ res_tac >>
 decide_tac);
 val _ = register "deBruijn_inc" deBruijn_inc_def deBruijn_inc_ind;
 
+val (bind_var_list_def,bind_var_list_ind) =
+  tprove_no_defn ((bind_var_list_def,bind_var_list_ind),
+wf_rel_tac `measure (LENGTH o FST o SND)` >>
+srw_tac [] []);
+val _ = register "bind_var_list" bind_var_list_def bind_var_list_ind;
+
+
 val _ = export_theory ();

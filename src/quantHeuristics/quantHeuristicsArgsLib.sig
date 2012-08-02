@@ -4,7 +4,11 @@ sig
   (* stateful ones, copied from quantHeuristicsLib *)
   val stateful_qp        : quantHeuristicsLib.quant_param;
   val pure_stateful_qp   : quantHeuristicsLib.quant_param;
-  val TypeBase_qp        : quantHeuristicsLib.quant_param
+  val TypeBase_qp        : quantHeuristicsLib.quant_param;
+
+  val clear_stateful_qp : unit -> unit;
+  val stateful_qp___add_combine_arguments :
+     quantHeuristicsLib.quant_param list -> unit;
 
 
   (* ones for specific types *)

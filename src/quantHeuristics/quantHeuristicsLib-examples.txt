@@ -7,7 +7,7 @@ loadPath :=
 
 
 open HolKernel Parse boolLib Drule ConseqConv computeLib
-open quantHeuristicsLib
+open quantHeuristicsLib;
 open quantHeuristicsArgsLib;
 
 (*
@@ -18,14 +18,12 @@ quietdec := false;
 (*Simple find an equation and instatiate it,
   same as UNWIND_CONV*)
 
-val t = ``?x. (x=7) /\ P x /\ Q``;
+val t = ``?x. Q /\ (x=7) /\ P x``;
 val t = ``!x. ((x=7) /\ Q) ==> P x``;
 
-(* Result:  P 7 /\ Q *)
-val thm = SIMP_CONV std_ss [] t
+(* Result:  Q /\ P 7 *)
+val thm = SIMP_CONV std_ss [] t;
 val thm = QUANT_INSTANTIATE_CONV [] t;
-
-
 
 
 (*Quantifiers are resorted to be able to find easy instantations*)
@@ -36,19 +34,28 @@ val thm = SIMP_CONV std_ss [] t
 val thm = QUANT_INSTANTIATE_CONV [] t
 
 
+QUANT_INSTANTIATE_CONV [] ``?x. (!z. Q z /\ (x=7)) /\ P x``
+QUANT_INSTANTIATE_CONV [std_qp] ``!x. IS_SOME x ==> P x``
 
 
 
 (*However, the new library can handle more difficult nestings than
   the existing UNWIND conversions*)
 
-val t = ``?x. (!z. (x=7) /\ Q z) /\ P x /\ Q t``
+val t = ``?x. ((x=7) \/ (7 = x)) /\ P x``;
+(* Result:  P 7 *)
+
+val t = ``?x. !y. (x=7) /\ P x y``;
+(* Result:  !y. P 7 y *)
+
+val t = ``?x. (!z. Q z /\ (x=7)) /\ P x``
 (* Result:  (!z. Q z) /\ P 7 /\ Q t *)
 
 val t = ``!x z. ?g. (((x=7) /\ Q g)) ==> P x``
 (* Result:  (?g. Q g) ==> P 7 *)
 
 val thm = QUANT_INSTANTIATE_CONV [] t
+val thm = SIMP_CONV std_ss [] t
 
 
 (*
@@ -89,6 +96,10 @@ val thm = QUANT_INSTANTIATE_CONV [] t
 
 
 (*The new library also uses matching to figure out instantions*)
+val t = ``?x. (f(8 + 2) = f(x + 2)) /\ P(10)``;
+val t = ``?x. (f(8 + 2) = f(x + 2)) /\ P(f (x + 2))``;
+val t = ``?x. (f(8 + 2) = f(x + 2)) /\ P(f (2 + x))``; (*fails *)
+
 val t = ``?x. P \/ (f(8 + 2) = f(x + 2)) \/ Z``;
 val t = ``?x. P /\ (f(8 + 2) = f(x + 2)) /\ 
               g (f (x+2)) /\ Z``;
@@ -97,6 +108,7 @@ val t = ``?x. P /\ (f 2 = f x) /\ Q /\ Q2(f x) /\ Z /\
               (f x = f 2)``;
 
 val thm = QUANT_INSTANTIATE_CONV [] t
+val thm = SIMP_CONV [] t
 
 
 
@@ -620,8 +632,14 @@ val thm = QUANT_INSTANTIATE_CONV [pair_qp [split_pair___ALL___pred]] t
 
 
 (*Some things about option types*)
+val t = ``!x. IS_SOME x``
+val thm = QUANT_INSTANTIATE_CONV [std_qp] t
+
+val t = ``!x. IS_NONE x``
+val thm = QUANT_INSTANTIATE_CONV [std_qp] t
+
 val t = ``!x. IS_SOME x ==> P x``;
-val thm = QUANT_INSTANTIATE_CONV [option_qp] t
+val thm = QUANT_INSTANTIATE_CONV [std_qp] t
 
 val t = ``!x. IS_NONE x \/ P x``
 val thm = QUANT_INSTANTIATE_CONV [option_qp] t
@@ -639,6 +657,7 @@ val thm = QUANT_INSTANTIATE_CONV [std_qp] t
 val t = ``!l. (~(l = []) ==> (LENGTH l > 0))``;
 val thm = QUANT_INSTANTIATE_CONV [stateful_qp] t
 val thm = QUANT_INSTANTIATE_CONV [list_qp] t
+val thm = QUANT_INSTANTIATE_CONV [std_qp] t
 
 val t = ``!l. (l = h::h2) \/ X``
 val thm = QUANT_INSTANTIATE_CONV [stateful_qp] t
@@ -686,11 +705,19 @@ e (SRW_TAC [QUANT_INST_ss [record_default_qp]] [])
 
 (*Tactics using the assumption*)
 
+set_goal ([], ``!x. IS_SOME x ==> P x``);
+
 set_goal ([], ``!x y. IS_SOME x /\ IS_SOME y ==> (x = y)``);
 
 e (
    REPEAT STRIP_TAC THEN
    ASM_QUANT_INSTANTIATE_TAC [std_qp]
+)
+
+(* in contrast, the simplifier does not work, since it does not instantiate free variables *)
+e (
+   REPEAT STRIP_TAC THEN
+   FULL_SIMP_TAC (std_ss++(QUANT_INST_ss [std_qp])) []
 )
 
 

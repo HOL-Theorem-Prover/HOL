@@ -14,11 +14,11 @@ open BytecodeTheory MiniMLTheory
 (*val every2 : forall 'a 'b. ('a -> 'b -> bool) -> 'a list -> 'b list -> bool*)
 (*val least : (num -> bool) -> num*)
 (*val num_to_string : num -> string*)
-(*val replace : forall 'a. 'a -> num -> 'a list -> 'a list*)
 (*val int_to_num : int -> num*)
 (*val alist_to_fmap : forall 'a 'b. ('a * 'b) list -> ('a,'b) Pmap.map*)
 (*val optrel : forall 'a 'b 'c 'd. ('a -> 'b -> bool) -> 'c -> 'd -> bool*)
 (*val flookup : forall 'a 'b 'c. ('a,'b) Pmap.map -> 'a -> 'c*)
+(*val genlist : forall 'a. (num -> 'a) -> num -> 'a list*)
 
 (* TODO: elsewhere? *)
  val find_index_defn = Hol_defn "find_index" `
@@ -562,13 +562,11 @@ val _ = Hol_datatype `
  compiler_state =
   <| env: ctenv
    ; sz: num
-   ; code: bc_inst list (* reversed *)
-   ; code_length: num
-   ; tail: call_context
+   ; out: bc_inst list (* reversed code *)
    ; next_label: num
+   ; tail: call_context
    (* not modified on return: *)
    ; decl: (ctenv # num)option
-   ; inst_length: bc_inst -> num
    |>`;
 
 
@@ -576,7 +574,11 @@ val _ = Hol_datatype `
  repl_state =
   <| cmap : (conN, num) fmap
    ; cpam : (typeN, (num, conN # nt list) fmap) fmap
-   ; cs : compiler_state
+   ; code : bc_inst list
+   ; renv : ctenv
+   ; rsz  : num
+   ; next_addr : num
+   ; inst_length : bc_inst -> num
    |>`;
 
 
@@ -877,11 +879,15 @@ val _ = Defn.save_defn error_to_int_defn;
 val _ = Defn.save_defn prim2_to_bc_defn;
 
 val _ = Define `
- emit = FOLDL
-  (\ s i .  s with<| next_label := s.next_label + s.inst_length i + 1;
-                        code := i :: s.code; code_length := s.code_length + 1 |>)`;
+ emit = FOLDL (\ s i .  s with<| out := i :: s.out |>)`;
 
 
+ val get_labels_defn = Hol_defn "get_labels" `
+
+(get_labels n s = ( s with<| next_label := s.next_label + n |>,
+                  GENLIST (\ i . s.next_label + i) n))`;
+
+val _ = Defn.save_defn get_labels_defn;
  val compile_varref_defn = Hol_defn "compile_varref" `
 
 (compile_varref s (CTLet n) = emit s [Stack (Load (s.sz - n))])
@@ -919,16 +925,6 @@ val _ = Hol_datatype `
 (emit_ec z s (CERef j) = incsz (emit s [Stack (Load (s.sz - z - j))]))`;
 
 val _ = Defn.save_defn emit_ec_defn;
-
- val replace_calls_defn = Hol_defn "replace_calls" `
-
-(replace_calls j [_] c = c)
-/\
-(replace_calls j ((_,lab)::(jl,l)::ls) c =
-  replace_calls j ((jl,l)::ls)
-    (REPLACE_ELEMENT (Call lab) (j - jl) c))`;
-
-val _ = Defn.save_defn replace_calls_defn;
 
  val bind_fv_defn = Hol_defn "bind_fv" `
 
@@ -1069,20 +1065,15 @@ val _ = Defn.save_defn bind_fv_defn;
 (compile s (CIf e1 e2 e3) =
   let (s,dt) = sdt s in
   let s = ldt dt (compile s e1) in
-  let s = emit s [JumpNil 0; Jump 0] in
-  let j1 = s.code_length in
-  let n1 = s.next_label in
+  let (s,labs) = get_labels 3 s in
+  let n0 = EL  0  labs in
+  let n1 = EL  1  labs in
+  let n2 = EL  2  labs in
+  let s = emit s [(JumpNil (Lab n0)); (Jump (Lab n1)); Label n0] in
   let s = compile (decsz s) e2 in
-  let s = emit s [Jump 0] in
-  let j2 = s.code_length in
-  let n2 = s.next_label in
+  let s = emit s [(Jump (Lab n2)); Label n1] in
   let s = compile (decsz s) e3 in
-  let n3 = s.next_label in
-  let j3 = s.code_length in
-   s with<| code :=
-      (REPLACE_ELEMENT (Jump n3) (j3 - j2)
-      (REPLACE_ELEMENT (Jump n2) (j3 - j1)
-      (REPLACE_ELEMENT (JumpNil n1) (j3 - j1 + 1) s.code))) |>)
+  emit s [Label n2])
 /\
 (compile_bindings env0 sz1 e n s [] =
   let s = (case s.tail of
@@ -1168,12 +1159,13 @@ val _ = Defn.save_defn bind_fv_defn;
   let sz0 = s.sz in
   let s = FOLDL (\ s _n . incsz (emit s [Stack (PushInt i0); Ref])) s ns in
   let s = emit s [Stack (PushInt i0)] in
-  let (s,k,labs,ecs) = FOLDL
-    (\ (s,k,labs,ecs) (xs,e) .
+  let nk = LENGTH defs in
+  let (s,labs) = get_labels nk s in
+  let (s,k,ecs) = FOLDL
+    (\ (s,k,ecs) (xs,e) .
       let az = LENGTH xs in
-      let lab = s.next_label in
-      let s = emit s [Call 0] in
-      let j = s.code_length in
+      let lab = EL  k  labs in
+      let s = emit s [(Call (Lab lab))] in
       let (n,env,(ecl,ec)) =
         ITSET (bind_fv ns xs az k) (free_vars e) (0,FEMPTY,(0,[])) in
       let s' =  s with<| env := env; sz := 0; tail := TCTail az 0 |> in
@@ -1183,14 +1175,12 @@ val _ = Defn.save_defn bind_fv_defn;
                         Stack (Load 1);
                         Stack (Store (az+2));
                         Stack (Pops (az+1));
-                        Return] in
+                        Return;
+                        Label lab] in
       let s =  s' with<| env := s.env; sz := s.sz + 1; tail := s.tail |> in
-      (s,k+1,(j,lab)::labs,(ecl,ec)::ecs))
-    (s,0,[],[]) defs in
-  let s =  s with<| code :=
-    replace_calls s.code_length ((0,s.next_label)::labs) s.code |> in
+      (s,k+1,(ecl,ec)::ecs))
+    (s,0,[]) defs in
   let s = emit s [Stack Pop] in
-  let nk = LENGTH defs in
   let (s,k) = FOLDL
     (\ (s,k) (j,ec) .
       let s = incsz (emit s [Stack (Load (nk - k))]) in
@@ -1215,6 +1205,44 @@ val _ = Defn.save_defn bind_fv_defn;
 
 val _ = Defn.save_defn compile_defn;
 
+ val calculate_labels_defn = Hol_defn "calculate_labels" `
+
+(calculate_labels il m n a [] = (m,n,a))
+/\
+(calculate_labels il m n a (Label l::lbc) =
+  calculate_labels il (FUPDATE  m ( l, n)) n a lbc)
+/\
+(calculate_labels il m n a (i::lbc) =
+  calculate_labels il m (n + il i + 1) (i::a) lbc)`;
+
+val _ = Defn.save_defn calculate_labels_defn;
+
+ val replace_labels_defn = Hol_defn "replace_labels" `
+
+(replace_labels m a [] = a)
+/\
+(replace_labels m a (Jump (Lab l)::bc) =
+  replace_labels m (Jump (Addr (FAPPLY  m  l))::a) bc)
+/\
+(replace_labels m a (JumpNil (Lab l)::bc) =
+  replace_labels m (JumpNil (Addr (FAPPLY  m  l))::a) bc)
+/\
+(replace_labels m a (Call (Lab l)::bc) =
+  replace_labels m (Call (Addr (FAPPLY  m  l))::a) bc)
+/\
+(replace_labels m a (i::bc) =
+  replace_labels m (i::a) bc)`;
+
+val _ = Defn.save_defn replace_labels_defn;
+
+ val compile_labels_defn = Hol_defn "compile_labels" `
+
+(compile_labels rs lbc =
+  let (m,n,bc) = calculate_labels rs.inst_length FEMPTY rs.next_addr [] lbc in
+   rs with<| code := replace_labels m [] bc ; next_addr := n |>)`;
+
+val _ = Defn.save_defn compile_labels_defn;
+
 val _ = Hol_reln `
 (! il c cc.
 T
@@ -1228,12 +1256,9 @@ bc_code_prefix il (i::cc) (p + il i) c)`;
 
  val body_cs_defn = Hol_defn "body_cs" `
 
-(body_cs il env xs lab =
-  <| env := env; sz := 0; tail := TCTail (LENGTH xs) 0;
-     code := []; code_length := 0;
-     next_label := lab;
-     decl := NONE;
-     inst_length := il |>)`;
+(body_cs env xs =
+  <| env := env; sz := 0; out := []; next_label := 0;
+     tail := TCTail (LENGTH xs) 0; decl := NONE |>)`;
 
 val _ = Defn.save_defn body_cs_defn;
 
@@ -1262,7 +1287,7 @@ EVERY2 (bceqv il c) vs bvs
 ==>
 bceqv il c (CConv n vs) (Block n bvs))
 /\
-(! il c env ns defs n j xs e cenv ec f bvs lab.
+(! il c env ns defs n j xs e cenv ec f bvs.
 (find_index n ns 0 = SOME j) /\
 (EL  j  defs = (xs,e)) /\
 ((cenv,ec) = body_env ns xs j (free_vars e)) /\
@@ -1270,47 +1295,40 @@ bceqv il c (CConv n vs) (Block n bvs))
 (! i. i < LENGTH ec ==>
     (? fv. (EL  i  ec = CEEnv fv) /\
                bceqv il c (FAPPLY  env  fv) (EL  i  bvs)) \/
-    (? k kxs ke kenv kec g l.
+    (? k kxs ke kenv kec g.
         (EL  i  ec = CERef k) /\
         (EL  k  defs = (kxs,ke)) /\
         ((kenv,kec) = body_env ns xs k (free_vars ke)) /\
         bc_code_prefix il c g
-          (REVERSE (compile (body_cs il kenv kxs l) ke).code))) /\
-bc_code_prefix il c f (REVERSE (compile (body_cs il cenv xs lab) e).code)
+          (REVERSE (compile (body_cs kenv kxs) ke).out))) /\
+bc_code_prefix il c f (REVERSE (compile (body_cs cenv xs) e).out)
 ==>
 bceqv il c (CRecClos env ns defs n)
   (Block 0 [CodePtr f; if bvs = [] then Number i0 else Block 0 bvs]))`;
 
 val _ = Define `
- init_compiler_state =
-  <| env := FEMPTY
-   ; code := []
-   ; code_length := 0
-   ; next_label := 0 (* depends on exception handlers *)
-   ; sz := 0
-   ; inst_length := \ i . 0 (* depends on runtime *)
-   ; decl := NONE
-   ; tail := TCNonTail
-   |>`;
-
-
-val _ = Define `
  init_repl_state =
   <| cmap := FEMPTY
    ; cpam := FEMPTY
-   ; cs := init_compiler_state
+   ; code := []
+   ; renv := FEMPTY
+   ; rsz  := 0
+   ; next_addr := 0
+   ; inst_length := \ i . 0
    |>`;
 
 
 val _ = Define `
- (compile_Cexp rs Ce =
-  let cs =  rs.cs with<| code := [] ; code_length := 0 |> in
+ (compile_Cexp rs decl Ce =
+  let cs = <| env := rs.renv; sz := rs.rsz
+            ; out := []; next_label := 0
+            ; tail := TCNonTail; decl := decl |> in
   let cs = compile cs Ce in
-  let cs = (case cs.decl of
-      NONE => cs
-    | SOME (env,sz) =>  cs with<| env := env ; sz := sz |>
+  let rs = (case cs.decl of
+      NONE => rs
+    | SOME (env,sz) =>  rs with<| renv := env ; rsz := sz |>
     ) in
-   rs with<| cs := cs |>)`;
+  compile_labels rs (REVERSE cs.out))`;
 
 
 (* TODO: typechecking *)
@@ -1329,8 +1347,7 @@ val _ = Defn.save_defn number_constructors_defn;
 
  val repl_dec_defn = Hol_defn "repl_dec" `
 
-(repl_dec rs (Dtype []) =
-   rs with<| cs := rs.cs with<| code := []; code_length := 0|> |>)
+(repl_dec rs (Dtype []) =  rs with<| code := [] |>)
 /\
 (repl_dec rs (Dtype ((a,ty,cs)::ts)) =
   let (cm,cw) = number_constructors a (rs.cmap,FEMPTY) 0 cs in
@@ -1338,23 +1355,22 @@ val _ = Defn.save_defn number_constructors_defn;
 /\
 (repl_dec rs (Dletrec defs) =
   let (fns,Cdefs) = defs_to_Cdefs rs.cmap defs in
-  let rs = rs with<| cs := rs.cs with<| decl:=SOME(rs.cs.env,rs.cs.sz)|> |> in
-  compile_Cexp rs (CLetfun T fns Cdefs (CDecl fns)))
+  let decl = SOME(rs.renv,rs.rsz) in
+  compile_Cexp rs decl (CLetfun T fns Cdefs (CDecl fns)))
 /\
 (repl_dec rs (Dlet p e) =
   let (pvs,Cp) = pat_to_Cpat rs.cmap [] p in
   let Cpes = [(Cp,CDecl pvs)] in
   let vn = fresh_var (Cpes_vars Cpes) in
   let Ce = exp_to_Cexp rs.cmap e in
-  let rs' = rs with<| cs := rs.cs with<| decl:=SOME(rs.cs.env,rs.cs.sz)|> |> in
-  compile_Cexp rs' (CLet [vn] [Ce] (remove_mat_var vn Cpes)))`;
+  let decl = SOME(rs.renv,rs.rsz) in
+  compile_Cexp rs decl (CLet [vn] [Ce] (remove_mat_var vn Cpes)))`;
 
 val _ = Defn.save_defn repl_dec_defn;
 
 val _ = Define `
- (repl_exp s exp =
-  compile_Cexp (s with<| cs := s.cs with<| decl:=NONE|> |>) (exp_to_Cexp s.cmap exp))`;
- (* parens *)
+ (repl_exp s exp = compile_Cexp s NONE (exp_to_Cexp s.cmap exp))`;
+
 
 (* Constant folding
 val fold_consts : exp -> exp

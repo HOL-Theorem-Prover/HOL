@@ -15,8 +15,6 @@ val least : (num -> bool) -> num
 let inline {hol} least = Hol.LEAST
 val num_to_string : num -> string
 let inline {hol} num_to_string = Hol.num_to_hex_string
-val replace : forall 'a. 'a -> num -> 'a list -> 'a list
-let inline {hol} replace = Hol.REPLACE_ELEMENT
 val int_to_num : int -> num
 let inline {hol} int_to_num = Hol.Num
 val alist_to_fmap : forall 'a 'b. ('a * 'b) list -> ('a,'b) Pmap.map
@@ -25,6 +23,8 @@ val optrel : forall 'a 'b 'c 'd. ('a -> 'b -> bool) -> 'c -> 'd -> bool
 let inline {hol} optrel = Hol.OPTREL
 val flookup : forall 'a 'b 'c. ('a,'b) Pmap.map -> 'a -> 'c
 let inline {hol} flookup = Hol.FLOOKUP
+val genlist : forall 'a. (num -> 'a) -> num -> 'a list
+let inline {hol} genlist = Hol.GENLIST
 
 (* TODO: elsewhere? *)
 let rec
@@ -550,19 +550,21 @@ type ctenv = (string,ctbind) Pmap.map
 type compiler_state =
   <| env: ctenv
    ; sz: num
-   ; code: bc_inst list (* reversed *)
-   ; code_length: num
-   ; tail: call_context
+   ; out: bc_inst list (* reversed code *)
    ; next_label: num
+   ; tail: call_context
    (* not modified on return: *)
    ; decl: (ctenv * num) option
-   ; inst_length: bc_inst -> num
    |>
 
 type repl_state =
   <| cmap : (conN, num) Pmap.map
    ; cpam : (typeN, (num, conN * nt list) Pmap.map) Pmap.map
-   ; cs : compiler_state
+   ; code : bc_inst list
+   ; renv : ctenv
+   ; rsz  : num
+   ; next_addr : num
+   ; inst_length : bc_inst -> num
    |>
 
 let rec
@@ -827,10 +829,11 @@ prim2_to_bc CLt = Less
 and
 prim2_to_bc CEq = Equal
 
-let emit = List.fold_left
-  (fun s i -> <| s with next_label = s.next_label + s.inst_length i + 1;
-                        code = i :: s.code; code_length = s.code_length + 1 |>)
+let emit = List.fold_left (fun s i -> <| s with out = i :: s.out |>)
 
+let rec
+get_labels n s = (<| s with next_label = s.next_label + n |>,
+                  genlist (fun i -> s.next_label + i) n)
 let rec
 compile_varref s (CTLet n) = emit s [Stack (Load (s.sz - n))]
 and
@@ -852,13 +855,6 @@ let rec
 emit_ec z s (CEEnv fv) = incsz (compile_varref s (Pmap.find fv s.env))
 and
 emit_ec z s (CERef j) = incsz (emit s [Stack (Load (s.sz - z - j))])
-
-let rec
-replace_calls j [_] c = c
-and
-replace_calls j ((_,lab)::(jl,l)::ls) c =
-  replace_calls j ((jl,l)::ls)
-    (replace (Call lab) (j - jl) c)
 
 let rec
 bind_fv ns xs az k fv (n,env,(ecl,ec)) =
@@ -995,20 +991,15 @@ and
 compile s (CIf e1 e2 e3) =
   let (s,dt) = sdt s in
   let s = ldt dt (compile s e1) in
-  let s = emit s [JumpNil 0; Jump 0] in
-  let j1 = s.code_length in
-  let n1 = s.next_label in
+  let (s,labs) = get_labels 3 s in
+  let n0 = List.nth labs 0 in
+  let n1 = List.nth labs 1 in
+  let n2 = List.nth labs 2 in
+  let s = emit s [(JumpNil (Lab n0)); (Jump (Lab n1)); Label n0] in
   let s = compile (decsz s) e2 in
-  let s = emit s [Jump 0] in
-  let j2 = s.code_length in
-  let n2 = s.next_label in
+  let s = emit s [(Jump (Lab n2)); Label n1] in
   let s = compile (decsz s) e3 in
-  let n3 = s.next_label in
-  let j3 = s.code_length in
-  <| s with code =
-      (replace (Jump n3) (j3 - j2)
-      (replace (Jump n2) (j3 - j1)
-      (replace (JumpNil n1) (j3 - j1 + 1) s.code))) |>
+  emit s [Label n2]
 and
 compile_bindings env0 sz1 e n s [] =
   let s = match s.tail with
@@ -1094,12 +1085,13 @@ compile_closures ns s defs =
   let sz0 = s.sz in
   let s = List.fold_left (fun s _n -> incsz (emit s [Stack (PushInt i0); Ref])) s ns in
   let s = emit s [Stack (PushInt i0)] in
-  let (s,k,labs,ecs) = List.fold_left
-    (fun (s,k,labs,ecs) (xs,e) ->
+  let nk = List.length defs in
+  let (s,labs) = get_labels nk s in
+  let (s,k,ecs) = List.fold_left
+    (fun (s,k,ecs) (xs,e) ->
       let az = List.length xs in
-      let lab = s.next_label in
-      let s = emit s [Call 0] in
-      let j = s.code_length in
+      let lab = List.nth labs k in
+      let s = emit s [(Call (Lab lab))] in
       let (n,env,(ecl,ec)) =
         Set.fold (bind_fv ns xs az k) (free_vars e) (0,Pmap.empty,(0,[])) in
       let s' = <| s with env = env; sz = 0; tail = TCTail az 0 |> in
@@ -1109,14 +1101,12 @@ compile_closures ns s defs =
                         Stack (Load 1);
                         Stack (Store (az+2));
                         Stack (Pops (az+1));
-                        Return] in
+                        Return;
+                        Label lab] in
       let s = <| s' with env = s.env; sz = s.sz + 1; tail = s.tail |> in
-      (s,k+1,(j,lab)::labs,(ecl,ec)::ecs))
-    (s,0,[],[]) defs in
-  let s = <| s with code =
-    replace_calls s.code_length ((0,s.next_label)::labs) s.code |> in
+      (s,k+1,(ecl,ec)::ecs))
+    (s,0,[]) defs in
   let s = emit s [Stack Pop] in
-  let nk = List.length defs in
   let (s,k) = List.fold_left
     (fun (s,k) (j,ec) ->
       let s = incsz (emit s [Stack (Load (nk - k))]) in
@@ -1139,6 +1129,35 @@ compile_closures ns s defs =
     (fun s _n -> decsz (emit s [Stack (Store k)]))
          s ns
 
+let rec
+calculate_labels il m n a [] = (m,n,a)
+and
+calculate_labels il m n a (Label l::lbc) =
+  calculate_labels il (Pmap.add l n m) n a lbc
+and
+calculate_labels il m n a (i::lbc) =
+  calculate_labels il m (n + il i + 1) (i::a) lbc
+
+let rec
+replace_labels m a [] = a
+and
+replace_labels m a (Jump (Lab l)::bc) =
+  replace_labels m (Jump (Addr (Pmap.find l m))::a) bc
+and
+replace_labels m a (JumpNil (Lab l)::bc) =
+  replace_labels m (JumpNil (Addr (Pmap.find l m))::a) bc
+and
+replace_labels m a (Call (Lab l)::bc) =
+  replace_labels m (Call (Addr (Pmap.find l m))::a) bc
+and
+replace_labels m a (i::bc) =
+  replace_labels m (i::a) bc
+
+let rec
+compile_labels rs lbc =
+  let (m,n,bc) = calculate_labels rs.inst_length Pmap.empty rs.next_addr [] lbc in
+  <| rs with code = replace_labels m [] bc ; next_addr = n |>
+
 indreln
 forall il c cc.
 true
@@ -1151,12 +1170,9 @@ bc_code_prefix il cc p c
 bc_code_prefix il (i::cc) (p + il i) c
 
 let rec
-body_cs il env xs lab =
-  <| env = env; sz = 0; tail = TCTail (List.length xs) 0;
-     code = []; code_length = 0;
-     next_label = lab;
-     decl = None;
-     inst_length = il |>
+body_cs env xs =
+  <| env = env; sz = 0; out = []; next_label = 0;
+     tail = TCTail (List.length xs) 0; decl = None |>
 
 let rec
 body_env ns xs j fvs =
@@ -1180,7 +1196,7 @@ every2 (bceqv il c) vs bvs
 ==>
 bceqv il c (CConv n vs) (Block n bvs)
 and
-forall il c env ns defs n j xs e cenv ec f bvs lab.
+forall il c env ns defs n j xs e cenv ec f bvs.
 find_index n ns 0 = Some j &&
 List.nth defs j = (xs,e) &&
 (cenv,ec) = body_env ns xs j (free_vars e) &&
@@ -1188,42 +1204,37 @@ List.length bvs = List.length ec &&
 (forall i. i < List.length ec -->
     (exist fv. List.nth ec i = CEEnv fv &&
                bceqv il c (Pmap.find fv env) (List.nth bvs i)) ||
-    (exist k kxs ke kenv kec g l.
+    (exist k kxs ke kenv kec g.
         List.nth ec i = CERef k &&
         List.nth defs k = (kxs,ke) &&
         (kenv,kec) = body_env ns xs k (free_vars ke) &&
         bc_code_prefix il c g
-          (List.rev (compile (body_cs il kenv kxs l) ke).code))) &&
-bc_code_prefix il c f (List.rev (compile (body_cs il cenv xs lab) e).code)
+          (List.rev (compile (body_cs kenv kxs) ke).out))) &&
+bc_code_prefix il c f (List.rev (compile (body_cs cenv xs) e).out)
 ==>
 bceqv il c (CRecClos env ns defs n)
   (Block 0 [CodePtr f; if bvs = [] then Number i0 else Block 0 bvs])
 
-let init_compiler_state =
-  <| env = Pmap.empty
-   ; code = []
-   ; code_length = 0
-   ; next_label = 0 (* depends on exception handlers *)
-   ; sz = 0
-   ; inst_length = fun i -> 0 (* depends on runtime *)
-   ; decl = None
-   ; tail = TCNonTail
-   |>
-
 let init_repl_state =
   <| cmap = Pmap.empty
    ; cpam = Pmap.empty
-   ; cs = init_compiler_state
+   ; code = []
+   ; renv = Pmap.empty
+   ; rsz  = 0
+   ; next_addr = 0
+   ; inst_length = fun i -> 0
    |>
 
-let compile_Cexp rs Ce =
-  let cs = <| rs.cs with code = [] ; code_length = 0 |> in
+let compile_Cexp rs decl Ce =
+  let cs = <| env = rs.renv; sz = rs.rsz
+            ; out = []; next_label = 0
+            ; tail = TCNonTail; decl = decl |> in
   let cs = compile cs Ce in
-  let cs = match cs.decl with
-    | None -> cs
-    | Some (env,sz) -> <| cs with env = env ; sz = sz |>
+  let rs = match cs.decl with
+    | None -> rs
+    | Some (env,sz) -> <| rs with renv = env ; rsz = sz |>
     end in
-  <| rs with cs = cs |>
+  compile_labels rs (List.rev cs.out)
 
 (* TODO: typechecking *)
 (* TODO: printing *)
@@ -1237,8 +1248,7 @@ number_constructors a (cm,cw) n ((c,tys)::cs) =
   number_constructors a (cm',cw') (n+1) cs
 
 let rec
-repl_dec rs (Dtype []) =
-  <| rs with cs = <|rs.cs with code = []; code_length = 0|> |>
+repl_dec rs (Dtype []) = <| rs with code = [] |>
 and
 repl_dec rs (Dtype ((a,ty,cs)::ts)) =
   let (cm,cw) = number_constructors a (rs.cmap,Pmap.empty) 0 cs in
@@ -1246,19 +1256,18 @@ repl_dec rs (Dtype ((a,ty,cs)::ts)) =
 and
 repl_dec rs (Dletrec defs) =
   let (fns,Cdefs) = defs_to_Cdefs rs.cmap defs in
-  let rs = <|rs with cs = <|rs.cs with decl=Some(rs.cs.env,rs.cs.sz)|> |> in
-  compile_Cexp rs (CLetfun true fns Cdefs (CDecl fns))
+  let decl = Some(rs.renv,rs.rsz) in
+  compile_Cexp rs decl (CLetfun true fns Cdefs (CDecl fns))
 and
 repl_dec rs (Dlet p e) =
   let (pvs,Cp) = pat_to_Cpat rs.cmap [] p in
   let Cpes = [(Cp,CDecl pvs)] in
   let vn = fresh_var (Cpes_vars Cpes) in
   let Ce = exp_to_Cexp rs.cmap e in
-  let rs' = <|rs with cs = <|rs.cs with decl=Some(rs.cs.env,rs.cs.sz)|> |> in
-  compile_Cexp rs' (CLet [vn] [Ce] (remove_mat_var vn Cpes))
+  let decl = Some(rs.renv,rs.rsz) in
+  compile_Cexp rs decl (CLet [vn] [Ce] (remove_mat_var vn Cpes))
 
-let repl_exp s exp =
-  compile_Cexp (<|s with cs = <|s.cs with decl=None|> |>) (exp_to_Cexp s.cmap exp) (* parens *)
+let repl_exp s exp = compile_Cexp s None (exp_to_Cexp s.cmap exp)
 
 (* Constant folding
 val fold_consts : exp -> exp
