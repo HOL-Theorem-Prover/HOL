@@ -694,7 +694,10 @@ fun update_pending (m,r) thydataty = let
   fun update1 inmap =
       case peek(inmap, thydataty) of
         NONE => inmap
-      | SOME (Loaded t) => raise Fail "update_pending invariant failure 1"
+      | SOME (Loaded t) =>
+          raise ERR "LoadableThyData.new"
+                    ("Theory data name " ^ Lib.quote thydataty ^
+                     " already in use.")
       | SOME (Pending []) => raise Fail "update_pending invariant failure 2"
       | SOME (Pending (ds as (_ :: _))) => let
           fun foldthis (d,acc) = m(acc, valOf (r d))
@@ -719,10 +722,10 @@ fun 'a new {thydataty, merge, read, write} = let
   fun read' s = Option.map mk (read s)
   fun write' t = write (vdest t)
 in
+  update_pending (merge',read') thydataty;
   dataops := Binarymap.insert(!dataops,
                               thydataty,
                               {merge=merge', read=read', write=write'});
-  update_pending (merge',read') thydataty;
   (mk,dest)
 end
 
