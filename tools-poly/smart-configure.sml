@@ -106,7 +106,7 @@ val OS = let
 in
   if vol = "" then (* i.e. Unix *)
     case Mosml.run "uname" ["-a"] "" of
-      Success s => if String.isPrefix "Linux" s then
+      Mosml.Success s => if String.isPrefix "Linux" s then
                      "linux"
                    else if String.isPrefix "SunOS" s then
                      "solaris"
@@ -114,7 +114,7 @@ in
                      "macosx"
                    else
                      "unix"
-    | Failure s => (print "\nRunning uname failed with message: ";
+    | Mosml.Failure s => (print "\nRunning uname failed with message: ";
                     print s;
                     OS.Process.exit OS.Process.failure)
   else "winNT"

@@ -49,11 +49,12 @@ val bc2x64_aux_def = Define `
        SOME [^(x86_bytes "pop rbx");
              ^(x86_bytes "shr rax,1");
              ^(x86_bytes "mul rbx")]) /\
-  (bc2x64_aux pos (Stack Div2) =
-       SOME [^(x86_bytes "shr rax,2");
-             ^(x86_bytes "add rax,rax")]) /\
-  (bc2x64_aux pos (Stack Mod2) =
-       SOME [^(x86_bytes "and rax,2")]) /\
+  (bc2x64_aux pos (Stack Div) =
+       SOME [^(x86_bytes "xor rbx,rbx");
+             ^(x86_bytes "div rbx")]) /\
+  (bc2x64_aux pos (Stack Mod) =
+       SOME [^(x86_bytes "xor rbx,rbx");
+             ^(x86_bytes "div rbx")]) /\
   (bc2x64_aux pos (Stack (Shift n k)) =
        if k = 0 then SOME [] else
        if n = 0 then
@@ -88,9 +89,9 @@ val bc2x64_aux_def = Define `
                [TAKE 3 ^(x86_bytes "add rsp,20000") ++ IMMEDIATE32 (n2w (8 * k))])) /\
   (bc2x64_aux pos Return =
        SOME [^(x86_bytes "ret")]) /\
-  (bc2x64_aux pos (Jump n) =
+  (bc2x64_aux pos (Jump (Addr n)) =
        SOME [TAKE 2 ^(x86_bytes "jmp 20000") ++ IMMEDIATE32 (n2w n - 6w - n2w pos)]) /\
-  (bc2x64_aux pos (Call n) =
+  (bc2x64_aux pos (Call (Addr n)) =
        SOME [TAKE 2 ^(x86_bytes "call 20000") ++ IMMEDIATE32 (n2w n - 6w - n2w pos)]) /\
   (bc2x64_aux pos JumpPtr =
        SOME [^(x86_bytes "mov rbx,rax");
@@ -100,7 +101,7 @@ val bc2x64_aux_def = Define `
        SOME [^(x86_bytes "mov rbx,rax");
              ^(x86_bytes "pop rax");
              ^(x86_bytes "call rbx")]) /\
-  (bc2x64_aux pos (JumpNil n) =
+  (bc2x64_aux pos (JumpNil (Addr n)) =
        SOME [^(x86_bytes "test rax,rax");
              ^(x86_bytes "pop rax");
              TAKE 3 ^(x86_bytes "jne 20000") ++ IMMEDIATE32 (n2w n - 12w - n2w pos)]) /\
@@ -160,7 +161,9 @@ val bc2x64_aux_def = Define `
              ^(x86_bytes "xor rax,rax")]) /\
   (bc2x64_aux pos Exception =
        SOME [^(x86_bytes "xor rbx,rbx");
-             ^(x86_bytes "div rbx")]) (* intentionally div by zero *)`;
+             ^(x86_bytes "div rbx")]) /\ (* intentionally div by zero *)
+  (bc2x64_aux pos (Label _) = SOME []) /\
+  (bc2x64_aux pos _ = NONE)`;
 
 val bc_length_x64_def = Define `
   bc_length_x64 x =
@@ -168,8 +171,8 @@ val bc_length_x64_def = Define `
 
 val bytecode_to_x64_def = Define `
   bytecode_to_x64 bc =
-    FST (FOLDL (\(res,pos) x. (SNOC (bc2x64_aux pos x) res, pos + bc_length_x64 x + 1)) ([],0) bc)`;
-
+    FST (FOLDL (\(res,pos) x. (SNOC (bc2x64_aux pos x) res,
+                               pos + bc_length_x64 x + 1)) ([],0) bc)`;
 
 val _ = export_theory();
 

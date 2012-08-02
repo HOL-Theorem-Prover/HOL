@@ -1127,12 +1127,13 @@ val arm_iadd_alias_thm = prove(
 
 val (arm_sa_mul_th,arm_sa_mul_def) = decompile_io_strings arm_tools "arm_sa_mul"
   (SOME (``(r0:word32,r2:word32,r3:word32,r4:word32)``,
-         ``(r2:word32,r3:word32,r4:word32)``)) (assemble "arm" `
+         ``(r0:word32,r2:word32,r3:word32,r4:word32)``)) (assemble "arm" `
 
     mov r1,#0
     umlal r0,r1,r2,r3
     adds r3,r0,r4
     adc r4,r1,#0
+    mov r0,r2
 
   `)
 
@@ -1141,7 +1142,7 @@ val word_contcat_0 = prove(
   WORD_DECIDE_TAC);
 
 val arm_sa_mul_thm = prove(
-  ``!p q k s. arm_sa_mul(k,p,q,s) = (p,single_mul_add p q k s)``,
+  ``!p q k s. arm_sa_mul(k,p,q,s) = (p,p,single_mul_add p q k s)``,
   REPEAT Cases \\ ASM_SIMP_TAC (std_ss++SIZES_ss) [single_mul_add_def,arm_sa_mul_def,
     LET_DEF,w2w_def,w2n_n2w,single_mul_def,mw_add_def,HD,TL,single_add_eq,
     word_contcat_0,word_add_n2w,word_mul_n2w,word_extract_n2w,bitTheory.BITS_THM,
@@ -1154,13 +1155,15 @@ val arm_sa_mul_thm = prove(
 
 (* mw_mul_pass *)
 
+val _ = codegenLib.add_compiled [arm_sa_mul_th];
+
 val arm_mul_pass_def = tailrecLib.tailrec_define ``
   arm_mul_pass (x,yp,zp,k,yl,df:word32 set,f:word32->word32) =
     if yl = 0w:word32 then
       let f = (zp =+ k) f in
         (f,df)
     else
-      let (x,y,k) = arm_sa_mul (k,x,f yp,f zp) in
+      let (k2,x,y,k) = arm_sa_mul (k,x,f yp,f zp) in
       let f = (zp =+ y) f in
       let yp = yp-4w in
       let zp = zp-4w in

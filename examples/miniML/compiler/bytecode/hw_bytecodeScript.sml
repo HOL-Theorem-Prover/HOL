@@ -1,7 +1,7 @@
 
 open HolKernel Parse boolLib bossLib; val _ = new_theory "hw_bytecode";
 
-open BytecodeTheory;
+open bytecodeTerminationTheory;
 open listTheory;
 open wordsTheory;
 open wordsLib;
@@ -12,17 +12,6 @@ open finite_mapTheory;
 open pred_setTheory;
 
 infix \\ val op \\ = op THEN;
-
-
-(* misc *)
-
-val (bc_fetch_aux_def, bc_fetch_aux_ind) =
-  Defn.tprove_no_defn ((bc_fetch_aux_def, bc_fetch_aux_ind),
-  WF_REL_TAC `measure (LENGTH o FST)` THEN SRW_TAC [] []);
-val _ = save_thm ("bc_fetch_aux_def", bc_fetch_aux_def);
-val _ = save_thm ("bc_fetch_aux_ind", bc_fetch_aux_ind);
-val _ = export_rewrites["bc_fetch_aux_def"];
-
 
 (* -------------------------------------------------------------------------- *
     Definition of hardware bytecode
