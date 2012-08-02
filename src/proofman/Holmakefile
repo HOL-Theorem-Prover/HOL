@@ -11,7 +11,8 @@ DEPS = $(BOOLLIB) $(BOOLTHEORY) $(PRIMREC) $(TERMPP) \
        goalStack.uo goalTree.uo Manager.uo \
        $(dprot $(HOLDIR)/tools-poly/builder0.ML) \
        $(dprot $(HOLDIR)/tools-poly/poly/poly-init2.ML) \
-       $(dprot $(SIGOBJ)/UnicodeChars.uo)
+       $(dprot $(SIGOBJ)/UnicodeChars.uo) \
+       $(dprot $(SIGOBJ)/ThmSetData.uo)
 
 EXTRA_CLEANS = $(TARGET)
 
