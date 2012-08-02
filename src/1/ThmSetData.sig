@@ -11,4 +11,11 @@ sig
                       export : string -> unit,
                       mk : string list -> data * (string * Thm.thm) list}
 
+  val current_data : string -> (string * Thm.thm) list
+  val theory_data : {settype : string, thy: string} ->
+                    (string * Thm.thm) list
+  val all_data : string -> (string * (string * Thm.thm) list) list
+
+  val all_set_types : unit -> string list
+
 end

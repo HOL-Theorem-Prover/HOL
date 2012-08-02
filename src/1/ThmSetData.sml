@@ -38,9 +38,19 @@ in
   String.concatWith " " list
 end
 
+type destfn = data -> (string * thm) list option
+val destmap = let
+  open Binarymap
+in
+  ref (mkDict String.compare : (string,destfn) dict)
+end
+
+fun all_set_types () = Binarymap.foldr (fn (k,_,acc) => k::acc) [] (!destmap)
+
 fun new s = let
   val (mk,dest) = LoadableThyData.new {merge = op@, read = read,
                                        write = writeset, thydataty = s}
+  val _ = destmap := Binarymap.insert(!destmap,s,dest)
   fun foldthis (nm,set) =
       case lookup nm of
         SOME r => (nm, r) :: set
@@ -53,6 +63,27 @@ fun new s = let
 in
   (mk',dest)
 end
+
+fun theory_data {settype = key, thy} =
+    case Binarymap.peek(!destmap, key) of
+      NONE => raise mk_HOL_ERR "ThmSetData" "theory_data"
+                    ("No ThmSetData with name "^Lib.quote key)
+    | SOME df => let
+        open LoadableThyData
+      in
+        case segment_data {thy = thy, thydataty = key} of
+          NONE => []
+        | SOME d => valOf (df d)
+                    handle Option =>
+                    raise mk_HOL_ERR "ThmSetData" "theory_data"
+                          ("ThmSetData for name " ^ Lib.quote key ^
+                           " doesn't decode")
+      end
+
+fun current_data s = theory_data { settype = s, thy = current_theory() }
+
+fun all_data s = map (fn thy => (thy, theory_data {settype = s, thy = thy}))
+                     (current_theory() :: ancestry "-")
 
 fun new_exporter name addfn = let
   val (mk,dest) = new name
