@@ -426,7 +426,7 @@ val DATA_PROCESSING =
   DATA_PROCESSING_def;
 
 val word2_software = prove(`num2exception (w2n (2w:word3)) = software`,
-  EVAL_TAC \\ PROVE_TAC [software]);
+  EVAL_TAC \\ PROVE_TAC [num2exception_thm]);
 
 val finish_rws3 =
   [ABS_ARM6_def,NEXT_ARM_def,state_arm_ex_case_def,EXEC_INST_def,DECODE_PSR_def,

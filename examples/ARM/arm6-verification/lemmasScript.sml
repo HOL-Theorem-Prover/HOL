@@ -214,6 +214,7 @@ val not_reg_eq = store_thm("not_reg_eq",
 val not_pc = (GEN_ALL o REWRITE_RULE [mode_reg2num_15] o
   SPECL [`v`,`15w`]) not_reg_eq;
 
+val r15 = SYM (List.nth (CONJUNCTS num2register_thm, 15))
 val READ_TO_READ6 = store_thm("READ_TO_READ6",
   `!r m n d. (REG_READ (REG_WRITE r usr 15w (d - 8w)) m n =
               REG_READ6 (REG_WRITE r usr 15w d) m n)`,
