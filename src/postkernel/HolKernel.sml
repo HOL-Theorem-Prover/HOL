@@ -1,7 +1,8 @@
 structure HolKernel =
 struct
 
-  open Feedback Globals Lib Type Term Thm Theory Definition
+  open Feedback Globals Lib Type Term Thm Theory
+  open Definition
 
 
 (*---------------------------------------------------------------------------

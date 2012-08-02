@@ -1585,7 +1585,17 @@ val TOK = term_grammar.RE o term_grammar.TOK
 
     val _ = initialise_typrinter
             (fn G => type_pp.pp_type G PPBackEnd.raw_terminal)
-    val _ = Definition.new_specification_hook := List.app add_const;
+    val _ = let
+      open TheoryDelta
+      fun hook ev =
+          case ev of
+            NewConstant{Thy,Name} => add_const Name
+          | NewTypeOp{Thy,Name} => add_type Name
+          | DelConstant{Thy,Name} => ignore (hide Name)
+          | _ => ()
+    in
+      Theory.register_hook ("Parse.watch_constants", hook)
+    end
 
 (* when new_theory is called, and if the new theory has the same name
    as the theory segment we were in anyway, then arrange that

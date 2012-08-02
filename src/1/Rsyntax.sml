@@ -57,7 +57,7 @@ fun new_binder{Name,Ty}     = boolSyntax.new_binder(Name,Ty);
 fun new_specification {name,sat_thm,consts} = let
   open Parse
   val cnames = map #const_name consts
-  val res = Definition.new_specification(name, cnames, sat_thm)
+  val res = Theory.Definition.new_specification(name, cnames, sat_thm)
   fun modify_grammar {const_name,fixity=SOME fxty} = set_fixity const_name fxty
     | modify_grammar _ = ()
 in

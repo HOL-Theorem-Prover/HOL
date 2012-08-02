@@ -281,8 +281,7 @@ fun post (V, th) =
       fun add_var v th = RIGHT_BETA (AP_THM th v)
       val cname = fst (dest_const (lhs (concl th)))
    in
-      Parse.add_const cname
-      ; itlist GEN V (rev_itlist add_var V th)
+      itlist GEN V (rev_itlist add_var V th)
    end
 
 val _ = Definition.new_definition_hook := (dest, post)
@@ -308,17 +307,12 @@ fun new_binder_definition (s, t) =
 fun new_type_definition (name, inhab_thm) =
    Definition.new_type_definition (name, inhab_thm) before Parse.add_type name
 
-fun new_constant (p as (Name, _)) =
-   Theory.new_constant p before Parse.add_const Name
-
 fun new_infix (Name, Ty, Prec) =
    Theory.new_constant (Name, Ty)
-   before (Parse.add_const Name; Parse.add_infix (Name, Prec, Parse.RIGHT))
+   before Parse.add_infix (Name, Prec, Parse.RIGHT)
 
 fun new_binder (p as (Name, _)) =
-   Theory.new_constant p before (add_const Name; set_fixity Name Binder)
-
-fun new_type (p as (Name, _)) = Theory.new_type p before Parse.add_type Name
+   Theory.new_constant p before set_fixity Name Binder
 
 fun new_infix_type (x as {Name, Arity, ParseName, Prec, Assoc}) =
    let
@@ -329,13 +323,6 @@ fun new_infix_type (x as {Name, Arity, ParseName, Prec, Assoc}) =
       before Parse.add_infix_type
                {Name = Name, ParseName = ParseName, Prec = Prec, Assoc = Assoc}
    end
-
-(*---------------------------------------------------------------------------
-      Delete the named constant from the current theory, and from the
-      current grammar.
- ---------------------------------------------------------------------------*)
-
-fun delete_const s = Theory.delete_const s before (Parse.hide s; ())
 
 (*---------------------------------------------------------------------------*)
 (* Lifter for booleans                                                       *)
