@@ -44,7 +44,6 @@ handle e =>
  raise e)
 end
 end;
-open Mosml;
 
 val _ = use "poly/Binarymap.sig";
 val _ = use "poly/Binarymap.sml";
