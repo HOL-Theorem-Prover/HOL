@@ -96,7 +96,27 @@ fun new_exporter name addfn = let
         in
           addfn (map #2 thms)
         end
+  fun revise_data td =
+      case segment_data {thy = current_theory(), thydataty = name} of
+        NONE => ()
+      | SOME d => let
+          val alist = valOf (dest d)
+          val (ok,notok) = Lib.partition (uptodate_thm o #2) alist
+        in
+          case notok of
+            [] => ()
+          | _ => (HOL_WARNING
+                      "ThmSetData" "revise_data"
+                      ("Theorems in ThmSet " ^ Lib.quote name ^ "\n   (" ^
+                       String.concatWith ", " (map #1 notok) ^
+                       ")\ninvalidated by " ^ TheoryDelta.toString td);
+                  set_theory_data {thydataty = name,
+                                   data = #1 (mk (map #1 ok))})
+        end
+
   fun hook (TheoryLoaded s) = onload s
+    | hook (td as DelConstant _) = revise_data td
+    | hook (td as DelTypeOp _) = revise_data td
     | hook _ = ()
   fun export s = let
     val (data, namedthms) = mk [s]
