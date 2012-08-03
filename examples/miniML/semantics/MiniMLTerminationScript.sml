@@ -58,7 +58,7 @@ val _ = export_rewrites["exp_size_positive"];
 fun register name def ind =
   let val _ = save_thm (name ^ "_def", def);
       val _ = save_thm (name ^ "_ind", ind);
-      val _ = computeLib.add_persistent_funs [(name ^ "_def", def)];
+      val _ = computeLib.add_persistent_funs [name ^ "_def"];
   in
     ()
   end
