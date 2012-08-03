@@ -64,6 +64,9 @@ So, the following now works:
 <li><p> Declaring an “enumerated” data type (one with nullary constructors only) with certain choices of constructor names could lead to unloadable theories.
 Thanks to Scott Owens for the <a href="https://github.com/mn200/HOL/issues/78">bug report</a>.
 
+<li><p> Calling <code>delete_const</code> on a constant that had been defined with <code>Define</code> could lead to unloadable theories.
+Thanks to Magnus Myreen and Ramana Kumar for help in finding and fixing  <a href="http://github.com/mn200/HOL/issues/73">this bug</a>.
+
 </ul>
 
 <h2 id="new-theories">New theories:</h2>
