@@ -93,16 +93,26 @@ fun ABB l r =
 
 fun ABBREV_TAC eq = let val (l,r) = dest_eq eq in ABB l r end;
 
-fun PAT_ABBREV_TAC fv_set eq (g as (asl, w)) =
- let val (l,r) = dest_eq eq
-     val l' = variant (HOLset.listItems (FVL [r] fv_set)) l
-     fun matchr t = raw_match [] fv_set r t ([],[])
-     fun finder t = not (is_var t orelse is_const t) andalso can matchr t
- in
-   case Lib.total (find_term finder) w of
-     NONE => raise ERR "PAT_ABBREV_TAC" "No matching term found"
-   | SOME t => ABB l' t g
- end
+local
+   val match_var_or_const = ref false
+in
+   val () = Feedback.register_btrace
+               ("PAT_ABBREV_TAC: match var/const", match_var_or_const)
+
+   fun PAT_ABBREV_TAC fv_set eq (g as (asl, w)) =
+      let
+         val (l, r) = dest_eq eq
+         val l' = variant (HOLset.listItems (FVL [r] fv_set)) l
+         fun matchr t = raw_match [] fv_set r t ([],[])
+         fun finder t =
+            (!match_var_or_const orelse not (is_var t orelse is_const t))
+            andalso can matchr t
+      in
+         case Lib.total (find_term finder) w of
+            NONE => raise ERR "PAT_ABBREV_TAC" "No matching term found"
+          | SOME t => ABB l' t g
+      end
+end
 
 fun fixed_tyvars ctxt pattern =
   Lib.U (map type_vars_in_term (Lib.intersect ctxt (free_vars pattern)))
