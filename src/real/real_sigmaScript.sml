@@ -4,7 +4,7 @@
 
 (* interactive mode
 app load ["bossLib", "arithmeticTheory", "combinTheory",
-          "pred_setTheory", "realTheory", "realLib", 
+          "pred_setTheory", "realTheory", "realLib",
           "res_quanTools", "pairTheory", "seqTheory"];
 quietdec := true;
 *)
@@ -617,7 +617,7 @@ val REAL_SUM_IMAGE_EQ_sum = store_thm
 
 val REAL_SUM_IMAGE_POW = store_thm
  ("REAL_SUM_IMAGE_POW",``!a s. FINITE s
-           ==> ((REAL_SUM_IMAGE a s) pow 2 = 
+           ==> ((REAL_SUM_IMAGE a s) pow 2 =
                 REAL_SUM_IMAGE (\(i,j). a i * a j) (s CROSS s):real)``,
   RW_TAC std_ss []
   ++ `(\(i,j). a i * a j) = (\x. (\i j. a i * a j) (FST x) (SND x))`
@@ -639,7 +639,7 @@ val REAL_SUM_IMAGE_EQ = store_thm
 
 val REAL_SUM_IMAGE_SUB = store_thm
  ("REAL_SUM_IMAGE_SUB", ``!s (f:'a -> real) f'. FINITE s ==>
-                 (REAL_SUM_IMAGE (\x. f x - f' x) s = 
+                 (REAL_SUM_IMAGE (\x. f x - f' x) s =
                   REAL_SUM_IMAGE f s - REAL_SUM_IMAGE f' s)``,
   RW_TAC std_ss [Once real_sub,REAL_SUM_IMAGE_ADD,Once REAL_NEG_MINUS1]
   ++ RW_TAC std_ss [Once real_sub,REAL_SUM_IMAGE_ADD,Once

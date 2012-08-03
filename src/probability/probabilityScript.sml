@@ -7,17 +7,17 @@
 (* ------------------------------------------------------------------------- *)
 
 (* interactive mode
-app load ["arithmeticTheory", "realTheory", "prim_recTheory", "seqTheory", 
-    	  "pred_setTheory","res_quanTheory", "res_quanTools", "listTheory", 
+app load ["arithmeticTheory", "realTheory", "prim_recTheory", "seqTheory",
+    	  "pred_setTheory","res_quanTheory", "res_quanTools", "listTheory",
 	  "transcTheory", "rich_listTheory", "pairTheory",
-	  "combinTheory", "realLib", "optionTheory", "real_sigmaTheory", 
+	  "combinTheory", "realLib", "optionTheory", "real_sigmaTheory",
 	  "util_probTheory", "extrealTheory", "measureTheory", "lebesgueTheory"];
 quietdec := true;
 *)
 
-open HolKernel Parse boolLib bossLib arithmeticTheory realTheory prim_recTheory 
+open HolKernel Parse boolLib bossLib arithmeticTheory realTheory prim_recTheory
      seqTheory pred_setTheory res_quanTheory res_quanTools listTheory transcTheory
-     rich_listTheory pairTheory combinTheory realLib  optionTheory 
+     rich_listTheory pairTheory combinTheory realLib  optionTheory
      real_sigmaTheory util_probTheory extrealTheory measureTheory lebesgueTheory;
 
 val _ = new_theory "probability";

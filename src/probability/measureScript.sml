@@ -7,16 +7,16 @@
 (* ------------------------------------------------------------------------- *)
 
 (* interactive mode
-app load ["arithmeticTheory", "realTheory", "seqTheory", "pred_setTheory","res_quanTheory", 
+app load ["arithmeticTheory", "realTheory", "seqTheory", "pred_setTheory","res_quanTheory",
 		"res_quanTools", "listTheory", "transcTheory", "rich_listTheory", "pairTheory",
-		"combinTheory", "realLib", "optionTheory", "real_sigmaTheory", 
+		"combinTheory", "realLib", "optionTheory", "real_sigmaTheory",
 		"util_probTheory", "extrealTheory"];
 quietdec := true;
 *)
 
 open HolKernel Parse boolLib bossLib arithmeticTheory realTheory
      seqTheory pred_setTheory res_quanTheory res_quanTools listTheory transcTheory
-     rich_listTheory pairTheory combinTheory realLib  optionTheory 
+     rich_listTheory pairTheory combinTheory realLib  optionTheory
      real_sigmaTheory util_probTheory extrealTheory;
 
 val _ = new_theory "measure";
@@ -386,10 +386,10 @@ val LAMBDA_SYSTEM_INTER = store_thm
 val LAMBDA_SYSTEM_ALGEBRA = store_thm
   ("LAMBDA_SYSTEM_ALGEBRA",
    ``!g0 lam.
-       algebra g0 /\ positive (space g0, subsets g0, lam)  
+       algebra g0 /\ positive (space g0, subsets g0, lam)
        ==> algebra (space g0, lambda_system g0 lam)``,
    RW_TAC std_ss [ALGEBRA_ALT_INTER, LAMBDA_SYSTEM_EMPTY, positive_def,
-                  LAMBDA_SYSTEM_COMPL, LAMBDA_SYSTEM_INTER, space_def, 
+                  LAMBDA_SYSTEM_COMPL, LAMBDA_SYSTEM_INTER, space_def,
 		  subsets_def, subset_class_def]
    ++ FULL_SIMP_TAC std_ss [lambda_system_def, GSPECIFICATION]);
 
@@ -427,7 +427,7 @@ val LAMBDA_SYSTEM_ADDITIVE = store_thm
    RW_TAC std_ss [additive_def, measure_def, measurable_sets_def]
    ++ MP_TAC (Q.SPECL [`g0`, `lam`, `space g0`, `s`, `t`]
               LAMBDA_SYSTEM_STRONG_ADDITIVE)
-   ++ FULL_SIMP_TAC std_ss [lambda_system_def, GSPECIFICATION, ALGEBRA_INTER_SPACE, 
+   ++ FULL_SIMP_TAC std_ss [lambda_system_def, GSPECIFICATION, ALGEBRA_INTER_SPACE,
       		    	    ALGEBRA_SPACE, ALGEBRA_UNION]);
 
 val COUNTABLY_SUBADDITIVE_SUBADDITIVE = store_thm
@@ -1380,7 +1380,7 @@ val INF_MEASURE_COUNTABLY_SUBADDITIVE = store_thm
     ++ MATCH_MP_TAC SUMINF_2D
     ++ RW_TAC std_ss [o_THM]
     ++ PROVE_TAC [positive_def]]);
- 
+
 val INF_MEASURE_OUTER = store_thm
   ("INF_MEASURE_OUTER",
    ``!m.
@@ -2120,13 +2120,13 @@ val MEASURE_COUNTABLE_INCREASING = store_thm
        ++ POP_ASSUM (MP_TAC o SYM)
        ++ RW_TAC arith_ss [o_THM, sum]
        ++ MATCH_MP_TAC MEASURE_ADDITIVE
-       ++ FULL_SIMP_TAC std_ss [EXTENSION, IN_UNION, IN_DIFF, DISJOINT_DEF, NOT_IN_EMPTY, 
+       ++ FULL_SIMP_TAC std_ss [EXTENSION, IN_UNION, IN_DIFF, DISJOINT_DEF, NOT_IN_EMPTY,
        	  		        IN_INTER, SUBSET_DEF]
        ++ Know `algebra (m_space m, measurable_sets m)`
-       >> FULL_SIMP_TAC std_ss [measure_space_def, sigma_algebra_def, algebra_def, 
+       >> FULL_SIMP_TAC std_ss [measure_space_def, sigma_algebra_def, algebra_def,
        	  		       	space_def, subsets_def]
        ++ STRIP_TAC
-       ++ (MP_TAC o REWRITE_RULE [subsets_def, space_def] o 
+       ++ (MP_TAC o REWRITE_RULE [subsets_def, space_def] o
            Q.SPEC `(m_space m, measurable_sets m)`) ALGEBRA_DIFF
        ++ PROVE_TAC [])
    ++ DISCH_THEN (ONCE_REWRITE_TAC o wrap)
@@ -2136,10 +2136,10 @@ val MEASURE_COUNTABLE_INCREASING = store_thm
    ++ CONJ_TAC
    >> (RW_TAC std_ss [IN_FUNSET, IN_UNIV]
        ++ Know `algebra (m_space m, measurable_sets m)`
-       >> FULL_SIMP_TAC std_ss [measure_space_def, sigma_algebra_def, algebra_def, 
+       >> FULL_SIMP_TAC std_ss [measure_space_def, sigma_algebra_def, algebra_def,
        	  		        space_def, subsets_def]
        ++ STRIP_TAC
-       ++ (MP_TAC o REWRITE_RULE [subsets_def, space_def] o 
+       ++ (MP_TAC o REWRITE_RULE [subsets_def, space_def] o
        	   Q.SPEC `(m_space m, measurable_sets m)`) ALGEBRA_DIFF
        ++ PROVE_TAC [])
    ++ CONJ_TAC

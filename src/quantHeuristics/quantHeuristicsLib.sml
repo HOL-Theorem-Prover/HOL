@@ -135,7 +135,7 @@ fun guess_term2type gtm =
        Feedback.fail();
 
 
-(*  
+(*
   All guesses consist of an instatiation, a list of free variables in this instatiation. There might also be
   a justification that might have been proved. The justification of a guess consists of a guess-type accompanied by either a theorem
   or a term. The term/theorem has to correspond to the ML-level information.
@@ -143,7 +143,7 @@ fun guess_term2type gtm =
   quantHeuristicsScritpt (either GUESS_TRUE, GUESS_FALSE, GUESS_EXISTS, GUESS_FORALL,  GUESS_EXISTS_STRONG or GUESS_FORALL_STRONG).
   The list of free variables is mainly used to record names. In the guess theorem/term, only a single variable is allowed.
   A simple example is
-  
+
   guess_term
     (gty_false,
      ``SUC (y :num) + (z :num)``,
@@ -156,8 +156,8 @@ fun guess_term2type gtm =
 
 datatype guess =
     (* Oracle Guesses *)
-    guess_general of term * term list    
-  | (* formally justified guesses *) 
+    guess_general of term * term list
+  | (* formally justified guesses *)
     guess_thm  of guess_type * term * term list * thm
   | (* informally justified guesses *)
     guess_term of guess_type * term * term list * term
@@ -603,7 +603,7 @@ fun guess_collection___get_forall_weaken (c:guess_collection) =
 
 (*******************************************************
  * Cleaning a guess collecion, i.e. removing duplicate
- * guesses or guesses that can be easily derived by weakening 
+ * guesses or guesses that can be easily derived by weakening
  * stronger ones.
  *******************************************************)
 

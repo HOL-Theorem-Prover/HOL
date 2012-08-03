@@ -5,13 +5,13 @@
 (* ------------------------------------------------------------------------- *)
 
 (*
-val () = app load ["bossLib", "metisLib", "arithmeticTheory", "pred_setTheory", 
-       	     	   "extra_pred_setTheory", "extra_realTheory", "realLib", 
+val () = app load ["bossLib", "metisLib", "arithmeticTheory", "pred_setTheory",
+       	     	   "extra_pred_setTheory", "extra_realTheory", "realLib",
 		   "pairTheory", "seqTheory", "transcTheory", "util_probTheory"];
 val () = quietdec := true;
 *)
 
-open HolKernel Parse boolLib bossLib metisLib 
+open HolKernel Parse boolLib bossLib metisLib
      combinTheory pred_setTheory res_quanTools
      arithmeticTheory realTheory realLib real_sigmaTheory pairTheory
       seqTheory transcTheory util_probTheory;
@@ -54,7 +54,7 @@ val _ = Hol_datatype`extreal = NegInf | PosInf | Normal of real`;
 
 val extreal_of_num_def = Define `extreal_of_num n = Normal (&n)`;
 
-val real_def = Define `real x = (if ((x = NegInf) \/ (x = PosInf)) then 0:real 
+val real_def = Define `real x = (if ((x = NegInf) \/ (x = PosInf)) then 0:real
                                 else (@r. x = Normal r))`;
 
 val real_normal = store_thm
@@ -1316,7 +1316,7 @@ val le_inv = store_thm
 (***************************)
 (*         x pow n         *)
 (***************************)
- 
+
 val pow_0 = store_thm
   ("pow_0",``!x. x pow 0 = 1``,
   Cases ++ RW_TAC std_ss [extreal_pow_def,extreal_of_num_def,pow]);
@@ -1663,11 +1663,11 @@ val le_epsilon = store_thm
   ("le_epsilon",``!x y. (!e. 0 < e /\ e <> PosInf
                      ==> x <= y + e) ==> x <= y``,
   (REPEAT Cases ++ RW_TAC std_ss [le_infty])
-  << [Q.EXISTS_TAC `1` 
+  << [Q.EXISTS_TAC `1`
       ++ RW_TAC std_ss [lt_01,extreal_of_num_def,extreal_not_infty,extreal_add_def],
-      Q.EXISTS_TAC `1` 
+      Q.EXISTS_TAC `1`
       ++ RW_TAC std_ss [lt_01,extreal_of_num_def,extreal_not_infty,extreal_add_def],
-      Q.EXISTS_TAC `1` 
+      Q.EXISTS_TAC `1`
       ++ RW_TAC std_ss [lt_01,extreal_of_num_def,extreal_not_infty,extreal_add_def,extreal_le_def],
       `!e. 0 < e  ==> Normal r <= Normal r' + Normal e`
          by (RW_TAC std_ss []
@@ -3455,7 +3455,7 @@ val max_infty = store_thm
 (*   Rational Numbers as a subset of extended real numbers           *)
 (* ================================================================= *)
 
-val Q_set_def = Define `Q_set = {x| ?a b. (x = (&a/(&b))) /\ (0 < &b)} UNION 
+val Q_set_def = Define `Q_set = {x| ?a b. (x = (&a/(&b))) /\ (0 < &b)} UNION
                                 {x | ?a b. (x = -(&a/(&b))) /\ (0 < &b)}`;
 
 val Q_not_infty = store_thm
@@ -3908,7 +3908,7 @@ val CROSS_COUNTABLE_UNIV = store_thm
   ++ FULL_SIMP_TAC std_ss [BIJ_DEF,INJ_DEF,SURJ_DEF,CROSS_DEF,IN_UNIV]);
 
 val CROSS_COUNTABLE_LEMMA1 = store_thm
-  ("CROSS_COUNTABLE_LEMMA1", ``!s. countable s /\ FINITE s /\ countable t 
+  ("CROSS_COUNTABLE_LEMMA1", ``!s. countable s /\ FINITE s /\ countable t
                            ==> countable (s CROSS t)``,
   RW_TAC std_ss []
   ++ Q.PAT_ASSUM `FINITE s` MP_TAC
@@ -3921,7 +3921,7 @@ val CROSS_COUNTABLE_LEMMA1 = store_thm
   ++ RW_TAC std_ss [COUNTABLE_IMAGE]);
 
 val CROSS_COUNTABLE_LEMMA2 = store_thm
-  ("CROSS_COUNTABLE_LEMMA2", ``!s. countable s /\ countable t /\ FINITE t 
+  ("CROSS_COUNTABLE_LEMMA2", ``!s. countable s /\ countable t /\ FINITE t
                            ==> countable (s CROSS t)``,
   RW_TAC std_ss []
   ++ `s CROSS t = IMAGE (\a. (SND a,FST a)) (t CROSS s)`

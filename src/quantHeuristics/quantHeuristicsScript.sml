@@ -245,7 +245,7 @@ val GUESS_RULES_DISJ = store_thm ("GUESS_RULES_DISJ",
    GUESS_EXISTS i (\x. Q x) ==>
    GUESS_EXISTS i (\x. P x \/ Q x)) /\
 
-  (* Not needed because of GUESS_RULES_CONSTANT_EXISTS, GUESS_RULES_CONSTANT_FORALL 
+  (* Not needed because of GUESS_RULES_CONSTANT_EXISTS, GUESS_RULES_CONSTANT_FORALL
   (GUESS_EXISTS i (\x. P x) ==>
    GUESS_EXISTS i (\x. P x \/ q)) /\
 
