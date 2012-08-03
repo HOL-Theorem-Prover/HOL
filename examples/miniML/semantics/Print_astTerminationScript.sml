@@ -8,7 +8,7 @@ val _ = new_theory "Print_astTermination";
 fun register name def ind =
   let val _ = save_thm (name ^ "_def", def);
       val _ = save_thm (name ^ "_ind", ind);
-      val _ = computeLib.add_persistent_funs [(name ^ "_def", def)];
+      val _ = computeLib.add_persistent_funs [name ^ "_def"];
   in
     ()
   end
@@ -76,6 +76,6 @@ val tok_to_string_def =
   save_thm ("tok_to_string_def",SIMP_RULE (srw_ss()) [] tok_to_string_def);
 
 val _ =
-  computeLib.add_persistent_funs [("tok_to_string_def", tok_to_string_def)];
+  computeLib.add_persistent_funs [("tok_to_string_def")];
 
 val _ = export_theory ();
