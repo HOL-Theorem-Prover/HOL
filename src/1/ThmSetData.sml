@@ -94,7 +94,7 @@ fun new_exporter name addfn = let
       | SOME d => let
           val thms = valOf (dest d)
         in
-          addfn (map #2 thms)
+          addfn thyname (map #2 thms)
         end
   fun revise_data td =
       case segment_data {thy = current_theory(), thydataty = name} of
@@ -107,9 +107,9 @@ fun new_exporter name addfn = let
             [] => ()
           | _ => (HOL_WARNING
                       "ThmSetData" "revise_data"
-                      ("Theorems in ThmSet " ^ Lib.quote name ^ "\n   (" ^
-                       String.concatWith ", " (map #1 notok) ^
-                       ")\ninvalidated by " ^ TheoryDelta.toString td);
+                      ("\n  Theorems in set " ^ Lib.quote name ^
+                       ":\n    " ^ String.concatWith ", " (map #1 notok) ^
+                       "\n  invalidated by " ^ TheoryDelta.toString td);
                   set_theory_data {thydataty = name,
                                    data = #1 (mk (map #1 ok))})
         end
@@ -122,7 +122,7 @@ fun new_exporter name addfn = let
     val (data, namedthms) = mk [s]
     val thms = map #2 namedthms
   in
-    addfn thms;
+    addfn (current_theory()) thms;
     write_data_update {thydataty = name, data = data}
   end
 in

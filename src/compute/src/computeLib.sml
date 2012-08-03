@@ -223,7 +223,7 @@ fun write_datatype_info tyinfo =
 (*---------------------------------------------------------------------------*)
 
 open LoadableThyData
-val {export,...} = ThmSetData.new_exporter "compute" add_funs
+val {export,...} = ThmSetData.new_exporter "compute" (K add_funs)
 val add_persistent_funs = app export
 
 (*---------------------------------------------------------------------------*)

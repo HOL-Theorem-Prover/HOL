@@ -94,7 +94,7 @@ fun betafy ss =
   !user_rewrites ++ BETA_CONG_ss
 fun bsrw_ss() = betafy(srw_ss())
 
-val {export = export_betarwt,...} = ThmSetData.new_exporter "betasimp" add_rwts
+val {export = export_betarwt,...} = ThmSetData.new_exporter "betasimp" (K add_rwts)
 fun bstore_thm (trip as (n,t,tac)) = store_thm trip before export_betarwt n
 
 (* ----------------------------------------------------------------------

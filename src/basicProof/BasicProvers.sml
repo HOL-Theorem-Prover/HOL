@@ -902,40 +902,33 @@ end g;
 
 val Abbr = markerSyntax.Abbr
 
-(*---------------------------------------------------------------------------
-       Make some additions to the srw_ss persistent
- ---------------------------------------------------------------------------*)
+(* ----------------------------------------------------------------------
+    Make some additions to the srw_ss persistent
+   ---------------------------------------------------------------------- *)
 
 open LoadableThyData
-val (mk,dest) = ThmSetData.new "simp"
 
+(* store a database of per-theory simpset fragments *)
 val thy_ssfrags = ref (Binarymap.mkDict String.compare)
-
 fun thy_ssfrag s = Binarymap.find(!thy_ssfrags, s)
 
-fun onload thyname =
-    case segment_data {thy = thyname, thydataty = "simp"} of
-      NONE => ()
-    | SOME d => let
-        val thmset = valOf (dest d)
-        val ssfrag = simpLib.named_rewrites thyname (map #2 thmset)
-      in
-        thy_ssfrags := Binarymap.insert(!thy_ssfrags, thyname, ssfrag);
-        augment_srw_ss [ssfrag]
-      end
-val _ = register_hook ("BasicProvers.srw_ss.onload",
-                       (fn TheoryDelta.TheoryLoaded s => onload s
-                         | _ => ()))
-
-val _ = List.app onload (ancestry "-")
-
-fun export_rewrites slist = let
-  val (data, namedthms) = mk slist
-  val thms = map #2 namedthms
+fun add_rewrites thyname thms = let
+  val ssfrag = simpLib.named_rewrites thyname thms
+  open Binarymap
 in
-  augment_srw_ss [simpLib.named_rewrites (current_theory()) thms];
-  write_data_update {thydataty = "simp", data = data}
+  augment_srw_ss [ssfrag];
+  case peek(!thy_ssfrags, thyname) of
+    NONE => thy_ssfrags := insert(!thy_ssfrags, thyname, ssfrag)
+  | SOME sf' => let
+      val sf = simpLib.named_merge_ss thyname [sf', ssfrag]
+    in
+      thy_ssfrags := insert(!thy_ssfrags, thyname, sf)
+    end
 end
 
+val {mk,dest,export} =
+    ThmSetData.new_exporter "BasicProvers.stateful_simpset" add_rewrites
+
+fun export_rewrites slist = List.app export slist
 
 end

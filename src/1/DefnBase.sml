@@ -135,6 +135,6 @@ fun drop_cong c =
             ^" was not found")) e;
 
 val {export = export_cong,...} =
-    ThmSetData.new_exporter "defncong" (app add_cong)
+    ThmSetData.new_exporter "defncong" (K (app add_cong))
 
 end
