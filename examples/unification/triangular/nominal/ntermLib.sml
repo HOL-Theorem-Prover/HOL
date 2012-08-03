@@ -41,8 +41,9 @@ val psrw_ss = permify o srw_ss
 
 open LoadableThyData ThmSetData
 
-val {export=export_permrwt,...} = new_exporter "permrwts" add_rwts
-val {export=export_permcong,...} = new_exporter "permcongs" add_congs
-val {export=export_permweakening,...} = new_exporter "permweakenings" add_weakenings
+val {export=export_permrwt,...} = new_exporter "permrwts" (K add_rwts)
+val {export=export_permcong,...} = new_exporter "permcongs" (K add_congs)
+val {export=export_permweakening,...} =
+   new_exporter "permweakenings" (K add_weakenings)
 
 end (* struct *)

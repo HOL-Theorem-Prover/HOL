@@ -284,7 +284,7 @@ val _ = adjoin_to_theory {
 \  destructors = [],\
 \  recognizers = [],\
 \  updates = []\
-\}] end")}
+\}] end\n")}
 
 val SELECT_permeq_REFL = RWstore_thm(
 "SELECT_permeq_REFL",
