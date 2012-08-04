@@ -36,8 +36,6 @@ val _ = Hol_datatype   `iiid = <| proc : num ; program_order_index : num |>`;
 
 val ALL_DISTINCT_Zreg = store_thm("ALL_DISTINCT_Zreg",
   ``ALL_DISTINCT ([RAX;RCX;RDX;RBX;RSP;RBP;RSI;RDI;zR8;zR9;zR10;zR11;zR12;zR13;zR14;zR15]:Zreg list)``,
-  SIMP_TAC std_ss (ALL_DISTINCT::MEM::fetch "-" "num2Zreg_11"::map (fetch "-")
-       ["RAX","RCX","RDX","RBX","RSP","RBP","RSI","RDI","zR8","zR9","zR10","zR11","zR12","zR13","zR14","zR15"]));
-
+  SRW_TAC[][]);
 
 val _ = export_theory ();
