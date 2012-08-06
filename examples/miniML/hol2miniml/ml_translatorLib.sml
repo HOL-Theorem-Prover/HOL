@@ -491,9 +491,9 @@ in
       val _ = pack_state ()
       val _ = print_translation_output ()
       in () end
-  val _ = Theory.register_hook
-              "miniml.ml_translator"
-              (fn ExportTheory _ => finalise_translation() | _ => ())
+  val _ = Theory.register_hook(
+              "miniml.ml_translator",
+              (fn TheoryDelta.ExportTheory _ => finalise_translation() | _ => ()))
   fun translation_extends name = let
     val _ = print ("Loading translation: " ^ name ^ " ... ")
     val _ = unpack_state name
