@@ -804,10 +804,10 @@ local
   end
 in
 fun export_theory () = let
+  val _ = call_hooks (TheoryDelta.ExportTheory (current_theory()))
   val {thid,facts,adjoin,thydata} = scrubCT()
   val concat = String.concat
   val thyname = thyid_name thid
-  val _ = call_hooks (TheoryDelta.ExportTheory thyname)
   val name = thyname^"Theory"
   val (A,D,T) = unkind facts
   val (sig_ps, struct_ps) = unadjzip adjoin ([],[])
