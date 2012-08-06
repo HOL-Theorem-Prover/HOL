@@ -22,6 +22,8 @@ val _ = new_theory "correct";
 
 (* ------------------------------------------------------------------------- *)
 
+val () = Feedback.set_trace "PAT_ABBREV_TAC: match var/const" 0
+
 infix \\ << >>
 
 val op \\ = op THEN;

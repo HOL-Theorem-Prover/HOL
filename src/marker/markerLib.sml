@@ -94,7 +94,7 @@ fun ABB l r =
 fun ABBREV_TAC eq = let val (l,r) = dest_eq eq in ABB l r end;
 
 local
-   val match_var_or_const = ref false
+   val match_var_or_const = ref true
 in
    val () = Feedback.register_btrace
                ("PAT_ABBREV_TAC: match var/const", match_var_or_const)
