@@ -1,5 +1,5 @@
 open HolKernel bossLib boolLib EmitTeX basis_emitTheory
-open BytecodeTheory bytecodeEvalTheory
+open BytecodeTheory bytecodeTerminationTheory bytecodeEvalTheory
 val _ = new_theory "bytecode_emit"
 
 val _ = Parse.disable_tyabbrev_printing "env"
@@ -24,7 +24,7 @@ val init_bc_state_def =  Define`
 
 val defs = map EmitML.DEFN [
 optionTheory.OPTION_BIND_def,
-calc_len_def,bc_fetch_aux_def,bc_fetch_def,
+is_Label_def,bc_fetch_aux_def,bc_fetch_def,
 bc_find_loc_aux_def,bc_find_loc_def,
 bump_pc_def,bool_to_int_def,isNumber_def,
 bc_eval_stack_def,bc_eval1_def,bc_eval_def,

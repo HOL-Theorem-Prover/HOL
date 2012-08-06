@@ -89,25 +89,23 @@ val _ = Hol_datatype `
 
 (* fetching the next instruction from the code *)
 
- val calc_len_defn = Hol_defn "calc_len" `
+ val is_Label_defn = Hol_defn "is_Label" `
 
-(calc_len len (Label _) = 0)
+(is_Label (Label _) = T)
 /\
-(calc_len len x = len x + 1)`;
+(is_Label _ = F)`;
 
-val _ = Defn.save_defn calc_len_defn;
+val _ = Defn.save_defn is_Label_defn;
 
  val bc_fetch_aux_defn = Hol_defn "bc_fetch_aux" `
 
 (bc_fetch_aux [] len (n:num) = NONE)
 /\
-(bc_fetch_aux (Label _::xs) len n =
-  bc_fetch_aux xs len n)
-/\
 (bc_fetch_aux (x::xs) len n =
-  if n = 0 then SOME x else
-    if n < calc_len len x then NONE else
-      bc_fetch_aux xs len (n - (calc_len len x)))`;
+  if is_Label x then bc_fetch_aux xs len n else
+    if n = 0 then SOME x else
+      if n < len x + 1 then NONE else
+        bc_fetch_aux xs len (n - (len x + 1)))`;
 
 val _ = Defn.save_defn bc_fetch_aux_defn;
 
@@ -131,7 +129,7 @@ val _ = Define `
 /\
 (bc_find_loc_aux (x::xs) len l n =
   if x = Label l then SOME n else
-    bc_find_loc_aux xs len l (n + calc_len len x))`;
+    bc_find_loc_aux xs len l (n + (if is_Label x then 0 else len x + 1)))`;
 
 val _ = Defn.save_defn bc_find_loc_aux_defn;
 

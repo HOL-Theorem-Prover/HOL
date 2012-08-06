@@ -664,9 +664,6 @@ val EVERY2_EL = prove(
   Induct \\ Cases_on `ys` \\ FULL_SIMP_TAC (srw_ss()) [EVERY2_def,LENGTH,EL,HD,TL]
   \\ Cases_on `n` \\ FULL_SIMP_TAC (srw_ss()) [] \\ METIS_TAC []);
 
-val is_Label_def = Define `
-  (is_Label (Label x) = T) /\ (is_Label _ = F)`;
-
 val bc_fetch_aux_NOT_Label = prove(
   ``!xs l n x. (bc_fetch_aux xs l n = SOME x) ==> ~is_Label x``,
   Induct \\ TRY (Cases_on `h`) \\ FULL_SIMP_TAC std_ss [bc_fetch_aux_def]
@@ -1527,7 +1524,7 @@ val bc_next_IMP_RTC_hw_step_rel = prove(
     \\ RES_TAC \\ FULL_SIMP_TAC std_ss [full_hwml_def,FLAT,MAP,APPEND_ASSOC]
     \\ Q.LIST_EXISTS_TAC [`hwml h ++ xs'`,`zs`]
     \\ Q.UNABBREV_TAC `h` \\ FULL_SIMP_TAC std_ss [is_Label_def]
-    \\ FULL_SIMP_TAC std_ss [calc_len_def,LENGTH_APPEND]
+    \\ FULL_SIMP_TAC std_ss [LENGTH_APPEND]
     \\ DECIDE_TAC)
   \\ `s.pc < 4294967196` by ALL_TAC THEN1
        (FULL_SIMP_TAC std_ss [LENGTH_APPEND] \\ DECIDE_TAC)
