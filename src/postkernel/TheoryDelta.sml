@@ -9,21 +9,24 @@ struct
  | NewTypeOp of KernelSig.kernelname
  | DelConstant of KernelSig.kernelname
  | DelTypeOp of KernelSig.kernelname
+ | DelBinding of string
 
 local
   fun ksOp opnm ks = opnm ^ "(" ^ KernelSig.name_toString ks ^ ")"
+  fun sOp opnm s = opnm ^ "(" ^ s ^ ")"
 in
 fun toString t =
     case t of
       NewTheory {oldseg,newseg} =>
       String.concat ["NewTheory{oldseg = ", Lib.quote oldseg, ", ",
                      "newseg = ", Lib.quote newseg, "}"]
-    | ExportTheory s => "ExportTheory(" ^ s ^ ")"
-    | TheoryLoaded s => "TheoryLoaded(" ^ s ^ ")"
+    | ExportTheory s => sOp "ExportTheory" s
+    | TheoryLoaded s => sOp "TheoryLoaded" s
     | NewConstant n => ksOp "NewConstant" n
     | NewTypeOp n => ksOp "NewTypeOp" n
     | DelConstant n => ksOp "DelConstant" n
     | DelTypeOp n => ksOp "DelTypeOp" n
+    | DelBinding s => sOp "DelBinding" s
 end (* local *)
 
 end

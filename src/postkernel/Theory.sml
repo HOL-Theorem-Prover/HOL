@@ -406,7 +406,7 @@ in
                            call_hooks
                                (DelConstant{Name = n, Thy = CTname()}))
 
-  val delete_binding    = inCT del_binding
+  fun delete_binding s  = (inCT del_binding s; call_hooks (DelBinding s))
 
   fun set_MLname s1 s2  = inCT set_MLbind (s1,s2)
   val adjoin_to_theory  = inCT new_addon
