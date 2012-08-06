@@ -40,6 +40,7 @@ struct
   val qspecl_then : term quotation list -> thm_tactic -> thm -> tactic =
      Q.SPECL_THEN
   val qpat_assum : term quotation -> thm_tactic -> tactic = Q.PAT_ASSUM
+  val qpat_abbrev_tac : term quotation -> tactic = Q.PAT_ABBREV_TAC
   val qmatch_abbrev_tac : term quotation -> tactic = Q.MATCH_ABBREV_TAC
   val qho_match_abbrev_tac : term quotation -> tactic = Q.HO_MATCH_ABBREV_TAC
   val qmatch_rename_tac : term quotation -> string list -> tactic =
