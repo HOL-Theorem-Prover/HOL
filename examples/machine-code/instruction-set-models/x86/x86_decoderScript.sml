@@ -480,16 +480,8 @@ val x86_decode_aux_thm = let
   val thZ = REWRITE_RULE [DTF_THM] thX
   in thZ end;
 
-fun permanently_add_to_compset name thm = let
-  val _ = save_thm(name,thm)
-  val _ = computeLib.add_funs [thm]
-  val _ = adjoin_to_theory {sig_ps = NONE, struct_ps = SOME (fn ppstrm =>
-    let val S = (fn s => (PP.add_string ppstrm s; PP.add_newline ppstrm)) in
-            S ("val _ = computeLib.add_funs ["^name^"];")
-    end)}
-  in print ("Permanently added to compset: "^name^"\n") end;
-
-val _ = permanently_add_to_compset "x86_decode_aux_thm" x86_decode_aux_thm;
+val _ = save_thm("x86_decode_aux_thm",x86_decode_aux_thm);
+val _ = computeLib.add_persistent_funs ["x86_decode_aux_thm"];
 
 
 (* x86 examples/tests:
