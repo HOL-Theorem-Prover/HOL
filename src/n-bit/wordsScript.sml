@@ -4546,6 +4546,69 @@ val WORD_LESS_0_word_T = store_thm("WORD_LESS_0_word_T",
   `~(0w < - 1w) /\ ~(0w <= - 1w) /\ - 1w < 0w /\ - 1w <= 0w`,
   REWRITE_TAC [WORD_LT, WORD_LE, word_msb_word_T, WORD_0_POS]);
 
+(* word_reverse *)
+
+val word_reverse_reverse = prove(
+  `!w. word_reverse (word_reverse w) = w:'a word`,
+  FULL_SIMP_TAC std_ss [word_reverse_def,fcpTheory.CART_EQ,fcpTheory.FCP_BETA]
+  THEN REPEAT STRIP_TAC
+  THEN `(dimindex (:'a) − 1 − i) < dimindex (:'a)` by DECIDE_TAC
+  THEN FULL_SIMP_TAC std_ss [word_reverse_def,fcpTheory.CART_EQ,fcpTheory.FCP_BETA]
+  THEN AP_TERM_TAC THEN DECIDE_TAC);
+
+val word_reverse_lsl = prove(
+  `!w n. word_reverse (w << n) = (word_reverse w >>> n):'a word`,
+  FULL_SIMP_TAC std_ss [word_reverse_def,word_lsl_def,word_lsr_def,
+    fcpTheory.CART_EQ,fcpTheory.FCP_BETA] THEN REPEAT STRIP_TAC
+  THEN `(dimindex (:'a) − 1 − i) < dimindex (:'a)` by DECIDE_TAC
+  THEN Cases_on `i + n < dimindex (:'a)`
+  THEN FULL_SIMP_TAC std_ss [fcpTheory.FCP_BETA]
+  THEN `i + n < dimindex (:'a) = n <= dimindex (:'a) − 1 − i` by DECIDE_TAC
+  THEN FULL_SIMP_TAC std_ss [fcpTheory.FCP_BETA,SUB_PLUS]);
+
+val word_reverse_lsr = prove(
+  `!w n. word_reverse (w >>> n) = (word_reverse w << n):'a word`,
+  METIS_TAC [word_reverse_lsl,word_reverse_reverse]);
+
+val word_reverse_EQ_ZERO = prove(
+  `!w:'a word. (word_reverse w = 0w) = (w = 0w)`,
+  FULL_SIMP_TAC std_ss [fcpTheory.CART_EQ,fcpTheory.FCP_BETA,word_reverse_def,word_0]
+  THEN REPEAT STRIP_TAC THEN EQ_TAC THEN REPEAT STRIP_TAC
+  THEN `dimindex (:'a) − 1 − i < dimindex (:'a)` by DECIDE_TAC THEN RES_TAC
+  THEN `dimindex (:'a) − 1 − (dimindex (:'a) − 1 − i) = i` by DECIDE_TAC
+  THEN FULL_SIMP_TAC std_ss []);
+
+val word_reverse_EQ_ONE = prove(
+  `!w:'a word. (word_reverse w = - 1w) = (w = - 1w)`,
+  FULL_SIMP_TAC std_ss [fcpTheory.CART_EQ,fcpTheory.FCP_BETA,
+    word_reverse_def,WORD_NEG_1_T]
+  THEN REPEAT STRIP_TAC THEN EQ_TAC THEN REPEAT STRIP_TAC
+  THEN `dimindex (:'a) − 1 − i < dimindex (:'a)` by DECIDE_TAC THEN RES_TAC
+  THEN `dimindex (:'a) − 1 − (dimindex (:'a) − 1 − i) = i` by DECIDE_TAC
+  THEN FULL_SIMP_TAC std_ss []);
+
+val word_reverse_thm = store_thm("word_reverse_thm",
+  `!w (v:'a word) n.
+     (word_reverse (word_reverse w) = w) /\
+     (word_reverse (w << n) = word_reverse w >>> n) /\
+     (word_reverse (w >>> n) = word_reverse w << n) /\
+     (word_reverse (w !! v) = word_reverse w !! word_reverse v) /\
+     (word_reverse (w && v) = word_reverse w && word_reverse v) /\
+     (word_reverse (w ?? v) = word_reverse w ?? word_reverse v) /\
+     (word_reverse (~w) = ~(word_reverse w)) /\
+     (word_reverse 0w = 0w:'a word) /\
+     (word_reverse (- 1w) = (- 1w):'a word) /\
+     ((word_reverse w = 0w) = (w = 0w)) /\
+     ((word_reverse w = - 1w) = (w = - 1w))`,
+  SIMP_TAC std_ss [word_reverse_reverse,word_reverse_lsr,word_reverse_lsl,
+    word_reverse_EQ_ZERO,word_reverse_word_T,word_reverse_0,word_reverse_EQ_ONE]
+  THEN FULL_SIMP_TAC std_ss [word_reverse_def,word_or_def,word_and_def,
+    word_xor_def,fcpTheory.CART_EQ,fcpTheory.FCP_BETA,word_1comp_def]
+  THEN REPEAT STRIP_TAC
+  THEN `(dimindex (:'a) − 1 − i) < dimindex (:'a)` by DECIDE_TAC
+  THEN FULL_SIMP_TAC std_ss [fcpTheory.FCP_BETA]);
+
+
 (* ------------------------------------------------------------------------- *)
 (* Theorems sets of words                                                    *)
 (* ------------------------------------------------------------------------- *)
