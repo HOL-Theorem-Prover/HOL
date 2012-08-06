@@ -76,6 +76,8 @@ Thanks to Magnus Myreen and Ramana Kumar for help in finding and fixing  <a href
 <li> <p>The theory of sets has been extended with new <code>PROD_IMAGE</code> and <code>PROD_SET</code> constants, by analogy with existing <code>SUM_IMAGE</code> (also known as <code>SIGMA</code>) and <code>SUM_SET</code>.
 The <code>PROD_IMAGE</code> constant is overloaded to <code>PI</code> and <code>Π</code>.
 Thanks to Joseph Chan for this.
+
+<li> <p> A small theory, <code>gcdset</code> defining a function <code>gcdset</code> that returns the greatest common divisor of any non-empty set of natural numbers (and returns 0 for the empty set for the sake of totality).
 </ul>
 
 <h2 id="new-tools">New tools:</h2>
@@ -89,6 +91,10 @@ Thanks to Joseph Chan for this.
 <h2 id="new-examples">New examples:</h2>
 
 <ul>
+<li><p>A development of the theory of ordinal numbers (in <code>examples/set-theory/hol_sets</code>, based on a quotient of well-orders.
+Standard arithmetic operations (addition, multiplication and exponentiation) are defined, as well as the notion of supremum.
+The theorem that all ordinals can be expressed in a polynomial form over all possible bases greater than 1 is also proved.
+(When the base is <code>ω</code>, this gives the “Cantor Normal Form”.)
 </ul>
 
 <h2 id="incompatibilities">Incompatibilities:</h2>
