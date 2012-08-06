@@ -637,6 +637,13 @@ val REAL_SUM_IMAGE_EQ = store_thm
   ++ ONCE_REWRITE_TAC [(UNDISCH o Q.SPEC `s`) REAL_SUM_IMAGE_IN_IF]
   ++ RW_TAC std_ss []);
 
+val REAL_SUM_IMAGE_IN_IF_ALT = store_thm
+  ("REAL_SUM_IMAGE_IN_IF_ALT",``!s f z:real.
+         FINITE s ==> (REAL_SUM_IMAGE f s = REAL_SUM_IMAGE (\x. if x IN s then f x else z) s)``,
+  RW_TAC std_ss []
+  ++ MATCH_MP_TAC REAL_SUM_IMAGE_EQ
+  ++ RW_TAC std_ss []);
+
 val REAL_SUM_IMAGE_SUB = store_thm
  ("REAL_SUM_IMAGE_SUB", ``!s (f:'a -> real) f'. FINITE s ==>
                  (REAL_SUM_IMAGE (\x. f x - f' x) s =
