@@ -47,8 +47,29 @@ end
 
 fun all_set_types () = Binarymap.foldr (fn (k,_,acc) => k::acc) [] (!destmap)
 
+fun foldli f a l = let
+  fun recurse a i l =
+      case l of
+        [] => a
+      | h::t => recurse (f (i,h,a)) (i + 1) t
+in
+  recurse a 0 l
+end
+
+fun set_alist_merge(a1, a2) = let
+  open Binarymap
+  val emptyd = mkDict String.compare
+  val offset = length a2
+  val d1 = foldli (fn (i,(s,th),d) => insert(d,s,(i,th))) emptyd a1
+  val d2 = foldli (fn (i,(s,th),d) => insert(d,s,(i+offset,th))) d1 a2
+  val items0 = listItems d2
+  val items = Listsort.sort (inv_img_cmp (#1 o #2) Int.compare) items0
+in
+  List.map (fn (s,(i,th)) => (s,th)) items
+end
+
 fun new s = let
-  val (mk,dest) = LoadableThyData.new {merge = op@, read = read,
+  val (mk,dest) = LoadableThyData.new {merge = set_alist_merge, read = read,
                                        write = writeset, thydataty = s}
   val _ = destmap := Binarymap.insert(!destmap,s,dest)
   fun foldthis (nm,set) =
@@ -96,12 +117,12 @@ fun new_exporter name addfn = let
         in
           addfn thyname (map #2 thms)
         end
-  fun revise_data td =
+  fun revise_data P td =
       case segment_data {thy = current_theory(), thydataty = name} of
         NONE => ()
       | SOME d => let
           val alist = valOf (dest d)
-          val (ok,notok) = Lib.partition (uptodate_thm o #2) alist
+          val (ok,notok) = Lib.partition P alist
         in
           case notok of
             [] => ()
@@ -115,8 +136,11 @@ fun new_exporter name addfn = let
         end
 
   fun hook (TheoryLoaded s) = onload s
-    | hook (td as DelConstant _) = revise_data td
-    | hook (td as DelTypeOp _) = revise_data td
+    | hook (td as DelConstant _) = revise_data (uptodate_thm o #2) td
+    | hook (td as DelTypeOp _) = revise_data (uptodate_thm o #2) td
+    | hook (td as NewConstant _) = revise_data (uptodate_thm o #2) td
+    | hook (td as NewTypeOp _) = revise_data (uptodate_thm o #2) td
+    | hook (td as DelBinding s) = revise_data (not o equal s o #1) td
     | hook _ = ()
   fun export s = let
     val (data, namedthms) = mk [s]

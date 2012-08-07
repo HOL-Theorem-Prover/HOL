@@ -2,6 +2,8 @@ open HolKernel Parse boolLib bossLib
 
 open theory1Theory
 
+val _ = Feedback.WARNINGs_as_ERRs := true
+
 val _ = new_theory "theory2"
 
 val thm1 = save_thm("thm1", EVAL ``f 64``)
