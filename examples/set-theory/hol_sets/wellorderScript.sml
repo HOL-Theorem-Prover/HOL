@@ -1032,7 +1032,7 @@ val elsOf_cardeq_iso = store_thm(
     els = domain (wellorder_REP wo) UNION range (wellorder_REP wo)` >>
   simp[BIJ_DEF, SURJ_IMAGE] >>
   simp[strict_def, EXISTS_PROD] >>
-  fs[INJ_DEF] >> conj_tac >- metis_tac [] >>
+  fs[INJ_DEF] >>
   map_every qx_gen_tac [`x`, `y`] >> strip_tac >>
   `x ∈ elsOf wo ∧ y ∈ elsOf wo` by metis_tac [WLE_elsOf] >>
   fs[elsOf_def] >> metis_tac[IN_UNION]);
@@ -1290,4 +1290,3 @@ val allsets_wellorderable = store_thm(
   metis_tac[]);
 
 val _ = export_theory()
-
