@@ -63,6 +63,7 @@ fun assoc1 item =
 val emit_ERR     = ref true
 val emit_MESG    = ref true
 val emit_WARNING = ref true
+val WARNINGs_as_ERRs = ref false
 
 val ERR_outstream     = ref TextIO.stdErr
 val MESG_outstream    = ref TextIO.stdOut
@@ -147,10 +148,11 @@ fun HOL_PROGRESS_MESG (start, finish) f x =
    else f x
 
 fun HOL_WARNING s1 s2 s3 =
-   if !emit_WARNING
-      then (output (!WARNING_outstream, !WARNING_to_string s1 s2 s3)
-            ; flush_out (!WARNING_outstream))
-   else ()
+    if !WARNINGs_as_ERRs then raise mk_HOL_ERR s1 s2 s3
+    else if !emit_WARNING then
+      (output (!WARNING_outstream, !WARNING_to_string s1 s2 s3)
+       ; flush_out (!WARNING_outstream))
+    else ()
 
 fun HOL_WARNINGloc s1 s2 locn s3 =
    HOL_WARNING s1 s2 (locn.toString locn ^ " :\n" ^ s3)

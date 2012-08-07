@@ -13,6 +13,7 @@ sig
     val emit_ERR          : bool ref
     val emit_MESG         : bool ref
     val emit_WARNING      : bool ref
+    val WARNINGs_as_ERRs  : bool ref
 
     val ERR_outstream     : TextIO.outstream ref
     val MESG_outstream    : TextIO.outstream ref
