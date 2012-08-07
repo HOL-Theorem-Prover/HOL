@@ -1005,7 +1005,7 @@ val generic_continuity = store_thm(
     fs[preds_omax_SOME_SUC] >>
     `a⁺ ∈ s` by metis_tac [sup_eq_SUC] >>
     ONCE_REWRITE_TAC [EQ_SYM_EQ] >>
-    match_mp_tac sup_eq_max >> dsimp[] >> qexists_tac `a⁺` >> simp[] >>
+    match_mp_tac sup_eq_max >> dsimp[] >>
     ntac 2 strip_tac >> first_x_assum match_mp_tac >>
     metis_tac [mklesup sup_thm]
   ])
@@ -1656,11 +1656,5 @@ val poly_lemma0 = prove(
   `c0 * a ** e0 ≤ c0 * a ** e0 + FOLDL (λacc (c,e). acc + c * a ** e) 0 t`
     by simp[] >>
   metis_tac [ordle_TRANS, ordle_lteq, ordlt_REFL, ordlt_TRANS])
-
-
-
-
-
-
 
 val _ = export_theory()
