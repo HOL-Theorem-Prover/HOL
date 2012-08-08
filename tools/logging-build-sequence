@@ -76,22 +76,27 @@ src/num/reduce/src
 src/num/arith/src
 src/num
 src/num/termination
+
+# A Poly/ML heap, numheap, is deposited in src/num/termination to
+# speed up the last few theories (sets, extra numbers, and lists) before
+# bossLib
 src/num/extra_theories
 src/pred_set/src
 src/datatype/equiv
 src/datatype/record
 src/datatype
+!src/datatype/theory_tests
 src/list/src
 src/quantHeuristics
 src/unwind
+src/HolSat/vector_def_CNF
 src/boss
+!src/boss/theory_tests
 # Up to this point is needed for hol (which loads bossLib).
 # (Maybe unwind could be omitted).
 [poly]bin/hol
 
 !src/tfl/src/test
-src/opentheory
-src/opentheory/logging
 src/TeX
 !examples/RSA
 src/sort
@@ -129,6 +134,8 @@ src/complex
 !!examples/separationLogic/src/
 src/HolQbf
 src/HolSmt
+src/opentheory
+src/opentheory/logging
 !examples/misc
 # these examples require Muddy, which is MoscowML specific
 [mosml]!examples/muddy/muddyC
@@ -137,22 +144,27 @@ src/HolSmt
 [mosml]!!examples/HolCheck
 src/datatype/inftree
 !examples/lambda/basics
+!examples/logic
 !!examples/unification/triangular/nominal
 !examples/lambda/barendregt
 !examples/computability
 !!examples/lambda/other-models
 !!examples/lambda/typing
 !!examples/computability/lambda
+!!examples/computability/register
 src/Boolify/src
 src/float
-src/prob
+src/probability
 src/temporal/src
 
 #
 # Examples only from here on
 #
+!examples/parity
 !examples/MLsyntax
-!examples/zfset
+!examples/set-theory/zfset
+!examples/set-theory/vbg
+!examples/set-theory/hol_sets
 !!examples/category
 !!examples/miller/ho_prover
 !!examples/miller/miller
