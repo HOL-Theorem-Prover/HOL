@@ -7,6 +7,7 @@
 open HolKernel boolLib bossLib;
 open bitTheory wordsTheory fcpLib;
 open lcsymtacs wordsLib;
+open ASCIInumbersTheory
 
 val _ = new_theory "bitstring";
 
@@ -490,8 +491,8 @@ val n2w_v2n = Q.store_thm("n2w_v2n",
     `i < LENGTH (bitify [] v)` by metis_tac [length_bitify_null]
     \\ rw [bitTheory.BIT_num_from_bin_list, every_bit_bitify, el_bitify],
     match_mp_tac bitTheory.NOT_BIT_GT_TWOEXP
-    \\ qspecl_then [`bitify [] v`, `2`] assume_tac bitTheory.l2n_lt
-    \\ fs [arithmeticTheory.NOT_LESS, bitTheory.num_from_bin_list_def]
+    \\ qspecl_then [`bitify [] v`, `2`] assume_tac l2n_lt
+    \\ fs [arithmeticTheory.NOT_LESS, num_from_bin_list_def]
     \\ metis_tac [length_bitify_null, bitTheory.TWOEXP_MONO2,
                   arithmeticTheory.LESS_LESS_EQ_TRANS]
   ]);
@@ -503,14 +504,14 @@ val v2n_n2v_lem = Q.prove(
 
 val v2n_n2v = Q.store_thm("v2n_n2v",
   `!n. v2n (n2v n) = n`,
-  lrw [n2v_def, v2n_def, bitify_def, bitTheory.num_from_bin_list_def,
-       bitTheory.l2n_def, bitTheory.num_to_bin_list_def,
+  lrw [n2v_def, v2n_def, bitify_def, num_from_bin_list_def,
+       l2n_def, num_to_bin_list_def,
        bitify_reverse_map, bitify_reverse_map, boolify_reverse_map,
        listTheory.PAD_LEFT, listTheory.MAP_GENLIST, listTheory.REVERSE_APPEND,
        listTheory.REVERSE_GENLIST, rich_listTheory.MAP_REVERSE,
-       listTheory.MAP_MAP_o, bitTheory.BITS_LOG2_ZERO_ID, bitTheory.LENGTH_n2l,
+       listTheory.MAP_MAP_o, bitTheory.BITS_LOG2_ZERO_ID, LENGTH_n2l,
        GSYM bitTheory.LOG2_def, DECIDE ``a + 1 - SUC a = 0``,
-       v2n_n2v_lem, bitTheory.n2l_BOUND, bitTheory.l2n_n2l]);
+       v2n_n2v_lem, n2l_BOUND, l2n_n2l]);
 
 val v2w_n2v = Q.store_thm("v2w_n2v",
   `!n. v2w (n2v n) = n2w n`,
@@ -522,8 +523,8 @@ val w2n_v2w = Q.store_thm("w2n_v2w",
 
 val v2n_lt = Q.store_thm("v2n_lt",
   `!v. v2n v < 2 ** LENGTH v`,
-    metis_tac [v2n_def, length_bitify_null, bitTheory.num_from_bin_list_def,
-               bitTheory.l2n_lt, DECIDE ``0 < 2n``]);
+    metis_tac [v2n_def, length_bitify_null, num_from_bin_list_def,
+               l2n_lt, DECIDE ``0 < 2n``]);
 
 (* ------------------------------------------------------------------------- *)
 

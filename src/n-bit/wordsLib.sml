@@ -6,7 +6,8 @@ struct
 *)
 
 open HolKernel Parse boolLib bossLib computeLib;
-open bitTheory numeral_bitTheory wordsTheory wordsSyntax;
+open bitTheory numeral_bitTheory wordsTheory wordsSyntax
+open ASCIInumbersTheory
 
 structure Parse = struct
   open Parse

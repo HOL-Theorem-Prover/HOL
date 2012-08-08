@@ -14,6 +14,7 @@
 open HolKernel Parse boolLib bossLib;
 open Q arithmeticTheory pred_setTheory;
 open bitTheory sum_numTheory fcpTheory;
+open ASCIInumbersTheory
 
 val _ = new_theory "words";
 

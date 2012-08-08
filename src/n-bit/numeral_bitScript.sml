@@ -317,7 +317,7 @@ val LOG_compute = store_thm("LOG_compute",
              0
            else
              SUC (LOG m (n DIV m))`,
-  SRW_TAC [ARITH_ss] [LOG_RWT, combinTheory.FAIL_THM]);
+  SRW_TAC [ARITH_ss] [logrootTheory.LOG_RWT, combinTheory.FAIL_THM]);
 
 val iLOG2_def =
  Definition.new_definition("iLOG2_def", ``iLOG2 n = LOG2 (n + 1)``);
@@ -427,6 +427,7 @@ end);
 
 (* ------------------------------------------------------------------------- *)
 
+open ASCIInumbersTheory
 val l2n_pow2_compute = store_thm("l2n_pow2_compute",
   `(!p. l2n (2 ** p) [] = 0) /\
    (!p h t. l2n (2 ** p) (h::t) =

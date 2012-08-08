@@ -188,6 +188,11 @@ val LOG_LE_MONO = store_thm("LOG_LE_MONO",
   Q.EXISTS_TAC `x` THEN Q.EXISTS_TAC `y` THEN
   METIS_TAC [LOG,LESS_TRANS,LESS_OR_EQ]);
 
+val LOG_RWT = store_thm("LOG_RWT",
+  ``!m n. 1 < m /\ 0 < n ==>
+     (LOG m n = if n < m then 0 else SUC (LOG m (n DIV m)))``,
+  SRW_TAC [ARITH_ss] [LOG_DIV, ADD1, LOG_UNIQUE, EXP]);
+
 val less_lemma1 = prove(``a <= c /\ b <= d ==> a * b <= c * d:num``,
   REPEAT STRIP_TAC THEN MATCH_MP_TAC LESS_EQ_TRANS THEN
   Q.EXISTS_TAC `c * b` THEN
