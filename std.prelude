@@ -167,23 +167,7 @@ in
   val _ = loadPath := tl (!loadPath)
 end;
 
-val _ = if FileSys.access ("Holmakefile", [FileSys.A_READ]) then let
-            open Holmake_types
-            val (env, _, _) = ReadHMF.read "Holmakefile" base_environment
-            fun envlist id =
-                map dequote (tokenize (perform_substitution env [VREF id]))
-            val hmake_includes = envlist "INCLUDES"
-          in
-            case hmake_includes of
-              [] => ()
-            | _ =>
-              (print "[extending loadPath with Holmakefile INCLUDES variable]\n";
-               loadPath := !loadPath @ hmake_includes)
-          end handle e => (print "[bogus Holmakefile in current directory \
-                                 \- ignoring it]\n";
-                           TextIO.flushOut TextIO.stdErr;
-                           ())
-        else ()
+use (OS.Path.concat (HOLDIR, OS.Path.concat("tools", "makefile-includes.ML")));
 
 structure HOL_Interactive : sig
   val toggle_quietdec : unit -> bool

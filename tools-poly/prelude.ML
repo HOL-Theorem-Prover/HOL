@@ -159,23 +159,7 @@ in
   app appthis ["internal_functions", "Holmake_types", "ReadHMF"]
 end;
 
-val _ = if FileSys.access ("Holmakefile", [FileSys.A_READ]) then let
-            open Holmake_types
-            val (env, _, _) = ReadHMF.read "Holmakefile" base_environment
-            fun envlist id =
-                map dequote (tokenize (perform_substitution env [VREF id]))
-            val hmake_includes = envlist "INCLUDES"
-          in
-            case hmake_includes of
-              [] => ()
-            | _ =>
-              (print "[extending loadPath with Holmakefile INCLUDES variable]\n";
-               loadPath := !loadPath @ hmake_includes)
-          end handle e => (print "[bogus Holmakefile in current directory \
-                                 \- ignoring it]\n";
-                           TextIO.flushOut TextIO.stdErr;
-                           ())
-        else ();
+use (OS.Path.concat (HOLDIR, OS.Path.concat("tools", "makefile-includes.ML")));
 
 val _ =
   (term_pp_prefix := "``";   term_pp_suffix := "``";
@@ -205,4 +189,3 @@ use (Path.concat(Globals.HOLDIR, "tools/check-intconfig.sml"));
 val _ = set_trace "pp_annotations" 1
 
 val _ = PolyML.print_depth 100;
-
