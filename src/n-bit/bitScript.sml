@@ -1405,29 +1405,6 @@ val SUB_num_to_bin_string = store_thm("SUB_num_to_bin_string",
 
 (* ------------------------------------------------------------------------- *)
 
-val LESS_THM =
-  CONV_RULE numLib.SUC_TO_NUMERAL_DEFN_CONV prim_recTheory.LESS_THM;
-
-val UNHEX_HEX = store_thm("UNHEX_HEX",
-  `!n. n < 16 ==> (UNHEX (HEX n) = n)`, SRW_TAC [] [LESS_THM] \\ EVAL_TAC);
-
-val HEX_UNHEX = store_thm("HEX_UNHEX",
-  `!c. isHexDigit c ==> (HEX (UNHEX c) = toUpper c)`,
-  Cases \\ SRW_TAC [] [isHexDigit_def] \\ PAT_ASSUM `n < 256` (K ALL_TAC)
-    << [`n < 58` by DECIDE_TAC, `n < 103` by DECIDE_TAC,
-        `n < 71` by DECIDE_TAC]
-    \\ FULL_SIMP_TAC std_ss [LESS_THM]
-    \\ FULL_SIMP_TAC arith_ss []
-    \\ EVAL_TAC);
-
-val DEC_UNDEC = store_thm("DEC_UNDEC",
-  `!c. isDigit c ==> (HEX (UNHEX c) = c)`,
-  Cases \\ SRW_TAC [] [isDigit_def] \\ PAT_ASSUM `n < 256` (K ALL_TAC)
-    \\ `n < 58` by DECIDE_TAC
-    \\ FULL_SIMP_TAC std_ss [LESS_THM]
-    \\ FULL_SIMP_TAC arith_ss []
-    \\ EVAL_TAC);
-
 val rwts = [FUN_EQ_THM, UNHEX_HEX, l2n_n2l, s2n_n2s,
   num_from_bin_list_def,num_from_oct_list_def,num_from_dec_list_def,
   num_from_hex_list_def,num_to_bin_list_def,num_to_oct_list_def,
