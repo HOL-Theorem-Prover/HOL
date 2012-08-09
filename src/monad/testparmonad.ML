@@ -18,7 +18,7 @@ val len_def = Define`
 `;
 
 val hd_def = Define`
-  (hd : num option M) x = case x of [] -> (NONE, x) || h::t -> (SOME h, x)
+  (hd : num option M) x = case x of [] => (NONE, x) | h::t => (SOME h, x)
 `;
 
 val cons_def = Define`
@@ -28,9 +28,9 @@ val cons_def = Define`
 val sum_def = Define`sum l = (SUM l, l)`
 
 val prog = ``do
-    x <- hd !! y <- len ;
-    case x of NONE -> return ()
-           || SOME h -> cons h ;
+    x <- hd ||| y <- len ;
+    case x of NONE => return ()
+             | SOME h => cons h ;
     cons y ;
     s <- sum ;
     cons s
@@ -51,4 +51,4 @@ val ignore_def = Define`
   ignore M = do x <- M ; return () od
 `;
 
-val prog2_revised = ``do x <- len !! ignore hd ; cons x od``;
+val prog2_revised = ``do x <- len ||| ignore hd ; cons x od``;

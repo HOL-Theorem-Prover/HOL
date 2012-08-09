@@ -1,35 +1,45 @@
-open HolKernel Parse boolLib pairTheory pairSyntax combinTheory ;
+open HolKernel Parse boolLib pairTheory pairSyntax combinTheory;
 
-val _ = new_theory "state_transformer";
+val _ = new_theory "state_transformer"
 
 infixr 0 ||
 infix 1 >>;
 
-val op++ = op THEN;
-val op|| = op ORELSE;
-val op>> = op THEN1;
-val Suff = Q_TAC SUFF_TAC;
-val Know = Q_TAC KNOW_TAC;
-val FUN_EQ_TAC = CONV_TAC (ONCE_DEPTH_CONV FUN_EQ_CONV);
+val op++ = op THEN
+val op|| = op ORELSE
+val op>> = op THEN1
+val Suff = Q_TAC SUFF_TAC
+val Know = Q_TAC KNOW_TAC
+val FUN_EQ_TAC = CONV_TAC (ONCE_DEPTH_CONV FUN_EQ_CONV)
 
 (* ------------------------------------------------------------------------- *)
 (* Definitions.                                                              *)
 (* ------------------------------------------------------------------------- *)
 
+val () = Parse.temp_type_abbrev ("M",``:'state -> 'a # 'state``)
+
 val UNIT_DEF = new_definition ("UNIT_DEF",
   ``UNIT (x:'b) = \(s:'a). (x, s)``);
 
 val BIND_DEF = new_definition ("BIND_DEF",
-  ``BIND (g:'a -> 'b # 'a) (f:'b -> 'a -> 'c # 'a) = UNCURRY f o g``);
+  ``BIND (g: ('b, 'a) M) (f: 'b -> ('c, 'a) M) = UNCURRY f o g``);
 
 val IGNORE_BIND_DEF = new_definition("IGNORE_BIND_DEF",
   ``IGNORE_BIND f g = BIND f (\x. g)``);
 
 val MMAP_DEF = new_definition ("MMAP_DEF",
-  ``MMAP (f:'c->'b) (m:'a->'c#'a) = BIND m (UNIT o f)``);
+  ``MMAP (f: 'c -> 'b) (m: ('c, 'a) M) = BIND m (UNIT o f)``);
 
 val JOIN_DEF = new_definition ("JOIN_DEF",
-  ``JOIN (z:'a->('a->'b#'a)#'a) = BIND z I``);
+  ``JOIN (z: (('b, 'a) M, 'a) M) = BIND z I``);
+
+val FOR_def = TotalDefn.tDefine "FOR"
+ `(FOR : num # num # (num -> (unit, 'state) M) -> (unit, 'state) M) (i, j, a) =
+     if i = j then
+        a i
+     else
+        BIND (a i) (\u. FOR (if i < j then i + 1 else i - 1, j, a))`
+  (TotalDefn.WF_REL_TAC `measure (\(i, j, a). if i < j then j - i else i - j)`)
 
 (* ------------------------------------------------------------------------- *)
 (* Theorems.                                                                 *)
@@ -177,4 +187,4 @@ val FST_o_MMAP = store_thm
    ++ BETA_TAC
    ++ REWRITE_TAC [FST]);
 
-val _ = export_theory ();
+val _ = export_theory ()
