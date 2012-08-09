@@ -63,6 +63,21 @@ val gspec_simp_tests =
      (``{(x:num,y:bool) | F}``, ``{}:(num#bool) set``),
      (``{x + y | x | F}``, ``{}:num set``)]
 
+val _ = let
+  open Systeml OS.Path
+in
+  print "Testing loads with Unicode trace off\n";
+  if OS.Process.isSuccess
+         (Systeml.system_ps
+              (String.concatWith " "
+                   [Systeml.protect
+                        (concat(HOLDIR,concat("bin", "hol.bare"))),
+                    "<", "testscript.ML"]))
+  then print "** OK\n"
+  else (print "** FAILED!\n";
+        OS.Process.exit OS.Process.failure)
+end
+
 val _ =
     Process.exit
         (if
@@ -71,4 +86,3 @@ val _ =
            List.all (test GSPEC_SIMP_CONV) gspec_simp_tests
          then Process.success
          else Process.failure)
-

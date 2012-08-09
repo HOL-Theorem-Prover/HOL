@@ -68,6 +68,9 @@ Thanks to Scott Owens for the <a href="https://github.com/mn200/HOL/issues/78">b
 <li><p> Calling <code>delete_const</code> on a constant that had been defined with <code>Define</code> could lead to unloadable theories.
 Thanks to Magnus Myreen and Ramana Kumar for help in finding and fixing  <a href="http://github.com/mn200/HOL/issues/73">this bug</a>.
 
+<li><p> If the Unicode trace was turned off in a user’s <code>hol-config</code> file (as per the <a href="http://hol.sourceforge.net/faq.html#turn-off-unicode">FAQ</a>), running the <code>hol</code> executable under Moscow&nbsp;ML resulted in lots of unnecessary warnings about “Unicode-ish” rules being added while the trace was off.
+Thanks to Joseph Chan for the bug report.
+
 </ul>
 
 <h2 id="new-theories">New theories:</h2>

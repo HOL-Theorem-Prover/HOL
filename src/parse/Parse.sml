@@ -669,7 +669,8 @@ struct
   val _ = Theory.register_hook
               ("Parse.ProvideUnicode",
                (fn TheoryDelta.TheoryLoaded s =>
-                   lift ProvideUnicode.apply_thydata s
+                   Feedback.trace("Parse.unicode_trace_off_complaints",0)
+                                 (lift ProvideUnicode.apply_thydata) s
                  | _ => ()))
 
 end
@@ -890,13 +891,17 @@ in
                           block_style = block_style})
 end
 
+val unicode_off_but_unicode_act_complaint = ref true
+val _ = register_btrace("Parse.unicode_trace_off_complaints",
+                        unicode_off_but_unicode_act_complaint)
+
 fun temp_add_grule gr = let
   val uni_on = get_tracefn "Unicode" () > 0
   val toks = userdelta_toks gr
 in
   if List.exists includes_unicode toks then let
     in
-      if uni_on then ()
+      if uni_on orelse not (!unicode_off_but_unicode_act_complaint) then ()
       else HOL_WARNING "Parse" "temp_add_rule"
                        "Adding a Unicode-ish rule without Unicode trace \
                        \being true";
@@ -923,7 +928,7 @@ fun add_rule (r as {term_name, fixity, pp_elements,
                     paren_style, block_style = (bs,bi)}) = let in
   temp_add_rule r;
   update_grms "add_rule"
-              ("temp_add_rule",
+              ("(UTOFF temp_add_rule)",
                String.concat
                  ["{term_name = ", quote term_name,
                   ", fixity = ", fixityToString fixity, ",\n",
@@ -937,7 +942,7 @@ fun make_temp_overload_on add (s, t) = let
   val uni_on = get_tracefn "Unicode" () > 0
 in
   if includes_unicode s then
-    (if not uni_on then
+    (if not uni_on andalso !unicode_off_but_unicode_act_complaint then
        HOL_WARNING "Parse" "overload_on"
                    "Adding a Unicode-ish rule without Unicode trace \
                    \being true"
@@ -958,7 +963,7 @@ fun make_overload_on temp temps (s, t) = let
 in
   temp (s, t);
   full_update_grms
-    (temps,
+    ("(UTOFF "^temps^")",
      String.concat ["(", quote s, ", ", minprint t, ")"],
     SOME t)
 end
@@ -976,7 +981,7 @@ fun add_listform x = let
 in
   temp_add_listform x;
   update_grms "add_listform"
-              ("temp_add_listform",
+              ("(UTOFF temp_add_listform)",
                String.concat
                  ["{separator = [",   pplistToString separator, "]\n",
                   ", leftdelim = [",  pplistToString leftdelim, "]\n",
@@ -1085,7 +1090,8 @@ fun temp_set_fixity s f =
 fun set_fixity s f = let in
     temp_set_fixity s f;
     update_grms "set_fixity"
-                ("(temp_set_fixity "^quote s^")", "("^fixityToString f^")")
+                ("(UTOFF (temp_set_fixity "^quote s^"))",
+                 "("^fixityToString f^")")
  end
 
 (* ----------------------------------------------------------------------
@@ -1486,6 +1492,9 @@ in
      in
        B 0;
          add_string "local open Portable GrammarSpecials Parse";
+         add_newline();
+         add_string "  fun UTOFF f = Feedback.trace(\"Parse.unicode_trace_\
+                    \off_complaints\",0)f";
          add_newline();
          add_string "in"; add_newline();
          add_string "val _ = mk_local_grms [";
