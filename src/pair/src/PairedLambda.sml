@@ -129,15 +129,15 @@ val GEN_BETA_TAC  = CONV_TAC (DEPTH_CONV GEN_BETA_CONV)
 (* ---------------------------------------------------------------------*)
 
 fun ITER_BETA_CONV tm =
-  let val (Rator,Rand) = dest_comb tm
+   let
+      val (Rator, Rand) = dest_comb tm
       val thm = AP_THM (ITER_BETA_CONV Rator) Rand
-      val redex = rand(concl thm)
-      val red = TRY_CONV(BETA_CONV ORELSEC PAIRED_BETA_CONV) redex
-  in
-    TRANS thm red
-  end
-  handle HOL_ERR _ => REFL tm;
-
+      val redex = rand (concl thm)
+      val red = TRY_CONV (BETA_CONV ORELSEC PAIRED_BETA_CONV) redex
+   in
+      TRANS thm red
+   end
+   handle HOL_ERR _ => REFL tm
 
 (* ---------------------------------------------------------------------*)
 (* Internal function: ARGS_CONV (apply a list of conversions to the     *)
@@ -146,15 +146,18 @@ fun ITER_BETA_CONV tm =
 (* ARGS_CONV [conv1;...;convn] "f a1 ... an" applies convi to ai.       *)
 (* ---------------------------------------------------------------------*)
 
-local fun appl [] [] = []
-        | appl (f::frst) (a::arest) = f a::appl frst arest
-        | appl _ _ = raise ERR "ARGS_CONV" "appl"
+local
+    fun appl [] [] = []
+      | appl (f :: frst) (a :: arest) = f a :: appl frst arest
+      | appl _ _ = raise ERR "ARGS_CONV" "appl"
 in
-fun ARGS_CONV cs tm =
-  let val (f,ths) = (I ## appl cs) (strip_comb tm)
-  in rev_itlist (C (curry MK_COMB)) ths (REFL f)
-  end
-end;
+   fun ARGS_CONV cs tm =
+      let
+         val (f,ths) = (I ## appl cs) (strip_comb tm)
+      in
+         rev_itlist (C (curry MK_COMB)) ths (REFL f)
+      end
+end
 
 (* ---------------------------------------------------------------------*)
 (* Internal function RED_WHERE.                                         *)
@@ -165,20 +168,26 @@ end;
 (* ---------------------------------------------------------------------*)
 
 fun RED_WHERE fnn body =
- if is_var body orelse is_const body then REFL
- else let val (_,Body) = Term.dest_abs body
-      in ABS_CONV (RED_WHERE fnn Body)
-      end
+   if is_var body orelse is_const body
+      then REFL
+   else let
+           val (_, Body) = Term.dest_abs body
+        in
+           ABS_CONV (RED_WHERE fnn Body)
+        end
    handle HOL_ERR _ =>
-    let val (f,args) = strip_comb body
-    in if f=fnn
-       then ARGS_CONV (map (RED_WHERE fnn) args) THENC ITER_BETA_CONV
-       else let val (Rator,Rand) = dest_comb body
-            in RAND_CONV(RED_WHERE fnn Rand)
-                  THENC
-               RATOR_CONV (RED_WHERE fnn Rator)
-            end
-    end;
+     let
+        val (f, args) = strip_comb body
+     in
+        if f = fnn
+           then ARGS_CONV (map (RED_WHERE fnn) args) THENC ITER_BETA_CONV
+        else let
+                val (Rator,Rand) = dest_comb body
+             in
+                RAND_CONV (RED_WHERE fnn Rand)
+                THENC RATOR_CONV (RED_WHERE fnn Rator)
+             end
+     end
 
 (* ---------------------------------------------------------------------*)
 (* Internal function: REDUCE                                            *)
@@ -204,10 +213,12 @@ fun RED_WHERE fnn body =
 (* ---------------------------------------------------------------------*)
 
 fun REDUCE f x th =
-  if not(is_abs x orelse is_uncurry x) then th
-  else let val (Bvar,Body) = Term.dest_abs f
-       in CONV_RULE (RAND_CONV (RED_WHERE Bvar Body)) th
-       end;
+   if not (is_abs x orelse pairSyntax.is_uncurry x) then th
+   else let
+           val (Bvar, Body) = Term.dest_abs f
+        in
+           CONV_RULE (RAND_CONV (RED_WHERE Bvar Body)) th
+        end
 
 (* ---------------------------------------------------------------------*)
 (* let_CONV: conversion for reducing "let" terms.                       *)
@@ -237,25 +248,28 @@ fun REDUCE f x th =
 (* ---------------------------------------------------------------------*)
 
 local
-fun conv tm =
-   let val (func,arg) = dest_let tm
-       val (ty1,ty2) = dom_rng (type_of func)
-       val defn = INST_TYPE [alpha |-> ty1, beta |-> ty2] LET_DEF
-       val thm = RIGHT_BETA(AP_THM(RIGHT_BETA(AP_THM defn func))arg)
-   in
-   if Term.is_abs func
-   then REDUCE func arg (RIGHT_BETA thm)
-   else if is_uncurry func
-        then CONV_RULE (RAND_CONV PAIRED_BETA_CONV) thm
-        else CONV_RULE (RAND_CONV conv)
-                       (AP_THM(AP_TERM (rator(rator tm)) (conv func)) arg)
-   end
+   fun conv bconv =
+      fn tm =>
+         let
+            val (func, arg) = boolSyntax.dest_let tm
+            val (ty1, ty2) = Type.dom_rng (Term.type_of func)
+            val defn = Thm.INST_TYPE [alpha |-> ty1, beta |-> ty2] LET_DEF
+            val thm = RIGHT_BETA (AP_THM (RIGHT_BETA (AP_THM defn func)) arg)
+         in
+            if Term.is_abs func
+               then REDUCE func arg (RIGHT_BETA thm)
+            else if pairSyntax.is_uncurry func
+                    then CONV_RULE (RAND_CONV bconv) thm
+                 else CONV_RULE
+                         (RAND_CONV (conv bconv))
+                         (AP_THM
+                            (AP_TERM (rator (rator tm)) (conv bconv func)) arg)
+         end
+         handle HOL_ERR _ => raise ERR "let_CONV" "cannot reduce the let"
 in
-fun let_CONV tm = conv tm
- handle HOL_ERR _ => raise ERR "let_CONV" "cannot reduce the let"
-end;
-
-
+   val let_CONV = conv PAIRED_BETA_CONV
+   val GEN_LET_CONV = conv GEN_BETA_CONV
+end
 
 (* ---------------------------------------------------------------------*)
 (* LET_SIMP_CONV: conversion for eliminating unused lets                *)
