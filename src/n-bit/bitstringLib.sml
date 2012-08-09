@@ -137,9 +137,9 @@ end
 (* Convert ``v2w [...]`` to ``n2w n`` *)
 
 local
-   val thm1 = List.nth (Drule.CONJUNCTS bitstringTheory.ops_to_n2w, 2)
-   val v2w_n2w_thm =
-      metisLib.METIS_PROVE [thm1] ``!l n. (v2n l = n) ==> (v2w l = n2w n)``
+   val v2w_n2w_thm = Q.prove(
+      `!l n. (v2n l = n) ==> (v2w l = n2w n : 'a word)`,
+      qm [bitstringTheory.ops_to_n2w])
 in
    fun v2w_n2w_CONV tm =
       let
