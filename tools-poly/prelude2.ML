@@ -31,11 +31,6 @@ val _ = use (HOLDIR^"/src/proofman/expandq");
 *)
 (* val _ = use (HOLDIR^"/src/datatype/Interactive"); *)
 
-val Hol_datatype =
-  Lib.with_flag
-    (Feedback.emit_WARNING,false)
-    bossLib.Hol_datatype;
-
 val _ = set_trace "metis" 1
 val _ = set_trace "meson" 1
 
