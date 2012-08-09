@@ -104,7 +104,7 @@ local
       `(l2n 2 [] = 0) /\
        (!l. l2n 2 (0::l) = 2 * l2n 2 l) /\
        (!l. l2n 2 (1::l) = 2 * l2n 2 l + 1)`,
-      simp [bitTheory.l2n_def])
+      simp [numposrepTheory.l2n_def])
 
    val l2n_2_numeric = Q.prove(
       `(l2n 2 [] = ZERO) /\
@@ -117,7 +117,7 @@ local
      `(num_from_bin_list [] = 0) /\
       (!l. num_from_bin_list (0::l) = NUMERAL (l2n 2 (0::l))) /\
       (!l. num_from_bin_list (1::l) = NUMERAL (l2n 2 (1::l)))`,
-      simp [bitTheory.num_from_bin_list_def, NUMERAL_DEF])
+      simp [numposrepTheory.num_from_bin_list_def] >> qm [NUMERAL_DEF])
 
    val cmp = computeLib.new_compset
               [bitstringTheory.bitify_def, num_from_bin_list_compute,

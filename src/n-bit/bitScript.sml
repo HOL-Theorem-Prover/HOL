@@ -1363,9 +1363,6 @@ val LEAST_THM = store_thm("LEAST_THM",
 
 (* ------------------------------------------------------------------------- *)
 
-
-(* ------------------------------------------------------------------------- *)
-
 val BIT_num_from_bin_list = store_thm("BIT_num_from_bin_list",
   `!x l. EVERY ($> 2) l /\ x < LENGTH l ==>
          (BIT x (num_from_bin_list l) = (EL x l = 1))`,
