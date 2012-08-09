@@ -4,6 +4,7 @@ open pred_setTheory optionTheory basicSizeTheory listTheory rich_listTheory;
 open stringTheory sumTheory finite_mapTheory sortingTheory;
 open bitTheory numeral_bitTheory fcpTheory fcpLib wordsTheory
 open integerTheory integer_wordTheory intSyntax;
+open numposrepTheory ASCIInumbersTheory
 
 val _ = new_theory "basis_emit";
 

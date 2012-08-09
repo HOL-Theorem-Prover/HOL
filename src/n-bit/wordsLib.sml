@@ -7,7 +7,7 @@ struct
 
 open HolKernel Parse boolLib bossLib computeLib;
 open bitTheory numeral_bitTheory wordsTheory wordsSyntax
-open ASCIInumbersTheory
+open numposrepTheory ASCIInumbersTheory
 
 structure Parse = struct
   open Parse
@@ -352,7 +352,7 @@ local
       "saturate_add", "saturate_sub", "saturate_mul"]
 
   val l2 =
-     ["l2n", "n2l", "s2n", "n2s", "HEX", "UNHEX", "SBIT", "BIT", "BITS", "BITV",
+     ["SBIT", "BIT", "BITS", "BITV",
       "SLICE", "TIMES_2EXP", "DIVMOD_2EXP", "LSB", "LOG2", "LOG", "BITWISE",
       "BIT_REVERSE", "SIGN_EXTEND", "BOOLIFY",
       "num_from_bin_list", "num_from_oct_list", "num_from_dec_list",
@@ -367,6 +367,8 @@ local
   val s = name_thy_set
            (("min", "=")::
             ("arithmetic", "DIV_2EXP")::
+            map (pair "ASCIInumbers") ["s2n", "n2s", "HEX", "UNHEX"] @
+            map (pair "numposrep") ["l2n", "n2l"] @
             map (pair "words") l1 @
             map (pair "bit") l2 @
             map (pair "fcp") l3)

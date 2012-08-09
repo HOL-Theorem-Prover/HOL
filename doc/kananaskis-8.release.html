@@ -78,6 +78,13 @@ The <code>PROD_IMAGE</code> constant is overloaded to <code>PI</code> and <code>
 Thanks to Joseph Chan for this.
 
 <li> <p> A small theory, <code>gcdset</code> defining a function <code>gcdset</code> that returns the greatest common divisor of any non-empty set of natural numbers (and returns 0 for the empty set for the sake of totality).
+
+<li> <p> A theory, <code>numposrep</code> about positional representations for numbers, linking type <code>:num</code> (<em>i.e.,</em> the natural numbers) to <code>:num list</code>.  The conversion functions <code>n2l</code> and <code>l2n</code> are parameterised by the base to be used.
+
+<p> In addition, there is a theory <code>ASCIInumbers</code>, which builds on this base to define the conversion from lists of digits to lists of characters, using the ASCII encoding for the digits.  This theory defines constants such as <code>num_to_bin_string</code> and <code>num_from_dec_string</code>.
+
+<p>These constants (and the theorems about them) were originally part of the existing theory <code>bit</code>, so theories and SML code referring to the constants and theorems may need to be adjusted to account for their new host theories.  (<b>Minor incompatibility</b>)
+
 </ul>
 
 <h2 id="new-tools">New tools:</h2>

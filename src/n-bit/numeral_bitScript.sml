@@ -13,6 +13,7 @@
 open HolKernel Parse boolLib bossLib lcsymtacs;
 open Q arithmeticTheory numeralTheory;
 open bitTheory;
+open numposrepTheory
 
 val _ = new_theory "numeral_bit";
 
@@ -427,7 +428,6 @@ end);
 
 (* ------------------------------------------------------------------------- *)
 
-open ASCIInumbersTheory
 val l2n_pow2_compute = store_thm("l2n_pow2_compute",
   `(!p. l2n (2 ** p) [] = 0) /\
    (!p h t. l2n (2 ** p) (h::t) =

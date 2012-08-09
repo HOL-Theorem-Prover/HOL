@@ -12,7 +12,7 @@
 open HolKernel Parse boolLib bossLib Q simpLib numLib stringLib;
 open arithmeticTheory listTheory rich_listTheory stringTheory
      logrootTheory prim_recTheory;
-open ASCIInumbersTheory
+open numposrepTheory ASCIInumbersTheory
 
 val _ = new_theory "bit";
 

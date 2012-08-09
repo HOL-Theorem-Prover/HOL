@@ -8,7 +8,8 @@
 *)
 
 open HolKernel Parse boolLib bossLib Q arithmeticTheory listTheory
-     rich_listTheory pred_setTheory bitTheory wordsTheory patriciaTheory;
+     rich_listTheory pred_setTheory bitTheory wordsTheory patriciaTheory
+     numposrepTheory ASCIInumbersTheory
 
 val _ = new_theory "patricia_casts";
 

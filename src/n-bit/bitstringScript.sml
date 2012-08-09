@@ -7,7 +7,7 @@
 open HolKernel boolLib bossLib;
 open bitTheory wordsTheory fcpLib;
 open lcsymtacs wordsLib;
-open ASCIInumbersTheory
+open numposrepTheory
 
 val _ = new_theory "bitstring";
 
