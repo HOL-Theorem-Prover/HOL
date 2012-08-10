@@ -9,7 +9,7 @@ sig
   val warn : string -> unit
 
   val read_buildsequence :
-      { kernelpath : string } ->
+      {kernelname : string} ->
       string -> (string * int) list
 
   val cline_selftest : string list -> (int * string list)

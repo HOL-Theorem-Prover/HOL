@@ -8,8 +8,8 @@
 
 # The **KERNEL** line stands for the directory containing the sytem's
 # kernel, which may be selected as a command-line option to the build
-# command (the possibilities are src/0 or src/experimental-kernel as
-# of 17 May 2011).
+# command (the possibilities are src/0, src/experimental-kernel, or
+# src/logging-kernel as of 10 August 2012).
 
 # Comments can be added; all text on a line after a # symbol is
 # ignored.  Similarly blank lines are ignored.  If you are going to
@@ -32,8 +32,17 @@
 # name of the current ML implementation.  Thus the line [poly]foo
 # will cause foo to be built only if the current implementation is
 # Poly/ML.  (The other supported implementation at the time of writing
-# is [mosml].)  If combining this with exclamation marks, the [system]
-# annotation should come first, i.e., [mosml]!!foo, not !![mosml]foo.
+# is [mosml].)
+#
+# If a directory name is preceded by a string inside ()-brackets, then
+# that directory/target will only be considered if the string is the
+# name of the current kernel.  Thus the line (otknl)foo will cause foo to
+# be built only if the current kernel is otknl. (The other supported
+# kernels at the time of writing are stdknl and expk.)
+# 
+# If combining these annotations, the required order is [system] then
+# (kernel) then test level.  Thus [mosml]!!foo, not !![mosml]foo, and
+# [poly](otknl)!foo, not (otknl)[poly]!foo.
 
 
 tools/mlyacc/mlyacclib
@@ -136,6 +145,7 @@ src/complex
 src/HolQbf
 src/HolSmt
 src/opentheory
+(otknl)src/opentheory/logging
 !examples/misc
 # these examples require Muddy, which is MoscowML specific
 [mosml]!examples/muddy/muddyC

@@ -53,6 +53,7 @@ in
   \   or: build cleanAll\n\
   \   or: build help.\n" ^ symlink_mesg ^
   "Add -expk to build an experimental kernel.\n\
+  \Add -otknl to build the OpenTheory proof logging kernel.\n\
   \Add -stdknl to force the standard kernel.\n\
   \Add -selftest to do self-tests, where defined.\n\
   \       Optionally follow -selftest with a number to indicate level\n\
@@ -63,7 +64,14 @@ in
 end
 
 
-fun read_buildsequence {kernelpath} bseq_fname = let
+fun read_buildsequence {kernelname} bseq_fname = let
+  val kernelpath = fullPath [HOLDIR, "src",
+    case kernelname of
+        "stdknl" => "0"
+      | "expk" => "experimental-kernel"
+      | "otknl" => "logging-kernel"
+      | _ => die ("Bad kernelname: "^kernelname)
+    ]
   val readline = TextIO.inputLine
   fun read_file acc fstr =
       case readline fstr of
@@ -84,20 +92,23 @@ fun read_buildsequence {kernelpath} bseq_fname = let
                   if String.sub(s,0) = #"!" then
                     extract_testcount (String.extract(s,1,NONE), acc+1)
                   else (s,acc)
-              fun extract_mlsys s =
-                  if String.sub(s,0) = #"[" then let
+              fun extract_brackets name l r s =
+                  if String.sub(s,0) = l then let
                       fun grabsys i =
-                          if String.sub(s,i) = #"]" then
+                          if String.sub(s,i) = r then
                             (String.substring(s,1,i-1),
                              String.extract(s,i+1,NONE))
                           else grabsys (i + 1)
                     in
                       grabsys 1
                       handle Subscript =>
-                             die ("Malformed system spec: "^s)
+                             die ("Malformed "^name^" spec: "^s)
                     end
                   else ("", s)
+              val extract_mlsys = extract_brackets "system" #"[" #"]"
+              val extract_kernel = extract_brackets "kernel" #"(" #")"
               val (mlsys,s) = extract_mlsys s
+              val (knl,s) = extract_kernel s
               val (dirname0,testcount) = extract_testcount (s,0)
               val dirname =
                   if dirname0 = "**KERNEL**" then kernelpath
@@ -105,7 +116,8 @@ fun read_buildsequence {kernelpath} bseq_fname = let
                   else fullPath [HOLDIR, dirname0]
               open FileSys
             in
-              if mlsys = "" orelse mlsys = Systeml.ML_SYSNAME then
+              if (mlsys = "" orelse mlsys = Systeml.ML_SYSNAME) andalso
+                 (knl = "" orelse knl = kernelname) then
                 if access (dirname, [A_READ, A_EXEC]) then
                   if isDir dirname orelse mlsys <> "" then
                     read_file ((dirname,testcount)::acc) fstr
@@ -231,7 +243,7 @@ datatype buildtype =
 exception QuickExit of buildtype
 fun get_cline {default_seq} = let
   val reader = TextIO.inputLine
-  (* handle -fullbuild vs -seq fname, and -expk vs -stdknl *)
+  (* handle -fullbuild vs -seq fname, and -expk vs -otknl vs -stdknl *)
   val oldopts = read_earlier_options reader
   val newopts = CommandLine.arguments()
   val _ =
@@ -257,18 +269,18 @@ fun get_cline {default_seq} = let
         end
       | (SOME f, new') => (f, new')
   val (knlspec, newopts) =
-      case inter ["-expk", "-stdknl"] newopts of
+      case inter ["-expk", "-otknl", "-stdknl"] newopts of
         [x] => (x, delete x newopts)
       | (result as (x::y::_)) =>
         (warn ("Specifying multiple kernel options; using "^x);
          (x, setdiff newopts result))
       | [] => let
         in
-          case inter ["-expk", "-stdknl"] oldopts of
+          case inter ["-expk", "-otknl", "-stdknl"] oldopts of
             [] => ("-stdknl", newopts)
           | [x] => (warn ("*** Using kernel option "^x^
                           " from earlier build command; \n\
-                          \    use -expk or -stdknl to override");
+                          \    use -expk, -otknl, or -stdknl to override");
                     (x, newopts))
           | x::y::_ =>
             (warn ("Cached build options specify multiple kernel options; \

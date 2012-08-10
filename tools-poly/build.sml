@@ -62,12 +62,14 @@ val (do_selftests, cmdline) = cline_selftest cmdline
      Source directories.
  ---------------------------------------------------------------------------*)
 
-val kpath = if use_expk then fullPath [HOLDIR, "src", "experimental-kernel"]
-            else fullPath [HOLDIR, "src", "0"]
+val kname =
+  if use_expk then "expk"
+  else if kernelspec = "-otknl" then "otknl"
+  else "stdknl"
 
 val SRCDIRS =
     if cmdline = ["help"] then []
-    else read_buildsequence {kernelpath = kpath} bseq_fname
+    else read_buildsequence {kernelname = kname} bseq_fname
 
 val SIGOBJ = fullPath [HOLDIR, "sigobj"];
 val HOLMAKE = fullPath [HOLDIR, "bin/Holmake"]

@@ -39,9 +39,6 @@ val {kernelspec,seqname = bseq_fname,rest = cmdline} =
       Normal x => x
     | Clean s => {kernelspec = "", seqname = dfltbuildseq, rest = [s]}
 
-(* use the experimental kernel? *)
-val use_expk = kernelspec = "-expk"
-
 (* do self-tests? and to what level *)
 val (do_selftests, cmdline) = cline_selftest cmdline
 
@@ -49,12 +46,11 @@ val (do_selftests, cmdline) = cline_selftest cmdline
      Source directories.
  ---------------------------------------------------------------------------*)
 
-val kpath = if use_expk then fullPath [HOLDIR, "src", "experimental-kernel"]
-            else fullPath [HOLDIR, "src", "0"]
+val kname = String.extract(kernelspec,1,NONE)
 
 val SRCDIRS =
     if cmdline = ["help"] then []
-    else read_buildsequence {kernelpath = kpath} bseq_fname
+    else read_buildsequence {kernelname = kname} bseq_fname
 
 val SIGOBJ = fullPath [HOLDIR, "sigobj"];
 val HOLMAKE = fullPath [HOLDIR, "bin/Holmake"]
@@ -399,6 +395,7 @@ fun clean_dirs f =
                           (fullPath [HOLDIR, "help", "src-sml"] ::
                            fullPath [HOLDIR, "src", "0"] ::
                            fullPath [HOLDIR, "src", "experimental-kernel"] ::
+                           fullPath [HOLDIR, "src", "logging-kernel"] ::
                            map #1 SRCDIRS)
 
 fun check_against s = let
