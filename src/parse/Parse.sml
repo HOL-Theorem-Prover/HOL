@@ -347,36 +347,31 @@ end
 
 (* Pretty-printing terms and types without certain overloads or abbreviations *)
 
-fun pp_overloads_on s = let
+fun overload_info_for s = let
   val (g,(ls1,ls2)) = term_grammar.mfupdate_overload_info
                         (Overload.remove_overloaded_form s)
                         (!the_term_grammar)
-  val (_,ppfn) = print_from_grammars (!the_type_grammar,g)
-  val ppfn = Lib.C ppfn
+  val (_,ppfn0) = print_from_grammars (!the_type_grammar,g)
+  fun ppfn t pps = Feedback.trace ("types", 1) (ppfn0 pps) t
+  val ppaction = let
+    open smpp
+  in
+    block PP.CONSISTENT 0
+     (add_string (s ^ " parses to:") >>
+      add_break(1,2) >>
+      block PP.INCONSISTENT 0
+        (pr_list (fn t => liftpp (ppfn t)) add_newline ls1) >>
+      add_newline >>
+      add_string (s ^ " might be printed from:") >>
+      add_break(1,2) >>
+      block PP.INCONSISTENT 0
+        (pr_list (fn t => liftpp (ppfn t)) add_newline ls2) >>
+      add_newline)
+  end
+  fun act_topp pps a = ignore (a ((), pps))
 in
-  (List.map ppfn ls1, List.map ppfn ls2)
+  print (HOLPP.pp_to_string (!Globals.linewidth) act_topp ppaction)
 end
-
-fun print_overloads_on s = let
-  val (ls1,ls2) = pp_overloads_on s
-  val p = List.app print_with_newline
-in
-  p ls1 ; p ls2
-end
-
-fun pp_abbrev s = let
-  val g = !the_type_grammar
-  val dict = type_grammar.abbreviations g
-  val st = Binarymap.find (dict, s)
-  val ty = type_grammar.structure_to_type st
-  val g = type_grammar.disable_abbrev_printing s g
-  val (ppfn,_) = print_from_grammars (g,!the_term_grammar)
-in
-  Lib.C ppfn ty
-end handle Binarymap.NotFound =>
-  raise ERROR "pp_abbrev" (s ^ " is not a type abbreviation")
-
-val print_abbrev = print_with_newline o pp_abbrev
 
 fun pp_term_without_overloads_on ls = let
   fun remove s = #1 o term_grammar.mfupdate_overload_info
@@ -385,11 +380,6 @@ fun pp_term_without_overloads_on ls = let
 in
   #2 (print_from_grammars (!the_type_grammar,g))
 end
-val term_without_overloads_on_to_backend_string = make_to_backend_string o pp_term_without_overloads_on
-fun term_without_overloads_on_to_string ls = lazy_make_to_string (fn()=>pp_term_without_overloads_on ls)
-val print_term_without_overloads_on = make_print o term_without_overloads_on_to_string
-val print_backend_term_without_overloads_on = make_print o term_without_overloads_on_to_backend_string
-
 fun pp_term_without_overloads ls = let
   fun remove (s,t) = term_grammar.fupdate_overload_info
                        (Overload.gen_remove_mapping s t)
@@ -397,20 +387,11 @@ fun pp_term_without_overloads ls = let
 in
   #2 (print_from_grammars (!the_type_grammar,g))
 end
-val term_without_overloads_to_backend_string = make_to_backend_string o pp_term_without_overloads
-fun term_without_overloads_to_string ls = lazy_make_to_string (fn()=>pp_term_without_overloads ls)
-val print_term_without_overloads = make_print o term_without_overloads_to_string
-val print_backend_term_without_overloads = make_print o term_without_overloads_to_backend_string
-
 fun pp_type_without_abbrevs ls = let
   val g = Lib.itlist type_grammar.disable_abbrev_printing ls (!the_type_grammar)
 in
   #1 (print_from_grammars (g,!the_term_grammar))
 end
-val type_without_abbrevs_to_backend_string = make_to_backend_string o pp_type_without_abbrevs
-fun type_without_abbrevs_to_string ls = lazy_make_to_string (fn()=>pp_type_without_abbrevs ls)
-val print_type_without_abbrevs = make_print o type_without_abbrevs_to_string
-val print_backend_type_without_abbrevs = make_print o type_without_abbrevs_to_backend_string
 
 (* ----------------------------------------------------------------------
     Top-level pretty-printing entry-points
