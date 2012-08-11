@@ -2047,6 +2047,9 @@ val _ = set_fixity "DIV" (Infixl 600);
 
 val DIV2_def =
   new_definition("DIV2_def",    --`DIV2 n = n DIV 2`--);
+local open OpenTheoryMap in
+val _ = OpenTheory_const_name {const={Thy="arithmetic",Name="DIV2"},name=(["HOL4","arithmetic"],"DIV2")}
+end
 
 val MOD_2EXP_def =
   new_definition("MOD_2EXP_def",

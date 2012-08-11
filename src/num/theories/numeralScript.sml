@@ -80,8 +80,9 @@ val iiSUC = new_definition("iiSUC", ``iiSUC n = SUC (SUC n)``);
 local open OpenTheoryMap in
 val _ = OpenTheory_const_name
   {const={Thy="numeral",Name="iZ"},name=(["Unwanted"],"id")}
-val _ = OpenTheory_const_name
-  {const={Thy="numeral",Name="iiSUC"},name=(["HOL4","Numeral"],"iiSUC")}
+fun OpenTheory_add s = OpenTheory_const_name
+  {const={Thy="numeral",Name=s},name=(["HOL4","Numeral"],s)}
+val _ = OpenTheory_add "iiSUC"
 end
 
 val numeral_distrib = store_thm(
@@ -396,6 +397,7 @@ val iBIT_cases = new_recursive_definition {
              (iBIT_cases (BIT2 n) zf bf1 bf2 = bf2 n)`,
   name = "iBIT_cases",
   rec_axiom = bit_initiality};
+val _ = OpenTheory_add"iBIT"
 
 (*---------------------------------------------------------------------------*)
 (* Another internal marker, this one represents a zero digit.  We can't      *)
@@ -408,6 +410,7 @@ val iBIT_cases = new_recursive_definition {
 (*---------------------------------------------------------------------------*)
 
 val iDUB = new_definition("iDUB", Term`iDUB x = x + x`);
+val _ = OpenTheory_add "iDUB"
 
 (*---------------------------------------------------------------------------*)
 (* iSUB implements subtraction.  When the first argument (a boolean) is      *)
@@ -438,6 +441,7 @@ val iSUB_DEF = new_recursive_definition {
              (* BIT2 m *) (\m. BIT1 (iSUB F n m)))`,
   name = "iSUB_DEF",
   rec_axiom = bit_initiality};
+val _ = OpenTheory_add"iSUB"
 
 val bit_induction = save_thm
   ("bit_induction",
@@ -606,6 +610,7 @@ val _ = print "Developing numeral treatment of exponentiation\n";
 (*---------------------------------------------------------------------------*)
 
 val iSQR = new_definition("iSQR", Term`iSQR x = x * x`);
+val _ = OpenTheory_add"iSQR"
 
 val numeral_exp = store_thm(
   "numeral_exp", Term
@@ -752,6 +757,7 @@ val NUMERAL_MOD_2EXP = Q.prove(
         THEN METIS_TAC [MOD_COMMON_FACTOR,TWO,LESS_0,ZERO_LT_TWOEXP]]);
 
 val iMOD_2EXP = new_definition("iMOD_2EXP", ``iMOD_2EXP = MOD_2EXP``);
+val _ = OpenTheory_add"iMOD_2EXP"
 
 val BIT1n = REWRITE_RULE [GSYM ADD1] BIT1n;
 
@@ -793,6 +799,7 @@ val texp_help_def = new_recursive_definition {
   def = ``(texp_help 0 acc = BIT2 acc) /\
           (texp_help (SUC n) acc = texp_help n (BIT1 acc))``,
   rec_axiom = TypeBase.axiom_of ``:num``};
+val _ = OpenTheory_add"texp_help"
 
 val texp_help_thm = store_thm(
   "texp_help_thm",
@@ -837,6 +844,7 @@ val onecount_def = new_specification(
             `\ (n:num) (rf:num->num) (a:num). ZERO`] o
    INST_TYPE [alpha |-> ``:num -> num``]) bit_initiality)
 val onecount0 = SIMP_RULE (srw_ss()) [ALT_ZERO] (CONJUNCT1 onecount_def)
+val _ = OpenTheory_add"onecount"
 
 val exactlog_def = new_specification(
   "exactlog_def", ["exactlog"],
@@ -848,6 +856,7 @@ val exactlog_def = new_specification(
                                   if x = ZERO then ZERO
                                   else BIT1 x`] o
    INST_TYPE [alpha |-> ``:num``]) bit_initiality)
+val _ = OpenTheory_add"exactlog"
 
 val onecount_lemma1 = prove(
   ``!n a. 0 < onecount n a ==> a <= onecount n a``,
@@ -965,6 +974,7 @@ val exactlog_characterisation = store_thm(
 val internal_mult_def = new_definition(
   "internal_mult_def",
   ``internal_mult = $*``);
+val _ = OpenTheory_add "internal_mult"
 
 val DIV2_BIT1 = store_thm(
   "DIV2_BIT1",
