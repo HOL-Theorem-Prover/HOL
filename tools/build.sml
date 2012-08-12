@@ -46,7 +46,11 @@ val (do_selftests, cmdline) = cline_selftest cmdline
      Source directories.
  ---------------------------------------------------------------------------*)
 
-val kname = String.extract(kernelspec,1,NONE)
+val kname =
+    case kernelspec of
+      "-expk" => "expk"
+    | "-otknl" => "otknl"
+    | _ => "stdknl"
 
 val SRCDIRS =
     if cmdline = ["help"] then []
