@@ -175,6 +175,7 @@ signature Parse = sig
   val pp_term : ppstream -> term -> unit
   val pp_type : ppstream -> hol_type -> unit
   val pp_thm : ppstream -> thm -> unit
+
   val pp_with_bquotes :
     (ppstream -> 'a -> unit) -> (ppstream -> 'a -> unit)
   val term_pp_with_delimiters :
@@ -190,21 +191,16 @@ signature Parse = sig
                                ppstream -> term -> unit
 
   val minprint               : term -> string
+  val rawterm_pp             : ('a -> 'b) -> 'a -> 'b
   val add_style_to_string    : PPBackEnd.pp_style list -> string -> string
   val print_with_style       : PPBackEnd.pp_style list -> string -> unit
   val term_to_string         : term -> string
-  val term_to_backend_string : term -> string
   val type_to_string         : hol_type -> string
-  val type_to_backend_string : hol_type -> string
   val thm_to_string          : thm -> string
-  val thm_to_backend_string  : thm -> string
 
   val print_thm              : thm -> unit
-  val print_backend_thm      : thm -> unit
   val print_type             : hol_type -> unit
-  val print_backend_type     : hol_type -> unit
   val print_term             : term -> unit
-  val print_backend_term     : term -> unit
 
 
   val export_theorems_as_docfiles : string -> (string * thm) list -> unit

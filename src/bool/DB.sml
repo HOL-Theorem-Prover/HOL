@@ -524,7 +524,7 @@ let
    val size = String.size s
    fun line 0 l = l
      | line n l = line (n-1) ("-"^l)
-   val s = s_style^(line (size-1) "\n")^thm_to_backend_string thm^"\n";
+   val s = s_style^(line (size-1) "\n")^ppstring pp_thm thm^"\n";
 in
    s
 end;

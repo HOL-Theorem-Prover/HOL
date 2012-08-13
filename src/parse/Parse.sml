@@ -99,6 +99,9 @@ val current_backend : PPBackEnd.t ref =
     ref (if !Globals.interactive then interactive_ppbackend()
          else PPBackEnd.raw_terminal)
 
+fun rawterm_pp f x =
+    Lib.with_flag(current_backend, PPBackEnd.raw_terminal) f x
+
 (*---------------------------------------------------------------------------
          local grammars
  ---------------------------------------------------------------------------*)
@@ -133,11 +136,6 @@ val type_parser1 =
 val type_parser2 =
     ref (parse_type typantiq_constructors false (type_grammar()))
 end
-
-fun make_to_backend_string ppf x = Portable.pp_to_string (!Globals.linewidth) ppf x
-fun lazy_make_to_string ppf = Lib.with_flag (current_backend, PPBackEnd.raw_terminal) (fn x => make_to_backend_string (ppf()) x)
-fun make_to_string ppf = lazy_make_to_string (fn()=>ppf)
-fun make_print to_string t = Portable.output(Portable.std_out, to_string t)
 
 (*---------------------------------------------------------------------------
         pretty printing types
@@ -180,10 +178,8 @@ fun pp_type pps ty = let in
  end
 
 
-val type_to_string = make_to_string pp_type;
-val print_type = make_print type_to_string;
-val type_to_backend_string = make_to_backend_string pp_type;
-val print_backend_type = make_print type_to_backend_string;
+val type_to_string = rawterm_pp (ppstring pp_type)
+val print_type = print o type_to_string
 
 fun type_pp_with_delimiters ppfn pp ty =
   let open Portable Globals
@@ -373,24 +369,24 @@ in
   print (HOLPP.pp_to_string (!Globals.linewidth) act_topp ppaction)
 end
 
-fun pp_term_without_overloads_on ls = let
+fun pp_term_without_overloads_on ls t = let
   fun remove s = #1 o term_grammar.mfupdate_overload_info
                         (Overload.remove_overloaded_form s)
   val g = Lib.itlist remove ls (!the_term_grammar)
 in
-  #2 (print_from_grammars (!the_type_grammar,g))
+  #2 (print_from_grammars (!the_type_grammar,g)) t
 end
-fun pp_term_without_overloads ls = let
+fun pp_term_without_overloads ls t = let
   fun remove (s,t) = term_grammar.fupdate_overload_info
                        (Overload.gen_remove_mapping s t)
   val g = Lib.itlist remove ls (!the_term_grammar)
 in
-  #2 (print_from_grammars (!the_type_grammar,g))
+  #2 (print_from_grammars (!the_type_grammar,g)) t
 end
-fun pp_type_without_abbrevs ls = let
+fun pp_type_without_abbrevs ls ty = let
   val g = Lib.itlist type_grammar.disable_abbrev_printing ls (!the_type_grammar)
 in
-  #1 (print_from_grammars (g,!the_term_grammar))
+  #1 (print_from_grammars (g,!the_term_grammar)) ty
 end
 
 (* ----------------------------------------------------------------------
@@ -399,23 +395,22 @@ end
 
 fun pp_style_string ppstrm (st, s) =
  let open Portable PPBackEnd
-    val {add_string,begin_style,end_style,...} = PPBackEnd.with_ppstream (!current_backend) ppstrm
+    val {add_string,begin_style,end_style,...} =
+        PPBackEnd.with_ppstream (!current_backend) ppstrm
  in
     begin_style st;
     add_string s;
     end_style ()
  end
 
-fun add_style_to_string st s = (make_to_backend_string pp_style_string) (st, s);
-fun print_with_style st =  make_print (add_style_to_string st);
+fun add_style_to_string st s = ppstring pp_style_string (st, s);
+fun print_with_style st =  print o add_style_to_string st
 
 
 fun pp_term pps t = (update_term_fns(); !term_printer pps t)
-val term_to_string = make_to_string pp_term;
-val print_term = make_print term_to_string;
-val term_to_backend_string = make_to_backend_string pp_term;
-val print_backend_term = make_print term_to_backend_string;
 
+val term_to_string = rawterm_pp (ppstring pp_term)
+val print_term = print o term_to_string
 
 fun term_pp_with_delimiters ppfn pp tm =
   let open Portable Globals
@@ -452,11 +447,8 @@ fun pp_thm ppstrm th =
     end_block()
  end;
 
-val thm_to_string = make_to_string pp_thm;
-val print_thm = make_print thm_to_string;
-val thm_to_backend_string = make_to_backend_string pp_thm;
-val print_backend_thm = make_print thm_to_backend_string;
-
+val thm_to_string = ppstring (rawterm_pp pp_thm)
+val print_thm = print o thm_to_string
 
 (*---------------------------------------------------------------------------
      Parse into preterm type

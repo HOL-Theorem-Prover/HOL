@@ -487,7 +487,7 @@ fun add_cntxt ADD = add_rws | add_cntxt DONT_ADD = Lib.K;
 
 fun simple cnv (cps as {context as (cntxt,b),prover,simpls}) (ant,rst) = let
   val _ = lztrace(5, "simple",
-                  (fn () => "ant: " ^ term_to_backend_string ant))
+                  (fn () => "ant: " ^ ppstring pp_term ant))
 in
  case total ((I##dest_eq) o strip_imp_only) ant of
    SOME (L,(lhs,rhs)) => let
@@ -507,11 +507,11 @@ in
          val Mnew = boolSyntax.rhs(concl th)
        in
          lztrace(5, "simple",
-                 (fn () => "outcome: " ^ term_to_backend_string Mnew));
+                 (fn () => "outcome: " ^ ppstring pp_term Mnew));
          (CHANGE (itlist DISCH L th), map (subst [rhs |-> Mnew]) rst)
        end
      |  _ => (lztrace(5, "simple", (fn () => "unchanged outcome "^
-                                             term_to_backend_string lhs));
+                                             ppstring pp_term lhs));
               (outcome, map (subst [rhs |-> lhs]) rst))
    end
  | NONE => (CHANGE(ASSUME ant), rst)    (* Not an equality, so just assume *)
@@ -520,15 +520,15 @@ end
 
 fun complex cnv (cps as {context as (cntxt,b),prover,simpls}) (ant,rst) =
 let fun tr (i,mf) = lztrace(i,"complex",mf)
-    fun trterm (i,m,t) = tr(i, (fn () => m ^ term_to_backend_string t))
+    fun trterm (i,m,t) = tr(i, (fn () => m ^ ppstring pp_term t))
     fun trvlist (i,m,tlist) =
         tr(i, (fn () => String.concatWith "\n"
-                           (m :: map term_to_backend_string tlist)))
+                           (m :: map (ppstring pp_term) tlist)))
     fun trthlist (i,m,thlist) =
         tr(i,
            trace ("assumptions", 1)
              (fn () => String.concatWith "\n"
-                         (m :: map thm_to_backend_string thlist)))
+                         (m :: map (ppstring pp_thm) thlist)))
     val _  = trterm(5, "Antecedent: ", ant)
     val _ = trthlist(6, "Context: ", cntxt)
     val ant_frees = free_vars ant
@@ -580,7 +580,7 @@ in
      val _ = lztrace(6, "complex",
                      trace ("assumptions", 1)
                      (fn () => "Changed outcome: " ^
-                               thm_to_backend_string result))
+                               ppstring pp_thm result))
    in
      (CHANGE result, map (subst [rhsv |-> g]) rst)
    end
@@ -612,11 +612,11 @@ fun do_cong cnv cps th0 = let
 (*  val th = GENVAR_THM th0 *)
   val (a, c) = dest_imp (concl th)
   val _ = lztrace(6, "do_cong",
-                  (fn () => "th concl: "^term_to_backend_string c))
+                  (fn () => "th concl: "^ppstring pp_term c))
   val ants = strip_conj a
   val _ = lztrace(6, "do_cong",
                     (fn () => String.concatWith "\n"
-                               ("ants: " :: map term_to_backend_string ants)))
+                               ("ants: " :: map (ppstring pp_term) ants)))
   fun loop [] = []    (* loop proves each antecedent in turn. *)
     | loop (ant::rst) =
       let val (outcome,rst') =
@@ -653,15 +653,15 @@ fun SUB_QCONV cnv (cps as {context,prover,simpls}) tm =
           let val _ = lztrace(6, "SUB_QCONV",
                               trace ("assumptions", 1)
                               (fn () => "ABS failure: " ^
-                                        term_to_backend_string Bvar ^ "  " ^
-                                        thm_to_backend_string Bth))
+                                        ppstring pp_term Bvar ^ "  " ^
+                                        ppstring pp_thm Bth))
               val v = genvar (type_of Bvar)
               val th1 = ALPHA_CONV v tm
               val call2 = cnv cps (body(rhs(concl th1)))
               val _ = lztrace(6, "SUB_QCONV",
                               trace ("assumptions", 1)
                               (fn () => "ABS 2nd call: "^
-                                        thm_to_backend_string call2))
+                                        ppstring pp_thm call2))
               val eq_thm' = ABS v call2
               val at = snd(dest_eq(concl eq_thm'))
               val v' = variant (free_vars at) Bvar

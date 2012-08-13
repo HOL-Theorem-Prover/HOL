@@ -720,6 +720,10 @@ fun unprefix pfx s =
 
 val str_all = CharVector.all
 
+(* like HOLPP.pp_to_string but uses the Globals.linewidth reference to
+   determine linewidth *)
+fun ppstring pp x = HOLPP.pp_to_string (!Globals.linewidth) pp x
+
 (*---------------------------------------------------------------------------*
  * A hash function used for various tasks in the system. It works fairly     *
  * well for our applications, but is not industrial strength. The size       *
