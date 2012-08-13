@@ -28,7 +28,7 @@ val _ = Parse.current_backend := PPBackEnd.vt100_terminal
 fun tpp (s,expected) = let
   val t = Parse.Term [QUOTE s]
   val _ = tprint ("Testing (coloured-)printing of `"^s^"`")
-  val res = term_to_backend_string t
+  val res = ppstring pp_term t
 in
   if res = expected then print "OK\n"
   else die ()

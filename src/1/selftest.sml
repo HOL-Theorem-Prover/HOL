@@ -331,7 +331,7 @@ val _ = set_trace "Unicode" 0
 fun tpp (s,expected) = let
   val t = Parse.Term [QUOTE s]
   val _ = tprint ("Testing (colour-)printing of `"^s^"`")
-  val res = term_to_backend_string t
+  val res = ppstring pp_term t
 in
   if res = expected then print "OK\n"
   else (print "FAILED\n"; Process.exit Process.failure)
