@@ -8,6 +8,10 @@ sig
   val die : string -> 'a
   val warn : string -> unit
 
+  val SIGOBJ : string
+  val EXECUTABLE : string
+  val SYSTEML : string list -> bool
+
   val read_buildsequence :
       {kernelname : string} ->
       string -> (string * int) list
@@ -45,4 +49,25 @@ sig
   val cleanAll : string -> string -> string list
   val clean_dirs : {HOLDIR:string, action : string -> string -> string list} ->
                    string list -> unit
+  val clean_sigobj : unit -> unit
+
+  val check_against : string -> unit
+       (* checks to see if string is newer than build executable *)
+
+  val transfer_file : (bool -> string -> string -> unit) -> string ->
+                      (string * string) -> unit
+      (* transfer_file opn dir (d,f)
+           opn will be cp, mv or a symbolic link operation;
+           dir is destination directory
+           (d,f) is source file info (directory and file) *)
+
+  val build_dir : (string -> unit) -> int -> (string * int) -> unit
+      (* build_dir Holmake i (dir, j)
+           Holmake calls Holmake in the provided directory argument;
+           i is the user's specified selftest level
+           dir is the directory to make
+           j is the selftest level as given in the build sequence for dir *)
+
+
+
 end

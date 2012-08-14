@@ -35,6 +35,9 @@ val DEPDIR = Systeml.DEPDIR
 val GNUMAKE = Systeml.GNUMAKE
 val DYNLIB = Systeml.DYNLIB
 
+fun SYSTEML clist = Process.isSuccess (Systeml.systeml clist)
+
+
 val help_mesg = let
   val symlink_mesg =
       if OS = "winNT" then "Symbolic linking is necessarily OFF.\n"
@@ -419,5 +422,163 @@ fun clean_dirs {HOLDIR,action} dirs = let
 in
   recurse seen dirs
 end
+
+(* ----------------------------------------------------------------------
+    In clean_sigobj, we need to avoid removing the systeml stuff that
+    will have been put into sigobj by the action of configure.sml
+   ---------------------------------------------------------------------- *)
+
+fun equal x y = (x=y);
+fun mem x l = List.exists (equal x) l;
+val SIGOBJ = fullPath [HOLDIR, "sigobj"];
+
+fun clean_sigobj() = let
+  open Systeml
+  val _ = print ("Cleaning out "^SIGOBJ^"\n")
+  val lowcase = String.map Char.toLower
+  val sigobj_extras =
+      if ML_SYSNAME = "mosml" then ["basis2002"] else []
+  fun sigobj_rem_file s = let
+    val f = Path.file s
+    val n = lowcase (hd (String.fields (equal #".") f))
+  in
+    if mem n (["systeml", "readme"] @ sigobj_extras) then ()
+    else rem_file s
+  end
+  val toolsuffix = if ML_SYSNAME = "poly" then "-poly" else ""
+  fun write_initial_srcfiles () = let
+    open TextIO
+    val outstr = openOut (fullPath [HOLDIR,"sigobj","SRCFILES"])
+  in
+    output(outstr,
+           fullPath [HOLDIR, "tools" ^ toolsuffix, "Holmake", "Systeml"]);
+    output(outstr, "\n");
+    closeOut(outstr)
+  end
+in
+  map_dir (sigobj_rem_file o normPath o OS.Path.concat) SIGOBJ;
+  write_initial_srcfiles ();
+  print (SIGOBJ ^ " cleaned\n")
+end;
+
+val EXECUTABLE = Systeml.xable_string (fullPath [HOLDIR, "bin", "build"])
+
+fun check_against s = let
+  open Time
+  val cfgtime = FileSys.modTime (fullPath [HOLDIR, s])
+in
+  if FileSys.modTime EXECUTABLE < cfgtime then
+    (warn ("WARNING! WARNING!");
+     warn ("  The build file is older than " ^ s ^ ";");
+     warn ("  this suggests you should reconfigure the system.");
+     warn ("  Press Ctl-C now to abort the build; <RETURN> to continue.");
+     warn ("WARNING! WARNING!");
+     ignore (TextIO.inputLine TextIO.stdIn))
+  else ()
+end handle OS.SysErr _ => die ("File "^s^" has disappeared.");
+
+
+(* uploadfn is of type : bool -> string -> string -> unit
+     the boolean is whether or not the arguments are binary files
+     the strings are source and destination file-names, in that order
+*)
+fun transfer_file uploadfn targetdir (df as (dir,file)) = let
+  fun transfer binaryp (dir,file1,file2) =
+    uploadfn binaryp (fullPath [dir,file1]) (fullPath [targetdir,file2])
+  fun idtransfer binaryp (dir,file) =
+      case Path.base file of
+        "selftest" => ()
+      | _ => transfer binaryp (dir,file,file)
+  fun digest_sig file =
+      let val b = Path.base file
+      in if (String.extract(b,String.size b -4,NONE) = "-sig"
+             handle _ => false)
+         then SOME (String.extract(b,0,SOME (String.size b - 4)))
+         else NONE
+      end
+  fun augmentSRCFILES file = let
+    open TextIO
+    val ostrm = openAppend (Path.concat(SIGOBJ,"SRCFILES"))
+  in
+    output(ostrm,fullPath[dir,file]^"\n") ;
+    closeOut ostrm
+  end
+
+in
+  case Path.ext file of
+    SOME"ui"     => idtransfer true df
+  | SOME"uo"     => idtransfer true df
+  | SOME"so"     => idtransfer true df   (* for dynlibs *)
+  | SOME"xable"  => idtransfer true df   (* for executables *)
+  | SOME"sig"    => (idtransfer false df; augmentSRCFILES (Path.base file))
+  | SOME"sml"    => (case digest_sig file of
+                       NONE => ()
+                     | SOME file' =>
+                       (transfer false (dir,file, file' ^".sig");
+                        augmentSRCFILES file'))
+  |    _         => ()
+end;
+
+fun Gnumake dir =
+  if SYSTEML [GNUMAKE] then true
+  else (warn ("Build failed in directory "^dir ^" ("^GNUMAKE^" failed).");
+        false)
+
+exception BuildExit
+fun build_dir Holmake selftest_level (dir, regulardir) = let
+  val _ = if selftest_level >= regulardir then ()
+          else raise BuildExit
+  val _ = OS.FileSys.chDir dir
+  val truncdir = if String.isPrefix HOLDIR dir then
+                   String.extract(dir, size HOLDIR + 1, NONE)
+                   (* +1 to drop directory slash after holdir *)
+                 else dir
+  val now_d = Date.fromTimeLocal (Time.now())
+  val now_s = Date.fmt "%d %b, %H:%M:%S" now_d
+  val _ = print ("Building directory "^truncdir^" ["^now_s^"]\n")
+in
+  case #file(OS.Path.splitDirFile dir) of
+    "muddyC" => let
+    in
+      case OS of
+        "winNT" => bincopy (fullPath [HOLDIR, "tools", "win-binaries",
+                                      "muddy.so"])
+                           (fullPath [HOLDIR, "examples", "muddy", "muddyC",
+                                      "muddy.so"])
+      | other => if not (Gnumake dir) then
+                   print(String.concat
+                           ["\nmuddyLib has NOT been built!! ",
+                            "(continuing anyway).\n\n"])
+                 else ()
+    end
+  | "minisat" => let
+    in case OS of
+	   "winNT" => bincopy (fullPath [HOLDIR, "tools", "win-binaries",
+					 "minisat.exe"])
+                              (fullPath [HOLDIR, "src","HolSat","sat_solvers","minisat", "minisat.exe"])
+	 | other => if not (Gnumake dir) then
+			print(String.concat
+				  ["\nMiniSat has NOT been built!! ",
+				   "(continuing anyway).\n\n"])
+                    else ()
+    end
+  | "zc2hs" => let
+    in case OS of
+	   "winNT" => bincopy (fullPath [HOLDIR, "tools", "win-binaries",
+					 "zc2hs.exe"])
+                              (fullPath [HOLDIR, "src","HolSat","sat_solvers","zc2hs", "zc2hs.exe"])
+	 | other => if not (Gnumake dir) then
+			print(String.concat
+				  ["\nzc2hs has NOT been built!! ",
+				   "(continuing anyway).\n\n"])
+                    else ()
+    end
+  | _ => Holmake dir
+end
+handle OS.SysErr(s, erropt) =>
+       die ("OS error: "^s^" - "^
+            (case erropt of SOME s' => OS.errorMsg s' | _ => ""))
+     | BuildExit => ()
+
 
 end (* struct *)

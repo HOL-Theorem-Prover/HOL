@@ -19,9 +19,7 @@ datatype phase = Initial | Bare | Full
    time *)
 val OS = Systeml.OS;
 val HOLDIR = Systeml.HOLDIR
-val EXECUTABLE = Systeml.xable_string (fullPath [HOLDIR, "bin", "build"])
 val DEPDIR = Systeml.DEPDIR
-val GNUMAKE = Systeml.GNUMAKE
 val DYNLIB = Systeml.DYNLIB
 val POLY_LDFLAGS = Systeml.POLY_LDFLAGS
 val POLY_LDFLAGS_STATIC = Systeml.POLY_LDFLAGS_STATIC
@@ -71,11 +69,9 @@ val SRCDIRS =
     if cmdline = ["help"] then []
     else read_buildsequence {kernelname = kname} bseq_fname
 
-val SIGOBJ = fullPath [HOLDIR, "sigobj"];
 val HOLMAKE = fullPath [HOLDIR, "bin/Holmake"]
 
 open Systeml;
-val SYSTEML = Systeml.systeml
 
 fun which_hol () =
   case !phase of
@@ -86,15 +82,14 @@ fun which_hol () =
 
 fun Holmake dir = let
   val (wp, hol) = which_hol ()
-  val hmstatus = SYSTEML [HOLMAKE, "--qof", "--poly", wp, hol]
+  val hmstatus = Systeml.systeml [HOLMAKE, "--qof", "--poly", wp, hol]
 in
   if OS.Process.isSuccess hmstatus then
     if do_selftests > 0 andalso
        OS.FileSys.access("selftest.exe", [OS.FileSys.A_EXEC])
     then
       (print "Performing self-test...\n";
-       if OS.Process.isSuccess (SYSTEML [dir ^ "/selftest.exe", Int.toString
-                                                               do_selftests])
+       if SYSTEML [dir ^ "/selftest.exe", Int.toString do_selftests]
        then
          print "Self-test was successful\n"
        else
@@ -116,11 +111,6 @@ in
     end
 end
 
-fun Gnumake dir =
-  if OS.Process.isSuccess (SYSTEML [GNUMAKE]) then true
-  else (warn ("Build failed in directory "^dir ^" ("^GNUMAKE^" failed).");
-        false)
-
 (* create a symbolic link - Unix only *)
 fun link b s1 s2 =
     Posix.FileSys.symlink {new = s2, old = s1}
@@ -128,127 +118,17 @@ fun link b s1 s2 =
            die ("Unable to link old file "^quote s1^" to new file "
                 ^quote s2^": "^s)
 
-(* f is either bincopy or copy *)
-fun update_copy f src dest = let
-  val t0 = OS.FileSys.modTime src
-in
-  f src dest;
-  OS.FileSys.setTime(dest, SOME t0)
-end
-fun cp b = if b then update_copy bincopy else update_copy copy
-
-fun mv0 s1 s2 = let
-  val s1' = normPath s1
-  val s2' = normPath s2
-in
-  OS.FileSys.rename{old=s1', new=s2'}
-end
-
-fun mv b = if b then mv0 else cp b
-
-(* uploadfn is of type : bool -> string -> string -> unit
-     the boolean is whether or not the arguments are binary files
-     the strings are source and destination file-names, in that order
-*)
-fun transfer_file uploadfn targetdir (df as (dir,file)) = let
-  fun transfer binaryp (dir,file1,file2) =
-    uploadfn binaryp (fullPath [dir,file1]) (fullPath [targetdir,file2])
-  fun idtransfer binaryp (dir,file) =
-      case OS.Path.base file of
-        "selftest" => ()
-      | _ => transfer binaryp (dir,file,file)
-  fun digest_sig file =
-      let val b = OS.Path.base file
-      in if (String.extract(b,String.size b -4,NONE) = "-sig"
-             handle _ => false)
-         then SOME (String.extract(b,0,SOME (String.size b - 4)))
-         else NONE
-      end
-  fun augmentSRCFILES file = let
-    open TextIO
-    val ostrm = openAppend (OS.Path.concat(SIGOBJ,"SRCFILES"))
-  in
-    output(ostrm,fullPath[dir,file]^"\n") ;
-    closeOut ostrm
-  end
-
-in
-  case OS.Path.ext file of
-    SOME"ui"     => idtransfer true df
-  | SOME"uo"     => idtransfer true df
-  | SOME"so"     => idtransfer true df   (* for dynlibs *)
-  | SOME"xable"  => idtransfer true df   (* for executables *)
-  | SOME"sig"    => (idtransfer false df; augmentSRCFILES (OS.Path.base file))
-  | SOME"sml"    => (case digest_sig file of
-                       NONE => ()
-                     | SOME file' =>
-                       (transfer false (dir,file, file' ^".sig");
-                        augmentSRCFILES file'))
-  |    _         => ()
-end;
-
+fun symlink_check() =
+    if OS = "winNT" then
+      die "Sorry; symbolic linking isn't available under Windows NT"
+    else link
+val default_link = if OS = "winNT" then cp else link
 
 (*---------------------------------------------------------------------------
            Compile a HOL directory in place. Some libraries,
            e.g., the robdd libraries, need special treatment because
            they come with external tools or C libraries.
  ---------------------------------------------------------------------------*)
-
-exception BuildExit
-fun build_dir (dir, regulardir) = let
-  val _ = if do_selftests >= regulardir then ()
-          else raise BuildExit
-  val _ = OS.FileSys.chDir dir
-  val truncdir = if String.isPrefix HOLDIR dir then
-                   String.extract(dir, size HOLDIR + 1, NONE)
-                   (* +1 to drop directory slash after holdir *)
-                 else dir
-  val now_d = Date.fromTimeLocal (Time.now())
-  val now_s = Date.fmt "%d %b, %H:%M:%S" now_d
-  val _ = print ("Building directory "^truncdir^" ["^now_s^"]\n")
-in
-  case #file(OS.Path.splitDirFile dir) of
-    "muddyC" => let
-    in
-      case OS of
-        "winNT" => bincopy (fullPath [HOLDIR, "tools", "win-binaries",
-                                      "muddy.so"])
-                           (fullPath [HOLDIR, "examples", "muddy", "muddyC",
-                                      "muddy.so"])
-      | other => if not (Gnumake dir) then
-                   print(String.concat
-                           ["\nmuddyLib has NOT been built!! ",
-                            "(continuing anyway).\n\n"])
-                 else ()
-    end
-  | "minisat" => let
-    in case OS of
-	   "winNT" => bincopy (fullPath [HOLDIR, "tools", "win-binaries",
-					 "minisat.exe"])
-                              (fullPath [HOLDIR, "src","HolSat","sat_solvers","minisat", "minisat.exe"])
-	 | other => if not (Gnumake dir) then
-			print(String.concat
-				  ["\nMiniSat has NOT been built!! ",
-				   "(continuing anyway).\n\n"])
-                    else ()
-    end
-  | "zc2hs" => let
-    in case OS of
-	   "winNT" => bincopy (fullPath [HOLDIR, "tools", "win-binaries",
-					 "zc2hs.exe"])
-                              (fullPath [HOLDIR, "src","HolSat","sat_solvers","zc2hs", "zc2hs.exe"])
-	 | other => if not (Gnumake dir) then
-			print(String.concat
-				  ["\nzc2hs has NOT been built!! ",
-				   "(continuing anyway).\n\n"])
-                    else ()
-    end
-  | _ => Holmake dir
-end
-handle OS.SysErr(s, erropt) =>
-       die ("OS error: "^s^" - "^
-            (case erropt of SOME s' => OS.errorMsg s' | _ => ""))
-     | BuildExit => ()
 
 
 (*---------------------------------------------------------------------------
@@ -294,42 +174,9 @@ fun buildDir symlink s =
   if #1 s = fullPath [HOLDIR, "bin/hol.bare"] then phase := Bare
   else if #1 s = fullPath [HOLDIR, "bin/hol"] then phase := Full
   else
-    (build_dir s; upload(s,SIGOBJ,symlink))
+    (build_dir Holmake do_selftests s; upload(s,SIGOBJ,symlink))
 
 fun build_src symlink = List.app (buildDir symlink) SRCDIRS
-
-(*---------------------------------------------------------------------------*)
-(* In clean_sigobj, we need to avoid removing the systeml stuff that will    *)
-(* have been put into sigobj by the action of configure.sml                  *)
-(*---------------------------------------------------------------------------*)
-
-fun equal x y = (x=y);
-fun mem x l = List.exists (equal x) l;
-
-fun clean_sigobj() =
- let val _ = print ("Cleaning out "^SIGOBJ^"\n")
-     val lowcase = String.map Char.toLower
-     fun sigobj_rem_file s =
-      let val f = OS.Path.file s
-          val n = lowcase (hd (String.fields (equal #".") f))
-      in
-         if mem n ["systeml", "cvs", "", "readme"]
-          then ()
-          else rem_file s
-      end
-     fun write_initial_srcfiles () =
-      let open TextIO
-          val outstr = openOut (fullPath [HOLDIR,"sigobj","SRCFILES"])
-      in
-        output(outstr, fullPath [HOLDIR, "tools-poly", "Holmake", "Systeml"]);
-        output(outstr, "\n");
-        closeOut(outstr)
-      end
- in
-  map_dir (sigobj_rem_file o normPath o OS.Path.concat) SIGOBJ;
-  write_initial_srcfiles ();
-  print (SIGOBJ ^ " cleaned\n")
- end;
 
 fun build_adoc_files () = let
   val docdirs = let
@@ -344,7 +191,7 @@ fun build_adoc_files () = let
   fun make_adocs dir = let
     val fulldir = fullPath [HOLDIR, dir]
   in
-    if OS.Process.isSuccess (SYSTEML [doc2txt, fulldir, fulldir]) then true
+    if SYSTEML [doc2txt, fulldir, fulldir] then true
     else
       (print ("Generation of ASCII doc files failed in directory "^dir^"\n");
        false)
@@ -383,10 +230,10 @@ fun build_help () =
  in
    print "Generating HTML versions of Docfiles...\n"
  ;
-   if OS.Process.isSuccess (SYSTEML cmd1) then print "...HTML Docfiles done\n"
+   if SYSTEML cmd1 then print "...HTML Docfiles done\n"
    else die "Couldn't make html versions of Docfiles"
  ;
-   if OS.Process.isSuccess (print "Building Help DB\n"; SYSTEML cmd2) then ()
+   if (print "Building Help DB\n"; SYSTEML cmd2) then ()
    else die "Couldn't make help database"
  end;
 
@@ -462,9 +309,6 @@ end
        Get rid of compiled code and dependency information.
  ---------------------------------------------------------------------------*)
 
-fun cleandir dir = ignore (buildutils.clean HOLDIR dir)
-fun cleanAlldir dir = ignore (buildutils.cleanAll HOLDIR dir)
-
 fun clean_dirs f =
     clean_sigobj() before
     (* clean both kernel directories, regardless of which was actually built,
@@ -476,31 +320,12 @@ fun clean_dirs f =
                            fullPath [HOLDIR, "src", "experimental-kernel"] ::
                            map #1 SRCDIRS)
 
-fun check_against s = let
-  open Time
-  val cfgtime = OS.FileSys.modTime (fullPath [HOLDIR, s])
-in
-  if OS.FileSys.modTime EXECUTABLE < cfgtime then
-    (warn ("WARNING! WARNING!");
-     warn ("  The build file is older than " ^ s ^ ";");
-     warn ("  this suggests you should reconfigure the system.");
-     warn ("  Press Ctl-C now to abort the build; <RETURN> to continue.");
-     warn ("WARNING! WARNING!");
-     ignore (TextIO.inputLine TextIO.stdIn))
-  else ()
-end handle OS.SysErr _ => die ("File "^s^" has disappeared.");
-
 val _ = check_against "tools-poly/smart-configure.sml"
 val _ = check_against "tools-poly/configure.sml"
 val _ = check_against "tools-poly/build.sml"
 val _ = check_against "tools/Holmake/Systeml.sig"
 
-fun symlink_check() =
-    if OS = "winNT" then
-      die "Sorry; symbolic linking isn't available under Windows NT"
-    else link
 
-val default_link = if OS = "winNT" then cp else link
 
 
 in
