@@ -168,7 +168,7 @@ val check_free_vars_ref = ref 1;
 val _ = Feedback.register_trace ("Sanity Check Free Vars", check_free_vars_ref, 1);
 
 fun varlist_to_string vL =
-  concat (commafy (map (fn v => "'"^(term_to_backend_string v)^"'") vL))
+  concat (commafy (map (fn v => "'"^(ppstring pp_term v)^"'") vL))
 
 fun check_free_vars ((thy, name), (thm, cl)) =
 let
@@ -203,7 +203,7 @@ let
       in
         if (free_in v b) then false else
           (report_sanity_problem thy name ("Redundant quantor: '" ^
-          (term_to_backend_string v) ^ "'!");true)
+          (ppstring pp_term v) ^ "'!");true)
       end;
 in
    (map_fail false check_term tL)
