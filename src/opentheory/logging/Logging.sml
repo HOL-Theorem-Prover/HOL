@@ -407,7 +407,7 @@ val (log_term, log_thm, log_clear,
     open Thm Term Type Lib Drule Conv boolSyntax Feedback
     val ob = OThm th
   in if saved ob then () else let
-    val ths = Susp.delay (fn () => (Parse.thm_to_backend_string th))
+    val ths = Susp.delay (fn () => (Lib.ppstring Parse.pp_thm th))
     val pt  = proof_type (proof th)
     val _ = if !verbosity >= 4 then HOL_MESG("Start a "^pt^" proof for "^(Susp.force ths))
        else if !verbosity >= 3 then HOL_MESG(proof_type (proof th))
@@ -709,7 +709,7 @@ fun export_thm th = let
       Not_logging => ()
     | Active_logging _ => let
       val v = !verbosity >= 1
-      val s = thm_to_backend_string th
+      val s = Lib.ppstring pp_thm th
       val _ = if v then HOL_MESG("Start logging\n"^s^"\n") else ()
       val _ = log_thm th
       val _ = log_list log_term (hyp th)
