@@ -54,7 +54,7 @@ in
   \   or: build small\n\
   \   or: build clean\n\
   \   or: build cleanAll\n\
-  \   or: build help.\n" ^ symlink_mesg ^
+  \   or: build help.\n" ^ symlink_mesg ^ "\n" ^
   "Add -expk to build an experimental kernel.\n\
   \Add -otknl to build the OpenTheory proof logging kernel.\n\
   \Add -stdknl to force the standard kernel.\n\
@@ -63,9 +63,12 @@ in
   \       of testing, the higher the number the more testing\n\
   \       will be done.\n\
   \Add -seq <fname> to use fname as build-sequence\n\
-  \Add -fullbuild to force full, default build sequence\n"
+  \Add -fullbuild to force full, default build sequence\n\n\
+  \Use -h, or -? or -help or --help to see this message.\n"
 end
 
+fun exit_with_help() =
+    (print help_mesg ; Process.exit Process.success)
 
 fun read_buildsequence {kernelname} bseq_fname = let
   val kernelpath = fullPath [HOLDIR, "src",
@@ -256,6 +259,10 @@ fun get_cline {default_seq} = let
         raise QuickExit (Clean "cleanDeps")
       else if mem "clean" newopts orelse mem "-clean" newopts then
         raise QuickExit (Clean "clean")
+      else if mem "-h" newopts orelse mem "-?" newopts orelse
+              mem "--help" newopts orelse mem "-help" newopts
+      then
+        exit_with_help()
       else ()
   val (seqspec, newopts) =
       case delseq default_seq 0 newopts of
