@@ -449,7 +449,8 @@ end
 
 
 (* directory specific stuff here *)
-fun Holmake visiteddirs cline_additional_includes dir targets = let
+fun Holmake dirinfo visiteddirs cline_additional_includes targets = let
+  val {abspath=dir,relpath=dirnm} = dirinfo
   val _ = OS.FileSys.chDir dir
 
 
@@ -1179,43 +1180,14 @@ in
   if keep_going_flag then keep_going tgts else stop_on_failure tgts
 end
 
-fun maybe_recurse k = let
-  fun recurse visited (newdir,nm) =
-      if Binaryset.member(visited, newdir) then SOME visited
-      else let
-          val _ = warn ("Recursively calling Holmake in "^nm)
-        in
-          Holmake visited [] newdir []
-          before
-          FileSys.chDir dir
-        end
-  fun do_em accg [] = if k() then SOME accg else NONE
-    | do_em accg (x::xs) = let
-      in
-        case recurse accg x of
-          SOME g' => do_em g' xs
-        | NONE => NONE
-      end
-  val visited = Binaryset.add(visiteddirs, dir)
-in
-  if no_prereqs then
-    if k() then SOME visited else NONE
-  else let
-      fun foldthis (dir, m) =
-          Binarymap.insert(m, FileSys.fullPath dir, dir)
-          handle OS.SysErr _ =>
-                 (warn ("Includes path "^dir^" looks bogus");
-                  m)
-      val possible_calls = List.foldr foldthis
-                                      (Binarymap.mkDict String.compare)
-                                      (cline_additional_includes @
-                                       envlist "PRE_INCLUDES" @
-                                       hmake_includes)
-    in
-      do_em visited (Binarymap.listItems possible_calls)
-    end
-end
-
+fun hm_recur k =
+    maybe_recurse
+        {warn = warn, no_prereqs = no_prereqs, hm = Holmake,
+         visited = visiteddirs,
+         includes =
+         cline_additional_includes @ envlist "PRE_INCLUDES" @ hmake_includes,
+         dir = {abspath = dir, relpath = dirnm},
+         local_build = k}
 in
   case targets of
     [] => let
@@ -1225,7 +1197,7 @@ in
         print("Generated targets are: "^print_list (map fromFile targets)^"\n")
         else ()
     in
-      maybe_recurse
+      hm_recur
           (fn () => finish_logging (strategy  (map (fromFile) targets)))
     end
   | xs => let
@@ -1234,7 +1206,7 @@ in
     in
       if List.all isPhony xs then
         if finish_logging (strategy xs) then SOME visiteddirs else NONE
-      else maybe_recurse (fn () => finish_logging (strategy xs))
+      else hm_recur (fn () => finish_logging (strategy xs))
     end
 end
 
@@ -1271,9 +1243,10 @@ val _ =
   else let
       open Process
       val result =
-          Holmake (Binaryset.empty String.compare)
+          Holmake {relpath = OS.Path.currentArc,
+                   abspath = OS.FileSys.getDir()}
+                  (Binaryset.empty String.compare)
                   cline_additional_includes
-                  (OS.FileSys.getDir())
                   targets
                   handle Fail s => (print ("Fail exception: "^s^"\n");
                                     exit failure)

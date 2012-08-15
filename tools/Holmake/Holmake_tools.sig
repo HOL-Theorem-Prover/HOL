@@ -36,5 +36,15 @@ sig
   val clean_dir : {extra_cleans: string list} -> unit
   val clean_depdir : {depdirname : string} -> bool
 
-end
+  val maybe_recurse :
+      {warn: string -> unit,
+       no_prereqs : bool,
+       hm: {relpath:string,abspath:string} -> string Binaryset.set ->
+           string list -> string list -> string Binaryset.set option,
+       visited: string Binaryset.set,
+       includes : string list,
+       dir : {abspath: string, relpath: string},
+       local_build : unit -> bool} ->
+      string Binaryset.set option
 
+end

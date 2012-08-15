@@ -221,4 +221,45 @@ end handle OS.SysErr (mesg, _) => let
            end
          | DirNotFound => true
 
+
+fun maybe_recurse {warn,no_prereqs,hm,visited,includes,dir,local_build=k} =
+let
+  val {abspath=dir,relpath} = dir
+  fun recurse visited (newdir,nm) =
+      if Binaryset.member(visited, newdir) then SOME visited
+      else let
+          val nm = Path.mkCanonical (Path.concat(relpath, nm))
+          val _ = warn ("Recursively calling Holmake in "^nm)
+        in
+          hm {relpath=nm,abspath=newdir} visited [] []
+          before
+          (warn ("Finished recursive invocation in "^nm);
+           FileSys.chDir dir)
+        end
+  fun do_em accg [] = if k() then SOME accg else NONE
+    | do_em accg (x::xs) = let
+      in
+        case recurse accg x of
+          SOME g' => do_em g' xs
+        | NONE => NONE
+      end
+  val visited = Binaryset.add(visited, dir)
+in
+  if no_prereqs then
+    if k() then SOME visited else NONE
+  else let
+      fun foldthis (dir, m) =
+          Binarymap.insert(m, FileSys.fullPath dir, dir)
+          handle OS.SysErr _ =>
+                 (warn ("Includes path "^dir^" looks bogus");
+                  m)
+      val possible_calls = List.foldr foldthis
+                                      (Binarymap.mkDict String.compare)
+                                      includes
+
+    in
+      do_em visited (Binarymap.listItems possible_calls)
+    end
+end
+
 end (* struct *)
