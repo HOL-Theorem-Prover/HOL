@@ -397,7 +397,7 @@ val iBIT_cases = new_recursive_definition {
              (iBIT_cases (BIT2 n) zf bf1 bf2 = bf2 n)`,
   name = "iBIT_cases",
   rec_axiom = bit_initiality};
-val _ = OpenTheory_add"iBIT"
+val _ = OpenTheory_add"iBIT_cases"
 
 (*---------------------------------------------------------------------------*)
 (* Another internal marker, this one represents a zero digit.  We can't      *)
