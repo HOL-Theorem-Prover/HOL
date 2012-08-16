@@ -1243,7 +1243,7 @@ val _ =
   else let
       open Process
       val result =
-          Holmake {relpath = OS.Path.currentArc,
+          Holmake {relpath = SOME (OS.Path.currentArc),
                    abspath = OS.FileSys.getDir()}
                   (Binaryset.empty String.compare)
                   cline_additional_includes

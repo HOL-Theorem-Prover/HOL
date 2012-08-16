@@ -39,11 +39,11 @@ sig
   val maybe_recurse :
       {warn: string -> unit,
        no_prereqs : bool,
-       hm: {relpath:string,abspath:string} -> string Binaryset.set ->
+       hm: {relpath:string option,abspath:string} -> string Binaryset.set ->
            string list -> string list -> string Binaryset.set option,
        visited: string Binaryset.set,
        includes : string list,
-       dir : {abspath: string, relpath: string},
+       dir : {abspath: string, relpath: string option},
        local_build : unit -> bool} ->
       string Binaryset.set option
 

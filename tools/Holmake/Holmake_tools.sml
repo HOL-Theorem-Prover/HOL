@@ -228,10 +228,16 @@ let
   fun recurse visited (newdir,nm) =
       if Binaryset.member(visited, newdir) then SOME visited
       else let
-          val nm = Path.mkCanonical (Path.concat(relpath, nm))
+          val newrelpath =
+              if Path.isAbsolute nm then NONE
+              else
+                case relpath of
+                  NONE => NONE
+                | SOME d => SOME (Path.mkCanonical (Path.concat(d, nm)))
+          val nm = case newrelpath of NONE => newdir | SOME d => d
           val _ = warn ("Recursively calling Holmake in "^nm)
         in
-          hm {relpath=nm,abspath=newdir} visited [] []
+          hm {relpath=newrelpath,abspath=newdir} visited [] []
           before
           (warn ("Finished recursive invocation in "^nm);
            FileSys.chDir dir)
