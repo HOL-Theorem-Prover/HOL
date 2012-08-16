@@ -14,7 +14,15 @@ open Systeml Holmake_tools
 structure FileSys = OS.FileSys
 structure Path = OS.Path
 
-  fun main () = let
+fun die_with message = let
+  open TextIO
+in
+  output(stdErr, message ^ "\n");
+  flushOut stdErr;
+  OS.Process.exit OS.Process.failure
+end
+
+fun main () = let
 
 val execname = OS.Path.file (CommandLine.name())
 fun warn s = (TextIO.output(TextIO.stdErr, execname^": "^s^"\n");
@@ -406,14 +414,6 @@ in
   SYSTEML (MOSMLCOMP::args)
 end;
 *)
-
-fun die_with message = let
-  open TextIO
-in
-  output(stdErr, message ^ "\n");
-  flushOut stdErr;
-  OS.Process.exit OS.Process.failure
-end
 
 (* turn a variable name into a list *)
 fun envlist env id = let
@@ -1408,7 +1408,9 @@ in
       if isSome result then exit success
       else exit failure
     end
-end
+end handle SML90.Interrupt => die_with "Holmake interrupted"
+         | e => die_with ("Holmake failed with exception: "^
+                          exnMessage e)
 
 end (* struct *)
 
