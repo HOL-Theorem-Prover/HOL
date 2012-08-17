@@ -7,17 +7,17 @@
 (* ------------------------------------------------------------------------- *)
 
 (* interactive mode
-app load ["arithmeticTheory", "realTheory", "prim_recTheory", "seqTheory",
-    	  "pred_setTheory","res_quanTheory", "res_quanTools", "listTheory",
+app load ["arithmeticTheory", "realTheory", "prim_recTheory", "seqTheory", 
+    	  "pred_setTheory","res_quanTheory", "res_quanTools", "listTheory", 
 	  "transcTheory", "rich_listTheory", "pairTheory",
-	  "combinTheory", "realLib", "optionTheory", "real_sigmaTheory",
+	  "combinTheory", "realLib", "optionTheory", "real_sigmaTheory", 
 	  "util_probTheory", "extrealTheory", "measureTheory", "lebesgueTheory"];
 quietdec := true;
 *)
 
-open HolKernel Parse boolLib bossLib arithmeticTheory realTheory prim_recTheory
+open HolKernel Parse boolLib bossLib arithmeticTheory realTheory prim_recTheory 
      seqTheory pred_setTheory res_quanTheory res_quanTools listTheory transcTheory
-     rich_listTheory pairTheory combinTheory realLib  optionTheory
+     rich_listTheory pairTheory combinTheory realLib  optionTheory 
      real_sigmaTheory util_probTheory extrealTheory measureTheory lebesgueTheory;
 
 val _ = new_theory "probability";
@@ -894,30 +894,32 @@ val distribution_prob_space = store_thm
 val uniform_distribution_prob_space = store_thm
   ("uniform_distribution_prob_space",
    ``!X p s. FINITE (p_space p) /\ FINITE (space s) /\ random_variable X p s ==>
-        prob_space (space s,subsets s,uniform_distribution p X s)``,
+        prob_space (space s, subsets s, uniform_distribution p X s)``,
   RW_TAC std_ss []
   ++ `prob_space p` by FULL_SIMP_TAC std_ss [random_variable_def]
-  ++ `p_space p <> {}` by METIS_TAC [MEASURE_EMPTY,EVAL ``0 <> 1:real``,prob_space_def]
+  ++ `p_space p <> {}` by METIS_TAC [MEASURE_EMPTY, EVAL ``0 <> 1:real``, prob_space_def]
   ++ `space s <> {}`
-      by (FULL_SIMP_TAC std_ss [random_variable_def,IN_FUNSET,IN_MEASURABLE,space_def]
-	  ++ METIS_TAC [CHOICE_DEF,NOT_IN_EMPTY])
+      by (FULL_SIMP_TAC std_ss [random_variable_def, IN_FUNSET, IN_MEASURABLE, space_def]
+	  ++ METIS_TAC [CHOICE_DEF, NOT_IN_EMPTY])
   ++ `CARD (space s) <> 0` by METIS_TAC [CARD_EQ_0]
   ++ `&CARD (space s) <> 0:real` by RW_TAC real_ss []
-  ++ REVERSE (RW_TAC std_ss [prob_space_def,measure_def,PSPACE])
-  >> RW_TAC std_ss [uniform_distribution_def,REAL_DIV_REFL]
+  ++ REVERSE (RW_TAC std_ss [prob_space_def, measure_def, PSPACE])
+  >> RW_TAC std_ss [uniform_distribution_def, REAL_DIV_REFL]
   ++ MATCH_MP_TAC finite_additivity_sufficient_for_finite_spaces
-  ++ CONJ_TAC >> FULL_SIMP_TAC std_ss [random_variable_def,IN_MEASURABLE]
+  ++ CONJ_TAC >> FULL_SIMP_TAC std_ss [random_variable_def, IN_MEASURABLE]
   ++ CONJ_TAC >> RW_TAC std_ss []
   ++ CONJ_TAC
-  >> (RW_TAC real_ss [positive_def,measure_def,uniform_distribution_def,PREIMAGE_EMPTY,CARD_EMPTY,INTER_EMPTY]
-      ++ RW_TAC real_ss [REAL_LE_MUL,REAL_LE_INV,real_div])
-  ++ RW_TAC std_ss [additive_def,measure_def,uniform_distribution_def,real_div,measurable_sets_def]
-  ++ FULL_SIMP_TAC std_ss [random_variable_def,IN_MEASURABLE,IN_FUNSET,space_def,subsets_def]
-  ++ `s' SUBSET space s` by METIS_TAC [sigma_algebra_def,algebra_def,subset_class_def]
-  ++ `t SUBSET space s` by METIS_TAC [sigma_algebra_def,algebra_def,subset_class_def]
-  ++ `CARD (s' INTER t) = 0` by METIS_TAC [DISJOINT_DEF,CARD_EMPTY]
-  ++ `CARD (s' UNION t) = CARD s' + CARD t`  by METIS_TAC [CARD_UNION,ADD_0,SUBSET_FINITE]
-  ++ RW_TAC std_ss [GSYM REAL_ADD,REAL_ADD_RDISTRIB]);
+  >> (RW_TAC real_ss [positive_def, measure_def, uniform_distribution_def, PREIMAGE_EMPTY,
+     	     	      CARD_EMPTY,INTER_EMPTY]
+      ++ RW_TAC real_ss [REAL_LE_MUL, REAL_LE_INV, real_div])
+  ++ RW_TAC std_ss [additive_def, measure_def, uniform_distribution_def, real_div,
+     	    	    measurable_sets_def]
+  ++ FULL_SIMP_TAC std_ss [random_variable_def, IN_MEASURABLE, IN_FUNSET, space_def, subsets_def]
+  ++ `s' SUBSET space s` by METIS_TAC [sigma_algebra_def, algebra_def, subset_class_def]
+  ++ `t SUBSET space s` by METIS_TAC [sigma_algebra_def, algebra_def, subset_class_def]
+  ++ `CARD (s' INTER t) = 0` by METIS_TAC [DISJOINT_DEF, CARD_EMPTY]
+  ++ `CARD (s' UNION t) = CARD s' + CARD t`  by METIS_TAC [CARD_UNION, ADD_0, SUBSET_FINITE]
+  ++ RW_TAC std_ss [GSYM REAL_ADD, REAL_ADD_RDISTRIB]);
 
 val distribution_partition = store_thm
 ("distribution_partition",``!p X. prob_space p /\ (!x. x IN p_space p ==> {x} IN events p) /\
@@ -926,30 +928,35 @@ val distribution_partition = store_thm
   RW_TAC std_ss []
   ++ `random_variable X p (IMAGE X (p_space p), POW (IMAGE X (p_space p)))`
       by (RW_TAC std_ss [random_variable_def]
-	  ++ RW_TAC std_ss [IN_MEASURABLE,IN_FUNSET,space_def,subsets_def,IN_IMAGE,POW_SIGMA_ALGEBRA]
-	  << [METIS_TAC [IN_MEASURABLE,random_variable_def],
+	  ++ RW_TAC std_ss [IN_MEASURABLE, IN_FUNSET, space_def, subsets_def,
+	     	    	    IN_IMAGE,POW_SIGMA_ALGEBRA]
+	  << [METIS_TAC [IN_MEASURABLE, random_variable_def],
 	      METIS_TAC [],
-	      METIS_TAC [PROB_DISCRETE_EVENTS,INTER_SUBSET]])
-  ++ `prob_space (space (IMAGE X (p_space p), POW (IMAGE X (p_space p))),subsets (IMAGE X (p_space p), POW (IMAGE X (p_space p))),distribution p X)` by METIS_TAC [distribution_prob_space]
+	      METIS_TAC [PROB_DISCRETE_EVENTS, INTER_SUBSET]])
+  ++ `prob_space (space (IMAGE X (p_space p), POW (IMAGE X (p_space p))), subsets (IMAGE X (p_space p), POW (IMAGE X (p_space p))),distribution p X)` by METIS_TAC [distribution_prob_space]
   ++ (MP_TAC o Q.ISPEC `(space (IMAGE (X :'a->extreal) (p_space p), POW (IMAGE X (p_space p))),subsets (IMAGE X (p_space p), POW (IMAGE X (p_space p))),distribution p X)`) PROB_REAL_SUM_IMAGE_SPACE
   ++ RW_TAC std_ss []
-  ++ FULL_SIMP_TAC std_ss [space_def,subsets_def,p_space_def,events_def,m_space_def,measurable_sets_def,prob_def,measure_def]
+  ++ FULL_SIMP_TAC std_ss [space_def, subsets_def, p_space_def, events_def, m_space_def,
+     		   	   measurable_sets_def, prob_def, measure_def]
   ++ `FINITE (IMAGE X (m_space p))` by METIS_TAC [IMAGE_FINITE]
   ++ `(!x. x IN IMAGE X (m_space p) ==> {x} IN POW (IMAGE X (m_space p)))`
-      by RW_TAC std_ss [IN_POW,SUBSET_DEF,IN_IMAGE,IN_SING]
+      by RW_TAC std_ss [IN_POW, SUBSET_DEF, IN_IMAGE, IN_SING]
   ++ METIS_TAC []);
 
 val distribution_lebesgue_thm1 = store_thm
   ("distribution_lebesgue_thm1",
    ``!X p s A. random_variable X p s /\ A IN subsets s ==>
-	     (distribution p X A = integral p (indicator_fn (PREIMAGE X A INTER p_space p)))``,
-   RW_TAC std_ss [random_variable_def,prob_space_def,distribution_def,events_def,IN_MEASURABLE,p_space_def,
-   	  	  prob_def,subsets_def, space_def, GSYM integral_indicator]);
+	     (Normal(distribution p X A) = 
+	      integral p (indicator_fn (PREIMAGE X A INTER p_space p)))``,
+   RW_TAC std_ss [random_variable_def, prob_space_def, distribution_def, events_def,
+   	  	  IN_MEASURABLE,p_space_def, prob_def, subsets_def, space_def,
+		  GSYM integral_indicator]);
 
 val distribution_lebesgue_thm2 = store_thm
   ("distribution_lebesgue_thm2",
    ``!X p s A. random_variable X p s /\ A IN subsets s ==>
-	     (distribution p X A = integral (space s, subsets s, distribution p X) (indicator_fn A))``,
+	(Normal (distribution p X A) = 
+	 integral (space s, subsets s, distribution p X) (indicator_fn A))``,
    REPEAT STRIP_TAC
    ++ `prob_space (space s,subsets s,distribution p X)`
 	by RW_TAC std_ss [distribution_prob_space]
@@ -968,16 +975,17 @@ val finite_expectation1 = store_thm
   ("finite_expectation1",
    ``!p X. FINITE (p_space p) /\ real_random_variable X p ==>
 		(expectation p X =
-		 SIGMA (\r. real r * prob p (PREIMAGE X {r} INTER p_space p))
+		 SIGMA (\r. r * Normal (prob p (PREIMAGE X {r} INTER p_space p)))
 		       (IMAGE X (p_space p)))``,
-   RW_TAC std_ss [expectation_def, p_space_def, prob_def, prob_space_def, real_random_variable_def, events_def]
+   RW_TAC std_ss [expectation_def, p_space_def, prob_def, prob_space_def,
+   	  	  real_random_variable_def, events_def]
    ++ (MATCH_MP_TAC o REWRITE_RULE [finite_space_integral_def]) finite_space_integral_reduce
    ++ RW_TAC std_ss [num_not_infty]);
 
 val finite_expectation = store_thm
   ("finite_expectation",
    ``!p X. FINITE (p_space p) /\ real_random_variable X p ==>
-	(expectation p X = SIGMA (\r. real r * distribution p X {r}) (IMAGE X (p_space p)))``,
+	(expectation p X = SIGMA (\r. r * Normal (distribution p X {r})) (IMAGE X (p_space p)))``,
    RW_TAC std_ss [distribution_def]
    ++ METIS_TAC [finite_expectation1]);
 
@@ -1086,7 +1094,8 @@ val prob_x_eq_1_imp_prob_y_eq_0 = store_thm
    REPEAT STRIP_TAC
    ++ (MP_TAC o Q.SPECL [`p`, `{y}`, `{x}`]) PROB_ONE_INTER
    ++ RW_TAC std_ss []
-   ++ Know `{y}INTER{x} = {}` >> RW_TAC std_ss [Once EXTENSION, NOT_IN_EMPTY, IN_INTER, IN_SING]
+   ++ Know `{y} INTER {x} = {}` 
+   >> RW_TAC std_ss [Once EXTENSION, NOT_IN_EMPTY, IN_INTER, IN_SING]
    ++ METIS_TAC [PROB_EMPTY]);
 
 val distribution_x_eq_1_imp_distribution_y_eq_0 = store_thm
@@ -1096,7 +1105,8 @@ val distribution_x_eq_1_imp_distribution_y_eq_0 = store_thm
 	   (!y. (~(y = x)) ==>
 		(distribution p X {y} = 0))``,
    REPEAT STRIP_TAC
-   ++ (MP_TAC o Q.SPECL [`p`, `X`, `(IMAGE X (p_space p),POW (IMAGE X (p_space p)))`]) distribution_prob_space
+   ++ (MP_TAC o Q.SPECL [`p`, `X`, `(IMAGE X (p_space p),POW (IMAGE X (p_space p)))`]) 
+      	      distribution_prob_space
    ++ RW_TAC std_ss [space_def, subsets_def]
    ++ (MP_TAC o Q.ISPECL [`(IMAGE (X :'a -> 'b)
            (p_space
@@ -1190,12 +1200,16 @@ val conditional_distribution_le_1 = store_thm
  ("conditional_distribution_le_1",``!p X Y a b. prob_space p /\ (events p = POW (p_space p)) ==>
 			     (conditional_distribution p X Y a b <= 1)``,
   RW_TAC std_ss [conditional_distribution_def]
-  ++ Cases_on `distribution p Y b = 0` >> METIS_TAC [marginal_joint_zero,real_div,REAL_MUL_LZERO,REAL_LE_01]
-  ++ METIS_TAC [REAL_LE_LDIV_EQ,REAL_MUL_LID,REAL_LT_LE, joint_distribution_le2,distribution_pos]);
+  ++ Cases_on `distribution p Y b = 0` 
+  >> METIS_TAC [marginal_joint_zero,real_div,REAL_MUL_LZERO,REAL_LE_01]
+  ++ METIS_TAC [REAL_LE_LDIV_EQ, REAL_MUL_LID, REAL_LT_LE, joint_distribution_le2,
+     	        distribution_pos]);
 
 val marginal_distribution1 = store_thm
- ("marginal_distribution1",``!p X Y a. prob_space p /\ FINITE (p_space p) /\ (events p = POW (p_space p))
-    ==> (distribution p X a = SIGMA (\x. joint_distribution p X Y (a CROSS {x})) (IMAGE Y (p_space p)))``,
+ ("marginal_distribution1",``!p X Y a. prob_space p /\ FINITE (p_space p) /\ 
+ 				       (events p = POW (p_space p))
+    ==> (distribution p X a = 
+    	 SIGMA (\x. joint_distribution p X Y (a CROSS {x})) (IMAGE Y (p_space p)))``,
   RW_TAC std_ss [joint_distribution_def,distribution_def]
   ++ `FINITE (IMAGE Y (p_space p))` by METIS_TAC [IMAGE_FINITE]
   ++ RW_TAC std_ss [PREIMAGE_def,IN_CROSS,IN_SING]
@@ -1203,10 +1217,11 @@ val marginal_distribution1 = store_thm
        SIGMA (\x. prob p ({x | X x IN a} INTER p_space p INTER (\x. {x' | Y x' = x}) x))
        	     	  (IMAGE Y (p_space p)))`
         by (MATCH_MP_TAC  PROB_REAL_SUM_IMAGE_FN
-	    ++ RW_TAC std_ss [IN_POW,INTER_SUBSET]
-	    <<[RW_TAC std_ss [SUBSET_DEF,IN_INTER,GSPECIFICATION],
-	       RW_TAC std_ss [DISJOINT_DEF,EXTENSION,NOT_IN_EMPTY,GSPECIFICATION,IN_INTER] ++ METIS_TAC [],
-	       RW_TAC std_ss [EXTENSION,IN_BIGUNION_IMAGE,IN_INTER,GSPECIFICATION]
+	    ++ RW_TAC std_ss [IN_POW, INTER_SUBSET]
+	    <<[RW_TAC std_ss [SUBSET_DEF, IN_INTER, GSPECIFICATION],
+	       RW_TAC std_ss [DISJOINT_DEF, EXTENSION, NOT_IN_EMPTY, GSPECIFICATION, IN_INTER] 
+	       ++ METIS_TAC [],
+	       RW_TAC std_ss [EXTENSION, IN_BIGUNION_IMAGE, IN_INTER, GSPECIFICATION]
 	       ++ METIS_TAC [IN_IMAGE]])
   ++ RW_TAC std_ss []
   ++ MATCH_MP_TAC REAL_SUM_IMAGE_EQ
@@ -1214,22 +1229,26 @@ val marginal_distribution1 = store_thm
   ++ Suff `{x | X x IN a} INTER p_space p INTER {x' | Y x' = x} =
      	   {x' | X x' IN a /\ (Y x' = x)} INTER p_space p`
   >> RW_TAC std_ss []
-  ++ RW_TAC std_ss [EXTENSION,IN_INTER,GSPECIFICATION]
+  ++ RW_TAC std_ss [EXTENSION, IN_INTER, GSPECIFICATION]
   ++ METIS_TAC []);
 
 val marginal_distribution2 = store_thm
- ("marginal_distribution2",``!p X Y b. prob_space p /\ FINITE (p_space p) /\ (events p = POW (p_space p))
-    ==> (distribution p Y b = SIGMA (\x. joint_distribution p X Y ({x} CROSS b)) (IMAGE X (p_space p)))``,
+ ("marginal_distribution2",``!p X Y b. prob_space p /\ FINITE (p_space p) /\ 
+ 				       (events p = POW (p_space p))
+    ==> (distribution p Y b = 
+    	 SIGMA (\x. joint_distribution p X Y ({x} CROSS b)) (IMAGE X (p_space p)))``,
   RW_TAC std_ss [joint_distribution_def,distribution_def]
   ++ `FINITE (IMAGE X (p_space p))` by METIS_TAC [IMAGE_FINITE]
   ++ RW_TAC std_ss [PREIMAGE_def,IN_CROSS,IN_SING]
   ++ `prob p ({x | Y x IN b} INTER p_space p) =
-      SIGMA (\x. prob p ({x | Y x IN b} INTER p_space p INTER (\x. {x' | X x' = x}) x)) (IMAGE X (p_space p))`
+      SIGMA (\x. prob p ({x | Y x IN b} INTER p_space p INTER (\x. {x' | X x' = x}) x)) 
+      	    (IMAGE X (p_space p))`
         by (MATCH_MP_TAC  PROB_REAL_SUM_IMAGE_FN
-	    ++ RW_TAC std_ss [IN_POW,INTER_SUBSET]
-	    <<[RW_TAC std_ss [SUBSET_DEF,IN_INTER,GSPECIFICATION],
-	       RW_TAC std_ss [DISJOINT_DEF,EXTENSION,NOT_IN_EMPTY,GSPECIFICATION,IN_INTER] ++ METIS_TAC [],
-	       RW_TAC std_ss [EXTENSION,IN_BIGUNION_IMAGE,IN_INTER,GSPECIFICATION]
+	    ++ RW_TAC std_ss [IN_POW, INTER_SUBSET]
+	    <<[RW_TAC std_ss [SUBSET_DEF, IN_INTER, GSPECIFICATION],
+	       RW_TAC std_ss [DISJOINT_DEF, EXTENSION, NOT_IN_EMPTY, GSPECIFICATION, IN_INTER]
+	       ++ METIS_TAC [],
+	       RW_TAC std_ss [EXTENSION, IN_BIGUNION_IMAGE, IN_INTER, GSPECIFICATION]
 	       ++ METIS_TAC [IN_IMAGE]])
   ++ RW_TAC std_ss []
   ++ MATCH_MP_TAC REAL_SUM_IMAGE_EQ
@@ -1237,13 +1256,14 @@ val marginal_distribution2 = store_thm
   ++ Suff `{x | Y x IN b} INTER p_space p INTER {x' | X x' = x} =
      	   {x' | (X x' = x) /\ Y x' IN b} INTER p_space p`
   >> RW_TAC std_ss []
-  ++ RW_TAC std_ss [EXTENSION,IN_INTER,GSPECIFICATION]
+  ++ RW_TAC std_ss [EXTENSION, IN_INTER, GSPECIFICATION]
   ++ METIS_TAC []);
 
 val joint_distribution_sums_1 = store_thm
- ("joint_distribution_sums_1",``!p X Y. prob_space p /\ FINITE (p_space p) /\ (events p = POW (p_space p))
-    ==> (SIGMA (\(x,y). joint_distribution p X Y {(x,y)}) ((IMAGE X (p_space p)) CROSS (IMAGE Y (p_space p))) =
-    	 1)``,
+ ("joint_distribution_sums_1",``!p X Y. prob_space p /\ FINITE (p_space p) /\ 
+ 				     	(events p = POW (p_space p))
+    ==> (SIGMA (\(x,y). joint_distribution p X Y {(x,y)}) 
+    	       ((IMAGE X (p_space p)) CROSS (IMAGE Y (p_space p))) = 1)``,
   RW_TAC std_ss []
   ++ `(\(x,y). joint_distribution p X Y {(x,y)}) =
       (\x. (\a b. joint_distribution p X Y ({a} CROSS {b})) (FST x) (SND x))`
@@ -1256,26 +1276,29 @@ val joint_distribution_sums_1 = store_thm
      	    	 (IMAGE X (p_space p) CROSS IMAGE Y (p_space p)) =
       SIGMA (\x. SIGMA (\y. joint_distribution p X Y ({x} CROSS {y})) (IMAGE Y (p_space p)))
       	    	 (IMAGE X (p_space p))`
-        by RW_TAC std_ss [GSYM REAL_SUM_IMAGE_REAL_SUM_IMAGE,IMAGE_FINITE]
+        by RW_TAC std_ss [GSYM REAL_SUM_IMAGE_REAL_SUM_IMAGE, IMAGE_FINITE]
   ++ POP_ORW
-  ++ `!x. SIGMA (\y. joint_distribution p X Y ({x} CROSS {y})) (IMAGE Y (p_space p)) = distribution p X {x}`
+  ++ `!x. SIGMA (\y. joint_distribution p X Y ({x} CROSS {y})) (IMAGE Y (p_space p)) = 
+     	  distribution p X {x}`
        by METIS_TAC [marginal_distribution1]
-  ++ RW_TAC std_ss [Once REAL_SUM_IMAGE_IN_IF,IMAGE_FINITE]
-  ++ RW_TAC std_ss [GSYM REAL_SUM_IMAGE_IN_IF,IMAGE_FINITE]
+  ++ RW_TAC std_ss [Once REAL_SUM_IMAGE_IN_IF, IMAGE_FINITE]
+  ++ RW_TAC std_ss [GSYM REAL_SUM_IMAGE_IN_IF, IMAGE_FINITE]
   ++ `random_variable X p (IMAGE X (p_space p), POW (IMAGE X (p_space p)))`
-      by (RW_TAC std_ss [random_variable_def,IN_MEASURABLE,IN_FUNSET,POW_SIGMA_ALGEBRA,
-      	 	 	 space_def,subsets_def,IN_POW,INTER_SUBSET,IN_IMAGE]
+      by (RW_TAC std_ss [random_variable_def, IN_MEASURABLE, IN_FUNSET, POW_SIGMA_ALGEBRA,
+      	 	 	 space_def, subsets_def, IN_POW, INTER_SUBSET, IN_IMAGE]
           ++ METIS_TAC [IN_IMAGE])
   ++ Q.ABBREV_TAC `p1 = (IMAGE X (p_space p), POW (IMAGE X (p_space p)), distribution p X)`
-  ++ `prob_space p1` by METIS_TAC [distribution_prob_space,space_def,subsets_def]
+  ++ `prob_space p1` by METIS_TAC [distribution_prob_space, space_def, subsets_def]
   ++ (MP_TAC o Q.SPEC `p1` o INST_TYPE [``:'a`` |-> ``:'b``]) PROB_REAL_SUM_IMAGE_SPACE
   ++ RW_TAC std_ss []
-  ++ `FINITE (p_space p1)` by METIS_TAC [PSPACE,IMAGE_FINITE]
-  ++ `!x. x IN p_space p1 ==> {x} IN events p1` by METIS_TAC [EVENTS,IN_POW,SUBSET_DEF,IN_SING,PSPACE]
+  ++ `FINITE (p_space p1)` by METIS_TAC [PSPACE, IMAGE_FINITE]
+  ++ `!x. x IN p_space p1 ==> {x} IN events p1` 
+      by METIS_TAC [EVENTS, IN_POW, SUBSET_DEF, IN_SING, PSPACE]
   ++ METIS_TAC [PROB,PSPACE]);
 
 val joint_distribution_sum_mul1 = store_thm
- ("joint_distribution_sum_mul1",``!p X Y f. prob_space p /\ FINITE (p_space p) /\ (events p = POW (p_space p))
+ ("joint_distribution_sum_mul1",``!p X Y f. prob_space p /\ FINITE (p_space p) /\ 
+ 				       	    (events p = POW (p_space p))
  	 ==> (SIGMA (\(x,y). joint_distribution p X Y {(x,y)} * (f x))
 	     	    (IMAGE X (p_space p) CROSS IMAGE Y (p_space p)) =
               SIGMA (\x. distribution p X {x} * (f x)) (IMAGE X (p_space p)))``,
@@ -1289,11 +1312,12 @@ val joint_distribution_sum_mul1 = store_thm
 	    ++ Cases_on `x`
 	    ++ RW_TAC std_ss [])
   ++ POP_ORW
-  ++ (MP_TAC o GSYM o Q.SPECL [`s1`,`s2`,`(\a b. joint_distribution p X Y {(a,b)} * (f a))`] o INST_TYPE [``:'a`` |-> ``:'b``, ``:'b`` |-> ``:'c``]) REAL_SUM_IMAGE_REAL_SUM_IMAGE
+  ++ (MP_TAC o GSYM o Q.SPECL [`s1`,`s2`,`(\a b. joint_distribution p X Y {(a,b)} * (f a))`] o 
+      INST_TYPE [``:'a`` |-> ``:'b``, ``:'b`` |-> ``:'c``]) REAL_SUM_IMAGE_REAL_SUM_IMAGE
   ++ RW_TAC std_ss []
   ++ `!x. (\b. joint_distribution p X Y {(x,b)} * (f x)) =
           (\b. (f x) * (\b. joint_distribution p X Y {(x,b)}) b)`
-        by RW_TAC std_ss [FUN_EQ_THM,REAL_MUL_COMM]
+        by RW_TAC std_ss [FUN_EQ_THM, REAL_MUL_COMM]
   ++ RW_TAC std_ss [REAL_SUM_IMAGE_CMUL]
   ++ `!x:'b b:'c. {(x,b)} = {x} CROSS {b}` by METIS_TAC [CROSS_SINGS]
   ++ Q.UNABBREV_TAC `s1`
@@ -1301,6 +1325,6 @@ val joint_distribution_sum_mul1 = store_thm
   ++ RW_TAC std_ss [GSYM marginal_distribution1]
   ++ Suff `(\x. (f x) * distribution p X {x}) = (\x. distribution p X {x} * (f x))`
   >> RW_TAC std_ss []
-  ++ RW_TAC std_ss [FUN_EQ_THM,REAL_MUL_COMM]);
+  ++ RW_TAC std_ss [FUN_EQ_THM, REAL_MUL_COMM]);
 
 val _ = export_theory ();

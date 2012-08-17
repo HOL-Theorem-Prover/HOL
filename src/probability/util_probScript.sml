@@ -284,7 +284,7 @@ val lg_pow = store_thm
    RW_TAC real_ss [lg_def, logr_def, LN_POW]
    ++ `~(ln 2 = 0)`
 	by (ONCE_REWRITE_TAC [EQ_SYM_EQ] ++ MATCH_MP_TAC REAL_LT_IMP_NE
-	    ++ MATCH_MP_TAC REAL_LET_TRANS ++ Q.EXISTS_TAC `ln 1`
+	    ++ MATCH_MP_TAC REAL_LET_TRANS ++ Q.EXISTS_TAC `ln 1` 
 	    ++ RW_TAC real_ss [LN_POS, LN_MONO_LT])
    ++ RW_TAC real_ss [real_div, GSYM REAL_MUL_ASSOC, REAL_MUL_RINV]);
 
@@ -1161,7 +1161,7 @@ val DIFF_DIFF_SUBSET = store_thm
   ++ RW_TAC std_ss []);
 
 val BIGINTER_SUBSET = store_thm
-  ("BIGINTER_SUBSET", ``!sp s. (!t. t IN s ==> t SUBSET sp)  /\ (~(s = {}))
+  ("BIGINTER_SUBSET", ``!sp s. (!t. t IN s ==> t SUBSET sp)  /\ (~(s = {})) 
                        ==> (BIGINTER s) SUBSET sp``,
   RW_TAC std_ss [SUBSET_DEF,IN_BIGINTER]
   ++ `?u. u IN s` by METIS_TAC [CHOICE_DEF]
@@ -1176,7 +1176,7 @@ val DIFF_BIGINTER1 = store_thm
   ++ METIS_TAC []);
 
 val DIFF_BIGINTER = store_thm
-   ("DIFF_BIGINTER", ``!sp s. (!t. t IN s ==> t SUBSET sp)  /\ (~(s = {}))
+   ("DIFF_BIGINTER", ``!sp s. (!t. t IN s ==> t SUBSET sp)  /\ (~(s = {})) 
          ==> ( BIGINTER s = sp DIFF (BIGUNION (IMAGE (\u. sp DIFF u) s)) )``,
   RW_TAC std_ss []
   ++ `(BIGINTER s SUBSET sp)` by RW_TAC std_ss [BIGINTER_SUBSET]
@@ -1205,18 +1205,18 @@ val PREIMAGE_COMPL_INTER = store_thm
 
 val PREIMAGE_REAL_COMPL1 = store_thm
   ("PREIMAGE_REAL_COMPL1", ``!c:real. COMPL {x | c < x} = {x | x <= c}``,
-  RW_TAC real_ss [COMPL_DEF,UNIV_DEF,DIFF_DEF,EXTENSION]
+  RW_TAC real_ss [COMPL_DEF,UNIV_DEF,DIFF_DEF,EXTENSION] 
   ++ RW_TAC real_ss [GSPECIFICATION,GSYM real_lte,SPECIFICATION]);
 
 val PREIMAGE_REAL_COMPL2 = store_thm
   ("PREIMAGE_REAL_COMPL2", ``!c:real. COMPL {x | c <= x} = {x | x < c}``,
-  RW_TAC real_ss [COMPL_DEF,UNIV_DEF,DIFF_DEF,EXTENSION]
+  RW_TAC real_ss [COMPL_DEF,UNIV_DEF,DIFF_DEF,EXTENSION] 
   ++ RW_TAC real_ss [GSPECIFICATION,GSYM real_lt,SPECIFICATION]);
 
 
 val PREIMAGE_REAL_COMPL3 = store_thm
   ("PREIMAGE_REAL_COMPL3", ``!c:real. COMPL {x | x <= c} = {x | c < x}``,
-  RW_TAC real_ss [COMPL_DEF,UNIV_DEF,DIFF_DEF,EXTENSION]
+  RW_TAC real_ss [COMPL_DEF,UNIV_DEF,DIFF_DEF,EXTENSION] 
   ++ RW_TAC real_ss [GSPECIFICATION,GSYM real_lt,SPECIFICATION]);
 
 val PREIMAGE_REAL_COMPL4 = store_thm
@@ -1974,7 +1974,7 @@ val POW_HALF_SER = store_thm
    ++ DISCH_THEN (ONCE_REWRITE_TAC o wrap)
    ++ HO_MATCH_MP_TAC SER_CMUL
    ++ RW_TAC std_ss []);
-
+ 
 val SER_POS_COMPARE = store_thm
   ("SER_POS_COMPARE",
    ``!f g.
