@@ -80,6 +80,19 @@ Thanks to Joseph Chan for the bug report.
 The <code>PROD_IMAGE</code> constant is overloaded to <code>PI</code> and <code>Π</code>.
 Thanks to Joseph Chan for this.
 
+<li> <p> A new theory, <code>real_sigmaTheory</code> defining the sum over a finite set of real numbers. The <code>REAL_SUM_IMAGE</code> constant is overloaded to <code>SIGMA</code>.
+
+<li> <p>A new <code>probability</code> theory providing an axiomatic formalization of probability theory including probability spaces, random variables, expectation and more.
+The formalization is based on the formalization of measure theory and Lebesgue integration.
+This work was done in the HVG group, Concordia and was built on top of
+  the work of Coble in Cambridge.
+In this formalization, functions as well as Lebesgue integrals are extended-real-valued. Among the main results of the formalization are the convergence theorems, the Radon Nikodym theorem and properties of the integral.
+Details of the work can be found in
+1. T. Mhamdi, O. Hasan, and S. Tahar: On the Formalization of the
+Lebesgue Integration Theory in HOL, ITP 2010
+2. T. Mhamdi, O. Hasan, and S. Tahar: Formalization of Entropy
+Measures in HOL, ITP 2011
+
 <li> <p> A small theory, <code>gcdset</code> defining a function <code>gcdset</code> that returns the greatest common divisor of any non-empty set of natural numbers (and returns 0 for the empty set for the sake of totality).
 
 <li> <p> A theory, <code>numposrep</code> about positional representations for numbers, linking type <code>:num</code> (<em>i.e.,</em> the natural numbers) to <code>:num list</code>.  The conversion functions <code>n2l</code> and <code>l2n</code> are parameterised by the base to be used.
