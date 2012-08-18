@@ -1,25 +1,21 @@
 \chapter{The \HOL{} Logic}\label{HOLlogic}
 
-The \HOL{}  system  supports {\it  higher order  logic}.   This is a version of
-predicate calculus with three main extensions:
+The \HOL{}  system  supports \emph{higher order logic}.
+This is a version of predicate calculus with three main extensions:
 
 \begin{itemize}
-\item Variables can range over functions and predicates
-(hence `higher order').
-\item The logic is {\it typed}.
-\item There is no separate syntactic category of {\it formulae\/}
-(terms of type \ml{bool} fulfill that role).
+\item Variables can range over functions and predicates (hence `higher order').
+\item The logic is \emph{typed}.
+\item There is no separate syntactic category of \emph{formulae} (terms of type \ml{bool} fulfill that role).
 \end{itemize}
 
-In this chapter, we will give a brief overview of the notation used to
-write expressions of the \HOL\ logic in ML, and also discuss standard
-\HOL\ proof techniques. It is assumed the reader is familiar with
-predicate logic.  The syntax and semantics of the particular logical
-system supported by \HOL{} is described in detail in \DESCRIPTION.
+In this chapter, we will give a brief overview of the notation used to write expressions of the \HOL{} logic in \ML{}, and also discuss some fundamental  \HOL{} proof techniques.
+It is assumed the reader is familiar with predicate logic.
+The syntax and semantics of the particular logical system supported by \HOL{} is described in detail in \DESCRIPTION.
+Readers who wish to see \HOL{} in action without the introduction to the finer details of \HOL's fundamentals might like to skip ahead to Chapter~\ref{chap:euclid}.
 
 
-The table below summarizes a useful subset of the notation used in
-\HOL.
+The table below summarizes a useful subset of the notation used in \HOL.
 
 \begin{center}
 \begin{tabular}{|l|l|l|l|} \hline
@@ -54,20 +50,13 @@ $(t\rightarrow t_1, t_2)$ & {\it if\ }$t${\it \ then\ }$t_1${\it\ else\ }$t_2$
 \end{tabular}
 \end{center}\label{logic-table}
 
-Terms of the \HOL{} logic are represented in \ML{} by an {\it abstract
-  type\/} called {\small\verb|term|}. They are normally input between
-double back-quote marks.  For example, the expression
-{\small\verb|``x /\ y ==> z``|} evaluates in \ML{} to a term representing
-{\small\verb|x|}$\wedge${\small\verb|y|}$\Rightarrow${\small\verb|z|}.
-Terms can be manipulated by various built-in \ML{} functions. For
-example, the \ML{} function \ml{dest\_imp} with \ML{} type
-{\small\verb|term -> term * term|} splits an implication into a pair
-of terms consisting of its antecedent and consequent, and the \ML\
-function \ml{dest\_conj} of type {\small\verb|term -> term * term|}
-splits a conjunction into its two conjuncts. \footnote
-{All of the examples below assume that the user is running
-\texttt{hol}, the executable for which is in the \texttt{bin/}
-directory.}
+Terms of the \HOL{} logic are represented in \ML{} by an \emph{abstract type} called {\small\verb|term|}.
+They are normally input between double back-quote marks.
+For example, the expression \holtxt{``x /\bs{} y ==> z``} evaluates in \ML{} to a term representing $\holtxt{x} \land \holtxt{y} \Rightarrow \holtxt{z}$.
+Terms can be manipulated by various built-in \ML{} functions.
+For example, the \ML{} function \ml{dest\_imp} with \ML{} type \ml{term -> term * term} splits an implication into a pair of terms consisting of its antecedent and consequent, and the \ML\ function \ml{dest\_conj} of type \ml{term -> term * term} splits a conjunction into its two conjuncts.%
+\footnote{All of the examples below assume that the user is running \texttt{hol}, the executable for which is in the \texttt{bin/} directory.
+Depending on the system configuration, it is also possible that the ASCII notation used in the session examples that follow will be replaced by prettier Unicode notation: \holtxt{/\bs} replaced by $\land$ for example.}
 
 \setcounter{sessioncount}{0}
 \begin{session}
@@ -84,20 +73,16 @@ directory.}
 \end{session}
 
 Terms of the \HOL{} logic are quite similar to \ML{} expressions, and
-this can at first be confusing.  Indeed, terms of the logic have types
-similar to those of \ML{} expressions.  For example,
-{\small\verb|``(1,2)``|} is an \ML{} expression with \ML{} type
-{\small\verb|term|}.  The \HOL{} type of this term is
-{\small\verb|num # num|}.  By contrast, the \ML{} expression
+this can at first be confusing.
+Indeed, terms of the logic have types similar to those of \ML{} expressions.  For example, {\small\verb|``(1,2)``|} is an \ML{} expression with \ML{} type {\small\verb|term|}.
+The \HOL{} type of this term is {\small\verb|num # num|}.
+By contrast, the \ML{} expression
 {\small\verb|(``1``, ``2``)|} has type {\small\verb|term * term|}.
 
 \paragraph{Syntax of \HOL\ types}
 
-The types of \HOL{} terms form an \ML{} type called
-{\small\verb|hol_type|}.  Expressions having the form
-{\small\verb|``: |}$\cdots${\small\verb| ``|} evaluate to logical
-types.  The built-in function {\small\verb|type_of|} has \ML{} type
-{\small\verb|term->hol_type|} and returns the logical type of a term.
+The types of \HOL{} terms form an \ML{} type called {\small\verb|hol_type|}.  Expressions having the form {\small\verb|``: |}$\cdots${\small\verb| ``|} evaluate to logical types.
+The built-in function {\small\verb|type_of|} has \ML{} type {\small\verb|term->hol_type|} and returns the logical type of a term.
 
 \begin{session}
 \begin{verbatim}
@@ -115,12 +100,8 @@ types.  The built-in function {\small\verb|type_of|} has \ML{} type
 \end{verbatim}
 \end{session}
 
-To try to minimise confusion between the logical types of \HOL{} terms and
-the \ML{} types of \ML{} expressions, the former will be referred to as {\it object
-language types\/} and the latter as {\it meta-language types\/}.  For example,
-{\small\verb|``(1,T)``|} is an \ML{} expression that has meta-language type
-{\small\verb|term|} and evaluates to a term with object language type
-{\small\verb|``:num#bool``|}.
+To try to minimise confusion between the logical types of \HOL{} terms and the \ML{} types of \ML{} expressions, the former will be referred to as \emph{object language types} and the latter as {\it meta-language types\/}.
+For example, {\small\verb|``(1,T)``|} is an \ML{} expression that has meta-language type {\small\verb|term|} and evaluates to a term with object language type {\small\verb|``:num#bool``|}.
 %
 \begin{session}
 \begin{verbatim}
@@ -133,11 +114,10 @@ language types\/} and the latter as {\it meta-language types\/}.  For example,
 \end{session}
 %
 \paragraph{Term constructors}
-\HOL{} terms can be input, as above, by using explicit {\it
-quotation\/}, or they can be constructed by calling \ML{} constructor
-functions. The function {\small\verb|mk_var|} constructs a variable
-from a string and a type.  In the example below, three variables of
-type {\small\verb|bool|} are constructed.  These are used later.
+\HOL{} terms can be input, as above, by using explicit \emph{quotation}, or they can be constructed by calling \ML{} constructor functions.
+The function {\small\verb|mk_var|} constructs a variable from a string and a type.
+In the example below, three variables of type {\small\verb|bool|} are constructed.
+These are used later.
 
 \begin{session}
 \begin{verbatim}
@@ -150,10 +130,8 @@ type {\small\verb|bool|} are constructed.  These are used later.
 \end{verbatim}
 \end{session}
 
-The constructors {\small\verb|mk_conj|} and {\small\verb|mk_imp|} construct
-conjunctions and implications respectively. A large collection of
-term constructors and destructors is available for the core theories
-in \HOL.
+The constructors {\small\verb|mk_conj|} and {\small\verb|mk_imp|} construct conjunctions and implications respectively.
+A large collection of term constructors and destructors is available for the core theories in \HOL.
 
 \begin{session}
 \begin{verbatim}
@@ -164,35 +142,28 @@ in \HOL.
 
 \paragraph{Type checking}
 
-There are actually only four different kinds of term in \HOL:
-variables, constants, function applications (\ml{``$t_1$\ $t_2$``}),
-and lambda abstractions ({\small\verb|``\|}$x$\ml{.}$t$\ml{``}).  More
-complex terms, such as those we have already seen above, are just
-compositions of terms from this simple set. In order to understand
-the behaviour of the quotation parser, it is necessary to understand
-how the type checker infers types for the four basic term categories.
+There are actually only four different kinds of term in \HOL: variables, constants, function applications (\ml{``$t_1$\ $t_2$``}), and lambda abstractions ({\small\verb|``\|}$x$\ml{.}$t$\ml{``}).
+More complex terms, such as those we have already seen above, are just compositions of terms from this simple set.
+In order to understand the behaviour of the quotation parser, it is necessary to understand how the type checker infers types for the four basic term categories.
 
-Both variables and constants have a name and a type; the difference is
-that constants cannot be bound by quantifiers, and their type is fixed
-when they are declared (see below). When a quotation is entered into
-\HOL{}, the type checking algorithm uses the types of constants to
-infer the types of variables in the same quotation. For example,
-in the following case, the \HOL{} type checker used the known type
-\ml{bool->bool} of boolean negation ({\small\verb|~|}) to deduce that
-the variable \ml{x} must have type \ml{bool}.
+Both variables and constants have a name and a type; the difference is that constants cannot be bound by quantifiers, and their type is fixed when they are declared (see below).
+When a quotation is entered into \HOL{}, the type checking algorithm uses the types of constants to infer the types of variables in the same quotation.
+For example, in the following case, the \HOL{} type checker used the known type \ml{bool->bool} of boolean negation ({\small\verb|~|}) to deduce that the variable \ml{x} must have type \ml{bool}.
 
-\begin{session}\begin{verbatim}
+\begin{session}
+\begin{verbatim}
 - ``~x``;
-val it = ``~x`` : term
-\end{verbatim}\end{session}
+> val it = ``~x`` : term
+\end{verbatim}
+\end{session}
 
 In the next two cases, the type of \ml{x} and \ml{y} cannot be
-deduced.  (The default `scope' of type information for type checking
-is a single quotation, so a type in one quotation cannot affect the
-type-checking of another. Thus \ml{x} is not constrained to have the
-the type \ml{bool} in the second quotation.)
+deduced.
+(The default `scope' of type information for type checking is a single quotation, so a type in one quotation cannot affect the type-checking of another.
+Thus \ml{x} is not constrained to have the the type \ml{bool} in the second quotation.)
 
-\begin{session}\begin{verbatim}
+\begin{session}
+\begin{verbatim}
 - ``x``;
 <<HOL message: inventing new type variable names: 'a.>>
 > val it = ``x`` : Term.term
@@ -206,33 +177,32 @@ the type \ml{bool} in the second quotation.)
 
 - type_of it;
 > val it = ``:'a # 'b`` : hol_type
-\end{verbatim}\end{session}
+\end{verbatim}
+\end{session}
 
-If there is not enough contextually-determined type information to
-resolve the types of all variables in a quotation, then the system
-will guess different type variables for all the unconstrained
-variables.
+If there is not enough contextually-determined type information to resolve the types of all variables in a quotation, then the system will guess different type variables for all the unconstrained variables.
 
 \paragraph{Type constraints}
 
-Alternatively, it is possible to explicitly indicate the required
-types by using the notation \ml{``$term$:$type$``}, as illustrated below.
+Alternatively, it is possible to explicitly indicate the required types by using the notation \ml{``$term$:$type$``}, as illustrated below.
 
-\begin{session}\begin{verbatim}
+\begin{session}
+\begin{verbatim}
 - ``x:num``;
 > val it = ``x`` : term
 
 - type_of it;
 > val it = ``:num`` : hol_type
-\end{verbatim}\end{session}
+\end{verbatim}
+\end{session}
 
 \paragraph{Function application types}
 
-An application $(t_1\ t_2)$ is well-typed if $t_1$ is a function
-with type $\tau_1 \to \tau_2$ and $t_2$ has type $\tau_1$. Contrarily,
-an application $(t_1\ t_2)$ is badly typed if $t_1$ is not a function:
+An application $(t_1\ t_2)$ is well-typed if $t_1$ is a function with type $\tau_1 \to \tau_2$ and $t_2$ has type $\tau_1$.
+Contrarily, an application $(t_1\ t_2)$ is badly typed if $t_1$ is not a function:
 
-\begin{session}\begin{verbatim}
+\begin{session}
+\begin{verbatim}
 - ``1 2``;
 
 Type inference failure: unable to infer a type for the application of
@@ -245,11 +215,14 @@ to
 
 unification failure message: unify failed
 ! Uncaught exception:
-! HOL_ERR \end{verbatim}\end{session}
+! HOL_ERR
+\end{verbatim}
+\end{session}
 
 \noindent or if it is a function, but $t_2$ is not in its domain:
 
-\begin{session}\begin{verbatim}
+\begin{session}
+\begin{verbatim}
 - ``~1``;
 
 Type inference failure: unable to infer a type for the application of
@@ -263,44 +236,42 @@ to
 unification failure message: unify failed
 ! Uncaught exception:
 ! HOL_ERR
-\end{verbatim}\end{session}
+\end{verbatim}
+\end{session}
 
-The dollar symbol in front of {\small\verb|~|} indicates that the
-boolean negation constant has a special syntactic status (in this case a
-non-standard precedence). Putting {\small\verb|$|} in front of any
-symbol causes the parser to ignore any special syntactic status (like
-being an infix) it might have.
+The dollar symbol in front of {\small\verb|~|} indicates that the boolean negation constant has a special syntactic status (in this case a non-standard precedence).
+Putting {\small\verb|$|} in front of any symbol causes the parser to ignore any special syntactic status (like being an infix) it might have.
 
-\begin{session}\begin{verbatim}
+\begin{session}
+\begin{verbatim}
 - ``$==> t1 t2``;
 > val it = ``t1 ==> t2`` : term
 
 - ``$/\ t1 t2``;
 > val it = ``t1 /\ t2`` : term
-\end{verbatim}\end{session}
+\end{verbatim}
+\end{session}
 
 \paragraph{Function types}
 
-Functions have types of the form \ml{$\sigma_1$->$\sigma_2$},
-where $\sigma_1$ and $\sigma_2$ are the types of the domain and
-range of the function, respectively.
+Functions have types of the form \ml{$\sigma_1$->$\sigma_2$}, where $\sigma_1$ and $\sigma_2$ are the types of the domain and range of the function, respectively.
 
-\begin{session}\begin{verbatim}
+\begin{session}
+\begin{verbatim}
 - type_of ``$==>``;
 > val it = ``:bool -> bool -> bool`` : hol_type
 
 - type_of ``$+``;
 > val it = ``:num -> num -> num`` : hol_type
-\end{verbatim}\end{session}
+\end{verbatim}
+\end{session}
 
-\noindent Both \ml{+} and \ml{==>} are infixes, so their use in
-contexts where they are not being used as such requires their
-prefixing by the \texttt{\$}-sign.  This is analogous to the way in
-which \texttt{op} is used in \ML. The session below illustrates the
-use of these constants as infixes; it also illustrates object language
-versus meta-language types.
+\noindent Both \holtxt{+} and \holtxt{==>} are infixes, so their use in contexts where they are not being used as such requires their prefixing by the \texttt{\$}-sign.
+This is analogous to the way in which \texttt{op} is used in \ML.
+The session below illustrates the use of these constants as infixes; it also illustrates object language versus meta-language types.
 
-\begin{session}\begin{verbatim}
+\begin{session}
+\begin{verbatim}
 - ``(x + 1, t1 ==> t2)``;
 > val it = ``(x + 1,t1 ==> t2)`` : term
 
@@ -312,42 +283,37 @@ versus meta-language types.
 
 - (type_of (#1 it), type_of (#2 it));
 > val it = (``:bool``, ``:bool``) : hol_type * hol_type
-\end{verbatim}\end{session}
+\end{verbatim}
+\end{session}
 
-Lambda-terms, or $\lambda$-terms, denote functions. The symbol
-    `{\small\verb|\|}' is used as an {\small ASCII} approximation to
-    $\lambda$.  Thus `{\small\verb|\|}$x$\ml{.}$t$' should be read as
-    `$\lquant{x}t$'. For example, {\small\verb|``\x. x+1``|} is a term
-    that denotes the function $n\mapsto n{+}1$.
+Lambda-terms, or $\lambda$-terms, denote functions.
+The symbol `{\small\verb|\|}' is used as an {\small ASCII} approximation to $\lambda$.
+Thus `{\small\verb|\|}$x$\ml{.}$t$' should be read as `$\lquant{x}t$'.
+For example, {\small\verb|``\x. x+1``|} is a term that denotes the function $n\mapsto n{+}1$.
 
-\begin{session}\begin{verbatim}
+\begin{session}
+\begin{verbatim}
 - ``\x. x + 1``;
 > val it = ``\x. x + 1`` : term
 
 - type_of it;
 > val it = ``:num -> num`` : hol_type
-\end{verbatim}\end{session}
+\end{verbatim}
+\end{session}
 
-Other binding symbols in the logic are its two most important
-quantifiers: \ml{!} and \ml{?}, universal and existential quantifiers.
-For example, the logical statement that every number is either even or
-odd might be phrased as
-{\small
+Other binding symbols in the logic are its two most important quantifiers: \ml{!} and \ml{?}, universal and existential quantifiers.
+For example, the logical statement that every number is either even or odd might be phrased as
 \begin{verbatim}
    !n. (n MOD 2 = 1) \/ (n MOD 2 = 0)
-\end{verbatim}}
-%
+\end{verbatim}
 while a version of Euclid's result about the infinitude of primes is:
-%
-{\small
 \begin{verbatim}
     !n. ?p. prime p /\ p > n
-\end{verbatim}}
+\end{verbatim}
 %
-Binding symbols such as these can be used over multiple symbols
-thus:
-
-\begin{session}\begin{verbatim}
+Binding symbols such as these can be used over multiple symbols thus:
+\begin{session}
+\begin{verbatim}
 - ``\x y. (x, y * x)``;
 > val it = ``\x y. (x,y * x)`` : term
 
@@ -360,7 +326,7 @@ thus:
 \end{session}
 
 
-\section{Proof in \HOL{}}
+\section{Basic Proof in \HOL{}}
 
 \newcommand\tacticline{\hline \hline}
 \newenvironment{proofenumerate}{\begin{enumerate}}{\end{enumerate}}
@@ -369,22 +335,18 @@ thus:
 
 \setcounter{sessioncount}{0}
 
-This section discusses the nature of proof in \HOL{}. For a logician,
-one definition of a formal proof is that it is a sequence, each of
-whose elements is either an {\it axiom\/} or follows from earlier
-members of the sequence by a {\it rule of inference\/}.  A theorem is
-the last element of a proof.
+This section discusses the nature of proof in \HOL{}.
+For a logician, one definition of a formal proof is that it is a sequence, each of whose elements is either an {\it axiom\/} or follows from earlier members of the sequence by a {\it rule of inference\/}.
+A theorem is the last element of a proof.
 
-Theorems are represented in \HOL{} by values of an abstract type
-{\small\verb|thm|}.  The only way to create theorems is by generating
-such a proof.  In \HOL, following \LCF, this consists in applying
-\ML{} functions representing {\it rules of inference\/} to axioms or
-previously generated theorems.  The sequence of such applications
-directly corresponds to a logician's proof.
+Theorems are represented in \HOL{} by values of an abstract type {\small\verb|thm|}.
+The only way to create theorems is by generating such a proof.
+In \HOL, following \LCF, this consists in applying \ML{} functions representing \emph{rules of inference} to axioms or previously generated theorems.
+The sequence of such applications directly corresponds to a logician's proof.
 
-There are five axioms of the \HOL{} logic and eight primitive
-inference rules. The axioms are bound to ML names. For example, the Law of
-Excluded Middle is bound to the \ML{} name {\small\verb|BOOL_CASES_AX|}:
+There are five axioms of the \HOL{} logic and eight primitive inference rules.
+The axioms are bound to ML names.
+For example, the Law of Excluded Middle is bound to the \ML{} name {\small\verb|BOOL_CASES_AX|}:
 
 \begin{session}
 \begin{verbatim}
@@ -393,30 +355,22 @@ Excluded Middle is bound to the \ML{} name {\small\verb|BOOL_CASES_AX|}:
 \end{verbatim}
 \end{session}
 
-Theorems are printed with a preceding turnstile {\small\verb+|-+} as
-illustrated above; the symbol `{\small\verb|!|}' is the universal
-quantifier `$\forall$'.  Rules of inference are \ML{} functions that
-return values of type {\small\verb|thm|}.  An example of a rule of
-inference is {\it specialization\/} (or $\forall$-elimination).  In
-standard `natural deduction' notation this is:
+Theorems are printed with a preceding turnstile {\small\verb+|-+} as illustrated above; the symbol `{\small\verb|!|}' is the universal quantifier `$\forall$'.
+Rules of inference are \ML{} functions that return values of type {\small\verb|thm|}.
+An example of a rule of inference is {\it specialization\/} (or $\forall$-elimination).
+In standard `natural deduction' notation this is:
 
 \[ \frac{\Gamma\turn \uquant{x}t}{\Gamma\turn t[t'/x]}\]
 
 \begin{itemize}
-\item $t[t'/x]$ denotes the result of substituting $t'$ for free
-occurrences of $x$ in $t$, with the restriction that no free variables in $t'$
-become bound after substitution.
+\item $t[t'/x]$ denotes the result of substituting $t'$ for free occurrences of $x$ in $t$, with the restriction that no free variables in $t'$ become bound after substitution.
 \end{itemize}
 
-\noindent This rule is represented in \ML\
-by a function
-{\small\verb|SPEC|},\footnote{{\tt SPEC} is not a
-primitive rule of inference in the HOL logic, but is a derived rule. Derived rules
-are described in Section~\ref{forward}.}
-which takes as arguments a term
-{\small\verb|``|}$a${\small\verb|``|} and a theorem
-{\small\verb%|- !%}$x${\small\verb|.|}$t[x]$ and returns the theorem
-{\small\verb%|- %}$t[a]$, the result of substituting $a$ for $x$ in $t[x]$.
+\noindent This rule is represented in \ML{} by a function
+\ml{SPEC},%
+\footnote{\ml{SPEC} is not a primitive rule of inference in the HOL logic, but is a derived rule.
+Derived rules are described in Section~\ref{forward}.}
+which takes as arguments a term {\small\verb|``|}$a${\small\verb|``|} and a theorem {\small\verb%|- !%}$x${\small\verb|.|}$t[x]$ and returns the theorem {\small\verb%|- %}$t[a]$, the result of substituting $a$ for $x$ in $t[x]$.
 
 \begin{session}
 \begin{verbatim}
@@ -428,28 +382,18 @@ which takes as arguments a term
 \end{verbatim}
 \end{session}
 
-This session consists of a proof of two steps: using an axiom and
-applying the rule \ml{SPEC}; it interactively performs the following proof:
-
-
+This session consists of a proof of two steps: using an axiom and applying the rule \ml{SPEC}; it interactively performs the following proof:
 \begin{proofenumerate}
 \item $ \turn \uquant{t} t=\top\ \disj\  t=\bot$ \hfill
 [Axiom \ml{BOOL\_CASES\_AX}]
 \item $ \turn (1{=}2)=\top\ \disj\ (1{=}2)=\bot$\hfill [Specializing line 1 to `$1{=}2$']
 \end{proofenumerate}
 
-If the argument to an \ML{} function representing a rule of inference
-is of the wrong kind, or violates a condition of the rule, then the
-application fails.  For example, $\ml{SPEC}\ t\ th$ will fail if $th$
-is not of the form $\ml{|-\ !}x\ml{.}\cdots$ or if it is of this form
-but the type of $t$ is not the same as the type of $x$, or if the free
-variable restriction is not met.  When one of the standard
-\ml{HOL\_ERR} exceptions is raised, more information about the failure
-can often be gained by using the \ml{Raise} function.
-\footnote{The \ml{Raise} function passes on all of the exceptions it
-sees; it does not affect the semantics of the computation at all.
-However, when passed a \ml{HOL\_ERR} exception, it prints out some
-useful information before passing the exception on to the next level.}
+If the argument to an \ML{} function representing a rule of inference is of the wrong kind, or violates a condition of the rule, then the application fails.
+For example, $\ml{SPEC}\ t\ th$ will fail if $th$ is not of the form $\ml{|-\ !}x\ml{.}\cdots$ or if it is of this form but the type of $t$ is not the same as the type of $x$, or if the free variable restriction is not met.
+When one of the standard \ml{HOL\_ERR} exceptions is raised, more information about the failure can often be gained by using the \ml{Raise} function.%
+\footnote{The \ml{Raise} function passes on all of the exceptions it sees; it does not affect the semantics of the computation at all.
+However, when passed a \ml{HOL\_ERR} exception, it prints out some useful information before passing the exception on to the next level.}
 
 \begin{session}
 \begin{verbatim}
@@ -1294,7 +1238,8 @@ not free in the goal or the assumptions.
 \noindent \ml{GEN\_TAC} strips off one quantifier;
 \ml{REPEAT\ GEN\_TAC} strips off all quantifiers:
 
-\begin{session}\begin{verbatim}
+\begin{session}
+\begin{verbatim}
 - g `!x y z. x+(y+z) = (x+y)+z`;
 > val it =
     Proof manager status: 1 proof.
@@ -1313,7 +1258,8 @@ OK..
 1 subgoal:
 > val it =
     x + (y + z) = x + y + z
-\end{verbatim}\end{session}
+\end{verbatim}
+\end{session}
 
 \subsection{Some tactics built into \HOL{}}
 
@@ -1549,3 +1495,8 @@ the tactic to use is $T${\small\verb% THENL[%}$T_1${\small\verb|;ALL_TAC]|}.
 
 \item{\bf Uses:} Writing tacticals.
 \end{itemize}
+
+%%% Local Variables:
+%%% mode: latex
+%%% TeX-master: "tutorial"
+%%% End:
