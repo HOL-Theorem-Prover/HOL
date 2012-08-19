@@ -906,22 +906,6 @@ val every_el_thm = prove(
     POP_ASSUM (STRIP_ASSUME_TAC o SPEC `SUC i`)] THEN
   FULL_SIMP_TAC arith_ss [EL,HD,TL]);
 
-val lists_eq_lem = prove(
-  `(LENGTH x = LENGTH y) /\ (!i. i < LENGTH x ==> (EL i x = EL i y))
-   ==> (x = y)`,
-  measureInduct_on `LENGTH (x ++ y)` THEN
-  Cases THEN Cases THEN RW_TAC arith_ss [LENGTH] THENL [
-    POP_ASSUM (STRIP_ASSUME_TAC o SPEC `0`),
-    POP_ASSUM (STRIP_ASSUME_TAC o GEN_ALL o SPEC `SUC i`)] THEN
-  FULL_SIMP_TAC arith_ss [EL,HD,TL] THEN
-  PAT_ASSUM `!y:'a list.P` (STRIP_ASSUME_TAC o SPEC `t ++ t'`) THEN
-  FULL_SIMP_TAC arith_ss [LENGTH_APPEND,LENGTH]);
-
-val LISTS_EQ = store_thm("LISTS_EQ",
-    `(x = y) =
-     (LENGTH x = LENGTH y) /\ (!i. i < LENGTH x ==> (EL i x = EL i y))`,
-    METIS_TAC [lists_eq_lem]);
-
 val length_tl_thm = prove(
   `LENGTH (TL (V2L (v :'a ** 'b)) :'a list) = PRE (dimindex (:'b))`,
   ELIM_V2L_TAC THEN RW_TAC arith_ss [] THEN
@@ -980,7 +964,7 @@ val FCP_CONS = store_thm(
 val V2L_L2V = store_thm("V2L_L2V",
   `!x. (dimindex (:'b) = LENGTH x) ==> (V2L (L2V x:'a ** 'b) = x)`,
   RW_TAC arith_ss [L2V_def] THEN ELIM_V2L_TAC THEN
-  RW_TAC arith_ss [FCP_BETA,lists_eq_lem]);
+  RW_TAC arith_ss [FCP_BETA,listTheory.LIST_EQ]);
 
 val NULL_V2L = store_thm("NULL_V2L",`~NULL (V2L v)`,
   ELIM_V2L_TAC THEN Cases THEN
