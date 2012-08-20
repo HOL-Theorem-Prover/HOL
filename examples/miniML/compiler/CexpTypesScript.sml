@@ -240,11 +240,7 @@ val Cvwf_constructors = store_thm(
   (Cvwf ^(rand(rhs(concl(SPEC_ALL CConv_def))))) ∧
   (Cvwf ^(rand(rhs(concl(SPEC_ALL CRecClos_def)))))``,
 rw[Cvwf_def,FRANGE_DEF] >>
-rw[o_f_FAPPLY] >- (
-  qmatch_abbrev_tac `(K T o_f fm) ' x` >>
-  `x ∈ FDOM fm` by (
-    unabbrev_all_tac >> rw[] >> PROVE_TAC[] ) >>
-  rw[o_f_FAPPLY] ) >>
+rw[o_f_FAPPLY] >>
 qexists_tac `MAP fromCv vs` >>
 rw[GSYM fmap_EQ_THM] >>
 qmatch_abbrev_tac `X = FUN_FMAP x y ' z` >>
