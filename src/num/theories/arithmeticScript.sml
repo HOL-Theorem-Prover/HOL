@@ -155,7 +155,7 @@ val EXP = new_recursive_definition
     def = --`($EXP m 0 = 1) /\
              ($EXP m (SUC n) = m * ($EXP m n))`--};
 
-val _ = ot0 "EXP" "exp"
+val _ = ot0 "EXP" "^"
 val _ = set_fixity "EXP" (Infixr 700);
 val _ = add_infix("**", 700, HOLgrammars.RIGHT);
 val _ = overload_on ("**", Term`$EXP`);
