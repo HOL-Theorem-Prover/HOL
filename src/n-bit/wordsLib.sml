@@ -400,8 +400,8 @@ local
                 orelse is_uintmax t
                 orelse is_bool t
                 orelse is_ground_list t
-                orelse term_eq ``bit$HEX`` t
-                orelse term_eq ``bit$UNHEX`` t
+                orelse term_eq ``ASCIInumbers$HEX`` t
+                orelse term_eq ``ASCIInumbers$UNHEX`` t
                 orelse term_eq ``bool$/\`` t
                 orelse term_eq ``bool$\/`` t
 
