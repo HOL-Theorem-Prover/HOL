@@ -91,7 +91,10 @@ fun with_exn f x e = f x handle Interrupt => raise Interrupt | _ => raise e
  *        Common list operations                                             *
  *---------------------------------------------------------------------------*)
 
-fun single x = [x]
+fun list_of_singleton a = [a]
+fun list_of_pair (a, b) = [a, b]
+fun list_of_triple (a, b, c) = [a, b, c]
+fun list_of_quadruple (a, b, c, d) = [a, b, c, d]
 
 (* turning lists into tuples *)
 

@@ -74,6 +74,10 @@ sig
    val last : 'a list -> 'a
    val lex_cmp : ('b cmp * 'c cmp) -> (('a -> 'b) * ('a -> 'c)) -> 'a cmp
    val list_compare : 'a cmp -> 'a list cmp
+   val list_of_pair : 'a * 'a -> 'a list
+   val list_of_quadruple : 'a * 'a * 'a * 'a -> 'a list
+   val list_of_singleton : 'a -> 'a list
+   val list_of_triple : 'a * 'a * 'a -> 'a list
    val map2 : ('a -> 'b -> 'c) -> 'a list -> 'b list -> 'c list
    val mapfilter : ('a -> 'b) -> 'a list -> 'b list
    val mapi : (int -> 'a -> 'b) -> 'a list -> 'b list
@@ -115,7 +119,6 @@ sig
    val separate : 'a -> 'a list -> 'a list
    val set_diff : ''a list -> ''a list -> ''a list
    val set_eq : ''a list -> ''a list -> bool
-   val single : 'a -> 'a list
    val singleton_of_list : 'a list -> 'a
    val snd : 'a * 'b -> 'b
    val sort : ('a -> 'a -> bool) -> 'a list -> 'a list

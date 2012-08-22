@@ -96,13 +96,7 @@ fun mk_arb ty = inst [alpha |-> ty] arb
 
 fun mk_itself ty = inst [alpha |-> ty] the_value
 
-fun mk_icomb (t1, t2) =
-   let
-      val (dom, _) = dom_rng (type_of t1)
-      val i = match_type dom (type_of t2)
-   in
-      mk_comb (inst i t1, t2)
-   end
+val mk_icomb = Lib.uncurry HolKernel.mk_monop
 
 (*--------------------------------------------------------------------------*
  *                Destructors                                               *

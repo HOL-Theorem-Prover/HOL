@@ -11,169 +11,239 @@ struct
 
 infixr -->;  infix |->;
 
-val ERR = mk_HOL_ERR "HolKernel";
+val ERR = mk_HOL_ERR "HolKernel"
 
 (*---------------------------------------------------------------------------
           General term operations
  ---------------------------------------------------------------------------*)
 
 fun dest_monop c e M =
- let val (c1,N) = with_exn dest_comb M e
- in if same_const c c1 then N else raise e end
+   let
+      val (c1, N) = with_exn dest_comb M e
+   in
+      if same_const c c1 then N else raise e
+   end
 
-local fun dest tm =
-       let val (Rator,N) = dest_comb tm
-           val (c,M) = dest_comb Rator
-       in (c,(M,N)) end
+local
+   fun dest tm =
+      let
+         val (Rator, N) = dest_comb tm
+         val (c, M) = dest_comb Rator
+      in
+         (c, (M, N))
+      end
 in
-fun dest_binop c e tm =
-   let val (c1,pair) = with_exn dest tm e
-   in if same_const c c1 then pair else raise e end
+   fun dest_binop c e tm =
+      let
+         val (c1, pair) = with_exn dest tm e
+      in
+         if same_const c c1 then pair else raise e
+      end
 end
 
 fun dest_triop p e M =
-  let val (f,z) = with_exn dest_comb M e
-      val (x,y) = dest_binop p e f
-  in (x,y,z)
-  end;
+   let
+      val (f, z) = with_exn dest_comb M e
+      val (x, y) = dest_binop p e f
+   in
+      (x, y, z)
+   end
 
 (*---------------------------------------------------------------------------*)
 (* Take a binder apart. Fails on paired binders.                             *)
 (*---------------------------------------------------------------------------*)
 
 local
-  fun dest M =
-    let val (c,Rand) = dest_comb M
-    in (c,dest_abs Rand) end
+   fun dest M = let val (c, Rand) = dest_comb M in (c, dest_abs Rand) end
 in
-fun dest_binder c e M =
-  let val (c1,p) = with_exn dest M e
-  in if same_const c c1 then p else raise e end
+   fun dest_binder c e M =
+      let
+         val (c1, p) = with_exn dest M e
+      in
+         if same_const c c1 then p else raise e
+      end
 end
 
-
-local fun dest M =
-       let val (Rator,Rand) = dest_comb M in (dest_thy_const Rator,Rand) end
+local
+   fun dest M =
+      let val (Rator, Rand) = dest_comb M in (dest_thy_const Rator, Rand) end
 in
-fun sdest_monop (name,thy) e M =
- let val ({Name,Thy,...},Rand) = with_exn dest M e
- in if Name=name andalso Thy=thy then Rand else raise e
- end;
+   fun sdest_monop (name, thy) e M =
+      let
+         val ({Name, Thy, ...}, Rand) = with_exn dest M e
+      in
+         if Name = name andalso Thy = thy then Rand else raise e
+      end
 end
 
-local fun dest tm =
-       let val (Rator,N) = dest_comb tm
-           val (c,M) = dest_comb Rator
-       in (dest_thy_const c,(M,N))
-       end
+local
+   fun dest tm =
+      let
+         val (Rator, N) = dest_comb tm
+         val (c, M) = dest_comb Rator
+      in
+         (dest_thy_const c, (M, N))
+      end
 in
-fun sdest_binop (name,thy) e tm =
-   let val ({Name,Thy,...},pair) = with_exn dest tm e
-   in if Name=name andalso Thy=thy then pair else raise e
-   end
-end;
+   fun sdest_binop (name, thy) e tm =
+      let
+         val ({Name, Thy, ...}, pair) = with_exn dest tm e
+      in
+         if Name = name andalso Thy = thy then pair else raise e
+      end
+end
 
-local fun dest M =
+local
+   fun dest M =
        let val (c, Rand) = dest_comb M
-       in (dest_thy_const c,dest_abs Rand)
+       in (dest_thy_const c, dest_abs Rand)
        end
 in
-fun sdest_binder (name,thy) e M =
-  let val ({Name,Thy,...}, p) = with_exn dest M e
-  in if Name=name andalso Thy=thy then p else raise e
-  end
-end;
-
-fun single x = [x];
+   fun sdest_binder (name, thy) e M =
+      let
+         val ({Name, Thy, ...}, p) = with_exn dest M e
+      in
+         if Name = name andalso Thy = thy then p else raise e
+      end
+end
 
 (* Breaks term down until binop no longer occurs at top level in result list *)
 
 fun strip_binop dest =
- let fun strip A [] = rev A
-       | strip A (h::t) =
-          case dest h
-           of NONE => strip (h::A) t
-            | SOME(c1,c2) => strip A (c1::c2::t)
- in strip [] o single
- end;
+   let
+      fun strip A [] = rev A
+        | strip A (h :: t) =
+            case dest h of
+               NONE => strip (h :: A) t
+             | SOME (c1, c2) => strip A (c1 :: c2 :: t)
+   in
+      strip [] o Lib.list_of_singleton
+   end
 
 (* For right-associative binary operators. Tail recursive. *)
 
 fun spine_binop dest =
- let fun strip A tm =
-       case dest tm
-         of NONE => rev (tm::A)
-          | SOME (l,r) => strip (l::A) r
- in strip []
- end;
+   let
+      fun strip A tm =
+         case dest tm of
+            NONE => rev (tm :: A)
+          | SOME (l, r) => strip (l :: A) r
+   in
+      strip []
+   end
 
-(* for left-associative binary operators.  Tail recursive *)
-fun lspine_binop dest = let
-  fun strip A tm =
-      case dest tm of
-        NONE => tm :: A
-      | SOME (l,r) => strip (r::A) l
-in
-  strip []
-end;
+(* For left-associative binary operators.  Tail recursive *)
+
+fun lspine_binop dest =
+   let
+     fun strip A tm =
+         case dest tm of
+           NONE => tm :: A
+         | SOME (l, r) => strip (r :: A) l
+   in
+      strip []
+   end
 
 (* For right-associative binary operators. Tail recursive. *)
 
 fun list_mk_rbinop mk_binop alist =
-    case List.rev alist of
+   case List.rev alist of
       [] => raise ERR "list_mk_rbinop" "empty list"
-    | h::t => rev_itlist mk_binop t h
+    | h :: t => rev_itlist mk_binop t h
 
 (* For left-associative binary operators. Tail recursive. *)
 
 fun list_mk_lbinop _ [] = raise ERR "list_mk_lbinop" "empty list"
-  | list_mk_lbinop mk_binop (h::t) = rev_itlist (C mk_binop) t h;
+  | list_mk_lbinop mk_binop (h :: t) = rev_itlist (C mk_binop) t h
 
-fun mk_binder c f (p as (Bvar,_)) =
-   mk_comb(inst[alpha |-> type_of Bvar] c, mk_abs p)
-   handle HOL_ERR {message,...} => raise ERR f message;
+fun mk_binder c f (p as (Bvar, _)) =
+   mk_comb (inst [alpha |-> type_of Bvar] c, mk_abs p)
+   handle HOL_ERR {message, ...} => raise ERR f message
 
 fun list_mk_fun (dtys, rty) = List.foldr op--> rty dtys
 
 val strip_fun =
-  let val dest = total dom_rng
+   let
+      val dest = total dom_rng
       fun strip acc ty =
-          case dest ty
-            of SOME (d,r) => strip (d::acc) r
-             | NONE => (rev acc, ty)
-  in strip []
-  end;
-
+         case dest ty of
+            SOME (d, r) => strip (d :: acc) r
+          | NONE => (rev acc, ty)
+   in
+      strip []
+   end
 
 val strip_comb =
- let val destc = total dest_comb
-     fun strip rands M =
-      case destc M
-       of NONE => (M, rands)
-        | SOME(Rator,Rand) => strip (Rand::rands) Rator
- in strip []
- end;
+   let
+      val destc = total dest_comb
+      fun strip rands M =
+         case destc M of
+            NONE => (M, rands)
+          | SOME (Rator, Rand) => strip (Rand :: rands) Rator
+   in
+      strip []
+   end
 
+fun dest_quadop c e tm =
+   case with_exn strip_comb tm e of
+      (t, [t1, t2, t3, t4]) =>
+         if same_const t c then (t1, t2, t3, t4) else raise e
+    | _ => raise e
 
-datatype lambda
-   = VAR   of string * hol_type
-   | CONST of {Name:string, Thy:string, Ty:hol_type}
-   | COMB  of term * term
-   | LAMB  of term * term;
+local
+   val mk_aty = list_mk_rbinop (Lib.curry Type.-->)
+   val args = fst o strip_fun o Term.type_of
+in
+   fun list_mk_icomb tm xs =
+      let
+         val tyl = mk_aty (Lib.with_exn List.take (args tm, List.length xs)
+                                        (ERR "" "too many arguments"))
+         val tyr = mk_aty (List.map Term.type_of xs)
+      in
+         Term.list_mk_comb (Term.inst (Type.match_type tyl tyr) tm, xs)
+      end
+      handle HOL_ERR {message, ...} => raise ERR "list_mk_icomb" message
+
+   fun syntax_fns thy n dest make =
+      fn name =>
+         let
+            val ERR = Feedback.mk_HOL_ERR (thy ^ "Syntax")
+            val tm = Term.prim_mk_const {Name = name, Thy = thy}
+            val () =
+               ignore (List.length (args tm) = n
+                       orelse raise ERR "systax_fns" "bad number of arguments")
+            val d = dest tm (ERR ("dest_" ^ name) "")
+         in
+            (tm,
+             fn v => Lib.with_exn (make tm) v (ERR ("mk_" ^ name) ""): term,
+             d: term -> 'a,
+             can d)
+         end
+end
+
+fun mk_monop tm = list_mk_icomb tm o Lib.list_of_singleton
+fun mk_binop tm = list_mk_icomb tm o Lib.list_of_pair
+fun mk_triop tm = list_mk_icomb tm o Lib.list_of_triple
+fun mk_quadop tm = list_mk_icomb tm o Lib.list_of_quadruple
+
+datatype lambda =
+     VAR of string * hol_type
+   | CONST of {Name: string, Thy: string, Ty: hol_type}
+   | COMB of term * term
+   | LAMB of term * term
 
 fun dest_term M =
-  COMB(dest_comb M) handle HOL_ERR _ =>
-  LAMB(dest_abs M)  handle HOL_ERR _ =>
-  VAR (dest_var M)  handle HOL_ERR _ =>
-  CONST(dest_thy_const M);
+   COMB (dest_comb M) handle HOL_ERR _ =>
+   LAMB (dest_abs M) handle HOL_ERR _ =>
+   VAR (dest_var M) handle HOL_ERR _ =>
+   CONST (dest_thy_const M)
 
 (*---------------------------------------------------------------------------*
  * Used to implement natural deduction style discharging of hypotheses. All  *
  * hypotheses alpha-convertible to the dischargee are removed.               *
  *---------------------------------------------------------------------------*)
 
-fun disch(w,wl) = List.filter (not o Term.aconv w) wl;
-
+fun disch (w, wl) = List.filter (not o Term.aconv w) wl
 
 (*---------------------------------------------------------------------------*
  * Search a term for a sub-term satisfying the predicate P. If application   *
@@ -184,16 +254,22 @@ fun disch(w,wl) = List.filter (not o Term.aconv w) wl;
  *---------------------------------------------------------------------------*)
 
 fun find_term P =
- let fun find_tm tm =
-      if P tm then tm else
-      if is_abs tm then find_tm (body tm) else
-      if is_comb tm
-         then let val (Rator,Rand) = dest_comb tm
-              in find_tm Rator handle HOL_ERR _ => find_tm Rand
-              end
+   let
+      fun find_tm tm =
+         if P tm
+            then tm
+         else if is_abs tm
+            then find_tm (body tm)
+         else if is_comb tm
+            then let
+                    val (Rator, Rand) = dest_comb tm
+                 in
+                    find_tm Rator handle HOL_ERR _ => find_tm Rand
+                 end
          else raise ERR "find_term" ""
- in find_tm
- end;
+   in
+      find_tm
+   end
 
 (* ----------------------------------------------------------------------
     bvk_find_term :
@@ -218,30 +294,27 @@ fun find_term P =
    ---------------------------------------------------------------------- *)
 
 local
-datatype action = SEARCH of term | POP
+   datatype action = SEARCH of term | POP
 in
-fun bvk_find_term P k t = let
-  fun search bvs actions =
-      case actions of
-        [] => NONE
-      | POP :: alist => search (tl bvs) alist
-      | SEARCH t :: alist => let
-        in
-          if P (bvs, t) then
-            SOME (k t) handle HOL_ERR _ => subterm bvs alist t
-          else subterm bvs alist t
-        end
-  and subterm bvs alist t =
-      case dest_term t of
-        COMB(t1, t2) => search bvs (SEARCH t1 :: SEARCH t2 :: alist)
-      | LAMB(bv, t) => search (bv::bvs) (SEARCH t :: POP :: alist)
-      | _ => search bvs alist
-in
-  search [] [SEARCH t]
-end
+   fun bvk_find_term P k t =
+      let
+        fun search bvs actions =
+           case actions of
+              [] => NONE
+            | POP :: alist => search (tl bvs) alist
+            | SEARCH t :: alist =>
+               (if P (bvs, t)
+                   then SOME (k t) handle HOL_ERR _ => subterm bvs alist t
+                else subterm bvs alist t)
+        and subterm bvs alist t =
+           case dest_term t of
+              COMB (t1, t2) => search bvs (SEARCH t1 :: SEARCH t2 :: alist)
+            | LAMB (bv, t) => search (bv :: bvs) (SEARCH t :: POP :: alist)
+            | _ => search bvs alist
+   in
+      search [] [SEARCH t]
+   end
 end (* local *)
-
-
 
 (*---------------------------------------------------------------------------
  * find_terms: (term -> bool) -> term -> term list
@@ -252,18 +325,27 @@ end (* local *)
  *---------------------------------------------------------------------------*)
 
 fun find_terms P =
- let fun accum tl tm =
-      let val tl' = if P tm then tm::tl else tl
-      in accum tl' (body tm)
-         handle HOL_ERR _ =>
-          if is_comb tm
-          then let val (r1,r2) = dest_comb tm
-               in accum (accum tl' r1) r2
-               end
-          else tl'
-      end
- in accum []
- end;
+   let
+      val tms = ref []
+      fun find_tms tm =
+         (if P tm then tms := tm :: (!tms) else ()
+          ; find_tms (body tm)
+            handle HOL_ERR _ =>
+               if is_comb tm
+                  then let
+                          val (r1, r2) = dest_comb tm
+                       in
+                          find_tms r1; find_tms r2
+                       end
+               else ())
+   in
+      fn tm =>
+         let
+            val r = (find_tms tm; (!tms))
+         in
+            tms := []; r
+         end
+   end
 
 (* ----------------------------------------------------------------------
     find_maximal_terms[l]
@@ -273,20 +355,21 @@ fun find_terms P =
     returns the terms as a list rather than a set.
    ---------------------------------------------------------------------- *)
 
-fun find_maximal_terms P t = let
-  fun recurse acc tlist =
-      case tlist of
-        [] => acc
-      | t::ts =>
-        if P t then recurse (HOLset.add(acc, t)) ts
-        else
-          case dest_term t of
-            COMB(f,x) => recurse acc (f::x::ts)
-          | LAMB(v,b) => recurse acc (b::ts)
-          | _ => recurse acc ts
-in
-  recurse empty_tmset [t]
-end
+fun find_maximal_terms P t =
+   let
+      fun recurse acc tlist =
+         case tlist of
+            [] => acc
+          | t :: ts =>
+               if P t
+                  then recurse (HOLset.add (acc, t)) ts
+               else case dest_term t of
+                       COMB (f, x) => recurse acc (f :: x :: ts)
+                     | LAMB (v, b) => recurse acc (b :: ts)
+                     | _ => recurse acc ts
+   in
+      recurse empty_tmset [t]
+   end
 
 fun find_maximal_termsl P t = HOLset.listItems (find_maximal_terms P t)
 
@@ -297,18 +380,19 @@ fun find_maximal_termsl P t = HOLset.listItems (find_maximal_terms P t)
     number, but it can be useful.
    ---------------------------------------------------------------------- *)
 
-fun term_size t = let
-  fun recurse acc tlist =
-      case tlist of
-        [] => acc
-      | t::ts =>
-        case dest_term t of
-          COMB(f, x) => recurse acc (f::x::ts)
-        | LAMB(v,b) => recurse (1 + acc) (b::ts)
-        | _ => recurse (1 + acc) ts
-in
-  recurse 0 [t]
-end
+fun term_size t =
+   let
+      fun recurse acc tlist =
+         case tlist of
+            [] => acc
+          | t :: ts =>
+              (case dest_term t of
+                  COMB (f, x) => recurse acc (f :: x :: ts)
+                | LAMB (v, b) => recurse (1 + acc) (b :: ts)
+                | _ => recurse (1 + acc) ts)
+   in
+      recurse 0 [t]
+   end
 
 (*---------------------------------------------------------------------------
  * Subst_occs
@@ -317,31 +401,31 @@ end
  *---------------------------------------------------------------------------*)
 
 local
-fun splice ({redex,...}:{redex:term,residue:term}) v occs tm2 =
+fun splice ({redex, ...}:{redex:term, residue:term}) v occs tm2 =
    let fun graft (r as {occs=[], ...}) = r
          | graft {tm, occs, count} =
           if term_eq redex tm
-          then if (List.hd occs=count+1)
+          then if (List.hd occs = count + 1)
                then {tm=v, occs=List.tl occs, count=count+1}
                else {tm=tm, occs=occs, count=count+1}
           else if (is_comb tm)
                then let val (Rator, Rand) = dest_comb tm
                         val {tm=Rator', occs=occs', count=count'} =
-                                        graft {tm=Rator,occs=occs,count=count}
+                                        graft {tm=Rator, occs=occs, count=count}
                         val {tm=Rand', occs=occs'', count=count''} =
-                                        graft {tm=Rand,occs=occs',count=count'}
-                    in {tm=mk_comb(Rator', Rand'),
+                                        graft {tm=Rand, occs=occs', count=count'}
+                    in {tm=mk_comb (Rator', Rand'),
                         occs=occs'', count=count''}
                     end
                else if is_abs tm
-                    then let val (Bvar,Body) = dest_abs tm
+                    then let val (Bvar, Body) = dest_abs tm
                              val {tm, count, occs} =
-                                        graft{tm=Body,count=count,occs=occs}
-                         in {tm=mk_abs(Bvar, tm),
+                                        graft{tm=Body, count=count, occs=occs}
+                         in {tm=mk_abs (Bvar, tm),
                              count=count, occs=occs}
                          end
                     else {tm=tm, occs=occs, count=count}
-   in #tm(graft {tm=tm2, occs=occs, count=0})
+   in #tm (graft {tm=tm2, occs=occs, count=0})
    end
 
 fun rev_itlist3 f L1 L2 L3 base_value =
@@ -357,16 +441,15 @@ val sort = Lib.sort (Lib.curry (op <=) : int -> int -> bool)
 in
 fun subst_occs occ_lists tm_subst tm =
    let val occ_lists' = map sort occ_lists
-       val (new_vars,theta) =
-               Lib.itlist (fn {redex,residue} => fn (V,T) =>
-                         let val v = genvar(type_of redex)
+       val (new_vars, theta) =
+               Lib.itlist (fn {redex, residue} => fn (V, T) =>
+                         let val v = genvar (type_of redex)
                          in (v::V,  (v |-> residue)::T)  end)
                       tm_subst ([],[])
        val template = rev_itlist3 splice tm_subst new_vars occ_lists' tm
    in subst theta template
    end
-end;
-
+end
 
 (*---------------------------------------------------------------------------
        Higher order matching (from jrh via Michael Norrish - June 2001)
@@ -375,35 +458,35 @@ end;
 local
   exception NOT_FOUND
   fun find_residue red [] = raise NOT_FOUND
-    | find_residue red ({redex,residue}::rest) = if red = redex then residue
+    | find_residue red ({redex, residue}::rest) = if red = redex then residue
                                                  else find_residue red rest
   fun in_dom x [] = false
-    | in_dom x ({redex,residue}::rest) = (x = redex) orelse in_dom x rest
-  fun safe_insert (n as {redex,residue}) l = let
+    | in_dom x ({redex, residue}::rest) = (x = redex) orelse in_dom x rest
+  fun safe_insert (n as {redex, residue}) l = let
     val z = find_residue redex l
   in
     if residue = z then l
     else failwith "match: safe_insert"
   end handle NOT_FOUND => n::l  (* binding not there *)
-  fun safe_inserta (n as {redex,residue}) l = let
+  fun safe_inserta (n as {redex, residue}) l = let
     val z = find_residue redex l
   in
     if aconv residue z then l
     else failwith "match: safe_inserta"
   end handle NOT_FOUND => n::l
   val mk_dummy = let
-    val name = fst(dest_var(genvar Type.alpha))
-  in fn ty => mk_var(name, ty)
+    val name = fst (dest_var (genvar Type.alpha))
+  in fn ty => mk_var (name, ty)
   end
 
 
-  fun term_pmatch lconsts env vtm ctm (sofar as (insts,homs)) =
+  fun term_pmatch lconsts env vtm ctm (sofar as (insts, homs)) =
     if is_var vtm then let
         val ctm' = find_residue vtm env
       in
         if ctm' = ctm then sofar else failwith "term_pmatch"
       end handle NOT_FOUND =>
-                 if HOLset.member(lconsts, vtm) then
+                 if HOLset.member (lconsts, vtm) then
                    if ctm = vtm then sofar
                    else
                      failwith "term_pmatch: can't instantiate local constant"
@@ -418,18 +501,18 @@ local
         else failwith "term_pmatch"
       end
     else if is_abs vtm then let
-        val (vv,vbod) = dest_abs vtm
-        val (cv,cbod) = dest_abs ctm
+        val (vv, vbod) = dest_abs vtm
+        val (cv, cbod) = dest_abs ctm
         val (_, vty) = dest_var vv
         val (_, cty) = dest_var cv
-        val sofar' = (safe_insert(mk_dummy vty |-> mk_dummy cty) insts, homs)
+        val sofar' = (safe_insert (mk_dummy vty |-> mk_dummy cty) insts, homs)
       in
         term_pmatch lconsts ((vv |-> cv)::env) vbod cbod sofar'
       end
     else let
         val vhop = repeat rator vtm
       in
-        if is_var vhop andalso not (HOLset.member(lconsts, vhop)) andalso
+        if is_var vhop andalso not (HOLset.member (lconsts, vhop)) andalso
            not (in_dom vhop env)
         then let
             val vty = type_of vtm
@@ -437,11 +520,11 @@ local
             val insts' = if vty = cty then insts
                          else safe_insert (mk_dummy vty |-> mk_dummy cty) insts
           in
-            (insts', (env,ctm,vtm)::homs)
+            (insts', (env, ctm, vtm)::homs)
           end
         else let
-            val (lv,rv) = dest_comb vtm
-            val (lc,rc) = dest_comb ctm
+            val (lv, rv) = dest_comb vtm
+            val (lc, rc) = dest_comb ctm
             val sofar' = term_pmatch lconsts env lv lc sofar
           in
             term_pmatch lconsts env rv rc sofar'
@@ -461,26 +544,26 @@ fun get_type_insts avoids L =
 
 fun get_type_insts avoids L =
  let val tytheta = itlist (fn {redex,residue} =>
-          match_type_in_context (snd(dest_var redex)) (type_of residue))
+          match_type_in_context (snd (dest_var redex)) (type_of residue))
                      L []
- in if null(intersect avoids (map #residue tytheta))
+ in if null (intersect avoids (map #residue tytheta))
     then tytheta
     else raise ERR "get_type_insts" "attempt to bind fixed type variable"
  end
 *)
-fun get_type_insts avoids L (tyS,Id) =
- itlist (fn {redex,residue} => fn Theta =>
-          raw_match_type (snd(dest_var redex)) (type_of residue) Theta)
-       L (tyS,union avoids Id)
+fun get_type_insts avoids L (tyS, Id) =
+ itlist (fn {redex, residue} => fn Theta =>
+          raw_match_type (snd (dest_var redex)) (type_of residue) Theta)
+       L (tyS, union avoids Id)
 
 fun separate_insts tyavoids insts = let
   val (realinsts, patterns) = partition (is_var o #redex) insts
   val betacounts =
       if patterns = [] then []
       else
-        itlist (fn {redex = p,...} =>
+        itlist (fn {redex = p, ...} =>
                    fn sof => let
-                        val (hop,args) = strip_comb p
+                        val (hop, args) = strip_comb p
                       in
                         safe_insert (hop |-> length args) sof
                       end handle HOL_ERR _ =>
@@ -492,9 +575,9 @@ fun separate_insts tyavoids insts = let
 in
   (betacounts,
    mapfilter (fn {redex = x, residue = t} => let
-                   val x' = let val (xn,xty) = dest_var x
+                   val x' = let val (xn, xty) = dest_var x
                             in
-                              mk_var(xn, type_subst (#1 tyins) xty)
+                              mk_var (xn, type_subst (#1 tyins) xty)
                             end
                  in
                    if t = x' then failwith "" else {redex = x', residue = t}
@@ -505,7 +588,7 @@ end
 fun tyenv_in_dom x (env, idlist) = mem x idlist orelse in_dom x env
 fun tyenv_find_residue x (env, idlist) = if mem x idlist then x
                                          else find_residue x env
-fun tyenv_safe_insert (t as {redex,residue}) (E as (env, idlist)) = let
+fun tyenv_safe_insert (t as {redex, residue}) (E as (env, idlist)) = let
   val existing = tyenv_find_residue redex E
 in
   if existing = residue then E else failwith "Type bindings clash"
@@ -517,18 +600,18 @@ fun beta_normalise0 t = let
   fun bn1 t = case bn0 t of NONE => SOME t | x => x
 in
   case dest_term t of
-    COMB(t1,t2) => let
+    COMB (t1, t2) => let
     in
       case Lib.total beta_conv t of
         NONE => let
         in
           case bn0 t1 of
-            NONE => Option.map (fn t2' => mk_comb(t1,t2')) (bn0 t2)
-          | SOME t1' => bn1 (mk_comb(t1',t2))
+            NONE => Option.map (fn t2' => mk_comb (t1, t2')) (bn0 t2)
+          | SOME t1' => bn1 (mk_comb (t1', t2))
         end
       | SOME t' => bn1 t'
     end
-  | LAMB(v,t) => Option.map (fn t' => mk_abs(v,t')) (bn0 t)
+  | LAMB (v, t) => Option.map (fn t' => mk_abs (v, t')) (bn0 t)
   | x => NONE
 end
 
@@ -546,7 +629,7 @@ fun term_homatch tyavoids lconsts tyins (insts, homs) = let
 in
   if homs = [] then insts
   else let
-      val (env,ctm,vtm) = hd homs
+      val (env, ctm, vtm) = hd homs
     in
       if is_var vtm then
         if ctm = vtm then term_homatch tyins (insts, tl homs)
@@ -570,15 +653,15 @@ in
                                    handle NOT_FOUND =>
                                           find_residue a insts
                                    handle NOT_FOUND =>
-                                          if HOLset.member(lconsts, a)
+                                          if HOLset.member (lconsts, a)
                                           then a
                                           else failwith ""))) afvs
              val pats0 = map inst_fn vargs
              val pats = map (Term.subst tmins) pats0
              val vhop' = inst_fn vhop
-             val ictm = list_mk_comb(vhop', pats)
+             val ictm = list_mk_comb (vhop', pats)
              val ni = let
-               val (chop,cargs) = strip_comb ctm
+               val (chop, cargs) = strip_comb ctm
              in
                if all_abconv cargs pats then
                  if chop = vhop then insts
@@ -586,25 +669,25 @@ in
                else let
                    val ginsts = map (fn p => (p |->
                                                 (if is_var p then p
-                                                 else genvar(type_of p))))
+                                                 else genvar (type_of p))))
                                     pats
                    val ctm' = Term.subst ginsts ctm
                    val gvs = map #residue ginsts
-                   val abstm = list_mk_abs(gvs,ctm')
+                   val abstm = list_mk_abs (gvs, ctm')
                    val vinsts = safe_inserta (vhop |-> abstm) insts
-                   val icpair = (list_mk_comb(vhop',gvs) |-> ctm')
+                   val icpair = (list_mk_comb (vhop', gvs) |-> ctm')
                  in
                    icpair::vinsts
                  end
              end
            in
-             term_homatch tyins (ni,tl homs)
+             term_homatch tyins (ni, tl homs)
            end) handle HOL_ERR _ => let
-                         val (lc,rc) = dest_comb ctm
-                         val (lv,rv) = dest_comb vtm
+                         val (lc, rc) = dest_comb ctm
+                         val (lv, rv) = dest_comb vtm
                          val pinsts_homs' =
                              term_pmatch lconsts env rv rc
-                                         (insts, (env,lc,lv)::(tl homs))
+                                         (insts, (env, lc, lv)::(tl homs))
                          val tyins' =
                              get_type_insts tyavoids
                                             (fst pinsts_homs')
