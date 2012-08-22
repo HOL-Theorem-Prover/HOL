@@ -1202,9 +1202,9 @@ List.nth defs j = (xs,e) &&
 (cenv,ec) = body_env ns xs j (free_vars e) &&
 List.length bvs = List.length ec &&
 (forall i. i < List.length ec -->
-    (exist fv. List.nth ec i = CEEnv fv &&
-               bceqv il c (Pmap.find fv env) (List.nth bvs i)) ||
-    (exist k kxs ke kenv kec g.
+    (exists fv. List.nth ec i = CEEnv fv &&
+                bceqv il c (Pmap.find fv env) (List.nth bvs i)) ||
+    (exists k kxs ke kenv kec g.
         List.nth ec i = CERef k &&
         List.nth defs k = (kxs,ke) &&
         (kenv,kec) = body_env ns xs k (free_vars ke) &&

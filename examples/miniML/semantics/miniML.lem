@@ -560,13 +560,13 @@ let e_step_reln st1 st2 =
 
 let rec
 small_eval cenv env e c (Rval v) =
-  exist env'. (rtc e_step_reln) (cenv,env,Exp e,c) (cenv,env',Val v,[])
+  exists env'. (rtc e_step_reln) (cenv,env,Exp e,c) (cenv,env',Val v,[])
 and
 small_eval cenv env e c (Rerr (Rraise err)) =
-  exist env'. (rtc e_step_reln) (cenv,env,Exp e,c) (cenv,env',Exp (Raise err),[])
+  exists env'. (rtc e_step_reln) (cenv,env,Exp e,c) (cenv,env',Exp (Raise err),[])
 and
 small_eval cenv env e c (Rerr Rtype_error) =
-  exist env' e' c'.
+  exists env' e' c'.
     (rtc e_step_reln) (cenv,env,Exp e,c) (cenv,env',e',c') &&
     (e_step (cenv,env',e',c') = Etype_error)
 
@@ -575,7 +575,7 @@ let e_diverges cenv env e =
   forall cenv' env' e' c'.
     (rtc e_step_reln) (cenv,env,Exp e,[]) (cenv',env', e',c')
     -->
-    exist cenv'' env'' e'' c''.
+    exists cenv'' env'' e'' c''.
       e_step_reln (cenv',env', e',c') (cenv'',env'',e'',c'')
 
 let d_step_reln st st' =
@@ -586,12 +586,12 @@ d_small_eval cenv env ds c (Rval (cenv',env')) =
   (rtc d_step_reln) (cenv,env,ds,c) (cenv',env',[],None)
 and
 d_small_eval cenv env ds c (Rerr Rtype_error) =
-  exist cenv' env' ds' c'.
+  exists cenv' env' ds' c'.
     (rtc d_step_reln) (cenv,env,ds,c) (cenv',env',ds',c') &&
     (d_step (cenv',env',ds',c') = Dtype_error)
 and
 d_small_eval cenv env ds c (Rerr (Rraise err)) =
-  exist cenv' env' ds' c'.
+  exists cenv' env' ds' c'.
     (rtc d_step_reln) (cenv,env,ds,c) (cenv',env',ds',c') &&
     (d_step (cenv',env',ds',c') = Draise err)
 
@@ -600,7 +600,7 @@ let diverges cenv env ds =
   forall cenv' env' ds' c'.
     (rtc d_step_reln) (cenv,env,ds,None) (cenv',env',ds',c')
     -->
-    exist cenv'' env'' ds'' c''.
+    exists cenv'' env'' ds'' c''.
       d_step_reln (cenv',env',ds',c') (cenv'',env'',ds'',c'')
 
 (* ------------------------ Big step semantics -------------------------- *)
