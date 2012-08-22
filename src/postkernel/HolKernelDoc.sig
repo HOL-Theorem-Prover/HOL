@@ -5,6 +5,12 @@ sig
   type term = Term.term
   type thm = Thm.thm
 
+  datatype lambda =
+      VAR of string * hol_type
+    | CONST of {Name: string, Thy: string, Ty: hol_type}
+    | COMB of term * term
+    | LAMB of term * term
+
   val bvk_find_term:
      (term list * term -> bool) -> (term -> 'a) -> term -> 'a option
   val dest_binder: term -> exn -> term -> term * term
