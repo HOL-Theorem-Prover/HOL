@@ -260,13 +260,10 @@ fun find_term P =
             then tm
          else if is_abs tm
             then find_tm (body tm)
-         else if is_comb tm
-            then let
-                    val (Rator, Rand) = dest_comb tm
-                 in
-                    find_tm Rator handle HOL_ERR _ => find_tm Rand
-                 end
-         else raise ERR "find_term" ""
+         else case Lib.total dest_comb tm of
+                 SOME (Rator, Rand) =>
+                    (find_tm Rator handle HOL_ERR _ => find_tm Rand)
+               | NONE => raise ERR "find_term" ""
    in
       find_tm
    end
@@ -331,13 +328,9 @@ fun find_terms P =
          (if P tm then tms := tm :: (!tms) else ()
           ; find_tms (body tm)
             handle HOL_ERR _ =>
-               if is_comb tm
-                  then let
-                          val (r1, r2) = dest_comb tm
-                       in
-                          find_tms r1; find_tms r2
-                       end
-               else ())
+               case Lib.total dest_comb tm of
+                  SOME (r1, r2) => (find_tms r1; find_tms r2)
+                | NONE => ())
    in
       fn tm =>
          let
