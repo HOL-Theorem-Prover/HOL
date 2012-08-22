@@ -7,31 +7,11 @@ open Abbrev HolKernel bitTheory
 (* Helper functions                                                          *)
 (*---------------------------------------------------------------------------*)
 
-local
-   fun count n ty = count (n + 1) (snd (Type.dom_rng ty)) handle HOL_ERR _ => n
-   val count_args = count 0 o Term.type_of
-in
-   fun syntax_fns thy n dest make =
-      fn name =>
-         let
-            val ERR = mk_HOL_ERR (thy ^ "Syntax")
-            val tm = Term.prim_mk_const {Name = name, Thy = thy}
-            val () = ignore (count_args tm = n orelse
-                             raise ERR "systax_fns" "bad number of arguments")
-            val d = dest tm (ERR ("dest_" ^ name) "")
-         in
-            (tm, fn v => Lib.with_exn make (tm, v) (ERR ("mk_" ^ name) ""),
-             d, can d)
-         end
-   fun dest_quadop c e tm =
-      case with_exn strip_comb tm e of
-        (t,[t1,t2,t3,t4]) => if same_const t c then (t1,t2,t3,t4) else raise e
-      | _ => raise e
-end
+fun base_monop th =
+   HolKernel.syntax_fns th 1 HolKernel.dest_monop (Lib.curry Term.mk_comb)
 
-fun base_monop th = syntax_fns th 1 HolKernel.dest_monop Term.mk_comb
-fun base_binop th = syntax_fns th 2 HolKernel.dest_binop
-   (fn (tm, (v1, v2)) => Term.list_mk_comb (tm, [v1, v2]))
+fun base_binop th =
+   HolKernel.syntax_fns th 2 HolKernel.dest_binop HolKernel.mk_binop
 
 val monop_syntax_fns = base_monop "bit"
 val anmonop_syntax_fns = base_monop "ASCIInumbers"
@@ -40,12 +20,14 @@ val npmonop_syntax_fns = base_monop "numposrep"
 val binop_syntax_fns = base_binop "bit"
 val anbinop_syntax_fns = base_binop "ASCIInumbers"
 val npbinop_syntax_fns = base_binop "numposrep"
-val triop_syntax_fns = syntax_fns "bit" 3 HolKernel.dest_triop
-   (fn (tm, (v1, v2, v3)) => Term.list_mk_comb (tm, [v1, v2, v3]))
-val antriop_syntax_fns = syntax_fns "ASCIInumbers" 3 HolKernel.dest_triop
-   (fn (tm, (v1, v2, v3)) => Term.list_mk_comb (tm, [v1, v2, v3]))
-val quadop_syntax_fns = syntax_fns "bit" 4 dest_quadop
-   (fn (tm, (v1, v2, v3, v4)) => Term.list_mk_comb (tm, [v1, v2, v3, v4]))
+
+val triop_syntax_fns =
+   HolKernel.syntax_fns "bit" 3 HolKernel.dest_triop HolKernel.mk_triop
+val antriop_syntax_fns =
+   HolKernel.syntax_fns "ASCIInumbers" 3 HolKernel.dest_triop HolKernel.mk_triop
+
+val quadop_syntax_fns =
+   HolKernel.syntax_fns "bit" 4 HolKernel.dest_quadop HolKernel.mk_quadop
 
 val (lsb_tm,mk_lsb,dest_lsb,is_lsb)         = monop_syntax_fns "LSB"
 val (log2_tm,mk_log2,dest_log2,is_log2)     = monop_syntax_fns "LOG2"

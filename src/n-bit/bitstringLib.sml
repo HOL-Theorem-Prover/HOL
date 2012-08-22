@@ -460,7 +460,7 @@ local
         [((thy, _), (thm, _))] => SOME (thy, thm)
       | _ => NONE
    fun syntax_monop thy =
-      bitSyntax.syntax_fns thy 1 HolKernel.dest_monop Term.mk_comb
+      HolKernel.syntax_fns thy 1 HolKernel.dest_monop HolKernel.mk_monop
 in
    fun bitify_boolify i =
       let

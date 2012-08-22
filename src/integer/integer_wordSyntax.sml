@@ -6,22 +6,24 @@ open wordsSyntax integer_wordTheory
 
 val ERR = Feedback.mk_HOL_ERR "integer_wordSyntax"
 
-val syntax_fns = bitSyntax.syntax_fns
+val syntax_fns = HolKernel.syntax_fns
 
 (*------------------------------------------------------------------------- *)
 
-val s = syntax_fns "integer_word" 1 HolKernel.dest_monop Term.mk_comb
+val s = syntax_fns "integer_word" 1 HolKernel.dest_monop HolKernel.mk_monop
 
 val (toString_tm, mk_toString, dest_toString, is_toString) = s "toString"
 
 val (fromString_tm, mk_fromString, dest_fromString, is_fromString) =
     s "fromString"
 
+val (w2i_tm, mk_w2i, dest_w2i, is_w2i) = s "w2i"
+
 (* - - - - - - - - - - - - - - - - - - - - - - - *)
 
 val s = syntax_fns "integer_word" 1
    (fn tm1 => fn e => boolSyntax.dest_itself o HolKernel.dest_monop tm1 e)
-   (fn (tm, ty) =>
+   (fn tm => fn ty =>
       Term.mk_comb (Term.inst [Type.alpha |-> ty] tm, boolSyntax.mk_itself ty))
 
 val (int_min_tm, mk_int_min, dest_int_min, is_int_min) = s "INT_MIN"
@@ -32,7 +34,7 @@ val (uint_max_tm, mk_uint_max, dest_uint_max, is_uint_max) = s "UINT_MAX"
 
 val s = syntax_fns "integer_word" 1
    (fn tm1 => fn e => fn w => (HolKernel.dest_monop tm1 e w, dim_of w))
-   (fn (tm, (w, ty)) => Term.mk_comb (Term.inst [Type.alpha |-> ty] tm, w))
+   (fn tm => fn (w, ty) => Term.mk_comb (Term.inst [Type.alpha |-> ty] tm, w))
 
 val (i2w_tm, mk_i2w, dest_i2w, is_i2w) = s "i2w"
 
@@ -46,7 +48,7 @@ val (saturate_i2w_tm, mk_saturate_i2w, dest_saturate_i2w, is_saturate_i2w) =
 
 val s = syntax_fns "integer_word" 1
    (fn tm1 => fn e => fn w => (HolKernel.dest_monop tm1 e w, dim_of w))
-   (fn (tm, (w, ty)) =>
+   (fn tm => fn (w, ty) =>
        Term.mk_comb (Term.inst [Type.alpha |-> wordsSyntax.dim_of w,
                                 Type.beta |-> ty] tm, w))
 
@@ -61,17 +63,7 @@ val (saturate_w2sw_tm, mk_saturate_w2sw,
 
 (* - - - - - - - - - - - - - - - - - - - - - - - *)
 
-val s = syntax_fns "integer_word" 1 HolKernel.dest_monop
-   (fn (tm, w) =>
-       Term.mk_comb (Term.inst [Type.alpha |-> wordsSyntax.dim_of w] tm, w))
-
-val (w2i_tm, mk_w2i, dest_w2i, is_w2i) = s "w2i"
-
-(* - - - - - - - - - - - - - - - - - - - - - - - *)
-
-val s = syntax_fns "integer_word" 2 HolKernel.dest_binop
-   (fn (tm, (w1, w2)) =>
-      Term.list_mk_comb (Term.inst [Type.alpha |-> dim_of w1] tm, [w1, w2]))
+val s = syntax_fns "integer_word" 2 HolKernel.dest_binop HolKernel.mk_binop
 
 val (signed_saturate_add_tm, mk_signed_saturate_add,
      dest_signed_saturate_add, is_signed_saturate_add) = s "signed_saturate_add"

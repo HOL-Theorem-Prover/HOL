@@ -6,8 +6,7 @@ open bitSyntax fcpSyntax fcpLib wordsTheory
 
 val ERR = mk_HOL_ERR "wordsSyntax"
 
-val syntax_fns = bitSyntax.syntax_fns
-val dest_quadop = bitSyntax.dest_quadop
+fun syntax_fns n d m = HolKernel.syntax_fns "words" n d m
 
 (*---------------------------------------------------------------------------*)
 (* Word types                                                                *)
@@ -52,10 +51,10 @@ val is_dimindex = Lib.can dest_dimindex
 
 (* - - - - - - - - - - - - - - - - - - - - - - *)
 
-val s = syntax_fns "words" 0
+val s = syntax_fns 0
    (fn tm1 => fn e => fn tm2 =>
        if Term.same_const tm1 tm2 then dim_of tm2 else raise e)
-   (fn (tm, ty) => Term.inst [Type.alpha |-> ty] tm)
+   (fn tm => fn ty => Term.inst [Type.alpha |-> ty] tm)
 
 val (word_T_tm, mk_word_T, dest_word_T, is_word_T) = s "word_T"
 val (word_L_tm, mk_word_L, dest_word_L, is_word_L) = s "word_L"
@@ -64,9 +63,9 @@ val (word_L2_tm, mk_word_L2, dest_word_L2, is_word_L2) = s "word_L2"
 
 (* - - - - - - - - - - - - - - - - - - - - - - *)
 
-val s = syntax_fns "words" 1
+val s = syntax_fns 1
    (fn tm1 => fn e => boolSyntax.dest_itself o HolKernel.dest_monop tm1 e)
-   (fn (tm, ty) =>
+   (fn tm => fn ty =>
       Term.mk_comb (Term.inst [Type.alpha |-> ty] tm, boolSyntax.mk_itself ty))
 
 val (dimword_tm, mk_dimword, dest_dimword, is_dimword) = s "dimword"
@@ -76,8 +75,7 @@ val (int_max_tm, mk_int_max, dest_int_max, is_int_max) = s "INT_MAX"
 
 (* - - - - - - - - - - - - - - - - - - - - - - *)
 
-val s = syntax_fns "words" 1 HolKernel.dest_monop
-   (fn (tm, w) => Term.mk_comb (Term.inst [Type.alpha |-> dim_of w] tm, w))
+val s = syntax_fns 1 HolKernel.dest_monop HolKernel.mk_monop
 
 val (w2n_tm, mk_w2n, dest_w2n, is_w2n) = s "w2n"
 val (word_abs_tm, mk_word_abs, dest_word_abs, is_word_abs) = s "word_abs"
@@ -137,9 +135,9 @@ val (word_to_hex_string_tm, mk_word_to_hex_string,
 
 (* - - - - - - - - - - - - - - - - - - - - - - *)
 
-val s = syntax_fns "words" 1
+val s = syntax_fns 1
    (fn tm => fn e => pairSyntax.dest_pair o HolKernel.dest_monop tm e)
-   (fn (tm, (x, w)) =>
+   (fn tm => fn (x, w) =>
        Term.mk_comb (Term.inst [Type.alpha |-> dim_of w] tm,
                      pairSyntax.mk_pair (x, w)))
 
@@ -147,7 +145,7 @@ val (word_rrx_tm, mk_word_rrx, dest_word_rrx, is_word_rrx) = s "word_rrx"
 
 (* - - - - - - - - - - - - - - - - - - - - - - *)
 
-val s = syntax_fns "words" 1
+val s = syntax_fns 1
    (fn tm => fn e => fn x =>
       let
          val (a, y) = pairSyntax.dest_pair (HolKernel.dest_monop tm e x)
@@ -155,18 +153,18 @@ val s = syntax_fns "words" 1
       in
          (a, b, c)
       end)
-   (fn (tm, (a, b, c)) =>
+   (fn tm => fn (a, b, c) =>
        Term.mk_comb (Term.inst [Type.alpha |-> dim_of a] tm,
-                     pairSyntax.mk_pair (a, pairSyntax.mk_pair (b, c))))
+                     pairSyntax.list_mk_pair [a, b, c]))
 
 val (add_with_carry_tm, mk_add_with_carry,
      dest_add_with_carry, is_add_with_carry) = s "add_with_carry"
 
 (* - - - - - - - - - - - - - - - - - - - - - - *)
 
-val s = syntax_fns "words" 1
+val s = syntax_fns 1
    (fn tm1 => fn e => fn w => (HolKernel.dest_monop tm1 e w, dim_of w))
-   (fn (tm, (w, ty)) => Term.mk_comb (Term.inst [Type.alpha |-> ty] tm, w))
+   (fn tm => fn (w, ty) => Term.mk_comb (Term.inst [Type.alpha |-> ty] tm, w))
 
 val (n2w_tm, mk_n2w, dest_n2w, is_n2w) = s "n2w"
 
@@ -203,9 +201,9 @@ val (word_from_hex_string_tm, mk_word_from_hex_string,
 
 (* - - - - - - - - - - - - - - - - - - - - - - *)
 
-val s = syntax_fns "words" 1
+val s = syntax_fns 1
    (fn tm1 => fn e => fn w => (HolKernel.dest_monop tm1 e w, dim_of w))
-   (fn (tm, (w, ty)) =>
+   (fn tm => fn (w, ty) =>
        Term.mk_comb
          (Term.inst [Type.alpha |-> dim_of w, Type.beta |-> ty] tm, w))
 
@@ -217,9 +215,9 @@ val (saturate_w2w_tm, mk_saturate_w2w, dest_saturate_w2w, is_saturate_w2w) =
 
 (* - - - - - - - - - - - - - - - - - - - - - - *)
 
-val s = syntax_fns "words" 1
+val s = syntax_fns 1
    (fn tm1 => fn e => fn w => (HolKernel.dest_monop tm1 e w, dim_of w))
-   (fn (tm, (l, ty)) =>
+   (fn tm => fn (l, ty) =>
       let
          val d = dest_word_type (listSyntax.dest_list_type (Term.type_of l))
       in
@@ -231,10 +229,9 @@ val (concat_word_list_tm, mk_concat_word_list,
 
 (* - - - - - - - - - - - - - - - - - - - - - - *)
 
-val s = syntax_fns "words" 2 HolKernel.dest_binop
-   (fn (tm, (w1, w2)) =>
-      Term.list_mk_comb (Term.inst [Type.alpha |-> dim_of w1] tm, [w1, w2]))
+val s = syntax_fns 2 HolKernel.dest_binop HolKernel.mk_binop
 
+val (w2l_tm, mk_w2l, dest_w2l, is_w2l) = s "w2l"
 val (nzcv_tm, mk_nzcv, dest_nzcv, is_nzcv) = s "nzcv"
 val (word_lt_tm, mk_word_lt, dest_word_lt, is_word_lt) = s "word_lt"
 val (word_le_tm, mk_word_le, dest_word_le, is_word_le) = s "word_le"
@@ -267,6 +264,7 @@ val (word_lsr_tm, mk_word_lsr, dest_word_lsr, is_word_lsr) = s "word_lsr"
 val (word_asr_tm, mk_word_asr, dest_word_asr, is_word_asr) = s "word_asr"
 val (word_ror_tm, mk_word_ror, dest_word_ror, is_word_ror) = s "word_ror"
 val (word_rol_tm, mk_word_rol, dest_word_rol, is_word_rol) = s "word_rol"
+val (word_bit_tm, mk_word_bit, dest_word_bit, is_word_bit) = s "word_bit"
 
 val (word_lsl_bv_tm, mk_word_lsl_bv, dest_word_lsl_bv, is_word_lsl_bv) =
    s "word_lsl_bv"
@@ -295,15 +293,6 @@ val (saturate_sub_tm, mk_saturate_sub, dest_saturate_sub, is_saturate_sub) =
 val (saturate_mul_tm, mk_saturate_mul, dest_saturate_mul, is_saturate_mul) =
    s "saturate_mul"
 
-(* - - - - - - - - - - - - - - - - - - - - - - *)
-
-val s = syntax_fns "words" 2 HolKernel.dest_binop
-   (fn (tm, (x, w2)) =>
-       Term.list_mk_comb (Term.inst [Type.alpha |-> dim_of w2] tm, [x, w2]))
-
-val (w2l_tm, mk_w2l, dest_w2l, is_w2l) = s "w2l"
-val (word_bit_tm, mk_word_bit, dest_word_bit, is_word_bit) = s "word_bit"
-
 val (word_modify_tm, mk_word_modify, dest_word_modify, is_word_modify) =
    s "word_modify"
 
@@ -313,30 +302,22 @@ val (word_reduce_tm, mk_word_reduce, dest_word_reduce, is_word_reduce) =
 val (word_sign_extend_tm, mk_word_sign_extend,
      dest_word_sign_extend, is_word_sign_extend) = s "word_sign_extend"
 
-(* - - - - - - - - - - - - - - - - - - - - - - *)
-
-val s = syntax_fns "words" 2 HolKernel.dest_binop
-   (fn (tm, (w1, w2)) =>
-       Term.list_mk_comb
-         (Term.inst [Type.alpha |-> dim_of w1, Type.beta |-> dim_of w2] tm,
-          [w1, w2]))
-
 val (word_join_tm, mk_word_join, dest_word_join, is_word_join) = s "word_join"
 
 (* - - - - - - - - - - - - - - - - - - - - - - *)
 
-val s = syntax_fns "words" 2
+val s = syntax_fns 2
    (fn tm1 => fn e => fn w =>
       let val (n, l) = HolKernel.dest_binop tm1 e w in (n, l, dim_of w) end)
-   (fn (tm, (n, l, ty)) =>
+   (fn tm => fn (n, l, ty) =>
        Term.list_mk_comb (Term.inst [Type.alpha |-> ty] tm, [n, l]))
 
 val (l2w_tm, mk_l2w, dest_l2w, is_l2w) = s "l2w"
 
 (* - - - - - - - - - - - - - - - - - - - - - - *)
 
-val s = syntax_fns "words" 2 HolKernel.dest_binop
-   (fn (tm, (w1, w2)) =>
+val s = syntax_fns 2 HolKernel.dest_binop
+   (fn tm => fn (w1, w2) =>
       let
          val d1 = dim_of w1
          val d2 = dim_of w2
@@ -354,8 +335,8 @@ val (word_concat_tm, mk_word_concat, dest_word_concat, is_word_concat) =
 
 (* - - - - - - - - - - - - - - - - - - - - - - *)
 
-val s = syntax_fns "words" 2 HolKernel.dest_binop
-   (fn (tm, (n, w)) =>
+val s = syntax_fns 2 HolKernel.dest_binop
+   (fn tm => fn (n, w) =>
       let
          val d1 = dim_of w
          val d2 = fcpLib.index_type
@@ -372,9 +353,7 @@ val (word_replicate_tm, mk_word_replicate,
 
 (* - - - - - - - - - - - - - - - - - - - - - - *)
 
-val s = syntax_fns "words" 3 HolKernel.dest_triop
-   (fn (tm, (n1, n2, w)) =>
-       Term.list_mk_comb (Term.inst [Type.alpha |-> dim_of w] tm, [n1, n2, w]))
+val s = syntax_fns 3 HolKernel.dest_triop HolKernel.mk_triop
 
 val (word_bits_tm, mk_word_bits, dest_word_bits, is_word_bits) = s "word_bits"
 
@@ -385,28 +364,28 @@ val (w2s_tm, mk_w2s, dest_w2s, is_w2s) = s "w2s"
 
 (* - - - - - - - - - - - - - - - - - - - - - - *)
 
-val s = syntax_fns "words" 3
+val s = syntax_fns 3
    (fn tm1 => fn e => fn w =>
       let
          val (n1, n2, s) = HolKernel.dest_triop tm1 e w
       in
          (n1, n2, w, dim_of w)
       end)
-   (fn (tm, (n1, n2, n3, ty)) =>
+   (fn tm => fn (n1, n2, n3, ty) =>
        Term.list_mk_comb (Term.inst [Type.alpha |-> ty] tm, [n1, n2, n3]))
 
 val (s2w_tm, mk_s2w, dest_s2w, is_s2w) = s "s2w"
 
 (* - - - - - - - - - - - - - - - - - - - - - - *)
 
-val s = syntax_fns "words" 3
+val s = syntax_fns 3
    (fn tm1 => fn e => fn w =>
       let
          val (n1, n2, w1) = HolKernel.dest_triop tm1 e w
       in
          (n1, n2, w1, dim_of w)
       end)
-   (fn (tm, (n1, n2, w, ty)) =>
+   (fn tm => fn (n1, n2, w, ty) =>
        Term.list_mk_comb
           (Term.inst [Type.alpha |-> dim_of w, Type.beta |-> ty] tm,
            [n1, n2, w]))
@@ -416,11 +395,7 @@ val (word_extract_tm, mk_word_extract, dest_word_extract, is_word_extract) =
 
 (* - - - - - - - - - - - - - - - - - - - - - - *)
 
-val s = syntax_fns "words" 4 dest_quadop
-   (fn (tm, (n1, n2, w1, w2)) =>
-       Term.list_mk_comb
-          (Term.inst [Type.alpha |-> dim_of w2, Type.beta |-> dim_of w1] tm,
-           [n1, n2, w1, w2]))
+val s = syntax_fns 4 HolKernel.dest_quadop HolKernel.mk_quadop
 
 val (bit_field_insert_tm, mk_bit_field_insert,
      dest_bit_field_insert, is_bit_field_insert) = s "bit_field_insert"
