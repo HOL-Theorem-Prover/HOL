@@ -4,6 +4,9 @@ sig
 
   type term = Term.term
   type thm = Thm.thm
+  type hol_type = Type.hol_type
+  type 'a set = 'a Binaryset.set
+  type ('a,'b) subst = ('a,'b) Lib.subst
 
   datatype lambda =
       VAR of string * hol_type
