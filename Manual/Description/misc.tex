@@ -234,31 +234,26 @@ For example, if, in your development directory, you had a file of ML code named 
 
 \subsection{Summary}
 
-A complete theory construction is performed by the following steps:
+A complete theory construction might be performed by the following steps:
 \begin{itemize}
 \item Construct theory script, perhaps over many sessions;
 \item Transform script into separately compilable form;
 \item Invoke \holmake{} to generate the theory and compile it.
 \end{itemize}
-
 After that, the theory is usable as an ML module.
+This flow is demonstrated in the Euclid example of \TUTORIAL.
+
+Alternatively, and probably with the help of one of the editor modes,\footnote{There are editor modes for \texttt{emacs} and \texttt{vim}.} one can develop a theory with a script file that is always separately compilable.
 
 \subsection{What \holmake{} doesn't do}
 
-\holmake{} only works properly on the current directory.  \holmake{}
-will rebuild files in the current directory if something it depends on
-from another directory is fresher than it is, but it will not do any
-analysis on files in other directories.
+\holmake{} only works properly on the current directory.
+\holmake{} will rebuild files in the current directory if something it depends on from another directory is fresher than it is, but it will not do any analysis on files in other directories.
 
-However, one can indicate that there is a dependency on other
-directories by using the \texttt{-I} flag, or the \texttt{INCLUDES}
-variable in a \texttt{Holmakefile}.  Such a specification will cause
-\holmake{} to look in the specified directories for other theory files
-that the current directory may depend on.  Moreover, by default
-\holmake{} will recursively call itself on all those ``include''
-directories before doing anything in the current directory.  In this
-way, one can get a staged application of \holmake{} across multiple
-directories.\footnote{See \emph{Recursive Make Considered
+However, one can indicate that there is a dependency on other directories by using the \texttt{-I} flag, or the \texttt{INCLUDES} variable in a \texttt{Holmakefile}.
+Such a specification will cause \holmake{} to look in the specified directories for other theory files that the current directory may depend on.
+Moreover, by default \holmake{} will recursively call itself on all those ``include'' directories before doing anything in the current directory.
+In this way, one can get a staged application of \holmake{} across multiple directories.\footnote{See \emph{Recursive Make Considered
     Harmful} by Peter Miller for why this is not ideal.}
 
 \subsection{\holmake{}'s command-line arguments}
