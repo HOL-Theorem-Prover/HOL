@@ -2,6 +2,10 @@
 
 \section{Datatypes}\label{sec:datatype}
 \index{type definitions, in HOL logic@type definitions, in \HOL{} logic!algebraic types}
+\index{Hol_datatype@\ml{Hol\_datatype}|(}
+\index{algebraic data types|see{\ml{Hol\_datatype}}}
+\index{data types!definition in HOL@definition in \HOL{}}
+\index{data types!definition in HOL@definition in \HOL{}|seealso{\ml{Hol\_datatype}}}
 
 Although the \HOL{} logic provides primitive definition principles
 allowing new types to be introduced, the level of detail is
@@ -322,23 +326,16 @@ lambda calculus as a set (note the \holtxt{->} in the clause for the
 
 \subsection{Theorems arising from a datatype definition}
 
-The consequences of an invocation of \ml{Hol\_datatype} are stored in
-the current theory segment and in \ml{TypeBase}. The principal
-consequences of a datatype definition are the primitive recursion and
-induction theorems.  These provide the ability to define simple
-functions over the type, and an induction principle for the type.
-Thus, for a type named \holtxt{ty}, the primitive recursion theorem is
-stored under \ml{ty\_Axiom} and the induction theorem is put under
-\ml{ty\_induction}. Other consequences include the distinctness of
-constructors (\ml{ty\_distinct}), and the injectivity of constructors
-(\verb+ty_11+). A `degenerate' version of \ml{ty\_induction} is also
-stored under \ml{ty\_nchotomy}: it provides for reasoning by cases on
-the construction of elements of \ml{ty}.  Finally, some
-special-purpose theorems are stored: for example, \ml{ty\_case\_cong}
-holds a congruence theorem for ``case'' statements on elements of
-\ml{ty}. These case statements are defined by \ml{ty\_case\_def}.
-Also, a definition of the ``size'' of the type is added to the current
-theory, under the name \ml{ty\_size\_def}.
+The consequences of an invocation of \ml{Hol\_datatype} are stored in the current theory segment and in \ml{TypeBase}.
+The principal consequences of a datatype definition are the primitive recursion and induction theorems.
+These provide the ability to define simple functions over the type, and an induction principle for the type.
+\index{induction theorems, in HOL logic@induction theorems, in \HOL{} logic!for algebraic data types}
+Thus, for a type named \holtxt{ty}, the primitive recursion theorem is stored under \ml{ty\_Axiom} and the induction theorem is put under \ml{ty\_induction}.
+Other consequences include the distinctness of constructors (\ml{ty\_distinct}), and the injectivity of constructors (\verb+ty_11+).
+A `degenerate' version of \ml{ty\_induction} is also stored under \ml{ty\_nchotomy}: it provides for reasoning by cases on the construction of elements of \ml{ty}.
+Finally, some special-purpose theorems are stored: for example, \ml{ty\_case\_cong} holds a congruence theorem for ``case'' statements on elements of \ml{ty}.
+These case statements are defined by \ml{ty\_case\_def}.
+Also, a definition of the ``size'' of the type is added to the current theory, under the name \ml{ty\_size\_def}.
 
 For example, invoking
 %
@@ -598,6 +595,7 @@ through a phase of simplification (\texttt{SIMP\_RULE}), applying the
 
 The pretty-printing of big records can be controlled with the
 \texttt{pp\_bigrecs} trace-flag.
+\index{Hol_datatype@\ml{Hol\_datatype}|)}
 
 
 \section{Quotient Types}\label{quotients}

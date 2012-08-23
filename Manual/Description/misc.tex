@@ -960,9 +960,14 @@ For example, \verb|\HOLthm{bool.AND_CLAUSES}|.
 %
 This prints the specified theorem with a leading turnstile.
 %
-By default, the output is \emph{not} wrapped in an \texttt{\bs{}mbox}, making it best suited for inclusion in an environment such as \texttt{alltt}.
+\index{Hol_datatype@\ml{Hol\_datatype}!printing in LaTeX@printing in \LaTeX{}}
+However, as a special case, if the theorem specified is a ``datatype theorem'' (with a name of the form \texttt{datatype\_}$\langle$\textit{type-name}$\rangle$), a BNF-style description of the given type (one that has been defined with \ml{Hol\_datatype}) will be printed.
 %
-(The important characteristics of the \texttt{alltt} environment are that it respects layout in terms of newlines, while also allowing the insertion of \LaTeX{} commands.  The \texttt{verbatim} environment does the former, but not the latter.)
+Datatype theorems with these names are automatically generated when \ml{Hol\_datatype} is run.
+
+By default, the output is \emph{not} wrapped in an \texttt{\bs{}mbox}, making it best suited for inclusion in an environment such as \texttt{alltt}.
+(The important characteristics of the \texttt{alltt} environment are that it respects layout in terms of newlines, while also allowing the insertion of \LaTeX{} commands.
+The \texttt{verbatim} environment does the former, but not the latter.)
 \end{description}
 
 \paragraph{Munging Command Options}
