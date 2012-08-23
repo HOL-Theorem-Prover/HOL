@@ -147,7 +147,7 @@ val e26 = ``Mat (Con "Cons" [Lit (IntLit 2);
 val [Number i] = run_decs_exp([listd],e26)
 val SOME 5 = intML.toInt i;
 val e27 =
-CLetfun(false,["1"],[([],CRaise Bind_error)],
+CLetfun(false,["1"],[([],sumML.INL (CRaise Bind_error))],
 CIf(CPrim2(CEq,CLit (IntLit i0),CLit (IntLit i0)),
     CLit (IntLit i1),
     CCall (CVar "1",[])))

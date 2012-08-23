@@ -6,5 +6,6 @@ val EVERY2 : forall 'a 'b. ('a -> 'b -> bool) -> 'a list -> 'b list -> bool
 (* TODO: lem library can't handle option type *)
 val OPTREL : forall 'a 'b 'c 'd. ('a -> 'b -> bool) -> 'c -> 'd -> bool
 val FLOOKUP : forall 'a 'b 'c. ('a,'b) fmap -> 'a -> 'c
+val DOMSUB : forall 'a 'b. ('a,'b) fmap -> 'a -> ('a,'b) fmap
 val int_of_num : num -> int
 val GENLIST : forall 'a. (num -> 'a) -> num -> 'a list
