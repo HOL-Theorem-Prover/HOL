@@ -39,7 +39,7 @@
 # name of the current kernel.  Thus the line (otknl)foo will cause foo to
 # be built only if the current kernel is otknl. (The other supported
 # kernels at the time of writing are stdknl and expk.)
-# 
+#
 # If combining these annotations, the required order is [system] then
 # (kernel) then test level.  Thus [mosml]!!foo, not !![mosml]foo, and
 # [poly](otknl)!foo, not (otknl)[poly]!foo.
@@ -192,4 +192,6 @@ src/temporal/src
 !!examples/Crypto/TEA
 !!examples/Crypto/TWOFISH
 
+[poly]!!examples/miniML/hol2miniml
+[poly]!!!examples/theorem-prover
 [poly]!!!examples/machine-code/lisp
