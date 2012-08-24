@@ -1,5 +1,5 @@
 (*=====================================================================  *)
-(* FILE          : quantHeuristicsLib.sml                                *)
+(* FILE          : quantHeuristicsLibParameters.sml                      *)
 (* DESCRIPTION   : some code to find instantations for quantified        *)
 (*                 variables                                             *)
 (*                                                                       *)
@@ -8,7 +8,7 @@
 (* ===================================================================== *)
 
 
-structure quantHeuristicsArgsLib :> quantHeuristicsArgsLib =
+structure quantHeuristicsLibParameters :> quantHeuristicsLibParameters =
 struct
 
 (*
@@ -23,7 +23,7 @@ show_assums := true;
 quietdec := true;
 *)
 
-open HolKernel Parse boolLib Drule ConseqConv quantHeuristicsLib
+open HolKernel Parse boolLib Drule ConseqConv quantHeuristicsLibBase
      rich_listTheory quantHeuristicsTheory
 (*
 quietdec := false;
@@ -66,7 +66,7 @@ in
 end;
 
 val GUESS_PAIR_THM = prove (
-``!P. GUESS_EXISTS_STRONG (\x:'a. x) P /\ GUESS_FORALL_STRONG (\x. x) P``,
+``!P. GUESS_EXISTS_GAP (\x:'a. x) P /\ GUESS_FORALL_GAP (\x. x) P``,
 simpLib.SIMP_TAC numLib.std_ss [GUESS_REWRITES])
 
 
@@ -82,14 +82,14 @@ let
 
    val gthmL = CONJUNCTS (ISPEC (mk_abs (v, t)) GUESS_PAIR_THM)
 in
-  {rewrites            = [],
-   general             = [],
-   true                = [],
-   false               = [],
-   forall              = [],
-   exists              = [],
-   forall_strong       = [guess_thm (gty_forall_strong, vars, fvL, el 2 gthmL)],
-   exists_strong       = [guess_thm (gty_exists_strong, vars, fvL, el 1 gthmL)]}
+  {rewrites     = [],
+   general      = [],
+   exists_point = [],
+   forall_point = [],
+   forall       = [],
+   exists       = [],
+   forall_gap   = [guess_thm (gty_forall_gap, vars, fvL, el 2 gthmL)],
+   exists_gap   = [guess_thm (gty_exists_gap, vars, fvL, el 1 gthmL)]}
 end;
 
 
@@ -185,9 +185,9 @@ val thm = PAIR_QUANT_INSTANTIATE_CONV t
 *)
 
 
-val stateful_qp = quantHeuristicsLib.stateful_qp;
-val pure_stateful_qp = quantHeuristicsLib.pure_stateful_qp;
-val TypeBase_qp = quantHeuristicsLib.TypeBase_qp;
+val stateful_qp = quantHeuristicsLibBase.stateful_qp;
+val pure_stateful_qp = quantHeuristicsLibBase.pure_stateful_qp;
+val TypeBase_qp = quantHeuristicsLibBase.TypeBase_qp;
 
 
 (*******************************************************************

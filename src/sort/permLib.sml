@@ -303,7 +303,7 @@ let
    val thm1 = CONV_RULE (RHS_CONV (REWRITE_CONV [GSYM (CONJUNCT2 APPEND)])) thm0
 
    val thm2 = CONV_RULE (RHS_CONV (RAND_CONV (
-		 quantHeuristicsLib.BOUNDED_REPEATC (length ls) (REWR_CONV APPEND_ASSOC)))) thm1;
+		 quantHeuristicsLibBase.BOUNDED_REPEATC (length ls) (REWR_CONV APPEND_ASSOC)))) thm1;
 
    val thm3 = CONV_RULE (RAND_CONV (RAND_CONV (RAND_CONV LIST_NIL_CONV))) thm2
 in

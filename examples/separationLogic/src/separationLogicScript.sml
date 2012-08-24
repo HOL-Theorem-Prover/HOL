@@ -16,7 +16,7 @@ show_assums := true;
 open generalHelpersTheory finite_mapTheory relationTheory bagTheory pred_setTheory congLib sortingTheory
    listTheory rich_listTheory arithmeticTheory operatorTheory optionTheory latticeTheory
    containerTheory boolSimps ConseqConv markerTheory
-open quantHeuristicsLib quantHeuristicsArgsLib
+open quantHeuristicsLib 
 
 (*
 open Sanity

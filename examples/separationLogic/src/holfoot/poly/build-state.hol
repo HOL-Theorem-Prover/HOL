@@ -29,7 +29,6 @@ val examplesDir =
 val _ = holfoot_auto_verify_spec (examplesDir ^ "/automatic/list.sf")
 val _ = holfoot_verify_spec (examplesDir ^ "/automatic/mergesort.sf") [] 
 
-
 (* save state *)
 val state_file = (Globals.HOLDIR ^ "/examples/separationLogic/src/holfoot/poly/holfoot.state");
 val _ = PolyML.SaveState.saveState state_file;

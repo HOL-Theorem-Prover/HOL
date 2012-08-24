@@ -14,7 +14,7 @@ show_assums := true;
 open generalHelpersTheory finite_mapTheory pred_setTheory
    listTheory rich_listTheory arithmeticTheory separationLogicTheory
    bagTheory bagSimps containerTheory relationTheory operatorTheory optionTheory;
-open ConseqConv boolSimps quantHeuristicsLib quantHeuristicsArgsLib Sanity
+open ConseqConv boolSimps quantHeuristicsLib Sanity
 open quantHeuristicsTheory
 
 (*
@@ -10248,7 +10248,7 @@ METIS_TAC[]);
 
 val GUESS_RULES___VAR_RES_FRAME_SPLIT_2 = store_thm ("GUESS_RULES___VAR_RES_FRAME_SPLIT_2",
 ``!i c f wpb rpb wpb' sfb_context sfb_split sfb_imp sfb_restP sr.
-GUESS_EXISTS_STRONG i (\x. c x) ==>
+GUESS_EXISTS_GAP i (\x. c x) ==>
 (!x. FINITE_BAG (sfb_imp x)) ==>
 (!x sf. BAG_IN sf (sfb_imp x) ==>
         VAR_RES_IS_STACK_IMPRECISE___USED_VARS (SET_OF_BAG (wpb + rpb)) sf) ==>

@@ -88,7 +88,6 @@ open vars_as_resourceSyntax
 open vars_as_resourceTheory
 open vars_as_resourceSyntax
 open quantHeuristicsLib
-open quantHeuristicsArgsLib
 open ConseqConv
 open bagLib
 open separationLogicLib

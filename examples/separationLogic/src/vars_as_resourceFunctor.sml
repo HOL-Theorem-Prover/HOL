@@ -200,7 +200,7 @@ open vars_as_resourceSyntax
 open vars_as_resourceTheory
 open vars_as_resourceSyntax
 open quantHeuristicsLib
-open quantHeuristicsArgsLib
+open quantHeuristicsLibBase
 open ConseqConv
 open bagLib
 open separationLogicLib
@@ -3229,7 +3229,7 @@ let
    val sfs'' = map rand sfs';
 
    val gC = COMBINE_HEURISTIC_FUNS (map (fn t => (fn () => (sys v t))) sfs'');
-   val relevant_guesses = #exists_strong gC;
+   val relevant_guesses = #exists_gap gC;
 
    fun mk_exists g =
      let
@@ -3241,12 +3241,12 @@ let
 in
   {rewrites            = #rewrites gC,
    general             = [],
-   true                = [],
-   false               = [],
+   exists_point        = [],
+   forall_point        = [],
    forall              = [],
    exists              = guesses,
-   exists_strong       = [],
-   forall_strong       = []}:guess_collection
+   exists_gap          = [],
+   forall_gap          = []}:guess_collection
 end handle HOL_ERR _ => raise QUANT_INSTANTIATE_HEURISTIC___no_guess_exp
 
 val cache_ref = ref (mk_quant_heuristic_cache ());

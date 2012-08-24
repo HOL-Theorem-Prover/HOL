@@ -28,7 +28,6 @@ open vars_as_resourceSyntax
 open vars_as_resourceTheory
 open vars_as_resourceSyntax
 open quantHeuristicsLib
-open quantHeuristicsArgsLib
 open treeTheory
 open ConseqConv
 open holfootSyntax treeSyntax
@@ -2826,7 +2825,7 @@ fun holfoot_verify_spec_internal verbose print_remaining (file, defaultConseqCon
      val t = parse_holfoot_file file;
      val is_spec = is_ASL_SPECIFICATION t
 
-     val _ = if verbose then (print_timer true (true,false); print "\n\n"; print_backend_term t; print "\n\n")
+     val _ = if verbose then (print_timer true (true,false); print "\n\n"; (print o ppstring pp_term) t; print "\n\n")
                         else (print "\n");
 
      val procedure_names =
@@ -2886,7 +2885,7 @@ fun holfoot_verify_spec_internal verbose print_remaining (file, defaultConseqCon
         val _ = print_timer verbose (p_thm_ok, skipped);
         val _ = if p_thm_ok orelse (not verbose) orelse (not print_remaining) then () else let
                   val _ = print "   remaining proof obligations:\n"
-                  val _ = foldl (fn (t, _) => (print_backend_term t;print "\n\n")) ()
+                  val _ = foldl (fn (t, _) => ((print o ppstring pp_term) t;print "\n\n")) ()
                              (hyp p_thm)
                 in () end;
      in

@@ -16,7 +16,7 @@ open separationLogicTheory;
 open separationLogicSyntax
 open vars_as_resourceTheory
 open quantHeuristicsLib
-open quantHeuristicsArgsLib
+open quantHeuristicsLibBase
 open ConseqConv
 open Profile
 

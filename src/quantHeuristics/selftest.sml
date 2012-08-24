@@ -1,5 +1,5 @@
 open HolKernel Parse boolTheory boolLib pairTheory
-open quantHeuristicsLib quantHeuristicsArgsLib
+open quantHeuristicsLib
 
 
 val _ = Parse.current_backend := PPBackEnd.vt100_terminal;
@@ -48,6 +48,7 @@ in
     ()
 end;
 
+val hard_fail = false;
 val hard_fail = true;
 val quiet = false;
 
@@ -115,6 +116,19 @@ val qh_testCases =
 val qh_test = test_conv "QUANT_INSTANTIATE_CONV []" (QUANT_INSTANTIATE_CONV [])
 val _ = map (qh_test hard_fail quiet) qh_testCases;
 
+
+(******************************************************************************)
+(* QUANT_CONV tests                                                           *)
+(******************************************************************************)
+
+val _ = test_conv "INST_QUANT_CONV [(\"x\", `2:num`, [])]" (INST_QUANT_CONV [("x", `2:num`, [])]) hard_fail quiet 
+   (``!z. !x. (x = 2:num) ==> P(x, z)``, SOME ``!z. P(2, z)``)
+
+val _ = test_conv "INST_QUANT_CONV [(\"x\", `2:num`, [])]" (INST_QUANT_CONV [("x", `2:num`, [])]) hard_fail quiet 
+   (``!z. ?x. (x = 2:num) /\ P(x, z)``, SOME ``!z. P(2, z)``)
+
+val _ = test_conv "INST_QUANT_CONV [(\"x\", `3:num`, [])]" (INST_QUANT_CONV [("x", `3:num`, [])]) hard_fail quiet 
+   (``!z. ?x. (x = 2:num) /\ P(x, z)``, NONE)
 
 (*
 QUANT_INSTANTIATE_CONV [] ``?x. if b x then ((x = 2) /\ Q x) else (Q2 x /\ (x = 2))``

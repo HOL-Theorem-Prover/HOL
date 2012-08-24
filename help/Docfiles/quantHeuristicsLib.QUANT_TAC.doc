@@ -1,6 +1,6 @@
-\DOC QUANT_INST_TAC
+\DOC QUANT_TAC
 
-\TYPE {QUANT_INST_TAC : (string * Parse.term Lib.frag list * Parse.term Parse.frag list list) list -> tactic}
+\TYPE {QUANT_TAC : (string * Parse.term Lib.frag list * Parse.term Parse.frag list list) list -> tactic}
 
 \SYNOPSIS
 A tactic to intantiate quantifiers in a term using an explitly given list of (partial) instantiations.
@@ -11,14 +11,14 @@ tactic, quantifier, existential, choose, witness.
 \DESCRIBE
 This tactic can be seen as a generalisation of {Q.EXISTS_TAC}. 
 When applied to a term fragment {u} and a goal {?x. t}, the tactic
-{EXISTS_TAC} reduces the goal to {t[u/x]}. {QUANT_INST_TAC} allows to
+{EXISTS_TAC} reduces the goal to {t[u/x]}. {QUANT_TAC} allows to
 perform similar instantiations of quantifiers at subpositions, provided 
 the subposition occurs in a formula composed of standard operators that
 the tactic can handle. It can - depending on negation level - instantiate
 both existential and universal quantifiers. Moreover, it allows partial
 instantiations and instantiating multiple variables at the same time.
 
-{QUANT_INST_TAC} gets a list of triples {(var_name, instantiation, free_vars)} 
+{QUANT_TAC} gets a list of triples {(var_name, instantiation, free_vars)} 
 as an argument. {var_name} is the name of the variable to be instantiated;
 {instantiation} is the term this variable should be instantiated with. Finally,
 {free_vars} is a list of free variables in {instantiation} that should remain
@@ -32,7 +32,7 @@ Given the goal
 {
    !x. (!z. P x z) ==> ?a b.    Q a        b z
 }
-where {z} and {a} are natural numbers, the call {QUANT_INST_TAC [("z", `0`, []), ("a", `SUC a'`, [`a'`])]}
+where {z} and {a} are natural numbers, the call {QUANT_TAC [("z", `0`, []), ("a", `SUC a'`, [`a'`])]}
 instantiates {z} with {0} and {a} with {SUC a'}, where {a'} is free.
 The variable {z} is universally quantified, but in the antecedent of the implication.
 Therefore, it can be safely instantiated. {a} is existentially quantified.

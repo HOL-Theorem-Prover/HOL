@@ -8,7 +8,7 @@ loadPath :=
 
 open HolKernel Parse boolLib Drule ConseqConv computeLib
 open quantHeuristicsLib;
-open quantHeuristicsArgsLib;
+open quantHeuristicsLibBase;
 
 (*
 quietdec := false;
@@ -26,17 +26,14 @@ val thm = SIMP_CONV std_ss [] t;
 val thm = QUANT_INSTANTIATE_CONV [] t;
 
 
+val thm = QUANT_INSTANTIATE_CONV []``?x. x = 2``;
+
 (*Quantifiers are resorted to be able to find easy instantations*)
 val t = ``?y x z. (x=y+z) /\ X x y z``;
 val t = ``!y x z. ~(x=y+z) \/ X x y z``;
 
 val thm = SIMP_CONV std_ss [] t
 val thm = QUANT_INSTANTIATE_CONV [] t
-
-
-QUANT_INSTANTIATE_CONV [] ``?x. (!z. Q z /\ (x=7)) /\ P x``
-QUANT_INSTANTIATE_CONV [std_qp] ``!x. IS_SOME x ==> P x``
-
 
 
 (*However, the new library can handle more difficult nestings than
@@ -63,17 +60,18 @@ If one want's to know in detail, how it comes up with a guess some
 verbose output is available*)
 
 (*no debug*)
-set_trace "QUANT_INSTANTIATE_HEURISTIC" 0
+set_trace "QUANT_INSTANTIATE_HEURISTIC" 0;
 
 (*simple traces*)
-set_trace "QUANT_INSTANTIATE_HEURISTIC" 1
+set_trace "QUANT_INSTANTIATE_HEURISTIC" 1;
 
 (*show theorems in guesses*)
 set_trace "QUANT_INSTANTIATE_HEURISTIC" 2;
+set_trace "QUANT_INSTANTIATE_HEURISTIC___print_term_length" 2000;
 
+val thm = QUANT_INSTANTIATE_CONV [] t;
 
-val thm = QUANT_INSTANTIATE_CONV [] t
-
+set_trace "QUANT_INSTANTIATE_HEURISTIC" 0;
 
 
 
@@ -108,7 +106,7 @@ val t = ``?x. P /\ (f 2 = f x) /\ Q /\ Q2(f x) /\ Z /\
               (f x = f 2)``;
 
 val thm = QUANT_INSTANTIATE_CONV [] t
-val thm = SIMP_CONV [] t
+val thm = SIMP_CONV std_ss [] t
 
 
 
@@ -134,8 +132,6 @@ val thm = QUANT_INSTANTIATE_CONV [] t
   however, neither bound variables nor matching can be used for it*)
 val t = ``?!x. !z. ((7=x) /\ Q z x)``;
 val thm = QUANT_INSTANTIATE_CONV [] t
-
-
 
 
 (* By default QUANT_INSTANTIATE_CONV just knows about
@@ -320,235 +316,70 @@ val thm = QUANT_INSTANTIATE_CONV
 
 set_trace "QUANT_INSTANTIATE_HEURISTIC" 0;
 
-(*The argument heuristicL is a full grown heuristcal one. 
-  Please have a look at quantHeuristicsArgsLib for more details.
-  A guess consists of an instantiation i with a list of
-  free variables in it fvL. There may or may not be an argument (given as 
-  a thm) why it is a sensible guess. There are the following types of guesses 
-  available:
-
-  guess_general of (i,fvL):
-      A guess with no particular reason at all, no justification. This
-      is for example used by EXISTS_TAC.
-
-      guess_general (i, [fv1,...,fvn])
-
-      can be used to proof
-
-      ?fv1 ... fvn. P i ==> ?v. P v   and
-      !v. P v ==> !fv1 ... fvn. P i
-
-      or if one want's to use equations 
-
-      ?v. P v = (?fv1 ... fvn. P i) \/ 
-                   ?v. (!fv1 ... fvn. ~(i = v)) /\ (P v)  and
-
-      !v. P v = (!fv1 ... fvn. P i) /\
-		   (!v. (?fv1 ... fvn. ~(i = v)) ==> P v)
-
-
-      These two possibilies are always available and
-      choosen if the other guesses don't provide a theorem.
-
-     
-  guess_untrusted (sub_term, guess)
-    Guess_untrusted, is an untrusted guess recording guesses for
-    subterms. It is mainly used to
-    give some feedback to the user, not for instantations.
-    It is introduced if a guess of subterms can not be ported to
-    the whole term. 
-  
-    
-
-  guess_false(i,fvL,thm_opt)
-      i makes P i false
-
-      This can be used to proof
-      !v. P v = F
-
-      If a theorem is provided it has to be of the form 
-      !fv1 ... fvn. ~(P i)
-    
-
-  guess_true(i,fvL,thm_opt)
-      i makes P i true
-
-      This can be used to proof
-      ?v. P v = T
-
-      The theorem has to be of the form 
-      !fv1 ... fvn. P i
-    
-
-  guess_only_not_possible (i,fvL,thm_opt)
-      if i does satisfy P then all other i' as well
-
-      This can be used to proof
-      !v. P v = !fv1 ... fvn. P i
-
-
-      The theorem has to be of the form 
-      (!fv1 ... fvn. P i) ==> !v. P v
-
-  guess_only_possible (i,fvL,thm_opt)    
-      if i does not satisfy P then all other i' don't as well
-
-      This can be used to proof
-      ?v. P v = ?fv1 ... fvn. P i
-
-      The theorem has to be of the form 
-      (!fv1 ... fvn. ~(P i)) ==> !v. ~(P v)
-      
-
-  guess_others_not_possible (i,fvL,thm_opt)    
-      all instantiations except i do not satisfy P 
-
-      This can be used to proof
-      ?v. P v = ?fv1 ... fvn. P i
-
-      The theorem has to be of the form 
-      !v. (!fv1 ... fvn. ~(v = i)) ==> ~P v
-      
-  guess_others_satisfied (i,fvL,thm_opt)    
-
-      all instantiations except i do not satisfy P 
-
-      This can be used to proof
-      !v. P v = !fv1 ... fvn. P i
-
-      The theorem has to be of the form 
-      !v. (!fv1 ... fvn. ~(v = i)) ==> P v
-      
-
-
-  Notice that guess_others_satisfied as well as
-  guess_false can be weakened to guess_only_not_possible.
-  Similaryly guess_others_not_possible and
-  guess_true can be weakened to guess_only_possible.
-  If a heuristic provides one of the stronger guesses, the
-  weaker version is inferred automatically. The heuristic itself
-  does not have to bother.
-
-
-To get a feeling lets try to simplify and look at part of the trace
-
-val t = ``?x. (x=7) /\ (!z. P z x /\ Q)``;
-set_trace "QUANT_INSTANTIATE_HEURISTIC" 1
-val _ = QUANT_INSTANTIATE_CONV [] t
-
-The conversion calls the outmost heuristic with
-v = ``x``
-t = ``(x = 7) /\ !z. P z x /\ Q``
-bv = [``x``]
-fv = [``Q``, ``P``, ``z``, ``x``]
-
-Then sys is used to come up with guesses for subterms. 
-/\ is handled by reducing it to ~ \/,
-~ is handled directly
-or is handled directly
-~ is handled directly
-finally, we look for guesses for ``x`` in ``x = 7``
-there the heuristic for equations is called and comes up with two guesses
-  - guess_true (``7``, [], X)
-  - guess_others_not_possible (``7``, [], X)
-It says that the "x = 7" will become true if x is instantiated with 7 and
-has a proof for it (indicated by "X" (use higher trace_level 2 for more details) and
-that it will become false for all other instantiations.
-
-This whole stuff is recombined. Look at the guesses for
-``!z. P z x /\ Q``. There ``z`` is introduced as a new bound variable,
-since we are looking for instantations of x in a term where z is bounded.
-
-
-searching guesses for ``x`` in ``(x = 7) /\ !z. P z x /\ Q`` (bv: [x], fv: [Q, P, z, x])
- searching guesses for ``x`` in ``~(~(x = 7) \/ ~ !z. P z x /\ Q)`` (bv: [x], fv: [Q, P, z, x])
-  searching guesses for ``x`` in ``~(x = 7) \/ ~ !z. P z x /\ Q`` (bv: [x], fv: [Q, P, z, x])
-   searching guesses for ``x`` in ``~(x = 7)`` (bv: [x], fv: [Q, P, z, x])
-    searching guesses for ``x`` in ``x = 7`` (bv: [x], fv: [Q, P, z, x])
-    found guesses for ``x`` in ``x = 7``
-     - guess_true (``7``, [], X)
-     - guess_others_not_possible (``7``, [], X)
-   found guesses for ``x`` in ``~(x = 7)``
-    - guess_false (``7``, [], X)
-    - guess_others_satisfied (``7``, [], X)
-   searching guesses for ``x`` in ``~ !z. P z x /\ Q`` (bv: [x], fv: [Q, P, z, x])
-    searching guesses for ``x`` in ``!z. P z x /\ Q`` (bv: [x], fv: [Q, P, z, x])
-     searching guesses for ``x`` in ``P z x /\ Q`` (bv: [z, x], fv: [z, Q, P, z, x])
-      searching guesses for ``x`` in ``~(~P z x \/ ~Q)`` (bv: [z, x], fv: [z, Q, P, z, x])
-       searching guesses for ``x`` in ``~P z x \/ ~Q`` (bv: [z, x], fv: [z, Q, P, z, x])
-        searching guesses for ``x`` in ``~P z x`` (bv: [z, x], fv: [z, Q, P, z, x])
-         searching guesses for ``x`` in ``P z x`` (bv: [z, x], fv: [z, Q, P, z, x])
-         found guesses for ``x`` in ``P z x``
-        found guesses for ``x`` in ``~P z x``
-        searching guesses for ``x`` in ``~Q`` (bv: [z, x], fv: [z, Q, P, z, x])
-         searching guesses for ``x`` in ``Q`` (bv: [z, x], fv: [z, Q, P, z, x])
-         found guesses for ``x`` in ``Q``
-        found guesses for ``x`` in ``~Q``
-       found guesses for ``x`` in ``~P z x \/ ~Q``
-      found guesses for ``x`` in ``~(~P z x \/ ~Q)``
-     found guesses for ``x`` in ``P z x /\ Q``
-    found guesses for ``x`` in ``!z. P z x /\ Q``
-   found guesses for ``x`` in ``~ !z. P z x /\ Q``
-  found guesses for ``x`` in ``~(x = 7) \/ ~ !z. P z x /\ Q``
-   - guess_others_satisfied (``7``, [], X)
- found guesses for ``x`` in ``~(~(x = 7) \/ ~ !z. P z x /\ Q)``
-  - guess_others_not_possible (``7``, [], X)
-found guesses for ``x`` in ``(x = 7) /\ !z. P z x /\ Q``
- - guess_others_not_possible (``7``, [], X)
-
-
-
-Lets write a own dummy heuristic that instantates a variable always with
-"choose_me".
-
-*)
-
-fun dummy_heuristic sys fv v t =
+fun dummy_heuristic sys v t =
 let
    val i = mk_var ("choose_me", type_of v);
 in
    guess_list2collection ([], [guess_general (i,[])])
 end;
 
-val t = ``?x. P x``
+val dummy_qp = top_heuristics_qp [dummy_heuristic]
 
-val thm = EXTENSIBLE_QUANT_INSTANTIATE_CONV NONE false (K true) true
-             [heuristics_qp [dummy_heuristic]] t
+(* Alternative way: *)
 
-val thm = QUANT_INSTANTIATE_CONV 
-             [heuristics_qp [dummy_heuristic]] t
+val dummy_qp = oracle_qp (fn v => fn t =>
+  let
+     val i = mk_var ("choose_me", type_of v);
+  in
+     SOME (i, [])
+  end)
 
+
+val t = ``?x. P x``;
+
+(* Nothing can be proved, we only say: "Trust me". Therefore the normal conversion fails. *)
+val thm = QUANT_INSTANTIATE_CONV [dummy_qp] t
+
+(* Consequence Conversions and expanding conversions are fine though *)
+val thm = QUANT_INSTANTIATE_CONSEQ_CONV [dummy_qp] CONSEQ_CONV_STRENGTHEN_direction t
+
+(*result 
+ val thm = |- P choose_me ==> (?x. P x) : thm
+*)
+
+val thm = EXPAND_QUANT_INSTANTIATE_CONV [dummy_qp] t
 
 (*result 
  val thm = |- (?x. P x) <=> (!x. ~(x = choose_me) ==> ~P x) ==> P choose_me :
   thm
 *)
 
-(*
-Notice that the value of the parameters redepth and expand_eq are changed
-as well.
 
-Since no justification for the guess is given, (?x. P x) can not be proved or
-simplified to P i. However, one can expand the definition of exists by a case split. That such
-case splitting should be used is indicated by setting exand_eq to true.
+(* Let's write a slightly more interesting oracle that
+   instantiates every list with a non-empty one *)
 
-However, normally the conversion revisits terms after substituting something
-(REDEPTH_CONV is used internally). This would leed to an infinite-loop in our example.
-So it was turned of.
+(* 
 
-
-(*!!!Infinite loop!!!*)
-val thm = EXTENSIBLE_QUANT_INSTANTIATE_CONV NONE true (K true) true
-             [heuristics_qp [dummy_heuristic]] t
+val t = ``P (TL (l:'a list))``
+val v = ``l:'a list``
 *)
+val dummy_list_qp = oracle_qp (fn v => fn t =>
+  let
+     val (v_name, v_list_ty) = dest_var v;
+     val v_ty = listSyntax.dest_list_type v_list_ty;
 
+     val x = mk_var (v_name ^ "_hd", v_ty);
+     val xs = mk_var (v_name ^ "_tl", v_list_ty);
+     val x_xs = listSyntax.mk_cons (x, xs)
+  in
+     SOME (x_xs, [x, xs])
+  end)
 
+val t = ``?x:'a list y:'b. P (x, y)``
 
-
-
-
-
-
+(* Be careful to use a tactic that does no REDEPTH but just depth, because otherwise
+   the procedure will not terminate. *)
+val thm = NORE_QUANT_INSTANTIATE_CONSEQ_CONV [dummy_list_qp] CONSEQ_CONV_STRENGTHEN_direction t
 
 
 (*There is a stateful argument stateful_qp,
