@@ -12,10 +12,10 @@ This is a version of predicate calculus with three main extensions:
 In this chapter, we will give a brief overview of the notation used to write expressions of the \HOL{} logic in \ML{}, and also discuss some fundamental  \HOL{} proof techniques.
 It is assumed the reader is familiar with predicate logic.
 The syntax and semantics of the particular logical system supported by \HOL{} is described in detail in \DESCRIPTION.
-Readers who wish to see \HOL{} in action without the introduction to the finer details of \HOL's fundamentals might like to skip ahead to Chapter~\ref{chap:euclid}.
+Readers who wish to see \HOL{} in action, without the introduction to the finer details of \HOL's fundamentals, might like to skip ahead to Chapter~\ref{chap:euclid}.
 
 
-The table below summarizes a useful subset of the notation used in \HOL.
+The table below summarizes a useful subset of the (ASCII) notation used in \HOL.
 
 \begin{center}
 \begin{tabular}{|l|l|l|l|} \hline
@@ -56,7 +56,7 @@ For example, the expression \holtxt{``x /\bs{} y ==> z``} evaluates in \ML{} to 
 Terms can be manipulated by various built-in \ML{} functions.
 For example, the \ML{} function \ml{dest\_imp} with \ML{} type \ml{term -> term * term} splits an implication into a pair of terms consisting of its antecedent and consequent, and the \ML\ function \ml{dest\_conj} of type \ml{term -> term * term} splits a conjunction into its two conjuncts.%
 \footnote{All of the examples below assume that the user is running \texttt{hol}, the executable for which is in the \texttt{bin/} directory.
-Depending on the system configuration, it is also possible that the ASCII notation used in the session examples that follow will be replaced by prettier Unicode notation: \holtxt{/\bs} replaced by $\land$ for example.}
+Depending on the system configuration, it is also possible that the ASCII notation used in the session examples that follow would be replaced by prettier Unicode notation: \holtxt{/\bs} replaced by $\land$ for example.}
 
 \setcounter{sessioncount}{0}
 \begin{session}
@@ -72,17 +72,17 @@ Depending on the system configuration, it is also possible that the ASCII notati
 \end{verbatim}
 \end{session}
 
-Terms of the \HOL{} logic are quite similar to \ML{} expressions, and
-this can at first be confusing.
-Indeed, terms of the logic have types similar to those of \ML{} expressions.  For example, {\small\verb|``(1,2)``|} is an \ML{} expression with \ML{} type {\small\verb|term|}.
-The \HOL{} type of this term is {\small\verb|num # num|}.
-By contrast, the \ML{} expression
-{\small\verb|(``1``, ``2``)|} has type {\small\verb|term * term|}.
+Terms of the \HOL{} logic are quite similar to \ML{} expressions, and this can at first be confusing.
+Indeed, terms of the logic have types similar to those of \ML{} expressions.
+For example, \holtxt{``(1,2)``} is an \ML{} expression with \ML{} type \ml{term}.
+The \HOL{} type of this term is \holtxt{num \# num}.
+By contrast, the \ML{} expression \ml{(``1``, ``2``)} has (\ML{}) type \ml{term * term}.
 
 \paragraph{Syntax of \HOL\ types}
 
-The types of \HOL{} terms form an \ML{} type called {\small\verb|hol_type|}.  Expressions having the form {\small\verb|``: |}$\cdots${\small\verb| ``|} evaluate to logical types.
-The built-in function {\small\verb|type_of|} has \ML{} type {\small\verb|term->hol_type|} and returns the logical type of a term.
+The types of \HOL{} terms form an \ML{} type called \ml{hol_type}.
+Expressions having the form \ml{``: $\cdots$ ``} evaluate to logical types.
+The built-in function \ml{type_of} has \ML{} type \ml{term->hol_type} and returns the logical type of a term.
 
 \begin{session}
 \begin{verbatim}
@@ -100,8 +100,8 @@ The built-in function {\small\verb|type_of|} has \ML{} type {\small\verb|term->h
 \end{verbatim}
 \end{session}
 
-To try to minimise confusion between the logical types of \HOL{} terms and the \ML{} types of \ML{} expressions, the former will be referred to as \emph{object language types} and the latter as {\it meta-language types\/}.
-For example, {\small\verb|``(1,T)``|} is an \ML{} expression that has meta-language type {\small\verb|term|} and evaluates to a term with object language type {\small\verb|``:num#bool``|}.
+To try to minimise confusion between the logical types of \HOL{} terms and the \ML{} types of \ML{} expressions, the former will be referred to as \emph{object language types} and the latter as \emph{meta-language types}.
+For example, \ml{``(1,T)``} is an \ML{} expression that has meta-language type \ml{term} and evaluates to a term with object language type \ml{``:num\#bool``}.
 %
 \begin{session}
 \begin{verbatim}
@@ -115,7 +115,7 @@ For example, {\small\verb|``(1,T)``|} is an \ML{} expression that has meta-langu
 %
 \paragraph{Term constructors}
 \HOL{} terms can be input, as above, by using explicit \emph{quotation}, or they can be constructed by calling \ML{} constructor functions.
-The function {\small\verb|mk_var|} constructs a variable from a string and a type.
+The function \ml{mk_var} constructs a variable from a string and a type.
 In the example below, three variables of type {\small\verb|bool|} are constructed.
 These are used later.
 
@@ -130,7 +130,7 @@ These are used later.
 \end{verbatim}
 \end{session}
 
-The constructors {\small\verb|mk_conj|} and {\small\verb|mk_imp|} construct conjunctions and implications respectively.
+The constructors \ml{mk_conj} and \ml{mk_imp} construct conjunctions and implications respectively.
 A large collection of term constructors and destructors is available for the core theories in \HOL.
 
 \begin{session}
@@ -142,13 +142,13 @@ A large collection of term constructors and destructors is available for the cor
 
 \paragraph{Type checking}
 
-There are actually only four different kinds of term in \HOL: variables, constants, function applications (\ml{``$t_1$\ $t_2$``}), and lambda abstractions ({\small\verb|``\|}$x$\ml{.}$t$\ml{``}).
+There are actually only four different kinds of term in \HOL: variables, constants, function applications (\ml{``$t_1$ $t_2$``}), and lambda abstractions (\ml{``\bs$x$.$t$``}).
 More complex terms, such as those we have already seen above, are just compositions of terms from this simple set.
 In order to understand the behaviour of the quotation parser, it is necessary to understand how the type checker infers types for the four basic term categories.
 
 Both variables and constants have a name and a type; the difference is that constants cannot be bound by quantifiers, and their type is fixed when they are declared (see below).
 When a quotation is entered into \HOL{}, the type checking algorithm uses the types of constants to infer the types of variables in the same quotation.
-For example, in the following case, the \HOL{} type checker used the known type \ml{bool->bool} of boolean negation ({\small\verb|~|}) to deduce that the variable \ml{x} must have type \ml{bool}.
+For example, in the following case, the \HOL{} type checker used the known type \holtxt{bool->bool} of boolean negation (\holtxt{\td}) to deduce that the variable \holtxt{x} must have type \holtxt{bool}.
 
 \begin{session}
 \begin{verbatim}
@@ -184,7 +184,7 @@ If there is not enough contextually-determined type information to resolve the t
 
 \paragraph{Type constraints}
 
-Alternatively, it is possible to explicitly indicate the required types by using the notation \ml{``$term$:$type$``}, as illustrated below.
+Alternatively, it is possible to explicitly indicate the required types by using the notation \ml{``$\mathit{term}$:$\mathit{type}$``}, as illustrated below.
 
 \begin{session}
 \begin{verbatim}
@@ -227,7 +227,9 @@ unification failure message: unify failed
 
 Type inference failure: unable to infer a type for the application of
 
-$~
+$~ :bool -> bool
+
+at line 1, character 3
 
 to
 
@@ -239,15 +241,17 @@ unification failure message: unify failed
 \end{verbatim}
 \end{session}
 
-The dollar symbol in front of {\small\verb|~|} indicates that the boolean negation constant has a special syntactic status (in this case a non-standard precedence).
-Putting {\small\verb|$|} in front of any symbol causes the parser to ignore any special syntactic status (like being an infix) it might have.
+The dollar symbol in front of \holtxt{\td} indicates that the boolean negation constant has a special syntactic status (in this case a non-standard precedence).
+Putting \holtxt{\$} in front of any symbol causes the parser to ignore any special syntactic status (like being an infix) it might have.
+The same effect can be achieved by enclosing the symbol in parentheses.
+This is analogous to the way in which \texttt{op} is used in \ML.
 
 \begin{session}
 \begin{verbatim}
 - ``$==> t1 t2``;
 > val it = ``t1 ==> t2`` : term
 
-- ``$/\ t1 t2``;
+- ``(/\) t1 t2``;
 > val it = ``t1 /\ t2`` : term
 \end{verbatim}
 \end{session}
@@ -258,7 +262,7 @@ Functions have types of the form \ml{$\sigma_1$->$\sigma_2$}, where $\sigma_1$ a
 
 \begin{session}
 \begin{verbatim}
-- type_of ``$==>``;
+- type_of ``(==>)``;
 > val it = ``:bool -> bool -> bool`` : hol_type
 
 - type_of ``$+``;
@@ -266,8 +270,7 @@ Functions have types of the form \ml{$\sigma_1$->$\sigma_2$}, where $\sigma_1$ a
 \end{verbatim}
 \end{session}
 
-\noindent Both \holtxt{+} and \holtxt{==>} are infixes, so their use in contexts where they are not being used as such requires their prefixing by the \texttt{\$}-sign.
-This is analogous to the way in which \texttt{op} is used in \ML.
+\noindent Again, both \holtxt{+} and \holtxt{==>} are infixes, so their use in contexts where they are not being used as such requires syntax-escaping.
 The session below illustrates the use of these constants as infixes; it also illustrates object language versus meta-language types.
 
 \begin{session}
@@ -287,7 +290,7 @@ The session below illustrates the use of these constants as infixes; it also ill
 \end{session}
 
 Lambda-terms, or $\lambda$-terms, denote functions.
-The symbol `{\small\verb|\|}' is used as an {\small ASCII} approximation to $\lambda$.
+The symbol `\holtxt{\bs}' is used as an ASCII approximation to $\lambda$.
 Thus `{\small\verb|\|}$x$\ml{.}$t$' should be read as `$\lquant{x}t$'.
 For example, {\small\verb|``\x. x+1``|} is a term that denotes the function $n\mapsto n{+}1$.
 
@@ -311,7 +314,7 @@ while a version of Euclid's result about the infinitude of primes is:
     !n. ?p. prime p /\ p > n
 \end{verbatim}
 %
-Binding symbols such as these can be used over multiple symbols thus:
+Binding symbols such as these can be used over multiple `parameters' thus:
 \begin{session}
 \begin{verbatim}
 - ``\x y. (x, y * x)``;
@@ -336,27 +339,32 @@ Binding symbols such as these can be used over multiple symbols thus:
 \setcounter{sessioncount}{0}
 
 This section discusses the nature of proof in \HOL{}.
-For a logician, one definition of a formal proof is that it is a sequence, each of whose elements is either an {\it axiom\/} or follows from earlier members of the sequence by a {\it rule of inference\/}.
+For a logician, one definition of a formal proof is that it is a sequence, each of whose elements is either an \emph{axiom} or follows from earlier members of the sequence by a \emph{rule of inference}.
 A theorem is the last element of a proof.
 
-Theorems are represented in \HOL{} by values of an abstract type {\small\verb|thm|}.
+Theorems are represented in \HOL{} by values of an abstract type \ml{thm}.
 The only way to create theorems is by generating such a proof.
 In \HOL, following \LCF, this consists in applying \ML{} functions representing \emph{rules of inference} to axioms or previously generated theorems.
 The sequence of such applications directly corresponds to a logician's proof.
 
 There are five axioms of the \HOL{} logic and eight primitive inference rules.
 The axioms are bound to ML names.
-For example, the Law of Excluded Middle is bound to the \ML{} name {\small\verb|BOOL_CASES_AX|}:
+For example, the Law of Excluded Middle is bound to the \ML{} name \ml{BOOL_CASES_AX}:\footnote{%
+Note how the term-printer has rendered the equalities in the theorem with the \holtxt{<=>} symbol rather than \holtxt{=}.
+The underlying constant is the same, but the printing is a clue for the user that this is equality on boolean values.
+The parser accepts both \holtxt{<=>} and \holtxt{=} with boolean arguments; attempting to use \holtxt{<=>} on values that are not of boolean type (numbers, say) will result in a parse error.%
+}
 
 \begin{session}
 \begin{verbatim}
 - BOOL_CASES_AX;
-> val it = |- !t. (t = T) \/ (t = F) : thm
+> val it = |- !t. (t <=> T) \/ (t <=> F) : thm
 \end{verbatim}
 \end{session}
 
+
 Theorems are printed with a preceding turnstile {\small\verb+|-+} as illustrated above; the symbol `{\small\verb|!|}' is the universal quantifier `$\forall$'.
-Rules of inference are \ML{} functions that return values of type {\small\verb|thm|}.
+Rules of inference are \ML{} functions that return values of type \ml{thm}.
 An example of a rule of inference is {\it specialization\/} (or $\forall$-elimination).
 In standard `natural deduction' notation this is:
 
@@ -366,28 +374,29 @@ In standard `natural deduction' notation this is:
 \item $t[t'/x]$ denotes the result of substituting $t'$ for free occurrences of $x$ in $t$, with the restriction that no free variables in $t'$ become bound after substitution.
 \end{itemize}
 
-\noindent This rule is represented in \ML{} by a function
-\ml{SPEC},%
+\noindent This rule is represented in \ML{} by a function \ml{SPEC},%
 \footnote{\ml{SPEC} is not a primitive rule of inference in the HOL logic, but is a derived rule.
 Derived rules are described in Section~\ref{forward}.}
-which takes as arguments a term {\small\verb|``|}$a${\small\verb|``|} and a theorem {\small\verb%|- !%}$x${\small\verb|.|}$t[x]$ and returns the theorem {\small\verb%|- %}$t[a]$, the result of substituting $a$ for $x$ in $t[x]$.
+which takes as arguments a term \ml{``$a$``} and a theorem \holtxt{|-~!$x.\,t[x]$} and returns the theorem \holtxt{|-~$t[a]$}, the result of substituting $a$ for $x$ in $t[x]$.
 
 \begin{session}
 \begin{verbatim}
 - val Th1 = BOOL_CASES_AX;
-> val Th1 = |- !t. (t = T) \/ (t = F) : thm
+> val Th1 = |- !t. (t <=> T) \/ (t <=> F) : thm
 
 - val Th2 = SPEC ``1 = 2`` Th1;
-> val Th2 = |- ((1 = 2) = T) \/ ((1 = 2) = F) : thm
+> val Th2 = |- ((1 = 2) <=> T) \/ ((1 = 2) <=> F) : thm
 \end{verbatim}
 \end{session}
 
 This session consists of a proof of two steps: using an axiom and applying the rule \ml{SPEC}; it interactively performs the following proof:
+\begin{samepage}
 \begin{proofenumerate}
-\item $ \turn \uquant{t} t=\top\ \disj\  t=\bot$ \hfill
+\item $ \turn \uquant{t}\;\; t\Leftrightarrow\top \;\disj\; t\Leftrightarrow\bot$ \hfill
 [Axiom \ml{BOOL\_CASES\_AX}]
-\item $ \turn (1{=}2)=\top\ \disj\ (1{=}2)=\bot$\hfill [Specializing line 1 to `$1{=}2$']
+\item $ \turn (1{=}2)\Leftrightarrow\top\ \disj\ (1{=}2)\Leftrightarrow\bot$\hfill [Specializing line 1 to `$1{=}2$']
 \end{proofenumerate}
+\end{samepage}
 
 If the argument to an \ML{} function representing a rule of inference is of the wrong kind, or violates a condition of the rule, then the application fails.
 For example, $\ml{SPEC}\ t\ th$ will fail if $th$ is not of the form $\ml{|-\ !}x\ml{.}\cdots$ or if it is of this form but the type of $t$ is not the same as the type of $x$, or if the free variable restriction is not met.
@@ -406,43 +415,30 @@ However, when passed a \ml{HOL\_ERR} exception, it prints out some useful inform
 Exception raised at Thm.SPEC:
 
 ! Uncaught exception:
-! HOL_ERR\end{verbatim}
+! HOL_ERR
+\end{verbatim}
 \end{session}
-However, as this session illustrates, the failure message does not
-always indicate the exact reason for failure. Detailed failure conditions
-for rules of inference are given in \REFERENCE.
+However, as this session illustrates, the failure message does not always indicate the exact reason for failure.
+Detailed failure conditions for rules of inference are given in \REFERENCE.
 
-A proof in the \HOL{} system is constructed by repeatedly applying
-inference rules to axioms or to previously proved theorems.  Since
-proofs may consist of millions of steps, it is necessary to provide
-tools to make proof construction easier for the user.  The proof
-generating tools in the \HOL{} system are just those of \LCF, and are
-described later.
+A proof in the \HOL{} system is constructed by repeatedly applying inference rules to axioms or to previously proved theorems.
+Since proofs may consist of millions of steps, it is necessary to provide tools to make proof construction easier for the user.
+The proof generating tools in the \HOL{} system are just those of \LCF, and are described later.
 
-The general form of a theorem is $t_1,\ldots,t_n\ $\ml{|-}$\ t$, where
-$t_1$, $\ldots$ , $t_n$ are boolean terms called the {\it assumptions}
-and $t$ is a boolean term called the {\it conclusion\/}.  Such a
-theorem asserts that if its assumptions are true then so is its
-conclusion.  Its truth conditions are thus the same as those for the
-single term
-$(t_1${\small\verb|/\|}$\ldots${\small\verb|/\|}$t_n$)\ml{==>}$t$.
+The general form of a theorem is $t_1,\ldots,t_n\;\ml{|-}\;t$, where $t_1$, $\ldots$ , $t_n$ are boolean terms called the {\it assumptions} and $t$ is a boolean term called the {\it conclusion\/}.
+Such a theorem asserts that if its assumptions are true then so is its conclusion.
+Its truth conditions are thus the same as those for the
+single term $(t_1\,\ml{/\bs}\ldots\ml{/\bs}\,t_n)\,\ml{==>}\,t$.
 Theorems with no assumptions are printed out in the form \ml{|-}$\ t$.
 
-The five axioms and eight primitive inference rules of the \HOL{} logic
-are described in detail in the document \DESCRIPTION.  Every value of
-type \ml{thm} in the \HOL{} system can be obtained by repeatedly
-applying primitive inference rules to axioms.  When the \HOL{} system
-is built, the eight primitive rules of inference are defined and the
-five axioms are bound to their \ML{} names, all other predefined
-theorems are proved using rules of inference as the system is
-made.\footnote{This is a slight over-simplification.} This is one of
-the reasons why building \ml{hol} takes so long.
+The five axioms and eight primitive inference rules of the \HOL{} logic are described in detail in the document \DESCRIPTION.
+Every value of type \ml{thm} in the \HOL{} system can be obtained by repeatedly applying primitive inference rules to axioms.
+When the \HOL{} system is built, the eight primitive rules of inference are defined and the five axioms are bound to their \ML{} names.
+All other predefined theorems are proved using rules of inference as the system is made.\footnote{This is a slight over-simplification.}
+This is one of the reasons why building \ml{hol} takes so long.
 
-In the rest of this section, the process of {\it forward proof\/},
-which has just been sketched, is described in more detail.  In
-Section~\ref{tactics} {\it goal directed proof\/} is described,
-including the important notions of {\it tactics\/} and {\it
-  tacticals\/}, due to Robin Milner.
+In the rest of this section, the process of \emph{forward proof}, which has just been sketched, is described in more detail.
+In Section~\ref{tactics} \emph{goal directed proof} is described, including the important notions of \emph{tactics} and \emph{tacticals}, due to Robin Milner.
 
 \section{Forward proof}
 \label{forward}
@@ -485,16 +481,17 @@ The following session illustrates this:
 Note that the term being discharged need not be in the assumptions; in
 this case they will be unchanged.
 
-\begin{session}\begin{verbatim}
+\begin{session}
+\begin{verbatim}
 - DISCH ``1=2`` Th3;
 > val it =  [.] |- (1 = 2) ==> t1 ==> t2 : thm
 
 - dest_thm it;
 > val it = ([``t1 ==> t2``], ``(1 = 2) ==> t1 ==> t2``) : term list * term
-\end{verbatim}\end{session}
+\end{verbatim}
+\end{session}
 
-    In \HOL\, the rule \ml{MP} of Modus Ponens is specified in
-    conventional notation by:
+In \HOL\, the rule \ml{MP} of Modus Ponens is specified in conventional notation by:
 \[
 \frac{\Gamma_1 \turn t_1 \imp t_2 \qquad\qquad \Gamma_2\turn t_1}
 {\Gamma_1 \cup \Gamma_2 \turn t_2}
@@ -505,7 +502,8 @@ returns \ml{$\cdots\ $|-$\ t_2$}. The next session illustrates the use
 of \ml{MP} and also a common error, namely not supplying the \HOL\
 logic type checker with enough information.
 
-\begin{session}\begin{verbatim}
+\begin{session}
+\begin{verbatim}
 - val Th5 = ASSUME ``t1``;
 <<HOL message: inventing new type variable names: 'a.>>
 ! Uncaught exception:
@@ -523,21 +521,24 @@ not a proposition
 
 - val Th6 = MP Th3 Th5;
 > val Th6 =  [..] |- t2 : thm
-\end{verbatim}\end{session}
+\end{verbatim}
+\end{session}
 
 The hypotheses of \ml{Th6} can be inspected with the \ML{} function
 \ml{hyp}, which returns the list of assumptions of a theorem (the
 conclusion is returned by \ml{concl}).
 
-\begin{session}\begin{verbatim}
+\begin{session}
+\begin{verbatim}
 - hyp Th6;
 > val it = [``t1 ==> t2``, ``t1``] : term list
-\end{verbatim}\end{session}
+\end{verbatim}
+\end{session}
 
-    \HOL{} can be made to print out hypotheses of theorems explicitly
-    by setting the global flag \ml{show\_assums} to true.
+\HOL{} can be made to print out hypotheses of theorems explicitly by setting the global flag \ml{show\_assums} to true.
 
-\begin{session}\begin{verbatim}
+\begin{session}
+\begin{verbatim}
 - show_assums := true;
 > val it = () : unit
 
@@ -546,24 +547,25 @@ conclusion is returned by \ml{concl}).
 
 - Th6;
 > val it =  [t1 ==> t2, t1] |- t2 : thm
-\end{verbatim}\end{session}
+\end{verbatim}
+\end{session}
 
 
 \noindent Discharging \ml{Th6} twice establishes the theorem
 \ml{|-\ t1 ==> (t1==>t2) ==> t2}.
 
-\begin{session}\begin{verbatim}
+\begin{session}
+\begin{verbatim}
 - val Th7 = DISCH ``t1==>t2`` Th6;
 > val Th7 = [t1] |- (t1 ==> t2) ==> t2 : thm
 
 - val Th8 = DISCH ``t1:bool`` Th7;
 > val Th8 = |- t1 ==> (t1 ==> t2) ==> t2 : thm
-\end{verbatim}\end{session}
+\end{verbatim}
+\end{session}
 
-    The sequence of theorems: \ml{Th3}, \ml{Th5}, \ml{Th6}, \ml{Th7},
-    \ml{Th8} constitutes a proof in \HOL{} of the theorem \ml{|-\ t1
-      ==> (t1 ==> t2) ==> t2}. In standard logical notation this proof
-    could be written:
+The sequence of theorems: \ml{Th3}, \ml{Th5}, \ml{Th6}, \ml{Th7}, \ml{Th8} constitutes a proof in \HOL{} of the theorem \ml{|-\ t1 ==> (t1 ==> t2) ==> t2}.
+In standard logical notation this proof could be written:
 
 \begin{proofenumerate}
 \item $ t_1\imp t_2\turn t_1\imp t_2$ \hfill
@@ -581,13 +583,9 @@ conclusion is returned by \ml{concl}).
 \subsection{Derived rules}
 
 
-A {\it proof from hypothesis $th_1, \ldots, th_n$} is a sequence each
-of whose elements is either an axiom, or one of the hypotheses $th_i$,
-or follows from earlier elements by a rule of inference.
+A \emph{proof from hypothesis} $th_1, \ldots, th_n$ is a sequence each of whose elements is either an axiom, or one of the hypotheses $th_i$, or follows from earlier elements by a rule of inference.
 
-For example, a proof of $\Gamma,\ t'\turn t$ from the hypothesis
-$\Gamma\turn t$ is:
-
+For example, a proof of $\Gamma,\ t'\turn t$ from the hypothesis $\Gamma\turn t$ is:
 
 \begin{proofenumerate}
 \item $ t'\turn t'$ \hfill [Assumption introduction]
@@ -604,7 +602,8 @@ proof of $\Gamma,\ t'\turn t$).\footnote{This property of the logic is
   called {\it monotonicity}.} For example, the next session uses this
 proof to add the hypothesis \ml{``t3``} to \ml{Th6}.
 
-\begin{session}\begin{verbatim}
+\begin{session}
+\begin{verbatim}
 - val Th9 = ASSUME ``t3:bool``;
 > val Th9 = [t3] |- t3 : thm
 
@@ -613,7 +612,8 @@ proof to add the hypothesis \ml{``t3``} to \ml{Th6}.
 
 - val Th11 = MP Th10 Th9;
 > val Th11 = [t1 ==> t2, t1, t3] |- t2 : thm
-\end{verbatim}\end{session}
+\end{verbatim}
+\end{session}
 
 
     A {\it derived rule\/} is an \ML{} procedure that generates a proof
@@ -627,7 +627,8 @@ proof to add the hypothesis \ml{``t3``} to \ml{Th6}.
 
 \noindent The \ML{} definition is:
 
-\begin{session}\begin{verbatim}
+\begin{session}
+\begin{verbatim}
 - fun ADD_ASSUM t th = let
     val th9 = ASSUME t
     val th10 = DISCH t th
@@ -638,31 +639,33 @@ proof to add the hypothesis \ml{``t3``} to \ml{Th6}.
 
 - ADD_ASSUM ``t3:bool`` Th6;
 > val it =  [t1, t1 ==> t2, t3] |- t2 : thm
-\end{verbatim}\end{session}
+\end{verbatim}
+\end{session}
 
 \noindent The body of \ml{ADD\_ASSUM} has been coded  to mirror  the proof done
 in session~10 above, so as to show how an interactive proof can be
 generalized into a procedure.  But \ml{ADD\_ASSUM} can be written much
 more concisely as:
 
-\begin{session}\begin{verbatim}
+\begin{session}
+\begin{verbatim}
 - fun ADD_ASSUM t th = MP (DISCH t th) (ASSUME t);
 > val ADD_ASSUM = fn : term -> thm -> thm
 
 - ADD_ASSUM ``t3:bool`` Th6;
 val it = [t1 ==> t2, t1, t3] |- t2 : thm
-\end{verbatim}\end{session}
+\end{verbatim}
+\end{session}
+
+Another example of a derived inference rule is \ml{UNDISCH}; this moves the antecedent of an implication to the assumptions.
+\[
+\frac{\Gamma\turn t_1\imp t_2}{\Gamma,\ t_1\turn t_2}
+\]
+An \ML{} derived rule that implements this is:
 
 
-    Another example of a derived inference rule is \ml{UNDISCH}; this
-    moves the antecedent of an implication to the assumptions.
-
-\[ \frac{\Gamma\turn t_1\imp t_2}{\Gamma,\ t_1\turn t_2} \]
-
-\noindent An \ML{} derived rule that implements this is:
-
-
-\begin{session}\begin{verbatim}
+\begin{session}
+\begin{verbatim}
 - fun UNDISCH th = MP th (ASSUME(#1(dest_imp(concl th))));
 > val UNDISCH = fn : thm -> thm
 
@@ -671,7 +674,8 @@ val it = [t1 ==> t2, t1, t3] |- t2 : thm
 
 - UNDISCH Th10;
 > val it =  [t1, t1 ==> t2, t3] |- t2 : thm
-\end{verbatim}\end{session}
+\end{verbatim}
+\end{session}
 
 \noindent Each time \ml{UNDISCH\ $\Gamma\turn t_1\imp t_2$} is executed,
 the following proof is performed:
@@ -691,25 +695,19 @@ rules see the section on derived rules in \DESCRIPTION.
 An interesting derived rule is \ml{REWRITE\_RULE}.  This takes a list of
 equational theorems of the form:
 
-\[ \Gamma\turn (u_1 = v_1) \conj (u_2 = v_2) \conj \ldots\ \conj (u_n  = v_n)\]
+\[
+\Gamma\turn (u_1 = v_1) \conj (u_2 = v_2) \conj \ldots\ \conj (u_n  = v_n)
+\]
+and a theorem $\Delta\turn t$ and repeatedly replaces instances of $u_i$ in $t$ by the corresponding instance of $v_i$ until no further change occurs.
+The result is a theorem $\Gamma\cup\Delta\turn t'$ where $t'$ is the result of rewriting $t$ in this way.
+The session below illustrates the use of \ml{REWRITE\_RULE}.
+In it the list of equations is the value \ml{rewrite\_list} containing the pre-proved theorems \ml{ADD\_CLAUSES} and \ml{MULT\_CLAUSES}.
+These theorems are from the theory \ml{arithmetic}, so we must use a fully qualified name with the name of the theory as the first component to refer to them.
+(Alternatively, we could, as in the Euclid example of section~\ref{chap:euclid}, use \ml{open} to bring declare all of the values in the theory at the top level.)
 
-\noindent  and a theorem
-$\Delta\turn t$ and repeatedly replaces instances of $u_i$ in $t$ by
-the corresponding instance of $v_i$ until no further change occurs.
-The result is a theorem $\Gamma\cup\Delta\turn t'$ where $t'$ is the
-result of rewriting $t$ in this way.  The session below illustrates
-the use of \ml{REWRITE\_RULE}.  In it the list of equations is the
-value \ml{rewrite\_list} containing the pre-proved theorems
-\ml{ADD\_CLAUSES} and \ml{MULT\_CLAUSES}.  These theorems are from the
-theory \ml{arithmetic}, so we must use a fully qualified name with the
-name of the theory as the first component to refer to them.
-(Alternatively, we could, as in the Euclid example of
-section~\ref{chap:euclid}, use \ml{open} to bring declare all of the
-values in the theory at the top level.)
-
-\begin{session}\begin{verbatim}
+\begin{session}
+\begin{verbatim}
 - open arithmeticTheory;
-
    ...
 
 - val rewrite_list = [ADD_CLAUSES,MULT_CLAUSES];
@@ -720,37 +718,39 @@ values in the theory at the top level.)
           (0 * m = 0) /\ (m * 0 = 0) /\ (1 * m = m) /\ (m * 1 = m) /\
           (SUC m * n = m * n + n) /\ (m * SUC n = m + m * n)]
     : thm list
-\end{verbatim}\end{session}
+\end{verbatim}
+\end{session}
 
-\begin{session}\begin{verbatim}
+\begin{session}
+\begin{verbatim}
 - REWRITE_RULE rewrite_list (ASSUME ``(m+0)<(1*n)+(SUC 0)``);
 > val it =  [m + 0 < 1 * n + SUC 0] |- m < SUC n : thm
-\end{verbatim}\end{session}
+\end{verbatim}
+\end{session}
 
 \noindent
 This can then be rewritten using another pre-proved theorem
 \ml{LESS\_THM}, this one from the theory \ml{prim\_rec}:
 
-\begin{session}\begin{verbatim}
+\begin{session}
+\begin{verbatim}
 - REWRITE_RULE [prim_recTheory.LESS_THM] it;
 > val it =  [m + 0 < 1 * n + SUC 0] |- (m = n) \/ m < n : thm
-\end{verbatim}\end{session}
+\end{verbatim}
+\end{session}
 
-    \ml{REWRITE\_RULE} is not a primitive in \HOL, but is a derived
-    rule. It is inherited from Cambridge \LCF\ and was implemented by
-    Larry Paulson (see his paper \cite{lcp_rewrite} for details). In
-    addition to the supplied equations, \ml{REWRITE\_RULE} has some
-    built in standard simplifications:
+\ml{REWRITE\_RULE} is not a primitive in \HOL, but is a derived rule.
+It is inherited from Cambridge \LCF\ and was implemented by Larry Paulson (see his paper \cite{lcp_rewrite} for details).
+In addition to the supplied equations, \ml{REWRITE\_RULE} has some built in standard simplifications:
 
-\begin{session}\begin{verbatim}
+\begin{session}
+\begin{verbatim}
 - REWRITE_RULE [] (ASSUME ``(T /\ x) \/ F ==> F``);
 > val it = [T /\ x \/ F ==> F] |- ~x : thm
-\end{verbatim}\end{session}
+\end{verbatim}
+\end{session}
 
-    There are elaborate facilities in \HOL{} for producing customized
-    rewriting tools which scan through terms in user programmed
-    orders; \ml{REWRITE\_RULE} is the tip of an iceberg, see
-    \DESCRIPTION\ for more details.
+There are elaborate facilities in \HOL{} for producing customized rewriting tools which scan through terms in user programmed orders; \ml{REWRITE\_RULE} is the tip of an iceberg, see \DESCRIPTION\ for more details.
 
 \section{Goal Oriented Proof: Tactics and Tacticals}
 \label{backward}\label{tactics}
@@ -786,7 +786,8 @@ following new session (note that the session number has been reset to
 {\small\sl 1}:
 
 \setcounter{sessioncount}{0}
-\begin{session}\begin{verbatim}
+\begin{session}
+\begin{verbatim}
 - show_assums := true;
 val it = () : unit
 
@@ -796,7 +797,8 @@ val it = () : unit
 
 - val Th3 = CONJ Th1 Th2;
 > val Th3 =  [A, B] |- A /\ B : thm
-\end{verbatim}\end{session}
+\end{verbatim}
+\end{session}
 
     Suppose the goal is to prove $A\conj B$, then this rule says that
     it is sufficient to prove the two subgoals $A$ and $B$, because
@@ -811,14 +813,9 @@ goal  $\turn A \conj B$  to the two  subgoals  $\turn A$
 and $\turn B$ is the rule of $\wedge$-introduction.
 \end{myenumerate}
 
-A {\it goal\/} in \HOL{} is a pair \ml{([$t_1$;\ldots;$t_n$],$t$)} of
-\ML{} type {\small\verb|term list * term|}. An {\it achievement\/} of
-such a goal is a theorem \ml{$t_1$,$\ldots$,$t_n$\ |-\ $t$}.  A tactic
-is an \ML{} function that when applied to a goal generates subgoals
-together with a {\it justification function\/} or {\it validation\/},
-which will be an \ML{} derived inference rule, that can be used to
-infer an achievement of the original goal from achievements of the
-subgoals.
+A \emph{goal} in \HOL{} is a pair \ml{([$t_1$,\ldots,$t_n$],$t$)} of \ML{} type \ml{term list~*~term}.
+An \emph{achievement} of such a goal is a theorem \ml{$t_1$,$\ldots$,$t_n$\ |-\ $t$}.
+A tactic is an \ML{} function that when applied to a goal generates subgoals together with a \emph{justification function} or {\it validation\/}, which will be an \ML{} derived inference rule, that can be used to infer an achievement of the original goal from achievements of the subgoals.
 
 If $T$ is a tactic (\ie\ an \ML{} function of type \ml{goal\,->\,(goal\,list\,*\,(thm\,list\,->\,thm))}) and $g$ is a goal, then applying $T$ to
 $g$ (\ie\ evaluating the \ML{} expression $T\ g$) will result in an
@@ -826,13 +823,12 @@ object which is a pair whose first component is a list of goals and
 whose second component is a justification function, \ie\ a value with
 \ML{} type {\small\verb|thm list -> thm|}.
 
-An example tactic is \ml{CONJ\_TAC} which implements (i) and (ii)
-above.  For example, consider the utterly trivial goal of showing
-{\small\verb|T /\ T|}, where \ml{T} is a constant that stands for
-$true$:
+An example tactic is \ml{CONJ\_TAC} which implements (i) and (ii) above.
+For example, consider the utterly trivial goal of showing \holtxt{T~/\bs{}~T}, where \ml{T} is a constant that stands for $\top$ (truth):
 
-\begin{session}\begin{verbatim}
-- val goal1 =([]:term list, ``T /\ T``);
+\begin{session}
+\begin{verbatim}
+- val goal1 = ([]:term list, ``T /\ T``);
 > val goal1 = ([], ``T /\ T``) : term list * term
 
 - CONJ_TAC goal1;
@@ -845,38 +841,45 @@ $true$:
     [([], ``T``), ([], ``T``)]
     : (term list * term) list
   val just_fn = fn : thm list -> thm
-\end{verbatim}\end{session}
+\end{verbatim}
+\end{session}
 
 \noindent \ml{CONJ\_TAC} has produced a goal  list consisting  of two identical
 subgoals of just showing \ml{([],"T")}.  Now, there is a preproved
 theorem in \HOL, called \ml{TRUTH}, that achieves this goal:
 
-\begin{session}\begin{verbatim}
+\begin{session}
+\begin{verbatim}
 - TRUTH;
 > val it = [] |- T : thm
-\end{verbatim}\end{session}
+\end{verbatim}
+\end{session}
 
 \noindent Applying the justification function \ml{just\_fn} to a list
 of theorems achieving the goals in \ml{goal\_list} results
 in a theorem achieving the original goal:
 
-\begin{session}\begin{verbatim}
+\begin{session}
+\begin{verbatim}
 - just_fn [TRUTH,TRUTH];
 > val it =  [] |- T /\ T : thm
-\end{verbatim}\end{session}
+\end{verbatim}
+\end{session}
 
     Although this example is trivial, it does illustrate the essential
     idea of tactics.  Note that tactics are not special
     theorem-proving primitives; they are just \ML{} functions.  For
     example, the definition of \ml{CONJ\_TAC} is simply:
 
-\begin{hol}\begin{verbatim}
+\begin{hol}
+\begin{verbatim}
    fun CONJ_TAC (asl,w) = let
      val (l,r) = dest_conj w
    in
      ([(asl,l), (asl,r)], fn [th1,th2] => CONJ th1 th2)
    end
-\end{verbatim}\end{hol}
+\end{verbatim}
+\end{hol}
 
 \noindent The function \ml{dest\_conj} splits a conjunction into its
 two conjuncts: If \ml{(asl,``$t_1$}{\small\verb|/\|}\ml{$t_2$``)} is a
@@ -995,13 +998,15 @@ and an induction step subgoal
 The extra induction assumption {\small\verb|``|}$t[n]${\small\verb|``|}
 is indicated in the tactic notation with set brackets.
 
-\begin{session}\begin{verbatim}
+\begin{session}
+\begin{verbatim}
 - numLib.INDUCT_TAC([], ``!m n. m+n = n+m``);
 > val it =
     ([([], ``!n. 0 + n = n + 0``),
       ([``!n. m + n = n + m``], ``!n. SUC m + n = n + SUC m``)], fn)
     : (term list * term) list * (thm list -> thm)
-\end{verbatim}\end{session}
+\end{verbatim}
+\end{session}
 
 \noindent The first subgoal is the basis case and the second subgoal is
 the step case.
@@ -1048,7 +1053,8 @@ of equations (empty in the example that follows) and tries to prove a goal
 by rewriting with these equations together with
 \ml{basic\_rewrites}:
 
-\begin{session}\begin{verbatim}
+\begin{session}
+\begin{verbatim}
 - val goal2 = ([]:term list, ``T /\ x ==> x \/ (y /\ F)``);
 > val goal2 = ([], ``T /\ x ==> x \/ y /\ F``) : (term list * term)
 
@@ -1057,7 +1063,8 @@ by rewriting with these equations together with
 
 - #2 it [];
 > val it =  [] |- T /\ x ==> x \/ y /\ F : thm
-\end{verbatim}\end{session}
+\end{verbatim}
+\end{session}
 
 \noindent Proved theorems are usually stored in the current theory
 so that they can be used in subsequent sessions.
@@ -1078,14 +1085,12 @@ If the theorem is not to be saved, the function \ml{prove} of type
 saving it.  In both cases  the evaluation  fails if  $T$ does  not solve the
 goal {\small\verb|([],|}$t${\small\verb|)|}.
 
-When conducting a proof that involves many subgoals and tactics, it is
-necessary to keep track of all the justification functions and compose
-them in the correct order.  While this is feasible even in large
-proofs, it is tedious.  \HOL{} provides a package for building and
-traversing the tree of subgoals, stacking the justification functions
-and applying them properly; this package was originally implemented
-for \LCF\ by Larry Paulson. Its use is demonstrated in Chapter
-\ref{chap:euclid}, and thoroughly documented in \DESCRIPTION.
+When conducting a proof that involves many subgoals and tactics, it is necessary to keep track of all the justification functions and compose them in the correct order.
+While this is feasible even in large proofs, it is tedious.
+\HOL{} provides a package for building and traversing the tree of subgoals, stacking the justification functions and applying them properly; this package was originally implemented for \LCF\ by Larry Paulson.
+Its use is demonstrated below in some of the example sessions, and in Chapter~\ref{chap:euclid}.
+It is thoroughly documented in \DESCRIPTION.
+(In short, the \ML{} function \ml{g} establishes a goal, and the \ML{} function \ml{e} applies a tactic to the current state of the goal.)
 
 \subsection{Tacticals}
 \label{tacticals}
@@ -1098,18 +1103,15 @@ Some important tacticals in the \HOL{} system are listed below.
 
 \subsubsection{\tt THENL : tactic -> tactic list -> tactic}
 
-If tactic $T$ produces $n$ subgoals and $T_1$, $\ldots$ , $T_n$ are
-tactics then $T${\small\verb| THENL|}
-{\small\verb|[|}$T_1${\small\verb|;|}$\ldots${\small\verb|;|}$T_n${\small\verb|]|}
-is a tactic which first applies $T$ and then applies $T_i$ to the
-$i$th subgoal produced by $T$.  The tactical {\small\verb|THENL|} is
-useful if one wants to do different things to different subgoals.
+If tactic $T$ produces $n$ subgoals and $T_1$, $\ldots$ , $T_n$ are tactics then \ml{$T$~THENL~[$T_1$,$\ldots$,$T_n$]} is a tactic which first applies $T$ and then applies $T_i$ to the $i$th subgoal produced by $T$.
+The tactical \ml{THENL} is useful if one wants to do different things to different subgoals.
 
 \ml{THENL} can be illustrated by doing the proof of $\vdash \uquant{m}m+0=m$ in
 one step.
 
 \setcounter{sessioncount}{0}
-\begin{session}\begin{verbatim}
+\begin{session}
+\begin{verbatim}
 - g `!m. m + 0 = m`;
 > val it =
     Proof manager status: 1 proof.
@@ -1122,13 +1124,13 @@ OK..
 > val it =
     Initial goal proved.
        |- !m. m + 0 = m
-\end{verbatim}\end{session}
+\end{verbatim}
+\end{session}
 
-\noindent The compound tactic
-{\small\verb|INDUCT_TAC THENL [REWRITE_TAC [ADD]; ASM_REWRITE_TAC [ADD]]|}
-first applies \ml{INDUCT\_TAC} and then applies
-\ml{REWRITE\_TAC[ADD]} to the first subgoal (the basis) and
-\ml{ASM\_REWRITE\_TAC[ADD]} to the second subgoal (the step).
+\noindent The compound tactic \[
+\ml{INDUCT\_TAC~THENL~[REWRITE\_TAC~[ADD],~ASM\_REWRITE\_TAC~[ADD]]}
+\]
+first applies \ml{INDUCT_TAC} and then applies \ml{REWRITE\_TAC[ADD]} to the first subgoal (the basis) and \ml{ASM\_REWRITE\_TAC[ADD]} to the second subgoal (the step).
 
 The tactical {\small\verb|THENL|} is useful for doing different things
 to different subgoals. The tactical \ml{THEN} can be used to apply the
@@ -1145,7 +1147,8 @@ In fact, \ml{ASM\_REWRITE\_TAC[ADD]} will solve the basis as well as
 the step case of the induction for $\uquant{m}m+0=m$, so there is an
 even simpler one-step proof than the one above:
 \setcounter{sessioncount}{0}
-\begin{session}\begin{verbatim}
+\begin{session}
+\begin{verbatim}
 - g `!m. m+0 = m`;
 > val it =
     Proof manager status: 1 proof.
@@ -1158,45 +1161,54 @@ OK..
 > val it =
     Initial goal proved.
         |- !m. m + 0 = m
-\end{verbatim}\end{session}
+\end{verbatim}
+\end{session}
 
 \noindent This is typical: it is common to use a single tactic for several
 goals. Here, for example, are the first four consequences of the
 definition \ml{ADD} of addition that are pre-proved when the built-in
 theory \ml{arithmetic} \HOL{} is made.
 
-\begin{hol}\begin{verbatim}
+\begin{hol}
+\begin{verbatim}
    val ADD_0 = prove (
      ``!m. m + 0 = m``,
      INDUCT_TAC THEN ASM_REWRITE_TAC[ADD]);
-\end{verbatim}\end{hol}
+\end{verbatim}
+\end{hol}
 
-\begin{hol}\begin{verbatim}
+\begin{hol}
+\begin{verbatim}
    val ADD_SUC = prove (
      ``!m n. SUC(m + n) = m + SUC n``,
      INDUCT_TAC THEN ASM_REWRITE_TAC[ADD]);
-\end{verbatim}\end{hol}
+\end{verbatim}
+\end{hol}
 
-\begin{hol}\begin{verbatim}
+\begin{hol}
+\begin{verbatim}
    val ADD_CLAUSES = prove (
      ``(0 + m = m)              /\
        (m + 0 = m)              /\
        (SUC m + n = SUC(m + n)) /\
        (m + SUC n = SUC(m + n))``,
      REWRITE_TAC[ADD, ADD_0, ADD_SUC]);
-\end{verbatim}\end{hol}
+\end{verbatim}
+\end{hol}
 
-\begin{hol}\begin{verbatim}
+\begin{hol}
+\begin{verbatim}
    val ADD_COMM = prove (
      ``!m n. m + n = n + m``,
      INDUCT_TAC THEN ASM_REWRITE_TAC[ADD_0, ADD, ADD_SUC]);
-\end{verbatim}\end{hol}
+\end{verbatim}
+\end{hol}
 
 
 \noindent These proofs are performed when the \HOL{} system is made and the
 theorems are saved in the theory \ml{arithmetic}. The complete list of
 proofs for this built-in theory can be found in the file
-\ml{src/num/arithmeticScript.sml}.
+\ml{src/num/theories/arithmeticScript.sml}.
 
 
 \subsubsection{\tt ORELSE : tactic -> tactic -> tactic}\label{ORELSE}
@@ -1267,12 +1279,6 @@ This section contains a summary of some of the tactics built into the
 \HOL{} system (including those already discussed).  The tactics given
 here are those that are used in the parity checking example.
 
-Before beginning, note that the \ML{} type {\small\verb|thm_tactic|}
-abbreviates {\small\verb|thm->tactic|}, and the type
-{\small\verb|conv|}\footnote{The type {\small{\tt conv}} comes from
-Larry Paulson's theory of conversions \cite{lcp_rewrite}.}
-abbreviates {\small\verb|term->thm|}.
-
 \subsubsection{\tt REWRITE\_TAC : thm list -> tactic}
 \label{rewrite}
 
@@ -1335,7 +1341,7 @@ $t_1$ & $t_2$ \\
 \end{center}
 
 \item{\bf Uses:} Solving conjunctive goals.
-{\small\verb|CONJ_TAC|} is invoked by {\small\verb|STRIP_TAC|} (see below).
+\ml{CONJ_TAC} is invoked by \ml{STRIP_TAC} (see below).
 
 \end{itemize}
 
@@ -1345,9 +1351,7 @@ $t_1$ & $t_2$ \\
 \begin{itemize}
 
 \item{\bf Summary:}
-{\small\verb|EQ_TAC|}
-splits an equational goal into two implications (the `if-case' and
-the `only-if' case):
+\ml{EQ_TAC} splits an equational goal into two implications (the `if-case' and the `only-if' case):
 
 \begin{center}
 
@@ -1383,9 +1387,7 @@ $\{u\}v$
 \end{center}
 
 
-\item{\bf Uses:} Solving goals of the form
-{\small\verb|``|}$u${\small\verb| ==> |}$v${\small\verb|``|} by assuming {\small\verb|``|}$u${\small\verb|``|} and then solving
-{\small\verb|``|}$v${\small\verb|``|}.
+\item{\bf Uses:} Solving goals of the form \holtxt{$u$~==>~$v$} by assuming \holtxt{$u$} and then solving \holtxt{$v$}.
 {\small\verb|STRIP_TAC|} (see below) will invoke {\small\verb|DISCH_TAC|} on implicative goals.
 \end{itemize}
 
@@ -1484,7 +1486,7 @@ in \DESCRIPTION).
 \item With {\small\verb%THENL%}; for example, if tactic $T$ produces two subgoals
 and we want to apply $T_1$
 to the first one but to do nothing to the second, then
-the tactic to use is $T${\small\verb% THENL[%}$T_1${\small\verb|;ALL_TAC]|}.
+the tactic to use is \ml{$T$~THENL[$T_1$,ALL_TAC]}.
 \end{enumerate}
 \end{itemize}
 
