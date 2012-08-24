@@ -169,6 +169,7 @@ First, the invocation
 should be added at the end of the file. When the script is finally
 executed, this call writes the theory to disk.
 
+\index{load (ML function)@\ml{load} (\ML{} function)}
 Second, we address a crucial environmental issue: if a theory script
 has been constructed using\verb+ <holdir>/bin/hol+, then it has been
 developed in an environment where some commonly used structures, \eg,
@@ -217,6 +218,7 @@ To make \ML{} happy, one must instead write something like
 This is because (due to restrictions imposed by Moscow~ML\index{Moscow ML}) the script file is required to be an ML structure, and the contents of a structure must be \emph{declarations}, not expressions.
 Indeed, one is allowed to (and often will) omit the bracketing \texttt{structure~foo~=~struct} - \texttt{end} lines, but the contents of the file are still interpreted as if belonging to a structure.
 
+\index{load (ML function)@\ml{load} (\ML{} function)}
 \item In the interactive system, one has to explicitly \verb+load+
   modules; on the other hand, the batch compiler will load modules
   automatically.  For example, in order to execute \verb+open Foo+ (or
