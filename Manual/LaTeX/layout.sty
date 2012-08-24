@@ -122,13 +122,6 @@
 \thesection. \ \fi ##1}}}}
 
 % ---------------------------------------------------------------------
-% Table of contents
-% ---------------------------------------------------------------------
-\def\tableofcontents{\@restonecolfalse\if@twocolumn\@restonecoltrue\onecolumn
- \fi\chapter*{Contents\@mkboth{Contents}{Contents}}
- \@starttoc{toc}\if@restonecol\twocolumn\fi}
-
-% ---------------------------------------------------------------------
 % Part
 % ---------------------------------------------------------------------
 \def\part{\cleardoublepage \thispagestyle{empty} \if@twocolumn \onecolumn
@@ -160,49 +153,6 @@
 % ---------------------------------------------------------------------
 
 \def\bibname{References}
-
-% ---------------------------------------------------------------------
-% To make the index
-% ---------------------------------------------------------------------
-\def\theindex{\@restonecoltrue\if@twocolumn\@restonecolfalse\fi
-\columnseprule \z@
-\columnsep 35pt\twocolumn[\@makeschapterhead{Index}]
- \@mkboth{Index}{Index}\thispagestyle{plain}
- \addcontentsline{toc}{chapter}{Index}
- \parindent\z@
- \parskip\z@ plus .3pt\relax\let\item\@idxitem}
-\def\@idxitem{\par\hangindent 40pt}
-\def\subitem{\par\hangindent 40pt \hspace*{20pt}}
-\def\subsubitem{\par\hangindent 40pt \hspace*{30pt}}
-\def\endtheindex{\if@restonecol\onecolumn\else\clearpage\fi}
-
-% ---------------------------------------------------------------------
-% Other Indexing commands
-%
-% autoindex is defined for indexing the thing in \DOC{thing}.
-% It translates \_ in thing to \string \_.
-% ---------------------------------------------------------------------
-
-\def\makeindex{\if@filesw \newwrite\@indexfile
-  \immediate\openout\@indexfile=\jobname.idx
-  \def\index{\@bsphack\begingroup
-             \def\protect####1{\string####1\space}\@sanitize
-             \@wrindex\@indexfile}
-  \def\autoindex{\@bsphack\begingroup
-             \def\protect####1{\string####1\space}
-             \def\_{\string\_}\@sanitize
-             \@wrindex\@indexfile}\typeout
-  {Writing index file \jobname.idx }\fi}
-
-\def\@wrindex#1#2{\let\thepage\relax
-   \xdef\@gtempa{\write#1{\string
-      \indexentry{#2}{\thepage}}}\endgroup\@gtempa
-   \if@nobreak \ifvmode\nobreak\fi\fi\@esphack}
-
-\def\index{\@bsphack\begingroup \@sanitize\@index}
-\def\autoindex{\@bsphack\begingroup \@sanitize\@index}
-
-\def\@index#1{\endgroup\@esphack}
 
 % ---------------------------------------------------------------------
 % Enumeration with Roman numerals: one-level enumeration only
