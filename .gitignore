@@ -30,6 +30,9 @@
 *.hix
 *.fdb_latexmk
 
+config-override
+tools-poly/poly-includes.ML
+
 *~
 build-log
 svn-update
