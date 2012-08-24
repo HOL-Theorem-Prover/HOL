@@ -208,29 +208,26 @@ The following notes may be of some further help.
 \item In \ML{}, modules are not allowed to include unbound top-level expressions.
   Hence, something like the following is not allowed:
 \begin{verbatim}
-    new_theory "ted";
+   new_theory "ted";
 \end{verbatim}
 To make \ML{} happy, one must instead write something like
 \begin{verbatim}
-    val _ = new_theory "ted";
+   val _ = new_theory "ted";
 \end{verbatim}
 \noindent
 This is because (due to restrictions imposed by Moscow~ML\index{Moscow ML}) the script file is required to be an ML structure, and the contents of a structure must be \emph{declarations}, not expressions.
 Indeed, one is allowed to (and often will) omit the bracketing \texttt{structure~foo~=~struct} - \texttt{end} lines, but the contents of the file are still interpreted as if belonging to a structure.
 
 \index{load (ML function)@\ml{load} (\ML{} function)}
-\item In the interactive system, one has to explicitly \verb+load+
-  modules; on the other hand, the batch compiler will load modules
-  automatically.  For example, in order to execute \verb+open Foo+ (or
-  refer to values in \verb+Foo+) in the interactive system, one must
-  first have executed \verb+load "Foo"+. Contrarily, the batch
-  compiler will reject files having occurrences of \verb+load+, since
-  \verb+load+ is only defined for the interactive system.
+\item In the interactive system, one has to explicitly \ml{load} modules; on the other hand, the batch compiler will load modules automatically.
+For example, in order to execute \ml{open Foo} (or refer to values in structure \ml{Foo}) in the interactive system, one must first have executed \ml{load "Foo"}.
+(This is on the assumption that structure \ml{Foo} is defined in a file \texttt{Foo.sml}.)
+Contrarily, the batch compiler will reject files having occurrences of \ml{load}, since \ml{load} is only defined for the interactive system.
 
-\item Take care not to have the string "Theory" embedded in the name of any of your files.
+\item Take care not to have the string ``Theory'' embedded in the name of any of your files.
 \HOL{} generates files containing this string, and when it cleans up after itself, it removes such files using a regular expression.
 This will also remove other files with names containing ``Theory''.
-For example, if, in your development directory, you had a file of ML code named \texttt{MyTheory.sml} and you were also managing a \HOL{} development there with \holmake, then \texttt{MyTheory.sml} would get deleted if \texttt{Holmake~clean} were invoked.
+For example, if, in your development directory, you had a file of \ML{} code named \texttt{MyTheory.sml} and you were also managing a \HOL{} development there with \holmake, then \texttt{MyTheory.sml} would get deleted if \texttt{Holmake~clean} were invoked.
 
 \end{enumerate}
 
