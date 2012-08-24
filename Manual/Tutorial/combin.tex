@@ -221,13 +221,30 @@ This suggests that we define confluent thus:
 \end{session}
 This property states of $R$ that we can ``complete the diamond'';
 if we have
-\[\xymatrix @R=5mm @C=2.5mm {
- & x \ar[dl]_{*} \ar[dr]^{*} & \\
-y & & z }\]
-\[\xymatrix @R=5mm @C=2.5mm {
-& x \ar[dl]_{*} \ar[dr]^{*} & \\
-y \ar@{.>}[dr]_{*} & & z \ar@{.>}[dl]^{*} \\
-& u}\]
+\begin{center}
+\begin{tikzpicture}[scale=.8,transform shape]
+\node (middle) {};
+\node (x) [above=of middle] {$x$};
+\node (y) [left=of middle] {$y$};
+\node (z) [right=of middle] {$z$};
+\path (x) edge [->,thick] node[auto,swap] {$*$} (y);
+\path (x) edge [->,thick] node[auto] {$*$} (z);
+\end{tikzpicture}
+\end{center}
+then we can complete with a fresh value $u$:
+\begin{center}
+\begin{tikzpicture}[scale=.8,transform shape]
+\node (middle) {};
+\node (x) [above=of middle] {$x$};
+\node (y) [left=of middle] {$y$};
+\node (z) [right=of middle] {$z$};
+\node (u) [below=of middle] {$u$};
+\path (x) edge [->,thick] node[auto,swap] {$*$} (y);
+\path (x) edge [->,thick] node[auto] {$*$} (z);
+\path (y) edge [->,thick,densely dotted] node[auto,swap] {$*$} (u);
+\path (z) edge [->,thick,densely dotted] node[auto] {$*$} (u);
+\end{tikzpicture}
+\end{center}
 
 One nice property of confluent relations is that from any one starting
 point they produce no more than one \emph{normal form}, where a normal
