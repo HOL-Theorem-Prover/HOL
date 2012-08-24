@@ -752,6 +752,7 @@ It is obviously important to be able to use heaps interactively.
 If the standard \texttt{hol} executable is invoked in a directory where there is a \texttt{Holmakefile} specifying a heap, the default heap will not be used and the given heap will be used instead.
 The fact that this is happening is mentioned as the interactive session begins.
 For example:
+\begin{samepage}
 \begin{alltt}
 ---------------------------------------------------------------------
        HOL-4 [Kananaskis 8 (stdknl, built Tue Jul 24 16:48:44 2012)]
@@ -764,6 +765,7 @@ For example:
 Poly/ML 5.4.1 Release
 >
 \end{alltt}
+\end{samepage}
 
 Finally, note that heaps are required to be built first in a directory, and that heaps embody theories or \ML{} sources that are \emph{ancestral} to the directory in which the heap occurs.
 This has the unfortunate consequence that one cannot package up a heap embodying the standard theories for the real numbers in \texttt{src/real}, but that such a heap has to built in some other directory.
