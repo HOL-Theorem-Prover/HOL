@@ -158,12 +158,6 @@ val lowest_set_bit_def = Define`
     else
       LEAST i. w ' i`;
 
-val bit_count_upto_def = Define`
-  bit_count_upto n (w : 'a word) = SUM n (\i. if w ' i then 1 else 0)`;
-
-val bit_count_def = Define`
-  bit_count (w : 'a word) = bit_count_upto (dimindex(:'a)) w`;
-
 val _ = wordsLib.guess_lengths();
 
 val zero_extend32_def = Define`

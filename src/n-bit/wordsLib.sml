@@ -225,6 +225,7 @@ local
 
   val thms =
   [pairTheory.UNCURRY_DEF, combinTheory.K_THM,
+   numLib.SUC_RULE sum_numTheory.SUM_def,
    listTheory.GENLIST_AUX_compute, listTheory.GENLIST_GENLIST_AUX,
    iBITWISE, NUMERAL_BITWISE, LSB_def, BITV_def, SBIT_def,
    NUM_RULE [BIT_ZERO] `n:num` SIGN_EXTEND_def,
@@ -242,6 +243,7 @@ local
    n2w_w2n, w2n_n2w_compute, MOD_WL1 w2w_n2w, Q.SPEC `^n2w n` sw2sw_def,
    word_len_def, word_L_def, word_H_def, word_T_def,
    word_abs_def, word_min_def, word_max_def, word_smin_def, word_smax_def,
+   bit_count_upto_def, bit_count_def,
    saturate_w2w_n2w, saturate_n2w_def,
    saturate_add_def, saturate_sub_def, saturate_mul_def,
    word_join_def, Q.SPECL [`^n2w n`, `n2w m:'b word`] word_concat_def,
@@ -334,6 +336,7 @@ local
 
   val l1 =
      ["l2w", "w2l", "s2w", "w2s", "add_with_carry",
+      "bit_count", "bit_count_upto",
       "word_from_bin_list", "word_from_oct_list", "word_from_dec_list",
       "word_from_hex_list", "word_to_bin_list", "word_to_oct_list",
       "word_to_dec_list", "word_to_hex_list", "word_from_bin_string",
@@ -374,7 +377,7 @@ local
             map (pair "fcp") l3)
 
   fun is_hex_digit_literal t =
-     numSyntax.is_numeral t andalso numSyntax.int_of_term t < 16
+     numSyntax.int_of_term t < 16 handle HOL_ERR _ => false
 
   fun is_bool t = t = boolSyntax.T orelse t = boolSyntax.F
 
@@ -398,12 +401,11 @@ local
       | NONE => numSyntax.is_numeral t
                 orelse wordsSyntax.is_word_literal t
                 orelse is_uintmax t
-                orelse is_bool t
+                orelse List.exists (Term.same_const t)
+                          [boolSyntax.T, boolSyntax.F,
+                           boolSyntax.conjunction, boolSyntax.disjunction,
+                           bitSyntax.hex_tm, bitSyntax.unhex_tm]
                 orelse is_ground_list t
-                orelse term_eq ``ASCIInumbers$HEX`` t
-                orelse term_eq ``ASCIInumbers$UNHEX`` t
-                orelse term_eq ``bool$/\`` t
-                orelse term_eq ``bool$\/`` t
 
   fun is_ground_fn t =
      is_comb t andalso

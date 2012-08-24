@@ -83,6 +83,7 @@ val (word_len_tm, mk_word_len, dest_word_len, is_word_len) = s "word_len"
 val (word_log2_tm, mk_word_log2, dest_word_log2, is_word_log2) = s "word_log2"
 val (word_msb_tm, mk_word_msb, dest_word_msb, is_word_msb) = s "word_msb"
 val (word_lsb_tm, mk_word_lsb, dest_word_lsb, is_word_lsb) = s "word_lsb"
+val (bit_count_tm, mk_bit_count, dest_bit_count, is_bit_count) = s "bit_count"
 val (reduce_or_tm, mk_reduce_or, dest_reduce_or, is_reduce_or) = s "reduce_or"
 
 val (reduce_and_tm, mk_reduce_and, dest_reduce_and, is_reduce_and) =
@@ -298,6 +299,9 @@ val (word_modify_tm, mk_word_modify, dest_word_modify, is_word_modify) =
 
 val (word_reduce_tm, mk_word_reduce, dest_word_reduce, is_word_reduce) =
    s "word_reduce"
+
+val (bit_count_upto_tm, mk_bit_count_upto,
+     dest_bit_count_upto, is_bit_count_upto) = s "bit_count_upto"
 
 val (word_sign_extend_tm, mk_word_sign_extend,
      dest_word_sign_extend, is_word_sign_extend) = s "word_sign_extend"

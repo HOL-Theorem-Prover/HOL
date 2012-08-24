@@ -3090,10 +3090,12 @@ val arm_parse_register_list : term M =
 val singleton_list_to_reg =
   mk_word4 o uint_of_word o eval o wordsSyntax.mk_word_log2;
 
+fun bit_count tm = numSyntax.int_of_term (eval (wordsSyntax.mk_bit_count tm))
+
 val arm_parse_pop_push : bool -> (term * term) M =
   fn pop =>
     arm_parse_register_list >>= (fn list =>
-      let val count = list |> mk_bit_count |> eval |> numSyntax.int_of_term in
+      let val count = bit_count list in
         read_thumb >>= (fn thumb =>
           if thumb then
             read_OutsideOrLastInITBlock >>= (fn OutsideOrLastInITBlock =>
@@ -3168,7 +3170,7 @@ val arm_parse_ldm_stm : bool -> term -> term -> (term * term) M =
           read_OutsideOrLastInITBlock >>= (fn OutsideOrLastInITBlock =>
           read_qualifier >>= (fn q =>
             let
-              val count = list |> mk_bit_count |> eval |> numSyntax.int_of_term
+              val count = bit_count list
               val l = uint_of_word list
               val n = uint_of_word rn
               val high_bits = l div 256

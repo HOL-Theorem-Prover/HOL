@@ -22,6 +22,8 @@ sig
    val uint_of_word          : term -> int
 
    val add_with_carry_tm : term
+   val bit_count_tm : term
+   val bit_count_upto_tm : term
    val bit_field_insert_tm : term
    val concat_word_list_tm : term
    val dimindex_tm : term
@@ -128,6 +130,8 @@ sig
    val word_xor_tm : term
 
    val dest_add_with_carry : term -> term * term * term
+   val dest_bit_count : term -> term
+   val dest_bit_count_upto : term -> term * term
    val dest_bit_field_insert : term -> term * term * term * term
    val dest_concat_word_list : term -> term * hol_type
    val dest_dimindex : term -> hol_type
@@ -234,6 +238,8 @@ sig
    val dest_word_xor : term -> term * term
 
    val is_add_with_carry : term -> bool
+   val is_bit_count : term -> bool
+   val is_bit_count_upto : term -> bool
    val is_bit_field_insert : term -> bool
    val is_concat_word_list : term -> bool
    val is_dimindex : term -> bool
@@ -340,6 +346,8 @@ sig
    val is_word_xor : term -> bool
 
    val mk_add_with_carry : term * term * term -> term
+   val mk_bit_count_upto : term * term -> term
+   val mk_bit_count : term -> term
    val mk_bit_field_insert : term * term * term * term -> term
    val mk_concat_word_list : term * hol_type -> term
    val mk_dimindex : hol_type -> term

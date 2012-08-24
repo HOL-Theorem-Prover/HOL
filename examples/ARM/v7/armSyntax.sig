@@ -32,7 +32,6 @@ sig
   val bytes_tm                      : term
   val align_tm                      : term
   val aligned_tm                    : term
-  val bit_count_tm                  : term
   val ITAdvance_tm                  : term
   val NoInterrupt_tm                : term
   val HW_Reset_tm                   : term
@@ -77,7 +76,6 @@ sig
   val mk_bytes                      : term * term -> term
   val mk_align                      : term * term -> term
   val mk_aligned                    : term * term -> term
-  val mk_bit_count                  : term -> term
   val mk_ITAdvance                  : term -> term
   val mk_clear_event_register       : term -> term
   val mk_send_event                 : term -> term
@@ -124,7 +122,6 @@ sig
   val dest_bytes                    : term -> term
   val dest_align                    : term -> term
   val dest_aligned                  : term -> term
-  val dest_bit_count                : term -> term
   val dest_ITAdvance                : term -> term
   val dest_arm_decode               : term -> term * term
   val dest_thumb_decode             : term -> term * term * term

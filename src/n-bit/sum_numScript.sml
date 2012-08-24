@@ -143,6 +143,12 @@ val SUM_FUN_EQUAL = save_thm("SUM_FUN_EQUAL",
 val SUM_ZERO = save_thm("SUM_ZERO",
   (SIMP_RULE arith_ss [SYM_SUM] o SPEC `0`) GSUM_ZERO);
 
+val SUM_FOLDL = Q.store_thm("SUM_FOLDL",
+   `!n f. SUM n f = FOLDL (\x n. f n + x) 0 (COUNT_LIST n)`,
+   Induct
+   THEN SRW_TAC [ARITH_ss]
+          [SUM_def, rich_listTheory.COUNT_LIST_SNOC, listTheory.FOLDL_SNOC])
+
 (* ------------------------------------------------------------------------- *)
 
 val _ = export_theory();

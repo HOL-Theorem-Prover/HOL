@@ -73,7 +73,6 @@ val decode_psr_tm       = mk_core_const "decode_psr"
 val bytes_tm            = mk_core_const "bytes"
 val align_tm            = mk_core_const "align"
 val aligned_tm          = mk_core_const "aligned"
-val bit_count_tm        = mk_core_const "bit_count"
 val Encoding_ARM_tm     = mk_core_const "Encoding_ARM"
 val Encoding_Thumb_tm   = mk_core_const "Encoding_Thumb"
 val Encoding_Thumb2_tm  = mk_core_const "Encoding_Thumb2"
@@ -262,11 +261,6 @@ fun mk_aligned (w,n) =
     pairSyntax.mk_pair(w, n))
   handle HOL_ERR _ => raise ERR "mk_aligned" "";
 
-fun mk_bit_count w =
-  HolKernel.mk_comb(Term.inst
-  [Type.alpha |-> wordsSyntax.dest_word_type (Term.type_of w)] bit_count_tm, w)
-  handle HOL_ERR _ => raise ERR "mk_bit_count" "";
-
 fun mk_ITAdvance w =
   HolKernel.mk_comb(Term.inst
   [Type.alpha |-> wordsSyntax.dest_word_type (Term.type_of w)] ITAdvance_tm, w)
@@ -346,7 +340,6 @@ val dest_decode_psr = dest_monop decode_psr_tm (ERR "dest_decode_psr" "")
 val dest_bytes      = dest_monop bytes_tm      (ERR "dest_bytes" "");
 val dest_align      = dest_monop align_tm      (ERR "dest_align" "");
 val dest_aligned    = dest_monop aligned_tm    (ERR "dest_align" "");
-val dest_bit_count  = dest_monop bit_count_tm  (ERR "dest_bit_count" "");
 val dest_ITAdvance  = dest_monop ITAdvance_tm  (ERR "dest_ITAdvance" "");
 
 val dest_clear_event_register =
@@ -405,7 +398,6 @@ val is_decode_psr     = can dest_decode_psr
 val is_bytes          = can dest_bytes
 val is_align          = can dest_align
 val is_aligned        = can dest_aligned
-val is_bit_count      = can dest_bit_count
 val is_ITAdvance      = can dest_ITAdvance
 
 val is_clear_event_register     = can dest_clear_event_register

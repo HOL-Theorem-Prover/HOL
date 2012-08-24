@@ -234,6 +234,12 @@ val word_sign_extend_def = Define`
 
 val word_len_def = Define `word_len (w:'a word) = dimindex (:'a)`;
 
+val bit_count_upto_def = Define`
+   bit_count_upto n (w : 'a word) = SUM n (\i. if w ' i then 1 else 0)`;
+
+val bit_count_def = Define`
+   bit_count (w : 'a word) = bit_count_upto (dimindex(:'a)) w`;
+
 val _ = overload_on ("''",Term`$word_slice`);
 val _ = overload_on ("--",Term`$word_bits`);
 val _ = overload_on ("><",Term`$word_extract`);
