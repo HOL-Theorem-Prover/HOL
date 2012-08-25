@@ -278,6 +278,7 @@ Cevaluate c env (CLet (n::ns) (e::es) b) (Rerr err))
 (! c env ns defs b r.
 (LENGTH ns = LENGTH defs) /\
 ALL_DISTINCT ns /\
+(! xs l. MEM (xs,INR l) defs ==>  l IN FDOM  c) /\
 Cevaluate c
   (FOLDL2 
     (\ env' n (xs,cb) .
@@ -292,6 +293,7 @@ Cevaluate c env (CLetfun F ns defs b) r)
 (! c env ns defs b r.
 (LENGTH ns = LENGTH defs) /\
 ALL_DISTINCT ns /\
+(! xs l. MEM (xs,INR l) defs ==>  l IN FDOM  c) /\
 Cevaluate c
   (FOLDL
      (\ env' n .
@@ -303,7 +305,7 @@ Cevaluate c env (CLetfun T ns defs b) r)
 
 /\
 (! c env xs cb.
-T
+(! l. (cb = INR l) ==>  l IN FDOM  c)
 ==>
 Cevaluate c env (CFun xs cb)
   (Rval (CRecClos env [fresh_var (cbod_fvs c cb)] [(xs,cb)]
