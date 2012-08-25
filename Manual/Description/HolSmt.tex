@@ -188,27 +188,28 @@ delete temporary files automatically, \eg, when \HOL{} exits).
 
 \subsection{Installing SMT solvers}
 
-\ml{HolSmtLib} has been tested with Yices~1.0.29 and Z3~2.19, the
-latest versions of these solvers at the time of writing.  (Yices~2 is
-not supported.)  To use \ml{HolSmtLib}, you need to install at least
-one of these SMT solvers on your machine.  As mentioned before, Yices
-supports a larger fragment of higher-order logic than Z3, but proof
-reconstruction has been implemented only for Z3.
+\ml{HolSmtLib} has been tested with Yices~1.0.29 and Z3~2.19. Later
+versions may or may not work.  (Yices~2 is not supported.)  To use
+\ml{HolSmtLib}, you need to install at least one of these SMT solvers
+on your machine.  As mentioned before, Yices supports a larger
+fragment of higher-order logic than Z3, but proof reconstruction has
+been implemented only for Z3.
 
 Yices is available for various platforms from
-\url{http://yices.csl.sri.com/}.  After installation, you must make
-the Yices executable available as {\tt yices}, \eg, by placing it into
-a folder that is in your {\tt \$PATH}.  This name is currently
-hard-coded: there is no configuration option to tell \HOL{} about the
-location and name of the Yices executable.
+\url{http://yices.csl.sri.com/}.  After installation, you must set the
+environment variable {\tt \$HOL4\_YICES\_EXECUTABLE} to the name of
+the Yices executable, \eg, {\tt /bin/yices}, before you invoke \HOL.
 
 The Z3 website,
 \url{http://research.microsoft.com/en-us/um/redmond/projects/z3/},
 provides Windows and Linux versions of the solver.  Alternatively, the
 Windows version can be installed on Linux and Mac OS~X---see the
-instructions at \url{http://www4.in.tum.de/~boehmes/z3.html}.  The
-executable must be made available as {\tt z3} after installation.
-Again, this name is currently hard-coded.
+instructions at
+\url{http://www4.in.tum.de/~boehmes/z3.html}.\footnote{Later versions
+  of Z3 than 2.19 are available for Mac OS~X directly, but not
+  supported by \HOL.}  After installation, you must set the
+environment variable {\tt \$HOL4\_Z3\_EXECUTABLE} to the name of the
+Z3 executable, \eg, {\tt /bin/z3}, before you invoke \HOL.
 
 It should be relatively straightforward to integrate other SMT solvers
 that support the SMT-LIB~2 input format as oracles.  However, this
