@@ -70,22 +70,12 @@ fun expect_sat name smt_tac t =
 
 val _ = print "Testing HolSmtLib "
 
-val yices_installed = Lib.can HolSmtLib.YICES_TAC ([], ``T``)
-
-val _ = if not yices_installed then
-          print "(Yices not installed? Some tests will be skipped.) "
+val _ = if not Yices.is_configured then
+          print "(Yices not configured, some tests will be skipped.) "
         else ()
 
-val z3_installed = Lib.can HolSmtLib.Z3_ORACLE_TAC ([], ``T``)
-
-val _ = if not z3_installed then
-          print "(Z3 not installed? Some tests will be skipped.) "
-        else ()
-
-val z3_proofs_installed = Lib.can HolSmtLib.Z3_TAC ([], ``T``)
-
-val _ = if not z3_proofs_installed then
-          print "(Z3 (proofs) not installed? Some tests will be skipped.) "
+val _ = if not Z3.is_configured then
+          print "(Z3 not configured, some tests will be skipped.) "
         else ()
 
 (*****************************************************************************)
@@ -130,27 +120,27 @@ local
       g; print ".")
   end
 
-  val thm_YO = if yices_installed then
+  val thm_YO = if Yices.is_configured then
                  (fn g => (expect_thm "Yices" HolSmtLib.YICES_TAC g; print "."))
                else Lib.K ()
-  val sat_YO = if yices_installed then
+  val sat_YO = if Yices.is_configured then
                  (fn g => (expect_sat "Yices" HolSmtLib.YICES_TAC g; print "."))
                else Lib.K ()
 
-  val thm_Z3 = if z3_installed then
+  val thm_Z3 = if Z3.is_configured then
                  (fn g => (expect_thm "Z3" HolSmtLib.Z3_ORACLE_TAC g;
                            print "."))
                else Lib.K ()
-  val sat_Z3 = if z3_installed then
+  val sat_Z3 = if Z3.is_configured then
                  (fn g => (expect_sat "Z3" HolSmtLib.Z3_ORACLE_TAC g;
                            print "."))
                else Lib.K ()
 
-  val thm_Z3p = if z3_proofs_installed then
+  val thm_Z3p = if Z3.is_configured then
                   (fn g => (expect_thm "Z3 (proofs)" HolSmtLib.Z3_TAC g;
                             print "."))
                 else Lib.K ()
-  val sat_Z3p = if z3_proofs_installed then
+  val sat_Z3p = if Z3.is_configured then
                   (fn g => (expect_sat "Z3 (proofs)" HolSmtLib.Z3_TAC g;
                             print "."))
                 else Lib.K ()

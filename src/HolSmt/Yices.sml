@@ -20,6 +20,8 @@ structure Yices = struct
               various word operations, data type constructors, data type case
               constants, record field selectors, record updates *)
 
+  val is_configured = Option.isSome (OS.Process.getEnv "HOL4_YICES_EXECUTABLE")
+
   val Yices_types = [
     (("min", "bool"), "bool", ""),
     (("num", "num"), "nat", ""),
@@ -776,9 +778,14 @@ structure Yices = struct
     end
 
   (* Yices 1.0.29, native file format *)
-  val Yices_Oracle = SolverSpec.make_solver
-    (Lib.pair () o goal_to_Yices)
-    "yices -tc "
-    (Lib.K result_fn)
+  val Yices_Oracle = case OS.Process.getEnv "HOL4_YICES_EXECUTABLE" of
+    SOME file =>
+      SolverSpec.make_solver
+        (Lib.pair () o goal_to_Yices)
+        (file ^ " -tc ")
+        (Lib.K result_fn)
+  | NONE =>
+      (fn _ => raise Feedback.mk_HOL_ERR "Yices" "Yices_Oracle"
+        "Set $HOL4_YICES_EXECUTABLE to point to the Yices executable file.")
 
 end

@@ -41,17 +41,20 @@ structure HolSmtLib :> HolSmtLib = struct
   (* report whether solvers are available *)
   val _ = (
     Feedback.set_trace "HolSmtLib" 0;
-    List.map (fn (f, name) =>
-      (
-        f boolSyntax.T;  (* try to prove ``T`` *)
-        Feedback.HOL_MESG ("HolSmtLib: solver " ^ name ^ " is available.")
-      )
-      handle Feedback.HOL_ERR _ =>
-        Feedback.HOL_MESG ("HolSmtLib: solver " ^ name ^ " not found."))
+    List.map (fn (is_configured, prove, name) =>
+      if is_configured then
+        (
+          prove boolSyntax.T;  (* try to prove ``T`` *)
+          Feedback.HOL_MESG ("HolSmtLib: solver " ^ name ^ " is available.")
+        )
+        handle Feedback.HOL_ERR _ =>
+          Feedback.HOL_WARNING "HolSmtLib" "<init>" ("solver " ^ name ^ " not found.")
+      else
+        Feedback.HOL_MESG ("HolSmtLib: solver " ^ name ^ " not configured."))
       [
-        (YICES_PROVE, "Yices"),
-        (Z3_ORACLE_PROVE, "Z3 (oracle)"),
-        (Z3_PROVE, "Z3 (with proofs)")
+        (Yices.is_configured, YICES_PROVE,"Yices"),
+        (Z3.is_configured, Z3_ORACLE_PROVE, "Z3 (oracle)"),
+        (Z3.is_configured, Z3_PROVE, "Z3 (with proofs)")
       ];
     Feedback.reset_trace "HolSmtLib"
   )
