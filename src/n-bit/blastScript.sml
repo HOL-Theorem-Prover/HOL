@@ -299,6 +299,8 @@ val BITWISE_LO = Q.store_thm("BITWISE_LO",
 
 (* ------------------------------------------------------------------------- *)
 
+val COUNT_LIST_compute = numLib.SUC_RULE rich_listTheory.COUNT_LIST_def
+
 val BITWISE_MUL_lem = Q.prove(
   `!n w m : 'a word.
      0 < n /\ n <= dimindex(:'a) ==>
@@ -310,7 +312,7 @@ val BITWISE_MUL_lem = Q.prove(
   THENL [
     Cases_on `w` \\ Cases_on `m`
     \\ SRW_TAC [fcpLib.FCP_ss]
-         [rich_listTheory.COUNT_LIST_compute, word_bits_n2w, word_mul_n2w,
+         [COUNT_LIST_compute, word_bits_n2w, word_mul_n2w,
           word_index, BITS_THM, bitTheory.ODD_MOD2_LEM]
     \\ Cases_on `n' MOD 2 = 1`
     \\ FULL_SIMP_TAC std_ss [bitTheory.NOT_MOD2_LEM2, bitTheory.BIT_ZERO],
@@ -488,7 +490,7 @@ val word_lsl_bv_expand = Q.store_thm("word_lsl_bv_expand",
                    (COUNT_LIST (dimindex(:'a))) /\
              ((dimindex(:'a) - 1 -- LOG2 (dimindex(:'a) - 1) + 1) m = 0w)`,
   SRW_TAC [] [word_lsl_bv_expand]
-  THEN1 SRW_TAC [wordsLib.WORD_BIT_EQ_ss] [rich_listTheory.COUNT_LIST_compute]
+  THEN1 SRW_TAC [wordsLib.WORD_BIT_EQ_ss] [COUNT_LIST_compute]
   \\ `1 < dimindex(:'a)` by SRW_TAC [] [DECIDE ``0n < n /\ n <> 1 ==> 1 < n``]
   \\ ONCE_REWRITE_TAC [fcpTheory.CART_EQ]
   \\ SRW_TAC [] [fcpTheory.FCP_BETA]
@@ -528,7 +530,7 @@ val word_lsr_bv_expand = Q.store_thm("word_lsr_bv_expand",
                   (COUNT_LIST (dimindex(:'a))) /\
             ((dimindex(:'a) - 1 -- LOG2 (dimindex(:'a) - 1) + 1) m = 0w)`,
   SRW_TAC [] [word_lsr_bv_expand]
-  THEN1 SRW_TAC [wordsLib.WORD_BIT_EQ_ss] [rich_listTheory.COUNT_LIST_compute]
+  THEN1 SRW_TAC [wordsLib.WORD_BIT_EQ_ss] [COUNT_LIST_compute]
   \\ `1 < dimindex(:'a)` by SRW_TAC [] [DECIDE ``0n < n /\ n <> 1 ==> 1 < n``]
   \\ ONCE_REWRITE_TAC [fcpTheory.CART_EQ]
   \\ SRW_TAC [] [fcpTheory.FCP_BETA]
@@ -580,7 +582,7 @@ val word_asr_bv_expand = Q.prove(
     \\ `(n = 0) \/ (n = 1)`
     by Q.PAT_ASSUM `x = 1` (fn th => FULL_SIMP_TAC arith_ss [dimword_def,th])
     \\ SRW_TAC [wordsLib.WORD_BIT_EQ_ss]
-         [wordsTheory.word_lo_n2w, rich_listTheory.COUNT_LIST_compute],
+         [wordsTheory.word_lo_n2w, COUNT_LIST_compute],
     `1 < dimindex(:'a)` by SRW_TAC [] [DECIDE ``0n < n /\ n <> 1 ==> 1 < n``]
     \\ ONCE_REWRITE_TAC [fcpTheory.CART_EQ]
     \\ SRW_TAC [] [fcpTheory.FCP_BETA]

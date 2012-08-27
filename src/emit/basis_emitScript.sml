@@ -703,8 +703,8 @@ FULL_SIMP_TAC (srw_ss()) [REPLACE_ELEMENT_DEF])
 val defs =
   map DEFN [AND_EL_DEF,BUTFIRSTN_compute,ELL_compute,
             FIRSTN_compute,IS_PREFIX,IS_SUBLIST,OR_EL_DEF,SPLITP_AUX_def,
-            REPLACE_ELEMENT_compute,
-            REWRITE_RULE [FUN_EQ_THM] SPLITP_AUX,PREFIX_DEF,REPLICATE_compute,
+            REPLACE_ELEMENT_compute, REWRITE_RULE [FUN_EQ_THM] SPLITP_compute,
+            PREFIX_DEF,REPLICATE_compute,
             SCANL,SCANR,SEG_compute,SUFFIX_DEF,UNZIP_FST_DEF,UNZIP_SND_DEF];
 
 val _ = eSML "rich_list"

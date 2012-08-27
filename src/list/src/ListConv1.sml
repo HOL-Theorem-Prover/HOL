@@ -60,7 +60,7 @@ val bool_ty = Type.bool;
 val int_of_term = Arbnum.toInt o numSyntax.dest_numeral;
 fun term_of_int i = numSyntax.mk_numeral(Arbnum.fromInt i)
 
-val list_INDUCT = rich_listTheory.list_INDUCT
+val list_INDUCT = listTheory.list_INDUCT
 val list_Axiom = listTheory.list_Axiom;
 
 (* --------------------------------------------------------------------*)

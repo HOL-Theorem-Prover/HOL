@@ -178,8 +178,6 @@ end
    EVAL_CONV    : General purpose evaluation
    ------------------------------------------------------------------------ *)
 
-val SUC_RULE = Conv.CONV_RULE numLib.SUC_TO_NUMERAL_DEFN_CONV;
-
 local
   val cmp = reduceLib.num_compset ()
 
@@ -187,9 +185,9 @@ local
      [pred_setTheory.NOT_IN_EMPTY, pred_setTheory.IN_INSERT,
       REWRITE_RULE [GSYM arithmeticTheory.DIV2_def] BIT_SET_def,
       listTheory.EVERY_DEF, listTheory.FOLDL,
-      SUC_RULE rich_listTheory.COUNT_LIST_AUX_def,
+      numLib.SUC_RULE rich_listTheory.COUNT_LIST_AUX_def,
       GSYM rich_listTheory.COUNT_LIST_GENLIST,
-      rich_listTheory.COUNT_LIST_AUX,
+      rich_listTheory.COUNT_LIST_compute,
       numeral_bitTheory.numeral_log2, numeral_bitTheory.numeral_ilog2,
       numeral_bitTheory.LOG_compute, GSYM DISJ_ASSOC] cmp
 
@@ -467,7 +465,7 @@ local
 
   val FCP_EQ_EVERY =
         REWRITE_RULE [GSYM rich_listTheory.COUNT_LIST_GENLIST,
-                      rich_listTheory.COUNT_LIST_AUX] FCP_EQ_EVERY
+                      rich_listTheory.COUNT_LIST_compute] FCP_EQ_EVERY
 
   val FCP_EQ_CONV = Conv.REWR_CONV FCP_EQ_EVERY THENC EVAL_CONV
 
@@ -801,7 +799,7 @@ local
       index_cond, SYM WORD_NEG_1, word_L_thm, minus1_thm, w2w_thm, sw2sw_thm,
       BITWISE_ADD, BITWISE_SUB, BITWISE_LO, fcpTheory.FCP_UPDATE_def,
       listTheory.HD, listTheory.TL, listTheory.SNOC, listTheory.FOLDL,
-      listTheory.GENLIST_GENLIST_AUX, SUC_RULE listTheory.GENLIST_AUX,
+      listTheory.GENLIST_GENLIST_AUX, numLib.SUC_RULE listTheory.GENLIST_AUX,
       combinTheory.o_THM, pairTheory.SND, pairTheory.FST] cmp
 
   val _ = computeLib.add_conv

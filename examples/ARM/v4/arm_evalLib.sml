@@ -23,7 +23,7 @@ open Q Parse computeLib combinTheory pairTheory wordsTheory wordsSyntax
 (* ------------------------------------------------------------------------- *)
 (* Some conversions *)
 
-val SUC_RULE = CONV_RULE numLib.SUC_TO_NUMERAL_DEFN_CONV;
+val SUC_RULE = numLib.SUC_RULE;
 
 fun NUM_ONLY_RULE n x =
   let val y = SPEC_ALL x
@@ -44,7 +44,8 @@ val arm_compset = wordsLib.words_compset();
 val _ = Lib.C add_thms arm_compset
   [FST,SND,listTheory.EL_compute,HD,TL,MAP,FILTER,LENGTH,ZIP,FOLDL,
    APPEND,APPEND_NIL,ELL_compute,LAST_CONS,listTheory.FRONT_CONS,
-   GENLIST_compute,SNOC,FIRSTN_compute,K_THM,listTheory.NULL_DEF,
+   SUC_RULE listTheory.GENLIST,SNOC,listTheory.TAKE_def,K_THM,
+   listTheory.NULL_DEF,
    register_EQ_register,num2register_thm,register2num_thm,
    mode_EQ_mode,mode2num_thm,mode_case_def,pairTheory.pair_case_thm,
    formats_case_def, psr_EQ_psr,psr2num_thm,
@@ -209,7 +210,7 @@ let open arm_evalTheory fcpTheory updateTheory
         [o_THM,register_EQ_register,register2num_thm,psr_EQ_psr,psr2num_thm,
          SYM Ua_def,UPDATE_EQ_RULE,Ua_RULE4,Ub_RULE4,Ua_RULE_PSR,Ub_RULE_PSR,
          SYM FUa_def,FCP_UPDATE_EQ_RULE,FUa_RULE,FUb_RULE,
-         LENGTH,SUC_RULE JOIN,BUTFIRSTN_compute,APPEND,
+         LENGTH,SUC_RULE JOIN,listTheory.DROP_def,APPEND,
          PURE_REWRITE_RULE [SYM Ua_def] UPDATE_LUPDATE,
          LIST_UPDATE_SORT_RULE1,LIST_UPDATE_SORT_RULE2,GSYM LUa_def]
 in

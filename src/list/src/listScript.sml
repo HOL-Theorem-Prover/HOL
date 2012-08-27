@@ -411,8 +411,8 @@ val EVERY_EL = store_thm ("EVERY_EL",
 	POP_ASSUM MP_TAC THEN REWRITE_TAC [EL, TL]]]);
 
 val EVERY_CONJ = store_thm("EVERY_CONJ",
- --`!l. EVERY (\(x:'a). (P x) /\ (Q x)) l = (EVERY P l /\ EVERY Q l)`--,
-     LIST_INDUCT_TAC THEN
+ --`!P Q l. EVERY (\(x:'a). (P x) /\ (Q x)) l = (EVERY P l /\ EVERY Q l)`--,
+     NTAC 2 GEN_TAC THEN LIST_INDUCT_TAC THEN
      ASM_REWRITE_TAC [EVERY_DEF] THEN
      CONV_TAC (DEPTH_CONV BETA_CONV) THEN
      REPEAT (STRIP_TAC ORELSE EQ_TAC) THEN
@@ -1483,7 +1483,7 @@ val LAST_CONS_cond = store_thm(
 
 val LAST_APPEND_CONS = store_thm(
   "LAST_APPEND_CONS",
-  ``LAST (l1 ++ h::l2) = LAST (h::l2)``,
+  ``!h l1 l2. LAST (l1 ++ h::l2) = LAST (h::l2)``,
   Induct_on `l1` THEN SRW_TAC [][LAST_CONS_cond]);
 val _ = export_rewrites ["LAST_APPEND_CONS"]
 
@@ -1514,13 +1514,13 @@ val _  = export_rewrites ["TAKE_0"]
 
 val TAKE_LENGTH_ID = store_thm(
   "TAKE_LENGTH_ID",
-  ``TAKE (LENGTH l) l = l``,
+  ``!l. TAKE (LENGTH l) l = l``,
   Induct_on `l` THEN SRW_TAC [][]);
 val _ = export_rewrites ["TAKE_LENGTH_ID"]
 
 val LENGTH_TAKE = store_thm(
   "LENGTH_TAKE",
-  ``!n. n <= LENGTH l ==> (LENGTH (TAKE n l) = n)``,
+  ``!n l. n <= LENGTH l ==> (LENGTH (TAKE n l) = n)``,
   Induct_on `l` THEN SRW_TAC [numSimps.ARITH_ss][]);
 val _ = export_rewrites ["LENGTH_TAKE"]
 
@@ -1542,13 +1542,13 @@ val _ = export_rewrites ["DROP_0"]
 
 val TAKE_DROP = store_thm(
   "TAKE_DROP",
-  ``!n. TAKE n l ++ DROP n l = l``,
+  ``!n l. TAKE n l ++ DROP n l = l``,
   Induct_on `l` THEN SRW_TAC [numSimps.ARITH_ss][]);
 val _ = export_rewrites ["TAKE_DROP"]
 
 val LENGTH_DROP = store_thm(
   "LENGTH_DROP",
-  ``!n. LENGTH (DROP n l) = LENGTH l - n``,
+  ``!n l. LENGTH (DROP n l) = LENGTH l - n``,
   Induct_on `l` THEN SRW_TAC [numSimps.ARITH_ss][]);
 val _ = export_rewrites ["LENGTH_DROP"]
 
@@ -2162,7 +2162,7 @@ val _ = export_rewrites ["MEM_SNOC"]
 
 val SNOC_11 = store_thm(
   "SNOC_11",
-  ``(SNOC x y = SNOC a b) <=> (x = a) /\ (y = b)``,
+  ``!x y a b. (SNOC x y = SNOC a b) <=> (x = a) /\ (y = b)``,
   SRW_TAC [][EQ_IMP_THM] THENL [
     POP_ASSUM (MP_TAC o Q.AP_TERM `LAST`) THEN SRW_TAC [][LAST_SNOC],
     POP_ASSUM (MP_TAC o Q.AP_TERM `FRONT`) THEN SRW_TAC [][FRONT_SNOC]
@@ -2640,7 +2640,7 @@ val _ = adjoin_to_theory
    S "              LENGTH, MAP, MAP2, NULL_DEF, MEM, EXISTS_DEF,";
    S "              EVERY_DEF, ZIP, UNZIP, FILTER, FOLDL, FOLDR,";
    S "              FOLDL, REVERSE_REV, ALL_DISTINCT, GENLIST_AUX,";
-   S "              EL_restricted, EL_simp_restricted,";
+   S "              EL_restricted, EL_simp_restricted, SNOC,";
    S "              GENLIST_NUMERALS, computeLib.lazyfy_thm list_case_compute,";
    S "              list_size_def, FRONT_DEF, LAST_DEF, isPREFIX]";
    S "        end;";

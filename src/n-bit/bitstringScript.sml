@@ -253,16 +253,16 @@ val el_fixwidth = Q.store_thm("el_fixwidth",
                  n - LENGTH w <= i /\ EL (i - (n - LENGTH w)) w
               else
                  EL (i + (LENGTH w - n)) w)`,
-  lrw [fixwidth_def, el_zero_extend, rich_listTheory.EL_BUTFIRSTN]);
+  lrw [fixwidth_def, el_zero_extend, rich_listTheory.EL_DROP]);
 
 val el_field = Q.store_thm("el_field",
   `!v h l i. i < SUC h - l ==>
              (EL i (field h l v) =
               SUC h <= i + LENGTH v /\ EL (i + LENGTH v - SUC h) v)`,
-  lrw [field_def, shiftr_def, el_fixwidth, rich_listTheory.EL_FIRSTN]
+  lrw [field_def, shiftr_def, el_fixwidth, rich_listTheory.EL_TAKE]
   \\ Cases_on `l < LENGTH v` \\ lrw []
   \\ `LENGTH v - SUC h < LENGTH v - l` by decide_tac
-  \\ lrw [rich_listTheory.EL_FIRSTN]);
+  \\ lrw [rich_listTheory.EL_TAKE]);
 
 val shiftr_field = Q.prove(
    `!n l v. LENGTH l <> 0 ==> (shiftr l n = field (LENGTH l - 1) n l)`,
@@ -348,7 +348,7 @@ val w2v_v2w = Q.store_thm("w2v_v2w",
   `!v. w2v (v2w v : 'a word) = fixwidth (dimindex(:'a)) v`,
   lrw [w2v_def, bit_v2w, testbit, fixwidth_def, zero_extend_def,
        listTheory.PAD_LEFT, listTheory.LIST_EQ_REWRITE,
-       rich_listTheory.EL_BUTFIRSTN, word_bit_lem]
+       rich_listTheory.EL_DROP, word_bit_lem]
   \\ Cases_on `x < dimindex(:'a) - LENGTH v`
   \\ lrw [rich_listTheory.EL_APPEND1, rich_listTheory.EL_APPEND2]);
 
@@ -409,7 +409,7 @@ val take_id_imp =
 val field_concat_right = Q.store_thm("field_concat_right",
    `!h a b. (LENGTH b = SUC h) ==> (field h 0 (a ++ b) = b)`,
    lrw [field_def, shiftr_def, take_id_imp]
-   \\ lrw [fixwidth_def, rich_listTheory.BUTFIRSTN_LENGTH_APPEND])
+   \\ lrw [fixwidth_def, rich_listTheory.DROP_LENGTH_APPEND])
 
 val field_concat_left = Q.store_thm("field_concat_left",
    `!h l a b.
@@ -634,7 +634,7 @@ val word_lsr_v2w = Q.store_thm("word_lsr_v2w",
   wrw [wordsTheory.word_lsr_def, shiftr_def]
   \\ Cases_on `i + n < dimindex(:'a)`
   \\ lrw [wordsTheory.word_bit, bit_v2w, testbit, length_fixwidth,
-          rich_listTheory.EL_FIRSTN, el_fixwidth,
+          rich_listTheory.EL_TAKE, el_fixwidth,
           DECIDE ``0 < d ==> (d <= v + d - (i + (n + 1)) = i + n < v)``]);
 
 val word_modify_v2w = Q.store_thm("word_modify_v2w",
@@ -861,7 +861,7 @@ val DROP_LAST = Q.prove(
    `!l. ~NULL l ==> (DROP (LENGTH l - 1) l = [LAST l])`,
    lrw [listTheory.NULL_LENGTH]
    \\ `LENGTH l - 1 <= LENGTH l` by decide_tac
-   \\ imp_res_tac rich_listTheory.BUTFIRSTN_LASTN
+   \\ imp_res_tac rich_listTheory.DROP_LASTN
    \\ lfs []
    \\ lfs [rich_listTheory.LASTN_1, listTheory.LENGTH_NIL])
 
