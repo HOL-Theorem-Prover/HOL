@@ -1,6 +1,12 @@
-(* Copyright (c) 2009-2011 Tjark Weber. All rights reserved. *)
+(* Copyright (c) 2009-2012 Tjark Weber. All rights reserved. *)
 
 (* Unit tests for HolSmtLib *)
+
+val _ = print "Testing HolSmtLib "
+
+(*****************************************************************************)
+(* tracing/pretty-printing options useful for debugging                      *)
+(*****************************************************************************)
 
 (*
 val _ = Globals.show_tags := true
@@ -15,8 +21,20 @@ val _ = Feedback.set_trace "HolSmtLib" 4
 *)
 
 (*****************************************************************************)
+(* check whether SMT solvers are installed                                   *)
+(*****************************************************************************)
+
+val _ = if Yices.is_configured () then () else
+  print "(Yices not configured, some tests will be skipped.) "
+
+val _ = if Z3.is_configured () then () else
+  print "(Z3 not configured, some tests will be skipped.) "
+
+(*****************************************************************************)
 (* utility functions                                                         *)
 (*****************************************************************************)
+
+local
 
 fun die s =
   if !Globals.interactive then
@@ -64,25 +82,11 @@ fun expect_sat name smt_tac t =
         origin_structure ^ "." ^ origin_function ^ ", message: " ^ message ^
         ")")
 
-(*****************************************************************************)
-(* check whether SMT solvers are installed                                   *)
-(*****************************************************************************)
-
-val _ = print "Testing HolSmtLib "
-
-val _ = if not Yices.is_configured then
-          print "(Yices not configured, some tests will be skipped.) "
-        else ()
-
-val _ = if not Z3.is_configured then
-          print "(Z3 not configured, some tests will be skipped.) "
-        else ()
-
-(*****************************************************************************)
-(* test cases                                                                *)
-(*****************************************************************************)
-
-local
+fun mk_test_fun is_configured expect_fun name smt_tac =
+  if is_configured then
+    (fn g => (expect_fun name smt_tac g; print "."))
+  else
+    Lib.K ()
 
 (*****************************************************************************)
 (* a built-in automated semi-decision procedure that *very* loosely          *)
@@ -90,60 +94,51 @@ local
 (* performance)                                                              *)
 (*****************************************************************************)
 
-  val thm_AUTO = let
-    fun auto_tac (_, t) =
-    let
-      val simpset = bossLib.++ (bossLib.srw_ss (), wordsLib.WORD_ss)
-      val t_eq_t' = simpLib.SIMP_CONV simpset [integerTheory.INT_ABS,
-        integerTheory.INT_MAX, integerTheory.INT_MIN, boolTheory.bool_case_DEF]
-        t
-        handle Conv.UNCHANGED =>
-          Thm.REFL t
-      val t' = boolSyntax.rhs (Thm.concl t_eq_t')
-      val t'_thm = bossLib.DECIDE t'
-        handle Feedback.HOL_ERR _ =>
-          bossLib.METIS_PROVE [] t'
-        handle Feedback.HOL_ERR _ =>
-          intLib.ARITH_PROVE t'
-        handle Feedback.HOL_ERR _ =>
-          realLib.REAL_ARITH t'
-        handle Feedback.HOL_ERR _ =>
-          wordsLib.WORD_DECIDE t'
-        handle Feedback.HOL_ERR _ =>
-          Tactical.prove (t', blastLib.BBLAST_TAC)
-      val thm = Thm.EQ_MP (Thm.SYM t_eq_t') t'_thm
-    in
-      ([], fn _ => thm)
-    end
+fun auto_tac (_, t) =
+  let
+    val simpset = bossLib.++ (bossLib.srw_ss (), wordsLib.WORD_ss)
+    val t_eq_t' = simpLib.SIMP_CONV simpset [integerTheory.INT_ABS,
+      integerTheory.INT_MAX, integerTheory.INT_MIN, boolTheory.bool_case_DEF]
+      t
+      handle Conv.UNCHANGED =>
+        Thm.REFL t
+    val t' = boolSyntax.rhs (Thm.concl t_eq_t')
+    val t'_thm = bossLib.DECIDE t'
+      handle Feedback.HOL_ERR _ =>
+        bossLib.METIS_PROVE [] t'
+      handle Feedback.HOL_ERR _ =>
+        intLib.ARITH_PROVE t'
+      handle Feedback.HOL_ERR _ =>
+        realLib.REAL_ARITH t'
+      handle Feedback.HOL_ERR _ =>
+        wordsLib.WORD_DECIDE t'
+      handle Feedback.HOL_ERR _ =>
+        Tactical.prove (t', blastLib.BBLAST_TAC)
+    val thm = Thm.EQ_MP (Thm.SYM t_eq_t') t'_thm
   in
-    fn g => (expect_thm "AUTO" (Tactical.THEN (Library.SET_SIMP_TAC, auto_tac))
-      g; print ".")
+    ([], fn _ => thm)
   end
 
-  val thm_YO = if Yices.is_configured then
-                 (fn g => (expect_thm "Yices" HolSmtLib.YICES_TAC g; print "."))
-               else Lib.K ()
-  val sat_YO = if Yices.is_configured then
-                 (fn g => (expect_sat "Yices" HolSmtLib.YICES_TAC g; print "."))
-               else Lib.K ()
+val thm_AUTO =
+  mk_test_fun true expect_thm "AUTO" (Tactical.THEN (Library.SET_SIMP_TAC, auto_tac))
 
-  val thm_Z3 = if Z3.is_configured then
-                 (fn g => (expect_thm "Z3" HolSmtLib.Z3_ORACLE_TAC g;
-                           print "."))
-               else Lib.K ()
-  val sat_Z3 = if Z3.is_configured then
-                 (fn g => (expect_sat "Z3" HolSmtLib.Z3_ORACLE_TAC g;
-                           print "."))
-               else Lib.K ()
+fun mk_Yices expect_fun =
+  mk_test_fun (Yices.is_configured ()) expect_fun "Yices" HolSmtLib.YICES_TAC
 
-  val thm_Z3p = if Z3.is_configured then
-                  (fn g => (expect_thm "Z3 (proofs)" HolSmtLib.Z3_TAC g;
-                            print "."))
-                else Lib.K ()
-  val sat_Z3p = if Z3.is_configured then
-                  (fn g => (expect_sat "Z3 (proofs)" HolSmtLib.Z3_TAC g;
-                            print "."))
-                else Lib.K ()
+val thm_YO = mk_Yices expect_thm
+val sat_YO = mk_Yices expect_sat
+
+fun mk_Z3 expect_fun =
+  mk_test_fun (Z3.is_configured ()) expect_fun "Z3" HolSmtLib.Z3_ORACLE_TAC
+
+val thm_Z3 = mk_Z3 expect_thm
+val sat_Z3 = mk_Z3 expect_sat
+
+fun mk_Z3p expect_fun =
+  mk_test_fun (Z3.is_configured ()) expect_fun "Z3 (proofs)" HolSmtLib.Z3_TAC
+
+val thm_Z3p = mk_Z3p expect_thm
+val sat_Z3p = mk_Z3p expect_sat
 
 (*****************************************************************************)
 (* HOL definitions (e.g., user-defined data types)                           *)
@@ -154,6 +149,11 @@ val _ = bossLib.Hol_datatype `dt1 = foo | bar | baz`
 val _ = bossLib.Hol_datatype `person = <| employed :bool; age :num |>`
 
 in
+
+(*****************************************************************************)
+(* test cases                                                                *)
+(*****************************************************************************)
+
   val tests = [
 
     (* propositional logic *)

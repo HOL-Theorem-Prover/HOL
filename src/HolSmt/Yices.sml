@@ -1,4 +1,4 @@
-(* Copyright (c) 2009-2011 Tjark Weber. All rights reserved. *)
+(* Copyright (c) 2009-2012 Tjark Weber. All rights reserved. *)
 
 (* Functions to invoke the Yices SMT solver *)
 
@@ -19,8 +19,6 @@ structure Yices = struct
               application, lambda abstraction, tuple selectors FST and SND,
               various word operations, data type constructors, data type case
               constants, record field selectors, record updates *)
-
-  val is_configured = Option.isSome (OS.Process.getEnv "HOL4_YICES_EXECUTABLE")
 
   val Yices_types = [
     (("min", "bool"), "bool", ""),
@@ -777,15 +775,20 @@ structure Yices = struct
         SolverSpec.UNKNOWN NONE
     end
 
+  fun is_configured () =
+    Option.isSome (OS.Process.getEnv "HOL4_YICES_EXECUTABLE")
+
   (* Yices 1.0.29, native file format *)
-  val Yices_Oracle = case OS.Process.getEnv "HOL4_YICES_EXECUTABLE" of
-    SOME file =>
-      SolverSpec.make_solver
-        (Lib.pair () o goal_to_Yices)
-        (file ^ " -tc ")
-        (Lib.K result_fn)
-  | NONE =>
-      (fn _ => raise Feedback.mk_HOL_ERR "Yices" "Yices_Oracle"
-        "Set $HOL4_YICES_EXECUTABLE to point to the Yices executable file.")
+  fun Yices_Oracle goal =
+    case OS.Process.getEnv "HOL4_YICES_EXECUTABLE" of
+      SOME file =>
+        SolverSpec.make_solver
+          (Lib.pair () o goal_to_Yices)
+          (file ^ " -tc ")
+          (Lib.K result_fn)
+          goal
+    | NONE =>
+        raise Feedback.mk_HOL_ERR "Yices" "Yices_Oracle"
+          "Yices not configured: set the HOL4_YICES_EXECUTABLE environment variable to point to the Yices executable file."
 
 end

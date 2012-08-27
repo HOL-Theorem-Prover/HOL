@@ -1,4 +1,4 @@
-(* Copyright (c) 2009-2011 Tjark Weber. All rights reserved. *)
+(* Copyright (c) 2009-2012 Tjark Weber. All rights reserved. *)
 
 (* Definition of SMT solvers *)
 
@@ -87,8 +87,8 @@ structure SolverSpec = struct
       | ([new_goal], validation) =>
         (new_goal, validation)
       | _ =>
-        raise (Feedback.mk_HOL_ERR "SolverSpec" "simplify"
-          "simplification produced more than one subgoal")
+        raise Feedback.mk_HOL_ERR "SolverSpec" "simplify"
+          "simplification produced more than one subgoal"
   in
     if !Library.trace > 2 then
       let

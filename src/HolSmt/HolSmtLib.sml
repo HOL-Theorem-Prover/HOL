@@ -1,4 +1,4 @@
-(* Copyright (c) 2009-2011 Tjark Weber. All rights reserved. *)
+(* Copyright (c) 2009-2012 Tjark Weber. All rights reserved. *)
 
 (* Entry point into HolSmtLib. Provides GENERIC_SMT_TAC and derived tactics to
    call SMT solvers. *)
@@ -39,24 +39,29 @@ structure HolSmtLib :> HolSmtLib = struct
   fun Z3_PROVE tm = Tactical.prove (tm, Z3_TAC)
 
   (* report whether solvers are available *)
-  val _ = (
-    Feedback.set_trace "HolSmtLib" 0;
-    List.map (fn (is_configured, prove, name) =>
-      if is_configured then
+  val _ =
+    let
+      fun check_available prove_fn name =
         (
-          prove boolSyntax.T;  (* try to prove ``T`` *)
+          prove_fn boolSyntax.T;  (* try to prove ``T`` *)
           Feedback.HOL_MESG ("HolSmtLib: solver " ^ name ^ " is available.")
         )
-        handle Feedback.HOL_ERR _ =>
-          Feedback.HOL_WARNING "HolSmtLib" "<init>" ("solver " ^ name ^ " not found.")
+      fun provoke_err prove_fn =
+        ignore (prove_fn boolSyntax.T)  (* should fail *)
+          handle Feedback.HOL_ERR {message, ...} =>
+            Feedback.HOL_MESG ("HolSmtLib: " ^ message)
+    in
+      Feedback.set_trace "HolSmtLib" 0;
+      if Yices.is_configured () then
+        check_available YICES_PROVE "Yices"
       else
-        Feedback.HOL_MESG ("HolSmtLib: solver " ^ name ^ " not configured."))
-      [
-        (Yices.is_configured, YICES_PROVE,"Yices"),
-        (Z3.is_configured, Z3_ORACLE_PROVE, "Z3 (oracle)"),
-        (Z3.is_configured, Z3_PROVE, "Z3 (with proofs)")
-      ];
-    Feedback.reset_trace "HolSmtLib"
-  )
+        provoke_err YICES_PROVE;
+      if Z3.is_configured () then (
+        check_available Z3_ORACLE_PROVE "Z3 (oracle)";
+        check_available Z3_PROVE "Z3 (with proofs)"
+      ) else
+        provoke_err Z3_ORACLE_PROVE;
+      Feedback.reset_trace "HolSmtLib"
+    end
 
 end
