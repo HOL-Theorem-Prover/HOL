@@ -810,6 +810,82 @@ and
 bv_to_ov m NTfn (Block 0 _) = OFn
 
 
+type label_closures_state =
+  <| next_clabel : num
+   ; code_env : (num,Cexp) Pmap.map
+   |>
+
+let rec
+labelise s (INR l) = (s, l)
+and
+labelise s (INL b) =
+  (<| s with
+      code_env = Pmap.add s.next_clabel b s.code_env
+    ; next_clabel = s.next_clabel+1
+    |>
+  , s.next_clabel)
+
+let rec
+label_closures s (CDecl xs) = (s,CDecl xs)
+and
+label_closures s (CRaise err) = (s,CRaise err)
+and
+label_closures s (CVar x) = (s,CVar x)
+and
+label_closures s (CLit l) = (s,CLit l)
+and
+label_closures s (CCon cn es) =
+  let (s,es) = label_closures_list s es in
+  (s,CCon cn es)
+and
+label_closures s (CTagEq e n) =
+  let (s,e) = label_closures s e in
+  (s,CTagEq e n)
+and
+label_closures s (CProj e n) =
+  let (s,e) = label_closures s e in
+  (s,CProj e n)
+and
+label_closures s (CLet xs es e) =
+  let (s,es) = label_closures_list s es in
+  let (s,e) = label_closures s e in
+  (s,CLet xs es e)
+and
+label_closures s (CLetfun p ns defs e) =
+  let (s,defs) = List.fold_left
+    (fun (s,ls) (xs,cb) ->
+      let (s,l) = labelise s cb in (s,(xs,INR l)::ls))
+         (s,[]) defs in
+  let (s,e) = label_closures s e in
+  (s,CLetfun p ns (List.rev defs) e)
+and
+label_closures s (CFun xs cb) =
+  let (s,l) = labelise s cb in
+  (s,CFun xs (INR l))
+and
+label_closures s (CCall e es) =
+  let (s,e) = label_closures s e in
+  let (s,es) = label_closures_list s es in
+  (s,CCall e es)
+and
+label_closures s (CPrim2 op e1 e2) =
+  let (s,e1) = label_closures s e1 in
+  let (s,e2) = label_closures s e2 in
+  (s, CPrim2 op e1 e2)
+and
+label_closures s (CIf e1 e2 e3) =
+  let (s,e1) = label_closures s e1 in
+  let (s,e2) = label_closures s e2 in
+  let (s,e3) = label_closures s e3 in
+  (s, CIf e1 e2 e3)
+and
+label_closures_list s [] = (s,[])
+and
+label_closures_list s (e::es) =
+  let (s,e) = label_closures s e in
+  let (s,es) = label_closures_list s es in
+  (s,e::es)
+
 (* TODO: simple type system and checker *)
 
 (* TODO: map_Cexp? *)

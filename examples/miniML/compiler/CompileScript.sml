@@ -850,6 +850,90 @@ val _ = Defn.save_defn num_to_bool_defn;
 val _ = Defn.save_defn bv_to_ov_defn;
 
 
+val _ = Hol_datatype `
+ label_closures_state =
+  <| next_clabel : num
+   ; code_env : (num,Cexp) fmap
+   |>`;
+
+
+ val labelise_defn = Hol_defn "labelise" `
+
+(labelise s (INR l) = (s, l))
+/\
+(labelise s (INL b) =
+  ( s with<|
+      code_env := FUPDATE  s.code_env ( s.next_clabel, b)
+    ; next_clabel := s.next_clabel+1
+    |>
+  , s.next_clabel))`;
+
+val _ = Defn.save_defn labelise_defn;
+
+ val label_closures_defn = Hol_defn "label_closures" `
+
+(label_closures s (CDecl xs) = (s,CDecl xs))
+/\
+(label_closures s (CRaise err) = (s,CRaise err))
+/\
+(label_closures s (CVar x) = (s,CVar x))
+/\
+(label_closures s (CLit l) = (s,CLit l))
+/\
+(label_closures s (CCon cn es) =
+  let (s,es) = label_closures_list s es in
+  (s,CCon cn es))
+/\
+(label_closures s (CTagEq e n) =
+  let (s,e) = label_closures s e in
+  (s,CTagEq e n))
+/\
+(label_closures s (CProj e n) =
+  let (s,e) = label_closures s e in
+  (s,CProj e n))
+/\
+(label_closures s (CLet xs es e) =
+  let (s,es) = label_closures_list s es in
+  let (s,e) = label_closures s e in
+  (s,CLet xs es e))
+/\
+(label_closures s (CLetfun p ns defs e) =
+  let (s,defs) = FOLDL
+    (\ (s,ls) (xs,cb) .
+      let (s,l) = labelise s cb in (s,(xs,INR l)::ls))
+         (s,[]) defs in
+  let (s,e) = label_closures s e in
+  (s,CLetfun p ns (REVERSE defs) e))
+/\
+(label_closures s (CFun xs cb) =
+  let (s,l) = labelise s cb in
+  (s,CFun xs (INR l)))
+/\
+(label_closures s (CCall e es) =
+  let (s,e) = label_closures s e in
+  let (s,es) = label_closures_list s es in
+  (s,CCall e es))
+/\
+(label_closures s (CPrim2 op e1 e2) =
+  let (s,e1) = label_closures s e1 in
+  let (s,e2) = label_closures s e2 in
+  (s, CPrim2 op e1 e2))
+/\
+(label_closures s (CIf e1 e2 e3) =
+  let (s,e1) = label_closures s e1 in
+  let (s,e2) = label_closures s e2 in
+  let (s,e3) = label_closures s e3 in
+  (s, CIf e1 e2 e3))
+/\
+(label_closures_list s [] = (s,[]))
+/\
+(label_closures_list s (e::es) =
+  let (s,e) = label_closures s e in
+  let (s,es) = label_closures_list s es in
+  (s,e::es))`;
+
+val _ = Defn.save_defn label_closures_defn;
+
 (* TODO: simple type system and checker *)
 
 (* TODO: map_Cexp? *)
