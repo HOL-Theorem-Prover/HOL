@@ -410,3 +410,11 @@ val d1 = ``Dletrec [
 val e61 = ``App Opapp (Var "f0") (Lit (IntLit 12))``
 val [Number r,_,_,_,_,_,_] = run_decs_exp([d0,d1],e61)
 val SOME 1 = intML.toInt r;
+val e62 = ``Letrec ["f","x",Var "x"] (App Opapp (Var "f") (Lit (IntLit 42)))``
+val [Number r] = run_exp e62
+val SOME 42 = intML.toInt r;
+val e63 = ``Letrec [("f","x",App Opapp (Var "g") (Var "x"));
+                    ("g","x",Var "x")]
+                    (App Opapp (Var "f") (Lit (IntLit 42)))``
+val [Number r] = run_exp e63
+val SOME 42 = intML.toInt r;

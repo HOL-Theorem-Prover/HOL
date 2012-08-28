@@ -571,10 +571,19 @@ val _ = Hol_datatype `
 
 val _ = type_abbrev( "ctenv" , ``: (string, ctbind) fmap``);
 
+(* helper for reconstructing closure environments *)
+val _ = Hol_datatype `
+ cebind = CEEnv of string | CERef of num`;
+
+
+val _ = type_abbrev( "ecs" , ``: num # cebind list``);
+
 val _ = Hol_datatype `
  compiler_state =
   <| env: ctenv
    ; sz: num
+   ; ecs: (num, ecs) fmap
+   ; env_azs: (num, (ctenv # num)) fmap
    ; out: bc_inst list (* reversed code *)
    ; next_label: num
    ; tail: call_context
@@ -849,26 +858,13 @@ val _ = Defn.save_defn num_to_bool_defn;
 
 val _ = Defn.save_defn bv_to_ov_defn;
 
-
 val _ = Hol_datatype `
  label_closures_state =
-  <| next_clabel : num
-   ; code_env : (num,Cexp) fmap
+  <| lnext_label: num
+   ; ldefs: ( string list # ( string list # Cexp # num) list) list
+   ; lbods: (num, Cexp) fmap
    |>`;
 
-
- val labelise_defn = Hol_defn "labelise" `
-
-(labelise s (INR l) = (s, l))
-/\
-(labelise s (INL b) =
-  ( s with<|
-      code_env := FUPDATE  s.code_env ( s.next_clabel, b)
-    ; next_clabel := s.next_clabel+1
-    |>
-  , s.next_clabel))`;
-
-val _ = Defn.save_defn labelise_defn;
 
  val label_closures_defn = Hol_defn "label_closures" `
 
@@ -898,16 +894,14 @@ val _ = Defn.save_defn labelise_defn;
   (s,CLet xs es e))
 /\
 (label_closures s (CLetfun p ns defs e) =
-  let (s,defs) = FOLDL
-    (\ (s,ls) (xs,cb) .
-      let (s,l) = labelise s cb in (s,(xs,INR l)::ls))
-         (s,[]) defs in
+  let (s,defs) = labelise s (if p then ns else []) defs in
   let (s,e) = label_closures s e in
-  (s,CLetfun p ns (REVERSE defs) e))
+  (s,CLetfun p ns defs e))
 /\
 (label_closures s (CFun xs cb) =
-  let (s,l) = labelise s cb in
-  (s,CFun xs (INR l)))
+  let (s,defs) = labelise s [] [(xs,cb)] in
+  let (xs,cb) = EL  0  defs in
+  (s,CFun xs cb))
 /\
 (label_closures s (CCall e es) =
   let (s,e) = label_closures s e in
@@ -930,9 +924,30 @@ val _ = Defn.save_defn labelise_defn;
 (label_closures_list s (e::es) =
   let (s,e) = label_closures s e in
   let (s,es) = label_closures_list s es in
-  (s,e::es))`;
+  (s,e::es))
+/\
+(labelise s ns defs =
+  let (s,ds,ls) =
+    FOLDL
+    (\ (s,ds,ls) (xs,cb) .
+      (case cb of INR l => (s, (xs,INR l)::ds, ls)
+      | INL b =>
+          let (s,b) = label_closures s b in
+          ( s with<|
+              lnext_label := s.lnext_label+1
+            ; lbods := FUPDATE  s.lbods ( s.lnext_label, b)
+            |>
+          , (xs,INR s.lnext_label)::ds
+          , (xs,b,s.lnext_label)::ls)
+      ))
+    (s,[],[]) defs in
+   ( s with<|
+        ldefs := (ns, REVERSE ls) :: s.ldefs
+      |>
+   , REVERSE ds))`;
 
 val _ = Defn.save_defn label_closures_defn;
+
 
 (* TODO: simple type system and checker *)
 
@@ -1010,11 +1025,6 @@ val _ = Define `
  (ldt (d,t) s =  s with<| decl := d; tail := t |>)`;
 
 
-(* helper for reconstructing closure environments *)
-val _ = Hol_datatype `
- cebind = CEEnv of string | CERef of num`;
-
-
  val emit_ec_defn = Hol_defn "emit_ec" `
 
 (emit_ec z s (CEEnv fv) = incsz (compile_varref s (FAPPLY  s.env  fv)))
@@ -1023,20 +1033,52 @@ val _ = Hol_datatype `
 
 val _ = Defn.save_defn emit_ec_defn;
 
- val bind_fv_defn = Hol_defn "bind_fv" `
+ val num_fold_defn = Hol_defn "num_fold" `
+ (num_fold f a n = if n = 0 then a else num_fold f (f a) (n - 1))`;
 
-(bind_fv ns xs az k fv (n,env,(ecl,ec)) =
-  (case find_index fv xs 1 of
-    SOME j => (n, FUPDATE  env ( fv, (CTArg (2 + az - j))), (ecl,ec))
-  | NONE => (case find_index fv ns 0 of
-      NONE => (n+1, FUPDATE  env ( fv, (CTEnv n)), (ecl+1,CEEnv fv::ec))
-    | SOME j => if j = k
-                then (n, FUPDATE  env ( fv, (CTArg (2 + az))), (ecl,ec))
-                else (n+1, FUPDATE  env ( fv, (CTRef n)), (ecl+1,(CERef (j+1))::ec))
-    )
-  ))`;
+val _ = Defn.save_defn num_fold_defn;
 
-val _ = Defn.save_defn bind_fv_defn;
+ val compile_closures_defn = Hol_defn "compile_closures" `
+
+(compile_closures nz s defs =
+  let sz0 = s.sz in
+  let s = num_fold (\ s . incsz (emit s [Stack (PushInt i0); Ref])) s nz in
+  let s = emit s [Stack (PushInt i0)] in
+  let nk = LENGTH defs in
+  let (s,labs) = get_labels nk s in
+  let (s,k,ecs) = FOLDL
+    (\ (s,k,ecs) . \x . (case x of (xs,INR l) =>
+      let lab = EL  k  labs in
+      let s = incsz (
+        emit s [Call (Lab lab);
+                Jump (Lab l);
+                Label lab]) in
+      (s,k+1,(FAPPLY  s.ecs  l)::ecs)))
+    (s,0,[]) defs in
+  let s = emit s [Stack Pop] in
+  let (s,k) = FOLDL
+    (\ (s,k) (j,ec) .
+      let s = incsz (emit s [Stack (Load (nk - k))]) in
+      let s = FOLDL (emit_ec sz0) s (REVERSE ec) in
+      let s = emit s [Stack (if j = 0 then PushInt i0 else Cons 0 j)] in
+      let s = emit s [Stack (Cons 0 2)] in
+      let s = decsz (emit s [Stack (Store (nk - k))]) in
+      let s =  s with<| sz := s.sz - j |> in
+      (s,k+1))
+    (s,1) (REVERSE ecs) in
+  let (s,k) = num_fold
+    (\ (s,k) .
+      let s = emit s [Stack (Load (nk + nk - k))] in
+      let s = emit s [Stack (Load (nk + 1 - k))] in
+      let s = emit s [Update] in
+      (s,k+1))
+    (s,1) nz in
+  let k = nk - 1 in
+  num_fold
+    (\ s . decsz (emit s [Stack (Store k)]))
+         s nz)`;
+
+val _ = Defn.save_defn compile_closures_defn;
 
  val compile_defn = Hol_defn "compile" `
 
@@ -1096,11 +1138,11 @@ val _ = Defn.save_defn bind_fv_defn;
 /\
 (compile s (CLetfun recp ns defs e) =
   let z = s.sz + 1 in
-  let s = compile_closures (if recp then ns else []) s defs in
+  let s = compile_closures (if recp then LENGTH ns else 0) s defs in
   compile_bindings s.env z e 0 s ns)
 /\
 (compile s (CFun xs cb) =
-  compile_closures [] s [(xs,cb)])
+  compile_closures 0 s [(xs,cb)])
 /\
 (compile s (CCall e es) =
   let n = LENGTH es in
@@ -1186,13 +1228,84 @@ val _ = Defn.save_defn bind_fv_defn;
   compile_bindings env0 sz1 e
     (n+1) (* parentheses below because Lem sucks *)
     ( s with<| env := FUPDATE  s.env ( x, (CTLet (sz1 + n))) |>)
-    xs)
-/\
-(compile_closures ns s defs =
+    xs)`;
+
+val _ = Defn.save_defn compile_defn;
+
+ val bind_fv_defn = Hol_defn "bind_fv" `
+
+(bind_fv ns xs az k fv (n,env,(ecl,ec)) =
+  (case find_index fv xs 1 of
+    SOME j => (n, FUPDATE  env ( fv, (CTArg (2 + az - j))), (ecl,ec))
+  | NONE => (case find_index fv ns 0 of
+      NONE => (n+1, FUPDATE  env ( fv, (CTEnv n)), (ecl+1,CEEnv fv::ec))
+    | SOME j => if j = k
+                then (n, FUPDATE  env ( fv, (CTArg (2 + az))), (ecl,ec))
+                else (n+1, FUPDATE  env ( fv, (CTRef n)), (ecl+1,(CERef (j+1))::ec))
+    )
+  ))`;
+
+val _ = Defn.save_defn bind_fv_defn;
+
+ val calculate_ecs_defn = Hol_defn "calculate_ecs" `
+
+(calculate_ecs c =
+  FOLDL
+    (\ s (ns,defs) .
+      let (s,k) = FOLDL
+        (\ (s,k) (xs,e,l) .
+          let az = LENGTH xs in
+          let (n,env,(ecl,ec)) =
+            ITSET (bind_fv ns xs az k) (free_vars c e) (0,FEMPTY,(0,[])) in
+          let s =  s with<|
+                     env_azs := FUPDATE  s.env_azs ( l, (env,az))
+                   ; ecs := FUPDATE  s.ecs ( l, (ecl,ec))
+                   |> in
+          (s,k+1))
+        (s,0) defs in
+      s))`;
+
+val _ = Defn.save_defn calculate_ecs_defn;
+
+ val cce_aux_defn = Hol_defn "cce_aux" `
+
+(cce_aux s (ns,defs) =
+  let (s,k) = FOLDL
+    (\ (s,k) (xs,e,l) .
+      let (env,az) = FAPPLY  s.env_azs  l in
+      let s = emit s [Label l] in
+      let s' =  s with<| env := env; sz := 0; tail := TCTail az 0 |> in
+      let s' = compile s' e in
+      let n = (case s'.tail of TCNonTail => 1 | TCTail j k => k+1 ) in
+      let s' = emit s' [Stack (Pops n);
+                        Stack (Load 1);
+                        Stack (Store (az+2));
+                        Stack (Pops (az+1));
+                        Return] in
+      let s =  s' with<| env := s.env; sz := s.sz; tail := s.tail |> in
+      (s,k+1))
+    (s,0) defs in
+  s)`;
+
+val _ = Defn.save_defn cce_aux_defn;
+
+ val compile_code_env_defn = Hol_defn "compile_code_env" `
+
+(compile_code_env s ldefs =
+  let (s,ls) = get_labels 1 s in
+  let l = EL  0  ls in
+  let s = emit s [Jump (Lab l)] in
+  let s = FOLDL cce_aux s ldefs in
+  emit s [Label l])`;
+
+val _ = Defn.save_defn compile_code_env_defn;
+
   (* calling convention:
    * before: env, CodePtr ret, argn, ..., arg1, Block 0 [CodePtr c; env],
    * thus, since env = stack[sz], argk should be CTArg (2 + n - k)
    * after:  retval,
+
+this might be out of date:
        PushInt 0, Ref
        ...            (* create RefPtrs for recursive closures *)
        PushInt 0, Ref                       RefPtr 0, ..., RefPtr 0, rest
@@ -1253,54 +1366,6 @@ val _ = Defn.save_defn bind_fv_defn;
    *   environment and build the closure
    * - update refptrs, etc.
    *)
-  let sz0 = s.sz in
-  let s = FOLDL (\ s _n . incsz (emit s [Stack (PushInt i0); Ref])) s ns in
-  let s = emit s [Stack (PushInt i0)] in
-  let nk = LENGTH defs in
-  let (s,labs) = get_labels nk s in
-  let (s,k,ecs) = FOLDL
-    (\ (s,k,ecs) . \x . (case x of (xs,INL e) =>
-      let az = LENGTH xs in
-      let lab = EL  k  labs in
-      let s = emit s [(Call (Lab lab))] in
-      let (n,env,(ecl,ec)) =
-        ITSET (bind_fv ns xs az k) (free_vars FEMPTY e) (0,FEMPTY,(0,[])) in
-      let s' =  s with<| env := env; sz := 0; tail := TCTail az 0 |> in
-      let s' = compile s' e in
-      let n = (case s'.tail of TCNonTail => 1 | TCTail j k => k+1 ) in
-      let s' = emit s' [Stack (Pops n);
-                        Stack (Load 1);
-                        Stack (Store (az+2));
-                        Stack (Pops (az+1));
-                        Return;
-                        Label lab] in
-      let s =  s' with<| env := s.env; sz := s.sz + 1; tail := s.tail |> in
-      (s,k+1,(ecl,ec)::ecs)))
-    (s,0,[]) defs in
-  let s = emit s [Stack Pop] in
-  let (s,k) = FOLDL
-    (\ (s,k) (j,ec) .
-      let s = incsz (emit s [Stack (Load (nk - k))]) in
-      let s = FOLDL (emit_ec sz0) s (REVERSE ec) in
-      let s = emit s [Stack (if j = 0 then PushInt i0 else Cons 0 j)] in
-      let s = emit s [Stack (Cons 0 2)] in
-      let s = decsz (emit s [Stack (Store (nk - k))]) in
-      let s =  s with<| sz := s.sz - j |> in
-      (s,k+1))
-    (s,1) (REVERSE ecs) in
-  let (s,k) = FOLDL
-    (\ (s,k) _n .
-      let s = emit s [Stack (Load (nk + nk - k))] in
-      let s = emit s [Stack (Load (nk + 1 - k))] in
-      let s = emit s [Update] in
-      (s,k+1))
-    (s,1) ns in
-  let k = nk - 1 in
-  FOLDL
-    (\ s _n . decsz (emit s [Stack (Store k)]))
-         s ns)`;
-
-val _ = Defn.save_defn compile_defn;
 
  val calculate_labels_defn = Hol_defn "calculate_labels" `
 
@@ -1340,35 +1405,29 @@ val _ = Defn.save_defn replace_labels_defn;
 
 val _ = Defn.save_defn compile_labels_defn;
 
-val _ = Hol_reln `
-(! il c cc.
-T
+(*
+indreln
+forall il c cc.
+true
 ==>
-bc_code_prefix il (APPEND c cc) 0 c)
-/\
-(! il p i c cc.
+bc_code_prefix il (List.append c cc) 0 c
+and
+forall il p i c cc.
 bc_code_prefix il cc p c
 ==>
-bc_code_prefix il (i::cc) (p + il i) c)`;
+bc_code_prefix il (i::cc) (p + il i) c
 
- val body_cs_defn = Hol_defn "body_cs" `
+let rec
+body_cs env xs =
+  <| env = env; sz = 0; out = []; next_label = 0;
+     tail = TCTail (List.length xs) 0; decl = None |>
 
-(body_cs env xs =
-  <| env := env; sz := 0; out := []; next_label := 0;
-     tail := TCTail (LENGTH xs) 0; decl := NONE |>)`;
-
-val _ = Defn.save_defn body_cs_defn;
-
- val body_env_defn = Hol_defn "body_env" `
-
-(body_env ns xs j fvs =
+let rec
+body_env ns xs j fvs =
   let (n,env,(nec,ec)) =
-    ITSET (bind_fv ns xs (LENGTH xs) j) fvs (0,FEMPTY,(0,[])) in
-  (env,ec))`;
+    Set.fold (bind_fv ns xs (List.length xs) j) fvs (0,Pmap.empty,(0,[])) in
+  (env,ec)
 
-val _ = Defn.save_defn body_env_defn;
-
-(*
 indreln
 forall il c i.
 true
@@ -1419,9 +1478,15 @@ val _ = Define `
 
 val _ = Define `
  (compile_Cexp rs decl Ce =
+  let s = <| lnext_label := 0; ldefs := []; lbods := FEMPTY |> in
+  let (s,Ce) = label_closures s Ce in
   let cs = <| env := rs.renv; sz := rs.rsz
-            ; out := []; next_label := 0
+            ; ecs := FEMPTY; env_azs := FEMPTY
+            ; out := []; next_label := s.lnext_label
             ; tail := TCNonTail; decl := decl |> in
+  let cs = calculate_ecs s.lbods cs s.ldefs in
+  let cs = compile_code_env cs s.ldefs in
+  let cs =  cs with<| env_azs := FEMPTY |> in
   let cs = compile cs Ce in
   let rs = (case cs.decl of
       NONE => rs

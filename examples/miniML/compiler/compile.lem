@@ -563,9 +563,16 @@ type call_context = TCNonTail | TCTail of num * num
 
 type ctenv = Pmap.map string ctbind
 
+(* helper for reconstructing closure environments *)
+type cebind = CEEnv of string | CERef of num
+
+type ecs = num * list cebind
+
 type compiler_state =
   <| env: ctenv
    ; sz: num
+   ; ecs: Pmap.map num ecs
+   ; env_azs: Pmap.map num (ctenv * num)
    ; out: list bc_inst (* reversed code *)
    ; next_label: num
    ; tail: call_context
@@ -809,21 +816,11 @@ bv_to_ov m (NTapp tvs ty) (Block n vs) =
 and
 bv_to_ov m NTfn (Block 0 _) = OFn
 
-
 type label_closures_state =
-  <| next_clabel : num
-   ; code_env : (num,Cexp) Pmap.map
+  <| lnext_label: num
+   ; ldefs: list (list string * list (list string * Cexp * num))
+   ; lbods: Pmap.map num Cexp
    |>
-
-let rec
-labelise s (INR l) = (s, l)
-and
-labelise s (INL b) =
-  (<| s with
-      code_env = Pmap.add s.next_clabel b s.code_env
-    ; next_clabel = s.next_clabel+1
-    |>
-  , s.next_clabel)
 
 let rec
 label_closures s (CDecl xs) = (s,CDecl xs)
@@ -852,16 +849,14 @@ label_closures s (CLet xs es e) =
   (s,CLet xs es e)
 and
 label_closures s (CLetfun p ns defs e) =
-  let (s,defs) = List.fold_left
-    (fun (s,ls) (xs,cb) ->
-      let (s,l) = labelise s cb in (s,(xs,INR l)::ls))
-         (s,[]) defs in
+  let (s,defs) = labelise s (if p then ns else []) defs in
   let (s,e) = label_closures s e in
-  (s,CLetfun p ns (List.rev defs) e)
+  (s,CLetfun p ns defs e)
 and
 label_closures s (CFun xs cb) =
-  let (s,l) = labelise s cb in
-  (s,CFun xs (INR l))
+  let (s,defs) = labelise s [] [(xs,cb)] in
+  let (xs,cb) = List.nth defs 0 in
+  (s,CFun xs cb)
 and
 label_closures s (CCall e es) =
   let (s,e) = label_closures s e in
@@ -885,6 +880,27 @@ label_closures_list s (e::es) =
   let (s,e) = label_closures s e in
   let (s,es) = label_closures_list s es in
   (s,e::es)
+and
+labelise s ns defs =
+  let (s,ds,ls) =
+    List.fold_left
+    (fun (s,ds,ls) (xs,cb) ->
+      match cb with INR l -> (s, (xs,INR l)::ds, ls)
+      | INL b ->
+          let (s,b) = label_closures s b in
+          (<| s with
+              lnext_label = s.lnext_label+1
+            ; lbods = Pmap.add s.lnext_label b s.lbods
+            |>
+          , (xs,INR s.lnext_label)::ds
+          , (xs,b,s.lnext_label)::ls)
+      end)
+    (s,[],[]) defs in
+   ( <|s with
+        ldefs = (ns, List.rev ls) :: s.ldefs
+      |>
+   , List.rev ds)
+
 
 (* TODO: simple type system and checker *)
 
@@ -940,25 +956,51 @@ let decsz s = <| s with sz = s.sz - 1 |>
 let sdt s = (<| s with decl = None; tail = TCNonTail |>, (s.decl,s.tail))
 let ldt (d,t) s = <| s with decl = d; tail = t |>
 
-(* helper for reconstructing closure environments *)
-type cebind = CEEnv of string | CERef of num
-
 let rec
 emit_ec z s (CEEnv fv) = incsz (compile_varref s (Pmap.find fv s.env))
 and
 emit_ec z s (CERef j) = incsz (emit s [Stack (Load (s.sz - z - j))])
 
+let rec num_fold f a n = if n = 0 then a else num_fold f (f a) (n-1)
+
 let rec
-bind_fv ns xs az k fv (n,env,(ecl,ec)) =
-  match find_index fv xs 1 with
-  | Some j -> (n, Pmap.add fv (CTArg (2 + az - j)) env, (ecl,ec))
-  | None -> match find_index fv ns 0 with
-    | None -> (n+1, Pmap.add fv (CTEnv n) env, (ecl+1,CEEnv fv::ec))
-    | Some j -> if j = k
-                then (n, Pmap.add fv (CTArg (2 + az)) env, (ecl,ec))
-                else (n+1, Pmap.add fv (CTRef n) env, (ecl+1,(CERef (j+1))::ec))
-    end
-  end
+compile_closures nz s defs =
+  let sz0 = s.sz in
+  let s = num_fold (fun s -> incsz (emit s [Stack (PushInt i0); Ref])) s nz in
+  let s = emit s [Stack (PushInt i0)] in
+  let nk = List.length defs in
+  let (s,labs) = get_labels nk s in
+  let (s,k,ecs) = List.fold_left
+    (fun (s,k,ecs) (xs,INR l) ->
+      let lab = List.nth labs k in
+      let s = incsz (
+        emit s [Call (Lab lab);
+                Jump (Lab l);
+                Label lab]) in
+      (s,k+1,(Pmap.find l s.ecs)::ecs))
+    (s,0,[]) defs in
+  let s = emit s [Stack Pop] in
+  let (s,k) = List.fold_left
+    (fun (s,k) (j,ec) ->
+      let s = incsz (emit s [Stack (Load (nk - k))]) in
+      let s = List.fold_left (emit_ec sz0) s (List.rev ec) in
+      let s = emit s [Stack (if j = 0 then PushInt i0 else Cons 0 j)] in
+      let s = emit s [Stack (Cons 0 2)] in
+      let s = decsz (emit s [Stack (Store (nk - k))]) in
+      let s = <| s with sz = s.sz - j |> in
+      (s,k+1))
+    (s,1) (List.rev ecs) in
+  let (s,k) = num_fold
+    (fun (s,k) ->
+      let s = emit s [Stack (Load (nk + nk - k))] in
+      let s = emit s [Stack (Load (nk + 1 - k))] in
+      let s = emit s [Update] in
+      (s,k+1))
+    (s,1) nz in
+  let k = nk - 1 in
+  num_fold
+    (fun s -> decsz (emit s [Stack (Store k)]))
+         s nz
 
 let rec
 compile s (CDecl vs) =
@@ -1017,11 +1059,11 @@ compile s (CLet xs es e) =
 and
 compile s (CLetfun recp ns defs e) =
   let z = s.sz + 1 in
-  let s = compile_closures (if recp then ns else []) s defs in
+  let s = compile_closures (if recp then List.length ns else 0) s defs in
   compile_bindings s.env z e 0 s ns
 and
 compile s (CFun xs cb) =
-  compile_closures [] s [(xs,cb)]
+  compile_closures 0 s [(xs,cb)]
 and
 compile s (CCall e es) =
   let n = List.length es in
@@ -1108,12 +1150,69 @@ compile_bindings env0 sz1 e n s (x::xs) =
     (n+1) (* parentheses below because Lem sucks *)
     (<| s with env = Pmap.add x (CTLet (sz1 + n)) s.env |>)
     xs
-and
-compile_closures ns s defs =
+
+let rec
+bind_fv ns xs az k fv (n,env,(ecl,ec)) =
+  match find_index fv xs 1 with
+  | Some j -> (n, Pmap.add fv (CTArg (2 + az - j)) env, (ecl,ec))
+  | None -> match find_index fv ns 0 with
+    | None -> (n+1, Pmap.add fv (CTEnv n) env, (ecl+1,CEEnv fv::ec))
+    | Some j -> if j = k
+                then (n, Pmap.add fv (CTArg (2 + az)) env, (ecl,ec))
+                else (n+1, Pmap.add fv (CTRef n) env, (ecl+1,(CERef (j+1))::ec))
+    end
+  end
+
+let rec
+calculate_ecs c =
+  List.fold_left
+    (fun s (ns,defs) ->
+      let (s,k) = List.fold_left
+        (fun (s,k) (xs,e,l) ->
+          let az = List.length xs in
+          let (n,env,(ecl,ec)) =
+            Set.fold (bind_fv ns xs az k) (free_vars c e) (0,Pmap.empty,(0,[])) in
+          let s = <| s with
+                     env_azs = Pmap.add l (env,az) s.env_azs
+                   ; ecs = Pmap.add l (ecl,ec) s.ecs
+                   |> in
+          (s,k+1))
+        (s,0) defs in
+      s)
+
+let rec
+cce_aux s (ns,defs) =
+  let (s,k) = List.fold_left
+    (fun (s,k) (xs,e,l) ->
+      let (env,az) = Pmap.find l s.env_azs in
+      let s = emit s [Label l] in
+      let s' = <| s with env = env; sz = 0; tail = TCTail az 0 |> in
+      let s' = compile s' e in
+      let n = match s'.tail with TCNonTail -> 1 | TCTail j k -> k+1 end in
+      let s' = emit s' [Stack (Pops n);
+                        Stack (Load 1);
+                        Stack (Store (az+2));
+                        Stack (Pops (az+1));
+                        Return] in
+      let s = <| s' with env = s.env; sz = s.sz; tail = s.tail |> in
+      (s,k+1))
+    (s,0) defs in
+  s
+
+let rec
+compile_code_env s ldefs =
+  let (s,ls) = get_labels 1 s in
+  let l = List.nth ls 0 in
+  let s = emit s [Jump (Lab l)] in
+  let s = List.fold_left cce_aux s ldefs in
+  emit s [Label l]
+
   (* calling convention:
    * before: env, CodePtr ret, argn, ..., arg1, Block 0 [CodePtr c; env],
    * thus, since env = stack[sz], argk should be CTArg (2 + n - k)
    * after:  retval,
+
+this might be out of date:
        PushInt 0, Ref
        ...            (* create RefPtrs for recursive closures *)
        PushInt 0, Ref                       RefPtr 0, ..., RefPtr 0, rest
@@ -1174,52 +1273,6 @@ compile_closures ns s defs =
    *   environment and build the closure
    * - update refptrs, etc.
    *)
-  let sz0 = s.sz in
-  let s = List.fold_left (fun s _n -> incsz (emit s [Stack (PushInt i0); Ref])) s ns in
-  let s = emit s [Stack (PushInt i0)] in
-  let nk = List.length defs in
-  let (s,labs) = get_labels nk s in
-  let (s,k,ecs) = List.fold_left
-    (fun (s,k,ecs) (xs,INL e) ->
-      let az = List.length xs in
-      let lab = List.nth labs k in
-      let s = emit s [(Call (Lab lab))] in
-      let (n,env,(ecl,ec)) =
-        Set.fold (bind_fv ns xs az k) (free_vars Pmap.empty e) (0,Pmap.empty,(0,[])) in
-      let s' = <| s with env = env; sz = 0; tail = TCTail az 0 |> in
-      let s' = compile s' e in
-      let n = match s'.tail with TCNonTail -> 1 | TCTail j k -> k+1 end in
-      let s' = emit s' [Stack (Pops n);
-                        Stack (Load 1);
-                        Stack (Store (az+2));
-                        Stack (Pops (az+1));
-                        Return;
-                        Label lab] in
-      let s = <| s' with env = s.env; sz = s.sz + 1; tail = s.tail |> in
-      (s,k+1,(ecl,ec)::ecs))
-    (s,0,[]) defs in
-  let s = emit s [Stack Pop] in
-  let (s,k) = List.fold_left
-    (fun (s,k) (j,ec) ->
-      let s = incsz (emit s [Stack (Load (nk - k))]) in
-      let s = List.fold_left (emit_ec sz0) s (List.rev ec) in
-      let s = emit s [Stack (if j = 0 then PushInt i0 else Cons 0 j)] in
-      let s = emit s [Stack (Cons 0 2)] in
-      let s = decsz (emit s [Stack (Store (nk - k))]) in
-      let s = <| s with sz = s.sz - j |> in
-      (s,k+1))
-    (s,1) (List.rev ecs) in
-  let (s,k) = List.fold_left
-    (fun (s,k) _n ->
-      let s = emit s [Stack (Load (nk + nk - k))] in
-      let s = emit s [Stack (Load (nk + 1 - k))] in
-      let s = emit s [Update] in
-      (s,k+1))
-    (s,1) ns in
-  let k = nk - 1 in
-  List.fold_left
-    (fun s _n -> decsz (emit s [Stack (Store k)]))
-         s ns
 
 let rec
 calculate_labels il m n a [] = (m,n,a)
@@ -1250,6 +1303,7 @@ compile_labels rs lbc =
   let (m,n,bc) = calculate_labels rs.inst_length Pmap.empty rs.next_addr [] lbc in
   <| rs with code = replace_labels m [] bc ; next_addr = n |>
 
+(*
 indreln
 forall il c cc.
 true
@@ -1272,7 +1326,6 @@ body_env ns xs j fvs =
     Set.fold (bind_fv ns xs (List.length xs) j) fvs (0,Pmap.empty,(0,[])) in
   (env,ec)
 
-(*
 indreln
 forall il c i.
 true
@@ -1320,9 +1373,15 @@ let init_repl_state =
    |>
 
 let compile_Cexp rs decl Ce =
+  let s = <| lnext_label = 0; ldefs = []; lbods = Pmap.empty |> in
+  let (s,Ce) = label_closures s Ce in
   let cs = <| env = rs.renv; sz = rs.rsz
-            ; out = []; next_label = 0
+            ; ecs = Pmap.empty; env_azs = Pmap.empty
+            ; out = []; next_label = s.lnext_label
             ; tail = TCNonTail; decl = decl |> in
+  let cs = calculate_ecs s.lbods cs s.ldefs in
+  let cs = compile_code_env cs s.ldefs in
+  let cs = <| cs with env_azs = Pmap.empty |> in
   let cs = compile cs Ce in
   let rs = match cs.decl with
     | None -> rs

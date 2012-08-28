@@ -26,6 +26,10 @@ val SUM_MAP_Cexp2_size_thm = store_thm(
 Induct >- rw[Cexp_size_def] >> Cases >>
 srw_tac[ARITH_ss][Cexp_size_def])
 
+val Cexp3_size_thm = store_thm("Cexp3_size_thm",
+  ``∀cb. Cexp3_size cb = 1 + sum_size Cexp_size I cb``,
+  Cases_on `cb` >> rw[Cexp_size_def,basicSizeTheory.sum_size_def])
+
 val list_size_thm = store_thm(
 "list_size_thm",
 ``∀f ls. list_size f ls = SUM (MAP f ls) + LENGTH ls``,
@@ -161,17 +165,33 @@ val (compile_def, compile_ind) = register "compile" (
   tprove_no_defn ((compile_def, compile_ind),
   WF_REL_TAC `inv_image ($< LEX $<) (λx. case x of
        | INL (s,e)                 => (Cexp_size e, 3:num)
-       | INR (INL (env,z,e,n,s,[]))=> (Cexp_size e, 4)
-       | INR (INL (env,z,e,n,s,ns))=> (Cexp_size e + (SUM (MAP (list_size char_size) ns)) + LENGTH ns, 2)
-       | INR (INR (ns,s,xbs))      => (SUM (MAP Cexp2_size xbs) + (SUM (MAP (list_size char_size) ns)) + LENGTH ns, 0))` >>
+       | INR (env,z,e,n,s,[])=> (Cexp_size e, 4)
+       | INR (env,z,e,n,s,ns)=> (Cexp_size e + (SUM (MAP (list_size char_size) ns)) + LENGTH ns, 2))` >>
   srw_tac[ARITH_ss][] >>
   srw_tac[ARITH_ss][Cexp1_size_thm,Cexp4_size_thm,Cexp_size_def,list_size_thm,SUM_MAP_Cexp2_size_thm] >>
   TRY (Q.ISPEC_THEN `Cexp_size` imp_res_tac SUM_MAP_MEM_bound >> DECIDE_TAC) >>
   TRY (Cases_on `xs` >> srw_tac[ARITH_ss][]) >>
   TRY (Cases_on `ns` >> srw_tac[ARITH_ss][]) >>
-  srw_tac[ARITH_ss][list_size_thm] >>
-  (Q.ISPEC_THEN `Cexp2_size` imp_res_tac SUM_MAP_MEM_bound >>
-   fsrw_tac[ARITH_ss][Cexp_size_def,list_size_thm,SUM_MAP_Cexp2_size_thm])))
+  srw_tac[ARITH_ss][list_size_thm]))
+
+val (label_closures_def, label_closures_ind) = register "label_closures" (
+  tprove_no_defn ((label_closures_def, label_closures_ind),
+  WF_REL_TAC `inv_image $< (λx. case x of
+       | INL (s,e) => (Cexp_size e)
+       | INR (INL (s,es)) => (Cexp4_size es)
+       | INR (INR (s,ns,defs)) => (Cexp1_size defs - 2))` >>
+  srw_tac[ARITH_ss][] >>
+  srw_tac[ARITH_ss][Cexp1_size_thm,SUM_MAP_Cexp2_size_thm] >>
+  Q.ISPEC_THEN `Cexp3_size o SND` imp_res_tac SUM_MAP_MEM_bound >>
+  fs[Cexp3_size_thm,basicSizeTheory.sum_size_def,MAP_MAP_o] >>
+  Cases_on `LENGTH defs` >> fs[LENGTH_NIL] >>
+  DECIDE_TAC))
+
+val _ = save_thm("num_fold_def",num_fold_def)
+val _ = save_thm("cce_aux_def",cce_aux_def)
+val _ = save_thm("compile_code_env_def",compile_code_env_def)
+val _ = save_thm("compile_closures_def",compile_closures_def)
+val _ = save_thm("calculate_ecs_def",calculate_ecs_def)
 
 val (number_constructors_def,number_constructors_ind) = register "number_constructors" (
   tprove_no_defn ((number_constructors_def,number_constructors_ind),

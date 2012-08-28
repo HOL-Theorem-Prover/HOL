@@ -9,6 +9,7 @@ val _ = Parse.temp_type_abbrev("op_",``:op``) (* EmitML should do this *)
 val _ = Parse.disable_tyabbrev_printing "tvarN"
 val _ = Parse.disable_tyabbrev_printing "envE"
 val _ = Parse.disable_tyabbrev_printing "ctenv"
+val _ = Parse.disable_tyabbrev_printing "ecs"
 val _ = Parse.disable_tyabbrev_printing "alist"
 
 val underscore_rule = Conv.CONV_RULE let
@@ -42,6 +43,7 @@ val data = map
   , datatype_ctbind
   , datatype_cebind
   , datatype_call_context
+  , datatype_label_closures_state
   , datatype_compiler_state
   , datatype_nt
   , datatype_repl_state
@@ -66,7 +68,13 @@ val defs = map EmitML.DEFN
 , find_index_def
 , emit_ec_def
 , bind_fv_def
+, num_fold_def
+, label_closures_def
+, compile_closures_def
 , underscore_rule compile_def
+, calculate_ecs_def
+, cce_aux_def
+, compile_code_env_def
 , calculate_labels_def
 , replace_labels_def
 , compile_labels_def
