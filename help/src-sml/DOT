@@ -28,6 +28,8 @@
 
    ====================================================================== *)
 
+val _ = HOL_Interactive.toggle_quietdec();
+
 val HTML_DIR   = Path.toString(Path.fromString(Path.concat
                     (Globals.HOLDIR,"help/theorygraph")));
 val SIGOBJ_DIR = Path.toString(Path.fromString(Path.concat
@@ -138,6 +140,7 @@ fun gen_map_file dot node_info name = let
                                    dotfile]
 in
   if OS.Process.isSuccess cmdstatus then let
+      val _ = print "Called dot successfully.\n"
       val ostrm = openOut mapfile
       fun out s = output(ostrm, s^"\n")
     in
@@ -176,8 +179,22 @@ in
 end;
 
 
-fun load_theories thyl = app (load o C (curry op^) "Theory") thyl;
+val load_theories = let
+  fun loadi i s = (if i mod 5 = 0 then print "." else () ;
+                   load (s^"Theory"))
+in
+  appi loadi
+end
 
+fun pappi f (l1,l2) = let
+  fun recurse i (l1,l2) =
+      case (l1,l2) of
+        ([], _) => ()
+      | (_, []) => ()
+      | (h1::t1,h2::t2) => (f i (h1,h2) ; recurse (i + 1) (t1, t2))
+in
+  recurse 0 (l1,l2)
+end
 
 (* ----------------------------------------------------------------------
     Up to this point, no work is done - the above just sets up
@@ -187,18 +204,23 @@ fun load_theories thyl = app (load o C (curry op^) "Theory") thyl;
 
 val sys_theories = List.filter (not o String.isSuffix "_emit")
                                (dir_theories SIGOBJ_DIR);
+(* trailing spaces make this line up with HTML printing message later *)
+val _ = print "\n\nLoading system theories        ";
 load_theories sys_theories;
+val _ = print " done\n"
 val ancs = ancestor_nodes "-";
 
 val all_theories = "min"::sys_theories;
 val paths = map(fn s => Path.concat (HTML_DIR,s^"Theory.html")) all_theories;
 val _ = HOLPP.catch_withpp_err := false
-fun mapthis (thy,path) =
-    print_theory_as_html thy path
-    handle Fail s => print (">>> PP failure on "^thy^": "^s^"\n")
-val _ = ListPair.map mapthis (all_theories, paths);
+val _ = print "Printing HTML theories to disk ";
+fun appthis i (thy,path) =
+    (if i mod 5 = 0 then print "." else ();
+     print_theory_as_html thy path
+     handle Fail s => print (">>> PP failure on "^thy^": "^s^"\n"))
+val _ = pappi appthis (all_theories, paths);
+val _ = print " done\n";
 
 (* The following works on Unix with dot version 1.10.2003xxxxxxx *)
 
 gen_map_file "/usr/bin/dot" ancs (Path.concat(HTML_DIR, "theories"));
-
