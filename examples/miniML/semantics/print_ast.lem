@@ -171,7 +171,7 @@ val (^^) : tok_tree -> tok_tree -> tok_tree
 let inline {hol} (^^) x y = N x y
 
 (*val tree_to_list : forall 'a. 'a tree -> 'a list -> 'a list*)
-val tree_to_list : tok_tree -> token list -> token list
+val tree_to_list : tok_tree -> list token -> list token
 let rec
 tree_to_list (L x) acc = x::acc
 and
@@ -218,7 +218,7 @@ let is_ocaml_infix s =
       s = "mod"
 
 (*val join_trees : forall 'a. 'a tree -> 'a tree list -> 'a tree*)
-val join_trees : tok_tree -> tok_tree list -> tok_tree
+val join_trees : tok_tree -> list tok_tree -> tok_tree
 let rec
 join_trees sep [x] = x
 and
@@ -437,7 +437,7 @@ let variant_to_tok_tree sml (c,ts) =
     join_trees (L StarT) (List.map type_to_tok_tree ts)
 
 (*val typedef_to_tok_tree : bool -> num -> tvarN list * typeN * (conN * t list) list -> token tree*)
-val typedef_to_tok_tree : bool -> num -> tvarN list * typeN * (conN * t list) list -> tok_tree
+val typedef_to_tok_tree : bool -> num -> list tvarN * typeN * list (conN * list t) -> tok_tree
 let typedef_to_tok_tree sml indent (tvs, name, variants) =
   (if tvs = [] then 
      L (LongidT name)

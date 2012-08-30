@@ -23,19 +23,19 @@
 val i : num -> Int.int
 let inline {hol} i = Hol.(&)
 
-val all_distinct : forall 'a. 'a list -> bool
+val all_distinct : forall 'a. list 'a -> bool
 let inline {hol} all_distinct = Hol.ALL_DISTINCT
 
 val rtc : forall 'a. ('a -> 'a -> bool) -> ('a -> 'a -> bool)
 let inline {hol} rtc = Hol.RTC
 
 (* Environments *)
-type ('a,'b) env = ('a*'b) list
+type env 'a 'b = list ('a*'b)
 
-val emp : forall 'a 'b. ('a,'b) env
+val emp : forall 'a 'b. env 'a 'b
 let emp = []
 
-val lookup : forall 'a 'b. 'a -> ('a,'b) env -> 'b option
+val lookup : forall 'a 'b. 'a -> env 'a 'b -> option 'b
 let rec
 lookup n [] = None
 and
@@ -45,10 +45,10 @@ lookup n ((n',v)::e) =
   else
     lookup n e
 
-val bind : forall 'a 'b. 'a -> 'b -> ('a,'b) env -> ('a,'b) env
+val bind : forall 'a 'b. 'a -> 'b -> env 'a 'b -> env 'a 'b
 let bind n v e = (n,v)::e
 
-val merge : forall 'a 'b. ('a,'b) env -> ('a,'b) env -> ('a,'b) env
+val merge : forall 'a 'b. env 'a 'b -> env 'a 'b -> env 'a 'b
 let merge e1 e2 = e1 @ e2
 
 (* Literal constants *)
@@ -103,7 +103,7 @@ type t =
   | Tvar of tvarN
   (* DeBruin indexed type variables. *)
   | Tvar_db of num
-  | Tapp of t list * typeN
+  | Tapp of list t * typeN
   | Tfn of t * t
   | Tnum
   | Tbool
@@ -113,7 +113,7 @@ type pat =
   | Pvar of varN
   | Plit of lit
   (* Constructor applications. *)
-  | Pcon of conN * pat list
+  | Pcon of conN * list pat
 
 (* Runtime errors *)
 type error =
@@ -125,7 +125,7 @@ type exp =
   | Raise of error
   | Lit of lit
   (* Constructor application. *)
-  | Con of conN * exp list
+  | Con of conN * list exp
   | Var of varN
   | Fun of varN * exp
   (* Application of an operator (including function application) *)
@@ -134,29 +134,29 @@ type exp =
   | Log of log * exp * exp
   | If of exp * exp * exp
   (* Pattern matching *)
-  | Mat of exp * (pat * exp) list
+  | Mat of exp * list (pat * exp)
   | Let of varN * exp * exp
   (* Local definition of (potentially) mutually recursive functions
    * The first varN is the function's name, and the second varN is its
    * parameter *)
-  | Letrec of (varN * varN * exp) list * exp
+  | Letrec of list (varN * varN * exp) * exp
 
 (* Value forms *)
 type v =
   | Litv of lit
   (* Constructor application. *) 
-  | Conv of conN * v list
+  | Conv of conN * list v
   (* Function closures
      The environment is used for the free variables in the function *)
-  | Closure of (varN, v) env * varN * exp
+  | Closure of env varN v * varN * exp
   (* Function closure for recursive functions
    * See Closure and Letrec above
    * The last variable name indicates which function from the mutually
    * recursive bundle this closure value represents *)
-  | Recclosure of (varN, v) env * (varN * varN * exp) list * varN
+  | Recclosure of env varN v * list (varN * varN * exp) * varN
 
 (* Environments *)
-type envE = (varN, v) env
+type envE = env varN v
 
 (* Declarations *)
 type dec =
@@ -164,17 +164,17 @@ type dec =
      The pattern allows several names to be bound at once *)
   | Dlet of pat * exp
   (* Mutually recursive function definition *)
-  | Dletrec of (varN * varN * exp) list
+  | Dletrec of list (varN * varN * exp)
   (* Type definition
      Defines several types, each of which has several named variants, which can
      in turn have several arguments *)
-  | Dtype of (tvarN list * typeN * (conN * t list) list) list
+  | Dtype of list (list tvarN * typeN * list (conN * list t))
 
-type decs = dec list
+type decs = list dec
 
 (* Maps each constructor to its arity and the set of all constructors of that
  * type *)
-type envC = (conN, num * conN set) env
+type envC = env conN (num * set conN)
 
 (* Evaluation contexts
  * The hole is denoted by the unit type
@@ -185,11 +185,11 @@ type ctxt_frame =
   | Capp2 of op * v * unit
   | Clog of log * unit * exp
   | Cif of unit * exp * exp
-  | Cmat of unit * (pat * exp) list
+  | Cmat of unit * list (pat * exp)
   | Clet of varN * unit * exp
   (* Evaluating a constructor's arguments
    * The v list should be in reverse order. *)
-  | Ccon of conN * v list * unit * exp list
+  | Ccon of conN * list v * unit * list exp
 type ctxt = ctxt_frame * envE
 
 val lit_same_type : lit -> lit -> bool
@@ -254,7 +254,7 @@ and
 pmatch_list envC _ _ env = Match_type_error
 
 (* Accumulates the bindings of a patterns *)
-val pat_bindings : pat -> varN list -> varN list
+val pat_bindings : pat -> list varN -> list varN
 let rec
 pat_bindings (Pvar n) already_bound =
   n::already_bound
@@ -281,7 +281,7 @@ type exp_or_val =
   | Exp of exp
   | Val of v
 
-type state = envC * envE * exp_or_val * ctxt list
+type state = envC * envE * exp_or_val * list ctxt
 
 type e_step_result =
   | Estep of state
@@ -293,14 +293,14 @@ type e_step_result =
  * push individual frames onto the context stack instead of finding a redex in a
  * single step *)
 
-val push : envC -> envE -> exp -> ctxt_frame -> ctxt list -> e_step_result
+val push : envC -> envE -> exp -> ctxt_frame -> list ctxt -> e_step_result
 let push envC env e c' cs = Estep (envC, env, Exp e, (c',env)::cs)
 
-val return : envC -> envE -> v -> ctxt list -> e_step_result
+val return : envC -> envE -> v -> list ctxt -> e_step_result
 let return envC env v c = Estep (envC, env, Val v, c)
 
 (* Bind each function of a mutually recursive set of functions to its closure *)
-val build_rec_env : (varN * varN * exp) list -> envE -> envE
+val build_rec_env : list (varN * varN * exp) -> envE -> envE
 let rec build_rec_env funs env =
   List.fold_right
     (fun (f,x,e) env' -> bind f (Recclosure env funs f) env')
@@ -308,7 +308,7 @@ let rec build_rec_env funs env =
     env
 
 (* Lookup in the list of mutually recursive functions *)
-val find_recfun : varN -> (varN * varN * exp) list -> (varN * exp) option
+val find_recfun : varN -> list (varN * varN * exp) -> option (varN * exp)
 let rec find_recfun n funs =
   match funs with
     | [] -> None
@@ -320,7 +320,7 @@ let rec find_recfun n funs =
   end
 
 (* Do an application *)
-val do_app : envE -> op -> v -> v -> (envE * exp) option
+val do_app : envE -> op -> v -> v -> option (envE * exp)
 let do_app env' op v1 v2 =
   match (op, v1, v2) with
     | (Opapp, Closure env n e, v) ->
@@ -345,7 +345,7 @@ let do_app env' op v1 v2 =
   end
 
 (* Do a logical operation *)
-val do_log : log -> v -> exp -> exp option
+val do_log : log -> v -> exp -> option exp
 let do_log l v e =
   match (l, v) with
     | (And, Litv (Bool true)) -> Some e
@@ -355,7 +355,7 @@ let do_log l v e =
   end
 
 (* Do an if-then-else *)
-val do_if : v -> exp -> exp -> exp option
+val do_if : v -> exp -> exp -> option exp
 let do_if v e1 e2 =
   if v = Litv (Bool true) then
     Some e1
@@ -373,7 +373,7 @@ let do_con_check envC n l =
   end
 
 (* apply a context to a value *)
-val continue : envC -> v -> ctxt list -> e_step_result
+val continue : envC -> v -> list ctxt -> e_step_result
 let continue envC v cs =
   match cs with
     | [] -> Estuck
@@ -467,8 +467,7 @@ let e_step (envC, env, ev, c) =
   end
 
 (* Add the given type definition to the given constructor environment *)
-val build_tdefs :
-  (tvarN list * typeN * (conN * t list) list) list -> envC
+val build_tdefs : list (list tvarN * typeN * list (conN * list t)) -> envC
 let build_tdefs tds =
   List.rev (List.flatten
     (List.map
@@ -482,7 +481,7 @@ let build_tdefs tds =
 
 (* Checks that no constructor is defined twice *)
 val check_dup_ctors :
-    forall 'a. (tvarN list * typeN * (conN * t list) list) list -> (conN,'a) env -> bool
+    forall 'a. list (list tvarN * typeN * list (conN * list t)) -> env conN 'a -> bool
 let check_dup_ctors tds envC =
   (forall ((tvs, tn, condefs) MEM tds) ((n, ts) MEM condefs).
    lookup n envC = None) &&
@@ -494,7 +493,7 @@ let check_dup_ctors tds envC =
  * - values bound be previous definitions
  * - remaining definitions
  * - current state for evaluating the current definition *)
-type d_state = envC * envE * decs * (pat * state) option
+type d_state = envC * envE * decs * option (pat * state)
 
 type d_step_result =
   | Dstep of d_state
@@ -546,14 +545,14 @@ type error_result =
   | Rtype_error
   | Rraise of error
 
-type 'a result =
+type result 'a =
   | Rval of 'a
   | Rerr of error_result
 
 val e_step_reln : state -> state -> bool
-val small_eval : envC -> envE -> exp -> ctxt list -> v result -> bool
+val small_eval : envC -> envE -> exp -> list ctxt -> result v -> bool
 val d_step_reln : d_state -> d_state -> bool
-val d_small_eval : envC -> envE -> dec list -> (pat * state) option -> (envC * envE) result -> bool
+val d_small_eval : envC -> envE -> list dec -> option (pat * state) -> result (envC * envE) -> bool
 
 let e_step_reln st1 st2 =
   (e_step st1 = Estep st2)
@@ -595,7 +594,7 @@ d_small_eval cenv env ds c (Rerr (Rraise err)) =
     (rtc d_step_reln) (cenv,env,ds,c) (cenv',env',ds',c') &&
     (d_step (cenv',env',ds',c') = Draise err)
 
-val diverges : envC -> envE -> dec list -> bool
+val diverges : envC -> envE -> list dec -> bool
 let diverges cenv env ds =
   forall cenv' env' ds' c'.
     (rtc d_step_reln) (cenv,env,ds,None) (cenv',env',ds',c')
@@ -604,10 +603,10 @@ let diverges cenv env ds =
       d_step_reln (cenv',env',ds',c') (cenv'',env'',ds'',c'')
 
 (* ------------------------ Big step semantics -------------------------- *)
-val evaluate : envC -> envE -> exp -> v result -> bool
-val evaluate_list : envC -> envE -> exp list -> v list result -> bool
-val evaluate_match : envC -> envE -> v -> (pat * exp) list -> v result -> bool
-val evaluate_decs : envC -> envE -> dec list -> (envC * envE) result -> bool
+val evaluate : envC -> envE -> exp -> result v -> bool
+val evaluate_list : envC -> envE -> list exp -> result (list v) -> bool
+val evaluate_match : envC -> envE -> v -> list (pat * exp) -> result v -> bool
+val evaluate_decs : envC -> envE -> list dec -> result (envC * envE) -> bool
 
 indreln
 
@@ -946,7 +945,7 @@ evaluate_decs cenv env (Dtype tds :: ds) (Rerr Rtype_error)
 
 (* constructor type environments: each constructor has a type
  * forall tyvars. t list -> (tyvars) typeN *)
-type tenvC = (conN, (tvarN list * t list * typeN)) env
+type tenvC = env conN (list tvarN * list t * typeN)
 
 (* Type environments *)
 type tenvE = 
@@ -979,7 +978,7 @@ deBruijn_inc skip n Tbool = Tbool
 
 (* Lookup a variable, incrementing its deBruijn indices by how many type
  * variable quantifiers it is lifted past. *)
-val lookup_var : varN -> num -> tenvE -> (t * num) option
+val lookup_var : varN -> num -> tenvE -> option (t * num)
 let rec
 lookup_var n inc Env_empty = None
 and
@@ -993,24 +992,24 @@ lookup_var n inc (Var_bind levels n' t tenv) =
 
 (* A pattern matches values of a certain type and extends the type environment
  * with the pattern's binders. *)
-val type_p : tenvC -> pat -> t -> (varN * t) list -> bool
+val type_p : tenvC -> pat -> t -> list (varN * t) -> bool
 
 (* An expression has a type *)
 val type_e : tenvC -> tenvE -> exp -> t -> bool
 
 (* A list of expressions has a list of types *)
-val type_es : tenvC -> tenvE -> exp list -> t list -> bool
+val type_es : tenvC -> tenvE -> list exp -> list t -> bool
 
 (* Type a mutually recursive bundle of functions.  Unlike pattern typing, the
  * resulting environment does not extend the input environment, but just
  * represents the functions *)
-val type_funs : tenvC -> tenvE -> (varN * varN * exp) list -> 
-                (varN * t) list -> bool
+val type_funs : tenvC -> tenvE -> list (varN * varN * exp) -> 
+                list (varN * t) -> bool
 
 (* Check a declaration and update the top-level environments *)
 val type_d : tenvC -> tenvE -> dec -> tenvC -> tenvE -> bool
 
-val type_ds : tenvC -> tenvE -> dec list -> tenvC -> tenvE -> bool
+val type_ds : tenvC -> tenvE -> list dec -> tenvC -> tenvE -> bool
 
 (* Check that the operator can have type (t1 -> t2 -> t3) *)
 val type_op : op -> t -> t -> t -> bool
@@ -1025,7 +1024,7 @@ let type_op op t1 t2 t3 =
 
 (* Check that the free type variables are in the given list.  If dbok is true,
  * the deBuijn type variables are permitted.  Otherwise, they are not. *)
-val check_freevars : bool -> tvarN list -> t -> bool
+val check_freevars : bool -> list tvarN -> t -> bool
 let rec
 check_freevars dbok tvs (Tvar tv) =
   List.mem tv tvs
@@ -1046,7 +1045,7 @@ check_freevars dbok tvs (Tvar_db _) = dbok
  * constructors or types, and that the free type variables of each constructor
  * argument type are included in the type's type parameters. *)
 val check_ctor_tenv :
-  tenvC -> (tvarN list * typeN * (conN * t list) list) list -> bool
+  tenvC -> list (list tvarN * typeN * list (conN * list t)) -> bool
 let check_ctor_tenv tenvC tds =
   check_dup_ctors tds tenvC &&
   List.for_all
@@ -1062,7 +1061,7 @@ let check_ctor_tenv tenvC tds =
        List.for_all (fun (_,(_,_,tn')) -> tn <> tn') tenvC)
     tds
 
-val build_ctor_tenv : (tvarN list * typeN * (conN * t list) list) list -> tenvC
+val build_ctor_tenv : list (list tvarN * typeN * list (conN * list t)) -> tenvC
 let build_ctor_tenv tds =
   List.flatten
     (List.map
@@ -1071,7 +1070,7 @@ let build_ctor_tenv tds =
        tds)
 
 (* Simultaneous substitution of types for type variables in a type *)
-val type_subst : (tvarN,t) env -> t -> t
+val type_subst : env tvarN t -> t -> t
 let rec
 type_subst s (Tvar tv) =
   match lookup tv s with
@@ -1092,7 +1091,7 @@ and
 type_subst s (Tvar_db n) = Tvar_db n
 
 (* skip the lowest given indices and replace the next (LENGTH ts) with the given types and reduce all the higher ones *)
-val deBruijn_subst : num -> t list -> t -> t
+val deBruijn_subst : num -> list t -> t -> t
 let rec
 deBruijn_subst skip ts (Tvar tv) = Tvar tv
 and
@@ -1114,7 +1113,7 @@ deBruijn_subst skip ts Tnum = Tnum
 and
 deBruijn_subst skip ts Tbool = Tbool
 
-val bind_var_list : num -> (varN * t) list -> tenvE -> tenvE
+val bind_var_list : num -> list (varN * t) -> tenvE -> tenvE
 let rec 
 bind_var_list levels [] tenv = tenv
 and
@@ -1354,7 +1353,7 @@ val type_env : tenvC -> envE -> tenvE -> bool
 (* An evaluation context has the second type when its hole is filled with a
  * value of the first type. *)
 val type_ctxt : tenvC -> tenvE -> ctxt_frame -> t -> t -> bool
-val type_ctxts : tenvC -> ctxt list -> t -> t -> bool
+val type_ctxts : tenvC -> list ctxt -> t -> t -> bool
 val type_state : tenvC -> state -> t -> bool
 
 indreln  
@@ -1547,9 +1546,9 @@ type_d_state tenvC (envC, env, ds, Some (p, (envC,env',e,c))) tenvC' tenv''
 
 (* ------ Auxiliary relations for proving big/small step equivalence ------ *)
 
-val evaluate_ctxt : envC -> envE -> ctxt_frame -> v -> v result -> bool
-val evaluate_ctxts : envC -> ctxt list -> v -> v result -> bool
-val evaluate_state : state -> v result -> bool
+val evaluate_ctxt : envC -> envE -> ctxt_frame -> v -> result v -> bool
+val evaluate_ctxts : envC -> list ctxt -> v -> result v -> bool
+val evaluate_state : state -> result v -> bool
 
 indreln
 

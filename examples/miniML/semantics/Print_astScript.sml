@@ -194,7 +194,7 @@ val _ = Hol_datatype `
 (*val (^^) : tok_tree -> tok_tree -> tok_tree*)
 
 (*val tree_to_list : forall 'a. 'a tree -> 'a list -> 'a list*)
-(*val tree_to_list : tok_tree -> token list -> token list*)
+(*val tree_to_list : tok_tree -> list token -> list token*)
  val tree_to_list_defn = Hol_defn "tree_to_list" `
 
 (tree_to_list (L x) acc = x::acc)
@@ -248,7 +248,7 @@ val _ = Define `
 
 
 (*val join_trees : forall 'a. 'a tree -> 'a tree list -> 'a tree*)
-(*val join_trees : tok_tree -> tok_tree list -> tok_tree*)
+(*val join_trees : tok_tree -> list tok_tree -> tok_tree*)
  val join_trees_defn = Hol_defn "join_trees" `
 
 (join_trees sep [x] = x)
@@ -490,7 +490,7 @@ val _ = Define `
 
 
 (*val typedef_to_tok_tree : bool -> num -> tvarN list * typeN * (conN * t list) list -> token tree*)
-(*val typedef_to_tok_tree : bool -> num -> tvarN list * typeN * (conN * t list) list -> tok_tree*)
+(*val typedef_to_tok_tree : bool -> num -> list tvarN * typeN * list (conN * list t) -> tok_tree*)
 val _ = Define `
  (typedef_to_tok_tree sml indent (tvs, name, variants) = N 
   (if tvs = [] then 

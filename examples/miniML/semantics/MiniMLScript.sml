@@ -29,19 +29,19 @@ val _ = new_theory "MiniML"
 
 (*val i : num -> Int.int*)
 
-(*val all_distinct : forall 'a. 'a list -> bool*)
+(*val all_distinct : forall 'a. list 'a -> bool*)
 
 (*val rtc : forall 'a. ('a -> 'a -> bool) -> ('a -> 'a -> bool)*)
 
 (* Environments *)
-val _ = type_abbrev((*  ('a,'b) *) "env" , ``: ('a#'b) list``);
+val _ = type_abbrev((* ( 'a, 'b) *) "env" , ``: ('a#'b) list``);
 
-(*val emp : forall 'a 'b. ('a,'b) env*)
+(*val emp : forall 'a 'b. env 'a 'b*)
 val _ = Define `
  emp = []`;
 
 
-(*val lookup : forall 'a 'b. 'a -> ('a,'b) env -> 'b option*)
+(*val lookup : forall 'a 'b. 'a -> env 'a 'b -> option 'b*)
  val lookup_defn = Hol_defn "lookup" `
 
 (lookup n [] = NONE)
@@ -54,12 +54,12 @@ val _ = Define `
 
 val _ = Defn.save_defn lookup_defn;
 
-(*val bind : forall 'a 'b. 'a -> 'b -> ('a,'b) env -> ('a,'b) env*)
+(*val bind : forall 'a 'b. 'a -> 'b -> env 'a 'b -> env 'a 'b*)
 val _ = Define `
  (bind n v e = (n,v)::e)`;
 
 
-(*val merge : forall 'a 'b. ('a,'b) env -> ('a,'b) env -> ('a,'b) env*)
+(*val merge : forall 'a 'b. env 'a 'b -> env 'a 'b -> env 'a 'b*)
 val _ = Define `
  (merge e1 e2 = e1 ++ e2)`;
 
@@ -184,16 +184,16 @@ val _ = Hol_datatype `
   | Conv of conN => v list
   (* Function closures
      The environment is used for the free variables in the function *)
-  | Closure of (varN, v) env => varN => exp
+  | Closure of( varN, v) env => varN => exp
   (* Function closure for recursive functions
    * See Closure and Letrec above
    * The last variable name indicates which function from the mutually
    * recursive bundle this closure value represents *)
-  | Recclosure of (varN, v) env => (varN # varN # exp) list => varN`;
+  | Recclosure of( varN, v) env => (varN # varN # exp) list => varN`;
 
 
 (* Environments *)
-val _ = type_abbrev( "envE" , ``: (varN, v) env``);
+val _ = type_abbrev( "envE" , ``:( varN, v) env``);
 
 (* Declarations *)
 val _ = Hol_datatype `
@@ -206,14 +206,14 @@ val _ = Hol_datatype `
   (* Type definition
      Defines several types, each of which has several named variants, which can
      in turn have several arguments *)
-  | Dtype of (tvarN list # typeN # (conN # t list) list) list`;
+  | Dtype of ( tvarN list # typeN # (conN # t list) list) list`;
 
 
 val _ = type_abbrev( "decs" , ``: dec list``);
 
 (* Maps each constructor to its arity and the set of all constructors of that
  * type *)
-val _ = type_abbrev( "envC" , ``: (conN, num # conN set) env``);
+val _ = type_abbrev( "envC" , ``:( conN, (num # conN set)) env``);
 
 (* Evaluation contexts
  * The hole is denoted by the unit type
@@ -302,7 +302,7 @@ val _ = Hol_datatype `
 val _ = Defn.save_defn pmatch_defn;
 
 (* Accumulates the bindings of a patterns *)
-(*val pat_bindings : pat -> varN list -> varN list*)
+(*val pat_bindings : pat -> list varN -> list varN*)
  val pat_bindings_defn = Hol_defn "pat_bindings" `
 
 (pat_bindings (Pvar n) already_bound =
@@ -348,18 +348,18 @@ val _ = Hol_datatype `
  * push individual frames onto the context stack instead of finding a redex in a
  * single step *)
 
-(*val push : envC -> envE -> exp -> ctxt_frame -> ctxt list -> e_step_result*)
+(*val push : envC -> envE -> exp -> ctxt_frame -> list ctxt -> e_step_result*)
 val _ = Define `
  (push envC env e c' cs = Estep (envC, env, Exp e, (c',env)::cs))`;
 
 
-(*val return : envC -> envE -> v -> ctxt list -> e_step_result*)
+(*val return : envC -> envE -> v -> list ctxt -> e_step_result*)
 val _ = Define `
  (return envC env v c = Estep (envC, env, Val v, c))`;
 
 
 (* Bind each function of a mutually recursive set of functions to its closure *)
-(*val build_rec_env : (varN * varN * exp) list -> envE -> envE*)
+(*val build_rec_env : list (varN * varN * exp) -> envE -> envE*)
  val build_rec_env_defn = Hol_defn "build_rec_env" `
  (build_rec_env funs env =
   FOLDR 
@@ -370,7 +370,7 @@ val _ = Define `
 val _ = Defn.save_defn build_rec_env_defn;
 
 (* Lookup in the list of mutually recursive functions *)
-(*val find_recfun : varN -> (varN * varN * exp) list -> (varN * exp)option*)
+(*val find_recfun : varN -> list (varN * varN * exp) -> option (varN * exp)*)
  val find_recfun_defn = Hol_defn "find_recfun" `
  (find_recfun n funs =
   (case funs of
@@ -385,7 +385,7 @@ val _ = Defn.save_defn build_rec_env_defn;
 val _ = Defn.save_defn find_recfun_defn;
 
 (* Do an application *)
-(*val do_app : envE -> op -> v -> v -> (envE * exp)option*)
+(*val do_app : envE -> op -> v -> v -> option (envE * exp)*)
 val _ = Define `
  (do_app env' op v1 v2 =
   (case (op, v1, v2) of
@@ -412,7 +412,7 @@ val _ = Define `
 
 
 (* Do a logical operation *)
-(*val do_log : log -> v -> exp -> exp option*)
+(*val do_log : log -> v -> exp -> option exp*)
 val _ = Define `
  (do_log l v e =
   (case (l, v) of
@@ -424,7 +424,7 @@ val _ = Define `
 
 
 (* Do an if-then-else *)
-(*val do_if : v -> exp -> exp -> exp option*)
+(*val do_if : v -> exp -> exp -> option exp*)
 val _ = Define `
  (do_if v e1 e2 =
   if v = Litv (Bool T) then
@@ -446,7 +446,7 @@ val _ = Define `
 
 
 (* apply a context to a value *)
-(*val continue : envC -> v -> ctxt list -> e_step_result*)
+(*val continue : envC -> v -> list ctxt -> e_step_result*)
 val _ = Define `
  (continue envC v cs =
   (case cs of
@@ -544,8 +544,7 @@ val _ = Define `
 
 
 (* Add the given type definition to the given constructor environment *)
-(*val build_tdefs :
-  (tvarN list * typeN * (conN * t list) list) list -> envC*)
+(*val build_tdefs : list (list tvarN * typeN * list (conN * list t)) -> envC*)
 val _ = Define `
  (build_tdefs tds =
   REVERSE (FLAT
@@ -561,7 +560,7 @@ val _ = Define `
 
 (* Checks that no constructor is defined twice *)
 (*val check_dup_ctors :
-    forall 'a. (tvarN list * typeN * (conN * t list) list) list -> (conN,'a) env -> bool*)
+    forall 'a. list (list tvarN * typeN * list (conN * list t)) -> env conN 'a -> bool*)
 val _ = Define `
  (check_dup_ctors tds envC =
   (! ((tvs, tn, condefs) :: LIST_TO_SET tds) ((n, ts) :: LIST_TO_SET condefs).
@@ -640,9 +639,9 @@ val _ = Hol_datatype `
 
 
 (*val e_step_reln : state -> state -> bool*)
-(*val small_eval : envC -> envE -> exp -> ctxt list -> v result -> bool*)
+(*val small_eval : envC -> envE -> exp -> list ctxt -> result v -> bool*)
 (*val d_step_reln : d_state -> d_state -> bool*)
-(*val d_small_eval : envC -> envE -> dec list -> (pat * state)option -> (envC * envE) result -> bool*)
+(*val d_small_eval : envC -> envE -> list dec -> option (pat * state) -> result (envC * envE) -> bool*)
 
 val _ = Define `
  (e_step_reln st1 st2 =
@@ -696,7 +695,7 @@ val _ = Define `
 
 val _ = Defn.save_defn d_small_eval_defn;
 
-(*val diverges : envC -> envE -> dec list -> bool*)
+(*val diverges : envC -> envE -> list dec -> bool*)
 val _ = Define `
  (diverges cenv env ds =
   ! cenv' env' ds' c'.
@@ -707,10 +706,10 @@ val _ = Define `
 
 
 (* ------------------------ Big step semantics -------------------------- *)
-(*val evaluate : envC -> envE -> exp -> v result -> bool*)
-(*val evaluate_list : envC -> envE -> exp list -> v list result -> bool*)
-(*val evaluate_match : envC -> envE -> v -> (pat * exp) list -> v result -> bool*)
-(*val evaluate_decs : envC -> envE -> dec list -> (envC * envE) result -> bool*)
+(*val evaluate : envC -> envE -> exp -> result v -> bool*)
+(*val evaluate_list : envC -> envE -> list exp -> result (list v) -> bool*)
+(*val evaluate_match : envC -> envE -> v -> list (pat * exp) -> result v -> bool*)
+(*val evaluate_decs : envC -> envE -> list dec -> result (envC * envE) -> bool*)
 
 val _ = Hol_reln `
 
@@ -1049,7 +1048,7 @@ evaluate_decs cenv env (Dtype tds :: ds) (Rerr Rtype_error))`;
 
 (* constructor type environments: each constructor has a type
  * forall tyvars. t list -> (tyvars) typeN *)
-val _ = type_abbrev( "tenvC" , ``: (conN, (tvarN list # t list # typeN)) env``);
+val _ = type_abbrev( "tenvC" , ``:( conN, ( tvarN list # t list # typeN)) env``);
 
 (* Type environments *)
 val _ = Hol_datatype `
@@ -1087,7 +1086,7 @@ val _ = Defn.save_defn deBruijn_inc_defn;
 
 (* Lookup a variable, incrementing its deBruijn indices by how many type
  * variable quantifiers it is lifted past. *)
-(*val lookup_var : varN -> num -> tenvE -> (t * num)option*)
+(*val lookup_var : varN -> num -> tenvE -> option (t * num)*)
  val lookup_var_defn = Hol_defn "lookup_var" `
 
 (lookup_var n inc Env_empty = NONE)
@@ -1104,24 +1103,24 @@ val _ = Defn.save_defn lookup_var_defn;
 
 (* A pattern matches values of a certain type and extends the type environment
  * with the pattern's binders. *)
-(*val type_p : tenvC -> pat -> t -> (varN * t) list -> bool*)
+(*val type_p : tenvC -> pat -> t -> list (varN * t) -> bool*)
 
 (* An expression has a type *)
 (*val type_e : tenvC -> tenvE -> exp -> t -> bool*)
 
 (* A list of expressions has a list of types *)
-(*val type_es : tenvC -> tenvE -> exp list -> t list -> bool*)
+(*val type_es : tenvC -> tenvE -> list exp -> list t -> bool*)
 
 (* Type a mutually recursive bundle of functions.  Unlike pattern typing, the
  * resulting environment does not extend the input environment, but just
  * represents the functions *)
-(*val type_funs : tenvC -> tenvE -> (varN * varN * exp) list -> 
-                (varN * t) list -> bool*)
+(*val type_funs : tenvC -> tenvE -> list (varN * varN * exp) -> 
+                list (varN * t) -> bool*)
 
 (* Check a declaration and update the top-level environments *)
 (*val type_d : tenvC -> tenvE -> dec -> tenvC -> tenvE -> bool*)
 
-(*val type_ds : tenvC -> tenvE -> dec list -> tenvC -> tenvE -> bool*)
+(*val type_ds : tenvC -> tenvE -> list dec -> tenvC -> tenvE -> bool*)
 
 (* Check that the operator can have type (t1 -> t2 -> t3) *)
 (*val type_op : op -> t -> t -> t -> bool*)
@@ -1138,7 +1137,7 @@ val _ = Define `
 
 (* Check that the free type variables are in the given list.  If dbok is true,
  * the deBuijn type variables are permitted.  Otherwise, they are not. *)
-(*val check_freevars : bool -> tvarN list -> t -> bool*)
+(*val check_freevars : bool -> list tvarN -> t -> bool*)
  val check_freevars_defn = Hol_defn "check_freevars" `
 
 (check_freevars dbok tvs (Tvar tv) =
@@ -1162,7 +1161,7 @@ val _ = Defn.save_defn check_freevars_defn;
  * constructors or types, and that the free type variables of each constructor
  * argument type are included in the type's type parameters. *)
 (*val check_ctor_tenv :
-  tenvC -> (tvarN list * typeN * (conN * t list) list) list -> bool*)
+  tenvC -> list (list tvarN * typeN * list (conN * list t)) -> bool*)
 val _ = Define `
  (check_ctor_tenv tenvC tds =
   check_dup_ctors tds tenvC /\
@@ -1180,7 +1179,7 @@ val _ = Define `
     tds)`;
 
 
-(*val build_ctor_tenv : (tvarN list * typeN * (conN * t list) list) list -> tenvC*)
+(*val build_ctor_tenv : list (list tvarN * typeN * list (conN * list t)) -> tenvC*)
 val _ = Define `
  (build_ctor_tenv tds =
   FLAT
@@ -1191,7 +1190,7 @@ val _ = Define `
 
 
 (* Simultaneous substitution of types for type variables in a type *)
-(*val type_subst : (tvarN,t) env -> t -> t*)
+(*val type_subst : env tvarN t -> t -> t*)
  val type_subst_defn = Hol_defn "type_subst" `
 
 (type_subst s (Tvar tv) =
@@ -1215,7 +1214,7 @@ val _ = Define `
 val _ = Defn.save_defn type_subst_defn;
 
 (* skip the lowest given indices and replace the next (LENGTH ts) with the given types and reduce all the higher ones *)
-(*val deBruijn_subst : num -> t list -> t -> t*)
+(*val deBruijn_subst : num -> list t -> t -> t*)
  val deBruijn_subst_defn = Hol_defn "deBruijn_subst" `
 
 (deBruijn_subst skip ts (Tvar tv) = Tvar tv)
@@ -1240,7 +1239,7 @@ val _ = Defn.save_defn type_subst_defn;
 
 val _ = Defn.save_defn deBruijn_subst_defn;
 
-(*val bind_var_list : num -> (varN * t) list -> tenvE -> tenvE*)
+(*val bind_var_list : num -> list (varN * t) -> tenvE -> tenvE*)
  val bind_var_list_defn = Hol_defn "bind_var_list" `
  
 (bind_var_list levels [] tenv = tenv)
@@ -1483,7 +1482,7 @@ type_ds cenv tenv (d::ds) (merge cenv' cenv'') tenv'')`;
 (* An evaluation context has the second type when its hole is filled with a
  * value of the first type. *)
 (*val type_ctxt : tenvC -> tenvE -> ctxt_frame -> t -> t -> bool*)
-(*val type_ctxts : tenvC -> ctxt list -> t -> t -> bool*)
+(*val type_ctxts : tenvC -> list ctxt -> t -> t -> bool*)
 (*val type_state : tenvC -> state -> t -> bool*)
 
 val _ = Hol_reln `  
@@ -1676,9 +1675,9 @@ type_d_state tenvC (envC, env, ds, SOME (p, (envC,env',e,c))) tenvC' tenv'')`;
 
 (* ------ Auxiliary relations for proving big/small step equivalence ------ *)
 
-(*val evaluate_ctxt : envC -> envE -> ctxt_frame -> v -> v result -> bool*)
-(*val evaluate_ctxts : envC -> ctxt list -> v -> v result -> bool*)
-(*val evaluate_state : state -> v result -> bool*)
+(*val evaluate_ctxt : envC -> envE -> ctxt_frame -> v -> result v -> bool*)
+(*val evaluate_ctxts : envC -> list ctxt -> v -> result v -> bool*)
+(*val evaluate_state : state -> result v -> bool*)
 
 val _ = Hol_reln `
 
