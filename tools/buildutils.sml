@@ -585,5 +585,24 @@ handle OS.SysErr(s, erropt) =>
             (case erropt of SOME s' => OS.errorMsg s' | _ => ""))
      | BuildExit => ()
 
+fun write_theory_graph () = let
+  val dotexec = "/usr/bin/dot"
+in
+  if not (FileSys.access (dotexec, [FileSys.A_EXEC])) then
+    (* of course, this will always be the case on Windows *)
+    warn ("*** Can't see dot executable at "^dotexec^"; not generating theory-graph\n")
+  else let
+      val _ = print "Generating theory-graph and HTML theory signatures; this may take a while\n"
+      val _ = print "  (Use build's -nograph option to skip this step.)\n"
+      val pfp = Systeml.protect o fullPath
+      val result =
+          OS.Process.system(pfp [HOLDIR, "bin", "hol"] ^ " < " ^
+                            pfp [HOLDIR, "help", "src-sml", "DOT"])
+    in
+      if OS.Process.isSuccess result then ()
+      else warn "*** Theory graph construction failed.\n"
+    end
+end
+
 
 end (* struct *)

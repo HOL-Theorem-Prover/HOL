@@ -302,6 +302,7 @@ in
   finish_logging true;
   make_buildstamp();
   build_help();
+  if build_theory_graph then write_theory_graph() else ();
   print "\nHol built successfully.\n"
 end
 

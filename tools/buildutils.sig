@@ -18,10 +18,6 @@ sig
 
   val cline_selftest : string list -> (int * string list)
 
-  val read_earlier_options : (TextIO.instream -> string option) ->
-                             string list
-  val write_options : string list -> unit
-
   datatype buildtype =
            Normal of {kernelspec : string, seqname : string,
                       build_theory_graph : bool, rest : string list}
@@ -68,6 +64,8 @@ sig
            i is the user's specified selftest level
            dir is the directory to make
            j is the selftest level as given in the build sequence for dir *)
+
+  val write_theory_graph : unit -> unit
 
 
 
