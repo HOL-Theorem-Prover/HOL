@@ -39,34 +39,35 @@ val DYNLIB = Systeml.DYNLIB
 fun SYSTEML clist = Process.isSuccess (Systeml.systeml clist)
 
 
-val help_mesg = let
-  val symlink_mesg =
-      if OS = "winNT" then "Symbolic linking is necessarily OFF.\n"
-      else "Symbolic linking is ON by default.\n"
-in
-  "Usage: build\n\
-  \   or: build -symlink\n\
-  \   or: build -small\n\
-  \   or: build -dir <fullpath>\n\
-  \   or: build -dir <fullpath> -symlink\n\
-  \   or: build -clean\n\
-  \   or: build -cleanAll\n\
-  \   or: build symlink\n\
-  \   or: build small\n\
-  \   or: build clean\n\
-  \   or: build cleanAll\n\
-  \   or: build help.\n" ^ symlink_mesg ^ "\n" ^
-  "Add -expk to build an experimental kernel.\n\
-  \Add -otknl to build the OpenTheory proof logging kernel.\n\
-  \Add -stdknl to force the standard kernel.\n\
-  \Add -selftest to do self-tests, where defined.\n\
-  \       Optionally follow -selftest with a number to indicate level\n\
-  \       of testing, the higher the number the more testing\n\
-  \       will be done.\n\
-  \Add -seq <fname> to use fname as build-sequence\n\
-  \Add -fullbuild to force full, default build sequence\n\n\
-  \Use -h, or -? or -help or --help to see this message.\n"
-end
+val help_mesg =
+    (* 80 characters ---------------------------------------------------------------| *)
+    "Usage:\n\
+    \  build [-stdknl|-expk|..] [-nograph|..] [-seq FNAME|-fullbuild] [-selftest N]\n\n\
+    \    builds the system\n\n\
+    \OR\n\n\
+    \  build [clean|cleanAll]\n\n\
+    \    \"cleans\" the system, removing built object files.\n\
+    \    The \"cleanAll\" variant removes pre-calculated dependency information.\n\n\
+    \OR\n\n\
+    \  build help\n\n\
+    \    builds the help system only\n\n\
+    \OR\n\n\
+    \  build [-h|--help|-help|-?]\n\n\
+    \    shows this message\n\n\
+    \Options to the first version of the command include\n\
+    \  -dir DIR    : builds just the directory DIR instead of a provided sequence\n\
+    \  -expk       : builds the \"experimental\" kernel\n\
+    \  -fullbuild  : builds with the default \"full\" build-sequence\n\
+    \  -graph      : requires the building of the help system's theory-graph\n\
+    \  -nograph    : omits the building of the help system's theory-graph\n\
+    \  -otknl      : builds the OpenTheory or \"logging\" kernel\n\
+    \  -selftest N : builds include regression test level N\n\
+    \  -seq FNAME  : builds using build-sequence file FNAME\n\
+    \  -small      : moves object files to SIGOBJ rather than copying or linking\n\
+    \  -stdknl     : builds the \"standard\" kernel\n\
+    \  -symlink    : no useful effect (retained for backwards compatibility)\n\n\
+    \Options clean, cleanAll can be given with leading hyphens.\n\
+    \Options -small and -symlink can be given without their leading hyphens.\n\n"
 
 fun exit_with_help() =
     (print help_mesg ; Process.exit Process.success)
