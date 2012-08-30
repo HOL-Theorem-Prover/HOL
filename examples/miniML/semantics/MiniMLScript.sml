@@ -184,16 +184,16 @@ val _ = Hol_datatype `
   | Conv of conN => v list
   (* Function closures
      The environment is used for the free variables in the function *)
-  | Closure of( varN, v) env => varN => exp
+  | Closure of (varN, v) env => varN => exp
   (* Function closure for recursive functions
    * See Closure and Letrec above
    * The last variable name indicates which function from the mutually
    * recursive bundle this closure value represents *)
-  | Recclosure of( varN, v) env => (varN # varN # exp) list => varN`;
+  | Recclosure of (varN, v) env => (varN # varN # exp) list => varN`;
 
 
 (* Environments *)
-val _ = type_abbrev( "envE" , ``:( varN, v) env``);
+val _ = type_abbrev( "envE" , ``: (varN, v) env``);
 
 (* Declarations *)
 val _ = Hol_datatype `
@@ -213,7 +213,7 @@ val _ = type_abbrev( "decs" , ``: dec list``);
 
 (* Maps each constructor to its arity and the set of all constructors of that
  * type *)
-val _ = type_abbrev( "envC" , ``:( conN, (num # conN set)) env``);
+val _ = type_abbrev( "envC" , ``: (conN, (num # conN set)) env``);
 
 (* Evaluation contexts
  * The hole is denoted by the unit type
@@ -1048,7 +1048,7 @@ evaluate_decs cenv env (Dtype tds :: ds) (Rerr Rtype_error))`;
 
 (* constructor type environments: each constructor has a type
  * forall tyvars. t list -> (tyvars) typeN *)
-val _ = type_abbrev( "tenvC" , ``:( conN, ( tvarN list # t list # typeN)) env``);
+val _ = type_abbrev( "tenvC" , ``: (conN, ( tvarN list # t list # typeN)) env``);
 
 (* Type environments *)
 val _ = Hol_datatype `
