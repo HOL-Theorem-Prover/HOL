@@ -39,35 +39,11 @@ val DYNLIB = Systeml.DYNLIB
 fun SYSTEML clist = Process.isSuccess (Systeml.systeml clist)
 
 
-val help_mesg =
-    (* 80 characters ---------------------------------------------------------------| *)
-    "Usage:\n\
-    \  build [-stdknl|-expk|..] [-nograph|..] [-seq FNAME|-fullbuild] [-selftest N]\n\n\
-    \    builds the system\n\n\
-    \OR\n\n\
-    \  build [clean|cleanAll]\n\n\
-    \    \"cleans\" the system, removing built object files.\n\
-    \    The \"cleanAll\" variant removes pre-calculated dependency information.\n\n\
-    \OR\n\n\
-    \  build help\n\n\
-    \    builds the help system only\n\n\
-    \OR\n\n\
-    \  build [-h|--help|-help|-?]\n\n\
-    \    shows this message\n\n\
-    \Options to the first version of the command include\n\
-    \  -dir DIR    : builds just the directory DIR instead of a provided sequence\n\
-    \  -expk       : builds the \"experimental\" kernel\n\
-    \  -fullbuild  : builds with the default \"full\" build-sequence\n\
-    \  -graph      : requires the building of the help system's theory-graph\n\
-    \  -nograph    : omits the building of the help system's theory-graph\n\
-    \  -otknl      : builds the OpenTheory or \"logging\" kernel\n\
-    \  -selftest N : builds include regression test level N\n\
-    \  -seq FNAME  : builds using build-sequence file FNAME\n\
-    \  -small      : moves object files to SIGOBJ rather than copying or linking\n\
-    \  -stdknl     : builds the \"standard\" kernel\n\
-    \  -symlink    : no useful effect (retained for backwards compatibility)\n\n\
-    \Options clean, cleanAll can be given with leading hyphens.\n\
-    \Options -small and -symlink can be given without their leading hyphens.\n\n"
+val help_mesg = let
+  val istrm = TextIO.openIn (fullPath [HOLDIR, "tools", "buildhelp.txt"])
+in
+  TextIO.inputAll istrm before TextIO.closeIn istrm
+end handle IO.Io _ => "\n\n<Build help file missing in action>\n\n"
 
 fun exit_with_help() =
     (print help_mesg ; Process.exit Process.success)

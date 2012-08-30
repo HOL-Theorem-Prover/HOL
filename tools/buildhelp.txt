@@ -1,0 +1,35 @@
+Usage:
+  build [-stdknl|-expk|..] [-nograph|..] [-seq FNAME|-fullbuild] [-selftest N]
+    builds the system
+
+OR
+
+  build [clean|cleanAll]
+    "cleans" the system, removing built object files.
+    The "cleanAll" variant removes pre-calculated dependency information.
+
+OR
+
+  build help
+    builds the help system only
+
+OR
+
+  build [-h|--help|-help|-?]
+    shows this message
+
+Options to the first version of the command include
+  -dir DIR    : builds just the directory DIR instead of a provided sequence
+  -expk       : builds the "experimental" kernel
+  -fullbuild  : builds with the default "full" build-sequence
+  -graph      : requires the building of the help system's theory-graph
+  -nograph    : omits the building of the help system's theory-graph
+  -otknl      : builds the OpenTheory or "logging" kernel
+  -selftest N : builds include regression test level N
+  -seq FNAME  : builds using build-sequence file FNAME
+  -small      : moves object files to SIGOBJ rather than copying or linking
+  -stdknl     : builds the "standard" kernel
+  -symlink    : no useful effect (retained for backwards compatibility)
+
+Commands clean and cleanAll can be given with leading hyphens.
+Options -small and -symlink can be given without their leading hyphens.
