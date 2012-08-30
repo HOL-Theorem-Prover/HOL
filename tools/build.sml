@@ -33,10 +33,11 @@ val DYNLIB = Systeml.DYNLIB
 
 val dfltbuildseq = fullPath [HOLDIR, "tools", "build-sequence"]
 
-val {kernelspec,seqname = bseq_fname,rest = cmdline} =
+val {kernelspec,seqname = bseq_fname,rest = cmdline,build_theory_graph} =
     case get_cline {default_seq = dfltbuildseq} of
       Normal x => x
-    | Clean s => {kernelspec = "", seqname = dfltbuildseq, rest = [s]}
+    | Clean s => {kernelspec = "", seqname = dfltbuildseq, rest = [s],
+                  build_theory_graph = false}
 
 (* do self-tests? and to what level *)
 val (do_selftests, cmdline) = cline_selftest cmdline

@@ -25,6 +25,7 @@ fun die s =
       Process.exit Process.failure
     end
 fun warn s = let open TextIO in output(stdErr, s ^ "\n"); flushOut stdErr end;
+fun I x = x
 
 (* values from the Systeml structure, which is created at HOL configuration
    time *)
@@ -242,9 +243,16 @@ in
               end
 end
 
+fun orlist slist =
+    case slist of
+      [] => ""
+    | [x] => x
+    | [x,y] => x ^ ", or " ^ y
+    | x::xs => x ^ ", " ^ orlist xs
+
 
 datatype buildtype =
-         Normal of {kernelspec : string, seqname : string, rest : string list}
+         Normal of {kernelspec : string, seqname : string, build_theory_graph : bool, rest : string list}
        | Clean of string
 exception QuickExit of buildtype
 fun get_cline {default_seq} = let
@@ -252,6 +260,27 @@ fun get_cline {default_seq} = let
   (* handle -fullbuild vs -seq fname, and -expk vs -otknl vs -stdknl *)
   val oldopts = read_earlier_options reader
   val newopts = CommandLine.arguments()
+  fun unary_toggle optname dflt f toggles opts =
+      case inter toggles opts of
+        [x] => (f x, delete x opts)
+      | result as (x::y::_) =>
+        (warn ("*** Specifying multiple "^optname^" options; using "^x);
+         (f x, delete x opts))
+      | [] => let
+          val optvalue =
+              case inter toggles oldopts of
+                [] => dflt
+              | [x] =>
+                (warn ("*** Using "^optname^" option "^x^
+                       " from earlier build command;\n\
+                       \    use " ^ orlist toggles ^ " to override");
+                 f x)
+              | x::y::_ =>
+                (warn ("Cached build options specify multiple "^optname^
+                       " options; using "^x); f x)
+        in
+          (optvalue, opts)
+        end
   val _ =
       if mem "cleanAll" newopts orelse mem "-cleanAll" newopts then
         raise QuickExit (Clean "cleanAll")
@@ -279,27 +308,19 @@ fun get_cline {default_seq} = let
         end
       | (SOME f, new') => (f, new')
   val (knlspec, newopts) =
-      case inter ["-expk", "-otknl", "-stdknl"] newopts of
-        [x] => (x, delete x newopts)
-      | (result as (x::y::_)) =>
-        (warn ("Specifying multiple kernel options; using "^x);
-         (x, setdiff newopts result))
-      | [] => let
-        in
-          case inter ["-expk", "-otknl", "-stdknl"] oldopts of
-            [] => ("-stdknl", newopts)
-          | [x] => (warn ("*** Using kernel option "^x^
-                          " from earlier build command; \n\
-                          \    use -expk, -otknl, or -stdknl to override");
-                    (x, newopts))
-          | x::y::_ =>
-            (warn ("Cached build options specify multiple kernel options; \
-                   \using "^x); (x,newopts))
-        end
-  val _ = if seqspec = default_seq then write_options [knlspec]
-          else write_options [knlspec, "-seq", seqspec]
+      unary_toggle "kernel" "-stdknl" I ["-expk", "-otknl", "-stdknl"] newopts
+  val (buildgraph, newopts) =
+      unary_toggle "theory-graph" true (fn x => x = "-graph")
+                   ["-graph", "-nograph"] newopts
+  val bgoption = if buildgraph then [] else ["-nograph"]
+  val _ =
+      if seqspec = default_seq then
+        write_options (knlspec::bgoption)
+      else
+        write_options (knlspec::"-seq"::seqspec::bgoption)
 in
-  Normal {kernelspec = knlspec, seqname = seqspec, rest = newopts}
+  Normal {kernelspec = knlspec, seqname = seqspec, rest = newopts,
+          build_theory_graph = buildgraph}
 end handle QuickExit bt => bt
 
 (* ----------------------------------------------------------------------

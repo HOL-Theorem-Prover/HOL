@@ -23,7 +23,8 @@ sig
   val write_options : string list -> unit
 
   datatype buildtype =
-           Normal of {kernelspec : string, seqname : string, rest : string list}
+           Normal of {kernelspec : string, seqname : string,
+                      build_theory_graph : bool, rest : string list}
          | Clean of string
 
   val get_cline : {default_seq : string} -> buildtype

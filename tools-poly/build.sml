@@ -30,10 +30,11 @@ val dfltbuildseq = fullPath [HOLDIR, "tools", "build-sequence"]
     Analysing the command-line
    ---------------------------------------------------------------------- *)
 
-val {kernelspec,seqname = bseq_fname,rest = cmdline} =
+val {kernelspec,seqname = bseq_fname,rest = cmdline,build_theory_graph} =
     case get_cline {default_seq = dfltbuildseq} of
       Normal x => x
-    | Clean s => {kernelspec = "", seqname = dfltbuildseq, rest = [s]}
+    | Clean s => {kernelspec = "", seqname = dfltbuildseq, rest = [s],
+                  build_theory_graph = false}
 
 (* use the experimental kernel? Depends on the command-line and the compiler
    version... *)
