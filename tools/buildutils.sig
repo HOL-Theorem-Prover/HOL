@@ -11,21 +11,14 @@ sig
   val SIGOBJ : string
   val EXECUTABLE : string
   val SYSTEML : string list -> bool
+  val HOLMAKE : string
 
-  val read_buildsequence :
-      {kernelname : string} ->
-      string -> (string * int) list
+  val process_cline :
+      (string -> string) ->
+      {cmdline : string list, build_theory_graph : bool,
+       do_selftests : int, SRCDIRS : (string * int) list}
 
-  val cline_selftest : string list -> (int * string list)
-
-  datatype buildtype =
-           Normal of {kernelspec : string, seqname : string,
-                      build_theory_graph : bool, rest : string list}
-         | Clean of string
-
-  val get_cline : {default_seq : string} -> buildtype
-
-
+  val Poly_link : {exe:string,obj:string} -> unit
   val map_dir : (string * string -> unit) -> string -> unit
                 (* f gets dirname * filename *)
   val rem_file : string -> unit
@@ -42,10 +35,6 @@ sig
            (* if boolean is true, renames (/bin/mv) src to dest.  Otherwise
               does update_copy bincopy *)
 
-  val clean : string -> string -> string list
-  val cleanAll : string -> string -> string list
-  val clean_dirs : {HOLDIR:string, action : string -> string -> string list} ->
-                   string list -> unit
   val clean_sigobj : unit -> unit
 
   val check_against : string -> unit
@@ -58,6 +47,9 @@ sig
            dir is destination directory
            (d,f) is source file info (directory and file) *)
 
+  val build_help : bool -> unit
+    (* boolean says whether or not to build the theory graph *)
+
   val build_dir : (string -> unit) -> int -> (string * int) -> unit
       (* build_dir Holmake i (dir, j)
            Holmake calls Holmake in the provided directory argument;
@@ -65,8 +57,18 @@ sig
            dir is the directory to make
            j is the selftest level as given in the build sequence for dir *)
 
-  val write_theory_graph : unit -> unit
+  val make_buildstamp : unit -> unit
+  val setup_logfile : unit -> unit
+  val finish_logging : bool -> unit
 
-
+  val Holmake : (unit -> string list) -> (OS.Process.status -> string) ->
+                int -> string -> unit
+      (* [Holmake extras analysis selftest dir] invokes Holmake, using
+         function extras to generate extra commandline arguments, and
+         function analysis to generate extra diagnostics from the exit
+         code of the call to Holmake. The dir argument is also used
+         for feedback; the assumption is that the current directory is
+         already dir. The selftest parameter is the user's specification
+         of the selftest level. *)
 
 end

@@ -38,6 +38,7 @@ val DYNLIB = Systeml.DYNLIB
 
 fun SYSTEML clist = Process.isSuccess (Systeml.systeml clist)
 
+val dfltbuildseq = fullPath [HOLDIR, "tools", "build-sequence"]
 
 val help_mesg = let
   val istrm = TextIO.openIn (fullPath [HOLDIR, "tools", "buildhelp.txt"])
@@ -51,9 +52,9 @@ fun exit_with_help() =
 fun read_buildsequence {kernelname} bseq_fname = let
   val kernelpath = fullPath [HOLDIR, "src",
     case kernelname of
-        "stdknl" => "0"
-      | "expk" => "experimental-kernel"
-      | "otknl" => "logging-kernel"
+        "-stdknl" => "0"
+      | "-expk" => "experimental-kernel"
+      | "-otknl" => "logging-kernel"
       | _ => die ("Bad kernelname: "^kernelname)
     ]
   val readline = TextIO.inputLine
@@ -227,12 +228,14 @@ fun orlist slist =
     | [x,y] => x ^ ", or " ^ y
     | x::xs => x ^ ", " ^ orlist xs
 
-
-datatype buildtype =
-         Normal of {kernelspec : string, seqname : string, build_theory_graph : bool, rest : string list}
-       | Clean of string
-exception QuickExit of buildtype
-fun get_cline {default_seq} = let
+datatype cline_action =
+         Clean of string
+       | Normal of {kernelspec : string,
+                    seqname : string,
+                    rest : string list,
+                    build_theory_graph : bool}
+exception DoClean of string
+fun get_cline kmod = let
   val reader = TextIO.inputLine
   (* handle -fullbuild vs -seq fname, and -expk vs -otknl vs -stdknl *)
   val oldopts = read_earlier_options reader
@@ -260,24 +263,24 @@ fun get_cline {default_seq} = let
         end
   val _ =
       if mem "cleanAll" newopts orelse mem "-cleanAll" newopts then
-        raise QuickExit (Clean "cleanAll")
+        raise DoClean "cleanAll"
       else if mem "cleanDeps" newopts orelse mem "-cleanDeps" newopts then
-        raise QuickExit (Clean "cleanDeps")
+        raise DoClean "cleanDeps"
       else if mem "clean" newopts orelse mem "-clean" newopts then
-        raise QuickExit (Clean "clean")
+        raise DoClean "clean"
       else if mem "-h" newopts orelse mem "-?" newopts orelse
               mem "--help" newopts orelse mem "-help" newopts
       then
         exit_with_help()
       else ()
   val (seqspec, newopts) =
-      case delseq default_seq 0 newopts of
+      case delseq dfltbuildseq 0 newopts of
         (NONE, new') => let
         in
-          case delseq default_seq 0 oldopts of
-            (NONE, _) => (default_seq, new')
+          case delseq dfltbuildseq 0 oldopts of
+            (NONE, _) => (dfltbuildseq, new')
           | (SOME f, _) =>
-            if f = default_seq then (f, new')
+            if f = dfltbuildseq then (f, new')
             else (warn ("*** Using build-sequence file "^f^
                         " from earlier build command; \n\
                         \    use -fullbuild option to override");
@@ -286,19 +289,20 @@ fun get_cline {default_seq} = let
       | (SOME f, new') => (f, new')
   val (knlspec, newopts) =
       unary_toggle "kernel" "-stdknl" I ["-expk", "-otknl", "-stdknl"] newopts
+  val knlspec = kmod knlspec
   val (buildgraph, newopts) =
       unary_toggle "theory-graph" true (fn x => x = "-graph")
                    ["-graph", "-nograph"] newopts
   val bgoption = if buildgraph then [] else ["-nograph"]
   val _ =
-      if seqspec = default_seq then
+      if seqspec = dfltbuildseq then
         write_options (knlspec::bgoption)
       else
         write_options (knlspec::"-seq"::seqspec::bgoption)
 in
   Normal {kernelspec = knlspec, seqname = seqspec, rest = newopts,
           build_theory_graph = buildgraph}
-end handle QuickExit bt => bt
+end handle DoClean s => Clean s
 
 (* ----------------------------------------------------------------------
    Some useful file-system utility functions
@@ -468,6 +472,18 @@ end;
 
 val EXECUTABLE = Systeml.xable_string (fullPath [HOLDIR, "bin", "build"])
 
+fun full_clean (SRCDIRS:(string*int) list)  f =
+    clean_sigobj() before
+    (* clean both kernel directories, regardless of which was actually built,
+       the help src directory too, and all the src directories, including
+       those with ! annotations  *)
+    clean_dirs {HOLDIR=HOLDIR, action = f}
+               (fullPath [HOLDIR, "help", "src-sml"] ::
+                fullPath [HOLDIR, "src", "0"] ::
+                fullPath [HOLDIR, "src", "experimental-kernel"] ::
+                fullPath [HOLDIR, "src", "logging-kernel"] ::
+                map #1 SRCDIRS)
+
 fun check_against s = let
   open Time
   val cfgtime = FileSys.modTime (fullPath [HOLDIR, s])
@@ -603,6 +619,192 @@ in
       else warn "*** Theory graph construction failed.\n"
     end
 end
+
+fun Poly_link {exe, obj} =
+    (Systeml.systeml([Systeml.CC, "-o", exe, obj] @ Systeml.POLY_LDFLAGS);
+     OS.FileSys.remove obj)
+
+fun Poly_compilehelp() = let
+  open Systeml
+  fun link exe obj = Poly_link{exe=exe,obj=obj}
+in
+  system_ps (fullPath [HOLDIR, "tools", "mllex", "mllex.exe"] ^ " Lexer.lex");
+  system_ps (fullPath [HOLDIR, "tools", "mlyacc", "src", "mlyacc.exe"] ^ " Parser.grm");
+  system_ps (POLY ^ " < poly-makebase.ML");
+  link "makebase.exe" "makebase.o";
+  system_ps (POLY ^ " < poly-Doc2Html.ML");
+  link "Doc2Html.exe" "Doc2Html.o";
+  system_ps (POLY ^ " < poly-Doc2Txt.ML");
+  link "Doc2Txt.exe" "Doc2Txt.o";
+  system_ps (POLY ^ " < poly-Doc2Tex.ML");
+  link "Doc2Tex.exe" "Doc2Tex.o"
+end
+
+val HOLMAKE = fullPath [HOLDIR, "bin/Holmake"]
+val ML_SYSNAME = Systeml.ML_SYSNAME
+
+fun mosml_compilehelp () = ignore (SYSTEML [HOLMAKE, "all"])
+
+fun build_adoc_files () = let
+  val docdirs = let
+    val instr = TextIO.openIn(fullPath [HOLDIR, "tools",
+                                        "documentation-directories"])
+    val wholefile = TextIO.inputAll instr before TextIO.closeIn instr
+  in
+    map normPath (String.tokens Char.isSpace wholefile)
+  end handle _ => (print "Couldn't read documentation directories file\n";
+                   [])
+  val doc2txt = fullPath [HOLDIR, "help", "src-sml", "Doc2Txt.exe"]
+  fun make_adocs dir = let
+    val fulldir = fullPath [HOLDIR, dir]
+  in
+    if SYSTEML [doc2txt, fulldir, fulldir] then true
+    else
+      (print ("Generation of ASCII doc files failed in directory "^dir^"\n");
+       false)
+  end
+in
+  List.all make_adocs docdirs
+end
+
+fun build_help graph =
+ let val dir = OS.Path.concat(OS.Path.concat (HOLDIR,"help"),"src-sml")
+     val _ = OS.FileSys.chDir dir
+
+     (* builds the documentation tools called below *)
+     val _ = if ML_SYSNAME = "poly" then Poly_compilehelp()
+             else if ML_SYSNAME = "mosml" then mosml_compilehelp()
+             else raise Fail "Bogus ML_SYSNAME"
+
+     val doc2html = fullPath [dir,"Doc2Html.exe"]
+     val docpath  = fullPath [HOLDIR, "help", "Docfiles"]
+     val htmlpath = fullPath [docpath, "HTML"]
+     val _        = if (OS.FileSys.isDir htmlpath handle _ => false) then ()
+                    else (print ("Creating directory "^htmlpath^"\n");
+                          OS.FileSys.mkDir htmlpath)
+     val cmd1     = [doc2html, docpath, htmlpath]
+     val cmd2     = [fullPath [dir,"makebase.exe"]]
+     val _ = print "Generating ASCII versions of Docfiles...\n"
+     val _ = if build_adoc_files () then print "...ASCII Docfiles done\n"
+             else ()
+ in
+   print "Generating HTML versions of Docfiles...\n"
+ ;
+   if SYSTEML cmd1 then print "...HTML Docfiles done\n"
+   else die "Couldn't make html versions of Docfiles"
+ ;
+   if (print "Building Help DB\n"; SYSTEML cmd2) then ()
+   else die "Couldn't make help database"
+ ;
+   if graph then write_theory_graph()
+   else ()
+ end
+
+fun process_cline kmod =
+    case get_cline kmod of
+      Clean s => let
+        val action = case s of
+                       "-cleanAll" => cleanAll
+                     | "cleanAll" => cleanAll
+                     | "clean" => clean
+                     | "-clean" => clean
+                     | _ => die ("Clean action = "^s^"???")
+        val SRCDIRS =
+            read_buildsequence {kernelname = "-stdknl"} dfltbuildseq
+      in
+        (full_clean SRCDIRS action; Process.exit Process.success)
+      end
+    | Normal {kernelspec, seqname, rest, build_theory_graph} => let
+        val (do_selftests, rest) = cline_selftest rest
+        val SRCDIRS = read_buildsequence {kernelname = kernelspec} seqname
+      in
+        if mem "help" rest then
+          (build_help build_theory_graph;
+           Process.exit Process.success)
+        else
+          {cmdline=rest,build_theory_graph=build_theory_graph,
+           do_selftests = do_selftests, SRCDIRS = SRCDIRS}
+      end
+
+fun make_buildstamp () =
+ let open Path TextIO
+     val stamp_filename = concat(HOLDIR, concat("tools","build-stamp"))
+     val stamp_stream = openOut stamp_filename
+     val date_string = Date.toString (Date.fromTimeLocal (Time.now()))
+ in
+    output(stamp_stream, "built "^date_string);
+    closeOut stamp_stream
+end
+
+val logdir = Systeml.build_log_dir
+val logfilename = Systeml.build_log_file
+val hostname = if Systeml.isUnix then
+                 case Mosml.run "hostname" [] "" of
+                   Mosml.Success s => String.substring(s,0,size s - 1) ^ "-"
+                                      (* substring to drop \n in output *)
+                 | _ => ""
+               else "" (* what to do under windows? *)
+
+fun setup_logfile () = let
+  open OS.FileSys
+  fun ensure_dir () =
+      if access (logdir, []) then
+        isDir logdir
+      else (mkDir logdir; true)
+in
+  if ensure_dir() then
+    if access (logfilename, []) then
+      warn "Build log exists; new logging will concatenate onto this file"
+    else let
+        (* touch the file *)
+        val outs = TextIO.openOut logfilename
+      in
+        TextIO.closeOut outs
+      end
+  else warn "Couldn't make or use build-logs directory"
+end handle IO.Io _ => warn "Couldn't set up build-logs"
+
+fun finish_logging buildok = let
+in
+  if OS.FileSys.access(logfilename, []) then let
+      open Date
+      val timestamp = fmt "%Y-%m-%dT%H%M" (fromTimeLocal (Time.now()))
+      val newname0 = hostname^timestamp
+      val newname = (if buildok then "" else "bad-") ^ newname0
+    in
+      OS.FileSys.rename {old = logfilename, new = fullPath [logdir, newname]}
+    end
+  else ()
+end handle IO.Io _ => warn "Had problems making permanent record of build log"
+
+fun Holmake extra_args analyse_failstatus do_selftests dir = let
+  val hmstatus = Systeml.systeml ([HOLMAKE, "--qof"] @ extra_args())
+in
+  if OS.Process.isSuccess hmstatus then
+    if do_selftests > 0 andalso
+       OS.FileSys.access("selftest.exe", [OS.FileSys.A_EXEC])
+    then
+      (print "Performing self-test...\n";
+       if SYSTEML [dir ^ "/selftest.exe", Int.toString do_selftests]
+       then
+         print "Self-test was successful\n"
+       else
+         die ("Selftest failed in directory "^dir))
+    else
+      ()
+  else let
+      val info = analyse_failstatus hmstatus
+    in
+      die ("Build failed in directory "^dir^
+           (if info <> "" then " ("^info^")" else ""))
+    end
+end
+
+val () = OS.Process.atExit (fn () => finish_logging false)
+        (* this will do nothing if finish_logging happened normally first;
+           otherwise the log's bad version will be recorded *)
+
+
 
 
 end (* struct *)
