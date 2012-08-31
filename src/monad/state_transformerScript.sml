@@ -12,26 +12,23 @@ val Suff = Q_TAC SUFF_TAC
 val Know = Q_TAC KNOW_TAC
 val FUN_EQ_TAC = CONV_TAC (ONCE_DEPTH_CONV FUN_EQ_CONV)
 
+val DEF = Lib.with_flag (boolLib.def_suffix, "_DEF") TotalDefn.Define
+
 (* ------------------------------------------------------------------------- *)
 (* Definitions.                                                              *)
 (* ------------------------------------------------------------------------- *)
 
 val () = Parse.temp_type_abbrev ("M",``:'state -> 'a # 'state``)
 
-val UNIT_DEF = new_definition ("UNIT_DEF",
-  ``UNIT (x:'b) = \(s:'a). (x, s)``);
+val UNIT_DEF = DEF `UNIT (x:'b) = \(s:'a). (x, s)`;
 
-val BIND_DEF = new_definition ("BIND_DEF",
-  ``BIND (g: ('b, 'a) M) (f: 'b -> ('c, 'a) M) = UNCURRY f o g``);
+val BIND_DEF = DEF `BIND (g: ('b, 'a) M) (f: 'b -> ('c, 'a) M) = UNCURRY f o g`;
 
-val IGNORE_BIND_DEF = new_definition("IGNORE_BIND_DEF",
-  ``IGNORE_BIND f g = BIND f (\x. g)``);
+val IGNORE_BIND_DEF = DEF `IGNORE_BIND f g = BIND f (\x. g)`;
 
-val MMAP_DEF = new_definition ("MMAP_DEF",
-  ``MMAP (f: 'c -> 'b) (m: ('c, 'a) M) = BIND m (UNIT o f)``);
+val MMAP_DEF = DEF `MMAP (f: 'c -> 'b) (m: ('c, 'a) M) = BIND m (UNIT o f)`;
 
-val JOIN_DEF = new_definition ("JOIN_DEF",
-  ``JOIN (z: (('b, 'a) M, 'a) M) = BIND z I``);
+val JOIN_DEF = DEF `JOIN (z: (('b, 'a) M, 'a) M) = BIND z I`;
 
 val FOR_def = TotalDefn.tDefine "FOR"
  `(FOR : num # num # (num -> (unit, 'state) M) -> (unit, 'state) M) (i, j, a) =
@@ -40,6 +37,12 @@ val FOR_def = TotalDefn.tDefine "FOR"
      else
         BIND (a i) (\u. FOR (if i < j then i + 1 else i - 1, j, a))`
   (TotalDefn.WF_REL_TAC `measure (\(i, j, a). if i < j then j - i else i - j)`)
+
+val READ_def = TotalDefn.Define`
+  (READ : ('state -> 'a) -> ('a, 'state) M) f = \s. (f s, s)`;
+
+val WRITE_def = TotalDefn.Define`
+  (WRITE : ('state -> 'state) -> (unit, 'state) M) f = \s. ((), f s)`;
 
 (* ------------------------------------------------------------------------- *)
 (* Theorems.                                                                 *)
@@ -186,5 +189,7 @@ val FST_o_MMAP = store_thm
    ++ REWRITE_TAC [MMAP_DEF, BIND_DEF, UNCURRY, o_THM, UNIT_DEF]
    ++ BETA_TAC
    ++ REWRITE_TAC [FST]);
+
+(* ------------------------------------------------------------------------- *)
 
 val _ = export_theory ()
