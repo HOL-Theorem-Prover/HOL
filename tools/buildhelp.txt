@@ -10,7 +10,7 @@ OR
 
 OR
 
-  build help
+  build [-nograph|-graph] help
     builds the help system only
 
 OR
