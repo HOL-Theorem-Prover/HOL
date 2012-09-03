@@ -19,7 +19,6 @@ open Unicode
 (*
 quietdec := false;
 *)
-
 val holfoot_pretty_printer_block_indent = ref 3;
 
 fun unicode_choice snu su =
@@ -740,7 +739,8 @@ fun holfoot_a_prop_printer Gs backend sys (ppfns:term_pp_types.ppstream_funs) gr
       ublock INCONSISTENT 0 (
          add_string "(" >>
          sys (Top, Top, Top) (d - 1) (el 2 args) >>
-         add_string (" "^(unicode_choice "!=" UChar.neq)); add_break (1,0) >>
+         add_string (" "^(unicode_choice "!=" UChar.neq)) >>
+         add_break (1,!holfoot_pretty_printer_block_indent) >>
          sys (Top, Top, Top) (d - 1) (el 3 args) >>
          add_string ")"
       )
@@ -1376,6 +1376,5 @@ temp_remove_holfoot_pp ();t
 
 val _ = Feedback.set_trace "PPBackEnd use annotations" 0
 val _ = add_holfoot_pp_quiet();
-
 
 end

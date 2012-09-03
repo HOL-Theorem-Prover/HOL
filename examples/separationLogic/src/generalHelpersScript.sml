@@ -989,16 +989,6 @@ REPEAT STRIP_TAC THEN
 ));
 
 
-
-
-
-val LIST_NUM_STAR_def = Define `
-   (LIST_NUM_STAR 0 l = []) /\
-   (LIST_NUM_STAR (SUC n) l = l++(LIST_NUM_STAR n l))`
-
-val LIST_STAR_def = Define `
-   LIST_STAR l l' = ?n. l' = LIST_NUM_STAR n l`
-
 val LIST_NUM_STAR_def = Define `
    (LIST_NUM_STAR 0 l = []) /\
    (LIST_NUM_STAR (SUC n) l = l++(LIST_NUM_STAR n l))`

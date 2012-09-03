@@ -9117,7 +9117,7 @@ val holfoot_new_action_1 = store_thm ("holfoot_new_action_1",
                 (s' = ((FST s) |+ (v, n, var_res_write_permission),
                        (SND s) |+ (n, X))))``,
 SIMP_TAC list_ss [holfoot_new_action_def, LENGTH_EQ_NUM_compute, GSYM RIGHT_EXISTS_AND_THM,
-   GSYM LEFT_EXISTS_AND_THM, FUPDATE_LIST_THM, COUNT_LIST_compute,
+   GSYM LEFT_EXISTS_AND_THM, FUPDATE_LIST_THM, numLib.SUC_RULE COUNT_LIST_def,
    GSYM arithmeticTheory.ADD1, COND_RAND, COND_RATOR, LET_THM,
    var_res_exp_const_EVAL] THEN
 `!n:num m:num. ((n <= m) /\ (m < SUC n)) = (n = m)` by DECIDE_TAC THEN
@@ -9399,7 +9399,7 @@ REPEAT (GEN_TAC ORELSE CONJ_TAC) THENL [
       LET_THM, IN_ABS, COUNT_LIST_def, FUPDATE_LIST_THM,
       var_res_exp_var_def, FDOM_FUPDATE_LIST, FDOM_FUPDATE, IN_INSERT,
       FDOM_FEMPTY, UNION_EMPTY, FAPPLY_FUPDATE_THM, MAP_MAP_o,
-      combinTheory.o_DEF, LIST_TO_SET_MAP, COUNT_LIST___COUNT,
+      combinTheory.o_DEF, LIST_TO_SET_MAP, COUNT_LIST_COUNT,
       GSYM IMAGE_COMPOSE, var_res_exp_prop_def, COND_RAND, COND_RATOR,
       var_res_prop_stack_true_REWRITE, asl_emp_DISJOINT_FMAP_UNION, IN_SING],
 
