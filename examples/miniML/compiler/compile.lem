@@ -1,5 +1,5 @@
 (* TODO: move to lem *)
-val fold_left2 : forall 'a 'b 'c. ('a -> 'b -> 'c -> 'a) -> 'a -> 'b list -> 'c list -> 'a
+val fold_left2 : forall 'a 'b 'c. ('a -> 'b -> 'c -> 'a) -> 'a -> list 'b -> list 'c -> 'a
 let inline {hol} fold_left2 f a lb lc =
   (* TODO: LEM internal error:
   List.fold_left (fun a -> Hol.UNCURRY (f a)) a (List.combine lb lc)
@@ -9,7 +9,7 @@ let inline {hol} fold_left2 f a lb lc =
   *)
   Hol.FOLDL2 f a lb lc
 (* TODO: lem library should use this for List.for_all2 *)
-val every2 : forall 'a 'b. ('a -> 'b -> bool) -> 'a list -> 'b list -> bool
+val every2 : forall 'a 'b. ('a -> 'b -> bool) -> list 'a -> list 'b -> bool
 let inline {hol} every2 = Hol.EVERY2
 val least : (num -> bool) -> num
 let inline {hol} least = Hol.LEAST
@@ -17,15 +17,15 @@ val num_to_string : num -> string
 let inline {hol} num_to_string = Hol.num_to_hex_string
 val int_to_num : int -> num
 let inline {hol} int_to_num = Hol.Num
-val alist_to_fmap : forall 'a 'b. ('a * 'b) list -> ('a,'b) Pmap.map
+val alist_to_fmap : forall 'a 'b. list ('a * 'b) -> Pmap.map 'a 'b
 let inline {hol} alist_to_fmap = Hol.alist_to_fmap
 val optrel : forall 'a 'b 'c 'd. ('a -> 'b -> bool) -> 'c -> 'd -> bool
 let inline {hol} optrel = Hol.OPTREL
-val flookup : forall 'a 'b 'c. ('a,'b) Pmap.map -> 'a -> 'c
+val flookup : forall 'a 'b 'c. Pmap.map 'a 'b -> 'a -> 'c
 let inline {hol} flookup = Hol.FLOOKUP
-val domsub : forall 'a 'b. ('a,'b) Pmap.map -> 'a -> ('a,'b) Pmap.map
+val domsub : forall 'a 'b. Pmap.map 'a 'b -> 'a -> Pmap.map 'a 'b
 let inline {hol} domsub = Hol.DOMSUB
-val genlist : forall 'a. (num -> 'a) -> num -> 'a list
+val genlist : forall 'a. (num -> 'a) -> num -> list 'a
 let inline {hol} genlist = Hol.GENLIST
 
 (* TODO: elsewhere? *)
@@ -49,7 +49,7 @@ map_result f (Rerr e) = Rerr e
 
 type ov =
   | OLit of lit
-  | OConv of conN * ov list
+  | OConv of conN * list ov
   | OFn
 
 let rec
@@ -75,29 +75,29 @@ type Cprim2 = CAdd | CSub | CMul | CDiv | CMod | CLt | CEq
 type Cpat =
   | CPvar of string
   | CPlit of lit
-  | CPcon of num * Cpat list
+  | CPcon of num * list Cpat
 
-type ('a,'b) (+) = INL of 'a | INR of 'b
+type (+) 'a 'b = INL of 'a | INR of 'b
 
 type Cexp =
-  | CDecl of string list
+  | CDecl of list string
   | CRaise of error
   | CVar of string
   | CLit of lit
-  | CCon of num * Cexp list
+  | CCon of num * list Cexp
   | CTagEq of Cexp * num
   | CProj of Cexp * num
-  | CLet of string list * Cexp list * Cexp
-  | CLetfun of bool * string list * (string list * ((Cexp,num) (+))) list * Cexp
-  | CFun of string list * ((Cexp,num) (+))
-  | CCall of Cexp * Cexp list
+  | CLet of list string * list Cexp * Cexp
+  | CLetfun of bool * list string * list (list string * ((+) Cexp num)) * Cexp
+  | CFun of list string * ((+) Cexp num)
+  | CCall of Cexp * list Cexp
   | CPrim2 of Cprim2 * Cexp * Cexp
   | CIf of Cexp * Cexp * Cexp
 
 type Cv =
   | CLitv of lit
-  | CConv of num * Cv list
-  | CRecClos of (string,Cv) Pmap.map * string list * (string list * ((Cexp,num) (+))) list * string
+  | CConv of num * list Cv
+  | CRecClos of Pmap.map string Cv * list string * list (list string * ((+) Cexp num)) * string
 
 (* Semantics *)
 
@@ -534,7 +534,7 @@ Cvs_to_bvs (v::vs) = Cv_to_bv v :: Cvs_to_bvs vs
 
 type nt =
   | NTvar of num
-  | NTapp of nt list * typeN
+  | NTapp of list nt * typeN
   | NTfn
   | NTnum
   | NTbool
@@ -561,22 +561,22 @@ open Bytecode
 
 type call_context = TCNonTail | TCTail of num * num
 
-type ctenv = (string,ctbind) Pmap.map
+type ctenv = Pmap.map string ctbind
 
 type compiler_state =
   <| env: ctenv
    ; sz: num
-   ; out: bc_inst list (* reversed code *)
+   ; out: list bc_inst (* reversed code *)
    ; next_label: num
    ; tail: call_context
    (* not modified on return: *)
-   ; decl: (ctenv * num) option
+   ; decl: option (ctenv * num)
    |>
 
 type repl_state =
-  <| cmap : (conN, num) Pmap.map
-   ; cpam : (typeN, (num, conN * nt list) Pmap.map) Pmap.map
-   ; code : bc_inst list
+  <| cmap : Pmap.map conN num
+   ; cpam : Pmap.map typeN (Pmap.map num (conN * list nt))
+   ; code : list bc_inst
    ; renv : ctenv
    ; rsz  : num
    ; next_addr : num

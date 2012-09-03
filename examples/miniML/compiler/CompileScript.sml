@@ -9,17 +9,17 @@ val _ = new_theory "Compile"
 open BytecodeTheory MiniMLTheory
 
 (* TODO: move to lem *)
-(*val fold_left2 : forall 'a 'b 'c. ('a -> 'b -> 'c -> 'a) -> 'a -> 'b list -> 'c list -> 'a*)
+(*val fold_left2 : forall 'a 'b 'c. ('a -> 'b -> 'c -> 'a) -> 'a -> list 'b -> list 'c -> 'a*)
 (* TODO: lem library should use this for List.for_all2 *)
-(*val every2 : forall 'a 'b. ('a -> 'b -> bool) -> 'a list -> 'b list -> bool*)
+(*val every2 : forall 'a 'b. ('a -> 'b -> bool) -> list 'a -> list 'b -> bool*)
 (*val least : (num -> bool) -> num*)
 (*val num_to_string : num -> string*)
 (*val int_to_num : int -> num*)
-(*val alist_to_fmap : forall 'a 'b. ('a * 'b) list -> ('a,'b) Pmap.map*)
+(*val alist_to_fmap : forall 'a 'b. list ('a * 'b) -> Pmap.map 'a 'b*)
 (*val optrel : forall 'a 'b 'c 'd. ('a -> 'b -> bool) -> 'c -> 'd -> bool*)
-(*val flookup : forall 'a 'b 'c. ('a,'b) Pmap.map -> 'a -> 'c*)
-(*val domsub : forall 'a 'b. ('a,'b) Pmap.map -> 'a -> ('a,'b) Pmap.map*)
-(*val genlist : forall 'a. (num -> 'a) -> num -> 'a list*)
+(*val flookup : forall 'a 'b 'c. Pmap.map 'a 'b -> 'a -> 'c*)
+(*val domsub : forall 'a 'b. Pmap.map 'a 'b -> 'a -> Pmap.map 'a 'b*)
+(*val genlist : forall 'a. (num -> 'a) -> num -> list 'a*)
 
 (* TODO: elsewhere? *)
  val find_index_defn = Hol_defn "find_index" `
@@ -569,7 +569,7 @@ val _ = Hol_datatype `
  call_context = TCNonTail | TCTail of num => num`;
 
 
-val _ = type_abbrev( "ctenv" , ``: (string,ctbind) fmap``);
+val _ = type_abbrev( "ctenv" , ``: (string, ctbind) fmap``);
 
 val _ = Hol_datatype `
  compiler_state =
@@ -586,7 +586,7 @@ val _ = Hol_datatype `
 val _ = Hol_datatype `
  repl_state =
   <| cmap : (conN, num) fmap
-   ; cpam : (typeN, (num, conN # nt list) fmap) fmap
+   ; cpam : (typeN, ( (num, (conN # nt list))fmap)) fmap
    ; code : bc_inst list
    ; renv : ctenv
    ; rsz  : num

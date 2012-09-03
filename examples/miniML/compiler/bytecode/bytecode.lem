@@ -39,7 +39,7 @@ type
 (* move to lem *)
 val int_of_num : num -> int
 let inline {hol} int_of_num = Hol.int_of_num
-val drop : forall 'a. num -> 'a list -> 'a list
+val drop : forall 'a. num -> list 'a -> list 'a
 let inline {hol} drop = Hol.DROP
 
 let rec
@@ -52,18 +52,18 @@ bool_to_int false = int_of_num 0
 type
   bc_value =
     Number of int                  (* integer *)
-  | Block of num * bc_value list   (* cons block: tag and payload *)
+  | Block of num * list bc_value   (* cons block: tag and payload *)
   | CodePtr of num                 (* code pointer *)
   | RefPtr of num                  (* pointer to ref cell *)
 
 type
   bc_state =
    <| (* main state components *)
-      stack : bc_value list;
-      code : bc_inst list ;
-      pc : num ;
-      refs : (num, bc_value) Pmap.map ;
-      exstack : (num * num) list ;
+      stack : list bc_value;
+      code : list bc_inst;
+      pc : num;
+      refs : Pmap.map num bc_value;
+      exstack : list (num * num);
       (* artificial state components *)
       inst_length : bc_inst -> num
    |>
