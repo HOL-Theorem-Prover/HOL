@@ -3216,6 +3216,41 @@ val exp_to_Cexp_thm1 = store_thm("exp_to_Cexp_thm1",
   simp_tac std_ss [Once evaluate_match_with_cases] >>
   fsrw_tac[][])
 
+val no_bodies_def = tDefine "no_bodies"`
+  (no_bodies (CDecl _) = T) ∧
+  (no_bodies (CRaise _) = T) ∧
+  (no_bodies (CVar _) = T) ∧
+  (no_bodies (CLit _) = T) ∧
+  (no_bodies (CCon _ es) = EVERY no_bodies es) ∧
+  (no_bodies (CTagEq e _) = no_bodies e) ∧
+  (no_bodies (CProj e _) = no_bodies e) ∧
+  (no_bodies (CLet _ es e) = EVERY no_bodies es ∧ no_bodies e) ∧
+  (no_bodies (CLetfun _ _ defs e) = EVERY (ISR o SND) defs ∧ no_bodies e) ∧
+  (no_bodies (CFun _ cb) = ISR cb) ∧
+  (no_bodies (CCall e es) = no_bodies e ∧ EVERY no_bodies es) ∧
+  (no_bodies (CPrim2 _ e1 e2) = no_bodies e1 ∧ no_bodies e2) ∧
+  (no_bodies (CIf e1 e2 e3) = no_bodies e1 ∧ no_bodies e2 ∧ no_bodies e3)`(
+  WF_REL_TAC `measure Cexp_size` >>
+  srw_tac[ARITH_ss][Cexp4_size_thm] >>
+  Q.ISPEC_THEN `Cexp_size` imp_res_tac SUM_MAP_MEM_bound >>
+  fsrw_tac[ARITH_ss][])
+val _ = export_rewrites["no_bodies_def"]
+
+val label_closures_no_bodies = store_thm("label_closures_no_bodies",
+  ``(∀s Ce. no_bodies (SND (label_closures s Ce))) ∧
+    (∀s Ces. EVERY no_bodies (SND (label_closures_list s Ces))) ∧
+    (∀s ns ls ds defs. EVERY (ISR o SND) ds ⇒ EVERY (ISR o SND) (SND (labelise s ns ls ds defs)))``,
+  ho_match_mp_tac label_closures_ind >> rw[] >>
+  TRY (rw[label_closures_def] >> fsrw_tac[ETA_ss][] >> rw[] >> NO_TAC)
+  >- (
+    rw[Once label_closures_def] >>
+    Cases_on `cb` >> fs[label_closures_def] >> rw[] >> fs[] >>
+    Cases_on `label_closures s x` >> fs[LET_THM] >>
+    rw[] >> fs[] )
+  >- (
+    rw[label_closures_def] >>
+    rw[rich_listTheory.EVERY_REVERSE]))
+
 val labels_only_def = Define`
   labels_only ls = ∀x. MEM x ls ⇒ case x of
     | Jump (Addr _) => F
