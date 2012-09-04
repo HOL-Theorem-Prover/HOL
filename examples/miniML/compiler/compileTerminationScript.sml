@@ -79,6 +79,32 @@ val (free_vars_def, free_vars_ind) = register "free_vars" (
   Cases_on `CARD (FDOM c)` >> fs[]))
 val _ = export_rewrites["free_vars_def"];
 
+val (free_labs_def, free_labs_ind) = register "free_labs" (
+  tprove_no_defn ((free_labs_def,free_labs_ind),
+  WF_REL_TAC `inv_image ($< LEX $<) (λx. case x of
+    | INL (c,e) => (CARD (FDOM c), Cexp_size e)
+    | INR (c,b) => (CARD (FDOM c), Cexp3_size b))` >>
+  srw_tac[ARITH_ss][Cexp1_size_thm,Cexp4_size_thm] >>
+  fsrw_tac[][FLOOKUP_DEF]>>
+  MAP_EVERY (fn q => Q.ISPEC_THEN q mp_tac SUM_MAP_MEM_bound)
+  [`Cexp_size`,`Cexp2_size`] >>
+  rw[] >> res_tac >> fs[Cexp_size_def] >> srw_tac[ARITH_ss][] >>
+  Cases_on `CARD (FDOM c)` >> fs[]))
+val _ = export_rewrites["free_labs_def"];
+
+val (free_bods_def, free_bods_ind) = register "free_bods" (
+  tprove_no_defn ((free_bods_def,free_bods_ind),
+  WF_REL_TAC `inv_image ($< LEX $<) (λx. case x of
+    | INL (c,e) => (CARD (FDOM c), Cexp_size e)
+    | INR (c,b) => (CARD (FDOM c), Cexp3_size b))` >>
+  srw_tac[ARITH_ss][Cexp1_size_thm,Cexp4_size_thm] >>
+  fsrw_tac[][FLOOKUP_DEF]>>
+  MAP_EVERY (fn q => Q.ISPEC_THEN q mp_tac SUM_MAP_MEM_bound)
+  [`Cexp_size`,`Cexp2_size`] >>
+  rw[] >> res_tac >> fs[Cexp_size_def] >> srw_tac[ARITH_ss][] >>
+  Cases_on `CARD (FDOM c)` >> fs[]))
+val _ = export_rewrites["free_bods_def"];
+
 val (no_closures_def, no_closures_ind) = register "no_closures" (
   tprove_no_defn ((no_closures_def, no_closures_ind),
   WF_REL_TAC `measure Cv_size` >>

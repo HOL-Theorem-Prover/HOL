@@ -174,6 +174,83 @@ cbod_fvs c (INR l) = match flookup c l with
   | Some e -> free_vars (domsub c l) e
   end
 
+let rec
+free_bods c (CDecl _) = {}
+and
+free_bods c (CRaise _) = {}
+and
+free_bods c (CVar _) = {}
+and
+free_bods c (CLit _) = {}
+and
+free_bods c (CCon _ es) =
+  List.fold_left (fun s e -> s union free_bods c e) {} es
+and
+free_bods c (CTagEq e _) = free_bods c e
+and
+free_bods c (CProj e _) = free_bods c e
+and
+free_bods c (CLet _ es e) =
+  List.fold_left (fun s e -> s union free_bods c e) (free_bods c e) es
+and
+free_bods c (CLetfun _ _ defs e) =
+  List.fold_left (fun s (vs,b) -> s union cbod_fbs c b) (free_bods c e) defs
+and
+free_bods c (CFun _ b) = cbod_fbs c b
+and
+free_bods c (CCall e es) =
+  List.fold_left (fun s e -> s union free_bods c e) (free_bods c e) es
+and
+free_bods c (CPrim2 _ e1 e2) = free_bods c e1 union free_bods c e2
+and
+free_bods c (CIf e1 e2 e3) = free_bods c e1 union free_bods c e2 union free_bods c e3
+and
+cbod_fbs c (INL e) = {e} union free_bods c e
+and
+cbod_fbs c (INR l) = match flookup c l with
+  | None -> {}
+  | Some e -> free_bods (domsub c l) e
+  end
+
+let rec
+free_labs c (CDecl _) = {}
+and
+free_labs c (CRaise _) = {}
+and
+free_labs c (CVar _) = {}
+and
+free_labs c (CLit _) = {}
+and
+free_labs c (CCon _ es) =
+  List.fold_left (fun s e -> s union free_labs c e) {} es
+and
+free_labs c (CTagEq e _) = free_labs c e
+and
+free_labs c (CProj e _) = free_labs c e
+and
+free_labs c (CLet _ es e) =
+  List.fold_left (fun s e -> s union free_labs c e) (free_labs c e) es
+and
+free_labs c (CLetfun _ _ defs e) =
+  List.fold_left (fun s (vs,b) -> s union cbod_fls c b) (free_labs c e) defs
+and
+free_labs c (CFun _ b) = cbod_fls c b
+and
+free_labs c (CCall e es) =
+  List.fold_left (fun s e -> s union free_labs c e) (free_labs c e) es
+and
+free_labs c (CPrim2 _ e1 e2) = free_labs c e1 union free_labs c e2
+and
+free_labs c (CIf e1 e2 e3) = free_labs c e1 union free_labs c e2 union free_labs c e3
+and
+cbod_fls c (INL e) = free_labs c e
+and
+cbod_fls c (INR l) = {l} union match flookup c l with
+  | None -> {}
+  | Some e -> free_labs (domsub c l) e
+  end
+
+
 (* Big-step semantics *)
 
 let rec

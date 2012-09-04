@@ -319,6 +319,18 @@ val free_vars_SUBMAP = store_thm("free_vars_SUBMAP",
   fsrw_tac[DNF_ss][DOMSUB_FAPPLY_THM] >>
   metis_tac[])
 
+val free_bods_DOMSUB_SUBSET = store_thm("free_bods_DOMSUB_SUBSET",
+  ``(∀c e l. free_bods (c \\ l) e ⊆ free_bods c e) ∧
+    (∀c b l. cbod_fbs (c \\ l) b ⊆ cbod_fbs c b)``,
+  ho_match_mp_tac free_bods_ind >>
+  rw[FOLDL_UNION_BIGUNION,FOLDL_UNION_BIGUNION_paired] >>
+  fsrw_tac[DNF_ss][SUBSET_DEF] >>
+  fsrw_tac[DNF_ss][pairTheory.FORALL_PROD,pairTheory.EXISTS_PROD] >>
+  TRY (PROVE_TAC[]) >>
+  fsrw_tac[DNF_ss][FLOOKUP_DEF] >> rw[] >>
+  fsrw_tac[][DOMSUB_FAPPLY_THM] >>
+  PROVE_TAC[DOMSUB_COMMUTES])
+
 val find_index_ALL_DISTINCT_EL = store_thm(
 "find_index_ALL_DISTINCT_EL",
 ``∀ls n m. ALL_DISTINCT ls ∧ n < LENGTH ls ⇒ (find_index (EL n ls) ls m = SOME (m + n))``,

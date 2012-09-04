@@ -361,4 +361,29 @@ val LESS_1 = store_thm(
 DECIDE_TAC)
 val _ = export_rewrites["LESS_1"]
 
+val NOT_ISL_ISR = store_thm("NOT_ISL_ISR",
+  ``~ISL x = ISR x``,
+  Cases_on `x` >> rw[])
+val _ = export_rewrites["NOT_ISL_ISR"]
+
+val IMAGE_EQ_SING = store_thm("IMAGE_EQ_SING",
+  ``(IMAGE f s = {z}) <=> (s <> {}) /\ !x. x IN s ==> (f x = z)``,
+  EQ_TAC >>
+  srw_tac[DNF_ss][EXTENSION] >>
+  PROVE_TAC[])
+
+val EVERY_MEM_MONO = store_thm("EVERY_MEM_MONO",
+  ``∀P Q l. (∀x. MEM x l ∧ P x ⇒ Q x) ∧ EVERY P l ⇒ EVERY Q l``,
+  ntac 2 gen_tac >> Induct >> rw[])
+
+val DRESTRICT_SUBSET = store_thm("DRESTRICT_SUBSET",
+  ``∀f1 f2 s t.
+    (DRESTRICT f1 s = DRESTRICT f2 s) ∧ t ⊆ s ⇒
+    (DRESTRICT f1 t = DRESTRICT f2 t)``,
+  rw[DRESTRICT_EQ_DRESTRICT]
+    >- metis_tac[DRESTRICT_SUBSET_SUBMAP,SUBMAP_TRANS]
+    >- metis_tac[DRESTRICT_SUBSET_SUBMAP,SUBMAP_TRANS] >>
+  fsrw_tac[DNF_ss][SUBSET_DEF,EXTENSION] >>
+  metis_tac[])
+
 val _ = export_theory()
