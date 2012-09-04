@@ -145,7 +145,7 @@ fun find_subterm qtm (g as (asl,w)) =
 
 fun primCases_on st (g as (_,w)) =
  let val ty = tmkind_tyof st
-     val {Thy,Tyop,...} = dest_thy_type ty
+     val {Thy,Tyop,...} = dest_thy_type (head_beta_eta_ty ty)
  in case TypeBase.fetch ty
      of SOME facts =>
         let val thm = TypeBasePure.nchotomy_of facts
@@ -212,7 +212,7 @@ val is_mutind_thm = is_conj o snd o strip_imp o snd o strip_forall o concl;
 
 fun induct_on_type st ty g = let
   val {Thy,Tyop,...} =
-         with_exn dest_thy_type ty
+         with_exn dest_thy_type (head_beta_eta_ty ty)
                   (ERR "induct_on_type"
                        "No induction theorems available for variable types")
 in

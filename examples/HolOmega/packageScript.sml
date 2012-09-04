@@ -15,8 +15,8 @@
    representation, and only present an abstract view to uses of the
    data structure.
 
-   The syntax of existential types and packages is different from that used
-   in Pierce's book.  Here is a table of correspondances,
+   The syntax of existential types and packages is different from
+   that used in Pierce's book.  Here is a table of correspondances,
    where in Pierce's notation, X is a type variable, S and T are
    arbitrary types, t is an arbitrary term, and x is a term variable,
    and in HOL-Omega's notation, 'a is a type variable, σ stands for 
@@ -24,7 +24,7 @@
    In both notations, p is a package, and tm is an arbitrary term.
 
                                  Pierce                 HOL-Omega
-                                 -----                  ---------
+                                 ------                 ---------
       Existential type           {∃X,T}                  ∃'a. σ
       Package introduction       {*S,t}               pack (:σ, tm)
       Package elimination    let {X,x}=p in tm    let (:'a, x) = p in tm

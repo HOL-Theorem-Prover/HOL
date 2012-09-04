@@ -37,7 +37,37 @@ val _ = new_theory "aop";
             Algebra type abbreviation
  ---------------------------------------------------------------------------*)
 
+(* Given a functor F : 'F functor, an algebra is an arrow of type 'a 'F -> 'a,
+   where the object 'a is called the carrier of the algebra. *)
+
 val _ = type_abbrev ("algebra", Type `: \'F 'a. 'a 'F -> 'a`);
+
+(* For example, the algebra (Nat,0,SUC) of the natural numbers, zero, and successor
+   is an algebra of the functor F A = unit + A and F h = I ++ h.               *)
+
+val Nat_fun = new_definition("Nat_fun", Term
+     `Nat_fun = (\:'a 'b. \h. I ++ h) : (\'a. unit + 'a) functor`);
+
+val SUM_MAP_I = sumTheory.SUM_MAP_I;
+val SUM_MAP_o = functorTheory.SUM_o;
+
+val Nat_functor = store_thm
+  ("Nat_functor",
+   ``functor Nat_fun``,
+   SIMP_TAC combin_ss [functor_def,Nat_fun,SUM_MAP_I,GSYM SUM_MAP_o]
+  );
+
+val Nat_alg = new_definition("Nat_alg",
+    ``Nat_alg =
+      (\m. case m of INL () => 0
+                   | INR n => SUC n)
+       : (\'a. unit + 'a, num) algebra``);
+
+val Bool_alg = new_definition("Bool_alg",
+    ``Bool_alg =
+      (\b. case b of INL () => F
+                   | INR t  => T)
+       : (\'a. unit + 'a, bool) algebra``);
 
 (* For example, the algebra (Nat,+) of the natural numbers and addition
    is an algebra of the functor F A = A # A and F h = h ## h.               *)
@@ -48,15 +78,16 @@ val PAIR_MAP_o = quotient_pairTheory.PAIR_MAP_o;
 val Nat_plus_functor = store_thm
   ("Nat_plus_functor",
    ``functor ((\:'a 'b. \h. h ## h) : (\'a. 'a # 'a) functor)``,
-   SIMP_TAC combin_ss [functor_def,PAIR_MAP_I,PAIR_MAP_o]
+   SIMP_TAC combin_ss [functor_def,PAIR_MAP_I,GSYM PAIR_MAP_o]
   );
 
-val Nat_plus_algebra = ``UNCURRY $+ : (\'a. 'a # 'a, num)algebra``;
+val Nat_plus_alg = ``UNCURRY $+ : (\'a. 'a # 'a, num)algebra``;
 
 
 
 (*---------------------------------------------------------------------------
-  An F-homomorphism from an algegra f :'a 'F -> 'a to an algegra g :'b 'F -> 'b
+  Given a functor F : 'F functor,
+  an F-homomorphism from an algegra f :'a 'F -> 'a to an algegra g :'b 'F -> 'b
   is a mapping h :'a -> 'b such that h o f = g o F h.
  ---------------------------------------------------------------------------*)
 
@@ -86,13 +117,111 @@ val homo_comp = store_thm
    THEN ASM_REWRITE_TAC[o_ASSOC]
   );
 
+val Nat_Bool_homo = store_thm
+  ("Nat_Bool_homo",
+   ``homo (\:'a 'b. \h. I ++ h) Nat_alg Bool_alg
+          (\n. n <> 0)``,
+   RW_TAC bool_ss [homo_def,Nat_alg,Bool_alg]
+   THEN CONV_TAC FUN_EQ_CONV
+   THEN BETA_TY_TAC
+   THEN Cases
+   THEN RW_TAC std_ss [oneTheory.one_case_rw]
+  );
+
+val no_Bool_Nat_homo = store_thm
+  ("no_Bool_Nat_homo",
+   ``!phi. ~(homo (\:'a 'b. \h. I ++ h) Bool_alg Nat_alg phi)``,
+   RW_TAC bool_ss [homo_def,Nat_alg,Bool_alg]
+   THEN DISCH_THEN (MP_TAC o CONV_RULE FUN_EQ_CONV)
+   THEN DISCH_THEN (MP_TAC o SPEC ``INR T : unit + bool``)
+   THEN RW_TAC arith_ss []
+  );
 
 (*---------------------------------------------------------------------------
   Because there is an identity homomorphism, and the composition of two
   homomorphisms is a homomorphism, F-algebras form the objects of a category
   called Alg(F) whose arrows are homomorphisms.  For many functors, this
   category has an initial object, which we will call alpha : 't 'F -> 't.
+ ---------------------------------------------------------------------------*)
 
+(*---------------------------------------------------------------------------
+            Initial algebra predicate
+ ---------------------------------------------------------------------------*)
+
+val ialg_def = new_definition("ialg_def", Term
+   `ialg (  F'  : 'F functor)
+         (alpha : ('F,'t)algebra) =
+      !:'a. !(f : ('F,'a)algebra). ?!h. homo F' alpha f h`);
+
+(* The Nat_alg is an initial algebra. *)
+
+val SIMP_REC_THM = prim_recTheory.SIMP_REC_THM
+
+(* Shortened tutorial version: *)
+val Nat_ialg = store_thm
+  ("Nat_ialg",
+   ``ialg Nat_fun Nat_alg``,
+   RW_TAC bool_ss [ialg_def,homo_def,Nat_fun,Nat_alg,FUN_EQ_THM,
+                   EXISTS_UNIQUE_THM,sumTheory.FORALL_SUM]
+   THENL
+     [ EXISTS_TAC ``SIMP_REC (f(INL()):'a) (f o INR)``
+       THEN RW_TAC std_ss [SIMP_REC_THM,oneTheory.one],
+
+       Induct_on `x`
+       THEN FULL_SIMP_TAC std_ss [oneTheory.one,oneTheory.one_case_rw]
+     ]
+  );
+
+(* Norbert Voelker's version: *)
+val SIMP_REC_cata_lemma = store_thm
+  ("SIMP_REC_cata_lemma",
+  ``((h: num -> 'a) o Nat_alg = f o Nat_fun h)
+    = (h = SIMP_REC (f(INL ())) (f o INR))``,
+   SIMP_TAC std_ss [Nat_alg,Nat_fun,o_DEF,FUN_EQ_THM,
+                    sumTheory.FORALL_SUM,oneTheory.one_case_rw]
+   THEN EQ_TAC THEN STRIP_TAC
+   THENL [ Induct, ALL_TAC ]
+   THEN ASM_SIMP_TAC std_ss [SIMP_REC_THM,oneTheory.one]
+  );
+
+(* the following theorem uses (included in bool_ss)
+- EXISTS_UNIQUE_REFL;
+> val it =
+    |- !a. ?!x. x = a
+     : thm
+When a does not involve x, this is a nice way to prove a unique existential.
+*)
+val Nat_ialg = store_thm
+  ("Nat_ialg",
+  ``ialg Nat_fun Nat_alg``,
+   SIMP_TAC bool_ss [ialg_def,homo_def,SIMP_REC_cata_lemma]
+  );
+
+(* older, more tutorial version:
+val Nat_ialg = store_thm
+  ("Nat_ialg",
+   ``ialg Nat_fun Nat_alg``,
+   RW_TAC bool_ss [ialg_def,homo_def,Nat_fun,Nat_alg,FUN_EQ_THM,EXISTS_UNIQUE_THM]
+   THENL
+     [ EXISTS_TAC ``SIMP_REC (f(INL())) (\x:'a. f(INR x))``
+       THEN Cases
+       THEN RW_TAC std_ss [oneTheory.one_case_rw,oneTheory.one,
+                           prim_recTheory.SIMP_REC_THM],
+
+       Induct_on `x`
+       THENL
+         [ EVERY_ASSUM (MP_TAC o SPEC ``INL () : unit + num``)
+           THEN SIMP_TAC std_ss [oneTheory.one_case_rw],
+
+           POP_ASSUM MP_TAC
+           THEN EVERY_ASSUM (MP_TAC o SPEC ``INR x : unit + num``)
+           THEN SIMP_TAC std_ss [oneTheory.one_case_rw]
+         ]
+     ]
+  );
+*)
+
+(*---------------------------------------------------------------------------
   The existence of an initial F-algebra means that for any other F-algebra
   f : 'a 'F -> 'a, there is a unique homomorphism from alpha to f.
   We call this homomorphism the catamorphism of f, of type 't -> 'a.
@@ -108,24 +237,17 @@ val cata_def = new_definition("cata_def", Term
          (  f   : ('F,'a)algebra) =
          @h. homo F' alpha f h`);
 
-(*---------------------------------------------------------------------------
-            Initial algebra predicate
- ---------------------------------------------------------------------------*)
-
-val ialg_def = new_definition("ialg_def", Term
-   `ialg (  F'  : 'F functor)
-         (alpha : ('F,'t)algebra) =
-      !:'a. !(f : ('F,'a)algebra). ?!h. homo F' alpha f h`);
-
 val identity_cata = store_thm
   ("identity_cata",
   ``functor (F' : 'F functor) /\ ialg F' (alpha : ('F,'t)algebra) ==>
     (cata F' alpha alpha = I)``,
    RW_TAC bool_ss [functor_def,cata_def,ialg_def,EXISTS_UNIQUE_THM]
-   THEN POP_ASSUM (STRIP_ASSUME_TAC o SPEC ``alpha: ('F,'t)algebra`` o TY_SPEC ``:'t``)
+   THEN POP_ASSUM (STRIP_ASSUME_TAC o SPEC ``alpha: ('F,'t)algebra``
+                                    o TY_SPEC ``:'t``)
    THEN SELECT_ELIM_TAC
    THEN CONJ_TAC
-   THENL [ PROVE_TAC[],
+   THENL [ EXISTS_TAC ``h:'t -> 't``
+           THEN FIRST_ASSUM ACCEPT_TAC,
 
            RW_TAC combin_ss [homo_def]
          ]
@@ -134,7 +256,8 @@ val identity_cata = store_thm
 val homo_cata = store_thm
   ("homo_cata",
   ``ialg (F' : 'F functor) (alpha : ('F,'t)algebra) ==>
-    !:'a. !f: ('F,'a)algebra. homo F' alpha (f: ('F,'a)algebra) (cata F' alpha f)``,
+    !:'a. !f: ('F,'a)algebra.
+        homo F' alpha (f: ('F,'a)algebra) (cata F' alpha f)``,
    RW_TAC bool_ss [homo_def,cata_def,ialg_def,EXISTS_UNIQUE_THM]
    THEN REPEAT STRIP_TAC
    THEN POP_ASSUM (STRIP_ASSUME_TAC o SPEC_ALL o TY_SPEC_ALL)
@@ -145,7 +268,8 @@ val homo_cata = store_thm
 val cata_property = store_thm
   ("cata_property",
   ``ialg (F' : 'F functor) (alpha : ('F,'t)algebra) ==>
-    !:'a. !(f : ('F,'a)algebra) h. ((h = cata F' alpha f) = (h o alpha = f o F' h))``,
+    !:'a. !(f : ('F,'a)algebra) h.
+        ((h = cata F' alpha f) = (h o alpha = f o F' h))``,
    REPEAT STRIP_TAC
    THEN FIRST_ASSUM (STRIP_ASSUME_TAC o SPEC_ALL o TY_SPEC_ALL
                       o REWRITE_RULE[ialg_def,EXISTS_UNIQUE_THM])

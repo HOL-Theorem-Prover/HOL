@@ -79,6 +79,8 @@ fun tyencode_env db =
 
 local fun drop [] ty = fst(dom_rng ty)
         | drop (_::t) ty = drop t (snd(dom_rng ty));
+      fun lose 0 ty = ty
+        | lose n ty = lose (n-1) (fst (dest_app_type ty))
       fun undef ty = raise ERR "tyencode" "undef"
                     (* mk_abs (mk_var ("v", ty), bool_nil) *)
       fun OK f ty M =
@@ -98,11 +100,14 @@ fun tyencode (theta,omega,gamma) clause ty =
                   alist)
         | NONE =>
            let val {Thy,Tyop,Args} = dest_thy_type ty
+               val Kind = valOf (op_kind {Tyop=Tyop, Thy=Thy})
+               val kind_args = fst(strip_arrow_kind Kind)
            in case gamma (Thy,Tyop)
                of SOME f =>
-                   let val vty = drop Args (type_of f)
-                       val sigma = Type.match_type vty ty
-                    in list_mk_comb(pure_inst sigma f,
+                   let val vty0 = drop kind_args (*Args*) (type_of f)
+                       val vty = lose (length kind_args - length Args) vty0
+                       val (tyS,kdS,rkS) = Type.om_match_type vty ty
+                    in list_mk_comb(inst_rk_kd_ty (tyS,kdS,rkS) f,
                             map (tyencode (theta,omega,gamma) clause) Args)
                     end
                 | NONE => undef ty
@@ -135,7 +140,7 @@ fun tyconst_names ty =
   in (Thy,Tyop)
   end;
 
-fun define_encode ax db =
+fun define_encode_rk ax rec_fn db =
  let val dtys = Prim_rec.doms_of_tyaxiom ax  (* primary types in axiom *)
      val tyvars = Lib.U (map (snd o dest_type) dtys)
      val (_, abody) = strip_forall(concl ax)
@@ -206,9 +211,11 @@ fun define_encode ax db =
                       ((DEPTH_CONV BETA_CONV THENC
                         Rewrite.PURE_REWRITE_CONV nil_rws) pre_defn0))
                      handle UNCHANGED => pre_defn0
+     val rank = rank_of_term pre_defn1 (* this can be improved *)
+     val ax' = if rank=0 then ax else rec_fn rank
      val defn = new_recursive_definition
                  {name="encode_"^def_name^"_def",
-                  rec_axiom=ax, def=pre_defn1}
+                  rec_axiom=ax', def=pre_defn1}
      val cty = (I##(type_of o last)) o strip_comb o lhs o snd o strip_forall
      val ctyl = Lib.op_mk_set (pair_cmp eq equal) (map cty (strip_conj (concl defn)))
      val const_tyl = filter (fn (c,ty) => mem ty dtys) ctyl
@@ -217,6 +224,8 @@ fun define_encode ax db =
     SOME {def=defn,const_tyopl=const_tyopl}
  end
  handle HOL_ERR _ => NONE;
+
+fun define_encode ax db =  define_encode_rk ax (fn _ => ax) db;
 
 (*---------------------------------------------------------------------------
       Writing all the boolification information to the typebase.
@@ -247,9 +256,10 @@ fun add_encode tyinfol =
    else let
       val db = TypeBase.theTypeBase ()
       val recursion = TypeBasePure.axiom_of (hd tyinfol)
+      val recursion_rk = TypeBasePure.axiom_rk_of (hd tyinfol)
       val tyname = TypeBasePure.ty_name_of (hd tyinfol)
     in
-      case define_encode recursion db
+      case define_encode_rk recursion recursion_rk db
        of SOME s => insert_encode s tyinfol
         | NONE => (HOL_MESG("Couldn't define encode function for type "
                             ^Lib.quote (pair_string tyname))
