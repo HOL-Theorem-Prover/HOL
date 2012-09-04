@@ -179,13 +179,7 @@ val (label_closures_def, label_closures_ind) = register "label_closures" (
   WF_REL_TAC `inv_image $< (λx. case x of
        | INL (s,e) => (Cexp_size e)
        | INR (INL (s,es)) => (Cexp4_size es)
-       | INR (INR (s,ns,defs)) => (Cexp1_size defs - 2))` >>
-  srw_tac[ARITH_ss][] >>
-  srw_tac[ARITH_ss][Cexp1_size_thm,SUM_MAP_Cexp2_size_thm] >>
-  Q.ISPEC_THEN `Cexp3_size o SND` imp_res_tac SUM_MAP_MEM_bound >>
-  fs[Cexp3_size_thm,basicSizeTheory.sum_size_def,MAP_MAP_o] >>
-  Cases_on `LENGTH defs` >> fs[LENGTH_NIL] >>
-  DECIDE_TAC))
+       | INR (INR (s,ns,ls,ds,defs)) => (Cexp1_size defs - 2))`))
 
 val _ = save_thm("num_fold_def",num_fold_def)
 val _ = save_thm("cce_aux_def",cce_aux_def)

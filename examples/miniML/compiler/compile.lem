@@ -849,12 +849,12 @@ label_closures s (CLet xs es e) =
   (s,CLet xs es e)
 and
 label_closures s (CLetfun p ns defs e) =
-  let (s,defs) = labelise s (if p then ns else []) defs in
+  let (s,defs) = labelise s (if p then ns else []) [] [] defs in
   let (s,e) = label_closures s e in
   (s,CLetfun p ns defs e)
 and
 label_closures s (CFun xs cb) =
-  let (s,defs) = labelise s [] [(xs,cb)] in
+  let (s,defs) = labelise s [] [] [] [(xs,cb)] in
   let (xs,cb) = List.nth defs 0 in
   (s,CFun xs cb)
 and
@@ -881,26 +881,23 @@ label_closures_list s (e::es) =
   let (s,es) = label_closures_list s es in
   (s,e::es)
 and
-labelise s ns defs =
-  let (s,ds,ls) =
-    List.fold_left
-    (fun (s,ds,ls) (xs,cb) ->
-      match cb with INR l -> (s, (xs,INR l)::ds, ls)
-      | INL b ->
-          let (s,b) = label_closures s b in
-          (<| s with
-              lnext_label = s.lnext_label+1
-            ; lbods = Pmap.add s.lnext_label b s.lbods
-            |>
-          , (xs,INR s.lnext_label)::ds
-          , (xs,b,s.lnext_label)::ls)
-      end)
-    (s,[],[]) defs in
-   ( <|s with
-        ldefs = (ns, List.rev ls) :: s.ldefs
-      |>
-   , List.rev ds)
-
+labelise s ns ls ds [] =
+  ( <| s with ldefs = (ns, List.rev ls) :: s.ldefs |>
+  , List.rev ds)
+and
+labelise s ns ls ds ((xs,INR a)::defs) =
+  labelise s ns ls ((xs,INR a)::ds) defs
+and
+labelise s ns ls ds ((xs,INL b)::defs) =
+  let (s,b) = label_closures s b in
+  labelise
+    (<|s with
+        lnext_label = s.lnext_label+1
+      ; lbods = Pmap.add s.lnext_label b s.lbods |>)
+    ns
+    ((xs,b,s.lnext_label)::ls)
+    ((xs,INR s.lnext_label)::ds)
+    defs
 
 (* TODO: simple type system and checker *)
 

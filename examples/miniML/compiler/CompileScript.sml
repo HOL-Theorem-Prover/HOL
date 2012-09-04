@@ -894,12 +894,12 @@ val _ = Hol_datatype `
   (s,CLet xs es e))
 /\
 (label_closures s (CLetfun p ns defs e) =
-  let (s,defs) = labelise s (if p then ns else []) defs in
+  let (s,defs) = labelise s (if p then ns else []) [] [] defs in
   let (s,e) = label_closures s e in
   (s,CLetfun p ns defs e))
 /\
 (label_closures s (CFun xs cb) =
-  let (s,defs) = labelise s [] [(xs,cb)] in
+  let (s,defs) = labelise s [] [] [] [(xs,cb)] in
   let (xs,cb) = EL  0  defs in
   (s,CFun xs cb))
 /\
@@ -926,28 +926,25 @@ val _ = Hol_datatype `
   let (s,es) = label_closures_list s es in
   (s,e::es))
 /\
-(labelise s ns defs =
-  let (s,ds,ls) =
-    FOLDL
-    (\ (s,ds,ls) (xs,cb) .
-      (case cb of INR l => (s, (xs,INR l)::ds, ls)
-      | INL b =>
-          let (s,b) = label_closures s b in
-          ( s with<|
-              lnext_label := s.lnext_label+1
-            ; lbods := FUPDATE  s.lbods ( s.lnext_label, b)
-            |>
-          , (xs,INR s.lnext_label)::ds
-          , (xs,b,s.lnext_label)::ls)
-      ))
-    (s,[],[]) defs in
-   ( s with<|
-        ldefs := (ns, REVERSE ls) :: s.ldefs
-      |>
-   , REVERSE ds))`;
+(labelise s ns ls ds [] =
+  (  s with<| ldefs := (ns, REVERSE ls) :: s.ldefs |>
+  , REVERSE ds))
+/\
+(labelise s ns ls ds ((xs,INR a)::defs) =
+  labelise s ns ls ((xs,INR a)::ds) defs)
+/\
+(labelise s ns ls ds ((xs,INL b)::defs) =
+  let (s,b) = label_closures s b in
+  labelise
+    (s with<|
+        lnext_label := s.lnext_label+1
+      ; lbods := FUPDATE  s.lbods ( s.lnext_label, b) |>)
+    ns
+    ((xs,b,s.lnext_label)::ls)
+    ((xs,INR s.lnext_label)::ds)
+    defs)`;
 
 val _ = Defn.save_defn label_closures_defn;
-
 
 (* TODO: simple type system and checker *)
 
