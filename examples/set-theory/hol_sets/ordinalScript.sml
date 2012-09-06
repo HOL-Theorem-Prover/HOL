@@ -1586,7 +1586,8 @@ val FOLDL_SUM_lemma = prove(
        FOLDL (λacc (c,e). acc + c * a ** e) (x + s) ces``,
   Induct >> simp[pairTheory.FORALL_PROD] >> simp[ordADD_ASSOC]);
 
-val poly_lemma0 = prove(
+val polyform_exists = store_thm(
+  "polyform_exists",
   ``∀a:'a ordinal b.
       1 < a ⇒
       ∃ces.
@@ -1656,5 +1657,62 @@ val poly_lemma0 = prove(
   `c0 * a ** e0 ≤ c0 * a ** e0 + FOLDL (λacc (c,e). acc + c * a ** e) 0 t`
     by simp[] >>
   metis_tac [ordle_TRANS, ordle_lteq, ordlt_REFL, ordlt_TRANS])
+
+val polyform_def = new_specification(
+  "polyform_def",
+  ["polyform"],
+  SIMP_RULE (srw_ss()) [GSYM RIGHT_EXISTS_IMP_THM, SKOLEM_THM]
+            polyform_exists);
+
+(* Cantor Normal Form - polynomials where the base is ω *)
+val _ = overload_on ("CNF", ``polyform ω``)
+
+val CNF_thm = save_thm(
+  "CNF_thm",
+  polyform_def |> SPEC ``ω`` |> SIMP_RULE (srw_ss()) [])
+
+val FOLDL_sum_EQ0 = prove(
+  ``FOLDL (λacc (c,e). acc + c * a ** e) a0 t = 0 ⇒ a0 = 0``,
+  simp[Once (FOLDL_SUM_lemma |> Q.SPECL [`t`, `a0`, `0`]
+                             |> SIMP_RULE (srw_ss()) []
+                             |> SYM)])
+
+
+val polyform_0 = store_thm(
+  "polyform_0",
+  ``1 < a ⇒ polyform a 0 = []``,
+  strip_tac >>
+  qspecl_then [`a`, `0`] mp_tac polyform_def >> simp[] >>
+  `polyform a 0 = [] ∨ ∃c e t. polyform a 0 = (c,e)::t`
+    by metis_tac[pairTheory.pair_CASES, listTheory.list_CASES]
+    >- simp[] >>
+  simp[SimpL ``$==>``] >> strip_tac >>
+  `c * a ** e = 0` by metis_tac [FOLDL_sum_EQ0] >>
+  pop_assum mp_tac >> qpat_assum `0 = FOLDL ff aa tt` (K ALL_TAC) >>
+  simp[ordEXP_EQ_0] >>
+  `a ≠ 0` by (strip_tac >> fs[]) >>
+  `0 < c` by metis_tac[] >>
+  `c ≠ 0` by (strip_tac >> fs[]) >>
+  simp[])
+
+(*
+val polyform_UNIQUE = store_thm(
+  "polyform_UNIQUE",
+  ``∀a b ces.
+      1 < a ∧
+      (∀i j. i < j ∧ j < LENGTH ces ⇒ SND (EL j ces) < SND (EL i ces)) ∧
+      (∀c e. MEM (c,e) ces ⇒ 0 < c ∧ c < a) ∧
+      b = FOLDL (λacc (c,e). acc + c * a ** e) 0 ces ⇒
+      polyform a b = ces``,
+  gen_tac >> ho_match_mp_tac ord_induction >> qx_gen_tac `b` >>
+  strip_tac >> qx_gen_tac `ces1` >> strip_tac >>
+  qspecl_then [`a`, `b`] mp_tac polyform_def >>
+  disch_then (strip_assume_tac o REWRITE_RULE [ASSUME``1<a:'a ordinal``]) >>
+  `ces1 = [] ∨ ∃c e t. ces1 = (c,e)::t`
+    by metis_tac[pairTheory.pair_CASES, listTheory.list_CASES]
+  >- (pop_assum SUBST_ALL_TAC >> `b = 0` by fs[] >> simp[polyform_0]) >>
+  pop_assum SUBST_ALL_TAC >>
+*)
+
 
 val _ = export_theory()
