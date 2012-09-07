@@ -2,10 +2,10 @@
 (* Theory of 2's complement representation of integers                       *)
 (* ========================================================================= *)
 
-open HolKernel boolLib Parse bossLib BasicProvers
+open HolKernel boolLib Parse bossLib BasicProvers lcsymtacs
 
-open bitTheory wordsTheory wordsLib integerTheory intLib arithmeticTheory
-open lcsymtacs;
+open wordsLib stringLib intLib arithmeticTheory
+open bitTheory wordsTheory integerTheory
 
 infix \\
 val op \\ = op THEN;
@@ -22,11 +22,9 @@ val toString_def = Define`
         num_to_dec_string (Num i)`;
 
 val fromString_def = Define`
-   fromString s =
-     if HD s = #"~" then
-        ~&(num_from_dec_string (TL s))
-     else
-        &(num_from_dec_string s)`;
+   (fromString (#"~"::t) = ~&(num_from_dec_string t)) /\
+   (fromString (#"-"::t) = ~&(num_from_dec_string t)) /\
+   (fromString s = &(num_from_dec_string s))`;
 
 val i2w_def = Define`
   i2w (i : int) : 'a word =
