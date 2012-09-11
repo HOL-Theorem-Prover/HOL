@@ -37,6 +37,7 @@ val arith_ss = bool_ss ++ numSimps.ARITH_ss ++ numSimps.REDUCE_ss
 val _ = new_theory "list";
 
 val _ = Rewrite.add_implicit_rewrites pairTheory.pair_rws;
+val zDefine = Lib.with_flag (computeLib.auto_import_definitions,false) Define
 
 val NOT_SUC      = numTheory.NOT_SUC
 and INV_SUC      = numTheory.INV_SUC
@@ -1494,13 +1495,13 @@ val _ = export_rewrites ["LAST_APPEND_CONS"]
 
 (* these are FIRSTN and BUTFIRSTN from rich_listTheory, but made total *)
 
-val TAKE_def = Define`
+val TAKE_def = zDefine`
   (TAKE n [] = []) /\
   (TAKE n (x::xs) = if n = 0 then [] else x :: TAKE (n - 1) xs)
 `;
 val _ = export_rewrites ["TAKE_def"]
 
-val DROP_def = Define`
+val DROP_def = zDefine`
   (DROP n [] = []) /\
   (DROP n (x::xs) = if n = 0 then x::xs else DROP (n - 1) xs)
 `;
@@ -2624,6 +2625,24 @@ val APPEND_EQ_APPEND_MID = store_thm(
 
 (* --------------------------------------------------------------------- *)
 
+val TAKE_compute = Q.prove(
+   `(!l. TAKE 0 l = []) /\
+    (!n. TAKE (SUC n) [] = []) /\
+    (!n h t. TAKE (SUC n) (h::t) = h :: TAKE n t)`,
+   SRW_TAC [] []);
+
+val DROP_compute = Q.prove(
+   `(!l. DROP 0 l = l) /\
+    (!n. DROP (SUC n) [] = []) /\
+    (!n h t. DROP (SUC n) (h::t) = DROP n t)`,
+   SRW_TAC [] []);
+
+val TAKE_compute =
+   Theory.save_thm("TAKE_compute", numLib.SUC_RULE TAKE_compute);
+
+val DROP_compute =
+   Theory.save_thm("DROP_compute", numLib.SUC_RULE DROP_compute);
+
 val _ = app DefnBase.export_cong ["EXISTS_CONG", "EVERY_CONG", "MAP_CONG",
                                   "MAP2_CONG", "EVERY2_cong", "FOLDL2_cong",
                                   "FOLDL_CONG", "FOLDR_CONG", "list_size_cong"]
@@ -2637,12 +2656,12 @@ val _ = adjoin_to_theory
  in
    S "val _ = let open computeLib";
    S "        in add_funs [APPEND,APPEND_NIL, FLAT, HD, TL,";
-   S "              LENGTH, MAP, MAP2, NULL_DEF, MEM, EXISTS_DEF,";
-   S "              EVERY_DEF, ZIP, UNZIP, FILTER, FOLDL, FOLDR,";
-   S "              FOLDL, REVERSE_REV, ALL_DISTINCT, GENLIST_AUX,";
-   S "              EL_restricted, EL_simp_restricted, SNOC,";
-   S "              GENLIST_NUMERALS, computeLib.lazyfy_thm list_case_compute,";
-   S "              list_size_def, FRONT_DEF, LAST_DEF, isPREFIX]";
+   S "             LENGTH, MAP, MAP2, NULL_DEF, MEM, EXISTS_DEF, DROP_compute,";
+   S "             EVERY_DEF, ZIP, UNZIP, FILTER, FOLDL, FOLDR, TAKE_compute,";
+   S "             FOLDL, REVERSE_REV, ALL_DISTINCT, GENLIST_AUX,";
+   S "             EL_restricted, EL_simp_restricted, SNOC,";
+   S "             GENLIST_NUMERALS, computeLib.lazyfy_thm list_case_compute,";
+   S "             list_size_def, FRONT_DEF, LAST_DEF, isPREFIX]";
    S "        end;";
    NL(); NL();
    S "val _ =";
