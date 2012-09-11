@@ -58,7 +58,7 @@ sig
   (* quantifier heurostic parameters  *)
   (************************************)
   
-  (* stateful ones, copied from quantHeuristicsLib *)
+  (* stateful ones *)
   val stateful_qp        : quantHeuristicsLibBase.quant_param;
   val pure_stateful_qp   : quantHeuristicsLibBase.quant_param;
   val TypeBase_qp        : quantHeuristicsLibBase.quant_param;
@@ -66,6 +66,8 @@ sig
   val clear_stateful_qp : unit -> unit;
   val stateful_qp___add_combine_arguments :
      quantHeuristicsLibBase.quant_param list -> unit;
+
+  val context_qp        : quantHeuristicsLibBase.quant_param;
 
   (*pair type*)
   val split_pair___PABS___pred    : Abbrev.term -> Abbrev.term -> Abbrev.term option
@@ -85,6 +87,7 @@ sig
   val num_qp            : quantHeuristicsLibBase.quant_param;
   val option_qp         : quantHeuristicsLibBase.quant_param;
   val list_qp           : quantHeuristicsLibBase.quant_param;
+  val sum_qp            : quantHeuristicsLibBase.quant_param;
 
 
   (* combination of all except the stateful ones *)
@@ -106,6 +109,7 @@ sig
   val convs_qp         : conv list -> quant_param
   val heuristics_qp    : quant_heuristic list -> quant_param
   val top_heuristics_qp: quant_heuristic list -> quant_param
+  val context_heuristics_qp : (thm list -> quant_heuristic) list -> quant_param
   val filter_qp        : (term -> term -> bool) list -> quant_param
   val oracle_qp        : (term -> term -> (term * term list) option) -> quant_param
 

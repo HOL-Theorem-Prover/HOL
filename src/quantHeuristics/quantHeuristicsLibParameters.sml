@@ -24,7 +24,8 @@ quietdec := true;
 *)
 
 open HolKernel Parse boolLib Drule ConseqConv quantHeuristicsLibBase
-     rich_listTheory quantHeuristicsTheory
+open rich_listTheory quantHeuristicsTheory
+
 (*
 quietdec := false;
 *)
@@ -145,6 +146,7 @@ fun pair_qp pL =
    inference_thms= [],
    filter       =  [],
    top_heuristics =[],
+   context_heuristics =[],
    final_rewrite_thms = [pairTheory.FST,  pairTheory.SND,
                          PAIR_EQ_SIMPLE_EXPAND]
   }:quant_param
@@ -188,6 +190,7 @@ val thm = PAIR_QUANT_INSTANTIATE_CONV t
 val stateful_qp = quantHeuristicsLibBase.stateful_qp;
 val pure_stateful_qp = quantHeuristicsLibBase.pure_stateful_qp;
 val TypeBase_qp = quantHeuristicsLibBase.TypeBase_qp;
+val context_qp = context_heuristics_qp[QUANT_INSTANTIATE_HEURISTIC___GIVEN_INSTANTIATION, QUANT_INSTANTIATE_HEURISTIC___STRENGTHEN_WEAKEN]
 
 
 (*******************************************************************
@@ -205,7 +208,26 @@ val option_qp =
    inference_thms     = [],
    filter             = [],
    top_heuristics     = [],
+   context_heuristics = [],
    final_rewrite_thms = [optionTheory.option_CLAUSES]
+  }:quant_param
+
+
+(*******************************************************************
+ * Sum types
+ *******************************************************************)
+
+val sum_qp = combine_qp (get_qp___for_types [``:('a + 'b)``])
+  {distinct_thms      = [],
+   cases_thms         = [],
+   rewrite_thms       = [ISL_exists, ISR_exists, ISL_ISR_NEG],
+   convs              = [],
+   heuristics         = [],
+   inference_thms     = [],
+   filter             = [],
+   top_heuristics     = [],
+   context_heuristics = [],
+   final_rewrite_thms = [sumTheory.OUTR, sumTheory.OUTL, sumTheory.ISL, sumTheory.ISR, sumTheory.INR_INL_11]
   }:quant_param
 
 
@@ -224,6 +246,7 @@ val num_qp =
    heuristics =    [],
    filter       =  [],
    top_heuristics =[],
+   context_heuristics = [],
    inference_thms     = [],
    final_rewrite_thms = [numTheory.NOT_SUC, GSYM numTheory.NOT_SUC]
   }:quant_param
@@ -246,6 +269,7 @@ val list_qp =
    filter       =  [],
    top_heuristics =[],
    heuristics =    [],
+   context_heuristics = [],
    final_rewrite_thms = [listTheory.NULL_DEF,
                          listTheory.TL, listTheory.HD,
                          rich_listTheory.NOT_CONS_NIL,
@@ -346,6 +370,7 @@ fun record_qp do_rewrites P =
    top_heuristics =[],
    inference_thms= [],
    heuristics =    [QUANT_INSTANTIATE_HEURISTIC___RECORDS do_rewrites P],
+   context_heuristics = [],
    final_rewrite_thms = []
   }:quant_param
 
@@ -357,7 +382,7 @@ val record_default_qp = record_qp false (K (K true))
  * Combinations
  *******************************************************************)
 
-val std_qp = combine_qps [
-   num_qp, option_qp, pair_default_qp, list_qp, record_default_qp]
+val std_qp = combine_qps [context_qp,
+   num_qp, option_qp, pair_default_qp, list_qp, sum_qp, record_default_qp]
 
 end

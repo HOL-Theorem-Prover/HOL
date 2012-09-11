@@ -1,6 +1,13 @@
 open HolKernel Parse boolTheory boolLib pairTheory
-open quantHeuristicsLib
+open quantHeuristicsLib simpLib boolSimps
 
+(* For manual 
+
+val hard_fail = false;
+val quiet = false;
+val _ = Parse.current_backend := PPBackEnd.emacs_terminal;
+
+*)
 
 val _ = Parse.current_backend := PPBackEnd.vt100_terminal;
 
@@ -258,6 +265,52 @@ val qh_testCases_option =
    (``!x. IS_NONE x``, SOME F)];
 
 val _ = map (qh_test_option hard_fail quiet) qh_testCases_option;
+
+(******************************************************************************)
+(* SUM tests                                                                  *)
+(******************************************************************************)
+
+val qh_test_sum = test_conv "QUANT_INSTANTIATE_CONV [sum_qp]" (QUANT_INSTANTIATE_CONV [sum_qp])
+
+val qh_testCases_sum =
+  [(``!x:'a + 'b. ISL x ==> P x``, SOME ``!l. P ((INL l):('a + 'b))``),
+   (``!x:'a + 'b. ISR x ==> P x``, SOME ``!r. P ((INR r):('a + 'b))``),
+   (``?x:'a + 'b. ISL x ==> P x``, SOME T),
+   (``?x:'a + 'b. ISR x ==> P x``, SOME T),
+   (``!x:'a + 'b. ~(ISR x) ==> P x``, SOME ``!l. (P ((INL l):('a + 'b)))``),
+   (``!x:'a + 'b. ~(ISL x) ==> P x``, SOME ``!r. (P ((INR r):('a + 'b)))``),
+   (``?x. ISL x``, SOME T),
+   (``!x. ISL x``, SOME F),
+   (``?x. ISR x``, SOME T),
+   (``!x. ISR x``, SOME F)];
+
+val _ = map (qh_test_sum hard_fail quiet) qh_testCases_sum;
+
+(******************************************************************************)
+(* Context tests                                                              *)
+(******************************************************************************)
+
+val qh_test_context = test_conv "SIMP_CONV (bool_ss++QUANT_INST_ss[context_qp]) []" (SIMP_CONV (bool_ss++QUANT_INST_ss[context_qp]) [])
+
+val qh_testCases_context =
+  [(``(P x) ==> !x. ~(P x) /\ Q x``, SOME ``~(P x)``),
+   (``~(P x) ==> !x. P x /\ Q x``, SOME ``(P (x:'a)):bool``),
+   (``P x ==> ?x. Q x \/ P x``, SOME ``T``),
+   (``(!x. P x ==> (x = 2)) ==> (!x. P x ==> Q x)``, SOME ``(!x. P x ==> (x = 2)) ==> P 2 ==> Q 2``),
+   (``(!x. Q x ==> P x) /\ Q 2 ==> (?x. P x)``, SOME T)
+]
+
+val _ = map (qh_test_context hard_fail quiet) qh_testCases_context;
+
+
+val qh_test_context2 = test_conv "SIMP_CONV (bool_ss++QUANT_INST_ss[std_qp]) []" (SIMP_CONV (bool_ss++QUANT_INST_ss[std_qp]) [])
+
+val qh_testCases_context2 =
+  [(``(~(P [])) ==> (!x. P x ==> Q x)``, SOME ``¬P [] ⇒ ∀x_t x_h. P (x_h::x_t) ⇒ Q (x_h::x_t)``),
+   (``(!x. P x ==> ~(x = [])) ==> (!x. P x ==> Q x)``, SOME ``¬P [] ⇒ ∀x_t x_h. P (x_h::x_t) ⇒ Q (x_h::x_t)``),
+   (``(!x. P x ==> ISR x) ==> (!x. P x ==> Q x)``, SOME ``(!x. (P:('a + 'b)-> bool) x ==> ISR x) ==> (!r. P (INR r) ==> (Q:('a + 'b)-> bool) (INR r))``)]
+
+val _ = map (qh_test_context2 hard_fail quiet) qh_testCases_context2;
 
 
 val _ = Process.exit Process.success;

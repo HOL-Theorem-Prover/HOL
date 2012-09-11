@@ -1,7 +1,7 @@
 signature quantHeuristicsLibParameters =
 sig
 
-  (* stateful ones, copied from quantHeuristicsLib *)
+  (* stateful ones *)
   val stateful_qp        : quantHeuristicsLibBase.quant_param;
   val pure_stateful_qp   : quantHeuristicsLibBase.quant_param;
   val TypeBase_qp        : quantHeuristicsLibBase.quant_param;
@@ -10,7 +10,9 @@ sig
   val stateful_qp___add_combine_arguments :
      quantHeuristicsLibBase.quant_param list -> unit;
 
-
+  (* context *)
+  val context_qp        : quantHeuristicsLibBase.quant_param;
+ 
   (* ones for specific types *)
 
   (*pair type*)
@@ -31,6 +33,7 @@ sig
   val num_qp            : quantHeuristicsLibBase.quant_param;
   val option_qp         : quantHeuristicsLibBase.quant_param;
   val list_qp           : quantHeuristicsLibBase.quant_param;
+  val sum_qp            : quantHeuristicsLibBase.quant_param;
 
 
   (* combination of all except the stateful ones *)

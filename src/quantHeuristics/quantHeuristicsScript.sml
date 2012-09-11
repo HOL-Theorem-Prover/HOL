@@ -165,6 +165,19 @@ val GUESS_RULES_EQUATION_EXISTS_GAP = store_thm ("GUESS_RULES_EQUATION_EXISTS_GA
 SIMP_TAC std_ss [GUESS_REWRITES] THEN
 METIS_TAC[]);
 
+(******************************************************************************)
+(* Trivial point guesses                                                      *)
+(******************************************************************************)
+
+val GUESS_RULES_TRIVIAL_EXISTS_POINT = store_thm ("GUESS_RULES_TRIVIAL_EXISTS_POINT",
+``!i P. P i ==>
+  GUESS_EXISTS_POINT (\xxx:unit. i) P``,
+SIMP_TAC std_ss [GUESS_REWRITES]);
+
+val GUESS_RULES_TRIVIAL_FORALL_POINT = store_thm ("GUESS_RULES_TRIVIAL_FORALL_POINT",
+``!i P. ~(P i) ==>
+  GUESS_FORALL_POINT (\xxx:unit. i) P``,
+SIMP_TAC std_ss [GUESS_REWRITES]);
 
 (******************************************************************************)
 (* Trivial booleans                                                           *)
@@ -648,6 +661,34 @@ SIMP_TAC std_ss [GUESS_REWRITES, FORALL_PROD,
    EXISTS_PROD, QUANT_UNIT_ELIM]);
 
 
+val GUESS_RULES_STRENGTHEN_EXISTS_POINT = store_thm ("GUESS_RULES_STRENGTHEN_EXISTS_POINT",
+``!P Q. ((!x. P x ==> Q x) ==>
+  ((GUESS_EXISTS_POINT i P ==>
+    GUESS_EXISTS_POINT i Q)))``,
+SIMP_TAC std_ss [GUESS_REWRITES] THEN
+METIS_TAC[]);
+
+val GUESS_RULES_STRENGTHEN_FORALL_GAP = store_thm ("GUESS_RULES_STRENGTHEN_FORALL_GAP",
+``!P Q. ((!x. P x ==> Q x) ==>
+  ((GUESS_FORALL_GAP i P ==>
+    GUESS_FORALL_GAP i Q)))``,
+SIMP_TAC std_ss [GUESS_REWRITES] THEN
+METIS_TAC[]);
+
+val GUESS_RULES_WEAKEN_FORALL_POINT = store_thm ("GUESS_RULES_WEAKEN_FORALL_POINT",
+``!P Q. ((!x. Q x ==> P x) ==>
+  ((GUESS_FORALL_POINT i P ==>
+    GUESS_FORALL_POINT i Q)))``,
+SIMP_TAC std_ss [GUESS_REWRITES] THEN
+METIS_TAC[]);
+
+val GUESS_RULES_WEAKEN_EXISTS_GAP = store_thm ("GUESS_RULES_WEAKEN_EXISTS_GAP",
+``!P Q. ((!x. Q x ==> P x) ==>
+  ((GUESS_EXISTS_GAP i P ==>
+    GUESS_EXISTS_GAP i Q)))``,
+SIMP_TAC std_ss [GUESS_REWRITES] THEN
+METIS_TAC[]);
+
 
 
 (*Basic theorems*)
@@ -692,6 +733,8 @@ val RIGHT_IMP_OR_INTRO = store_thm ("RIGHT_IMP_OR_INTRO",
  ``!x t1 t2. (t1 ==> t2) ==> ((t1 \/ x) ==> (t2 \/ x))``,
  PROVE_TAC[]);
 
+val IMP_NEG_CONTRA = store_thm("IMP_NEG_CONTRA",
+   ``!P i x. ~(P i) ==> (P x) ==> ~(x = i)``, PROVE_TAC[])
 
 
 
@@ -719,6 +762,19 @@ val IS_SOME_EQ_NOT_NONE = store_thm ("IS_SOME_EQ_NOT_NONE",
 ``!x. IS_SOME x = ~(x = NONE)``,
 REWRITE_TAC[GSYM optionTheory.NOT_IS_SOME_EQ_NONE]);
 
+
+val ISL_exists = store_thm ("ISL_exists",
+  ``ISL x = (?l. x = INL l)``,
+Cases_on `x` THEN SIMP_TAC std_ss [])
+
+val ISR_exists = store_thm ("ISR_exists",
+  ``ISR x = (?r. x = INR r)``,
+Cases_on `x` THEN SIMP_TAC std_ss [])
+
+val ISL_ISR_NEG = store_thm ("ISL_ISR_NEG",
+  ``(~(ISR x) = ISL x) /\
+    (~(ISL x) = ISR x)``,
+Cases_on `x` THEN SIMP_TAC std_ss [])
 
 val _ = export_theory();
 

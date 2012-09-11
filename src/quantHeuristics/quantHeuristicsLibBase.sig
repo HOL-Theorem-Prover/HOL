@@ -135,6 +135,7 @@ sig
      filter             : (term -> term -> bool) list,
      heuristics         : quant_heuristic list,
      top_heuristics     : quant_heuristic list,
+     context_heuristics : (thm list -> quant_heuristic) list,
      final_rewrite_thms : thm list};
   type quant_heuristic_cache;
 
@@ -144,19 +145,19 @@ sig
 
 
 (*Heuristics that might be useful to write own ones*)
-  val QUANT_INSTANTIATE_HEURISTIC___CONV              : conv -> quant_heuristic;
-  val QUANT_INSTANTIATE_HEURISTIC___EQUATION_distinct : thm list -> quant_heuristic;
-  val QUANT_INSTANTIATE_HEURISTIC___EQUATION_two_cases: thm -> quant_heuristic;
-  val QUANT_INSTANTIATE_HEURISTIC___one_case          : thm -> quant_heuristic;
-  val QUANT_INSTANTIATE_HEURISTIC___cases             : thm -> quant_heuristic;
-
-
+  val QUANT_INSTANTIATE_HEURISTIC___CONV                : conv -> quant_heuristic;
+  val QUANT_INSTANTIATE_HEURISTIC___EQUATION_distinct   : thm list -> quant_heuristic;
+  val QUANT_INSTANTIATE_HEURISTIC___EQUATION_two_cases  : thm -> quant_heuristic;
+  val QUANT_INSTANTIATE_HEURISTIC___one_case            : thm -> quant_heuristic;
+  val QUANT_INSTANTIATE_HEURISTIC___cases               : thm -> quant_heuristic;
+  val QUANT_INSTANTIATE_HEURISTIC___GIVEN_INSTANTIATION : thm list -> quant_heuristic;
+  val QUANT_INSTANTIATE_HEURISTIC___STRENGTHEN_WEAKEN   : thm list -> quant_heuristic;
 
   val QUANT_INSTANTIATE_HEURISTIC___max_rec_depth : int ref
 
   val QUANT_INSTANTIATE_HEURISTIC___COMBINE :
     ((term -> term -> bool) list) -> quant_heuristic list ->
-    quant_heuristic list -> quant_heuristic_cache ref option -> quant_heuristic_base;
+    quant_heuristic list -> (thm list -> quant_heuristic) list -> quant_heuristic_cache ref option -> thm list -> quant_heuristic_base;
 
 
   val COMBINE_HEURISTIC_FUNS : (unit -> guess_collection) list -> guess_collection;
@@ -165,11 +166,11 @@ sig
   (*use this to create sys for debugging own heuristics*)
   val QUANT_INSTANTIATE_HEURISTIC___PURE_COMBINE : quant_param ->
        quant_heuristic_cache ref option ->
-       term -> term -> guess_collection
+       thm list -> term -> term -> guess_collection
 
 (*The most important functions *)
   val EXTENSIBLE_QUANT_INSTANTIATE_CONV : quant_heuristic_cache ref option ->
-      bool -> (term -> bool) -> bool -> bool -> quant_param list -> conv;
+      bool -> (term -> bool) -> bool -> bool -> thm list -> quant_param list -> conv;
   val QUANT_INSTANTIATE_TAC             : quant_param list -> tactic;
   val QUANT_INSTANTIATE_CONV            : quant_param list -> conv;
   val ASM_QUANT_INSTANTIATE_TAC         : quant_param list -> tactic;
@@ -184,7 +185,7 @@ sig
 
 
   val EXTENSIBLE_QUANT_INSTANTIATE_STEP_CONSEQ_CONV :
-      quant_heuristic_cache ref option -> (term -> bool) -> bool -> quant_param list -> ConseqConv.directed_conseq_conv;
+      quant_heuristic_cache ref option -> (term -> bool) -> bool -> quant_param list -> thm list -> ConseqConv.directed_conseq_conv;
   val EXTENSIBLE_QUANT_INSTANTIATE_CONSEQ_CONV :
       quant_heuristic_cache ref option -> bool -> (term -> bool) -> bool -> quant_param list -> ConseqConv.directed_conseq_conv;
   val QUANT_INSTANTIATE_CONSEQ_CONV :
@@ -234,6 +235,7 @@ sig
   val inference_qp     : thm list -> quant_param
   val convs_qp         : conv list -> quant_param
   val heuristics_qp    : quant_heuristic list -> quant_param
+  val context_heuristics_qp : (thm list -> quant_heuristic) list -> quant_param
   val top_heuristics_qp: quant_heuristic list -> quant_param
   val filter_qp        : (term -> term -> bool) list -> quant_param
   val oracle_qp        : (term -> term -> (term * term list) option) -> quant_param
