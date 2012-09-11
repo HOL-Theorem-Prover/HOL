@@ -766,6 +766,7 @@ val omax_preds_omega = store_thm(
   ``omax (preds ω) = NONE``,
   simp_tac (srw_ss() ++ DNF_ss) [omax_NONE, lt_omega] >> qx_gen_tac `m` >>
   qexists_tac `SUC m` >> simp[]);
+val omega_islimit = save_thm("omega_islimit", omax_preds_omega)
 
 val ordle_ANTISYM = store_thm(
   "ordle_ANTISYM",
