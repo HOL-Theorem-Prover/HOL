@@ -3258,10 +3258,11 @@ val VAR_RES_QUANT_INSTANTIATE_CONSEQ_CONV___main  =
       convs =         [],
       heuristics =    [QUANT_INSTANTIATE_HEURISTIC___VAR_RES_FRAME_SPLIT___bool],
       inference_thms = [],
-      filter              = [],
-      top_heuristics      = [],
+      filter             = [],
+      top_heuristics     = [],
+      context_heuristics = [],
       final_rewrite_thms = []
-      }::list_qp::(var_res_param.quantifier_heuristicsL));
+      }::list_qp::(var_res_param.quantifier_heuristicsL)) [];
 
 (*
 val lref = ref []
