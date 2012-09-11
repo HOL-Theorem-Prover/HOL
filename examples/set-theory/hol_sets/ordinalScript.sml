@@ -968,6 +968,16 @@ val ordle_TRANS = store_thm(
   ``∀x y z. (x:'a ordinal) ≤ y ∧ y ≤ z ⇒ x ≤ z``,
   metis_tac [ordlt_TRANS, ordle_lteq]);
 
+val ordlet_TRANS = store_thm(
+  "ordlet_TRANS",
+  ``∀x y z. (x:'a ordinal) ≤ y ∧ y < z ⇒ x < z``,
+  metis_tac [ordle_lteq, ordlt_TRANS]);
+val ordlte_TRANS = store_thm(
+  "ordlte_TRANS",
+  ``∀x y z. (x:'a ordinal) < y ∧ y ≤ z ⇒ x < z``,
+  metis_tac [ordle_lteq, ordlt_TRANS]);
+
+
 val generic_continuity = store_thm(
   "generic_continuity",
   ``(∀a. 0 < a ∧ islimit a ⇒ f a :'a ordinal = sup (IMAGE f (preds a))) ∧
