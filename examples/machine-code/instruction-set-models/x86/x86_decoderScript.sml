@@ -347,7 +347,7 @@ val x86_syntax_list = `` [
 
   ] ``;
 
-val x86_decode_aux_def = Define `
+val x86_decode_aux_def = zDefine `
   x86_decode_aux = (match_list x86_match_step tokenise (x86_syntax o tokenise) o
                      MAP (\s. let x = STR_SPLIT [#"|"] s in (EL 0 x, EL 1 x))) ^x86_syntax_list`;
 
