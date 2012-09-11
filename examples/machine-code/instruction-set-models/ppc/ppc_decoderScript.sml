@@ -160,7 +160,7 @@ val ppc_syntax = ``
    ("0 1 1 0 1 1 S A UIMM",
      (\v. Pxoris (b2w v "A") (b2w v "S") (b2w v "UIMM")))]    ``;
 
-val ppc_decode_def = Define `
+val ppc_decode_def = zDefine `
   ppc_decode = match_list ppc_match_step (REVERSE o tokenise) (\k x. SOME (k (FST x))) ^ppc_syntax`;
 
 (* -- partially pre-evaluate ppc_decode -- *)
