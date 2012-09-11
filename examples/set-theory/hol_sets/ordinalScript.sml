@@ -1576,9 +1576,96 @@ val epsilon0_fixpoint = store_thm(
 
 val epsilon0_least_fixpoint = store_thm(
   "epsilon0_least_fixpoint",
-  ``∀a. a < ε₀ ⇒ ω ** a ≠ a``,
+  ``∀a. a < ε₀ ⇒ a < ω ** a ∧ ω ** a < ε₀``,
   gen_tac >> simp[epsilon0_def] >> DEEP_INTRO_TAC oleast_intro >>
-  metis_tac [epsilon0_fixpoint]);
+  metis_tac [epsilon0_fixpoint, x_le_ordEXP_x, ordle_lteq, ordEXP_lt_MONO_R,
+             fromNat_lt_omega]);
+
+val add_nat_islimit = store_thm(
+  "add_nat_islimit",
+  ``0 < n ⇒ islimit (α + &n) = F``,
+  Induct_on `n` >> simp[]);
+val _ = export_rewrites ["add_nat_islimit"]
+
+val strict_continuity_preserves_islimit = store_thm(
+  "strict_continuity_preserves_islimit",
+  ``(∀s. s ≼ univ(:α inf) ∧ s ≠ ∅ ⇒
+         f (sup s) = sup (IMAGE f s) : 'a ordinal) ∧
+    (∀x y. x < y ⇒ f x < f y) ∧
+    islimit (α:α ordinal) ∧ α ≠ 0 ⇒ islimit (f α)``,
+  strip_tac >> fs[sup_preds_omax_NONE] >>
+  first_assum (fn th => simp_tac (srw_ss()) [SimpRHS, Once (SYM th)]) >>
+  `preds α ≠ ∅`
+    by (strip_tac >> `0 < a` by fs[IFF_ZERO_lt] >> rw[] >> fs[]) >>
+  simp[preds_inj_univ] >>
+  match_mp_tac ordle_ANTISYM >>
+  simp[sup_thm, IMAGE_cardleq_rwt, preds_inj_univ, impI] >> conj_tac
+  >- (qx_gen_tac `b` >> strip_tac >> match_mp_tac ordle_TRANS >>
+      qexists_tac `f α` >> conj_tac >- simp[ordle_lteq] >>
+      Q.UNDISCH_THEN `sup (preds α) = α`
+        (fn th => simp_tac (srw_ss()) [SimpR ``ordlt``, Once (SYM th)]) >>
+      simp[preds_inj_univ]) >>
+  asm_simp_tac (srw_ss() ++ DNF_ss) [] >> qx_gen_tac `x` >> strip_tac >>
+  match_mp_tac suple_thm >> simp[preds_inj_univ])
+
+val add_omega_islimit = store_thm(
+  "add_omega_islimit",
+  ``islimit (α + ω)``,
+  ho_match_mp_tac strict_continuity_preserves_islimit >>
+  simp[omax_preds_omega, ordADD_continuous])
+val _ = export_rewrites ["add_omega_islimit"]
+
+val islimit_mul_L = store_thm(
+  "islimit_mul_L",
+  ``∀α. islimit α ⇒ islimit (α * β)``,
+  Cases_on `β = 0` >- simp[] >> fs[IFF_ZERO_lt] >> gen_tac >>
+  Cases_on `α = 0` >- simp[] >> fs[IFF_ZERO_lt] >> strip_tac >>
+  qspec_then `λx. x * β` mp_tac
+    (Q.GEN `f` strict_continuity_preserves_islimit) >> simp[] >>
+  simp[ordMULT_continuous, IFF_ZERO_lt])
+
+val mul_omega_islimit = store_thm(
+  "mul_omega_islimit",
+  ``islimit (α * ω)``,
+  qspec_then `α` strip_assume_tac ord_CASES >> simp[islimit_mul_L]);
+
+val omega_exp_islimit = store_thm(
+  "omega_exp_islimit",
+  ``0 < α ⇒ islimit (ω ** α)``,
+  qspec_then `α` strip_assume_tac ord_CASES
+  >- simp[]
+  >- (simp[] >> simp[islimit_mul_L, omax_preds_omega]) >>
+  strip_tac >> ho_match_mp_tac strict_continuity_preserves_islimit >>
+  simp[IFF_ZERO_lt, ordEXP_continuous]);
+
+(*
+val expbound_lemma = prove(
+  ``0 < α ⇒ ∀y. y < ω ** α ⇒ 2 * y < ω ** α``,
+  strip_tac >> ho_match_mp_tac simple_ord_induction >> simp[]
+
+(* And so, arithmetic (addition, multiplication and exponentiation) is
+   closed under ε₀ *)
+val ordADD_under_epsilon0 = store_thm(
+  "ordADD_under_epsilon0",
+  ``x ≤ y ∧ y < ε₀ ⇒ x + y < ε₀``,
+  strip_tac >>
+  Cases_on `y = 0` >- fs[] >>
+  `0 < y` by fs[IFF_ZERO_lt] >>
+  Cases_on `y = 1`
+  >- (fs[ordle_lteq]
+      >- (`x = 0` by metis_tac [IFF_ZERO_lt] >> fs[]) >>
+      match_mp_tac ordlt_TRANS >> qexists_tac `ω` >> simp[] >>
+      simp[Once (SYM epsilon0_fixpoint)] >>
+      metis_tac [ordEXP_lt_IFF, ordEXP_1R, fromNat_lt_omega]) >>
+  `x + y ≤ 2 * y` by metis_tac [ordADD_le_MONO_L, ordMULT_2L] >>
+  `2 * y ≤ y * y` by (match_mp_tac ordMULT_le_MONO_L >>
+                      simp[ordlt_fromNat] >>
+                      metis_tac [DECIDE ``m < 2n ⇔ m = 0 ∨ m = 1``]) >>
+
+
+
+  ho_match_mp_tac binary_wlog >> conj_tac >- metis_tac [ordADD_
+*)
 
 val FOLDL_SUM_lemma = prove(
   ``∀ces x s:'a ordinal.
