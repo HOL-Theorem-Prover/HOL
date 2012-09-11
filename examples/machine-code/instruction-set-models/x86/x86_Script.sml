@@ -1,11 +1,11 @@
 
-open HolKernel boolLib bossLib Parse;
+open HolKernel boolLib bossLib Parse; val _ = new_theory "x86_";
+
 open wordsTheory bit_listTheory;
 
 open x86_coretypesTheory x86_astTheory x86_opsemTheory;
 open x86_seq_monadTheory x86_decoderTheory x86_icacheTheory;
 
-val _ = new_theory "x86_";
 
 (* ---------------------------------------------------------------------------------- *>
 
@@ -48,5 +48,13 @@ val X86_NEXT_THM = store_thm("X86_NEXT_THM",
   SIMP_TAC std_ss [X86_NEXT_def,LET_DEF,XREAD_REG_def,x86_decode_bytes_def,
     x86_execute_some_def,option_apply_def]);
 
+
+(* test whether decoding works, if this is slow then something's wrong *)
+
+val t1 = Time.now();
+val th = EVAL ``x86_decode(bytebits "D1F8")``;  (* sar eax, 1 *)
+val t2 = Time.now();
+val elapsed_time = Time.toReal t2 - Time.toReal t1
+val _ = elapsed_time < 5.0 orelse failwith("Decoding failed to use compset properly.")
 
 val _ = export_theory ();

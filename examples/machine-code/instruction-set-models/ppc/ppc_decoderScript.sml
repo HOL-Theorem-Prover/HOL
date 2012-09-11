@@ -183,17 +183,8 @@ val ppc_decode_thm = let
   val th7 = REWRITE_RULE [option_orelse_assoc] th6
   in th7 end;
 
-fun permanently_add_to_compset name thm = let
-  val _ = save_thm(name,thm)
-  val _ = computeLib.add_funs [thm]
-  val _ = adjoin_to_theory {sig_ps = NONE, struct_ps = SOME (fn ppstrm =>
-    let val S = (fn s => (PP.add_string ppstrm s; PP.add_newline ppstrm)) in
-            S ("val _ = computeLib.add_funs ["^name^"];")
-    end)}
-  in print ("Permanently added to compset: "^name^"\n") end;
-
-val _ = permanently_add_to_compset "ppc_decode_thm" ppc_decode_thm;
-
+val _ = save_thm("ppc_decode_thm",ppc_decode_thm);
+val _ = computeLib.add_persistent_funs ["ppc_decode_thm"];
 
 val _ = export_theory ();
 

@@ -121,11 +121,7 @@ val DT_DF_then_orelse = prove(
 
 fun permanently_add_to_compset name thm = let
   val _ = save_thm(name,thm)
-  val _ = computeLib.add_funs [thm]
-  val _ = adjoin_to_theory {sig_ps = NONE, struct_ps = SOME (fn ppstrm =>
-    let val S = (fn s => (PP.add_string ppstrm s; PP.add_newline ppstrm)) in
-            S ("val _ = computeLib.add_funs ["^name^"];")
-    end)}
+  val _ = computeLib.add_persistent_funs [name]
   in print ("Permanently added to compset: "^name^"\n") end;
 
 val _ = permanently_add_to_compset "DT_DF_then_orelse" DT_DF_then_orelse;

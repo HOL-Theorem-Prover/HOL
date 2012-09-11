@@ -571,4 +571,14 @@ val th = EVAL ``x86_decode(bytebits "5B")``;
 *)
 
 
+(* test whether decoding works, if this is slow then something's wrong *)
+
+val t1 = Time.now();
+val th = EVAL ``x86_decode(bytebits "D1F8")``;  (* sar eax, 1 *)
+val t2 = Time.now();
+val elapsed_time = Time.toReal t2 - Time.toReal t1
+val _ = elapsed_time < 5.0 orelse failwith("Decoding failed to use compset properly.")
+(* The time difference should really be under a second, but 5 seconds
+   gives a bit of a margin. *)
+
 val _ = export_theory ();
