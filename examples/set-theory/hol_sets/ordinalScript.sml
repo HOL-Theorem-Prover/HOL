@@ -1623,6 +1623,28 @@ val epsilon0_least_fixpoint = store_thm(
   metis_tac [epsilon0_fixpoint, x_le_ordEXP_x, ordle_lteq, ordEXP_lt_MONO_R,
              fromNat_lt_omega]);
 
+val zero_lt_epsilon0 =
+  epsilon0_fixpoint |> SIMP_RULE (srw_ss()) [ASSUME ``ε₀ = 0``]
+                    |> DISCH_ALL
+                    |> SIMP_RULE (srw_ss()) [IFF_ZERO_lt]
+
+val one_lt_epsilon0 =
+    MATCH_MP epsilon0_least_fixpoint zero_lt_epsilon0
+             |> SIMP_RULE (srw_ss()) []
+
+(* |- ω < ε₀ *)
+val omega_lt_epsilon0 = save_thm(
+  "omega_lt_epsilon0",
+  MATCH_MP epsilon0_least_fixpoint one_lt_epsilon0
+           |> SIMP_RULE (srw_ss()) [])
+val _ = export_rewrites ["omega_lt_epsilon0"]
+
+val fromNat_lt_epsilon0 = store_thm(
+  "fromNat_lt_epsilon0",
+  ``&n < ε₀``,
+  metis_tac [ordlt_TRANS, fromNat_lt_omega, omega_lt_epsilon0]);
+val _ = export_rewrites ["fromNat_lt_epsilon0"]
+
 val add_nat_islimit = store_thm(
   "add_nat_islimit",
   ``0 < n ⇒ islimit (α + &n) = F``,
