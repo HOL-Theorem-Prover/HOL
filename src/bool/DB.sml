@@ -451,7 +451,7 @@ in
 
      if null parents then ()
      else pblock ((fn n => link(n^"Theory.html",n)), parents) ;
-     sig_block((fn (Name,Kind) =>
+     sig_block((fn (Name,Kind,Promote) =>
                    (begin_block CONSISTENT 0;
                       add_string"<td>"; add_break(1,0); strong Name;
                       add_break(1,0);

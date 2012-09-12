@@ -402,6 +402,7 @@ fun inst_kind theta =
   let val Theta = align_kinds theta
   in inst_rank_kind Theta
   end
+  handle e as HOL_ERR _ => raise (wrap_exn "Kind" "inst_kind" e)
 
 (*---------------------------------------------------------------------------
      These routines support the "vsubst" routine in Type.sml,

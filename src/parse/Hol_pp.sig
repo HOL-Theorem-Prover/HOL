@@ -9,7 +9,7 @@ sig
 
   datatype theory
     = THEORY of string *
-                {types       : (string * kind) list,
+                {types       : (string * kind * bool) list,
                  consts      : (string * hol_type) list,
                  parents     : string list,
                  axioms      : (string * thm) list,

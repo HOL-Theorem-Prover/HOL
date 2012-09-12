@@ -560,6 +560,7 @@ in
   in
     grammar_term_printer := term_pp.pp_term (term_grammar()) (type_grammar());
     the_absyn_parser := TermParse.absyn (!the_term_grammar) (!the_type_grammar) (!the_kind_grammar);
+    Term.set_pp_term (!term_printer);
     term_grammar_changed := false
   end
   else ()

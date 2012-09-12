@@ -29,6 +29,9 @@ sig
                       hol_type * hol_type ->
                       (hol_type, (string HOLset.set)Susp.susp * hol_type)Binarymap.dict
 
+  val same_tyconst  : hol_type -> hol_type -> bool
+  val is_humble_type_con : {Thy:string, Tyop:string} -> bool
+  val is_humble_type_app : hol_type * hol_type list -> bool
   val compare0      : int -> (hol_type,int)Binarymap.dict * (hol_type,int)Binarymap.dict
                           -> hol_type * hol_type -> order
   val prim_compare0 : int -> (hol_type,int)Binarymap.dict * (hol_type,int)Binarymap.dict

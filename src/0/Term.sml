@@ -42,6 +42,12 @@ val --> = Type.-->;   infixr 3 -->;
 
 infix |-> ##;
 
+val pp_term_ref = ref (fn pps:HOLPP.ppstream => fn ty:term => ())
+val term_to_string_ref = ref (fn ty:term => "<term>")
+fun sprint pp x = HOLPP.pp_to_string 80 pp x
+fun set_pp_term f = (pp_term_ref := f; term_to_string_ref := sprint f)
+fun term_to_string ty = !term_to_string_ref ty
+
 (*---------------------------------------------------------------------------
                Create the signature for HOL terms
  ---------------------------------------------------------------------------*)
@@ -1088,10 +1094,10 @@ fun check_kd_subst caller =
   end;
 *)
 
-fun inst_kind [] = I
-  | inst_kind theta =
-    let val kd_inst = Kind.inst_kind theta
-        val ty_inst = Type.inst_kind theta
+fun pure_inst_kind [] = I
+  | pure_inst_kind theta =
+    let val kd_inst = Kind.pure_inst_kind theta
+        val ty_inst = Type.pure_inst_kind theta
         fun inst (bv as Bv i) = bv
           | inst (c as Const(_, GRND _)) = c
           | inst (c as Const(r, POLY Ty)) = Const(r, maybe_GRND (ty_inst Ty))
@@ -1102,14 +1108,14 @@ fun inst_kind [] = I
           | inst (TAbs(Bvar as (s,kd),Body)) = TAbs((s,kd_inst kd), inst Body)
           | inst (t as Clos _)      = inst(push_clos t)
     in
-      (*check_kd_subst "inst_kind" theta;*)
+      (*check_kd_subst "pure_inst_kind" theta;*)
       inst
     end
-    handle HOL_ERR{message=m,...} => raise ERR "inst_kind" m;
+    handle HOL_ERR{message=m,...} => raise ERR "pure_inst_kind" m;
 
-fun inst_rank_kind ([],rank)    = (inst_rank rank
+fun inst_rank_kind ([],rank) = (inst_rank rank
                                handle HOL_ERR{message=m,...} => raise ERR "inst_rank_kind" m)
-  | inst_rank_kind (theta,0) = (inst_kind theta
+  | inst_rank_kind (theta,0) = (pure_inst_kind theta
                                handle HOL_ERR{message=m,...} => raise ERR "inst_rank_kind" m)
   | inst_rank_kind (Theta as (theta,rank)) =
     let val ty_inst = Type.inst_rank_kind Theta
@@ -1228,6 +1234,8 @@ fun align_inst_kind [] = I
   in inst_rank_kind Theta
   end
   handle e as HOL_ERR _ => raise (wrap_exn "Term" "align_inst_kind" e)
+
+val inst_kind = align_inst_kind
 
 fun align_inst [] = I
   | align_inst theta =
@@ -1948,7 +1956,7 @@ fun kind_norm_subst (S as (_,_,([],_),(0,_))) = kind_norm_subst0 S
                  else (redex' |-> residue)::A
               end) rst
      val tyS' = delty [] tyS
-     val Theta = inst_rk_kd_ty (tyS',kdS',rkS) (* pure_inst tyS' o inst_kind kdS' o inst_rank rkS *)
+     val Theta = inst_rk_kd_ty (tyS',kdS',rkS) (* pure_inst tyS' o pure_inst_kind kdS' o inst_rank rkS *)
      fun del A [] = A
        | del A ({redex,residue}::rst) =
          del (let val redex' = Theta(redex)

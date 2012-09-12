@@ -52,13 +52,13 @@ fun REWR_CONV0 (part_matcher,fn_name) th =
         val l   = lhs(concl eqn)
     in if prim_eq l tm then eqn else TRANS (ALPHA tm l) eqn
     end
-    handle HOL_ERR _ => raise ERR fn_name "lhs of thm doesn't match term"
-(*
+    (* handle HOL_ERR _ => raise ERR fn_name "lhs of thm doesn't match term" *)
+(**)
     handle HOL_ERR _ => raise ERR fn_name ("lhs of thm doesn't match term"
-                            ^ (if current_trace "kinds" < 2 then "" else
+                            ^ (if current_trace "ranks" < 3 then "" else
                                  (set_trace "types" 1;
                                   "\n" ^ thm_to_string th ^ "\nvs.\n" ^ term_to_string tm)))
-*)
+(**)
   end;
 
 val REWR_CONV    = REWR_CONV0 (PART_MATCH,    "REWR_CONV")

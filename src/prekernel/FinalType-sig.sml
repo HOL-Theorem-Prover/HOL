@@ -64,11 +64,14 @@ sig
 
  val kind_of       : hol_type -> kind
  val prim_kind_of  : {Thy:string,Tyop:string} -> kind
+ val humble_of     : {Thy:string,Tyop:string} -> bool
+ val is_humble_type: hol_type -> bool
  val rank_of_type  : hol_type -> rank
  val kind_vars     : hol_type -> kind list
  val kind_varsl    : hol_type list -> kind list
  val inst_rank     : rank -> hol_type -> hol_type
- val inst_kind     : (kind,kind)Lib.subst -> hol_type -> hol_type
+ val pure_inst_kind: (kind,kind)Lib.subst -> hol_type -> hol_type (* expects ranks match *)
+ val inst_kind     : (kind,kind)Lib.subst -> hol_type -> hol_type (* aligns ranks *)
  val inst_rank_kind: (kind,kind)Lib.subst * rank -> hol_type -> hol_type
  val inst_rk_kd_ty : (hol_type,hol_type)Lib.subst * (kind,kind)Lib.subst * rank
                         -> hol_type -> hol_type
@@ -156,10 +159,10 @@ sig
 
  (* accessing and manipulating theory information for types *)
  val prim_new_type : {Thy:string, Tyop:string} -> int -> unit
- val prim_new_type_opr : {Thy:string, Tyop:string} -> kind -> unit
+ val prim_new_type_opr : {Thy:string, Tyop:string} -> kind * bool -> unit
  val prim_delete_type : {Thy:string, Tyop:string} -> unit
  val thy_types : string -> (string * int) list
- val thy_type_oprs : string -> (string * kind) list
+ val thy_type_oprs : string -> (string * kind * bool) list
  val del_segment : string -> unit
  val uptodate_type : hol_type -> bool
 

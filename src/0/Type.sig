@@ -11,6 +11,8 @@ sig
   val rank_of_exist_dom : hol_type -> rank
   val check_kind_of : hol_type -> kind
   val is_well_kinded: hol_type -> bool
+  val is_humble_type_con : {Thy:string, Tyop:string} -> bool
+  val is_humble_type_app : hol_type * hol_type list -> bool
 
   val is_bvartype   : hol_type -> bool
 

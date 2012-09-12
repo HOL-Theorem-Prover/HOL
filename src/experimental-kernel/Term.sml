@@ -66,6 +66,12 @@ datatype term = Var of string * hol_type
               | Abs  of term * term
               | TAbs of hol_type * term
 
+val pp_term_ref = ref (fn pps:HOLPP.ppstream => fn ty:term => ())
+val term_to_string_ref = ref (fn ty:term => "<term>")
+fun sprint pp x = HOLPP.pp_to_string 80 pp x
+fun set_pp_term f = (pp_term_ref := f; term_to_string_ref := sprint f)
+fun term_to_string ty = !term_to_string_ref ty
+
 fun prim_new_const (k as {Thy,Name}) ty = let
   val _ = if is_type_kind (kind_of ty) then () else raise ERR "prim_new_const" "type does not have base kind"
   val id = KernelSig.insert(const_table, k, ty)
@@ -2097,7 +2103,7 @@ fun inst_all (tmS,tyS,kdS,rk:int) =
 end (* local *)
 
 
-val inst_kind = fn theta => inst_rank_kind (theta,0)
+val pure_inst_kind = fn theta => inst_rank_kind (theta,0)
 
 fun align_inst_kind []  = I
   | align_inst_kind kdS =
@@ -2105,6 +2111,8 @@ fun align_inst_kind []  = I
   in inst_rank_kind Theta
   end
   handle HOL_ERR {message, ...} => raise ERR "align_inst_kind" message
+
+val inst_kind = align_inst_kind
 
 (*---------------------------------------------------------------------------*
  * Applying rank, kind, and type substitutions to all types in a term.       *
@@ -2191,7 +2199,7 @@ local
            | SOME ty => (fn univ =>
                          (* let val dom = kind_of(fst(Type.dest_univ_type(type_of univ)))
                                 val kdv = kind_of ty
-                            in mk_comb (align_inst_kind [kdv |-> dom] c, univ)
+                            in mk_comb (inst_kind [kdv |-> dom] c, univ)
                             end *) 
                             let val (tytheta,kdtheta,rk) = om_match_type ty (type_of univ)
                             in mk_comb (inst_rk_kd_ty (tytheta,kdtheta,rk) c, univ)
@@ -2550,7 +2558,7 @@ fun kind_norm_subst (S as (_,_,([],_),(0,_))) = kind_norm_subst0 S
                  else (redex' |-> residue)::A
               end) rst
      val tyS' = delty [] tyS
-     val Theta = inst_rk_kd_ty (tyS',kdS',rkS) (* pure_inst tyS' o inst_kind kdS' o inst_rank rkS *)
+     val Theta = inst_rk_kd_ty (tyS',kdS',rkS) (* pure_inst tyS' o pure_inst_kind kdS' o inst_rank rkS *)
      fun del A [] = A
        | del A ({redex,residue}::rst) =
          del (let val redex' = Theta(redex)

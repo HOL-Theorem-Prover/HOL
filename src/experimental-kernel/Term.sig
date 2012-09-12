@@ -11,4 +11,6 @@ sig
   val dest_eq_ty        : term -> term * term * hol_type
   val lazy_beta_conv    : term -> term
 
+  val term_to_string: term -> string
+
 end

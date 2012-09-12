@@ -52,24 +52,28 @@ end handle Unchanged => let val fy = f y
 
 
 type type_key = {Thy : string, Tyop : string }
-type type_info = KernelSig.kernelid * kind
+type type_info = KernelSig.kernelid * (kind * bool)
 
 val operator_table = KernelSig.new_table()
+(* boolean flag in type constant operator_table is *true* iff humble, i.e.,
+   that constant is equivalent to itself under rank promotion
+     (if completely applied to just such type arguments);
+   if *false*, the constant has distinct rank instances *)
 
 fun prim_delete_type (k as {Thy, Tyop}) =
     ignore (KernelSig.retire_name(operator_table, {Thy = Thy, Name = Tyop}))
 
-fun prim_new_type_opr {Thy,Tyop} kd =
-  ignore (KernelSig.insert(operator_table,{Thy=Thy,Name=Tyop},kd))
+fun prim_new_type_opr {Thy,Tyop} (kd,humble) =
+  ignore (KernelSig.insert(operator_table,{Thy=Thy,Name=Tyop},(kd,humble)))
 
 fun prim_new_type (r as {Thy,Tyop}) n = let
   val _ = n >= 0 orelse failwith "invalid arity"
 in
-  prim_new_type_opr r (mk_arity n)
+  prim_new_type_opr r (mk_arity n, false)
 end
 
 fun thy_types s = let
-  fun foldthis (kn,(_,kind),acc) =
+  fun foldthis (kn,(_,(kind,humble)),acc) =
       if #Thy kn = s then (#Name kn, arity_of kind) :: acc handle HOL_ERR _ =>
                 raise ERR "thy_types" "non-arity kind in theory - use thy_type_oprs"
       else acc
@@ -78,8 +82,8 @@ in
 end
 
 fun thy_type_oprs s = let
-  fun foldthis (kn,(_,kind),acc) =
-      if #Thy kn = s then (#Name kn, kind) :: acc
+  fun foldthis (kn,(_,(kind,humble)),acc) =
+      if #Thy kn = s then (#Name kn, kind, humble) :: acc
       else acc
 in
   KernelSig.foldl foldthis [] operator_table
@@ -88,9 +92,9 @@ end
 fun del_segment s = KernelSig.del_segment(operator_table, s)
 
 fun minseg s = {Thy = "min", Tyop = s}
-val _ = prim_new_type_opr (minseg "fun" ) (mk_arity 2)
-val _ = prim_new_type_opr (minseg "bool") (mk_arity 0)
-val _ = prim_new_type_opr (minseg "ind" ) (mk_arity 0)
+val _ = prim_new_type_opr (minseg "fun" ) (mk_arity 2, true)
+val _ = prim_new_type_opr (minseg "bool") (mk_arity 0, true)
+val _ = prim_new_type_opr (minseg "ind" ) (mk_arity 0, true)
 
 (*---------------------------------------------------------------------------
                 Declare the SML type of HOL types
@@ -276,15 +280,29 @@ fun is_exist_type (TyExi _) = true
 fun prim_kind_of_tyc tyc =
   let open KernelSig
   in case peek(operator_table,KernelSig.name_of_id tyc) of
-        SOME (_,kd) => kd
+        SOME (_,(kd,_)) => kd
       | NONE => raise ERR "prim_kind_of_tyc" "not a defined type constant"
   end
 
 fun prim_kind_of {Thy,Tyop} =
   let open KernelSig
   in case peek(operator_table,{Thy=Thy,Name=Tyop}) of
-        SOME (_,kd) => kd
+        SOME (_,(kd,_)) => kd
       | NONE => raise ERR "prim_kind_of" "not a defined type constant"
+  end
+
+fun humble_of_tyc tyc =
+  let open KernelSig
+  in case peek(operator_table,KernelSig.name_of_id tyc) of
+        SOME (_,(_,h:bool)) => h
+      | NONE => raise ERR "humble_of_tyc" "not a defined type constant"
+  end
+
+fun humble_of {Thy,Tyop} =
+  let open KernelSig
+  in case peek(operator_table,{Thy=Thy,Name=Tyop}) of
+        SOME (_,(_,h:bool)) => h
+      | NONE => raise ERR "humble_of" "not a defined type constant"
   end
 
 (* Commenting out vacuum code:
@@ -336,7 +354,7 @@ val tyname = KernelSig.id_toString tyc
                 fun revar kd = orig_kdvar (#1(dest_var_kind kd))
                 fun revar_match {redex,residue} = {redex=revar redex, residue=residue}
                 val kdS' = List.map revar_match kdS
-                val kd' = Kind.inst_kind kdS' pkd
+                val kd' = Kind.pure_inst_kind kdS' pkd
                 val _ = if kd'=kd then raise UNCHANGEDTY else ()
             in raise ERR "vacuum_opr" ("no args: TyCon("^tyname^",kd')") (* TyCon(tyc,kd') *)
             end
@@ -456,7 +474,7 @@ fun prim_mk_thy_con_type {Thy,Tyop} = let
   open KernelSig
 in
   case peek(operator_table,{Thy=Thy,Name=Tyop}) of
-    SOME const => TyCon const
+    SOME (const as (id,(kind,humble))) => TyCon (id,kind)
   | NONE => raise ERR "mk_thy_con_type"
                 ("the type operator "^quote Tyop^
                  " has not been declared in theory "^quote Thy^".")
@@ -466,7 +484,7 @@ fun mk_thy_con_type {Thy,Tyop,Kind} = let
   open KernelSig
 in
   case peek(operator_table,{Thy=Thy,Name=Tyop}) of
-    SOME (const as (id,(kind0))) =>
+    SOME (const as (id,(kind0,humble))) =>
            (let val (kdS,rkS) = Kind.match_kind kind0 Kind
                 val Kind' = Kind.inst_rank_kind (kdS,rkS) kind0
             in TyCon (id,Kind')
@@ -481,11 +499,12 @@ end
 
 fun first_decl caller s = let
   val possibilities = KernelSig.listName operator_table s
+  fun id_kd (id,(kind,humble)) = (id,kind)
 in
   case possibilities of
     [] => raise ERR caller ("No such type: "^s)
-  | [x] => #2 x
-  | x::xs => (WARN caller ("More than one possibility for "^s); #2 x)
+  | [x] => id_kd (#2 x)
+  | x::xs => (WARN caller ("More than one possibility for "^s); id_kd (#2 x))
 end
 
 fun prim_mk_con_type Tyop = TyCon (first_decl "mk_con_type" Tyop)
@@ -645,7 +664,7 @@ fun mk_type (opname, args) =
 fun mk_thy_type {Thy, Tyop, Args} =
     case KernelSig.peek(operator_table, {Thy = Thy, Name = Tyop}) of
       NONE => raise ERR "mk_thy_type" ("No such type: "^Thy ^ "$" ^ Tyop)
-    | SOME (id,kind) =>
+    | SOME (id,(kind,humble)) =>
       let val (argkds,reskd) = strip_arrow_kind kind
           val argkds0 = List.take(argkds, length Args)
                         handle Subscript => raise ERR "mk_thy_type"
@@ -714,7 +733,7 @@ end
 
 fun op_kind {Thy,Tyop} =
     case KernelSig.peek(operator_table,{Thy=Thy,Name=Tyop}) of
-      SOME (id, kind) => SOME kind
+      SOME (id, (kind,humble)) => SOME kind
     | NONE => NONE
 
 fun op_arity r = case op_kind r
@@ -728,7 +747,7 @@ fun op_arity r = case op_kind r
 
 fun op_rank {Thy,Tyop} =
     case KernelSig.peek(operator_table,{Thy=Thy,Name=Tyop}) of
-      SOME (id, kind) => SOME (rank_of kind)
+      SOME (id, (kind,humble)) => SOME (rank_of kind)
     | NONE => NONE
 
 (*---------------------------------------------------------------------------
@@ -764,6 +783,38 @@ fun type_var_subtype (Tyv u, Tyv v) = tyvar_subtype (u,v)
   | type_var_subtype _ = raise ERR "type_var_subtype" "variables required"
 *)
 
+fun is_humble_tyc tyc =
+  let open KernelSig
+  in case peek(operator_table,name_of_id tyc) of
+        SOME (_,(kd,h:bool)) => h andalso kd = typ rho
+      | NONE => false
+  end
+
+fun is_humble_type_con {Thy,Tyop} =
+  let open KernelSig
+  in case peek(operator_table,{Thy=Thy,Name=Tyop}) of
+        SOME (_,(kd,h:bool)) => h andalso kd = typ rho
+      | NONE => false
+  end
+
+fun is_humble_type_app (TyCon(tyc,_), a) = (* (tyc = fun_tyid) andalso length a = 2 *)
+    let open KernelSig
+    in case peek(operator_table,name_of_id tyc) of
+          SOME (_,(kd,h:bool)) =>
+             h andalso is_arrow_kind kd
+             andalso ((length a = arity_of kd) handle HOL_ERR _ => false)
+        | NONE => false
+    end
+  | is_humble_type_app _ = false
+
+fun is_humble_type (TyCon(tyc,_)) = is_humble_tyc tyc
+  | is_humble_type (ty as TyApp _) =
+        let val (h,a) = strip_app_type ty
+        in is_humble_type_app (h,a)
+           andalso Lib.all is_humble_type a
+        end
+  | is_humble_type _ = false
+
 fun prim_type_con_compare (TyCon(c1,k1), TyCon(c2,k2)) =
        (case KernelSig.id_compare (c1,c2)
          of EQUAL => kind_compare (k1,k2)
@@ -772,15 +823,19 @@ fun prim_type_con_compare (TyCon(c1,k1), TyCon(c2,k2)) =
 
 fun type_con_compare (TyCon(c1,k1), TyCon(c2,k2)) =
        (case KernelSig.id_compare (c1,c2)
-         of EQUAL => (* kind_compare *) tycon_kind_compare (k1,k2)
+         of EQUAL => if is_humble_tyc c1
+                     then tycon_kind_compare (k1,k2)
+                     else kind_compare (k1,k2)
           | x => x)
   | type_con_compare _ = raise ERR "type_con_compare" "constants required";
 
 fun type_con_ge (TyCon(c1,k1), TyCon(c2,k2)) =
        (case KernelSig.id_compare (c1,c2)
-         of EQUAL => k1 :=: (* :>=: *) k2
+         of EQUAL => if is_humble_tyc c1
+                     then k1 :=: k2
+                     else k1 :>=: k2
           | x => false)
-  | type_con_ge _ =raise ERR "type_con_ge" "constants required";
+  | type_con_ge _ = raise ERR "type_con_ge" "constants required";
 
 (* ----------------------------------------------------------------------
     A total, "symmetric" ordering on types that respects alpha equivalence.
@@ -845,6 +900,7 @@ fun prim_compare0 n E (u as Tyv _, v as Tyv _)     = map_type_var_compare E (u,v
                         ((k1,ty1), (k2,ty2))
   | prim_compare0 n E (TyAbs _, _)                 = GREATER
 
+(* used in postkernel/SharingTables.sml *)
 fun prim_compare p = if Portable.pointer_eq p then EQUAL
                      else prim_compare0 0 (empty_env, empty_env) p
 
@@ -887,7 +943,13 @@ fun compare0 n E (p as (TyApp _, _))          = app_type_compare n E p
 and app_type_compare n E (t1,t2) =
   let val (h1,a1) = strip_app_type t1
       val (h2,a2) = strip_app_type t2
-  in case compare0 n E (h1,h2)
+  in
+    case
+      (if same_tyconst h1 h2 andalso
+          is_humble_type_app (h1,a1) andalso is_humble_type_app (h2,a2)
+         then tycon_kind_compare (kind_of h1, kind_of h2)
+         else compare0 n E (h1,h2) (* standard case *)
+      )
       of EQUAL => Lib.list_compare (compare0 n E) (a1,a2)
        |   x   => x
   end
@@ -2453,6 +2515,16 @@ val head_beta_ty = qconv_ty head_betan_ty
 val head_beta_eta_ty = qconv_ty head_beta_etan_ty
 
 
+fun on_humble_app f g (t1,t2) =
+  let val (h1,a1) = strip_app_type t1
+      val (h2,a2) = strip_app_type t2
+  in
+    if same_tyconst h1 h2 andalso
+          is_humble_type_app (h1,a1) andalso is_humble_type_app (h2,a2)
+      then Lib.all g (Lib.zip a1 a2) (* accept that h1 matches h2 regardless of rank *)
+      else f (h1,h2) andalso Lib.all g (Lib.zip a1 a2)
+  end
+
 local
 open Map
 val EQ = Portable.pointer_eq
@@ -2462,7 +2534,8 @@ and abconv1_ty n (E as (env1,env2)) p = EQ p orelse
      case p
       of (u as Tyv _, v as Tyv _) => map_type_var_compare E (u,v) = EQUAL
        | (u as TyCon _,v as TyCon _) => type_con_compare (u,v) = EQUAL
-       | (TyApp(p,t1),TyApp(q,t2)) => abconv1_ty n E (p,q) andalso abconv0_ty n E (t1,t2)
+       | (TyApp(q,t1),TyApp(r,t2)) => (* abconv1_ty n E (q,r) andalso abconv0_ty n E (t1,t2) *)
+                                      on_humble_app (abconv1_ty n E) (abconv0_ty n E) p
        | (TyAbs(x1 as (_,k1),ty1),
           TyAbs(x2 as (_,k2),ty2)) => k1 = k2 andalso
                                       let val E' = (insert(env1, Tyv x1, n), insert(env2, Tyv x2, n))
@@ -2485,7 +2558,8 @@ and abeconv1_ty n (E as (env1,env2)) p = EQ p orelse
      case p
       of (u as Tyv _, v as Tyv _) => map_type_var_compare E (u,v) = EQUAL
        | (u as TyCon _,v as TyCon _) => type_con_compare (u,v) = EQUAL
-       | (TyApp(p,t1),TyApp(q,t2)) => abeconv1_ty n E (p,q) andalso abeconv0_ty n E (t1,t2)
+       | (TyApp(q,t1),TyApp(r,t2)) => (* abeconv1_ty n E (q,r) andalso abeconv0_ty n E (t1,t2) *)
+                                      on_humble_app (abeconv1_ty n E) (abeconv0_ty n E) p
        | (TyAbs(x1 as (_,k1),ty1),
           TyAbs(x2 as (_,k2),ty2)) => k1 = k2 andalso
                                       let val E' = (insert(env1, Tyv x1, n), insert(env2, Tyv x2, n))
@@ -2508,7 +2582,8 @@ and abeconv_ge1_ty n (E as (env1,env2)) p = EQ p orelse
      case p
       of (u as Tyv _, v as Tyv _) => map_type_var_ge E (u,v)
        | (u as TyCon _,v as TyCon _) => type_con_ge (u,v)
-       | (TyApp(p,t1),TyApp(q,t2)) => abeconv_ge1_ty n E (p,q) andalso abeconv_ge0_ty n E (t1,t2)
+       | (TyApp(q,t1),TyApp(r,t2)) => (* abeconv_ge1_ty n E (q,r) andalso abeconv_ge0_ty n E (t1,t2) *)
+                                      on_humble_app (abeconv_ge1_ty n E) (abeconv_ge0_ty n E) p
        | (TyAbs(x1 as (_,k1),ty1),
           TyAbs(x2 as (_,k2),ty2)) => k1 = k2 andalso
        (* TyAbs(x2 as (_,k2),ty2)) => k1 :>=: k2 andalso *)
@@ -2632,7 +2707,12 @@ and compare1 n (E as (env1,env2)) p =
 and app_type_compare n E (t1,t2) =
   let val (h1,a1) = strip_app_type t1
       val (h2,a2) = strip_app_type t2
-  in case compare0 n E (h1,h2)
+  in case
+      (if same_tyconst h1 h2 andalso
+          is_humble_type_app (h1,a1) andalso is_humble_type_app (h2,a2)
+         then tycon_kind_compare (kind_of h1, kind_of h2)
+         else compare0 n E (h1,h2) (* standard case *)
+      )
       of EQUAL => Lib.list_compare (compare0 n E) (a1,a2)
        |   x   => x
   end
@@ -2766,14 +2846,22 @@ local
   end
   val mk_dummy_ty = mk_fresh_dummy_ty ()
 (**)
-  val dummy_name = fst(dest_var_type (mk_dummy_ty (typ 0)))
-  fun is_dummy_ty ty = (*is_gen_tyvar ty andalso*) not (fst(dest_var_type ty) = dummy_name)
+  fun dummy_name_of ty = fst(dest_var_type ty)
+  val dummy_name = dummy_name_of (mk_dummy_ty (typ 0))
+  fun is_dummy_ty ty = (*is_gen_tyvar ty andalso*) not (dummy_name_of ty = dummy_name)
 (**)
-  val mk_con_dummy_ty = mk_fresh_dummy_ty ()
-  val con_dummy_name = fst(dest_var_type (mk_con_dummy_ty (typ 0)))
-  fun is_con_dummy_ty ty = (fst(dest_var_type ty) = con_dummy_name)
+  val con_dummy_names = ref ([] : string list)
+  (*val con_dummy_name = mk_fresh_dummy_ty ()*)
+  fun mk_con_dummy_ty () =
+      let val tyf = mk_fresh_dummy_ty ()
+      in
+        con_dummy_names := dummy_name_of (tyf (typ 0)) :: !con_dummy_names;
+        tyf
+      end
+  (* val con_dummy_name = fst(dest_var_type (mk_con_dummy_ty (typ 0))) *)
+  fun is_con_dummy_ty ty = Lib.mem (dummy_name_of ty) (!con_dummy_names)
   fun var_cmp (x as Tyv(xs,xkd)) (Tyv(ys,ykd)) =
-      (xs = ys) andalso (if is_con_dummy_ty x then xkd :=: ykd
+      (xs = ys) andalso (if is_con_dummy_ty x  then ykd :=: xkd
                          else if xs=dummy_name then ykd :>=: xkd
                          else xkd = ykd)
     | var_cmp anything other = false
@@ -2808,7 +2896,11 @@ local
       in
         if vname = cname andalso vthy = cthy then
           if ckd = vkd andalso crk = vrk then sofar
-          else (safe_insert_tya (mk_dummy_ty(vkd,vrk) |-> mk_dummy_ty(ckd,crk)) insts, homs)
+          else let val mk_dummy_ty = if is_humble_type_con {Thy=vthy,Tyop=vname}
+                                     then mk_con_dummy_ty() else mk_dummy_ty
+               in
+               (safe_insert_tya (mk_dummy_ty(vkd,vrk) |-> mk_dummy_ty(ckd,crk)) insts, homs)
+               end
         else MERR "type constant mismatch"
       end
     else if is_abs_type vty then let
@@ -2886,14 +2978,16 @@ local
             TyCon(cc,ckd) =>
               if vc = cc then
                 if ckd = vkd then sofar
-                else let val mk_dummy_ty = mk_con_dummy_ty
+                else let val mk_dummy_ty = if is_humble_tyc vc
+                                           then mk_con_dummy_ty() else mk_dummy_ty
                      in (safe_insert_tya (mk_dummy_ty vkd |-> mk_dummy_ty ckd) insts, homs)
                      end
               else MERR "type constant mismatch"
           | _ => MERR "type constant mismatched with non-constant")
     | type_pmatch_1 lconsts env (vty as TyApp(lv,rv)) cty (sofar as (insts,homs))
       = let
-          val vhop = repeat rator_type lv
+          (*val vhop = repeat rator_type lv*)
+          val (vhop,vargs) = strip_app_type vty
         in
           if is_var_type vhop andalso not (HOLset.member(lconsts, vhop)) andalso
              not (in_dom vhop env)
@@ -2907,6 +3001,41 @@ local
               (insts', (env,cty,vty)::homs)
             end
           else
+            if is_humble_type_app(vhop,vargs)
+            then
+              let val (chop,cargs) = strip_app_type cty
+              in if is_humble_type_app(chop,cargs)
+                 then
+                   (case (vhop,chop) of
+                     (TyCon(vc,vkd), TyCon(cc,ckd)) =>
+                       if vc = cc then
+                         let
+                           val sofar' =
+                             if ckd = vkd then sofar
+                             else let val mk_dummy_ty = mk_con_dummy_ty()
+                                  in (safe_insert_tya (mk_dummy_ty vkd |-> mk_dummy_ty ckd) insts, homs)
+                                  end
+                         in
+                           Lib.rev_itlist2 (type_pmatch lconsts env) vargs cargs sofar'
+(*
+                           Lib.rev_itlist2 (fn va => fn ca => fn sof =>
+                                              type_pmatch lconsts env va ca sof)
+                                           vargs cargs sofar'
+*)
+                         end
+                       else MERR "type constant mismatch"
+                    | _ => MERR "type constant mismatch")
+                 else
+                   (case cty of
+                      TyApp(lc,rc) =>
+                        let
+                          val sofar' = type_pmatch_1 lconsts env lv lc sofar (* lv,lc are head-beta-eta-reduced *)
+                        in
+                          type_pmatch lconsts env rv rc sofar'
+                        end
+                    | _ => MERR "application type mismatched with non-application type")
+              end
+            else
             case cty of
                TyApp(lc,rc) =>
                  let

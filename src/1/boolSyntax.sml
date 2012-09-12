@@ -39,7 +39,7 @@ val conditional  = prim_mk_const {Name="COND",         Thy="bool"};
 val let_tm       = prim_mk_const {Name="LET",          Thy="bool"};
 val arb          = prim_mk_const {Name="ARB",          Thy="bool"};
 val the_kind_value=prim_mk_const {Name="the_value",    Thy="bool"};
-val the_value    = inst_kind [kappa |-> typ 0] the_kind_value;
+val the_value    = pure_inst_kind [kappa |-> typ 0] the_kind_value;
 val bool_case    = prim_mk_const {Name="bool_case",    Thy="bool"};
 val literal_case = prim_mk_const {Name="literal_case", Thy="bool"};
 val bounded_tm   = prim_mk_const {Name="BOUNDED",      Thy="bool"};

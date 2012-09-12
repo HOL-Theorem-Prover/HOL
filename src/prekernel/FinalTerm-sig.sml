@@ -100,8 +100,9 @@ sig
   val pure_inst     : (hol_type,hol_type) subst -> term -> term (* expects kinds & ranks match *)
   val inst          : (hol_type,hol_type) subst -> term -> term (* general: aligns kinds & ranks *)
 (*val align_inst    : (hol_type,hol_type) subst -> term -> term *) (* general: aligns kinds & ranks *)
-  val inst_kind     : (kind,kind) subst -> term -> term   (* expects ranks match *)
-  val align_inst_kind : (kind,kind) subst -> term -> term (* general: aligns ranks *)
+  val pure_inst_kind: (kind,kind) subst -> term -> term   (* expects ranks match *)
+  val inst_kind     : (kind,kind) subst -> term -> term (* general: aligns ranks *)
+(*val align_inst_kind : (kind,kind) subst -> term -> term *) (* general: aligns ranks *)
   val inst_rank     : rank -> term -> term
   val inst_rank_kind : (kind,kind)subst * rank -> term -> term
   val inst_rk_kd_ty : (hol_type,hol_type)subst * (kind,kind)subst * rank -> term -> term
@@ -168,6 +169,8 @@ sig
   (* printed theory functionality *)
   val read_raw : hol_type vector -> term vector -> string -> term
   val write_raw : (hol_type -> int) -> (term -> int) -> term -> string
+
+  val set_pp_term : (HOLPP.ppstream -> term -> unit) -> unit
 
 
 end

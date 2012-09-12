@@ -1674,7 +1674,7 @@ local
     end
 
     val tys = Theory.types (current_theory())
-    fun ty_appthis (tyn,kind) =
+    fun ty_appthis (tyn,kind,promote) =
         if String.isSubstring safepfx tyn then Theory.delete_type tyn
         else ()
   in

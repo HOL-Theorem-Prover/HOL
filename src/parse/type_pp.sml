@@ -286,8 +286,10 @@ fun pp_type0 (G:grammar) backend = let
     fun print_const grav tyc =
         let val {Thy, Tyop, Kind} = dest_thy_con_type tyc
             val fullname = Thy ^ "$" ^ Tyop
-            val kd_annot = if Kind = Kind.typ Rank.rho then ""
-                           else " :" ^ kind_to_string Kind
+            val kd_annot = if Kind = Kind.typ Rank.rho
+                              orelse current_trace "ranks" < 3
+                           then ""
+                           else ":" ^ kind_to_string Kind
             val annot_str = fullname ^ kd_annot
             val annot = TyOp (fn () => annot_str)
         in print_sk grav annot (fullname,Kind)
@@ -370,13 +372,19 @@ fun pp_type0 (G:grammar) backend = let
             end_block();
             add_string ")"
           end
+          val Kind = kind_of ty
+          val rk_str = if not (is_con_type ty)
+                              orelse Kind = Kind.typ Rank.rho
+                              orelse current_trace "ranks" < 3
+                           then ""
+                           else ":" ^ kind_to_string Kind
         in
           case Args of
             [] => let
             in
               case lookup_tyop Tyop of
                 NONE => print_ghastly ()
-              | _ => add_ann_string (Tyop, TyOp tooltip)
+              | _ => add_ann_string (Tyop ^ rk_str, TyOp tooltip)
 
             end
           | [arg1, arg2] => (let
@@ -390,13 +398,13 @@ fun pp_type0 (G:grammar) backend = let
                      be printed with parentheses, so the gravity we pass in
                      here makes no difference. *)
                   if prefix_types() then
-                    (add_ann_string (Tyop, TyOp tooltip);
+                    (add_ann_string (Tyop ^ rk_str, TyOp tooltip);
                      add_break(1,0);
                      print_args Top Args)
                   else
                     (print_args Top Args;
                      add_break(1,0);
-                     add_ann_string (Tyop, TyOp tooltip));
+                     add_ann_string (Tyop ^ rk_str, TyOp tooltip));
                   end_block()
                 end
               | IR(prec, assoc, printthis) => let
@@ -454,6 +462,12 @@ fun pp_type0 (G:grammar) backend = let
           case fromType ty of
             TyV_Const _ => let
               val {Thy,Tyop,Kind} = dest_thy_con_type ty
+(*
+              val rk_str = if Kind = Kind.typ Rank.rho
+                              orelse current_trace "ranks" < 3
+                           then ""
+                           else ":" ^ kind_to_string Kind
+*)
             in
               case lookup_tyop Tyop of
                 NONE =>  print_const grav ty

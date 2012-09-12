@@ -1996,7 +1996,12 @@ report "Type unification" cmp n c1 c2 ty1 ty2 (
   | (Contype {Kind=kd1,Thy=thy1,Tyop=tyop1},
      Contype {Kind=kd2,Thy=thy2,Tyop=tyop2}) =>
         (fn e => (if tyop1=tyop2 andalso thy1=thy2 then ok else fail) e) >>
-            conty_kind_unify kd1 kd2 (* special kind unify that ignores ranks *)
+            (* conty_kind_unify kd1 kd2 (* special kind unify that ignores ranks *) *)
+(**)
+           (if humble_of {Thy=thy1, Tyop=tyop1} (*is_type_con_name_basic{Thy=thy1, Tyop=tyop1}*)
+            then conty_kind_unify (* special kind unify that ignores ranks *)
+            else kind_unify_le) kd1 kd2
+(**)
   | (TyKindConstr{Ty=ty1',Kind=kd1}, _) =>
        kind_unify kd1 (pkind_of ty1') >> gen_unify c1 c2 ty1' ty2
   | (_, TyKindConstr{Ty=ty2',Kind=kd2}) =>

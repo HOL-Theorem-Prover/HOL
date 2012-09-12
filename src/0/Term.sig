@@ -31,4 +31,6 @@ sig
                       ({redex : hol_type, residue : hol_type} list * hol_type list) *
                       ({redex : kind, residue : kind} list * kind list) * (rank * bool)
 
+  val term_to_string: term -> string
+
 end;

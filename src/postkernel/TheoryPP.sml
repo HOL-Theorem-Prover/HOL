@@ -421,6 +421,8 @@ fun pp_struct info_record = let
   val (idtable, kdtable, tytable, tmtable) =
       HOLset.foldl doterms (idtable, kdtable, tytable, empty_termtable)
                    all_term_atoms_set
+  fun pp_bool true  = add_string "true"
+    | pp_bool false = add_string "false"
   fun pp_kind1 kd = let
       open Kind
     in
@@ -443,10 +445,12 @@ fun pp_struct info_record = let
              add_string ")")
         end
     end
-  fun pp_ty_dec (s,kd) =
+  fun pp_ty_dec (s,kd,p) =
        block CONSISTENT 0
         (add_string ("(" ^ stringify s ^ ", ") >>
          pp_kind1 kd >>
+         add_string ", " >>
+         pp_bool p >>
          add_string ")")
   fun pp_const_dec (s, ty) =
       add_string ("("^stringify s^", "^

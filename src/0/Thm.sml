@@ -68,7 +68,7 @@ val mk_forall = Susp.delay (fn () =>
 val mk_tyforall = Susp.delay (fn () =>
  let val tyforallc = prim_mk_const{Name="!:", Thy="bool"}
  in fn a => fn tm =>
-      mk_comb(align_inst_kind[Kind.kappa |-> Type.kind_of a] tyforallc, mk_tyabs(a,tm))
+      mk_comb(inst_kind[Kind.kappa |-> Type.kind_of a] tyforallc, mk_tyabs(a,tm))
  end);
 
 val mk_conj = Susp.delay (fn () =>
@@ -360,7 +360,7 @@ fun INST_RANK 0 th = th
 
 fun INST_KIND [] th = th
   | INST_KIND theta (THM(ocl,asl,c)) =
-    let val instfn = Term.inst_kind theta
+    let val instfn = Term.pure_inst_kind theta
     in make_thm Count.InstKind(ocl, hypset_map instfn asl, instfn c)
     end
     handle HOL_ERR {message,...} => ERR "INST_KIND" message
@@ -374,7 +374,7 @@ fun INST_KIND [] th = th
 
 fun ALIGN_INST_KIND [] th = th
   | ALIGN_INST_KIND theta (THM(ocl,asl,c)) =
-    let val instfn = Term.align_inst_kind theta
+    let val instfn = Term.inst_kind theta
     in make_thm Count.AlignInstKind(ocl, hypset_map instfn asl, instfn c)
     end
     handle HOL_ERR {message,...} => ERR "ALIGN_INST_KIND" message
@@ -1790,6 +1790,23 @@ fun check_kdvars body_kdvars bound_kdvars f =
          ("Unbound kind variable(s) in definition: "
            :: commafy (map (Lib.quote o fst o Kind.dest_var_kind) extras)));
 
+local open Type
+in
+fun determine_humble_type frees ty =
+  if is_var_type ty then Lib.mem ty frees
+  else if is_con_type ty then
+    let val {Thy,Tyop,Kind} = dest_thy_con_type ty
+    in is_humble_type_con {Thy=Thy,Tyop=Tyop}
+    end
+  else if is_app_type ty then
+    let val (h,a) = strip_app_type ty
+    in is_humble_type_app (h,a)
+       andalso Lib.all (determine_humble_type frees) a
+    end
+  else false
+end
+
+
 fun prim_type_definition (name as {Thy, Tyop}, thm) = let
   val (_,Body)  = with_exn dest_exists (concl thm) TYDEF_FORM_ERR
   val P         = with_exn rator Body TYDEF_FORM_ERR
@@ -1804,7 +1821,8 @@ fun prim_type_definition (name as {Thy, Tyop}, thm) = let
   val checked   = assert_exn (Type.eq_ty bool) rng
                              (TYDEF_ERR "subset predicate has the wrong type")
   val newkd     = List.foldr (op Kind.==>) (Type.kind_of dom) (map Type.kind_of tyvars)
-  val   _       = Type.prim_new_type_opr name newkd
+  val humble    = determine_humble_type (Type.type_vars dom) dom
+  val   _       = Type.prim_new_type_opr name (newkd,humble)
   val newty     = Type.mk_thy_type{Tyop=Tyop,Thy=Thy,Args=tyvars}
   val repty     = newty --> dom
   val rep       = mk_primed_var("rep", repty)
@@ -1825,7 +1843,7 @@ fun prim_type_specification thyname tnames th = let
                   (TYSPEC_ERR "too few existentially quantified type variables")
   fun vOK V a   = check_kdvars V (Type.kind_vars a) TYSPEC_ERR
   val checked   = List.app (vOK (kind_vars_in_term Q)) tyvs
-  fun newty n k = (Type.prim_new_type_opr {Thy=thyname,Tyop=n} k;
+  fun newty n k = (Type.prim_new_type_opr {Thy=thyname,Tyop=n} (k,false);
                    Type.mk_thy_con_type{Thy=thyname,Tyop=n,Kind=k})
   val kds       = map (snd o Type.dest_var_type) tyvs
   val newtys    = map2 newty tnames kds

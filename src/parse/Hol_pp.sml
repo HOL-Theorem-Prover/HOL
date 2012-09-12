@@ -5,7 +5,7 @@ open HolKernel Parse;
 
 datatype theory
     = THEORY of string *
-                {types       : (string * kind) list,
+                {types       : (string * kind * bool) list,
                  consts      : (string * hol_type) list,
                  parents     : string list,
                  axioms      : (string * thm) list,
@@ -48,7 +48,7 @@ in
     add_string ("Theory: "^name); nl2();
     vblock ("Parents", add_string, parents); nl2();
     vblock ("Type constants",
-     (fn (name,kind) =>
+     (fn (name,kind,promote) =>
          (add_string name; add_string (" : "^kind_to_string kind))),
      types)
       ;
