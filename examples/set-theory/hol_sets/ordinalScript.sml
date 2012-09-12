@@ -541,6 +541,19 @@ val preds_0 = store_thm(
   simp[preds_def]);
 val _ = export_rewrites ["preds_0"]
 
+val ordleq0 = store_thm(
+  "ordleq0",
+  ``(x:'a ordinal) ≤ 0 ⇔ (x = 0)``,
+  eq_tac >> simp[ordle_lteq]);
+val _ = export_rewrites ["ordleq0"]
+
+val preds_EQ_EMPTY = store_thm(
+  "preds_EQ_EMPTY",
+  ``preds x = ∅ ⇔ x = 0``,
+  simp[EQ_IMP_THM] >> simp[EXTENSION] >>
+  disch_then (qspec_then `0` mp_tac) >> simp[]);
+val _ = export_rewrites ["preds_EQ_EMPTY"]
+
 val omax_sup = store_thm(
   "omax_sup",
   ``(omax s = SOME α) ==> (sup s = α)``,
@@ -792,12 +805,6 @@ val ordADD_fromNat_omega = store_thm(
 val lt_suppreds = save_thm(
   "lt_suppreds",
   predimage_sup_thm |> Q.INST [`f` |-> `λx. x`] |> SIMP_RULE (srw_ss()) [])
-
-val ordleq0 = store_thm(
-  "ordleq0",
-  ``(x:'a ordinal) ≤ 0 ⇔ (x = 0)``,
-  eq_tac >> simp[ordle_lteq]);
-val _ = export_rewrites ["ordleq0"]
 
 val omax_preds_SUC = store_thm(
   "omax_preds_SUC",
@@ -1216,7 +1223,7 @@ val ordMULT_RDISTRIB = store_thm(
   qsuff_tac `∀b a c. (a + b) * c = a * c + b * c` >- simp[] >>
   ho_match_mp_tac simple_ord_induction >> simp[ordADD_ASSOC] >>
   qx_gen_tac `b` >> strip_tac >>
-  `preds b ≠ {}` by (simp[EXTENSION] >> metis_tac[]) >>
+  `preds b ≠ {}` by (strip_tac >> fs[]) >>
   simp[ordADD_continuous, ordMULT_continuous, IMAGE_cardleq_rwt,
        preds_inj_univ] >>
   rpt strip_tac >> AP_TERM_TAC >> dsimp[EXTENSION] >>
@@ -1432,7 +1439,7 @@ val ordADD_EQ_0 = store_thm(
   ho_match_mp_tac simple_ord_induction >> simp[] >>
   simp[sup_EQ_0, IMAGE_cardleq_rwt, preds_inj_univ] >>
   qx_gen_tac `y` >> strip_tac >> qx_gen_tac `x` >>
-  `preds y <> {}` by (simp[EXTENSION] >> metis_tac[]) >>
+  `preds y <> {}` by (strip_tac >> fs[]) >>
   simp[EXTENSION] >>
   `y ≠ 0` by metis_tac [ordlt_REFL] >> simp[] >>
   qexists_tac `x⁺` >> simp[] >> qexists_tac `1` >>
@@ -1450,8 +1457,7 @@ val ordMULT_EQ_0 = store_thm(
   ho_match_mp_tac simple_ord_induction >> simp[] >>
   simp_tac (srw_ss() ++ CONJ_ss) [] >> qx_gen_tac `x` >> strip_tac >>
   simp[sup_EQ_0, IMAGE_cardleq_rwt, preds_inj_univ] >>
-  `preds x <> {}` by (simp[EXTENSION] >> metis_tac[]) >>
-  `x <> 0` by (strip_tac >> fs[]) >> simp[] >>
+  `preds x <> {} ∧ x ≠ 0` by (rpt strip_tac >> fs[]) >>
   qx_gen_tac `y` >> eq_tac
   >- (simp[IMAGE_EQ_SING] >> strip_tac >>
       pop_assum (qspec_then `1` mp_tac) >> simp[] >>
@@ -1466,7 +1472,8 @@ val ordEXP_EQ_0 = store_thm(
   >- metis_tac[] >>
   qx_gen_tac `y` >> strip_tac >>
   simp[sup_EQ_0, IMAGE_cardleq_rwt, preds_inj_univ] >>
-  `preds y ≠ ∅` by (simp[EXTENSION] >> metis_tac[]) >> simp[] >>
+  simp[IFF_ZERO_lt] >>
+  `preds y ≠ ∅` by (strip_tac >> fs[]) >> simp[] >>
   simp[IMAGE_EQ_SING] >> qx_gen_tac `x` >> DISJ2_TAC >>
   qexists_tac `0` >> simp[]);
 
