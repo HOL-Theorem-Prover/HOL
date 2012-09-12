@@ -1524,6 +1524,30 @@ val ordEXP_continuous = store_thm(
        a ** sup s = sup (IMAGE ($** a) s)``,
   simp[generic_continuity, ordEXP_le_MONO_R]);
 
+val ordEXP_ADD = store_thm(
+  "ordEXP_ADD",
+  ``0 < x ⇒ x ** (y + z) = x ** z * x ** y``,
+  map_every qid_spec_tac [`x`,`y`,`z`] >>
+  ho_match_mp_tac simple_ord_induction >> simp[ordMULT_ASSOC] >>
+  qx_gen_tac `z` >> strip_tac >> map_every qx_gen_tac [`y`, `x`] >>
+  `preds z ≠ ∅` by (strip_tac >> fs[]) >>
+  simp[ordEXP_continuous, IMAGE_cardleq_rwt, preds_inj_univ,
+       ordMULT_continuous, GSYM IMAGE_COMPOSE] >>
+  simp[combinTheory.o_DEF] >> strip_tac >> AP_TERM_TAC >>
+  simp[EXTENSION] >> metis_tac[]);
+
+val ordEXP_MUL = store_thm(
+  "ordEXP_MUL",
+  ``0 < x ⇒ x ** (z * y) = (x ** y) ** z``,
+  strip_tac >> map_every qid_spec_tac [`y`, `z`] >>
+  ho_match_mp_tac simple_ord_induction >> simp[ordEXP_ADD] >>
+  qx_gen_tac `z` >> strip_tac >> qx_gen_tac `y` >>
+  `preds z ≠ ∅` by (strip_tac >> fs[]) >>
+  simp[ordEXP_continuous, IMAGE_cardleq_rwt, preds_inj_univ,
+       GSYM IMAGE_COMPOSE] >>
+  simp[combinTheory.o_DEF] >> AP_TERM_TAC >>
+  simp[EXTENSION] >> metis_tac []);
+
 val fixpoints_exist = store_thm(
   "fixpoints_exist",
   ``(!s:'a ordinal set. s ≠ ∅ ∧ s ≼ univ(:'a inf) ⇒
