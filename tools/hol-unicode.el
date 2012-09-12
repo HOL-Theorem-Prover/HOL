@@ -13,6 +13,11 @@
 (global-set-key (kbd "C-~") (lambda () (interactive) (insert "¬")))
 (global-set-key (kbd "C-S-c") "⊆")
 
+(global-set-key (kbd "C-{") "⟦")
+(global-set-key (kbd "C-}") "⟧")
+(global-set-key (kbd "C-M-{") "⦃")
+(global-set-key (kbd "C-M-}") "⦄")
+
 ;; Greek : C-S-<char> for lower case version of Greek <char>
 ;;         add the Meta modifier for upper case Greek letter.
 (define-prefix-command 'hol-unicode-p-map)
