@@ -4464,7 +4464,7 @@ val SUC_EQ_LENGTH = prove(
 
 val DROP_CONS = prove(
   ``DROP n (x::xs) = if n = 0 then x::xs else DROP (n-1) xs``,
-  EVAL_TAC);
+  SRW_TAC [] []);
 
 val LENGTH_bs2bytes = prove(
   ``!bs code.
