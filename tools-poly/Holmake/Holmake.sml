@@ -1043,8 +1043,7 @@ in
       val _ = print ("Linking "^scriptuo^
                      " to produce theory-builder executable\n")
       val objectfiles0 =
-          if allfast andalso not (member s fastfiles) orelse
-             not allfast andalso member s fastfiles
+          if allfast <> member s fastfiles
           then ["fastbuild.uo", scriptuo]
           else if quit_on_failure then [scriptuo]
           else ["holmakebuild.uo", scriptuo]

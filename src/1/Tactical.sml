@@ -27,32 +27,52 @@ fun empty th [] = th
  * we should do this check in the hypotheses of the goal as well.
  *---------------------------------------------------------------------------*)
 
-fun TAC_PROOF (g, tac) =
-   case tac g of
-      ([], p) =>
-        (let
-            val thm = p []
-            val c = concl thm
-         in
-            if c = snd g then thm else EQ_MP (ALPHA c (snd g)) thm
-         end
-         handle e => raise ERR "TAC_PROOF" "Can't alpha convert")
-    | _ => raise ERR "TAC_PROOF" "unsolved goals"
+local
+   val unsolved_list = ref ([]: goal list)
+in
+   fun unsolved () = !unsolved_list
+   fun TAC_PROOF (g, tac) =
+      case tac g of
+         ([], p) =>
+             (let
+                 val thm = p []
+                 val c = concl thm
+                 val () = unsolved_list := []
+              in
+                 if c = snd g then thm else EQ_MP (ALPHA c (snd g)) thm
+              end
+              handle e => raise ERR "TAC_PROOF" "Can't alpha convert")
+       | (l, _) => (unsolved_list := l; raise ERR "TAC_PROOF" "unsolved goals")
+end
 
 fun default_prover (t, tac) = TAC_PROOF (([], t), tac)
 
 local
-   val internal_prover = ref (default_prover: Term.term * tactic -> Thm.thm)
+   val mesg = Lib.with_flag (Feedback.MESG_to_string, Lib.I) Feedback.HOL_MESG
+   fun provide_feedback f (t, tac: tactic) =
+      f (t, tac)
+      handle (e as HOL_ERR {message = m, origin_function = f, ...}) =>
+           (mesg ("Proof of \n\n" ^ Parse.term_to_string t ^ "\n\nfailed.\n")
+            ; (case (m, f, unsolved ()) of
+                  ("unsolved goals", "TAC_PROOF", (_, u)::_) =>
+                      if Term.term_eq u t
+                         then ()
+                      else mesg ("First unsolved sub-goal is\n\n" ^
+                                 Parse.term_to_string u ^ "\n\n")
+                | _ => ())
+            ; raise e)
+   val internal_prover =
+      ref (provide_feedback default_prover: Term.term * tactic -> Thm.thm)
 in
-   fun set_prover f = internal_prover := f
-   fun restore_prover () = internal_prover := default_prover
+   fun set_prover f = internal_prover := provide_feedback f
+   fun restore_prover () = set_prover default_prover
    fun prove (t, tac) = !internal_prover (t, tac)
 end
 
 fun store_thm (name, tm, tac) =
    Theory.save_thm (name, prove (tm, tac))
    handle e =>
-     (print ("Failed to prove theorem " ^ name ^ "\n");
+     (print ("Failed to prove theorem " ^ name ^ ".\n");
       Raise e)
 
 infix THEN THENL THEN1 ORELSE
