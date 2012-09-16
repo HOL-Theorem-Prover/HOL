@@ -1778,15 +1778,47 @@ val FOLDL_SUM_lemma = prove(
        FOLDL (λacc (c,e). acc + c * a ** e) (x + s) ces``,
   Induct >> simp[pairTheory.FORALL_PROD] >> simp[ordADD_ASSOC]);
 
+val is_polyform_def = Define`
+  (is_polyform (a:'a ordinal) [] ⇔ T) ∧
+  (is_polyform a [(c,e)] ⇔ 0 < c ∧ c < a) ∧
+  (is_polyform a ((c1,e1) :: (c2,e2) :: t) ⇔
+     0 < c1 ∧ c1 < a ∧ e2 < e1 ∧ is_polyform a ((c2,e2) :: t))
+`;
+
+val is_polyform_ELthm = store_thm(
+  "is_polyform_ELthm",
+  ``is_polyform a ces ⇔
+      (∀i j. i < j ∧ j < LENGTH ces ⇒ SND (EL j ces) < SND (EL i ces)) ∧
+      (∀c e. MEM (c,e) ces ⇒ 0 < c ∧ c < a)``,
+  map_every qid_spec_tac [`ces`, `a`] >>
+  ho_match_mp_tac (theorem "is_polyform_ind") >> simp[is_polyform_def] >>
+  simp[DISJ_IMP_THM, FORALL_AND_THM] >> rpt strip_tac >>
+  eq_tac >> simp[] >| [
+    strip_tac >> ASM_REWRITE_TAC [] >>
+    map_every qx_gen_tac [`i`, `j`] >>
+    `i = 0 ∨ ∃i0. i = SUC i0` by (Cases_on `i` >> simp[])
+    >- (simp[] >> strip_tac >>
+        `∃j0. j = SUC j0` by (Cases_on `j` >> fs[]) >>
+        fs[] >>
+        `j0 = 0 ∨ ∃j00. j0 = SUC j00` by (Cases_on `j0` >> simp[]) >> simp[] >>
+        first_x_assum (qspecl_then [`0`, `j0`] mp_tac) >> simp[] >>
+        metis_tac [ordlt_TRANS]) >>
+    strip_tac >>
+    `∃j0. j = SUC j0` by (Cases_on `j` >> fs[]) >> fs[] >>
+    asm_simp_tac (srw_ss() ++ ARITH_ss) [],
+    rpt strip_tac
+    >- (first_x_assum (qspecl_then [`0`, `SUC 0`] mp_tac) >> simp[])
+    >- (first_x_assum (qspecl_then [`SUC i`, `SUC j`] mp_tac) >> simp[])
+    >- res_tac >> res_tac
+  ]);
+
 val polyform_exists = store_thm(
   "polyform_exists",
   ``∀a:'a ordinal b.
       1 < a ⇒
       ∃ces.
-        (∀i j. i < j ∧ j < LENGTH ces ⇒ SND (EL j ces) < SND (EL i ces)) ∧
-        (∀c e. MEM (c,e) ces ⇒ 0 < c ∧ c < a) ∧
-        b = FOLDL (λacc (c,e). acc + c * a ** e) 0 ces``,
-  gen_tac >> Cases_on `1 < a` >> simp[] >>
+        is_polyform a ces ∧ b = FOLDL (λacc (c,e). acc + c * a ** e) 0 ces``,
+  gen_tac >> Cases_on `1 < a` >> simp[is_polyform_ELthm] >>
   `0 < a` by (match_mp_tac ordlt_TRANS >> qexists_tac `1` >> simp[]) >>
   ho_match_mp_tac ord_induction >>
   qx_gen_tac `b` >> strip_tac >> Cases_on `b = 0`
@@ -1869,7 +1901,6 @@ val FOLDL_sum_EQ0 = prove(
                              |> SIMP_RULE (srw_ss()) []
                              |> SYM)])
 
-
 val polyform_0 = store_thm(
   "polyform_0",
   ``1 < a ⇒ polyform a 0 = []``,
@@ -1883,17 +1914,21 @@ val polyform_0 = store_thm(
   pop_assum mp_tac >> qpat_assum `0 = FOLDL ff aa tt` (K ALL_TAC) >>
   simp[ordEXP_EQ_0] >>
   `a ≠ 0` by (strip_tac >> fs[]) >>
-  `0 < c` by metis_tac[] >>
-  `c ≠ 0` by (strip_tac >> fs[]) >>
-  simp[])
+  `0 < c` by metis_tac[is_polyform_ELthm,listTheory.MEM] >>
+  fs[IFF_ZERO_lt])
+
+val polyform_EQ_NIL = store_thm(
+  "polyform_EQ_NIL",
+  ``1 < a ⇒ (polyform a x = [] ⇔ x = 0)``,
+  simp[EQ_IMP_THM, polyform_0] >>
+  rpt strip_tac >>
+  qspecl_then [`a`, `x`] mp_tac polyform_def >> simp[]);
 
 (*
 val polyform_UNIQUE = store_thm(
   "polyform_UNIQUE",
   ``∀a b ces.
-      1 < a ∧
-      (∀i j. i < j ∧ j < LENGTH ces ⇒ SND (EL j ces) < SND (EL i ces)) ∧
-      (∀c e. MEM (c,e) ces ⇒ 0 < c ∧ c < a) ∧
+      1 < a ∧ is_polyform a ces ∧
       b = FOLDL (λacc (c,e). acc + c * a ** e) 0 ces ⇒
       polyform a b = ces``,
   gen_tac >> ho_match_mp_tac ord_induction >> qx_gen_tac `b` >>
@@ -1904,6 +1939,16 @@ val polyform_UNIQUE = store_thm(
     by metis_tac[pairTheory.pair_CASES, listTheory.list_CASES]
   >- (pop_assum SUBST_ALL_TAC >> `b = 0` by fs[] >> simp[polyform_0]) >>
   pop_assum SUBST_ALL_TAC >>
+  `0 < c ∧ c < a` by metis_tac[listTheory.MEM, is_polyform_ELthm] >>
+  qabbrev_tac `FF = λacc (c,e). acc + c * a ** e` >>
+  `∀acc ce. FF acc ce = acc + FST ce * a ** SND ce`
+    by simp[Abbr`FF`, pairTheory.FORALL_PROD] >>
+  `b = FOLDL FF (c * a ** e) t` by simp[] >>
+  qspecl_then [`t`, `c * a ** e`, `0`] (mp_tac o SYM) FOLDL_SUM_lemma >>
+  simp[] >>
+  disch_then (fn th =>
+    `_ = c * a ** e + FOLDL FF 0 t` by metis_tac [th]) >>
+  `0 < b`
 *)
 
 
