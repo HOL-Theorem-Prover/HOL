@@ -1,5 +1,6 @@
 open HolKernel boolLib bossLib Parse; val _ = new_theory "lisp_ops";
-open lisp_symbolsTheory lisp_sexpTheory lisp_consTheory lisp_invTheory; open lisp_equalTheory;
+open lisp_symbolsTheory lisp_sexpTheory lisp_consTheory lisp_invTheory;
+open lisp_equalTheory lisp_codegenTheory lisp_initTheory lisp_symbolsTheory;
 
 (* --- *)
 

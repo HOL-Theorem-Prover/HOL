@@ -4,7 +4,8 @@ open HolKernel boolLib bossLib Parse; val _ = new_theory "lisp_compiler_op";
 open compilerLib decompilerLib codegenLib;
 
 open lisp_sexpTheory lisp_invTheory lisp_opsTheory lisp_bigopsTheory;
-open lisp_symbolsTheory lisp_sexpTheory lisp_invTheory lisp_parseTheory;
+open lisp_codegenTheory lisp_initTheory lisp_symbolsTheory
+open lisp_sexpTheory lisp_invTheory lisp_parseTheory;
 open lisp_semanticsTheory lisp_alt_semanticsTheory lisp_compilerTheory progTheory;
 
 open wordsTheory arithmeticTheory wordsLib listTheory pred_setTheory pairTheory;

@@ -1,7 +1,8 @@
 open HolKernel Parse boolLib bossLib; val _ = new_theory "lisp_bytecode_step";
 
 open lisp_sexpTheory lisp_invTheory lisp_opsTheory lisp_bigopsTheory;
-open lisp_symbolsTheory lisp_sexpTheory lisp_invTheory lisp_parseTheory;
+open lisp_codegenTheory lisp_initTheory lisp_symbolsTheory;
+open lisp_sexpTheory lisp_invTheory lisp_parseTheory;
 open lisp_semanticsTheory lisp_compilerTheory lisp_compiler_opTheory progTheory;
 open compilerLib decompilerLib codegenLib prog_x64Lib prog_x64Theory;
 
