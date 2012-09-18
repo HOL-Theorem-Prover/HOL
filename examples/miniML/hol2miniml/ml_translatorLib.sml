@@ -346,9 +346,10 @@ fun D th = let
   in if is_imp (concl th) then th else DISCH T th end
 
 val quietDefine = (* quiet version of Define -- by Anthony Fox *)
-  Lib.with_flag (Feedback.emit_ERR, false)
-    (Lib.with_flag (Feedback.emit_MESG, false)
-       (Feedback.trace ("auto Defn.tgoal", 0) TotalDefn.Define))
+  Lib.with_flag (Feedback.emit_WARNING, false)
+    (Lib.with_flag (Feedback.emit_ERR, false)
+       (Lib.with_flag (Feedback.emit_MESG, false)
+          (Feedback.trace ("auto Defn.tgoal", 0) TotalDefn.Define)))
 
 
 (* mapping from dec terms to SML and Ocaml *)
