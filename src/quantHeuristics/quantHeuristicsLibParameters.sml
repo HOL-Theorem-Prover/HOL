@@ -137,20 +137,10 @@ fun split_pair___ALL___pred v = K (SOME (enumerate_pair true v));
    val t = ``(\ (a1, a2, a3). P a1 a2 a3) (x:('a # 'b # 'c))``
  *)
 
-fun pair_qp pL =
-  {distinct_thms = [],
-   cases_thms =    [],
-   rewrite_thms =  [PAIR_EQ_EXPAND, pairTheory.FST, pairTheory.SND],
-   convs =         [],
-   heuristics =    [QUANT_INSTANTIATE_HEURISTIC___SPLIT_PAIR_GEN pL],
-   inference_thms= [],
-   filter       =  [],
-   top_heuristics =[],
-   context_heuristics =[],
-   final_rewrite_thms = [pairTheory.FST,  pairTheory.SND,
-                         PAIR_EQ_SIMPLE_EXPAND]
-  }:quant_param
-
+fun pair_qp pL = combine_qps 
+    [rewrite_qp [PAIR_EQ_EXPAND, pairTheory.FST, pairTheory.SND],
+     heuristics_qp [QUANT_INSTANTIATE_HEURISTIC___SPLIT_PAIR_GEN pL],
+     final_rewrite_qp [pairTheory.FST, pairTheory.SND, PAIR_EQ_SIMPLE_EXPAND]]
 
 val pair_default_qp = pair_qp [split_pair___PABS___pred,
         split_pair___FST_SND___pred false]
@@ -197,59 +187,47 @@ val context_qp = context_heuristics_qp[QUANT_INSTANTIATE_HEURISTIC___GIVEN_INSTA
  * Option types
  *******************************************************************)
 
-val option_qp =
-  {distinct_thms      = [optionTheory.NOT_NONE_SOME],
-   cases_thms         = [optionTheory.option_nchotomy],
-   rewrite_thms       = [optionTheory.SOME_11, optionTheory.IS_NONE_EQ_NONE,
-                         optionTheory.IS_NONE_EQ_NONE,
-                         IS_SOME_EQ_NOT_NONE],
-   convs              = [],
-   heuristics         = [],
-   inference_thms     = [],
-   filter             = [],
-   top_heuristics     = [],
-   context_heuristics = [],
-   final_rewrite_thms = [optionTheory.option_CLAUSES]
-  }:quant_param
+val option_qp = combine_qps [
+   distinct_qp [optionTheory.NOT_NONE_SOME],
+
+   cases_qp    [optionTheory.option_nchotomy],
+
+   rewrite_qp  [optionTheory.SOME_11, optionTheory.IS_NONE_EQ_NONE,
+                optionTheory.IS_NONE_EQ_NONE,
+                IS_SOME_EQ_NOT_NONE],
+
+   final_rewrite_qp [optionTheory.option_CLAUSES]
+  ]
 
 
 (*******************************************************************
  * Sum types
  *******************************************************************)
 
-val sum_qp = combine_qp (get_qp___for_types [``:('a + 'b)``])
-  {distinct_thms      = [],
-   cases_thms         = [],
-   rewrite_thms       = [ISL_exists, ISR_exists, ISL_ISR_NEG],
-   convs              = [],
-   heuristics         = [],
-   inference_thms     = [],
-   filter             = [],
-   top_heuristics     = [],
-   context_heuristics = [],
-   final_rewrite_thms = [sumTheory.OUTR, sumTheory.OUTL, sumTheory.ISL, sumTheory.ISR, sumTheory.INR_INL_11]
-  }:quant_param
+val sum_qp = combine_qps [
+  get_qp___for_types [``:('a + 'b)``],
 
+  rewrite_qp [ISL_exists, ISR_exists, ISL_ISR_NEG],
+
+  final_rewrite_qp [sumTheory.OUTR, sumTheory.OUTL, sumTheory.ISL, sumTheory.ISR, sumTheory.INR_INL_11]
+]
 
 
 (*******************************************************************
  * Nums
  *******************************************************************)
 
-val num_qp =
-  {distinct_thms = [prim_recTheory.SUC_ID],
-   cases_thms =    [arithmeticTheory.num_CASES],
-   rewrite_thms =  [prim_recTheory.INV_SUC_EQ,
+val num_qp = combine_qps [
+   distinct_qp [prim_recTheory.SUC_ID],
+
+   cases_qp [arithmeticTheory.num_CASES],
+
+   rewrite_qp [prim_recTheory.INV_SUC_EQ,
       arithmeticTheory.EQ_ADD_RCANCEL,arithmeticTheory.EQ_ADD_LCANCEL,
       arithmeticTheory.ADD_CLAUSES],
-   convs =         [],
-   heuristics =    [],
-   filter       =  [],
-   top_heuristics =[],
-   context_heuristics = [],
-   inference_thms     = [],
-   final_rewrite_thms = [numTheory.NOT_SUC, GSYM numTheory.NOT_SUC]
-  }:quant_param
+
+   final_rewrite_qp [numTheory.NOT_SUC, GSYM numTheory.NOT_SUC]
+]
 
 
 
@@ -257,30 +235,26 @@ val num_qp =
  * Lists
  *******************************************************************)
 
-val list_qp =
-  {distinct_thms = [rich_listTheory.NOT_CONS_NIL],
-   cases_thms =    [listTheory.list_CASES],
-   rewrite_thms =  [listTheory.CONS_11,
-                    listTheory.NULL_EQ,
-                    listTheory.APPEND_11,
-                    listTheory.APPEND_eq_NIL],
-   convs =         [],
-   inference_thms= [],
-   filter       =  [],
-   top_heuristics =[],
-   heuristics =    [],
-   context_heuristics = [],
-   final_rewrite_thms = [listTheory.NULL_DEF,
-                         listTheory.TL, listTheory.HD,
-                         rich_listTheory.NOT_CONS_NIL,
-                         GSYM rich_listTheory.NOT_CONS_NIL]
-  }:quant_param
+val list_qp = combine_qps [
+   distinct_qp [rich_listTheory.NOT_CONS_NIL],
+
+   cases_qp [listTheory.list_CASES],
+
+   rewrite_qp  [listTheory.CONS_11,
+                listTheory.NULL_EQ,
+                listTheory.APPEND_11,
+                listTheory.APPEND_eq_NIL],
+
+   final_rewrite_qp [listTheory.NULL_DEF,
+                     listTheory.TL, listTheory.HD,
+                     rich_listTheory.NOT_CONS_NIL,
+                     GSYM rich_listTheory.NOT_CONS_NIL]
+]
 
 
 (*******************************************************************
  * Records
  *******************************************************************)
-
 
 fun get_record_type_rewrites ty =
 let
@@ -361,18 +335,8 @@ in
    else gc
 end
 
-fun record_qp do_rewrites P =
-  {distinct_thms = [],
-   cases_thms =    [],
-   rewrite_thms =  [],
-   convs =         [],
-   filter =        [],
-   top_heuristics =[],
-   inference_thms= [],
-   heuristics =    [QUANT_INSTANTIATE_HEURISTIC___RECORDS do_rewrites P],
-   context_heuristics = [],
-   final_rewrite_thms = []
-  }:quant_param
+fun record_qp do_rewrites P = heuristics_qp [QUANT_INSTANTIATE_HEURISTIC___RECORDS do_rewrites P];
+
 
 val record_default_qp = record_qp false (K (K true))
 

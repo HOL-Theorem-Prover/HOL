@@ -2,8 +2,8 @@ signature quantHeuristicsLibParameters =
 sig
 
   (* stateful ones *)
-  val stateful_qp        : quantHeuristicsLibBase.quant_param;
-  val pure_stateful_qp   : quantHeuristicsLibBase.quant_param;
+  val stateful_qp        : unit -> quantHeuristicsLibBase.quant_param;
+  val pure_stateful_qp   : unit -> quantHeuristicsLibBase.quant_param;
   val TypeBase_qp        : quantHeuristicsLibBase.quant_param;
 
   val clear_stateful_qp : unit -> unit;

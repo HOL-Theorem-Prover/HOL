@@ -122,25 +122,66 @@ sig
 
   exception QUANT_INSTANTIATE_HEURISTIC___no_guess_exp;
 
-(*Some types*)
+(*Basic types*)
   type quant_heuristic_base = term -> term -> guess_collection;
   type quant_heuristic      = quant_heuristic_base -> quant_heuristic_base;
-
-  type quant_param =
-    {distinct_thms      : thm list,
-     cases_thms         : thm list,
-     rewrite_thms       : thm list,
-     inference_thms     : thm list,
-     convs              : conv list,
-     filter             : (term -> term -> bool) list,
-     heuristics         : quant_heuristic list,
-     top_heuristics     : quant_heuristic list,
-     context_heuristics : (thm list -> quant_heuristic) list,
-     final_rewrite_thms : thm list};
   type quant_heuristic_cache;
 
-
   val mk_quant_heuristic_cache : unit -> quant_heuristic_cache;
+
+
+(* Quantifier Heuristics Parameters are the main way to configure the behaviour. They
+   are a record of theorems, conversion and full heuristics used during proof search. *)
+
+  type quant_param =
+    {distinct_thms      : thm list, (* Dichotomy theorems showing distinctiness *)
+     cases_thms         : thm list, (* Dichotomy theorems showing case completeness *)
+     rewrite_thms       : thm list, (* Theorems used for rewrites *)
+     instantiation_thms : thm list, (* Theorems used for direct instantiations *)
+     imp_thms           : thm list, (* Theorems used for weakening and strengthening *)
+     context_thms       : thm list, (* additional context *)
+     inference_thms     : thm list, (* Theorems used as inference rules to derive guesses from guesses for subterms. *)
+     convs              : conv list, (* Conversions used *)
+     filter             : (term -> term -> bool) list, (* Getting a free variable and a term, these ML functions decide, whether to try and find a guess *)
+     top_heuristics     : quant_heuristic list, (* Heuristics that should only be applied at top level *)
+     context_heuristics : (thm list -> quant_heuristic) list, (* Heuristics that may use the context of the given theorems *)
+     heuristics         : quant_heuristic list, (* Heuristics that should be applied for all subterms *)
+     final_rewrite_thms : thm list (* Rewrites used for cleaning up after instantiations. *) };
+
+(* constructing quantifier heuristics parameters*)
+
+  val distinct_qp      : thm list -> quant_param
+  val cases_qp         : thm list -> quant_param
+  val rewrite_qp       : thm list -> quant_param
+  val instantiation_qp : thm list -> quant_param
+  val imp_qp           : thm list -> quant_param
+  val fixed_context_qp : thm list -> quant_param
+  val inference_qp     : thm list -> quant_param
+  val convs_qp         : conv list -> quant_param
+  val filter_qp        : (term -> term -> bool) list -> quant_param
+  val top_heuristics_qp: quant_heuristic list -> quant_param
+  val context_heuristics_qp : (thm list -> quant_heuristic) list -> quant_param
+  val heuristics_qp    : quant_heuristic list -> quant_param
+  val oracle_qp        : (term -> term -> (term * term list) option) -> quant_param (* creates heuristic that produces oracle guesses *)
+  val final_rewrite_qp : thm list -> quant_param
+
+  (* a stateful version and combining several*)
+  val clear_stateful_qp : unit -> unit
+  val stateful_qp___add_combine_arguments :
+     quant_param list -> unit;
+
+  val empty_qp           : quant_param;
+  val stateful_qp        : unit -> quant_param;
+  val pure_stateful_qp   : unit -> quant_param;
+  val TypeBase_qp        : quant_param;
+  val get_qp___for_types : hol_type list -> quant_param
+
+  val combine_qp :
+     quant_param -> quant_param ->
+     quant_param;
+
+  val combine_qps :
+     quant_param list -> quant_param;
 
 
 
@@ -164,11 +205,10 @@ sig
 
 
   (*use this to create sys for debugging own heuristics*)
-  val QUANT_INSTANTIATE_HEURISTIC___PURE_COMBINE : quant_param ->
-       quant_heuristic_cache ref option ->
-       thm list -> term -> term -> guess_collection
+  val qp_to_heuristic : quant_param -> quant_heuristic_cache ref option -> thm list -> term -> term -> guess_collection
+  val debug_sys : term -> term -> guess_collection
 
-(*The most important functions *)
+ (*The most important functions *)
   val EXTENSIBLE_QUANT_INSTANTIATE_CONV : quant_heuristic_cache ref option ->
       bool -> (term -> bool) -> bool -> bool -> thm list -> quant_param list -> conv;
   val QUANT_INSTANTIATE_TAC             : quant_param list -> tactic;
@@ -204,41 +244,6 @@ sig
 (*combination with simplifier*)
   val QUANT_INST_ss      : quant_param list -> simpLib.ssfrag;
   val FAST_QUANT_INST_ss : quant_param list -> simpLib.ssfrag;
-
-
-(*functions to add stuff to QUANT_INSTANTIATE_CONV*)
-
-  val clear_stateful_qp : unit -> unit
-  val stateful_qp___add_combine_arguments :
-     quant_param list -> unit;
-
-  val QUANT_INSTANTIATE_HEURISTIC___STATEFUL : quant_heuristic;
-
-  val empty_qp           : quant_param;
-  val stateful_qp        : quant_param;
-  val pure_stateful_qp   : quant_param;
-  val TypeBase_qp        : quant_param;
-  val get_qp___for_types : hol_type list -> quant_param
-
-
-  val combine_qp :
-     quant_param -> quant_param ->
-     quant_param;
-
-  val combine_qps :
-     quant_param list -> quant_param;
-
-  val distinct_qp      : thm list -> quant_param
-  val rewrite_qp       : thm list -> quant_param
-  val final_rewrite_qp : thm list -> quant_param
-  val cases_qp         : thm list -> quant_param
-  val inference_qp     : thm list -> quant_param
-  val convs_qp         : conv list -> quant_param
-  val heuristics_qp    : quant_heuristic list -> quant_param
-  val context_heuristics_qp : (thm list -> quant_heuristic) list -> quant_param
-  val top_heuristics_qp: quant_heuristic list -> quant_param
-  val filter_qp        : (term -> term -> bool) list -> quant_param
-  val oracle_qp        : (term -> term -> (term * term list) option) -> quant_param
 
 (* Traces *)
 (* "QUANT_INSTANTIATE_HEURISTIC" can be used to get debug information on

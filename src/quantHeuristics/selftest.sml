@@ -104,6 +104,7 @@ val qh_testCases =
    (``?x. ~~(P x /\ (x = 2))``, SOME ``(P 2):bool``),
    (``?x. P1 x /\ (x = 2) /\ P2 x /\ P3 x /\ P4 x``, SOME ``P1 2 /\ P2 2 /\ P3 2 /\ P4 2``),
    (``?x. P /\ (x = 2)``, SOME ``P:bool``),
+   (``?x1 x2. P1 x2 ==> ((x1 = 2) /\ P2(x1, x2))``, SOME ``?x2. P1 x2 ==> (P2(2, x2))``),
    (``?x. P x \/ (x = 2)``, SOME T),
    (``?x. (x = 2) \/ Q x``, SOME T),
    (``?x. (f x = f 2) /\ Q``, SOME ``Q:bool``),

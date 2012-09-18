@@ -59,14 +59,15 @@ sig
   (************************************)
   
   (* stateful ones *)
-  val stateful_qp        : quantHeuristicsLibBase.quant_param;
-  val pure_stateful_qp   : quantHeuristicsLibBase.quant_param;
+  val stateful_qp        : unit -> quantHeuristicsLibBase.quant_param;
+  val pure_stateful_qp   : unit -> quantHeuristicsLibBase.quant_param;
   val TypeBase_qp        : quantHeuristicsLibBase.quant_param;
 
   val clear_stateful_qp : unit -> unit;
   val stateful_qp___add_combine_arguments :
      quantHeuristicsLibBase.quant_param list -> unit;
 
+  (* using context *)
   val context_qp        : quantHeuristicsLibBase.quant_param;
 
   (*pair type*)
@@ -102,15 +103,18 @@ sig
   val get_qp___for_types : hol_type list -> quant_param
 
   val distinct_qp      : thm list -> quant_param
-  val rewrite_qp       : thm list -> quant_param
-  val final_rewrite_qp : thm list -> quant_param
   val cases_qp         : thm list -> quant_param
+  val rewrite_qp       : thm list -> quant_param
+  val instantiation_qp : thm list -> quant_param
+  val imp_qp           : thm list -> quant_param
+  val fixed_context_qp : thm list -> quant_param
   val inference_qp     : thm list -> quant_param
   val convs_qp         : conv list -> quant_param
-  val heuristics_qp    : quant_heuristic list -> quant_param
+  val filter_qp        : (term -> term -> bool) list -> quant_param
   val top_heuristics_qp: quant_heuristic list -> quant_param
   val context_heuristics_qp : (thm list -> quant_heuristic) list -> quant_param
-  val filter_qp        : (term -> term -> bool) list -> quant_param
+  val heuristics_qp    : quant_heuristic list -> quant_param
   val oracle_qp        : (term -> term -> (term * term list) option) -> quant_param
+  val final_rewrite_qp : thm list -> quant_param
 
 end

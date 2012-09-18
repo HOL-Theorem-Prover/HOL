@@ -3250,19 +3250,12 @@ in
 end handle HOL_ERR _ => raise QUANT_INSTANTIATE_HEURISTIC___no_guess_exp
 
 val cache_ref = ref (mk_quant_heuristic_cache ());
+val var_res_main_qp = combine_qps [
+   rewrite_qp [asl_comments_ELIM],
+   heuristics_qp [QUANT_INSTANTIATE_HEURISTIC___VAR_RES_FRAME_SPLIT___bool]]
 val VAR_RES_QUANT_INSTANTIATE_CONSEQ_CONV___main  =
    EXTENSIBLE_QUANT_INSTANTIATE_STEP_CONSEQ_CONV NONE (K true) false
-     ({distinct_thms = [],
-      cases_thms =    [],
-      rewrite_thms =  [asl_comments_ELIM],
-      convs =         [],
-      heuristics =    [QUANT_INSTANTIATE_HEURISTIC___VAR_RES_FRAME_SPLIT___bool],
-      inference_thms = [],
-      filter             = [],
-      top_heuristics     = [],
-      context_heuristics = [],
-      final_rewrite_thms = []
-      }::list_qp::(var_res_param.quantifier_heuristicsL)) [];
+     (var_res_main_qp::list_qp::(var_res_param.quantifier_heuristicsL)) [];
 
 (*
 val lref = ref []
