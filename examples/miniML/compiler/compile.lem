@@ -250,7 +250,6 @@ cbod_fls c (INR l) = {l} union match flookup c l with
   | Some e -> free_labs (domsub c l) e
   end
 
-
 (* Big-step semantics *)
 
 let rec

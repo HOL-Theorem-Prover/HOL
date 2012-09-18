@@ -248,7 +248,6 @@ val _ = Defn.save_defn free_bods_defn;
 
 val _ = Defn.save_defn free_labs_defn;
 
-
 (* Big-step semantics *)
 
  val no_closures_defn = Hol_defn "no_closures" `
