@@ -56,7 +56,9 @@ val machine_env = Posix.ProcEnv.uname()
 val sysname = assoc "sysname" machine_env
 in
 val machine_flags = if sysname = "Darwin" (* Mac OS X *)
-                    then ["-segprot", "POLY", "rwx", "rwx"] @
+                    then (if PolyML.Compiler.compilerVersionNumber >= 550
+                             then ["-Wl,-no_pie"]
+                          else ["-segprot", "POLY", "rwx", "rwx"]) @
                            (if PolyML.architecture() = "I386"
                             then ["-arch", "i386"]
                             else [])
