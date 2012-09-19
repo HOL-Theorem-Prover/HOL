@@ -5,6 +5,7 @@
 Manual
 developers
 examples/PSL
+examples/dev/sw
 examples/diningcryptos
 examples/elliptic
 examples/fsub
