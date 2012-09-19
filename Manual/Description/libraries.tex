@@ -3553,31 +3553,33 @@ Obviously, without adding safeguards, this rewrite theorem cannot be deployed wh
 
 \subsubsection{Decision procedures}
 
-A basic decision procedure for words is provided in the form of \ml{wordsLib.WORD\_DECIDE}.  This procedure is fairly light-weight, \eg{} it does not employ ``bit-blasting'' techniques for addition or multiplication.  However, it does provide some support for reasoning about word orderings, for example:
+A decision procedure for words is provided in the form of
+\ml{blastLib.BBLAST\_PROVE}.  This procedure uses \emph{bit-blasting} ---
+converting word expressions into propositions and then using a SAT solver to
+decide the goal.\footnote{This approach enables counter-examples to be given
+when a goal's negation is satisfiable.} This approach is reasonably general and
+can tackle a wide range of bit-vector problems.  However, there are some
+limitations: the approach only works for constant word lengths, linear
+arithmetic (multiplication by literals) and for shifts and bit-field
+extractions with respect to literal values.  Also note that some problems will
+be potentially slow to prove, e.g.{} when word sizes are large and/or when
+there are many nested additions (perhaps through multiplication).
+
+The following examples shows \ml{BBLAST\_PROVE} in use:
 \begin{session}
 \begin{verbatim}
-- wordsLib.WORD_DECIDE ``a + 2w <+ 4w = a <+ 2w \/ 13w <+ a :word4``;
+- blastLib.BBLAST_PROVE ``a + 2w <+ 4w = a <+ 2w \/ 13w <+ a :word4``;
 > val it =
     |- a + 2w <+ 4w <=> a <+ 2w \/ 13w <+ a
      : thm
 
-- wordsLib.WORD_DECIDE ``w2w (a:word8) <+ 256w : word16``;
+- blastLib.BBLAST_PROVE ``w2w (a:word8) <+ 256w : word16``;
 > val it = |- w2w a <+ 256w : thm
 \end{verbatim}
 \end{session}
-When the trace variable \ml{"word decide"} is set, a limited amount of feedback will be printed.
-
-A custom decision procedure can be constructed using \ml{wordsLib.WORD\_DP}.  In fact, the default decision procedure is just a special instance of this routine, for example:
-\begin{session}
-\begin{verbatim}
-- wordsLib.WORD_DP wordsLib.WORD_CONV bossLib.DECIDE
-   ``w2w (a:word8) <+ 256w : word16``;
-> val it = |- w2w a <+ 256w : thm
-\end{verbatim}
-\end{session}
-The supplied conversion is used to perform initial simplification, the problem is then mapped to the natural numbers and the decision procedure is applied.  With complex goals, the arithmetic decision procedures in \ml{intLib} provide better performance than \ml{bossLib.DECIDE}.
-
-The conversion \ml{blastLib.BBLAST\_CONV} performs bit-blasting, converting word expressions into propositions and, whenever possible, deriving true or false. This conversion is suited to reasoning about addition and multiplication (by a word literal) in combination with orderings and bit-field operations (shifts, bitwise logic and so forth).  For example:
+The decision procedure \ml{BBLAST\_PROVE} is based on the conversion
+\ml{BBLAST\_CONV}. This conversion can be used to convert bit-vector problems
+into a propositional form; for example:
 \begin{session}
 \begin{verbatim}
 - blastLib.BBLAST_CONV ``(((a : word16) + 5w) << 3) ' 5``;
@@ -3586,7 +3588,7 @@ The conversion \ml{blastLib.BBLAST\_CONV} performs bit-blasting, converting word
    : thm
 \end{verbatim}
 \end{session}
-This conversion will only work for constant word lengths and for fixed value shifts and bit-field extractions.  Furthermore, it can be very slow for all but a small number of additions, or with large word lengths. Consequently, this conversion should be used with caution.
+There are also bit-blasting tactics: \ml{BBLAST\_TAC} and \ml{FULL\_BBLAST\_TAC}; with only the latter making use of goal assumptions.
 
 \section{The \texttt{HolSat} Library}\label{sec:HolSatLib}
 \input{HolSat.tex}
