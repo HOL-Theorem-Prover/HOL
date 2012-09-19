@@ -1933,6 +1933,7 @@ val polyform_UNIQUE = store_thm(
       polyform a b = ces``,
   gen_tac >> ho_match_mp_tac ord_induction >> qx_gen_tac `b` >>
   strip_tac >> qx_gen_tac `ces1` >> strip_tac >>
+  `0 < a` by (`0 < 1o` by simp[] >> metis_tac [ordlt_TRANS]) >>
   qspecl_then [`a`, `b`] mp_tac polyform_def >>
   disch_then (strip_assume_tac o REWRITE_RULE [ASSUME``1<a:'a ordinal``]) >>
   `ces1 = [] ∨ ∃c e t. ces1 = (c,e)::t`
@@ -1945,10 +1946,11 @@ val polyform_UNIQUE = store_thm(
     by simp[Abbr`FF`, pairTheory.FORALL_PROD] >>
   `b = FOLDL FF (c * a ** e) t` by simp[] >>
   qspecl_then [`t`, `c * a ** e`, `0`] (mp_tac o SYM) FOLDL_SUM_lemma >>
-  simp[] >>
+  simp[SimpL ``(==>)``] >>
   disch_then (fn th =>
     `_ = c * a ** e + FOLDL FF 0 t` by metis_tac [th]) >>
-  `0 < b`
+  `polyform a b ≠ []` by simp[polyform_EQ_NIL, IFF_ZERO_lt, ZERO_lt_ordEXP] >>
+
 *)
 
 
