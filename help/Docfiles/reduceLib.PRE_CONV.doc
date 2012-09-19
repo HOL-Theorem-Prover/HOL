@@ -17,19 +17,19 @@ where {s} is the numeral that denotes the predecessor of the natural
 number denoted by {n}.
 
 \FAILURE
-{PRE_CONV tm} fails unless {tm} is of the form  {"PRE n"}, where {n} is
+{PRE_CONV tm} fails unless {tm} is of the form  {``PRE n``}, where {n} is
 a numeral.
 
 \EXAMPLE
 {
-#PRE_CONV "PRE 0";;
-|- PRE 0 = 0
+> PRE_CONV ``PRE 0``;
+val it = |- PRE 0 = 0 : thm
 
-#PRE_CONV "PRE 1";;
-|- PRE 1 = 0
+> PRE_CONV ``PRE 1``;
+val it = |- PRE 1 = 0 : thm
 
-#PRE_CONV "PRE 22";;
-|- PRE 22 = 21
+> PRE_CONV ``PRE 22``;
+val it = |- PRE 22 = 21 : thm
 }
 
 \ENDDOC
