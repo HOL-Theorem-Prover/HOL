@@ -142,13 +142,14 @@ echo ; echo Building documentation
 for man_name in Reference Description Tutorial Quick Logic
 do
     lcname=$(echo $man_name | tr A-Z a-z)
-    echo "  $man_name"
+    echo -n "  $man_name"
     cd $archive/Manual/$man_name
     if make $lcname.pdf > $texlogs/$man_name.log 2>&1 < /dev/null
     then :
     else echo Build failed - see $texlogs/$man_name.log ; exit 1
     fi
-    mv $lcname.pdf /tmp/$release-$lcname.pdf
+    mv $lcname.pdf /tmp/$releasename-$lcname.pdf
+    echo " -> /tmp/$releasename-$lcname.pdf"
 done
 /bin/rm -f $archive/help/src-sml/Doc2Tex.{exe,o}
 
@@ -186,4 +187,5 @@ cd /tmp
 echo "Creating tar file"
 tar czf hol-$releasename.tar.gz $(basename $archive)
 
-mv $archive/doc/$releasename.release.html .
+mv $archive/doc/$releasename.release.html . ||
+  die "No release notes for $releasename in doc directory"
