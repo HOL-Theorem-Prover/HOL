@@ -8,6 +8,23 @@ val _ = new_theory "Compile"
 
 open BytecodeTheory MiniMLTheory
 
+(* TODO: simple type system and checker *)
+(* TODO: map_Cexp? *)
+(* TODO: use Pmap.peek instead of mem when it becomes available *)
+(* TODO: collapse nested functions *)
+(* TODO: collapse nested lets *)
+(* TODO: Letfun introduction and reordering *)
+(* TODO: let floating *)
+(* TODO: removal of redundant expressions *)
+(* TODO: simplification (e.g., constant folding) *)
+(* TODO: avoid Shifts when possible *)
+(* TODO: registers, register allocation, greedy shuffling? *)
+(* TODO: bytecode optimizer: repeated Pops, unreachable code (e.g. after a Jump) *)
+(* TODO: more efficient pattern-matching method? *)
+(* TODO: store type information on CMat nodes (for pattern matching compilation) *)
+(* TODO: typechecking *)
+(* TODO: printing *)
+
 (* TODO: move to lem *)
 (*val fold_left2 : forall 'a 'b 'c. ('a -> 'b -> 'c -> 'a) -> 'a -> list 'b -> list 'c -> 'a*)
 (* TODO: lem library should use this for List.for_all2 *)
@@ -46,26 +63,13 @@ val _ = Define `
 
 val _ = Defn.save_defn map_result_defn;
 
-(* observable values *)
+ val every_result_defn = Hol_defn "every_result" `
 
-val _ = Hol_datatype `
- ov =
-    OLit of lit
-  | OConv of conN => ov list
-  | OFn`;
-
-
- val v_to_ov_defn = Hol_defn "v_to_ov" `
-
-(v_to_ov (Litv l) = OLit l)
+(every_result  P (Rerr _) = T)
 /\
-(v_to_ov (Conv cn vs) = OConv cn (MAP v_to_ov vs))
-/\
-(v_to_ov (Closure _ _ _) = OFn)
-/\
-(v_to_ov (Recclosure _ _ _) = OFn)`;
+(every_result P (Rval v) = P v)`;
 
-val _ = Defn.save_defn v_to_ov_defn;
+val _ = Defn.save_defn every_result_defn;
 
 (* Intermediate language for MiniML compiler *)
 
@@ -79,16 +83,6 @@ val _ = Define `
  i2 = int_of_num 2`;
 
 
-
- val Cv_to_ov_defn = Hol_defn "Cv_to_ov" `
-
-(Cv_to_ov m (CLitv l) = OLit l)
-/\
-(Cv_to_ov m (CConv cn vs) = OConv (FAPPLY  m  cn) (MAP (Cv_to_ov m) vs))
-/\
-(Cv_to_ov m (CRecClos _ _ _ _) = OFn)`;
-
-val _ = Defn.save_defn Cv_to_ov_defn;
 
  val Cpat_vars_defn = Hol_defn "Cpat_vars" `
 
@@ -407,130 +401,6 @@ EVERY
 ==>
 syneq c (CRecClos env1 ns defs d) (CRecClos env2 ns defs d))`;
 
-(* relating source to intermediate language *)
-
-(*
-indreln
-forall G cm env Cenv err.
-true
-==>
-exp_Cexp G cm env Cenv (Raise err) (CRaise err)
-and
-forall G cm env Cenv l.
-true
-==>
-exp_Cexp G cm env Cenv (Lit l) (CLit l)
-and
-forall G cm env Cenv cn es Ces.
-Pmap.mem cn cm &&
-every2 (exp_Cexp G cm env Cenv) es Ces
-==>
-exp_Cexp G cm env Cenv (Con cn es) (CCon (Pmap.find cn cm) Ces)
-and
-forall G cm env Cenv vn v Cvn.
-lookup vn env = Some v &&
-Pmap.mem Cvn Cenv &&
-G cm v (Pmap.find Cvn Cenv)
-==>
-exp_Cexp G cm env Cenv (Var vn) (CVar Cvn)
-and
-forall G cm env Cenv vn e n Ce.
-(forall v Cv. G cm v Cv -->
-  exp_Cexp G cm (bind vn v env) (Pmap.add n Cv Cenv) e Ce)
-==>
-exp_Cexp G cm env Cenv (Fun vn e) (CFun [n] Ce)
-
-indreln
-forall G cm l.
-true
-==>
-v_Cv G cm (Litv l) (CLitv l)
-and
-forall G cm cn vs Cvs.
-Pmap.mem cn cm &&
-every2 (v_Cv G cm) vs Cvs
-==>
-v_Cv G cm (Conv cn vs) (CConv (Pmap.find cn cm) Cvs)
-*)
-
-(*
-indreln
-forall cm env Cenv err.
-true
-==>
-exp_Cexp cm env Cenv (Raise err) (CRaise err)
-and
-forall cm env Cenv v Cv.
-v_Cv cm v Cv
-==>
-exp_Cexp cm env Cenv (Val v) (CVal Cv)
-and
-forall cm env Cenv cn es Ces.
-every2 (exp_Cexp cm env Cenv) es Ces
-==>
-exp_Cexp cm env Cenv (Con cn es) (CCon (Pmap.find cn cm) Ces)
-and
-forall cm env Cenv vn v Cvn Cv.
-lookup vn env = Some v &&
-Pmap.mem Cvn Cenv && Pmap.find Cvn Cenv = Cv && (* TODO: lookup *)
-v_Cv cm v Cv
-==>
-exp_Cexp cm env Cenv (Var vn) (CVar Cvn)
-and
-forall cm env Cenv vn e n Ce.
-(* but what to do here without a context of equal variables? *)
-(* (see comments in v_Cv below) *)
-==>
-exp_Cexp cm env Cenv (Fun vn e) (CFun n Ce)
-and
-forall cm l.
-true
-==>
-v_Cv cm (Lit l) (CLit l)
-and
-forall cm cn vs Cvs.
-every2 (v_Cv cm) vs Cvs
-==>
-v_Cv cm (Conv cn vs) (CConv (Pmap.find cn cm) Cvs)
-and
-forall cm env vn e Cenv n Ce.
-(* can't do this because it's a negative occurrence of v_Cv,
- * leading to a non-monotonic rule
-(forall v Cv. v_Cv cm v Cv -->
- exp_Cexp cm (bind vn v env) (Pmap.add n Cv (alist_to_fmap Cenv)) e Ce)
-*)
-(* obviously this is incorrect (requires the functions to be equivalent on
- * arbitrary pairs of arguments)
- * options for extension include:
-   * normal form (open): use the same free variable as the argument
-     * but does this distinguish too many pairs of terms?
-   * carry around a context of equal values/variables
-     * but how does this relate with the environments in closures?
-     * probably just have to have both independently
-   * parameterise by a "global knowledge" relation of equal values *)
-(forall v Cv. exp_Cexp cm (bind vn v env) (Pmap.add n Cv (alist_to_fmap Cenv)) e Ce)
-==>
-v_Cv cm (Closure env vn e) (CClosure Cenv [n] Ce)
-*)
-
-(*
-let rec
-Cv_to_bv (CLitv (IntLit i)) = Number i
-and
-Cv_to_bv (CLitv (Bool b)) = Number (bool_to_int b)
-and
-Cv_to_bv (CConv n vs) = Block n (Cvs_to_bvs vs)
-and
-Cv_to_bv (CClosure env vs b) = Block 0 [CodePtr ?, ?]
-and
-Cv_to_bv (CRecClos env ns defs n) = Block 0 [CodePtr ?, ?]
-and
-Cvs_to_bvs [] = []
-and
-Cvs_to_bvs (v::vs) = Cv_to_bv v :: Cvs_to_bvs vs
-*)
-
-
 val _ = Hol_datatype `
  nt =
     NTvar of num
@@ -629,8 +499,6 @@ val _ = Define `
 
 
 (* Remove pattern-matching using continuations *)
-(* TODO: more efficient method *)
-(* TODO: store type information on CMat nodes *)
 
  val remove_mat_vp_defn = Hol_defn "remove_mat_vp" `
 
@@ -770,7 +638,7 @@ val _ = Defn.save_defn remove_mat_var_defn;
 
 val _ = Defn.save_defn exp_to_Cexp_defn;
 
-(* conversions between values in different languages *)
+(* conversions source to intermediate values *)
 
  val v_to_Cv_defn = Hol_defn "v_to_Cv" `
 
@@ -800,63 +668,6 @@ val _ = Defn.save_defn exp_to_Cexp_defn;
   (x, v_to_Cv m v)::(env_to_Cenv m env))`;
 
 val _ = Defn.save_defn v_to_Cv_defn;
-
-(*
-let rec
-Cv_to_bv (CLitv (IntLit i)) = Number i
-and
-Cv_to_bv (CLitv (Bool b)) = Number (bool_to_int b)
-and
-Cv_to_bv (CConv n vs) = Block n (Cvs_to_bvs vs)
-and
-Cv_to_bv (CClosure env vs b) = Block 0 [CodePtr ?, ?]
-and
-Cv_to_bv (CRecClos env ns defs n) = Block 0 [CodePtr ?, ?]
-and
-Cvs_to_bvs [] = []
-and
-Cvs_to_bvs (v::vs) = Cv_to_bv v :: Cvs_to_bvs vs
-*)
-
-val _ = Define `
- (lookup_conv_ty m ty n = FAPPLY  (FAPPLY  m  ty)  n)`;
-
-
- val inst_arg_defn = Hol_defn "inst_arg" `
-
-(inst_arg tvs (NTvar n) = EL  n  tvs)
-/\
-(inst_arg tvs (NTapp ts tn) = NTapp (MAP (inst_arg tvs) ts) tn)
-/\
-(inst_arg tvs tt = tt)`;
-
-val _ = Defn.save_defn inst_arg_defn;
-
- val num_to_bool_defn = Hol_defn "num_to_bool" `
-
-(num_to_bool 0 = F)
-/\
-(num_to_bool 1 = T)`;
-
-val _ = Defn.save_defn num_to_bool_defn;
-
- val bv_to_ov_defn = Hol_defn "bv_to_ov" `
-
-(bv_to_ov m NTnum (Number i) = OLit (IntLit i))
-/\
-(bv_to_ov m NTbool (Number i) = OLit (Bool (num_to_bool (Num i))))
-/\
-(bv_to_ov m (NTapp _ ty) (Number i) =
-  OConv (FST (lookup_conv_ty m ty (Num i))) [])
-/\
-(bv_to_ov m (NTapp tvs ty) (Block n vs) =
-  let (tag, args) = lookup_conv_ty m ty n in
-  let args = MAP (inst_arg tvs) args in
-  OConv tag (MAP2 (\ ty v . bv_to_ov m ty v) args vs)) (* uneta: Hol_defn sucks *)
-/\
-(bv_to_ov m NTfn (Block 0 _) = OFn)`;
-
-val _ = Defn.save_defn bv_to_ov_defn;
 
 val _ = Hol_datatype `
  label_closures_state =
@@ -945,21 +756,6 @@ val _ = Hol_datatype `
     defs)`;
 
 val _ = Defn.save_defn label_closures_defn;
-
-(* TODO: simple type system and checker *)
-
-(* TODO: map_Cexp? *)
-
-(* TODO: use Pmap.peek instead of mem when it becomes available *)
-(* TODO: collapse nested functions *)
-(* TODO: collapse nested lets *)
-(* TODO: Letfun introduction and reordering *)
-(* TODO: let floating *)
-(* TODO: removal of redundant expressions *)
-(* TODO: simplification (e.g., constant folding) *)
-(* TODO: avoid Shifts when possible *)
-(* TODO: registers, register allocation, greedy shuffling? *)
-(* TODO: bytecode optimizer: repeated Pops, unreachable code (e.g. after a Jump) *)
 
  val error_to_int_defn = Hol_defn "error_to_int" `
 
@@ -1402,6 +1198,165 @@ val _ = Defn.save_defn replace_labels_defn;
 
 val _ = Defn.save_defn compile_labels_defn;
 
+val _ = Define `
+ init_repl_state =
+  <| cmap := FEMPTY
+   ; cpam := FEMPTY
+   ; code := []
+   ; renv := FEMPTY
+   ; rsz  := 0
+   ; next_addr := 0
+   ; inst_length := \ i . 0
+   |>`;
+
+
+val _ = Define `
+ (compile_Cexp rs decl Ce =
+  let s = <| lnext_label := 0; ldefs := []; lbods := FEMPTY |> in
+  let (s,Ce) = label_closures s Ce in
+  let cs = <| env := rs.renv; sz := rs.rsz
+            ; ecs := FEMPTY; env_azs := FEMPTY
+            ; out := []; next_label := s.lnext_label
+            ; tail := TCNonTail; decl := decl |> in
+  let cs = calculate_ecs s.lbods cs s.ldefs in
+  let cs = compile_code_env cs s.ldefs in
+  let cs =  cs with<| env_azs := FEMPTY |> in
+  let cs = compile cs Ce in
+  let rs = (case cs.decl of
+      NONE => rs
+    | SOME (env,sz) =>  rs with<| renv := env ; rsz := sz |>
+    ) in
+  compile_labels rs (REVERSE cs.out))`;
+
+
+ val number_constructors_defn = Hol_defn "number_constructors" `
+
+(number_constructors a (cm,cw) n [] = (cm,cw))
+/\
+(number_constructors a (cm,cw) n ((c,tys)::cs) =
+  let cm' = FUPDATE  cm ( c, n) in
+  let cw' = FUPDATE  cw ( n, (c, MAP (t_to_nt a) tys)) in
+  number_constructors a (cm',cw') (n+1) cs)`;
+
+val _ = Defn.save_defn number_constructors_defn;
+
+ val repl_dec_defn = Hol_defn "repl_dec" `
+
+(repl_dec rs (Dtype []) =  rs with<| code := [] |>)
+/\
+(repl_dec rs (Dtype ((a,ty,cs)::ts)) =
+  let (cm,cw) = number_constructors a (rs.cmap,FEMPTY) 0 cs in
+  repl_dec ( rs with<| cmap := cm; cpam := FUPDATE  rs.cpam ( ty, cw) |>) (Dtype ts)) (* parens: Lem sucks *)
+/\
+(repl_dec rs (Dletrec defs) =
+  let (fns,Cdefs) = defs_to_Cdefs rs.cmap defs in
+  let decl = SOME(rs.renv,rs.rsz) in
+  compile_Cexp rs decl (CLetfun T fns Cdefs (CDecl fns)))
+/\
+(repl_dec rs (Dlet p e) =
+  let (pvs,Cp) = pat_to_Cpat rs.cmap [] p in
+  let Cpes = [(Cp,CDecl pvs)] in
+  let vn = fresh_var (Cpes_vars Cpes) in
+  let Ce = exp_to_Cexp rs.cmap e in
+  let decl = SOME(rs.renv,rs.rsz) in
+  compile_Cexp rs decl (CLet [vn] [Ce] (remove_mat_var vn Cpes)))`;
+
+val _ = Defn.save_defn repl_dec_defn;
+
+val _ = Define `
+ (repl_exp s exp = compile_Cexp s NONE (exp_to_Cexp s.cmap exp))`;
+
+
+(* observable values *)
+
+val _ = Hol_datatype `
+ ov =
+    OLit of lit
+  | OConv of conN => ov list
+  | OFn`;
+
+
+ val v_to_ov_defn = Hol_defn "v_to_ov" `
+
+(v_to_ov (Litv l) = OLit l)
+/\
+(v_to_ov (Conv cn vs) = OConv cn (MAP v_to_ov vs))
+/\
+(v_to_ov (Closure _ _ _) = OFn)
+/\
+(v_to_ov (Recclosure _ _ _) = OFn)`;
+
+val _ = Defn.save_defn v_to_ov_defn;
+
+ val Cv_to_ov_defn = Hol_defn "Cv_to_ov" `
+
+(Cv_to_ov m (CLitv l) = OLit l)
+/\
+(Cv_to_ov m (CConv cn vs) = OConv (FAPPLY  m  cn) (MAP (Cv_to_ov m) vs))
+/\
+(Cv_to_ov m (CRecClos _ _ _ _) = OFn)`;
+
+val _ = Defn.save_defn Cv_to_ov_defn;
+
+val _ = Define `
+ (lookup_conv_ty m ty n = FAPPLY  (FAPPLY  m  ty)  n)`;
+
+
+ val inst_arg_defn = Hol_defn "inst_arg" `
+
+(inst_arg tvs (NTvar n) = EL  n  tvs)
+/\
+(inst_arg tvs (NTapp ts tn) = NTapp (MAP (inst_arg tvs) ts) tn)
+/\
+(inst_arg tvs tt = tt)`;
+
+val _ = Defn.save_defn inst_arg_defn;
+
+ val num_to_bool_defn = Hol_defn "num_to_bool" `
+
+(num_to_bool 0 = F)
+/\
+(num_to_bool 1 = T)`;
+
+val _ = Defn.save_defn num_to_bool_defn;
+
+ val bv_to_ov_defn = Hol_defn "bv_to_ov" `
+
+(bv_to_ov m NTnum (Number i) = OLit (IntLit i))
+/\
+(bv_to_ov m NTbool (Number i) = OLit (Bool (num_to_bool (Num i))))
+/\
+(bv_to_ov m (NTapp _ ty) (Number i) =
+  OConv (FST (lookup_conv_ty m ty (Num i))) [])
+/\
+(bv_to_ov m (NTapp tvs ty) (Block n vs) =
+  let (tag, args) = lookup_conv_ty m ty n in
+  let args = MAP (inst_arg tvs) args in
+  OConv tag (MAP2 (\ ty v . bv_to_ov m ty v) args vs)) (* uneta: Hol_defn sucks *)
+/\
+(bv_to_ov m NTfn (Block 0 _) = OFn)`;
+
+val _ = Defn.save_defn bv_to_ov_defn;
+
+(* convert intermediate to target values *)
+
+(*
+let rec
+Cv_to_bv (CLitv (IntLit i)) = Number i
+and
+Cv_to_bv (CLitv (Bool b)) = Number (bool_to_int b)
+and
+Cv_to_bv (CConv n vs) = Block n (Cvs_to_bvs vs)
+and
+Cv_to_bv (CClosure env vs b) = Block 0 [CodePtr ?, ?]
+and
+Cv_to_bv (CRecClos env ns defs n) = Block 0 [CodePtr ?, ?]
+and
+Cvs_to_bvs [] = []
+and
+Cvs_to_bvs (v::vs) = Cv_to_bv v :: Cvs_to_bvs vs
+*)
+
 (*
 indreln
 forall il c cc.
@@ -1461,77 +1416,129 @@ bceqv il c (CRecClos env ns defs n)
   (Block 0 [CodePtr f; if bvs = [] then Number i0 else Block 0 bvs])
 *)
 
-val _ = Define `
- init_repl_state =
-  <| cmap := FEMPTY
-   ; cpam := FEMPTY
-   ; code := []
-   ; renv := FEMPTY
-   ; rsz  := 0
-   ; next_addr := 0
-   ; inst_length := \ i . 0
-   |>`;
 
+(* relating source to intermediate language *)
 
-val _ = Define `
- (compile_Cexp rs decl Ce =
-  let s = <| lnext_label := 0; ldefs := []; lbods := FEMPTY |> in
-  let (s,Ce) = label_closures s Ce in
-  let cs = <| env := rs.renv; sz := rs.rsz
-            ; ecs := FEMPTY; env_azs := FEMPTY
-            ; out := []; next_label := s.lnext_label
-            ; tail := TCNonTail; decl := decl |> in
-  let cs = calculate_ecs s.lbods cs s.ldefs in
-  let cs = compile_code_env cs s.ldefs in
-  let cs =  cs with<| env_azs := FEMPTY |> in
-  let cs = compile cs Ce in
-  let rs = (case cs.decl of
-      NONE => rs
-    | SOME (env,sz) =>  rs with<| renv := env ; rsz := sz |>
-    ) in
-  compile_labels rs (REVERSE cs.out))`;
+(*
+indreln
+forall G cm env Cenv err.
+true
+==>
+exp_Cexp G cm env Cenv (Raise err) (CRaise err)
+and
+forall G cm env Cenv l.
+true
+==>
+exp_Cexp G cm env Cenv (Lit l) (CLit l)
+and
+forall G cm env Cenv cn es Ces.
+Pmap.mem cn cm &&
+every2 (exp_Cexp G cm env Cenv) es Ces
+==>
+exp_Cexp G cm env Cenv (Con cn es) (CCon (Pmap.find cn cm) Ces)
+and
+forall G cm env Cenv vn v Cvn.
+lookup vn env = Some v &&
+Pmap.mem Cvn Cenv &&
+G cm v (Pmap.find Cvn Cenv)
+==>
+exp_Cexp G cm env Cenv (Var vn) (CVar Cvn)
+and
+forall G cm env Cenv vn e n Ce.
+(forall v Cv. G cm v Cv -->
+  exp_Cexp G cm (bind vn v env) (Pmap.add n Cv Cenv) e Ce)
+==>
+exp_Cexp G cm env Cenv (Fun vn e) (CFun [n] Ce)
 
+indreln
+forall G cm l.
+true
+==>
+v_Cv G cm (Litv l) (CLitv l)
+and
+forall G cm cn vs Cvs.
+Pmap.mem cn cm &&
+every2 (v_Cv G cm) vs Cvs
+==>
+v_Cv G cm (Conv cn vs) (CConv (Pmap.find cn cm) Cvs)
+*)
 
-(* TODO: typechecking *)
-(* TODO: printing *)
+(*
+indreln
+forall cm env Cenv err.
+true
+==>
+exp_Cexp cm env Cenv (Raise err) (CRaise err)
+and
+forall cm env Cenv v Cv.
+v_Cv cm v Cv
+==>
+exp_Cexp cm env Cenv (Val v) (CVal Cv)
+and
+forall cm env Cenv cn es Ces.
+every2 (exp_Cexp cm env Cenv) es Ces
+==>
+exp_Cexp cm env Cenv (Con cn es) (CCon (Pmap.find cn cm) Ces)
+and
+forall cm env Cenv vn v Cvn Cv.
+lookup vn env = Some v &&
+Pmap.mem Cvn Cenv && Pmap.find Cvn Cenv = Cv && (* TODO: lookup *)
+v_Cv cm v Cv
+==>
+exp_Cexp cm env Cenv (Var vn) (CVar Cvn)
+and
+forall cm env Cenv vn e n Ce.
+(* but what to do here without a context of equal variables? *)
+(* (see comments in v_Cv below) *)
+==>
+exp_Cexp cm env Cenv (Fun vn e) (CFun n Ce)
+and
+forall cm l.
+true
+==>
+v_Cv cm (Lit l) (CLit l)
+and
+forall cm cn vs Cvs.
+every2 (v_Cv cm) vs Cvs
+==>
+v_Cv cm (Conv cn vs) (CConv (Pmap.find cn cm) Cvs)
+and
+forall cm env vn e Cenv n Ce.
+(* can't do this because it's a negative occurrence of v_Cv,
+ * leading to a non-monotonic rule
+(forall v Cv. v_Cv cm v Cv -->
+ exp_Cexp cm (bind vn v env) (Pmap.add n Cv (alist_to_fmap Cenv)) e Ce)
+*)
+(* obviously this is incorrect (requires the functions to be equivalent on
+ * arbitrary pairs of arguments)
+ * options for extension include:
+   * normal form (open): use the same free variable as the argument
+     * but does this distinguish too many pairs of terms?
+   * carry around a context of equal values/variables
+     * but how does this relate with the environments in closures?
+     * probably just have to have both independently
+   * parameterise by a "global knowledge" relation of equal values *)
+(forall v Cv. exp_Cexp cm (bind vn v env) (Pmap.add n Cv (alist_to_fmap Cenv)) e Ce)
+==>
+v_Cv cm (Closure env vn e) (CClosure Cenv [n] Ce)
+*)
 
- val number_constructors_defn = Hol_defn "number_constructors" `
-
-(number_constructors a (cm,cw) n [] = (cm,cw))
-/\
-(number_constructors a (cm,cw) n ((c,tys)::cs) =
-  let cm' = FUPDATE  cm ( c, n) in
-  let cw' = FUPDATE  cw ( n, (c, MAP (t_to_nt a) tys)) in
-  number_constructors a (cm',cw') (n+1) cs)`;
-
-val _ = Defn.save_defn number_constructors_defn;
-
- val repl_dec_defn = Hol_defn "repl_dec" `
-
-(repl_dec rs (Dtype []) =  rs with<| code := [] |>)
-/\
-(repl_dec rs (Dtype ((a,ty,cs)::ts)) =
-  let (cm,cw) = number_constructors a (rs.cmap,FEMPTY) 0 cs in
-  repl_dec ( rs with<| cmap := cm; cpam := FUPDATE  rs.cpam ( ty, cw) |>) (Dtype ts)) (* parens: Lem sucks *)
-/\
-(repl_dec rs (Dletrec defs) =
-  let (fns,Cdefs) = defs_to_Cdefs rs.cmap defs in
-  let decl = SOME(rs.renv,rs.rsz) in
-  compile_Cexp rs decl (CLetfun T fns Cdefs (CDecl fns)))
-/\
-(repl_dec rs (Dlet p e) =
-  let (pvs,Cp) = pat_to_Cpat rs.cmap [] p in
-  let Cpes = [(Cp,CDecl pvs)] in
-  let vn = fresh_var (Cpes_vars Cpes) in
-  let Ce = exp_to_Cexp rs.cmap e in
-  let decl = SOME(rs.renv,rs.rsz) in
-  compile_Cexp rs decl (CLet [vn] [Ce] (remove_mat_var vn Cpes)))`;
-
-val _ = Defn.save_defn repl_dec_defn;
-
-val _ = Define `
- (repl_exp s exp = compile_Cexp s NONE (exp_to_Cexp s.cmap exp))`;
-
+(*
+let rec
+Cv_to_bv (CLitv (IntLit i)) = Number i
+and
+Cv_to_bv (CLitv (Bool b)) = Number (bool_to_int b)
+and
+Cv_to_bv (CConv n vs) = Block n (Cvs_to_bvs vs)
+and
+Cv_to_bv (CClosure env vs b) = Block 0 [CodePtr ?, ?]
+and
+Cv_to_bv (CRecClos env ns defs n) = Block 0 [CodePtr ?, ?]
+and
+Cvs_to_bvs [] = []
+and
+Cvs_to_bvs (v::vs) = Cv_to_bv v :: Cvs_to_bvs vs
+*)
 
 (* Constant folding
 val fold_consts : exp -> exp

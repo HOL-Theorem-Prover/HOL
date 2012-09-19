@@ -122,6 +122,8 @@ val _ = export_rewrites["v_to_ov_def"];
 
 val _ = save_thm ("map_result_def", map_result_def);
 val _ = export_rewrites["map_result_def"];
+val _ = save_thm ("every_result_def", every_result_def);
+val _ = export_rewrites["every_result_def"]
 
 val _ = save_thm ("doPrim2_def", doPrim2_def);
 val _ = export_rewrites["doPrim2_def"];
