@@ -38,18 +38,18 @@ val _ = Hol_datatype `SRS = SN | SZ | SC | SV`;
 val getS_def = Define
         `getS (cpsr : CPSR) (flag:SRS) =
             case flag of
-                 SN -> cpsr %% 31 ||
-                 SZ -> cpsr %% 30 ||
-                 SC -> cpsr %% 29 ||
-                 SV -> cpsr %% 28
+                 SN => cpsr ' 31 |
+                 SZ => cpsr ' 30 |
+                 SC => cpsr ' 29 |
+                 SV => cpsr ' 28
         `;
 
 val getS_thm = Q.store_thm (
 	"getS_thm",
-        `(getS (cpsr : CPSR) SN = cpsr %% 31) /\
-	 (getS (cpsr : CPSR) SZ = cpsr %% 30) /\
-	 (getS (cpsr : CPSR) SC = cpsr %% 29) /\
-	 (getS (cpsr : CPSR) SV = cpsr %% 28)
+        `(getS (cpsr : CPSR) SN = cpsr ' 31) /\
+	 (getS (cpsr : CPSR) SZ = cpsr ' 30) /\
+	 (getS (cpsr : CPSR) SC = cpsr ' 29) /\
+	 (getS (cpsr : CPSR) SV = cpsr ' 28)
 	`,
 	RW_TAC std_ss [getS_def]);
 
@@ -57,10 +57,10 @@ val getS_thm = Q.store_thm (
 val setS_def = Define
         `setS (cpsr : CPSR) (flag:SRS) =
             case flag of
-                 SN -> (cpsr !! 0x80000000w) ||
-                 SZ -> (cpsr !! 0x40000000w) ||
-                 SC -> (cpsr !! 0x20000000w) ||
-                 SV -> (cpsr !! 0x10000000w)
+                 SN => (cpsr !! 0x80000000w) |
+                 SZ => (cpsr !! 0x40000000w) |
+                 SC => (cpsr !! 0x20000000w) |
+                 SV => (cpsr !! 0x10000000w)
         `;
 
 val setS_thm = Q.store_thm (
@@ -181,14 +181,14 @@ val read_def =
   Define `
     read (regs,mem) (exp:EXP) =
       case exp of
-        MEM (r,offset) ->
+        MEM (r,offset) =>
 	    (case offset of
-		  POS k -> mem ' ((MEM_ADDR (regs ' (n2w r))) + (n2w k)) ||
-		  NEG k -> mem ' ((MEM_ADDR (regs ' (n2w r))) - (n2w k))
-	    )	||
-	NCONST i -> n2w i     ||
-   WCONST w -> w         ||
-   REG r -> regs ' (n2w:num->word4 r)
+		  POS k => mem ' ((MEM_ADDR (regs ' (n2w r))) + (n2w k)) |
+		  NEG k => mem ' ((MEM_ADDR (regs ' (n2w r))) - (n2w k))
+	    )	|
+	NCONST i => n2w i     |
+   WCONST w => w         |
+   REG r => regs ' (n2w:num->word4 r)
 `;
 
 val read_thm = Q.store_thm (
@@ -205,15 +205,15 @@ val write_def =
   Define `
     write (regs,mem) (exp:EXP) (v:DATA)=
       case exp of
-        MEM (r,offset) ->
+        MEM (r,offset) =>
 	    (regs,
              (case offset of
-                   POS k -> mem |+ (MEM_ADDR (regs ' (n2w r)) + (n2w k), v) ||
-                   NEG k -> mem |+ (MEM_ADDR (regs ' (n2w r)) - (n2w k), v)
-             ))   	 ||
-        REG r -> ( regs |+ ((n2w:num->REGISTER r), v),
-                   mem ) ||
-        _ -> (regs, mem)
+                   POS k => mem |+ (MEM_ADDR (regs ' (n2w r)) + (n2w k), v) |
+                   NEG k => mem |+ (MEM_ADDR (regs ' (n2w r)) - (n2w k), v)
+             ))   	 |
+        REG r => ( regs |+ ((n2w:num->REGISTER r), v),
+                   mem ) |
+        _ => (regs, mem)
   `;
 
 val write_thm = Q.store_thm (
@@ -233,9 +233,9 @@ val goto_def =
   Define `
     goto (pc, SOME jump) =
         case jump of
-            POS n -> pc + n  ||
-            NEG n -> pc - n  ||
-	    INR ->   pc
+            POS n => pc + n  |
+            NEG n => pc - n  |
+	    INR =>   pc
    `;
 
 val goto_thm = Q.store_thm (
@@ -251,104 +251,104 @@ val decode_op_def =
   Define `
   decode_op (pc,cpsr,s) (op,dst,src,jump) =
      case op of
-          MOV -> (cpsr, write s (THE dst) (read s (HD src)))
-              ||
+          MOV => (cpsr, write s (THE dst) (read s (HD src)))
+              |
 
           (* we assume that the stack goes from low addresses to high addresses even it is "FD",
              change LDMFD to be LDMFA if necessary *)
 
-	  LDMFD -> (case THE dst of
-			REG r ->
+	  LDMFD => (case THE dst of
+			REG r =>
 			     (* We must read values from the original state instead of the updated state *)
 			    (cpsr, FST (FOLDL (\(s1,i) reg. (write s1 reg (read s (MEM(r,POS(i+1)))), i+1)) (s,0) src))
-                    ||
-                        WREG r ->
+                    |
+                        WREG r =>
 			    (cpsr, write (FST (FOLDL (\(s1,i) reg. (write s1 reg (read s (MEM(r,POS(i+1)))), i+1)) (s,0) src))
 						 (REG r) (read s (REG r) + n2w (4*LENGTH src)))
 		   )
-	      ||
+	      |
 
           (* we assume that the stack goes from low addresses to high addresses even it is "FD",
              change STMFA to be STMFD if necessary *)
 
-	  STMFD -> (case THE dst of
-                        REG r ->
+	  STMFD => (case THE dst of
+                        REG r =>
                                 (cpsr,
 			         (* We must read values from the original state instead of the updated state *)
-                                 FST (FOLDL (\(s1,i) reg. (write s1 (MEM(r,NEG i)) (read s reg), i+1)) (s,0) (REVERSE src))) ||
-                        WREG r ->
+                                 FST (FOLDL (\(s1,i) reg. (write s1 (MEM(r,NEG i)) (read s reg), i+1)) (s,0) (REVERSE src))) |
+                        WREG r =>
                                 (cpsr,
 				 write (FST (FOLDL (\(s1,i) reg. (write s1 (MEM(r,NEG i)) (read s reg), i+1)) (s,0) (REVERSE src)))
 					(REG r) (read s (REG r) - n2w (4*LENGTH src)))
 		   )
-	      ||
-          ADD -> (cpsr, (write s (THE dst) (read s (HD src) + read s (HD (TL (src))))))
-              ||
-          SUB -> (cpsr, (write s (THE dst) (read s (HD src) - read s (HD (TL (src))))))
-              ||
-          RSB -> (cpsr, (write s (THE dst) (read s (HD (TL (src))) - read s (HD src))))
-              ||
-          MUL -> (cpsr, (write s (THE dst) (read s (HD src) * read s (HD (TL (src))))))
-              ||
-	  MLA -> (cpsr, (write s (THE dst) (read s (HD src) * read s (HD (TL (src))) +
+	      |
+          ADD => (cpsr, (write s (THE dst) (read s (HD src) + read s (HD (TL (src))))))
+              |
+          SUB => (cpsr, (write s (THE dst) (read s (HD src) - read s (HD (TL (src))))))
+              |
+          RSB => (cpsr, (write s (THE dst) (read s (HD (TL (src))) - read s (HD src))))
+              |
+          MUL => (cpsr, (write s (THE dst) (read s (HD src) * read s (HD (TL (src))))))
+              |
+	  MLA => (cpsr, (write s (THE dst) (read s (HD src) * read s (HD (TL (src))) +
 						  read s (HD (TL (TL (src)))) )))
-              ||
-          AND -> (cpsr, (write s (THE dst) (read s (HD src) && read s (HD (TL (src))))))
-              ||
-          ORR -> (cpsr, (write s (THE dst) (read s (HD src) !! read s (HD (TL (src))))))
-              ||
-          EOR -> (cpsr, (write s (THE dst) (read s (HD src) ?? read s (HD (TL (src))))))
-              ||
+              |
+          AND => (cpsr, (write s (THE dst) (read s (HD src) && read s (HD (TL (src))))))
+              |
+          ORR => (cpsr, (write s (THE dst) (read s (HD src) !! read s (HD (TL (src))))))
+              |
+          EOR => (cpsr, (write s (THE dst) (read s (HD src) ?? read s (HD (TL (src))))))
+              |
 
-          LSL -> (cpsr, (write s (THE dst)
+          LSL => (cpsr, (write s (THE dst)
 				(read s (HD src) << w2n (read s (HD (TL (src)))))))
-              ||
-          LSR -> (cpsr, (write s (THE dst)
+              |
+          LSR => (cpsr, (write s (THE dst)
 				(read s (HD src) >>> w2n (read s (HD (TL (src)))))))
-              ||
-          ASR -> (cpsr, (write s (THE dst)
+              |
+          ASR => (cpsr, (write s (THE dst)
 				(read s (HD src) >> w2n (read s (HD (TL (src)))))))
-              ||
-          ROR -> (cpsr, (write s (THE dst)
+              |
+          ROR => (cpsr, (write s (THE dst)
 				(read s (HD src) #>> w2n (read s (HD (TL (src)))))))
-              ||
+              |
 
-          CMP -> (let a = read s (HD src) in
+          CMP => (let a = read s (HD src) in
                  let b = read s (HD (TL (src))) in
                  (setNZCV cpsr (word_msb (a - b),
                                 a = b,
                                 b <=+ a,
                                 ~(word_msb a = word_msb b) /\ ~(word_msb a = word_msb (a - b))), s))
-              ||
+              |
 
           (*  The carry flag is always set to false. This does not correspond to
               real ARM assembler. There you could set the carry flag by passing
               an shift as second argument. *)
-          TST -> (let a = read s (HD src) in
+          TST => (let a = read s (HD src) in
                  let b = read s (HD (TL (src))) in
                  (setNZCV cpsr (word_msb (a && b),
                                 (a && b) = 0w,
                                 F,
-                                cpsr %% 28), s))
+                                cpsr ' 28), s))
 
-              ||
+              |
 
-          LDR -> (cpsr, (write s (THE dst) (read s (HD src))))
+          LDR => (cpsr, (write s (THE dst) (read s (HD src))))
 		(* write the value in src (i.e. the memory) to the dst (i.e. the register)*)
-              ||
+              |
 
-          STR -> (cpsr, (write s (HD src) (read s (THE dst))))
+          STR => (cpsr, (write s (HD src) (read s (THE dst))))
 		(* write the value in src (i.e. the register) to the dst (i.e. the memory)*)
-              ||
+              |
 
-          MSR -> (read s (HD src), s)
-              ||
-          MRS -> (cpsr, (write s (THE dst) cpsr))
-	      ||
+          MSR => (read s (HD src), s)
+              |
+          MRS => (cpsr, (write s (THE dst) cpsr))
+	      |
 
-	  B   -> (cpsr, s)
-	      ||
-          BL ->  (cpsr, write s (REG 14) (n2w (SUC pc)))
+	  B   => (cpsr, s)
+	      |
+          BL =>  (cpsr, write s (REG 14) (n2w (SUC pc)))
   `;
 
 val decode_op_thm = Q.store_thm
@@ -376,7 +376,7 @@ val decode_op_thm = Q.store_thm
                      (setNZCV cpsr (word_msb (a && b),
                                     (a && b) = 0w,
                                     F,
-                                    cpsr %% 28), s))) /\
+                                    cpsr ' 28), s))) /\
   (decode_op (pc,cpsr,s) (LSL,SOME dst,src,jump) = (cpsr, write s dst (read s (HD src) << w2n (read s (HD (TL src)))))) /\
   (decode_op (pc,cpsr,s) (LSR,SOME dst,src,jump) = (cpsr, write s dst (read s (HD src) >>> w2n (read s (HD (TL src)))))) /\
   (decode_op (pc,cpsr,s) (ASR,SOME dst,src,jump) = (cpsr, write s dst (read s (HD src) >> w2n (read s (HD (TL src)))))) /\
@@ -438,9 +438,9 @@ val decode_cond_def =
   Define `
     (decode_cond ((pc,cpsr,s):STATE) (((op,cond,sflag), dst, src, jump):INST)) =
         (case cond of
-            NONE -> (pc+1, decode_op (pc,cpsr,s) (op,dst,src,jump))
-                ||
-            SOME c ->
+            NONE => (pc+1, decode_op (pc,cpsr,s) (op,dst,src,jump))
+                |
+            SOME c =>
 		          if (decode_cond_cpsr cpsr c) then (goto(pc,jump), decode_op (pc,cpsr,s) (op,dst,src,jump))
 			        else (pc+1, cpsr, s))
   `;
@@ -1337,10 +1337,10 @@ Induct_on `m` THENL [
 			FULL_SIMP_TAC arith_ss [] THEN
 			ONCE_REWRITE_TAC [sum_numTheory.SUM_def] THEN
 			SIMP_TAC std_ss [] THEN
-			`!x. ((x + SBIT (v %% SUC n) (SUC n)) DIV 2) =
-				  (x DIV 2 + SBIT (v %% SUC n) n)` by ALL_TAC THEN1 (
+			`!x. ((x + SBIT (v ' SUC n) (SUC n)) DIV 2) =
+				  (x DIV 2 + SBIT (v ' SUC n) n)` by ALL_TAC THEN1 (
 				ONCE_REWRITE_TAC [ADD_COMM] THEN
-				Tactical.REVERSE (`SBIT (v %% SUC n) (SUC n) = SBIT (v %% SUC n) n * 2` by ALL_TAC) THEN1 (
+				Tactical.REVERSE (`SBIT (v ' SUC n) (SUC n) = SBIT (v ' SUC n) n * 2` by ALL_TAC) THEN1 (
 					ASM_SIMP_TAC std_ss [ADD_DIV_ADD_DIV]
 				) THEN
 				SIMP_TAC arith_ss [bitTheory.SBIT_def, COND_RATOR, COND_RAND, EXP]
