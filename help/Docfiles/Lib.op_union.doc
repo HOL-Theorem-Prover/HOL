@@ -1,6 +1,6 @@
-\DOC union
+\DOC
 
-\TYPE {union : ('a -> 'a -> bool) -> 'a list -> 'a list -> 'a list}
+\TYPE {op_union : ('a -> 'a -> bool) -> 'a list -> 'a list -> 'a list}
 
 \SYNOPSIS
 Computes the union of two `sets'.
