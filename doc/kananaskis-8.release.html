@@ -106,14 +106,33 @@ Details of the work can be found in
 <h2 id="new-tools">New tools:</h2>
 
 <ul>
-
-
+<li><p>A new proof-producing translator from HOL functions to MiniML:
+<code>examples/miniML/hol2miniml</code>. Given an ML-like function in
+the HOL logic, this tool generates a corresponding deeply embedded
+MiniML program and automatically proves (w.r.t. an operational
+semantics) that the generated MiniML program indeed computes exactly
+the same value as the original HOL function. A description of this
+tool can be found in:
+<ol>
+<li> Myreen and Owens: <cite>Proof-Producing Synthesis of ML from Higher-Order Logic</cite>, ICFP&nbsp;2012.
+</ol>
 
 </ul>
 
 <h2 id="new-examples">New examples:</h2>
 
 <ul>
+<li><p>A soundness proof of Jared Davis' ACl2-like Milawa theorem
+prover: <code>examples/theorem-prover</code>. This examples directory
+constructs a verified Lisp implementation in 64-bit x86 (including
+verified garbage collection, parsing, printing, compilation) that is
+able to host the Milawa theorem prover. Going further, we also verify
+the soundness of Milawa's reflective kernel w.r.t. a formal definition
+of the semantics of its logic. Part of this work is described in:
+<ol>
+<li> Myreen and Davis: <cite>A verified runtime for a verified theorem prover</cite>, ITP&nbsp;2011.
+</ol>
+
 <li><p>A development of the theory of ordinal numbers (in <code>examples/set-theory/hol_sets</code>, based on a quotient of well-orders.
 Standard arithmetic operations (addition, multiplication and exponentiation) are defined, as well as the notion of supremum.
 The theorem that all ordinals can be expressed in a polynomial form over all possible bases greater than 1 is also proved.
