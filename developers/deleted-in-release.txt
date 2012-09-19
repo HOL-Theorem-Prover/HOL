@@ -1,0 +1,19 @@
+# Uncommented lines below are deleted from the directory that
+# is eventually tarred up to create the release.
+# Deletion is done with /bin/rm -r
+.gitignore
+Manual
+developers
+examples/PSL
+examples/diningcryptos
+examples/elliptic
+examples/fsub
+examples/miniML/.gitignore
+examples/miniML/compiler
+examples/miniML/computability
+examples/miniML/metatheory
+examples/muddy/muddyC/buddy/doc/bddnotes.ps
+examples/muddy/muddyC/buddy/doc/buddy.ps
+examples/opsemTools
+examples/pgcl
+examples/temporal_deep

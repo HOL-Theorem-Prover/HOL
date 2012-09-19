@@ -3,26 +3,22 @@
 homesvn=https://hol.svn.sourceforge.net/svnroot/hol
 
 usage () {
-        echo "Usage: releasing-hol [-f] [--svn URL] (-Lpath)* <release-path> <ML>" >&2
-        echo "  <release-path> is a path wrt $homesvn" >&2
+        echo "Usage: releasing-hol [--relname=<name>] (-Lpath)* <ref> <ML>" >&2
+        echo "  <ref> is a git reference (e.g., HEAD or a tag name)" >&2
         echo "  <ML> is a path to mosml or poly" >&2
-        echo "  Use the -f option to force fresh svn call (ignoring cache)" >&2
-        echo "  Use --svn <repo-URL> to specify alternative svn repo" >&2
         echo "  Use -Lpath to add library paths for Poly" >&2
+        echo "  Use --relname=<name> to give the release a name other than <ref>" >&2
         exit 1
 }
 
-TEMP=$(getopt -n releasing-hol -ofL: -l svn: -- "$@")
+TEMP=$(getopt -n releasing-hol -oL: -lrelname: -- "$@")
 eval set -- "$TEMP"
-
-force=false
 
 while true
 do
     case "$1" in
-        -f ) force=true ; echo "Forcing a fresh svn export call" >&2; shift ;;
-        --svn ) homesvn=$2 ; shift 2 ;;
         -L ) Lpaths+=(-L$2) ; shift 2 ;;
+        --relname ) userrelname=$2 ; shift 2 ;;
         -- ) shift ; break ;;
         * ) echo "Internal error!" >&2 ; exit 1 ;;
     esac
@@ -32,25 +28,31 @@ if [ $# -ne 2 ]
 then
     usage
 fi
-origname=$1
+gitref=$1
+if [ "$userrelname" ]
+then
+    releasename=$userrelname
+else
+    releasename=$gitref
+fi
 ML=$2
 
-MLbase=$(basename $ML)
-if [ $MLbase != mosml -a $MLbase != poly ]
-then
-    echo "MLs supported are Poly/ML and Moscow ML" >&2
-    exit 1
-fi
+die () {
+  echo "$@" >&2
+  exit 1
+}
 
-repos=$homesvn/$origname
-shortname=$(basename $origname)
-name=${origname////-}
+MLbase=$(basename $ML)
+[ $MLbase = mosml ] || [ $MLbase = poly ] ||
+  die "MLs supported are Poly/ML and Moscow ML"
 
 localholdir="`dirname $0`/.."
 localholdir=$(cd $localholdir ; pwd)
 echo "Local HOL directory: $localholdir"
 
-texlogs=/tmp/$name-latex-logs
+cd $localholdir
+
+texlogs=/tmp/$releasename-latex-logs
 
 createdir () {
   if mkdir $1 2> /dev/null
@@ -61,16 +63,14 @@ createdir () {
     then
         mkdir $1
     else
-        echo "Couldn't create directory $1" >&2
-        exit 1
+        die "Couldn't create directory $1"
     fi
   fi
 }
 
 # initial setup
 createdir $texlogs
-createdir "/tmp/svn-export-result"        # where output from svn export will go
-/bin/rm -rf "/tmp/hol"                    # final directory to be tarred
+/bin/rm -rf "/tmp/hol"                     # final directory to be tarred
 
 if /bin/ls -1 $localholdir | grep std.prelude > /dev/null 2>&1
 then
@@ -80,53 +80,32 @@ else
     exit 1
 fi
 
-cd /tmp
-/bin/rm -f svn-export.log
+archive=/tmp/hol-$releasename
 
-
-echo "Getting copy of $repos from SourceForge"
-echo -n "Progress: "
-linecount=0
-(if [ -d $name-svn-cache -a $force = false ]
- then
-      echo "Using cache"
-      cat /tmp/$name-svn-export-output
-      /bin/rm -r svn-export-result
-      cp -R $name-svn-cache svn-export-result
- else
-      echo "Calling svn export $repos svn-export-result"
-      /bin/rm -rf svn-export-result $name-svn-cache
-      svn export $repos svn-export-result | tee /tmp/$name-svn-export-output
-      cp -R svn-export-result $name-svn-cache
- fi) 2>&1 | tee /tmp/svn-export.log |
-  while read foo
-  do  linecount=$[ $linecount + 1 ]
-      if [ $[ $linecount % 20 ] -eq 0 ] ; then echo -n . ; fi
-  done
+echo "Archiving from $localholdir to $archive"
+git archive --prefix="hol-$releasename/" $gitref | tar -x -C /tmp
 
 if [ $? -ne 0 ] ; then
-  echo ; echo "svn export failed, consult /tmp/svn-export.log" ; exit 1
+  die "git archive failed, consult /tmp/svn-export.log"
 else
   echo
 fi
 
-if [ ! -r svn-export-result/std.prelude -o ! -d svn-export-result/src ]
+if [ ! -r $archive/std.prelude -o ! -d $archive/src ]
 then
-    echo "svn export doesn't seem to have worked" >&2
-    exit 1
+    die "git archive doesn't seem to have worked"
 fi
 
 echo -n "Copying various theorems from local installation: "
 for i in pair res_quan string
 do
   echo -n "$i "
-  if /bin/cp -R $localholdir/src/$i/help/thms /tmp/svn-export-result/src/$i/help 2> /dev/null
+  if /bin/cp -R $localholdir/src/$i/help/thms $archive/src/$i/help 2> /dev/null
   then
       :
   else
       echo
-      echo "Couldn't find theorems for $i" >&2
-      exit 1
+      die "Couldn't find theorems for $i"
   fi
 done
 echo
@@ -134,22 +113,22 @@ echo
 echo "Copying theory graph from local installation"
 # see the file help/src-sml/DOT for instructions on how to generate the
 # theorygraph files
-/bin/cp $localholdir/help/theorygraph/*.html $localholdir/help/theorygraph/theories.* /tmp/svn-export-result/help/theorygraph ||
-  (echo "Couldn't copy theory graph." >&2 ; exit 1)
+/bin/cp $localholdir/help/theorygraph/*.html $localholdir/help/theorygraph/theories.* $archive/help/theorygraph ||
+  die "Couldn't copy theory graph."
 
 if [ $ML = "mosml" ]
 then
     echo "Running configure script"
-    cd /tmp/svn-export-result
-    $ML < tools/smart-configure.sml > /tmp/$name-config-log 2>&1
+    cd $archive
+    $ML < tools/smart-configure.sml > /tmp/$release-config-log 2>&1
     if [ $? -ne 0 ] ; then
-        echo "HOL configuration failed, consult /tmp/$name-config.log" ; exit 1
+        echo "HOL configuration failed, consult /tmp/$release-config.log" ; exit 1
     fi
 fi
 
 
-echo Now building Doc2Tex
-cd /tmp/svn-export-result/help/src-sml
+echo ; echo Building Doc2Tex
+cd $archive/help/src-sml
 # ../../bin/Holmake Doc2Tex
 if [ $ML = "mosml" ]
 then
@@ -159,28 +138,30 @@ else
     gcc -o Doc2Tex.exe Doc2Tex.o "${Lpaths[@]}" -lpolymain -lpolyml
 fi
 
-echo Now building documentation
+echo ; echo Building documentation
 for man_name in Reference Description Tutorial Quick Logic
 do
     lcname=$(echo $man_name | tr A-Z a-z)
-    echo Making $man_name
-    cd /tmp/svn-export-result/Manual/$man_name
+    echo "  $man_name"
+    cd $archive/Manual/$man_name
     if make $lcname.pdf > $texlogs/$man_name.log 2>&1 < /dev/null
     then :
     else echo Build failed - see $texlogs/$man_name.log ; exit 1
     fi
-    mv $lcname.pdf /tmp/$shortname-$lcname.pdf
+    mv $lcname.pdf /tmp/$release-$lcname.pdf
 done
+/bin/rm -f $archive/help/src-sml/Doc2Tex.{exe,o}
 
-echo Removing Buddy documentation from distribution
-cd /tmp/
-mv svn-export-result/examples/muddy/muddyC/buddy/doc/*.ps .
-
-echo Now starting to clean up and make tar ball
-cd /tmp/svn-export-result
-/bin/rm -rf developers
-/bin/rm -rf Manual
-/bin/rm -rf examples/HolBdd/Manual
+echo ; echo Cleaning up
+cd $archive
+(while read line ; do
+  case $line in
+      \#* ) : ;;
+      * ) (/bin/rm -r $line && echo "  Removed $line") ||
+        die "Couldn't delete $line"
+  esac
+ done) < $localholdir/developers/deleted-in-release.txt
+echo
 
 mv bin/README ../bin-README
 if [ $ML = "mosml" ]
@@ -201,9 +182,8 @@ fi
 mv ../bin-README bin/README
 
 cd /tmp
-mv svn-export-result hol
 
 echo "Creating tar file"
-tar czf $name.tar.gz hol
+tar czf hol-$releasename.tar.gz $(basename $archive)
 
-mv hol/doc/$shortname.release.html .
+mv $archive/doc/$releasename.release.html .
