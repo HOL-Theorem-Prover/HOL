@@ -111,6 +111,8 @@ Manual/*/*.pdf
 Manual/*/*.ps
 Manual/Reference/entries.tex
 
+examples/dev/*.vl
+
 examples/machine-code/lisp/*.s
 
 examples/muddy/muddyC/Makefile
