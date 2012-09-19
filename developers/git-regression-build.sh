@@ -61,7 +61,7 @@ else
     die "ML system \"$ML\" is not executable."
 fi
 
-case $kernel in -expk | -stdknl ) : ;; * ) die "Bad kernel spec \"$kernel\"."
+case $kernel in -expk | -stdknl | -otknl ) : ;; * ) die "Bad kernel spec \"$kernel\"."
 esac
 
 if git pull > update-log 2>&1
@@ -126,7 +126,7 @@ esac
      cat update-log
  else
      echo "git pull failed - "
-     (while read line ; do echo "  $line" ; done) < update-log 
+     (while read line ; do echo "  $line" ; done) < update-log
      echo "continuing anyway"
  fi &&
  echo "-- Configuration Description Ends --" &&
