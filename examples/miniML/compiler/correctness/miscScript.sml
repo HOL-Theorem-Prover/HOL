@@ -236,13 +236,6 @@ val DRESTRICTED_FUNION = store_thm(
 rw[GSYM fmap_EQ_THM,DRESTRICT_DEF,FUNION_DEF] >> rw[] >>
 rw[EXTENSION] >> PROVE_TAC[])
 
-(* TODO: move *)
-val OPTREL_refl = store_thm(
-"OPTREL_refl",
-``(!x. R x x) ==> !x. OPTREL R x x``,
-strip_tac >> Cases >> rw[optionTheory.OPTREL_def])
-val _ = export_rewrites["OPTREL_refl"]
-
 (* TODO: move? *)
 val ALOOKUP_NONE = store_thm(
 "ALOOKUP_NONE",

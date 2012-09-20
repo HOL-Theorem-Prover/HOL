@@ -452,6 +452,15 @@ val OPTREL_MONO = store_thm(
   BasicProvers.SRW_TAC [][OPTREL_def] THEN BasicProvers.SRW_TAC [][SOME_11]);
 val _ = IndDefLib.export_mono "OPTREL_MONO"
 
+val OPTREL_refl = store_thm(
+"OPTREL_refl",
+``(!x. R x x) ==> !x. OPTREL R x x``,
+STRIP_TAC THEN GEN_TAC
+THEN OPTION_CASES_TAC ``x:'a option``
+THEN ASM_REWRITE_TAC(OPTREL_def::option_rws)
+THEN PROVE_TAC[])
+val _ = export_rewrites["OPTREL_refl"]
+
 (* ----------------------------------------------------------------------
     some (Hilbert choice "lifted" to the option type)
 
