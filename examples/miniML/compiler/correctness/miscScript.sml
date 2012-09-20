@@ -236,12 +236,6 @@ val DRESTRICTED_FUNION = store_thm(
 rw[GSYM fmap_EQ_THM,DRESTRICT_DEF,FUNION_DEF] >> rw[] >>
 rw[EXTENSION] >> PROVE_TAC[])
 
-(* TODO: move? *)
-val ALOOKUP_NONE = store_thm(
-"ALOOKUP_NONE",
-``!l x. (ALOOKUP l x = NONE) = ~MEM x (MAP FST l)``,
-SRW_TAC[][ALOOKUP_FAILS,MEM_MAP,pairTheory.FORALL_PROD])
-
 val FOLDR_transitive_property = store_thm(
 "FOLDR_transitive_property",
 ``!P ls f a. P [] a /\ (!n a. n < LENGTH ls /\ P (DROP (SUC n) ls) a ==> P (DROP n ls) (f (EL n ls) a)) ==> P ls (FOLDR f a ls)``,
@@ -359,29 +353,6 @@ Cases_on`a < b` >- (
   res_tac >> DECIDE_TAC ) >>
 DECIDE_TAC)
 
-val ALOOKUP_ALL_DISTINCT_MEM = store_thm(
-"ALOOKUP_ALL_DISTINCT_MEM",
-``ALL_DISTINCT (MAP FST al) ∧ MEM (k,v) al ⇒
-  (ALOOKUP al k = SOME v)``,
-rw[ALOOKUP_LEAST_EL] >- (
-  rw[MEM_MAP,pairTheory.EXISTS_PROD] >>
-  PROVE_TAC[]) >>
-fs[MEM_EL] >>
-pop_assum (assume_tac o SYM) >>
-qho_match_abbrev_tac `EL ($LEAST P) (MAP SND al) = v` >>
-`P n` by (
-  unabbrev_all_tac >> rw[EL_MAP] ) >>
-qspecl_then [`P`,`n`] mp_tac LEAST_BOUND >> rw[] >>
-numLib.LEAST_ELIM_TAC >>
-conj_tac >- (
-  qexists_tac `n` >> rw[] ) >>
-rw[] >>
-qmatch_rename_tac `EL m (MAP SND al) = v`[] >>
-`m < LENGTH al` by DECIDE_TAC >>
-fs[EL_ALL_DISTINCT_EL_EQ] >>
-unabbrev_all_tac >> fs[] >>
-`m = n` by PROVE_TAC[] >>
-fs[EL_MAP])
 
 val FUPDATE_LIST_ALL_DISTINCT_APPLY_MEM = store_thm(
 "FUPDATE_LIST_ALL_DISTINCT_APPLY_MEM",

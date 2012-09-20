@@ -41,6 +41,11 @@ val ALOOKUP_FAILS = store_thm(
   Induct_on `l` THEN SRW_TAC [][] THEN
   Cases_on `h` THEN SRW_TAC [][] THEN METIS_TAC []);
 
+val ALOOKUP_NONE = store_thm(
+"ALOOKUP_NONE",
+``!l x. (ALOOKUP l x = NONE) = ~MEM x (MAP FST l)``,
+SRW_TAC[][ALOOKUP_FAILS,MEM_MAP,pairTheory.FORALL_PROD])
+
 val ALOOKUP_TABULATE = store_thm(
   "ALOOKUP_TABULATE",
   ``ALL_DISTINCT l /\ MEM x l ==>
@@ -279,6 +284,31 @@ Cases_on `m < z` THEN1 (
 Cases_on `z < m` THEN1 METIS_TAC[EL_MAP] THEN
 `m = z` by DECIDE_TAC THEN
 SRW_TAC[][])
+
+val ALOOKUP_ALL_DISTINCT_MEM = store_thm(
+"ALOOKUP_ALL_DISTINCT_MEM",
+``ALL_DISTINCT (MAP FST al) /\ MEM (k,v) al ==>
+  (ALOOKUP al k = SOME v)``,
+rw[ALOOKUP_LEAST_EL] >- (
+  rw[MEM_MAP,pairTheory.EXISTS_PROD] >>
+  PROVE_TAC[]) >>
+fs[MEM_EL] >>
+pop_assum (assume_tac o SYM) >>
+qho_match_abbrev_tac `EL ($LEAST P) (MAP SND al) = v` >>
+`P n` by (
+  unabbrev_all_tac >> rw[EL_MAP] ) >>
+qspecl_then [`P`,`n`] mp_tac whileTheory.LESS_LEAST >> rw[] >>
+numLib.LEAST_ELIM_TAC >>
+conj_tac >- (
+  qexists_tac `n` >> rw[] ) >>
+rw[] >>
+qmatch_rename_tac `EL m (MAP SND al) = v`[] >>
+`~(n < m)` by PROVE_TAC[] >>
+`m < LENGTH al` by DECIDE_TAC >>
+fs[EL_ALL_DISTINCT_EL_EQ] >>
+unabbrev_all_tac >> fs[] >>
+`m = n` by PROVE_TAC[] >>
+fs[EL_MAP])
 
 val ALL_DISTINCT_fmap_to_alist_keys = store_thm(
 "ALL_DISTINCT_fmap_to_alist_keys",
