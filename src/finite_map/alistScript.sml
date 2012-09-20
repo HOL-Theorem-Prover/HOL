@@ -176,6 +176,13 @@ val FLOOKUP_FUPDATE_LIST_ALOOKUP_NONE = Q.store_thm(
 `(ALOOKUP ls k = NONE) ==> (FLOOKUP (fm |++ (REVERSE ls)) k = FLOOKUP fm k)`,
 SRW_TAC [][FUPDATE_LIST_EQ_APPEND_REVERSE,FLOOKUP_DEF,FUNION_DEF,ALOOKUP_FAILS,MEM_MAP,pairTheory.EXISTS_PROD]);
 
+val FUNION_alist_to_fmap = store_thm("FUNION_alist_to_fmap",
+  ``!ls fm. FUNION (alist_to_fmap ls) fm = fm |++ (REVERSE ls)``,
+  Induct THEN1 SRW_TAC[][FUNION_FEMPTY_1,FUPDATE_LIST] THEN
+  Q.X_GEN_TAC `p` THEN PairCases_on `p` THEN
+  SRW_TAC[][FUPDATE_LIST_THM,alist_to_fmap_thm,FUPDATE_LIST_APPEND] THEN
+  SRW_TAC[][FUNION_FUPDATE_1])
+
 val alist_to_fmap_MAP = store_thm(
 "alist_to_fmap_MAP",
 ``!f1 f2 al. INJ f1 (set (MAP FST al)) UNIV ==>

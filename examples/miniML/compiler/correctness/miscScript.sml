@@ -420,12 +420,6 @@ val EVERY2_MAP = store_thm("EVERY2_MAP",
   PROVE_TAC[])
 
 
-val FUNION_alist_to_fmap = store_thm("FUNION_alist_to_fmap",
-  ``∀ls fm. alist_to_fmap ls ⊌ fm = fm |++ (REVERSE ls)``,
-  Induct >- rw[FUNION_FEMPTY_1,FUPDATE_LIST] >>
-  qx_gen_tac `p` >> PairCases_on `p` >>
-  rw[FUPDATE_LIST_THM,alist_to_fmap_thm,FUPDATE_LIST_APPEND] >>
-  rw[FUNION_FUPDATE_1])
 
 val FUPDATE_LIST_ALL_DISTINCT_REVERSE = store_thm("FUPDATE_LIST_ALL_DISTINCT_REVERSE",
   ``∀ls. ALL_DISTINCT (MAP FST ls) ⇒ ∀fm. fm |++ (REVERSE ls) = fm |++ ls``,
