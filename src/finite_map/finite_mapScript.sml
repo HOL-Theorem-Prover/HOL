@@ -816,6 +816,11 @@ val DRESTRICT_FUNION = Q.store_thm
  SRW_TAC [][GSYM fmap_EQ_THM, FDOM_FUPDATE, FUNION_DEF, FAPPLY_FUPDATE_THM,
             EXTENSION, DRESTRICT_DEF] THEN PROVE_TAC []);
 
+val FUNION_IDEMPOT = store_thm("FUNION_IDEMPOT",
+``FUNION fm fm = fm``,
+  SRW_TAC[][GSYM fmap_EQ_THM,FUNION_DEF])
+val _ = export_rewrites["FUNION_IDEMPOT"]
+
 (*---------------------------------------------------------------------------
      Merging of finite maps (added 17 March 2009 by Thomas Tuerk)
  ---------------------------------------------------------------------------*)

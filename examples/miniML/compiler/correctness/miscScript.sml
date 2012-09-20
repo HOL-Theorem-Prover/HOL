@@ -419,9 +419,6 @@ val EVERY2_MAP = store_thm("EVERY2_MAP",
   srw_tac[DNF_ss][pairTheory.FORALL_PROD] >>
   PROVE_TAC[])
 
-val FUNION_IDEMPOT = store_thm("FUNION_IDEMPOT",
-  ``fm ⊌ fm = fm``,
-  SRW_TAC[][GSYM fmap_EQ_THM,FUNION_DEF])
 
 val FUNION_alist_to_fmap = store_thm("FUNION_alist_to_fmap",
   ``∀ls fm. alist_to_fmap ls ⊌ fm = fm |++ (REVERSE ls)``,
