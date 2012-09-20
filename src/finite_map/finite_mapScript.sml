@@ -2101,6 +2101,46 @@ SRW_TAC[][LET_THM] THEN
 POP_ASSUM (Q.SPECL_THEN [`f`,`fm`] MP_TAC) THEN
 SRW_TAC[][MAP_KEYS_def])
 
+(* Relate the values in two finite maps *)
+
+val fmap_rel_def = Define`
+  fmap_rel R f1 f2 = (FDOM f2 = FDOM f1) /\ (!x. x IN FDOM f1 ==> R (f1 ' x) (f2 ' x))`
+
+val fmap_rel_FUPDATE_same = store_thm(
+"fmap_rel_FUPDATE_same",
+``fmap_rel R f1 f2 /\ R v1 v2 ==> fmap_rel R (f1 |+ (k,v1)) (f2 |+ (k,v2))``,
+SRW_TAC[][fmap_rel_def,FAPPLY_FUPDATE_THM] THEN SRW_TAC[][])
+
+val fmap_rel_FUPDATE_LIST_same = store_thm(
+"fmap_rel_FUPDATE_LIST_same",
+``!R ls1 ls2 f1 f2.
+  fmap_rel R f1 f2 /\ (MAP FST ls1 = MAP FST ls2) /\ (LIST_REL R (MAP SND ls1) (MAP SND ls2))
+  ==> fmap_rel R (f1 |++ ls1) (f2 |++ ls2)``,
+GEN_TAC THEN
+Induct THEN Cases THEN SRW_TAC[][FUPDATE_LIST_THM,listTheory.LIST_REL_CONS1] THEN
+Cases_on `ls2` THEN FULL_SIMP_TAC(srw_ss())[FUPDATE_LIST_THM] THEN
+FIRST_X_ASSUM MATCH_MP_TAC THEN FULL_SIMP_TAC(srw_ss())[] THEN SRW_TAC[][] THEN
+Q.MATCH_ASSUM_RENAME_TAC `R a (SND b)`[] THEN
+Cases_on `b` THEN FULL_SIMP_TAC(srw_ss())[] THEN
+SRW_TAC[][fmap_rel_FUPDATE_same])
+
+val fmap_rel_FEMPTY = store_thm(
+"fmap_rel_FEMPTY",
+``fmap_rel R FEMPTY FEMPTY``,
+SRW_TAC[][fmap_rel_def])
+val _ = export_rewrites["fmap_rel_FEMPTY"]
+
+val fmap_rel_refl = store_thm(
+"fmap_rel_refl",
+``(!x. R x x) ==> fmap_rel R x x``,
+SRW_TAC[][fmap_rel_def])
+val _ = export_rewrites["fmap_rel_refl"]
+
+val fmap_rel_FUNION_rels = store_thm(
+"fmap_rel_FUNION_rels",
+``fmap_rel R f1 f2 /\ fmap_rel R f3 f4 ==> fmap_rel R (FUNION f1 f3) (FUNION f2 f4)``,
+SRW_TAC[][fmap_rel_def,FUNION_DEF] THEN SRW_TAC[][])
+
 (*---------------------------------------------------------------------------
      Some helpers for fupdate_NORMALISE_CONV
  ---------------------------------------------------------------------------*)

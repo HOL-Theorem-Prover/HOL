@@ -344,45 +344,6 @@ val DRESTRICT_FDOM = store_thm(
 ``!f.DRESTRICT f (FDOM f) = f``,
 SRW_TAC[][GSYM fmap_EQ_THM,DRESTRICT_DEF])
 
-(* TODO: move? *)
-val fmap_rel_def = Define`
-  fmap_rel R f1 f2 = (FDOM f2 = FDOM f1) ∧ (∀x. x ∈ FDOM f1 ⇒ R (f1 ' x) (f2 ' x))`
-
-val fmap_rel_FUPDATE_same = store_thm(
-"fmap_rel_FUPDATE_same",
-``fmap_rel R f1 f2 ∧ R v1 v2 ⇒ fmap_rel R (f1 |+ (k,v1)) (f2 |+ (k,v2))``,
-rw[fmap_rel_def,FAPPLY_FUPDATE_THM] >> rw[])
-
-val fmap_rel_FUPDATE_LIST_same = store_thm(
-"fmap_rel_FUPDATE_LIST_same",
-``∀R ls1 ls2 f1 f2.
-  fmap_rel R f1 f2 ∧ (MAP FST ls1 = MAP FST ls2) ∧ (LIST_REL R (MAP SND ls1) (MAP SND ls2))
-  ⇒ fmap_rel R (f1 |++ ls1) (f2 |++ ls2)``,
-gen_tac >>
-Induct >> Cases >> rw[FUPDATE_LIST_THM,LIST_REL_CONS1] >>
-Cases_on `ls2` >> fs[FUPDATE_LIST_THM] >>
-first_x_assum match_mp_tac >> fs[] >> rw[] >>
-qmatch_assum_rename_tac `R a (SND b)`[] >>
-Cases_on `b` >> fs[] >>
-rw[fmap_rel_FUPDATE_same])
-
-val fmap_rel_FEMPTY = store_thm(
-"fmap_rel_FEMPTY",
-``fmap_rel R FEMPTY FEMPTY``,
-rw[fmap_rel_def])
-val _ = export_rewrites["fmap_rel_FEMPTY"]
-
-val fmap_rel_refl = store_thm(
-"fmap_rel_refl",
-``(∀x. R x x) ⇒ fmap_rel R x x``,
-rw[fmap_rel_def])
-val _ = export_rewrites["fmap_rel_refl"]
-
-val fmap_rel_FUNION_rels = store_thm(
-"fmap_rel_FUNION_rels",
-``fmap_rel R f1 f2 ∧ fmap_rel R f3 f4 ⇒ fmap_rel R (f1 ⊌ f3) (f2 ⊌ f4)``,
-rw[fmap_rel_def,FUNION_DEF] >> rw[])
-
 val LEAST_BOUND = store_thm(
 "LEAST_BOUND",
 ``∀P n. P n ⇒ ($LEAST P) ≤ n ∧ ($LEAST P = $LEAST (λm. P m ∧ m ≤ n))``,
