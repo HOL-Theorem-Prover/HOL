@@ -692,6 +692,21 @@ val UNION_DIFF = store_thm(
   ``s SUBSET t ==> (s UNION (t DIFF s) = t) /\ ((t DIFF s) UNION s = t)``,
   SRW_TAC [][EXTENSION, SUBSET_DEF] THEN PROVE_TAC []);
 
+val DIFF_UNION = store_thm(
+"DIFF_UNION",
+``!x y z. x DIFF (y UNION z) = x DIFF y DIFF z``,
+SRW_TAC[][EXTENSION] THEN METIS_TAC[])
+
+val DIFF_COMM = store_thm(
+"DIFF_COMM",
+``!x y z. x DIFF y DIFF z = x DIFF z DIFF y``,
+SRW_TAC[][EXTENSION] THEN METIS_TAC[])
+
+val DIFF_SAME_UNION = store_thm(
+"DIFF_SAME_UNION",
+``!x y. ((x UNION y) DIFF x = y DIFF x) /\ ((x UNION y) DIFF y = x DIFF y)``,
+SRW_TAC[][EXTENSION,EQ_IMP_THM])
+
 (* ===================================================================== *)
 (* The insertion function.					         *)
 (* ===================================================================== *)

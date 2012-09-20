@@ -79,16 +79,6 @@ val set_MAP_FST_fmap_to_alist = store_thm(
 METIS_TAC[fmap_to_alist_to_fmap,FDOM_alist_to_fmap])
 val _ = export_rewrites["set_MAP_FST_fmap_to_alist"]
 
-val DIFF_UNION = store_thm(
-"DIFF_UNION",
-``!x y z. x DIFF (y UNION z) = x DIFF y DIFF z``,
-SRW_TAC[][EXTENSION] THEN METIS_TAC[])
-
-val DIFF_COMM = store_thm(
-"DIFF_COMM",
-``!x y z. x DIFF y DIFF z = x DIFF z DIFF y``,
-SRW_TAC[][EXTENSION] THEN METIS_TAC[])
-
 val INJ_I = store_thm(
 "INJ_I",
 ``∀s t. INJ I s t = s ⊆ t``,
@@ -266,12 +256,6 @@ val ALOOKUP_NONE = store_thm(
 "ALOOKUP_NONE",
 ``!l x. (ALOOKUP l x = NONE) = ~MEM x (MAP FST l)``,
 SRW_TAC[][ALOOKUP_FAILS,MEM_MAP,pairTheory.FORALL_PROD])
-
-(* TODO: move? *)
-val DIFF_SAME_UNION = store_thm(
-"DIFF_SAME_UNION",
-``!x y. ((x UNION y) DIFF x = y DIFF x) /\ ((x UNION y) DIFF y = x DIFF y)``,
-SRW_TAC[][EXTENSION,EQ_IMP_THM])
 
 val FOLDR_transitive_property = store_thm(
 "FOLDR_transitive_property",
