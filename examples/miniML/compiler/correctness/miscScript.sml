@@ -3,15 +3,6 @@ val _ = new_theory "misc"
 
 (* Misc. lemmas (without any compiler constants) *)
 
-(* TODO: move *)
-val cond_sum_expand = store_thm(
-"cond_sum_expand",
-``(!x y z. ((if P then INR x else INL y) = INR z) = (P /\ (z = x))) /\
-  (!x y z. ((if P then INR x else INL y) = INL z) = (~P /\ (z = y))) /\
-  (!x y z. ((if P then INL x else INR y) = INL z) = (P /\ (z = x))) /\
-  (!x y z. ((if P then INL x else INR y) = INR z) = (~P /\ (z = y)))``,
-Cases_on `P` >> fs[] >> rw[EQ_IMP_THM])
-
 val FOLDR_CONS_triple = store_thm(
 "FOLDR_CONS_triple",
 ``!f ls a. FOLDR (\(x,y,z) w. f x y z :: w) a ls = (MAP (\(x,y,z). f x y z) ls)++a``,

@@ -1,4 +1,4 @@
-open HolKernel bossLib boolLib boolSimps intLib listTheory pred_setTheory finite_mapTheory alistTheory lcsymtacs
+open HolKernel bossLib boolLib boolSimps intLib sumTheory listTheory pred_setTheory finite_mapTheory alistTheory lcsymtacs
 open MiniMLTheory MiniMLTerminationTheory miniMLExtraTheory evaluateEquationsTheory miscTheory intLangTheory compileTerminationTheory pmatchTheory
 val _ = new_theory "expToCexp"
 val fsd = full_simp_tac std_ss

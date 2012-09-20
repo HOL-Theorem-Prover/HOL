@@ -417,6 +417,14 @@ val SUM_MAP_I = store_thm (
   ``(I ++ I) = (I : 'a + 'b -> 'a + 'b)``,
   SIMP_TAC (srw_ss()) [FORALL_SUM, FUN_EQ_THM]);
 
+val cond_sum_expand = store_thm("cond_sum_expand",
+``(!x y z. ((if P then INR x else INL y) = INR z) = (P /\ (z = x))) /\
+  (!x y z. ((if P then INR x else INL y) = INL z) = (~P /\ (z = y))) /\
+  (!x y z. ((if P then INL x else INR y) = INL z) = (P /\ (z = x))) /\
+  (!x y z. ((if P then INL x else INR y) = INR z) = (~P /\ (z = y)))``,
+Cases_on `P` THEN FULL_SIMP_TAC(srw_ss())[] THEN SRW_TAC[][EQ_IMP_THM])
+val _ = export_rewrites["cond_sum_expand"]
+
 val _ = adjoin_to_theory
 {sig_ps = NONE,
  struct_ps = SOME(fn ppstrm =>
