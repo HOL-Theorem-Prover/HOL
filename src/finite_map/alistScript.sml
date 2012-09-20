@@ -391,4 +391,11 @@ rpt (qpat_assum `(X,Y) = EL N Z` (assume_tac o SYM)) >>
 `LENGTH afy = LENGTH afx` by rw[PERM_LENGTH] >> fs[] >>
 metis_tac[pairTheory.PAIR_EQ,pairTheory.FST])
 
+val alist_to_fmap_PERM = store_thm(
+"alist_to_fmap_PERM",
+``!l1 l2. PERM l1 l2 /\ ALL_DISTINCT (MAP FST l1) ==> (alist_to_fmap l1 = alist_to_fmap l2)``,
+rpt strip_tac >>
+match_mp_tac (fst (EQ_IMP_RULE PERM_fmap_to_alist)) >>
+metis_tac[PERM_TRANS,PERM_SYM,ALL_DISTINCT_PERM,PERM_MAP,alist_to_fmap_to_alist_PERM])
+
 val _ = export_theory ();

@@ -249,26 +249,6 @@ GEN_TAC THEN Induct THEN SRW_TAC[][] THEN
 FIRST_X_ASSUM (Q.SPEC_THEN `0` MP_TAC) THEN
 SRW_TAC[][])
 
-(* TODO: Move *)
-val alist_to_fmap_PERM = store_thm(
-"alist_to_fmap_PERM",
-``∀l1 l2. PERM l1 l2 ∧ ALL_DISTINCT (MAP FST l1) ⇒ (alist_to_fmap l1 = alist_to_fmap l2)``,
-let open sortingTheory in
-qsuff_tac
-  `∀l1 l2. PERM l1 l2 ⇒ ALL_DISTINCT (MAP FST l1) ⇒ PERM l1 l2 ∧ (alist_to_fmap l1 = alist_to_fmap l2)`
-  >- rw[] >>
-ho_match_mp_tac PERM_IND >>
-fs[pairTheory.FORALL_PROD] >>
-rw[] >> fs[] >- (
-  fs[PERM_SWAP_AT_FRONT] )
->- (
-  match_mp_tac FUPDATE_COMMUTES >> rw[] )
->- (
-  PROVE_TAC[PERM_TRANS,ALL_DISTINCT_PERM,PERM_MAP] )
->- (
-  PROVE_TAC[PERM_TRANS,ALL_DISTINCT_PERM,PERM_MAP] )
-end)
-
 (* TODO: move *)
 val DROP_APPEND1 = rich_listTheory.BUTFIRSTN_APPEND1
 val DROP_APPEND2 = rich_listTheory.BUTFIRSTN_APPEND2
