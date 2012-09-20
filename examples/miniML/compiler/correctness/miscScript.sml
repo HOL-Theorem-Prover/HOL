@@ -96,14 +96,6 @@ val MAP_EQ_ID = store_thm(
 ``!f ls. (MAP f ls = ls) = (!x. MEM x ls ==> (f x = x))``,
 PROVE_TAC[MAP_EQ_f,MAP_ID,combinTheory.I_THM])
 
-(* TODO: move *)
-val LIST_REL_EVERY_ZIP = store_thm(
-"LIST_REL_EVERY_ZIP",
-``!R l1 l2. LIST_REL R l1 l2 = ((LENGTH l1 = LENGTH l2) /\ EVERY (UNCURRY R) (ZIP (l1,l2)))``,
-GEN_TAC THEN Induct THEN SRW_TAC[][LENGTH_NIL_SYM] THEN
-SRW_TAC[][EQ_IMP_THM,LIST_REL_CONS1] THEN SRW_TAC[][] THEN
-Cases_on `l2` THEN FULL_SIMP_TAC(srw_ss())[])
-
 val MAP_ZIP_SND_triple = store_thm(
 "MAP_ZIP_SND_triple",
 ``(LENGTH l1 = LENGTH l2) ⇒ (MAP (λ(x,y,z). f y z) (ZIP(l1,l2)) = MAP (UNCURRY f) l2)``,
@@ -269,16 +261,6 @@ GEN_TAC THEN Induct THEN SRW_TAC[][] THEN
   SRW_TAC[][] ) THEN
 FIRST_X_ASSUM (Q.SPEC_THEN `0` MP_TAC) THEN
 SRW_TAC[][])
-
-val MEM_DROP = store_thm(
-"MEM_DROP",
-``!x ls n. MEM x (DROP n ls) = (n < LENGTH ls /\ (x = (EL n ls))) \/ MEM x (DROP (SUC n) ls)``,
-GEN_TAC THEN
-Induct THEN1 SRW_TAC[][] THEN
-NTAC 2 GEN_TAC THEN
-SIMP_TAC (srw_ss()) [] THEN
-Cases_on `n` THEN SIMP_TAC (srw_ss()) [] THEN
-PROVE_TAC[])
 
 (* TODO: Move *)
 val alist_to_fmap_PERM = store_thm(
@@ -473,12 +455,6 @@ val FRANGE_DRESTRICT_SUBSET = store_thm(
 ``FRANGE (DRESTRICT fm s) ⊆ FRANGE fm``,
 SRW_TAC[][FRANGE_DEF,SUBSET_DEF,DRESTRICT_DEF] THEN
 SRW_TAC[][] THEN PROVE_TAC[])
-
-val DROP_NIL = store_thm(
-"DROP_NIL",
-``∀ls n. (DROP n ls = []) = (n ≥ LENGTH ls)``,
-Induct >> rw[] >>
-srw_tac[ARITH_ss][])
 
 val EVERY2_MAP = store_thm("EVERY2_MAP",
   ``(EVERY2 P (MAP f l1) l2 = EVERY2 (λx y. P (f x) y) l1 l2) ∧

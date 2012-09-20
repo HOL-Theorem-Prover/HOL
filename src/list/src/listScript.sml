@@ -1365,6 +1365,13 @@ val SUM_MAP_PLUS_ZIP = store_thm(
   Induct THEN Cases_on `ls2` THEN
   SRW_TAC [numSimps.ARITH_ss][MAP,ZIP,MAP_ZIP,SUM]);
 
+val LIST_REL_EVERY_ZIP = store_thm(
+"LIST_REL_EVERY_ZIP",
+``!R l1 l2. LIST_REL R l1 l2 = ((LENGTH l1 = LENGTH l2) /\ EVERY (UNCURRY R) (ZIP (l1,l2)))``,
+GEN_TAC THEN Induct THEN SRW_TAC[][LENGTH_NIL_SYM] THEN
+SRW_TAC[][EQ_IMP_THM,LIST_REL_CONS1] THEN SRW_TAC[][EVERY_DEF,ZIP] THEN
+Cases_on `l2` THEN FULL_SIMP_TAC(srw_ss())[EVERY_DEF,ZIP])
+
 (* --------------------------------------------------------------------- *)
 (* REVERSE                                                               *)
 (* --------------------------------------------------------------------- *)
@@ -1552,6 +1559,21 @@ val LENGTH_DROP = store_thm(
   ``!n l. LENGTH (DROP n l) = LENGTH l - n``,
   Induct_on `l` THEN SRW_TAC [numSimps.ARITH_ss][]);
 val _ = export_rewrites ["LENGTH_DROP"]
+
+val MEM_DROP = store_thm(
+"MEM_DROP",
+``!x ls n. MEM x (DROP n ls) = (n < LENGTH ls /\ (x = (EL n ls))) \/ MEM x (DROP (SUC n) ls)``,
+GEN_TAC THEN
+Induct THEN1 SRW_TAC[][] THEN
+NTAC 2 GEN_TAC THEN
+SIMP_TAC (srw_ss()) [] THEN
+Cases_on `n` THEN SIMP_TAC (srw_ss()) [] THEN
+PROVE_TAC[])
+
+val DROP_NIL = store_thm(
+"DROP_NIL",
+``!ls n. (DROP n ls = []) = (n >= LENGTH ls)``,
+Induct THEN SRW_TAC[][] THEN numLib.DECIDE_TAC)
 
 (* More functions for operating on pairs of lists *)
 
