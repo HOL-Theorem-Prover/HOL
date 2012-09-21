@@ -7,8 +7,8 @@ loadPath :=
 
 
 open HolKernel Parse boolLib Drule ConseqConv computeLib
+open optionTheory
 open quantHeuristicsLib;
-open quantHeuristicsLibBase;
 
 (*
 quietdec := false;
@@ -24,8 +24,6 @@ val t = ``!x. ((x=7) /\ Q) ==> P x``;
 (* Result:  Q /\ P 7 *)
 val thm = SIMP_CONV std_ss [] t;
 val thm = QUANT_INSTANTIATE_CONV [] t;
-
-
 val thm = QUANT_INSTANTIATE_CONV []``?x. x = 2``;
 
 (*Quantifiers are resorted to be able to find easy instantations*)
@@ -93,7 +91,7 @@ val thm = QUANT_INSTANTIATE_CONV [] t
 
 
 
-(*The new library also uses matching to figure out instantions*)
+(*The new library also uses unification to figure out instantions*)
 val t = ``?x. (f(8 + 2) = f(x + 2)) /\ P(10)``;
 val t = ``?x. (f(8 + 2) = f(x + 2)) /\ P(f (x + 2))``;
 val t = ``?x. (f(8 + 2) = f(x + 2)) /\ P(f (2 + x))``; (*fails *)
@@ -159,43 +157,30 @@ val t = ``?x. ((x,y) = (0,z)) /\ (P x)``
 
 val thm = QUANT_INSTANTIATE_CONV [TypeBase_qp] t
 
+(* The new library supports guesses without justification. For example,
+   there is support for just considering the conclusion of an implication. *)
+
+val t = ``?x. P x ==> ((x = 2) /\ Q x)``
+
+(* in general x cannot be instantiated, because nothing is know about P and Q.
+   (x = 2) looks tempting, but in case ~(Q 2), P 2 and ~(P 3) this is wrong. *)
+
+val thm = QUANT_INSTANTIATE_CONV [] t (* fails *)
+val thm = QUANT_INSTANTIATE_CONV [implication_concl_qp] t (* fails with unjustified guesses *)
+
+(* We can't prove equality, but just implications using a heuristic that produces
+   unjustified guesses *)
+val thm = QUANT_INSTANTIATE_CONSEQ_CONV [implication_concl_qp] CONSEQ_CONV_STRENGTHEN_direction t
+
+(* Expanding is possible as well *)
+val thm = EXPAND_QUANT_INSTANTIATE_CONV [implication_concl_qp] t
+val thm = SIMP_CONV (std_ss ++ EXPAND_QUANT_INST_ss [implication_concl_qp]) [] t
+
 
 
 (*The main advantage of the new library is however, it is user extensible.
-  TypeBase_qp uses some theorem from TypeBase. Please
-  have a look at quantHeuristicsArgsLib for details how
-  to write your own qps. A qp (quant heuristics combine argument)
-  constists of 
-
-distinct_thms
-  This one is a list of theorems used for finding counterexamples.
-  These theorems have to be of the form 
-     |- (!x1...xn. ~(f1 x1 ... xn = g1 x1 ... xn)) /\
-        ... /\
-        (!x1...xm. ~(fi x1 ... xm = gi x1 ... xm))
-
-cases_thmL
-  This one is a list of theorems used for figuring out case splits.
-  These theorems have to be of the form |- !x. (?x1...xn. x = f x1 ... xn) \/ (?x1...xm. x = g x1 ... xn)
-  Theorems containing more than two cases are ignored.
-
-rewrite_thmL
-  are theorems used for rewriting an unknown expression at the very top level. They are applied
-  using REWR_CONV and have to be of the usual form. They are an easy way to introduce
-  knowledge about new operators
-
-convL
-  sometimes, these simple rewrites are not sufficient. For these
-  cases convL can contain arbitrary conversions. Be careful though,
-  to use the term at toplevel. If just proper subterms are rewritten,
-  a lot of work will be done several times. This leads to a considarable slowdown.
-  
-heuristicL
-  A list of full grown, own heuristics.
-
-
-In the following some examples are given, how these parameters 
-filter and args can be used. The others simple and ignored for now.
+  TypeBase_qp uses some theorem from TypeBase. Users can provide there own parameters.
+  In the following some examples are given, how these parameters can be used. 
 *)
 
 
@@ -207,12 +192,71 @@ val t = ``?x y z. (x = 1) /\ (y = 2) /\ (z = 3)``
 val thm = QUANT_INSTANTIATE_CONV [] t
 
 
-(*Let's just get rid of y
+(* filter_qp gets a list of ML functions "filter v t" that get a variable v and a term t and
+   return whether the tool should try to instantiate v in t. For example, 
+   let's just get rid of y by using filter_qp
+
  |- ?x y z. (x = 1) /\ (y = 2) /\ (z = 3) = 
     ?x   z. (x = 1) /\            (z = 3)*)
-val thm = EXTENSIBLE_QUANT_INSTANTIATE_CONV NONE true 
-             (fn v => (v = ``y:num``)) false [] t
 
+val thm = QUANT_INSTANTIATE_CONV [filter_qp [fn v => fn t => (v = ``y:num``)]] t
+
+
+(* By default, the quantifier heuristics don't know IS_SOME. *)
+val t = ``!x. IS_SOME x ==> P x``
+val thm = QUANT_INSTANTIATE_CONV [] t (* fails *)
+
+(* By adding a rewrite rule for IS_SOME, the standard rules for equations and 
+   quantifiers can be exploited *)
+val IS_SOME_EXISTS = prove (``IS_SOME x = (?x'. x = SOME x')``, Cases_on `x` THEN SIMP_TAC std_ss []);
+val thm = QUANT_INSTANTIATE_CONV [rewrite_qp[IS_SOME_EXISTS]] t
+
+(* |- (!x. IS_SOME x ==> P x) <=> !x'. IS_SOME (SOME x') ==> P (SOME x') 
+
+   To clean up the result after instantiation, rewrite theorems can be provided via
+   final_rewrite_qp
+*)
+
+val thm = QUANT_INSTANTIATE_CONV [rewrite_qp[IS_SOME_EXISTS], final_rewrite_qp[option_CLAUSES]] t
+
+(*
+ val thm =
+   |- (!x. IS_SOME x ==> P x) <=> !x'. P (SOME x'):
+   thm
+
+if rewrites are not enough, conv_ss can be used as well. 
+*)
+
+
+(* sometimes you want to apply knowledge that some predicate is true or false.
+   instantiation_qp provides an interface for giving explicit theorems to state 
+   satisfying and dissatisfying instantiations. *)
+
+val t = ``?m:num. n <= m``
+
+(* By default, this can't be handled, but adding the reflexivity theorem helps *)
+
+val thm = QUANT_INSTANTIATE_CONV [] t (* fails *)
+val thm = QUANT_INSTANTIATE_CONV [instantiation_qp[arithmeticTheory.LESS_EQ_REFL]] t (* succeeds *)
+
+
+(* Let's consider an example to demonstrate context *)
+val t = ``P m ==> ?n. P n``		
+
+(* applied naively, the tool fails *)
+
+val thm = QUANT_INSTANTIATE_CONV [] t (* fail *)
+
+(* This is not surprising, because the conversion does not collect context.
+   The simplifier has to be used to collect context *)
+val thm = SIMP_CONV (bool_ss++QUANT_INST_ss []) [] t
+
+(* Another option is using consequence conversions. However, this will create only implications. 
+
+   |- T ==> P m ==> ?n. P n:
+*)
+
+val thm = QUANT_INSTANTIATE_CONSEQ_CONV [] CONSEQ_CONV_STRENGTHEN_direction t (* fail *)
 
 (*
 Lets for example teach the heuristic to

@@ -291,7 +291,7 @@ val _ = map (qh_test_sum hard_fail quiet) qh_testCases_sum;
 (* Context tests                                                              *)
 (******************************************************************************)
 
-val qh_test_context = test_conv "SIMP_CONV (bool_ss++QUANT_INST_ss[context_qp]) []" (SIMP_CONV (bool_ss++QUANT_INST_ss[context_qp]) [])
+val qh_test_context = test_conv "SIMP_CONV (bool_ss++QUANT_INST_ss[]) []" (SIMP_CONV (bool_ss++QUANT_INST_ss[]) [])
 
 val qh_testCases_context =
   [(``(P x) ==> !x. ~(P x) /\ Q x``, SOME ``~(P x)``),

@@ -29,7 +29,11 @@ fun occ env v =
     in f
     end;
 
-fun bind env v t = if occ env v t then failwith "occurs" else (v |-> t)::env;
+fun bind env v t = if occ env v t then failwith "occurs" else 
+   let
+     val new_sub = v |-> subst env t;
+     val env' = map (fn {redex,residue} => (redex |-> (subst [new_sub] residue))) env
+   in  new_sub::env' end
 
 (*---------------------------------------------------------------------------
    The following code assumes things have been renamed.
@@ -70,6 +74,8 @@ end (* struct *)
 
 
 (*
+simp_unify_terms [] ``f(X) /\ g(Y+2)`` ``f(2+2) /\ g(2 + Y)``
+
 simp_unify_terms [`b:'a`] `P (x:'a) (b:'a):bool` `P (a:'a) (b:'a):bool`;;
 , `!x y:'a. Q x y`, `!z:'a. R x z`];
 fun S facts = satisfy1 (U (map (freesl o hyp) facts)) (map concl facts);

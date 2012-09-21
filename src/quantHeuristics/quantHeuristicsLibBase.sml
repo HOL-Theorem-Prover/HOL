@@ -44,7 +44,7 @@ val QUANT_INSTANTIATE_HEURISTIC___max_rec_depth = ref 250;
 val QUANT_INSTANTIATE_HEURISTIC___debug = ref 0;
 val _ = register_trace("QUANT_INSTANTIATE_HEURISTIC", QUANT_INSTANTIATE_HEURISTIC___debug, 3);
 
-val QUANT_INSTANTIATE_HEURISTIC___print_term_length = ref 20;
+val QUANT_INSTANTIATE_HEURISTIC___print_term_length = ref 2000;
 val _ = register_trace("QUANT_INSTANTIATE_HEURISTIC___print_term_length", QUANT_INSTANTIATE_HEURISTIC___print_term_length, 2000);
 
 
@@ -281,6 +281,9 @@ end;
 fun mk_guess gty v t i fvL =
    guess_term (gty, i, fvL, make_guess_thm_term gty v t i fvL)
 
+fun mk_guess_opt NONE v t i fvL = guess_general(i, fvL)
+  | mk_guess_opt (SOME gty) v t i fvL = mk_guess gty v t i fvL
+     
 
 (* Given a guess_term the function is applied to prove the term. *)
 fun make_set_guess_thm (guess_term(ty, i, fvL, tm)) proofConv =
@@ -1440,7 +1443,8 @@ fun local_cache_sys sys =
     if (isSome gc_opt) then valOf gc_opt else raise QUANT_INSTANTIATE_HEURISTIC___no_guess_exp
   end handle HOL_ERR _ =>
   let
-     val gc_opt = SOME (sys v t) handle QUANT_INSTANTIATE_HEURISTIC___no_guess_exp => NONE;
+     val gc_opt = SOME (sys v t) handle QUANT_INSTANTIATE_HEURISTIC___no_guess_exp => NONE
+                                      | HOL_ERR _ => NONE;
      val _ = lc_ref := (t,gc_opt)::(!lc_ref);
   in
      if (isSome gc_opt) then valOf gc_opt else raise QUANT_INSTANTIATE_HEURISTIC___no_guess_exp
@@ -1674,7 +1678,8 @@ let
    val infL' = filter (fn (_, fL', _, _, _) => fL = fL') infL
    val _ = if null infL' then raise QUANT_INSTANTIATE_HEURISTIC___no_guess_exp else ();
 
-   val gcL = map (fn t => sys v t handle QUANT_INSTANTIATE_HEURISTIC___no_guess_exp => empty_guess_collection) tL;
+   val gcL = map (fn t => sys v t handle QUANT_INSTANTIATE_HEURISTIC___no_guess_exp => empty_guess_collection
+                                       | HOL_ERR _ => empty_guess_collection) tL;
 
    fun try_inf (i_f, _, pre_checkL, gty, inf_thm) =
    let
@@ -1876,7 +1881,7 @@ let
 in
    gc   
 end handle HOL_ERR _ => raise QUANT_INSTANTIATE_HEURISTIC___no_guess_exp;
-
+         
 end
 
 
@@ -1927,10 +1932,10 @@ local
       val gc = QUANT_INSTANTIATE_HEURISTIC___STRENGTHEN_WEAKEN [ithm5] sys (v:term) t 
                   handle QUANT_INSTANTIATE_HEURISTIC___no_guess_exp => empty_guess_collection;
    in gc end handle HOL_ERR _ => empty_guess_collection;
-                       
+
 
    fun get_direct_matches_gc neg dneg i P thm = let
-           val gthm0 = if neg then GUESS_RULES_TRIVIAL_FORALL_POINT else GUESS_RULES_TRIVIAL_EXISTS_POINT
+      val gthm0 = if neg then GUESS_RULES_TRIVIAL_FORALL_POINT else GUESS_RULES_TRIVIAL_EXISTS_POINT
       val gthm1 = ISPECL [i, P] gthm0 
 
       val c0 = if neg then (RAND_CONV BETA_CONV) else BETA_CONV
@@ -1961,7 +1966,6 @@ local
       val i = Unify.deref_tmenv s v';
       val P = mk_abs (v, t)
       val thm'' = INST s thm';
-      
       val gc1 = get_direct_matches_gc neg dneg i P thm'';
       val gc2 = get_implication_gc sys v t neg dneg i P thm'';
    in SOME (guess_collection_append gc1 gc2) end handle HOL_ERR _ => NONE;
@@ -1981,7 +1985,6 @@ in
 end handle HOL_ERR _ => raise QUANT_INSTANTIATE_HEURISTIC___no_guess_exp;
 
 end
-  
 
 (******************************************************************************)
 (******************************************************************************)
@@ -2333,11 +2336,9 @@ let
    val gcL = map (fn h =>
 	    ((SOME (h ())
               handle QUANT_INSTANTIATE_HEURISTIC___no_guess_exp => NONE
-	      handle HOL_ERR _ => raise UNCHANGED)
-                                  handle UNCHANGED =>
-              (say_HOL_WARNING "QUANT_INSTANTIATE_HEURISTIC___COMBINE"
-			      ("Some heuristic produced an error!"); NONE)
-            )) L;
+	           | HOL_ERR _ => NONE
+                   | UNCHANGED => NONE
+            ))) L;
    val gc = guess_collection_flatten gcL;
 in
    gc
@@ -2469,9 +2470,7 @@ local
                       GUESS_RULES_IMP, GUESS_RULES_EQUIV,
                       GUESS_RULES_COND, GUESS_RULES_NEG];
   val (guesses_net_complex, guesses_net_simple) = mk_guess_net inference_thmL;
-in
 
-  (* The most basic heuristics that should always be turned on *)
   val BASIC_QUANT_INSTANTIATE_HEURISTICS =
     [QUANT_INSTANTIATE_HEURISTIC___EQUATION,
      QUANT_INSTANTIATE_HEURISTIC___BOOL,
@@ -2481,7 +2480,14 @@ in
      QUANT_INSTANTIATE_HEURISTIC___CONV (markerLib.DEST_LABEL_CONV),
      QUANT_INSTANTIATE_HEURISTIC___CONV (asm_marker_ELIM_CONV)
    ]
+in
+
+  (* The most basic heuristics that should always be turned on *)
+  val basic_qp = combine_qps [
+        heuristics_qp BASIC_QUANT_INSTANTIATE_HEURISTICS,
+        context_heuristics_qp[QUANT_INSTANTIATE_HEURISTIC___GIVEN_INSTANTIATION, QUANT_INSTANTIATE_HEURISTIC___STRENGTHEN_WEAKEN]]
 end
+
 
 
 fun qp_to_heuristic 
@@ -2503,14 +2509,13 @@ fun qp_to_heuristic
        val (guesses_net_complex, guesses_net_simple) = mk_guess_net inference_thmL2;
 
        val top_heuristicL = (hcL1 @ top_heuristicL);
-       val heuristicL_0 = BASIC_QUANT_INSTANTIATE_HEURISTICS 
        val heuristicL_1 = [QUANT_INSTANTIATE_HEURISTIC___EQUATION_distinct distinct_thmL,
                            QUANT_INSTANTIATE_HEURISTIC___THM_GENERAL_SIMPLE guesses_net_simple,
                            QUANT_INSTANTIATE_HEURISTIC___THM_GENERAL_COMPLEX guesses_net_complex,
                            QUANT_INSTANTIATE_HEURISTIC___STRENGTHEN_WEAKEN imp_thmL,
                            QUANT_INSTANTIATE_HEURISTIC___GIVEN_INSTANTIATION instantiation_thmL] 
        val heuristicL_2 = map QUANT_INSTANTIATE_HEURISTIC___CONV ((TOP_ONCE_REWRITE_CONV rewrite_thmL)::convL)
-       val heuristicL_final = flatten [heuristicL_0, heuristicL_1, heuristicL_2, hcL2, heuristicL]
+       val heuristicL_final = flatten [heuristicL_1, heuristicL_2, hcL2, heuristicL]
     in
        fn cache_ref_opt => fn ctx => 
           (QUANT_INSTANTIATE_HEURISTIC___COMBINE filterF top_heuristicL heuristicL_final
@@ -2616,7 +2621,6 @@ val t = ``?x. ~(Q3 x \/ Q x \/ Q2 x \/ ~(x = 2))``
 val only_eq = true;
 val try_eq = true;
 val expand_eq = false;
-fun varfilter x = true
 val heuristic = QUANT_INSTANTIATE_HEURISTIC___PURE_COMBINE empty_qp NONE
 val sys = heuristic;
 val dir = CONSEQ_CONV_UNKNOWN_direction
@@ -2630,11 +2634,10 @@ heuristic ``l:'a list`` ``l:'a list = []``
 *)
 
 
-fun QUANT_INSTANTIATE_HEURISTIC_STEP_CONSEQ_CONV (only_eq,try_eq,expand_eq) varfilter min_var_occs heuristic rwL (ctx:thm list) dir t =
+fun QUANT_INSTANTIATE_HEURISTIC_STEP_CONSEQ_CONV (only_eq,try_eq,expand_eq) min_var_occs heuristic rwL (ctx:thm list) dir t =
 if (not (is_exists t)) andalso (not (is_forall t)) andalso (not (is_exists1 t)) then raise UNCHANGED else
 let
    val (v,b) = dest_abs (rand t);
-   val _ = if varfilter v then () else raise UNCHANGED;
 in
   (if not (free_in v b) then
      ((if is_exists t then EXISTS_SIMP_CONV else
@@ -2755,7 +2758,7 @@ in
           in
              list_mk_exists (vL, n_body) end
 
-      val thm = QUANT_INSTANTIATE_HEURISTIC_STEP_CONSEQ_CONV (only_eq,try_eq,expand_eq) varfilter min_var_occs heuristic rwL ctx (CONSEQ_CONV_DIRECTION_NEGATE dir) (neg_t)
+      val thm = QUANT_INSTANTIATE_HEURISTIC_STEP_CONSEQ_CONV (only_eq,try_eq,expand_eq) min_var_occs heuristic rwL ctx (CONSEQ_CONV_DIRECTION_NEGATE dir) (neg_t)
 
       val neg_t_thm = NOT_FORALL_LIST_CONV (mk_neg t)
       val new_conv = TRY_CONV NOT_EXISTS_LIST_CONV THENC (BOOL_SIMP_CONV rwL empty_guess_collection)
@@ -2820,9 +2823,9 @@ end;
 
 
 
-fun HEURISTIC_QUANT_INSTANTIATE_CONV re filter min_occs heuristic expand_eq rwL ctx =
+fun HEURISTIC_QUANT_INSTANTIATE_CONV re min_occs heuristic expand_eq rwL ctx =
     (if re then REDEPTH_CONV else DEPTH_CONV)
-(CHANGED_CONV (QUANT_INSTANTIATE_HEURISTIC_STEP_CONSEQ_CONV (true,true,expand_eq) filter min_occs heuristic rwL ctx CONSEQ_CONV_UNKNOWN_direction)) THENC
+(CHANGED_CONV (QUANT_INSTANTIATE_HEURISTIC_STEP_CONSEQ_CONV (true,true,expand_eq) min_occs heuristic rwL ctx CONSEQ_CONV_UNKNOWN_direction)) THENC
 REWRITE_CONV rwL;
 
 
@@ -2846,10 +2849,6 @@ REWRITE_CONV rwL;
  *     redescent into a term some intantiation has been found?
  *     similar to DEPTH_CONV and REDEPTH_CONV
  *
- * - filter : term -> bool
- *     the conversion just tries to instantiate variables,
- *     for which this function returns true
- *
  * - min_occs
  *     should occurences of the variable be tried to be removed in
  *     a preprocessing step?
@@ -2863,9 +2862,9 @@ REWRITE_CONV rwL;
  *     a list of quant_params
  *****************************************************)
 
-fun EXTENSIBLE_QUANT_INSTANTIATE_CONV cache_ref_opt re filter min_occs expand_eq ctx args =
-    let val arg = (combine_qps args) in
-    HEURISTIC_QUANT_INSTANTIATE_CONV re filter min_occs (qp_to_heuristic arg cache_ref_opt) expand_eq (#final_rewrite_thms arg) ctx
+fun EXTENSIBLE_QUANT_INSTANTIATE_CONV cache_ref_opt re min_occs expand_eq ctx bqp args =
+    let val arg = (combine_qps (bqp::args)) in
+    HEURISTIC_QUANT_INSTANTIATE_CONV re min_occs (qp_to_heuristic arg cache_ref_opt) expand_eq (#final_rewrite_thms arg) ctx
     end
 
 (*
@@ -2888,25 +2887,25 @@ val (cache_ref_opt, re,   filter,   min_occs, expand_eq, args) =
  * A simpler interface, here just the quant_params list is needed
  ******************************************************************)
 val QUANT_INSTANTIATE_CONV =
-    EXTENSIBLE_QUANT_INSTANTIATE_CONV NONE true (K true) true false []
+    EXTENSIBLE_QUANT_INSTANTIATE_CONV NONE true true false [] basic_qp
 
 val NORE_QUANT_INSTANTIATE_CONV =
-    EXTENSIBLE_QUANT_INSTANTIATE_CONV NONE false (K true) true false []
+    EXTENSIBLE_QUANT_INSTANTIATE_CONV NONE false true false [] basic_qp
 
 val FAST_QUANT_INSTANTIATE_CONV =
-    EXTENSIBLE_QUANT_INSTANTIATE_CONV NONE false (K true) false false []
+    EXTENSIBLE_QUANT_INSTANTIATE_CONV NONE false false false [] basic_qp
 
 val EXPAND_QUANT_INSTANTIATE_CONV =
-    EXTENSIBLE_QUANT_INSTANTIATE_CONV NONE true (K true) true true []
+    EXTENSIBLE_QUANT_INSTANTIATE_CONV NONE true true true [] basic_qp
 
 val NORE_EXPAND_QUANT_INSTANTIATE_CONV =
-    EXTENSIBLE_QUANT_INSTANTIATE_CONV NONE false (K true) true true []
+    EXTENSIBLE_QUANT_INSTANTIATE_CONV NONE false true true [] basic_qp
 
 val FAST_EXPAND_QUANT_INSTANTIATE_CONV =
-    EXTENSIBLE_QUANT_INSTANTIATE_CONV NONE false (K true) false true []
+    EXTENSIBLE_QUANT_INSTANTIATE_CONV NONE false false true [] basic_qp
 
 
-fun QUANT_INSTANTIATE_REDUCER pre qpL =  
+fun QUANT_INSTANTIATE_REDUCER cache_ref_opt re min_occs expand_eq bqp qpL =  
   let exception FACTDB of thm list;
       fun get_db e = (raise e) handle FACTDB thms => thms
   in Traverse.REDUCER
@@ -2915,59 +2914,58 @@ fun QUANT_INSTANTIATE_REDUCER pre qpL =
      apply=(fn r => fn t => 
        let 
          val thms = get_db (#context r);
-         val res = EXTENSIBLE_QUANT_INSTANTIATE_CONV NONE false (K true) pre false thms qpL t;
+         val res = EXTENSIBLE_QUANT_INSTANTIATE_CONV cache_ref_opt re min_occs expand_eq thms bqp qpL t;
        in
          res
        end handle UNCHANGED => fail()),
      addcontext=(fn (ctxt,thms) => (FACTDB (thms @ (get_db ctxt))))}
   end;
 
-fun QUANT_INST_ss qpL = simpLib.dproc_ss (QUANT_INSTANTIATE_REDUCER true qpL)
-fun FAST_QUANT_INST_ss qpL = simpLib.dproc_ss (QUANT_INSTANTIATE_REDUCER false qpL)
+fun EXTENSIBLE_QUANT_INST_ss cache_ref_opt re min_occs expand_eq bqp qpL = 
+   simpLib.dproc_ss (QUANT_INSTANTIATE_REDUCER cache_ref_opt re min_occs expand_eq bqp qpL)
+
+fun QUANT_INST_ss qpL        = EXTENSIBLE_QUANT_INST_ss NONE false true  false basic_qp qpL 
+fun EXPAND_QUANT_INST_ss qpL = EXTENSIBLE_QUANT_INST_ss NONE false true  true  basic_qp qpL
+fun FAST_QUANT_INST_ss qpL   = EXTENSIBLE_QUANT_INST_ss NONE false false false basic_qp qpL
+
+fun QUANT_INSTANTIATE_TAC L =  CONV_TAC (QUANT_INSTANTIATE_CONV L);
+fun FAST_QUANT_INSTANTIATE_TAC L = CONV_TAC (FAST_QUANT_INSTANTIATE_CONV L);
+fun ASM_QUANT_INSTANTIATE_TAC L =  DISCH_ASM_CONV_TAC (QUANT_INSTANTIATE_CONV L);
+fun FAST_ASM_QUANT_INSTANTIATE_TAC L = DISCH_ASM_CONV_TAC (FAST_QUANT_INSTANTIATE_CONV L);
 
 
 (******************************************************************
  * Interfaces for consequence conversions
  ******************************************************************)
 
-fun HEURISTIC_QUANT_INSTANTIATE_CONSEQ_CONV re filter min_occs heuristic rwL dir =
+fun HEURISTIC_QUANT_INSTANTIATE_CONSEQ_CONV re min_occs heuristic rwL dir =
 THEN_CONSEQ_CONV
 ((if re then CONTEXT_REDEPTH_CONSEQ_CONV else CONTEXT_DEPTH_CONSEQ_CONV) CONSEQ_CONV_IMP_CONTEXT
-   (QUANT_INSTANTIATE_HEURISTIC_STEP_CONSEQ_CONV (false,true,false) filter min_occs heuristic rwL) dir)
+   (QUANT_INSTANTIATE_HEURISTIC_STEP_CONSEQ_CONV (false,true,false) min_occs heuristic rwL) dir)
 (REWRITE_CONV rwL);
 
-fun EXTENSIBLE_QUANT_INSTANTIATE_CONSEQ_CONV cache_ref_opt re filter min_occs args =
-    let val arg = (combine_qps args) in
-    HEURISTIC_QUANT_INSTANTIATE_CONSEQ_CONV re filter min_occs (qp_to_heuristic
+fun EXTENSIBLE_QUANT_INSTANTIATE_CONSEQ_CONV cache_ref_opt re min_occs bqp args =
+    let val arg = (combine_qps (bqp::args)) in
+    HEURISTIC_QUANT_INSTANTIATE_CONSEQ_CONV re min_occs (qp_to_heuristic
        arg cache_ref_opt) (#final_rewrite_thms arg) end;
 
+fun EXTENSIBLE_QUANT_INSTANTIATE_STEP_CONSEQ_CONV cache_ref_opt min_occs bqp args =
+    let val arg = (combine_qps (bqp::args)) in
+    (QUANT_INSTANTIATE_HEURISTIC_STEP_CONSEQ_CONV (false,true,false) min_occs
+          (qp_to_heuristic arg cache_ref_opt)
+            (#final_rewrite_thms arg) []) end;
+
 val NORE_QUANT_INSTANTIATE_CONSEQ_CONV =
-    EXTENSIBLE_QUANT_INSTANTIATE_CONSEQ_CONV NONE false (K true) false
+    EXTENSIBLE_QUANT_INSTANTIATE_CONSEQ_CONV NONE false false basic_qp
 
 val QUANT_INSTANTIATE_CONSEQ_CONV =
-    EXTENSIBLE_QUANT_INSTANTIATE_CONSEQ_CONV NONE true (K true) true
+    EXTENSIBLE_QUANT_INSTANTIATE_CONSEQ_CONV NONE true true basic_qp
 
 val FAST_QUANT_INSTANTIATE_CONSEQ_CONV =
-    EXTENSIBLE_QUANT_INSTANTIATE_CONSEQ_CONV NONE false (K true) false
+    EXTENSIBLE_QUANT_INSTANTIATE_CONSEQ_CONV NONE false false basic_qp
 
-fun QUANT_INSTANTIATE_TAC L =
-    CONV_TAC (QUANT_INSTANTIATE_CONV L);
-
-fun ASM_QUANT_INSTANTIATE_TAC L =
-    DISCH_ASM_CONV_TAC (QUANT_INSTANTIATE_CONV L);
-
-fun FAST_QUANT_INSTANTIATE_TAC L =
-    CONV_TAC (FAST_QUANT_INSTANTIATE_CONV L);
-
-fun ASM_FAST_QUANT_INSTANTIATE_TAC L =
-    DISCH_ASM_CONV_TAC (FAST_QUANT_INSTANTIATE_CONV L);
-
-
-fun EXTENSIBLE_QUANT_INSTANTIATE_STEP_CONSEQ_CONV cache_ref_opt filter min_occs args =
-    let val arg = (combine_qps args) in
-    (QUANT_INSTANTIATE_HEURISTIC_STEP_CONSEQ_CONV (false,true,false) filter min_occs
-          (qp_to_heuristic arg cache_ref_opt)
-            (#final_rewrite_thms arg)) end;
+fun QUANT_INSTANTIATE_CONSEQ_TAC L =
+    DISCH_ASM_CONSEQ_CONV_TAC (QUANT_INSTANTIATE_CONSEQ_CONV L);
 
 
 (*********************************************************************
@@ -3052,7 +3050,7 @@ fun QUANT_TAC L (asm,t) =
   in
     REDEPTH_CONSEQ_CONV_TAC
       (QUANT_INSTANTIATE_HEURISTIC_STEP_CONSEQ_CONV (false,false,false)
-         (K true) false (K (QUANT_INSTANTIATE_HEURISTIC___LIST ctxt false L)) [] [])
+         false (K (QUANT_INSTANTIATE_HEURISTIC___LIST ctxt false L)) [] [])
     (asm,t)
   end;
 
@@ -3063,7 +3061,7 @@ fun INST_QUANT_CONV L t =
   in
     DEPTH_CONV
       (QUANT_INSTANTIATE_HEURISTIC_STEP_CONSEQ_CONV (true,true,false)
-         (K true) false (K (QUANT_INSTANTIATE_HEURISTIC___LIST ctxt true L)) [] [] CONSEQ_CONV_UNKNOWN_direction)
+         false (K (QUANT_INSTANTIATE_HEURISTIC___LIST ctxt true L)) [] [] CONSEQ_CONV_UNKNOWN_direction)
     t
   end;
 

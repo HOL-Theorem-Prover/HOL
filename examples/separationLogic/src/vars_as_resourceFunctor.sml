@@ -3254,8 +3254,8 @@ val var_res_main_qp = combine_qps [
    rewrite_qp [asl_comments_ELIM],
    heuristics_qp [QUANT_INSTANTIATE_HEURISTIC___VAR_RES_FRAME_SPLIT___bool]]
 val VAR_RES_QUANT_INSTANTIATE_CONSEQ_CONV___main  =
-   EXTENSIBLE_QUANT_INSTANTIATE_STEP_CONSEQ_CONV NONE (K true) false
-     (var_res_main_qp::list_qp::(var_res_param.quantifier_heuristicsL)) [];
+   EXTENSIBLE_QUANT_INSTANTIATE_STEP_CONSEQ_CONV NONE false basic_qp
+     (var_res_main_qp::list_qp::(var_res_param.quantifier_heuristicsL));
 
 (*
 val lref = ref []

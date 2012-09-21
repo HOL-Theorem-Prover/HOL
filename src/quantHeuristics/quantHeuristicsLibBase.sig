@@ -51,6 +51,7 @@ sig
   val guess_remove_thm    : term -> term -> guess -> guess
   val make_set_guess_thm  : guess -> (term -> thm) -> guess
   val mk_guess            : guess_type -> term -> term -> term -> term list -> guess
+  val mk_guess_opt        : guess_type option -> term -> term -> term -> term list -> guess
 
   val make_guess___dummy  : guess_type -> term -> term -> term -> term list -> guess
   val make_guess___assume : guess_type -> term -> term -> term -> term list -> guess
@@ -171,6 +172,7 @@ sig
      quant_param list -> unit;
 
   val empty_qp           : quant_param;
+  val basic_qp           : quant_param; (* the basic things that should always be turned on *)
   val stateful_qp        : unit -> quant_param;
   val pure_stateful_qp   : unit -> quant_param;
   val TypeBase_qp        : quant_param;
@@ -210,13 +212,13 @@ sig
 
  (*The most important functions *)
   val EXTENSIBLE_QUANT_INSTANTIATE_CONV : quant_heuristic_cache ref option ->
-      bool -> (term -> bool) -> bool -> bool -> thm list -> quant_param list -> conv;
+      bool -> bool -> bool -> thm list -> quant_param -> quant_param list -> conv;
   val QUANT_INSTANTIATE_TAC             : quant_param list -> tactic;
-  val QUANT_INSTANTIATE_CONV            : quant_param list -> conv;
   val ASM_QUANT_INSTANTIATE_TAC         : quant_param list -> tactic;
+  val QUANT_INSTANTIATE_CONV            : quant_param list -> conv;
   val FAST_QUANT_INSTANTIATE_CONV       : quant_param list -> conv;
   val FAST_QUANT_INSTANTIATE_TAC        : quant_param list -> tactic;
-  val ASM_FAST_QUANT_INSTANTIATE_TAC    : quant_param list -> tactic;
+  val FAST_ASM_QUANT_INSTANTIATE_TAC    : quant_param list -> tactic;
   val EXPAND_QUANT_INSTANTIATE_CONV     : quant_param list -> conv;
   val FAST_EXPAND_QUANT_INSTANTIATE_CONV: quant_param list -> conv;
 
@@ -224,12 +226,13 @@ sig
   val NORE_EXPAND_QUANT_INSTANTIATE_CONV : quant_param list -> conv;
 
 
-  val EXTENSIBLE_QUANT_INSTANTIATE_STEP_CONSEQ_CONV :
-      quant_heuristic_cache ref option -> (term -> bool) -> bool -> quant_param list -> thm list -> ConseqConv.directed_conseq_conv;
   val EXTENSIBLE_QUANT_INSTANTIATE_CONSEQ_CONV :
-      quant_heuristic_cache ref option -> bool -> (term -> bool) -> bool -> quant_param list -> ConseqConv.directed_conseq_conv;
+      quant_heuristic_cache ref option -> bool -> bool -> quant_param -> quant_param list -> ConseqConv.directed_conseq_conv;
+  val EXTENSIBLE_QUANT_INSTANTIATE_STEP_CONSEQ_CONV :
+      quant_heuristic_cache ref option -> bool -> quant_param -> quant_param list -> ConseqConv.directed_conseq_conv;
   val QUANT_INSTANTIATE_CONSEQ_CONV :
       quant_param list -> ConseqConv.directed_conseq_conv;
+  val QUANT_INSTANTIATE_CONSEQ_TAC : quant_param list -> tactic;
   val NORE_QUANT_INSTANTIATE_CONSEQ_CONV :
       quant_param list -> ConseqConv.directed_conseq_conv;
   val FAST_QUANT_INSTANTIATE_CONSEQ_CONV :
@@ -242,8 +245,9 @@ sig
    -> tactic;
 
 (*combination with simplifier*)
-  val QUANT_INST_ss      : quant_param list -> simpLib.ssfrag;
-  val FAST_QUANT_INST_ss : quant_param list -> simpLib.ssfrag;
+  val QUANT_INST_ss        : quant_param list -> simpLib.ssfrag;
+  val EXPAND_QUANT_INST_ss : quant_param list -> simpLib.ssfrag;
+  val FAST_QUANT_INST_ss   : quant_param list -> simpLib.ssfrag;
 
 (* Traces *)
 (* "QUANT_INSTANTIATE_HEURISTIC" can be used to get debug information on

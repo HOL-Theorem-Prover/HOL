@@ -180,7 +180,6 @@ val thm = PAIR_QUANT_INSTANTIATE_CONV t
 val stateful_qp = quantHeuristicsLibBase.stateful_qp;
 val pure_stateful_qp = quantHeuristicsLibBase.pure_stateful_qp;
 val TypeBase_qp = quantHeuristicsLibBase.TypeBase_qp;
-val context_qp = context_heuristics_qp[QUANT_INSTANTIATE_HEURISTIC___GIVEN_INSTANTIATION, QUANT_INSTANTIATE_HEURISTIC___STRENGTHEN_WEAKEN]
 
 
 (*******************************************************************
@@ -340,13 +339,43 @@ fun record_qp do_rewrites P = heuristics_qp [QUANT_INSTANTIATE_HEURISTIC___RECOR
 
 val record_default_qp = record_qp false (K (K true))
 
+(*******************************************************************
+ * Heuristic for implications that considers just the right hand side
+ *******************************************************************)
+
+(*
+  val v = ``x:num``
+  val t = ``Q x ==> (x = 2) /\ P x``
+  val sys = debug_sys
+*)
+fun QUANT_INSTANTIATE_HEURISTIC___IMP_CONCL_HEU sys v t =
+let
+   val (t1, t2) = dest_imp_only t;
+
+   (* get guesses form right hand side *)
+   val gc = sys v t2
+   val (rw_thms, gL) = guess_collection2list gc
+
+   (* just assume without justification that these are valid guesses for the full implication,
+      this might be wrong! *)
+   fun guess_lift g = let
+      val (i, fvL) = guess_extract g
+      val ty_opt = guess_extract_type g
+      val g' = mk_guess_opt ty_opt v t i fvL
+   in g' end
+   val gL' = map guess_lift gL
+
+in
+   guess_list2collection (rw_thms, gL')
+end handle HOL_ERR _ => raise QUANT_INSTANTIATE_HEURISTIC___no_guess_exp
+
+val implication_concl_qp = heuristics_qp [QUANT_INSTANTIATE_HEURISTIC___IMP_CONCL_HEU]
 
 
 (*******************************************************************
  * Combinations
  *******************************************************************)
 
-val std_qp = combine_qps [context_qp,
-   num_qp, option_qp, pair_default_qp, list_qp, sum_qp, record_default_qp]
+val std_qp = combine_qps [num_qp, option_qp, pair_default_qp, list_qp, sum_qp, record_default_qp]
 
 end

@@ -10,9 +10,6 @@ sig
   val stateful_qp___add_combine_arguments :
      quantHeuristicsLibBase.quant_param list -> unit;
 
-  (* context *)
-  val context_qp        : quantHeuristicsLibBase.quant_param;
- 
   (* ones for specific types *)
 
   (*pair type*)
@@ -38,5 +35,9 @@ sig
 
   (* combination of all except the stateful ones *)
   val std_qp  : quantHeuristicsLibBase.quant_param;
+
+  (* A heuristic that considers just the conclusion of implications. This may lead to wrong guesses, but
+     if used carefully, is a handy heuristic. *)
+  val implication_concl_qp : quantHeuristicsLibBase.quant_param;
 
 end

@@ -10,14 +10,16 @@ sig
   (************************************)
 
   (* Simplifier Interface *)
-  val QUANT_INST_ss      : quant_param list -> simpLib.ssfrag;
-  val FAST_QUANT_INST_ss : quant_param list -> simpLib.ssfrag;
+  val QUANT_INST_ss        : quant_param list -> simpLib.ssfrag;
+  val FAST_QUANT_INST_ss   : quant_param list -> simpLib.ssfrag;
+  val EXPAND_QUANT_INST_ss : quant_param list -> simpLib.ssfrag;
 
   (* Tactics *)
   val QUANT_INSTANTIATE_TAC          : quant_param list -> tactic;
   val ASM_QUANT_INSTANTIATE_TAC      : quant_param list -> tactic;
   val FAST_QUANT_INSTANTIATE_TAC     : quant_param list -> tactic;
-  val ASM_FAST_QUANT_INSTANTIATE_TAC : quant_param list -> tactic;
+  val FAST_ASM_QUANT_INSTANTIATE_TAC : quant_param list -> tactic;
+  val QUANT_INSTANTIATE_CONSEQ_TAC   : quant_param list -> tactic;
 
   (* Conversions *)
   val QUANT_INSTANTIATE_CONV      : quant_param list -> conv;
@@ -67,9 +69,6 @@ sig
   val stateful_qp___add_combine_arguments :
      quantHeuristicsLibBase.quant_param list -> unit;
 
-  (* using context *)
-  val context_qp        : quantHeuristicsLibBase.quant_param;
-
   (*pair type*)
   val split_pair___PABS___pred    : Abbrev.term -> Abbrev.term -> Abbrev.term option
   val split_pair___FST_SND___pred : bool -> Abbrev.term -> Abbrev.term -> Abbrev.term option
@@ -94,6 +93,9 @@ sig
   (* combination of all except the stateful ones *)
   val std_qp  : quantHeuristicsLibBase.quant_param;
 
+  (* A heuristic that considers just the conclusion of implications. This may lead to wrong guesses, but
+     if used carefully, is a handy heuristic. *)
+  val implication_concl_qp : quantHeuristicsLibBase.quant_param;
   
   (* writing own parameters *)
 
