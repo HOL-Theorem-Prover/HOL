@@ -1923,6 +1923,21 @@ val is_polyform_CONS_E = store_thm(
   Cases_on `t` >> simp[is_polyform_def] >> Cases_on `h` >>
   simp[is_polyform_def]);
 
+val expbounds = prove(
+  ``1 < (a:'a ordinal) ∧ y < a ** e ∧ c < a ∧ e < e' ⇒
+    c * a ** e + y < a ** e'``,
+  strip_tac >>
+  `c * a ** e + y < c * a ** e + a ** e` by simp[] >>
+  `c * a ** e + a ** e = c⁺ * a ** e` by simp[] >> pop_assum SUBST_ALL_TAC >>
+  `c⁺ ≤ a` by metis_tac [ordlt_DISCRETE1] >>
+  `c⁺ * a ** e ≤ a * a ** e` by simp[ordMULT_le_MONO_L] >>
+  `a * a ** e = a ** e⁺` by simp[] >> pop_assum SUBST_ALL_TAC >>
+  `a ** e⁺ ≤ a ** e'`
+     by (match_mp_tac ordEXP_le_MONO_R >> conj_tac
+         >- (spose_not_then strip_assume_tac >> fs[]) >>
+         metis_tac [ordlt_DISCRETE1]) >>
+  metis_tac [ordlte_TRANS, ordle_TRANS])
+
 val is_polyform_head_dominates_tail = store_thm(
   "is_polyform_head_dominates_tail",
   ``1 < a ∧ is_polyform a ((c,e)::t) ⇒ eval_poly a t < a ** e``,
@@ -1934,21 +1949,40 @@ val is_polyform_head_dominates_tail = store_thm(
   ho_match_mp_tac (theorem "is_polyform_ind") >> simp[is_polyform_def] >>
   rpt strip_tac
   >- (spose_not_then strip_assume_tac >> fs[] >> fs[ordEXP_EQ_0]) >>
-  fs[] >>
-  `c2 * a ** e2 + eval_poly a t < c2 * a ** e2 + a ** e2` by simp[] >>
-  `c2 * a ** e2 + a ** e2 = c2⁺ * a ** e2` by simp[] >>
-  pop_assum SUBST_ALL_TAC >>
-  `c2 < a` by imp_res_tac is_polyform_CONS_E >>
-  `c2⁺ ≤ a` by metis_tac[ordlt_DISCRETE1] >>
-  `c2⁺ * a ** e2 ≤ a * a ** e2` by simp[ordMULT_le_MONO_L] >>
-  `a * a ** e2 = a ** e2⁺` by simp[] >> pop_assum SUBST_ALL_TAC >>
-  `a ** e2⁺ ≤ a ** e1`
-    by (match_mp_tac ordEXP_le_MONO_R >> conj_tac
-        >- (spose_not_then strip_assume_tac >> fs[]) >>
-        metis_tac[ordlt_DISCRETE1]) >>
-  metis_tac [ordlte_TRANS, ordle_TRANS]);
+  fs[] >> metis_tac[is_polyform_CONS_E, expbounds])
 
-(*
+val cx_lt_x = store_thm(
+  "cx_lt_x",
+  ``c * x < (x:'a ordinal) ⇔ 0 < x ∧ c = 0``,
+  simp_tac bool_ss [SimpLHS, SimpR ``ordlt``, Once (GSYM ordMULT_1L)] >>
+  simp[] >> metis_tac [IFF_ZERO_lt]);
+val _ = export_rewrites ["cx_lt_x"]
+
+val explemma = prove(
+  ``1 < a ∧ c1 * a ** e1 + eval_poly a t1 = c2 * a ** e2 + eval_poly a t2 ∧
+    is_polyform a ((c1,e1)::t1) ∧ is_polyform a ((c2,e2)::t2) ⇒
+    e1 ≤ e2``,
+  rpt strip_tac (* e2 < e1 *) >>
+  `eval_poly a t2 < a ** e2` by metis_tac [is_polyform_head_dominates_tail] >>
+  imp_res_tac is_polyform_CONS_E >>
+  `c2 * a ** e2 + eval_poly a t2 < a ** e1` by simp[expbounds] >>
+  `a ** e1 ≤ c1 * a ** e1` by simp[IFF_ZERO_lt] >>
+  `c1 * a ** e1 ≤ c1 * a ** e1 + eval_poly a t1` by simp[] >>
+  metis_tac[ordlte_TRANS, ordle_TRANS, ordlt_REFL]);
+
+val coefflemma = prove(
+  ``1 < a ∧ c1 * a ** e + eval_poly a t1 = c2 * a ** e + eval_poly a t2 ∧
+    is_polyform a ((c1,e)::t1) ∧ is_polyform a ((c2,e)::t2) ⇒
+    c1 ≤ c2``,
+  rpt strip_tac (* c2 < c1 *) >>
+  `eval_poly a t2 < a ** e` by metis_tac [is_polyform_head_dominates_tail] >>
+  imp_res_tac is_polyform_CONS_E >>
+  `c2 * a ** e + eval_poly a t2 < c2 * a ** e + a ** e` by simp[] >>
+  `c2 * a ** e + a ** e = c2⁺ * a ** e` by simp[] >> pop_assum SUBST_ALL_TAC >>
+  `c2⁺ * a ** e ≤ c1 * a ** e` by (simp[] >> metis_tac [ordlt_DISCRETE1]) >>
+  `c1 * a ** e ≤ c1 * a ** e + eval_poly a t1` by simp[] >>
+  metis_tac [ordlte_TRANS, ordle_TRANS, ordlt_REFL]);
+
 val polyform_UNIQUE = store_thm(
   "polyform_UNIQUE",
   ``∀a b ces.
@@ -1968,22 +2002,18 @@ val polyform_UNIQUE = store_thm(
   `polyform a b ≠ []` by simp[polyform_EQ_NIL, IFF_ZERO_lt, ZERO_lt_ordEXP] >>
   `∃c' e' t'. polyform a b = (c',e')::t'`
     by metis_tac [listTheory.list_CASES, pairTheory.pair_CASES] >>
+  `0 < c' ∧ c' < a` by metis_tac [is_polyform_CONS_E] >>
   `b = c' * a ** e' + eval_poly a t'` by fs[] >>
-  `e = e'`
-    by (match_mp_tac ordle_ANTISYM >> rpt strip_tac >|[
-          (* e' < e *)
-          `eval_poly a t' < a ** e'`
-            by metis_tac[is_polyform_head_dominates_tail] >>
-          `c' * a ** e' + eval_poly a t' < c' * a ** e' + a ** e'` by simp[] >>
-          `c' * a ** e' + a ** e' = c'⁺ * a ** e'` by simp[] >>
-          pop_assum SUBST_ALL_TAC >>
-
-
-          `a ** e' < a ** e` by simp[ordEXP_lt_IFF] >>
-
-
-
-*)
-
+  `e' = e` by metis_tac [explemma, ordle_ANTISYM] >> pop_assum SUBST_ALL_TAC >>
+  `c' = c` by metis_tac [coefflemma, ordle_ANTISYM] >> pop_assum SUBST_ALL_TAC>>
+  `eval_poly a t = eval_poly a t'` by metis_tac [ordADD_RIGHT_CANCEL] >>
+  qsuff_tac `t = t'` >- simp[] >>
+  `eval_poly a t < b`
+    by (`eval_poly a t < a ** e`
+          by metis_tac [is_polyform_head_dominates_tail] >>
+        `a ** e ≤ c * a ** e` by simp[IFF_ZERO_lt] >>
+        `c * a ** e ≤ c * a ** e + eval_poly a t` by simp[] >>
+        metis_tac [ordlte_TRANS, ordle_TRANS]) >>
+  metis_tac [is_polyform_CONS_E]);
 
 val _ = export_theory()
