@@ -38,7 +38,10 @@ open BytecodeTheory MiniMLTheory
 (*val domsub : forall 'a 'b. Pmap.map 'a 'b -> 'a -> Pmap.map 'a 'b*)
 (*val genlist : forall 'a. (num -> 'a) -> num -> list 'a*)
 
-(* TODO: elsewhere? *)
+(*open MiniML*)
+
+(* TODO: Misc. helpers *)
+
  val find_index_defn = Hol_defn "find_index" `
 
 (find_index y [] _ = NONE)
@@ -52,9 +55,11 @@ val _ = Define `
   num_to_hex_string ($LEAST (\ n . ~  (num_to_hex_string n IN s))))`;
 
 
-(*open MiniML*)
+ val num_fold_defn = Hol_defn "num_fold" `
+ (num_fold f a n = if n = 0 then a else num_fold f (f a) (n - 1))`;
 
-(* TODO: elsewhere? *)
+val _ = Defn.save_defn num_fold_defn;
+
  val map_result_defn = Hol_defn "map_result" `
 
 (map_result f (Rval v) = Rval (f v))
@@ -71,8 +76,6 @@ val _ = Defn.save_defn map_result_defn;
 
 val _ = Defn.save_defn every_result_defn;
 
-(* Intermediate language for MiniML compiler *)
-
 val _ = Define `
  i0 = int_of_num 0`;
 
@@ -82,6 +85,24 @@ val _ = Define `
 val _ = Define `
  i2 = int_of_num 2`;
 
+
+ val error_to_int_defn = Hol_defn "error_to_int" `
+
+(error_to_int Bind_error = i0)
+/\
+(error_to_int Div_error = i1)`;
+
+val _ = Defn.save_defn error_to_int_defn;
+
+ val num_to_bool_defn = Hol_defn "num_to_bool" `
+
+(num_to_bool 0 = F)
+/\
+(num_to_bool 1 = T)`;
+
+val _ = Defn.save_defn num_to_bool_defn;
+
+(* Intermediate language for MiniML compiler *)
 
 
  val Cpat_vars_defn = Hol_defn "Cpat_vars" `
@@ -401,78 +422,11 @@ EVERY
 ==>
 syneq c (CRecClos env1 ns defs d) (CRecClos env2 ns defs d))`;
 
-val _ = Hol_datatype `
- nt =
-    NTvar of num
-  | NTapp of nt list => typeN
-  | NTfn
-  | NTnum
-  | NTbool`;
+(* Compiler *)
 
+(* source to intermediate expressions *)
 
- val t_to_nt_defn = Hol_defn "t_to_nt" `
-
-(t_to_nt a (Tvar x) = (case find_index x a 0 of SOME n => NTvar n ))
-/\
-(t_to_nt a (Tapp ts tn) = NTapp (MAP (t_to_nt a) ts) tn)
-/\
-(t_to_nt a (Tfn _ _) = NTfn)
-/\
-(t_to_nt a Tnum = NTnum)
-/\
-(t_to_nt a Tbool = NTbool)`;
-
-val _ = Defn.save_defn t_to_nt_defn;
-
-(* values in compile-time environment *)
-val _ = Hol_datatype `
- ctbind = CTLet of num | CTArg of num | CTEnv of num | CTRef of num`;
-
-(* CTLet n means stack[sz - n]
-   CTArg n means stack[sz + n]
-   CTEnv n means El n of the environment, which is at stack[sz]
-   CTRef n means El n of the environment, but it's a ref pointer *)
-
-(*open Bytecode*)
-
-val _ = Hol_datatype `
- call_context = TCNonTail | TCTail of num => num`;
-
-
-val _ = type_abbrev( "ctenv" , ``: (string, ctbind) fmap``);
-
-(* helper for reconstructing closure environments *)
-val _ = Hol_datatype `
- cebind = CEEnv of string | CERef of num`;
-
-
-val _ = type_abbrev( "ecs" , ``: num # cebind list``);
-
-val _ = Hol_datatype `
- compiler_state =
-  <| env: ctenv
-   ; sz: num
-   ; ecs: (num, ecs) fmap
-   ; env_azs: (num, (ctenv # num)) fmap
-   ; out: bc_inst list (* reversed code *)
-   ; next_label: num
-   ; tail: call_context
-   (* not modified on return: *)
-   ; decl: (ctenv # num)option
-   |>`;
-
-
-val _ = Hol_datatype `
- repl_state =
-  <| cmap : (conN, num) fmap
-   ; cpam : (typeN, ( (num, (conN # nt list))fmap)) fmap
-   ; code : bc_inst list
-   ; renv : ctenv
-   ; rsz  : num
-   ; next_addr : num
-   ; inst_length : bc_inst -> num
-   |>`;
-
+(* remove pattern-matching using continuations *)
 
  val pat_to_Cpat_defn = Hol_defn "pat_to_Cpat" `
 
@@ -492,13 +446,6 @@ val _ = Hol_datatype `
   (pvs,Cp::Cps))`;
 
 val _ = Defn.save_defn pat_to_Cpat_defn;
-
-val _ = Define `
- Cpes_vars =
-  FOLDL (\ s (p,e) . s UNION Cpat_vars p UNION free_vars FEMPTY e) {}`;
-
-
-(* Remove pattern-matching using continuations *)
 
  val remove_mat_vp_defn = Hol_defn "remove_mat_vp" `
 
@@ -533,6 +480,11 @@ val _ = Defn.save_defn remove_mat_vp_defn;
     (remove_mat_vp fk sk v p))`;
 
 val _ = Defn.save_defn remove_mat_var_defn;
+
+val _ = Define `
+ Cpes_vars =
+  FOLDL (\ s (p,e) . s UNION Cpat_vars p UNION free_vars FEMPTY e) {}`;
+
 
  val exp_to_Cexp_defn = Hol_defn "exp_to_Cexp" `
 
@@ -638,36 +590,7 @@ val _ = Defn.save_defn remove_mat_var_defn;
 
 val _ = Defn.save_defn exp_to_Cexp_defn;
 
-(* conversions source to intermediate values *)
-
- val v_to_Cv_defn = Hol_defn "v_to_Cv" `
-
-(v_to_Cv m (Litv l) = CLitv l)
-/\
-(v_to_Cv m (Conv cn vs) =
-  CConv (FAPPLY  m  cn) (vs_to_Cvs m vs))
-/\
-(v_to_Cv m (Closure env vn e) =
-  let Cenv = alist_to_fmap (env_to_Cenv m env) in
-  let Ce = exp_to_Cexp m e in
-  let a = fresh_var (free_vars FEMPTY Ce) in
-  CRecClos Cenv [a] [([vn],INL Ce)] a)
-/\
-(v_to_Cv m (Recclosure env defs vn) =
-  let Cenv = alist_to_fmap (env_to_Cenv m env) in
-  let (fns,Cdefs) = defs_to_Cdefs m defs in
-  CRecClos Cenv fns Cdefs vn)
-/\
-(vs_to_Cvs m [] = [])
-/\
-(vs_to_Cvs m (v::vs) = v_to_Cv m v :: vs_to_Cvs m vs)
-/\
-(env_to_Cenv m [] = [])
-/\
-(env_to_Cenv m ((x,v)::env) =
-  (x, v_to_Cv m v)::(env_to_Cenv m env))`;
-
-val _ = Defn.save_defn v_to_Cv_defn;
+(* pull closure bodies into code environment *)
 
 val _ = Hol_datatype `
  label_closures_state =
@@ -757,13 +680,45 @@ val _ = Hol_datatype `
 
 val _ = Defn.save_defn label_closures_defn;
 
- val error_to_int_defn = Hol_defn "error_to_int" `
+(* intermediate expressions to bytecode *)
 
-(error_to_int Bind_error = i0)
-/\
-(error_to_int Div_error = i1)`;
+(*open Bytecode*)
 
-val _ = Defn.save_defn error_to_int_defn;
+(* values in compile-time environment *)
+val _ = Hol_datatype `
+ ctbind = CTLet of num | CTArg of num | CTEnv of num | CTRef of num`;
+
+(* CTLet n means stack[sz - n]
+   CTArg n means stack[sz + n]
+   CTEnv n means El n of the environment, which is at stack[sz]
+   CTRef n means El n of the environment, but it's a ref pointer *)
+
+val _ = Hol_datatype `
+ call_context = TCNonTail | TCTail of num => num`;
+
+
+val _ = type_abbrev( "ctenv" , ``: (string, ctbind) fmap``);
+
+(* helper for reconstructing closure environments *)
+val _ = Hol_datatype `
+ cebind = CEEnv of string | CERef of num`;
+
+
+val _ = type_abbrev( "ecs" , ``: num # cebind list``);
+
+val _ = Hol_datatype `
+ compiler_state =
+  <| env: ctenv
+   ; sz: num
+   ; ecs: (num, ecs) fmap
+   ; env_azs: (num, (ctenv # num)) fmap
+   ; out: bc_inst list (* reversed code *)
+   ; next_label: num
+   ; tail: call_context
+   (* not modified on return: *)
+   ; decl: (ctenv # num)option
+   |>`;
+
 
  val prim2_to_bc_defn = Hol_defn "prim2_to_bc" `
 
@@ -793,6 +748,7 @@ val _ = Define `
                   GENLIST (\ i . s.next_label + i) n))`;
 
 val _ = Defn.save_defn get_labels_defn;
+
  val compile_varref_defn = Hol_defn "compile_varref" `
 
 (compile_varref s (CTLet n) = emit s [Stack (Load (s.sz - n))])
@@ -825,11 +781,6 @@ val _ = Define `
 (emit_ec z s (CERef j) = incsz (emit s [Stack (Load (s.sz - z - j))]))`;
 
 val _ = Defn.save_defn emit_ec_defn;
-
- val num_fold_defn = Hol_defn "num_fold" `
- (num_fold f a n = if n = 0 then a else num_fold f (f a) (n - 1))`;
-
-val _ = Defn.save_defn num_fold_defn;
 
  val compile_closures_defn = Hol_defn "compile_closures" `
 
@@ -872,6 +823,73 @@ val _ = Defn.save_defn num_fold_defn;
          s nz)`;
 
 val _ = Defn.save_defn compile_closures_defn;
+
+  (* calling convention:
+   * before: env, CodePtr ret, argn, ..., arg1, Block 0 [CodePtr c; env],
+   * thus, since env = stack[sz], argk should be CTArg (2 + n - k)
+   * after:  retval,
+
+this is out of date:
+       PushInt 0, Ref
+       ...            (* create RefPtrs for recursive closures *)
+       PushInt 0, Ref                       RefPtr 0, ..., RefPtr 0, rest
+       PushInt 0                            0, RefPtr 0, ..., RefPtr 0, rest
+       Call L1                              0, CodePtr f1, RefPtr 0, ..., RefPtr 0, rest
+       ?
+       ...      (* function 1 body *)
+       Pops ?   (* delete local variables and env *)
+       Load 1
+       Store n+2(* replace closure with return pointer *)
+       Pops n+1 (* delete arguments *)
+       Return
+   L1: Call L2                              0, CodePtr f2, CodePtr f1, RefPtrs, rest
+       ?
+       ...      (* function 2 body *)
+       Return
+   L2: Call L3
+       ?
+       ...      (* more function bodies *)
+   ...
+       Return
+   LK: Call L
+       ...
+       Return   (* end of last function *)
+   L:  Pop                                  CodePtr fk, ..., CodePtr f1, RefPtrs, rest
+       Load ?   (* copy code pointer for function 1 *)
+       Load ?   (* copy free mutrec vars for function 1 *)
+       Load ?   (* copy free vars for function 1 *)
+       ...                                  vm1, ..., v1, RefPtr 0, ..., RefPtr 0, CodePtr f1, CodePtr fk, ..., CodePtr f1, RefPtrs, rest
+       Cons 0 (m1 + n1)
+       Cons 0 2                             Block 0 [CodePtr f1; Block 0 Env], CodePtr fk, ..., CodePtr f1, RefPtrs, rest
+       Store ?                              CodePtr fk, ..., CodePtr f2, f1, RefPtrs, rest
+       Load ?   (* copy code pointer for function 2 *)
+       Load ?   (* copy free mutrec vars for function k-1 *)
+       Load ?   (* copy free vars for function k-1 *)
+       ...
+       Cons 0 (m2 + n2)
+       Cons 0 2                             
+       Store ?                              CodePtr fk, ..., CodePtr f3, f2, f1, RefPtrs, rest
+       ...                                  fk, ..., f2, f1, RefPtrs, rest
+       Load ?
+       Load 1                               fk, RefPtr 0, fk, f(k-1), ..., RefPtrs, rest
+       Update                               fk, f(k-1), ..., f1, RefPtrs, rest
+       Load ?
+       Load 2
+       Update
+       ...      (* update RefPtrs with closures *)
+       Store ?  (* pop RefPtrs *)           fk, f(k-1), ..., f1, rest
+       ...
+  *)
+  (*
+   * - push refptrs and leading 0
+   * - for each function (in order), push a Call 0, remember the next label,
+   *   calculate its environment, remember the environment, compile its body in
+   *   that environment
+   * - update Calls
+   * - for each environment emit code to load that
+   *   environment and build the closure
+   * - update refptrs, etc.
+   *)
 
  val compile_defn = Hol_defn "compile" `
 
@@ -1025,6 +1043,8 @@ val _ = Defn.save_defn compile_closures_defn;
 
 val _ = Defn.save_defn compile_defn;
 
+(* code env to bytecode *)
+
  val bind_fv_defn = Hol_defn "bind_fv" `
 
 (bind_fv ns xs az k fv (n,env,(ecl,ec)) =
@@ -1093,72 +1113,44 @@ val _ = Defn.save_defn cce_aux_defn;
 
 val _ = Defn.save_defn compile_code_env_defn;
 
-  (* calling convention:
-   * before: env, CodePtr ret, argn, ..., arg1, Block 0 [CodePtr c; env],
-   * thus, since env = stack[sz], argk should be CTArg (2 + n - k)
-   * after:  retval,
+(* replace labels in bytecode with addresses *)
 
-this might be out of date:
-       PushInt 0, Ref
-       ...            (* create RefPtrs for recursive closures *)
-       PushInt 0, Ref                       RefPtr 0, ..., RefPtr 0, rest
-       PushInt 0                            0, RefPtr 0, ..., RefPtr 0, rest
-       Call L1                              0, CodePtr f1, RefPtr 0, ..., RefPtr 0, rest
-       ?
-       ...      (* function 1 body *)
-       Pops ?   (* delete local variables and env *)
-       Load 1
-       Store n+2(* replace closure with return pointer *)
-       Pops n+1 (* delete arguments *)
-       Return
-   L1: Call L2                              0, CodePtr f2, CodePtr f1, RefPtrs, rest
-       ?
-       ...      (* function 2 body *)
-       Return
-   L2: Call L3
-       ?
-       ...      (* more function bodies *)
-   ...
-       Return
-   LK: Call L
-       ...
-       Return   (* end of last function *)
-   L:  Pop                                  CodePtr fk, ..., CodePtr f1, RefPtrs, rest
-       Load ?   (* copy code pointer for function 1 *)
-       Load ?   (* copy free mutrec vars for function 1 *)
-       Load ?   (* copy free vars for function 1 *)
-       ...                                  vm1, ..., v1, RefPtr 0, ..., RefPtr 0, CodePtr f1, CodePtr fk, ..., CodePtr f1, RefPtrs, rest
-       Cons 0 (m1 + n1)
-       Cons 0 2                             Block 0 [CodePtr f1; Block 0 Env], CodePtr fk, ..., CodePtr f1, RefPtrs, rest
-       Store ?                              CodePtr fk, ..., CodePtr f2, f1, RefPtrs, rest
-       Load ?   (* copy code pointer for function 2 *)
-       Load ?   (* copy free mutrec vars for function k-1 *)
-       Load ?   (* copy free vars for function k-1 *)
-       ...
-       Cons 0 (m2 + n2)
-       Cons 0 2                             
-       Store ?                              CodePtr fk, ..., CodePtr f3, f2, f1, RefPtrs, rest
-       ...                                  fk, ..., f2, f1, RefPtrs, rest
-       Load ?
-       Load 1                               fk, RefPtr 0, fk, f(k-1), ..., RefPtrs, rest
-       Update                               fk, f(k-1), ..., f1, RefPtrs, rest
-       Load ?
-       Load 2
-       Update
-       ...      (* update RefPtrs with closures *)
-       Store ?  (* pop RefPtrs *)           fk, f(k-1), ..., f1, rest
-       ...
-  *)
-  (*
-   * - push refptrs and leading 0
-   * - for each function (in order), push a Call 0, remember the next label,
-   *   calculate its environment, remember the environment, compile its body in
-   *   that environment
-   * - update Calls
-   * - for each environment emit code to load that
-   *   environment and build the closure
-   * - update refptrs, etc.
-   *)
+(* runtime type information, for repl *)
+
+val _ = Hol_datatype `
+ nt =
+    NTvar of num
+  | NTapp of nt list => typeN
+  | NTfn
+  | NTnum
+  | NTbool`;
+
+
+ val t_to_nt_defn = Hol_defn "t_to_nt" `
+
+(t_to_nt a (Tvar x) = (case find_index x a 0 of SOME n => NTvar n ))
+/\
+(t_to_nt a (Tapp ts tn) = NTapp (MAP (t_to_nt a) ts) tn)
+/\
+(t_to_nt a (Tfn _ _) = NTfn)
+/\
+(t_to_nt a Tnum = NTnum)
+/\
+(t_to_nt a Tbool = NTbool)`;
+
+val _ = Defn.save_defn t_to_nt_defn;
+
+val _ = Hol_datatype `
+ repl_state =
+  <| cmap : (conN, num) fmap
+   ; cpam : (typeN, ( (num, (conN # nt list))fmap)) fmap
+   ; code : bc_inst list
+   ; renv : ctenv
+   ; rsz  : num
+   ; next_addr : num
+   ; inst_length : bc_inst -> num
+   |>`;
+
 
  val calculate_labels_defn = Hol_defn "calculate_labels" `
 
@@ -1197,6 +1189,8 @@ val _ = Defn.save_defn replace_labels_defn;
    rs with<| code := replace_labels m [] bc ; next_addr := n |>)`;
 
 val _ = Defn.save_defn compile_labels_defn;
+
+(* repl *)
 
 val _ = Define `
  init_repl_state =
@@ -1267,6 +1261,8 @@ val _ = Define `
  (repl_exp s exp = compile_Cexp s NONE (exp_to_Cexp s.cmap exp))`;
 
 
+(* Correctness *)
+
 (* observable values *)
 
 val _ = Hol_datatype `
@@ -1312,14 +1308,6 @@ val _ = Define `
 
 val _ = Defn.save_defn inst_arg_defn;
 
- val num_to_bool_defn = Hol_defn "num_to_bool" `
-
-(num_to_bool 0 = F)
-/\
-(num_to_bool 1 = T)`;
-
-val _ = Defn.save_defn num_to_bool_defn;
-
  val bv_to_ov_defn = Hol_defn "bv_to_ov" `
 
 (bv_to_ov m NTnum (Number i) = OLit (IntLit i))
@@ -1338,7 +1326,38 @@ val _ = Defn.save_defn num_to_bool_defn;
 
 val _ = Defn.save_defn bv_to_ov_defn;
 
-(* convert intermediate to target values *)
+(* source to intermediate values *)
+
+ val v_to_Cv_defn = Hol_defn "v_to_Cv" `
+
+(v_to_Cv m (Litv l) = CLitv l)
+/\
+(v_to_Cv m (Conv cn vs) =
+  CConv (FAPPLY  m  cn) (vs_to_Cvs m vs))
+/\
+(v_to_Cv m (Closure env vn e) =
+  let Cenv = alist_to_fmap (env_to_Cenv m env) in
+  let Ce = exp_to_Cexp m e in
+  let a = fresh_var (free_vars FEMPTY Ce) in
+  CRecClos Cenv [a] [([vn],INL Ce)] a)
+/\
+(v_to_Cv m (Recclosure env defs vn) =
+  let Cenv = alist_to_fmap (env_to_Cenv m env) in
+  let (fns,Cdefs) = defs_to_Cdefs m defs in
+  CRecClos Cenv fns Cdefs vn)
+/\
+(vs_to_Cvs m [] = [])
+/\
+(vs_to_Cvs m (v::vs) = v_to_Cv m v :: vs_to_Cvs m vs)
+/\
+(env_to_Cenv m [] = [])
+/\
+(env_to_Cenv m ((x,v)::env) =
+  (x, v_to_Cv m v)::(env_to_Cenv m env))`;
+
+val _ = Defn.save_defn v_to_Cv_defn;
+
+(* intermediate to target values *)
 
 (*
 let rec
@@ -1538,112 +1557,6 @@ and
 Cvs_to_bvs [] = []
 and
 Cvs_to_bvs (v::vs) = Cv_to_bv v :: Cvs_to_bvs vs
-*)
-
-(* Constant folding
-val fold_consts : exp -> exp
-
-let rec
-fold_consts (Raise err) = Raise err
-and
-fold_consts (Val v) = Val (v_fold_consts v)
-and
-fold_consts (Con c es) = Con c (List.map fold_consts es)
-and
-fold_consts (Var vn) = Var vn
-and
-fold_consts (Fun vn e) = Fun vn (fold_consts e)
-and
-fold_consts (App (Opn opn) (Val (Lit (IntLit n1))) (Val (Lit (IntLit n2)))) =
-  Val (Lit (IntLit (opn_lookup opn n1 n2)))
-and
-fold_consts (App (Opb opb) (Val (Lit (IntLit n1))) (Val (Lit (IntLit n2)))) =
-  Val (Lit (Bool (opb_lookup opb n1 n2)))
-and
-fold_consts (App Equality (Val (Lit (IntLit n1))) (Val (Lit (IntLit n2)))) =
-  Val (Lit (Bool (n1 = n2)))
-and
-fold_consts (App Equality (Val (Lit (Bool b1))) (Val (Lit (Bool b2)))) =
-  Val (Lit (Bool (b1 = b2)))
-and
-fold_consts (App op e1 e2) =
-  let e1' = fold_consts e1 in
-  let e2' = fold_consts e2 in
-  if e1 = e1' && e2 = e2' then (App op e1 e2) else
-  fold_consts (App op e1' e2')
-and
-fold_consts (Log And (Val (Lit (Bool true))) e2) =
-  fold_consts e2
-and
-fold_consts (Log Or (Val (Lit (Bool false))) e2) =
-  fold_consts e2
-and
-fold_consts (Log _ (Val (Lit (Bool b))) _) =
-  Val (Lit (Bool b))
-and
-fold_consts (Log log e1 e2) =
-  Log log (fold_consts e1) (fold_consts e2)
-and
-fold_consts (If (Val (Lit (Bool b))) e2 e3) =
-  if b then fold_consts e2 else fold_consts e3
-and
-fold_consts (If e1 e2 e3) =
-  If (fold_consts e1) (fold_consts e2) (fold_consts e3)
-and
-fold_consts (Mat (Val v) pes) =
-  fold_match v pes
-and
-fold_consts (Mat e pes) =
-  Mat (fold_consts e) (match_fold_consts pes)
-and
-fold_consts (Let vn e1 e2) =
-  Let vn (fold_consts e1) (fold_consts e2)
-and
-fold_consts (Letrec funs e) =
-  Letrec (funs_fold_consts funs) (fold_consts e)
-and
-fold_consts (Proj (Val (Conv None vs)) n) =
-  Val (List.nth vs n)
-and
-fold_consts (Proj e n) = Proj (fold_consts e) n
-and
-v_fold_consts (Lit l) = Lit l
-and
-v_fold_consts (Conv None vs) =
-  Conv None (List.map v_fold_consts vs)
-and
-v_fold_consts (Closure envE vn e) =
-  Closure (env_fold_consts envE) vn (fold_consts e)
-and
-v_fold_consts (Recclosure envE funs vn) =
-  Recclosure (env_fold_consts envE) (funs_fold_consts funs) vn
-and
-env_fold_consts [] = []
-and
-env_fold_consts ((vn,v)::env) =
-  ((vn, v_fold_consts v)::env_fold_consts env)
-and
-funs_fold_consts [] = []
-and
-funs_fold_consts ((vn1,vn2,e)::funs) =
-  ((vn1,vn2,fold_consts e)::funs_fold_consts funs)
-and
-match_fold_consts [] = []
-and
-match_fold_consts ((p,e)::pes) =
-  (p, fold_consts e)::match_fold_consts pes
-and
-fold_match v [] = Raise Bind_error
-and
-fold_match (Lit l) ((Plit l',e)::pes) =
-  if l = l' then
-    fold_consts e
-  else
-    fold_match (Lit l) pes
-and
-(* TODO: fold more pattern matching (e.g. to Let)? Need envC? *)
-fold_match v pes =
-  Mat (Val v) (match_fold_consts pes)
 *)
 val _ = export_theory()
 

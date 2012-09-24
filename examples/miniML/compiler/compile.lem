@@ -45,7 +45,10 @@ let inline {hol} domsub = Hol.DOMSUB
 val genlist : forall 'a. (num -> 'a) -> num -> list 'a
 let inline {hol} genlist = Hol.GENLIST
 
-(* TODO: elsewhere? *)
+open MiniML
+
+(* TODO: Misc. helpers *)
+
 let rec
 find_index y [] _ = None
 and
@@ -54,9 +57,8 @@ find_index y (x::xs) n = if x = y then Some n else find_index y xs (n+1)
 let fresh_var s =
   num_to_string (least (fun n -> not (num_to_string n IN s)))
 
-open MiniML
+let rec num_fold f a n = if n = 0 then a else num_fold f (f a) (n-1)
 
-(* TODO: elsewhere? *)
 let rec
 map_result f (Rval v) = Rval (f v)
 and
@@ -67,11 +69,21 @@ every_result  P (Rerr _) = true
 and
 every_result P (Rval v) = P v
 
-(* Intermediate language for MiniML compiler *)
-
 let i0 = Bytecode.int_of_num 0
 let i1 = Bytecode.int_of_num 1
 let i2 = Bytecode.int_of_num 2
+
+let rec
+error_to_int Bind_error = i0
+and
+error_to_int Div_error = i1
+
+let rec
+num_to_bool 0 = false
+and
+num_to_bool 1 = true
+
+(* Intermediate language for MiniML compiler *)
 
 (* Syntax *)
 (* (real definitions in CexpTypesTheory) *)
@@ -407,63 +419,11 @@ List.for_all
 ==>
 syneq c (CRecClos env1 ns defs d) (CRecClos env2 ns defs d)
 
-type nt =
-  | NTvar of num
-  | NTapp of list nt * typeN
-  | NTfn
-  | NTnum
-  | NTbool
+(* Compiler *)
 
-let rec
-t_to_nt a (Tvar x) = match find_index x a 0 with Some n -> NTvar n end
-and
-t_to_nt a (Tapp ts tn) = NTapp (List.map (t_to_nt a) ts) tn
-and
-t_to_nt a (Tfn _ _) = NTfn
-and
-t_to_nt a Tnum = NTnum
-and
-t_to_nt a Tbool = NTbool
+(* source to intermediate expressions *)
 
-(* values in compile-time environment *)
-type ctbind = CTLet of num | CTArg of num | CTEnv of num | CTRef of num
-(* CTLet n means stack[sz - n]
-   CTArg n means stack[sz + n]
-   CTEnv n means El n of the environment, which is at stack[sz]
-   CTRef n means El n of the environment, but it's a ref pointer *)
-
-open Bytecode
-
-type call_context = TCNonTail | TCTail of num * num
-
-type ctenv = Pmap.map string ctbind
-
-(* helper for reconstructing closure environments *)
-type cebind = CEEnv of string | CERef of num
-
-type ecs = num * list cebind
-
-type compiler_state =
-  <| env: ctenv
-   ; sz: num
-   ; ecs: Pmap.map num ecs
-   ; env_azs: Pmap.map num (ctenv * num)
-   ; out: list bc_inst (* reversed code *)
-   ; next_label: num
-   ; tail: call_context
-   (* not modified on return: *)
-   ; decl: option (ctenv * num)
-   |>
-
-type repl_state =
-  <| cmap : Pmap.map conN num
-   ; cpam : Pmap.map typeN (Pmap.map num (conN * list nt))
-   ; code : list bc_inst
-   ; renv : ctenv
-   ; rsz  : num
-   ; next_addr : num
-   ; inst_length : bc_inst -> num
-   |>
+(* remove pattern-matching using continuations *)
 
 let rec
 pat_to_Cpat m pvs (Pvar vn) = (vn::pvs, CPvar vn)
@@ -480,11 +440,6 @@ pats_to_Cpats m pvs (p::ps) =
   let (pvs,Cps) = pats_to_Cpats m pvs ps in
   let (pvs,Cp) = pat_to_Cpat m pvs p in
   (pvs,Cp::Cps)
-
-let Cpes_vars =
-  List.fold_left (fun s (p,e) -> s union Cpat_vars p union free_vars Pmap.empty e) {}
-
-(* Remove pattern-matching using continuations *)
 
 let rec
 remove_mat_vp fk sk v (CPvar pv) =
@@ -513,6 +468,9 @@ remove_mat_var v ((p,sk)::pes) =
   let fk = fresh_var ({v} union (free_vars Pmap.empty sk) union (Cpat_vars p)) in
   CLetfun false [fk] [([],(INL (remove_mat_var v pes)))]
     (remove_mat_vp fk sk v p)
+
+let Cpes_vars =
+  List.fold_left (fun s (p,e) -> s union Cpat_vars p union free_vars Pmap.empty e) {}
 
 let rec
 exp_to_Cexp m (Raise err) = CRaise err
@@ -615,33 +573,7 @@ and
 exps_to_Cexps m (e::es) =
   exp_to_Cexp m e :: exps_to_Cexps m es
 
-(* conversions source to intermediate values *)
-
-let rec
-v_to_Cv m (Litv l) = CLitv l
-and
-v_to_Cv m (Conv cn vs) =
-  CConv (Pmap.find cn m) (vs_to_Cvs m vs)
-and
-v_to_Cv m (Closure env vn e) =
-  let Cenv = alist_to_fmap (env_to_Cenv m env) in
-  let Ce = exp_to_Cexp m e in
-  let a = fresh_var (free_vars Pmap.empty Ce) in
-  CRecClos Cenv [a] [([vn],INL Ce)] a
-and
-v_to_Cv m (Recclosure env defs vn) =
-  let Cenv = alist_to_fmap (env_to_Cenv m env) in
-  let (fns,Cdefs) = defs_to_Cdefs m defs in
-  CRecClos Cenv fns Cdefs vn
-and
-vs_to_Cvs m [] = []
-and
-vs_to_Cvs m (v::vs) = v_to_Cv m v :: vs_to_Cvs m vs
-and
-env_to_Cenv m [] = []
-and
-env_to_Cenv m ((x,v)::env) =
-  (x, v_to_Cv m v)::(env_to_Cenv m env)
+(* pull closure bodies into code environment *)
 
 type label_closures_state =
   <| lnext_label: num
@@ -726,10 +658,37 @@ labelise s ns ls ds ((xs,INL b)::defs) =
     ((xs,INR s.lnext_label)::ds)
     defs
 
-let rec
-error_to_int Bind_error = i0
-and
-error_to_int Div_error = i1
+(* intermediate expressions to bytecode *)
+
+open Bytecode
+
+(* values in compile-time environment *)
+type ctbind = CTLet of num | CTArg of num | CTEnv of num | CTRef of num
+(* CTLet n means stack[sz - n]
+   CTArg n means stack[sz + n]
+   CTEnv n means El n of the environment, which is at stack[sz]
+   CTRef n means El n of the environment, but it's a ref pointer *)
+
+type call_context = TCNonTail | TCTail of num * num
+
+type ctenv = Pmap.map string ctbind
+
+(* helper for reconstructing closure environments *)
+type cebind = CEEnv of string | CERef of num
+
+type ecs = num * list cebind
+
+type compiler_state =
+  <| env: ctenv
+   ; sz: num
+   ; ecs: Pmap.map num ecs
+   ; env_azs: Pmap.map num (ctenv * num)
+   ; out: list bc_inst (* reversed code *)
+   ; next_label: num
+   ; tail: call_context
+   (* not modified on return: *)
+   ; decl: option (ctenv * num)
+   |>
 
 let rec
 prim2_to_bc CAdd = Add
@@ -751,6 +710,7 @@ let emit = List.fold_left (fun s i -> <| s with out = i :: s.out |>)
 let rec
 get_labels n s = (<| s with next_label = s.next_label + n |>,
                   genlist (fun i -> s.next_label + i) n)
+
 let rec
 compile_varref s (CTLet n) = emit s [Stack (Load (s.sz - n))]
 and
@@ -769,8 +729,6 @@ let rec
 emit_ec z s (CEEnv fv) = incsz (compile_varref s (Pmap.find fv s.env))
 and
 emit_ec z s (CERef j) = incsz (emit s [Stack (Load (s.sz - z - j))])
-
-let rec num_fold f a n = if n = 0 then a else num_fold f (f a) (n-1)
 
 let rec
 compile_closures nz s defs =
@@ -810,6 +768,73 @@ compile_closures nz s defs =
   num_fold
     (fun s -> decsz (emit s [Stack (Store k)]))
          s nz
+
+  (* calling convention:
+   * before: env, CodePtr ret, argn, ..., arg1, Block 0 [CodePtr c; env],
+   * thus, since env = stack[sz], argk should be CTArg (2 + n - k)
+   * after:  retval,
+
+this is out of date:
+       PushInt 0, Ref
+       ...            (* create RefPtrs for recursive closures *)
+       PushInt 0, Ref                       RefPtr 0, ..., RefPtr 0, rest
+       PushInt 0                            0, RefPtr 0, ..., RefPtr 0, rest
+       Call L1                              0, CodePtr f1, RefPtr 0, ..., RefPtr 0, rest
+       ?
+       ...      (* function 1 body *)
+       Pops ?   (* delete local variables and env *)
+       Load 1
+       Store n+2(* replace closure with return pointer *)
+       Pops n+1 (* delete arguments *)
+       Return
+   L1: Call L2                              0, CodePtr f2, CodePtr f1, RefPtrs, rest
+       ?
+       ...      (* function 2 body *)
+       Return
+   L2: Call L3
+       ?
+       ...      (* more function bodies *)
+   ...
+       Return
+   LK: Call L
+       ...
+       Return   (* end of last function *)
+   L:  Pop                                  CodePtr fk, ..., CodePtr f1, RefPtrs, rest
+       Load ?   (* copy code pointer for function 1 *)
+       Load ?   (* copy free mutrec vars for function 1 *)
+       Load ?   (* copy free vars for function 1 *)
+       ...                                  vm1, ..., v1, RefPtr 0, ..., RefPtr 0, CodePtr f1, CodePtr fk, ..., CodePtr f1, RefPtrs, rest
+       Cons 0 (m1 + n1)
+       Cons 0 2                             Block 0 [CodePtr f1; Block 0 Env], CodePtr fk, ..., CodePtr f1, RefPtrs, rest
+       Store ?                              CodePtr fk, ..., CodePtr f2, f1, RefPtrs, rest
+       Load ?   (* copy code pointer for function 2 *)
+       Load ?   (* copy free mutrec vars for function k-1 *)
+       Load ?   (* copy free vars for function k-1 *)
+       ...
+       Cons 0 (m2 + n2)
+       Cons 0 2                             
+       Store ?                              CodePtr fk, ..., CodePtr f3, f2, f1, RefPtrs, rest
+       ...                                  fk, ..., f2, f1, RefPtrs, rest
+       Load ?
+       Load 1                               fk, RefPtr 0, fk, f(k-1), ..., RefPtrs, rest
+       Update                               fk, f(k-1), ..., f1, RefPtrs, rest
+       Load ?
+       Load 2
+       Update
+       ...      (* update RefPtrs with closures *)
+       Store ?  (* pop RefPtrs *)           fk, f(k-1), ..., f1, rest
+       ...
+  *)
+  (*
+   * - push refptrs and leading 0
+   * - for each function (in order), push a Call 0, remember the next label,
+   *   calculate its environment, remember the environment, compile its body in
+   *   that environment
+   * - update Calls
+   * - for each environment emit code to load that
+   *   environment and build the closure
+   * - update refptrs, etc.
+   *)
 
 let rec
 compile s (CDecl vs) =
@@ -960,6 +985,8 @@ compile_bindings env0 sz1 e n s (x::xs) =
     (<| s with env = Pmap.add x (CTLet (sz1 + n)) s.env |>)
     xs
 
+(* code env to bytecode *)
+
 let rec
 bind_fv ns xs az k fv (n,env,(ecl,ec)) =
   match find_index fv xs 1 with
@@ -1016,72 +1043,37 @@ compile_code_env s ldefs =
   let s = List.fold_left cce_aux s ldefs in
   emit s [Label l]
 
-  (* calling convention:
-   * before: env, CodePtr ret, argn, ..., arg1, Block 0 [CodePtr c; env],
-   * thus, since env = stack[sz], argk should be CTArg (2 + n - k)
-   * after:  retval,
+(* replace labels in bytecode with addresses *)
 
-this might be out of date:
-       PushInt 0, Ref
-       ...            (* create RefPtrs for recursive closures *)
-       PushInt 0, Ref                       RefPtr 0, ..., RefPtr 0, rest
-       PushInt 0                            0, RefPtr 0, ..., RefPtr 0, rest
-       Call L1                              0, CodePtr f1, RefPtr 0, ..., RefPtr 0, rest
-       ?
-       ...      (* function 1 body *)
-       Pops ?   (* delete local variables and env *)
-       Load 1
-       Store n+2(* replace closure with return pointer *)
-       Pops n+1 (* delete arguments *)
-       Return
-   L1: Call L2                              0, CodePtr f2, CodePtr f1, RefPtrs, rest
-       ?
-       ...      (* function 2 body *)
-       Return
-   L2: Call L3
-       ?
-       ...      (* more function bodies *)
-   ...
-       Return
-   LK: Call L
-       ...
-       Return   (* end of last function *)
-   L:  Pop                                  CodePtr fk, ..., CodePtr f1, RefPtrs, rest
-       Load ?   (* copy code pointer for function 1 *)
-       Load ?   (* copy free mutrec vars for function 1 *)
-       Load ?   (* copy free vars for function 1 *)
-       ...                                  vm1, ..., v1, RefPtr 0, ..., RefPtr 0, CodePtr f1, CodePtr fk, ..., CodePtr f1, RefPtrs, rest
-       Cons 0 (m1 + n1)
-       Cons 0 2                             Block 0 [CodePtr f1; Block 0 Env], CodePtr fk, ..., CodePtr f1, RefPtrs, rest
-       Store ?                              CodePtr fk, ..., CodePtr f2, f1, RefPtrs, rest
-       Load ?   (* copy code pointer for function 2 *)
-       Load ?   (* copy free mutrec vars for function k-1 *)
-       Load ?   (* copy free vars for function k-1 *)
-       ...
-       Cons 0 (m2 + n2)
-       Cons 0 2                             
-       Store ?                              CodePtr fk, ..., CodePtr f3, f2, f1, RefPtrs, rest
-       ...                                  fk, ..., f2, f1, RefPtrs, rest
-       Load ?
-       Load 1                               fk, RefPtr 0, fk, f(k-1), ..., RefPtrs, rest
-       Update                               fk, f(k-1), ..., f1, RefPtrs, rest
-       Load ?
-       Load 2
-       Update
-       ...      (* update RefPtrs with closures *)
-       Store ?  (* pop RefPtrs *)           fk, f(k-1), ..., f1, rest
-       ...
-  *)
-  (*
-   * - push refptrs and leading 0
-   * - for each function (in order), push a Call 0, remember the next label,
-   *   calculate its environment, remember the environment, compile its body in
-   *   that environment
-   * - update Calls
-   * - for each environment emit code to load that
-   *   environment and build the closure
-   * - update refptrs, etc.
-   *)
+(* runtime type information, for repl *)
+
+type nt =
+  | NTvar of num
+  | NTapp of list nt * typeN
+  | NTfn
+  | NTnum
+  | NTbool
+
+let rec
+t_to_nt a (Tvar x) = match find_index x a 0 with Some n -> NTvar n end
+and
+t_to_nt a (Tapp ts tn) = NTapp (List.map (t_to_nt a) ts) tn
+and
+t_to_nt a (Tfn _ _) = NTfn
+and
+t_to_nt a Tnum = NTnum
+and
+t_to_nt a Tbool = NTbool
+
+type repl_state =
+  <| cmap : Pmap.map conN num
+   ; cpam : Pmap.map typeN (Pmap.map num (conN * list nt))
+   ; code : list bc_inst
+   ; renv : ctenv
+   ; rsz  : num
+   ; next_addr : num
+   ; inst_length : bc_inst -> num
+   |>
 
 let rec
 calculate_labels il m n a [] = (m,n,a)
@@ -1111,6 +1103,8 @@ let rec
 compile_labels rs lbc =
   let (m,n,bc) = calculate_labels rs.inst_length Pmap.empty rs.next_addr [] lbc in
   <| rs with code = replace_labels m [] bc ; next_addr = n |>
+
+(* repl *)
 
 let init_repl_state =
   <| cmap = Pmap.empty
@@ -1169,6 +1163,8 @@ repl_dec rs (Dlet p e) =
 
 let repl_exp s exp = compile_Cexp s None (exp_to_Cexp s.cmap exp)
 
+(* Correctness *)
+
 (* observable values *)
 
 type ov =
@@ -1202,11 +1198,6 @@ and
 inst_arg tvs tt = tt
 
 let rec
-num_to_bool 0 = false
-and
-num_to_bool 1 = true
-
-let rec
 bv_to_ov m NTnum (Number i) = OLit (IntLit i)
 and
 bv_to_ov m NTbool (Number i) = OLit (Bool (num_to_bool (int_to_num i)))
@@ -1221,7 +1212,35 @@ bv_to_ov m (NTapp tvs ty) (Block n vs) =
 and
 bv_to_ov m NTfn (Block 0 _) = OFn
 
-(* convert intermediate to target values *)
+(* source to intermediate values *)
+
+let rec
+v_to_Cv m (Litv l) = CLitv l
+and
+v_to_Cv m (Conv cn vs) =
+  CConv (Pmap.find cn m) (vs_to_Cvs m vs)
+and
+v_to_Cv m (Closure env vn e) =
+  let Cenv = alist_to_fmap (env_to_Cenv m env) in
+  let Ce = exp_to_Cexp m e in
+  let a = fresh_var (free_vars Pmap.empty Ce) in
+  CRecClos Cenv [a] [([vn],INL Ce)] a
+and
+v_to_Cv m (Recclosure env defs vn) =
+  let Cenv = alist_to_fmap (env_to_Cenv m env) in
+  let (fns,Cdefs) = defs_to_Cdefs m defs in
+  CRecClos Cenv fns Cdefs vn
+and
+vs_to_Cvs m [] = []
+and
+vs_to_Cvs m (v::vs) = v_to_Cv m v :: vs_to_Cvs m vs
+and
+env_to_Cenv m [] = []
+and
+env_to_Cenv m ((x,v)::env) =
+  (x, v_to_Cv m v)::(env_to_Cenv m env)
+
+(* intermediate to target values *)
 
 (*
 let rec
@@ -1421,110 +1440,4 @@ and
 Cvs_to_bvs [] = []
 and
 Cvs_to_bvs (v::vs) = Cv_to_bv v :: Cvs_to_bvs vs
-*)
-
-(* Constant folding
-val fold_consts : exp -> exp
-
-let rec
-fold_consts (Raise err) = Raise err
-and
-fold_consts (Val v) = Val (v_fold_consts v)
-and
-fold_consts (Con c es) = Con c (List.map fold_consts es)
-and
-fold_consts (Var vn) = Var vn
-and
-fold_consts (Fun vn e) = Fun vn (fold_consts e)
-and
-fold_consts (App (Opn opn) (Val (Lit (IntLit n1))) (Val (Lit (IntLit n2)))) =
-  Val (Lit (IntLit (opn_lookup opn n1 n2)))
-and
-fold_consts (App (Opb opb) (Val (Lit (IntLit n1))) (Val (Lit (IntLit n2)))) =
-  Val (Lit (Bool (opb_lookup opb n1 n2)))
-and
-fold_consts (App Equality (Val (Lit (IntLit n1))) (Val (Lit (IntLit n2)))) =
-  Val (Lit (Bool (n1 = n2)))
-and
-fold_consts (App Equality (Val (Lit (Bool b1))) (Val (Lit (Bool b2)))) =
-  Val (Lit (Bool (b1 = b2)))
-and
-fold_consts (App op e1 e2) =
-  let e1' = fold_consts e1 in
-  let e2' = fold_consts e2 in
-  if e1 = e1' && e2 = e2' then (App op e1 e2) else
-  fold_consts (App op e1' e2')
-and
-fold_consts (Log And (Val (Lit (Bool true))) e2) =
-  fold_consts e2
-and
-fold_consts (Log Or (Val (Lit (Bool false))) e2) =
-  fold_consts e2
-and
-fold_consts (Log _ (Val (Lit (Bool b))) _) =
-  Val (Lit (Bool b))
-and
-fold_consts (Log log e1 e2) =
-  Log log (fold_consts e1) (fold_consts e2)
-and
-fold_consts (If (Val (Lit (Bool b))) e2 e3) =
-  if b then fold_consts e2 else fold_consts e3
-and
-fold_consts (If e1 e2 e3) =
-  If (fold_consts e1) (fold_consts e2) (fold_consts e3)
-and
-fold_consts (Mat (Val v) pes) =
-  fold_match v pes
-and
-fold_consts (Mat e pes) =
-  Mat (fold_consts e) (match_fold_consts pes)
-and
-fold_consts (Let vn e1 e2) =
-  Let vn (fold_consts e1) (fold_consts e2)
-and
-fold_consts (Letrec funs e) =
-  Letrec (funs_fold_consts funs) (fold_consts e)
-and
-fold_consts (Proj (Val (Conv None vs)) n) =
-  Val (List.nth vs n)
-and
-fold_consts (Proj e n) = Proj (fold_consts e) n
-and
-v_fold_consts (Lit l) = Lit l
-and
-v_fold_consts (Conv None vs) =
-  Conv None (List.map v_fold_consts vs)
-and
-v_fold_consts (Closure envE vn e) =
-  Closure (env_fold_consts envE) vn (fold_consts e)
-and
-v_fold_consts (Recclosure envE funs vn) =
-  Recclosure (env_fold_consts envE) (funs_fold_consts funs) vn
-and
-env_fold_consts [] = []
-and
-env_fold_consts ((vn,v)::env) =
-  ((vn, v_fold_consts v)::env_fold_consts env)
-and
-funs_fold_consts [] = []
-and
-funs_fold_consts ((vn1,vn2,e)::funs) =
-  ((vn1,vn2,fold_consts e)::funs_fold_consts funs)
-and
-match_fold_consts [] = []
-and
-match_fold_consts ((p,e)::pes) =
-  (p, fold_consts e)::match_fold_consts pes
-and
-fold_match v [] = Raise Bind_error
-and
-fold_match (Lit l) ((Plit l',e)::pes) =
-  if l = l' then
-    fold_consts e
-  else
-    fold_match (Lit l) pes
-and
-(* TODO: fold more pattern matching (e.g. to Let)? Need envC? *)
-fold_match v pes =
-  Mat (Val v) (match_fold_consts pes)
 *)
