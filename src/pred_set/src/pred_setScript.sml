@@ -784,6 +784,11 @@ val ABSORPTION =
      FIRST_ASSUM (fn th => fn g => PURE_ONCE_REWRITE_TAC [SYM(SPEC_ALL th)] g)
      THEN DISJ1_TAC THEN REFL_TAC);
 
+val ABSORPTION_RWT = store_thm(
+  "ABSORPTION_RWT",
+  ``!x:'a s. x IN s ==> (x INSERT s = s)``,
+  METIS_TAC [ABSORPTION]);
+
 val INSERT_INSERT =
     store_thm
     ("INSERT_INSERT",
