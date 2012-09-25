@@ -437,12 +437,16 @@ val suple_thm = store_thm(
   ``∀β s:'a ordinal set. s ≼ univ(:'a inf) ∧ β ∈ s ⇒ β ≤ sup s``,
   metis_tac [sup_thm, ordlt_REFL]);
 
+val Unum_cle_Uinf = store_thm(
+  "Unum_cle_Uinf",
+  ``𝕌(:num) ≼ 𝕌(:'a inf)``,
+  simp[cardleq_def] >> qexists_tac `INL` >> simp[INJ_INL]);
+
 val csup_thm = store_thm(
   "csup_thm",
-  ``countable (s : cord set) ==> ∀β. β < sup s ⇔ ∃δ. δ ∈ s ∧ β < δ``,
-  simp[countable_def] >>
-  metis_tac [sup_thm, cardleq_def, unitinf_univnum, cardeq_REFL,
-             CARDEQ_CARDLEQ])
+  ``countable (s : 'a ordinal set) ⇒ ∀β. β < sup s ⇔ ∃δ. δ ∈ s ∧ β < δ``,
+  simp[countable_thm] >>
+  metis_tac [sup_thm, cardleq_def, Unum_cle_Uinf, cardleq_TRANS])
 
 val predimage_sup_thm = store_thm(
   "predimage_sup_thm",
