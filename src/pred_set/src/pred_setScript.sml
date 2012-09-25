@@ -3415,6 +3415,22 @@ val INFINITE_PAIR_UNIV = store_thm(
   FULL_SIMP_TAC (srw_ss()) [CROSS_UNIV]);
 val _ = export_rewrites ["INFINITE_PAIR_UNIV"]
 
+(* sums *)
+
+val SUM_UNIV = store_thm(
+  "SUM_UNIV",
+  ``univ(:'a + 'b) = IMAGE INL univ(:'a) UNION IMAGE INR univ(:'b)``,
+  SRW_TAC[][EQ_IMP_THM, EXTENSION] THEN METIS_TAC [sumTheory.sum_CASES]);
+
+val INJ_INL = store_thm(
+  "INJ_INL",
+  ``(!x. x IN s ==> INL x IN t) ==> INJ INL s t``,
+  SIMP_TAC (srw_ss()) [INJ_DEF])
+val INJ_INR = store_thm(
+  "INJ_INR",
+  ``(!x. x IN s ==> INR x IN t) ==> INJ INR s t``,
+  SIMP_TAC (srw_ss()) [INJ_DEF])
+
 (* ====================================================================== *)
 (* Set complements.                                                       *)
 (* ====================================================================== *)
@@ -4843,6 +4859,18 @@ RWTAC [] THEN
               METIS_TAC []) THEN
 METIS_TAC [bigunion_countable, finite_countable]);
 
+val union_countable_IFF = store_thm(
+  "union_countable_IFF",
+  ``countable (s UNION t) <=> countable s /\ countable t``,
+  METIS_TAC [union_countable, SUBSET_UNION, subset_countable]);
+val _ = export_rewrites ["union_countable_IFF"]
+
+val inj_image_countable_IFF = store_thm(
+  "inj_image_countable_IFF",
+  ``INJ f s (IMAGE f s) ==> (countable (IMAGE f s) <=> countable s)``,
+  SRW_TAC[][EQ_IMP_THM, image_countable] THEN
+  METIS_TAC[countable_def, INJ_COMPOSE]);
+
 val pow_no_surj = Q.store_thm ("pow_no_surj",
 `!s. ~?f. SURJ f s (POW s)`,
 RWTAC [SURJ_DEF, POW_DEF, METIS_PROVE [] ``a \/ b = ~a ==> b``] THEN
@@ -4858,6 +4886,73 @@ RWTAC [countable_surj, infinite_num_inj] THENL
  IMP_RES_TAC inj_surj THEN
      FSTAC [UNIV_NOT_EMPTY] THEN
      METIS_TAC [pow_no_surj, SURJ_COMPOSE]]);
+
+val countable_Usum = store_thm(
+  "countable_Usum",
+  ``countable univ(:'a + 'b) <=>
+      countable univ(:'a) /\ countable univ(:'b)``,
+  SRW_TAC [][SUM_UNIV, inj_image_countable_IFF, INJ_INL, INJ_INR]);
+val _ = export_rewrites ["countable_Usum"]
+
+val countable_EMPTY = store_thm(
+  "countable_EMPTY",
+  ``countable {}``,
+  SIMP_TAC (srw_ss()) [countable_def, INJ_EMPTY]);
+val _ = export_rewrites ["countable_EMPTY"]
+
+val countable_INSERT = store_thm(
+  "countable_INSERT",
+  ``countable (x INSERT s) <=> countable s``,
+  Cases_on `x IN s` THEN1 ASM_SIMP_TAC (srw_ss()) [ABSORPTION_RWT] THEN
+  SIMP_TAC (srw_ss()) [countable_def] THEN EQ_TAC THEN
+  DISCH_THEN (Q.X_CHOOSE_THEN `f` ASSUME_TAC) THENL [
+    Q.EXISTS_TAC `f` THEN MATCH_MP_TAC INJ_SUBSET THEN
+    Q.EXISTS_TAC `x INSERT s` THEN ASM_SIMP_TAC (srw_ss()) [SUBSET_DEF],
+    Q.EXISTS_TAC `\y. if y IN s then f y + 1 else 0` THEN
+    FULL_SIMP_TAC (srw_ss() ++ DNF_ss) [INJ_DEF]
+  ]);
+val _ = export_rewrites ["countable_INSERT"]
+
+val cross_countable_IFF = store_thm(
+  "cross_countable_IFF",
+  ``countable (s CROSS t) <=>
+     (s = {}) \/ (t = {}) \/ countable s /\ countable t``,
+  SIMP_TAC (srw_ss()) [EQ_IMP_THM, DISJ_IMP_THM, cross_countable] THEN
+  STRIP_TAC THEN
+  `(s = {}) \/ ?a s0. (s = a INSERT s0) /\ a NOTIN s0`
+    by METIS_TAC [SET_CASES] THEN1 SRW_TAC [][] THEN
+  `(t = {}) \/ ?b t0. (t = b INSERT t0) /\ b NOTIN t0`
+    by METIS_TAC [SET_CASES] THEN1 SRW_TAC [][] THEN
+  `?fg:'a # 'b -> num.
+     !xy1 xy2. xy1 IN s CROSS t /\ xy2 IN s CROSS t ==>
+     ((fg xy1 = fg xy2) <=> (xy1 = xy2))`
+    by (Q.UNDISCH_THEN `countable (s CROSS t)` MP_TAC THEN
+        SIMP_TAC bool_ss [countable_def, INJ_DEF, IN_UNIV] THEN
+        METIS_TAC[]) THEN
+  `countable s`
+    by (SIMP_TAC (srw_ss()) [countable_def] THEN
+        Q.EXISTS_TAC `\x. fg (x,b)` THEN
+        SIMP_TAC (srw_ss()) [INJ_DEF] THEN
+        MAP_EVERY Q.X_GEN_TAC [`a1`, `a2`] THEN
+        STRIP_TAC THEN
+        FIRST_X_ASSUM (Q.SPECL_THEN [`(a1,b)`, `(a2,b)`] MP_TAC) THEN
+        NTAC 2 (POP_ASSUM MP_TAC) THEN
+        ASM_SIMP_TAC (srw_ss()) []) THEN
+  `countable t`
+    by (SIMP_TAC (srw_ss()) [countable_def] THEN
+        Q.EXISTS_TAC `\y. fg (a,y)` THEN
+        SIMP_TAC (srw_ss()) [INJ_DEF] THEN
+        MAP_EVERY Q.X_GEN_TAC [`b1`, `b2`] THEN
+        STRIP_TAC THEN
+        FIRST_X_ASSUM (Q.SPECL_THEN [`(a,b1)`, `(a,b2)`] MP_TAC) THEN
+        NTAC 2 (POP_ASSUM MP_TAC) THEN
+        ASM_SIMP_TAC (srw_ss()) []) THEN
+  SRW_TAC [][]);
+
+val countable_Uprod = store_thm(
+  "countable_Uprod",
+  ``countable univ(:'a # 'b) <=> countable univ(:'a) /\ countable univ(:'b)``,
+  SIMP_TAC (srw_ss()) [CROSS_UNIV, cross_countable_IFF]);
 
 (* END countability theorems *)
 
