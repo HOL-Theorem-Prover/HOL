@@ -119,14 +119,14 @@ fun inject ty [v] = [v]
      end
   | inject ty [] = raise Match
 
-fun project ty M =
- if is_vartype ty then [M]
- else case dest_thy_type ty
-       of {Tyop="sum",Thy="sum",Args=[lty,rty]} =>
-            mk_comb(mk_const("OUTL", type_of M-->lty),M)
-            :: project rty (mk_comb(mk_const("OUTR", type_of M-->rty),M))
-        |  _  => [M];
 
+fun project [] _ _ = raise ERR "project" "catastrophic invariant failure (eqns was empty!?)"
+  | project [_] ty M = [M]
+  | project (_::ls) ty M = let
+      val (lty,rty) = sumSyntax.dest_sum ty
+      in mk_comb(mk_const("OUTL", type_of M-->lty),M)
+         :: project ls rty (mk_comb(mk_const("OUTR", type_of M-->rty),M))
+      end
 
 (*---------------------------------------------------------------------------*
  * We need a "smart" MP. th1 can be less quantified than th2, so th2 has     *
@@ -901,7 +901,7 @@ fun mutrec thy bindstem eqns =
           mk_comb(mut,beta_conv (mk_comb(assoc f injmap,arg)))
       val L1 = map (mk_lhs_mut_app o dest_comb) L
       val gv_mut_rng = genvar mut_rng
-      val outfns = map (curry mk_abs gv_mut_rng) (project mut_rng gv_mut_rng)
+      val outfns = map (curry mk_abs gv_mut_rng) (project rng_tyl mut_rng gv_mut_rng)
       val ty_outs = zip rng_tyl outfns
       (* now replace each f by \x. outbar(mut(inbar x)) *)
       fun fout f = (f,assoc (#2(dom_rng(type_of f))) ty_outs)
