@@ -338,6 +338,16 @@ val SUBSET_CARDLEQ = store_thm(
   simp[SUBSET_DEF, cardleq_def] >> strip_tac >> qexists_tac `I` >>
   simp[INJ_DEF]);
 
+val IMAGE_cardleq_rwt = store_thm(
+  "IMAGE_cardleq_rwt",
+  ``s ≼ t ⇒ IMAGE f s ≼ t``,
+  metis_tac [cardleq_TRANS, IMAGE_cardleq]);
+
+val countable_thm = store_thm(
+  "countable_thm",
+  ``countable s <=> s ≼ univ(:num)``,
+  simp[countable_def, cardleq_def]);
+
 open wellorderTheory
 val cardleq_dichotomy = store_thm(
   "cardleq_dichotomy",

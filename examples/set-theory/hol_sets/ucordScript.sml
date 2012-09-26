@@ -28,7 +28,7 @@ val ucinf_uncountable = store_thm(
   ``¬countable 𝕌(:'a ucinf)``,
   simp[SUM_UNIV, UNIV_FUN_TO_BOOL, infinite_pow_uncountable]);
 
-val _ = overload_on ("countableOrd", ``\a. countable(preds a)``)
+
 
 (*
 val sup_exists_lemma = prove(

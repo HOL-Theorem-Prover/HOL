@@ -226,11 +226,6 @@ val preds_inj_univ = store_thm(
 
 val _ = type_abbrev("cord", ``:unit ordinal``)
 
-val countable_thm = store_thm(
-  "countable_thm",
-  ``countable s <=> s ≼ univ(:num)``,
-  simp[countable_def, cardleq_def]);
-
 val unitinf_univnum = store_thm(
   "unitinf_univnum",
   ``univ(:unit inf) ≈ univ(:num)``,
@@ -502,6 +497,13 @@ val sup_preds_SUC = store_thm(
   >- (`∃x. α < x ∧ x < α⁺` by metis_tac [] >>
       fs[ordlt_SUC_DISCRETE] >> metis_tac [ordlt_REFL, ordlt_TRANS]) >>
   res_tac >> fs[ordlt_SUC]);
+
+val _ = overload_on ("countableOrd", ``\a. countable(preds a)``)
+
+val preds_ordSUC = store_thm(
+  "preds_ordSUC",
+  ``preds a⁺ = a INSERT preds a``,
+  simp[EXTENSION, ordlt_SUC_DISCRETE] >> metis_tac[]);
 
 val omax_def = Define`
   omax (s : 'a ordinal set) =
@@ -928,15 +930,29 @@ val ordle_CANCEL_ADDR = store_thm(
   simp[ordle_lteq] >> metis_tac[ordlt_trichotomy, ordlt_ZERO]);
 val _ = export_rewrites ["ordle_CANCEL_ADDR"]
 
-val IMAGE_cardleq_rwt = store_thm(
-  "IMAGE_cardleq_rwt",
-  ``s ≼ t ⇒ IMAGE f s ≼ t``,
-  metis_tac [cardleq_TRANS, IMAGE_cardleq]);
-
 val dclose_BIGUNION = store_thm(
   "dclose_BIGUNION",
   ``dclose s = BIGUNION (IMAGE preds s)``,
   dsimp[Once EXTENSION, dclose_def] >> metis_tac[]);
+
+val countableOrds_uncountable = store_thm(
+  "countableOrds_uncountable",
+  ``¬countable { a:'a ordinal | countableOrd a }``,
+  strip_tac >> qabbrev_tac `CO = { a | countableOrd a }` >>
+  `CO ≼ 𝕌(:'a inf)`
+     by metis_tac[countable_thm, cardleq_TRANS, Unum_cle_Uinf] >>
+  `∀β. β < sup CO ⇔ ∃δ. δ ∈ CO ∧ β < δ` by metis_tac [sup_thm] >>
+  `countableOrd (sup CO)`
+    by (`preds (sup CO) = dclose CO` by simp[preds_sup] >>
+        simp[countable_thm, dclose_BIGUNION] >>
+        match_mp_tac CARD_BIGUNION >>
+        asm_simp_tac (srw_ss() ++ DNF_ss) [] >> conj_tac
+        >- (match_mp_tac IMAGE_cardleq_rwt >> fs[countable_thm]) >>
+        simp[Abbr`CO`, countable_thm]) >>
+  `countable (preds (sup CO)⁺)` by simp[preds_ordSUC] >>
+  `(sup CO)⁺ ∈ CO` by simp[Abbr`CO`] >>
+  `sup CO < (sup CO)⁺` by simp[] >>
+  metis_tac [ordlt_REFL]);
 
 val dclose_cardleq_univinf = store_thm(
   "dclose_cardleq_univinf",
