@@ -2135,6 +2135,14 @@ val fmap_rel_FEMPTY = store_thm(
 SRW_TAC[][fmap_rel_def])
 val _ = export_rewrites["fmap_rel_FEMPTY"]
 
+val fmap_rel_FEMPTY2 = store_thm(
+  "fmap_rel_FEMPTY2",
+  ``(fmap_rel R FEMPTY f <=> (f = FEMPTY)) /\
+    (fmap_rel R f FEMPTY <=> (f = FEMPTY))``,
+  SRW_TAC [][fmap_rel_def, FDOM_EQ_EMPTY, EQ_IMP_THM] THEN
+  METIS_TAC [FDOM_EQ_EMPTY]);
+val _ = export_rewrites ["fmap_rel_FEMPTY2"]
+
 val fmap_rel_refl = store_thm(
 "fmap_rel_refl",
 ``(!x. R x x) ==> fmap_rel R x x``,
@@ -2145,6 +2153,25 @@ val fmap_rel_FUNION_rels = store_thm(
 "fmap_rel_FUNION_rels",
 ``fmap_rel R f1 f2 /\ fmap_rel R f3 f4 ==> fmap_rel R (FUNION f1 f3) (FUNION f2 f4)``,
 SRW_TAC[][fmap_rel_def,FUNION_DEF] THEN SRW_TAC[][])
+
+val fmap_rel_FUPDATE_I = store_thm(
+  "fmap_rel_FUPDATE_I",
+  ``fmap_rel R (f1 \\ k) (f2 \\ k) /\ R v1 v2 ==>
+    fmap_rel R (f1 |+ (k,v1)) (f2 |+ (k,v2))``,
+  SRW_TAC[][fmap_rel_def] THENL [
+    Q.PAT_ASSUM `FDOM X DELETE EE = FDOM Y DELETE FF` MP_TAC THEN
+    SRW_TAC [][EXTENSION] THEN METIS_TAC [],
+    SRW_TAC [][],
+    FULL_SIMP_TAC (srw_ss()) [DOMSUB_FAPPLY_THM] THEN
+    SRW_TAC[][FAPPLY_FUPDATE_THM]
+  ]);
+
+val fmap_rel_mono = store_thm(
+  "fmap_rel_mono",
+  ``(!x y. R1 x y ==> R2 x y) ==> fmap_rel R1 f1 f2 ==> fmap_rel R2 f1 f2``,
+  SRW_TAC [][fmap_rel_def]);
+val _ = export_mono "fmap_rel_mono"
+
 
 (*---------------------------------------------------------------------------
      Some helpers for fupdate_NORMALISE_CONV
