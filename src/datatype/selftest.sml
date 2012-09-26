@@ -224,4 +224,13 @@ val _ = List.app pptest
          ("overloaded var.fld with args", ``inv x``, "inv x")
          ]
 
+(* a test for Hol_defn that requires a datatype: *)
+(* mutrec defs with sums *)
+val _ = Hol_datatype `foo = F1 of unit | F2 of foo + num`
+val _ = Defn.Hol_defn "foo"`
+(foo1 (F1 ()) = F1 ()) /\
+(foo1 (F2 sf) = F2 (foo2 sf)) /\
+(foo2 (INR n) = INL (F1 ())) /\
+(foo2 (INL f) = INL (foo1 f))`
+
 val _ = Process.exit Process.success;
