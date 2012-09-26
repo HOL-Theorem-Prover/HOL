@@ -505,6 +505,13 @@ val preds_ordSUC = store_thm(
   ``preds a⁺ = a INSERT preds a``,
   simp[EXTENSION, ordlt_SUC_DISCRETE] >> metis_tac[]);
 
+val countableOrds_dclosed = store_thm(
+  "countableOrds_dclosed",
+  ``α < β ∧ countableOrd β ⇒ countableOrd α``,
+  strip_tac >>
+  `preds α ⊆ preds β` by metis_tac [preds_lt_PSUBSET, PSUBSET_DEF] >>
+  metis_tac[subset_countable]);
+
 val omax_def = Define`
   omax (s : 'a ordinal set) =
     some α. maximal_elements s { (x,y) | x <= y } = {α}

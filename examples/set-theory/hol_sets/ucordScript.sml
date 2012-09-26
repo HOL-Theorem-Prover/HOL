@@ -12,11 +12,7 @@ val _ = new_theory "ucord"
 val _ = type_abbrev("ucinf", ``:('a + (num -> bool)) inf``)
 val _ = type_abbrev("ucord", ``:('a + (num -> bool)) ordinal``)
 
-val countable_cardeq = store_thm(
-  "countable_cardeq",
-  ``s ≈ t ⇒ (countable s ⇔ countable t)``,
-  simp[countable_def, cardeq_def, EQ_IMP_THM] >>
-  metis_tac [INJ_COMPOSE, BIJ_DEF, BIJ_LINV_BIJ]);
+val dsimp = asm_simp_tac(srw_ss() ++ DNF_ss)
 
 val UNIV_FUN_TO_BOOL = store_thm(
   "UNIV_FUN_TO_BOOL",
@@ -28,9 +24,19 @@ val ucinf_uncountable = store_thm(
   ``¬countable 𝕌(:'a ucinf)``,
   simp[SUM_UNIV, UNIV_FUN_TO_BOOL, infinite_pow_uncountable]);
 
+val Unum_cardlt_ucinf = store_thm(
+  "Unum_cardlt_ucinf",
+  ``𝕌(:num) ≺ 𝕌(:'a ucinf)``,
+  simp[cardlt_iso_REFL] >> conj_tac
+  >- (simp[cardleq_def] >> qexists_tac `INL` >> simp[INJ_INL]) >>
+  strip_tac >> imp_res_tac countable_cardeq >>
+  fs[ucinf_uncountable, num_countable])
 
+val Unum_cardle_ucinf = store_thm(
+  "Unum_cardle_ucinf",
+  ``𝕌(:num) ≼ 𝕌(:'a ucinf)``,
+  simp[cardleq_lteq, Unum_cardlt_ucinf]);
 
-(*
 val sup_exists_lemma = prove(
   ``{ a:'a ucord | countableOrd a } ≼ univ(:'a ucinf)``,
   spose_not_then assume_tac >> fs[cardlt_iso_REFL] >>
@@ -58,7 +64,6 @@ val sup_exists_lemma = prove(
           `U0 ≈ 𝕌(:'a ucinf)`
              by metis_tac[finite_countable, FINITE_DELETE, ucinf_uncountable,
                           cardeq_SYM, CARDEQ_INSERT_RWT] >>
-          `𝕌(:'a ucinf) DELETE u ≈ 𝕌(:'a ucinf)` >>
           qsuff_tac `U0 ≼ preds (sup fU)`
           >- metis_tac[CARDEQ_CARDLEQ, cardeq_REFL] >>
           simp[cardleq_def] >> qexists_tac `f` >>
@@ -77,6 +82,25 @@ val sup_exists_lemma = prove(
   >- metis_tac [cardleq_ANTISYM, cardleq_TRANS] >>
   simp[preds_sup, dclose_BIGUNION] >>
   match_mp_tac CARD_BIGUNION >>
-  asm_simp_tac (srw_ss() ++ DNF_ss) []
-*)
+  dsimp[IMAGE_cardleq_rwt] >>
+  dsimp[Abbr`fU`] >>
+  metis_tac[countable_thm, cardleq_TRANS, Unum_cardle_ucinf])
+
+val omega1_def = Define`
+  omega1 : 'a ucord = sup { a | countableOrd a }
+`;
+val _ = overload_on ("ω₁", ``omega1``)
+
+val x_lt_omega1_countable = store_thm(
+  "x_lt_omega1_countable",
+  ``x < ω₁ ⇔ countableOrd x``,
+  simp[omega1_def, sup_thm, sup_exists_lemma, EQ_IMP_THM] >>
+  rpt strip_tac >- metis_tac[countableOrds_dclosed] >>
+  qexists_tac `x⁺` >> simp[preds_ordSUC]);
+
+(* |- ¬countableOrd ω₁ *)
+val omega1_not_countable = save_thm(
+  "omega1_not_countable",
+  x_lt_omega1_countable |> Q.INST[`x` |-> `ω₁`] |> SIMP_RULE (srw_ss()) []);
+
 val _ = export_theory()

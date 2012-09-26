@@ -345,8 +345,14 @@ val IMAGE_cardleq_rwt = store_thm(
 
 val countable_thm = store_thm(
   "countable_thm",
-  ``countable s <=> s ≼ univ(:num)``,
+  ``countable s ⇔ s ≼ univ(:num)``,
   simp[countable_def, cardleq_def]);
+
+val countable_cardeq = store_thm(
+  "countable_cardeq",
+  ``s ≈ t ⇒ (countable s ⇔ countable t)``,
+  simp[countable_def, cardeq_def, EQ_IMP_THM] >>
+  metis_tac [INJ_COMPOSE, BIJ_DEF, BIJ_LINV_BIJ]);
 
 open wellorderTheory
 val cardleq_dichotomy = store_thm(
