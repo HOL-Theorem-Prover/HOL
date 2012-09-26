@@ -87,7 +87,6 @@ num_to_bool 1 = true
 
 (* Syntax *)
 (* (real definitions in CexpTypesTheory) *)
-type (+) 'a 'b = INL of 'a | INR of 'b (* TODO: move to lem *)
 
 (* applicative primitives with bytecode counterparts *)
 type Cprim2 = CAdd | CSub | CMul | CDiv | CMod | CLt | CEq
@@ -106,8 +105,8 @@ type Cexp =
   | CTagEq of Cexp * num
   | CProj of Cexp * num
   | CLet of list string * list Cexp * Cexp
-  | CLetfun of bool * list string * list (list string * ((+) Cexp num)) * Cexp
-  | CFun of list string * ((+) Cexp num)
+  | CLetfun of bool * list string * list (list string * num) * Cexp
+  | CFun of list string * num
   | CCall of Cexp * list Cexp
   | CPrim2 of Cprim2 * Cexp * Cexp
   | CIf of Cexp * Cexp * Cexp
@@ -115,7 +114,7 @@ type Cexp =
 type Cv =
   | CLitv of lit
   | CConv of num * list Cv
-  | CRecClos of Pmap.map string Cv * list string * list (list string * ((+) Cexp num)) * string
+  | CRecClos of Pmap.map string Cv * list string * list (list string * num) * string
 
 (* Semantics *)
 
@@ -167,9 +166,7 @@ free_vars c (CPrim2 _ e1 e2) = free_vars c e1 union free_vars c e2
 and
 free_vars c (CIf e1 e2 e3) = free_vars c e1 union free_vars c e2 union free_vars c e3
 and
-cbod_fvs c (INL e) = free_vars c e
-and
-cbod_fvs c (INR l) = match flookup c l with
+cbod_fvs c l = match flookup c l with
   | None -> {}
   | Some e -> free_vars (domsub c l) e
   end
@@ -205,9 +202,7 @@ free_bods c (CPrim2 _ e1 e2) = free_bods c e1 union free_bods c e2
 and
 free_bods c (CIf e1 e2 e3) = free_bods c e1 union free_bods c e2 union free_bods c e3
 and
-cbod_fbs c (INL e) = {e} union free_bods c e
-and
-cbod_fbs c (INR l) = match flookup c l with
+cbod_fbs c l = match flookup c l with
   | None -> {}
   | Some e -> free_bods (domsub c l) e
   end
@@ -243,9 +238,7 @@ free_labs c (CPrim2 _ e1 e2) = free_labs c e1 union free_labs c e2
 and
 free_labs c (CIf e1 e2 e3) = free_labs c e1 union free_labs c e2 union free_labs c e3
 and
-cbod_fls c (INL e) = free_labs c e
-and
-cbod_fls c (INR l) = {l} union match flookup c l with
+cbod_fls c l = {l} union match flookup c l with
   | None -> {}
   | Some e -> free_labs (domsub c l) e
   end
@@ -366,7 +359,7 @@ and
 forall c env ns defs b r.
 List.length ns = List.length defs &&
 all_distinct ns &&
-(forall xs l. List.mem (xs,INR l) defs --> Pmap.mem l c) &&
+(forall xs l. List.mem (xs,l) defs --> Pmap.mem l c) &&
 Cevaluate c
   (fold_left2
     (fun env' n (xs,cb) ->
@@ -381,7 +374,7 @@ and
 forall c env ns defs b r.
 List.length ns = List.length defs &&
 all_distinct ns &&
-(forall xs l. List.mem (xs,INR l) defs --> Pmap.mem l c) &&
+(forall xs l. List.mem (xs,l) defs --> Pmap.mem l c) &&
 Cevaluate c
   (List.fold_left
      (fun env' n ->
@@ -392,22 +385,23 @@ Cevaluate c
 Cevaluate c env (CLetfun true ns defs b) r
 
 and
-forall c env xs cb.
-(forall l. cb = INR l --> Pmap.mem l c)
+forall c env xs l.
+Pmap.mem l c
 ==>
-Cevaluate c env (CFun xs cb)
-  (Rval (CRecClos env [fresh_var (cbod_fvs c cb)] [(xs,cb)]
-                      (fresh_var (cbod_fvs c cb))))
+Cevaluate c env (CFun xs l)
+  (Rval (CRecClos env [fresh_var (cbod_fvs c l)] [(xs,l)]
+                      (fresh_var (cbod_fvs c l))))
 
 and
-forall c env e es env' ns' defs n i ns cb b vs r.
+forall c env e es env' ns' defs n i ns l b vs r.
 Cevaluate c env e (Rval (CRecClos env' ns' defs n)) &&
 List.length ns' = List.length defs &&
 all_distinct ns' &&
 Cevaluate_list c env es (Rval vs) &&
 find_index n ns' 0 = Some i &&
-List.nth defs i = (ns,cb) &&
-b = match cb with INL b -> b | INR l -> Pmap.find l c end &&
+List.nth defs i = (ns,l) &&
+Pmap.mem l c &&
+b = Pmap.find l c &&
 List.length ns = List.length vs &&
 all_distinct ns &&
 Cevaluate c (extend_rec_env env' env' ns' defs ns vs) b r
@@ -537,33 +531,54 @@ remove_mat_con fk sk v n (p::ps) =
   CLet [v'] [CProj (CVar v) n]
     (remove_mat_vp fk (remove_mat_con fk sk v (n+1) ps) v' p)
 
+type e2c_state =
+  <| e2c_next_label : num
+   ; e2c_code_env : Pmap.map num Cexp
+   (* not modified on return *)
+   ; e2c_cmap : Pmap.map conN num
+   |>
+
+
+let rec e2c_ret s c = (s,c)
+let rec e2c_bump s =
+  (<| s with e2c_next_label = s.e2c_next_label + 1 |>, s.e2c_next_label)
+let rec e2c_add s l b =
+  <| s with e2c_code_env = Pmap.add l b s.e2c_code_env |>
+
 let rec
-remove_mat_var v [] = CRaise Bind_error
+remove_mat_var s v [] = e2c_ret s ( CRaise Bind_error )
 and
-remove_mat_var v ((p,sk)::pes) =
+remove_mat_var s v ((p,sk)::pes) =
   let fk = fresh_var ({v} union (free_vars Pmap.empty sk) union (Cpat_vars p)) in
-  CLetfun false [fk] [([],(INL (remove_mat_var v pes)))]
-    (remove_mat_vp fk sk v p)
+  let (s,n) = e2c_bump s in
+  let (s,pes) = remove_mat_var s v pes in
+  let s = e2c_add s n pes in
+  e2c_ret s ( CLetfun false [fk] [([],n)] (remove_mat_vp fk sk v p) )
 
 let Cpes_vars =
   List.fold_left (fun s (p,e) -> s union Cpat_vars p union free_vars Pmap.empty e) {}
 
 let rec
-exp_to_Cexp m (Raise err) = CRaise err
+exp_to_Cexp s (Raise err) = e2c_ret s (CRaise err)
 and
-exp_to_Cexp m (Lit l) = CLit l
+exp_to_Cexp s (Lit l) = e2c_ret s (CLit l)
 and
-exp_to_Cexp m (Con cn es) =
-  CCon (Pmap.find cn m) (exps_to_Cexps m es)
+exp_to_Cexp s (Con cn es) =
+  let (s,es) = exps_to_Cexps s es in
+  e2c_ret s (CCon (Pmap.find cn s.e2c_cmap) es)
 and
-exp_to_Cexp m (Var vn) = CVar vn
+exp_to_Cexp s (Var vn) = e2c_ret s (CVar vn)
 and
-exp_to_Cexp m (Fun vn e) =
-  CFun [vn] (INL (exp_to_Cexp m e))
+exp_to_Cexp s (Fun vn e) =
+  let (s,n) = e2c_bump s in
+  let (s,e) = exp_to_Cexp s e in
+  let s = e2c_add s n e in
+  e2c_ret s (CFun [vn] n)
 and
-exp_to_Cexp m (App (Opn opn) e1 e2) =
-  let Ce1 = exp_to_Cexp m e1 in
-  let Ce2 = exp_to_Cexp m e2 in
+exp_to_Cexp s (App (Opn opn) e1 e2) =
+  let (s,Ce1) = exp_to_Cexp s e1 in
+  let (s,Ce2) = exp_to_Cexp s e2 in
+  e2c_ret s (
   CPrim2 (match opn with
           | Plus   -> CAdd
           | Minus  -> CSub
@@ -571,168 +586,133 @@ exp_to_Cexp m (App (Opn opn) e1 e2) =
           | Divide -> CDiv
           | Modulo -> CMod
           end)
-  Ce1 Ce2
+  Ce1 Ce2 )
 and
-exp_to_Cexp m (App (Opb opb) e1 e2) =
-  let Ce1 = exp_to_Cexp m e1 in
-  let Ce2 = exp_to_Cexp m e2 in
-  match opb with
+exp_to_Cexp s (App (Opb opb) e1 e2) =
+  let (s,Ce1) = exp_to_Cexp s e1 in
+  let (s,Ce2) = exp_to_Cexp s e2 in
+  e2c_ret s ( match opb with
   | Lt -> CPrim2 CLt Ce1 Ce2
   | Leq -> CPrim2 CLt (CPrim2 CSub Ce1 Ce2) (CLit (IntLit i1))
   | opb ->
-      let x1 = fresh_var (free_vars Pmap.empty Ce2) in
+      let x1 = fresh_var (free_vars s.e2c_code_env Ce2) in
       let x2 = fresh_var {x1} in
       CLet [x1;x2] [Ce1;Ce2]
         match opb with
         | Gt ->  CPrim2 CLt (CVar x2) (CVar x1)
         | Geq -> CPrim2 CLt (CPrim2 CSub (CVar x2) (CVar x1)) (CLit (IntLit i1))
         end
-  end
+  end )
 and
-exp_to_Cexp m (App Equality e1 e2) =
-  let Ce1 = exp_to_Cexp m e1 in
-  let Ce2 = exp_to_Cexp m e2 in
-  CPrim2 CEq Ce1 Ce2
+exp_to_Cexp s (App Equality e1 e2) =
+  let (s,Ce1) = exp_to_Cexp s e1 in
+  let (s,Ce2) = exp_to_Cexp s e2 in
+  e2c_ret s ( CPrim2 CEq Ce1 Ce2 )
 and
-exp_to_Cexp m (App Opapp e1 e2) =
-  let Ce1 = exp_to_Cexp m e1 in
-  let Ce2 = exp_to_Cexp m e2 in
-  CCall Ce1 [Ce2]
+exp_to_Cexp s (App Opapp e1 e2) =
+  let (s,Ce1) = exp_to_Cexp s e1 in
+  let (s,Ce2) = exp_to_Cexp s e2 in
+  e2c_ret s ( CCall Ce1 [Ce2] )
 and
-exp_to_Cexp m (Log log e1 e2) =
-  let Ce1 = exp_to_Cexp m e1 in
-  let Ce2 = exp_to_Cexp m e2 in
-  (match log with
+exp_to_Cexp s (Log log e1 e2) =
+  let (s,Ce1) = exp_to_Cexp s e1 in
+  let (s,Ce2) = exp_to_Cexp s e2 in
+  e2c_ret s (match log with
    | And -> CIf Ce1 Ce2 (CLit (Bool false))
    | Or  -> CIf Ce1 (CLit (Bool true)) Ce2
    end)
 and
-exp_to_Cexp m (If e1 e2 e3) =
-  let Ce1 = exp_to_Cexp m e1 in
-  let Ce2 = exp_to_Cexp m e2 in
-  let Ce3 = exp_to_Cexp m e3 in
-  CIf Ce1 Ce2 Ce3
+exp_to_Cexp s (If e1 e2 e3) =
+  let (s,Ce1) = exp_to_Cexp s e1 in
+  let (s,Ce2) = exp_to_Cexp s e2 in
+  let (s,Ce3) = exp_to_Cexp s e3 in
+  e2c_ret s ( CIf Ce1 Ce2 Ce3 )
 and
-exp_to_Cexp m (Mat e pes) =
-  let Cpes = pes_to_Cpes m pes in
+exp_to_Cexp s (Mat e pes) =
+  let (s,Ce) = exp_to_Cexp s e in
+  let (s,Cpes) = pes_to_Cpes s pes in
   let v = fresh_var (Cpes_vars Cpes) in
-  let Ce = exp_to_Cexp m e in
-  CLet [v] [Ce] (remove_mat_var v Cpes)
+  let (s,Cpes) = remove_mat_var s v Cpes in
+  e2c_ret s ( CLet [v] [Ce] Cpes )
 and
-exp_to_Cexp m (Let vn e b) =
-  let Ce = exp_to_Cexp m e in
-  let Cb = exp_to_Cexp m b in
-  CLet [vn] [Ce] Cb
+exp_to_Cexp s (Let vn e b) =
+  let (s,Ce) = exp_to_Cexp s e in
+  let (s,Cb) = exp_to_Cexp s b in
+  e2c_ret s ( CLet [vn] [Ce] Cb )
 and
-exp_to_Cexp m (Letrec defs b) =
-  let (fns,Cdefs) = defs_to_Cdefs m defs in
-  let Cb = exp_to_Cexp m b in
-  CLetfun true fns Cdefs Cb
+exp_to_Cexp s (Letrec defs b) =
+  let (s,fns,Cdefs) = defs_to_Cdefs s defs in
+  let (s,Cb) = exp_to_Cexp s b in
+  e2c_ret s ( CLetfun true fns Cdefs Cb )
 and
-defs_to_Cdefs m [] = ([],[])
+defs_to_Cdefs s [] = (s,[],[])
 and
-defs_to_Cdefs m ((d,vn,e)::defs) =
-  let Ce = exp_to_Cexp m e in
-  let (fns,Cdefs) = defs_to_Cdefs m defs in
-  (d::fns,([vn],INL Ce)::Cdefs)
+defs_to_Cdefs s ((d,vn,e)::defs) =
+  let (s,n) = e2c_bump s in
+  let (s,Ce) = exp_to_Cexp s e in
+  let s = e2c_add s n Ce in
+  let (s,fns,Cdefs) = defs_to_Cdefs s defs in
+  (s,d::fns,([vn],n)::Cdefs)
 and
-pes_to_Cpes m [] = []
+pes_to_Cpes s [] = (s,[])
 and
-pes_to_Cpes m ((p,e)::pes) =
-  let (_pvs,Cp) = pat_to_Cpat m [] p in
-  let Ce = exp_to_Cexp m e in
-  let Cpes = pes_to_Cpes m pes in
-  (Cp,Ce)::Cpes
+pes_to_Cpes s ((p,e)::pes) =
+  let (_pvs,Cp) = pat_to_Cpat s.e2c_cmap [] p in
+  let (s,Ce) = exp_to_Cexp s e in
+  let (s,Cpes) = pes_to_Cpes s pes in
+  (s,(Cp,Ce)::Cpes)
 and
-exps_to_Cexps s [] = []
+exps_to_Cexps s [] = (s,[])
 and
-exps_to_Cexps m (e::es) =
-  exp_to_Cexp m e :: exps_to_Cexps m es
-
-(* pull closure bodies into code environment *)
-
-type label_closures_state =
-  <| lnext_label: num
-   ; ldefs: list (list string * list (list string * Cexp * num))
-   ; lbods: Pmap.map num Cexp
-   |>
-
-let rec
-label_closures s (CDecl xs) = (s,CDecl xs)
-and
-label_closures s (CRaise err) = (s,CRaise err)
-and
-label_closures s (CVar x) = (s,CVar x)
-and
-label_closures s (CLit l) = (s,CLit l)
-and
-label_closures s (CCon cn es) =
-  let (s,es) = label_closures_list s es in
-  (s,CCon cn es)
-and
-label_closures s (CTagEq e n) =
-  let (s,e) = label_closures s e in
-  (s,CTagEq e n)
-and
-label_closures s (CProj e n) =
-  let (s,e) = label_closures s e in
-  (s,CProj e n)
-and
-label_closures s (CLet xs es e) =
-  let (s,es) = label_closures_list s es in
-  let (s,e) = label_closures s e in
-  (s,CLet xs es e)
-and
-label_closures s (CLetfun p ns defs e) =
-  let (s,defs) = labelise s (if p then ns else []) [] [] defs in
-  let (s,e) = label_closures s e in
-  (s,CLetfun p ns defs e)
-and
-label_closures s (CFun xs cb) =
-  let (s,defs) = labelise s [] [] [] [(xs,cb)] in
-  let (xs,cb) = List.nth defs 0 in
-  (s,CFun xs cb)
-and
-label_closures s (CCall e es) =
-  let (s,e) = label_closures s e in
-  let (s,es) = label_closures_list s es in
-  (s,CCall e es)
-and
-label_closures s (CPrim2 op e1 e2) =
-  let (s,e1) = label_closures s e1 in
-  let (s,e2) = label_closures s e2 in
-  (s, CPrim2 op e1 e2)
-and
-label_closures s (CIf e1 e2 e3) =
-  let (s,e1) = label_closures s e1 in
-  let (s,e2) = label_closures s e2 in
-  let (s,e3) = label_closures s e3 in
-  (s, CIf e1 e2 e3)
-and
-label_closures_list s [] = (s,[])
-and
-label_closures_list s (e::es) =
-  let (s,e) = label_closures s e in
-  let (s,es) = label_closures_list s es in
+exps_to_Cexps s (e::es) =
+  let (s,e) = exp_to_Cexp s e in
+  let (s,es) = exps_to_Cexps s es in
   (s,e::es)
+
+(* extract syntactic defs, to assist code_env construction *)
+
+let rec (* including many uneta because Hol_defn sucks *)
+calculate_ldefs c ls (CDecl _) = ls
 and
-labelise s ns ls ds [] =
-  ( <| s with ldefs = (ns, List.rev ls) :: s.ldefs |>
-  , List.rev ds)
+calculate_ldefs c ls (CRaise _) = ls
 and
-labelise s ns ls ds ((xs,INR a)::defs) =
-  labelise s ns ls ((xs,INR a)::ds) defs
+calculate_ldefs c ls (CVar _) = ls
 and
-labelise s ns ls ds ((xs,INL b)::defs) =
-  let (s,b) = label_closures s b in
-  labelise
-    (<|s with
-        lnext_label = s.lnext_label+1
-      ; lbods = Pmap.add s.lnext_label b s.lbods |>)
-    ns
-    ((xs,b,s.lnext_label)::ls)
-    ((xs,INR s.lnext_label)::ds)
+calculate_ldefs c ls (CLit _) = ls
+and
+calculate_ldefs c ls (CCon _ es) =
+  List.fold_left (fun ls e -> calculate_ldefs c ls e) ls es
+and
+calculate_ldefs c ls (CTagEq e _) = calculate_ldefs c ls e
+and
+calculate_ldefs c ls (CProj e _) = calculate_ldefs c ls e
+and
+calculate_ldefs c ls (CLet _ es e) =
+  List.fold_left (fun ls e -> calculate_ldefs c ls e) (calculate_ldefs c ls e) es
+and
+calculate_ldefs c ls (CLetfun p ns defs e) =
+  List.fold_left
+    (fun ls (_,l) ->
+      match flookup c l with None -> [] (* should not happen *)
+      | Some e -> calculate_ldefs (domsub c l) ls e
+      end)
+    ((if p then ns else [],defs)
+     ::calculate_ldefs c ls e)
     defs
+and
+calculate_ldefs c ls (CFun xs l) =
+  match flookup c l with None -> [] (* should not happen *)
+  | Some e -> calculate_ldefs (domsub c l) (([],[(xs,l)])::ls) e
+  end
+and
+calculate_ldefs c ls (CCall e es) =
+  List.fold_left (fun ls e -> calculate_ldefs c ls e) (calculate_ldefs c ls e) es
+and
+calculate_ldefs c ls (CPrim2 _ e1 e2) =
+  calculate_ldefs c (calculate_ldefs c ls e1) e2
+and
+calculate_ldefs c ls (CIf e1 e2 e3) =
+  calculate_ldefs c (calculate_ldefs c (calculate_ldefs c ls e1) e2) e3
 
 (* intermediate expressions to bytecode *)
 
@@ -814,7 +794,7 @@ compile_closures nz s defs =
   let nk = List.length defs in
   let (s,labs) = get_labels nk s in
   let (s,k,ecs) = List.fold_left
-    (fun (s,k,ecs) (xs,INR l) ->
+    (fun (s,k,ecs) (xs,l) ->
       let lab = List.nth labs k in
       let s = incsz (
         emit s [Call (Lab lab);
@@ -1080,10 +1060,10 @@ calculate_ecs c =
   List.fold_left
     (fun s (ns,defs) ->
       let (s,k) = List.fold_left
-        (fun (s,k) (xs,e,l) ->
+        (fun (s,k) (xs,l) ->
           let az = List.length xs in
           let (n,env,(ecl,ec)) =
-            Set.fold (bind_fv ns xs az k) (free_vars c e) (0,Pmap.empty,(0,[])) in
+            Set.fold (bind_fv ns xs az k) (free_vars c (Pmap.find l c)) (0,Pmap.empty,(0,[])) in
           let s = <| s with
                      env_azs = Pmap.add l (env,az) s.env_azs
                    ; ecs = Pmap.add l (ecl,ec) s.ecs
@@ -1093,13 +1073,13 @@ calculate_ecs c =
       s)
 
 let rec
-cce_aux s (ns,defs) =
+cce_aux c s (ns,defs) =
   let (s,k) = List.fold_left
-    (fun (s,k) (xs,e,l) ->
+    (fun (s,k) (xs,l) ->
       let (env,az) = Pmap.find l s.env_azs in
       let s = emit s [Label l] in
       let s' = <| s with env = env; sz = 0; tail = TCTail az 0 |> in
-      let s' = compile s' e in
+      let s' = compile s' (Pmap.find l c) in
       let n = match s'.tail with TCNonTail -> 1 | TCTail j k -> k+1 end in
       let s' = emit s' [Stack (Pops n);
                         Stack (Load 1);
@@ -1112,11 +1092,11 @@ cce_aux s (ns,defs) =
   s
 
 let rec
-compile_code_env s ldefs =
+compile_code_env c s ldefs =
   let (s,ls) = get_labels 1 s in
   let l = List.nth ls 0 in
   let s = emit s [Jump (Lab l)] in
-  let s = List.fold_left cce_aux s ldefs in
+  let s = List.fold_left (cce_aux c) s ldefs in
   emit s [Label l]
 
 (* replace labels in bytecode with addresses *)
@@ -1192,15 +1172,15 @@ let init_repl_state =
    ; inst_length = fun i -> 0
    |>
 
-let compile_Cexp rs decl Ce =
-  let s = <| lnext_label = 0; ldefs = []; lbods = Pmap.empty |> in
-  let (s,Ce) = label_closures s Ce in
+let compile_Cexp rs decl s Ce =
+  let c = s.e2c_code_env in
+  let ldefs = calculate_ldefs c [] Ce in
   let cs = <| env = rs.renv; sz = rs.rsz
             ; ecs = Pmap.empty; env_azs = Pmap.empty
-            ; out = []; next_label = s.lnext_label
+            ; out = []; next_label = s.e2c_next_label
             ; tail = TCNonTail; decl = decl |> in
-  let cs = calculate_ecs s.lbods cs s.ldefs in
-  let cs = compile_code_env cs s.ldefs in
+  let cs = calculate_ecs c cs ldefs in
+  let cs = compile_code_env c cs ldefs in
   let cs = <| cs with env_azs = Pmap.empty |> in
   let cs = compile cs Ce in
   let rs = match cs.decl with
@@ -1217,6 +1197,12 @@ number_constructors a (cm,cw) n ((c,tys)::cs) =
   let cw' = Pmap.add n (c, List.map (t_to_nt a) tys) cw in
   number_constructors a (cm',cw') (n+1) cs
 
+let mk_e2c_state rs =
+  <| e2c_next_label = 0
+   ; e2c_code_env = Pmap.empty
+   ; e2c_cmap = rs.cmap
+   |>
+
 let rec
 repl_dec rs (Dtype []) = <| rs with code = [] |>
 and
@@ -1225,19 +1211,25 @@ repl_dec rs (Dtype ((a,ty,cs)::ts)) =
   repl_dec (<| rs with cmap = cm; cpam = Pmap.add ty cw rs.cpam |>) (Dtype ts) (* parens: Lem sucks *)
 and
 repl_dec rs (Dletrec defs) =
-  let (fns,Cdefs) = defs_to_Cdefs rs.cmap defs in
+  let s = mk_e2c_state rs in
+  let (s,fns,Cdefs) = defs_to_Cdefs s defs in
   let decl = Some(rs.renv,rs.rsz) in
-  compile_Cexp rs decl (CLetfun true fns Cdefs (CDecl fns))
+  compile_Cexp rs decl s (CLetfun true fns Cdefs (CDecl fns))
 and
 repl_dec rs (Dlet p e) =
   let (pvs,Cp) = pat_to_Cpat rs.cmap [] p in
   let Cpes = [(Cp,CDecl pvs)] in
   let vn = fresh_var (Cpes_vars Cpes) in
-  let Ce = exp_to_Cexp rs.cmap e in
+  let s = mk_e2c_state rs in
+  let (s,Ce) = exp_to_Cexp s e in
+  let (s,Cpes) = remove_mat_var s vn Cpes in
   let decl = Some(rs.renv,rs.rsz) in
-  compile_Cexp rs decl (CLet [vn] [Ce] (remove_mat_var vn Cpes))
+  compile_Cexp rs decl s (CLet [vn] [Ce] Cpes)
 
-let repl_exp s exp = compile_Cexp s None (exp_to_Cexp s.cmap exp)
+let repl_exp rs exp =
+  let s = mk_e2c_state rs in
+  let (s,Ce) = exp_to_Cexp s exp in
+  compile_Cexp rs None s Ce
 
 (* Correctness *)
 
@@ -1290,14 +1282,15 @@ bv_to_ov m NTfn (Block 0 _) = OFn
 
 (* source to intermediate values *)
 
+(*
 let rec
-v_to_Cv m (Litv l) = CLitv l
+v_to_Cv s (Litv l) = CLitv l
 and
-v_to_Cv m (Conv cn vs) =
-  CConv (Pmap.find cn m) (vs_to_Cvs m vs)
+v_to_Cv s (Conv cn vs) =
+  CConv (Pmap.find cn s.e2c_cmap) (vs_to_Cvs s vs)
 and
-v_to_Cv m (Closure env vn e) =
-  let Cenv = alist_to_fmap (env_to_Cenv m env) in
+v_to_Cv s (Closure env vn e) =
+  let Cenv = alist_to_fmap (env_to_Cenv s. env) in
   let Ce = exp_to_Cexp m e in
   let a = fresh_var (free_vars Pmap.empty Ce) in
   CRecClos Cenv [a] [([vn],INL Ce)] a
@@ -1315,6 +1308,7 @@ env_to_Cenv m [] = []
 and
 env_to_Cenv m ((x,v)::env) =
   (x, v_to_Cv m v)::(env_to_Cenv m env)
+*)
 
 (* intermediate to target values *)
 

@@ -146,6 +146,7 @@ val e26 = ``Mat (Con "Cons" [Lit (IntLit 2);
               Lit (IntLit 5))]``
 val [Number i] = run_decs_exp([listd],e26)
 val SOME 5 = intML.toInt i;
+(*
 val e27 =
 CLetfun(false,["1"],[([],sumML.INL (CRaise Bind_error))],
 CIf(CPrim2(CEq,CLit (IntLit i0),CLit (IntLit i0)),
@@ -157,6 +158,7 @@ val bs = add_code rs bs
 val bs = bc_eval bs
 val [Number i] = bc_state_stack bs
 val SOME 1 = intML.toInt i;
+*)
 val e28 = ``
 Letrec [("fac",("n",
   If (App Equality (Var "n") (Lit (IntLit 0)))

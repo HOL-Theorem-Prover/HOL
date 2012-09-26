@@ -43,7 +43,7 @@ val data = map
   , datatype_ctbind
   , datatype_cebind
   , datatype_call_context
-  , datatype_label_closures_state
+  , datatype_e2c_state
   , datatype_compiler_state
   , datatype_nt
   , datatype_repl_state
@@ -69,7 +69,11 @@ val defs = map EmitML.DEFN
 , emit_ec_def
 , bind_fv_def
 , num_fold_def
-, label_closures_def
+, e2c_ret_def
+, e2c_bump_def
+, e2c_add_def
+, calculate_ldefs_def
+, mk_e2c_state_def
 , compile_closures_def
 , underscore_rule compile_def
 , calculate_ecs_def
