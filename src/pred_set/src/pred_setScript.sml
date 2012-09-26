@@ -4237,6 +4237,11 @@ val IN_POW = Q.store_thm
  `!set e. e IN POW set = e SUBSET set`,
  RW_TAC bool_ss [POW_DEF,GSPECIFICATION]);
 
+val UNIV_FUN_TO_BOOL = store_thm(
+  "UNIV_FUN_TO_BOOL",
+  ``univ(:'a -> bool) = POW univ(:'a)``,
+  SIMP_TAC (srw_ss()) [EXTENSION, IN_POW]);
+
 val SUBSET_POW = Q.store_thm
 ("SUBSET_POW",
  `!s1 s2. s1 SUBSET s2 ==> (POW s1) SUBSET (POW s2)`,

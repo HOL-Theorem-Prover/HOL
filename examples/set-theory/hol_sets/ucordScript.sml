@@ -14,11 +14,6 @@ val _ = type_abbrev("ucord", ``:('a + (num -> bool)) ordinal``)
 
 val dsimp = asm_simp_tac(srw_ss() ++ DNF_ss)
 
-val UNIV_FUN_TO_BOOL = store_thm(
-  "UNIV_FUN_TO_BOOL",
-  ``univ(:'a -> bool) = POW univ(:'a)``,
-  SIMP_TAC (srw_ss()) [EXTENSION, IN_POW]);
-
 val ucinf_uncountable = store_thm(
   "ucinf_uncountable",
   ``¬countable 𝕌(:'a ucinf)``,
