@@ -40,6 +40,7 @@ val _ = new_theory "ordinalNotation";
 (* Raw syntax of ordinals                                                    *)
 (*---------------------------------------------------------------------------*)
 
+val _ = set_fixity "=" (Infix(NONASSOC, 100))
 val _ = Hol_datatype
   `osyntax = End of num
            | Plus of osyntax => num => osyntax`;
@@ -79,8 +80,8 @@ val ord_ss = arith_ss ++ rewrites
    [expt_def, coeff_def, finp_def, tail_def, rank_def, GSYM IMP_DISJ_THM];
 
 val ordModel_def = Define`
-  ordModel (End n) = &n ∧
-  ordModel (Plus e c t) = &c * ω ** ordModel e + ordModel t
+  (ordModel (End n) = &n) ∧
+  (ordModel (Plus e c t) = &c * ω ** ordModel e + ordModel t)
 `
 
 val _ = add_rule {fixity = Closefix, term_name = "ordModel",
@@ -722,7 +723,7 @@ val ord_less_def =
 
 val osyntax_EQ_0 = store_thm(
   "osyntax_EQ_0",
-  ``∀a. is_ord a ⇒ ⟦a⟧ = 0 ⇒ a = End 0``,
+  ``∀a. is_ord a ⇒ (⟦a⟧ = 0) ⇒ (a = End 0)``,
   Induct_on `is_ord` THEN SRW_TAC [][ordModel_def] THEN
   `k ≠ 0` by DECIDE_TAC THEN SRW_TAC [][ordEXP_EQ_0]);
 
