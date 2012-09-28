@@ -1,7 +1,7 @@
 
 open HolKernel Parse boolLib bossLib; val _ = new_theory "milawa_ordinal";
 
-open lisp_sexpTheory arithmeticTheory pred_setTheory ordinalTheory;
+open lisp_sexpTheory arithmeticTheory pred_setTheory ordinalNotationTheory;
 
 infix \\
 val op \\ = op THEN;
@@ -159,4 +159,3 @@ val WF_ORD_LESS = store_thm("WF_ORD_LESS",
   \\ CCONTR_TAC \\ FULL_SIMP_TAC std_ss [ord2sexp_sexp2ord]);
 
 val _ = export_theory();
-
