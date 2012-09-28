@@ -119,7 +119,7 @@ examples/muddy/muddyC/Makefile
 examples/muddy/muddyC/buddy/src/libbdd.a
 examples/muddy/muddyC/muddy.so
 
-examples/ordinal/ordinalML.*
+examples/set-theory/hol_sets/ordinalML.*
 
 examples/computability/lambda/computability-heap
 

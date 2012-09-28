@@ -1,0 +1,40 @@
+The theories in this directory:
+
+wellorder:
+  A basic theory of well-orders. Includes an ordering relation on
+  well-orders, which is itself shown to be a well-order. Also proves
+  that every set can be well-ordered (using Zorn's lemma from
+  set_relationTheory).
+
+cardinal:
+  A basic theory of the cardinality partial order and equivalence
+  relations (≼ and ≈ respectively). Thus includes a proof that ≼ is
+  anti-symmetric (Schroder-Bernstein). Also the important result that
+  A × A ≈ A (another use of Zorn's Lemma).
+
+ordinal:
+  By quotienting the wellorders, derive a type of ordinal numbers
+  (parameterised by the underlying type over which the wellorders are
+  constructed). Show that this includes a copy of the natural numbers
+  and a supremum operation. The latter is not always well-defined (in
+  particular, you can't take a supremum of the whole type and expect
+  to get back a new ordinal. Derive the standard arithmetic
+  operations, define constants such as ω and ε₀, and show that all
+  ordinals have a standard "polynomial" representation.
+
+ucord:
+  Show the existence of uncountable ordinals if the underlying type is
+  big enough (itself uncountable).
+
+ordinalNotation:
+  A development of a concrete notation for ordinals up to ε₀. Based on
+  the paper
+
+     "Wellfounded induction on the ordinals up to e0".
+     Matt Kaufmann and Konrad Slind,
+     TPHOLs 2007,
+     LNCS 4732
+     URL: http://dx.doi.org/10.1007/978-3-540-74591-4_22
+
+  There is a proof of the same results in the examples/acl2/ml
+  directory, but based in a theory of s-expressions.

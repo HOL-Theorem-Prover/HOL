@@ -1,5 +1,3 @@
-structure ordinalScript =
-struct
 
 (* Interactive:
 quietdec := true;
@@ -34,7 +32,7 @@ val meter = Count.mk_meter();
 (* Start the theory                                                          *)
 (*---------------------------------------------------------------------------*)
 
-val _ = new_theory "ordinal";
+val _ = new_theory "ordinalNotation";
 
 (*---------------------------------------------------------------------------*)
 (* Raw syntax of ordinals                                                    *)
@@ -816,5 +814,3 @@ val _ =
       DEFN ord_add_def,
       DEFN ord_sub_def,
       DEFN ord_mult_def]);
-
-end
