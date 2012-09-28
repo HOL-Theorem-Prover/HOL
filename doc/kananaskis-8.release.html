@@ -38,9 +38,9 @@ In the latter, it was already permitted to use constant names in the position of
 There is one exception: if the formal name is the name of a constructor, then it has to be read as a constant rather than a bound name in order to allow ML-style pattern-matching.
 So, the following now works:
 <pre>
-    &gt; Define`x = 1`;
+    &gt; Define`x = (2,3)`;
     Definition has been stored under "x_def"
-    val it = |- x = 1
+    val it = |- x = (2,3)
 
     &gt; Define`f x = x + 1`;
     Definition has been stored under "f_def"
