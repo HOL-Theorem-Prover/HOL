@@ -9,7 +9,8 @@ wellorder:
 cardinal:
   A basic theory of the cardinality partial order and equivalence
   relations (≼ and ≈ respectively). Thus includes a proof that ≼ is
-  anti-symmetric (Schroder-Bernstein). Also the important result that
+  anti-symmetric (Schroder-Bernstein). Also, totality of ≼ (from
+  well-orderability of all sets). Finally, the important result that
   A × A ≈ A (another use of Zorn's Lemma).
 
 ordinal:
@@ -18,7 +19,7 @@ ordinal:
   constructed). Show that this includes a copy of the natural numbers
   and a supremum operation. The latter is not always well-defined (in
   particular, you can't take a supremum of the whole type and expect
-  to get back a new ordinal. Derive the standard arithmetic
+  to get back a new ordinal). Derive the standard arithmetic
   operations, define constants such as ω and ε₀, and show that all
   ordinals have a standard "polynomial" representation.
 
@@ -38,3 +39,6 @@ ordinalNotation:
 
   There is a proof of the same results in the examples/acl2/ml
   directory, but based in a theory of s-expressions.
+
+  Some minor additions to this theory show some of the connection with
+  the other presentation of ordinals.

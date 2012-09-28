@@ -7,7 +7,7 @@ open numTheory prim_recTheory arithmeticTheory IndDefLib EmitML
 quietdec := false;
 *)
 
-open HolKernel boolLib bossLib IndDefLib EmitML
+open HolKernel Parse boolLib bossLib IndDefLib EmitML
      numTheory prim_recTheory arithmeticTheory basis_emitTheory;
 
 val _ = numLib.prefer_num();
@@ -27,6 +27,8 @@ fun DROP_ASSUMS_TAC [] (asl,c) = REPEAT (WEAKEN_TAC (K true)) (asl,c)
 fun DROP_ASSUM n = DROP_ASSUMS_TAC [n];
 
 val meter = Count.mk_meter();
+
+open ordinalTheory
 
 (*---------------------------------------------------------------------------*)
 (* Start the theory                                                          *)
@@ -76,6 +78,16 @@ val rank_def =
 val ord_ss = arith_ss ++ rewrites
    [expt_def, coeff_def, finp_def, tail_def, rank_def, GSYM IMP_DISJ_THM];
 
+val ordModel_def = Define`
+  ordModel (End n) = &n ∧
+  ordModel (Plus e c t) = &c * ω ** ordModel e + ordModel t
+`
+
+val _ = add_rule {fixity = Closefix, term_name = "ordModel",
+                  block_style = (AroundEachPhrase, (PP.CONSISTENT,2)),
+                  paren_style = OnlyIfNecessary,
+                  pp_elements = [TOK "⟦", TM, TOK "⟧"]}
+
 (*---------------------------------------------------------------------------*)
 (* Definition of less-than on osyntax                                        *)
 (*---------------------------------------------------------------------------*)
@@ -90,9 +102,8 @@ val (oless_rules, oless_ind, oless_cases) =
   (!e1 k1 t1 e2 k2 t2. (e1=e2) /\ (k1=k2) /\ oless t1 t2
                         ==> oless (Plus e1 k1 t1) (Plus e2 k2 t2))`;
 
-val oless_strong_ind = derive_strong_induction (oless_rules,oless_ind);
-
-val _ = save_thm ("oless_strong_ind",oless_strong_ind);
+val oless_strong_ind =
+    save_thm ("oless_strong_ind",theorem "oless_strongind");
 
 val oless_End_End = Q.store_thm
 ("oless_End_End",
@@ -105,10 +116,10 @@ val oless_End_End = Q.store_thm
 
 val oless_equations = Q.store_thm
 ("oless_equations",
- `(oless (End m) (End n) = m < n) /\
-  (oless (End m) (Plus e k t) = T) /\
-  (oless (Plus e k t) (End m) = F) /\
-  (oless (Plus e1 k1 t1) (Plus e2 k2 t2) =
+ `(oless (End m) (End n) <=> m < n) /\
+  (oless (End m) (Plus e k t) <=> T) /\
+  (oless (Plus e k t) (End m) <=> F) /\
+  (oless (Plus e1 k1 t1) (Plus e2 k2 t2) <=>
      if oless e1 e2 then T else
      if (e1 = e2) /\ k1 < k2 then T else
      if (e1 = e2) /\ (k1 = k2) /\ oless t1 t2 then T
@@ -131,9 +142,8 @@ val (is_ord_rules, is_ord_ind, is_ord_cases) =
    (!e k t. is_ord e /\ ~(e = End 0) /\ 0 < k /\ is_ord t /\ oless (expt t) e
             ==> is_ord (Plus e k t))`;
 
-val is_ord_strong_ind = derive_strong_induction (is_ord_rules,is_ord_ind);
-
-val _ = save_thm ("is_ord_strong_ind",is_ord_strong_ind);
+val is_ord_strong_ind =
+    save_thm("is_ord_strong_ind", theorem "is_ord_strongind")
 
 val decompose_plus = Q.store_thm
 ("decompose_plus",
@@ -147,8 +157,8 @@ val decompose_plus = Q.store_thm
 
 val is_ord_equations = Q.store_thm
 ("is_ord_equations",
- `(is_ord (End k) = T) /\
-  (is_ord (Plus e k t) =
+ `(is_ord (End k) <=> T) /\
+  (is_ord (Plus e k t) <=>
         is_ord e /\ ~(e = End 0) /\ 0 < k /\ is_ord t /\ oless (expt t) e)`,
   METIS_TAC [is_ord_rules,decompose_plus]);
 
@@ -267,12 +277,12 @@ val rank_finp = Q.store_thm
 
 val rank_positive_exists = Q.store_thm
 ("rank_positive_exists",
- `!x. 0 < rank x = ?e c t. x = Plus e c t`,
+ `!x. 0 < rank x <=> ?e c t. x = Plus e c t`,
  Cases THEN RW_TAC ord_ss [rank_def]);
 
 val rank_positive = Q.store_thm
 ("rank_positive",
- `!x. 0 < rank x = (x = Plus (expt x) (coeff x) (tail x))`,
+ `!x. 0 < rank x <=> (x = Plus (expt x) (coeff x) (tail x))`,
  Cases THEN RW_TAC ord_ss [rank_def,expt_def, coeff_def, tail_def]);
 
 val rank_positive_expt = Q.store_thm
@@ -425,8 +435,8 @@ THEN
 (*---------------------------------------------------------------------------*)
 
  SPOSE_NOT_THEN
-    (ASSUME_TAC o SIMP_RULE ord_ss [DECIDE ``A \/ B = ~A ==> B``,
-                          DECIDE ``a ==> b ==> c = a /\ b ==> c``])
+    (ASSUME_TAC o SIMP_RULE ord_ss [DECIDE ``A \/ B <=> ~A ==> B``,
+                          DECIDE ``a ==> b ==> c <=> a /\ b ==> c``])
 THEN
 
 (*---------------------------------------------------------------------------*)
@@ -434,7 +444,7 @@ THEN
 (*---------------------------------------------------------------------------*)
 
 `?S. (?si. S(si)) /\
-     (!si. S si = (?x. si x) /\
+     (!si. S si <=> (?x. si x) /\
         (!x. si(x) ==> is_ord(x) /\ (rank x = SUC n) /\ ?y. si y /\ oless y x))`
   by (Q.EXISTS_TAC `\si.
          (?a. si a) /\
@@ -485,7 +495,7 @@ THEN
 
 `?s_alpha_1.
        (?a. s_alpha_1 a) /\
-       (!b. s_alpha_1(b) = sj(b) /\ (expt b = alpha_1))`
+       (!b. s_alpha_1(b) <=> sj(b) /\ (expt b = alpha_1))`
     by (Q.EXISTS_TAC `\x. sj(x) /\ (expt x = alpha_1)` THEN METIS_TAC [])
 
 THEN
@@ -519,7 +529,7 @@ THEN
 
 `?s_alpha_1_k_1.
      (?a1. s_alpha_1_k_1(a1)) /\
-     (!b. s_alpha_1_k_1(b) = s_alpha_1 b /\ (coeff(b) = k_1))`
+     (!b. s_alpha_1_k_1(b) <=> s_alpha_1 b /\ (coeff(b) = k_1))`
   by (Q.EXISTS_TAC `\x. s_alpha_1(x) /\ (coeff(x) = k_1)` THEN METIS_TAC [])
 
 THEN
@@ -529,7 +539,7 @@ THEN
 (*---------------------------------------------------------------------------*)
 
 `?Tails. (?b. Tails b) /\
-         (!c. Tails(c) = ?b. s_alpha_1_k_1(b) /\ (c = tail b))`
+         (!c. Tails(c) <=> ?b. s_alpha_1_k_1(b) /\ (c = tail b))`
      by (Q.EXISTS_TAC `\x. ?b. s_alpha_1_k_1(b) /\ (x = tail b)`
          THEN METIS_TAC [])
 
@@ -609,7 +619,7 @@ THEN
 (* Other side of case: Everything in Tails has rank = n+1                    *)
 (*---------------------------------------------------------------------------*)
 
-`!d. Tails(d) ==> n < rank (d)` by METIS_TAC[DECIDE``~(x<=y) = y<x``] THEN
+`!d. Tails(d) ==> n < rank (d)` by METIS_TAC[DECIDE``~(x<=y) <=> y<x``] THEN
 `!d. Tails(d) ==> rank d <= SUC n`
       by (RW_TAC ord_ss [] THEN `SUC n = rank b'` by METIS_TAC []
           THEN POP_ASSUM SUBST1_TAC
@@ -708,7 +718,48 @@ val main_lemma = Q.store_thm
 
 val ord_less_def =
  Define
-   `ord_less x y = is_ord x /\ is_ord y /\ oless x y`;
+   `ord_less x y <=> is_ord x /\ is_ord y /\ oless x y`;
+
+val osyntax_EQ_0 = store_thm(
+  "osyntax_EQ_0",
+  ``∀a. is_ord a ⇒ ⟦a⟧ = 0 ⇒ a = End 0``,
+  Induct_on `is_ord` THEN SRW_TAC [][ordModel_def] THEN
+  `k ≠ 0` by DECIDE_TAC THEN SRW_TAC [][ordEXP_EQ_0]);
+
+val ordModel_lt_epsilon0 = store_thm(
+  "ordModel_lt_epsilon0",
+  ``∀a. ⟦a⟧ < ε₀``,
+  Induct_on `a` THEN
+  SRW_TAC [][ordMUL_under_epsilon0, ordEXP_under_epsilon0,
+             ordADD_under_epsilon0, ordModel_def]);
+
+val osyntax_size_def = definition "osyntax_size_def"
+
+(*
+val ord_less_models_ordlt = store_thm(
+  "ord_less_models_ordlt",
+  ``∀x y. ord_less x y ⇒ ⟦x⟧ < ⟦y⟧``,
+  SIMP_TAC (srw_ss()) [ord_less_def] THEN
+  completeInduct_on `MAX (osyntax_size x) (osyntax_size y)` THEN
+  FULL_SIMP_TAC (srw_ss() ++ boolSimps.DNF_ss) [] THEN
+  SIMP_TAC (srw_ss()) [Once oless_cases] THEN SRW_TAC [][] THEN
+  SRW_TAC [][ordModel_def] THENL [
+    MATCH_MP_TAC ordlte_TRANS THEN Q.EXISTS_TAC `ω` THEN SRW_TAC [][] THEN
+    MATCH_MP_TAC ordle_TRANS THEN Q.EXISTS_TAC `&k2 * ω ** ⟦e2⟧` THEN
+    SRW_TAC [][] THEN
+    MATCH_MP_TAC ordle_TRANS THEN Q.EXISTS_TAC `ω ** ⟦e2⟧` THEN
+    SRW_TAC [][] THENL [
+      SIMP_TAC bool_ss [Once (GSYM ordEXP_1R), SimpR ``ordlt``] THEN
+      MATCH_MP_TAC ordEXP_le_MONO_R THEN
+      FULL_SIMP_TAC (srw_ss()) [is_ord_equations] THEN
+      STRIP_TAC THEN
+      `⟦e2⟧ = 0` by METIS_TAC [IFF_ZERO_lt] THEN METIS_TAC [osyntax_EQ_0],
+      FULL_SIMP_TAC (srw_ss() ++ ARITH_ss) [is_ord_equations]
+    ],
+
+    FULL_SIMP_TAC (srw_ss()) [is_ord_equations, arithmeticTheory.MAX_LT]
+    ...
+*)
 
 (*---------------------------------------------------------------------------*)
 (* ord_less is well-founded.                                                 *)
