@@ -2647,6 +2647,39 @@ val APPEND_EQ_APPEND_MID = store_thm(
 
 (* --------------------------------------------------------------------- *)
 
+val LUPDATE_def = Define `
+  (LUPDATE n x [] = []:'a list) /\
+  (LUPDATE n x (y::ys) = if n = 0 then x::ys else y::LUPDATE (PRE n) x ys)`;
+
+val EL_LUPDATE = store_thm("EL_LUPDATE",
+  ``!ys (x:'a) i k.
+      EL i (LUPDATE k x ys) =
+      if (i = k) /\ k < LENGTH ys then x else EL i ys``,
+  Induct THEN FULL_SIMP_TAC bool_ss [LUPDATE_def,LENGTH,EL,NOT_LESS_0]
+  THEN REPEAT STRIP_TAC THEN Cases_on `k`
+  THEN FULL_SIMP_TAC bool_ss [LESS_0,LESS_MONO_EQ,NOT_SUC] THEN Cases_on `i`
+  THEN FULL_SIMP_TAC bool_ss [EL,HD,TL,NOT_SUC,PRE,INV_SUC_EQ]);
+
+val LENGTH_LUPDATE = store_thm("LENGTH_LUPDATE",
+  ``!ys n (x:'a). LENGTH (LUPDATE n x ys) = LENGTH ys``,
+  Induct THEN Cases_on `n`
+  THEN FULL_SIMP_TAC bool_ss [LUPDATE_def,LENGTH,NOT_SUC]);
+
+val LUPDATE_LENGTH = store_thm("LUPDATE_LENGTH",
+  ``!xs x (y:'a) ys. LUPDATE (LENGTH xs) x (xs ++ y::ys) = xs ++ x::ys``,
+  Induct THEN FULL_SIMP_TAC bool_ss [LENGTH,APPEND,LUPDATE_def,
+    NOT_SUC,PRE,INV_SUC_EQ]);
+
+val LUPDATE_SNOC = store_thm("LUPDATE_SNOC",
+  ``!ys k x (y:'a).
+      LUPDATE k x (SNOC y ys) =
+      if k = LENGTH ys then SNOC x ys else SNOC y (LUPDATE k x ys)``,
+  Induct THEN Cases_on `k` THEN Cases_on `n = LENGTH ys`
+  THEN FULL_SIMP_TAC bool_ss [SNOC,LUPDATE_def,LENGTH,NOT_SUC,
+         PRE,INV_SUC_EQ]);
+
+(* --------------------------------------------------------------------- *)
+
 val TAKE_compute = Q.prove(
    `(!l. TAKE 0 l = []) /\
     (!n. TAKE (SUC n) [] = []) /\
@@ -2705,7 +2738,8 @@ val _ = export_rewrites
            "LENGTH_ZIP", "LENGTH_UNZIP",
            "EVERY_APPEND", "EXISTS_APPEND", "EVERY_SIMP",
            "EXISTS_SIMP", "NOT_EVERY", "NOT_EXISTS",
-           "FOLDL", "FOLDR"];
+           "FOLDL", "FOLDR", "LENGTH_LUPDATE",
+           "LUPDATE_LENGTH"];
 
 val nil_tm = Term.prim_mk_const{Name="NIL",Thy="list"};
 val cons_tm = Term.prim_mk_const{Name="CONS",Thy="list"};
