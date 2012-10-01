@@ -74,10 +74,6 @@ val (free_labs_def, free_labs_ind) = register "free_labs" (
   tprove_no_defn ((free_labs_def,free_labs_ind), free_tac))
 val _ = export_rewrites["free_labs_def"];
 
-val (free_bods_def, free_bods_ind) = register "free_bods" (
-  tprove_no_defn ((free_bods_def,free_bods_ind), free_tac))
-val _ = export_rewrites["free_bods_def"];
-
 val (no_closures_def, no_closures_ind) = register "no_closures" (
   tprove_no_defn ((no_closures_def, no_closures_ind),
   WF_REL_TAC `measure Cv_size` >>

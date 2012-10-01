@@ -164,45 +164,6 @@ val _ = Defn.save_defn Cpat_vars_defn;
 
 val _ = Defn.save_defn free_vars_defn;
 
- val free_bods_defn = Hol_defn "free_bods" `
-
-(free_bods c (CDecl _) = {})
-/\
-(free_bods c (CRaise _) = {})
-/\
-(free_bods c (CVar _) = {})
-/\
-(free_bods c (CLit _) = {})
-/\
-(free_bods c (CCon _ es) =
-  FOLDL (\ s e . s UNION free_bods c e) {} es)
-/\
-(free_bods c (CTagEq e _) = free_bods c e)
-/\
-(free_bods c (CProj e _) = free_bods c e)
-/\
-(free_bods c (CLet _ es e) =
-  FOLDL (\ s e . s UNION free_bods c e) (free_bods c e) es)
-/\
-(free_bods c (CLetfun _ _ defs e) =
-  FOLDL (\ s (vs,b) . s UNION cbod_fbs c b) (free_bods c e) defs)
-/\
-(free_bods c (CFun _ b) = cbod_fbs c b)
-/\
-(free_bods c (CCall e es) =
-  FOLDL (\ s e . s UNION free_bods c e) (free_bods c e) es)
-/\
-(free_bods c (CPrim2 _ e1 e2) = free_bods c e1 UNION free_bods c e2)
-/\
-(free_bods c (CIf e1 e2 e3) = free_bods c e1 UNION free_bods c e2 UNION free_bods c e3)
-/\
-(cbod_fbs c l = (case FLOOKUP c l of
-    NONE => {}
-  | SOME e => free_bods ($\\ c l) e
-  ))`;
-
-val _ = Defn.save_defn free_bods_defn;
-
  val free_labs_defn = Hol_defn "free_labs" `
 
 (free_labs c (CDecl _) = {})

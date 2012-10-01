@@ -2,6 +2,23 @@ open HolKernel bossLib boolLib boolSimps listTheory pred_setTheory finite_mapThe
 (* Misc. lemmas (without any compiler constants) *)
 val _ = new_theory "misc"
 
+(* TODO: move to optionTheory *)
+val IF_NONE_EQUALS_OPTION = store_thm(
+  "IF_NONE_EQUALS_OPTION",
+  ``(((if P then X else NONE) = NONE) <=> (P ==> IS_NONE X)) /\
+    (((if P then NONE else X) = NONE) <=> (IS_SOME X ==> P)) /\
+    (((if P then X else NONE) = SOME x) <=> P /\ (X = SOME x)) /\
+    (((if P then NONE else X) = SOME x) <=> ~P /\ (X = SOME x))``,
+  SRW_TAC [][]);
+val _ = export_rewrites ["IF_NONE_EQUALS_OPTION"]
+
+(* TODO: move elsewhere? export as rewrite? *)
+val IN_option_rwt = store_thm(
+"IN_option_rwt",
+``(x ∈ case opt of NONE => {} | SOME y => Q y) =
+  (∃y. (opt = SOME y) ∧ x ∈ Q y)``,
+Cases_on `opt` >> rw[EQ_IMP_THM])
+
 (* Re-expressing folds *)
 
 val FOLDL2_FUPDATE_LIST = store_thm(
