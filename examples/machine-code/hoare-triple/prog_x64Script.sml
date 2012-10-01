@@ -1251,10 +1251,6 @@ val zCODE_HEAP_def = Define `
 
 (* snoc *)
 
-val LUPDATE_def = Define `
-  (LUPDATE n x [] = []) /\
-  (LUPDATE n x (y::ys) = if n = 0 then x::ys else y::LUPDATE (n-1) x ys)`;
-
 val PULL_FORALL = METIS_PROVE [] ``(b ==> !x. P x) = (!x. b ==> P x)``
 
 val zCODE_HEAP_SNOC = store_thm("zCODE_HEAP_SNOC",
@@ -1292,14 +1288,6 @@ val list_lemma = prove(
   \\ RES_TAC \\ Q.EXISTS_TAC `h::ys1`
   \\ FULL_SIMP_TAC (srw_ss()) [APPEND]);
 
-val LENGTH_LUPDATE = prove(
-  ``!ys n. LENGTH (LUPDATE n x ys) = LENGTH ys``,
-  Induct \\ SRW_TAC [] [LUPDATE_def] \\ FULL_SIMP_TAC std_ss []);
-
-val LUPDATE_THM = prove(
-  ``!xs x y ys. LUPDATE (LENGTH xs) x (xs ++ y::ys) = xs ++ x::ys``,
-  Induct \\ FULL_SIMP_TAC (srw_ss()) [LUPDATE_def,APPEND]);
-
 val zCODE_HEAP_UPDATE = store_thm("zCODE_HEAP_UPDATE",
   ``(!df f.
       SPEC X64_MODEL
@@ -1327,7 +1315,7 @@ val zCODE_HEAP_UPDATE = store_thm("zCODE_HEAP_UPDATE",
   \\ IMP_RES_TAC list_lemma
   \\ FULL_SIMP_TAC std_ss [SEP_ARRAY_APPEND,SEP_ARRAY_def,word_mul_n2w,
        LENGTH_LUPDATE,STAR_ASSOC,LENGTH_APPEND,LENGTH]
-  \\ POP_ASSUM (ASSUME_TAC o GSYM) \\ FULL_SIMP_TAC std_ss [LUPDATE_THM]
+  \\ POP_ASSUM (ASSUME_TAC o GSYM) \\ FULL_SIMP_TAC std_ss [LUPDATE_LENGTH]
   \\ FULL_SIMP_TAC std_ss [SEP_ARRAY_APPEND,SEP_ARRAY_def,word_mul_n2w,
        LENGTH_LUPDATE,STAR_ASSOC,LENGTH_APPEND,LENGTH]
   \\ FULL_SIMP_TAC std_ss [word_mul_n2w] \\ helperLib.SEP_WRITE_TAC);
