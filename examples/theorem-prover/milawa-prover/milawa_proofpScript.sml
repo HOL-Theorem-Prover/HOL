@@ -53,7 +53,7 @@ val nfix_thm = add_prove(
 val less_eq_thm = add_prove(
   ``!x y. less_eq x y = LISP_TEST (getVal x <= getVal y)``,
   Cases \\ Cases \\ EVAL_TAC \\ SIMP_TAC std_ss [GSYM NOT_LESS]
-  \\ Cases_on `0 < n` \\ ASM_SIMP_TAC std_ss [DECIDE ``(n = 0)=~(0<n:num)``]
+  \\ Cases_on `0 < n` \\ ASM_SIMP_TAC std_ss [DECIDE ``(n = 0) = ~(0<n:num)``]
   \\ Cases_on `n'<n` \\ FULL_SIMP_TAC std_ss []);
 
 val len_thm = add_prove(
