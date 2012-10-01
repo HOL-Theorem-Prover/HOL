@@ -1,10 +1,10 @@
 
 open HolKernel boolLib bossLib Parse;
-open compilerLib codegen_x86Lib;
+(* open compilerLib codegen_x86Lib; *)
 
 val _ = new_theory "compiler_demo";
 
-
+(*
 
 (* basic loop: mod 10 *)
 
@@ -132,6 +132,8 @@ val tm = ``
       if r3 = 30w then (r1,r3,s3) else
         let r1 = r1 + r5 in
           stck_loop (r1,s4,r5)``;
+
+*)
 
 *)
 

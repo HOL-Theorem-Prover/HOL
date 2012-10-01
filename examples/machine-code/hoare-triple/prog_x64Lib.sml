@@ -21,7 +21,7 @@ fun set_x64_code_write_perm_flag b = (x64_code_write_perm := b);
 fun set_x64_use_stack b = (x64_use_stack := b);
 val Zreg_distinct = x64_decoderTheory.Zreg_distinct;
 
-datatype mpred_type = zMEM_AUTO | zMEM_BYTE_MEMORY;
+datatype mpred_type = zMEM_AUTO | zMEM_BYTE_MEMORY | zMEM_MEMORY64;
 
 fun name_for_resource counter tm = let
   val to_lower_drop_two = implode o tl o tl o explode o to_lower
@@ -251,6 +251,84 @@ fun introduce_zMEMORY th = if
     val th = SIMP_RULE (bool_ss++sep_cond_ss) [] th
     in th end end
 
+fun introduce_zM64 th = if
+  not (can (find_term (can (match_term ``zM``))) (concl th))
+  then th else let
+  val pattern = ``zM (a + 4w) x1 * zM a x2``
+  val tag = (RW [GSYM STAR_ASSOC] th) |> concl |> car
+            |> find_term (can (match_term pattern))
+  val x1 = (cdr o cdr o car) tag
+  val x2 = (cdr o cdr) tag
+  val a = (cdr o car o cdr) tag
+  val res = SPECL [a,mk_var("xx",``:word64``)] (RW1[STAR_COMM]zM64_def)
+  val y1 = (cdr o cdr o car) ((snd o dest_eq o concl) res)
+  val y2 = (cdr o cdr) ((snd o dest_eq o concl) res)
+  val th = RW [GSYM res,GSYM STAR_ASSOC] (INST [x1|->y1,x2|->y2] th)
+  val th = RW [STAR_ASSOC,LOAD64] th
+  in th end handle HOL_ERR _ => th;
+
+fun introduce_zMEMORY64 th =
+  let val th = introduce_zM64 th in
+  if not (can (find_term (can (match_term ``zM64``))) (concl th))
+  then th else let
+  val th = CONV_RULE (PRE_CONV STAR_REVERSE_CONV) th
+  val th = SIMP_RULE (bool_ss++sep_cond_ss) [] th
+  val th = CONV_RULE (PRE_CONV STAR_REVERSE_CONV) th
+  val (_,p,_,q) = dest_spec(concl th)
+  val xs = (rev o list_dest dest_star) p
+  val tm = ``zM64 a x``
+  val xs = filter (can (match_term tm)) xs
+  fun foo tm = cdr tm |->
+               mk_comb(mk_var("f",``:word64->word64``),(cdr o car) tm)
+  val th = INST (map foo xs) th
+  in if xs = [] then th else let
+    val (_,p,_,q) = dest_spec(concl th)
+    val xs = (rev o list_dest dest_star) p
+    val tm = ``zM64 a x``
+    val xs = filter (can (match_term tm)) xs
+    val ys = (map (cdr o car) xs)
+    fun foo [] = mk_var("df",``:word64 set``)
+      | foo (v::vs) = pred_setSyntax.mk_delete(foo vs,v)
+    val frame = mk_comb(mk_comb(``zMEMORY64``,foo ys),mk_var("f",``:word64->word64``))
+    val th = SPEC frame (MATCH_MP progTheory.SPEC_FRAME th)
+    val th = RW [GSYM STAR_ASSOC] th
+    val fff = (fst o dest_eq o concl o UNDISCH_ALL o SPEC_ALL o GSYM) zMEMORY64_INSERT
+    fun compact th = let
+      val x = find_term (can (match_term fff)) ((car o car o concl o UNDISCH_ALL) th)
+      val rw = (INST (fst (match_term fff x)) o SPEC_ALL o DISCH_ALL o GSYM o UNDISCH) zMEMORY64_INSERT
+      val th = DISCH ((fst o dest_imp o concl) rw) th
+      val th = SIMP_RULE bool_ss [GSYM zMEMORY64_INSERT] th
+      in th end
+    val th = repeat compact th
+    val th = RW [STAR_ASSOC,AND_IMP_INTRO,GSYM CONJ_ASSOC] th
+    val th = RW [APPLY_UPDATE_ID] th
+    val v = hd (filter (is_var) ys @ ys)
+    fun ss [] = ``{}:word64 set``
+      | ss (v::vs) = pred_setSyntax.mk_insert(v,ss vs)
+    val u1 = pred_setSyntax.mk_subset(ss (rev ys),mk_var("df",``:word64 set``))
+    val u3 = (fst o dest_imp o concl) th
+    val u2 = list_mk_conj (u1::filter is_eq (list_dest dest_conj u3))
+    val goal = mk_imp(u2,u3)
+    val imp = prove(goal,
+      ONCE_REWRITE_TAC [ALIGNED_MOD_4]
+      THEN SIMP_TAC std_ss [WORD_ADD_0,WORD_SUB_RZERO]
+      THEN SIMP_TAC std_ss [WORD_EQ_ADD_CANCEL,word_sub_def]
+      THEN SIMP_TAC (std_ss++SIZES_ss) [n2w_11,word_2comp_n2w]
+      THEN SIMP_TAC std_ss [EXTENSION,IN_INSERT,IN_DELETE,INSERT_SUBSET]
+      THEN SIMP_TAC std_ss [WORD_EQ_ADD_CANCEL,word_sub_def]
+      THEN SIMP_TAC (std_ss++SIZES_ss) [n2w_11,word_2comp_n2w]
+      THEN REPEAT STRIP_TAC THEN EQ_TAC THEN REPEAT STRIP_TAC
+      THEN ASM_SIMP_TAC std_ss []
+      THEN CCONTR_TAC
+      THEN FULL_SIMP_TAC std_ss []
+      THEN FULL_SIMP_TAC std_ss [])
+    val th = DISCH_ALL (MATCH_MP th (UNDISCH imp))
+    val th = RW [GSYM progTheory.SPEC_MOVE_COND] th
+    val th = remove_primes th
+    val th = REWRITE_RULE [SING_SUBSET] th
+    val th = SIMP_RULE (bool_ss++sep_cond_ss) [] th
+    in th end end end
+
 fun introduce_zSTACK th =
   if not (can (find_term (fn x => x = ``RSP``)) (concl th)) then th else let
   val pattern = ``zM (a + 4w) x1 * zM a x2``
@@ -280,6 +358,7 @@ fun calculate_length_and_jump th = let
     (th,l,NONE) end
 
 fun post_process_thm mpred th = let
+  val th = if mpred = zMEM_MEMORY64 then introduce_zMEMORY64 th else th
   val th = if mpred = zMEM_AUTO then introduce_zSTACK th else th
   val th = RW [GSYM zR_def] th
   val th = SIMP_RULE (std_ss++sw2sw_ss++w2w_ss) [wordsTheory.word_mul_n2w,SEP_CLAUSES] th
@@ -401,6 +480,7 @@ fun x64_spec_aux mpred = cache (x64_prove_specs mpred);
 
 val x64_spec_aux_auto = cache (x64_prove_specs zMEM_AUTO);
 val x64_spec_aux_byte = cache (x64_prove_specs zMEM_BYTE_MEMORY);
+val x64_spec_aux_memory64 = cache (x64_prove_specs zMEM_MEMORY64);
 
 fun x64_spec s = let
   val ((th,i,j),other) = x64_spec_aux_auto s
@@ -416,8 +496,17 @@ fun x64_spec_byte_memory s = let
   val th = RW [GSYM zBYTE_MEMORY_def,GSYM zBYTE_MEMORY_Z_def] th
   in ((th,i,j),other) end
 
-val x64_tools = (x64_spec, x64_jump, x64_status, x64_pc)
+fun x64_spec_memory64 s = let
+  val ((th,i,j),other) = x64_spec_aux_memory64 s
+  val b = if !x64_exec_flag then T else F
+  val th = INST [``ex:bool``|->b] th
+  val th = RW [GSYM zBYTE_MEMORY_def,GSYM zBYTE_MEMORY_Z_def] th
+  in ((th,i,j),other) end
+
+val x64_tools = (x64_spec, x64_jump, x64_status, x64_pc);
 val x64_tools_no_status = (x64_spec, x64_jump, TRUTH, x64_pc);
+val x64_tools_64 = (x64_spec_memory64, x64_jump, x64_status, x64_pc);
+val x64_tools_64_no_status = (x64_spec_memory64, x64_jump, TRUTH, x64_pc);
 
 
 (*
@@ -439,6 +528,24 @@ val x64_tools_no_status = (x64_spec, x64_jump, TRUTH, x64_pc);
   val th = x64_spec (x64_encode "add [rax], rax");
   val th = x64_spec (x64_encode "call r2");
   val th = x64_spec (x64_encode "ret");
+
+  val ((th,_,_),_) = x64_spec (x64_encode "mov [rax],r1b")
+  val th = th |> REWRITE_RULE [SIGN_EXTEND_IGNORE,n2w_w2n,
+                   GSYM zBYTE_MEMORY_Z_def,zBYTE_MEMORY_def]
+              |> Q.GEN `g` |> Q.GEN `dg`
+              |> Q.INST [`r0`|->`a+n2w (LENGTH (xs:word8 list))`]
+              |> MATCH_MP zCODE_HEAP_SNOC
+
+  val ((th,_,_),_) = x64_spec "C600"
+  val th = th |> REWRITE_RULE [SIGN_EXTEND_IGNORE,n2w_w2n,
+                   GSYM zBYTE_MEMORY_Z_def,zBYTE_MEMORY_def]
+              |> Q.GEN `g` |> Q.GEN `dg`
+              |> Q.INST [`r0`|->`a+n2w (LENGTH (xs:word8 list))`,`imm8`|->`n2w k`]
+              |> MATCH_MP zCODE_HEAP_SNOC
+
+  val th = x64_spec_memory64 (x64_encode "add [rax], rax");
+  val th = x64_spec_memory64 (x64_encode "mov [rax+40], rbx");
+  val th = x64_spec_memory64 (x64_encode "mov rbx,[rax+40]");
 
   val s = "mov r8d, [r7+4*r3+6000]"
   val s = x64_encode s
