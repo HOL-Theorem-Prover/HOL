@@ -1251,9 +1251,9 @@ val zCODE_HEAP_def = Define `
 
 (* snoc *)
 
-val UPDATE_NTH_def = Define `
-  (UPDATE_NTH n x [] = []) /\
-  (UPDATE_NTH n x (y::ys) = if n = 0 then x::ys else y::UPDATE_NTH (n-1) x ys)`;
+val LUPDATE_def = Define `
+  (LUPDATE n x [] = []) /\
+  (LUPDATE n x (y::ys) = if n = 0 then x::ys else y::LUPDATE (n-1) x ys)`;
 
 val PULL_FORALL = METIS_PROVE [] ``(b ==> !x. P x) = (!x. b ==> P x)``
 
@@ -1292,13 +1292,13 @@ val list_lemma = prove(
   \\ RES_TAC \\ Q.EXISTS_TAC `h::ys1`
   \\ FULL_SIMP_TAC (srw_ss()) [APPEND]);
 
-val LENGTH_UPDATE_NTH = prove(
-  ``!ys n. LENGTH (UPDATE_NTH n x ys) = LENGTH ys``,
-  Induct \\ SRW_TAC [] [UPDATE_NTH_def] \\ FULL_SIMP_TAC std_ss []);
+val LENGTH_LUPDATE = prove(
+  ``!ys n. LENGTH (LUPDATE n x ys) = LENGTH ys``,
+  Induct \\ SRW_TAC [] [LUPDATE_def] \\ FULL_SIMP_TAC std_ss []);
 
-val UPDATE_NTH_THM = prove(
-  ``!xs x y ys. UPDATE_NTH (LENGTH xs) x (xs ++ y::ys) = xs ++ x::ys``,
-  Induct \\ FULL_SIMP_TAC (srw_ss()) [UPDATE_NTH_def,APPEND]);
+val LUPDATE_THM = prove(
+  ``!xs x y ys. LUPDATE (LENGTH xs) x (xs ++ y::ys) = xs ++ x::ys``,
+  Induct \\ FULL_SIMP_TAC (srw_ss()) [LUPDATE_def,APPEND]);
 
 val zCODE_HEAP_UPDATE = store_thm("zCODE_HEAP_UPDATE",
   ``(!df f.
@@ -1307,7 +1307,7 @@ val zCODE_HEAP_UPDATE = store_thm("zCODE_HEAP_UPDATE",
         (q * zBYTE_MEMORY_Z df ((a + n2w k =+ x) f))) ==>
     SPEC X64_MODEL
       (p * zCODE_HEAP F a xs n * cond (k < LENGTH xs)) c
-      (q * zCODE_HEAP F a (UPDATE_NTH k x xs) n)``,
+      (q * zCODE_HEAP F a (LUPDATE k x xs) n)``,
   REPEAT STRIP_TAC
   \\ FULL_SIMP_TAC (std_ss++helperLib.sep_cond_ss) [zCODE_HEAP_def,
        zCODE_HEAP_AUX_def,SEP_CLAUSES]
@@ -1322,14 +1322,14 @@ val zCODE_HEAP_UPDATE = store_thm("zCODE_HEAP_UPDATE",
     \\ helperLib.SEP_R_TAC)
   \\ FULL_SIMP_TAC std_ss [SEP_IMP_def,SEP_EXISTS_THM] \\ REPEAT STRIP_TAC
   \\ Q.LIST_EXISTS_TAC [`ys`,`df`,`((a + n2w k =+ x) f)`]
-  \\ FULL_SIMP_TAC (srw_ss()) [cond_STAR,ADD_CLAUSES,LENGTH_UPDATE_NTH]
+  \\ FULL_SIMP_TAC (srw_ss()) [cond_STAR,ADD_CLAUSES,LENGTH_LUPDATE]
   \\ FULL_SIMP_TAC std_ss []
   \\ IMP_RES_TAC list_lemma
   \\ FULL_SIMP_TAC std_ss [SEP_ARRAY_APPEND,SEP_ARRAY_def,word_mul_n2w,
-       LENGTH_UPDATE_NTH,STAR_ASSOC,LENGTH_APPEND,LENGTH]
-  \\ POP_ASSUM (ASSUME_TAC o GSYM) \\ FULL_SIMP_TAC std_ss [UPDATE_NTH_THM]
+       LENGTH_LUPDATE,STAR_ASSOC,LENGTH_APPEND,LENGTH]
+  \\ POP_ASSUM (ASSUME_TAC o GSYM) \\ FULL_SIMP_TAC std_ss [LUPDATE_THM]
   \\ FULL_SIMP_TAC std_ss [SEP_ARRAY_APPEND,SEP_ARRAY_def,word_mul_n2w,
-       LENGTH_UPDATE_NTH,STAR_ASSOC,LENGTH_APPEND,LENGTH]
+       LENGTH_LUPDATE,STAR_ASSOC,LENGTH_APPEND,LENGTH]
   \\ FULL_SIMP_TAC std_ss [word_mul_n2w] \\ helperLib.SEP_WRITE_TAC);
 
 
