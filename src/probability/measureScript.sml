@@ -1381,7 +1381,7 @@ val INF_MEASURE_COUNTABLY_SUBADDITIVE = store_thm
     ++ MATCH_MP_TAC SUMINF_2D
     ++ RW_TAC std_ss [o_THM]
     ++ PROVE_TAC [positive_def]]);
- 
+
 val INF_MEASURE_OUTER = store_thm
   ("INF_MEASURE_OUTER",
    ``!m.
@@ -1497,7 +1497,7 @@ val CARATHEODORY = store_thm
        algebra (m_space m0, measurable_sets m0) /\ positive m0 /\ countably_additive m0 ==>
        ?m.
          (!s. s IN measurable_sets m0 ==> (measure m s = measure m0 s)) /\
-         ((m_space m, measurable_sets m) = 
+         ((m_space m, measurable_sets m) =
 	  sigma (m_space m0) (measurable_sets m0)) /\ measure_space m``,
    RW_TAC std_ss []
    ++ Q.EXISTS_TAC `(space (sigma (m_space m0) (measurable_sets m0)),
@@ -1818,8 +1818,8 @@ val SIGMA_PROPERTY_DISJOINT_LEMMA1 = store_thm
     ++ RW_TAC std_ss [subset_class_def, SUBSET_DEF, GSPECIFICATION]
     ++ PROVE_TAC [algebra_def, subset_class_def, SUBSET_DEF],
     PROVE_TAC [closed_cdi_def, SMALLEST_CLOSED_CDI, SPACE_SMALLEST_CLOSED_CDI],
-    Know `s INTER (space a DIFF s') = 
-    	  space (smallest_closed_cdi a) DIFF 
+    Know `s INTER (space a DIFF s') =
+    	  space (smallest_closed_cdi a) DIFF
 	  	(space (smallest_closed_cdi a) DIFF s UNION (s INTER s'))`
     >> (RW_TAC std_ss [EXTENSION, INTER_DEF, COMPL_DEF, UNION_DEF, GSPECIFICATION, IN_UNIV,
        	       	       IN_DIFF]
@@ -2017,7 +2017,7 @@ val SIGMA_PROPERTY_DISJOINT_LEMMA2 = store_thm
 
 val SIGMA_PROPERTY_DISJOINT_LEMMA = store_thm
   ("SIGMA_PROPERTY_DISJOINT_LEMMA",
-   ``!sp a p. algebra (sp, a) /\ a SUBSET p /\ closed_cdi (sp, p) 
+   ``!sp a p. algebra (sp, a) /\ a SUBSET p /\ closed_cdi (sp, p)
    	 ==> subsets (sigma sp a) SUBSET p``,
    RW_TAC std_ss []
    ++ MATCH_MP_TAC SUBSET_TRANS
@@ -2163,7 +2163,7 @@ val MEASURE_COUNTABLE_INCREASING = store_thm
        >> FULL_SIMP_TAC std_ss [measure_space_def, sigma_algebra_def, algebra_def,
        	  		       	space_def, subsets_def]
        ++ STRIP_TAC
-       ++ (MP_TAC o REWRITE_RULE [subsets_def, space_def] o 
+       ++ (MP_TAC o REWRITE_RULE [subsets_def, space_def] o
            Q.SPEC `(m_space m, measurable_sets m)`) ALGEBRA_DIFF
        ++ PROVE_TAC [])
    ++ DISCH_THEN (ONCE_REWRITE_TAC o wrap)
@@ -2176,7 +2176,7 @@ val MEASURE_COUNTABLE_INCREASING = store_thm
        >> FULL_SIMP_TAC std_ss [measure_space_def, sigma_algebra_def, algebra_def,
        	  		        space_def, subsets_def]
        ++ STRIP_TAC
-       ++ (MP_TAC o REWRITE_RULE [subsets_def, space_def] o 
+       ++ (MP_TAC o REWRITE_RULE [subsets_def, space_def] o
        	   Q.SPEC `(m_space m, measurable_sets m)`) ALGEBRA_DIFF
        ++ PROVE_TAC [])
    ++ CONJ_TAC
@@ -3190,7 +3190,7 @@ val IN_MEASURABLE_BOREL_ALT1 = store_thm
   ++ EQ_TAC
   >> (RW_TAC std_ss []
       ++ `{x | c <= f x} = PREIMAGE f {x | c <= x}` by RW_TAC std_ss[PREIMAGE_def, GSPECIFICATION]
-      ++ `!c. {x | f x < c} = PREIMAGE f {x | x < c}` 
+      ++ `!c. {x | f x < c} = PREIMAGE f {x | x < c}`
           by RW_TAC std_ss[PREIMAGE_def, GSPECIFICATION]
       ++ `!c. space a DIFF ((PREIMAGE f {x | x < c}) INTER space a) IN subsets a`
           by METIS_TAC [sigma_algebra_def,algebra_def]
@@ -3252,9 +3252,9 @@ val IN_MEASURABLE_BOREL_ALT2 = store_thm
              ++ `f x <> PosInf` by METIS_TAC [lt_infty]
              ++ `?r. f x = Normal r` by METIS_TAC [extreal_cases]
              ++ FULL_SIMP_TAC std_ss [extreal_lt_eq,extreal_le_def]
- 	     ++ METIS_TAC [REAL_LT_IMP_LE, 
+ 	     ++ METIS_TAC [REAL_LT_IMP_LE,
 	     		   Q.SPECL [`r'`,`r`,`(\n. r + (1 / 2) pow n)`] LE_SEQ_IMP_LE_LIM])
-    ++ `BIGINTER (IMAGE (\n:num. {x | f x < Normal (r + (1 / 2) pow n)} INTER space a) UNIV) 
+    ++ `BIGINTER (IMAGE (\n:num. {x | f x < Normal (r + (1 / 2) pow n)} INTER space a) UNIV)
        		 IN subsets a`
 	 by (RW_TAC std_ss []
 	     ++ (MP_TAC o Q.SPEC `a`) SIGMA_ALGEBRA_FN_BIGINTER
@@ -3841,8 +3841,8 @@ val IN_MEASURABLE_BOREL_ADD = store_thm
            ++ METIS_TAC [])
   ++ `({x | Normal y < Normal r1 - g x} INTER space a) IN subsets a`
       by METIS_TAC [IN_MEASURABLE_BOREL_ALL, extreal_sub_def]
-  ++ `(({x | f x < Normal y} INTER space a) INTER 
-      ({x | Normal y < Normal r1 - g x} INTER space a)) = 
+  ++ `(({x | f x < Normal y} INTER space a) INTER
+      ({x | Normal y < Normal r1 - g x} INTER space a)) =
       ({x | f x < Normal y} INTER {x | Normal y < Normal r1 - g x} INTER space a)`
 	by (RW_TAC std_ss [EXTENSION, GSPECIFICATION, IN_INTER]
 	    ++ EQ_TAC >> RW_TAC std_ss []
@@ -3978,7 +3978,7 @@ val IN_MEASURABLE_BOREL_MUL_INDICATOR_EQ = store_thm
 
 
 val IN_MEASURABLE_BOREL_POS_SIMPLE_FN = store_thm
-  ("IN_MEASURABLE_BOREL_POS_SIMPLE_FN",``!m f. measure_space m /\ 
+  ("IN_MEASURABLE_BOREL_POS_SIMPLE_FN",``!m f. measure_space m /\
   					       (?s a x. pos_simple_fn m f s a x)
 				 ==> f IN measurable (m_space m,measurable_sets m) Borel``,
   RW_TAC std_ss [pos_simple_fn_def]
@@ -4226,7 +4226,7 @@ val indicator_fn_split = store_thm
   ("indicator_fn_split", ``!(r:num->bool) s (b:num->('a->bool)). FINITE r /\
 	(BIGUNION (IMAGE b r) = s) /\
         (!i j. i IN r /\ j IN r /\ (~(i=j)) ==> DISJOINT (b i) (b j)) ==>
-     !a. a SUBSET s ==> ((indicator_fn a) = 
+     !a. a SUBSET s ==> ((indicator_fn a) =
      	   	    	 (\x. SIGMA (\i. indicator_fn (a INTER (b i)) x) r))``,
    Suff `!r. FINITE r ==>
 		(\r. !s (b:num->('a->bool)).

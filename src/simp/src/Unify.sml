@@ -29,7 +29,7 @@ fun occ env v =
     in f
     end;
 
-fun bind env v t = if occ env v t then failwith "occurs" else 
+fun bind env v t = if occ env v t then failwith "occurs" else
    let
      val new_sub = v |-> subst env t;
      val env' = map (fn {redex,residue} => (redex |-> (subst [new_sub] residue))) env

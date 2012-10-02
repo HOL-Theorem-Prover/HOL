@@ -1328,7 +1328,7 @@ val le_inv = store_thm
 (***************************)
 (*         x pow n         *)
 (***************************)
- 
+
 val pow_0 = store_thm
   ("pow_0",``!x. x pow 0 = 1``,
   Cases ++ RW_TAC std_ss [extreal_pow_def,extreal_of_num_def,pow]);

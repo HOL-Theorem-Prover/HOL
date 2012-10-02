@@ -137,7 +137,7 @@ fun split_pair___ALL___pred v = K (SOME (enumerate_pair true v));
    val t = ``(\ (a1, a2, a3). P a1 a2 a3) (x:('a # 'b # 'c))``
  *)
 
-fun pair_qp pL = combine_qps 
+fun pair_qp pL = combine_qps
     [rewrite_qp [PAIR_EQ_EXPAND, pairTheory.FST, pairTheory.SND],
      heuristics_qp [QUANT_INSTANTIATE_HEURISTIC___SPLIT_PAIR_GEN pL],
      final_rewrite_qp [pairTheory.FST, pairTheory.SND, PAIR_EQ_SIMPLE_EXPAND]]

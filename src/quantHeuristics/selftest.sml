@@ -1,7 +1,7 @@
 open HolKernel Parse boolTheory boolLib pairTheory
 open quantHeuristicsLib simpLib boolSimps
 
-(* For manual 
+(* For manual
 
 val hard_fail = false;
 val quiet = false;
@@ -129,13 +129,13 @@ val _ = map (qh_test hard_fail quiet) qh_testCases;
 (* QUANT_CONV tests                                                           *)
 (******************************************************************************)
 
-val _ = test_conv "INST_QUANT_CONV [(\"x\", `2:num`, [])]" (INST_QUANT_CONV [("x", `2:num`, [])]) hard_fail quiet 
+val _ = test_conv "INST_QUANT_CONV [(\"x\", `2:num`, [])]" (INST_QUANT_CONV [("x", `2:num`, [])]) hard_fail quiet
    (``!z. !x. (x = 2:num) ==> P(x, z)``, SOME ``!z. P(2, z)``)
 
-val _ = test_conv "INST_QUANT_CONV [(\"x\", `2:num`, [])]" (INST_QUANT_CONV [("x", `2:num`, [])]) hard_fail quiet 
+val _ = test_conv "INST_QUANT_CONV [(\"x\", `2:num`, [])]" (INST_QUANT_CONV [("x", `2:num`, [])]) hard_fail quiet
    (``!z. ?x. (x = 2:num) /\ P(x, z)``, SOME ``!z. P(2, z)``)
 
-val _ = test_conv "INST_QUANT_CONV [(\"x\", `3:num`, [])]" (INST_QUANT_CONV [("x", `3:num`, [])]) hard_fail quiet 
+val _ = test_conv "INST_QUANT_CONV [(\"x\", `3:num`, [])]" (INST_QUANT_CONV [("x", `3:num`, [])]) hard_fail quiet
    (``!z. ?x. (x = 2:num) /\ P(x, z)``, NONE)
 
 (*

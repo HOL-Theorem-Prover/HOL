@@ -51,7 +51,7 @@ sig
        1 - simple traces
        2 - full traces with theorems
 
-     QUANT_INSTANTIATE_HEURISTIC___print_term_length 
+     QUANT_INSTANTIATE_HEURISTIC___print_term_length
        maximal length of term strings in debug (default 20)
    *)
 
@@ -59,7 +59,7 @@ sig
   (************************************)
   (* quantifier heurostic parameters  *)
   (************************************)
-  
+
   (* stateful ones *)
   val stateful_qp        : unit -> quantHeuristicsLibBase.quant_param;
   val pure_stateful_qp   : unit -> quantHeuristicsLibBase.quant_param;
@@ -96,7 +96,7 @@ sig
   (* A heuristic that considers just the conclusion of implications. This may lead to wrong guesses, but
      if used carefully, is a handy heuristic. *)
   val implication_concl_qp : quantHeuristicsLibBase.quant_param;
-  
+
   (* writing own parameters *)
 
   val empty_qp    : quant_param;
