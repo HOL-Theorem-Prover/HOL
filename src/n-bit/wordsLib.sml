@@ -1451,6 +1451,20 @@ val WORD_EXTRACT_ss =
 (* ------------------------------------------------------------------------- *)
 
 local
+   val ssfrags = [WORD_LOGIC_ss, WORD_ARITH_ss, WORD_SHIFT_ss, WORD_GROUND_ss,
+                  BIT_ss, SIZES_ss]
+in
+   val WORD_ss = simpLib.named_merge_ss "words" ssfrags
+   val _ = augment_srw_ss ssfrags
+end
+
+val WORD_CONV = SIMP_CONV (std_ss++WORD_ss++WORD_EXTRACT_ss)
+   [WORD_LEFT_ADD_DISTRIB, WORD_RIGHT_ADD_DISTRIB,
+    WORD_LEFT_AND_OVER_OR, WORD_RIGHT_AND_OVER_OR]
+
+(* ------------------------------------------------------------------------- *)
+
+local
    open listTheory
    val cmp = reduceLib.num_compset ()
    val _ = computeLib.add_thms
@@ -1553,19 +1567,30 @@ val BITS_INTRO_ss =
         pats = [``a MOD b``, ``(a MOD b) DIV c``],
         conv = BITS_INTRO_CONV})
 
-(* ------------------------------------------------------------------------- *)
+(* WORD_BIT_INDEX_CONV true:  convert ``word_bit i w`` to ``w ' i``
+   WORD_BIT_INDEX_CONV false: convert ``w ' i`` to ``word_bit i w`` *)
 
-local
-   val ssfrags = [WORD_LOGIC_ss, WORD_ARITH_ss, WORD_SHIFT_ss, WORD_GROUND_ss,
-                  BIT_ss, SIZES_ss]
-in
-   val WORD_ss = simpLib.named_merge_ss "words" ssfrags
-   val _ = augment_srw_ss ssfrags
-end
-
-val WORD_CONV = SIMP_CONV (std_ss++WORD_ss++WORD_EXTRACT_ss)
-   [WORD_LEFT_ADD_DISTRIB, WORD_RIGHT_ADD_DISTRIB,
-    WORD_LEFT_AND_OVER_OR, WORD_RIGHT_AND_OVER_OR]
+fun WORD_BIT_INDEX_CONV toindex =
+   let
+      val (dest, thm) =
+          if toindex
+             then (wordsSyntax.dest_word_bit, Conv.GSYM wordsTheory.word_bit)
+          else (Lib.swap o fcpSyntax.dest_fcp_index, wordsTheory.word_bit)
+   in
+      fn tm =>
+         let
+            val (b, w) = dest tm
+            val lt =
+               (b, fcpSyntax.mk_dimindex (wordsSyntax.dim_of w))
+                 |> numSyntax.mk_less
+                 |> (Conv.RAND_CONV SIZES_CONV THENC numLib.REDUCE_CONV)
+                 |> Drule.EQT_ELIM
+         in
+            Drule.ISPEC w (Drule.MATCH_MP thm lt)
+         end
+         handle HOL_ERR {origin_function = "EQT_ELIM", ...} =>
+            raise ERR "WORD_BIT_INDEX_CONV" "index too large"
+   end
 
 (* ------------------------------------------------------------------------- *)
 

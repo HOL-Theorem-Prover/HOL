@@ -147,7 +147,8 @@ in
          val thm = v2n_CONV (bitstringSyntax.mk_v2n l)
       in
          Drule.MATCH_MP (Thm.INST_TYPE [Type.alpha |-> ty] v2w_n2w_thm) thm
-      end handle HOL_ERR _ => raise ERR "v2w_n2w_CONV" ""
+      end
+      handle HOL_ERR _ => raise ERR "v2w_n2w_CONV" ""
 end
 
 (* ------------------------------------------------------------------------- *)
@@ -162,7 +163,8 @@ fun n2w_v2w_CONV tm =
       val l = listSyntax.mk_list (b, Type.bool)
    in
       Thm.SYM (v2w_n2w_CONV (bitstringSyntax.mk_v2w (l, ty)))
-   end handle HOL_ERR _ => raise ERR "n2w_v2w_CONV" ""
+   end
+   handle HOL_ERR _ => raise ERR "n2w_v2w_CONV" ""
 
 (* ------------------------------------------------------------------------- *)
 
@@ -195,7 +197,8 @@ fun v2w_eq_CONV tm =
                   (Conv.RATOR_CONV (Conv.RAND_CONV wordsLib.SIZES_CONV)
                    THENC FIX_CONV)
          THENC listLib.LIST_EQ_SIMP_CONV) tm
-   end handle HOL_ERR _ => raise ERR "v2w_eq_n2w_CONV" ""
+   end
+   handle HOL_ERR _ => raise ERR "v2w_eq_n2w_CONV" ""
 
 (* ------------------------------------------------------------------------- *)
 
@@ -227,7 +230,8 @@ in
          else if bitstringSyntax.is_v2w r
             then (Conv.RHS_CONV v2w_n2w_CONV THENC wordsLib.word_EQ_CONV) tm
          else wordsLib.word_EQ_CONV tm
-      end handle HOL_ERR _ => raise ERR "word_eq_CONV" ""
+      end
+      handle HOL_ERR _ => raise ERR "word_eq_CONV" ""
 end
 
 (* ------------------------------------------------------------------------- *)
@@ -282,7 +286,8 @@ in
          (Conv.REWR_CONV thm
           THENC Conv.RAND_CONV (Conv.RAND_CONV shiftr_CONV)
           THENC Conv.RAND_CONV FIX_CONV) tm
-      end handle HOL_ERR _ => raise ERR "extract_v2w_CONV" ""
+      end
+      handle HOL_ERR _ => raise ERR "extract_v2w_CONV" ""
 end
 
 (* ------------------------------------------------------------------------- *)
@@ -296,10 +301,16 @@ end
 *)
 
 local
+   open numeralTheory listTheory
    val word_bit_last_shiftr =
       REWRITE_RULE [bitstringTheory.shiftr_def]
          bitstringTheory.word_bit_last_shiftr
-   val cnv = CHANGE_CBV_CONV (listSimps.list_compset())
+   val cmp = computeLib.bool_compset ()
+   val () = computeLib.add_thms
+              [numeral_distrib, numeral_suc, numeral_iisuc, numeral_sub,
+               numeral_lt, iSUB_THM, iDUB_removal,
+               LENGTH, TAKE_compute, NULL_DEF, LAST_compute] cmp
+   val cnv = CHANGE_CBV_CONV cmp
 in
    fun word_bit_CONV tm =
       let
@@ -313,7 +324,8 @@ in
          val thm = Drule.MATCH_MP word_bit_last_shiftr lt_thm
       in
          (Conv.REWR_CONV thm THENC cnv) tm
-      end handle HOL_ERR _ => raise ERR "word_bit_CONV" ""
+      end
+      handle HOL_ERR _ => raise ERR "word_bit_CONV" ""
 end
 
 (* ------------------------------------------------------------------------- *)

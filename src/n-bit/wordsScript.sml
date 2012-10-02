@@ -4615,6 +4615,16 @@ val word_reverse_thm = store_thm("word_reverse_thm",
   THEN `(dimindex (:'a) − 1 − i) < dimindex (:'a)` by DECIDE_TAC
   THEN FULL_SIMP_TAC std_ss [fcpTheory.FCP_BETA]);
 
+(* ------------------------------------------------------------------------- *)
+
+val bit_count_upto_0 = Q.store_thm("bit_count_upto_0",
+  `!w. bit_count_upto 0 w = 0`,
+  SIMP_TAC std_ss [bit_count_upto_def, sum_numTheory.SUM_def]);
+
+val bit_count_upto_SUC = Q.store_thm("bit_count_upto_SUC",
+   `!w n. bit_count_upto (SUC n) w =
+          (if w ' n then 1 else 0) + bit_count_upto n w`,
+   SRW_TAC [ARITH_ss] [bit_count_upto_def, sum_numTheory.SUM_def]);
 
 (* ------------------------------------------------------------------------- *)
 (* Theorems sets of words                                                    *)

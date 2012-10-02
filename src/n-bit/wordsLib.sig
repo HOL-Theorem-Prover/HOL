@@ -34,6 +34,7 @@ sig
     val WORD_MOD_BITS_CONV  : conv
     val WORD_CONV           : conv
     val WORD_BIT_EQ_CONV    : conv
+    val WORD_BIT_INDEX_CONV : bool -> conv
     val EXTEND_EXTRACT_CONV : conv
     val EXPAND_REDUCE_CONV  : conv
 
