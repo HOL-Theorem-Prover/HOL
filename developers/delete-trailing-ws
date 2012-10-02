@@ -1,3 +1,11 @@
 #!/bin/sh
 
-find . \( -name '*.sml' -o -name '*.sig' -o -name '*.tex' -o -name '*.ML' -o -name '*.lem' \) \! -name '*ML.sml' \! -name '*Theory.sml' \! -name '*Theory.sig' -exec grep -q ' \+$' \{\} \; -print -exec perl -i -pe 's/ +$//;' \{\} +
+if [ $# -ne 1 ]
+then
+    echo "Usage:" >& 2
+    echo "  $0 directory-to-purge" >& 2
+    exit 1
+fi
+
+
+find "$1" \( -name '*.sml' -o -name '*.sig' -o -name '*.tex' -o -name '*.ML' -o -name '*.lem' \) \! -name '*ML.sml' \! -name '*Theory.sml' \! -name '*Theory.sig' -exec grep -q ' \+$' \{\} \; -print -exec perl -i -pe 's/ +$//;' \{\} +
