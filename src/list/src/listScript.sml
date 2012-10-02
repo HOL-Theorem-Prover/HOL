@@ -2680,6 +2680,11 @@ val LUPDATE_SNOC = store_thm("LUPDATE_SNOC",
 
 (* --------------------------------------------------------------------- *)
 
+val LAST_compute = Q.store_thm("LAST_compute",
+   `(!x. LAST [x] = x) /\
+    (!h1 h2 t. LAST (h1::h2::t) = LAST (h2::t))`,
+   SRW_TAC [] [LAST_DEF]);
+
 val TAKE_compute = Q.prove(
    `(!l. TAKE 0 l = []) /\
     (!n. TAKE (SUC n) [] = []) /\
@@ -2716,7 +2721,7 @@ val _ = adjoin_to_theory
    S "             FOLDL, REVERSE_REV, ALL_DISTINCT, GENLIST_AUX,";
    S "             EL_restricted, EL_simp_restricted, SNOC,";
    S "             GENLIST_NUMERALS, computeLib.lazyfy_thm list_case_compute,";
-   S "             list_size_def, FRONT_DEF, LAST_DEF, isPREFIX]";
+   S "             list_size_def, FRONT_DEF, LAST_compute, isPREFIX]";
    S "        end;";
    NL(); NL();
    S "val _ =";
