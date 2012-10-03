@@ -337,6 +337,35 @@ val OWHILE_INV_IND = store_thm(
     SRW_TAC [][LESS_MONO_EQ, FUNPOW, LESS_0]
   ]);
 
+val IF_SOME_EQ_SOME_LEMMA = prove(
+  ``!b (x:'a) y. ((if b then SOME x else NONE) = SOME y) = b /\ (x = y)``,
+  Cases THEN
+  FULL_SIMP_TAC bool_ss [optionTheory.NOT_NONE_SOME,optionTheory.SOME_11]);
+
+val OWHILE_IND = store_thm(
+  "OWHILE_IND",
+  ``!P G (f:'a->'a).
+      (!s. ~(G s) ==> P s s) /\
+      (!s1 s2. G s1 /\ P (f s1) s2 ==> P s1 s2) ==>
+      !s1 s2. (OWHILE G f s1 = SOME s2) ==> P s1 s2``,
+  SIMP_TAC bool_ss [OWHILE_def,IF_SOME_EQ_SOME_LEMMA] THEN REPEAT STRIP_TAC
+  THEN (Q.SPEC `\n. ~G (FUNPOW f n s1)` LEAST_EXISTS_IMP
+      |> SIMP_RULE bool_ss [PULL_EXISTS] |> IMP_RES_TAC)
+  THEN NTAC 2 (POP_ASSUM MP_TAC)
+  THEN Q.SPEC_TAC (`($LEAST (\n. ~G (FUNPOW f n s1)))`,`k`)
+  THEN Q.SPEC_TAC (`s1`,`s1`)
+  THEN Induct_on `k` THEN FULL_SIMP_TAC bool_ss [FUNPOW]
+  THEN REPEAT STRIP_TAC
+  THEN Q.PAT_ASSUM `!xx yy. bb` MATCH_MP_TAC
+  THEN STRIP_TAC THEN1
+   (`0 < SUC k` by REWRITE_TAC [prim_recTheory.LESS_0]
+    THEN RES_TAC THEN FULL_SIMP_TAC bool_ss [FUNPOW])
+  THEN FULL_SIMP_TAC bool_ss [AND_IMP_INTRO]
+  THEN Q.PAT_ASSUM `!s1. bb /\ bbb ==> bbbb` MATCH_MP_TAC
+  THEN FULL_SIMP_TAC bool_ss [] THEN REPEAT STRIP_TAC
+  THEN IMP_RES_TAC prim_recTheory.LESS_MONO THEN RES_TAC
+  THEN FULL_SIMP_TAC bool_ss [FUNPOW]);
+
 val _ =
  computeLib.add_persistent_funs
    ["WHILE"
