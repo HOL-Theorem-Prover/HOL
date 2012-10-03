@@ -384,7 +384,7 @@ val _ = adjoin_to_theory_struct
 
 (* == State transformer ==================================================== *)
 
-val defs = map DEFN [UNIT_DEF, BIND_DEF, MMAP_DEF, JOIN_DEF]
+val defs = map DEFN [UNIT_DEF, BIND_DEF, IGNORE_BIND_DEF, MMAP_DEF, JOIN_DEF, READ_def, WRITE_def]
 
 val _ = eSML "state_transformer" defs
 val _ = eCAML "state_transformer" defs;
