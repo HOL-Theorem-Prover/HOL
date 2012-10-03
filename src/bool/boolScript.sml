@@ -4518,6 +4518,98 @@ end
 
 
 (*---------------------------------------------------------------------------*)
+(* Pulling FORALL and EXISTS up through /\ and ==>                           *)
+(*---------------------------------------------------------------------------*)
+
+local
+  val PULL_EXISTS1 = let
+    val th1 = ASSUME ``((?(x:'a). P x) ==> Q)``
+    val th2 = ASSUME ``(P (x:'a)):bool``
+    val th3 = EXISTS (``?x:'a. P x``,``x:'a``) th2
+    val th4 = GEN ``x:'a`` (DISCH ``(P (x:'a)):bool`` (MP th1 th3))
+    val th5 = DISCH_ALL th4
+    val th1 = ASSUME ``!(x:'a). P x ==> Q``
+    val th2 = ASSUME ``((?(x:'a). P x))``
+    val th3 = CHOOSE (``x:'a``,th2) (UNDISCH (SPEC_ALL th1))
+    val th4 = DISCH_ALL (DISCH ``((?(x:'a). P x))`` th3)
+    val thA = IMP_ANTISYM_AX
+              |> SPECL [``((?(x:'a). P x) ==> Q)``,``!(x:'a). P x ==> Q``]
+    in MP (MP thA th5) th4 end;
+  val PULL_EXISTS2 = let
+    val th1 = ASSUME ``((?(x:'a). P x) /\ Q)``
+    val th2 = CONJUNCT1 th1
+    val th3 = CONJUNCT2 th1
+    val th4 = CONJ (ASSUME ``(P:'a->bool) x``) th3
+              |> EXISTS (``?x:'a. P x /\ Q``,``x:'a``)
+    val th5 = CHOOSE (``x:'a``,th2) th4 |> DISCH_ALL
+    val th1 = ASSUME ``(?(x:'a). P x /\ Q)``
+    val th2 = ASSUME ``(P (x:'a) /\ Q)``
+    val th3 = CONJUNCT1 th2 |> EXISTS (``?x:'a. P x``,``x:'a``)
+    val th4 = CONJ th3 (CONJUNCT2 th2)
+    val th6 = CHOOSE (``x:'a``,th1) th4 |> DISCH_ALL
+    val thA = IMP_ANTISYM_AX
+              |> SPECL [``((?(x:'a). P x) /\ Q)``,``(?(x:'a). P x /\ Q)``]
+    in MP (MP thA th5) th6 end;
+  val PULL_EXISTS3 = let
+    val th1 = ASSUME ``(Q /\ (?(x:'a). P x))``
+    val th2 = CONJUNCT2 th1
+    val th3 = CONJUNCT1 th1
+    val th4 = CONJ th3 (ASSUME ``(P:'a->bool) x``)
+              |> EXISTS (``?x:'a. Q /\ P x``,``x:'a``)
+    val th5 = CHOOSE (``x:'a``,th2) th4 |> DISCH_ALL
+    val th1 = ASSUME ``(?(x:'a). Q /\ P x)``
+    val th2 = ASSUME ``(Q /\ P (x:'a))``
+    val th3 = EXISTS (``?x:'a. P x``,``x:'a``) (CONJUNCT2 th2)
+    val th4 = CONJ (CONJUNCT1 th2) th3
+    val th6 = CHOOSE (``x:'a``,th1) th4 |> DISCH_ALL
+    val thA = IMP_ANTISYM_AX
+              |> SPECL [``(Q /\ (?(x:'a). P x))``,``(?(x:'a). Q /\ P x)``]
+    in MP (MP thA th5) th6 end;
+in
+  val PULL_EXISTS = save_thm("PULL_EXISTS",
+    CONJ PULL_EXISTS1 (CONJ PULL_EXISTS2 PULL_EXISTS3)
+    |> GENL [``(P:'a->bool)``,``Q:bool``])
+end
+
+local
+  val PULL_FORALL1 = let
+    val th1 = ASSUME ``(Q ==> !x:'a. P x)``
+              |> UNDISCH |> SPEC_ALL
+              |> DISCH ``Q:bool`` |> GEN ``x:'a`` |> DISCH_ALL
+    val th2 = ASSUME ``(!x:'a. Q ==> P x)``
+              |> SPEC_ALL |> UNDISCH |> GEN ``x:'a``
+              |> DISCH ``Q:bool`` |> DISCH_ALL
+    val thA = IMP_ANTISYM_AX
+              |> SPECL [``(Q ==> !x:'a. P x)``,``(!x:'a. Q ==> P x)``]
+    in MP (MP thA th1) th2 end;
+  val PULL_FORALL2 = let
+    val th1 = ASSUME ``(!x:'a. P x) /\ Q``
+    val th2 = CONJ (th1 |> CONJUNCT1 |> SPEC_ALL) (th1 |> CONJUNCT2)
+              |> GEN ``x:'a`` |> DISCH_ALL
+    val th1 = ASSUME ``(!x:'a. P x /\ Q)`` |> SPEC_ALL
+    val th3 = CONJ (th1 |> CONJUNCT1 |> GEN ``x:'a``)
+                   (th1 |> CONJUNCT2) |> DISCH_ALL
+    val thA = IMP_ANTISYM_AX
+              |> SPECL [``(!x:'a. P x) /\ Q``,``(!x:'a. P x /\ Q)``]
+    in MP (MP thA th2) th3 end;
+  val PULL_FORALL3 = let
+    val th1 = ASSUME ``Q /\ (!x:'a. P x)``
+    val th2 = CONJ (th1 |> CONJUNCT1) (th1 |> CONJUNCT2 |> SPEC_ALL)
+              |> GEN ``x:'a`` |> DISCH_ALL
+    val th1 = ASSUME ``(!x:'a. Q /\ P x)`` |> SPEC_ALL
+    val th3 = CONJ (th1 |> CONJUNCT1)
+                   (th1 |> CONJUNCT2 |> GEN ``x:'a``) |> DISCH_ALL
+    val thA = IMP_ANTISYM_AX
+              |> SPECL [``Q /\ (!x:'a. P x)``,``(!x:'a. Q /\ P x)``]
+    in MP (MP thA th2) th3 end;
+in
+  val PULL_FORALL = save_thm("PULL_FORALL",
+    CONJ PULL_FORALL1 (CONJ PULL_FORALL2 PULL_FORALL3)
+    |> GENL [``(P:'a->bool)``,``Q:bool``]);
+end
+
+
+(*---------------------------------------------------------------------------*)
 (* PEIRCE  =  |- ((P ==> Q) ==> P) ==> P                                     *)
 (*---------------------------------------------------------------------------*)
 
