@@ -777,6 +777,8 @@ fun CONJ_PAIR thm = (CONJUNCT1 thm, CONJUNCT2 thm);
 fun CONJUNCTS th =
   (CONJUNCTS (CONJUNCT1 th) @ CONJUNCTS (CONJUNCT2 th)) handle _ => [th];
 
+val LIST_CONJ = end_itlist CONJ
+
 (*---------------------------------------------------------------------------
  *   |- !t1 t2. (t1 /\ t2) = (t2 /\ t1)
  *---------------------------------------------------------------------------*)
@@ -1017,14 +1019,9 @@ val AND_CLAUSE5 =
 val AND_CLAUSES =
    let val t = --`t:bool`--
    in
-   GEN t (CONJ
-           (SPEC t AND_CLAUSE1)
-            (CONJ
-             (SPEC t AND_CLAUSE2)
-              (CONJ
-               (SPEC t AND_CLAUSE3)
-                 (CONJ (SPEC t AND_CLAUSE4)
-                       (SPEC t AND_CLAUSE5)))))
+   GEN t (LIST_CONJ [SPEC t AND_CLAUSE1, SPEC t AND_CLAUSE2,
+                     SPEC t AND_CLAUSE3, SPEC t AND_CLAUSE4,
+                     SPEC t AND_CLAUSE5])
    end;
 
 val _ = save_thm("AND_CLAUSES", AND_CLAUSES);
@@ -1105,14 +1102,9 @@ val OR_CLAUSE5 =
 val OR_CLAUSES =
    let val t = --`t:bool`--
    in
-   GEN t (CONJ
-          (SPEC t OR_CLAUSE1)
-          (CONJ
-           (SPEC t OR_CLAUSE2)
-           (CONJ
-            (SPEC t OR_CLAUSE3)
-            (CONJ (SPEC t OR_CLAUSE4)
-                  (SPEC t OR_CLAUSE5)))))
+   GEN t (LIST_CONJ [SPEC t OR_CLAUSE1, SPEC t OR_CLAUSE2,
+                     SPEC t OR_CLAUSE3, SPEC t OR_CLAUSE4,
+                     SPEC t OR_CLAUSE5])
    end;
 
 val _ = save_thm("OR_CLAUSES", OR_CLAUSES);
@@ -1182,11 +1174,9 @@ val IMP_CLAUSE5 =
 val IMP_CLAUSES =
    let val t = --`t:bool`--
    in GEN t
-      (CONJ (SPEC t IMP_CLAUSE1)
-            (CONJ (SPEC t IMP_CLAUSE3)
-                  (CONJ (SPEC t IMP_CLAUSE2)
-                        (CONJ (EQT_INTRO(DISCH t (ASSUME t)))
-                              (SPEC t IMP_CLAUSE5)))))
+      (LIST_CONJ [SPEC t IMP_CLAUSE1, SPEC t IMP_CLAUSE3,
+                  SPEC t IMP_CLAUSE2, EQT_INTRO(DISCH t (ASSUME t)),
+                  SPEC t IMP_CLAUSE5])
    end;
 
 val _ = save_thm("IMP_CLAUSES", IMP_CLAUSES);
@@ -1396,12 +1386,8 @@ val EQ_CLAUSE4 =
 val EQ_CLAUSES =
    let val t = --`t:bool`--
    in
-   GEN t (CONJ
-           (SPEC t EQ_CLAUSE1)
-            (CONJ
-              (SPEC t EQ_CLAUSE2)
-                (CONJ (SPEC t EQ_CLAUSE3)
-                      (SPEC t EQ_CLAUSE4))))
+   GEN t (LIST_CONJ [SPEC t EQ_CLAUSE1, SPEC t EQ_CLAUSE2,
+                     SPEC t EQ_CLAUSE3, SPEC t EQ_CLAUSE4])
    end;
 
 val _ = save_thm("EQ_CLAUSES", EQ_CLAUSES);
@@ -4522,92 +4508,23 @@ end
 (*---------------------------------------------------------------------------*)
 
 local
-  val PULL_EXISTS1 = let
-    val th1 = ASSUME ``((?(x:'a). P x) ==> Q)``
-    val th2 = ASSUME ``(P (x:'a)):bool``
-    val th3 = EXISTS (``?x:'a. P x``,``x:'a``) th2
-    val th4 = GEN ``x:'a`` (DISCH ``(P (x:'a)):bool`` (MP th1 th3))
-    val th5 = DISCH_ALL th4
-    val th1 = ASSUME ``!(x:'a). P x ==> Q``
-    val th2 = ASSUME ``((?(x:'a). P x))``
-    val th3 = CHOOSE (``x:'a``,th2) (UNDISCH (SPEC_ALL th1))
-    val th4 = DISCH_ALL (DISCH ``((?(x:'a). P x))`` th3)
-    val thA = IMP_ANTISYM_AX
-              |> SPECL [``((?(x:'a). P x) ==> Q)``,``!(x:'a). P x ==> Q``]
-    in MP (MP thA th5) th4 end;
-  val PULL_EXISTS2 = let
-    val th1 = ASSUME ``((?(x:'a). P x) /\ Q)``
-    val th2 = CONJUNCT1 th1
-    val th3 = CONJUNCT2 th1
-    val th4 = CONJ (ASSUME ``(P:'a->bool) x``) th3
-              |> EXISTS (``?x:'a. P x /\ Q``,``x:'a``)
-    val th5 = CHOOSE (``x:'a``,th2) th4 |> DISCH_ALL
-    val th1 = ASSUME ``(?(x:'a). P x /\ Q)``
-    val th2 = ASSUME ``(P (x:'a) /\ Q)``
-    val th3 = CONJUNCT1 th2 |> EXISTS (``?x:'a. P x``,``x:'a``)
-    val th4 = CONJ th3 (CONJUNCT2 th2)
-    val th6 = CHOOSE (``x:'a``,th1) th4 |> DISCH_ALL
-    val thA = IMP_ANTISYM_AX
-              |> SPECL [``((?(x:'a). P x) /\ Q)``,``(?(x:'a). P x /\ Q)``]
-    in MP (MP thA th5) th6 end;
-  val PULL_EXISTS3 = let
-    val th1 = ASSUME ``(Q /\ (?(x:'a). P x))``
-    val th2 = CONJUNCT2 th1
-    val th3 = CONJUNCT1 th1
-    val th4 = CONJ th3 (ASSUME ``(P:'a->bool) x``)
-              |> EXISTS (``?x:'a. Q /\ P x``,``x:'a``)
-    val th5 = CHOOSE (``x:'a``,th2) th4 |> DISCH_ALL
-    val th1 = ASSUME ``(?(x:'a). Q /\ P x)``
-    val th2 = ASSUME ``(Q /\ P (x:'a))``
-    val th3 = EXISTS (``?x:'a. P x``,``x:'a``) (CONJUNCT2 th2)
-    val th4 = CONJ (CONJUNCT1 th2) th3
-    val th6 = CHOOSE (``x:'a``,th1) th4 |> DISCH_ALL
-    val thA = IMP_ANTISYM_AX
-              |> SPECL [``(Q /\ (?(x:'a). P x))``,``(?(x:'a). Q /\ P x)``]
-    in MP (MP thA th5) th6 end;
+  val Pb = mk_var("P", bool)
+  val Pab = mk_var("P", alpha --> bool)
+  val Qb = mk_var("Q", bool)
+  val Qab = mk_var("Q", alpha --> bool)
+  val flip = INST [Pb |-> Qb, Qab |-> Pab]
+  val PULL_EXISTS1 = LEFT_FORALL_IMP_THM |> SPEC_ALL |> SYM
+  val PULL_EXISTS2 = LEFT_EXISTS_AND_THM |> SPEC_ALL |> SYM
+  val PULL_EXISTS3 = RIGHT_EXISTS_AND_THM |> SPEC_ALL |> SYM |> flip
+  val PULL_FORALL1 = RIGHT_FORALL_IMP_THM |> SPEC_ALL |> SYM |> flip
+  val PULL_FORALL2 = LEFT_AND_FORALL_THM |> SPEC_ALL
+  val PULL_FORALL3 = RIGHT_AND_FORALL_THM |> SPEC_ALL |> flip
 in
   val PULL_EXISTS = save_thm("PULL_EXISTS",
-    CONJ PULL_EXISTS1 (CONJ PULL_EXISTS2 PULL_EXISTS3)
-    |> GENL [``(P:'a->bool)``,``Q:bool``])
-end
-
-local
-  val PULL_FORALL1 = let
-    val th1 = ASSUME ``(Q ==> !x:'a. P x)``
-              |> UNDISCH |> SPEC_ALL
-              |> DISCH ``Q:bool`` |> GEN ``x:'a`` |> DISCH_ALL
-    val th2 = ASSUME ``(!x:'a. Q ==> P x)``
-              |> SPEC_ALL |> UNDISCH |> GEN ``x:'a``
-              |> DISCH ``Q:bool`` |> DISCH_ALL
-    val thA = IMP_ANTISYM_AX
-              |> SPECL [``(Q ==> !x:'a. P x)``,``(!x:'a. Q ==> P x)``]
-    in MP (MP thA th1) th2 end;
-  val PULL_FORALL2 = let
-    val th1 = ASSUME ``(!x:'a. P x) /\ Q``
-    val th2 = CONJ (th1 |> CONJUNCT1 |> SPEC_ALL) (th1 |> CONJUNCT2)
-              |> GEN ``x:'a`` |> DISCH_ALL
-    val th1 = ASSUME ``(!x:'a. P x /\ Q)`` |> SPEC_ALL
-    val th3 = CONJ (th1 |> CONJUNCT1 |> GEN ``x:'a``)
-                   (th1 |> CONJUNCT2) |> DISCH_ALL
-    val thA = IMP_ANTISYM_AX
-              |> SPECL [``(!x:'a. P x) /\ Q``,``(!x:'a. P x /\ Q)``]
-    in MP (MP thA th2) th3 end;
-  val PULL_FORALL3 = let
-    val th1 = ASSUME ``Q /\ (!x:'a. P x)``
-    val th2 = CONJ (th1 |> CONJUNCT1) (th1 |> CONJUNCT2 |> SPEC_ALL)
-              |> GEN ``x:'a`` |> DISCH_ALL
-    val th1 = ASSUME ``(!x:'a. Q /\ P x)`` |> SPEC_ALL
-    val th3 = CONJ (th1 |> CONJUNCT1)
-                   (th1 |> CONJUNCT2 |> GEN ``x:'a``) |> DISCH_ALL
-    val thA = IMP_ANTISYM_AX
-              |> SPECL [``Q /\ (!x:'a. P x)``,``(!x:'a. Q /\ P x)``]
-    in MP (MP thA th2) th3 end;
-in
+    LIST_CONJ [PULL_EXISTS1, PULL_EXISTS2, PULL_EXISTS3] |> GENL [Pab, Qb])
   val PULL_FORALL = save_thm("PULL_FORALL",
-    CONJ PULL_FORALL1 (CONJ PULL_FORALL2 PULL_FORALL3)
-    |> GENL [``(P:'a->bool)``,``Q:bool``]);
+    LIST_CONJ [PULL_FORALL1, PULL_FORALL2, PULL_FORALL3] |> GENL [Pab, Qb])
 end
-
 
 (*---------------------------------------------------------------------------*)
 (* PEIRCE  =  |- ((P ==> Q) ==> P) ==> P                                     *)
