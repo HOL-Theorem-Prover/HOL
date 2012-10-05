@@ -106,7 +106,7 @@ local
   fun munge s = String.translate (fn #"/" => "\\" | c => str c) s
   fun q s = "\""^munge s^"\""
 in
-fun emit_hol_script target qend =
+fun emit_hol_script target qend _ =
  let val ostrm = fopen(target^".bat")
      fun output s = TextIO.output(ostrm, s)
      val sigobj = q (fullPath [HOLDIR, "sigobj"])
@@ -123,7 +123,7 @@ fun emit_hol_script target qend =
  end
 
 
-fun emit_hol_unquote_script target qend =
+fun emit_hol_unquote_script target qend _ =
  let val ostrm = fopen(target^".bat")
      fun output s = TextIO.output(ostrm, s)
      val qfilter = q (fullPath [HOLDIR, "bin", "unquote"])
@@ -146,5 +146,3 @@ end (* local *)
 
 
 end; (* struct *)
-
-
