@@ -281,8 +281,7 @@ val EL_DISJOINT_FILTER = store_thm ("EL_DISJOINT_FILTER",
    FULL_SIMP_TAC list_ss [MEM_EL, FILTER_APPEND] THEN
    Q.EXISTS_TAC `n` THEN
    Q.EXISTS_TAC `LENGTH (FILTER P l1) + n'` THEN
-   ASM_SIMP_TAC list_ss [EL_APPEND1, EL_APPEND2] THEN
-   METIS_TAC[]
+   FULL_SIMP_TAC list_ss [EL_APPEND1, EL_APPEND2]
 );
 
 
@@ -998,8 +997,8 @@ val LIST_STAR_def = Define `
 
 
 val LIST_STAR_REWRITE = store_thm ("LIST_STAR_REWRITE",
-``      (LIST_STAR l []) /\
-   (~(t = []) ==> (LIST_STAR l t = ?t'. (t = l++t') /\ LIST_STAR l t'))``,
+``(LIST_STAR l []) /\
+  (~(t = []) ==> (LIST_STAR l t = ?t'. (t = l++t') /\ LIST_STAR l t'))``,
 
 SIMP_TAC std_ss [LIST_STAR_def] THEN
 REPEAT STRIP_TAC THENL [
@@ -1023,7 +1022,7 @@ REPEAT STRIP_TAC THENL [
 
 
 val LIST_NUM_STAR_SYM = store_thm ("LIST_NUM_STAR_SYM",
-   ``(LIST_NUM_STAR 0 l = []) /\
+ ``(LIST_NUM_STAR 0 l = []) /\
    (LIST_NUM_STAR (SUC n) l = (LIST_NUM_STAR n l)++l)``,
 
 SIMP_TAC std_ss [LIST_NUM_STAR_def] THEN

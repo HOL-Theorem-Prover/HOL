@@ -30,6 +30,7 @@ sig
   val num_qp            : quantHeuristicsLibBase.quant_param;
   val option_qp         : quantHeuristicsLibBase.quant_param;
   val list_qp           : quantHeuristicsLibBase.quant_param;
+  val list_len_qp       : quantHeuristicsLibBase.quant_param; (* use LENGTH for number > 1 to unroll lists *)
   val sum_qp            : quantHeuristicsLibBase.quant_param;
 
 

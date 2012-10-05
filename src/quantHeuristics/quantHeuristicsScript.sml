@@ -3,7 +3,7 @@ struct
 
 
 open HolKernel Parse boolLib Drule BasicProvers
-     pairTheory listTheory optionTheory metisLib simpLib
+     pairTheory listTheory optionTheory metisLib simpLib 
      boolSimps pureSimps TotalDefn numLib ConseqConv
 
 val _ = new_theory "quantHeuristics";
@@ -12,7 +12,7 @@ val _ = new_theory "quantHeuristics";
 quietdec := false;
 *)
 
-
+val list_ss  = arith_ss ++ listSimps.LIST_ss
 
 val GUESS_EXISTS_def = Define `
     GUESS_EXISTS i P = ((?v. P v) = (?fv. P (i fv)))`
@@ -737,6 +737,23 @@ val IMP_NEG_CONTRA = store_thm("IMP_NEG_CONTRA",
    ``!P i x. ~(P i) ==> (P x) ==> ~(x = i)``, PROVE_TAC[])
 
 
+(******************************************************************************)
+(* Removing functions under quantifiers                                       *)
+(******************************************************************************)
+
+
+val IS_REMOVABLE_QUANT_FUN_def = Define `
+    IS_REMOVABLE_QUANT_FUN f = (!v. ?x. f x = v)`
+
+val IS_REMOVABLE_QUANT_FUN___EXISTS_THM = store_thm ("IS_REMOVABLE_QUANT_FUN___EXISTS_THM",
+  ``!f P. IS_REMOVABLE_QUANT_FUN f ==> ((?x. P (f x)) = (?x'. P x'))``,
+REWRITE_TAC[IS_REMOVABLE_QUANT_FUN_def] THEN METIS_TAC[]);
+
+val IS_REMOVABLE_QUANT_FUN___FORALL_THM = store_thm ("IS_REMOVABLE_QUANT_FUN___FORALL_THM",
+  ``!f P. IS_REMOVABLE_QUANT_FUN f ==> ((!x. P (f x)) = (!x'. P x'))``,
+REWRITE_TAC[IS_REMOVABLE_QUANT_FUN_def] THEN METIS_TAC[]);
+
+
 
 (* Theorems for the specialised logics *)
 
@@ -775,6 +792,142 @@ val ISL_ISR_NEG = store_thm ("ISL_ISR_NEG",
   ``(~(ISR x) = ISL x) /\
     (~(ISL x) = ISR x)``,
 Cases_on `x` THEN SIMP_TAC std_ss [])
+
+val LENGTH_LE_PLUS = store_thm ("LENGTH_LE_PLUS",
+  ``(n + m) <= LENGTH l <=> (?l1 l2. (LENGTH l1 = n) /\ m <= LENGTH l2 /\ (l = l1 ++ l2))``,
+SIMP_TAC list_ss [arithmeticTheory.LESS_EQ_EXISTS, LENGTH_EQ_NUM, GSYM LEFT_EXISTS_AND_THM,
+  GSYM RIGHT_EXISTS_AND_THM] THEN
+METIS_TAC[]);
+
+val LENGTH_LE_NUM = store_thm ("LENGTH_LE_NUM",
+  ``n <= LENGTH l <=> (?l1 l2. (LENGTH l1 = n) /\ (l = l1 ++ l2))``,
+SIMP_TAC list_ss [arithmeticTheory.LESS_EQ_EXISTS, LENGTH_EQ_NUM, GSYM LEFT_EXISTS_AND_THM,
+  GSYM RIGHT_EXISTS_AND_THM]);
+
+
+val LENGTH_NIL_SYM = save_thm ("LENGTH_NIL_SYM",
+  CONV_RULE (LHS_CONV SYM_CONV) (SPEC_ALL listTheory.LENGTH_NIL))
+
+val LIST_LENGTH_COMPARE_1_0 = store_thm ("LIST_LENGTH_COMPARE_1",
+  ``((LENGTH l < 1) <=> (l = [])) /\
+    ((1 > LENGTH l) <=> (l = [])) /\
+    ((0 >= LENGTH l) <=> (l = [])) /\
+    ((LENGTH l <= 0) <=> (l = []))``,
+`LENGTH l < 1 <=> (LENGTH l = 0)` by DECIDE_TAC THEN
+`1 > LENGTH l <=> (LENGTH l = 0)` by DECIDE_TAC THEN
+`0 >= LENGTH l <=> (LENGTH l = 0)` by DECIDE_TAC THEN
+ASM_SIMP_TAC arith_ss [LENGTH_NIL]);
+
+
+val LIST_LENGTH_THMS_0 = ((SPEC_ALL listTheory.LENGTH_NIL)::
+                          (SPEC_ALL LENGTH_NIL_SYM)::
+                          (BODY_CONJUNCTS LIST_LENGTH_COMPARE_1_0))
+
+(* prove length theormes generally *)
+
+local
+  val len_t = ``LENGTH (l:'a list)``
+
+  fun mk_e l 0 = l
+    | mk_e l n =
+      mk_e (("e"^Int.toString n)::l) (n-1)
+
+  fun mk_base_length_thms n =
+  let
+    val n_t = mk_numeral (Arbnum.fromInt n)
+    val pre_n_t = mk_numeral (Arbnum.fromInt (n-1))
+    val es = mk_e [] n
+
+    (* equality *)
+    val thm_eq = let 
+      val l = mk_eq (len_t, n_t);
+      val thm_aux = SIMP_CONV arith_ss [LENGTH_EQ_NUM_compute, GSYM LEFT_EXISTS_AND_THM] l;
+    in
+      CONV_RULE (RHS_CONV (RENAME_VARS_CONV es)) thm_aux
+    end
+
+    (* equality plus *)
+    val thm_eqp = let 
+      val l = mk_eq (len_t, mk_plus(n_t, mk_var("x", ``:num``)));
+      val thm_aux = SIMP_CONV list_ss [LENGTH_EQ_NUM, GSYM LEFT_EXISTS_AND_THM, thm_eq] l;
+    in
+      CONV_RULE (RHS_CONV (RENAME_VARS_CONV ["l'"])) thm_aux
+    end
+
+    (* less equal *)
+    val thm_le = let  
+      val l = mk_leq (n_t, len_t);
+      val thm_aux = SIMP_CONV list_ss [LENGTH_LE_NUM, thm_eq, GSYM LEFT_EXISTS_AND_THM] l;
+    in 
+      CONV_RULE (RHS_CONV (RENAME_VARS_CONV ["l'"])) thm_aux
+    end
+
+    (* less equal plus *)
+    val thm_lep = let  
+      val l = mk_leq (mk_plus(n_t, mk_var("x", ``:num``)), len_t);
+      val thm_aux = SIMP_CONV list_ss [LENGTH_LE_PLUS, thm_eq, GSYM LEFT_EXISTS_AND_THM] l;
+    in 
+      CONV_RULE (RHS_CONV (RENAME_VARS_CONV ["l'"])) thm_aux
+    end
+
+    (* less *)
+    val thm_less = let  
+      val l = mk_less (pre_n_t, len_t);
+      val thm_aux = SIMP_CONV list_ss [arithmeticTheory.LESS_EQ, thm_le] l;
+    in 
+      thm_aux
+    end
+  in
+    (thm_eq, thm_eqp, thm_le, thm_lep, thm_less)
+  end
+
+in
+
+fun mk_length_n_thms 0 = LIST_LENGTH_THMS_0
+  | mk_length_n_thms n =
+let
+  fun lhs_rule c = CONV_RULE (LHS_CONV c)
+  val (eq_thm, eqp_thm, le_thm, lep_thm, less_thm) = mk_base_length_thms n
+
+  val eq_thm_sym = lhs_rule SYM_CONV eq_thm
+  val ge_thm = lhs_rule (REWR_CONV (GSYM arithmeticTheory.GREATER_EQ)) le_thm
+  val greater_thm = lhs_rule (REWR_CONV (GSYM arithmeticTheory.GREATER_DEF)) less_thm
+  val gep_thm = lhs_rule (REWR_CONV (GSYM arithmeticTheory.GREATER_EQ)) lep_thm
+  val leps_thm = lhs_rule (RATOR_CONV (RAND_CONV (REWR_CONV (GSYM arithmeticTheory.ADD_SYM)))) lep_thm
+  val geps_thm = lhs_rule (REWR_CONV (GSYM arithmeticTheory.GREATER_EQ)) leps_thm
+
+  val eqp_thm_sym = lhs_rule SYM_CONV eqp_thm
+  val eqps_thm = lhs_rule (RHS_CONV (REWR_CONV (GSYM arithmeticTheory.ADD_SYM))) eqp_thm
+  val eqps_thm_sym = lhs_rule SYM_CONV eqps_thm
+
+in
+  [eq_thm, eq_thm_sym, less_thm, greater_thm, le_thm, ge_thm, lep_thm, gep_thm, leps_thm, geps_thm, eqp_thm, eqp_thm_sym, eqps_thm, eqps_thm_sym]
+end
+
+fun mk_length_upto_n_thms 0 = LIST_LENGTH_THMS_0
+  | mk_length_upto_n_thms n =
+       (mk_length_n_thms n) @ (mk_length_upto_n_thms (n-1))
+
+end
+
+val LIST_LENGTH_0  = save_thm ("LIST_LENGTH_0",  LIST_CONJ (mk_length_upto_n_thms 0));
+val LIST_LENGTH_1  = save_thm ("LIST_LENGTH_1",  LIST_CONJ (mk_length_upto_n_thms 1));
+val LIST_LENGTH_2  = save_thm ("LIST_LENGTH_2",  LIST_CONJ (mk_length_upto_n_thms 2));
+val LIST_LENGTH_3  = save_thm ("LIST_LENGTH_3",  LIST_CONJ (mk_length_upto_n_thms 3));
+val LIST_LENGTH_4  = save_thm ("LIST_LENGTH_4",  LIST_CONJ (mk_length_upto_n_thms 4));
+val LIST_LENGTH_5  = save_thm ("LIST_LENGTH_5",  LIST_CONJ (mk_length_upto_n_thms 5));
+val LIST_LENGTH_7  = save_thm ("LIST_LENGTH_7",  LIST_CONJ (mk_length_upto_n_thms 7));
+val LIST_LENGTH_10 = save_thm ("LIST_LENGTH_10", LIST_CONJ (mk_length_upto_n_thms 10));
+val LIST_LENGTH_15 = save_thm ("LIST_LENGTH_15", LIST_CONJ (mk_length_upto_n_thms 15));
+val LIST_LENGTH_20 = save_thm ("LIST_LENGTH_20", LIST_CONJ (mk_length_upto_n_thms 20));
+val LIST_LENGTH_25 = save_thm ("LIST_LENGTH_25", LIST_CONJ (mk_length_upto_n_thms 25));
+
+val LIST_LENGTH_COMPARE_SUC = store_thm ("LIST_LENGTH_COMPARE_SUC",
+``(SUC x <= LENGTH l <=> ?l' e1. x <= LENGTH l' /\ (l = e1::l')) /\
+  (LENGTH l >= SUC x <=> ?l' e1. x <= LENGTH l' /\ (l = e1::l')) /\
+  ((LENGTH l = SUC x) <=> ?l' e1. (LENGTH l' = x) /\ (l = e1::l')) /\
+  ((SUC x = LENGTH l) <=> ?l' e1. (LENGTH l' = x) /\ (l = e1::l'))``,
+SIMP_TAC std_ss [arithmeticTheory.ADD1, LIST_LENGTH_1]);
 
 val _ = export_theory();
 

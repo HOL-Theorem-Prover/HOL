@@ -87,6 +87,7 @@ sig
   val num_qp            : quantHeuristicsLibBase.quant_param;
   val option_qp         : quantHeuristicsLibBase.quant_param;
   val list_qp           : quantHeuristicsLibBase.quant_param;
+  val list_len_qp       : quantHeuristicsLibBase.quant_param; (* use LENGTH for number > 1 to unroll lists *)
   val sum_qp            : quantHeuristicsLibBase.quant_param;
 
 
@@ -118,5 +119,11 @@ sig
   val heuristics_qp    : quant_heuristic list -> quant_param
   val oracle_qp        : (term -> term -> (term * term list) option) -> quant_param
   val final_rewrite_qp : thm list -> quant_param
+
+
+  (* Removing functions under quantification *)
+  val QUANT_FUN_REMOVE_CONV : quantHeuristicsLibFunRemove.quant_fun_remove_arg list -> conv
+  val QUANT_FUN_REMOVE_ss   : quantHeuristicsLibFunRemove.quant_fun_remove_arg list -> simpLib.ssfrag
+  val remove_thm_arg        : thm -> string -> thm list -> quantHeuristicsLibFunRemove.quant_fun_remove_arg
 
 end

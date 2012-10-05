@@ -234,6 +234,7 @@ val num_qp = combine_qps [
  * Lists
  *******************************************************************)
 
+
 val list_qp = combine_qps [
    distinct_qp [rich_listTheory.NOT_CONS_NIL],
 
@@ -242,13 +243,17 @@ val list_qp = combine_qps [
    rewrite_qp  [listTheory.CONS_11,
                 listTheory.NULL_EQ,
                 listTheory.APPEND_11,
-                listTheory.APPEND_eq_NIL],
+                listTheory.APPEND_eq_NIL,
+                LIST_LENGTH_COMPARE_SUC,
+                LIST_LENGTH_1],
 
    final_rewrite_qp [listTheory.NULL_DEF,
                      listTheory.TL, listTheory.HD,
-                     rich_listTheory.NOT_CONS_NIL,
+                     rich_listTheory.NOT_CONS_NIL, 
                      GSYM rich_listTheory.NOT_CONS_NIL]
 ]
+
+val list_len_qp = combine_qp (rewrite_qp  [LIST_LENGTH_20]) list_qp;
 
 
 (*******************************************************************
