@@ -57,6 +57,15 @@ A. [Moscow ML:] First, install Moscow ML. This is usually
 
        http://www.polyml.org/
 
+   You must ensure that your dynamic library loading (typically done
+   by setting the LD_LIBRARY_PATH environment variable) picks up
+   libpolyml.so and libpolymain.so. If these files are in /usr/lib,
+   you will not have to change anything, but other locations may
+   require further system configuration. A sample LD_LIBRARY_PATH
+   initialisation command (in a file such as .bashrc) might be
+
+       declare -x LD_LIBRARY_PATH=/usr/local/lib:$HOME/lib
+
 
 B. Unpack HOL with the commands
 
