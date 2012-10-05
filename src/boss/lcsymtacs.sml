@@ -71,6 +71,7 @@ struct
   val simp_tac = simpLib.SIMP_TAC
   val asm_simp_tac = simpLib.ASM_SIMP_TAC
   val full_simp_tac = simpLib.FULL_SIMP_TAC
+  val rev_full_simp_tac = simpLib.REV_FULL_SIMP_TAC
   val rw_tac = BasicProvers.RW_TAC
   val srw_tac = BasicProvers.SRW_TAC
 
@@ -82,14 +83,17 @@ struct
      end
 
   val fsrw_tac = stateful full_simp_tac
+  val rfsrw_tac = stateful rev_full_simp_tac
 
   val let_arith_list = [boolSimps.LET_ss, numSimps.ARITH_ss, listSimps.LIST_ss]
   val simp = stateful asm_simp_tac let_arith_list
   val lrw = srw_tac let_arith_list
   val lfs = fsrw_tac let_arith_list
+  val lrfs = rfsrw_tac let_arith_list
 
   val rw = srw_tac []
   val fs = fsrw_tac []
+  val rfs = rfsrw_tac []
 
   val op>> = op Tactical.THEN
   val op>- = op Tactical.THEN1

@@ -66,14 +66,18 @@ sig
   val simp_tac : simpLib.simpset -> thm list -> tactic
   val asm_simp_tac : simpLib.simpset -> thm list -> tactic
   val full_simp_tac : simpLib.simpset -> thm list -> tactic
+  val rev_full_simp_tac : simpLib.simpset -> thm list -> tactic
   val rw_tac : simpLib.simpset -> thm list -> tactic
   val srw_tac : simpLib.ssfrag list -> thm list -> tactic
   val fsrw_tac : simpLib.ssfrag list -> thm list -> tactic
+
   val simp : thm list -> tactic
   val lrw : thm list -> tactic
   val lfs : thm list -> tactic
+  val lrfs : thm list -> tactic
   val rw : thm list -> tactic
   val fs : thm list -> tactic
+  val rfs : thm list -> tactic
 
   val >> : tactic * tactic -> tactic
   val >| : tactic * tactic list -> tactic
