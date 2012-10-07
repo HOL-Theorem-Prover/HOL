@@ -357,7 +357,7 @@ fun calculate_length_and_jump th = let
   handle e =>
     (th,l,NONE) end
 
-fun post_process_thm mpred th = let
+fun post_process_thm mpred no_status th = let
   val th = if mpred = zMEM_MEMORY64 then introduce_zMEMORY64 th else th
   val th = if mpred = zMEM_AUTO then introduce_zSTACK th else th
   val th = RW [GSYM zR_def] th
@@ -375,7 +375,7 @@ fun post_process_thm mpred th = let
     val th = INST [cdr x |-> y] th
     val th = SIMP_RULE bool_ss [SEP_CLAUSES,optionLib.option_rws] th
     in th end
-  val th = repeat f th
+  val th = if no_status then th else repeat f th
   val th = RW [ALIGNED_def] th
   val th = SIMP_RULE std_ss [wordsTheory.WORD_EQ_SUB_ZERO,w2w_eq_n2w,w2w_CLAUSES] th
   val th = th |> SIMP_RULE (std_ss++wordsLib.SIZES_ss) [WORD_w2w_OVER_BITWISE,
@@ -451,7 +451,7 @@ fun x64_prove_one_spec th c = let
   val th = INST [``w:bool``|-> (if !x64_code_write_perm then T else F)] th
   in RW [STAR_ASSOC,SEP_CLAUSES,markerTheory.Abbrev_def] th end;
 
-fun x64_prove_specs mpred s = let
+fun x64_prove_specs mpred no_status s = let
   val th = x64_step s
   val th = if mpred = zMEM_BYTE_MEMORY then
              RW [ZWRITE_MEM2_WORD32_def,ZREAD_MEM2_WORD32_def] th else th
@@ -470,17 +470,18 @@ fun x64_prove_specs mpred s = let
          val th1 = SIMP_RULE std_ss [SEP_CLAUSES] (DISCH tm1 th1)
          val th1 = RW [CONTAINER_def] th1
          val th1 = RW [RW [GSYM precond_def] (GSYM progTheory.SPEC_MOVE_COND)] th1
-         in post_process_thm mpred th1 end
+         in post_process_thm mpred no_status th1 end
        in (prove_branch CONTAINER_IF_T th, SOME (prove_branch CONTAINER_IF_F th)) end
-     else (post_process_thm mpred (x64_prove_one_spec th c),NONE) end
+     else (post_process_thm mpred no_status (x64_prove_one_spec th c),NONE) end
 
 fun x64_jump (tm1:term) (tm2:term) (jump_length:int) (forward:bool) = ("",0)
 
-fun x64_spec_aux mpred = cache (x64_prove_specs mpred);
+fun x64_spec_aux mpred = cache (x64_prove_specs mpred false);
 
-val x64_spec_aux_auto = cache (x64_prove_specs zMEM_AUTO);
-val x64_spec_aux_byte = cache (x64_prove_specs zMEM_BYTE_MEMORY);
-val x64_spec_aux_memory64 = cache (x64_prove_specs zMEM_MEMORY64);
+val x64_spec_aux_auto = cache (x64_prove_specs zMEM_AUTO false);
+val x64_spec_aux_byte = cache (x64_prove_specs zMEM_BYTE_MEMORY false);
+val x64_spec_aux_memory64 = cache (x64_prove_specs zMEM_MEMORY64 false);
+val x64_spec_aux_memory64_no_status = cache (x64_prove_specs zMEM_MEMORY64 true);
 
 fun x64_spec s = let
   val ((th,i,j),other) = x64_spec_aux_auto s
@@ -503,10 +504,17 @@ fun x64_spec_memory64 s = let
   val th = RW [GSYM zBYTE_MEMORY_def,GSYM zBYTE_MEMORY_Z_def] th
   in ((th,i,j),other) end
 
+fun x64_spec_memory64_no_status s = let
+  val ((th,i,j),other) = x64_spec_aux_memory64_no_status s
+  val b = if !x64_exec_flag then T else F
+  val th = INST [``ex:bool``|->b] th
+  val th = RW [GSYM zBYTE_MEMORY_def,GSYM zBYTE_MEMORY_Z_def] th
+  in ((th,i,j),other) end
+
 val x64_tools = (x64_spec, x64_jump, x64_status, x64_pc);
 val x64_tools_no_status = (x64_spec, x64_jump, TRUTH, x64_pc);
 val x64_tools_64 = (x64_spec_memory64, x64_jump, x64_status, x64_pc);
-val x64_tools_64_no_status = (x64_spec_memory64, x64_jump, TRUTH, x64_pc);
+val x64_tools_64_no_status = (x64_spec_memory64_no_status, x64_jump, TRUTH, x64_pc);
 
 
 (*
@@ -556,6 +564,9 @@ val x64_tools_64_no_status = (x64_spec_memory64, x64_jump, TRUTH, x64_pc);
   val s = x64_encode s
   val (spec,_,sts,_) = x64_tools
   val ((th,_,_),_) = spec (String.substring(s,0,size(s)-8))
+
+  val th = x64_spec_memory64_no_status (x64_encode "adc r8,r9")
+  val th = x64_spec_memory64_no_status (x64_encode "je 400")
 
 *)
 
