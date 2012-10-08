@@ -33,7 +33,7 @@ val _ = (FileSys.chDir "help", FileSys.chDir "src-sml")
 val _ = systeml [fullPath [holdir, "bin", "Holmake"], "cleanAll"]
 val _ = print "cleanable stuff in help/src-sml\n\n"
 
-val _ = print "Compiling win-config.exe"
+val _ = print "Compiling win-config.exe\n"
 val _ = FileSys.chDir (fullPath [holdir, "tools"])
 val _ = if Process.isSuccess
              (systeml ["mosmlc", "-I", "Holmake", "-o", "win-config.exe",
@@ -147,6 +147,8 @@ in
   print run_section;
   TextIO.closeOut outstream
 end handle OS.SysErr(s,_) => die ("OS error: "^s)
+
+val _ = print "Written hol4.iss to HOLDIR\n\n"
 
 (* adjusting sigobj/SRCFILES *)
 val _ = let
