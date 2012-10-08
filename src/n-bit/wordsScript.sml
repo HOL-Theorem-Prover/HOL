@@ -11,8 +11,8 @@
             "sum_numTheory", "fcpLib"];
 *)
 
-open HolKernel Parse boolLib bossLib;
-open Q arithmeticTheory pred_setTheory;
+open HolKernel Parse boolLib bossLib Q lcsymtacs;
+open arithmeticTheory pred_setTheory;
 open bitTheory sum_numTheory fcpTheory;
 open numposrepTheory ASCIInumbersTheory
 
@@ -1060,6 +1060,10 @@ val ONE_COMP_0_THM =
 val word_0 = store_thm("word_0",
   `!i. i < ^WL ==> ~((0w:'a word) ' i)`,
   SIMP_TAC fcp_ss [n2w_def,BIT_ZERO]);
+
+val word_eq_0 = Q.store_thm("word_eq_0",
+   `!w: 'a word. (w = 0w) = (!i. i < dimindex(:'a) ==> ~w ' i)`,
+   SRW_TAC [fcpLib.FCP_ss] [word_0])
 
 val word_T = store_thm("word_T",
   `!i. i < ^WL ==> (Tw:'a word) ' i`,
@@ -4625,6 +4629,23 @@ val bit_count_upto_SUC = Q.store_thm("bit_count_upto_SUC",
    `!w n. bit_count_upto (SUC n) w =
           (if w ' n then 1 else 0) + bit_count_upto n w`,
    SRW_TAC [ARITH_ss] [bit_count_upto_def, sum_numTheory.SUM_def]);
+
+val bit_count_upto_is_zero = Q.store_thm("bit_count_upto_is_zero",
+   `!n w. (bit_count_upto n w = 0) = (!i. i < n ==> ~w ' i)`,
+   simp [bit_count_upto_def]
+   \\ Induct
+   \\ rw [sum_numTheory.SUM_def]
+   >- metis_tac [prim_recTheory.LESS_SUC_REFL]
+   \\ eq_tac
+   \\ lrw []
+   \\ Cases_on `i < n` 
+   >- simp []
+   \\ `i = n` by decide_tac
+   \\ simp []);
+
+val bit_count_is_zero = Q.store_thm("bit_count_is_zero",
+  `!w. (bit_count w = 0) = (w = 0w)`,
+  simp [bit_count_def, bit_count_upto_is_zero, word_eq_0]);
 
 (* ------------------------------------------------------------------------- *)
 (* Theorems sets of words                                                    *)
