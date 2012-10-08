@@ -157,12 +157,23 @@ in
   infloop_protect "SimpL on operator returning non-boolean" check doit t
 end
 
+
+val (test11_flag,_) = let
+  open boolSimps
+  val t = ``(!n:'a. P n n) ==> ?m. P c m``
+  val result = ``T``
+  val doit = QCONV (SIMP_CONV (bool_ss ++ SatisfySimps.SATISFY_ss) [])
+  fun check th = aconv (rhs (concl th)) result
+in
+  infloop_protect "Satisfy" check doit t
+end
+
 (* ---------------------------------------------------------------------- *)
 
 val _ = Process.exit
           (if List.all I [test1_flag, test2_flag, test3_flag, test4_flag,
                           test5_flag, test6_flag, test7_flag, test8_flag,
-                          test9_flag, test10_flag]
+                          test9_flag, test10_flag, test11_flag]
            then
              Process.success
            else
