@@ -192,6 +192,5 @@ src/temporal/src
 !!examples/Crypto/TEA
 !!examples/Crypto/TWOFISH
 
-[poly]!!examples/miniML/hol2miniml
 [poly]!!!examples/theorem-prover
 [poly]!!!examples/machine-code/lisp
