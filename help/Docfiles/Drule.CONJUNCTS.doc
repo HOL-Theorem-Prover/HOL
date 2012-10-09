@@ -29,7 +29,7 @@ Suppose the identifier {th} is bound to the theorem:
 Application of {CONJUNCTS} to {th} returns the following list of
 theorems:
 {
-   [A |- x; A |- y; A |- z; A |- w] : thm list
+   [A |- x, A |- y, A |- z, A |- w] : thm list
 }
 
 
