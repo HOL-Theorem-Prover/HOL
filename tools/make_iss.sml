@@ -44,6 +44,8 @@ val _ = FileSys.chDir holdir
 
 
 val header = "\
+\; use the compile option (probably Control-F9) to compile this file\n\
+\; and create the HOL-install.exe executable in HOLDIR/Output\n\
 \[Setup]\n\
 \AppName            = HOL\n\
 \AppVerName         = HOL 4 - "^sysname^"\n\
@@ -148,7 +150,7 @@ in
   TextIO.closeOut outstream
 end handle OS.SysErr(s,_) => die ("OS error: "^s)
 
-val _ = print "Written hol4.iss to HOLDIR\n\n"
+val _ = print "Writing hol4.iss to HOLDIR\n\n"
 
 (* adjusting sigobj/SRCFILES *)
 val _ = let
