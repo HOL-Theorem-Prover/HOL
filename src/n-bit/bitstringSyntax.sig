@@ -33,6 +33,13 @@ sig
 
    val padded_fixedwidth_of_int : int * int -> term
 
+   val dest_b : term -> bool
+
+   val mk_b : bool -> term
+   val mk_bit : int -> term
+   val mk_bstring : int -> int -> term
+   val mk_nvec : int -> int -> term
+   val mk_vec : int -> int -> term
    val mk_fixedwidth : term * int -> term
 
    val add_tm : term

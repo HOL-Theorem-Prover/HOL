@@ -176,4 +176,28 @@ fun padded_fixedwidth_of_int (m, n) =
 
 (* ----------------------------------------------------------------------- *)
 
+fun dest_b tm =
+   if tm = boolSyntax.T
+      then true
+   else if tm = boolSyntax.F
+      then false
+   else raise ERR "dest_b" ""
+
+fun mk_b b = if b then boolSyntax.T else boolSyntax.F
+
+fun mk_bit n = Term.mk_var ("b" ^ Int.toString n, Type.bool)
+
+(* Make term ``[b(n+w); ... ; b(n)]`` *)
+fun mk_bstring w n =
+   listSyntax.mk_list
+      (List.tabulate (w, fn i => mk_bit (w - i - 1 + n)), Type.bool)
+
+(* Make term ``v2w [b(n+w); ... ; b(n)] : w word`` *)
+fun mk_vec w n = mk_v2w (mk_bstring w n, fcpSyntax.mk_int_numeric_type w)
+
+(* Make term ``v2n [b(n+w); ... ; b(n)]`` *)
+fun mk_nvec w n = mk_v2n (mk_bstring w n)
+
+(* ----------------------------------------------------------------------- *)
+
 end
