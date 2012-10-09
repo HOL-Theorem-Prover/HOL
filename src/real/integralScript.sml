@@ -6,9 +6,12 @@
     Email: grace_gwq@163.com
     DATE: 08-10-2012
 
+    Ported by:
+      Weiqing Gu, Zhiping Shi, Yong Guan, Shengzhen Jin, Xiaojuan Li
+
     Beijing Engineering Research Center of High Reliable Embedded System
 
-      College of Information Engineering Capital Normal University(CNU)
+    College of Information Engineering, Capital Normal University (CNU)
                         Beijing, China
    ===================================================================== *)
 
@@ -16,7 +19,7 @@
 app load ["arithmeticTheory","realTheory","transcTheory","limTheory",
           "boolTheory","hol88Lib","numLib","reduceLib","pairTheory","jrhUtils",
           "powserTheory","Diff","mesonLib","RealArith","tautLib","pairLib",
-          "seqTheory", "numTHeory","prim_recTheory","topologyTheory",
+          "seqTheory", "numTheory","prim_recTheory","topologyTheory",
           "netsTheory","PairedLambda", "pred_setTheory"];
 *)
 
