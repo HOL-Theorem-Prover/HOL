@@ -692,18 +692,18 @@ val SEG_compute = Q.prove(
     THEN REWRITE_TAC [NOT_CONS_NIL, HD, TL, NOT_SUC, PRE, SEG,
                       combinTheory.FAIL_THM]);
 
-val REPLACE_ELEMENT_compute = Q.prove(
-`(!e n. REPLACE_ELEMENT e n [] = []) /\
- (!e n x l. REPLACE_ELEMENT e n (x::l) =
-  if n = 0 then e::l else x::REPLACE_ELEMENT e (PRE n) l)`,
-SRW_TAC[][REPLACE_ELEMENT_DEF] THEN
+val LUPDATE_compute = Q.prove(
+`(!e n. LUPDATE e n [] = []) /\
+ (!e n x l. LUPDATE e n (x::l) =
+  if n = 0 then e::l else x::LUPDATE e (PRE n) l)`,
+SRW_TAC[][LUPDATE_def] THEN
 Cases_on `n` THEN
-FULL_SIMP_TAC (srw_ss()) [REPLACE_ELEMENT_DEF])
+FULL_SIMP_TAC (srw_ss()) [LUPDATE_def])
 
 val defs =
   map DEFN [AND_EL_DEF,BUTFIRSTN_compute,ELL_compute,
             FIRSTN_compute,IS_PREFIX,IS_SUBLIST,OR_EL_DEF,SPLITP_AUX_def,
-            REPLACE_ELEMENT_compute, REWRITE_RULE [FUN_EQ_THM] SPLITP_compute,
+            LUPDATE_compute, REWRITE_RULE [FUN_EQ_THM] SPLITP_compute,
             PREFIX_DEF,REPLICATE_compute,
             SCANL,SCANR,SEG_compute,SUFFIX_DEF,UNZIP_FST_DEF,UNZIP_SND_DEF];
 

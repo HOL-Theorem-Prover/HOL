@@ -139,31 +139,6 @@ val NOT_NULL_SNOC = Q.store_thm("NOT_NULL_SNOC",
 (* ------------------------------------------------------------------------ *)
 
 local
-   val replace_element_exists = Q.prove(
-      `?replace_element.
-          (!e: 'a n: num. replace_element e n ([]: 'a list) = []: 'a list) /\
-          (!e x l. replace_element e 0 (x::l) = e::l) /\
-          (!e n x l. replace_element e (SUC n) (x::l) =
-                        CONS x (replace_element e n l))`,
-      REPEAT STRIP_TAC
-      THEN STRIP_ASSUME_TAC
-             (Q.ISPECL
-                [`(\x1 x2. []): 'a -> num -> 'a list`,
-                 `\(x: 'a) (l: 'a list) (r: 'a -> num -> 'a list) (e: 'a)
-                   (n: num).
-                     if n = 0 then
-                        e::l
-                     else
-                        (CONS x (r e (PRE n)):'a list)`] listTheory.list_Axiom)
-      THEN Q.EXISTS_TAC `\x1 x2 x3. fn x3 x1 x2`
-      THEN ASM_SIMP_TAC arith_ss [])
-in
-   val REPLACE_ELEMENT_DEF =
-      Definition.new_specification
-         ("REPLACE_ELEMENT_DEF", ["REPLACE_ELEMENT"], replace_element_exists)
-end;
-
-local
    val lastn_thm = Prim_rec.prove_rec_fn_exists prim_recTheory.num_Axiom
       ``(lastn 0 (l: 'a list) = []) /\
         (lastn (SUC n) l = SNOC (LAST l) (lastn n (FRONT l)))``
@@ -2829,7 +2804,7 @@ val MEM_LAST_FRONT = Q.store_thm ("MEM_LAST_FRONT",
    THEN PROVE_TAC []);
 
 (*---------------------------------------------------------------------------
-   LIST_ELEM_COUNT and REPLACE_ELEMENT
+   LIST_ELEM_COUNT
    Added by Thomas Tuerk
  ---------------------------------------------------------------------------*)
 
@@ -2848,18 +2823,6 @@ val LIST_ELEM_COUNT_MEM = Q.store_thm ("LIST_ELEM_COUNT_MEM",
    Induct_on `l`
    THEN FULL_SIMP_TAC list_ss [LIST_ELEM_COUNT_DEF, COND_RAND, COND_RATOR]
    THEN PROVE_TAC []);
-
-val REPLACE_ELEMENT_SEM = Q.store_thm ("REPLACE_ELEMENT_SEM",
-   `(!e:'a n l. LENGTH (REPLACE_ELEMENT e n l) = LENGTH l) /\
-    (!e:'a n l p.
-       p < LENGTH l ==>
-       (EL p (REPLACE_ELEMENT e n l) = if p = n then e else EL p l))`,
-   CONJ_TAC
-   THEN Induct_on `n`
-   THEN Cases_on `l`
-   THEN ASM_SIMP_TAC arith_ss [REPLACE_ELEMENT_DEF, LENGTH]
-   THEN Cases_on `p`
-   THEN ASM_SIMP_TAC arith_ss [EL, HD, TL]);
 
 (*---------------------------------------------------------------------------*)
 (* Add evaluation theorems to computeLib.the_compset                         *)
@@ -2894,9 +2857,6 @@ val SPLITP_compute = save_thm ("SPLITP_compute",
    REWRITE_RULE [GSYM FUN_EQ_THM] SPLITP_AUX);
 
 val IS_SUFFIX_compute = save_thm ("IS_SUFFIX_compute", GSYM IS_PREFIX_REVERSE);
-
-val REPLACE_ELEMENT_compute = save_thm ("REPLACE_ELEMENT_compute",
-   numLib.SUC_RULE REPLACE_ELEMENT_DEF)
 
 val SEG_compute = save_thm ("SEG_compute", numLib.SUC_RULE SEG);
 
@@ -3149,7 +3109,6 @@ val () = computeLib.add_persistent_funs
     "IS_SUBLIST",
     "IS_SUFFIX_compute",
     "LASTN_compute",
-    "REPLACE_ELEMENT_compute",
     "SEG_compute",
     "SPLITP_compute"
    ]
@@ -3169,7 +3128,6 @@ val () = computeLib.add_persistent_funs
    EVAL ``UNZIP_SND [(1, 2), (3, 4)]``;
    EVAL ``LIST_ELEM_COUNT 2 [1;2;2;3]``;
    EVAL ``COUNT_LIST 4``;
-   EVAL ``REPLACE_ELEMENT 0 3 [1;2;3;4;5]``;
    EVAL ``LASTN 3 [1;2;3;4;5]``;
    EVAL ``BUTLASTN 3 [1;2;3;4;5]``;
    EVAL ``IS_SUBLIST [1;2;3;4;5] [2;3]``;

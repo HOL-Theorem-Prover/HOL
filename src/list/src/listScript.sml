@@ -2647,36 +2647,71 @@ val APPEND_EQ_APPEND_MID = store_thm(
 
 (* --------------------------------------------------------------------- *)
 
-val LUPDATE_def = Define `
-  (LUPDATE n x [] = []:'a list) /\
-  (LUPDATE n x (y::ys) = if n = 0 then x::ys else y::LUPDATE (PRE n) x ys)`;
+local
+   val lupdate_exists = prove(
+     ``?lupdate.
+         (!e: 'a n: num. lupdate e n ([]: 'a list) = []: 'a list) /\
+         (!e x l. lupdate e 0 (x::l) = e::l) /\
+         (!e n x l. lupdate e (SUC n) (x::l) =
+                       CONS x (lupdate e n l))``,
+     REPEAT STRIP_TAC
+     THEN STRIP_ASSUME_TAC
+          (Q.ISPECL
+             [`(\x1 x2. []): 'a -> num -> 'a list`,
+              `\(x: 'a) (l: 'a list) (r: 'a -> num -> 'a list) (e: 'a)
+                (n: num).
+                  if n = 0 then
+                     e::l
+                  else
+                     (CONS x (r e (PRE n)):'a list)`] list_Axiom)
+     THEN Q.EXISTS_TAC `\x1 x2 x3. fn x3 x1 x2`
+     THEN ASM_SIMP_TAC arith_ss [])
+in
+   val LUPDATE_def =
+      Definition.new_specification
+         ("LUPDATE_def", ["LUPDATE"], lupdate_exists)
+end;
+
+val LUPDATE_SEM = store_thm ("LUPDATE_SEM",
+  ``(!e:'a n l. LENGTH (LUPDATE e n l) = LENGTH l) /\
+    (!e:'a n l p.
+       p < LENGTH l ==>
+       (EL p (LUPDATE e n l) = if p = n then e else EL p l))``,
+  CONJ_TAC
+  THEN Induct_on `n`
+  THEN Cases_on `l`
+  THEN ASM_SIMP_TAC arith_ss [LUPDATE_def, LENGTH]
+  THEN Cases_on `p`
+  THEN ASM_SIMP_TAC arith_ss [EL, HD, TL]);
 
 val EL_LUPDATE = store_thm("EL_LUPDATE",
   ``!ys (x:'a) i k.
-      EL i (LUPDATE k x ys) =
+      EL i (LUPDATE x k ys) =
       if (i = k) /\ k < LENGTH ys then x else EL i ys``,
-  Induct THEN FULL_SIMP_TAC bool_ss [LUPDATE_def,LENGTH,EL,NOT_LESS_0]
-  THEN REPEAT STRIP_TAC THEN Cases_on `k`
-  THEN FULL_SIMP_TAC bool_ss [LESS_0,LESS_MONO_EQ,NOT_SUC] THEN Cases_on `i`
-  THEN FULL_SIMP_TAC bool_ss [EL,HD,TL,NOT_SUC,PRE,INV_SUC_EQ]);
+  Induct_on `ys` THEN Cases_on `k` THEN REPEAT STRIP_TAC
+  THEN ASM_SIMP_TAC arith_ss [LUPDATE_def,LENGTH]
+  THEN Cases_on `i`
+  THEN FULL_SIMP_TAC arith_ss [LUPDATE_def,LENGTH,EL,HD,TL]);
 
 val LENGTH_LUPDATE = store_thm("LENGTH_LUPDATE",
-  ``!ys n (x:'a). LENGTH (LUPDATE n x ys) = LENGTH ys``,
-  Induct THEN Cases_on `n`
-  THEN FULL_SIMP_TAC bool_ss [LUPDATE_def,LENGTH,NOT_SUC]);
+  ``!(x:'a) n ys. LENGTH (LUPDATE x n ys) = LENGTH ys``,
+  SIMP_TAC bool_ss [LUPDATE_SEM]);
 
 val LUPDATE_LENGTH = store_thm("LUPDATE_LENGTH",
-  ``!xs x (y:'a) ys. LUPDATE (LENGTH xs) x (xs ++ y::ys) = xs ++ x::ys``,
+  ``!xs x (y:'a) ys. LUPDATE x (LENGTH xs) (xs ++ y::ys) = xs ++ x::ys``,
   Induct THEN FULL_SIMP_TAC bool_ss [LENGTH,APPEND,LUPDATE_def,
     NOT_SUC,PRE,INV_SUC_EQ]);
 
 val LUPDATE_SNOC = store_thm("LUPDATE_SNOC",
   ``!ys k x (y:'a).
-      LUPDATE k x (SNOC y ys) =
-      if k = LENGTH ys then SNOC x ys else SNOC y (LUPDATE k x ys)``,
+      LUPDATE x k (SNOC y ys) =
+      if k = LENGTH ys then SNOC x ys else SNOC y (LUPDATE x k ys)``,
   Induct THEN Cases_on `k` THEN Cases_on `n = LENGTH ys`
   THEN FULL_SIMP_TAC bool_ss [SNOC,LUPDATE_def,LENGTH,NOT_SUC,
          PRE,INV_SUC_EQ]);
+
+val LUPDATE_compute = save_thm("LUPDATE_compute",
+   numLib.SUC_RULE LUPDATE_def)
 
 (* --------------------------------------------------------------------- *)
 
@@ -2719,7 +2754,7 @@ val _ = adjoin_to_theory
    S "             LENGTH, MAP, MAP2, NULL_DEF, MEM, EXISTS_DEF, DROP_compute,";
    S "             EVERY_DEF, ZIP, UNZIP, FILTER, FOLDL, FOLDR, TAKE_compute,";
    S "             FOLDL, REVERSE_REV, ALL_DISTINCT, GENLIST_AUX,";
-   S "             EL_restricted, EL_simp_restricted, SNOC,";
+   S "             EL_restricted, EL_simp_restricted, SNOC, LUPDATE_compute,";
    S "             GENLIST_NUMERALS, computeLib.lazyfy_thm list_case_compute,";
    S "             list_size_def, FRONT_DEF, LAST_compute, isPREFIX]";
    S "        end;";

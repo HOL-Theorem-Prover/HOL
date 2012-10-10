@@ -1295,7 +1295,7 @@ val zCODE_HEAP_UPDATE = store_thm("zCODE_HEAP_UPDATE",
         (q * zBYTE_MEMORY_Z df ((a + n2w k =+ x) f))) ==>
     SPEC X64_MODEL
       (p * zCODE_HEAP F a xs n * cond (k < LENGTH xs)) c
-      (q * zCODE_HEAP F a (LUPDATE k x xs) n)``,
+      (q * zCODE_HEAP F a (LUPDATE x k xs) n)``,
   REPEAT STRIP_TAC
   \\ FULL_SIMP_TAC (std_ss++helperLib.sep_cond_ss) [zCODE_HEAP_def,
        zCODE_HEAP_AUX_def,SEP_CLAUSES]
