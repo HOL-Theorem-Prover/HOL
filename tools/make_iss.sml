@@ -132,6 +132,12 @@ val run_section = "\
 \[Run]\n\
 \Filename: \"{app}\\tools\\win-config.exe\"; Parameters: \"\"\"{app}\"\"\"\n";
 
+val uninstall_delete_section =
+   "[UninstallDelete]\n\
+   \Type: filesandordirs; Name: \"{app}\\tools\"\n\
+   \Type: filesandordirs; Name: \"{app}\\help\"\n\
+   \Type: files; Name: \"{app}\\config-override\"\n"
+
 val _ = let
   val (toplevelfiles, dirs) = alldirs [".HOLMK", "CVS"]
   val outstream = TextIO.openOut "hol4.iss"
@@ -147,6 +153,8 @@ in
   print icon_section;
   print "\n";
   print run_section;
+  print "\n";
+  print uninstall_delete_section;
   TextIO.closeOut outstream
 end handle OS.SysErr(s,_) => die ("OS error: "^s)
 
