@@ -479,11 +479,10 @@ val base_env = let
   open Holmake_types
   val basis_string = if nob2002 then [] else [LIT " basis2002.ui"]
   val alist = [
-    ("ISIGOBJ", [VREF "if $(findstring NO_SIGOBJ,$(OPTIONS)),,$(SIGOBJ)"]),
-    ("MOSML_INCLUDES", [VREF ("patsubst %,-I %,"^
-                              (if cline_no_sigobj then ""
-                               else "$(ISIGOBJ)") ^
-                              " $(INCLUDES) $(PREINCLUDES)")]),
+    ("MOSML_INCLUDES", (if cline_no_sigobj then []
+                        else [VREF "if $(findstring NO_SIGOBJ,$(OPTIONS)),,-I \
+                                   \$(protect $(SIGOBJ))", LIT " "]) @
+                       [VREF ("patsubst %,-I %,$(INCLUDES) $(PREINCLUDES)")]),
     ("HOLMOSMLC", [VREF "MOSMLCOMP", LIT (" -q "), VREF "MOSML_INCLUDES"] @
                   basis_string),
     ("HOLMOSMLC-C",
