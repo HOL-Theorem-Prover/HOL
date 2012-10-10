@@ -63,7 +63,7 @@ val _ = let
       | s => readlines (s::acc)
   val lines = readlines []
   val _ = TextIO.closeIn instrm
-  fun adjustline s = fullPath [holdir, s]
+  fun adjustline s = if Path.isAbsolute s then s else fullPath [holdir, s]
   val outstrm = TextIO.openOut file
   val _ = app (fn s => TextIO.output(outstrm, adjustline s)) lines
   val _ = TextIO.closeOut outstrm
