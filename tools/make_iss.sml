@@ -33,7 +33,7 @@ val _ = (FileSys.chDir "help", FileSys.chDir "src-sml")
 val _ = systeml [fullPath [holdir, "bin", "Holmake"], "cleanAll"]
 val _ = print "cleanable stuff in help/src-sml\n\n"
 
-val _ = print "Compiling win-config.exe"
+val _ = print "Compiling win-config.exe\n"
 val _ = FileSys.chDir (fullPath [holdir, "tools"])
 val _ = if Process.isSuccess
              (systeml ["mosmlc", "-I", "Holmake", "-o", "win-config.exe",
@@ -44,13 +44,15 @@ val _ = FileSys.chDir holdir
 
 
 val header = "\
+\; use the compile option (probably Control-F9) to compile this file\n\
+\; and create the HOL-install.exe executable in HOLDIR/Output\n\
 \[Setup]\n\
 \AppName            = HOL\n\
 \AppVerName         = HOL 4 - "^sysname^"\n\
 \AppVersion         = "^sysname^"\n\
-\AppUpdatesURL      = http://hol.sf.net\n\
+\AppUpdatesURL      = http://hol.sourceforge.net\n\
 \AppPublisher       = HOL Developers\n\
-\DefaultDirName     = {pf}\\Hol\n\
+\DefaultDirName     = {userdocs}\\Hol\n\
 \DefaultGroupName   = HOL\n\
 \Compression        = lzma/ultra\n\
 \SolidCompression   = true\n\
@@ -130,6 +132,12 @@ val run_section = "\
 \[Run]\n\
 \Filename: \"{app}\\tools\\win-config.exe\"; Parameters: \"\"\"{app}\"\"\"\n";
 
+val uninstall_delete_section =
+   "[UninstallDelete]\n\
+   \Type: filesandordirs; Name: \"{app}\\tools\"\n\
+   \Type: filesandordirs; Name: \"{app}\\help\"\n\
+   \Type: files; Name: \"{app}\\config-override\"\n"
+
 val _ = let
   val (toplevelfiles, dirs) = alldirs [".HOLMK", "CVS"]
   val outstream = TextIO.openOut "hol4.iss"
@@ -145,8 +153,12 @@ in
   print icon_section;
   print "\n";
   print run_section;
+  print "\n";
+  print uninstall_delete_section;
   TextIO.closeOut outstream
 end handle OS.SysErr(s,_) => die ("OS error: "^s)
+
+val _ = print "Writing hol4.iss to HOLDIR\n\n"
 
 (* adjusting sigobj/SRCFILES *)
 val _ = let

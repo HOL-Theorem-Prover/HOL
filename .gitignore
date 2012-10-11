@@ -49,6 +49,7 @@ bin/hol.builder
 bin/hol.builder0
 bin/heapname
 bin/buildheap
+bin/*.bat
 
 developers/docfiles/*.txt
 
