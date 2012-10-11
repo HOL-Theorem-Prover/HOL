@@ -1,3 +1,4 @@
+
 open HolKernel Parse boolLib bossLib;
 
 (*
@@ -13,7 +14,7 @@ show_assums := true;
 
 open finite_mapTheory relationTheory pred_setTheory listTheory rich_listTheory arithmeticTheory
      operatorTheory containerTheory bagTheory stringLib
-     boolSimps ConseqConv sortingTheory;
+     boolSimps ConseqConv sortingTheory quantHeuristicsLib;
 
 (*
 quietdec := false;
@@ -57,23 +58,8 @@ SIMP_TAC std_ss [IS_BOOL_TO_NUM_def]);
 
 
 (******************************************************************
-  BAG
- ******************************************************************)
-val BAG_IN_LIST_TO_BAG = store_thm ("BAG_IN_LIST_TO_BAG",
-``!x l. BAG_IN x (LIST_TO_BAG l) = MEM x l``,
-Induct_on `l` THEN (
-   ASM_SIMP_TAC list_ss [containerTheory.LIST_TO_BAG_def,
-       NOT_IN_EMPTY_BAG, BAG_IN_BAG_INSERT]
-));
-
-
-(******************************************************************
   Arithmetic
  ******************************************************************)
-
-val SUB1 = store_thm ("SUB1",
-``!m:num. PRE m = m - 1``,
-DECIDE_TAC);
 
 val FORALL_LESS_SUC = store_thm ("FORALL_LESS_SUC",
    ``!P m. ((!n. n < SUC m ==> P n) =
@@ -109,136 +95,94 @@ val PAIR_BETA_THM = store_thm ("PAIR_BETA_THM",
 );
 
 
-val PAIR_FORALL_THM = store_thm ("PAIR_FORALL_THM",
-``(!x:('a # 'b). P x) = (!x1 x2. P (x1,x2))``,
-SIMP_TAC std_ss [PAIR_BETA_THM, pairTheory.PFORALL_THM]);
-
-
-val PAIR_EXISTS_THM = store_thm ("PAIR_EXISTS_THM",
-``(?x:('a # 'b). P x) = (?x1 x2. P (x1,x2))``,
-SIMP_TAC std_ss [PAIR_BETA_THM, pairTheory.PEXISTS_THM]);
-
-
-
-val PAIR_EQ_REWRITES = store_thm ("PAIR_EQ_REWRITES",
-``(((y1, y2) = x) = (y1 = FST x) /\ (y2 = SND x))``,
-Cases_on `x` THEN SIMP_TAC std_ss []);
-
-
-
-
-
-
-
 (******************************************************************
   LISTS
  ******************************************************************)
 
 
-val REPLACE_ELEMENT_compute = save_thm ("REPLACE_ELEMENT_compute",
-    CONV_RULE numLib.SUC_TO_NUMERAL_DEFN_CONV REPLACE_ELEMENT_DEF);
-
-
-val EL_REPLACE_ELEMENT = store_thm ("EL_REPLACE_ELEMENT",
-``!n1 n2 e l. (EL n1 (REPLACE_ELEMENT e n2 l) =
-      if (n1 = n2) /\ (n1 < LENGTH l) then e else
-         (EL n1 l))``,
-
-Induct_on `n1` THEN (
-   Cases_on `l` THEN
-   Cases_on `n2` THEN
-   ASM_SIMP_TAC list_ss [REPLACE_ELEMENT_DEF]
-));
-
-
-val HD_REPLACE_ELEMENT = store_thm ("HD_REPLACE_ELEMENT",
-``!n e l. (HD (REPLACE_ELEMENT e n l) =
+val HD_LUPDATE = store_thm ("HD_LUPDATE",
+``!n e l. (HD (LUPDATE e n l) =
       if (n = 0) /\ (0 < LENGTH l) then e else HD l)``,
-SIMP_TAC std_ss [GSYM EL, EL_REPLACE_ELEMENT] THEN
+SIMP_TAC std_ss [GSYM EL, EL_LUPDATE] THEN
 METIS_TAC[]);
 
 
-val LENGTH_REPLACE_ELEMENT = store_thm ("LENGTH_REPLACE_ELEMENT",
-``LENGTH (REPLACE_ELEMENT e n l) = LENGTH l``,
-REWRITE_TAC[REPLACE_ELEMENT_SEM]);
+val EL_LUPDATE___NO_COND = store_thm ("EL_LUPDATE___NO_COND",
+``(!n e l. n < LENGTH l ==> (EL n (LUPDATE e n l) = e)) /\
+  (!n1 n2 e l. ~(n1 = n2) ==> (EL n1 (LUPDATE e n2 l) = EL n1 l))``,
+SIMP_TAC std_ss [EL_LUPDATE]);
 
 
-val EL_REPLACE_ELEMENT___NO_COND = store_thm ("EL_REPLACE_ELEMENT___NO_COND",
-``(!n e l. n < LENGTH l ==> (EL n (REPLACE_ELEMENT e n l) = e)) /\
-  (!n1 n2 e l. ~(n1 = n2) ==> (EL n1 (REPLACE_ELEMENT e n2 l) = EL n1 l))``,
-SIMP_TAC std_ss [EL_REPLACE_ELEMENT]);
-
-
-val FIRSTN_REPLACE_ELEMENT = store_thm ("FIRSTN_REPLACE_ELEMENT",
-``!n1 n2 e l. FIRSTN n1 (REPLACE_ELEMENT e n2 l) =
-  if (n1 <= n2) then FIRSTN n1 l else
-  REPLACE_ELEMENT e n2 (FIRSTN n1 l)``,
+val TAKE_LUPDATE = store_thm ("TAKE_LUPDATE",
+``!n1 n2 e l. TAKE n1 (LUPDATE e n2 l) =
+  if (n1 <= n2) then TAKE n1 l else
+  LUPDATE e n2 (TAKE n1 l)``,
 
 Induct_on `n1` THEN
 Cases_on `n2` THEN
 Cases_on `l` THEN
-ASM_SIMP_TAC list_ss [REPLACE_ELEMENT_DEF,
+ASM_SIMP_TAC list_ss [LUPDATE_def,
   COND_RAND, COND_RATOR])
 
 
-val FIRSTN_REPLACE_ELEMENT___SIMPLE = store_thm ("FIRSTN_REPLACE_ELEMENT___SIMPLE",
-``!n1 n2 e l. FIRSTN n1 (REPLACE_ELEMENT e n2 l) =
-  REPLACE_ELEMENT e n2 (FIRSTN n1 l)``,
+val TAKE_LUPDATE___SIMPLE = store_thm ("TAKE_LUPDATE___SIMPLE",
+``!n1 n2 e l. TAKE n1 (LUPDATE e n2 l) =
+  LUPDATE e n2 (TAKE n1 l)``,
 Induct_on `n1` THEN Cases_on `n2` THEN Cases_on `l` THEN
-ASM_SIMP_TAC list_ss [REPLACE_ELEMENT_DEF])
+ASM_SIMP_TAC list_ss [LUPDATE_def])
 
 
-val BUTFIRSTN_REPLACE_ELEMENT = store_thm ("BUTFIRSTN_REPLACE_ELEMENT",
-``!n1 n2 e l. BUTFIRSTN n1 (REPLACE_ELEMENT e n2 l) =
-   if (n2 < n1) then BUTFIRSTN n1 l else
-  REPLACE_ELEMENT e (n2-n1) (BUTFIRSTN n1 l)``,
+val DROP_LUPDATE = store_thm ("DROP_LUPDATE",
+``!n1 n2 e l. DROP n1 (LUPDATE e n2 l) =
+   if (n2 < n1) then DROP n1 l else
+  LUPDATE e (n2-n1) (DROP n1 l)``,
 
 Induct_on `n1` THEN
 Cases_on `n2` THEN
 Cases_on `l` THEN
-ASM_SIMP_TAC list_ss [REPLACE_ELEMENT_DEF]);
+ASM_SIMP_TAC list_ss [LUPDATE_def]);
 
 
-val REPLACE_ELEMENT_APPEND1 = store_thm ("REPLACE_ELEMENT_APPEND1",
+val LUPDATE_APPEND1 = store_thm ("LUPDATE_APPEND1",
 ``!n l1 l2. n < LENGTH l1 ==> (
-     REPLACE_ELEMENT e n (l1 ++ l2) =
-     (REPLACE_ELEMENT e n l1) ++ l2)``,
+     LUPDATE e n (l1 ++ l2) =
+     (LUPDATE e n l1) ++ l2)``,
 
-SIMP_TAC list_ss [LIST_EQ_REWRITE, EL_REPLACE_ELEMENT,
-   LENGTH_REPLACE_ELEMENT] THEN
+SIMP_TAC list_ss [LIST_EQ_REWRITE, EL_LUPDATE,
+   LENGTH_LUPDATE] THEN
 REPEAT STRIP_TAC THEN
 Cases_on `x < LENGTH l1` THEN (
-   ASM_SIMP_TAC list_ss [EL_APPEND1, EL_APPEND2, LENGTH_REPLACE_ELEMENT,
-     EL_REPLACE_ELEMENT]
+   ASM_SIMP_TAC list_ss [EL_APPEND1, EL_APPEND2, LENGTH_LUPDATE,
+     EL_LUPDATE]
 ));
 
 
-val REPLACE_ELEMENT_APPEND2 = store_thm ("REPLACE_ELEMENT_APPEND2",
+val LUPDATE_APPEND2 = store_thm ("LUPDATE_APPEND2",
 ``!n l1 l2. LENGTH l1 <= n ==> (
-     REPLACE_ELEMENT e n (l1 ++ l2) =
-     l1 ++ (REPLACE_ELEMENT e (n - LENGTH l1) l2))``,
+     LUPDATE e n (l1 ++ l2) =
+     l1 ++ (LUPDATE e (n - LENGTH l1) l2))``,
 
-SIMP_TAC list_ss [LIST_EQ_REWRITE, EL_REPLACE_ELEMENT,
-   LENGTH_REPLACE_ELEMENT] THEN
+SIMP_TAC list_ss [LIST_EQ_REWRITE, EL_LUPDATE,
+   LENGTH_LUPDATE] THEN
 REPEAT STRIP_TAC THEN
 Cases_on `x < LENGTH l1` THEN (
-   ASM_SIMP_TAC list_ss [EL_APPEND1, EL_APPEND2, LENGTH_REPLACE_ELEMENT,
-     EL_REPLACE_ELEMENT]
+   ASM_SIMP_TAC list_ss [EL_APPEND1, EL_APPEND2, LENGTH_LUPDATE,
+     EL_LUPDATE]
 ) THEN
 `(x - LENGTH l1 = n - LENGTH l1) = (x = n)` by DECIDE_TAC THEN
 PROVE_TAC[]);
 
 
-val LENGTH_FIRSTN_MIN = store_thm ("LENGTH_FIRSTN_MIN",
-``!n l. LENGTH (FIRSTN n l) = MIN n (LENGTH l)``,
+val LENGTH_TAKE_MIN = store_thm ("LENGTH_TAKE_MIN",
+``!n l. LENGTH (TAKE n l) = MIN n (LENGTH l)``,
 Induct_on `l` THEN
 Induct_on `n` THEN
 ASM_SIMP_TAC list_ss [arithmeticTheory.MIN_DEF]);
 
 
-val LENGTH_FIRSTN_LESS_EQ = store_thm ("LENGTH_FIRSTN_LESS_EQ",
-``!n l. LENGTH (FIRSTN n l) <= n``,
-SIMP_TAC std_ss [LENGTH_FIRSTN_MIN]);
+val LENGTH_TAKE_LESS_EQ = store_thm ("LENGTH_TAKE_LESS_EQ",
+``!n l. LENGTH (TAKE n l) <= n``,
+SIMP_TAC std_ss [LENGTH_TAKE_MIN]);
 
 
 val LIST_NOT_NIL___HD_EXISTS = store_thm ("LIST_NOT_NIL___HD_EXISTS",
@@ -264,15 +208,15 @@ val EL_DISJOINT_FILTER = store_thm ("EL_DISJOINT_FILTER",
    CONJ_TAC THEN1 METIS_TAC[] THEN
    REPEAT STRIP_TAC THEN
 
-   `l = (FIRSTN (SUC n1) l) ++ (LASTN (LENGTH l - (SUC n1)) l)` by ALL_TAC THEN1 (
-      MATCH_MP_TAC (GSYM APPEND_FIRSTN_LASTN) THEN
+   `l = (TAKE (SUC n1) l) ++ (LASTN (LENGTH l - (SUC n1)) l)` by ALL_TAC THEN1 (
+      MATCH_MP_TAC (GSYM APPEND_TAKE_LASTN) THEN
       ASM_SIMP_TAC arith_ss []
    ) THEN
-   Q.ABBREV_TAC `l1 = (FIRSTN (SUC n1) l)` THEN
+   Q.ABBREV_TAC `l1 = (TAKE (SUC n1) l)` THEN
    Q.ABBREV_TAC `l2 = (LASTN (LENGTH l - (SUC n1)) l)` THEN
    `(n1 < LENGTH l1) /\ (LENGTH l1 <= n2)` by ALL_TAC THEN1 (
       bossLib.UNABBREV_ALL_TAC THEN
-      ASM_SIMP_TAC list_ss [LENGTH_FIRSTN]
+      ASM_SIMP_TAC list_ss [LENGTH_TAKE]
    ) THEN
    FULL_SIMP_TAC list_ss [EL_APPEND2, EL_APPEND1] THEN
    `n2 - LENGTH l1 < LENGTH l2` by DECIDE_TAC THEN
@@ -285,8 +229,8 @@ val EL_DISJOINT_FILTER = store_thm ("EL_DISJOINT_FILTER",
 );
 
 
-val BUTFIRSTN_LENGTH_LESS = store_thm ("BUTFIRSTN_LENGTH_LESS",
-``!l n. (LENGTH l <= n) ==> (BUTFIRSTN n l = [])``,
+val DROP_LENGTH_LESS = store_thm ("DROP_LENGTH_LESS",
+``!l n. (LENGTH l <= n) ==> (DROP n l = [])``,
 Induct_on `n` THEN Induct_on `l` THEN
 ASM_SIMP_TAC list_ss []);
 
@@ -378,9 +322,9 @@ FULL_SIMP_TAC (std_ss++EQUIV_EXTRACT_ss) [EVERY_PAIR_APPEND, MEM_APPEND,
 METIS_TAC[]);
 
 
-val HD_BUTFIRSTN = store_thm ("HD_BUTFIRSTN",
+val HD_DROP = store_thm ("HD_DROP",
 ``!l n. (n < LENGTH l) ==>
-   (HD (BUTFIRSTN n l) = EL n l)``,
+   (HD (DROP n l) = EL n l)``,
 
 Induct_on `n` THEN1 (
   SIMP_TAC list_ss [EL]
@@ -391,35 +335,35 @@ FULL_SIMP_TAC list_ss []);
 
 
 val FIRSTN_LENGTH_ID_EVAL = store_thm ("FIRSTN_LENGTH_ID_EVAL",
-``!l n. (LENGTH l = n) ==> (FIRSTN n l = l)``,
+``!l n. (LENGTH l = n) ==> (TAKE n l = l)``,
 METIS_TAC[rich_listTheory.FIRSTN_LENGTH_ID])
 
 val BUTFIRSTN_LENGTH_NIL_EVAL = store_thm ("BUTFIRSTN_LENGTH_NIL_EVAL",
-``!l n. (LENGTH l = n) ==> (BUTFIRSTN n l = [])``,
+``!l n. (LENGTH l = n) ==> (DROP n l = [])``,
 METIS_TAC[rich_listTheory.BUTFIRSTN_LENGTH_NIL]);
 
 
-val BUTFIRSTN_REPLACE_ELEMENT = store_thm ("BUTFIRSTN_REPLACE_ELEMENT",
+val DROP_LUPDATE = store_thm ("DROP_LUPDATE",
 ``!l n m e. (n <= LENGTH l) /\ (m < n) ==>
-   (BUTFIRSTN n (REPLACE_ELEMENT e m l) =
-    BUTFIRSTN n l)``,
+   (DROP n (LUPDATE e m l) =
+    DROP n l)``,
 
 Induct_on `n` THEN1 (
    SIMP_TAC list_ss []
 ) THEN
 REPEAT STRIP_TAC THEN
 Cases_on `l` THEN1 (
-   SIMP_TAC list_ss [REPLACE_ELEMENT_DEF]
+   SIMP_TAC list_ss [LUPDATE_def]
 ) THEN
 Cases_on `m` THEN (
-   FULL_SIMP_TAC list_ss [REPLACE_ELEMENT_DEF]
+   FULL_SIMP_TAC list_ss [LUPDATE_def]
 ));
 
-val FIRSTN_EQ_APPEND_REWRITE = store_thm ("FIRSTN_EQ_APPEND_REWRITE",
-``!n l l1. (LENGTH l1 = n) ==> ((FIRSTN n l = l1) = (?l2. l = l1 ++ l2))``,
+val TAKE_EQ_APPEND_REWRITE = store_thm ("TAKE_EQ_APPEND_REWRITE",
+``!n l l1. (LENGTH l1 = n) ==> ((TAKE n l = l1) = (?l2. l = l1 ++ l2))``,
 
 Induct_on `n` THEN (
-   SIMP_TAC (list_ss++CONJ_ss) [FIRSTN, LENGTH_EQ_NUM]
+   SIMP_TAC (list_ss++CONJ_ss) [TAKE, LENGTH_EQ_NUM]
 ) THEN
 REPEAT STRIP_TAC THEN
 Cases_on `l` THEN (
@@ -428,20 +372,20 @@ Cases_on `l` THEN (
 ));
 
 
-val FIRSTN_REPLACE_ELEMENT = store_thm ("FIRSTN_REPLACE_ELEMENT",
+val TAKE_LUPDATE = store_thm ("TAKE_LUPDATE",
 ``!l n m e. (n <= LENGTH l) /\ (n <= m) ==>
-   (FIRSTN n (REPLACE_ELEMENT e m l) =
-    FIRSTN n l)``,
+   (TAKE n (LUPDATE e m l) =
+    TAKE n l)``,
 
 Induct_on `n` THEN1 (
    SIMP_TAC list_ss []
 ) THEN
 REPEAT STRIP_TAC THEN
 Cases_on `l` THEN1 (
-   SIMP_TAC list_ss [REPLACE_ELEMENT_DEF]
+   SIMP_TAC list_ss [LUPDATE_def]
 ) THEN
 Cases_on `m` THEN (
-   FULL_SIMP_TAC list_ss [REPLACE_ELEMENT_DEF]
+   FULL_SIMP_TAC list_ss [LUPDATE_def]
 ));
 
 
@@ -702,27 +646,19 @@ val LIST_ZIP_MAP_CONS = store_thm ("LIST_ZIP_MAP_CONS",
 l2::(LIST_ZIP l1))``,
 
 Induct_on `l2` THEN
-SIMP_TAC list_ss [LENGTH_NIL] THEN
-Cases_on `l1` THEN SIMP_TAC list_ss [] THEN
-SIMP_TAC list_ss [LIST_ZIP_REWRITE, MAP_MAP_o, combinTheory.o_DEF,
+SIMP_TAC (list_ss++QUANT_INST_ss[list_qp]) [LIST_ZIP_REWRITE, MAP_MAP_o, combinTheory.o_DEF,
                   PAIR_BETA_THM] THEN
-STRIP_TAC THEN
-Tactical.REVERSE (`((MAP (\ (x1,x2). x2) (ZIP (t,l2)) = l2) /\
-                    (MAP (\ (x1,x2). x1) (ZIP (t,l2)) = t))` by ALL_TAC) THEN1 (
+REPEAT GEN_TAC THEN STRIP_TAC THEN
+Tactical.REVERSE (`((MAP (\ (x1,x2). x2) (ZIP (l',l2)) = l2) /\
+                    (MAP (\ (x1,x2). x1) (ZIP (l',l2)) = l'))` by ALL_TAC) THEN1 (
    ASM_REWRITE_TAC[]
 ) THEN
 POP_ASSUM MP_TAC THEN
 Q.SPEC_TAC (`l2`, `l2`) THEN
-Q.SPEC_TAC (`t`, `l1`) THEN
+Q.SPEC_TAC (`l'`, `l1`) THEN
 REPEAT (POP_ASSUM (K ALL_TAC)) THEN
-Induct_on `l2` THEN
-SIMP_TAC list_ss [LENGTH_NIL] THEN
-Cases_on `l1` THEN
-ASM_SIMP_TAC list_ss []);
-
-
-
-
+Induct_on `l1` THEN
+ASM_SIMP_TAC (list_ss++QUANT_INST_ss[list_qp]) []);
 
 val LIST_ZIP___LIST_ZIP = store_thm ("LIST_ZIP___LIST_ZIP",
 ``!L n. EVERY (\l. LENGTH l = SUC n) L ==>
@@ -753,9 +689,9 @@ Induct_on `t` THENL [
 val ZIP___LIST_ZIP = store_thm ("ZIP___LIST_ZIP",
 ``!l1 l2. (LENGTH l1 = LENGTH l2) ==>
 (ZIP (l1,l2) = MAP (\l. (EL 0 l, EL 1 l)) (LIST_ZIP [l1;l2]))``,
-Induct_on `l2` THEN SIMP_TAC list_ss [LENGTH_NIL, LIST_ZIP_REWRITE] THEN
-Cases_on `l1` THEN ASM_SIMP_TAC list_ss [LENGTH_NIL, LIST_ZIP_REWRITE]);
 
+Induct_on `l2` THEN 
+ASM_SIMP_TAC (list_ss++QUANT_INST_ss[list_qp]) [LIST_ZIP_REWRITE]);
 
 
 val LIST_UNROLL_GIVEN_ELEMENT_NAMES_def = Define `
@@ -850,59 +786,52 @@ val FRONT_TAKE_THM = store_thm ("FRONT_TAKE_THM",
 SIMP_TAC std_ss [DROP_TAKE_PRE_LENGTH, FRONT_DEF]);
 
 
-
-
 val SWAP_ELEMENTS_def = Define `
 SWAP_ELEMENTS n m l =
-  (REPLACE_ELEMENT (EL n l) m
-      (REPLACE_ELEMENT (EL m l) n l))`
+  (LUPDATE (EL n l) m
+      (LUPDATE (EL m l) n l))`
 
 val SWAP_ELEMENTS_INTRO = store_thm ("SWAP_ELEMENTS_INTRO",
 ``!n m l e1 e2.
   (EL n l = e1) /\ (EL m l = e2) ==>
-  ((REPLACE_ELEMENT e1 m
-      (REPLACE_ELEMENT e2 n l)) =
+  ((LUPDATE e1 m (LUPDATE e2 n l)) =
   SWAP_ELEMENTS n m l)``,
 SIMP_TAC std_ss [SWAP_ELEMENTS_def]);
 
 
 val LENGTH_SWAP_ELEMENTS = store_thm ("LENGTH_SWAP_ELEMENTS",
 ``LENGTH (SWAP_ELEMENTS n m l) = LENGTH l``,
-SIMP_TAC std_ss [SWAP_ELEMENTS_def, REPLACE_ELEMENT_SEM]);
-
+SIMP_TAC std_ss [SWAP_ELEMENTS_def, LUPDATE_SEM]);
 
 
 val SWAP_ELEMENTS_SYM = store_thm ("SWAP_ELEMENTS_SYM",
   ``SWAP_ELEMENTS n m l = SWAP_ELEMENTS m n l``,
-SIMP_TAC std_ss [LIST_EQ_REWRITE, REPLACE_ELEMENT_SEM,
-   SWAP_ELEMENTS_def, EL_REPLACE_ELEMENT] THEN
+SIMP_TAC std_ss [LIST_EQ_REWRITE, LUPDATE_SEM,
+   SWAP_ELEMENTS_def, EL_LUPDATE] THEN
 METIS_TAC[]);
 
 
-val REPLACE_ELEMENT___NO_REPLACE = store_thm ("REPLACE_ELEMENT___NO_REPLACE",
-``!e n l. ~(n < LENGTH l) ==>
-(REPLACE_ELEMENT e n l = l)``,
+val LUPDATE___NO_REPLACE = store_thm ("LUPDATE___NO_REPLACE",
+``!e n l. ~(n < LENGTH l) ==> (LUPDATE e n l = l)``,
 Induct_on `n` THEN (
    Cases_on `l` THEN
-   ASM_SIMP_TAC list_ss [REPLACE_ELEMENT_DEF]
+   ASM_SIMP_TAC list_ss [LUPDATE_def]
 ));
 
 
-val REPLACE_ELEMENT___ALTERNATIVE_DEF = store_thm ("REPLACE_ELEMENT___ALTERNATIVE_DEF",
-``!e n l. (n < LENGTH l) ==>
-  (REPLACE_ELEMENT e n l =
-   (FIRSTN n l) ++ [e] ++ (BUTFIRSTN (SUC n) l))``,
+val LUPDATE___ALTERNATIVE_DEF = store_thm ("LUPDATE___ALTERNATIVE_DEF",
+``!e n l. (n < LENGTH l) ==> (LUPDATE e n l = (TAKE n l) ++ [e] ++ (DROP (SUC n) l))``,
 Induct_on `n` THEN (
    Cases_on `l` THEN
-   ASM_SIMP_TAC list_ss [REPLACE_ELEMENT_DEF]
+   ASM_SIMP_TAC list_ss [LUPDATE_def]
 ));
 
 
-val REPLACE_ELEMENT___REPLACE_ID = store_thm ("REPLACE_ELEMENT___REPLACE_ID",
-``!n l. REPLACE_ELEMENT (EL n l) n l = l``,
+val LUPDATE___REPLACE_ID = store_thm ("LUPDATE___REPLACE_ID",
+``!n l. LUPDATE (EL n l) n l = l``,
 Induct_on `n` THEN (
    Cases_on `l` THEN
-   ASM_SIMP_TAC list_ss [REPLACE_ELEMENT_DEF]
+   ASM_SIMP_TAC list_ss [LUPDATE_def]
 ));
 
 
@@ -912,7 +841,7 @@ val SWAP_ELEMENTS_EQ = store_thm ("SWAP_ELEMENTS_EQ",
 SIMP_TAC std_ss [SWAP_ELEMENTS_def] THEN
 Induct_on `n` THEN (
    Cases_on `l` THEN
-   ASM_SIMP_TAC list_ss [SWAP_ELEMENTS_def, REPLACE_ELEMENT_DEF]
+   ASM_SIMP_TAC list_ss [SWAP_ELEMENTS_def, LUPDATE_def]
 ));
 
 
@@ -924,10 +853,10 @@ val EL_SWAP_ELEMENTS = store_thm ("EL_SWAP_ELEMENTS",
      (if (x = n) then EL m l else EL x l))
   else EL x l``,
 
-SIMP_TAC std_ss [SWAP_ELEMENTS_def, EL_REPLACE_ELEMENT,
-  LENGTH_REPLACE_ELEMENT] THEN
+SIMP_TAC std_ss [SWAP_ELEMENTS_def, EL_LUPDATE, LENGTH_LUPDATE] THEN
+REPEAT GEN_TAC THEN
 Cases_on `x < LENGTH l` THEN
-SIMP_TAC std_ss []);
+PROVE_TAC[]);
 
 
 val PERM_SWAP_ELEMENTS___helper = prove (
@@ -937,40 +866,17 @@ val PERM_SWAP_ELEMENTS___helper = prove (
 SIMP_TAC std_ss [SWAP_ELEMENTS_def] THEN
 Tactical.REVERSE (Induct_on `n1`) THEN1 (
    Cases_on `l` THEN
-   ASM_SIMP_TAC std_ss [ADD_CLAUSES, REPLACE_ELEMENT_DEF, PERM_REFL,
+   ASM_SIMP_TAC std_ss [ADD_CLAUSES, LUPDATE_def, PERM_REFL,
       PERM_CONS_IFF, EL, TL, LENGTH]
 ) THEN
 Cases_on `n2` THEN (
    Cases_on `l` THEN
-   FULL_SIMP_TAC list_ss [REPLACE_ELEMENT_DEF, PERM_REFL]
+   FULL_SIMP_TAC list_ss [LUPDATE_def, PERM_REFL]
 ) THEN
-SIMP_TAC std_ss [REPLACE_ELEMENT___ALTERNATIVE_DEF] THEN
+SIMP_TAC std_ss [LUPDATE___ALTERNATIVE_DEF] THEN
 REPEAT STRIP_TAC THEN
 `t = TAKE n t ++ (EL n t::(DROP (SUC n) t))` by ALL_TAC THEN1 (
-   ASM_SIMP_TAC arith_ss [GSYM BUTFIRSTN_CONS_EL, APPEND_FIRSTN_BUTFIRSTN]
-) THEN
-POP_ASSUM (fn thm => CONV_TAC (RATOR_CONV (RAND_CONV (ONCE_REWRITE_CONV [thm])))) THEN
-SIMP_TAC (std_ss++permLib.PERM_ss) []);
-
-
-val PERM_SWAP_ELEMENTS___helper = prove (
-``!n1 n2 l. ((n1 + n2) < LENGTH l) ==>
-  (PERM l (SWAP_ELEMENTS n1 (n1+n2) l))``,
-
-SIMP_TAC std_ss [SWAP_ELEMENTS_def] THEN
-Tactical.REVERSE (Induct_on `n1`) THEN1 (
-   Cases_on `l` THEN
-   ASM_SIMP_TAC std_ss [ADD_CLAUSES, REPLACE_ELEMENT_DEF, PERM_REFL,
-      PERM_CONS_IFF, EL, TL, LENGTH]
-) THEN
-Cases_on `n2` THEN (
-   Cases_on `l` THEN
-   FULL_SIMP_TAC list_ss [REPLACE_ELEMENT_DEF, PERM_REFL]
-) THEN
-SIMP_TAC std_ss [REPLACE_ELEMENT___ALTERNATIVE_DEF] THEN
-REPEAT STRIP_TAC THEN
-`t = TAKE n t ++ (EL n t::(DROP (SUC n) t))` by ALL_TAC THEN1 (
-   ASM_SIMP_TAC arith_ss [GSYM BUTFIRSTN_CONS_EL, APPEND_FIRSTN_BUTFIRSTN]
+   ASM_SIMP_TAC arith_ss [GSYM DROP_CONS_EL, APPEND_FIRSTN_BUTFIRSTN]
 ) THEN
 POP_ASSUM (fn thm => CONV_TAC (RATOR_CONV (RAND_CONV (ONCE_REWRITE_CONV [thm])))) THEN
 SIMP_TAC (std_ss++permLib.PERM_ss) []);
@@ -1051,7 +957,7 @@ Induct_on `n` THENL [
    SIMP_TAC std_ss [LIST_NUM_SET_STAR_def, LIST_NUM_STAR_def],
 
    ASM_SIMP_TAC std_ss [LIST_NUM_SET_STAR_def, LIST_NUM_STAR_def, IN_SING,
-      EXTENSION, GSPECIFICATION, PAIR_EXISTS_THM]
+      EXTENSION, GSPECIFICATION, pairTheory.EXISTS_PROD]
 ]);
 
 
@@ -1076,7 +982,7 @@ val IN_LIST_NUM_SET_STAR = store_thm ("IN_LIST_NUM_SET_STAR",
       ?l t. (x = l ++ t) /\ l IN ls /\ (t IN (LIST_NUM_SET_STAR n ls)))``,
 
 SIMP_TAC std_ss [LIST_NUM_SET_STAR_def, IN_SING, GSPECIFICATION,
-   PAIR_EXISTS_THM]);
+   pairTheory.EXISTS_PROD]);
 
 
 
@@ -1112,7 +1018,7 @@ Induct_on `n` THENL [
 
    REPEAT STRIP_TAC THEN
    RES_TAC THEN
-   SIMP_TAC std_ss [SUBSET_DEF, GSPECIFICATION, PAIR_EXISTS_THM,
+   SIMP_TAC std_ss [SUBSET_DEF, GSPECIFICATION, pairTheory.EXISTS_PROD,
       LIST_NUM_SET_STAR_def] THEN
    METIS_TAC[SUBSET_DEF]
 ]);
@@ -1136,18 +1042,6 @@ val LIST_NUM_STAR_APPEND = store_thm ("LIST_NUM_STAR_APPEND",
       ASM_SIMP_TAC std_ss [LIST_NUM_STAR_def, ADD_CLAUSES, GSYM APPEND_ASSOC]
    ]
 );
-
-
-
-val LENGTH_EQ_ADD_CONST = store_thm (
-   "LENGTH_EQ_ADD_CONST",
-   ``(!l:'a list n1 n2. (LENGTH l = ((SUC n1) + n2)) = (?h l'. (LENGTH l' = n1 + n2) /\ (l = h::l'))) /\
-     (!l:'a list n1 n2. (LENGTH l = (n1 + SUC n2)) = (?h l'. (LENGTH l' = n1 + n2) /\ (l = h::l')))``,
-  METIS_TAC [arithmeticTheory.ADD_CLAUSES, LENGTH_EQ_NUM]);
-
-
-val LENGTH_EQ_ADD_CONST_compute = save_thm ("LENGTH_EQ_ADD_CONST_compute",
-   CONV_RULE numLib.SUC_TO_NUMERAL_DEFN_CONV LENGTH_EQ_ADD_CONST);
 
 
 (******************************************************************

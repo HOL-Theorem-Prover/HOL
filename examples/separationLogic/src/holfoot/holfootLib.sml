@@ -160,7 +160,7 @@ val sub_add_simp = prove (Term `(((x:num) + (c1:num)) - (x + c2)) = (c1 - c2)`, 
 val arith_simp_ss =
    std_ss ++ simpLib.merge_ss [
      (numSimps.ARITH_DP_FILTER_ss is_no_proper_diseq),
-     simpLib.rewrites [arithmeticTheory.ADD1, SUB1,
+     simpLib.rewrites [arithmeticTheory.ADD1, arithmeticTheory.PRE_SUB1,
       sub_add_simp]]
 
 fun holfoot_arith_simp_CONV context t =
@@ -2541,18 +2541,18 @@ struct
         tree_11, GSYM tree_distinct, tree_distinct,
         IS_LEAF_REWRITE,
 
-        BUTFIRSTN_LENGTH_NIL, BUTFIRSTN_LENGTH_APPEND,
-        FIRSTN_LENGTH_APPEND, LAST_DROP_THM,
+        BUTFIRSTN_LENGTH_NIL, DROP_LENGTH_APPEND,
+        TAKE_LENGTH_APPEND, LAST_DROP_THM,
         FRONT_TAKE_THM, BUTLAST, LAST, NOT_NULL_SNOC,
 
         holfoot_var_res_map_REWRITES,
         holfoot_separation_combinator_def,
-        REPLACE_ELEMENT_compute,
-        REPLACE_ELEMENT___REPLACE_ID,
-        LENGTH_REPLACE_ELEMENT, REPLACE_ELEMENT_DEF,
-        LENGTH_FIRSTN_MIN, LENGTH_DROP,
+        LUPDATE_compute,
+        LUPDATE___REPLACE_ID,
+        LENGTH_LUPDATE, LUPDATE_def,
+        LENGTH_TAKE_MIN, LENGTH_DROP,
 
-        SUB1, arithmeticTheory.ADD1, arithmeticTheory.NOT_LESS,
+        arithmeticTheory.PRE_SUB1, arithmeticTheory.ADD1, arithmeticTheory.NOT_LESS,
         arithmeticTheory.NOT_LESS_EQUAL,
         arithmeticTheory.GREATER_DEF,
         arithmeticTheory.GREATER_EQ
@@ -2560,11 +2560,11 @@ struct
 
    val predicate_ssfrag2 = simpLib.merge_ss [predicate_ssfrag1,
       simpLib.rewrites [
-        EL_REPLACE_ELEMENT, HD_REPLACE_ELEMENT,
-        REPLACE_ELEMENT___NO_REPLACE,
+        EL_LUPDATE, HD_LUPDATE,
+        LUPDATE___NO_REPLACE,
         holfoot_ap_data_array___SIMP_THMS___PRECOND,
         TAKE_APPEND1, TAKE_APPEND2,
-        BUTFIRSTN_APPEND1, BUTFIRSTN_APPEND2,
+        DROP_APPEND1, DROP_APPEND2,
         FIRSTN_LENGTH_ID_EVAL, BUTFIRSTN_LENGTH_NIL_EVAL]];
 
    fun predicate_ssfrag_arith 0 = simpLib.rewrites []
