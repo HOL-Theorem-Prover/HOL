@@ -87,9 +87,21 @@ sig
   val num_qp            : quantHeuristicsLibBase.quant_param;
   val option_qp         : quantHeuristicsLibBase.quant_param;
   val list_qp           : quantHeuristicsLibBase.quant_param;
+  val list_no_len_qp    : quantHeuristicsLibBase.quant_param; (* do not use LENGTH to unroll lists *)
   val list_len_qp       : quantHeuristicsLibBase.quant_param; (* use LENGTH for number > 1 to unroll lists *)
   val sum_qp            : quantHeuristicsLibBase.quant_param;
 
+  (* predefined filters *)
+  val subterm_filter       : term list -> term -> term -> bool
+  val subterm_match_filter : term list -> term -> term -> bool
+  val type_filter          : hol_type list -> term -> term -> bool
+  val type_match_filter    : hol_type list -> term -> term -> bool
+  val neg_filter           : (term -> term -> bool) -> term -> term -> bool
+  val sum_ty_filter        : term -> term -> bool
+  val option_ty_filter     : term -> term -> bool
+  val pair_ty_filter       : term -> term -> bool
+  val num_ty_filter        : term -> term -> bool
+  val list_ty_filter       : term -> term -> bool
 
   (* combination of all except the stateful ones *)
   val std_qp  : quantHeuristicsLibBase.quant_param;

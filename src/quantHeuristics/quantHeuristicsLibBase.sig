@@ -202,9 +202,7 @@ sig
     ((term -> term -> bool) list) -> quant_heuristic list ->
     quant_heuristic list -> (thm list -> quant_heuristic) list -> quant_heuristic_cache ref option -> thm list -> quant_heuristic_base;
 
-
   val COMBINE_HEURISTIC_FUNS : (unit -> guess_collection) list -> guess_collection;
-
 
   (*use this to create sys for debugging own heuristics*)
   val qp_to_heuristic : quant_param -> quant_heuristic_cache ref option -> thm list -> term -> term -> guess_collection
@@ -244,14 +242,29 @@ sig
   val QUANT_TAC  : (string * Parse.term Lib.frag list * Parse.term Parse.frag list list) list
    -> tactic;
 
+(* Predefined filters to use with filter_qp *)
+val subterm_filter       : term list -> term -> term -> bool
+val subterm_match_filter : term list -> term -> term -> bool
+val type_filter          : hol_type list -> term -> term -> bool
+val type_match_filter    : hol_type list -> term -> term -> bool
+val neg_filter           : (term -> term -> bool) -> term -> term -> bool
+
 (*combination with simplifier*)
   val QUANT_INST_ss        : quant_param list -> simpLib.ssfrag;
   val EXPAND_QUANT_INST_ss : quant_param list -> simpLib.ssfrag;
   val FAST_QUANT_INST_ss   : quant_param list -> simpLib.ssfrag;
 
 (* Traces *)
-(* "QUANT_INSTANTIATE_HEURISTIC" can be used to get debug information on
-   how guesses are obtained *)
+(* "QUANT_INST_DEBUG" can be used to get debug information on
+   how guesses are obtained
+
+   "QUANT_INST___print_term_length" used for printing debug concisely
+
+
+   "QUANT_INST___REC_DEPTH" can set the maximal recursion depth, default is 250. 
+   If the search is aborted, because the depth is not big enough, a warning
+   is printed. Decrease for speed and increase if the warning appears and you want to search deeper. 
+*)
 
 
 

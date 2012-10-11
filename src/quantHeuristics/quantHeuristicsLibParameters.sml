@@ -145,6 +145,7 @@ fun pair_qp pL = combine_qps
 val pair_default_qp = pair_qp [split_pair___PABS___pred,
         split_pair___FST_SND___pred false]
 
+val pair_ty_filter = type_match_filter [``:('a # 'b)``]
 
 (*
 val PAIR_QUANT_INSTANTIATE_CONV = QUANT_INSTANTIATE_CONV [pair_default_qp]
@@ -198,6 +199,8 @@ val option_qp = combine_qps [
    final_rewrite_qp [optionTheory.option_CLAUSES]
   ]
 
+val option_ty_filter = type_match_filter [``:'a option``]
+
 
 (*******************************************************************
  * Sum types
@@ -211,6 +214,7 @@ val sum_qp = combine_qps [
   final_rewrite_qp [sumTheory.OUTR, sumTheory.OUTL, sumTheory.ISL, sumTheory.ISR, sumTheory.INR_INL_11]
 ]
 
+val sum_ty_filter = type_match_filter [``:('a + 'b)``]
 
 (*******************************************************************
  * Nums
@@ -228,6 +232,7 @@ val num_qp = combine_qps [
    final_rewrite_qp [numTheory.NOT_SUC, GSYM numTheory.NOT_SUC]
 ]
 
+val num_ty_filter = type_filter [``:num``]
 
 
 (*******************************************************************
@@ -235,7 +240,7 @@ val num_qp = combine_qps [
  *******************************************************************)
 
 
-val list_qp = combine_qps [
+val list_no_len_qp = combine_qps [
    distinct_qp [rich_listTheory.NOT_CONS_NIL],
 
    cases_qp [listTheory.list_CASES],
@@ -243,9 +248,7 @@ val list_qp = combine_qps [
    rewrite_qp  [listTheory.CONS_11,
                 listTheory.NULL_EQ,
                 listTheory.APPEND_11,
-                listTheory.APPEND_eq_NIL,
-                LIST_LENGTH_COMPARE_SUC,
-                LIST_LENGTH_1],
+                listTheory.APPEND_eq_NIL],
 
    final_rewrite_qp [listTheory.NULL_DEF,
                      listTheory.TL, listTheory.HD,
@@ -253,7 +256,13 @@ val list_qp = combine_qps [
                      GSYM rich_listTheory.NOT_CONS_NIL]
 ]
 
-val list_len_qp = combine_qp (rewrite_qp  [LIST_LENGTH_20]) list_qp;
+val list_qp = combine_qp (rewrite_qp  [LIST_LENGTH_COMPARE_SUC,
+                     LIST_LENGTH_1]) list_no_len_qp;
+
+val list_len_qp = combine_qp (rewrite_qp  [LIST_LENGTH_COMPARE_SUC,
+                     LIST_LENGTH_20]) list_no_len_qp;
+
+val list_ty_filter = type_match_filter [``:'a list``]
 
 
 (*******************************************************************
@@ -382,5 +391,6 @@ val implication_concl_qp = heuristics_qp [QUANT_INSTANTIATE_HEURISTIC___IMP_CONC
  *******************************************************************)
 
 val std_qp = combine_qps [num_qp, option_qp, pair_default_qp, list_qp, sum_qp, record_default_qp]
+
 
 end

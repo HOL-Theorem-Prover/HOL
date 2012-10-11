@@ -40,12 +40,13 @@ val std_ss = numLib.std_ss
  *******************************************************)
 
 val QUANT_INSTANTIATE_HEURISTIC___max_rec_depth = ref 250;
+val _ = register_trace("QUANT_INST___REC_DEPTH", QUANT_INSTANTIATE_HEURISTIC___max_rec_depth, 20000);
 
 val QUANT_INSTANTIATE_HEURISTIC___debug = ref 0;
-val _ = register_trace("QUANT_INSTANTIATE_HEURISTIC", QUANT_INSTANTIATE_HEURISTIC___debug, 3);
+val _ = register_trace("QUANT_INST_DEBUG", QUANT_INSTANTIATE_HEURISTIC___debug, 3);
 
 val QUANT_INSTANTIATE_HEURISTIC___print_term_length = ref 2000;
-val _ = register_trace("QUANT_INSTANTIATE_HEURISTIC___print_term_length", QUANT_INSTANTIATE_HEURISTIC___print_term_length, 2000);
+val _ = register_trace("QUANT_INST___print_term_length", QUANT_INSTANTIATE_HEURISTIC___print_term_length, 2000);
 
 
 (*******************************************************
@@ -3001,6 +3002,32 @@ end handle HOL_ERR _ => raise QUANT_INSTANTIATE_HEURISTIC___no_guess_exp;
 
 fun oracle_qp ml_callback = top_heuristics_qp [
   QUANT_INSTANTIATE_HEURISTIC___ORACLE false ml_callback]
+
+(*****************************************************************
+ * Predefined filters 
+ *****************************************************************)
+
+fun type_match_filter tyL v (t:term) =
+  let
+    val ty' = type_of v;
+    val _ = tryfind (fn ty => match_type ty ty') tyL;
+  in true end handle HOL_ERR _ => false;
+
+
+fun type_filter tyL v (t:term) =
+  let
+    val ty' = type_of v;
+    val _ = tryfind (fn ty => ty = ty') tyL;
+  in true end handle HOL_ERR _ => false;
+
+fun subterm_match_filter tL (v:term) t =
+  can (find_term (fn t' => exists (can (fn t'' => match_term t'' t')) tL)) t
+
+fun subterm_filter tL (v:term) t =
+  can (find_term (fn t' => exists (aconv t') tL)) t
+
+fun neg_filter f (v:term) (t:term) = not (f v t)
+
 
 (*********************************************************************
  * Instantiate quantifiers by explicitly given guesses
