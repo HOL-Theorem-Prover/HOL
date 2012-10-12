@@ -45,6 +45,9 @@ val _ = register_trace("QUANT_INST___REC_DEPTH", QUANT_INSTANTIATE_HEURISTIC___m
 val QUANT_INSTANTIATE_HEURISTIC___debug = ref 0;
 val _ = register_trace("QUANT_INST_DEBUG", QUANT_INSTANTIATE_HEURISTIC___debug, 3);
 
+val QUANT_INSTANTIATE_HEURISTIC___debug_depth = ref 5;
+val _ = register_trace("QUANT_INST_DEBUG_DEPTH", QUANT_INSTANTIATE_HEURISTIC___debug_depth, 2000);
+
 val QUANT_INSTANTIATE_HEURISTIC___print_term_length = ref 2000;
 val _ = register_trace("QUANT_INST___print_term_length", QUANT_INSTANTIATE_HEURISTIC___print_term_length, 2000);
 
@@ -52,6 +55,13 @@ val _ = register_trace("QUANT_INST___print_term_length", QUANT_INSTANTIATE_HEURI
 (*******************************************************
  * Some general auxiliary functions
  *******************************************************)
+
+local
+   val my_type_subst = [alpha |-> gen_tyvar(), beta |-> gen_tyvar(), gamma  |-> gen_tyvar(), delta |-> gen_tyvar(),
+                        ``:'e`` |-> gen_tyvar(), ``:'f`` |-> gen_tyvar(), ``:'g``  |-> gen_tyvar(), ``:'h`` |-> gen_tyvar()]
+in
+  fun intro_fresh_ty_vars thm = INST_TYPE my_type_subst thm
+end
 
 fun mapPartialAcc f acc [] = acc
   | mapPartialAcc f acc (x::xs) =
@@ -796,7 +806,7 @@ let
    val g_exists_pointL = let
       val v_l = mk_abs (v, l);
       val v_r = mk_abs (v, r);
-      val g_exists_point_thm  = ISPECL [i, v_l, v_r] GUESS_RULES_EQUATION_EXISTS_POINT
+      val g_exists_point_thm  = ISPECL [i, v_l, v_r] (intro_fresh_ty_vars GUESS_RULES_EQUATION_EXISTS_POINT)
       val g_exists_point_thm2 = CONV_RULE (
          RATOR_CONV (RAND_CONV (BINOP_CONV BETA_CONV)) THENC
          RAND_CONV (RAND_CONV (ALPHA_CONV v THENC (ABS_CONV ((BINOP_CONV BETA_CONV)))))) g_exists_point_thm
@@ -1052,7 +1062,7 @@ let
         val (i_v, i_b) = dest_forall (concl ni_thm3);
         val i = mk_abs (i_v, lhs (dest_neg i_b))
         val (vl, vr) = (mk_abs(v,l), mk_abs(v,r));
-        val g_thm0 = ISPECL [i, if turn then vr else vl, if turn then vl else vr] GUESS_RULES_EQUATION_FORALL_POINT
+        val g_thm0 = ISPECL [i, if turn then vr else vl, if turn then vl else vr] (intro_fresh_ty_vars GUESS_RULES_EQUATION_FORALL_POINT)
         val g_thm1 = BETA_RULE g_thm0
         val g_thm2 = HO_MATCH_MP g_thm1 ni_thm3;
         val g_thm3 = CONV_RULE (RAND_CONV
@@ -1705,7 +1715,7 @@ let
          val i_t = (rand o rator o concl) gthm1;
          val i_tv = if i_f then i_t else snd (dest_abs i_t);
          val t_vL = map (fn (fv, ttt) => if fv then mk_abs (v, ttt) else ttt) (zip fL tL)
-         val inf_thm0 = ISPECL (i_tv::t_vL) inf_thm
+         val inf_thm0 = ISPECL (i_tv::t_vL) (intro_fresh_ty_vars inf_thm)
          val inf_thm1 = LIST_MP (map (snd o guess2thm) final_gL) inf_thm0
          val inf_thm2 = CONV_RULE (RAND_CONV (ALPHA_CONV v THENC
                          ABS_CONV (fL_BETA_CONV (rev fL)))) inf_thm1
@@ -1825,6 +1835,7 @@ local
    val gL = (#forall_point gc)
    val ithm = inf_thm3
    val g = hd gL
+   val thm = hd thmL
 *)
    fun process_guess ithm g =
    let
@@ -1834,30 +1845,30 @@ local
       guess_thm(gty, i, fvL, gthm')
    end;
 
-
    fun process_guess_list pre_thm v t t' inf_thm gL =
    let
       val vt = mk_abs(v, t)
       val vt' = mk_abs(v, t')
-      val inf_thm1 = ISPECL [vt', vt] inf_thm
+      val inf_thm1 = ISPECL [vt', vt] (intro_fresh_ty_vars inf_thm)
       val inf_thm2 = CONV_RULE ((RATOR_CONV o RAND_CONV o QUANT_CONV o BINOP_CONV) BETA_CONV) inf_thm1
       val inf_thm3 = MP inf_thm2 pre_thm
+
       val gL' = map (process_guess inf_thm3) gL
    in
       gL'
    end handle HOL_ERR _ => [];
 
 
-   fun try_single_thm sys v t thm =
+   fun try_single_thm strengthen sys v t thm =
    let
       val _ = if (is_imp_only (concl thm)) then () else fail();
-      val (thm0, strengthen) = (PART_MATCH (rand o rator) thm t, true) handle HOL_ERR _ =>
-                               (PART_MATCH rand thm t, false);
+      val thm0 = (if strengthen then (PART_MATCH (rand o rator) thm t) else
+                                     (PART_MATCH rand thm t));
 
       val pre_thm = GEN v thm0
       val t' = if strengthen then (rand (concl thm0)) else (rand (rator (concl thm0)))
 
-      val gfun = process_guess_list pre_thm v t t'
+      val gfun = process_guess_list pre_thm v t t' 
 
       val gc1:guess_collection = sys v t' handle QUANT_INSTANTIATE_HEURISTIC___no_guess_exp => fail()
 
@@ -1877,8 +1888,9 @@ in
 fun QUANT_INSTANTIATE_HEURISTIC___STRENGTHEN_WEAKEN thms sys (v:term) t =
 let
    val thmL = flatten (map BODY_CONJUNCTS thms);
-   val gcL = mapfilter (try_single_thm sys v t) thmL
-   val gc = guess_collection_flatten gcL
+   val gcL_s = mapfilter (try_single_thm true sys v t) thmL
+   val gcL_w = mapfilter (try_single_thm false sys v t) thmL
+   val gc = guess_collection_flatten (gcL_s @ gcL_w)
 in
    gc
 end handle HOL_ERR _ => raise QUANT_INSTANTIATE_HEURISTIC___no_guess_exp;
@@ -1922,7 +1934,7 @@ val SOME (thms, v, t) = !xxx
 local
    fun get_implication_gc sys v t neg dneg i P thm = let
       val _ = if neg then () else fail();
-      val ithm1 = ISPECL [P, i, v] IMP_NEG_CONTRA;
+      val ithm1 = ISPECL [P, i, v] (intro_fresh_ty_vars IMP_NEG_CONTRA);
 
       val c0 = RATOR_CONV o RAND_CONV
       val (c2, c1) = (RAND_CONV BETA_CONV, BETA_CONV)
@@ -1937,7 +1949,7 @@ local
 
    fun get_direct_matches_gc neg dneg i P thm = let
       val gthm0 = if neg then GUESS_RULES_TRIVIAL_FORALL_POINT else GUESS_RULES_TRIVIAL_EXISTS_POINT
-      val gthm1 = ISPECL [i, P] gthm0
+      val gthm1 = ISPECL [i, P] (intro_fresh_ty_vars gthm0)
 
       val c0 = if neg then (RAND_CONV BETA_CONV) else BETA_CONV
       val c1 = if dneg then c0 THENC NEG_NEG_ELIM_CONV else c0
@@ -2394,7 +2406,7 @@ fun BOUNDED_QUANT_INSTANTIATE_HEURISTIC___COMBINE n tL
     filterL top_heuristicL heuristicL ctx_heuristicL cache_ref_opt (ctx:thm list) (v:term) (t:term) =
 if (n >= !QUANT_INSTANTIATE_HEURISTIC___max_rec_depth) then
    ((say_HOL_WARNING "BOUNDED_QUANT_INSTANTIATE_HEURISTIC___COMBINE" "Maximal recursion depth reached!");
-   empty_guess_collection)
+   raise QUANT_INSTANTIATE_HEURISTIC___no_guess_exp)
 else let
    val _ = if exists (aconv t) tL then raise QUANT_INSTANTIATE_HEURISTIC___no_guess_exp else ();
    val _ = if (all (fn filter => (filter v t)) filterL) andalso (free_in v t) then () else raise QUANT_INSTANTIATE_HEURISTIC___no_guess_exp;
@@ -2403,7 +2415,7 @@ else let
    val gc_opt = quant_heuristic_cache___peek (!cache_ref) v t
    val cache_found = isSome gc_opt;
 
-   val _ = if (!QUANT_INSTANTIATE_HEURISTIC___debug > 0) then
+   val _ = if ((!QUANT_INSTANTIATE_HEURISTIC___debug > 0) andalso (n <= !QUANT_INSTANTIATE_HEURISTIC___debug_depth)) then
 	       say ((prefix_string n)^"searching guesses for ``"^
 	           (term_to_string v)^"`` in ``"^(cut_term_to_string t)^"``\n")
            else ();
@@ -2432,7 +2444,7 @@ else let
    val gc  = correct_guess_collection v t (guess_collection_clean (guess_collection_append gc gc_context));
 
 
-   val _ = if (!QUANT_INSTANTIATE_HEURISTIC___debug > 0) then
+   val _ = if (!QUANT_INSTANTIATE_HEURISTIC___debug > 0) andalso (n <= !QUANT_INSTANTIATE_HEURISTIC___debug_depth) then
                let
                   val gL = (snd (guess_collection2list gc));
 		  val prefix = prefix_string n;
