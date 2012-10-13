@@ -1749,6 +1749,9 @@ fun check_kdvars body_kdvars bound_kdvars f =
 
 local open Type
 in
+fun determine_humble_tyvars frees =
+  Lib.all (Kind.is_type_kind o kind_of) frees
+
 fun determine_humble_type frees ty =
   if is_var_type ty then Lib.mem ty frees
   else if is_con_type ty then
@@ -1759,6 +1762,21 @@ fun determine_humble_type frees ty =
     let val (h,a) = strip_app_type ty
     in is_humble_type_app (h,a)
        andalso Lib.all (determine_humble_type frees) a
+    end
+  else false
+
+fun determine_humble_term frees tm =
+  if is_var tm then determine_humble_type frees (snd (dest_var tm))
+  else if is_const tm then determine_humble_type frees (snd (dest_const tm))
+  else if is_comb tm then
+    let val (opr,arg) = dest_comb tm
+    in determine_humble_term frees opr andalso
+       determine_humble_term frees arg
+    end
+  else if is_abs tm then
+    let val (bv,body) = dest_abs tm
+    in determine_humble_term frees bv andalso
+       determine_humble_term frees body
     end
   else false
 end
@@ -1778,8 +1796,10 @@ fun prim_type_definition (name as {Thy, Tyop}, thm) = let
   val checked   = assert_exn (Type.eq_ty bool) rng
                              (TYDEF_ERR "subset predicate has the wrong type")
   val newkd     = List.foldr (op ==>) (Type.kind_of dom) (map Type.kind_of tyvars)
-  val promote   = determine_humble_type (Type.type_vars dom) dom
-  val   _       = Type.prim_new_type_opr name (newkd,promote)
+  val humble    = determine_humble_tyvars tyvars andalso
+                  determine_humble_type tyvars dom andalso
+                  determine_humble_term tyvars P
+  val   _       = Type.prim_new_type_opr name (newkd,humble)
   val newty     = Type.mk_thy_type{Tyop=Tyop,Thy=Thy,Args=tyvars}
   val repty     = newty --> dom
   val rep       = mk_primed_var("rep", repty)

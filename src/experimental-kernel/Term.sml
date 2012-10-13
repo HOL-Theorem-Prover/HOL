@@ -2936,9 +2936,12 @@ local
     val tyname = #1(dest_var_type(gen_var_type(typ rho)))
   in
     fun mk_new_dummy ty =
-       let val a = trace ("Vartype Format Complaint",0)
-                             mk_var_type(tyname, kind_of ty)
-           val ty' = mk_app_type(mk_abs_type(a, bool), ty)
+       let val a = mk_thy_con_type{Thy="bool", Tyop="itself",
+                                      Kind = kind_of ty ==> typ 0}
+                   handle HOL_ERR _ =>
+                   trace ("Vartype Format Complaint",0)
+                             mk_var_type(tyname, kind_of ty ==> typ 0)
+           val ty' = mk_app_type(a, ty)
        in mk_var(name, ty')
        end
     fun mk_dummy2 {redex,residue} =
@@ -2946,12 +2949,15 @@ local
           (* keep as similar as possible to HOL4 dummies *)
        then (mk_var(name, redex) |-> mk_var(name, residue))
        else (mk_new_dummy redex  |-> mk_new_dummy residue )
+    fun is_dummy_ty a = (fst (dest_var_type a) = tyname)
+                        handle HOL_ERR _ => false
+    fun is_dummy x    = (fst (dest_var x) = name)
+                        handle HOL_ERR _ => false
     fun dest_dummy tm =
        let val (n,ty) = dest_var tm
            val _ = if name = n then () else raise ERR "dest_dummy" ""
        in let val (opr,arg) = dest_app_type ty
-              val (a,body) = dest_abs_type opr
-              val (s,kd) = dest_var_type a
+              val (s,kd) = dest_var_type opr
               val _ = if tyname = s then () else raise ERR "dest_dummy" ""
           in arg
           end (* but if not the new kind of dummy, it's the old sort *)
@@ -3090,19 +3096,25 @@ fun separate_insts kdavoids tyavoids rkS kdS tyS insts = let
                    if t = x' then raise ERR "separate_insts" ""
                              else {redex = x', residue = t}
                  end) (fst tyins)
-  val tyins' = (tyinsts,snd tyins)
   val inst_rk_kd_ty = Type.inst_rk_kd_ty (tyinsts, kdS', fst rkin)
   val tminsts = mapfilter (fn {redex = x, residue = t} => let
                    val x' = let val (xn,xty) = dest_var x
                             in
+                              if is_dummy x then raise ERR "separate_insts" "" else ();
                               mk_var(xn, inst_rk_kd_ty xty)
                             end
                  in
                    if aconv t x' then raise ERR "separate_insts" ""
                    else {redex = x', residue = t}
                  end) realinsts
+  val tyinsts = mapfilter (fn m as {redex = x, residue = t} => let
+                 in
+                   if is_dummy_ty x then raise ERR "separate_insts" ""
+                   else m
+                 end) tyinsts (* this removes dummy type insts, which should not be reported *)
+  val tyins' = (tyinsts,snd tyins)
   val _ = map (fn {redex = x, residue = t} =>
-                   if eq_ty (type_of x) (type_of t) then ()
+                   if ge_ty (type_of x) (type_of t) then ()
                    else raise ERR "separate_insts" "bad term subst: type mismatch" (* This covers an error in normal HOL *)
               ) tminsts
 in

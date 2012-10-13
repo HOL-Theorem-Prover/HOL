@@ -225,7 +225,7 @@ fun prerank_to_string0 rs (UVarrank (r as ref NONE)) =
          (": " ^ (if ord = EQUAL then "=" else if ord = GREATER then ">=" else "<=")
                ^ prerank_to_string0 (r::rs) rk))
   | prerank_to_string0 rs (Zerorank) = "0"
-  | prerank_to_string0 rs (Sucrank rk) = "(" ^ prerank_to_string0 rs rk ^ "+1)"
+  | prerank_to_string0 rs (Sucrank rk) = "(" ^ prerank_to_string0 rs rk ^ ")+1"
   | prerank_to_string0 rs (Maxrank rks) = "max(" ^ preranks_to_string0 rs rks ^ ")"
 
 and preranks_to_string0 rs [] = ""
@@ -670,7 +670,13 @@ report "Unifying ranks" "<=" n rk1 rk2 (
    into final estimates of ranks.  To avoid making a "bind_less" binding,
    (UVarrank _, Sucrank _) chooses to give up some flexibility, requiring
    a somewhat more stringent condition that is absolutely necessary,
-   in order to concentrate on "bind_greater" bindings. *)
+   in order to concentrate on "bind_greater" bindings.
+   However, this can cause unnecessary failures; so in cases
+   when (UVarrank (GREATER rk1'), Sucrank rk2') and rk2' <= rk1',
+   the "bind_less" actually creates an equality binding, as the
+   lesser bound of a range [n..n+1];
+   in such cases, the "bind_less" is preferred.
+ *)
 (*  (UVarrank r1, UVarrank r2) =>
           if r2 ref_occurs_in_less rk1
             then bind_less gen_unify_le (n+1) r1 rk2
@@ -680,7 +686,18 @@ report "Unifying ranks" "<=" n rk1 rk2 (
   | (Zerorank, _) => ok
   | (Sucrank rk1, Sucrank rk2) => gen_unify_le_1 rk1 rk2
 (**)
-  | (UVarrank r, Sucrank rk2') => if has_free_uvar rk2
+  | (UVarrank r, Sucrank (UVarrank (ref(SOME (EQUAL,rk2'))))) =>
+                                  gen_unify_le_1 rk1 (Sucrank rk2')
+  | (UVarrank (r as ref(SOME (EQUAL,rk1'))), Sucrank rk2') =>
+                                  gen_unify_le_1 rk1' rk2
+  | (UVarrank r, Sucrank (Maxrank rs)) =>
+                                  tryall (gen_unify_le_1 rk1) (map Sucrank (rev (shrink_list rs)))
+  | (UVarrank (r as ref(SOME (GREATER,rk1'))), Sucrank rk2') =>
+                                  if has_free_uvar rk2' andalso not (leq rk2' rk1')
+                                  then report "Discard suc rank" "<=" (n+1) rk1 rk2
+                                         (gen_unify_le_1 rk1 rk2') (* loses info *)
+                                  else bind_less gen_unify_le (n+1) r rk2
+  | (UVarrank r, Sucrank rk2') => if has_free_uvar rk2'
                                   then report "Discard suc rank" "<=" (n+1) rk1 rk2
                                          (gen_unify_le_1 rk1 rk2') (* loses info *)
                                   else bind_less gen_unify_le (n+1) r rk2

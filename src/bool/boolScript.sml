@@ -446,13 +446,30 @@ val UNPACK_PACK_AX = (* New for HOL-Omega *)
                              !(f: !'x:'k. 'x 'a -> 'b) (t: 'y 'a).
                                UNPACK f (PACK [:'y:] t) = f [:'y:] t`);
 
+(* This next axiom is only true if we quotient the type of packages
+   in the semantics;
+   it is not true that p = q in the semantics of dependent pairs.
+
 val PACK_EXT_AX = (* New for HOL-Omega *)
  new_axiom
-   ("PACK_EXT_AX",   Term `!:('a:'k => ty:1).
+   ("PACK_EXT_AX",   Term `!:('a:'k => ty:1) ('b:ty:1).
                              !p q: ?'x:'k. 'x 'a.
-                               (!P: !'x:'k. 'x 'a -> bool.
+                               (!f: !'x:'k. 'x 'a -> 'b.
                                    UNPACK P p = UNPACK P q)
                                ==> (p = q)`);
+*)
+
+(* Cannot express this axiom without a new constant
+      EQTYPE : !('b:'k) ('c:'k). bool
+   to imply the equality of two type variables:
+
+val PACK_ONE_ONE_AX = (* New for HOL-Omega *)
+ new_axiom
+   ("PACK_ONE_ONE_AX", Term `!:('a:'k => ty:1) ('b:'k) ('c:'k).
+                               !(s:'b 'a) (t:'b 'a).
+                                 (PACK [:'b:] s = PACK [:'b:] t)
+                                 ==> EQTYPE [:'b,'c:] /\ (s = t)`);
+*)
 
 val PACK_ONTO_AX = (* New for HOL-Omega *)
  new_axiom
@@ -1698,6 +1715,9 @@ val TY_FUN_EQ_THM =
 
 val _ = save_thm("TY_FUN_EQ_THM",TY_FUN_EQ_THM);
 
+(* The following theorem is not valid in the current semantics;
+   see the notes on PACT_EXT_AX.
+
 (*---------------------------------------------------------------------------
       PACK_EQ_THM  |- !p q. (p = q) = !P. UNPACK P p = UNPACK P q
  ---------------------------------------------------------------------------*)
@@ -1724,6 +1744,7 @@ val PACK_EQ_THM =
   end;
 
 val _ = save_thm("PACK_EQ_THM",PACK_EQ_THM);
+*)
 
 (*---------------------------------------------------------------------------
  *    |- !x y z. x=y  /\  y=z  ==>  x=z
