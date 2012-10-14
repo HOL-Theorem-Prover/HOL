@@ -53,7 +53,7 @@ endf
 
 fu! HOLLoad()
   call HOLLoadSetup()
-  call HOLLoadMessage("HOLLoad",line("$")-1)
+  call HOLLoadMessage("HOLLoad",line("$"))
 endf
 
 fu! HOLLoadSendQuiet()
@@ -62,7 +62,7 @@ fu! HOLLoadSendQuiet()
   let l:l = line(".")-1
   silent normal op
   exe "keepjumps normal Go" . s:holtogglequiet
-  call HOLLoadMessage("HOLLoadSendQuiet",line(".")-1)
+  call HOLLoadMessage("HOLLoadSendQuiet",l:l)
 endf
 
 fu! HOLLoadMessage(s,l)
