@@ -261,9 +261,9 @@ val neg_filter           : (term -> term -> bool) -> term -> term -> bool
    "QUANT_INST___print_term_length" used for printing debug concisely
 
 
-   "QUANT_INST___REC_DEPTH" can set the maximal recursion depth, default is 250. 
+   "QUANT_INST___REC_DEPTH" can set the maximal recursion depth, default is 250.
    If the search is aborted, because the depth is not big enough, a warning
-   is printed. Decrease for speed and increase if the warning appears and you want to search deeper. 
+   is printed. Decrease for speed and increase if the warning appears and you want to search deeper.
 *)
 
 

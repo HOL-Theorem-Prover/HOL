@@ -3,7 +3,7 @@ struct
 
 
 open HolKernel Parse boolLib Drule BasicProvers
-     pairTheory listTheory optionTheory metisLib simpLib 
+     pairTheory listTheory optionTheory metisLib simpLib
      boolSimps pureSimps TotalDefn numLib ConseqConv
 
 val _ = new_theory "quantHeuristics";
@@ -839,7 +839,7 @@ local
     val es = mk_e [] n
 
     (* equality *)
-    val thm_eq = let 
+    val thm_eq = let
       val l = mk_eq (len_t, n_t);
       val thm_aux = SIMP_CONV arith_ss [LENGTH_EQ_NUM_compute, GSYM LEFT_EXISTS_AND_THM] l;
     in
@@ -847,7 +847,7 @@ local
     end
 
     (* equality plus *)
-    val thm_eqp = let 
+    val thm_eqp = let
       val l = mk_eq (len_t, mk_plus(n_t, mk_var("x", ``:num``)));
       val thm_aux = SIMP_CONV list_ss [LENGTH_EQ_NUM, GSYM LEFT_EXISTS_AND_THM, thm_eq] l;
     in
@@ -855,26 +855,26 @@ local
     end
 
     (* less equal *)
-    val thm_le = let  
+    val thm_le = let
       val l = mk_leq (n_t, len_t);
       val thm_aux = SIMP_CONV list_ss [LENGTH_LE_NUM, thm_eq, GSYM LEFT_EXISTS_AND_THM] l;
-    in 
+    in
       CONV_RULE (RHS_CONV (RENAME_VARS_CONV ["l'"])) thm_aux
     end
 
     (* less equal plus *)
-    val thm_lep = let  
+    val thm_lep = let
       val l = mk_leq (mk_plus(n_t, mk_var("x", ``:num``)), len_t);
       val thm_aux = SIMP_CONV list_ss [LENGTH_LE_PLUS, thm_eq, GSYM LEFT_EXISTS_AND_THM] l;
-    in 
+    in
       CONV_RULE (RHS_CONV (RENAME_VARS_CONV ["l'"])) thm_aux
     end
 
     (* less *)
-    val thm_less = let  
+    val thm_less = let
       val l = mk_less (pre_n_t, len_t);
       val thm_aux = SIMP_CONV list_ss [arithmeticTheory.LESS_EQ, thm_le] l;
-    in 
+    in
       thm_aux
     end
   in

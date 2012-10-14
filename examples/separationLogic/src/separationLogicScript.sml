@@ -16,7 +16,7 @@ show_assums := true;
 open generalHelpersTheory finite_mapTheory relationTheory bagTheory pred_setTheory congLib sortingTheory
    listTheory rich_listTheory arithmeticTheory operatorTheory optionTheory latticeTheory
    containerTheory boolSimps ConseqConv markerTheory
-open quantHeuristicsLib 
+open quantHeuristicsLib
 
 (*
 open Sanity
@@ -414,7 +414,7 @@ ASM_SIMP_TAC std_ss [EXTENSION, IN_IMAGE, IN_UNIV,
 
 val asl_emp_NOT_EMPTY = store_thm ("asl_emp_NOT_EMPTY",
 ``IS_SEPARATION_COMBINATOR f ==> ~(asl_emp f = {})``,
-SIMP_TAC std_ss [IS_SEPARATION_COMBINATOR_EXPAND_THM, asl_emp_def, IN_ABS, 
+SIMP_TAC std_ss [IS_SEPARATION_COMBINATOR_EXPAND_THM, asl_emp_def, IN_ABS,
   EXTENSION, NOT_IN_EMPTY] THEN
 METIS_TAC[]);
 

@@ -252,7 +252,7 @@ val list_no_len_qp = combine_qps [
 
    final_rewrite_qp [listTheory.NULL_DEF,
                      listTheory.TL, listTheory.HD,
-                     rich_listTheory.NOT_CONS_NIL, 
+                     rich_listTheory.NOT_CONS_NIL,
                      GSYM rich_listTheory.NOT_CONS_NIL]
 ]
 

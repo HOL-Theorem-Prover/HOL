@@ -690,7 +690,7 @@ val ZIP___LIST_ZIP = store_thm ("ZIP___LIST_ZIP",
 ``!l1 l2. (LENGTH l1 = LENGTH l2) ==>
 (ZIP (l1,l2) = MAP (\l. (EL 0 l, EL 1 l)) (LIST_ZIP [l1;l2]))``,
 
-Induct_on `l2` THEN 
+Induct_on `l2` THEN
 ASM_SIMP_TAC (list_ss++QUANT_INST_ss[list_qp]) [LIST_ZIP_REWRITE]);
 
 

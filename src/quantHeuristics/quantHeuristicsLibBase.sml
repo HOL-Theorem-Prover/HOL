@@ -1868,7 +1868,7 @@ local
       val pre_thm = GEN v thm0
       val t' = if strengthen then (rand (concl thm0)) else (rand (rator (concl thm0)))
 
-      val gfun = process_guess_list pre_thm v t t' 
+      val gfun = process_guess_list pre_thm v t t'
 
       val gc1:guess_collection = sys v t' handle QUANT_INSTANTIATE_HEURISTIC___no_guess_exp => fail()
 
@@ -3016,7 +3016,7 @@ fun oracle_qp ml_callback = top_heuristics_qp [
   QUANT_INSTANTIATE_HEURISTIC___ORACLE false ml_callback]
 
 (*****************************************************************
- * Predefined filters 
+ * Predefined filters
  *****************************************************************)
 
 fun type_match_filter tyL v (t:term) =

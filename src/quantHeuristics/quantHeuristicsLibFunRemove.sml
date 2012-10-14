@@ -50,19 +50,19 @@ fun postfix_name_fun p s = String.concat [s,"_",p]
 
 fun QUANT_FUN_REMOVE_apply_thm nf rws thm v qb =
 let
-   val (i, thm') = let 
-     val (v', i') = dest_abs (rand (concl thm)) 
+   val (i, thm') = let
+     val (v', i') = dest_abs (rand (concl thm))
      val s = match_term v' v
      val thm' = INST_TY_TERM s thm
      val i = subst (fst s) (inst (snd s) i')
-   in 
+   in
      (i, thm')
    end;
 
-   val (ic, s) = 
-     let 
+   val (ic, s) =
+     let
        val v_set = (HOLset.add(empty_varset,v));
-       val mf = match_terml [] v_set i     
+       val mf = match_terml [] v_set i
        val ic = find_term (can mf) qb
        val s = mf ic
      in (ic, s) end
@@ -76,7 +76,7 @@ let
        TRY_CONV (CHANGED_CONV (SUB_CONV (check_removed_conv conv)))) tm
 
    fun check_convs convs t =
-     tryfind (fn c => 
+     tryfind (fn c =>
         let val thm = (CHANGED_CONV c) t;
         val _ = if (all_removed_check (rhs (concl thm))) then () else fail();
         in thm end) convs
@@ -97,7 +97,7 @@ end;
 
 (*
 val rem_thm = prove (``IS_REMOVABLE_QUANT_FUN (\n:num. n - 3)``,
-  SIMP_TAC std_ss [thm])  
+  SIMP_TAC std_ss [thm])
 val v' = genvar numty
 val qb' = subst [[``n3:num - 3``]]
 
@@ -119,7 +119,7 @@ let
    val P = rator (lhs (concl qb_thm))
    val inst_thm = if is_ex then IS_REMOVABLE_QUANT_FUN___EXISTS_THM else IS_REMOVABLE_QUANT_FUN___FORALL_THM
    val inst_thm1 = MP (ISPEC P (ISPEC f inst_thm)) thm'
-   val inst_thm2 = CONV_RULE 
+   val inst_thm2 = CONV_RULE
                      (LHS_CONV (
                         RAND_CONV (RENAME_VARS_CONV [fst (dest_var v)]) THENC
                         QUANT_CONV (

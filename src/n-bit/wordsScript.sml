@@ -4638,7 +4638,7 @@ val bit_count_upto_is_zero = Q.store_thm("bit_count_upto_is_zero",
    >- metis_tac [prim_recTheory.LESS_SUC_REFL]
    \\ eq_tac
    \\ lrw []
-   \\ Cases_on `i < n` 
+   \\ Cases_on `i < n`
    >- simp []
    \\ `i = n` by decide_tac
    \\ simp []);
