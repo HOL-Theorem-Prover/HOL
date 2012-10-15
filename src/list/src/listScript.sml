@@ -961,6 +961,10 @@ val SUM_eq_0 = store_thm("SUM_eq_0",
   ``!ls. (SUM ls = 0) = !x. MEM x ls ==> (x = 0)``,
   LIST_INDUCT_TAC THEN SRW_TAC[][SUM,MEM] THEN METIS_TAC[])
 
+val NULL_FILTER = store_thm("NULL_FILTER",
+  ``!P ls. NULL (FILTER P ls) = !x. MEM x ls ==> ~P x``,
+  GEN_TAC THEN LIST_INDUCT_TAC THEN
+  SRW_TAC[][NULL,FILTER,MEM] THEN METIS_TAC[])
 
 
 val WF_LIST_PRED = store_thm("WF_LIST_PRED",
