@@ -1,4 +1,4 @@
-open HolKernel Parse boolLib pairTheory pairSyntax combinTheory;
+open HolKernel Parse boolLib pairTheory pairSyntax combinTheory listTheory;
 
 val _ = new_theory "state_transformer"
 
@@ -43,6 +43,12 @@ val READ_def = TotalDefn.Define`
 
 val WRITE_def = TotalDefn.Define`
   (WRITE : ('state -> 'state) -> (unit, 'state) M) f = \s. ((), f s)`;
+
+val sequence_def = TotalDefn.Define`
+  sequence = FOLDR (\m ms. BIND m (\x. BIND ms (\xs. UNIT (x::xs)))) (UNIT [])`
+
+val mapM_def = TotalDefn.Define`
+  mapM f = sequence o MAP f`
 
 (* ------------------------------------------------------------------------- *)
 (* Theorems.                                                                 *)
@@ -189,6 +195,20 @@ val FST_o_MMAP = store_thm
    ++ REWRITE_TAC [MMAP_DEF, BIND_DEF, UNCURRY, o_THM, UNIT_DEF]
    ++ BETA_TAC
    ++ REWRITE_TAC [FST]);
+
+val sequence_nil = store_thm("sequence_nil",
+  ``sequence [] = UNIT []``,
+  BasicProvers.SRW_TAC[][sequence_def])
+val _ = BasicProvers.export_rewrites["sequence_nil"]
+
+val mapM_nil = store_thm("mapM_nil",
+  ``mapM f [] = UNIT []``,
+  BasicProvers.SRW_TAC[][mapM_def])
+val _ = BasicProvers.export_rewrites["mapM_nil"]
+
+val mapM_cons = store_thm("mapM_cons",
+  ``mapM f (x::xs) = BIND (f x) (\y. BIND (mapM f xs) (\ys. UNIT (y::ys)))``,
+  BasicProvers.SRW_TAC[][mapM_def,sequence_def])
 
 (* ------------------------------------------------------------------------- *)
 

@@ -90,13 +90,13 @@ src/num/termination
 # speed up the last few theories (sets, extra numbers, and lists) before
 # bossLib
 src/num/extra_theories
-src/monad
 src/pred_set/src
 src/datatype/equiv
 src/datatype/record
 src/datatype
 !src/datatype/theory_tests
 src/list/src
+src/monad
 src/quantHeuristics
 src/unwind
 src/HolSat/vector_def_CNF
