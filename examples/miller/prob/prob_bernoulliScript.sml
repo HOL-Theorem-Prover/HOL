@@ -111,9 +111,9 @@ val PROB_TERMINATES_BERNOULLI = store_thm
                           IN_IMAGE, COUNTABLE_IMAGE]
         ++ Know
            `{s |
-             ~ISL (FST (prob_while_cut
+             ISR (FST (prob_while_cut
                         ISL (prob_bernoulli_iter o OUTL) n a s))} =
-            {x | ~ISL x} o FST o
+            {x | ISR x} o FST o
             prob_while_cut ISL (prob_bernoulli_iter o OUTL) n a`
         >> (SET_EQ_TAC
             ++ RW_TAC std_ss [GSPECIFICATION, IN_o, o_THM])
@@ -134,15 +134,15 @@ val PROB_TERMINATES_BERNOULLI = store_thm
    ++ RW_TAC bool_ss [ONE]
    ++ RW_TAC std_ss [prob_while_cut_def, PROB_WHILE_CUT_0,
                       BIND_RIGHT_UNIT, o_THM]
-   ++ MP_TAC (Q.SPEC `{x | ~ISL x} o FST o prob_bernoulli_iter x`
+   ++ MP_TAC (Q.SPEC `{x | ISR x} o FST o prob_bernoulli_iter x`
               (GSYM PROB_BERN_INTER_HALVES))
    ++ Cond >> RW_TAC std_ss [INDEP_FN_FST_EVENTS, INDEP_FN_PROB_BERNOULLI_ITER]
    ++ Rewr'
    ++ RW_TAC std_ss [prob_bernoulli_iter_def]
    ++ Know
       `!f b.
-         halfspace b INTER {x:real+bool | ~ISL x} o FST o BIND sdest (\b. f b) =
-         halfspace b INTER ({x | ~ISL x} o FST o f b) o stl`
+         halfspace b INTER {x:real+bool | ISR x} o FST o BIND sdest (\b. f b) =
+         halfspace b INTER ({x | ISR x} o FST o f b) o stl`
    >> (SET_EQ_TAC
        ++ RW_TAC std_ss [IN_o, o_THM, IN_HALFSPACE, IN_INTER, GSPECIFICATION,
                          BIND_DEF, UNCURRY, sdest_def]
@@ -155,11 +155,12 @@ val PROB_TERMINATES_BERNOULLI = store_thm
    ++ RW_TAC bool_ss [GSYM o_ASSOC]
    ++ Know
       `!x:real+bool.
-         {x | ~ISL x} o FST o UNIT x =
+         {x | ISR x} o FST o UNIT x =
          if ISL x then {} else (UNIV:(num->bool)->bool)`
    >> (SET_EQ_TAC
        ++ RW_TAC std_ss [GSPECIFICATION, IN_o, o_THM, UNIT_DEF, IN_UNIV,
-                         NOT_IN_EMPTY])
+                         NOT_IN_EMPTY]
+       ++ FULL_SIMP_TAC (srw_ss()) [])
    ++ Rewr
    ++ RW_TAC std_ss [PROB_BERN_UNIV, PROB_BERN_EMPTY, GSYM ONE]
    ++ RW_TAC real_ss [REAL_LE_REFL]);
