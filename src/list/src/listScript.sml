@@ -957,6 +957,9 @@ val EL_simp_restricted = store_thm(
   REWRITE_TAC [EL_simp, TL]);
 val _ = export_rewrites ["EL_simp_restricted"]
 
+val SUM_eq_0 = store_thm("SUM_eq_0",
+  ``!ls. (SUM ls = 0) = !x. MEM x ls ==> (x = 0)``,
+  LIST_INDUCT_TAC THEN SRW_TAC[][SUM,MEM] THEN METIS_TAC[])
 
 
 
