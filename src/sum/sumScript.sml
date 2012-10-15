@@ -425,6 +425,16 @@ val cond_sum_expand = store_thm("cond_sum_expand",
 Cases_on `P` THEN FULL_SIMP_TAC(srw_ss())[] THEN SRW_TAC[][EQ_IMP_THM])
 val _ = export_rewrites["cond_sum_expand"]
 
+val NOT_ISL_ISR = store_thm("NOT_ISL_ISR",
+  ``!x. ~ISL x = ISR x``,
+  GEN_TAC THEN Q.SPEC_THEN `x` STRUCT_CASES_TAC sum_CASES THEN SRW_TAC[][])
+val _ = export_rewrites["NOT_ISL_ISR"]
+
+val NOT_ISR_ISL = store_thm("NOT_ISR_ISL",
+  ``!x. ~ISR x = ISL x``,
+  GEN_TAC THEN Q.SPEC_THEN `x` STRUCT_CASES_TAC sum_CASES THEN SRW_TAC[][])
+val _ = export_rewrites["NOT_ISR_ISL"]
+
 val _ = adjoin_to_theory
 {sig_ps = NONE,
  struct_ps = SOME(fn ppstrm =>
