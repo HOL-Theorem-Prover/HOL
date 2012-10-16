@@ -1644,7 +1644,7 @@ fun extract_function name th entry exit function_in_out = let
     val goal = mk_eq((fst o dest_imp o concl o
       ISPEC (pairSyntax.mk_fst(mk_comb(step_fun,x_in)))) sumTheory.INL,F)
     val simp_lemma = auto_prove "simp_lemma" (goal,SIMP_TAC std_ss []
-      THEN REPEAT (AUTO_DECONSTRUCT_TAC (cdr o cdr o cdr))
+      THEN REPEAT (AUTO_DECONSTRUCT_TAC (cdr o cdr))
       THEN SIMP_TAC std_ss [])
     val simp_lemma = Q.SPEC `x` (GEN_TUPLE x_in simp_lemma)
     val simp_lemma = PURE_REWRITE_RULE [GSYM step_def] simp_lemma
