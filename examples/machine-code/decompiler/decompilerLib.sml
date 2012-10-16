@@ -1674,12 +1674,13 @@ fun extract_function name th entry exit function_in_out = let
                                  POST_CONV (fix_star xin))) lemma2
   val l1 = GEN_TUPLE x_in (GEN_TUPLE new_output l1)
   val l2 = GEN_TUPLE x_in (GEN_TUPLE new_input l2) handle HOL_ERR _ => l2
-  val goal = (snd o dest_imp o concl) thi
+  val goal = (fst o dest_imp o concl) thi
   val th = auto_prove "decompiler certificate" (goal,
-    MATCH_MP_TAC thi THEN STRIP_TAC
+    STRIP_TAC
     THEN1 (ONCE_REWRITE_TAC [simp_lemma] THEN REWRITE_TAC [] THEN
-           REPEAT STRIP_TAC THEN MATCH_MP_TAC l2 THEN ASM_SIMP_TAC std_ss [])
-    THEN1 (REPEAT STRIP_TAC THEN MATCH_MP_TAC l1 THEN ASM_SIMP_TAC std_ss []))
+           REPEAT STRIP_TAC THEN MATCH_MP_TAC l2 THEN FULL_SIMP_TAC std_ss [])
+    THEN1 (REPEAT STRIP_TAC THEN MATCH_MP_TAC l1 THEN FULL_SIMP_TAC std_ss []))
+  val th = MP thi th
   val th = SPEC x_in th
   val th = RW [GSYM SPEC_MOVE_COND] th
   val th = introduce_post_let th

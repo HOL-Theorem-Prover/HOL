@@ -1110,13 +1110,17 @@ fun SEP_IMP_TAC (hs,goal) = let
 
 (* debug prover *)
 
-fun auto_prove proof_name (goal,tac) =
-  prove(goal,tac THEN (fn (tms,tm) => let
+fun auto_prove proof_name (goal,tac) = let
+  val (rest,validation) = tac ([],goal)
+  in if length rest = 0 then validation [] else let
+(*
+    val (tms,tm) = hd rest
+    val sub_goal = if tms = [] then tm else mk_imp(list_mk_conj tms,tm)
     val b = !show_types_verbosely
     val _ = print ("\n\n\n  AUTO PROOF FAILED: " ^ proof_name ^ "\n\n")
     val _ = print "-----------------------------------------------\n"
     val _ = print "  Unsolved subgoal:\n\n"
-    val _ = print_term (mk_imp(list_mk_conj tms,tm))
+    val _ = print_term sub_goal
     val _ = print "\n\n"
     val _ = print "-----------------------------------------------\n"
     val _ = print "  Initial goal:\n\n"
@@ -1126,6 +1130,7 @@ fun auto_prove proof_name (goal,tac) =
     val _ = print "\n\n"
     val _ = print "-----------------------------------------------\n"
     val _ = print ("  The proof failed at " ^ proof_name ^ "\n\n\n")
-  in hd [] end)) handle Empty => fail()
+*)
+  in failwith("auto_prove failed for " ^ proof_name) end end handle Empty => fail()
 
 end;

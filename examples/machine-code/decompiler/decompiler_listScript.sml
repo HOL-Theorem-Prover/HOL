@@ -1,12 +1,13 @@
 
 open HolKernel boolLib bossLib Parse;
+(*
 open progTheory set_sepTheory addressTheory prog_armTheory;
 open listTheory pred_setTheory arithmeticTheory wordsTheory;
 open helperLib decompilerLib;
-
+*)
 val _ = new_theory "decompiler_list";
 
-
+(*
 (* we define a separation logic-style linked-list assertion *)
 
 val aLIST_def = Define `
@@ -175,6 +176,6 @@ L2: cmp r1,#0
 `
 
 *)
-
+*)
 val _ = export_theory();
 
