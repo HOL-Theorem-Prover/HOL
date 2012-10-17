@@ -134,26 +134,14 @@ sig
 (* Quantifier Heuristics Parameters are the main way to configure the behaviour. They
    are a record of theorems, conversion and full heuristics used during proof search. *)
 
-  type quant_param =
-    {distinct_thms      : thm list, (* Dichotomy theorems showing distinctiness *)
-     cases_thms         : thm list, (* Dichotomy theorems showing case completeness *)
-     rewrite_thms       : thm list, (* Theorems used for rewrites *)
-     instantiation_thms : thm list, (* Theorems used for direct instantiations *)
-     imp_thms           : thm list, (* Theorems used for weakening and strengthening *)
-     context_thms       : thm list, (* additional context *)
-     inference_thms     : thm list, (* Theorems used as inference rules to derive guesses from guesses for subterms. *)
-     convs              : conv list, (* Conversions used *)
-     filter             : (term -> term -> bool) list, (* Getting a free variable and a term, these ML functions decide, whether to try and find a guess *)
-     top_heuristics     : quant_heuristic list, (* Heuristics that should only be applied at top level *)
-     context_heuristics : (thm list -> quant_heuristic) list, (* Heuristics that may use the context of the given theorems *)
-     heuristics         : quant_heuristic list, (* Heuristics that should be applied for all subterms *)
-     final_rewrite_thms : thm list (* Rewrites used for cleaning up after instantiations. *) };
+  type quant_param;
 
 (* constructing quantifier heuristics parameters*)
 
   val distinct_qp      : thm list -> quant_param
   val cases_qp         : thm list -> quant_param
   val rewrite_qp       : thm list -> quant_param
+  val inst_filter_qp   : (term -> term -> term -> term list -> bool) list -> quant_param
   val instantiation_qp : thm list -> quant_param
   val imp_qp           : thm list -> quant_param
   val fixed_context_qp : thm list -> quant_param
@@ -186,6 +174,7 @@ sig
      quant_param list -> quant_param;
 
 
+  val COMBINE_HEURISTIC_FUNS : (unit -> guess_collection) list -> guess_collection;
 
 (*Heuristics that might be useful to write own ones*)
   val QUANT_INSTANTIATE_HEURISTIC___CONV                : conv -> quant_heuristic;
@@ -197,12 +186,6 @@ sig
   val QUANT_INSTANTIATE_HEURISTIC___STRENGTHEN_WEAKEN   : thm list -> quant_heuristic;
 
   val QUANT_INSTANTIATE_HEURISTIC___max_rec_depth : int ref
-
-  val QUANT_INSTANTIATE_HEURISTIC___COMBINE :
-    ((term -> term -> bool) list) -> quant_heuristic list ->
-    quant_heuristic list -> (thm list -> quant_heuristic) list -> quant_heuristic_cache ref option -> thm list -> quant_heuristic_base;
-
-  val COMBINE_HEURISTIC_FUNS : (unit -> guess_collection) list -> guess_collection;
 
   (*use this to create sys for debugging own heuristics*)
   val qp_to_heuristic : quant_param -> quant_heuristic_cache ref option -> thm list -> term -> term -> guess_collection

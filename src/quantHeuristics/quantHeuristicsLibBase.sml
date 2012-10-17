@@ -597,6 +597,7 @@ fun correct_guess_collection v t (gc:guess_collection) =
                 (all (is_guess gty_forall_gap) (#forall_gap gc)) andalso
                 (all (is_guess gty_exists_gap) (#exists_gap gc)) then () else
                    say_HOL_WARNING "correct_guess_collection" "Guess-collection-invariant violated!"
+
   in
      gc
   end else gc;
@@ -607,6 +608,25 @@ fun guess_collection___get_exists_weaken (c:guess_collection) =
 fun guess_collection___get_forall_weaken (c:guess_collection) =
     append (#forall_point c) (append (#forall c) (#forall_gap c));
 
+
+fun filter_guess inst_filterL v t guess =
+   let val (i, fvL) = guess_extract guess in
+   if (all (fn f => f (v:term) (t:term) i fvL) inst_filterL) then SOME guess else NONE
+      handle HOL_ERR _ => NONE
+   end;
+
+fun filter_guess_list inst_filterL v t = mapPartial (filter_guess inst_filterL v t)
+
+fun filter_guess_collection inst_filterL v t (gc:guess_collection) =
+  if (null inst_filterL) then gc else
+     {rewrites     = #rewrites gc,
+      general      = filter_guess_list inst_filterL v t (#general gc),
+      exists_point = filter_guess_list inst_filterL v t (#exists_point gc),
+      forall_point = filter_guess_list inst_filterL v t (#forall_point gc),
+      forall       = filter_guess_list inst_filterL v t (#forall gc),
+      exists       = filter_guess_list inst_filterL v t (#exists gc),
+      forall_gap   = filter_guess_list inst_filterL v t (#forall_gap gc),
+      exists_gap   = filter_guess_list inst_filterL v t (#exists_gap gc)}:guess_collection;
 
 
 (*******************************************************
@@ -2047,6 +2067,8 @@ type quant_param =
  inference_thms     : thm list, (* Theorems used as inference rules to derive guesses from guesses for subterms. *)
  convs              : conv list, (* Conversions used *)
  filter             : (term -> term -> bool) list, (* Getting a free variable and a term, these ML functions decide, whether to try and find a guess *)
+ inst_filter        : (term -> term -> term -> term list -> bool) list,
+   (* Getting a free variable v and a term t as well as an instantiation i for v in t and the list of free variables in i, these ML functions decide, whether this instantiation i should be used *)
  top_heuristics     : quant_heuristic list, (* Heuristics that should only be applied at top level *)
  context_heuristics : (thm list -> quant_heuristic) list, (* Heuristics that may use the context of the given theorems *)
  heuristics         : quant_heuristic list, (* Heuristics that should be applied for all subterms *)
@@ -2060,6 +2082,7 @@ fun combine_qp
      convs              = l14,
      heuristics         = l15,
      filter             = l19,
+     inst_filter        = l1E,
      top_heuristics     = l18,
      context_heuristics = l1A,
      imp_thms           = l1B,
@@ -2073,6 +2096,7 @@ fun combine_qp
      convs              = l24,
      heuristics         = l25,
      filter             = l29,
+     inst_filter        = l2E,
      top_heuristics     = l28,
      context_heuristics = l2A,
      imp_thms           = l2B,
@@ -2086,6 +2110,7 @@ fun combine_qp
      cases_thms         = (append l13 l23),
      convs              = (append l14 l24),
      filter             = (append l19 l29),
+     inst_filter        = (append l1E l2E),
      top_heuristics     = (append l18 l28),
      context_heuristics = (append l1A l2A),
      imp_thms           = (append l1B l2B),
@@ -2103,6 +2128,7 @@ val empty_qp =
      convs              = [],
      heuristics         = [],
      filter             = [],
+     inst_filter        = [],
      top_heuristics     = [],
      context_heuristics = [] ,
      imp_thms           = [],
@@ -2124,6 +2150,7 @@ fun distinct_qp thmL =
     context_heuristics=[],
     inference_thms=[],
     imp_thms = [],
+    inst_filter = [],
     instantiation_thms = [],
     context_thms = [],
     convs=[],heuristics=[],
@@ -2135,6 +2162,7 @@ fun rewrite_qp thmL =
     rewrite_thms=thmL,
     cases_thms=[],
     filter=[],
+    inst_filter = [],
     top_heuristics=[],
     context_heuristics=[],
     inference_thms=[],
@@ -2149,6 +2177,7 @@ fun fixed_context_qp thmL =
     rewrite_thms=[],
     cases_thms=[],
     filter=[],
+    inst_filter = [],
     top_heuristics=[],
     context_heuristics=[],
     inference_thms=[],
@@ -2163,6 +2192,7 @@ fun imp_qp thmL =
     rewrite_thms=[],
     cases_thms=[],
     filter=[],
+    inst_filter = [],
     top_heuristics=[],
     context_heuristics=[],
     inference_thms=[],
@@ -2177,6 +2207,7 @@ fun instantiation_qp thmL =
     rewrite_thms=[],
     cases_thms=[],
     filter=[],
+    inst_filter = [],
     top_heuristics=[],
     context_heuristics=[],
     inference_thms=[],
@@ -2191,6 +2222,7 @@ fun final_rewrite_qp thmL =
     rewrite_thms=[],
     cases_thms=[],
     filter=[],
+    inst_filter = [],
     top_heuristics=[],
     context_heuristics=[],
     inference_thms=[],
@@ -2206,6 +2238,7 @@ fun cases_qp thmL =
     rewrite_thms=[],
     cases_thms=thmL,
     filter=[],
+    inst_filter = [],
     top_heuristics=[],
     context_heuristics=[],
     inference_thms=[],
@@ -2220,6 +2253,7 @@ fun inference_qp thmL =
     rewrite_thms=[],
     cases_thms=[],
     filter=[],
+    inst_filter = [],
     top_heuristics=[],
     context_heuristics=[],
     inference_thms=thmL,
@@ -2234,6 +2268,7 @@ fun convs_qp cL =
     rewrite_thms=[],
     cases_thms=[],
     filter=[],
+    inst_filter = [],
     top_heuristics=[],
     context_heuristics=[],
     inference_thms=[],
@@ -2248,6 +2283,7 @@ fun heuristics_qp hL =
     rewrite_thms=[],
     cases_thms=[],
     filter=[],
+    inst_filter = [],
     top_heuristics=[],
     context_heuristics=[],
     inference_thms=[],
@@ -2263,6 +2299,7 @@ fun top_heuristics_qp hL =
     rewrite_thms=[],
     cases_thms=[],
     filter=[],
+    inst_filter = [],
     top_heuristics=hL,
     context_heuristics=[],
     inference_thms=[],
@@ -2277,6 +2314,7 @@ fun context_heuristics_qp chL =
     rewrite_thms=[],
     cases_thms=[],
     filter=[],
+    inst_filter = [],
     top_heuristics=[],
     context_heuristics=chL,
     inference_thms=[],
@@ -2291,6 +2329,22 @@ fun filter_qp fL =
     rewrite_thms=[],
     cases_thms=[],
     filter=fL,
+    inst_filter = [],
+    top_heuristics=[],
+    context_heuristics=[],
+    inference_thms=[],
+    imp_thms = [],
+    instantiation_thms = [],
+    context_thms = [],
+    convs=[],heuristics=[],
+    final_rewrite_thms=[]}:quant_param;
+
+fun inst_filter_qp fL =
+   {distinct_thms=[],
+    rewrite_thms=[],
+    cases_thms=[],
+    filter=[],
+    inst_filter = fL,
     top_heuristics=[],
     context_heuristics=[],
     inference_thms=[],
@@ -2424,7 +2478,7 @@ val heuristicL = hL
 *)
 
 fun BOUNDED_QUANT_INSTANTIATE_HEURISTIC___COMBINE n tL
-    filterL top_heuristicL heuristicL ctx_heuristicL cache_ref_opt (ctx:thm list) (v:term) (t:term) =
+    filterL inst_filterL top_heuristicL heuristicL ctx_heuristicL cache_ref_opt (ctx:thm list) (v:term) (t:term) =
 if (n >= !QUANT_INSTANTIATE_HEURISTIC___max_rec_depth) then
    ((say_HOL_WARNING "BOUNDED_QUANT_INSTANTIATE_HEURISTIC___COMBINE" "Maximal recursion depth reached!");
    raise QUANT_INSTANTIATE_HEURISTIC___no_guess_exp)
@@ -2441,7 +2495,7 @@ else let
 	           (term_to_string v)^"`` in ``"^(cut_term_to_string t)^"``\n")
            else ();
 
-   val sys = BOUNDED_QUANT_INSTANTIATE_HEURISTIC___COMBINE (n+1) (t :: tL) filterL [] heuristicL ctx_heuristicL (SOME cache_ref) ctx;
+   val sys = BOUNDED_QUANT_INSTANTIATE_HEURISTIC___COMBINE (n+1) (t :: tL) filterL inst_filterL [] heuristicL ctx_heuristicL (SOME cache_ref) ctx;
    val gc = if (isSome gc_opt) then valOf gc_opt else
 	    let
                val hL  = map (fn h => (fn () => (h sys v t))) (top_heuristicL @ heuristicL);
@@ -2463,7 +2517,7 @@ else let
 	       gc
 	    end;
    val gc  = correct_guess_collection v t (guess_collection_clean (guess_collection_append gc gc_context));
-
+   val gc = filter_guess_collection inst_filterL v t gc;
 
    val _ = if (!QUANT_INSTANTIATE_HEURISTIC___debug > 0) andalso (n <= !QUANT_INSTANTIATE_HEURISTIC___debug_depth) then
                let
@@ -2520,13 +2574,14 @@ in
   val basic_qp = combine_qps [
         heuristics_qp BASIC_QUANT_INSTANTIATE_HEURISTICS,
         context_heuristics_qp[QUANT_INSTANTIATE_HEURISTIC___GIVEN_INSTANTIATION, QUANT_INSTANTIATE_HEURISTIC___STRENGTHEN_WEAKEN]]
-end
+end;
 
 fun qp_to_heuristic
     ({distinct_thms = distinct_thmL,
      cases_thms = cases_thmL,
      rewrite_thms = rewrite_thmL,
      inference_thms = inference_thmL2,
+     inst_filter = inst_filterF,
      convs = convL,
      filter = filterF,
      top_heuristics = top_heuristicL,
@@ -2551,7 +2606,7 @@ fun qp_to_heuristic
        val heuristicL_final = flatten [heuristicL_1, heuristicL_2, hcL2, heuristicL]
     in
        fn cache_ref_opt => fn ctx =>
-          (QUANT_INSTANTIATE_HEURISTIC___COMBINE filterF top_heuristicL heuristicL_final
+          (QUANT_INSTANTIATE_HEURISTIC___COMBINE filterF inst_filterF top_heuristicL heuristicL_final
         context_heuristicL cache_ref_opt (append ctx ctx_thmL))
     end;
 
@@ -2590,6 +2645,7 @@ fun get_qp___for_types typeL =
         inference_thms = [],
         imp_thms = [],
         instantiation_thms = [],
+        inst_filter = [],
         context_thms = [],
         convs=[],heuristics=[]}:quant_param;
 
