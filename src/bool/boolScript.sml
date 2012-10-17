@@ -22,9 +22,10 @@ val _ = new_theory "bool";
  *---------------------------------------------------------------------------*)
 
 (* parsing/printing support for theory min *)
-val _ = OpenTheory_const_name {const={Thy="min",Name="="},name=([],"=")}
 val _ = OpenTheory_tyop_name {tyop={Thy="min",Tyop="fun"},name=([],"->")}
 val _ = OpenTheory_tyop_name {tyop={Thy="min",Tyop="bool"},name=([],"bool")}
+val _ = OpenTheory_const_name {const={Thy="min",Name="="},name=([],"=")}
+val _ = OpenTheory_const_name {const={Thy="min",Name="@"},name=([],"select")}
 
 val ns = ["Data","Bool"]
 
@@ -37,7 +38,6 @@ val _ = TeX_notation {hol = "\\", TeX = ("\\HOLTokenLambda{}", 1)}
 val _ = TeX_notation {hol = UChar.lambda, TeX = ("\\HOLTokenLambda{}", 1)}
 
 val _ = TeX_notation {hol = "@", TeX = ("\\HOLTokenHilbert{}", 1)}
-val _ = OpenTheory_const_name {const={Thy="min",Name="@"},name=(ns,"select")}
 
 (* records *)
 val _ = TeX_notation {hol = "<|", TeX = ("\\HOLTokenLeftrec{}", 2)}
