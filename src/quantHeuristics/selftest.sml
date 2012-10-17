@@ -280,6 +280,7 @@ val qh_testCases_sum =
    (``?x:'a + 'b. ISR x ==> P x``, SOME T),
    (``!x:'a + 'b. ~(ISR x) ==> P x``, SOME ``!l. (P ((INL l):('a + 'b)))``),
    (``!x:'a + 'b. ~(ISL x) ==> P x``, SOME ``!r. (P ((INR r):('a + 'b)))``),
+   (``!p_1 p_2. x <> OUTR p_2 \/ ISL p_2 \/ P p_1 p_2``, SOME ``!p_1. P p_1 (INR x)``),
    (``?x. ISL x``, SOME T),
    (``!x. ISL x``, SOME F),
    (``?x. ISR x``, SOME T),
@@ -309,8 +310,8 @@ val qh_test_context2 = test_conv "SIMP_CONV (bool_ss++QUANT_INST_ss[std_qp]) []"
 val qh_testCases_context2 =
   [(``(~(P [])) ==> (!x. P x ==> Q x)``, SOME ``¬P [] ⇒ ∀x_t x_h. P (x_h::x_t) ⇒ Q (x_h::x_t)``),
    (``(!x. P x ==> ~(x = [])) ==> (!x. P x ==> Q x)``, SOME ``¬P [] ⇒ ∀x_t x_h. P (x_h::x_t) ⇒ Q (x_h::x_t)``),
-   (``(!x. P x ==> ISR x) ==> (!x. P x ==> Q x)``, SOME ``(!x. (P:('a + 'b)-> bool) x ==> ISR x) ==> (!r. P (INR r) ==> (Q:('a + 'b)-> bool) (INR r))``),
-   (``(!x. P x ==> ISL x) ==> (!x. P x ==> Q x)``, SOME ``(!x. (P:('a + 'b)-> bool) x ==> ISL x) ==> (!l. P (INL l) ==> (Q:('a + 'b)-> bool) (INL l))``)]
+   (``(!x. P x ==> ISR x) ==> (!x. P x ==> Q x)``, SOME ``(!l. ~((P:('a + 'b)-> bool) (INL l))) ==> (!r. P (INR r) ==> (Q:('a + 'b)-> bool) (INR r))``),
+   (``(!x. P x ==> ISL x) ==> (!x. P x ==> Q x)``, SOME ``(!r. ~((P:('a + 'b)-> bool) (INR r))) ==> (!l. P (INL l) ==> (Q:('a + 'b)-> bool) (INL l))``)]
 
 val _ = map (qh_test_context2 hard_fail quiet) qh_testCases_context2;
 

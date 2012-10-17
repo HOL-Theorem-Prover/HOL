@@ -871,7 +871,7 @@ let
                   if (r = v) then (l,true) else
 	          raise QUANT_INSTANTIATE_HEURISTIC___no_guess_exp;
 
-   val thm' = ISPEC v thm;
+   val thm' = ISPEC v (intro_fresh_ty_vars thm);
    val (eeq1,eeq2) = dest_disj (concl thm');
    val left_right_flag = if ((is_eq eeq1) andalso (lhs eeq1 = v) andalso (rhs eeq1 = i)) then false else
                          if ((is_eq eeq2) andalso (lhs eeq2 = v) andalso (rhs eeq2 = i)) then true else
@@ -905,8 +905,6 @@ in
    exists_gap   = []}:guess_collection
 end handle UNCHANGED => raise QUANT_INSTANTIATE_HEURISTIC___no_guess_exp
          | HOL_ERR _ => raise QUANT_INSTANTIATE_HEURISTIC___no_guess_exp
-
-
 
 (*
 val v = ``X:('a # 'b)``
@@ -979,6 +977,15 @@ local
      in
         true
      end handle HOL_ERR _ => false;
+
+   fun is_disj_case_thm thm = 
+     let
+        val (v, b) = dest_forall (concl thm);
+        val (b1, b2) = dest_disj b;
+     in
+        not (is_double_case_thm thm)
+     end handle HOL_ERR _ => false;
+
 in
    fun QUANT_INSTANTIATE_HEURISTIC___cases thm =
    let
@@ -996,11 +1003,12 @@ in
    let
       val thmL1 = filter is_sing_case_thm thmL
       val thmL2 = filter is_double_case_thm thmL
+      val thmL3 = filter is_disj_case_thm thmL
 
       val hL1 = map QUANT_INSTANTIATE_HEURISTIC___one_case thmL1;
       val hL2 = map QUANT_INSTANTIATE_HEURISTIC___EQUATION_two_cases thmL2;
    in
-      (hL1, hL2)
+      (hL1, hL2, thmL3)
    end
 end;
 
@@ -1785,7 +1793,9 @@ let
    exists_gap   = map f (#exists_gap gc1)}:guess_collection
 in
    gc2
-end;
+end handle UNCHANGED => raise QUANT_INSTANTIATE_HEURISTIC___no_guess_exp
+         | HOL_ERR _ => raise QUANT_INSTANTIATE_HEURISTIC___no_guess_exp;
+
 
 
 fun QUANT_INSTANTIATE_HEURISTIC___CONV conv sys v t =
@@ -1794,7 +1804,8 @@ let
 in
    if not (isSome thm_opt) then raise QUANT_INSTANTIATE_HEURISTIC___no_guess_exp else
    QUANT_INSTANTIATE_HEURISTIC___REWRITE sys v (valOf thm_opt)
-end;
+end handle UNCHANGED => raise QUANT_INSTANTIATE_HEURISTIC___no_guess_exp
+         | HOL_ERR _ => raise QUANT_INSTANTIATE_HEURISTIC___no_guess_exp;
 
 
 fun QUANT_INSTANTIATE_HEURISTIC___EQUATION___TypeBase_one_one sys v t =
@@ -1942,7 +1953,17 @@ local
       val ithm3 = if dneg then CONV_RULE (c0 NEG_NEG_ELIM_CONV) ithm2 else ithm2
       val ithm4 = MP ithm3 thm
       val ithm5 = CONV_RULE (c0 c1) ithm4;
-      val gc = QUANT_INSTANTIATE_HEURISTIC___STRENGTHEN_WEAKEN [ithm5] sys (v:term) t
+
+      val free_vars_lhs = let
+         val bound_vars = FVL (hyp ithm5) empty_tmset
+         val bound_vars' = FVL [(rand (rator (concl ithm5)))] bound_vars
+         val rest_vars = FVL [rand (concl ithm5)] empty_tmset
+         val free_vars = HOLset.difference (rest_vars, bound_vars')
+      in 
+         HOLset.listItems free_vars
+      end
+      val ithm6 = List.foldl (fn (v, thm) => CONV_RULE FORALL_IMP_CONV (GEN v thm)) ithm5 free_vars_lhs
+      val gc = QUANT_INSTANTIATE_HEURISTIC___STRENGTHEN_WEAKEN [ithm6] sys (v:term) t
                   handle QUANT_INSTANTIATE_HEURISTIC___no_guess_exp => empty_guess_collection;
    in gc end handle HOL_ERR _ => empty_guess_collection;
 
@@ -2501,8 +2522,6 @@ in
         context_heuristics_qp[QUANT_INSTANTIATE_HEURISTIC___GIVEN_INSTANTIATION, QUANT_INSTANTIATE_HEURISTIC___STRENGTHEN_WEAKEN]]
 end
 
-
-
 fun qp_to_heuristic
     ({distinct_thms = distinct_thmL,
      cases_thms = cases_thmL,
@@ -2518,16 +2537,17 @@ fun qp_to_heuristic
      context_thms = ctx_thmL,
      final_rewrite_thms = final_rewrite_thmL}:quant_param) =
     let
-       val (hcL1, hcL2) = QUANT_INSTANTIATE_HEURISTIC___cases_list cases_thmL;
+       val (hcL1, hcL2, imp_case_thms) = QUANT_INSTANTIATE_HEURISTIC___cases_list cases_thmL;
        val (guesses_net_complex, guesses_net_simple) = mk_guess_net inference_thmL2;
+       val extra_imp_thms = mapfilter (MATCH_MP DISJ_IMP_INTRO) imp_case_thms
 
        val top_heuristicL = (hcL1 @ top_heuristicL);
        val heuristicL_1 = [QUANT_INSTANTIATE_HEURISTIC___EQUATION_distinct distinct_thmL,
                            QUANT_INSTANTIATE_HEURISTIC___THM_GENERAL_SIMPLE guesses_net_simple,
                            QUANT_INSTANTIATE_HEURISTIC___THM_GENERAL_COMPLEX guesses_net_complex,
-                           QUANT_INSTANTIATE_HEURISTIC___STRENGTHEN_WEAKEN imp_thmL,
+                           QUANT_INSTANTIATE_HEURISTIC___STRENGTHEN_WEAKEN (imp_thmL @ extra_imp_thms),
                            QUANT_INSTANTIATE_HEURISTIC___GIVEN_INSTANTIATION instantiation_thmL]
-       val heuristicL_2 = map QUANT_INSTANTIATE_HEURISTIC___CONV ((TOP_ONCE_REWRITE_CONV rewrite_thmL)::convL)
+       val heuristicL_2 = map QUANT_INSTANTIATE_HEURISTIC___CONV ((map (fn thm => TOP_ONCE_REWRITE_CONV [thm]) rewrite_thmL)@convL)
        val heuristicL_final = flatten [heuristicL_1, heuristicL_2, hcL2, heuristicL]
     in
        fn cache_ref_opt => fn ctx =>

@@ -208,8 +208,8 @@ val option_ty_filter = type_match_filter [``:'a option``]
 
 val sum_qp = combine_qps [
   get_qp___for_types [``:('a + 'b)``],
-
-  rewrite_qp [ISL_exists, ISR_exists, ISL_ISR_NEG],
+  cases_qp [sumTheory.ISL_OR_ISR],
+  rewrite_qp [ISL_exists, ISR_exists, sumTheory.NOT_ISR_ISL, sumTheory.NOT_ISL_ISR, INL_NEQ_ELIM, INR_NEQ_ELIM],
 
   final_rewrite_qp [sumTheory.OUTR, sumTheory.OUTL, sumTheory.ISL, sumTheory.ISR, sumTheory.INR_INL_11]
 ]
