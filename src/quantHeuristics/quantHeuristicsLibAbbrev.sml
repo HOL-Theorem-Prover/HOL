@@ -7,7 +7,7 @@
 (* ===================================================================== *)
 
 
-structure quantHeuristicsLibAbbrev :> quantHeuristicsLibAbbrev =
+structure quantHeuristicsLibAbbrev =
 struct
 
 (*
@@ -22,30 +22,30 @@ show_assums := true;
 quietdec := true;
 *)
 
-open HolKernel Parse boolLib Drule 
+open HolKernel Parse boolLib Drule
      quantHeuristicsLibBase quantHeuristicsLibParameters
 
 (*
 val t = ``P y /\ !x. (Q (SND (g x)) /\ P (f (FST (g x))))``
 
-     
+
 fun FST_select_fun t =
-  let 
-    val t' = pairSyntax.dest_fst t    
+  let
+    val t' = pairSyntax.dest_fst t
   in
     SOME (t', "p")
   end handle HOL_ERR _ => NONE
 
 fun THE_select_fun t =
-  let 
-    val t' = optionSyntax.dest_the t    
+  let
+    val t' = optionSyntax.dest_the t
   in
     SOME (t', "x")
   end handle HOL_ERR _ => NONE
 
 fun SND_select_fun t =
-  let 
-    val t' = pairSyntax.dest_snd t    
+  let
+    val t' = pairSyntax.dest_snd t
   in
     SOME (t', "p")
   end handle HOL_ERR _ => NONE
@@ -98,7 +98,7 @@ val t0 = t
            val abbrev_t = mk_forall (new_v, mk_imp(mk_eq (st, new_v), t'));
            val elim_thm = QCHANGED_CONV (elim_conv v_qps) abbrev_t handle HOL_ERR _ => REFL abbrev_t
            val _ = if (aconv t0 (rhs (concl elim_thm))) then fail() else ()
-           val _ = if (elim_abbrev_abort andalso 
+           val _ = if (elim_abbrev_abort andalso
                        (aconv abbrev_t (rhs (concl elim_thm)))) then fail() else ()
 
            val abbrev_thm = prove (mk_eq (t0, abbrev_t), Unwind.UNWIND_FORALL_TAC THEN REWRITE_TAC [])
@@ -116,10 +116,10 @@ end;
 
 fun INTRO_QUANT_ABBREVIATIONS_CONV select_funs = REPEATC (INTRO_QUANT_ABBREVIATIONS_CONV_base (K NO_CONV) false select_funs)
 
-fun QUANT_ABBREVIATIONS_CONV select_funs qpL = REPEATC (INTRO_QUANT_ABBREVIATIONS_CONV_base 
+fun QUANT_ABBREVIATIONS_CONV select_funs qpL = REPEATC (INTRO_QUANT_ABBREVIATIONS_CONV_base
 (fn qps => QCHANGED_CONV (FAST_QUANT_INSTANTIATE_CONV (qps@qpL))) false select_funs)
 
-(* Testing it 
+(* Testing it
 
 val t = ``P (FST (g x)) /\ (P (FST (g x))) /\ P (FST (f x)) /\ !y. Q p /\ P (SND (g y))``
 
