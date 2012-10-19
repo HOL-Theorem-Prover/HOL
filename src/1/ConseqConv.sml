@@ -1723,6 +1723,45 @@ in
 end
 
 
+fun asm_marker_ADD_PRECONDITION new_mL tt =
+if (is_forall tt) then (
+  let
+    val (vs, tt') = strip_forall tt;
+    val (new_mL', thm0) = asm_marker_ADD_PRECONDITION new_mL tt'
+    val thm = STRIP_QUANT_CONV (K thm0) tt
+  in
+    (new_mL', thm)
+  end
+) else if (is_imp_only tt) then (
+  let
+    val (a, c) = dest_imp tt;
+    val (new_mL', c_thm) = asm_marker_ADD_PRECONDITION new_mL c;
+    val new_m = genvar bool
+    val a_thm = asm_marker_INTRO_CONV new_m a
+
+    val conv_a = (RATOR_CONV (RAND_CONV (K a_thm)))
+    val conv_c = RAND_CONV (K c_thm)
+    fun conv_forall t = (RIGHT_IMP_FORALL_CONV THENC
+                         TRY_CONV (QUANT_CONV conv_forall)) t
+
+    fun conv_move_marker ttt =
+    let
+       val (a, c) = dest_imp ttt;
+       val (m, cb) = dest_asm_marker c;
+       val c_thm = SPECL [m, cb] ASM_MARKER_THM
+       val ac_thm = SPECL [m, mk_imp(a, cb)] (GSYM ASM_MARKER_THM)
+    in
+       (RAND_CONV (K c_thm) THENC (K ac_thm)) ttt
+    end;
+
+    val thm = (conv_a THENC conv_c THENC
+               (TRY_CONV conv_forall) THENC
+               (TRY_CONV (STRIP_QUANT_CONV conv_move_marker))) tt
+  in
+    (new_m :: new_mL', thm)
+  end
+) else (new_mL, REFL tt)
+
 (* a simple tactic to remove true form the assumptions *)
 val REMOVE_TRUE_TAC:tactic = fn (asm, t) =>
    let
@@ -1742,11 +1781,11 @@ let
    val (m_top, m_asm_t) = mk_asm_marker_random_pair asm_t
    val qasm_t = list_mk_forall (fv, m_asm_t);
 
-   val mL = map fst asm_mL
+   val mL_org = map fst asm_mL
    val thm0 = conv qasm_t;
-   val thm1 = if (is_eq (concl thm0)) then
-		  snd (EQ_IMP_RULE thm0)
-	      else thm0;
+   val (mL, thm1a) = asm_marker_ADD_PRECONDITION mL_org (rhs (concl thm0))
+   val thm1b = TRANS thm0 thm1a
+   val thm1 = snd (EQ_IMP_RULE thm1b)
 
    val (new_asm, new_t, new_fv, thm2a) = ASM_MARKER_CONV (m_base, mL, m_top) ((fst o dest_imp o concl) thm1)
    val thm2 = CONV_RULE (RATOR_CONV (RAND_CONV (K thm2a))) thm1
@@ -1770,7 +1809,7 @@ in
         val qasm_thm = MP thm2 new_qasm_thm;
 
         (*get rid of markers again*)
-	val asm_thm_m = SPECL fv qasm_thm;
+        val asm_thm_m = SPECL fv qasm_thm;
         val asm_thm = CONV_RULE asm_marker_ELIM_CONV asm_thm_m
 
         fun ASM_MARKER_UNDISCH thm = (
