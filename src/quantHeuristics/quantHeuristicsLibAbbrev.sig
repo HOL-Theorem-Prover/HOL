@@ -6,8 +6,8 @@ sig
 
   (* The main conv and tactic *)
 
-  val QUANT_ABBREV_CONV        : selection_fun list -> quant_param list -> conv
-  val QUANT_ABBREV_TAC         : selection_fun list -> quant_param list -> tactic
+  val QUANT_ABBREV_CONV        : selection_fun list -> quantHeuristicsLibBase.quant_param list -> conv
+  val QUANT_ABBREV_TAC         : selection_fun list -> quantHeuristicsLibBase.quant_param list -> tactic
 
   (* a simple version that does not try to instantiate the new quatifier *)
   val SIMPLE_QUANT_ABBREV_CONV : selection_fun list -> conv
