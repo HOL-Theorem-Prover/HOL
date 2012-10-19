@@ -945,7 +945,7 @@ val WORD_ADD_ss =
      pats = [``words$word_add (w:'a word) y``]}
 
 val WORD_SUBTRACT_ss =
-   simpLib.merge_ss
+   simpLib.named_merge_ss "word subtract"
      [simpLib.rewrites [word_sub_def],
       simpLib.std_conv_ss
         {conv = WORD_NEG_CONV,
@@ -996,11 +996,15 @@ val WORD_CANCEL_ss =
          name = "WORD_CANCEL_CONV",
          pats = [``w = y :'a word``]}]
 
+val WORD_ABS_ss =
+   simpLib.rewrites
+     [word_abs_word_abs, word_abs_neg,
+      ONCE_REWRITE_RULE [WORD_NEG_MUL] word_abs_neg]
+
 val WORD_ARITH_ss =
    simpLib.named_merge_ss "word arith"
      [WORD_MULT_ss, WORD_ADD_ss, WORD_SUBTRACT_ss, WORD_w2n_ss, WORD_CONST_ss,
-      simpLib.rewrites [word_abs_word_abs, word_abs_neg,
-        ONCE_REWRITE_RULE [WORD_NEG_MUL] word_abs_neg]]
+      WORD_ABS_ss]
 
 local
    val conv = SIMP_CONV (std_ss++WORD_ARITH_EQ_ss++WORD_ARITH_ss) []
@@ -1451,8 +1455,13 @@ val WORD_EXTRACT_ss =
 (* ------------------------------------------------------------------------- *)
 
 local
-   val ssfrags = [WORD_LOGIC_ss, WORD_ARITH_ss, WORD_SHIFT_ss, WORD_GROUND_ss,
-                  BIT_ss, SIZES_ss]
+   val WORD_NO_SUB_ARITH_ss =
+      simpLib.named_merge_ss "word arith"
+        [WORD_MULT_ss, WORD_ADD_ss, WORD_w2n_ss, WORD_CONST_ss, WORD_ABS_ss]
+
+   val ssfrags =
+      [WORD_LOGIC_ss, WORD_NO_SUB_ARITH_ss, WORD_SUBTRACT_ss, WORD_SHIFT_ss,
+       WORD_GROUND_ss, BIT_ss, SIZES_ss]
 in
    val WORD_ss = simpLib.named_merge_ss "words" ssfrags
    val _ = augment_srw_ss ssfrags
