@@ -7,7 +7,7 @@
 (* ===================================================================== *)
 
 
-structure quantHeuristicsLibAbbrev =
+structure quantHeuristicsLibAbbrev :> quantHeuristicsLibAbbrev =
 struct
 
 (*
