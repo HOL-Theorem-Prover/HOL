@@ -820,6 +820,7 @@ val MEM = store_thm(
   "MEM",
   ``(!x:'a. MEM x [] = F) /\ (!x:'a h t. MEM x (h::t) = (x = h) \/ MEM x t)``,
   SRW_TAC [][]);
+val _ = export_rewrites ["MEM"];
 
 val FILTER_EQ_APPEND = Q.store_thm
 ("FILTER_EQ_APPEND",

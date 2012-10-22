@@ -51,7 +51,7 @@ val () = new_theory "rich_list"
 
 (* ------------------------------------------------------------------------ *)
 
-val list_ss = arith_ss ++ listSimps.LIST_ss
+val list_ss = arith_ss ++ listSimps.LIST_ss ++ pred_setSimps.PRED_SET_ss
 
 val DEF0 = Lib.with_flag (boolLib.def_suffix, "") TotalDefn.Define
 val DEF = Lib.with_flag (boolLib.def_suffix, "_DEF") TotalDefn.Define
@@ -2770,7 +2770,7 @@ val SPLITP_EVERY = Q.store_thm ("SPLITP_EVERY",
 
 val MEM_FRONT = Q.store_thm ("MEM_FRONT",
    `!l e y. MEM y (FRONT (e::l)) ==> MEM y (e::l)`,
-   Induct_on `l` THEN FULL_SIMP_TAC list_ss [DISJ_IMP_THM]);
+   Induct_on `l` THEN FULL_SIMP_TAC list_ss [DISJ_IMP_THM, MEM]);
 
 val FRONT_APPEND = Q.store_thm ("FRONT_APPEND",
    `!l1 l2 e. FRONT (l1 ++ e::l2) = l1 ++ FRONT (e::l2)`,
@@ -2885,14 +2885,16 @@ local
       in
          Parse.overload_on (s1, tm); Parse.overload_on (s2, tm)
       end
+   val mem_t = ``\x:'a l:'a list. x IN LIST_TO_SET l``
 in
    val () = List.app alias
      [("ALL_EL", "EVERY"),
       ("SOME_EL", "EXISTS"),
-      ("IS_EL", "MEM"),
       ("FIRSTN", "TAKE"),
       ("BUTFIRSTN", "DROP"),
       ("BUTLAST", "FRONT")]
+   val _ = overload_on("IS_EL", mem_t)
+   val _ = overload_on("MEM", mem_t)
 end
 
 (* ------------------------------------------------------------------------ *)
