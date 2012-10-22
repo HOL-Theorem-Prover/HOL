@@ -826,11 +826,6 @@ val FILTER_EQ_APPEND = Q.store_thm
  `!P l l1 l2.
   (FILTER P l = l1 ++ l2) =
   (?l3 l4. (l = l3++l4) /\ (FILTER P l3 = l1) /\ (FILTER P l4 = l2))`,
-Induct_on `l` THEN SRW_TAC [][] THEN1 PROVE_TAC [] THENL [
-  Cases_on `l1` THEN SRW_TAC [][] THENL [
-    Cases_on `l2` THEN SRW_TAC [][FILTER_EQ_NIL, EVERY_MEM] THEN
-    PROVE_TAC [MEM, MEM_APPEND]
-
 GEN_TAC THEN INDUCT_THEN list_INDUCT ASSUME_TAC THEN1 (
   ASM_SIMP_TAC bool_ss [FILTER, APPEND_eq_NIL] THEN PROVE_TAC[]
 ) THEN
@@ -1810,25 +1805,6 @@ SRW_TAC [][] THENL [
     which is overloaded to "set".
    ---------------------------------------------------------------------- *)
 
-val LIST_TO_SET =
-    new_definition("LIST_TO_SET", ``LIST_TO_SET = combin$C MEM``);
-
-val _ = overload_on ("set", ``LIST_TO_SET : 'a list -> 'a set``);
-
-val IN_LIST_TO_SET = store_thm(
-  "IN_LIST_TO_SET",
-  ``x IN set l = MEM x l``,
-  SRW_TAC [][LIST_TO_SET, boolTheory.IN_DEF]);
-val _ = export_rewrites ["IN_LIST_TO_SET"]
-
-open pred_setTheory
-val LIST_TO_SET_THM = Q.store_thm
-("LIST_TO_SET_THM",
- `(set []     = {}) /\
-  (set (h::t) = h INSERT (set t))`,
- SRW_TAC [][EXTENSION]);
-val _ = export_rewrites ["LIST_TO_SET_THM"];
-
 val LIST_TO_SET_APPEND = Q.store_thm
 ("LIST_TO_SET_APPEND",
  `!l1 l2. set (l1 ++ l2) = set l1 UNION set l2`,
@@ -1891,6 +1867,7 @@ val LIST_TO_SET_REVERSE = store_thm(
   Induct THEN SRW_TAC [][pred_setTheory.EXTENSION]);
 val _ = export_rewrites ["LIST_TO_SET_REVERSE"]
 
+val LIST_TO_SET_THM = save_thm("LIST_TO_SET_THM", LIST_TO_SET)
 val LIST_TO_SET_MAP = store_thm ("LIST_TO_SET_MAP",
 ``!f l. LIST_TO_SET (MAP f l) = IMAGE f (LIST_TO_SET l)``,
 Induct_on `l` THEN
