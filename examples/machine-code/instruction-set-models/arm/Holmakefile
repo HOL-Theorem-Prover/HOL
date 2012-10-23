@@ -1,1 +1,2 @@
 INCLUDES = $(HOLDIR)/tools/mlyacc/mlyacclib $(HOLDIR)/examples/ARM/v4
+OPTIONS=QUIT_ON_FAILURE

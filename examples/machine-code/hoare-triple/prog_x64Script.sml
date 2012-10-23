@@ -1047,7 +1047,7 @@ val IMP_X64_SPEC2 = save_thm("IMP_X64_SPEC2",
 
 val cpuid_thm = let
   val th = x64_step "0FA2" (* cpuid *)
-  val th = Q.INST [`s`|->`X64_ICACHE_UPDATE x (r,e,t,m,i)`] th
+  val th = Q.INST [`s`|->`X64_ICACHE_UPDATE x (r,e,t,t',m,i)`] th
   val th = RW [ZREAD_CLAUSES] th
   val th = RW [ZREAD_REG_def,X64_ICACHE_UPDATE_def,ZWRITE_RIP_def,ZCLEAR_ICACHE_def] th
   in th end
