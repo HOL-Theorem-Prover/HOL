@@ -97,7 +97,7 @@ val old_arith_ss = std_ss ++ numSimps.old_ARITH_ss
 val ARITH_ss = numSimps.ARITH_ss
 val old_ARITH_ss = numSimps.old_ARITH_ss
 val list_ss  = arith_ss ++ listSimps.LIST_ss
-                        ++ rewrites [IN_INSERT, NOT_IN_EMPTY]
+                        ++ rewrites [IN_INSERT, NOT_IN_EMPTY, IN_UNION]
 end
 
 val DECIDE = numLib.DECIDE;
