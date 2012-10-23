@@ -16,23 +16,25 @@ val _ = type_abbrev("x64_state",   (*  state = tuple consisting of:       *)
   ``: (Zreg -> word64) #           (*  - general-purpose 32-bit registers *)
       (word64) #                   (*  - rip                              *)
       (Zeflags -> bool option) #   (*  - eflags                           *)
+      word64 list #                (*  - stack                            *)
       x64_memory #                 (*  - unsegmented memory               *)
       x64_memory                   (*  - instruction cache                *) ``);
 
 (* functions for reading/writing state *)
 
-val ZREAD_REG_def   = Define `ZREAD_REG     x ((r,p,s,m,i):x64_state) = r x `;
-val ZREAD_RIP_def   = Define `ZREAD_RIP       ((r,p,s,m,i):x64_state) = p `;
-val ZREAD_EFLAG_def = Define `ZREAD_EFLAG   x ((r,p,s,m,i):x64_state) = s x `;
+val ZREAD_REG_def   = Define `ZREAD_REG     x ((r,p,s,t,m,i):x64_state) = r x `;
+val ZREAD_RIP_def   = Define `ZREAD_RIP       ((r,p,s,t,m,i):x64_state) = p `;
+val ZREAD_EFLAG_def = Define `ZREAD_EFLAG   x ((r,p,s,t,m,i):x64_state) = s x `;
+val ZREAD_STACK_def = Define `ZREAD_STACK     ((r,p,s,t,m,i):x64_state) = t `;
 
 val ZREAD_MEM_def = Define `
-  ZREAD_MEM x ((r,p,s,m,i):x64_state) =
+  ZREAD_MEM x ((r,p,s,t,m,i):x64_state) =
     case m x of
        NONE => NONE
      | SOME (w,perms) => if Zread IN perms then SOME w else NONE`;
 
 val ZREAD_INSTR_def = Define `
-  ZREAD_INSTR x ((r,p,s,m,i):x64_state) =
+  ZREAD_INSTR x ((r,p,s,t,m,i):x64_state) =
     case (i x, m x) of
        (NONE, NONE) => NONE
      | (NONE, SOME (w,perms)) => if {Zread;Zexecute} SUBSET perms then SOME w else NONE
@@ -41,17 +43,18 @@ val ZREAD_INSTR_def = Define `
 val X64_ICACHE_EMPTY_def = Define `X64_ICACHE_EMPTY = (\addr. NONE):x64_memory`;
 
 val ZCLEAR_ICACHE_def = Define `
-  ZCLEAR_ICACHE ((r,p,s,m,i):x64_state) = (r,p,s,m,X64_ICACHE_EMPTY):x64_state`;
+  ZCLEAR_ICACHE ((r,p,s,t,m,i):x64_state) = (r,p,s,t,m,X64_ICACHE_EMPTY):x64_state`;
 
-val ZWRITE_REG_def   = Define `ZWRITE_REG   x y ((r,p,s,m,i):x64_state) = ((x =+ y) r,p,s,m,i):x64_state `;
-val ZWRITE_RIP_def   = Define `ZWRITE_RIP     y ((r,p,s,m,i):x64_state) = (r,y,s,m,i):x64_state `;
-val ZWRITE_EFLAG_def = Define `ZWRITE_EFLAG x y ((r,p,s,m,i):x64_state) = (r,p,(x =+ y) s,m,i):x64_state `;
+val ZWRITE_REG_def   = Define `ZWRITE_REG   x y ((r,p,s,t,m,i):x64_state) = ((x =+ y) r,p,s,t,m,i):x64_state `;
+val ZWRITE_RIP_def   = Define `ZWRITE_RIP     y ((r,p,s,t,m,i):x64_state) = (r,y,s,t,m,i):x64_state `;
+val ZWRITE_EFLAG_def = Define `ZWRITE_EFLAG x y ((r,p,s,t,m,i):x64_state) = (r,p,(x =+ y) s,t,m,i):x64_state `;
+val ZWRITE_STACK_def = Define `ZWRITE_STACK   y ((r,p,s,t,m,i):x64_state) = (r,p,s,y,m,i):x64_state `;
 
 val ZWRITE_MEM_def   = Define `
-  ZWRITE_MEM x y ((r,p,s,m,i):x64_state) =
+  ZWRITE_MEM x y ((r,p,s,t,m,i):x64_state) =
     case m x of
        NONE => NONE
-     | SOME (w,perms) => if Zwrite IN perms then SOME ((r,p,s,(x =+ SOME (y,perms)) m,i):x64_state) else NONE`;
+     | SOME (w,perms) => if Zwrite IN perms then SOME ((r,p,s,t,(x =+ SOME (y,perms)) m,i):x64_state) else NONE`;
 
 val ZREAD_MEM_BYTES_def = Define `
   ZREAD_MEM_BYTES n a s =
@@ -170,6 +173,14 @@ val write_rip_seq_def = Define `(write_rip_seq ii x):unit x64_M =
 val read_rip_seq_def = Define `(read_rip_seq ii):Zimm x64_M =
   \s. SOME (ZREAD_RIP s,s)`;
 
+(* stack reads/writes always succeed. *)
+
+val write_stack_seq_def = Define `(write_stack_seq ii x):unit x64_M =
+  \s. SOME ((),ZWRITE_STACK x s)`;
+
+val read_stack_seq_def = Define `(read_stack_seq ii):(word64 list) x64_M =
+  \s. SOME (ZREAD_STACK s,s)`;
+
 (* memory writes are only allowed to modelled memory, i.e. locations containing SOME ... *)
 
 val write_mem_seq_def   = Define `(write_mem_seq ii a x):unit x64_M =
@@ -276,10 +287,10 @@ val option_apply_SOME = prove(
   ``!x f. option_apply (SOME x) f = f x``,SRW_TAC [] [option_apply_def]);
 
 val ZWRITE_MEM2_def = Define `
-  ZWRITE_MEM2 a w ((r,e,t,m,i):x64_state) = (r,e,t,(a =+ SOME (w, SND (THE (m a)))) m,i)`;
+  ZWRITE_MEM2 a w ((r,e,s,t,m,i):x64_state) = (r,e,s,t,(a =+ SOME (w, SND (THE (m a)))) m,i)`;
 
 val ZREAD_MEM2_def = Define `
-  ZREAD_MEM2 a ((r,e,t,m,i):x64_state) = FST (THE (m a))`;
+  ZREAD_MEM2 a ((r,e,s,t,m,i):x64_state) = FST (THE (m a))`;
 
 val ZREAD_MEM2_WORD16_def = Define `
   ZREAD_MEM2_WORD16 a (s:x64_state) = (bytes2word
@@ -387,14 +398,14 @@ val seq_monad_thm = save_thm("seq_monad_thm",let
   in LIST_CONJ (map GEN_ALL xs) end);
 
 val CAN_ZWRITE_MEM = store_thm("CAN_ZWRITE_MEM",
-  ``CAN_ZWRITE_MEM a (r,e,s,m,i) =
+  ``CAN_ZWRITE_MEM a (r,e,s,t,m,i) =
     ~(m a = NONE) /\ Zwrite IN SND (THE (m a))``,
   SIMP_TAC std_ss [ZWRITE_MEM_def,CAN_ZWRITE_MEM_def]
   THEN Cases_on `m a` THEN ASM_SIMP_TAC std_ss [] THEN SRW_TAC [] []
   THEN Cases_on `x` THEN Cases_on `Zwrite IN r'` THEN SRW_TAC [] []);
 
 val CAN_ZREAD_MEM = store_thm("CAN_ZREAD_MEM",
-  ``CAN_ZREAD_MEM a (r,e,s,m,i) =
+  ``CAN_ZREAD_MEM a (r,e,s,t,m,i) =
     ~(m a = NONE) /\ Zread IN SND (THE (m a))``,
   SIMP_TAC std_ss [ZREAD_MEM_def,CAN_ZREAD_MEM_def]
   THEN Cases_on `m a` THEN ASM_SIMP_TAC std_ss [] THEN SRW_TAC [] []
@@ -411,7 +422,7 @@ val CAN_ZREAD_ZWRITE_THM = store_thm("CAN_ZREAD_ZWRITE_THM",
         (CAN_ZREAD_MEM a s ==> CAN_ZREAD_MEM a (ZWRITE_EFLAG f b s)) /\
         (CAN_ZREAD_MEM a s ==> CAN_ZREAD_MEM a (ZCLEAR_ICACHE s)) /\
         (CAN_ZREAD_MEM a s /\ CAN_ZWRITE_MEM c s ==> CAN_ZREAD_MEM a (ZWRITE_MEM2 c x s))``,
-  STRIP_TAC THEN `?r2 e2 s2 m2 i2. s = (r2,e2,s2,m2,i2)` by METIS_TAC [pairTheory.PAIR]
+  STRIP_TAC THEN `?r2 e2 s2 t2 m2 i2. s = (r2,e2,s2,t2,m2,i2)` by METIS_TAC [pairTheory.PAIR]
   THEN ASM_SIMP_TAC std_ss [ZREAD_REG_def,ZREAD_RIP_def,
          ZREAD_EFLAG_def, ZWRITE_REG_def, ZWRITE_MEM2_def, ZREAD_MEM2_def,
          combinTheory.APPLY_UPDATE_THM, ZWRITE_RIP_def,CAN_ZREAD_MEM,
@@ -422,7 +433,7 @@ val x64_else_none_write_mem_lemma = store_thm("x64_else_none_write_mem_lemma",
   ``!a x t f. CAN_ZWRITE_MEM a t ==>
               (option_apply (ZWRITE_MEM a x t) f = f (ZWRITE_MEM2 a x t))``,
   REPEAT STRIP_TAC
-  THEN `?r e s m i. t = (r,e,s,m,i)` by METIS_TAC [pairTheory.PAIR]
+  THEN `?r e s t' m i. t = (r,e,s,t',m,i)` by METIS_TAC [pairTheory.PAIR]
   THEN FULL_SIMP_TAC std_ss [CAN_ZWRITE_MEM,ZWRITE_MEM_def,ZWRITE_MEM2_def]
   THEN Cases_on `m a` THEN FULL_SIMP_TAC std_ss []
   THEN Cases_on `x'` THEN FULL_SIMP_TAC (srw_ss()) []
@@ -432,7 +443,7 @@ val x64_else_none_read_mem_lemma = store_thm("x64_else_none_read_mem_lemma",
   ``!a x t f. CAN_ZREAD_MEM a t ==>
               (option_apply (ZREAD_MEM a t) f = f (ZREAD_MEM2 a t))``,
   REPEAT STRIP_TAC
-  THEN `?r e s m i. t = (r,e,s,m,i)` by METIS_TAC [pairTheory.PAIR]
+  THEN `?r e s t' m i. t = (r,e,s,t',m,i)` by METIS_TAC [pairTheory.PAIR]
   THEN FULL_SIMP_TAC std_ss [CAN_ZREAD_MEM,ZREAD_MEM2_def,ZREAD_MEM_def]
   THEN Cases_on `m a` THEN FULL_SIMP_TAC std_ss []
   THEN Cases_on `x` THEN FULL_SIMP_TAC (srw_ss()) []
@@ -443,8 +454,8 @@ val x64_else_none_eflag_lemma = store_thm("x64_else_none_eflag_lemma",
             (option_apply ((m:x64_state->bool option) a) (f:bool->'a option) = f (THE (m a)))``,
   SIMP_TAC std_ss [option_apply_def]);
 
-val x64_state_EZPAND = store_thm("x64_state_EZPAND",
-  ``?r p f m i. s:x64_state = (r,p,f,m,i)``,
+val x64_state_EXPAND = store_thm("x64_state_EXPAND",
+  ``?r p f t m i. s:x64_state = (r,p,f,t,m,i)``,
   Q.SPEC_TAC (`s`,`s`) THEN SIMP_TAC std_ss [pairTheory.FORALL_PROD]);
 
 val ZREAD_RIP_ADD_0 = store_thm("ZREAD_RIP_ADD_0",

@@ -128,12 +128,18 @@ val ss = rewrites [x64_exec_def, ZREAD_REG_def, ZREAD_EFLAG_def,
   read_m16_seq_def, write_m16_seq_def, read_m64_seq_def,
   write_m64_seq_def, APPLY_UPDATE_THM, WORD_EQ_ADD_LCANCEL,
   x64_address_lemma, write_reg_seq_def, jump_to_ea_def,
+  read_stack_seq_def, write_stack_seq_def, write_stack_def, read_stack_def,
   x64_exec_push_def, x64_exec_push_rip_def, Zrm_is_memory_access_def,
   write_eflag_seq_def, if_some_lemma, ZREAD_CLAUSES,
   call_dest_from_ea_def, Zbinop_name_distinct, get_ea_address_def,
   erase_eflags_def, write_result_erase_eflags_def,restrict_size_def,
   word_signed_overflow_add_def, word_signed_overflow_sub_def, w2w_n2w,
-  bitTheory.BITS_THM, value_width_def, word_size_msb_def]
+  bitTheory.BITS_THM, value_width_def, word_size_msb_def,
+  write_reg_not_rsp_def, rsp_add_imm_aux_def,
+  x64_exec_pop_aux_def, x64_exec_push_aux_def, x64_exec_drop_def,
+  EVAL ``dimindex (:8) <= dimindex (:64)``,
+  EVAL ``dimindex (:16) <= dimindex (:64)``,
+  EVAL ``dimindex (:32) <= dimindex (:64)``]
 
 val SCALE_SIMP = LIST_CONJ [EVAL ``w2n (0w:word2)``,EVAL ``w2n (1w:word2)``,
     EVAL ``w2n (2w:word2)``,EVAL ``w2n (3w:word2)``,
@@ -205,12 +211,15 @@ fun x64_step s = let
   val th = x64_step (x64_encode "JMP 400");
   val th = x64_step (x64_encode "JMP rax");
   val th = x64_step (x64_encode "POP rax");
-  val th = x64_step (x64_encode "PUSH [rbx]");
+  val th = x64_step (x64_encode "PUSH QWORD [rbx]");
   val th = x64_step (x64_encode "DIV r11");
   val th = x64_step (x64_encode "MUL r12d");
   val th = x64_step (x64_encode "XADD rax,rdx");
   val th = x64_step (x64_encode "RET");
-  val th = x64_step (x64_encode "RET 15");
+  val th = x64_step (x64_encode "RET 16");
+  val th = x64_step (x64_encode "add rsp,80");
+  val th = x64_step (x64_encode "mov [rsp+80],rax");
+  val th = x64_step (x64_encode "mov rax,[rsp+80]");
   val th = x64_step (x64_encode "CALL r15");
   val th = x64_step (x64_encode "CMPXCHG r11,r14");
   val th = x64_step (x64_encode "mov rsi,4611686018427844360")
@@ -265,8 +274,9 @@ fun x64_test_aux i input output = let
     STRIP_TAC
     THEN (ASSUME_TAC o UNDISCH_ALL o REWRITE_RULE [GSYM AND_IMP_INTRO]) th
     THEN ASM_SIMP_TAC std_ss [ZREAD_CLAUSES,optionTheory.THE_DEF,Zreg_distinct,Zeflags_distinct]
-    THEN STRIP_ASSUME_TAC x64_state_EZPAND
+    THEN STRIP_ASSUME_TAC x64_state_EXPAND
     THEN FULL_SIMP_TAC std_ss [ZREAD_REG_def,ZREAD_EFLAG_def,ZREAD_MEM_def,ZREAD_RIP_def,
+           ZWRITE_STACK_def,ZREAD_STACK_def,
            ZWRITE_MEM_def,ZWRITE_REG_def,ZWRITE_EFLAG_def,ZWRITE_RIP_def, APPLY_UPDATE_THM,Zreg_distinct]
     THEN EVAL_TAC)
   val result = REWRITE_RULE [GSYM AND_IMP_INTRO] result
@@ -284,6 +294,7 @@ fun x64_test s diff = let
       NONE => (print "   --- FAILED!\n"; ())
     | SOME th => (print ", ok.\n"; ())
   end;
+
 
 
 (*
