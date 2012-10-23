@@ -472,20 +472,15 @@ val Fold1_RSP = store_thm
 (* Definition of list2set function to convert a list to a set.           *)
 (* --------------------------------------------------------------------- *)
 
-val list2set_def = Define
-   `(list2set ([]) = {})  /\
-    (list2set ((a:'a) :: A) = a INSERT (list2set A))`;
-
 (* Respectfulness theorem for the list2set function. *)
-
+val _ = temp_overload_on("list2set", ``LIST_TO_SET``)
 val list2set_RSP = store_thm
    ("list2set_RSP",
     ``!X Y:'a list. X == Y ==>
           (list2set X = list2set Y)``,
     rule_induct fsequiv_ind_thm
     THEN REPEAT STRIP_TAC
-    THEN RW_TAC (std_ss ++ pred_setLib.PRED_SET_ss)
-                [list2set_def,INSERT_COMM,INSERT_INSERT]
+    THEN SRW_TAC [] [INSERT_COMM,INSERT_INSERT]
    );
 
 
@@ -514,10 +509,12 @@ val fnlist =
       func= ``CONS :'a -> 'a list -> 'a list``,
       fixity=SOME(Infixr 490)},
 
+(*
      {def_name="In_def",
       fname="In",
       func= ``MEM :'a -> 'a list -> bool``,
       fixity=SOME(Infix(NONASSOC,425))},
+*)
 
      {def_name="Card_def",
       fname="Card",
@@ -574,7 +571,7 @@ val  [finite_set_cases, Insert_LEFT_COMM, Insert_LEFT_IDEM,
      tyop_equivs = [],
      tyop_quotients = [FUN_QUOTIENT],
      tyop_simps = [FUN_REL_EQ, FUN_MAP_I],
-     respects = [NIL_RSP, CONS_RSP, MEM_RSP, Card1_RSP, Delete1_RSP,
+     respects = [NIL_RSP, CONS_RSP, Card1_RSP, Delete1_RSP,
                  APPEND_RSP, Inter1_RSP, Fold1_RSP, list2set_RSP],
      poly_preserves = [FORALL_PRS, EXISTS_PRS, COND_PRS],
      poly_respects = [RES_FORALL_RSP, RES_EXISTS_RSP, COND_RSP],
@@ -585,7 +582,7 @@ val  [finite_set_cases, Insert_LEFT_COMM, Insert_LEFT_IDEM,
                  Delete1_def, MEM_Delete1, Card1_Delete1,
                  CONS_Delete1, MEM_CONS_Delete1, finite_set1_Delete1_cases,
                  APPEND, MEM_APPEND, Inter1_def, MEM_Inter1,
-                 Fold1_def, list2set_def, list_EXTENSION, list_INDUCT]
+                 Fold1_def, LIST_TO_SET, list_EXTENSION, list_INDUCT]
    };
 
 
@@ -661,6 +658,8 @@ val Card_Fold = store_thm
     THEN RW_TAC arith_ss [Fold,Card]
    );
 
+val _ = overload_on("In", ``\e s. e IN fset2set s``);
+val _ = set_fixity "In" (Infix(NONASSOC, 425))
 
 (* --------------------------------------------------------------------- *)
 (* Proof of stronger finite set induction principle.                     *)
@@ -676,27 +675,10 @@ val finite_set_strong_induction = store_thm
     THEN PROVE_TAC [In_Insert]
    );
 
-
-(*
-val fset2set_def =
-    |- (fset2set Empty = {}) /\
-       !a A. fset2set (a Insert A) = a INSERT fset2set A
-*)
-
-
-
-val IN_fset2set = store_thm
-   ("IN_fset2set",
-    ``!A (a:'a). a IN fset2set A = a In A``,
-    HO_MATCH_MP_TAC finite_set_INDUCT
-    THEN REPEAT STRIP_TAC
-    THEN RW_TAC (std_ss ++ pred_setLib.PRED_SET_ss) [fset2set,In]
-   );
-
 val fset2set_11 = store_thm
    ("fset2set_11",
     ``!A B:'a finite_set. (fset2set A = fset2set B) = (A = B)``,
-    REWRITE_TAC[finite_set_EXTENSION,EXTENSION,IN_fset2set]
+    REWRITE_TAC[finite_set_EXTENSION,EXTENSION]
    );
 
 val fset2set_FINITE = store_thm
