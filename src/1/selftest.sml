@@ -375,6 +375,14 @@ in
   die "FAILED"
 end
 
+val _ = let
+  val _ = tprint "REWRITE with T (if this appears to hang it has failed)"
+  val t = mk_disj(mk_var("p", bool),T)
+  val (sgs,vfn) = REWRITE_TAC [TRUTH] ([], t)
+in
+  if null sgs andalso aconv (concl (vfn [])) t then print "OK\n"
+  else die "FAILED"
+end
 
 val _ = Process.exit (if List.all substtest tests then Process.success
                       else Process.failure)

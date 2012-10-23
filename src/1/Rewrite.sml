@@ -47,6 +47,7 @@ fun decompose tag th =
  let val th = SPEC_ALL th
      val t = concl th
  in
+   if aconv t T then [] else
    if is_eq t   then [(th,tag)] else
    if is_conj t then (op@ o (decompose tag##decompose tag) o CONJ_PAIR) th else
    if is_neg t  then [(EQF_INTRO th,tag)]
