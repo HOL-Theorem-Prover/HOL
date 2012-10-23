@@ -1200,9 +1200,11 @@ val phase5_CONV  = let
                             RAND_CONV (REWR_CONV INT_NEG_MINUS1)) t
                          else ALL_CONV t)) THENC
      (* collect additive consts on elements of list *)
-     LAND_CONV (LAND_CONV
-                  (RAND_CONV (LIST_EL_CONV
-                                (TRY_CONV collect_additive_consts)))))
+     LAND_CONV (LAND_CONV (* first conjunct of three *)
+                    (RAND_CONV (* set [...] (from b ∈ set [..]) *)
+                         (RAND_CONV (* [...] *)
+                              (LIST_EL_CONV
+                                   (TRY_CONV collect_additive_consts))))))
 
 
 
