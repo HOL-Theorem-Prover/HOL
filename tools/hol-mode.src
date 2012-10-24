@@ -571,7 +571,11 @@ that the buffer has already had HOL terms, comments and strings removed."
        (send-timed-string-to-hol string echoit)
      (send-string-to-hol string echoit)))
 
-(setq temporary-file-directory "/tmp")
+(if (null temporary-file-directory)
+    (if (equal system-type 'windows-nt)
+        (if (not (null (getenv "TEMP")))
+            (setq temporary-file-directory (getenv "TEMP")))
+      (setq temporary-file-directory "/tmp")))
 
 (defun make-temp-file-xemacs (prefix &optional dir-flag)
   "Create a temporary file.
@@ -1916,7 +1920,3 @@ module if not already loaded.)"
 
 (define-key global-map [menu-bar hol-menu hol-process hol-start]
    '("Start HOL" . hol))
-
-
-
-
