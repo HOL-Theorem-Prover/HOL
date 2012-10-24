@@ -175,6 +175,8 @@ val _ = overload_on ("set", ``LIST_TO_SET``)
 val _ = overload_on ("MEM", ``\h:'a l:'a list. h IN LIST_TO_SET l``)
 val _ = export_rewrites ["LIST_TO_SET"]
 
+val IN_LIST_TO_SET = save_thm("IN_LIST_TO_SET", TRUTH)
+
 val FILTER = new_recursive_definition
       {name = "FILTER",
        rec_axiom = list_Axiom,
