@@ -42,6 +42,14 @@ val to_lower = let
   in implode o map aux o explode end;
 
 
+(* debug prover *)
+
+fun auto_prove proof_name (goal,tac) = let
+  val (rest,validation) = tac ([],goal) handle Empty => fail()
+  in if length rest = 0 then validation [] else let
+  in failwith("auto_prove failed for " ^ proof_name) end end
+
+
 (* finding and replacing terms *)
 
 fun all_distinct ([]:''a list) = []
@@ -179,11 +187,11 @@ val sep_cond_ss = conv2ssfrag "sep_cond_ss" SEP_cond_CONV ``x * (y:'a set -> boo
 
 (* conversions *)
 
-fun MOVE_STAR_CONV tm2 tm1 = prove(mk_eq(tm1,tm2),
-  SIMP_TAC (bool_ss++star_ss) [SEP_CLAUSES]);
+fun MOVE_STAR_CONV tm2 tm1 = auto_prove "MOVE_STAR_CONV"
+  (mk_eq(tm1,tm2),SIMP_TAC (bool_ss++star_ss) [SEP_CLAUSES]);
 
-fun MOVE_STAR_REWRITE_CONV thms tm2 tm1 = prove(mk_eq(tm1,tm2),
-  SIMP_TAC (bool_ss++star_ss) (SEP_CLAUSES::thms));
+fun MOVE_STAR_REWRITE_CONV thms tm2 tm1 = auto_prove "MOVE_STAR_REWRITE_CONV"
+  (mk_eq(tm1,tm2),SIMP_TAC (bool_ss++star_ss) (SEP_CLAUSES::thms));
 
 fun MOVE_OUT_CONV target tm = let
   fun take_drop_until p ys [] = fail()
@@ -193,13 +201,13 @@ fun MOVE_OUT_CONV target tm = let
   fun is_match x y = (x = get_sep_domain y)
   val (s1,y,s2) = take_drop_until (is_match target) [] xs
   val result = list_mk_star (s1 @ s2 @ [y]) (type_of tm)
-  in prove(mk_eq(tm,result),SIMP_TAC bool_ss [AC STAR_ASSOC STAR_COMM]) end
+  in auto_prove "MOVE_OUT_CONV" (mk_eq(tm,result),SIMP_TAC bool_ss [AC STAR_ASSOC STAR_COMM]) end
   handle e => ALL_CONV tm;
 
 fun STAR_REVERSE_CONV tm = let
   val xs = list_dest dest_star tm
   val result = list_mk_star (rev xs) (type_of tm)
-  in prove(mk_eq(tm,result),SIMP_TAC bool_ss [AC STAR_ASSOC STAR_COMM]) end
+  in auto_prove "STAR_REVERSE_CONV" (mk_eq(tm,result),SIMP_TAC bool_ss [AC STAR_ASSOC STAR_COMM]) end
   handle e => ALL_CONV tm;
 
 val PRE_CONV = RATOR_CONV o RATOR_CONV o RAND_CONV
@@ -274,7 +282,7 @@ fun SEP_EXISTS_AC_CONV tm = let
   val tm2 = foldr mk_sep_exists p ws
   val goal = mk_eq(tm,tm2)
   fun AUTO_EXISTS_TAC (gs,goal) = EXISTS_TAC (fst (dest_exists goal)) (gs,goal)
-  val th = prove(goal,
+  val th = auto_prove "SEP_EXISTS_AC_CONV" (goal,
     REWRITE_TAC [CONV_RULE ((QUANT_CONV o QUANT_CONV o RAND_CONV o RAND_CONV)
       (ALPHA_CONV (genvar(``:'a``)))) FUN_EQ_THM]
     THEN SIMP_TAC bool_ss [SEP_EXISTS_THM]
@@ -395,7 +403,7 @@ fun EXISTS_SEP_REWRITE_RULE rw th = let (* possibly fragile *)
     val t3 = foldr mk_sep_exists (subst s (list_mk_star z (type_of frame))) (map (subst s) zs)
     val goal = foldr mk_sep_exists (list_mk_star (t3::ys) (type_of frame)) ws
     val goal = mk_eq(foldr mk_sep_exists tm ws,goal)
-    val lemma = prove(goal,
+    val lemma = auto_prove "EXISTS_SEP_REWRITE_RULE" (goal,
       SIMP_TAC std_ss [GSYM rw]
       THEN SIMP_TAC (std_ss++sep_cond_ss) [SEP_CLAUSES]
       THEN CONV_TAC (BINOP_CONV SEP_EXISTS_AC_CONV)
@@ -447,7 +455,7 @@ fun SEP_EXISTS_ELIM_CONV tm = let
   val tm3 = foldr mk_sep_exists tm3 vs
   val goal = mk_eq(tm2,tm3)
   val thi = CONV_RULE ((RAND_CONV o RAND_CONV) (ALPHA_CONV x)) (ISPEC f SEP_HIDE_def)
-  val th = prove(goal,
+  val th = auto_prove "SEP_EXISTS_ELIM_CONV" (goal,
     SIMP_TAC std_ss [SEP_CLAUSES,thi]
     THEN CONV_TAC (RAND_CONV SEP_EXISTS_AC_CONV)
     THEN CONV_TAC ((RATOR_CONV o RAND_CONV) SEP_EXISTS_AC_CONV)
@@ -823,7 +831,7 @@ val SEP_READ_TAC = let
       val z = (snd o hd) (filter (fn (a,b) => x = a) (map dest_pair_one ps))
       in mk_eq(mk_comb((fst o dest_pair o cdr) f,x),z) end
     val tm = extract (hd (filter (can extract) hs))
-    val thi = prove(mk_imp(mk_conj(tm,gs),gs),REPEAT STRIP_TAC)
+    val thi = auto_prove "SEP_READ_TAC" (mk_imp(mk_conj(tm,gs),gs),REPEAT STRIP_TAC)
     in MATCH_MP_TAC thi (hs,gs) end handle e => let
     val (x,y) = dest_comb (fst (dest_eq gs))
     fun extract tm = let
@@ -832,7 +840,7 @@ val SEP_READ_TAC = let
       val z = (snd o hd) (filter (fn (a,b) => y = a) (map dest_pair_one ps))
       in pred_setSyntax.mk_in(y,cdr (cdr f)) end
     val tm = extract (hd (filter (can extract) hs))
-    val thi = prove(mk_imp(mk_conj(gs,tm),gs),REPEAT STRIP_TAC)
+    val thi = auto_prove "SEP_READ_TAC" (mk_imp(mk_conj(gs,tm),gs),REPEAT STRIP_TAC)
     in MATCH_MP_TAC thi (hs,gs) end
   in (REPEAT STRIP_TAC THEN prepare_tac THEN
       MATCH_MP_TAC read_fun2set THEN aux) end handle e => NO_TAC;
@@ -845,7 +853,7 @@ fun SEP_WRITE_TAC (hs,gs) = let
   val zs = map (mk_one o mk_pair) updates
   val qs2 = filter (fn x => not (mem x zs)) ys
   val tm2 = list_mk_star (qs2 @ rev zs) (type_of (car gs))
-  val lemma = prove(mk_eq(car gs,tm2),SIMP_TAC (bool_ss++star_ss) [])
+  val lemma = auto_prove "SEP_WRITE_TAC" (mk_eq(car gs,tm2),SIMP_TAC (bool_ss++star_ss) [])
   val tac = ONCE_REWRITE_TAC [lemma]
   val df = mk_pair(last xs, ((snd o dest_pair o cdr o cdr) gs))
   val rhs = mk_comb((car o cdr) gs, df)
@@ -1076,7 +1084,7 @@ fun INST_FRAME assums th = let
         | first_filter (q::qs) = (q,fs,star_match vs q fs) handle HOL_ERR _ => first_filter qs
       in first_filter qs end handle HOL_ERR _ => first_first_filter fss
   val (q,fs,ss) = first_first_filter fss
-  val thi = prove(mk_eq(subst ss q,fs),SIMP_TAC (bool_ss++star_ss) [])
+  val thi = auto_prove "INST_FRAME" (mk_eq(subst ss q,fs),SIMP_TAC (bool_ss++star_ss) [])
   in ONCE_REWRITE_RULE [thi] (SUBST_INST ss th) end;
 
 fun SEP_S_TAC names th (hs,goal) = let
@@ -1103,34 +1111,8 @@ fun SEP_IMP_TAC (hs,goal) = let
   val th2 = RW1 [SEP_IMP_def] (SPEC (list_mk_star zs (type_of x2)) th1)
   val th3 = SPEC (cdr goal) th2
   val rw_goal = mk_eq(car (cdr (concl th3)),car goal)
-  val rw_th = prove(rw_goal,SIMP_TAC (std_ss++star_ss) [])
+  val rw_th = auto_prove "SEP_IMP_TAC" (rw_goal,SIMP_TAC (std_ss++star_ss) [])
   val th4 = CONV_RULE (RAND_CONV (ONCE_REWRITE_CONV [rw_th])) th3
   in MATCH_MP_TAC th4 (hs,goal) end;
-
-
-(* debug prover *)
-
-fun auto_prove proof_name (goal,tac) = let
-  val (rest,validation) = tac ([],goal)
-  in if length rest = 0 then validation [] else let
-(*
-    val (tms,tm) = hd rest
-    val sub_goal = if tms = [] then tm else mk_imp(list_mk_conj tms,tm)
-    val b = !show_types_verbosely
-    val _ = print ("\n\n\n  AUTO PROOF FAILED: " ^ proof_name ^ "\n\n")
-    val _ = print "-----------------------------------------------\n"
-    val _ = print "  Unsolved subgoal:\n\n"
-    val _ = print_term sub_goal
-    val _ = print "\n\n"
-    val _ = print "-----------------------------------------------\n"
-    val _ = print "  Initial goal:\n\n"
-    val _ = (show_types_verbosely := true)
-    val _ = print_term (goal)
-    val _ = (show_types_verbosely := b)
-    val _ = print "\n\n"
-    val _ = print "-----------------------------------------------\n"
-    val _ = print ("  The proof failed at " ^ proof_name ^ "\n\n\n")
-*)
-  in failwith("auto_prove failed for " ^ proof_name) end end handle Empty => fail()
 
 end;
