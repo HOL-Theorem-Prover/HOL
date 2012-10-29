@@ -1794,6 +1794,12 @@ val IN_ch_active_set3 = prove(
   \\ FULL_SIMP_TAC (std_ss++SIZES_ss) [MULT_ASSOC,w2n_n2w]
   \\ REWRITE_TAC [RW1 [MULT_COMM] (MATCH_MP MULT_DIV (DECIDE ``0<8``))]);
 
+val MEM_fix = prove(``set l x = MEM x l``, SIMP_TAC bool_ss [IN_DEF])
+val IN_reachables =
+    ``(a,b,c,d) IN reachables rs h``
+        |> SIMP_CONV bool_ss [reachables_def, IN_DEF]
+        |> REWRITE_RULE [MEM_fix]
+
 val ch_arm2_CAR = prove(
   ``(FST q1) IN FDOM h /\
     (h ' (FST q1) = (z1,y1,z2,y2)) /\
@@ -1801,7 +1807,7 @@ val ch_arm2_CAR = prove(
     ch_arm2 ([(z1,z2); q2; q3; q4; q5; q6],h,l,i,u) (xs w1,w2,w3,w4,w5,w6,a,dm,xs)``,
   SIMP_TAC std_ss [ch_arm2_def,ch_inv_def] \\ REPEAT STRIP_TAC
   \\ `(FST q1,z1,y1,z2,y2) IN reachables (MAP FST [q1; q2; q3; q4; q5; q6]) (ch_set h)` by
-   (FULL_SIMP_TAC std_ss [IN_DEF,reachables_def,ch_set_def]
+   (FULL_SIMP_TAC std_ss [IN_reachables,ch_set_def]
     \\ Q.EXISTS_TAC `FST q1` \\ SIMP_TAC std_ss [MEM,MAP,reachable_def])
   \\ `(FST q1,z1,y1,z2,y2) IN abstract (b,m)` by METIS_TAC [SUBSET_DEF]
   \\ FULL_SIMP_TAC std_ss [abstract_def,GSPECIFICATION]
@@ -1924,7 +1930,7 @@ val ch_arm2_CDR = prove(
     w1 IN ch_active_set (a,if u then 1 + l else 1,i) /\ ALIGNED w1``,
   SIMP_TAC std_ss [ch_arm2_def,ch_inv_def] \\ STRIP_TAC
   \\ `(FST q1,z1,y1,z2,y2) IN reachables (MAP FST [q1; q2; q3; q4; q5; q6]) (ch_set h)` by
-   (FULL_SIMP_TAC std_ss [IN_DEF,reachables_def,ch_set_def]
+   (FULL_SIMP_TAC std_ss [IN_reachables,ch_set_def]
     \\ Q.EXISTS_TAC `FST q1` \\ SIMP_TAC std_ss [MEM,MAP,reachable_def])
   \\ `(FST q1,z1,y1,z2,y2) IN abstract (b,m)` by METIS_TAC [SUBSET_DEF]
   \\ FULL_SIMP_TAC std_ss [abstract_def,GSPECIFICATION]
