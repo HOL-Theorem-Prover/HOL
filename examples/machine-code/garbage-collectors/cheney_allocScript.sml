@@ -143,10 +143,13 @@ val PATH_SUBSET = prove(
   ``!xs x s t. PATH (x,xs) s /\ s SUBSET t ==> PATH (x,xs) t``,
   Induct \\ FULL_SIMP_TAC std_ss[PATH_def,SUBSET_DEF] \\ METIS_TAC []);
 
+val fix_MEM = prove(``set l x = MEM x l``, SIMP_TAC bool_ss [IN_DEF])
+
 val reachables_reachables = prove(
   ``!c s. reachables c (reachables c s) = reachables c s``,
   REWRITE_TAC [METIS_PROVE [PAIR] ``!f g. (f = g) = !x y z d. f (x,y,z,d) = g (x,y,z,d)``]
   \\ REPEAT STRIP_TAC \\ SIMP_TAC std_ss [reachables_def,IN_DEF]
+  \\ REWRITE_TAC [fix_MEM]
   \\ EQ_TAC \\ SIMP_TAC std_ss [] \\ REWRITE_TAC [reachable_def]
   \\ REPEAT STRIP_TAC \\ ASM_SIMP_TAC bool_ss []
   \\ Q.EXISTS_TAC `r` \\ ASM_SIMP_TAC bool_ss [] \\ DISJ2_TAC \\ Q.EXISTS_TAC `p`
@@ -156,13 +159,15 @@ val reachables_reachables = prove(
   \\ Induct_on `p` \\ REWRITE_TAC [APPEND,PATH_def]
   THEN1 (SIMP_TAC std_ss [PATH_def,IN_DEF,reachables_def,reachable_def] \\ METIS_TAC [])
   \\ NTAC 8 STRIP_TAC \\ RES_TAC
-  \\ FULL_SIMP_TAC std_ss [reachables_def,IN_DEF,reachable_def] \\ REPEAT STRIP_TAC
+  \\ FULL_SIMP_TAC std_ss [reachables_def,IN_DEF,reachable_def]
+  \\ FULL_SIMP_TAC bool_ss [fix_MEM] \\ REPEAT STRIP_TAC
   THENL [ALL_TAC,METIS_TAC [],ALL_TAC,METIS_TAC []]
   \\ MATCH_MP_TAC PATH_SUBSET \\ Q.EXISTS_TAC `reachables [h] s`
   \\ (STRIP_TAC THEN1 METIS_TAC [MEM])
   \\ ASM_SIMP_TAC bool_ss [SUBSET_DEF,IN_DEF]
   \\ Cases \\ Cases_on `r'` \\ Cases_on `r''`
   \\ SIMP_TAC std_ss [reachables_def,IN_DEF,reachable_def,MEM]
+  \\ REWRITE_TAC [fix_MEM]
   \\ REPEAT STRIP_TAC \\ Q.EXISTS_TAC `r` \\ ASM_SIMP_TAC bool_ss [] \\ DISJ2_TAC THENL [
     Q.EXISTS_TAC `[]` \\ ASM_REWRITE_TAC [APPEND,PATH_def,IN_DEF] \\ METIS_TAC [],
     Q.EXISTS_TAC `h::p'` \\ ASM_REWRITE_TAC [APPEND,PATH_def,IN_DEF] \\ METIS_TAC [],
@@ -338,6 +343,7 @@ val cheney_alloc_gc_spec = store_thm("cheney_alloc_gc_spec",
       REWRITE_TAC [reachables_def]
       \\ STRIP_TAC THEN1 (FULL_SIMP_TAC bool_ss [SUBSET_DEF,IN_DEF] \\ METIS_TAC [])
       \\ FULL_SIMP_TAC bool_ss [reachables_def,IN_DEF,reachable_def] THEN1 METIS_TAC []
+      \\ FULL_SIMP_TAC bool_ss [fix_MEM]
       \\ Q.EXISTS_TAC `r'` \\ ASM_REWRITE_TAC [] \\ DISJ2_TAC \\ Q.EXISTS_TAC `p`
       \\ Q.UNDISCH_TAC `PATH (r',p ++ [x]) (apply b (ch_set h))`
       \\ `reachables [r'] (apply b (ch_set h)) SUBSET basic_abs m` by
@@ -370,6 +376,7 @@ val cheney_alloc_gc_spec = store_thm("cheney_alloc_gc_spec",
           (FULL_SIMP_TAC std_ss [reachables_def,MEM,IN_DEF,reachable_def] \\ METIS_TAC [])
         \\ FULL_SIMP_TAC bool_ss [IN_DEF,SUBSET_DEF] \\ METIS_TAC []],
       FULL_SIMP_TAC std_ss [reachables_def,SUBSET_DEF,IN_DEF]
+      \\ FULL_SIMP_TAC bool_ss [fix_MEM]
       \\ Q.EXISTS_TAC `r'` \\ ASM_REWRITE_TAC []
       \\ FULL_SIMP_TAC std_ss [reachable_def] \\ DISJ2_TAC \\ Q.EXISTS_TAC `p`
       \\ Q.UNDISCH_TAC `PATH (r',p ++ [x]) (basic_abs m)`
@@ -433,6 +440,7 @@ val reachables_INSERT = prove(
       (reachables (x::ts) ((x:num,y:num,z:num,d:'a) INSERT s) = (x,y,z,d) INSERT reachables (y::z::ts) s)``,
   REWRITE_TAC [METIS_PROVE [PAIR] ``!f g. (f = g) = !a b c e. f (a,b,c,e) = g (a,b,c,e)``]
   \\ SIMP_TAC std_ss [reachables_def,IN_DEF,INSERT_THM]
+  \\ REWRITE_TAC [fix_MEM]
   \\ REPEAT STRIP_TAC \\ EQ_TAC \\ REPEAT STRIP_TAC \\ ASM_SIMP_TAC bool_ss [] THENL [
     REVERSE (Cases_on `r = x`) \\ FULL_SIMP_TAC bool_ss [GSYM INSERT_THM] THENL [
       FULL_SIMP_TAC bool_ss [MEM] \\ DISJ2_TAC \\ Q.EXISTS_TAC `r`
@@ -498,6 +506,7 @@ val ok_state_LESS = prove(
       ok_state (i,e,t::v::r,l,u,m) /\ i < e ==>
       ok_state (i + 1,e,i::v::r,l,u,(i =+ DATA (t,v,d)) m)``,
   SIMP_TAC std_ss [ok_state_def,LET_DEF,IN_DEF] \\ REPEAT STRIP_TAC
+  \\ FULL_SIMP_TAC bool_ss [fix_MEM]
   THEN1 (Cases_on `u` \\ FULL_SIMP_TAC bool_ss [] \\ DECIDE_TAC)
   THEN1 (Cases_on `u` \\ FULL_SIMP_TAC bool_ss [] \\ DECIDE_TAC) THENL [
     Cases_on `k = i` THEN1 (FULL_SIMP_TAC bool_ss [RANGE_def] \\ DECIDE_TAC)
@@ -633,9 +642,10 @@ val cheney_alloc_spec = store_thm("cheney_alloc_spec",
       \\ FULL_SIMP_TAC std_ss [heap_type_11,SUBSET0_DEF,SUBSET_DEF,IN_INSERT,NOT_IN_EMPTY]
       \\ FULL_SIMP_TAC bool_ss [RANGE_def,IN_DEF] \\ METIS_TAC [DECIDE ``~(i<i:num)``],
       `~(b' h' = 0)` by METIS_TAC [bijection_def,ONE_ONE_DEF]
-      \\ FULL_SIMP_TAC bool_ss [MEM] \\ METIS_TAC [RANGE_BORDER],
+      \\ FULL_SIMP_TAC bool_ss [fix_MEM, MEM]
+      \\ METIS_TAC [RANGE_BORDER],
       `~(b' h'' = 0)` by METIS_TAC [bijection_def,ONE_ONE_DEF]
-      \\ FULL_SIMP_TAC bool_ss [MEM] \\ METIS_TAC [RANGE_BORDER]])
+      \\ FULL_SIMP_TAC bool_ss [MEM, fix_MEM] \\ METIS_TAC [RANGE_BORDER]])
   \\ ASM_SIMP_TAC bool_ss []
   \\ `(k 0 = 0)` by (FULL_SIMP_TAC std_ss [FUN_EQ_THM] \\ METIS_TAC [])
   \\ Q.UNABBREV_TAC `f`
@@ -768,6 +778,7 @@ val cheney_DELETE = prove(
   \\ MATCH_MP_TAC SUBSET_TRANS \\ Q.EXISTS_TAC `apply b (reachables xs (ch_set h))`
   \\ ASM_SIMP_TAC bool_ss [] \\ FULL_SIMP_TAC bool_ss [EXPAND_SUBSET]
   \\ FULL_SIMP_TAC bool_ss [apply_def,reachables_def,IN_DEF,MEM,MAP]
+  \\ FULL_SIMP_TAC bool_ss [fix_MEM]
   \\ METIS_TAC [MEM_LIST_DELETE]);
 
 val cheney_INSERT = prove(
@@ -780,6 +791,7 @@ val cheney_INSERT = prove(
   \\ MATCH_MP_TAC SUBSET_TRANS \\ Q.EXISTS_TAC `apply b (reachables (x::xs) (ch_set h))`
   \\ ASM_SIMP_TAC bool_ss [] \\ FULL_SIMP_TAC bool_ss [EXPAND_SUBSET]
   \\ FULL_SIMP_TAC bool_ss [apply_def,reachables_def,IN_DEF,MEM,MAP]
+  \\ FULL_SIMP_TAC bool_ss [fix_MEM]
   \\ METIS_TAC [MEM_LIST_INSERT,MEM]);
 
 val cheney_UPDATE = prove(
@@ -1005,7 +1017,7 @@ val LEMMA = prove(
     \\ Cases_on `ys`
     \\ SIMP_TAC bool_ss [APPEND,PATH_def,IN_INSERT]
     \\ SIMP_TAC bool_ss [IN_DEF]
-    \\ SIMP_TAC bool_ss [ch_set_def,fresh_NOT_IN_FDOM,PAIR_EQ,LENGTH_APPEND,LENGTH]
+    \\ SIMP_TAC bool_ss [fix_MEM,ch_set_def,fresh_NOT_IN_FDOM,PAIR_EQ,LENGTH_APPEND,LENGTH]
     THEN1 (REPEAT STRIP_TAC \\ METIS_TAC [MEM])
     \\ STRIP_TAC
     \\ `LENGTH t < v` by DECIDE_TAC
@@ -1041,6 +1053,7 @@ val reachables_fresh = store_thm("reachables_fresh",
     \\ METIS_TAC [reachable_SUBSET,IN_INSERT,SUBSET_DEF],
     FULL_SIMP_TAC bool_ss [reachables_def,IN_INSERT,PAIR_EQ]
     \\ FULL_SIMP_TAC bool_ss [IN_DEF,reachable_def]
+    \\ FULL_SIMP_TAC bool_ss [fix_MEM]
     \\ REPEAT STRIP_TAC \\ ASM_SIMP_TAC bool_ss [] THEN1 METIS_TAC []
     \\ CONV_TAC RIGHT_OR_EXISTS_CONV
     \\ Cases_on `(a = v1)` THEN1 METIS_TAC [MEM]
@@ -1060,7 +1073,7 @@ val reachables_fresh = store_thm("reachables_fresh",
       Cases_on `p'`
       \\ FULL_SIMP_TAC bool_ss [APPEND,PATH_def,IN_INSERT,PAIR_EQ]
       \\ FULL_SIMP_TAC bool_ss [IN_DEF]
-      \\ FULL_SIMP_TAC bool_ss [ch_set_def,fresh_NOT_IN_FDOM]
+      \\ FULL_SIMP_TAC bool_ss [ch_set_def,fresh_NOT_IN_FDOM,fix_MEM]
       \\ METIS_TAC [MEM,LEMMA3]]]);
 
 val _ = export_theory();
