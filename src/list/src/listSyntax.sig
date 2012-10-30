@@ -22,7 +22,6 @@ sig
   val length_tm       : term
   val map_tm          : term
   val map2_tm         : term
-  val mem_tm          : term
   val filter_tm       : term
   val foldr_tm        : term
   val foldl_tm        : term

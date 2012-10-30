@@ -297,8 +297,6 @@ fun phase4_CONV tm = let
   val (disj2, bis_list_tm) = let
     (* need all of the bi *)
     val intlist_ty = mk_thy_type{Args=[int_ty], Tyop="list",Thy="list"}
-    val MEM_tm = mk_thy_const{Name = "MEM", Thy="list",
-                               Ty = int_ty --> intlist_ty --> Type.bool}
     fun find_bi (LT_x t, true) = SOME t
       | find_bi (x_LT t, false) = SOME (mk_plus(t, mk_negated one_tm))
       | find_bi (x_EQ t, true) = SOME (mk_plus(t, mk_negated one_tm))
@@ -315,7 +313,7 @@ fun phase4_CONV tm = let
     val bis_list_tm = listSyntax.mk_list(bis, int_ty)
     val b = genvar int_ty
     val j = genvar int_ty
-    val brestriction = list_mk_comb(MEM_tm, [b, bis_list_tm])
+    val brestriction = listSyntax.mk_mem(b, bis_list_tm)
     val jrestriction = mk_conj(mk_less(zero_tm, j), mk_leq(j, delta_tm))
   in
     (list_mk_exists([b,j], mk_conj(mk_conj(brestriction, jrestriction),
@@ -1149,18 +1147,19 @@ end
 fun in_list_CONV tm = let
   val (v, body) = dest_exists tm
   val (mem_t, _) = dest_conj body
+  val (_, list_t) = listSyntax.dest_mem mem_t
 
   fun recurse tm = let
     val (v, body) = dest_exists tm
     val (mem_t, _) = dest_conj body
-    val list_t = rand mem_t
+    val (_, list_t) = listSyntax.dest_mem mem_t
     (* mem_t = MEM v l and l is not nil, so list_t = CONS h t *)
   in
     if is_const (rand list_t) then REWR_CONV mem_singP
     else REWR_CONV mem_consP THENC RAND_CONV recurse
   end tm
 in
-  if is_const (rand (mem_t)) (* i.e. = [] *) then REWR_CONV mem_nilP tm
+  if is_const list_t (* i.e. = [] *) then REWR_CONV mem_nilP tm
   else recurse tm
 end
 
@@ -1201,9 +1200,11 @@ val phase5_CONV  = let
                             RAND_CONV (REWR_CONV INT_NEG_MINUS1)) t
                          else ALL_CONV t)) THENC
      (* collect additive consts on elements of list *)
-     LAND_CONV (LAND_CONV
-                  (RAND_CONV (LIST_EL_CONV
-                                (TRY_CONV collect_additive_consts)))))
+     LAND_CONV (LAND_CONV (* first conjunct of three *)
+                    (RAND_CONV (* set [...] (from b ∈ set [..]) *)
+                         (RAND_CONV (* [...] *)
+                              (LIST_EL_CONV
+                                   (TRY_CONV collect_additive_consts))))))
 
 
 

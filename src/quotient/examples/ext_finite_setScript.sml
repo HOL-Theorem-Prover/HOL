@@ -284,10 +284,21 @@ val fnlist =
       func= ``CONS :'a -> 'a list -> 'a list``,
       fixity=SOME(Infixr 490)},
 
+(* if desired, a membership constant for finite sets can be defined in
+   terms of fset2set:
+
+     fmem x s = x ∈ fset2set s
+
+   Alternatively, fmem could just be overloaded to a term of this form, as
+   is done in the finite_set version of this example.
+
+   The following doesn't work because MEM is not a constant (since f42df6bf5)
+
      {def_name="In_def",
       fname="In",
       func= ``MEM :'a -> 'a list -> bool``,
       fixity=SOME(Infix(NONASSOC,425))},
+*)
 
      {def_name="Card_def",
       fname="Card",
@@ -345,7 +356,7 @@ val  [finite_set_cases, Insert_LEFT_COMM, Insert_LEFT_IDEM,
      tyop_equivs = [],
      tyop_quotients = [FUN_QUOTIENT],
      tyop_simps = [FUN_REL_EQ, FUN_MAP_I],
-     respects = [NIL_RSP, CONS_RSP, MEM_RSP, Card1_RSP, Delete1_RSP,
+     respects = [NIL_RSP, CONS_RSP, Card1_RSP, Delete1_RSP,
                  APPEND_RSP, Inter1_RSP, Fold1_RSP, list2set_RSP],
      poly_preserves = [FORALL_PRS, EXISTS_PRS, COND_PRS],
      poly_respects = [RES_FORALL_RSP, RES_EXISTS_RSP, COND_RSP],

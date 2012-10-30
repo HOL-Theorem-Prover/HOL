@@ -660,6 +660,10 @@ val IMP_part_heap = prove(
   \\ SIMP_TAC std_ss [EMP_RANGE_def,IN_DEF,RANGE_def] \\ REPEAT STRIP_TAC
   \\ `F` by DECIDE_TAC);
 
+val IN_D0 = SIMP_CONV bool_ss [IN_DEF, D0_def] ``x IN D0 m``
+val IN_D1 = (REWRITE_CONV [IN_DEF] THENC SIMP_CONV bool_ss [D1_def])
+                ``x IN D1 m``
+
 val ok_split_heap = store_thm("ok_split_heap",
   ``!roots m i e.
       ok_split_heap (roots,m,i,e) =
@@ -715,14 +719,10 @@ val ok_split_heap = store_thm("ok_split_heap",
     \\ REPEAT STRIP_TAC \\ POP_ASSUM MP_TAC \\ POP_ASSUM MP_TAC
     \\ ASM_SIMP_TAC std_ss [FUN_FMAP_DEF,ADDR_SET_def,GSPECIFICATION]
     \\ FULL_SIMP_TAC std_ss [UNION_SUBSET]
-    \\ FULL_SIMP_TAC std_ss [D0_def,getBLOCK_def,SUBSET_DEF,D1_def]
+    \\ FULL_SIMP_TAC std_ss [IN_D0,getBLOCK_def,SUBSET_DEF,IN_D1]
     \\ FULL_SIMP_TAC std_ss [ADDR_SET_def,GSPECIFICATION]
-    \\ FULL_SIMP_TAC std_ss [D0_def,getBLOCK_def,SUBSET_DEF,IN_DEF]
-    \\ FULL_SIMP_TAC std_ss [D1_def,ADDR_SET_def,GSPECIFICATION]
+    \\ FULL_SIMP_TAC std_ss [IN_D0,getBLOCK_def,SUBSET_DEF]
+    \\ FULL_SIMP_TAC std_ss [IN_D1,ADDR_SET_def,GSPECIFICATION]
     \\ METIS_TAC []));
 
 val _ = export_theory();
-
-
-
-
