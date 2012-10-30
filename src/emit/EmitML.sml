@@ -275,6 +275,7 @@ fun term_to_ML openthys side ppstrm =
      if is_string_literal tm then pp_string tm else
      if listSyntax.is_list tm then pp_list tm else
      if listSyntax.is_cons tm then pp_cons i tm else
+     if listSyntax.is_mem tm then pp_mem i (listSyntax.dest_mem tm) else
      if is_infix_app tm then pp_binop i tm else
      if pairSyntax.is_pair tm then pp_pair i tm else
      if boolSyntax.is_let tm then pp_lets i tm else
@@ -394,6 +395,17 @@ fun term_to_ML openthys side ppstrm =
         ; end_block()
         ; rparen i j
         ; end_block()
+      end
+  and pp_mem i (t1, t2) =
+      let
+      in
+        begin_block INCONSISTENT 0
+      ; lparen i maxprec
+      ; add_string "MEM"
+      ; add_break(1,0)
+      ; pr_list (pp maxprec) (fn () => add_break(1,0)) (fn () => ()) [t1, t2]
+      ; rparen i maxprec
+      ; end_block()
       end
   and pp_pair i tm =
       let val (t1,t2) = pairSyntax.dest_pair tm
