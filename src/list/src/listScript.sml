@@ -980,6 +980,9 @@ val (LIST_REL_rules, LIST_REL_ind, LIST_REL_cases) = IndDefLib.Hol_reln`
   (!h1 h2 t1 t2. R h1 h2 /\ LIST_REL R t1 t2 ==> LIST_REL R (h1::t1) (h2::t2))
 `;
 
+val _ = overload_on ("listRel", ``LIST_REL``)
+val _ = overload_on ("LIST_REL", ``LIST_REL``)
+
 val LIST_REL_EL_EQN = store_thm(
   "LIST_REL_EL_EQN",
   ``!R l1 l2. LIST_REL R l1 l2 <=>
@@ -1042,6 +1045,21 @@ val LIST_REL_MAP2 = store_thm(
   ``LIST_REL (\a b. R a b) l1 (MAP f l2) <=>
       LIST_REL (\a b. R a (f b)) l1 l2``,
   SRW_TAC [CONJ_ss][LIST_REL_EL_EQN, EL_MAP, LENGTH_MAP]);
+
+val LIST_REL_LENGTH = store_thm(
+  "LIST_REL_LENGTH",
+  ``!x y. LIST_REL R x y ==> (LENGTH x = LENGTH y)``,
+  Induct_on `LIST_REL` THEN SRW_TAC [][LENGTH]);
+
+(* example of LIST_REL in action :
+val (rules,ind,cases) = IndDefLib.Hol_reln`
+  (!n m. n < m ==> R n m) /\
+  (!n m. R n m ==> R1 (INL n) (INL m)) /\
+  (!l1 l2. LIST_REL R l1 l2 ==> R1 (INR l1) (INR l2))
+`
+val strong = IndDefLib.derive_strong_induction (rules,ind)
+*)
+
 
 (*---------------------------------------------------------------------------
      Congruence rules for higher-order functions. Used when making
@@ -1988,55 +2006,6 @@ val ITSET_eq_FOLDL_SET_TO_LIST = Q.store_thm(
 HO_MATCH_MP_TAC pred_setTheory.FINITE_COMPLETE_INDUCTION THEN
 SRW_TAC [][pred_setTheory.ITSET_THM,SET_TO_LIST_THM,FOLDL]);
 
-(* ----------------------------------------------------------------------
-    listRel
-       lifts a binary relation to its point-wise extension on pairs of
-       lists
-   ---------------------------------------------------------------------- *)
-
-val (listRel_rules, listRel_ind, listRel_cases) = IndDefLib.Hol_reln`
-  listRel R [] [] /\
-  (!h1 h2 t1 t2. R h1 h2 /\ listRel R t1 t2 ==>
-                 listRel R (h1::t1) (h2::t2))
-`;
-
-val listRel_NIL = store_thm(
-  "listRel_NIL",
-  ``(listRel R [] y = (y = [])) /\ (listRel R x [] = (x = []))``,
-  ONCE_REWRITE_TAC [listRel_cases] THEN SRW_TAC [][])
-val _ = export_rewrites ["listRel_NIL"]
-
-val listRel_CONS = store_thm(
-  "listRel_CONS",
-  ``(listRel R (h::t) y = ?h' t'. (y = h'::t') /\ R h h' /\ listRel R t t') /\
-    (listRel R x (h'::t') = ?h t. (x = h::t) /\ R h h' /\ listRel R t t')``,
-  CONJ_TAC THEN CONV_TAC (LHS_CONV (ONCE_REWRITE_CONV [listRel_cases])) THEN
-  SRW_TAC [][])
-
-val listRel_LENGTH = store_thm(
-  "listRel_LENGTH",
-  ``!x y. listRel R x y ==> (LENGTH x = LENGTH y)``,
-  HO_MATCH_MP_TAC listRel_ind THEN SRW_TAC [][LENGTH])
-
-val listRel_strong_ind = save_thm(
-  "listRel_strong_ind",
-  IndDefLib.derive_strong_induction(listRel_rules, listRel_ind))
-
-val MONO_listRel = store_thm(
-  "MONO_listRel",
-  ``(!x y. R x y ==> R' x y) ==> (listRel R x y ==> listRel R' x y)``,
-  STRIP_TAC THEN MAP_EVERY Q.ID_SPEC_TAC [`y`, `x`] THEN
-  HO_MATCH_MP_TAC listRel_ind THEN SRW_TAC [][listRel_rules])
-val _ = IndDefLib.export_mono "MONO_listRel"
-
-(* example of listRel in action :
-val (rules,ind,cases) = IndDefLib.Hol_reln`
-  (!n m. n < m ==> R n m) /\
-  (!n m. R n m ==> R1 (INL n) (INL m)) /\
-  (!l1 l2. listRel R l1 l2 ==> R1 (INR l1) (INR l2))
-`
-val strong = IndDefLib.derive_strong_induction (rules,ind)
-*)
 
 (* ----------------------------------------------------------------------
     isPREFIX
