@@ -617,6 +617,7 @@ val _ = eSML "list"
 
 val _ = eCAML "list"
   (MLSIG "type num = NumML.num" ::
+   MLSIG "val _MEM : 'a -> 'a list -> bool" ::
    MLSTRUCT "type num = NumML.num" ::
    OPEN ["Num"] ::
    defs)
