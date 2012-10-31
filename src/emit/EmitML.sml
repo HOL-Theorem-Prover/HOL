@@ -275,6 +275,7 @@ fun term_to_ML openthys side ppstrm =
      if is_string_literal tm then pp_string tm else
      if listSyntax.is_list tm then pp_list tm else
      if listSyntax.is_cons tm then pp_cons i tm else
+     if listSyntax.is_mem tm then pp_mem i (listSyntax.dest_mem tm) else
      if is_infix_app tm then pp_binop i tm else
      if pairSyntax.is_pair tm then pp_pair i tm else
      if boolSyntax.is_let tm then pp_lets i tm else
@@ -394,6 +395,17 @@ fun term_to_ML openthys side ppstrm =
         ; end_block()
         ; rparen i j
         ; end_block()
+      end
+  and pp_mem i (t1, t2) =
+      let
+      in
+        begin_block INCONSISTENT 0
+      ; lparen i maxprec
+      ; add_string (full_name openthys (false,"list","MEM",bool))
+      ; add_break(1,0)
+      ; pr_list (pp maxprec) (fn () => add_break(1,0)) (fn () => ()) [t1, t2]
+      ; rparen i maxprec
+      ; end_block()
       end
   and pp_pair i tm =
       let val (t1,t2) = pairSyntax.dest_pair tm
@@ -654,6 +666,8 @@ fun same_fn eq1 eq2 =
 (* Print a function definition as ML, i.e., fun f ... = ...                  *)
 (*---------------------------------------------------------------------------*)
 
+val IN_tm = prim_mk_const {Thy = "bool", Name = "IN"}
+
 fun partitions P [] = []
   | partitions P (h::t) =
      case partition (P h) t
@@ -705,6 +719,7 @@ fun pp_defn_as_ML openthys ppstrm =
 
 fun pp_defn_as_OCAML openthys ppstrm =
  let open Portable
+     val const_map = const_map openthys
      val {add_break,add_newline,
           add_string,begin_block,end_block,...} = with_ppstream ppstrm
      val toML = fn ppnumlit => term_to_ML openthys ppnumlit ppstrm
@@ -732,7 +747,12 @@ fun pp_defn_as_OCAML openthys ppstrm =
           ; end_block()
           ; add_newline()
           ; end_block())
-     fun clauses_to_patterns els = map (((snd o strip_comb)##I) o dest_eq) els
+     fun caml_strip_comb t = let
+       val (t1, t2) = listSyntax.dest_mem t
+     in
+       (full_name openthys (false, "list", "MEM", bool), [t1, t2])
+     end handle _ => apfst const_map (strip_comb t)
+     fun clauses_to_patterns els = map (((snd o caml_strip_comb)##I) o dest_eq) els
      fun pp_clauses (s,els) =
          ( begin_block INCONSISTENT 2
          ; add_string (s^" ")
@@ -740,11 +760,13 @@ fun pp_defn_as_OCAML openthys ppstrm =
             (pp_clause minprec (hd els); add_newline())
            else
              let
-               val (f, l) = strip_comb (lhs(hd els))
-               val vs = vars_of_types (map type_of l)
+               val (fname, args) = caml_strip_comb (lhs (hd els))
+               val vs = vars_of_types (map type_of args)
                val pats = clauses_to_patterns els
              in
-                 toML LEFT minprec (list_mk_comb (f, vs))
+                 add_string fname
+               ; add_break(1,0)
+               ; pr_list (toML LEFT minprec) (fn () => add_break(1,0)) (fn () => ()) vs
                ; add_break(1,0)
                ; add_string "="
                ; add_break(1,0)
@@ -773,8 +795,9 @@ fun pp_defn_as_OCAML openthys ppstrm =
                           (strip_conj (snd (strip_forall tm)))
            val clauses = partitions same_fn eqns (* term list list *)
            val rhsides = map rhs eqns
-           val lhsides = map (fst o strip_comb)
-                           (filter is_fn_app (map lhs eqns))
+           val lhsides = eqns |> map lhs |> filter is_fn_app
+                              |> map (fst o strip_comb)
+                              |> filter (not o same_const IN_tm)
            val possibly_recursive =
                  isSome (List.find (contains_consts lhsides) rhsides)
            val s = if possibly_recursive then "let rec" else "let"

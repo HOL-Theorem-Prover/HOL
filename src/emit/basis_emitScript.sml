@@ -602,19 +602,22 @@ val GENLIST_compute = Q.prove(
 
 val defs =
   map DEFN [NULL_DEF, CONJ HD_NIL HD, CONJ TL_NIL TL, APPEND, FLAT, MAP,
-            MEM, FILTER, FOLDR, FOLDL, SNOC, GENLIST_compute, EVERY_DEF,
+            FILTER, FOLDR, FOLDL, SNOC, GENLIST_compute, EVERY_DEF,
             EXISTS_DEF, MAP2_THM, ZIP_THM, UNZIP_THM, REVERSE_DEF,
             CONJ LAST_NIL LAST_CONS, CONJ FRONT_NIL FRONT_CONS,
-            ALL_DISTINCT, EL_compute, LENGTH_THM, LEN_DEF, REV_DEF,
-            list_size_def, PAD_LEFT, PAD_RIGHT]
+            EL_compute, LENGTH_THM, LEN_DEF, REV_DEF,
+            list_size_def, PAD_LEFT, PAD_RIGHT] @
+  [DEFN_NOSIG MEM, DEFN ALL_DISTINCT]
 
 val _ = eSML "list"
   (MLSIG "type num = numML.num" ::
+   MLSIG "val MEM : ''a -> ''a list -> bool" ::
    OPEN ["num"] ::
    defs)
 
 val _ = eCAML "list"
   (MLSIG "type num = NumML.num" ::
+   MLSIG "val _MEM : 'a -> 'a list -> bool" ::
    MLSTRUCT "type num = NumML.num" ::
    OPEN ["Num"] ::
    defs)
