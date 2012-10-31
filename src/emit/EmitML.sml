@@ -1396,7 +1396,13 @@ fun add (is_constr, s) c =
 fun install_consts _ [] = []
   | install_consts s (iDEFN_NOSIG thm::rst) = install_consts s (iDEFN thm::rst)
   | install_consts s (iDEFN thm::rst) =
-       let val clist = munge_def_type thm
+       let val clist0 = munge_def_type thm
+           val clist =
+               (* IN is only allowed to be defined in the setML module/structure;
+                  due to the special-case of MEM, listML may appear to define it too
+                *)
+               if s <> "set" then filter (not o same_const IN_tm) clist0
+               else clist0
            val _ = List.app (add (false, s)) clist
        in map (pair false) clist @ install_consts s rst
        end
