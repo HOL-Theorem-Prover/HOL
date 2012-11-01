@@ -166,13 +166,20 @@ val MAP = new_recursive_definition
        def = --`(!f:'a->'b. MAP f [] = []) /\
                    (!f h t. MAP f (h::t) = f h::MAP f t)`--};
 
-val LIST_TO_SET = new_recursive_definition{
-  name = "LIST_TO_SET",
+val LIST_TO_SET_DEF = new_recursive_definition{
+  name = "LIST_TO_SET_DEF",
   rec_axiom = list_Axiom,
-  def = ``(LIST_TO_SET [] = {}) /\
-          (!h:'a t. LIST_TO_SET (h::t) = h INSERT LIST_TO_SET t)``}
+  def = ``(!x:'a. LIST_TO_SET [] x <=> F) /\
+          (!h:'a t x. LIST_TO_SET (h::t) x = (x = h) \/ LIST_TO_SET t x)``}
 val _ = overload_on ("set", ``LIST_TO_SET``)
 val _ = overload_on ("MEM", ``\h:'a l:'a list. h IN LIST_TO_SET l``)
+val _ = export_rewrites ["LIST_TO_SET_DEF"]
+
+val LIST_TO_SET = store_thm(
+  "LIST_TO_SET",
+  ``(LIST_TO_SET [] = {}) /\
+    (LIST_TO_SET (h::t) = h INSERT LIST_TO_SET t)``,
+  SRW_TAC [][FUN_EQ_THM, IN_DEF]);
 val _ = export_rewrites ["LIST_TO_SET"]
 
 val IN_LIST_TO_SET = save_thm("IN_LIST_TO_SET", TRUTH)
