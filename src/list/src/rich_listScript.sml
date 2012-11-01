@@ -5,7 +5,7 @@ open HolKernel Parse BasicProvers boolLib numLib metisLib simpLib
 open operatorTheory arithmeticTheory prim_recTheory
 
 local
-   open listTheory
+   open listTheory core_listTheory
 in
    val APPEND = APPEND
    val APPEND_ASSOC = APPEND_ASSOC

@@ -30,7 +30,9 @@ local open arithmeticTheory pairTheory pred_setTheory operatorTheory Datatype Op
  *---------------------------------------------------------------------------*)
 
 open HolKernel Parse boolLib Num_conv Prim_rec BasicProvers mesonLib
-     simpLib boolSimps pairTheory TotalDefn metisLib;;
+     simpLib boolSimps pairTheory TotalDefn metisLib
+
+open core_listTheory
 
 val arith_ss = bool_ss ++ numSimps.ARITH_ss ++ numSimps.REDUCE_ss
 
@@ -62,12 +64,6 @@ val ADD_EQ_0     = arithmeticTheory.ADD_EQ_0;
 val ONE          = arithmeticTheory.ONE;
 val PAIR_EQ      = pairTheory.PAIR_EQ;
 
-(*---------------------------------------------------------------------------*)
-(* Declare the datatype of lists                                             *)
-(*---------------------------------------------------------------------------*)
-
-val _ = Datatype.Hol_datatype `list = NIL | CONS of 'a => list`;
-
 local open OpenTheoryMap in
 val ns = ["Data","List"]
 val _ = OpenTheory_tyop_name{tyop={Thy="list",Tyop="list"},name=(ns,"list")}
@@ -78,24 +74,8 @@ val _ = OpenTheory_const_name{const={Thy="list",Name="APPEND"},name=(ns,"@")}
 end
 
 (*---------------------------------------------------------------------------*)
-(* Fiddle with concrete syntax                                               *)
-(*---------------------------------------------------------------------------*)
-
-val _ = add_listform {separator = [TOK ";", BreakSpace(1,0)],
-                      leftdelim = [TOK "["], rightdelim = [TOK "]"],
-                      cons = "CONS", nilstr = "NIL",
-                      block_info = (PP.INCONSISTENT, 0)};
-
-val _ = add_rule {term_name = "CONS", fixity = Infixr 490,
-                  pp_elements = [TOK "::", BreakSpace(0,2)],
-                  paren_style = OnlyIfNecessary,
-                  block_style = (AroundSameName, (PP.INCONSISTENT, 2))};
-
-(*---------------------------------------------------------------------------*)
 (* Prove the axiomatization of lists                                         *)
 (*---------------------------------------------------------------------------*)
-
-val list_Axiom = TypeBase.axiom_of ``:'a list``;
 
 val list_Axiom_old = store_thm(
   "list_Axiom_old",
@@ -109,71 +89,6 @@ val list_Axiom_old = store_thm(
     simpLib.ASM_SIMP_TAC boolSimps.bool_ss []
   ]);
 
-(*---------------------------------------------------------------------------
-     Now some definitions.
- ---------------------------------------------------------------------------*)
-
-val NULL_DEF = new_recursive_definition
-      {name = "NULL_DEF",
-       rec_axiom = list_Axiom,
-       def = --`(NULL []     = T) /\
-                (NULL (h::t) = F)`--};
-
-val HD = new_recursive_definition
-      {name = "HD",
-       rec_axiom = list_Axiom,
-       def = --`HD (h::t) = h`--};
-val _ = export_rewrites ["HD"]
-
-val TL = new_recursive_definition
-      {name = "TL",
-       rec_axiom = list_Axiom,
-       def = --`TL (h::t) = t`--};
-val _ = export_rewrites ["TL"]
-
-val SUM = new_recursive_definition
-      {name = "SUM",
-       rec_axiom =  list_Axiom,
-       def = --`(SUM [] = 0) /\
-          (!h t. SUM (h::t) = h + SUM t)`--};
-
-val APPEND = new_recursive_definition
-      {name = "APPEND",
-       rec_axiom = list_Axiom,
-       def = --`(!l:'a list. APPEND [] l = l) /\
-                  (!l1 l2 h. APPEND (h::l1) l2 = h::APPEND l1 l2)`--};
-val _ = export_rewrites ["APPEND"]
-
-val _ = set_fixity "++" (Infixl 480);
-val _ = overload_on ("++", Term`APPEND`);
-
-val FLAT = new_recursive_definition
-      {name = "FLAT",
-       rec_axiom = list_Axiom,
-       def = --`(FLAT []     = []) /\
-          (!h t. FLAT (h::t) = APPEND h (FLAT t))`--};
-
-val LENGTH = new_recursive_definition
-      {name = "LENGTH",
-       rec_axiom = list_Axiom,
-       def = --`(LENGTH []     = 0) /\
-     (!(h:'a) t. LENGTH (h::t) = SUC (LENGTH t))`--};
-val _ = export_rewrites ["LENGTH"]
-
-val MAP = new_recursive_definition
-      {name = "MAP",
-       rec_axiom = list_Axiom,
-       def = --`(!f:'a->'b. MAP f [] = []) /\
-                   (!f h t. MAP f (h::t) = f h::MAP f t)`--};
-
-val LIST_TO_SET_DEF = new_recursive_definition{
-  name = "LIST_TO_SET_DEF",
-  rec_axiom = list_Axiom,
-  def = ``(!x:'a. LIST_TO_SET [] x <=> F) /\
-          (!h:'a t x. LIST_TO_SET (h::t) x = (x = h) \/ LIST_TO_SET t x)``}
-val _ = overload_on ("set", ``LIST_TO_SET``)
-val _ = overload_on ("MEM", ``\h:'a l:'a list. h IN LIST_TO_SET l``)
-val _ = export_rewrites ["LIST_TO_SET_DEF"]
 
 val LIST_TO_SET = store_thm(
   "LIST_TO_SET",
@@ -183,48 +98,6 @@ val LIST_TO_SET = store_thm(
 val _ = export_rewrites ["LIST_TO_SET"]
 
 val IN_LIST_TO_SET = save_thm("IN_LIST_TO_SET", TRUTH)
-
-val FILTER = new_recursive_definition
-      {name = "FILTER",
-       rec_axiom = list_Axiom,
-       def = --`(!P. FILTER P [] = []) /\
-             (!(P:'a->bool) h t.
-                    FILTER P (h::t) =
-                         if P h then (h::FILTER P t) else FILTER P t)`--};
-val _ = export_rewrites ["FILTER"]
-
-val FOLDR = new_recursive_definition
-      {name = "FOLDR",
-       rec_axiom = list_Axiom,
-       def = --`(!f e. FOLDR (f:'a->'b->'b) e [] = e) /\
-            (!f e x l. FOLDR f e (x::l) = f x (FOLDR f e l))`--};
-
-val FOLDL = new_recursive_definition
-      {name = "FOLDL",
-       rec_axiom = list_Axiom,
-       def = --`(!f e. FOLDL (f:'b->'a->'b) e [] = e) /\
-            (!f e x l. FOLDL f e (x::l) = FOLDL f (f e x) l)`--};
-
-val EVERY_DEF = new_recursive_definition
-      {name = "EVERY_DEF",
-       rec_axiom = list_Axiom,
-       def = --`(!P:'a->bool. EVERY P [] = T)  /\
-                (!P h t. EVERY P (h::t) = P h /\ EVERY P t)`--};
-val _ = export_rewrites ["EVERY_DEF"]
-
-val EXISTS_DEF = new_recursive_definition
-      {name = "EXISTS_DEF",
-       rec_axiom = list_Axiom,
-       def = --`(!P:'a->bool. EXISTS P [] = F)
-            /\  (!P h t.      EXISTS P (h::t) = P h \/ EXISTS P t)`--};
-val _ = export_rewrites ["EXISTS_DEF"]
-
-val EL = new_recursive_definition
-      {name = "EL",
-       rec_axiom = num_Axiom,
-       def = --`(!l. EL 0 l = (HD l:'a)) /\
-                (!l:'a list. !n. EL (SUC n) l = EL n (TL l))`--};
-
 
 
 (* ---------------------------------------------------------------------*)
@@ -2707,17 +2580,17 @@ val _ = adjoin_to_theory
    fun NL() = PP.add_newline ppstrm
  in
    S "val _ = let open computeLib";
-   S "        in add_funs [APPEND,APPEND_NIL, FLAT, HD, TL,";
-   S "             LENGTH, MAP, MAP2, NULL_DEF, MEM, EXISTS_DEF, DROP_compute,";
-   S "             EVERY_DEF, ZIP, UNZIP, FILTER, FOLDL, FOLDR, TAKE_compute,";
-   S "             FOLDL, REVERSE_REV, ALL_DISTINCT, GENLIST_AUX,";
+   S "        in add_funs [APPEND_NIL, ";
+   S "             MAP2, MEM, DROP_compute,";
+   S "             ZIP, UNZIP, TAKE_compute,";
+   S "             REVERSE_REV, ALL_DISTINCT, GENLIST_AUX,";
    S "             EL_restricted, EL_simp_restricted, SNOC, LUPDATE_compute,";
    S "             GENLIST_NUMERALS, computeLib.lazyfy_thm list_case_compute,";
-   S "             list_size_def, FRONT_DEF, LAST_compute, isPREFIX]";
+   S "             FRONT_DEF, LAST_compute, isPREFIX]";
    S "        end;";
    NL(); NL();
    S "val _ =";
-   S "  let val list_info = Option.valOf (TypeBase.read {Thy = \"list\",Tyop=\"list\"})";
+   S "  let val list_info = Option.valOf (TypeBase.read {Thy = \"core_list\",Tyop=\"list\"})";
    S "      val lift_list = mk_var(\"listSyntax.lift_list\",Parse.Type`:'type -> ('a -> 'term) -> 'a list -> 'term`)";
    S "      val list_info' = TypeBasePure.put_lift lift_list list_info";
    S "  in TypeBase.write [list_info']";
@@ -2725,32 +2598,16 @@ val _ = adjoin_to_theory
  end)};
 
 val _ = export_rewrites
-          ["APPEND_11", "FLAT",
-           "MAP", "MAP2", "NULL_DEF",
-           "SUM", "APPEND_ASSOC", "CONS", "CONS_11",
+          ["APPEND_11", "MAP2",
+           "APPEND_ASSOC", "CONS",
            "LENGTH_MAP", "MAP_APPEND",
-           "NOT_CONS_NIL", "NOT_NIL_CONS", "MAP_EQ_NIL",
-           "CONS_ACYCLIC", "list_case_def",
+           "MAP_EQ_NIL",
+           "CONS_ACYCLIC",
            "ZIP", "UNZIP", "ZIP_UNZIP", "UNZIP_ZIP",
            "LENGTH_ZIP", "LENGTH_UNZIP",
            "EVERY_APPEND", "EXISTS_APPEND", "EVERY_SIMP",
            "EXISTS_SIMP", "NOT_EVERY", "NOT_EXISTS",
-           "FOLDL", "FOLDR", "LENGTH_LUPDATE",
+           "LENGTH_LUPDATE",
            "LUPDATE_LENGTH"];
-
-val nil_tm = Term.prim_mk_const{Name="NIL",Thy="list"};
-val cons_tm = Term.prim_mk_const{Name="CONS",Thy="list"};
-
-fun dest_cons M =
-  case strip_comb M
-   of (c,[p,q]) => if Term.same_const c cons_tm then (p,q)
-                   else raise ERR "listScript" "dest_cons"
-    | otherwise => raise ERR "listScript" "dest_cons" ;
-
-fun dest_list M =
-   case total dest_cons M
-    of NONE => if same_const nil_tm M then []
-               else raise ERR "dest_list" "not terminated with nil"
-     | SOME(h,t) => h::dest_list t
 
 val _ = export_theory();

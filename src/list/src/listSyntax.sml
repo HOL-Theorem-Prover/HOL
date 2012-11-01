@@ -24,35 +24,35 @@ val is_list_type = can dest_list_type;
     Constants ... SUM really belongs elsewhere.
  ---------------------------------------------------------------------------*)
 
-val nil_tm       = prim_mk_const {Name = "NIL",     Thy = "list"}
-val cons_tm      = prim_mk_const {Name = "CONS",    Thy = "list"}
+val nil_tm       = prim_mk_const {Name = "NIL",     Thy = "core_list"}
+val cons_tm      = prim_mk_const {Name = "CONS",    Thy = "core_list"}
 val snoc_tm      = prim_mk_const {Name = "SNOC",    Thy = "list"}
 val drop_tm      = prim_mk_const {Name = "DROP",    Thy = "list"}
 val take_tm      = prim_mk_const {Name = "TAKE",    Thy = "list"}
 val isprefix_tm  = prim_mk_const {Name = "isPREFIX",Thy = "list"}
-val null_tm      = prim_mk_const {Name = "NULL",    Thy = "list"}
-val hd_tm        = prim_mk_const {Name = "HD",      Thy = "list"}
-val tl_tm        = prim_mk_const {Name = "TL",      Thy = "list"}
-val append_tm    = prim_mk_const {Name = "APPEND",  Thy = "list"}
-val flat_tm      = prim_mk_const {Name = "FLAT",    Thy = "list"}
-val length_tm    = prim_mk_const {Name = "LENGTH",  Thy = "list"}
-val map_tm       = prim_mk_const {Name = "MAP",     Thy = "list"}
+val null_tm      = prim_mk_const {Name = "NULL",    Thy = "core_list"}
+val hd_tm        = prim_mk_const {Name = "HD",      Thy = "core_list"}
+val tl_tm        = prim_mk_const {Name = "TL",      Thy = "core_list"}
+val append_tm    = prim_mk_const {Name = "APPEND",  Thy = "core_list"}
+val flat_tm      = prim_mk_const {Name = "FLAT",    Thy = "core_list"}
+val length_tm    = prim_mk_const {Name = "LENGTH",  Thy = "core_list"}
+val map_tm       = prim_mk_const {Name = "MAP",     Thy = "core_list"}
 val map2_tm      = prim_mk_const {Name = "MAP2",    Thy = "list"}
-val filter_tm    = prim_mk_const {Name = "FILTER",  Thy = "list"}
-val foldr_tm     = prim_mk_const {Name = "FOLDR",   Thy = "list"}
-val foldl_tm     = prim_mk_const {Name = "FOLDL",   Thy = "list"}
-val every_tm     = prim_mk_const {Name = "EVERY",   Thy = "list"}
-val exists_tm    = prim_mk_const {Name = "EXISTS",  Thy = "list"}
-val el_tm        = prim_mk_const {Name = "EL",      Thy = "list"}
+val filter_tm    = prim_mk_const {Name = "FILTER",  Thy = "core_list"}
+val foldr_tm     = prim_mk_const {Name = "FOLDR",   Thy = "core_list"}
+val foldl_tm     = prim_mk_const {Name = "FOLDL",   Thy = "core_list"}
+val every_tm     = prim_mk_const {Name = "EVERY",   Thy = "core_list"}
+val exists_tm    = prim_mk_const {Name = "EXISTS",  Thy = "core_list"}
+val el_tm        = prim_mk_const {Name = "EL",      Thy = "core_list"}
 val zip_tm       = prim_mk_const {Name = "ZIP",     Thy = "list"}
 val unzip_tm     = prim_mk_const {Name = "UNZIP",   Thy = "list"}
-val sum_tm       = prim_mk_const {Name = "SUM",     Thy = "list"}
+val sum_tm       = prim_mk_const {Name = "SUM",     Thy = "core_list"}
 val reverse_tm   = prim_mk_const {Name = "REVERSE", Thy = "list"}
-val list_case_tm = prim_mk_const {Name = "list_case", Thy = "list"}
+val list_case_tm = prim_mk_const {Name = "list_case", Thy = "core_list"}
 val last_tm      = prim_mk_const {Name = "LAST",    Thy = "list"}
 val front_tm     = prim_mk_const {Name = "FRONT",   Thy = "list"}
 val all_distinct_tm = prim_mk_const {Name = "ALL_DISTINCT", Thy = "list"}
-val list_to_set_tm  = prim_mk_const {Name = "LIST_TO_SET",  Thy = "list"}
+val list_to_set_tm  = prim_mk_const {Name = "LIST_TO_SET",  Thy = "core_list"}
 val genlist_tm    = prim_mk_const {Name =  "GENLIST", Thy = "list"}
 
 fun eltype l = dest_list_type (type_of l);
