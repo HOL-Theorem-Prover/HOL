@@ -1,4 +1,4 @@
 OPTIONS = NO_OVERLAY
 
-selftest.exe: selftest.uo armML.uo numML.uo wordsML.uo
-	$(HOLMOSMLC) -o $@ $<
+# selftest.exe: selftest.uo numML.uo wordsML.uo # armML.uo
+#	$(HOLMOSMLC) -o $@ $<
