@@ -193,4 +193,5 @@ src/temporal/src
 !!examples/Crypto/TWOFISH
 
 [poly]!!!examples/theorem-prover
-[poly]!!!examples/machine-code/lisp
+[poly]!!!examples/machine-code
+[poly]!!!examples/miniML/hol2miniml
