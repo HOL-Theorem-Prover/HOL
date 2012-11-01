@@ -22,8 +22,6 @@ val AP = numLib.ARITH_PROVE
 val ARITH_ss = numSimps.ARITH_ss
 val arith_ss = bool_ss ++ ARITH_ss
 
-val IN_tm = prim_mk_const{Thy = "bool", Name = "IN"}
-
 fun store_thm(r as(n,t,tac)) = let
   val th = Tactical.store_thm r
 in

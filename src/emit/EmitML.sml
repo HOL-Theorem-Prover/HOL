@@ -666,8 +666,6 @@ fun same_fn eq1 eq2 =
 (* Print a function definition as ML, i.e., fun f ... = ...                  *)
 (*---------------------------------------------------------------------------*)
 
-val IN_tm = prim_mk_const {Thy = "bool", Name = "IN"}
-
 fun partitions P [] = []
   | partitions P (h::t) =
      case partition (P h) t
