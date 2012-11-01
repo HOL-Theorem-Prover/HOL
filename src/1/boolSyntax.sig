@@ -25,6 +25,7 @@ sig
   val arb            : term
   val the_value      : term
   val bounded_tm     : term
+  val IN_tm          : term
   val res_forall_tm  : term
   val res_exists_tm  : term
   val res_exists1_tm : term
@@ -54,6 +55,7 @@ sig
   val mk_res_select          : term * term * term -> term
   val mk_res_abstract        : term * term * term -> term
   val mk_icomb               : term * term -> term
+  val mk_IN                  : term * term -> term
 
   (* Destruction routines *)
 
@@ -84,6 +86,7 @@ sig
   val dest_res_exists_unique : term -> term * term * term
   val dest_res_select        : term -> term * term * term
   val dest_res_abstract      : term -> term * term * term
+  val dest_IN                : term -> term * term
 
 
   (* Query routines *)
@@ -109,6 +112,7 @@ sig
   val is_res_exists_unique   : term -> bool
   val is_res_select          : term -> bool
   val is_res_abstract        : term -> bool
+  val is_IN                  : term -> bool
 
   (* Construction of a term from a list of terms *)
 

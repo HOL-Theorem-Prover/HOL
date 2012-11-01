@@ -22,6 +22,30 @@ val AP = numLib.ARITH_PROVE
 val ARITH_ss = numSimps.ARITH_ss
 val arith_ss = bool_ss ++ ARITH_ss
 
+fun store_thm(r as(n,t,tac)) = let
+  val th = Tactical.store_thm r
+in
+  if String.isPrefix "IN_" n then let
+      val stem = String.extract(n,3,NONE)
+    in
+      if isSome (CharVector.find (equal #"_") stem) then th
+      else
+        case Lib.total (#1 o strip_comb o lhs o #2 o strip_forall o concl) th of
+          NONE => th
+        | SOME t =>
+            if same_const t IN_tm then let
+                val applied_thm = SIMP_RULE bool_ss [SimpLHS, IN_DEF] th
+                val applied_name = stem ^ "_applied"
+              in
+                save_thm(applied_name, applied_thm)
+              ; export_rewrites [applied_name]
+              ; th
+              end
+            else th
+    end
+  else th
+end
+
 
 (* ---------------------------------------------------------------------*)
 (* Create the new theory.						*)
@@ -208,6 +232,12 @@ val MEMBER_NOT_EMPTY =
      REWRITE_TAC [EXTENSION,NOT_IN_EMPTY] THEN
      CONV_TAC (ONCE_DEPTH_CONV NOT_FORALL_CONV) THEN
      REWRITE_TAC [NOT_CLAUSES]);
+
+val EMPTY_applied = store_thm(
+  "EMPTY_applied",
+  ``EMPTY x <=> F``,
+  REWRITE_TAC [EMPTY_DEF])
+val _ = export_rewrites ["EMPTY_applied"]
 
 (* ===================================================================== *)
 (* The set of everything						 *)
@@ -3069,9 +3099,9 @@ val BIGUNION = Q.new_definition
  ("BIGUNION",
   `BIGUNION P = { x | ?s. s IN P /\ x IN s}`);
 
-val IN_BIGUNION = Q.store_thm
+val IN_BIGUNION = store_thm
 ("IN_BIGUNION",
- `!x sos. x IN (BIGUNION sos) = ?s. x IN s /\ s IN sos`,
+ ``!x sos. x IN (BIGUNION sos) = ?s. x IN s /\ s IN sos``,
   SIMP_TAC bool_ss [GSPECIFICATION, BIGUNION, pairTheory.PAIR_EQ] THEN
   MESON_TAC []);
 
@@ -3194,9 +3224,9 @@ val BIGINTER = Q.new_definition
 ("BIGINTER",
  `BIGINTER P = { x | !s. s IN P ==> x IN s}`);
 
-val IN_BIGINTER = Q.store_thm
+val IN_BIGINTER = store_thm
 ("IN_BIGINTER",
- `x IN BIGINTER B = !P. P IN B ==> x IN P`,
+ ``x IN BIGINTER B = !P. P IN B ==> x IN P``,
   SIMP_TAC bool_ss [BIGINTER, GSPECIFICATION, pairTheory.PAIR_EQ]);
 
 val BIGINTER_INSERT = Q.store_thm

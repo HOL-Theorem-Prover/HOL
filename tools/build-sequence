@@ -135,6 +135,7 @@ src/update
 src/emit
 !!examples/ARM/v4
 !!examples/ARM/v7
+!!src/emit/ML
 src/hol88
 !examples/dev
 !src/quotient/examples/lambda

@@ -38,6 +38,7 @@ val the_value    = prim_mk_const {Name = "the_value",    Thy = "bool"}
 val bool_case    = prim_mk_const {Name = "bool_case",    Thy = "bool"}
 val literal_case = prim_mk_const {Name = "literal_case", Thy = "bool"}
 val bounded_tm   = prim_mk_const {Name = "BOUNDED",      Thy = "bool"}
+val IN_tm        = prim_mk_const {Name = "IN",           Thy = "bool"}
 
 (*---------------------------------------------------------------------------
           Derived syntax operations
@@ -98,6 +99,10 @@ fun mk_itself ty = inst [alpha |-> ty] the_value
 
 val mk_icomb = Lib.uncurry HolKernel.mk_monop
 
+fun mk_IN (t1, t2) = mk_comb(mk_icomb(IN_tm, t1), t2)
+
+
+
 (*--------------------------------------------------------------------------*
  *                Destructors                                               *
  *--------------------------------------------------------------------------*)
@@ -130,6 +135,7 @@ in
    val dest_conj = dest_binop conjunction (ERR "dest_conj"   "not a \"/\\\"")
    val dest_disj = dest_binop disjunction (ERR "dest_disj"   "not a \"\\/\"")
    val dest_let  = dest_binop let_tm      (ERR "dest_let"    "not a let term")
+   val dest_IN = dest_binop IN_tm (ERR "dest_IN" "not an IN term")
 
    fun dest_cond M =
       let
@@ -178,6 +184,7 @@ val is_bool_case    = can dest_bool_case
 val is_literal_case = can dest_literal_case
 val is_arb          = same_const arb
 val is_the_value    = same_const the_value
+val is_IN           = can dest_IN
 
 (*---------------------------------------------------------------------------*
  * Construction and destruction functions that deal with SML lists           *
