@@ -375,7 +375,9 @@ end
 
 fun lookup e k =
     case Binarymap.peek(e, k) of
-      NONE => [LIT ""]
+      NONE => (case OS.Process.getEnv k of
+                   NONE => [LIT ""]
+                 | SOME s => [LIT s])
     | SOME q => normquote [] q
 
 
