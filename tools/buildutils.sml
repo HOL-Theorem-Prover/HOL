@@ -777,10 +777,10 @@ in
   else ()
 end handle IO.Io _ => warn "Had problems making permanent record of build log"
 
-fun Holmake extra_args analyse_failstatus do_selftests dir = let
-  val hmstatus = Systeml.systeml ([HOLMAKE, "--qof"] @ extra_args())
+fun Holmake sysl isSuccess extra_args analyse_failstatus do_selftests dir = let
+  val hmstatus = sysl HOLMAKE ("--qof" :: extra_args())
 in
-  if OS.Process.isSuccess hmstatus then
+  if isSuccess hmstatus then
     if do_selftests > 0 andalso
        OS.FileSys.access("selftest.exe", [OS.FileSys.A_EXEC])
     then
