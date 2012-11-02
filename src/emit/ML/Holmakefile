@@ -1,4 +1,14 @@
 OPTIONS = NO_OVERLAY
 
-# selftest.exe: selftest.uo numML.uo wordsML.uo # armML.uo
-#	$(HOLMOSMLC) -o $@ $<
+# testing SELFTESTLEVEL like this only works in Poly/ML for the moment.
+# when/if github issue 100 (http://github.com/mn200/HOL/issues/100) is
+# implemented, that may change.
+ifdef SELFTESTLEVEL
+ifneq ($(SELFTESTLEVEL),0)
+ifneq ($(SELFTESTLEVEL),1)
+selftest.exe: selftest.uo armML.uo numML.uo wordsML.uo
+	$(HOLMOSMLC) -o $@ $<
+
+endif
+endif
+endif
