@@ -55,14 +55,23 @@ fun assoc item =
 val machine_env = Posix.ProcEnv.uname()
 val sysname = assoc "sysname" machine_env
 in
-val machine_flags = if sysname = "Darwin" (* Mac OS X *)
-                    then (if PolyML.Compiler.compilerVersionNumber >= 550
-                             then ["-Wl,-no_pie"]
-                          else ["-segprot", "POLY", "rwx", "rwx"]) @
-                           (if PolyML.architecture() = "I386"
-                            then ["-arch", "i386"]
-                            else [])
-                    else []
+val machine_flags =
+    if sysname = "Darwin" (* Mac OS X *) then
+      let
+        open PolyML
+        val vnum_s = hd (String.fields Char.isSpace Compiler.compilerVersion)
+        val (major,minor) =
+            case String.fields (fn c => c = #".") vnum_s of
+              mj::mn::_ => (valOf (Int.fromString mj), valOf (Int.fromString mn))
+            | _ => die "Can't pull apart Compiler.compilerVersion"
+        val number = major * 100 + 10 * minor
+      in
+        (if number >= 550 then ["-Wl,-no_pie"]
+         else ["-segprot", "POLY", "rwx", "rwx"]) @
+        (if PolyML.architecture() = "I386" then ["-arch", "i386"]
+         else [])
+      end
+    else []
 end;
 
 fun compile systeml exe obj =
