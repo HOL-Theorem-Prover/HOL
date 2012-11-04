@@ -74,6 +74,7 @@ sig
          parameter is the user's specification of the selftest level.
          The sysl function actually does the invocation (fork/exec,
          whatever), taking the path to the thing to run, and the
-         additional arguments. The *)
+         additional arguments. The isSuccess parameter interprets
+         whether or not the result of sysl constitutes a success. *)
 
 end
