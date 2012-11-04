@@ -239,4 +239,4 @@ print "\n";
 val configfile = OS.Path.concat (OS.Path.concat (holdir, "tools-poly"), "configure.sml");
 
 
-use configfile;
+use configfile handle Fail s => die s;
