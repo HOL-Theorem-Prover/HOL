@@ -85,6 +85,7 @@ fun do_lastmade_checks (ofns : output_functions) {no_lastmakercheck} = let
                 if mypath = path then ()
                 else
                   (warn ("*** Switching to execute "^path);
+                   warn ("*** (Honouring last Holmake call in this directory)");
                    Systeml.exec(path,
                                 path::"--nolmbc"::CommandLine.arguments()))
               else (warn "Garbage in Last Maker file";
@@ -105,6 +106,7 @@ in
       diag "In the wrong distribution, but --nolmbc takes precedence."
     else
       (warn ("*** Switching to execute "^p);
+       warn ("*** (As we are in/under its HOLDIR)");
        Systeml.exec (p, p::"--nolmbc"::CommandLine.arguments()))
 end
 
