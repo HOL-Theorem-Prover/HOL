@@ -83,4 +83,9 @@ val (rules,induction,ecases) = Hol_reln
 
 val _ = checkhyps rules
 
+(* check MONO_COND *)
+val _ = Hol_reln
+`(foo p x x) /\
+ ((if p y then foo p y x else foo p y y) ==> foo p x y)`
+
 val _ = OS.Process.exit OS.Process.success
