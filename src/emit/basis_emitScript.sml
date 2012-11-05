@@ -606,7 +606,7 @@ val defs =
             EXISTS_DEF, MAP2_THM, ZIP_THM, UNZIP_THM, REVERSE_DEF,
             CONJ LAST_NIL LAST_CONS, CONJ FRONT_NIL FRONT_CONS,
             EL_compute, LENGTH_THM, LEN_DEF, REV_DEF,
-            list_size_def, PAD_LEFT, PAD_RIGHT, LIST_TO_SET_DEF] @
+            list_size_def, PAD_LEFT, PAD_RIGHT] @
   [DEFN_NOSIG MEM, DEFN ALL_DISTINCT]
 
 val _ = eSML "list"
