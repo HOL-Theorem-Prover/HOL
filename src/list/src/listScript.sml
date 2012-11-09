@@ -515,6 +515,13 @@ val MEM_FLAT = Q.store_thm
  `!x L. MEM x (FLAT L) = (?l. MEM l L /\ MEM x l)`,
  Induct_on `L` THEN SRW_TAC [][FLAT] THEN PROVE_TAC[]);
 
+val FLAT_APPEND = Q.store_thm ("FLAT_APPEND",
+   `!l1 l2. FLAT (APPEND l1 l2) = APPEND (FLAT l1) (FLAT l2)`,
+   LIST_INDUCT_TAC
+   THEN REWRITE_TAC [APPEND, FLAT]
+   THEN ASM_REWRITE_TAC [APPEND_ASSOC]);
+val _ = export_rewrites ["FLAT_APPEND"]
+
 val EVERY_APPEND = store_thm(
   "EVERY_APPEND",
   ``!P (l1:'a list) l2.
