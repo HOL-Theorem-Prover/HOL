@@ -352,7 +352,9 @@ local
       "word_ror", "word_rol", "word_rrx", "word_lsl_bv", "word_lsr_bv",
       "word_asr_bv", "word_ror_bv", "word_rol_bv", "word_lo", "word_ls",
       "word_lt", "word_le", "saturate_n2w", "saturate_w2w",
-      "saturate_add", "saturate_sub", "saturate_mul"]
+      "saturate_add", "saturate_sub", "saturate_mul",
+      "word_min", "word_max", "word_smin", "word_smax", "word_abs",
+      "word_div", "word_sdiv", "word_mod", "word_smod", "word_srem"]
 
   val l2 =
      ["SBIT", "BIT", "BITS", "BITV",
@@ -375,6 +377,14 @@ local
             map (pair "words") l1 @
             map (pair "bit") l2 @
             map (pair "fcp") l3)
+
+  val s2 =
+     Redblackset.addList
+       (s, map (pair "words")
+               ["word_mul", "word_add", "word_sub", "word_1comp", "word_2comp",
+                "word_xor", "word_and", "word_or",
+                "word_xnor", "word_nand", "word_nor",
+                "word_T", "word_H", "word_L"])
 
   fun is_hex_digit_literal t =
      numSyntax.int_of_term t < 16 handle HOL_ERR _ => false
@@ -407,16 +417,18 @@ local
                            bitSyntax.hex_tm, bitSyntax.unhex_tm]
                 orelse is_ground_list t
 
-  fun is_ground_fn t =
-     is_comb t andalso
-        let
-           val (f, l) = boolSyntax.strip_comb t
-           val tn as (thy, name) = name_thy f
-           val typ = Term.type_of (Term.prim_mk_const {Name = name, Thy = thy})
-        in
-           (List.length (fst (boolSyntax.strip_fun typ)) = List.length l)
-           andalso Redblackset.member (s, tn) andalso Lib.all is_ground_arg l
-        end
+  fun is_ground_fn s =
+     fn t =>
+        is_comb t andalso
+           let
+              val (f, l) = boolSyntax.strip_comb t
+              val tn as (thy, name) = name_thy f
+              val typ =
+                 Term.type_of (Term.prim_mk_const {Name = name, Thy = thy})
+           in
+              (List.length (fst (boolSyntax.strip_fun typ)) = List.length l)
+              andalso Redblackset.member (s, tn) andalso Lib.all is_ground_arg l
+           end
 
   val alpha_rws =
    [word_lsb_n2w, word_lsb_word_T, word_msb_word_T, WORD_0_POS, WORD_L_NEG,
@@ -426,6 +438,10 @@ local
     word_join_0, word_concat_0_0, word_concat_word_T, word_join_word_T,
     WORD_BITS_ZERO2, WORD_EXTRACT_ZERO2, WORD_SLICE_ZERO2,
     (REWRITE_RULE [LSB_ODD] o GSYM) LSB_def, BIT_ZERO, BITS_ZERO2]
+
+  val alpha_rws2 =
+   [WORD_ADD_0, WORD_SUB_RZERO, WORD_MULT_CLAUSES, WORD_XOR_CLAUSES,
+    WORD_AND_CLAUSES, WORD_OR_CLAUSES]
 
   fun PRIM_UINT_MAX_CONV d =
      PURE_REWRITE_CONV [GSYM (EVAL (wordsSyntax.mk_word_T d)), SYM_WORD_NEG_1]
@@ -445,12 +461,18 @@ in
 
   fun WORD_GROUND_CONV u =
      let
-        val c = PURE_REWRITE_CONV alpha_rws THENC WORD_EVAL_CONV
-        val c = if u then c THENC UINT_MAX_CONV else c
+        val (c, set) =
+           if u then
+              (PURE_REWRITE_CONV alpha_rws
+               THENC WORD_EVAL_CONV
+               THENC UINT_MAX_CONV, s)
+           else (PURE_REWRITE_CONV (alpha_rws @ alpha_rws2)
+                 THENC WORD_EVAL_CONV, s2)
+        val is_ground = is_ground_fn set
      in
         fn t =>
            let
-             val _ = null (type_vars_in_term t) andalso is_ground_fn t orelse
+             val _ = null (type_vars_in_term t) andalso is_ground t orelse
                      raise ERR "WORD_GROUND_CONV"
                                "Term not ground or contains type variables."
            in
