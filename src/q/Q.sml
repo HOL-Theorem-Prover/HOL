@@ -78,6 +78,8 @@ fun GEN [QUOTE s] th =
      end
   | GEN _ _ = raise ERR "GEN" "unexpected quote format"
 
+val GENL = rev_itlist GEN
+
 fun SPEC q =
  W(Thm.SPEC o ptm_with_ty q o (type_of o fst o dest_forall o concl));
 
