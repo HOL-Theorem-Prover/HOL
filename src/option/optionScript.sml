@@ -79,21 +79,9 @@ val NONE_DEF = new_definition("NONE_DEF",Term`NONE = option_ABS(INR one)`);
 val _ = ot "SOME"
 val _ = ot "NONE"
 
-val option_CASES_orig = prove
-(Term`!opt. (?x. opt = SOME x) \/ (opt = NONE)`,
-GEN_TAC THEN PURE_REWRITE_TAC[SOME_DEF,NONE_DEF]
- THEN PURE_ONCE_REWRITE_TAC[SYM(SPEC_ALL option_REP_ONE_ONE)]
- THEN PURE_ONCE_REWRITE_TAC[reduce(option_REP_ABS_DEF)]
- THEN STRIP_ASSUME_TAC (ISPEC (--`option_REP opt`--) sumTheory.ISL_OR_ISR)
- THENL
- [DISJ1_TAC THEN IMP_RES_TAC sumTheory.INL THEN POP_ASSUM (SUBST1_TAC o SYM)
-      THEN EXISTS_TAC (--`OUTL (option_REP opt)`--) THEN REFL_TAC,
-  DISJ2_TAC THEN IMP_RES_TAC sumTheory.INR THEN POP_ASSUM (SUBST1_TAC o SYM)
-      THEN ONCE_REWRITE_TAC[oneTheory.one] THEN REFL_TAC]);
-
 val option_Axiom = store_thm (
   "option_Axiom",
-  Term`!e f:'a -> 'b. ?fn. (!x. fn (SOME x) = f x) /\ (fn NONE = e)`,
+  Term`!e f:'a -> 'b. ?fn. (fn NONE = e) /\ (!x. fn (SOME x) = f x)`,
   REPEAT GEN_TAC THEN
   PURE_REWRITE_TAC[SOME_DEF,NONE_DEF] THEN
   STRIP_ASSUME_TAC
@@ -114,6 +102,16 @@ val option_induction = store_thm (
   HO_MATCH_MP_TAC sumTheory.sum_INDUCT THEN
   ONCE_REWRITE_TAC [oneTheory.one] THEN ASM_REWRITE_TAC []);
 
+val option_nchotomy = save_thm(
+  "option_nchotomy",
+  prove_cases_thm option_induction
+    |> hd
+    |> CONV_RULE (RENAME_VARS_CONV ["opt"] THENC
+                  BINDER_CONV (RAND_CONV (RENAME_VARS_CONV ["x"]))))
+
+val [option_case_def] = Prim_rec.define_case_constant option_Axiom
+val _ = ot0 "option_case" "case"
+
 val FORALL_OPTION = Q.store_thm
  ("FORALL_OPTION",
   `(!opt. P opt) = P NONE /\ !x. P (SOME x)`,
@@ -122,7 +120,7 @@ val FORALL_OPTION = Q.store_thm
 val EXISTS_OPTION = store_thm(
   "EXISTS_OPTION",
   ``(?opt. P opt) = P NONE \/ ?x. P (SOME x)``,
-  METIS_TAC [option_CASES_orig]);
+  METIS_TAC [option_nchotomy]);
 
 val SOME_11 = store_thm("SOME_11",
   Term`!x y :'a. (SOME x = SOME y) = (x=y)`,
@@ -141,15 +139,6 @@ val _ = export_rewrites ["NOT_NONE_SOME"]
         (* only need one because simplifier automatically flips the equality
            for us *)
 
-val option_nchotomy = save_thm("option_nchotomy",
- ONCE_REWRITE_RULE [DISJ_SYM] option_CASES_orig);
-
-val option_case_def = Prim_rec.new_recursive_definition
-  {name="option_case_def",
-   rec_axiom=option_Axiom,
-   def = Term`(option_case u f NONE = u) /\
-              (option_case (u:'b) f (SOME (x:'a)) = f x)`};
-val _ = ot0 "option_case" "case"
 
 val OPTION_MAP_DEF = Prim_rec.new_recursive_definition
  {name="OPTION_MAP_DEF",
@@ -243,14 +232,14 @@ val IS_SOME_IMP_SOME_THE_CANCEL = Q.prove(
 
 val option_case_ID = Q.store_thm(
   "option_case_ID",
-  `!x:'a option. option_case NONE SOME x = x`,
+  `!x:'a option. option_CASE x NONE SOME = x`,
     GEN_TAC
     THEN OPTION_CASES_TAC (--`(x :'a option)`--)
     THEN ASM_REWRITE_TAC option_rws
 );
 
 val IS_SOME_option_case_SOME = Q.prove(
-`!x:'a option. IS_SOME x ==> (option_case e SOME x = x)`,
+`!x:'a option. IS_SOME x ==> (option_CASE x e SOME = x)`,
     GEN_TAC
     THEN OPTION_CASES_TAC (--`(x :'a option)`--)
     THEN ASM_REWRITE_TAC option_rws
@@ -258,14 +247,14 @@ val IS_SOME_option_case_SOME = Q.prove(
 
 val option_case_SOME_ID = Q.store_thm(
   "option_case_SOME_ID",
-  `!x:'a option. (option_case x SOME x = x)`,
+  `!x:'a option. (option_CASE x x SOME = x)`,
     GEN_TAC
     THEN OPTION_CASES_TAC (--`(x :'a option)`--)
     THEN ASM_REWRITE_TAC option_rws
 );
 
 val IS_SOME_option_case = Q.prove(
-`!x:'a option. IS_SOME x ==> (option_case e (f:'a->'b) x = f (THE x))`,
+`!x:'a option. IS_SOME x ==> (option_CASE x e (f:'a->'b) = f (THE x))`,
     GEN_TAC
     THEN OPTION_CASES_TAC (--`(x :'a option)`--)
     THEN ASM_REWRITE_TAC option_rws
@@ -273,7 +262,7 @@ val IS_SOME_option_case = Q.prove(
 
 
 val IS_NONE_option_case = Q.prove(
-`!x:'a option. IS_NONE x ==> (option_case e f x = (e:'b))`,
+`!x:'a option. IS_NONE x ==> (option_CASE x e f = (e:'b))`,
     GEN_TAC
     THEN OPTION_CASES_TAC (--`(x :'a option)`--)
     THEN ASM_REWRITE_TAC option_rws
@@ -297,7 +286,7 @@ val option_CLAUSES = save_thm("option_CLAUSES",
 
 val option_case_compute = Q.store_thm
 ("option_case_compute",
- `option_case (e:'b) f (x:'a option) =
+ `option_CASE (x:'a option) (e:'b) f =
   if IS_SOME x then f (THE x) else e`,
     OPTION_CASES_TAC (--`(x :'a option)`--)
     THEN ASM_REWRITE_TAC option_rws);
@@ -547,7 +536,7 @@ val _ = adjoin_to_theory
     S "val _ = let open computeLib";                            NL();
     S "        in add_funs (map lazyfy_thm";                    NL();
     S "               [NOT_NONE_SOME,NOT_SOME_NONE,SOME_11,";   NL();
-    S "                option_case_compute,OPTION_MAP_DEF,";    NL();
+    S "                OPTION_MAP_DEF,";                        NL();
     S "                IS_SOME_DEF,IS_NONE_DEF,THE_DEF,";       NL();
     S "                OPTION_JOIN_DEF])";                      NL();
     S "        end;"
