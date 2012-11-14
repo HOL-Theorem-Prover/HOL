@@ -343,8 +343,8 @@ fun put_destructors thl (DFACTS
 fun basic_info case_def =
  let val clauses = (strip_conj o concl) case_def
      val lefts   = map (fst o dest_eq o #2 o strip_forall) clauses
-     val constrs = map (#1 o strip_comb o rand) lefts
-     val ty      = type_of (rand (Lib.trye hd lefts))
+     val constrs = map (#1 o strip_comb o hd o #2 o strip_comb) lefts
+     val ty      = type_of (hd (#2 (strip_comb (Lib.trye hd lefts))))
  in
    (ty, type_names ty, constrs)
  end
