@@ -161,7 +161,7 @@ val bool_redns =
  strictify_thm LET_DEF
  :: strictify_thm literal_case_DEF
  :: List.map lazyfy_thm
-      [COND_CLAUSES, COND_ID, NOT_CLAUSES, bool_case_DEF,
+      [COND_CLAUSES, COND_ID, NOT_CLAUSES,
        AND_CLAUSES, OR_CLAUSES, IMP_CLAUSES, EQ_CLAUSES];
 
 fun bool_compset() = let
