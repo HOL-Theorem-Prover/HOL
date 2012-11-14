@@ -376,11 +376,7 @@ val INR = store_thm("INR",
     ASM_REWRITE_TAC [ISR,OUTR]);
 val _ = export_rewrites ["INR"]
 
-val sum_case_def = Prim_rec.new_recursive_definition{
-  def = Term`(sum_case f g (INL x) = f x) /\
-             (sum_case f g (INR y) = g y)`,
-  name = "sum_case_def",
-  rec_axiom = sum_Axiom};
+val [sum_case_def] = Prim_rec.define_case_constant sum_Axiom
 val _ = export_rewrites ["sum_case_def"]
 
 val sum_case_cong = save_thm("sum_case_cong",
@@ -409,7 +405,7 @@ val SUM_MAP = store_thm (
 val SUM_MAP_CASE = store_thm (
   "SUM_MAP_CASE",
   ``!f g (z:'a + 'b).
-         (f ++ g) z = sum_case (INL o f) (INR o g) z :'c + 'd``,
+         (f ++ g) z = sum_CASE z (INL o f) (INR o g) :'c + 'd``,
   SIMP_TAC (srw_ss()) [FORALL_SUM]);
 
 val SUM_MAP_I = store_thm (
