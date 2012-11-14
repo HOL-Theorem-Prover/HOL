@@ -283,9 +283,16 @@ val pair_Axiom = Q.store_thm("pair_Axiom",
 (*                (UNCURRY f M = UNCURRY f' M')                             *)
 (* -------------------------------------------------------------------------*)
 
-val UNCURRY_CONG =
-  save_thm("UNCURRY_CONG", Prim_rec.case_cong_thm ABS_PAIR_THM UNCURRY_DEF);
-
+open simpLib boolSimps
+val UNCURRY_CONG = store_thm(
+  "UNCURRY_CONG",
+  ``!f' f M' M.
+       (M = M') /\ (!x y. (M' = (x,y)) ==> (f x y = f' x y)) ==>
+       (UNCURRY f M = UNCURRY f' M')``,
+  REPEAT STRIP_TAC THEN
+  Q.SPEC_THEN `M` FULL_STRUCT_CASES_TAC pair_CASES THEN
+  Q.SPEC_THEN `M'` FULL_STRUCT_CASES_TAC pair_CASES THEN
+  FULL_SIMP_TAC bool_ss [PAIR_EQ, UNCURRY_DEF])
 
 (*---------------------------------------------------------------------------
          LAMBDA_PROD = |- !P. (\p. P p) = (\(p1,p2). P (p1,p2))
@@ -496,18 +503,15 @@ RW_TAC bool_ss [EXISTS_UNIQUE_THM]
        TFL support.
  ---------------------------------------------------------------------------*)
 
-val pair_case_def =
-  new_definition("pair_case_def", Term`pair_case = UNCURRY`);
+val pair_CASE_def =
+  new_definition("pair_CASE_def", Term`pair_CASE p f = f (FST p) (SND p)`)
 val _ = ot0 "pair_case" "case"
 
 val pair_case_thm = save_thm("pair_case_thm",
-   Rewrite.REWRITE_RULE [UNCURRY_DEF]
-      (MK_COMB(MK_COMB (pair_case_def, REFL(Term`f:'a->'b ->'c`)),
-               REFL (Term`(x,y)`))));
+  pair_CASE_def |> Q.SPEC `(x,y)` |> REWRITE_RULE [FST, SND] |> SPEC_ALL)
 
 val pair_case_cong = save_thm("pair_case_cong",
- Rewrite.PURE_REWRITE_RULE[GSYM pair_case_def] UNCURRY_CONG);
-
+  Prim_rec.case_cong_thm pair_CASES pair_case_thm);
 val pair_rws = [PAIR, FST, SND];
 
 
