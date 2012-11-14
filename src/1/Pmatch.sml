@@ -388,10 +388,10 @@ fun mk_case ty_info ty_match FV range_ty =
            val rec_calls = map mk news
            val (pat_rect,dtrees) = unzip rec_calls
            val case_functions = map list_mk_abs(zip new_formals dtrees)
-           val types = map type_of (case_functions@[u])
+           val types = map type_of (u::case_functions)
            val case_const' = mk_thy_const{Name = case_const_name, Thy = Thy,
                                           Ty = list_mk_fun(types, range_ty)}
-           val tree = list_mk_comb(case_const', case_functions@[u])
+           val tree = list_mk_comb(case_const', u::case_functions)
            val pat_rect1 = flatten(map2 mk_pat constructors' pat_rect)
        in
           (pat_rect1,tree)
