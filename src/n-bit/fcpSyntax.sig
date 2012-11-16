@@ -22,13 +22,40 @@ sig
     val mk_fcp                : term * hol_type -> term
     val mk_fcp_index          : term * term -> term
     val mk_dimindex           : hol_type -> term
+    val mk_fcp_update         : term * term * term -> term
+    val mk_fcp_hd             : term -> term
+    val mk_fcp_tl             : term -> term
+    val mk_fcp_cons           : term * term -> term
+    val mk_fcp_map            : term * term -> term
+    val mk_fcp_exists         : term * term -> term
+    val mk_fcp_every          : term * term -> term
+    val mk_v2l                : term -> term
+    val mk_l2v                : term -> term
 
     val dest_fcp              : term -> term * hol_type
     val dest_fcp_index        : term -> term * term
     val dest_dimindex         : term -> hol_type
+    val dest_fcp_update       : term -> term * term * term
+    val dest_fcp_hd           : term -> term
+    val dest_fcp_tl           : term -> term
+    val dest_fcp_cons         : term -> term * term
+    val dest_fcp_map          : term -> term * term 
+    val dest_fcp_exists       : term -> term * term
+    val dest_fcp_every        : term -> term * term
+    val dest_v2l              : term -> term
+    val dest_l2v              : term -> term
 
     val is_fcp                : term -> bool
     val is_fcp_index          : term -> bool
     val is_dimindex           : term -> bool
+    val is_fcp_update         : term -> bool
+    val is_fcp_hd             : term -> bool
+    val is_fcp_tl             : term -> bool
+    val is_fcp_cons           : term -> bool
+    val is_fcp_map            : term -> bool
+    val is_fcp_exists         : term -> bool
+    val is_fcp_every          : term -> bool
+    val is_v2l                : term -> bool
+    val is_l2v                : term -> bool
 
 end

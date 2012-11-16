@@ -287,9 +287,6 @@ val _ = adjoin_to_theory {
 }
 end
 
-
-
-
 val CART_EQ = store_thm("CART_EQ",
   `!(x:'a ** 'b) y.
     (x = y) = (!i. i < dimindex(:'b) ==> (x ' i = y ' i))`,
@@ -838,17 +835,21 @@ val FCP_APPLY_UPDATE_THM = store_thm("FCP_APPLY_UPDATE_THM",
 
 open listTheory;
 
-val FCP_TL_def = Define `
-  FCP_TL v = (FCP i. v ' (SUC i))`;
 val FCP_HD_def = Define `
   FCP_HD v = v ' 0`;
+
+val FCP_TL_def = Define `
+  FCP_TL v = FCP i. v ' (SUC i)`;
+
 val FCP_CONS_def = Define `
   FCP_CONS h (v:'a ** 'b) = (0 :+ h) (FCP i. v ' (PRE i))`;
 
 val FCP_MAP_def = Define `
   FCP_MAP f (v:'a ** 'c) = (FCP i. f (v ' i)):'b ** 'c`;
+
 val FCP_EXISTS_def = Define `
   FCP_EXISTS P (v:'b ** 'a) = ?i. i < dimindex (:'a) /\ P (v ' i)`;
+
 val FCP_EVERY_def = Define `
   FCP_EVERY P (v:'b ** 'a) = !i. dimindex (:'a) <= i \/ P (v ' i)`;
 
@@ -856,6 +857,7 @@ val V2L_def = Define `
   V2L (v:'a ** 'b) =
     @L. (LENGTH L = dimindex (:'b)) /\
         !i. i < dimindex (:'b) ==> (EL i L = (v:'a ** 'b) ' i)`;
+
 val L2V_def = Define `
   L2V L = FCP i. EL i L`;
 
