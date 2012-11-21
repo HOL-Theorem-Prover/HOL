@@ -91,6 +91,8 @@ sig
                        (* get returns list of tyinfos for types with that tyop *)
 
    val listItems       : typeBase -> tyinfo list
+   val toPmatchThry    : typeBase -> {Thy:string,Tyop:string} ->
+                         {constructors : term list, case_const : term} option
 
   (* Support for polytypism *)
 

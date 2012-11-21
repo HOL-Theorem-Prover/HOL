@@ -630,6 +630,14 @@ end
 
 fun listItems db = map #2 (TypeNet.listItems db)
 
+fun toPmatchThry tbase {Thy,Tyop} =
+    case prim_get tbase (Thy,Tyop) of
+        NONE => NONE
+      | SOME tyi => SOME {case_const = case_const_of tyi,
+                          constructors = constructors_of tyi}
+
+
+
 (*---------------------------------------------------------------------------*)
 (* If ty1 is an instance of ty2, then return the record                      *)
 (*---------------------------------------------------------------------------*)
