@@ -686,4 +686,27 @@ fun mk_functional thy eqs =
  end
 end;
 
+(*---------------------------------------------------------------------------
+   Given a list of (pattern,expression) pairs, mk_pattern_fn creates a term
+   as an abstraction containing a case expression on the function's argument.
+ ---------------------------------------------------------------------------*)
+
+fun mk_pattern_fn thy (pes: (term * term) list) =
+  let fun err s = raise ERR "mk_pattern_fn" s
+      val (p0,e0) = Lib.trye hd pes
+          handle HOL_ERR _ => err "empty list of (pattern,expression) pairs"
+      val pty = type_of p0 and ety = type_of e0
+      val (ps,es) = unzip pes
+      val _ = if all (Lib.equal pty o type_of) ps then ()
+              else err "patterns have varying types"
+      val _ = if all (Lib.equal ety o type_of) es then ()
+              else err "expressions have varying types"
+      val fvar = genvar (pty --> ety)
+      val eqs = list_mk_conj (map (fn (p,e) => mk_eq(mk_comb(fvar,p), e)) pes)
+      val {functional,pats} = mk_functional thy eqs
+      val f = snd (dest_abs functional)
+   in
+     f
+  end
+
 end;
