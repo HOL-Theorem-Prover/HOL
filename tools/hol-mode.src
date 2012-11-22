@@ -60,6 +60,14 @@
   :group 'hol
   :type 'boolean)
 
+(defcustom hol-unicode-print-font-filename
+  "/usr/share/fonts/truetype/ttf-dejavu/DejaVuSans.ttf"
+  "File name of font to use when printing HOL output to a PDF file."
+  :group 'hol
+  :type '(file :must-match t))
+
+
+
 (defvar hol-generate-locpragma-p t
   "*Whether or not to generate (*#loc row col *) pragmas for HOL.")
 
@@ -1522,7 +1530,20 @@ module if not already loaded.)"
   "The face for presenting HOL types."
   :group 'hol-faces)
 
-
+(defun hol-region-to-unicode-pdf (filename beg end)
+  "Print region to FILE as a PDF, handling Unicode characters."
+  (interactive "FFile to write to: \nr")
+  (if (and transient-mark-mode (not mark-active))
+      (error "No active region"))
+  (let* ((temp-ps-file (make-temp-file "holprint" nil ".ps"))
+         (lpr-switches
+          (list "-font" hol-unicode-print-font-filename
+                "-out" temp-ps-file))
+         (lpr-add-switches nil)
+         (lpr-command "uniprint"))
+    (lpr-region beg end)
+    (shell-command (concat "ps2pdf " temp-ps-file " " filename))
+    (delete-file temp-ps-file)))
 
 ;;The key combinations
 (define-key global-map "\M-h" 'hol-map)
