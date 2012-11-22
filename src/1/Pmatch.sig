@@ -10,6 +10,7 @@ sig
         = GIVEN   of term * int
         | OMITTED of term * int
 
+   val allow_new_clauses : bool ref
    val pat_of : pattern -> term
    val givens : pattern list -> term list
 
