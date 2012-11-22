@@ -18,11 +18,20 @@ sig
     val fcp_tm                : term
     val fcp_index_tm          : term
     val dimindex_tm           : term
+    val fcp_update_tm         : term
+    val fcp_hd_tm             : term
+    val fcp_tl_tm             : term
+    val fcp_cons_tm           : term
+    val fcp_map_tm            : term
+    val fcp_exists_tm         : term
+    val fcp_every_tm          : term
+    val v2l_tm                : term
+    val l2v_tm                : term
 
     val mk_fcp                : term * hol_type -> term
     val mk_fcp_index          : term * term -> term
     val mk_dimindex           : hol_type -> term
-    val mk_fcp_update         : term * term * term -> term
+    val mk_fcp_update         : term * term * term -> term  (* A[i] := v is mk_fcp_update (A,i,v)  *)
     val mk_fcp_hd             : term -> term
     val mk_fcp_tl             : term -> term
     val mk_fcp_cons           : term * term -> term
