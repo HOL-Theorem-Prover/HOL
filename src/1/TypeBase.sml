@@ -141,6 +141,13 @@ fun dest_case x = TypeBasePure.dest_case (theTypeBase()) x
 fun is_case x   = TypeBasePure.is_case (theTypeBase()) x;
 fun strip_case x = TypeBasePure.strip_case (theTypeBase()) x
 
+fun mk_pattern_fn css =
+   let
+      val pmthry = TypeBasePure.toPmatchThry (theTypeBase ())
+   in
+      Pmatch.mk_pattern_fn pmthry css
+   end
+
 (*---------------------------------------------------------------------------*)
 (* Syntax operations on records                                              *)
 (*---------------------------------------------------------------------------*)

@@ -90,9 +90,8 @@ in
          val _ = List.all (Lib.equal ty o Term.type_of) l
                  orelse raise ERR "Define_string2enum" "not an enum type"
          val css = List.map (fn c => (e2s c, c)) l
-         val pmthry = TypeBasePure.toPmatchThry (TypeBase.theTypeBase ())
          val cs = Lib.with_flag (Feedback.emit_MESG, false)
-                                (Pmatch.mk_pattern_fn pmthry) css
+                                TypeBase.mk_pattern_fn css
          val (v, b) = Term.dest_abs cs
          val name = "string2" ^ fst (Type.dest_type ty)
          val f = Term.mk_var (name, stringSyntax.string_ty --> ty)
