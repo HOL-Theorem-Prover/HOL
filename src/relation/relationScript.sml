@@ -819,6 +819,7 @@ val RTC_lifts_invariants = Q.store_thm(
 val WF_DEF =
 Q.new_definition
  ("WF_DEF", `WF R = !B. (?w:'a. B w) ==> ?min. B min /\ !b. R b min ==> ~B b`);
+val _ = OpenTheoryMap.OpenTheory_const_name {const={Thy="relation",Name="WF"},name=(["Relation"],"wellFounded")}
 
 (*---------------------------------------------------------------------------*)
 (* Misc. proof tools, from pre-automation days.                              *)
