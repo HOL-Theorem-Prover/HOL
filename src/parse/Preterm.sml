@@ -2078,7 +2078,14 @@ fun TC printers = let
           if is_debug() then print ("\nChecking term that has type constraint:\n" ^
                                    preterm_to_string Ptm ^ "\n") else ();
          let val Ptm' = check Ptm
+             val _ = if is_debug() then print ("\nChecked term that has type constraint:\n" ^
+                                   preterm_to_string Ptm' ^ "\n") else ()
+             val Ptm_ty' = ptype_of Ptm'
+             val _ = if is_debug() then print ("\nComputed unreduced type of term that has type constraint:\n" ^
+                                   Pretype.pretype_to_string Ptm_ty' ^ "\n") else ()
              val Ptm_ty = Pretype.deep_beta_eta_ty (ptype_of Ptm')
+             val _ = if is_debug() then print ("\nComputed reduced type of term that has type constraint:\n" ^
+                                   Pretype.pretype_to_string Ptm_ty ^ "\n") else ()
          in if Pretype.is_univ_type Ptm_ty andalso Pretype.is_not_univ_type Ty then
             (if not(is_debug()) then () else
                print ("\nInserting type arguments to the constrained term\n" ^ preterm_to_string Ptm' ^ "\n");

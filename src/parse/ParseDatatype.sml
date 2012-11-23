@@ -612,9 +612,14 @@ fun dTyop {Tyop, Thy, Args} =
                      | {Thy,Tyop} :: _ => SOME Thy
       val pre_kd = case Thy_s
                     of SOME s => let val prim_kd = Type.prim_kind_of{Thy=s, Tyop=Tyop}
-                                 in case rename_kv [] (fromKind prim_kd) ([],[])
-                                     of (_, SOME pre_kd) => pre_kd
-                                      | _ => raise ERR "dTyop" "impossible"
+                                 in if current_trace "lift_humble_type_constants" = 1 andalso
+                                       Kind.is_type_kind prim_kd andalso
+                                       Type.humble_of{Thy=s, Tyop=Tyop}
+                                    then fromKind prim_kd (* don't rename zero ranks;
+                                               this constant type need not promote. *)
+                                    else case rename_kv [] (fromKind prim_kd) ([],[])
+                                          of (_, SOME pre_kd) => pre_kd
+                                           | _ => raise ERR "dTyop" "impossible"
                                  end
                      | NONE => list_mk_arrow_kind(map pkind_of Args, typ Prerank.Zerorank)
       val c = dContype{Thy=Thy, Tyop=Tyop, Kind=pre_kd}
@@ -840,13 +845,33 @@ fun make_type_atom (s,kd) E =
    handle HOL_ERR _ =>
    make_free_tyvar ((s,kd), E)
 
-
+(*
 fun make_type_constant {Thy=Thy0,Tyop=Tyop0} E =
  let val c = case Thy0 of
                    SOME Thy' => Type.prim_mk_thy_con_type {Thy=Thy',Tyop=Tyop0}
                  | NONE      => Type.prim_mk_con_type Tyop0
      val {Thy,Tyop,Kind} = Type.dest_thy_con_type c
      val Kind' = Prekind.rename_kindvars [] (Prekind.fromKind Kind)
+ in (dContype {Thy=SOME Thy,Tyop=Tyop,Kind=Kind'}, E)
+ end
+ handle Feedback.HOL_ERR _ =>
+ let val Kind' = Prekind.all_new_uvar()
+ in (dContype {Thy=Thy0,Tyop=Tyop0,Kind=Kind'}, E)
+ end
+*)
+
+fun make_type_constant {Thy=Thy0,Tyop=Tyop0,Kind=Kind0} E =
+ let val c = case Thy0 of
+                   SOME Thy' => Type.prim_mk_thy_con_type {Thy=Thy',Tyop=Tyop0}
+                 | NONE      => Type.prim_mk_con_type Tyop0
+     val {Thy,Tyop,Kind} = Type.dest_thy_con_type c
+     (**)
+     val Kind' = if current_trace "lift_humble_type_constants" = 1 andalso
+                    Kind.is_type_kind Kind andalso Type.humble_of{Thy=Thy,Tyop=Tyop}
+                 then Prekind.fromKind Kind (* don't rename zero ranks;
+                                               this constant type need not promote. *)
+                 else Prekind.rename_kindvars [] (Prekind.fromKind Kind)
+     (**)
  in (dContype {Thy=SOME Thy,Tyop=Tyop,Kind=Kind'}, E)
  end
  handle Feedback.HOL_ERR _ =>
@@ -938,7 +963,7 @@ fun to_ptyInEnv ty = let
     | binder_type _ _ = raise ERR "to_ptyInEnv" "non-variable type binder"
 in case ty of
      dVartype(s,kd)  => make_type_atom (s,kd)
-   | dContype{Thy,Tyop,Kind} => make_type_constant {Thy=Thy,Tyop=Tyop}
+   | dContype{Thy,Tyop,Kind} => make_type_constant {Thy=Thy,Tyop=Tyop,Kind=Kind}
    | dTyApp(ty1,ty2   ) => list_make_app_type (map to_ptyInEnv [ty1,ty2])
    | dTyUniv(bvar,body) => bind_type [binder_type "!"  bvar] (to_ptyInEnv body)
    | dTyExist(bvar,body) => bind_type [binder_type "?"  bvar] (to_ptyInEnv body)

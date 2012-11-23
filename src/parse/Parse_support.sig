@@ -42,7 +42,7 @@ sig
                               string -> preterm_in_env
   val make_type_atom        : locn.locn -> (string * prekind) -> pretype_in_env
   val make_uvar_type        : locn.locn -> uvartype ref -> pretype_in_env option -> pretype_in_env
-  val make_type_constant    : locn.locn -> {Thy:string,Tyop:string} -> pretype_in_env
+  val make_type_constant    : locn.locn -> {Thy:string,Tyop:string,Kind:prekind} -> pretype_in_env
   val make_qconst           : overload_info -> locn.locn -> string * string ->
                               preterm_in_env
   val list_make_comb        : locn.locn -> preterm_in_env list -> preterm_in_env

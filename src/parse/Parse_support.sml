@@ -535,11 +535,27 @@ fun make_atom oinfo l s E =
                        ("Record field "^String.extract(s, size rfn, NONE)^
                         " not registered")
 
+(*
 fun make_type_constant l {Thy=Thy0,Tyop=Tyop0} E =
  let open Pretype
      val c = Type.prim_mk_thy_con_type {Thy=Thy0,Tyop=Tyop0}
      val {Thy,Tyop,Kind} = Type.dest_thy_con_type c
      val Kind' = Prekind.rename_kindvars [] (Prekind.fromKind Kind)
+ in (PT(Contype {Thy=Thy0,Tyop=Tyop0,Kind=Kind'}, l), E)
+ end
+*)
+
+fun make_type_constant l {Thy=Thy0,Tyop=Tyop0,Kind=Kind0} E =
+ let open Pretype
+(**)
+     val c = Type.prim_mk_thy_con_type {Thy=Thy0,Tyop=Tyop0}
+     val {Thy,Tyop,Kind} = Type.dest_thy_con_type c
+     val Kind' = if current_trace "lift_humble_type_constants" = 1 andalso
+                    Kind.is_type_kind Kind andalso Type.humble_of{Thy=Thy,Tyop=Tyop}
+                 then Prekind.fromKind Kind (* don't rename zero ranks;
+                                               this constant type need not promote. *)
+                 else Prekind.rename_kindvars [] (Prekind.fromKind Kind)
+(**)
  in (PT(Contype {Thy=Thy0,Tyop=Tyop0,Kind=Kind'}, l), E)
  end
 

@@ -15,6 +15,9 @@ fun is_debug() = current_trace "debug_type_inference" >= 4;
 val show_kinds = ref 1
 val _ = Feedback.register_trace("kinds", show_kinds, 2)
 
+val lift_humble_type_constants = ref 0
+val _ = Feedback.register_trace("lift_humble_type_constants", lift_humble_type_constants, 1)
+
 val TCERR = mk_HOL_ERR "Prekind";
 val ERRloc = mk_HOL_ERRloc "Prekind"
 
@@ -447,13 +450,28 @@ report "Unifying kinds" s n kd1 kd2 (
    the rank of the left side is <= the rank of the right side.
    Together, these two restrictions imply that:
    1) If the UVarkind is on the right, then the rank reconciliation can be <= ,
-   2) but if the UVarkind is on the left, then the rank reconciliation must be = .
+   2) but if the UVarkind is on the left, then the rank reconciliation must be = ,
+      UNLESS the right is a Typekind, when we can simply reconcile ranks by <=
+      and replace the UVarkind by a Typekind of the same rank.
 *)
     (_, UVarkind (r as ref (NONEK rk)))  =>
        rank_unify_le (prank_of kd1) (* <= *) rk >> bind gen_unify r kd1
   | (k1, UVarkind (r as ref (SOMEK k2))) => gen_unify kd1 k2
+(*
+  | (UVarkind (r as ref (NONEK rk)), Typekind rk2)  =>
+       (fn e => (if current_trace "ranks" < 3 then () else print "(UVarkind,Typekind)\n";
+                 rank_unify_le rk (* <= *) rk2 e))
+       >> bind gen_unify r (PK(Typekind rk,locn1))
   | (UVarkind (r as ref (NONEK rk)), _)  =>
-       rank_unify rk (* = *) (prank_of kd2) >> bind gen_unify r kd2
+       (fn e => (if current_trace "ranks" < 3 then () else print "(UVarkind, NOT Typekind)\n";
+                 rank_unify rk (* = *) (prank_of kd2) e))
+       >> bind gen_unify r kd2
+*)
+  | (UVarkind (r as ref (NONEK rk)), _)  =>
+       (fn e =>
+         (if is_type_kind kd2
+          then rank_unify_le rk (* <= *) (prank_of kd2) >> bind gen_unify r (PK(Typekind rk,locn1))
+          else rank_unify    rk (*  = *) (prank_of kd2) >> bind gen_unify r kd2) e)
   | (UVarkind (r as ref (SOMEK k1)), k2) => gen_unify k1 kd2
   | (Varkind (s1,rk1), Varkind (s2,rk2)) =>
        (fn e => (if s1 = s2 then ok else fail) e) >> rank_unify rk1 rk2

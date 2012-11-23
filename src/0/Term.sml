@@ -158,6 +158,7 @@ local fun lookup 0 (ty::_)  = ty
 	| rk_of_tm (t as Clos _) T E        = rk_of_tm (push_clos t) T E
         | rk_of_tm tm T E                   = Type.rk_of (ty_of tm T E) T
 in
+val ty_of = ty_of
 fun type_of tm = ty_of tm [] []
 fun rank_of_term tm = rk_of_tm tm [] []
 end;
@@ -976,7 +977,8 @@ local fun pop (tm as Fv(s,ty),k)    = Fv(s,pop_ty(ty,k))
         | ty_eta_body _ = raise ERR "ty_eta_conv" "not a type eta-redex"
 in
 fun ty_eta_conv (TAbs((_,kd),Body)) =
-      if not (kd = kind_of (fst (dest_univ_type (type_of (fst (dest_tycomb Body))))))
+      if (not (kd = Type.kd_of (fst (dest_univ_type (ty_of (fst (dest_tycomb Body)) [kd] []))) [kd]))
+         handle HOL_ERR _ => true
       then raise ERR "ty_eta_conv" "not a type eta-redex"
       else ty_eta_body Body
   | ty_eta_conv (tm as Clos _) = ty_eta_conv (push_clos tm)
@@ -1044,9 +1046,9 @@ fun check_subst [] = ()
               assume the kind check was done earlier and proceed. *)
        in
          if not (rank_of kdx >= rank_of kdu)
-         then raise ERR "inst" "rank of residue is not contained in rank of redex"
+         then raise ERR "pure_inst" "rank of residue is not contained in rank of redex"
          else if not (kdx :>=: kdu)
-         then raise ERR "inst" "kind of residue is not contained in kind of redex"
+         then raise ERR "pure_inst" "kind of residue is not contained in kind of redex"
          else check_subst s
        end handle HOL_ERR {origin_structure="Type",
                            origin_function ="kind_of",
@@ -1242,7 +1244,7 @@ fun align_inst [] = I
   let val Theta = align_types theta
   in inst_rk_kd_ty Theta
   end
-  handle e as HOL_ERR _ => raise (wrap_exn "Term" "align_inst" e)
+  handle e as HOL_ERR _ => raise (wrap_exn "Term" "inst" e)
 
 val inst = align_inst
 

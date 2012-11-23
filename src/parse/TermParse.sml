@@ -265,7 +265,7 @@ fun to_ptyInEnv ty = let
     | binder_type _ _ = raise ERROR "to_ptyInEnv" "non-variable type binder"
 in case ty0 of
      Vartype(s,kd)  => make_type_atom l (s,kd)
-   | Contype{Thy,Tyop,Kind} => make_type_constant l {Thy=Thy,Tyop=Tyop}
+   | Contype{Thy,Tyop,Kind} => make_type_constant l {Thy=Thy,Tyop=Tyop,Kind=Kind}
    | TyApp(ty1,ty2   ) => list_make_app_type l (map to_ptyInEnv [ty1,ty2])
    | TyUniv(bvar,body) => bind_type l [binder_type "!"  bvar] (to_ptyInEnv body)
    | TyExis(bvar,body) => bind_type l [binder_type "?"  bvar] (to_ptyInEnv body)

@@ -1112,7 +1112,15 @@ fun beta_conv_ty (PT(TyApp(M, N), _))
              val _ = if not (is_debug()) then () else
                      print ("beta_conv_ty: Bvar = " ^ pretype_to_string Bvar ^ "\n")
 *)
+             val N_kd = pkind_of N
+             val B_kd = pkind_of Bvar
+             val _ = if ge_kind B_kd N_kd then ()
+                     else (if not (is_debug()) then () else
+                           print ("Pretype.beta_conv_ty: unifying kinds\n");
+                           Prekind.unify_le N_kd (* :<=: *) B_kd)
+(*
              val _ = Prekind.unify_le (pkind_of N) (* :<=: *) (pkind_of Bvar);
+*)
 (*
              val _ = if not (is_debug()) then () else
                      print ("beta_conv_ty: kind and rank unified; about to subst\n");
@@ -1882,6 +1890,7 @@ fun gen_unify (kind_unify   :int -> prekind -> prekind -> ('a -> 'a * unit optio
   val gen_unify = gen_unify kind_unify kind_unify_le conty_kind_unify rank_unify bind cmp tyvars (n+1)
   val kind_unify = kind_unify (n+1)
   val kind_unify_le = kind_unify_le (n+1)
+  val kind_unify_cmp = if cmp = "<=" then kind_unify_le else kind_unify
   val conty_kind_unify = conty_kind_unify (n+1)
   val rank_unify = rank_unify (n+1)
   val bind = bind (n+1)
@@ -1980,27 +1989,32 @@ report "Type unification" cmp n c1 c2 ty1 ty2 (
    the kind of the left side is :<=: the kind of the right side.
    Together, these two restrictions imply that:
    1) If the UVar is on the right, then the kind reconciliation can be :<=: ,
-   2) but if the UVar is on the left, then the kind reconciliation must be :=: .
+   2) but if the UVar is on the left, then the kind reconciliation must be :=: ,
+      UNLESS the right is a Contype, when we can simply reconcile kinds by :<=:
+      and replace the UVar by a Contype of the same kind.
 *)
     (_, UVar (r as ref (NONEU kd))) =>
-        kind_unify_le (pkind_of ty1) (* :<=: *) kd >> (* allow inequality *)
+        kind_unify_cmp (pkind_of ty1) (* :<=: *) kd >> (* allow inequality *)
         bind gen_unify c2 c1 r ty1
   | (_, UVar (r as ref (SOMEU ty2))) => gen_unify c1 c2 ty1 ty2
+  | (UVar (r as ref (NONEU kd)), Contype {Kind=kd2,Thy=thy2,Tyop=tyop2}) =>
+        kind_unify_cmp kd (* :<=: *) kd2 >> (* allow inequality *)
+        bind gen_unify c1 c2 r (PT(Contype{Thy=thy2,Tyop=tyop2,Kind=kd},locn1))
   | (UVar (r as ref (NONEU kd)), _) =>
         kind_unify kd (* :=: *) (pkind_of ty2) >> (* require equality *)
         bind gen_unify c1 c2 r ty2
   | (UVar (r as ref (SOMEU ty1)), _) => gen_unify c1 c2 ty1 ty2
   | (Vartype (tv1 as (s1,kd1)), Vartype (tv2 as (s2,kd2))) =>
         (fn e => (if eq_varty c1 c2 tv1 tv2 then ok else fail) e) >>
-            kind_unify_le kd1 kd2
+            kind_unify_cmp kd1 kd2
   | (Contype {Kind=kd1,Thy=thy1,Tyop=tyop1},
      Contype {Kind=kd2,Thy=thy2,Tyop=tyop2}) =>
         (fn e => (if tyop1=tyop2 andalso thy1=thy2 then ok else fail) e) >>
             (* conty_kind_unify kd1 kd2 (* special kind unify that ignores ranks *) *)
 (**)
-           (if humble_of {Thy=thy1, Tyop=tyop1} (*is_type_con_name_basic{Thy=thy1, Tyop=tyop1}*)
+           (if humble_of {Thy=thy1, Tyop=tyop1}
             then conty_kind_unify (* special kind unify that ignores ranks *)
-            else kind_unify_le) kd1 kd2
+            else kind_unify_cmp) kd1 kd2
 (**)
   | (TyKindConstr{Ty=ty1',Kind=kd1}, _) =>
        kind_unify kd1 (pkind_of ty1') >> gen_unify c1 c2 ty1' ty2
@@ -2161,18 +2175,22 @@ fun ho_match gen_unify gen_unify_le homs e = let
              in (e, SOME new_homs)
              end
     fun match leftp lep n c1 c2 (vty,vopr,vargs) (cty,copr,cargs) =
+             (* vopr is the h.o. type variable to be bound, NOT copr *)
              let
                val gen_unify = if lep then gen_unify_le else gen_unify
                fun unify ty1 ty2 =
-                 if leftp then gen_unify (n+1) c1 c2 ty1 ty2
-                          else gen_unify (n+1) c2 c1 ty2 ty1
+                 gen_unify (n+1) c2 c1 ty2 ty1
+(*
+                 if leftp then gen_unify (n+1) c2 c1 ty2 ty1
+                          else gen_unify (n+1) c1 c2 ty1 ty2
+*)
                val pats = map (shift_context c1 c2) vargs
              in
                if not (ho_debug()) then () else
                print ("\nmatch " ^ (if leftp then "left " else "right") ^ "\n" ^
                       env_to_string c1 ^
                       pretype_to_string vty ^ "\n " ^
-                      (if lep then if leftp then "<=" else ">=" else " =") ^
+                      (if lep then if leftp then ">=" else "<=" else " =") ^
                       " with\n" ^
                       env_to_string c2 ^
                       pretype_to_string cty ^ "\n\n");
@@ -2201,7 +2219,7 @@ fun ho_match gen_unify gen_unify_le homs e = let
                                       pretype_to_string absty ^ "\n");
                    unify vopr absty
                  end
-             end
+             end (* fun match *)
 
     fun process_hom
            (i, (hom as (lep, n, c1, c2, ty1 as PT(t1,locn1), ty2 as PT(t2,locn2), erpt),
@@ -2258,13 +2276,13 @@ report "H.O. type unification" cmp n c1 c2 ty1 ty2 (
           if leftp (* true iff matching left side, ty1, as h.o. *) then
             (if not (ho_debug()) then () else
                   print "Higher order unification on the left\n";
-             match true lep n c1 c2 (ty1,opr1,args1) (ty2,opr2,args2) >>
+             match true (*lep*)true n c1 c2 (ty1,opr1,args1) (ty2,opr2,args2) >>
              collect_homs >- (fn new_homs =>
              ho_match (new_homs @ rest_homs)))
           else if ho_2 then
             (if not (ho_debug()) then () else
                   print "Higher order unification on the right\n";
-             match false lep n c2 c1 (ty2,opr2,args2) (ty1,opr1,args1) >>
+             match false (*lep*)true n c2 c1 (ty2,opr2,args2) (ty1,opr1,args1) >>
              collect_homs >- (fn new_homs =>
              ho_match (new_homs @ rest_homs)))
           else if length args1 = length args2 then (* arguments, in order, before operator *)
@@ -2297,7 +2315,7 @@ report "H.O. type unification" cmp n c1 c2 ty1 ty2 (
                                          andalso subset (type_uvarsl args1) (type_uvars ty2)
         in
           if ho_1 then
-             match true lep n c1 c2 (ty1,opr1,args1) (ty2,ty2,[]) >>
+             match true (*lep*)true n c1 c2 (ty1,opr1,args1) (ty2,ty2,[]) >>
              collect_homs >- (fn new_homs =>
              ho_match (new_homs @ rest_homs))
           else
@@ -2327,7 +2345,7 @@ report "H.O. type unification" cmp n c1 c2 ty1 ty2 (
                                          andalso subset (type_uvarsl args2) (type_uvars ty1)
         in
           if ho_2 then
-             match false lep n c2 c1 (ty2,opr2,args2) (ty1,ty1,[]) >>
+             match false (*lep*)true n c2 c1 (ty2,opr2,args2) (ty1,ty1,[]) >>
              collect_homs >- (fn new_homs =>
              ho_match (new_homs @ rest_homs))
           else
@@ -2378,7 +2396,7 @@ in
 end
 
 fun resolve_ho_matches () = let
-  val unify    = gen_unify kind_unify kind_unify    conty_kind_unify rank_unify unsafe_bind " =" etype_vars
+  val unify    = gen_unify kind_unify kind_unify_le conty_kind_unify rank_unify unsafe_bind " =" etype_vars
   val unify_le = gen_unify kind_unify kind_unify_le conty_kind_unify rank_unify unsafe_bind "<=" etype_vars
 in
   (case (do_ho_matches unify unify_le empty_env)
@@ -2393,7 +2411,7 @@ fun ho_gen_unify
               (conty_kind_unify:int -> prekind -> prekind -> ('a -> 'a * unit option))
               (rank_unify   :int -> prerank -> prerank -> ('a -> 'a * unit option))
               bind cmp tyvars n c1 c2 t1 t2 e =
-  let val unify1    = gen_unify kind_unify kind_unify    conty_kind_unify rank_unify bind " =" tyvars
+  let val unify1    = gen_unify kind_unify kind_unify_le conty_kind_unify rank_unify bind " =" tyvars
       val unify1_le = gen_unify kind_unify kind_unify_le conty_kind_unify rank_unify bind "<=" tyvars
       val unify' = if cmp = "<=" then unify1_le else unify1
       val _ = begin_homs()
@@ -2415,7 +2433,7 @@ fun unify t1 t2 =
                    ^ "\n   vs. " ^ ty2s' ^ "\n")
          end
   in
-  case (gen_unify kind_unify kind_unify conty_kind_unify rank_unify unsafe_bind " =" etype_vars 0 [] [] t1' t2' empty_env)
+  case (gen_unify kind_unify kind_unify_le conty_kind_unify rank_unify unsafe_bind " =" etype_vars 0 [] [] t1' t2' empty_env)
    of (bindings, SOME ()) => ()
     | (_, NONE) => raise TCERR "unify" "unify failed"
                                     (* ("unify failed: " ^ pretype_to_string t1
@@ -2592,7 +2610,7 @@ report "Binding safely = type" "= " n c1 c2 (PT(UVar r, locn.Loc_None)) value (f
         else ((renv,kenv,(r, SOMEU (shift_context c2 c1 value))::tenv), SOME ())
 )) env
 
-val safe_unify0    = gen_unify kind_unify kind_unify    conty_kind_unify rank_unify safe_bind " =" deref_type_vars 0 [] []
+val safe_unify0    = gen_unify kind_unify kind_unify_le conty_kind_unify rank_unify safe_bind " =" deref_type_vars 0 [] []
 val safe_unify_le0 = gen_unify kind_unify kind_unify_le conty_kind_unify rank_unify safe_bind "<=" deref_type_vars 0 [] []
 
 val ho_safe_unify0    =
@@ -2624,7 +2642,7 @@ fun unify t1 t2 =
                    ^ "\n   vs. " ^ ty2s' ^ "\n")
          end
   in
-  case (gen_unify kind_unify kind_unify conty_kind_unify rank_unify unsafe_bind " =" etype_vars 0 [] [] t1' t2' empty_env)
+  case (gen_unify kind_unify kind_unify_le conty_kind_unify rank_unify unsafe_bind " =" etype_vars 0 [] [] t1' t2' empty_env)
    of (bindings, SOME ()) =>
         let in case safe_res
                 of SOME () => ()
@@ -2717,7 +2735,9 @@ fun rename_tv kdavds avds (ty as PT(ty0, locn)) =
                            return (PT(Vartype(s,kd'), locn))))
        else replace kdavds (s,kd)
   | Contype {Thy,Tyop,Kind} =>
-       if Prekind.is_type_kind Kind
+       if current_trace "lift_humble_type_constants" = 1 andalso
+          Type.humble_of{Thy=Thy,Tyop=Tyop}
+          andalso Kind.is_type_kind(Type.prim_kind_of{Thy=Thy,Tyop=Tyop})
        then (* don't rename zero ranks; this constant type need not promote (save on uvars!). *)
          return ty
        else
@@ -3248,7 +3268,7 @@ fun test_reconcile_univ_types pat targ =
     let val pty = reconcile (deep_beta_eta_ty pat) (deep_beta_eta_ty targ)
         val zty = all_new_uvar()
         val (bindings, result) =
-          gen_unify kind_unify kind_unify conty_kind_unify rank_unify unsafe_bind " =" etype_vars 0 [] [] pty zty empty_env
+          gen_unify kind_unify kind_unify_le conty_kind_unify rank_unify unsafe_bind " =" etype_vars 0 [] [] pty zty empty_env
         (* bindings = (rank_bindings,kind_bindings,type_bindings) *)
     in (bindings, pty)
     end
@@ -3279,9 +3299,15 @@ fun tyop_to_qtyop ((tyop,locn), args) =
                               (tyop^" not a known type operator")
   | {Thy,Tyop} :: _ =>
       let val prim_kd = prim_kind_of{Thy=Thy, Tyop=Tyop}
-          val pre_kd = case Prekind.rename_kv [] (Prekind.fromKind prim_kd) ([],[])
-                         of (_, SOME pre_kd) => pre_kd
-                          | _ => raise ERR "tyop_to_qtyop" "impossible"
+          val pre_kd = if current_trace "lift_humble_type_constants" = 1 andalso
+                          Kind.is_type_kind prim_kd andalso
+                          Type.humble_of{Thy=Thy,Tyop=Tyop}
+                       then Prekind.fromKind prim_kd (* don't rename zero ranks;
+                                       this constant type need not promote. *)
+                       else
+                         case Prekind.rename_kv [] (Prekind.fromKind prim_kd) ([],[])
+                           of (_, SOME pre_kd) => pre_kd
+                            | _ => raise ERR "tyop_to_qtyop" "impossible"
           val c = mk_conty{Thy=Thy,Tyop=Tyop,Kind=pre_kd,Locn=locn}
       in list_mk_app_type(c, args)
       end
