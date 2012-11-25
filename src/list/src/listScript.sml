@@ -306,7 +306,7 @@ val list_nchotomy = save_thm("list_nchotomy", list_CASES);
 val list_case_def = TypeBase.case_def_of ``:'a list``;
 
 val list_case_compute = store_thm("list_case_compute",
- --`!(l:'a list). list_case (b:'b) f l =
+ --`!(l:'a list). list_CASE l (b:'b) f =
                   if NULL l then b else f (HD l) (TL l)`--,
    LIST_INDUCT_TAC THEN ASM_REWRITE_TAC [list_case_def,HD, TL,NULL_DEF]);
 

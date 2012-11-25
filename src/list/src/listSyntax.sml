@@ -48,7 +48,7 @@ val zip_tm       = prim_mk_const {Name = "ZIP",     Thy = "list"}
 val unzip_tm     = prim_mk_const {Name = "UNZIP",   Thy = "list"}
 val sum_tm       = prim_mk_const {Name = "SUM",     Thy = "list"}
 val reverse_tm   = prim_mk_const {Name = "REVERSE", Thy = "list"}
-val list_case_tm = prim_mk_const {Name = "list_case", Thy = "list"}
+val list_case_tm = prim_mk_const {Name = "list_CASE", Thy = "list"}
 val last_tm      = prim_mk_const {Name = "LAST",    Thy = "list"}
 val front_tm     = prim_mk_const {Name = "FRONT",   Thy = "list"}
 val all_distinct_tm = prim_mk_const {Name = "ALL_DISTINCT", Thy = "list"}
@@ -117,7 +117,7 @@ fun mk_list_case (n,c,l) =
  case total dest_list_type (type_of l)
   of SOME ty =>
        list_mk_comb
-          (inst [alpha |-> ty, beta |-> type_of n]list_case_tm, [n,c,l])
+          (inst [alpha |-> ty, beta |-> type_of n]list_case_tm, [l,n,c])
    | NONE => raise ERR "mk_list_case" "";
 
 
@@ -162,8 +162,12 @@ val dest_list_to_set = dest_monop list_to_set_tm
                           (ERR "dest_list_to_set" "not LIST_TO_SET")
 val dest_genlist  = dest_binop genlist_tm  (ERR "dest_genlist"  "not GENLIST")
 
-val dest_list_case = dest_triop list_case_tm
-                          (ERR "dest_list_case" "not list_case");
+fun dest_list_case t = let
+  val (l,n,c) = dest_triop list_case_tm
+                           (ERR "dest_list_case" "not list_case") t
+in
+  (n,c,l)
+end
 
 fun dest_mem t = let
   val (x,setl) = pred_setSyntax.dest_in t
