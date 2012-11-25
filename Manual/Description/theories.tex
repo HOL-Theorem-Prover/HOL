@@ -3379,7 +3379,7 @@ strings which returns an option type.
 \index{case expressions!over strings}
 
 Compound \HOL{} expressions that branch based on
-whether a term is an empty or non-empty string have the
+whether a term is an empty or non-empty string can be written with the
 surface syntax
 \begin{hol}
 \begin{verbatim}
@@ -3388,17 +3388,8 @@ surface syntax
      | STRING c rst => e2
 \end{verbatim}
 \end{hol}
-%
-Such an expression is translated to
-\holtxt{string\_case $e_1$ ($\lambda c\; rst.\ e_2)\ s$} where the constant
-\holtxt{string\_case} is defined as follows:
-\begin{hol}
-\begin{verbatim}
-   STRING_CASE_DEF
-     |- (string_case b f ""  = b) /\
-        (string_case b f (STRING c s) = f c s)
-\end{verbatim}
-\end{hol}
+
+Such an expression is actually a case-expression over the underlying list, and so the underlying constant is that for lists.
 
 \paragraph {Length and concatenation}
 

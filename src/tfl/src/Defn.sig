@@ -5,7 +5,7 @@ sig
   type thry   = TypeBasePure.typeBase
   type proofs = Manager.proofs
   type absyn  = Absyn.absyn
-  type pattern = Functional.pattern
+  type pattern = Pmatch.pattern
 
   val monitoring : bool ref
 

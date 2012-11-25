@@ -2,7 +2,7 @@ structure Defn :> Defn =
 struct
 
 open HolKernel Parse boolLib;
-open pairLib Rules wfrecUtils Functional Induction DefnBase;
+open pairLib Rules wfrecUtils Pmatch Induction DefnBase;
 
 type thry   = TypeBasePure.typeBase
 type proofs = Manager.proofs
@@ -576,7 +576,8 @@ fun elim_triv_literal_case th =
 (*---------------------------------------------------------------------------*)
 
 fun wfrec_eqns facts tup_eqs =
- let val {functional,pats} = mk_functional facts (protect tup_eqs)
+ let val {functional,pats} =
+         mk_functional (TypeBasePure.toPmatchThry facts) (protect tup_eqs)
      val SV = free_vars functional    (* schematic variables *)
      val (f, Body) = dest_abs functional
      val (x,_) = dest_abs Body

@@ -8,6 +8,7 @@ type thry   = {Tyop : string, Thy : string} ->
 
 val ERR = mk_HOL_ERR "Pmatch";
 
+val allow_new_clauses = ref true;
 
 (*---------------------------------------------------------------------------
       Miscellaneous support
@@ -39,6 +40,22 @@ fun match_type thry ty1 ty2 = Type.match_type ty1 ty2;
 
 fun match_info db s = db s
 
+(* should probably be in somewhere like HolKernel *)
+local val counter = ref 0
+in
+fun vary vlist =
+  let val slist = ref (map (fst o dest_var) vlist)
+      val _ = counter := 0
+      fun pass str =
+         if Lib.mem str (!slist)
+         then (counter := !counter + 1; pass ("v"^int_to_string(!counter)))
+         else (slist := str :: !slist; str)
+  in
+    fn ty => mk_var(pass "v", ty)
+  end
+end;
+
+
 (*---------------------------------------------------------------------------
  * This datatype carries some information about the origin of a
  * clause in a function definition.
@@ -47,19 +64,30 @@ fun match_info db s = db s
 datatype pattern = GIVEN   of term * int
                  | OMITTED of term * int
 
+fun pattern_cmp (GIVEN(_,i)) (GIVEN(_, j)) = i <= j
+  | pattern_cmp all others = raise ERR "pattern_cmp" ""
+
 fun psubst theta (GIVEN (tm,i)) = GIVEN(subst theta tm, i)
   | psubst theta (OMITTED (tm,i)) = OMITTED(subst theta tm, i);
 
 fun dest_pattern (GIVEN (tm,i)) = ((GIVEN,i),tm)
   | dest_pattern (OMITTED (tm,i)) = ((OMITTED,i),tm);
 
-val pat_of = #2 o dest_pattern;
-val row_of_pat = #2 o #1 o dest_pattern;
+fun pat_of (GIVEN (tm,_)) = tm
+  | pat_of (OMITTED(tm,_)) = tm
 
-fun not_omitted (GIVEN(tm,_)) = tm
-  | not_omitted (OMITTED _) = raise ERR"not_omitted" ""
-val givens = mapfilter not_omitted;
+fun row_of_pat (GIVEN(_, i)) = i
+  | row_of_pat (OMITTED _) = ~1
 
+fun dest_given (GIVEN(tm,_)) = tm
+  | dest_given (OMITTED _) = raise ERR "dest_given" ""
+
+fun mk_omitted tm = OMITTED(tm,~1)
+
+fun is_omitted (OMITTED _) = true
+  | is_omitted otherwise   = false;
+
+val givens = mapfilter dest_given;
 
 (*---------------------------------------------------------------------------
  * Produce an instance of a constructor, plus genvars for its arguments.
@@ -81,21 +109,21 @@ fun fresh_constr ty_match (colty:hol_type) gv c =
  * is a variable.                                                            *
  *---------------------------------------------------------------------------*)
 
-fun mk_groupl Literal rows =
+fun mk_groupl literal rows =
   let fun func (row as ((prefix, p::rst), rhs)) (in_group,not_in_group) =
-               if (is_var Literal andalso is_var p) orelse p = Literal
-               then if is_var Literal
+               if (is_var literal andalso is_var p) orelse p = literal
+               then if is_var literal
                     then (((prefix,p::rst), rhs)::in_group, not_in_group)
                     else (((prefix,rst), rhs)::in_group, not_in_group)
                else (in_group, row::not_in_group)
-        | func _ _ = raise ERR "mk_groupc" ""
+        | func _ _ = raise ERR "mk_groupl" ""
   in
     itlist func rows ([],[])
   end;
 
 (*---------------------------------------------------------------------------*
  * Goes through a list of rows and picks out the ones beginning with a       *
- * pattern with constructor = Name.                                          *
+ * pattern with constructor = c.                                             *
  *---------------------------------------------------------------------------*)
 
 fun mk_group c rows =
@@ -123,7 +151,7 @@ let  fun part {constrs = [],      rows, A} = rev A
          let val (in_group, not_in_group) = mk_groupl c rows
              val in_group' =
                  if (null in_group)  (* Constructor not given *)
-                 then [((prefix, []), OMITTED (mk_arb res_ty, ~1))]
+                 then [((prefix, []), mk_omitted (mk_arb res_ty))]
                  else in_group
              val gvars = if is_var c then [c] else []
          in
@@ -151,14 +179,12 @@ let val fresh = fresh_constr ty_match colty gv
              val (in_group, not_in_group) = mk_group c' rows
              val in_group' =
                  if (null in_group)  (* Constructor not given *)
-                 then [((prefix, #2(fresh c)), OMITTED (mk_arb res_ty, ~1))]
+                 then [((prefix, #2(fresh c)), mk_omitted (mk_arb res_ty))]
                  else in_group
          in
-         part{constrs = crst,
-              rows = not_in_group,
-              A = {constructor = c',
-                   new_formals = gvars,
-                   group = in_group'}::A}
+          part{constrs = crst,
+               rows = not_in_group,
+               A = {constructor = c', new_formals = gvars, group = in_group'}::A}
          end
 in part{constrs=constructors, rows=rows, A=[]}
 end;
@@ -185,24 +211,6 @@ fun mk_pat c =
   in map build
   end;
 
-(*---------------------------------------------------------------------------*)
-(* Use of funky internal variable names, prefixed with *v, to avoid name     *)
-(* clashes.                                                                  *)
-(*---------------------------------------------------------------------------*)
-
-local val counter = ref 0
-in
-fun vary vlist =
-  let val slist = ref (map (fst o dest_var) vlist)
-      val _ = counter := 0
-      fun pass str =
-         if Lib.mem str (!slist)
-         then (counter := !counter + 1; pass ("v"^int_to_string(!counter)))
-         else (slist := str :: !slist; str)
-  in
-    fn ty => mk_var(pass "v", ty)
-  end
-end;
 
 fun v_to_prefix (prefix, v::pats) = (v::prefix,pats)
   | v_to_prefix _ = raise ERR "mk_case" "v_to_prefix"
@@ -229,9 +237,9 @@ fun is_zero_emptystr_or_var tm =
 fun is_closed_or_var tm = is_var tm orelse null (free_vars tm)
 
 
-(*---------------------------------------------------------------------------*)
-(* Reconstructed code from TypeBasePure, to avoid circularity.               *)
-(*---------------------------------------------------------------------------*)
+(* ---------------------------------------------------------------------------
+    Reconstructed code from TypeBasePure, to avoid circularity.
+   ---------------------------------------------------------------------------*)
 
 fun case_const_of   {case_const : term, constructors : term list} = case_const
 fun constructors_of {case_const : term, constructors : term list} = constructors
@@ -253,7 +261,7 @@ fun is_constructor tybase c =
   end handle HOL_ERR _ => false;
 
 fun is_constructor_pat tybase tm =
-    is_var tm orelse is_constructor tybase (fst (strip_comb tm));
+    is_constructor tybase (fst (strip_comb tm));
 
 fun is_constructor_var_pat ty_info tm =
     is_var tm orelse is_constructor_pat ty_info tm
@@ -657,9 +665,22 @@ fun mk_functional thy eqs =
      fun func (_,(tag,i),[pat]) = tag (pat,i)
        | func _ = err "error in pattern-match translation"
      val patts1 = map func patts
-     val patts2 = sort(fn p1=>fn p2=> row_of_pat p1 < row_of_pat p2) patts1
+     val (omits,givens) = Lib.partition is_omitted patts1
+     val givens' = sort pattern_cmp givens
+     val patts2 = givens' @ omits
      val finals = map row_of_pat patts2
      val originals = map (row_of_pat o #2) rows
+     val new_rows = length finals - length originals
+     val clause_s = if new_rows = 1 then " clause " else " clauses "
+     val _ = if new_rows > 0 then
+               (msg ("\n  pattern completion has added "^
+                     Int.toString new_rows^clause_s^
+                     "to the original specification.");
+                if !allow_new_clauses then ()
+                else
+                  err ("new clauses not allowed under current setting of "^
+                       Lib.quote("Functional.allow_new_clauses")^" flag"))
+             else ()
      fun int_eq i1 (i2:int) =  (i1=i2)
      val inaccessibles = filter(fn x => not(op_mem int_eq x finals)) originals
      fun accessible p = not(op_mem int_eq (row_of_pat p) inaccessibles)
@@ -685,5 +706,28 @@ fun mk_functional thy eqs =
     pats = patts3}
  end
 end;
+
+(*---------------------------------------------------------------------------
+   Given a list of (pattern,expression) pairs, mk_pattern_fn creates a term
+   as an abstraction containing a case expression on the function's argument.
+ ---------------------------------------------------------------------------*)
+
+fun mk_pattern_fn thy (pes: (term * term) list) =
+  let fun err s = raise ERR "mk_pattern_fn" s
+      val (p0,e0) = Lib.trye hd pes
+          handle HOL_ERR _ => err "empty list of (pattern,expression) pairs"
+      val pty = type_of p0 and ety = type_of e0
+      val (ps,es) = unzip pes
+      val _ = if all (Lib.equal pty o type_of) ps then ()
+              else err "patterns have varying types"
+      val _ = if all (Lib.equal ety o type_of) es then ()
+              else err "expressions have varying types"
+      val fvar = genvar (pty --> ety)
+      val eqs = list_mk_conj (map (fn (p,e) => mk_eq(mk_comb(fvar,p), e)) pes)
+      val {functional,pats} = mk_functional thy eqs
+      val f = snd (dest_abs functional)
+   in
+     f
+  end
 
 end;
