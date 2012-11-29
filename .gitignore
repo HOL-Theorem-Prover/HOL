@@ -30,6 +30,9 @@
 *.hix
 *.fdb_latexmk
 
+#Generated Verilog from Iyoda/Gordon hw compilation
+*.vl
+
 config-override
 tools-poly/poly-includes.ML
 
