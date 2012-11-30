@@ -12,6 +12,46 @@ open Parse
 
 (* ------------------------------------------------------------------------ *)
 
+local
+   val cnv = Conv.REWR_CONV (Thm.CONJUNCT1 combinTheory.UPDATE_APPLY)
+   val mp = Drule.MATCH_MP (Thm.CONJUNCT2 combinTheory.UPDATE_APPLY)
+   val ADDR_CONV =
+     Conv.RATOR_CONV o Conv.RATOR_CONV o Conv.RATOR_CONV o Conv.RAND_CONV
+in
+   fun UPDATE_APPLY_CONV eqconv =
+      let
+         fun APPLY_CONV tm =
+            let
+               val (u, v) = Term.dest_comb tm
+               val ((a, _), _) = combinSyntax.dest_update_comb u
+                                 handle HOL_ERR _ => raise Conv.UNCHANGED
+            in
+               if a = v
+                  then cnv tm
+               else let
+                       val thm =
+                          eqconv (boolSyntax.mk_eq (a, v))
+                          handle Conv.UNCHANGED =>
+                             Conv.CONV_RULE (Conv.LHS_CONV Conv.SYM_CONV)
+                                (eqconv (boolSyntax.mk_eq (v, a)))
+                       val r = boolSyntax.rhs (Thm.concl thm)
+                    in
+                       if r = boolSyntax.F
+                          then (Conv.REWR_CONV (mp (Drule.EQF_ELIM thm))
+                                THENC APPLY_CONV) tm
+                       else if r = boolSyntax.T
+                          then (ADDR_CONV (Conv.REWR_CONV (Drule.EQT_ELIM thm))
+                                THENC cnv) tm
+                       else raise Conv.UNCHANGED
+                    end
+            end
+      in
+         APPLY_CONV
+      end
+end
+
+(* ------------------------------------------------------------------------ *)
+
 val LIST_UPDATE_INTRO_CONV =
   PURE_REWRITE_CONV [LIST_UPDATE_THMS, listTheory.APPEND, listTheory.SNOC]
 

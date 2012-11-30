@@ -4,6 +4,8 @@ sig
 
     val dest_list_update        : term -> (term * term) list
 
+    val UPDATE_APPLY_CONV       : conv -> conv
+
     val LIST_UPDATE_INTRO_CONV  : conv
     val LIST_UPDATE_ELIM_CONV   : conv
 
