@@ -45,8 +45,7 @@ val explode_tm     = prim_mk_const{Name="EXPLODE",     Thy="string"}
 val emptystring_tm = mk_thy_const{Name="NIL", Thy="list", Ty = string_ty}
 val string_tm      = mk_thy_const{Name="CONS", Thy="list",
                                   Ty = char_ty --> string_ty --> string_ty}
-val string_case_tm = inst [beta |-> alpha]
-                          (stri (prim_mk_const{Name="list_case", Thy="list"}))
+val string_case_tm = inst [beta |-> alpha] (stri listSyntax.list_case_tm)
 val strlen_tm      = stri (prim_mk_const{Name="LENGTH",    Thy="list"})
 val strcat_tm      = stri (prim_mk_const{Name="APPEND",    Thy="list"})
 val isprefix_tm    = stri (prim_mk_const{Name="isPREFIX",  Thy="list"});
@@ -56,7 +55,7 @@ val mk_explode = C (with_exn (curry mk_comb explode_tm)) (ERR "mk_explode" "")
 fun mk_string (c,s) =
   with_exn list_mk_comb (string_tm,[c,s]) (ERR "mk_string" "")
 fun mk_string_case (e,f,s) =
-  with_exn list_mk_comb (inst [alpha |-> type_of e]string_case_tm, [e,f,s])
+  with_exn list_mk_comb (inst [alpha |-> type_of e]string_case_tm, [s,e,f])
            (ERR "mk_string_case" "")
 val mk_strlen = C (with_exn (curry mk_comb strlen_tm)) (ERR "mk_strlen" "")
 fun mk_strcat (s1,s2) =
@@ -70,7 +69,11 @@ val dest_string      = dest_binop string_tm      (ERR "dest_string"   "")
 val dest_strlen      = dest_monop strlen_tm      (ERR "dest_strlen"   "")
 val dest_strcat      = dest_binop strcat_tm      (ERR "dest_strcat"   "")
 val dest_isprefix    = dest_binop isprefix_tm    (ERR "dest_isprefix" "")
-val dest_string_case = dest_triop string_case_tm (ERR "dest_string_case" "")
+fun dest_string_case t = let
+  val (s,e,f) = dest_triop string_case_tm (ERR "dest_string_case" "") t
+in
+  (e,f,s)
+end
 
 val is_implode     = can dest_implode
 val is_explode     = can dest_explode;
