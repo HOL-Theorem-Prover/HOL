@@ -283,11 +283,11 @@ fun define_case (case_const_name, rep_t, rep_th, constrs) = let
       else raise Fail "can't happen 101"
   val (ty, _) = dom_rng (type_of rep_t)
   val case_t = mk_var(case_const_name,
-                      list_mk_fun(List.tabulate(sz, K alpha), ty --> alpha))
+                      ty --> list_mk_fun(List.tabulate(sz, K alpha), alpha))
   val args = List.tabulate(sz, (fn n => mk_var("v" ^ Int.toString n,
                                                alpha)))
   val e_t = mk_var("x", ty)
-  val def_t = mk_eq(mk_comb(list_mk_comb(case_t, args), e_t),
+  val def_t = mk_eq(list_mk_comb(case_t, e_t::args),
                     mk_comb(mk_abs(m, mk_decision_tree 0 (sz - 1)),
                             mk_comb(rep_t, e_t)))
   val def_th = new_definition(case_const_name, def_t)
