@@ -992,7 +992,9 @@ fun dest_case tybase M =
 
 fun is_case1 tybase M =
   let val (c,args) = strip_comb M
-      val (tynames as (_,tyop)) = type_names (type_of (hd args))
+      val (tynames as (_,tyop)) =
+          type_names (type_of (hd args)) handle Empty => raise ERR "" ""
+  (* will get caught later *)
   in case prim_get tybase tynames
       of NONE => raise ERR "is_case" ("unknown type operator: "^Lib.quote tyop)
        | SOME tyinfo =>
