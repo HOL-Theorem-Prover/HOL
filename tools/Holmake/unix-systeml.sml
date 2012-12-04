@@ -102,6 +102,7 @@ val DYNLIB = ""
 val version = ""
 val ML_SYSNAME = ""
 val release = ""
+val DOT_PATH = ""
 
 val isUnix = true
 

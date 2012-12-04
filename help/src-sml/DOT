@@ -35,7 +35,7 @@ val HTML_DIR   = Path.toString(Path.fromString(Path.concat
 val SIGOBJ_DIR = Path.toString(Path.fromString(Path.concat
                     (Globals.HOLDIR,"sigobj")));
 
-val DOTPATH = "/usr/local/bin/dot"
+val DOTPATH = Systeml.DOT_PATH
 
 (*---------------------------------------------------------------------------
      Extract dot-friendly digraph from HOL theory graph.
@@ -227,4 +227,3 @@ val _ = print " done\n";
 
 
 gen_map_file DOTPATH ancs (Path.concat(HTML_DIR, "theories"));
-
