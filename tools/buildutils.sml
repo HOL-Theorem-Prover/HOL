@@ -602,7 +602,7 @@ handle OS.SysErr(s, erropt) =>
      | BuildExit => ()
 
 fun write_theory_graph () = let
-  val dotexec = "/usr/bin/dot"
+  val dotexec = Systeml.DOT_PATH
 in
   if not (FileSys.access (dotexec, [FileSys.A_EXEC])) then
     (* of course, this will always be the case on Windows *)
