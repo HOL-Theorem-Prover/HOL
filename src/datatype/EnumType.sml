@@ -354,7 +354,7 @@ fun enum_type_to_tyinfo (ty, clist) = let
       else prove_distinctness_thm simpls constrs
   val initiality = prove_initiality_thm (#REPconst result) TYPE constrs simpls
   val rep_t = rator (lhs (hd (strip_conj (concl rep_thm))))
-  val case_def = define_case (ty ^ "_case", rep_t, rep_thm, constrs)
+  val case_def = define_case (ty ^ "_CASE", rep_t, rep_thm, constrs)
   val case_cong = Prim_rec.case_cong_thm nchotomy case_def
   open TypeBasePure
   val tyinfo0 =
