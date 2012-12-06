@@ -145,7 +145,7 @@ end
 
 val t = Parse.Term `(case T of T => (\x. x) | F => (~)) y`
 val _ = tprint "Testing parsing of case expressions with function type"
-val _ = case Lib.total (find_term (same_const ``bool_case``)) t of
+val _ = case Lib.total (find_term (same_const boolSyntax.bool_case)) t of
           NONE => die "FAILED"
         | SOME _ => print "OK\n"
 
@@ -154,9 +154,10 @@ val t_opt = SOME (trace ("syntax_error", 0) Parse.Term
                         `case T of | T => F | F => T`)
     handle HOL_ERR _ => NONE
 val _ = case t_opt of
-          SOME t => if Lib.can (find_term (same_const ``bool_case``)) t then
-                      print "OK\n"
-                    else die "FAILED"
+          SOME t =>
+            if Lib.can (find_term (same_const boolSyntax.bool_case)) t then
+              print "OK\n"
+            else die "FAILED"
         | NONE => die "FAILED"
 
 val _ = tprint "Testing parsing of _ variables (1)"
@@ -266,35 +267,15 @@ val _ = print "OK\n"
 
 
 (* pretty-printing tests - turn Unicode off *)
-val _ = set_trace "Unicode" 0
-val _ = Parse.current_backend := PPBackEnd.raw_terminal
-fun tppw width s = let
-  val t = Parse.Term [QUOTE s]
-  val pfxsize = size "Testing printing of `` ..."
-  fun trunc s = if size s + pfxsize > 62 then let
-                    val s' = String.substring(s,0,58 - pfxsize)
-                  in
-                    s' ^ " ..."
-                  end
-                else s
-  fun pretty s = s |> String.translate (fn #"\n" => "\\n" | c => str c)
-                   |> trunc
-  val _ = tprint ("Testing printing of `"^pretty s^"`")
-  val res = Portable.pp_to_string width Parse.pp_term t
-in
-  if res = s then print "OK\n"
-  else (print "FAILED!\n"; Process.exit Process.failure)
-end
-val tpp = tppw 80
-
+val tpp = let open testutils
+             in
+               unicode_off (raw_backend testutils.tpp)
+             end
 
 val _ = app tpp ["let x = T in x /\\ y",
                  "(let x = T in \\y. x /\\ y) p",
                  "f ($/\\ p)",
                  "(((p /\\ q) /\\ r) /\\ s) /\\ t",
-                 "case e1 of T => (case e2 of T => F | F => T) | F => T",
-                 "case e1 of T => F | F => case e2 of T => F | F => T",
-                 "(case x of T => (\\x. x) | F => $~) y",
                  "!x. P (x /\\ y)",
                  "P (!x. Q x)",
                  "\\x. ?y. P x y",
@@ -302,14 +283,14 @@ val _ = app tpp ["let x = T in x /\\ y",
                  "(:'a)"]
 
 val _ = tpp "x = y"
-val _ = tppw 10 "xxxxxx =\nyyyyyy"
+val _ = Lib.with_flag (testutils.linewidth, 10) tpp "xxxxxx =\nyyyyyy"
 
 val _ = add_rule {term_name = "=",
                   fixity = Infix(NONASSOC, 100),
                   block_style = (AroundSamePrec, (PP.CONSISTENT,0)),
                   paren_style = OnlyIfNecessary,
                   pp_elements = [HardSpace 1, TOK "=", BreakSpace(1,2)]}
-val _ = tppw 10 "xxxxxx =\n  yyyyyy"
+val _ = Lib.with_flag (testutils.linewidth, 10) tpp "xxxxxx =\n  yyyyyy"
 
 val _ = print "** Tests with pp_dollar_escapes = 0.\n"
 val _ = set_trace "pp_dollar_escapes" 0
