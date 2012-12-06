@@ -992,9 +992,9 @@ fun mutrec thy bindstem eqns =
                val Pdom = #1(dom_rng Pty)
                val tmty = type_of tm
                val tmdom = #1(dom_rng tmty)
-               val sum_ty = Pty --> tmty --> mk_sum_type Pdom tmdom --> bool
+               val gv = genvar (sumSyntax.mk_sum(Pdom, tmdom))
            in
-              list_mk_comb(mk_const("sum_case",sum_ty),[P,tm])
+              mk_abs(gv, sumSyntax.mk_sum_case(P,tm,gv))
            end) preds
       val mut_ind1 = Rules.simplify [sum_case_def] (SPEC Psum_case mut_ind0)
       val (ant,_) = dest_imp (concl mut_ind1)
