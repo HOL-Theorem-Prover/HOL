@@ -262,7 +262,7 @@ fun define_enum_type(name,clist,ABS,REP) =
  end;
 
 val (COND_T, COND_F) = CONJ_PAIR (SPEC_ALL COND_CLAUSES)
-fun define_case (case_const_name, rep_t, rep_th, constrs) = let
+fun define_case (type_name, rep_t, rep_th, constrs) = let
   val sz = length constrs
   val m = mk_var("m", numSyntax.num)
   fun V n = mk_var("v" ^ Int.toString n, alpha)
@@ -282,6 +282,7 @@ fun define_case (case_const_name, rep_t, rep_th, constrs) = let
       else if lo = hi then V lo
       else raise Fail "can't happen 101"
   val (ty, _) = dom_rng (type_of rep_t)
+  val case_const_name = case_constant_name{type_name = type_name}
   val case_t = mk_var(case_const_name,
                       ty --> list_mk_fun(List.tabulate(sz, K alpha), alpha))
   val args = List.tabulate(sz, (fn n => mk_var("v" ^ Int.toString n,
@@ -305,7 +306,7 @@ fun define_case (case_const_name, rep_t, rep_th, constrs) = let
     GENL args (CONV_RULE (RAND_CONV follow_conds) th)
   end
 in
-  save_thm(case_const_name ^ "_def",
+  save_thm(case_constant_defn_name {type_name = type_name},
            LIST_CONJ (map mk_consequence constrs))
 end
 
@@ -354,7 +355,7 @@ fun enum_type_to_tyinfo (ty, clist) = let
       else prove_distinctness_thm simpls constrs
   val initiality = prove_initiality_thm (#REPconst result) TYPE constrs simpls
   val rep_t = rator (lhs (hd (strip_conj (concl rep_thm))))
-  val case_def = define_case (ty ^ "_CASE", rep_t, rep_thm, constrs)
+  val case_def = define_case (ty, rep_t, rep_thm, constrs)
   val case_cong = Prim_rec.case_cong_thm nchotomy case_def
   open TypeBasePure
   val tyinfo0 =

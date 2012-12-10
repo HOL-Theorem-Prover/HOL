@@ -418,6 +418,9 @@ fun num_variant vlist v =
   mk_var(pass Name, Ty)
   end;
 
+fun case_constant_name {type_name} = type_name ^ "_CASE"
+fun case_constant_defn_name {type_name} = type_name ^ "_case_def"
+
 fun generate_case_constant_eqns ty clist =
  let val (dty,rty) = Type.dom_rng ty
      val (Tyop,Args) = dest_type dty
@@ -429,7 +432,8 @@ fun generate_case_constant_eqns ty clist =
        in (v::nv, v::away)
        end
      val arg_list = rev(fst(rev_itlist mk_cfun clist ([],free_varsl clist)))
-     val v = mk_var(Tyop^"_CASE", list_mk_fun(dty :: map type_of arg_list, rty))
+     val v = mk_var(case_constant_name{type_name = Tyop},
+                    list_mk_fun(dty :: map type_of arg_list, rty))
      fun clause (a,c) = mk_eq(list_mk_comb(v,c::arg_list),
                               list_mk_comb(a, #2 (strip_comb c)))
  in
@@ -449,7 +453,9 @@ fun define_case_constant ax =
           val cs = type_constructors_with_args ax name
           val eqns = generate_case_constant_eqns ty cs
       in new_recursive_definition
-             {name=name^"_case_def", rec_axiom=ax, def=eqns}
+             {name=case_constant_defn_name {type_name = name},
+              rec_axiom=ax,
+              def=eqns}
       end
  in
   map mk_defn usethese
