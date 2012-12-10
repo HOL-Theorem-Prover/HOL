@@ -40,6 +40,7 @@ struct
 
 open HolKernel Parse boolLib bossLib
 
+val _ = set_trace "Unicode" 0;
 val _ = set_trace "types" 1;
 
 val _ = new_theory "package";
@@ -55,7 +56,7 @@ val ety1_vars = type_vars ety1;
 val ety2 = ``:?'a. 'a -> 'b``;
 val ety2_vars = type_vars ety2;
 
-val ety2' = mk_exist_type(alpha, alpha --> beta);
+val ety2' = mk_exist_type(gamma, gamma --> beta);
 val check = eq_ty ety2 ety2';
 
 val (bvar,body) = dest_exist_type ety2;
@@ -68,43 +69,44 @@ val (ety3_bvars,ety3_body) = strip_exist_type ety3;
 
 (* Example 1: Simple package examples from Pierce, Ch.24.1, page 364-5. *)
 
-val package = ``pack (:num, (5, \x:num. SUC x))``;
-val package_ty = type_of package;
+val pkg1 = ``pack (:num, (5, \x:num. SUC x))``;
+val pkg1_ty = type_of pkg1;
 
-val package1 = ``pack (:num, (5, \x:num. SUC x)) : ?'x. 'x # ('x -> num)``;
-val package1_ty = type_of package1;
+val pkg2 = ``pack (:num, (5, \x:num. SUC x)) : ?'x. 'x # ('x -> num)``;
+val pkg2_ty = type_of pkg2;
 
-val package2 = ``pack (:num, 0) : ?'x. 'x``;
-val package2_ty = type_of package2;
+val pkg3 = ``pack (:num, 0) : ?'x. 'x``;
+val pkg3_ty = type_of pkg3;
 
-val package3 = ``pack (:bool, T) : ?'x. 'x``;
-val package3_ty = type_of package3;
+val pkg4 = ``pack (:bool, T) : ?'x. 'x``;
+val pkg4_ty = type_of pkg4;
 
-val check = eq_ty package2_ty package3_ty;
+val check = eq_ty pkg3_ty pkg4_ty;
 
-val package4 =
+val pkg5 =
     ``pack (:num, (0, \x:num. SUC x)) : ?'x. 'x # ('x -> num)``;
-val package4_ty = type_of package4;
+val pkg5_ty = type_of pkg5;
 
-val package5 =
+val pkg6 =
     ``pack (:bool, (T, \x:bool. 0)) : ?'x. 'x # ('x -> num)``;
-val package5_ty = type_of package5;
+val pkg6_ty = type_of pkg6;
 
-val check = eq_ty package4_ty package5_ty;
+val check = eq_ty pkg5_ty pkg6_ty;
 
 
 (* Using packages *)
 
 fun eval ths tm = QCONV (SIMP_CONV (srw_ss()) ths) tm;
 
-val unpacktm4 = ``let (:'x, x:'x # ('x -> num)) = ^package4 in (SND x) (FST x)``;
-val unpacktm4_res = eval[] unpacktm4;
+val unpkg5 = ``let (:'x, t:'x # ('x -> num)) = ^pkg5 in (SND t) (FST t)``;
 
-val unpacktm5 = ``let (:'x, x:'x # ('x -> num)) = ^package5 in (SND x) (FST x)``;
-val unpacktm5_res = eval[] unpacktm5;
+val unpkg5_res = eval [] unpkg5;
 
-val unpacktm4a = ``let (:'x, x:'x # ('x -> num)) = ^package4 in (\y:'x. (SND x) y) (FST x)``;
-val unpacktm4a_res = eval[] unpacktm4a;
+val unpkg6 = ``let (:'x, t:'x # ('x -> num)) = ^pkg6 in (SND t) (FST t)``;
+val unpkg6_res = eval [] unpkg6;
+
+val unpkg5a = ``let (:'x, t:'x # ('x -> num)) = ^pkg5 in (\y:'x. (SND t) y) (FST t)``;
+val unpkg5a_res = eval [] unpkg5a;
 
 (* Create a datatype that simulates an object with access methods included. *)
 
@@ -117,18 +119,18 @@ val packtm1' =
          \:'elem. LENGTH:'elem list -> num)) :?'c. !'elem. 'elem 'c -> num``;
 val packty1' = type_of packtm1';
 
-val unpacktm1' =
+val unpkg1' =
   ``let (:'coll, size:!'a. 'a 'coll -> num) = ^packtm1' in T``;
 
-val unpacktm1'' =
+val unpkg1'' =
   ``let (:'coll:ty=>ty, size:!'a. 'a 'coll -> num)
         = pack(: list,
                \:'elem. LENGTH:'elem list -> num)
     in T``;
 
-val res1 = HO_REWR_CONV UNPACK_PACK_AX unpacktm1'';
-val res2 = SIMP_CONV bool_ss [] unpacktm1'';
-val res3 = eval[] unpacktm1'';
+val res1 = HO_REWR_CONV UNPACK_PACK_AX unpkg1'';
+val res2 = SIMP_CONV bool_ss [] unpkg1'';
+val res3 = eval[] unpkg1'';
 
 
 (* Packages can be used to simulate objects, as   *)

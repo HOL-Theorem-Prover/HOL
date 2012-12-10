@@ -2805,6 +2805,13 @@ and inst_to_string0 [] = ""
   | inst_to_string0 (x::xs) = inst_to_string1 x ^ ",\n " ^ inst_to_string0 xs
 and inst_to_string1 {redex,residue} = type_to_string redex ^ " |-> " ^ type_to_string residue;
 
+fun hom_to_string (env,cty,vty) =
+   inst_to_string env ^ ": " ^ inst_to_string1 (vty |-> cty);
+fun homs_to_string homs = "[" ^ homs_to_string0 homs ^ "]"
+and homs_to_string0 [] = ""
+  | homs_to_string0 [h] = hom_to_string h
+  | homs_to_string0 (h::t) = hom_to_string h ^ ",\n " ^ homs_to_string0 t;
+
 
 (*---------------------------------------------------------------------------
        Higher order matching (from jrh via Michael Norrish - June 2001)
@@ -2838,6 +2845,13 @@ local
   in
     if eq_ty residue z then l
     else raise ERR "safe_insert_tya" "match"
+    (*else (if !trace_complex_matching < 1 then () else
+          print ("\nsafe_insert_tya(throws match):\nn = " ^
+                 inst_to_string [n] ^
+                 "\nl = " ^
+                 inst_to_string l ^
+                 "\n");
+          raise ERR "safe_insert_tya" "match") *)
   end handle NOT_FOUND => n::l
 (*
   val mk_dummy_ty = let
@@ -2981,7 +2995,11 @@ local
 *)
 
   fun type_pmatch lconsts env pat ob sofar
-      = type_pmatch_1 lconsts env (head_beta_eta_ty pat) (head_beta_eta_ty ob) sofar
+      = (if !trace_complex_matching < 1 then () else
+           (print ("\nEntering type_pmatch:\n" ^ inst_to_string [pat |-> ob] ^ "\n");
+            print ("insts: " ^ inst_to_string (fst sofar) ^ "\n");
+            print ("homs:\n" ^ homs_to_string (snd sofar) ^ "\n"));
+         type_pmatch_1 lconsts env (head_beta_eta_ty pat) (head_beta_eta_ty ob) sofar)
 
   and type_pmatch_1 lconsts env (vty as TyFv(_,kd)) cty (sofar as (insts,homs))
       = (let
@@ -2992,7 +3010,10 @@ local
                  if HOLset.member(lconsts, vty) then
                    if cty = vty then sofar
                    else MERR "can't instantiate local constant type"
-                 else (safe_insert_tya (vty |-> cty) insts, homs)
+                 else ((safe_insert_tya (vty |-> cty) insts, homs)
+                               handle e => raise (wrap_exn "Type" ("type_pmatch_1.TyFv"
+^"\n"^ type_to_string vty ^ " |-> " ^ type_to_string cty ^ "\n" ^ inst_to_string insts ^ "\n"
+) e))
                | HOL_ERR _ => MERR "free type variable mismatch")
     | type_pmatch_1 lconsts env (vty as TyCon(vc,vkd)) cty (sofar as (insts,homs))
       = (case cty of
@@ -3002,6 +3023,7 @@ local
                 else let val mk_dummy_ty = if is_humble_tyc vc
                                            then mk_con_dummy_ty() else mk_dummy_ty
                      in (safe_insert_tya (mk_dummy_ty vkd |-> mk_dummy_ty ckd) insts, homs)
+                               handle e => raise (wrap_exn "Type" "type_pmatch_1.TyCon" e)
                      end
               else MERR "type constant mismatch"
           | _ => MERR "type constant mismatched with non-constant")
@@ -3019,6 +3041,7 @@ local
               val ckd = kd_of cty cE
               val insts' = if vkd = ckd then insts
                            else safe_insert_tya (mk_dummy_ty vkd |-> mk_dummy_ty ckd) insts
+                               handle e => raise (wrap_exn "Type" "type_pmatch_1.TyApp" e)
             in
               (insts', (env,cty,vty)::homs)
             end
@@ -3036,6 +3059,7 @@ local
                              if ckd = vkd then sofar
                              else let val mk_dummy_ty = mk_con_dummy_ty()
                                   in (safe_insert_tya (mk_dummy_ty vkd |-> mk_dummy_ty ckd) insts, homs)
+                               handle e => raise (wrap_exn "Type" "type_pmatch_1.TyApp.humble TyCons" e)
                                   end
                          in
                            Lib.rev_itlist2 (type_pmatch lconsts env) vargs cargs sofar'
@@ -3079,6 +3103,7 @@ local
                val (vv,vbody) = dest_abs_type vty
                val (cv,cbody) = dest_abs_type cty
                val sofar' = (safe_insert_tya (mk_dummy_ty vkd |-> mk_dummy_ty ckd) insts, homs)
+                               handle e => raise (wrap_exn "Type" "type_pmatch_1.TyAbs" e)
              in
                type_pmatch_1 lconsts ((vv |-> cv)::env) vbody cbody sofar' (* bodies are head-beta-eta reduced *)
              end
@@ -3090,6 +3115,7 @@ local
                val (vv,vbody) = dest_univ_type vty
                val (cv,cbody) = dest_univ_type cty
                val sofar' = (safe_insert_tya (mk_dummy_ty vkd |-> mk_dummy_ty ckd) insts, homs)
+                               handle e => raise (wrap_exn "Type" "type_pmatch_1.TyAll" e)
              in
                type_pmatch lconsts ((vv |-> cv)::env) vbody cbody sofar'
              end
@@ -3101,6 +3127,7 @@ local
                val (vv,vbody) = dest_exist_type vty
                val (cv,cbody) = dest_exist_type cty
                val sofar' = (safe_insert_tya (mk_dummy_ty vkd |-> mk_dummy_ty ckd) insts, homs)
+                               handle e => raise (wrap_exn "Type" "type_pmatch_1.TyExi" e)
              in
                type_pmatch lconsts ((vv |-> cv)::env) vbody cbody sofar'
              end
@@ -3195,12 +3222,32 @@ and
              print ("   " ^ type_to_string redex ^
                     " |-> " ^ type_to_string residue ^ "\n") ;
 
-fun distinct (x::xs) = not (Lib.mem x xs) andalso distinct xs
+fun distinct (x::xs) = not (Lib.op_mem eq_ty x xs) andalso distinct xs
   | distinct [] = true;
 
 
 fun type_homatch kdavoids lconsts rkin kdins (insts, []) = insts
   | type_homatch kdavoids lconsts rkin kdins (insts, homs) = let
+  val (var_homs,nvar_homs) = partition (fn (env,cty,vty) => is_var_type vty) homs
+  fun args_are_distinct (env,cty,vty) = let
+       val (vhop, vargs) = strip_app_type vty
+    in distinct vargs
+    end
+  val (dist_homs,cmpl_homs) = partition args_are_distinct nvar_homs
+  fun args_are_env_vars (env,cty,vty) = let
+       val (vhop, vargs) = strip_app_type vty
+    in all (fn a => is_var_type a andalso can (find_residue a) env) vargs
+    end
+  val (env_homs,nenv_homs) = partition args_are_env_vars dist_homs
+  fun args_are_fixed (env,cty,vty) = let
+       val (vhop, vargs) = strip_app_type vty
+       val afvs = type_varsl vargs
+    in all (fn a => can (find_residue(*_ty*) a) env orelse can (find_residue(*_ty*) a) insts
+                    orelse HOLset.member(lconsts, a)) afvs
+    end
+  val (fixed_homs,basic_homs) = partition args_are_fixed nenv_homs
+  val ordered_homs = var_homs @ env_homs @ fixed_homs @ basic_homs @ cmpl_homs
+(*
   (* local constants of kinds and types never change *)
   val (var_homs,nvar_homs) = partition (fn (env,cty,vty) => is_var_type vty) homs
   fun args_are_fixed (env,cty,vty) = let
@@ -3218,6 +3265,7 @@ fun type_homatch kdavoids lconsts rkin kdins (insts, []) = insts
     end
   val (distv_homs,real_homs) = partition args_are_distinct_vars fixed_homs
   val ordered_homs = var_homs @ distv_homs @ real_homs @ basic_homs
+*)
   val (kdins',_) = Kind.norm_subst(kdins,rkin)
   val inst_fn = inst_rank_kind (fst kdins', fst rkin)
   fun fix_con_dummy_ty (i as {redex,residue}) =
@@ -3232,6 +3280,11 @@ fun type_homatch kdavoids lconsts rkin kdins (insts, []) = insts
   if homs = [] then insts
   else let
       val (env,cty,vty) = hd homs
+      val _ = if !trace_complex_matching < 1 then () else
+           (print ("\nEntering type_homatch(homatch):\n" ^ inst_to_string [vty |-> cty] ^ "\n");
+            print ("env: " ^ inst_to_string env ^ "\n");
+            print ("insts: " ^ inst_to_string insts ^ "\n");
+            print ("homs:\n" ^ homs_to_string homs ^ "\n")  );
     in
       if is_var_type vty then
         if eq_ty cty vty then homatch rkin kdins (insts, tl homs)
@@ -3438,6 +3491,8 @@ val type_homatch = type_homatch
 val separate_insts_ty = separate_insts_ty
 
 fun ho_match_type1 lift kdavoids lconsts vty cty insts_homs rk_kd_insts_ids = let
+  val _ = if !trace_complex_matching < 1 then () else
+            (print ("ho_match_type1: " ^ inst_to_string [vty |-> cty] ^ "\n"))
   val pinsts_homs = type_pmatch lconsts [] vty cty insts_homs
   val (kdins,rkin) = get_rank_kind_insts kdavoids [] (fst pinsts_homs) rk_kd_insts_ids
   val insts = type_homatch kdavoids lconsts rkin kdins pinsts_homs

@@ -1835,7 +1835,10 @@ local
       in ((lctys,env,(tyS'',homs)), kdS, rkS)
       end
       handle Type.HIGHER_ORDER =>
-        let val insts_homs' = Type.type_pmatch lctys env pat ob insts_homs
+        let
+            val _ = if current_trace "Type.trace_complex_matching" < 1 then () else
+              (print ("\nTerm.tymatch(RM)\n"))
+            val insts_homs' = Type.type_pmatch lctys env pat ob insts_homs
             val (kdS',rkS') = Type.get_rank_kind_insts [] env (fst insts_homs') (kdS,rkS)
         in ((lctys,env,insts_homs'),kdS',rkS')
         end
@@ -1993,7 +1996,10 @@ fun match_term pat ob =
 
 local
 fun tymatch pat ob ((lctys,env,insts_homs),kdS,rkS) =
-        let val insts_homs' = Type.type_pmatch lctys env pat ob insts_homs
+        let
+            val _ = if current_trace "Type.trace_complex_matching" < 1 then () else
+              (print ("\nTerm.tymatch(get_type_kind_rank_insts)\n"))
+            val insts_homs' = Type.type_pmatch lctys env pat ob insts_homs
             val (kdS',rkS') = Type.get_rank_kind_insts [] env (fst insts_homs') (kdS,rkS)
         in ((lctys,env,insts_homs'),kdS',rkS')
         end

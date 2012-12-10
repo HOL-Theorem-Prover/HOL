@@ -3164,8 +3164,31 @@ and
              print ("   " ^ type_to_string redex ^
                     " |-> " ^ type_to_string residue ^ "\n") ;
 
+fun distinct (x::xs) = not (Lib.op_mem eq_ty x xs) andalso distinct xs
+  | distinct [] = true;
+
 
 fun type_homatch kdavoids lconsts rkin kdins (insts, homs) = let
+  val (var_homs,nvar_homs) = partition (fn (env,cty,vty) => is_var_type vty) homs
+  fun args_are_distinct (env,cty,vty) = let
+       val (vhop, vargs) = strip_app_type vty
+    in distinct vargs
+    end
+  val (dist_homs,cmpl_homs) = partition args_are_distinct nvar_homs
+  fun args_are_env_vars (env,cty,vty) = let
+       val (vhop, vargs) = strip_app_type vty
+    in all (fn a => is_var_type a andalso can (find_residue a) env) vargs
+    end
+  val (env_homs,nenv_homs) = partition args_are_env_vars dist_homs
+  fun args_are_fixed (env,cty,vty) = let
+       val (vhop, vargs) = strip_app_type vty
+       val afvs = type_varsl vargs
+    in all (fn a => can (find_residue(*_ty*) a) env orelse can (find_residue(*_ty*) a) insts
+                    orelse HOLset.member(lconsts, a)) afvs
+    end
+  val (fixed_homs,basic_homs) = partition args_are_fixed nenv_homs
+  val ordered_homs = var_homs @ env_homs @ fixed_homs @ basic_homs @ cmpl_homs
+(*
   (* local constants of kinds and types never change *)
   val (var_homs,nvar_homs) = partition (fn (env,cty,vty) => is_var_type vty) homs
   fun args_are_fixed (env,cty,vty) = let
@@ -3183,6 +3206,7 @@ fun type_homatch kdavoids lconsts rkin kdins (insts, homs) = let
     end
   val (distv_homs,real_homs) = partition args_are_distinct_vars fixed_homs
   val ordered_homs = var_homs @ distv_homs @ real_homs @ basic_homs
+*)
   val (kdins',_) = Kind.norm_subst(kdins,rkin)
   val inst_fn = inst_rank_kind (fst kdins', fst rkin)
   fun fix_con_dummy_ty (i as {redex,residue}) =

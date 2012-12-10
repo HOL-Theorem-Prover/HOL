@@ -1997,12 +1997,23 @@ report "Type unification" cmp n c1 c2 ty1 ty2 (
         kind_unify_cmp (pkind_of ty1) (* :<=: *) kd >> (* allow inequality *)
         bind gen_unify c2 c1 r ty1
   | (_, UVar (r as ref (SOMEU ty2))) => gen_unify c1 c2 ty1 ty2
+(*
   | (UVar (r as ref (NONEU kd)), Contype {Kind=kd2,Thy=thy2,Tyop=tyop2}) =>
         kind_unify_cmp kd (* :<=: *) kd2 >> (* allow inequality *)
         bind gen_unify c1 c2 r (PT(Contype{Thy=thy2,Tyop=tyop2,Kind=kd},locn1))
   | (UVar (r as ref (NONEU kd)), _) =>
         kind_unify kd (* :=: *) (pkind_of ty2) >> (* require equality *)
         bind gen_unify c1 c2 r ty2
+*)
+  | (UVar (r as ref (NONEU kd)), _) =>
+        (fn e =>
+          (if is_con_type ty2
+           then kind_unify_le kd (* <= *) (pkind_of ty2) >> (* allow inequality *)
+                let val {Thy,Tyop,Kind} = dest_con_type ty2
+                in bind gen_unify c1 c2 r (PT(Contype{Thy=Thy,Tyop=Tyop,Kind=kd},locn1))
+                end
+           else kind_unify    kd (*  = *) (pkind_of ty2) >> (* require equality *)
+                bind gen_unify c1 c2 r ty2) e)
   | (UVar (r as ref (SOMEU ty1)), _) => gen_unify c1 c2 ty1 ty2
   | (Vartype (tv1 as (s1,kd1)), Vartype (tv2 as (s2,kd2))) =>
         (fn e => (if eq_varty c1 c2 tv1 tv2 then ok else fail) e) >>
