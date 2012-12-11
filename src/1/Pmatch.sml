@@ -396,10 +396,10 @@ fun mk_case ty_info ty_match FV range_ty =
            val rec_calls = map mk news
            val (pat_rect,dtrees) = unzip rec_calls
            val case_functions = map list_mk_abs(zip new_formals dtrees)
-           val types = map type_of (case_functions@[u])
+           val types = map type_of (u::case_functions)
            val case_const' = mk_thy_const{Name = case_const_name, Thy = Thy,
                                           Ty = list_mk_fun(types, range_ty)}
-           val tree = list_mk_comb(case_const', case_functions@[u])
+           val tree = list_mk_comb(case_const', u::case_functions)
            val pat_rect1 = flatten(map2 mk_pat constructors' pat_rect)
        in
           (pat_rect1,tree)
@@ -486,11 +486,11 @@ fun mk_case1 tybase (exp, plist) =
     | SOME tyinfo =>
        let val c = case_const_of tyinfo
            val fns = map (fn (p,R) => list_mk_abs(snd(strip_comb p),R)) plist
-           val ty' = list_mk_fun (map type_of fns@[type_of exp],
+           val ty' = list_mk_fun (type_of exp::map type_of fns,
                                   type_of (snd (hd plist)))
            val theta = Type.match_type (type_of c) ty'
-       in list_mk_comb(inst theta c,fns@[exp])
-       end;
+       in list_mk_comb(inst theta c,exp::fns)
+       end
 
 fun mk_case2 v (exp, plist) =
        let fun mk_switch [] = raise ERR "mk_case" "null patterns"
@@ -535,7 +535,9 @@ local fun build_case_clause((ty,constr),rhs) =
 in
 fun dest_case1 tybase M =
   let val (c,args) = strip_comb M
-      val (cases,arg) = front_last args
+      val (cases,arg) =
+          case args of h::t => (t, h)
+                     | _ => raise ERR "dest_case" "case exp has too few args"
   in case match_info tybase (type_names (type_of arg))
       of NONE => raise ERR "dest_case" "unable to destruct case expression"
        | SOME tyinfo =>
@@ -561,7 +563,9 @@ fun dest_case tybase M =
 
 fun is_case1 tybase M =
   let val (c,args) = strip_comb M
-      val (tynames as {Tyop=tyop,...}) = type_names (type_of (last args))
+      val (tynames as {Tyop=tyop, ...}) =
+          type_names (type_of (hd args)) handle Empty => raise ERR "" ""
+      (* will get caught later *)
   in case match_info tybase tynames
       of NONE => raise ERR "is_case" ("unknown type operator: "^Lib.quote tyop)
        | SOME tyinfo => same_const c (case_const_of tyinfo)

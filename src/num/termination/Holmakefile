@@ -1,11 +1,18 @@
 ifdef POLY
 HOLHEAP = numheap
-EXTRA_CLEANS = $(HOLHEAP) $(HOLHEAP).o
+EXTRA_CLEANS = $(HOLHEAP) $(HOLHEAP).o selftest.exe
 
 BARE_DEPS = ../theories/numeralTheory ../numLib
 DEPS = $(patsubst %,%.uo,$(BARE_DEPS))
 
+.PHONY: all
+all: $(HOLHEAP) selftest.exe
+
 $(HOLHEAP): $(DEPS) $(dprot $(HOLDIR)/bin/hol.builder0)
 	$(protect $(HOLDIR)/bin/buildheap) -o $@ -b $(protect $(HOLDIR)/bin/hol.builder0) $(BARE_DEPS)
-
+else
+EXTRA_CLEANS = selftest.exe
 endif
+
+selftest.exe: selftest.uo
+	$(HOLMOSMLC) -o $@ $<

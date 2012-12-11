@@ -343,8 +343,8 @@ fun put_destructors thl (DFACTS
 fun basic_info case_def =
  let val clauses = (strip_conj o concl) case_def
      val lefts   = map (fst o dest_eq o #2 o strip_forall) clauses
-     val constrs = map (#1 o strip_comb o rand) lefts
-     val ty      = type_of (rand (Lib.trye hd lefts))
+     val constrs = map (#1 o strip_comb o hd o #2 o strip_comb) lefts
+     val ty      = type_of (hd (#2 (strip_comb (Lib.trye hd lefts))))
  in
    (ty, type_names ty, constrs)
  end
@@ -960,7 +960,9 @@ local fun build_case_clause((ty,constr),rhs) =
 in
 fun dest_case1 tybase M =
   let val (c,args) = strip_comb M
-      val (cases,arg) = front_last args
+      val (cases,arg) =
+          case args of h::t => (t, h)
+                     | _ => raise ERR "dest_case" "case exp has too few args"
   in case prim_get tybase (type_names (type_of arg))
       of NONE => raise ERR "dest_case" "unable to destruct case expression"
        | SOME tyinfo =>
@@ -990,7 +992,9 @@ fun dest_case tybase M =
 
 fun is_case1 tybase M =
   let val (c,args) = strip_comb M
-      val (tynames as (_,tyop)) = type_names (type_of (last args))
+      val (tynames as (_,tyop)) =
+          type_names (type_of (hd args)) handle Empty => raise ERR "" ""
+  (* will get caught later *)
   in case prim_get tybase tynames
       of NONE => raise ERR "is_case" ("unknown type operator: "^Lib.quote tyop)
        | SOME tyinfo =>

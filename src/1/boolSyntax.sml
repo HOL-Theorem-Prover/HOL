@@ -35,7 +35,7 @@ val conditional  = prim_mk_const {Name = "COND",         Thy = "bool"}
 val let_tm       = prim_mk_const {Name = "LET",          Thy = "bool"}
 val arb          = prim_mk_const {Name = "ARB",          Thy = "bool"}
 val the_value    = prim_mk_const {Name = "the_value",    Thy = "bool"}
-val bool_case    = prim_mk_const {Name = "bool_case",    Thy = "bool"}
+val bool_case    = prim_mk_const {Name = "COND",         Thy = "bool"}
 val literal_case = prim_mk_const {Name = "literal_case", Thy = "bool"}
 val bounded_tm   = prim_mk_const {Name = "BOUNDED",      Thy = "bool"}
 val IN_tm        = prim_mk_const {Name = "IN",           Thy = "bool"}
@@ -81,7 +81,7 @@ fun mk_let (func, arg) =
    handle HOL_ERR _ => raise ERR "mk_let" ""
 
 fun mk_bool_case (a0, a1, b) =
-   list_mk_comb (inst [alpha |-> type_of a0] bool_case, [a0, a1, b])
+   list_mk_comb (inst [alpha |-> type_of a0] bool_case, [b, a0, a1])
    handle HOL_ERR _ => raise ERR "mk_bool_case" ""
 
 fun mk_literal_case (func, arg) =
@@ -147,8 +147,8 @@ in
 
    fun dest_bool_case M =
       let
-         val (Rator, b) = with_exn dest_comb M bool_case_err
-         val (a0, a1) = dest_binop bool_case bool_case_err Rator
+         val (Rator, a1) = with_exn dest_comb M bool_case_err
+         val (b, a0) = dest_binop bool_case bool_case_err Rator
       in
          (a0, a1, b)
       end

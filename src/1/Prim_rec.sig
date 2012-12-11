@@ -30,6 +30,8 @@ sig
     -------------------------------------------------------------------------*)
 
    val define_case_constant : thm -> thm list
+   val case_constant_name : {type_name:string} -> string
+   val case_constant_defn_name : {type_name:string} -> string
 
    val INDUCT_THEN                 : thm -> (thm -> tactic) -> tactic
    val prove_rec_fn_exists         : thm -> term -> thm

@@ -418,6 +418,9 @@ fun num_variant vlist v =
   mk_var(pass Name, Ty)
   end;
 
+fun case_constant_name {type_name} = type_name ^ "_CASE"
+fun case_constant_defn_name {type_name} = type_name ^ "_case_def"
+
 fun generate_case_constant_eqns ty clist =
  let val (dty,rty) = Type.dom_rng ty
      val (Tyop,Args) = dest_type dty
@@ -429,10 +432,9 @@ fun generate_case_constant_eqns ty clist =
        in (v::nv, v::away)
        end
      val arg_list = rev(fst(rev_itlist mk_cfun clist ([],free_varsl clist)))
-     val v = mk_var(Tyop^"_case",
-                    list_mk_fun(map type_of arg_list, ty))
-     val preamble = list_mk_comb(v,arg_list)
-     fun clause (a,c) = mk_eq(mk_comb(preamble,c),
+     val v = mk_var(case_constant_name{type_name = Tyop},
+                    list_mk_fun(dty :: map type_of arg_list, rty))
+     fun clause (a,c) = mk_eq(list_mk_comb(v,c::arg_list),
                               list_mk_comb(a, #2 (strip_comb c)))
  in
    list_mk_conj (ListPair.map clause (arg_list, clist))
@@ -451,7 +453,9 @@ fun define_case_constant ax =
           val cs = type_constructors_with_args ax name
           val eqns = generate_case_constant_eqns ty cs
       in new_recursive_definition
-             {name=name^"_case_def", rec_axiom=ax, def=eqns}
+             {name=case_constant_defn_name {type_name = name},
+              rec_axiom=ax,
+              def=eqns}
       end
  in
   map mk_defn usethese
@@ -1269,18 +1273,21 @@ fun case_cong_term case_def =
  let val clauses = (strip_conj o concl) case_def
      val clause1 = Lib.trye hd clauses
      val left = (#1 o dest_eq o #2 o strip_forall) clause1
-     val ty = type_of (rand left)
+     val (c, allargs) = strip_comb left
+     val (tyarg, nonty_args) =
+         case allargs of h::t => (h,t)
+                       | _ => raise Fail "case_cong_term: should never happen"
+     val ty = type_of tyarg
      val allvars = all_varsl clauses
      val M = variant allvars (mk_var("M", ty))
      val M' = variant (M::allvars) (mk_var("M",ty))
-     val lhsM = mk_comb(rator left, M)
-     val c = #1(strip_comb left)
+     val lhsM = list_mk_comb(c, M::nonty_args)
      fun mk_clause clause =
        let val (lhs,rhs) = (dest_eq o #2 o strip_forall) clause
            val func = (#1 o strip_comb) rhs
            val (Name,Ty) = dest_var func
            val func' = variant allvars (mk_var(Name^"'", Ty))
-           val capp = rand lhs
+           val capp = hd (#2 (strip_comb lhs))
            val (constr,xbar) = strip_vars capp
        in (func',
            list_mk_forall
@@ -1291,7 +1298,7 @@ fun case_cong_term case_def =
      val (funcs',clauses') = unzip (map mk_clause clauses)
  in
  mk_imp(list_mk_conj(mk_eq(M, M')::clauses'),
-        mk_eq(lhsM, list_mk_comb(c,(funcs'@[M']))))
+        mk_eq(lhsM, list_mk_comb(c,M'::funcs')))
  end;
 
 (*---------------------------------------------------------------------------*
@@ -1319,9 +1326,8 @@ fun EQ_EXISTS_LINTRO (thm,(vlist,theta)) =
 
 fun OKform case_def =
   let val clauses = (strip_conj o concl) case_def
-      val left = (rator o fst o dest_eq o #2 o strip_forall)
-                 (Lib.trye hd clauses)
-      val opvars = #2 (strip_comb left)
+      val left = (fst o dest_eq o #2 o strip_forall) (Lib.trye hd clauses)
+      val opvars = tl (#2 (strip_comb left))
       fun rhs_head c = fst(strip_comb(rhs(snd(strip_forall c))))
       val rhs_heads = map rhs_head clauses
       fun check [] = true
@@ -1335,7 +1341,7 @@ fun case_cong_thm nchotomy case_def =
      val _ = assert OKform case_def
      val clause1 =
        let val c = concl case_def in fst(dest_conj c) handle HOL_ERR _ => c end
-     val V = butlast (snd (strip_comb (lhs (#2 (strip_forall clause1)))))
+     val V = tl (snd (strip_comb (lhs (#2 (strip_forall clause1)))))
      val gl = case_cong_term case_def
      val (ant,conseq) = dest_imp gl
      val imps = CONJUNCTS (ASSUME ant)
@@ -1348,18 +1354,23 @@ fun case_cong_thm nchotomy case_def =
      val lconseqM' = rhs(concl lconseq_thm)
      val nchotomy' = ISPEC M' nchotomy
      val disjrl = map ((I##rhs) o strip_exists)	(strip_disj (concl nchotomy'))
-     val V' = butlast(snd(strip_comb rconseq))
+     val V' = tl(snd(strip_comb rconseq))
      val theta = map2 (fn v => fn v' => {redex=v,residue=v'}) V V'
      fun zot (p as (icase_thm, case_def_clause)) (iimp,(vlist,disjrhs)) =
-       let val lth = TRANS (AP_TERM(rator lconseqM') icase_thm) case_def_clause
-           val rth = TRANS (AP_TERM(rator rconseq) icase_thm)
+         let
+           val c = case_def_clause |> concl |> lhs |> strip_comb |> #1
+           fun AP_THMl tl th = List.foldl (fn (v,th) => AP_THM th v) th tl
+           val lth =
+                 icase_thm |> AP_TERM c |> AP_THMl V |> C TRANS case_def_clause
+           val rth = TRANS (icase_thm |> AP_TERM c |> AP_THMl V')
                            (INST theta case_def_clause)
            val theta = Term.match_term disjrhs
                      ((rhs o fst o dest_imp o #2 o strip_forall o concl) iimp)
            val th = MATCH_MP iimp icase_thm
            val th1 = TRANS lth th
-       in (TRANS th1 (SYM rth), (vlist, #1 theta))
-       end
+         in
+           (TRANS th1 (SYM rth), (vlist, #1 theta))
+         end
      val thm_substs = map2 zot
                        (zip (Lib.trye tl case_assms)
                             (map SPEC_ALL (CONJUNCTS case_def)))

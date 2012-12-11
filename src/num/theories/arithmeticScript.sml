@@ -210,11 +210,7 @@ val ODD = new_recursive_definition
              (ODD (SUC n) = ~ODD n)`--};
 val _ = ot0 "ODD" "odd"
 
-val num_case_def = new_recursive_definition
-   {name = "num_case_def",
-    rec_axiom = num_Axiom,
-    def = --`(num_case b f 0 = (b:'a)) /\
-             (num_case b f (SUC n) = f n)`--};
+val [num_case_def] = Prim_rec.define_case_constant num_Axiom
 
 val FUNPOW = new_recursive_definition
    {name = "FUNPOW",
@@ -254,7 +250,7 @@ val EQ_SYM_EQ' = INST_TYPE [alpha |-> Type`:num`] EQ_SYM_EQ;
 (*---------------------------------------------------------------------------*)
 
 val num_case_compute = store_thm("num_case_compute",
-  Term `!n. num_case (f:'a) g n = if n=0 then f else g (PRE n)`,
+  Term `!n. num_CASE n (f:'a) g = if n=0 then f else g (PRE n)`,
 INDUCT_TAC THEN REWRITE_TAC [num_case_def,NOT_SUC,PRE]);
 
 (* --------------------------------------------------------------------- *)

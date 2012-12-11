@@ -36,7 +36,7 @@ struct
   val odd_tm       = prim_mk_const {Name="ODD",     Thy="arithmetic"}
   val min_tm       = prim_mk_const {Name="MIN",     Thy="arithmetic"}
   val max_tm       = prim_mk_const {Name="MAX",     Thy="arithmetic"}
-  val num_case_tm  = prim_mk_const {Name="num_case",Thy="arithmetic"}
+  val num_case_tm  = prim_mk_const {Name="num_CASE",Thy="arithmetic"}
   val fact_tm      = prim_mk_const {Name="FACT",    Thy="arithmetic"}
   val funpow_tm    = prim_mk_const {Name="FUNPOW",  Thy="arithmetic"}
   val divmod_tm    = prim_mk_const {Name="DIVMOD",  Thy="arithmetic"};
@@ -72,7 +72,7 @@ struct
   val mk_fact     = mk_monop fact_tm
 
   fun mk_num_case(b,f,n) =
-      list_mk_comb(inst[alpha |-> type_of b] num_case_tm, [b,f,n]);
+      list_mk_comb(inst[alpha |-> type_of b] num_case_tm, [n,b,f]);
 
   fun mk_funpow(f,n,x) =
       list_mk_comb(inst [alpha |-> type_of x] funpow_tm, [f,n,x]);
@@ -120,11 +120,11 @@ struct
 
   fun dest_num_case tm =
     case strip_comb tm
-     of (ncase,[b,f,n]) =>
+     of (ncase,[n,b,f]) =>
          if same_const num_case_tm ncase
          then (b,f,n)
-         else raise ERR "dest_num_case" "not an application of \"num_case\""
-      | _ => raise ERR "dest_num_case" "not an application of \"num_case\""
+         else raise ERR "dest_num_case" "not an application of \"num_CASE\""
+      | _ => raise ERR "dest_num_case" "not an application of \"num_CASE\""
 
   fun dest_funpow tm =
     case strip_comb tm

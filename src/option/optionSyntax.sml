@@ -32,7 +32,7 @@ val option_map_tm  = prim_mk_const{Name="OPTION_MAP",  Thy="option"}
 val option_join_tm = prim_mk_const{Name="OPTION_JOIN", Thy="option"}
 val is_some_tm     = prim_mk_const{Name="IS_SOME",     Thy="option"}
 val is_none_tm     = prim_mk_const{Name="IS_NONE",     Thy="option"}
-val option_case_tm = prim_mk_const{Name="option_case", Thy="option"}
+val option_case_tm = prim_mk_const{Name="option_CASE", Thy="option"}
 
 
 (*---------------------------------------------------------------------------
@@ -68,7 +68,7 @@ fun mk_option_case (n,s,p) =
  case total dest_thy_type (type_of p)
   of SOME{Tyop="option", Thy="option", Args=[ty]}
       => list_mk_comb
-            (inst[beta |-> type_of n, alpha |-> ty]option_case_tm, [n,s,p])
+            (inst[beta |-> type_of n, alpha |-> ty]option_case_tm, [p,n,s])
    | otherwise => raise ERR "mk_option_case" "";
 
 
@@ -90,7 +90,7 @@ val dest_option_join = dest_monop option_join_tm (ERR "dest_option_join" "")
 fun dest_option_case tm =
  let val (f,z) = with_exn dest_comb tm (ERR "dest_option_case" "")
      val (x,y) = dest_binop option_case_tm (ERR "dest_option_case" "") f
- in (x,y,z)
+ in (z,x,y)
  end
 
 (*---------------------------------------------------------------------------

@@ -148,19 +148,14 @@ val _ = BasicProvers.export_rewrites ["FORALL_ONE"]
     Define the case constant
  ---------------------------------------------------------------------------*)
 
-val one_case_def = new_definition
- ("one_case_def",
-  Term`one_case u x = if x=one then u else u`);
-
-val one_case_rw = Q.store_thm
- ("one_case_rw",
-  `!(u:'a) x. one_case u x = u`,
-  REWRITE_TAC [one_case_def,boolTheory.COND_ID]);
+val one_case_def = new_definition (
+  "one_case_def",
+  Term`one_CASE (u:unit) (x:'a) = x`);
 
 val one_case_thm = Q.store_thm
  ("one_case_thm",
-  `!u:'a. one_case u () = u`,
-  ONCE_REWRITE_TAC [GSYM one] THEN REWRITE_TAC [one_case_rw]);
+  `!x:'a. one_CASE () x = x`,
+  ONCE_REWRITE_TAC [GSYM one] THEN REWRITE_TAC [one_case_def]);
 
 
 val _ = adjoin_to_theory

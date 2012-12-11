@@ -246,9 +246,19 @@ val fcp_ind = store_thm(
   Q.SPEC_THEN `a` (SUBST1_TAC o SYM) (CONJUNCT1 cart_tybij) THEN
   SRW_TAC [][]);
 
+
+(* could just call
+
+     Prim_rec.define_case_constant fcp_Axiom
+
+   but this gives the case constant the name cart_CASE *)
+
 val fcp_case_def = new_specification(
-  "fcp_case_def", ["fcp_case"],
-  SIMP_RULE (srw_ss()) [SKOLEM_THM] fcp_Axiom);
+  "fcp_case_def", ["fcp_CASE"],
+  prove(`?cf. !h f. cf (mk_cart h) f = f h`,
+        X_CHOOSE_THEN `cf0` STRIP_ASSUME_TAC
+                        (SIMP_RULE (srw_ss()) [SKOLEM_THM] fcp_Axiom) THEN
+        EXISTS_TAC `\c f. cf0 f c` THEN BETA_TAC THEN ASM_REWRITE_TAC []));
 
 val fcp_tyinfo = TypeBasePure.gen_datatype_info {
   ax = fcp_Axiom,

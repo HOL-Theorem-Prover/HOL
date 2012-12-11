@@ -2662,9 +2662,7 @@ val compare_branch_instr = save_thm("compare_branch_instr",
 
 val error_option_case_COND_RAND = Q.store_thm("error_option_case_COND_RAND",
   `!c f f1 a0 a1 a2 a3.
-     error_option_case f f1
-       (if c then ValueState a0 a1
-             else ValueState a2 a3) =
+     error_option_CASE (if c then ValueState a0 a1 else ValueState a2 a3) f f1 =
      if c then
        f a0 a1
      else

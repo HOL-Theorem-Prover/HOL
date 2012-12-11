@@ -25,7 +25,10 @@ val isl_tm      = prim_mk_const{Name="ISL",      Thy = "sum"}
 val isr_tm      = prim_mk_const{Name="ISR",      Thy = "sum"}
 val outl_tm     = prim_mk_const{Name="OUTL",     Thy = "sum"}
 val outr_tm     = prim_mk_const{Name="OUTR",     Thy = "sum"}
-val sum_case_tm = prim_mk_const{Name="sum_case", Thy = "sum"};
+val sum_case_tm =
+    mk_thy_const{Name="sum_CASE", Thy = "sum",
+                 Ty = mk_sum(beta,gamma) --> (beta --> alpha) -->
+                      (gamma --> alpha) --> alpha}
 
 fun mk_inl(tm,ty) = mk_comb(inst[alpha|-> type_of tm, beta |-> ty] inl_tm, tm);
 
@@ -55,7 +58,7 @@ fun mk_sum_case (f,g,s) =
   let val (df,r) = dom_rng (type_of f)
       val (dg,_) = dom_rng (type_of g)
   in list_mk_comb
-       (inst [alpha |-> r, beta |-> df, gamma |-> dg] sum_case_tm, [f,g,s])
+       (inst [alpha |-> r, beta |-> df, gamma |-> dg] sum_case_tm, [s,f,g])
   end;
 
 (*---------------------------------------------------------------------------*)

@@ -387,17 +387,12 @@ fun first_subterm f tm = f (case_find_subterm (can f) tm);
 
 fun scrutinized_and_free_in tm =
  let fun free_case t =
-        let val (_, a) = dest_comb t
-        in if TypeBase.is_case t andalso free_in a tm
-              then a else raise ERR "free_case" ""
-        end
-
-     fun free_cond t =
-        let val (a, _, _) = dest_cond t
-        in if free_in a tm then a else raise ERR "free_cond" ""
+        let val (_, examined, _) = TypeBase.dest_case t
+        in if free_in examined tm
+              then examined else raise ERR "free_case" ""
         end
  in
-    fn t => free_case t handle HOL_ERR _ => free_cond t
+    free_case
  end;
 
 fun PURE_TOP_CASE_TAC (g as (_, tm)) =
