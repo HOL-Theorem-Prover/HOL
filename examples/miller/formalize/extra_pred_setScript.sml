@@ -54,6 +54,19 @@ val Cond =
 val countable_def = Define
   `countable s = ?f. !x : 'a. x IN s ==> ?n : num. f n = x`;
 
+val pscountable_countable = store_thm(
+  "pscountable_countable",
+  ``pred_set$countable = extra_pred_set$countable``,
+  SRW_TAC [][countable_def, pred_setTheory.countable_def, FUN_EQ_THM] THEN
+  EQ_TAC THEN STRIP_TAC THEN1
+    (IMP_RES_TAC inj_surj THEN SRW_TAC [][] THEN METIS_TAC [SURJ_DEF]) THEN
+  Q.EXISTS_TAC `\x. @n. f n = x` THEN ASM_SIMP_TAC (srw_ss())[INJ_DEF] THEN
+  MAP_EVERY Q.X_GEN_TAC [`e1`, `e2`] THEN STRIP_TAC THEN
+  SELECT_ELIM_TAC THEN CONJ_TAC THEN1 METIS_TAC [] THEN
+  Q.X_GEN_TAC `u` THEN STRIP_TAC THEN
+  SELECT_ELIM_TAC THEN CONJ_TAC THEN1 METIS_TAC [] THEN
+  Q.X_GEN_TAC `v` THEN REPEAT STRIP_TAC THEN SRW_TAC [][]);
+
 val enumerate_def = Define `enumerate s = @f : num -> 'a. BIJ f UNIV s`;
 
 val schroeder_close_def = Define
@@ -1281,7 +1294,7 @@ val COUNTABLE_ENUM = store_thm
        ++ Q.EXISTS_TAC `K e`
        ++ RW_TAC std_ss [EXTENSION, IN_SING, IN_IMAGE, IN_UNIV, K_THM])
    ++ DISJ2_TAC
-   ++ Q.EXISTS_TAC `num_case e f`
+   ++ Q.EXISTS_TAC `\n. num_CASE n e f`
    ++ RW_TAC std_ss [IN_INSERT, IN_IMAGE, EXTENSION, IN_UNIV]
    ++ EQ_TAC <<
    [RW_TAC std_ss [] <<
@@ -1289,11 +1302,8 @@ val COUNTABLE_ENUM = store_thm
      ++ RW_TAC std_ss [num_case_def],
      Q.EXISTS_TAC `SUC x'`
      ++ RW_TAC std_ss [num_case_def]],
-    RW_TAC std_ss []
-    ++ Cases_on `x'` <<
-    [RW_TAC std_ss [num_case_def],
-     RW_TAC std_ss [num_case_def]
-     ++ PROVE_TAC []]]);
+    RW_TAC std_ss [] ++
+    METIS_TAC [num_case_def, TypeBase.nchotomy_of ``:num``]]);
 
 val BIGUNION_IMAGE_UNIV = store_thm
   ("BIGUNION_IMAGE_UNIV",
@@ -1504,7 +1514,7 @@ val FINITE_DISJOINT_ENUM = store_thm
    ++ RW_TAC std_ss []
    ++ Q.PAT_ASSUM `f IN X` MP_TAC
    ++ RW_TAC std_ss [IN_FUNSET, IN_UNIV, IN_INSERT]
-   ++ Q.EXISTS_TAC `num_case e f`
+   ++ Q.EXISTS_TAC `\x. num_CASE x e f`
    ++ CONJ_TAC
    >> (RW_TAC std_ss [IN_FUNSET, IN_UNIV, IN_INSERT]
        ++ Cases_on `x`
@@ -1684,19 +1694,9 @@ val DISJOINT_ALT = store_thm
    RW_TAC std_ss [IN_DISJOINT]
    ++ PROVE_TAC []);
 
-val COUNTABLE_INSERT = store_thm
-  ("COUNTABLE_INSERT",
-   ``!x xs. countable (x INSERT xs) = countable xs``,
-   RW_TAC std_ss []
-   ++ EQ_TAC >> PROVE_TAC [COUNTABLE_SUBSET, SUBSET_DEF, IN_INSERT]
-   ++ RW_TAC std_ss [countable_def, IN_INSERT]
-   ++ Q.EXISTS_TAC `num_case x f`
-   ++ RW_TAC std_ss []
-   >> (Q.EXISTS_TAC `0`
-       ++ RW_TAC std_ss [num_case_def])
-   ++ RES_TAC
-   ++ Q.EXISTS_TAC `SUC n`
-   ++ RW_TAC std_ss [num_case_def]);
+val COUNTABLE_INSERT = save_thm(
+  "COUNTABLE_INSERT",
+  REWRITE_RULE [pscountable_countable] pred_setTheory.countable_INSERT)
 
 val COUNTABLE_COUNT = store_thm
   ("COUNTABLE_COUNT",
