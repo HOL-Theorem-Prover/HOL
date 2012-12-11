@@ -2632,13 +2632,13 @@ ML)
 \end{hol}
 %
 Such an expression is translated to
-$\konst{list\_case}\ e_2\ (\lambda h\; t.\ e_3)\ e_1$ where the constant
-{\small\verb+list_case+} is defined as follows:
+$\holtxt{list\_CASE}\ e_1\ e_2\ (\lambda h\; t.\ e_3)$ where the constant
+\holtxt{list\_CASE} is defined as follows:
 \begin{hol}
 \begin{verbatim}
    list_case_def
-     |- (!v f. list_case v f [] = v) /\
-        (!v f a0 a1. list_case v f (a0::a1) = f a0 a1)
+     |- (!v f. list_CASE [] v f = v) /\
+        (!v f a0 a1. list_CASE (a0::a1) v f = f a0 a1)
 \end{verbatim}
 \end{hol}
 

@@ -386,7 +386,7 @@ are also proved and stored in the current theory.
         (!a. (M' = Leaf a) ==> (f a = f' a)) /\
         (!a0 a1. (M' = Node a0 a1) ==> (f1 a0 a1 = f1' a0 a1))
           ==>
-        (case f f1 M = case f' f1' M')
+        (tree_CASE M f f1 M = tree_CASE M' f' f1')
 \end{verbatim}
 \end{hol}
 %

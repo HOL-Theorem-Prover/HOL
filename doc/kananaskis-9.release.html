@@ -1,0 +1,81 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01//EN">
+<html>
+<head>
+<meta http-equiv="content-type"
+      content="text/html ; charset=UTF-8">
+<title>Release Notes for Kananaskis-9 version of HOL 4</title>
+<style type="text/css">
+<!--
+  body {color: #333333; background: #FFFFFF;
+        margin-left: 1em; margin-right: 1em }
+  code, pre {color: #660066; font-weight: bold; font-family: "Andale Mono", "Lucida Console", monospace; }
+-->
+</style>
+
+</head>
+
+<body>
+<h1>Notes on HOL 4, Kananaskis-9 release</h1>
+
+<p>We are pleased to announce the Kananaskis-9 release of HOL 4.</p>
+
+<h2 id="contents">Contents</h2>
+<ul>
+  <li> <a href="#new-features">New features</a> </li>
+  <li> <a href="#bugs-fixed">Bugs fixed</a> </li>
+  <li> <a href="#new-theories">New theories</a> </li>
+  <li> <a href="#new-tools">New tools</a> </li>
+  <li> <a href="#new-examples">New examples</a> </li>
+  <li> <a href="#incompatibilities">Incompatibilities</a> </li>
+</ul>
+
+<h2 id="new-features">New features:</h2>
+
+<h2 id="bugs-fixed">Bugs fixed:</h2>
+
+
+<h2 id="new-theories">New theories:</h2>
+
+<h2 id="new-tools">New tools:</h2>
+
+<h2 id="new-examples">New examples:</h2>
+
+<h2 id="incompatibilities">Incompatibilities:</h2>
+
+<ul>
+
+<li><p>The case-constants generated for algebraic data types now have different types.
+The value that is “switched on” is now the first argument of the constant rather than the last.
+The names of these constants have also changed, emphasising the change.
+For example, the old constant for natural numbers, <code>num_case</code> had type
+<pre>
+   α → (num → α) → num → α
+</pre>
+<p> Now the case constant for the natural numbers is called <code>num_CASE</code> and has type
+<pre>
+   num → α → (num → α) → α
+</pre>
+
+<p>This change is invisible if the “<code>case</code>-<code>of</code>” syntax is used.
+
+<p>This change makes more efficient evaluation (with <code>EVAL</code>) of expressions with case constants possible.
+
+<p>In addition, the <code>bool_case</code> constant has been deleted entirely: when the arguments are flipped as above it becomes identical to <code>COND</code> (<code>if</code>-<code>then</code>-<code>else</code>).
+This means that simple case-expressions over booleans will print as <code>if</code>-<code>then</code>-<code>else</code> forms.
+Thus
+<pre>
+   > ``case b of T => 1 | F => 3``;
+   val it = ``if b then 1 else 3``: term
+</pre>
+<p>More complicated case expressions involving booleans will still print with the <code>case</code> form:
+<pre>
+   > ``case p of (x,T) => 3 | (y,F) => y``;
+   val it =
+     ``case p of (x,T) => 3 | (x,F) => x``: term
+</pre>
+</ul>
+<hr>
+
+<p><em><a href="http://hol.sourceforge.net">HOL 4, Kananaskis-9</a></em></p>
+
+</body> </html>
