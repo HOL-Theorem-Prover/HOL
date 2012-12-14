@@ -222,10 +222,8 @@ val zR_def = Define `
   (zR 12w = zR1 zR12) /\
   (zR 13w = zR1 zR13) /\
   (zR 14w = zR1 zR14) /\
-  (zR (15w:word4) = zR1 zR15)`
-  |> SIMP_RULE (srw_ss()) []
+  (zR (15w:word4) = zR1 zR15)`;
 
-val _ = save_thm("zR_def",zR_def);
 
 (* theorems *)
 
