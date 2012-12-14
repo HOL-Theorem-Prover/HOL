@@ -17,4 +17,10 @@ sig
    val mk_functional : thry -> term -> {functional:term, pats: pattern list}
    val mk_pattern_fn : thry -> (term * term) list -> term
 
+   (* case expression manipulation functions *)
+   val mk_case : thry -> term * (term * term) list -> term
+   val dest_case : thry -> term -> term * term * (term * term) list
+   val is_case : thry -> term -> bool
+   val strip_case : thry -> term -> term * (term * term) list
+
 end

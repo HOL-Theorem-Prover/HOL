@@ -73,6 +73,17 @@ Thus
    val it =
      ``case p of (x,T) => 3 | (x,F) => x``: term
 </pre>
+
+<p>At the ML level, we have tried to retain a degree of backwards compatibility.
+For example, the automatically defined case constants for algebraic types will still be saved in their home-theories with the name “<i>type</i><code>_case_def</code>”.
+In addition, case terms for the core types of the system (options, lists, numbers, pairs, sums, etc) can still be constructed and destructed through functions in the relevant <i>type</i><code>Syntax</code> modules in the same way.
+For example, <code>numSyntax.mk_num_case</code> still has the type
+<pre>
+   term * term * term -> term
+</pre>
+<p> and term-triple still corresponds to the 0-case, the successor-case and the number-argument (in that order), as before.
+This is despite the fact that the underlying term has those sub-terms in a different order (the number-argument comes first).
+
 </ul>
 <hr>
 

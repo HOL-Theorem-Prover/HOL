@@ -561,8 +561,8 @@ val unprotect_thm  = PURE_REWRITE_RULE [combinTheory.I_THM];
 fun elim_triv_literal_case th =
  let val const_eq_conv = !const_eq_ref
      val cnv = TRY_CONV (REWR_CONV literal_case_THM THENC BETA_CONV) THENC
-               RAND_CONV const_eq_conv THENC
-               PURE_ONCE_REWRITE_CONV [bool_case_thm]
+               RATOR_CONV (RATOR_CONV (RAND_CONV const_eq_conv)) THENC
+               PURE_ONCE_REWRITE_CONV [COND_CLAUSES]
 (*     val cnv1 = REWRITE_CONV [pairTheory.pair_case_thm] THENC LIST_BETA_CONV
      val rule = CONV_RULE (RAND_CONV (REPEATC cnv THENC cnv1))
 *)

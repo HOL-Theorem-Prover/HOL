@@ -312,7 +312,7 @@ fun under_literal_bool_case conv tm =
     incomplete set of patterns is given.
  ----------------------------------------------------------------------------*)
 
-fun mk_case ty_info ty_match FV range_ty =
+fun mk_case0 ty_info ty_match FV range_ty =
  let
  fun mk_case_fail s = raise ERR "mk_case" s
  val fresh_var = vary FV
@@ -502,7 +502,7 @@ fun mk_case2 v (exp, plist) =
                      else mk_literal_case(mk_abs(v,switch),exp)
        end;
 
-fun mk_case' tybase (exp, plist) =
+fun mk_case tybase (exp, plist) =
   let val col0 = map fst plist
   in if all (is_constructor_var_pat tybase) col0
         andalso not (all is_var col0)
@@ -566,9 +566,16 @@ fun is_case1 tybase M =
       val (tynames as {Tyop=tyop, ...}) =
           type_names (type_of (hd args)) handle Empty => raise ERR "" ""
       (* will get caught later *)
-  in case match_info tybase tynames
-      of NONE => raise ERR "is_case" ("unknown type operator: "^Lib.quote tyop)
-       | SOME tyinfo => same_const c (case_const_of tyinfo)
+  in
+    case match_info tybase tynames of
+      NONE => raise ERR "is_case" ("unknown type operator: "^Lib.quote tyop)
+    | SOME tyinfo => let
+        val gconst = case_const_of tyinfo
+        val gty = type_of gconst
+        val argtys = fst (strip_fun gty)
+      in
+        same_const c gconst andalso length args = length argtys
+      end
   end
   handle HOL_ERR _ => false;
 
@@ -585,7 +592,7 @@ local fun dest tybase (pat,rhs) =
                       val pat0 = if is_var v then subst [v |-> e] pat
                                              else e (* fails if pat ~= v *)
                       (* val theta = fst (Term.match_term v e) handle HOL_ERR _ => [] *)
-                  in if null (subtract fvs patvars)
+                  in if null (subtract fvs patvars) andalso null (free_vars e)
                         (* andalso null_intersection fvs (free_vars (hd rhsides)) *)
                      then flatten
                             (map (dest tybase)
@@ -641,7 +648,7 @@ fun rename_case thy sub cs =
                              rename_case thy sub exp))
                        pat_exps
        val arg' = rename_case thy sub arg
-       val cs' = mk_case' thy (arg', pat_exps')
+       val cs' = mk_case thy (arg', pat_exps')
    in cs'
    end
 
@@ -664,7 +671,7 @@ fun mk_functional thy eqs =
      val a = variant fvs (mk_var("a", type_of(Lib.trye hd pats)))
      val FV = a::fvs
      val range_ty = type_of (Lib.trye hd R)
-     val (patts, case_tm) = mk_case (match_info thy) (match_type thy)
+     val (patts, case_tm) = mk_case0 (match_info thy) (match_type thy)
                                      FV range_ty {path=[a], rows=rows}
      fun func (_,(tag,i),[pat]) = tag (pat,i)
        | func _ = err "error in pattern-match translation"
