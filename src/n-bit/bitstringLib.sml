@@ -119,13 +119,13 @@ local
       (!l. num_from_bin_list (1::l) = NUMERAL (l2n 2 (1::l)))`,
       simp [numposrepTheory.num_from_bin_list_def] >> qm [NUMERAL_DEF])
 
-   val cmp = computeLib.new_compset
-              [bitstringTheory.bitify_def, num_from_bin_list_compute,
-               l2n_2_numeric, iDUB_removal]
-
-   val cnv = Conv.REWR_CONV bitstringTheory.v2n_def
-             THENC CHANGE_CBV_CONV cmp
-             THENC Conv.TRY_CONV (Conv.REWR_CONV NORM_0)
+   val cnv =
+      Conv.REWR_CONV bitstringTheory.v2n_def
+      THENC Conv.RAND_CONV (PURE_REWRITE_CONV [bitstringTheory.bitify_def])
+      THENC PURE_ONCE_REWRITE_CONV [num_from_bin_list_compute]
+      THENC Conv.TRY_CONV
+              (Conv.RAND_CONV (PURE_REWRITE_CONV [l2n_2_numeric, iDUB_removal])
+               THENC Conv.TRY_CONV (Conv.REWR_CONV NORM_0))
 in
    fun v2n_CONV tm =
       check numLib.is_numeral (ERR "v2n_CONV" "not ground")
