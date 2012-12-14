@@ -592,7 +592,7 @@ local fun dest tybase (pat,rhs) =
                       val pat0 = if is_var v then subst [v |-> e] pat
                                              else e (* fails if pat ~= v *)
                       (* val theta = fst (Term.match_term v e) handle HOL_ERR _ => [] *)
-                  in if null (subtract fvs patvars)
+                  in if null (subtract fvs patvars) andalso null (free_vars e)
                         (* andalso null_intersection fvs (free_vars (hd rhsides)) *)
                      then flatten
                             (map (dest tybase)
