@@ -24,6 +24,12 @@ in
   ()
 end handle e => die()
 
+(* parsing of case expressions with conditionals as arms *)
+val _ = tprint "Parsing case expressions with conditional arms"
+val t1 = ``case p:'a#'b of (x,y) => if y = a then x else f x y``
+val t2 = ``pair_CASE (p:'a # 'b) (\x y. if y = a then x else f x y)``
+val _ = if aconv t1 t2 then print "OK\n" else die()
+
 val _ = print "**** More Inductive Definition tests ****\n"
 open IndDefLib
 fun checkhyps th = if null (hyp th) then ()
