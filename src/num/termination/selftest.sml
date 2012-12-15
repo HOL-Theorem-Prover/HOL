@@ -1,6 +1,7 @@
 open HolKernel Parse boolLib
 open testutils TotalDefn
 val _ = Feedback.emit_MESG := false
+val _ = print "\n"
 val _ = tprint "Testing mutually recursive function definition"
 
 val f_def = Define`
@@ -22,3 +23,12 @@ val _ = let
 in
   print "OK\n"
 end
+
+val _ = tprint "Testing form of derived induction principle"
+val fact_def = Define`fact n = if n < 2 then 1 else n * fact(n - 1)`;
+
+val desired_ind =
+  ``!P. (!n. (~(n < 2) ==> P (n - 1)) ==> P n) ==> !v. P v``
+
+val _ = if aconv desired_ind (concl (theorem "fact_ind")) then print "OK\n"
+        else die "FAILED!\n"
