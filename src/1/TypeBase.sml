@@ -91,10 +91,17 @@ fun encode_of ty       = valOf2 ty "encode_of"
  * Install datatype facts for booleans into theTypeBase.                     *
  *---------------------------------------------------------------------------*)
 
-val [bool_info] = TypeBasePure.gen_datatype_info
-                         {ax=boolTheory.boolAxiom,
-                          ind=boolTheory.bool_INDUCT,
-                          case_defs = [boolTheory.bool_case_thm]};
+val bool_info =
+    TypeBasePure.mk_datatype_info
+      {ax=ORIG boolTheory.boolAxiom,
+       induction = ORIG boolTheory.bool_INDUCT,
+       case_def = boolTheory.bool_case_thm,
+       case_cong = boolTheory.COND_CONG,
+       distinct = SOME (CONJUNCT1 boolTheory.BOOL_EQ_DISTINCT),
+       nchotomy = boolTheory.BOOL_CASES_AX,
+       fields = [], accessors = [], updates = [], one_one = NONE,
+       recognizers=[], destructors = [],
+       size = NONE, encode = NONE, lift = NONE}
 
 val _ = write [bool_info];
 
