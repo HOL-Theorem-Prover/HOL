@@ -10,8 +10,14 @@ boss_deps = listTheory pred_setTheory arithmeticTheory numLib \
 DEPS = bossLib.uo $(patsubst %,$(dprot $(SIGOBJ)/%.uo),$(boss_deps)) \
        $(dprot $(builder0))
 
+.PHONY: all
+all: $(TARGET) selftest.exe
+
 $(TARGET): $(DEPS)
 	$(protect $(HOLDIR)/bin/buildheap) -o hol.builder -b $(builder0) $(boss_deps) bossLib && \
 	$(MV) hol.builder $(TARGET)
 
 endif
+
+selftest.exe: selftest.uo bossLib.uo
+	$(HOLMOSMLC) -o $@ $<
