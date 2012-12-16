@@ -510,6 +510,11 @@ val _ = ot0 "pair_case" "case"
 val pair_case_thm = save_thm("pair_case_thm",
   pair_CASE_def |> Q.SPEC `(x,y)` |> REWRITE_RULE [FST, SND] |> SPEC_ALL)
 
+(* and, to be consistent with what would be generated if we could use
+   Hol_datatype to generate the pair type: *)
+val pair_case_def = save_thm("pair_case_def", pair_case_thm)
+
+
 val pair_case_cong = save_thm("pair_case_cong",
   Prim_rec.case_cong_thm pair_CASES pair_case_thm);
 val pair_rws = [PAIR, FST, SND];
