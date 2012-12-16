@@ -118,6 +118,7 @@ Manual/Reference/entries.tex
 examples/dev/*.vl
 
 examples/machine-code/lisp/*.s
+examples/machine-code/just-in-time/*.s
 
 examples/muddy/muddyC/Makefile
 examples/muddy/muddyC/buddy/src/libbdd.a
