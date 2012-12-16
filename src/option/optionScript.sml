@@ -536,7 +536,7 @@ val _ = adjoin_to_theory
     S "val _ = let open computeLib";                            NL();
     S "        in add_funs (map lazyfy_thm";                    NL();
     S "               [NOT_NONE_SOME,NOT_SOME_NONE,SOME_11,";   NL();
-    S "                OPTION_MAP_DEF,";                        NL();
+    S "                option_case_def, OPTION_MAP_DEF,";       NL();
     S "                IS_SOME_DEF,IS_NONE_DEF,THE_DEF,";       NL();
     S "                OPTION_JOIN_DEF])";                      NL();
     S "        end;"
