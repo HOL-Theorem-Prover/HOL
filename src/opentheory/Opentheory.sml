@@ -26,7 +26,9 @@ fun tyop_name_in_map n = Map.find(tyop_from_ot_map(),n)
 fun define_tyop_in_thy
   {name={Thy=tthy,Tyop},ax,args,
    rep={Thy=rthy,Name=rep},abs={Thy=athy,Name=abs}}
-= let
+= if (tthy = "string") andalso (Tyop = "char") then  (*  *ugly* hack to avoid  *)
+    {rep_abs=Q.SPEC `a`(DB.fetch "string" "ORD_CHR"), (*  duplicate definition  *)
+     abs_rep=Q.SPEC `r`(DB.fetch "string" "CHR_ORD")} else let
   open boolLib
   val (P,t) = dest_comb (concl ax)
   val v   = variant (free_vars P) (mk_var ("v",type_of t))
