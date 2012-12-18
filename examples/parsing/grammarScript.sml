@@ -345,4 +345,9 @@ val derives_language = store_thm(
   disch_then (qxch `pt` strip_assume_tac) >> qexists_tac `pt` >>
   simp[] >> asm_simp_tac (srw_ss() ++ DNF_ss) [MEM_MAP]);
 
+val extlanguage_def = Define`
+  extlanguage G cf = {
+    l | MAP FST l ∈ language G ∧ ∀e. MEM e l ⇒ cf (SND e) = FST e
+  }`
+
 val _ = export_theory()
