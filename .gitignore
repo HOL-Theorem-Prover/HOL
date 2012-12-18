@@ -131,4 +131,7 @@ examples/theorem-prover/lisp-runtime/bin/*.s
 
 examples/computability/lambda/computability-heap
 
+examples/miniML/hol2miniml/*.txt
+examples/miniML/hol2miniml/miniml-heap
+
 local-hol-heap
