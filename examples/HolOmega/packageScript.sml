@@ -108,6 +108,7 @@ val unpkg6_res = eval [] unpkg6;
 val unpkg5a = ``let (:'x, t:'x # ('x -> num)) = ^pkg5 in (\y:'x. (SND t) y) (FST t)``;
 val unpkg5a_res = eval [] unpkg5a;
 
+(* Probably delete this section: seems redundant:
 (* Create a datatype that simulates an object with access methods included. *)
 
 val packtm1 =
@@ -131,6 +132,7 @@ val unpkg1'' =
 val res1 = HO_REWR_CONV UNPACK_PACK_AX unpkg1'';
 val res2 = SIMP_CONV bool_ss [] unpkg1'';
 val res3 = eval[] unpkg1'';
+*** probably delete this section. *)
 
 
 (* Packages can be used to simulate objects, as   *)
@@ -144,7 +146,7 @@ val _ = Hol_datatype
                         inc : 'a -> 'a
                       |>`;
 
-val counter_kind = kind_of ``:counter_recd1``
+val counter_kind = kind_of ``:counter_recd1``;
 
 val counterADT =
        ``pack ( :num,
@@ -154,6 +156,16 @@ val counterADT =
                 |> ) : ?'a. 'a counter_recd1``;
 
 val counterADT_type = type_of counterADT; (* note: an existential type *)
+
+(*
+val counter1_new = Define
+   `counter1_new p =
+      let (:'Counter,counter) = p in
+      pack(:'Counter, <| new := counter.new;
+                         get := (\i:'Counter. counter.get counter.new);
+                         inc := counter.inc
+                      |> ) : ?'a. 'a counter_recd1`;
+*)
 
 val counter_ex1 =
   ``let (:'Counter,counter) = ^counterADT in
@@ -167,6 +179,19 @@ val counter_ex2 =
     counter.get (add3 counter.new)``;
 
 val ex2_res = eval[LET_DEF] counter_ex2;
+
+(*
+local open intLib in end; (* loads the integer library and all theories *)
+
+val counterADT1 =
+       ``pack ( :int,
+                <| new := 1i;
+                   get := Num;
+                   inc := \i:int. i + 1
+                |> ) : ?'a. 'a counter_recd1``;
+
+val counterADT1_type = type_of counterADT1; (* note: an existential type *)
+*)
 
 val _ = Hol_datatype
        `flipflop_recd1 =
