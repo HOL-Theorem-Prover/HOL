@@ -2526,6 +2526,7 @@ val IS_PREFIX_REFL = Q.store_thm ("IS_PREFIX_REFL",
    `!x. IS_PREFIX x x`,
    INDUCT_THEN list_INDUCT MP_TAC
    THEN SIMP_TAC boolSimps.bool_ss [IS_PREFIX]);
+val _ = export_rewrites ["IS_PREFIX_REFL"]
 
 val IS_PREFIX_ANTISYM = Q.store_thm ("IS_PREFIX_ANTISYM",
    `!x y. IS_PREFIX y x /\ IS_PREFIX x y ==> (x = y)`,
@@ -2627,6 +2628,15 @@ val IS_PREFIX_APPENDS = Q.store_thm ("IS_PREFIX_APPENDS",
    `!a b c. IS_PREFIX (APPEND a c) (APPEND a b) = IS_PREFIX c b`,
    INDUCT_THEN list_INDUCT ASSUME_TAC
    THEN ASM_SIMP_TAC boolSimps.bool_ss [APPEND, IS_PREFIX]);
+val _ = export_rewrites ["IS_PREFIX_APPENDS"]
+
+(* |- !a c. a <<= a ++ c *)
+val IS_PREFIX_APPEND3 = save_thm("IS_PREFIX_APPEND3",
+  IS_PREFIX_APPENDS |> SPEC_ALL |> Q.INST [`b` |-> `[]`]
+                    |> REWRITE_RULE [IS_PREFIX, APPEND_NIL]
+                    |> Q.GENL [`c`, `a`])
+val _ = export_rewrites ["IS_PREFIX_APPEND3"]
+
 
 (*---------------------------------------------------------------------------
    A list of numbers
