@@ -30,7 +30,7 @@ val _ = Hol_datatype`
 
 val (peg_eval_rules, peg_eval_ind, peg_eval_cases) = Hol_reln`
   (∀s c. peg_eval G (s, empty c) (SOME(s, c))) ∧
-  (∀n r s f.
+  (∀n r s f c.
        n ∈ FDOM G.rules ∧ peg_eval G (s, G.rules ' n) (SOME(r,c)) ⇒
        peg_eval G (s, nt n f) (SOME(r, f c))) ∧
   (∀n s f.
@@ -279,7 +279,8 @@ val reducing_peg_eval_makes_list = prove(
   metis_tac [peg_eval_rules]);
 
 
-val peg_eval_total = prove(
+val peg_eval_total = store_thm(
+  "peg_eval_total",
   ``wfG G ⇒ ∀s e. e ∈ Gexprs G ⇒ ∃r. peg_eval G (s,e) r``,
   simp[wfG_def] >> strip_tac >> gen_tac >>
   completeInduct_on `LENGTH s` >>
