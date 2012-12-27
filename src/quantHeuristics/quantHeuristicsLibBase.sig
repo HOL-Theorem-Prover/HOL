@@ -150,8 +150,10 @@ sig
   val filter_qp        : (term -> term -> bool) list -> quant_param
   val top_heuristics_qp: quant_heuristic list -> quant_param
   val context_heuristics_qp : (thm list -> quant_heuristic) list -> quant_param
+  val context_top_heuristics_qp : (thm list -> quant_heuristic) list -> quant_param
   val heuristics_qp    : quant_heuristic list -> quant_param
   val oracle_qp        : (term -> term -> (term * term list) option) -> quant_param (* creates heuristic that produces oracle guesses *)
+  val context_oracle_qp: (thm list -> term -> term -> (term * term list) option) -> quant_param (* creates heuristic that produces oracle guesses *)
   val final_rewrite_qp : thm list -> quant_param
 
   (* a stateful version and combining several*)

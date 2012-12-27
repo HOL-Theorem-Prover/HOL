@@ -110,6 +110,11 @@ sig
      if used carefully, is a handy heuristic. *)
   val implication_concl_qp : quantHeuristicsLibBase.quant_param;
 
+  (* A heuristic that looks at both sides of a conjunction independently 
+     and just lifts the results. This may lead to wrong guesses, but
+     if used carefully, may be a handy heuristic. *)
+  val conj_lift_qp : quantHeuristicsLibBase.quant_param;
+
   (* writing own parameters *)
 
   val empty_qp    : quant_param;
@@ -126,10 +131,12 @@ sig
   val inference_qp     : thm list -> quant_param
   val convs_qp         : conv list -> quant_param
   val filter_qp        : (term -> term -> bool) list -> quant_param
-  val top_heuristics_qp: quant_heuristic list -> quant_param
   val context_heuristics_qp : (thm list -> quant_heuristic) list -> quant_param
+  val context_top_heuristics_qp : (thm list -> quant_heuristic) list -> quant_param
   val heuristics_qp    : quant_heuristic list -> quant_param
+  val top_heuristics_qp: quant_heuristic list -> quant_param
   val oracle_qp        : (term -> term -> (term * term list) option) -> quant_param
+  val context_oracle_qp: (thm list -> term -> term -> (term * term list) option) -> quant_param
   val final_rewrite_qp : thm list -> quant_param
 
 

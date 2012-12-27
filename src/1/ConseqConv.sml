@@ -1782,10 +1782,10 @@ let
    val qasm_t = list_mk_forall (fv, m_asm_t);
 
    val mL_org = map fst asm_mL
-   val thm0 = conv qasm_t;
-   val (mL, thm1a) = asm_marker_ADD_PRECONDITION mL_org (rhs (concl thm0))
-   val thm1b = TRANS thm0 thm1a
-   val thm1 = snd (EQ_IMP_RULE thm1b)
+   val thm0a = conv qasm_t;
+   val thm0 = snd (EQ_IMP_RULE thm0a) handle HOL_ERR _ => thm0a
+   val (mL, thm1a) = asm_marker_ADD_PRECONDITION mL_org (rand (rator (concl thm0)))
+   val thm1 = CONV_RULE (RATOR_CONV (RAND_CONV (K thm1a))) thm0
 
    val (new_asm, new_t, new_fv, thm2a) = ASM_MARKER_CONV (m_base, mL, m_top) ((fst o dest_imp o concl) thm1)
    val thm2 = CONV_RULE (RATOR_CONV (RAND_CONV (K thm2a))) thm1

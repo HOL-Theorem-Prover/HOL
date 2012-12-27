@@ -614,3 +614,28 @@ e (QUANT_INST_TAC [("z", `0`, []),
 
 
 ``(?x:num. P x) /\ (?x. x \/ y)``
+
+(* Let's play around with conjunctions and guessing *)
+val t = ``P 2 ==> ?x. P x /\ Q x``
+
+(* in general x cannot be instantiated, because nothing is know about P and Q.
+   (x = 2) looks tempting, but in case ~(Q 2), P 3 and Q 3 this is wrong. *)
+
+val thm = QUANT_INSTANTIATE_CONV [] t (* fails *)
+val thm = QUANT_INSTANTIATE_CONV [conj_lift_qp] t (* fails with unjustified guesses *)
+
+(* We can't prove equality, but just implications using a heuristic that produces
+   unjustified guesses *)
+val thm = QUANT_INSTANTIATE_CONSEQ_CONV [conj_lift_qp] CONSEQ_CONV_STRENGTHEN_direction t
+
+(* Expanding is possible as well *)
+val thm = SIMP_CONV (std_ss ++ EXPAND_QUANT_INST_ss [conj_lift_qp]) [] t
+
+(* try it as a tactic *)
+set_goal ([], t)
+e (REPEAT STRIP_TAC)
+
+e (QUANT_INSTANTIATE_CONSEQ_TAC [conj_lift_qp])
+
+(* or expand *)
+e (ASM_SIMP_TAC (std_ss ++ EXPAND_QUANT_INST_ss [conj_lift_qp]) [])

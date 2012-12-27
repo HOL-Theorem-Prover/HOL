@@ -2520,6 +2520,7 @@ struct
       LENGTH_EQ_norm_ss,
       simpLib.rewrites [
         LENGTH_NIL, LENGTH_NIL_SYM,
+        IN_INSERT, NOT_IN_EMPTY,
         LIST_TO_FMAP_THM,
         holfoot_ap_data_list_seg___NOT_EMPTY_DATA___0,
         holfoot_ap_data_list_seg___SAME_START_END,

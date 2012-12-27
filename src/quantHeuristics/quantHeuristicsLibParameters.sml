@@ -355,6 +355,7 @@ val record_default_qp = record_qp false (K (K true))
 
 (*******************************************************************
  * Heuristic for implications that considers just the right hand side
+ * and conjunctions that just assume everything
  *******************************************************************)
 
 (*
@@ -362,12 +363,14 @@ val record_default_qp = record_qp false (K (K true))
   val t = ``Q x ==> (x = 2) /\ P x``
   val sys = debug_sys
 *)
-fun QUANT_INSTANTIATE_HEURISTIC___IMP_CONCL_HEU sys v t =
+fun QUANT_INSTANTIATE_HEURISTIC___DEST_HEU dest sys v t =
 let
-   val (t1, t2) = dest_imp_only t;
+   val tL = dest t;
 
    (* get guesses form right hand side *)
-   val gc = sys v t2
+   val gcL = map (fn t => SOME (sys v t) handle HOL_ERR _ => NONE
+                                              | QUANT_INSTANTIATE_HEURISTIC___no_guess_exp => NONE) tL
+   val gc = guess_collection_flatten gcL
    val (rw_thms, gL) = guess_collection2list gc
 
    (* just assume without justification that these are valid guesses for the full implication,
@@ -378,12 +381,14 @@ let
       val g' = mk_guess_opt ty_opt v t i fvL
    in g' end
    val gL' = map guess_lift gL
-
 in
    guess_list2collection (rw_thms, gL')
 end handle HOL_ERR _ => raise QUANT_INSTANTIATE_HEURISTIC___no_guess_exp
 
-val implication_concl_qp = heuristics_qp [QUANT_INSTANTIATE_HEURISTIC___IMP_CONCL_HEU]
+fun dest_lift_qp dest = heuristics_qp [QUANT_INSTANTIATE_HEURISTIC___DEST_HEU dest]
+
+val implication_concl_qp = dest_lift_qp (fn t => [snd (dest_imp_only t)])
+val conj_lift_qp = dest_lift_qp (fn t => (let val (t1,t2) = dest_conj t in [t1, t2] end))
 
 
 (*******************************************************************
