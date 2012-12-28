@@ -134,8 +134,9 @@ val REP_INR = TAC_PROOF(([],
    REFL_TAC);
 
 (* Prove that INL is one-to-one						*)
-val INL_11 = TAC_PROOF(([],
-   --`(INL x = ((INL y):('a,'b)sum)) = (x = y)`--),
+val INL_11 = store_thm(
+  "INL_11",
+  ``(INL x = ((INL y):('a,'b)sum)) = (x = y)``,
    EQ_TAC THENL
    [PURE_REWRITE_TAC [R_11,REP_INL] THEN
    CONV_TAC (REDEPTH_CONV (FUN_EQ_CONV ORELSEC BETA_CONV)) THEN
@@ -143,8 +144,9 @@ val INL_11 = TAC_PROOF(([],
    DISCH_THEN SUBST1_TAC THEN REFL_TAC]);
 
 (* Prove that INR is one-to-one						*)
-val INR_11 = TAC_PROOF(([],
-   --`(INR x = (INR y:('a,'b)sum)) = (x = y)`--),
+val INR_11 = store_thm(
+  "INR_11",
+  ``(INR x = (INR y:('a,'b)sum)) = (x = y)``,
    EQ_TAC THENL
    [PURE_REWRITE_TAC [R_11,REP_INR] THEN
    CONV_TAC (REDEPTH_CONV (FUN_EQ_CONV ORELSEC BETA_CONV)) THEN
@@ -431,6 +433,10 @@ val NOT_ISR_ISL = store_thm("NOT_ISR_ISL",
   GEN_TAC THEN Q.SPEC_THEN `x` STRUCT_CASES_TAC sum_CASES THEN SRW_TAC[][])
 val _ = export_rewrites["NOT_ISR_ISL"]
 
+val _ = computeLib.add_persistent_funs ["sum_case_def", "INL_11", "INR_11",
+                                        "sum_distinct", "sum_distinct1",
+                                        "OUTL", "OUTR", "ISL", "ISR"]
+
 val _ = adjoin_to_theory
 {sig_ps = NONE,
  struct_ps = SOME(fn ppstrm =>
@@ -453,13 +459,7 @@ val _ = adjoin_to_theory
       S "      destructors=[OUTL,OUTR],";                   NL();
       S "      lift=SOME(mk_var(\"sumSyntax.lift_sum\",Parse.Type`:'type -> ('a -> 'term) -> ('b -> 'term) -> ('a,'b)sum -> 'term`)),";
       S "      one_one=SOME INR_INL_11,";                   NL();
-      S "      distinct=SOME sum_distinct}];";              NL();
-      NL();
-      S "val _ = let open computeLib";                      NL();
-      S "        in add_thms (map lazyfy_thm";              NL();
-      S "               [ISL,ISR,OUTL,OUTR,INR_INL_11,";    NL();
-      S "                sum_distinct,sum_distinct1,sum_case_def])";    NL();
-      S "        end;"
+      S "      distinct=SOME sum_distinct}];";              NL()
    end)};
 
 val _ = TypeBase.write

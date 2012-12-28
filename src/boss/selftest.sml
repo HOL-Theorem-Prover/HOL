@@ -11,9 +11,14 @@ in
   else die "FAILED!\n"
 end handle HOL_ERR _ => die "FAILED (not even an eqn)!"
 
+val _ = set_trace "Unicode" 0
+
 val _ = app (test_CONV (EVAL,"EVAL")) [
       (``option_CASE (NONE : 'a option) (n:'b) f``, ``n:'b``),
       (``option_CASE (SOME (x:'a)) (n:'b) f``, ``f (x:'a):'b``),
       (``list_CASE ((h::t) : 'a list) (n:'b) f``,
-       ``f (h:'a) (t:'a list):'b``)
+       ``f (h:'a) (t:'a list):'b``),
+      (``sum_CASE (INL 3) (\n. n) f``, ``3``),
+      (``INL (x:'a) = INR (y:'b)``, ``F``),
+      (``INL (x:'a) = INL x'``, ``x:'a = x'``)
 ];
