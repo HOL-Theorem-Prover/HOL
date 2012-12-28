@@ -328,68 +328,6 @@ val peg_eval_total = store_thm(
 
 
 (*
-val _ = Hol_datatype`ftok = Plus | Times | Number | LParen | RParen`
-
-val _ = Hol_datatype`etok = EPlus | ETimes | ENumber of num | ELParen | ERParen`
-
-val categorise_def = Define`
-  categorise EPlus = mkTok Plus ∧
-  categorise ETimes = mkTok Times ∧
-  categorise (ENumber n) = mkTok Number ∧
-  categorise ELParen = mkTok LParen ∧
-  categorise ERParen = mkTok RParen
-`;
-
-local open stringTheory in end
-
-val _ = Hol_datatype `
-  expr = XN of num
-       | XPlus of expr => expr
-       | XTimes of expr => expr
-       | XList of expr list`;
-
-val _ = overload_on("mkTok", ``mk_finite_image``)
-
-
-val ty = ty_antiq ``:(ftok, string, expr, etok) pegsym``
-val nrule =
-  ``tok (mkTok Number) (\e. case e of ENumber n => XN n) : ^ty``
-val paren_rule =
-  ``seq (tok (mkTok LParen) (K (XN 0)))
-        (seq (nt (INL "expr") I) (tok (mkTok RParen) (K (XN 0))) (\a b. a))
-        (\a b. b) : ^ty``
-
-val termpair =
-  ``(INL "term" : string inf,
-     choice ^nrule ^paren_rule (\s. case s of INL e => e | INR e => e))``
-
-val factorpair = ``(INL "factor" : string inf,
-                    seq (rpt (seq (nt (INL "term") I)
-                                            (tok (mkTok Times) (K ARB))
-                                            (\a b. a))
-                                       XList)
-                                  (nt (INL "term") I)
-                                  (\a b.
-                                    case a of
-                                      XList (h::t) => FOLDL XTimes h (t ++ [b])
-                                    | _ => b) : ^ty)``
-
-val exprpair = ``(INL "expr" : string inf,
-                  seq (rpt (seq (nt (INL "factor") I)
-                                        (tok (mkTok Plus) (K ARB))
-                                        (\a b. a))
-                                   XList)
-                              (nt (INL "factor") I)
-                              (\a b.
-                                case a of
-                                  XList (h::t) => FOLDL XPlus h (t ++ [b])
-                                | _ => b) : ^ty)``
-
-val rules = ``FEMPTY |+ ^exprpair |+ ^factorpair |+ ^termpair``
-
-val G = ``<| start := INL "expr"; rules := ^rules; cf := categorise |>``
-
-val testexp = ``[ENumber 3; EPlus; ENumber 4; ETimes; ENumber 5]``
 
 val [emptyI,ntI0,anyOKI,anyFAIL,tokOK,tokFAIL1,tokFAIL2,notOK, notFAIL,
      seqFAIL1, seqFAIL2, seqOK0, choiceFAIL, choiceOK1, choiceOK2,
