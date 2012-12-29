@@ -38,10 +38,6 @@ val _ = Hol_datatype `
                    ('atok,'bnt,'cvalue,'etok) kont
            | AP of ('atok,'bnt,'cvalue,'etok) kont =>
                    'etok list => 'cvalue option list
-           | LV of ('atok,'bnt,'cvalue,'etok) pegsym =>
-                   ('cvalue list -> 'cvalue) =>
-                   'etok list => 'cvalue option list =>
-                   ('atok,'bnt,'cvalue,'etok) kont
            | Result of ('cvalue # 'etok list) option
 `;
 
@@ -73,7 +69,8 @@ val coreloop_def = zDefine`
                      EV e1 i r
                         (appf1 (cf o INL) k)
                         (returnTo i r (ksym e2 (appf1 (cf o INR) k) fk))
-                 | EV (rpt e lf) i r k fk => LV e lf i (NONE::r) k
+                 | EV (rpt e lf) i r k fk =>
+                     EV e i (NONE::r) (listsym e lf k) (poplist lf k)
                  | EV (not e v) i r k fk =>
                      EV e i r (returnTo i r fk) (returnTo i (SOME v::r) k)
                  | AP done i r => Result(SOME(THE (HD r), i))
@@ -83,9 +80,9 @@ val coreloop_def = zDefine`
                  | AP (appf2 f2 k) i (SOME v1 :: SOME v2 :: r) =>
                      AP k i (SOME (f2 v2 v1) :: r)
                  | AP (returnTo i r k) i' r' => AP k i r
-                 | AP (listsym e f k) i r => LV e f i r k
-                 | AP (poplist f k) i r => AP k i (poplistval f r)
-                 | LV e f i r k => EV e i r (listsym e f k) (poplist f k))
+                 | AP (listsym e f k) i r =>
+                     EV e i r (listsym e f k) (poplist f k)
+                 | AP (poplist f k) i r => AP k i (poplistval f r))
 `;
 
 
@@ -95,18 +92,11 @@ val eval_def = zDefine`
 
 val applykont_def = zDefine`applykont G k i r = coreloop G (AP k i r)`
 
-val listeval_def = zDefine`listeval G e lf i r k = coreloop G (LV e lf i r k)`
 open lcsymtacs
 val coreloop_result = store_thm(
   "coreloop_result",
   ``coreloop G (Result x) = Result x``,
   simp[coreloop_def, Once whileTheory.WHILE]);
-
-val better_listeval = store_thm(
-  "better_listeval",
-  ``listeval G e lf i r k = eval G e i r (listsym e lf k) (poplist lf k)``,
-  simp[listeval_def, coreloop_def, Once whileTheory.WHILE] >>
-  simp[GSYM eval_def, GSYM coreloop_def]);
 
 fun inst_thm def (qs,ths) =
     def |> SIMP_RULE (srw_ss()) [Once whileTheory.WHILE, coreloop_def]
@@ -114,9 +104,7 @@ fun inst_thm def (qs,ths) =
         |> Q.INST qs
         |> SIMP_RULE (srw_ss()) []
         |> SIMP_RULE bool_ss (GSYM eval_def :: GSYM coreloop_def ::
-                              GSYM applykont_def :: GSYM listeval_def ::
-                              coreloop_result :: better_listeval ::
-                              ths)
+                              GSYM applykont_def :: coreloop_result :: ths)
 
 val eval_thm = inst_thm eval_def
 

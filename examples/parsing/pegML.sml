@@ -75,8 +75,12 @@ fun eval G (e:(''i,'v)pegsym) input (results:'v option list) k fk =
                                 (unary2list f k)
                                 (returnTo(input,results,
                                           sym(e2,unary2list f k,fk)))
-      | not(e,v) => eval G e input results (returnTo(input,results,fk)) (returnTo(input,SOME v::results,k))
-      | rpt(e,f) => listeval G e f input (NONE::results) k
+      | not(e,v) =>
+          eval G e input results
+               (returnTo(input,results,fk))
+               (returnTo(input,SOME v::results,k))
+      | rpt(e,f) =>
+          eval G e input (NONE::results) (listsym(e,f,k)) (poplist(f,k))
       | nt(n,f) => eval G (G n) input results k fk
 and apply G (k:(''i,'v)kont) input (results:'v option list) =
     case k of
@@ -85,10 +89,9 @@ and apply G (k:(''i,'v)kont) input (results:'v option list) =
       | sym(e,k,f) => eval G e input results k f
       | applyf(f, k) => apply G k input (f results)
       | returnTo(i,r,k) => apply G k i r
-      | listsym(e,f,k) => listeval G e f input results k
+      | listsym(e,f,k) =>
+          eval G e input results (listsym(e,f,k)) (poplist(f, k))
       | poplist(f,k) => apply G k input (poplistval f results : 'v option list)
-and listeval G e (f:'v list -> 'v) input results k =
-    eval G e input results (listsym(e,f,k)) (poplist(f,k))
 
 datatype PT = XN of int | Plus of PT * PT | Times of PT * PT
               | PTL of PT list
@@ -116,17 +119,14 @@ fun testG s =
 
 val mk = map str o explode
 
-val _ = let
-in
-eval testG (nt("E",I)) (mk "1+2*3") [] done failed;
-eval testG (nt("E",I)) (mk "(1+2)*3") [] done failed;
-eval testG (nt("E",I)) (mk "(1+2)*(3*1)") [] done failed;
-eval testG (nt("E",I)) (mk "2*3*1") [] done failed;
-eval testG (nt("E",I)) (mk "2+3+1") [] done failed;
-eval testG (nt("E",I)) (mk "2+3+1+2+1") [] done failed;
-eval testG (nt("E",I)) (mk "(1+2)*(3+1)*(1+2+1)") [] done failed;
-
-eval testG (nt("E",I)) (mk "(1+2)*(3+1)*(1+2+1") [] done
-     (sym(empty (XN 0), done, done))
-end
+val results = [
+  eval testG (nt("E",I)) (mk "1+2*3") [] done failed,
+  eval testG (nt("E",I)) (mk "(1+2)*3") [] done failed,
+  eval testG (nt("E",I)) (mk "(1+2)*(3*1)") [] done failed,
+  eval testG (nt("E",I)) (mk "2*3*1") [] done failed,
+  eval testG (nt("E",I)) (mk "2+3+1") [] done failed,
+  eval testG (nt("E",I)) (mk "2+3+1+2+1") [] done failed,
+  eval testG (nt("E",I)) (mk "(1+2)*(3+1)*(1+2+1)") [] done failed,
+  eval testG (nt("E",I)) (mk "(1+2)*(3+1)*(1+2+1") [] done
+       (sym(empty (XN 0), done, done))]
 end (* struct *)
