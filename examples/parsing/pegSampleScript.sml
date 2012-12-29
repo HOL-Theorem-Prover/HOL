@@ -104,14 +104,14 @@ end
    with "optimised" tail-recursive form: 0.213s *)
 val result1 = save_thm(
   "result1",
-  time EVAL ``eval ^G (nt (INL "expr") I)
-                      [ENumber 1; EPlus; ENumber 2; ETimes; ENumber 4]
-                      [] done failed``)
+  time EVAL ``peg_exec ^G (nt (INL "expr") I)
+                      [ENumber 1; EPlus; ENumber 2; ETimes; ENumber 4] []
+                      done failed``)
 
 (* As of 5a18cdc17ff, takes 1.983s (ugh) *)
 val result2 = save_thm(
   "result2",
-  time EVAL ``eval ^G (nt (INL "expr") I)
+  time EVAL ``peg_exec ^G (nt (INL "expr") I)
                       [ENumber 1; EPlus; ENumber 2; ETimes; ENumber 4;
                        ETimes; ELParen; ENumber 3; EPlus; ENumber 1; ERParen]
                       [] done failed``)
