@@ -70,17 +70,19 @@ val (peg_eval_rules, peg_eval_ind, peg_eval_cases) = Hol_reln`
      peg_eval_list G (s0, e) (s2,c::cs))
 `;
 
-val ind' = theorem "peg_eval_strongind"
+val peg_eval_strongind' = save_thm(
+  "peg_eval_strongind'",
+  theorem "peg_eval_strongind"
              |> SIMP_RULE (srw_ss()) [pairTheory.FORALL_PROD]
              |> Q.SPECL [`G`, `\es0 r. P1 (FST es0) (SND es0) r`,
                          `\es0 sr. P2 (FST es0) (SND es0) (FST sr) (SND sr)`]
-             |> SIMP_RULE (srw_ss()) []
+             |> SIMP_RULE (srw_ss()) [])
 
 open rich_listTheory
 val peg_eval_suffix0 = prove(
   ``(∀s0 e sr. peg_eval G (s0,e) sr ⇒ ∀s r. sr = SOME (s,r) ⇒ IS_SUFFIX s0 s) ∧
     ∀s0 e s rl. peg_eval_list G (s0,e) (s,rl) ⇒ IS_SUFFIX s0 s``,
-  HO_MATCH_MP_TAC ind' THEN SRW_TAC [][IS_SUFFIX_compute, IS_PREFIX_APPEND3,
+  HO_MATCH_MP_TAC peg_eval_strongind' THEN SRW_TAC [][IS_SUFFIX_compute, IS_PREFIX_APPEND3,
                                        IS_PREFIX_REFL] THEN
   METIS_TAC [IS_PREFIX_TRANS]);
 
@@ -95,7 +97,7 @@ val peg_deterministic = store_thm(
   ``(∀s0 e sr. peg_eval G (s0,e) sr ⇒ ∀sr'. peg_eval G (s0,e) sr' ⇔ sr' = sr) ∧
     ∀s0 e s rl. peg_eval_list G (s0,e) (s,rl) ⇒
                 ∀srl'. peg_eval_list G (s0,e) srl' ⇔ srl' = (s,rl)``,
-  HO_MATCH_MP_TAC ind' THEN SRW_TAC [][] THEN
+  HO_MATCH_MP_TAC peg_eval_strongind' THEN SRW_TAC [][] THEN
   ONCE_REWRITE_TAC [peg_eval_cases] THEN SRW_TAC [][]);
 
 open lcsymtacs
@@ -185,7 +187,7 @@ val lemma4_1a0 = prove(
     (∀s0 e s rl. peg_eval_list G (s0,e) (s,rl) ⇒
                  (s0 = s ⇒ pegfail G e) ∧
                  (LENGTH s < LENGTH s0 ⇒ peggt0 G e))``,
-  ho_match_mp_tac ind' >> simp[peg0_rules] >> rpt conj_tac
+  ho_match_mp_tac peg_eval_strongind' >> simp[peg0_rules] >> rpt conj_tac
   >- (rpt strip_tac >> imp_res_tac peg_eval_suffix' >> fs[peg0_rules])
   >- (rpt strip_tac >> rule_match peg0_rules >>
       imp_res_tac peg_eval_suffix' >> fs[] >> rw[] >>
@@ -239,6 +241,12 @@ val subexprs_included = store_thm(
 val Gexprs_def = Define`
   Gexprs G = BIGUNION (IMAGE subexprs (G.start INSERT FRANGE G.rules))
 `
+
+val start_IN_Gexprs = store_thm(
+  "start_IN_Gexprs",
+  ``G.start ∈ Gexprs G``,
+  simp[Gexprs_def, subexprs_included]);
+val _ = export_rewrites ["start_IN_Gexprs"]
 
 val wfG_def = Define`wfG G ⇔ ∀e. e ∈ Gexprs G ⇒ wfpeg G e`;
 

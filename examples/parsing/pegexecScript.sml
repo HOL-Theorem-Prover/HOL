@@ -38,7 +38,7 @@ val _ = Hol_datatype `
                    ('atok,'bnt,'cvalue,'etok) kont
            | AP of ('atok,'bnt,'cvalue,'etok) kont =>
                    'etok list => 'cvalue option list
-           | Result of ('cvalue # 'etok list) option
+           | Result of ('etok list # 'cvalue) option
 `;
 
 val coreloop_def = zDefine`
@@ -73,7 +73,7 @@ val coreloop_def = zDefine`
                      EV e i (NONE::r) (listsym e lf k) (poplist lf k)
                  | EV (not e v) i r k fk =>
                      EV e i r (returnTo i r fk) (returnTo i (SOME v::r) k)
-                 | AP done i r => Result(SOME(THE (HD r), i))
+                 | AP done i r => Result(SOME(i, THE (HD r)))
                  | AP failed i r => Result NONE
                  | AP (ksym e k fk) i r => EV e i r k fk
                  | AP (appf1 f1 k) i (SOME v :: r) => AP k i (SOME (f1 v) :: r)
@@ -136,5 +136,115 @@ val applykont_thm = save_thm("applykont_thm", LIST_CONJ better_apply);
 
 val _ = computeLib.add_persistent_funs ["eval_thm", "applykont_thm"]
 
+val exec_correct0 = prove(
+  ``(∀i e r. peg_eval G (i,e) r ⇒
+             (∀j v k fk stk.
+                r = SOME(j,v) ⇒
+                eval G e i stk k fk = applykont G k j (SOME v :: stk)) ∧
+             (∀k fk stk.
+                r = NONE ⇒ eval G e i stk k fk = applykont G fk i stk)) ∧
+    (∀i e j vlist.
+      peg_eval_list G (i,e) (j,vlist) ⇒
+      ∀f k stk vs.
+          eval G e i (MAP SOME vs ++ (NONE::stk))
+                     (listsym e f k)
+                     (poplist f k) =
+          applykont G k j (SOME (f (REVERSE vs ++ vlist)) :: stk))``,
+  ho_match_mp_tac peg_eval_strongind' >> simp[eval_thm, applykont_thm] >>
+  rpt conj_tac
+  >- ((* rpt - no elements succeed *)
+      map_every qx_gen_tac [`e`, `f`, `i`, `j`, `vlist`] >> strip_tac >>
+      map_every qx_gen_tac [`k`, `stk`] >>
+      first_x_assum (qspecl_then [`f`, `k`, `stk`, `[]`] mp_tac) >>
+      simp[])
+  >- ((* poplistval works *)
+      rpt strip_tac >> rpt AP_TERM_TAC >> rpt (pop_assum (K ALL_TAC)) >>
+      simp[poplistval_def] >>
+      qmatch_abbrev_tac `
+        (λ(values,rest). SOME (f values)::rest)
+        (poplist_aux [] (MAP SOME vs ++ [NONE] ++ stk)) =
+        SOME (f (REVERSE vs))::stk` >>
+      qsuff_tac `∀a. poplist_aux a (MAP SOME vs ++ [NONE] ++ stk) =
+                     (REVERSE vs ++ a, stk)` >- simp[] >>
+      Induct_on `vs` >> simp[poplist_aux_def])
+  >- ((* rpt - some elements succeed *)
+      map_every qx_gen_tac [`e`, `i0`, `i1`, `j`, `v`, `vs`] >> strip_tac >>
+      map_every qx_gen_tac [`f`, `k`, `stk`, `vs'`] >>
+      first_x_assum (qspecl_then [`f`, `k`, `stk`, `v::vs'`] mp_tac) >>
+      simp[] >>
+      simp_tac bool_ss [GSYM listTheory.APPEND_ASSOC, listTheory.APPEND]))
+
+val exec_correct = save_thm(
+  "exec_correct",
+  exec_correct0 |> SIMP_RULE (srw_ss() ++ DNF_ss) [])
+
+val pegexec_succeeds = save_thm(
+  "pegexec_succeeds",
+  exec_correct |> CONJUNCTS |> hd |> SPEC_ALL
+               |> Q.INST [`k` |-> `done`, `fk` |-> `failed`, `stk` |-> `[]`]
+               |> SIMP_RULE (srw_ss()) [applykont_thm])
+
+val pegexec_fails = save_thm(
+  "pegexec_fails",
+  exec_correct |> CONJUNCTS |> tl |> hd |> SPEC_ALL
+               |> Q.INST [`k` |-> `done`, `fk` |-> `failed`, `stk` |-> `[]`]
+               |> SIMP_RULE (srw_ss()) [applykont_thm])
+
+val pair_CASES = pairTheory.pair_CASES
+val option_CASES = optionTheory.option_nchotomy
+val list_CASES = listTheory.list_CASES
+
+val pegexec = store_thm(
+  "pegexec",
+  ``peg_eval G (s,e) r ⇒ eval G e s [] done failed = Result r``,
+  metis_tac [option_CASES, pair_CASES, pegexec_fails, pegexec_succeeds]);
+
+val peg_eval_executed = store_thm(
+  "peg_eval_executed",
+  ``wfG G ∧ e ∈ Gexprs G ⇒
+    (peg_eval G (s,e) r ⇔ eval G e s [] done failed = Result r)``,
+  strip_tac >> eq_tac
+  >- (`r = NONE ∨ ∃s' v. r = SOME (s',v)`
+        by metis_tac[option_CASES, pair_CASES] >>
+      simp[pegexec_fails, pegexec_succeeds]) >>
+  strip_tac >>
+  `∃r'. peg_eval G (s,e) r'` by metis_tac[peg_eval_total] >>
+  first_assum (assume_tac o MATCH_MP (CONJUNCT1 peg_deterministic)) >>
+  simp[] >> first_x_assum (assume_tac o MATCH_MP pegexec) >> fs[]);
+
+val destResult_def = Define`destResult (Result r) = r`
+val _ = export_rewrites ["destResult_def"]
+
+val pegparse_def = Define`
+  pegparse G s =
+    if wfG G then destResult (eval G G.start s [] done failed)
+    else NONE
+`;
+
+val pegparse_eq_SOME = store_thm(
+  "pegparse_eq_SOME",
+  ``pegparse G s = SOME (s',v) ⇔ wfG G ∧ peg_eval G (s,G.start) (SOME(s',v))``,
+  Tactical.REVERSE (Cases_on `wfG G`) >- simp[pegparse_def] >>
+  `∃r. peg_eval G (s,G.start) r`
+    by metis_tac [peg_eval_total, start_IN_Gexprs] >>
+  first_assum (assume_tac o MATCH_MP (CONJUNCT1 peg_deterministic)) >>
+  simp[] >>
+  `r = NONE ∨ ∃s2 v2. r = SOME (s2,v2)` by metis_tac [option_CASES, pair_CASES]
+  >- rw[pegparse_def, pegexec_fails] >>
+  rw[pegparse_def] >> first_x_assum (assume_tac o MATCH_MP pegexec_succeeds) >>
+  simp[] >> metis_tac[]);
+
+val pegparse_eq_NONE = store_thm(
+  "pegparse_eq_NONE",
+  ``pegparse G s = NONE ⇔ ¬wfG G ∨ peg_eval G (s,G.start) NONE``,
+  Cases_on `wfG G` >> simp[pegparse_def] >>
+  `∃r. peg_eval G (s,G.start) r`
+    by metis_tac [peg_eval_total, start_IN_Gexprs] >>
+  first_assum (assume_tac o MATCH_MP (CONJUNCT1 peg_deterministic)) >>
+  simp[] >>
+  `r = NONE ∨ ∃s2 v2. r = SOME (s2,v2)` by metis_tac [option_CASES, pair_CASES]
+  >- rw[pegexec_fails] >>
+  rw[] >> first_x_assum (assume_tac o MATCH_MP pegexec_succeeds) >>
+  simp[]);
 
 val _ = export_theory()
