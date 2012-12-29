@@ -45,8 +45,8 @@ val _ = Hol_datatype `
            | Result of ('cvalue # 'etok list) option
 `;
 
-val eval_def = Define`
-  eval (G:('atok,'bnt,'cvalue,'etok)peg) e i r k fk =
+val coreloop_def = zDefine`
+  coreloop G =
     WHILE (λs. case s of Result _ => F
                        | _ => T)
           (λs. case s of
@@ -86,6 +86,67 @@ val eval_def = Define`
                  | AP (listsym e f k) i r => LV e f i r k
                  | AP (poplist f k) i r => AP k i (poplistval f r)
                  | LV e f i r k => EV e i r (listsym e f k) (poplist f k))
-          (EV e i r k fk)
+`;
+
+
+val eval_def = zDefine`
+  eval (G:('atok,'bnt,'cvalue,'etok)peg) e i r k fk = coreloop G (EV e i r k fk)
 `
+
+val applykont_def = zDefine`applykont G k i r = coreloop G (AP k i r)`
+
+val listeval_def = zDefine`listeval G e lf i r k = coreloop G (LV e lf i r k)`
+open lcsymtacs
+val coreloop_result = store_thm(
+  "coreloop_result",
+  ``coreloop G (Result x) = Result x``,
+  simp[coreloop_def, Once whileTheory.WHILE]);
+
+val better_listeval = store_thm(
+  "better_listeval",
+  ``listeval G e lf i r k = eval G e i r (listsym e lf k) (poplist lf k)``,
+  simp[listeval_def, coreloop_def, Once whileTheory.WHILE] >>
+  simp[GSYM eval_def, GSYM coreloop_def]);
+
+fun inst_thm def (qs,ths) =
+    def |> SIMP_RULE (srw_ss()) [Once whileTheory.WHILE, coreloop_def]
+        |> SPEC_ALL
+        |> Q.INST qs
+        |> SIMP_RULE (srw_ss()) []
+        |> SIMP_RULE bool_ss (GSYM eval_def :: GSYM coreloop_def ::
+                              GSYM applykont_def :: GSYM listeval_def ::
+                              coreloop_result :: better_listeval ::
+                              ths)
+
+val eval_thm = inst_thm eval_def
+
+val better_evals =
+    map eval_thm [([`e` |-> `empty v`], []),
+                  ([`e` |-> `tok t f`, `i` |-> `[]`], []),
+                  ([`e` |-> `tok t f`, `i` |-> `x::xs`], [Once COND_RAND]),
+                  ([`e` |-> `any f`, `i` |-> `[]`], []),
+                  ([`e` |-> `any f`, `i` |-> `x::xs`], []),
+                  ([`e` |-> `seq e1 e2 sf`], []),
+                  ([`e` |-> `choice e1 e2 cf`], []),
+                  ([`e` |-> `nt n nfn`], [Once COND_RAND]),
+                  ([`e` |-> `not e v`], []),
+                  ([`e` |-> `rpt e lf`], [])]
+
+val better_apply =
+    map (inst_thm applykont_def)
+        [([`k` |-> `ksym e k fk`], []),
+         ([`k` |-> `appf1 f k`, `r` |-> `SOME v::r`], []),
+         ([`k` |-> `appf2 f k`, `r` |-> `SOME v1::SOME v2::r`], []),
+         ([`k` |-> `returnTo i' r' k`], []),
+         ([`k` |-> `done`], []),
+         ([`k` |-> `failed`], []),
+         ([`k` |-> `poplist f k`], []),
+         ([`k` |-> `listsym e f k`], [])]
+
+val eval_thm = save_thm("eval_thm", LIST_CONJ better_evals);
+val applykont_thm = save_thm("applykont_thm", LIST_CONJ better_apply);
+
+val _ = computeLib.add_persistent_funs ["eval_thm", "applykont_thm"]
+
+
 val _ = export_theory()

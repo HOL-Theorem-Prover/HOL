@@ -100,10 +100,12 @@ in
   set_skip the_compset ``COND`` (SOME 1)
 end
 
+(* with eval_def directly: 1.155s;
+   with "optimised" tail-recursive form: 0.213s *)
 val result1 = save_thm(
   "result1",
-  EVAL ``eval ^G (nt (INL "expr") I)
-                 [ENumber 1; EPlus; ENumber 2; ETimes; ENumber 4]
-                 [] done failed``)
+  time EVAL ``eval ^G (nt (INL "expr") I)
+                      [ENumber 1; EPlus; ENumber 2; ETimes; ENumber 4]
+                      [] done failed``)
 
 val _ = export_theory()
