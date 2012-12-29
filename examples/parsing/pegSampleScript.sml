@@ -108,4 +108,13 @@ val result1 = save_thm(
                       [ENumber 1; EPlus; ENumber 2; ETimes; ENumber 4]
                       [] done failed``)
 
+(* As of 5a18cdc17ff, takes 1.983s (ugh) *)
+val result2 = save_thm(
+  "result2",
+  time EVAL ``eval ^G (nt (INL "expr") I)
+                      [ENumber 1; EPlus; ENumber 2; ETimes; ENumber 4;
+                       ETimes; ELParen; ENumber 3; EPlus; ENumber 1; ERParen]
+                      [] done failed``)
+
+
 val _ = export_theory()
