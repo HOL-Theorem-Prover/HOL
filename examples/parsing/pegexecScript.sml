@@ -136,6 +136,9 @@ val applykont_thm = save_thm("applykont_thm", LIST_CONJ better_apply);
 
 val _ = computeLib.add_persistent_funs ["eval_thm", "applykont_thm"]
 
+val _ = app (fn s => ignore (remove_ovl_mapping s {Thy = "pegexec", Name = s}))
+            ["AP", "EV"]
+
 val exec_correct0 = prove(
   ``(∀i e r. peg_eval G (i,e) r ⇒
              (∀j v k fk stk.
