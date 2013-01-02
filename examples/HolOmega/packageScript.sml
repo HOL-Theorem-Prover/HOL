@@ -40,12 +40,12 @@ struct
 
 open HolKernel Parse boolLib bossLib
 
-val _ = set_trace "Unicode" 0;
-val _ = set_trace "types" 1;
-
 val _ = new_theory "package";
 
 local open combinTheory pred_setLib bagLib in end;
+
+val _ = set_trace "Unicode" 0;
+val _ = set_trace "types" 1;
 
 
 (* Existential types: *)
@@ -108,32 +108,6 @@ val unpkg6_res = eval [] unpkg6;
 val unpkg5a = ``let (:'x, t:'x # ('x -> num)) = ^pkg5 in (\y:'x. (SND t) y) (FST t)``;
 val unpkg5a_res = eval [] unpkg5a;
 
-(* Probably delete this section: seems redundant:
-(* Create a datatype that simulates an object with access methods included. *)
-
-val packtm1 =
-  ``pack(: list, \:'elem. LENGTH:'elem list -> num)``;
-val packty1 = type_of packtm1;
-
-val packtm1' =
- ``(pack(: list,
-         \:'elem. LENGTH:'elem list -> num)) :?'c. !'elem. 'elem 'c -> num``;
-val packty1' = type_of packtm1';
-
-val unpkg1' =
-  ``let (:'coll, size:!'a. 'a 'coll -> num) = ^packtm1' in T``;
-
-val unpkg1'' =
-  ``let (:'coll:ty=>ty, size:!'a. 'a 'coll -> num)
-        = pack(: list,
-               \:'elem. LENGTH:'elem list -> num)
-    in T``;
-
-val res1 = HO_REWR_CONV UNPACK_PACK_AX unpkg1'';
-val res2 = SIMP_CONV bool_ss [] unpkg1'';
-val res3 = eval[] unpkg1'';
-*** probably delete this section. *)
-
 
 (* Packages can be used to simulate objects, as   *)
 (* abstract data types hiding the representation. *)
@@ -157,16 +131,6 @@ val counterADT =
 
 val counterADT_type = type_of counterADT; (* note: an existential type *)
 
-(*
-val counter1_new = Define
-   `counter1_new p =
-      let (:'Counter,counter) = p in
-      pack(:'Counter, <| new := counter.new;
-                         get := (\i:'Counter. counter.get counter.new);
-                         inc := counter.inc
-                      |> ) : ?'a. 'a counter_recd1`;
-*)
-
 val counter_ex1 =
   ``let (:'Counter,counter) = ^counterADT in
     counter.get (counter.inc counter.new)``;
@@ -179,19 +143,6 @@ val counter_ex2 =
     counter.get (add3 counter.new)``;
 
 val ex2_res = eval[LET_DEF] counter_ex2;
-
-(*
-local open intLib in end; (* loads the integer library and all theories *)
-
-val counterADT1 =
-       ``pack ( :int,
-                <| new := 1i;
-                   get := Num;
-                   inc := \i:int. i + 1
-                |> ) : ?'a. 'a counter_recd1``;
-
-val counterADT1_type = type_of counterADT1; (* note: an existential type *)
-*)
 
 val _ = Hol_datatype
        `flipflop_recd1 =
@@ -235,8 +186,8 @@ val _ = Hol_datatype
                         methods : 'x cntr_methods2
                       |>`;
 
-(* Example of a counter object containing the number 5: *)
 
+(* Example of a counter object containing the number 5: *)
 
 val _ = type_abbrev ("Counter", Type `: ?'x. 'x counter_recd2`);
 
@@ -246,16 +197,16 @@ val c_def = Define
                   methods := <| get := \x:num. x;
                                 inc := \x:num. SUC x |>
                |>)
-        : ?'x:ty:0. 'x counter_recd2 `;
+        : ?'x. 'x counter_recd2 `;
 
-val counter_obj_ex4 = ``let (:'x,body) = c in body.methods.get(body.state)``;
+val counter_ex4 = ``let (:'x,body) = c in body.methods.get(body.state)``;
 
-val ex4_res = eval[c_def] counter_obj_ex4;
+val ex4_res = eval[c_def] counter_ex4;
 
 val sendget_def =
    Define `sendget = \c: Counter.
                        let (:'x, body) = c in
-                               body.methods.get(body.state)`;
+                       body.methods.get(body.state)`;
 
 val sendget_ty = type_of ``sendget``;
 
@@ -270,15 +221,17 @@ val c1_ty = type_of ``c1``;
 
 val ex5_res = eval[c_def,c1_def] ``c1``;
 
-val sendinc_def =
-   Define `sendinc = \c: Counter.
-                      let (:'x, body) = c in
-                            pack(: 'x,
-                              <| state := body.methods.inc(body.state);
-                                 methods := body.methods
-                              |> )`;
+val sendinc_def = Define
+   `sendinc = \c: Counter.
+                let (:'x, body) = c in
+                     pack(: 'x,
+                       <| state := body.methods.inc(body.state);
+                          methods := body.methods
+                       |> )`;
 
 val sendinc_ty = type_of ``sendinc``;
+
+val ex6_res = eval[c_def,sendinc_def] ``sendinc c``;
 
 val add3_def = Define
    `add3 = \c:Counter. sendinc (sendinc (sendinc c))`;
@@ -287,9 +240,9 @@ val add3_ty = type_of ``add3``;
 
 val add3_rk = rank_of_term ``add3``; (* the rank is 1 *)
 
-val unpack_add3_c = ``let (:'x,body) = add3 c in body.methods.get(body.state)``;
+val ex7 = ``let (:'x,body) = add3 c in body.methods.get(body.state)``;
 
-val unpack_add3_c_val = eval[c_def,sendinc_def,add3_def] unpack_add3_c;
+val ex7_res = eval[c_def,sendinc_def,add3_def] ex7;
 
 
 
