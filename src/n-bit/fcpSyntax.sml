@@ -108,12 +108,12 @@ fun mk_dimindex ty =
 (* the arguments to the constant.                                            *)
 (*---------------------------------------------------------------------------*)
 
-fun mk_fcp_update (A,i,v) = 
+fun mk_fcp_update (A,i,v) =
  let val (elty,sizety) = dest_cart_type (type_of A)
      val fcp_update_tm' = Term.inst [alpha |-> elty, beta |-> sizety] fcp_update_tm
- in 
+ in
    list_mk_comb(fcp_update_tm',[i,v,A])
- end 
+ end
  handle HOL_ERR _ => raise ERR "mk_fcp_update" "";
 
 fun mk_fcp_hd tm =
@@ -130,27 +130,27 @@ fun mk_fcp_tl tm =
  end
  handle HOL_ERR _ => raise ERR "mk_fcp_tl" "";
 
-fun mk_fcp_cons (h,t) = 
+fun mk_fcp_cons (h,t) =
  let val (elty,sizety) = dest_cart_type (type_of t)
      val n = dest_numeric_type sizety
      val sizety' = mk_numeric_type (Arbnum.plus1 n)
-     val fcp_cons_tm' = Term.inst[alpha |-> elty, 
+     val fcp_cons_tm' = Term.inst[alpha |-> elty,
                                   beta |-> sizety, gamma |-> sizety'] fcp_cons_tm
  in list_mk_comb(fcp_cons_tm',[h,t])
  end
  handle HOL_ERR _ => raise ERR "mk_fcp_cons" "";
 
-fun mk_fcp_map (f,A) = 
+fun mk_fcp_map (f,A) =
  let val (dom_elty,sizety) = dest_cart_type (type_of A)
      val rng_elty = snd(dom_rng(type_of f))
-     val fcp_map_tm' = Term.inst[alpha |-> dom_elty, 
+     val fcp_map_tm' = Term.inst[alpha |-> dom_elty,
                                  beta |-> rng_elty, gamma |-> sizety] fcp_map_tm
  in
    list_mk_comb(fcp_map_tm',[f,A])
  end
  handle HOL_ERR _ => raise ERR "mk_fcp_map" "";
 
-fun mk_fcp_exists (P,A) = 
+fun mk_fcp_exists (P,A) =
  let val (elty,sizety) = dest_cart_type (type_of A)
      val fcp_exists_tm' = Term.inst[alpha |-> elty,beta |-> sizety] fcp_exists_tm
  in
@@ -158,7 +158,7 @@ fun mk_fcp_exists (P,A) =
  end
  handle HOL_ERR _ => raise ERR "mk_fcp_exists" "";
 
-fun mk_fcp_every (P,A) = 
+fun mk_fcp_every (P,A) =
  let val (elty,sizety) = dest_cart_type (type_of A)
      val fcp_every_tm' = Term.inst[alpha |-> elty,beta |-> sizety] fcp_every_tm
  in
@@ -166,7 +166,7 @@ fun mk_fcp_every (P,A) =
  end
  handle HOL_ERR _ => raise ERR "mk_fcp_every" "";
 
-fun mk_v2l A = 
+fun mk_v2l A =
  let val (elty,sizety) = dest_cart_type (type_of A)
      val v2l_tm' = Term.inst[alpha |-> elty,beta |-> sizety] v2l_tm
  in
@@ -174,7 +174,7 @@ fun mk_v2l A =
  end
  handle HOL_ERR _ => raise ERR "mk_v2l" "";
 
-fun mk_l2v Ltm = 
+fun mk_l2v Ltm =
  let val (els,elty) = listSyntax.dest_list Ltm
      val n = Arbnum.fromInt (length els)
      val nty = mk_numeric_type n
@@ -199,34 +199,34 @@ fun dest_dimindex tm =
   HolKernel.dest_monop dimindex_tm (ERR "dest_dimindex" "") tm
     |> boolSyntax.dest_itself;
 
-fun dest_fcp_update tm = 
-  let val (i,v,A) = HolKernel.dest_triop fcp_update_tm 
+fun dest_fcp_update tm =
+  let val (i,v,A) = HolKernel.dest_triop fcp_update_tm
                                     (ERR "dest_fcp_update" "") tm
   in (A,i,v)
   end
 
-val dest_fcp_hd = 
+val dest_fcp_hd =
   HolKernel.dest_monop fcp_hd_tm (ERR "dest_fcp_hd" "");
 
-val dest_fcp_tl = 
+val dest_fcp_tl =
   HolKernel.dest_monop fcp_tl_tm (ERR "dest_fcp_tl" "");
 
-val dest_fcp_cons = 
+val dest_fcp_cons =
   HolKernel.dest_binop fcp_cons_tm (ERR "dest_fcp_cons" "");
 
-val dest_fcp_map = 
+val dest_fcp_map =
   HolKernel.dest_binop fcp_map_tm (ERR "dest_fcp_map" "");
 
-val dest_fcp_exists = 
+val dest_fcp_exists =
   HolKernel.dest_binop fcp_exists_tm (ERR "dest_fcp_exists" "");
 
-val dest_fcp_every = 
+val dest_fcp_every =
   HolKernel.dest_binop fcp_every_tm (ERR "dest_fcp_every" "");
 
-val dest_v2l = 
+val dest_v2l =
   HolKernel.dest_monop v2l_tm (ERR "dest_v2l" "");
 
-val dest_l2v = 
+val dest_l2v =
   HolKernel.dest_monop l2v_tm (ERR "dest_l2v" "");
 
 

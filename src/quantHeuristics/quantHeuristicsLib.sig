@@ -110,7 +110,7 @@ sig
      if used carefully, is a handy heuristic. *)
   val implication_concl_qp : quantHeuristicsLibBase.quant_param;
 
-  (* A heuristic that looks at both sides of a conjunction independently 
+  (* A heuristic that looks at both sides of a conjunction independently
      and just lifts the results. This may lead to wrong guesses, but
      if used carefully, may be a handy heuristic. *)
   val conj_lift_qp : quantHeuristicsLibBase.quant_param;

@@ -1,7 +1,7 @@
 signature quantHeuristicsLibAbbrev =
 sig
  include Abbrev
- 
+
  type selection_fun = term -> (term -> int) -> term -> (term * string) list
 
   (* The main conv and tactic *)

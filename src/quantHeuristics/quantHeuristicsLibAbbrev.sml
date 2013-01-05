@@ -28,7 +28,7 @@ open HolKernel Parse boolLib Drule
 fun no_var_const_filter t =
   not ((is_var t) orelse (is_const t))
 
-local 
+local
    fun find_tms (d:(term, int) Redblackmap.dict) tm =
    let
       val d = Redblackmap.update (d, tm, (fn vo => (getOpt (vo, 0)) + 1))
@@ -86,7 +86,7 @@ let
       val sf = select_funs_combine select_funs t t_count_fun
       val sfs = flatten (map sf tL)
       val fsfs = filter (fn (tt, _) => no_var_const_filter tt) sfs
-      
+
       fun my_insert ((tt, n), l) = if (exists (fn (tt', _) => tt' = tt) l) then l else (tt,n)::l
       val fsfs_unique = rev (foldl my_insert [] fsfs)
    in fsfs_unique end
@@ -94,7 +94,7 @@ let
 (*
    val (st, ss) = hd select_terms
 *)
-  
+
 
    fun try_select (st, ss) t =
    let
@@ -118,7 +118,7 @@ val t0 = snd (strip_forall t)
          val t' = subst s t0
          val is_top' = (is_top andalso is_forall t0)
       in
-         if (t0 = t') then (if (only_top andalso (not is_top')) then fail() else 
+         if (t0 = t') then (if (only_top andalso (not is_top')) then fail() else
                                (if is_top' then QUANT_CONV (try_subst true) t0 else
                                                 (SUB_CONV (try_subst false) t0))) else
          let
@@ -128,7 +128,7 @@ val t0 = snd (strip_forall t)
            val no_simp = (aconv abbrev_t (rhs (concl elim_thm)))
            val _ = if (elim_abbrev_abort andalso no_simp) then fail() else ()
            val elim_thm = if (no_simp andalso intro_abbrev andalso is_top) then
-              let 
+              let
                  val pre_thm = CONV_RULE (LHS_CONV SYM_CONV) (GSYM (ISPEC (mk_eq (new_v, st)) markerTheory.Abbrev_def))
               in QUANT_CONV (RATOR_CONV (RAND_CONV (K pre_thm))) abbrev_t end
               else elim_thm;
@@ -145,10 +145,10 @@ in
   EVERY_CONV (map (fn arg => TRY_CONV (try_select arg)) select_terms) t
 end;
 
-fun GEN_SIMPLE_QUANT_ABBREV_CONV intro_abbrev only_top select_funs = 
+fun GEN_SIMPLE_QUANT_ABBREV_CONV intro_abbrev only_top select_funs =
    (INTRO_QUANT_ABBREVIATIONS_CONV_base (K NO_CONV) false intro_abbrev only_top select_funs)
 
-fun SIMPLE_QUANT_ABBREV_CONV select_funs = 
+fun SIMPLE_QUANT_ABBREV_CONV select_funs =
     GEN_SIMPLE_QUANT_ABBREV_CONV false false select_funs
 
 fun SIMPLE_QUANT_ABBREV_TAC (select_funs:selection_fun list) =
@@ -165,7 +165,7 @@ fun QUANT_ABBREV_TAC (select_funs:selection_fun list) qpL =
 
 (* Some select functions *)
 
-(* Searching for constants "c" and abbreviation argument number "i" 
+(* Searching for constants "c" and abbreviation argument number "i"
    with name "name". i = 0 means the whole term, i = 1 the first argument ... *)
 fun select_fun_constant c i (name:string) = (fn ctx => fn cf => (fn t =>
   let
@@ -193,8 +193,8 @@ fun select_fun_pabs name = (fn ctx => fn cf => (fn t =>
 val PAIR_select_fun = select_funs_combine [select_fun_pabs "p", FST_select_fun, SND_select_fun];
 
 
-(* In general, we might want pattern matching. The following function tries matching 
-   and abbreviates any matched variable in the pattern that does not start with _. 
+(* In general, we might want pattern matching. The following function tries matching
+   and abbreviates any matched variable in the pattern that does not start with _.
    The general version allows to specify that it needs to occur at least n times as well. *)
 (*
 val q = `f (_, xx)`

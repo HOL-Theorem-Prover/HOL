@@ -48,7 +48,7 @@ sig
     val dest_fcp_hd           : term -> term
     val dest_fcp_tl           : term -> term
     val dest_fcp_cons         : term -> term * term
-    val dest_fcp_map          : term -> term * term 
+    val dest_fcp_map          : term -> term * term
     val dest_fcp_exists       : term -> term * term
     val dest_fcp_every        : term -> term * term
     val dest_v2l              : term -> term

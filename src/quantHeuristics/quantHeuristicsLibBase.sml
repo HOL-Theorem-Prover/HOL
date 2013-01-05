@@ -998,7 +998,7 @@ local
         true
      end handle HOL_ERR _ => false;
 
-   fun is_disj_case_thm thm = 
+   fun is_disj_case_thm thm =
      let
         val (v, b) = dest_forall (concl thm);
         val (b1, b2) = dest_disj b;
@@ -1979,7 +1979,7 @@ local
          val bound_vars' = FVL [(rand (rator (concl ithm5)))] bound_vars
          val rest_vars = FVL [rand (concl ithm5)] empty_tmset
          val free_vars = HOLset.difference (rest_vars, bound_vars')
-      in 
+      in
          HOLset.listItems free_vars
       end
       val ithm6 = List.foldl (fn (v, thm) => CONV_RULE FORALL_IMP_CONV (GEN v thm)) ithm5 free_vars_lhs
@@ -2182,7 +2182,7 @@ fun imp_qp thmL =
     rewrite_thms=[],
     cases_thms=[],
     filter=[],
-    inst_filter = [],    
+    inst_filter = [],
     context_heuristics=[],
     inference_thms=[],
     imp_thms = thmL,
