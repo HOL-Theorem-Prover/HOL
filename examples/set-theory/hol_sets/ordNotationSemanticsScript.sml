@@ -25,7 +25,7 @@ val _ = add_rule {fixity = Closefix, term_name = "ordModel",
 
 val osyntax_EQ_0 = store_thm(
   "osyntax_EQ_0",
-  ``∀a. is_ord a ⇒ (⟦a⟧ = 0) ⇒ (a = End 0)``,
+  ``∀a. is_ord a ⇒ ((⟦a⟧ = 0) ⇔ (a = End 0))``,
   Induct_on `is_ord` THEN SRW_TAC [][ordModel_def] THEN
   `k ≠ 0` by DECIDE_TAC THEN SRW_TAC [][ordEXP_EQ_0]);
 
@@ -204,6 +204,7 @@ val ordpolyform_correct = store_thm(
   Induct_on `e` >> rw[ordModel_def]);
 
 val asimp = asm_simp_tac (srw_ss() ++ ARITH_ss)
+val bsimp = asm_simp_tac bool_ss
 val dsimp = asm_simp_tac (srw_ss() ++ boolSimps.DNF_ss)
 
 val ord_less_models_ordlt = store_thm(
@@ -283,6 +284,14 @@ val oless_modelled = store_thm(
   ``is_ord x ∧ is_ord y ⇒ (oless x y ⇔ ⟦x⟧ < ⟦y⟧)``,
   metis_tac [ord_less_def, ord_less_modelled]);
 
+val WF_ord_less = store_thm(
+  "WF_ord_less",
+  ``WF ord_less``,
+  match_mp_tac relationTheory.WF_SUBSET >>
+  qexists_tac `inv_image ordlt ordModel` >>
+  simp[relationTheory.WF_inv_image, ordlt_WF] >>
+  simp[ord_less_modelled, relationTheory.inv_image_def]);
+
 (* |- ⟦expt t⟧ < ⟦e⟧ ∧ is_ord e ∧ is_ord t ⇒ ⟦t⟧ < ω ** ⟦e⟧ *)
 val neqend0_lemma = prove(
   ``x < ⟦e⟧ ⇒ e ≠ End 0``,
@@ -307,7 +316,6 @@ val sup_eq_sup = store_thm(
   strip_tac >> match_mp_tac ordle_ANTISYM >> simp[sup_thm] >>
   metis_tac [suple_thm, ordle_TRANS]);
 
-(*
 val addL_disappears = store_thm(
   "addL_disappears",
   ``∀e a. a < ω ** e ⇒ (a + ω ** e = ω ** e)``,
@@ -328,48 +336,90 @@ val addL_disappears = store_thm(
                       SIMP_RULE (srw_ss()) [lt_omega]) >>
           `(dn = 0) ∨ ∃dn0. dn = SUC dn0` by (Cases_on `dn` >> simp[])
           >- (rw[] >> qexists_tac `c` >> simp[ordle_lteq]) >>
-          rw[]
-
-
-      AP_TERM_TAC >> simp[pred_setTheory.EXTENSION] >>
-      qx_gen_tac `α` >>
-      `0 < c` by (spose_not_then strip_assume_tac >> fs[]) >>
-      `0 < ω ** e` by (spose_not_then strip_assume_tac >> fs[]) >>
-      qspecl_then [`a`, `ω ** e`] mp_tac ordDIVISION >>
-      qabbrev_tac `q = a / ω ** e` >> qabbrev_tac `r = a % ω ** e` >>
-      simp[] >> strip_tac
-
-       0 < k2 ∧ e1 < e2 ⇒
-       (&k1 * ω ** e1 + &k2 * ω ** e2 = &k2 * ω ** e2)``,
-  ho_match_mp_tac simple_ord_induction >> simp[]
+          `dn = 1 + dn0` by decide_tac >>
+          Q.UNDISCH_THEN `dn = SUC dn0` (K ALL_TAC) >> rw[] >>
+          SIMP_TAC bool_ss [GSYM ordADD_fromNat, ordMULT_RDISTRIB] >>
+          simp[] >>
+          `0 < c` by (spose_not_then strip_assume_tac >> fs[]) >>
+          `0 < ω ** e` by (spose_not_then strip_assume_tac >> fs[]) >>
+          qspecl_then [`a`, `ω ** e`] mp_tac ordDIVISION >>
+          qabbrev_tac `q = a / ω ** e` >> qabbrev_tac `r = a % ω ** e` >>
+          simp[] >> strip_tac >>
+          `q * ω ** e + r + (ω ** e + &dn0 * ω ** e) =
+           q * ω ** e + ω ** e + &dn0 * ω ** e`
+            by metis_tac [ordADD_ASSOC] >>
+          simp[] >>
+          `q < c`
+            by (spose_not_then strip_assume_tac >>
+                `c * ω ** e ≤ q * ω ** e` by simp[] >>
+                `q * ω ** e ≤ q * ω ** e + r` by simp[] >>
+                metis_tac [ordlte_TRANS, ordle_TRANS, ordlt_REFL]) >>
+          `q < ω` by metis_tac [ordlt_TRANS] >>
+          qexists_tac `q + 1 + &dn0` >>
+          simp[ordMULT_RDISTRIB] >> fs[lt_omega]) >>
+      qx_gen_tac `d` >> strip_tac >> qexists_tac `d` >> simp[]) >>
+  qx_gen_tac `e` >> strip_tac >>
+  `IMAGE ($** ω) (preds e) ≠ ∅`
+    by (simp[pred_setTheory.EXTENSION] >> strip_tac >> fs[]) >>
+  dsimp[sup_thm, ordADD_continuous, IMAGE_cardleq_rwt, preds_inj_univ,
+        GSYM pred_setTheory.IMAGE_COMPOSE] >>
+  map_every qx_gen_tac [`a`, `x`] >> strip_tac >>
+  match_mp_tac sup_eq_sup >> dsimp[IMAGE_cardleq_rwt, preds_inj_univ] >>
+  conj_tac
+  >- (qx_gen_tac `y` >> strip_tac >>
+      `(x = y) ∨ x < y ∨ y < x` by metis_tac [ordlt_trichotomy]
+      >- metis_tac[ordlt_REFL]
+      >- (`ω ** x < ω ** y` by simp[] >>
+          `a < ω ** y` by metis_tac [ordlt_TRANS] >>
+          metis_tac [ordlt_REFL]) >>
+      metis_tac [ordlt_CANCEL, ordEXP_lt_IFF, lt_omega, ordle_lteq]) >>
+  qx_gen_tac `y` >> strip_tac >>
+  `(x = y) ∨ x < y ∨ y < x` by metis_tac [ordlt_trichotomy]
+  >- metis_tac [ordlt_REFL]
+  >- (`ω ** x < ω ** y` by simp[] >>
+      `a < ω ** y` by metis_tac [ordlt_TRANS] >>
+      metis_tac [ordlt_REFL]) >>
+  metis_tac [ordlt_CANCEL, ordEXP_lt_IFF, lt_omega, ordle_lteq]);
 
 val add_nat1_disappears = store_thm(
   "add_nat1_disappears",
-  ``∀α. ω ≤ α ⇒ (&n + α = α)``,
-  ho_match_mp_tac simple_ord_induction >>
-  simp_tac (srw_ss() ++ boolSimps.CONJ_ss)[AND_IMP_INTRO] >> conj_tac
-  >- (rw[ordle_lteq] >> fs[ordlt_SUC_DISCRETE] >>
-      metis_tac [omega_islimit, islimit_SUC]) >>
-  qx_gen_tac `a` >> strip_tac >>
-  qmatch_abbrev_tac `sup someset = a` >>
-  `someset ≼ univ(:α inf)`
-    by simp[Abbr`someset`, IMAGE_cardleq_rwt, preds_inj_univ] >>
-  `dclose someset = preds (sup someset)` by simp[preds_sup] >>
-  qsuff_tac `dclose someset = preds a` >- (strip_tac >> fs[]) >>
-  dsimp[Abbr`someset`, pred_setTheory.EXTENSION, sup_thm] >>
-  qx_gen_tac `b` >> Cases_on `b < ω`
-  >- (`b < a` by metis_tac [ordlte_TRANS] >> simp[] >>
-      `∃bn. b = &bn` by metis_tac [lt_omega] >> qexists_tac `b^+` >>
-      conj_tac >- metis_tac [islimit_SUC_lt] >> simp[] >>
-      simp_tac (bool_ss ++ ARITH_ss) [GSYM fromNat_SUC, fromNat_ordlt]) >>
-  eq_tac
-  >- (disch_then (Q.X_CHOOSE_THEN `c` strip_assume_tac) >>
-      qsuff_tac `ω ≤ c` >- metis_tac [ordlt_TRANS] >>
-      disch_then (strip_assume_tac o SIMP_RULE (srw_ss()) [lt_omega]) >>
-      fs[] >>
-      metis_tac [fromNat_lt_omega, ordlt_TRANS, ordlt_REFL, ordlte_TRANS]) >>
-  strip_tac >> qexists_tac `b^+` >>
-  `b^+ < a` by metis_tac [islimit_SUC_lt] >> simp[]);
+  ``ω ≤ α ⇒ (&n + α = α)``,
+  rpt strip_tac >> fs [ordle_EXISTS_ADD] >>
+  qspecl_then  [`1`, `&n`] mp_tac addL_disappears >> simp[ordADD_ASSOC]);
+
+val add_nat1_disappears_kexp = store_thm(
+  "add_nat1_disappears_kexp",
+  ``e ≠ 0 ∧ 0 < k ⇒ (&n + &k * ω ** e = &k * ω ** e)``,
+  strip_tac >> match_mp_tac add_nat1_disappears >> match_mp_tac ordle_TRANS >>
+  qexists_tac `ω ** e` >> simp[] >>
+  match_mp_tac ordle_TRANS >> qexists_tac `ω ** 1` >> simp[] >>
+  metis_tac [IFF_ZERO_lt]);
+
+val add_disappears_kexp = store_thm(
+  "add_disappears_kexp",
+  ``e ≠ 0 ∧ 0 < k ∧ a < ω ** e ⇒ (a + &k * ω ** e = &k * ω ** e)``,
+  strip_tac >>
+  `(k = 0) ∨ ∃k0. k = SUC k0` by (Cases_on `k` >> simp[]) >- fs[] >>
+  `k = 1 + k0` by decide_tac >> pop_assum SUBST1_TAC >>
+  bsimp[GSYM ordADD_fromNat, ordMULT_RDISTRIB] >>
+  simp[ordADD_ASSOC, addL_disappears]);
+
+
+(* |- e1 < e2 ⇒ &k * ω ** e1 < ω ** e2 *)
+val kexp_lt = let
+  val zero_ltk_or_eqzero = DECIDE ``0n < k ∨ (k = 0)``
+  val zero_ltk =
+    is_polyform_head_dominates_tail
+      |> Q.INST [`a` |-> `ω`, `t` |-> `[(&k,e1)]`, `c` |-> `1`, `e` |-> `e2`]
+      |> SIMP_RULE (srw_ss()) [is_polyform_def, ASSUME ``e1:'a ordinal < e2``]
+      |> UNDISCH_ALL
+  val eqzero = prove(``&k * ω ** e1 < ω ** e2``,
+                     simp[ASSUME ``k = 0n``] >> spose_not_then assume_tac >>
+                     fs[ordEXP_EQ_0])
+in
+  save_thm("kexp_lt",
+           DISJ_CASES zero_ltk_or_eqzero zero_ltk eqzero |> DISCH_ALL)
+end
 
 val ord_add_correct = store_thm(
   "ord_add_correct",
@@ -377,8 +427,14 @@ val ord_add_correct = store_thm(
   ho_match_mp_tac ord_add_ind >>
   simp_tac (srw_ss() ++ boolSimps.CONJ_ss)
     [ord_add_def, oless_modelled, AND_IMP_INTRO, is_ord_expt, ordADD_ASSOC] >>
-  rw[]
+  rw[add_nat1_disappears_kexp, osyntax_EQ_0]
+  >- (AP_THM_TAC >> AP_TERM_TAC >> simp[Once EQ_SYM_EQ] >>
+      match_mp_tac (add_disappears_kexp |> GEN_ALL) >>
+      simp[osyntax_EQ_0] >> match_mp_tac ordlt_TRANS >>
+      qexists_tac `&(SUC k1) * ω ** ⟦e1⟧` >> simp[kexp_lt, tail_dominated])
+  >- (AP_THM_TAC >> AP_TERM_TAC >> simp[GSYM ordADD_ASSOC] >>
+      simp[add_disappears_kexp, tail_dominated, osyntax_EQ_0] >>
+      bsimp[GSYM ordADD_fromNat, ordMULT_RDISTRIB]) >>
+  simp[ordADD_ASSOC]);
 
-  Cases_on `x` >> Cases_on `y` >> simp[ord_add_def, oless_modelled]
-*)
 val _ = export_theory()
