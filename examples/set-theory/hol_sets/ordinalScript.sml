@@ -272,6 +272,25 @@ val ordle_lteq = store_thm(
   ``(α:α ordinal) ≤ β <=> α < β ∨ (α = β)``,
   metis_tac [ordlt_trichotomy, ordlt_REFL, ordlt_TRANS])
 
+val ordle_ANTISYM = store_thm(
+  "ordle_ANTISYM",
+  ``α ≤ β ∧ β ≤ α ⇒ (α = β)``,
+  metis_tac [ordlt_trichotomy]);
+
+val ordle_TRANS = store_thm(
+  "ordle_TRANS",
+  ``∀x y z. (x:'a ordinal) ≤ y ∧ y ≤ z ⇒ x ≤ z``,
+  metis_tac [ordlt_TRANS, ordle_lteq]);
+
+val ordlet_TRANS = store_thm(
+  "ordlet_TRANS",
+  ``∀x y z. (x:'a ordinal) ≤ y ∧ y < z ⇒ x < z``,
+  metis_tac [ordle_lteq, ordlt_TRANS]);
+val ordlte_TRANS = store_thm(
+  "ordlte_TRANS",
+  ``∀x y z. (x:'a ordinal) < y ∧ y ≤ z ⇒ x < z``,
+  metis_tac [ordle_lteq, ordlt_TRANS]);
+
 val oleast_def = Define`
   $oleast (P:'a ordinal -> bool) = @x. P x ∧ ∀y. y < x ==> ¬P y
 `;
@@ -431,6 +450,15 @@ val suple_thm = store_thm(
   "suple_thm",
   ``∀β s:'a ordinal set. s ≼ univ(:'a inf) ∧ β ∈ s ⇒ β ≤ sup s``,
   metis_tac [sup_thm, ordlt_REFL]);
+
+val sup_eq_sup = store_thm(
+  "sup_eq_sup",
+  ``(s1:α ordinal set) ≼ univ(:α inf) ∧
+    (s2:α ordinal set) ≼ univ(:α inf) ∧
+    (∀a. a ∈ s1 ⇒ ∃b. b ∈ s2 ∧ a ≤ b) ∧
+    (∀b. b ∈ s2 ⇒ ∃a. a ∈ s1 ∧ b ≤ a) ⇒ (sup s1 = sup s2)``,
+  strip_tac >> match_mp_tac ordle_ANTISYM >> simp[sup_thm] >>
+  metis_tac [suple_thm, ordle_TRANS]);
 
 val Unum_cle_Uinf = store_thm(
   "Unum_cle_Uinf",
@@ -794,11 +822,6 @@ val omax_preds_omega = store_thm(
   qexists_tac `SUC m` >> simp[]);
 val omega_islimit = save_thm("omega_islimit", omax_preds_omega)
 
-val ordle_ANTISYM = store_thm(
-  "ordle_ANTISYM",
-  ``α ≤ β ∧ β ≤ α ⇒ (α = β)``,
-  metis_tac [ordlt_trichotomy]);
-
 val ordADD_fromNat_omega = store_thm(
   "ordADD_fromNat_omega",
   ``&n + ω = ω``,
@@ -997,20 +1020,6 @@ val sup_eq_SUC = store_thm(
   match_mp_tac ordle_ANTISYM >> conj_tac
   >- metis_tac [sup_lt_implies, ordlt_REFL] >>
   simp[ordlt_SUC_DISCRETE] >> metis_tac[ordle_lteq, ordlt_REFL]);
-
-val ordle_TRANS = store_thm(
-  "ordle_TRANS",
-  ``∀x y z. (x:'a ordinal) ≤ y ∧ y ≤ z ⇒ x ≤ z``,
-  metis_tac [ordlt_TRANS, ordle_lteq]);
-
-val ordlet_TRANS = store_thm(
-  "ordlet_TRANS",
-  ``∀x y z. (x:'a ordinal) ≤ y ∧ y < z ⇒ x < z``,
-  metis_tac [ordle_lteq, ordlt_TRANS]);
-val ordlte_TRANS = store_thm(
-  "ordlte_TRANS",
-  ``∀x y z. (x:'a ordinal) < y ∧ y ≤ z ⇒ x < z``,
-  metis_tac [ordle_lteq, ordlt_TRANS]);
 
 
 val generic_continuity = store_thm(
@@ -2042,5 +2051,15 @@ val polyform_UNIQUE = store_thm(
         `c * a ** e ≤ c * a ** e + eval_poly a t` by simp[] >>
         metis_tac [ordlte_TRANS, ordle_TRANS]) >>
   metis_tac [is_polyform_CONS_E]);
+
+val polyform_eval_poly = store_thm(
+  "polyform_eval_poly",
+  ``1 < α ∧ is_polyform α β ⇒ (polyform α (eval_poly α β) = β)``,
+  strip_tac >> match_mp_tac polyform_UNIQUE >> simp[]);
+
+val CNF_nat = store_thm(
+  "CNF_nat",
+  ``CNF &n = if n = 0 then [] else [(&n,0)]``,
+  rw[] >> match_mp_tac polyform_UNIQUE >> rw[is_polyform_def] >> decide_tac);
 
 val _ = export_theory()

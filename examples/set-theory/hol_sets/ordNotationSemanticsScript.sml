@@ -29,32 +29,6 @@ val osyntax_EQ_0 = store_thm(
   Induct_on `is_ord` THEN SRW_TAC [][ordModel_def] THEN
   `k ≠ 0` by DECIDE_TAC THEN SRW_TAC [][ordEXP_EQ_0]);
 
-val CNF_nat = store_thm(
-  "CNF_nat",
-  ``CNF &n = if n = 0 then [] else [(&n,0)]``,
-  rw[] >> match_mp_tac polyform_UNIQUE >> rw[is_polyform_def] >> decide_tac);
-
-(* val ordModel_11 = store_thm(
-  "ordModel_11",
-  ``is_ord m ∧ is_ord n ⇒ ((⟦m⟧ = ⟦n⟧) ⇔ (m = n))``,
-  qsuff_tac `∀m. is_ord m ⇒ ∀n. is_ord n ∧ (⟦m⟧ = ⟦n⟧) ⇒ (m = n)`
-  >- metis_tac[] >> Induct_on `is_ord` >> simp[] >> conj_tac
-  >- (map_every qx_gen_tac [`k`, `n`] >>
-      `(∃k2. n = End k2) ∨ ∃c e t. n = Plus e c t`
-        by (Cases_on `n` >> simp[])
-      >- simp[] >>
-      strip_tac >> rw[] >> fs[] >>
-      `&k < ω` by simp[] >>
-      `ω ≤ ω ** ⟦e⟧`
-        by (simp_tac bool_ss [SimpR ``ordlt``, Once (GSYM ordEXP_1R)] >>
-            match_mp_tac ordEXP_le_MONO_R >> simp[] >> strip_tac >>
-            `⟦e⟧ = 0` by metis_tac [IFF_ZERO_lt] >> metis_tac [osyntax_EQ_0]) >>
-      `ω ** ⟦e⟧ ≤ &c * ω ** ⟦e⟧` by simp[] >>
-      `&c * ω ** ⟦e⟧ ≤ &c * ω ** ⟦e⟧ + ⟦t⟧` by simp[] >>
-      metis_tac [ordlte_TRANS, ordle_TRANS, ordlt_REFL]) >>
-  map_every qx_gen_tac [`e`, `c`, `t`] >> strip_tac
-*)
-
 val oless_0 = store_thm(
   "oless_0",
   ``∀n. oless n (End 0) = F``,
@@ -77,28 +51,12 @@ val is_ord_expt = store_thm(
   ``is_ord e ⇒ is_ord (expt e)``,
   Cases_on `e` >> simp[]);
 
-val polyform_eval_poly = store_thm(
-  "polyform_eval_poly",
-  ``1 < α ∧ is_polyform α β ⇒ (polyform α (eval_poly α β) = β)``,
-  strip_tac >> match_mp_tac polyform_UNIQUE >> simp[]);
-
 val ordModel_lt_epsilon0 = store_thm(
   "ordModel_lt_epsilon0",
   ``∀a. ⟦a⟧ < ε₀``,
   Induct_on `a` THEN
   SRW_TAC [][ordMUL_under_epsilon0, ordEXP_under_epsilon0,
              ordADD_under_epsilon0, ordModel_def]);
-
-val ordpolyform_def = Define`
-  (ordpolyform (End n) = [(&n:'a ordinal,&0:'a ordinal)]) ∧
-  (ordpolyform (Plus e c t) = (&c,⟦e⟧)::ordpolyform t)
-`;
-val _ = export_rewrites ["ordpolyform_def"]
-
-val ordpolyform_correct = store_thm(
-  "ordpolyform_correct",
-  ``eval_poly ω (ordpolyform e) = ⟦e⟧``,
-  Induct_on `e` >> rw[ordModel_def]);
 
 val asimp = asm_simp_tac (srw_ss() ++ ARITH_ss)
 val bsimp = asm_simp_tac bool_ss
@@ -203,15 +161,6 @@ val tail_dominated = save_thm(
     |> REWRITE_RULE [neqend0_lemma |> Q.INST [`x` |-> `⟦expt t⟧`] |> UNDISCH]
     |> REWRITE_RULE [ASSUME ``⟦expt t⟧ < ⟦e⟧ :α ordinal``]
     |> DISCH_ALL |> REWRITE_RULE [AND_IMP_INTRO]);
-
-val sup_eq_sup = store_thm(
-  "sup_eq_sup",
-  ``(s1:α ordinal set) ≼ univ(:α inf) ∧
-    (s2:α ordinal set) ≼ univ(:α inf) ∧
-    (∀a. a ∈ s1 ⇒ ∃b. b ∈ s2 ∧ a ≤ b) ∧
-    (∀b. b ∈ s2 ⇒ ∃a. a ∈ s1 ∧ b ≤ a) ⇒ (sup s1 = sup s2)``,
-  strip_tac >> match_mp_tac ordle_ANTISYM >> simp[sup_thm] >>
-  metis_tac [suple_thm, ordle_TRANS]);
 
 val addL_disappears = store_thm(
   "addL_disappears",
