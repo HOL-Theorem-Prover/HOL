@@ -389,4 +389,11 @@ val notation_exists = store_thm(
     pop_assum (fn th => RULE_ASSUM_TAC (REWRITE_RULE [th])) >> rw[] >>
     fs[is_polyform_def]);
 
+val ordModel_11 = store_thm(
+  "ordModel_11",
+  ``is_ord n1 ∧ is_ord n2 ⇒ ((⟦n1⟧ = ⟦n2⟧) ⇔ (n1 = n2))``,
+  simp[EQ_IMP_THM] >> rpt strip_tac >>
+  `(n1 = n2) ∨ oless n1 n2 ∨ oless n2 n1` by metis_tac [oless_total] >>
+  pop_assum mp_tac >> simp[oless_modelled]);
+
 val _ = export_theory()
