@@ -82,109 +82,6 @@ val polyform_eval_poly = store_thm(
   ``1 < α ∧ is_polyform α β ⇒ (polyform α (eval_poly α β) = β)``,
   strip_tac >> match_mp_tac polyform_UNIQUE >> simp[]);
 
-(*
-val notation_exists = store_thm(
-  "notation_exists",
-  ``∀α. α < ε₀ ⇒
-        ∃n. is_ord n ∧ (⟦n⟧ = α) ∧
-            (α ≠ 0 ⇒ (⟦expt n⟧ = SND (HD (CNF α)))) ∧
-            ∀b. is_ord b ⇒ (oless b n ⇔ ⟦b⟧ < α)``,
-  ho_match_mp_tac ord_induction >> rpt strip_tac >>
-  `(CNF α = []) ∨ ∃c e t. (CNF α = (c,e)::t)`
-    by metis_tac [listTheory.list_CASES, pairTheory.pair_CASES]
-  >- (fs[polyform_EQ_NIL] >> qexists_tac `End 0` >> simp[]) >>
-  `(eval_poly ω ((c,e)::t) = α) ∧ is_polyform ω ((c,e)::t)`
-    by metis_tac [polyform_def, fromNat_lt_omega] >>
-  fs[] >>
-  `c < ω ∧ 0 < c ∧ is_polyform ω t`
-    by (imp_res_tac is_polyform_CONS_E >> simp[]) >>
-  `eval_poly ω t < α`
-    by (rw[] >> match_mp_tac ordlte_TRANS >>
-        qexists_tac `ω ** e` >> conj_tac
-        >- (match_mp_tac (GEN_ALL is_polyform_head_dominates_tail) >>
-            metis_tac[fromNat_lt_omega]) >>
-        match_mp_tac ordle_TRANS >> qexists_tac `c * ω ** e` >> simp[] >>
-        qsuff_tac `c ≠ 0` >- simp[] >> strip_tac >> fs[]) >>
-  `∃tn. is_ord tn ∧ (⟦tn⟧ = eval_poly ω t) ∧
-        (eval_poly ω t ≠ 0 ⇒ (⟦expt tn⟧ = SND (HD (CNF (eval_poly ω t))))) ∧
-        ∀b. is_ord b ⇒ (oless b tn ⇔ ⟦b⟧ < eval_poly ω t)`
-    by (first_x_assum (qspec_then `eval_poly ω t` mp_tac) >> simp[] >>
-        disch_then match_mp_tac >> metis_tac [ordlt_TRANS]) >>
-  `∃cn. c = &cn` by metis_tac[lt_omega] >>
-  `e < α`
-    by (spose_not_then strip_assume_tac >>
-        `c * ω ** e ≤ α` by rw[] >>
-        `ω ** e ≤ c * ω ** e` by (simp[] >> qsuff_tac `cn ≠ 0` >- simp[] >>
-                                  strip_tac >> fs[]) >>
-        `ω ** e ≤ e` by metis_tac [ordle_TRANS] >>
-        `ε₀ ≤ e` by metis_tac [epsilon0_least_fixpoint] >>
-        `α < e` by metis_tac [ordlte_TRANS] >>
-        `e ≤ ω ** e` by simp[x_le_ordEXP_x] >>
-        metis_tac [ordlt_REFL, ordlte_TRANS, ordle_TRANS]) >>
-    Cases_on `e = 0`
-    >- (qexists_tac `End cn` >> simp[] >> fs[] >>
-        `&cn = α`
-          by (qsuff_tac `t = []` >- (strip_tac >> fs[]) >>
-              spose_not_then strip_assume_tac >>
-              `∃c' e' t'. t = (c',e')::t'`
-                by metis_tac [listTheory.list_CASES, pairTheory.pair_CASES] >>
-              fs[is_polyform_def]) >>
-        simp[] >> rw[] >> simp[oless_x_End] >> eq_tac >- (rw[] >> rw[]) >>
-        pop_assum mp_tac >>
-        `(∃m. b = End m) ∨ ∃e c t. b = Plus e c t` by (Cases_on `b` >> simp[])
-        >- simp[] >>
-        simp[] >> strip_tac >>
-        match_mp_tac ordle_TRANS >> qexists_tac `ω` >> simp[] >>
-        conj_tac >- simp[ordle_lteq] >>
-        match_mp_tac ordle_TRANS >> qexists_tac `&c * ω ** ⟦e⟧` >> simp[] >>
-        match_mp_tac ordle_TRANS >> qexists_tac `ω ** ⟦e⟧` >> simp[] >>
-        match_mp_tac ordle_TRANS >> qexists_tac `ω ** 1` >> simp[] >>
-        strip_tac >> metis_tac [osyntax_EQ_0, IFF_ZERO_lt]) >>
-    `∃en. is_ord en ∧ (⟦en⟧ = e) ∧
-          ∀b. is_ord b ⇒ (oless b en ⇔ ⟦b⟧ < e)` by metis_tac[ordlt_TRANS] >>
-    `en ≠ End 0` by (strip_tac >> fs[]) >>
-    qexists_tac `Plus en cn tn` >> simp[] >>
-    rpt strip_tac
-    >- (rw[] >> fs[])
-    >- (`(t = []) ∨ ∃c2 e2 t2. t = (c2,e2)::t2`
-          by metis_tac [listTheory.list_CASES, pairTheory.pair_CASES]
-        >- (fs[] >>
-            `tn = End 0` by metis_tac [osyntax_EQ_0] >> fs[] >>
-            metis_tac [IFF_ZERO_lt]) >>
-        `CNF (eval_poly ω t) = t` by simp[polyform_eval_poly] >>
-        pop_assum SUBST_ALL_TAC >>
-        `eval_poly ω t ≠ 0`
-          by (fs[is_polyform_def, ordEXP_EQ_0] >>
-              imp_res_tac is_polyform_CONS_E >> metis_tac [IFF_ZERO_lt]) >>
-        simp[is_ord_expt] >> fs[is_polyform_def])
-    >- rw[] >>
-    `(∃m. b = End m) ∨ (∃e0 c0 t0. b = Plus e0 c0 t0)`
-      by (Cases_on `b` >> simp[])
-    >- (simp[] >> rw[] >>
-        match_mp_tac ordlte_TRANS >> qexists_tac `ω` >> simp[] >>
-        match_mp_tac ordle_TRANS >> qexists_tac `&cn * ω ** ⟦en⟧` >> simp[]>>
-        match_mp_tac ordle_TRANS >> qexists_tac `ω ** ⟦en⟧` >>
-        simp[ordEXP_EQ_0]>> conj_tac
-        >- (match_mp_tac ordle_TRANS >> qexists_tac `ω ** 1` >> simp[] >>
-            metis_tac [IFF_ZERO_lt]) >>
-        fs[] >> decide_tac) >>
-    simp[] >> fs[] >>
-    Cases_on `e0 = en`
-    >- (simp[] >> Cases_on `c0 = cn` >> simp[] >> rw[] >>
-
-
-
-
-
-
-        Cases_on `en` >> fs[]
-        >- (`0 < n` by decide_tac >> simp[oless_rules]) >>
-        simp[oless_rules]) >>
-
-
-*)
-
-
 val ordModel_lt_epsilon0 = store_thm(
   "ordModel_lt_epsilon0",
   ``∀a. ⟦a⟧ < ε₀``,
@@ -436,5 +333,60 @@ val ord_add_correct = store_thm(
       simp[add_disappears_kexp, tail_dominated, osyntax_EQ_0] >>
       bsimp[GSYM ordADD_fromNat, ordMULT_RDISTRIB]) >>
   simp[ordADD_ASSOC]);
+
+val notation_exists = store_thm(
+  "notation_exists",
+  ``∀α. α < ε₀ ⇒ ∃n. is_ord n ∧ (⟦n⟧ = α) ∧
+                    (0 < α ⇒ (⟦expt n⟧ = SND (HD (CNF α))))``,
+  ho_match_mp_tac ord_induction >> rpt strip_tac >>
+  `(CNF α = []) ∨ ∃c e t. (CNF α = (c,e)::t)`
+    by metis_tac [listTheory.list_CASES, pairTheory.pair_CASES]
+  >- (fs[polyform_EQ_NIL] >> qexists_tac `End 0` >> simp[]) >>
+  `(eval_poly ω ((c,e)::t) = α) ∧ is_polyform ω ((c,e)::t)`
+    by metis_tac [polyform_def, fromNat_lt_omega] >>
+  `c < ω ∧ 0 < c ∧ is_polyform ω t`
+    by (imp_res_tac is_polyform_CONS_E >> simp[]) >>
+  `eval_poly ω t < α`
+    by (rw[] >> match_mp_tac ordlte_TRANS >>
+        qexists_tac `ω ** e` >> conj_tac
+        >- (match_mp_tac (GEN_ALL is_polyform_head_dominates_tail) >>
+            metis_tac[fromNat_lt_omega]) >>
+        match_mp_tac ordle_TRANS >> qexists_tac `c * ω ** e` >> simp[] >>
+        qsuff_tac `c ≠ 0` >- simp[] >> strip_tac >> fs[]) >>
+  `∃tn. is_ord tn ∧ (⟦tn⟧ = eval_poly ω t) ∧
+        (0 < eval_poly ω t ⇒ (⟦expt tn⟧ = SND (HD (CNF (eval_poly ω t)))))`
+    by (first_x_assum (qspec_then `eval_poly ω t` mp_tac) >> simp[] >>
+        disch_then match_mp_tac >> metis_tac [ordlt_TRANS]) >>
+  `CNF (eval_poly ω t) = t` by simp[polyform_eval_poly] >> fs[] >>
+  `∃cn. c = &cn` by metis_tac[lt_omega] >>
+  `e < α`
+    by (spose_not_then strip_assume_tac >>
+        `c * ω ** e ≤ α` by rw[] >>
+        `ω ** e ≤ c * ω ** e` by (simp[] >> qsuff_tac `cn ≠ 0` >- simp[] >>
+                                  strip_tac >> fs[]) >>
+        `ω ** e ≤ e` by metis_tac [ordle_TRANS] >>
+        `ε₀ ≤ e` by metis_tac [epsilon0_least_fixpoint] >>
+        `α < e` by metis_tac [ordlte_TRANS] >>
+        `e ≤ ω ** e` by simp[x_le_ordEXP_x] >>
+        metis_tac [ordlt_REFL, ordlte_TRANS, ordle_TRANS]) >>
+    Cases_on `e = 0`
+    >- (qexists_tac `End cn` >> simp[] >> fs[] >>
+        `&cn = α`
+          by (qsuff_tac `t = []` >- (strip_tac >> fs[]) >>
+              spose_not_then strip_assume_tac >>
+              `∃c' e' t'. t = (c',e')::t'`
+                by metis_tac [listTheory.list_CASES, pairTheory.pair_CASES] >>
+              fs[is_polyform_def])) >>
+    `∃en. is_ord en ∧ (⟦en⟧ = e)` by metis_tac[ordlt_TRANS] >>
+    `en ≠ End 0` by (strip_tac >> fs[]) >>
+    qexists_tac `Plus en cn tn` >> simp[] >> rw[] >- fs[] >>
+    simp[oless_modelled, is_ord_expt] >>
+    `(t = []) ∨ ∃c2 e2 t2. t = (c2,e2)::t2`
+      by metis_tac [listTheory.list_CASES, pairTheory.pair_CASES]
+    >- (fs[] >> Q.UNDISCH_THEN `⟦tn⟧ = 0` mp_tac >> simp[osyntax_EQ_0] >>
+        strip_tac >> spose_not_then assume_tac >> fs[]) >>
+    `0 < eval_poly ω t` by (spose_not_then assume_tac >> fs[polyform_0]) >>
+    pop_assum (fn th => RULE_ASSUM_TAC (REWRITE_RULE [th])) >> rw[] >>
+    fs[is_polyform_def]);
 
 val _ = export_theory()
