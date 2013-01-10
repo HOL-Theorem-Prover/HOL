@@ -81,9 +81,10 @@ local
   val rty = mk_var_type("'r", typ 1)
   val aty = mk_var_type("'a", kappa ==> typ 1)
   val xty = mk_var_type("'x", kappa)
+  val yty = mk_var_type("'y", kappa)
   val axty = mk_app_type(aty,xty)
-  val ety = mk_exist_type(xty, axty)
-  (* val pack_ty = POLY (list_mk_univ_type([xty,aty], axty --> ety)) *)
+  val ayty = mk_app_type(aty,yty)
+  val ety = mk_exist_type(yty, ayty)
   val pack_ty = POLY (mk_univ_type(xty, axty --> ety))
   val unpack_ty = POLY (mk_univ_type(xty, axty --> rty) --> ety --> rty)
 in

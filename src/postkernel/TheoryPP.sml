@@ -24,10 +24,36 @@ val sort = Lib.sort (fn s1:string => fn s2 => s1<=s2);
 val psort = Lib.sort (fn (s1:string,_:Thm.thm) => fn (s2,_:Thm.thm) => s1<=s2);
 val thid_sort = Lib.sort (fn (s1:string,_,_) => fn (s2,_,_) => s1<=s2);
 fun thm_atoms acc th k = let
-  open Term
+  open Type Term
+  val k0 = fn s => s
+  fun type_atoms ty k acc (*tyset*) =
+      if is_var_type ty then k (HOLset.add(acc, ty))
+      else if is_con_type ty then k (HOLset.add(acc, ty))
+      else if is_app_type ty then let
+          val (opr,arg) = dest_app_type ty
+        in
+          type_atoms opr (type_atoms arg k) acc
+        end
+      else if is_abs_type ty then let
+          val (bv,body) = dest_abs_type ty
+        in
+          type_atoms body k (HOLset.add(acc, bv))
+        end
+      else if is_univ_type ty then let
+          val (bv,body) = dest_univ_type ty
+        in
+          type_atoms body k (HOLset.add(acc, bv))
+        end
+      else if is_exist_type ty then let
+          val (bv,body) = dest_exist_type ty
+        in
+          type_atoms body k (HOLset.add(acc, bv))
+        end
+      else raise ERR "thm_atoms" "unrecognized type"
+  fun type_atoms_of_term t tyset = type_atoms (type_of t) k0 tyset
   fun term_atoms (acc as (tyset,tmset)) t k =
-      if is_var t then k (tyset,HOLset.add(tmset, t))
-      else if is_const t then k (tyset,HOLset.add(tmset, t))
+      if is_var t then k (type_atoms_of_term t tyset,HOLset.add(tmset, t))
+      else if is_const t then k (type_atoms_of_term t tyset,HOLset.add(tmset, t))
       else if is_comb t then let
           val (f,x) = dest_comb t
         in
@@ -41,7 +67,7 @@ fun thm_atoms acc th k = let
       else if is_tycomb t then let
           val (f,ty) = dest_tycomb t
         in
-          term_atoms (HOLset.add(tyset, ty),tmset) f k
+          term_atoms (type_atoms ty k0 (HOLset.add(tyset, ty)),tmset) f k
         end
       else if is_tyabs t then let
           val (a, body) = dest_tyabs t
@@ -404,7 +430,7 @@ fun pp_struct info_record = let
        axioms,definitions,theorems,types,constants,struct_ps} = info_record
   val parents1 = filter (fn (s,_,_) => not ("min"=s)) parents0
   val thml = axioms@definitions@theorems
-  val (all_term_types_set,all_term_atoms_set) = thml_atoms (map #2 thml) (empty_tyset,empty_tmset)
+  val (all_type_atoms_set,all_term_atoms_set) = thml_atoms (map #2 thml) (empty_tyset,empty_tmset)
   open SharingTables
   fun dotypes (ty, (idtable, kdtable, tytable)) = let
     val (_, (idtable, kdtable, tytable)) = make_shared_type ty (idtable, kdtable, tytable)
@@ -416,7 +442,7 @@ fun pp_struct info_record = let
   fun dotypes (ty, tables) = #2 (make_shared_type ty tables)
   val (idtable, kdtable, tytable) =
       HOLset.foldl dotypes (idtable, kdtable, tytable)
-                   all_term_types_set
+                   all_type_atoms_set
   fun doterms (c, tables) = #2 (make_shared_term c tables)
   val (idtable, kdtable, tytable, tmtable) =
       HOLset.foldl doterms (idtable, kdtable, tytable, empty_termtable)
@@ -512,8 +538,16 @@ fun pp_struct info_record = let
   fun pp_tm tm =
       (add_string "read\"">>
        add_string (Term.write_raw
-                     (fn ty => Map.find(#tymap tytable, ty))
-                     (fn t => Map.find(#termmap tmtable, t))
+                     (fn ty => Map.find(#tymap tytable, ty)
+                               handle e as NotFound =>
+                               (print "\nCouldn't find type "; Thm.debug_type ty;
+                                print " of kind "; Thm.debug_kind (kind_of ty);
+                                print "\n"; raise e))
+                     (fn t => Map.find(#termmap tmtable, t)
+                               handle e as NotFound =>
+                               (print "\nCouldn't find term "; Thm.debug_term t;
+                                print " of type "; Thm.debug_type (type_of t);
+                                print "\n"; raise e))
                      tm)>>
        add_string "\"")
   fun pr_bind(s, th) = let

@@ -2659,8 +2659,10 @@ local
   val rty = mk_var_type("'r", typ 1)
   val aty = mk_var_type("'a", kappa ==> typ 1)
   val xty = mk_var_type("'x", kappa)
+  val yty = mk_var_type("'y", kappa)
   val axty = mk_app_type(aty,xty)
-  val ety = mk_exist_type(xty, axty)
+  val ayty = mk_app_type(aty,yty)
+  val ety = mk_exist_type(yty, ayty)
   val pack_ty = mk_univ_type(xty, axty --> ety)
   val unpack_ty = mk_univ_type(xty, axty --> rty) --> ety --> rty
 in
@@ -2701,32 +2703,6 @@ fun prim_mk_eq ty t1 t2 =
 fun prim_mk_imp t1 t2 = App(App(imp, t1), t2)
 
 (* val prim_mk_imp = (fn t1 => Profile.profile "prim_mk_imp" (prim_mk_imp t1))*)
-
-
-(*---------------------------------------------------------------------------*
- *  Raw syntax prettyprinter for terms.                                      *
- *---------------------------------------------------------------------------*)
-
-val dot     = "."
-val percent = "%";
-
-fun pp_raw_term index pps tm =
- let open Portable
-     val {add_string,add_break,begin_block,end_block,...} = with_ppstream pps
-     fun pp (Abs(Bvar,Body)) =
-          ( add_string "\\\\(";
-            pp Bvar; add_string ","; add_break(1,0);
-            pp Body; add_string ")" )
-      | pp (App(Rator,Rand)) =
-         ( add_string "("; pp Rator; add_break(1,0);
-                           add_string "& ";
-                           pp Rand; add_string ")")
-      | pp a      = add_string (percent^Lib.int_to_string (index a))
- in
-   begin_block INCONSISTENT 0;
-   pp tm;
-   end_block()
- end;
 
 
 local
@@ -2879,7 +2855,7 @@ fun write_raw tymap map t = let
               else
                 doit acc (core @ rest)
             end
-          else raise ERR "pp_raw_term" "unrecognized term"
+          else raise ERR "write_raw" "unrecognized term"
         end
 in
   doit [] [Tm(t,Top)]

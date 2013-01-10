@@ -149,8 +149,6 @@ sig
  val align_types : (hol_type,hol_type) Lib.subst ->
                    (hol_type,hol_type) Lib.subst * (kind,kind) Lib.subst * rank
 
-(* val type_to_string : hol_type -> string *) (* for low-level error messages only; superceeded *)
-
  val type_size : hol_type -> int
 
  val ty_sub        : (hol_type,hol_type) Lib.subst -> hol_type ->
