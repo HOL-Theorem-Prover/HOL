@@ -14,7 +14,7 @@ val _ = export_rewrites ["ordinalNotation.finp_def", "ordinalNotation.tail_def",
 
 val ordModel_def = Define`
   (ordModel (End n) = &n) ∧
-  (ordModel (Plus e c t) = &c * ω ** ordModel e + ordModel t)
+  (ordModel (Plus e c t) = ω ** ordModel e * &c + ordModel t)
 `
 val _ = export_rewrites ["ordModel_def"]
 
@@ -76,7 +76,7 @@ val ord_less_models_ordlt = store_thm(
       `(∃n. y = End n) ∨ (∃e c t. y = Plus e c t)` by (Cases_on `y` >> simp[])>>
       simp[] >> strip_tac >>
       match_mp_tac ordlte_TRANS >> qexists_tac `ω` >> rw[] >>
-      match_mp_tac ordle_TRANS >> qexists_tac `&c * ω ** ⟦e⟧` >> rw[] >>
+      match_mp_tac ordle_TRANS >> qexists_tac `ω ** ⟦e⟧ * &c` >> rw[] >>
       match_mp_tac ordle_TRANS >> qexists_tac `ω ** ⟦e⟧` >>
       asm_simp_tac (srw_ss() ++ ARITH_ss) [] >>
       SIMP_TAC bool_ss [Once (GSYM ordEXP_1R), SimpR ``ordlt``] THEN
@@ -92,14 +92,14 @@ val ord_less_models_ordlt = store_thm(
   >- (`⟦t⟧ < ⟦Plus e 1 (End 0)⟧`
         by (first_assum match_mp_tac >> asimp[] >> Cases_on `t` >> fs[]) >>
       pop_assum mp_tac >> simp[] >> strip_tac >>
-      match_mp_tac ordlt_TRANS >> qexists_tac `&(SUC c) * ω ** ⟦e⟧` >>
+      match_mp_tac ordlt_TRANS >> qexists_tac `ω ** ⟦e⟧ * &(SUC c)` >>
       conj_tac
       >- (match_mp_tac ordlte_TRANS >>
-          qexists_tac `&c * ω ** ⟦e⟧ + ω ** ⟦e⟧` >> simp[]) >>
+          qexists_tac `ω ** ⟦e⟧ * &c + ω ** ⟦e⟧` >> simp[]) >>
       match_mp_tac ordlte_TRANS >> qexists_tac `ω ** ⟦e2⟧` >> REVERSE conj_tac
-      >- (match_mp_tac ordle_TRANS >> qexists_tac `&c2 * ω ** ⟦e2⟧` >>
+      >- (match_mp_tac ordle_TRANS >> qexists_tac `ω ** ⟦e2⟧ * &c2` >>
           simp[]) >>
-      `&SUC c * ω ** ⟦e⟧ = eval_poly ω [(&SUC c, ⟦e⟧)]` by simp[] >>
+      `ω ** ⟦e⟧ * &(SUC c) = eval_poly ω [(&SUC c, ⟦e⟧)]` by simp[] >>
       pop_assum SUBST1_TAC >>
       match_mp_tac (GEN_ALL is_polyform_head_dominates_tail) >>
       simp[is_polyform_def] >> qexists_tac `1` >> simp[])
@@ -107,9 +107,9 @@ val ord_less_models_ordlt = store_thm(
       `⟦t⟧ < ⟦Plus e 1 (End 0)⟧`
         by (first_assum match_mp_tac >> asimp[] >> Cases_on `t` >> fs[]) >>
       pop_assum mp_tac >> simp[] >> strip_tac >>
-      match_mp_tac ordlte_TRANS >> qexists_tac `&(SUC c) * ω ** ⟦e2⟧` >>
+      match_mp_tac ordlte_TRANS >> qexists_tac `ω ** ⟦e2⟧ * &(SUC c)` >>
       conj_tac >- simp[] >>
-      match_mp_tac ordle_TRANS >> qexists_tac `&c2 * ω ** ⟦e2⟧` >> simp[]) >>
+      match_mp_tac ordle_TRANS >> qexists_tac `ω ** ⟦e2⟧ * &c2` >> simp[]) >>
   simp[]);
 
 val oless_total = store_thm(
@@ -171,7 +171,7 @@ val addL_disappears = store_thm(
   >- (simp[omega_islimit] >> qx_gen_tac `e` >> strip_tac >> qx_gen_tac `a` >>
       dsimp[sup_thm, IMAGE_cardleq_rwt, preds_inj_univ] >> qx_gen_tac `c` >>
       strip_tac >>
-      `IMAGE (λy. y * ω ** e) (preds ω) ≠ ∅`
+      `IMAGE ($* (ω ** e)) (preds ω) ≠ ∅`
         by simp[pred_setTheory.EXTENSION] >>
       simp[ordADD_continuous, IMAGE_cardleq_rwt, preds_inj_univ] >>
       simp[GSYM pred_setTheory.IMAGE_COMPOSE, combinTheory.o_ABS_R] >>
@@ -184,25 +184,25 @@ val addL_disappears = store_thm(
           >- (rw[] >> qexists_tac `c` >> simp[ordle_lteq]) >>
           `dn = 1 + dn0` by decide_tac >>
           Q.UNDISCH_THEN `dn = SUC dn0` (K ALL_TAC) >> rw[] >>
-          SIMP_TAC bool_ss [GSYM ordADD_fromNat, ordMULT_RDISTRIB] >>
+          SIMP_TAC bool_ss [GSYM ordADD_fromNat, ordMULT_LDISTRIB] >>
           simp[] >>
           `0 < c` by (spose_not_then strip_assume_tac >> fs[]) >>
           `0 < ω ** e` by (spose_not_then strip_assume_tac >> fs[]) >>
           qspecl_then [`a`, `ω ** e`] mp_tac ordDIVISION >>
           qabbrev_tac `q = a / ω ** e` >> qabbrev_tac `r = a % ω ** e` >>
           simp[] >> strip_tac >>
-          `q * ω ** e + r + (ω ** e + &dn0 * ω ** e) =
-           q * ω ** e + ω ** e + &dn0 * ω ** e`
+          `ω ** e * q + r + (ω ** e + ω ** e * &dn0) =
+           ω ** e * q + ω ** e + ω ** e * &dn0`
             by metis_tac [ordADD_ASSOC] >>
           simp[] >>
           `q < c`
             by (spose_not_then strip_assume_tac >>
-                `c * ω ** e ≤ q * ω ** e` by simp[] >>
-                `q * ω ** e ≤ q * ω ** e + r` by simp[] >>
+                `ω ** e * c ≤ ω ** e * q` by simp[] >>
+                `ω ** e * q ≤ ω ** e * q+ r` by simp[] >>
                 metis_tac [ordlte_TRANS, ordle_TRANS, ordlt_REFL]) >>
           `q < ω` by metis_tac [ordlt_TRANS] >>
           qexists_tac `q + 1 + &dn0` >>
-          simp[ordMULT_RDISTRIB] >> fs[lt_omega]) >>
+          simp[ordMULT_LDISTRIB] >> fs[lt_omega]) >>
       qx_gen_tac `d` >> strip_tac >> qexists_tac `d` >> simp[]) >>
   qx_gen_tac `e` >> strip_tac >>
   `IMAGE ($** ω) (preds e) ≠ ∅`
@@ -235,7 +235,7 @@ val add_nat1_disappears = store_thm(
 
 val add_nat1_disappears_kexp = store_thm(
   "add_nat1_disappears_kexp",
-  ``e ≠ 0 ∧ 0 < k ⇒ (&n + &k * ω ** e = &k * ω ** e)``,
+  ``e ≠ 0 ∧ 0 < k ⇒ (&n + ω ** e * &k = ω ** e * &k)``,
   strip_tac >> match_mp_tac add_nat1_disappears >> match_mp_tac ordle_TRANS >>
   qexists_tac `ω ** e` >> simp[] >>
   match_mp_tac ordle_TRANS >> qexists_tac `ω ** 1` >> simp[] >>
@@ -243,13 +243,12 @@ val add_nat1_disappears_kexp = store_thm(
 
 val add_disappears_kexp = store_thm(
   "add_disappears_kexp",
-  ``e ≠ 0 ∧ 0 < k ∧ a < ω ** e ⇒ (a + &k * ω ** e = &k * ω ** e)``,
+  ``e ≠ 0 ∧ 0 < k ∧ a < ω ** e ⇒ (a + ω ** e * &k = ω ** e * &k)``,
   strip_tac >>
   `(k = 0) ∨ ∃k0. k = SUC k0` by (Cases_on `k` >> simp[]) >- fs[] >>
   `k = 1 + k0` by decide_tac >> pop_assum SUBST1_TAC >>
-  bsimp[GSYM ordADD_fromNat, ordMULT_RDISTRIB] >>
+  bsimp[GSYM ordADD_fromNat, ordMULT_LDISTRIB] >>
   simp[ordADD_ASSOC, addL_disappears]);
-
 
 (* |- e1 < e2 ⇒ &k * ω ** e1 < ω ** e2 *)
 val kexp_lt = let
@@ -259,7 +258,7 @@ val kexp_lt = let
       |> Q.INST [`a` |-> `ω`, `t` |-> `[(&k,e1)]`, `c` |-> `1`, `e` |-> `e2`]
       |> SIMP_RULE (srw_ss()) [is_polyform_def, ASSUME ``e1:'a ordinal < e2``]
       |> UNDISCH_ALL
-  val eqzero = prove(``&k * ω ** e1 < ω ** e2``,
+  val eqzero = prove(``ω ** e1 * &k < ω ** e2``,
                      simp[ASSUME ``k = 0n``] >> spose_not_then assume_tac >>
                      fs[ordEXP_EQ_0])
 in
@@ -277,10 +276,10 @@ val ord_add_correct = store_thm(
   >- (AP_THM_TAC >> AP_TERM_TAC >> simp[Once EQ_SYM_EQ] >>
       match_mp_tac (add_disappears_kexp |> GEN_ALL) >>
       simp[osyntax_EQ_0] >> match_mp_tac ordlt_TRANS >>
-      qexists_tac `&(SUC k1) * ω ** ⟦e1⟧` >> simp[kexp_lt, tail_dominated])
+      qexists_tac `ω ** ⟦e1⟧ * &(SUC k1)` >> simp[kexp_lt, tail_dominated])
   >- (AP_THM_TAC >> AP_TERM_TAC >> simp[GSYM ordADD_ASSOC] >>
       simp[add_disappears_kexp, tail_dominated, osyntax_EQ_0] >>
-      bsimp[GSYM ordADD_fromNat, ordMULT_RDISTRIB]) >>
+      bsimp[GSYM ordADD_fromNat, ordMULT_LDISTRIB]) >>
   simp[ordADD_ASSOC]);
 
 val notation_exists = store_thm(
@@ -300,7 +299,7 @@ val notation_exists = store_thm(
         qexists_tac `ω ** e` >> conj_tac
         >- (match_mp_tac (GEN_ALL is_polyform_head_dominates_tail) >>
             metis_tac[fromNat_lt_omega]) >>
-        match_mp_tac ordle_TRANS >> qexists_tac `c * ω ** e` >> simp[] >>
+        match_mp_tac ordle_TRANS >> qexists_tac `ω ** e * c` >> simp[] >>
         qsuff_tac `c ≠ 0` >- simp[] >> strip_tac >> fs[]) >>
   `∃tn. is_ord tn ∧ (⟦tn⟧ = eval_poly ω t) ∧
         (0 < eval_poly ω t ⇒ (⟦expt tn⟧ = SND (HD (CNF (eval_poly ω t)))))`
@@ -310,8 +309,8 @@ val notation_exists = store_thm(
   `∃cn. c = &cn` by metis_tac[lt_omega] >>
   `e < α`
     by (spose_not_then strip_assume_tac >>
-        `c * ω ** e ≤ α` by rw[] >>
-        `ω ** e ≤ c * ω ** e` by (simp[] >> qsuff_tac `cn ≠ 0` >- simp[] >>
+        `ω ** e * c ≤ α` by rw[] >>
+        `ω ** e ≤ ω ** e * c` by (simp[] >> qsuff_tac `cn ≠ 0` >- simp[] >>
                                   strip_tac >> fs[]) >>
         `ω ** e ≤ e` by metis_tac [ordle_TRANS] >>
         `ε₀ ≤ e` by metis_tac [epsilon0_least_fixpoint] >>

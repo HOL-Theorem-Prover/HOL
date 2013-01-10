@@ -1111,44 +1111,43 @@ val ordMULT_def = new_specification(
   "ordMULT_def", ["ordMULT"],
   ord_RECURSION |> INST_TYPE [beta |-> ``:'a ordinal``]
                 |> Q.SPEC `0`
-                |> Q.SPEC `λap r. r + b`
+                |> Q.SPEC `λap r. r + β`
                 |> Q.SPEC `λa preds. sup preds`
-                |> Q.GEN `b`
+                |> Q.GEN `β`
                 |> CONV_RULE SKOLEM_CONV
-                |> BETA_RULE
-                |> SIMP_RULE (srw_ss()) [Once exists_C]
-                |> SIMP_RULE (srw_ss()) [combinTheory.C_DEF])
+                |> BETA_RULE)
 val _ = export_rewrites ["ordMULT_def"]
 val _ = overload_on ("*", ``ordMULT``)
 
-val ordMULT_0R = store_thm(
-  "ordMULT_0R",
-  ``∀a:'a ordinal. a * 0 = 0``,
+val ordMULT_0L = store_thm(
+  "ordMULT_0L",
+  ``∀a:'a ordinal. 0 * a = 0``,
   ho_match_mp_tac simple_ord_induction >> simp[] >> qx_gen_tac `a` >>
-  strip_tac >> qsuff_tac `IMAGE (λy. y * 0) (preds a) = {0}` >> simp[] >>
-  simp[EXTENSION] >>
-  asm_simp_tac (srw_ss() ++ DNF_ss ++ CONJ_ss) [] >> metis_tac[]);
-val _ = export_rewrites ["ordMULT_0R"]
+  strip_tac >> qsuff_tac `IMAGE ($* 0) (preds a) = {0}` >> simp[] >>
+  simp[EXTENSION] >> metis_tac[]);
+val _ = export_rewrites ["ordMULT_0L"]
+
+val ordMULT_0R = store_thm("ordMULT_0R", ``∀a:'a ordinal. a * 0 = 0``, simp[]);
 
 val ordMULT_1L = store_thm(
   "ordMULT_1L",
-  ``1 * (a:'a ordinal) = a``,
-  REWRITE_TAC [GSYM ORD_ONE] >> simp[]);
+  ``∀a. 1 * (a:'a ordinal) = a``,
+  ho_match_mp_tac simple_ord_induction >> simp[ADD1R] >> qx_gen_tac `a` >>
+  strip_tac >> qsuff_tac `IMAGE ($* 1) (preds a) = preds a`
+  >- fs [sup_preds_omax_NONE] >>
+  dsimp[EXTENSION] >> asm_simp_tac (srw_ss() ++ CONJ_ss) []);
 val _ = export_rewrites ["ordMULT_1L"]
-
-val ordMULT_2L = store_thm(
-  "ordMULT_2L",
-  ``2 * (a:'a ordinal) = a + a``,
-  `2 = 1⁺` by simp[] >> pop_assum SUBST1_TAC >> simp[]);
 
 val ordMULT_1R = store_thm(
   "ordMULT_1R",
   ``∀a:'a ordinal. a * 1 = a``,
-  ho_match_mp_tac simple_ord_induction >> simp[ADD1R] >>
-  qx_gen_tac `a` >> strip_tac >>
-  qsuff_tac `IMAGE (λy. y * 1) (preds a) = preds a`
-  >- fs[sup_preds_omax_NONE] >>
-  dsimp[EXTENSION] >> asm_simp_tac (srw_ss() ++ CONJ_ss) []);
+  simp_tac bool_ss [GSYM ORD_ONE, ordMULT_def, ordADD_0L]);
+val _ = export_rewrites ["ordMULT_1R"]
+
+val ordMULT_2R = store_thm(
+  "ordMULT_2R",
+  ``(a:'a ordinal) * 2 = a + a``,
+  `2 = 1⁺` by simp[] >> pop_assum SUBST1_TAC >> simp[]);
 
 val ord_CASES = store_thm(
   "ord_CASES",
@@ -1163,100 +1162,100 @@ val islimit_SUC_lt = store_thm(
   ``islimit b ∧ a < b ⇒ a⁺ < b``,
   fs[omax_NONE] >> metis_tac [ordlt_SUC_DISCRETE, ordlt_trichotomy, ordle_lteq])
 
-val ordMULT_lt_MONO_L = store_thm(
-  "ordMULT_lt_MONO_L",
-  ``∀a b c:'a ordinal. a < b ∧ 0 < c ⇒ a * c < b * c``,
-  qsuff_tac `∀b a c:'a ordinal. a < b ∧ 0 < c ⇒ a * c < b * c` >- metis_tac[]>>
+val ordMULT_lt_MONO_R = store_thm(
+  "ordMULT_lt_MONO_R",
+  ``∀a b c:'a ordinal. a < b ∧ 0 < c ⇒ c * a < c * b``,
+  qsuff_tac `∀b a c:'a ordinal. a < b ∧ 0 < c ⇒ c * a < c * b` >- metis_tac[]>>
   ho_match_mp_tac simple_ord_induction >> simp[] >> conj_tac
   >- (simp[ordlt_SUC_DISCRETE] >> qx_gen_tac `b` >> strip_tac >>
       map_every qx_gen_tac [`a`, `c`] >>
       Cases_on `a = b` >> simp[] >> strip_tac >>
-      `a * c < b * c` by metis_tac[] >>
-      `b * c < b * c + c` by simp[] >> metis_tac [ordlt_TRANS]) >>
+      `c * a < c * b` by metis_tac[] >>
+      `c * b < c * b + c` by simp[] >> metis_tac [ordlt_TRANS]) >>
   qx_gen_tac `b` >> strip_tac >> map_every qx_gen_tac [`a`, `c`] >>
   strip_tac >> simp[predimage_sup_thm] >>
   `∃d. a < d ∧ d < b`
     by metis_tac[sup_preds_omax_NONE, IN_preds, preds_inj_univ, sup_thm] >>
   metis_tac[]);
 
-val ordMULT_le_MONO_L = store_thm(
-  "ordMULT_le_MONO_L",
-  ``∀a b c:'a ordinal. a ≤ b ⇒ a * c ≤ b * c``,
+val ordMULT_le_MONO_R = store_thm(
+  "ordMULT_le_MONO_R",
+  ``∀a b c:'a ordinal. a ≤ b ⇒ c * a ≤ c * b``,
   simp[ordle_lteq] >> rpt strip_tac >> simp[] >>
   Cases_on `c = 0` >> simp[] >>
   `0 < c` by metis_tac [ordlt_ZERO, ordlt_trichotomy] >>
-  metis_tac [ordMULT_lt_MONO_L])
+  metis_tac [ordMULT_lt_MONO_R])
 
-val ordMULT_lt_MONO_L_EQN = store_thm(
-  "ordMULT_lt_MONO_L_EQN",
-  ``a * c < b * c <=> a < b ∧ 0 < c``,
-  simp[EQ_IMP_THM, ordMULT_lt_MONO_L] >>
-  Cases_on `0 < c` >- metis_tac [ordMULT_le_MONO_L] >> fs[]);
-val _ = export_rewrites ["ordMULT_lt_MONO_L_EQN"]
+val ordMULT_lt_MONO_R_EQN = store_thm(
+  "ordMULT_lt_MONO_R_EQN",
+  ``c * a < c * b <=> a < b ∧ 0 < c``,
+  simp[EQ_IMP_THM, ordMULT_lt_MONO_R] >>
+  Cases_on `0 < c` >- metis_tac [ordMULT_le_MONO_R] >> fs[]);
+val _ = export_rewrites ["ordMULT_lt_MONO_R_EQN"]
 
 val ordADD_le_MONO_L = store_thm(
   "ordADD_le_MONO_L",
   ``x ≤ y ⇒ x + z ≤ y + z``,
   simp[ordle_lteq, SimpL ``$==>``] >> simp[DISJ_IMP_THM, ordADD_weak_MONO]);
 
-val ordMULT_le_MONO_R = store_thm(
-  "ordMULT_le_MONO_R",
-  ``∀a b c:'a ordinal. a ≤ b ⇒ c * a ≤ c * b``,
-  qsuff_tac `∀c a b:'a ordinal. a ≤ b ⇒ c * a ≤ c * b` >- metis_tac[] >>
+val ordMULT_le_MONO_L = store_thm(
+  "ordMULT_le_MONO_L",
+  ``∀a b c:'a ordinal. a ≤ b ⇒ a * c ≤ b * c``,
+  qsuff_tac `∀c a b:'a ordinal. a ≤ b ⇒ a * c ≤ b * c` >- metis_tac[] >>
   ho_match_mp_tac simple_ord_induction >> simp[] >> conj_tac
   >- (qx_gen_tac `c` >> strip_tac >> map_every qx_gen_tac [`a`, `b`] >>
       strip_tac >>
-      `c * a + a ≤ c * a + b` by simp[] >>
-      match_mp_tac ordle_TRANS >> qexists_tac `c * a + b` >> simp[] >>
+      `a * c + a ≤ a * c + b` by simp[] >>
+      match_mp_tac ordle_TRANS >> qexists_tac `a * c + b` >> simp[] >>
       simp[ordADD_le_MONO_L]) >>
   qx_gen_tac `c` >> strip_tac >> map_every qx_gen_tac [`a`, `b`] >> strip_tac>>
   simp[predimage_sup_thm, impI] >> qx_gen_tac `d` >> strip_tac >>
-  match_mp_tac ordle_TRANS >> qexists_tac `d * b` >> simp[] >>
-  qsuff_tac `d * b ∈ IMAGE (λy. y * b) (preds c)`
+  match_mp_tac ordle_TRANS >> qexists_tac `b * d` >> simp[] >>
+  qsuff_tac `b * d ∈ IMAGE ($* b) (preds c)`
   >- metis_tac [mklesup sup_thm, IMAGE_cardleq_rwt, preds_inj_univ] >>
   simp[] >> metis_tac[]);
 
-val ordMULT_CANCEL_L = store_thm(
-  "ordMULT_CANCEL_L",
-  ``(x * z = y * z:'a ordinal) <=> (z = 0) ∨ (x = y)``,
+val ordMULT_CANCEL_R = store_thm(
+  "ordMULT_CANCEL_R",
+  ``(z * x = z * y:'a ordinal) <=> (z = 0) ∨ (x = y)``,
   simp[EQ_IMP_THM, DISJ_IMP_THM] >> strip_tac >>
   Tactical.REVERSE (Cases_on `0 < z`) >- fs[] >>
   `x < y ∨ (x = y) ∨ y < x` by metis_tac [ordlt_trichotomy] >>
-  metis_tac [ordMULT_lt_MONO_L_EQN, ordlt_REFL]);
+  metis_tac [ordMULT_lt_MONO_R_EQN, ordlt_REFL]);
+val _ = export_rewrites ["ordMULT_CANCEL_R"]
 
 val ordMULT_continuous0 =
-  generic_continuity |> Q.INST [`f` |-> `λx. x * y`]
+  generic_continuity |> Q.INST [`f` |-> `$* a`]
                      |> SIMP_RULE (srw_ss()) []
 
 val ordMULT_continuous = store_thm(
   "ordMULT_continuous",
-  ``∀s:'a ordinal set. s ≼ univ(:'a inf) ⇒
-           (sup s * a = sup (IMAGE (λx. x * a) s))``,
+  ``∀s:'a ordinal set. s ≼ univ(:'a inf) ⇒ a * sup s = sup (IMAGE ($* a) s)``,
   rpt strip_tac >> Cases_on `s = {}` >> simp[ordMULT_continuous0]);
 
 val ordMULT_fromNat = store_thm(
   "ordMULT_fromNat",
   ``(&n : 'a ordinal) * &m = &(n * m)``,
-  Induct_on `n` >> simp[arithmeticTheory.MULT_CLAUSES]);
+  Induct_on `m` >> simp[arithmeticTheory.MULT_CLAUSES]);
 val _ = export_rewrites ["ordMULT_fromNat"]
 
 val omega_MUL_fromNat = store_thm(
   "omega_MUL_fromNat",
-  ``0 < n ⇒ ω * &n = ω``,
+  ``0 < n ⇒ &n * ω = ω``,
   simp[omax_preds_omega] >> strip_tac >>
   match_mp_tac ordle_ANTISYM >> dsimp[predimage_sup_thm, lt_omega, impI] >>
   conj_tac >- simp[ordle_lteq] >>
   qx_gen_tac `m` >>
-  qsuff_tac `&m < sup (IMAGE (λy. y * &n) (preds ω))` >- metis_tac[ordlt_REFL]>>
+  qsuff_tac `&m < sup (IMAGE ($* &n) (preds ω))` >- metis_tac[ordlt_REFL]>>
   dsimp[predimage_sup_thm, lt_omega] >>
-  qexists_tac `m + 1` >> simp[arithmeticTheory.RIGHT_ADD_DISTRIB] >>
+  qexists_tac `m + 1` >> simp[arithmeticTheory.LEFT_ADD_DISTRIB] >>
   qsuff_tac `m ≤ m * n ∧ m * n < n + m * n` >- DECIDE_TAC >>
   simp[]);
 
-val ordMULT_RDISTRIB = store_thm(
-  "ordMULT_RDISTRIB",
-  ``∀a b c:'a ordinal. (a + b) * c = a * c + b * c``,
-  qsuff_tac `∀b a c. (a + b) * c = a * c + b * c` >- simp[] >>
+val ordMULT_LDISTRIB = store_thm(
+  "ordMULT_LDISTRIB",
+  ``∀a b c:'a ordinal. c * (a + b) = c * a + c * b``,
+  qsuff_tac `∀b a c. c * (a + b) = c * a + c * b` >- simp[] >>
   ho_match_mp_tac simple_ord_induction >> simp[ordADD_ASSOC] >>
   qx_gen_tac `b` >> strip_tac >>
   `preds b ≠ {}` by (strip_tac >> fs[]) >>
@@ -1268,41 +1267,42 @@ val ordMULT_RDISTRIB = store_thm(
 val ordMULT_ASSOC = store_thm(
   "ordMULT_ASSOC",
   ``∀a b c:'a ordinal. a * (b * c) = (a * b) * c``,
-  ho_match_mp_tac simple_ord_induction >> simp[ordMULT_RDISTRIB] >>
+  qsuff_tac `∀c a b:'a ordinal. a * (b * c) = (a * b) * c` >- simp[] >>
+  ho_match_mp_tac simple_ord_induction >> simp[ordMULT_LDISTRIB] >>
   simp[ordMULT_continuous, IMAGE_cardleq_rwt, preds_inj_univ] >>
   rpt strip_tac >> AP_TERM_TAC >> dsimp[EXTENSION] >>
   asm_simp_tac (srw_ss() ++ CONJ_ss) [])
 
 val ordDIVISION0 = prove(
-  ``∀a b:'a ordinal. 0 < b ⇒ ∃q r. a = q * b + r ∧ r < b``,
+  ``∀a b:'a ordinal. 0 < b ⇒ ∃q r. a = b * q + r ∧ r < b``,
   rpt strip_tac >>
-  qabbrev_tac `d = sup { c | c * b ≤ a }` >>
-  `∀c. c * b ≤ a ⇒ c ≤ a`
+  qabbrev_tac `d = sup { c | b * c ≤ a }` >>
+  `∀c. b * c ≤ a ⇒ c ≤ a`
      by (ntac 2 strip_tac >> match_mp_tac ordle_TRANS >>
-         qexists_tac `c * b` >> simp[] >>
-         simp[Once (GSYM ordMULT_1R), SimpR ``ordlt``] >>
-         match_mp_tac ordMULT_le_MONO_R >>
+         qexists_tac `b * c` >> simp[] >>
+         match_mp_tac ordle_TRANS >> qexists_tac `1 * c` >> conj_tac >- simp[]>>
+         match_mp_tac ordMULT_le_MONO_L >>
          simp_tac bool_ss [GSYM ORD_ONE, ordlt_SUC_DISCRETE] >>
          simp[] >> strip_tac >> fs[]) >>
-  `∀α. α ∈ { c | c * b ≤ a } ⇒ α < a⁺`
+  `∀α. α ∈ { c | b * c ≤ a } ⇒ α < a⁺`
     by (simp[ordlt_SUC_DISCRETE] >> metis_tac [ordle_lteq]) >>
-  `∀α. α < d ⇔ ∃c. c * b ≤ a ∧ α < c`
+  `∀α. α < d ⇔ ∃c. b * c ≤ a ∧ α < c`
     by (simp[Abbr`d`] >> pop_assum (assume_tac o MATCH_MP ubsup_thm) >>
         simp[]) >>
-  `d * b ≤ a`
+  `b * d ≤ a`
     by (simp[Abbr`d`] >>
-        `{ c | c * b ≤ a } ≼ univ(:'a inf)`
-          by (`{ c | c * b ≤ a } ≼ preds a⁺`
+        `{ c | b * c ≤ a } ≼ univ(:'a inf)`
+          by (`{ c | b * c ≤ a } ≼ preds a⁺`
                 by simp[SUBSET_DEF, SUBSET_CARDLEQ] >>
               `preds a⁺ ≼ univ(:'a inf)` by simp[preds_inj_univ] >>
               metis_tac [cardleq_TRANS]) >>
         dsimp[ordMULT_continuous, sup_thm, IMAGE_cardleq_rwt, impI]) >>
-  `∃r. d * b + r = a` by metis_tac [ordle_EXISTS_ADD] >>
+  `∃r. b * d + r = a` by metis_tac [ordle_EXISTS_ADD] >>
   qsuff_tac `r < b` >- metis_tac[] >>
   spose_not_then strip_assume_tac >>
   `∃bb. b + bb = r` by metis_tac [ordle_EXISTS_ADD] >>
-  `d⁺ * b + bb = a` by simp[GSYM ordADD_ASSOC] >>
-  `∀c. c * b ≤ a ⇒ c ≤ d` by metis_tac [ordlt_REFL] >>
+  `b * d⁺ + bb = a` by simp[GSYM ordADD_ASSOC] >>
+  `∀c. b * c ≤ a ⇒ c ≤ d` by metis_tac [ordlt_REFL] >>
   metis_tac [ordlt_SUC, ordle_EXISTS_ADD]);
 
 val ordDIVISION = new_specification(
@@ -1317,44 +1317,44 @@ val _ = overload_on ("%", ``ordMOD``)
 
 val ordDIV_UNIQUE = store_thm(
   "ordDIV_UNIQUE",
-  ``∀a b q r. 0 < (b:'a ordinal) ∧ a = q*b + r ∧ r < b ⇒ a / b = q``,
+  ``∀a b q r. 0 < (b:'a ordinal) ∧ a = b*q + r ∧ r < b ⇒ a / b = q``,
   rpt strip_tac >>
-  `a = a / b * b + a % b ∧ a % b < b` by metis_tac [ordDIVISION] >>
+  `a = b * (a / b) + a % b ∧ a % b < b` by metis_tac [ordDIVISION] >>
   `a / b < q ∨ a / b = q ∨ q < a / b` by metis_tac [ordlt_trichotomy] >| [
     `∃bb. (q = a/b + bb) ∧ 0 < bb`
       by metis_tac [ordlt_EXISTS_ADD, ordlt_trichotomy, ordlt_ZERO] >>
-    `a = (a/b + bb) * b + r` by metis_tac[] >>
-    `_ = a/b * b + bb * b + r` by metis_tac[ordMULT_RDISTRIB] >>
-    `a % b = bb * b + r` by metis_tac [ordADD_ASSOC, ordADD_RIGHT_CANCEL] >>
-    `bb * b + r < b` by metis_tac[] >>
-    `b ≤ bb * b`
-      by (simp_tac bool_ss [Once (GSYM ordMULT_1L), SimpR ``ordlt``] >>
-          match_mp_tac ordMULT_le_MONO_L >>
+    `a = b * (a/b + bb) + r` by metis_tac[] >>
+    `_ = b * (a/b) + b * bb + r` by metis_tac[ordMULT_LDISTRIB] >>
+    `a % b = b * bb + r` by metis_tac [ordADD_ASSOC, ordADD_RIGHT_CANCEL] >>
+    `b * bb + r < b` by metis_tac[] >>
+    `b ≤ b * bb`
+      by (simp_tac bool_ss [Once (GSYM ordMULT_1R), SimpR ``ordlt``] >>
+          match_mp_tac ordMULT_le_MONO_R >>
           simp_tac bool_ss [GSYM ORD_ONE, ordlt_SUC_DISCRETE] >>
           simp[] >> strip_tac >> fs[]) >>
-    `b ≤ bb * b + r` by metis_tac [ordle_CANCEL_ADDR, ordADD_le_MONO_L,
+    `b ≤ b * bb + r` by metis_tac [ordle_CANCEL_ADDR, ordADD_le_MONO_L,
                                    ordle_TRANS],
 
     `∃bb. q + bb = a/b ∧ 0 < bb`
       by metis_tac [ordlt_EXISTS_ADD, ordlt_trichotomy, ordlt_ZERO] >>
-    `a = (q + bb) * b + a % b` by metis_tac[] >>
-    `_ = q * b + bb * b + a % b` by simp[ordMULT_RDISTRIB] >>
-    `r = bb * b + a % b` by metis_tac [ordADD_ASSOC, ordADD_RIGHT_CANCEL] >>
-    `bb * b + a % b < b` by metis_tac[] >>
-    `b ≤ bb * b`
-      by (simp_tac bool_ss [Once (GSYM ordMULT_1L), SimpR ``ordlt``] >>
-          match_mp_tac ordMULT_le_MONO_L >>
+    `a = b * (q + bb) + a % b` by metis_tac[] >>
+    `_ = b * q + b * bb + a % b` by simp[ordMULT_LDISTRIB] >>
+    `r = b * bb + a % b` by metis_tac [ordADD_ASSOC, ordADD_RIGHT_CANCEL] >>
+    `b * bb + a % b < b` by metis_tac[] >>
+    `b ≤ b * bb`
+      by (simp_tac bool_ss [Once (GSYM ordMULT_1R), SimpR ``ordlt``] >>
+          match_mp_tac ordMULT_le_MONO_R >>
           simp_tac bool_ss [GSYM ORD_ONE, ordlt_SUC_DISCRETE] >>
           simp[] >> strip_tac >> fs[]) >>
-    `b ≤ bb * b + a % b`
+    `b ≤ b * bb + a % b`
       by metis_tac [ordle_CANCEL_ADDR, ordADD_le_MONO_L, ordle_TRANS]
   ]);
 
 val ordMOD_UNIQUE = store_thm(
   "ordMOD_UNIQUE",
-  ``∀a b q r. 0 < b ∧ a = q * b + r ∧ r < b ⇒ a % b = r``,
+  ``∀a b q r. 0 < b ∧ a = b * q + r ∧ r < b ⇒ a % b = r``,
   rpt strip_tac >>
-  `(a = a / b * b + a % b) ∧ a % b < b` by metis_tac [ordDIVISION] >>
+  `(a = b * (a / b) + a % b) ∧ a % b < b` by metis_tac [ordDIVISION] >>
   `a / b = q` by metis_tac [ordDIV_UNIQUE] >> pop_assum SUBST_ALL_TAC >>
   qabbrev_tac `r' = a % b` >> fs[])
 
@@ -1363,7 +1363,7 @@ val ordEXP_def = new_specification(
   "ordEXP_def", ["ordEXP"],
   ord_RECURSION |> INST_TYPE [beta |-> ``:'a ordinal``]
                 |> Q.SPEC `1`
-                |> Q.SPEC `λap r. a * r`
+                |> Q.SPEC `λap r. r * a`
                 |> Q.SPEC `λa preds. sup preds`
                 |> Q.GEN `a`
                 |> CONV_RULE SKOLEM_CONV
@@ -1372,7 +1372,6 @@ val ordEXP_def = new_specification(
 val _ = export_rewrites ["ordEXP_def"]
 val _ = overload_on ("**", ``ordEXP``)
 
-val _ = export_rewrites ["ordMULT_1R"]
 val ordEXP_1R = store_thm(
   "ordEXP_1R",
   ``(a:'a ordinal) ** 1 = a``,
@@ -1404,7 +1403,7 @@ val ordEXP_le_MONO_L = store_thm(
   ho_match_mp_tac simple_ord_induction >> simp[] >> conj_tac
   >- (qx_gen_tac `x` >> strip_tac >> map_every qx_gen_tac [`a`, `b`] >>
       strip_tac >> match_mp_tac ordle_TRANS >>
-      qexists_tac `b * a ** x` >> simp[ordMULT_le_MONO_L, ordMULT_le_MONO_R]) >>
+      qexists_tac `a ** x * b` >> simp[ordMULT_le_MONO_L, ordMULT_le_MONO_R]) >>
   qx_gen_tac `x` >> strip_tac >> map_every qx_gen_tac [`a`, `b`] >>
   strip_tac >> simp[predimage_sup_thm, impI] >>
   qx_gen_tac `d` >> strip_tac >>
@@ -1459,7 +1458,7 @@ val ordEXP_ZERO_nonlimit = store_thm(
   "ordEXP_ZERO_nonlimit",
   ``¬islimit x ⇒ 0 ** x = 0``,
   metis_tac [preds_omax_SOME_SUC, optionTheory.option_CASES, ordEXP_def,
-             ordMULT_def]);
+             ordMULT_0R]);
 
 val sup_EQ_0 = store_thm(
   "sup_EQ_0",
@@ -1490,6 +1489,7 @@ val IMAGE_EQ_SING = store_thm(
 val ordMULT_EQ_0 = store_thm(
   "ordMULT_EQ_0",
   ``∀x y. x * y = 0 ⇔ x = 0 ∨ y = 0``,
+  CONV_TAC SWAP_FORALL_CONV >>
   ho_match_mp_tac simple_ord_induction >> simp[] >>
   simp_tac (srw_ss() ++ CONJ_ss) [] >> qx_gen_tac `x` >> strip_tac >>
   simp[sup_EQ_0, IMAGE_cardleq_rwt, preds_inj_univ] >>
@@ -1531,7 +1531,7 @@ val ordEXP_lt_MONO_R = store_thm(
   >- (simp[ordlt_SUC_DISCRETE] >> rw[] >| [
         match_mp_tac ordlt_TRANS >> qexists_tac `a ** y` >> simp[],
         ALL_TAC
-      ] >> simp_tac bool_ss [SimpL ``ordlt``, Once (GSYM ordMULT_1L)] >>
+      ] >> simp_tac bool_ss [SimpL ``ordlt``, Once (GSYM ordMULT_1R)] >>
       simp[ZERO_lt_ordEXP] >> DISJ1_TAC >>
       match_mp_tac ordlt_TRANS >> qexists_tac `1` >> simp[]) >>
   simp[predimage_sup_thm] >> fs[omax_NONE] >>
@@ -1562,7 +1562,7 @@ val ordEXP_continuous = store_thm(
 
 val ordEXP_ADD = store_thm(
   "ordEXP_ADD",
-  ``0 < x ⇒ x ** (y + z) = x ** z * x ** y``,
+  ``0 < x ⇒ x ** (y + z) = x ** y * x ** z``,
   map_every qid_spec_tac [`x`,`y`,`z`] >>
   ho_match_mp_tac simple_ord_induction >> simp[ordMULT_ASSOC] >>
   qx_gen_tac `z` >> strip_tac >> map_every qx_gen_tac [`y`, `x`] >>
@@ -1574,7 +1574,7 @@ val ordEXP_ADD = store_thm(
 
 val ordEXP_MUL = store_thm(
   "ordEXP_MUL",
-  ``0 < x ⇒ x ** (z * y) = (x ** y) ** z``,
+  ``0 < x ⇒ x ** (y * z) = (x ** y) ** z``,
   strip_tac >> map_every qid_spec_tac [`y`, `z`] >>
   ho_match_mp_tac simple_ord_induction >> simp[ordEXP_ADD] >>
   qx_gen_tac `z` >> strip_tac >> qx_gen_tac `y` >>
@@ -1622,12 +1622,12 @@ val x_le_ordEXP_x = store_thm(
   gen_tac >> Cases_on `1 < a` >> simp[] >>
   ho_match_mp_tac simple_ord_induction >> simp[] >> conj_tac >>
   qx_gen_tac `x` >> strip_tac
-  >- (qsuff_tac `x < a * a ** x`
+  >- (qsuff_tac `x < a ** x * a`
       >- (simp[ordlt_SUC_DISCRETE] >> simp[ordle_lteq] >>
           metis_tac[ordlt_REFL]) >>
-      qsuff_tac `a ** x < a * a ** x`
+      qsuff_tac `a ** x < a ** x * a`
       >- metis_tac[ordle_lteq, ordlt_TRANS] >>
-      SIMP_TAC bool_ss [SimpL ``ordlt``, Once (GSYM ordMULT_1L)] >>
+      SIMP_TAC bool_ss [SimpL ``ordlt``, Once (GSYM ordMULT_1R)] >>
       simp[ZERO_lt_ordEXP] >> DISJ1_TAC >> match_mp_tac ordlt_TRANS >>
       qexists_tac `1` >> simp[]) >>
   `∀b. b < x ⇒ b⁺ < x` by metis_tac [islimit_SUC_lt] >>
@@ -1715,26 +1715,26 @@ val add_omega_islimit = store_thm(
   simp[omax_preds_omega, ordADD_continuous])
 val _ = export_rewrites ["add_omega_islimit"]
 
-val islimit_mul_L = store_thm(
-  "islimit_mul_L",
-  ``∀α. islimit α ⇒ islimit (α * β)``,
+val islimit_mul_R = store_thm(
+  "islimit_mul_R",
+  ``∀α. islimit α ⇒ islimit (β * α)``,
   Cases_on `β = 0` >- simp[] >> fs[IFF_ZERO_lt] >> gen_tac >>
   Cases_on `α = 0` >- simp[] >> fs[IFF_ZERO_lt] >> strip_tac >>
-  qspec_then `λx. x * β` mp_tac
+  qspec_then `$* β` mp_tac
     (Q.GEN `f` strict_continuity_preserves_islimit) >> simp[] >>
   simp[ordMULT_continuous, IFF_ZERO_lt])
 
 val mul_omega_islimit = store_thm(
   "mul_omega_islimit",
-  ``islimit (α * ω)``,
-  qspec_then `α` strip_assume_tac ord_CASES >> simp[islimit_mul_L]);
+  ``islimit (ω * α)``,
+  qspec_then `α` strip_assume_tac ord_CASES >> simp[islimit_mul_R]);
 
 val omega_exp_islimit = store_thm(
   "omega_exp_islimit",
   ``0 < α ⇒ islimit (ω ** α)``,
   qspec_then `α` strip_assume_tac ord_CASES
   >- simp[]
-  >- (simp[] >> simp[islimit_mul_L, omax_preds_omega]) >>
+  >- (simp[] >> simp[islimit_mul_R, omax_preds_omega]) >>
   strip_tac >> ho_match_mp_tac strict_continuity_preserves_islimit >>
   simp[IFF_ZERO_lt, ordEXP_continuous]);
 
@@ -1752,10 +1752,10 @@ val expbound_add = store_thm(
       disch_then (CONJUNCTS_THEN2
                   (Q.X_CHOOSE_THEN `b` strip_assume_tac)
                   (Q.X_CHOOSE_THEN `c` strip_assume_tac)) >>
-      `x + y < &(b + c) * ω ** a`
-        by (simp_tac bool_ss [ordMULT_RDISTRIB, GSYM ordADD_fromNat] >>
+      `x + y < ω ** a * &(b + c)`
+        by (simp_tac bool_ss [ordMULT_LDISTRIB, GSYM ordADD_fromNat] >>
             match_mp_tac ordlte_TRANS >>
-            qexists_tac `x + &c * ω ** a` >> simp[] >>
+            qexists_tac `x + ω ** a * &c` >> simp[] >>
             simp[ordADD_weak_MONO]) >>
       asm_simp_tac(srw_ss() ++ DNF_ss)[] >> qexists_tac `&(b + c)` >>
       simp[]) >>
@@ -1787,11 +1787,11 @@ val ordMUL_under_epsilon0 = store_thm(
   strip_tac >> imp_res_tac epsilon0_least_fixpoint >>
   `x * y < ω ** x * ω ** y`
     by (match_mp_tac ordlet_TRANS >>
-        qexists_tac `x * ω ** y` >> simp[ZERO_lt_ordEXP] >>
-        match_mp_tac ordMULT_le_MONO_R >> simp[ordle_lteq]) >>
-  `ω ** x * ω ** y = ω ** (y + x)` by simp[ordEXP_ADD] >>
+        qexists_tac `ω ** x * y` >> simp[ZERO_lt_ordEXP] >>
+        match_mp_tac ordMULT_le_MONO_L >> simp[ordle_lteq]) >>
+  `ω ** x * ω ** y = ω ** (x + y)` by simp[ordEXP_ADD] >>
   pop_assum SUBST_ALL_TAC >>
-  qsuff_tac `ω ** (y + x) < ε₀` >- metis_tac[ordlt_TRANS] >>
+  qsuff_tac `ω ** (x + y) < ε₀` >- metis_tac[ordlt_TRANS] >>
   metis_tac [epsilon0_fixpoint, ordADD_under_epsilon0, fromNat_lt_omega,
              ordEXP_lt_IFF]);
 
@@ -1801,22 +1801,16 @@ val ordEXP_under_epsilon0 = store_thm(
   strip_tac >>
   `a < ω ** a` by imp_res_tac epsilon0_least_fixpoint >>
   `a ** b <= (ω ** a) ** b` by metis_tac [ordEXP_le_MONO_L, ordle_lteq] >>
-  `(ω ** a) ** b = ω ** (b * a)` by simp [GSYM ordEXP_MUL] >>
+  `(ω ** a) ** b = ω ** (a * b)` by simp [GSYM ordEXP_MUL] >>
   pop_assum SUBST_ALL_TAC >>
-  `ω ** (b * a) < ε₀`
+  `ω ** (a * b) < ε₀`
     by simp[ordEXP_lt_IFF, ordMUL_under_epsilon0,
             Once (GSYM epsilon0_fixpoint)] >>
   metis_tac [ordlet_TRANS]);
 
-val FOLDL_SUM_lemma = prove(
-  ``∀ces x s:'a ordinal.
-       x + FOLDL (λacc (c,e). acc + c * a ** e) s ces =
-       FOLDL (λacc (c,e). acc + c * a ** e) (x + s) ces``,
-  Induct >> simp[pairTheory.FORALL_PROD] >> simp[ordADD_ASSOC]);
-
 val eval_poly_def = Define`
   eval_poly (a:'a ordinal) [] = 0 ∧
-  eval_poly a ((c,e)::t) = c * a ** e + eval_poly a t
+  eval_poly a ((c,e)::t) = a ** e * c + eval_poly a t
 `;
 val _ = export_rewrites ["eval_poly_def"]
 
@@ -1884,13 +1878,13 @@ val polyform_exists = store_thm(
   qabbrev_tac `c1 = b / a ** E` >>
   qabbrev_tac `r = b % a ** E` >>
   `0 < a ** E` by simp[ZERO_lt_ordEXP] >>
-  `b = c1 * a ** E + r ∧ r < a ** E` by metis_tac [ordDIVISION] >>
+  `b = a ** E * c1 + r ∧ r < a ** E` by metis_tac [ordDIVISION] >>
   `r < b` by metis_tac [ordlt_TRANS, ordle_lteq] >>
   `0 < c1` by (spose_not_then strip_assume_tac >> fs[]) >>
   `c1 < a`
     by (spose_not_then strip_assume_tac >>
-        `a * a ** E ≤ c1 * a ** E` by simp[] >>
-        `a * a ** E + r ≤ b` by simp[ordADD_le_MONO_L] >>
+        `a ** E * a ≤ a ** E * c1` by simp[] >>
+        `a ** E * a + r ≤ b` by simp[ordADD_le_MONO_L] >>
         metis_tac [ordEXP_def, ordle_CANCEL_ADDR, ordle_TRANS]) >>
   `∃ces. (∀i j. i < j ∧ j < LENGTH ces ⇒ SND (EL j ces) < SND (EL i ces)) ∧
          (∀c e. MEM (c,e) ces ⇒ 0 < c ∧ c < a) ∧
@@ -1912,12 +1906,12 @@ val polyform_exists = store_thm(
   `ces = [] ∨ ∃c0 e0 t. ces = (c0,e0)::t`
     by metis_tac [pairTheory.pair_CASES, listTheory.list_CASES] >- simp[] >>
   simp[] >> (* rts: e0 < E *) spose_not_then strip_assume_tac >>
-  `r = c0 * a ** e0 + eval_poly a t` by simp[] >>
+  `r = a ** e0 * c0 + eval_poly a t` by simp[] >>
   `a ** E ≤ a ** e0` by simp[ordEXP_le_MONO_R] >>
-  `a ** e0 ≤ c0 * a ** e0`
-    by (simp_tac bool_ss [SimpR ``ordlt``, Once (GSYM ordMULT_1L)] >>
-        match_mp_tac ordMULT_le_MONO_L >> simp[IFF_ZERO_lt] >> fs[]) >>
-  `c0 * a ** e0 ≤ c0 * a ** e0 + eval_poly a t` by simp[] >>
+  `a ** e0 ≤ a ** e0 * c0`
+    by (simp_tac bool_ss [SimpR ``ordlt``, Once (GSYM ordMULT_1R)] >>
+        match_mp_tac ordMULT_le_MONO_R >> simp[IFF_ZERO_lt] >> fs[]) >>
+  `a ** e0 * c0 ≤ a ** e0 * c0 + eval_poly a t` by simp[] >>
   metis_tac [ordle_TRANS, ordle_lteq, ordlt_REFL, ordlt_TRANS])
 
 val polyform_def = new_specification(
@@ -1942,9 +1936,9 @@ val polyform_0 = store_thm(
     by metis_tac[pairTheory.pair_CASES, listTheory.list_CASES]
     >- simp[] >>
   simp[SimpL ``$==>``] >> strip_tac >> fs[]
-  >- (`0 < c` by metis_tac[is_polyform_ELthm,listTheory.MEM] >>
-      metis_tac[IFF_ZERO_lt]) >>
-  fs[ordEXP_EQ_0]);
+  >- fs[ordEXP_EQ_0] >>
+  `0 < c` by metis_tac[is_polyform_ELthm,listTheory.MEM] >>
+  metis_tac[IFF_ZERO_lt]);
 
 val polyform_EQ_NIL = store_thm(
   "polyform_EQ_NIL",
@@ -1961,13 +1955,14 @@ val is_polyform_CONS_E = store_thm(
 
 val expbounds = prove(
   ``1 < (a:'a ordinal) ∧ y < a ** e ∧ c < a ∧ e < e' ⇒
-    c * a ** e + y < a ** e'``,
+    a ** e * c + y < a ** e'``,
   strip_tac >>
-  `c * a ** e + y < c * a ** e + a ** e` by simp[] >>
-  `c * a ** e + a ** e = c⁺ * a ** e` by simp[] >> pop_assum SUBST_ALL_TAC >>
+  `a ** e * c + y < a ** e * c + a ** e` by simp[] >>
+  `a ** e * c + a ** e = a ** e * ordSUC c` by simp[] >>
+  pop_assum SUBST_ALL_TAC >>
   `c⁺ ≤ a` by metis_tac [ordlt_DISCRETE1] >>
-  `c⁺ * a ** e ≤ a * a ** e` by simp[ordMULT_le_MONO_L] >>
-  `a * a ** e = a ** e⁺` by simp[] >> pop_assum SUBST_ALL_TAC >>
+  `a ** e * c⁺ ≤ a ** e * a` by simp[ordMULT_le_MONO_R] >>
+  `a ** e * a = a ** e⁺` by simp[] >> pop_assum SUBST_ALL_TAC >>
   `a ** e⁺ ≤ a ** e'`
      by (match_mp_tac ordEXP_le_MONO_R >> conj_tac
          >- (spose_not_then strip_assume_tac >> fs[]) >>
@@ -1989,34 +1984,34 @@ val is_polyform_head_dominates_tail = store_thm(
 
 val cx_lt_x = store_thm(
   "cx_lt_x",
-  ``c * x < (x:'a ordinal) ⇔ 0 < x ∧ c = 0``,
-  simp_tac bool_ss [SimpLHS, SimpR ``ordlt``, Once (GSYM ordMULT_1L)] >>
+  ``x * c < (x:'a ordinal) ⇔ 0 < x ∧ c = 0``,
+  simp_tac bool_ss [SimpLHS, SimpR ``ordlt``, Once (GSYM ordMULT_1R)] >>
   simp[] >> metis_tac [IFF_ZERO_lt]);
 val _ = export_rewrites ["cx_lt_x"]
 
 val explemma = prove(
-  ``1 < a ∧ c1 * a ** e1 + eval_poly a t1 = c2 * a ** e2 + eval_poly a t2 ∧
+  ``1 < a ∧ a ** e1 * c1 + eval_poly a t1 = a ** e2 * c2 + eval_poly a t2 ∧
     is_polyform a ((c1,e1)::t1) ∧ is_polyform a ((c2,e2)::t2) ⇒
     e1 ≤ e2``,
   rpt strip_tac (* e2 < e1 *) >>
   `eval_poly a t2 < a ** e2` by metis_tac [is_polyform_head_dominates_tail] >>
   imp_res_tac is_polyform_CONS_E >>
-  `c2 * a ** e2 + eval_poly a t2 < a ** e1` by simp[expbounds] >>
-  `a ** e1 ≤ c1 * a ** e1` by simp[IFF_ZERO_lt] >>
-  `c1 * a ** e1 ≤ c1 * a ** e1 + eval_poly a t1` by simp[] >>
+  `a ** e2 * c2 + eval_poly a t2 < a ** e1` by simp[expbounds] >>
+  `a ** e1 ≤ a ** e1 * c1` by simp[IFF_ZERO_lt] >>
+  `a ** e1 * c1 ≤ a ** e1 * c1 + eval_poly a t1` by simp[] >>
   metis_tac[ordlte_TRANS, ordle_TRANS, ordlt_REFL]);
 
 val coefflemma = prove(
-  ``1 < a ∧ c1 * a ** e + eval_poly a t1 = c2 * a ** e + eval_poly a t2 ∧
+  ``1 < a ∧ a ** e * c1 + eval_poly a t1 = a ** e * c2 + eval_poly a t2 ∧
     is_polyform a ((c1,e)::t1) ∧ is_polyform a ((c2,e)::t2) ⇒
     c1 ≤ c2``,
   rpt strip_tac (* c2 < c1 *) >>
   `eval_poly a t2 < a ** e` by metis_tac [is_polyform_head_dominates_tail] >>
   imp_res_tac is_polyform_CONS_E >>
-  `c2 * a ** e + eval_poly a t2 < c2 * a ** e + a ** e` by simp[] >>
-  `c2 * a ** e + a ** e = c2⁺ * a ** e` by simp[] >> pop_assum SUBST_ALL_TAC >>
-  `c2⁺ * a ** e ≤ c1 * a ** e` by (simp[] >> metis_tac [ordlt_DISCRETE1]) >>
-  `c1 * a ** e ≤ c1 * a ** e + eval_poly a t1` by simp[] >>
+  `a ** e * c2 + eval_poly a t2 < a ** e * c2 + a ** e` by simp[] >>
+  `a ** e * c2 + a ** e = a ** e * c2⁺` by simp[] >> pop_assum SUBST_ALL_TAC >>
+  `a ** e * c2⁺ ≤ a ** e * c1` by (simp[] >> metis_tac [ordlt_DISCRETE1]) >>
+  `a ** e * c1 ≤ a ** e * c1 + eval_poly a t1` by simp[] >>
   metis_tac [ordlte_TRANS, ordle_TRANS, ordlt_REFL]);
 
 val polyform_UNIQUE = store_thm(
@@ -2034,12 +2029,12 @@ val polyform_UNIQUE = store_thm(
   >- (pop_assum SUBST_ALL_TAC >> `b = 0` by fs[] >> simp[polyform_0]) >>
   pop_assum SUBST_ALL_TAC >>
   `0 < c ∧ c < a` by metis_tac[listTheory.MEM, is_polyform_ELthm] >>
-  `b = c * a ** e + eval_poly a t` by fs[] >>
+  `b = a ** e * c + eval_poly a t` by fs[] >>
   `polyform a b ≠ []` by simp[polyform_EQ_NIL, IFF_ZERO_lt, ZERO_lt_ordEXP] >>
   `∃c' e' t'. polyform a b = (c',e')::t'`
     by metis_tac [listTheory.list_CASES, pairTheory.pair_CASES] >>
   `0 < c' ∧ c' < a` by metis_tac [is_polyform_CONS_E] >>
-  `b = c' * a ** e' + eval_poly a t'` by fs[] >>
+  `b = a ** e' * c' + eval_poly a t'` by fs[] >>
   `e' = e` by metis_tac [explemma, ordle_ANTISYM] >> pop_assum SUBST_ALL_TAC >>
   `c' = c` by metis_tac [coefflemma, ordle_ANTISYM] >> pop_assum SUBST_ALL_TAC>>
   `eval_poly a t = eval_poly a t'` by metis_tac [ordADD_RIGHT_CANCEL] >>
@@ -2047,8 +2042,8 @@ val polyform_UNIQUE = store_thm(
   `eval_poly a t < b`
     by (`eval_poly a t < a ** e`
           by metis_tac [is_polyform_head_dominates_tail] >>
-        `a ** e ≤ c * a ** e` by simp[IFF_ZERO_lt] >>
-        `c * a ** e ≤ c * a ** e + eval_poly a t` by simp[] >>
+        `a ** e ≤ a ** e * c` by simp[IFF_ZERO_lt] >>
+        `a ** e * c ≤ a ** e * c + eval_poly a t` by simp[] >>
         metis_tac [ordlte_TRANS, ordle_TRANS]) >>
   metis_tac [is_polyform_CONS_E]);
 
