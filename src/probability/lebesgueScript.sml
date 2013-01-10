@@ -3290,6 +3290,156 @@ val finite_space_integral_reduce = store_thm
         EXTREAL_SUM_IMAGE_EQ
   ++ RW_TAC std_ss [GSYM extreal_mul_def]);
 
+val finite_support_integral_reduce = store_thm
+  ("finite_support_integral_reduce",
+   ``!m f. measure_space m /\ f IN measurable (m_space m,measurable_sets m) Borel /\
+   	   (!x. x IN m_space m ==> f x <> NegInf /\ f x <> PosInf) /\ FINITE (IMAGE f (m_space m))
+              ==> (integral m f = finite_space_integral m f)``,
+  REPEAT STRIP_TAC
+  ++ `?c1 n. BIJ c1 (count n) (IMAGE f (m_space m))`
+       by RW_TAC std_ss [GSYM FINITE_BIJ_COUNT]
+  ++ `?c. !i. (i IN count n ==> (c1 i = Normal (c i)))`
+       by (Q.EXISTS_TAC `(\i. @r. c1 i = Normal r)`
+	   ++ RW_TAC std_ss []
+           ++ SELECT_ELIM_TAC
+	   ++ RW_TAC std_ss []
+	   ++ FULL_SIMP_TAC std_ss [BIJ_DEF, INJ_DEF, SURJ_DEF, IN_IMAGE]
+	   ++ `?t. (c1 i = f t) /\ t IN m_space m` by METIS_TAC []
+	   ++ METIS_TAC [extreal_cases])
+  ++ `FINITE (count n)` by RW_TAC std_ss [FINITE_COUNT]
+  ++ `!i j. (i <> j) /\ (i IN count n) /\ (j IN count n)
+        ==> DISJOINT (PREIMAGE f {Normal (c i)})(PREIMAGE f {Normal (c j)})`
+        by (RW_TAC std_ss [DISJOINT_DEF,EXTENSION,IN_PREIMAGE,IN_INTER,NOT_IN_EMPTY,IN_SING]
+            ++ FULL_SIMP_TAC std_ss [BIJ_DEF, INJ_DEF, SURJ_DEF, IN_IMAGE]
+	    ++ METIS_TAC [])
+  ++ `!i. PREIMAGE f {Normal (c i)} INTER m_space m IN measurable_sets m`
+      by (RW_TAC std_ss []
+          ++ `PREIMAGE f {Normal (c i)} = {x | f x = Normal (c i)}`
+              by RW_TAC std_ss [EXTENSION,IN_PREIMAGE,GSPECIFICATION,IN_SING]
+          ++ METIS_TAC [IN_MEASURABLE_BOREL_ALL, integrable_def, space_def, m_space_def,
+	     	        subsets_def, measurable_sets_def])
+  ++ `pos_simple_fn m (fn_plus f)
+	(count n) (\i. PREIMAGE f {Normal (c i)} INTER m_space m)
+	(\i. if 0 <= (c i) then c i else 0)`
+    by (RW_TAC std_ss [pos_simple_fn_def, FINITE_COUNT,FN_PLUS_POS,FN_MINUS_POS]
+   << [REVERSE (RW_TAC real_ss [fn_plus_def])
+       >> (FULL_SIMP_TAC std_ss [extreal_lt_def,indicator_fn_def,IN_INTER]
+           ++ (MP_TAC o Q.SPEC `(\i. Normal (if 0 <= c i then c i else 0) *
+	      	      	            if t IN PREIMAGE f {Normal (c i)} then 1 else 0)` o
+               UNDISCH o Q.ISPEC `count n`) EXTREAL_SUM_IMAGE_IN_IF
+	   ++ RW_TAC std_ss []
+	   ++ POP_ORW
+	   ++ Suff `(\x. if x IN count n then Normal (if 0 <= c x then c x else 0) *
+                       if t IN PREIMAGE f {Normal (c x)} then 1 else 0 else 0) =
+                    (\x. 0)`
+           >> RW_TAC std_ss [EXTREAL_SUM_IMAGE_ZERO]
+	   ++ RW_TAC std_ss [FUN_EQ_THM]
+	   ++ Cases_on `~(x IN count n)`
+	   >> RW_TAC std_ss []
+	   ++ REVERSE (RW_TAC std_ss [mul_rone,mul_rzero])
+	   >> RW_TAC std_ss [extreal_of_num_def]
+	   ++ FULL_SIMP_TAC std_ss [BIJ_DEF, INJ_DEF, SURJ_DEF, IN_COUNT, IN_IMAGE,
+	      		    	    IN_PREIMAGE, IN_SING]
+	   ++ METIS_TAC [le_antisym, extreal_le_def, extreal_of_num_def])
+       ++ FULL_SIMP_TAC std_ss [BIJ_DEF, INJ_DEF, SURJ_DEF, IN_IMAGE]
+       ++ `?i. i IN count n /\ (f t = Normal (c i))` by METIS_TAC []
+       ++ `count n = i INSERT ((count n) DELETE i)`
+	    by (RW_TAC std_ss [EXTENSION, IN_INSERT, IN_DELETE] ++ METIS_TAC [])
+       ++ POP_ORW
+       ++ REVERSE (RW_TAC std_ss [EXTREAL_SUM_IMAGE_THM, FINITE_DELETE, GSYM extreal_of_num_def,
+       	  	   mul_lzero, DELETE_DELETE, add_lzero])
+       >> METIS_TAC [extreal_of_num_def, extreal_lt_eq, lt_antisym, real_lt]
+       ++ RW_TAC std_ss [indicator_fn_def, IN_INTER, DELETE_DELETE, mul_rzero, add_lzero,
+       	  	 	 IN_PREIMAGE, IN_SING, mul_rone]
+       ++ Suff `SIGMA (\i'. Normal (if 0 <= c i' then c i' else 0) *
+       	       	      	    if c i = c i' then 1 else 0) (count n DELETE i) = 0`
+       >> RW_TAC std_ss [add_rzero]
+       ++ MATCH_MP_TAC EXTREAL_SUM_IMAGE_0
+       ++ REVERSE (RW_TAC std_ss [FINITE_DELETE, mul_rone, mul_rzero])
+       >> RW_TAC std_ss [extreal_of_num_def]
+       ++ METIS_TAC [IN_DELETE],
+       RW_TAC real_ss [],
+       FULL_SIMP_TAC std_ss [DISJOINT_DEF, IN_INTER, NOT_IN_EMPTY, IN_PREIMAGE, EXTENSION,IN_SING]
+       ++ METIS_TAC [],
+       RW_TAC std_ss [EXTENSION, IN_BIGUNION_IMAGE, IN_PREIMAGE, IN_SING, IN_INTER]
+       ++ FULL_SIMP_TAC std_ss [BIJ_DEF, INJ_DEF, SURJ_DEF]
+       ++ METIS_TAC [IN_IMAGE]])
+  ++ `pos_simple_fn m (fn_minus f)
+	(count n) (\i. PREIMAGE f {Normal (c i)} INTER m_space m)
+	(\i. if c i <= 0 then ~ (c i) else 0)`
+    by (RW_TAC std_ss [pos_simple_fn_def, FINITE_COUNT,FN_PLUS_POS,FN_MINUS_POS]
+   << [REVERSE (RW_TAC real_ss [fn_minus_def])
+       >> (FULL_SIMP_TAC std_ss [extreal_lt_def,indicator_fn_def,IN_INTER]
+           ++ (MP_TAC o Q.SPEC `(\i. Normal (if c i <= 0 then -c i else 0) *
+	      	      	       	     if t IN PREIMAGE f {Normal (c i)} then 1 else 0)` o
+               UNDISCH o Q.ISPEC `count n`) EXTREAL_SUM_IMAGE_IN_IF
+	   ++ RW_TAC std_ss []
+	   ++ POP_ORW
+	   ++ Suff `(\x. if x IN count n then Normal (if c x <= 0 then -c x else 0) *
+	      	   	 if t IN PREIMAGE f {Normal (c x)} then 1 else 0 else 0) = (\x. 0)`
+           >> RW_TAC std_ss [EXTREAL_SUM_IMAGE_ZERO]
+	   ++ RW_TAC std_ss [FUN_EQ_THM]
+	   ++ Cases_on `~(x IN count n)`
+	   >> RW_TAC std_ss []
+	   ++ REVERSE (RW_TAC std_ss [mul_rone,mul_rzero])
+	   >> RW_TAC std_ss [extreal_of_num_def]
+	   ++ FULL_SIMP_TAC std_ss [BIJ_DEF, INJ_DEF, SURJ_DEF, IN_COUNT, IN_IMAGE,
+	      		    	    IN_PREIMAGE, IN_SING]
+	   ++ METIS_TAC [REAL_LE_ANTISYM, extreal_of_num_def, REAL_NEG_0,extreal_le_def,IN_COUNT])
+       ++ FULL_SIMP_TAC std_ss [BIJ_DEF, INJ_DEF, SURJ_DEF, IN_IMAGE]
+       ++ `?i. i IN count n /\ (f t = Normal (c i))` by METIS_TAC []
+       ++ `count n = i INSERT ((count n) DELETE i)`
+	    by (RW_TAC std_ss [EXTENSION, IN_INSERT, IN_DELETE] ++ METIS_TAC [])
+       ++ POP_ORW
+       ++ REVERSE (RW_TAC std_ss [EXTREAL_SUM_IMAGE_THM, FINITE_DELETE, GSYM extreal_of_num_def,
+       	  	                  mul_lzero, DELETE_DELETE, add_lzero])
+       >> METIS_TAC [extreal_lt_eq, real_lt, extreal_of_num_def, lt_antisym]
+       ++ RW_TAC std_ss [indicator_fn_def, IN_INTER, DELETE_DELETE, mul_rzero,
+       	  	 	 add_lzero, IN_PREIMAGE, IN_SING, mul_rone]
+       ++ Suff `SIGMA (\i'. Normal (if c i' <= 0 then -c i' else 0) *
+       	       	      	    if c i = c i' then 1 else 0) (count n DELETE i) = 0`
+       >> METIS_TAC [add_rzero, extreal_ainv_def]
+       ++ MATCH_MP_TAC EXTREAL_SUM_IMAGE_0
+       ++ REVERSE (RW_TAC std_ss [FINITE_DELETE, mul_rone, mul_rzero])
+       >> RW_TAC std_ss [extreal_of_num_def]
+       ++ METIS_TAC [IN_DELETE],
+       RW_TAC real_ss [] ++ METIS_TAC [REAL_LE_NEG, REAL_NEG_0],
+       FULL_SIMP_TAC std_ss [DISJOINT_DEF, IN_INTER, NOT_IN_EMPTY, IN_PREIMAGE,EXTENSION,IN_SING]
+       ++ METIS_TAC [],
+       RW_TAC std_ss [EXTENSION, IN_BIGUNION_IMAGE, IN_PREIMAGE, IN_SING, IN_INTER]
+       ++ FULL_SIMP_TAC std_ss [BIJ_DEF, INJ_DEF, SURJ_DEF]
+       ++ METIS_TAC [IN_IMAGE]])
+  ++ RW_TAC std_ss [finite_space_integral_def]
+  ++ `pos_fn_integral m (fn_plus f) =
+      pos_simple_fn_integral m (count n) (\i. PREIMAGE f {Normal (c i)} INTER m_space m)
+      			       (\i. if 0 <= c i then c i else 0)`
+            by METIS_TAC [pos_fn_integral_pos_simple_fn]
+  ++ `pos_fn_integral m (fn_minus f) =
+      pos_simple_fn_integral m (count n) (\i. PREIMAGE f {Normal (c i)} INTER m_space m)
+      			       (\i. if c i <= 0 then -c i else 0)`
+            by METIS_TAC [pos_fn_integral_pos_simple_fn]
+  ++ FULL_SIMP_TAC std_ss [integral_def, pos_simple_fn_integral_def, extreal_sub_def,
+     		   	   GSYM REAL_SUM_IMAGE_SUB, GSYM REAL_SUB_RDISTRIB]
+  ++ `!x. ((if 0 <= c x then c x else 0) - if c x <= 0 then -c x else 0) = c x`
+      by (RW_TAC real_ss []
+          ++ METIS_TAC [REAL_LE_ANTISYM,REAL_ADD_RID,real_lt,REAL_LT_ANTISYM])
+  ++ POP_ORW
+  ++ (MP_TAC o Q.ISPEC `c1:num->extreal` o UNDISCH o Q.ISPEC `count n`)
+        EXTREAL_SUM_IMAGE_IMAGE
+  ++ Know `INJ c1 (count n) (IMAGE c1 (count n))`
+  >> (FULL_SIMP_TAC std_ss [BIJ_DEF, INJ_DEF, IN_IMAGE] ++ METIS_TAC [])
+  ++ SIMP_TAC std_ss [] ++ STRIP_TAC ++ STRIP_TAC
+  ++ POP_ASSUM (MP_TAC o Q.SPEC `(\r. r * Normal (measure m (PREIMAGE f {r} INTER m_space m)))`)
+  ++ RW_TAC std_ss [o_DEF]
+  ++ `(IMAGE c1 (count n)) = (IMAGE f (m_space m))`
+     by (ONCE_REWRITE_TAC [EXTENSION] ++ RW_TAC std_ss [IN_IMAGE]
+	 ++ FULL_SIMP_TAC std_ss [BIJ_DEF, INJ_DEF, SURJ_DEF, IN_IMAGE]
+	 ++ METIS_TAC [])
+  ++ FULL_SIMP_TAC std_ss [GSYM EXTREAL_SUM_IMAGE_NORMAL]
+  ++ (MATCH_MP_TAC o UNDISCH o Q.SPEC `count n` o INST_TYPE [``:'a`` |-> ``:num``])
+        EXTREAL_SUM_IMAGE_EQ
+  ++ RW_TAC std_ss [GSYM extreal_mul_def]);
+
 val finite_space_POW_integral_reduce = store_thm
   ("finite_space_POW_integral_reduce",
    ``!m f. measure_space m /\ (POW (m_space m) = measurable_sets m) /\ FINITE (m_space m) /\
