@@ -344,4 +344,10 @@ val ordModel_11 = store_thm(
   `(n1 = n2) ∨ oless n1 n2 ∨ oless n2 n1` by metis_tac [oless_total] >>
   pop_assum mp_tac >> simp[oless_modelled]);
 
+val ordModel_BIJ = store_thm(
+  "ordModel_BIJ",
+  ``BIJ ordModel { n | is_ord n } { α | α < ε₀ }``,
+  simp[pred_setTheory.BIJ_DEF, pred_setTheory.INJ_DEF, pred_setTheory.SURJ_DEF,
+       ordModel_lt_epsilon0, ordModel_11] >> metis_tac [notation_exists]);
+
 val _ = export_theory()
