@@ -60,6 +60,7 @@ val ordModel_lt_epsilon0 = store_thm(
 
 val asimp = asm_simp_tac (srw_ss() ++ ARITH_ss)
 val bsimp = asm_simp_tac bool_ss
+val csimp = asm_simp_tac (srw_ss() ++ boolSimps.CONJ_ss)
 val dsimp = asm_simp_tac (srw_ss() ++ boolSimps.DNF_ss)
 
 val ord_less_models_ordlt = store_thm(
@@ -349,5 +350,140 @@ val ordModel_BIJ = store_thm(
   ``BIJ ordModel { n | is_ord n } { α | α < ε₀ }``,
   simp[pred_setTheory.BIJ_DEF, pred_setTheory.INJ_DEF, pred_setTheory.SURJ_DEF,
        ordModel_lt_epsilon0, ordModel_11] >> metis_tac [notation_exists]);
+
+val nat_times_omega = store_thm(
+  "nat_times_omega",
+  ``∀e m. 0 < m ∧ 0 < e ⇒ (&m * ω ** e = ω ** e)``,
+  ho_match_mp_tac simple_ord_induction >> simp[] >> conj_tac
+  >- (qx_gen_tac `e` >> strip_tac >>
+      Cases_on `0 < e` >- simp[ordMULT_ASSOC] >> fs[] >>
+      simp[omega_islimit] >> simp[omega_def, SimpRHS] >> rpt strip_tac >>
+      match_mp_tac sup_eq_sup >> simp[IMAGE_cardleq_rwt, preds_inj_univ] >>
+      dsimp[] >> rpt conj_tac
+      >- (qsuff_tac `{&i | T}:'a ordinal set ≈ univ(:num)`
+          >- metis_tac [cardinalTheory.CARDEQ_CARDLEQ,
+                        cardinalTheory.cardeq_REFL,
+                        Unum_cle_Uinf] >>
+          simp[Once cardinalTheory.cardeq_SYM] >>
+          simp[cardinalTheory.cardeq_def] >> qexists_tac `fromNat` >>
+          simp[pred_setTheory.SURJ_DEF, pred_setTheory.BIJ_DEF,
+               pred_setTheory.INJ_DEF] >> dsimp[])
+      >- (dsimp[lt_omega] >> metis_tac [DECIDE ``¬(x:num < x)``]) >>
+      qx_gen_tac `i` >> qexists_tac `&i` >> simp[]) >>
+  qx_gen_tac `e` >> strip_tac >>
+  `IMAGE ($** ω) (preds e) ≠ ∅`
+    by (simp[pred_setTheory.EXTENSION] >> strip_tac >> fs[]) >>
+  simp[ordMULT_continuous, IMAGE_cardleq_rwt, preds_inj_univ,
+       GSYM pred_setTheory.IMAGE_COMPOSE, combinTheory.o_DEF] >>
+  rpt strip_tac >> match_mp_tac sup_eq_sup >>
+  dsimp[IMAGE_cardleq_rwt, preds_inj_univ] >> conj_tac
+  >- (qx_gen_tac `a` >> strip_tac >> Cases_on `0 < a`
+      >- (csimp[] >> qexists_tac `a` >> simp[]) >> fs[] >>
+      qexists_tac `1` >> simp[ordle_lteq] >>
+      metis_tac [ORD_ONE, islimit_SUC_lt]) >>
+  qx_gen_tac `a` >> strip_tac >> qexists_tac `a` >> simp[] >>
+  bsimp [Once (GSYM ordMULT_1L), SimpR ``ordlt``] >>
+  match_mp_tac ordMULT_le_MONO_L >> simp[])
+
+val kexp_sum_times_nat = store_thm(
+  "kexp_sum_times_nat",
+  ``∀c2 c t e. 0 < c2 ∧ 0 < c ∧ t < ω ** e ⇒
+               ((ω ** e * &c + t) * &c2 = ω ** e * &(c * c2) + t)``,
+  Induct >> simp[] >> map_every qx_gen_tac [`c`, `t`, `e`] >> simp[] >>
+  REVERSE (Cases_on `0 < e`)
+  >- (fs[] >> strip_tac >> `t = 0` by metis_tac [IFF_ZERO_lt] >>
+      simp[arithmeticTheory.MULT_CLAUSES]) >>
+  `(c2 = 0) ∨ ∃c20. c2 = SUC c20` by (Cases_on `c2` >> simp[]) >- simp[] >>
+  strip_tac >>
+  Q.UNDISCH_THEN `c2 = SUC c20`
+    (fn th => RULE_ASSUM_TAC
+                (REWRITE_RULE [
+                    MATCH_MP (DECIDE ``!x y. (x = SUC y) ==> 0 < x``)
+                             th])) >>
+  simp[] >> simp[ordADD_ASSOC] >> AP_THM_TAC >> AP_TERM_TAC >>
+  bsimp[GSYM ordMULT_fromNat, fromNat_SUC, ordMULT_ASSOC] >>
+  simp[ordMULT_def] >>
+  simp[GSYM ordADD_ASSOC] >> match_mp_tac (GEN_ALL add_disappears_kexp) >>
+  simp[] >> strip_tac >> fs[])
+
+val kexp_mult = store_thm(
+  "kexp_mult",
+  ``∀e2 e1 c t.
+       0 < e2 ∧ t < ω ** e1 ∧ 0 < c ⇒
+       ((ω ** e1 * &c + t) * ω ** e2 = ω ** (e1 + e2))``,
+  ho_match_mp_tac simple_ord_induction >> simp[] >> conj_tac
+  >- (qx_gen_tac `e2` >> strip_tac >> map_every qx_gen_tac [`e1`, `c`, `t`] >>
+      strip_tac >>
+      Cases_on `0 < e2` >- simp[ordMULT_ASSOC] >>
+      fs[] >> simp[omega_islimit] >> match_mp_tac sup_eq_sup >>
+      dsimp[IMAGE_cardleq_rwt, preds_inj_univ] >> conj_tac
+      >- (qx_gen_tac `a` >> strip_tac >> `∃an. a = &an` by fs[lt_omega] >>
+          REVERSE (Cases_on `0 < an`)
+          >- (`an = 0` by decide_tac >> simp[] >> qexists_tac `0` >> simp[]) >>
+          simp[kexp_sum_times_nat] >>
+          qexists_tac `ordSUC (&(an * c))` >> simp[] >>
+          bsimp[GSYM fromNat_SUC, fromNat_lt_omega, ordle_lteq]) >>
+      qx_gen_tac `x` >> strip_tac >> qexists_tac `x` >>
+      `∃m. x = &m` by fs[lt_omega] >> REVERSE (Cases_on `0 < m`)
+      >- (`m = 0` by decide_tac >> simp[]) >>
+      simp[kexp_sum_times_nat] >> match_mp_tac ordle_TRANS >>
+      qexists_tac `ω ** e1 * &(c * m)` >> simp[]) >>
+  qx_gen_tac `e2` >> strip_tac >> map_every qx_gen_tac [`e1`, `c`, `t`] >>
+  strip_tac >>
+  `IMAGE ($+ e1) (preds e2) ≠ ∅`
+    by (simp[pred_setTheory.EXTENSION] >> strip_tac >> fs[]) >>
+  simp[ordEXP_continuous, ordMULT_continuous, IMAGE_cardleq_rwt,
+       preds_inj_univ, GSYM pred_setTheory.IMAGE_COMPOSE, combinTheory.o_DEF] >>
+  match_mp_tac sup_eq_sup >> dsimp[IMAGE_cardleq_rwt, preds_inj_univ] >>
+  conj_tac
+  >- (qx_gen_tac `a` >> strip_tac >>
+      Cases_on `0 < a` >- metis_tac[ordlt_REFL] >>
+      fs[] >> qexists_tac `1` >> conj_tac
+      >- metis_tac[ORD_ONE, islimit_SUC_lt] >>
+      match_mp_tac ordle_TRANS >> qexists_tac `ω ** e1 * (ordSUC &c)` >>
+      conj_tac >- simp[ordle_lteq] >>
+      bsimp[ordle_lteq] >> disj1_tac >>
+      bsimp[GSYM fromNat_SUC] >> match_mp_tac (GEN_ALL kexp_lt) >> simp[]) >>
+  qx_gen_tac `a` >> strip_tac >>
+  Cases_on `0 < a`
+  >- (qexists_tac `a` >> simp[]) >>
+  qexists_tac `1` >> `1 < e2` by metis_tac [ORD_ONE, islimit_SUC_lt] >>
+  simp[] >> fs[])
+
+val ord_mult_correct = store_thm(
+  "ord_mult_correct",
+  ``∀x y. is_ord x ∧ is_ord y ⇒ (⟦ord_mult x y⟧ = ⟦x⟧ * ⟦y⟧)``,
+  ho_match_mp_tac ord_mult_ind >> csimp[] >> map_every qx_gen_tac [`x`, `y`] >>
+  rpt strip_tac >>
+  `(∃m. x = End m) ∨ ∃e1 c1 t1. x = Plus e1 c1 t1` by (Cases_on `x` >> simp[])
+  >- (`(∃n. y = End n) ∨ ∃e2 c2 t2. y = Plus e2 c2 t2`
+        by (Cases_on `y` >> simp[])
+      >- (simp[Once ord_mult_def] >> Cases_on `(m = 0) ∨ (n = 0)` >> simp[]) >>
+      rw[] >> Cases_on `m = 0` >> simp[Once ord_mult_def] >>
+      fs[ord_add_correct] >> simp[ordMULT_LDISTRIB] >> AP_THM_TAC >>
+      AP_TERM_TAC >>
+      `0 < ⟦e2⟧`
+        by (spose_not_then assume_tac >> fs[] >> metis_tac [osyntax_EQ_0]) >>
+      `0 < m` by decide_tac >> metis_tac[nat_times_omega, ordMULT_ASSOC]) >>
+  `(∃n. y = End n) ∨ ∃e2 c2 t2. y = Plus e2 c2 t2` by (Cases_on `y` >> simp[])
+  >- (simp[Once ord_mult_def] >> rw[ordMULT_LDISTRIB] >> fs[] >>
+      Induct_on `n` >> simp[] >>
+      `(n = 0) ∨ ∃m. n = SUC m` by (Cases_on `n` >> simp[]) >- simp[] >>
+      fs[] >> pop_assum (fn nSm => pop_assum (SUBST_ALL_TAC o SYM) >>
+                                   REWRITE_TAC [SYM nSm]) >>
+      bsimp[GSYM ordMULT_fromNat, ordMULT_ASSOC, fromNat_SUC] >>
+      simp[ordMULT_def, GSYM ordADD_ASSOC] >> simp[ordADD_ASSOC] >>
+      AP_THM_TAC >> AP_TERM_TAC >> simp[Once EQ_SYM_EQ] >>
+      match_mp_tac (GEN_ALL add_disappears_kexp) >> simp[] >> conj_tac
+      >- metis_tac [osyntax_EQ_0] >>
+      qpat_assum `oless MM NN` mp_tac >> simp[oless_modelled, is_ord_expt] >>
+      simp[tail_dominated]) >>
+  fs[] >> simp[Once ord_mult_def, ord_add_correct, ordMULT_LDISTRIB] >>
+  AP_THM_TAC >> AP_TERM_TAC >> simp[ordMULT_ASSOC] >>
+  AP_THM_TAC >> AP_TERM_TAC >> simp[ordMULT_ASSOC] >>
+  simp[Once EQ_SYM_EQ] >> match_mp_tac kexp_mult >> simp[] >>
+  conj_tac >- (spose_not_then assume_tac >> fs[] >> metis_tac [osyntax_EQ_0]) >>
+  Q.UNDISCH_THEN `oless (expt t1) e1` mp_tac >>
+  simp[oless_modelled, is_ord_expt, tail_dominated])
 
 val _ = export_theory()
