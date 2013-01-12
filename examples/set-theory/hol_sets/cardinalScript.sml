@@ -399,7 +399,7 @@ val cardlt_REFL = store_thm(
   simp[cardleq_REFL]);
 
 val cardlt_lenoteq = store_thm(
-  "cardlt_iso_REFL",
+  "cardlt_lenoteq",
   ``s ≺ t ⇔ s ≼ t ∧ ¬(s ≈ t)``,
   metis_tac [cardleq_dichotomy, CARDEQ_SUBSET_CARDLEQ, cardeq_SYM,
              cardleq_ANTISYM, cardeq_REFL]);

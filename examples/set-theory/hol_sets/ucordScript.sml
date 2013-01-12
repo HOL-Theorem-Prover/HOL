@@ -22,7 +22,7 @@ val ucinf_uncountable = store_thm(
 val Unum_cardlt_ucinf = store_thm(
   "Unum_cardlt_ucinf",
   ``𝕌(:num) ≺ 𝕌(:'a ucinf)``,
-  simp[cardlt_iso_REFL] >> conj_tac
+  simp[cardlt_lenoteq] >> conj_tac
   >- (simp[cardleq_def] >> qexists_tac `INL` >> simp[INJ_INL]) >>
   strip_tac >> imp_res_tac countable_cardeq >>
   fs[ucinf_uncountable, num_countable])
@@ -34,7 +34,7 @@ val Unum_cardle_ucinf = store_thm(
 
 val sup_exists_lemma = prove(
   ``{ a:'a ucord | countableOrd a } ≼ univ(:'a ucinf)``,
-  spose_not_then assume_tac >> fs[cardlt_iso_REFL] >>
+  spose_not_then assume_tac >> fs[cardlt_lenoteq] >>
   `∃f. INJ f 𝕌(:'a ucinf) {a:'a ucord | countableOrd a}`
      by metis_tac[cardleq_def] >>
   `(∀u. countableOrd (f u)) ∧ (∀u v. f u = f v ⇒ u = v)`
