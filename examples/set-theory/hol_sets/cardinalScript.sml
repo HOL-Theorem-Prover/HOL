@@ -386,6 +386,8 @@ val cardleq_dichotomy = store_thm(
 val _ = set_fixity "≺" (Infix(NONASSOC, 450))
 val _ = overload_on ("≺", ``λ(s1:'a set) s2. ¬(s2 ≼ s1)``)
 
+val _ = TeX_notation {hol = "≺", TeX = ("\\ensuremath{\\prec}", 1)}
+
 val cardleq_lteq = store_thm(
   "cardleq_lteq",
   ``s1 ≼ s2 ⇔ s1 ≺ s2 ∨ (s1 ≈ s2)``,
