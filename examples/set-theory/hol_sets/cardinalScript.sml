@@ -14,6 +14,7 @@ val _ = set_mapped_fixity {tok = "≈", term_name = "=~",
                            fixity = Infix(NONASSOC, 450)}
 
 val _ = overload_on("=~", ``cardeq``)
+val _ = TeX_notation {hol = "≈", TeX = ("\\ensuremath{\\approx}", 1)}
 
 
 val cardeq_REFL = store_thm(
