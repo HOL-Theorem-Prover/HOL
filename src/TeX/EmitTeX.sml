@@ -342,11 +342,13 @@ local
           if !dollar_parens then ("(", ")", String.extract(s,1,NONE),2)
           else ("", "", String.extract(s,1,NONE),0)
         else ("", "", s,0)
-    fun addann ty s =
-      "\\" ^ !texPrefix ^ ty ^ "{" ^ varmunge s ^ "}"
-    val annotation = case ann of BV _ => addann "BoundVar"
-                               | FV _ => addann "FreeVar"
-                               | _ => (fn s => s)
+    fun addann ty f s =
+      "\\" ^ !texPrefix ^ ty ^ "{" ^ f s ^ "}"
+    fun annotation s =
+        case ann of BV _ => addann "BoundVar" varmunge s
+                  | FV _ => addann "FreeVar" varmunge s
+                  | Const _ => addann "Const" I s
+                  | _ => s
     val (s',sz) = smap overrides (s,sz)
   in
     PP.add_stringsz pps (dollarpfx ^ annotation s' ^ dollarsfx, sz + szdelta)
