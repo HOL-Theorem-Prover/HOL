@@ -272,6 +272,12 @@ exception DoneExit
 
 fun symbolic s = HOLsym (String.sub(s,String.size(s)-1));
 
+fun unfakeconst vnm =
+    case Lib.total (Lib.unprefix GrammarSpecials.fakeconst_special) vnm of
+      SOME s => SOME("", s)
+        (* first argument in result might conceivably contain useful
+           information, but I'm not sure what it should be right now *)
+   | NONE => NONE
 
 fun grammar_name G tm = let
   val oinfo = term_grammar.overload_info G
@@ -281,9 +287,9 @@ in
   else if is_var tm then let
       val (vnm, _) = dest_var tm
     in
-      case Lib.total (Lib.unprefix GrammarSpecials.fakeconst_special) vnm of
+      case unfakeconst vnm of
         NONE => SOME vnm
-      | x => x
+      | SOME(_ (* thy *), nm) => SOME nm
     end
   else NONE
 end
@@ -341,7 +347,9 @@ fun decdepth n = if n < 0 then n else n - 1
 fun atom_name tm = let
   val (vnm, _) = dest_var tm
 in
-  Lib.unprefix GrammarSpecials.fakeconst_special vnm handle HOL_ERR _ => vnm
+  case unfakeconst vnm of
+    NONE => vnm
+  | SOME((* thy *)_, nm) => nm
 end handle HOL_ERR _ => fst (dest_const tm)
 
 
@@ -1480,8 +1488,8 @@ fun pp_term (G : grammar) TyG backend = let
       case dest_term tm of
         VAR(vname, Ty) => let
           val (isfake, vname) =
-              (true, Lib.unprefix GrammarSpecials.fakeconst_special vname)
-              handle HOL_ERR _ => (false, vname)
+              (true, #2 (valOf (unfakeconst vname)))
+              handle Option => (false, vname)
           val vrule = lookup_term vname
           val add_type=
             add_string (" "^type_intro) >>  add_break(0,0) >> doTy Ty
@@ -1498,7 +1506,8 @@ fun pp_term (G : grammar) TyG backend = let
                 add_ann_string (s, PPBackEnd.BV (Ty, fn () => s^": "^tystr Ty))
               else if not isfake then
                 add_ann_string (s, PPBackEnd.FV (Ty, fn () => s^": "^tystr Ty))
-              else add_string s)
+              else add_ann_string(s, PPBackEnd.Const({Ty = Ty, Thy = "??",
+                                                      Name = "??"}, s)))
         in
           fupdate (fn x => x) >- return o new_freevar >-
           (fn is_new =>

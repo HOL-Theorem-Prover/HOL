@@ -36,7 +36,7 @@ val _ = if s1 = s2 then print "OK\n" else die()
 
 val _ = tprint "Testing dollarised syntax (/\\)"
 val s = pp_to_string 70 pp_term_as_tex conjunction
-val _ = if s = "(\\HOLTokenConj{})" then print "OK\n" else die()
+val _ = if s = "(\\HOLConst{\\HOLTokenConj{}})" then print "OK\n" else die()
 
 val _ = tprint "Testing dollarised syntax (if)"
 val s = pp_to_string 70 pp_term_as_tex (mk_var("if", bool))
@@ -46,7 +46,7 @@ open Feedback
 val _ = tprint "Testing paren-less dollarised syntax /\\"
 val _ = set_trace "EmitTeX: dollar parens" 0
 val s = pp_to_string 70 pp_term_as_tex conjunction
-val _ = if s = "\\HOLTokenConj{}" then print "OK\n" else die()
+val _ = if s = "\\HOLConst{\\HOLTokenConj{}}" then print "OK\n" else die()
 val _ = set_trace "EmitTeX: dollar parens" 1
 
 val _ = tprint "Testing UNIV printing (:'a)"
