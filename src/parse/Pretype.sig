@@ -34,6 +34,10 @@ val dom_rng : pretype -> pretype * pretype
 val is_fun_type : pretype -> bool
 val dest_con_type : pretype -> {Tyop : string, Thy : string, Kind : prekind}
 val dest_var_type : pretype -> pretyvar
+val is_var_type : pretype -> bool
+val is_uvar_type : pretype -> bool
+val has_var_type : pretype -> bool
+val mk_var_type : string * prekind -> pretype
 val the_var_type : pretype -> pretype
 val mk_app_type : pretype * pretype -> pretype
 val list_mk_app_type : pretype * pretype list -> pretype
@@ -50,6 +54,7 @@ val dest_exist_type : pretype -> pretype * pretype
 val strip_exist_type : pretype -> pretype list * pretype
 val is_exist_type : pretype -> bool
 val mk_abs_type : pretype * pretype -> pretype
+val list_mk_abs_type : pretype list * pretype -> pretype
 val dest_abs_type : pretype -> pretype * pretype
 
 val beta_conv_ty : pretype -> pretype

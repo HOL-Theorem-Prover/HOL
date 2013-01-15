@@ -272,6 +272,8 @@ fun contains_uvar_type (PT(UVar(ref(NONEU _)),_)) = true
 
 val contains_uvar_typel = exists contains_uvar_type
 
+fun mk_var_type v = PT(Vartype v, locn.Loc_None)
+
 fun dest_var_type(PT(Vartype v,loc)) = v
   | dest_var_type(PT(UVar(ref(SOMEU ty)),loc)) = dest_var_type ty
   | dest_var_type _ = raise TCERR "dest_var_type" "not a type variable";
@@ -1735,6 +1737,10 @@ fun add_hom h     = let val (hs1,rst) = dest_homs "add_hom"
                         print ("\nAdding hom #" ^ Int.toString(length hs1 + 1) ^ ":\n" ^
                                hom_str h');
                       homs := (h'::hs1)::rst; () end;
+fun add_homs hs   = let val (hs1,rst) = dest_homs "add_homs"
+                    in
+                      homs := (hs @ hs1)::rst; ()
+                    end
 fun end_homs ()   = let val (hs1,rst) = dest_homs "end_homs"
                     in
                       if not (ho_debug()) then () else
@@ -1742,7 +1748,10 @@ fun end_homs ()   = let val (hs1,rst) = dest_homs "end_homs"
                       if null hs1 then () else
                         if not (ho_debug()) then () else
                           print ("\nDropping " ^ Int.toString (length hs1) ^ " homs.\n");
-                      homs := rst; hs1 end;
+                      homs := rst;
+                      add_homs hs1;
+                      hs1
+                    end;
 local
   val MAX = 100
   val MIN_GOOD = 70
@@ -1767,9 +1776,11 @@ local
                                else 4
                           else 3
                      else 2
-      else if contains_uvar_type opr
-           then 1
-           else 0
+      else if is_uvar_type opr
+           then MAX
+           else if contains_uvar_type opr
+                then 1
+                else 0
     end
   fun measure_hom (lep, n, c1, c2, ty1, ty2, erpt) =
     let val ty1' = head_beta_ty ty1
@@ -2323,7 +2334,8 @@ report "H.O. type unification" cmp n c1 c2 ty1 ty2 (
             (* if there are any UVar(NONE) variables in the arguments that
                    are not also on the other side, don't h.o. match *)
             val ho_1 = has_var_type opr1 andalso is_uvar_type(the_var_type opr1)
-                                         andalso subset (type_uvarsl args1) (type_uvars ty2)
+                                         andalso (not (is_univ_type ty2) orelse
+                                                  subset (type_uvarsl args1) (type_uvars ty2))
         in
           if ho_1 then
              match true (*lep*)true n c1 c2 (ty1,opr1,args1) (ty2,ty2,[]) >>
@@ -2353,7 +2365,8 @@ report "H.O. type unification" cmp n c1 c2 ty1 ty2 (
             (* if there are any UVar(NONE) variables in the arguments that
                    are not also on the other side, don't h.o. match *)
             val ho_2 = has_var_type opr2 andalso is_uvar_type(the_var_type opr2)
-                                         andalso subset (type_uvarsl args2) (type_uvars ty1)
+                                         andalso (not (is_univ_type ty1) orelse
+                                                  subset (type_uvarsl args2) (type_uvars ty1))
         in
           if ho_2 then
              match false (*lep*)true n c2 c1 (ty2,opr2,args2) (ty1,ty1,[]) >>

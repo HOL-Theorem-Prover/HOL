@@ -1874,10 +1874,30 @@ fun TC printers = let
           end
 
   fun check(tm as Comb{Rator, Rand, Locn}) =
-      (let val Rator' = check Rator;
+      (let val _ = if not (is_debug()) then () else
+                     print ("\n! Checking subterm of application:\n" ^
+                                preterm_to_string Rator ^ "\nas operator of\n" ^
+                                preterm_to_string tm ^ "\n")
+           val Rator' = check Rator;
+           val _ = if not (is_debug()) then () else
+                     print ("\n! Checking subterm of application:\n" ^
+                                preterm_to_string Rand ^ "\nas operand of\n" ^
+                                preterm_to_string tm ^ "\n")
            val Rand'  = check Rand;
+           val _ = if not (is_debug()) then () else
+                     print ("\n! Checked both subterms of application:\n" ^
+                                preterm_to_string tm ^ "\n")
            val Rator_ty = Pretype.deep_beta_eta_ty (ptype_of Rator')
+           val _ = if not (is_debug()) then () else
+                     print ("\n! Determined type of Rator of application:\n" ^
+                                Pretype.pretype_to_string Rator_ty ^ "\n")
+           val _ = if not (is_debug()) then () else
+                     print ("\n! Rand of application:\n" ^
+                                preterm_to_string Rand' ^ "\n")
            val Rand_ty = Pretype.deep_beta_eta_ty (ptype_of Rand')
+           val _ = if not (is_debug()) then () else
+                     print ("\n! Determined type of Rand of application:\n" ^
+                                Pretype.pretype_to_string Rand_ty ^ "\n")
            fun univ_str ty = (if Pretype.is_univ_type ty then "IS"
                               else if Pretype.with_homs_is_not_univ_type ty then "IS DEFINITELY NOT"
                               else "IS NOT CLEARLY") ^ " universal"
@@ -1928,16 +1948,44 @@ fun TC printers = let
               if Pretype.is_fun_type Rator_ty (* optimize; cut out unnecessary unifications *)
               then Pretype.unify_le Rand_ty (* :<=: *) (fst (Pretype.dom_rng Rator_ty))
               else
-                let in
-                   if infrequent_homs() then ()
-                   else Pretype.begin_homs();
-                   Pretype.unify_le (Rand_ty --> Pretype.all_new_uvar())
-                              (* :<=: *) Rator_ty;
-                   if infrequent_homs() then ()
-                   else (Pretype.resolve_ho_matches();
-                         Pretype.end_homs(); ());
-                   ()
+                let
+                  val (P,args) = Pretype.strip_app_type Rator_ty
+                in
+                  if not (null args) andalso
+                     (Pretype.is_uvar_type (Pretype.the_var_type P)
+                      handle HOL_ERR _ => false)
+                  then (* Rator_ty is a higher order type pattern *)
+                       (* Need to first make this a function type *)
+                   let
+                     val _ = if not (is_debug()) then () else
+                             print ("\nCreating function unification for "
+                                    ^ "ho type pattern with ->:\n"
+                                    ^ Pretype.pretype_to_string Rator_ty ^ "\n"
+                                    ^ "with dom of -> type:\n"
+                                    ^ Pretype.pretype_to_string Rand_ty ^ "\n");
+                     val P_kd = Pretype.pkind_of P
+                     val arg_kds = map Pretype.pkind_of args
+                     val P1 = Pretype.new_uvar P_kd
+                     val P2 = Pretype.new_uvar P_kd
+                     fun mk_new_args (kd,tys) =
+                       tys @ [Pretype.variant_type tys
+                                  (Pretype.mk_var_type("'a",kd))]
+                     val args' = List.foldl mk_new_args [] arg_kds
+                     val P1a  = Pretype.list_mk_app_type(P1,args)
+                     val P1a' = Pretype.list_mk_app_type(P1,args')
+                     val P2a' = Pretype.list_mk_app_type(P2,args')
+                     val P' = Pretype.list_mk_abs_type(args', P1a' --> P2a')
+                   in
+                     Pretype.unify P (* :=: *) P'; (* make function type *)
+                     Pretype.unify_le Rand_ty (* :<=: *) P1a (* just domains *)
+                   end
+                  else (* general case *)
+                     Pretype.unify_le (Rand_ty --> Pretype.all_new_uvar())
+                                              (* :<=: *) Rator_ty;
+                  ()
                 end;
+              if Pretype.is_fun_type (Pretype.deep_beta_ty Rator_ty) then () else
+                print ("\nType Checking Warning: Type of rator in application is still not a function.\n");
               if not (is_debug()) then () else
                 print ("\n)Checked application:\n" ^ preterm_to_string Rator ^ "\napplied to\n"
                         ^ preterm_to_string Rand ^ "\n"
