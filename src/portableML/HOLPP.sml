@@ -17,8 +17,6 @@ type 'a quotation = 'a frag list
 open Array
 infix 9 sub
 
-fun magic x = x
-
 (* the queue library, formerly in unit Ppqueue *)
 
 datatype Qend = Qback | Qfront
@@ -430,9 +428,8 @@ fun advance_left (ppstrm as PPS{consumer,left_index,left_sum,
     end
 
 
-fun begin_block (pps : ppstream) style offset =
-  let val ppstrm = pps : ppstream
-      val PPS{the_token_buffer, the_delim_stack,left_index,
+fun begin_block (ppstrm : ppstream) style offset =
+  let val PPS{the_token_buffer, the_delim_stack,left_index,
               left_sum, right_index, right_sum,...}
             = ppstrm
   in
@@ -455,9 +452,8 @@ fun begin_block (pps : ppstream) style offset =
 	       push_delim_stack (!right_index, the_delim_stack)))
   end
 
-fun end_block(pps : ppstream) =
-  let val ppstrm = pps
-      val PPS{the_token_buffer,the_delim_stack,right_index,...}
+fun end_block(ppstrm : ppstream) =
+  let val PPS{the_token_buffer,the_delim_stack,right_index,...}
             = ppstrm
   in
     if (delim_stack_is_empty the_delim_stack)
@@ -504,9 +500,8 @@ local
       end
 in
 
-  fun add_break (pps : ppstream) (n, break_offset) =
-    let val ppstrm = magic pps : ppstream
-        val PPS{the_token_buffer,the_delim_stack,left_index,
+  fun add_break (ppstrm : ppstream) (n, break_offset) =
+    let val PPS{the_token_buffer,the_delim_stack,left_index,
                 right_index,left_sum,right_sum, ++, ...}
               = ppstrm
     in
@@ -523,9 +518,8 @@ in
        push_delim_stack (!right_index,the_delim_stack))
     end
 
-  fun flush_ppstream0(pps : ppstream) =
-    let val ppstrm = magic pps : ppstream
-        val PPS{the_delim_stack,the_token_buffer, flush, left_index,...}
+  fun flush_ppstream0(ppstrm : ppstream) =
+    let val PPS{the_delim_stack,the_token_buffer, flush, left_index,...}
               = ppstrm
     in
       (if (delim_stack_is_empty the_delim_stack)
