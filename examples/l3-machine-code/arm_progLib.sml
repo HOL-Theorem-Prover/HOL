@@ -602,18 +602,64 @@ local
            component_11
            [word, ``:RName``]
            EXTRA_TAC STATE_TAC
+   fun is_stm_wb s =
+      let
+         val s' = utilsLib.lowercase s
+      in
+         String.isPrefix "stm" s' andalso
+         List.exists (fn p => String.isPrefix p (String.extract (s', 3, NONE)))
+            ["ia (wb)", "ib (wb)", "da (wb)", "db (wb)"]
+      end
+   val v3 = Term.mk_var ("x3", Type.bool)
+   val v4 = Term.mk_var ("x4", Type.bool)
+   val v5 = Term.mk_var ("x5", Type.bool)
+   val v6 = Term.mk_var ("x6", Type.bool)
+   val vn = listSyntax.mk_list ([v3, v4, v5, v6], Type.bool)
+   val vn = bitstringSyntax.mk_v2w (vn, fcpSyntax.mk_int_numeric_type 4)
    fun arm_spec_opt opt =
       let
          val step = hd o arm_stepLib.arm_step opt
       in
          fn s =>
-            let
-               val thm = step s
-               val t = arm_mk_pre_post thm
-            in
-               List.map (fn x => (print "."; spec x)) (combinations (thm, t))
-               before print "\n"
-            end
+           (if is_stm_wb s
+               then let
+                       val thm = step s
+                       val base = s |> utilsLib.splitAtChar (Char.isDigit)
+                                    |> snd
+                                    |> String.tokens (Lib.equal #",")
+                                    |> List.map Arbnum.fromString
+                                    |> mlibUseful.min Arbnum.compare
+                                    |> fst
+                                    |> Arbnum.toInt
+                       val (x3, x4, x5, x6) =
+                          utilsLib.padLeft false 4
+                             (bitstringSyntax.int_to_bitlist base)
+                          |> List.map bitstringSyntax.mk_b
+                          |> Lib.quadruple_of_list
+                       val thm1 =
+                          REG_RULE
+                            (Thm.INST [v3 |-> x3, v4 |-> x4,
+                                       v5 |-> x5, v6 |-> x6] thm)
+                       val thm2 =
+                          Drule.ADD_ASSUM
+                            (boolSyntax.mk_neg
+                               (boolSyntax.mk_eq
+                                  (vn, wordsSyntax.mk_wordii (base, 4)))) thm
+                       val () = print "."
+                       val spec1 = spec (thm1, arm_mk_pre_post thm1)
+                       val () = print "."
+                       val spec2 = spec (thm2, arm_mk_pre_post thm2)
+                    in
+                       [spec1, spec2]
+                    end
+            else let
+                    val thm = step s
+                    val t = arm_mk_pre_post thm
+                 in
+                    List.map (fn x => (print "."; spec x))
+                             (combinations (thm, t))
+                 end)
+           before print "\n"
       end
    val the_spec = ref (arm_spec_opt "")
    fun get_opcode thm =
@@ -833,6 +879,7 @@ val arm_spec_hex = Count.apply arm_spec_hex
 
   arm_spec_hex "E8B1001C"; (* LDMIA (wb);4,3,2 *)
   arm_spec_hex "E8A1001C"; (* STMIA (wb);4,3,2 *)
+  arm_spec_hex "E8A10082"; (* STMIA (wb);7,1 *)
 
   arm_spec_hex "01A00000"; (* MOVEQ *)
   arm_spec_hex "11A00000"; (* MOVNE *)
@@ -903,6 +950,32 @@ val pos = ref 0;
 val () = List.app (fn s => (addInstructionClass s; Portable.inc pos))
                   (List.drop (l, !pos))
 
+use "arm_tests.sml";
+val l = Lib.mk_set arm_tests
+length arm_tests
+length l
+
+val stp = arm_stepLib.arm_step_hex ""
+val dec = arm_stepLib.decode_arm_hex (arm_configLib.mk_config_terms "")
+List.length (!fails)
+val fs = List.map (fn s => (s, Lib.total dec s)) (!fails)
+
+val s = "e8bd85f8"
+val s = fst (List.nth (fs, 10))
+
+dec s
+stp s
+arm_spec_hex s
+
+val fails = ref ([]:string list)
+val pos = ref 0;
+
+val () = List.app (fn s => (arm_spec_hex s
+                            handle HOL_ERR _ => (fails := s::(!fails); TRUTH)
+                            ; Portable.inc pos))
+                  (List.drop (l, !pos))
+
+fails
 pos
 List.length l
 val s = List.nth (l, !pos)

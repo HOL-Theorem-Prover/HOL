@@ -97,7 +97,8 @@ val FULL_DATATYPE_RULE =
    utilsLib.ALL_HYP_CONV_RULE DATATYPE_CONV o DATATYPE_RULE
 
 val COND_UPDATE_RULE =
-   REWRITE_RULE (utilsLib.qm [] ``!b. (if b then T else F) = b`` ::
+   REWRITE_RULE (unit_state_cond ::
+                 utilsLib.qm [] ``!b. (if b then T else F) = b`` ::
                  utilsLib.mk_cond_update_thms
                     (List.map arm_configLib.mk_arm_type ["arm_state", "PSR"]))
 
@@ -138,6 +139,7 @@ local
 in
    fun getThms e tms =
       List.map (ADD_PRECOND_RULE e) (specialized1 "eval" tms (!rwts))
+      |> List.filter (not o utilsLib.vacuous)
    fun resetThms () = rwts := []
    fun addThms thms = (rwts := thms @ !rwts; thms)
 end
@@ -1093,11 +1095,41 @@ local
       THENC BIT_THMS_CONV
    val bit_count_rule = Conv.CONV_RULE (Conv.DEPTH_CONV BIT_COUNT_CONV)
    val rule = bit_count_rule o endian_rule
-   val stm_rule =
+   val stm_rule1 =
       utilsLib.MATCH_HYP_CONV_RULE
          (Conv.RAND_CONV
             (Conv.LHS_CONV (Conv.RAND_CONV (Conv.TRY_CONV LowestSetBit_CONV))))
          ``x ==> (n2w (LowestSetBit (l: word16)) = v2w q : word4)``
+   val mk_neq = boolSyntax.mk_neg o boolSyntax.mk_eq
+   fun mk_stm_wb_thm t =
+      let
+         val l = t |> boolSyntax.lhand
+                   |> boolSyntax.rand
+                   |> bitstringSyntax.dest_v2w |> fst
+                   |> bitstringSyntax.bitlist_of_term
+                   |> List.foldl
+                         (fn (b, (i, a)) => (i - 1, if b then i :: a else a))
+                         (15, [])
+                   |> snd |> tl
+         val base = boolSyntax.rhs (boolSyntax.rand t)
+         val t2 =
+           List.map (fn i => mk_neq (base, wordsSyntax.mk_wordii (i, 4))) l
+           |> (fn [] => boolSyntax.T | x => boolSyntax.list_mk_conj x)
+         val eq_thm =
+            boolSyntax.list_mk_forall
+               (Term.free_vars base, boolSyntax.mk_eq (t, t2))
+      in
+         (*
+         set_goal ([], eq_thm)
+         *)
+         Tactical.prove(eq_thm, NTAC 4 Cases THEN EVAL_TAC)
+      end
+   fun stm_rule2 thm =
+      case List.find boolSyntax.is_imp_only (Thm.hyp thm) of
+         SOME t =>
+            utilsLib.MATCH_HYP_CONV_RULE
+              (PURE_REWRITE_CONV [mk_stm_wb_thm t]) ``x ==> (a: word4 = b)`` thm
+       | NONE => thm
 in
    fun ldm_stm_rule s =
       let
@@ -1106,7 +1138,7 @@ in
          if String.isPrefix "LDM" s'
             then rule o Conv.CONV_RULE (Conv.DEPTH_CONV FOLDL_LDM1_CONV)
          else if String.isPrefix "STM" s'
-            then stm_rule o rule o
+            then stm_rule2 o stm_rule1 o rule o
                  Conv.CONV_RULE (Conv.DEPTH_CONV FOLDL_STM1_CONV)
          else Lib.I
       end
@@ -1579,6 +1611,7 @@ val arm_patterns = List.map (I ## epattern)
    ("Move",                                 "FFTTT_T_________________"),
    ("TestCompareImmediate",                 "FFTTF__T________________"),
    ("MoveHalfword",                         "FFTTF_FF________________"),
+   ("ExtendByte",                           "FTTFT_TF____________FTTT"),
    ("BranchTarget",                         "TFTF____________________"),
    ("BranchLinkExchangeImmediate (to ARM)", "TFTT____________________"),
    ("LoadUnprivileged (imm)",               "FTFF_FTT________________"),
@@ -1876,6 +1909,10 @@ local
      ("SMLAL", ("MultiplyLong", [xT 0, xT 1, xF 2])),
      ("MULS", ("Multiply32", [xT 0])),
      ("MLAS", ("MultiplyAccumulate", [xT 0])),
+     ("UXTAB", ("ExtendByte", [xT 0])),
+     ("SXTAB", ("ExtendByte", [xF 0])),
+     ("UXTB", ("ExtendByte", [xT 0, xT 1, xT 2, xT 3, xT 4])),
+     ("SXTB", ("ExtendByte", [xF 0, xT 1, xT 2, xT 3, xT 4])),
      ("UMULLS", ("MultiplyLong", [xF 0, xF 1, xT 2])),
      ("SMULLS", ("MultiplyLong", [xT 0, xF 1, xT 2])),
      ("UMLALS", ("MultiplyLong", [xF 0, xT 1, xT 2])),
@@ -1896,6 +1933,31 @@ local
      ("LDR (-reg,pre,pc)",
         ("LoadWord (reg,pre)", [xF 0, xF 1, xT 2, xT 3, xT 4, xT 5])),
      ("LDR (reg,post)", ("LoadWord (reg,post)", [])),
+     ("LDR (pc,+imm,pre,wb)",
+        ("LoadWord (imm,pre)", [xT 0, xT 1, xT 6, xT 7, xT 8, xT 9])),
+     ("LDR (pc,-imm,pre,wb)",
+        ("LoadWord (imm,pre)", [xF 0, xT 1, xT 6, xT 7, xT 8, xT 9])),
+     ("LDR (pc,+imm,pre)",
+        ("LoadWord (imm,pre)", [xT 0, xF 1, xT 6, xT 7, xT 8, xT 9])),
+     ("LDR (pc,-imm,pre)",
+        ("LoadWord (imm,pre)", [xF 0, xF 1, xT 6, xT 7, xT 8, xT 9])),
+     ("LDR (pc,imm,post)",
+        ("LoadWord (imm,post)", [xT 5, xT 6, xT 7, xT 8])),
+     ("LDR (pc,+reg,pre,wb)",
+        ("LoadWord (reg,pre)", [xT 0, xT 1, xT 6, xT 7, xT 8, xT 9])),
+     ("LDR (pc,-reg,pre,wb)",
+        ("LoadWord (reg,pre)", [xF 0, xT 1, xT 6, xT 7, xT 8, xT 9])),
+     ("LDR (pc,+reg,pre)",
+        ("LoadWord (reg,pre)", [xT 0, xF 1, xT 6, xT 7, xT 8, xT 9])),
+     ("LDR (pc,-reg,pre)",
+        ("LoadWord (reg,pre)", [xF 0, xF 1, xT 6, xT 7, xT 8, xT 9])),
+     ("LDR (pc,+reg,pre,pc)",
+        ("LoadWord (reg,pre)",
+         [xT 0, xF 1, xT 2, xT 3, xT 4, xT 5, xT 6, xT 7, xT 8, xT 9])),
+     ("LDR (pc,-reg,pre,pc)",
+        ("LoadWord (reg,pre)",
+         [xF 0, xF 1, xT 2, xT 3, xT 4, xT 5, xT 6, xT 7, xT 8, xT 9])),
+     ("LDR (pc,reg,post)", ("LoadWord (reg,post)", [])),
      ("LDRB (+imm,pre,wb)", ("LoadByte (imm,pre)", [xT 0, xT 1])),
      ("LDRB (-imm,pre,wb)", ("LoadByte (imm,pre)", [xF 0, xT 1])),
      ("LDRB (+imm,pre)", ("LoadByte (imm,pre)", [xT 0, xF 1])),
@@ -2147,8 +2209,15 @@ local
             else let val (b, c) = splitAtSemi b in (a, b, c) end
          val c = if c <> "" then String.extract (c, 1, NONE) else "none"
          val d = ("TTTF", a ^ b, c)
+         val pfx = if String.size a = 3 andalso String.isPrefix "BL" a
+                      then SOME "B"
+                   else if String.size a = 5 andalso String.isPrefix "STRH" a
+                      then SOME "STR"
+                   else if String.size a = 5 andalso String.isPrefix "LDRH" a
+                      then SOME "LDR"
+                   else List.find (fn p => String.isPrefix p a) prefixes
       in
-         case List.find (fn p => String.isPrefix p a) prefixes of
+         case pfx of
             SOME p =>
                let
                   val a' = String.extract (a, String.size p, NONE)
@@ -2171,9 +2240,9 @@ local
 in
    val list_instructions = list_instructions
    fun print_instructions () = List.app printn (list_instructions ())
-   fun mk_arm_opcode opc =
+   fun mk_arm_opcode s =
       let
-         val (c, s, l) = splitOpcode opc
+         val (c, s, l) = splitOpcode s
          val lm = if LDM_STM s andalso l <> "none" then reg_list_subst l else []
       in
          case Redblackmap.peek (ast, s) of
@@ -2231,6 +2300,7 @@ local
             ``~(b3 /\ b2 /\ b1 /\ b0)`` o
          Conv.RIGHT_CONV_RULE
             (REG_CONV THENC Conv.DEPTH_CONV bitstringLib.v2n_CONV))
+   val rwconv = REWRITE_CONV []
 in
    fun decode_arm tms =
       let
@@ -2268,7 +2338,7 @@ in
                                       |> Thm.INST s
                                       |> COND_RULE
                       in
-                         Conv.REWR_CONV rwt tm
+                         (Conv.REWR_CONV rwt THENC rwconv) tm
                       end)
                 handle Conv.UNCHANGED =>
                            (WARN "decode_arm" "fallback (slow) decode"
@@ -2336,8 +2406,8 @@ val BranchTarget_rwts =
 
 val BranchExchange_rwt =
    List.map (fn r =>
-      EV ([r, dfn'BranchExchange_def, BXWritePC_rwt,
-           CurrentInstrSet_rwt, unit_state_cond] @ SelectInstrSet_rwt)
+      EV ([r, dfn'BranchExchange_def, BXWritePC_rwt, CurrentInstrSet_rwt] @
+          SelectInstrSet_rwt)
         [[``m <> 15w: word4``]] []
         ``dfn'BranchExchange m``) R_rwts
      |> List.concat
@@ -2346,8 +2416,7 @@ val BranchExchange_rwt =
 
 val BranchExchange_pc_arm_rwt =
    EV ([dfn'BranchExchange_def, BXWritePC_rwt, R15_rwt,
-        arm_stepTheory.Aligned4_bit0, CurrentInstrSet_rwt, unit_state_cond] @
-       SelectInstrSet_rwt)
+        arm_stepTheory.Aligned4_bit0, CurrentInstrSet_rwt] @ SelectInstrSet_rwt)
       [[``~^st.CPSR.T``]] []
       ``dfn'BranchExchange 15w``
      |> List.map
@@ -2360,8 +2429,7 @@ val BranchExchange_pc_arm_rwt =
 
 val BranchExchange_pc_thumb_rwt =
    EV ([dfn'BranchExchange_def, BXWritePC_rwt, R15_rwt,
-        arm_stepTheory.Aligned2_bit0, CurrentInstrSet_rwt, unit_state_cond] @
-       SelectInstrSet_rwt)
+        arm_stepTheory.Aligned2_bit0, CurrentInstrSet_rwt] @ SelectInstrSet_rwt)
       [[``^st.CPSR.T``]] []
       ``dfn'BranchExchange 15w``
      |> List.map
@@ -2384,8 +2452,8 @@ val R_x_14_not_pc =
 val BranchLinkExchangeRegister_rwt =
    List.map (fn (r, w) =>
       EV ([r, w, PC_rwt, dfn'BranchLinkExchangeRegister_def, BXWritePC_rwt,
-           CurrentInstrSet_rwt, write'LR_def, R_x_14_not_pc, not_cond,
-           unit_state_cond] @ SelectInstrSet_rwt)
+           CurrentInstrSet_rwt, write'LR_def, R_x_14_not_pc, not_cond] @
+          SelectInstrSet_rwt)
          [[``m <> 15w: word4``]] []
         ``dfn'BranchLinkExchangeRegister m``) reg_rwts
      |> List.concat
@@ -2754,6 +2822,18 @@ val MultiplyLong_rwt =
         ``n <> 15w: word4``, ``m <> 15w: word4``]] (TF `signed`)
       ``dfn'MultiplyLong (accumulate, signed, setflags, dhi, dlo, n, m)``
 
+(* ---------------------------- *)
+
+val ExtendByte_rwt =
+  regEV [`d`, `m`] [dfn'ExtendByte_def, ROR_rwt, wordsTheory.WORD_ADD_0]
+     [[``d <> 15w: word4``, ``m <> 15w: word4``]] []
+     ``dfn'ExtendByte (u, d, 15w, m, rot)``
+
+val ExtendByteAcc_rwt =
+  regEV [`d`, `m`] [dfn'ExtendByte_def, ROR_rwt]
+     [[``d <> 15w: word4``, ``m <> 15w: word4``, ``n <> 15w: word4``]] []
+     ``dfn'ExtendByte (u, d, n, m, rot)``
+
 (* Add a few more multiplies and SIMD instructions *)
 
 (* ---------------------------- *)
@@ -2763,24 +2843,24 @@ local
       fun mapCons l (x: {redex: term frag list, residue: term}) =
          List.map (fn s => (x :: s)) l
    in
-      fun substCases cs l = List.concat (List.map (mapCons l) cs)
+      fun substCases cs f l = List.concat (List.map (mapCons l) (f cs))
    end
 
-   val immediate1 =
+   fun immediate1 f =
       substCases
          [`m` |-> ``immediate_form1 imm32``,
           `m` |-> ``register_form1
                        (r, FST (DecodeImmShift (v2w [b1; b0], imm5)),
-                           SND (DecodeImmShift (v2w [b1; b0], imm5)))``]
+                           SND (DecodeImmShift (v2w [b1; b0], imm5)))``] f
 
-   val immediate2 =
+   fun immediate2 f =
       substCases [`m` |-> ``immediate_form2 imm32``,
-                  `m` |-> ``register_form2 r``]
+                  `m` |-> ``register_form2 r``] f
 
-   val immediate3 =
+   fun immediate3 f =
       substCases
          [`m` |-> ``immediate_form1 imm32``,
-          `m` |-> ``register_form1 (r, SRType_LSL, imm2)``]
+          `m` |-> ``register_form1 (r, SRType_LSL, imm2)``] f
 in
    val addr =
       [[`idx` |-> ``T``, `wb` |-> ``F``, `a` |-> ``T``],
@@ -2789,12 +2869,12 @@ in
        [`idx` |-> ``T``, `wb` |-> ``T``, `a` |-> ``T``],
        [`idx` |-> ``T``, `wb` |-> ``T``, `a` |-> ``F``]]
    val bpc_addr = List.take (addr, 2)
-   val addr1 = immediate1 addr
-   val addr2 = immediate2 addr
-   val addr3 = immediate3 addr
-   val bpc_addr1 = immediate1 bpc_addr
-   val bpc_addr2 = immediate2 bpc_addr
-   val bpc_addr3 = immediate3 bpc_addr
+   val addr1 = immediate1 Lib.I addr
+   val addr2 = immediate2 Lib.I addr
+   val addr3 = immediate3 Lib.I addr
+   val bpc_addr1 = immediate1 List.tl bpc_addr
+   val bpc_addr2 = immediate2 List.tl bpc_addr
+   val bpc_addr3 = immediate3 List.tl bpc_addr
 end
 
 (* ---------------------------- *)
@@ -2805,13 +2885,14 @@ val rule_sp =
       Conv.CONV_RULE (utilsLib.INST_REWRITE_CONV [Aligned_plus_minus]))
      ``a \/ b \/ c``
 
-(*
 fun rule_pc w =
    rule_sp o
-   DATATYPE_RULE o
+   COND_UPDATE_RULE o
+   FULL_DATATYPE_RULE o
+   utilsLib.ALL_HYP_CONV_RULE
+      (Conv.DEPTH_CONV (utilsLib.INST_REWRITE_CONV [w])) o
    Conv.CONV_RULE (utilsLib.INST_REWRITE_CONV [w]) o
    ASM_REWRITE_RULE []
-*)
 
 fun rule_npc b w =
    (if b then rule_sp else Lib.I) o
@@ -2888,12 +2969,21 @@ fun rule_literal2 w =
 
 (* ---------------------------- *)
 
-(*
 val LoadWord_pc_rwt =
-   memEV rule_pc MemU_4_rwt [dfn'LoadWord_def]
-     [[``n <> 15w: word4``, ``r <> 15w: word4``]] addr1
-     ``dfn'LoadWord (a, idx, wb, 15w, n, m)``
-*)
+   List.map (fn wpc =>
+      memEV rule_pc MemU_4_rwt [dfn'LoadWord_def, wpc]
+        [[``n <> 15w: word4``, ``r <> 15w: word4``]] addr1
+        ``dfn'LoadWord (a, idx, wb, 15w, n, m)``
+     ) LoadWritePC_rwt
+     |> List.concat
+
+val LoadWord_pc_pc_rwt =
+   List.map (fn wpc =>
+      memEV rule_pc MemU_4_rwt [dfn'LoadWord_def, wpc]
+        [[``r <> 15w: word4``]] bpc_addr1
+        ``dfn'LoadWord (a, idx, wb, 15w, 15w, m)``
+     ) LoadWritePC_rwt
+     |> List.concat
 
 val LoadWord_rwt =
    memEV (rule_npc true) MemU_4_rwt [dfn'LoadWord_def]
