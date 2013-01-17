@@ -1,5 +1,6 @@
 local
 open HolKernel Parse
+structure UD = mungeLex.UserDeclarations
 in
 fun munger () = let
   val () = Feedback.emit_MESG := false
@@ -18,24 +19,27 @@ fun munger () = let
           | SOME i => SOME i
         end
       else NONE
-  fun setwidth i = mungeLex.UserDeclarations.width := i
+  fun setwidth i = UD.width := i
   fun setoverrides s = mungeTools.user_overrides := mungeTools.read_overrides s
+  fun set_mathmode s = UD.mathmode := SOME (UD.tex_spacing s)
   val run_lexer = ref true
   fun proc_args args =
       case args of
         [] => ()
       | ["-index"] => mungeTools.usage()
       | ["-index", basename] => (holindex.holindex basename; run_lexer := false)
+      | "--nomergeanalysis" :: rest => (set_trace "pp_avoids_symbol_merges" 0;
+                                        proc_args rest)
       | s :: rest => let
         in
           case parseWidth s of
             SOME i => (setwidth i ; proc_args rest)
           | NONE => let
             in
-              case s of
-                "--nomergeanalysis" => (set_trace "pp_avoids_symbol_merges" 0;
-                                        proc_args rest)
-              | _ => (setoverrides s ; proc_args rest)
+              if String.isPrefix "-m" s then
+                (set_mathmode (String.extract(s,2,NONE)); proc_args rest)
+              else
+                (setoverrides s ; proc_args rest)
             end
         end
   val _ = proc_args (CommandLine.arguments())
@@ -43,4 +47,3 @@ in
   if (!run_lexer) then lexer() else ()
 end
 end
-

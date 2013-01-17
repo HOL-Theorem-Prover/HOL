@@ -8,6 +8,7 @@ datatype opt = Turnstile | Case | TT | Def | SpacedDef | TypeOf | TermThm
              | Indent of int | NoSpec
              | Inst of string * string
              | NoTurnstile | Width of int
+             | Mathmode of string
              | AllTT | ShowTypes
              | Conj of int
              | Rule | StackedRule
@@ -78,6 +79,10 @@ fun stringOpt pos s =
           | SOME i => if i <= 0 then
                         (warn(pos, "Negative/zero conj specs illegal"); NONE)
                       else SOME (Conj i)
+        end
+      else if String.isPrefix "m" s then let
+        in
+          SOME (Mathmode (String.extract(s,1,NONE)))
         end
       else let
           open Substring
@@ -169,6 +174,7 @@ fun optset_indent s =
     | SOME i => spaces i
 
 fun optset_conjnum s = get_first (fn Conj i => SOME i | _ => NONE) s
+fun optset_mathmode s = get_first (fn Mathmode s => SOME s | _ => NONE) s
 
 val HOL = !EmitTeX.texPrefix
 val user_overrides = ref (Binarymap.mkDict String.compare)

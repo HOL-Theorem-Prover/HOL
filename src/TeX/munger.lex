@@ -27,19 +27,42 @@ in
   fun unescape s = u [] (full s)
 end
 val width = ref 63
+val mathmode = ref (NONE : string option)
+fun tex_spacing s =
+    if s = "" then "\\;\\;"
+    else String.translate (fn #"c" => "\\," | c => "\\" ^ str c) s
+
+
+fun pp_to_mathstring spacing width f x = let
+  val acc = ref ([] : string list)
+  fun consumer s =
+      if s = "\n" then acc := "\\\\\n" :: !acc
+      else if CharVector.all Char.isSpace s then
+        acc := String.concat(List.tabulate(size s, (fn _ => spacing))) :: !acc
+      else acc := s :: !acc
+  val ppc = {consumer = consumer, linewidth = width, flush = fn () => ()}
+in
+  PP.with_pp ppc (fn ppstrm => f ppstrm x);
+  String.concat (List.rev (!acc))
+end
 
 fun replace (pos, argpos, comm, optstring, args) = let
   val optset = parseOpts pos optstring
   val width = case optset_width optset of
                 SOME w => w
               | NONE => !width
+  val local_math = case optset_mathmode optset of
+                     NONE => !mathmode
+                   | SOME s => (TextIO.output(TextIO.stdErr, "Math spacing of " ^ s ^ "\n"); SOME (tex_spacing s))
+  val printer = case local_math of
+                  NONE => PP.pp_to_string
+                | SOME s => pp_to_mathstring s
 in
   TextIO.output(TextIO.stdOut,
-                PP.pp_to_string width replacement
-                                {commpos = pos, argpos = argpos,
-                                 command = comm,
-                                 options = optset,
-                                 argument = unescape args})
+                printer width replacement
+                        {commpos = pos, argpos = argpos,
+                         command = comm, options = optset,
+                         argument = unescape args})
 end
 
 fun getparts s = let

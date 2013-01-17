@@ -11,6 +11,7 @@ sig
   val user_overrides : override_map ref
   val read_overrides : string -> override_map
   val optset_width : optionset -> int option
+  val optset_mathmode: optionset -> string option
 
   val numErrors : int ref
 
