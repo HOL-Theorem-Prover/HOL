@@ -348,6 +348,7 @@ local
         case ann of BV _ => addann "BoundVar" varmunge s
                   | FV _ => addann "FreeVar" varmunge s
                   | Const _ => addann "Const" I s
+                  | TyOp _ => addann "TyOp" I s
                   | _ => s
     val (s',sz) = smap overrides (s,sz)
   in
