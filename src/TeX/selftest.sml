@@ -61,4 +61,5 @@ val _ = if s = "\\ensuremath{\\cal{U}}(:\\ensuremath{\\alpha})" then print "OK\n
 
 val _ = tprint "Testing UNIV printing (:num)"
 val s = pp_to_string 70 pp_term_as_tex (pred_setSyntax.mk_univ numSyntax.num)
-val _ = if s = "\\ensuremath{\\cal{U}}(:num)" then print "OK\n" else die()
+val _ = if s = "\\ensuremath{\\cal{U}}(:\\HOLTyOp{num})" then print "OK\n"
+        else die()
