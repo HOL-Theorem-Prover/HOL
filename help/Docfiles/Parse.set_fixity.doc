@@ -64,7 +64,7 @@ constants:
 This function is of no use if multiple-token rules (such as those for
 conditional expressions) are desired, or if the token does not
 correspond to the name of the constant or variable that is to be
-produced.
+produced.  (For the latter case, use {set_mapped_fixity}.)
 
 As with other functions in the {Parse} structure, there is a companion
 {temp_set_fixity} function, which has the same effect on the global
@@ -72,7 +72,7 @@ grammar, but which does not cause this effect to persist when the
 current theory is exported.
 
 \SEEALSO
-Parse.add_rule, Parse.add_infix, Parse.remove_rules_for_term, 
-Parse.remove_termtok.
+Parse.add_rule, Parse.add_infix, Parse.remove_rules_for_term,
+Parse.remove_termtok, Parse.set_mapped_fixity.
 
 \ENDDOC
