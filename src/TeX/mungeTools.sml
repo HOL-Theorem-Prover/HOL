@@ -29,8 +29,8 @@ fun die s = (TextIO.output(TextIO.stdErr, s ^ "\n");
              OS.Process.exit OS.Process.failure)
 fun usage() =
     die ("Usage:\n  "^
-         CommandLine.name()^" [-w<linewidth>] [--nomergeanalysis] " ^
-         "[overridesfile] or\n"^
+         CommandLine.name()^" [-w<linewidth>] [-m[<math-spacing>]] [--nomergeanalysis] " ^
+         "[overridesfile]\nor\n  "^
          CommandLine.name()^" -index filename")
 
 fun stringOpt pos s =
