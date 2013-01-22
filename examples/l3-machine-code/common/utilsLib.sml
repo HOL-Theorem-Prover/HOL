@@ -233,6 +233,7 @@ in
    fun PRED_HYP_CONV_RULE c = PRED_HYP_RULE (LAND_RULE c)
    fun MATCH_HYP_CONV_RULE c = MATCH_HYP_RULE (LAND_RULE c)
    fun ALL_HYP_CONV_RULE c = ALL_HYP_RULE (LAND_RULE c)
+   fun FULL_CONV_RULE c = ALL_HYP_CONV_RULE c o Conv.CONV_RULE c
 end
 
 (* ---------------------------- *)

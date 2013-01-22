@@ -92,15 +92,15 @@ fun datatype_thms thms =
 
 val DATATYPE_CONV = REWRITE_CONV (datatype_thms [])
 val DATATYPE_RULE = Conv.CONV_RULE DATATYPE_CONV
+val FULL_DATATYPE_RULE = utilsLib.FULL_CONV_RULE DATATYPE_CONV
 
-val FULL_DATATYPE_RULE =
-   utilsLib.ALL_HYP_CONV_RULE DATATYPE_CONV o DATATYPE_RULE
-
-val COND_UPDATE_RULE =
-   REWRITE_RULE (unit_state_cond ::
+val COND_UPDATE_CONV =
+   REWRITE_CONV (unit_state_cond ::
                  utilsLib.qm [] ``!b. (if b then T else F) = b`` ::
                  utilsLib.mk_cond_update_thms
                     (List.map arm_configLib.mk_arm_type ["arm_state", "PSR"]))
+
+val COND_UPDATE_RULE = Conv.CONV_RULE COND_UPDATE_CONV
 
 val STATE_CONV =
    REWRITE_CONV (utilsLib.datatype_rewrites "arm" ["arm_state"] @
@@ -132,9 +132,7 @@ fun state_with_pre (c, e) =
 local
    val c = Term.mk_var ("c", wordsSyntax.mk_int_word_type 4)
    fun ADD_PRECOND_RULE e thm =
-      thm |> Thm.INST [state_with_pre (c, e)]
-          |> utilsLib.ALL_HYP_CONV_RULE DATATYPE_CONV
-          |> DATATYPE_RULE
+      FULL_DATATYPE_RULE (Thm.INST [state_with_pre (c, e)] thm)
    val rwts = ref ([]: thm list)
 in
    fun getThms e tms =
@@ -312,10 +310,12 @@ local
         [[``^st.Architecture <> ARMv4 /\ ^st.Architecture <> ARMv4T``]] []
        ``LoadWritePC imm32``
        |> hd
+       |> COND_UPDATE_RULE
+       |> REWRITE_RULE [arm_stepTheory.Align_LoadWritePC]
 
    val LoadWritePC_rwt2 =
      EV [LoadWritePC_def, hd (BranchWritePC_rwt), CurrentInstrSet_rwt,
-         ArchVersion_rwts]
+         ArchVersion_rwts, arm_stepTheory.Align_LoadWritePC]
         [[``~(^st.Architecture <> ARMv4 /\ ^st.Architecture <> ARMv4T)``]] []
        ``LoadWritePC imm32``
        |> hd
@@ -323,7 +323,7 @@ local
 
    val LoadWritePC_rwt3 =
      EV [LoadWritePC_def, hd (tl (BranchWritePC_rwt)), CurrentInstrSet_rwt,
-         ArchVersion_rwts]
+         ArchVersion_rwts, arm_stepTheory.Align_LoadWritePC]
         [[``~(^st.Architecture <> ARMv4 /\ ^st.Architecture <> ARMv4T)``]] []
        ``LoadWritePC imm32``
        |> hd
@@ -787,6 +787,39 @@ local
              THENC numLib.REDUCE_CONV)
       |> REWRITE_RULE [rearrange]
 
+   fun LDM_PC a i =
+      LDM_thm
+      |> Q.INST [`increment` |-> a, `index` |-> i]
+      |> Conv.RIGHT_CONV_RULE
+           (REWRITE_CONV [hd R_rwts,
+                          ASSUME ``word_bit 15 (registers: word16)``,
+                          ASSUME ``n <> 15w: word4``]
+            THENC Conv.EVERY_CONV
+                     (List.tabulate
+                         (15, fn i => Conv.ONCE_DEPTH_CONV (FOR_BETA_CONV i)))
+            THENC Conv.RAND_CONV
+                     (PairedLambda.let_CONV
+                      THENC utilsLib.INST_REWRITE_CONV [hd MemA_4_rwt]
+                      THENC REWRITE_CONV
+                              [pairTheory.pair_case_thm, EVAL ``14 + 1n``,
+                               LDM_UPTO_components]
+                      THENC Conv.RAND_CONV
+                              (Conv.RAND_CONV
+                                 (Conv.RATOR_CONV PairedLambda.GEN_BETA_CONV
+                                  THENC PairedLambda.GEN_BETA_CONV)
+                               THENC PairedLambda.let_CONV)))
+      |> utilsLib.ALL_HYP_CONV_RULE
+            (utilsLib.WGROUND_CONV
+             THENC REWRITE_CONV
+                      [Aligned_plus, Aligned_concat4, LDM_UPTO_components]
+             THENC numLib.REDUCE_CONV)
+      |> REWRITE_RULE [rearrange]
+
+   val LDMDA_PC = LDM_PC `F` `F`
+   val LDMDB_PC = LDM_PC `F` `T`
+   val LDMIA_PC = LDM_PC `T` `F`
+   val LDMIB_PC = LDM_PC `T` `T`
+
    val LDMDA = LDM `F` `F`
    val LDMDB = LDM `F` `T`
    val LDMIA = LDM `T` `F`
@@ -807,12 +840,39 @@ in
         |> List.map (REWRITE_RULE [count_list_15] o
                      utilsLib.ALL_HYP_CONV_RULE DATATYPE_CONV)
         |> addThms
+
+   fun ldm_pcEV wb =
+      List.map (fn wpc =>
+         EV [LDMDA_PC, LDMDB_PC, LDMIA_PC, LDMIB_PC, LDM_UPTO_def, wpc,
+             LDM_UPTO_PC, hd write'R_rwts]
+            (if wb
+                then [[``~word_bit (w2n (n:word4)) (registers:word16)``]]
+             else [])
+            [[`inc` |-> ``F``, `index` |-> ``F``],
+             [`inc` |-> ``F``, `index` |-> ``T``],
+             [`inc` |-> ``T``, `index` |-> ``F``],
+             [`inc` |-> ``T``, `index` |-> ``T``]]
+           ``dfn'LoadMultiple
+               (inc, index, ^(bitstringSyntax.mk_b wb), n, registers)``
+           |> List.map
+                (REWRITE_RULE [count_list_15] o
+                 utilsLib.ALL_HYP_CONV_RULE
+                   (DATATYPE_CONV
+                    THENC REWRITE_CONV
+                            [ASSUME ``Aligned (s.REG (arm_step$R_usr n),4)``,
+                             Aligned_plus, LDM_UPTO_components])))
+           LoadWritePC_rwt
+        |> List.concat
+        |> addThms
 end
 
 val () = resetThms ()
 
 val LoadMultiple_wb_rwt = ldmEV true
 val LoadMultiple_nowb_rwt = ldmEV false
+
+val LoadMultiple_pc_wb_rwt = ldm_pcEV true
+val LoadMultiple_pc_nowb_rwt = ldm_pcEV false
 
 (* -- *)
 
@@ -1088,12 +1148,16 @@ local
       THENC Conv.RAND_CONV bossLib.EVAL
       THENC Conv.REWR_CONV arm_stepTheory.CountLeadingZeroBits16
       THENC bossLib.EVAL
-   val BIT_COUNT_CONV =
-      Conv.REWR_CONV wordsTheory.bit_count_def
-      THENC NO_FREE_VARS_CONV
-      THENC Conv.RATOR_CONV (Conv.RAND_CONV wordsLib.SIZES_CONV)
-      THENC BIT_THMS_CONV
-   val bit_count_rule = Conv.CONV_RULE (Conv.DEPTH_CONV BIT_COUNT_CONV)
+   fun BIT_COUNT_UPTO_CONV tm =
+      case boolSyntax.dest_strip_comb tm of
+         ("words$bit_count_upto", [_, _]) => NO_FREE_VARS_CONV tm
+       | ("words$bit_count", [v]) =>
+            (NO_FREE_VARS_CONV
+             THENC Conv.REWR_CONV wordsTheory.bit_count_def
+             THENC Conv.RATOR_CONV (Conv.RAND_CONV wordsLib.SIZES_CONV)) tm
+       | _ => Conv.NO_CONV tm
+   val BIT_COUNT_CONV = BIT_COUNT_UPTO_CONV THENC BIT_THMS_CONV
+   val bit_count_rule = utilsLib.FULL_CONV_RULE (Conv.DEPTH_CONV BIT_COUNT_CONV)
    val rule = bit_count_rule o endian_rule
    val stm_rule1 =
       utilsLib.MATCH_HYP_CONV_RULE
@@ -2110,14 +2174,14 @@ local
      ("STRD (+reg,pre)", ("StoreDual (reg)", [xT 0, xT 1, xF 2])),
      ("STRD (-reg,pre)", ("StoreDual (reg)", [xT 0, xF 1, xF 2])),
      ("STRD (reg,post)", ("StoreDual (reg)", [xF 0, xF 2])),
-     ("LDMDA", ("LoadMultiple", [xF 0, xF 1, xF 2, xF 7])),
-     ("LDMDB", ("LoadMultiple", [xT 0, xF 1, xF 2, xF 7])),
-     ("LDMIA", ("LoadMultiple", [xF 0, xT 1, xF 2, xF 7])),
-     ("LDMIB", ("LoadMultiple", [xT 0, xT 1, xF 2, xF 7])),
-     ("LDMDA (wb)", ("LoadMultiple", [xF 0, xF 1, xT 2, xF 7])),
-     ("LDMDB (wb)", ("LoadMultiple", [xT 0, xF 1, xT 2, xF 7])),
-     ("LDMIA (wb)", ("LoadMultiple", [xF 0, xT 1, xT 2, xF 7])),
-     ("LDMIB (wb)", ("LoadMultiple", [xT 0, xT 1, xT 2, xF 7])),
+     ("LDMDA", ("LoadMultiple", [xF 0, xF 1, xF 2])),
+     ("LDMDB", ("LoadMultiple", [xT 0, xF 1, xF 2])),
+     ("LDMIA", ("LoadMultiple", [xF 0, xT 1, xF 2])),
+     ("LDMIB", ("LoadMultiple", [xT 0, xT 1, xF 2])),
+     ("LDMDA (wb)", ("LoadMultiple", [xF 0, xF 1, xT 2])),
+     ("LDMDB (wb)", ("LoadMultiple", [xT 0, xF 1, xT 2])),
+     ("LDMIA (wb)", ("LoadMultiple", [xF 0, xT 1, xT 2])),
+     ("LDMIB (wb)", ("LoadMultiple", [xT 0, xT 1, xT 2])),
      ("STMDA", ("StoreMultiple", [xF 0, xF 1, xF 2])),
      ("STMDB", ("StoreMultiple", [xT 0, xF 1, xF 2])),
      ("STMIA", ("StoreMultiple", [xF 0, xT 1, xF 2])),
@@ -2887,7 +2951,6 @@ val rule_sp =
 
 fun rule_pc w =
    rule_sp o
-   COND_UPDATE_RULE o
    FULL_DATATYPE_RULE o
    utilsLib.ALL_HYP_CONV_RULE
       (Conv.DEPTH_CONV (utilsLib.INST_REWRITE_CONV [w])) o
@@ -3499,9 +3562,9 @@ end
 local
    fun uncond c = Lib.mem (Char.toUpper c) [#"E", #"F"]
 in
-   fun eval_arm_hex tms =
+   fun arm_step_hex config =
       let
-         val ev = eval_arm tms
+         val ev = eval_arm (arm_configLib.mk_config_terms config)
       in
          fn s =>
             let
@@ -3538,8 +3601,6 @@ in
             end
       end
 end
-
-fun arm_step_hex config = eval_arm_hex (arm_configLib.mk_config_terms config)
 
 (* ---------------------------- *)
 

@@ -789,6 +789,24 @@ val Align_branch_exchange_immediate =
    )
 *)
 
+local
+   val t2 = ``(((31 >< 1) (i: word32) : 31 word) @@ (0w: word1)): word32``
+   val lem = Q.prove(
+      `(!i:word32. ^t2 = Align (i, 2)) /\
+       (!i:word32. ((31 >< 2) i : 30 word) @@ (0w: word2) = Align (i, 4))`,
+      simp [Align]
+      \\ blastLib.BBLAST_TAC
+      )
+   val lem2 = Q.prove(
+      `(!i: word32.  (if word_bit 0 i then ^t2 else i) = Align (i, 2))`,
+      lrw [lem, Align]
+      \\ blastLib.FULL_BBLAST_TAC
+      )
+in
+   val Align_LoadWritePC = Theory.save_thm("Align_LoadWritePC",
+      Thm.CONJ lem2 lem)
+end
+
 (* ------------------------------------------------------------------------ *)
 
 val take_id_imp =
@@ -1174,13 +1192,16 @@ val mustbe15 = Q.store_thm("mustbe15",
 
 (* ------------------------------------------------------------------------ *)
 
-val LDM_UPTO_components =
-   Drule.LIST_CONJ
-      (List.map (GEN_ALL o SIMP_CONV (srw_ss()) [LDM_UPTO_def] o Parse.Term)
-         [`FST (LDM_UPTO f i r (b, s))`,
-          `(SND (LDM_UPTO f i r (b, s))).MEM`,
-          `(SND (LDM_UPTO f i r (b, s))).CPSR`])
-   |> save_as "LDM_UPTO_components"
+local
+   val t = ``LDM_UPTO f i r (b, s)``
+in
+   val LDM_UPTO_components =
+      Drule.LIST_CONJ
+         (List.map (GEN_ALL o SIMP_CONV (srw_ss()) [LDM_UPTO_def])
+            [``FST ^t``, ``(SND ^t).MEM``, ``(SND ^t).CPSR``,
+             ``(SND ^t).Architecture``])
+      |> save_as "LDM_UPTO_components"
+end
 
 local
    val LDM1_PC = Q.prove(

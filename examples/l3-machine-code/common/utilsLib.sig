@@ -10,6 +10,7 @@ sig
    val CHANGE_CBV_CONV: computeLib.compset -> conv
    val ELIM_UNDISCH: rule
    val EXTRACT_CONV: conv
+   val FULL_CONV_RULE: conv -> thm -> thm
    val HYP_CANON_RULE: rule
    val HYP_CONV_RULE: conv -> term -> rule
    val HYP_RULE: (thm -> thm) -> term -> rule
