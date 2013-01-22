@@ -205,6 +205,16 @@ fun pp_type0 (G:grammar) backend = let
   end
 
   fun pr_ty binderp pps ty grav depth = let
+    val KdG = kind_grammar.min_grammar
+    val kd_to_str = PP.pp_to_string 10000 (kind_pp.pp_kind KdG PPBackEnd.raw_terminal)
+    fun kdstr kd =
+      let val cur_ranks = current_trace "ranks"
+          val _ = set_trace "ranks" 0
+          val str = kd_to_str kd
+      in
+        set_trace "ranks" cur_ranks;
+        str
+      end
     open PPBackEnd
     val {add_string, add_break, begin_block, end_block, add_xstring,...} =
       with_ppstream backend pps
@@ -246,24 +256,18 @@ fun pp_type0 (G:grammar) backend = let
 
     fun print_sk grav annot (s,k) =
       let open Rank Kind
+        val print_kd = (k <> typ rho andalso show_kinds() >= 1)
+                       orelse show_kinds() = 2
       in
-        if (k <> typ rho) andalso show_kinds() = 1
-           orelse show_kinds() = 2
+        if print_kd
         then let
             val parens_needed =
                  case grav of Top => false | _ => true
           in
             pbegin parens_needed;
             add_ann_string' (s, annot);
-            if k <> typ rho orelse show_kinds() = 2 then let
-                val p = rank_of k <> rho andalso not (Kind.is_arity k)
-              in
-                add_string " :";
-                pbegin p;
-                pp_kind pps k;
-                pend p
-              end
-            else ();
+            add_string " :";
+            pp_kind pps k;
             pend parens_needed
           end
         else add_ann_string' (s, annot)
@@ -274,7 +278,7 @@ fun pp_type0 (G:grammar) backend = let
             val s = uniconvert s
             val bound = binderp orelse Lib.mem tyv (!btyvars_seen)
             val kd_annot = (* if k = Kind.typ then "" else *)
-                           " :" ^ kind_to_string k
+                           " :" ^ kdstr k
             val annot = (if bound then TyBV else TyFV)
                         (k, fn () => s ^ kd_annot)
         in if new then print_sk grav annot (s,k)
@@ -289,7 +293,7 @@ fun pp_type0 (G:grammar) backend = let
             val kd_annot = if Kind = Kind.typ Rank.rho
                               orelse current_trace "ranks" < 3
                            then ""
-                           else ":" ^ kind_to_string Kind
+                           else ":" ^ kdstr Kind
             val annot_str = fullname ^ kd_annot
             val annot = TyOp (fn () => annot_str)
         in print_sk grav annot (fullname,Kind)
@@ -377,7 +381,7 @@ fun pp_type0 (G:grammar) backend = let
                               orelse Kind = Kind.typ Rank.rho
                               orelse current_trace "ranks" < 3
                            then ""
-                           else ":" ^ kind_to_string Kind
+                           else ":" ^ kdstr Kind
         in
           case Args of
             [] => let
@@ -466,7 +470,7 @@ fun pp_type0 (G:grammar) backend = let
               val rk_str = if Kind = Kind.typ Rank.rho
                               orelse current_trace "ranks" < 3
                            then ""
-                           else ":" ^ kind_to_string Kind
+                           else ":" ^ kdstr Kind
 *)
             in
               case lookup_tyop Tyop of

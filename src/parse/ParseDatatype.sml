@@ -648,12 +648,12 @@ fun dTyBeta (dTyApp (dTyAbst(bv,body), arg)) =
 
 (* Building the kind parser: *)
 
-val kd_antiq = parse_kind.kd_antiq;
-val dest_kd_antiq = parse_kind.dest_kd_antiq;
-val is_kd_antiq = parse_kind.is_kd_antiq;
+val kd_antiq_type = parse_kind.kd_antiq_type;
+val dest_kd_antiq_type = parse_kind.dest_kd_antiq_type;
+val is_kd_antiq_type = parse_kind.is_kd_antiq_type;
 
-fun remove_kd_aq t =
-  if is_kd_antiq t then dest_kd_antiq t
+fun remove_kd_aq_type t =
+  if is_kd_antiq_type t then dest_kd_antiq_type t
   else raise ERR "kind parser" "antiquotation is not of a kind"
 
 fun kindcast {Ty,Kind,Locn} =
@@ -685,7 +685,7 @@ fun kd_rankcast {Kd,Rank,Locn} =
 val kind_p1_rec = {varkind = mk_basevarkd, typekind = mk_basetypekd,
                    qkindop = do_qkindop,
                    kindop = kindop_to_qkindop, arity = arity,
-                   antiq = fn x => Prekind.fromKind (remove_kd_aq x),
+                   antiq = fn x => Prekind.fromKind (remove_kd_aq_type x),
                    rankcast = kd_rankcast}
 
 val kindparser = parse_kind.parse_kind kind_p1_rec true (Parse.kind_grammar())

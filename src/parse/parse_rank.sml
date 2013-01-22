@@ -17,30 +17,30 @@ val ERRloc = Feedback.mk_HOL_ERRloc "Parse" "parse_rank"
 
 (* antiquoting ranks into kinds *)
 local
-  val ERR2 = Feedback.mk_HOL_ERR "Parse" "dest_rk_antiq" "not a rank antiquotation"
+  val ERR2 = Feedback.mk_HOL_ERR "Parse" "dest_rk_antiq_kind" "not a rank antiquotation"
 in
-fun rk_antiq rk = Kind.mk_var_kind("'rk_antiq",rk)
+fun rk_antiq_kind rk = Kind.mk_var_kind("'rk_antiq",rk)
 
-fun dest_rk_antiq kd =
+fun dest_rk_antiq_kind kd =
   case Lib.with_exn Kind.dest_var_kind kd ERR2
    of ("'rk_antiq",Rk) => Rk
     |  _ => raise ERR2
 
-val is_rk_antiq = Lib.can dest_rk_antiq
+val is_rk_antiq_kind = Lib.can dest_rk_antiq_kind
 end
 
 (* antiquoting kinds into types *)
 local
-  val ERR2 = Feedback.mk_HOL_ERR "Parse" "dest_kd_antiq" "not a kind antiquotation"
+  val ERR2 = Feedback.mk_HOL_ERR "Parse" "dest_kd_antiq_type" "not a kind antiquotation"
 in
-fun kd_antiq kd = Type.mk_var_type("'kd_antiq",kd)
+fun kd_antiq_type kd = Type.mk_var_type("'kd_antiq",kd)
 
-fun dest_kd_antiq ty =
+fun dest_kd_antiq_type ty =
   case Lib.with_exn Type.dest_var_type ty ERR2
    of ("'kd_antiq",Kd) => Kd
     |  _ => raise ERR2
 
-val is_kd_antiq = Lib.can dest_kd_antiq
+val is_kd_antiq_type = Lib.can dest_kd_antiq_type
 end
 
 (* antiquoting types into terms *)
@@ -69,14 +69,14 @@ val is_ty_antiq = Lib.can dest_ty_antiq
 end
 
 (* antiquoting ranks into types *)
-val rk_kd_antiq = kd_antiq o rk_antiq;
-val dest_rk_kd_antiq = dest_rk_antiq o dest_kd_antiq;
-val is_rk_kd_antiq = Lib.can dest_rk_kd_antiq
+val rk_antiq_type = kd_antiq_type o rk_antiq_kind;
+val dest_rk_antiq_type = dest_rk_antiq_kind o dest_kd_antiq_type;
+val is_rk_antiq_type = Lib.can dest_rk_antiq_type
 
 (* antiquoting ranks into terms *)
-val rk_ty_antiq = ty_antiq o kd_antiq o rk_antiq;
-val dest_rk_ty_antiq = dest_rk_antiq o dest_kd_antiq o dest_ty_antiq;
-val is_rk_ty_antiq = Lib.can dest_rk_ty_antiq
+val rk_antiq = ty_antiq o kd_antiq_type o rk_antiq_kind;
+val dest_rk_antiq = dest_rk_antiq_kind o dest_kd_antiq_type o dest_ty_antiq;
+val is_rk_antiq = Lib.can dest_rk_antiq
 
 fun totalify f x = SOME (f x) handle InternalFailure _ => NONE
 

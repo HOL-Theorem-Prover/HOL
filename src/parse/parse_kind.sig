@@ -16,17 +16,17 @@ sig
     kind_grammar.grammar ->
     'b qbuf.qbuf -> 'a
 
-  val kd_antiq      : Kind.kind -> Type.hol_type
-  val dest_kd_antiq : Type.hol_type -> Kind.kind
-  val is_kd_antiq   : Type.hol_type -> bool
+  val kd_antiq_type      : Kind.kind -> Type.hol_type
+  val dest_kd_antiq_type : Type.hol_type -> Kind.kind
+  val is_kd_antiq_type   : Type.hol_type -> bool
 
   val ty_antiq      : Type.hol_type -> Term.term
   val dest_ty_antiq : Term.term -> Type.hol_type
   val is_ty_antiq   : Term.term -> bool
 
-  val kd_ty_antiq      : Kind.kind -> Term.term
-  val dest_kd_ty_antiq : Term.term -> Kind.kind
-  val is_kd_ty_antiq   : Term.term -> bool
+  val kd_antiq      : Kind.kind -> Term.term
+  val dest_kd_antiq : Term.term -> Kind.kind
+  val is_kd_antiq   : Term.term -> bool
 
     (* The record of functions specify how to deal with the need to
        construct variable kinds, kind operators and antiquotations

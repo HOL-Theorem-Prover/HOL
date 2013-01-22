@@ -1025,24 +1025,33 @@ fun asubtype t1 t2 = EQ(t1,t2) orelse
 *)
 end
 
-fun type_vars_set acc bvs [] = acc
-  | type_vars_set acc bvs ((t as Tyv s) :: rest) =
-      if HOLset.member(bvs,t) then type_vars_set acc bvs rest
-      else type_vars_set (HOLset.add(acc, t)) bvs rest
-  | type_vars_set acc bvs (TyCon _ :: rest) =
-      type_vars_set acc bvs rest
-  | type_vars_set acc bvs (TyApp(opr,arg) :: rest) =
-      type_vars_set acc bvs (opr :: arg :: rest)
-  | type_vars_set acc bvs (TyAbs(bv,body) :: rest) =
-      type_vars_set (type_vars_set acc (HOLset.add(bvs, Tyv bv)) [body]) bvs rest
-  | type_vars_set acc bvs (TyAll(bv,body) :: rest) =
-      type_vars_set (type_vars_set acc (HOLset.add(bvs, Tyv bv)) [body]) bvs rest
-  | type_vars_set acc bvs (TyExi(bv,body) :: rest) =
-      type_vars_set (type_vars_set acc (HOLset.add(bvs, Tyv bv)) [body]) bvs rest
+fun type_vars_set1 acc bvs [] = acc
+  | type_vars_set1 acc bvs ((t as Tyv _) :: rest) =
+      if HOLset.member(bvs,t) then type_vars_set1 acc bvs rest
+      else type_vars_set1 (HOLset.add(acc, t)) bvs rest
+  | type_vars_set1 acc bvs (TyCon _ :: rest) =
+      type_vars_set1 acc bvs rest
+  | type_vars_set1 acc bvs (TyApp(opr,arg) :: rest) =
+      type_vars_set1 acc bvs (opr :: arg :: rest)
+  | type_vars_set1 acc bvs (TyAbs(bv,body) :: rest) =
+      type_vars_set1 (type_vars_set1 acc (HOLset.add(bvs, Tyv bv)) [body]) bvs rest
+  | type_vars_set1 acc bvs (TyAll(bv,body) :: rest) =
+      type_vars_set1 (type_vars_set1 acc (HOLset.add(bvs, Tyv bv)) [body]) bvs rest
+  | type_vars_set1 acc bvs (TyExi(bv,body) :: rest) =
+      type_vars_set1 (type_vars_set1 acc (HOLset.add(bvs, Tyv bv)) [body]) bvs rest
 
-fun type_vars ty = HOLset.listItems (type_vars_set empty_tyset empty_tyset [ty])
+fun type_vars_set acc [] = acc
+  | type_vars_set acc ((t as Tyv _) :: rest) =
+      type_vars_set (HOLset.add(acc, t)) rest
+  | type_vars_set acc (TyCon _ :: rest) =
+      type_vars_set acc rest
+  | type_vars_set acc (TyApp(opr,arg) :: rest) =
+      type_vars_set acc (opr :: arg :: rest)
+  | type_vars_set acc tys = type_vars_set1 acc empty_tyset tys
 
-val type_varsl = HOLset.listItems o type_vars_set empty_tyset empty_tyset
+fun type_vars ty = HOLset.listItems (type_vars_set empty_tyset [ty])
+
+val type_varsl = HOLset.listItems o type_vars_set empty_tyset
 
 fun exists_tyvar P = let
   fun occ E (w as Tyv _) = not (mem w E) andalso P w
@@ -1242,7 +1251,7 @@ val empty_stringset = HOLset.empty String.compare
 val free_names = let
   fun fold_name (tyv, acc) = HOLset.add(acc, #1 (dest_var_type tyv))
 in
-  (fn ty => HOLset.foldl fold_name empty_stringset (type_vars_set empty_tyset empty_tyset [ty]))
+  (fn ty => HOLset.foldl fold_name empty_stringset (type_vars_set empty_tyset [ty]))
 end
 
 fun set_name_variant nmset n = let

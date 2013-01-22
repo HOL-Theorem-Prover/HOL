@@ -848,12 +848,12 @@ in
 end
 
 
-fun remove_kd_aq t =
-  if parse_kind.is_kd_antiq t then parse_kind.dest_kd_antiq t
+fun remove_kd_aq_type t =
+  if parse_kind.is_kd_antiq_type t then parse_kind.dest_kd_antiq_type t
   else raise mk_HOL_ERR "Parse" "kind parser" "antiquotation is not of a kind"
 
-fun remove_kd_ty_aq t =
-  if parse_kind.is_kd_ty_antiq t then parse_kind.dest_kd_ty_antiq t
+fun remove_kd_aq_term t =
+  if parse_kind.is_kd_antiq t then parse_kind.dest_kd_antiq t
   else raise mk_HOL_ERR "Parse" "kind parser" "antiquotation is not of a kind"
 
 (* "qkindop" refers to "qualified" kind operator, i.e., qualified by theory name. *)
@@ -887,14 +887,14 @@ val termantiq_constructors =
     {varkind = mk_basevarkd, typekind = mk_basetypekd,
      qkindop = do_qkindop, kindop = kindop_to_qkindop,
      arity = arity, rankcast = kd_rankcast,
-     antiq = fn x => fromKind (remove_kd_ty_aq x)}
+     antiq = fn x => fromKind (remove_kd_aq_term x)}
 
 (* kind_p1_rec *)
 val typeantiq_constructors =
     {varkind = mk_basevarkd, typekind = mk_basetypekd,
      qkindop = do_qkindop, kindop = kindop_to_qkindop,
      arity = arity, rankcast = kd_rankcast,
-     antiq = fn x => fromKind (remove_kd_aq x)}
+     antiq = fn x => fromKind (remove_kd_aq_type x)}
 
 (* kind_p2_rec *)
 val kindantiq_constructors =

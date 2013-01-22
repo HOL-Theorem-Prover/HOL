@@ -61,6 +61,13 @@ fun pp_kind0 (G:grammar) backend = let
       pend parens_needed
     end
 
+    fun pr_kds pps args (grav as (Lfx (prec, printthis))) depth = let
+    in
+      pr_list (fn arg => pr_kd pps arg grav depth)
+              (fn () => add_string (" "^printthis)) (fn () => add_break (1, 0)) args
+    end
+      | pr_kds _ _ _ _ = raise ERR "pr_kds: not a left infix"
+
     val show_ranks = Feedback.get_tracefn "ranks"
     fun rank_string rk =
       if show_ranks() + (if rk = rho then 0 else 1) < 2 then ""
@@ -82,13 +89,59 @@ fun pp_kind0 (G:grammar) backend = let
         in
           add_string ("ar "  ^ Int.toString a)
         end handle HOL_ERR _ =>
-        let val (dom,rng) = kind_dom_rng kd
-            val Tyop = "=>"
+        let val Tyop = "=>"
+            val (dom,rng) = kind_dom_rng kd
             val Args = [dom,rng]
+            val (Args,rng) = strip_arrow_kind kd (* length Args >= 1 *)
           in
             case Args of
-              [arg1, arg2] =>
+              _ :: _ :: _ => (* at least three args *)
               (let
+                 val (prec, rule) = valOf (lookup_kindop Tyop)
+               in
+                 case rule of
+                   SR => let
+                     val addparens =
+                         case grav of
+                           Rfx(n, _) => (n > prec)
+                         | _ => false
+                   in
+                     pbegin addparens;
+                     begin_block INCONSISTENT 0;
+                     (* knowing that there are at least two args, we know that they will
+                        be printed with parentheses, so the gravity we pass in
+                        here makes no difference. *)
+                     print_args Top (Args @ [rng]);
+                     add_break(1,0);
+                     add_string Tyop;
+                     end_block();
+                     pend addparens
+                   end
+                 | IR(assoc, printthis) => let
+                     val parens_needed =
+                         case grav of
+                           Pfx n => (n > prec)
+                         | Lfx (n, s) => if s = printthis then assoc <> LEFT
+                                         else (n >= prec)
+                         | Rfx (n, s) => if s = printthis then assoc <> RIGHT
+                                         else (n >= prec)
+                         | _ => false
+                   in
+                     pbegin parens_needed;
+                     begin_block INCONSISTENT 0;
+                     pr_kds pps Args (Lfx (prec, printthis)) (depth - 1);
+                     add_string " ";
+                     add_string printthis;
+                     add_break(1,0);
+                     pr_kd pps rng (Rfx (prec, printthis)) (depth - 1);
+                     end_block();
+                     pend parens_needed
+                   end
+               end handle Option => raise ERR ("prettyprinting rule not found for kind operator "
+                                               ^ "\"" ^ Tyop ^ "\""))
+            | [arg1] =>
+              (let
+                 val arg2 = rng
                  val (prec, rule) = valOf (lookup_kindop Tyop)
                in
                  case rule of
@@ -140,7 +193,7 @@ fun pp_kind0 (G:grammar) backend = let
               in
                 pbegin addparens;
                 begin_block INCONSISTENT 0;
-                print_args (Pfx prec) Args;
+                print_args (Pfx prec) (Args @ [rng]);
                 add_break(1,0);
                 add_string Tyop;
                 end_block();

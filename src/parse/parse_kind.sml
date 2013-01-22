@@ -22,16 +22,16 @@ val ERRloc = Feedback.mk_HOL_ERRloc "Parse" "parse_kind"
 
 (* antiquoting kinds into types *)
 local
-  val ERR2 = Feedback.mk_HOL_ERR "Parse" "dest_kd_antiq" "not a kind antiquotation"
+  val ERR2 = Feedback.mk_HOL_ERR "Parse" "dest_kd_antiq_type" "not a kind antiquotation"
 in
-fun kd_antiq kd = Type.mk_var_type("'kd_antiq",kd)
+fun kd_antiq_type kd = Type.mk_var_type("'kd_antiq",kd)
 
-fun dest_kd_antiq ty =
+fun dest_kd_antiq_type ty =
   case Lib.with_exn Type.dest_var_type ty ERR2
    of ("'kd_antiq",Kd) => Kd
     |  _ => raise ERR2
 
-val is_kd_antiq = Lib.can dest_kd_antiq
+val is_kd_antiq_type = Lib.can dest_kd_antiq_type
 end
 
 (* antiquoting types into terms *)
@@ -60,9 +60,9 @@ val is_ty_antiq = Lib.can dest_ty_antiq
 end
 
 (* antiquoting kinds into terms *)
-val kd_ty_antiq = ty_antiq o kd_antiq;
-val dest_kd_ty_antiq = dest_kd_antiq o dest_ty_antiq;
-val is_kd_ty_antiq = Lib.can dest_kd_ty_antiq
+val kd_antiq = ty_antiq o kd_antiq_type;
+val dest_kd_antiq = dest_kd_antiq_type o dest_ty_antiq;
+val is_kd_antiq = Lib.can dest_kd_antiq
 
 fun totalify f x = SOME (f x) handle InternalFailure _ => NONE
 

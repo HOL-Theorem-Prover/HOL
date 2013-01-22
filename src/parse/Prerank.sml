@@ -1228,16 +1228,16 @@ fun pp_prerank pps rk =
  end;
 
 
-fun remove_rk_aq t =
+fun remove_rk_aq_kind t =
+  if parse_rank.is_rk_antiq_kind t then parse_rank.dest_rk_antiq_kind t
+  else raise mk_HOL_ERR "Parse" "rank parser" "antiquotation is not of a rank"
+
+fun remove_rk_aq_type t =
+  if parse_rank.is_rk_antiq_type t then parse_rank.dest_rk_antiq_type t
+  else raise mk_HOL_ERR "Parse" "rank parser" "antiquotation is not of a rank"
+
+fun remove_rk_aq_term t =
   if parse_rank.is_rk_antiq t then parse_rank.dest_rk_antiq t
-  else raise mk_HOL_ERR "Parse" "rank parser" "antiquotation is not of a rank"
-
-fun remove_rk_kd_aq t =
-  if parse_rank.is_rk_kd_antiq t then parse_rank.dest_rk_kd_antiq t
-  else raise mk_HOL_ERR "Parse" "rank parser" "antiquotation is not of a rank"
-
-fun remove_rk_ty_aq t =
-  if parse_rank.is_rk_ty_antiq t then parse_rank.dest_rk_ty_antiq t
   else raise mk_HOL_ERR "Parse" "rank parser" "antiquotation is not of a rank"
 
 val mk_rank = fromRank
@@ -1245,17 +1245,17 @@ val mk_rank = fromRank
 (* rank_p0_rec *)
 val termantiq_constructors =
     {intrank = mk_rank,
-     antiq = fn x => fromRank (remove_rk_ty_aq x)}
+     antiq = fn x => fromRank (remove_rk_aq_term x)}
 
 (* rank_p1_rec *)
 val typeantiq_constructors =
     {intrank = mk_rank,
-     antiq = fn x => fromRank (remove_rk_kd_aq x)}
+     antiq = fn x => fromRank (remove_rk_aq_type x)}
 
 (* rank_p2_rec *)
 val kindantiq_constructors =
     {intrank = mk_rank,
-     antiq = fn x => fromRank (remove_rk_aq x)}
+     antiq = fn x => fromRank (remove_rk_aq_kind x)}
 
 (* rank_p3_rec *)
 val rankantiq_constructors =

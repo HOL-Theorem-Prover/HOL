@@ -842,7 +842,7 @@ local
   exception NeedToRename of term
   val empty_tyvsubst = mkDict Type.raw_compare
   val empty_ctxt = mkDict compare
-  fun type_vars ty = Type.type_vars_set raw_empty_tyset raw_empty_tyset [ty]
+  fun type_vars ty = Type.type_vars_set raw_empty_tyset [ty]
 
   datatype fvinfo = FVI of { currentty : hol_type HOLset.set,
                              current : term HOLset.set,
@@ -1260,7 +1260,7 @@ local
   exception NeedToRename of term
   structure Map = struct open Redblackmap end
   val empty_ctxt = Map.mkDict compare : (term, hol_type) Map.dict
-  fun type_vars ty = Type.type_vars_set raw_empty_tyset raw_empty_tyset [ty]
+  fun type_vars ty = Type.type_vars_set raw_empty_tyset [ty]
   fun inst1 theta ctxt t =
       case t of
         (c as Const(r, ty)) => (case pure_ty_sub theta ty of
@@ -1728,7 +1728,7 @@ local
   exception NeedToRename of term
   val empty_tyvsubst = mkDict Type.raw_compare
   val empty_ctxt = mkDict compare
-  fun type_vars ty = Type.type_vars_set raw_empty_tyset raw_empty_tyset [ty]
+  fun type_vars ty = Type.type_vars_set raw_empty_tyset [ty]
   fun inst_type_vars (inst : hol_type -> hol_type) tyset =
     let fun merge_type_vars (a,s) =
               HOLset.union(s, type_vars (inst a handle Unchanged => a))

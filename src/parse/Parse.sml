@@ -139,17 +139,17 @@ fun fixity s =
 (* rank parsing *)
 (* ============ *)
 
+val rk_antiq_kind = parse_rank.rk_antiq_kind;
+val dest_rk_antiq_kind = parse_rank.dest_rk_antiq_kind;
+val is_rk_antiq_kind = parse_rank.is_rk_antiq_kind;
+
+val rk_antiq_type = parse_rank.rk_antiq_type;
+val dest_rk_antiq_type = parse_rank.dest_rk_antiq_type;
+val is_rk_antiq_type = parse_rank.is_rk_antiq_type;
+
 val rk_antiq = parse_rank.rk_antiq;
 val dest_rk_antiq = parse_rank.dest_rk_antiq;
 val is_rk_antiq = parse_rank.is_rk_antiq;
-
-val rk_kd_antiq = parse_rank.rk_kd_antiq;
-val dest_rk_kd_antiq = parse_rank.dest_rk_kd_antiq;
-val is_rk_kd_antiq = parse_rank.is_rk_kd_antiq;
-
-val rk_ty_antiq = parse_rank.rk_ty_antiq;
-val dest_rk_ty_antiq = parse_rank.dest_rk_ty_antiq;
-val is_rk_ty_antiq = parse_rank.is_rk_ty_antiq;
 
 local
   open parse_rank Prerank
@@ -170,13 +170,13 @@ end
 (* kind parsing *)
 (* ============ *)
 
+val kd_antiq_type = parse_kind.kd_antiq_type;
+val dest_kd_antiq_type = parse_kind.dest_kd_antiq_type;
+val is_kd_antiq_type = parse_kind.is_kd_antiq_type;
+
 val kd_antiq = parse_kind.kd_antiq;
 val dest_kd_antiq = parse_kind.dest_kd_antiq;
 val is_kd_antiq = parse_kind.is_kd_antiq;
-
-val kd_ty_antiq = parse_kind.kd_ty_antiq;
-val dest_kd_ty_antiq = parse_kind.dest_kd_ty_antiq;
-val is_kd_ty_antiq = parse_kind.is_kd_ty_antiq;
 
 local
   open parse_kind Prekind

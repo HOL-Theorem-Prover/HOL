@@ -36,7 +36,7 @@ sig
                           -> hol_type * hol_type -> order
   val prim_compare0 : int -> (hol_type,int)Binarymap.dict * (hol_type,int)Binarymap.dict
                           -> hol_type * hol_type -> order
-  val type_vars_set : hol_type HOLset.set -> hol_type HOLset.set -> hol_type list -> hol_type HOLset.set
+  val type_vars_set : hol_type HOLset.set -> hol_type list -> hol_type HOLset.set
   val free_names    : hol_type -> string HOLset.set
   val inst_rank_kind1 : rank -> (kind, kind)Lib.subst -> (tyvar, kind)Binarymap.dict
                         -> hol_type -> hol_type
