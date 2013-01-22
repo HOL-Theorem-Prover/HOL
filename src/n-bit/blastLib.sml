@@ -1013,32 +1013,32 @@ end
 
 local
   fun is_word_index tm =
-         case Lib.total wordsSyntax.dest_index tm
-         of SOME (w,i) => numLib.is_numeral i andalso Lib.can dim_of_word w
-          | NONE => false
+     case Lib.total wordsSyntax.dest_index tm of
+        SOME (w, i) => numLib.is_numeral i andalso Lib.can dim_of_word w
+      | NONE => false
 in
   fun is_blastable tm =
-         is_word_index tm orelse
-         (case Lib.total boolSyntax.dest_eq tm
-          of SOME (w,v) => Lib.can dim_of_word w
-           | NONE =>
-               (case Lib.total wordsSyntax.dest_word_lo tm
-                of SOME (w,_) => Lib.can dim_of_word w
-                 | NONE => false))
+     is_word_index tm orelse
+     (case Lib.total boolSyntax.dest_eq tm
+      of SOME (w, v) => Lib.can dim_of_word w
+       | NONE =>
+           (case Lib.total wordsSyntax.dest_word_lo tm
+            of SOME (w, _) => Lib.can dim_of_word w
+             | NONE => false))
 
   fun full_is_blastable tm =
-         is_blastable tm orelse
-         (case Lib.total boolSyntax.dest_strip_comb tm
-          of SOME (s,[w,_]) =>
-              (Lib.can dim_of_word w andalso
-               Lib.mem s
-                ["words$word_lt", "words$word_le", "words$word_gt",
-                 "words$word_ge", "words$word_hi", "words$word_hs",
-                 "words$word_ls"])
-           | SOME (s,[w]) =>
-              (Lib.can dim_of_word w andalso
-               Lib.mem s ["words$word_msb", "words$word_lsb"])
-           | _ => false)
+     is_blastable tm orelse
+     (case Lib.total boolSyntax.dest_strip_comb tm
+      of SOME ("words$word_bit", [_, w]) => Lib.can dim_of_word w
+       | SOME (s, [w, _]) =>
+           Lib.can dim_of_word w andalso
+           Lib.mem s
+            ["words$word_lt", "words$word_le", "words$word_gt",
+             "words$word_ge", "words$word_hi", "words$word_hs", "words$word_ls"]
+       | SOME (s, [w]) =>
+           Lib.can dim_of_word w andalso
+           Lib.mem s ["words$word_msb", "words$word_lsb"]
+       | _ => false)
 end
 
 local
