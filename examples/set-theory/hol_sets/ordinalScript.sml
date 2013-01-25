@@ -1604,17 +1604,13 @@ val fixpoints_exist = store_thm(
   conj_tac
   >- (match_mp_tac suple_thm >> simp[] >> qexists_tac `0` >> simp[]) >>
   `{ FUNPOW f n a | n | T } ≠ ∅` by simp[EXTENSION] >>
-  simp[] >> match_mp_tac ordle_ANTISYM >>
-  dsimp[sup_thm, impI, IMAGE_cardleq_rwt] >> ntac 2 strip_tac
-  >- (match_mp_tac suple_thm >> simp[] >>
-      metis_tac [arithmeticTheory.FUNPOW_SUC]) >>
-  Cases_on `n` >> simp[]
-  >- (qsuff_tac `f a ≤ sup (IMAGE f {FUNPOW f n a | n | T})`
-      >- metis_tac [ordle_TRANS] >>
-      match_mp_tac suple_thm >> dsimp[IMAGE_cardleq_rwt] >>
-      qexists_tac `0` >> simp[]) >>
-  match_mp_tac suple_thm >> dsimp[IMAGE_cardleq_rwt] >>
-  simp[arithmeticTheory.FUNPOW_SUC] >> metis_tac[])
+  simp[] >> match_mp_tac sup_eq_sup >>
+  dsimp[IMAGE_cardleq_rwt] >>
+  `∀n. ∃m. f (FUNPOW f n a) ≤ FUNPOW f m a`
+    by (strip_tac >> qexists_tac `SUC n` >>
+        simp[arithmeticTheory.FUNPOW_SUC]) >>
+  `∀n. ∃m. FUNPOW f n a ≤ f (FUNPOW f m a)`
+    by (strip_tac >> qexists_tac `n` >> simp[]) >> simp[]);
 
 val x_le_ordEXP_x = store_thm(
   "x_le_ordEXP_x",
