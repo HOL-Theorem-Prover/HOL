@@ -2053,4 +2053,35 @@ val CNF_nat = store_thm(
   ``CNF &n = if n = 0 then [] else [(&n,0)]``,
   rw[] >> match_mp_tac polyform_UNIQUE >> rw[is_polyform_def] >> decide_tac);
 
+val _ = overload_on ("ordLOG", ``λb x. SND (HD (polyform b x))``)
+val _ = overload_on ("olog", ``λx. ordLOG ω x``)
+val ordLOG_correct = store_thm(
+  "ordLOG_correct",
+  ``1 < b ∧ 0 < x ⇒ ordEXP b (ordLOG b x) ≤ x ∧
+    ∀a. ordLOG b x < a ⇒ x < ordEXP b a``,
+  strip_tac >>
+  `(polyform b x = []) ∨ ∃c e t. polyform b x = (c,e) :: t`
+    by metis_tac [pairTheory.pair_CASES, listTheory.list_CASES]
+  >- (pop_assum mp_tac >> fs[polyform_EQ_NIL] >> strip_tac >> fs[]) >>
+  simp[] >>
+  `is_polyform b (polyform b x) ∧ (x = eval_poly b (polyform b x))`
+    by metis_tac [polyform_def] >>
+  first_assum SUBST1_TAC >> simp[] >>
+  `0 < c ∧ c < b ∧ is_polyform b t` by metis_tac[is_polyform_CONS_E] >>
+  `c ≠ 0` by (strip_tac >> fs[]) >>
+  conj_tac
+  >- (match_mp_tac ordle_TRANS >> qexists_tac `b ** e * c` >> simp[]) >>
+  rpt strip_tac >>
+  (is_polyform_head_dominates_tail
+     |> Q.INST [`a` |-> `b`, `c` |-> `1`, `e` |-> `a`, `t` |-> `polyform b x`]
+     |> MP_TAC) >> simp[] >> disch_then match_mp_tac >>
+  simp[is_polyform_def] >> metis_tac[]);
+
+(* |- 0 < x ⇒ ω ** olog x ≤ x ∧ ∀a. olog x < a ⇒ x < ω ** a *)
+val olog_correct = save_thm(
+  "olog_correct",
+  ordLOG_correct |> Q.INST [`b` |-> `ω`] |> SIMP_RULE (srw_ss()) []);
+
+
+
 val _ = export_theory()
