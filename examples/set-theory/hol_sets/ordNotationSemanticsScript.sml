@@ -486,4 +486,78 @@ val ord_mult_correct = store_thm(
   Q.UNDISCH_THEN `oless (expt t1) e1` mp_tac >>
   simp[oless_modelled, is_ord_expt, tail_dominated])
 
+(* also showing the more efficient version of multiplication correct *)
+val model_expt0 =
+    notation_exists
+      |> Q.SPEC `⟦a⟧`
+      |> SIMP_RULE (srw_ss() ++ boolSimps.CONJ_ss)
+                   [ordModel_lt_epsilon0, ASSUME ``is_ord a /\ 0 < ⟦a⟧``,
+                    ordModel_11]
+      |> DISCH_ALL
+
+val model_expt = store_thm(
+  "model_expt",
+  ``is_ord a ⇒ (⟦expt a⟧ = if a = End 0 then 0 else olog ⟦a⟧)``,
+  rw[] >>
+  `0 < ⟦a⟧` by(spose_not_then assume_tac >> fs[] >> metis_tac [osyntax_EQ_0]) >>
+  simp[model_expt0]);
+
+val ord_less_expt_monotone = store_thm(
+  "ord_less_expt_monotone",
+  ``ord_less x y ⇒ (expt x = expt y) ∨ ord_less (expt x) (expt y)``,
+  rw[ord_less_modelled, is_ord_expt, model_expt] >>
+  bsimp[GSYM ordModel_11, is_ord_rules, is_ord_expt, model_expt, ordModel_def]
+  >- metis_tac [ordle_lteq, ordlt_ZERO] >>
+  qsuff_tac `olog ⟦x⟧ ≤ olog ⟦y⟧` >- metis_tac [ordle_lteq] >> strip_tac >>
+  `0 < ⟦x⟧ :α ordinal ∧ 0 < ⟦y⟧ : α ordinal`
+    by (strip_tac >> spose_not_then strip_assume_tac >> fs[] >>
+        metis_tac [osyntax_EQ_0]) >>
+  `⟦y⟧ :α ordinal < ω ** olog ⟦x⟧ ∧
+   ω ** olog ⟦x⟧ ≤ ⟦x⟧ : α ordinal` by metis_tac [olog_correct] >>
+  metis_tac [ordlet_TRANS, ordlt_TRANS, ordlt_REFL]);
+
+val jar_lemma3 = store_thm(
+  "jar_lemma3",
+  ``ord_less d b ⇒ cf1 a b ≤ cf1 a d``,
+  Induct_on `cf1 a b` >- metis_tac[DECIDE ``0n ≤ n``] >>
+  rpt strip_tac >>
+  `∃n. (a = End n) ∨ (∃e1 c1 k1. a = Plus e1 c1 k1)`
+    by (Cases_on `a` >> simp[]) >- fs[cf1_def] >>
+  pop_assum SUBST_ALL_TAC >>
+  RULE_ASSUM_TAC (SIMP_RULE (srw_ss()) [cf1_def]) >>
+  `ord_less (expt b) e1` by (spose_not_then assume_tac >> fs[]) >>
+  full_simp_tac (srw_ss() ++ ARITH_ss) [arithmeticTheory.ADD1] >>
+  first_x_assum (qspecl_then [`k1`, `b`] mp_tac) >> simp[] >>
+  qsuff_tac `ord_less (expt d) e1` >- simp[] >>
+  `(expt d = expt b) ∨ ord_less (expt d) (expt b)`
+    by metis_tac [ord_less_expt_monotone]
+  >- simp[] >> metis_tac [ord_less_modelled, ordlt_TRANS])
+
+val _ = export_rewrites ["ordinalNotation.restn_def",
+                         "ordinalNotation.coeff_def"]
+
+val jar_lemma4 = store_thm(
+  "jar_lemma4",
+  ``∀a n b. n ≤ cf1 a b ⇒ (cf1 a b = cf2 a b n)``,
+  simp[cf2_def] >> Induct_on `a` >> simp[] >>
+  map_every qx_gen_tac [`n`, `m`, `b`] >>
+  Cases_on `ord_less (expt b) a` >> simp[] >> strip_tac >>
+  `(m = 0) ∨ (∃k. m = SUC k)` by (Cases_on `m` >> simp[]) >> simp[] >>
+  asm_simp_tac (srw_ss() ++ numSimps.ARITH_NORM_ss) [arithmeticTheory.ADD1] >>
+  asimp[]);
+
+val jar_lemma5 = store_thm(
+  "jar_lemma5",
+  ``(padd a b (cf1 a b) = ord_add a b)``,
+  Induct_on `cf1 a b` >> simp[] >- metis_tac [padd_def] >>
+  map_every qx_gen_tac [`a`, `b`] >>
+  `∃n. (a = End n) ∨ (∃e1 c1 k1. a = Plus e1 c1 k1)`
+    by (Cases_on `a` >> simp[]) >> simp[cf1_def] >>
+  Cases_on `ord_less (expt b) e1` >> asimp[arithmeticTheory.ADD1] >> rw[] >>
+  first_x_assum (qspecl_then [`k1`, `b`] mp_tac) >> simp[] >>
+  `cf1 k1 b + 1 = SUC (cf1 k1 b)` by decide_tac >> simp[padd_def] >>
+  strip_tac >> Cases_on `b` >> simp[ord_add_def] >> fs[ord_less_def] >>
+  qpat_assum `oless XX YY` mp_tac >>
+  simp[oless_modelled] >> rw[] >> metis_tac [ordlt_TRANS, ordlt_REFL]);
+
 val _ = export_theory()
