@@ -787,6 +787,42 @@ val ord_mult_def =
 
 val _ = Count.report (Count.read meter);
 
+(* ----------------------------------------------------------------------
+    More efficient multiplication (again from Manolios & Vroon)
+   ---------------------------------------------------------------------- *)
+
+val restn_def = Define`
+  (restn a 0 = a) /\
+  (restn a (SUC n) = restn (tail a) n)
+`;
+
+val cf1_def = Define`
+  (cf1 (End _) b = 0) /\
+  (cf1 (Plus e1 c1 k1) b = if ord_less (expt b) e1 then 1 + cf1 k1 b
+                           else 0)
+`
+val _ = export_rewrites ["cf1_def"]
+
+val cf2_def = Define`cf2 a b n = n + cf1 (restn a n) b`
+
+val padd_def = Define`
+  (padd a b 0 = ord_add a b) /\
+  (padd a b (SUC n) = Plus (expt a) (coeff a) (padd (tail a) b n))
+`
+
+val pmult_def = tDefine "pmult" `
+  pmult a b n =
+    if (a = End 0) \/ (b = End 0) then End 0
+    else
+      case (a,b) of
+          (End i, End j) => End (i * j)
+        | (Plus e1 c1 k1, End j) => Plus e1 (c1 * j) k1
+        | (_, Plus e2 c2 k2) =>
+          let m = cf2 (expt a) e2 n
+          in
+            Plus (padd (expt a) e2 m) c2 (pmult a k2 m)
+` (WF_REL_TAC `measure (osyntax_size o FST o SND)`)
+
 val _ = export_theory();
 
 (*---------------------------------------------------------------------------*)
