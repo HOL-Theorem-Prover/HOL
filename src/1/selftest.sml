@@ -272,6 +272,19 @@ val tpp = let open testutils
                unicode_off (raw_backend testutils.tpp)
              end
 
+fun typp s = let
+  open testutils
+  val ty = Parse.Type [QUOTE s]
+  val _ = tprint ("Testing p/printing of "^s)
+  val res = unicode_off (raw_backend type_to_string) ty
+in
+  if s <> res then die "FAILED!\n" else print "OK\n"
+end
+
+val _ = app typp [":bool", ":bool -> bool", ":'a -> bool",
+                  ":'a -> 'b -> 'c",
+                  ":(bool -> bool) -> 'a"]
+
 val _ = app tpp ["let x = T in x /\\ y",
                  "(let x = T in \\y. x /\\ y) p",
                  "f ($/\\ p)",
