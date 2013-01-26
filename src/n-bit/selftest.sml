@@ -30,9 +30,17 @@ val ty2 = Parse.Type`:('a + 'b)[32]`
 val _ = if Type.compare(ty1,ty2) = EQUAL then print "OK\n"
         else die "FAILED"
 
-val _ = print (prs 65 "Printing :('a + 'b)[32]")
+val _ = tprint "Printing :('a + 'b)[32]"
 val _ = if type_to_string ty2 = ":('a + 'b)[32]" then print "OK\n"
         else die "FAILED"
+
+val _ = tprint "Parsing abbreviated word types"
+val u8 = fcpSyntax.mk_cart_type(bool, fcpSyntax.mk_int_numeric_type 8)
+val _ = type_abbrev("u8", u8)
+val _ = if Type.compare(Parse.Type`:u8`, u8) <> EQUAL then die "FAILED!"
+        else print "OK\n"
+val _ = tprint "Printing abbreviated word types"
+val _ = if type_to_string u8 = ":u8" then print "OK\n" else die "FAILED!"
 
 fun test (c:conv) tm = let
   val rt = Timer.startRealTimer ()
