@@ -40,8 +40,6 @@ val ucord_sup_exists_lemma = store_thm(
      by metis_tac[cardleq_def] >>
   `(∀u. countableOrd (f u)) ∧ (∀u v. f u = f v ⇒ u = v)`
       by fs[INJ_DEF] >>
-  `¬SURJ f 𝕌(:'a ucinf) { a | countableOrd a}`
-    by metis_tac [cardeq_def, BIJ_DEF] >>
   qabbrev_tac `fU = IMAGE f 𝕌(:'a ucinf)` >>
   `fU ≼ 𝕌(:'a ucinf)` by simp[Abbr`fU`, IMAGE_cardleq] >>
   first_assum (ASSUME_TAC o MATCH_MP (GEN_ALL sup_thm)) >>
