@@ -32,7 +32,8 @@ val Unum_cardle_ucinf = store_thm(
   ``𝕌(:num) ≼ 𝕌(:'a ucinf)``,
   simp[cardleq_lteq, Unum_cardlt_ucinf]);
 
-val sup_exists_lemma = prove(
+val ucord_sup_exists_lemma = store_thm(
+  "ucord_sup_exists_lemma",
   ``{ a:'a ucord | countableOrd a } ≼ univ(:'a ucinf)``,
   spose_not_then assume_tac >> fs[cardlt_lenoteq] >>
   `∃f. INJ f 𝕌(:'a ucinf) {a:'a ucord | countableOrd a}`
@@ -89,7 +90,7 @@ val _ = overload_on ("ω₁", ``omega1``)
 val x_lt_omega1_countable = store_thm(
   "x_lt_omega1_countable",
   ``x < ω₁ ⇔ countableOrd x``,
-  simp[omega1_def, sup_thm, sup_exists_lemma, EQ_IMP_THM] >>
+  simp[omega1_def, sup_thm, ucord_sup_exists_lemma, EQ_IMP_THM] >>
   rpt strip_tac >- metis_tac[countableOrds_dclosed] >>
   qexists_tac `x⁺` >> simp[preds_ordSUC]);
 
