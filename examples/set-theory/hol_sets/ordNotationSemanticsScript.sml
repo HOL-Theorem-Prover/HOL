@@ -516,8 +516,8 @@ val ord_less_expt_monotone = store_thm(
    ω ** olog ⟦x⟧ ≤ ⟦x⟧ : α ordinal` by metis_tac [olog_correct] >>
   metis_tac [ordlet_TRANS, ordlt_TRANS, ordlt_REFL]);
 
-val jar_lemma3 = store_thm(
-  "jar_lemma3",
+val mvjar_lemma3 = store_thm(
+  "mvjar_lemma3",
   ``ord_less d b ⇒ cf1 a b ≤ cf1 a d``,
   Induct_on `cf1 a b` >- metis_tac[DECIDE ``0n ≤ n``] >>
   rpt strip_tac >>
@@ -536,8 +536,8 @@ val jar_lemma3 = store_thm(
 val _ = export_rewrites ["ordinalNotation.restn_def",
                          "ordinalNotation.coeff_def"]
 
-val jar_lemma4 = store_thm(
-  "jar_lemma4",
+val mvjar_lemma4 = store_thm(
+  "mvjar_lemma4",
   ``∀a n b. n ≤ cf1 a b ⇒ (cf1 a b = cf2 a b n)``,
   simp[cf2_def] >> Induct_on `a` >> simp[] >>
   map_every qx_gen_tac [`n`, `m`, `b`] >>
@@ -546,8 +546,8 @@ val jar_lemma4 = store_thm(
   asm_simp_tac (srw_ss() ++ numSimps.ARITH_NORM_ss) [arithmeticTheory.ADD1] >>
   asimp[]);
 
-val jar_lemma5 = store_thm(
-  "jar_lemma5",
+val mvjar_lemma5 = store_thm(
+  "mvjar_lemma5",
   ``(padd a b (cf1 a b) = ord_add a b)``,
   Induct_on `cf1 a b` >> simp[] >- metis_tac [padd_def] >>
   map_every qx_gen_tac [`a`, `b`] >>
@@ -559,5 +559,52 @@ val jar_lemma5 = store_thm(
   strip_tac >> Cases_on `b` >> simp[ord_add_def] >> fs[ord_less_def] >>
   qpat_assum `oless XX YY` mp_tac >>
   simp[oless_modelled] >> rw[] >> metis_tac [ordlt_TRANS, ordlt_REFL]);
+
+val better_pmult_def = store_thm(
+  "better_pmult_def",
+  ``(pmult a (Plus be bc bt) n =
+      if a = End 0 then End 0
+      else
+        let m = cf2 (expt a) be n
+        in
+          Plus (padd (expt a) be m) bc (pmult a bt m))``,
+  Cases_on `a` >> simp[SimpLHS, Once pmult_def] >> simp[]);
+
+val better_ord_mult_def = store_thm(
+  "better_ord_mult_def",
+  ``ord_mult a (Plus be bc bt) =
+      if a = End 0 then End 0
+      else Plus (ord_add (expt a) be) bc (ord_mult a bt)``,
+  Cases_on `a` >> simp[SimpLHS, Once ord_mult_def] >> simp[]);
+
+val mvjar_theorem10 = store_thm(
+  "mvjar_theorem10",
+  ``∀n a b. is_ord a ∧ is_ord b ∧ n ≤ cf1 (expt a) (expt b) ⇒
+            (⟦pmult a b n⟧ = ⟦a⟧ * ⟦b⟧)``,
+  Induct_on `b`
+  >- (Cases_on `a` >> simp[pmult_def] >> rw[] >>
+      qmatch_abbrev_tac
+        `ω ** ⟦e1⟧ * &(i * j) + ⟦t⟧ = (ω ** ⟦e1⟧ * &i + ⟦t⟧) * &j` >>
+      markerLib.RM_ALL_ABBREVS_TAC >>
+      `0 < i ∧ 0 < j` by decide_tac >>
+      qsuff_tac `⟦t⟧ < ω ** ⟦e1⟧` >- simp[kexp_sum_times_nat] >>
+      match_mp_tac (GEN_ALL tail_dominated) >>
+      metis_tac [oless_modelled, is_ord_expt]) >>
+  rpt strip_tac >>
+  qmatch_abbrev_tac
+    `⟦pmult a (Plus be bc bt) nn⟧ = ⟦a⟧ * ⟦Plus be bc bt⟧` >>
+  markerLib.RM_ALL_ABBREVS_TAC >>
+  qabbrev_tac `m = cf2 (expt a) be nn` >>
+  `m = cf1 (expt a) be` by metis_tac [mvjar_lemma4, expt_def] >>
+  RULE_ASSUM_TAC (SIMP_RULE (srw_ss()) []) >>
+  `m ≤ cf1 (expt a) (expt bt)`
+    by metis_tac [mvjar_lemma3, ord_less_def, is_ord_expt] >>
+  simp[Once better_pmult_def] >> Cases_on `a = End 0` >>
+  simp[mvjar_lemma5, ord_add_correct, is_ord_expt] >>
+  qmatch_abbrev_tac `LHS = RHS` >>
+  qsuff_tac `LHS = ⟦ord_mult a (Plus be bc bt)⟧`
+  >- simp[Abbr`RHS`, ord_mult_correct] >>
+  simp[Abbr`LHS`, Once better_ord_mult_def, ord_add_correct] >>
+  simp[ord_mult_correct, ord_add_correct, is_ord_expt]);
 
 val _ = export_theory()
