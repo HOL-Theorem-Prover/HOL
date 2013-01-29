@@ -350,6 +350,37 @@ val _ = app tpp [
            bound "f", " ", fx, " /\\ ", fy])
 ]
 
+open testutils
+val test = tpp_expected
+             |> Lib.with_flag (linewidth,!Globals.linewidth)
+             |> unicode_off
+             |> raw_backend
+val _ = app test [
+      {input = "if oless e1 e2 /\\ oless x y /\\ foobabbbbbbb\n\
+               \then p /\\ q /\\ r /\\ ppppp xxxx yyyyy\n\
+               \else if (e1 = e2) /\\ k1 <> k2\n\
+               \then T else if (e1 = e2) /\\ (k1 = k2) /\\ oless t1 t2\n\
+               \then T else F",
+       testf = K ("Large COND 1"),
+       output = "if oless e1 e2 /\\ oless x y /\\ foobabbbbbbb then\n\
+                \  p /\\ q /\\ r /\\ ppppp xxxx yyyyy\n\
+                \else if (e1 = e2) /\\ k1 <> k2 then T\n\
+                \else if (e1 = e2) /\\ (k1 = k2) /\\ oless t1 t2 then T\n\
+                \else F"},
+      {input = "if oless e1 e2 /\\ oless x y /\\ foobabb\n\
+               \then p /\\ q /\\ r /\\ ppppp xxxx\n\
+               \else if (e1 = e2) /\\ k1 <> k2\n\
+               \then T else if (e1 = e2) /\\ (k1 = k2) /\\ oless t1 t2\n\
+               \then T else F",
+       testf = K ("Large COND 2"),
+       output = "if oless e1 e2 /\\ oless x y /\\ foobabb then\
+                \ p /\\ q /\\ r /\\ ppppp xxxx\n\
+                \else if (e1 = e2) /\\ k1 <> k2 then T\n\
+                \else if (e1 = e2) /\\ (k1 = k2) /\\ oless t1 t2 then T\n\
+                \else F"}
+]
+
+
 (* test DiskThms *)
 val _ = let
   val _ = tprint "Testing DiskThms"
