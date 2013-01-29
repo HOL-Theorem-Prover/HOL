@@ -168,18 +168,19 @@ fun avoid_symbolmerge G (add_string, add_xstring, add_break) = let
   fun new_addxstring f (xstr as {s,sz,ann}) ls = let
     val allspaces = str_all (equal #" ") s
   in
-    case sz of SOME 0 => nothing
-    |_=> (if ls = " " orelse allspaces then f xstr
-          else if not (!avoid_symbol_merges) then f xstr
-          else if String.sub(ls, size ls - 1) = #"\"" then f xstr
-          (* special case the quotation because term_tokens relies on
-             the base token technology (see base_lexer) to separate the
-             end of a string from the next character *)
-          else if creates_comment (ls, s) orelse bad_merge (ls, s) then
-            add_string " " >> f xstr
-          else
-            f xstr) >>
-         setlaststring (if allspaces then " " else s)
+    case s of
+      "" => nothing
+    | _ => (if ls = " " orelse allspaces then f xstr
+            else if not (!avoid_symbol_merges) then f xstr
+            else if String.sub(ls, size ls - 1) = #"\"" then f xstr
+            (* special case the quotation because term_tokens relies on
+               the base token technology (see base_lexer) to separate the
+               end of a string from the next character *)
+            else if creates_comment (ls, s) orelse bad_merge (ls, s) then
+              add_string " " >> f xstr
+            else
+              f xstr) >>
+           setlaststring (if allspaces then " " else s)
   end
   fun new_addstring f s = new_addxstring (fn{s,...}=>f s) {s=s,sz=NONE,ann=NONE}
   fun new_add_break (p as (n,m)) =
