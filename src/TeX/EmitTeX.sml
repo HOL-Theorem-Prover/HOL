@@ -412,7 +412,7 @@ let val {add_string,add_break,begin_block,add_newline,end_block,...} =
              if ll < 2 then
                ()
              else
-               (S " of ";
+               (S " "; S "of"; BR(1,0);
                 BB PP.INCONSISTENT 0;
                   app (fn x => (TP x; S " "; S "=>"; BR(1,0)))
                       (List.take(l, ll - 2));
