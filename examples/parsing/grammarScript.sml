@@ -8,12 +8,9 @@ val _ = new_theory "grammar"
 
 val _ = ParseExtras.tight_equality()
 
-local open fcpTheory in end  (* for finite_image type *)
-
 val _ = type_abbrev("inf", ``:'a + num``)
-val _ = type_abbrev("tok", ``:'a finite_image``)
 val _ = Hol_datatype `
-  symbol = TOK of 'a finite_image | NT of 'b inf
+  symbol = TOK of 'a | NT of 'b inf
 `;
 
 val isTOK_def = Define`(isTOK (TOK tok) = T) ∧ (isTOK (NT n) = F)`
@@ -26,14 +23,14 @@ val _ = Hol_datatype`
 |> `;
 
 val _ = Hol_datatype`
-  parsetree = Lf of ('a,'b) symbol => 'data
+  parsetree = Lf of ('a,'b) symbol
             | Nd of 'b inf => parsetree list
 `;
 
 val ptree_size_def = tDefine "ptree_size" `
-  (ptree_size (Lf tok _) = 1) ∧
+  (ptree_size (Lf tok) = 1) ∧
   (ptree_size (Nd nt children) = 1 + SUM (MAP ptree_size children))
-` (WF_REL_TAC `measure (parsetree_size (K 1) (K 1) (K 0))` THEN
+` (WF_REL_TAC `measure (parsetree_size (K 1) (K 1))` THEN
    Induct_on `children` THEN
    SRW_TAC [][definition "parsetree_size_def"] THEN1 DECIDE_TAC THEN
    RES_TAC THEN POP_ASSUM (Q.SPEC_THEN `nt` MP_TAC) THEN
@@ -44,15 +41,14 @@ val ptree_size_def = save_thm(
   CONV_RULE (DEPTH_CONV ETA_CONV) ptree_size_def)
 val _ = export_rewrites ["ptree_size_def"]
 
-
 val ptree_head_def = Define`
-  (ptree_head (Lf tok _) = tok) ∧
+  (ptree_head (Lf tok) = tok) ∧
   (ptree_head (Nd nt children) = NT nt)
 `;
 val _ = export_rewrites ["ptree_head_def"]
 
 val valid_ptree_def = tDefine "valid_ptree" `
-  (valid_ptree G (Lf t _) ⇔ T) ∧
+  (valid_ptree G (Lf _) ⇔ T) ∧
   (valid_ptree G (Nd nt children) ⇔
     (nt,MAP ptree_head children) ∈ G.rules ∧
     ∀pt. pt ∈ set children ⇒ valid_ptree G pt)`
@@ -62,8 +58,8 @@ val valid_ptree_def = tDefine "valid_ptree" `
 val _ = export_rewrites ["valid_ptree_def"]
 
 val ptree_fringe_def = tDefine "ptree_fringe" `
-  (ptree_fringe (Lf t _) = [t]) ∧
-  (ptree_fringe (Nd s children) = FLAT (MAP ptree_fringe children))
+  (ptree_fringe (Lf t) = [t]) ∧
+  (ptree_fringe (Nd _ children) = FLAT (MAP ptree_fringe children))
 ` (WF_REL_TAC `measure ptree_size` THEN Induct_on `children` THEN
    SRW_TAC [][ptree_size_def] THEN1 DECIDE_TAC THEN
    FULL_SIMP_TAC (srw_ss() ++ ETA_ss) [ptree_size_def] THEN
@@ -74,26 +70,6 @@ val ptree_fringe_def = save_thm(
   CONV_RULE (DEPTH_CONV ETA_CONV) ptree_fringe_def)
 val _ = export_rewrites ["ptree_fringe_def"]
 
-val ptree_dfringe_def = tDefine "ptree_dfringe" `
-  (ptree_dfringe (Lf t d) = [(t,d)]) ∧
-  (ptree_dfringe (Nd s subs) = FLAT (MAP ptree_dfringe subs))
-` (WF_REL_TAC `measure ptree_size` THEN Induct_on `subs` THEN
-   SRW_TAC [][ptree_size_def] THEN1 DECIDE_TAC THEN
-   FULL_SIMP_TAC (srw_ss() ++ ETA_ss) [ptree_size_def] THEN
-   RES_TAC THEN DECIDE_TAC)
-
-val ptree_dfringe_def = save_thm(
-  "ptree_dfringe_def",
-  CONV_RULE (DEPTH_CONV ETA_CONV) ptree_dfringe_def);
-val _ = export_rewrites ["ptree_dfringe_def"]
-
-val ptree_fringe_dfringe = store_thm(
-  "ptree_fringe_dfringe",
-  ``∀t. ptree_fringe t = MAP FST (ptree_dfringe t)``,
-  HO_MATCH_MP_TAC (theorem "ptree_dfringe_ind") THEN
-  SRW_TAC [][] THEN SRW_TAC [][rich_listTheory.MAP_FLAT] THEN
-  AP_TERM_TAC THEN SRW_TAC [][MAP_MAP_o, MAP_EQ_f]);
-
 val complete_ptree_def = Define`
   complete_ptree G pt ⇔
     valid_ptree G pt ∧ ptree_head pt = NT G.start ∧
@@ -101,8 +77,7 @@ val complete_ptree_def = Define`
 
 val language_def = Define`
   language G =
-   { ts | ∃pt:('a,'b,unit)parsetree.
-            complete_ptree G pt ∧ ptree_fringe pt = MAP TOK ts }`
+   { ts | ∃pt. complete_ptree G pt ∧ ptree_fringe pt = MAP TOK ts }`
 
 val derive_def = Define`
   derive G sf1 sf2 ⇔
@@ -161,7 +136,7 @@ val derives_paste_horizontally = store_thm(
 
 val ptree_ind = save_thm(
   "ptree_ind",
-  TypeBase.induction_of ``:('a,'b,'d)parsetree``
+  TypeBase.induction_of ``:('a,'b)parsetree``
      |> Q.SPECL [`P`, `λl. ∀pt. MEM pt l ⇒ P pt`]
      |> SIMP_RULE (srw_ss() ++ CONJ_ss) []
      |> SIMP_RULE (srw_ss()) [DISJ_IMP_THM, FORALL_AND_THM]
@@ -233,14 +208,14 @@ val fringe_element = store_thm(
   "fringe_element",
   ``∀pt p x s.
       ptree_fringe pt = p ++ [x] ++ s ⇒
-      ((∃d. pt = Lf x d) ∧ p = [] ∧ s = []) ∨
+      (pt = Lf x ∧ p = [] ∧ s = []) ∨
       ∃nt ip is ts1 xpt ts2.
         pt = Nd nt (ts1 ++ [xpt] ++ ts2) ∧
         p = FLAT (MAP ptree_fringe ts1) ++ ip ∧
         s = is ++ FLAT (MAP ptree_fringe ts2) ∧
         ptree_fringe xpt = ip ++ [x] ++ is``,
   gen_tac >>
-  `(∃tok d. pt = Lf tok d) ∨ (∃sym ptl. pt = Nd sym ptl)`
+  `(∃tok. pt = Lf tok) ∨ (∃sym ptl. pt = Nd sym ptl)`
     by (Cases_on `pt` >> simp[]) >- simp[APPEND_EQ_CONS] >>
   simp[] >> pop_assum (K ALL_TAC) >> rpt gen_tac >>
   simp[Once FLAT_EQ_APPEND] >>
@@ -311,14 +286,14 @@ val fringe_element = store_thm(
 
 val derive_fringe = store_thm(
   "derive_fringe",
-  ``∀(pt:('a,'b,'c)parsetree) sf.
+  ``∀pt sf.
       derive G (ptree_fringe pt) sf ∧ valid_ptree G pt ⇒
-      ∃pt':('a,'b,'c)parsetree.
+      ∃pt'.
          ptree_head pt' = ptree_head pt ∧ valid_ptree G pt' ∧
          ptree_fringe pt' = sf``,
   ho_match_mp_tac ptree_ind >> rw[]
   >- (fs[derive_def, APPEND_EQ_CONS] >>
-      qexists_tac `Nd sym (MAP (λs. Lf s d) sf)` >> rw[MEM_MAP]
+      qexists_tac `Nd sym (MAP Lf sf)` >> rw[MEM_MAP]
       >- rw[MAP_MAP_o, combinTheory.o_DEF]
       >- rw[] >>
       rw[MAP_MAP_o, combinTheory.o_DEF] >>
@@ -341,19 +316,19 @@ val derive_fringe = store_thm(
   simp[rich_listTheory.FLAT_APPEND, DISJ_IMP_THM, FORALL_AND_THM]);
 
 val lemma = prove(
-  ``∀pt:('a,'b,'c)parsetree ts.
+  ``∀pt ts.
       valid_ptree G pt ∧ ptree_head pt = NT G.start ∧
       derives G (ptree_fringe pt) (MAP TOK ts) ⇒
-      ∃pt':('a,'b,'c)parsetree.
+      ∃pt'.
          valid_ptree G pt' ∧ ptree_head pt' = NT G.start ∧
          ptree_fringe pt' = MAP TOK ts``,
   qsuff_tac
     `∀sf1 sf2.
        derives G sf1 sf2 ⇒
-       ∀pt:('a,'b,'c)parsetree ts.
+       ∀pt ts.
           (sf2 = MAP TOK ts) ∧ valid_ptree G pt ∧
           ptree_head pt = NT G.start ∧ ptree_fringe pt = sf1 ⇒
-          ∃pt':('a,'b,'c)parsetree.
+          ∃pt'.
              valid_ptree G pt' ∧ ptree_head pt' = NT G.start ∧
              ptree_fringe pt' = MAP TOK ts`
     >- metis_tac[] >>
@@ -366,16 +341,8 @@ val derives_language = store_thm(
   rw[language_def, EXTENSION, complete_ptree_def] >> eq_tac
   >- metis_tac[valid_ptree_derive] >>
   strip_tac >>
-  qspecl_then
-    [`Lf (NT G.start) ()`, `x`]
-    mp_tac
-    (lemma |> INST_TYPE [gamma |-> ``:unit``]) >> simp[] >>
+  qspecl_then [`Lf (NT G.start)`, `x`] mp_tac lemma >> simp[] >>
   disch_then (qxch `pt` strip_assume_tac) >> qexists_tac `pt` >>
   simp[] >> asm_simp_tac (srw_ss() ++ DNF_ss) [MEM_MAP]);
-
-val extlanguage_def = Define`
-  extlanguage G cf = {
-    l | MAP FST l ∈ language G ∧ ∀e. MEM e l ⇒ cf (SND e) = FST e
-  }`
 
 val _ = export_theory()

@@ -8,12 +8,12 @@ val _ = new_theory "pegexec"
 
 val _ = Hol_datatype`
   kont =
-    ksym of ('atok,'bnt,'cvalue,'etok) pegsym => kont => kont
+    ksym of ('atok,'bnt,'cvalue) pegsym => kont => kont
   | appf1 of ('cvalue -> 'cvalue) => kont
   | appf2 of ('cvalue -> 'cvalue -> 'cvalue) => kont
-  | returnTo of 'etok list => 'cvalue option list => kont
+  | returnTo of 'atok list => 'cvalue option list => kont
   | poplist of ('cvalue list -> 'cvalue) => kont
-  | listsym of ('atok,'bnt,'cvalue,'etok) pegsym =>
+  | listsym of ('atok,'bnt,'cvalue) pegsym =>
                ('cvalue list -> 'cvalue) =>
                kont
   | done
@@ -32,13 +32,13 @@ val poplistval_def = Define`
 `;
 
 val _ = Hol_datatype `
-  evalcase = EV of ('atok,'bnt,'cvalue,'etok) pegsym =>
-                   'etok list => 'cvalue option list =>
-                   ('atok,'bnt,'cvalue,'etok) kont =>
-                   ('atok,'bnt,'cvalue,'etok) kont
-           | AP of ('atok,'bnt,'cvalue,'etok) kont =>
-                   'etok list => 'cvalue option list
-           | Result of ('etok list # 'cvalue) option
+  evalcase = EV of ('atok,'bnt,'cvalue) pegsym =>
+                   'atok list => 'cvalue option list =>
+                   ('atok,'bnt,'cvalue) kont =>
+                   ('atok,'bnt,'cvalue) kont
+           | AP of ('atok,'bnt,'cvalue) kont =>
+                   'atok list => 'cvalue option list
+           | Result of ('atok list # 'cvalue) option
 `;
 
 val coreloop_def = zDefine`
@@ -50,11 +50,11 @@ val coreloop_def = zDefine`
                  | EV (any tf) i r k fk =>
                    (case i of
                         [] => AP fk i r
-                      | h::t => AP k t (SOME (tf (G.cf h) h) :: r))
-                 | EV (tok tk tf2) i r k fk =>
+                      | h::t => AP k t (SOME (tf h) :: r))
+                 | EV (tok P tf2) i r k fk =>
                    (case i of
                         [] => AP fk i r
-                      | h::t => if G.cf h = tk then AP k t (SOME (tf2 h)::r)
+                      | h::t => if P h then AP k t (SOME (tf2 h)::r)
                                 else AP fk i r)
                  | EV (nt n tf3) i r k fk =>
                    if n ∈ FDOM G.rules then
@@ -87,7 +87,7 @@ val coreloop_def = zDefine`
 
 
 val peg_exec_def = zDefine`
-  peg_exec (G:('atok,'bnt,'cvalue,'etok)peg) e i r k fk = coreloop G (EV e i r k fk)
+  peg_exec (G:('atok,'bnt,'cvalue)peg) e i r k fk = coreloop G (EV e i r k fk)
 `
 
 val applykont_def = zDefine`applykont G k i r = coreloop G (AP k i r)`
@@ -110,8 +110,8 @@ val peg_exec_thm = inst_thm peg_exec_def
 
 val better_peg_execs =
     map peg_exec_thm [([`e` |-> `empty v`], []),
-                  ([`e` |-> `tok t f`, `i` |-> `[]`], []),
-                  ([`e` |-> `tok t f`, `i` |-> `x::xs`], [Once COND_RAND]),
+                  ([`e` |-> `tok P f`, `i` |-> `[]`], []),
+                  ([`e` |-> `tok P f`, `i` |-> `x::xs`], [Once COND_RAND]),
                   ([`e` |-> `any f`, `i` |-> `[]`], []),
                   ([`e` |-> `any f`, `i` |-> `x::xs`], []),
                   ([`e` |-> `seq e1 e2 sf`], []),

@@ -13,8 +13,8 @@ val _ = new_theory "peg"
 
 val _ = Hol_datatype `pegsym =
     empty of 'c
-  | any of ('a tok -> 'e -> 'c)
-  | tok of 'a tok => ('e -> 'c)
+  | any of ('a -> 'c)
+  | tok of ('a -> bool) => ('a -> 'c)
   | nt of 'b inf => ('c -> 'c)
   | seq of pegsym => pegsym => ('c -> 'c -> 'c)
   | choice of pegsym => pegsym => ('c + 'c -> 'c)
@@ -23,9 +23,8 @@ val _ = Hol_datatype `pegsym =
 `
 
 val _ = Hol_datatype`
-  peg = <| start : ('a,'b,'c,'e) pegsym ;
-           rules : 'b inf |-> ('a,'b,'c,'e) pegsym ;
-           cf : 'e -> 'a tok |>
+  peg = <| start : ('a,'b,'c) pegsym ;
+           rules : 'b inf |-> ('a,'b,'c) pegsym |>
 `
 
 val (peg_eval_rules, peg_eval_ind, peg_eval_cases) = Hol_reln`
@@ -36,11 +35,11 @@ val (peg_eval_rules, peg_eval_ind, peg_eval_cases) = Hol_reln`
   (∀n s f.
        n ∈ FDOM G.rules ∧ peg_eval G (s, G.rules ' n) NONE ⇒
        peg_eval G (s, nt n f) NONE) ∧
-  (∀h t f. peg_eval G (h::t, any f) (SOME (t, f (G.cf h) h))) ∧
+  (∀h t f. peg_eval G (h::t, any f) (SOME (t, f h))) ∧
   (∀f. peg_eval G ([], any f) NONE) ∧
-  (∀h e t f. G.cf e = h ⇒ peg_eval G (e::t, tok h f) (SOME(t, f e))) ∧
-  (∀h e t f. G.cf e ≠ h ⇒ peg_eval G (e::t, tok h f) NONE) ∧
-  (∀h f. peg_eval G ([], tok h f) NONE) ∧
+  (∀e t P f. P e ⇒ peg_eval G (e::t, tok P f) (SOME(t, f e))) ∧
+  (∀e t P f. ¬P e ⇒ peg_eval G (e::t, tok P f) NONE) ∧
+  (∀P f. peg_eval G ([], tok P f) NONE) ∧
   (∀e s c. peg_eval G (s, e) NONE ⇒ peg_eval G (s, not e c) (SOME(s,c))) ∧
   (∀e s s' c. peg_eval G (s, e) (SOME s') ⇒ peg_eval G (s, not e c) NONE)  ∧
   (∀e1 e2 s f. peg_eval G (s, e1) NONE ⇒ peg_eval G (s, seq e1 e2 f) NONE)  ∧
@@ -286,7 +285,6 @@ val reducing_peg_eval_makes_list = prove(
   `LENGTH s1 < LENGTH s0` by metis_tac [peg_eval_suffix'] >>
   metis_tac [peg_eval_rules]);
 
-
 val peg_eval_total = store_thm(
   "peg_eval_total",
   ``wfG G ⇒ ∀s e. e ∈ Gexprs G ⇒ ∃r. peg_eval G (s,e) r``,
@@ -331,48 +329,4 @@ val peg_eval_total = store_thm(
   `LENGTH s' < LENGTH s` by metis_tac [peg_eval_suffix'] >>
   metis_tac [peg_eval_rules, reducing_peg_eval_makes_list])
 
-
-
-
-
-(*
-
-val [emptyI,ntI0,anyOKI,anyFAIL,tokOK,tokFAIL1,tokFAIL2,notOK, notFAIL,
-     seqFAIL1, seqFAIL2, seqOK0, choiceFAIL, choiceOK1, choiceOK2,
-     rptOK1, list1, list2] = peg_eval_rules |> SPEC_ALL |> CONJUNCTS
-
-val seqOK = let
-  val th0 = seqOK0 |> SPEC_ALL |> UNDISCH
-  val c = th0 |> concl
-  fun check t = let
-    val (f, args) = strip_comb t
-  in
-    not (null args) andalso is_var f
-  end
-  val fxy = find_term check c
-  val th = REWRITE_RULE [ASSUME (mk_eq(fxy, mk_var("x", type_of fxy)))] th0
-in
-  DISCH_ALL th |> REWRITE_RULE [AND_IMP_INTRO] |> GEN_ALL
-end
-
-val ntI = ntI0 |> SPEC_ALL
-               |> Q.INST [`f` |-> `I`]
-               |> SIMP_RULE (srw_ss()) []
-
-val _ = overload_on ("G", G)
-
-val ok = prove(
-  ``peg_eval ^G (nt ^G.start I,^testexp)
-                (SOME([], XPlus (XN 3) (XTimes (XN 4) (XN 5))))``,
-  SIMP_TAC (srw_ss()) [] THEN
-  MATCH_MP_TAC ntI THEN
-  SIMP_TAC (srw_ss()) [finite_mapTheory.FAPPLY_FUPDATE_THM] THEN
-  MATCH_MP_TAC seqOK THEN SIMP_TAC (srw_ss()) []
-
-  FIRST (List.mapPartial (Lib.total MATCH_MP_TAC) (CONJUNCTS peg_eval_rules))
-
-
-
-
-*)
 val _ = export_theory()
