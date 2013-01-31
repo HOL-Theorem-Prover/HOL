@@ -33,6 +33,11 @@ ML=$2
 kernel=$3
 shift 3
 
+otheropts=$(echo "$@" | sed '
+s/ //g
+s/-fullbuild//
+')
+
 if [ -d $holdir -a -x $holdir -a -r $holdir ]
 then
   cd $holdir
@@ -76,7 +81,7 @@ cd developers
 mlsys=$($ML < mlsysinfo.sml | grep MLSYSTEM | awk '{print $3}')
 cd ..
 
-holid="$kernel:$rev:$mlsys"
+holid="$kernel:$rev:$mlsys:$otheropts"
 
 cpuperlprog='
   while (<>) {
