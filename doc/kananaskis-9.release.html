@@ -48,6 +48,15 @@ Thanks to Hamed Nemati for the bug report.
 
 <ul>
 
+<li><p>The <code>MEM</code> constant has been replaced with an abbreviation that maps that string to <code>λe l. e ∈ set l</code>.
+In other words, if you enter <code>``MEM x mylist``</code>, the underlying term would be <code>x ∈ set mylist</code> (recall also that <code>set</code> is another name for <code>LIST_TO_SET</code>).
+The pretty-printer will reverse this transformation so that the same term will print as <code>``MEM e l``</code>.
+The entry-points for making <code>MEM</code>-terms in <code>listSyntax</code> do the right thing.
+Similarly, exporting code with <code>EmitML</code> will continue to work.
+
+<p>Thus, SML code that takes <code>MEM</code>-terms apart using functions like <code>rand</code> and <code>rator</code> will likely need to be adjusted.
+If the SML code uses <code>listSyntax.{dest,mk,is}_mem</code>, it will be fine.
+
 <li><p>The case-constants generated for algebraic data types now have different types.
 The value that is “switched on” is now the first argument of the constant rather than the last.
 The names of these constants have also changed, emphasising the change.
