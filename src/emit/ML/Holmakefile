@@ -1,5 +1,5 @@
 OPTIONS = NO_OVERLAY
-EXTRA_CLEANS = selftest.exe
+EXTRA_CLEANS = selftest.exe selftest.sml
 
 # testing SELFTESTLEVEL like this only works in Poly/ML for the moment.
 # when/if github issue 100 (http://github.com/mn200/HOL/issues/100) is
@@ -7,6 +7,12 @@ EXTRA_CLEANS = selftest.exe
 ifdef SELFTESTLEVEL
 ifneq ($(SELFTESTLEVEL),0)
 ifneq ($(SELFTESTLEVEL),1)
+selftest.sml: selftest.ML
+	$(CP) $< $@
+
+selftest.uo: selftest.sml
+	$(HOLMOSMLC) -c $@ $<
+
 selftest.exe: selftest.uo armML.uo numML.uo wordsML.uo
 	$(HOLMOSMLC) -o $@ $<
 
