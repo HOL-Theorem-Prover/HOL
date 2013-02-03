@@ -3,7 +3,6 @@
 open HolKernel Parse boolLib bossLib
 
 open optionTheory
-open stringTheory
 open monadsyntax
 
 val _ = new_theory "theory3";
@@ -17,7 +16,7 @@ val _ = Hol_datatype`gtok = NT of nt | TOK of num`
 
 val _ = Hol_datatype`ptree = Lf of gtok | Nd of nt => ptree list`
 
-val _ = new_constant("Ast_Tapp", ``:ast list -> string -> ast``);
+val _ = new_constant("Ast_Tapp", ``:ast list -> num -> ast``);
 
 val works_ptree_Type_def = Define`
   works_ptree_Type ptree =
@@ -28,7 +27,7 @@ val works_ptree_Type_def = Define`
                    [Lf _] => NONE
                  | [dt; opn] => do
                      dty <- works_ptree_Type dt;
-                     SOME (Ast_Tapp [dty] "foo")
+                     SOME (Ast_Tapp [dty] 201)
                    od
                  | _ => NONE)
        | _ => NONE)
@@ -46,10 +45,12 @@ val fails_ptree_Type_def = Define`
                    (* comment out line above, and it works OK *)
                  | [dt; opn] => do
                      dty <- fails_ptree_Type dt;
-                     SOME (Ast_Tapp [dty] "foo")
+                     SOME (Ast_Tapp [dty] 201)
                    od
                  | _ => NONE)
        | _ => NONE)
 `
+
+
 
 val _ = export_theory()
