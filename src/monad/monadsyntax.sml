@@ -194,9 +194,10 @@ end
 val _ = temp_add_user_printer ("monadsyntax.print_monads", ``x:'a``,
                                print_monads)
 
-val _ = temp_overload_on (monad_bind, ``BIND``)
-val _ = temp_overload_on (monad_unitbind, ``IGNORE_BIND``)
-val _ = temp_overload_on ("return", ``UNIT``)
+fun mkc s = prim_mk_const{Thy = "state_transformer", Name = s}
+val _ = temp_overload_on (monad_bind, mkc "BIND")
+val _ = temp_overload_on (monad_unitbind, mkc "IGNORE_BIND")
+val _ = temp_overload_on ("return", mkc "UNIT")
 
 val _ = TexTokenMap.temp_TeX_notation
             {hol = "<-", TeX = ("\\HOLTokenLeftmap", 1)}
