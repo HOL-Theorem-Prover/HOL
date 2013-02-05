@@ -2445,7 +2445,7 @@ local
         (fn th =>
            STRIP_ASSUME_TAC
              (CONV_RULE (DEPTH_CONV SIZES_CONV THENC LESS_CONV) th))
-     THEN POP_ASSUM SUBST1_TAC
+     THEN POP_ASSUM SUBST_ALL_TAC
 in
    val Cases_word_value = Cases THEN tac
    fun Cases_on_word_value t = Cases_on t THEN tac
