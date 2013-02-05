@@ -824,12 +824,11 @@ fun adjust_tygram tygram =
                        opname = "prod", associativity = NONASSOC}
  end;
 
-fun prim_pp_type_as_ML tygram tmgram ppstrm ty =
-    type_pp.pp_type (adjust_tygram tygram) PPBackEnd.raw_terminal ppstrm ty
+fun prim_pp_type_as_ML tygram ppstrm =
+   trace ("Greek tyvars",0)
+      (type_pp.pp_type (adjust_tygram tygram) PPBackEnd.raw_terminal ppstrm)
 
-fun pp_type_as_ML ppstrm ty =
-   prim_pp_type_as_ML (Parse.type_grammar()) (Parse.term_grammar())
-                      ppstrm ty ;
+fun pp_type_as_ML ppstrm = prim_pp_type_as_ML (Parse.type_grammar()) ppstrm;
 
 (*---------------------------------------------------------------------------*)
 (* Elements of a theory presentation.                                        *)
