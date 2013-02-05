@@ -4,7 +4,17 @@ open ordinalTheory
 open lcsymtacs
 
 open pred_setTheory cardinalTheory
+(* Material from Brian Huffman's AFP entry on Ordinal arithmetic *)
+
 val _ = new_theory "veblen"
+
+val better_induction = store_thm(
+  "better_induction",
+  ``∀P. P 0 ∧ (∀α. P α ⇒ P α⁺) ∧
+        (∀α. 0 < α ∧ (∀β. β < α ⇒ P β) ⇒ P (sup (preds α))) ⇒
+        ∀α. P α``,
+  gen_tac >> strip_tac >> match_mp_tac simple_ord_induction >> simp[] >>
+  qx_gen_tac `a` >> strip_tac >> fs[sup_preds_omax_NONE] >> metis_tac[]);
 
 val closed_def = Define`
   closed A ⇔ ∀g. (∀n:num. g n ∈ A) ⇒ sup { g n | n | T} ∈ A
@@ -37,19 +47,20 @@ val nrange_IN_Uinf = store_thm(
   simp[SURJ_DEF] >> metis_tac[]);
 val _ = export_rewrites ["nrange_IN_Uinf"]
 
-(*
 val increasing = store_thm(
   "increasing",
-  ``strict_mono f ∧ continuous f ⇒ x ≤ f x``,
-  strip_tac >> qid_spec_tac `x` >>
-  ho_match_mp_tac simple_ord_induction >> simp[] >> conj_tac
+  ``∀f x. strict_mono f ∧ continuous f ⇒ x ≤ f x``,
+  ntac 3 strip_tac >> qid_spec_tac `x` >>
+  ho_match_mp_tac better_induction >> simp[] >> conj_tac
   >- (qx_gen_tac `x` >> strip_tac >> simp[ordlt_SUC_DISCRETE] >>
       qsuff_tac `x < f x⁺`
       >- (simp[ordle_lteq] >> rpt strip_tac >> fs[]) >>
       match_mp_tac ordlet_TRANS >> qexists_tac `f x` >>
       fs[strict_mono_def]) >>
-  qx_gen_tac `a` >> strip_tac >>
-
+  qx_gen_tac `a` >> strip_tac >> fs[continuous_def, preds_inj_univ] >>
+  simp[sup_thm,preds_inj_univ] >> qx_gen_tac `b` >> Cases_on `a ≤ b` >>
+  simp[] >> fs[] >> match_mp_tac ordle_TRANS >> qexists_tac `f b` >>
+  simp[] >> match_mp_tac suple_thm >> simp[IMAGE_cardleq_rwt, preds_inj_univ]);
 
 val clubs_exist = store_thm(
   "clubs_exist",
@@ -66,8 +77,16 @@ val clubs_exist = store_thm(
     dsimp[Abbr`ss`] >> qx_gen_tac `n` >> qexists_tac `n` >>
     DEEP_INTRO_TAC oleast_intro >> simp[],
     dsimp[] >> qexists_tac `a⁺` >> match_mp_tac ordlet_TRANS >>
-    qexists_tac `f a` >> fs[strict_mono_def]
+    qexists_tac `f a` >> fs[strict_mono_def, increasing]
   ]);
+
+val mono_natI = store_thm(
+  "mono_natI",
+  ``(∀n. f n : α ordinal ≤ f (SUC n)) ⇒ ∀m n. m ≤ n ⇒ f m ≤ f n``,
+  strip_tac >> Induct_on `n` >> simp[] >> qx_gen_tac `m` >> strip_tac >>
+  Cases_on `m = SUC n` >- simp[] >>
+  `m ≤ n` by decide_tac >>
+  metis_tac[ordle_TRANS]);
 
 val sup_mem_INTER = store_thm(
   "sup_mem_INTER",
@@ -87,6 +106,14 @@ val sup_mem_INTER = store_thm(
   Induct_on `n` >> simp[arithmeticTheory.ADD_CLAUSES] >>
   metis_tac [SUBSET_TRANS, DECIDE ``x + y:num = y + x``]);
 
+val smem' = sup_mem_INTER |> SIMP_RULE (srw_ss() ++ boolSimps.DNF_ss) []
+                          |> GEN_ALL
+
+val oleast_leq = store_thm(
+  "oleast_leq",
+  ``∀P a. P a ⇒ (oleast) P ≤ a``,
+  ntac 3 strip_tac >> DEEP_INTRO_TAC oleast_intro >> metis_tac[]);
+
 val club_INTER = store_thm(
   "club_INTER",
   ``(∀n. club (A n)) ∧ (∀n. A (SUC n) ⊆ A n) ⇒
@@ -97,14 +124,19 @@ val club_INTER = store_thm(
   qx_gen_tac `a` >> rpt strip_tac >>
   qexists_tac `sup {oleast b. b ∈ A n ∧ a < b | n | T}` >>
   conj_tac
-  >- (qx_gen_tac `n` >> first_assum ho_match_mp_tac >>
-      qx_gen_tac `m` >> DEEP_INTRO_TAC oleast_intro >> conj_tac
-      >- metis_tac[] >>
-      rw[]
-
-
+  >- (qx_gen_tac `n` >> ho_match_mp_tac smem' >> simp[] >>
+      conj_tac
+      >- (qx_gen_tac `n` >> DEEP_INTRO_TAC oleast_intro >> simp[] >>
+          fs[club_def, unbounded_def]) >>
+      ho_match_mp_tac mono_natI >> qx_gen_tac `n` >>
+      ho_match_mp_tac oleast_leq >>
+      conj_tac
+      >- (DEEP_INTRO_TAC oleast_intro >> conj_tac
+          >- fs[club_def, unbounded_def] >>
+          metis_tac[SUBSET_DEF]) >>
+      DEEP_INTRO_TAC oleast_intro >> conj_tac
+      >- fs[club_def, unbounded_def] >> simp[]) >>
   simp[sup_thm] >> dsimp[] >> qexists_tac `n` >>
-  DEEP_INTRO_TAC oleast_intro >> simp[]
-*)
+  DEEP_INTRO_TAC oleast_intro >> simp[] >> fs[club_def, unbounded_def])
 
 val _ = export_theory()
