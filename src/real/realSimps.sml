@@ -126,7 +126,7 @@ fun transform vs th = let
   val T_imp = hd (CONJUNCTS (SPEC_ALL IMP_CLAUSES))
   val rwt =
       REWRITE_CONV ([REAL_INJ, REAL_NEGNEG, REAL_NEG_EQ0,
-                     num_eq_0, REAL_LT, REAL_LE,
+                     num_eq_0, REAL_LT, REAL_LE, REAL_DIV_LZERO,
                      REAL_MUL_RZERO, REAL_MUL_LZERO,
                      REAL_ADD_LID, REAL_ADD_RID,
                      arithmeticTheory.ZERO_LESS_EQ] @
@@ -165,8 +165,8 @@ val add_ratrs = transform [(x, posneg0), (y, posneg), (z, nb12)] add_ratr
 
 val mult_rats =
     transform [(x,posneg), (y, nb12), (u, posneg), (v, nb12)] mult_rat
-val mult_ratls = transform [(x, posneg), (y, nb12), (z, posneg)] mult_ratl
-val mult_ratrs = transform [(x, posneg), (y, posneg), (z, nb12)] mult_ratr
+val mult_ratls = transform [(x, posneg), (y, nb12), (z, posneg0)] mult_ratl
+val mult_ratrs = transform [(x, posneg0), (y, posneg), (z, nb12)] mult_ratr
 
 val neg_ths = REAL_NEG_0 :: transform [(y, nb12)] neg_rat
 
