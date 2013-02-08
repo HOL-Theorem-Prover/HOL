@@ -3262,6 +3262,22 @@ val EXTRACT_JOIN_ADD_LSL = store_thm("EXTRACT_JOIN_ADD_LSL",
     \\ ABBREV_TAC `s' = m' - l`
     \\ ASM_SIMP_TAC std_ss [EXTRACT_JOIN_ADD]);
 
+val word_extract_mask = Q.prove(
+   `!h l a.
+        (h >< l) a =
+        if l <= h then a >>> l && (1w << (1 + (h - l)) - 1w) else 0w`,
+   rw_tac (arith_ss++fcpLib.FCP_ss)
+      [SHIFT_1_SUB_1, word_and_def, word_extract_def, word_lsr_def,
+       word_bits_def, w2w, word_0,
+       DECIDE ``l <= h ==> (i + l <= h = i < h + 1 - l)``]
+   \\ Cases_on `i + l < dimindex (:'a)`
+   \\ lrw []
+   \\ decide_tac
+   )
+
+val word_extract_mask = Theory.save_thm("word_extract_mask",
+  SIMP_RULE std_ss [word_add_n2w, GSYM LSL_ADD, LSL_ONE] word_extract_mask)
+
 val word_shift_bv = Q.store_thm("word_shift_bv",
   `(!w:'a word n. n < dimword (:'a) ==> (w << n = w <<~ n2w n)) /\
    (!w:'a word n. n < dimword (:'a) ==> (w >> n = w >>~ n2w n)) /\
